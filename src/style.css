@@ -89,7 +89,56 @@ body {
   color: #fff;
 }
 
+.chart-wrapper {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
 #chart-container {
   flex: 1;
   min-height: 0;
+}
+
+.cvd-gauges {
+  position: absolute;
+  z-index: 5;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.cvd-gauge {
+  width: 130px;
+  padding: 8px 10px 10px;
+  background: rgba(30, 34, 45, 0.85);
+  border: 1px solid #2a2e39;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.gauge-svg {
+  width: 100%;
+  display: block;
+}
+
+#gauge-needle-window,
+#gauge-needle-daily {
+  transform-origin: 100px 100px;
+  transition: transform 0.3s ease;
+}
+
+.gauge-value {
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: -6px;
+}
+
+.gauge-label {
+  font-size: 10px;
+  color: #787b86;
+  margin-top: 2px;
 }

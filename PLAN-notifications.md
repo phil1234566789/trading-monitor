@@ -15,18 +15,33 @@ markieren den Fortschritt.
 
 ---
 
+## Zwei Instrumente, zwei Datenquellen, eine Pipeline
+
+Beide Instrumente sind relevant und laufen **parallel** in dieselbe Downstream-Pipeline
+(Claude-Judge + Telegram), aber mit unterschiedlicher Datenquelle/Erkennungsebene:
+
+| | BTC-USDT (Krypto) | GBPUSD/EURUSD/XAUEUR (Forex) |
+|---|---|---|
+| Datenquelle | OKX REST-API (frei, kein Auth) | Kein Crypto-Exchange hat Forex-Paare — OKX fällt raus |
+| Zonen-/Entry-Erkennung | Eigene JS-Logik (`orderBlocks.js`, Portierung auf Edge Function in D2) | **TradingView selbst** — `tv-indikator`-Pine-Skript berechnet 4H-OB + M1-Entry schon jetzt korrekt für genau diese Symbole |
+| Trigger in die Pipeline | Cron pollt OKX jede Minute | **Webhook-Alert** aus TradingView (Nutzer hat Premium, Webhooks früher schon erfolgreich genutzt) — kein eigener FX-Datenanbieter nötig |
+| Claude-Rolle | Erkennt Muster aus rohen Kerzendaten (JSON) | Bekommt Alert-Payload (Preis, Zeit, Zonen-Kontext als Text), macht nur noch finale Plausibilitätsprüfung/Begründung |
+
+Für Forex-**Backtesting** (Phase A) reicht das nicht — dafür braucht es trotzdem historische
+Daten, z.B. via TradingViews eigenem Strategy-Tester/Bar-Replay oder kostenlosen historischen
+FX-Daten (z.B. Dukascopy).
+
 ## Architektur-Bausteine (Entscheidungen)
 
-- **Live-Pipeline (später, Phase D):** Supabase Edge Functions + Cron + Postgres + Telegram.
-- **Claude (Sonnet 5)** mit Prompt Caching für den statischen Strategie-Kontext,
-  bekommt strukturierte Kerzendaten als JSON (kein Screenshot/Vision — die exakten
-  OHLC-Werte sind eh schon vorhanden, das ist billiger und präziser).
-- **TradingView-Webhooks (vorgemerkt, aktuell nicht Teil des Plans):** Offiziell
-  unterstützter Weg, TV-Alerts an einen eigenen Endpoint zu pushen (Pull/Fetch von
-  Alerts geht nicht, TV hat keine öffentliche Lese-API dafür). Nutzer hat TV Premium
-  und hat Webhook-Alerts früher schon eingerichtet — funktioniert gut. Käme z.B. als
-  Ersatz für die eigene 4H-OB-Zonen-Erkennung infrage (Pine-`alertcondition()` statt
-  JS-Neuimplementierung) — wird erst relevant, wenn die Strategie steht.
+- **Live-Pipeline (später, Phase D):** Supabase Edge Functions + Cron + Postgres + Telegram —
+  gemeinsamer Endpunkt für beide Instrumente (OKX-Cron-Trigger + TV-Webhook-Trigger).
+- **Claude (Sonnet 5)** mit Prompt Caching für den statischen Strategie-Kontext. Bei Krypto:
+  strukturierte Kerzendaten als JSON (kein Screenshot/Vision). Bei Forex: Alert-Payload aus TV.
+- **TradingView-Webhooks:** Offiziell unterstützter Weg, TV-Alerts an einen eigenen Endpoint
+  zu pushen (Pull/Fetch von Alerts geht nicht, TV hat keine öffentliche Lese-API dafür).
+  Nutzer hat TV Premium und hat Webhook-Alerts früher schon eingerichtet — funktioniert gut.
+  Wird für die Forex-Seite gebraucht (Ersatz für eine eigene FX-Datenquelle + Neuimplementierung
+  der OB-Erkennung) — Details werden erst nach Strategie-Validierung ausgearbeitet.
 
 Kostenschätzung Live-Pipeline (siehe Chat-Verlauf): bei gezielter POI-getriggerter
 Beobachtung (nicht 24/7 durchlaufend) ca. $15-35/Monat.
@@ -58,16 +73,18 @@ Beobachtung (nicht 24/7 durchlaufend) ca. $15-35/Monat.
 ## Phase D — Live-Notification-Pipeline (erst nach validierter Strategie)
 
 ### D0 — Vorbereitung
-- [ ] Supabase-Projekt anlegen (oder bestehendes nutzen)
-- [ ] Telegram-Bot erstellen über [@BotFather](https://t.me/BotFather) (`/newbot`) → Bot-Token notieren
-- [ ] Eigene Telegram-Chat-ID ermitteln (Nachricht an den Bot schicken, dann `getUpdates`-Endpoint abfragen)
-- [ ] Anthropic API-Key bereitlegen
-- [ ] Secrets in Supabase hinterlegen: `ANTHROPIC_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+- [x] Supabase-Projekt anlegen (oder bestehendes nutzen) — bestehendes Projekt `vkphwtqcvqrkphksproj` (eu-west-1/Ireland) verlinkt, CLI-Login via Access-Token
+- [x] Telegram-Bot erstellen über [@BotFather](https://t.me/BotFather) (`/newbot`) → Bot-Token notieren — Bot `@milkyway_200a_bot` ("Trading Monitor Alerts")
+- [x] Eigene Telegram-Chat-ID ermitteln (Nachricht an den Bot schicken, dann `getUpdates`-Endpoint abfragen) — Chat-ID `6388438907`, Testnachricht erfolgreich zugestellt
+- [x] Anthropic API-Key bereitlegen
+- [x] Secrets in Supabase hinterlegen: `ANTHROPIC_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+      — gesetzt via `supabase secrets set --env-file supabase/functions.env`
+      (lokale Datei `supabase/functions.env` mit echten Werten, gitignored)
 
 ### D1 — Datenmodell
-- [ ] Tabelle `ob_zones` — aktuell erkannte 4H-Orderblock-Zonen (top, bottom, dir, weak, touched, invalidated, startTime)
-- [ ] Tabelle `watch_state` — Singleton/kleine Tabelle: gerade beobachtete Zone (falls vorhanden), Modus (`idle` / `watching_m1`), Zeitpunkt des letzten Zonen-Kontakts
-- [ ] Tabelle `signals` — Log aller ausgelösten Entry-Signale (Zeitpunkt, Richtung, Entry-Preis, SL, Begründung, ob Notification verschickt wurde)
+- [x] Tabelle `ob_zones` — aktuell erkannte 4H-Orderblock-Zonen (top, bottom, dir, weak, touched, invalidated, startTime) — Migration `supabase/migrations/20260705120000_ob_zones.sql`, angewendet
+- [x] Tabelle `watch_state` — pro Instrument: Modus (`idle` / `watching_m1`), aktiv beobachtete Zone, Zeitpunkt des letzten Zonen-Kontakts — Migration `20260705120001_watch_state.sql`, angewendet
+- [x] Tabelle `signals` — Log aller Entry-Signale (Zeitpunkt, Richtung, Entry-Preis, SL, TP, Begründung, Outcome/R-Multiple, ob Notification verschickt wurde) — inkl. `source`-Spalte (`backtest`/`paper`/`live`), damit dieselbe Tabelle auch für Phase A/B/C nutzbar ist. Migration `20260705120002_signals.sql`, angewendet
 
 ### D2 — 4H-Zonen-Wächter (Edge Function, läuft jede Minute)
 - [ ] OKX-Candle-Fetch (4H) nach Deno/Edge-Function portieren (Logik existiert schon in `src/main.js` / `orderBlocks.js`, ist reines JS ohne DOM-Abhängigkeit — sollte sich fast 1:1 wiederverwenden lassen)
@@ -98,13 +115,43 @@ Beobachtung (nicht 24/7 durchlaufend) ca. $15-35/Monat.
 
 ---
 
+## Ideen für später (aus TradingAgents-Recherche, aktuell NICHT umsetzen)
+
+Quelle: [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) — generisches
+Multi-Agent-LLM-Trading-Framework (LangGraph, Analyst-/Researcher-/Trader-/Risk-Agenten).
+Architektur selbst passt nicht zu unserem Fall (News/Sentiment/Fundamentaldaten-lastig,
+generisches Multi-LLM-Setup — wir haben eine präzise eigene Strategie und bleiben bei Claude).
+Diese drei Einzel-Ideen daraus sind aber potenziell nützlich, falls die Testphase zeigt,
+dass ein einzelner Claude-Judge-Call nicht reicht:
+
+- **Decision-Log mit Lessons-Learned-Feedback:** Kurzfassung der letzten X Signale (inkl. ob
+  Treffer oder nicht) mit in den Claude-Kontext geben, als eine Art Gedächtnis ohne
+  Weight-Updates. Passt gut zu Phase C (Dashboard zeigt Trades/Signale eh schon an).
+- **Bull/Bear-Debatte als optionaler Stresstest:** zweiter Claude-Call, der gegen ein
+  erkanntes Signal argumentiert, bevor es geloggt/gemeldet wird — nur einbauen, falls
+  Backtesting zu viele Fehlsignale zeigt.
+- **Risk-Manager-Freigabe-Gate:** letzter Sanity-Check (R:R, Positionsgröße) vor der
+  Telegram-Notification, angelehnt an deren Portfolio-Manager-Schritt.
+
+---
+
 ## Offene Fragen
 
 - Welche Entry-Variante zuerst testen? → Variante b (M1-OB + Retest + Bestätigungscandle) hat Priorität, da Variante a (Impulscandle) laut eigener Beobachtung im Indikator selten auftritt
 - Wie viele M1-Kerzen als Kontext an Claude schicken (Kosten vs. Genauigkeit)?
 - TP-Pivot-Point-Erkennung automatisieren oder erstmal nur Entry+SL melden und TP manuell lassen? (im Handbuch selbst als offene Frage markiert)
 - Backtesting: wie weit zurück testen, welcher Zeitraum ist repräsentativ genug?
-- TradingView-Webhook-Integration: erst nach Strategie-Validierung erneut aufgreifen
+- TradingView-Webhook-Integration für GBPUSD/EURUSD/XAUEUR: erst nach Strategie-Validierung
+  im Detail ausarbeiten (welches Alert-Payload-Format, welche Pine-`alertcondition()`-Trigger)
+- Forex-Backtesting-Datenquelle: TV Bar-Replay vs. Dukascopy vs. anderer Anbieter — noch offen
+
+## Status: cTrader Open API (Forex-Datenquelle)
+
+**Blockiert — wartet auf Freischaltung durch Spotware.** App auf connect.spotware.com
+angelegt (Client ID vorhanden, `.env` lokal, nicht committed), aber neue Open-API-Apps
+müssen erst manuell von Spotware freigeschaltet werden ("OA client is not in active state").
+Mail an support@ctrader.com mit der Application ID geschickt — warten auf Antwort.
+Danach: OAuth-Autorisierungs-URL erneut aufrufen, Code gegen Access-/Refresh-Token tauschen.
 
 ---
 

@@ -1,5 +1,13 @@
-import { createChart, CandlestickSeries } from "lightweight-charts";
+import { createChart, CandlestickSeries, LineSeries } from "lightweight-charts";
 import { renderOrderBlocks } from "./orderBlocks.js";
+import {
+  binanceIntervalFor,
+  fetchInitialDeltas,
+  fetchOlderDeltas,
+  mergeRecentDeltas,
+  cumulativeFromDeltas,
+} from "./cvd.js";
+import { initGauges } from "./gauge.js";
 import "./style.css";
 
 const OKX_BASE_URL = "https://www.okx.com";
@@ -53,10 +61,37 @@ const candleSeries = chart.addSeries(CandlestickSeries, {
   wickDownColor: "#ef5350",
 });
 
+const cvdSeries = chart.addSeries(
+  LineSeries,
+  {
+    color: "#f0b90b",
+    lineWidth: 2,
+    priceLineVisible: false,
+    lastValueVisible: true,
+    title: "CVD (Binance Futures)",
+  },
+  1, // eigene Pane unterhalb des Candlestick-Charts
+);
+chart.panes()[1]?.setStretchFactor(0.25);
+
+const cvdGaugesEl = document.getElementById("cvd-gauges");
+
+// Gauges an die untere rechte Ecke der Kerzen-Pane pinnen, direkt oberhalb der CVD-Pane —
+// sonst überlappen sie deren Preisskala/Legende.
+function positionGauges() {
+  const cvdPane = chart.panes()[1];
+  if (cvdPane && cvdGaugesEl) {
+    cvdGaugesEl.style.bottom = `${cvdPane.getHeight() + 12}px`;
+  }
+}
+
 new ResizeObserver((entries) => {
   const { width, height } = entries[0].contentRect;
   chart.resize(width, height);
+  positionGauges();
 }).observe(chartContainer);
+
+positionGauges();
 
 function renderTimeframeButtons() {
   timeframeSwitcher.innerHTML = "";
@@ -127,18 +162,32 @@ function mergeRecent(existing, freshRecent) {
 
 let orderBlockPrimitives = [];
 let allCandles = [];
+let allCvdDeltas = [];
 let loadingOlder = false;
 let reachedHistoryStart = false;
+let reachedCvdHistoryStart = false;
 
 function refreshChart() {
   candleSeries.setData(allCandles);
   renderOrderBlocks(chart, candleSeries, allCandles, orderBlockPrimitives);
+  cvdSeries.setData(cumulativeFromDeltas(allCvdDeltas));
+  positionGauges();
 }
 
 async function loadInitial() {
   try {
-    allCandles = await fetchInitialCandles(okxBarFor(currentBar), INITIAL_CANDLE_COUNT);
+    const binanceInterval = binanceIntervalFor(currentBar);
+    const [candles, deltas] = await Promise.all([
+      fetchInitialCandles(okxBarFor(currentBar), INITIAL_CANDLE_COUNT),
+      fetchInitialDeltas(binanceInterval, INITIAL_CANDLE_COUNT).catch((err) => {
+        console.error("CVD-Historie fehlgeschlagen:", err);
+        return [];
+      }),
+    ]);
+    allCandles = candles;
+    allCvdDeltas = deltas;
     reachedHistoryStart = false;
+    reachedCvdHistoryStart = false;
     refreshChart();
     markSuccess();
   } catch (err) {
@@ -148,10 +197,18 @@ async function loadInitial() {
 
 async function pollRecent() {
   try {
-    const recent = (
-      await fetchCandlePage("/api/v5/market/candles", okxBarFor(currentBar), { limit: RECENT_PAGE_SIZE })
-    ).reverse();
+    const binanceInterval = binanceIntervalFor(currentBar);
+    const [recent, freshDeltas] = await Promise.all([
+      fetchCandlePage("/api/v5/market/candles", okxBarFor(currentBar), { limit: RECENT_PAGE_SIZE }).then((rows) =>
+        rows.reverse(),
+      ),
+      fetchInitialDeltas(binanceInterval, RECENT_PAGE_SIZE).catch((err) => {
+        console.error("CVD-Update fehlgeschlagen:", err);
+        return null;
+      }),
+    ]);
     allCandles = mergeRecent(allCandles, recent);
+    if (freshDeltas) allCvdDeltas = mergeRecentDeltas(allCvdDeltas, freshDeltas);
     refreshChart();
     markSuccess();
   } catch (err) {
@@ -160,21 +217,33 @@ async function pollRecent() {
 }
 
 chart.timeScale().subscribeVisibleLogicalRangeChange(async (range) => {
-  if (!range || loadingOlder || reachedHistoryStart || allCandles.length === 0) return;
+  if (!range || loadingOlder || allCandles.length === 0) return;
   if (range.from > LAZY_LOAD_LOGICAL_THRESHOLD) return;
+  if (reachedHistoryStart && reachedCvdHistoryStart) return;
 
   loadingOlder = true;
   try {
-    const oldest = allCandles[0].time;
-    const older = await fetchOlderCandles(okxBarFor(currentBar), oldest);
-    if (older.length === 0) {
-      reachedHistoryStart = true;
-    } else {
-      allCandles = older.concat(allCandles);
-      refreshChart();
+    const tasks = [];
+    if (!reachedHistoryStart) {
+      tasks.push(
+        fetchOlderCandles(okxBarFor(currentBar), allCandles[0].time).then((older) => {
+          if (older.length === 0) reachedHistoryStart = true;
+          else allCandles = older.concat(allCandles);
+        }),
+      );
     }
+    if (!reachedCvdHistoryStart && allCvdDeltas.length > 0) {
+      tasks.push(
+        fetchOlderDeltas(binanceIntervalFor(currentBar), allCvdDeltas[0].time).then((older) => {
+          if (older.length === 0) reachedCvdHistoryStart = true;
+          else allCvdDeltas = older.concat(allCvdDeltas);
+        }),
+      );
+    }
+    await Promise.all(tasks);
+    refreshChart();
   } catch (err) {
-    console.error("Ältere Kerzen laden fehlgeschlagen:", err);
+    console.error("Ältere Daten laden fehlgeschlagen:", err);
   } finally {
     loadingOlder = false;
   }
@@ -201,6 +270,7 @@ function updateStatusBar() {
 
 renderTimeframeButtons();
 loadInitial();
+initGauges();
 setInterval(pollRecent, POLL_MS);
 setInterval(updateStatusBar, 1000);
 updateStatusBar();
