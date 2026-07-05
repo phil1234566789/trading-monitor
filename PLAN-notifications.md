@@ -74,7 +74,25 @@ Beobachtung (nicht 24/7 durchlaufend) ca. $15-35/Monat.
       1m/5m/15m/1h). Mit einem manuellen Test-Trade verifiziert.
 - [ ] **Deployment offen:** FE ist noch nicht live — braucht zuerst ein GitHub-Repo/Remote
       (aktuell nur lokales Git, kein `origin`), dann Deploy auf GitHub Pages einrichten
-      (`npm run build` + Pages-Workflow). Nächstes Mal dran erinnern.
+      (`npm run build` + Pages-Workflow). **Achtung beim Deploy:** `vite.config.js` braucht
+      dann noch `base: '/<repo-name>/'` (Projekt-Pages-Pfad) — Hash-Routing selbst braucht
+      kein `base`, aber Asset-URLs schon. Nächstes Mal dran erinnern.
+- [x] **Frontend auf Vue 3 migriert (2026-07-05):** Vanilla-JS + zwei Multi-Page-HTML-Dateien
+      → Vue 3 (`<script setup>`) + `vue-router` (Hash-History, SPA) auf demselben Vite-Setup.
+      Grund: Philip will das Dashboard jahrelang weiterbauen, kennt Vue, HTML-String-
+      Templating (`el.innerHTML = ...`) und doppelte Status-Leisten-Logik zwischen den
+      beiden alten Seiten wurden als konkrete Reibungspunkte identifiziert. Chart
+      (lightweight-charts) bleibt bewusst imperativ in `PriceChart.vue` gekapselt (Canvas-
+      API lässt sich nicht sinnvoll deklarativ abbilden) — inkl. sauberem Dispose bei
+      Routenwechsel (`onUnmounted`: Timer clearen, `ResizeObserver` trennen, `chart.remove()`,
+      Guards gegen "Object is disposed" bei noch laufenden Async-Loads). Neue Struktur:
+      `App.vue` (Status-Leiste+Nav), `views/Dashboard.vue`+`views/Protokoll.vue`,
+      `components/PriceChart.vue`+`Gauge.vue`+`TradesTable.vue`+`TradeStats.vue`+
+      `ProtokollTable.vue`, `composables/useStatusBar.js`+`usePolledFetch.js` (einzige zwei
+      Composables — Candles/CVD/Gauges bewusst NICHT extrahiert, da Single-Consumer und eng
+      an die Chart-Instanz gekoppelt). Verifiziert: beide Routen, alle Timeframes, Gauges,
+      Test-Trade-Marker, POI-Zonen, mehrfache Navigation ohne Chart-Leak, Production-Build
+      (`npm run build`, Dashboard/Protokoll als separate Lazy-Chunks).
 - [x] Neue Seite `protokoll.html` — Log aller erreichten POIs (Timeframe, Richtung, Zone,
       ob TG-Nachricht raus ist, Platzhalter-Spalte "Trade-Signal" für später/D3). Header-
       Navigation (Dashboard/Protokoll) in beiden Seiten, `vite.config.js` für Multi-Page-Build ergänzt

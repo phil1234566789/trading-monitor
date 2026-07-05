@@ -6,78 +6,7 @@
     <title>BTC-USDT Monitor</title>
   </head>
   <body>
-    <div id="app">
-      <header class="status-bar">
-        <span id="status-dot" class="status-dot"></span>
-        <span id="status-text">Verbinde...</span>
-        <nav class="page-nav">
-          <a href="index.html" class="active">Dashboard</a>
-          <a href="protokoll.html">Protokoll</a>
-        </nav>
-        <span id="last-update" class="last-update"></span>
-      </header>
-
-      <div class="toolbar">
-        <span class="symbol">BTC-USDT</span>
-        <div id="timeframe-switcher" class="timeframe-switcher"></div>
-      </div>
-
-      <div class="chart-wrapper">
-        <div id="chart-container"></div>
-        <div id="cvd-gauges" class="cvd-gauges">
-          <div class="cvd-gauge">
-            <svg viewBox="0 0 200 110" class="gauge-svg">
-              <defs>
-                <linearGradient id="gaugeGradientWindow" x1="10" y1="0" x2="190" y2="0" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stop-color="#ef5350" />
-                  <stop offset="50%" stop-color="#5b5f6b" />
-                  <stop offset="100%" stop-color="#26a69a" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M 10 100 A 90 90 0 0 1 190 100"
-                fill="none"
-                stroke="url(#gaugeGradientWindow)"
-                stroke-width="12"
-                stroke-linecap="round"
-              />
-              <line id="gauge-needle-window" x1="100" y1="100" x2="100" y2="25" stroke="#d1d4dc" stroke-width="3" stroke-linecap="round" />
-              <circle cx="100" cy="100" r="5" fill="#d1d4dc" />
-            </svg>
-            <div id="gauge-value-window" class="gauge-value">0.0</div>
-            <div class="gauge-label">&Delta; 15m</div>
-          </div>
-          <div class="cvd-gauge">
-            <svg viewBox="0 0 200 110" class="gauge-svg">
-              <defs>
-                <linearGradient id="gaugeGradientDaily" x1="10" y1="0" x2="190" y2="0" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stop-color="#ef5350" />
-                  <stop offset="50%" stop-color="#5b5f6b" />
-                  <stop offset="100%" stop-color="#26a69a" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M 10 100 A 90 90 0 0 1 190 100"
-                fill="none"
-                stroke="url(#gaugeGradientDaily)"
-                stroke-width="12"
-                stroke-linecap="round"
-              />
-              <line id="gauge-needle-daily" x1="100" y1="100" x2="100" y2="25" stroke="#d1d4dc" stroke-width="3" stroke-linecap="round" />
-              <circle cx="100" cy="100" r="5" fill="#d1d4dc" />
-            </svg>
-            <div id="gauge-value-daily" class="gauge-value">0.0</div>
-            <div class="gauge-label">&Delta; Tag (UTC)</div>
-          </div>
-        </div>
-      </div>
-
-      <aside id="trades-panel" class="trades-panel">
-        <h2 class="trades-panel-title">Trades</h2>
-        <div id="trades-list" class="trades-list"></div>
-        <div id="trade-stats" class="trade-stats"></div>
-      </aside>
-    </div>
+    <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
