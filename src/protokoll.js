@@ -32,7 +32,7 @@ async function fetchTouchedZones() {
     .select("*")
     .eq("instrument", INST_ID)
     .eq("touched", true)
-    .order("touched_at", { ascending: false, nullsFirst: false });
+    .order("end_time", { ascending: false });
 
   if (error) throw error;
   return data;
@@ -65,7 +65,7 @@ function renderProtokoll(rows) {
           const direction = z.direction === "long" ? "Long" : "Short";
           return `
             <tr>
-              <td>${fmtTime(z.touched_at)}</td>
+              <td>${fmtTime(z.end_time)}</td>
               <td>${z.timeframe}</td>
               <td><span class="trade-direction ${z.direction === "long" ? "long" : "short"}">${direction}</span></td>
               <td>${fmtPrice(z.bottom)} – ${fmtPrice(z.top)}${z.weak ? " (schwach)" : ""}</td>

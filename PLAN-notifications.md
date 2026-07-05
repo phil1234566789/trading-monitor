@@ -92,6 +92,16 @@ Beobachtung (nicht 24/7 durchlaufend) ca. $15-35/Monat.
       ist — Philip braucht die Zeit aber immer, die TG-Flag getrennt zur Einordnung.
       Navigation (Dashboard/Protokoll) außerdem in die oberste Status-Leiste verschoben
       (war vorher in der Toolbar neben dem Symbol)
+- [x] **Korrektur derselben Session:** `touched_at`/`invalidated_at` (Wanduhr-Zeit, wann der
+      Cron es bemerkt hat) war der falsche Ansatz fürs Chart — Zonen-Boxen brauchen die
+      **Kerzen-Zeit** der zuletzt gewachsenen Kerze, nicht wann der Bot es zufällig gesehen
+      hat. `detectOrderBlocks()` berechnet das intern schon korrekt als `endTime` (wächst,
+      bis touched/invalidated, dann automatisch eingefroren) — wurde nur nie persistiert.
+      Ersetzt durch eine einzige `end_time`-Spalte (Migration `20260705240000_...`,
+      `touched_at`/`invalidated_at` wieder entfernt), direkt aus der Zonen-Erkennung
+      übernommen. Fixt sowohl die Chart-Boxen (verifiziert: Box stoppt jetzt an einer
+      festen historischen Kerze statt am rechten Rand) als auch die Protokoll-Sortierung/
+      -Anzeige. `notified_at` bleibt separat für "TG wirklich gesendet"
 
 ## Phase D — Live-Notification-Pipeline (erst nach validierter Strategie)
 

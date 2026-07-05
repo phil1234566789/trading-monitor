@@ -1,15 +1,12 @@
 import { supabase } from "./supabaseClient.js";
 
 // Wandelt eine ob_zones-Zeile in das Zonen-Format um, das die Chart-Primitives
-// (orderBlocks.js) erwarten. `endTime` ist nicht in der DB gespeichert — wird hier aus
-// touched/invalidated-Status hergeleitet (aehnlich zur Live-Erkennung: waechst, bis die
-// Zone touched/invalidated ist, dann eingefroren).
-function toChartZone(row, nowSec) {
+// (orderBlocks.js) erwarten. `end_time` kommt direkt aus der Zonen-Erkennung im
+// poi-watcher (Kerzen-Zeit der zuletzt gewachsenen Kerze, automatisch eingefroren sobald
+// die Zone touched/invalidated ist) — keine eigene Herleitung noetig.
+function toChartZone(row) {
   const startTime = Math.floor(new Date(row.start_time).getTime() / 1000);
-  let endTime;
-  if (row.invalidated) endTime = Math.floor(new Date(row.invalidated_at ?? row.updated_at).getTime() / 1000);
-  else if (row.touched) endTime = Math.floor(new Date(row.touched_at ?? row.updated_at).getTime() / 1000);
-  else endTime = nowSec;
+  const endTime = Math.floor(new Date(row.end_time).getTime() / 1000);
 
   return {
     top: row.top,
@@ -33,6 +30,5 @@ export async function fetchPoiZones(instrument) {
 
   if (error) throw error;
 
-  const nowSec = Math.floor(Date.now() / 1000);
-  return data.map((row) => toChartZone(row, nowSec));
+  return data.map((row) => toChartZone(row));
 }

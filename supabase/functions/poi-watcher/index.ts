@@ -86,7 +86,7 @@ Deno.serve(async () => {
 
     const { data: existingRows, error: selectError } = await supabase
       .from("ob_zones")
-      .select("start_time, direction, touched, invalidated, notified, notified_at, touched_at, invalidated_at")
+      .select("start_time, direction, touched, notified, notified_at")
       .eq("instrument", INST_ID)
       .eq("timeframe", tf.label);
     if (selectError) throw selectError;
@@ -103,7 +103,6 @@ Deno.serve(async () => {
       const direction = z.dir === 1 ? "long" : "short";
       const existing = existingMap.get(`${direction}_${z.startTime}`);
       const justTouched = z.touched && !(existing?.touched ?? false);
-      const justInvalidated = z.invalidated && !(existing?.invalidated ?? false);
 
       const { error: upsertError } = await supabase.from("ob_zones").upsert(
         {
@@ -116,17 +115,17 @@ Deno.serve(async () => {
           touched: z.touched,
           invalidated: z.invalidated,
           start_time: new Date(z.startTime * 1000).toISOString(),
+          // end_time kommt direkt aus der Zonen-Erkennung: waechst mit jeder Kerze, bis die
+          // Zone touched/invalidated ist, dann friert es automatisch ein (siehe
+          // detectOrderBlocks in _shared/orderBlocks.ts) — deterministisch aus der
+          // Kerzenhistorie, keine eigene Wanduhr-Bookkeeping noetig.
+          end_time: new Date(z.endTime * 1000).toISOString(),
           notified: existing ? existing.notified || justTouched : z.touched,
           // notified_at nur bei einem echten Versand setzen (existing muss vorhanden sein,
           // sonst ist es ein historischer Alt-Touch ohne echten Alarm) — sonst würde ein
           // beim Deploy schon getouchtes Alt-Zone-Backlog faelschlich den Deploy-Zeitpunkt
           // als "gerade eben benachrichtigt" zeigen.
           notified_at: justTouched && existing ? new Date().toISOString() : existing?.notified_at ?? null,
-          // touched_at/invalidated_at: unabhaengig vom Versand immer beim jeweiligen
-          // Uebergang eingefroren — fuers Protokoll (immer sichtbare Zeit) und fuers
-          // Chart (Zonen-Box dort stoppen, nicht bis "jetzt" weiterziehen).
-          touched_at: justTouched ? new Date().toISOString() : existing?.touched_at ?? null,
-          invalidated_at: justInvalidated ? new Date().toISOString() : existing?.invalidated_at ?? null,
         },
         { onConflict: "instrument,timeframe,start_time,direction" },
       );
