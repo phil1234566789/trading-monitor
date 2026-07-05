@@ -1,5 +1,6 @@
-import { createChart, CandlestickSeries, LineSeries } from "lightweight-charts";
-import { renderOrderBlocks } from "./orderBlocks.js";
+import { createChart, CandlestickSeries, LineSeries, TickMarkType } from "lightweight-charts";
+import { renderPersistedZones } from "./orderBlocks.js";
+import { fetchPoiZones } from "./poiZones.js";
 import {
   binanceIntervalFor,
   fetchInitialDeltas,
@@ -8,6 +9,8 @@ import {
   cumulativeFromDeltas,
 } from "./cvd.js";
 import { initGauges } from "./gauge.js";
+import { fetchTrades, renderTradesPanel, renderTradeStats } from "./trades.js";
+import { renderTradeMarkers } from "./tradeMarkers.js";
 import "./style.css";
 
 const OKX_BASE_URL = "https://www.okx.com";
@@ -32,11 +35,42 @@ let currentBar = "1h";
 let lastSuccessAt = null;
 let pollTimer = null;
 
+// lightweight-charts formatiert Zeit standardmäßig in UTC (unabhängig von der
+// Browser-Zeitzone) — hier auf lokale Zeit umgestellt, damit die Achse/der Crosshair
+// mit der Systemuhr des Nutzers übereinstimmt. Die zugrundeliegenden Zeitstempel
+// (UTC-Sekunden) bleiben unverändert, es wird nur die Anzeige angepasst.
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+function tickMarkFormatter(time, tickMarkType) {
+  const d = new Date(time * 1000);
+  switch (tickMarkType) {
+    case TickMarkType.Year:
+      return `${d.getFullYear()}`;
+    case TickMarkType.Month:
+      return d.toLocaleDateString("de-DE", { month: "short", year: "numeric" });
+    case TickMarkType.DayOfMonth:
+      return d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" });
+    case TickMarkType.TimeWithSeconds:
+      return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+    default:
+      return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  }
+}
+
+function crosshairTimeFormatter(time) {
+  const d = new Date(time * 1000);
+  return `${d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" })} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
 const chartContainer = document.getElementById("chart-container");
 const statusDot = document.getElementById("status-dot");
 const statusText = document.getElementById("status-text");
 const lastUpdateEl = document.getElementById("last-update");
 const timeframeSwitcher = document.getElementById("timeframe-switcher");
+const tradesListEl = document.getElementById("trades-list");
+const tradeStatsEl = document.getElementById("trade-stats");
 
 const chart = createChart(chartContainer, {
   layout: {
@@ -50,6 +84,10 @@ const chart = createChart(chartContainer, {
   timeScale: {
     timeVisible: true,
     secondsVisible: false,
+    tickMarkFormatter,
+  },
+  localization: {
+    timeFormatter: crosshairTimeFormatter,
   },
 });
 
@@ -160,16 +198,34 @@ function mergeRecent(existing, freshRecent) {
   return olderPrefix.concat(freshRecent);
 }
 
+const TRADE_MARKER_BARS = new Set(["1m", "5m", "15m", "1h"]); // 4h/1D würden zu unübersichtlich
+
 let orderBlockPrimitives = [];
+let tradePrimitives = [];
 let allCandles = [];
 let allCvdDeltas = [];
+let currentTrades = [];
+let currentPoiZones = [];
 let loadingOlder = false;
 let reachedHistoryStart = false;
 let reachedCvdHistoryStart = false;
 
+function refreshTradeMarkers() {
+  const trades = TRADE_MARKER_BARS.has(currentBar) ? currentTrades : [];
+  renderTradeMarkers(candleSeries, trades, tradePrimitives, allCandles);
+}
+
+// POI-Zonen kommen vom poi-watcher-Backend (4H+1H, aus `ob_zones`) statt lokal aus den
+// gerade angezeigten Kerzen neu berechnet — so zeigt der Chart immer exakt das, was der
+// Bot auch tatsächlich beobachtet/alarmiert, unabhängig vom gewählten Chart-Timeframe.
+function refreshPoiZones() {
+  renderPersistedZones(candleSeries, currentPoiZones, orderBlockPrimitives, allCandles);
+}
+
 function refreshChart() {
   candleSeries.setData(allCandles);
-  renderOrderBlocks(chart, candleSeries, allCandles, orderBlockPrimitives);
+  refreshPoiZones();
+  refreshTradeMarkers();
   cvdSeries.setData(cumulativeFromDeltas(allCvdDeltas));
   positionGauges();
 }
@@ -192,6 +248,26 @@ async function loadInitial() {
     markSuccess();
   } catch (err) {
     console.error("Kerzen-Update fehlgeschlagen:", err);
+  }
+}
+
+async function loadTrades() {
+  try {
+    currentTrades = await fetchTrades(INST_ID);
+    renderTradesPanel(tradesListEl, currentTrades);
+    renderTradeStats(tradeStatsEl, currentTrades);
+    refreshTradeMarkers();
+  } catch (err) {
+    console.error("Trades laden fehlgeschlagen:", err);
+  }
+}
+
+async function loadPoiZones() {
+  try {
+    currentPoiZones = await fetchPoiZones(INST_ID);
+    refreshPoiZones();
+  } catch (err) {
+    console.error("POI-Zonen laden fehlgeschlagen:", err);
   }
 }
 
@@ -270,7 +346,11 @@ function updateStatusBar() {
 
 renderTimeframeButtons();
 loadInitial();
+loadTrades();
+loadPoiZones();
 initGauges();
 setInterval(pollRecent, POLL_MS);
+setInterval(loadTrades, POLL_MS);
+setInterval(loadPoiZones, POLL_MS);
 setInterval(updateStatusBar, 1000);
 updateStatusBar();

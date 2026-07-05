@@ -5,6 +5,8 @@
 // FVG-Fenster über 4 Kerzen (c0..c2 + cur): bullisch, wenn cur.low über c1.high liegt (Gap),
 // bärisch symmetrisch. Zone = C1-Kante bis zur gegenüberliegenden Kante von C2 (inkl. Wick) —
 // siehe Pine-Kommentar "HTF-Modus" für die Herleitung.
+import { snapToBarTime } from "./chartTimeUtils.js";
+
 const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone angelegt
 const WEAK_PCT = 0.15; // Gap kleiner als das gilt als "schwach" (blasser dargestellt)
 
@@ -127,12 +129,16 @@ class ZonePaneView {
     const series = this._source._series;
     const timeScale = this._source._chart.timeScale();
     const z = this._source._zone;
+    const candles = this._source._candles;
+
+    const startBarTime = snapToBarTime(candles, z.startTime);
+    const endBarTime = snapToBarTime(candles, z.endTime);
     this._p1 = {
-      x: timeScale.timeToCoordinate(z.startTime),
+      x: startBarTime != null ? timeScale.timeToCoordinate(startBarTime) : null,
       y: series.priceToCoordinate(z.top),
     };
     this._p2 = {
-      x: timeScale.timeToCoordinate(z.endTime),
+      x: endBarTime != null ? timeScale.timeToCoordinate(endBarTime) : null,
       y: series.priceToCoordinate(z.bottom),
     };
   }
@@ -143,9 +149,10 @@ class ZonePaneView {
 }
 
 export class OrderBlockPrimitive {
-  constructor(zone, options) {
+  constructor(zone, options, candles) {
     this._zone = zone;
     this._options = options;
+    this._candles = candles;
     this._paneViews = [new ZonePaneView(this)];
     this._chart = null;
     this._series = null;
@@ -171,25 +178,42 @@ const BEAR_COLOR = "rgba(239, 83, 80, 0.28)";
 const BEAR_WEAK_COLOR = "rgba(239, 83, 80, 0.10)";
 const INACTIVE_COLOR = "rgba(120, 123, 134, 0.15)";
 
+// 1H-Zonen etwas dezenter als 4H, damit beide gleichzeitig im Chart unterscheidbar sind.
+const DIM_FACTOR_1H = 0.6;
+
+function withAlpha(rgba, factor) {
+  return rgba.replace(/([\d.]+)\)$/, (_, a) => `${(Number(a) * factor).toFixed(3)})`);
+}
+
 function zoneOptions(z) {
   const inactive = z.touched || z.invalidated;
+  const dim = z.timeframe === "1H";
   const fillColor = inactive ? INACTIVE_COLOR : z.dir === 1 ? (z.weak ? BULL_WEAK_COLOR : BULL_COLOR) : z.weak ? BEAR_WEAK_COLOR : BEAR_COLOR;
+  const borderColor = inactive ? "rgba(120, 123, 134, 0.35)" : z.dir === 1 ? "rgba(38, 166, 154, 0.7)" : "rgba(239, 83, 80, 0.7)";
+  const label = `${z.timeframe ? `${z.timeframe} ` : ""}${z.dir === 1 ? "OB Bull" : "OB Bear"}`;
   return {
-    fillColor,
-    borderColor: inactive ? "rgba(120, 123, 134, 0.35)" : z.dir === 1 ? "rgba(38, 166, 154, 0.7)" : "rgba(239, 83, 80, 0.7)",
+    fillColor: dim ? withAlpha(fillColor, DIM_FACTOR_1H) : fillColor,
+    borderColor: dim ? withAlpha(borderColor, DIM_FACTOR_1H) : borderColor,
     textColor: "rgba(209, 212, 220, 0.9)",
-    label: z.dir === 1 ? "OB Bull" : "OB Bear",
+    label,
   };
 }
 
 export function renderOrderBlocks(chart, series, candles, existingPrimitives) {
+  const zones = detectOrderBlocks(candles).filter((z) => !z.invalidated);
+  renderPersistedZones(series, zones, existingPrimitives, candles);
+}
+
+// Zeichnet bereits berechnete Zonen (z.B. aus `ob_zones` in Supabase, mit `timeframe`-Tag)
+// statt sie selbst aus Kerzen neu zu berechnen — für Zonen, die auf einem anderen
+// Timeframe erkannt wurden als dem gerade angezeigten Chart.
+export function renderPersistedZones(series, zones, existingPrimitives, candles) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
-  const zones = detectOrderBlocks(candles);
   for (const z of zones) {
     if (z.invalidated) continue;
-    const primitive = new OrderBlockPrimitive(z, zoneOptions(z));
+    const primitive = new OrderBlockPrimitive(z, zoneOptions(z), candles);
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }

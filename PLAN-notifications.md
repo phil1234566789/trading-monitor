@@ -66,9 +66,32 @@ Beobachtung (nicht 24/7 durchlaufend) ca. $15-35/Monat.
 
 ## Phase C — Dashboard-Erweiterung
 
-- [ ] Trades/Signale (aus Backtest + Paper-Trading) im trading-monitor-Frontend
+- [x] Trades/Signale (aus Backtest + Paper-Trading) im trading-monitor-Frontend
       schön visualisieren — Entry, SL, TP, Ergebnis, Begründung — damit alles
-      nachvollziehbar und kontrollierbar ist
+      nachvollziehbar und kontrollierbar ist. Umgesetzt: Trades-Tabelle + Stats-Zeile
+      (Winrate, PnL in R) unten im Dashboard, exakte Entry-/Exit-Marker direkt im Chart
+      (Punkt + Preis-Strich, snapped auf die richtige Kerze je Timeframe, sichtbar auf
+      1m/5m/15m/1h). Mit einem manuellen Test-Trade verifiziert.
+- [ ] **Deployment offen:** FE ist noch nicht live — braucht zuerst ein GitHub-Repo/Remote
+      (aktuell nur lokales Git, kein `origin`), dann Deploy auf GitHub Pages einrichten
+      (`npm run build` + Pages-Workflow). Nächstes Mal dran erinnern.
+- [x] Neue Seite `protokoll.html` — Log aller erreichten POIs (Timeframe, Richtung, Zone,
+      ob TG-Nachricht raus ist, Platzhalter-Spalte "Trade-Signal" für später/D3). Header-
+      Navigation (Dashboard/Protokoll) in beiden Seiten, `vite.config.js` für Multi-Page-Build ergänzt
+- [x] Chart zeigt jetzt 4H- **und** 1H-Order-Blocks gleichzeitig, direkt aus `ob_zones`
+      (Supabase, dieselben Daten wie der poi-watcher) statt lokal neu berechnet — damit
+      Chart und Bot immer exakt dasselbe zeigen, unabhängig vom gewählten Chart-Timeframe.
+      1H-Zonen etwas dezenter eingefärbt als 4H, Label zeigt Timeframe (`4H OB Bull` etc.)
+- [x] Nachbesserung 2026-07-05: eigene `touched_at`/`invalidated_at`-Spalten ergänzt
+      (Migration `20260705230000_...`), getrennt von `notified_at` (das jetzt exklusiv
+      "hier ging wirklich eine TG-Nachricht raus" bedeutet). Fixt zwei Dinge, die Philip
+      per Chart-Screenshot gezeigt hat: (1) Zonen-Boxen wurden bis zur aktuellen Kerze
+      weitergezogen statt am Touch/Invalidierungs-Zeitpunkt einzufrieren — lag daran, dass
+      als Fallback `updated_at` genutzt wurde, das bei jedem Cron-Lauf neu gestempelt wird;
+      (2) Protokoll-Seite zeigte "Erreicht am" nur, wenn wirklich eine TG-Nachricht raus
+      ist — Philip braucht die Zeit aber immer, die TG-Flag getrennt zur Einordnung.
+      Navigation (Dashboard/Protokoll) außerdem in die oberste Status-Leiste verschoben
+      (war vorher in der Toolbar neben dem Symbol)
 
 ## Phase D — Live-Notification-Pipeline (erst nach validierter Strategie)
 
@@ -86,16 +109,16 @@ Beobachtung (nicht 24/7 durchlaufend) ca. $15-35/Monat.
 - [x] Tabelle `watch_state` — pro Instrument: Modus (`idle` / `watching_m1`), aktiv beobachtete Zone, Zeitpunkt des letzten Zonen-Kontakts — Migration `20260705120001_watch_state.sql`, angewendet
 - [x] Tabelle `signals` — Log aller Entry-Signale (Zeitpunkt, Richtung, Entry-Preis, SL, TP, Begründung, Outcome/R-Multiple, ob Notification verschickt wurde) — inkl. `source`-Spalte (`backtest`/`paper`/`live`), damit dieselbe Tabelle auch für Phase A/B/C nutzbar ist. Migration `20260705120002_signals.sql`, angewendet
 
-### D2 — 4H-Zonen-Wächter (Edge Function, läuft jede Minute)
-- [ ] OKX-Candle-Fetch (4H) nach Deno/Edge-Function portieren (Logik existiert schon in `src/main.js` / `orderBlocks.js`, ist reines JS ohne DOM-Abhängigkeit — sollte sich fast 1:1 wiederverwenden lassen)
-- [ ] `detectOrderBlocks()`-Logik aus `src/orderBlocks.js` wiederverwenden (bereits chart-unabhängig, reine Berechnung)
-- [ ] Zonen in `ob_zones` persistieren/aktualisieren
-- [ ] Prüfen: liegt aktueller Preis innerhalb einer aktiven, nicht invalidierten Zone?
-  - Ja → `watch_state.mode = 'watching_m1'`, Zone merken
-  - Nein → `watch_state.mode = 'idle'`
-- [ ] Kein Claude-Call in dieser Phase — reine Vergleichslogik
+### D2 — 4H+1H-Zonen-Wächter (Edge Function, läuft jede Minute) — **vereinfacht vorgezogen, 2026-07-05**
+- [x] OKX-Candle-Fetch nach Deno/Edge-Function portiert — `supabase/functions/poi-watcher/index.ts`, läuft für **4H und 1H** (nicht nur 4H — Philip will für beide Timeframes eine Benachrichtigung, um sich selbst/den Trade vorzubereiten)
+- [x] `detectOrderBlocks()`-Logik nach `supabase/functions/_shared/orderBlocks.ts` portiert (1:1 aus `src/orderBlocks.js`, muss bei Änderungen an der Zonen-Erkennung manuell mitgezogen werden — kein gemeinsames Build-System zwischen Vite-Frontend und Deno-Function)
+- [x] Zonen in `ob_zones` persistieren/aktualisieren (Schema um `timeframe`, `notified`, `notified_at` erweitert, Migration `20260705180000_ob_zones_poi_watcher.sql`)
+- [x] Bei Preis-Kontakt (Zone wird zum ersten Mal `touched`) → Telegram-Alert (siehe D4). Historische Alt-Touches beim allerersten Lauf lösen bewusst **keinen** Alert aus (sonst Spam beim Deploy)
+- [x] Kein Claude-Call — reine Vergleichslogik, wie geplant
+- [ ] ~~`watch_state`/M1-Eskalation~~ — noch nicht gebaut, da an D3 (Claude-Check) gekoppelt, aktuell übersprungen
 
-### D3 — M1-Beobachtung + Claude-Entry-Check (nur wenn `watching_m1`)
+### D3 — M1-Beobachtung + Claude-Entry-Check — **übersprungen, 2026-07-05**
+Bewusst ausgelassen: es gibt noch kein fertiges Regelwerk für Claude (Strategie wird gerade in einer parallelen Session verfeinert). Nachholen, sobald die Strategie steht:
 - [ ] M1-Candle-Fetch (OKX) für die letzten ~30-50 Kerzen
 - [ ] M1-Orderblock-Erkennung (gleiche Kernlogik wie 4H, andere Parameter — siehe `tv-indikator/src/calculations.pine` `processClosedBar` mit `capMode=true`, Cap auf max. Zonengröße)
 - [ ] Strukturierte Anfrage an Claude (Sonnet 5, `output_config.effort` vorerst `medium` testen):
@@ -104,13 +127,25 @@ Beobachtung (nicht 24/7 durchlaufend) ca. $15-35/Monat.
   - Erwartete Antwort (structured output / JSON): `{ entry: bool, direction: "long"|"short"|null, stopLoss: number|null, reasoning: string }`
 - [ ] Bei `entry: true` → Eintrag in `signals`-Tabelle
 
-### D4 — Notification
-- [ ] Telegram-Nachricht bei neuem Signal (Richtung, Entry-Kontext, SL, Kurzbegründung)
-- [ ] Markieren, dass Signal bereits benachrichtigt wurde (kein Doppel-Versand)
+### D4 — Notification — **vereinfachte Version live, 2026-07-05**
+- [x] Telegram-Nachricht, sobald ein 4H- oder 1H-OB erreicht wird (Richtung, Zonen-Range, aktueller Preis) — noch **kein** Entry-Signal-Alert (das braucht D3/Claude), nur "POI erreicht, jetzt selbst analysieren"
+- [x] Markieren, dass eine Zone bereits benachrichtigt wurde (`ob_zones.notified`), kein Doppel-Versand
+- [x] Quiet Hours 23–5 Uhr lokal (Europe/Berlin, Philips Schlafenszeit): kein Telegram-Versand
+      in diesem Fenster. Zonen werden trotzdem normal erkannt/upgedatet (Kontinuität für die
+      touched-Erkennung), nur der Versand pausiert — kein nachträglicher Alarm beim Aufwachen.
+      Bewusst **nicht** auf Philips Handelszeiten (Mo-Fr 7-11 & 18-22) eingeschränkt, da er
+      auch außerhalb davon (z.B. 6 Uhr) manchmal reagiert, wenn die Bedingungen passen
+- [x] Bug gefunden+gefixt (2026-07-05): beim allerersten Deploy bekamen historische
+      Alt-Touches (schon vor dem Bot getouchte Zonen) fälschlich den Deploy-Zeitpunkt als
+      `notified_at`, obwohl nie eine echte Nachricht rausging. Kein Doppel-Versand passiert
+      (der Send-Gate war korrekt), nur die Zeitstempel-Anzeige im Protokoll war irreführend.
+      Fix deployed, Alt-Daten per Migration bereinigt (`20260705220000_fix_notified_at_backlog.sql`)
+- [ ] Entry-Signal-Alert (Richtung, SL, Kurzbegründung) — folgt mit D3
 
 ### D5 — Scheduling & Deployment
-- [ ] Supabase Cron: Edge Function jede Minute triggern
-- [ ] Dry-Run-Modus einbauen (loggen statt Telegram schicken) für ersten Testlauf
+- [x] Supabase Cron: Edge Function jede Minute triggern — via `pg_cron`+`pg_net`, Migration `20260705200000_poi_watcher_cron.sql`, verifiziert (läuft automatisch)
+- [x] Dry-Run-Modus eingebaut (`DRY_RUN`-Secret, loggt statt zu senden) — aktuell **aus** (live), da Philip den Bot testen wollte
+- [ ] Nach Testphase: ggf. `DRY_RUN=true` setzen, falls die Erkennungslogik nochmal geändert wird, bevor sie wieder scharf geschaltet wird
 - [ ] Nach Testphase: scharf schalten
 
 ---

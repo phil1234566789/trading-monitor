@@ -10,6 +10,10 @@
       <header class="status-bar">
         <span id="status-dot" class="status-dot"></span>
         <span id="status-text">Verbinde...</span>
+        <nav class="page-nav">
+          <a href="index.html" class="active">Dashboard</a>
+          <a href="protokoll.html">Protokoll</a>
+        </nav>
         <span id="last-update" class="last-update"></span>
       </header>
 
@@ -67,6 +71,12 @@
           </div>
         </div>
       </div>
+
+      <aside id="trades-panel" class="trades-panel">
+        <h2 class="trades-panel-title">Trades</h2>
+        <div id="trades-list" class="trades-list"></div>
+        <div id="trade-stats" class="trade-stats"></div>
+      </aside>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>
