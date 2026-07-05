@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BTC-USDT Monitor</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="status-bar">
+        <span id="status-dot" class="status-dot"></span>
+        <span id="status-text">Verbinde...</span>
+        <span id="last-update" class="last-update"></span>
+      </header>
+
+      <div class="toolbar">
+        <span class="symbol">BTC-USDT</span>
+        <div id="timeframe-switcher" class="timeframe-switcher"></div>
+      </div>
+
+      <div id="chart-container"></div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
