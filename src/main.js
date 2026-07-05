@@ -1,4 +1,5 @@
 import { createChart, CandlestickSeries } from "lightweight-charts";
+import { renderOrderBlocks } from "./orderBlocks.js";
 import "./style.css";
 
 const OKX_BASE_URL = "https://www.okx.com";
@@ -91,10 +92,13 @@ async function fetchCandles(bar) {
     .reverse();
 }
 
+let orderBlockPrimitives = [];
+
 async function loadCandles() {
   try {
     const candles = await fetchCandles(okxBarFor(currentBar));
     candleSeries.setData(candles);
+    renderOrderBlocks(chart, candleSeries, candles, orderBlockPrimitives);
     markSuccess();
   } catch (err) {
     console.error("Kerzen-Update fehlgeschlagen:", err);
