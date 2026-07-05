@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "okx-market": {
+      "command": "npx",
+      "args": ["-y", "@okx_ai/okx-trade-mcp", "--modules", "market", "--read-only"]
+    }
+  }
+}
