@@ -93,6 +93,14 @@ Beobachtung (nicht 24/7 durchlaufend) ca. $15-35/Monat.
       an die Chart-Instanz gekoppelt). Verifiziert: beide Routen, alle Timeframes, Gauges,
       Test-Trade-Marker, POI-Zonen, mehrfache Navigation ohne Chart-Leak, Production-Build
       (`npm run build`, Dashboard/Protokoll als separate Lazy-Chunks).
+- [x] **Letzter Fix des Tages:** Off-by-one-Bug in `detectOrderBlocks()` gefunden — `endTime`
+      fror genau eine Kerze zu frueh ein (auf der Kerze, die touched/invalidated ausloest,
+      wurde der Status gesetzt, aber `endTime` fuer ebendiese Kerze nicht mehr mitgezogen).
+      Sichtbarer Effekt: Zonen-Boxen endeten 1 Balkenbreite zu frueh (4h bei 4H-Zonen, 1h bei
+      1H-Zonen). Fix in beiden Kopien (`src/orderBlocks.js` + `supabase/functions/_shared/
+      orderBlocks.ts`), Edge Function redeployt + einmal manuell angestoßen, damit alle
+      bestehenden Zonen sofort mit korrektem `end_time` neu geschrieben werden (kein
+      Datenmigrations-Schritt nötig, wird bei jedem Lauf ohnehin komplett neu berechnet).
 - [x] Neue Seite `protokoll.html` — Log aller erreichten POIs (Timeframe, Richtung, Zone,
       ob TG-Nachricht raus ist, Platzhalter-Spalte "Trade-Signal" für später/D3). Header-
       Navigation (Dashboard/Protokoll) in beiden Seiten, `vite.config.js` für Multi-Page-Build ergänzt

@@ -53,16 +53,23 @@ export function detectOrderBlocks(candles) {
     // Gültigkeits-/Touched-Regeln laufen für alle bestehenden Zonen gegen die aktuelle Kerze.
     for (const z of zones) {
       if (z.invalidated) continue;
+      const wasTouched = z.touched; // vor der Pruefung dieser Kerze festhalten
+
       if (z.dir === 1 && cur.high < z.bottom) {
         z.invalidated = true;
+        z.endTime = cur.time; // Box soll die invalidierende Kerze noch einschliessen
         continue;
       }
       if (z.dir === -1 && cur.low > z.top) {
         z.invalidated = true;
+        z.endTime = cur.time;
         continue;
       }
+
       if (!z.touched && cur.low <= z.top && cur.high >= z.bottom) z.touched = true;
-      if (!z.touched) z.endTime = cur.time;
+      // Auf genau der Kerze, die den Touch ausloest, soll endTime noch mitwachsen (sonst
+      // friert die Box eine Kerze zu frueh ein) — danach (wasTouched war schon true) nicht mehr.
+      if (!wasTouched) z.endTime = cur.time;
     }
   }
 
