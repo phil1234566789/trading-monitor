@@ -216,13 +216,49 @@ dass ein einzelner Claude-Judge-Call nicht reicht:
   im Detail ausarbeiten (welches Alert-Payload-Format, welche Pine-`alertcondition()`-Trigger)
 - Forex-Backtesting-Datenquelle: TV Bar-Replay vs. Dukascopy vs. anderer Anbieter — noch offen
 
-## Status: cTrader Open API (Forex-Datenquelle)
+## Status: cTrader Open API (Forex-Datenquelle) — 2026-07-09
 
-**Blockiert — wartet auf Freischaltung durch Spotware.** App auf connect.spotware.com
-angelegt (Client ID vorhanden, `.env` lokal, nicht committed), aber neue Open-API-Apps
-müssen erst manuell von Spotware freigeschaltet werden ("OA client is not in active state").
-Mail an support@ctrader.com mit der Application ID geschickt — warten auf Antwort.
-Danach: OAuth-Autorisierungs-URL erneut aufrufen, Code gegen Access-/Refresh-Token tauschen.
+**Freigeschaltet und angebunden.** App auf connect.spotware.com ist jetzt "Active".
+OAuth-Flow (scope=`accounts`, read-only) durchlaufen, Access-/Refresh-Token liegen lokal
+in `.env` und als Supabase-Secrets (`CTRADER_CLIENT_ID/SECRET/ACCESS_TOKEN`, nicht committed).
+Genutzt wird das **Demo-Konto** (`ctidTraderAccountId 47792490`, Broker `thetradingpit`,
+GBPUSD `symbolId 2`) — bewusste Wahl, weil es nur um Kursdaten fürs Chart geht, kein Trading.
+
+**Wire-Protokoll (manuell verifiziert, keine offizielle JS/Deno-Bibliothek genutzt):**
+TLS-Verbindung zu `demo.ctraderapi.com:5035`, 4-Byte-Big-Endian-Längenpräfix +
+binär-kodierte `ProtoMessage`-Hülle (protobuf). Handshake: `ApplicationAuthReq` (2100) →
+`GetAccountListByAccessTokenReq` (2149) → `AccountAuthReq` (2102) → `SymbolsListReq` (2114)
+→ `GetTrendbarsReq` (2137). Preise kommen relativ zu `low` (`low`, `deltaOpen`, `deltaHigh`,
+`deltaClose`, alle durch 100000 geteilt). Max. 14000 Bars pro Request laut Spotware-Docs,
+hier reicht ein einzelner Call (kein Multi-Page nötig wie bei OKX). Die vier offiziellen
+`.proto`-Schemadateien (spotware/openapi-proto-messages) sind als String-Konstanten in
+`supabase/functions/_shared/ctrader/protoSource.ts` eingebettet — `protobufjs`s
+dateibasiertes `Root.load()` funktioniert im Edge-Runtime-Bundle nicht (bindet intern an
+Node-`fs`, ignoriert eine `util.fetch`-Überschreibung), daher `protobuf.parse()` auf die
+rohen Strings, in Abhängigkeitsreihenfolge, in einen gemeinsamen `Root`.
+
+**Architektur:** neue Edge Function `ctrader-candles` (`supabase/functions/ctrader-candles/`)
+— pro HTTP-Request eine frische TCP/TLS-Verbindung auf, Handshake, Trendbars holen, JSON
+zurückgeben (`{time,open,high,low,close,volume}`, oldest-first), Verbindung wieder zu. Kein
+Cron/keine Persistenz — Frontend ruft das wie bisher OKX auf Poll-Basis auf
+(`src/ctraderCandles.js`, gleiche Form wie die OKX-Fetch-Funktionen in `PriceChart.vue`).
+Account-ID/Symbol-ID werden pro warmer Isolate gecacht, um nicht bei jedem Request neu
+aufzulösen. `Deno.connectTls` brauchte (anders als ein simples Node-`tls.connect`, das ohne
+`minVersion:"TLSv1.2"` im Test mit ECONNRESET reagierte) keine Sonderbehandlung.
+
+**Dashboard:** Symbol-Switcher (BTC-USDT/GBPUSD) in der Toolbar, `PriceChart.vue` bekommt
+`symbol`-Prop, `Dashboard.vue` rendert es mit `:key="symbol"` (voller Remount statt
+Laufzeit-Umschaltung — einfacher als dynamisches Umbauen von Chart-Panes). Für GBPUSD:
+keine CVD-Pane/-Gauges (nur für BTC/Binance-Futures sinnvoll), keine Trades/OB-Zonen (die
+Forex-OB-Erkennung läuft weiterhin nicht über diese Codebase, siehe TradingView-Webhook-Plan
+oben) — nur der reine Kerzenchart samt Lazy-Scroll-Historie. Verifiziert per Playwright
+(headless Chromium, da kein `chromium-cli` verfügbar): BTC↔GBPUSD-Wechsel, alle 6
+Timeframes, keine Konsolenfehler, CVD erscheint/verschwindet korrekt.
+
+**Bekannte Lücken/nächste Schritte:** Access-Token läuft nach ~30 Tagen ab (`expiresIn`
+2.628.000s) — noch kein automatischer Refresh via `CTRADER_REFRESH_TOKEN` eingebaut, nur
+manuell erneuerbar. `scope=accounts` reicht für Kursdaten; falls später Trading übers Open
+API gebraucht wird, braucht es einen neuen Autorisierungs-Durchlauf mit `scope=trading`.
 
 ---
 

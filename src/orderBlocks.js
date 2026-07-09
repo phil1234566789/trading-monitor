@@ -111,7 +111,12 @@ class ZoneRenderer {
         ctx.font = `${Math.round(11 * scope.verticalPixelRatio)}px sans-serif`;
         ctx.fillStyle = this._options.textColor;
         ctx.textBaseline = "top";
-        ctx.fillText(this._options.label, xPos.position + 4 * scope.horizontalPixelRatio, yPos.position + 2 * scope.verticalPixelRatio);
+        ctx.textAlign = "right";
+        ctx.fillText(
+          this._options.label,
+          xPos.position + xPos.length - 4 * scope.horizontalPixelRatio,
+          yPos.position + 2 * scope.verticalPixelRatio,
+        );
       }
     });
   }
@@ -204,11 +209,6 @@ function zoneOptions(z) {
     textColor: "rgba(209, 212, 220, 0.9)",
     label,
   };
-}
-
-export function renderOrderBlocks(chart, series, candles, existingPrimitives) {
-  const zones = detectOrderBlocks(candles).filter((z) => !z.invalidated);
-  renderPersistedZones(series, zones, existingPrimitives, candles);
 }
 
 // Zeichnet bereits berechnete Zonen (z.B. aus `ob_zones` in Supabase, mit `timeframe`-Tag)

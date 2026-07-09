@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import { createChart, CandlestickSeries, LineSeries, TickMarkType } from "lightweight-charts";
-import { renderPersistedZones } from "../orderBlocks.js";
+import { detectOrderBlocks, renderPersistedZones } from "../orderBlocks.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import {
   binanceIntervalFor,
@@ -12,14 +12,27 @@ import {
   cumulativeFromDeltas,
 } from "../cvd.js";
 import { okxBarFor } from "../timeframes.js";
+import {
+  fetchInitialCandles as fetchInitialForexCandles,
+  fetchRecentCandles as fetchRecentForexCandles,
+  fetchOlderCandles as fetchOlderForexCandles,
+} from "../ctraderCandles.js";
 import { useStatusBar } from "../composables/useStatusBar.js";
 import Gauge from "./Gauge.vue";
 
 const props = defineProps({
+  symbol: { type: String, required: true },
   currentBar: { type: String, required: true },
   trades: { type: Array, default: () => [] },
   poiZones: { type: Array, default: () => [] },
+  showHistoricalObs: { type: Boolean, default: false },
 });
+
+// CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
+// bleiben Gauges/CVD-Pane komplett weg statt leer. Der Wert steht bei onMounted fest:
+// Dashboard.vue rendert <PriceChart :key="symbol">, ein Symbolwechsel montiert die
+// Komponente also neu, statt dieses Flag zur Laufzeit umzuschalten.
+const isForex = props.symbol !== "BTC-USDT";
 
 const OKX_BASE_URL = "https://www.okx.com";
 const INST_ID = "BTC-USDT";
@@ -147,8 +160,25 @@ function refreshTradeMarkersInternal() {
 // POI-Zonen kommen vom poi-watcher-Backend (4H+1H, aus `ob_zones`) statt lokal aus den
 // gerade angezeigten Kerzen neu berechnet — so zeigt der Chart immer exakt das, was der
 // Bot auch tatsächlich beobachtet/alarmiert, unabhängig vom gewählten Chart-Timeframe.
+// "Historische OBs"-Toggle (Dashboard-Toolbar) blendet bereits angetestete, aber noch nicht
+// invalidierte Zonen aus (analog zum tv-indikator-Toggle, siehe PLAN-notifications.md) —
+// invalidierte Zonen bleiben unabhängig davon immer ausgeblendet (eigene, ältere Regel).
+function filterHistorical(zones) {
+  return props.showHistoricalObs ? zones : zones.filter((z) => !z.touched);
+}
+
+// Für Forex (GBPUSD) gibt es noch kein Backend, das Zonen vorberechnet (siehe PLAN-
+// notifications.md) — hier deshalb direkt aus den geladenen Kerzen des aktuellen
+// Timeframes neu erkannt, statt wie bei BTC aus `ob_zones` (Supabase) gerendert.
 function refreshPoiZonesInternal() {
-  renderPersistedZones(candleSeries, props.poiZones, orderBlockPrimitives, allCandles);
+  if (isForex) {
+    const zones = detectOrderBlocks(allCandles)
+      .filter((z) => !z.invalidated)
+      .map((z) => ({ ...z, timeframe: props.currentBar.toUpperCase() }));
+    renderPersistedZones(candleSeries, filterHistorical(zones), orderBlockPrimitives, allCandles);
+  } else {
+    renderPersistedZones(candleSeries, filterHistorical(props.poiZones), orderBlockPrimitives, allCandles);
+  }
 }
 
 function refreshChart() {
@@ -159,24 +189,30 @@ function refreshChart() {
   candleSeries.setData(allCandles);
   refreshPoiZonesInternal();
   refreshTradeMarkersInternal();
-  cvdSeries.setData(cumulativeFromDeltas(allCvdDeltas));
+  cvdSeries?.setData(cumulativeFromDeltas(allCvdDeltas));
   positionGauges();
 }
 
 async function loadInitial() {
   try {
-    const binanceInterval = binanceIntervalFor(props.currentBar);
-    const [candles, deltas] = await Promise.all([
-      fetchInitialCandles(okxBarFor(props.currentBar), INITIAL_CANDLE_COUNT),
-      fetchInitialDeltas(binanceInterval, INITIAL_CANDLE_COUNT).catch((err) => {
-        console.error("CVD-Historie fehlgeschlagen:", err);
-        return [];
-      }),
-    ]);
+    let candles, deltas;
+    if (isForex) {
+      candles = await fetchInitialForexCandles(props.symbol, props.currentBar, INITIAL_CANDLE_COUNT);
+      deltas = [];
+    } else {
+      const binanceInterval = binanceIntervalFor(props.currentBar);
+      [candles, deltas] = await Promise.all([
+        fetchInitialCandles(okxBarFor(props.currentBar), INITIAL_CANDLE_COUNT),
+        fetchInitialDeltas(binanceInterval, INITIAL_CANDLE_COUNT).catch((err) => {
+          console.error("CVD-Historie fehlgeschlagen:", err);
+          return [];
+        }),
+      ]);
+    }
     allCandles = candles;
     allCvdDeltas = deltas;
     reachedHistoryStart = false;
-    reachedCvdHistoryStart = false;
+    reachedCvdHistoryStart = isForex; // keine CVD-Historie zum Nachladen bei Forex
     refreshChart();
     markSuccess();
   } catch (err) {
@@ -186,16 +222,22 @@ async function loadInitial() {
 
 async function pollRecent() {
   try {
-    const binanceInterval = binanceIntervalFor(props.currentBar);
-    const [recent, freshDeltas] = await Promise.all([
-      fetchCandlePage("/api/v5/market/candles", okxBarFor(props.currentBar), { limit: RECENT_PAGE_SIZE }).then((rows) =>
-        rows.reverse(),
-      ),
-      fetchInitialDeltas(binanceInterval, RECENT_PAGE_SIZE).catch((err) => {
-        console.error("CVD-Update fehlgeschlagen:", err);
-        return null;
-      }),
-    ]);
+    let recent, freshDeltas;
+    if (isForex) {
+      recent = await fetchRecentForexCandles(props.symbol, props.currentBar, RECENT_PAGE_SIZE);
+      freshDeltas = null;
+    } else {
+      const binanceInterval = binanceIntervalFor(props.currentBar);
+      [recent, freshDeltas] = await Promise.all([
+        fetchCandlePage("/api/v5/market/candles", okxBarFor(props.currentBar), { limit: RECENT_PAGE_SIZE }).then((rows) =>
+          rows.reverse(),
+        ),
+        fetchInitialDeltas(binanceInterval, RECENT_PAGE_SIZE).catch((err) => {
+          console.error("CVD-Update fehlgeschlagen:", err);
+          return null;
+        }),
+      ]);
+    }
     allCandles = mergeRecent(allCandles, recent);
     if (freshDeltas) allCvdDeltas = mergeRecentDeltas(allCvdDeltas, freshDeltas);
     refreshChart();
@@ -249,20 +291,27 @@ onMounted(() => {
     borderVisible: false,
     wickUpColor: "#26a69a",
     wickDownColor: "#ef5350",
+    // Default (precision 2 / minMove 0.01) passt für BTC-USD, macht Forex-Kurse (GBPUSD
+    // z.B. 1.33941) aber auf 1.34 gerundet fast nutzlos — 5 Nachkommastellen (Pipette).
+    priceFormat: isForex
+      ? { type: "price", precision: 5, minMove: 0.00001 }
+      : { type: "price", precision: 2, minMove: 0.01 },
   });
 
-  cvdSeries = chart.addSeries(
-    LineSeries,
-    {
-      color: "#f0b90b",
-      lineWidth: 2,
-      priceLineVisible: false,
-      lastValueVisible: true,
-      title: "CVD (Binance Futures)",
-    },
-    1, // eigene Pane unterhalb des Candlestick-Charts
-  );
-  chart.panes()[1]?.setStretchFactor(0.25);
+  if (!isForex) {
+    cvdSeries = chart.addSeries(
+      LineSeries,
+      {
+        color: "#f0b90b",
+        lineWidth: 2,
+        priceLineVisible: false,
+        lastValueVisible: true,
+        title: "CVD (Binance Futures)",
+      },
+      1, // eigene Pane unterhalb des Candlestick-Charts
+    );
+    chart.panes()[1]?.setStretchFactor(0.25);
+  }
 
   resizeObserver = new ResizeObserver((entries) => {
     if (!chart) return; // Resize-Callback kann nach chart.remove() noch nachfeuern
@@ -282,8 +331,11 @@ onMounted(() => {
     try {
       const tasks = [];
       if (!reachedHistoryStart) {
+        const olderPromise = isForex
+          ? fetchOlderForexCandles(props.symbol, props.currentBar, allCandles[0].time, HISTORY_PAGE_SIZE)
+          : fetchOlderCandles(okxBarFor(props.currentBar), allCandles[0].time);
         tasks.push(
-          fetchOlderCandles(okxBarFor(props.currentBar), allCandles[0].time).then((older) => {
+          olderPromise.then((older) => {
             if (older.length === 0) reachedHistoryStart = true;
             else allCandles = older.concat(allCandles);
           }),
@@ -307,11 +359,13 @@ onMounted(() => {
   });
 
   loadInitial();
-  updateWindowGauge();
-  updateDailyGauge();
   pollTimer = setInterval(pollRecent, POLL_MS);
-  windowGaugeTimer = setInterval(updateWindowGauge, POLL_MS);
-  dailyGaugeTimer = setInterval(updateDailyGauge, POLL_MS);
+  if (!isForex) {
+    updateWindowGauge();
+    updateDailyGauge();
+    windowGaugeTimer = setInterval(updateWindowGauge, POLL_MS);
+    dailyGaugeTimer = setInterval(updateDailyGauge, POLL_MS);
+  }
 });
 
 onUnmounted(() => {
@@ -331,12 +385,13 @@ onUnmounted(() => {
 watch(() => props.currentBar, loadInitial);
 watch(() => props.trades, refreshTradeMarkersInternal);
 watch(() => props.poiZones, refreshPoiZonesInternal);
+watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
 </script>
 
 <template>
   <div class="chart-wrapper">
     <div ref="chartContainerRef" class="chart-container"></div>
-    <div class="cvd-gauges" :style="{ bottom: gaugesBottom + 'px' }">
+    <div v-if="!isForex" class="cvd-gauges" :style="{ bottom: gaugesBottom + 'px' }">
       <Gauge id="window" :value="windowDelta" label="Δ 15m" />
       <Gauge id="daily" :value="dailyDelta" label="Δ Tag (UTC)" />
     </div>
