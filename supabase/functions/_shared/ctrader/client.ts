@@ -184,6 +184,83 @@ function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
   return out;
 }
 
+async function authenticate(
+  conn: CTraderConnection,
+  clientId: string,
+  clientSecret: string,
+  accessToken: string,
+): Promise<string> {
+  await conn.send(PAYLOAD_TYPE.APPLICATION_AUTH_REQ, "ProtoOAApplicationAuthReq", { clientId, clientSecret });
+
+  if (!cachedAccountId) {
+    const acctRes = (await conn.send(
+      PAYLOAD_TYPE.GET_ACCOUNTS_BY_ACCESS_TOKEN_REQ,
+      "ProtoOAGetAccountListByAccessTokenReq",
+      { accessToken },
+    )) as unknown as { ctidTraderAccount: { ctidTraderAccountId: string }[] };
+    if (acctRes.ctidTraderAccount.length === 0) throw new Error("No cTrader accounts on this access token");
+    cachedAccountId = String(acctRes.ctidTraderAccount[0].ctidTraderAccountId);
+  }
+  const accountId = cachedAccountId;
+
+  await conn.send(PAYLOAD_TYPE.ACCOUNT_AUTH_REQ, "ProtoOAAccountAuthReq", { ctidTraderAccountId: accountId, accessToken });
+  return accountId;
+}
+
+async function resolveSymbolId(conn: CTraderConnection, accountId: string, symbolName: string): Promise<string> {
+  let symbolId = cachedSymbolIds.get(symbolName);
+  if (!symbolId) {
+    const symRes = (await conn.send(PAYLOAD_TYPE.SYMBOLS_LIST_REQ, "ProtoOASymbolsListReq", {
+      ctidTraderAccountId: accountId,
+    })) as unknown as { symbol: { symbolId: string; symbolName: string }[] };
+    for (const s of symRes.symbol) cachedSymbolIds.set(s.symbolName, String(s.symbolId));
+    symbolId = cachedSymbolIds.get(symbolName);
+    if (!symbolId) throw new Error(`Unknown symbol on this account: ${symbolName}`);
+  }
+  return symbolId;
+}
+
+async function fetchOneTrendbar(
+  conn: CTraderConnection,
+  accountId: string,
+  symbolId: string,
+  period: string,
+  count: number,
+  toTimestampMs?: number,
+): Promise<Candle[]> {
+  const periodNum = TRENDBAR_PERIOD[period];
+  if (!periodNum) throw new Error(`Unknown trendbar period: ${period}`);
+
+  // Empirically verified against demo.ctraderapi.com: the API always returns exactly
+  // `count - 1` trendbars (count=1 → 0 bars, count=1000 → 999, ...) — `toTimestamp` falls
+  // inside the still-forming current bar, which counts toward `count` internally but is
+  // never included in the response since it isn't closed yet. Request one extra to
+  // transparently give callers the number of (closed) bars they actually asked for.
+  const trendRes = (await conn.send(PAYLOAD_TYPE.GET_TRENDBARS_REQ, "ProtoOAGetTrendbarsReq", {
+    ctidTraderAccountId: accountId,
+    symbolId,
+    period: periodNum,
+    toTimestamp: toTimestampMs ?? Date.now(),
+    count: count + 1,
+  })) as unknown as {
+    trendbar: { low: string; deltaOpen: string; deltaHigh: string; deltaClose: string; volume: string; utcTimestampInMinutes: number }[];
+  };
+
+  return trendRes.trendbar
+    .map((b) => {
+      const low = Number(b.low);
+      return {
+        time: b.utcTimestampInMinutes * 60,
+        open: (low + Number(b.deltaOpen)) / 100000,
+        high: (low + Number(b.deltaHigh)) / 100000,
+        low: low / 100000,
+        close: (low + Number(b.deltaClose)) / 100000,
+        volume: Number(b.volume),
+      };
+    })
+    .sort((a, b) => a.time - b.time); // API order isn't guaranteed oldest-first
+}
+
 export interface FetchTrendbarsOptions {
   env?: "demo" | "live";
   clientId: string;
@@ -199,64 +276,36 @@ export async function fetchTrendbars(opts: FetchTrendbarsOptions): Promise<Candl
   const env = opts.env ?? "demo";
   const conn = await CTraderConnection.connect(env);
   try {
-    await conn.send(PAYLOAD_TYPE.APPLICATION_AUTH_REQ, "ProtoOAApplicationAuthReq", {
-      clientId: opts.clientId,
-      clientSecret: opts.clientSecret,
-    });
+    const accountId = await authenticate(conn, opts.clientId, opts.clientSecret, opts.accessToken);
+    const symbolId = await resolveSymbolId(conn, accountId, opts.symbolName);
+    return await fetchOneTrendbar(conn, accountId, symbolId, opts.period, opts.count, opts.toTimestampMs);
+  } finally {
+    conn.close();
+  }
+}
 
-    if (!cachedAccountId) {
-      const acctRes = (await conn.send(
-        PAYLOAD_TYPE.GET_ACCOUNTS_BY_ACCESS_TOKEN_REQ,
-        "ProtoOAGetAccountListByAccessTokenReq",
-        { accessToken: opts.accessToken },
-      )) as unknown as { ctidTraderAccount: { ctidTraderAccountId: string }[] };
-      if (acctRes.ctidTraderAccount.length === 0) throw new Error("No cTrader accounts on this access token");
-      cachedAccountId = String(acctRes.ctidTraderAccount[0].ctidTraderAccountId);
+export interface FetchTrendbarsBatchOptions {
+  env?: "demo" | "live";
+  clientId: string;
+  clientSecret: string;
+  accessToken: string;
+  requests: { symbolName: string; period: string; count: number; toTimestampMs?: number }[];
+}
+
+// Ein Connect/Auth-Handshake für mehrere Trendbar-Anfragen — genutzt vom poi-watcher-Cron,
+// der pro Lauf ohnehin mehrere Requests je Instrument braucht (Preis + 4H + 1H) und das
+// nicht für jede einzeln neu aufbauen muss.
+export async function fetchTrendbarsBatch(opts: FetchTrendbarsBatchOptions): Promise<Candle[][]> {
+  const env = opts.env ?? "demo";
+  const conn = await CTraderConnection.connect(env);
+  try {
+    const accountId = await authenticate(conn, opts.clientId, opts.clientSecret, opts.accessToken);
+    const results: Candle[][] = [];
+    for (const req of opts.requests) {
+      const symbolId = await resolveSymbolId(conn, accountId, req.symbolName);
+      results.push(await fetchOneTrendbar(conn, accountId, symbolId, req.period, req.count, req.toTimestampMs));
     }
-    const accountId = cachedAccountId;
-
-    await conn.send(PAYLOAD_TYPE.ACCOUNT_AUTH_REQ, "ProtoOAAccountAuthReq", {
-      ctidTraderAccountId: accountId,
-      accessToken: opts.accessToken,
-    });
-
-    let symbolId = cachedSymbolIds.get(opts.symbolName);
-    if (!symbolId) {
-      const symRes = (await conn.send(PAYLOAD_TYPE.SYMBOLS_LIST_REQ, "ProtoOASymbolsListReq", {
-        ctidTraderAccountId: accountId,
-      })) as unknown as { symbol: { symbolId: string; symbolName: string }[] };
-      for (const s of symRes.symbol) cachedSymbolIds.set(s.symbolName, String(s.symbolId));
-      symbolId = cachedSymbolIds.get(opts.symbolName);
-      if (!symbolId) throw new Error(`Unknown symbol on this account: ${opts.symbolName}`);
-    }
-
-    const period = TRENDBAR_PERIOD[opts.period];
-    if (!period) throw new Error(`Unknown trendbar period: ${opts.period}`);
-
-    const toTimestamp = opts.toTimestampMs ?? Date.now();
-    const trendRes = (await conn.send(PAYLOAD_TYPE.GET_TRENDBARS_REQ, "ProtoOAGetTrendbarsReq", {
-      ctidTraderAccountId: accountId,
-      symbolId,
-      period,
-      toTimestamp,
-      count: opts.count,
-    })) as unknown as {
-      trendbar: { low: string; deltaOpen: string; deltaHigh: string; deltaClose: string; volume: string; utcTimestampInMinutes: number }[];
-    };
-
-    return trendRes.trendbar
-      .map((b) => {
-        const low = Number(b.low);
-        return {
-          time: b.utcTimestampInMinutes * 60,
-          open: (low + Number(b.deltaOpen)) / 100000,
-          high: (low + Number(b.deltaHigh)) / 100000,
-          low: low / 100000,
-          close: (low + Number(b.deltaClose)) / 100000,
-          volume: Number(b.volume),
-        };
-      })
-      .sort((a, b) => a.time - b.time); // API order isn't guaranteed oldest-first
+    return results;
   } finally {
     conn.close();
   }

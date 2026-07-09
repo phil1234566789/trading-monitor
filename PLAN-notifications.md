@@ -176,6 +176,21 @@ Bewusst ausgelassen: es gibt noch kein fertiges Regelwerk für Claude (Strategie
       `notified_at`, obwohl nie eine echte Nachricht rausging. Kein Doppel-Versand passiert
       (der Send-Gate war korrekt), nur die Zeitstempel-Anzeige im Protokoll war irreführend.
       Fix deployed, Alt-Daten per Migration bereinigt (`20260705220000_fix_notified_at_backlog.sql`)
+- [x] **Update 2026-07-09: Multi-Instrument, BTC stummgeschaltet.** `poi-watcher` erkennt/
+      persistiert Zonen weiterhin für alle drei Instrumente (BTC-USDT/GBPUSD/EURUSD — Dashboard
+      braucht das), aber Telegram geht jetzt nur noch für GBPUSD/EURUSD raus (`sendTelegram`
+      je Instrument in `INSTRUMENTS`, siehe `supabase/functions/poi-watcher/index.ts`). Grund:
+      BTC war nur zum Testen der Pipeline, Philip tradet Daytrading auf Forex. GBPUSD/EURUSD-
+      Kerzen kommen über denselben cTrader-Connector wie der Dashboard-Chart (`_shared/
+      ctrader/client.ts`), ein Connect/Auth-Handshake pro Instrument und Lauf statt drei
+      (`fetchTrendbarsBatch` — Preis + 4H + 1H in einer Verbindung). Dabei einen echten
+      Off-by-one in der cTrader-API gefunden+gefixt: `count: N` liefert IMMER `N-1` Bars
+      (leere `toTimestamp`-Bar zählt intern mit, wird aber nie zurückgegeben, da noch nicht
+      geschlossen) — betraf auch schon den Dashboard-Chart unbemerkt (999 statt 1000 Bars).
+      Fix zentral in `fetchOneTrendbar` (fragt intern `count+1` an), profitiert beide Nutzer
+      (`ctrader-candles` UND `poi-watcher`) automatisch. Neue Instrumente starten wie BTC
+      damals ohne Alarm-Flut (erster Lauf hat keine `existing`-Zeilen, historische Alt-Touches
+      lösen keinen Alert aus).
 - [ ] Entry-Signal-Alert (Richtung, SL, Kurzbegründung) — folgt mit D3
 
 ### D5 — Scheduling & Deployment

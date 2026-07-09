@@ -1,26 +1,45 @@
-// D2 (vereinfacht): 4H+1H-Zonen-Wächter für BTC-USDT. Erkennt Order-Block-Zonen aus
-// OKX-Kerzen, persistiert sie in `ob_zones` und schickt eine Telegram-Nachricht, sobald
-// eine Zone zum ersten Mal vom Preis berührt wird. Kein M1/Claude-Entry-Check (D3) —
-// das kommt erst, wenn die Strategie ein Regelwerk für Claude hat.
+// D2 (vereinfacht): 4H+1H-Zonen-Wächter, jetzt Multi-Instrument (BTC-USDT via OKX,
+// GBPUSD/EURUSD via cTrader). Erkennt Order-Block-Zonen, persistiert sie in `ob_zones` und
+// schickt eine Telegram-Nachricht, sobald eine Zone zum ersten Mal vom Preis berührt wird —
+// aber nur für Instrumente mit `sendTelegram: true` (siehe INSTRUMENTS unten). BTC lief nur
+// zum Testen der Pipeline; Philip tradet Forex, daher jetzt GBPUSD/EURUSD live, BTC stumm
+// (Zonen werden weiter erkannt/im Dashboard angezeigt, nur der Versand ist aus). Kein M1/
+// Claude-Entry-Check (D3) — das kommt erst, wenn die Strategie ein Regelwerk für Claude hat.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { detectOrderBlocks, type Candle } from "../_shared/orderBlocks.ts";
+import { fetchTrendbarsBatch } from "../_shared/ctrader/client.ts";
 
 const OKX_BASE_URL = "https://www.okx.com";
-const INST_ID = "BTC-USDT";
-const TIMEFRAMES: { label: "4H" | "1H"; bar: string }[] = [
-  { label: "4H", bar: "4H" },
-  { label: "1H", bar: "1H" },
+const TIMEFRAMES: { label: "4H" | "1H"; okxBar: string; ctraderPeriod: string }[] = [
+  { label: "4H", okxBar: "4H", ctraderPeriod: "H4" },
+  { label: "1H", okxBar: "1H", ctraderPeriod: "H1" },
 ];
 const CANDLE_LIMIT = 300;
+
+interface InstrumentConfig {
+  instrument: string;
+  source: "okx" | "ctrader";
+  sendTelegram: boolean;
+  pricePrecision: number;
+}
+
+const INSTRUMENTS: InstrumentConfig[] = [
+  { instrument: "BTC-USDT", source: "okx", sendTelegram: false, pricePrecision: 2 },
+  { instrument: "GBPUSD", source: "ctrader", sendTelegram: true, pricePrecision: 5 },
+  { instrument: "EURUSD", source: "ctrader", sendTelegram: true, pricePrecision: 5 },
+];
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const TELEGRAM_CHAT_ID = Deno.env.get("TELEGRAM_CHAT_ID")!;
 const DRY_RUN = (Deno.env.get("DRY_RUN") ?? "false").toLowerCase() === "true";
+const CTRADER_CLIENT_ID = Deno.env.get("CTRADER_CLIENT_ID")!;
+const CTRADER_CLIENT_SECRET = Deno.env.get("CTRADER_CLIENT_SECRET")!;
+const CTRADER_ACCESS_TOKEN = Deno.env.get("CTRADER_ACCESS_TOKEN")!;
 
-async function fetchCandles(bar: string): Promise<Candle[]> {
-  const url = `${OKX_BASE_URL}/api/v5/market/candles?instId=${INST_ID}&bar=${bar}&limit=${CANDLE_LIMIT}`;
+async function fetchOkxCandles(instId: string, bar: string): Promise<Candle[]> {
+  const url = `${OKX_BASE_URL}/api/v5/market/candles?instId=${instId}&bar=${bar}&limit=${CANDLE_LIMIT}`;
   const res = await fetch(url);
   const json = await res.json();
   if (json.code !== "0") throw new Error(`OKX candles error ${json.code}: ${json.msg}`);
@@ -35,11 +54,29 @@ async function fetchCandles(bar: string): Promise<Candle[]> {
     .reverse(); // älteste zuerst
 }
 
-async function fetchCurrentPrice(): Promise<number> {
-  const res = await fetch(`${OKX_BASE_URL}/api/v5/market/ticker?instId=${INST_ID}`);
+async function fetchOkxPrice(instId: string): Promise<number> {
+  const res = await fetch(`${OKX_BASE_URL}/api/v5/market/ticker?instId=${instId}`);
   const json = await res.json();
   if (json.code !== "0") throw new Error(`OKX ticker error ${json.code}: ${json.msg}`);
   return Number(json.data[0].last);
+}
+
+// Ein Connect/Auth-Handshake pro Forex-Instrument statt drei (Preis + je Timeframe) — holt
+// den "aktuellen Preis" (Close der letzten M1-Bar, kein eigener Ticker-Endpunkt verdrahtet)
+// und alle Timeframe-Kerzen in einem Rutsch. Reihenfolge der Requests = Reihenfolge der
+// Ergebnisse: [M1-Preis-Bar, ...TIMEFRAMES].
+async function fetchCtraderBatch(symbol: string): Promise<{ currentPrice: number; candlesByTf: Map<string, Candle[]> }> {
+  const [priceBars, ...tfCandles] = await fetchTrendbarsBatch({
+    clientId: CTRADER_CLIENT_ID,
+    clientSecret: CTRADER_CLIENT_SECRET,
+    accessToken: CTRADER_ACCESS_TOKEN,
+    requests: [
+      { symbolName: symbol, period: "M1", count: 1 },
+      ...TIMEFRAMES.map((tf) => ({ symbolName: symbol, period: tf.ctraderPeriod, count: CANDLE_LIMIT })),
+    ],
+  });
+  const candlesByTf = new Map(TIMEFRAMES.map((tf, i) => [tf.label, tfCandles[i]]));
+  return { currentPrice: priceBars[priceBars.length - 1].close, candlesByTf };
 }
 
 async function sendTelegram(text: string) {
@@ -55,8 +92,8 @@ async function sendTelegram(text: string) {
   if (!res.ok) console.error("Telegram send failed:", await res.text());
 }
 
-function fmt(n: number) {
-  return n.toLocaleString("de-DE", { maximumFractionDigits: 2 });
+function fmt(n: number, precision: number) {
+  return n.toLocaleString("de-DE", { maximumFractionDigits: precision });
 }
 
 // Schlaffenster 23-5 Uhr lokal (Europe/Berlin) — Zonen werden weiterhin normal erkannt/
@@ -69,87 +106,99 @@ function isQuietHours(date: Date): boolean {
 }
 
 Deno.serve(async () => {
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-  const currentPrice = await fetchCurrentPrice();
-  const quietHours = isQuietHours(new Date());
-  const summary: Record<string, unknown> = {
-    instrument: INST_ID,
-    currentPrice,
-    dryRun: DRY_RUN,
-    quietHours,
-    timeframes: {},
-  };
+  try {
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const quietHours = isQuietHours(new Date());
+    const summary: Record<string, unknown> = { dryRun: DRY_RUN, quietHours, instruments: {} };
 
-  for (const tf of TIMEFRAMES) {
-    const candles = await fetchCandles(tf.bar);
-    const zones = detectOrderBlocks(candles);
+    for (const cfg of INSTRUMENTS) {
+      const ctraderBatch = cfg.source === "ctrader" ? await fetchCtraderBatch(cfg.instrument) : null;
+      const currentPrice = cfg.source === "okx" ? await fetchOkxPrice(cfg.instrument) : ctraderBatch!.currentPrice;
+      // Zonen werden für jedes Instrument immer erkannt/gespeichert (Dashboard-Charts brauchen
+      // das weiterhin) — `shouldSend` entscheidet nur, ob dafür auch wirklich eine
+      // Telegram-Nachricht rausgeht (BTC: nie, per `sendTelegram: false`; sonst: außerhalb der
+      // Ruhezeit). Gleiches Prinzip wie die bisherige Quiet-Hours-Behandlung, nur pro Instrument.
+      const shouldSend = cfg.sendTelegram && !quietHours;
+      const instrumentSummary: Record<string, unknown> = {};
 
-    const { data: existingRows, error: selectError } = await supabase
-      .from("ob_zones")
-      .select("start_time, direction, touched, notified, notified_at")
-      .eq("instrument", INST_ID)
-      .eq("timeframe", tf.label);
-    if (selectError) throw selectError;
+      for (const tf of TIMEFRAMES) {
+        const candles =
+          cfg.source === "okx" ? await fetchOkxCandles(cfg.instrument, tf.okxBar) : ctraderBatch!.candlesByTf.get(tf.label)!;
+        const zones = detectOrderBlocks(candles);
 
-    const existingMap = new Map(
-      (existingRows ?? []).map((r) => [
-        `${r.direction}_${Math.floor(new Date(r.start_time).getTime() / 1000)}`,
-        r,
-      ]),
-    );
+        const { data: existingRows, error: selectError } = await supabase
+          .from("ob_zones")
+          .select("start_time, direction, touched, notified, notified_at")
+          .eq("instrument", cfg.instrument)
+          .eq("timeframe", tf.label);
+        if (selectError) throw selectError;
 
-    let notifiedCount = 0;
-    for (const z of zones) {
-      const direction = z.dir === 1 ? "long" : "short";
-      const existing = existingMap.get(`${direction}_${z.startTime}`);
-      const justTouched = z.touched && !(existing?.touched ?? false);
+        const existingMap = new Map(
+          (existingRows ?? []).map((r) => [
+            `${r.direction}_${Math.floor(new Date(r.start_time).getTime() / 1000)}`,
+            r,
+          ]),
+        );
 
-      const { error: upsertError } = await supabase.from("ob_zones").upsert(
-        {
-          instrument: INST_ID,
-          timeframe: tf.label,
-          direction,
-          top: z.top,
-          bottom: z.bottom,
-          weak: z.weak,
-          touched: z.touched,
-          invalidated: z.invalidated,
-          start_time: new Date(z.startTime * 1000).toISOString(),
-          // end_time kommt direkt aus der Zonen-Erkennung: waechst mit jeder Kerze, bis die
-          // Zone touched/invalidated ist, dann friert es automatisch ein (siehe
-          // detectOrderBlocks in _shared/orderBlocks.ts) — deterministisch aus der
-          // Kerzenhistorie, keine eigene Wanduhr-Bookkeeping noetig.
-          end_time: new Date(z.endTime * 1000).toISOString(),
-          notified: existing ? existing.notified || justTouched : z.touched,
-          // notified_at nur bei einem echten Versand setzen (existing muss vorhanden sein,
-          // sonst ist es ein historischer Alt-Touch ohne echten Alarm) — sonst würde ein
-          // beim Deploy schon getouchtes Alt-Zone-Backlog faelschlich den Deploy-Zeitpunkt
-          // als "gerade eben benachrichtigt" zeigen.
-          notified_at: justTouched && existing ? new Date().toISOString() : existing?.notified_at ?? null,
-        },
-        { onConflict: "instrument,timeframe,start_time,direction" },
-      );
-      if (upsertError) throw upsertError;
+        let notifiedCount = 0;
+        for (const z of zones) {
+          const direction = z.dir === 1 ? "long" : "short";
+          const existing = existingMap.get(`${direction}_${z.startTime}`);
+          const justTouched = z.touched && !(existing?.touched ?? false);
 
-      // Bei brandneuen Zonen (kein `existing`), die schon beim ersten Erkennen touched
-      // sind, nicht alarmieren — das waere ein historischer Alt-Touch, kein "jetzt gerade".
-      // Waehrend der Schlaf-Ruhezeit (23-5 Uhr) wird der Touch trotzdem als notified
-      // vermerkt (kein nachtraeglicher Alarm beim Aufwachen), nur der Versand entfaellt.
-      if (justTouched && existing) {
-        if (!quietHours) {
-          notifiedCount++;
-          const label = direction === "long" ? "Bullish" : "Bearish";
-          await sendTelegram(
-            `📍 BTC-USDT ${tf.label} ${label} OB erreicht\n` +
-              `Zone: ${fmt(z.bottom)} – ${fmt(z.top)}${z.weak ? " (schwach)" : ""}\n` +
-              `Preis: ${fmt(currentPrice)}`,
+          const { error: upsertError } = await supabase.from("ob_zones").upsert(
+            {
+              instrument: cfg.instrument,
+              timeframe: tf.label,
+              direction,
+              top: z.top,
+              bottom: z.bottom,
+              weak: z.weak,
+              touched: z.touched,
+              invalidated: z.invalidated,
+              start_time: new Date(z.startTime * 1000).toISOString(),
+              // end_time kommt direkt aus der Zonen-Erkennung: waechst mit jeder Kerze, bis die
+              // Zone touched/invalidated ist, dann friert es automatisch ein (siehe
+              // detectOrderBlocks in _shared/orderBlocks.ts) — deterministisch aus der
+              // Kerzenhistorie, keine eigene Wanduhr-Bookkeeping noetig.
+              end_time: new Date(z.endTime * 1000).toISOString(),
+              notified: existing ? existing.notified || justTouched : z.touched,
+              // notified_at nur bei einem echten Versand setzen (existing muss vorhanden sein,
+              // sonst ist es ein historischer Alt-Touch ohne echten Alarm) — sonst würde ein
+              // beim Deploy schon getouchtes Alt-Zone-Backlog faelschlich den Deploy-Zeitpunkt
+              // als "gerade eben benachrichtigt" zeigen.
+              notified_at: justTouched && existing && shouldSend ? new Date().toISOString() : existing?.notified_at ?? null,
+            },
+            { onConflict: "instrument,timeframe,start_time,direction" },
           );
+          if (upsertError) throw upsertError;
+
+          // Bei brandneuen Zonen (kein `existing`), die schon beim ersten Erkennen touched
+          // sind, nicht alarmieren — das waere ein historischer Alt-Touch, kein "jetzt gerade".
+          if (justTouched && existing && shouldSend) {
+            notifiedCount++;
+            const label = direction === "long" ? "Bullish" : "Bearish";
+            await sendTelegram(
+              `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
+                `Zone: ${fmt(z.bottom, cfg.pricePrecision)} – ${fmt(z.top, cfg.pricePrecision)}${z.weak ? " (schwach)" : ""}\n` +
+                `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+            );
+          }
         }
+
+        instrumentSummary[tf.label] = { zonesSeen: zones.length, notified: notifiedCount };
       }
+
+      (summary.instruments as Record<string, unknown>)[cfg.instrument] = { currentPrice, shouldSend, ...instrumentSummary };
     }
 
-    (summary.timeframes as Record<string, unknown>)[tf.label] = { zonesSeen: zones.length, notified: notifiedCount };
+    return new Response(JSON.stringify(summary), { headers: { "Content-Type": "application/json" } });
+  } catch (err) {
+    console.error("poi-watcher error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
-
-  return new Response(JSON.stringify(summary), { headers: { "Content-Type": "application/json" } });
 });
