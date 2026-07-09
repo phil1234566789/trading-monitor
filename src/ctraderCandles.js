@@ -4,7 +4,7 @@
 // entspricht bewusst den OKX-Fetch-Funktionen in PriceChart.vue (oldest-first, {time,open,
 // high,low,close}), damit sich beide Datenquellen dort gleich behandeln lassen.
 const CTRADER_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ctrader-candles`;
-const PERIOD_MAP = { "1m": "M1", "5m": "M5", "15m": "M15", "1h": "H1", "4h": "H4", "1D": "D1" };
+const PERIOD_MAP = { "1m": "M1", "3m": "M3", "5m": "M5", "15m": "M15", "1h": "H1", "4h": "H4", "1D": "D1" };
 
 function ctraderPeriodFor(label) {
   return PERIOD_MAP[label];

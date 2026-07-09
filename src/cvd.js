@@ -9,7 +9,7 @@ const BINANCE_FUTURES_BASE_URL = "https://fapi.binance.com";
 const BINANCE_SYMBOL = "BTCUSDT";
 export const BINANCE_PAGE_SIZE = 1000;
 
-const INTERVAL_MAP = { "1m": "1m", "5m": "5m", "15m": "15m", "1h": "1h", "4h": "4h", "1D": "1d" };
+const INTERVAL_MAP = { "1m": "1m", "3m": "3m", "5m": "5m", "15m": "15m", "1h": "1h", "4h": "4h", "1D": "1d" };
 
 export function binanceIntervalFor(label) {
   return INTERVAL_MAP[label];

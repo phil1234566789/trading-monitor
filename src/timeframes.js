@@ -1,5 +1,6 @@
 export const TIMEFRAMES = [
   { label: "1m", bar: "1m" },
+  { label: "3m", bar: "3m" },
   { label: "5m", bar: "5m" },
   { label: "15m", bar: "15m" },
   { label: "1h", bar: "1H" },
