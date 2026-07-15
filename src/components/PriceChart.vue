@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import { createChart, CandlestickSeries, LineSeries, TickMarkType } from "lightweight-charts";
 import { detectOrderBlocks, renderPersistedZones } from "../orderBlocks.js";
+import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels } from "../liquidity.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import {
   binanceIntervalFor,
@@ -26,6 +27,7 @@ const props = defineProps({
   trades: { type: Array, default: () => [] },
   poiZones: { type: Array, default: () => [] },
   showHistoricalObs: { type: Boolean, default: false },
+  showLiquidity: { type: Boolean, default: true },
 });
 
 // CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
@@ -43,6 +45,9 @@ const INITIAL_CANDLE_COUNT = 1000; // depth loaded on startup / timeframe switch
 const LAZY_LOAD_LOGICAL_THRESHOLD = 20; // fetch older data once this close to the left edge
 const WINDOW_BARS = 15; // letzte 15 Binance-1m-Kerzen für das rollierende Gauge-Fenster
 const TRADE_MARKER_BARS = new Set(["1m", "5m", "15m", "1h"]); // 4h/1D würden zu unübersichtlich
+const LIQUIDITY_FRACTAL_PERIOD = 5; // Williams-Fractal-Periode, siehe fractals.pine
+const LIQUIDITY_MAX_RELEVANT = 10; // je Richtung, siehe liqMaxRelevant in inputs.pine
+const LIQUIDITY_ONLY_RELEVANT = true; // blendet alte, längst geswepte Level aus
 
 const { markSuccess } = useStatusBar();
 
@@ -59,6 +64,7 @@ let candleSeries;
 let cvdSeries;
 let resizeObserver;
 let orderBlockPrimitives = [];
+let liquidityPrimitives = [];
 let tradePrimitives = [];
 let allCandles = [];
 let allCvdDeltas = [];
@@ -181,6 +187,23 @@ function refreshPoiZonesInternal() {
   }
 }
 
+// Liquiditäts-Level (Fractal-Pivots, siehe tv-indikator/src/liquidity.pine) gibt es
+// bisher für kein Symbol aus dem Backend — anders als die BTC-OB-Zonen (`ob_zones`)
+// deshalb hier für beide (BTC + Forex) direkt aus den geladenen Kerzen des aktuellen
+// Chart-Timeframes neu erkannt, analog zur Forex-OB-Erkennung oben.
+function refreshLiquidityInternal() {
+  if (!props.showLiquidity) {
+    renderLiquidityLevels(candleSeries, [], liquidityPrimitives, allCandles);
+    return;
+  }
+  const { highs, lows } = detectLiquidityLevels(allCandles, LIQUIDITY_FRACTAL_PERIOD);
+  const relevant = [
+    ...filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, LIQUIDITY_ONLY_RELEVANT),
+    ...filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, LIQUIDITY_ONLY_RELEVANT),
+  ];
+  renderLiquidityLevels(candleSeries, relevant, liquidityPrimitives, allCandles);
+}
+
 function refreshChart() {
   // Async loads (loadInitial/pollRecent/lazy-load) koennen noch laufen, wenn die
   // Komponente schon unmounted wurde (z.B. schnelle Navigation zu /protokoll) — chart
@@ -188,6 +211,7 @@ function refreshChart() {
   if (!chart) return;
   candleSeries.setData(allCandles);
   refreshPoiZonesInternal();
+  refreshLiquidityInternal();
   refreshTradeMarkersInternal();
   cvdSeries?.setData(cumulativeFromDeltas(allCvdDeltas));
   positionGauges();
@@ -386,6 +410,7 @@ watch(() => props.currentBar, loadInitial);
 watch(() => props.trades, refreshTradeMarkersInternal);
 watch(() => props.poiZones, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
+watch(() => props.showLiquidity, refreshLiquidityInternal);
 </script>
 
 <template>

@@ -21,6 +21,7 @@ const currentBar = ref("1h");
 // (dort default auch aus). Ein einzelner Schalter statt pro-Timeframe (4H/1H getrennt wie
 // dort), weil hier ohnehin nur "schon getestet ja/nein" existiert, kein Nearest-3-Ranking.
 const showHistoricalObs = ref(false);
+const showLiquidity = ref(true);
 const isBtc = computed(() => currentSymbol.value === "BTC-USDT");
 const { data: trades, refresh: refreshTrades } = usePolledFetch(
   () => (isBtc.value ? fetchTrades(currentSymbol.value) : []),
@@ -64,6 +65,9 @@ watch(currentSymbol, () => {
       <button :class="{ active: showHistoricalObs }" @click="showHistoricalObs = !showHistoricalObs">
         Historische OBs
       </button>
+      <button :class="{ active: showLiquidity }" @click="showLiquidity = !showLiquidity">
+        Liquidität
+      </button>
     </div>
   </div>
 
@@ -74,6 +78,7 @@ watch(currentSymbol, () => {
     :trades="trades"
     :poi-zones="poiZones"
     :show-historical-obs="showHistoricalObs"
+    :show-liquidity="showLiquidity"
   />
 
   <aside class="trades-panel">
