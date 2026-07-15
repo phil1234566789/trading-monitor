@@ -96,29 +96,39 @@ function fmt(n: number, precision: number) {
   return n.toLocaleString("de-DE", { maximumFractionDigits: precision });
 }
 
-// Schlaffenster 23-5 Uhr lokal (Europe/Berlin) — Zonen werden weiterhin normal erkannt/
-// upgedatet (Kontinuität für die touched-Erkennung), nur der Telegram-Versand pausiert.
-function isQuietHours(date: Date): boolean {
-  const hour = Number(
-    new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", hour12: false }).format(date),
-  );
-  return hour >= 23 || hour < 5;
+// Trading-Session-Fenster 8:00-17:30 lokal (Europe/Berlin) — Zonen werden weiterhin normal
+// erkannt/upgedatet (Kontinuität für die touched-Erkennung, kein Nachhol-Alarm-Schwall beim
+// Fenster-Start), nur der Telegram-Versand ist auf die Session begrenzt. Cron laeuft bewusst
+// trotzdem rund um die Uhr weiter (siehe poi_watcher_cron Migration) — wuerde der Cron selbst
+// pausieren, wuerden ueber Nacht liegengebliebene Touches beim naechsten Lauf faelschlich als
+// "gerade eben" markiert und alle auf einmal gemeldet.
+function isTradingHours(date: Date): boolean {
+  const parts = new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const hour = Number(parts.find((p) => p.type === "hour")!.value);
+  const minute = Number(parts.find((p) => p.type === "minute")!.value);
+  const minutesSinceMidnight = hour * 60 + minute;
+  return minutesSinceMidnight >= 8 * 60 && minutesSinceMidnight < 17 * 60 + 30;
 }
 
 Deno.serve(async () => {
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    const quietHours = isQuietHours(new Date());
-    const summary: Record<string, unknown> = { dryRun: DRY_RUN, quietHours, instruments: {} };
+    const tradingHours = isTradingHours(new Date());
+    const summary: Record<string, unknown> = { dryRun: DRY_RUN, tradingHours, instruments: {} };
 
     for (const cfg of INSTRUMENTS) {
       const ctraderBatch = cfg.source === "ctrader" ? await fetchCtraderBatch(cfg.instrument) : null;
       const currentPrice = cfg.source === "okx" ? await fetchOkxPrice(cfg.instrument) : ctraderBatch!.currentPrice;
       // Zonen werden für jedes Instrument immer erkannt/gespeichert (Dashboard-Charts brauchen
       // das weiterhin) — `shouldSend` entscheidet nur, ob dafür auch wirklich eine
-      // Telegram-Nachricht rausgeht (BTC: nie, per `sendTelegram: false`; sonst: außerhalb der
-      // Ruhezeit). Gleiches Prinzip wie die bisherige Quiet-Hours-Behandlung, nur pro Instrument.
-      const shouldSend = cfg.sendTelegram && !quietHours;
+      // Telegram-Nachricht rausgeht (BTC: nie, per `sendTelegram: false`; sonst: nur innerhalb
+      // der Trading-Session).
+      const shouldSend = cfg.sendTelegram && tradingHours;
       const instrumentSummary: Record<string, unknown> = {};
 
       for (const tf of TIMEFRAMES) {
@@ -144,7 +154,19 @@ Deno.serve(async () => {
         for (const z of zones) {
           const direction = z.dir === 1 ? "long" : "short";
           const existing = existingMap.get(`${direction}_${z.startTime}`);
-          const justTouched = z.touched && !(existing?.touched ?? false);
+          const wasTouchedInDb = existing?.touched ?? false;
+
+          // Live-Preis-Touch: cTrader liefert nur geschlossene Kerzen, d.h. ohne das hier
+          // wuerde ein Touch erst erkannt, wenn die volle 1H/4H-Kerze schliesst (bis zu 59min
+          // Verzoegerung). Einmal getouched bleibt getouched (auch wenn detectOrderBlocks()
+          // die noch offene Kerze dementsprechend noch nicht sieht) — sonst faellt der Wert
+          // beim naechsten Run auf false zurueck und der Alarm geht beim echten Kerzenschluss
+          // ein zweites Mal raus.
+          if (!z.invalidated && !z.touched && (wasTouchedInDb || (currentPrice <= z.top && currentPrice >= z.bottom))) {
+            z.touched = true;
+          }
+
+          const justTouched = z.touched && !wasTouchedInDb;
 
           const { error: upsertError } = await supabase.from("ob_zones").upsert(
             {

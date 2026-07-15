@@ -184,6 +184,10 @@ function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
   return out;
 }
 
+async function authAccount(conn: CTraderConnection, accountId: string, accessToken: string): Promise<void> {
+  await conn.send(PAYLOAD_TYPE.ACCOUNT_AUTH_REQ, "ProtoOAAccountAuthReq", { ctidTraderAccountId: accountId, accessToken });
+}
+
 async function authenticate(
   conn: CTraderConnection,
   clientId: string,
@@ -192,19 +196,39 @@ async function authenticate(
 ): Promise<string> {
   await conn.send(PAYLOAD_TYPE.APPLICATION_AUTH_REQ, "ProtoOAApplicationAuthReq", { clientId, clientSecret });
 
-  if (!cachedAccountId) {
-    const acctRes = (await conn.send(
-      PAYLOAD_TYPE.GET_ACCOUNTS_BY_ACCESS_TOKEN_REQ,
-      "ProtoOAGetAccountListByAccessTokenReq",
-      { accessToken },
-    )) as unknown as { ctidTraderAccount: { ctidTraderAccountId: string }[] };
-    if (acctRes.ctidTraderAccount.length === 0) throw new Error("No cTrader accounts on this access token");
-    cachedAccountId = String(acctRes.ctidTraderAccount[0].ctidTraderAccountId);
+  // A cached account can go stale (e.g. a broker disables/closes it) without any local
+  // signal — re-validate it every time instead of trusting it forever once resolved.
+  if (cachedAccountId) {
+    try {
+      await authAccount(conn, cachedAccountId, accessToken);
+      return cachedAccountId;
+    } catch {
+      cachedAccountId = null;
+    }
   }
-  const accountId = cachedAccountId;
 
-  await conn.send(PAYLOAD_TYPE.ACCOUNT_AUTH_REQ, "ProtoOAAccountAuthReq", { ctidTraderAccountId: accountId, accessToken });
-  return accountId;
+  const acctRes = (await conn.send(
+    PAYLOAD_TYPE.GET_ACCOUNTS_BY_ACCESS_TOKEN_REQ,
+    "ProtoOAGetAccountListByAccessTokenReq",
+    { accessToken },
+  )) as unknown as { ctidTraderAccount: { ctidTraderAccountId: string }[] };
+  if (acctRes.ctidTraderAccount.length === 0) throw new Error("No cTrader accounts on this access token");
+
+  // A token can be linked to multiple accounts (e.g. old + new prop-firm challenge accounts)
+  // and the list order isn't a guarantee of which one is actually active — try each until one
+  // authenticates instead of blindly trusting index 0.
+  let lastError: unknown;
+  for (const acct of acctRes.ctidTraderAccount) {
+    const id = String(acct.ctidTraderAccountId);
+    try {
+      await authAccount(conn, id, accessToken);
+      cachedAccountId = id;
+      return id;
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("No usable cTrader account on this access token");
 }
 
 async function resolveSymbolId(conn: CTraderConnection, accountId: string, symbolName: string): Promise<string> {
