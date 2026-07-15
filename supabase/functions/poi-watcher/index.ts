@@ -7,6 +7,7 @@
 // Claude-Entry-Check (D3) — das kommt erst, wenn die Strategie ein Regelwerk für Claude hat.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { detectOrderBlocks, type Candle } from "../_shared/orderBlocks.ts";
+import { detectLiquidityLevels } from "../_shared/liquidity.ts";
 import { fetchTrendbarsBatch } from "../_shared/ctrader/client.ts";
 
 const OKX_BASE_URL = "https://www.okx.com";
@@ -15,6 +16,7 @@ const TIMEFRAMES: { label: "4H" | "1H"; okxBar: string; ctraderPeriod: string }[
   { label: "1H", okxBar: "1H", ctraderPeriod: "H1" },
 ];
 const CANDLE_LIMIT = 300;
+const LIQUIDITY_FRACTAL_PERIOD = 5; // siehe LIQUIDITY_FRACTAL_PERIOD in PriceChart.vue
 
 interface InstrumentConfig {
   instrument: string;
@@ -209,6 +211,77 @@ Deno.serve(async () => {
         }
 
         instrumentSummary[tf.label] = { zonesSeen: zones.length, notified: notifiedCount };
+      }
+
+      // 1H-Liquiditäts-Level (Fractal-Sweeps, siehe src/liquidity.js) — nur für die
+      // cTrader-Instrumente (GBPUSD/EURUSD), Philip wollte das explizit nicht für BTC.
+      // Gleiches Live-Preis-Sofort-Touch-Muster wie oben bei den OB-Zonen (cTrader liefert
+      // nur geschlossene Kerzen, sonst bis zu 59min Verzoegerung bis zum Alarm).
+      if (cfg.source === "ctrader") {
+        const candles1h = ctraderBatch!.candlesByTf.get("1H")!;
+        const { highs, lows } = detectLiquidityLevels(candles1h, LIQUIDITY_FRACTAL_PERIOD);
+        const levels = [
+          ...highs.map((l) => ({ ...l, direction: "high" as const })),
+          ...lows.map((l) => ({ ...l, direction: "low" as const })),
+        ];
+
+        const { data: existingLiqRows, error: liqSelectError } = await supabase
+          .from("liquidity_levels")
+          .select("pivot_time, direction, touched, notified, notified_at")
+          .eq("instrument", cfg.instrument)
+          .eq("timeframe", "1H");
+        if (liqSelectError) throw liqSelectError;
+
+        const existingLiqMap = new Map(
+          (existingLiqRows ?? []).map((r) => [
+            `${r.direction}_${Math.floor(new Date(r.pivot_time).getTime() / 1000)}`,
+            r,
+          ]),
+        );
+
+        let liqNotifiedCount = 0;
+        for (const lvl of levels) {
+          const existing = existingLiqMap.get(`${lvl.direction}_${lvl.pivotTime}`);
+          const wasTouchedInDb = existing?.touched ?? false;
+
+          if (
+            !lvl.touched &&
+            (wasTouchedInDb || (lvl.direction === "high" ? currentPrice >= lvl.price : currentPrice <= lvl.price))
+          ) {
+            lvl.touched = true;
+          }
+
+          const justTouched = lvl.touched && !wasTouchedInDb;
+
+          const { error: upsertLiqError } = await supabase.from("liquidity_levels").upsert(
+            {
+              instrument: cfg.instrument,
+              timeframe: "1H",
+              direction: lvl.direction,
+              price: lvl.price,
+              pivot_time: new Date(lvl.pivotTime * 1000).toISOString(),
+              touched: lvl.touched,
+              notified: existing ? existing.notified || justTouched : lvl.touched,
+              notified_at: justTouched && existing && shouldSend ? new Date().toISOString() : existing?.notified_at ?? null,
+            },
+            { onConflict: "instrument,timeframe,direction,pivot_time" },
+          );
+          if (upsertLiqError) throw upsertLiqError;
+
+          // Neue Level, die schon beim ersten Erkennen touched sind, waeren ein
+          // historischer Alt-Touch (z.B. direkt nach Deploy) — kein "jetzt gerade".
+          if (justTouched && existing && shouldSend) {
+            liqNotifiedCount++;
+            const label = lvl.direction === "high" ? "Hoch" : "Tief";
+            await sendTelegram(
+              `💧 ${cfg.instrument} 1H Liquiditäts-Level (${label}) angetestet\n` +
+                `Level: ${fmt(lvl.price, cfg.pricePrecision)}\n` +
+                `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+            );
+          }
+        }
+
+        instrumentSummary["1H_liquidity"] = { levelsSeen: levels.length, notified: liqNotifiedCount };
       }
 
       (summary.instruments as Record<string, unknown>)[cfg.instrument] = { currentPrice, shouldSend, ...instrumentSummary };
