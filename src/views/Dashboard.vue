@@ -23,6 +23,9 @@ const currentBar = ref("1h");
 const showHistoricalObs = ref(false);
 const showLiquidity = ref(true);
 const showTradeSetups = ref(true);
+// Anzahl vergangener Setups je Richtung, analog zu tradeSetupHistoryCountShort/Long im
+// tv-indikator (dort default 5, 0-50) — 0 zeigt nur das gerade aktive/letzte Setup.
+const tradeSetupHistoryCount = ref(5);
 const isBtc = computed(() => currentSymbol.value === "BTC-USDT");
 const { data: trades, refresh: refreshTrades } = usePolledFetch(
   () => (isBtc.value ? fetchTrades(currentSymbol.value) : []),
@@ -72,6 +75,15 @@ watch(currentSymbol, () => {
       <button :class="{ active: showTradeSetups }" @click="showTradeSetups = !showTradeSetups">
         Trade-Setups
       </button>
+      <input
+        v-if="showTradeSetups"
+        v-model.number="tradeSetupHistoryCount"
+        type="number"
+        min="0"
+        max="50"
+        class="trade-setup-history-count"
+        title="Anzahl vergangener Trade-Setups je Richtung"
+      />
     </div>
   </div>
 
@@ -84,6 +96,7 @@ watch(currentSymbol, () => {
     :show-historical-obs="showHistoricalObs"
     :show-liquidity="showLiquidity"
     :show-trade-setups="showTradeSetups"
+    :trade-setup-history-count="tradeSetupHistoryCount"
   />
 
   <aside class="trades-panel">
@@ -145,6 +158,17 @@ watch(currentSymbol, () => {
 .drawing-toggles button.active {
   background: #2962ff;
   color: #fff;
+}
+
+.trade-setup-history-count {
+  width: 40px;
+  margin-left: 4px;
+  background: #131722;
+  border: 1px solid #2a2e39;
+  border-radius: 4px;
+  color: #d1d4dc;
+  font-size: 13px;
+  padding: 3px 4px;
 }
 
 .trades-panel {

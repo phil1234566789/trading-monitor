@@ -65,32 +65,35 @@ function findBestLsMatch(h1Levels, m5Levels, fractal, dir, graceSec, lsMaxLeadSe
   return h1Match;
 }
 
-// Sucht von der neuesten Uhrzeit aus rückwärts das erste noch ungebrochene (touched=false)
-// Fraktal, für das ein gültiges LS existiert (H1 und M5 zählen gleichwertig). fractalLevels
-// ist chronologisch sortiert — bricht ab, sobald ein Fraktal älter als maxLookbackSec ist.
-function findProtectedFractal(fractalLevels, h1Levels, m5Levels, dir, params) {
-  const oldestAllowed = params.nowTime - params.maxLookbackSec;
-  for (let i = fractalLevels.length - 1; i >= 0; i--) {
-    const candidate = fractalLevels[i];
-    if (candidate.pivotTime < oldestAllowed) break;
-    if (!candidate.touched) {
-      const ls = findBestLsMatch(h1Levels, m5Levels, candidate, dir, params.graceSec, params.lsMaxLeadSec);
-      if (ls) return { fractal: candidate, ls };
-    }
+// Jedes Fraktal im geladenen Fenster (unabhängig vom aktuellen touched-Status) unabhängig
+// darauf prüfen, ob es damals ein gültiges LS hatte — anders als die "Live"-Suche im
+// tv-indikator (findProtectedFractal dort verlangt touched=false, weil dort nur der GERADE
+// aktive Setup gezeichnet wird). Hier soll auch die Historie sichtbar sein (siehe
+// tradeSetupHistoryCount in PriceChart.vue), daher zählt jedes damals gültige Fraktal, ob es
+// später gebrochen wurde oder nicht — wir haben ohnehin keinen bar-für-bar-State wie das
+// Pine-Original, sondern rechnen bei jedem Refresh komplett neu aus dem geladenen Fenster.
+function findAllProtectedFractals(fractalLevels, h1Levels, m5Levels, dir, params) {
+  const results = [];
+  for (const candidate of fractalLevels) {
+    const ls = findBestLsMatch(h1Levels, m5Levels, candidate, dir, params.graceSec, params.lsMaxLeadSec);
+    if (ls) results.push({ fractal: candidate, ls });
   }
-  return null;
+  return results; // chronologisch (fractalLevels ist es bereits)
 }
 
-// Gültiges Setup = (1) aktuell gültiges "Protected High/Low" auf M5-Basis + der es sweepende
-// H1- oder M5-LQ-Level, UND (2) ein bestätigendes M5-OB, das zeitlich NACH diesem M5-Fraktal
+// Gültiges Setup = (1) ein "Protected High/Low" auf M5-Basis + der es sweepende H1- oder
+// M5-LQ-Level, UND (2) ein bestätigendes M5-OB, das zeitlich NACH diesem M5-Fraktal
 // entstanden ist. dir: 1 = Short (Protected High, braucht bärisches M5-OB), -1 = Long
 // (Protected Low, braucht bullisches M5-OB). m5Levels ist i.d.R. dieselbe Array-Referenz wie
-// fractalLevels (ein Fraktal kann auch von einem anderen M5-Fraktal geswept werden).
-export function detectTradeSetup(dir, fractalLevels, h1Levels, m5Levels, setupObs, params) {
-  const found = findProtectedFractal(fractalLevels, h1Levels, m5Levels, dir, params);
-  if (!found) return null;
+// fractalLevels (ein Fraktal kann auch von einem anderen M5-Fraktal geswept werden). Gibt ALLE
+// im Fenster gefundenen Setups zurück (chronologisch, älteste zuerst) — Aufrufer schneidet
+// selbst auf die gewünschte Anzahl zu (siehe lastTradeSetups im Original).
+export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupObs, params) {
   const obDir = dir === 1 ? -1 : 1;
-  const ob = findFirstSetupObAfter(setupObs, obDir, found.fractal.pivotTime, params.obMaxDelaySec);
-  if (!ob) return null;
-  return { dir, fractal: found.fractal, ls: found.ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime };
+  const setups = [];
+  for (const { fractal, ls } of findAllProtectedFractals(fractalLevels, h1Levels, m5Levels, dir, params)) {
+    const ob = findFirstSetupObAfter(setupObs, obDir, fractal.pivotTime, params.obMaxDelaySec);
+    if (ob) setups.push({ dir, fractal, ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime });
+  }
+  return setups;
 }

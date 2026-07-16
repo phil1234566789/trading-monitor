@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, ref, watch } from "vue";
 import { createChart, CandlestickSeries, LineSeries, TickMarkType } from "lightweight-charts";
 import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
 import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, LiquidityLinePrimitive } from "../liquidity.js";
-import { detectSetupObs, detectTradeSetup } from "../tradeSetup.js";
+import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import {
   binanceIntervalFor,
@@ -30,6 +30,7 @@ const props = defineProps({
   showHistoricalObs: { type: Boolean, default: false },
   showLiquidity: { type: Boolean, default: true },
   showTradeSetups: { type: Boolean, default: true },
+  tradeSetupHistoryCount: { type: Number, default: 5 },
 });
 
 // CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
@@ -235,6 +236,11 @@ function refreshLiquidityInternal() {
 // Erkennung läuft nur, wenn sich die M5/H1-Kerzen geändert haben (siehe loadTradeSetupCandles)
 // — das Ergebnis (currentTradeSetups) bleibt über Timeframe-Wechsel/refreshChart-Aufrufe
 // hinweg stehen, nur renderTradeSetupsInternal() (Positionierung) läuft bei jedem Refresh neu.
+// Zeigt die letzten `tradeSetupHistoryCount` Setups JE Richtung (analog zu
+// tradeSetupHistoryCountShort/Long + lastTradeSetups im Original) — nicht nur das gerade
+// aktive. Nummerierung (1..n, chronologisch) nur für die angezeigte Auswahl, nicht global über
+// die gesamte Historie — wir haben keinen fortlaufenden Zähler wie das Pine-Original, das bei
+// jedem neuen Live-Setup hochzählt.
 function computeTradeSetups() {
   if (tradeSetupM5Candles.length === 0 || tradeSetupH1Candles.length === 0) {
     currentTradeSetups = [];
@@ -250,10 +256,18 @@ function computeTradeSetups() {
     obMaxDelaySec: TRADE_SETUP_OB_MAX_DELAY_SEC,
     nowTime: tradeSetupM5Candles[tradeSetupM5Candles.length - 1].time,
   };
+  // Anders als tradeSetupHistoryCountShort/Long im Original (dort "zusätzlich zum aktuell
+  // aktiven", 0 = nur das aktive) zählt n hier die GESAMTE Anzahl gezeigter Setups je
+  // Richtung — wir zeichnen kein separates "Live"-Setup, siehe detectTradeSetups. n=0 zeigt
+  // also nichts (slice(-0) wäre sonst das GANZE Array, daher der Sonderfall).
+  const n = Math.max(0, props.tradeSetupHistoryCount);
+  const takeLast = (arr) => (n === 0 ? [] : arr.slice(-n));
+  const shorts = takeLast(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params));
+  const longs = takeLast(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params));
   currentTradeSetups = [
-    detectTradeSetup(1, m5Highs, h1Highs, m5Highs, setupObs, params),
-    detectTradeSetup(-1, m5Lows, h1Lows, m5Lows, setupObs, params),
-  ].filter((s) => s !== null);
+    ...shorts.map((s, i) => ({ ...s, label: n > 1 ? `Short-Setup (${i + 1})` : "Short-Setup" })),
+    ...longs.map((s, i) => ({ ...s, label: n > 1 ? `Long-Setup (${i + 1})` : "Long-Setup" })),
+  ];
 }
 
 // OB (Order Block) ≠ FVG — siehe obBoxBounds in tradesetup.pine: die gezeichnete Box reicht
@@ -289,7 +303,7 @@ function renderTradeSetupsInternal() {
     const lsLine = new LiquidityLinePrimitive(setup.ls, { color: lsColor, lineWidth: TRADE_SETUP_LINE_WIDTH }, allCandles);
     const obBox = new OrderBlockPrimitive(
       { top, bottom, startTime: setup.obStartTime, endTime: setup.obStartTime + TRADE_SETUP_OB_WIDTH_SEC },
-      { ...obColors, textColor: "rgba(255, 255, 255, 0.9)", label: setup.dir === 1 ? "Short-Setup" : "Long-Setup" },
+      { ...obColors, textColor: "rgba(255, 255, 255, 0.9)", label: setup.label },
       allCandles,
     );
 
@@ -535,6 +549,10 @@ watch(() => props.poiZones, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
 watch(() => props.showLiquidity, refreshLiquidityInternal);
 watch(() => props.showTradeSetups, renderTradeSetupsInternal);
+watch(() => props.tradeSetupHistoryCount, () => {
+  computeTradeSetups();
+  renderTradeSetupsInternal();
+});
 </script>
 
 <template>
