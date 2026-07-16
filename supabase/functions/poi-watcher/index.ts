@@ -135,6 +135,17 @@ Deno.serve(async () => {
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     const tradingHours = isTradingHours(new Date());
+
+    // Ein/Aus-Schalter je Alarm-Typ (siehe "Alarme"-Seite im Dashboard) — steuert NUR den
+    // Telegram-Versand, nie die Erkennung/Persistierung selbst (siehe Kommentare unten an den
+    // einzelnen shouldSend-Stellen). Fail-open (fehlende Zeile = an), falls die Migration mal
+    // hinter einem neuen Key zurückhängt — ein stiller Alarm-Ausfall wäre schlimmer als ein
+    // ungewollter Alarm.
+    const { data: alarmRows, error: alarmSelectError } = await supabase.from("alarm_settings").select("key, enabled");
+    if (alarmSelectError) throw alarmSelectError;
+    const alarmEnabledMap = new Map((alarmRows ?? []).map((r) => [r.key, r.enabled]));
+    const isAlarmOn = (key: string) => alarmEnabledMap.get(key) ?? true;
+
     const summary: Record<string, unknown> = { dryRun: DRY_RUN, tradingHours, instruments: {} };
 
     for (const cfg of INSTRUMENTS) {
@@ -148,6 +159,8 @@ Deno.serve(async () => {
       const instrumentSummary: Record<string, unknown> = {};
 
       for (const tf of TIMEFRAMES) {
+        // z.B. "ob_zone_4h"/"ob_zone_1h" — je Timeframe einzeln umschaltbar.
+        const alarmActive = shouldSend && isAlarmOn(`ob_zone_${tf.label.toLowerCase()}`);
         const candles =
           cfg.source === "okx" ? await fetchOkxCandles(cfg.instrument, tf.okxBar) : ctraderBatch!.candlesByTf.get(tf.label)!;
         const zones = detectOrderBlocks(candles);
@@ -205,7 +218,7 @@ Deno.serve(async () => {
               // sonst ist es ein historischer Alt-Touch ohne echten Alarm) — sonst würde ein
               // beim Deploy schon getouchtes Alt-Zone-Backlog faelschlich den Deploy-Zeitpunkt
               // als "gerade eben benachrichtigt" zeigen.
-              notified_at: justTouched && existing && shouldSend ? new Date().toISOString() : existing?.notified_at ?? null,
+              notified_at: justTouched && existing && alarmActive ? new Date().toISOString() : existing?.notified_at ?? null,
             },
             { onConflict: "instrument,timeframe,start_time,direction" },
           );
@@ -213,7 +226,7 @@ Deno.serve(async () => {
 
           // Bei brandneuen Zonen (kein `existing`), die schon beim ersten Erkennen touched
           // sind, nicht alarmieren — das waere ein historischer Alt-Touch, kein "jetzt gerade".
-          if (justTouched && existing && shouldSend) {
+          if (justTouched && existing && alarmActive) {
             notifiedCount++;
             const label = direction === "long" ? "Bullish" : "Bearish";
             await sendTelegram(
@@ -232,6 +245,7 @@ Deno.serve(async () => {
       // Gleiches Live-Preis-Sofort-Touch-Muster wie oben bei den OB-Zonen (cTrader liefert
       // nur geschlossene Kerzen, sonst bis zu 59min Verzoegerung bis zum Alarm).
       if (cfg.source === "ctrader") {
+        const alarmActive = shouldSend && isAlarmOn("liquidity_1h");
         const candles1h = ctraderBatch!.candlesByTf.get("1H")!;
         const { highs, lows } = detectLiquidityLevels(candles1h, LIQUIDITY_FRACTAL_PERIOD);
         const levels = [
@@ -276,7 +290,7 @@ Deno.serve(async () => {
               pivot_time: new Date(lvl.pivotTime * 1000).toISOString(),
               touched: lvl.touched,
               notified: existing ? existing.notified || justTouched : lvl.touched,
-              notified_at: justTouched && existing && shouldSend ? new Date().toISOString() : existing?.notified_at ?? null,
+              notified_at: justTouched && existing && alarmActive ? new Date().toISOString() : existing?.notified_at ?? null,
             },
             { onConflict: "instrument,timeframe,direction,pivot_time" },
           );
@@ -284,7 +298,7 @@ Deno.serve(async () => {
 
           // Neue Level, die schon beim ersten Erkennen touched sind, waeren ein
           // historischer Alt-Touch (z.B. direkt nach Deploy) — kein "jetzt gerade".
-          if (justTouched && existing && shouldSend) {
+          if (justTouched && existing && alarmActive) {
             liqNotifiedCount++;
             const label = lvl.direction === "high" ? "Hoch" : "Tief";
             await sendTelegram(
@@ -304,9 +318,11 @@ Deno.serve(async () => {
       // dir=1 (Short/Protected High) und dir=-1 (Long/Protected Low) laufen mit denselben
       // Kerzen, nur gespiegelt (siehe checkShortSetup/checkLongSetup im Original).
       if (cfg.source === "ctrader") {
+        const alarmActive = shouldSend && isAlarmOn("trade_setup");
         const m5Candles = ctraderBatch!.candlesByTf.get("M5")!;
+        const candles1hForSetup = ctraderBatch!.candlesByTf.get("1H")!;
         const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5Candles, TRADE_SETUP_M5_FRACTAL_PERIOD);
-        const { highs: h1HighsSetup, lows: h1LowsSetup } = detectLiquidityLevels(candles1h, TRADE_SETUP_H1_FRACTAL_PERIOD);
+        const { highs: h1HighsSetup, lows: h1LowsSetup } = detectLiquidityLevels(candles1hForSetup, TRADE_SETUP_H1_FRACTAL_PERIOD);
         const setupObs = detectSetupObs(m5Candles);
 
         // Live-Preis-Sofort-Touch, gleiches Muster wie bei den 1H-Liquiditäts-Leveln oben —
@@ -363,7 +379,7 @@ Deno.serve(async () => {
           // Erstes Setup überhaupt für dieses Instrument+Richtung (kein "existing" überhaupt)
           // ist ein Alt-Bestand direkt nach Deploy, kein "gerade eben" — kein Alarm, analog zum
           // ob_zones/liquidity_levels-Verhalten beim allerersten Lauf.
-          const shouldAlert = hasAnySetupRow[direction] && shouldSend;
+          const shouldAlert = hasAnySetupRow[direction] && alarmActive;
 
           const { error: setupUpsertError } = await supabase.from("trade_setups").upsert(
             {

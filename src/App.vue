@@ -36,6 +36,7 @@ const lastUpdateText = computed(() =>
              normalen (nicht-exakten) active-Matching waere "Dashboard" immer aktiv. -->
         <RouterLink to="/" exact-active-class="active">Dashboard</RouterLink>
         <RouterLink to="/protokoll" exact-active-class="active">Protokoll</RouterLink>
+        <RouterLink to="/alarme" exact-active-class="active">Alarme</RouterLink>
       </nav>
       <span class="last-update">{{ lastUpdateText }}</span>
     </header>

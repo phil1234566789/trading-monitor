@@ -7,5 +7,6 @@ export const router = createRouter({
   routes: [
     { path: "/", name: "dashboard", component: () => import("./views/Dashboard.vue") },
     { path: "/protokoll", name: "protokoll", component: () => import("./views/Protokoll.vue") },
+    { path: "/alarme", name: "alarme", component: () => import("./views/Alarme.vue") },
   ],
 });
