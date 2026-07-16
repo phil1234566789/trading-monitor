@@ -22,6 +22,7 @@ const currentBar = ref("1h");
 // dort), weil hier ohnehin nur "schon getestet ja/nein" existiert, kein Nearest-3-Ranking.
 const showHistoricalObs = ref(false);
 const showLiquidity = ref(true);
+const showTradeSetups = ref(true);
 const isBtc = computed(() => currentSymbol.value === "BTC-USDT");
 const { data: trades, refresh: refreshTrades } = usePolledFetch(
   () => (isBtc.value ? fetchTrades(currentSymbol.value) : []),
@@ -68,6 +69,9 @@ watch(currentSymbol, () => {
       <button :class="{ active: showLiquidity }" @click="showLiquidity = !showLiquidity">
         Liquidität
       </button>
+      <button :class="{ active: showTradeSetups }" @click="showTradeSetups = !showTradeSetups">
+        Trade-Setups
+      </button>
     </div>
   </div>
 
@@ -79,6 +83,7 @@ watch(currentSymbol, () => {
     :poi-zones="poiZones"
     :show-historical-obs="showHistoricalObs"
     :show-liquidity="showLiquidity"
+    :show-trade-setups="showTradeSetups"
   />
 
   <aside class="trades-panel">

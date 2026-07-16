@@ -1,8 +1,9 @@
 <script setup>
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import { createChart, CandlestickSeries, LineSeries, TickMarkType } from "lightweight-charts";
-import { detectOrderBlocks, renderPersistedZones } from "../orderBlocks.js";
-import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels } from "../liquidity.js";
+import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
+import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, LiquidityLinePrimitive } from "../liquidity.js";
+import { detectSetupObs, detectTradeSetup } from "../tradeSetup.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import {
   binanceIntervalFor,
@@ -28,6 +29,7 @@ const props = defineProps({
   poiZones: { type: Array, default: () => [] },
   showHistoricalObs: { type: Boolean, default: false },
   showLiquidity: { type: Boolean, default: true },
+  showTradeSetups: { type: Boolean, default: true },
 });
 
 // CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
@@ -49,6 +51,27 @@ const LIQUIDITY_FRACTAL_PERIOD = 5; // Williams-Fractal-Periode, siehe fractals.
 const LIQUIDITY_MAX_RELEVANT = 10; // je Richtung, siehe liqMaxRelevant in inputs.pine
 const LIQUIDITY_ONLY_RELEVANT = true; // blendet alte, längst geswepte Level aus
 
+// Trade-Setup (Liquidity Sweep + Protected M5-Fraktal + M5-OB, siehe tv-indikator/src/
+// tradesetup.pine) — nur für Forex (braucht M5-Kerzen zusätzlich zum aktuell angezeigten
+// Chart-Timeframe). Werte 1:1 aus den getunten Defaults in tv-indikator/src/inputs.pine
+// übernommen (TRADE-SETUP-Gruppen), nicht neu geraten — siehe auch poi-watcher/index.ts,
+// das dieselben Werte serverseitig für die Telegram-Alarme nutzt.
+const TRADE_SETUP_M5_FRACTAL_PERIOD = 5; // liqM5Period
+const TRADE_SETUP_H1_FRACTAL_PERIOD = 10; // liqH1Period
+const TRADE_SETUP_CANDLE_COUNT = 300; // ~25h M5-Historie, mehr als der Lookback unten
+const TRADE_SETUP_GRACE_SEC = 5 * 60; // eine M5-Kerzenlänge
+const TRADE_SETUP_LS_MAX_LEAD_SEC = 30 * 60; // lsMaxLeadMinutes
+const TRADE_SETUP_OB_MAX_DELAY_SEC = 60 * 60; // obMaxDelayMinutes
+const TRADE_SETUP_LOOKBACK_SEC = 6 * 60 * 60; // protectedHighLookbackHours
+const TRADE_SETUP_OB_WIDTH_SEC = 10 * TRADE_SETUP_GRACE_SEC; // obBoxWidthM5Candles=10, rein optisch
+const TRADE_SETUP_POLL_MS = 60_000; // eigener, langsamerer Poll als POLL_MS — M5/H1 brauchen keine 12s-Frische und jeder Poll ist ein frischer cTrader-TLS-Connect
+const TRADE_SETUP_GOLD = "rgba(255, 215, 0, 0.9)";
+const TRADE_SETUP_BLUE = "rgba(33, 150, 243, 0.9)";
+const TRADE_SETUP_PROTECTED_COLOR = "rgba(255, 255, 255, 0.95)";
+const TRADE_SETUP_LINE_WIDTH = 2;
+const TRADE_SETUP_OB_BEAR = { fillColor: "rgba(255, 215, 0, 0.22)", borderColor: "rgba(255, 215, 0, 0.7)" };
+const TRADE_SETUP_OB_BULL = { fillColor: "rgba(33, 150, 243, 0.22)", borderColor: "rgba(33, 150, 243, 0.7)" };
+
 const { markSuccess } = useStatusBar();
 
 const chartContainerRef = ref(null);
@@ -66,12 +89,17 @@ let resizeObserver;
 let orderBlockPrimitives = [];
 let liquidityPrimitives = [];
 let tradePrimitives = [];
+let tradeSetupPrimitives = [];
 let allCandles = [];
 let allCvdDeltas = [];
+let tradeSetupM5Candles = [];
+let tradeSetupH1Candles = [];
+let currentTradeSetups = [];
 let loadingOlder = false;
 let reachedHistoryStart = false;
 let reachedCvdHistoryStart = false;
 let pollTimer = null;
+let tradeSetupPollTimer = null;
 let windowGaugeTimer = null;
 let dailyGaugeTimer = null;
 
@@ -204,6 +232,95 @@ function refreshLiquidityInternal() {
   renderLiquidityLevels(candleSeries, relevant, liquidityPrimitives, allCandles);
 }
 
+// Erkennung läuft nur, wenn sich die M5/H1-Kerzen geändert haben (siehe loadTradeSetupCandles)
+// — das Ergebnis (currentTradeSetups) bleibt über Timeframe-Wechsel/refreshChart-Aufrufe
+// hinweg stehen, nur renderTradeSetupsInternal() (Positionierung) läuft bei jedem Refresh neu.
+function computeTradeSetups() {
+  if (tradeSetupM5Candles.length === 0 || tradeSetupH1Candles.length === 0) {
+    currentTradeSetups = [];
+    return;
+  }
+  const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(tradeSetupM5Candles, TRADE_SETUP_M5_FRACTAL_PERIOD);
+  const { highs: h1Highs, lows: h1Lows } = detectLiquidityLevels(tradeSetupH1Candles, TRADE_SETUP_H1_FRACTAL_PERIOD);
+  const setupObs = detectSetupObs(tradeSetupM5Candles);
+  const params = {
+    graceSec: TRADE_SETUP_GRACE_SEC,
+    lsMaxLeadSec: TRADE_SETUP_LS_MAX_LEAD_SEC,
+    maxLookbackSec: TRADE_SETUP_LOOKBACK_SEC,
+    obMaxDelaySec: TRADE_SETUP_OB_MAX_DELAY_SEC,
+    nowTime: tradeSetupM5Candles[tradeSetupM5Candles.length - 1].time,
+  };
+  currentTradeSetups = [
+    detectTradeSetup(1, m5Highs, h1Highs, m5Highs, setupObs, params),
+    detectTradeSetup(-1, m5Lows, h1Lows, m5Lows, setupObs, params),
+  ].filter((s) => s !== null);
+}
+
+// OB (Order Block) ≠ FVG — siehe obBoxBounds in tradesetup.pine: die gezeichnete Box reicht
+// vom Fraktal bis zur ihm am nächsten liegenden Kante der FVG, nicht die FVG selbst.
+function tradeSetupObBoxBounds(setup) {
+  return setup.dir === 1
+    ? { top: setup.fractal.price, bottom: setup.obTop }
+    : { top: setup.obBottom, bottom: setup.fractal.price };
+}
+
+// Positioniert die aktuell erkannten Setups (currentTradeSetups) gegen `allCandles` (den
+// gerade angezeigten Chart-Timeframe) — analog zu renderPersistedZones für die 4H/1H-OB-
+// Zonen: das Setup selbst lebt auf M5/H1, gerendert wird aber immer gegen das sichtbare
+// Timeframe, damit die Koordinaten-Snappings (snapToBarTime) einen gültigen Bezugspunkt haben.
+function renderTradeSetupsInternal() {
+  // Async-Fetch (loadTradeSetupCandles) kann noch laufen, wenn die Komponente schon
+  // unmounted wurde — siehe gleicher Guard in refreshChart().
+  if (!chart) return;
+  for (const p of tradeSetupPrimitives) candleSeries.detachPrimitive(p);
+  tradeSetupPrimitives.length = 0;
+  if (!isForex || !props.showTradeSetups) return;
+
+  for (const setup of currentTradeSetups) {
+    const lsColor = setup.dir === 1 ? TRADE_SETUP_GOLD : TRADE_SETUP_BLUE;
+    const obColors = setup.dir === 1 ? TRADE_SETUP_OB_BEAR : TRADE_SETUP_OB_BULL;
+    const { top, bottom } = tradeSetupObBoxBounds(setup);
+
+    const fractalLine = new LiquidityLinePrimitive(
+      setup.fractal,
+      { color: TRADE_SETUP_PROTECTED_COLOR, lineWidth: TRADE_SETUP_LINE_WIDTH },
+      allCandles,
+    );
+    const lsLine = new LiquidityLinePrimitive(setup.ls, { color: lsColor, lineWidth: TRADE_SETUP_LINE_WIDTH }, allCandles);
+    const obBox = new OrderBlockPrimitive(
+      { top, bottom, startTime: setup.obStartTime, endTime: setup.obStartTime + TRADE_SETUP_OB_WIDTH_SEC },
+      { ...obColors, textColor: "rgba(255, 255, 255, 0.9)", label: setup.dir === 1 ? "Short-Setup" : "Long-Setup" },
+      allCandles,
+    );
+
+    for (const primitive of [fractalLine, lsLine, obBox]) {
+      candleSeries.attachPrimitive(primitive);
+      tradeSetupPrimitives.push(primitive);
+    }
+  }
+}
+
+// M5/H1-Kerzen für die Trade-Setup-Erkennung — unabhängig vom aktuell gewählten Chart-
+// Timeframe (props.currentBar), da ein Setup immer auf M5-Fraktal + H1/M5-Sweep basiert,
+// egal ob der Nutzer gerade den 1h- oder den 15m-Chart anschaut. Eigener, langsamerer Poll
+// (TRADE_SETUP_POLL_MS) statt am 12s-POLL_MS der Haupt-Kerzen zu hängen — jeder Aufruf ist
+// ein frischer cTrader-TLS-Connect (siehe ctraderCandles.js), 12s wäre unnötig teuer.
+async function loadTradeSetupCandles() {
+  if (!isForex) return;
+  try {
+    const [m5, h1] = await Promise.all([
+      fetchInitialForexCandles(props.symbol, "5m", TRADE_SETUP_CANDLE_COUNT),
+      fetchInitialForexCandles(props.symbol, "1h", TRADE_SETUP_CANDLE_COUNT),
+    ]);
+    tradeSetupM5Candles = m5;
+    tradeSetupH1Candles = h1;
+    computeTradeSetups();
+    renderTradeSetupsInternal();
+  } catch (err) {
+    console.error("Trade-Setup-Kerzen fehlgeschlagen:", err);
+  }
+}
+
 function refreshChart() {
   // Async loads (loadInitial/pollRecent/lazy-load) koennen noch laufen, wenn die
   // Komponente schon unmounted wurde (z.B. schnelle Navigation zu /protokoll) — chart
@@ -213,6 +330,7 @@ function refreshChart() {
   refreshPoiZonesInternal();
   refreshLiquidityInternal();
   refreshTradeMarkersInternal();
+  renderTradeSetupsInternal();
   cvdSeries?.setData(cumulativeFromDeltas(allCvdDeltas));
   positionGauges();
 }
@@ -384,6 +502,10 @@ onMounted(() => {
 
   loadInitial();
   pollTimer = setInterval(pollRecent, POLL_MS);
+  if (isForex) {
+    loadTradeSetupCandles();
+    tradeSetupPollTimer = setInterval(loadTradeSetupCandles, TRADE_SETUP_POLL_MS);
+  }
   if (!isForex) {
     updateWindowGauge();
     updateDailyGauge();
@@ -394,6 +516,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearInterval(pollTimer);
+  clearInterval(tradeSetupPollTimer);
   clearInterval(windowGaugeTimer);
   clearInterval(dailyGaugeTimer);
   resizeObserver?.disconnect();
@@ -411,6 +534,7 @@ watch(() => props.trades, refreshTradeMarkersInternal);
 watch(() => props.poiZones, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
 watch(() => props.showLiquidity, refreshLiquidityInternal);
+watch(() => props.showTradeSetups, renderTradeSetupsInternal);
 </script>
 
 <template>

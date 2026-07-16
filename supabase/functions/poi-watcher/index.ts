@@ -7,8 +7,9 @@
 // Claude-Entry-Check (D3) — das kommt erst, wenn die Strategie ein Regelwerk für Claude hat.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { detectOrderBlocks, type Candle } from "../_shared/orderBlocks.ts";
-import { detectLiquidityLevels } from "../_shared/liquidity.ts";
+import { detectLiquidityLevels, type LiquidityLevel } from "../_shared/liquidity.ts";
 import { fetchTrendbarsBatch } from "../_shared/ctrader/client.ts";
+import { detectSetupObs, detectTradeSetup } from "../_shared/tradeSetup.ts";
 
 const OKX_BASE_URL = "https://www.okx.com";
 const TIMEFRAMES: { label: "4H" | "1H"; okxBar: string; ctraderPeriod: string }[] = [
@@ -17,6 +18,17 @@ const TIMEFRAMES: { label: "4H" | "1H"; okxBar: string; ctraderPeriod: string }[
 ];
 const CANDLE_LIMIT = 300;
 const LIQUIDITY_FRACTAL_PERIOD = 5; // siehe LIQUIDITY_FRACTAL_PERIOD in PriceChart.vue
+
+// Trade-Setup-Parameter (Liquidity Sweep + Protected M5-Fraktal + M5-OB, siehe
+// _shared/tradeSetup.ts) — 1:1 aus den getunten Defaults in tv-indikator/src/inputs.pine
+// übernommen (TRADE-SETUP-Gruppen), nicht neu erraten.
+const TRADE_SETUP_M5_FRACTAL_PERIOD = 5; // liqM5Period
+const TRADE_SETUP_H1_FRACTAL_PERIOD = 10; // liqH1Period — bewusst ANDERS als LIQUIDITY_FRACTAL_PERIOD oben (eigene 1H-Notification, andere Abstimmung)
+const TRADE_SETUP_M5_CANDLE_LIMIT = 300; // ~25h M5-Historie, deutlich mehr als der Lookback unten
+const TRADE_SETUP_GRACE_SEC = 5 * 60; // eine M5-Kerzenlänge (m5FractalGraceMs)
+const TRADE_SETUP_LS_MAX_LEAD_SEC = 30 * 60; // lsMaxLeadMinutes
+const TRADE_SETUP_OB_MAX_DELAY_SEC = 60 * 60; // obMaxDelayMinutes
+const TRADE_SETUP_LOOKBACK_SEC = 6 * 60 * 60; // protectedHighLookbackHours
 
 interface InstrumentConfig {
   instrument: string;
@@ -75,9 +87,11 @@ async function fetchCtraderBatch(symbol: string): Promise<{ currentPrice: number
     requests: [
       { symbolName: symbol, period: "M1", count: 1 },
       ...TIMEFRAMES.map((tf) => ({ symbolName: symbol, period: tf.ctraderPeriod, count: CANDLE_LIMIT })),
+      { symbolName: symbol, period: "M5", count: TRADE_SETUP_M5_CANDLE_LIMIT },
     ],
   });
   const candlesByTf = new Map(TIMEFRAMES.map((tf, i) => [tf.label, tfCandles[i]]));
+  candlesByTf.set("M5", tfCandles[TIMEFRAMES.length]);
   return { currentPrice: priceBars[priceBars.length - 1].close, candlesByTf };
 }
 
@@ -282,6 +296,108 @@ Deno.serve(async () => {
         }
 
         instrumentSummary["1H_liquidity"] = { levelsSeen: levels.length, notified: liqNotifiedCount };
+      }
+
+      // Trade-Setup: Liquidity Sweep + Protected M5-Fraktal + M5-OB, in dieser Reihenfolge
+      // (siehe tv-indikator/src/tradesetup.pine, portiert nach _shared/tradeSetup.ts). Läuft
+      // nur für die cTrader-Instrumente — braucht M5-Kerzen, die nur dort abgerufen werden.
+      // dir=1 (Short/Protected High) und dir=-1 (Long/Protected Low) laufen mit denselben
+      // Kerzen, nur gespiegelt (siehe checkShortSetup/checkLongSetup im Original).
+      if (cfg.source === "ctrader") {
+        const m5Candles = ctraderBatch!.candlesByTf.get("M5")!;
+        const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5Candles, TRADE_SETUP_M5_FRACTAL_PERIOD);
+        const { highs: h1HighsSetup, lows: h1LowsSetup } = detectLiquidityLevels(candles1h, TRADE_SETUP_H1_FRACTAL_PERIOD);
+        const setupObs = detectSetupObs(m5Candles);
+
+        // Live-Preis-Sofort-Touch, gleiches Muster wie bei den 1H-Liquiditäts-Leveln oben —
+        // sonst würde ein Fraktalbruch/Sweep erst beim nächsten Kerzenschluss erkannt (bis zu
+        // 5min bei M5, bis zu 1h bei H1) und ein längst gebrochenes "Protected" fälschlich
+        // noch als gültig gelten.
+        const nowSec = Math.floor(Date.now() / 1000);
+        const applyLiveTouch = (levels: LiquidityLevel[], direction: "high" | "low") => {
+          for (const lvl of levels) {
+            if (!lvl.touched && (direction === "high" ? currentPrice >= lvl.price : currentPrice <= lvl.price)) {
+              lvl.touched = true;
+              lvl.touchedTime = nowSec;
+            }
+          }
+        };
+        applyLiveTouch(m5Highs, "high");
+        applyLiveTouch(m5Lows, "low");
+        applyLiveTouch(h1HighsSetup, "high");
+        applyLiveTouch(h1LowsSetup, "low");
+
+        const tradeSetupParams = {
+          graceSec: TRADE_SETUP_GRACE_SEC,
+          lsMaxLeadSec: TRADE_SETUP_LS_MAX_LEAD_SEC,
+          maxLookbackSec: TRADE_SETUP_LOOKBACK_SEC,
+          obMaxDelaySec: TRADE_SETUP_OB_MAX_DELAY_SEC,
+          nowTime: m5Candles[m5Candles.length - 1].time,
+        };
+
+        const detected = [
+          detectTradeSetup(1, m5Highs, h1HighsSetup, m5Highs, setupObs, tradeSetupParams),
+          detectTradeSetup(-1, m5Lows, h1LowsSetup, m5Lows, setupObs, tradeSetupParams),
+        ].filter((s): s is NonNullable<typeof s> => s !== null);
+
+        const { data: existingSetupRows, error: setupSelectError } = await supabase
+          .from("trade_setups")
+          .select("direction, fractal_pivot_time")
+          .eq("instrument", cfg.instrument);
+        if (setupSelectError) throw setupSelectError;
+
+        const existingSetupKeys = new Set(
+          (existingSetupRows ?? []).map(
+            (r) => `${r.direction}_${Math.floor(new Date(r.fractal_pivot_time).getTime() / 1000)}`,
+          ),
+        );
+        const hasAnySetupRow = { short: false, long: false };
+        for (const r of existingSetupRows ?? []) hasAnySetupRow[r.direction as "short" | "long"] = true;
+
+        let tradeSetupNotifiedCount = 0;
+        for (const setup of detected) {
+          const direction: "short" | "long" = setup.dir === 1 ? "short" : "long";
+          const key = `${direction}_${setup.fractal.pivotTime}`;
+          if (existingSetupKeys.has(key)) continue; // schon erkannt/gespeichert — ein Fraktal bricht nie "zurück"
+
+          // Erstes Setup überhaupt für dieses Instrument+Richtung (kein "existing" überhaupt)
+          // ist ein Alt-Bestand direkt nach Deploy, kein "gerade eben" — kein Alarm, analog zum
+          // ob_zones/liquidity_levels-Verhalten beim allerersten Lauf.
+          const shouldAlert = hasAnySetupRow[direction] && shouldSend;
+
+          const { error: setupUpsertError } = await supabase.from("trade_setups").upsert(
+            {
+              instrument: cfg.instrument,
+              direction,
+              fractal_price: setup.fractal.price,
+              fractal_pivot_time: new Date(setup.fractal.pivotTime * 1000).toISOString(),
+              ls_price: setup.ls.price,
+              ls_pivot_time: new Date(setup.ls.pivotTime * 1000).toISOString(),
+              ls_touched_time: new Date(setup.ls.touchedTime! * 1000).toISOString(),
+              ob_top: setup.obTop,
+              ob_bottom: setup.obBottom,
+              ob_start_time: new Date(setup.obStartTime * 1000).toISOString(),
+              notified: shouldAlert,
+              notified_at: shouldAlert ? new Date().toISOString() : null,
+            },
+            { onConflict: "instrument,direction,fractal_pivot_time" },
+          );
+          if (setupUpsertError) throw setupUpsertError;
+
+          if (shouldAlert) {
+            tradeSetupNotifiedCount++;
+            const label = direction === "short" ? "Short (Protected High)" : "Long (Protected Low)";
+            await sendTelegram(
+              `🎯 ${cfg.instrument} Trade-Setup: ${label}\n` +
+                `Protected: ${fmt(setup.fractal.price, cfg.pricePrecision)}\n` +
+                `LS-Sweep: ${fmt(setup.ls.price, cfg.pricePrecision)}\n` +
+                `M5-OB: ${fmt(setup.obBottom, cfg.pricePrecision)} – ${fmt(setup.obTop, cfg.pricePrecision)}\n` +
+                `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+            );
+          }
+        }
+
+        instrumentSummary["tradeSetups"] = { detected: detected.length, notified: tradeSetupNotifiedCount };
       }
 
       (summary.instruments as Record<string, unknown>)[cfg.instrument] = { currentPrice, shouldSend, ...instrumentSummary };
