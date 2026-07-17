@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import PriceChart from "../components/PriceChart.vue";
 import TradesTable from "../components/TradesTable.vue";
 import TradeStats from "../components/TradeStats.vue";
@@ -7,6 +7,7 @@ import { TIMEFRAMES } from "../timeframes.js";
 import { fetchTrades } from "../trades.js";
 import { fetchPoiZones } from "../poiZones.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
+import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 
 // Trades/POI-Zonen (ob_zones) gibt es aktuell nur für BTC-USDT — die Forex-OB-Erkennung
 // läuft (noch) nicht über diese Codebase, sondern soll später per TradingView-Webhook
@@ -16,27 +17,47 @@ const POLL_MS = 12_000;
 
 const currentSymbol = ref("GBPUSD");
 const currentBar = ref("5m");
+// Toggle-Zustand persistiert in localStorage (siehe useLocalStorageRef), damit ein Reload nicht
+// jedes Mal auf die Default-Werte zurückspringt — die Defaults hier gelten nur beim allerersten
+// Aufruf (noch nichts im localStorage).
 // Historische (bereits angetestete) OB-Zonen standardmäßig ausgeblendet, um den Chart
 // übersichtlich zu halten — analog zum "Historische OBs"-Toggle im tv-indikator-Projekt
 // (dort default auch aus). Ein einzelner Schalter statt pro-Timeframe (4H/1H getrennt wie
 // dort), weil hier ohnehin nur "schon getestet ja/nein" existiert, kein Nearest-3-Ranking.
-const showHistoricalObs = ref(false);
-const showLiquidity = ref(true);
+const showHistoricalObs = useLocalStorageRef("showHistoricalObs", false);
+const showLiquidity = useLocalStorageRef("showLiquidity", true);
 // Debug-Hilfsmittel für die Trend-Indikator-Entwicklung: Preise an den Pivot-Linien
 // einblenden und die aktuell ausgeblendeten (bereits gesweepten) Liquiditäts-Level
 // mitanzeigen. Beide default aus, um den Chart im Normalbetrieb nicht zuzumüllen.
-const showLiquidityDebug = ref(false);
-const showSweptLiquidity = ref(false);
-const showTradeSetups = ref(true);
+const showLiquidityDebug = useLocalStorageRef("showLiquidityDebug", false);
+const showSweptLiquidity = useLocalStorageRef("showSweptLiquidity", false);
+// Eigenständiger Pivot-Toggle (Periode 10) für die Trendanalyse-Diskussion — komplett getrennt
+// von showSweptLiquidity (Periode 5, LQ-Sweeps), die davon unverändert bleiben sollen.
+const showPivots = useLocalStorageRef("showPivots", false);
+const showTradeSetups = useLocalStorageRef("showTradeSetups", true);
 // Marktstruktur-Trendanalyse (Swing High/Low, Protected High/Low, CHoCH — siehe
-// trendStructure.js), default aus wie die anderen Debug/Analyse-Hilfsmittel.
-const showTrendAnalysis = ref(false);
+// trendStructure.js) — default AN, das ist mittlerweile der primäre Anwendungsfall.
+const showTrendAnalysis = useLocalStorageRef("showTrendAnalysis", true);
 // Popup mit den rohen Trend-State-Daten (Swing/Protected-Level, CHoCH, gesammelte Pivots,
 // previous-Kette) zum Nachvollziehen der Trendanalyse gegen den Chart — siehe MetadataPanel.vue.
-const showMetadata = ref(false);
+const showMetadata = useLocalStorageRef("showMetadata", false);
 // Anzahl vergangener Setups je Richtung, analog zu tradeSetupHistoryCountShort/Long im
 // tv-indikator (dort default 5, 0-50) — 0 zeigt nur das gerade aktive/letzte Setup.
 const tradeSetupHistoryCount = ref(5);
+
+// Toolbar wurde zu voll (siehe Chat) -> Liquidity-Sweeps unter "Liquidität", Pivots+Metadaten
+// unter "Trend" als Dropdown. Reiner UI-Zustand, bewusst NICHT in localStorage (anders als die
+// Toggles selbst) — welches Dropdown gerade offen ist, ist keine Einstellung, die überdauern muss.
+const liquidityMenuOpen = ref(false);
+const trendMenuOpen = ref(false);
+function closeMenusOutside(e) {
+  if (!e.target.closest?.(".toggle-group")) {
+    liquidityMenuOpen.value = false;
+    trendMenuOpen.value = false;
+  }
+}
+onMounted(() => window.addEventListener("click", closeMenusOutside));
+onUnmounted(() => window.removeEventListener("click", closeMenusOutside));
 const isBtc = computed(() => currentSymbol.value === "BTC-USDT");
 const { data: trades, refresh: refreshTrades } = usePolledFetch(
   () => (isBtc.value ? fetchTrades(currentSymbol.value) : []),
@@ -80,17 +101,28 @@ watch(currentSymbol, () => {
       <button :class="{ active: showHistoricalObs }" @click="showHistoricalObs = !showHistoricalObs">
         Historische OBs
       </button>
-      <button :class="{ active: showLiquidity }" @click="showLiquidity = !showLiquidity">
-        Liquidität
-      </button>
-      <button :class="{ active: showSweptLiquidity }" @click="showSweptLiquidity = !showSweptLiquidity">
-        Gesweepte Liquidität
-      </button>
+
+      <div class="toggle-group">
+        <button :class="{ active: showLiquidity }" @click="showLiquidity = !showLiquidity">
+          Liquidität
+        </button>
+        <button
+          class="toggle-caret"
+          :class="{ open: liquidityMenuOpen }"
+          title="Untermenü"
+          @click="liquidityMenuOpen = !liquidityMenuOpen"
+        >
+          ▾
+        </button>
+        <div v-if="liquidityMenuOpen" class="toggle-dropdown">
+          <button :class="{ active: showSweptLiquidity }" @click="showSweptLiquidity = !showSweptLiquidity">
+            Liquidity-Sweeps
+          </button>
+        </div>
+      </div>
+
       <button :class="{ active: showTradeSetups }" @click="showTradeSetups = !showTradeSetups">
         Trade-Setups
-      </button>
-      <button :class="{ active: showTrendAnalysis }" @click="showTrendAnalysis = !showTrendAnalysis">
-        Trendanalyse
       </button>
       <input
         v-if="showTradeSetups"
@@ -101,11 +133,27 @@ watch(currentSymbol, () => {
         class="trade-setup-history-count"
         title="Anzahl vergangener Trade-Setups je Richtung"
       />
+
+      <div class="toggle-group">
+        <button :class="{ active: showTrendAnalysis }" @click="showTrendAnalysis = !showTrendAnalysis">
+          Trend
+        </button>
+        <button
+          class="toggle-caret"
+          :class="{ open: trendMenuOpen }"
+          title="Untermenü"
+          @click="trendMenuOpen = !trendMenuOpen"
+        >
+          ▾
+        </button>
+        <div v-if="trendMenuOpen" class="toggle-dropdown">
+          <button :class="{ active: showPivots }" @click="showPivots = !showPivots">Pivots</button>
+          <button :class="{ active: showMetadata }" @click="showMetadata = !showMetadata">Metadaten</button>
+        </div>
+      </div>
+
       <button :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
         Debug
-      </button>
-      <button :class="{ active: showMetadata }" @click="showMetadata = !showMetadata">
-        Metadaten
       </button>
     </div>
   </div>
@@ -119,6 +167,7 @@ watch(currentSymbol, () => {
     :show-historical-obs="showHistoricalObs"
     :show-liquidity="showLiquidity"
     :show-swept-liquidity="showSweptLiquidity"
+    :show-pivots="showPivots"
     :show-liquidity-debug="showLiquidityDebug"
     :show-trade-setups="showTradeSetups"
     :trade-setup-history-count="tradeSetupHistoryCount"
@@ -184,6 +233,71 @@ watch(currentSymbol, () => {
 .symbol-switcher button.active,
 .timeframe-switcher button.active,
 .drawing-toggles button.active {
+  background: #2962ff;
+  color: #fff;
+}
+
+.toggle-group {
+  position: relative;
+  display: flex;
+  gap: 1px;
+}
+
+.toggle-caret {
+  background: transparent;
+  border: none;
+  color: #787b86;
+  padding: 4px 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.toggle-caret:hover {
+  background: #2a2e39;
+  color: #d1d4dc;
+}
+
+.toggle-caret.open {
+  background: #2a2e39;
+  color: #d1d4dc;
+}
+
+.toggle-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  z-index: 20;
+  background: #1e222d;
+  border: 1px solid #2a2e39;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: max-content;
+}
+
+.toggle-dropdown button {
+  background: transparent;
+  border: none;
+  color: #787b86;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.toggle-dropdown button:hover {
+  background: #2a2e39;
+  color: #d1d4dc;
+}
+
+.toggle-dropdown button.active {
   background: #2962ff;
   color: #fff;
 }

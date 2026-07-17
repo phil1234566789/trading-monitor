@@ -1,48 +1,26 @@
-// Marktstruktur-Erkennung (Swing High/Low, BOS/CHoCH) für den geplanten Trend-Indikator,
-// siehe trading/marktstruktur.md. Erster Baustein: das Analyse-Fenster für die M5-
-// Strukturerkennung sinnvoll begrenzen (siehe computeStructureAnchorTime).
+// Marktstruktur-Erkennung (Swing High/Low, BOS/CHoCH) für den geplanten Trend-Indikator, siehe
+// trading/marktstruktur.md und buildNestedTrendStructure weiter unten für die verschachtelte
+// Über-/Unterstruktur (äußerer Rahmen + M5-"unterstruktur" darin, beides aus derselben M5-Kette
+// abgeleitet — kein separates H1-Fraktal (mehr), siehe Chat: "ich trade im M5 chart". H1-Pivots
+// sind als spätere Ausbaustufe gedacht, um automatisch einen sinnvollen Startpunkt/Anker zu
+// finden (aktuell übernimmt das ein fest vorgegebener anchorTime, siehe PriceChart.vue).
 import { detectLiquidityLevels, LiquidityLinePrimitive } from "./liquidity.js";
-
-const H1_FRACTAL_PERIOD = 10; // wie TRADE_SETUP_H1_FRACTAL_PERIOD in PriceChart.vue
-const ANCHOR_FALLBACK_PIVOT_COUNT = 3;
-
-// Ohne Anker könnte ein uralter, nie geswepter M5-Pivot (z.B. von vor Jahren) fälschlich als
-// aktuelles Swing High/Low gelten. Anker = pivotTime des zuletzt gebrochenen H1-Pivots
-// (Periode 10, highs+lows zusammen) — ein gebrochenes H1-Level markiert einen echten
-// strukturellen Reset, alles davor ist laut Marktstruktur-Lehre ohnehin nicht mehr die
-// aktuell gültige Struktur. Fallback (noch kein H1-Pivot im geladenen Fenster gebrochen):
-// ältester der letzten 3 H1-Pivots (chronologisch, highs+lows gemischt).
-// Gibt null zurück, wenn nicht mal genug H1-Historie für einen einzigen Pivot vorliegt.
-export function computeStructureAnchorTime(h1Candles) {
-  const { highs, lows } = detectLiquidityLevels(h1Candles, H1_FRACTAL_PERIOD);
-  const allPivots = [...highs, ...lows];
-  if (allPivots.length === 0) return null;
-
-  const lastBroken = allPivots
-    .filter((p) => p.touched)
-    .sort((a, b) => b.touchedTime - a.touchedTime)[0];
-  if (lastBroken) return lastBroken.pivotTime;
-
-  const newest3 = [...allPivots].sort((a, b) => b.pivotTime - a.pivotTime).slice(0, ANCHOR_FALLBACK_PIVOT_COUNT);
-  return newest3[newest3.length - 1].pivotTime;
-}
 
 const M5_FRACTAL_PERIOD = 5; // wie LIQUIDITY_FRACTAL_PERIOD / TRADE_SETUP_M5_FRACTAL_PERIOD in PriceChart.vue
 
-// M5-Pivots ab dem Anker, chronologisch — alles davor ist laut computeStructureAnchorTime nicht
-// mehr die aktuell gültige Struktur (siehe dort).
-function boundedM5Pivots(m5Candles, anchorTime) {
-  const { highs, lows } = detectLiquidityLevels(m5Candles, M5_FRACTAL_PERIOD);
+// Pivots ab `anchorTime`, chronologisch.
+function boundedPivots(candles, anchorTime, fractalPeriod) {
+  const { highs, lows } = detectLiquidityLevels(candles, fractalPeriod);
   return {
     highs: highs.filter((p) => p.pivotTime >= anchorTime).sort((a, b) => a.pivotTime - b.pivotTime),
     lows: lows.filter((p) => p.pivotTime >= anchorTime).sort((a, b) => a.pivotTime - b.pivotTime),
   };
 }
 
-// Baut die M5-Trend-Historie (verkettet über `previous`), siehe trading/marktstruktur.md.
-// Batch-Berechnung über das geladene Kerzen-Fenster (analog zu liquidity.js/tradeSetup.js)
-// statt bar-für-bar-Streaming-State — läuft chronologisch vom Anker aus vorwärts und
-// verfolgt dabei pro Trend-Abschnitt:
+// Baut die Trend-Historie (verkettet über `previous`) auf EINER Zeitebene, siehe
+// trading/marktstruktur.md. Batch-Berechnung über das geladene Kerzen-Fenster (analog zu
+// liquidity.js/tradeSetup.js) statt bar-für-bar-Streaming-State — läuft chronologisch vom
+// Anker aus vorwärts und verfolgt dabei pro Trend-Abschnitt:
 //
 // - swingHigh/swingLow: die Struktur-Grenzen des Trends. Im Downtrend läuft swingLow mit jedem
 //   neuen, per Kerzenabschluss bestätigten tieferen Tief weiter ("Bestätigung" laut Doku),
@@ -61,14 +39,16 @@ function boundedM5Pivots(m5Candles, anchorTime) {
 //
 // Der Bootstrap eines neuen Abschnitts (nach Anker ODER nach einer Umkehr) sucht einfach den
 // erstbesten Kerzenabschluss, der das seither laufende Pivot-Hoch/-Tief bricht — das kann auf
-// verrauschten Daten auch einen kurzlebigen, unbedeutenden Mini-Abschnitt erzeugen (siehe Chat:
-// die Kette wird dadurch ggf. länger/kleinteiliger als ein Mensch sie ziehen würde). Gültige,
+// verrauschten Daten auch einen kurzlebigen, unbedeutenden Mini-Abschnitt erzeugen. Gültige,
 // aber uninteressante Abschnitte einfach ignorieren, indem man `previous` weiterverfolgt.
-export function buildTrendState(m5Candles, h1Candles) {
-  const anchorTime = computeStructureAnchorTime(h1Candles);
-  if (anchorTime == null) return null;
+//
+// `anchorTime` (Pflicht) legt fest, wie weit zurück gesucht wird — ein bewusst gewählter,
+// fester Zeitpunkt (siehe buildNestedTrendStructure/PriceChart.vue), bis das später mal
+// automatisch aus H1-Pivots hergeleitet wird.
+export function buildTrendState(candles, { anchorTime, fractalPeriod = M5_FRACTAL_PERIOD } = {}) {
+  if (anchorTime == null || candles.length === 0) return null;
 
-  const { highs, lows } = boundedM5Pivots(m5Candles, anchorTime);
+  const { highs, lows } = boundedPivots(candles, anchorTime, fractalPeriod);
   if (highs.length === 0 || lows.length === 0) return null; // nicht genug Struktur seit dem Anker
 
   let hi = 0;
@@ -100,8 +80,7 @@ export function buildTrendState(m5Candles, h1Candles) {
   // Tief/Hoch vor dem Umschwung wird "geschützt"). Nur die jeweils andere, "laufende" Seite
   // (neue Tiefs im kommenden Downtrend / neue Hochs im kommenden Uptrend) startet frisch bei
   // null. Ohne diese Übernahme würde jede Umkehr komplett neu bootstrappen und dabei genau das
-  // Level verlieren, das den Trend eigentlich gültig hält (siehe Testlauf: ohne Übernahme
-  // verschwindet 1.34805 spurlos aus der Kette).
+  // Level verlieren, das den Trend eigentlich gültig hält.
   function closeSegment(invalidatedAt) {
     seg.invalidatedAt = invalidatedAt;
     seg.protectedHigh = seg.direction === "down" ? seg.protectedHigh ?? null : null;
@@ -117,7 +96,7 @@ export function buildTrendState(m5Candles, h1Candles) {
     }
   }
 
-  for (const c of m5Candles) {
+  for (const c of candles) {
     if (c.time < anchorTime) continue;
     admitPivotsUpTo(c.time);
 
@@ -186,6 +165,7 @@ export function buildTrendState(m5Candles, h1Candles) {
     direction: seg.direction,
     anchorTime,
     confirmedAt: seg.confirmedAt,
+    invalidatedAt: seg.invalidatedAt,
     swingHigh: seg.swingHigh,
     swingLow: seg.swingLow,
     protectedHigh: seg.direction === "down" ? seg.protectedHigh ?? null : null,
@@ -197,26 +177,119 @@ export function buildTrendState(m5Candles, h1Candles) {
   };
 }
 
+// Höchster/tiefster Pivot eines Feldes (swingHigh/swingLow) über eine GANZE M5-Kette hinweg
+// (nicht nur den aktuellen Abschnitt) — für die äußere Struktur-Grenze GEGEN die aktuelle
+// Richtung (siehe buildNestedTrendStructure): "die größte Hürde, die über die gesamte
+// verfolgte Historie hinweg noch nicht gebrochen wurde".
+function extremeAcrossChain(chain, field, isBetter) {
+  let best = null;
+  for (const seg of chain) {
+    const p = seg[field];
+    if (p && (!best || isBetter(p.price, best.price))) best = p;
+  }
+  return best;
+}
+
+// Baut die verschachtelte Marktstruktur direkt aus EINER M5-Kette (siehe Chat: "die 1h-Pivots
+// brauchen wir nur später, um automatisch einen Startpunkt zu finden — für jetzt reicht ein
+// fester Anker"). Kein separates H1-Fraktal mehr (frühere Version, verworfen, siehe Git-Historie
+// falls interessant) — stattdessen wird die äußere Struktur aus der M5-Kette selbst abgeleitet:
+//
+// - direction (außen) = direction des aktuellsten M5-Abschnitts (unterstruktur[0])
+// - die "laufende" Grenze in dieser Richtung (swingLow bei down, swingHigh bei up) = die des
+//   aktuellsten Abschnitts — "wie weit ist die aktuelle Bewegung schon gekommen"
+// - die Gegen-Grenze (swingHigh bei down, swingLow bei up) = der extremste Wert über die
+//   GESAMTE Kette hinweg — "die größte Hürde, die noch nicht gebrochen wurde", auch wenn sie
+//   aus einem älteren, strukturell andersartigen (z.B. bullischen) Abschnitt stammt.
+//
+// `maxUnterstruktur` begrenzt die zurückgegebene Kette (default 2, siehe Chat: "mach ZWEI
+// Unterstrukturen rein" — fürs Debuggen erstmal überschaubar halten statt der ganzen Historie).
+export function buildNestedTrendStructure(m5Candles, { anchorTime, maxUnterstruktur = 2 } = {}) {
+  const m5State = buildTrendState(m5Candles, { anchorTime, fractalPeriod: M5_FRACTAL_PERIOD });
+  if (!m5State || m5State.direction === "consolidation") return m5State;
+
+  const chain = [];
+  let s = m5State;
+  while (s) {
+    const { previous, ...rest } = s; // previous durch die Array-Reihenfolge ersetzt, nicht doppelt mitschleppen
+    chain.push(rest);
+    s = previous;
+  }
+
+  const direction = chain[0].direction;
+  const swingHigh = direction === "down" ? extremeAcrossChain(chain, "swingHigh", (a, b) => a > b) : chain[0].swingHigh;
+  const swingLow = direction === "down" ? chain[0].swingLow : extremeAcrossChain(chain, "swingLow", (a, b) => a < b);
+
+  return { direction, swingHigh, swingLow, unterstruktur: chain.slice(0, maxUnterstruktur) };
+}
+
 const SWING_HIGH_COLOR = "rgba(255, 23, 68, 0.9)"; // Struktur-Grenze oben — bricht sie, ist der Trend vorbei
 const SWING_LOW_COLOR = "rgba(0, 230, 118, 0.9)"; // Struktur-Grenze unten
 const PROTECTED_COLOR = "rgba(186, 85, 255, 0.9)"; // nähere Gegen-Grenze, deren Bruch den CHoCH auslöst
 const CHOCH_COLOR = "rgba(255, 193, 7, 0.95)"; // Level, an dem der CHoCH tatsächlich ausgelöst hat
-const LINE_WIDTH = 2;
+const OUTER_LINE_WIDTH = 3; // dicker als die Unterstruktur -> optisch klar der übergeordnete Rahmen
+const M5_LINE_WIDTH = 2;
+const MAX_M5_ALPHA = 0.55; // Deckkraft der aktuellen M5-Unterstruktur (immer noch klar dem äußeren Rahmen untergeordnet)
+const MIN_M5_ALPHA = 0.12; // Deckkraft-Untergrenze für weit zurückliegende M5-Abschnitte
 
-function trendLineItem(pivot, endTime, roleLabel, color, formatPrice) {
+function dimColor(rgba, alpha) {
+  return rgba.replace(/[\d.]+\)$/, `${alpha})`);
+}
+
+// Je weiter zurück ein M5-Unterstruktur-Abschnitt liegt, desto blasser — linear abnehmend bis
+// zur Untergrenze, damit lange Ketten nicht alle gleich laut schreien.
+function alphaForDepth(depth) {
+  return Math.max(MIN_M5_ALPHA, MAX_M5_ALPHA - depth * 0.1);
+}
+
+// "aktuell" / "davor" / "davor-davor" / "3x davor" — greift Philips eigene Terminologie aus dem
+// Chat auf. depth 0 = der aktuelle, offene M5-Abschnitt.
+export function chainLabel(depth) {
+  if (depth === 0) return "aktuell";
+  if (depth === 1) return "davor";
+  if (depth === 2) return "davor-davor";
+  return `${depth}x davor`;
+}
+
+function trendLineItem(pivot, endTime, roleLabel, color, lineWidth, formatPrice) {
   const label = formatPrice ? `${roleLabel} ${formatPrice(pivot.price)}` : roleLabel;
   return {
     level: { price: pivot.price, pivotTime: pivot.pivotTime, endTime },
-    options: { color, lineWidth: LINE_WIDTH, label, labelSide: "end" },
+    options: { color, lineWidth, label, labelSide: "end" },
   };
 }
 
-// Zeichnet den aktuellen Trend-Zustand (nur den offenen, aktuellsten Abschnitt — nicht die
-// `previous`-Kette) als Linien mit Preis-Label auf den Chart, siehe "Trendanalyse"-Toggle im
-// Dashboard. `candles` = die gerade ANGEZEIGTEN Kerzen (nicht zwingend M5!), nur fürs Snapping
-// der Linien-Endpunkte auf eine gültige Bar-Zeit — analog zu den Trade-Setup-Linien in
-// PriceChart.vue, die aus demselben Grund ebenfalls `allCandles` statt der M5-Erkennungs-
-// Kerzen verwenden.
+// Baut die Linien-Items für EINEN Trend-Abschnitt (H1-Rahmen oder eine M5-Unterstruktur-Stufe).
+function segmentItems(segment, endTime, formatPrice, { alpha = null, lineWidth = M5_LINE_WIDTH, prefix = "" } = {}) {
+  const color = (c) => (alpha != null ? dimColor(c, alpha) : c);
+  const items = [];
+  // Pfeile fürs schnellere Erkennen im Gewühl der anderen Chart-Zeichnungen (Pfeilrichtung
+  // passend zur Farblogik: rot/▼ = Ablehnung nach unten, grün/▲ = Ablehnung nach oben).
+  if (segment.swingHigh) {
+    items.push(trendLineItem(segment.swingHigh, endTime, `${prefix}▼ Swing High`, color(SWING_HIGH_COLOR), lineWidth, formatPrice));
+  }
+  if (segment.swingLow) {
+    items.push(trendLineItem(segment.swingLow, endTime, `${prefix}▲ Swing Low`, color(SWING_LOW_COLOR), lineWidth, formatPrice));
+  }
+  if (segment.protectedHigh) {
+    items.push(trendLineItem(segment.protectedHigh, endTime, `${prefix}Protected High`, color(PROTECTED_COLOR), lineWidth, formatPrice));
+  }
+  if (segment.protectedLow) {
+    items.push(trendLineItem(segment.protectedLow, endTime, `${prefix}Protected Low`, color(PROTECTED_COLOR), lineWidth, formatPrice));
+  }
+  if (segment.choch) {
+    items.push(trendLineItem(segment.choch, segment.choch.brokenAt, `${prefix}CHoCH`, color(CHOCH_COLOR), lineWidth, formatPrice));
+  }
+  return items;
+}
+
+// Zeichnet die verschachtelte Struktur (siehe buildNestedTrendStructure): der äußere Rahmen
+// dick+hell ("Rahmen "-Präfix), darunter die M5-Unterstruktur zunehmend abgedunkelt ("M5 aktuell"
+// / "M5 davor" / ...) — dieselben Abschnitte, die auch das Metadaten-Panel auflistet (siehe
+// summarizeNestedTrend in PriceChart.vue), damit Chart und Metadaten 1:1 vergleichbar bleiben.
+// `candles` = die gerade ANGEZEIGTEN Kerzen (nicht zwingend M5!), nur fürs Snapping der Linien-
+// Endpunkte auf eine gültige Bar-Zeit — analog zu den Trade-Setup-Linien in PriceChart.vue, die
+// aus demselben Grund ebenfalls `allCandles` statt der M5-Erkennungs-Kerzen verwenden.
 export function renderTrendState(series, trendState, existingPrimitives, candles) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
@@ -226,18 +299,17 @@ export function renderTrendState(series, trendState, existingPrimitives, candles
   const formatPrice = (price) => price.toFixed(precision);
   const nowTime = candles[candles.length - 1].time;
 
-  const items = [];
-  if (trendState.swingHigh) items.push(trendLineItem(trendState.swingHigh, nowTime, "Swing High", SWING_HIGH_COLOR, formatPrice));
-  if (trendState.swingLow) items.push(trendLineItem(trendState.swingLow, nowTime, "Swing Low", SWING_LOW_COLOR, formatPrice));
-  if (trendState.protectedHigh) {
-    items.push(trendLineItem(trendState.protectedHigh, nowTime, "Protected High", PROTECTED_COLOR, formatPrice));
-  }
-  if (trendState.protectedLow) {
-    items.push(trendLineItem(trendState.protectedLow, nowTime, "Protected Low", PROTECTED_COLOR, formatPrice));
-  }
-  if (trendState.choch) {
-    items.push(trendLineItem(trendState.choch, trendState.choch.brokenAt, "CHoCH", CHOCH_COLOR, formatPrice));
-  }
+  let items = segmentItems(trendState, nowTime, formatPrice, { lineWidth: OUTER_LINE_WIDTH, prefix: "Rahmen " });
+
+  (trendState.unterstruktur ?? []).forEach((seg, i) => {
+    items = items.concat(
+      segmentItems(seg, seg.invalidatedAt ?? nowTime, formatPrice, {
+        alpha: alphaForDepth(i),
+        lineWidth: M5_LINE_WIDTH,
+        prefix: `M5 ${chainLabel(i)} `,
+      }),
+    );
+  });
 
   for (const { level, options } of items) {
     const primitive = new LiquidityLinePrimitive(level, options, candles);
