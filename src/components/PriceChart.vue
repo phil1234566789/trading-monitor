@@ -1,9 +1,10 @@
 <script setup>
-import { onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { createChart, CandlestickSeries, LineSeries, TickMarkType } from "lightweight-charts";
 import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
 import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, LiquidityLinePrimitive } from "../liquidity.js";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
+import { buildTrendState, renderTrendState } from "../trendStructure.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import {
   binanceIntervalFor,
@@ -20,7 +21,9 @@ import {
   fetchOlderCandles as fetchOlderForexCandles,
 } from "../ctraderCandles.js";
 import { useStatusBar } from "../composables/useStatusBar.js";
+import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
 import Gauge from "./Gauge.vue";
+import MetadataPanel from "./MetadataPanel.vue";
 
 const props = defineProps({
   symbol: { type: String, required: true },
@@ -29,9 +32,14 @@ const props = defineProps({
   poiZones: { type: Array, default: () => [] },
   showHistoricalObs: { type: Boolean, default: false },
   showLiquidity: { type: Boolean, default: true },
+  showSweptLiquidity: { type: Boolean, default: false },
+  showLiquidityDebug: { type: Boolean, default: false },
   showTradeSetups: { type: Boolean, default: true },
   tradeSetupHistoryCount: { type: Number, default: 5 },
+  showTrendAnalysis: { type: Boolean, default: false },
+  showMetadata: { type: Boolean, default: false },
 });
+const emit = defineEmits(["close-metadata"]);
 
 // CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
 // bleiben Gauges/CVD-Pane komplett weg statt leer. Der Wert steht bei onMounted fest:
@@ -50,7 +58,6 @@ const WINDOW_BARS = 15; // letzte 15 Binance-1m-Kerzen für das rollierende Gaug
 const TRADE_MARKER_BARS = new Set(["1m", "5m", "15m", "1h"]); // 4h/1D würden zu unübersichtlich
 const LIQUIDITY_FRACTAL_PERIOD = 5; // Williams-Fractal-Periode, siehe fractals.pine
 const LIQUIDITY_MAX_RELEVANT = 10; // je Richtung, siehe liqMaxRelevant in inputs.pine
-const LIQUIDITY_ONLY_RELEVANT = true; // blendet alte, längst geswepte Level aus
 
 // Trade-Setup (Liquidity Sweep + Protected M5-Fraktal + M5-OB, siehe tv-indikator/src/
 // tradesetup.pine) — nur für Forex (braucht M5-Kerzen zusätzlich zum aktuell angezeigten
@@ -77,12 +84,66 @@ const TRADE_SETUP_LINE_WIDTH = 2;
 const TRADE_SETUP_OB_BEAR = { fillColor: "rgba(255, 215, 0, 0.22)", borderColor: "rgba(255, 215, 0, 0.7)" };
 const TRADE_SETUP_OB_BULL = { fillColor: "rgba(33, 150, 243, 0.22)", borderColor: "rgba(33, 150, 243, 0.7)" };
 
+// Trendanalyse (Swing High/Low + CHoCH, siehe trendStructure.js) braucht mehr M5-Historie als
+// tradeSetupM5Candles (300 = ~25h, zu knapp für den H1-Anker-Lookback) — eigener, größerer Fetch,
+// nur solange der Toggle an ist (jeder Fetch ist ein frischer cTrader-TLS-Connect, siehe
+// loadTradeSetupCandles). 800 Kerzen = ~66h, deutlich mehr Puffer als der Anker je gebraucht hat.
+const TREND_ANALYSIS_CANDLE_COUNT = 800;
+
 const { markSuccess } = useStatusBar();
 
 const chartContainerRef = ref(null);
 const gaugesBottom = ref(12);
 const windowDelta = ref(0);
 const dailyDelta = ref(0);
+const trendLabel = ref(null); // "Long" | "Short" | "Konsolidierung" | null — siehe computeTrendState
+const trendMetadata = ref(null); // Rohkopie von currentTrendState fürs Metadaten-Panel (siehe computeTrendState)
+
+// direction ("up"/"down"/"consolidation") in Trading-Sprech für die Chart-Anzeige übersetzt.
+function trendLabelFor(direction) {
+  if (direction === "up") return "Long";
+  if (direction === "down") return "Short";
+  if (direction === "consolidation") return "Konsolidierung";
+  return null;
+}
+
+// Menschenlesbare Zusammenfassung eines Trend-Abschnitts fürs Metadaten-Panel — läuft die
+// gesamte previous-Kette ab, damit Philip die Trendanalyse (Swing/Protected-Level, CHoCH,
+// gesammelte Pivots) Schritt für Schritt gegen den Chart nachvollziehen kann.
+function summarizePivot(p) {
+  return p ? { price: p.price, at: fmtDateTime(p.pivotTime), touched: p.touched, touchedAt: fmtDateTime(p.touchedTime) } : null;
+}
+function summarizeTrendSegment(state) {
+  if (!state) return null;
+  return {
+    direction: state.direction,
+    anchorTime: fmtDateTime(state.anchorTime),
+    confirmedAt: fmtDateTime(state.confirmedAt),
+    invalidatedAt: fmtDateTime(state.invalidatedAt),
+    swingHigh: summarizePivot(state.swingHigh),
+    swingLow: summarizePivot(state.swingLow),
+    protectedHigh: summarizePivot(state.protectedHigh),
+    protectedLow: summarizePivot(state.protectedLow),
+    choch: state.choch
+      ? { price: state.choch.price, protectedSince: fmtDateTime(state.choch.pivotTime), brokenAt: fmtDateTime(state.choch.brokenAt) }
+      : null,
+    pivotHighs: (state.pivotHighs ?? []).map(summarizePivot),
+    pivotLows: (state.pivotLows ?? []).map(summarizePivot),
+  };
+}
+function summarizeTrendHistory(state) {
+  const segments = [];
+  let s = state;
+  while (s) {
+    segments.push(summarizeTrendSegment(s));
+    s = s.previous;
+  }
+  return segments; // [aktuell, davor, davor-davor, ...]
+}
+const metadataText = computed(() => {
+  if (!trendMetadata.value) return "Keine Trend-Daten geladen (Trendanalyse-Toggle einschalten).";
+  return JSON.stringify(summarizeTrendHistory(trendMetadata.value), null, 2);
+});
 
 // lightweight-charts ist inhärent imperativ (Canvas-API) — Chart/Series/Primitives und ihr
 // Zustand bleiben deshalb bewusst reine Closure-Variablen statt reaktiver refs. Sie steuern
@@ -100,6 +161,9 @@ let allCvdDeltas = [];
 let tradeSetupM5Candles = [];
 let tradeSetupH1Candles = [];
 let currentTradeSetups = [];
+let trendAnalysisPrimitives = [];
+let trendAnalysisM5Candles = [];
+let currentTrendState = null;
 let loadingOlder = false;
 let reachedHistoryStart = false;
 let reachedCvdHistoryStart = false;
@@ -224,17 +288,26 @@ function refreshPoiZonesInternal() {
 // bisher für kein Symbol aus dem Backend — anders als die BTC-OB-Zonen (`ob_zones`)
 // deshalb hier für beide (BTC + Forex) direkt aus den geladenen Kerzen des aktuellen
 // Chart-Timeframes neu erkannt, analog zur Forex-OB-Erkennung oben.
+// `showSweptLiquidity` schaltet den onlyRelevant-Filter aus filterRelevantLevels ab, zeigt
+// also auch längst berührte/irrelevante Level (statt nur aktive + die letzten 2 Sweeps) —
+// für den geplanten Trend-Indikator, wo genau diese "einer nach dem anderen touched=false
+// übrig gebliebenen" Fraktale interessant sind.
 function refreshLiquidityInternal() {
   if (!props.showLiquidity) {
     renderLiquidityLevels(candleSeries, [], liquidityPrimitives, allCandles);
     return;
   }
   const { highs, lows } = detectLiquidityLevels(allCandles, LIQUIDITY_FRACTAL_PERIOD);
+  const onlyRelevant = !props.showSweptLiquidity;
   const relevant = [
-    ...filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, LIQUIDITY_ONLY_RELEVANT),
-    ...filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, LIQUIDITY_ONLY_RELEVANT),
+    ...filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, onlyRelevant),
+    ...filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, onlyRelevant),
   ];
-  renderLiquidityLevels(candleSeries, relevant, liquidityPrimitives, allCandles);
+  const precision = pricePrecisionForInstrument(props.symbol);
+  renderLiquidityLevels(candleSeries, relevant, liquidityPrimitives, allCandles, {
+    debugPrices: props.showLiquidityDebug,
+    formatPrice: (price) => fmtPrice(price, precision),
+  });
 }
 
 // Erkennung läuft nur, wenn sich die M5/H1-Kerzen geändert haben (siehe loadTradeSetupCandles)
@@ -320,22 +393,56 @@ function renderTradeSetupsInternal() {
   }
 }
 
+// Berechnung (buildTrendState) läuft nur, wenn sich trendAnalysisM5Candles/tradeSetupH1Candles
+// geändert haben — analog zu computeTradeSetups: das Ergebnis bleibt über refreshChart-Aufrufe
+// hinweg stehen, nur renderTrendAnalysisInternal() (Positionierung) läuft bei jedem Refresh neu.
+function computeTrendState() {
+  currentTrendState =
+    trendAnalysisM5Candles.length > 0 && tradeSetupH1Candles.length > 0
+      ? buildTrendState(trendAnalysisM5Candles, tradeSetupH1Candles)
+      : null;
+  trendMetadata.value = currentTrendState;
+}
+
+// Positioniert currentTrendState gegen `allCandles` (den gerade angezeigten Chart-Timeframe) —
+// aus demselben Grund wie renderTradeSetupsInternal (die Erkennung läuft auf M5, gerendert wird
+// aber immer gegen das sichtbare Timeframe).
+function renderTrendAnalysisInternal() {
+  if (!chart) return;
+  if (!isForex || !props.showTrendAnalysis || !currentTrendState) {
+    trendLabel.value = null;
+    renderTrendState(candleSeries, null, trendAnalysisPrimitives, allCandles);
+    return;
+  }
+  trendLabel.value = trendLabelFor(currentTrendState.direction);
+  const drawableState = currentTrendState.direction === "consolidation" ? null : currentTrendState;
+  renderTrendState(candleSeries, drawableState, trendAnalysisPrimitives, allCandles);
+}
+
 // M5/H1-Kerzen für die Trade-Setup-Erkennung — unabhängig vom aktuell gewählten Chart-
 // Timeframe (props.currentBar), da ein Setup immer auf M5-Fraktal + H1/M5-Sweep basiert,
 // egal ob der Nutzer gerade den 1h- oder den 15m-Chart anschaut. Eigener, langsamerer Poll
 // (TRADE_SETUP_POLL_MS) statt am 12s-POLL_MS der Haupt-Kerzen zu hängen — jeder Aufruf ist
 // ein frischer cTrader-TLS-Connect (siehe ctraderCandles.js), 12s wäre unnötig teuer.
+// Holt bei aktivem showTrendAnalysis-Toggle zusätzlich die größere M5-Historie für
+// buildTrendState (siehe TREND_ANALYSIS_CANDLE_COUNT) — nur dann, um unnötige cTrader-Connects
+// zu vermeiden, solange niemand hinschaut.
 async function loadTradeSetupCandles() {
   if (!isForex) return;
   try {
-    const [m5, h1] = await Promise.all([
+    const fetches = [
       fetchInitialForexCandles(props.symbol, "5m", TRADE_SETUP_CANDLE_COUNT),
       fetchInitialForexCandles(props.symbol, "1h", TRADE_SETUP_CANDLE_COUNT),
-    ]);
+    ];
+    if (props.showTrendAnalysis) fetches.push(fetchInitialForexCandles(props.symbol, "5m", TREND_ANALYSIS_CANDLE_COUNT));
+    const [m5, h1, trendM5] = await Promise.all(fetches);
     tradeSetupM5Candles = m5;
     tradeSetupH1Candles = h1;
+    if (trendM5) trendAnalysisM5Candles = trendM5;
     computeTradeSetups();
     renderTradeSetupsInternal();
+    computeTrendState();
+    renderTrendAnalysisInternal();
   } catch (err) {
     console.error("Trade-Setup-Kerzen fehlgeschlagen:", err);
   }
@@ -351,6 +458,7 @@ function refreshChart() {
   refreshLiquidityInternal();
   refreshTradeMarkersInternal();
   renderTradeSetupsInternal();
+  renderTrendAnalysisInternal();
   cvdSeries?.setData(cumulativeFromDeltas(allCvdDeltas));
   positionGauges();
 }
@@ -554,10 +662,18 @@ watch(() => props.trades, refreshTradeMarkersInternal);
 watch(() => props.poiZones, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
 watch(() => props.showLiquidity, refreshLiquidityInternal);
+watch(() => props.showSweptLiquidity, refreshLiquidityInternal);
+watch(() => props.showLiquidityDebug, refreshLiquidityInternal);
 watch(() => props.showTradeSetups, renderTradeSetupsInternal);
 watch(() => props.tradeSetupHistoryCount, () => {
   computeTradeSetups();
   renderTradeSetupsInternal();
+});
+// Beim Einschalten fehlt die größere M5-Historie evtl. noch (siehe loadTradeSetupCandles) ->
+// einmal frisch nachladen; beim Ausschalten reicht ein reines Re-Render (blendet aus).
+watch(() => props.showTrendAnalysis, (on) => {
+  if (on) loadTradeSetupCandles();
+  else renderTrendAnalysisInternal();
 });
 </script>
 
@@ -568,6 +684,10 @@ watch(() => props.tradeSetupHistoryCount, () => {
       <Gauge id="window" :value="windowDelta" label="Δ 15m" />
       <Gauge id="daily" :value="dailyDelta" label="Δ Tag (UTC)" />
     </div>
+    <div v-if="trendLabel" class="trend-badge" :class="trendLabel.toLowerCase()">{{ trendLabel }}</div>
+    <MetadataPanel v-if="showMetadata" title="Trend-Metadaten" @close="emit('close-metadata')">
+      <pre class="metadata-json">{{ metadataText }}</pre>
+    </MetadataPanel>
   </div>
 </template>
 
@@ -591,5 +711,42 @@ watch(() => props.tradeSetupHistoryCount, () => {
   display: flex;
   gap: 8px;
   pointer-events: none;
+}
+
+.trend-badge {
+  position: absolute;
+  z-index: 5;
+  right: 60px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #fff;
+  pointer-events: none;
+}
+
+.trend-badge.long {
+  background: rgba(0, 230, 118, 0.85);
+}
+
+.trend-badge.short {
+  background: rgba(255, 23, 68, 0.85);
+}
+
+.trend-badge.konsolidierung {
+  background: rgba(120, 123, 134, 0.85);
+}
+
+.metadata-json {
+  margin: 0;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #d1d4dc;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 </style>

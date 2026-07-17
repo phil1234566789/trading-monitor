@@ -169,6 +169,29 @@ class LiquidityLineRenderer {
       ctx.moveTo(Math.min(x1, x2), y);
       ctx.lineTo(Math.max(x1, x2), y);
       ctx.stroke();
+
+      // Debug-Modus (showLiquidityDebug-Toggle) und Trendanalyse-Labels: Preis/Beschriftung an
+      // der Linie einblenden. labelSide "start" (Default) = am Pivot-Ursprung, wie der Debug-
+      // Toggle es will; "end" = rechts vom Linienende (siehe Trendanalyse-Toggle).
+      if (this._options.label) {
+        ctx.font = `${Math.round(10 * scope.verticalPixelRatio)}px sans-serif`;
+        ctx.fillStyle = this._options.color;
+        if (this._options.labelSide === "end") {
+          // Linien, die bis "jetzt" reichen (z.B. Swing High/Low), enden direkt am rechten
+          // Pane-Rand — ohne Clamp würde das Label dort abgeschnitten. An den Rand klemmen
+          // (mit etwas Innenabstand), notfalls überlappt es minimal mit dem Linienende.
+          const textWidth = ctx.measureText(this._options.label).width;
+          const desiredX = Math.max(x1, x2) + 6 * scope.horizontalPixelRatio;
+          const maxX = scope.bitmapSize.width - textWidth - 4 * scope.horizontalPixelRatio;
+          ctx.textBaseline = "middle";
+          ctx.textAlign = "left";
+          ctx.fillText(this._options.label, Math.min(desiredX, maxX), y);
+        } else {
+          ctx.textBaseline = "bottom";
+          ctx.textAlign = "left";
+          ctx.fillText(this._options.label, Math.min(x1, x2) + 4 * scope.horizontalPixelRatio, y - 2 * scope.verticalPixelRatio);
+        }
+      }
     });
   }
 
@@ -240,19 +263,21 @@ const LOW_COLOR = "rgba(255, 152, 0, 0.9)"; // reagiert auf Wicks nach unten (lo
 const SWEEP_COLOR = "rgba(255, 215, 0, 0.9)"; // Level bereits berührt/durchbrochen
 const LINE_WIDTH = 1;
 
-function levelOptions(lvl) {
+function levelOptions(lvl, { debugPrices, formatPrice } = {}) {
   const color = lvl.touched ? SWEEP_COLOR : lvl.dir === 1 ? HIGH_COLOR : LOW_COLOR;
-  return { color, lineWidth: LINE_WIDTH };
+  const label = debugPrices ? formatPrice(lvl.price) : null;
+  return { color, lineWidth: LINE_WIDTH, label };
 }
 
 // Zeichnet die übergebenen Level neu (komplettes Ersetzen der bisherigen Primitives) —
-// analog zu renderPersistedZones in orderBlocks.js.
-export function renderLiquidityLevels(series, levels, existingPrimitives, candles) {
+// analog zu renderPersistedZones in orderBlocks.js. `debugPrices`/`formatPrice` steuern das
+// Preis-Label am Pivot-Ursprung (Debug-Toggle im Dashboard) — ohne `formatPrice` bleibt es aus.
+export function renderLiquidityLevels(series, levels, existingPrimitives, candles, { debugPrices, formatPrice } = {}) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
   for (const lvl of levels) {
-    const primitive = new LiquidityLinePrimitive(lvl, levelOptions(lvl), candles);
+    const primitive = new LiquidityLinePrimitive(lvl, levelOptions(lvl, { debugPrices, formatPrice }), candles);
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }

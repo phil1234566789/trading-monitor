@@ -22,7 +22,18 @@ const currentBar = ref("5m");
 // dort), weil hier ohnehin nur "schon getestet ja/nein" existiert, kein Nearest-3-Ranking.
 const showHistoricalObs = ref(false);
 const showLiquidity = ref(true);
+// Debug-Hilfsmittel für die Trend-Indikator-Entwicklung: Preise an den Pivot-Linien
+// einblenden und die aktuell ausgeblendeten (bereits gesweepten) Liquiditäts-Level
+// mitanzeigen. Beide default aus, um den Chart im Normalbetrieb nicht zuzumüllen.
+const showLiquidityDebug = ref(false);
+const showSweptLiquidity = ref(false);
 const showTradeSetups = ref(true);
+// Marktstruktur-Trendanalyse (Swing High/Low, Protected High/Low, CHoCH — siehe
+// trendStructure.js), default aus wie die anderen Debug/Analyse-Hilfsmittel.
+const showTrendAnalysis = ref(false);
+// Popup mit den rohen Trend-State-Daten (Swing/Protected-Level, CHoCH, gesammelte Pivots,
+// previous-Kette) zum Nachvollziehen der Trendanalyse gegen den Chart — siehe MetadataPanel.vue.
+const showMetadata = ref(false);
 // Anzahl vergangener Setups je Richtung, analog zu tradeSetupHistoryCountShort/Long im
 // tv-indikator (dort default 5, 0-50) — 0 zeigt nur das gerade aktive/letzte Setup.
 const tradeSetupHistoryCount = ref(5);
@@ -72,8 +83,14 @@ watch(currentSymbol, () => {
       <button :class="{ active: showLiquidity }" @click="showLiquidity = !showLiquidity">
         Liquidität
       </button>
+      <button :class="{ active: showSweptLiquidity }" @click="showSweptLiquidity = !showSweptLiquidity">
+        Gesweepte Liquidität
+      </button>
       <button :class="{ active: showTradeSetups }" @click="showTradeSetups = !showTradeSetups">
         Trade-Setups
+      </button>
+      <button :class="{ active: showTrendAnalysis }" @click="showTrendAnalysis = !showTrendAnalysis">
+        Trendanalyse
       </button>
       <input
         v-if="showTradeSetups"
@@ -84,6 +101,12 @@ watch(currentSymbol, () => {
         class="trade-setup-history-count"
         title="Anzahl vergangener Trade-Setups je Richtung"
       />
+      <button :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
+        Debug
+      </button>
+      <button :class="{ active: showMetadata }" @click="showMetadata = !showMetadata">
+        Metadaten
+      </button>
     </div>
   </div>
 
@@ -95,8 +118,13 @@ watch(currentSymbol, () => {
     :poi-zones="poiZones"
     :show-historical-obs="showHistoricalObs"
     :show-liquidity="showLiquidity"
+    :show-swept-liquidity="showSweptLiquidity"
+    :show-liquidity-debug="showLiquidityDebug"
     :show-trade-setups="showTradeSetups"
     :trade-setup-history-count="tradeSetupHistoryCount"
+    :show-trend-analysis="showTrendAnalysis"
+    :show-metadata="showMetadata"
+    @close-metadata="showMetadata = false"
   />
 
   <aside class="trades-panel">
