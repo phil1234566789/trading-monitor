@@ -9,6 +9,7 @@ export interface LiquidityLevel {
   pivotTime: number;
   touched: boolean;
   touchedTime: number | null;
+  endTime: number;
 }
 
 function isUpFractal(candles: Candle[], p: number, n: number): boolean {
@@ -78,7 +79,13 @@ function buildLevel(candles: Candle[], p: number, period: number, dir: 1 | -1): 
       break;
     }
   }
-  return { price, pivotTime: candles[p].time, touched, touchedTime };
+  return {
+    price,
+    pivotTime: candles[p].time,
+    touched,
+    touchedTime,
+    endTime: touched ? touchedTime! : candles[candles.length - 1].time,
+  };
 }
 
 export function detectLiquidityLevels(candles: Candle[], period: number): { highs: LiquidityLevel[]; lows: LiquidityLevel[] } {

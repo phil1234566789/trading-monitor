@@ -265,8 +265,8 @@ function computeTradeSetups() {
   const shorts = takeLast(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params));
   const longs = takeLast(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params));
   currentTradeSetups = [
-    ...shorts.map((s, i) => ({ ...s, label: n > 1 ? `Short-Setup (${i + 1})` : "Short-Setup" })),
-    ...longs.map((s, i) => ({ ...s, label: n > 1 ? `Long-Setup (${i + 1})` : "Long-Setup" })),
+    ...shorts.map((s, i) => ({ ...s, label: n > 1 ? `Short (${i + 1})` : "Short" })),
+    ...longs.map((s, i) => ({ ...s, label: n > 1 ? `Long (${i + 1})` : "Long" })),
   ];
 }
 

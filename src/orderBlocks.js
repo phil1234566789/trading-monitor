@@ -202,7 +202,7 @@ function zoneOptions(z) {
   const dim = z.timeframe === "1H";
   const fillColor = inactive ? INACTIVE_COLOR : z.dir === 1 ? (z.weak ? BULL_WEAK_COLOR : BULL_COLOR) : z.weak ? BEAR_WEAK_COLOR : BEAR_COLOR;
   const borderColor = inactive ? "rgba(120, 123, 134, 0.35)" : z.dir === 1 ? "rgba(38, 166, 154, 0.7)" : "rgba(239, 83, 80, 0.7)";
-  const label = `${z.timeframe ? `${z.timeframe} ` : ""}${z.dir === 1 ? "OB Bull" : "OB Bear"}`;
+  const label = z.timeframe ?? "";
   return {
     fillColor: dim ? withAlpha(fillColor, DIM_FACTOR_1H) : fillColor,
     borderColor: dim ? withAlpha(borderColor, DIM_FACTOR_1H) : borderColor,

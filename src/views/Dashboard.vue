@@ -11,11 +11,11 @@ import { usePolledFetch } from "../composables/usePolledFetch.js";
 // Trades/POI-Zonen (ob_zones) gibt es aktuell nur für BTC-USDT — die Forex-OB-Erkennung
 // läuft (noch) nicht über diese Codebase, sondern soll später per TradingView-Webhook
 // kommen (siehe PLAN-notifications.md). Für GBPUSD/EURUSD bleiben beide Listen also leer.
-const SYMBOLS = ["BTC-USDT", "GBPUSD", "EURUSD"];
+const SYMBOLS = ["GBPUSD", "EURUSD", "BTC-USDT"];
 const POLL_MS = 12_000;
 
-const currentSymbol = ref("BTC-USDT");
-const currentBar = ref("1h");
+const currentSymbol = ref("GBPUSD");
+const currentBar = ref("5m");
 // Historische (bereits angetestete) OB-Zonen standardmäßig ausgeblendet, um den Chart
 // übersichtlich zu halten — analog zum "Historische OBs"-Toggle im tv-indikator-Projekt
 // (dort default auch aus). Ein einzelner Schalter statt pro-Timeframe (4H/1H getrennt wie

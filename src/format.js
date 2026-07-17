@@ -1,5 +1,11 @@
-export function fmtPrice(n) {
-  return n == null ? "–" : n.toLocaleString("de-DE", { maximumFractionDigits: 2 });
+export function fmtPrice(n, precision = 2) {
+  return n == null ? "–" : n.toLocaleString("de-DE", { maximumFractionDigits: precision });
+}
+
+// Forex-Paare (GBPUSD/EURUSD) brauchen 5 Nachkommastellen, BTC-USDT 2 — siehe
+// cfg.pricePrecision in supabase/functions/poi-watcher/index.ts (dieselbe Zuordnung).
+export function pricePrecisionForInstrument(instrument) {
+  return instrument === "BTC-USDT" ? 2 : 5;
 }
 
 // Akzeptiert sowohl Unix-Sekunden (Chart-Zeit) als auch ISO-Strings (direkt aus Supabase).

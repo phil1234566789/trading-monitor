@@ -167,7 +167,7 @@ Deno.serve(async () => {
 
         const { data: existingRows, error: selectError } = await supabase
           .from("ob_zones")
-          .select("start_time, direction, touched, notified, notified_at")
+          .select("start_time, direction, touched, notified, notified_at, alert_price")
           .eq("instrument", cfg.instrument)
           .eq("timeframe", tf.label);
         if (selectError) throw selectError;
@@ -213,6 +213,10 @@ Deno.serve(async () => {
               // detectOrderBlocks in _shared/orderBlocks.ts) — deterministisch aus der
               // Kerzenhistorie, keine eigene Wanduhr-Bookkeeping noetig.
               end_time: new Date(z.endTime * 1000).toISOString(),
+              // alert_price: der Preis im Moment des Touches, einmal eingefroren (wie
+              // end_time) — unabhaengig davon, ob dafuer auch wirklich eine TG-Nachricht
+              // rausging (alarmActive/Session steuern nur notified_at, nicht diesen Wert).
+              alert_price: justTouched ? currentPrice : existing?.alert_price ?? null,
               notified: existing ? existing.notified || justTouched : z.touched,
               // notified_at nur bei einem echten Versand setzen (existing muss vorhanden sein,
               // sonst ist es ein historischer Alt-Touch ohne echten Alarm) — sonst würde ein
@@ -255,7 +259,7 @@ Deno.serve(async () => {
 
         const { data: existingLiqRows, error: liqSelectError } = await supabase
           .from("liquidity_levels")
-          .select("pivot_time, direction, touched, notified, notified_at")
+          .select("pivot_time, direction, touched, notified, notified_at, end_time, alert_price")
           .eq("instrument", cfg.instrument)
           .eq("timeframe", "1H");
         if (liqSelectError) throw liqSelectError;
@@ -281,6 +285,22 @@ Deno.serve(async () => {
 
           const justTouched = lvl.touched && !wasTouchedInDb;
 
+          // end_time: bevorzugt der aus der Kerzenhistorie abgeleitete Zeitpunkt (deterministisch,
+          // siehe buildLevel in _shared/liquidity.ts). lvl.touchedTime ist nur dann null, wenn
+          // touched hier gerade erst per Live-Preis (vor Kerzenschluss) oder ueber
+          // wasTouchedInDb gesetzt wurde: bei einem brandneuen Touch (justTouched) ist "jetzt"
+          // korrekt, bei einem laengst bekannten Touch, der nur aus dem geladenen
+          // Kerzenfenster gefallen ist, bleibt der bestehende end_time-Wert stehen (sonst
+          // wuerde er bei jedem Cron-Lauf erneut auf "jetzt" springen — derselbe Bug, den
+          // end_time hier ueberhaupt erst ersetzen soll).
+          const endTimeIso = !lvl.touched
+            ? null
+            : lvl.touchedTime != null
+              ? new Date(lvl.touchedTime * 1000).toISOString()
+              : justTouched
+                ? new Date().toISOString()
+                : existing?.end_time ?? new Date().toISOString();
+
           const { error: upsertLiqError } = await supabase.from("liquidity_levels").upsert(
             {
               instrument: cfg.instrument,
@@ -289,6 +309,8 @@ Deno.serve(async () => {
               price: lvl.price,
               pivot_time: new Date(lvl.pivotTime * 1000).toISOString(),
               touched: lvl.touched,
+              end_time: endTimeIso,
+              alert_price: justTouched ? currentPrice : existing?.alert_price ?? null,
               notified: existing ? existing.notified || justTouched : lvl.touched,
               notified_at: justTouched && existing && alarmActive ? new Date().toISOString() : existing?.notified_at ?? null,
             },
@@ -393,6 +415,7 @@ Deno.serve(async () => {
               ob_top: setup.obTop,
               ob_bottom: setup.obBottom,
               ob_start_time: new Date(setup.obStartTime * 1000).toISOString(),
+              alert_price: currentPrice,
               notified: shouldAlert,
               notified_at: shouldAlert ? new Date().toISOString() : null,
             },

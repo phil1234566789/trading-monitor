@@ -1,34 +1,34 @@
 <script setup>
-import { fmtPrice, fmtDateTime } from "../format.js";
+import { fmtDateTime } from "../format.js";
 
 defineProps({
-  zones: { type: Array, required: true },
+  rows: { type: Array, required: true },
 });
 </script>
 
 <template>
-  <div v-if="zones.length === 0" class="trades-empty">Noch keine erreichten POIs.</div>
+  <div v-if="rows.length === 0" class="trades-empty">Noch keine Alarme.</div>
   <table v-else class="trades-table">
     <thead>
       <tr>
-        <th>Erreicht am</th>
-        <th>Timeframe</th>
+        <th>Gesendet am</th>
+        <th>Typ</th>
         <th>Richtung</th>
-        <th>Zone</th>
+        <th>Detail</th>
+        <th>Preis</th>
         <th>TG gesendet</th>
-        <th>Trade-Signal</th>
       </tr>
     </thead>
     <tbody>
-      <tr v-for="z in zones" :key="z.id">
-        <td>{{ fmtDateTime(z.end_time) }}</td>
-        <td>{{ z.timeframe }}</td>
+      <tr v-for="r in rows" :key="r.id">
+        <td>{{ fmtDateTime(r.time) }}</td>
+        <td>{{ r.typeLabel }}</td>
         <td>
-          <span class="trade-direction" :class="z.direction">{{ z.direction === "long" ? "Long" : "Short" }}</span>
+          <span class="trade-direction" :class="r.direction">{{ r.directionLabel }}</span>
         </td>
-        <td>{{ fmtPrice(z.bottom) }} – {{ fmtPrice(z.top) }}{{ z.weak ? " (schwach)" : "" }}</td>
-        <td>{{ z.notified_at ? "✅" : "–" }}</td>
-        <td class="trade-reasoning-cell">– <span class="trade-time">(folgt mit D3/Claude-Check)</span></td>
+        <td>{{ r.detail }}</td>
+        <td>{{ r.price }}</td>
+        <td>{{ r.notifiedAt ? "✅" : "–" }}</td>
       </tr>
     </tbody>
   </table>
