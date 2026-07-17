@@ -61,7 +61,11 @@ const TRADE_SETUP_M5_FRACTAL_PERIOD = 5; // liqM5Period
 const TRADE_SETUP_H1_FRACTAL_PERIOD = 10; // liqH1Period
 const TRADE_SETUP_CANDLE_COUNT = 300; // ~25h M5-Historie, mehr als der Lookback unten
 const TRADE_SETUP_GRACE_SEC = 5 * 60; // eine M5-Kerzenlänge
-const TRADE_SETUP_LS_MAX_LEAD_SEC = 30 * 60; // lsMaxLeadMinutes
+const TRADE_SETUP_LS_MAX_LEAD_SEC_H1 = 120 * 60; // lsMaxLeadMinutesH1 — eigenes, größeres Fenster
+// als M5 (H1-Sweep liegt typischerweise deutlich länger vor dem Fraktal), siehe poi-watcher/index.ts
+const TRADE_SETUP_LS_MAX_LEAD_SEC_M5 = 45 * 60; // lsMaxLeadMinutesM5
+const TRADE_SETUP_PIP_SIZE = 0.0001; // pipSize im Indikator — gilt für beide FX-Paare (GBPUSD/EURUSD)
+const TRADE_SETUP_LS_MAX_DISTANCE_M5 = 5.0 * TRADE_SETUP_PIP_SIZE; // lsMaxDistancePipsM5=5, nur für M5-LS
 const TRADE_SETUP_OB_MAX_DELAY_SEC = 60 * 60; // obMaxDelayMinutes
 const TRADE_SETUP_LOOKBACK_SEC = 6 * 60 * 60; // protectedHighLookbackHours
 const TRADE_SETUP_OB_WIDTH_SEC = 10 * TRADE_SETUP_GRACE_SEC; // obBoxWidthM5Candles=10, rein optisch
@@ -251,7 +255,9 @@ function computeTradeSetups() {
   const setupObs = detectSetupObs(tradeSetupM5Candles);
   const params = {
     graceSec: TRADE_SETUP_GRACE_SEC,
-    lsMaxLeadSec: TRADE_SETUP_LS_MAX_LEAD_SEC,
+    lsMaxLeadSecH1: TRADE_SETUP_LS_MAX_LEAD_SEC_H1,
+    lsMaxLeadSecM5: TRADE_SETUP_LS_MAX_LEAD_SEC_M5,
+    maxDistanceM5: TRADE_SETUP_LS_MAX_DISTANCE_M5,
     maxLookbackSec: TRADE_SETUP_LOOKBACK_SEC,
     obMaxDelaySec: TRADE_SETUP_OB_MAX_DELAY_SEC,
     nowTime: tradeSetupM5Candles[tradeSetupM5Candles.length - 1].time,

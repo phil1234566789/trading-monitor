@@ -38,15 +38,21 @@ function findFirstSetupObAfter(obs, obDir, afterTime, maxDelaySec) {
 // zeitlich spätesten Berührungszeitpunkt (der jüngste, relevanteste Sweep). Fenster liegt um
 // pivotTime herum: lsMaxLeadSec als Untergrenze (Sweep meist kurz VOR dem Fraktal), graceSec
 // als Obergrenze (Sweep und Fraktal-Entstehung auch als dasselbe Preisereignis möglich).
-function findLsInArray(levels, fractal, dir, graceSec, lsMaxLeadSec) {
+function findLsInArray(levels, fractal, dir, graceSec, lsMaxLeadSec, maxDistance) {
   const earliest = fractal.pivotTime - lsMaxLeadSec;
   const deadline = fractal.pivotTime + graceSec;
   let best = null;
   let bestTouchedTime = -1;
   for (const lvl of levels) {
     const onFarSide = dir === 1 ? lvl.price < fractal.price : lvl.price > fractal.price;
+    const withinDistance = maxDistance == null || Math.abs(lvl.price - fractal.price) <= maxDistance;
     const eligible =
-      lvl.touched && lvl.touchedTime != null && lvl.touchedTime >= earliest && lvl.touchedTime <= deadline && onFarSide;
+      lvl.touched &&
+      lvl.touchedTime != null &&
+      lvl.touchedTime >= earliest &&
+      lvl.touchedTime <= deadline &&
+      onFarSide &&
+      withinDistance;
     if (eligible && lvl.touchedTime > bestTouchedTime) {
       bestTouchedTime = lvl.touchedTime;
       best = lvl;
@@ -57,10 +63,11 @@ function findLsInArray(levels, fractal, dir, graceSec, lsMaxLeadSec) {
 
 // Ein Fraktal kann sowohl durch einen größeren H1-Sweep als auch durch einen kleineren
 // M5-Sweep entstehen, beide zählen gleichwertig — gewinnt das mit dem zeitlich spätesten
-// Berührungszeitpunkt, unabhängig davon aus welchem Array es kommt.
-function findBestLsMatch(h1Levels, m5Levels, fractal, dir, graceSec, lsMaxLeadSec) {
-  const h1Match = findLsInArray(h1Levels, fractal, dir, graceSec, lsMaxLeadSec);
-  const m5Match = findLsInArray(m5Levels, fractal, dir, graceSec, lsMaxLeadSec);
+// Berührungszeitpunkt, unabhängig davon aus welchem Array es kommt. Distanzlimit (maxDistanceM5)
+// gilt bewusst NUR fürs M5-Level (H1 bekommt null = kein Limit).
+function findBestLsMatch(h1Levels, m5Levels, fractal, dir, graceSec, lsMaxLeadSecH1, lsMaxLeadSecM5, maxDistanceM5) {
+  const h1Match = findLsInArray(h1Levels, fractal, dir, graceSec, lsMaxLeadSecH1, null);
+  const m5Match = findLsInArray(m5Levels, fractal, dir, graceSec, lsMaxLeadSecM5, maxDistanceM5);
   if (m5Match && (!h1Match || m5Match.touchedTime > h1Match.touchedTime)) return m5Match;
   return h1Match;
 }
@@ -75,7 +82,16 @@ function findBestLsMatch(h1Levels, m5Levels, fractal, dir, graceSec, lsMaxLeadSe
 function findAllProtectedFractals(fractalLevels, h1Levels, m5Levels, dir, params) {
   const results = [];
   for (const candidate of fractalLevels) {
-    const ls = findBestLsMatch(h1Levels, m5Levels, candidate, dir, params.graceSec, params.lsMaxLeadSec);
+    const ls = findBestLsMatch(
+      h1Levels,
+      m5Levels,
+      candidate,
+      dir,
+      params.graceSec,
+      params.lsMaxLeadSecH1,
+      params.lsMaxLeadSecM5,
+      params.maxDistanceM5,
+    );
     if (ls) results.push({ fractal: candidate, ls });
   }
   return results; // chronologisch (fractalLevels ist es bereits)
