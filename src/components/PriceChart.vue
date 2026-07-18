@@ -197,6 +197,13 @@ let rangesPollTimer = null;
 let windowGaugeTimer = null;
 let dailyGaugeTimer = null;
 const rangesMetadata = ref(null); // Liste der erkannten H1-Periode-5-Pivots fürs Ranges-Metadaten-Panel
+// Der erste H1-Fetch (loadRangesCandles) ist ein frischer cTrader-TLS-Connect+Auth-Handshake
+// (siehe ctraderCandles.js/_shared/ctrader/client.ts) statt eines simplen DB-Reads — das kann
+// spürbar dauern und lief bisher komplett unsichtbar (siehe Chat: "dauert echt lange bis es
+// aufm Chart erscheint"). rangesMetadata bleibt null bis zum ersten erfolgreichen Fetch, danach
+// nie wieder (auch nicht während der 60s-Hintergrund-Polls) — genau das späte "leer -> gefüllt"
+// ist der Moment, der ohne Feedback wie ein Hänger wirkt.
+const rangesLoading = computed(() => (props.showRanges || props.showRangesMetadata) && rangesMetadata.value === null);
 
 // lightweight-charts formatiert Zeit standardmäßig in UTC (unabhängig von der
 // Browser-Zeitzone) — hier auf lokale Zeit umgestellt, damit die Achse/der Crosshair
@@ -975,6 +982,10 @@ watch(
 <template>
   <div class="chart-wrapper">
     <div ref="chartContainerRef" class="chart-container"></div>
+    <div v-if="rangesLoading" class="ranges-loading">
+      <span class="ranges-spinner"></span>
+      Ranges laden…
+    </div>
     <div v-if="!isForex" class="cvd-gauges" :style="{ bottom: gaugesBottom + 'px' }">
       <Gauge id="window" :value="windowDelta" label="Δ 15m" />
       <Gauge id="daily" :value="dailyDelta" label="Δ Tag (UTC)" />
@@ -1016,5 +1027,36 @@ watch(
   margin: 0;
   font-size: 13px;
   color: #787b86;
+}
+
+.ranges-loading {
+  position: absolute;
+  z-index: 5;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(30, 34, 45, 0.85);
+  color: #d1d4dc;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.ranges-spinner {
+  width: 11px;
+  height: 11px;
+  border: 2px solid rgba(209, 212, 220, 0.3);
+  border-top-color: #d1d4dc;
+  border-radius: 50%;
+  animation: ranges-spin 0.8s linear infinite;
+}
+
+@keyframes ranges-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

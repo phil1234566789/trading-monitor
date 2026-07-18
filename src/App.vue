@@ -1,10 +1,12 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useStatusBar } from "./composables/useStatusBar.js";
+import { useHttpActivity } from "./composables/useHttpActivity.js";
 
 const FRESH_MS = 30_000;
 
 const { lastSuccessAt } = useStatusBar();
+const { activeLabels, isActive } = useHttpActivity();
 const now = ref(Date.now());
 
 let timer = null;
@@ -31,6 +33,10 @@ const lastUpdateText = computed(() =>
     <header class="status-bar">
       <span :class="statusDotClass"></span>
       <span>{{ statusText }}</span>
+      <span v-if="isActive" class="http-activity" :title="activeLabels.join(', ')">
+        <span class="http-spinner"></span>
+        {{ activeLabels.join(", ") }}
+      </span>
       <nav class="page-nav">
         <!-- exact-active-class statt active-class: "/" ist Praefix jeder Route, mit dem
              normalen (nicht-exakten) active-Matching waere "Dashboard" immer aktiv. -->
@@ -80,6 +86,33 @@ const lastUpdateText = computed(() =>
 .last-update {
   margin-left: auto;
   color: #787b86;
+}
+
+.http-activity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #787b86;
+  max-width: 40vw;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.http-spinner {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border: 2px solid rgba(120, 123, 134, 0.35);
+  border-top-color: #787b86;
+  border-radius: 50%;
+  animation: http-spin 0.8s linear infinite;
+}
+
+@keyframes http-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .page-nav {
