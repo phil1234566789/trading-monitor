@@ -84,13 +84,19 @@ const GROUPS = [
     <button class="style-reset" @click="resetChartColors">Alle zurücksetzen</button>
     <section v-for="group in GROUPS" :key="group.title" class="style-group">
       <h3 class="style-group-title">{{ group.title }}</h3>
-      <label v-for="field in group.fields" :key="field.key" class="style-field" :for="'color-' + field.key">
-        <span class="style-field-label">{{ field.label }}</span>
-        <span class="style-swatch-wrap">
-          <input :id="'color-' + field.key" v-model="chartColors[field.key]" type="color" class="style-swatch" />
-          <span class="style-hex">{{ chartColors[field.key] }}</span>
-        </span>
-      </label>
+      <div v-for="field in group.fields" :key="field.key" class="style-field">
+        <div class="style-field-top">
+          <span class="style-field-label">{{ field.label }}</span>
+          <span class="style-swatch-wrap">
+            <input v-model="chartColors[field.key].hex" type="color" class="style-swatch" />
+            <span class="style-hex">{{ chartColors[field.key].hex }}</span>
+          </span>
+        </div>
+        <div class="style-field-alpha">
+          <input v-model.number="chartColors[field.key].alpha" type="range" min="0" max="1" step="0.01" class="style-alpha-slider" />
+          <span class="style-alpha-value">{{ Math.round(chartColors[field.key].alpha * 100) }}%</span>
+        </div>
+      </div>
     </section>
   </MetadataPanel>
 </template>
@@ -132,17 +138,69 @@ const GROUPS = [
 }
 
 .style-field {
+  padding: 6px 0;
+}
+
+.style-field-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 4px 0;
-  cursor: pointer;
 }
 
 .style-field-label {
   font-size: 13px;
   color: #d1d4dc;
+}
+
+.style-field-alpha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding-left: 2px;
+}
+
+.style-alpha-slider {
+  flex: 1;
+  height: 3px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #2a2e39;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.style-alpha-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #7ea6ff;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.style-alpha-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.style-alpha-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 50%;
+  background: #7ea6ff;
+  cursor: pointer;
+}
+
+.style-alpha-value {
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  color: #565a64;
+  min-width: 32px;
+  text-align: right;
 }
 
 .style-swatch-wrap {

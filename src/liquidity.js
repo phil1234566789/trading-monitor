@@ -4,7 +4,7 @@
 // bei jedem Refresh einmal komplett über das geladene `candles`-Array (aktueller
 // Chart-Timeframe) neu berechnet.
 import { snapToBarTime } from "./chartTimeUtils.js";
-import { chartColors, hexToRgba } from "./chartColors.js";
+import { cssColor } from "./chartColors.js";
 
 const RECENT_SWEEP_COUNT = 2; // siehe markTopKRecentTouches in liquidity.pine
 
@@ -262,8 +262,8 @@ export class LiquidityLinePrimitive {
 const LINE_WIDTH = 1;
 
 function levelOptions(lvl, { debugPrices, formatPrice } = {}) {
-  const base = lvl.touched ? chartColors.liquiditySweep : lvl.dir === 1 ? chartColors.liquidityHigh : chartColors.liquidityLow;
-  const color = hexToRgba(base, 0.9);
+  const key = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
+  const color = cssColor(key);
   const label = debugPrices ? formatPrice(lvl.price) : null;
   return { color, lineWidth: LINE_WIDTH, label };
 }

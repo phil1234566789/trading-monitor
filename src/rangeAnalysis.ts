@@ -1,5 +1,5 @@
 import { LiquidityLinePrimitive } from "./liquidity.js";
-import { chartColors, hexToRgba } from "./chartColors.js";
+import { cssColor } from "./chartColors.js";
 import type { Pivot, RangeState } from "./range.type";
 
 // Neuer "1h-Range"-Trendalgorithmus (siehe test/tdd_mit_claude.ts, rangeState1..7) — löst den
@@ -295,8 +295,8 @@ export function renderRangeAnalysis(
   existingPrimitives.length = 0;
   if (!state || candles.length === 0) return;
 
-  const highColor = hexToRgba(chartColors.rangeHigh, 0.95);
-  const lowColor = hexToRgba(chartColors.rangeLow, 0.95);
+  const highColor = cssColor("rangeHigh");
+  const lowColor = cssColor("rangeLow");
   const highLine = new LiquidityLinePrimitive(toLevel(state.currRange.high, candles), { color: highColor, lineWidth: LINE_WIDTH }, candles);
   const lowLine = new LiquidityLinePrimitive(toLevel(state.currRange.low, candles), { color: lowColor, lineWidth: LINE_WIDTH }, candles);
   // rot: unter der Linie, zeigt nach oben; grün: über der Linie, zeigt nach unten (siehe Chat)
@@ -311,7 +311,7 @@ export function renderRangeAnalysis(
   if (protectedLow) {
     const line = new LiquidityLinePrimitive(
       toLevel(protectedLow, candles),
-      { color: hexToRgba(chartColors.rangeProtectedLow, 0.95), lineWidth: LINE_WIDTH, label: "1h protected low", labelSide: "end" },
+      { color: cssColor("rangeProtectedLow"), lineWidth: LINE_WIDTH, label: "1h protected low", labelSide: "end" },
       candles,
     );
     series.attachPrimitive(line);

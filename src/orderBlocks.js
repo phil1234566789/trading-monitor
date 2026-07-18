@@ -6,7 +6,7 @@
 // bärisch symmetrisch. Zone = C1-Kante bis zur gegenüberliegenden Kante von C2 (inkl. Wick) —
 // siehe Pine-Kommentar "HTF-Modus" für die Herleitung.
 import { snapToBarTime } from "./chartTimeUtils.js";
-import { chartColors, hexToRgba } from "./chartColors.js";
+import { cssColorScaled } from "./chartColors.js";
 
 const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone angelegt
 const WEAK_PCT = 0.15; // Gap kleiner als das gilt als "schwach" (blasser dargestellt)
@@ -188,16 +188,24 @@ export class OrderBlockPrimitive {
 // 1H-Zonen etwas dezenter als 4H, damit beide gleichzeitig im Chart unterscheidbar sind.
 const DIM_FACTOR_1H = 0.6;
 
+// chartColors[obBull/obBear/obInactive].alpha ist die "normale" Fill-Transparenz (Default 0.28
+// bzw. 0.15) — weak/Border skalieren proportional dazu (Original-Design-Verhältnis), damit EIN
+// Transparenz-Regler pro Farbe reicht statt vier separate (siehe chartColors.js: cssColorScaled).
+const WEAK_FILL_RATIO = 0.1 / 0.28;
+const BULL_BEAR_BORDER_RATIO = 0.7 / 0.28;
+const INACTIVE_BORDER_RATIO = 0.35 / 0.15;
+
 function zoneOptions(z) {
   const inactive = z.touched || z.invalidated;
   const dim = z.timeframe === "1H";
-  const base = inactive ? chartColors.obInactive : z.dir === 1 ? chartColors.obBull : chartColors.obBear;
-  const fillAlpha = inactive ? 0.15 : z.weak ? 0.1 : 0.28;
-  const borderAlpha = inactive ? 0.35 : 0.7;
+  const key = inactive ? "obInactive" : z.dir === 1 ? "obBull" : "obBear";
+  const fillRatio = !inactive && z.weak ? WEAK_FILL_RATIO : 1;
+  const borderRatio = inactive ? INACTIVE_BORDER_RATIO : BULL_BEAR_BORDER_RATIO;
+  const dimFactor = dim ? DIM_FACTOR_1H : 1;
   const label = z.timeframe ?? "";
   return {
-    fillColor: hexToRgba(base, dim ? fillAlpha * DIM_FACTOR_1H : fillAlpha),
-    borderColor: hexToRgba(base, dim ? borderAlpha * DIM_FACTOR_1H : borderAlpha),
+    fillColor: cssColorScaled(key, fillRatio * dimFactor),
+    borderColor: cssColorScaled(key, borderRatio * dimFactor),
     textColor: "rgba(209, 212, 220, 0.9)",
     label,
   };

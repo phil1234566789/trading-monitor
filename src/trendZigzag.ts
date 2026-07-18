@@ -1,5 +1,5 @@
 import { snapToBarTime } from "./chartTimeUtils.js";
-import { chartColors, hexToRgba } from "./chartColors.js";
+import { cssColor } from "./chartColors.js";
 import type { Pivot, DowntrendState } from "./range.type";
 
 // Schrittweise Marktstruktur-Erkennung nach Philips eigenem Entwurf (siehe
@@ -114,8 +114,8 @@ export function zigzagSegments(state: Pick<DowntrendState, "structure" | "applie
   const structurePoints = points.slice(0, classifiedCount);
   const tailPoints = points.slice(Math.max(classifiedCount - 1, 0));
   return [
-    { points: structurePoints, color: hexToRgba(chartColors.zigzagStructure, 0.9) },
-    { points: tailPoints.length > 1 ? tailPoints : [], color: hexToRgba(chartColors.zigzagTail, 0.9) },
+    { points: structurePoints, color: cssColor("zigzagStructure") },
+    { points: tailPoints.length > 1 ? tailPoints : [], color: cssColor("zigzagTail") },
   ];
 }
 

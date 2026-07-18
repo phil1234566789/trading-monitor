@@ -1,7 +1,7 @@
 // Zeichnet Entry/Exit als exakten Punkt + Preis-Strich auf den Kerzen-Chart (nicht nur
 // "Kerze markiert", sondern der tatsächliche Einstiegs-/Austiegspreis als Marke).
 import { snapToBarTime } from "./chartTimeUtils.js";
-import { chartColors, hexToRgba } from "./chartColors.js";
+import { cssColor } from "./chartColors.js";
 
 const TICK_LENGTH = 16; // px, Strich neben dem Punkt zur Preis-Ablesung
 const DOT_RADIUS = 4; // px
@@ -131,19 +131,14 @@ export class TradeMarkerPrimitive {
 }
 
 function tradeOptions(t) {
-  const outcomeColor = {
-    win: chartColors.tradeWin,
-    loss: chartColors.tradeLoss,
-    open: chartColors.tradeOpen,
-    invalid: chartColors.tradeInvalid,
-  };
-  const entryColor = t.direction === "short" ? chartColors.tradeLoss : chartColors.tradeWin;
-  const exitColor = outcomeColor[t.outcome] ?? chartColors.tradeInvalid;
+  const outcomeKey = { win: "tradeWin", loss: "tradeLoss", open: "tradeOpen", invalid: "tradeInvalid" };
+  const entryColor = cssColor(t.direction === "short" ? "tradeLoss" : "tradeWin");
+  const exitColor = cssColor(outcomeKey[t.outcome] ?? "tradeInvalid");
   const dirLabel = t.direction === "short" ? "Short" : "Long";
   return {
     entryColor,
     exitColor,
-    connectorColor: hexToRgba(chartColors.tradeConnector, 0.75),
+    connectorColor: cssColor("tradeConnector"),
     entryLabel: `${dirLabel} Entry ${t.entryPrice}`,
     exitLabel: t.exitPrice != null ? `${t.outcome?.toUpperCase() ?? "EXIT"} ${t.exitPrice}` : null,
   };
