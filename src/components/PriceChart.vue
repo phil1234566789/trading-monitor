@@ -4,7 +4,7 @@ import { createChart, CandlestickSeries, LineSeries, TickMarkType } from "lightw
 import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
 import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, LiquidityLinePrimitive } from "../liquidity.js";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
-import { buildNestedTrendStructure, renderTrendState, chainLabel } from "../trendStructure.js";
+import { initTrendState, applyPivot, zigzagSegments, renderZigzag } from "../trendZigzag.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import {
   binanceIntervalFor,
@@ -37,9 +37,9 @@ const props = defineProps({
   showLiquidityDebug: { type: Boolean, default: false },
   showTradeSetups: { type: Boolean, default: true },
   tradeSetupHistoryCount: { type: Number, default: 5 },
-  showTrendAnalysis: { type: Boolean, default: false },
   showMetadata: { type: Boolean, default: false },
   showPivots: { type: Boolean, default: false },
+  showZigzag: { type: Boolean, default: false },
 });
 const emit = defineEmits(["close-metadata"]);
 
@@ -90,18 +90,16 @@ const TRADE_SETUP_LINE_WIDTH = 2;
 const TRADE_SETUP_OB_BEAR = { fillColor: "rgba(255, 215, 0, 0.22)", borderColor: "rgba(255, 215, 0, 0.7)" };
 const TRADE_SETUP_OB_BULL = { fillColor: "rgba(33, 150, 243, 0.22)", borderColor: "rgba(33, 150, 243, 0.7)" };
 
-// Trendanalyse (Swing High/Low + CHoCH, siehe trendStructure.js) braucht mehr M5-Historie als
-// tradeSetupM5Candles (300 = ~25h) — eigener Fetch, nur solange der Toggle an ist (jeder Fetch
-// ist ein frischer cTrader-TLS-Connect, siehe loadTradeSetupCandles). fetchTrendAnalysisM5History
+// Zigzag/Metadaten (siehe trendZigzag.js) brauchen mehr M5-Historie als tradeSetupM5Candles
+// (300 = ~25h) — eigener Fetch, nur solange einer der beiden Toggles an ist (jeder Fetch ist ein
+// frischer cTrader-TLS-Connect, siehe loadTradeSetupCandles). fetchTrendAnalysisM5History
 // paginiert automatisch nach, falls der Anker (siehe unten) irgendwann weiter als ~83h (1000
 // Kerzen, Edge-Function-Limit pro Request) zurückliegt.
 const TREND_ANALYSIS_CANDLE_COUNT = 1000;
-// Fester Anker für buildNestedTrendStructure statt automatischer Herleitung — siehe Chat: der
-// äußere Trend soll exakt am Ursprung des Pivots starten, den man als Referenz nehmen will
-// (hier: der Swing High 1.35578 vom 15.07), NICHT von irgendeinem H1-Fraktal abhängen. 19:20
-// statt 20:20 (Pivot-Kerze selbst), damit die Fraktal-Erkennung (braucht period=5 Kerzen davor)
-// den Pivot bei 1.35578 überhaupt als solchen erkennt. H1-Pivots sind als spätere Ausbaustufe
-// gedacht, um diesen Anker automatisch zu finden (siehe trendStructure.js).
+// Fester Anker für den Zigzag-Algo statt automatischer Herleitung — siehe Chat: der Trend soll
+// exakt am Ursprung des Pivots starten, den man als Referenz nehmen will (hier: der Swing High
+// 1.35578 vom 15.07). 19:20 statt 20:20 (Pivot-Kerze selbst), damit die Fraktal-Erkennung
+// (braucht period=5 Kerzen davor) den Pivot bei 1.35578 überhaupt als solchen erkennt.
 const TREND_ANALYSIS_ANCHOR_TIME = Math.floor(new Date("2026-07-15T19:20:00+02:00").getTime() / 1000);
 
 const { markSuccess } = useStatusBar();
@@ -110,54 +108,33 @@ const chartContainerRef = ref(null);
 const gaugesBottom = ref(12);
 const windowDelta = ref(0);
 const dailyDelta = ref(0);
-const trendLabel = ref(null); // "Long" | "Short" | "Konsolidierung" | null — siehe computeTrendState
-const trendMetadata = ref(null); // Rohkopie von currentTrendState fürs Metadaten-Panel (siehe computeTrendState)
+const trendMetadata = ref(null); // Rohkopie des Zigzag-States fürs Metadaten-Panel, siehe refreshZigzagInternal
 
-// direction ("up"/"down"/"consolidation") in Trading-Sprech für die Chart-Anzeige übersetzt.
-function trendLabelFor(direction) {
-  if (direction === "up") return "Long";
-  if (direction === "down") return "Short";
-  if (direction === "consolidation") return "Konsolidierung";
-  return null;
+// Menschenlesbare Zusammenfassung fürs Metadaten-Panel — jetzt der ZIGZAG-State (siehe
+// trendZigzag.js / test/trendanalyse_vorschlag.ts), NICHT mehr buildNestedTrendStructure: Philip
+// hat das explizit so spezifiziert (trendOrdnung statt chartLabel "Rahmen (übergeordnet)", siehe
+// Chat). pivotTime ist nur intern fürs Rendern der Zigzag-Linien nötig, taucht hier bewusst
+// nicht auf (Philips Pivot-Typ hat kein Pflichtfeld dafür, nur das menschenlesbare pivotAt).
+function pivotForDisplay(p) {
+  if (!p) return null;
+  const { pivotTime, ...rest } = p;
+  return rest;
 }
-
-// Menschenlesbare Zusammenfassung der verschachtelten Trend-Struktur (siehe
-// buildNestedTrendStructure) fürs Metadaten-Panel — äußerer Rahmen + M5-unterstruktur, damit
-// Philip die Trendanalyse (Swing/Protected-Level, CHoCH, gesammelte Pivots) Schritt für Schritt
-// gegen den Chart nachvollziehen kann.
-function summarizePivot(p) {
-  return p ? { price: p.price, at: fmtDateTime(p.pivotTime), touched: p.touched, touchedAt: fmtDateTime(p.touchedTime) } : null;
-}
-function summarizeUnterstruktur(seg, depth) {
-  return {
-    chartLabel: `M5 ${chainLabel(depth)}`, // exakt dieselbe Bezeichnung wie auf dem Chart
-    direction: seg.direction,
-    confirmedAt: fmtDateTime(seg.confirmedAt),
-    invalidatedAt: fmtDateTime(seg.invalidatedAt),
-    swingHigh: summarizePivot(seg.swingHigh),
-    swingLow: summarizePivot(seg.swingLow),
-    protectedHigh: summarizePivot(seg.protectedHigh),
-    protectedLow: summarizePivot(seg.protectedLow),
-    choch: seg.choch
-      ? { price: seg.choch.price, protectedSince: fmtDateTime(seg.choch.pivotTime), brokenAt: fmtDateTime(seg.choch.brokenAt) }
-      : null,
-    pivotHighs: (seg.pivotHighs ?? []).map(summarizePivot),
-    pivotLows: (seg.pivotLows ?? []).map(summarizePivot),
-  };
-}
-function summarizeNestedTrend(state) {
+function summarizeZigzagState(state) {
   if (!state) return null;
   return {
-    chartLabel: "Rahmen (übergeordnet)",
+    trendOrdnung: state.trendOrdnung,
     direction: state.direction,
-    swingHigh: summarizePivot(state.swingHigh),
-    swingLow: summarizePivot(state.swingLow),
-    unterstruktur: (state.unterstruktur ?? []).map((seg, i) => summarizeUnterstruktur(seg, i)),
+    trendState: state.trendState,
+    range: { high: pivotForDisplay(state.range.high), low: pivotForDisplay(state.range.low) },
+    struktur: state.struktur.map(pivotForDisplay),
+    unterStruktur: state.unterStruktur,
+    gelesenePivots: state.gelesenePivots.map(pivotForDisplay),
   };
 }
 // Rohes Objekt statt fertigem JSON-Text — JsonTree.vue rendert es einklappbar, damit man
-// große Bäume (v.a. die pivotHighs/pivotLows-Arrays) schneller überfliegen kann.
-const metadataTree = computed(() => (trendMetadata.value ? summarizeNestedTrend(trendMetadata.value) : null));
+// große Arrays (gelesenePivots) schneller überfliegen kann.
+const metadataTree = computed(() => (trendMetadata.value ? summarizeZigzagState(trendMetadata.value) : null));
 
 // lightweight-charts ist inhärent imperativ (Canvas-API) — Chart/Series/Primitives und ihr
 // Zustand bleiben deshalb bewusst reine Closure-Variablen statt reaktiver refs. Sie steuern
@@ -169,6 +146,7 @@ let resizeObserver;
 let orderBlockPrimitives = [];
 let liquidityPrimitives = [];
 let pivotPrimitives = [];
+let zigzagPrimitives = [];
 let tradePrimitives = [];
 let tradeSetupPrimitives = [];
 let allCandles = [];
@@ -176,9 +154,7 @@ let allCvdDeltas = [];
 let tradeSetupM5Candles = [];
 let tradeSetupH1Candles = [];
 let currentTradeSetups = [];
-let trendAnalysisPrimitives = [];
 let trendAnalysisM5Candles = [];
-let currentTrendState = null;
 let loadingOlder = false;
 let reachedHistoryStart = false;
 let reachedCvdHistoryStart = false;
@@ -341,6 +317,56 @@ function refreshPivotsInternal() {
   });
 }
 
+// "Zigzag"-Toggle: Philips eigener Marktstruktur-Entwurf (siehe test/trendanalyse_vorschlag.ts
+// und trendZigzag.js) — verbindet die M5-Periode-10-Pivots seit dem Trend-Ursprung
+// (TREND_ANALYSIS_ANCHOR_TIME) der Reihe nach mit Linien, statt horizontale Level zu zeichnen.
+// Nutzt trendAnalysisM5Candles (nicht allCandles!), weil der Ursprung mehrere Tage zurückliegt —
+// gerendert wird aber gegen allCandles (das sichtbare Timeframe), aus demselben Grund wie bei
+// renderTrendState.
+function computeZigzagState() {
+  const { highs, lows } = detectLiquidityLevels(trendAnalysisM5Candles, PIVOTS_FRACTAL_PERIOD);
+  const pivots = [...highs, ...lows]
+    .filter((p) => p.pivotTime >= TREND_ANALYSIS_ANCHOR_TIME)
+    .sort((a, b) => a.pivotTime - b.pivotTime)
+    .map((p) => ({
+      price: p.price,
+      pivotTime: p.pivotTime,
+      type: p.dir === 1 ? "high" : "low",
+      touched: p.touched ? { price: p.price, touchedAt: fmtDateTime(p.touchedTime) } : false,
+      pivotAt: fmtDateTime(p.pivotTime),
+    }));
+
+  const originHigh = pivots.find((p) => p.type === "high");
+  const originLow = pivots.find((p) => p.type === "low");
+  if (!originHigh || !originLow) return null;
+
+  let state = initTrendState({ trendOrdnung: 1, direction: "down", high: originHigh, low: originLow });
+  for (const pivot of pivots) {
+    if (pivot === originHigh || pivot === originLow) continue;
+    state = applyPivot(state, pivot, { candles: trendAnalysisM5Candles, fractalPeriod: PIVOTS_FRACTAL_PERIOD });
+  }
+  return state;
+}
+
+// Berechnet den Zigzag-State IMMER (sobald trendAnalysisM5Candles da sind) und füllt damit
+// trendMetadata fürs Metadaten-Panel — unabhängig von showZigzag, sonst hätte "nur Metadaten an,
+// Zigzag aus" keine Daten zum Anzeigen. Nur das tatsächliche ZEICHNEN der Linien hängt an
+// showZigzag.
+function refreshZigzagInternal() {
+  const state = trendAnalysisM5Candles.length > 0 ? computeZigzagState() : null;
+  trendMetadata.value = state;
+
+  if (!props.showZigzag || !state) {
+    renderZigzag(candleSeries, [], zigzagPrimitives, allCandles);
+    return;
+  }
+  const precision = pricePrecisionForInstrument(props.symbol);
+  renderZigzag(candleSeries, zigzagSegments(state), zigzagPrimitives, allCandles, {
+    showLabels: props.showLiquidityDebug,
+    formatPrice: (price) => fmtPrice(price, precision),
+  });
+}
+
 // Erkennung läuft nur, wenn sich die M5/H1-Kerzen geändert haben (siehe loadTradeSetupCandles)
 // — das Ergebnis (currentTradeSetups) bleibt über Timeframe-Wechsel/refreshChart-Aufrufe
 // hinweg stehen, nur renderTradeSetupsInternal() (Positionierung) läuft bei jedem Refresh neu.
@@ -424,34 +450,6 @@ function renderTradeSetupsInternal() {
   }
 }
 
-// Berechnung (buildNestedTrendStructure) läuft nur, wenn sich trendAnalysisM5Candles geändert
-// haben — analog zu computeTradeSetups: das Ergebnis bleibt über refreshChart-Aufrufe hinweg
-// stehen, nur renderTrendAnalysisInternal() (Positionierung) läuft bei jedem Refresh neu.
-// Braucht kein H1 mehr (siehe trendStructure.js) — der äußere Rahmen kommt direkt aus der
-// M5-Kette, verankert exakt am Pivot-Ursprung (TREND_ANALYSIS_ANCHOR_TIME).
-function computeTrendState() {
-  currentTrendState =
-    trendAnalysisM5Candles.length > 0
-      ? buildNestedTrendStructure(trendAnalysisM5Candles, { anchorTime: TREND_ANALYSIS_ANCHOR_TIME, maxUnterstruktur: 2 })
-      : null;
-  trendMetadata.value = currentTrendState;
-}
-
-// Positioniert currentTrendState gegen `allCandles` (den gerade angezeigten Chart-Timeframe) —
-// aus demselben Grund wie renderTradeSetupsInternal (die Erkennung läuft auf M5, gerendert wird
-// aber immer gegen das sichtbare Timeframe).
-function renderTrendAnalysisInternal() {
-  if (!chart) return;
-  if (!isForex || !props.showTrendAnalysis || !currentTrendState) {
-    trendLabel.value = null;
-    renderTrendState(candleSeries, null, trendAnalysisPrimitives, allCandles);
-    return;
-  }
-  trendLabel.value = trendLabelFor(currentTrendState.direction);
-  const drawableState = currentTrendState.direction === "consolidation" ? null : currentTrendState;
-  renderTrendState(candleSeries, drawableState, trendAnalysisPrimitives, allCandles);
-}
-
 // TREND_ANALYSIS_CANDLE_COUNT (2000) liegt über dem Edge-Function-Limit pro Request (1000,
 // siehe ctraderCandles.js) -> seitenweise rückwärts nachladen, analog zu fetchAllSince im
 // fetch-trend-fixture.mjs-Script.
@@ -470,9 +468,9 @@ async function fetchTrendAnalysisM5History(symbol, targetCount) {
 // egal ob der Nutzer gerade den 1h- oder den 15m-Chart anschaut. Eigener, langsamerer Poll
 // (TRADE_SETUP_POLL_MS) statt am 12s-POLL_MS der Haupt-Kerzen zu hängen — jeder Aufruf ist
 // ein frischer cTrader-TLS-Connect (siehe ctraderCandles.js), 12s wäre unnötig teuer.
-// Holt bei aktivem showTrendAnalysis-Toggle zusätzlich die größere M5-Historie für
-// buildNestedTrendStructure (siehe TREND_ANALYSIS_CANDLE_COUNT) — nur dann, um unnötige
-// cTrader-Connects zu vermeiden, solange niemand hinschaut.
+// Holt bei aktivem Zigzag/Metadaten-Toggle zusätzlich die größere M5-Historie für den
+// Zigzag-Algo (siehe TREND_ANALYSIS_CANDLE_COUNT) — nur dann, um unnötige cTrader-Connects zu
+// vermeiden, solange niemand hinschaut.
 async function loadTradeSetupCandles() {
   if (!isForex) return;
   try {
@@ -480,15 +478,16 @@ async function loadTradeSetupCandles() {
       fetchInitialForexCandles(props.symbol, "5m", TRADE_SETUP_CANDLE_COUNT),
       fetchInitialForexCandles(props.symbol, "1h", TRADE_SETUP_CANDLE_COUNT),
     ];
-    if (props.showTrendAnalysis) fetches.push(fetchTrendAnalysisM5History(props.symbol, TREND_ANALYSIS_CANDLE_COUNT));
+    if (props.showZigzag || props.showMetadata) {
+      fetches.push(fetchTrendAnalysisM5History(props.symbol, TREND_ANALYSIS_CANDLE_COUNT));
+    }
     const [m5, h1, trendM5] = await Promise.all(fetches);
     tradeSetupM5Candles = m5;
     tradeSetupH1Candles = h1;
     if (trendM5) trendAnalysisM5Candles = trendM5;
     computeTradeSetups();
     renderTradeSetupsInternal();
-    computeTrendState();
-    renderTrendAnalysisInternal();
+    refreshZigzagInternal();
   } catch (err) {
     console.error("Trade-Setup-Kerzen fehlgeschlagen:", err);
   }
@@ -505,7 +504,7 @@ function refreshChart() {
   refreshPivotsInternal();
   refreshTradeMarkersInternal();
   renderTradeSetupsInternal();
-  renderTrendAnalysisInternal();
+  refreshZigzagInternal();
   cvdSeries?.setData(cumulativeFromDeltas(allCvdDeltas));
   positionGauges();
 }
@@ -713,6 +712,7 @@ watch(() => props.showSweptLiquidity, refreshLiquidityInternal);
 watch(() => props.showLiquidityDebug, () => {
   refreshLiquidityInternal();
   refreshPivotsInternal();
+  refreshZigzagInternal();
 });
 watch(() => props.showPivots, refreshPivotsInternal);
 watch(() => props.showTradeSetups, renderTradeSetupsInternal);
@@ -722,9 +722,14 @@ watch(() => props.tradeSetupHistoryCount, () => {
 });
 // Beim Einschalten fehlt die größere M5-Historie evtl. noch (siehe loadTradeSetupCandles) ->
 // einmal frisch nachladen; beim Ausschalten reicht ein reines Re-Render (blendet aus).
-watch(() => props.showTrendAnalysis, (on) => {
+watch(() => props.showZigzag, (on) => {
   if (on) loadTradeSetupCandles();
-  else renderTrendAnalysisInternal();
+  else refreshZigzagInternal();
+});
+// Metadaten-Panel zeigt den Zigzag-State (siehe refreshZigzagInternal) — beim Einschalten ohne
+// Zigzag fehlt trendAnalysisM5Candles evtl. noch, daher genau wie dort einmal nachladen.
+watch(() => props.showMetadata, (on) => {
+  if (on && trendAnalysisM5Candles.length === 0) loadTradeSetupCandles();
 });
 </script>
 
@@ -735,10 +740,9 @@ watch(() => props.showTrendAnalysis, (on) => {
       <Gauge id="window" :value="windowDelta" label="Δ 15m" />
       <Gauge id="daily" :value="dailyDelta" label="Δ Tag (UTC)" />
     </div>
-    <div v-if="trendLabel" class="trend-badge" :class="trendLabel.toLowerCase()">{{ trendLabel }}</div>
     <MetadataPanel v-if="showMetadata" title="Trend-Metadaten" @close="emit('close-metadata')">
       <JsonTree v-if="metadataTree" :value="metadataTree" />
-      <p v-else class="metadata-empty">Keine Trend-Daten geladen (Trendanalyse-Toggle einschalten).</p>
+      <p v-else class="metadata-empty">Keine Trend-Daten geladen (Zigzag-Toggle einschalten).</p>
     </MetadataPanel>
   </div>
 </template>
@@ -763,33 +767,6 @@ watch(() => props.showTrendAnalysis, (on) => {
   display: flex;
   gap: 8px;
   pointer-events: none;
-}
-
-.trend-badge {
-  position: absolute;
-  z-index: 5;
-  right: 60px;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 6px 16px;
-  border-radius: 6px;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: #fff;
-  pointer-events: none;
-}
-
-.trend-badge.long {
-  background: rgba(0, 230, 118, 0.85);
-}
-
-.trend-badge.short {
-  background: rgba(255, 23, 68, 0.85);
-}
-
-.trend-badge.konsolidierung {
-  background: rgba(120, 123, 134, 0.85);
 }
 
 .metadata-empty {

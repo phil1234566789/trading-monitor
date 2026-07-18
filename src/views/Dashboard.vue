@@ -35,12 +35,12 @@ const showSweptLiquidity = useLocalStorageRef("showSweptLiquidity", false);
 // von showSweptLiquidity (Periode 5, LQ-Sweeps), die davon unverändert bleiben sollen.
 const showPivots = useLocalStorageRef("showPivots", false);
 const showTradeSetups = useLocalStorageRef("showTradeSetups", true);
-// Marktstruktur-Trendanalyse (Swing High/Low, Protected High/Low, CHoCH — siehe
-// trendStructure.js) — default AN, das ist mittlerweile der primäre Anwendungsfall.
-const showTrendAnalysis = useLocalStorageRef("showTrendAnalysis", true);
 // Popup mit den rohen Trend-State-Daten (Swing/Protected-Level, CHoCH, gesammelte Pivots,
 // previous-Kette) zum Nachvollziehen der Trendanalyse gegen den Chart — siehe MetadataPanel.vue.
 const showMetadata = useLocalStorageRef("showMetadata", false);
+// Philips eigener Marktstruktur-Entwurf (siehe test/trendanalyse_vorschlag.ts, trendZigzag.js) —
+// verbindet die Pivots seit dem Trend-Ursprung der Reihe nach mit Linien, zum Debuggen/Erklären.
+const showZigzag = useLocalStorageRef("showZigzag", false);
 // Anzahl vergangener Setups je Richtung, analog zu tradeSetupHistoryCountShort/Long im
 // tv-indikator (dort default 5, 0-50) — 0 zeigt nur das gerade aktive/letzte Setup.
 const tradeSetupHistoryCount = ref(5);
@@ -135,19 +135,12 @@ watch(currentSymbol, () => {
       />
 
       <div class="toggle-group">
-        <button :class="{ active: showTrendAnalysis }" @click="showTrendAnalysis = !showTrendAnalysis">
-          Trend
-        </button>
-        <button
-          class="toggle-caret"
-          :class="{ open: trendMenuOpen }"
-          title="Untermenü"
-          @click="trendMenuOpen = !trendMenuOpen"
-        >
-          ▾
+        <button :class="{ active: trendMenuOpen }" @click="trendMenuOpen = !trendMenuOpen">
+          Trend ▾
         </button>
         <div v-if="trendMenuOpen" class="toggle-dropdown">
           <button :class="{ active: showPivots }" @click="showPivots = !showPivots">Pivots</button>
+          <button :class="{ active: showZigzag }" @click="showZigzag = !showZigzag">Zigzag</button>
           <button :class="{ active: showMetadata }" @click="showMetadata = !showMetadata">Metadaten</button>
         </div>
       </div>
@@ -171,7 +164,7 @@ watch(currentSymbol, () => {
     :show-liquidity-debug="showLiquidityDebug"
     :show-trade-setups="showTradeSetups"
     :trade-setup-history-count="tradeSetupHistoryCount"
-    :show-trend-analysis="showTrendAnalysis"
+    :show-zigzag="showZigzag"
     :show-metadata="showMetadata"
     @close-metadata="showMetadata = false"
   />
