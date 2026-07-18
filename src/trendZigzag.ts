@@ -7,13 +7,64 @@ import { snapToBarTime } from "./chartTimeUtils.js";
 // bewusst noch NICHT behandelt (siehe Datei: "STOPP, schreib den algo erst mal bis hier und
 // nicht weiter").
 //
-// Pivot-Form (übernimmt Philips eigene Typisierung aus trendanalyse_vorschlag.ts):
-// { price, type: "high"|"low"|"swing-high"|"swing-low"|"lower-high"|"lower-low"|"weak-high",
-//   touched: false | { price, touchedAt }, pivotAt, pivotTime }
-// pivotTime (Unix-Sekunden) ist nur intern für Rendering + Kerzen-Lookup nötig, siehe
-// PriceChart.vue (pivotForDisplay strippt es wieder raus fürs Metadaten-Panel).
+// Die Typen hier sind bewusst noch grob/vorläufig (siehe Chat: "ich setz mich an die types dran
+// und mach die fester") — Philip verschärft sie in test/trendanalyse_vorschlag.ts weiter.
 
-export function initTrendState({ trendOrdnung, direction, high, low }) {
+export type PivotType =
+  | "high"
+  | "low"
+  | "swing-high"
+  | "swing-low"
+  | "lower-high"
+  | "lower-low"
+  | "weak-high"
+  | "weak-low";
+
+export type Touched = false | { price: number; touchedAt: unknown };
+
+// pivotTime (Unix-Sekunden) ist nur intern für Rendering + Kerzen-Lookup nötig, siehe
+// PriceChart.vue (pivotForDisplay strippt es wieder raus fürs Metadaten-Panel) — optional, weil
+// Philips handgeschriebene Testdaten (trendanalyse_vorschlag.ts) es nicht mitführen.
+export interface Pivot {
+  price: number;
+  type: PivotType;
+  touched: Touched;
+  pivotAt?: unknown;
+  pivotTime?: number;
+}
+
+export type Direction = "down" | "up";
+export type TrendState = "unconfirmed" | "confirmed" | "invalidated";
+
+export interface Candle {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
+export interface TrendZigzagState {
+  trendOrdnung: number;
+  direction: Direction;
+  trendState: TrendState;
+  range: { high: Pivot; low: Pivot };
+  struktur: Pivot[];
+  unterStruktur: unknown[];
+  gelesenePivots: Pivot[];
+}
+
+export function initTrendState({
+  trendOrdnung,
+  direction,
+  high,
+  low,
+}: {
+  trendOrdnung: number;
+  direction: Direction;
+  high: Pivot;
+  low: Pivot;
+}): TrendZigzagState {
   return {
     trendOrdnung, // 1 = übergeordneter Trend, je niedriger desto stärker (reicht als chartLabel)
     direction,
@@ -33,15 +84,25 @@ export function initTrendState({ trendOrdnung, direction, high, low }) {
 // irgendeine M5-Kerze per CLOSE unter das alte Low fällt. Falls nicht, war der Move dorthin nicht
 // stark genug -> das Lower-High gilt nur als "weak-high" statt als bestätigtes lower-high.
 // Ohne Kerzendaten (candles leer) lässt sich das nicht prüfen -> konservativ nicht abwerten.
-function closesBelowOldLow(candles, fromTime, lowPivotTime, oldLowPrice, fractalPeriod) {
-  if (candles.length === 0) return true;
+function closesBelowOldLow(
+  candles: Candle[],
+  fromTime: number | undefined,
+  lowPivotTime: number | undefined,
+  oldLowPrice: number,
+  fractalPeriod: number,
+): boolean {
+  if (candles.length === 0 || fromTime == null || lowPivotTime == null) return true;
   const lowIndex = candles.findIndex((c) => c.time === lowPivotTime);
   const confirmIndex = lowIndex === -1 ? candles.length - 1 : Math.min(lowIndex + fractalPeriod, candles.length - 1);
   const confirmTime = candles[confirmIndex].time;
   return candles.some((c) => c.time > fromTime && c.time <= confirmTime && c.close < oldLowPrice);
 }
 
-export function applyPivot(state, pivot, { candles = [], fractalPeriod = 10 } = {}) {
+export function applyPivot(
+  state: TrendZigzagState,
+  pivot: Pivot,
+  { candles = [], fractalPeriod = 10 }: { candles?: Candle[]; fractalPeriod?: number } = {},
+): TrendZigzagState {
   const gelesenePivots = [...state.gelesenePivots, pivot];
   let { range, struktur, trendState } = state;
 
@@ -68,6 +129,11 @@ export function applyPivot(state, pivot, { candles = [], fractalPeriod = 10 } = 
   return { ...state, range, struktur, trendState, gelesenePivots };
 }
 
+export interface ZigzagSegment {
+  points: Pivot[];
+  color: string;
+}
+
 const STRUCTURE_COLOR = "rgba(239, 83, 80, 0.9)"; // rot - bestätigte Struktur (Ursprung + struktur[])
 const TAIL_COLOR = "rgba(120, 123, 134, 0.9)"; // grau - gelesen, aber noch nicht Teil der Struktur
 
@@ -77,7 +143,7 @@ const TAIL_COLOR = "rgba(120, 123, 134, 0.9)"; // grau - gelesen, aber noch nich
 // in Grau — siehe Chat: "zeichne das zigzack nachdem wir keine rote Struktur-Bestimmung mehr
 // haben in grau". Der letzte rote Punkt wird im grauen Segment wiederholt, damit die Linie ohne
 // Lücke weiterläuft.
-export function zigzagSegments(state) {
+export function zigzagSegments(state: Pick<TrendZigzagState, "struktur" | "gelesenePivots">): ZigzagSegment[] {
   const classifiedCount = 2 + state.struktur.length;
   const points = state.gelesenePivots;
   const structurePoints = points.slice(0, classifiedCount);
@@ -91,21 +157,32 @@ export function zigzagSegments(state) {
 // --- Zeichnung: Verbindungslinien von Pivot zu Pivot (siehe Chat) ------------------------------
 // Anders als die horizontalen Level-Linien in liquidity.js: hier wird jeder Punkt direkt mit dem
 // nächsten verbunden (Zickzack durch die Struktur), plus ein kleiner Punkt + Preis-Label an jedem
-// Pivot selbst.
+// Pivot selbst. Die lightweight-charts-Anbindung (Primitive/PaneView/Renderer) bleibt bewusst
+// locker getypt (any) — das ist reines Chart-Rendering-Glue, nicht die Domain-Logik oben.
+interface RenderOptions {
+  color: string;
+  lineWidth: number;
+  showLabels: boolean;
+  formatPrice?: (price: number) => string;
+}
+
 class ZigzagRenderer {
-  constructor(points, options) {
+  private _points: any[];
+  private _options: RenderOptions;
+
+  constructor(points: any[], options: RenderOptions) {
     this._points = points; // [{x,y,label}] in Pane-Koordinaten, siehe ZigzagPaneView.update()
     this._options = options;
   }
 
-  draw(target) {
+  draw(target: any) {
     const pts = this._points.filter((p) => p.x !== null && p.y !== null);
     if (pts.length === 0) return;
 
-    target.useBitmapCoordinateSpace((scope) => {
+    target.useBitmapCoordinateSpace((scope: any) => {
       const ctx = scope.context;
-      const toX = (x) => Math.round(x * scope.horizontalPixelRatio);
-      const toY = (y) => Math.round(y * scope.verticalPixelRatio);
+      const toX = (x: number) => Math.round(x * scope.horizontalPixelRatio);
+      const toY = (y: number) => Math.round(y * scope.verticalPixelRatio);
 
       if (pts.length > 1) {
         ctx.strokeStyle = this._options.color;
@@ -143,7 +220,10 @@ class ZigzagRenderer {
 }
 
 class ZigzagPaneView {
-  constructor(source) {
+  private _source: ZigzagPrimitive;
+  private _points: any[];
+
+  constructor(source: ZigzagPrimitive) {
     this._source = source;
     this._points = [];
   }
@@ -155,7 +235,7 @@ class ZigzagPaneView {
     const formatPrice = this._source._options.formatPrice;
 
     this._points = this._source._pivots.map((p) => {
-      const barTime = snapToBarTime(candles, p.pivotTime);
+      const barTime = p.pivotTime != null ? snapToBarTime(candles, p.pivotTime) : null;
       return {
         x: barTime != null ? timeScale.timeToCoordinate(barTime) : null,
         y: series.priceToCoordinate(p.price),
@@ -170,8 +250,15 @@ class ZigzagPaneView {
 }
 
 export class ZigzagPrimitive {
-  constructor(pivots, options, candles) {
-    this._pivots = pivots; // [{price, pivotTime}, ...] chronologisch, siehe zigzagSegments()
+  _pivots: Pivot[]; // chronologisch, siehe zigzagSegments()
+  _options: RenderOptions;
+  _candles: Candle[];
+  _paneViews: ZigzagPaneView[];
+  _chart: any;
+  _series: any;
+
+  constructor(pivots: Pivot[], options: RenderOptions, candles: Candle[]) {
+    this._pivots = pivots;
     this._options = options;
     this._candles = candles;
     this._paneViews = [new ZigzagPaneView(this)];
@@ -179,7 +266,7 @@ export class ZigzagPrimitive {
     this._series = null;
   }
 
-  attached({ chart, series, requestUpdate }) {
+  attached({ chart, series, requestUpdate }: { chart: any; series: any; requestUpdate: () => void }) {
     this._chart = chart;
     this._series = series;
     requestUpdate(); // siehe LiquidityLinePrimitive — sonst haengt ein Primitive-Wechsel in der Luft
@@ -199,7 +286,13 @@ const DEFAULT_LINE_WIDTH = 2;
 // Ersetzt existingPrimitives komplett durch die aktuellen Zickzack-Segmente (siehe
 // zigzagSegments) — analog zu renderLiquidityLevels in liquidity.js. Ein Primitive je Segment,
 // damit jedes seine eigene Farbe (Rot = Struktur, Grau = noch unklassifizierter Tail) bekommt.
-export function renderZigzag(series, segments, existingPrimitives, candles, options = {}) {
+export function renderZigzag(
+  series: any,
+  segments: ZigzagSegment[],
+  existingPrimitives: ZigzagPrimitive[],
+  candles: Candle[],
+  options: { lineWidth?: number; showLabels?: boolean; formatPrice?: (price: number) => string } = {},
+) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
   if (!segments || candles.length === 0) return;

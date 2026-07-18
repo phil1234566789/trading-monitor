@@ -149,6 +149,9 @@ const stateSchritt4 = {
 
 
 
+// Alte Referenznotiz (Shape des inzwischen entfernten trendStructure.js-Engines, siehe Chat) —
+// kein gültiges JS/TS, deshalb zum Kompilieren auskommentiert statt gelöscht.
+/*
 {
 "chartLabel": "Rahmen (übergeordnet)"
 "direction": "down"
@@ -194,3 +197,4 @@ const stateSchritt4 = {
 "protectedSince": "17.07., 13:40"
 "brokenAt": "17.07., 15:50"
 }
+*/

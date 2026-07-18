@@ -1,7 +1,7 @@
 // Reproduziert Philips Schritt-für-Schritt-Beispiel aus trendanalyse_vorschlag.ts 1:1
 // (stateSchritt1 -> stateSchritt2 -> stateSchritt3, Zeilen 44-123).
 import { describe, expect, it } from "vitest";
-import { initTrendState, applyPivot, zigzagSegments } from "../src/trendZigzag.js";
+import { initTrendState, applyPivot, zigzagSegments } from "../src/trendZigzag";
 import candles from "./fixtures/gbpusd-m5-trend-2026-07-13.json";
 
 function unixSec(iso) {
