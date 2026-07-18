@@ -60,6 +60,9 @@ const rangesLookbackDays = computed({
 // Metadaten-Panel offen zu haben (siehe Chat: "man kann ranges nicht einzelnd toggeln").
 const showRanges = useLocalStorageRef("showRanges", false);
 const showRangesMetadata = useLocalStorageRef("showRangesMetadata", false);
+// EMA 50/200 auf M5 (siehe Chat: "Trend über EMA + Anzahl protected highs/lows") — ein Toggle für
+// beide Linien zusammen, keine separaten Schalter je Periode (nicht verlangt).
+const showEma = useLocalStorageRef("showEma", false);
 
 // Toolbar wurde zu voll (siehe Chat) -> Liquidity-Sweeps unter "Liquidität", Pivots+Metadaten
 // unter "Trend" als Dropdown. Reiner UI-Zustand, bewusst NICHT in localStorage (anders als die
@@ -202,6 +205,10 @@ watch(currentSymbol, () => {
         </div>
       </div>
 
+      <button :class="{ active: showEma }" @click="showEma = !showEma">
+        EMA
+      </button>
+
       <button :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
         Debug
       </button>
@@ -226,6 +233,7 @@ watch(currentSymbol, () => {
     :ranges-lookback-hours="rangesLookbackHours"
     :show-ranges="showRanges"
     :show-ranges-metadata="showRangesMetadata"
+    :show-ema="showEma"
     @close-metadata="showMetadata = false"
     @close-ranges-metadata="showRangesMetadata = false"
   />

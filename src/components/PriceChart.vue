@@ -6,6 +6,7 @@ import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, Liq
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { initTrendState, applyPivot, zigzagSegments, renderZigzag } from "../trendZigzag";
 import { initRangeState, applyRangePivot, renderRangeAnalysis } from "../rangeAnalysis";
+import { computeEma } from "../ema.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import {
   binanceIntervalFor,
@@ -44,6 +45,7 @@ const props = defineProps({
   rangesLookbackHours: { type: Number, default: 7 * 24 },
   showRanges: { type: Boolean, default: false },
   showRangesMetadata: { type: Boolean, default: false },
+  showEma: { type: Boolean, default: false },
 });
 const emit = defineEmits(["close-metadata", "close-ranges-metadata"]);
 
@@ -119,6 +121,14 @@ const RANGES_CANDLE_BUFFER = 20;
 const RANGES_POLL_MS = 60_000; // wie TRADE_SETUP_POLL_MS — H1-Kerzen brauchen keine schnellere Frische
 const RANGES_MARKER_COLOR = "rgba(0, 188, 212, 0.9)"; // Cyan — hebt sich von Zigzag (rot/grau) und Liquidität (grün/orange/gold) ab
 
+// EMA 50/200 auf M5 (siehe Chat: Philips "Trend über EMA + Anzahl protected highs/lows"-Idee) —
+// läuft auf trendAnalysisM5Candles (dieselbe M5-Historie wie der Zigzag-Algo), kein eigener Fetch
+// nötig, siehe loadTradeSetupCandles.
+const EMA_PERIOD_FAST = 50;
+const EMA_PERIOD_SLOW = 200;
+const EMA_FAST_COLOR = "#42a5f5"; // hellblau
+const EMA_SLOW_COLOR = "#ffb74d"; // amber
+
 const { markSuccess } = useStatusBar();
 
 const chartContainerRef = ref(null);
@@ -161,6 +171,8 @@ const metadataTree = computed(() => (trendMetadata.value ? summarizeZigzagState(
 let chart;
 let candleSeries;
 let cvdSeries;
+let ema50Series;
+let ema200Series;
 let resizeObserver;
 let orderBlockPrimitives = [];
 let liquidityPrimitives = [];
@@ -588,6 +600,21 @@ function renderTradeSetupsInternal() {
   }
 }
 
+// EMA 50/200 (M5) — läuft auf trendAnalysisM5Candles, unabhängig von allCandles/currentBar (eine
+// LineSeries braucht keine Neu-Positionierung gegen den sichtbaren Timeframe wie die Primitives
+// oben, daher kein Aufruf in refreshChart() nötig, nur wenn sich trendAnalysisM5Candles oder der
+// Toggle selbst ändern, siehe loadTradeSetupCandles/watch(showEma)).
+function refreshEmaInternal() {
+  if (!isForex) return;
+  if (!props.showEma || trendAnalysisM5Candles.length === 0) {
+    ema50Series?.setData([]);
+    ema200Series?.setData([]);
+    return;
+  }
+  ema50Series?.setData(computeEma(trendAnalysisM5Candles, EMA_PERIOD_FAST));
+  ema200Series?.setData(computeEma(trendAnalysisM5Candles, EMA_PERIOD_SLOW));
+}
+
 // TREND_ANALYSIS_CANDLE_COUNT (2000) liegt über dem Edge-Function-Limit pro Request (1000,
 // siehe ctraderCandles.js) -> seitenweise rückwärts nachladen, analog zu fetchAllSince im
 // fetch-trend-fixture.mjs-Script.
@@ -616,7 +643,7 @@ async function loadTradeSetupCandles() {
       fetchInitialForexCandles(props.symbol, "5m", TRADE_SETUP_CANDLE_COUNT),
       fetchInitialForexCandles(props.symbol, "1h", TRADE_SETUP_CANDLE_COUNT),
     ];
-    if (props.showZigzag || props.showMetadata) {
+    if (props.showZigzag || props.showMetadata || props.showEma) {
       fetches.push(fetchTrendAnalysisM5History(props.symbol, TREND_ANALYSIS_CANDLE_COUNT));
     }
     const [m5, h1, trendM5] = await Promise.all(fetches);
@@ -626,6 +653,7 @@ async function loadTradeSetupCandles() {
     computeTradeSetups();
     renderTradeSetupsInternal();
     refreshZigzagInternal();
+    refreshEmaInternal();
   } catch (err) {
     console.error("Trade-Setup-Kerzen fehlgeschlagen:", err);
   }
@@ -769,6 +797,25 @@ onMounted(() => {
     chart.panes()[1]?.setStretchFactor(0.25);
   }
 
+  if (isForex) {
+    // EMA 50/200 (M5) direkt in der Candlestick-Pane (keine eigene Pane, wie CVD) — sichtbar erst
+    // sobald refreshEmaInternal Daten reinschreibt (siehe watch(showEma)).
+    ema50Series = chart.addSeries(LineSeries, {
+      color: EMA_FAST_COLOR,
+      lineWidth: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      title: "EMA 50 (M5)",
+    });
+    ema200Series = chart.addSeries(LineSeries, {
+      color: EMA_SLOW_COLOR,
+      lineWidth: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      title: "EMA 200 (M5)",
+    });
+  }
+
   resizeObserver = new ResizeObserver((entries) => {
     if (!chart) return; // Resize-Callback kann nach chart.remove() noch nachfeuern
     const { width, height } = entries[0].contentRect;
@@ -843,6 +890,8 @@ onUnmounted(() => {
   chart = null;
   candleSeries = null;
   cvdSeries = null;
+  ema50Series = null;
+  ema200Series = null;
 });
 
 watch(() => props.currentBar, loadInitial);
@@ -885,6 +934,13 @@ watch(() => props.showRangesMetadata, refreshRangesPollingState);
 // frisch zu laden).
 watch(() => props.rangesLookbackHours, () => {
   if (rangesNeedsData()) loadRangesCandles();
+});
+// Braucht dieselbe trendAnalysisM5Candles-Historie wie Zigzag/Metadaten (siehe loadTradeSetupCandles)
+// -> beim Einschalten ohne die beiden fehlt sie evtl. noch, dann einmal nachladen; beim
+// Ausschalten reicht refreshEmaInternal (blendet aus, kein Neu-Fetch nötig).
+watch(() => props.showEma, (on) => {
+  if (on && trendAnalysisM5Candles.length === 0) loadTradeSetupCandles();
+  else refreshEmaInternal();
 });
 </script>
 
