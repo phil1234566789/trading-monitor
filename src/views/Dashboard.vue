@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import PriceChart from "../components/PriceChart.vue";
 import TradesTable from "../components/TradesTable.vue";
 import TradeStats from "../components/TradeStats.vue";
+import StyleModal from "../components/StyleModal.vue";
 import { TIMEFRAMES } from "../timeframes.js";
 import { fetchTrades } from "../trades.js";
 import { fetchPoiZones } from "../poiZones.js";
@@ -63,6 +64,10 @@ const showRangesMetadata = useLocalStorageRef("showRangesMetadata", false);
 // EMA 50/200 auf M5 (siehe Chat: "Trend über EMA + Anzahl protected highs/lows") — ein Toggle für
 // beide Linien zusammen, keine separaten Schalter je Periode (nicht verlangt).
 const showEma = useLocalStorageRef("showEma", false);
+// Style-Modal (Farben aller Chart-Indikatoren, siehe StyleModal.vue/chartColors.js) — reiner
+// Öffnen/Schließen-Zustand, NICHT in localStorage (die Farben selbst persistieren bereits über
+// den chartColors-Singleton, das Modal muss nicht offen bleiben).
+const showStyleModal = ref(false);
 
 // Toolbar wurde zu voll (siehe Chat) -> Liquidity-Sweeps unter "Liquidität", Pivots+Metadaten
 // unter "Trend" als Dropdown. Reiner UI-Zustand, bewusst NICHT in localStorage (anders als die
@@ -212,8 +217,14 @@ watch(currentSymbol, () => {
       <button :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
         Debug
       </button>
+
+      <button :class="{ active: showStyleModal }" @click="showStyleModal = !showStyleModal">
+        🎨 Style
+      </button>
     </div>
   </div>
+
+  <StyleModal v-if="showStyleModal" @close="showStyleModal = false" />
 
   <PriceChart
     :key="currentSymbol"

@@ -1,4 +1,5 @@
 import { LiquidityLinePrimitive } from "./liquidity.js";
+import { chartColors, hexToRgba } from "./chartColors.js";
 import type { Pivot, RangeState } from "./range.type";
 
 // Neuer "1h-Range"-Trendalgorithmus (siehe test/tdd_mit_claude.ts, rangeState1..7) — löst den
@@ -270,9 +271,6 @@ export class TrendLabelPrimitive {
   }
 }
 
-const RANGE_HIGH_COLOR = "rgba(239, 83, 80, 0.95)"; // rot
-const RANGE_LOW_COLOR = "rgba(0, 230, 118, 0.95)"; // grün
-const PROTECTED_LOW_COLOR = "rgba(255, 255, 255, 0.95)"; // weiß, wie TRADE_SETUP_PROTECTED_COLOR in PriceChart.vue
 const LINE_WIDTH = 2;
 
 function toLevel(pivot: Pivot, candles: Candle[]) {
@@ -297,11 +295,13 @@ export function renderRangeAnalysis(
   existingPrimitives.length = 0;
   if (!state || candles.length === 0) return;
 
-  const highLine = new LiquidityLinePrimitive(toLevel(state.currRange.high, candles), { color: RANGE_HIGH_COLOR, lineWidth: LINE_WIDTH }, candles);
-  const lowLine = new LiquidityLinePrimitive(toLevel(state.currRange.low, candles), { color: RANGE_LOW_COLOR, lineWidth: LINE_WIDTH }, candles);
+  const highColor = hexToRgba(chartColors.rangeHigh, 0.95);
+  const lowColor = hexToRgba(chartColors.rangeLow, 0.95);
+  const highLine = new LiquidityLinePrimitive(toLevel(state.currRange.high, candles), { color: highColor, lineWidth: LINE_WIDTH }, candles);
+  const lowLine = new LiquidityLinePrimitive(toLevel(state.currRange.low, candles), { color: lowColor, lineWidth: LINE_WIDTH }, candles);
   // rot: unter der Linie, zeigt nach oben; grün: über der Linie, zeigt nach unten (siehe Chat)
-  const highArrow = new ArrowPrimitive(state.currRange.high, { color: RANGE_HIGH_COLOR, direction: "up" }, candles);
-  const lowArrow = new ArrowPrimitive(state.currRange.low, { color: RANGE_LOW_COLOR, direction: "down" }, candles);
+  const highArrow = new ArrowPrimitive(state.currRange.high, { color: highColor, direction: "up" }, candles);
+  const lowArrow = new ArrowPrimitive(state.currRange.low, { color: lowColor, direction: "down" }, candles);
   for (const primitive of [highLine, lowLine, highArrow, lowArrow]) {
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
@@ -311,7 +311,7 @@ export function renderRangeAnalysis(
   if (protectedLow) {
     const line = new LiquidityLinePrimitive(
       toLevel(protectedLow, candles),
-      { color: PROTECTED_LOW_COLOR, lineWidth: LINE_WIDTH, label: "1h protected low", labelSide: "end" },
+      { color: hexToRgba(chartColors.rangeProtectedLow, 0.95), lineWidth: LINE_WIDTH, label: "1h protected low", labelSide: "end" },
       candles,
     );
     series.attachPrimitive(line);
@@ -319,7 +319,7 @@ export function renderRangeAnalysis(
   }
 
   if (state.trend !== "unknown") {
-    const color = state.trend === "uptrend" ? RANGE_LOW_COLOR : RANGE_HIGH_COLOR;
+    const color = state.trend === "uptrend" ? lowColor : highColor;
     const label = new TrendLabelPrimitive(`1h ${state.trend}`, color);
     series.attachPrimitive(label);
     existingPrimitives.push(label);

@@ -7,6 +7,7 @@ import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { initTrendState, applyPivot, zigzagSegments, renderZigzag } from "../trendZigzag";
 import { initRangeState, applyRangePivot, renderRangeAnalysis } from "../rangeAnalysis";
 import { computeEma } from "../ema.js";
+import { chartColors, hexToRgba } from "../chartColors.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import {
   binanceIntervalFor,
@@ -89,12 +90,9 @@ const TRADE_SETUP_OB_MAX_DELAY_SEC = 60 * 60; // obMaxDelayMinutes
 const TRADE_SETUP_LOOKBACK_SEC = 6 * 60 * 60; // protectedHighLookbackHours
 const TRADE_SETUP_OB_WIDTH_SEC = 10 * TRADE_SETUP_GRACE_SEC; // obBoxWidthM5Candles=10, rein optisch
 const TRADE_SETUP_POLL_MS = 60_000; // eigener, langsamerer Poll als POLL_MS — M5/H1 brauchen keine 12s-Frische und jeder Poll ist ein frischer cTrader-TLS-Connect
-const TRADE_SETUP_GOLD = "rgba(255, 215, 0, 0.9)";
-const TRADE_SETUP_BLUE = "rgba(33, 150, 243, 0.9)";
-const TRADE_SETUP_PROTECTED_COLOR = "rgba(255, 255, 255, 0.95)";
 const TRADE_SETUP_LINE_WIDTH = 2;
-const TRADE_SETUP_OB_BEAR = { fillColor: "rgba(255, 215, 0, 0.22)", borderColor: "rgba(255, 215, 0, 0.7)" };
-const TRADE_SETUP_OB_BULL = { fillColor: "rgba(33, 150, 243, 0.22)", borderColor: "rgba(33, 150, 243, 0.7)" };
+// Farb-Basen kommen jetzt aus chartColors (siehe tradeSetupObColors unten) — tradeSetupShort/-Long
+// dienen sowohl der LS-Linie als auch (per hexToRgba mit anderer Alpha) der OB-Box.
 
 // Zigzag/Metadaten (siehe trendZigzag.js) brauchen mehr M5-Historie als tradeSetupM5Candles
 // (300 = ~25h) — eigener Fetch, nur solange einer der beiden Toggles an ist (jeder Fetch ist ein
@@ -119,15 +117,12 @@ const RANGES_FRACTAL_PERIOD = 5;
 // Puffer würden Fraktale am Rand des konfigurierten Fensters unter den Tisch fallen.
 const RANGES_CANDLE_BUFFER = 20;
 const RANGES_POLL_MS = 60_000; // wie TRADE_SETUP_POLL_MS — H1-Kerzen brauchen keine schnellere Frische
-const RANGES_MARKER_COLOR = "rgba(0, 188, 212, 0.9)"; // Cyan — hebt sich von Zigzag (rot/grau) und Liquidität (grün/orange/gold) ab
 
 // EMA 50/200 auf M5 (siehe Chat: Philips "Trend über EMA + Anzahl protected highs/lows"-Idee) —
 // läuft auf trendAnalysisM5Candles (dieselbe M5-Historie wie der Zigzag-Algo), kein eigener Fetch
 // nötig, siehe loadTradeSetupCandles.
 const EMA_PERIOD_FAST = 50;
 const EMA_PERIOD_SLOW = 200;
-const EMA_FAST_COLOR = "#42a5f5"; // hellblau
-const EMA_SLOW_COLOR = "#ffb74d"; // amber
 
 const { markSuccess } = useStatusBar();
 
@@ -438,7 +433,7 @@ function refreshRangesMarkersInternal() {
     return;
   }
   const precision = pricePrecisionForInstrument(props.symbol);
-  const segments = rangesPivots.map((p) => ({ points: [p], color: RANGES_MARKER_COLOR }));
+  const segments = rangesPivots.map((p) => ({ points: [p], color: hexToRgba(chartColors.rangesMarker, 0.9) }));
   renderZigzag(candleSeries, segments, rangesMarkerPrimitives, allCandles, {
     showLabels: true,
     formatPrice: (price) => fmtPrice(price, precision),
@@ -577,19 +572,19 @@ function renderTradeSetupsInternal() {
   if (!isForex || !props.showTradeSetups) return;
 
   for (const setup of currentTradeSetups) {
-    const lsColor = setup.dir === 1 ? TRADE_SETUP_GOLD : TRADE_SETUP_BLUE;
-    const obColors = setup.dir === 1 ? TRADE_SETUP_OB_BEAR : TRADE_SETUP_OB_BULL;
+    const base = setup.dir === 1 ? chartColors.tradeSetupShort : chartColors.tradeSetupLong;
+    const lsColor = hexToRgba(base, 0.9);
     const { top, bottom } = tradeSetupObBoxBounds(setup);
 
     const fractalLine = new LiquidityLinePrimitive(
       setup.fractal,
-      { color: TRADE_SETUP_PROTECTED_COLOR, lineWidth: TRADE_SETUP_LINE_WIDTH },
+      { color: hexToRgba(chartColors.tradeSetupProtected, 0.95), lineWidth: TRADE_SETUP_LINE_WIDTH },
       allCandles,
     );
     const lsLine = new LiquidityLinePrimitive(setup.ls, { color: lsColor, lineWidth: TRADE_SETUP_LINE_WIDTH }, allCandles);
     const obBox = new OrderBlockPrimitive(
       { top, bottom, startTime: setup.obStartTime, endTime: setup.obStartTime + TRADE_SETUP_OB_WIDTH_SEC },
-      { ...obColors, textColor: "rgba(255, 255, 255, 0.9)", label: setup.label },
+      { fillColor: hexToRgba(base, 0.22), borderColor: hexToRgba(base, 0.7), textColor: "rgba(255, 255, 255, 0.9)", label: setup.label },
       allCandles,
     );
 
@@ -770,11 +765,11 @@ onMounted(() => {
   });
 
   candleSeries = chart.addSeries(CandlestickSeries, {
-    upColor: "#26a69a",
-    downColor: "#ef5350",
+    upColor: chartColors.candleUp,
+    downColor: chartColors.candleDown,
     borderVisible: false,
-    wickUpColor: "#26a69a",
-    wickDownColor: "#ef5350",
+    wickUpColor: chartColors.candleUp,
+    wickDownColor: chartColors.candleDown,
     // Default (precision 2 / minMove 0.01) passt für BTC-USD, macht Forex-Kurse (GBPUSD
     // z.B. 1.33941) aber auf 1.34 gerundet fast nutzlos — 5 Nachkommastellen (Pipette).
     priceFormat: isForex
@@ -786,7 +781,7 @@ onMounted(() => {
     cvdSeries = chart.addSeries(
       LineSeries,
       {
-        color: "#f0b90b",
+        color: chartColors.cvdLine,
         lineWidth: 2,
         priceLineVisible: false,
         lastValueVisible: true,
@@ -801,14 +796,14 @@ onMounted(() => {
     // EMA 50/200 (M5) direkt in der Candlestick-Pane (keine eigene Pane, wie CVD) — sichtbar erst
     // sobald refreshEmaInternal Daten reinschreibt (siehe watch(showEma)).
     ema50Series = chart.addSeries(LineSeries, {
-      color: EMA_FAST_COLOR,
+      color: chartColors.emaFast,
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: false,
       title: "EMA 50 (M5)",
     });
     ema200Series = chart.addSeries(LineSeries, {
-      color: EMA_SLOW_COLOR,
+      color: chartColors.emaSlow,
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: false,
@@ -942,6 +937,28 @@ watch(() => props.showEma, (on) => {
   if (on && trendAnalysisM5Candles.length === 0) loadTradeSetupCandles();
   else refreshEmaInternal();
 });
+// StyleModal (Dashboard.vue) schreibt direkt in den chartColors-Singleton — Serien-OPTIONEN
+// (Candles/CVD/EMA) werden von refreshChart() nicht angefasst (das setzt nur setData), deshalb
+// hier explizit; alle Primitive-basierten Farben (Liquidität/OB/Zigzag/Ranges/Trade-Setups/
+// Trade-Marker) lesen chartColors ohnehin live bei jedem Render-Aufruf, ein refreshChart() reicht
+// dafür.
+watch(
+  chartColors,
+  () => {
+    if (!chart) return;
+    candleSeries?.applyOptions({
+      upColor: chartColors.candleUp,
+      downColor: chartColors.candleDown,
+      wickUpColor: chartColors.candleUp,
+      wickDownColor: chartColors.candleDown,
+    });
+    cvdSeries?.applyOptions({ color: chartColors.cvdLine });
+    ema50Series?.applyOptions({ color: chartColors.emaFast });
+    ema200Series?.applyOptions({ color: chartColors.emaSlow });
+    refreshChart();
+  },
+  { deep: true },
+);
 </script>
 
 <template>

@@ -1,4 +1,5 @@
 import { snapToBarTime } from "./chartTimeUtils.js";
+import { chartColors, hexToRgba } from "./chartColors.js";
 import type { Pivot, DowntrendState } from "./range.type";
 
 // Schrittweise Marktstruktur-Erkennung nach Philips eigenem Entwurf (siehe
@@ -100,23 +101,21 @@ export interface ZigzagSegment {
   color: string;
 }
 
-const STRUCTURE_COLOR = "rgba(239, 83, 80, 0.9)"; // rot - bestätigte Struktur (Ursprung + structure[])
-const TAIL_COLOR = "rgba(120, 123, 134, 0.9)"; // grau - gelesen, aber noch nicht Teil der Struktur
-
 // Teilt den Zigzag in zwei Segmente für die Zeichnung: die bereits klassifizierte Struktur
 // (Ursprung High+Low + jeder structure[]-Eintrag, chronologisch) in Rot, und den noch nicht
 // klassifizierten Rest von appliedPivots (Pivots, die weder Range noch Struktur verändert haben)
 // in Grau — siehe Chat: "zeichne das zigzack nachdem wir keine rote Struktur-Bestimmung mehr
 // haben in grau". Der letzte rote Punkt wird im grauen Segment wiederholt, damit die Linie ohne
-// Lücke weiterläuft.
+// Lücke weiterläuft. Farben live aus chartColors gelesen (nicht als Modul-Konstante gecacht),
+// damit das StyleModal ohne Reload wirkt.
 export function zigzagSegments(state: Pick<DowntrendState, "structure" | "appliedPivots">): ZigzagSegment[] {
   const classifiedCount = 2 + state.structure.length;
   const points = state.appliedPivots;
   const structurePoints = points.slice(0, classifiedCount);
   const tailPoints = points.slice(Math.max(classifiedCount - 1, 0));
   return [
-    { points: structurePoints, color: STRUCTURE_COLOR },
-    { points: tailPoints.length > 1 ? tailPoints : [], color: TAIL_COLOR },
+    { points: structurePoints, color: hexToRgba(chartColors.zigzagStructure, 0.9) },
+    { points: tailPoints.length > 1 ? tailPoints : [], color: hexToRgba(chartColors.zigzagTail, 0.9) },
   ];
 }
 

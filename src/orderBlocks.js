@@ -6,6 +6,7 @@
 // bärisch symmetrisch. Zone = C1-Kante bis zur gegenüberliegenden Kante von C2 (inkl. Wick) —
 // siehe Pine-Kommentar "HTF-Modus" für die Herleitung.
 import { snapToBarTime } from "./chartTimeUtils.js";
+import { chartColors, hexToRgba } from "./chartColors.js";
 
 const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone angelegt
 const WEAK_PCT = 0.15; // Gap kleiner als das gilt als "schwach" (blasser dargestellt)
@@ -184,28 +185,19 @@ export class OrderBlockPrimitive {
   }
 }
 
-const BULL_COLOR = "rgba(38, 166, 154, 0.28)";
-const BULL_WEAK_COLOR = "rgba(38, 166, 154, 0.10)";
-const BEAR_COLOR = "rgba(239, 83, 80, 0.28)";
-const BEAR_WEAK_COLOR = "rgba(239, 83, 80, 0.10)";
-const INACTIVE_COLOR = "rgba(120, 123, 134, 0.15)";
-
 // 1H-Zonen etwas dezenter als 4H, damit beide gleichzeitig im Chart unterscheidbar sind.
 const DIM_FACTOR_1H = 0.6;
-
-function withAlpha(rgba, factor) {
-  return rgba.replace(/([\d.]+)\)$/, (_, a) => `${(Number(a) * factor).toFixed(3)})`);
-}
 
 function zoneOptions(z) {
   const inactive = z.touched || z.invalidated;
   const dim = z.timeframe === "1H";
-  const fillColor = inactive ? INACTIVE_COLOR : z.dir === 1 ? (z.weak ? BULL_WEAK_COLOR : BULL_COLOR) : z.weak ? BEAR_WEAK_COLOR : BEAR_COLOR;
-  const borderColor = inactive ? "rgba(120, 123, 134, 0.35)" : z.dir === 1 ? "rgba(38, 166, 154, 0.7)" : "rgba(239, 83, 80, 0.7)";
+  const base = inactive ? chartColors.obInactive : z.dir === 1 ? chartColors.obBull : chartColors.obBear;
+  const fillAlpha = inactive ? 0.15 : z.weak ? 0.1 : 0.28;
+  const borderAlpha = inactive ? 0.35 : 0.7;
   const label = z.timeframe ?? "";
   return {
-    fillColor: dim ? withAlpha(fillColor, DIM_FACTOR_1H) : fillColor,
-    borderColor: dim ? withAlpha(borderColor, DIM_FACTOR_1H) : borderColor,
+    fillColor: hexToRgba(base, dim ? fillAlpha * DIM_FACTOR_1H : fillAlpha),
+    borderColor: hexToRgba(base, dim ? borderAlpha * DIM_FACTOR_1H : borderAlpha),
     textColor: "rgba(209, 212, 220, 0.9)",
     label,
   };

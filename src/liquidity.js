@@ -4,6 +4,7 @@
 // bei jedem Refresh einmal komplett über das geladene `candles`-Array (aktueller
 // Chart-Timeframe) neu berechnet.
 import { snapToBarTime } from "./chartTimeUtils.js";
+import { chartColors, hexToRgba } from "./chartColors.js";
 
 const RECENT_SWEEP_COUNT = 2; // siehe markTopKRecentTouches in liquidity.pine
 
@@ -258,13 +259,11 @@ export class LiquidityLinePrimitive {
   }
 }
 
-const HIGH_COLOR = "rgba(0, 230, 118, 0.9)"; // reagiert auf Wicks nach oben (high >= Level)
-const LOW_COLOR = "rgba(255, 152, 0, 0.9)"; // reagiert auf Wicks nach unten (low <= Level)
-const SWEEP_COLOR = "rgba(255, 215, 0, 0.9)"; // Level bereits berührt/durchbrochen
 const LINE_WIDTH = 1;
 
 function levelOptions(lvl, { debugPrices, formatPrice } = {}) {
-  const color = lvl.touched ? SWEEP_COLOR : lvl.dir === 1 ? HIGH_COLOR : LOW_COLOR;
+  const base = lvl.touched ? chartColors.liquiditySweep : lvl.dir === 1 ? chartColors.liquidityHigh : chartColors.liquidityLow;
+  const color = hexToRgba(base, 0.9);
   const label = debugPrices ? formatPrice(lvl.price) : null;
   return { color, lineWidth: LINE_WIDTH, label };
 }
