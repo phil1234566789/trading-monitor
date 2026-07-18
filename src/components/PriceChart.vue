@@ -40,8 +40,11 @@ const props = defineProps({
   showMetadata: { type: Boolean, default: false },
   showPivots: { type: Boolean, default: false },
   showZigzag: { type: Boolean, default: false },
+  rangesLookbackHours: { type: Number, default: 7 * 24 },
+  showRanges: { type: Boolean, default: false },
+  showRangesMetadata: { type: Boolean, default: false },
 });
-const emit = defineEmits(["close-metadata"]);
+const emit = defineEmits(["close-metadata", "close-ranges-metadata"]);
 
 // CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
 // bleiben Gauges/CVD-Pane komplett weg statt leer. Der Wert steht bei onMounted fest:
@@ -102,6 +105,19 @@ const TREND_ANALYSIS_CANDLE_COUNT = 1000;
 // (braucht period=5 Kerzen davor) den Pivot bei 1.35578 überhaupt als solchen erkennt.
 const TREND_ANALYSIS_ANCHOR_TIME = Math.floor(new Date("2026-07-15T19:20:00+02:00").getTime() / 1000);
 
+// "Ranges" — erster Baustein des neuen PA-Analyse-Konzepts (siehe Chat 2026-07-18): H1-Periode-5-
+// Fraktale im konfigurierbaren Lookback-Fenster (rangesLookbackHours), noch ohne weak/protected/
+// sweep-Klassifizierung. Eigene Periode (5, wie liqM5Period-Analogon auf H1) und eigener Fetch,
+// bewusst unabhängig von tradeSetupH1Candles (Periode 10, feste 300er-Historie) — die beiden
+// Konzepte sollen sich nicht querbeeinflussen, siehe Chat.
+const RANGES_FRACTAL_PERIOD = 5;
+// Puffer vor/nach dem Lookback-Fenster: ein Fraktal braucht period+4 Kerzen davor und period
+// danach, um überhaupt erkannt zu werden (siehe isUpFractal/isDownFractal in liquidity.js) — ohne
+// Puffer würden Fraktale am Rand des konfigurierten Fensters unter den Tisch fallen.
+const RANGES_CANDLE_BUFFER = 20;
+const RANGES_POLL_MS = 60_000; // wie TRADE_SETUP_POLL_MS — H1-Kerzen brauchen keine schnellere Frische
+const RANGES_MARKER_COLOR = "rgba(0, 188, 212, 0.9)"; // Cyan — hebt sich von Zigzag (rot/grau) und Liquidität (grün/orange/gold) ab
+
 const { markSuccess } = useStatusBar();
 
 const chartContainerRef = ref(null);
@@ -111,7 +127,7 @@ const dailyDelta = ref(0);
 const trendMetadata = ref(null); // Rohkopie des Zigzag-States fürs Metadaten-Panel, siehe refreshZigzagInternal
 
 // Menschenlesbare Zusammenfassung fürs Metadaten-Panel — jetzt der ZIGZAG-State (siehe
-// src/trendZigzag.ts, src/trendTypes.ts / test/trendanalyse_testdriven_modelling.ts), NICHT mehr
+// src/trendZigzag.ts, src/range.type.ts / test/tdd_mit_claude.ts), NICHT mehr
 // buildNestedTrendStructure: Philip hat das explizit so spezifiziert (trendOrdnung statt
 // chartLabel "Rahmen (übergeordnet)", siehe Chat). pivotTime ist nur intern fürs Rendern der
 // Zigzag-Linien nötig, taucht hier bewusst nicht auf (Philips Pivot-Typ hat kein Pflichtfeld
@@ -149,6 +165,7 @@ let orderBlockPrimitives = [];
 let liquidityPrimitives = [];
 let pivotPrimitives = [];
 let zigzagPrimitives = [];
+let rangesMarkerPrimitives = [];
 let tradePrimitives = [];
 let tradeSetupPrimitives = [];
 let allCandles = [];
@@ -157,13 +174,17 @@ let tradeSetupM5Candles = [];
 let tradeSetupH1Candles = [];
 let currentTradeSetups = [];
 let trendAnalysisM5Candles = [];
+let rangesH1Candles = [];
+let rangesPivots = null; // roh (mit pivotTime), siehe computeRangesPivots/refreshRangesMarkersInternal
 let loadingOlder = false;
 let reachedHistoryStart = false;
 let reachedCvdHistoryStart = false;
 let pollTimer = null;
 let tradeSetupPollTimer = null;
+let rangesPollTimer = null;
 let windowGaugeTimer = null;
 let dailyGaugeTimer = null;
+const rangesMetadata = ref(null); // Liste der erkannten H1-Periode-5-Pivots fürs Ranges-Metadaten-Panel
 
 // lightweight-charts formatiert Zeit standardmäßig in UTC (unabhängig von der
 // Browser-Zeitzone) — hier auf lokale Zeit umgestellt, damit die Achse/der Crosshair
@@ -319,7 +340,7 @@ function refreshPivotsInternal() {
   });
 }
 
-// "Zigzag"-Toggle: Philips eigener Marktstruktur-Entwurf (siehe test/trendanalyse_testdriven_modelling.ts
+// "Zigzag"-Toggle: Philips eigener Marktstruktur-Entwurf (siehe test/tdd_mit_claude.ts
 // und trendZigzag.ts) — verbindet die M5-Periode-10-Pivots seit dem Trend-Ursprung
 // (TREND_ANALYSIS_ANCHOR_TIME) der Reihe nach mit Linien, statt horizontale Level zu zeichnen.
 // Nutzt trendAnalysisM5Candles (nicht allCandles!), weil der Ursprung mehrere Tage zurückliegt —
@@ -367,6 +388,86 @@ function refreshZigzagInternal() {
     showLabels: props.showLiquidityDebug,
     formatPrice: (price) => fmtPrice(price, precision),
   });
+}
+
+// H1-Periode-5-Fraktale im konfigurierten Lookback-Fenster (props.rangesLookbackHours) — reine
+// Pivot-Liste, noch keine weak/protected/sweep-Klassifizierung (kommt als nächster Schritt im
+// PA-Analyse-Konzept). cutoff statt einfach "alle erkannten Pivots", weil RANGES_CANDLE_BUFFER
+// zusätzliche Kerzen VOR dem eigentlichen Lookback-Fenster lädt (siehe loadRangesCandles) — die
+// dort möglicherweise erkannten Fraktale sollen nicht mitgezählt werden. pivotTime bleibt (roh)
+// erhalten, weil refreshRangesMarkersInternal die Koordinaten braucht — erst pivotForDisplay
+// (siehe oben, schon für den Zigzag-State genutzt) entfernt es fürs Metadaten-Panel.
+function computeRangesPivots() {
+  const cutoff = Math.floor(Date.now() / 1000) - props.rangesLookbackHours * 3600;
+  const { highs, lows } = detectLiquidityLevels(rangesH1Candles, RANGES_FRACTAL_PERIOD);
+  return [...highs, ...lows]
+    .filter((p) => p.pivotTime >= cutoff)
+    .sort((a, b) => a.pivotTime - b.pivotTime)
+    .map((p) => ({
+      type: p.dir === 1 ? "high" : "low",
+      price: p.price,
+      pivotTime: p.pivotTime,
+      pivotAt: fmtDateTime(p.pivotTime),
+      touched: p.touched ? { price: p.price, touchedAt: fmtDateTime(p.touchedTime) } : false,
+    }));
+}
+
+// Punkt-Marker (KEINE Verbindungslinie) für die H1-Ranges-Pivots — nur sichtbar, wenn sowohl das
+// Ranges-Metadaten-Panel als auch der Debug-Modus an sind (siehe Chat: "wenn ranges angetoggelt
+// ist und debug modus"). Wiederverwendet ZigzagPrimitive/-Renderer aus trendZigzag.ts (Punkt +
+// Preis-Label ist dort schon fertig) — je Pivot ein eigenes 1-Punkt-Segment, damit die dortige
+// Verbindungslinie (entsteht nur bei pts.length > 1 INNERHALB eines Segments) nicht gezeichnet
+// wird.
+function refreshRangesMarkersInternal() {
+  if (!props.showRanges || !props.showLiquidityDebug || !rangesPivots) {
+    renderZigzag(candleSeries, [], rangesMarkerPrimitives, allCandles);
+    return;
+  }
+  const precision = pricePrecisionForInstrument(props.symbol);
+  const segments = rangesPivots.map((p) => ({ points: [p], color: RANGES_MARKER_COLOR }));
+  renderZigzag(candleSeries, segments, rangesMarkerPrimitives, allCandles, {
+    showLabels: true,
+    formatPrice: (price) => fmtPrice(price, precision),
+  });
+}
+
+function refreshRangesInternal() {
+  rangesPivots = rangesH1Candles.length > 0 ? computeRangesPivots() : null;
+  rangesMetadata.value = rangesPivots ? rangesPivots.map(pivotForDisplay) : null;
+  refreshRangesMarkersInternal();
+}
+
+// Eigener H1-Fetch fürs Ranges-Metadaten-Panel, unabhängig von tradeSetupH1Candles (siehe oben) —
+// lädt genug Historie für das konfigurierte Lookback-Fenster + Erkennungspuffer.
+async function loadRangesCandles() {
+  if (!isForex) return;
+  try {
+    const count = props.rangesLookbackHours + RANGES_CANDLE_BUFFER;
+    rangesH1Candles = await fetchInitialForexCandles(props.symbol, "1h", count);
+    refreshRangesInternal();
+  } catch (err) {
+    console.error("Ranges-Kerzen fehlgeschlagen:", err);
+  }
+}
+
+// showRanges (Marker im Chart) und showRangesMetadata (JSON-Panel) sind getrennte Toggles, teilen
+// sich aber dieselben H1-Kerzen/Pivots — laden läuft also, solange MINDESTENS einer von beiden an
+// ist, kein unnötiger cTrader-Connect (RANGES_POLL_MS), solange wirklich niemand hinschaut.
+function rangesNeedsData() {
+  return props.showRanges || props.showRangesMetadata;
+}
+function startRangesPolling() {
+  loadRangesCandles();
+  clearInterval(rangesPollTimer);
+  rangesPollTimer = setInterval(loadRangesCandles, RANGES_POLL_MS);
+}
+function stopRangesPolling() {
+  clearInterval(rangesPollTimer);
+  rangesPollTimer = null;
+}
+function refreshRangesPollingState() {
+  if (rangesNeedsData()) startRangesPolling();
+  else stopRangesPolling();
 }
 
 // Erkennung läuft nur, wenn sich die M5/H1-Kerzen geändert haben (siehe loadTradeSetupCandles)
@@ -507,6 +608,7 @@ function refreshChart() {
   refreshTradeMarkersInternal();
   renderTradeSetupsInternal();
   refreshZigzagInternal();
+  refreshRangesMarkersInternal();
   cvdSeries?.setData(cumulativeFromDeltas(allCvdDeltas));
   positionGauges();
 }
@@ -681,6 +783,7 @@ onMounted(() => {
   if (isForex) {
     loadTradeSetupCandles();
     tradeSetupPollTimer = setInterval(loadTradeSetupCandles, TRADE_SETUP_POLL_MS);
+    if (rangesNeedsData()) startRangesPolling();
   }
   if (!isForex) {
     updateWindowGauge();
@@ -693,6 +796,7 @@ onMounted(() => {
 onUnmounted(() => {
   clearInterval(pollTimer);
   clearInterval(tradeSetupPollTimer);
+  clearInterval(rangesPollTimer);
   clearInterval(windowGaugeTimer);
   clearInterval(dailyGaugeTimer);
   resizeObserver?.disconnect();
@@ -715,6 +819,7 @@ watch(() => props.showLiquidityDebug, () => {
   refreshLiquidityInternal();
   refreshPivotsInternal();
   refreshZigzagInternal();
+  refreshRangesMarkersInternal();
 });
 watch(() => props.showPivots, refreshPivotsInternal);
 watch(() => props.showTradeSetups, renderTradeSetupsInternal);
@@ -733,6 +838,17 @@ watch(() => props.showZigzag, (on) => {
 watch(() => props.showMetadata, (on) => {
   if (on && trendAnalysisM5Candles.length === 0) loadTradeSetupCandles();
 });
+watch(() => props.showRanges, () => {
+  refreshRangesPollingState();
+  refreshRangesMarkersInternal(); // sofort reagieren, nicht erst beim nächsten refreshChart()
+});
+watch(() => props.showRangesMetadata, refreshRangesPollingState);
+// Lookback-Änderung braucht mehr/weniger H1-Historie -> neu fetchen, aber nur solange mindestens
+// einer der beiden Ranges-Toggles überhaupt an ist (sonst reicht es, beim nächsten Einschalten
+// frisch zu laden).
+watch(() => props.rangesLookbackHours, () => {
+  if (rangesNeedsData()) loadRangesCandles();
+});
 </script>
 
 <template>
@@ -745,6 +861,10 @@ watch(() => props.showMetadata, (on) => {
     <MetadataPanel v-if="showMetadata" title="Trend-Metadaten" @close="emit('close-metadata')">
       <JsonTree v-if="metadataTree" :value="metadataTree" />
       <p v-else class="metadata-empty">Keine Trend-Daten geladen (Zigzag-Toggle einschalten).</p>
+    </MetadataPanel>
+    <MetadataPanel v-if="showRangesMetadata" title="Ranges-Metadaten" @close="emit('close-ranges-metadata')">
+      <JsonTree v-if="rangesMetadata" :value="rangesMetadata" />
+      <p v-else class="metadata-empty">Keine Ranges-Daten geladen.</p>
     </MetadataPanel>
   </div>
 </template>

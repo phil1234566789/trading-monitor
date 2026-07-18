@@ -1,13 +1,13 @@
 import { snapToBarTime } from "./chartTimeUtils.js";
-import type { Pivot, DowntrendState } from "./trendTypes";
+import type { Pivot, DowntrendState } from "./range.type";
 
 // Schrittweise Marktstruktur-Erkennung nach Philips eigenem Entwurf (siehe
-// test/trendanalyse_testdriven_modelling.ts, stateSchritt1 -> stateSchritt2 -> stateSchritt3) —
+// test/tdd_mit_claude.ts, stateSchritt1 -> stateSchritt2 -> stateSchritt3) —
 // bewusst simpler als trendStructure.js: ein Pivot nach dem anderen einlesen und in die Struktur
 // einordnen. Reversal (Bruch der Gegen-Grenze, also Bruch des swing-high im Downtrend) ist hier
 // bewusst noch NICHT behandelt (siehe Datei: "STOPP, schreib den algo erst mal bis hier und
 // nicht weiter"). Nur Downtrend implementiert -> Domain-Types (Pivot, DowntrendState, ...) kommen
-// jetzt aus src/trendTypes.ts, damit Algo und Testdaten denselben Vertrag benutzen.
+// jetzt aus src/range.type.ts, damit Algo und Testdaten denselben Vertrag benutzen.
 
 export interface Candle {
   time: number;
@@ -39,7 +39,7 @@ export function initTrendState({
     structure: [], // klassifizierte Struktur-Pivots (lower-high/lower-low/weak-high), siehe applyPivot
     innerStructure: [],
     appliedPivots: [high, low], // chronologisch, roh (unklassifiziert) — Ursprung zählt schon als gelesen
-    trendInvalidatingPivot: null, // wird erst beim Reversal (swing-high-Bruch) gesetzt, siehe trendTypes.ts
+    trendInvalidatingPivot: null, // wird erst beim Reversal (swing-high-Bruch) gesetzt, siehe range.type.ts
   };
 }
 
@@ -83,7 +83,7 @@ export function applyPivot(
     }
     structure = [...structure, { ...pivot, type: "lower-low" }];
     // range.low ist immer die AKTUELL gültige Referenz -> wird bei jedem Bruch neu als swing-low
-    // reklassifiziert (siehe stateSchritt3 in trendanalyse_testdriven_modelling.ts). structure[]
+    // reklassifiziert (siehe stateSchritt3 in tdd_mit_claude.ts). structure[]
     // behält daneben den historischen "lower-low"-Eintrag für denselben Pivot - beides gleichzeitig,
     // kein Widerspruch (range = aktueller Stand, structure = wie er entstanden ist).
     range = { ...range, low: { ...pivot, type: "swing-low" } };

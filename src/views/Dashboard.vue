@@ -43,17 +43,35 @@ const showMetadata = useLocalStorageRef("showMetadata", false);
 const showZigzag = useLocalStorageRef("showZigzag", false);
 // Anzahl vergangener Setups je Richtung, analog zu tradeSetupHistoryCountShort/Long im
 // tv-indikator (dort default 5, 0-50) — 0 zeigt nur das gerade aktive/letzte Setup.
-const tradeSetupHistoryCount = ref(5);
+const tradeSetupHistoryCount = useLocalStorageRef("tradeSetupHistoryCount", 5);
+
+// "Ranges" — erster Baustein des neuen PA-Analyse-Konzepts (siehe Chat 2026-07-18: weg von der
+// verschachtelten Trend-State-Machine, hin zu PA-Analyse/Trendanalyse/Marktstärke als getrennten
+// Bausteinen). Lookback-Fenster für die H1-Periode-5-Fraktalsuche, maßgeblich in Stunden
+// persistiert (default 168 = 7 Tage) — rangesLookbackDays (unten) ist nur ein Eingabe-Helper,
+// der beim Editieren in Stunden umrechnet, kein eigener State.
+const rangesLookbackHours = useLocalStorageRef("rangesLookbackHours", 7 * 24);
+const rangesLookbackDays = computed({
+  get: () => rangesLookbackHours.value / 24,
+  set: (days) => { rangesLookbackHours.value = Math.round(days * 24); },
+});
+// showRanges (Punkt-Marker im Chart, siehe PriceChart.vue) und showRangesMetadata (JSON-Panel)
+// sind bewusst getrennte Toggles — Philip will Ranges anzeigen können, ohne dafür das
+// Metadaten-Panel offen zu haben (siehe Chat: "man kann ranges nicht einzelnd toggeln").
+const showRanges = useLocalStorageRef("showRanges", false);
+const showRangesMetadata = useLocalStorageRef("showRangesMetadata", false);
 
 // Toolbar wurde zu voll (siehe Chat) -> Liquidity-Sweeps unter "Liquidität", Pivots+Metadaten
 // unter "Trend" als Dropdown. Reiner UI-Zustand, bewusst NICHT in localStorage (anders als die
 // Toggles selbst) — welches Dropdown gerade offen ist, ist keine Einstellung, die überdauern muss.
 const liquidityMenuOpen = ref(false);
 const trendMenuOpen = ref(false);
+const rangesMenuOpen = ref(false);
 function closeMenusOutside(e) {
   if (!e.target.closest?.(".toggle-group")) {
     liquidityMenuOpen.value = false;
     trendMenuOpen.value = false;
+    rangesMenuOpen.value = false;
   }
 }
 onMounted(() => window.addEventListener("click", closeMenusOutside));
@@ -145,6 +163,45 @@ watch(currentSymbol, () => {
         </div>
       </div>
 
+      <div class="toggle-group">
+        <button :class="{ active: showRanges }" @click="showRanges = !showRanges">
+          Ranges
+        </button>
+        <button
+          class="toggle-caret"
+          :class="{ open: rangesMenuOpen }"
+          title="Untermenü"
+          @click="rangesMenuOpen = !rangesMenuOpen"
+        >
+          ▾
+        </button>
+        <div v-if="rangesMenuOpen" class="toggle-dropdown">
+          <label class="ranges-lookback-field">
+            Tage
+            <input
+              v-model.number="rangesLookbackDays"
+              type="number"
+              min="1"
+              class="ranges-lookback-input"
+              title="Lookback in Tagen — rechnet automatisch in Stunden um"
+            />
+          </label>
+          <label class="ranges-lookback-field">
+            Stunden
+            <input
+              v-model.number="rangesLookbackHours"
+              type="number"
+              min="1"
+              class="ranges-lookback-input"
+              title="Lookback in Stunden (maßgeblicher Wert für die Fraktal-Suche)"
+            />
+          </label>
+          <button :class="{ active: showRangesMetadata }" @click="showRangesMetadata = !showRangesMetadata">
+            Metadaten
+          </button>
+        </div>
+      </div>
+
       <button :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
         Debug
       </button>
@@ -166,7 +223,11 @@ watch(currentSymbol, () => {
     :trade-setup-history-count="tradeSetupHistoryCount"
     :show-zigzag="showZigzag"
     :show-metadata="showMetadata"
+    :ranges-lookback-hours="rangesLookbackHours"
+    :show-ranges="showRanges"
+    :show-ranges-metadata="showRangesMetadata"
     @close-metadata="showMetadata = false"
+    @close-ranges-metadata="showRangesMetadata = false"
   />
 
   <aside class="trades-panel">
@@ -293,6 +354,27 @@ watch(currentSymbol, () => {
 .toggle-dropdown button.active {
   background: #2962ff;
   color: #fff;
+}
+
+.ranges-lookback-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 10px;
+  font-size: 13px;
+  color: #787b86;
+  white-space: nowrap;
+}
+
+.ranges-lookback-input {
+  width: 50px;
+  background: #131722;
+  border: 1px solid #2a2e39;
+  border-radius: 4px;
+  color: #d1d4dc;
+  font-size: 13px;
+  padding: 3px 4px;
 }
 
 .trade-setup-history-count {

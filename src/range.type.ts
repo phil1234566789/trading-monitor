@@ -1,6 +1,4 @@
-// Domain-Types für die Marktstruktur-Trendanalyse
-
-export type TrendConfirmation = "unconfirmed" | "confirmed" | "invalidated";
+// Domain-Types für Pivots und die Range
 
 export type PivotUntouched = false;
 export type PivotTouched = {
@@ -31,35 +29,15 @@ export type PivotUptrend = PivotBase<PivotTypeUptrend>;
 export type PivotSwingHigh = PivotBase<"swing-high">;
 export type PivotSwingLow = PivotBase<"swing-low">;
 
-export type DowntrendState = {
-  trendOrdnung: number; // 1 ist der übergeordnete Trend. Je niedriger die Zahl, desto stärker der Trend. Wird außerdem zum labeln aufn Chart verwendet "Downtrend 1"
-  direction: "down";
-  confirmation: TrendConfirmation;
+/**
+ * überbleibsel nachdem die Trendanalyse verworfen wird
+ */
+export type RangeState = {
   range: {
     high: PivotSwingHigh;
     low: PivotSwingLow;
   };
-  structure: PivotDowntrend[];
-  innerStructure: unknown;
-  appliedPivots: Pivot[];
-  // Bruch des swing-high (Reversal, noch nicht implementiert) beendet DIESEN Trend, statt range
-  // rückwirkend zu verändern. null solange unconfirmed
-  // bzw. noch kein Bruch passiert ist.
-  trendInvalidatingPivot: Pivot | null;
+  protectedPivots: PivotDowntrend[];
+  appliedPivots: Pivot[]; // TODO hier aufpassen, dass es nicht ins unendliche wächst
 };
 
-export type UptrendState = {
-  trendOrdnung: number;
-  direction: "up";
-  confirmation: TrendConfirmation;
-  range: {
-    high: PivotSwingHigh;
-    low: PivotSwingLow;
-  };
-  structure: PivotUptrend[];
-  innerStructure: unknown;
-  appliedPivots: Pivot[];
-  trendInvalidatingPivot: Pivot | null;
-};
-
-export type TrendAnalyseState = DowntrendState | UptrendState; // später | ConsolidationState

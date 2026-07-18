@@ -1,4 +1,4 @@
-// Reproduziert Philips Schritt-für-Schritt-Beispiel aus trendanalyse_testdriven_modelling.ts 1:1
+// Reproduziert Philips Schritt-für-Schritt-Beispiel aus tdd_mit_claude.ts 1:1
 // (stateSchritt1 -> stateSchritt2 -> stateSchritt3).
 import { describe, expect, it } from "vitest";
 import { initTrendState, applyPivot, zigzagSegments } from "../src/trendZigzag";
