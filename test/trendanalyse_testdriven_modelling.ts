@@ -1,40 +1,68 @@
-// Note: ob du timestamp brauchst, weiß ich nicht. kannste auch weglassen wenn du es nicht brauchst
-// Schau mal ob du diese typisierung von mir übernehmen willst. ich finde die gut, was sagst du?
+/** Domain Typen mein Vorschlag */
+type TrendAnalyseState = DowntrendState | UptrendState; // später | ConsolidationState
+
+type DowntrendState = {
+    trendOrdnung: number // 1 ist der übergeordnete Trend. Je niedriger die Zahl, desto stärker der Trend. Wird außerdem zum labeln aufn Chart verwendet "Downtrend 1"
+    direction: 'down',
+    confirmation: TrendConfirmation,
+    range: {
+        high: PivotDowntrend,
+        low: PivotDowntrend,
+    },
+    structure: Pivot[],
+    innerStructure: unknown,
+    appliedPivots: Pivot[]
+}
+
+type UptrendState = {
+    trendOrdnung: number 
+    direction: 'up',
+    confirmation: TrendConfirmation,
+    range: {
+        high: PivotUptrend,
+        low: PivotUptrend,
+    },
+    structure: Pivot[],
+    innerStructure: unknown,
+    appliedPivots: Pivot[]
+}
+
+type TrendConfirmation = 'unconfirmed' | 'confirmed' | 'invalidated';
+
+type PivotBase<T extends string> = {
+    price: number;
+    touched: PivotUntouched | PivotTouched;
+    pivotAt: string;
+    type: T;
+};
+
+type PivotTypeAll       = 'high' | 'low' | 'swing-high' | 'swing-low' | 'weak-high' | 'weak-low' | 'protected-high' | 'protected-low';
+type PivotTypeDowntrend = 'swing-high' | 'swing-low' | 'weak-high' | 'weak-low' | 'protected-high' | 'lower-high';
+type PivotTypeUptrend   = 'swing-high' | 'swing-low' | 'weak-high' | 'weak-low' | 'protected-low' |'higher-low';
+
+type Pivot           = PivotBase<PivotTypeAll>;
+type PivotDowntrend  = PivotBase<PivotTypeDowntrend>;
+type PivotUptrend    = PivotBase<PivotTypeUptrend>;
+
 type PivotUntouched = false;
 type PivotTouched = {
     price: number, 
     touchedAt: string
 }
-type Pivot = {
-    price: number;
-    trend: 'unknown' | 'downtrend' | 'uptrend' | 'consolidation',
-    type: 'high' | 'low' | 'swing-high' | 'swing-low' | 'weak-high' | 'weak-low' | 'protected-high' | 'protected-low',
-    touched: PivotUntouched | PivotTouched, // versteh nicht wieso du touched & touchedAt brauchst. Eine Variable reicht doch
-    pivotAt: string // für menschen lesbares date time format
-}
-type PivotDowntrend = {
-    price: number;
-    trend: 'downtrend',
-    type: 'swing-high' | 'swing-low' | 'weak-high' | 'weak-low' | 'protected-high', // 'protected-low gibts im downtrend nicht
-    touched: PivotUntouched | PivotTouched,
-    pivotAt: string // für menschen lesbares date time format
-}
-
-type TrendState = 'unconfirmed' | 'confirmed' | 'invalidated';
 
 /** GBPUSD M5-Periode-10 Pivots der Test-Range ab 15.07.19:30, die zum Zeitpunkt der Erkennung immer untouched sind */
-const swingHighTestRange = { type: 'high', price: 1.35578, pivotAt: '15.07.2026 20:20', touched: false };
-const nextPivot1 = { type: 'low', price: 1.35273, pivotAt: '15.07.2026 21:35',  touched: false };
-const nextPivot2 = { price: 1.35392, pivotAt: '15.07.2026 22:25', type: 'high', touched: false };
-const nextPivot3 = { price: 1.35269, pivotAt: '15.07.2026 23:55', type: 'low', touched: false };
-const nextPivot4 = { price: 1.35418, pivotAt: '16.07.2026 00:30', type: 'high', touched: false };
-const nextPivot5 = { price: 1.35440, pivotAt: '16.07.2026 02:15', type: 'high', touched: false }; // "1,3544" im Screenshot (gerundet)
-const nextPivot6 = { price: 1.35196, pivotAt: '16.07.2026 04:15', type: 'low', touched: false };
-const nextPivot7 = { price: 1.35377, pivotAt: '16.07.2026 05:30', type: 'high', touched: false };
-const nextPivot8 = { price: 1.35306, pivotAt: '16.07.2026 06:25', type: 'low', touched: false };
-const nextPivot9 = { price: 1.35409, pivotAt: '16.07.2026 07:30', type: 'high', touched: false };
-const nextPivot10 = { price: 1.35271, pivotAt: '16.07.2026 07:55', type: 'low', touched: false };
-const nextPivot11 = { price: 1.35421, pivotAt: '16.07.2026 09:00', type: 'high', touched: false };
+const swingHighTestRange: Pivot = { type: 'high', price: 1.35578, pivotAt: '15.07.2026 20:20', touched: false };
+const nextPivot1: Pivot  = { type: 'low', price: 1.35273, pivotAt: '15.07.2026 21:35',  touched: false };
+const nextPivot2: Pivot  = { price: 1.35392, pivotAt: '15.07.2026 22:25', type: 'high', touched: false };
+const nextPivot3: Pivot  = { price: 1.35269, pivotAt: '15.07.2026 23:55', type: 'low', touched: false };
+const nextPivot4: Pivot  = { price: 1.35418, pivotAt: '16.07.2026 00:30', type: 'high', touched: false };
+const nextPivot5: Pivot  = { price: 1.35440, pivotAt: '16.07.2026 02:15', type: 'high', touched: false }; // "1,3544" im Screenshot (gerundet)
+const nextPivot6: Pivot  = { price: 1.35196, pivotAt: '16.07.2026 04:15', type: 'low', touched: false };
+const nextPivot7: Pivot  = { price: 1.35377, pivotAt: '16.07.2026 05:30', type: 'high', touched: false };
+const nextPivot8: Pivot  = { price: 1.35306, pivotAt: '16.07.2026 06:25', type: 'low', touched: false };
+const nextPivot9: Pivot  = { price: 1.35409, pivotAt: '16.07.2026 07:30', type: 'high', touched: false };
+const nextPivot10: Pivot  = { price: 1.35271, pivotAt: '16.07.2026 07:55', type: 'low', touched: false };
+const nextPivot11: Pivot  = { price: 1.35421, pivotAt: '16.07.2026 09:00', type: 'high', touched: false };
 
 
 
@@ -43,17 +71,17 @@ const nextPivot11 = { price: 1.35421, pivotAt: '16.07.2026 09:00', type: 'high',
 // algo: Ausgangspunkt - High und Low werden als swing-high/swing-low markiert, trendState steht
 // auf 'unconfirmed' (Richtung ist erkennbar, aber ohne Lower-High/Lower-Low noch keine
 // bestätigte Struktur).
-const stateSchritt1 = {
-    trendOrdnung: 1, // 1 ist der übergeordnete Trend. Je niedriger die Zahl, desto stärker der Trend. Außerdem reicht die Trendordnung als chartLabel. Ich brauch kein "Rahmen (übergeordnet"
+const stateSchritt1: TrendAnalyseState = {
+    trendOrdnung: 1,
     direction: 'down',
-    trendState: 'unconfirmed', // mit einem high & low können wir grad mal die Richtung sagen, ist aber kein bestätigter Trend
+    confirmation: 'unconfirmed', // mit einem high & low können wir grad mal die Richtung sagen, ist aber kein bestätigter Trend
     range: {
         high: { ...swingHighTestRange, type: 'swing-high' },
         low: {...nextPivot1, type: 'swing-low'}
     },
-    struktur: [], // noch keine Struktur vorhanden
-    unterStruktur: [],
-    gelesenePivots: [
+    structure: [], // noch keine Struktur vorhanden
+    innerStructure: [],
+    appliedPivots: [
         swingHighTestRange,
         nextPivot1
     ]
@@ -80,11 +108,11 @@ const stateSchritt2 = {
             touched: false
         }
     },
-    struktur: [
+    structure: [
         { ...nextPivot2, type: 'lower-high'} // hier bildet sich grad die Struktur von trend-1, Trend ist aber noch unconfirmed
     ],
-    unterStruktur: [], // wir sind noch in TrendOrdnung 1, keine Unterstruktur vorhanden
-    gelesenePivots: [ 
+    innerStructure: [], // wir sind noch in TrendOrdnung 1, keine Unterstruktur vorhanden
+    appliedPivots: [ 
         swingHighTestRange,
         nextPivot1,
         nextPivot2
@@ -109,11 +137,11 @@ const stateSchritt3 = {
         },
         low: { price: 1.35269, pivotAt: '15.07.2026 23:55', type: 'low', touched: false }
     },
-    struktur: [
+    structure: [
         { ...nextPivot2, type: 'weak-high'}, // schließt keine M5-Kerze zwischen pivot2 und pivot3 per CLOSE unter pivot2, gilt pivot2 nur als "weak" statt lower-high
         { ...nextPivot3, type: 'lower-low'}
     ],
-    unterStruktur: [],
+    innerStructure: [],
     gelesenePivots: [ 
         swingHighTestRange,
         nextPivot1,
@@ -123,29 +151,6 @@ const stateSchritt3 = {
 }
 
 // STOPP, schreib den algo erst mal bis hier und nicht weiter.
-
-// 4: um 16.07. 00:50
-// algo: neuer pivot bricht das range-swing-high nicht, das heißt die TrendOrdnung 1 bleibt short
-// TODO morgen: in Schritt 3 hätte schon die Unterstruktur gespeichert werden sollen
-const stateSchritt4 = {
-    trendOrdnung: 1, 
-    direction: 'down',
-    range: {
-       high: {
-            type: 'high',
-            price: 1.35578,
-            pivotAt: '15.07.2026 20:20',
-            touched: false
-        },
-        low: { price: 1.35269, pivotAt: '15.07.2026 23:55', type: 'low', touched: false }
-    },
-    unterStruktur: [],
-    gelesenePivots: [ 
-        { price: 1.35392, pivotAt: '15.07.2026 22:25', type: 'high', touched: false },
-        { price: 1.35269, pivotAt: '15.07.2026 23:55', type: 'low', touched: false },
-        { price: 1.35418, pivotAt: '16.07.2026 00:30', type: 'high', touched: false }
-    ]
-}
 
 
 
