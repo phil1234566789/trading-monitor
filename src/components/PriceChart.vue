@@ -5,6 +5,7 @@ import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "..
 import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, LiquidityLinePrimitive } from "../liquidity.js";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { initTrendState, applyPivot, zigzagSegments, renderZigzag } from "../trendZigzag";
+import { initRangeState, applyRangePivot, renderRangeAnalysis } from "../rangeAnalysis";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import {
   binanceIntervalFor,
@@ -166,6 +167,7 @@ let liquidityPrimitives = [];
 let pivotPrimitives = [];
 let zigzagPrimitives = [];
 let rangesMarkerPrimitives = [];
+let rangeAnalysisPrimitives = [];
 let tradePrimitives = [];
 let tradeSetupPrimitives = [];
 let allCandles = [];
@@ -435,6 +437,39 @@ function refreshRangesInternal() {
   rangesPivots = rangesH1Candles.length > 0 ? computeRangesPivots() : null;
   rangesMetadata.value = rangesPivots ? rangesPivots.map(pivotForDisplay) : null;
   refreshRangesMarkersInternal();
+  refreshRangeAnalysisInternal();
+}
+
+// Neuer "1h-Range"-Trendalgorithmus (siehe rangeAnalysis.ts, test/tdd_mit_claude.ts) — läuft über
+// dieselben H1-Pivots wie die Debug-Punktmarker oben, aber unabhängig vom Debug-Toggle: das ist
+// das eigentliche Analyse-Ergebnis der Ranges-Funktion, nicht nur eine Debug-Hilfe. Erster
+// gelesener 'low'/'high' bilden die Start-Range (analog zu computeZigzagState/originHigh/Low),
+// der Rest läuft über applyRangePivot.
+function computeRangeAnalysisState() {
+  if (!rangesPivots || rangesPivots.length < 2) return null;
+  const originLow = rangesPivots.find((p) => p.type === "low");
+  const originHigh = rangesPivots.find((p) => p.type === "high");
+  if (!originLow || !originHigh) return null;
+
+  const [first, second] = originLow.pivotTime <= originHigh.pivotTime ? [originLow, originHigh] : [originHigh, originLow];
+  let state = initRangeState(first, second);
+  for (const pivot of rangesPivots) {
+    if (pivot === originLow || pivot === originHigh) continue;
+    state = applyRangePivot(state, pivot);
+  }
+  return state;
+}
+
+// Roter Pfeil+Linie an range.high, grüner an range.low, ggf. "1h protected low"-Linie +
+// Trend-Label rechts/mittig (siehe Chat) — sichtbar, sobald showRanges an ist, unabhängig vom
+// Debug-Toggle (im Gegensatz zu den rohen Punktmarkern oben).
+function refreshRangeAnalysisInternal() {
+  const state = computeRangeAnalysisState();
+  if (!props.showRanges || !state) {
+    renderRangeAnalysis(candleSeries, null, rangeAnalysisPrimitives, allCandles);
+    return;
+  }
+  renderRangeAnalysis(candleSeries, state, rangeAnalysisPrimitives, allCandles);
 }
 
 // Eigener H1-Fetch fürs Ranges-Metadaten-Panel, unabhängig von tradeSetupH1Candles (siehe oben) —
@@ -609,6 +644,7 @@ function refreshChart() {
   renderTradeSetupsInternal();
   refreshZigzagInternal();
   refreshRangesMarkersInternal();
+  refreshRangeAnalysisInternal();
   cvdSeries?.setData(cumulativeFromDeltas(allCvdDeltas));
   positionGauges();
 }
@@ -841,6 +877,7 @@ watch(() => props.showMetadata, (on) => {
 watch(() => props.showRanges, () => {
   refreshRangesPollingState();
   refreshRangesMarkersInternal(); // sofort reagieren, nicht erst beim nächsten refreshChart()
+  refreshRangeAnalysisInternal();
 });
 watch(() => props.showRangesMetadata, refreshRangesPollingState);
 // Lookback-Änderung braucht mehr/weniger H1-Historie -> neu fetchen, aber nur solange mindestens

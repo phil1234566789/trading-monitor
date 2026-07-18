@@ -29,15 +29,29 @@ export type PivotUptrend = PivotBase<PivotTypeUptrend>;
 export type PivotSwingHigh = PivotBase<"swing-high">;
 export type PivotSwingLow = PivotBase<"swing-low">;
 
-/**
- * überbleibsel nachdem die Trendanalyse verworfen wird
- */
+// Eigene, engere Typen für currRange.high/low im neuen "1h-Range"-Algorithmus (siehe unten) —
+// anders als beim alten Zigzag-Ansatz (PivotSwingHigh/-Low) werden sie NICHT reklassifiziert,
+// sondern behalten ihren rohen Fraktal-Typ ('high'/'low'). Trotzdem eigene Typen statt Pivot,
+// aus demselben Grund wie oben: ein 'low'-Pivot soll nicht in currRange.high kompilieren können.
+export type PivotHigh = PivotBase<"high">;
+export type PivotLow = PivotBase<"low">;
+
+export type RangeTrend = "unknown" | "uptrend" | "downtrend";
+
+// Zustand des neuen "1h-Range"-Trendalgorithmus (siehe test/tdd_mit_claude.ts, rangeState1..7,
+// und src/rangeAnalysis.ts) — ersetzt die alte, nie fertig genutzte RangeState-Form
+// (protectedPivots/PivotSwingHigh/-Low), die zur verworfenen verschachtelten Trend-State-Machine
+// gehörte. currRange ist die aktuell gültige, ungeklassifizierte Grenze; structurePivots sammelt
+// Pivots innerhalb der Range (Pullbacks), von denen bei Trendbestätigung einer zu
+// 'protected-high'/'protected-low' reklassifiziert wird — der Rest bleibt unverändert (siehe
+// applyRangePivot).
 export type RangeState = {
-  range: {
-    high: PivotSwingHigh;
-    low: PivotSwingLow;
+  trend: RangeTrend;
+  currRange: {
+    high: PivotHigh;
+    low: PivotLow;
   };
-  protectedPivots: PivotDowntrend[];
-  appliedPivots: Pivot[]; // TODO hier aufpassen, dass es nicht ins unendliche wächst
+  structurePivots: Pivot[];
+  appliedPivots: Pivot[];
 };
 
