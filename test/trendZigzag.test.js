@@ -61,7 +61,7 @@ describe("trendZigzag", () => {
     const s2 = applyPivot(s1, nextPivot2, { candles, fractalPeriod: 10 });
     const s3 = applyPivot(s2, nextPivot3, { candles, fractalPeriod: 10 });
     expect(s3.confirmation).toBe("confirmed");
-    expect(s3.range).toEqual({ high: s1.range.high, low: nextPivot3 });
+    expect(s3.range).toEqual({ high: s1.range.high, low: { ...nextPivot3, type: "swing-low" } });
     expect(s3.appliedPivots).toEqual([high, nextPivot1, nextPivot2, nextPivot3]);
   });
 

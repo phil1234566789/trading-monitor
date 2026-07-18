@@ -24,13 +24,20 @@ export type Pivot = PivotBase<PivotTypeAll>;
 export type PivotDowntrend = PivotBase<PivotTypeDowntrend>;
 export type PivotUptrend = PivotBase<PivotTypeUptrend>;
 
+// range.high/low halten IMMER genau den aktuell gültigen swing-Wert - nie eine Struktur-
+// Klassifizierung wie 'lower-high'/'weak-high'/'protected-high' (die gehören nur in structure[]).
+// Eigene, engere Typen statt PivotDowntrend/PivotUptrend, damit sowas wie ein roher 'low'-Pivot
+// oder ein 'lower-low' in range gar nicht erst kompiliert (siehe Chat: genau das ist uns passiert).
+export type PivotSwingHigh = PivotBase<"swing-high">;
+export type PivotSwingLow = PivotBase<"swing-low">;
+
 export type DowntrendState = {
   trendOrdnung: number; // 1 ist der übergeordnete Trend. Je niedriger die Zahl, desto stärker der Trend. Wird außerdem zum labeln aufn Chart verwendet "Downtrend 1"
   direction: "down";
   confirmation: TrendConfirmation;
   range: {
-    high: PivotDowntrend;
-    low: PivotDowntrend;
+    high: PivotSwingHigh;
+    low: PivotSwingLow;
   };
   structure: PivotDowntrend[];
   innerStructure: unknown;
@@ -46,8 +53,8 @@ export type UptrendState = {
   direction: "up";
   confirmation: TrendConfirmation;
   range: {
-    high: PivotUptrend;
-    low: PivotUptrend;
+    high: PivotSwingHigh;
+    low: PivotSwingLow;
   };
   structure: PivotUptrend[];
   innerStructure: unknown;

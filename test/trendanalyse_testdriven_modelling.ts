@@ -1,7 +1,7 @@
 // Domain-Typen jetzt in src/trendTypes.ts (siehe Chat: Algo und Testdaten sollen denselben
 // Vertrag benutzen statt zweier Kopien, die auseinanderlaufen können). Hier nur noch Fixtures +
 // die Schritt-für-Schritt-Testzustände.
-import type { Pivot, TrendAnalyseState } from "../src/trendTypes";
+import type { Pivot, PivotSwingHigh, PivotSwingLow, TrendAnalyseState } from "../src/trendTypes";
 
 /** GBPUSD M5-Periode-10 Pivots der Test-Range ab 15.07.19:30, die zum Zeitpunkt der Erkennung immer untouched sind */
 const swingHighTestRange: Pivot = { type: 'high', price: 1.35578, pivotAt: '15.07.2026 20:20', touched: false };
@@ -24,13 +24,18 @@ const nextPivot11: Pivot  = { price: 1.35421, pivotAt: '16.07.2026 09:00', type:
 // algo: Ausgangspunkt - High und Low werden als swing-high/swing-low markiert, trendState steht
 // auf 'unconfirmed' (Richtung ist erkennbar, aber ohne Lower-High/Lower-Low noch keine
 // bestätigte Struktur).
+// Klassifizierte Fassungen für range.* - swingHighTestRange/nextPivot1 selbst bleiben roh (type
+// 'high'/'low'), weil appliedPivots die ungeklassifizierte Lese-Reihenfolge braucht.
+const swingHigh: PivotSwingHigh = { ...swingHighTestRange, type: 'swing-high' };
+const swingLow: PivotSwingLow = { ...nextPivot1, type: 'swing-low' };
+
 const stateSchritt1: TrendAnalyseState = {
     trendOrdnung: 1,
     direction: 'down',
     confirmation: 'unconfirmed', // mit einem high & low können wir grad mal die Richtung sagen, ist aber kein bestätigter Trend
     range: {
-        high: { ...swingHighTestRange, type: 'swing-high' },
-        low: {...nextPivot1, type: 'swing-low'}
+        high: swingHigh,
+        low: swingLow
     },
     structure: [], // noch keine Struktur vorhanden
     innerStructure: [],
@@ -44,33 +49,24 @@ const stateSchritt1: TrendAnalyseState = {
 // algo: neuer Pivot bricht weder High noch Low, range bleibt unverändert. Er wird trotzdem als
 // lower-high in struktur[] abgelegt (erster Baustein der Struktur), trendState bleibt
 // 'unconfirmed' - ein einzelnes lower-high reicht noch nicht für einen bestätigten Trend.
-const stateSchritt2 = {
-    trendOrdnung: 1, 
+const stateSchritt2: TrendAnalyseState = {
+    trendOrdnung: 1,
     direction: 'down',
-    trendState: 'unconfirmed', 
+    confirmation: 'unconfirmed',
     range: {
-        high: {
-            type: 'high',
-            price: 1.35578,
-            pivotAt: '15.07.2026 20:20',
-            touched: false
-        },
-        low: {
-            type: 'low',
-            price: 1.35273,
-            pivotAt: '15.07.2026 21:35',
-            touched: false
-        }
+        high: swingHigh,
+        low: swingLow
     },
     structure: [
         { ...nextPivot2, type: 'lower-high'} // hier bildet sich grad die Struktur von trend-1, Trend ist aber noch unconfirmed
     ],
     innerStructure: [], // wir sind noch in TrendOrdnung 1, keine Unterstruktur vorhanden
-    appliedPivots: [ 
+    appliedPivots: [
         swingHighTestRange,
         nextPivot1,
         nextPivot2
-    ]
+    ],
+    trendInvalidatingPivot: null
 }
 // 3: um 16.07. 00:25
 // algo: neuer Pivot macht ein Lower Low -> range.low wird angepasst. Damit haben wir 4 Pivots
@@ -78,31 +74,31 @@ const stateSchritt2 = {
 // zeichnen lässt - Lehrbuch: Lower Low, Lower High, neues Lower Low. trendState wechselt auf
 // 'confirmed', weil jetzt Lower-High + Lower-Low als echte Struktur vorliegen (siehe struktur[]
 // unten für die Details zu "weak"). Die Zigzag-Linie dieser Struktur wird separat in Rot gezeichnet.
-const stateSchritt3 = {
-    trendOrdnung: 1, 
+const newSwingLow: PivotSwingLow = { ...nextPivot3, type: 'swing-low'};
+const stateSchritt3: TrendAnalyseState = {
+    trendOrdnung: 1,
     direction: 'down',
-    trendState: 'confirmed', // ham ja lower-low, lower-high, also confirmed.
+    confirmation: 'confirmed', // ham ja lower-low, lower-high, also confirmed.
     range: {
-       high: {
-            type: 'high',
-            price: 1.35578,
-            pivotAt: '15.07.2026 20:20',
-            touched: false
-        },
-        low: { price: 1.35269, pivotAt: '15.07.2026 23:55', type: 'low', touched: false }
+        high: swingHigh,
+        low: newSwingLow
     },
     structure: [
         { ...nextPivot2, type: 'weak-high'}, // schließt keine M5-Kerze zwischen pivot2 und pivot3 per CLOSE unter pivot2, gilt pivot2 nur als "weak" statt lower-high
         { ...nextPivot3, type: 'lower-low'}
     ],
     innerStructure: [],
-    gelesenePivots: [ 
+    appliedPivots: [
         swingHighTestRange,
         nextPivot1,
         nextPivot2,
         nextPivot3
-    ]
+    ],
+    trendInvalidatingPivot: null
 }
+
+// 4. nächster pivot hat sich gebildet und wird vom algo eingelesen
+
 
 // STOPP, schreib den algo erst mal bis hier und nicht weiter.
 

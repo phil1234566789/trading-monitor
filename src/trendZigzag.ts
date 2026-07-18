@@ -1,5 +1,5 @@
 import { snapToBarTime } from "./chartTimeUtils.js";
-import type { Pivot, PivotDowntrend, DowntrendState } from "./trendTypes";
+import type { Pivot, DowntrendState } from "./trendTypes";
 
 // Schrittweise Marktstruktur-Erkennung nach Philips eigenem Entwurf (siehe
 // test/trendanalyse_testdriven_modelling.ts, stateSchritt1 -> stateSchritt2 -> stateSchritt3) —
@@ -82,13 +82,11 @@ export function applyPivot(
       structure = [...structure.slice(0, pendingIndex), { ...pending, type: confirmed ? "lower-high" : "weak-high" }];
     }
     structure = [...structure, { ...pivot, type: "lower-low" }];
-    // Achtung Domain-Lücke: range.low landet hier als ROHER Pivot (type "low", z.B. bei einem
-    // frischen Lower Low direkt aus appliedPivots) statt reklassifiziert — genau wie in Philips
-    // eigenem stateSchritt3 (range.low: {..., type: 'low'}). PivotDowntrend erlaubt "low"/"high"
-    // aber nicht (bewusst nur klassifizierte Typen laut Philip) -> deshalb der Cast hier. Wenn das
-    // so bleiben soll, müsste PivotDowntrend eigentlich "low"/"high" mit aufnehmen oder range
-    // bräuchte einen eigenen (breiteren) Typ als PivotDowntrend.
-    range = { ...range, low: pivot as PivotDowntrend };
+    // range.low ist immer die AKTUELL gültige Referenz -> wird bei jedem Bruch neu als swing-low
+    // reklassifiziert (siehe stateSchritt3 in trendanalyse_testdriven_modelling.ts). structure[]
+    // behält daneben den historischen "lower-low"-Eintrag für denselben Pivot - beides gleichzeitig,
+    // kein Widerspruch (range = aktueller Stand, structure = wie er entstanden ist).
+    range = { ...range, low: { ...pivot, type: "swing-low" } };
     confirmation = "confirmed"; // Lower-High + Lower-Low -> echte Struktur, nicht nur Richtung
   }
   // sonst: Pivot bricht die Struktur (noch) nicht -> landet nur in appliedPivots (siehe
