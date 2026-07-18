@@ -1,54 +1,7 @@
-/** Domain Typen mein Vorschlag */
-type TrendAnalyseState = DowntrendState | UptrendState; // später | ConsolidationState
-
-type DowntrendState = {
-    trendOrdnung: number // 1 ist der übergeordnete Trend. Je niedriger die Zahl, desto stärker der Trend. Wird außerdem zum labeln aufn Chart verwendet "Downtrend 1"
-    direction: 'down',
-    confirmation: TrendConfirmation,
-    range: {
-        high: PivotDowntrend,
-        low: PivotDowntrend,
-    },
-    structure: Pivot[],
-    innerStructure: unknown,
-    appliedPivots: Pivot[]
-}
-
-type UptrendState = {
-    trendOrdnung: number 
-    direction: 'up',
-    confirmation: TrendConfirmation,
-    range: {
-        high: PivotUptrend,
-        low: PivotUptrend,
-    },
-    structure: Pivot[],
-    innerStructure: unknown,
-    appliedPivots: Pivot[]
-}
-
-type TrendConfirmation = 'unconfirmed' | 'confirmed' | 'invalidated';
-
-type PivotBase<T extends string> = {
-    price: number;
-    touched: PivotUntouched | PivotTouched;
-    pivotAt: string;
-    type: T;
-};
-
-type PivotTypeAll       = 'high' | 'low' | 'swing-high' | 'swing-low' | 'weak-high' | 'weak-low' | 'protected-high' | 'protected-low';
-type PivotTypeDowntrend = 'swing-high' | 'swing-low' | 'weak-high' | 'weak-low' | 'protected-high' | 'lower-high';
-type PivotTypeUptrend   = 'swing-high' | 'swing-low' | 'weak-high' | 'weak-low' | 'protected-low' |'higher-low';
-
-type Pivot           = PivotBase<PivotTypeAll>;
-type PivotDowntrend  = PivotBase<PivotTypeDowntrend>;
-type PivotUptrend    = PivotBase<PivotTypeUptrend>;
-
-type PivotUntouched = false;
-type PivotTouched = {
-    price: number, 
-    touchedAt: string
-}
+// Domain-Typen jetzt in src/trendTypes.ts (siehe Chat: Algo und Testdaten sollen denselben
+// Vertrag benutzen statt zweier Kopien, die auseinanderlaufen können). Hier nur noch Fixtures +
+// die Schritt-für-Schritt-Testzustände.
+import type { Pivot, TrendAnalyseState } from "../src/trendTypes";
 
 /** GBPUSD M5-Periode-10 Pivots der Test-Range ab 15.07.19:30, die zum Zeitpunkt der Erkennung immer untouched sind */
 const swingHighTestRange: Pivot = { type: 'high', price: 1.35578, pivotAt: '15.07.2026 20:20', touched: false };
@@ -84,7 +37,8 @@ const stateSchritt1: TrendAnalyseState = {
     appliedPivots: [
         swingHighTestRange,
         nextPivot1
-    ]
+    ],
+    trendInvalidatingPivot: null // noch kein Bruch des swing-high passiert
 }
 // 2: zum Zeitpunkt 23:10
 // algo: neuer Pivot bricht weder High noch Low, range bleibt unverändert. Er wird trotzdem als

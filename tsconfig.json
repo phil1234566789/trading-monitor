@@ -11,5 +11,5 @@
     "allowJs": true,
     "checkJs": false
   },
-  "include": ["src/trendZigzag.ts", "test/trendanalyse_vorschlag.ts"]
+  "include": ["src/trendZigzag.ts", "test/trendanalyse_testdriven_modelling.ts"]
 }

@@ -111,10 +111,11 @@ const dailyDelta = ref(0);
 const trendMetadata = ref(null); // Rohkopie des Zigzag-States fürs Metadaten-Panel, siehe refreshZigzagInternal
 
 // Menschenlesbare Zusammenfassung fürs Metadaten-Panel — jetzt der ZIGZAG-State (siehe
-// trendZigzag.js / test/trendanalyse_vorschlag.ts), NICHT mehr buildNestedTrendStructure: Philip
-// hat das explizit so spezifiziert (trendOrdnung statt chartLabel "Rahmen (übergeordnet)", siehe
-// Chat). pivotTime ist nur intern fürs Rendern der Zigzag-Linien nötig, taucht hier bewusst
-// nicht auf (Philips Pivot-Typ hat kein Pflichtfeld dafür, nur das menschenlesbare pivotAt).
+// src/trendZigzag.ts, src/trendTypes.ts / test/trendanalyse_testdriven_modelling.ts), NICHT mehr
+// buildNestedTrendStructure: Philip hat das explizit so spezifiziert (trendOrdnung statt
+// chartLabel "Rahmen (übergeordnet)", siehe Chat). pivotTime ist nur intern fürs Rendern der
+// Zigzag-Linien nötig, taucht hier bewusst nicht auf (Philips Pivot-Typ hat kein Pflichtfeld
+// dafür, nur das menschenlesbare pivotAt).
 function pivotForDisplay(p) {
   if (!p) return null;
   const { pivotTime, ...rest } = p;
@@ -125,15 +126,16 @@ function summarizeZigzagState(state) {
   return {
     trendOrdnung: state.trendOrdnung,
     direction: state.direction,
-    trendState: state.trendState,
+    confirmation: state.confirmation,
     range: { high: pivotForDisplay(state.range.high), low: pivotForDisplay(state.range.low) },
-    struktur: state.struktur.map(pivotForDisplay),
-    unterStruktur: state.unterStruktur,
-    gelesenePivots: state.gelesenePivots.map(pivotForDisplay),
+    structure: state.structure.map(pivotForDisplay),
+    innerStructure: state.innerStructure,
+    appliedPivots: state.appliedPivots.map(pivotForDisplay),
+    trendInvalidatingPivot: pivotForDisplay(state.trendInvalidatingPivot),
   };
 }
 // Rohes Objekt statt fertigem JSON-Text — JsonTree.vue rendert es einklappbar, damit man
-// große Arrays (gelesenePivots) schneller überfliegen kann.
+// große Arrays (appliedPivots) schneller überfliegen kann.
 const metadataTree = computed(() => (trendMetadata.value ? summarizeZigzagState(trendMetadata.value) : null));
 
 // lightweight-charts ist inhärent imperativ (Canvas-API) — Chart/Series/Primitives und ihr
@@ -317,8 +319,8 @@ function refreshPivotsInternal() {
   });
 }
 
-// "Zigzag"-Toggle: Philips eigener Marktstruktur-Entwurf (siehe test/trendanalyse_vorschlag.ts
-// und trendZigzag.js) — verbindet die M5-Periode-10-Pivots seit dem Trend-Ursprung
+// "Zigzag"-Toggle: Philips eigener Marktstruktur-Entwurf (siehe test/trendanalyse_testdriven_modelling.ts
+// und trendZigzag.ts) — verbindet die M5-Periode-10-Pivots seit dem Trend-Ursprung
 // (TREND_ANALYSIS_ANCHOR_TIME) der Reihe nach mit Linien, statt horizontale Level zu zeichnen.
 // Nutzt trendAnalysisM5Candles (nicht allCandles!), weil der Ursprung mehrere Tage zurückliegt —
 // gerendert wird aber gegen allCandles (das sichtbare Timeframe), aus demselben Grund wie bei

@@ -1,5 +1,5 @@
-// Reproduziert Philips Schritt-für-Schritt-Beispiel aus trendanalyse_vorschlag.ts 1:1
-// (stateSchritt1 -> stateSchritt2 -> stateSchritt3, Zeilen 44-123).
+// Reproduziert Philips Schritt-für-Schritt-Beispiel aus trendanalyse_testdriven_modelling.ts 1:1
+// (stateSchritt1 -> stateSchritt2 -> stateSchritt3).
 import { describe, expect, it } from "vitest";
 import { initTrendState, applyPivot, zigzagSegments } from "../src/trendZigzag";
 import candles from "./fixtures/gbpusd-m5-trend-2026-07-13.json";
@@ -38,37 +38,38 @@ const nextPivot3 = {
 };
 
 describe("trendZigzag", () => {
-  it("stateSchritt1: Ausgangszustand - swing-high/swing-low, trendState unconfirmed", () => {
+  it("stateSchritt1: Ausgangszustand - swing-high/swing-low, confirmation unconfirmed", () => {
     const s1 = initTrendState({ trendOrdnung: 1, direction: "down", high, low: nextPivot1 });
-    expect(s1.trendState).toBe("unconfirmed");
+    expect(s1.confirmation).toBe("unconfirmed");
     expect(s1.range).toEqual({ high: { ...high, type: "swing-high" }, low: { ...nextPivot1, type: "swing-low" } });
-    expect(s1.struktur).toEqual([]);
-    expect(s1.gelesenePivots).toEqual([high, nextPivot1]);
+    expect(s1.structure).toEqual([]);
+    expect(s1.appliedPivots).toEqual([high, nextPivot1]);
+    expect(s1.trendInvalidatingPivot).toBeNull();
   });
 
-  it("stateSchritt2: Pivot bricht das swing-high nicht -> lower-high in struktur[], trendState bleibt unconfirmed", () => {
+  it("stateSchritt2: Pivot bricht das swing-high nicht -> lower-high in structure[], confirmation bleibt unconfirmed", () => {
     const s1 = initTrendState({ trendOrdnung: 1, direction: "down", high, low: nextPivot1 });
     const s2 = applyPivot(s1, nextPivot2, { candles });
-    expect(s2.trendState).toBe("unconfirmed");
+    expect(s2.confirmation).toBe("unconfirmed");
     expect(s2.range).toEqual(s1.range);
-    expect(s2.struktur).toEqual([{ ...nextPivot2, type: "lower-high" }]);
-    expect(s2.gelesenePivots).toEqual([high, nextPivot1, nextPivot2]);
+    expect(s2.structure).toEqual([{ ...nextPivot2, type: "lower-high" }]);
+    expect(s2.appliedPivots).toEqual([high, nextPivot1, nextPivot2]);
   });
 
-  it("stateSchritt3: neuer Lower Low -> range.low aktualisiert sich, trendState wird confirmed", () => {
+  it("stateSchritt3: neuer Lower Low -> range.low aktualisiert sich, confirmation wird confirmed", () => {
     const s1 = initTrendState({ trendOrdnung: 1, direction: "down", high, low: nextPivot1 });
     const s2 = applyPivot(s1, nextPivot2, { candles, fractalPeriod: 10 });
     const s3 = applyPivot(s2, nextPivot3, { candles, fractalPeriod: 10 });
-    expect(s3.trendState).toBe("confirmed");
+    expect(s3.confirmation).toBe("confirmed");
     expect(s3.range).toEqual({ high: s1.range.high, low: nextPivot3 });
-    expect(s3.gelesenePivots).toEqual([high, nextPivot1, nextPivot2, nextPivot3]);
+    expect(s3.appliedPivots).toEqual([high, nextPivot1, nextPivot2, nextPivot3]);
   });
 
   it('stateSchritt3: keine M5-Kerze zwischen nextPivot2 und der Bestätigung von nextPivot3 schließt unter dem alten Low -> nextPivot2 wird "weak-high"', () => {
     const s1 = initTrendState({ trendOrdnung: 1, direction: "down", high, low: nextPivot1 });
     const s2 = applyPivot(s1, nextPivot2, { candles, fractalPeriod: 10 });
     const s3 = applyPivot(s2, nextPivot3, { candles, fractalPeriod: 10 });
-    expect(s3.struktur).toEqual([
+    expect(s3.structure).toEqual([
       { ...nextPivot2, type: "weak-high" },
       { ...nextPivot3, type: "lower-low" },
     ]);
@@ -79,31 +80,31 @@ describe("trendZigzag", () => {
     const higherHigh = { price: 1.4, pivotAt: "x", pivotTime: 0, type: "high", touched: false };
     const s2 = applyPivot(s1, higherHigh, { candles });
     expect(s2.range.high).toEqual(s1.range.high);
-    expect(s2.struktur).toEqual([]);
+    expect(s2.structure).toEqual([]);
   });
 
   it("zigzagSegments: durch step1-3 ist alles klassifiziert -> nur das rote Struktur-Segment, kein grauer Tail", () => {
     const s1 = initTrendState({ trendOrdnung: 1, direction: "down", high, low: nextPivot1 });
     const s2 = applyPivot(s1, nextPivot2, { candles });
     const s3 = applyPivot(s2, nextPivot3, { candles });
-    const [structure, tail] = zigzagSegments(s3);
-    expect(structure.points.map((p) => p.price)).toEqual([1.35578, 1.35273, 1.35392, 1.35269]);
-    expect(tail.points).toEqual([]);
+    const [structureSegment, tailSegment] = zigzagSegments(s3);
+    expect(structureSegment.points.map((p) => p.price)).toEqual([1.35578, 1.35273, 1.35392, 1.35269]);
+    expect(tailSegment.points).toEqual([]);
   });
 
   it("zigzagSegments: ein noch nicht klassifizierter Pivot landet als grauer Tail (Linie ans letzte rote Pivot angehängt)", () => {
     // Synthetischer State (nicht über applyPivot erzeugt) - reicht, um den Segment-Split isoliert
-    // von der Klassifizierungslogik zu testen: 2 Ursprungspivots + 1 struktur-Eintrag sind "rot"
-    // klassifiziert, das nachfolgend gelesene 4. Pivot ist noch nicht in struktur[] gelandet -> grau.
+    // von der Klassifizierungslogik zu testen: 2 Ursprungspivots + 1 structure-Eintrag sind "rot"
+    // klassifiziert, das nachfolgend gelesene 4. Pivot ist noch nicht in structure[] gelandet -> grau.
     const untouchedTail = { price: 1.354, pivotAt: "y", pivotTime: 1, type: "high", touched: false };
     const state = {
       direction: "down",
       range: { high, low: nextPivot1 },
-      struktur: [{ ...nextPivot2, type: "lower-high" }],
-      gelesenePivots: [high, nextPivot1, nextPivot2, untouchedTail],
+      structure: [{ ...nextPivot2, type: "lower-high" }],
+      appliedPivots: [high, nextPivot1, nextPivot2, untouchedTail],
     };
-    const [structure, tail] = zigzagSegments(state);
-    expect(structure.points).toEqual([high, nextPivot1, nextPivot2]);
-    expect(tail.points).toEqual([nextPivot2, untouchedTail]); // letztes rotes Pivot wiederholt, damit die Linie nahtlos weiterläuft
+    const [structureSegment, tailSegment] = zigzagSegments(state);
+    expect(structureSegment.points).toEqual([high, nextPivot1, nextPivot2]);
+    expect(tailSegment.points).toEqual([nextPivot2, untouchedTail]); // letztes rotes Pivot wiederholt, damit die Linie nahtlos weiterläuft
   });
 });
