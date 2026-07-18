@@ -603,13 +603,15 @@ function renderTradeSetupsInternal() {
   }
 }
 
-// EMA 50/200 (M5) — läuft auf trendAnalysisM5Candles, unabhängig von allCandles/currentBar (eine
-// LineSeries braucht keine Neu-Positionierung gegen den sichtbaren Timeframe wie die Primitives
-// oben, daher kein Aufruf in refreshChart() nötig, nur wenn sich trendAnalysisM5Candles oder der
-// Toggle selbst ändern, siehe loadTradeSetupCandles/watch(showEma)).
+// EMA 50/200 (M5) — läuft auf trendAnalysisM5Candles, M5-aufgelöst. Nur sichtbar, wenn der Chart
+// selbst auch auf M5 steht: auf einem gröberen Timeframe (z.B. 1h) teilt sich die EMA-LineSeries
+// die Zeitachse mit der 1h-Candlestick-Serie, und die viel dichteren M5-Zeitpunkte quetschen dort
+// die Kerzen zusammen (siehe Chat: "candles werden ganz komisch dünn, wenn man den EMA anschaltet").
+// Deshalb hier zusätzlich zum Toggle gegen props.currentBar geprüft — daher jetzt auch bei jedem
+// TF-Wechsel über refreshChart() aufgerufen, nicht mehr nur bei loadTradeSetupCandles/watch(showEma).
 function refreshEmaInternal() {
   if (!isForex) return;
-  if (!props.showEma || trendAnalysisM5Candles.length === 0) {
+  if (!props.showEma || props.currentBar !== "5m" || trendAnalysisM5Candles.length === 0) {
     ema50Series?.setData([]);
     ema200Series?.setData([]);
     return;
@@ -676,6 +678,7 @@ function refreshChart() {
   refreshZigzagInternal();
   refreshRangesMarkersInternal();
   refreshRangeAnalysisInternal();
+  refreshEmaInternal();
   cvdSeries?.setData(cumulativeFromDeltas(allCvdDeltas));
   positionGauges();
 }
