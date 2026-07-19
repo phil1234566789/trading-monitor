@@ -137,39 +137,32 @@ const rangeState2_1: RangeState = {
     ]
 }
 
-/**
- * HIER STOPP, lass erst mal schauen, dass sweeped-high funktioniert
- */
-
+// p2Pivot5 wird vor pivot4 erkannt = geil schnell!
 // p2Pivot5 bricht tatsächlich das range.high. Jetzt können wir das range.high setzen und unser Algo erkennt den Trend schneller
 // da wir 4 Strukturpunkte haben für einen uptrend (LL, HL, HH, HH) können wir den uptrend bereits setzen.
 // evtl musst du den algo anpassen, weil jetzt ein kleinerer pivot bereits als HL gilt.
 // die Regeln müssten gleich sein, nur dass der kleinere Pivot mit einbezogen wird.
-// FIX (Claude): Klammer nach 'swing-high' hatte gefehlt -> low/structurePivots/innerStructurePivots/
-// appliedPivots landeten dadurch alle IM high-Objekt statt in RangeState. Zu deiner Namensfrage:
-// 'high' statt 'swing-high' — 'swing-high' ist bereits PivotSwingHigh im alten Zigzag-Algo (anderes
-// Konzept, siehe range.type.ts), und initRangeState/applyRangePivot setzen einen bestätigten Bruch
-// jetzt schon immer auf den rohen Typ 'high' zurück (nicht auf einen neuen Namen) — für Konsistenz
-// mit rangeState1_1/pivot2 oben genauso gemacht. Sag Bescheid, falls du das anders wolltest.
 const rangeState1_4: RangeState = {
     trend: 'uptrend',
     currRange: {
         high: { ...p2Pivot5, type: 'high' },
         low: pivot1,
     },
-    structurePivots: [],
+    structurePivots: [
+        pivot3
+    ],
     // FRAGE (Claude): p2Pivot5 hier UND gleichzeitig als currRange.high — im Periode-5-Algo landet
     // der brechende Pivot NICHT zusätzlich in structurePivots (siehe applyRangePivot: der Fall
     // "pivot.price > currRange.high.price" hängt den Pivot nur an currRange.high, nie an
     // structurePivots). Soll das hier bewusst anders sein, oder sollte p2Pivot5 raus?
     // Antwort: p2Pivot5 ist hier mit Absicht, damit man geistig und visuell die innere Struktur gespeichert hat. structurePivots dagegen ist wichtig für relevante Extrem-Punkte, wie "protected-low", daher war das im anderen Algo nicht dabei 
     innerStructurePivots: [
-        p2Pivot3,
         p2Pivot4,
         p2Pivot5
     ],
     appliedPivots: [
         pivot1,
-        pivot2
+        pivot2,
+        pivot3
     ]
 }

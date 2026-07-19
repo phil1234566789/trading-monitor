@@ -607,8 +607,12 @@ function computeRangeAnalysisState() {
     .map((pivot) => ({ pivot, outer: false, at: confirmationTime(pivot, props.ranges2Period) }));
 
   const merged = [...outerRest, ...innerRest].sort((a, b) => a.at - b.at);
+  // Für applyInnerRangePivots Kerzen-Close-Prüfung (closesAboveOldHigh, siehe rangeAnalysis.ts):
+  // dieselben H1-Kerzen wie die Pivot-Erkennung selbst (rangesH1Candles), nicht allCandles — das
+  // wäre je nach gewähltem Chart-Timeframe eine andere Auflösung.
+  const rangesCandles = clipReplay(rangesH1Candles);
   for (const entry of merged) {
-    state = entry.outer ? applyRangePivot(state, entry.pivot) : applyInnerRangePivot(state, entry.pivot);
+    state = entry.outer ? applyRangePivot(state, entry.pivot) : applyInnerRangePivot(state, entry.pivot, { candles: rangesCandles });
   }
   return state;
 }

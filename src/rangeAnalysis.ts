@@ -47,20 +47,51 @@ function pivotTimeOf(pivot: Pivot): number {
   return pivot.pivotTime;
 }
 
+// Prüft, ob ein High-Bruch (übergeordnet ODER eingebettet, siehe applyRangePivot/
+// applyInnerRangePivot) den Uptrend bestätigt — gemeinsame Logik für beide, seit Chat 2026-07-19
+// ("die Regeln müssten gleich sein, nur dass der kleinere Pivot mit einbezogen wird",
+// gbp_h1_uptrend_LQ_sweep_long_setup.ts rangeState1_4). Ein bestätigter Uptrend braucht 4 Punkte
+// in strikter zeitlicher Reihenfolge (pivotTime): das aktuelle currRange.low, ein currRange.high,
+// das ZEITLICH NACH diesem Low liegt ("eligible" — sonst zählt es nicht als echter Ursprung eines
+// Aufwärts-Legs), mindestens 1 Pullback-Low NACH diesem eligible currRange.high — aus
+// structurePivots ODER innerStructurePivots zusammen, "der kleinere Pivot" darf also auch
+// qualifizieren — und schließlich der Bruch dieses currRange.high durch breakingPivot. Der jüngste
+// qualifizierende Pullback wird zu 'protected-low' reklassifiziert (in welcher der beiden Listen
+// er auch steckt), die übrigen bleiben unverändert. Gibt null zurück, wenn (noch) nicht bestätigt.
+function tryConfirmUptrend(state: RangeState, breakingPivot: Pivot): RangeState | null {
+  const { currRange, structurePivots, innerStructurePivots, trend } = state;
+  if (trend !== "unknown") return null;
+
+  const highTime = pivotTimeOf(currRange.high);
+  if (highTime <= pivotTimeOf(currRange.low)) return null; // nicht eligible
+
+  const qualifyingPullbacks = [...structurePivots, ...innerStructurePivots].filter(
+    (p) => p.type === "low" && pivotTimeOf(p) > highTime,
+  );
+  if (qualifyingPullbacks.length === 0) return null;
+
+  // jüngster qualifizierender Pullback nach pivotTime, nicht nach Array-Position bestimmt
+  const protectedLow = qualifyingPullbacks.reduce((latest, p) => (pivotTimeOf(p) > pivotTimeOf(latest) ? p : latest));
+  const reclassify = (p: Pivot) => (p === protectedLow ? { ...p, type: "protected-low" as const } : p);
+
+  return {
+    ...state,
+    trend: "uptrend",
+    currRange: { ...currRange, high: { ...breakingPivot, type: "high" } },
+    structurePivots: structurePivots.map(reclassify),
+    innerStructurePivots: innerStructurePivots.map(reclassify),
+  };
+}
+
 // Liest einen weiteren Pivot ein und wendet genau die Regeln an, die sich aus rangeState1..7
 // ablesen lassen (siehe Chat 2026-07-18, Korrektur):
 // 1. Pivot bricht die Range in seiner eigenen Richtung (neues Low unter currRange.low, neues High
 //    über currRange.high) -> diese Grenze wird ersetzt.
-// 2. Ein bestätigter Uptrend braucht 4 Punkte in strikter zeitlicher Reihenfolge (pivotTime): das
-//    aktuelle currRange.low, ein currRange.high, das ZEITLICH NACH diesem Low liegt ("eligible" —
-//    sonst zählt es nicht als echter Ursprung eines Aufwärts-Legs), mindestens 1 Pullback-Low in
-//    structurePivots, das NACH diesem eligible currRange.high liegt, und schließlich der Bruch
-//    dieses currRange.high. Beispiel rangeState4 vs. rangeState7: pivot2 ist NICHT eligible (liegt
-//    vor dem aktuellen range-low pivot3) -> pivot5s Bruch von pivot2 bestätigt NICHT, obwohl pivot4
-//    zeitlich danach liegt. pivot5 IST eligible (liegt nach pivot3) -> pivot8s Bruch von pivot5
-//    bestätigt, weil pivot6 und pivot7 danach liegen (pivot4 zählt hier nicht mehr mit, weil es VOR
-//    pivot5 liegt). Der jüngste qualifizierende Pullback wird zu 'protected-low' reklassifiziert,
-//    die übrigen structurePivots bleiben unverändert.
+// 2. Bestätigung siehe tryConfirmUptrend oben. Beispiel rangeState4 vs. rangeState7: pivot2 ist
+//    NICHT eligible (liegt vor dem aktuellen range-low pivot3) -> pivot5s Bruch von pivot2
+//    bestätigt NICHT, obwohl pivot4 zeitlich danach liegt. pivot5 IST eligible (liegt nach pivot3)
+//    -> pivot8s Bruch von pivot5 bestätigt, weil pivot6 und pivot7 danach liegen (pivot4 zählt
+//    hier nicht mehr mit, weil es VOR pivot5 liegt).
 // 3. Pivot liegt innerhalb der aktuellen Range -> Pullback, landet in structurePivots (siehe
 //    rangeState3/5/6) — unabhängig davon, ob er später als "qualifizierend" zählt.
 // NICHT implementiert: die spiegelbildliche Downtrend-Bestätigung (neues Low bricht currRange.low
@@ -73,7 +104,7 @@ function pivotTimeOf(pivot: Pivot): number {
 // "wenn neuer übergeordneter pivot, dann innerStructurePivots CLEAREN"). Gilt für alle drei Fälle
 // unten (Low-Bruch/High-Bruch/Struktur-Pullback), nicht nur für den Trend-Bestätigungsfall.
 export function applyRangePivot(state: RangeState, pivot: Pivot): RangeState {
-  const { currRange, structurePivots, appliedPivots, trend } = state;
+  const { currRange, structurePivots, appliedPivots } = state;
   const nextAppliedPivots = [...appliedPivots, pivot];
 
   if (pivot.type === "low" && pivot.price < currRange.low.price) {
@@ -86,26 +117,9 @@ export function applyRangePivot(state: RangeState, pivot: Pivot): RangeState {
   }
 
   if (pivot.type === "high" && pivot.price > currRange.high.price) {
-    const highTime = pivotTimeOf(currRange.high);
-    const highIsEligible = highTime > pivotTimeOf(currRange.low);
-    const qualifyingPullbacks = structurePivots.filter((p) => p.type === "low" && pivotTimeOf(p) > highTime);
-
-    if (trend === "unknown" && highIsEligible && qualifyingPullbacks.length >= 1) {
-      // jüngster qualifizierender Pullback nach pivotTime, nicht nach Array-Position bestimmt
-      const protectedLow = qualifyingPullbacks.reduce((latest, p) =>
-        pivotTimeOf(p) > pivotTimeOf(latest) ? p : latest,
-      );
-      const nextStructurePivots = structurePivots.map((p) =>
-        p === protectedLow ? { ...p, type: "protected-low" as const } : p,
-      );
-      return {
-        ...state,
-        trend: "uptrend",
-        currRange: { ...currRange, high: { ...pivot, type: "high" } },
-        structurePivots: nextStructurePivots,
-        innerStructurePivots: [],
-        appliedPivots: nextAppliedPivots,
-      };
+    const confirmed = tryConfirmUptrend(state, pivot);
+    if (confirmed) {
+      return { ...confirmed, innerStructurePivots: [], appliedPivots: nextAppliedPivots };
     }
     return {
       ...state,
@@ -123,25 +137,53 @@ export function applyRangePivot(state: RangeState, pivot: Pivot): RangeState {
   };
 }
 
-// Liest einen eingebetteten (z.B. Periode-2-)Pivot ein — läuft NUR gegen die aktuelle Range,
-// NIE gegen die übergeordnete Trend-Bestätigungslogik oben (siehe Chat 2026-07-19,
-// gbp_h1_uptrend_LQ_sweep_long_setup.ts rangeState1_2/rangeState2_1):
+// Analog zu closesBelowOldLow in trendZigzag.ts, nur für die Gegenrichtung: prüft, ob zwischen
+// fromTime (Zeit des ALTEN currRange.high) und toTime (Zeit des brechenden Pivots) irgendeine
+// Kerze ÜBER dem alten High-Preis geschlossen hat. Nur dann ist der Bruch "echt" (Preis bleibt
+// oben) — sonst ist es nur ein Sweep: Preis hat den Docht drüber geschoben, kann aber laut Philip
+// "potenziell umdrehen" (siehe Chat 2026-07-19). Ohne Kerzendaten konservativ NICHT abwerten
+// (wie beim Vorbild) — sonst würde ein fehlender Candle-Fetch stillschweigend jeden Bruch zum
+// Sweep degradieren.
+function closesAboveOldHigh(candles: Candle[], fromTime: number, toTime: number, oldHighPrice: number): boolean {
+  if (candles.length === 0) return true;
+  return candles.some((c) => c.time > fromTime && c.time <= toTime && c.close > oldHighPrice);
+}
+
+// Liest einen eingebetteten (z.B. Periode-2-)Pivot ein — läuft NUR gegen die aktuelle Range, NIE
+// gegen appliedPivots (das bleibt reine übergeordnete Zeitachse, siehe rangeState2_1: p2Pivot4
+// taucht dort nur in innerStructurePivots auf) — siehe Chat 2026-07-19,
+// gbp_h1_uptrend_LQ_sweep_long_setup.ts rangeState1_2/rangeState2_1/rangeState1_4:
 // 1. Pivot liegt innerhalb der Range -> reiner Pullback, landet in innerStructurePivots.
-// 2. Pivot bricht currRange.high preislich (Docht) -> currRange.high wird NICHT ersetzt (das darf
-//    nur ein übergeordneter Pivot, siehe applyRangePivot) — stattdessen nur als 'sweeped-high'
-//    markiert (Preis/pivotTime bleiben die des ALTEN currRange.high, nicht die des brechenden
-//    inneren Pivots). Der inneren Pivot selbst landet zusätzlich in innerStructurePivots. Ob daraus
-//    ein echter Bruch wird, entscheidet erst der nächste übergeordnete Pivot bzw. eine Kerzen-
-//    Close-Prüfung, die es hier noch nicht gibt (kein Testfall dafür bis inkl. rangeState2_1, siehe
-//    Chat: "lass erst mal schauen, dass sweeped-high funktioniert").
-// Anders als applyRangePivot NICHT in appliedPivots (das bleibt reine übergeordnete Zeitachse,
-// siehe rangeState2_1: p2Pivot4 taucht dort nur in innerStructurePivots auf).
+// 2. Pivot bricht currRange.high preislich UND mindestens eine Kerze hat seit dem alten High
+//    tatsächlich DRÜBER geschlossen (closesAboveOldHigh) -> echter Bruch, kein Sweep mehr ("ein
+//    Sweep bedeutet, der Preis kann potenziell umdrehen — ohne Sweep reicht der erste Bruch
+//    schon", siehe Chat) -> currRange.high wird SOFORT komplett ersetzt (Preis/Zeit des neuen
+//    Pivots), unabhängig davon, ob der Uptrend selbst schon bestätigt. Bestätigt zusätzlich noch
+//    (siehe tryConfirmUptrend, "der kleinere Pivot" darf mitbestätigen, siehe rangeState1_4:
+//    p2Pivot5 bestätigt anhand von pivot3) -> Trend auf 'uptrend'. Landet in JEDEM Fall zusätzlich
+//    in innerStructurePivots (anders als beim übergeordneten Fall, wo appliedPivots wächst).
+// 3. Pivot bricht currRange.high preislich, aber KEINE Kerze schließt drüber -> nur Sweep:
+//    currRange.high bleibt (Preis/pivotTime unverändert), nur type wird 'sweeped-high' (siehe
+//    rangeState2_1: p2Pivot4).
 // NICHT implementiert: der spiegelbildliche Fall (innerer Pivot bricht currRange.low) — dafür gibt
 // es noch kein Beispiel.
-export function applyInnerRangePivot(state: RangeState, pivot: Pivot): RangeState {
+export function applyInnerRangePivot(state: RangeState, pivot: Pivot, { candles = [] }: { candles?: Candle[] } = {}): RangeState {
   const { currRange, innerStructurePivots } = state;
 
   if (pivot.type === "high" && pivot.price > currRange.high.price) {
+    const isRealBreak = closesAboveOldHigh(candles, pivotTimeOf(currRange.high), pivotTimeOf(pivot), currRange.high.price);
+
+    if (isRealBreak) {
+      const confirmed = tryConfirmUptrend(state, pivot);
+      if (confirmed) {
+        return { ...confirmed, innerStructurePivots: [...confirmed.innerStructurePivots, pivot] };
+      }
+      return {
+        ...state,
+        currRange: { ...currRange, high: { ...pivot, type: "high" } },
+        innerStructurePivots: [...innerStructurePivots, pivot],
+      };
+    }
     return {
       ...state,
       currRange: { ...currRange, high: { ...currRange.high, type: "sweeped-high" } },
