@@ -43,9 +43,17 @@ const props = defineProps({
   showMetadata: { type: Boolean, default: false },
   showPivots: { type: Boolean, default: false },
   showZigzag: { type: Boolean, default: false },
+  rangesPeriod: { type: Number, default: 5 },
   rangesLookbackHours: { type: Number, default: 7 * 24 },
   showRanges: { type: Boolean, default: false },
   showRangesMetadata: { type: Boolean, default: false },
+  // Zweiter, eingebetteter Fraktal-Lauf mit eigener Periode/Lookback (siehe Chat 2026-07-19:
+  // "wir brauchen nen zweiten state ... mit periode 2" — schnellere Uptrend-Erkennung). Läuft auf
+  // denselben H1-Kerzen wie die Periode-5-Ranges (siehe loadRangesCandles: EIN Fetch für beide,
+  // kein zweiter cTrader-Connect), aber komplett eigene Pivot-Liste/Cutoff/Debug-Marker — fließt
+  // aktuell NICHT in rangeAnalysis.ts/applyRangePivot ein (nur Rohdaten zum Beobachten/TDD).
+  ranges2Period: { type: Number, default: 2 },
+  ranges2LookbackHours: { type: Number, default: 7 * 24 },
   showEma: { type: Boolean, default: false },
   // Replay-Modus (siehe Chat 2026-07-19): unix Sekunden, ab denen alles nach "Zeit X" ausgeblendet
   // wird — null = live (kein Clipping). Zum visuellen Prüfen des Ranges-Algos, ohne Zukunft zu
@@ -113,15 +121,18 @@ const TREND_ANALYSIS_CANDLE_COUNT = 1000;
 // (braucht period=5 Kerzen davor) den Pivot bei 1.35578 überhaupt als solchen erkennt.
 const TREND_ANALYSIS_ANCHOR_TIME = Math.floor(new Date("2026-07-15T19:20:00+02:00").getTime() / 1000);
 
-// "Ranges" — erster Baustein des neuen PA-Analyse-Konzepts (siehe Chat 2026-07-18): H1-Periode-5-
-// Fraktale im konfigurierbaren Lookback-Fenster (rangesLookbackHours), noch ohne weak/protected/
-// sweep-Klassifizierung. Eigene Periode (5, wie liqM5Period-Analogon auf H1) und eigener Fetch,
-// bewusst unabhängig von tradeSetupH1Candles (Periode 10, feste 300er-Historie) — die beiden
-// Konzepte sollen sich nicht querbeeinflussen, siehe Chat.
-const RANGES_FRACTAL_PERIOD = 5;
+// "Ranges" — erster Baustein des neuen PA-Analyse-Konzepts (siehe Chat 2026-07-18): H1-Fraktale
+// im konfigurierbaren Lookback-Fenster (rangesLookbackHours), noch ohne weak/protected/sweep-
+// Klassifizierung. Periode ist jetzt konfigurierbar (props.rangesPeriod, Default 5, wie
+// liqM5Period-Analogon auf H1) — seit Chat 2026-07-19 läuft zusätzlich ein zweiter, eingebetteter
+// Lauf mit eigener Periode/Lookback (props.ranges2Period/ranges2LookbackHours, Default 2) für eine
+// schnellere Uptrend-Erkennung, siehe computeRangesPivotsFor. Eigener Fetch, bewusst unabhängig
+// von tradeSetupH1Candles (Periode 10, feste 300er-Historie) — die Konzepte sollen sich nicht
+// querbeeinflussen, siehe Chat.
 // Puffer vor/nach dem Lookback-Fenster: ein Fraktal braucht period+4 Kerzen davor und period
 // danach, um überhaupt erkannt zu werden (siehe isUpFractal/isDownFractal in liquidity.js) — ohne
-// Puffer würden Fraktale am Rand des konfigurierten Fensters unter den Tisch fallen.
+// Puffer würden Fraktale am Rand des konfigurierten Fensters unter den Tisch fallen. 20 ist für
+// BEIDE Perioden (5 und 2) großzügig genug, kein separater Puffer je Periode nötig.
 const RANGES_CANDLE_BUFFER = 20;
 const RANGES_POLL_MS = 60_000; // wie TRADE_SETUP_POLL_MS — H1-Kerzen brauchen keine schnellere Frische
 
@@ -181,6 +192,7 @@ let liquidityPrimitives = [];
 let pivotPrimitives = [];
 let zigzagPrimitives = [];
 let rangesMarkerPrimitives = [];
+let rangesMarkerPrimitives2 = []; // eingebettete Periode-2-Debug-Marker, siehe refreshRangesMarkersInternal
 let rangeAnalysisPrimitives = [];
 let tradePrimitives = [];
 let tradeSetupPrimitives = [];
@@ -191,7 +203,8 @@ let tradeSetupH1Candles = [];
 let currentTradeSetups = [];
 let trendAnalysisM5Candles = [];
 let rangesH1Candles = [];
-let rangesPivots = null; // roh (mit pivotTime), siehe computeRangesPivots/refreshRangesMarkersInternal
+let rangesPivots = null; // roh (mit pivotTime), Periode 5 — siehe computeRangesPivotsFor/refreshRangesMarkersInternal
+let rangesPivots2 = null; // roh (mit pivotTime), eingebettete Periode 2 (siehe Chat 2026-07-19)
 let loadingOlder = false;
 let reachedHistoryStart = false;
 let reachedCvdHistoryStart = false;
@@ -201,6 +214,9 @@ let rangesPollTimer = null;
 let windowGaugeTimer = null;
 let dailyGaugeTimer = null;
 const rangesMetadata = ref(null); // Liste der erkannten H1-Periode-5-Pivots fürs Ranges-Metadaten-Panel
+const rangesMetadata2 = ref(null); // dito für die eingebettete Periode-2-Erkennung — siehe Chat 2026-07-19:
+// EIN gemeinsames Metadaten-Panel für beide Perioden reicht ("wenn es zu schwer ist zwei Modals
+// gleichzeitig offen zu haben"), daher kein zweiter showRangesMetadata2-Toggle.
 // Der erste H1-Fetch (loadRangesCandles) ist ein frischer cTrader-TLS-Connect+Auth-Handshake
 // (siehe ctraderCandles.js/_shared/ctrader/client.ts) statt eines simplen DB-Reads — das kann
 // spürbar dauern und lief bisher komplett unsichtbar (siehe Chat: "dauert echt lange bis es
@@ -441,20 +457,22 @@ function refreshZigzagInternal() {
   });
 }
 
-// H1-Periode-5-Fraktale im konfigurierten Lookback-Fenster (props.rangesLookbackHours) — reine
-// Pivot-Liste, noch keine weak/protected/sweep-Klassifizierung (kommt als nächster Schritt im
-// PA-Analyse-Konzept). cutoff statt einfach "alle erkannten Pivots", weil RANGES_CANDLE_BUFFER
-// zusätzliche Kerzen VOR dem eigentlichen Lookback-Fenster lädt (siehe loadRangesCandles) — die
-// dort möglicherweise erkannten Fraktale sollen nicht mitgezählt werden. pivotTime bleibt (roh)
-// erhalten, weil refreshRangesMarkersInternal die Koordinaten braucht — erst pivotForDisplay
-// (siehe oben, schon für den Zigzag-State genutzt) entfernt es fürs Metadaten-Panel.
-function computeRangesPivots() {
+// H1-Fraktale im konfigurierten Lookback-Fenster — reine Pivot-Liste, noch keine weak/protected/
+// sweep-Klassifizierung (kommt als nächster Schritt im PA-Analyse-Konzept). Generalisiert auf
+// (period, lookbackHours), damit dieselbe Logik für die Periode-5- UND die eingebettete
+// Periode-2-Erkennung läuft (siehe Chat 2026-07-19), statt sie zu duplizieren. cutoff statt
+// einfach "alle erkannten Pivots", weil RANGES_CANDLE_BUFFER zusätzliche Kerzen VOR dem
+// eigentlichen Lookback-Fenster lädt (siehe loadRangesCandles) — die dort möglicherweise
+// erkannten Fraktale sollen nicht mitgezählt werden. pivotTime bleibt (roh) erhalten, weil
+// refreshRangesMarkersInternal die Koordinaten braucht — erst pivotForDisplay (siehe oben, schon
+// für den Zigzag-State genutzt) entfernt es fürs Metadaten-Panel.
+function computeRangesPivotsFor(period, lookbackHours) {
   // Im Replay-Modus zählt das Lookback-Fenster ab replayUntil, nicht ab der echten aktuellen
   // Zeit — sonst wäre das Fenster (7 Tage vor "jetzt") komplett am geclippten Kerzen-Ende
-  // vorbei, sobald replayUntil mehr als rangesLookbackHours in der Vergangenheit liegt.
+  // vorbei, sobald replayUntil mehr als lookbackHours in der Vergangenheit liegt.
   const now = props.replayUntil ?? Math.floor(Date.now() / 1000);
-  const cutoff = now - props.rangesLookbackHours * 3600;
-  const { highs, lows } = detectLiquidityLevels(clipReplay(rangesH1Candles), RANGES_FRACTAL_PERIOD);
+  const cutoff = now - lookbackHours * 3600;
+  const { highs, lows } = detectLiquidityLevels(clipReplay(rangesH1Candles), period);
   return [...highs, ...lows]
     .filter((p) => p.pivotTime >= cutoff)
     .sort((a, b) => a.pivotTime - b.pivotTime)
@@ -472,23 +490,41 @@ function computeRangesPivots() {
 // ist und debug modus"). Wiederverwendet ZigzagPrimitive/-Renderer aus trendZigzag.ts (Punkt +
 // Preis-Label ist dort schon fertig) — je Pivot ein eigenes 1-Punkt-Segment, damit die dortige
 // Verbindungslinie (entsteht nur bei pts.length > 1 INNERHALB eines Segments) nicht gezeichnet
-// wird.
+// wird. Periode-2-Marker (rangesMarkerPrimitives2) laufen als eigene Primitive-Liste in derselben
+// Pane mit — kleinerer dotRadius + eigene, transparentere Farbe (rangesMarker2), damit man beide
+// Periode-Ebenen optisch auseinanderhält (siehe Chat: "Transparenz auf 50%").
 function refreshRangesMarkersInternal() {
-  if (!props.showRanges || !props.showLiquidityDebug || !rangesPivots) {
-    renderZigzag(candleSeries, [], rangesMarkerPrimitives, clipReplay(allCandles));
-    return;
-  }
+  const candles = clipReplay(allCandles);
   const precision = pricePrecisionForInstrument(props.symbol);
-  const segments = rangesPivots.map((p) => ({ points: [p], color: cssColor("rangesMarker") }));
-  renderZigzag(candleSeries, segments, rangesMarkerPrimitives, clipReplay(allCandles), {
-    showLabels: true,
-    formatPrice: (price) => fmtPrice(price, precision),
-  });
+  const showMarkers = props.showRanges && props.showLiquidityDebug;
+
+  if (!showMarkers || !rangesPivots) {
+    renderZigzag(candleSeries, [], rangesMarkerPrimitives, candles);
+  } else {
+    const segments = rangesPivots.map((p) => ({ points: [p], color: cssColor("rangesMarker") }));
+    renderZigzag(candleSeries, segments, rangesMarkerPrimitives, candles, {
+      showLabels: true,
+      formatPrice: (price) => fmtPrice(price, precision),
+    });
+  }
+
+  if (!showMarkers || !rangesPivots2) {
+    renderZigzag(candleSeries, [], rangesMarkerPrimitives2, candles);
+  } else {
+    const segments2 = rangesPivots2.map((p) => ({ points: [p], color: cssColor("rangesMarker2") }));
+    renderZigzag(candleSeries, segments2, rangesMarkerPrimitives2, candles, {
+      showLabels: true,
+      formatPrice: (price) => fmtPrice(price, precision),
+      dotRadius: 1.5,
+    });
+  }
 }
 
 function refreshRangesInternal() {
-  rangesPivots = rangesH1Candles.length > 0 ? computeRangesPivots() : null;
+  rangesPivots = rangesH1Candles.length > 0 ? computeRangesPivotsFor(props.rangesPeriod, props.rangesLookbackHours) : null;
+  rangesPivots2 = rangesH1Candles.length > 0 ? computeRangesPivotsFor(props.ranges2Period, props.ranges2LookbackHours) : null;
   rangesMetadata.value = rangesPivots ? rangesPivots.map(pivotForDisplay) : null;
+  rangesMetadata2.value = rangesPivots2 ? rangesPivots2.map(pivotForDisplay) : null;
   refreshRangesMarkersInternal();
   refreshRangeAnalysisInternal();
 }
@@ -527,11 +563,15 @@ function refreshRangeAnalysisInternal() {
 }
 
 // Eigener H1-Fetch fürs Ranges-Metadaten-Panel, unabhängig von tradeSetupH1Candles (siehe oben) —
-// lädt genug Historie für das konfigurierte Lookback-Fenster + Erkennungspuffer.
+// lädt genug Historie für das GRÖSSERE der beiden Lookback-Fenster (Periode 5 + eingebettete
+// Periode 2, siehe Chat 2026-07-19) + Erkennungspuffer. EIN Fetch für beide Perioden (nicht zwei
+// separate cTrader-Connects) — computeRangesPivotsFor schneidet sich aus rangesH1Candles selbst
+// den für die jeweilige Periode passenden, ggf. kürzeren Ausschnitt raus.
 async function loadRangesCandles() {
   if (!isForex) return;
   try {
-    const count = props.rangesLookbackHours + RANGES_CANDLE_BUFFER;
+    const hours = Math.max(props.rangesLookbackHours, props.ranges2LookbackHours);
+    const count = hours + RANGES_CANDLE_BUFFER;
     rangesH1Candles = await fetchInitialForexCandles(props.symbol, "1h", count, replayToMs());
     refreshRangesInternal();
   } catch (err) {
@@ -991,6 +1031,16 @@ watch(() => props.showRangesMetadata, refreshRangesPollingState);
 watch(() => props.rangesLookbackHours, () => {
   if (rangesNeedsData()) loadRangesCandles();
 });
+// Eingebettete Periode-2-Erkennung (siehe Chat 2026-07-19): Lookback-Änderung kann das gemeinsame
+// Fetch-Fenster (Math.max in loadRangesCandles) vergrößern -> neu fetchen wie bei Periode 5 oben.
+// Periode-Änderung selbst braucht dagegen KEINEN Refetch (rangesH1Candles ist schon da) — nur neu
+// berechnen, wenn Daten vorhanden sind.
+watch(() => props.ranges2LookbackHours, () => {
+  if (rangesNeedsData()) loadRangesCandles();
+});
+watch([() => props.rangesPeriod, () => props.ranges2Period], () => {
+  if (rangesH1Candles.length > 0) refreshRangesInternal();
+});
 // Braucht dieselbe trendAnalysisM5Candles-Historie wie Zigzag/Metadaten (siehe loadTradeSetupCandles)
 // -> beim Einschalten ohne die beiden fehlt sie evtl. noch, dann einmal nachladen; beim
 // Ausschalten reicht refreshEmaInternal (blendet aus, kein Neu-Fetch nötig).
@@ -1064,7 +1114,11 @@ defineExpose({
       <p v-else class="metadata-empty">Keine Trend-Daten geladen (Zigzag-Toggle einschalten).</p>
     </MetadataPanel>
     <MetadataPanel v-if="showRangesMetadata" title="Ranges-Metadaten" @close="emit('close-ranges-metadata')">
+      <h4 class="metadata-subheading">Periode {{ rangesPeriod }}</h4>
       <JsonTree v-if="rangesMetadata" :value="rangesMetadata" />
+      <p v-else class="metadata-empty">Keine Ranges-Daten geladen.</p>
+      <h4 class="metadata-subheading">Periode {{ ranges2Period }} (eingebettet)</h4>
+      <JsonTree v-if="rangesMetadata2" :value="rangesMetadata2" />
       <p v-else class="metadata-empty">Keine Ranges-Daten geladen.</p>
     </MetadataPanel>
   </div>
@@ -1096,6 +1150,19 @@ defineExpose({
   margin: 0;
   font-size: 13px;
   color: #787b86;
+}
+
+.metadata-subheading {
+  margin: 12px 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #565a64;
+}
+
+.metadata-subheading:first-child {
+  margin-top: 0;
 }
 
 .ranges-loading {

@@ -54,14 +54,27 @@ const tradeSetupHistoryCount = useLocalStorageRef("tradeSetupHistoryCount", 5);
 // Bausteinen). Lookback-Fenster für die H1-Periode-5-Fraktalsuche, maßgeblich in Stunden
 // persistiert (default 168 = 7 Tage) — rangesLookbackDays (unten) ist nur ein Eingabe-Helper,
 // der beim Editieren in Stunden umrechnet, kein eigener State.
+const rangesPeriod = useLocalStorageRef("rangesPeriod", 5);
 const rangesLookbackHours = useLocalStorageRef("rangesLookbackHours", 7 * 24);
 const rangesLookbackDays = computed({
   get: () => rangesLookbackHours.value / 24,
   set: (days) => { rangesLookbackHours.value = Math.round(days * 24); },
 });
+// Eingebetteter zweiter Fraktal-Lauf mit eigener Periode/Lookback (siehe Chat 2026-07-19: "wir
+// brauchen nen zweiten state ... mit periode 2" — schnellere Uptrend-Erkennung). Eigene Felder
+// statt die obigen umzubenennen, damit rangesLookbackHours/-Period (bereits persistiert) unangetastet
+// bleiben.
+const ranges2Period = useLocalStorageRef("ranges2Period", 2);
+const ranges2LookbackHours = useLocalStorageRef("ranges2LookbackHours", 7 * 24);
+const ranges2LookbackDays = computed({
+  get: () => ranges2LookbackHours.value / 24,
+  set: (days) => { ranges2LookbackHours.value = Math.round(days * 24); },
+});
 // showRanges (Punkt-Marker im Chart, siehe PriceChart.vue) und showRangesMetadata (JSON-Panel)
 // sind bewusst getrennte Toggles — Philip will Ranges anzeigen können, ohne dafür das
-// Metadaten-Panel offen zu haben (siehe Chat: "man kann ranges nicht einzelnd toggeln").
+// Metadaten-Panel offen zu haben (siehe Chat: "man kann ranges nicht einzelnd toggeln"). EIN
+// gemeinsames Metadaten-Panel für Periode 5 + eingebettete Periode 2 (siehe PriceChart.vue) —
+// kein zweiter showRangesMetadata2-Toggle, Philip reicht "einmal Metadaten".
 const showRanges = useLocalStorageRef("showRanges", false);
 const showRangesMetadata = useLocalStorageRef("showRangesMetadata", false);
 // EMA 50/200 auf M5 (siehe Chat: "Trend über EMA + Anzahl protected highs/lows") — ein Toggle für
@@ -228,6 +241,16 @@ watch(currentSymbol, () => {
           ▾
         </button>
         <div v-if="rangesMenuOpen" class="toggle-dropdown">
+          <label class="ranges-period-field">
+            Periode
+            <input
+              v-model.number="rangesPeriod"
+              type="number"
+              min="1"
+              class="ranges-period-input"
+              title="Fraktal-Periode für die Haupt-Range-Erkennung"
+            />
+          </label>
           <label class="ranges-lookback-field">
             Tage
             <input
@@ -248,9 +271,43 @@ watch(currentSymbol, () => {
               title="Lookback in Stunden (maßgeblicher Wert für die Fraktal-Suche)"
             />
           </label>
+
+          <div class="toggle-dropdown-divider"></div>
+
           <button :class="{ active: showRangesMetadata }" @click="showRangesMetadata = !showRangesMetadata">
             Metadaten
           </button>
+
+          <label class="ranges-period-field">
+            Periode
+            <input
+              v-model.number="ranges2Period"
+              type="number"
+              min="1"
+              class="ranges-period-input"
+              title="Fraktal-Periode für die eingebettete (schnellere) Erkennung"
+            />
+          </label>
+          <label class="ranges-lookback-field">
+            Tage
+            <input
+              v-model.number="ranges2LookbackDays"
+              type="number"
+              min="1"
+              class="ranges-lookback-input"
+              title="Lookback in Tagen (eingebettete Periode) — rechnet automatisch in Stunden um"
+            />
+          </label>
+          <label class="ranges-lookback-field">
+            Stunden
+            <input
+              v-model.number="ranges2LookbackHours"
+              type="number"
+              min="1"
+              class="ranges-lookback-input"
+              title="Lookback in Stunden (eingebettete Periode)"
+            />
+          </label>
         </div>
       </div>
 
@@ -301,7 +358,10 @@ watch(currentSymbol, () => {
     :trade-setup-history-count="tradeSetupHistoryCount"
     :show-zigzag="showZigzag"
     :show-metadata="showMetadata"
+    :ranges-period="rangesPeriod"
     :ranges-lookback-hours="rangesLookbackHours"
+    :ranges2-period="ranges2Period"
+    :ranges2-lookback-hours="ranges2LookbackHours"
     :show-ranges="showRanges"
     :show-ranges-metadata="showRangesMetadata"
     :show-ema="showEma"
@@ -455,6 +515,34 @@ watch(currentSymbol, () => {
   color: #d1d4dc;
   font-size: 13px;
   padding: 3px 4px;
+}
+
+.ranges-period-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #9aa0ac;
+  white-space: nowrap;
+}
+
+.ranges-period-input {
+  width: 40px;
+  background: #131722;
+  border: 1px solid #2a2e39;
+  border-radius: 4px;
+  color: #d1d4dc;
+  font-size: 13px;
+  padding: 3px 4px;
+}
+
+.toggle-dropdown-divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: #2a2e39;
 }
 
 .trade-setup-history-count {

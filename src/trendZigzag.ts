@@ -129,6 +129,8 @@ interface RenderOptions {
   lineWidth: number;
   showLabels: boolean;
   formatPrice?: (price: number) => string;
+  dotRadius?: number; // Basis-Radius in CSS-Pixeln (vor pixelRatio-Skalierung), Default 3 — siehe
+  // Ranges-Periode-2-Debug-Marker (Chat 2026-07-19): sollen kleiner sein als die Periode-5-Marker.
 }
 
 class ZigzagRenderer {
@@ -160,7 +162,7 @@ class ZigzagRenderer {
         ctx.stroke();
       }
 
-      const dotRadius = 3 * scope.horizontalPixelRatio;
+      const dotRadius = (this._options.dotRadius ?? 3) * scope.horizontalPixelRatio;
       pts.forEach((p) => {
         const x = toX(p.x);
         const y = toY(p.y);
@@ -256,7 +258,7 @@ export function renderZigzag(
   segments: ZigzagSegment[],
   existingPrimitives: ZigzagPrimitive[],
   candles: Candle[],
-  options: { lineWidth?: number; showLabels?: boolean; formatPrice?: (price: number) => string } = {},
+  options: { lineWidth?: number; showLabels?: boolean; formatPrice?: (price: number) => string; dotRadius?: number } = {},
 ) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
@@ -271,6 +273,7 @@ export function renderZigzag(
         lineWidth: options.lineWidth ?? DEFAULT_LINE_WIDTH,
         showLabels: options.showLabels ?? false,
         formatPrice: options.formatPrice,
+        dotRadius: options.dotRadius,
       },
       candles,
     );
