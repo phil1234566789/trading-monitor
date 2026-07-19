@@ -233,7 +233,11 @@ let rangesH1Candles = [];
 let rangesPivots = null; // roh (mit pivotTime), Periode 5 — siehe computeRangesPivotsFor/refreshRangesMarkersInternal
 let rangesPivots2 = null; // roh (mit pivotTime), eingebettete Periode 2 (siehe Chat 2026-07-19)
 // Out-of-Order-Guards für loadInitial/loadRangesCandles/loadTradeSetupM5/loadTradeSetupH1, siehe
-// dort (Chat 2026-07-20: "im Replay-Modus hängt der Trend-Algorithmus").
+// dort (Chat 2026-07-20: "im Replay-Modus hängt der Trend-Algorithmus"). loadInitialFetchSeq wird
+// zusätzlich von pollRecent() als Bar-Mismatch-Guard gelesen (siehe dort, Bug-Report Philip
+// 2026-07-19: "1h -> M5 -> wieder 1h, Chart zeigt nur noch M5-Kerzen") — jeder echte Neu-Load von
+// allCandles (TF-/Symbol-Wechsel, Replay-Schritt) zählt hoch, ein noch laufender pollRecent()-Fetch
+// von VOR diesem Wechsel erkennt daran, dass er überholt ist.
 let loadInitialFetchSeq = 0;
 let rangesFetchSeq = 0;
 let tradeSetupM5FetchSeq = 0;
@@ -933,6 +937,16 @@ async function loadInitial() {
 }
 
 async function pollRecent() {
+  // Bar-Mismatch-Guard (Bug-Report Philip 2026-07-19: "1h -> M5 -> wieder 1h, Chart zeigt nur noch
+  // M5-Kerzen"): pollRecent() läuft über einen eigenen setTimeout-Timer (scheduleNextPoll) und
+  // liest props.currentBar/props.symbol nur EINMAL beim Start der Fetches oben — läuft der Timer
+  // kurz vor einem TF-Wechsel an (oder ist der Fetch selbst schon unterwegs), kommt die Antwort
+  // ggf. erst NACH dem Wechsel zurück und würde sonst ungeprüft Kerzen des ALTEN Timeframes per
+  // mergeRecent() in das inzwischen schon auf den neuen TF umgestellte allCandles mischen.
+  // loadInitialFetchSeq wird bei jedem echten Neu-Laden von allCandles hochgezählt (TF-Wechsel,
+  // Symbol-Wechsel, Replay-Schritt, siehe loadInitial) — hat sich der Zähler seit Start dieses
+  // Polls verändert, ist die Antwort für einen inzwischen überholten Stand und wird verworfen.
+  const seq = loadInitialFetchSeq;
   try {
     let recent, freshDeltas;
     if (isForex) {
@@ -950,6 +964,7 @@ async function pollRecent() {
         }),
       ]);
     }
+    if (seq !== loadInitialFetchSeq) return; // inzwischen überholt, siehe oben
     allCandles = mergeRecent(allCandles, recent);
     if (freshDeltas) allCvdDeltas = mergeRecentDeltas(allCvdDeltas, freshDeltas);
     refreshChart();
