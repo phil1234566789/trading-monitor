@@ -103,15 +103,18 @@ const showStyleModal = ref(false);
 // Zeitpunkt, während im Hintergrund ganz normal weitergeholt wird (siehe PriceChart.vue:
 // clipReplay) — zum visuellen Prüfen des Ranges-Algos (oder jedes anderen Indikators), ohne
 // dabei schon die "Zukunft" zu sehen. Jetzt (siehe Chat 2026-07-19) genau wie Symbol/Timeframe
-// persistiert, damit das aktuelle Testszenario nicht bei jedem Reload zurückspringt — Default
-// hier ist bewusst schon auf den Start des Long-Setup-Testszenarios gesetzt (02.07.2026 19:00,
-// kurz nach pivot5 in gbp_h1_uptrend_LQ_sweep_long_setup.ts).
+// persistiert, damit das aktuelle Testszenario nicht bei jedem Reload zurückspringt.
 // replayTime (der eingestellte Zeitpunkt) und replayActive (Toggle) sind bewusst getrennt — der
 // "⏮ Replay bis"-Button schaltet nur zwischen live/replay um, ohne den eingestellten Zeitpunkt im
 // Datumsfeld daneben zu löschen (siehe Chat: "verschwinden aber die eingestellten datetime daten
 // im input daneben nicht"). replayUntil (an PriceChart durchgereicht) ist nur die Kombination.
+// replayTime-Default bleibt auf dem Start des Long-Setup-Testszenarios (02.07.2026 19:00, kurz
+// nach pivot5 in gbp_h1_uptrend_LQ_sweep_long_setup.ts) — nur relevant, falls replayActive mal
+// eingeschaltet wird. replayActive selbst ist seit Chat 2026-07-20 per Default AUS: ein
+// brandneuer Nutzer (noch nichts in localStorage) soll live starten, nicht mitten in einem alten
+// Test-Replay — wer aktiv testet, toggelt Replay bewusst an, das bleibt dann wie gehabt persistiert.
 const replayTime = useLocalStorageRef("replayTime", 1783011600); // 02.07.2026 19:00 (Berlin)
-const replayActive = useLocalStorageRef("replayActive", true);
+const replayActive = useLocalStorageRef("replayActive", false);
 const replayUntil = computed(() => (replayActive.value ? replayTime.value : null));
 function toDatetimeLocal(unixSeconds) {
   const d = new Date(unixSeconds * 1000);

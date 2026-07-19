@@ -24,6 +24,7 @@ import {
   fetchRecentCandles as fetchRecentForexCandles,
   fetchOlderCandles as fetchOlderForexCandles,
 } from "../ctraderCandles.js";
+import { fetchCandlesCached } from "../candleCache.js";
 import { useStatusBar } from "../composables/useStatusBar.js";
 import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
 import Gauge from "./Gauge.vue";
@@ -820,12 +821,18 @@ async function loadInitial() {
     // auf M5 gewechselt und sehe keinen Chart").
     const toMs = replayToMs();
     if (isForex) {
-      candles = await fetchInitialForexCandles(props.symbol, props.currentBar, INITIAL_CANDLE_COUNT, toMs);
+      candles = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, props.currentBar, INITIAL_CANDLE_COUNT, toMs);
       deltas = [];
     } else {
       const binanceInterval = binanceIntervalFor(props.currentBar);
       [candles, deltas] = await Promise.all([
-        fetchInitialCandles(okxBarFor(props.currentBar), INITIAL_CANDLE_COUNT, toMs),
+        fetchCandlesCached(
+          (symbol, bar, count, ms) => fetchInitialCandles(okxBarFor(bar), count, ms),
+          props.symbol,
+          props.currentBar,
+          INITIAL_CANDLE_COUNT,
+          toMs,
+        ),
         fetchInitialDeltas(binanceInterval, INITIAL_CANDLE_COUNT).catch((err) => {
           console.error("CVD-Historie fehlgeschlagen:", err);
           return [];
