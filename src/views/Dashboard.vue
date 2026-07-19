@@ -56,8 +56,9 @@ const showTradeSetupsShort = useLocalStorageRef("showTradeSetupsShort", true);
 // persistiert (default 168 = 7 Tage) — rangesLookbackDays (unten) ist nur ein Eingabe-Helper,
 // der beim Editieren in Stunden umrechnet, kein eigener State.
 // Im Toolbar-Label seit Chat 2026-07-19 "Trend" statt "Ranges" (das alte, eigenständige
-// Trend/Pivots/Zigzag-Feature ist komplett raus — Ranges IST jetzt die Trendanalyse). Interne
-// Namen (rangesPeriod, showRanges, ...) bewusst NICHT mitumbenannt, um keinen reinen
+// Trend/Pivots/Zigzag-Feature ist komplett raus — Ranges IST jetzt die Trendanalyse), seit Chat
+// 2026-07-20 "Structure" (passend zu src/marketStructureAnalysis.ts, vormals rangeAnalysis.ts).
+// Interne Namen (rangesPeriod, showRanges, ...) bewusst NICHT mitumbenannt, um keinen reinen
 // Textumbenennungs-Diff über viele Dateien zu erzeugen — nur die sichtbaren Strings ändern sich.
 const rangesPeriod = useLocalStorageRef("rangesPeriod", 5);
 const rangesLookbackHours = useLocalStorageRef("rangesLookbackHours", 7 * 24);
@@ -140,7 +141,7 @@ function stepReplayForward() {
 }
 
 // Toolbar wurde zu voll (siehe Chat) -> Liquidity-Sweeps unter "Liquidität", Periode/Lookback
-// unter "Trend" als Dropdown. Reiner UI-Zustand, bewusst NICHT in localStorage (anders als die
+// unter "Structure" als Dropdown. Reiner UI-Zustand, bewusst NICHT in localStorage (anders als die
 // Toggles selbst) — welches Dropdown gerade offen ist, ist keine Einstellung, die überdauern muss.
 const liquidityMenuOpen = ref(false);
 const rangesMenuOpen = ref(false);
@@ -271,7 +272,7 @@ watch(currentSymbol, () => {
 
       <div class="toggle-group">
         <button :class="{ active: showRanges }" @click="showRanges = !showRanges">
-          Trend
+          Structure
         </button>
         <button
           class="toggle-caret"

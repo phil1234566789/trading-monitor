@@ -2,7 +2,7 @@
 // Vertrag benutzen statt zweier Kopien, die auseinanderlaufen können). Hier nur noch Fixtures +
 // die Schritt-für-Schritt-Testzustände.
 
-import { Pivot, PivotHigh, PivotLow, RangeState } from "../../../src/range.type";
+import { Pivot, PivotHigh, PivotLow, MarketStructureState } from "../../../src/range.type";
 
 /** GBPUSD M5-Periode-10 Pivots der Test-Range ab 15.07.19:30, die zum Zeitpunkt der Erkennung immer untouched sind */
 const swingHighTestRange: Pivot = { type: 'high', price: 1.35578, pivotAt: '15.07.2026 20:20', touched: false };

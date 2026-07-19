@@ -1,13 +1,17 @@
 import { LiquidityLinePrimitive } from "./liquidity.js";
 import { cssColor } from "./chartColors.js";
-import type { Pivot, RangeState } from "./range.type";
+import type { Pivot, MarketStructureState } from "./range.type";
 
 // Neuer "1h-Range"-Trendalgorithmus (siehe test/tdd_mit_claude.ts, rangeState1..7) — löst den
 // alten, verworfenen BOS/CHoCH-Ansatz (trendZigzag.ts) für die eigentliche Trendbestimmung ab:
 // auf M5-Periode-10-Pivots gab es zu viele CHoCHs/BOS für einen stabilen Trend (siehe Chat
 // 2026-07-18). Dieser Algorithmus arbeitet auf H1-Periode-5-Pivots und bestätigt einen Trend erst,
 // wenn eine echte Pullback-Struktur (structurePivots) vorliegt, nicht schon bei jeder neuen
-// Extremkerze.
+// Extremkerze. Datei/Typ hießen bis Chat 2026-07-20 rangeAnalysis.ts/RangeState — umbenannt, weil
+// "Range" hier mit dem GLEICHZEITIG existierenden, aber komplett anderen "Ranges"-Feature (H1-
+// Fraktal-Pivot-Erkennung, Periode 5/2, siehe PriceChart.vue: rangesPeriod/showRanges/...)
+// verwechselt wurde — dieser Algorithmus ist die eigentliche MARKTSTRUKTUR-Analyse, "Ranges"
+// liefert ihm nur die rohen Input-Pivots.
 
 export interface Candle {
   time: number;
@@ -18,10 +22,10 @@ export interface Candle {
 }
 
 // Erwartet die ersten beiden gelesenen Pivots (ein 'high' und ein 'low', in Lese-Reihenfolge für
-// appliedPivots) — analog zu initTrendState in trendZigzag.ts. currRange.high/low behalten hier
-// bewusst ihren rohen Fraktal-Typ ('high'/'low'), werden anders als beim alten Zigzag-Ansatz NICHT
-// reklassifiziert (siehe range.type.ts: PivotHigh/PivotLow).
-export function initRangeState(a: Pivot, b: Pivot): RangeState {
+// appliedPivots). currRange.high/low behalten hier bewusst ihren rohen Fraktal-Typ ('high'/'low'),
+// werden anders als beim alten Zigzag-Ansatz NICHT reklassifiziert (siehe range.type.ts:
+// PivotHigh/PivotLow).
+export function initMarketStructureState(a: Pivot, b: Pivot): MarketStructureState {
   const high = a.type === "high" ? a : b;
   const low = a.type === "low" ? a : b;
   return {
@@ -38,18 +42,18 @@ export function initRangeState(a: Pivot, b: Pivot): RangeState {
 
 // pivotTime (Unix-Sekunden) ist die verlässliche Zeitachse für die Reihenfolge-Prüfung unten —
 // bewusst NICHT die Position in appliedPivots (ein Array-Index ist fragil, siehe Chat). pivotTime
-// ist im Pivot-Typ optional (range.type.ts), applyRangePivot braucht es aber zwingend -> klarer
-// Fehler statt still falsch zu sortieren, falls doch mal ein Pivot ohne pivotTime hereinkommt.
+// ist im Pivot-Typ optional (range.type.ts), applyMarketStructurePivot braucht es aber zwingend ->
+// klarer Fehler statt still falsch zu sortieren, falls doch mal ein Pivot ohne pivotTime hereinkommt.
 function pivotTimeOf(pivot: Pivot): number {
   if (pivot.pivotTime == null) {
-    throw new Error(`applyRangePivot: Pivot ohne pivotTime (pivotAt="${pivot.pivotAt}") — pivotTime ist für die Reihenfolge-Prüfung zwingend.`);
+    throw new Error(`applyMarketStructurePivot: Pivot ohne pivotTime (pivotAt="${pivot.pivotAt}") — pivotTime ist für die Reihenfolge-Prüfung zwingend.`);
   }
   return pivot.pivotTime;
 }
 
-// Prüft, ob ein High-Bruch (übergeordnet ODER eingebettet, siehe applyRangePivot/
-// applyInnerRangePivot) den Uptrend bestätigt — gemeinsame Logik für beide, seit Chat 2026-07-19
-// ("die Regeln müssten gleich sein, nur dass der kleinere Pivot mit einbezogen wird",
+// Prüft, ob ein High-Bruch (übergeordnet ODER eingebettet, siehe applyMarketStructurePivot/
+// applyInnerMarketStructurePivot) den Uptrend bestätigt — gemeinsame Logik für beide, seit Chat
+// 2026-07-19 ("die Regeln müssten gleich sein, nur dass der kleinere Pivot mit einbezogen wird",
 // gbp_h1_uptrend_LQ_sweep_long_setup.ts rangeState1_4). Ein bestätigter Uptrend braucht 4 Punkte
 // in strikter zeitlicher Reihenfolge (pivotTime): das aktuelle currRange.low, ein currRange.high,
 // das ZEITLICH NACH diesem Low liegt ("eligible" — sonst zählt es nicht als echter Ursprung eines
@@ -58,7 +62,7 @@ function pivotTimeOf(pivot: Pivot): number {
 // qualifizieren — und schließlich der Bruch dieses currRange.high durch breakingPivot. Der jüngste
 // qualifizierende Pullback wird zu 'protected-low' reklassifiziert (in welcher der beiden Listen
 // er auch steckt), die übrigen bleiben unverändert. Gibt null zurück, wenn (noch) nicht bestätigt.
-function tryConfirmUptrend(state: RangeState, breakingPivot: Pivot): RangeState | null {
+function tryConfirmUptrend(state: MarketStructureState, breakingPivot: Pivot): MarketStructureState | null {
   const { currRange, structurePivots, innerStructurePivots, trend } = state;
   if (trend !== "unknown") return null;
 
@@ -103,7 +107,7 @@ function tryConfirmUptrend(state: RangeState, breakingPivot: Pivot): RangeState 
 // (siehe Chat 2026-07-19, gbp_h1_uptrend_LQ_sweep_long_setup.ts: rangeState1_2 -> rangeState2,
 // "wenn neuer übergeordneter pivot, dann innerStructurePivots CLEAREN"). Gilt für alle drei Fälle
 // unten (Low-Bruch/High-Bruch/Struktur-Pullback), nicht nur für den Trend-Bestätigungsfall.
-export function applyRangePivot(state: RangeState, pivot: Pivot): RangeState {
+export function applyMarketStructurePivot(state: MarketStructureState, pivot: Pivot): MarketStructureState {
   const { currRange, structurePivots, appliedPivots } = state;
   const nextAppliedPivots = [...appliedPivots, pivot];
 
@@ -137,13 +141,12 @@ export function applyRangePivot(state: RangeState, pivot: Pivot): RangeState {
   };
 }
 
-// Analog zu closesBelowOldLow in trendZigzag.ts, nur für die Gegenrichtung: prüft, ob zwischen
-// fromTime (Zeit des ALTEN currRange.high) und toTime (Zeit des brechenden Pivots) irgendeine
-// Kerze ÜBER dem alten High-Preis geschlossen hat. Nur dann ist der Bruch "echt" (Preis bleibt
-// oben) — sonst ist es nur ein Sweep: Preis hat den Docht drüber geschoben, kann aber laut Philip
-// "potenziell umdrehen" (siehe Chat 2026-07-19). Ohne Kerzendaten konservativ NICHT abwerten
-// (wie beim Vorbild) — sonst würde ein fehlender Candle-Fetch stillschweigend jeden Bruch zum
-// Sweep degradieren.
+// Analog zu closesBelowOldLow im alten trendZigzag.ts, nur für die Gegenrichtung: prüft, ob
+// zwischen fromTime (Zeit des ALTEN currRange.high) und toTime (Zeit des brechenden Pivots)
+// irgendeine Kerze ÜBER dem alten High-Preis geschlossen hat. Nur dann ist der Bruch "echt" (Preis
+// bleibt oben) — sonst ist es nur ein Sweep: Preis hat den Docht drüber geschoben, kann aber laut
+// Philip "potenziell umdrehen" (siehe Chat 2026-07-19). Ohne Kerzendaten konservativ NICHT abwerten
+// — sonst würde ein fehlender Candle-Fetch stillschweigend jeden Bruch zum Sweep degradieren.
 function closesAboveOldHigh(candles: Candle[], fromTime: number, toTime: number, oldHighPrice: number): boolean {
   if (candles.length === 0) return true;
   return candles.some((c) => c.time > fromTime && c.time <= toTime && c.close > oldHighPrice);
@@ -209,7 +212,11 @@ function markLqSweeps(structurePivots: Pivot[], candles: Candle[], toTime: numbe
 //    rangeState2_1: p2Pivot4).
 // NICHT implementiert: der spiegelbildliche Fall (innerer Pivot bricht currRange.low) — dafür gibt
 // es noch kein Beispiel.
-export function applyInnerRangePivot(state: RangeState, pivot: Pivot, { candles = [] }: { candles?: Candle[] } = {}): RangeState {
+export function applyInnerMarketStructurePivot(
+  state: MarketStructureState,
+  pivot: Pivot,
+  { candles = [] }: { candles?: Candle[] } = {},
+): MarketStructureState {
   const sweepChecked = { ...state, structurePivots: markLqSweeps(state.structurePivots, candles, pivotTimeOf(pivot)) };
   const { currRange, innerStructurePivots } = sweepChecked;
 
@@ -337,11 +344,6 @@ export class ArrowPrimitive {
   }
 }
 
-// Das feste "1h uptrend"-Textlabel (rechts, vertikal mittig) ist seit Chat 2026-07-19 ins
-// Trade-Setup-Cockpit gewandert (siehe tradeSetupCockpit.ts) — stand sonst genau hinter der Karte
-// (dieselbe Position). TrendLabelPrimitive/-Renderer/-PaneView deshalb entfernt statt nur
-// ausgeblendet, um kein totes Zeichen-Primitive mitzuschleppen.
-
 const LINE_WIDTH = 2;
 
 function toLevel(pivot: Pivot, candles: Candle[]) {
@@ -352,13 +354,13 @@ function toLevel(pivot: Pivot, candles: Candle[]) {
   return { price: pivot.price, pivotTime: pivot.pivotTime ?? 0, endTime };
 }
 
-// Ersetzt existingPrimitives komplett durch die aktuelle Range-Analyse-Darstellung: roter
+// Ersetzt existingPrimitives komplett durch die aktuelle Marktstruktur-Darstellung: roter
 // Pfeil+Linie an currRange.high, grüner Pfeil+Linie an currRange.low, bei bestätigtem Trend
-// zusätzlich eine beschriftete Linie am protected-low und rechts/mittig das Trend-Label
-// (siehe Chat). state=null (oder zu wenig Kerzen) -> nur aufräumen, nichts zeichnen.
-export function renderRangeAnalysis(
+// zusätzlich eine beschriftete Linie am protected-low (siehe Chat). state=null (oder zu wenig
+// Kerzen) -> nur aufräumen, nichts zeichnen.
+export function renderMarketStructureAnalysis(
   series: any,
-  state: RangeState | null,
+  state: MarketStructureState | null,
   existingPrimitives: any[],
   candles: Candle[],
 ) {
@@ -408,7 +410,7 @@ export function renderRangeAnalysis(
   // eine Linie+Pfeil PRO markiertem structurePivot statt nur die erste. Pfeil zeigt IMMER nach
   // oben (direction: "down" löst laut ArrowRenderer den nach-oben-zeigenden Zweig aus, siehe
   // dortiger Kommentar) — ein LQ-Sweep ist per Definition bullisch (gesweepter Low, der hält).
-  // Downtrend (Pfeil nach unten) noch nicht implementiert, siehe rangeAnalysis-Trend-Logik oben.
+  // Downtrend (Pfeil nach unten) noch nicht implementiert, siehe Trend-Logik oben.
   for (const lqSweep of state.structurePivots.filter((p) => p.type === "LQ-sweep")) {
     const lqColor = cssColor("rangeLqSweep");
     const line = new LiquidityLinePrimitive(

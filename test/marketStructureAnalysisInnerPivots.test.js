@@ -1,11 +1,11 @@
 // Reproduziert Philips Schritt-für-Schritt-Beispiel aus
 // test/tdd_mit_claude/ranges/gbp_h1_uptrend_LQ_sweep_long_setup.ts 1:1 (rangeState1_1 -> rangeState1_4,
 // Zeilen 1-174, Stand 2026-07-19) — verifiziert die eingebettete Periode-2-Erkennung
-// (applyInnerRangePivot: "sweeped-high" vs. echter Bruch über closesAboveOldHigh, und die
+// (applyInnerMarketStructurePivot: "sweeped-high" vs. echter Bruch über closesAboveOldHigh, und die
 // schnellere Uptrend-Bestätigung über tryConfirmUptrend, die jetzt auch ein eingebetteter Pivot
 // auslösen kann).
 import { describe, expect, it } from "vitest";
-import { initRangeState, applyRangePivot, applyInnerRangePivot } from "../src/rangeAnalysis";
+import { initMarketStructureState, applyMarketStructurePivot, applyInnerMarketStructurePivot } from "../src/marketStructureAnalysis";
 
 const pivot1 = { type: "low", price: 1.32189, pivotAt: "01.07.2026 15:00", pivotTime: 1782910800, touched: false };
 const pivot2 = { type: "high", price: 1.32918, pivotAt: "01.07.2026 16:00", pivotTime: 1782914400, touched: { price: 1.32918, touchedAt: "02.07.2026 04:00" } };
@@ -18,9 +18,9 @@ const p2Pivot4 = { type: "high", price: 1.32947, pivotAt: "02.07.2026 04:00", pi
 const p2Pivot5 = { type: "high", price: 1.33627, pivotAt: "02.07.2026 10:00", pivotTime: 1782979200, touched: { price: 1.33627, touchedAt: "02.07.2026 14:00" } };
 
 // Echte H1-Kerzen ab pivot2 (01.07.2026 16:00) bis p2Pivot5 (02.07.2026 10:00), aus
-// test/fixtures/gbpusd-h1-trend.json — für closesAboveOldHigh (applyInnerRangePivot) zwingend
-// nötig: kein Close schließt über 1.32918 vor 02.07 08:00 (Close 1.33053) -> genau das entscheidet
-// p2Pivot4 = Sweep, p2Pivot5 = echter Bruch.
+// test/fixtures/gbpusd-h1-trend.json — für closesAboveOldHigh (applyInnerMarketStructurePivot)
+// zwingend nötig: kein Close schließt über 1.32918 vor 02.07 08:00 (Close 1.33053) -> genau das
+// entscheidet p2Pivot4 = Sweep, p2Pivot5 = echter Bruch.
 const h1Candles = [
   { time: 1782914400, open: 1.32652, high: 1.32918, low: 1.32628, close: 1.32775 },
   { time: 1782918000, open: 1.32778, high: 1.32816, low: 1.32665, close: 1.32776 },
@@ -43,17 +43,17 @@ const h1Candles = [
   { time: 1782979200, open: 1.33362, high: 1.33627, low: 1.33355, close: 1.33568 }, // p2Pivot5-Kerze
 ];
 
-describe("rangeAnalysis: eingebettete Periode-2-Pivots (sweeped-high)", () => {
-  it("rangeState1_1: initRangeState liest pivot1+pivot2, innerStructurePivots leer", () => {
-    const s = initRangeState(pivot1, pivot2);
+describe("marketStructureAnalysis: eingebettete Periode-2-Pivots (sweeped-high)", () => {
+  it("rangeState1_1: initMarketStructureState liest pivot1+pivot2, innerStructurePivots leer", () => {
+    const s = initMarketStructureState(pivot1, pivot2);
     expect(s.trend).toBe("unknown");
     expect(s.currRange).toEqual({ high: pivot2, low: pivot1 });
     expect(s.innerStructurePivots).toEqual([]);
   });
 
   it("rangeState1_2: p2Pivot3 liegt innerhalb der Range -> landet in innerStructurePivots, appliedPivots unverändert", () => {
-    const s1 = initRangeState(pivot1, pivot2);
-    const s = applyInnerRangePivot(s1, p2Pivot3);
+    const s1 = initMarketStructureState(pivot1, pivot2);
+    const s = applyInnerMarketStructurePivot(s1, p2Pivot3);
     expect(s.currRange).toEqual({ high: pivot2, low: pivot1 });
     expect(s.innerStructurePivots).toEqual([p2Pivot3]);
     expect(s.appliedPivots).toEqual([pivot1, pivot2]);
@@ -61,12 +61,12 @@ describe("rangeAnalysis: eingebettete Periode-2-Pivots (sweeped-high)", () => {
 
   // Abweichung von Philips rangeState2 (structurePivots dort []): pivot3 bricht currRange.low
   // nicht (1.32635 > 1.32189) -> nach der bestehenden, bereits getesteten Periode-5-Regel (Fall 3
-  // in applyRangePivot) landet es in structurePivots, wie bei jedem anderen Pullback auch. Siehe
-  // Chat 2026-07-19 — mit Philip abzugleichen, falls das anders gemeint war.
+  // in applyMarketStructurePivot) landet es in structurePivots, wie bei jedem anderen Pullback
+  // auch. Siehe Chat 2026-07-19 — mit Philip abzugleichen, falls das anders gemeint war.
   it("rangeState2: pivot3 (übergeordnet) bricht currRange.low nicht -> Pullback in structurePivots, räumt innerStructurePivots leer", () => {
-    const s1 = initRangeState(pivot1, pivot2);
-    const s2 = applyInnerRangePivot(s1, p2Pivot3);
-    const s = applyRangePivot(s2, pivot3);
+    const s1 = initMarketStructureState(pivot1, pivot2);
+    const s2 = applyInnerMarketStructurePivot(s1, p2Pivot3);
+    const s = applyMarketStructurePivot(s2, pivot3);
     expect(s.currRange).toEqual({ high: pivot2, low: pivot1 });
     expect(s.structurePivots).toEqual([pivot3]);
     expect(s.innerStructurePivots).toEqual([]);
@@ -74,10 +74,10 @@ describe("rangeAnalysis: eingebettete Periode-2-Pivots (sweeped-high)", () => {
   });
 
   it("rangeState2_1: p2Pivot4 bricht currRange.high preislich, aber keine Kerze schließt drüber -> 'sweeped-high' statt echtem Bruch, appliedPivots unverändert", () => {
-    const s1 = initRangeState(pivot1, pivot2);
-    const s2 = applyInnerRangePivot(s1, p2Pivot3);
-    const s3 = applyRangePivot(s2, pivot3);
-    const s = applyInnerRangePivot(s3, p2Pivot4, { candles: h1Candles });
+    const s1 = initMarketStructureState(pivot1, pivot2);
+    const s2 = applyInnerMarketStructurePivot(s1, p2Pivot3);
+    const s3 = applyMarketStructurePivot(s2, pivot3);
+    const s = applyInnerMarketStructurePivot(s3, p2Pivot4, { candles: h1Candles });
     expect(s.trend).toBe("unknown");
     expect(s.currRange).toEqual({ high: { ...pivot2, type: "sweeped-high" }, low: pivot1 });
     expect(s.innerStructurePivots).toEqual([p2Pivot4]);
@@ -92,11 +92,11 @@ describe("rangeAnalysis: eingebettete Periode-2-Pivots (sweeped-high)", () => {
   // bestätigt den Uptrend genau wie ein übergeordneter Pivot es täte, wird zu protected-low
   // reklassifiziert.
   it("rangeState1_4: p2Pivot5 bricht currRange.high (echter Close-Bruch) UND bestätigt den Uptrend (dank pivot3 als qualifizierendem Pullback)", () => {
-    const s1 = initRangeState(pivot1, pivot2);
-    const s2 = applyInnerRangePivot(s1, p2Pivot3);
-    const s3 = applyRangePivot(s2, pivot3);
-    const s4 = applyInnerRangePivot(s3, p2Pivot4, { candles: h1Candles });
-    const s = applyInnerRangePivot(s4, p2Pivot5, { candles: h1Candles });
+    const s1 = initMarketStructureState(pivot1, pivot2);
+    const s2 = applyInnerMarketStructurePivot(s1, p2Pivot3);
+    const s3 = applyMarketStructurePivot(s2, pivot3);
+    const s4 = applyInnerMarketStructurePivot(s3, p2Pivot4, { candles: h1Candles });
+    const s = applyInnerMarketStructurePivot(s4, p2Pivot5, { candles: h1Candles });
     expect(s.trend).toBe("uptrend");
     expect(s.currRange).toEqual({ high: { ...p2Pivot5, type: "high" }, low: pivot1 });
     expect(s.structurePivots).toEqual([{ ...pivot3, type: "protected-low" }]);

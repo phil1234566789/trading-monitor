@@ -167,7 +167,7 @@ class LiquidityLineRenderer {
       ctx.strokeStyle = this._options.color;
       ctx.lineWidth = this._options.lineWidth;
       // gestrichelt für "sweeped" (Docht durchbrochen, aber noch kein bestätigter Bruch) — siehe
-      // rangeAnalysis.ts: renderRangeAnalysis, Chat 2026-07-19. setLineDash([]) = durchgezogen,
+      // marketStructureAnalysis.ts: renderMarketStructureAnalysis, Chat 2026-07-19. setLineDash([]) = durchgezogen,
       // muss bei jedem draw() neu gesetzt werden (kein impliziter Reset zwischen Primitives).
       ctx.setLineDash(this._options.dashed ? [6 * scope.horizontalPixelRatio, 4 * scope.horizontalPixelRatio] : []);
       ctx.beginPath();

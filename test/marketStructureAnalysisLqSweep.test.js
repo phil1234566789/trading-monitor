@@ -1,11 +1,12 @@
-// Verifiziert die 'LQ-sweep'-Reklassifizierung aus applyInnerRangePivot (siehe rangeAnalysis.ts:
-// markLqSweeps/closesBelowLevel) — Regel aus Chat 2026-07-19, gbp_h1_uptrend_mit_LQ_sweep_LONG_SETUP.ts
-// rangeState1_1: ein touched LOW-structurePivot, das NIE eine Kerze drunter geschlossen hat, ist ein
-// Liquidity-Grab statt eines echten Bruchs. Synthetische statt echter Fixture-Kerzen, weil das reale
-// Beispiel (pivot6..pivot12) einen mehrtägigen Kerzenbereich bräuchte — die Regel selbst ist gegen
-// die echten Kerzen bereits per Skript geprüft (siehe Kommentar über rangeState1_1 in der Testdatei).
+// Verifiziert die 'LQ-sweep'-Reklassifizierung aus applyInnerMarketStructurePivot (siehe
+// marketStructureAnalysis.ts: markLqSweeps/closesBelowLevel) — Regel aus Chat 2026-07-19,
+// gbp_h1_uptrend_mit_LQ_sweep_LONG_SETUP.ts rangeState1_1: ein touched LOW-structurePivot, das NIE
+// eine Kerze drunter geschlossen hat, ist ein Liquidity-Grab statt eines echten Bruchs. Synthetische
+// statt echter Fixture-Kerzen, weil das reale Beispiel (pivot6..pivot12) einen mehrtägigen
+// Kerzenbereich bräuchte — die Regel selbst ist gegen die echten Kerzen bereits per Skript geprüft
+// (siehe Kommentar über rangeState1_1 in der Testdatei).
 import { describe, expect, it } from "vitest";
-import { initRangeState, applyInnerRangePivot } from "../src/rangeAnalysis";
+import { initMarketStructureState, applyInnerMarketStructurePivot } from "../src/marketStructureAnalysis";
 
 const origin = {
   low: { type: "low", price: 1.0, pivotAt: "a", pivotTime: 0, touched: false },
@@ -21,7 +22,7 @@ const levelUntouched = { type: "low", price: 1.1, pivotAt: "untouched", pivotTim
 
 function baseState() {
   return {
-    ...initRangeState(origin.low, origin.high),
+    ...initMarketStructureState(origin.low, origin.high),
     structurePivots: [levelSweep, levelRealBreak, levelUntouched],
   };
 }
@@ -37,27 +38,27 @@ const candles = [
   { time: 2400, open: 1.26, high: 1.29, low: 1.25, close: 1.28 },
 ];
 
-describe("rangeAnalysis: LQ-sweep-Reklassifizierung (applyInnerRangePivot)", () => {
+describe("marketStructureAnalysis: LQ-sweep-Reklassifizierung (applyInnerMarketStructurePivot)", () => {
   it("touched LOW ohne jeden Close drunter -> 'LQ-sweep'", () => {
-    const s = applyInnerRangePivot(baseState(), triggerPivot, { candles });
+    const s = applyInnerMarketStructurePivot(baseState(), triggerPivot, { candles });
     const sweep = s.structurePivots.find((p) => p.pivotAt === "sweep");
     expect(sweep.type).toBe("LQ-sweep");
   });
 
   it("touched LOW MIT echtem Close drunter -> bleibt 'low'", () => {
-    const s = applyInnerRangePivot(baseState(), triggerPivot, { candles });
+    const s = applyInnerMarketStructurePivot(baseState(), triggerPivot, { candles });
     const realBreak = s.structurePivots.find((p) => p.pivotAt === "break");
     expect(realBreak.type).toBe("low");
   });
 
   it("nie touched -> wird gar nicht erst geprüft, bleibt 'low'", () => {
-    const s = applyInnerRangePivot(baseState(), triggerPivot, { candles });
+    const s = applyInnerMarketStructurePivot(baseState(), triggerPivot, { candles });
     const untouched = s.structurePivots.find((p) => p.pivotAt === "untouched");
     expect(untouched.type).toBe("low");
   });
 
   it("ohne Kerzendaten (candles=[]) konservativ KEIN Sweep behaupten", () => {
-    const s = applyInnerRangePivot(baseState(), triggerPivot, {});
+    const s = applyInnerMarketStructurePivot(baseState(), triggerPivot, {});
     const sweep = s.structurePivots.find((p) => p.pivotAt === "sweep");
     expect(sweep.type).toBe("low");
   });
@@ -69,11 +70,11 @@ describe("rangeAnalysis: LQ-sweep-Reklassifizierung (applyInnerRangePivot)", () 
   // das für immer hängen, obwohl ein späterer Schritt den echten Close-drunter längst sieht.
   it("einmal fälschlich als LQ-sweep markiert (früher Zwischenschritt) korrigiert sich bei einem späteren Schritt wieder zurück zu 'low'", () => {
     const early = { type: "low", price: 0.9, pivotAt: "early", pivotTime: 2100, touched: false }; // VOR dem Close-drunter-Candle (2200)
-    const s1 = applyInnerRangePivot(baseState(), early, { candles });
+    const s1 = applyInnerMarketStructurePivot(baseState(), early, { candles });
     expect(s1.structurePivots.find((p) => p.pivotAt === "break").type).toBe("LQ-sweep"); // (noch) verfrüht, aber nachvollziehbar
 
     const later = { type: "low", price: 0.9, pivotAt: "later", pivotTime: 2500, touched: false }; // NACH dem Close-drunter-Candle
-    const s2 = applyInnerRangePivot(s1, later, { candles });
+    const s2 = applyInnerMarketStructurePivot(s1, later, { candles });
     expect(s2.structurePivots.find((p) => p.pivotAt === "break").type).toBe("low"); // korrigiert sich zurück
   });
 });

@@ -5,7 +5,7 @@ import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "..
 import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, LiquidityLinePrimitive } from "../liquidity.js";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { renderZigzag } from "../trendZigzag";
-import { initRangeState, applyRangePivot, applyInnerRangePivot, renderRangeAnalysis } from "../rangeAnalysis";
+import { initMarketStructureState, applyMarketStructurePivot, applyInnerMarketStructurePivot, renderMarketStructureAnalysis } from "../marketStructureAnalysis";
 import { computeCockpitState, renderTradeSetupCockpit } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
@@ -54,7 +54,7 @@ const props = defineProps({
   // "wir brauchen nen zweiten state ... mit periode 2" — schnellere Uptrend-Erkennung). Läuft auf
   // denselben H1-Kerzen wie die Periode-5-Ranges (siehe loadRangesCandles: EIN Fetch für beide,
   // kein zweiter cTrader-Connect), aber komplett eigene Pivot-Liste/Cutoff/Debug-Marker — fließt
-  // aktuell NICHT in rangeAnalysis.ts/applyRangePivot ein (nur Rohdaten zum Beobachten/TDD).
+  // aktuell NICHT in marketStructureAnalysis.ts/applyMarketStructurePivot ein (nur Rohdaten zum Beobachten/TDD).
   ranges2Period: { type: Number, default: 2 },
   ranges2LookbackHours: { type: Number, default: 7 * 24 },
   showEma: { type: Boolean, default: false },
@@ -158,10 +158,10 @@ function pivotForDisplay(p) {
   return rest;
 }
 
-// Ergebnis-State des "1h-Range"-Algorithmus selbst (nicht nur die rohen Pivot-Listen oben) —
-// zum Gegenprüfen im Replay-Modus gegen die hand-hergeleiteten rangeStateN in
+// Ergebnis-State des "1h-Range"-Marktstruktur-Algorithmus selbst (nicht nur die rohen Pivot-Listen
+// oben) — zum Gegenprüfen im Replay-Modus gegen die hand-hergeleiteten rangeStateN in
 // gbp_h1_uptrend_LQ_sweep_long_setup.ts (siehe Chat 2026-07-19: "brauch noch das json vom state").
-function summarizeRangeState(state) {
+function summarizeMarketStructureState(state) {
   if (!state) return null;
   return {
     trend: state.trend,
@@ -171,8 +171,8 @@ function summarizeRangeState(state) {
     appliedPivots: state.appliedPivots.map(pivotForDisplay),
   };
 }
-const rangeAnalysisState = ref(null);
-const rangeAnalysisTree = computed(() => summarizeRangeState(rangeAnalysisState.value));
+const marketStructureState = ref(null);
+const marketStructureTree = computed(() => summarizeMarketStructureState(marketStructureState.value));
 
 // Copy-Button neben den Metadaten-Überschriften (siehe Chat 2026-07-19) — kopiert den jeweiligen
 // Abschnitt als JSON, z.B. zum 1:1-Abgleich gegen die hand-hergeleiteten rangeStateN in
@@ -207,7 +207,7 @@ let orderBlockPrimitives = [];
 let liquidityPrimitives = [];
 let rangesMarkerPrimitives = [];
 let rangesMarkerPrimitives2 = []; // eingebettete Periode-2-Debug-Marker, siehe refreshRangesMarkersInternal
-let rangeAnalysisPrimitives = [];
+let marketStructurePrimitives = [];
 let cockpitPrimitives = [];
 let tradePrimitives = [];
 let tradeSetupPrimitives = [];
@@ -220,6 +220,10 @@ let trendAnalysisM5Candles = [];
 let rangesH1Candles = [];
 let rangesPivots = null; // roh (mit pivotTime), Periode 5 — siehe computeRangesPivotsFor/refreshRangesMarkersInternal
 let rangesPivots2 = null; // roh (mit pivotTime), eingebettete Periode 2 (siehe Chat 2026-07-19)
+// Out-of-Order-Guards für loadRangesCandles/loadTradeSetupCandles, siehe dort (Chat 2026-07-20:
+// "im Replay-Modus hängt der Trend-Algorithmus").
+let rangesFetchSeq = 0;
+let tradeSetupFetchSeq = 0;
 let loadingOlder = false;
 let reachedHistoryStart = false;
 let reachedCvdHistoryStart = false;
@@ -474,14 +478,14 @@ function refreshRangesInternal() {
   rangesMetadata.value = rangesPivots ? rangesPivots.map(pivotForDisplay) : null;
   rangesMetadata2.value = rangesPivots2 ? rangesPivots2.map(pivotForDisplay) : null;
   refreshRangesMarkersInternal();
-  refreshRangeAnalysisInternal();
+  refreshMarketStructureInternal();
 }
 
-// Neuer "1h-Range"-Trendalgorithmus (siehe rangeAnalysis.ts, test/tdd_mit_claude.ts) — läuft über
-// dieselben H1-Pivots wie die Debug-Punktmarker oben, aber unabhängig vom Debug-Toggle: das ist
-// das eigentliche Analyse-Ergebnis der Ranges-Funktion, nicht nur eine Debug-Hilfe. Erster
-// gelesener 'low'/'high' bilden die Start-Range (analog zu computeZigzagState/originHigh/Low),
-// der Rest läuft über applyRangePivot.
+// Neuer "1h-Range"-Marktstruktur-Trendalgorithmus (siehe marketStructureAnalysis.ts,
+// test/tdd_mit_claude.ts) — läuft über dieselben H1-Pivots wie die Debug-Punktmarker oben, aber
+// unabhängig vom Debug-Toggle: das ist das eigentliche Analyse-Ergebnis der Ranges-Funktion, nicht
+// nur eine Debug-Hilfe. Erster gelesener 'low'/'high' bilden die Start-Range, der Rest läuft über
+// applyMarketStructurePivot.
 // Ein Pivot ist erst NACH `period` weiteren Kerzen überhaupt als Fraktal erkennbar (siehe
 // isUpFractal/isDownFractal in liquidity.js: braucht period strikt schwächere Kerzen danach) —
 // pivotTime ist die Zeit der Extremkerze selbst, nicht die Erkennungszeit. Näherung über
@@ -499,16 +503,16 @@ function confirmationTime(pivot, period) {
 // confirmationTime: ein Periode-2-Pivot mit späterem pivotTime kann trotzdem VOR einem Periode-5-
 // Pivot mit früherem pivotTime erkannt werden (siehe Chat 2026-07-19, gbp_h1_uptrend_LQ_sweep_
 // long_setup.ts: p2Pivot4 entsteht erst um 04:00, aber pivot3 -von 23:00- ist zu dem Zeitpunkt
-// schon längst bestätigt). applyRangePivot/applyInnerRangePivot übernehmen den Rest (u.a. das
-// Leeren von innerStructurePivots bei jedem neuen übergeordneten Pivot).
-function computeRangeAnalysisState() {
+// schon längst bestätigt). applyMarketStructurePivot/applyInnerMarketStructurePivot übernehmen
+// den Rest (u.a. das Leeren von innerStructurePivots bei jedem neuen übergeordneten Pivot).
+function computeMarketStructureState() {
   if (!rangesPivots || rangesPivots.length < 2) return null;
   const originLow = rangesPivots.find((p) => p.type === "low");
   const originHigh = rangesPivots.find((p) => p.type === "high");
   if (!originLow || !originHigh) return null;
 
   const [first, second] = originLow.pivotTime <= originHigh.pivotTime ? [originLow, originHigh] : [originHigh, originLow];
-  let state = initRangeState(first, second);
+  let state = initMarketStructureState(first, second);
 
   const originCutoff = Math.max(first.pivotTime, second.pivotTime);
   const outerRest = rangesPivots
@@ -519,12 +523,15 @@ function computeRangeAnalysisState() {
     .map((pivot) => ({ pivot, outer: false, at: confirmationTime(pivot, props.ranges2Period) }));
 
   const merged = [...outerRest, ...innerRest].sort((a, b) => a.at - b.at);
-  // Für applyInnerRangePivots Kerzen-Close-Prüfung (closesAboveOldHigh, siehe rangeAnalysis.ts):
-  // dieselben H1-Kerzen wie die Pivot-Erkennung selbst (rangesH1Candles), nicht allCandles — das
-  // wäre je nach gewähltem Chart-Timeframe eine andere Auflösung.
+  // Für applyInnerMarketStructurePivot Kerzen-Close-Prüfung (closesAboveOldHigh, siehe
+  // marketStructureAnalysis.ts): dieselben H1-Kerzen wie die Pivot-Erkennung selbst
+  // (rangesH1Candles), nicht allCandles — das wäre je nach gewähltem Chart-Timeframe eine andere
+  // Auflösung.
   const rangesCandles = clipReplay(rangesH1Candles);
   for (const entry of merged) {
-    state = entry.outer ? applyRangePivot(state, entry.pivot) : applyInnerRangePivot(state, entry.pivot, { candles: rangesCandles });
+    state = entry.outer
+      ? applyMarketStructurePivot(state, entry.pivot)
+      : applyInnerMarketStructurePivot(state, entry.pivot, { candles: rangesCandles });
   }
   return state;
 }
@@ -532,23 +539,23 @@ function computeRangeAnalysisState() {
 // Roter Pfeil+Linie an range.high, grüner an range.low, ggf. "1h protected low"-Linie +
 // Trend-Label rechts/mittig (siehe Chat) — sichtbar, sobald showRanges an ist, unabhängig vom
 // Debug-Toggle (im Gegensatz zu den rohen Punktmarkern oben).
-function refreshRangeAnalysisInternal() {
+function refreshMarketStructureInternal() {
   if (!chart) return; // async loadRangesCandles kann nach unmount noch abschließen, siehe onUnmounted
-  const state = computeRangeAnalysisState();
-  rangeAnalysisState.value = state; // fürs Metadaten-Panel + TSC, unabhängig von showRanges (Zeichnen)
+  const state = computeMarketStructureState();
+  marketStructureState.value = state; // fürs Metadaten-Panel + TSC, unabhängig von showRanges (Zeichnen)
   const candles = clipReplay(allCandles);
-  renderRangeAnalysis(candleSeries, props.showRanges ? state : null, rangeAnalysisPrimitives, candles);
+  renderMarketStructureAnalysis(candleSeries, props.showRanges ? state : null, marketStructurePrimitives, candles);
   // Sofort weiterreichen statt auf den nächsten refreshChart()/POLL_MS (12s) zu warten (siehe Chat
-  // 2026-07-19: "TSC scheint zu hängen, dauert ne Weile bis da was drin steht") — rangeAnalysisState
+  // 2026-07-19: "TSC scheint zu hängen, dauert ne Weile bis da was drin steht") — marketStructureState
   // ist eine der beiden TSC-Datenquellen (siehe refreshCockpitInternal), die andere ist
   // currentTradeSetups (siehe loadTradeSetupCandles).
   refreshCockpitInternal();
 }
 
-// Trade-Setup-Cockpit (siehe Chat 2026-07-19) — reine Zusammenfassung, liest rangeAnalysisState.value
+// Trade-Setup-Cockpit (siehe Chat 2026-07-19) — reine Zusammenfassung, liest marketStructureState.value
 // und currentTradeSetups direkt aus der Closure (dieselbe Liste, die renderTradeSetupsInternal schon
 // positioniert) — kein eigener Fetch/eigene Erkennung. Nur für Forex (wie Ranges/Trade-Setups
-// selbst). Wird sowohl von refreshRangeAnalysisInternal als auch von loadTradeSetupCandles direkt
+// selbst). Wird sowohl von refreshMarketStructureInternal als auch von loadTradeSetupCandles direkt
 // aufgerufen (siehe dort), nicht erst über den nächsten refreshChart() — sonst hinkt die Karte bis
 // zu POLL_MS (12s) hinter den eigentlich schon fertigen Daten her.
 function refreshCockpitInternal() {
@@ -558,7 +565,7 @@ function refreshCockpitInternal() {
     renderTradeSetupCockpit(candleSeries, null, cockpitPrimitives, candles);
     return;
   }
-  const state = computeCockpitState(rangeAnalysisState.value, currentTradeSetups);
+  const state = computeCockpitState(marketStructureState.value, currentTradeSetups);
   const precision = pricePrecisionForInstrument(props.symbol);
   renderTradeSetupCockpit(candleSeries, state, cockpitPrimitives, candles, {
     mode: props.tradeSetupCockpitAtCandle ? "candle" : "fixed",
@@ -574,10 +581,19 @@ function refreshCockpitInternal() {
 // den für die jeweilige Periode passenden, ggf. kürzeren Ausschnitt raus.
 async function loadRangesCandles() {
   if (!isForex) return;
+  // rangesFetchSeq schützt gegen Out-of-Order-Antworten (siehe Chat 2026-07-20: "im Replay-Modus
+  // hängt der Trend-Algorithmus" — schneller mehrfacher Replay-Step feuert mehrfach diesen fetch;
+  // ohne Guard kann eine ÄLTERE, aber langsamere Antwort eine NEUERE überschreiben und der Chart
+  // bleibt auf einem veralteten Replay-Stand hängen, bis zufällig wieder die richtige Antwort
+  // zuletzt eintrifft). Jeder Aufruf zieht seine eigene Sequenznummer; nur die zuletzt GESTARTETE
+  // gilt noch als aktuell, ältere Ergebnisse werden beim Eintreffen verworfen.
+  const seq = ++rangesFetchSeq;
   try {
     const hours = Math.max(props.rangesLookbackHours, props.ranges2LookbackHours);
     const count = hours + RANGES_CANDLE_BUFFER;
-    rangesH1Candles = await fetchInitialForexCandles(props.symbol, "1h", count, replayToMs());
+    const candles = await fetchInitialForexCandles(props.symbol, "1h", count, replayToMs());
+    if (seq !== rangesFetchSeq) return; // inzwischen überholt, siehe oben
+    rangesH1Candles = candles;
     refreshRangesInternal();
   } catch (err) {
     console.error("Ranges-Kerzen fehlgeschlagen:", err);
@@ -587,7 +603,7 @@ async function loadRangesCandles() {
 // showRanges (Marker im Chart) und showRangesMetadata (JSON-Panel) sind getrennte Toggles, teilen
 // sich aber dieselben H1-Kerzen/Pivots. showTradeSetupCockpit zählt seit Chat 2026-07-19 ebenfalls
 // mit ("TSC soll den aktuellsten und wahren Stand anzeigen, selbst wenn Trend im Chart gerade zur
-// Übersicht ausgetoggelt ist") — sonst würde rangeAnalysisState (siehe refreshRangeAnalysisInternal)
+// Übersicht ausgetoggelt ist") — sonst würde marketStructureState (siehe refreshMarketStructureInternal)
 // beim Wegtoggeln von Ranges/Metadaten stumpf auf dem letzten Stand einfrieren statt weiter mit-
 // zulaufen. Laden läuft also, solange MINDESTENS einer der drei an ist, kein unnötiger
 // cTrader-Connect (RANGES_POLL_MS), solange wirklich niemand (auch nicht die TSC-Karte) hinschaut.
@@ -750,6 +766,8 @@ async function fetchTrendAnalysisM5History(symbol, targetCount, toMs) {
 // niemand hinschaut.
 async function loadTradeSetupCandles() {
   if (!isForex) return;
+  // tradeSetupFetchSeq: derselbe Out-of-Order-Guard wie in loadRangesCandles, siehe dort.
+  const seq = ++tradeSetupFetchSeq;
   try {
     const toMs = replayToMs();
     const fetches = [
@@ -760,6 +778,7 @@ async function loadTradeSetupCandles() {
       fetches.push(fetchTrendAnalysisM5History(props.symbol, TREND_ANALYSIS_CANDLE_COUNT, toMs));
     }
     const [m5, h1, trendM5] = await Promise.all(fetches);
+    if (seq !== tradeSetupFetchSeq) return; // inzwischen überholt, siehe loadRangesCandles
     tradeSetupM5Candles = m5;
     tradeSetupH1Candles = h1;
     if (trendM5) trendAnalysisM5Candles = trendM5;
@@ -767,7 +786,7 @@ async function loadTradeSetupCandles() {
     renderTradeSetupsInternal();
     refreshEmaInternal();
     // Sofort weiterreichen statt auf den nächsten refreshChart()/POLL_MS zu warten — siehe
-    // refreshCockpitInternal/refreshRangeAnalysisInternal (Chat 2026-07-19: "TSC hängt").
+    // refreshCockpitInternal/refreshMarketStructureInternal (Chat 2026-07-19: "TSC hängt").
     refreshCockpitInternal();
   } catch (err) {
     console.error("Trade-Setup-Kerzen fehlgeschlagen:", err);
@@ -785,7 +804,7 @@ function refreshChart() {
   refreshTradeMarkersInternal();
   renderTradeSetupsInternal();
   refreshRangesMarkersInternal();
-  refreshRangeAnalysisInternal(); // ruft refreshCockpitInternal() selbst mit auf, siehe dort
+  refreshMarketStructureInternal(); // ruft refreshCockpitInternal() selbst mit auf, siehe dort
   refreshEmaInternal();
   cvdSeries?.setData(cumulativeFromDeltas(clipReplay(allCvdDeltas)));
   positionGauges();
@@ -1012,6 +1031,7 @@ onUnmounted(() => {
   clearInterval(rangesPollTimer);
   clearInterval(windowGaugeTimer);
   clearInterval(dailyGaugeTimer);
+  clearTimeout(replayFetchDebounceTimer);
   resizeObserver?.disconnect();
   chart?.remove();
   // Nullen, damit noch laufende Async-Loads (loadInitial/pollRecent) beim Abschluss
@@ -1046,7 +1066,7 @@ watch([() => props.showTradeSetupsLong, () => props.showTradeSetupsShort], rende
 watch(() => props.showRanges, () => {
   refreshRangesPollingState();
   refreshRangesMarkersInternal(); // sofort reagieren, nicht erst beim nächsten refreshChart()
-  refreshRangeAnalysisInternal();
+  refreshMarketStructureInternal();
 });
 watch(() => props.showRangesMetadata, refreshRangesPollingState);
 // Lookback-Änderung braucht mehr/weniger H1-Historie -> neu fetchen, aber nur solange mindestens
@@ -1080,17 +1100,25 @@ watch(() => props.showTradeSetupCockpit, () => {
   refreshCockpitInternal();
 });
 watch(() => [props.tradeSetupCockpitAtCandle, props.tradeSetupCockpitCandleOffset], refreshCockpitInternal);
-// Verschieben von replayUntil braucht keinen Refetch (siehe clipReplay) — nur ein Neu-Ableiten
-// aller von den rohen *Candles-Arrays abhängigen Zustände (currentTradeSetups läuft anders als
-// der Rest nicht automatisch über refreshChart() mit, siehe computeTradeSetups) + Re-Render.
+// Hauptkerzen (allCandles) selbst brauchen keinen Refetch (siehe clipReplay, oben schon geladen) —
+// refreshChart() reicht dafür sofort. Trade-Setups/Ranges dagegen SCHON: ihr fester count/Lookback
+// hängt ohne replayToMs() am alten Anker (vorheriger replayUntil bzw. "jetzt") fest und deckt den
+// neuen Replay-Zeitpunkt ggf. gar nicht mehr ab (siehe Chat: "Ranges-Pivots gehen bei 12 Tagen
+// Lookback + Replay nicht weit genug zurück") -> echtes Neu-Fetchen mit replayToMs().
+let replayFetchDebounceTimer = null;
+const REPLAY_FETCH_DEBOUNCE_MS = 400; // siehe Chat 2026-07-20: "im Replay-Modus hängt der Algo"
 watch(() => props.replayUntil, () => {
-  // Nicht nur neu rendern (clipReplay reicht hier NICHT) — der feste count/Lookback der Fetches
-  // selbst hängt ohne replayToMs am alten Anker (vorheriger replayUntil bzw. "jetzt") fest und
-  // deckt den neuen Replay-Zeitpunkt ggf. gar nicht mehr ab (siehe Chat: "Ranges-Pivots gehen bei
-  // 12 Tagen Lookback + Replay nicht weit genug zurück") -> echtes Neu-Fetchen mit replayToMs().
-  if (isForex) loadTradeSetupCandles();
-  if (rangesNeedsData()) loadRangesCandles();
   refreshChart();
+  // Debounced statt bei JEDEM einzelnen "+1 Kerze"-Klick sofort zu fetchen — jeder Fetch ist ein
+  // frischer, spürbar langsamer cTrader-TLS-Connect (siehe loadTradeSetupCandles/loadRangesCandles);
+  // schnelles mehrfaches Klicken hat sonst mehrere überlappende Fetches gleichzeitig laufen, die
+  // (ohne den *FetchSeq-Guard dort) in falscher Reihenfolge zurückkommen können und den Chart auf
+  // einem veralteten Replay-Stand hängen lassen. Bei einem einzelnen Klick spürt man die 400ms nicht.
+  clearTimeout(replayFetchDebounceTimer);
+  replayFetchDebounceTimer = setTimeout(() => {
+    if (isForex) loadTradeSetupCandles();
+    if (rangesNeedsData()) loadRangesCandles();
+  }, REPLAY_FETCH_DEBOUNCE_MS);
 });
 // StyleModal (Dashboard.vue) schreibt direkt in den chartColors-Singleton — Serien-OPTIONEN
 // (Candles/CVD/EMA) werden von refreshChart() nicht angefasst (das setzt nur setData), deshalb
@@ -1141,15 +1169,15 @@ defineExpose({
       <Gauge id="window" :value="windowDelta" label="Δ 15m" />
       <Gauge id="daily" :value="dailyDelta" label="Δ Tag (UTC)" />
     </div>
-    <MetadataPanel v-if="showRangesMetadata" title="Trend-Metadaten" @close="emit('close-ranges-metadata')">
+    <MetadataPanel v-if="showRangesMetadata" title="Structure-Metadaten" @close="emit('close-ranges-metadata')">
       <div class="metadata-subheading-row">
-        <h4 class="metadata-subheading">Range-State</h4>
-        <button class="metadata-copy-btn" :disabled="!rangeAnalysisTree" @click="copyJson('rangeState', rangeAnalysisTree)">
-          {{ copiedSection === 'rangeState' ? '✓ kopiert' : '📋 kopieren' }}
+        <h4 class="metadata-subheading">Structure-State</h4>
+        <button class="metadata-copy-btn" :disabled="!marketStructureTree" @click="copyJson('structureState', marketStructureTree)">
+          {{ copiedSection === 'structureState' ? '✓ kopiert' : '📋 kopieren' }}
         </button>
       </div>
-      <JsonTree v-if="rangeAnalysisTree" :value="rangeAnalysisTree" />
-      <p v-else class="metadata-empty">Kein Range-State (mind. 2 Pivots nötig).</p>
+      <JsonTree v-if="marketStructureTree" :value="marketStructureTree" />
+      <p v-else class="metadata-empty">Kein Structure-State (mind. 2 Pivots nötig).</p>
 
       <div class="metadata-subheading-row">
         <h4 class="metadata-subheading">Periode {{ rangesPeriod }} (Rohdaten)</h4>

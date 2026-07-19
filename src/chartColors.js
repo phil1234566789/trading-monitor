@@ -4,7 +4,7 @@ import { supabase } from "./supabaseClient.js";
 // Zentraler, reaktiver Farb-Store für sämtliche Chart-Indikatoren (Kerzen, CVD, EMA, Liquidität,
 // Order-Blocks, Trade-Setups, Zigzag, Ranges, Trade-Marker) — als ES-Modul-Singleton (nicht an
 // eine Vue-Komponente gebunden), damit jedes Render-Modul (liquidity.js, orderBlocks.js,
-// trendZigzag.ts, rangeAnalysis.ts, tradeMarkers.js) und das StyleModal dieselbe Instanz lesen/
+// trendZigzag.ts, marketStructureAnalysis.ts, tradeMarkers.js) und das StyleModal dieselbe Instanz lesen/
 // schreiben, ohne Farben durch PriceChart.vue durchreichen zu müssen (siehe Chat: "Style"-Button
 // + Modal, "alle Farben einstellen"). Persistiert komplett in localStorage, analog zu
 // useLocalStorageRef, aber für ein ganzes Farb-Objekt statt eines einzelnen Werts.

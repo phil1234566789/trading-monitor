@@ -1,9 +1,10 @@
 // Trade-Setup-Cockpit (TSC): eine Karte im Chart, die die aktuelle Analyse aus mehreren, bereits
 // bestehenden Quellen bündelt (siehe Chat 2026-07-19: "wir wollen jetzt step by step alles
 // zusammenstöpseln", "ein 1h-LQ-Sweep allein reicht nicht"). Reine Anzeige/Aggregation, KEINE
-// eigene Erkennungslogik — liest nur den schon berechneten RangeState (H1, rangeAnalysis.ts) und
-// die schon berechneten Trade-Setups (M5, tradeSetup.js) und stellt sie zusammengefasst dar.
-import type { RangeState, Pivot } from "./range.type";
+// eigene Erkennungslogik — liest nur den schon berechneten MarketStructureState (H1,
+// marketStructureAnalysis.ts) und die schon berechneten Trade-Setups (M5, tradeSetup.js) und
+// stellt sie zusammengefasst dar.
+import type { MarketStructureState, Pivot } from "./range.type";
 import { cssColor, cssColorScaled } from "./chartColors.js";
 
 export interface Candle {
@@ -34,9 +35,9 @@ export interface CockpitState {
 // "die aktuell relevante" Analyse. Bewusst NICHT geprüft, ob h1LqSweep und der M5-LQ-Sweep aus
 // m5Setup derselbe sind — das ist laut Philip nicht immer der Fall (Trade-Setups bezieht auch
 // kleinere LQ-Sweeps mit ein) und wird hier nur nebeneinander dargestellt, nicht verglichen.
-export function computeCockpitState(rangeState: RangeState | null, tradeSetups: any[]): CockpitState {
-  const h1Trend = rangeState?.trend ?? "unknown";
-  const h1LqSweep = rangeState?.structurePivots.find((p) => p.type === "LQ-sweep") ?? null;
+export function computeCockpitState(structureState: MarketStructureState | null, tradeSetups: any[]): CockpitState {
+  const h1Trend = structureState?.trend ?? "unknown";
+  const h1LqSweep = structureState?.structurePivots.find((p) => p.type === "LQ-sweep") ?? null;
   const last = tradeSetups.length > 0 ? tradeSetups[tradeSetups.length - 1] : null;
   const m5Setup = last
     ? {
@@ -52,7 +53,7 @@ export function computeCockpitState(rangeState: RangeState | null, tradeSetups: 
 
 // --- Zeichnung ----------------------------------------------------------------------------------
 // Zwei Positionsmodi (siehe Chat: "WENN MÖGLICH: einen Toggle einfügen"): 'fixed' — rechter
-// Pane-Rand, vertikal mittig (wie bisher das "1h uptrend"-Label, siehe rangeAnalysis.ts:
+// Pane-Rand, vertikal mittig (wie bisher das "1h uptrend"-Label, siehe marketStructureAnalysis.ts:
 // TrendLabelPrimitive) — und 'candle' — rechts neben der letzten geladenen Kerze, mit Abstand.
 
 interface Line {
@@ -325,7 +326,7 @@ export class TradeSetupCockpitPrimitive {
   }
 }
 
-// Ersetzt existingPrimitives komplett (siehe renderRangeAnalysis-Vorbild). state=null -> nur
+// Ersetzt existingPrimitives komplett (siehe renderMarketStructureAnalysis-Vorbild). state=null -> nur
 // aufräumen, keine Karte. mode: 'fixed' (Default) oder 'candle', siehe oben. candleOffset nur im
 // 'candle'-Modus relevant, siehe DEFAULT_CANDLE_OFFSET.
 export function renderTradeSetupCockpit(
