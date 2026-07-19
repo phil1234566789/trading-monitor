@@ -122,7 +122,6 @@ const TRADE_SETUP_LS_MAX_DISTANCE_M5 = 5.0 * TRADE_SETUP_PIP_SIZE; // lsMaxDista
 const TRADE_SETUP_OB_MAX_DELAY_SEC = 60 * 60; // obMaxDelayMinutes
 const TRADE_SETUP_LOOKBACK_SEC = 6 * 60 * 60; // protectedHighLookbackHours
 const TRADE_SETUP_OB_WIDTH_SEC = 10 * TRADE_SETUP_GRACE_SEC; // obBoxWidthM5Candles=10, rein optisch
-const TRADE_SETUP_POLL_MS = 60_000; // eigener, langsamerer Poll als POLL_MS — M5/H1 brauchen keine 12s-Frische und jeder Poll ist ein frischer cTrader-TLS-Connect
 const TRADE_SETUP_LINE_WIDTH = 2;
 // tradeSetupShort/-Long dienen sowohl der LS-Linie (chartColors[key].alpha, Default 0.9 = "Haupt"-
 // Transparenz) als auch der OB-Box, deren Fill/Border proportional dazu skalieren (Original-
@@ -132,7 +131,7 @@ const TRADE_SETUP_OB_BORDER_RATIO = 0.7 / 0.9;
 
 // EMA (siehe unten) braucht mehr M5-Historie als tradeSetupM5Candles (300 = ~25h) — eigener
 // Fetch, nur solange der EMA-Toggle an ist (jeder Fetch ist ein frischer cTrader-TLS-Connect,
-// siehe loadTradeSetupCandles). fetchTrendAnalysisM5History paginiert automatisch nach, falls
+// siehe loadTradeSetupM5). fetchTrendAnalysisM5History paginiert automatisch nach, falls
 // TREND_ANALYSIS_CANDLE_COUNT über dem Edge-Function-Limit pro Request (1000) liegt.
 const TREND_ANALYSIS_CANDLE_COUNT = 1000;
 
@@ -149,11 +148,10 @@ const TREND_ANALYSIS_CANDLE_COUNT = 1000;
 // Puffer würden Fraktale am Rand des konfigurierten Fensters unter den Tisch fallen. 20 ist für
 // BEIDE Perioden (5 und 2) großzügig genug, kein separater Puffer je Periode nötig.
 const RANGES_CANDLE_BUFFER = 20;
-const RANGES_POLL_MS = 60_000; // wie TRADE_SETUP_POLL_MS — H1-Kerzen brauchen keine schnellere Frische
 
 // EMA 50/200 auf M5 (siehe Chat: Philips "Trend über EMA + Anzahl protected highs/lows"-Idee) —
 // läuft auf trendAnalysisM5Candles (dieselbe M5-Historie wie der Zigzag-Algo), kein eigener Fetch
-// nötig, siehe loadTradeSetupCandles.
+// nötig, siehe loadTradeSetupM5.
 const EMA_PERIOD_FAST = 50;
 const EMA_PERIOD_SLOW = 200;
 
@@ -234,15 +232,17 @@ let trendAnalysisM5Candles = [];
 let rangesH1Candles = [];
 let rangesPivots = null; // roh (mit pivotTime), Periode 5 — siehe computeRangesPivotsFor/refreshRangesMarkersInternal
 let rangesPivots2 = null; // roh (mit pivotTime), eingebettete Periode 2 (siehe Chat 2026-07-19)
-// Out-of-Order-Guards für loadRangesCandles/loadTradeSetupCandles, siehe dort (Chat 2026-07-20:
-// "im Replay-Modus hängt der Trend-Algorithmus").
+// Out-of-Order-Guards für loadRangesCandles/loadTradeSetupM5/loadTradeSetupH1, siehe dort (Chat
+// 2026-07-20: "im Replay-Modus hängt der Trend-Algorithmus").
 let rangesFetchSeq = 0;
-let tradeSetupFetchSeq = 0;
+let tradeSetupM5FetchSeq = 0;
+let tradeSetupH1FetchSeq = 0;
 let loadingOlder = false;
 let reachedHistoryStart = false;
 let reachedCvdHistoryStart = false;
 let pollTimer = null;
-let tradeSetupPollTimer = null;
+let tradeSetupM5PollTimer = null;
+let tradeSetupH1PollTimer = null;
 let rangesPollTimer = null;
 let windowGaugeTimer = null;
 let dailyGaugeTimer = null;
@@ -344,7 +344,7 @@ function mergeRecent(existing, freshRecent) {
   return olderPrefix.concat(freshRecent);
 }
 
-// Replay-Modus: alle Fetches (loadInitial/pollRecent/loadRangesCandles/loadTradeSetupCandles)
+// Replay-Modus: alle Fetches (loadInitial/pollRecent/loadRangesCandles/loadTradeSetupM5/-H1)
 // laufen unverändert weiter — geclippt wird ausschließlich hier, an jeder Stelle, wo Kerzen
 // tatsächlich gerendert oder für eine Erkennung (Pivots/OBs/EMA/Setups) genutzt werden. So bleibt
 // z.B. der Lazy-Load-Cursor (allCandles[0].time) unangetastet, und ein Verschieben von
@@ -357,7 +357,7 @@ function clipReplay(rows) {
 // der echten aktuellen Zeit (siehe ctraderCandles.js: toMs ohne Wert = "jetzt"), unabhängig von
 // replayUntil — bei einem Replay-Zeitpunkt, der weiter zurückliegt als count reicht, deckt das
 // geladene Fenster den gewünschten Bereich dann gar nicht ab (siehe Chat: "Ranges-Pivots gehen bei
-// 12 Tagen Lookback + Replay nicht weit genug zurück"). loadRangesCandles/loadTradeSetupCandles
+// 12 Tagen Lookback + Replay nicht weit genug zurück"). loadRangesCandles/loadTradeSetupM5/-H1
 // übergeben das hier an fetchInitialForexCandles, damit der Fetch selbst schon bis replayUntil
 // zurückreicht statt erst hinterher (zu kurz) geclippt zu werden.
 function replayToMs() {
@@ -559,21 +559,21 @@ function refreshMarketStructureInternal() {
   marketStructureState.value = state; // fürs Metadaten-Panel + TSC, unabhängig von showRanges (Zeichnen)
   const candles = clipReplay(allCandles);
   renderMarketStructureAnalysis(candleSeries, props.showRanges ? state : null, marketStructurePrimitives, candles);
-  // Sofort weiterreichen statt auf den nächsten refreshChart()/POLL_MS (12s) zu warten (siehe Chat
+  // Sofort weiterreichen statt auf den nächsten refreshChart()/Poll zu warten (siehe Chat
   // 2026-07-19: "TSC scheint zu hängen, dauert ne Weile bis da was drin steht") — marketStructureState
   // ist eine der beiden TSC-Datenquellen (siehe refreshCockpitInternal), die andere ist
-  // currentTradeSetups (siehe loadTradeSetupCandles).
+  // currentTradeSetups (siehe loadTradeSetupM5/-H1).
   refreshCockpitInternal();
 }
 
 // Trade-Setup-Cockpit (siehe Chat 2026-07-19) — reine Zusammenfassung, liest marketStructureState.value
 // und currentTradeSetups direkt aus der Closure (dieselbe Liste, die renderTradeSetupsInternal schon
 // positioniert) — kein eigener Fetch/eigene Erkennung. Nur für Forex (wie Ranges/Trade-Setups
-// selbst). Wird sowohl von refreshMarketStructureInternal als auch von loadTradeSetupCandles direkt
-// aufgerufen (siehe dort), nicht erst über den nächsten refreshChart() — sonst hinkt die Karte bis
-// zu POLL_MS (12s) hinter den eigentlich schon fertigen Daten her.
+// selbst). Wird sowohl von refreshMarketStructureInternal als auch von loadTradeSetupM5/-H1 direkt
+// aufgerufen (siehe dort), nicht erst über den nächsten refreshChart() — sonst hinkt die Karte den
+// eigentlich schon fertigen Daten hinterher.
 function refreshCockpitInternal() {
-  if (!isForex || !chart) return; // async loadTradeSetupCandles kann nach unmount noch abschließen
+  if (!isForex || !chart) return; // async loadTradeSetupM5/-H1 können nach unmount noch abschließen
   const candles = clipReplay(allCandles);
   if (!props.showTradeSetupCockpit || candles.length === 0) {
     renderTradeSetupCockpit(candleSeries, null, cockpitPrimitives, candles);
@@ -606,8 +606,8 @@ async function loadRangesCandles() {
     const hours = Math.max(props.rangesLookbackHours, props.ranges2LookbackHours);
     const count = hours + RANGES_CANDLE_BUFFER;
     // Teilt sich den H1-Cache-Eintrag mit loadInitial (falls currentBar "1h" ist) und
-    // loadTradeSetupCandles (siehe Chat 2026-07-20: "unnötige cTrader Aufrufe") — statt alle 60s
-    // unabhängig komplett neu zu fetchen, nur der fehlende/neue Teil.
+    // loadTradeSetupH1 (siehe Chat 2026-07-20: "unnötige cTrader Aufrufe") — statt unabhängig
+    // komplett neu zu fetchen, nur der fehlende/neue Teil.
     const candles = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", count, replayToMs());
     if (seq !== rangesFetchSeq) return; // inzwischen überholt, siehe oben
     rangesH1Candles = candles;
@@ -623,17 +623,28 @@ async function loadRangesCandles() {
 // Übersicht ausgetoggelt ist") — sonst würde marketStructureState (siehe refreshMarketStructureInternal)
 // beim Wegtoggeln von Ranges/Metadaten stumpf auf dem letzten Stand einfrieren statt weiter mit-
 // zulaufen. Laden läuft also, solange MINDESTENS einer der drei an ist, kein unnötiger
-// cTrader-Connect (RANGES_POLL_MS), solange wirklich niemand (auch nicht die TSC-Karte) hinschaut.
+// cTrader-Connect, solange wirklich niemand (auch nicht die TSC-Karte) hinschaut.
 function rangesNeedsData() {
   return props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit;
 }
+// An den H1-Kerzenschluss ausgerichtet statt festem Intervall (siehe scheduleNextTradeSetupH1Poll,
+// Chat 2026-07-20) — H1-Kerzen ändern sich nur stündlich, ein häufigerer Poll bringt nichts außer
+// zusätzlichen cTrader-Connects.
+function scheduleNextRangesPoll() {
+  clearTimeout(rangesPollTimer);
+  const barMs = barSecondsFor("1h") * 1000;
+  const delay = barMs - (Date.now() % barMs) + CLOSE_POLL_BUFFER_MS;
+  rangesPollTimer = setTimeout(async () => {
+    await loadRangesCandles();
+    if (chart) scheduleNextRangesPoll();
+  }, delay);
+}
 function startRangesPolling() {
   loadRangesCandles();
-  clearInterval(rangesPollTimer);
-  rangesPollTimer = setInterval(loadRangesCandles, RANGES_POLL_MS);
+  scheduleNextRangesPoll();
 }
 function stopRangesPolling() {
-  clearInterval(rangesPollTimer);
+  clearTimeout(rangesPollTimer);
   rangesPollTimer = null;
 }
 function refreshRangesPollingState() {
@@ -641,7 +652,7 @@ function refreshRangesPollingState() {
   else stopRangesPolling();
 }
 
-// Erkennung läuft nur, wenn sich die M5/H1-Kerzen geändert haben (siehe loadTradeSetupCandles)
+// Erkennung läuft nur, wenn sich die M5/H1-Kerzen geändert haben (siehe loadTradeSetupM5/-H1)
 // — das Ergebnis (currentTradeSetups) bleibt über Timeframe-Wechsel/refreshChart-Aufrufe
 // hinweg stehen, nur renderTradeSetupsInternal() (Positionierung) läuft bei jedem Refresh neu.
 // Zeigt die letzten `tradeSetupHistoryCount` Setups JE Richtung (analog zu
@@ -700,7 +711,7 @@ function tradeSetupObBoxBounds(setup) {
 // Zonen: das Setup selbst lebt auf M5/H1, gerendert wird aber immer gegen das sichtbare
 // Timeframe, damit die Koordinaten-Snappings (snapToBarTime) einen gültigen Bezugspunkt haben.
 function renderTradeSetupsInternal() {
-  // Async-Fetch (loadTradeSetupCandles) kann noch laufen, wenn die Komponente schon
+  // Async-Fetch (loadTradeSetupM5/-H1) kann noch laufen, wenn die Komponente schon
   // unmounted wurde — siehe gleicher Guard in refreshChart().
   if (!chart) return;
   for (const p of tradeSetupPrimitives) candleSeries.detachPrimitive(p);
@@ -747,7 +758,7 @@ function renderTradeSetupsInternal() {
 // die Zeitachse mit der 1h-Candlestick-Serie, und die viel dichteren M5-Zeitpunkte quetschen dort
 // die Kerzen zusammen (siehe Chat: "candles werden ganz komisch dünn, wenn man den EMA anschaltet").
 // Deshalb hier zusätzlich zum Toggle gegen props.currentBar geprüft — daher jetzt auch bei jedem
-// TF-Wechsel über refreshChart() aufgerufen, nicht mehr nur bei loadTradeSetupCandles/watch(showEma).
+// TF-Wechsel über refreshChart() aufgerufen, nicht mehr nur bei loadTradeSetupM5/watch(showEma).
 function refreshEmaInternal() {
   if (!isForex) return;
   if (!props.showEma || props.currentBar !== "5m" || trendAnalysisM5Candles.length === 0) {
@@ -773,27 +784,25 @@ async function fetchTrendAnalysisM5History(symbol, targetCount, toMs) {
   return all;
 }
 
-// M5/H1-Kerzen für die Trade-Setup-Erkennung — unabhängig vom aktuell gewählten Chart-
-// Timeframe (props.currentBar), da ein Setup immer auf M5-Fraktal + H1/M5-Sweep basiert,
-// egal ob der Nutzer gerade den 1h- oder den 15m-Chart anschaut. Eigener, langsamerer Poll
-// (TRADE_SETUP_POLL_MS) statt am 12s-POLL_MS der Haupt-Kerzen zu hängen — jeder Aufruf ist
-// ein frischer cTrader-TLS-Connect (siehe ctraderCandles.js), 12s wäre unnötig teuer.
-// Holt bei aktivem EMA-Toggle zusätzlich die größere M5-Historie für die EMA-Berechnung (siehe
-// TREND_ANALYSIS_CANDLE_COUNT) — nur dann, um unnötige cTrader-Connects zu vermeiden, solange
-// niemand hinschaut.
-async function loadTradeSetupCandles() {
+// M5/H1-Kerzen für die Trade-Setup-Erkennung — unabhängig vom aktuell gewählten Chart-Timeframe
+// (props.currentBar), da ein Setup immer auf M5-Fraktal + H1/M5-Sweep basiert, egal ob der Nutzer
+// gerade den 1h- oder den 15m-Chart anschaut. Seit Chat 2026-07-20 ("unnötige cTrader Aufrufe")
+// in zwei unabhängige Funktionen mit je eigener, an den jeweiligen Kerzenschluss ausgerichteter
+// Poll-Taktung gesplittet (siehe scheduleNextTradeSetupM5Poll/-H1Poll) — vorher hing H1 am
+// selben festen 60s-Takt wie M5, obwohl sich H1-Kerzen nur stündlich wirklich ändern; jeder Poll
+// ist ein frischer cTrader-TLS-Connect, das war unnötig teuer. computeTradeSetups() braucht
+// zwar beide Candle-Sets, wird aber bewusst nach JEDER der beiden Teil-Fetches neu aufgerufen
+// (reine lokale Berechnung, kein Netzwerk) statt auf ein gemeinsames "beide fertig" zu warten.
+async function loadTradeSetupM5() {
   if (!isForex) return;
-  // tradeSetupFetchSeq: derselbe Out-of-Order-Guard wie in loadRangesCandles, siehe dort.
-  const seq = ++tradeSetupFetchSeq;
+  const seq = ++tradeSetupM5FetchSeq; // Out-of-Order-Guard, siehe loadRangesCandles
   try {
     const toMs = replayToMs();
-    // Teilen sich die Cache-Einträge mit loadInitial (M5/H1, falls currentBar passt) und
-    // loadRangesCandles (H1) — statt alle 60s unabhängig komplett neu zu fetchen, nur der
-    // fehlende/neue Teil (siehe Chat 2026-07-20: "unnötige cTrader Aufrufe").
-    const fetches = [
-      fetchCandlesCached(fetchInitialForexCandles, props.symbol, "5m", TRADE_SETUP_CANDLE_COUNT, toMs),
-      fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", TRADE_SETUP_CANDLE_COUNT, toMs),
-    ];
+    // Holt bei aktivem EMA-Toggle zusätzlich die größere M5-Historie für die EMA-Berechnung
+    // (siehe TREND_ANALYSIS_CANDLE_COUNT) — nur dann, um unnötige cTrader-Connects zu vermeiden.
+    // Hängt hier dran (nicht an einem dritten eigenen Poller), weil EMA ohnehin M5-Kerzen braucht
+    // und dieser Poll schon läuft — inhaltlich hat EMA nichts mit Trade-Setups zu tun, siehe Chat.
+    const fetches = [fetchCandlesCached(fetchInitialForexCandles, props.symbol, "5m", TRADE_SETUP_CANDLE_COUNT, toMs)];
     if (props.showEma) {
       fetches.push(
         fetchCandlesCached(
@@ -805,20 +814,56 @@ async function loadTradeSetupCandles() {
         ),
       );
     }
-    const [m5, h1, trendM5] = await Promise.all(fetches);
-    if (seq !== tradeSetupFetchSeq) return; // inzwischen überholt, siehe loadRangesCandles
+    const [m5, trendM5] = await Promise.all(fetches);
+    if (seq !== tradeSetupM5FetchSeq) return; // inzwischen überholt
     tradeSetupM5Candles = m5;
-    tradeSetupH1Candles = h1;
     if (trendM5) trendAnalysisM5Candles = trendM5;
     computeTradeSetups();
     renderTradeSetupsInternal();
     refreshEmaInternal();
-    // Sofort weiterreichen statt auf den nächsten refreshChart()/POLL_MS zu warten — siehe
-    // refreshCockpitInternal/refreshMarketStructureInternal (Chat 2026-07-19: "TSC hängt").
+    refreshCockpitInternal(); // sofort weiterreichen statt auf den nächsten refreshChart() zu warten
+  } catch (err) {
+    console.error("Trade-Setup-M5-Kerzen fehlgeschlagen:", err);
+  }
+}
+
+async function loadTradeSetupH1() {
+  if (!isForex) return;
+  const seq = ++tradeSetupH1FetchSeq; // Out-of-Order-Guard, siehe loadRangesCandles
+  try {
+    const toMs = replayToMs();
+    // Teilt sich den Cache-Eintrag mit loadInitial (falls currentBar "1h" ist) und
+    // loadRangesCandles — beide bleiben trotzdem bewusst eigene Aufrufe/Poller (siehe Chat
+    // 2026-07-20: "Konzepte sollen sich nicht querbeeinflussen"), der Cache macht das billig.
+    const h1 = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", TRADE_SETUP_CANDLE_COUNT, toMs);
+    if (seq !== tradeSetupH1FetchSeq) return; // inzwischen überholt
+    tradeSetupH1Candles = h1;
+    computeTradeSetups();
+    renderTradeSetupsInternal();
     refreshCockpitInternal();
   } catch (err) {
-    console.error("Trade-Setup-Kerzen fehlgeschlagen:", err);
+    console.error("Trade-Setup-H1-Kerzen fehlgeschlagen:", err);
   }
+}
+
+function scheduleNextTradeSetupM5Poll() {
+  clearTimeout(tradeSetupM5PollTimer);
+  const barMs = barSecondsFor("5m") * 1000;
+  const delay = barMs - (Date.now() % barMs) + CLOSE_POLL_BUFFER_MS;
+  tradeSetupM5PollTimer = setTimeout(async () => {
+    await loadTradeSetupM5();
+    if (chart) scheduleNextTradeSetupM5Poll(); // Komponente könnte während des awaits unmounted worden sein
+  }, delay);
+}
+
+function scheduleNextTradeSetupH1Poll() {
+  clearTimeout(tradeSetupH1PollTimer);
+  const barMs = barSecondsFor("1h") * 1000;
+  const delay = barMs - (Date.now() % barMs) + CLOSE_POLL_BUFFER_MS;
+  tradeSetupH1PollTimer = setTimeout(async () => {
+    await loadTradeSetupH1();
+    if (chart) scheduleNextTradeSetupH1Poll();
+  }, delay);
 }
 
 function refreshChart() {
@@ -1065,8 +1110,10 @@ onMounted(() => {
   loadInitial();
   scheduleNextPoll();
   if (isForex) {
-    loadTradeSetupCandles();
-    tradeSetupPollTimer = setInterval(loadTradeSetupCandles, TRADE_SETUP_POLL_MS);
+    loadTradeSetupM5();
+    loadTradeSetupH1();
+    scheduleNextTradeSetupM5Poll();
+    scheduleNextTradeSetupH1Poll();
     if (rangesNeedsData()) startRangesPolling();
   }
   if (!isForex) {
@@ -1078,9 +1125,12 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  clearTimeout(pollTimer); // scheduleNextPoll() nutzt setTimeout statt setInterval, siehe dort
-  clearInterval(tradeSetupPollTimer);
-  clearInterval(rangesPollTimer);
+  // scheduleNextPoll/-TradeSetupM5Poll/-TradeSetupH1Poll/-RangesPoll nutzen setTimeout statt
+  // setInterval (Kerzenschluss-Ausrichtung, siehe dort) -> clearTimeout statt clearInterval.
+  clearTimeout(pollTimer);
+  clearTimeout(tradeSetupM5PollTimer);
+  clearTimeout(tradeSetupH1PollTimer);
+  clearTimeout(rangesPollTimer);
   clearInterval(windowGaugeTimer);
   clearInterval(dailyGaugeTimer);
   clearTimeout(replayFetchDebounceTimer);
@@ -1140,11 +1190,11 @@ watch(() => props.ranges2LookbackHours, () => {
 watch([() => props.rangesPeriod, () => props.ranges2Period], () => {
   if (rangesH1Candles.length > 0) refreshRangesInternal();
 });
-// Braucht trendAnalysisM5Candles (siehe loadTradeSetupCandles) -> beim Einschalten fehlt sie
-// evtl. noch, dann einmal nachladen; beim Ausschalten reicht refreshEmaInternal (blendet aus,
-// kein Neu-Fetch nötig).
+// Braucht trendAnalysisM5Candles (siehe loadTradeSetupM5) -> beim Einschalten fehlt sie evtl. noch,
+// dann einmal nachladen; beim Ausschalten reicht refreshEmaInternal (blendet aus, kein Neu-Fetch
+// nötig). Nur der M5-Poller, H1 hat mit EMA nichts zu tun.
 watch(() => props.showEma, (on) => {
-  if (on && trendAnalysisM5Candles.length === 0) loadTradeSetupCandles();
+  if (on && trendAnalysisM5Candles.length === 0) loadTradeSetupM5();
   else refreshEmaInternal();
 });
 watch(() => props.showTradeSetupCockpit, () => {
@@ -1165,13 +1215,16 @@ const REPLAY_FETCH_DEBOUNCE_MS = 400; // siehe Chat 2026-07-20: "im Replay-Modus
 watch(() => props.replayUntil, () => {
   refreshChart();
   // Debounced statt bei JEDEM einzelnen "+1 Kerze"-Klick sofort zu fetchen — jeder Fetch ist ein
-  // frischer, spürbar langsamer cTrader-TLS-Connect (siehe loadTradeSetupCandles/loadRangesCandles);
+  // frischer, spürbar langsamer cTrader-TLS-Connect (siehe loadTradeSetupM5/-H1/loadRangesCandles);
   // schnelles mehrfaches Klicken hat sonst mehrere überlappende Fetches gleichzeitig laufen, die
-  // (ohne den *FetchSeq-Guard dort) in falscher Reihenfolge zurückkommen können und den Chart auf
+  // (ohne die *FetchSeq-Guards dort) in falscher Reihenfolge zurückkommen können und den Chart auf
   // einem veralteten Replay-Stand hängen lassen. Bei einem einzelnen Klick spürt man die 400ms nicht.
   clearTimeout(replayFetchDebounceTimer);
   replayFetchDebounceTimer = setTimeout(() => {
-    if (isForex) loadTradeSetupCandles();
+    if (isForex) {
+      loadTradeSetupM5();
+      loadTradeSetupH1();
+    }
     if (rangesNeedsData()) loadRangesCandles();
   }, REPLAY_FETCH_DEBOUNCE_MS);
 });
