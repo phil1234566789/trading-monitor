@@ -60,6 +60,9 @@ interface Line {
   text: string;
   color: string;
   bold?: boolean;
+  // Bestätigungs-/Anti-Bestätigungs-Icon direkt hinter dem Zeilentext, in eigener Farbe (siehe
+  // trendSetupConfirmation) — z.B. der grüne Haken/rote X neben "1h uptrend".
+  suffix?: { text: string; color: string };
 }
 
 const FONT_SIZE = 15;
@@ -109,12 +112,27 @@ interface HitBox {
   height: number;
 }
 
+// Zeigt, ob das aktuelle M5-Setup den H1-Trend bestätigt oder ihm widerspricht (siehe Chat
+// 2026-07-20: "Bestätigungen / Anti-Bestätigungen nur bissl visueller") — grüner Haken bei
+// Übereinstimmung (Long im Uptrend, Short im Downtrend), rotes X bei Gegenrichtung. Bewusst
+// symmetrisch für Downtrend mitgedacht, auch wenn der Algo den noch nicht produziert (siehe
+// marketStructureAnalysis.ts). Kein Icon ohne Setup oder ohne bekannten Trend — nichts zu
+// bestätigen/widerlegen.
+function trendSetupConfirmation(state: CockpitState): { text: string; color: string } | null {
+  if (!state.m5Setup || state.h1Trend === "unknown") return null;
+  const setupIsLong = state.m5Setup.dir === -1;
+  const trendIsUp = state.h1Trend === "uptrend";
+  const confirms = setupIsLong === trendIsUp;
+  return confirms ? { text: " ✓", color: cssColor("candleUp") } : { text: " ✗", color: cssColor("candleDown") };
+}
+
 function buildLines(state: CockpitState, formatPrice: (price: number) => string): Line[] {
   const lines: Line[] = [{ text: "Trade-Setup-Cockpit", color: "rgba(209, 212, 220, 0.8)", bold: true }];
 
   if (state.h1Trend !== "unknown") {
     const color = state.h1Trend === "uptrend" ? cssColor("rangeLow") : cssColor("rangeHigh");
-    lines.push({ text: `1h ${state.h1Trend}`, color });
+    const suffix = trendSetupConfirmation(state) ?? undefined;
+    lines.push({ text: `1h ${state.h1Trend}`, color, suffix });
   }
   if (state.h1LqSweep) {
     lines.push({ text: `1h LQ-Sweep @ ${formatPrice(state.h1LqSweep.price)}`, color: cssColor("rangeLqSweep") });
@@ -172,7 +190,9 @@ class CockpitRenderer {
       let maxWidth = 0;
       for (const line of this._lines) {
         ctx.font = fontFor(line.bold);
-        maxWidth = Math.max(maxWidth, ctx.measureText(line.text).width);
+        let width = ctx.measureText(line.text).width;
+        if (line.suffix) width += ctx.measureText(line.suffix.text).width;
+        maxWidth = Math.max(maxWidth, width);
       }
       const boxWidth = maxWidth + padding * 2;
       const boxHeight = this._lines.length * lineHeight + padding * 2;
@@ -209,7 +229,14 @@ class CockpitRenderer {
       this._lines.forEach((line, i) => {
         ctx.font = fontFor(line.bold);
         ctx.fillStyle = line.color;
-        ctx.fillText(line.text, boxLeft + padding, boxTop + padding + lineHeight * i + lineHeight / 2);
+        const x = boxLeft + padding;
+        const y = boxTop + padding + lineHeight * i + lineHeight / 2;
+        ctx.fillText(line.text, x, y);
+        if (line.suffix) {
+          const textWidth = ctx.measureText(line.text).width; // dasselbe Font wie gerade gesetzt
+          ctx.fillStyle = line.suffix.color;
+          ctx.fillText(line.suffix.text, x + textWidth, y);
+        }
       });
 
       // Positions-Toggle-Badge, oben rechts an der Karte (siehe Chat: "Ein extra Toggle im TSC

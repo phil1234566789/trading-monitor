@@ -11,5 +11,5 @@
     "allowJs": true,
     "checkJs": false
   },
-  "include": ["src/trendZigzag.ts", "src/marketStructureAnalysis.ts", "test/tdd_mit_claude/ranges/tdd_mit_claude.ts"]
+  "include": ["src/pivotMarkers.ts", "src/marketStructureAnalysis.ts", "test/tdd_mit_claude/ranges/tdd_mit_claude.ts"]
 }

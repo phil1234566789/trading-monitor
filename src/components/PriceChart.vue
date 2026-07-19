@@ -4,7 +4,7 @@ import { createChart, CandlestickSeries, LineSeries, TickMarkType } from "lightw
 import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
 import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, LiquidityLinePrimitive } from "../liquidity.js";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
-import { renderZigzag } from "../trendZigzag";
+import { renderPivotMarkers } from "../pivotMarkers";
 import { initMarketStructureState, applyMarketStructurePivot, applyInnerMarketStructurePivot, renderMarketStructureAnalysis } from "../marketStructureAnalysis";
 import { computeCockpitState, renderTradeSetupCockpit } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
@@ -232,8 +232,9 @@ let trendAnalysisM5Candles = [];
 let rangesH1Candles = [];
 let rangesPivots = null; // roh (mit pivotTime), Periode 5 — siehe computeRangesPivotsFor/refreshRangesMarkersInternal
 let rangesPivots2 = null; // roh (mit pivotTime), eingebettete Periode 2 (siehe Chat 2026-07-19)
-// Out-of-Order-Guards für loadRangesCandles/loadTradeSetupM5/loadTradeSetupH1, siehe dort (Chat
-// 2026-07-20: "im Replay-Modus hängt der Trend-Algorithmus").
+// Out-of-Order-Guards für loadInitial/loadRangesCandles/loadTradeSetupM5/loadTradeSetupH1, siehe
+// dort (Chat 2026-07-20: "im Replay-Modus hängt der Trend-Algorithmus").
+let loadInitialFetchSeq = 0;
 let rangesFetchSeq = 0;
 let tradeSetupM5FetchSeq = 0;
 let tradeSetupH1FetchSeq = 0;
@@ -451,34 +452,36 @@ function computeRangesPivotsFor(period, lookbackHours) {
     }));
 }
 
-// Punkt-Marker (KEINE Verbindungslinie) für die H1-Ranges-Pivots — nur sichtbar, wenn sowohl das
-// Ranges-Metadaten-Panel als auch der Debug-Modus an sind (siehe Chat: "wenn ranges angetoggelt
-// ist und debug modus"). Wiederverwendet ZigzagPrimitive/-Renderer aus trendZigzag.ts (Punkt +
-// Preis-Label ist dort schon fertig) — je Pivot ein eigenes 1-Punkt-Segment, damit die dortige
-// Verbindungslinie (entsteht nur bei pts.length > 1 INNERHALB eines Segments) nicht gezeichnet
-// wird. Periode-2-Marker (rangesMarkerPrimitives2) laufen als eigene Primitive-Liste in derselben
-// Pane mit — kleinerer dotRadius + eigene, transparentere Farbe (rangesMarker2), damit man beide
-// Periode-Ebenen optisch auseinanderhält (siehe Chat: "Transparenz auf 50%").
+// Punkt-Marker für die H1-Ranges-Pivots — nur sichtbar, wenn sowohl das Ranges-Metadaten-Panel
+// als auch der Debug-Modus an sind (siehe Chat: "wenn ranges angetoggelt ist und debug modus").
+// Nutzt renderPivotMarkers aus pivotMarkers.ts (Punkt + entzertes Preis-Label ist dort schon
+// fertig) — ALLE Pivots EINER Periode in EINER Gruppe (nicht mehr eine Gruppe pro Pivot wie
+// früher), damit sich ihre Preis-Labels gegenseitig entzerren können, statt bei eng
+// beieinanderliegenden Pivots übereinander zu fallen (Bug-Report Philip 2026-07-19: im
+// M5-Replay mit Debug-Modus lagen alle H1-Pivot-Labels eng übereinander). Periode-2-Marker
+// (rangesMarkerPrimitives2) laufen als eigene Primitive-Liste in derselben Pane mit — kleinerer
+// dotRadius + eigene, transparentere Farbe (rangesMarker2), damit man beide Periode-Ebenen
+// optisch auseinanderhält (siehe Chat: "Transparenz auf 50%").
 function refreshRangesMarkersInternal() {
   const candles = clipReplay(allCandles);
   const precision = pricePrecisionForInstrument(props.symbol);
   const showMarkers = props.showRanges && props.showLiquidityDebug;
 
   if (!showMarkers || !rangesPivots) {
-    renderZigzag(candleSeries, [], rangesMarkerPrimitives, candles);
+    renderPivotMarkers(candleSeries, [], rangesMarkerPrimitives, candles);
   } else {
-    const segments = rangesPivots.map((p) => ({ points: [p], color: cssColor("rangesMarker") }));
-    renderZigzag(candleSeries, segments, rangesMarkerPrimitives, candles, {
+    const groups = [{ points: rangesPivots, color: cssColor("rangesMarker") }];
+    renderPivotMarkers(candleSeries, groups, rangesMarkerPrimitives, candles, {
       showLabels: true,
       formatPrice: (price) => fmtPrice(price, precision),
     });
   }
 
   if (!showMarkers || !rangesPivots2) {
-    renderZigzag(candleSeries, [], rangesMarkerPrimitives2, candles);
+    renderPivotMarkers(candleSeries, [], rangesMarkerPrimitives2, candles);
   } else {
-    const segments2 = rangesPivots2.map((p) => ({ points: [p], color: cssColor("rangesMarker2") }));
-    renderZigzag(candleSeries, segments2, rangesMarkerPrimitives2, candles, {
+    const groups2 = [{ points: rangesPivots2, color: cssColor("rangesMarker2") }];
+    renderPivotMarkers(candleSeries, groups2, rangesMarkerPrimitives2, candles, {
       showLabels: true,
       formatPrice: (price) => fmtPrice(price, precision),
       dotRadius: 1.5,
@@ -884,6 +887,12 @@ function refreshChart() {
 }
 
 async function loadInitial() {
+  // Out-of-Order-Guard (siehe rangesFetchSeq/loadRangesCandles) — seit Bug-Report Philip
+  // 2026-07-19 ("+1 Kerze"-Button tat nichts) läuft loadInitial() nicht mehr nur einmal bei
+  // Mount/TF-Wechsel, sondern auch gedebounced bei jedem Replay-Schritt (siehe replayUntil-
+  // Watcher unten) — schnell aufeinanderfolgende Schritte können also mehrere echte Fetches
+  // gleichzeitig laufen haben, die out-of-order zurückkommen.
+  const seq = ++loadInitialFetchSeq;
   try {
     let candles, deltas;
     // Fester count (INITIAL_CANDLE_COUNT) reicht "bis jetzt" gerechnet nicht bei jedem Timeframe
@@ -911,6 +920,7 @@ async function loadInitial() {
         }),
       ]);
     }
+    if (seq !== loadInitialFetchSeq) return; // inzwischen überholt, siehe oben
     allCandles = candles;
     allCvdDeltas = deltas;
     reachedHistoryStart = false;
@@ -1205,11 +1215,16 @@ watch(() => props.showTradeSetupCockpit, () => {
   refreshCockpitInternal();
 });
 watch(() => [props.tradeSetupCockpitAtCandle, props.tradeSetupCockpitCandleOffset], refreshCockpitInternal);
-// Hauptkerzen (allCandles) selbst brauchen keinen Refetch (siehe clipReplay, oben schon geladen) —
-// refreshChart() reicht dafür sofort. Trade-Setups/Ranges dagegen SCHON: ihr fester count/Lookback
-// hängt ohne replayToMs() am alten Anker (vorheriger replayUntil bzw. "jetzt") fest und deckt den
-// neuen Replay-Zeitpunkt ggf. gar nicht mehr ab (siehe Chat: "Ranges-Pivots gehen bei 12 Tagen
-// Lookback + Replay nicht weit genug zurück") -> echtes Neu-Fetchen mit replayToMs().
+// Hauptkerzen (allCandles) BRAUCHEN hier einen Refetch (Bug-Report Philip 2026-07-19: "+1
+// Kerze"-Button tat einfach nichts) — loadInitial() bindet den Fetch selbst an replayToMs()
+// (siehe dort: "1h auf M5 gewechselt und sehe keinen Chart"), allCandles endet also IMMER exakt
+// an dem Replay-Zeitpunkt, zu dem es zuletzt geladen wurde, nie später. Ohne Neu-Laden hier bleibt
+// es für immer auf diesem alten Stand hängen, sobald replayUntil weiterrückt (z.B. per "+1
+// Kerze") — refreshChart() allein rendert dann nur denselben, schon geclippten Datenstand neu.
+// Trade-Setups/Ranges brauchen aus demselben Grund ebenfalls ein echtes Neu-Fetchen: ihr fester
+// count/Lookback hängt ohne replayToMs() am alten Anker (vorheriger replayUntil bzw. "jetzt")
+// fest und deckt den neuen Replay-Zeitpunkt ggf. gar nicht mehr ab (siehe Chat: "Ranges-Pivots
+// gehen bei 12 Tagen Lookback + Replay nicht weit genug zurück").
 let replayFetchDebounceTimer = null;
 const REPLAY_FETCH_DEBOUNCE_MS = 400; // siehe Chat 2026-07-20: "im Replay-Modus hängt der Algo"
 watch(() => props.replayUntil, () => {
@@ -1217,10 +1232,12 @@ watch(() => props.replayUntil, () => {
   // Debounced statt bei JEDEM einzelnen "+1 Kerze"-Klick sofort zu fetchen — jeder Fetch ist ein
   // frischer, spürbar langsamer cTrader-TLS-Connect (siehe loadTradeSetupM5/-H1/loadRangesCandles);
   // schnelles mehrfaches Klicken hat sonst mehrere überlappende Fetches gleichzeitig laufen, die
-  // (ohne die *FetchSeq-Guards dort) in falscher Reihenfolge zurückkommen können und den Chart auf
-  // einem veralteten Replay-Stand hängen lassen. Bei einem einzelnen Klick spürt man die 400ms nicht.
+  // (ohne die *FetchSeq-Guards dort, inkl. loadInitialFetchSeq) in falscher Reihenfolge
+  // zurückkommen können und den Chart auf einem veralteten Replay-Stand hängen lassen. Bei einem
+  // einzelnen Klick spürt man die 400ms nicht.
   clearTimeout(replayFetchDebounceTimer);
   replayFetchDebounceTimer = setTimeout(() => {
+    loadInitial();
     if (isForex) {
       loadTradeSetupM5();
       loadTradeSetupH1();
@@ -1252,16 +1269,20 @@ watch(
 );
 
 // Für den "+1 Kerze"-Button in Dashboard.vue: replayUntil lebt dort (fließt nur als Prop rein),
-// daher kein direktes Setzen von hier aus möglich — stattdessen den Zeitpunkt der nächsten
-// geladenen Kerze im AKTUELLEN Timeframe (allCandles, unclipped) zurückgeben, den Dashboard.vue
-// dann als neuen replayUntil-Wert übernimmt. `after == null` (noch kein Replay aktiv) liefert die
-// älteste geladene Kerze, damit der Button auch aus Live heraus sofort funktioniert.
+// daher kein direktes Setzen von hier aus möglich — stattdessen den Zeitpunkt der nächsten Kerze
+// im AKTUELLEN Timeframe zurückgeben, den Dashboard.vue dann als neuen replayUntil-Wert übernimmt.
+// `after == null` (noch kein Replay aktiv) liefert die älteste geladene Kerze, damit der Button
+// auch aus Live heraus sofort funktioniert.
+// BEWUSST arithmetisch (after + eine Kerzenlänge) statt in allCandles nach der nächsten
+// tatsächlich geladenen Kerze zu suchen (Bug-Report Philip 2026-07-19: Button tat einfach nichts)
+// — allCandles ist während eines aktiven Replays IMMER exakt bis replayUntil geladen, nie weiter
+// (siehe loadInitial: der Fetch selbst ist an replayToMs() gebunden), enthält also strukturell nie
+// eine Kerze NACH dem aktuellen Replay-Stand. Der arithmetische Sprung braucht dieses Datum nicht
+// — der replayUntil-Watcher unten lädt die dadurch neu sichtbare Kerze nach.
 defineExpose({
   nextReplayTime(after) {
-    for (const c of allCandles) {
-      if (after == null || c.time > after) return c.time;
-    }
-    return null;
+    if (after == null) return allCandles[0]?.time ?? null;
+    return after + barSecondsFor(props.currentBar);
   },
 });
 </script>
