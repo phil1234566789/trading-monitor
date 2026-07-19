@@ -6,6 +6,7 @@ import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, Liq
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { initTrendState, applyPivot, zigzagSegments, renderZigzag } from "../trendZigzag";
 import { initRangeState, applyRangePivot, applyInnerRangePivot, renderRangeAnalysis } from "../rangeAnalysis";
+import { computeCockpitState, renderTradeSetupCockpit } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
@@ -59,6 +60,12 @@ const props = defineProps({
   // wird — null = live (kein Clipping). Zum visuellen Prüfen des Ranges-Algos, ohne Zukunft zu
   // sehen, während er noch entsteht.
   replayUntil: { type: Number, default: null },
+  // Trade-Setup-Cockpit (siehe Chat 2026-07-19: "wir wollen jetzt step by step alles
+  // zusammenstöpseln") — bündelt H1-Range-Analyse + M5-Trade-Setups in einer Karte im Chart.
+  // showTradeSetupCockpit: an/aus. tradeSetupCockpitAtCandle: Positions-Toggle — false (Default)
+  // = fester Platz rechts/mittig (links von der Preis-Skala), true = neben der letzten Kerze.
+  showTradeSetupCockpit: { type: Boolean, default: true },
+  tradeSetupCockpitAtCandle: { type: Boolean, default: false },
 });
 const emit = defineEmits(["close-metadata", "close-ranges-metadata"]);
 
@@ -230,6 +237,7 @@ let zigzagPrimitives = [];
 let rangesMarkerPrimitives = [];
 let rangesMarkerPrimitives2 = []; // eingebettete Periode-2-Debug-Marker, siehe refreshRangesMarkersInternal
 let rangeAnalysisPrimitives = [];
+let cockpitPrimitives = [];
 let tradePrimitives = [];
 let tradeSetupPrimitives = [];
 let allCandles = [];
@@ -634,6 +642,25 @@ function refreshRangeAnalysisInternal() {
   renderRangeAnalysis(candleSeries, state, rangeAnalysisPrimitives, candles);
 }
 
+// Trade-Setup-Cockpit (siehe Chat 2026-07-19) — reine Zusammenfassung, läuft NACH
+// refreshRangeAnalysisInternal (braucht rangeAnalysisState.value) und liest currentTradeSetups
+// direkt aus der Closure (dieselbe Liste, die renderTradeSetupsInternal schon positioniert) — kein
+// eigener Fetch/eigene Erkennung. Nur für Forex (wie Ranges/Trade-Setups selbst).
+function refreshCockpitInternal() {
+  if (!isForex) return;
+  const candles = clipReplay(allCandles);
+  if (!props.showTradeSetupCockpit || candles.length === 0) {
+    renderTradeSetupCockpit(candleSeries, null, cockpitPrimitives, candles);
+    return;
+  }
+  const state = computeCockpitState(rangeAnalysisState.value, currentTradeSetups);
+  const precision = pricePrecisionForInstrument(props.symbol);
+  renderTradeSetupCockpit(candleSeries, state, cockpitPrimitives, candles, {
+    mode: props.tradeSetupCockpitAtCandle ? "candle" : "fixed",
+    formatPrice: (price) => fmtPrice(price, precision),
+  });
+}
+
 // Eigener H1-Fetch fürs Ranges-Metadaten-Panel, unabhängig von tradeSetupH1Candles (siehe oben) —
 // lädt genug Historie für das GRÖSSERE der beiden Lookback-Fenster (Periode 5 + eingebettete
 // Periode 2, siehe Chat 2026-07-19) + Erkennungspuffer. EIN Fetch für beide Perioden (nicht zwei
@@ -840,6 +867,7 @@ function refreshChart() {
   refreshZigzagInternal();
   refreshRangesMarkersInternal();
   refreshRangeAnalysisInternal();
+  refreshCockpitInternal(); // nach refreshRangeAnalysisInternal (braucht rangeAnalysisState.value)
   refreshEmaInternal();
   cvdSeries?.setData(cumulativeFromDeltas(clipReplay(allCvdDeltas)));
   positionGauges();
@@ -1126,6 +1154,7 @@ watch(() => props.showEma, (on) => {
   if (on && trendAnalysisM5Candles.length === 0) loadTradeSetupCandles();
   else refreshEmaInternal();
 });
+watch(() => [props.showTradeSetupCockpit, props.tradeSetupCockpitAtCandle], refreshCockpitInternal);
 // Verschieben von replayUntil braucht keinen Refetch (siehe clipReplay) — nur ein Neu-Ableiten
 // aller von den rohen *Candles-Arrays abhängigen Zustände (currentTradeSetups läuft anders als
 // der Rest nicht automatisch über refreshChart() mit, siehe computeTradeSetups) + Re-Render.

@@ -337,68 +337,10 @@ export class ArrowPrimitive {
   }
 }
 
-// Feste Bildschirmposition (rechts, vertikal mittig in der Pane) statt Preis/Zeit-Koordinate —
-// für das Trend-Label ("1h uptrend"), siehe Chat. Keine der bestehenden Primitives (Linie, Punkt,
-// Pfeil) ist preis-/zeit-UNABHÄNGIG positioniert, daher eigene, sehr kleine Renderer-Klasse.
-class TrendLabelRenderer {
-  private _text: string;
-  private _color: string;
-
-  constructor(text: string, color: string) {
-    this._text = text;
-    this._color = color;
-  }
-
-  draw(target: any) {
-    if (!this._text) return;
-    target.useBitmapCoordinateSpace((scope: any) => {
-      const ctx = scope.context;
-      ctx.font = `${Math.round(13 * scope.verticalPixelRatio)}px sans-serif`;
-      ctx.fillStyle = this._color;
-      ctx.textAlign = "right";
-      ctx.textBaseline = "middle";
-      const x = scope.bitmapSize.width - 12 * scope.horizontalPixelRatio;
-      const y = scope.bitmapSize.height / 2;
-      ctx.fillText(this._text, x, y);
-    });
-  }
-}
-
-class TrendLabelPaneView {
-  private _source: TrendLabelPrimitive;
-
-  constructor(source: TrendLabelPrimitive) {
-    this._source = source;
-  }
-
-  renderer() {
-    return new TrendLabelRenderer(this._source._text, this._source._color);
-  }
-}
-
-export class TrendLabelPrimitive {
-  _text: string;
-  _color: string;
-  _paneViews: TrendLabelPaneView[];
-
-  constructor(text: string, color: string) {
-    this._text = text;
-    this._color = color;
-    this._paneViews = [new TrendLabelPaneView(this)];
-  }
-
-  attached({ requestUpdate }: { requestUpdate: () => void }) {
-    requestUpdate(); // keine Chart-/Series-Referenz nötig, Position kommt rein aus der Pane-Größe
-  }
-
-  updateAllViews() {
-    // nichts zu berechnen — Position wird erst beim Draw aus der Pane-Bitmapgröße abgeleitet
-  }
-
-  paneViews() {
-    return this._paneViews;
-  }
-}
+// Das feste "1h uptrend"-Textlabel (rechts, vertikal mittig) ist seit Chat 2026-07-19 ins
+// Trade-Setup-Cockpit gewandert (siehe tradeSetupCockpit.ts) — stand sonst genau hinter der Karte
+// (dieselbe Position). TrendLabelPrimitive/-Renderer/-PaneView deshalb entfernt statt nur
+// ausgeblendet, um kein totes Zeichen-Primitive mitzuschleppen.
 
 const LINE_WIDTH = 2;
 
@@ -471,12 +413,5 @@ export function renderRangeAnalysis(
     );
     series.attachPrimitive(line);
     existingPrimitives.push(line);
-  }
-
-  if (state.trend !== "unknown") {
-    const color = state.trend === "uptrend" ? lowColor : highColor;
-    const label = new TrendLabelPrimitive(`1h ${state.trend}`, color);
-    series.attachPrimitive(label);
-    existingPrimitives.push(label);
   }
 }

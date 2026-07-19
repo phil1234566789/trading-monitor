@@ -80,6 +80,11 @@ const showRangesMetadata = useLocalStorageRef("showRangesMetadata", false);
 // EMA 50/200 auf M5 (siehe Chat: "Trend über EMA + Anzahl protected highs/lows") — ein Toggle für
 // beide Linien zusammen, keine separaten Schalter je Periode (nicht verlangt).
 const showEma = useLocalStorageRef("showEma", false);
+// Trade-Setup-Cockpit (siehe Chat 2026-07-19: "wir wollen jetzt step by step alles
+// zusammenstöpseln") — bündelt H1-Range-Analyse + M5-Trade-Setups in einer Karte im Chart.
+// tradeSetupCockpitAtCandle ist der Positions-Toggle (fester Platz vs. neben der letzten Kerze).
+const showTradeSetupCockpit = useLocalStorageRef("showTradeSetupCockpit", true);
+const tradeSetupCockpitAtCandle = useLocalStorageRef("tradeSetupCockpitAtCandle", false);
 // Style-Modal (Farben aller Chart-Indikatoren, siehe StyleModal.vue/chartColors.js) — reiner
 // Öffnen/Schließen-Zustand, NICHT in localStorage (die Farben selbst persistieren bereits über
 // den chartColors-Singleton, das Modal muss nicht offen bleiben).
@@ -132,11 +137,13 @@ function stepReplayForward() {
 const liquidityMenuOpen = ref(false);
 const trendMenuOpen = ref(false);
 const rangesMenuOpen = ref(false);
+const tscMenuOpen = ref(false);
 function closeMenusOutside(e) {
   if (!e.target.closest?.(".toggle-group")) {
     liquidityMenuOpen.value = false;
     trendMenuOpen.value = false;
     rangesMenuOpen.value = false;
+    tscMenuOpen.value = false;
   }
 }
 onMounted(() => window.addEventListener("click", closeMenusOutside));
@@ -315,6 +322,25 @@ watch(currentSymbol, () => {
         EMA
       </button>
 
+      <div class="toggle-group">
+        <button :class="{ active: showTradeSetupCockpit }" @click="showTradeSetupCockpit = !showTradeSetupCockpit">
+          TSC
+        </button>
+        <button
+          class="toggle-caret"
+          :class="{ open: tscMenuOpen }"
+          title="Untermenü"
+          @click="tscMenuOpen = !tscMenuOpen"
+        >
+          ▾
+        </button>
+        <div v-if="tscMenuOpen" class="toggle-dropdown">
+          <button :class="{ active: tradeSetupCockpitAtCandle }" @click="tradeSetupCockpitAtCandle = !tradeSetupCockpitAtCandle">
+            Neben Kerze
+          </button>
+        </div>
+      </div>
+
       <button :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
         Debug
       </button>
@@ -365,6 +391,8 @@ watch(currentSymbol, () => {
     :show-ranges="showRanges"
     :show-ranges-metadata="showRangesMetadata"
     :show-ema="showEma"
+    :show-trade-setup-cockpit="showTradeSetupCockpit"
+    :trade-setup-cockpit-at-candle="tradeSetupCockpitAtCandle"
     :replay-until="replayUntil"
     @close-metadata="showMetadata = false"
     @close-ranges-metadata="showRangesMetadata = false"
@@ -382,8 +410,9 @@ watch(currentSymbol, () => {
 <style scoped>
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 8px 16px;
   padding: 8px 16px;
   background: #131722;
   border-bottom: 1px solid #2a2e39;
@@ -393,12 +422,14 @@ watch(currentSymbol, () => {
 .timeframe-switcher,
 .drawing-toggles {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
 }
 
 .drawing-toggles {
   padding-left: 12px;
   border-left: 1px solid #2a2e39;
+  row-gap: 8px;
 }
 
 .symbol-switcher button {
