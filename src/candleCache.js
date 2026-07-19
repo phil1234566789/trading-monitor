@@ -19,6 +19,13 @@ const STORE_NAME = "candles";
 // Jahr durchgehend Handel; jenseits davon ist mit Sicherheit ein Bug am Werk, kein legitimer Fall.
 const SANITY_MAX_CANDLES = 500_000;
 
+// Toleranz für den Cache-Hit-Check in fetchCandlesCached (siehe dort): eine normale Forex-
+// Wochenend-Pause dauert bis zu ~60h (Fr. Abend UTC -> So. Abend UTC), plus etwas Puffer für
+// Feiertage — großzügig genug, um ein normales Wochenende nicht als "Cache reicht nicht" zu werten,
+// aber knapp genug, um ein ECHTES Cache-Loch (mergeCandles lässt zwischen disjunkten Fenstern
+// bewusst Lücken stehen, siehe dort) zuverlässig zu erkennen.
+const MAX_CACHE_GAP_SEC = 3 * 24 * 3600;
+
 let dbPromise = null;
 function openDb() {
   if (dbPromise) return dbPromise;
@@ -92,6 +99,30 @@ function mergeCandles(cached, fresh) {
   return [...before, ...fresh, ...after];
 }
 
+// Kern-Entscheidung für den Replay-Cache-Hit (toMs gesetzt): liefert die letzten `targetCount`
+// gecachten Kerzen bis effectiveEndSec zurück, wenn der Cache dafür KONTINUIERLICH bis dorthin
+// reicht — sonst null (dann muss fetchCandlesCached frisch fetchen). Als eigene, reine Funktion
+// ausgelagert (statt inline in fetchCandlesCached), damit sich genau dieser Bug (siehe unten) ohne
+// echtes IndexedDB testen lässt.
+//
+// BUG (Bug-Report Philip 2026-07-19: M5-Replay auf 08.07. gestellt, Chart zeigte trotzdem nur bis
+// 02.07.) war hier vorher: geprüft wurde `cached[cached.length-1].time >= effectiveEndSec` — das
+// ist die insgesamt LETZTE gecachte Kerze, die aus einem GANZ ANDEREN, späteren Fetch-Fenster
+// stammen kann (z.B. ein Live-Fetch von heute) und mit effectiveEndSec nichts zu tun hat.
+// mergeCandles lässt zwischen disjunkten Fenstern bewusst Lücken stehen (siehe dort) — fiel
+// effectiveEndSec in so eine Lücke, meldete dieser Check trotzdem "Cache reicht" und lieferte eine
+// Kerze von knapp VOR der Lücke als "aktuellste" zurück, obwohl dazwischen tagelang nichts gecacht
+// war. Jetzt wird stattdessen geprüft, ob die tatsächlich zurückgegebene letzte Kerze nah genug an
+// effectiveEndSec liegt (MAX_CACHE_GAP_SEC toleriert ein normales Wochenende).
+export function cachedCandlesUpTo(cached, effectiveEndSec, targetCount) {
+  const upToEnd = cached.filter((c) => c.time <= effectiveEndSec);
+  const newestInRange = upToEnd[upToEnd.length - 1];
+  if (newestInRange && effectiveEndSec - newestInRange.time <= MAX_CACHE_GAP_SEC && upToEnd.length >= targetCount) {
+    return upToEnd.slice(-targetCount);
+  }
+  return null;
+}
+
 // Ersetzt einen vollen fetchFn(symbol, bar, count, toMs)-Aufruf (siehe ctraderCandles.js/OKX-
 // Pendant in PriceChart.vue): liefert `targetCount` Kerzen für symbol+bar bis toMs (bzw. bis
 // "jetzt", wenn toMs null ist) — holt dabei aber nur, was seit dem letzten Cache-Stand fehlt:
@@ -109,11 +140,8 @@ export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs
   const effectiveEndSec = toMs != null ? Math.floor(toMs / 1000) : Math.floor(Date.now() / 1000);
 
   if (toMs != null && cached.length > 0) {
-    const lastCachedTime = cached[cached.length - 1].time;
-    if (lastCachedTime >= effectiveEndSec) {
-      const upToEnd = cached.filter((c) => c.time <= effectiveEndSec);
-      if (upToEnd.length >= targetCount) return upToEnd.slice(-targetCount);
-    }
+    const hit = cachedCandlesUpTo(cached, effectiveEndSec, targetCount);
+    if (hit) return hit;
   }
 
   if (toMs == null && cached.length > 0) {
