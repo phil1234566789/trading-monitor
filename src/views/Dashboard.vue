@@ -69,6 +69,26 @@ const showEma = useLocalStorageRef("showEma", false);
 // den chartColors-Singleton, das Modal muss nicht offen bleiben).
 const showStyleModal = ref(false);
 
+// Replay-Modus (siehe Chat 2026-07-19): Chart + alle Indikatoren zeigen nur Daten bis zu diesem
+// Zeitpunkt, während im Hintergrund ganz normal weitergeholt wird (siehe PriceChart.vue:
+// clipReplay) — zum visuellen Prüfen des Ranges-Algos (oder jedes anderen Indikators), ohne
+// dabei schon die "Zukunft" zu sehen. Bewusst NICHT in localStorage: ein Reload soll immer
+// wieder live starten, nicht in einem alten Replay-Zeitpunkt hängen bleiben.
+const replayUntil = ref(null); // unix Sekunden oder null (= live)
+function toDatetimeLocal(unixSeconds) {
+  const d = new Date(unixSeconds * 1000);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+// <input type="datetime-local"> liefert/erwartet "YYYY-MM-DDTHH:mm" in der Browser-Lokalzeit —
+// new Date(v) parst das wieder als Lokalzeit, der Roundtrip braucht also keine eigene TZ-Logik.
+const replayInputValue = computed({
+  get: () => (replayUntil.value == null ? "" : toDatetimeLocal(replayUntil.value)),
+  set: (v) => {
+    replayUntil.value = v ? Math.floor(new Date(v).getTime() / 1000) : null;
+  },
+});
+
 // Toolbar wurde zu voll (siehe Chat) -> Liquidity-Sweeps unter "Liquidität", Pivots+Metadaten
 // unter "Trend" als Dropdown. Reiner UI-Zustand, bewusst NICHT in localStorage (anders als die
 // Toggles selbst) — welches Dropdown gerade offen ist, ist keine Einstellung, die überdauern muss.
@@ -221,6 +241,14 @@ watch(currentSymbol, () => {
       <button :class="{ active: showStyleModal }" @click="showStyleModal = !showStyleModal">
         🎨 Style
       </button>
+
+      <div class="toggle-group replay-control" :class="{ active: replayUntil != null }">
+        <span class="replay-label">⏮ Replay bis</span>
+        <input v-model="replayInputValue" type="datetime-local" class="replay-input" title="Chart+Indikatoren nur bis zu diesem Zeitpunkt anzeigen" />
+        <button v-if="replayUntil != null" class="replay-live-btn" title="Zurück zu live" @click="replayUntil = null">
+          Live
+        </button>
+      </div>
     </div>
   </div>
 
@@ -245,6 +273,7 @@ watch(currentSymbol, () => {
     :show-ranges="showRanges"
     :show-ranges-metadata="showRangesMetadata"
     :show-ema="showEma"
+    :replay-until="replayUntil"
     @close-metadata="showMetadata = false"
     @close-ranges-metadata="showRangesMetadata = false"
   />
@@ -405,6 +434,45 @@ watch(currentSymbol, () => {
   color: #d1d4dc;
   font-size: 13px;
   padding: 3px 4px;
+}
+
+.replay-control {
+  margin-left: auto;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.replay-control.active {
+  background: rgba(41, 98, 255, 0.12);
+}
+
+.replay-label {
+  font-size: 13px;
+  color: #787b86;
+  white-space: nowrap;
+}
+
+.replay-input {
+  background: #131722;
+  border: 1px solid #2a2e39;
+  border-radius: 4px;
+  color: #d1d4dc;
+  font-size: 13px;
+  padding: 3px 4px;
+  color-scheme: dark;
+}
+
+.replay-live-btn {
+  background: #2962ff;
+  border: none;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .trades-panel {

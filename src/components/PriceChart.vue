@@ -47,6 +47,10 @@ const props = defineProps({
   showRanges: { type: Boolean, default: false },
   showRangesMetadata: { type: Boolean, default: false },
   showEma: { type: Boolean, default: false },
+  // Replay-Modus (siehe Chat 2026-07-19): unix Sekunden, ab denen alles nach "Zeit X" ausgeblendet
+  // wird — null = live (kein Clipping). Zum visuellen Prüfen des Ranges-Algos, ohne Zukunft zu
+  // sehen, während er noch entsteht.
+  replayUntil: { type: Number, default: null },
 });
 const emit = defineEmits(["close-metadata", "close-ranges-metadata"]);
 
@@ -288,9 +292,18 @@ function mergeRecent(existing, freshRecent) {
   return olderPrefix.concat(freshRecent);
 }
 
+// Replay-Modus: alle Fetches (loadInitial/pollRecent/loadRangesCandles/loadTradeSetupCandles)
+// laufen unverändert weiter — geclippt wird ausschließlich hier, an jeder Stelle, wo Kerzen
+// tatsächlich gerendert oder für eine Erkennung (Pivots/OBs/EMA/Setups) genutzt werden. So bleibt
+// z.B. der Lazy-Load-Cursor (allCandles[0].time) unangetastet, und ein Verschieben von
+// replayUntil braucht keinen Refetch, nur ein erneutes refreshChart().
+function clipReplay(rows) {
+  return props.replayUntil == null ? rows : rows.filter((r) => r.time <= props.replayUntil);
+}
+
 function refreshTradeMarkersInternal() {
   const trades = TRADE_MARKER_BARS.has(props.currentBar) ? props.trades : [];
-  renderTradeMarkers(candleSeries, trades, tradePrimitives, allCandles);
+  renderTradeMarkers(candleSeries, trades, tradePrimitives, clipReplay(allCandles));
 }
 
 // POI-Zonen kommen vom poi-watcher-Backend (4H+1H, aus `ob_zones`) statt lokal aus den
@@ -307,13 +320,18 @@ function filterHistorical(zones) {
 // notifications.md) — hier deshalb direkt aus den geladenen Kerzen des aktuellen
 // Timeframes neu erkannt, statt wie bei BTC aus `ob_zones` (Supabase) gerendert.
 function refreshPoiZonesInternal() {
+  const candles = clipReplay(allCandles);
   if (isForex) {
-    const zones = detectOrderBlocks(allCandles)
+    const zones = detectOrderBlocks(candles)
       .filter((z) => !z.invalidated)
       .map((z) => ({ ...z, timeframe: props.currentBar.toUpperCase() }));
-    renderPersistedZones(candleSeries, filterHistorical(zones), orderBlockPrimitives, allCandles);
+    renderPersistedZones(candleSeries, filterHistorical(zones), orderBlockPrimitives, candles);
   } else {
-    renderPersistedZones(candleSeries, filterHistorical(props.poiZones), orderBlockPrimitives, allCandles);
+    // BTC-Zonen kommen fertig vom poi-watcher-Backend (props.poiZones) statt lokal erkannt —
+    // im Replay-Modus trotzdem auf Zonen bis replayUntil beschränken, damit nicht schon
+    // Zonen auftauchen, die "in der Zukunft" (relativ zu X) erst entdeckt wurden.
+    const zones = props.replayUntil == null ? props.poiZones : props.poiZones.filter((z) => z.startTime <= props.replayUntil);
+    renderPersistedZones(candleSeries, filterHistorical(zones), orderBlockPrimitives, candles);
   }
 }
 
@@ -326,16 +344,17 @@ function refreshPoiZonesInternal() {
 // Philip: er braucht wirklich jeden Pivot sichtbar, nicht nur die 10 neuesten je Richtung, die
 // filterRelevantLevels selbst mit onlyRelevant=false noch abschneiden würde.
 function refreshLiquidityInternal() {
+  const candles = clipReplay(allCandles);
   if (!props.showLiquidity) {
-    renderLiquidityLevels(candleSeries, [], liquidityPrimitives, allCandles);
+    renderLiquidityLevels(candleSeries, [], liquidityPrimitives, candles);
     return;
   }
-  const { highs, lows } = detectLiquidityLevels(allCandles, LIQUIDITY_FRACTAL_PERIOD);
+  const { highs, lows } = detectLiquidityLevels(candles, LIQUIDITY_FRACTAL_PERIOD);
   const relevant = props.showSweptLiquidity
     ? [...highs, ...lows]
     : [...filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true), ...filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true)];
   const precision = pricePrecisionForInstrument(props.symbol);
-  renderLiquidityLevels(candleSeries, relevant, liquidityPrimitives, allCandles, {
+  renderLiquidityLevels(candleSeries, relevant, liquidityPrimitives, candles, {
     debugPrices: props.showLiquidityDebug,
     formatPrice: (price) => fmtPrice(price, precision),
   });
@@ -347,13 +366,14 @@ function refreshLiquidityInternal() {
 // werden. Zeigt immer ALLE erkannten Pivots (kein Relevanz-Filter), genau wie
 // "Gesweepte Liquidität" — das war hier ja gerade der Punkt.
 function refreshPivotsInternal() {
+  const candles = clipReplay(allCandles);
   if (!props.showPivots) {
-    renderLiquidityLevels(candleSeries, [], pivotPrimitives, allCandles);
+    renderLiquidityLevels(candleSeries, [], pivotPrimitives, candles);
     return;
   }
-  const { highs, lows } = detectLiquidityLevels(allCandles, PIVOTS_FRACTAL_PERIOD);
+  const { highs, lows } = detectLiquidityLevels(candles, PIVOTS_FRACTAL_PERIOD);
   const precision = pricePrecisionForInstrument(props.symbol);
-  renderLiquidityLevels(candleSeries, [...highs, ...lows], pivotPrimitives, allCandles, {
+  renderLiquidityLevels(candleSeries, [...highs, ...lows], pivotPrimitives, candles, {
     debugPrices: props.showLiquidityDebug,
     formatPrice: (price) => fmtPrice(price, precision),
   });
@@ -366,7 +386,8 @@ function refreshPivotsInternal() {
 // gerendert wird aber gegen allCandles (das sichtbare Timeframe), aus demselben Grund wie bei
 // renderTrendState.
 function computeZigzagState() {
-  const { highs, lows } = detectLiquidityLevels(trendAnalysisM5Candles, PIVOTS_FRACTAL_PERIOD);
+  const candles = clipReplay(trendAnalysisM5Candles);
+  const { highs, lows } = detectLiquidityLevels(candles, PIVOTS_FRACTAL_PERIOD);
   const pivots = [...highs, ...lows]
     .filter((p) => p.pivotTime >= TREND_ANALYSIS_ANCHOR_TIME)
     .sort((a, b) => a.pivotTime - b.pivotTime)
@@ -385,7 +406,7 @@ function computeZigzagState() {
   let state = initTrendState({ trendOrdnung: 1, direction: "down", high: originHigh, low: originLow });
   for (const pivot of pivots) {
     if (pivot === originHigh || pivot === originLow) continue;
-    state = applyPivot(state, pivot, { candles: trendAnalysisM5Candles, fractalPeriod: PIVOTS_FRACTAL_PERIOD });
+    state = applyPivot(state, pivot, { candles, fractalPeriod: PIVOTS_FRACTAL_PERIOD });
   }
   return state;
 }
@@ -399,11 +420,11 @@ function refreshZigzagInternal() {
   trendMetadata.value = state;
 
   if (!props.showZigzag || !state) {
-    renderZigzag(candleSeries, [], zigzagPrimitives, allCandles);
+    renderZigzag(candleSeries, [], zigzagPrimitives, clipReplay(allCandles));
     return;
   }
   const precision = pricePrecisionForInstrument(props.symbol);
-  renderZigzag(candleSeries, zigzagSegments(state), zigzagPrimitives, allCandles, {
+  renderZigzag(candleSeries, zigzagSegments(state), zigzagPrimitives, clipReplay(allCandles), {
     showLabels: props.showLiquidityDebug,
     formatPrice: (price) => fmtPrice(price, precision),
   });
@@ -417,8 +438,12 @@ function refreshZigzagInternal() {
 // erhalten, weil refreshRangesMarkersInternal die Koordinaten braucht — erst pivotForDisplay
 // (siehe oben, schon für den Zigzag-State genutzt) entfernt es fürs Metadaten-Panel.
 function computeRangesPivots() {
-  const cutoff = Math.floor(Date.now() / 1000) - props.rangesLookbackHours * 3600;
-  const { highs, lows } = detectLiquidityLevels(rangesH1Candles, RANGES_FRACTAL_PERIOD);
+  // Im Replay-Modus zählt das Lookback-Fenster ab replayUntil, nicht ab der echten aktuellen
+  // Zeit — sonst wäre das Fenster (7 Tage vor "jetzt") komplett am geclippten Kerzen-Ende
+  // vorbei, sobald replayUntil mehr als rangesLookbackHours in der Vergangenheit liegt.
+  const now = props.replayUntil ?? Math.floor(Date.now() / 1000);
+  const cutoff = now - props.rangesLookbackHours * 3600;
+  const { highs, lows } = detectLiquidityLevels(clipReplay(rangesH1Candles), RANGES_FRACTAL_PERIOD);
   return [...highs, ...lows]
     .filter((p) => p.pivotTime >= cutoff)
     .sort((a, b) => a.pivotTime - b.pivotTime)
@@ -439,12 +464,12 @@ function computeRangesPivots() {
 // wird.
 function refreshRangesMarkersInternal() {
   if (!props.showRanges || !props.showLiquidityDebug || !rangesPivots) {
-    renderZigzag(candleSeries, [], rangesMarkerPrimitives, allCandles);
+    renderZigzag(candleSeries, [], rangesMarkerPrimitives, clipReplay(allCandles));
     return;
   }
   const precision = pricePrecisionForInstrument(props.symbol);
   const segments = rangesPivots.map((p) => ({ points: [p], color: cssColor("rangesMarker") }));
-  renderZigzag(candleSeries, segments, rangesMarkerPrimitives, allCandles, {
+  renderZigzag(candleSeries, segments, rangesMarkerPrimitives, clipReplay(allCandles), {
     showLabels: true,
     formatPrice: (price) => fmtPrice(price, precision),
   });
@@ -482,11 +507,12 @@ function computeRangeAnalysisState() {
 // Debug-Toggle (im Gegensatz zu den rohen Punktmarkern oben).
 function refreshRangeAnalysisInternal() {
   const state = computeRangeAnalysisState();
+  const candles = clipReplay(allCandles);
   if (!props.showRanges || !state) {
-    renderRangeAnalysis(candleSeries, null, rangeAnalysisPrimitives, allCandles);
+    renderRangeAnalysis(candleSeries, null, rangeAnalysisPrimitives, candles);
     return;
   }
-  renderRangeAnalysis(candleSeries, state, rangeAnalysisPrimitives, allCandles);
+  renderRangeAnalysis(candleSeries, state, rangeAnalysisPrimitives, candles);
 }
 
 // Eigener H1-Fetch fürs Ranges-Metadaten-Panel, unabhängig von tradeSetupH1Candles (siehe oben) —
@@ -531,13 +557,15 @@ function refreshRangesPollingState() {
 // die gesamte Historie — wir haben keinen fortlaufenden Zähler wie das Pine-Original, das bei
 // jedem neuen Live-Setup hochzählt.
 function computeTradeSetups() {
-  if (tradeSetupM5Candles.length === 0 || tradeSetupH1Candles.length === 0) {
+  const m5Candles = clipReplay(tradeSetupM5Candles);
+  const h1Candles = clipReplay(tradeSetupH1Candles);
+  if (m5Candles.length === 0 || h1Candles.length === 0) {
     currentTradeSetups = [];
     return;
   }
-  const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(tradeSetupM5Candles, TRADE_SETUP_M5_FRACTAL_PERIOD);
-  const { highs: h1Highs, lows: h1Lows } = detectLiquidityLevels(tradeSetupH1Candles, TRADE_SETUP_H1_FRACTAL_PERIOD);
-  const setupObs = detectSetupObs(tradeSetupM5Candles);
+  const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5Candles, TRADE_SETUP_M5_FRACTAL_PERIOD);
+  const { highs: h1Highs, lows: h1Lows } = detectLiquidityLevels(h1Candles, TRADE_SETUP_H1_FRACTAL_PERIOD);
+  const setupObs = detectSetupObs(m5Candles);
   const params = {
     graceSec: TRADE_SETUP_GRACE_SEC,
     lsMaxLeadSecH1: TRADE_SETUP_LS_MAX_LEAD_SEC_H1,
@@ -545,7 +573,7 @@ function computeTradeSetups() {
     maxDistanceM5: TRADE_SETUP_LS_MAX_DISTANCE_M5,
     maxLookbackSec: TRADE_SETUP_LOOKBACK_SEC,
     obMaxDelaySec: TRADE_SETUP_OB_MAX_DELAY_SEC,
-    nowTime: tradeSetupM5Candles[tradeSetupM5Candles.length - 1].time,
+    nowTime: m5Candles[m5Candles.length - 1].time,
   };
   // Anders als tradeSetupHistoryCountShort/Long im Original (dort "zusätzlich zum aktuell
   // aktiven", 0 = nur das aktive) zählt n hier die GESAMTE Anzahl gezeigter Setups je
@@ -580,8 +608,10 @@ function renderTradeSetupsInternal() {
   for (const p of tradeSetupPrimitives) candleSeries.detachPrimitive(p);
   tradeSetupPrimitives.length = 0;
   if (!isForex || !props.showTradeSetups) return;
+  const candles = clipReplay(allCandles);
 
   for (const setup of currentTradeSetups) {
+    if (props.replayUntil != null && setup.fractal.pivotTime > props.replayUntil) continue;
     const key = setup.dir === 1 ? "tradeSetupShort" : "tradeSetupLong";
     const lsColor = cssColor(key);
     const { top, bottom } = tradeSetupObBoxBounds(setup);
@@ -589,9 +619,9 @@ function renderTradeSetupsInternal() {
     const fractalLine = new LiquidityLinePrimitive(
       setup.fractal,
       { color: cssColor("tradeSetupProtected"), lineWidth: TRADE_SETUP_LINE_WIDTH },
-      allCandles,
+      candles,
     );
-    const lsLine = new LiquidityLinePrimitive(setup.ls, { color: lsColor, lineWidth: TRADE_SETUP_LINE_WIDTH }, allCandles);
+    const lsLine = new LiquidityLinePrimitive(setup.ls, { color: lsColor, lineWidth: TRADE_SETUP_LINE_WIDTH }, candles);
     const obBox = new OrderBlockPrimitive(
       { top, bottom, startTime: setup.obStartTime, endTime: setup.obStartTime + TRADE_SETUP_OB_WIDTH_SEC },
       {
@@ -600,7 +630,7 @@ function renderTradeSetupsInternal() {
         textColor: "rgba(255, 255, 255, 0.9)",
         label: setup.label,
       },
-      allCandles,
+      candles,
     );
 
     for (const primitive of [fractalLine, lsLine, obBox]) {
@@ -623,8 +653,9 @@ function refreshEmaInternal() {
     ema200Series?.setData([]);
     return;
   }
-  ema50Series?.setData(computeEma(trendAnalysisM5Candles, EMA_PERIOD_FAST));
-  ema200Series?.setData(computeEma(trendAnalysisM5Candles, EMA_PERIOD_SLOW));
+  const candles = clipReplay(trendAnalysisM5Candles);
+  ema50Series?.setData(computeEma(candles, EMA_PERIOD_FAST));
+  ema200Series?.setData(computeEma(candles, EMA_PERIOD_SLOW));
 }
 
 // TREND_ANALYSIS_CANDLE_COUNT (2000) liegt über dem Edge-Function-Limit pro Request (1000,
@@ -676,7 +707,7 @@ function refreshChart() {
   // Komponente schon unmounted wurde (z.B. schnelle Navigation zu /protokoll) — chart
   // ist dann bereits disposed, ohne Guard wirft lightweight-charts "Object is disposed".
   if (!chart) return;
-  candleSeries.setData(allCandles);
+  candleSeries.setData(clipReplay(allCandles));
   refreshPoiZonesInternal();
   refreshLiquidityInternal();
   refreshPivotsInternal();
@@ -686,7 +717,7 @@ function refreshChart() {
   refreshRangesMarkersInternal();
   refreshRangeAnalysisInternal();
   refreshEmaInternal();
-  cvdSeries?.setData(cumulativeFromDeltas(allCvdDeltas));
+  cvdSeries?.setData(cumulativeFromDeltas(clipReplay(allCvdDeltas)));
   positionGauges();
 }
 
@@ -954,6 +985,17 @@ watch(() => props.rangesLookbackHours, () => {
 watch(() => props.showEma, (on) => {
   if (on && trendAnalysisM5Candles.length === 0) loadTradeSetupCandles();
   else refreshEmaInternal();
+});
+// Verschieben von replayUntil braucht keinen Refetch (siehe clipReplay) — nur ein Neu-Ableiten
+// aller von den rohen *Candles-Arrays abhängigen Zustände (currentTradeSetups läuft anders als
+// der Rest nicht automatisch über refreshChart() mit, siehe computeTradeSetups) + Re-Render.
+watch(() => props.replayUntil, () => {
+  computeTradeSetups();
+  // rangesPivots hängt am cutoff in computeRangesPivots (jetzt relativ zu replayUntil) — muss
+  // hier explizit neu berechnet werden, refreshChart() allein ruft nur refreshRangeAnalysisInternal
+  // (liest rangesPivots nur, berechnet es nicht neu).
+  if (rangesH1Candles.length > 0) refreshRangesInternal();
+  refreshChart();
 });
 // StyleModal (Dashboard.vue) schreibt direkt in den chartColors-Singleton — Serien-OPTIONEN
 // (Candles/CVD/EMA) werden von refreshChart() nicht angefasst (das setzt nur setData), deshalb

@@ -11,5 +11,5 @@
     "allowJs": true,
     "checkJs": false
   },
-  "include": ["src/trendZigzag.ts", "src/rangeAnalysis.ts", "test/tdd_mit_claude.ts"]
+  "include": ["src/trendZigzag.ts", "src/rangeAnalysis.ts", "test/tdd_mit_claude/ranges/tdd_mit_claude.ts"]
 }

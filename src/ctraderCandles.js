@@ -5,6 +5,12 @@
 // high,low,close}), damit sich beide Datenquellen dort gleich behandeln lassen.
 const CTRADER_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ctrader-candles`;
 const PERIOD_MAP = { "1m": "M1", "3m": "M3", "5m": "M5", "15m": "M15", "1h": "H1", "4h": "H4", "1D": "D1" };
+// Deno.connectTls im Edge-Function-Client (siehe supabase/functions/_shared/ctrader/client.ts)
+// hat selbst keinen Timeout — ohne einen hier würde ein hängender TCP-Connect/Handshake diesen
+// fetch() für immer offen lassen (siehe Chat: HTTP-Aktivitäts-Indikator blieb dauerhaft "an").
+// 20s statt 10s (der interne Timeout je einzelnem cTrader-Request), weil ein kalter Aufruf
+// mehrere solcher Requests SEQUENTIELL braucht (App-/Account-Auth, ggf. Symbol-Liste, Trendbars).
+const REQUEST_TIMEOUT_MS = 20_000;
 
 function ctraderPeriodFor(label) {
   return PERIOD_MAP[label];
@@ -15,6 +21,7 @@ async function fetchCandles(symbol, bar, { count, to } = {}) {
   if (to) params.set("to", String(to));
   const res = await fetch(`${CTRADER_FN_URL}?${params}`, {
     headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
