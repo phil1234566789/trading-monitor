@@ -60,6 +60,116 @@ const p2Pivot35: PivotHigh = { type: 'high', price: 1.337, pivotAt: '08.07.2026 
 const p2Pivot36: PivotLow = { type: 'low', price: 1.33222, pivotAt: '08.07.2026 11:00', pivotTime: 1783501200, touched: false };
 const p2Pivot37: PivotHigh = { type: 'high', price: 1.33775, pivotAt: '08.07.2026 15:00', pivotTime: 1783515600, touched: { price: 1.33775, touchedAt: '08.07.2026 18:00' } };
 
+
 /**
  * Szenario A: uptrend besser und schneller erkennen.
  */
+const rangeState1_1: RangeState = {
+    trend: 'unknown',
+    currRange: {
+        high: pivot2,
+        low: pivot1,
+    },
+    structurePivots: [],
+    innerStructurePivots: [], //hier kommen die periode 2 pivots rein. Da periode 2 konfigurierbar ist, musst du halt auf generischen Code achten.
+    appliedPivots: [
+        pivot1,
+        pivot2
+    ]
+}
+// uns interessieren die p2Pivots immer nur ab dem letzten periode-5-pivot. Die werden einfach schneller erkannt. 
+// Zunächst müssen wir einen p2Pivot nach dem anderen einlesen, bis pivot3 kommt.
+const rangeState1_2: RangeState = {
+    trend: 'unknown',
+    currRange: {
+        high: pivot2,
+        low: pivot1,
+    },
+    structurePivots: [],
+    innerStructurePivots: [
+        p2Pivot3 // da pivot innerhalb der Range ist, passiert nichts
+    ],
+    appliedPivots: [
+        pivot1,
+        pivot2
+    ]
+}
+// pivot3 neu erkannt
+// wenn neuer übergeordneter pivot (also periode-5 in der aktuellen Einstellung), 
+// dann innerStructurePivots CLEAREN 
+// und p2Pivot4, welches zeitlich nach pivot3 kommt in innerstructure aufnehmen
+const rangeState2: RangeState = {
+    trend: 'unknown',
+    currRange: {
+        high: {...pivot2},
+        low: pivot1,
+    },
+    structurePivots: [
+        pivot3
+    ],
+    innerStructurePivots: [],
+    appliedPivots: [
+        pivot1,
+        pivot2,
+        pivot3
+    ]
+}
+// p2Pivot4 wird 2h danach erkannt = Schnelligkeit!
+// p2Pivot4 geht höher als das range.high. Algo muss hier noch die Candles dazu nehmen. 
+// Da keine Candle über dem range.high schließt, wird das range.high noch nicht umgesetzt.
+// was aber passiert: das range.high wurde überschritten, daher muss der typ markiert werden. Ich setze jetzt 'sweeped-high'. Kann sich evtl noch ändern.
+const rangeState2_1: RangeState = {
+    trend: 'unknown',
+    currRange: {
+        high: {...pivot2, type: 'sweeped-high'},
+        low: pivot1,
+    },
+    structurePivots: [
+        pivot3
+    ],
+    innerStructurePivots: [
+        p2Pivot4 // p2Pivot4 aufnehmen, da p2Pivot4.pivotAt nach pivot1.pivotAt
+    ],
+    appliedPivots: [
+        pivot1,
+        pivot2,
+        pivot3
+    ]
+}
+
+/**
+ * HIER STOPP, lass erst mal schauen, dass sweeped-high funktioniert
+ */
+
+// p2Pivot5 bricht tatsächlich das range.high. Jetzt können wir das range.high setzen und unser Algo erkennt den Trend schneller
+// da wir 4 Strukturpunkte haben für einen uptrend (LL, HL, HH, HH) können wir den uptrend bereits setzen.
+// evtl musst du den algo anpassen, weil jetzt ein kleinerer pivot bereits als HL gilt.
+// die Regeln müssten gleich sein, nur dass der kleinere Pivot mit einbezogen wird.
+// FIX (Claude): Klammer nach 'swing-high' hatte gefehlt -> low/structurePivots/innerStructurePivots/
+// appliedPivots landeten dadurch alle IM high-Objekt statt in RangeState. Zu deiner Namensfrage:
+// 'high' statt 'swing-high' — 'swing-high' ist bereits PivotSwingHigh im alten Zigzag-Algo (anderes
+// Konzept, siehe range.type.ts), und initRangeState/applyRangePivot setzen einen bestätigten Bruch
+// jetzt schon immer auf den rohen Typ 'high' zurück (nicht auf einen neuen Namen) — für Konsistenz
+// mit rangeState1_1/pivot2 oben genauso gemacht. Sag Bescheid, falls du das anders wolltest.
+const rangeState1_4: RangeState = {
+    trend: 'uptrend',
+    currRange: {
+        high: { ...p2Pivot5, type: 'high' },
+        low: pivot1,
+    },
+    structurePivots: [],
+    // FRAGE (Claude): p2Pivot5 hier UND gleichzeitig als currRange.high — im Periode-5-Algo landet
+    // der brechende Pivot NICHT zusätzlich in structurePivots (siehe applyRangePivot: der Fall
+    // "pivot.price > currRange.high.price" hängt den Pivot nur an currRange.high, nie an
+    // structurePivots). Soll das hier bewusst anders sein, oder sollte p2Pivot5 raus?
+    // Antwort: p2Pivot5 ist hier mit Absicht, damit man geistig und visuell die innere Struktur gespeichert hat. structurePivots dagegen ist wichtig für relevante Extrem-Punkte, wie "protected-low", daher war das im anderen Algo nicht dabei 
+    innerStructurePivots: [
+        p2Pivot3,
+        p2Pivot4,
+        p2Pivot5
+    ],
+    appliedPivots: [
+        pivot1,
+        pivot2
+    ]
+}

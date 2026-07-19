@@ -166,10 +166,15 @@ class LiquidityLineRenderer {
       const x2 = Math.round(p2.x * scope.horizontalPixelRatio);
       ctx.strokeStyle = this._options.color;
       ctx.lineWidth = this._options.lineWidth;
+      // gestrichelt für "sweeped" (Docht durchbrochen, aber noch kein bestätigter Bruch) — siehe
+      // rangeAnalysis.ts: renderRangeAnalysis, Chat 2026-07-19. setLineDash([]) = durchgezogen,
+      // muss bei jedem draw() neu gesetzt werden (kein impliziter Reset zwischen Primitives).
+      ctx.setLineDash(this._options.dashed ? [6 * scope.horizontalPixelRatio, 4 * scope.horizontalPixelRatio] : []);
       ctx.beginPath();
       ctx.moveTo(Math.min(x1, x2), y);
       ctx.lineTo(Math.max(x1, x2), y);
       ctx.stroke();
+      ctx.setLineDash([]);
 
       // Debug-Modus (showLiquidityDebug-Toggle) und Trendanalyse-Labels: Preis/Beschriftung an
       // der Linie einblenden. labelSide "start" (Default) = am Pivot-Ursprung, wie der Debug-

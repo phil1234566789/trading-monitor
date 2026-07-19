@@ -14,7 +14,20 @@ export type PivotBase<T extends string> = {
   type: T;
 };
 
-export type PivotTypeAll = "high" | "low" | "swing-high" | "swing-low" | "weak-high" | "weak-low" | "protected-high" | "protected-low";
+export type PivotTypeAll =
+  | "high"
+  | "low"
+  | "swing-high"
+  | "swing-low"
+  | "weak-high"
+  | "weak-low"
+  | "protected-high"
+  | "protected-low"
+  // Preis wurde nur mit dem Docht durchbrochen, aber (noch) keine Kerze DARÜBER/-UNTER
+  // geschlossen — Zwischenzustand vor einem echten Bruch (siehe Chat 2026-07-19: eingebettete
+  // Periode-2-Erkennung, rangeState1_3/1_4 in gbp_h1_uptrend_LQ_sweep_long_setup.ts).
+  | "sweeped-high"
+  | "sweeped-low";
 export type PivotTypeDowntrend = "swing-high" | "swing-low" | "weak-high" | "weak-low" | "protected-high" | "lower-high" | "lower-low";
 export type PivotTypeUptrend = "swing-high" | "swing-low" | "weak-high" | "weak-low" | "protected-low" | "higher-low";
 
@@ -33,8 +46,12 @@ export type PivotSwingLow = PivotBase<"swing-low">;
 // anders als beim alten Zigzag-Ansatz (PivotSwingHigh/-Low) werden sie NICHT reklassifiziert,
 // sondern behalten ihren rohen Fraktal-Typ ('high'/'low'). Trotzdem eigene Typen statt Pivot,
 // aus demselben Grund wie oben: ein 'low'-Pivot soll nicht in currRange.high kompilieren können.
-export type PivotHigh = PivotBase<"high">;
-export type PivotLow = PivotBase<"low">;
+// 'sweeped-high'/'sweeped-low' seit Chat 2026-07-19 mit aufgenommen: der Docht-Zwischenzustand
+// gehört fachlich zu "was gerade range.high/low ist", nicht zu structurePivots/innerStructurePivots
+// (die sind für Pullbacks INNERHALB der Range gedacht) — bewusst NICHT 'swing-high' (das ist
+// PivotSwingHigh oben, ein anderes Konzept aus dem alten Zigzag-Algo).
+export type PivotHigh = PivotBase<"high" | "sweeped-high">;
+export type PivotLow = PivotBase<"low" | "sweeped-low">;
 
 export type RangeTrend = "unknown" | "uptrend" | "downtrend";
 
@@ -45,6 +62,10 @@ export type RangeTrend = "unknown" | "uptrend" | "downtrend";
 // Pivots innerhalb der Range (Pullbacks), von denen bei Trendbestätigung einer zu
 // 'protected-high'/'protected-low' reklassifiziert wird — der Rest bleibt unverändert (siehe
 // applyRangePivot).
+// innerStructurePivots seit Chat 2026-07-19: die eingebettete Periode-2-Erkennung (schnellere
+// Uptrend-Bestätigung, siehe gbp_h1_uptrend_LQ_sweep_long_setup.ts) sammelt ihre eigenen Pullback-
+// Pivots getrennt von structurePivots (Periode 5) — beide Ebenen sollen unterscheidbar bleiben,
+// nicht in einer Liste vermischt werden.
 export type RangeState = {
   trend: RangeTrend;
   currRange: {
@@ -52,6 +73,7 @@ export type RangeState = {
     low: PivotLow;
   };
   structurePivots: Pivot[];
+  innerStructurePivots: Pivot[];
   appliedPivots: Pivot[];
 };
 

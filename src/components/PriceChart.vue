@@ -5,7 +5,7 @@ import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "..
 import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, LiquidityLinePrimitive } from "../liquidity.js";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { initTrendState, applyPivot, zigzagSegments, renderZigzag } from "../trendZigzag";
-import { initRangeState, applyRangePivot, renderRangeAnalysis } from "../rangeAnalysis";
+import { initRangeState, applyRangePivot, applyInnerRangePivot, renderRangeAnalysis } from "../rangeAnalysis";
 import { computeEma } from "../ema.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
@@ -177,6 +177,42 @@ function summarizeZigzagState(state) {
 // Rohes Objekt statt fertigem JSON-Text — JsonTree.vue rendert es einklappbar, damit man
 // große Arrays (appliedPivots) schneller überfliegen kann.
 const metadataTree = computed(() => (trendMetadata.value ? summarizeZigzagState(trendMetadata.value) : null));
+
+// Ergebnis-State des "1h-Range"-Algorithmus selbst (nicht nur die rohen Pivot-Listen oben) —
+// zum Gegenprüfen im Replay-Modus gegen die hand-hergeleiteten rangeStateN in
+// gbp_h1_uptrend_LQ_sweep_long_setup.ts (siehe Chat 2026-07-19: "brauch noch das json vom state").
+function summarizeRangeState(state) {
+  if (!state) return null;
+  return {
+    trend: state.trend,
+    currRange: { high: pivotForDisplay(state.currRange.high), low: pivotForDisplay(state.currRange.low) },
+    structurePivots: state.structurePivots.map(pivotForDisplay),
+    innerStructurePivots: state.innerStructurePivots.map(pivotForDisplay),
+    appliedPivots: state.appliedPivots.map(pivotForDisplay),
+  };
+}
+const rangeAnalysisState = ref(null);
+const rangeAnalysisTree = computed(() => summarizeRangeState(rangeAnalysisState.value));
+
+// Copy-Button neben den Metadaten-Überschriften (siehe Chat 2026-07-19) — kopiert den jeweiligen
+// Abschnitt als JSON, z.B. zum 1:1-Abgleich gegen die hand-hergeleiteten rangeStateN in
+// gbp_h1_uptrend_LQ_sweep_long_setup.ts. copiedSection zeigt kurz "✓ kopiert" statt "Kopieren",
+// bevor es sich nach COPIED_FEEDBACK_MS von selbst zurücksetzt.
+const COPIED_FEEDBACK_MS = 1200;
+const copiedSection = ref(null);
+let copiedSectionTimer = null;
+async function copyJson(section, value) {
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(value, null, 2));
+    copiedSection.value = section;
+    clearTimeout(copiedSectionTimer);
+    copiedSectionTimer = setTimeout(() => {
+      copiedSection.value = null;
+    }, COPIED_FEEDBACK_MS);
+  } catch (err) {
+    console.error("Kopieren fehlgeschlagen:", err);
+  }
+}
 
 // lightweight-charts ist inhärent imperativ (Canvas-API) — Chart/Series/Primitives und ihr
 // Zustand bleiben deshalb bewusst reine Closure-Variablen statt reaktiver refs. Sie steuern
@@ -534,6 +570,25 @@ function refreshRangesInternal() {
 // das eigentliche Analyse-Ergebnis der Ranges-Funktion, nicht nur eine Debug-Hilfe. Erster
 // gelesener 'low'/'high' bilden die Start-Range (analog zu computeZigzagState/originHigh/Low),
 // der Rest läuft über applyRangePivot.
+// Ein Pivot ist erst NACH `period` weiteren Kerzen überhaupt als Fraktal erkennbar (siehe
+// isUpFractal/isDownFractal in liquidity.js: braucht period strikt schwächere Kerzen danach) —
+// pivotTime ist die Zeit der Extremkerze selbst, nicht die Erkennungszeit. Näherung über
+// Kalenderstunden (period*3600) statt echter Kerzen-Indizes — bei einer Wochenend-Lücke direkt
+// nach dem Pivot wäre die ECHTE Erkennungszeit etwas später als hier berechnet; für die
+// Größenordnung, um die es beim Mischen der beiden Perioden geht (2h vs. 5h Differenz), reicht
+// das (siehe Chat 2026-07-19).
+function confirmationTime(pivot, period) {
+  return pivot.pivotTime + period * 3600;
+}
+
+// Übergeordnete (rangesPivots, props.rangesPeriod) und eingebettete Pivots (rangesPivots2,
+// props.ranges2Period) laufen auf demselben Kerzen-Fenster, aber mit unterschiedlicher
+// Bestätigungsverzögerung — deshalb NICHT stur nach rohem pivotTime mischen, sondern nach
+// confirmationTime: ein Periode-2-Pivot mit späterem pivotTime kann trotzdem VOR einem Periode-5-
+// Pivot mit früherem pivotTime erkannt werden (siehe Chat 2026-07-19, gbp_h1_uptrend_LQ_sweep_
+// long_setup.ts: p2Pivot4 entsteht erst um 04:00, aber pivot3 -von 23:00- ist zu dem Zeitpunkt
+// schon längst bestätigt). applyRangePivot/applyInnerRangePivot übernehmen den Rest (u.a. das
+// Leeren von innerStructurePivots bei jedem neuen übergeordneten Pivot).
 function computeRangeAnalysisState() {
   if (!rangesPivots || rangesPivots.length < 2) return null;
   const originLow = rangesPivots.find((p) => p.type === "low");
@@ -542,9 +597,18 @@ function computeRangeAnalysisState() {
 
   const [first, second] = originLow.pivotTime <= originHigh.pivotTime ? [originLow, originHigh] : [originHigh, originLow];
   let state = initRangeState(first, second);
-  for (const pivot of rangesPivots) {
-    if (pivot === originLow || pivot === originHigh) continue;
-    state = applyRangePivot(state, pivot);
+
+  const originCutoff = Math.max(first.pivotTime, second.pivotTime);
+  const outerRest = rangesPivots
+    .filter((p) => p !== originLow && p !== originHigh)
+    .map((pivot) => ({ pivot, outer: true, at: confirmationTime(pivot, props.rangesPeriod) }));
+  const innerRest = (rangesPivots2 ?? [])
+    .filter((p) => p.pivotTime > originCutoff)
+    .map((pivot) => ({ pivot, outer: false, at: confirmationTime(pivot, props.ranges2Period) }));
+
+  const merged = [...outerRest, ...innerRest].sort((a, b) => a.at - b.at);
+  for (const entry of merged) {
+    state = entry.outer ? applyRangePivot(state, entry.pivot) : applyInnerRangePivot(state, entry.pivot);
   }
   return state;
 }
@@ -554,6 +618,7 @@ function computeRangeAnalysisState() {
 // Debug-Toggle (im Gegensatz zu den rohen Punktmarkern oben).
 function refreshRangeAnalysisInternal() {
   const state = computeRangeAnalysisState();
+  rangeAnalysisState.value = state; // fürs Metadaten-Panel, unabhängig von showRanges (Zeichnen)
   const candles = clipReplay(allCandles);
   if (!props.showRanges || !state) {
     renderRangeAnalysis(candleSeries, null, rangeAnalysisPrimitives, candles);
@@ -1114,10 +1179,30 @@ defineExpose({
       <p v-else class="metadata-empty">Keine Trend-Daten geladen (Zigzag-Toggle einschalten).</p>
     </MetadataPanel>
     <MetadataPanel v-if="showRangesMetadata" title="Ranges-Metadaten" @close="emit('close-ranges-metadata')">
-      <h4 class="metadata-subheading">Periode {{ rangesPeriod }}</h4>
+      <div class="metadata-subheading-row">
+        <h4 class="metadata-subheading">Range-State</h4>
+        <button class="metadata-copy-btn" :disabled="!rangeAnalysisTree" @click="copyJson('rangeState', rangeAnalysisTree)">
+          {{ copiedSection === 'rangeState' ? '✓ kopiert' : '📋 kopieren' }}
+        </button>
+      </div>
+      <JsonTree v-if="rangeAnalysisTree" :value="rangeAnalysisTree" />
+      <p v-else class="metadata-empty">Kein Range-State (mind. 2 Pivots nötig).</p>
+
+      <div class="metadata-subheading-row">
+        <h4 class="metadata-subheading">Periode {{ rangesPeriod }} (Rohdaten)</h4>
+        <button class="metadata-copy-btn" :disabled="!rangesMetadata" @click="copyJson('period5', rangesMetadata)">
+          {{ copiedSection === 'period5' ? '✓ kopiert' : '📋 kopieren' }}
+        </button>
+      </div>
       <JsonTree v-if="rangesMetadata" :value="rangesMetadata" />
       <p v-else class="metadata-empty">Keine Ranges-Daten geladen.</p>
-      <h4 class="metadata-subheading">Periode {{ ranges2Period }} (eingebettet)</h4>
+
+      <div class="metadata-subheading-row">
+        <h4 class="metadata-subheading">Periode {{ ranges2Period }} (eingebettet, Rohdaten)</h4>
+        <button class="metadata-copy-btn" :disabled="!rangesMetadata2" @click="copyJson('period2', rangesMetadata2)">
+          {{ copiedSection === 'period2' ? '✓ kopiert' : '📋 kopieren' }}
+        </button>
+      </div>
       <JsonTree v-if="rangesMetadata2" :value="rangesMetadata2" />
       <p v-else class="metadata-empty">Keine Ranges-Daten geladen.</p>
     </MetadataPanel>
@@ -1161,8 +1246,37 @@ defineExpose({
   color: #565a64;
 }
 
-.metadata-subheading:first-child {
+.metadata-subheading-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.metadata-subheading-row:first-child .metadata-subheading {
   margin-top: 0;
+}
+
+.metadata-copy-btn {
+  flex: none;
+  background: transparent;
+  border: 1px solid #2a2e39;
+  color: #787b86;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.metadata-copy-btn:hover:not(:disabled) {
+  border-color: #2962ff;
+  color: #d1d4dc;
+}
+
+.metadata-copy-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .ranges-loading {

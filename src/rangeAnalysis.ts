@@ -31,6 +31,7 @@ export function initRangeState(a: Pivot, b: Pivot): RangeState {
       low: { ...low, type: "low" },
     },
     structurePivots: [],
+    innerStructurePivots: [],
     appliedPivots: [a, b],
   };
 }
@@ -66,6 +67,11 @@ function pivotTimeOf(pivot: Pivot): number {
 // mit genug nachträglichen Pullback-Highs in der Struktur) — dafür gibt es noch kein Beispiel in
 // tdd_mit_claude.ts, also bewusst offen gelassen statt geraten (wie beim alten trendZigzag.ts:
 // "STOPP, schreib den algo erst mal bis hier und nicht weiter").
+// Jeder hier gelesene ÜBERGEORDNETE (z.B. Periode-5-)Pivot räumt innerStructurePivots leer —
+// die eingebettete Struktur bezieht sich immer nur auf "seit dem letzten übergeordneten Pivot"
+// (siehe Chat 2026-07-19, gbp_h1_uptrend_LQ_sweep_long_setup.ts: rangeState1_2 -> rangeState2,
+// "wenn neuer übergeordneter pivot, dann innerStructurePivots CLEAREN"). Gilt für alle drei Fälle
+// unten (Low-Bruch/High-Bruch/Struktur-Pullback), nicht nur für den Trend-Bestätigungsfall.
 export function applyRangePivot(state: RangeState, pivot: Pivot): RangeState {
   const { currRange, structurePivots, appliedPivots, trend } = state;
   const nextAppliedPivots = [...appliedPivots, pivot];
@@ -74,6 +80,7 @@ export function applyRangePivot(state: RangeState, pivot: Pivot): RangeState {
     return {
       ...state,
       currRange: { ...currRange, low: { ...pivot, type: "low" } },
+      innerStructurePivots: [],
       appliedPivots: nextAppliedPivots,
     };
   }
@@ -92,20 +99,57 @@ export function applyRangePivot(state: RangeState, pivot: Pivot): RangeState {
         p === protectedLow ? { ...p, type: "protected-low" as const } : p,
       );
       return {
+        ...state,
         trend: "uptrend",
         currRange: { ...currRange, high: { ...pivot, type: "high" } },
         structurePivots: nextStructurePivots,
+        innerStructurePivots: [],
         appliedPivots: nextAppliedPivots,
       };
     }
     return {
       ...state,
       currRange: { ...currRange, high: { ...pivot, type: "high" } },
+      innerStructurePivots: [],
       appliedPivots: nextAppliedPivots,
     };
   }
 
-  return { ...state, structurePivots: [...structurePivots, pivot], appliedPivots: nextAppliedPivots };
+  return {
+    ...state,
+    structurePivots: [...structurePivots, pivot],
+    innerStructurePivots: [],
+    appliedPivots: nextAppliedPivots,
+  };
+}
+
+// Liest einen eingebetteten (z.B. Periode-2-)Pivot ein — läuft NUR gegen die aktuelle Range,
+// NIE gegen die übergeordnete Trend-Bestätigungslogik oben (siehe Chat 2026-07-19,
+// gbp_h1_uptrend_LQ_sweep_long_setup.ts rangeState1_2/rangeState2_1):
+// 1. Pivot liegt innerhalb der Range -> reiner Pullback, landet in innerStructurePivots.
+// 2. Pivot bricht currRange.high preislich (Docht) -> currRange.high wird NICHT ersetzt (das darf
+//    nur ein übergeordneter Pivot, siehe applyRangePivot) — stattdessen nur als 'sweeped-high'
+//    markiert (Preis/pivotTime bleiben die des ALTEN currRange.high, nicht die des brechenden
+//    inneren Pivots). Der inneren Pivot selbst landet zusätzlich in innerStructurePivots. Ob daraus
+//    ein echter Bruch wird, entscheidet erst der nächste übergeordnete Pivot bzw. eine Kerzen-
+//    Close-Prüfung, die es hier noch nicht gibt (kein Testfall dafür bis inkl. rangeState2_1, siehe
+//    Chat: "lass erst mal schauen, dass sweeped-high funktioniert").
+// Anders als applyRangePivot NICHT in appliedPivots (das bleibt reine übergeordnete Zeitachse,
+// siehe rangeState2_1: p2Pivot4 taucht dort nur in innerStructurePivots auf).
+// NICHT implementiert: der spiegelbildliche Fall (innerer Pivot bricht currRange.low) — dafür gibt
+// es noch kein Beispiel.
+export function applyInnerRangePivot(state: RangeState, pivot: Pivot): RangeState {
+  const { currRange, innerStructurePivots } = state;
+
+  if (pivot.type === "high" && pivot.price > currRange.high.price) {
+    return {
+      ...state,
+      currRange: { ...currRange, high: { ...currRange.high, type: "sweeped-high" } },
+      innerStructurePivots: [...innerStructurePivots, pivot],
+    };
+  }
+
+  return { ...state, innerStructurePivots: [...innerStructurePivots, pivot] };
 }
 
 // --- Zeichnung ----------------------------------------------------------------------------------
@@ -297,8 +341,21 @@ export function renderRangeAnalysis(
 
   const highColor = cssColor("rangeHigh");
   const lowColor = cssColor("rangeLow");
-  const highLine = new LiquidityLinePrimitive(toLevel(state.currRange.high, candles), { color: highColor, lineWidth: LINE_WIDTH }, candles);
-  const lowLine = new LiquidityLinePrimitive(toLevel(state.currRange.low, candles), { color: lowColor, lineWidth: LINE_WIDTH }, candles);
+  // Gestrichelt statt durchgezogen, solange range.high/low nur "sweeped" ist (Docht durchbrochen,
+  // aber noch keine Kerze drüber/drunter geschlossen -> kein bestätigter Bruch, siehe Chat
+  // 2026-07-19). Dreieck (ArrowPrimitive) bleibt unverändert — nur die Linie ändert sich.
+  const highDashed = state.currRange.high.type === "sweeped-high";
+  const lowDashed = state.currRange.low.type === "sweeped-low";
+  const highLine = new LiquidityLinePrimitive(
+    toLevel(state.currRange.high, candles),
+    { color: highColor, lineWidth: LINE_WIDTH, dashed: highDashed },
+    candles,
+  );
+  const lowLine = new LiquidityLinePrimitive(
+    toLevel(state.currRange.low, candles),
+    { color: lowColor, lineWidth: LINE_WIDTH, dashed: lowDashed },
+    candles,
+  );
   // rot: unter der Linie, zeigt nach oben; grün: über der Linie, zeigt nach unten (siehe Chat)
   const highArrow = new ArrowPrimitive(state.currRange.high, { color: highColor, direction: "up" }, candles);
   const lowArrow = new ArrowPrimitive(state.currRange.low, { color: lowColor, direction: "down" }, candles);
