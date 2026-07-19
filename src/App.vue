@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useStatusBar } from "./composables/useStatusBar.js";
 import { useHttpActivity } from "./composables/useHttpActivity.js";
+import HttpErrorBanners from "./components/HttpErrorBanners.vue";
 
 const FRESH_MS = 30_000;
 
@@ -46,6 +47,7 @@ const lastUpdateText = computed(() =>
       </nav>
       <span class="last-update">{{ lastUpdateText }}</span>
     </header>
+    <HttpErrorBanners />
     <RouterView />
   </div>
 </template>
