@@ -301,6 +301,17 @@ function clipReplay(rows) {
   return props.replayUntil == null ? rows : rows.filter((r) => r.time <= props.replayUntil);
 }
 
+// Gegenstück zu clipReplay für die FETCH-Seite: ein fester count/Lookback endet sonst immer bei
+// der echten aktuellen Zeit (siehe ctraderCandles.js: toMs ohne Wert = "jetzt"), unabhängig von
+// replayUntil — bei einem Replay-Zeitpunkt, der weiter zurückliegt als count reicht, deckt das
+// geladene Fenster den gewünschten Bereich dann gar nicht ab (siehe Chat: "Ranges-Pivots gehen bei
+// 12 Tagen Lookback + Replay nicht weit genug zurück"). loadRangesCandles/loadTradeSetupCandles
+// übergeben das hier an fetchInitialForexCandles, damit der Fetch selbst schon bis replayUntil
+// zurückreicht statt erst hinterher (zu kurz) geclippt zu werden.
+function replayToMs() {
+  return props.replayUntil == null ? undefined : props.replayUntil * 1000;
+}
+
 function refreshTradeMarkersInternal() {
   const trades = TRADE_MARKER_BARS.has(props.currentBar) ? props.trades : [];
   renderTradeMarkers(candleSeries, trades, tradePrimitives, clipReplay(allCandles));
@@ -521,7 +532,7 @@ async function loadRangesCandles() {
   if (!isForex) return;
   try {
     const count = props.rangesLookbackHours + RANGES_CANDLE_BUFFER;
-    rangesH1Candles = await fetchInitialForexCandles(props.symbol, "1h", count);
+    rangesH1Candles = await fetchInitialForexCandles(props.symbol, "1h", count, replayToMs());
     refreshRangesInternal();
   } catch (err) {
     console.error("Ranges-Kerzen fehlgeschlagen:", err);
@@ -661,8 +672,8 @@ function refreshEmaInternal() {
 // TREND_ANALYSIS_CANDLE_COUNT (2000) liegt über dem Edge-Function-Limit pro Request (1000,
 // siehe ctraderCandles.js) -> seitenweise rückwärts nachladen, analog zu fetchAllSince im
 // fetch-trend-fixture.mjs-Script.
-async function fetchTrendAnalysisM5History(symbol, targetCount) {
-  let all = await fetchInitialForexCandles(symbol, "5m", Math.min(targetCount, 1000));
+async function fetchTrendAnalysisM5History(symbol, targetCount, toMs) {
+  let all = await fetchInitialForexCandles(symbol, "5m", Math.min(targetCount, 1000), toMs);
   while (all.length < targetCount && all.length > 0) {
     const older = await fetchOlderForexCandles(symbol, "5m", all[0].time, 1000);
     if (older.length === 0) break;
@@ -682,12 +693,13 @@ async function fetchTrendAnalysisM5History(symbol, targetCount) {
 async function loadTradeSetupCandles() {
   if (!isForex) return;
   try {
+    const toMs = replayToMs();
     const fetches = [
-      fetchInitialForexCandles(props.symbol, "5m", TRADE_SETUP_CANDLE_COUNT),
-      fetchInitialForexCandles(props.symbol, "1h", TRADE_SETUP_CANDLE_COUNT),
+      fetchInitialForexCandles(props.symbol, "5m", TRADE_SETUP_CANDLE_COUNT, toMs),
+      fetchInitialForexCandles(props.symbol, "1h", TRADE_SETUP_CANDLE_COUNT, toMs),
     ];
     if (props.showZigzag || props.showMetadata || props.showEma) {
-      fetches.push(fetchTrendAnalysisM5History(props.symbol, TREND_ANALYSIS_CANDLE_COUNT));
+      fetches.push(fetchTrendAnalysisM5History(props.symbol, TREND_ANALYSIS_CANDLE_COUNT, toMs));
     }
     const [m5, h1, trendM5] = await Promise.all(fetches);
     tradeSetupM5Candles = m5;
@@ -990,11 +1002,12 @@ watch(() => props.showEma, (on) => {
 // aller von den rohen *Candles-Arrays abhängigen Zustände (currentTradeSetups läuft anders als
 // der Rest nicht automatisch über refreshChart() mit, siehe computeTradeSetups) + Re-Render.
 watch(() => props.replayUntil, () => {
-  computeTradeSetups();
-  // rangesPivots hängt am cutoff in computeRangesPivots (jetzt relativ zu replayUntil) — muss
-  // hier explizit neu berechnet werden, refreshChart() allein ruft nur refreshRangeAnalysisInternal
-  // (liest rangesPivots nur, berechnet es nicht neu).
-  if (rangesH1Candles.length > 0) refreshRangesInternal();
+  // Nicht nur neu rendern (clipReplay reicht hier NICHT) — der feste count/Lookback der Fetches
+  // selbst hängt ohne replayToMs am alten Anker (vorheriger replayUntil bzw. "jetzt") fest und
+  // deckt den neuen Replay-Zeitpunkt ggf. gar nicht mehr ab (siehe Chat: "Ranges-Pivots gehen bei
+  // 12 Tagen Lookback + Replay nicht weit genug zurück") -> echtes Neu-Fetchen mit replayToMs().
+  if (isForex) loadTradeSetupCandles();
+  if (rangesNeedsData()) loadRangesCandles();
   refreshChart();
 });
 // StyleModal (Dashboard.vue) schreibt direkt in den chartColors-Singleton — Serien-OPTIONEN

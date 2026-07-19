@@ -28,8 +28,13 @@ async function fetchCandles(symbol, bar, { count, to } = {}) {
   return json; // oldest zuerst
 }
 
-export async function fetchInitialCandles(symbol, bar, count) {
-  return fetchCandles(symbol, bar, { count });
+// toMs (optional, ms-Epoch): ohne das die neuesten `count` Kerzen bis "jetzt" — für den
+// Replay-Modus (siehe PriceChart.vue: clipReplay/loadRangesCandles/loadTradeSetupCandles) muss
+// der initiale Fetch aber bis zum Replay-Zeitpunkt zurückreichen, nicht bis zur echten aktuellen
+// Zeit, sonst deckt ein festes count/Lookback-Fenster den geclippten Bereich nicht ab (siehe Chat:
+// "Ranges-Pivots gehen bei 12 Tagen Lookback + Replay nicht weit genug zurück").
+export async function fetchInitialCandles(symbol, bar, count, toMs) {
+  return fetchCandles(symbol, bar, { count, to: toMs });
 }
 
 export async function fetchRecentCandles(symbol, bar, count) {

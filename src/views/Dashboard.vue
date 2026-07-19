@@ -16,11 +16,14 @@ import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 const SYMBOLS = ["GBPUSD", "EURUSD", "BTC-USDT"];
 const POLL_MS = 12_000;
 
-const currentSymbol = ref("GBPUSD");
-const currentBar = ref("5m");
 // Toggle-Zustand persistiert in localStorage (siehe useLocalStorageRef), damit ein Reload nicht
 // jedes Mal auf die Default-Werte zurückspringt — die Defaults hier gelten nur beim allerersten
-// Aufruf (noch nichts im localStorage).
+// Aufruf (noch nichts im localStorage). Symbol/Timeframe waren früher reine (nicht-persistierte)
+// refs — beim Ranges-Algo-Testen mit Replay (siehe Chat 2026-07-19) nervt ein Reset auf 5m/GBPUSD
+// bei jedem Reload aber, deshalb jetzt genau wie die Toggles persistiert. Defaults hier bewusst
+// aufs aktuelle Testszenario gesetzt (GBP 1h) statt auf die alten Werte.
+const currentSymbol = useLocalStorageRef("currentSymbol", "GBPUSD");
+const currentBar = useLocalStorageRef("currentBar", "1h");
 // Historische (bereits angetestete) OB-Zonen standardmäßig ausgeblendet, um den Chart
 // übersichtlich zu halten — analog zum "Historische OBs"-Toggle im tv-indikator-Projekt
 // (dort default auch aus). Ein einzelner Schalter statt pro-Timeframe (4H/1H getrennt wie
@@ -72,14 +75,16 @@ const showStyleModal = ref(false);
 // Replay-Modus (siehe Chat 2026-07-19): Chart + alle Indikatoren zeigen nur Daten bis zu diesem
 // Zeitpunkt, während im Hintergrund ganz normal weitergeholt wird (siehe PriceChart.vue:
 // clipReplay) — zum visuellen Prüfen des Ranges-Algos (oder jedes anderen Indikators), ohne
-// dabei schon die "Zukunft" zu sehen. Bewusst NICHT in localStorage: ein Reload soll immer
-// wieder live starten, nicht in einem alten Replay-Zeitpunkt hängen bleiben.
+// dabei schon die "Zukunft" zu sehen. Jetzt (siehe Chat 2026-07-19) genau wie Symbol/Timeframe
+// persistiert, damit das aktuelle Testszenario nicht bei jedem Reload zurückspringt — Default
+// hier ist bewusst schon auf den Start des Long-Setup-Testszenarios gesetzt (02.07.2026 19:00,
+// kurz nach pivot5 in gbp_h1_uptrend_LQ_sweep_long_setup.ts).
 // replayTime (der eingestellte Zeitpunkt) und replayActive (Toggle) sind bewusst getrennt — der
 // "⏮ Replay bis"-Button schaltet nur zwischen live/replay um, ohne den eingestellten Zeitpunkt im
 // Datumsfeld daneben zu löschen (siehe Chat: "verschwinden aber die eingestellten datetime daten
 // im input daneben nicht"). replayUntil (an PriceChart durchgereicht) ist nur die Kombination.
-const replayTime = ref(null); // unix Sekunden, bleibt auch bei ausgeschaltetem Replay stehen
-const replayActive = ref(false);
+const replayTime = useLocalStorageRef("replayTime", 1783011600); // 02.07.2026 19:00 (Berlin)
+const replayActive = useLocalStorageRef("replayActive", true);
 const replayUntil = computed(() => (replayActive.value ? replayTime.value : null));
 function toDatetimeLocal(unixSeconds) {
   const d = new Date(unixSeconds * 1000);
