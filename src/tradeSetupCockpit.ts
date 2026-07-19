@@ -67,6 +67,19 @@ const PADDING = 16;
 const EDGE_MARGIN = 12; // Abstand zum Pane-Rand im 'fixed'-Modus
 const CANDLE_OFFSET = 14; // Abstand zur letzten Kerze im 'candle'-Modus
 
+// Positions-Toggle DIREKT an der Karte (siehe Chat 2026-07-19: "Ein extra Toggle im TSC selbst
+// bitte" — zusätzlich zum bestehenden Toolbar-Dropdown, nicht als Ersatz). Kleines Badge oben
+// rechts an der Karte statt die ganze Karte klickbar zu machen, damit spätere Klicks auf die
+// Karte selbst (z.B. fürs Chart dahinter) nicht versehentlich die Position umschalten.
+const BADGE_RADIUS = 9;
+
+interface HitBox {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 function buildLines(state: CockpitState, formatPrice: (price: number) => string): Line[] {
   const lines: Line[] = [{ text: "Trade-Setup-Cockpit", color: "rgba(209, 212, 220, 0.8)", bold: true }];
 
@@ -93,16 +106,25 @@ class CockpitRenderer {
   private _mode: "fixed" | "candle";
   private _point: { x: number | null; y: number | null };
   private _lines: Line[];
+  private _primitive: TradeSetupCockpitPrimitive;
 
-  constructor(mode: "fixed" | "candle", point: { x: number | null; y: number | null }, lines: Line[]) {
+  constructor(
+    mode: "fixed" | "candle",
+    point: { x: number | null; y: number | null },
+    lines: Line[],
+    primitive: TradeSetupCockpitPrimitive,
+  ) {
     this._mode = mode;
     this._point = point;
     this._lines = lines;
+    this._primitive = primitive;
   }
 
   draw(target: any) {
-    if (this._lines.length === 0) return;
-    if (this._mode === "candle" && (this._point.x === null || this._point.y === null)) return;
+    if (this._lines.length === 0 || (this._mode === "candle" && (this._point.x === null || this._point.y === null))) {
+      this._primitive._hitBox = null;
+      return;
+    }
 
     target.useBitmapCoordinateSpace((scope: any) => {
       const ctx = scope.context;
@@ -145,6 +167,32 @@ class CockpitRenderer {
         ctx.fillStyle = line.color;
         ctx.fillText(line.text, boxLeft + padding, boxTop + padding + lineHeight * i + lineHeight / 2);
       });
+
+      // Positions-Toggle-Badge, oben rechts an der Karte (siehe Chat: "Ein extra Toggle im TSC
+      // selbst"). hitBox wird in CSS-Pixeln (nicht Bitmap-skaliert) gespeichert, weil
+      // chart.subscribeClick() (siehe PriceChart.vue) Klickpunkte in CSS-Pixeln liefert.
+      const badgeRadius = Math.round(BADGE_RADIUS * scope.horizontalPixelRatio);
+      const badgeCenterX = boxLeft + boxWidth - badgeRadius * 0.9;
+      const badgeCenterY = boxTop + badgeRadius * 0.9;
+      ctx.beginPath();
+      ctx.arc(badgeCenterX, badgeCenterY, badgeRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(41, 98, 255, 0.9)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(19, 23, 34, 0.9)";
+      ctx.lineWidth = Math.max(1, Math.round(scope.horizontalPixelRatio));
+      ctx.stroke();
+      ctx.fillStyle = "#fff";
+      ctx.font = `${Math.round(11 * scope.verticalPixelRatio)}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("⇄", badgeCenterX, badgeCenterY + Math.round(scope.verticalPixelRatio));
+
+      this._primitive._hitBox = {
+        left: (badgeCenterX - badgeRadius) / scope.horizontalPixelRatio,
+        top: (badgeCenterY - badgeRadius) / scope.verticalPixelRatio,
+        width: (badgeRadius * 2) / scope.horizontalPixelRatio,
+        height: (badgeRadius * 2) / scope.verticalPixelRatio,
+      };
     });
   }
 }
@@ -171,7 +219,7 @@ class CockpitPaneView {
   }
 
   renderer() {
-    return new CockpitRenderer(this._source._mode, this._point, this._source._lines);
+    return new CockpitRenderer(this._source._mode, this._point, this._source._lines, this._source);
   }
 }
 
@@ -182,6 +230,7 @@ export class TradeSetupCockpitPrimitive {
   _paneViews: CockpitPaneView[];
   _chart: any;
   _series: any;
+  _hitBox: HitBox | null;
 
   constructor(lines: Line[], mode: "fixed" | "candle", candles: Candle[]) {
     this._lines = lines;
@@ -190,6 +239,15 @@ export class TradeSetupCockpitPrimitive {
     this._paneViews = [new CockpitPaneView(this)];
     this._chart = null;
     this._series = null;
+    this._hitBox = null;
+  }
+
+  // Klick-Hittest fürs Positions-Toggle-Badge (siehe CockpitRenderer.draw) — point in CSS-Pixeln,
+  // wie von chart.subscribeClick() geliefert (siehe PriceChart.vue).
+  hitTestToggle(point: { x: number; y: number }): boolean {
+    const box = this._hitBox;
+    if (!box) return false;
+    return point.x >= box.left && point.x <= box.left + box.width && point.y >= box.top && point.y <= box.top + box.height;
   }
 
   attached({ chart, series, requestUpdate }: { chart: any; series: any; requestUpdate: () => void }) {

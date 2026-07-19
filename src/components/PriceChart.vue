@@ -4,7 +4,7 @@ import { createChart, CandlestickSeries, LineSeries, TickMarkType } from "lightw
 import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
 import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, LiquidityLinePrimitive } from "../liquidity.js";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
-import { initTrendState, applyPivot, zigzagSegments, renderZigzag } from "../trendZigzag";
+import { renderZigzag } from "../trendZigzag";
 import { initRangeState, applyRangePivot, applyInnerRangePivot, renderRangeAnalysis } from "../rangeAnalysis";
 import { computeCockpitState, renderTradeSetupCockpit } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
@@ -41,9 +41,6 @@ const props = defineProps({
   showLiquidityDebug: { type: Boolean, default: false },
   showTradeSetups: { type: Boolean, default: true },
   tradeSetupHistoryCount: { type: Number, default: 5 },
-  showMetadata: { type: Boolean, default: false },
-  showPivots: { type: Boolean, default: false },
-  showZigzag: { type: Boolean, default: false },
   rangesPeriod: { type: Number, default: 5 },
   rangesLookbackHours: { type: Number, default: 7 * 24 },
   showRanges: { type: Boolean, default: false },
@@ -67,7 +64,7 @@ const props = defineProps({
   showTradeSetupCockpit: { type: Boolean, default: true },
   tradeSetupCockpitAtCandle: { type: Boolean, default: false },
 });
-const emit = defineEmits(["close-metadata", "close-ranges-metadata"]);
+const emit = defineEmits(["close-ranges-metadata", "toggle-tsc-position"]);
 
 // CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
 // bleiben Gauges/CVD-Pane komplett weg statt leer. Der Wert steht bei onMounted fest:
@@ -86,11 +83,6 @@ const WINDOW_BARS = 15; // letzte 15 Binance-1m-Kerzen für das rollierende Gaug
 const TRADE_MARKER_BARS = new Set(["1m", "5m", "15m", "1h"]); // 4h/1D würden zu unübersichtlich
 const LIQUIDITY_FRACTAL_PERIOD = 5; // Williams-Fractal-Periode, siehe fractals.pine — NICHT anfassen (LQ-Sweeps), siehe Chat
 const LIQUIDITY_MAX_RELEVANT = 10; // je Richtung, siehe liqMaxRelevant in inputs.pine
-// Eigenständiger "Pivots"-Toggle für die Trendanalyse-Diskussion — bewusst eine eigene Periode
-// (10 statt 5) UND eine eigene Erkennung/Primitives-Liste, damit die LQ-Sweep-Linien (Periode 5,
-// oben) davon unberührt bleiben (siehe Chat: "die LQ-Sweeps dürfen nicht verändert werden").
-const PIVOTS_FRACTAL_PERIOD = 10;
-
 // Trade-Setup (Liquidity Sweep + Protected M5-Fraktal + M5-OB, siehe tv-indikator/src/
 // tradesetup.pine) — nur für Forex (braucht M5-Kerzen zusätzlich zum aktuell angezeigten
 // Chart-Timeframe). Werte 1:1 aus den getunten Defaults in tv-indikator/src/inputs.pine
@@ -116,17 +108,11 @@ const TRADE_SETUP_LINE_WIDTH = 2;
 const TRADE_SETUP_OB_FILL_RATIO = 0.22 / 0.9;
 const TRADE_SETUP_OB_BORDER_RATIO = 0.7 / 0.9;
 
-// Zigzag/Metadaten (siehe trendZigzag.js) brauchen mehr M5-Historie als tradeSetupM5Candles
-// (300 = ~25h) — eigener Fetch, nur solange einer der beiden Toggles an ist (jeder Fetch ist ein
-// frischer cTrader-TLS-Connect, siehe loadTradeSetupCandles). fetchTrendAnalysisM5History
-// paginiert automatisch nach, falls der Anker (siehe unten) irgendwann weiter als ~83h (1000
-// Kerzen, Edge-Function-Limit pro Request) zurückliegt.
+// EMA (siehe unten) braucht mehr M5-Historie als tradeSetupM5Candles (300 = ~25h) — eigener
+// Fetch, nur solange der EMA-Toggle an ist (jeder Fetch ist ein frischer cTrader-TLS-Connect,
+// siehe loadTradeSetupCandles). fetchTrendAnalysisM5History paginiert automatisch nach, falls
+// TREND_ANALYSIS_CANDLE_COUNT über dem Edge-Function-Limit pro Request (1000) liegt.
 const TREND_ANALYSIS_CANDLE_COUNT = 1000;
-// Fester Anker für den Zigzag-Algo statt automatischer Herleitung — siehe Chat: der Trend soll
-// exakt am Ursprung des Pivots starten, den man als Referenz nehmen will (hier: der Swing High
-// 1.35578 vom 15.07). 19:20 statt 20:20 (Pivot-Kerze selbst), damit die Fraktal-Erkennung
-// (braucht period=5 Kerzen davor) den Pivot bei 1.35578 überhaupt als solchen erkennt.
-const TREND_ANALYSIS_ANCHOR_TIME = Math.floor(new Date("2026-07-15T19:20:00+02:00").getTime() / 1000);
 
 // "Ranges" — erster Baustein des neuen PA-Analyse-Konzepts (siehe Chat 2026-07-18): H1-Fraktale
 // im konfigurierbaren Lookback-Fenster (rangesLookbackHours), noch ohne weak/protected/sweep-
@@ -155,35 +141,14 @@ const chartContainerRef = ref(null);
 const gaugesBottom = ref(12);
 const windowDelta = ref(0);
 const dailyDelta = ref(0);
-const trendMetadata = ref(null); // Rohkopie des Zigzag-States fürs Metadaten-Panel, siehe refreshZigzagInternal
-
-// Menschenlesbare Zusammenfassung fürs Metadaten-Panel — jetzt der ZIGZAG-State (siehe
-// src/trendZigzag.ts, src/range.type.ts / test/tdd_mit_claude.ts), NICHT mehr
-// buildNestedTrendStructure: Philip hat das explizit so spezifiziert (trendOrdnung statt
-// chartLabel "Rahmen (übergeordnet)", siehe Chat). pivotTime ist nur intern fürs Rendern der
-// Zigzag-Linien nötig, taucht hier bewusst nicht auf (Philips Pivot-Typ hat kein Pflichtfeld
-// dafür, nur das menschenlesbare pivotAt).
+// pivotTime ist nur intern fürs Rendern der Zigzag-/Ranges-Linien nötig, taucht in den
+// Metadaten-Panels bewusst nicht auf (Philips Pivot-Typ hat kein Pflichtfeld dafür, nur das
+// menschenlesbare pivotAt).
 function pivotForDisplay(p) {
   if (!p) return null;
   const { pivotTime, ...rest } = p;
   return rest;
 }
-function summarizeZigzagState(state) {
-  if (!state) return null;
-  return {
-    trendOrdnung: state.trendOrdnung,
-    direction: state.direction,
-    confirmation: state.confirmation,
-    range: { high: pivotForDisplay(state.range.high), low: pivotForDisplay(state.range.low) },
-    structure: state.structure.map(pivotForDisplay),
-    innerStructure: state.innerStructure,
-    appliedPivots: state.appliedPivots.map(pivotForDisplay),
-    trendInvalidatingPivot: pivotForDisplay(state.trendInvalidatingPivot),
-  };
-}
-// Rohes Objekt statt fertigem JSON-Text — JsonTree.vue rendert es einklappbar, damit man
-// große Arrays (appliedPivots) schneller überfliegen kann.
-const metadataTree = computed(() => (trendMetadata.value ? summarizeZigzagState(trendMetadata.value) : null));
 
 // Ergebnis-State des "1h-Range"-Algorithmus selbst (nicht nur die rohen Pivot-Listen oben) —
 // zum Gegenprüfen im Replay-Modus gegen die hand-hergeleiteten rangeStateN in
@@ -232,8 +197,6 @@ let ema200Series;
 let resizeObserver;
 let orderBlockPrimitives = [];
 let liquidityPrimitives = [];
-let pivotPrimitives = [];
-let zigzagPrimitives = [];
 let rangesMarkerPrimitives = [];
 let rangesMarkerPrimitives2 = []; // eingebettete Periode-2-Debug-Marker, siehe refreshRangesMarkersInternal
 let rangeAnalysisPrimitives = [];
@@ -430,76 +393,6 @@ function refreshLiquidityInternal() {
   const precision = pricePrecisionForInstrument(props.symbol);
   renderLiquidityLevels(candleSeries, relevant, liquidityPrimitives, candles, {
     debugPrices: props.showLiquidityDebug,
-    formatPrice: (price) => fmtPrice(price, precision),
-  });
-}
-
-// "Pivots"-Toggle: exakt dieselbe Erkennung/Zeichnung wie die LQ-Sweep-Linien oben, aber mit
-// eigener Periode (10) und eigener Primitives-Liste — komplett unabhängig von
-// refreshLiquidityInternal, damit die LQ-Sweep-Linien (Periode 5) davon niemals beeinflusst
-// werden. Zeigt immer ALLE erkannten Pivots (kein Relevanz-Filter), genau wie
-// "Gesweepte Liquidität" — das war hier ja gerade der Punkt.
-function refreshPivotsInternal() {
-  const candles = clipReplay(allCandles);
-  if (!props.showPivots) {
-    renderLiquidityLevels(candleSeries, [], pivotPrimitives, candles);
-    return;
-  }
-  const { highs, lows } = detectLiquidityLevels(candles, PIVOTS_FRACTAL_PERIOD);
-  const precision = pricePrecisionForInstrument(props.symbol);
-  renderLiquidityLevels(candleSeries, [...highs, ...lows], pivotPrimitives, candles, {
-    debugPrices: props.showLiquidityDebug,
-    formatPrice: (price) => fmtPrice(price, precision),
-  });
-}
-
-// "Zigzag"-Toggle: Philips eigener Marktstruktur-Entwurf (siehe test/tdd_mit_claude.ts
-// und trendZigzag.ts) — verbindet die M5-Periode-10-Pivots seit dem Trend-Ursprung
-// (TREND_ANALYSIS_ANCHOR_TIME) der Reihe nach mit Linien, statt horizontale Level zu zeichnen.
-// Nutzt trendAnalysisM5Candles (nicht allCandles!), weil der Ursprung mehrere Tage zurückliegt —
-// gerendert wird aber gegen allCandles (das sichtbare Timeframe), aus demselben Grund wie bei
-// renderTrendState.
-function computeZigzagState() {
-  const candles = clipReplay(trendAnalysisM5Candles);
-  const { highs, lows } = detectLiquidityLevels(candles, PIVOTS_FRACTAL_PERIOD);
-  const pivots = [...highs, ...lows]
-    .filter((p) => p.pivotTime >= TREND_ANALYSIS_ANCHOR_TIME)
-    .sort((a, b) => a.pivotTime - b.pivotTime)
-    .map((p) => ({
-      price: p.price,
-      pivotTime: p.pivotTime,
-      type: p.dir === 1 ? "high" : "low",
-      touched: p.touched ? { price: p.price, touchedAt: fmtDateTime(p.touchedTime) } : false,
-      pivotAt: fmtDateTime(p.pivotTime),
-    }));
-
-  const originHigh = pivots.find((p) => p.type === "high");
-  const originLow = pivots.find((p) => p.type === "low");
-  if (!originHigh || !originLow) return null;
-
-  let state = initTrendState({ trendOrdnung: 1, direction: "down", high: originHigh, low: originLow });
-  for (const pivot of pivots) {
-    if (pivot === originHigh || pivot === originLow) continue;
-    state = applyPivot(state, pivot, { candles, fractalPeriod: PIVOTS_FRACTAL_PERIOD });
-  }
-  return state;
-}
-
-// Berechnet den Zigzag-State IMMER (sobald trendAnalysisM5Candles da sind) und füllt damit
-// trendMetadata fürs Metadaten-Panel — unabhängig von showZigzag, sonst hätte "nur Metadaten an,
-// Zigzag aus" keine Daten zum Anzeigen. Nur das tatsächliche ZEICHNEN der Linien hängt an
-// showZigzag.
-function refreshZigzagInternal() {
-  const state = trendAnalysisM5Candles.length > 0 ? computeZigzagState() : null;
-  trendMetadata.value = state;
-
-  if (!props.showZigzag || !state) {
-    renderZigzag(candleSeries, [], zigzagPrimitives, clipReplay(allCandles));
-    return;
-  }
-  const precision = pricePrecisionForInstrument(props.symbol);
-  renderZigzag(candleSeries, zigzagSegments(state), zigzagPrimitives, clipReplay(allCandles), {
-    showLabels: props.showLiquidityDebug,
     formatPrice: (price) => fmtPrice(price, precision),
   });
 }
@@ -826,9 +719,9 @@ async function fetchTrendAnalysisM5History(symbol, targetCount, toMs) {
 // egal ob der Nutzer gerade den 1h- oder den 15m-Chart anschaut. Eigener, langsamerer Poll
 // (TRADE_SETUP_POLL_MS) statt am 12s-POLL_MS der Haupt-Kerzen zu hängen — jeder Aufruf ist
 // ein frischer cTrader-TLS-Connect (siehe ctraderCandles.js), 12s wäre unnötig teuer.
-// Holt bei aktivem Zigzag/Metadaten-Toggle zusätzlich die größere M5-Historie für den
-// Zigzag-Algo (siehe TREND_ANALYSIS_CANDLE_COUNT) — nur dann, um unnötige cTrader-Connects zu
-// vermeiden, solange niemand hinschaut.
+// Holt bei aktivem EMA-Toggle zusätzlich die größere M5-Historie für die EMA-Berechnung (siehe
+// TREND_ANALYSIS_CANDLE_COUNT) — nur dann, um unnötige cTrader-Connects zu vermeiden, solange
+// niemand hinschaut.
 async function loadTradeSetupCandles() {
   if (!isForex) return;
   try {
@@ -837,7 +730,7 @@ async function loadTradeSetupCandles() {
       fetchInitialForexCandles(props.symbol, "5m", TRADE_SETUP_CANDLE_COUNT, toMs),
       fetchInitialForexCandles(props.symbol, "1h", TRADE_SETUP_CANDLE_COUNT, toMs),
     ];
-    if (props.showZigzag || props.showMetadata || props.showEma) {
+    if (props.showEma) {
       fetches.push(fetchTrendAnalysisM5History(props.symbol, TREND_ANALYSIS_CANDLE_COUNT, toMs));
     }
     const [m5, h1, trendM5] = await Promise.all(fetches);
@@ -846,7 +739,6 @@ async function loadTradeSetupCandles() {
     if (trendM5) trendAnalysisM5Candles = trendM5;
     computeTradeSetups();
     renderTradeSetupsInternal();
-    refreshZigzagInternal();
     refreshEmaInternal();
   } catch (err) {
     console.error("Trade-Setup-Kerzen fehlgeschlagen:", err);
@@ -861,10 +753,8 @@ function refreshChart() {
   candleSeries.setData(clipReplay(allCandles));
   refreshPoiZonesInternal();
   refreshLiquidityInternal();
-  refreshPivotsInternal();
   refreshTradeMarkersInternal();
   renderTradeSetupsInternal();
-  refreshZigzagInternal();
   refreshRangesMarkersInternal();
   refreshRangeAnalysisInternal();
   refreshCockpitInternal(); // nach refreshRangeAnalysisInternal (braucht rangeAnalysisState.value)
@@ -1018,6 +908,16 @@ onMounted(() => {
     });
   }
 
+  // Positions-Toggle-Badge auf der TSC-Karte (siehe tradeSetupCockpit.ts: CockpitRenderer/
+  // TradeSetupCockpitPrimitive.hitTestToggle) — param.point liegt in CSS-Pixeln, genau wie die dort
+  // gespeicherte hitBox. Zusätzlich zum Toolbar-Dropdown (Dashboard.vue), nicht als Ersatz.
+  chart.subscribeClick((param) => {
+    if (!param.point) return;
+    if (cockpitPrimitives.some((p) => p.hitTestToggle(param.point))) {
+      emit("toggle-tsc-position");
+    }
+  });
+
   resizeObserver = new ResizeObserver((entries) => {
     if (!chart) return; // Resize-Callback kann nach chart.remove() noch nachfeuern
     const { width, height } = entries[0].contentRect;
@@ -1104,26 +1004,12 @@ watch(() => props.showLiquidity, refreshLiquidityInternal);
 watch(() => props.showSweptLiquidity, refreshLiquidityInternal);
 watch(() => props.showLiquidityDebug, () => {
   refreshLiquidityInternal();
-  refreshPivotsInternal();
-  refreshZigzagInternal();
   refreshRangesMarkersInternal();
 });
-watch(() => props.showPivots, refreshPivotsInternal);
 watch(() => props.showTradeSetups, renderTradeSetupsInternal);
 watch(() => props.tradeSetupHistoryCount, () => {
   computeTradeSetups();
   renderTradeSetupsInternal();
-});
-// Beim Einschalten fehlt die größere M5-Historie evtl. noch (siehe loadTradeSetupCandles) ->
-// einmal frisch nachladen; beim Ausschalten reicht ein reines Re-Render (blendet aus).
-watch(() => props.showZigzag, (on) => {
-  if (on) loadTradeSetupCandles();
-  else refreshZigzagInternal();
-});
-// Metadaten-Panel zeigt den Zigzag-State (siehe refreshZigzagInternal) — beim Einschalten ohne
-// Zigzag fehlt trendAnalysisM5Candles evtl. noch, daher genau wie dort einmal nachladen.
-watch(() => props.showMetadata, (on) => {
-  if (on && trendAnalysisM5Candles.length === 0) loadTradeSetupCandles();
 });
 watch(() => props.showRanges, () => {
   refreshRangesPollingState();
@@ -1147,9 +1033,9 @@ watch(() => props.ranges2LookbackHours, () => {
 watch([() => props.rangesPeriod, () => props.ranges2Period], () => {
   if (rangesH1Candles.length > 0) refreshRangesInternal();
 });
-// Braucht dieselbe trendAnalysisM5Candles-Historie wie Zigzag/Metadaten (siehe loadTradeSetupCandles)
-// -> beim Einschalten ohne die beiden fehlt sie evtl. noch, dann einmal nachladen; beim
-// Ausschalten reicht refreshEmaInternal (blendet aus, kein Neu-Fetch nötig).
+// Braucht trendAnalysisM5Candles (siehe loadTradeSetupCandles) -> beim Einschalten fehlt sie
+// evtl. noch, dann einmal nachladen; beim Ausschalten reicht refreshEmaInternal (blendet aus,
+// kein Neu-Fetch nötig).
 watch(() => props.showEma, (on) => {
   if (on && trendAnalysisM5Candles.length === 0) loadTradeSetupCandles();
   else refreshEmaInternal();
@@ -1216,11 +1102,7 @@ defineExpose({
       <Gauge id="window" :value="windowDelta" label="Δ 15m" />
       <Gauge id="daily" :value="dailyDelta" label="Δ Tag (UTC)" />
     </div>
-    <MetadataPanel v-if="showMetadata" title="Trend-Metadaten" @close="emit('close-metadata')">
-      <JsonTree v-if="metadataTree" :value="metadataTree" />
-      <p v-else class="metadata-empty">Keine Trend-Daten geladen (Zigzag-Toggle einschalten).</p>
-    </MetadataPanel>
-    <MetadataPanel v-if="showRangesMetadata" title="Ranges-Metadaten" @close="emit('close-ranges-metadata')">
+    <MetadataPanel v-if="showRangesMetadata" title="Trend-Metadaten" @close="emit('close-ranges-metadata')">
       <div class="metadata-subheading-row">
         <h4 class="metadata-subheading">Range-State</h4>
         <button class="metadata-copy-btn" :disabled="!rangeAnalysisTree" @click="copyJson('rangeState', rangeAnalysisTree)">

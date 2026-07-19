@@ -35,16 +35,7 @@ const showLiquidity = useLocalStorageRef("showLiquidity", true);
 // mitanzeigen. Beide default aus, um den Chart im Normalbetrieb nicht zuzumüllen.
 const showLiquidityDebug = useLocalStorageRef("showLiquidityDebug", false);
 const showSweptLiquidity = useLocalStorageRef("showSweptLiquidity", false);
-// Eigenständiger Pivot-Toggle (Periode 10) für die Trendanalyse-Diskussion — komplett getrennt
-// von showSweptLiquidity (Periode 5, LQ-Sweeps), die davon unverändert bleiben sollen.
-const showPivots = useLocalStorageRef("showPivots", false);
 const showTradeSetups = useLocalStorageRef("showTradeSetups", true);
-// Popup mit den rohen Trend-State-Daten (Swing/Protected-Level, CHoCH, gesammelte Pivots,
-// previous-Kette) zum Nachvollziehen der Trendanalyse gegen den Chart — siehe MetadataPanel.vue.
-const showMetadata = useLocalStorageRef("showMetadata", false);
-// Philips eigener Marktstruktur-Entwurf (siehe test/trendanalyse_vorschlag.ts, trendZigzag.js) —
-// verbindet die Pivots seit dem Trend-Ursprung der Reihe nach mit Linien, zum Debuggen/Erklären.
-const showZigzag = useLocalStorageRef("showZigzag", false);
 // Anzahl vergangener Setups je Richtung, analog zu tradeSetupHistoryCountShort/Long im
 // tv-indikator (dort default 5, 0-50) — 0 zeigt nur das gerade aktive/letzte Setup.
 const tradeSetupHistoryCount = useLocalStorageRef("tradeSetupHistoryCount", 5);
@@ -54,6 +45,10 @@ const tradeSetupHistoryCount = useLocalStorageRef("tradeSetupHistoryCount", 5);
 // Bausteinen). Lookback-Fenster für die H1-Periode-5-Fraktalsuche, maßgeblich in Stunden
 // persistiert (default 168 = 7 Tage) — rangesLookbackDays (unten) ist nur ein Eingabe-Helper,
 // der beim Editieren in Stunden umrechnet, kein eigener State.
+// Im Toolbar-Label seit Chat 2026-07-19 "Trend" statt "Ranges" (das alte, eigenständige
+// Trend/Pivots/Zigzag-Feature ist komplett raus — Ranges IST jetzt die Trendanalyse). Interne
+// Namen (rangesPeriod, showRanges, ...) bewusst NICHT mitumbenannt, um keinen reinen
+// Textumbenennungs-Diff über viele Dateien zu erzeugen — nur die sichtbaren Strings ändern sich.
 const rangesPeriod = useLocalStorageRef("rangesPeriod", 5);
 const rangesLookbackHours = useLocalStorageRef("rangesLookbackHours", 7 * 24);
 const rangesLookbackDays = computed({
@@ -131,17 +126,15 @@ function stepReplayForward() {
   }
 }
 
-// Toolbar wurde zu voll (siehe Chat) -> Liquidity-Sweeps unter "Liquidität", Pivots+Metadaten
+// Toolbar wurde zu voll (siehe Chat) -> Liquidity-Sweeps unter "Liquidität", Periode/Lookback
 // unter "Trend" als Dropdown. Reiner UI-Zustand, bewusst NICHT in localStorage (anders als die
 // Toggles selbst) — welches Dropdown gerade offen ist, ist keine Einstellung, die überdauern muss.
 const liquidityMenuOpen = ref(false);
-const trendMenuOpen = ref(false);
 const rangesMenuOpen = ref(false);
 const tscMenuOpen = ref(false);
 function closeMenusOutside(e) {
   if (!e.target.closest?.(".toggle-group")) {
     liquidityMenuOpen.value = false;
-    trendMenuOpen.value = false;
     rangesMenuOpen.value = false;
     tscMenuOpen.value = false;
   }
@@ -225,19 +218,8 @@ watch(currentSymbol, () => {
       />
 
       <div class="toggle-group">
-        <button :class="{ active: trendMenuOpen }" @click="trendMenuOpen = !trendMenuOpen">
-          Trend ▾
-        </button>
-        <div v-if="trendMenuOpen" class="toggle-dropdown">
-          <button :class="{ active: showPivots }" @click="showPivots = !showPivots">Pivots</button>
-          <button :class="{ active: showZigzag }" @click="showZigzag = !showZigzag">Zigzag</button>
-          <button :class="{ active: showMetadata }" @click="showMetadata = !showMetadata">Metadaten</button>
-        </div>
-      </div>
-
-      <div class="toggle-group">
         <button :class="{ active: showRanges }" @click="showRanges = !showRanges">
-          Ranges
+          Trend
         </button>
         <button
           class="toggle-caret"
@@ -341,14 +323,6 @@ watch(currentSymbol, () => {
         </div>
       </div>
 
-      <button :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
-        Debug
-      </button>
-
-      <button :class="{ active: showStyleModal }" @click="showStyleModal = !showStyleModal">
-        🎨 Style
-      </button>
-
       <div class="toggle-group replay-control" :class="{ active: replayActive }">
         <button
           class="replay-toggle-btn"
@@ -356,13 +330,21 @@ watch(currentSymbol, () => {
           title="Replay an/aus — Datum bleibt beim Ausschalten stehen"
           @click="replayActive = !replayActive"
         >
-          ⏮ Replay bis
+          Replay ⏮
         </button>
         <input v-model="replayInputValue" type="datetime-local" class="replay-input" title="Chart+Indikatoren nur bis zu diesem Zeitpunkt anzeigen" />
-        <button class="replay-step-btn" title="Eine Kerze weiter (aktueller Timeframe)" @click="stepReplayForward">
-          +1 Kerze ▶|
+        <button class="replay-step-btn" title="+1 Kerze" @click="stepReplayForward">
+          ▶|
         </button>
       </div>
+
+      <button :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
+        Debug
+      </button>
+
+      <button :class="{ active: showStyleModal }" @click="showStyleModal = !showStyleModal">
+        🎨 Style
+      </button>
     </div>
   </div>
 
@@ -378,12 +360,9 @@ watch(currentSymbol, () => {
     :show-historical-obs="showHistoricalObs"
     :show-liquidity="showLiquidity"
     :show-swept-liquidity="showSweptLiquidity"
-    :show-pivots="showPivots"
     :show-liquidity-debug="showLiquidityDebug"
     :show-trade-setups="showTradeSetups"
     :trade-setup-history-count="tradeSetupHistoryCount"
-    :show-zigzag="showZigzag"
-    :show-metadata="showMetadata"
     :ranges-period="rangesPeriod"
     :ranges-lookback-hours="rangesLookbackHours"
     :ranges2-period="ranges2Period"
@@ -394,8 +373,8 @@ watch(currentSymbol, () => {
     :show-trade-setup-cockpit="showTradeSetupCockpit"
     :trade-setup-cockpit-at-candle="tradeSetupCockpitAtCandle"
     :replay-until="replayUntil"
-    @close-metadata="showMetadata = false"
     @close-ranges-metadata="showRangesMetadata = false"
+    @toggle-tsc-position="tradeSetupCockpitAtCandle = !tradeSetupCockpitAtCandle"
   />
 
   <aside class="trades-panel">
