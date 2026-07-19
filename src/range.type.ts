@@ -27,7 +27,13 @@ export type PivotTypeAll =
   // geschlossen — Zwischenzustand vor einem echten Bruch (siehe Chat 2026-07-19: eingebettete
   // Periode-2-Erkennung, rangeState1_3/1_4 in gbp_h1_uptrend_LQ_sweep_long_setup.ts).
   | "sweeped-high"
-  | "sweeped-low";
+  | "sweeped-low"
+  // Ein LOW-structurePivot, der per Docht angetestet (touched) wurde, aber seitdem NIE eine Kerze
+  // drunter geschlossen hat — Liquidity-Grab statt echtem Bruch, potenzielles bullisches Long-Setup
+  // (siehe Chat 2026-07-19, gbp_h1_uptrend_mit_LQ_sweep_LONG_SETUP.ts: rangeState1_1). Lebt nur in
+  // structurePivots, nie in currRange (anders als sweeped-high/-low) — deshalb reicht die
+  // Zugehörigkeit zu Pivot/PivotTypeAll, keine eigene engere Type-Variante nötig.
+  | "LQ-sweep";
 export type PivotTypeDowntrend = "swing-high" | "swing-low" | "weak-high" | "weak-low" | "protected-high" | "lower-high" | "lower-low";
 export type PivotTypeUptrend = "swing-high" | "swing-low" | "weak-high" | "weak-low" | "protected-low" | "higher-low";
 

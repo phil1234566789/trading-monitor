@@ -149,10 +149,52 @@ function closesAboveOldHigh(candles: Candle[], fromTime: number, toTime: number,
   return candles.some((c) => c.time > fromTime && c.time <= toTime && c.close > oldHighPrice);
 }
 
+// Spiegelbildlich zu closesAboveOldHigh, für structurePivots statt currRange.high: prüft, ob seit
+// levelTime (Zeit des betroffenen Pivots selbst) bis toTime irgendeine Kerze UNTER levelPrice
+// geschlossen hat. Ohne Kerzendaten konservativ KEINEN Sweep behaupten (anders als bei
+// closesAboveOldHigh — dort ist "echter Bruch" der Default, hier ist "plain low" der Default, siehe
+// markLqSweeps).
+function closesBelowLevel(candles: Candle[], levelTime: number, toTime: number, levelPrice: number): boolean {
+  if (candles.length === 0) return true;
+  return candles.some((c) => c.time > levelTime && c.time <= toTime && c.close < levelPrice);
+}
+
+// Ein LOW-structurePivot, der per Docht schon mal angetestet wurde (touched, aus der Fraktal-
+// Erkennung selbst) aber NIE eine Kerze drunter geschlossen hat, ist ein Liquidity-Grab statt
+// eines echten Bruchs — wird zu 'LQ-sweep' reklassifiziert (siehe Chat 2026-07-19, gbp_h1_uptrend_
+// mit_LQ_sweep_LONG_SETUP.ts: rangeState1_1, "potenzieller 1h bullischer LQ-Sweep & Long Trade").
+// Läuft über ALLE bisherigen structurePivots (nicht nur den, den der aktuelle Pivot direkt
+// berührt) — ein Sweep kann durch jede neue Kerze nachträglich bestätigt werden, nicht nur exakt
+// im Moment des auslösenden Pivots (siehe rangeState1_1: pivot9 wird durch p2Pivot37 bestätigt,
+// pivot12 dagegen NICHT — dort hat zwischenzeitlich tatsächlich eine Kerze drunter geschlossen,
+// also ein "echter" Touch, kein Sweep).
+// BIDIREKTIONAL (Fix 2026-07-19, siehe Chat: "aktuell werden 3 1h LQ-Sweeps erkannt"): `touched`
+// ist der volle Fixture-Endstand (steht schon fest, bevor der eigentliche Docht-Moment in der
+// Replay-Reihenfolge überhaupt erreicht ist, siehe pivot9), daher kann closesBelowLevel bei einem
+// FRÜHEN Zwischenschritt (toTime lange vor dem eigentlichen Close-drunter) fälschlich "noch kein
+// Close" liefern. Ohne Rückweg bliebe das für immer als 'LQ-sweep' hängen, auch wenn ein späterer
+// Schritt (näher am echten Zeitpunkt) den tatsächlichen Close-drunter längst sehen würde — daher
+// hier IMMER neu bewerten (auch bereits als 'LQ-sweep' markierte), in beide Richtungen. Am
+// tatsächlichen Ziel-toTime (z.B. p2Pivot37) ist das Ergebnis dadurch unabhängig vom genauen
+// Zwischenschritt-Pfad immer korrekt. 'protected-low' bleibt unangetastet (anderes Konzept).
+// NICHT implementiert: was mit einem ECHTEN Close-Bruch eines structurePivots passieren soll (die
+// spiegelbildliche Downtrend-Bestätigung) — dafür gibt es noch kein Beispiel, der Pivot bleibt in
+// dem Fall einfach unverändert 'low' liegen (siehe pivot12).
+function markLqSweeps(structurePivots: Pivot[], candles: Candle[], toTime: number): Pivot[] {
+  return structurePivots.map((p) => {
+    if ((p.type !== "low" && p.type !== "LQ-sweep") || !p.touched) return p;
+    const closedBelow = closesBelowLevel(candles, pivotTimeOf(p), toTime, p.price);
+    if (closedBelow) return p.type === "LQ-sweep" ? { ...p, type: "low" as const } : p;
+    return p.type === "low" ? { ...p, type: "LQ-sweep" as const } : p;
+  });
+}
+
 // Liest einen eingebetteten (z.B. Periode-2-)Pivot ein — läuft NUR gegen die aktuelle Range, NIE
 // gegen appliedPivots (das bleibt reine übergeordnete Zeitachse, siehe rangeState2_1: p2Pivot4
 // taucht dort nur in innerStructurePivots auf) — siehe Chat 2026-07-19,
 // gbp_h1_uptrend_LQ_sweep_long_setup.ts rangeState1_2/rangeState2_1/rangeState1_4:
+// 0. Zuerst IMMER markLqSweeps über structurePivots (siehe oben) — unabhängig davon, was der
+//    aktuelle Pivot selbst bricht.
 // 1. Pivot liegt innerhalb der Range -> reiner Pullback, landet in innerStructurePivots.
 // 2. Pivot bricht currRange.high preislich UND mindestens eine Kerze hat seit dem alten High
 //    tatsächlich DRÜBER geschlossen (closesAboveOldHigh) -> echter Bruch, kein Sweep mehr ("ein
@@ -168,30 +210,31 @@ function closesAboveOldHigh(candles: Candle[], fromTime: number, toTime: number,
 // NICHT implementiert: der spiegelbildliche Fall (innerer Pivot bricht currRange.low) — dafür gibt
 // es noch kein Beispiel.
 export function applyInnerRangePivot(state: RangeState, pivot: Pivot, { candles = [] }: { candles?: Candle[] } = {}): RangeState {
-  const { currRange, innerStructurePivots } = state;
+  const sweepChecked = { ...state, structurePivots: markLqSweeps(state.structurePivots, candles, pivotTimeOf(pivot)) };
+  const { currRange, innerStructurePivots } = sweepChecked;
 
   if (pivot.type === "high" && pivot.price > currRange.high.price) {
     const isRealBreak = closesAboveOldHigh(candles, pivotTimeOf(currRange.high), pivotTimeOf(pivot), currRange.high.price);
 
     if (isRealBreak) {
-      const confirmed = tryConfirmUptrend(state, pivot);
+      const confirmed = tryConfirmUptrend(sweepChecked, pivot);
       if (confirmed) {
         return { ...confirmed, innerStructurePivots: [...confirmed.innerStructurePivots, pivot] };
       }
       return {
-        ...state,
+        ...sweepChecked,
         currRange: { ...currRange, high: { ...pivot, type: "high" } },
         innerStructurePivots: [...innerStructurePivots, pivot],
       };
     }
     return {
-      ...state,
+      ...sweepChecked,
       currRange: { ...currRange, high: { ...currRange.high, type: "sweeped-high" } },
       innerStructurePivots: [...innerStructurePivots, pivot],
     };
   }
 
-  return { ...state, innerStructurePivots: [...innerStructurePivots, pivot] };
+  return { ...sweepChecked, innerStructurePivots: [...innerStructurePivots, pivot] };
 }
 
 // --- Zeichnung ----------------------------------------------------------------------------------
@@ -411,6 +454,19 @@ export function renderRangeAnalysis(
     const line = new LiquidityLinePrimitive(
       toLevel(protectedLow, candles),
       { color: cssColor("rangeProtectedLow"), lineWidth: LINE_WIDTH, label: "1h protected low", labelSide: "end" },
+      candles,
+    );
+    series.attachPrimitive(line);
+    existingPrimitives.push(line);
+  }
+
+  // Goldene Linie je LQ-Sweep (siehe Chat 2026-07-19: "GOLDENE Linie ... mit dem label '1h
+  // LQ-Sweep'") — anders als protected-low (immer nur der jeweils jüngste) potenziell mehrere
+  // gleichzeitig, deshalb hier eine Linie PRO markiertem structurePivot statt nur die erste.
+  for (const lqSweep of state.structurePivots.filter((p) => p.type === "LQ-sweep")) {
+    const line = new LiquidityLinePrimitive(
+      toLevel(lqSweep, candles),
+      { color: cssColor("rangeLqSweep"), lineWidth: LINE_WIDTH, label: "1h LQ-Sweep", labelSide: "end" },
       candles,
     );
     series.attachPrimitive(line);

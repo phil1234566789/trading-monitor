@@ -315,9 +315,12 @@ async function fetchCandlePage(endpoint, bar, { after, limit } = {}) {
 }
 
 // Holt die letzten `count` Kerzen über mehrere Seiten von /market/candles (recent-Fenster).
-async function fetchInitialCandles(bar, count) {
+// toMs (optional): Startpunkt für die erste Seite statt "jetzt" — siehe replayToMs()/loadInitial,
+// sonst reicht ein fester count im Replay-Modus bei TF-Wechsel ggf. nicht bis replayUntil zurück
+// (siehe Chat 2026-07-19: "1h auf M5 gewechselt und sehe keinen Chart").
+async function fetchInitialCandles(bar, count, toMs) {
   let all = [];
-  let after;
+  let after = toMs ? String(toMs) : undefined;
   while (all.length < count) {
     const page = await fetchCandlePage("/api/v5/market/candles", bar, { after, limit: RECENT_PAGE_SIZE });
     if (page.length === 0) break;
@@ -845,13 +848,19 @@ function refreshChart() {
 async function loadInitial() {
   try {
     let candles, deltas;
+    // Fester count (INITIAL_CANDLE_COUNT) reicht "bis jetzt" gerechnet nicht bei jedem Timeframe
+    // gleich weit zurück (1000 M5-Kerzen ~3,5 Tage, 1000 H1-Kerzen ~41 Tage) — ohne replayToMs()
+    // würde ein TF-Wechsel während eines weit zurückliegenden Replays (z.B. 1h -> M5) einen leeren
+    // Kerzenbereich laden, der nach clipReplay komplett verschwindet (siehe Chat 2026-07-19: "1h
+    // auf M5 gewechselt und sehe keinen Chart").
+    const toMs = replayToMs();
     if (isForex) {
-      candles = await fetchInitialForexCandles(props.symbol, props.currentBar, INITIAL_CANDLE_COUNT);
+      candles = await fetchInitialForexCandles(props.symbol, props.currentBar, INITIAL_CANDLE_COUNT, toMs);
       deltas = [];
     } else {
       const binanceInterval = binanceIntervalFor(props.currentBar);
       [candles, deltas] = await Promise.all([
-        fetchInitialCandles(okxBarFor(props.currentBar), INITIAL_CANDLE_COUNT),
+        fetchInitialCandles(okxBarFor(props.currentBar), INITIAL_CANDLE_COUNT, toMs),
         fetchInitialDeltas(binanceInterval, INITIAL_CANDLE_COUNT).catch((err) => {
           console.error("CVD-Historie fehlgeschlagen:", err);
           return [];

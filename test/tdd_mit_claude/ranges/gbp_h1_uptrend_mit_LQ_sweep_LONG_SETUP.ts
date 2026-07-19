@@ -71,3 +71,136 @@ const p2Pivot40: PivotLow = { type: 'low', price: 1.33804, pivotAt: '08.07.2026 
 const p2Pivot41: PivotHigh = { type: 'high', price: 1.3404, pivotAt: '09.07.2026 02:00', pivotTime: 1783555200, touched: { price: 1.3404, touchedAt: '09.07.2026 07:00' } };
 const p2Pivot42: PivotLow = { type: 'low', price: 1.33867, pivotAt: '09.07.2026 03:00', pivotTime: 1783558800, touched: { price: 1.33867, touchedAt: '09.07.2026 13:00' } };
 const p2Pivot43: PivotHigh = { type: 'high', price: 1.34308, pivotAt: '09.07.2026 08:00', pivotTime: 1783576800, touched: { price: 1.34308, touchedAt: '10.07.2026 03:00' } };
+
+/**
+ * LOS GEHTS
+ * Wir starten schon etwas später im Algo.
+ * als letztes wurde pivot9 eingelesen
+ */
+// Mapping der kopierten Metadaten auf die oben deklarierten Konstanten (pivot1..pivot12).
+// KORREKTUR (Claude, 2026-07-19): touched hier NICHT der volle Fixture-Endstand, sondern der
+// tatsächliche Stand zum Zeitpunkt dieses States — der ursprünglich kopierte Live-JSON hatte das
+// schon richtig (touched: false für pivot10/11), ich hatte das beim ersten Durchgang fälschlich
+// als "Zeit-Clipping-Artefakt" verworfen und mit dem Endstand überschrieben. War falsch (siehe
+// Chat: "Zum Startpunkt des Algos ist pivot9 doch untouched?"). rangeState1 liegt zeitlich direkt
+// bei pivot12s Bestätigung (pivotTime + 5h = 08.07. 08:00) — zu diesem Zeitpunkt sind pivot9/10/11/12
+// alle noch NICHT getoucht (ihr jeweiliges touchedAt liegt erst danach: 10:00/19:00/19:00/11:00).
+// Nur pivot5/6/7/8 (touchedAt alle vor 06.07.) sind zu diesem Zeitpunkt schon korrekt getoucht.
+//
+// GEGENGECHECKT (Claude): pivot3 (nicht pivot4!) ist hier protected-low — das kann NICHT aus
+// pivot1..pivot12 allein entstanden sein. applyRangePivot mit nur den Outer-Pivots pur durchlaufen
+// liefert stattdessen pivot4 als protected-low (beide qualifizieren als Pullback nach pivot2, aber
+// pivot4 liegt zeitlich näher an pivot5s Bruch -> "jüngster qualifizierender Pullback" siehe
+// tryConfirmUptrend). Dass hier pivot3 gewählt wurde, beweist: der Uptrend wurde in Wirklichkeit
+// schon FRÜHER bestätigt — über p2Pivot5 (eingebettet, Periode 2), bevor pivot4 (Periode 5) überhaupt
+// gelesen war (genau wie in gbp_h1_uptrend_mit_inner_structure.ts: rangeState1_4). pivot4 kam danach
+// nur noch als normaler Pullback dazu (tryConfirmUptrend bricht sofort ab, sobald trend !== 'unknown'
+// ist), und pivot5/pivot10/... haben currRange.high seither nur noch ohne erneute Bestätigung
+// weitergeschoben. Schöner Live-Beweis, dass die Outer/Inner-Verzahnung in PriceChart.vue
+// (computeRangeAnalysisState) tatsächlich korrekt greift.
+const rangeState1: RangeState = {
+    trend: 'uptrend',
+    currRange: {
+        high: { ...pivot10, touched: false },
+        low: pivot1,
+    },
+    structurePivots: [
+        { ...pivot3, type: 'protected-low' },
+        pivot4,
+        pivot5,
+        pivot6,
+        pivot7,
+        pivot8,
+        { ...pivot9, touched: false },
+        { ...pivot11, touched: false },
+        { ...pivot12, touched: false },
+    ],
+    innerStructurePivots: [],
+    appliedPivots: [
+        pivot1,
+        pivot2,
+        pivot3,
+        pivot4,
+        pivot5,
+        pivot6,
+        pivot7,
+        pivot8,
+        { ...pivot9, touched: false },
+        { ...pivot10, touched: false },
+        { ...pivot11, touched: false },
+        { ...pivot12, touched: false },
+    ],
+}
+// zwei Schritte weiter: p2Pivot36 war schon, jetzt wurde p2Pivot37 erkannt
+// pivot9 & pivot12 wurden GETOUCHED
+/**
+ * POTENTIELLER 1h bullischer LQ-Sweep & LONG TRADE MÖGLICH:
+ * - wir stellen fest: keine der aktuellen Kerzen um p2Pivot37 herum SCHLIEßT UNTER pivot9
+ * 
+ * Das heißt der Algo müsste:
+ * - frisch getouchten structurePivots prüfen, ob die Bedingung erfüllt ist, 
+ * dass es einen touched structurePivot GIBT, 
+ * wo beim neuesten p2Pivot keine Kerze drunter geschlossen hat
+ * - es darf keine Pivots einbeziehen, welche schon längst touched waren (pivot6 & pivot8) 
+ * => daher ist pivot9 das zählende 1h-pivot mit LQ-Sweep, da der Kerzenzeitpunkt NACH pivot6.touched.touchedAt und pivot8.touched.touchedAt ist
+ * 
+ * Was wir auch machen können: structurePivots die kaum eine Rolle mehr spielen, als 'legacy' flaggen.
+ * Bedingungen könnten sein: touched. neues p5 pivot mit niedrigerem Preis gebildet.
+ * 
+ * 
+ * - sind alle Bedingungen erfüllt, wird der entsprechende structurePivot als 'LQ-sweep' gekennzeichnet
+ * 
+ * 
+ * Visualisierung:
+ * An der Stelle soll im Chart eine GOLDENE Linie bei pivot9 gezeichnet werden mit dem label '1h LQ-Sweep'
+*/
+// AUSGEFÜLLT + GEGENGECHECKT (Claude), siehe closesBelowLevel/markLqSweeps in rangeAnalysis.ts:
+// gegen die echten Kerzen (test/fixtures/gbpusd-h1-trend.json) geprüft, ob zwischen jedem touched
+// LOW-structurePivot und p2Pivot37 (08.07. 11:00) je eine Kerze DRUNTER geschlossen hat:
+// - pivot6 (touchedAt 06.07. 07:00): ja, schließt später drunter -> bleibt 'low'
+// - pivot8 (touchedAt 03.07. 22:00): ja, schließt später drunter -> bleibt 'low'
+// - pivot9 (touchedAt 08.07. 11:00, exakt p2Pivot37s eigene Kerze): NIE eine Kerze drunter
+//   geschlossen -> 'LQ-sweep'.
+// - pivot12 (touchedAt 08.07. 10:00): schließt bei 08.07. 10:00 UND 11:00 tatsächlich drunter
+//   (1.33397 / 1.33418 < 1.33421) -> bleibt 'low'.
+// Der markLqSweeps-BUG selbst (fehlende Bidirektionalität, siehe rangeAnalysis.ts) ist unabhängig
+// von den touched-Werten hier gefixt — die touched-Korrektur unten ist eine SEPARATE Korrektur
+// (touched muss den Stand ZUM ZEITPUNKT DIESES STATES zeigen, nicht den vollen Fixture-Endstand,
+// siehe Kommentar über rangeState1). Zum p2Pivot37-Zeitpunkt (08.07. 11:00) sind pivot9 (exakt
+// 11:00) und pivot12 (10:00, davor) schon getoucht, pivot10/pivot11 (beide erst 19:00) NICHT.
+const rangeState1_1: RangeState = {
+    trend: 'uptrend',
+    currRange: {
+        high: { ...pivot10, touched: false },
+        low: pivot1,
+    },
+    structurePivots: [
+        { ...pivot3, type: 'protected-low' },
+        pivot4,
+        pivot5,
+        pivot6,
+        pivot7,
+        pivot8,
+        { ...pivot9, type: 'LQ-sweep' },
+        { ...pivot11, touched: false },
+        pivot12,
+    ],
+    innerStructurePivots: [
+        p2Pivot36,
+        p2Pivot37
+    ],
+    appliedPivots: [
+        pivot1,
+        pivot2,
+        pivot3,
+        pivot4,
+        pivot5,
+        pivot6,
+        pivot7,
+        pivot8,
+        pivot9,
+        { ...pivot10, touched: false },
+        { ...pivot11, touched: false },
+        pivot12,
+    ],
+}

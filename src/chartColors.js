@@ -36,6 +36,7 @@ export const DEFAULT_CHART_COLORS = {
   rangeHigh: { hex: "#ef5350", alpha: 0.95 },
   rangeLow: { hex: "#00e676", alpha: 0.95 },
   rangeProtectedLow: { hex: "#ffffff", alpha: 0.95 },
+  rangeLqSweep: { hex: "#ffd700", alpha: 0.9 },
   rangesMarker: { hex: "#00bcd4", alpha: 0.9 },
   // Periode-2-Debug-Marker (siehe Chat 2026-07-19: "früherer Uptrend-Erkennung") — bewusst
   // dieselbe Grundfarbe wie rangesMarker (Periode 5), aber deutlich transparenter, damit man
