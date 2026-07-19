@@ -19,13 +19,6 @@ const STORE_NAME = "candles";
 // Jahr durchgehend Handel; jenseits davon ist mit Sicherheit ein Bug am Werk, kein legitimer Fall.
 const SANITY_MAX_CANDLES = 500_000;
 
-// Toleranz für den Cache-Hit-Check in fetchCandlesCached (siehe dort): eine normale Forex-
-// Wochenend-Pause dauert bis zu ~60h (Fr. Abend UTC -> So. Abend UTC), plus etwas Puffer für
-// Feiertage — großzügig genug, um ein normales Wochenende nicht als "Cache reicht nicht" zu werten,
-// aber knapp genug, um ein ECHTES Cache-Loch (mergeCandles lässt zwischen disjunkten Fenstern
-// bewusst Lücken stehen, siehe dort) zuverlässig zu erkennen.
-const MAX_CACHE_GAP_SEC = 3 * 24 * 3600;
-
 let dbPromise = null;
 function openDb() {
   if (dbPromise) return dbPromise;
@@ -44,25 +37,26 @@ function cacheKey(symbol, bar) {
   return `${symbol}:${bar}`;
 }
 
-// Liefert die gecachten Kerzen (älteste zuerst) für symbol+bar, oder [] wenn noch nichts gecacht
-// ist. Wirft nie — IndexedDB kann selten fehlschlagen (privater Modus, Quota, deaktiviert); die
-// App läuft dann einfach ohne Cache weiter, genau wie vorher.
+// Liefert { candles, completeUpTo } für symbol+bar (candles: [], completeUpTo: null wenn noch
+// nichts gecacht ist). completeUpTo siehe cachedCandlesUpTo unten. Wirft nie — IndexedDB kann
+// selten fehlschlagen (privater Modus, Quota, deaktiviert); die App läuft dann einfach ohne Cache
+// weiter, genau wie vorher.
 export async function getCachedCandles(symbol, bar) {
   try {
     const db = await openDb();
     return await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readonly");
       const req = tx.objectStore(STORE_NAME).get(cacheKey(symbol, bar));
-      req.onsuccess = () => resolve(req.result?.candles ?? []);
+      req.onsuccess = () => resolve({ candles: req.result?.candles ?? [], completeUpTo: req.result?.completeUpTo ?? null });
       req.onerror = () => reject(req.error);
     });
   } catch (err) {
     console.error("Kerzen-Cache lesen fehlgeschlagen:", err);
-    return [];
+    return { candles: [], completeUpTo: null };
   }
 }
 
-async function setCachedCandles(symbol, bar, candles) {
+async function setCachedCandles(symbol, bar, candles, completeUpTo) {
   try {
     if (candles.length > SANITY_MAX_CANDLES) {
       console.error(
@@ -74,7 +68,7 @@ async function setCachedCandles(symbol, bar, candles) {
     const db = await openDb();
     await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readwrite");
-      tx.objectStore(STORE_NAME).put({ key: cacheKey(symbol, bar), candles });
+      tx.objectStore(STORE_NAME).put({ key: cacheKey(symbol, bar), candles, completeUpTo });
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
@@ -88,7 +82,9 @@ async function setCachedCandles(symbol, bar, candles) {
 // STRIKT danach bleiben unangetastet erhalten. Bewusst kein simples "alles ab erster frischer Kerze
 // ersetzen" (das würde bereits gecachte NEUERE Daten wegwerfen, wenn `fresh` z.B. ein Replay-Fetch
 // weit in der Vergangenheit ist, während der Cache schon aktuellere Live-Daten enthält) — die
-// Vereinigung hier ist in jede Richtung sicher.
+// Vereinigung hier ist in jede Richtung sicher. Kann dabei bewusst eine LÜCKE zwischen `before` und
+// `fresh` (oder `fresh` und `after`) stehen lassen, wenn `fresh` nicht direkt anschließt (siehe
+// cachedCandlesUpTo unten, wieso das für den Cache-Hit-Check kein Problem mehr ist).
 function mergeCandles(cached, fresh) {
   if (fresh.length === 0) return cached;
   if (cached.length === 0) return fresh;
@@ -100,26 +96,32 @@ function mergeCandles(cached, fresh) {
 }
 
 // Kern-Entscheidung für den Replay-Cache-Hit (toMs gesetzt): liefert die letzten `targetCount`
-// gecachten Kerzen bis effectiveEndSec zurück, wenn der Cache dafür KONTINUIERLICH bis dorthin
-// reicht — sonst null (dann muss fetchCandlesCached frisch fetchen). Als eigene, reine Funktion
-// ausgelagert (statt inline in fetchCandlesCached), damit sich genau dieser Bug (siehe unten) ohne
-// echtes IndexedDB testen lässt.
+// gecachten Kerzen bis effectiveEndSec zurück, wenn wir schon einmal ERFOLGREICH bis mindestens
+// effectiveEndSec gefetcht haben (completeUpTo, siehe fetchCandlesCached) — sonst null (dann muss
+// fetchCandlesCached frisch fetchen). Als eigene, reine Funktion ausgelagert (statt inline in
+// fetchCandlesCached), damit sich das ohne echtes IndexedDB testen lässt.
 //
-// BUG (Bug-Report Philip 2026-07-19: M5-Replay auf 08.07. gestellt, Chart zeigte trotzdem nur bis
-// 02.07.) war hier vorher: geprüft wurde `cached[cached.length-1].time >= effectiveEndSec` — das
-// ist die insgesamt LETZTE gecachte Kerze, die aus einem GANZ ANDEREN, späteren Fetch-Fenster
-// stammen kann (z.B. ein Live-Fetch von heute) und mit effectiveEndSec nichts zu tun hat.
-// mergeCandles lässt zwischen disjunkten Fenstern bewusst Lücken stehen (siehe dort) — fiel
-// effectiveEndSec in so eine Lücke, meldete dieser Check trotzdem "Cache reicht" und lieferte eine
-// Kerze von knapp VOR der Lücke als "aktuellste" zurück, obwohl dazwischen tagelang nichts gecacht
-// war. Jetzt wird stattdessen geprüft, ob die tatsächlich zurückgegebene letzte Kerze nah genug an
-// effectiveEndSec liegt (MAX_CACHE_GAP_SEC toleriert ein normales Wochenende).
-export function cachedCandlesUpTo(cached, effectiveEndSec, targetCount) {
+// completeUpTo statt eines Gap-Toleranz-Heuristik (frühere Version, siehe Git-History) — die hatte
+// zwei Bugs in entgegengesetzte Richtungen:
+// 1. (Bug-Report Philip: M5-Replay auf 08.07. gestellt, Chart zeigte trotzdem nur bis 02.07.) Ein
+//    Toleranz-Fenster, das groß genug ist für ein Wochenende (~60h), ist zwangsläufig AUCH groß
+//    genug, um ein völlig unrelated, viel älteres Cache-Fenster (z.B. von einem alten Replay-Test)
+//    fälschlich als "nah genug" durchzuwinken, wenn mergeCandles zwischen zwei disjunkten Fenstern
+//    eine mehrtägige Lücke stehen gelassen hat.
+// 2. (Bug-Report Philip: "+1 Kerze" im M5-Replay zeigt keine neue Kerze) Umgekehrt ist selbst eine
+//    einzelne, gerade erst freigeschaltete Kerze (5 Minuten Lücke zum letzten gecachten Stand, weil
+//    sie schlicht noch nicht gefetcht wurde) locker innerhalb jeder wochenend-tauglichen Toleranz —
+//    der Cache wurde also fälschlich als "reicht schon" gewertet, obwohl die neue Kerze fehlte.
+// completeUpTo umgeht beide Fälle: es wird NUR nach einem echten, erfolgreichen Replay-Fetch auf
+// dessen effectiveEndSec gesetzt (siehe fetchCandlesCached) — cTrader liefert für so einen Fetch
+// IMMER die tatsächlichen, autoritativen Kerzen bis genau zu diesem Zeitpunkt (Wochenend-Lücken
+// darin sind einfach echte Marktschließzeiten, kein Cache-Problem). Ein späterer Request für einen
+// SPÄTEREN Zeitpunkt (wie beim "+1 Kerze"-Klick) liegt dann automatisch über completeUpTo und
+// erzwingt korrekt einen neuen Fetch.
+export function cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetCount) {
+  if (completeUpTo == null || effectiveEndSec > completeUpTo) return null;
   const upToEnd = cached.filter((c) => c.time <= effectiveEndSec);
-  const newestInRange = upToEnd[upToEnd.length - 1];
-  if (newestInRange && effectiveEndSec - newestInRange.time <= MAX_CACHE_GAP_SEC && upToEnd.length >= targetCount) {
-    return upToEnd.slice(-targetCount);
-  }
+  if (upToEnd.length >= targetCount) return upToEnd.slice(-targetCount);
   return null;
 }
 
@@ -127,20 +129,24 @@ export function cachedCandlesUpTo(cached, effectiveEndSec, targetCount) {
 // Pendant in PriceChart.vue): liefert `targetCount` Kerzen für symbol+bar bis toMs (bzw. bis
 // "jetzt", wenn toMs null ist) — holt dabei aber nur, was seit dem letzten Cache-Stand fehlt:
 //
-// - Replay (toMs gesetzt) UND der Cache reicht schon bis zu diesem fixen Zeitpunkt zurück UND hat
-//   genug Tiefe -> KEIN Fetch, komplett aus dem Cache (der häufigste Fall beim TF-Wechsel während
-//   eines Replays, siehe Chat: "TF-Wechsel ist sehr laggy" — Replay ist der App-Default, siehe
-//   Dashboard.vue: replayActive Default true).
+// - Replay (toMs gesetzt) UND wir haben schon einmal erfolgreich bis mindestens diesen Zeitpunkt
+//   gefetcht (completeUpTo, siehe cachedCandlesUpTo) UND haben genug Tiefe -> KEIN Fetch, komplett
+//   aus dem Cache (der häufigste Fall beim TF-Wechsel während eines Replays, siehe Chat:
+//   "TF-Wechsel ist sehr laggy" — Replay ist der App-Default, siehe Dashboard.vue: replayActive
+//   Default true).
 // - Live (toMs null) UND schon was gecacht -> nur der Teil seit der letzten gecachten Kerze wird
-//   frisch geholt (Delta), Rest aus dem Cache.
+//   frisch geholt (Delta), Rest aus dem Cache. completeUpTo bleibt hier bewusst unangetastet (siehe
+//   unten) — der Delta-Fetch deckt bei einer sehr alten Cache-Lücke ggf. nicht bis zur letzten
+//   gecachten Kerze zurück und würde sonst fälschlich Vollständigkeit über eine neu entstandene
+//   Lücke hinweg behaupten.
 // - Sonst (nichts gecacht, oder Cache reicht nicht tief/weit genug zurück) -> voller Fetch wie
 //   bisher, Ergebnis wird für künftige Aufrufe gecacht.
 export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs) {
-  const cached = await getCachedCandles(symbol, bar);
+  const { candles: cached, completeUpTo } = await getCachedCandles(symbol, bar);
   const effectiveEndSec = toMs != null ? Math.floor(toMs / 1000) : Math.floor(Date.now() / 1000);
 
   if (toMs != null && cached.length > 0) {
-    const hit = cachedCandlesUpTo(cached, effectiveEndSec, targetCount);
+    const hit = cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetCount);
     if (hit) return hit;
   }
 
@@ -150,17 +156,24 @@ export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs
     const elapsedBars = Math.max(1, Math.ceil((effectiveEndSec - lastCachedTime) / barSeconds));
     // +5 Puffer (Wochenend-/Feiertagslücken, Uhrzeit-Ungenauigkeiten). Nach oben durch targetCount
     // gedeckelt: bei einer sehr alten Cache-Lücke (z.B. App seit Wochen nicht offen) ist ein
-    // Delta-Fetch ohnehin nicht günstiger als der volle Fetch.
+    // Delta-Fetch ohnehin nicht günstiger als der volle Fetch — dieser Fetch deckt dann aber
+    // möglicherweise NICHT bis lastCachedTime zurück, lässt also ggf. eine neue Lücke stehen
+    // (siehe mergeCandles) -> completeUpTo bewusst NICHT setzen, sonst würde ein späterer
+    // Replay-Request in genau diese neue Lücke fälschlich als "gecacht" durchgehen.
     const catchUpCount = Math.min(elapsedBars + 5, targetCount);
     const fresh = await fetchFn(symbol, bar, catchUpCount, undefined);
     const merged = mergeCandles(cached, fresh);
-    await setCachedCandles(symbol, bar, merged);
+    await setCachedCandles(symbol, bar, merged, completeUpTo);
     return merged.slice(-targetCount);
   }
 
   // Nichts gecacht, oder Cache reicht (im Replay-Fall) nicht bis toMs zurück/nicht tief genug ->
-  // ganz normal voll fetchen, wie ohne Cache — Ergebnis danach für künftige Aufrufe sichern.
+  // ganz normal voll fetchen, wie ohne Cache. `fetchFn` liefert dabei IMMER die tatsächlichen,
+  // autoritativen Kerzen bis genau effectiveEndSec (siehe cachedCandlesUpTo oben) -> completeUpTo
+  // im Replay-Fall entsprechend hochsetzen, im Live-Fall (toMs null) unangetastet lassen (siehe
+  // Delta-Zweig oben, dieselbe Begründung: "jetzt" ist kein stabiler Vergleichspunkt für später).
   const fresh = await fetchFn(symbol, bar, targetCount, toMs);
-  await setCachedCandles(symbol, bar, cached.length > 0 ? mergeCandles(cached, fresh) : fresh);
+  const merged = cached.length > 0 ? mergeCandles(cached, fresh) : fresh;
+  await setCachedCandles(symbol, bar, merged, toMs != null ? effectiveEndSec : completeUpTo);
   return fresh;
 }
