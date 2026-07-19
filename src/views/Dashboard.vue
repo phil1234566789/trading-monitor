@@ -9,6 +9,7 @@ import { fetchTrades } from "../trades.js";
 import { fetchPoiZones } from "../poiZones.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
+import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
 
 // Trades/POI-Zonen (ob_zones) gibt es aktuell nur für BTC-USDT — die Forex-OB-Erkennung
 // läuft (noch) nicht über diese Codebase, sondern soll später per TradingView-Webhook
@@ -23,7 +24,10 @@ const POLL_MS = 12_000;
 // bei jedem Reload aber, deshalb jetzt genau wie die Toggles persistiert. Defaults hier bewusst
 // aufs aktuelle Testszenario gesetzt (GBP 1h) statt auf die alten Werte.
 const currentSymbol = useLocalStorageRef("currentSymbol", "GBPUSD");
-const currentBar = useLocalStorageRef("currentBar", "1h");
+// currentBar bewusst sessionStorage statt localStorage (siehe Chat 2026-07-19: "ich hab zwei Tabs
+// offen, eins im M5 und eins im 1h") — sessionStorage ist pro Tab isoliert, localStorage wäre
+// tab-übergreifend geteilt und würde die beiden Tabs gegenseitig auf denselben TF zwingen.
+const currentBar = useSessionStorageRef("currentBar", "1h");
 // Historische (bereits angetestete) OB-Zonen standardmäßig ausgeblendet, um den Chart
 // übersichtlich zu halten — analog zum "Historische OBs"-Toggle im tv-indikator-Projekt
 // (dort default auch aus). Ein einzelner Schalter statt pro-Timeframe (4H/1H getrennt wie
@@ -39,6 +43,12 @@ const showTradeSetups = useLocalStorageRef("showTradeSetups", true);
 // Anzahl vergangener Setups je Richtung, analog zu tradeSetupHistoryCountShort/Long im
 // tv-indikator (dort default 5, 0-50) — 0 zeigt nur das gerade aktive/letzte Setup.
 const tradeSetupHistoryCount = useLocalStorageRef("tradeSetupHistoryCount", 5);
+// Long/Short einzeln de-/aktivierbar (siehe Chat 2026-07-19: "hilft für die Übersicht") — beide
+// default an. Wirkt sowohl auf die gezeichneten Setups als auch auf das TSC (siehe
+// PriceChart.vue: computeTradeSetups() lässt die deaktivierte Richtung komplett weg, TSC zeigt
+// dadurch automatisch nur noch das jüngste SICHTBARE Setup).
+const showTradeSetupsLong = useLocalStorageRef("showTradeSetupsLong", true);
+const showTradeSetupsShort = useLocalStorageRef("showTradeSetupsShort", true);
 
 // "Ranges" — erster Baustein des neuen PA-Analyse-Konzepts (siehe Chat 2026-07-18: weg von der
 // verschachtelten Trend-State-Machine, hin zu PA-Analyse/Trendanalyse/Marktstärke als getrennten
@@ -80,6 +90,9 @@ const showEma = useLocalStorageRef("showEma", false);
 // tradeSetupCockpitAtCandle ist der Positions-Toggle (fester Platz vs. neben der letzten Kerze).
 const showTradeSetupCockpit = useLocalStorageRef("showTradeSetupCockpit", true);
 const tradeSetupCockpitAtCandle = useLocalStorageRef("tradeSetupCockpitAtCandle", false);
+// Abstand zur letzten Kerze im "neben Kerze"-Modus, konfigurierbar (siehe Chat 2026-07-19: "etwas
+// zu eng, am besten Abstand konfigurabel machen") — siehe tradeSetupCockpit.ts: DEFAULT_CANDLE_OFFSET.
+const tradeSetupCockpitCandleOffset = useLocalStorageRef("tradeSetupCockpitCandleOffset", 24);
 // Style-Modal (Farben aller Chart-Indikatoren, siehe StyleModal.vue/chartColors.js) — reiner
 // Öffnen/Schließen-Zustand, NICHT in localStorage (die Farben selbst persistieren bereits über
 // den chartColors-Singleton, das Modal muss nicht offen bleiben).
@@ -131,12 +144,12 @@ function stepReplayForward() {
 // Toggles selbst) — welches Dropdown gerade offen ist, ist keine Einstellung, die überdauern muss.
 const liquidityMenuOpen = ref(false);
 const rangesMenuOpen = ref(false);
-const tscMenuOpen = ref(false);
+const tradeSetupsMenuOpen = ref(false);
 function closeMenusOutside(e) {
   if (!e.target.closest?.(".toggle-group")) {
     liquidityMenuOpen.value = false;
     rangesMenuOpen.value = false;
-    tscMenuOpen.value = false;
+    tradeSetupsMenuOpen.value = false;
   }
 }
 onMounted(() => window.addEventListener("click", closeMenusOutside));
@@ -204,18 +217,57 @@ watch(currentSymbol, () => {
         </div>
       </div>
 
-      <button :class="{ active: showTradeSetups }" @click="showTradeSetups = !showTradeSetups">
-        Trade-Setups
-      </button>
-      <input
-        v-if="showTradeSetups"
-        v-model.number="tradeSetupHistoryCount"
-        type="number"
-        min="0"
-        max="50"
-        class="trade-setup-history-count"
-        title="Anzahl vergangener Trade-Setups je Richtung"
-      />
+      <div class="toggle-group">
+        <button :class="{ active: showTradeSetups }" @click="showTradeSetups = !showTradeSetups">
+          Trade-Setups
+        </button>
+        <button
+          class="toggle-caret"
+          :class="{ open: tradeSetupsMenuOpen }"
+          title="Untermenü"
+          @click="tradeSetupsMenuOpen = !tradeSetupsMenuOpen"
+        >
+          ▾
+        </button>
+        <div v-if="tradeSetupsMenuOpen" class="toggle-dropdown">
+          <button :class="{ active: showTradeSetupsLong }" @click="showTradeSetupsLong = !showTradeSetupsLong">
+            Long
+          </button>
+          <button :class="{ active: showTradeSetupsShort }" @click="showTradeSetupsShort = !showTradeSetupsShort">
+            Short
+          </button>
+          <label class="ranges-lookback-field">
+            Historie
+            <input
+              v-model.number="tradeSetupHistoryCount"
+              type="number"
+              min="0"
+              max="50"
+              class="ranges-lookback-input"
+              title="Anzahl vergangener Trade-Setups je Richtung"
+            />
+          </label>
+
+          <div class="toggle-dropdown-divider"></div>
+
+          <button :class="{ active: showTradeSetupCockpit }" @click="showTradeSetupCockpit = !showTradeSetupCockpit">
+            TSC
+          </button>
+          <button :class="{ active: tradeSetupCockpitAtCandle }" @click="tradeSetupCockpitAtCandle = !tradeSetupCockpitAtCandle">
+            TSC neben Kerze
+          </button>
+          <label v-if="tradeSetupCockpitAtCandle" class="ranges-lookback-field">
+            Abstand
+            <input
+              v-model.number="tradeSetupCockpitCandleOffset"
+              type="number"
+              min="0"
+              class="ranges-lookback-input"
+              title="Abstand (Pixel) zwischen letzter Kerze und TSC-Karte im Modus 'Neben Kerze'"
+            />
+          </label>
+        </div>
+      </div>
 
       <div class="toggle-group">
         <button :class="{ active: showRanges }" @click="showRanges = !showRanges">
@@ -304,25 +356,6 @@ watch(currentSymbol, () => {
         EMA
       </button>
 
-      <div class="toggle-group">
-        <button :class="{ active: showTradeSetupCockpit }" @click="showTradeSetupCockpit = !showTradeSetupCockpit">
-          TSC
-        </button>
-        <button
-          class="toggle-caret"
-          :class="{ open: tscMenuOpen }"
-          title="Untermenü"
-          @click="tscMenuOpen = !tscMenuOpen"
-        >
-          ▾
-        </button>
-        <div v-if="tscMenuOpen" class="toggle-dropdown">
-          <button :class="{ active: tradeSetupCockpitAtCandle }" @click="tradeSetupCockpitAtCandle = !tradeSetupCockpitAtCandle">
-            Neben Kerze
-          </button>
-        </div>
-      </div>
-
       <div class="toggle-group replay-control" :class="{ active: replayActive }">
         <button
           class="replay-toggle-btn"
@@ -363,6 +396,8 @@ watch(currentSymbol, () => {
     :show-liquidity-debug="showLiquidityDebug"
     :show-trade-setups="showTradeSetups"
     :trade-setup-history-count="tradeSetupHistoryCount"
+    :show-trade-setups-long="showTradeSetupsLong"
+    :show-trade-setups-short="showTradeSetupsShort"
     :ranges-period="rangesPeriod"
     :ranges-lookback-hours="rangesLookbackHours"
     :ranges2-period="ranges2Period"
@@ -372,6 +407,7 @@ watch(currentSymbol, () => {
     :show-ema="showEma"
     :show-trade-setup-cockpit="showTradeSetupCockpit"
     :trade-setup-cockpit-at-candle="tradeSetupCockpitAtCandle"
+    :trade-setup-cockpit-candle-offset="tradeSetupCockpitCandleOffset"
     :replay-until="replayUntil"
     @close-ranges-metadata="showRangesMetadata = false"
     @toggle-tsc-position="tradeSetupCockpitAtCandle = !tradeSetupCockpitAtCandle"
@@ -553,17 +589,6 @@ watch(currentSymbol, () => {
   height: 1px;
   margin: 4px 6px;
   background: #2a2e39;
-}
-
-.trade-setup-history-count {
-  width: 40px;
-  margin-left: 4px;
-  background: #131722;
-  border: 1px solid #2a2e39;
-  border-radius: 4px;
-  color: #d1d4dc;
-  font-size: 13px;
-  padding: 3px 4px;
 }
 
 .replay-control {

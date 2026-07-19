@@ -41,6 +41,11 @@ const props = defineProps({
   showLiquidityDebug: { type: Boolean, default: false },
   showTradeSetups: { type: Boolean, default: true },
   tradeSetupHistoryCount: { type: Number, default: 5 },
+  // Long/Short einzeln de-/aktivierbar (siehe Chat 2026-07-19: "hilft für die Übersicht") — siehe
+  // computeTradeSetups, wirkt auch aufs TSC (currentTradeSetups enthält die deaktivierte Richtung
+  // dann gar nicht erst).
+  showTradeSetupsLong: { type: Boolean, default: true },
+  showTradeSetupsShort: { type: Boolean, default: true },
   rangesPeriod: { type: Number, default: 5 },
   rangesLookbackHours: { type: Number, default: 7 * 24 },
   showRanges: { type: Boolean, default: false },
@@ -63,6 +68,9 @@ const props = defineProps({
   // = fester Platz rechts/mittig (links von der Preis-Skala), true = neben der letzten Kerze.
   showTradeSetupCockpit: { type: Boolean, default: true },
   tradeSetupCockpitAtCandle: { type: Boolean, default: false },
+  // Abstand (CSS-Pixel) zur letzten Kerze im 'candle'-Modus — konfigurierbar seit Chat
+  // 2026-07-19 ("etwas zu eng, am besten Abstand konfigurabel machen"), siehe tradeSetupCockpit.ts.
+  tradeSetupCockpitCandleOffset: { type: Number, default: 24 },
 });
 const emit = defineEmits(["close-ranges-metadata", "toggle-tsc-position"]);
 
@@ -525,22 +533,26 @@ function computeRangeAnalysisState() {
 // Trend-Label rechts/mittig (siehe Chat) — sichtbar, sobald showRanges an ist, unabhängig vom
 // Debug-Toggle (im Gegensatz zu den rohen Punktmarkern oben).
 function refreshRangeAnalysisInternal() {
+  if (!chart) return; // async loadRangesCandles kann nach unmount noch abschließen, siehe onUnmounted
   const state = computeRangeAnalysisState();
-  rangeAnalysisState.value = state; // fürs Metadaten-Panel, unabhängig von showRanges (Zeichnen)
+  rangeAnalysisState.value = state; // fürs Metadaten-Panel + TSC, unabhängig von showRanges (Zeichnen)
   const candles = clipReplay(allCandles);
-  if (!props.showRanges || !state) {
-    renderRangeAnalysis(candleSeries, null, rangeAnalysisPrimitives, candles);
-    return;
-  }
-  renderRangeAnalysis(candleSeries, state, rangeAnalysisPrimitives, candles);
+  renderRangeAnalysis(candleSeries, props.showRanges ? state : null, rangeAnalysisPrimitives, candles);
+  // Sofort weiterreichen statt auf den nächsten refreshChart()/POLL_MS (12s) zu warten (siehe Chat
+  // 2026-07-19: "TSC scheint zu hängen, dauert ne Weile bis da was drin steht") — rangeAnalysisState
+  // ist eine der beiden TSC-Datenquellen (siehe refreshCockpitInternal), die andere ist
+  // currentTradeSetups (siehe loadTradeSetupCandles).
+  refreshCockpitInternal();
 }
 
-// Trade-Setup-Cockpit (siehe Chat 2026-07-19) — reine Zusammenfassung, läuft NACH
-// refreshRangeAnalysisInternal (braucht rangeAnalysisState.value) und liest currentTradeSetups
-// direkt aus der Closure (dieselbe Liste, die renderTradeSetupsInternal schon positioniert) — kein
-// eigener Fetch/eigene Erkennung. Nur für Forex (wie Ranges/Trade-Setups selbst).
+// Trade-Setup-Cockpit (siehe Chat 2026-07-19) — reine Zusammenfassung, liest rangeAnalysisState.value
+// und currentTradeSetups direkt aus der Closure (dieselbe Liste, die renderTradeSetupsInternal schon
+// positioniert) — kein eigener Fetch/eigene Erkennung. Nur für Forex (wie Ranges/Trade-Setups
+// selbst). Wird sowohl von refreshRangeAnalysisInternal als auch von loadTradeSetupCandles direkt
+// aufgerufen (siehe dort), nicht erst über den nächsten refreshChart() — sonst hinkt die Karte bis
+// zu POLL_MS (12s) hinter den eigentlich schon fertigen Daten her.
 function refreshCockpitInternal() {
-  if (!isForex) return;
+  if (!isForex || !chart) return; // async loadTradeSetupCandles kann nach unmount noch abschließen
   const candles = clipReplay(allCandles);
   if (!props.showTradeSetupCockpit || candles.length === 0) {
     renderTradeSetupCockpit(candleSeries, null, cockpitPrimitives, candles);
@@ -551,6 +563,7 @@ function refreshCockpitInternal() {
   renderTradeSetupCockpit(candleSeries, state, cockpitPrimitives, candles, {
     mode: props.tradeSetupCockpitAtCandle ? "candle" : "fixed",
     formatPrice: (price) => fmtPrice(price, precision),
+    candleOffset: props.tradeSetupCockpitCandleOffset,
   });
 }
 
@@ -572,10 +585,14 @@ async function loadRangesCandles() {
 }
 
 // showRanges (Marker im Chart) und showRangesMetadata (JSON-Panel) sind getrennte Toggles, teilen
-// sich aber dieselben H1-Kerzen/Pivots — laden läuft also, solange MINDESTENS einer von beiden an
-// ist, kein unnötiger cTrader-Connect (RANGES_POLL_MS), solange wirklich niemand hinschaut.
+// sich aber dieselben H1-Kerzen/Pivots. showTradeSetupCockpit zählt seit Chat 2026-07-19 ebenfalls
+// mit ("TSC soll den aktuellsten und wahren Stand anzeigen, selbst wenn Trend im Chart gerade zur
+// Übersicht ausgetoggelt ist") — sonst würde rangeAnalysisState (siehe refreshRangeAnalysisInternal)
+// beim Wegtoggeln von Ranges/Metadaten stumpf auf dem letzten Stand einfrieren statt weiter mit-
+// zulaufen. Laden läuft also, solange MINDESTENS einer der drei an ist, kein unnötiger
+// cTrader-Connect (RANGES_POLL_MS), solange wirklich niemand (auch nicht die TSC-Karte) hinschaut.
 function rangesNeedsData() {
-  return props.showRanges || props.showRangesMetadata;
+  return props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit;
 }
 function startRangesPolling() {
   loadRangesCandles();
@@ -624,6 +641,11 @@ function computeTradeSetups() {
   // also nichts (slice(-0) wäre sonst das GANZE Array, daher der Sonderfall).
   const n = Math.max(0, props.tradeSetupHistoryCount);
   const takeLast = (arr) => (n === 0 ? [] : arr.slice(-n));
+  // IMMER beide Richtungen berechnen (unabhängig von showTradeSetupsLong/-Short) — siehe Chat
+  // 2026-07-19: "TSC soll den aktuellsten und wahren Stand anzeigen", auch wenn im Chart gerade
+  // eine Richtung zur Übersicht ausgetoggelt ist. Die Long/Short-Toggles filtern erst beim
+  // ZEICHNEN (renderTradeSetupsInternal), currentTradeSetups selbst (und damit die TSC-Karte,
+  // siehe refreshCockpitInternal) bleibt immer vollständig.
   const shorts = takeLast(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params));
   const longs = takeLast(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params));
   currentTradeSetups = [
@@ -655,6 +677,10 @@ function renderTradeSetupsInternal() {
 
   for (const setup of currentTradeSetups) {
     if (props.replayUntil != null && setup.fractal.pivotTime > props.replayUntil) continue;
+    // Long/Short-Toggle filtert NUR das Zeichnen (siehe computeTradeSetups: currentTradeSetups
+    // selbst bleibt immer vollständig, fürs TSC).
+    if (setup.dir === 1 && !props.showTradeSetupsShort) continue;
+    if (setup.dir === -1 && !props.showTradeSetupsLong) continue;
     const key = setup.dir === 1 ? "tradeSetupShort" : "tradeSetupLong";
     const lsColor = cssColor(key);
     const { top, bottom } = tradeSetupObBoxBounds(setup);
@@ -740,6 +766,9 @@ async function loadTradeSetupCandles() {
     computeTradeSetups();
     renderTradeSetupsInternal();
     refreshEmaInternal();
+    // Sofort weiterreichen statt auf den nächsten refreshChart()/POLL_MS zu warten — siehe
+    // refreshCockpitInternal/refreshRangeAnalysisInternal (Chat 2026-07-19: "TSC hängt").
+    refreshCockpitInternal();
   } catch (err) {
     console.error("Trade-Setup-Kerzen fehlgeschlagen:", err);
   }
@@ -756,8 +785,7 @@ function refreshChart() {
   refreshTradeMarkersInternal();
   renderTradeSetupsInternal();
   refreshRangesMarkersInternal();
-  refreshRangeAnalysisInternal();
-  refreshCockpitInternal(); // nach refreshRangeAnalysisInternal (braucht rangeAnalysisState.value)
+  refreshRangeAnalysisInternal(); // ruft refreshCockpitInternal() selbst mit auf, siehe dort
   refreshEmaInternal();
   cvdSeries?.setData(cumulativeFromDeltas(clipReplay(allCvdDeltas)));
   positionGauges();
@@ -1011,6 +1039,10 @@ watch(() => props.tradeSetupHistoryCount, () => {
   computeTradeSetups();
   renderTradeSetupsInternal();
 });
+// Nur Re-Render, kein computeTradeSetups() — currentTradeSetups bleibt unabhängig von diesem
+// Toggle vollständig (siehe computeTradeSetups), die TSC-Karte bekommt also KEIN eigenes
+// Refresh hier (sie ignoriert diesen Toggle bewusst, siehe Chat 2026-07-19).
+watch([() => props.showTradeSetupsLong, () => props.showTradeSetupsShort], renderTradeSetupsInternal);
 watch(() => props.showRanges, () => {
   refreshRangesPollingState();
   refreshRangesMarkersInternal(); // sofort reagieren, nicht erst beim nächsten refreshChart()
@@ -1040,7 +1072,14 @@ watch(() => props.showEma, (on) => {
   if (on && trendAnalysisM5Candles.length === 0) loadTradeSetupCandles();
   else refreshEmaInternal();
 });
-watch(() => [props.showTradeSetupCockpit, props.tradeSetupCockpitAtCandle], refreshCockpitInternal);
+watch(() => props.showTradeSetupCockpit, () => {
+  // showTradeSetupCockpit zählt seit Chat 2026-07-19 mit in rangesNeedsData() (TSC braucht den
+  // H1-Range-State immer, auch ohne Trend-Toggle) -> Polling-Zustand neu bewerten, genau wie beim
+  // showRanges/showRangesMetadata-Watcher oben.
+  refreshRangesPollingState();
+  refreshCockpitInternal();
+});
+watch(() => [props.tradeSetupCockpitAtCandle, props.tradeSetupCockpitCandleOffset], refreshCockpitInternal);
 // Verschieben von replayUntil braucht keinen Refetch (siehe clipReplay) — nur ein Neu-Ableiten
 // aller von den rohen *Candles-Arrays abhängigen Zustände (currentTradeSetups läuft anders als
 // der Rest nicht automatisch über refreshChart() mit, siehe computeTradeSetups) + Re-Render.

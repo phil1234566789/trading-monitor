@@ -4,7 +4,7 @@
 // eigene Erkennungslogik — liest nur den schon berechneten RangeState (H1, rangeAnalysis.ts) und
 // die schon berechneten Trade-Setups (M5, tradeSetup.js) und stellt sie zusammengefasst dar.
 import type { RangeState, Pivot } from "./range.type";
-import { cssColor } from "./chartColors.js";
+import { cssColor, cssColorScaled } from "./chartColors.js";
 
 export interface Candle {
   time: number;
@@ -65,13 +65,41 @@ const FONT_SIZE = 15;
 const LINE_HEIGHT = 24;
 const PADDING = 16;
 const EDGE_MARGIN = 12; // Abstand zum Pane-Rand im 'fixed'-Modus
-const CANDLE_OFFSET = 14; // Abstand zur letzten Kerze im 'candle'-Modus
+// Abstand zur letzten Kerze im 'candle'-Modus — Default nur der Fallback, wenn renderTradeSetupCockpit
+// ohne candleOffset aufgerufen wird. Konfigurierbar seit Chat 2026-07-19 ("etwas zu eng, am besten
+// Abstand konfigurabel machen"), siehe candleOffset-Parameter unten / Dashboard.vue-Dropdown.
+const DEFAULT_CANDLE_OFFSET = 24;
 
 // Positions-Toggle DIREKT an der Karte (siehe Chat 2026-07-19: "Ein extra Toggle im TSC selbst
 // bitte" — zusätzlich zum bestehenden Toolbar-Dropdown, nicht als Ersatz). Kleines Badge oben
 // rechts an der Karte statt die ganze Karte klickbar zu machen, damit spätere Klicks auf die
 // Karte selbst (z.B. fürs Chart dahinter) nicht versehentlich die Position umschalten.
 const BADGE_RADIUS = 9;
+const CARD_RADIUS = 8; // abgerundete Ecken (siehe Chat 2026-07-19), CSS-Pixel
+
+// Karten-Hintergrund/-Rand färben sich nach der M5-Setup-Richtung ein (Long=grün, Short=rot) —
+// bewusst NICHT dieselben Farben wie die M5-LS-Linie/OB-Box (tradeSetupLong/-Short, siehe
+// buildLines) - das bleibt laut Philip unabhängig ("es kann ein Short Setup geben mit 1h
+// uptrend, das ist damit ich es gut einordnen kann"). Stattdessen die im Rest der App schon
+// etablierte grün/rot-Semantik (candleUp/candleDown, auch tradeWin/tradeLoss) — Grün/Rot heißt
+// hier "Long/Short", nicht "Trend" oder "Erfolg".
+function cardAccentColors(state: CockpitState): { fill: string; border: string } | null {
+  if (!state.m5Setup) return null;
+  const key = state.m5Setup.dir === -1 ? "candleUp" : "candleDown";
+  return { fill: cssColorScaled(key, 0.16), border: cssColor(key) };
+}
+
+// Karte mit abgerundeten Ecken statt ctx.rect (siehe Chat: "Ecken abrunden ;D") — eigener Pfad
+// statt ctx.roundRect, weil letzteres in älteren Electron/Chromium-Ständen fehlen kann.
+function roundedRectPath(ctx: any, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
 
 interface HitBox {
   left: number;
@@ -107,17 +135,23 @@ class CockpitRenderer {
   private _point: { x: number | null; y: number | null };
   private _lines: Line[];
   private _primitive: TradeSetupCockpitPrimitive;
+  private _candleOffset: number;
+  private _accent: { fill: string; border: string } | null;
 
   constructor(
     mode: "fixed" | "candle",
     point: { x: number | null; y: number | null },
     lines: Line[],
     primitive: TradeSetupCockpitPrimitive,
+    candleOffset: number,
+    accent: { fill: string; border: string } | null,
   ) {
     this._mode = mode;
     this._point = point;
     this._lines = lines;
     this._primitive = primitive;
+    this._candleOffset = candleOffset;
+    this._accent = accent;
   }
 
   draw(target: any) {
@@ -148,16 +182,25 @@ class CockpitRenderer {
         boxLeft = scope.bitmapSize.width - boxWidth - Math.round(EDGE_MARGIN * scope.horizontalPixelRatio);
         boxTop = (scope.bitmapSize.height - boxHeight) / 2;
       } else {
-        boxLeft = Math.round((this._point.x as number) * scope.horizontalPixelRatio) + Math.round(CANDLE_OFFSET * scope.horizontalPixelRatio);
+        boxLeft = Math.round((this._point.x as number) * scope.horizontalPixelRatio) + Math.round(this._candleOffset * scope.horizontalPixelRatio);
         boxTop = Math.round((this._point.y as number) * scope.verticalPixelRatio) - boxHeight / 2;
       }
 
+      // Dunkler Grund IMMER zuerst (Textlesbarkeit) — bei aktivem M5-Setup kommt darüber ein
+      // grüner/roter Tint + kräftigerer Rand (siehe Chat 2026-07-19: "Long -> grün, Short -> rot,
+      // Ecken abrunden"). Ohne Setup bleibt die Karte neutral wie bisher.
+      const radius = Math.round(CARD_RADIUS * scope.horizontalPixelRatio);
+      roundedRectPath(ctx, boxLeft, boxTop, boxWidth, boxHeight, radius);
       ctx.fillStyle = "rgba(19, 23, 34, 0.92)";
-      ctx.strokeStyle = "rgba(120, 123, 134, 0.5)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.rect(boxLeft, boxTop, boxWidth, boxHeight);
       ctx.fill();
+      if (this._accent) {
+        roundedRectPath(ctx, boxLeft, boxTop, boxWidth, boxHeight, radius);
+        ctx.fillStyle = this._accent.fill;
+        ctx.fill();
+      }
+      roundedRectPath(ctx, boxLeft, boxTop, boxWidth, boxHeight, radius);
+      ctx.strokeStyle = this._accent ? this._accent.border : "rgba(120, 123, 134, 0.5)";
+      ctx.lineWidth = this._accent ? Math.max(1.5, Math.round(1.5 * scope.horizontalPixelRatio)) : 1;
       ctx.stroke();
 
       ctx.textAlign = "left";
@@ -219,7 +262,14 @@ class CockpitPaneView {
   }
 
   renderer() {
-    return new CockpitRenderer(this._source._mode, this._point, this._source._lines, this._source);
+    return new CockpitRenderer(
+      this._source._mode,
+      this._point,
+      this._source._lines,
+      this._source,
+      this._source._candleOffset,
+      this._source._accent,
+    );
   }
 }
 
@@ -227,15 +277,25 @@ export class TradeSetupCockpitPrimitive {
   _lines: Line[];
   _mode: "fixed" | "candle";
   _candles: Candle[];
+  _candleOffset: number;
+  _accent: { fill: string; border: string } | null;
   _paneViews: CockpitPaneView[];
   _chart: any;
   _series: any;
   _hitBox: HitBox | null;
 
-  constructor(lines: Line[], mode: "fixed" | "candle", candles: Candle[]) {
+  constructor(
+    lines: Line[],
+    mode: "fixed" | "candle",
+    candles: Candle[],
+    candleOffset: number,
+    accent: { fill: string; border: string } | null,
+  ) {
     this._lines = lines;
     this._mode = mode;
     this._candles = candles;
+    this._candleOffset = candleOffset;
+    this._accent = accent;
     this._paneViews = [new CockpitPaneView(this)];
     this._chart = null;
     this._series = null;
@@ -266,20 +326,26 @@ export class TradeSetupCockpitPrimitive {
 }
 
 // Ersetzt existingPrimitives komplett (siehe renderRangeAnalysis-Vorbild). state=null -> nur
-// aufräumen, keine Karte. mode: 'fixed' (Default) oder 'candle', siehe oben.
+// aufräumen, keine Karte. mode: 'fixed' (Default) oder 'candle', siehe oben. candleOffset nur im
+// 'candle'-Modus relevant, siehe DEFAULT_CANDLE_OFFSET.
 export function renderTradeSetupCockpit(
   series: any,
   state: CockpitState | null,
   existingPrimitives: any[],
   candles: Candle[],
-  { mode = "fixed", formatPrice = (p: number) => String(p) }: { mode?: "fixed" | "candle"; formatPrice?: (price: number) => string } = {},
+  {
+    mode = "fixed",
+    formatPrice = (p: number) => String(p),
+    candleOffset = DEFAULT_CANDLE_OFFSET,
+  }: { mode?: "fixed" | "candle"; formatPrice?: (price: number) => string; candleOffset?: number } = {},
 ) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
   if (!state) return;
 
   const lines = buildLines(state, formatPrice);
-  const primitive = new TradeSetupCockpitPrimitive(lines, mode, candles);
+  const accent = cardAccentColors(state);
+  const primitive = new TradeSetupCockpitPrimitive(lines, mode, candles, candleOffset, accent);
   series.attachPrimitive(primitive);
   existingPrimitives.push(primitive);
 }

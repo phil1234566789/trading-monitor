@@ -402,16 +402,24 @@ export function renderRangeAnalysis(
     existingPrimitives.push(line);
   }
 
-  // Goldene Linie je LQ-Sweep (siehe Chat 2026-07-19: "GOLDENE Linie ... mit dem label '1h
-  // LQ-Sweep'") — anders als protected-low (immer nur der jeweils jüngste) potenziell mehrere
-  // gleichzeitig, deshalb hier eine Linie PRO markiertem structurePivot statt nur die erste.
+  // Goldene Linie + Pfeil je LQ-Sweep (siehe Chat 2026-07-19: "GOLDENE Linie ... mit dem label '1h
+  // LQ-Sweep'", und Chat 2026-07-20: "noch mit nem goldenen Pfeil nach oben") — anders als
+  // protected-low (immer nur der jeweils jüngste) potenziell mehrere gleichzeitig, deshalb hier
+  // eine Linie+Pfeil PRO markiertem structurePivot statt nur die erste. Pfeil zeigt IMMER nach
+  // oben (direction: "down" löst laut ArrowRenderer den nach-oben-zeigenden Zweig aus, siehe
+  // dortiger Kommentar) — ein LQ-Sweep ist per Definition bullisch (gesweepter Low, der hält).
+  // Downtrend (Pfeil nach unten) noch nicht implementiert, siehe rangeAnalysis-Trend-Logik oben.
   for (const lqSweep of state.structurePivots.filter((p) => p.type === "LQ-sweep")) {
+    const lqColor = cssColor("rangeLqSweep");
     const line = new LiquidityLinePrimitive(
       toLevel(lqSweep, candles),
-      { color: cssColor("rangeLqSweep"), lineWidth: LINE_WIDTH, label: "1h LQ-Sweep", labelSide: "end" },
+      { color: lqColor, lineWidth: LINE_WIDTH, label: "1h LQ-Sweep", labelSide: "end" },
       candles,
     );
-    series.attachPrimitive(line);
-    existingPrimitives.push(line);
+    const arrow = new ArrowPrimitive(lqSweep, { color: lqColor, direction: "down" }, candles);
+    for (const primitive of [line, arrow]) {
+      series.attachPrimitive(primitive);
+      existingPrimitives.push(primitive);
+    }
   }
 }
