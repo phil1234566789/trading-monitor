@@ -74,7 +74,13 @@ const showStyleModal = ref(false);
 // clipReplay) — zum visuellen Prüfen des Ranges-Algos (oder jedes anderen Indikators), ohne
 // dabei schon die "Zukunft" zu sehen. Bewusst NICHT in localStorage: ein Reload soll immer
 // wieder live starten, nicht in einem alten Replay-Zeitpunkt hängen bleiben.
-const replayUntil = ref(null); // unix Sekunden oder null (= live)
+// replayTime (der eingestellte Zeitpunkt) und replayActive (Toggle) sind bewusst getrennt — der
+// "⏮ Replay bis"-Button schaltet nur zwischen live/replay um, ohne den eingestellten Zeitpunkt im
+// Datumsfeld daneben zu löschen (siehe Chat: "verschwinden aber die eingestellten datetime daten
+// im input daneben nicht"). replayUntil (an PriceChart durchgereicht) ist nur die Kombination.
+const replayTime = ref(null); // unix Sekunden, bleibt auch bei ausgeschaltetem Replay stehen
+const replayActive = ref(false);
+const replayUntil = computed(() => (replayActive.value ? replayTime.value : null));
 function toDatetimeLocal(unixSeconds) {
   const d = new Date(unixSeconds * 1000);
   const pad = (n) => String(n).padStart(2, "0");
@@ -83,11 +89,24 @@ function toDatetimeLocal(unixSeconds) {
 // <input type="datetime-local"> liefert/erwartet "YYYY-MM-DDTHH:mm" in der Browser-Lokalzeit —
 // new Date(v) parst das wieder als Lokalzeit, der Roundtrip braucht also keine eigene TZ-Logik.
 const replayInputValue = computed({
-  get: () => (replayUntil.value == null ? "" : toDatetimeLocal(replayUntil.value)),
+  get: () => (replayTime.value == null ? "" : toDatetimeLocal(replayTime.value)),
   set: (v) => {
-    replayUntil.value = v ? Math.floor(new Date(v).getTime() / 1000) : null;
+    replayTime.value = v ? Math.floor(new Date(v).getTime() / 1000) : null;
   },
 });
+// "+1 Kerze"-Button: den Zeitpunkt der nächsten geladenen Kerze im aktuellen Timeframe holt
+// PriceChart.vue (kennt allCandles, siehe defineExpose dort) — replayTime/-Active gehören hierher,
+// nicht in die Kind-Komponente (fließt nur als Prop nach unten). Aus Live heraus (noch kein
+// Zeitpunkt gesetzt) springt der erste Klick auf die älteste geladene Kerze (siehe nextReplayTime)
+// und aktiviert Replay gleich mit — sonst würde der Klick unsichtbar ins Leere laufen.
+const priceChartRef = ref(null);
+function stepReplayForward() {
+  const next = priceChartRef.value?.nextReplayTime(replayTime.value);
+  if (next != null) {
+    replayTime.value = next;
+    replayActive.value = true;
+  }
+}
 
 // Toolbar wurde zu voll (siehe Chat) -> Liquidity-Sweeps unter "Liquidität", Pivots+Metadaten
 // unter "Trend" als Dropdown. Reiner UI-Zustand, bewusst NICHT in localStorage (anders als die
@@ -242,11 +261,18 @@ watch(currentSymbol, () => {
         🎨 Style
       </button>
 
-      <div class="toggle-group replay-control" :class="{ active: replayUntil != null }">
-        <span class="replay-label">⏮ Replay bis</span>
+      <div class="toggle-group replay-control" :class="{ active: replayActive }">
+        <button
+          class="replay-toggle-btn"
+          :class="{ active: replayActive }"
+          title="Replay an/aus — Datum bleibt beim Ausschalten stehen"
+          @click="replayActive = !replayActive"
+        >
+          ⏮ Replay bis
+        </button>
         <input v-model="replayInputValue" type="datetime-local" class="replay-input" title="Chart+Indikatoren nur bis zu diesem Zeitpunkt anzeigen" />
-        <button v-if="replayUntil != null" class="replay-live-btn" title="Zurück zu live" @click="replayUntil = null">
-          Live
+        <button class="replay-step-btn" title="Eine Kerze weiter (aktueller Timeframe)" @click="stepReplayForward">
+          +1 Kerze ▶|
         </button>
       </div>
     </div>
@@ -255,6 +281,7 @@ watch(currentSymbol, () => {
   <StyleModal v-if="showStyleModal" @close="showStyleModal = false" />
 
   <PriceChart
+    ref="priceChartRef"
     :key="currentSymbol"
     :symbol="currentSymbol"
     :current-bar="currentBar"
@@ -448,10 +475,25 @@ watch(currentSymbol, () => {
   background: rgba(41, 98, 255, 0.12);
 }
 
-.replay-label {
-  font-size: 13px;
+.replay-toggle-btn {
+  background: transparent;
+  border: none;
   color: #787b86;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
   white-space: nowrap;
+}
+
+.replay-toggle-btn:hover {
+  background: #2a2e39;
+  color: #d1d4dc;
+}
+
+.replay-toggle-btn.active {
+  background: #2962ff;
+  color: #fff;
 }
 
 .replay-input {
@@ -464,15 +506,19 @@ watch(currentSymbol, () => {
   color-scheme: dark;
 }
 
-.replay-live-btn {
-  background: #2962ff;
+.replay-step-btn {
+  background: #2a2e39;
   border: none;
-  color: #fff;
+  color: #d1d4dc;
   padding: 4px 8px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 12px;
   white-space: nowrap;
+}
+
+.replay-step-btn:hover {
+  background: #363b47;
 }
 
 .trades-panel {

@@ -1019,6 +1019,20 @@ watch(
   },
   { deep: true },
 );
+
+// Für den "+1 Kerze"-Button in Dashboard.vue: replayUntil lebt dort (fließt nur als Prop rein),
+// daher kein direktes Setzen von hier aus möglich — stattdessen den Zeitpunkt der nächsten
+// geladenen Kerze im AKTUELLEN Timeframe (allCandles, unclipped) zurückgeben, den Dashboard.vue
+// dann als neuen replayUntil-Wert übernimmt. `after == null` (noch kein Replay aktiv) liefert die
+// älteste geladene Kerze, damit der Button auch aus Live heraus sofort funktioniert.
+defineExpose({
+  nextReplayTime(after) {
+    for (const c of allCandles) {
+      if (after == null || c.time > after) return c.time;
+    }
+    return null;
+  },
+});
 </script>
 
 <template>
