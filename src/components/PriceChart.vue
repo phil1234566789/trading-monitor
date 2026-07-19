@@ -100,6 +100,12 @@ const RECENT_PAGE_SIZE_FOREX = 10;
 const CLOSE_POLL_BUFFER_MS = 2_000;
 const HISTORY_PAGE_SIZE = 100; // OKX max per call on /market/history-candles
 const INITIAL_CANDLE_COUNT = 1000; // depth loaded on startup / timeframe switch
+// Wunsch Philip 2026-07-20: "ich werd bei Replay öfter auf +1 klicken, fetch doch gleich die
+// nächsten 4h" — an alle Replay-Fetches (fetchCandlesCached lookaheadSec-Parameter) durchgereicht,
+// damit wiederholtes "+1 Kerze"-Klicken innerhalb dieses Fensters ohne neuen Roundtrip auskommt
+// (siehe candleCache.js: der Hit-Check bleibt dabei strikt am WAHREN replayUntil, nur der
+// tatsächliche Fetch/completeUpTo reicht weiter).
+const REPLAY_LOOKAHEAD_SEC = 4 * 3600;
 const LAZY_LOAD_LOGICAL_THRESHOLD = 20; // fetch older data once this close to the left edge
 const WINDOW_BARS = 15; // letzte 15 Binance-1m-Kerzen für das rollierende Gauge-Fenster
 const TRADE_MARKER_BARS = new Set(["1m", "5m", "15m", "1h"]); // 4h/1D würden zu unübersichtlich
@@ -615,7 +621,7 @@ async function loadRangesCandles() {
     // Teilt sich den H1-Cache-Eintrag mit loadInitial (falls currentBar "1h" ist) und
     // loadTradeSetupH1 (siehe Chat 2026-07-20: "unnötige cTrader Aufrufe") — statt unabhängig
     // komplett neu zu fetchen, nur der fehlende/neue Teil.
-    const candles = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", count, replayToMs());
+    const candles = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", count, replayToMs(), REPLAY_LOOKAHEAD_SEC);
     if (seq !== rangesFetchSeq) return; // inzwischen überholt, siehe oben
     rangesH1Candles = candles;
     refreshRangesInternal();
@@ -809,7 +815,9 @@ async function loadTradeSetupM5() {
     // (siehe TREND_ANALYSIS_CANDLE_COUNT) — nur dann, um unnötige cTrader-Connects zu vermeiden.
     // Hängt hier dran (nicht an einem dritten eigenen Poller), weil EMA ohnehin M5-Kerzen braucht
     // und dieser Poll schon läuft — inhaltlich hat EMA nichts mit Trade-Setups zu tun, siehe Chat.
-    const fetches = [fetchCandlesCached(fetchInitialForexCandles, props.symbol, "5m", TRADE_SETUP_CANDLE_COUNT, toMs)];
+    const fetches = [
+      fetchCandlesCached(fetchInitialForexCandles, props.symbol, "5m", TRADE_SETUP_CANDLE_COUNT, toMs, REPLAY_LOOKAHEAD_SEC),
+    ];
     if (props.showEma) {
       fetches.push(
         fetchCandlesCached(
@@ -818,6 +826,7 @@ async function loadTradeSetupM5() {
           "5m",
           TREND_ANALYSIS_CANDLE_COUNT,
           toMs,
+          REPLAY_LOOKAHEAD_SEC,
         ),
       );
     }
@@ -842,7 +851,7 @@ async function loadTradeSetupH1() {
     // Teilt sich den Cache-Eintrag mit loadInitial (falls currentBar "1h" ist) und
     // loadRangesCandles — beide bleiben trotzdem bewusst eigene Aufrufe/Poller (siehe Chat
     // 2026-07-20: "Konzepte sollen sich nicht querbeeinflussen"), der Cache macht das billig.
-    const h1 = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", TRADE_SETUP_CANDLE_COUNT, toMs);
+    const h1 = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", TRADE_SETUP_CANDLE_COUNT, toMs, REPLAY_LOOKAHEAD_SEC);
     if (seq !== tradeSetupH1FetchSeq) return; // inzwischen überholt
     tradeSetupH1Candles = h1;
     computeTradeSetups();
@@ -906,7 +915,14 @@ async function loadInitial() {
     // auf M5 gewechselt und sehe keinen Chart").
     const toMs = replayToMs();
     if (isForex) {
-      candles = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, props.currentBar, INITIAL_CANDLE_COUNT, toMs);
+      candles = await fetchCandlesCached(
+        fetchInitialForexCandles,
+        props.symbol,
+        props.currentBar,
+        INITIAL_CANDLE_COUNT,
+        toMs,
+        REPLAY_LOOKAHEAD_SEC,
+      );
       deltas = [];
     } else {
       const binanceInterval = binanceIntervalFor(props.currentBar);
@@ -917,6 +933,7 @@ async function loadInitial() {
           props.currentBar,
           INITIAL_CANDLE_COUNT,
           toMs,
+          REPLAY_LOOKAHEAD_SEC,
         ),
         fetchInitialDeltas(binanceInterval, INITIAL_CANDLE_COUNT).catch((err) => {
           console.error("CVD-Historie fehlgeschlagen:", err);

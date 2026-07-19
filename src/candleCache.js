@@ -141,7 +141,18 @@ export function cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetC
 //   Lücke hinweg behaupten.
 // - Sonst (nichts gecacht, oder Cache reicht nicht tief/weit genug zurück) -> voller Fetch wie
 //   bisher, Ergebnis wird für künftige Aufrufe gecacht.
-export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs) {
+// lookaheadSec (nur im Replay-Fall, toMs gesetzt): holt beim tatsächlichen Fetch nicht nur bis
+// effectiveEndSec, sondern gleich lookaheadSec weiter in die (Replay-)Zukunft — und entsprechend
+// mehr Kerzen, damit die zusätzliche Zukunft nicht die gleiche Menge an ALTER Historie vom
+// Fensteranfang verdrängt. Zahlt sich beim wiederholten "+1 Kerze"-Klicken aus (Wunsch Philip
+// 2026-07-20: "fetch doch gleich die nächsten 4 Stunden, dann gibt's nur einen Roundtrip") — jeder
+// Klick innerhalb des Lookahead-Fensters landet danach direkt im Cache-Hit oben, OHNE dass sich am
+// eigentlichen Verhalten etwas ändert: die Anzeige bleibt strikt durch clipReplay() auf den
+// ECHTEN replayUntil begrenzt, unabhängig davon, wie weit im Voraus schon gecacht ist. Der
+// Hit-Check oben vergleicht bewusst weiterhin gegen den WAHREN (unverschobenen) effectiveEndSec,
+// nicht gegen einen pro Aufruf neu verschobenen Wert — sonst würde die "Sicherheitsmarge" nie
+// tatsächlich aufgebraucht und jeder Schritt bliebe trotzdem ein Cache-Miss.
+export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs, lookaheadSec = 0) {
   const { candles: cached, completeUpTo } = await getCachedCandles(symbol, bar);
   const effectiveEndSec = toMs != null ? Math.floor(toMs / 1000) : Math.floor(Date.now() / 1000);
 
@@ -168,12 +179,16 @@ export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs
   }
 
   // Nichts gecacht, oder Cache reicht (im Replay-Fall) nicht bis toMs zurück/nicht tief genug ->
-  // ganz normal voll fetchen, wie ohne Cache. `fetchFn` liefert dabei IMMER die tatsächlichen,
-  // autoritativen Kerzen bis genau effectiveEndSec (siehe cachedCandlesUpTo oben) -> completeUpTo
-  // im Replay-Fall entsprechend hochsetzen, im Live-Fall (toMs null) unangetastet lassen (siehe
-  // Delta-Zweig oben, dieselbe Begründung: "jetzt" ist kein stabiler Vergleichspunkt für später).
-  const fresh = await fetchFn(symbol, bar, targetCount, toMs);
+  // ganz normal voll fetchen, wie ohne Cache — im Replay-Fall gleich mit Lookahead (siehe oben).
+  // `fetchFn` liefert dabei IMMER die tatsächlichen, autoritativen Kerzen bis genau
+  // fetchEffectiveEndSec (siehe cachedCandlesUpTo oben) -> completeUpTo entsprechend hochsetzen,
+  // im Live-Fall (toMs null) unangetastet lassen (siehe Delta-Zweig oben, dieselbe Begründung:
+  // "jetzt" ist kein stabiler Vergleichspunkt für später).
+  const lookaheadBars = toMs != null && lookaheadSec > 0 ? Math.ceil(lookaheadSec / barSecondsFor(bar)) : 0;
+  const fetchToMs = lookaheadBars > 0 ? toMs + lookaheadSec * 1000 : toMs;
+  const fetchEffectiveEndSec = fetchToMs != null ? Math.floor(fetchToMs / 1000) : effectiveEndSec;
+  const fresh = await fetchFn(symbol, bar, targetCount + lookaheadBars, fetchToMs);
   const merged = cached.length > 0 ? mergeCandles(cached, fresh) : fresh;
-  await setCachedCandles(symbol, bar, merged, toMs != null ? effectiveEndSec : completeUpTo);
+  await setCachedCandles(symbol, bar, merged, toMs != null ? fetchEffectiveEndSec : completeUpTo);
   return fresh;
 }
