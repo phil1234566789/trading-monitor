@@ -18,7 +18,7 @@ import {
   mergeRecentDeltas,
   cumulativeFromDeltas,
 } from "../cvd.js";
-import { okxBarFor } from "../timeframes.js";
+import { okxBarFor, barSecondsFor } from "../timeframes.js";
 import {
   fetchInitialCandles as fetchInitialForexCandles,
   fetchRecentCandles as fetchRecentForexCandles,
@@ -83,8 +83,21 @@ const isForex = props.symbol !== "BTC-USDT";
 
 const OKX_BASE_URL = "https://www.okx.com";
 const INST_ID = "BTC-USDT";
-const POLL_MS = 12_000;
+const POLL_MS = 12_000; // nur noch für die BTC-CVD-Gauges (windowGaugeTimer/dailyGaugeTimer) — die
+// Haupt-Kerzen pollen seit Chat 2026-07-20 nicht mehr fest im 12s-Takt, siehe scheduleNextPoll.
 const RECENT_PAGE_SIZE = 300; // OKX max per call on /market/candles
+// Forex-Pendant zu RECENT_PAGE_SIZE, aber bewusst viel kleiner (siehe Chat 2026-07-20: "unnötige
+// cTrader Aufrufe") — RECENT_PAGE_SIZE ist ein OKX-Seitenlimit, kein Forex-Bedarf: pollRecent
+// braucht pro Tick nur die 1-2 Kerzen, die sich seit dem letzten Poll geändert haben können,
+// mergeRecent() ersetzt ohnehin nur den Schwanz von allCandles. 10 als Puffer für einen verpassten
+// Poll (z.B. Tab im Hintergrund gedrosselt) — pro cTrader-Connect trotzdem 30x weniger Daten.
+const RECENT_PAGE_SIZE_FOREX = 10;
+// An den Kerzenschluss ausgerichtetes Polling statt fester Intervall-Taktung (siehe Chat
+// 2026-07-20: "die wackelt immer in die falsche Richtung ... mir reicht pro M1 Kerzenschluss ...
+// wichtig ist bloß, dass M1 Kerzen sofort da sind, wenn sie schließen, nicht 30s zu spät"). Kleiner
+// Puffer nach der erwarteten Schlusszeit, bis die frisch geschlossene Kerze beim Broker/Backend
+// ankommt (siehe scheduleNextPoll) — lieber knapp nach dem Schluss pollen als knapp davor.
+const CLOSE_POLL_BUFFER_MS = 2_000;
 const HISTORY_PAGE_SIZE = 100; // OKX max per call on /market/history-candles
 const INITIAL_CANDLE_COUNT = 1000; // depth loaded on startup / timeframe switch
 const LAZY_LOAD_LOGICAL_THRESHOLD = 20; // fetch older data once this close to the left edge
@@ -592,7 +605,10 @@ async function loadRangesCandles() {
   try {
     const hours = Math.max(props.rangesLookbackHours, props.ranges2LookbackHours);
     const count = hours + RANGES_CANDLE_BUFFER;
-    const candles = await fetchInitialForexCandles(props.symbol, "1h", count, replayToMs());
+    // Teilt sich den H1-Cache-Eintrag mit loadInitial (falls currentBar "1h" ist) und
+    // loadTradeSetupCandles (siehe Chat 2026-07-20: "unnötige cTrader Aufrufe") — statt alle 60s
+    // unabhängig komplett neu zu fetchen, nur der fehlende/neue Teil.
+    const candles = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", count, replayToMs());
     if (seq !== rangesFetchSeq) return; // inzwischen überholt, siehe oben
     rangesH1Candles = candles;
     refreshRangesInternal();
@@ -771,12 +787,23 @@ async function loadTradeSetupCandles() {
   const seq = ++tradeSetupFetchSeq;
   try {
     const toMs = replayToMs();
+    // Teilen sich die Cache-Einträge mit loadInitial (M5/H1, falls currentBar passt) und
+    // loadRangesCandles (H1) — statt alle 60s unabhängig komplett neu zu fetchen, nur der
+    // fehlende/neue Teil (siehe Chat 2026-07-20: "unnötige cTrader Aufrufe").
     const fetches = [
-      fetchInitialForexCandles(props.symbol, "5m", TRADE_SETUP_CANDLE_COUNT, toMs),
-      fetchInitialForexCandles(props.symbol, "1h", TRADE_SETUP_CANDLE_COUNT, toMs),
+      fetchCandlesCached(fetchInitialForexCandles, props.symbol, "5m", TRADE_SETUP_CANDLE_COUNT, toMs),
+      fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", TRADE_SETUP_CANDLE_COUNT, toMs),
     ];
     if (props.showEma) {
-      fetches.push(fetchTrendAnalysisM5History(props.symbol, TREND_ANALYSIS_CANDLE_COUNT, toMs));
+      fetches.push(
+        fetchCandlesCached(
+          (symbol, bar, count, ms) => fetchTrendAnalysisM5History(symbol, count, ms),
+          props.symbol,
+          "5m",
+          TREND_ANALYSIS_CANDLE_COUNT,
+          toMs,
+        ),
+      );
     }
     const [m5, h1, trendM5] = await Promise.all(fetches);
     if (seq !== tradeSetupFetchSeq) return; // inzwischen überholt, siehe loadRangesCandles
@@ -854,7 +881,7 @@ async function pollRecent() {
   try {
     let recent, freshDeltas;
     if (isForex) {
-      recent = await fetchRecentForexCandles(props.symbol, props.currentBar, RECENT_PAGE_SIZE);
+      recent = await fetchRecentForexCandles(props.symbol, props.currentBar, RECENT_PAGE_SIZE_FOREX);
       freshDeltas = null;
     } else {
       const binanceInterval = binanceIntervalFor(props.currentBar);
@@ -875,6 +902,24 @@ async function pollRecent() {
   } catch (err) {
     console.error("Kerzen-Update fehlgeschlagen:", err);
   }
+}
+
+// Plant den nächsten pollRecent()-Aufruf CLOSE_POLL_BUFFER_MS NACH dem nächsten erwarteten
+// Kerzenschluss des aktuellen Timeframes (siehe CLOSE_POLL_BUFFER_MS) statt fest alle POLL_MS —
+// dadurch wird die noch offene Kerze zwischen zwei Schlüssen gar nicht mehr angefasst (kein
+// Wackeln) und die frisch geschlossene erscheint kurz NACH ihrem echten Schluss, nicht irgendwann
+// im nächsten Intervall-Tick. Kerzen sind (bei allen hier genutzten Timeframes) auf UTC-Epoch
+// ausgerichtet, daher reicht Date.now() % barMs zur Bestimmung von "wie weit sind wir in die
+// aktuelle Kerze rein".
+function scheduleNextPoll() {
+  clearTimeout(pollTimer);
+  const barMs = barSecondsFor(props.currentBar) * 1000;
+  const msIntoBar = Date.now() % barMs;
+  const delay = barMs - msIntoBar + CLOSE_POLL_BUFFER_MS;
+  pollTimer = setTimeout(async () => {
+    await pollRecent();
+    if (chart) scheduleNextPoll(); // Komponente könnte während des awaits unmounted worden sein
+  }, delay);
 }
 
 async function updateWindowGauge() {
@@ -1018,7 +1063,7 @@ onMounted(() => {
   });
 
   loadInitial();
-  pollTimer = setInterval(pollRecent, POLL_MS);
+  scheduleNextPoll();
   if (isForex) {
     loadTradeSetupCandles();
     tradeSetupPollTimer = setInterval(loadTradeSetupCandles, TRADE_SETUP_POLL_MS);
@@ -1033,7 +1078,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  clearInterval(pollTimer);
+  clearTimeout(pollTimer); // scheduleNextPoll() nutzt setTimeout statt setInterval, siehe dort
   clearInterval(tradeSetupPollTimer);
   clearInterval(rangesPollTimer);
   clearInterval(windowGaugeTimer);
@@ -1051,7 +1096,10 @@ onUnmounted(() => {
   ema200Series = null;
 });
 
-watch(() => props.currentBar, loadInitial);
+watch(() => props.currentBar, () => {
+  loadInitial();
+  scheduleNextPoll(); // neuer Timeframe -> neue Kerzenschluss-Taktung, siehe dort
+});
 watch(() => props.trades, refreshTradeMarkersInternal);
 watch(() => props.poiZones, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);

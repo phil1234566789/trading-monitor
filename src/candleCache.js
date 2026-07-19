@@ -1,3 +1,5 @@
+import { barSecondsFor } from "./timeframes.js";
+
 // Kerzen-Cache in IndexedDB (siehe Chat 2026-07-20: "cTrader ist das allerteuerste" + "TF-Wechsel
 // ist sehr laggy") — abgeschlossene Kerzen ändern sich nie wieder, also lohnt es sich, sie über
 // Reloads/TF-Wechsel/zweite Tabs hinweg zu behalten statt bei jedem Laden komplett neu von
@@ -74,10 +76,6 @@ async function setCachedCandles(symbol, bar, candles) {
   }
 }
 
-// Bar-Dauer in Sekunden je TIMEFRAMES-Label (siehe timeframes.js) — bestimmt, wie viele Kerzen
-// seit dem letzten Cache-Stand frühestens dazugekommen sein können (siehe fetchCandlesCached).
-const BAR_SECONDS = { "1m": 60, "3m": 180, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1D": 86400 };
-
 // Vereinigt zwei Kerzen-Arrays (älteste zuerst): `fresh` ist für seinen eigenen Zeitbereich
 // [ersteFresh, letzteFresh] immer die Wahrheit (frisch geholt), `cached`-Kerzen STRIKT davor oder
 // STRIKT danach bleiben unangetastet erhalten. Bewusst kein simples "alles ab erster frischer Kerze
@@ -120,7 +118,7 @@ export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs
 
   if (toMs == null && cached.length > 0) {
     const lastCachedTime = cached[cached.length - 1].time;
-    const barSeconds = BAR_SECONDS[bar] ?? 60;
+    const barSeconds = barSecondsFor(bar);
     const elapsedBars = Math.max(1, Math.ceil((effectiveEndSec - lastCachedTime) / barSeconds));
     // +5 Puffer (Wochenend-/Feiertagslücken, Uhrzeit-Ungenauigkeiten). Nach oben durch targetCount
     // gedeckelt: bei einer sehr alten Cache-Lücke (z.B. App seit Wochen nicht offen) ist ein
