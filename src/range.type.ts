@@ -4,6 +4,11 @@ export type PivotUntouched = false;
 export type PivotTouched = {
   price: number;
   touchedAt: string;
+  // unix sekunden, optional (siehe pivotTime unten) — nur intern für zeitbewusste Algo-Checks
+  // (z.B. tryConfirmUptrend: "war dieser Pullback zum BESTÄTIGUNGSzeitpunkt schon getoucht?", Bug-
+  // Report Philip 2026-07-20). touchedAt bleibt die einzige Darstellung in den Metadaten-Panels
+  // (siehe pivotForDisplay in PriceChart.vue, das touchedTime dort genau wie pivotTime rausfiltert).
+  touchedTime?: number;
 };
 
 export type PivotBase<T extends string> = {

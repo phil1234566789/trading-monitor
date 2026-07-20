@@ -171,12 +171,17 @@ const chartContainerRef = ref(null);
 const gaugesBottom = ref(12);
 const windowDelta = ref(0);
 const dailyDelta = ref(0);
-// pivotTime ist nur intern fürs Rendern der Zigzag-/Ranges-Linien nötig, taucht in den
-// Metadaten-Panels bewusst nicht auf (Philips Pivot-Typ hat kein Pflichtfeld dafür, nur das
-// menschenlesbare pivotAt).
+// pivotTime/touched.touchedTime sind nur intern nötig (Rendern der Zigzag-/Ranges-Linien bzw.
+// zeitbewusste Pullback-Auswahl in tryConfirmUptrend, siehe marketStructureAnalysis.ts), tauchen in
+// den Metadaten-Panels bewusst nicht auf (Philips Pivot-Typ hat kein Pflichtfeld dafür, nur die
+// menschenlesbaren pivotAt/touchedAt).
 function pivotForDisplay(p) {
   if (!p) return null;
   const { pivotTime, ...rest } = p;
+  if (rest.touched && typeof rest.touched === "object") {
+    const { touchedTime, ...touchedRest } = rest.touched;
+    rest.touched = touchedRest;
+  }
   return rest;
 }
 
@@ -555,7 +560,7 @@ function computeRangesPivotsFor(period, lookbackHours) {
       price: p.price,
       pivotTime: p.pivotTime,
       pivotAt: fmtDateTime(p.pivotTime),
-      touched: p.touched ? { price: p.price, touchedAt: fmtDateTime(p.touchedTime) } : false,
+      touched: p.touched ? { price: p.price, touchedAt: fmtDateTime(p.touchedTime), touchedTime: p.touchedTime } : false,
     }));
 }
 

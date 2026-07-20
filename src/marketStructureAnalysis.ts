@@ -51,6 +51,18 @@ function pivotTimeOf(pivot: Pivot): number {
   return pivot.pivotTime;
 }
 
+// War `pivot` zum Zeitpunkt `momentTime` (i.d.R. die pivotTime des GERADE bestätigenden Bruch-
+// Pivots) schon getoucht? Bug-Report Philip 2026-07-20 ("zum Zeitpunkt 06.07. 21:00 ist [1.33286]
+// das letzte ungetouchte pullback"): `touched` selbst ist ein GLOBALER Fakt (irgendwann bis zum
+// Ende des geladenen Fensters berührt, siehe buildLevel in liquidity.js) — für die Pullback-Auswahl
+// bei der Trendbestätigung zählt aber nur, ob der Touch VOR oder NACH dem Bestätigungsmoment liegt.
+// Ohne touchedTime (ältere/synthetische Testdaten ohne den optionalen Zeitstempel, siehe
+// range.type.ts) konservativ als "schon getoucht" behandeln, statt fälschlich zu qualifizieren.
+function isUntouchedAsOf(pivot: Pivot, momentTime: number): boolean {
+  if (!pivot.touched) return true;
+  return typeof pivot.touched.touchedTime === "number" && pivot.touched.touchedTime > momentTime;
+}
+
 // Prüft, ob ein High-Bruch (übergeordnet ODER eingebettet, siehe applyMarketStructurePivot/
 // applyInnerMarketStructurePivot) den Uptrend bestätigt — gemeinsame Logik für beide, seit Chat
 // 2026-07-19 ("die Regeln müssten gleich sein, nur dass der kleinere Pivot mit einbezogen wird",
@@ -59,9 +71,19 @@ function pivotTimeOf(pivot: Pivot): number {
 // das ZEITLICH NACH diesem Low liegt ("eligible" — sonst zählt es nicht als echter Ursprung eines
 // Aufwärts-Legs), mindestens 1 Pullback-Low NACH diesem eligible currRange.high — aus
 // structurePivots ODER innerStructurePivots zusammen, "der kleinere Pivot" darf also auch
-// qualifizieren — und schließlich der Bruch dieses currRange.high durch breakingPivot. Der jüngste
-// qualifizierende Pullback wird zu 'protected-low' reklassifiziert (in welcher der beiden Listen
-// er auch steckt), die übrigen bleiben unverändert. Gibt null zurück, wenn (noch) nicht bestätigt.
+// qualifizieren — und schließlich der Bruch dieses currRange.high durch breakingPivot.
+//
+// Pullback-Kandidaten (Bug-Report Philip 2026-07-20, gbp_h1_uptrend_protected_low_gebrochen.ts):
+// - type 'low' ODER 'LQ-sweep' (nicht nur 'low') — markLqSweeps läuft in
+//   applyInnerMarketStructurePivot VOR dieser Prüfung und kann einen eigentlich noch qualifizierenden
+//   Pullback längst zu 'LQ-sweep' reklassifiziert haben (der GLOBALE touched-Fakt gilt schon, auch
+//   wenn der eigentliche Touch zeitlich erst NACH dem gerade bestätigenden Pivot liegt).
+// - MUSS zum Bestätigungsmoment noch ungetoucht sein (isUntouchedAsOf) — ein bereits (vor der
+//   Bestätigung) getouchter Pullback "schützt" nichts mehr, der Preis war ja schon wieder da.
+// Unter den verbleibenden Kandidaten gewinnt weiterhin der ZEITLICH JÜNGSTE (nicht der tiefste —
+// das würde die bestehende rangeState7-Regel brechen, siehe test/marketStructureAnalysis.test.js:
+// dort sind alle drei Kandidaten ungetoucht, und das explizit gewünschte Ergebnis ist das jüngste
+// HL, nicht das tiefste). Gibt null zurück, wenn (noch) nicht bestätigt.
 function tryConfirmUptrend(state: MarketStructureState, breakingPivot: Pivot): MarketStructureState | null {
   const { currRange, structurePivots, innerStructurePivots, trend } = state;
   if (trend !== "unknown") return null;
@@ -69,8 +91,9 @@ function tryConfirmUptrend(state: MarketStructureState, breakingPivot: Pivot): M
   const highTime = pivotTimeOf(currRange.high);
   if (highTime <= pivotTimeOf(currRange.low)) return null; // nicht eligible
 
+  const confirmationMoment = pivotTimeOf(breakingPivot);
   const qualifyingPullbacks = [...structurePivots, ...innerStructurePivots].filter(
-    (p) => p.type === "low" && pivotTimeOf(p) > highTime,
+    (p) => (p.type === "low" || p.type === "LQ-sweep") && pivotTimeOf(p) > highTime && isUntouchedAsOf(p, confirmationMoment),
   );
   if (qualifyingPullbacks.length === 0) return null;
 
@@ -179,16 +202,21 @@ function closesBelowLevel(candles: Candle[], levelTime: number, toTime: number, 
 // Schritt (näher am echten Zeitpunkt) den tatsächlichen Close-drunter längst sehen würde — daher
 // hier IMMER neu bewerten (auch bereits als 'LQ-sweep' markierte), in beide Richtungen. Am
 // tatsächlichen Ziel-toTime (z.B. p2Pivot37) ist das Ergebnis dadurch unabhängig vom genauen
-// Zwischenschritt-Pfad immer korrekt. 'protected-low' bleibt unangetastet (anderes Konzept).
-// NICHT implementiert: was mit einem ECHTEN Close-Bruch eines structurePivots passieren soll (die
-// spiegelbildliche Downtrend-Bestätigung) — dafür gibt es noch kein Beispiel, der Pivot bleibt in
-// dem Fall einfach unverändert 'low' liegen (siehe pivot12).
+// Zwischenschritt-Pfad immer korrekt.
+// 'protected-low' ZÄHLT SEIT Bug-Report Philip 2026-07-20 MIT (vorher explizit ausgeschlossen —
+// war falsch: "1.33286 muss zum [Bestätigungsmoment] protected-low sein, UND zum [späteren
+// Replay-Zeitpunkt] ein 1h LQ-Sweep" — ein protected-low, das seither getoucht, aber nie
+// drunter geschlossen wurde, ist genau wie jeder andere Pullback ein bestätigter Liquidity-Grab,
+// keine Ausnahme). Ein ECHTER Close-Bruch degradiert es zurück auf 'low' (wie bei 'LQ-sweep'
+// -> 'low' oben) — NICHT implementiert bleibt weiterhin, was DANACH mit trend/dem nächsten
+// protected-low passieren soll (spiegelbildliche Downtrend-Bestätigung, siehe rangeAnalysis.ts-
+// Historie), dafür gibt es noch kein Beispiel.
 function markLqSweeps(structurePivots: Pivot[], candles: Candle[], toTime: number): Pivot[] {
   return structurePivots.map((p) => {
-    if ((p.type !== "low" && p.type !== "LQ-sweep") || !p.touched) return p;
+    if ((p.type !== "low" && p.type !== "LQ-sweep" && p.type !== "protected-low") || !p.touched) return p;
     const closedBelow = closesBelowLevel(candles, pivotTimeOf(p), toTime, p.price);
-    if (closedBelow) return p.type === "LQ-sweep" ? { ...p, type: "low" as const } : p;
-    return p.type === "low" ? { ...p, type: "LQ-sweep" as const } : p;
+    if (closedBelow) return p.type === "low" ? p : { ...p, type: "low" as const };
+    return p.type === "LQ-sweep" ? p : { ...p, type: "LQ-sweep" as const };
   });
 }
 
