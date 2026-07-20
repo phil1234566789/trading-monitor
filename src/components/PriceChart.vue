@@ -1279,7 +1279,7 @@ watch(() => props.replayUntil, () => {
 });
 // StyleModal (Dashboard.vue) schreibt direkt in den chartColors-Singleton — Serien-OPTIONEN
 // (Candles/CVD/EMA) werden von refreshChart() nicht angefasst (das setzt nur setData), deshalb
-// hier explizit; alle Primitive-basierten Farben (Liquidität/OB/Zigzag/Ranges/Trade-Setups/
+// hier explizit; alle Primitive-basierten Farben (Liquidität/OB/Ranges/Trade-Setups/
 // Trade-Marker) lesen chartColors ohnehin live bei jedem Render-Aufruf, ein refreshChart() reicht
 // dafür.
 watch(

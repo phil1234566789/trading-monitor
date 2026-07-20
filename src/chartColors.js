@@ -2,7 +2,7 @@ import { reactive, watch, nextTick } from "vue";
 import { supabase } from "./supabaseClient.js";
 
 // Zentraler, reaktiver Farb-Store für sämtliche Chart-Indikatoren (Kerzen, CVD, EMA, Liquidität,
-// Order-Blocks, Trade-Setups, Zigzag, Ranges, Trade-Marker) — als ES-Modul-Singleton (nicht an
+// Order-Blocks, Trade-Setups, Ranges, Trade-Marker) — als ES-Modul-Singleton (nicht an
 // eine Vue-Komponente gebunden), damit jedes Render-Modul (liquidity.js, orderBlocks.js,
 // pivotMarkers.ts, marketStructureAnalysis.ts, tradeMarkers.js) und das StyleModal dieselbe Instanz lesen/
 // schreiben, ohne Farben durch PriceChart.vue durchreichen zu müssen (siehe Chat: "Style"-Button
@@ -31,8 +31,6 @@ export const DEFAULT_CHART_COLORS = {
   tradeSetupShort: { hex: "#ffd700", alpha: 0.9 },
   tradeSetupLong: { hex: "#2196f3", alpha: 0.9 },
   tradeSetupProtected: { hex: "#ffffff", alpha: 0.95 },
-  zigzagStructure: { hex: "#ef5350", alpha: 0.9 },
-  zigzagTail: { hex: "#787b86", alpha: 0.9 },
   rangeHigh: { hex: "#ef5350", alpha: 0.95 },
   rangeLow: { hex: "#00e676", alpha: 0.95 },
   rangeProtectedLow: { hex: "#ffffff", alpha: 0.95 },

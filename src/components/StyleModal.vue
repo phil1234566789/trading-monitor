@@ -5,7 +5,7 @@ import MetadataPanel from "./MetadataPanel.vue";
 const emit = defineEmits(["close"]);
 
 // Gruppiert nach Feature statt alphabetisch — so findet man "die Farbe von X" genauso, wie man
-// auch die Toolbar liest (Kerzen/CVD/EMA/Liquidität/Order-Blocks/Trade-Setups/Zigzag/Ranges/
+// auch die Toolbar liest (Kerzen/CVD/EMA/Liquidität/Order-Blocks/Trade-Setups/Ranges/
 // Trade-Marker). Keys müssen exakt den Feldern in chartColors.js (DEFAULT_CHART_COLORS) entsprechen.
 const GROUPS = [
   {
@@ -48,13 +48,6 @@ const GROUPS = [
       { key: "tradeSetupShort", label: "Short" },
       { key: "tradeSetupLong", label: "Long" },
       { key: "tradeSetupProtected", label: "Protected Level" },
-    ],
-  },
-  {
-    title: "Zigzag",
-    fields: [
-      { key: "zigzagStructure", label: "Struktur" },
-      { key: "zigzagTail", label: "Unklassifiziert" },
     ],
   },
   {
