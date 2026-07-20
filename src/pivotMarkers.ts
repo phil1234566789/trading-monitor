@@ -78,11 +78,25 @@ class PivotMarkerRenderer {
           .filter((p) => p.label)
           .map((p) => ({ p, x: toX(p.x), y: toY(p.y) - 4 * scope.verticalPixelRatio }))
           .sort((a, b) => a.y - b.y);
-        let lastY = -Infinity;
-        for (const entry of sorted) {
-          const y = Math.max(entry.y, lastY + minGap);
-          lastY = y;
-          ctx.fillText(entry.p.label, entry.x + 6 * scope.horizontalPixelRatio, y);
+        // Cluster statt globalem Kaskaden-Push (Bug-Report Philip 2026-07-20: bei vielen dicht
+        // beieinanderliegenden Pivots, z.B. Periode-2-Debug-Marker, schob der alte Ansatz jedes
+        // Label relativ zum VORHERIGEN, bereits verschobenen Label nach unten — bei einem langen
+        // Cluster driftete das letzte Label so weit von seinem tatsächlichen Punkt weg, dass die
+        // Y-Position nicht mehr zum Punkt passte (X blieb korrekt). Eng beieinanderliegende Labels
+        // (natürlicher Abstand < minGap) bilden jetzt einen Cluster und werden EVENLY um ihren
+        // eigenen Mittelwert verteilt statt global weitergeschoben — Drift bleibt an die
+        // Clustergröße gebunden statt an die Gesamtzahl aller Punkte.
+        let i = 0;
+        while (i < sorted.length) {
+          let j = i + 1;
+          while (j < sorted.length && sorted[j].y - sorted[j - 1].y < minGap) j++;
+          const cluster = sorted.slice(i, j);
+          const meanY = cluster.reduce((sum, entry) => sum + entry.y, 0) / cluster.length;
+          const startY = meanY - ((cluster.length - 1) * minGap) / 2;
+          cluster.forEach((entry, idx) => {
+            ctx.fillText(entry.p.label, entry.x + 6 * scope.horizontalPixelRatio, startY + idx * minGap);
+          });
+          i = j;
         }
       }
     });
