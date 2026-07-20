@@ -98,6 +98,10 @@ const tradeSetupCockpitCandleOffset = useLocalStorageRef("tradeSetupCockpitCandl
 // Öffnen/Schließen-Zustand, NICHT in localStorage (die Farben selbst persistieren bereits über
 // den chartColors-Singleton, das Modal muss nicht offen bleiben).
 const showStyleModal = ref(false);
+// Debug-Metadaten-Sammel-Panel (siehe Chat 2026-07-20: "damit ich dir nicht ständig die Daten von
+// dem was ich in TradingView sehe hier schreiben muss") — Unterpunkt bei "Debug", analog zu
+// showRangesMetadata persistiert (bleibt über einen Reload offen, falls man gerade aktiv vergleicht).
+const showDebugMetadata = useLocalStorageRef("showDebugMetadata", false);
 
 // Replay-Modus (siehe Chat 2026-07-19): Chart + alle Indikatoren zeigen nur Daten bis zu diesem
 // Zeitpunkt, während im Hintergrund ganz normal weitergeholt wird (siehe PriceChart.vue:
@@ -149,11 +153,13 @@ function stepReplayForward() {
 const liquidityMenuOpen = ref(false);
 const rangesMenuOpen = ref(false);
 const tradeSetupsMenuOpen = ref(false);
+const debugMenuOpen = ref(false);
 function closeMenusOutside(e) {
   if (!e.target.closest?.(".toggle-group")) {
     liquidityMenuOpen.value = false;
     rangesMenuOpen.value = false;
     tradeSetupsMenuOpen.value = false;
+    debugMenuOpen.value = false;
   }
 }
 onMounted(() => window.addEventListener("click", closeMenusOutside));
@@ -375,9 +381,24 @@ watch(currentSymbol, () => {
         </button>
       </div>
 
-      <button :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
-        Debug
-      </button>
+      <div class="toggle-group">
+        <button :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
+          Debug
+        </button>
+        <button
+          class="toggle-caret"
+          :class="{ open: debugMenuOpen }"
+          title="Untermenü"
+          @click="debugMenuOpen = !debugMenuOpen"
+        >
+          ▾
+        </button>
+        <div v-if="debugMenuOpen" class="toggle-dropdown">
+          <button :class="{ active: showDebugMetadata }" @click="showDebugMetadata = !showDebugMetadata">
+            📋 Metadaten
+          </button>
+        </div>
+      </div>
 
       <button :class="{ active: showStyleModal }" @click="showStyleModal = !showStyleModal">
         🎨 Style
@@ -413,8 +434,10 @@ watch(currentSymbol, () => {
     :trade-setup-cockpit-at-candle="tradeSetupCockpitAtCandle"
     :trade-setup-cockpit-candle-offset="tradeSetupCockpitCandleOffset"
     :replay-until="replayUntil"
+    :show-debug-metadata="showDebugMetadata"
     @close-ranges-metadata="showRangesMetadata = false"
     @toggle-tsc-position="tradeSetupCockpitAtCandle = !tradeSetupCockpitAtCandle"
+    @close-debug-metadata="showDebugMetadata = false"
   />
 
   <aside class="trades-panel">

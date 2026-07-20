@@ -9,6 +9,7 @@ import { initMarketStructureState, applyMarketStructurePivot, applyInnerMarketSt
 import { computeCockpitState, renderTradeSetupCockpit } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
+import { selectActiveMetadataSections, earliestRelevantTime } from "../debugMetadata.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import {
   binanceIntervalFor,
@@ -72,8 +73,11 @@ const props = defineProps({
   // Abstand (CSS-Pixel) zur letzten Kerze im 'candle'-Modus — konfigurierbar seit Chat
   // 2026-07-19 ("etwas zu eng, am besten Abstand konfigurabel machen"), siehe tradeSetupCockpit.ts.
   tradeSetupCockpitCandleOffset: { type: Number, default: 24 },
+  // Debug-Metadaten-Sammel-Panel (siehe Chat 2026-07-20: "damit ich dir nicht ständig die Daten
+  // von dem was ich in TradingView sehe hier schreiben muss") — Toolbar-Unterpunkt bei "Debug".
+  showDebugMetadata: { type: Boolean, default: false },
 });
-const emit = defineEmits(["close-ranges-metadata", "toggle-tsc-position"]);
+const emit = defineEmits(["close-ranges-metadata", "toggle-tsc-position", "close-debug-metadata"]);
 
 // CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
 // bleiben Gauges/CVD-Pane komplett weg statt leer. Der Wert steht bei onMounted fest:
@@ -269,6 +273,93 @@ const rangesMetadata2 = ref(null); // dito für die eingebettete Periode-2-Erken
 // ist der Moment, der ohne Feedback wie ein Hänger wirkt.
 const rangesLoading = computed(() => (props.showRanges || props.showRangesMetadata) && rangesMetadata.value === null);
 
+// Fürs Debug-Metadaten-Sammel-Panel (buildActiveMetadataSnapshot unten) — dieselben Werte, die auch
+// fürs Zeichnen berechnet werden, hier zusätzlich in Refs gespiegelt statt aus den Primitives
+// zurückzulesen (die kennen nur Pixel-Koordinaten, keine Rohdaten mehr). poiZonesMetadata hat
+// bewusst kein eigenes Toggle-Gate (siehe buildActiveMetadataSnapshot) — POI-/OB-Zonen haben anders
+// als Liquidität/Trade-Setups/Structure keinen eigenen An/Aus-Schalter in der Toolbar, sie werden
+// immer gezeichnet. liquidityEarliestTime/structureEarliestTime halten den frühesten ROHEN
+// pivotTime der jeweils zuletzt berechneten Levels/Pivots (die *Metadata-Refs selbst sind schon
+// pivotForDisplay-bereinigt, siehe pivotForDisplay oben) — nur für die Kerzen-Relevanz unten,
+// tauchen selbst nicht im kopierten JSON auf.
+const poiZonesMetadata = ref(null);
+const liquidityMetadata = ref(null);
+const liquidityEarliestTime = ref(null);
+const tradeSetupsMetadata = ref([]);
+const cockpitMetadata = ref(null);
+const structureEarliestTime = ref(null);
+
+// Nur die Abschnitte der gerade angetoggelten Features (siehe Chat 2026-07-20: "nur metadaten von
+// den features im Menü, wenn sie angetoggelt sind") — damit bleibt der kopierte JSON-Blob fokussiert
+// auf das, was gerade im Chart tatsächlich zu sehen ist, statt jedes Mal alles (inkl. ausgeblendeter
+// Sachen) mitzuschleppen. orderBlocks bewusst ungated, siehe poiZonesMetadata oben. context (Symbol/
+// TF/Replay) läuft IMMER mit, unabhängig von Toggles — ohne das lässt sich ein kopiertes OB
+// (z.B. "startTime": 1782709200) gar nicht einordnen (Chat 2026-07-20: "fehlt ... replaymodus
+// inputs, TF, Währungspaar").
+//
+// candles: die "Option A" aus demselben Chat ("du suchst selbst aus den Metadaten, welche Uhrzeit
+// noch relevant ist") — ab dem FRÜHESTEN Zeitpunkt, auf den irgendeine aktive Sektion verweist
+// (OB-Zone startTime, Liquiditäts-/Structure-Pivot pivotTime, Trade-Setup fractal/ls/obStartTime),
+// bis zum aktuellen (bzw. im Replay: replayUntil) Kerzenende. Bewusst ein Filter auf das ohnehin
+// schon geladene allCandles-Fenster statt eines eigenen Fetches — bleibt der gewählte
+// Zeitpunkt VOR der ältesten geladenen Kerze, fehlt entsprechend der Anfang (kein Nachladen bisher,
+// siehe Chat: "falls kompliziert, lass uns das gemeinsam refinen").
+//
+// Bewusst eine imperativ befüllte Ref statt eines computed() — allCandles ist absichtlich KEIN
+// reaktiver State (siehe Kommentar bei den Closure-Variablen oben), ein computed() würde also nie
+// neu laufen, wenn sich NUR allCandles ändert. buildActiveMetadataSnapshot() wird deshalb explizit
+// am Ende von refreshChart() aufgerufen (derselbe Zyklus, der auch alle anderen *Metadata-Refs
+// aktuell hält) sowie beim Öffnen des Panels selbst.
+const activeMetadataSnapshot = ref({ context: {}, orderBlocks: [] });
+function buildActiveMetadataSnapshot() {
+  const toggles = {
+    showLiquidity: props.showLiquidity,
+    showTradeSetups: props.showTradeSetups,
+    showTradeSetupCockpit: props.showTradeSetupCockpit,
+    showRanges: props.showRanges,
+  };
+  const tradeSetupTimes = (tradeSetupsMetadata.value ?? [])
+    .flatMap((s) => [s.fractal?.pivotTime, s.ls?.pivotTime, s.obStartTime])
+    .filter((t) => t != null);
+
+  const sections = selectActiveMetadataSections(toggles, {
+    context: {
+      symbol: props.symbol,
+      timeframe: props.currentBar,
+      replay: props.replayUntil == null ? { active: false } : { active: true, until: props.replayUntil, untilAt: fmtDateTime(props.replayUntil) },
+    },
+    orderBlocks: poiZonesMetadata.value ?? [],
+    liquidity: liquidityMetadata.value ?? [],
+    tradeSetups: tradeSetupsMetadata.value,
+    tradeSetupCockpit: cockpitMetadata.value,
+    structure: {
+      state: marketStructureTree.value,
+      period5: { period: props.rangesPeriod, lookbackHours: props.rangesLookbackHours, pivots: rangesMetadata.value ?? [] },
+      period2Embedded: { period: props.ranges2Period, lookbackHours: props.ranges2LookbackHours, pivots: rangesMetadata2.value ?? [] },
+    },
+  });
+
+  const since = earliestRelevantTime(toggles, {
+    orderBlocks: (poiZonesMetadata.value ?? []).map((z) => z.startTime).filter((t) => t != null),
+    liquidity: liquidityEarliestTime.value != null ? [liquidityEarliestTime.value] : [],
+    tradeSetups: tradeSetupTimes,
+    structure: structureEarliestTime.value != null ? [structureEarliestTime.value] : [],
+  });
+  if (since != null) {
+    const candles = clipReplay(allCandles).filter((c) => c.time >= since);
+    sections.candles = { since, sinceAt: fmtDateTime(since), timeframe: props.currentBar, count: candles.length, data: candles };
+  }
+  return sections;
+}
+const hasActiveMetadata = computed(
+  () =>
+    activeMetadataSnapshot.value.orderBlocks.length > 0 ||
+    props.showLiquidity ||
+    props.showTradeSetups ||
+    props.showTradeSetupCockpit ||
+    props.showRanges,
+);
+
 // lightweight-charts formatiert Zeit standardmäßig in UTC (unabhängig von der
 // Browser-Zeitzone) — hier auf lokale Zeit umgestellt, damit die Achse/der Crosshair
 // mit der Systemuhr des Nutzers übereinstimmt. Die zugrundeliegenden Zeitstempel
@@ -395,18 +486,20 @@ function filterHistorical(zones) {
 // Timeframes neu erkannt, statt wie bei BTC aus `ob_zones` (Supabase) gerendert.
 function refreshPoiZonesInternal() {
   const candles = clipReplay(allCandles);
+  let zones;
   if (isForex) {
-    const zones = detectOrderBlocks(candles)
+    zones = detectOrderBlocks(candles)
       .filter((z) => !z.invalidated)
       .map((z) => ({ ...z, timeframe: props.currentBar.toUpperCase() }));
-    renderPersistedZones(candleSeries, filterHistorical(zones), orderBlockPrimitives, candles);
   } else {
     // BTC-Zonen kommen fertig vom poi-watcher-Backend (props.poiZones) statt lokal erkannt —
     // im Replay-Modus trotzdem auf Zonen bis replayUntil beschränken, damit nicht schon
     // Zonen auftauchen, die "in der Zukunft" (relativ zu X) erst entdeckt wurden.
-    const zones = props.replayUntil == null ? props.poiZones : props.poiZones.filter((z) => z.startTime <= props.replayUntil);
-    renderPersistedZones(candleSeries, filterHistorical(zones), orderBlockPrimitives, candles);
+    zones = props.replayUntil == null ? props.poiZones : props.poiZones.filter((z) => z.startTime <= props.replayUntil);
   }
+  const visibleZones = filterHistorical(zones);
+  renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles);
+  poiZonesMetadata.value = visibleZones;
 }
 
 // Liquiditäts-Level (Fractal-Pivots, siehe tv-indikator/src/liquidity.pine) gibt es
@@ -421,6 +514,8 @@ function refreshLiquidityInternal() {
   const candles = clipReplay(allCandles);
   if (!props.showLiquidity) {
     renderLiquidityLevels(candleSeries, [], liquidityPrimitives, candles);
+    liquidityMetadata.value = null;
+    liquidityEarliestTime.value = null;
     return;
   }
   const { highs, lows } = detectLiquidityLevels(candles, LIQUIDITY_FRACTAL_PERIOD);
@@ -432,6 +527,8 @@ function refreshLiquidityInternal() {
     debugPrices: props.showLiquidityDebug,
     formatPrice: (price) => fmtPrice(price, precision),
   });
+  liquidityMetadata.value = relevant.map(pivotForDisplay);
+  liquidityEarliestTime.value = relevant.length > 0 ? Math.min(...relevant.map((lvl) => lvl.pivotTime)) : null;
 }
 
 // H1-Fraktale im konfigurierten Lookback-Fenster — reine Pivot-Liste, noch keine weak/protected/
@@ -504,6 +601,8 @@ function refreshRangesInternal() {
   rangesPivots2 = rangesH1Candles.length > 0 ? computeRangesPivotsFor(props.ranges2Period, props.ranges2LookbackHours) : null;
   rangesMetadata.value = rangesPivots ? rangesPivots.map(pivotForDisplay) : null;
   rangesMetadata2.value = rangesPivots2 ? rangesPivots2.map(pivotForDisplay) : null;
+  const allPivotTimes = [...(rangesPivots ?? []), ...(rangesPivots2 ?? [])].map((p) => p.pivotTime);
+  structureEarliestTime.value = allPivotTimes.length > 0 ? Math.min(...allPivotTimes) : null;
   refreshRangesMarkersInternal();
   refreshMarketStructureInternal();
 }
@@ -590,6 +689,7 @@ function refreshCockpitInternal() {
   const candles = clipReplay(allCandles);
   if (!props.showTradeSetupCockpit || candles.length === 0) {
     renderTradeSetupCockpit(candleSeries, null, cockpitPrimitives, candles);
+    cockpitMetadata.value = null;
     return;
   }
   const state = computeCockpitState(marketStructureState.value, currentTradeSetups);
@@ -599,6 +699,7 @@ function refreshCockpitInternal() {
     formatPrice: (price) => fmtPrice(price, precision),
     candleOffset: props.tradeSetupCockpitCandleOffset,
   });
+  cockpitMetadata.value = { h1Trend: state.h1Trend, h1LqSweep: pivotForDisplay(state.h1LqSweep), m5Setup: state.m5Setup };
 }
 
 // Eigener H1-Fetch fürs Ranges-Metadaten-Panel, unabhängig von tradeSetupH1Candles (siehe oben) —
@@ -678,6 +779,7 @@ function computeTradeSetups() {
   const h1Candles = clipReplay(tradeSetupH1Candles);
   if (m5Candles.length === 0 || h1Candles.length === 0) {
     currentTradeSetups = [];
+    tradeSetupsMetadata.value = currentTradeSetups;
     return;
   }
   const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5Candles, TRADE_SETUP_M5_FRACTAL_PERIOD);
@@ -709,6 +811,7 @@ function computeTradeSetups() {
     ...shorts.map((s, i) => ({ ...s, label: n > 1 ? `Short (${i + 1})` : "Short" })),
     ...longs.map((s, i) => ({ ...s, label: n > 1 ? `Long (${i + 1})` : "Long" })),
   ];
+  tradeSetupsMetadata.value = currentTradeSetups;
 }
 
 // OB (Order Block) ≠ FVG — siehe obBoxBounds in tradesetup.pine: die gezeichnete Box reicht
@@ -897,6 +1000,7 @@ function refreshChart() {
   refreshEmaInternal();
   cvdSeries?.setData(cumulativeFromDeltas(clipReplay(allCvdDeltas)));
   positionGauges();
+  activeMetadataSnapshot.value = buildActiveMetadataSnapshot();
 }
 
 async function loadInitial() {
@@ -1247,6 +1351,19 @@ watch(() => props.showTradeSetupCockpit, () => {
   refreshCockpitInternal();
 });
 watch(() => [props.tradeSetupCockpitAtCandle, props.tradeSetupCockpitCandleOffset], refreshCockpitInternal);
+// Debug-Metadaten-Panel: activeMetadataSnapshot ist bewusst KEIN computed() (siehe dort) und muss
+// deshalb explizit nachgezogen werden — nicht nur am Ende von refreshChart() (das läuft nicht bei
+// jedem einzelnen Toggle-Klick, siehe die spezifischeren Watcher oben), sondern auch direkt beim
+// Toggeln einer der hier relevanten Features/beim Öffnen des Panels selbst, damit man nicht erst
+// auf den nächsten Poll warten muss. NACH den spezifischeren Watchern oben registriert (Vue führt
+// Watcher in Registrierungsreihenfolge aus), damit liquidityMetadata/tradeSetupsMetadata/etc. zu
+// diesem Zeitpunkt schon aktualisiert sind.
+watch(
+  [() => props.showLiquidity, () => props.showTradeSetups, () => props.showTradeSetupCockpit, () => props.showRanges, () => props.showDebugMetadata],
+  () => {
+    activeMetadataSnapshot.value = buildActiveMetadataSnapshot();
+  },
+);
 // Hauptkerzen (allCandles) BRAUCHEN hier einen Refetch (Bug-Report Philip 2026-07-19: "+1
 // Kerze"-Button tat einfach nichts) — loadInitial() bindet den Fetch selbst an replayToMs()
 // (siehe dort: "1h auf M5 gewechselt und sehe keinen Chart"), allCandles endet also IMMER exakt
@@ -1357,6 +1474,23 @@ defineExpose({
       </div>
       <JsonTree v-if="rangesMetadata2" :value="rangesMetadata2" />
       <p v-else class="metadata-empty">Keine Ranges-Daten geladen.</p>
+    </MetadataPanel>
+
+    <MetadataPanel v-if="showDebugMetadata" title="Debug-Metadaten" @close="emit('close-debug-metadata')">
+      <div class="metadata-subheading-row">
+        <h4 class="metadata-subheading">Aktive Features</h4>
+        <button
+          class="metadata-copy-btn"
+          :disabled="!hasActiveMetadata"
+          @click="copyJson('debugMetadata', activeMetadataSnapshot)"
+        >
+          {{ copiedSection === 'debugMetadata' ? '✓ kopiert' : '📋 alles kopieren' }}
+        </button>
+      </div>
+      <p v-if="!hasActiveMetadata" class="metadata-empty">
+        Keine der erfassten Features (Liquidität/Trade-Setups/TSC/Structure) ist gerade angetoggelt.
+      </p>
+      <JsonTree v-else :value="activeMetadataSnapshot" />
     </MetadataPanel>
   </div>
 </template>
