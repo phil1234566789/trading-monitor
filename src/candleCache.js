@@ -12,7 +12,14 @@ import { barSecondsFor } from "./timeframes.js";
 // unbegrenzt volllaufen lassen würde.
 
 const DB_NAME = "trading-monitor-candles";
-const DB_VERSION = 1;
+// 2 (Bug-Report Philip 2026-07-21: "Kerzen hören ab 22:00 auf", überstand mehrere Reloads) — ein
+// fehlerhafter (Nachkomma-)count in loadRangesCandles (siehe PriceChart.vue: Math.ceil-Fix) hat
+// vermutlich einen falschen completeUpTo-Stand in den Cache geschrieben, für GBPUSD:1h denselben
+// Eintrag, den auch der Hauptchart nutzt — IndexedDB übersteht einen Browser-Reload, ein reiner
+// Code-Fix (der die Ursache behebt) räumt den bereits kaputten Eintrag also NICHT auf. Ein
+// einmaliger Versions-Bump erzwingt onupgradeneeded, das den Store jetzt komplett neu anlegt (siehe
+// unten) — sauberer/automatischer Reset statt "geh in die DevTools und lösch die DB von Hand".
+const DB_VERSION = 2;
 const STORE_NAME = "candles";
 
 // Rein defensiv, KEINE reguläre Obergrenze (siehe oben) — 500k Kerzen sind selbst auf M1 fast ein
@@ -24,8 +31,14 @@ function openDb() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
+    // Idempotent statt einem einmaligen nackten createObjectStore — ein KÜNFTIGER Versions-Bump
+    // (z.B. für einen ähnlichen Reset) liefe sonst gegen einen schon existierenden Store und würde
+    // mit "object store already exists" crashen, weil IndexedDB den Store aus der alten Version
+    // in die Upgrade-Transaktion mitnimmt, bevor createObjectStore erneut versucht wird.
     req.onupgradeneeded = () => {
-      req.result.createObjectStore(STORE_NAME, { keyPath: "key" });
+      const db = req.result;
+      if (db.objectStoreNames.contains(STORE_NAME)) db.deleteObjectStore(STORE_NAME);
+      db.createObjectStore(STORE_NAME, { keyPath: "key" });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

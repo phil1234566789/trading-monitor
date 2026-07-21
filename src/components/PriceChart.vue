@@ -226,6 +226,25 @@ async function copyJson(section, value) {
   }
 }
 
+// Zusätzlich lokal in .debug/metadata.json ablegen (siehe vite.config.js: debugMetadataWriter) —
+// nur für den "alles kopieren"-Button im Debug-Metadaten-Panel, Chat 2026-07-21: "du siehst nicht
+// alle daten, weil mein Text abgeschnitten wird" (sehr lange Kerzen-Arrays sprengen das Prompt-
+// Fenster beim Einfügen). Bewusst ZUSÄTZLICH zum Clipboard-Copy, nicht als Ersatz. Nur im
+// `vite dev`-Server erreichbar — schlägt der POST fehl (z.B. weil kein Dev-Server läuft), still
+// ignorieren, das Clipboard-Copy allein bleibt trotzdem nützlich.
+async function copyJsonAndSaveLocally(section, value) {
+  await copyJson(section, value);
+  try {
+    await fetch("/__debug-metadata", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(value, null, 2),
+    });
+  } catch (err) {
+    console.error("Debug-Metadaten lokal speichern fehlgeschlagen:", err);
+  }
+}
+
 // lightweight-charts ist inhärent imperativ (Canvas-API) — Chart/Series/Primitives und ihr
 // Zustand bleiben deshalb bewusst reine Closure-Variablen statt reaktiver refs. Sie steuern
 // nie ein Template, nur Chart-Methodenaufrufe.
@@ -738,10 +757,14 @@ async function loadRangesCandles() {
     // rangesFixedStartActive: genug Historie ab dem fixen Startzeitpunkt laden (bis zur echten
     // aktuellen/Replay-Zeit) statt der rollierenden lookbackHours — sonst reicht der Fetch bei
     // einem weit zurückliegenden fixen Start nicht aus (siehe cutoff in computeRangesPivotsFor).
+    // Math.ceil zwingend (Bug-Report Philip 2026-07-21: "+1 Kerze hängt") — (nowSec-fixedStart)/3600
+    // ist so gut wie NIE eine glatte Stundenzahl, das nicht-ganzzahlige `hours` lief ungeprüft bis in
+    // `count` und von dort als Feld in den cTrader-Edge-Function-Request (letztlich ein Protobuf-
+    // Feld Richtung Broker) — ein Bruchteil-count dort ist vermutlich der Auslöser des Hängers.
     const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
     const hours =
       props.rangesFixedStartActive && props.rangesFixedStartTime != null
-        ? Math.max(1, (nowSec - props.rangesFixedStartTime) / 3600)
+        ? Math.max(1, Math.ceil((nowSec - props.rangesFixedStartTime) / 3600))
         : Math.max(props.rangesLookbackHours, props.ranges2LookbackHours);
     const count = hours + RANGES_CANDLE_BUFFER;
     // Teilt sich den H1-Cache-Eintrag mit loadInitial (falls currentBar "1h" ist) und
@@ -1512,9 +1535,10 @@ defineExpose({
         <button
           class="metadata-copy-btn"
           :disabled="!hasActiveMetadata"
-          @click="copyJson('debugMetadata', activeMetadataSnapshot)"
+          title="Kopiert ins Clipboard UND speichert zusätzlich lokal in .debug/metadata.json (nur im Dev-Server) — für sehr lange Daten, die im Chat-Fenster abgeschnitten würden"
+          @click="copyJsonAndSaveLocally('debugMetadata', activeMetadataSnapshot)"
         >
-          {{ copiedSection === 'debugMetadata' ? '✓ kopiert' : '📋 alles kopieren' }}
+          {{ copiedSection === 'debugMetadata' ? '✓ kopiert + gespeichert' : '📋 kopieren + lokal speichern' }}
         </button>
       </div>
       <p v-if="!hasActiveMetadata" class="metadata-empty">
