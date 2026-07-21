@@ -76,6 +76,18 @@ const ranges2LookbackDays = computed({
   get: () => ranges2LookbackHours.value / 24,
   set: (days) => { ranges2LookbackHours.value = Math.round(days * 24); },
 });
+// Fixer Startzeitpunkt statt rollierendem "letzte X Tage"-Fenster (Chat 2026-07-21: "im
+// Replaymodus wird das ja immer dynamisch angepasst ... für Testszenarien bräuchte ich einen
+// fixen Punkt, ab wann die Pivots gezählt werden sollen") — beim Scrubben durch den Replay-Modus
+// verschiebt sich sonst ständig, welche Pivots überhaupt als "die letzten X Tage" zählen, was ein
+// Testszenario nicht reproduzierbar macht. EIN gemeinsamer Startzeitpunkt für Periode 5 UND die
+// eingebettete Periode 2 (nicht zwei getrennte) — Philip wollte "ab Zeitpunkt X", nicht zwei
+// unabhängige Fixpunkte. Bewusst additiv (rangesLookbackHours/ranges2LookbackHours bleiben
+// unangetastet, der bestehende Rolling-Modus ist weiterhin der Default) — rangesFixedStartActive
+// schaltet nur um, welcher der beiden Cutoff-Berechnungen computeRangesPivotsFor/loadRangesCandles
+// (PriceChart.vue) tatsächlich verwenden.
+const rangesFixedStartActive = useLocalStorageRef("rangesFixedStartActive", false);
+const rangesFixedStartTime = useLocalStorageRef("rangesFixedStartTime", 1783011600); // Default = derselbe Testszenario-Start wie replayTime
 // showRanges (Punkt-Marker im Chart, siehe PriceChart.vue) und showRangesMetadata (JSON-Panel)
 // sind bewusst getrennte Toggles — Philip will Ranges anzeigen können, ohne dafür das
 // Metadaten-Panel offen zu haben (siehe Chat: "man kann ranges nicht einzelnd toggeln"). EIN
@@ -131,6 +143,12 @@ const replayInputValue = computed({
   get: () => (replayTime.value == null ? "" : toDatetimeLocal(replayTime.value)),
   set: (v) => {
     replayTime.value = v ? Math.floor(new Date(v).getTime() / 1000) : null;
+  },
+});
+const rangesFixedStartInputValue = computed({
+  get: () => (rangesFixedStartTime.value == null ? "" : toDatetimeLocal(rangesFixedStartTime.value)),
+  set: (v) => {
+    rangesFixedStartTime.value = v ? Math.floor(new Date(v).getTime() / 1000) : null;
   },
 });
 // "+1 Kerze"-Button: den Zeitpunkt der nächsten geladenen Kerze im aktuellen Timeframe holt
@@ -292,6 +310,23 @@ watch(currentSymbol, () => {
           ▾
         </button>
         <div v-if="rangesMenuOpen" class="toggle-dropdown">
+          <button
+            :class="{ active: rangesFixedStartActive }"
+            title="Fester Startzeitpunkt statt 'letzte X Tage' — bleibt beim Scrubben im Replay-Modus stabil, statt sich mitzuverschieben (gilt für Periode 5 UND die eingebettete Periode 2)"
+            @click="rangesFixedStartActive = !rangesFixedStartActive"
+          >
+            Fixer Start
+          </button>
+          <input
+            v-if="rangesFixedStartActive"
+            v-model="rangesFixedStartInputValue"
+            type="datetime-local"
+            class="replay-input ranges-fixed-start-input"
+            title="Ab diesem Zeitpunkt werden Structure-Pivots gezählt (beide Perioden)"
+          />
+
+          <div class="toggle-dropdown-divider"></div>
+
           <label class="ranges-period-field">
             Periode
             <input
@@ -310,6 +345,7 @@ watch(currentSymbol, () => {
               min="1"
               class="ranges-lookback-input"
               title="Lookback in Tagen — rechnet automatisch in Stunden um"
+              :disabled="rangesFixedStartActive"
             />
           </label>
           <label class="ranges-lookback-field">
@@ -320,6 +356,7 @@ watch(currentSymbol, () => {
               min="1"
               class="ranges-lookback-input"
               title="Lookback in Stunden (maßgeblicher Wert für die Fraktal-Suche)"
+              :disabled="rangesFixedStartActive"
             />
           </label>
 
@@ -347,6 +384,7 @@ watch(currentSymbol, () => {
               min="1"
               class="ranges-lookback-input"
               title="Lookback in Tagen (eingebettete Periode) — rechnet automatisch in Stunden um"
+              :disabled="rangesFixedStartActive"
             />
           </label>
           <label class="ranges-lookback-field">
@@ -357,6 +395,7 @@ watch(currentSymbol, () => {
               min="1"
               class="ranges-lookback-input"
               title="Lookback in Stunden (eingebettete Periode)"
+              :disabled="rangesFixedStartActive"
             />
           </label>
         </div>
@@ -427,6 +466,8 @@ watch(currentSymbol, () => {
     :ranges-lookback-hours="rangesLookbackHours"
     :ranges2-period="ranges2Period"
     :ranges2-lookback-hours="ranges2LookbackHours"
+    :ranges-fixed-start-active="rangesFixedStartActive"
+    :ranges-fixed-start-time="rangesFixedStartTime"
     :show-ranges="showRanges"
     :show-ranges-metadata="showRangesMetadata"
     :show-ema="showEma"
@@ -588,6 +629,17 @@ watch(currentSymbol, () => {
   color: #d1d4dc;
   font-size: 13px;
   padding: 3px 4px;
+}
+
+.ranges-lookback-input:disabled,
+.ranges-period-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ranges-fixed-start-input {
+  margin: 2px 10px 5px;
+  width: calc(100% - 20px);
 }
 
 .ranges-period-field {

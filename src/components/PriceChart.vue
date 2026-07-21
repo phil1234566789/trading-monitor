@@ -59,6 +59,11 @@ const props = defineProps({
   // aktuell NICHT in marketStructureAnalysis.ts/applyMarketStructurePivot ein (nur Rohdaten zum Beobachten/TDD).
   ranges2Period: { type: Number, default: 2 },
   ranges2LookbackHours: { type: Number, default: 7 * 24 },
+  // Fixer Startzeitpunkt statt rollierendem "letzte X Stunden"-Fenster (Chat 2026-07-21: "im
+  // Replaymodus wird das ja immer dynamisch angepasst ... für Testszenarien bräuchte ich einen
+  // fixen Punkt") — gilt für BEIDE Perioden gemeinsam (siehe computeRangesPivotsFor/loadRangesCandles).
+  rangesFixedStartActive: { type: Boolean, default: false },
+  rangesFixedStartTime: { type: Number, default: null },
   showEma: { type: Boolean, default: false },
   // Replay-Modus (siehe Chat 2026-07-19): unix Sekunden, ab denen alles nach "Zeit X" ausgeblendet
   // wird — null = live (kein Clipping). Zum visuellen Prüfen des Ranges-Algos, ohne Zukunft zu
@@ -339,6 +344,10 @@ function buildActiveMetadataSnapshot() {
     tradeSetupCockpit: cockpitMetadata.value,
     structure: {
       state: marketStructureTree.value,
+      window:
+        props.rangesFixedStartActive && props.rangesFixedStartTime != null
+          ? { mode: "fixed", since: props.rangesFixedStartTime, sinceAt: fmtDateTime(props.rangesFixedStartTime) }
+          : { mode: "lookback" },
       period5: { period: props.rangesPeriod, lookbackHours: props.rangesLookbackHours, pivots: rangesMetadata.value ?? [] },
       period2Embedded: { period: props.ranges2Period, lookbackHours: props.ranges2LookbackHours, pivots: rangesMetadata2.value ?? [] },
     },
@@ -549,8 +558,12 @@ function computeRangesPivotsFor(period, lookbackHours) {
   // Im Replay-Modus zählt das Lookback-Fenster ab replayUntil, nicht ab der echten aktuellen
   // Zeit — sonst wäre das Fenster (7 Tage vor "jetzt") komplett am geclippten Kerzen-Ende
   // vorbei, sobald replayUntil mehr als lookbackHours in der Vergangenheit liegt.
+  // rangesFixedStartActive (siehe Chat 2026-07-21: "im Replaymodus wird das ja immer dynamisch
+  // angepasst ... für Testszenarien bräuchte ich einen fixen Punkt") ersetzt den ROLLIERENDEN
+  // Cutoff durch einen ABSOLUTEN — bleibt beim Scrubben durch den Replay-Modus stabil, statt sich
+  // mit replayUntil mitzuverschieben. lookbackHours wird in dem Fall komplett ignoriert.
   const now = props.replayUntil ?? Math.floor(Date.now() / 1000);
-  const cutoff = now - lookbackHours * 3600;
+  const cutoff = props.rangesFixedStartActive && props.rangesFixedStartTime != null ? props.rangesFixedStartTime : now - lookbackHours * 3600;
   const { highs, lows } = detectLiquidityLevels(clipReplay(rangesH1Candles), period);
   return [...highs, ...lows]
     .filter((p) => p.pivotTime >= cutoff)
@@ -722,7 +735,14 @@ async function loadRangesCandles() {
   // gilt noch als aktuell, ältere Ergebnisse werden beim Eintreffen verworfen.
   const seq = ++rangesFetchSeq;
   try {
-    const hours = Math.max(props.rangesLookbackHours, props.ranges2LookbackHours);
+    // rangesFixedStartActive: genug Historie ab dem fixen Startzeitpunkt laden (bis zur echten
+    // aktuellen/Replay-Zeit) statt der rollierenden lookbackHours — sonst reicht der Fetch bei
+    // einem weit zurückliegenden fixen Start nicht aus (siehe cutoff in computeRangesPivotsFor).
+    const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
+    const hours =
+      props.rangesFixedStartActive && props.rangesFixedStartTime != null
+        ? Math.max(1, (nowSec - props.rangesFixedStartTime) / 3600)
+        : Math.max(props.rangesLookbackHours, props.ranges2LookbackHours);
     const count = hours + RANGES_CANDLE_BUFFER;
     // Teilt sich den H1-Cache-Eintrag mit loadInitial (falls currentBar "1h" ist) und
     // loadTradeSetupH1 (siehe Chat 2026-07-20: "unnötige cTrader Aufrufe") — statt unabhängig
@@ -1336,6 +1356,11 @@ watch(() => props.rangesLookbackHours, () => {
 // Periode-Änderung selbst braucht dagegen KEINEN Refetch (rangesH1Candles ist schon da) — nur neu
 // berechnen, wenn Daten vorhanden sind.
 watch(() => props.ranges2LookbackHours, () => {
+  if (rangesNeedsData()) loadRangesCandles();
+});
+// Fixer Startzeitpunkt (siehe computeRangesPivotsFor/loadRangesCandles) — Umschalten des Modus oder
+// Ändern des Zeitpunkts braucht denselben Refetch wie eine Lookback-Änderung, aus demselben Grund.
+watch([() => props.rangesFixedStartActive, () => props.rangesFixedStartTime], () => {
   if (rangesNeedsData()) loadRangesCandles();
 });
 watch([() => props.rangesPeriod, () => props.ranges2Period], () => {
