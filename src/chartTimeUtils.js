@@ -46,3 +46,36 @@ export function nextCandleAfter(candles, afterSec) {
   const found = candles.find((c) => c.time > afterSec);
   return found ? found.time : null;
 }
+
+// Für die "Alter"-Anzeige an LQ-Leveln/TSC-Zeilen (Chat 2026-07-22: "1h LQ-Sweep (1d 3h alt)",
+// "Wochenende nicht mitzählen") — zählt nur die tatsächliche Marktzeit zwischen startSec und
+// endSec, Samstag/Sonntag (UTC-Kalendertage) fallen komplett raus. Grobe, aber für eine reine
+// Alters-ANZEIGE ausreichende Näherung (UTC-Kalendertag statt exakter Forex-Handelszeiten
+// Fr ~22:00–So ~22:00) — iteriert Tag für Tag, zählt Werktage komplett bzw. anteilig am
+// ersten/letzten Tag, Wochenendtage gar nicht.
+export function businessSecondsBetween(startSec, endSec) {
+  if (endSec == null || startSec == null || endSec <= startSec) return 0;
+  const DAY = 86400;
+  let total = 0;
+  let cursor = startSec;
+  while (cursor < endSec) {
+    const dayStart = Math.floor(cursor / DAY) * DAY;
+    const segmentEnd = Math.min(dayStart + DAY, endSec);
+    const isWeekend = [0, 6].includes(new Date(dayStart * 1000).getUTCDay());
+    if (!isWeekend) total += segmentEnd - cursor;
+    cursor = segmentEnd;
+  }
+  return total;
+}
+
+// "1d 3h" / "3h 15m" / "15m" — Minuten fallen weg, sobald schon Tage angezeigt werden (genug
+// Präzision für eine Alters-ANZEIGE, kein exakter Zeitstempel).
+export function formatAge(seconds) {
+  if (seconds == null || seconds < 0) return null;
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (days > 0) return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+  if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  return `${minutes}m`;
+}

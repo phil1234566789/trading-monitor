@@ -3,7 +3,7 @@
 // orderBlocks.js): kein Ringpuffer/Streaming-State pro geschlossener Bar, stattdessen
 // bei jedem Refresh einmal komplett über das geladene `candles`-Array (aktueller
 // Chart-Timeframe) neu berechnet.
-import { snapToBarTime } from "./chartTimeUtils.js";
+import { snapToBarTime, businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
 import { cssColor } from "./chartColors.js";
 
 const RECENT_SWEEP_COUNT = 2; // siehe markTopKRecentTouches in liquidity.pine
@@ -266,22 +266,31 @@ export class LiquidityLinePrimitive {
 
 const LINE_WIDTH = 1;
 
-function levelOptions(lvl, { debugPrices, formatPrice } = {}) {
+// " (1d 3h alt)" hinter dem Preis-Label, oder "" ohne pivotTime/nowSec (Chat 2026-07-22: "bei den
+// relevanten LQ-Leveln das Alter anzeigen ... Wochenende nicht mitzählen") — businessSecondsBetween
+// lässt Sa/So komplett raus.
+function ageSuffix(pivotTime, nowSec) {
+  if (pivotTime == null || nowSec == null) return "";
+  const age = formatAge(businessSecondsBetween(pivotTime, nowSec));
+  return age ? ` (${age} alt)` : "";
+}
+
+function levelOptions(lvl, { debugPrices, formatPrice, nowSec } = {}) {
   const key = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
   const color = cssColor(key);
-  const label = debugPrices ? formatPrice(lvl.price) : null;
+  const label = debugPrices ? `${formatPrice(lvl.price)}${ageSuffix(lvl.pivotTime, nowSec)}` : null;
   return { color, lineWidth: LINE_WIDTH, label };
 }
 
 // Zeichnet die übergebenen Level neu (komplettes Ersetzen der bisherigen Primitives) —
 // analog zu renderPersistedZones in orderBlocks.js. `debugPrices`/`formatPrice` steuern das
 // Preis-Label am Pivot-Ursprung (Debug-Toggle im Dashboard) — ohne `formatPrice` bleibt es aus.
-export function renderLiquidityLevels(series, levels, existingPrimitives, candles, { debugPrices, formatPrice } = {}) {
+export function renderLiquidityLevels(series, levels, existingPrimitives, candles, { debugPrices, formatPrice, nowSec } = {}) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
   for (const lvl of levels) {
-    const primitive = new LiquidityLinePrimitive(lvl, levelOptions(lvl, { debugPrices, formatPrice }), candles);
+    const primitive = new LiquidityLinePrimitive(lvl, levelOptions(lvl, { debugPrices, formatPrice, nowSec }), candles);
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }

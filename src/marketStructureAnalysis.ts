@@ -1,5 +1,6 @@
 import { LiquidityLinePrimitive } from "./liquidity.js";
 import { cssColor } from "./chartColors.js";
+import { businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
 import type { Pivot, MarketStructureState } from "./range.type";
 
 // Neuer "1h-Range"-Trendalgorithmus (siehe test/tdd_mit_claude.ts, rangeState1..7) — löst den
@@ -382,6 +383,17 @@ function toLevel(pivot: Pivot, candles: Candle[]) {
   return { price: pivot.price, pivotTime: pivot.pivotTime ?? 0, endTime };
 }
 
+// " (1d 3h alt)" hinter einem Label, oder "" ohne pivotTime/nowSec (Chat 2026-07-22: "bei den
+// relevanten LQ-Leveln das Alter anzeigen ... Wochenende nicht mitzählen", 2026-07-22 zweite Runde:
+// "bitte noch bei structure bei 1h LQ-Sweep dazutun") — dieselbe Formel wie im TSC/den
+// Liquiditäts-Debug-Labels (tradeSetupCockpit.ts/liquidity.js), hier noch mal separat, weil jede
+// Datei ihre eigene, leicht andere Label-Bau-Stelle hat.
+function ageSuffix(pivotTime: number | undefined, nowSec: number | undefined): string {
+  if (pivotTime == null || nowSec == null) return "";
+  const age = formatAge(businessSecondsBetween(pivotTime, nowSec));
+  return age ? ` (${age} alt)` : "";
+}
+
 // Ersetzt existingPrimitives komplett durch die aktuelle Marktstruktur-Darstellung: roter
 // Pfeil+Linie an currRange.high, grüner Pfeil+Linie an currRange.low, bei bestätigtem Trend
 // zusätzlich eine beschriftete Linie am protected-low (siehe Chat). state=null (oder zu wenig
@@ -391,6 +403,7 @@ export function renderMarketStructureAnalysis(
   state: MarketStructureState | null,
   existingPrimitives: any[],
   candles: Candle[],
+  { nowSec }: { nowSec?: number } = {},
 ) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
@@ -443,7 +456,7 @@ export function renderMarketStructureAnalysis(
     const lqColor = cssColor("rangeLqSweep");
     const line = new LiquidityLinePrimitive(
       toLevel(lqSweep, candles),
-      { color: lqColor, lineWidth: LINE_WIDTH, label: "1h LQ-Sweep", labelSide: "end" },
+      { color: lqColor, lineWidth: LINE_WIDTH, label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec)}`, labelSide: "end" },
       candles,
     );
     const arrow = new ArrowPrimitive(lqSweep, { color: lqColor, direction: "down" }, candles);

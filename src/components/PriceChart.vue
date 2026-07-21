@@ -591,6 +591,9 @@ function refreshLiquidityInternal() {
   renderLiquidityLevels(candleSeries, relevant, liquidityPrimitives, candles, {
     debugPrices: props.showLiquidityDebug,
     formatPrice: (price) => fmtPrice(price, precision),
+    // "Alter"-Anzeige an den Debug-Preis-Labels (Chat 2026-07-22) — im Replay bezogen auf
+    // replayUntil, nicht die echte Uhrzeit, sonst wäre das Alter beim Testen falsch/inkonsistent.
+    nowSec: props.replayUntil ?? Math.floor(Date.now() / 1000),
   });
   liquidityMetadata.value = relevant.map(pivotForDisplay);
   liquidityEarliestTime.value = relevant.length > 0 ? Math.min(...relevant.map((lvl) => lvl.pivotTime)) : null;
@@ -739,7 +742,11 @@ function refreshMarketStructureInternal() {
   const state = computeMarketStructureState();
   marketStructureState.value = state; // fürs Metadaten-Panel + TSC, unabhängig von showRanges (Zeichnen)
   const candles = clipReplay(allCandles);
-  renderMarketStructureAnalysis(candleSeries, props.showRanges ? state : null, marketStructurePrimitives, candles);
+  renderMarketStructureAnalysis(candleSeries, props.showRanges ? state : null, marketStructurePrimitives, candles, {
+    // "Alter"-Anzeige an der "1h LQ-Sweep"-Linie (Chat 2026-07-22) — im Replay bezogen auf
+    // replayUntil, nicht die echte Uhrzeit, sonst wäre das Alter beim Testen falsch/inkonsistent.
+    nowSec: props.replayUntil ?? Math.floor(Date.now() / 1000),
+  });
   // Sofort weiterreichen statt auf den nächsten refreshChart()/Poll zu warten (siehe Chat
   // 2026-07-19: "TSC scheint zu hängen, dauert ne Weile bis da was drin steht") — marketStructureState
   // ist eine der beiden TSC-Datenquellen (siehe refreshCockpitInternal), die andere ist
@@ -767,6 +774,9 @@ function refreshCockpitInternal() {
     mode: props.tradeSetupCockpitAtCandle ? "candle" : "fixed",
     formatPrice: (price) => fmtPrice(price, precision),
     candleOffset: props.tradeSetupCockpitCandleOffset,
+    // "Alter"-Anzeige an den LQ-Sweep-Zeilen (Chat 2026-07-22) — im Replay bezogen auf replayUntil,
+    // nicht die echte Uhrzeit, sonst wäre das Alter während des Testens falsch/inkonsistent.
+    nowSec: props.replayUntil ?? Math.floor(Date.now() / 1000),
   });
   cockpitMetadata.value = { h1Trend: state.h1Trend, h1LqSweep: pivotForDisplay(state.h1LqSweep), m5Setup: state.m5Setup };
 }

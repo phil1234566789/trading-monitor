@@ -6,6 +6,7 @@
 // stellt sie zusammengefasst dar.
 import type { MarketStructureState, Pivot } from "./range.type";
 import { cssColor, cssColorScaled } from "./chartColors.js";
+import { businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
 
 export interface Candle {
   time: number;
@@ -25,6 +26,9 @@ export interface CockpitState {
     dir: 1 | -1;
     label: string;
     lsPrice: number;
+    // Chat 2026-07-22: "im TSC ... bei den relevanten LQ-Leveln das Alter anzeigen" — pivotTime des
+    // M5-LQ-Sweeps, nur für die Alters-Anzeige in buildLines, sonst nirgends genutzt.
+    lsPivotTime: number | undefined;
     obTop: number;
     obBottom: number;
   } | null;
@@ -44,6 +48,7 @@ export function computeCockpitState(structureState: MarketStructureState | null,
         dir: last.dir as 1 | -1,
         label: last.label as string,
         lsPrice: last.ls.price as number,
+        lsPivotTime: last.ls.pivotTime as number | undefined,
         obTop: last.obTop as number,
         obBottom: last.obBottom as number,
       }
@@ -126,7 +131,17 @@ function trendSetupConfirmation(state: CockpitState): { text: string; color: str
   return confirms ? { text: " ✓", color: cssColor("candleUp") } : { text: " ✗", color: cssColor("candleDown") };
 }
 
-function buildLines(state: CockpitState, formatPrice: (price: number) => string): Line[] {
+// " (1d 3h alt)" hinter dem Preis, oder "" ohne pivotTime/nowSec (siehe Chat 2026-07-22: "Wochenende
+// nicht mitzählen" — businessSecondsBetween lässt Sa/So komplett raus, formatAge macht daraus die
+// Kurzform). Eigene Helper-Funktion statt inline, weil beide LQ-Sweep-Zeilen unten (1h + M5) sie
+// brauchen.
+function ageSuffix(pivotTime: number | undefined, nowSec: number | undefined): string {
+  if (pivotTime == null || nowSec == null) return "";
+  const age = formatAge(businessSecondsBetween(pivotTime, nowSec));
+  return age ? ` (${age} alt)` : "";
+}
+
+function buildLines(state: CockpitState, formatPrice: (price: number) => string, nowSec: number | undefined): Line[] {
   const lines: Line[] = [{ text: "Trade-Setup-Cockpit", color: "rgba(209, 212, 220, 0.8)", bold: true }];
 
   if (state.h1Trend !== "unknown") {
@@ -135,12 +150,14 @@ function buildLines(state: CockpitState, formatPrice: (price: number) => string)
     lines.push({ text: `1h ${state.h1Trend}`, color, suffix });
   }
   if (state.h1LqSweep) {
-    lines.push({ text: `1h LQ-Sweep @ ${formatPrice(state.h1LqSweep.price)}`, color: cssColor("rangeLqSweep") });
+    const age = ageSuffix(state.h1LqSweep.pivotTime, nowSec);
+    lines.push({ text: `1h LQ-Sweep @ ${formatPrice(state.h1LqSweep.price)}${age}`, color: cssColor("rangeLqSweep") });
   }
   if (state.m5Setup) {
     const color = cssColor(state.m5Setup.dir === -1 ? "tradeSetupLong" : "tradeSetupShort");
+    const age = ageSuffix(state.m5Setup.lsPivotTime, nowSec);
     lines.push({ text: `M5 ${state.m5Setup.label} Setup`, color });
-    lines.push({ text: `  LQ-Sweep @ ${formatPrice(state.m5Setup.lsPrice)}`, color });
+    lines.push({ text: `  LQ-Sweep @ ${formatPrice(state.m5Setup.lsPrice)}${age}`, color });
     lines.push({ text: `  M5-OB ${formatPrice(state.m5Setup.obBottom)}–${formatPrice(state.m5Setup.obTop)}`, color });
   }
   if (lines.length === 1) {
@@ -365,13 +382,14 @@ export function renderTradeSetupCockpit(
     mode = "fixed",
     formatPrice = (p: number) => String(p),
     candleOffset = DEFAULT_CANDLE_OFFSET,
-  }: { mode?: "fixed" | "candle"; formatPrice?: (price: number) => string; candleOffset?: number } = {},
+    nowSec = undefined,
+  }: { mode?: "fixed" | "candle"; formatPrice?: (price: number) => string; candleOffset?: number; nowSec?: number } = {},
 ) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
   if (!state) return;
 
-  const lines = buildLines(state, formatPrice);
+  const lines = buildLines(state, formatPrice, nowSec);
   const accent = cardAccentColors(state);
   const primitive = new TradeSetupCockpitPrimitive(lines, mode, candles, candleOffset, accent);
   series.attachPrimitive(primitive);
