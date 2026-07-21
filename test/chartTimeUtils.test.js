@@ -5,7 +5,41 @@
 // Open-Zeit exakt replayUntil entspricht, obwohl clipReplay() (PriceChart.vue) sie korrekt anzeigen
 // würde (Filter ist `<=`).
 import { describe, expect, it } from "vitest";
-import { replayFetchToMs, nextCandleAfter, businessSecondsBetween, formatAge } from "../src/chartTimeUtils.js";
+import { replayFetchToMs, nextCandleAfter, businessSecondsBetween, formatAge, snapToBarTime } from "../src/chartTimeUtils.js";
+
+// Bug-Report Philip 2026-07-22: "session indikator wird mir für 02.07. 23:00 - 03.07. 07:00 nicht
+// angezeigt, bei dem tag davor und danach schon" — die Session war zeitlich vollständig innerhalb
+// des geladenen Kerzenfensters, verschwand aber trotzdem. Ursache: SessionBandPaneView (sessions.js)
+// rief timeToCoordinate() mit den ROHEN Session-Grenzen auf; lag eine davon außerhalb des zum
+// Render-Zeitpunkt geladenen Bereichs (z.B. während des Replay-Scrubbens), lieferte
+// timeToCoordinate() null zurück und die GESAMTE Box (auch ihr sichtbarer Teil) wurde verworfen.
+// orderBlocks.js/liquidity.js hatten dasselbe Problem längst über snapToBarTime gelöst — Tests dafür
+// gab es aber noch keine.
+describe("snapToBarTime", () => {
+  const candles = [{ time: 100 }, { time: 200 }, { time: 300 }, { time: 400 }];
+
+  it("gibt die exakte Kerzenzeit zurück, wenn targetTime auf eine Kerze trifft", () => {
+    expect(snapToBarTime(candles, 200)).toBe(200);
+  });
+
+  it("klemmt auf die erste Kerze, wenn targetTime davor liegt", () => {
+    expect(snapToBarTime(candles, 0)).toBe(100);
+  });
+
+  it("klemmt auf die letzte Kerze, wenn targetTime danach liegt", () => {
+    expect(snapToBarTime(candles, 9999)).toBe(400);
+  });
+
+  it("rundet auf die nächste Kerze VOR targetTime ab (keine Interpolation)", () => {
+    expect(snapToBarTime(candles, 250)).toBe(200);
+    expect(snapToBarTime(candles, 399)).toBe(300);
+  });
+
+  it("gibt null für ein leeres oder fehlendes Kerzenarray zurück", () => {
+    expect(snapToBarTime([], 200)).toBeNull();
+    expect(snapToBarTime(null, 200)).toBeNull();
+  });
+});
 
 describe("replayFetchToMs", () => {
   it("returns undefined (= 'jetzt') when not in replay mode", () => {

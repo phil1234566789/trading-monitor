@@ -1,4 +1,5 @@
 import { reactive, watch } from "vue";
+import { snapToBarTime } from "./chartTimeUtils.js";
 
 // Session-Indikator (Chat 2026-07-22: "es gibt mehrere sessions ... hinzufügen/editieren/löschen,
 // von-bis Zeitangabe halbstunde genau, Hintergrundfarbe, Label") — frei konfigurierbare, TÄGLICH
@@ -185,13 +186,23 @@ class SessionBandPaneView {
   update() {
     const timeScale = this._source._chart.timeScale();
     const series = this._source._series;
-    const { highPrice, lowPrice } = this._source;
+    const { highPrice, lowPrice, _candles: candles } = this._source;
+    // Bug-Report Philip 2026-07-22: "session indikator wird mir für 02.07. 23:00 - 03.07. 07:00
+    // nicht angezeigt, bei dem tag davor und danach schon" — wenn startSec/endSec (echte Session-
+    // Grenzen) über den geladenen Kerzenbereich hinausragen (z.B. während des Replay-Scrubbens endet
+    // der geladene Bereich MITTEN in dieser Session), liefert timeToCoordinate für den Randpunkt
+    // AUSSERHALB `null` zurück — draw() bricht dann bei p1.x===null||p2.x===null KOMPLETT ab, auch
+    // der eigentlich sichtbare Teil der Box verschwindet mit. snapToBarTime (schon von
+    // orderBlocks.js/liquidity.js für exakt dasselbe Problem genutzt, siehe chartTimeUtils.js) klemmt
+    // auf die erste/letzte geladene Kerze, statt den Randpunkt unverändert zu lassen.
+    const startBarTime = snapToBarTime(candles, this._source._startSec);
+    const endBarTime = snapToBarTime(candles, this._source._endSec);
     this._p1 = {
-      x: timeScale.timeToCoordinate(this._source._startSec),
+      x: startBarTime != null ? timeScale.timeToCoordinate(startBarTime) : null,
       y: highPrice != null ? series.priceToCoordinate(highPrice) : null,
     };
     this._p2 = {
-      x: timeScale.timeToCoordinate(this._source._endSec),
+      x: endBarTime != null ? timeScale.timeToCoordinate(endBarTime) : null,
       y: lowPrice != null ? series.priceToCoordinate(lowPrice) : null,
     };
   }
@@ -209,12 +220,13 @@ class SessionBandPaneView {
 }
 
 export class SessionBandPrimitive {
-  constructor(startSec, endSec, options, { highPrice = null, lowPrice = null } = {}) {
+  constructor(startSec, endSec, options, { highPrice = null, lowPrice = null, candles = [] } = {}) {
     this._startSec = startSec;
     this._endSec = endSec;
     this._options = options;
     this.highPrice = highPrice;
     this.lowPrice = lowPrice;
+    this._candles = candles;
     this._paneViews = [new SessionBandPaneView(this)];
     this._chart = null;
     this._series = null;
@@ -273,7 +285,7 @@ export function renderSessions(series, sessionConfigs, existingPrimitives, candl
           label: session.label || null,
           labelColor: hexToRgba(session.hex, Math.min(1, session.alpha + 0.55)),
         },
-        { highPrice: highLow?.high ?? null, lowPrice: highLow?.low ?? null },
+        { highPrice: highLow?.high ?? null, lowPrice: highLow?.low ?? null, candles },
       );
       series.attachPrimitive(primitive);
       existingPrimitives.push(primitive);
