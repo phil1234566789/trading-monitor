@@ -4,6 +4,7 @@ import PriceChart from "../components/PriceChart.vue";
 import TradesTable from "../components/TradesTable.vue";
 import TradeStats from "../components/TradeStats.vue";
 import StyleModal from "../components/StyleModal.vue";
+import SessionsModal from "../components/SessionsModal.vue";
 import { TIMEFRAMES } from "../timeframes.js";
 import { fetchTrades } from "../trades.js";
 import { fetchPoiZones } from "../poiZones.js";
@@ -98,6 +99,13 @@ const showRangesMetadata = useLocalStorageRef("showRangesMetadata", false);
 // EMA 50/200 auf M5 (siehe Chat: "Trend über EMA + Anzahl protected highs/lows") — ein Toggle für
 // beide Linien zusammen, keine separaten Schalter je Periode (nicht verlangt).
 const showEma = useLocalStorageRef("showEma", false);
+// Sessions-Indikator (Chat 2026-07-22) — Sichtbarkeits-Toggle für die Hintergrundbänder, die
+// eigentlichen Session-Definitionen (Zeiten/Farbe/Label) liegen im sessions.js-Store, den
+// SessionsModal.vue direkt editiert. showSessionsModal ist analog zu showStyleModal reiner
+// Öffnen/Schließen-Zustand (nicht persistiert), showSessions (die Sichtbarkeit) dagegen schon,
+// wie die übrigen Indikator-Toggles.
+const showSessions = useLocalStorageRef("showSessions", true);
+const showSessionsModal = ref(false);
 // Trade-Setup-Cockpit (siehe Chat 2026-07-19: "wir wollen jetzt step by step alles
 // zusammenstöpseln") — bündelt H1-Range-Analyse + M5-Trade-Setups in einer Karte im Chart.
 // tradeSetupCockpitAtCandle ist der Positions-Toggle (fester Platz vs. neben der letzten Kerze).
@@ -182,12 +190,19 @@ const liquidityMenuOpen = ref(false);
 const rangesMenuOpen = ref(false);
 const tradeSetupsMenuOpen = ref(false);
 const debugMenuOpen = ref(false);
+// Neuer Sammel-Menüpunkt "Indikatoren" (Chat 2026-07-22: "Du kannst wohl neuen Menupunkt
+// 'Indikatoren' machen. Unterpunkte Sessions, EMA, Liquidität, OBs") — bündelt die vorher
+// einzeln in der Toolbar stehenden Sessions/EMA/Liquidität/OBs-Schalter. Liquidität behält ihr
+// eigenes verschachteltes Sweep-Untermenü (liquidityMenuOpen), das jetzt innerhalb des
+// Indikatoren-Dropdowns lebt statt auf oberster Ebene.
+const indikatorenMenuOpen = ref(false);
 function closeMenusOutside(e) {
   if (!e.target.closest?.(".toggle-group")) {
     liquidityMenuOpen.value = false;
     rangesMenuOpen.value = false;
     tradeSetupsMenuOpen.value = false;
     debugMenuOpen.value = false;
+    indikatorenMenuOpen.value = false;
   }
 }
 onMounted(() => window.addEventListener("click", closeMenusOutside));
@@ -232,25 +247,55 @@ watch(currentSymbol, () => {
       </button>
     </div>
     <div class="drawing-toggles">
-      <button :class="{ active: showHistoricalObs }" @click="showHistoricalObs = !showHistoricalObs">
-        Historische OBs
-      </button>
-
       <div class="toggle-group">
-        <button :class="{ active: showLiquidity }" @click="showLiquidity = !showLiquidity">
-          Liquidität
-        </button>
         <button
-          class="toggle-caret"
-          :class="{ open: liquidityMenuOpen }"
-          title="Untermenü"
-          @click="liquidityMenuOpen = !liquidityMenuOpen"
+          class="toggle-caret-label"
+          :class="{ open: indikatorenMenuOpen }"
+          @click="indikatorenMenuOpen = !indikatorenMenuOpen"
         >
-          ▾
+          Indikatoren ▾
         </button>
-        <div v-if="liquidityMenuOpen" class="toggle-dropdown">
-          <button :class="{ active: showSweptLiquidity }" @click="showSweptLiquidity = !showSweptLiquidity">
-            Liquidity-Sweeps
+        <div v-if="indikatorenMenuOpen" class="toggle-dropdown indikatoren-dropdown">
+          <div class="toggle-dropdown-row">
+            <button :class="{ active: showSessions }" @click="showSessions = !showSessions">
+              Sessions
+            </button>
+            <button class="toggle-caret" title="Sessions verwalten" @click="showSessionsModal = true">
+              ⚙
+            </button>
+          </div>
+
+          <div class="toggle-dropdown-divider"></div>
+
+          <button :class="{ active: showEma }" @click="showEma = !showEma">
+            EMA
+          </button>
+
+          <div class="toggle-dropdown-divider"></div>
+
+          <div class="toggle-group">
+            <button :class="{ active: showLiquidity }" @click="showLiquidity = !showLiquidity">
+              Liquidität
+            </button>
+            <button
+              class="toggle-caret"
+              :class="{ open: liquidityMenuOpen }"
+              title="Untermenü"
+              @click="liquidityMenuOpen = !liquidityMenuOpen"
+            >
+              ▾
+            </button>
+            <div v-if="liquidityMenuOpen" class="toggle-dropdown">
+              <button :class="{ active: showSweptLiquidity }" @click="showSweptLiquidity = !showSweptLiquidity">
+                Liquidity-Sweeps
+              </button>
+            </div>
+          </div>
+
+          <div class="toggle-dropdown-divider"></div>
+
+          <button :class="{ active: showHistoricalObs }" @click="showHistoricalObs = !showHistoricalObs">
+            OBs
           </button>
         </div>
       </div>
@@ -456,6 +501,7 @@ watch(currentSymbol, () => {
   </div>
 
   <StyleModal v-if="showStyleModal" @close="showStyleModal = false" />
+  <SessionsModal v-if="showSessionsModal" @close="showSessionsModal = false" />
 
   <PriceChart
     ref="priceChartRef"
@@ -481,6 +527,7 @@ watch(currentSymbol, () => {
     :show-ranges="showRanges"
     :show-ranges-metadata="showRangesMetadata"
     :show-ema="showEma"
+    :show-sessions="showSessions"
     :show-trade-setup-cockpit="showTradeSetupCockpit"
     :trade-setup-cockpit-at-candle="tradeSetupCockpitAtCandle"
     :trade-setup-cockpit-candle-offset="tradeSetupCockpitCandleOffset"
@@ -678,6 +725,38 @@ watch(currentSymbol, () => {
   height: 1px;
   margin: 4px 6px;
   background: #2a2e39;
+}
+
+/* "Indikatoren"-Sammelmenü (Chat 2026-07-22): reiner Caret-Auslöser statt Toggle-Button + Caret
+   wie bei Liquidität/Trade-Setups/Structure — "Indikatoren" selbst ist kein Ein/Aus-Schalter,
+   sondern nur der Einstieg ins Untermenü. */
+.toggle-caret-label {
+  background: transparent;
+  border: none;
+  color: #d1d4dc;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.toggle-caret-label:hover,
+.toggle-caret-label.open {
+  background: #2a2e39;
+}
+
+.indikatoren-dropdown {
+  min-width: 180px;
+}
+
+.toggle-dropdown-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.toggle-dropdown-row button:first-child {
+  flex: 1;
 }
 
 .replay-control {

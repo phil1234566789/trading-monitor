@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { createChart, CandlestickSeries, LineSeries, TickMarkType } from "lightweight-charts";
 import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
 import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, LiquidityLinePrimitive } from "../liquidity.js";
+import { sessions, renderSessions } from "../sessions.js";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { renderPivotMarkers } from "../pivotMarkers";
 import { initMarketStructureState, applyMarketStructurePivot, applyInnerMarketStructurePivot, renderMarketStructureAnalysis } from "../marketStructureAnalysis";
@@ -66,6 +67,10 @@ const props = defineProps({
   rangesFixedStartActive: { type: Boolean, default: false },
   rangesFixedStartTime: { type: Number, default: null },
   showEma: { type: Boolean, default: false },
+  // Sessions-Indikator (Chat 2026-07-22) — Sichtbarkeit der Hintergrundbänder; die Session-Liste
+  // selbst kommt nicht als Prop, sondern direkt aus dem sessions.js-Store (siehe deep watch unten,
+  // analog zu chartColors: der Store ist die Quelle der Wahrheit, nicht Dashboard.vue).
+  showSessions: { type: Boolean, default: true },
   // Replay-Modus (siehe Chat 2026-07-19): unix Sekunden, ab denen alles nach "Zeit X" ausgeblendet
   // wird — null = live (kein Clipping). Zum visuellen Prüfen des Ranges-Algos, ohne Zukunft zu
   // sehen, während er noch entsteht.
@@ -284,6 +289,7 @@ let ema200Series;
 let resizeObserver;
 let orderBlockPrimitives = [];
 let liquidityPrimitives = [];
+let sessionPrimitives = [];
 let rangesMarkerPrimitives = [];
 let rangesMarkerPrimitives2 = []; // eingebettete Periode-2-Debug-Marker, siehe refreshRangesMarkersInternal
 let marketStructurePrimitives = [];
@@ -597,6 +603,22 @@ function refreshLiquidityInternal() {
   });
   liquidityMetadata.value = relevant.map(pivotForDisplay);
   liquidityEarliestTime.value = relevant.length > 0 ? Math.min(...relevant.map((lvl) => lvl.pivotTime)) : null;
+}
+
+// Sessions-Hintergrundbänder (Chat 2026-07-22) — tzOffsetMinutes kommt aus der Browser-Lokalzeit
+// (-getTimezoneOffset() dreht JS' vorzeichenverkehrtes Offset ins übliche "UTC+X"-Format), passend
+// zur restlichen Chart-Zeitachse (siehe tickMarkFormatter). Läuft auf allCandles wie refreshLiquidityInternal,
+// nicht auf einem der Analyse-spezifischen Kerzen-Arrays (rangesH1Candles etc.).
+function refreshSessionsInternal() {
+  if (!candleSeries) return; // watch(sessions) kann vor dem ersten Chart-Mount feuern (Store lädt schon bei Modul-Import)
+  const candles = clipReplay(allCandles);
+  renderSessions(candleSeries, props.showSessions ? sessions : [], sessionPrimitives, candles, {
+    // Funktion statt fixer Zahl (Bug-Report Philip 2026-07-22: Zeitumstellung) — allCandles kann per
+    // Lazy-Load Monate zurückreichen, ein einzelner "jetzt"-Offset wäre für Kerzen auf der anderen
+    // Seite einer Sommer-/Winterzeit-Umstellung eine Stunde daneben. sessionOccurrences fragt diese
+    // Funktion PRO TAG einzeln ab (siehe sessions.js: localMidnightUtc).
+    tzOffsetMinutes: (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset(),
+  });
 }
 
 // H1-Fraktale im konfigurierten Lookback-Fenster — reine Pivot-Liste, noch keine weak/protected/
@@ -1083,6 +1105,7 @@ function refreshChart() {
   candleSeries.setData(clipReplay(allCandles));
   refreshPoiZonesInternal();
   refreshLiquidityInternal();
+  refreshSessionsInternal();
   refreshTradeMarkersInternal();
   renderTradeSetupsInternal();
   refreshRangesMarkersInternal();
@@ -1439,6 +1462,11 @@ watch(() => props.showEma, (on) => {
   if (on && trendAnalysisM5Candles.length === 0) loadTradeSetupM5();
   else refreshEmaInternal();
 });
+// showSessions (Toggle) UND der sessions-Store selbst (Hinzufügen/Editieren/Löschen in
+// SessionsModal.vue, deep weil Label/Zeiten/Farbe direkt auf den reactive-Objekten mutiert werden,
+// kein splice/push) sollen beide sofort neu zeichnen, nicht erst beim nächsten refreshChart()-Zyklus.
+watch(() => props.showSessions, refreshSessionsInternal);
+watch(sessions, refreshSessionsInternal, { deep: true });
 watch(() => props.showTradeSetupCockpit, () => {
   // showTradeSetupCockpit zählt seit Chat 2026-07-19 mit in rangesNeedsData() (TSC braucht den
   // H1-Range-State immer, auch ohne Trend-Toggle) -> Polling-Zustand neu bewerten, genau wie beim
