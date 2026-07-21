@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cachedCandlesUpTo } from "../src/candleCache.js";
+import { cachedCandlesUpTo, safeCompleteUpTo } from "../src/candleCache.js";
 
 // Bug-Report Philip 2026-07-19 (#1): M5-Replay auf 08.07.2026 21:00 gestellt, Chart zeigte trotzdem
 // nur Kerzen bis 02.07.2026 — der IndexedDB-Cache für GBPUSD:5m hatte ein Loch zwischen einem alten
@@ -79,5 +79,42 @@ describe("cachedCandlesUpTo", () => {
 
     const result = cachedCandlesUpTo(cached, effectiveEndSec, effectiveEndSec, 1000);
     expect(result).toBeNull();
+  });
+});
+
+// Bug-Report Philip 2026-07-21: fetchCandlesCached setzte completeUpTo bisher IMMER auf den vollen
+// angefragten Zeitpunkt, egal wie weit die tatsächliche Antwort reichte — ein Fetch, der aus
+// irgendeinem Grund (fehlerhafte Eingabe, eine API-Eigenheit wie cTraders "toTimestamp zählt selbst
+// noch als offene Kerze", siehe replayFetchToMs in chartTimeUtils.js) kürzer ausfiel, poisoned den
+// Cache dadurch DAUERHAFT (übersteht Reloads, siehe cachedCandlesUpTo oben — completeUpTo ist die
+// einzige Quelle der Wahrheit für "reicht der Cache"). safeCompleteUpTo trennt jetzt "eine ECHTE
+// Marktschließzeit" (Antwort reicht nur wenig kürzer, bleibt vertrauenswürdig) von "grob falsch/leer"
+// (Antwort bricht weit vor dem angefragten Ziel ab, oder gar nicht erst) — Letzteres claimt keine
+// Vollständigkeit mehr, damit der NÄCHSTE Aufruf automatisch neu fetcht statt für immer hängen zu bleiben.
+describe("safeCompleteUpTo", () => {
+  function candleAt(time) {
+    return { time, open: 1, high: 1, low: 1, close: 1 };
+  }
+
+  it("trusts the full requested end time when the response reaches it exactly", () => {
+    const fresh = [candleAt(1000), candleAt(1300), candleAt(1600)];
+    expect(safeCompleteUpTo(fresh, 1600)).toBe(1600);
+  });
+
+  it("still trusts the full requested end time for a normal weekend-sized gap", () => {
+    const fridayClose = 1_000_000;
+    const fresh = [candleAt(fridayClose - 300), candleAt(fridayClose)];
+    const mondayMorning = fridayClose + 60 * 3600; // ~60h Wochenend-Lücke
+    expect(safeCompleteUpTo(fresh, mondayMorning)).toBe(mondayMorning);
+  });
+
+  it("caps completeUpTo at the actual last candle when the response falls far short of the target (grober Ausreißer)", () => {
+    const fresh = [candleAt(1000), candleAt(1300)];
+    const requestedEnd = 1300 + 10 * 24 * 3600; // 10 Tage weiter als tatsächlich geliefert
+    expect(safeCompleteUpTo(fresh, requestedEnd)).toBe(1300);
+  });
+
+  it("claims no completeness at all for a completely empty response", () => {
+    expect(safeCompleteUpTo([], 999_999)).toBeNull();
   });
 });

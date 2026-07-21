@@ -12,14 +12,13 @@ import { barSecondsFor } from "./timeframes.js";
 // unbegrenzt volllaufen lassen würde.
 
 const DB_NAME = "trading-monitor-candles";
-// 2 (Bug-Report Philip 2026-07-21: "Kerzen hören ab 22:00 auf", überstand mehrere Reloads) — ein
-// fehlerhafter (Nachkomma-)count in loadRangesCandles (siehe PriceChart.vue: Math.ceil-Fix) hat
-// vermutlich einen falschen completeUpTo-Stand in den Cache geschrieben, für GBPUSD:1h denselben
-// Eintrag, den auch der Hauptchart nutzt — IndexedDB übersteht einen Browser-Reload, ein reiner
-// Code-Fix (der die Ursache behebt) räumt den bereits kaputten Eintrag also NICHT auf. Ein
-// einmaliger Versions-Bump erzwingt onupgradeneeded, das den Store jetzt komplett neu anlegt (siehe
-// unten) — sauberer/automatischer Reset statt "geh in die DevTools und lösch die DB von Hand".
-const DB_VERSION = 2;
+// 3 (Bug-Report Philip 2026-07-21, zweite Runde: derselbe "Kerzen hören zu früh auf"-Effekt, jetzt
+// durch den cTrader-Off-by-one statt den Nachkomma-count verursacht, siehe replayFetchToMs in
+// chartTimeUtils.js + safeCompleteUpTo unten) — IndexedDB übersteht einen Browser-Reload, ein
+// reiner Code-Fix räumt einen schon kaputt geschriebenen completeUpTo-Stand also NICHT auf. Noch
+// ein Versions-Bump für den JETZT schon poisoned Cache; safeCompleteUpTo verhindert ab hier, dass
+// dieselbe Bug-Klasse nochmal einen DAUERHAFTEN (reload-festen) Schaden anrichtet.
+const DB_VERSION = 3;
 const STORE_NAME = "candles";
 
 // Rein defensiv, KEINE reguläre Obergrenze (siehe oben) — 500k Kerzen sind selbst auf M1 fast ein
@@ -202,6 +201,24 @@ export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs
   const fetchEffectiveEndSec = fetchToMs != null ? Math.floor(fetchToMs / 1000) : effectiveEndSec;
   const fresh = await fetchFn(symbol, bar, targetCount + lookaheadBars, fetchToMs);
   const merged = cached.length > 0 ? mergeCandles(cached, fresh) : fresh;
-  await setCachedCandles(symbol, bar, merged, toMs != null ? fetchEffectiveEndSec : completeUpTo);
+  await setCachedCandles(symbol, bar, merged, toMs != null ? safeCompleteUpTo(fresh, fetchEffectiveEndSec) : completeUpTo);
   return fresh;
+}
+
+// Sicherheitsnetz — NICHT gegen den konkreten Bug vom 2026-07-21 selbst (der ist an der Wurzel
+// gefixt, siehe replayFetchToMs in chartTimeUtils.js: ein korrekt gebauter Request fällt gar nicht
+// erst kurz aus), sondern gegen die Poisoning-MECHANIK, die ihn zweimal reload-fest gemacht hat:
+// completeUpTo wurde bisher IMMER auf den vollen angefragten Zeitpunkt gesetzt, komplett unabhängig
+// davon, was tatsächlich zurückkam. Ein normaler 1-Bar-Shortfall (z.B. die gerade noch offene
+// aktuelle Kerze) ist dabei NICHT von einem Bug zu unterscheiden — beide sehen für diese Funktion
+// identisch aus, MAX_ACCEPTABLE_GAP_SEC (4 Tage, deckt lange Wochenenden/Feiertage ab, siehe
+// cachedCandlesUpTo-Kommentar oben zu echten Marktschließzeiten) fängt deshalb bewusst nur GROBE
+// Ausreißer ab (leere/fast leere Antwort trotz erfolgreichem Request), nicht jeden kleinen
+// Rand-Shortfall. Ein leerer fresh-Response claimt gar keine Vollständigkeit mehr — der nächste
+// Aufruf fetcht dann automatisch neu, statt für immer auf einem falschen Stand hängen zu bleiben.
+const MAX_ACCEPTABLE_GAP_SEC = 4 * 24 * 3600;
+export function safeCompleteUpTo(fresh, fetchEffectiveEndSec) {
+  const lastFreshTime = fresh.length > 0 ? fresh[fresh.length - 1].time : null;
+  if (lastFreshTime == null) return null;
+  return fetchEffectiveEndSec - lastFreshTime <= MAX_ACCEPTABLE_GAP_SEC ? fetchEffectiveEndSec : lastFreshTime;
 }

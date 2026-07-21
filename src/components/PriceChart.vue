@@ -26,6 +26,7 @@ import {
   fetchOlderCandles as fetchOlderForexCandles,
 } from "../ctraderCandles.js";
 import { fetchCandlesCached } from "../candleCache.js";
+import { replayFetchToMs } from "../chartTimeUtils.js";
 import { useStatusBar } from "../composables/useStatusBar.js";
 import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
 import Gauge from "./Gauge.vue";
@@ -226,14 +227,14 @@ async function copyJson(section, value) {
   }
 }
 
-// Zusätzlich lokal in .debug/metadata.json ablegen (siehe vite.config.js: debugMetadataWriter) —
-// nur für den "alles kopieren"-Button im Debug-Metadaten-Panel, Chat 2026-07-21: "du siehst nicht
-// alle daten, weil mein Text abgeschnitten wird" (sehr lange Kerzen-Arrays sprengen das Prompt-
-// Fenster beim Einfügen). Bewusst ZUSÄTZLICH zum Clipboard-Copy, nicht als Ersatz. Nur im
-// `vite dev`-Server erreichbar — schlägt der POST fehl (z.B. weil kein Dev-Server läuft), still
-// ignorieren, das Clipboard-Copy allein bleibt trotzdem nützlich.
-async function copyJsonAndSaveLocally(section, value) {
-  await copyJson(section, value);
+// Lokal in .debug/metadata.json ablegen (siehe vite.config.js: debugMetadataWriter), Chat
+// 2026-07-21: "du siehst nicht alle daten, weil mein Text abgeschnitten wird" (sehr lange
+// Kerzen-Arrays sprengen das Prompt-Fenster beim Einfügen). Eigene Funktion OHNE Clipboard-Zugriff
+// (siehe copyJsonAndSaveLocally unten, das ist NUR der Button) — der Auto-Save weiter unten ruft
+// das im Hintergrund auf, das darf nicht heimlich alle paar Sekunden das System-Clipboard
+// überschreiben. Nur im `vite dev`-Server erreichbar — schlägt der POST fehl (z.B. Production-
+// Build ohne den Dev-Endpoint), still ignorieren.
+async function saveDebugMetadataLocally(value) {
   try {
     await fetch("/__debug-metadata", {
       method: "POST",
@@ -244,6 +245,33 @@ async function copyJsonAndSaveLocally(section, value) {
     console.error("Debug-Metadaten lokal speichern fehlgeschlagen:", err);
   }
 }
+
+// Für den "kopieren + lokal speichern"-Button im Debug-Metadaten-Panel — Clipboard-Copy UND
+// Datei-Save zusammen, mit dem "✓ kopiert"-Feedback am Button (siehe copyJson).
+async function copyJsonAndSaveLocally(section, value) {
+  await copyJson(section, value);
+  await saveDebugMetadataLocally(value);
+}
+
+// Auto-Save (Chat 2026-07-21: "alle X Sekunden automatisch neu speichern, nur im localhost dann...
+// einmal bei App-Start und dann alle X Sekunden, so dass es nicht zu belastend für den PC ist") —
+// damit .debug/metadata.json immer aktuell ist, ohne dass Philip vor jedem Bug-Report erst den
+// Button klicken muss. import.meta.env.DEV ist Vites eingebautes "läuft das gerade im
+// `vite dev`-Server" (true nur dort, false im Production-Build/`vite preview`) — deckt sich exakt
+// mit "nur im localhost", ohne Hostname-Sniffing nötig; der Endpoint existiert im Production-Build
+// ohnehin nicht (siehe vite.config.js), der Fetch würde dort sowieso ins Leere laufen.
+// 30s: JSON bauen + ein kleiner lokaler POST sind beide sehr billig (auch bei ~1000 Kerzen), 30s
+// ist trotzdem großzügig genug, um den PC nicht unnötig zu belasten.
+const DEBUG_AUTOSAVE_INTERVAL_MS = 30_000;
+let debugAutosaveTimer = null;
+onMounted(() => {
+  if (!import.meta.env.DEV) return;
+  saveDebugMetadataLocally(activeMetadataSnapshot.value);
+  debugAutosaveTimer = setInterval(() => {
+    saveDebugMetadataLocally(activeMetadataSnapshot.value);
+  }, DEBUG_AUTOSAVE_INTERVAL_MS);
+});
+onUnmounted(() => clearInterval(debugAutosaveTimer));
 
 // lightweight-charts ist inhärent imperativ (Canvas-API) — Chart/Series/Primitives und ihr
 // Zustand bleiben deshalb bewusst reine Closure-Variablen statt reaktiver refs. Sie steuern
@@ -495,8 +523,12 @@ function clipReplay(rows) {
 // 12 Tagen Lookback + Replay nicht weit genug zurück"). loadRangesCandles/loadTradeSetupM5/-H1
 // übergeben das hier an fetchInitialForexCandles, damit der Fetch selbst schon bis replayUntil
 // zurückreicht statt erst hinterher (zu kurz) geclippt zu werden.
-function replayToMs() {
-  return props.replayUntil == null ? undefined : props.replayUntil * 1000;
+// bar (Forex-Aufrufe): siehe replayFetchToMs in chartTimeUtils.js — cTrader liefert die Kerze GENAU
+// an replayUntil sonst strukturell nie mit (Bug-Report Philip 2026-07-21: "letzte Kerze nur 22:00
+// statt 23:00", "+1 Kerze" brachte deshalb nie die neu angeforderte Kerze). OKX/BTC-Aufrufe lassen
+// bar bewusst weg (kein bekanntes Analogon zu diesem cTrader-Verhalten).
+function replayToMs(bar) {
+  return replayFetchToMs(props.replayUntil, bar);
 }
 
 function refreshTradeMarkersInternal() {
@@ -770,7 +802,7 @@ async function loadRangesCandles() {
     // Teilt sich den H1-Cache-Eintrag mit loadInitial (falls currentBar "1h" ist) und
     // loadTradeSetupH1 (siehe Chat 2026-07-20: "unnötige cTrader Aufrufe") — statt unabhängig
     // komplett neu zu fetchen, nur der fehlende/neue Teil.
-    const candles = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", count, replayToMs(), REPLAY_LOOKAHEAD_SEC);
+    const candles = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", count, replayToMs("1h"), REPLAY_LOOKAHEAD_SEC);
     if (seq !== rangesFetchSeq) return; // inzwischen überholt, siehe oben
     rangesH1Candles = candles;
     refreshRangesInternal();
@@ -961,7 +993,7 @@ async function loadTradeSetupM5() {
   if (!isForex) return;
   const seq = ++tradeSetupM5FetchSeq; // Out-of-Order-Guard, siehe loadRangesCandles
   try {
-    const toMs = replayToMs();
+    const toMs = replayToMs("5m");
     // Holt bei aktivem EMA-Toggle zusätzlich die größere M5-Historie für die EMA-Berechnung
     // (siehe TREND_ANALYSIS_CANDLE_COUNT) — nur dann, um unnötige cTrader-Connects zu vermeiden.
     // Hängt hier dran (nicht an einem dritten eigenen Poller), weil EMA ohnehin M5-Kerzen braucht
@@ -998,7 +1030,7 @@ async function loadTradeSetupH1() {
   if (!isForex) return;
   const seq = ++tradeSetupH1FetchSeq; // Out-of-Order-Guard, siehe loadRangesCandles
   try {
-    const toMs = replayToMs();
+    const toMs = replayToMs("1h");
     // Teilt sich den Cache-Eintrag mit loadInitial (falls currentBar "1h" ist) und
     // loadRangesCandles — beide bleiben trotzdem bewusst eigene Aufrufe/Poller (siehe Chat
     // 2026-07-20: "Konzepte sollen sich nicht querbeeinflussen"), der Cache macht das billig.
@@ -1064,8 +1096,9 @@ async function loadInitial() {
     // gleich weit zurück (1000 M5-Kerzen ~3,5 Tage, 1000 H1-Kerzen ~41 Tage) — ohne replayToMs()
     // würde ein TF-Wechsel während eines weit zurückliegenden Replays (z.B. 1h -> M5) einen leeren
     // Kerzenbereich laden, der nach clipReplay komplett verschwindet (siehe Chat 2026-07-19: "1h
-    // auf M5 gewechselt und sehe keinen Chart").
-    const toMs = replayToMs();
+    // auf M5 gewechselt und sehe keinen Chart"). bar nur für Forex (siehe replayToMs) — der OKX-Fetch
+    // (BTC, else-Zweig unten) bekommt bewusst KEIN bar, kein bekanntes Analogon zum cTrader-Verhalten.
+    const toMs = replayToMs(isForex ? props.currentBar : undefined);
     if (isForex) {
       candles = await fetchCandlesCached(
         fetchInitialForexCandles,
