@@ -26,7 +26,7 @@ import {
   fetchOlderCandles as fetchOlderForexCandles,
 } from "../ctraderCandles.js";
 import { fetchCandlesCached } from "../candleCache.js";
-import { replayFetchToMs } from "../chartTimeUtils.js";
+import { replayFetchToMs, nextCandleAfter } from "../chartTimeUtils.js";
 import { useStatusBar } from "../composables/useStatusBar.js";
 import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
 import Gauge from "./Gauge.vue";
@@ -1508,16 +1508,32 @@ watch(
 // im AKTUELLEN Timeframe zurückgeben, den Dashboard.vue dann als neuen replayUntil-Wert übernimmt.
 // `after == null` (noch kein Replay aktiv) liefert die älteste geladene Kerze, damit der Button
 // auch aus Live heraus sofort funktioniert.
-// BEWUSST arithmetisch (after + eine Kerzenlänge) statt in allCandles nach der nächsten
-// tatsächlich geladenen Kerze zu suchen (Bug-Report Philip 2026-07-19: Button tat einfach nichts)
-// — allCandles ist während eines aktiven Replays IMMER exakt bis replayUntil geladen, nie weiter
-// (siehe loadInitial: der Fetch selbst ist an replayToMs() gebunden), enthält also strukturell nie
-// eine Kerze NACH dem aktuellen Replay-Stand. Der arithmetische Sprung braucht dieses Datum nicht
-// — der replayUntil-Watcher unten lädt die dadurch neu sichtbare Kerze nach.
+// Seit Chat 2026-07-19 (Bug-Report: Button tat einfach nichts) BEWUSST NICHT rein arithmetisch,
+// sondern sucht per nextCandleAfter (chartTimeUtils.js) die nächste TATSÄCHLICH geladene Kerze —
+// dank REPLAY_LOOKAHEAD_SEC (seit "performance replay modus") enthält allCandles inzwischen auch
+// schon Kerzen ETWAS über replayUntil hinaus, die alte Sorge ("allCandles hat strukturell nie eine
+// Kerze nach dem Replay-Stand") gilt also nicht mehr uneingeschränkt.
+// Reicht das geladene Fenster nicht (z.B. Wochenende/Feiertag bei Forex — Chat 2026-07-21: "Das ist
+// der Freitag! Am WE gibts kein Forex!!", REPLAY_LOOKAHEAD_SEC von 4h ist dafür viel zu knapp) ->
+// gezielt 7 Tage weiter nachfragen (deckt jede normale Markt-Schließzeit ab) und daraus die früheste
+// Kerze NACH `after` nehmen — cTrader liefert nur "N Kerzen BIS X" (rückwärts), nie "AB X vorwärts",
+// daher der Umweg über einen extra Fetch statt eines direkten Vorwärts-Lookups. Rein arithmetischer
+// Fallback (+ eine Kerzenlänge) nur noch für BTC/OKX (kein bekanntes Markt-Schließzeit-Analogon) und
+// falls der Extra-Fetch selbst fehlschlägt.
 defineExpose({
-  nextReplayTime(after) {
+  async nextReplayTime(after) {
     if (after == null) return allCandles[0]?.time ?? null;
-    return after + barSecondsFor(props.currentBar);
+    const barSeconds = barSecondsFor(props.currentBar);
+    const loaded = nextCandleAfter(allCandles, after);
+    if (loaded != null) return loaded;
+    if (!isForex) return after + barSeconds;
+    try {
+      const probe = await fetchInitialForexCandles(props.symbol, props.currentBar, 200, (after + 7 * 24 * 3600) * 1000);
+      return nextCandleAfter(probe, after) ?? after + barSeconds;
+    } catch (err) {
+      console.error("Nächste Kerze über eine Lücke hinweg suchen fehlgeschlagen:", err);
+      return after + barSeconds;
+    }
   },
 });
 </script>

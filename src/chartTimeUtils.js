@@ -34,3 +34,15 @@ export function replayFetchToMs(replayUntilSec, bar) {
   const barOffsetMs = bar ? barSecondsFor(bar) * 1000 : 0;
   return replayUntilSec * 1000 + barOffsetMs;
 }
+
+// Für den "+1 Kerze"-Button (PriceChart.vue: nextReplayTime) — die frühste Kerze NACH `afterSec` in
+// `candles` (oldest-first sortiert), oder null, wenn keine geladen ist. Ohne Markt-Öffnungszeiten zu
+// kennen (Wochenende/Feiertag bei Forex, siehe Chat 2026-07-21: "Das ist der Freitag! Am WE gibts
+// kein Forex!!") würde ein stures "+1 Bar" bei jedem Klick auf eine Zeit OHNE Kerze landen — der
+// Button müsste dutzende Male geklickt werden, um über eine Wochenend-Lücke zu kommen ("bleibts
+// hängen"). Sucht stattdessen direkt die nächste TATSÄCHLICH vorhandene Kerze, egal wie weit sie
+// entfernt liegt — ein Klick überspringt die ganze Lücke auf einmal.
+export function nextCandleAfter(candles, afterSec) {
+  const found = candles.find((c) => c.time > afterSec);
+  return found ? found.time : null;
+}

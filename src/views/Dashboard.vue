@@ -157,11 +157,21 @@ const rangesFixedStartInputValue = computed({
 // Zeitpunkt gesetzt) springt der erste Klick auf die älteste geladene Kerze (siehe nextReplayTime)
 // und aktiviert Replay gleich mit — sonst würde der Klick unsichtbar ins Leere laufen.
 const priceChartRef = ref(null);
-function stepReplayForward() {
-  const next = priceChartRef.value?.nextReplayTime(replayTime.value);
-  if (next != null) {
-    replayTime.value = next;
-    replayActive.value = true;
+// nextReplayTime ist seit Chat 2026-07-21 async (kann bei einer Markt-Schließlücke, z.B. Wochenende,
+// selbst nachfetchen, siehe PriceChart.vue) — stepReplayInFlight verhindert überlappende Aufrufe bei
+// mehrfachem schnellen Klicken, während der vorige Aufruf noch fetcht.
+const stepReplayInFlight = ref(false);
+async function stepReplayForward() {
+  if (stepReplayInFlight.value) return;
+  stepReplayInFlight.value = true;
+  try {
+    const next = await priceChartRef.value?.nextReplayTime(replayTime.value);
+    if (next != null) {
+      replayTime.value = next;
+      replayActive.value = true;
+    }
+  } finally {
+    stepReplayInFlight.value = false;
   }
 }
 
@@ -415,8 +425,8 @@ watch(currentSymbol, () => {
           Replay ⏮
         </button>
         <input v-model="replayInputValue" type="datetime-local" class="replay-input" title="Chart+Indikatoren nur bis zu diesem Zeitpunkt anzeigen" />
-        <button class="replay-step-btn" title="+1 Kerze" @click="stepReplayForward">
-          ▶|
+        <button class="replay-step-btn" title="+1 Kerze" :disabled="stepReplayInFlight" @click="stepReplayForward">
+          {{ stepReplayInFlight ? '…' : '▶|' }}
         </button>
       </div>
 
