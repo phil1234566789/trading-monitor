@@ -1,5 +1,5 @@
 // D2 (vereinfacht): 4H+1H-Zonen-Wächter, jetzt Multi-Instrument (BTC-USDT via OKX,
-// GBPUSD/EURUSD via cTrader). Erkennt Order-Block-Zonen, persistiert sie in `ob_zones` und
+// GBPUSD/EURUSD via Twelve Data). Erkennt Order-Block-Zonen, persistiert sie in `ob_zones` und
 // schickt eine Telegram-Nachricht, sobald eine Zone zum ersten Mal vom Preis berührt wird —
 // aber nur für Instrumente mit `sendTelegram: true` (siehe INSTRUMENTS unten). BTC lief nur
 // zum Testen der Pipeline; Philip tradet Forex, daher jetzt GBPUSD/EURUSD live, BTC stumm
@@ -8,13 +8,13 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { detectOrderBlocks, type Candle } from "../_shared/orderBlocks.ts";
 import { detectLiquidityLevels, type LiquidityLevel } from "../_shared/liquidity.ts";
-import { fetchTrendbarsBatch } from "../_shared/ctrader/client.ts";
+import { fetchCandles as fetchForexCandles } from "../_shared/twelvedata/client.ts";
 import { detectSetupObs, detectTradeSetup } from "../_shared/tradeSetup.ts";
 
 const OKX_BASE_URL = "https://www.okx.com";
-const TIMEFRAMES: { label: "4H" | "1H"; okxBar: string; ctraderPeriod: string }[] = [
-  { label: "4H", okxBar: "4H", ctraderPeriod: "H4" },
-  { label: "1H", okxBar: "1H", ctraderPeriod: "H1" },
+const TIMEFRAMES: { label: "4H" | "1H"; okxBar: string; forexPeriod: string }[] = [
+  { label: "4H", okxBar: "4H", forexPeriod: "4h" },
+  { label: "1H", okxBar: "1H", forexPeriod: "1h" },
 ];
 const CANDLE_LIMIT = 300;
 const LIQUIDITY_FRACTAL_PERIOD = 5; // siehe LIQUIDITY_FRACTAL_PERIOD in PriceChart.vue
@@ -41,15 +41,15 @@ const TRADE_SETUP_LOOKBACK_SEC = 6 * 60 * 60; // protectedHighLookbackHours
 
 interface InstrumentConfig {
   instrument: string;
-  source: "okx" | "ctrader";
+  source: "okx" | "twelvedata";
   sendTelegram: boolean;
   pricePrecision: number;
 }
 
 const INSTRUMENTS: InstrumentConfig[] = [
   { instrument: "BTC-USDT", source: "okx", sendTelegram: false, pricePrecision: 2 },
-  { instrument: "GBPUSD", source: "ctrader", sendTelegram: true, pricePrecision: 5 },
-  { instrument: "EURUSD", source: "ctrader", sendTelegram: true, pricePrecision: 5 },
+  { instrument: "GBPUSD", source: "twelvedata", sendTelegram: true, pricePrecision: 5 },
+  { instrument: "EURUSD", source: "twelvedata", sendTelegram: true, pricePrecision: 5 },
 ];
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -57,9 +57,7 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const TELEGRAM_CHAT_ID = Deno.env.get("TELEGRAM_CHAT_ID")!;
 const DRY_RUN = (Deno.env.get("DRY_RUN") ?? "false").toLowerCase() === "true";
-const CTRADER_CLIENT_ID = Deno.env.get("CTRADER_CLIENT_ID")!;
-const CTRADER_CLIENT_SECRET = Deno.env.get("CTRADER_CLIENT_SECRET")!;
-const CTRADER_ACCESS_TOKEN = Deno.env.get("CTRADER_ACCESS_TOKEN")!;
+const TWELVEDATA_API_KEY = Deno.env.get("TWELVEDATA_API_KEY")!;
 
 async function fetchOkxCandles(instId: string, bar: string): Promise<Candle[]> {
   const url = `${OKX_BASE_URL}/api/v5/market/candles?instId=${instId}&bar=${bar}&limit=${CANDLE_LIMIT}`;
@@ -84,21 +82,17 @@ async function fetchOkxPrice(instId: string): Promise<number> {
   return Number(json.data[0].last);
 }
 
-// Ein Connect/Auth-Handshake pro Forex-Instrument statt drei (Preis + je Timeframe) — holt
-// den "aktuellen Preis" (Close der letzten M1-Bar, kein eigener Ticker-Endpunkt verdrahtet)
-// und alle Timeframe-Kerzen in einem Rutsch. Reihenfolge der Requests = Reihenfolge der
-// Ergebnisse: [M1-Preis-Bar, ...TIMEFRAMES].
-async function fetchCtraderBatch(symbol: string): Promise<{ currentPrice: number; candlesByTf: Map<string, Candle[]> }> {
-  const [priceBars, ...tfCandles] = await fetchTrendbarsBatch({
-    clientId: CTRADER_CLIENT_ID,
-    clientSecret: CTRADER_CLIENT_SECRET,
-    accessToken: CTRADER_ACCESS_TOKEN,
-    requests: [
-      { symbolName: symbol, period: "M1", count: 1 },
-      ...TIMEFRAMES.map((tf) => ({ symbolName: symbol, period: tf.ctraderPeriod, count: CANDLE_LIMIT })),
-      { symbolName: symbol, period: "M5", count: TRADE_SETUP_M5_CANDLE_LIMIT },
-    ],
-  });
+// Ein REST-Call pro Forex-Instrument+Timeframe (Preis + je Timeframe), parallel statt
+// sequentiell wie beim alten cTrader-Handshake — Twelve Data hat keine "mehrere Requests über
+// eine Verbindung" Batch-API, das Rate-Limit ist ohnehin pro Minute übers ganze Konto, nicht
+// pro Verbindung. Holt den "aktuellen Preis" (Close der letzten M1-Bar, kein eigener
+// Ticker-Endpunkt verdrahtet) und alle Timeframe-Kerzen in einem Rutsch.
+async function fetchForexBatch(symbol: string): Promise<{ currentPrice: number; candlesByTf: Map<string, Candle[]> }> {
+  const [priceBars, ...tfCandles] = await Promise.all([
+    fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "1m", count: 1 }),
+    ...TIMEFRAMES.map((tf) => fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: tf.forexPeriod, count: CANDLE_LIMIT })),
+    fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "5m", count: TRADE_SETUP_M5_CANDLE_LIMIT }),
+  ]);
   const candlesByTf = new Map(TIMEFRAMES.map((tf, i) => [tf.label, tfCandles[i]]));
   candlesByTf.set("M5", tfCandles[TIMEFRAMES.length]);
   return { currentPrice: priceBars[priceBars.length - 1].close, candlesByTf };
@@ -158,8 +152,8 @@ Deno.serve(async () => {
     const summary: Record<string, unknown> = { dryRun: DRY_RUN, tradingHours, instruments: {} };
 
     for (const cfg of INSTRUMENTS) {
-      const ctraderBatch = cfg.source === "ctrader" ? await fetchCtraderBatch(cfg.instrument) : null;
-      const currentPrice = cfg.source === "okx" ? await fetchOkxPrice(cfg.instrument) : ctraderBatch!.currentPrice;
+      const forexBatch = cfg.source === "twelvedata" ? await fetchForexBatch(cfg.instrument) : null;
+      const currentPrice = cfg.source === "okx" ? await fetchOkxPrice(cfg.instrument) : forexBatch!.currentPrice;
       // Zonen werden für jedes Instrument immer erkannt/gespeichert (Dashboard-Charts brauchen
       // das weiterhin) — `shouldSend` entscheidet nur, ob dafür auch wirklich eine
       // Telegram-Nachricht rausgeht (BTC: nie, per `sendTelegram: false`; sonst: nur innerhalb
@@ -171,7 +165,7 @@ Deno.serve(async () => {
         // z.B. "ob_zone_4h"/"ob_zone_1h" — je Timeframe einzeln umschaltbar.
         const alarmActive = shouldSend && isAlarmOn(`ob_zone_${tf.label.toLowerCase()}`);
         const candles =
-          cfg.source === "okx" ? await fetchOkxCandles(cfg.instrument, tf.okxBar) : ctraderBatch!.candlesByTf.get(tf.label)!;
+          cfg.source === "okx" ? await fetchOkxCandles(cfg.instrument, tf.okxBar) : forexBatch!.candlesByTf.get(tf.label)!;
         const zones = detectOrderBlocks(candles);
 
         const { data: existingRows, error: selectError } = await supabase
@@ -194,7 +188,7 @@ Deno.serve(async () => {
           const existing = existingMap.get(`${direction}_${z.startTime}`);
           const wasTouchedInDb = existing?.touched ?? false;
 
-          // Live-Preis-Touch: cTrader liefert nur geschlossene Kerzen, d.h. ohne das hier
+          // Live-Preis-Touch: Twelve Data liefert nur geschlossene Kerzen, d.h. ohne das hier
           // wuerde ein Touch erst erkannt, wenn die volle 1H/4H-Kerze schliesst (bis zu 59min
           // Verzoegerung). Einmal getouched bleibt getouched (auch wenn detectOrderBlocks()
           // die noch offene Kerze dementsprechend noch nicht sieht) — sonst faellt der Wert
@@ -254,12 +248,12 @@ Deno.serve(async () => {
       }
 
       // 1H-Liquiditäts-Level (Fractal-Sweeps, siehe src/liquidity.js) — nur für die
-      // cTrader-Instrumente (GBPUSD/EURUSD), Philip wollte das explizit nicht für BTC.
-      // Gleiches Live-Preis-Sofort-Touch-Muster wie oben bei den OB-Zonen (cTrader liefert
+      // Forex-Instrumente (GBPUSD/EURUSD), Philip wollte das explizit nicht für BTC.
+      // Gleiches Live-Preis-Sofort-Touch-Muster wie oben bei den OB-Zonen (Twelve Data liefert
       // nur geschlossene Kerzen, sonst bis zu 59min Verzoegerung bis zum Alarm).
-      if (cfg.source === "ctrader") {
+      if (cfg.source === "twelvedata") {
         const alarmActive = shouldSend && isAlarmOn("liquidity_1h");
-        const candles1h = ctraderBatch!.candlesByTf.get("1H")!;
+        const candles1h = forexBatch!.candlesByTf.get("1H")!;
         const { highs, lows } = detectLiquidityLevels(candles1h, LIQUIDITY_FRACTAL_PERIOD);
         const levels = [
           ...highs.map((l) => ({ ...l, direction: "high" as const })),
@@ -345,13 +339,13 @@ Deno.serve(async () => {
 
       // Trade-Setup: Liquidity Sweep + Protected M5-Fraktal + M5-OB, in dieser Reihenfolge
       // (siehe tv-indikator/src/tradesetup.pine, portiert nach _shared/tradeSetup.ts). Läuft
-      // nur für die cTrader-Instrumente — braucht M5-Kerzen, die nur dort abgerufen werden.
+      // nur für die Forex-Instrumente — braucht M5-Kerzen, die nur dort abgerufen werden.
       // dir=1 (Short/Protected High) und dir=-1 (Long/Protected Low) laufen mit denselben
       // Kerzen, nur gespiegelt (siehe checkShortSetup/checkLongSetup im Original).
-      if (cfg.source === "ctrader") {
+      if (cfg.source === "twelvedata") {
         const alarmActive = shouldSend && isAlarmOn("trade_setup");
-        const m5Candles = ctraderBatch!.candlesByTf.get("M5")!;
-        const candles1hForSetup = ctraderBatch!.candlesByTf.get("1H")!;
+        const m5Candles = forexBatch!.candlesByTf.get("M5")!;
+        const candles1hForSetup = forexBatch!.candlesByTf.get("1H")!;
         const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5Candles, TRADE_SETUP_M5_FRACTAL_PERIOD);
         const { highs: h1HighsSetup, lows: h1LowsSetup } = detectLiquidityLevels(candles1hForSetup, TRADE_SETUP_H1_FRACTAL_PERIOD);
         const setupObs = detectSetupObs(m5Candles);

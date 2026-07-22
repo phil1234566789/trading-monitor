@@ -1,7 +1,7 @@
 import { computed, reactive } from "vue";
 
 // Registriert JEDEN `fetch()`-Aufruf der App (Modul-weiter Singleton, wie useStatusBar) —
-// einmaliges Patchen von window.fetch statt jede einzelne HTTP-Funktion (ctraderCandles.js,
+// einmaliges Patchen von window.fetch statt jede einzelne HTTP-Funktion (forexCandles.js,
 // cvd.js, PriceChart.vue-OKX-Fetch, alle supabase-js-Queries in poiZones.js/alarmLog.js/
 // trades.js/alarmSettings.js/chartColors.js) selbst instrumentieren zu müssen (siehe Chat:
 // "Ladeindikator für jede HTTP-Funktion die im Code rausgefeuert wird"). supabase-js nutzt in
@@ -41,7 +41,7 @@ export function dismissHttpError(id) {
 
 // Body EINMAL klonen und lesen (der Original-Response bleibt für den eigentlichen Aufrufer
 // unangetastet lesbar) — Edge-Functions/Supabase liefern Fehler i.d.R. als {error: "..."} oder
-// {message: "..."} JSON (siehe ctrader-candles/index.ts), sonst Klartext oder als letzter Fallback
+// {message: "..."} JSON (siehe forex-candles/index.ts), sonst Klartext oder als letzter Fallback
 // der HTTP-Statustext.
 async function extractErrorMessage(res) {
   try {
@@ -100,7 +100,7 @@ function labelFor(rawUrl) {
   }
   const path = u.pathname;
 
-  if (path.includes("/functions/v1/ctrader-candles")) return "cTrader-Kerzen";
+  if (path.includes("/functions/v1/forex-candles")) return "Forex-Kerzen";
   if (u.hostname.endsWith("okx.com")) return "OKX-Kerzen";
   if (u.hostname.endsWith("binance.com")) return "CVD (Binance)";
 

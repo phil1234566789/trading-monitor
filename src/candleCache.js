@@ -137,7 +137,7 @@ export function cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetC
   return null;
 }
 
-// Ersetzt einen vollen fetchFn(symbol, bar, count, toMs)-Aufruf (siehe ctraderCandles.js/OKX-
+// Ersetzt einen vollen fetchFn(symbol, bar, count, toMs)-Aufruf (siehe forexCandles.js/OKX-
 // Pendant in PriceChart.vue): liefert `targetCount` Kerzen für symbol+bar bis toMs (bzw. bis
 // "jetzt", wenn toMs null ist) — holt dabei aber nur, was seit dem letzten Cache-Stand fehlt:
 //

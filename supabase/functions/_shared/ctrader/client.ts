@@ -15,6 +15,7 @@ const HOSTS = {
   live: "live.ctraderapi.com",
 } as const;
 const PORT = 5035;
+const TOKEN_URL = "https://openapi.ctrader.com/apps/token";
 
 const PAYLOAD_TYPE = {
   APPLICATION_AUTH_REQ: 2100,
@@ -177,6 +178,55 @@ class CTraderConnection {
   }
 }
 
+export interface RefreshedTokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
+// Spotwares Token-Endpoint nimmt die Grant-Parameter als Query-String auf einem GET
+// (kein Standard-OAuth2-POST-Body) und antwortet camelCase (`accessToken`/`refreshToken`),
+// nicht snake_case — beides empirisch verifiziert, nicht aus offizieller Doku übernommen.
+async function refreshAccessToken(clientId: string, clientSecret: string, refreshToken: string): Promise<RefreshedTokens> {
+  const url = new URL(TOKEN_URL);
+  url.searchParams.set("grant_type", "refresh_token");
+  url.searchParams.set("refresh_token", refreshToken);
+  url.searchParams.set("client_id", clientId);
+  url.searchParams.set("client_secret", clientSecret);
+  const res = await fetch(url, { method: "GET" });
+  const body = (await res.json()) as { accessToken?: string; refreshToken?: string; errorCode?: string; description?: string };
+  if (!res.ok || !body.accessToken) {
+    throw new Error(`cTrader token refresh failed: ${body.errorCode ?? res.status} ${body.description ?? ""}`);
+  }
+  return { accessToken: body.accessToken, refreshToken: body.refreshToken ?? refreshToken };
+}
+
+// Der Access-Token läuft nach ~30 Tagen ab (siehe PLAN-notifications.md) — statt den Ablauf
+// selbst zu tracken, einfach den ersten Fehlschlag eines Requests als Signal nehmen und
+// einmal mit einem frisch geholten Token neu versuchen. `onTokenRefresh` ist optional, weil
+// der einmalige manuelle Re-Auth-Flow (scripts/ctrader-reauth.mjs) kein Refresh-Token/Callback
+// hat — dann wird einfach der ursprüngliche Fehler durchgereicht wie bisher.
+async function withAutoRefresh<T>(
+  opts: { clientId: string; clientSecret: string; refreshToken?: string; onTokenRefresh?: (tokens: RefreshedTokens) => Promise<void> | void },
+  accessToken: string,
+  fn: (accessToken: string) => Promise<T>,
+): Promise<T> {
+  try {
+    return await fn(accessToken);
+  } catch (err) {
+    if (!opts.refreshToken) throw err;
+    const refreshed = await refreshAccessToken(opts.clientId, opts.clientSecret, opts.refreshToken);
+    try {
+      await opts.onTokenRefresh?.(refreshed);
+    } catch (persistErr) {
+      // Frisches Token trotzdem für DIESEN Request nutzen, auch wenn das Wegschreiben
+      // (z.B. DB down) fehlschlägt — sonst scheitert ein funktionierender Request unnötig
+      // an einem Persistenzproblem, das den nächsten Kaltstart betrifft, nicht diesen Call.
+      console.error("cTrader: failed to persist refreshed token:", persistErr);
+    }
+    return await fn(refreshed.accessToken);
+  }
+}
+
 function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
   const out = new Uint8Array(a.length + b.length);
   out.set(a, 0);
@@ -290,6 +340,8 @@ export interface FetchTrendbarsOptions {
   clientId: string;
   clientSecret: string;
   accessToken: string;
+  refreshToken?: string; // wenn gesetzt: bei Auth-Fehler einmal automatisch refreshen+retry
+  onTokenRefresh?: (tokens: RefreshedTokens) => Promise<void> | void;
   symbolName: string;
   period: string; // key of TRENDBAR_PERIOD
   count: number;
@@ -298,14 +350,16 @@ export interface FetchTrendbarsOptions {
 
 export async function fetchTrendbars(opts: FetchTrendbarsOptions): Promise<Candle[]> {
   const env = opts.env ?? "demo";
-  const conn = await CTraderConnection.connect(env);
-  try {
-    const accountId = await authenticate(conn, opts.clientId, opts.clientSecret, opts.accessToken);
-    const symbolId = await resolveSymbolId(conn, accountId, opts.symbolName);
-    return await fetchOneTrendbar(conn, accountId, symbolId, opts.period, opts.count, opts.toTimestampMs);
-  } finally {
-    conn.close();
-  }
+  return withAutoRefresh(opts, opts.accessToken, async (accessToken) => {
+    const conn = await CTraderConnection.connect(env);
+    try {
+      const accountId = await authenticate(conn, opts.clientId, opts.clientSecret, accessToken);
+      const symbolId = await resolveSymbolId(conn, accountId, opts.symbolName);
+      return await fetchOneTrendbar(conn, accountId, symbolId, opts.period, opts.count, opts.toTimestampMs);
+    } finally {
+      conn.close();
+    }
+  });
 }
 
 export interface FetchTrendbarsBatchOptions {
@@ -313,6 +367,8 @@ export interface FetchTrendbarsBatchOptions {
   clientId: string;
   clientSecret: string;
   accessToken: string;
+  refreshToken?: string;
+  onTokenRefresh?: (tokens: RefreshedTokens) => Promise<void> | void;
   requests: { symbolName: string; period: string; count: number; toTimestampMs?: number }[];
 }
 
@@ -321,16 +377,18 @@ export interface FetchTrendbarsBatchOptions {
 // nicht für jede einzeln neu aufbauen muss.
 export async function fetchTrendbarsBatch(opts: FetchTrendbarsBatchOptions): Promise<Candle[][]> {
   const env = opts.env ?? "demo";
-  const conn = await CTraderConnection.connect(env);
-  try {
-    const accountId = await authenticate(conn, opts.clientId, opts.clientSecret, opts.accessToken);
-    const results: Candle[][] = [];
-    for (const req of opts.requests) {
-      const symbolId = await resolveSymbolId(conn, accountId, req.symbolName);
-      results.push(await fetchOneTrendbar(conn, accountId, symbolId, req.period, req.count, req.toTimestampMs));
+  return withAutoRefresh(opts, opts.accessToken, async (accessToken) => {
+    const conn = await CTraderConnection.connect(env);
+    try {
+      const accountId = await authenticate(conn, opts.clientId, opts.clientSecret, accessToken);
+      const results: Candle[][] = [];
+      for (const req of opts.requests) {
+        const symbolId = await resolveSymbolId(conn, accountId, req.symbolName);
+        results.push(await fetchOneTrendbar(conn, accountId, symbolId, req.period, req.count, req.toTimestampMs));
+      }
+      return results;
+    } finally {
+      conn.close();
     }
-    return results;
-  } finally {
-    conn.close();
-  }
+  });
 }

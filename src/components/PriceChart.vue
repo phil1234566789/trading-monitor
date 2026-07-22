@@ -25,7 +25,7 @@ import {
   fetchInitialCandles as fetchInitialForexCandles,
   fetchRecentCandles as fetchRecentForexCandles,
   fetchOlderCandles as fetchOlderForexCandles,
-} from "../ctraderCandles.js";
+} from "../forexCandles.js";
 import { fetchCandlesCached } from "../candleCache.js";
 import { replayFetchToMs, nextCandleAfter } from "../chartTimeUtils.js";
 import { useStatusBar } from "../composables/useStatusBar.js";
@@ -329,7 +329,7 @@ const rangesMetadata2 = ref(null); // dito für die eingebettete Periode-2-Erken
 // EIN gemeinsames Metadaten-Panel für beide Perioden reicht ("wenn es zu schwer ist zwei Modals
 // gleichzeitig offen zu haben"), daher kein zweiter showRangesMetadata2-Toggle.
 // Der erste H1-Fetch (loadRangesCandles) ist ein frischer cTrader-TLS-Connect+Auth-Handshake
-// (siehe ctraderCandles.js/_shared/ctrader/client.ts) statt eines simplen DB-Reads — das kann
+// (siehe forexCandles.js/_shared/twelvedata/client.ts) statt eines simplen DB-Reads — das kann
 // spürbar dauern und lief bisher komplett unsichtbar (siehe Chat: "dauert echt lange bis es
 // aufm Chart erscheint"). rangesMetadata bleibt null bis zum ersten erfolgreichen Fetch, danach
 // nie wieder (auch nicht während der 60s-Hintergrund-Polls) — genau das späte "leer -> gefüllt"
@@ -523,7 +523,7 @@ function clipReplay(rows) {
 }
 
 // Gegenstück zu clipReplay für die FETCH-Seite: ein fester count/Lookback endet sonst immer bei
-// der echten aktuellen Zeit (siehe ctraderCandles.js: toMs ohne Wert = "jetzt"), unabhängig von
+// der echten aktuellen Zeit (siehe forexCandles.js: toMs ohne Wert = "jetzt"), unabhängig von
 // replayUntil — bei einem Replay-Zeitpunkt, der weiter zurückliegt als count reicht, deckt das
 // geladene Fenster den gewünschten Bereich dann gar nicht ab (siehe Chat: "Ranges-Pivots gehen bei
 // 12 Tagen Lookback + Replay nicht weit genug zurück"). loadRangesCandles/loadTradeSetupM5/-H1
@@ -1000,7 +1000,7 @@ function refreshEmaInternal() {
 }
 
 // TREND_ANALYSIS_CANDLE_COUNT (2000) liegt über dem Edge-Function-Limit pro Request (1000,
-// siehe ctraderCandles.js) -> seitenweise rückwärts nachladen, analog zu fetchAllSince im
+// siehe forexCandles.js) -> seitenweise rückwärts nachladen, analog zu fetchAllSince im
 // fetch-trend-fixture.mjs-Script.
 async function fetchTrendAnalysisM5History(symbol, targetCount, toMs) {
   let all = await fetchInitialForexCandles(symbol, "5m", Math.min(targetCount, 1000), toMs);
