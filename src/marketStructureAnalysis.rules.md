@@ -32,7 +32,7 @@ Implementierung: [marketStructureAnalysis.ts](marketStructureAnalysis.ts).
 | Ohne mindestens einen qualifizierenden Pullback: keine Bestätigung, `currRange.high` wird trotzdem ersetzt. | `marketStructureAnalysis.test.js`: *rangeState4* |
 | **Bestätigung läuft bei JEDEM weiteren High-Bruch neu**, nicht nur beim ersten Mal — protected-low rückt auf einen neueren ungetouchten Pullback weiter, der alte fällt zurück auf `low`. Kein neuerer Kandidat -> alter bleibt stehen. | `marketStructureAnalysisProtectedLow.test.js`: *"protected-low rückt bei einem weiteren HH-Bruch auf den neueren ungetouchten Pullback weiter..."*, *"ohne einen neueren ungetouchten Pullback bleibt der bisherige protected-low stehen..."* |
 | Ein per Inner-Pivot gesetztes protected-low wird vor jedem `innerStructurePivots`-Reset nach `structurePivots` migriert, statt verloren zu gehen. | `marketStructureAnalysisProtectedLow.test.js`: *"ein per eingebettetem Pivot bestätigtes protected-low überlebt den nächsten übergeordneten Pivot..."* |
-| Downtrend-Bestätigung (Low bricht, Pullback-Highs bestätigen spiegelbildlich): **nicht implementiert**, bewusst offen gelassen. | — (kein Test, kein Code) |
+| Downtrend-BESTÄTIGUNG (ein "protected-high" als Pendant zum protected-low, sobald sich nach einer Trend-Invalidierung — siehe unten — eine neue tiefere Struktur bestätigt): **nicht implementiert**, bewusst offen gelassen. | — (kein Test, kein Code) |
 
 ## Inner-Pivots (Periode 2) — schnellere Vorab-Erkennung
 
@@ -42,7 +42,21 @@ Implementierung: [marketStructureAnalysis.ts](marketStructureAnalysis.ts).
 | Inner-Pivot bricht `currRange.high` preislich, aber KEINE Kerze schließt drüber -> nur `sweeped-high` (Preis/Zeit von `currRange.high` bleiben), kein echter Bruch. | `marketStructureAnalysisInnerPivots.test.js`: *rangeState2_1* |
 | Inner-Pivot bricht `currRange.high` preislich UND mindestens eine Kerze schließt seit dem alten High tatsächlich drüber -> echter Bruch, `currRange.high` wird ersetzt, Bestätigungslogik läuft mit. | `marketStructureAnalysisInnerPivots.test.js`: *rangeState1_4* |
 | Ohne Kerzendaten gilt ein Preis-Bruch konservativ als ECHTER Bruch (nicht als Sweep) — fehlender Candle-Fetch soll nicht heimlich jeden Bruch abwerten. | Code-Kommentar `closesAboveOldHigh`, kein dedizierter Test |
-| Ein Outer-Pivot bricht `currRange.low` NICHT von sich aus über Inner-Pivots — der spiegelbildliche Fall (Inner-Pivot bricht `currRange.low`) ist **nicht implementiert**. | — (kein Test, kein Code) |
+
+## Trend-Invalidierung (Uptrend-Bruch durch Inner-Pivot)
+
+Spiegelbildlich zum Inner-High-Bruch oben, seit 2026-07-24 implementiert (live beobachtet: ein
+Periode-2-Pivot bildete sich unter `currRange.low`, mehrere Kerzen schlossen danach tatsächlich
+drunter). Kein direkter Sprung zu `downtrend` — nur Invalidierung, der Algo startet komplett neu
+(siehe `test/tdd_mit_claude/ranges/gbp_h1_uptrend_uptrend_break_of_structure_und_trendumkehr.ts`
+für das reale Ausgangsszenario).
+
+| Regel | Test |
+|---|---|
+| Inner-Pivot bricht `currRange.low` preislich, aber KEINE Kerze schließt drunter -> nur `sweeped-low` (Preis/Zeit von `currRange.low` bleiben), Uptrend bleibt bestehen. | `marketStructureAnalysisTrendInvalidation.test.js`: *"bricht currRange.low NUR preislich (kein Close drunter) -> nur 'sweeped-low'..."* |
+| War der Uptrend noch NICHT bestätigt (`trend==='unknown'`) und eine Kerze schließt echt drunter -> `currRange.low` wird einfach ausgeweitet, nichts zu invalidieren (spiegelbildlich zum unconfirmed Outer-Low-Bruch). | `marketStructureAnalysisTrendInvalidation.test.js`: *"Uptrend noch NICHT bestätigt ... currRange.low wird nur ausgeweitet..."* |
+| War der Uptrend schon bestätigt (`trend==='uptrend'`) und eine Kerze schließt echt drunter -> Trend zurück auf `'unknown'`, komplett frischer Start: `currRange.high` bleibt der ALTE High (weiterverwendet, nicht verworfen — zeitlich VOR dem neuen Low, bärische Origin-Konstellation), `currRange.low` wird der brechende Pivot, `structurePivots`/`innerStructurePivots` geleert, `appliedPivots` nur noch die zwei neuen Origin-Pivots. | `marketStructureAnalysisTrendInvalidation.test.js`: *"bricht currRange.low PREISLICH UND eine Kerze schließt tatsächlich drunter -> Trend zurück auf 'unknown'..."* |
+| Ein Outer-Pivot bricht `currRange.low` NICHT über Inner-Pivots — der spiegelbildliche Fall für `applyMarketStructurePivot` selbst (Outer-Pivot bricht `currRange.low`, während der Uptrend schon bestätigt ist) ist **nicht implementiert**; die bestehende Outer-Regel weitet `currRange.low` immer nur ohne Invalidierungs-/Kerzen-Check aus. | — (kein Test, kein Code) |
 
 ## LQ-Sweep (`markLqSweeps`)
 

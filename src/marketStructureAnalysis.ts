@@ -1,7 +1,7 @@
 import { LiquidityLinePrimitive } from "./liquidity.js";
 import { cssColor } from "./chartColors.js";
 import { businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
-import type { Pivot, MarketStructureState } from "./range.type";
+import type { Pivot, PivotHigh, PivotLow, MarketStructureState } from "./range.type";
 
 // Neuer "1h-Range"-Trendalgorithmus (siehe test/tdd_mit_claude.ts, rangeState1..7) — löst den
 // alten, verworfenen BOS/CHoCH-Ansatz (trendZigzag.ts) für die eigentliche Trendbestimmung ab:
@@ -268,15 +268,25 @@ function markLqSweeps(structurePivots: Pivot[], candles: Candle[], toTime: numbe
 // 3. Pivot bricht currRange.high preislich, aber KEINE Kerze schließt drüber -> nur Sweep:
 //    currRange.high bleibt (Preis/pivotTime unverändert), nur type wird 'sweeped-high' (siehe
 //    rangeState2_1: p2Pivot4).
-// NICHT implementiert: der spiegelbildliche Fall (innerer Pivot bricht currRange.low) — dafür gibt
-// es noch kein Beispiel.
+// 4. Spiegelbildlich (seit Chat 2026-07-24, gbp_h1_uptrend_uptrend_break_of_structure_und_
+//    trendumkehr.ts): Pivot bricht currRange.low preislich. Schließt seit currRange.low tatsächlich
+//    eine Kerze drunter UND war der Uptrend schon bestätigt -> der Uptrend ist komplett invalidiert,
+//    Trend zurück auf 'unknown', Algo startet komplett neu (structurePivots/innerStructurePivots
+//    geleert, appliedPivots neu) mit dem alten currRange.high (zeitlich VOR dem neuen Low, bärische
+//    Origin-Konstellation) und dem brechenden Pivot als neuem Low. War der Uptrend noch nicht
+//    bestätigt, wird currRange.low stattdessen nur ausgeweitet (reine Erkundung, nichts zu
+//    invalidieren). Kein echter Close drunter -> nur Sweep, 'sweeped-low' (spiegelbildlich zu
+//    'sweeped-high').
+// NICHT implementiert: die eigentliche Downtrend-BESTÄTIGUNG (ein "protected-high" als Pendant zum
+// protected-low, sobald sich nach diesem Reset eine neue tiefere Struktur bestätigt) — das hier ist
+// nur die Invalidierung des alten Uptrends, nicht der Start einer symmetrischen Downtrend-Logik.
 export function applyInnerMarketStructurePivot(
   state: MarketStructureState,
   pivot: Pivot,
   { candles = [] }: { candles?: Candle[] } = {},
 ): MarketStructureState {
   const sweepChecked = { ...state, structurePivots: markLqSweeps(state.structurePivots, candles, pivotTimeOf(pivot)) };
-  const { currRange, innerStructurePivots } = sweepChecked;
+  const { currRange, innerStructurePivots, trend } = sweepChecked;
 
   if (pivot.type === "high" && pivot.price > currRange.high.price) {
     const isRealBreak = closesAboveOldHigh(candles, pivotTimeOf(currRange.high), pivotTimeOf(pivot), currRange.high.price);
@@ -295,6 +305,50 @@ export function applyInnerMarketStructurePivot(
     return {
       ...sweepChecked,
       currRange: { ...currRange, high: { ...currRange.high, type: "sweeped-high" } },
+      innerStructurePivots: [...innerStructurePivots, pivot],
+    };
+  }
+
+  // Spiegelbildlich zum High-Bruch oben — bis Chat 2026-07-24 der explizit "NICHT implementiert"e
+  // Fall (siehe Doku-Kommentar über dieser Funktion). Live beobachtet: p2Pivot66 (1.33003, GBPUSD
+  // 1h) bildete sich unter currRange.low (1.33408), mehrere Kerzen schlossen danach tatsächlich
+  // drunter — kein bloßer Docht/Sweep mehr.
+  if (pivot.type === "low" && pivot.price < currRange.low.price) {
+    const isRealBreak = closesBelowLevel(candles, pivotTimeOf(currRange.low), pivotTimeOf(pivot), currRange.low.price);
+
+    if (isRealBreak) {
+      // Ein bereits BESTÄTIGTER Uptrend bricht komplett, sobald eine Kerze wirklich unter
+      // currRange.low schließt (Philip: "der uptrend ist komplett gebrochen, trend = unknown...
+      // wenn der uptrend gebrochen ist, soll der algo von vorne anfangen") — kein direkter Sprung
+      // zu 'downtrend', genau wie ein frischer Start auch erstmal 'unknown' ist, bis genug
+      // Struktur eine Richtung bestätigt (Downtrend-Bestätigung selbst: siehe unten, noch offen).
+      // Der alte currRange.high wird als neuer Origin-High WEITERVERWENDET statt verworfen — er
+      // liegt zeitlich vor dem neuen Origin-Low (dem gerade brechenden Pivot), was genau die
+      // gespiegelte Eligibility-Bedingung zum Uptrend ist (dort: High NACH Low = bullisch; hier:
+      // High VOR Low = bärisch, siehe Philip: "ergo es geht tendenz nach unten").
+      if (trend === "uptrend") {
+        const newOriginHigh: PivotHigh = { ...currRange.high, type: "high" };
+        const newOriginLow: PivotLow = { ...pivot, type: "low" };
+        return {
+          trend: "unknown",
+          currRange: { high: newOriginHigh, low: newOriginLow },
+          structurePivots: [],
+          innerStructurePivots: [],
+          appliedPivots: [newOriginHigh, newOriginLow],
+        };
+      }
+      // Uptrend noch nicht bestätigt -> es gibt nichts zu invalidieren, currRange.low wird
+      // stattdessen einfach ausgeweitet (spiegelbildlich zum unconfirmed Low-Bruch in
+      // applyMarketStructurePivot — reine Erkundung, kein Bruch von etwas Bestätigtem).
+      return {
+        ...sweepChecked,
+        currRange: { ...currRange, low: { ...pivot, type: "low" } },
+        innerStructurePivots: [...innerStructurePivots, pivot],
+      };
+    }
+    return {
+      ...sweepChecked,
+      currRange: { ...currRange, low: { ...currRange.low, type: "sweeped-low" } },
       innerStructurePivots: [...innerStructurePivots, pivot],
     };
   }
