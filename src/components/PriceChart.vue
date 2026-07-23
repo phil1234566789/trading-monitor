@@ -20,7 +20,7 @@ import {
   mergeRecentDeltas,
   cumulativeFromDeltas,
 } from "../cvd.js";
-import { okxBarFor, barSecondsFor } from "../timeframes.js";
+import { okxBarFor, barSecondsFor, REPLAY_LOOKAHEAD_SEC } from "../timeframes.js";
 import {
   fetchInitialCandles as fetchInitialForexCandles,
   fetchRecentCandles as fetchRecentForexCandles,
@@ -116,11 +116,13 @@ const CLOSE_POLL_BUFFER_MS = 2_000;
 const HISTORY_PAGE_SIZE = 100; // OKX max per call on /market/history-candles
 const INITIAL_CANDLE_COUNT = 1000; // depth loaded on startup / timeframe switch
 // Wunsch Philip 2026-07-20: "ich werd bei Replay öfter auf +1 klicken, fetch doch gleich die
-// nächsten 4h" — an alle Replay-Fetches (fetchCandlesCached lookaheadSec-Parameter) durchgereicht,
-// damit wiederholtes "+1 Kerze"-Klicken innerhalb dieses Fensters ohne neuen Roundtrip auskommt
-// (siehe candleCache.js: der Hit-Check bleibt dabei strikt am WAHREN replayUntil, nur der
-// tatsächliche Fetch/completeUpTo reicht weiter).
-const REPLAY_LOOKAHEAD_SEC = 4 * 3600;
+// nächsten Kerzen" — an alle Replay-Fetches (fetchCandlesCached lookaheadSec-Parameter)
+// durchgereicht, damit wiederholtes "+1 Kerze"-Klicken innerhalb dieses Fensters ohne neuen
+// Roundtrip auskommt (siehe candleCache.js: der Hit-Check bleibt dabei strikt am WAHREN
+// replayUntil, nur der tatsächliche Fetch/completeUpTo reicht weiter). Jetzt in timeframes.js
+// (Chat 2026-07-23: von 4h auf ~8,68 Tage hochgesetzt, 429 beim Replay-Klicken) statt hier lokal,
+// weil sich der Wert aus TRADE_SETUP_M5_CANDLE_COUNT ableitet und für alle Timeframes gleich sein
+// soll.
 const LAZY_LOAD_LOGICAL_THRESHOLD = 20; // fetch older data once this close to the left edge
 const WINDOW_BARS = 15; // letzte 15 Binance-1m-Kerzen für das rollierende Gauge-Fenster
 const TRADE_MARKER_BARS = new Set(["1m", "5m", "15m", "1h"]); // 4h/1D würden zu unübersichtlich
@@ -133,7 +135,13 @@ const LIQUIDITY_MAX_RELEVANT = 10; // je Richtung, siehe liqMaxRelevant in input
 // das dieselben Werte serverseitig für die Telegram-Alarme nutzt.
 const TRADE_SETUP_M5_FRACTAL_PERIOD = 5; // liqM5Period
 const TRADE_SETUP_H1_FRACTAL_PERIOD = 10; // liqH1Period
-const TRADE_SETUP_CANDLE_COUNT = 300; // ~25h M5-Historie, mehr als der Lookback unten
+// M5 und H1 hatten sich bisher dieselbe Konstante geteilt (300) — seit Chat 2026-07-23 getrennt,
+// weil M5 fürs Replay-Prefetch jetzt viel mehr Historie braucht (2500, siehe REPLAY_LOOKAHEAD_SEC
+// in timeframes.js: 2500 Historie + 2500 Lookahead = 5000, Twelve Datas Maximum pro Request),
+// während H1 bei 300 (~12,5 Tage) bleibt — H1 hat pro Kerze ohnehin viel mehr Zeitabdeckung, mehr
+// Tiefe war dort nie das Problem.
+const TRADE_SETUP_M5_CANDLE_COUNT = 2500;
+const TRADE_SETUP_H1_CANDLE_COUNT = 300;
 const TRADE_SETUP_GRACE_SEC = 5 * 60; // eine M5-Kerzenlänge
 const TRADE_SETUP_LS_MAX_LEAD_SEC_H1 = 120 * 60; // lsMaxLeadMinutesH1 — eigenes, größeres Fenster
 // als M5 (H1-Sweep liegt typischerweise deutlich länger vor dem Fraktal), siehe poi-watcher/index.ts
@@ -861,7 +869,9 @@ function scheduleNextRangesPoll() {
   const barMs = barSecondsFor("1h") * 1000;
   const delay = barMs - (Date.now() % barMs) + CLOSE_POLL_BUFFER_MS;
   rangesPollTimer = setTimeout(async () => {
-    await loadRangesCandles();
+    // Im Replay-Modus bringt der echte Kerzenschluss nichts (siehe pollRecent) — Timer läuft
+    // trotzdem weiter, damit Live-Updates beim Verlassen des Replays automatisch wieder anspringen.
+    if (props.replayUntil == null) await loadRangesCandles();
     if (chart) scheduleNextRangesPoll();
   }, delay);
 }
@@ -1031,7 +1041,7 @@ async function loadTradeSetupM5() {
     // Hängt hier dran (nicht an einem dritten eigenen Poller), weil EMA ohnehin M5-Kerzen braucht
     // und dieser Poll schon läuft — inhaltlich hat EMA nichts mit Trade-Setups zu tun, siehe Chat.
     const fetches = [
-      fetchCandlesCached(fetchInitialForexCandles, props.symbol, "5m", TRADE_SETUP_CANDLE_COUNT, toMs, REPLAY_LOOKAHEAD_SEC),
+      fetchCandlesCached(fetchInitialForexCandles, props.symbol, "5m", TRADE_SETUP_M5_CANDLE_COUNT, toMs, REPLAY_LOOKAHEAD_SEC),
     ];
     if (props.showEma) {
       fetches.push(
@@ -1066,7 +1076,7 @@ async function loadTradeSetupH1() {
     // Teilt sich den Cache-Eintrag mit loadInitial (falls currentBar "1h" ist) und
     // loadRangesCandles — beide bleiben trotzdem bewusst eigene Aufrufe/Poller (siehe Chat
     // 2026-07-20: "Konzepte sollen sich nicht querbeeinflussen"), der Cache macht das billig.
-    const h1 = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", TRADE_SETUP_CANDLE_COUNT, toMs, REPLAY_LOOKAHEAD_SEC);
+    const h1 = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", TRADE_SETUP_H1_CANDLE_COUNT, toMs, REPLAY_LOOKAHEAD_SEC);
     if (seq !== tradeSetupH1FetchSeq) return; // inzwischen überholt
     tradeSetupH1Candles = h1;
     computeTradeSetups();
@@ -1082,7 +1092,8 @@ function scheduleNextTradeSetupM5Poll() {
   const barMs = barSecondsFor("5m") * 1000;
   const delay = barMs - (Date.now() % barMs) + CLOSE_POLL_BUFFER_MS;
   tradeSetupM5PollTimer = setTimeout(async () => {
-    await loadTradeSetupM5();
+    // Siehe scheduleNextRangesPoll — im Replay bringt der echte Kerzenschluss nichts.
+    if (props.replayUntil == null) await loadTradeSetupM5();
     if (chart) scheduleNextTradeSetupM5Poll(); // Komponente könnte während des awaits unmounted worden sein
   }, delay);
 }
@@ -1092,7 +1103,8 @@ function scheduleNextTradeSetupH1Poll() {
   const barMs = barSecondsFor("1h") * 1000;
   const delay = barMs - (Date.now() % barMs) + CLOSE_POLL_BUFFER_MS;
   tradeSetupH1PollTimer = setTimeout(async () => {
-    await loadTradeSetupH1();
+    // Siehe scheduleNextRangesPoll — im Replay bringt der echte Kerzenschluss nichts.
+    if (props.replayUntil == null) await loadTradeSetupH1();
     if (chart) scheduleNextTradeSetupH1Poll();
   }, delay);
 }
@@ -1172,6 +1184,12 @@ async function loadInitial() {
 }
 
 async function pollRecent() {
+  // Im Replay-Modus bringt ein Update auf die echte "jetzt"-Kerze nichts (wird von clipReplay()
+  // ohnehin weggefiltert) — kostet aber trotzdem einen Twelve-Data-Request im Hintergrund, egal ob
+  // gerade "+1 Kerze" geklickt wird oder nicht (Bug-Report Philip 2026-07-23: 429 beim Replay-
+  // Klicken). Timer läuft trotzdem weiter (siehe scheduleNextPoll) — Live-Updates springen beim
+  // Verlassen des Replays automatisch wieder an, ohne dass hier extra gestartet/gestoppt werden muss.
+  if (props.replayUntil != null) return;
   // Bar-Mismatch-Guard (Bug-Report Philip 2026-07-19: "1h -> M5 -> wieder 1h, Chart zeigt nur noch
   // M5-Kerzen"): pollRecent() läuft über einen eigenen setTimeout-Timer (scheduleNextPoll) und
   // liest props.currentBar/props.symbol nur EINMAL beim Start der Fetches oben — läuft der Timer

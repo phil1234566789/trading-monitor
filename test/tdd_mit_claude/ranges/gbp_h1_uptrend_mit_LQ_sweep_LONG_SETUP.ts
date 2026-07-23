@@ -1,4 +1,4 @@
-import { Pivot, PivotHigh, PivotLow, RangeState } from "../../../src/range.type";
+import { Pivot, PivotHigh, PivotLow, MarketStructureState } from "../../../src/range.type";
 
 /** GBPUSD H1-Periode-5 Pivots ab 01.07.2026 10:00 bis 09.07.2026 12:00 (test/fixtures/gbpusd-h1-trend.json,
  * exakt wie detectLiquidityLevels/buildLevel in src/liquidity.js erkannt+getoucht) — etwas weiter gefasst
@@ -98,7 +98,7 @@ const p2Pivot43: PivotHigh = { type: 'high', price: 1.34308, pivotAt: '09.07.202
 // ist), und pivot5/pivot10/... haben currRange.high seither nur noch ohne erneute Bestätigung
 // weitergeschoben. Schöner Live-Beweis, dass die Outer/Inner-Verzahnung in PriceChart.vue
 // (computeRangeAnalysisState) tatsächlich korrekt greift.
-const rangeState1: RangeState = {
+const rangeState1: MarketStructureState = {
     trend: 'uptrend',
     currRange: {
         high: { ...pivot10, touched: false },
@@ -168,7 +168,7 @@ const rangeState1: RangeState = {
 // (touched muss den Stand ZUM ZEITPUNKT DIESES STATES zeigen, nicht den vollen Fixture-Endstand,
 // siehe Kommentar über rangeState1). Zum p2Pivot37-Zeitpunkt (08.07. 11:00) sind pivot9 (exakt
 // 11:00) und pivot12 (10:00, davor) schon getoucht, pivot10/pivot11 (beide erst 19:00) NICHT.
-const rangeState1_1: RangeState = {
+const rangeState1_1: MarketStructureState = {
     trend: 'uptrend',
     currRange: {
         high: { ...pivot10, touched: false },

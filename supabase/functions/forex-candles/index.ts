@@ -10,7 +10,11 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "*",
 };
-const MAX_COUNT = 1000;
+// 5000 statt vorher 1000 (Chat 2026-07-23) — Twelve Datas eigenes outputsize-Limit ist 5000/Request,
+// unser 1000er-Cap war 1:1 vom alten cTrader-Limit übernommen, ohne für Twelve Data neu überlegt zu
+// werden. Der Replay-Lookahead (siehe REPLAY_LOOKAHEAD_SEC in src/timeframes.js: 2500 M5-Kerzen
+// Historie + 2500 Lookahead) braucht das volle Twelve-Data-Maximum in einem Request.
+const MAX_COUNT = 5000;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });

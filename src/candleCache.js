@@ -97,7 +97,7 @@ async function setCachedCandles(symbol, bar, candles, completeUpTo) {
 // Vereinigung hier ist in jede Richtung sicher. Kann dabei bewusst eine LÜCKE zwischen `before` und
 // `fresh` (oder `fresh` und `after`) stehen lassen, wenn `fresh` nicht direkt anschließt (siehe
 // cachedCandlesUpTo unten, wieso das für den Cache-Hit-Check kein Problem mehr ist).
-function mergeCandles(cached, fresh) {
+export function mergeCandles(cached, fresh) {
   if (fresh.length === 0) return cached;
   if (cached.length === 0) return fresh;
   const freshStart = fresh[0].time;

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { cachedCandlesUpTo, safeCompleteUpTo } from "../src/candleCache.js";
+import { cachedCandlesUpTo, safeCompleteUpTo, mergeCandles } from "../src/candleCache.js";
+import { REPLAY_LOOKAHEAD_SEC, barSecondsFor } from "../src/timeframes.js";
 
 // Bug-Report Philip 2026-07-19 (#1): M5-Replay auf 08.07.2026 21:00 gestellt, Chart zeigte trotzdem
 // nur Kerzen bis 02.07.2026 — der IndexedDB-Cache für GBPUSD:5m hatte ein Loch zwischen einem alten
@@ -116,5 +117,71 @@ describe("safeCompleteUpTo", () => {
 
   it("claims no completeness at all for a completely empty response", () => {
     expect(safeCompleteUpTo([], 999_999)).toBeNull();
+  });
+});
+
+// Chat 2026-07-23: 429 beim Replay-Klicken, weil der alte 4h-Lookahead bei M5/1H-Ansichten viel zu
+// knapp war (jeder ~4. "+1 Kerze"-Klick im 1h-Chart löste einen Refetch aus). REPLAY_LOOKAHEAD_SEC
+// ist jetzt aus 2500 M5-Kerzen abgeleitet (2500 Historie + 2500 Lookahead = 5000, Twelve Datas
+// Maximum pro Request) — dieselbe Sekundenzahl ergibt für andere Timeframes automatisch die dazu
+// passende Kerzenzahl, ohne dass jede Timeframe ihren eigenen Wert braucht (siehe timeframes.js).
+describe("REPLAY_LOOKAHEAD_SEC (timeframes.js): abgeleitete Kerzenzahl je Timeframe", () => {
+  it("entspricht exakt 2500 M5-Kerzen (die Grundlage, aus der der Wert abgeleitet wurde)", () => {
+    const lookaheadBars = Math.ceil(REPLAY_LOOKAHEAD_SEC / barSecondsFor("5m"));
+    expect(lookaheadBars).toBe(2500);
+  });
+
+  it("ergibt für 1h automatisch ~209 Kerzen Vorausschau, synchron zum selben Zeitfenster wie M5", () => {
+    const lookaheadBars = Math.ceil(REPLAY_LOOKAHEAD_SEC / barSecondsFor("1h"));
+    expect(lookaheadBars).toBe(209);
+  });
+
+  it("2500 Historie + 2500 Lookahead bleiben bei M5 unter Twelve Datas 5000er-Request-Limit", () => {
+    const TRADE_SETUP_M5_CANDLE_COUNT = 2500; // siehe PriceChart.vue, hier nur zur Dokumentation der Invariante
+    const lookaheadBars = Math.ceil(REPLAY_LOOKAHEAD_SEC / barSecondsFor("5m"));
+    expect(TRADE_SETUP_M5_CANDLE_COUNT + lookaheadBars).toBeLessThanOrEqual(5000);
+  });
+});
+
+// Chat 2026-07-23 (Frage Philip: "wenn ich ein zweites mal im Replaymodus nachgeladen werden muss,
+// dann werden natürlich [ein weiteres Lookahead-Fenster] VORNE dran gehängt. Die historischen
+// Kerzen sind ja beim Nachladen schon da.") — verifiziert genau das: eine zweite Fetch-Runde (der
+// Cache reicht nicht mehr, siehe cachedCandlesUpTo oben) liefert ein neues Fenster, das direkt ans
+// Ende des schon gecachten Fensters anschließt. mergeCandles muss die ALTE Historie unverändert
+// (dieselben Objekte/Werte) stehen lassen und nur den neuen Teil anhängen — kein Re-Fetch/Neu-
+// Zusammenbauen der Vergangenheit.
+describe("mergeCandles: zweites Nachladen hängt nur vorne an, fasst die Historie nicht neu an", () => {
+  it("behält das alte (cached) Fenster exakt bei und hängt das neue Fenster nahtlos dahinter", () => {
+    // Erstes Fenster (Replay-Einstieg): 5000 M5-Kerzen, 2500 Historie + 2500 Lookahead.
+    const firstWindow = Array.from({ length: 5000 }, (_, i) => candle(i * BAR_SECONDS));
+    // Zweites Fenster (Cache erschöpft, neuer Fetch): schließt exakt an firstWindows letzte Kerze an,
+    // reicht wieder 5000 Kerzen weiter in die Zukunft.
+    const secondWindowStart = firstWindow[firstWindow.length - 1].time + BAR_SECONDS;
+    const secondWindow = Array.from({ length: 5000 }, (_, i) => candle(secondWindowStart + i * BAR_SECONDS));
+
+    const merged = mergeCandles(firstWindow, secondWindow);
+
+    // Historie unverändert: exakt dieselben Kerzen-Objekte wie im ersten Fenster, keine Neu-Erzeugung.
+    expect(merged.slice(0, firstWindow.length)).toEqual(firstWindow);
+    // Neuer Teil lückenlos angehängt.
+    expect(merged.slice(firstWindow.length)).toEqual(secondWindow);
+    expect(merged.length).toBe(firstWindow.length + secondWindow.length);
+  });
+
+  it("dedupliziert einen Überlapp am Nahtpunkt statt die Kerzen doppelt zu führen", () => {
+    // Realistischer Fall: der neue Fetch bekommt denselben lookaheadSec draufgerechnet wie der alte,
+    // sein Fenster kann also ein paar Kerzen mit dem Ende des alten Fensters überlappen.
+    const firstWindow = Array.from({ length: 5000 }, (_, i) => candle(i * BAR_SECONDS));
+    const overlapBars = 10;
+    const secondWindowStart = firstWindow[firstWindow.length - 1 - overlapBars].time;
+    const secondWindow = Array.from({ length: 5000 }, (_, i) => candle(secondWindowStart + i * BAR_SECONDS));
+
+    const merged = mergeCandles(firstWindow, secondWindow);
+
+    // Keine doppelten Zeitstempel im Ergebnis.
+    const times = merged.map((c) => c.time);
+    expect(new Set(times).size).toBe(times.length);
+    // Historie VOR dem Überlapp bleibt unverändert erhalten.
+    expect(merged.slice(0, firstWindow.length - overlapBars)).toEqual(firstWindow.slice(0, firstWindow.length - overlapBars));
   });
 });
