@@ -115,4 +115,76 @@ describe("marketStructureAnalysis: zeitbewusste Pullback-Auswahl für protected-
     const pb = state.structurePivots.find((p) => p.pivotAt === "pb");
     expect(pb?.type).toBe("LQ-sweep");
   });
+
+  // Chat 2026-07-23 ("die structurePivots sollten den jetzt bullischen Trend BESTÄTIGEN. Passt
+  // nicht mehr"): protected-low war bis hierhin ein EINMALIGES Ereignis (tryConfirmUptrend blockte
+  // mit `trend !== "unknown"` jede weitere Auswertung) — ein neuer, jüngerer ungetouchter Pullback
+  // nach der ersten Bestätigung wurde nie mehr berücksichtigt, selbst wenn der alte protected-low
+  // strukturell längst nicht mehr der relevante war. Jetzt rückt protected-low bei jedem weiteren
+  // HH-Bruch auf den jeweils jüngsten ungetouchten Pullback SEIT DIESEM Bruch weiter.
+  it("protected-low rückt bei einem weiteren HH-Bruch auf den neueren ungetouchten Pullback weiter, alter fällt zurück auf 'low'", () => {
+    const originLow = { type: "low", price: 1.0, pivotAt: "lo", pivotTime: 0, touched: false };
+    const originHigh = { type: "high", price: 1.1, pivotAt: "hi", pivotTime: 10, touched: false };
+    const firstPullback = { type: "low", price: 1.03, pivotAt: "first-hl", pivotTime: 20, touched: false };
+    const firstBreak = { type: "high", price: 1.2, pivotAt: "first-break", pivotTime: 40, touched: false };
+    // Neuer, jüngerer ungetouchter Pullback NACH dem ersten Bruch (entspricht z.B. 1.33408 im
+    // Live-Fall: liegt zeitlich nach der Bestätigung, ist beim erneuten Bruch immer noch ungetoucht).
+    const secondPullback = { type: "low", price: 1.15, pivotAt: "second-hl", pivotTime: 50, touched: false };
+    const secondBreak = { type: "high", price: 1.3, pivotAt: "second-break", pivotTime: 60, touched: false };
+
+    let state = initMarketStructureState(originLow, originHigh);
+    for (const p of [firstPullback, firstBreak]) state = applyMarketStructurePivot(state, p);
+    expect(state.structurePivots.find((p) => p.pivotAt === "first-hl")?.type).toBe("protected-low");
+
+    for (const p of [secondPullback, secondBreak]) state = applyMarketStructurePivot(state, p);
+
+    expect(state.trend).toBe("uptrend");
+    expect(state.structurePivots.find((p) => p.pivotAt === "second-hl")?.type).toBe("protected-low");
+    expect(state.structurePivots.find((p) => p.pivotAt === "first-hl")?.type).toBe("low");
+    expect(state.currRange.high.pivotAt).toBe("second-break");
+  });
+
+  it("ohne einen neueren ungetouchten Pullback bleibt der bisherige protected-low stehen, currRange.high rückt trotzdem vor", () => {
+    const originLow = { type: "low", price: 1.0, pivotAt: "lo", pivotTime: 0, touched: false };
+    const originHigh = { type: "high", price: 1.1, pivotAt: "hi", pivotTime: 10, touched: false };
+    const pullback = { type: "low", price: 1.03, pivotAt: "hl", pivotTime: 20, touched: false };
+    const firstBreak = { type: "high", price: 1.2, pivotAt: "first-break", pivotTime: 40, touched: false };
+    // Kein neuer Pullback dazwischen -> beim zweiten Bruch gibt es keinen neueren Kandidaten.
+    const secondBreak = { type: "high", price: 1.3, pivotAt: "second-break", pivotTime: 60, touched: false };
+
+    let state = initMarketStructureState(originLow, originHigh);
+    for (const p of [pullback, firstBreak, secondBreak]) state = applyMarketStructurePivot(state, p);
+
+    expect(state.structurePivots.find((p) => p.pivotAt === "hl")?.type).toBe("protected-low");
+    expect(state.currRange.high.pivotAt).toBe("second-break");
+  });
+
+  // Chat 2026-07-23 ("protected low verschwindet"): applyInnerMarketStructurePivot lässt ein per
+  // eingebettetem (Periode-2-)Pivot bestätigtes protected-low zunächst in innerStructurePivots
+  // stehen — applyMarketStructurePivot leerte das bisher UNCONDITIONAL, sobald der nächste
+  // übergeordnete Pivot eintraf, egal welchen Typs (Low-Bruch, High-Bruch, reiner Pullback). Damit
+  // verschwand die Markierung, obwohl trend korrekt 'uptrend' blieb.
+  it("ein per eingebettetem Pivot bestätigtes protected-low überlebt den nächsten übergeordneten Pivot (egal welchen Typs)", () => {
+    const originLow = { type: "low", price: 1.0, pivotAt: "lo", pivotTime: 0, touched: false };
+    const originHigh = { type: "high", price: 1.1, pivotAt: "hi", pivotTime: 10, touched: false };
+    // Eingebetteter (Periode-2-)Pullback, der beim Bestätigungsmoment noch ungetoucht ist.
+    const innerPullback = { type: "low", price: 1.05, pivotAt: "inner-hl", pivotTime: 20, touched: false };
+    // Eingebetteter Bruch, der den Uptrend bestätigt — landet per Design in innerStructurePivots.
+    const innerBreak = { type: "high", price: 1.2, pivotAt: "inner-break", pivotTime: 30, touched: false };
+
+    let state = initMarketStructureState(originLow, originHigh);
+    state = applyInnerMarketStructurePivot(state, innerPullback, {});
+    state = applyInnerMarketStructurePivot(state, innerBreak, {});
+    expect(state.trend).toBe("uptrend");
+    expect(state.innerStructurePivots.find((p) => p.pivotAt === "inner-hl")?.type).toBe("protected-low");
+
+    // Nächster ÜBERGEORDNETER Pivot — bewusst ein simpler Pullback INNERHALB der Range (nicht
+    // selbst ein Bruch), um zu zeigen: die Migration passiert bei JEDEM übergeordneten Pivot, nicht
+    // nur beim nächsten HH-Bruch.
+    const outerPullback = { type: "low", price: 1.15, pivotAt: "outer-pullback", pivotTime: 40, touched: false };
+    state = applyMarketStructurePivot(state, outerPullback);
+
+    expect(state.innerStructurePivots).toHaveLength(0); // wie immer geleert
+    expect(state.structurePivots.find((p) => p.pivotAt === "inner-hl")?.type).toBe("protected-low"); // aber migriert statt verloren
+  });
 });

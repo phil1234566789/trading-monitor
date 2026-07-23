@@ -85,27 +85,47 @@ function isUntouchedAsOf(pivot: Pivot, momentTime: number): boolean {
 // das würde die bestehende rangeState7-Regel brechen, siehe test/marketStructureAnalysis.test.js:
 // dort sind alle drei Kandidaten ungetoucht, und das explizit gewünschte Ergebnis ist das jüngste
 // HL, nicht das tiefste). Gibt null zurück, wenn (noch) nicht bestätigt.
+// Läuft bei JEDEM HH-Bruch, nicht nur beim allerersten (Chat 2026-07-23: "die structurePivots
+// sollten den jetzt bullischen Trend BESTÄTIGEN" — vorher blockierte `trend !== "unknown"` jede
+// weitere Auswertung, sobald der Uptrend einmal stand, und das protected-low blieb für immer auf
+// dem allerersten Gewinner eingefroren, selbst wenn seither viele neuere, ebenfalls ungetouchte
+// Pullbacks aufgetaucht waren). protected-low ist damit kein einmaliges Ereignis mehr, sondern
+// rückt bei jedem weiteren HH-Bruch auf den jeweils jüngsten ungetouchten Pullback seit dem
+// GERADE gebrochenen High weiter — der bisherige protected-low fällt dabei zurück auf 'low' (siehe
+// reclassify unten), außer es taucht gar kein neuerer Kandidat auf (dann bleibt der alte stehen,
+// nur currRange.high rückt trotzdem vor).
 function tryConfirmUptrend(state: MarketStructureState, breakingPivot: Pivot): MarketStructureState | null {
   const { currRange, structurePivots, innerStructurePivots, trend } = state;
-  if (trend !== "unknown") return null;
-
+  // Die Eligibility-Prüfung (Origin-High muss NACH Origin-Low liegen) betrifft nur die ALLERERSTE
+  // Bestätigung — einmal bestätigt, ist currRange.high per Konstruktion immer schon ein gültiger,
+  // späterer Bruch, die Prüfung wäre hier bedeutungslos (und potenziell falsch, siehe unten).
   const highTime = pivotTimeOf(currRange.high);
-  if (highTime <= pivotTimeOf(currRange.low)) return null; // nicht eligible
+  if (trend === "unknown" && highTime <= pivotTimeOf(currRange.low)) return null; // nicht eligible
 
+  const advancedRange = { ...currRange, high: { ...breakingPivot, type: "high" as const } };
   const confirmationMoment = pivotTimeOf(breakingPivot);
   const qualifyingPullbacks = [...structurePivots, ...innerStructurePivots].filter(
     (p) => (p.type === "low" || p.type === "LQ-sweep") && pivotTimeOf(p) > highTime && isUntouchedAsOf(p, confirmationMoment),
   );
-  if (qualifyingPullbacks.length === 0) return null;
+  if (qualifyingPullbacks.length === 0) {
+    // Schon bestätigt, aber kein neuerer Kandidat seit dem letzten High -> nichts zum Weiterrücken,
+    // trotzdem ganz normal den Bruch übernehmen (dieselbe Rolle wie der alte "sonst nur High
+    // ersetzen"-Fallback in applyMarketStructurePivot/applyInnerMarketStructurePivot).
+    return trend === "unknown" ? null : { ...state, currRange: advancedRange };
+  }
 
   // jüngster qualifizierender Pullback nach pivotTime, nicht nach Array-Position bestimmt
   const protectedLow = qualifyingPullbacks.reduce((latest, p) => (pivotTimeOf(p) > pivotTimeOf(latest) ? p : latest));
-  const reclassify = (p: Pivot) => (p === protectedLow ? { ...p, type: "protected-low" as const } : p);
+  const reclassify = (p: Pivot): Pivot => {
+    if (p === protectedLow) return { ...p, type: "protected-low" };
+    if (p.type === "protected-low") return { ...p, type: "low" }; // vom neuen Kandidaten abgelöst
+    return p;
+  };
 
   return {
     ...state,
     trend: "uptrend",
-    currRange: { ...currRange, high: { ...breakingPivot, type: "high" } },
+    currRange: advancedRange,
     structurePivots: structurePivots.map(reclassify),
     innerStructurePivots: innerStructurePivots.map(reclassify),
   };
@@ -132,26 +152,35 @@ function tryConfirmUptrend(state: MarketStructureState, breakingPivot: Pivot): M
 // "wenn neuer übergeordneter pivot, dann innerStructurePivots CLEAREN"). Gilt für alle drei Fälle
 // unten (Low-Bruch/High-Bruch/Struktur-Pullback), nicht nur für den Trend-Bestätigungsfall.
 export function applyMarketStructurePivot(state: MarketStructureState, pivot: Pivot): MarketStructureState {
-  const { currRange, structurePivots, appliedPivots } = state;
+  const { currRange, innerStructurePivots, appliedPivots } = state;
   const nextAppliedPivots = [...appliedPivots, pivot];
+  // Ein per applyInnerMarketStructurePivot zu 'protected-low' reklassifizierter eingebetteter Pivot
+  // würde durch das innerStructurePivots:[] unten sonst sofort wieder verschwinden (Chat 2026-07-23:
+  // "protected low verschwindet" — jeder übergeordnete Pivot räumt die eingebettete Struktur weg,
+  // unabhängig von seinem eigenen Typ). Erst nach structurePivots migrieren, DANN leeren — auf allen
+  // drei Zweigen unten, nicht nur beim Bestätigungsfall, weil auch ein simpler Pullback oder ein
+  // Low-Bruch die eingebettete Struktur genauso wegräumt.
+  const structurePivots = [...state.structurePivots, ...innerStructurePivots.filter((p) => p.type === "protected-low")];
 
   if (pivot.type === "low" && pivot.price < currRange.low.price) {
     return {
       ...state,
       currRange: { ...currRange, low: { ...pivot, type: "low" } },
+      structurePivots,
       innerStructurePivots: [],
       appliedPivots: nextAppliedPivots,
     };
   }
 
   if (pivot.type === "high" && pivot.price > currRange.high.price) {
-    const confirmed = tryConfirmUptrend(state, pivot);
+    const confirmed = tryConfirmUptrend({ ...state, structurePivots }, pivot);
     if (confirmed) {
       return { ...confirmed, innerStructurePivots: [], appliedPivots: nextAppliedPivots };
     }
     return {
       ...state,
       currRange: { ...currRange, high: { ...pivot, type: "high" } },
+      structurePivots,
       innerStructurePivots: [],
       appliedPivots: nextAppliedPivots,
     };
