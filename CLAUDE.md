@@ -104,6 +104,17 @@ naively re-fetch everything every 5 minutes:
 If you add a new Twelve-Data-backed feature to `poi-watcher`, think about which of these three
 throttling tiers it belongs to before wiring in a fresh per-run fetch.
 
+### Market structure algorithm (`src/marketStructureAnalysis.ts`)
+
+The "1h-Range" trend/protected-low/LQ-sweep algorithm (confirms uptrends from H1 pivots, tracks a
+rolling protected-low, reclassifies swept lows) has its rules indexed in
+[`src/marketStructureAnalysis.rules.md`](src/marketStructureAnalysis.rules.md) — one sentence per
+rule plus a pointer to the exact test that verifies it, not a restatement of the logic (that would
+drift). **Whenever you change a rule in this file (not just refactor), update the matching line in
+`marketStructureAnalysis.rules.md` in the same change** — add a new row for a new rule, adjust the
+wording for a changed one, add a test reference once a new test exists. Don't let this doc fall
+behind the algorithm the way the JS/TS detection-logic duplication above already does.
+
 ### Frontend data flow (`PriceChart.vue`)
 
 `src/components/PriceChart.vue` is the largest component and the hub: it fetches candles (OKX for
