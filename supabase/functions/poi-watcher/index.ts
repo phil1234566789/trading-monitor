@@ -131,7 +131,32 @@ function isTradingHours(date: Date): boolean {
   const hour = Number(parts.find((p) => p.type === "hour")!.value);
   const minute = Number(parts.find((p) => p.type === "minute")!.value);
   const minutesSinceMidnight = hour * 60 + minute;
-  return minutesSinceMidnight >= 8 * 60 && minutesSinceMidnight < 17 * 60 + 30;
+  return minutesSinceMidnight >= TRADING_START_MIN && minutesSinceMidnight < TRADING_END_MIN;
+}
+
+// Nachts (außerhalb der Trading-Session) werden fürs Forex-Zonen-Fetching keine Twelve-Data-
+// Requests gebraucht (Philip schläft, kein Alarm um 18/22/3 Uhr bringt was) — spart den
+// Großteil der ~2.300 Twelve-Data-Calls/Tag, die der 24/7-Cron sonst verursacht hätte (Free-
+// Tier: 800/Tag, 8/Min). FETCH_START_BUFFER_MIN Minuten VOR Sessionstart schon wieder holen
+// (nicht erst genau um 8:00) — ein einziger Lauf davor reicht, um über Nacht liegengebliebene
+// Touches noch außerhalb der Session (shouldSend=false) still nachzuholen, damit beim
+// tatsächlichen Sessionstart kein Nachhol-Alarm-Schwall für längst vergangene Touches losgeht
+// (gleicher Grund wie beim 24/7-Cron davor, nur jetzt auf ein kurzes Vorlauf-Fenster verkürzt).
+const TRADING_START_MIN = 8 * 60;
+const TRADING_END_MIN = 17 * 60 + 30;
+const FETCH_START_BUFFER_MIN = 10;
+
+function isForexFetchWindow(date: Date): boolean {
+  const parts = new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const hour = Number(parts.find((p) => p.type === "hour")!.value);
+  const minute = Number(parts.find((p) => p.type === "minute")!.value);
+  const minutesSinceMidnight = hour * 60 + minute;
+  return minutesSinceMidnight >= TRADING_START_MIN - FETCH_START_BUFFER_MIN && minutesSinceMidnight < TRADING_END_MIN;
 }
 
 Deno.serve(async () => {
@@ -149,9 +174,14 @@ Deno.serve(async () => {
     const alarmEnabledMap = new Map((alarmRows ?? []).map((r) => [r.key, r.enabled]));
     const isAlarmOn = (key: string) => alarmEnabledMap.get(key) ?? true;
 
-    const summary: Record<string, unknown> = { dryRun: DRY_RUN, tradingHours, instruments: {} };
+    const forexFetchWindow = isForexFetchWindow(new Date());
+    const summary: Record<string, unknown> = { dryRun: DRY_RUN, tradingHours, forexFetchWindow, instruments: {} };
 
     for (const cfg of INSTRUMENTS) {
+      if (cfg.source === "twelvedata" && !forexFetchWindow) {
+        (summary.instruments as Record<string, unknown>)[cfg.instrument] = { skipped: "outside forex fetch window" };
+        continue;
+      }
       const forexBatch = cfg.source === "twelvedata" ? await fetchForexBatch(cfg.instrument) : null;
       const currentPrice = cfg.source === "okx" ? await fetchOkxPrice(cfg.instrument) : forexBatch!.currentPrice;
       // Zonen werden für jedes Instrument immer erkannt/gespeichert (Dashboard-Charts brauchen
