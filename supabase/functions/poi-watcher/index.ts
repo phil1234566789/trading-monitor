@@ -56,6 +56,17 @@ interface ObZoneRow {
   invalidated: boolean;
 }
 
+interface LiquidityLevelRow {
+  pivot_time: string;
+  direction: string;
+  price: number;
+  touched: boolean;
+  notified: boolean;
+  notified_at: string | null;
+  end_time: string | null;
+  alert_price: number | null;
+}
+
 interface InstrumentConfig {
   instrument: string;
   source: "okx" | "twelvedata";
@@ -99,11 +110,15 @@ async function fetchOkxPrice(instId: string): Promise<number> {
   return Number(json.data[0].last);
 }
 
-// Nur beim ersten Lauf nach einem 4H-Kerzenschluss neu holen (Chat 2026-07-23: "da ändert
-// sich doch in 4h nichts") — 4H-Kerzen werden NUR für die 4H-OB-Zonenerkennung gebraucht,
-// sonst nirgends referenziert (anders als 1H, siehe candles1hForSetup), Refetch alle 5min
-// war also reine Verschwendung von Twelve-Data-Requests. UTC statt Europe/Berlin, weil sich
-// sowohl der pg_cron-Tick als auch Twelve Datas eigene 4H-Bucket-Grenzen an UTC ausrichten.
+// Nur beim ersten Lauf nach einem Kerzenschluss neu holen (Chat 2026-07-23: "da ändert sich
+// doch in 4h/1h nichts") — zwischen zwei Kerzenschlüssen liefert Twelve Data (nur geschlossene
+// Kerzen, empirisch verifiziert) exakt dieselbe Kerzenreihe, ein Refetch alle 5min war reine
+// Verschwendung. UTC statt Europe/Berlin, weil sich sowohl der pg_cron-Tick als auch Twelve
+// Datas eigene Bucket-Grenzen an UTC ausrichten. isH4RefreshTick-Ticks sind automatisch eine
+// Teilmenge von isH1RefreshTick-Ticks (jede 4H-Grenze ist auch eine 1H-Grenze).
+function isH1RefreshTick(date: Date): boolean {
+  return date.getUTCMinutes() === 0;
+}
 function isH4RefreshTick(date: Date): boolean {
   return date.getUTCHours() % 4 === 0 && date.getUTCMinutes() === 0;
 }
@@ -112,14 +127,21 @@ function isH4RefreshTick(date: Date): boolean {
 // cTrader-Handshake — Twelve Data hat keine "mehrere Requests über eine Verbindung"
 // Batch-API, das Rate-Limit ist ohnehin pro Minute übers ganze Konto, nicht pro Verbindung).
 // Kein eigener M1-Preis-Call mehr (Chat 2026-07-23) — der Close der letzten M5-Kerze reicht
-// für den Live-Touch-Check völlig, spart einen von vier Calls pro Instrument.
-async function fetchForexBatch(symbol: string, includeH4: boolean): Promise<{ currentPrice: number; candlesByTf: Map<string, Candle[]> }> {
+// für den Live-Touch-Check völlig, spart einen von vier Calls pro Instrument. 1H fehlt in
+// candlesByTf, wenn includeH1=false — der Aufrufer muss dann auf den forex_h1_cache-Stand
+// zurückfallen (siehe Deno.serve unten), fürs Trade-Setup UND die 1H-Zonen/Liquidity-Level.
+async function fetchForexBatch(
+  symbol: string,
+  includeH1: boolean,
+  includeH4: boolean,
+): Promise<{ currentPrice: number; candlesByTf: Map<string, Candle[]> }> {
   const [h1Candles, m5Candles, h4Candles] = await Promise.all([
-    fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "1h", count: CANDLE_LIMIT }),
+    includeH1 ? fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "1h", count: CANDLE_LIMIT }) : Promise.resolve(null),
     fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "5m", count: TRADE_SETUP_M5_CANDLE_LIMIT }),
     includeH4 ? fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "4h", count: CANDLE_LIMIT }) : Promise.resolve(null),
   ]);
-  const candlesByTf = new Map<string, Candle[]>([["1H", h1Candles], ["M5", m5Candles]]);
+  const candlesByTf = new Map<string, Candle[]>([["M5", m5Candles]]);
+  if (h1Candles) candlesByTf.set("1H", h1Candles);
   if (h4Candles) candlesByTf.set("4H", h4Candles);
   return { currentPrice: m5Candles[m5Candles.length - 1].close, candlesByTf };
 }
@@ -210,7 +232,37 @@ Deno.serve(async () => {
         (summary.instruments as Record<string, unknown>)[cfg.instrument] = { skipped: "outside forex fetch window" };
         continue;
       }
-      const forexBatch = cfg.source === "twelvedata" ? await fetchForexBatch(cfg.instrument, h4RefreshTick) : null;
+      // 1H fürs Trade-Setup (candles1hForSetup unten) braucht IMMER eine Kerzenreihe, egal ob
+      // dieser Lauf frisch fetcht oder nicht — anders als die 1H-OB-Zonen/Liquidity-Level unten,
+      // die bei einem Skip-Tick bewusst NUR den DB-Stand fürs Touch-Update anfassen (kein Sinn
+      // in einem eigenen "Fraktal touched"-Konzept). Deshalb hier der forex_h1_cache-Fallback,
+      // nicht direkt candlesByTf — sonst würde jeder Skip-Tick trotzdem wieder volle Arbeit
+      // machen und der Cache brächte nichts.
+      let h1RefreshTick = isH1RefreshTick(now);
+      let h1CandlesForSetup: Candle[] | undefined;
+      if (cfg.source === "twelvedata" && !h1RefreshTick) {
+        const { data: h1CacheRow, error: h1CacheError } = await supabase
+          .from("forex_h1_cache")
+          .select("candles")
+          .eq("instrument", cfg.instrument)
+          .maybeSingle();
+        if (h1CacheError) throw h1CacheError;
+        if (h1CacheRow) {
+          h1CandlesForSetup = h1CacheRow.candles as Candle[];
+        } else {
+          h1RefreshTick = true; // Bootstrap: noch kein Cache-Eintrag, erzwungener Fetch
+        }
+      }
+
+      const forexBatch = cfg.source === "twelvedata" ? await fetchForexBatch(cfg.instrument, h1RefreshTick, h4RefreshTick) : null;
+      const freshH1Candles = forexBatch?.candlesByTf.get("1H");
+      if (freshH1Candles) {
+        h1CandlesForSetup = freshH1Candles;
+        const { error: h1CacheWriteError } = await supabase
+          .from("forex_h1_cache")
+          .upsert({ instrument: cfg.instrument, candles: freshH1Candles });
+        if (h1CacheWriteError) throw h1CacheWriteError;
+      }
       const currentPrice = cfg.source === "okx" ? await fetchOkxPrice(cfg.instrument) : forexBatch!.currentPrice;
       // Zonen werden für jedes Instrument immer erkannt/gespeichert (Dashboard-Charts brauchen
       // das weiterhin) — `shouldSend` entscheidet nur, ob dafür auch wirklich eine
@@ -355,88 +407,129 @@ Deno.serve(async () => {
       // nur geschlossene Kerzen, sonst bis zu 59min Verzoegerung bis zum Alarm).
       if (cfg.source === "twelvedata") {
         const alarmActive = shouldSend && isAlarmOn("liquidity_1h");
-        const candles1h = forexBatch!.candlesByTf.get("1H")!;
-        const { highs, lows } = detectLiquidityLevels(candles1h, LIQUIDITY_FRACTAL_PERIOD);
-        const levels = [
-          ...highs.map((l) => ({ ...l, direction: "high" as const })),
-          ...lows.map((l) => ({ ...l, direction: "low" as const })),
-        ];
+        const candles1h = forexBatch!.candlesByTf.get("1H");
 
         const { data: existingLiqRows, error: liqSelectError } = await supabase
           .from("liquidity_levels")
-          .select("pivot_time, direction, touched, notified, notified_at, end_time, alert_price")
+          .select("pivot_time, direction, price, touched, notified, notified_at, end_time, alert_price")
           .eq("instrument", cfg.instrument)
-          .eq("timeframe", "1H");
+          .eq("timeframe", "1H")
+          .returns<LiquidityLevelRow[]>();
         if (liqSelectError) throw liqSelectError;
 
-        const existingLiqMap = new Map(
-          (existingLiqRows ?? []).map((r) => [
-            `${r.direction}_${Math.floor(new Date(r.pivot_time).getTime() / 1000)}`,
-            r,
-          ]),
-        );
-
         let liqNotifiedCount = 0;
-        for (const lvl of levels) {
-          const existing = existingLiqMap.get(`${lvl.direction}_${lvl.pivotTime}`);
-          const wasTouchedInDb = existing?.touched ?? false;
 
-          if (
-            !lvl.touched &&
-            (wasTouchedInDb || (lvl.direction === "high" ? currentPrice >= lvl.price : currentPrice <= lvl.price))
-          ) {
-            lvl.touched = true;
-          }
+        if (candles1h) {
+          const { highs, lows } = detectLiquidityLevels(candles1h, LIQUIDITY_FRACTAL_PERIOD);
+          const levels = [
+            ...highs.map((l) => ({ ...l, direction: "high" as const })),
+            ...lows.map((l) => ({ ...l, direction: "low" as const })),
+          ];
 
-          const justTouched = lvl.touched && !wasTouchedInDb;
-
-          // end_time: bevorzugt der aus der Kerzenhistorie abgeleitete Zeitpunkt (deterministisch,
-          // siehe buildLevel in _shared/liquidity.ts). lvl.touchedTime ist nur dann null, wenn
-          // touched hier gerade erst per Live-Preis (vor Kerzenschluss) oder ueber
-          // wasTouchedInDb gesetzt wurde: bei einem brandneuen Touch (justTouched) ist "jetzt"
-          // korrekt, bei einem laengst bekannten Touch, der nur aus dem geladenen
-          // Kerzenfenster gefallen ist, bleibt der bestehende end_time-Wert stehen (sonst
-          // wuerde er bei jedem Cron-Lauf erneut auf "jetzt" springen — derselbe Bug, den
-          // end_time hier ueberhaupt erst ersetzen soll).
-          const endTimeIso = !lvl.touched
-            ? null
-            : lvl.touchedTime != null
-              ? new Date(lvl.touchedTime * 1000).toISOString()
-              : justTouched
-                ? new Date().toISOString()
-                : existing?.end_time ?? new Date().toISOString();
-
-          const { error: upsertLiqError } = await supabase.from("liquidity_levels").upsert(
-            {
-              instrument: cfg.instrument,
-              timeframe: "1H",
-              direction: lvl.direction,
-              price: lvl.price,
-              pivot_time: new Date(lvl.pivotTime * 1000).toISOString(),
-              touched: lvl.touched,
-              end_time: endTimeIso,
-              alert_price: justTouched ? currentPrice : existing?.alert_price ?? null,
-              notified: existing ? existing.notified || justTouched : lvl.touched,
-              notified_at: justTouched && existing && alarmActive ? new Date().toISOString() : existing?.notified_at ?? null,
-            },
-            { onConflict: "instrument,timeframe,direction,pivot_time" },
+          const existingLiqMap = new Map(
+            (existingLiqRows ?? []).map((r) => [
+              `${r.direction}_${Math.floor(new Date(r.pivot_time).getTime() / 1000)}`,
+              r,
+            ]),
           );
-          if (upsertLiqError) throw upsertLiqError;
 
-          // Neue Level, die schon beim ersten Erkennen touched sind, waeren ein
-          // historischer Alt-Touch (z.B. direkt nach Deploy) — kein "jetzt gerade".
-          if (justTouched && existing && alarmActive) {
-            liqNotifiedCount++;
-            const label = lvl.direction === "high" ? "Hoch" : "Tief";
-            await sendTelegram(
-              `💧 ${cfg.instrument} 1H Liquiditäts-Level (${label}) angetestet\n` +
-                `Level: ${fmt(lvl.price, cfg.pricePrecision)}\n` +
-                `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+          for (const lvl of levels) {
+            const existing = existingLiqMap.get(`${lvl.direction}_${lvl.pivotTime}`);
+            const wasTouchedInDb = existing?.touched ?? false;
+
+            if (
+              !lvl.touched &&
+              (wasTouchedInDb || (lvl.direction === "high" ? currentPrice >= lvl.price : currentPrice <= lvl.price))
+            ) {
+              lvl.touched = true;
+            }
+
+            const justTouched = lvl.touched && !wasTouchedInDb;
+
+            // end_time: bevorzugt der aus der Kerzenhistorie abgeleitete Zeitpunkt (deterministisch,
+            // siehe buildLevel in _shared/liquidity.ts). lvl.touchedTime ist nur dann null, wenn
+            // touched hier gerade erst per Live-Preis (vor Kerzenschluss) oder ueber
+            // wasTouchedInDb gesetzt wurde: bei einem brandneuen Touch (justTouched) ist "jetzt"
+            // korrekt, bei einem laengst bekannten Touch, der nur aus dem geladenen
+            // Kerzenfenster gefallen ist, bleibt der bestehende end_time-Wert stehen (sonst
+            // wuerde er bei jedem Cron-Lauf erneut auf "jetzt" springen — derselbe Bug, den
+            // end_time hier ueberhaupt erst ersetzen soll).
+            const endTimeIso = !lvl.touched
+              ? null
+              : lvl.touchedTime != null
+                ? new Date(lvl.touchedTime * 1000).toISOString()
+                : justTouched
+                  ? new Date().toISOString()
+                  : existing?.end_time ?? new Date().toISOString();
+
+            const { error: upsertLiqError } = await supabase.from("liquidity_levels").upsert(
+              {
+                instrument: cfg.instrument,
+                timeframe: "1H",
+                direction: lvl.direction,
+                price: lvl.price,
+                pivot_time: new Date(lvl.pivotTime * 1000).toISOString(),
+                touched: lvl.touched,
+                end_time: endTimeIso,
+                alert_price: justTouched ? currentPrice : existing?.alert_price ?? null,
+                notified: existing ? existing.notified || justTouched : lvl.touched,
+                notified_at: justTouched && existing && alarmActive ? new Date().toISOString() : existing?.notified_at ?? null,
+              },
+              { onConflict: "instrument,timeframe,direction,pivot_time" },
             );
-          }
-        }
+            if (upsertLiqError) throw upsertLiqError;
 
-        instrumentSummary["1H_liquidity"] = { levelsSeen: levels.length, notified: liqNotifiedCount };
+            // Neue Level, die schon beim ersten Erkennen touched sind, waeren ein
+            // historischer Alt-Touch (z.B. direkt nach Deploy) — kein "jetzt gerade".
+            if (justTouched && existing && alarmActive) {
+              liqNotifiedCount++;
+              const label = lvl.direction === "high" ? "Hoch" : "Tief";
+              await sendTelegram(
+                `💧 ${cfg.instrument} 1H Liquiditäts-Level (${label}) angetestet\n` +
+                  `Level: ${fmt(lvl.price, cfg.pricePrecision)}\n` +
+                  `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+              );
+            }
+          }
+
+          instrumentSummary["1H_liquidity"] = { levelsSeen: levels.length, notified: liqNotifiedCount };
+        } else {
+          // Skip-Tick (siehe isH1RefreshTick oben): keine frischen 1H-Kerzen, also auch keine
+          // neuen Fraktale möglich — nur den DB-Stand gegen den aktuellen Preis pruefen, gleiches
+          // Muster wie beim 4H-OB-Zonen-Skip-Pfad.
+          for (const row of existingLiqRows ?? []) {
+            if (row.touched) continue;
+            const touchedNow = row.direction === "high" ? currentPrice >= row.price : currentPrice <= row.price;
+            if (!touchedNow) continue;
+
+            const { error: updateLiqError } = await supabase
+              .from("liquidity_levels")
+              .update({
+                touched: true,
+                notified: true,
+                alert_price: currentPrice,
+                end_time: new Date().toISOString(),
+                notified_at: alarmActive ? new Date().toISOString() : row.notified_at ?? null,
+              })
+              .eq("instrument", cfg.instrument)
+              .eq("timeframe", "1H")
+              .eq("direction", row.direction)
+              .eq("pivot_time", row.pivot_time);
+            if (updateLiqError) throw updateLiqError;
+
+            if (alarmActive) {
+              liqNotifiedCount++;
+              const label = row.direction === "high" ? "Hoch" : "Tief";
+              await sendTelegram(
+                `💧 ${cfg.instrument} 1H Liquiditäts-Level (${label}) angetestet\n` +
+                  `Level: ${fmt(row.price, cfg.pricePrecision)}\n` +
+                  `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+              );
+            }
+          }
+
+          instrumentSummary["1H_liquidity"] = { levelsSeen: (existingLiqRows ?? []).length, notified: liqNotifiedCount, cached: true };
+        }
       }
 
       // Trade-Setup: Liquidity Sweep + Protected M5-Fraktal + M5-OB, in dieser Reihenfolge
@@ -447,7 +540,7 @@ Deno.serve(async () => {
       if (cfg.source === "twelvedata") {
         const alarmActive = shouldSend && isAlarmOn("trade_setup");
         const m5Candles = forexBatch!.candlesByTf.get("M5")!;
-        const candles1hForSetup = forexBatch!.candlesByTf.get("1H")!;
+        const candles1hForSetup = h1CandlesForSetup!;
         const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5Candles, TRADE_SETUP_M5_FRACTAL_PERIOD);
         const { highs: h1HighsSetup, lows: h1LowsSetup } = detectLiquidityLevels(candles1hForSetup, TRADE_SETUP_H1_FRACTAL_PERIOD);
         const setupObs = detectSetupObs(m5Candles);
