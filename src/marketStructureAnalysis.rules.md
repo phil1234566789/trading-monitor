@@ -102,4 +102,6 @@ Rein visuell, keine Zustandslogik — kein Test, nur Code-Kommentare in
   fällt weg, sobald irgendwo ein `break-of-structure` existiert (keine Long-Andeutung mehr, siehe
   Chat 2026-07-24: "damit ich keine Longs suche").
 - `break-of-structure`: JEDER aktuell so markierte `structurePivot` bekommt eine eigene gestrichelte
-  rote Linie + Label ("Break of Structure"), kein eigener Pfeil (reines Warnsignal).
+  rote Linie + Label ("BOS", ohne Altersangabe — anders als bei `LQ-sweep` für die Handelsentscheidung
+  nicht relevant, Chat 2026-07-24), mittig über der Linie im Uptrend / mittig darunter im (noch nicht
+  implementierten) Downtrend, kein eigener Pfeil (reines Warnsignal).

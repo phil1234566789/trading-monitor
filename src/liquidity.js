@@ -178,7 +178,9 @@ class LiquidityLineRenderer {
 
       // Debug-Modus (showLiquidityDebug-Toggle) und Trendanalyse-Labels: Preis/Beschriftung an
       // der Linie einblenden. labelSide "start" (Default) = am Pivot-Ursprung, wie der Debug-
-      // Toggle es will; "end" = rechts vom Linienende (siehe Trendanalyse-Toggle).
+      // Toggle es will; "end" = rechts vom Linienende (siehe Trendanalyse-Toggle); "center-above"/
+      // "center-below" = horizontal mittig über/unter der Linie (Chat 2026-07-24, Break of
+      // Structure: "im uptrend über der Linie mittig, im downtrend unter der Linie mittig").
       if (this._options.label) {
         ctx.font = `${Math.round(10 * scope.verticalPixelRatio)}px sans-serif`;
         ctx.fillStyle = this._options.color;
@@ -192,6 +194,12 @@ class LiquidityLineRenderer {
           ctx.textBaseline = "middle";
           ctx.textAlign = "left";
           ctx.fillText(this._options.label, Math.min(desiredX, maxX), y);
+        } else if (this._options.labelSide === "center-above" || this._options.labelSide === "center-below") {
+          const midX = (x1 + x2) / 2;
+          const above = this._options.labelSide === "center-above";
+          ctx.textBaseline = above ? "bottom" : "top";
+          ctx.textAlign = "center";
+          ctx.fillText(this._options.label, midX, y + (above ? -2 : 2) * scope.verticalPixelRatio);
         } else {
           ctx.textBaseline = "bottom";
           ctx.textAlign = "left";

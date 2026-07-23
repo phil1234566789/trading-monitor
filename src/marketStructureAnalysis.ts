@@ -686,12 +686,15 @@ export function renderMarketStructureAnalysis(
 
   // Gestrichelte rote Linie + Beschriftung je Break of Structure (Chat 2026-07-24) — analog zu
   // LQ-Sweep potenziell mehrere gleichzeitig (jedes gebrochene protected-low bekommt seine
-  // eigene), kein eigener Pfeil (reines Warnsignal, keine Handelsrichtung wie bei LQ-Sweep).
+  // eigene), kein eigener Pfeil (reines Warnsignal, keine Handelsrichtung wie bei LQ-Sweep). Label
+  // nur "BOS" (kein Alter — anders als bei LQ-Sweep für die Handelsentscheidung nicht relevant,
+  // siehe Chat), mittig über der Linie im Uptrend, mittig darunter im (noch nicht implementierten)
+  // Downtrend — spiegelbildlich zur Trendrichtung.
   for (const bos of state.structurePivots.filter((p) => p.type === "break-of-structure")) {
     const bosColor = cssColor("rangeBreakOfStructure");
     const line = new LiquidityLinePrimitive(
       toLevel(bos, candles),
-      { color: bosColor, lineWidth: LINE_WIDTH, dashed: true, label: `Break of Structure${ageSuffix(bos.pivotTime, nowSec)}`, labelSide: "end" },
+      { color: bosColor, lineWidth: LINE_WIDTH, dashed: true, label: "BOS", labelSide: state.trend === "uptrend" ? "center-above" : "center-below" },
       candles,
     );
     series.attachPrimitive(line);
