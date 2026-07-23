@@ -1,5 +1,6 @@
-import { reactive, watch } from "vue";
+import { reactive, watch, nextTick } from "vue";
 import { snapToBarTime } from "./chartTimeUtils.js";
+import { supabase } from "./supabaseClient.js";
 
 // Session-Indikator (Chat 2026-07-22: "es gibt mehrere sessions ... hinzufügen/editieren/löschen,
 // von-bis Zeitangabe halbstunde genau, Hintergrundfarbe, Label") — frei konfigurierbare, TÄGLICH
@@ -26,6 +27,12 @@ function loadInitial() {
 
 export const sessions = reactive(loadInitial());
 
+// true während ein DB-Fetch die Liste reinschreibt — verhindert, dass genau dieser Merge sofort
+// wieder einen Save auslöst (siehe chartColors.js, gleiches Muster).
+let suppressSave = false;
+let saveTimer = null;
+const SAVE_DEBOUNCE_MS = 500;
+
 watch(
   sessions,
   (v) => {
@@ -35,9 +42,76 @@ watch(
       // localStorage kann fehlschlagen (privater Modus, Quota) — Sessions gelten dann nur für die
       // aktuelle Sitzung, kein Show-Stopper.
     }
+    if (suppressSave) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveToRemote, SAVE_DEBOUNCE_MS);
   },
   { deep: true },
 );
+
+// Voller Delete+Insert statt eines reinen upsert (anders als chartColors.js) — Sessions sind
+// eine dynamische Liste mit Löschen, ein upsert allein würde eine auf einem anderen Gerät
+// gelöschte Session nie remote entfernen. Unkritisch bei den paar Zeilen, die hier realistisch
+// vorkommen (Ein-Nutzer-App, kein Concurrent-Multi-Autor-Risiko wie bei einer echten
+// Mehrbenutzer-Tabelle).
+async function saveToRemote() {
+  const rows = sessions.map((s) => ({
+    id: s.id,
+    label: s.label,
+    from_minutes: s.fromMinutes,
+    to_minutes: s.toMinutes,
+    hex: s.hex,
+    alpha: s.alpha,
+    high_low_relevant: s.highLowRelevant,
+  }));
+  const { error: deleteError } = await supabase.from("sessions").delete().not("id", "is", null);
+  if (deleteError) {
+    console.error("Sessions in DB löschen (vor Neuschreiben) fehlgeschlagen:", deleteError);
+    return;
+  }
+  if (rows.length === 0) return;
+  const { error: insertError } = await supabase.from("sessions").insert(rows);
+  if (insertError) console.error("Sessions in DB speichern fehlgeschlagen:", insertError);
+}
+
+// Geräteübergreifender Sync (Chat 2026-07-23: "session indikator war leer, den ich auf meinem
+// haupt pc schon eingestellt hab") — genau wie chartColors.js: leere Tabelle (noch nie von
+// irgendeinem Gerät gespeichert) lässt die lokalen Werte unangetastet, ABER schiebt sie dann
+// aktiv einmal hoch (Bootstrap) — sonst würde das Geraet mit den einzigen echten Daten (hier:
+// der Haupt-PC) nie von selbst pushen, weil `watch` nur auf ECHTE Änderungen reagiert, nicht
+// auf den initialen Ladezustand.
+async function syncFromRemote() {
+  try {
+    const { data, error } = await supabase
+      .from("sessions")
+      .select("id, label, from_minutes, to_minutes, hex, alpha, high_low_relevant");
+    if (error) throw error;
+    if (data && data.length > 0) {
+      suppressSave = true;
+      sessions.splice(
+        0,
+        sessions.length,
+        ...data.map((r) => ({
+          id: r.id,
+          label: r.label,
+          fromMinutes: r.from_minutes,
+          toMinutes: r.to_minutes,
+          hex: r.hex,
+          alpha: r.alpha,
+          highLowRelevant: r.high_low_relevant,
+        })),
+      );
+      nextTick(() => {
+        suppressSave = false;
+      });
+    } else if (sessions.length > 0) {
+      await saveToRemote();
+    }
+  } catch (err) {
+    console.error("Sessions aus DB laden fehlgeschlagen:", err);
+  }
+}
+syncFromRemote();
 
 let sessionIdSeq = 0;
 export function addSession() {
