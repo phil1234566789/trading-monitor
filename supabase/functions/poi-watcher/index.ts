@@ -39,6 +39,23 @@ const TRADE_SETUP_LS_MAX_DISTANCE_M5 = 5.0 * TRADE_SETUP_PIP_SIZE; // lsMaxDista
 const TRADE_SETUP_OB_MAX_DELAY_SEC = 60 * 60; // obMaxDelayMinutes
 const TRADE_SETUP_LOOKBACK_SEC = 6 * 60 * 60; // protectedHighLookbackHours
 
+// Explizit typisiert statt auf die select-String-Typinferenz von supabase-js zu vertrauen —
+// die kollabiert bei einem untypisierten Client (kein Database-Generic bei createClient) ab
+// einer gewissen Spaltenzahl im select() auf `{}` (siehe Chat 2026-07-23: TS-Fehler beim
+// Erweitern um top/bottom/weak/invalidated).
+interface ObZoneRow {
+  start_time: string;
+  direction: string;
+  touched: boolean;
+  notified: boolean;
+  notified_at: string | null;
+  alert_price: number | null;
+  top: number;
+  bottom: number;
+  weak: boolean;
+  invalidated: boolean;
+}
+
 interface InstrumentConfig {
   instrument: string;
   source: "okx" | "twelvedata";
@@ -82,20 +99,29 @@ async function fetchOkxPrice(instId: string): Promise<number> {
   return Number(json.data[0].last);
 }
 
-// Ein REST-Call pro Forex-Instrument+Timeframe (Preis + je Timeframe), parallel statt
-// sequentiell wie beim alten cTrader-Handshake — Twelve Data hat keine "mehrere Requests über
-// eine Verbindung" Batch-API, das Rate-Limit ist ohnehin pro Minute übers ganze Konto, nicht
-// pro Verbindung. Holt den "aktuellen Preis" (Close der letzten M1-Bar, kein eigener
-// Ticker-Endpunkt verdrahtet) und alle Timeframe-Kerzen in einem Rutsch.
-async function fetchForexBatch(symbol: string): Promise<{ currentPrice: number; candlesByTf: Map<string, Candle[]> }> {
-  const [priceBars, ...tfCandles] = await Promise.all([
-    fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "1m", count: 1 }),
-    ...TIMEFRAMES.map((tf) => fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: tf.forexPeriod, count: CANDLE_LIMIT })),
+// Nur beim ersten Lauf nach einem 4H-Kerzenschluss neu holen (Chat 2026-07-23: "da ändert
+// sich doch in 4h nichts") — 4H-Kerzen werden NUR für die 4H-OB-Zonenerkennung gebraucht,
+// sonst nirgends referenziert (anders als 1H, siehe candles1hForSetup), Refetch alle 5min
+// war also reine Verschwendung von Twelve-Data-Requests. UTC statt Europe/Berlin, weil sich
+// sowohl der pg_cron-Tick als auch Twelve Datas eigene 4H-Bucket-Grenzen an UTC ausrichten.
+function isH4RefreshTick(date: Date): boolean {
+  return date.getUTCHours() % 4 === 0 && date.getUTCMinutes() === 0;
+}
+
+// Ein REST-Call pro Forex-Instrument+Timeframe (parallel statt sequentiell wie beim alten
+// cTrader-Handshake — Twelve Data hat keine "mehrere Requests über eine Verbindung"
+// Batch-API, das Rate-Limit ist ohnehin pro Minute übers ganze Konto, nicht pro Verbindung).
+// Kein eigener M1-Preis-Call mehr (Chat 2026-07-23) — der Close der letzten M5-Kerze reicht
+// für den Live-Touch-Check völlig, spart einen von vier Calls pro Instrument.
+async function fetchForexBatch(symbol: string, includeH4: boolean): Promise<{ currentPrice: number; candlesByTf: Map<string, Candle[]> }> {
+  const [h1Candles, m5Candles, h4Candles] = await Promise.all([
+    fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "1h", count: CANDLE_LIMIT }),
     fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "5m", count: TRADE_SETUP_M5_CANDLE_LIMIT }),
+    includeH4 ? fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "4h", count: CANDLE_LIMIT }) : Promise.resolve(null),
   ]);
-  const candlesByTf = new Map(TIMEFRAMES.map((tf, i) => [tf.label, tfCandles[i]]));
-  candlesByTf.set("M5", tfCandles[TIMEFRAMES.length]);
-  return { currentPrice: priceBars[priceBars.length - 1].close, candlesByTf };
+  const candlesByTf = new Map<string, Candle[]>([["1H", h1Candles], ["M5", m5Candles]]);
+  if (h4Candles) candlesByTf.set("4H", h4Candles);
+  return { currentPrice: m5Candles[m5Candles.length - 1].close, candlesByTf };
 }
 
 async function sendTelegram(text: string) {
@@ -174,7 +200,9 @@ Deno.serve(async () => {
     const alarmEnabledMap = new Map((alarmRows ?? []).map((r) => [r.key, r.enabled]));
     const isAlarmOn = (key: string) => alarmEnabledMap.get(key) ?? true;
 
-    const forexFetchWindow = isForexFetchWindow(new Date());
+    const now = new Date();
+    const forexFetchWindow = isForexFetchWindow(now);
+    const h4RefreshTick = isH4RefreshTick(now);
     const summary: Record<string, unknown> = { dryRun: DRY_RUN, tradingHours, forexFetchWindow, instruments: {} };
 
     for (const cfg of INSTRUMENTS) {
@@ -182,7 +210,7 @@ Deno.serve(async () => {
         (summary.instruments as Record<string, unknown>)[cfg.instrument] = { skipped: "outside forex fetch window" };
         continue;
       }
-      const forexBatch = cfg.source === "twelvedata" ? await fetchForexBatch(cfg.instrument) : null;
+      const forexBatch = cfg.source === "twelvedata" ? await fetchForexBatch(cfg.instrument, h4RefreshTick) : null;
       const currentPrice = cfg.source === "okx" ? await fetchOkxPrice(cfg.instrument) : forexBatch!.currentPrice;
       // Zonen werden für jedes Instrument immer erkannt/gespeichert (Dashboard-Charts brauchen
       // das weiterhin) — `shouldSend` entscheidet nur, ob dafür auch wirklich eine
@@ -195,86 +223,130 @@ Deno.serve(async () => {
         // z.B. "ob_zone_4h"/"ob_zone_1h" — je Timeframe einzeln umschaltbar.
         const alarmActive = shouldSend && isAlarmOn(`ob_zone_${tf.label.toLowerCase()}`);
         const candles =
-          cfg.source === "okx" ? await fetchOkxCandles(cfg.instrument, tf.okxBar) : forexBatch!.candlesByTf.get(tf.label)!;
-        const zones = detectOrderBlocks(candles);
+          cfg.source === "okx" ? await fetchOkxCandles(cfg.instrument, tf.okxBar) : forexBatch!.candlesByTf.get(tf.label);
 
         const { data: existingRows, error: selectError } = await supabase
           .from("ob_zones")
-          .select("start_time, direction, touched, notified, notified_at, alert_price")
+          .select("start_time, direction, touched, notified, notified_at, alert_price, top, bottom, weak, invalidated")
           .eq("instrument", cfg.instrument)
-          .eq("timeframe", tf.label);
+          .eq("timeframe", tf.label)
+          .returns<ObZoneRow[]>();
         if (selectError) throw selectError;
 
-        const existingMap = new Map(
-          (existingRows ?? []).map((r) => [
-            `${r.direction}_${Math.floor(new Date(r.start_time).getTime() / 1000)}`,
-            r,
-          ]),
-        );
-
         let notifiedCount = 0;
-        for (const z of zones) {
-          const direction = z.dir === 1 ? "long" : "short";
-          const existing = existingMap.get(`${direction}_${z.startTime}`);
-          const wasTouchedInDb = existing?.touched ?? false;
 
-          // Live-Preis-Touch: Twelve Data liefert nur geschlossene Kerzen, d.h. ohne das hier
-          // wuerde ein Touch erst erkannt, wenn die volle 1H/4H-Kerze schliesst (bis zu 59min
-          // Verzoegerung). Einmal getouched bleibt getouched (auch wenn detectOrderBlocks()
-          // die noch offene Kerze dementsprechend noch nicht sieht) — sonst faellt der Wert
-          // beim naechsten Run auf false zurueck und der Alarm geht beim echten Kerzenschluss
-          // ein zweites Mal raus.
-          if (!z.invalidated && !z.touched && (wasTouchedInDb || (currentPrice <= z.top && currentPrice >= z.bottom))) {
-            z.touched = true;
-          }
-
-          const justTouched = z.touched && !wasTouchedInDb;
-
-          const { error: upsertError } = await supabase.from("ob_zones").upsert(
-            {
-              instrument: cfg.instrument,
-              timeframe: tf.label,
-              direction,
-              top: z.top,
-              bottom: z.bottom,
-              weak: z.weak,
-              touched: z.touched,
-              invalidated: z.invalidated,
-              start_time: new Date(z.startTime * 1000).toISOString(),
-              // end_time kommt direkt aus der Zonen-Erkennung: waechst mit jeder Kerze, bis die
-              // Zone touched/invalidated ist, dann friert es automatisch ein (siehe
-              // detectOrderBlocks in _shared/orderBlocks.ts) — deterministisch aus der
-              // Kerzenhistorie, keine eigene Wanduhr-Bookkeeping noetig.
-              end_time: new Date(z.endTime * 1000).toISOString(),
-              // alert_price: der Preis im Moment des Touches, einmal eingefroren (wie
-              // end_time) — unabhaengig davon, ob dafuer auch wirklich eine TG-Nachricht
-              // rausging (alarmActive/Session steuern nur notified_at, nicht diesen Wert).
-              alert_price: justTouched ? currentPrice : existing?.alert_price ?? null,
-              notified: existing ? existing.notified || justTouched : z.touched,
-              // notified_at nur bei einem echten Versand setzen (existing muss vorhanden sein,
-              // sonst ist es ein historischer Alt-Touch ohne echten Alarm) — sonst würde ein
-              // beim Deploy schon getouchtes Alt-Zone-Backlog faelschlich den Deploy-Zeitpunkt
-              // als "gerade eben benachrichtigt" zeigen.
-              notified_at: justTouched && existing && alarmActive ? new Date().toISOString() : existing?.notified_at ?? null,
-            },
-            { onConflict: "instrument,timeframe,start_time,direction" },
+        if (candles) {
+          // Voller Durchlauf: Zonen frisch aus den Kerzen erkennen (structural touched/
+          // invalidated ändert sich nur, wenn neue Kerzen dazukommen) und mit dem DB-Stand
+          // mergen. Läuft bei 1H/OKX jeden Tick, bei 4H nur an isH4RefreshTick-Ticks (siehe
+          // fetchForexBatch).
+          const zones = detectOrderBlocks(candles);
+          const existingMap = new Map(
+            (existingRows ?? []).map((r) => [
+              `${r.direction}_${Math.floor(new Date(r.start_time).getTime() / 1000)}`,
+              r,
+            ]),
           );
-          if (upsertError) throw upsertError;
 
-          // Bei brandneuen Zonen (kein `existing`), die schon beim ersten Erkennen touched
-          // sind, nicht alarmieren — das waere ein historischer Alt-Touch, kein "jetzt gerade".
-          if (justTouched && existing && alarmActive) {
-            notifiedCount++;
-            const label = direction === "long" ? "Bullish" : "Bearish";
-            await sendTelegram(
-              `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
-                `Zone: ${fmt(z.bottom, cfg.pricePrecision)} – ${fmt(z.top, cfg.pricePrecision)}${z.weak ? " (schwach)" : ""}\n` +
-                `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+          for (const z of zones) {
+            const direction = z.dir === 1 ? "long" : "short";
+            const existing = existingMap.get(`${direction}_${z.startTime}`);
+            const wasTouchedInDb = existing?.touched ?? false;
+
+            // Live-Preis-Touch: Twelve Data liefert nur geschlossene Kerzen, d.h. ohne das hier
+            // wuerde ein Touch erst erkannt, wenn die volle 1H/4H-Kerze schliesst (bis zu 59min
+            // Verzoegerung). Einmal getouched bleibt getouched (auch wenn detectOrderBlocks()
+            // die noch offene Kerze dementsprechend noch nicht sieht) — sonst faellt der Wert
+            // beim naechsten Run auf false zurueck und der Alarm geht beim echten Kerzenschluss
+            // ein zweites Mal raus.
+            if (!z.invalidated && !z.touched && (wasTouchedInDb || (currentPrice <= z.top && currentPrice >= z.bottom))) {
+              z.touched = true;
+            }
+
+            const justTouched = z.touched && !wasTouchedInDb;
+
+            const { error: upsertError } = await supabase.from("ob_zones").upsert(
+              {
+                instrument: cfg.instrument,
+                timeframe: tf.label,
+                direction,
+                top: z.top,
+                bottom: z.bottom,
+                weak: z.weak,
+                touched: z.touched,
+                invalidated: z.invalidated,
+                start_time: new Date(z.startTime * 1000).toISOString(),
+                // end_time kommt direkt aus der Zonen-Erkennung: waechst mit jeder Kerze, bis die
+                // Zone touched/invalidated ist, dann friert es automatisch ein (siehe
+                // detectOrderBlocks in _shared/orderBlocks.ts) — deterministisch aus der
+                // Kerzenhistorie, keine eigene Wanduhr-Bookkeeping noetig.
+                end_time: new Date(z.endTime * 1000).toISOString(),
+                // alert_price: der Preis im Moment des Touches, einmal eingefroren (wie
+                // end_time) — unabhaengig davon, ob dafuer auch wirklich eine TG-Nachricht
+                // rausging (alarmActive/Session steuern nur notified_at, nicht diesen Wert).
+                alert_price: justTouched ? currentPrice : existing?.alert_price ?? null,
+                notified: existing ? existing.notified || justTouched : z.touched,
+                // notified_at nur bei einem echten Versand setzen (existing muss vorhanden sein,
+                // sonst ist es ein historischer Alt-Touch ohne echten Alarm) — sonst würde ein
+                // beim Deploy schon getouchtes Alt-Zone-Backlog faelschlich den Deploy-Zeitpunkt
+                // als "gerade eben benachrichtigt" zeigen.
+                notified_at: justTouched && existing && alarmActive ? new Date().toISOString() : existing?.notified_at ?? null,
+              },
+              { onConflict: "instrument,timeframe,start_time,direction" },
             );
-          }
-        }
+            if (upsertError) throw upsertError;
 
-        instrumentSummary[tf.label] = { zonesSeen: zones.length, notified: notifiedCount };
+            // Bei brandneuen Zonen (kein `existing`), die schon beim ersten Erkennen touched
+            // sind, nicht alarmieren — das waere ein historischer Alt-Touch, kein "jetzt gerade".
+            if (justTouched && existing && alarmActive) {
+              notifiedCount++;
+              const label = direction === "long" ? "Bullish" : "Bearish";
+              await sendTelegram(
+                `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
+                  `Zone: ${fmt(z.bottom, cfg.pricePrecision)} – ${fmt(z.top, cfg.pricePrecision)}${z.weak ? " (schwach)" : ""}\n` +
+                  `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+              );
+            }
+          }
+
+          instrumentSummary[tf.label] = { zonesSeen: zones.length, notified: notifiedCount };
+        } else {
+          // 4H außerhalb eines isH4RefreshTick-Ticks: keine frischen Kerzen (siehe
+          // fetchForexBatch/isH4RefreshTick) — zwischen zwei 4H-Kerzenschlüssen kann sich die
+          // ZONENLISTE selbst nicht ändern, nur ob der Preis inzwischen eine schon bekannte
+          // Zone berührt hat. Dafür reicht der DB-Stand als Zonenliste, kein detectOrderBlocks
+          // nötig — nur ein leichtes UPDATE statt des vollen Upserts oben.
+          for (const row of existingRows ?? []) {
+            if (row.invalidated || row.touched) continue;
+            if (currentPrice > row.top || currentPrice < row.bottom) continue;
+
+            const { error: updateError } = await supabase
+              .from("ob_zones")
+              .update({
+                touched: true,
+                notified: true,
+                alert_price: currentPrice,
+                notified_at: alarmActive ? new Date().toISOString() : row.notified_at ?? null,
+              })
+              .eq("instrument", cfg.instrument)
+              .eq("timeframe", tf.label)
+              .eq("direction", row.direction)
+              .eq("start_time", row.start_time);
+            if (updateError) throw updateError;
+
+            if (alarmActive) {
+              notifiedCount++;
+              const label = row.direction === "long" ? "Bullish" : "Bearish";
+              await sendTelegram(
+                `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
+                  `Zone: ${fmt(row.bottom, cfg.pricePrecision)} – ${fmt(row.top, cfg.pricePrecision)}${row.weak ? " (schwach)" : ""}\n` +
+                  `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+              );
+            }
+          }
+
+          instrumentSummary[tf.label] = { zonesSeen: (existingRows ?? []).length, notified: notifiedCount, cached: true };
+        }
       }
 
       // 1H-Liquiditäts-Level (Fractal-Sweeps, siehe src/liquidity.js) — nur für die
