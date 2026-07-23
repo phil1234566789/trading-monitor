@@ -6,7 +6,7 @@ import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, Liq
 import { sessions, renderSessions } from "../sessions.js";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { renderPivotMarkers } from "../pivotMarkers";
-import { initMarketStructureState, applyMarketStructurePivot, applyInnerMarketStructurePivot, renderMarketStructureAnalysis } from "../marketStructureAnalysis";
+import { computeRangesPivots, buildMarketStructureState, renderMarketStructureAnalysis } from "../marketStructureAnalysis";
 import { computeCockpitState, renderTradeSetupCockpit } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
@@ -648,17 +648,7 @@ function computeRangesPivotsFor(period, lookbackHours) {
   // mit replayUntil mitzuverschieben. lookbackHours wird in dem Fall komplett ignoriert.
   const now = props.replayUntil ?? Math.floor(Date.now() / 1000);
   const cutoff = props.rangesFixedStartActive && props.rangesFixedStartTime != null ? props.rangesFixedStartTime : now - lookbackHours * 3600;
-  const { highs, lows } = detectLiquidityLevels(clipReplay(rangesH1Candles), period);
-  return [...highs, ...lows]
-    .filter((p) => p.pivotTime >= cutoff)
-    .sort((a, b) => a.pivotTime - b.pivotTime)
-    .map((p) => ({
-      type: p.dir === 1 ? "high" : "low",
-      price: p.price,
-      pivotTime: p.pivotTime,
-      pivotAt: fmtDateTime(p.pivotTime),
-      touched: p.touched ? { price: p.price, touchedAt: fmtDateTime(p.touchedTime), touchedTime: p.touchedTime } : false,
-    }));
+  return computeRangesPivots(clipReplay(rangesH1Candles), period, cutoff, fmtDateTime);
 }
 
 // Punkt-Marker für die H1-Ranges-Pivots — nur sichtbar, wenn sowohl das Ranges-Metadaten-Panel
@@ -712,56 +702,16 @@ function refreshRangesInternal() {
 // Neuer "1h-Range"-Marktstruktur-Trendalgorithmus (siehe marketStructureAnalysis.ts,
 // test/tdd_mit_claude.ts) — läuft über dieselben H1-Pivots wie die Debug-Punktmarker oben, aber
 // unabhängig vom Debug-Toggle: das ist das eigentliche Analyse-Ergebnis der Ranges-Funktion, nicht
-// nur eine Debug-Hilfe. Erster gelesener 'low'/'high' bilden die Start-Range, der Rest läuft über
-// applyMarketStructurePivot.
-// Ein Pivot ist erst NACH `period` weiteren Kerzen überhaupt als Fraktal erkennbar (siehe
-// isUpFractal/isDownFractal in liquidity.js: braucht period strikt schwächere Kerzen danach) —
-// pivotTime ist die Zeit der Extremkerze selbst, nicht die Erkennungszeit. Näherung über
-// Kalenderstunden (period*3600) statt echter Kerzen-Indizes — bei einer Wochenend-Lücke direkt
-// nach dem Pivot wäre die ECHTE Erkennungszeit etwas später als hier berechnet; für die
-// Größenordnung, um die es beim Mischen der beiden Perioden geht (2h vs. 5h Differenz), reicht
-// das (siehe Chat 2026-07-19).
-function confirmationTime(pivot, period) {
-  return pivot.pivotTime + period * 3600;
-}
-
-// Übergeordnete (rangesPivots, props.rangesPeriod) und eingebettete Pivots (rangesPivots2,
-// props.ranges2Period) laufen auf demselben Kerzen-Fenster, aber mit unterschiedlicher
-// Bestätigungsverzögerung — deshalb NICHT stur nach rohem pivotTime mischen, sondern nach
-// confirmationTime: ein Periode-2-Pivot mit späterem pivotTime kann trotzdem VOR einem Periode-5-
-// Pivot mit früherem pivotTime erkannt werden (siehe Chat 2026-07-19, gbp_h1_uptrend_LQ_sweep_
-// long_setup.ts: p2Pivot4 entsteht erst um 04:00, aber pivot3 -von 23:00- ist zu dem Zeitpunkt
-// schon längst bestätigt). applyMarketStructurePivot/applyInnerMarketStructurePivot übernehmen
-// den Rest (u.a. das Leeren von innerStructurePivots bei jedem neuen übergeordneten Pivot).
+// nur eine Debug-Hilfe. Reine Weiterleitung an buildMarketStructureState (marketStructureAnalysis.ts)
+// — die eigentliche Merge-/Apply-Logik lebt dort, NICHT hier, damit Tests exakt denselben Code
+// aufrufen können wie die App (siehe Chat 2026-07-24: "wie kann es sein, dass Tests grün laufen
+// aber der Algo trotzdem nicht das macht, was die Tests eigentlich sicherstellen sollen?" — vorher
+// war diese Funktion lokal und für Tests nur über eine von Hand nachgebaute Kopie erreichbar).
+// Für closesAboveOldHigh/closesBelowLevel/markLqSweeps: dieselben H1-Kerzen wie die Pivot-Erkennung
+// selbst (rangesH1Candles), nicht allCandles — das wäre je nach gewähltem Chart-Timeframe eine
+// andere Auflösung.
 function computeMarketStructureState() {
-  if (!rangesPivots || rangesPivots.length < 2) return null;
-  const originLow = rangesPivots.find((p) => p.type === "low");
-  const originHigh = rangesPivots.find((p) => p.type === "high");
-  if (!originLow || !originHigh) return null;
-
-  const [first, second] = originLow.pivotTime <= originHigh.pivotTime ? [originLow, originHigh] : [originHigh, originLow];
-  let state = initMarketStructureState(first, second);
-
-  const originCutoff = Math.max(first.pivotTime, second.pivotTime);
-  const outerRest = rangesPivots
-    .filter((p) => p !== originLow && p !== originHigh)
-    .map((pivot) => ({ pivot, outer: true, at: confirmationTime(pivot, props.rangesPeriod) }));
-  const innerRest = (rangesPivots2 ?? [])
-    .filter((p) => p.pivotTime > originCutoff)
-    .map((pivot) => ({ pivot, outer: false, at: confirmationTime(pivot, props.ranges2Period) }));
-
-  const merged = [...outerRest, ...innerRest].sort((a, b) => a.at - b.at);
-  // Für applyInnerMarketStructurePivot Kerzen-Close-Prüfung (closesAboveOldHigh, siehe
-  // marketStructureAnalysis.ts): dieselben H1-Kerzen wie die Pivot-Erkennung selbst
-  // (rangesH1Candles), nicht allCandles — das wäre je nach gewähltem Chart-Timeframe eine andere
-  // Auflösung.
-  const rangesCandles = clipReplay(rangesH1Candles);
-  for (const entry of merged) {
-    state = entry.outer
-      ? applyMarketStructurePivot(state, entry.pivot)
-      : applyInnerMarketStructurePivot(state, entry.pivot, { candles: rangesCandles });
-  }
-  return state;
+  return buildMarketStructureState(rangesPivots, rangesPivots2, props.rangesPeriod, props.ranges2Period, clipReplay(rangesH1Candles));
 }
 
 // Roter Pfeil+Linie an range.high, grüner an range.low, ggf. "1h protected low"-Linie +

@@ -59,7 +59,11 @@ describe("marketStructureAnalysis: zeitbewusste Pullback-Auswahl für protected-
     let state = initMarketStructureState(originLow, originHigh);
     state = applyMarketStructurePivot(state, sweepCandidate);
     state = applyInnerMarketStructurePivot(state, nudge, { candles });
-    expect(state.structurePivots.find((p) => p.pivotAt === "sweep")?.type).toBe("LQ-sweep"); // Zwischenstand, siehe markLqSweeps-Test
+    // Zwischenstand: sweepCandidates eigener Touch (touchedTime 999) liegt noch in der Zukunft
+    // relativ zu nudge (t=25) -> zu diesem Zeitpunkt noch NICHT als getoucht zu werten (Fix Chat
+    // 2026-07-24: markLqSweeps prüft jetzt isUntouchedAsOf statt des rohen globalen touched-Fakts,
+    // siehe marketStructureAnalysis.ts) -> bleibt vorerst 'low', nicht schon 'LQ-sweep'.
+    expect(state.structurePivots.find((p) => p.pivotAt === "sweep")?.type).toBe("low");
 
     state = applyMarketStructurePivot(state, breakingPivot);
 
@@ -107,8 +111,11 @@ describe("marketStructureAnalysis: zeitbewusste Pullback-Auswahl für protected-
     expect(state.structurePivots.find((p) => p.pivotAt === "pb")?.type).toBe("protected-low");
 
     // Später: ein eingebetteter Pivot bestätigt, dass 'pb' zwar getoucht wurde (Docht drunter), aber
-    // NIE eine Kerze drunter geschlossen hat -> Liquidity-Grab, kein echter Bruch.
-    const laterInner = { type: "high", price: 1.15, pivotAt: "later", pivotTime: 60, touched: false };
+    // NIE eine Kerze drunter geschlossen hat -> Liquidity-Grab, kein echter Bruch. pivotTime (1000)
+    // muss dafür >= pb.touched.touchedTime (999) liegen (Fix Chat 2026-07-24: markLqSweeps prüft
+    // jetzt isUntouchedAsOf statt des rohen globalen touched-Fakts) — sonst ist 'pb' zu diesem
+    // Verarbeitungszeitpunkt schlicht noch nicht getoucht, ganz gleich, was global irgendwann passiert.
+    const laterInner = { type: "high", price: 1.15, pivotAt: "later", pivotTime: 1000, touched: false };
     const candles = [{ time: 21, open: 1.06, high: 1.08, low: 1.02, close: 1.06 }]; // Docht unter 1.03, Close drüber
     state = applyInnerMarketStructurePivot(state, laterInner, { candles });
 

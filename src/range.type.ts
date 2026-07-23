@@ -38,7 +38,14 @@ export type PivotTypeAll =
   // (siehe Chat 2026-07-19, gbp_h1_uptrend_mit_LQ_sweep_LONG_SETUP.ts: rangeState1_1). Lebt nur in
   // structurePivots, nie in currRange (anders als sweeped-high/-low) — deshalb reicht die
   // Zugehörigkeit zu Pivot/PivotTypeAll, keine eigene engere Type-Variante nötig.
-  | "LQ-sweep";
+  | "LQ-sweep"
+  // Ein 'protected-low', seit dessen eigener Kerze tatsächlich eine Kerze DRUNTER geschlossen hat
+  // (Chat 2026-07-24: "pivot 1.336 fällt unter 1.33806 ohne Chance auf LS" — trend bleibt
+  // 'uptrend', KEIN voller Reset wie bei der Trendumkehr, siehe applyInnerMarketStructurePivot: der
+  // Bruch der eigentlichen currRange.low-Grenze). Strukturell schwerwiegender als ein gewöhnlicher
+  // Pullback, der bricht (der wird nur 'low', siehe markLqSweeps) — ein PROTECTED-low sollte per
+  // Definition halten, sein Bruch ist ein eigenständiges Warnsignal ("Break of Structure").
+  | "break-of-structure";
 
 export type Pivot = PivotBase<PivotTypeAll>;
 

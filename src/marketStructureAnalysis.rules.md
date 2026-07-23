@@ -4,6 +4,20 @@ Ein-Satz-Zusammenfassung pro Regel + Verweis auf den Test, der sie tatsächlich 
 Zweifel zählt der Test/Code, nicht diese Zeile — hier steht nur "was", nicht "wie genau".
 Implementierung: [marketStructureAnalysis.ts](marketStructureAnalysis.ts).
 
+## Pipeline (Kerzen -> Pivots -> State)
+
+`computeRangesPivots(candles, period, cutoff, formatTime?)` und
+`buildMarketStructureState(pivotsOuter, pivotsInner, periodOuter, periodInner, candles)` sind seit
+Chat 2026-07-24 die EINZIGE Quelle für "Kerzen -> Pivots -> State", exportiert aus
+`marketStructureAnalysis.ts`. Vorher lebte diese Logik nur als lokale Funktion in
+`PriceChart.vue` (`computeRangesPivotsFor`/`computeMarketStructureState`) — Tests liefen deshalb
+zwangsläufig gegen eine von Hand nachgebaute Kopie statt gegen exakt den Code, den die App
+tatsächlich ausführt (Bug-Report Philip: "wie kann es sein, dass Tests grün laufen, aber der Algo
+trotzdem nicht das macht, was die Tests eigentlich sicherstellen sollen?"). `PriceChart.vue`
+delegiert jetzt an diese beiden Funktionen, statt sie zu duplizieren — ein Test, der sie direkt mit
+echten Kerzen aus `.debug/metadata.json` aufruft (`marketStructureAnalysisRealPipeline.test.js`),
+prüft damit 1:1 denselben Pfad wie die Live-App.
+
 ## Grundbegriffe
 
 - **Outer-Pivot** (Periode 5, `applyMarketStructurePivot`) vs. **Inner-Pivot** (Periode 2,
@@ -65,16 +79,27 @@ für das reale Ausgangsszenario).
 | Ein getouchtes `low`/`LQ-sweep`/`protected-low`, seit dessen eigener Kerze NIE eine Kerze drunter geschlossen hat, ist ein Liquidity-Grab -> wird/bleibt `LQ-sweep`. | `marketStructureAnalysisLqSweep.test.js`: *"touched LOW ohne jeden Close drunter -> 'LQ-sweep'"* |
 | Sobald irgendeine Kerze seit der eigenen Pivot-Kerze tatsächlich drunter geschlossen hat, gilt es als echter Bruch -> wird/bleibt `low`. | `marketStructureAnalysisLqSweep.test.js`: *"touched LOW MIT echtem Close drunter -> bleibt 'low'"* |
 | Ohne Kerzendaten gilt konservativ KEIN Sweep (Default ist `low`, nicht `LQ-sweep`) — umgekehrter Default als bei `closesAboveOldHigh`. | `marketStructureAnalysisLqSweep.test.js`: *"ohne Kerzendaten (candles=[]) konservativ KEIN Sweep behaupten"* |
-| Nie getouchte Pivots werden gar nicht erst geprüft/reklassifiziert. | `marketStructureAnalysisLqSweep.test.js`: *"nie touched -> wird gar nicht erst geprüft, bleibt 'low'"* |
-| Neubewertung läuft BIDIREKTIONAL bei jedem Inner-Pivot (auch schon als `LQ-sweep` markierte Pivots), damit sich ein zu früh markierter Sweep bei einem späteren Replay-Schritt wieder zurück auf `low` korrigiert. | `marketStructureAnalysisLqSweep.test.js`: *"einmal fälschlich als LQ-sweep markiert ... korrigiert sich bei einem späteren Schritt wieder zurück zu 'low'"* |
+| Nie getouchte Pivots werden gar nicht erst geprüft/reklassifiziert — "getoucht" heißt hier **zum aktuellen Verarbeitungszeitpunkt (`toTime`) bereits getoucht** (`isUntouchedAsOf`), NICHT der rohe globale Touch-Endfakt. Ein Pivot, dessen `touchedTime` erst in der Zukunft (relativ zu `toTime`) liegt, bleibt bis dahin unangetastet. **Fix Chat 2026-07-24**, gefunden über den echten `.debug/metadata.json`-Snapshot: vorher degradierte ein frisch bestätigtes `protected-low` oft schon beim nächsten Verarbeitungsschritt zu `LQ-sweep`, Tage bevor der eigentliche Touch chronologisch überhaupt stattfand — einmal so fälschlich degradiert, konnte der spätere ECHTE Close-drunter nie mehr `break-of-structure` auslösen (griff nur noch der `LQ-sweep`->`low`-Zweig). | `marketStructureAnalysisLqSweep.test.js`: *"nie touched -> wird gar nicht erst geprüft, bleibt 'low'"*; `marketStructureAnalysisProtectedLow.test.js`: *"ein bereits zu 'LQ-sweep' reklassifizierter Pullback kann trotzdem protected-low werden..."* (Zwischenstand bleibt jetzt `low`, nicht `LQ-sweep`), *"ein protected-low wird zu 'LQ-sweep', sobald es touched ist..."*; `marketStructureAnalysisRealPipeline.test.js` |
+| `toTime` für die Kerzenschluss-Prüfung ist die Zeit der ZULETZT GELADENEN Kerze (`candles[candles.length-1].time`), nicht die pivotTime des gerade ankommenden Pivots selbst — `candles` liegt als vollständige, bis "jetzt" geladene Historie längst vor. **Fix Chat 2026-07-24**: vorher blieb ein längst tatsächlich erfolgter Kerzenschluss unentdeckt, bis zufällig ein NEUER Pivot die Neubewertung anstieß — bei ruhigem Markt (keine neuen Fraktale) blieb ein reales `break-of-structure` so u.U. für Stunden/Tage unsichtbar, obwohl die Kerzendaten dafür längst vorlagen. | `marketStructureAnalysisRealPipeline.test.js`: *"buildMarketStructureState erkennt einen break-of-structure, sobald 1.33806 real unterschlossen wird"* (reproduziert den Live-Bug 1:1 mit echten Kerzen+Settings aus `.debug/metadata.json`) |
+| Neubewertung läuft BIDIREKTIONAL bei jedem Inner-Pivot (auch schon als `LQ-sweep` markierte Pivots) — durch die beiden Fixes oben ist ein "zu früh markiert, korrigiert sich später zurück"-Fall inzwischen die Ausnahme statt die Regel: ein bereits in `candles` sichtbarer Close-drunter wird i.d.R. schon beim ersten Verarbeitungsschritt korrekt erkannt. | `marketStructureAnalysisLqSweep.test.js`: *"ein bereits in candles sichtbarer Close-drunter wird sofort erkannt, auch an einem frühen Zwischenschritt (kein Nachlauf mehr)"* |
 | Ein `protected-low` zählt bei dieser Prüfung mit (kein Sonderfall) — wird getoucht und schließt nie eine Kerze drunter -> wird ebenfalls `LQ-sweep`. | `marketStructureAnalysisProtectedLow.test.js`: *"ein protected-low wird zu 'LQ-sweep', sobald es touched ist, aber nie eine Kerze drunter schließt"* |
+| Bricht dagegen ein `protected-low` durch einen ECHTEN Kerzenschluss drunter, wird es NICHT nur `low`, sondern `break-of-structure` (Chat 2026-07-24: "Break of Structure", eigener Wert seit `range.type.ts` — strukturell schwerwiegender als ein gewöhnlicher Pullback, der bricht). `trend`/`currRange` bleiben dabei komplett unangetastet (bleibt `uptrend`) — reines Warnsignal, KEIN Reset wie bei der Trend-Invalidierung unten. | `marketStructureAnalysisLqSweep.test.js`: *"protected-low MIT echtem Close drunter -> wird 'break-of-structure'..."* |
+| Einmal `break-of-structure` wird NICHT mehr zurückbewertet (fällt aus dem Reklassifizierungs-Filter raus) — anders als `low`/`LQ-sweep`, die bei neuen Kerzendaten weiter pendeln können, ist ein bestätigter Strukturbruch ein permanenter historischer Fakt. | `marketStructureAnalysisLqSweep.test.js`: *"einmal 'break-of-structure' bleibt dauerhaft..."* |
+| `markLqSweeps` läuft bei JEDEM neuen Pivot, Outer (Periode 5) UND Inner (Periode 2) gleichermaßen — ein reiner Periode-5-Pivot kann LQ-sweep/break-of-structure also genauso auslösen wie ein Periode-2-Pivot, nur i.d.R. mit größerer Verzögerung (Chat 2026-07-24, Bug-Report: "allerspätestens mit Bildung des folgenden P5-Fraktals sollte ein BOS stehen" — vorher rief `applyMarketStructurePivot` `markLqSweeps` gar nicht auf). `applyMarketStructurePivot` braucht dafür jetzt ebenfalls ein `candles`-Argument (Default `[]`, siehe PriceChart.vue: `rangesCandles` wird an BEIDE Pfade durchgereicht). | `marketStructureAnalysisLqSweep.test.js`: *"ein reiner Periode-5-Pivot mit echtem Kerzenschluss reklassifiziert ein protected-low zu 'break-of-structure'"* |
 
 ## Darstellung (`renderMarketStructureAnalysis`)
 
 Rein visuell, keine Zustandslogik — kein Test, nur Code-Kommentare in
 `marketStructureAnalysis.ts` ab `renderMarketStructureAnalysis`:
 
-- `currRange.high`/`.low`: immer Pfeil + Linie, gestrichelt solange nur `sweeped-high`/`sweeped-low`.
+- `currRange.high`: immer Pfeil + Linie, gestrichelt solange nur `sweeped-high`.
+- `currRange.low`: immer Linie, gestrichelt solange nur `sweeped-low` ODER sobald irgendwo ein
+  `break-of-structure` existiert (Schwäche-Signal, Chat 2026-07-24). Der grüne Pfeil ("hier long
+  suchen") fällt komplett weg, sobald ein `break-of-structure` existiert — die Linie bleibt.
 - `protected-low`: genau EINE Linie+Label ("1h protected low"), der jeweils aktuelle.
-- `LQ-sweep`: JEDER aktuell so markierte `structurePivot` bekommt eine eigene goldene Linie + Pfeil
-  (im Gegensatz zu protected-low potenziell mehrere gleichzeitig).
+- `LQ-sweep`: JEDER aktuell so markierte `structurePivot` bekommt eine eigene goldene 1px-Linie
+  (im Gegensatz zu protected-low potenziell mehrere gleichzeitig) — der goldene Pfeil nach oben
+  fällt weg, sobald irgendwo ein `break-of-structure` existiert (keine Long-Andeutung mehr, siehe
+  Chat 2026-07-24: "damit ich keine Longs suche").
+- `break-of-structure`: JEDER aktuell so markierte `structurePivot` bekommt eine eigene gestrichelte
+  rote Linie + Label ("Break of Structure"), kein eigener Pfeil (reines Warnsignal).

@@ -1,4 +1,4 @@
-import { LiquidityLinePrimitive } from "./liquidity.js";
+import { LiquidityLinePrimitive, detectLiquidityLevels } from "./liquidity.js";
 import { cssColor } from "./chartColors.js";
 import { businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
 import type { Pivot, PivotHigh, PivotLow, MarketStructureState } from "./range.type";
@@ -62,6 +62,21 @@ function pivotTimeOf(pivot: Pivot): number {
 function isUntouchedAsOf(pivot: Pivot, momentTime: number): boolean {
   if (!pivot.touched) return true;
   return typeof pivot.touched.touchedTime === "number" && pivot.touched.touchedTime > momentTime;
+}
+
+// Bug-Report Philip 2026-07-24 ("wieso steht immer noch kein BOS, obwohl [Kerze X] längst drunter
+// geschlossen hat"): markLqSweeps' toTime war bislang IMMER die pivotTime des GERADE ankommenden
+// Pivots selbst — dabei liegen `candles` (siehe applyMarketStructurePivot/applyInnerMarketStructurePivot)
+// oft schon WEIT über diesen Zeitpunkt hinaus vor (die komplette geladene Historie bis "jetzt"/
+// replayUntil). Ohne einen NEUEN Pivot, der die Auswertung anstößt, blieb ein längst geschehener
+// echter Kerzenschluss unter einem Level so u.U. für Stunden unentdeckt, selbst wenn die Kerzendaten
+// dafür längst vorlagen — reine Chart-Auffrischung (ohne neuen Pivot) holte das nie nach, weil jeder
+// volle Recompute (siehe PriceChart.vue: computeMarketStructureState) den letzten angewendeten Pivot
+// als toTime-Obergrenze wiederholt. Die letzte geladene Kerze ist die verlässlichere Grenze für "was
+// wissen wir bereits" als die pivotTime des zufällig zuletzt gelesenen Pivots.
+function latestKnownTime(candles: Candle[], pivot: Pivot): number {
+  const lastCandleTime = candles.length > 0 ? candles[candles.length - 1].time : -Infinity;
+  return Math.max(pivotTimeOf(pivot), lastCandleTime);
 }
 
 // Prüft, ob ein High-Bruch (übergeordnet ODER eingebettet, siehe applyMarketStructurePivot/
@@ -151,7 +166,15 @@ function tryConfirmUptrend(state: MarketStructureState, breakingPivot: Pivot): M
 // (siehe Chat 2026-07-19, gbp_h1_uptrend_LQ_sweep_long_setup.ts: rangeState1_2 -> rangeState2,
 // "wenn neuer übergeordneter pivot, dann innerStructurePivots CLEAREN"). Gilt für alle drei Fälle
 // unten (Low-Bruch/High-Bruch/Struktur-Pullback), nicht nur für den Trend-Bestätigungsfall.
-export function applyMarketStructurePivot(state: MarketStructureState, pivot: Pivot): MarketStructureState {
+//
+// candles (Chat 2026-07-24, Bug-Report Philip: "allerspätestens mit Bildung des folgenden P5-
+// Fraktals sollte ein BOS stehen" — bis hierhin lief markLqSweeps NUR auf der Periode-2-Seite,
+// ein reiner Periode-5-Pivot konnte LQ-sweep/break-of-structure also nie auslösen, selbst wenn
+// längst ein echter Kerzenschluss vorlag): optional, Default `[]` bedeutet "keine Kerzendaten
+// verfügbar" (closesBelowLevel behauptet dann konservativ KEINEN Sweep, siehe dort) — der
+// Aufrufer (PriceChart.vue: computeMarketStructureState) MUSS echte Kerzen durchreichen, sonst
+// bleibt dieser Pfad wirkungslos wie vorher.
+export function applyMarketStructurePivot(state: MarketStructureState, pivot: Pivot, { candles = [] }: { candles?: Candle[] } = {}): MarketStructureState {
   const { currRange, innerStructurePivots, appliedPivots } = state;
   const nextAppliedPivots = [...appliedPivots, pivot];
   // Ein per applyInnerMarketStructurePivot zu 'protected-low' reklassifizierter eingebetteter Pivot
@@ -159,8 +182,11 @@ export function applyMarketStructurePivot(state: MarketStructureState, pivot: Pi
   // "protected low verschwindet" — jeder übergeordnete Pivot räumt die eingebettete Struktur weg,
   // unabhängig von seinem eigenen Typ). Erst nach structurePivots migrieren, DANN leeren — auf allen
   // drei Zweigen unten, nicht nur beim Bestätigungsfall, weil auch ein simpler Pullback oder ein
-  // Low-Bruch die eingebettete Struktur genauso wegräumt.
-  const structurePivots = [...state.structurePivots, ...innerStructurePivots.filter((p) => p.type === "protected-low")];
+  // Low-Bruch die eingebettete Struktur genauso wegräumt. markLqSweeps läuft danach genau wie auf
+  // der Periode-2-Seite (siehe applyInnerMarketStructurePivot), unabhängig davon, was DIESER Pivot
+  // selbst bricht — ein LQ-sweep/break-of-structure kann durch jede neue Kerze bestätigt werden.
+  const migratedStructurePivots = [...state.structurePivots, ...innerStructurePivots.filter((p) => p.type === "protected-low")];
+  const structurePivots = markLqSweeps(migratedStructurePivots, candles, latestKnownTime(candles, pivot));
 
   if (pivot.type === "low" && pivot.price < currRange.low.price) {
     return {
@@ -237,15 +263,42 @@ function closesBelowLevel(candles: Candle[], levelTime: number, toTime: number, 
 // war falsch: "1.33286 muss zum [Bestätigungsmoment] protected-low sein, UND zum [späteren
 // Replay-Zeitpunkt] ein 1h LQ-Sweep" — ein protected-low, das seither getoucht, aber nie
 // drunter geschlossen wurde, ist genau wie jeder andere Pullback ein bestätigter Liquidity-Grab,
-// keine Ausnahme). Ein ECHTER Close-Bruch degradiert es zurück auf 'low' (wie bei 'LQ-sweep'
-// -> 'low' oben) — NICHT implementiert bleibt weiterhin, was DANACH mit trend/dem nächsten
-// protected-low passieren soll (spiegelbildliche Downtrend-Bestätigung, siehe rangeAnalysis.ts-
-// Historie), dafür gibt es noch kein Beispiel.
+// keine Ausnahme).
+// Ein ECHTER Close-Bruch degradiert einen gewöhnlichen 'low'/'LQ-sweep' zurück auf 'low' (siehe
+// oben) — ein 'protected-low' dagegen wird zu 'break-of-structure' (Chat 2026-07-24: "pivot 1.336
+// fällt unter 1.33806 ohne Chance auf LS"), nicht einfach nur 'low': ein PROTECTED-low sollte per
+// Definition halten, sein echter Bruch ist strukturell schwerwiegender als ein gewöhnlicher
+// Pullback, der bricht — eigenständiges Warnsignal, OHNE trend selbst anzufassen (bleibt
+// 'uptrend', KEIN voller Reset wie bei der eigentlichen Trendumkehr, siehe
+// applyInnerMarketStructurePivot: Bruch der currRange.low-Grenze selbst). Einmal 'break-of-
+// structure' wird NICHT mehr zurückbewertet (fällt aus dem Typ-Filter oben raus, sobald gesetzt)
+// — anders als 'LQ-sweep'/'low', die als Pendel zwischen unklaren Zwischenschritten gedacht sind,
+// ist ein bestätigter Strukturbruch ein permanenter historischer Fakt.
+// NICHT implementiert bleibt weiterhin die eigentliche Downtrend-BESTÄTIGUNG (ein "protected-high"
+// als Pendant zum protected-low, siehe marketStructureAnalysis.rules.md) — 'break-of-structure'
+// ist nur ein Warnsignal, kein Trendwechsel.
+// Touch-Gate über isUntouchedAsOf statt rohem `!p.touched` (Fix Chat 2026-07-24, gefunden über den
+// echten .debug/metadata.json-Snapshot vom 2026-07-23, siehe test/marketStructureAnalysisRealPipeline
+// .test.js): `touched` ist wie überall in dieser Datei der GLOBALE Endstand (irgendwann bis zum Ende
+// des geladenen Kerzenfensters berührt), nicht "bereits berührt zum jetzigen Verarbeitungsmoment"
+// (toTime). Mit dem rohen `!p.touched` degradierte ein frisch bestätigtes protected-low (siehe
+// tryConfirmUptrend) OFT schon beim nächsten Verarbeitungsschritt zu 'LQ-sweep' — Monate bevor der
+// eigentliche Touch überhaupt chronologisch stattfand —, einfach weil dieser Touch irgendwann später
+// im Fenster als Fakt feststeht. Einmal so fälschlich zu 'LQ-sweep' degradiert, konnte der spätere
+// ECHTE Close-drunter (markLqSweeps' 'protected-low' -> 'break-of-structure'-Zweig) nie mehr greifen
+// — er sah nur noch 'LQ-sweep' vor und landete im 'low'-Zweig. Reale Auswirkung: bei GBPUSD H1
+// (13.07.-23.07.2026) wurde 1.33806 direkt bei seiner eigenen protected-low-Bestätigung
+// (15.07., 20:00) sofort wieder zu 'LQ-sweep' degradiert, obwohl der tatsächliche Touch erst am
+// 21.07., 15:00 lag — der spätere echte Kerzenschluss darunter erzeugte dadurch nie einen
+// break-of-structure.
 function markLqSweeps(structurePivots: Pivot[], candles: Candle[], toTime: number): Pivot[] {
   return structurePivots.map((p) => {
-    if ((p.type !== "low" && p.type !== "LQ-sweep" && p.type !== "protected-low") || !p.touched) return p;
+    if ((p.type !== "low" && p.type !== "LQ-sweep" && p.type !== "protected-low") || isUntouchedAsOf(p, toTime)) return p;
     const closedBelow = closesBelowLevel(candles, pivotTimeOf(p), toTime, p.price);
-    if (closedBelow) return p.type === "low" ? p : { ...p, type: "low" as const };
+    if (closedBelow) {
+      if (p.type === "protected-low") return { ...p, type: "break-of-structure" as const };
+      return p.type === "low" ? p : { ...p, type: "low" as const };
+    }
     return p.type === "LQ-sweep" ? p : { ...p, type: "LQ-sweep" as const };
   });
 }
@@ -285,7 +338,7 @@ export function applyInnerMarketStructurePivot(
   pivot: Pivot,
   { candles = [] }: { candles?: Candle[] } = {},
 ): MarketStructureState {
-  const sweepChecked = { ...state, structurePivots: markLqSweeps(state.structurePivots, candles, pivotTimeOf(pivot)) };
+  const sweepChecked = { ...state, structurePivots: markLqSweeps(state.structurePivots, candles, latestKnownTime(candles, pivot)) };
   const { currRange, innerStructurePivots, trend } = sweepChecked;
 
   if (pivot.type === "high" && pivot.price > currRange.high.price) {
@@ -354,6 +407,64 @@ export function applyInnerMarketStructurePivot(
   }
 
   return { ...sweepChecked, innerStructurePivots: [...innerStructurePivots, pivot] };
+}
+
+// --- Pipeline (Kerzen -> Pivots -> State) --------------------------------------------------------
+// Extrahiert aus PriceChart.vue (computeRangesPivotsFor/computeMarketStructureState, Chat 2026-07-24:
+// "wie kann es sein, dass Tests grün laufen aber der Algo trotzdem nicht das macht, was die Tests
+// eigentlich sicherstellen sollen?") — vorher lebte diese Logik NUR als lokale Funktion im
+// Vue-Setup und war damit für Tests nicht direkt aufrufbar; jeder Test lief zwangsläufig gegen eine
+// von Hand nachgebaute Kopie der Pipeline statt gegen exakt den Code, den die App tatsächlich
+// ausführt. Ab jetzt einzige Quelle für beide Seiten (siehe PriceChart.vue: computeRangesPivotsFor/
+// computeMarketStructureState delegieren hierher).
+export function computeRangesPivots(candles: Candle[], period: number, cutoff: number, formatTime: (t: number) => string = (t) => String(t)): Pivot[] {
+  const { highs, lows } = detectLiquidityLevels(candles, period);
+  return [...highs, ...lows]
+    .filter((p: any) => p.pivotTime >= cutoff)
+    .sort((a: any, b: any) => a.pivotTime - b.pivotTime)
+    .map(
+      (p: any): Pivot => ({
+        type: p.dir === 1 ? "high" : "low",
+        price: p.price,
+        pivotTime: p.pivotTime,
+        pivotAt: formatTime(p.pivotTime),
+        touched: p.touched ? { price: p.price, touchedAt: formatTime(p.touchedTime), touchedTime: p.touchedTime } : false,
+      }),
+    );
+}
+
+// pivotsOuter/pivotsInner müssen bereits wie computeRangesPivots' Output aussehen (sortiert nach
+// pivotTime, type 'high'/'low'). Erster gelesener 'low'/'high' bilden die Start-Range (siehe
+// initMarketStructureState), der Rest läuft gemischt nach confirmationTime über
+// applyMarketStructurePivot/applyInnerMarketStructurePivot (siehe dortige Kommentare).
+export function buildMarketStructureState(
+  pivotsOuter: Pivot[] | null,
+  pivotsInner: Pivot[] | null,
+  periodOuter: number,
+  periodInner: number,
+  candles: Candle[],
+): MarketStructureState | null {
+  if (!pivotsOuter || pivotsOuter.length < 2) return null;
+  const originLow = pivotsOuter.find((p) => p.type === "low");
+  const originHigh = pivotsOuter.find((p) => p.type === "high");
+  if (!originLow || !originHigh) return null;
+
+  const [first, second] = originLow.pivotTime! <= originHigh.pivotTime! ? [originLow, originHigh] : [originHigh, originLow];
+  let state = initMarketStructureState(first, second);
+
+  const originCutoff = Math.max(first.pivotTime!, second.pivotTime!);
+  const outerRest = pivotsOuter
+    .filter((p) => p !== originLow && p !== originHigh)
+    .map((pivot) => ({ pivot, outer: true, at: pivotTimeOf(pivot) + periodOuter * 3600 }));
+  const innerRest = (pivotsInner ?? [])
+    .filter((p) => pivotTimeOf(p) > originCutoff)
+    .map((pivot) => ({ pivot, outer: false, at: pivotTimeOf(pivot) + periodInner * 3600 }));
+
+  const merged = [...outerRest, ...innerRest].sort((a, b) => a.at - b.at);
+  for (const entry of merged) {
+    state = entry.outer ? applyMarketStructurePivot(state, entry.pivot, { candles }) : applyInnerMarketStructurePivot(state, entry.pivot, { candles });
+  }
+  return state;
 }
 
 // --- Zeichnung ----------------------------------------------------------------------------------
@@ -457,6 +568,10 @@ export class ArrowPrimitive {
 }
 
 const LINE_WIDTH = 2;
+// Dünner als die übrigen Linien (Chat 2026-07-24: "Linienstärke des 1h LQ Sweep auf 1px") — seit
+// ein Break of Structure existiert, ist ein LQ-Sweep nur noch informativ (keine Long-Chance mehr,
+// siehe hasBreakOfStructure unten), soll also optisch zurücktreten.
+const LQ_SWEEP_LINE_WIDTH = 1;
 
 function toLevel(pivot: Pivot, candles: Candle[]) {
   // Vereinfachung: Linie reicht immer bis zur letzten geladenen Kerze (nicht bis touchedAt-Zeit) —
@@ -481,6 +596,12 @@ function ageSuffix(pivotTime: number | undefined, nowSec: number | undefined): s
 // Pfeil+Linie an currRange.high, grüner Pfeil+Linie an currRange.low, bei bestätigtem Trend
 // zusätzlich eine beschriftete Linie am protected-low (siehe Chat). state=null (oder zu wenig
 // Kerzen) -> nur aufräumen, nichts zeichnen.
+//
+// Sobald ein Break of Structure existiert (Chat 2026-07-24: "damit ich nicht weiter nach Longs
+// schaue"), werden alle bullischen "hier gibt's noch eine Long-Chance"-Pfeile unterdrückt — der
+// grüne Pfeil an range.low UND jeder goldene LQ-Sweep-Pfeil —, die zugehörigen Linien/Labels
+// bleiben aber stehen (weiterhin informativ, welches Level das war). range.low wird zusätzlich
+// gestrichelt (signalisiert die Schwäche), unabhängig vom eigenen sweeped-low-Zustand.
 export function renderMarketStructureAnalysis(
   series: any,
   state: MarketStructureState | null,
@@ -492,13 +613,17 @@ export function renderMarketStructureAnalysis(
   existingPrimitives.length = 0;
   if (!state || candles.length === 0) return;
 
+  const hasBreakOfStructure = state.structurePivots.some((p) => p.type === "break-of-structure");
+
   const highColor = cssColor("rangeHigh");
   const lowColor = cssColor("rangeLow");
   // Gestrichelt statt durchgezogen, solange range.high/low nur "sweeped" ist (Docht durchbrochen,
   // aber noch keine Kerze drüber/drunter geschlossen -> kein bestätigter Bruch, siehe Chat
-  // 2026-07-19). Dreieck (ArrowPrimitive) bleibt unverändert — nur die Linie ändert sich.
+  // 2026-07-19) — ODER sobald irgendwo ein Break of Structure steht (Schwäche-Signal, unabhängig
+  // vom sweeped-low-Zustand von range.low selbst). Dreieck (ArrowPrimitive) bleibt unverändert —
+  // nur die Linie ändert sich.
   const highDashed = state.currRange.high.type === "sweeped-high";
-  const lowDashed = state.currRange.low.type === "sweeped-low";
+  const lowDashed = state.currRange.low.type === "sweeped-low" || hasBreakOfStructure;
   const highLine = new LiquidityLinePrimitive(
     toLevel(state.currRange.high, candles),
     { color: highColor, lineWidth: LINE_WIDTH, dashed: highDashed },
@@ -509,10 +634,15 @@ export function renderMarketStructureAnalysis(
     { color: lowColor, lineWidth: LINE_WIDTH, dashed: lowDashed },
     candles,
   );
-  // rot: unter der Linie, zeigt nach oben; grün: über der Linie, zeigt nach unten (siehe Chat)
+  // rot: unter der Linie, zeigt nach oben; grün: über der Linie, zeigt nach unten (siehe Chat).
+  // Der grüne range.low-Pfeil fällt bei einem Break of Structure weg (siehe oben) — die Linie
+  // bleibt trotzdem stehen, nur ohne die "hier long suchen"-Andeutung.
   const highArrow = new ArrowPrimitive(state.currRange.high, { color: highColor, direction: "up" }, candles);
-  const lowArrow = new ArrowPrimitive(state.currRange.low, { color: lowColor, direction: "down" }, candles);
-  for (const primitive of [highLine, lowLine, highArrow, lowArrow]) {
+  const primitives = [highLine, lowLine, highArrow];
+  if (!hasBreakOfStructure) {
+    primitives.push(new ArrowPrimitive(state.currRange.low, { color: lowColor, direction: "down" }, candles));
+  }
+  for (const primitive of primitives) {
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }
@@ -531,21 +661,40 @@ export function renderMarketStructureAnalysis(
   // Goldene Linie + Pfeil je LQ-Sweep (siehe Chat 2026-07-19: "GOLDENE Linie ... mit dem label '1h
   // LQ-Sweep'", und Chat 2026-07-20: "noch mit nem goldenen Pfeil nach oben") — anders als
   // protected-low (immer nur der jeweils jüngste) potenziell mehrere gleichzeitig, deshalb hier
-  // eine Linie+Pfeil PRO markiertem structurePivot statt nur die erste. Pfeil zeigt IMMER nach
-  // oben (direction: "down" löst laut ArrowRenderer den nach-oben-zeigenden Zweig aus, siehe
+  // eine Linie (+ ggf. Pfeil) PRO markiertem structurePivot statt nur die erste. Pfeil zeigt IMMER
+  // nach oben (direction: "down" löst laut ArrowRenderer den nach-oben-zeigenden Zweig aus, siehe
   // dortiger Kommentar) — ein LQ-Sweep ist per Definition bullisch (gesweepter Low, der hält).
-  // Downtrend (Pfeil nach unten) noch nicht implementiert, siehe Trend-Logik oben.
+  // Downtrend (Pfeil nach unten) noch nicht implementiert, siehe Trend-Logik oben. Seit Chat
+  // 2026-07-24 nur noch 1px breit (LQ_SWEEP_LINE_WIDTH) und OHNE Pfeil, sobald ein Break of
+  // Structure existiert — der Long-Gedanke dahinter gilt dann nicht mehr, die Linie bleibt aber
+  // als reine Information stehen.
   for (const lqSweep of state.structurePivots.filter((p) => p.type === "LQ-sweep")) {
     const lqColor = cssColor("rangeLqSweep");
     const line = new LiquidityLinePrimitive(
       toLevel(lqSweep, candles),
-      { color: lqColor, lineWidth: LINE_WIDTH, label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec)}`, labelSide: "end" },
+      { color: lqColor, lineWidth: LQ_SWEEP_LINE_WIDTH, label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec)}`, labelSide: "end" },
       candles,
     );
-    const arrow = new ArrowPrimitive(lqSweep, { color: lqColor, direction: "down" }, candles);
-    for (const primitive of [line, arrow]) {
-      series.attachPrimitive(primitive);
-      existingPrimitives.push(primitive);
+    series.attachPrimitive(line);
+    existingPrimitives.push(line);
+    if (!hasBreakOfStructure) {
+      const arrow = new ArrowPrimitive(lqSweep, { color: lqColor, direction: "down" }, candles);
+      series.attachPrimitive(arrow);
+      existingPrimitives.push(arrow);
     }
+  }
+
+  // Gestrichelte rote Linie + Beschriftung je Break of Structure (Chat 2026-07-24) — analog zu
+  // LQ-Sweep potenziell mehrere gleichzeitig (jedes gebrochene protected-low bekommt seine
+  // eigene), kein eigener Pfeil (reines Warnsignal, keine Handelsrichtung wie bei LQ-Sweep).
+  for (const bos of state.structurePivots.filter((p) => p.type === "break-of-structure")) {
+    const bosColor = cssColor("rangeBreakOfStructure");
+    const line = new LiquidityLinePrimitive(
+      toLevel(bos, candles),
+      { color: bosColor, lineWidth: LINE_WIDTH, dashed: true, label: `Break of Structure${ageSuffix(bos.pivotTime, nowSec)}`, labelSide: "end" },
+      candles,
+    );
+    series.attachPrimitive(line);
+    existingPrimitives.push(line);
   }
 }
