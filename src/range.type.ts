@@ -101,5 +101,13 @@ export type MarketStructureState = {
   // einer Promotion (siehe applyInnerMarketStructurePivot: Invalidierung mit bereits bestätigtem
   // nestedTrend), bleibt sonst unverändert durchgereicht.
   closedRanges: ClosedRange[];
+  // Der Pivot, der die ALLERERSTE Bestätigung dieser Range ausgelöst hat (gesetzt in
+  // tryConfirmTrend, EINMALIG — bleibt danach eingefroren, auch wenn currRange.high/low bei
+  // weiteren Bestätigungen immer weiterwandert). null, solange noch nicht bestätigt.
+  // Existiert speziell für die CHoCH-Darstellung des Nested-Trackers (Chat 2026-07-25, Bug-Report
+  // Philip: "CHOCH linie geht noch zu weit" — currRange.low ist dafür der FALSCHE Anker, weil er
+  // bei jedem weiteren Bruch, solange der Nested-Trend noch nicht promoted ist, weiterwandert;
+  // firstConfirmedAt bleibt exakt am ursprünglichen Bestätigungsmoment stehen).
+  firstConfirmedAt: Pivot | null;
 };
 

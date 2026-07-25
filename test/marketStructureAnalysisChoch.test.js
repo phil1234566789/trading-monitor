@@ -64,6 +64,53 @@ describe("marketStructureAnalysis: Nested-Trend/CHoCH-Erkennung (advanceNestedTr
     // Anker fürs CHoCH-Label (Rendering) ist die URSPRÜNGLICHE Nested-Origin-Low (pivotB), NICHT
     // der brechende Pivot (pivotD) — Bug-Report Philip 2026-07-25: "IST 1.34601, SOLL 1.35206".
     expect(state.nestedTrend.appliedPivots[1]).toEqual({ ...pivotB, type: "low" });
+    // firstConfirmedAt ist der Anker fürs Linien-ENDE der CHoCH-Darstellung, eingefroren auf den
+    // Bestätigungsmoment selbst (pivotD) — siehe nächster Test für den eigentlichen Bug.
+    expect(state.nestedTrend.firstConfirmedAt).toEqual({ ...pivotD, type: "low" });
+  });
+
+  it("firstConfirmedAt bleibt eingefroren, auch wenn der noch nicht promotete Nested-Trend über pivotD hinaus weiterwandert", () => {
+    let state = confirmedUptrendState();
+    const pivotB = { type: "low", price: 1.05, pivotAt: "pivotB", pivotTime: 50, touched: false };
+    const pivotC = { type: "high", price: 1.15, pivotAt: "pivotC", pivotTime: 60, touched: false };
+    const pivotD = { type: "low", price: 1.02, pivotAt: "pivotD", pivotTime: 70, touched: false };
+    state = applyMarketStructurePivot(state, pivotB);
+    state = applyMarketStructurePivot(state, pivotC);
+    state = applyMarketStructurePivot(state, pivotD);
+    expect(state.nestedTrend.trend).toBe("downtrend");
+
+    // Ein weiterer Pullback + ein NEUER, tieferer Bruch (analog: der Gegentrend läuft weiter,
+    // solange die eigentliche Uptrend-Invalidierung noch nicht real passiert ist) — currRange.low
+    // rückt vor, firstConfirmedAt darf sich NICHT mitverschieben (Bug-Report Philip 2026-07-25:
+    // "CHOCH Linie geht noch zu weit" — die Linie wuchs vorher mit currRange.low mit).
+    const pivotE = { type: "high", price: 1.08, pivotAt: "pivotE", pivotTime: 80, touched: false };
+    const pivotF = { type: "low", price: 0.98, pivotAt: "pivotF", pivotTime: 90, touched: false };
+    state = applyMarketStructurePivot(state, pivotE);
+    state = applyMarketStructurePivot(state, pivotF);
+
+    expect(state.nestedTrend.currRange.low).toEqual({ ...pivotF, type: "low" }); // weitergerückt
+    expect(state.nestedTrend.firstConfirmedAt).toEqual({ ...pivotD, type: "low" }); // unverändert
+  });
+
+  it("ein bereits bestätigter Nested-Trend wird verworfen, sobald der Haupttrend danach noch ein ECHTES neues Hoch bricht", () => {
+    let state = confirmedUptrendState();
+    const pivotB = { type: "low", price: 1.05, pivotAt: "pivotB", pivotTime: 50, touched: false };
+    const pivotC = { type: "high", price: 1.15, pivotAt: "pivotC", pivotTime: 60, touched: false };
+    const pivotD = { type: "low", price: 1.02, pivotAt: "pivotD", pivotTime: 70, touched: false };
+    state = applyMarketStructurePivot(state, pivotB);
+    state = applyMarketStructurePivot(state, pivotC);
+    state = applyMarketStructurePivot(state, pivotD);
+    expect(state.nestedTrend.trend).toBe("downtrend"); // CHoCH bestätigt
+
+    // Widerspricht der Lower-High-Prämisse des CHoCH: der Haupttrend bricht NACH der Bestätigung
+    // noch ein neues, höheres Hoch (analog zu einer Fortsetzung des Uptrends statt der erwarteten
+    // Umkehr) — Bug-Report Philip 2026-07-25: "Choch Linie immernoch zu weit", weil ein längst
+    // überholter, bereits bestätigter Nested-Tracker vorher NIE wieder verworfen wurde.
+    const newHigh = { type: "high", price: 1.3, pivotAt: "newHigh", pivotTime: 80, touched: false };
+    state = applyMarketStructurePivot(state, newHigh);
+
+    expect(state.currRange.high).toEqual({ ...newHigh, type: "high" });
+    expect(state.nestedTrend).toBeNull(); // der überholte CHoCH ist weg, wartet auf einen neuen Pullback-Low
   });
 
   it("Reseed: eine weitere reguläre HH VOR der CHoCH-Bestätigung verwirft den bisherigen Nested-Tracker", () => {

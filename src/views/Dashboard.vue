@@ -34,6 +34,12 @@ const currentBar = useSessionStorageRef("currentBar", "1h");
 // (dort default auch aus). Ein einzelner Schalter statt pro-Timeframe (4H/1H getrennt wie
 // dort), weil hier ohnehin nur "schon getestet ja/nein" existiert, kein Nearest-3-Ranking.
 const showHistoricalObs = useLocalStorageRef("showHistoricalObs", false);
+// Genereller OBs-An/Aus-Schalter (Chat 2026-07-25: "nicht nur historische Obs an- und ausschalten
+// ... sondern auch OBs") — vorher gab es nur showHistoricalObs, dessen Button aber irreführend
+// schlicht "OBs" hieß, obwohl er nur die bereits angetesteten Zonen aus-/einblendete. Jetzt analog
+// zu showLiquidity/showSweptLiquidity: "OBs" schaltet ALLE Order-Blocks komplett aus, "Historische
+// OBs" (Untermenü, wie Liquidity-Sweeps bei Liquidität) bleibt der Filter für bereits angetestete.
+const showOrderBlocks = useLocalStorageRef("showOrderBlocks", true);
 const showLiquidity = useLocalStorageRef("showLiquidity", true);
 // Debug-Hilfsmittel für die Trend-Indikator-Entwicklung: Preise an den Pivot-Linien
 // einblenden und die aktuell ausgeblendeten (bereits gesweepten) Liquiditäts-Level
@@ -187,6 +193,7 @@ async function stepReplayForward() {
 // unter "Structure" als Dropdown. Reiner UI-Zustand, bewusst NICHT in localStorage (anders als die
 // Toggles selbst) — welches Dropdown gerade offen ist, ist keine Einstellung, die überdauern muss.
 const liquidityMenuOpen = ref(false);
+const obsMenuOpen = ref(false);
 const rangesMenuOpen = ref(false);
 const tradeSetupsMenuOpen = ref(false);
 const debugMenuOpen = ref(false);
@@ -199,6 +206,7 @@ const indikatorenMenuOpen = ref(false);
 function closeMenusOutside(e) {
   if (!e.target.closest?.(".toggle-group")) {
     liquidityMenuOpen.value = false;
+    obsMenuOpen.value = false;
     rangesMenuOpen.value = false;
     tradeSetupsMenuOpen.value = false;
     debugMenuOpen.value = false;
@@ -294,9 +302,24 @@ watch(currentSymbol, () => {
 
           <div class="toggle-dropdown-divider"></div>
 
-          <button :class="{ active: showHistoricalObs }" @click="showHistoricalObs = !showHistoricalObs">
-            OBs
-          </button>
+          <div class="toggle-group">
+            <button :class="{ active: showOrderBlocks }" @click="showOrderBlocks = !showOrderBlocks">
+              OBs
+            </button>
+            <button
+              class="toggle-caret"
+              :class="{ open: obsMenuOpen }"
+              title="Untermenü"
+              @click="obsMenuOpen = !obsMenuOpen"
+            >
+              ▾
+            </button>
+            <div v-if="obsMenuOpen" class="toggle-dropdown">
+              <button :class="{ active: showHistoricalObs }" @click="showHistoricalObs = !showHistoricalObs">
+                Historische OBs
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -510,6 +533,7 @@ watch(currentSymbol, () => {
     :current-bar="currentBar"
     :trades="trades"
     :poi-zones="poiZones"
+    :show-order-blocks="showOrderBlocks"
     :show-historical-obs="showHistoricalObs"
     :show-liquidity="showLiquidity"
     :show-swept-liquidity="showSweptLiquidity"

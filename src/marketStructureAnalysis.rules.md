@@ -80,9 +80,10 @@ Live beobachtet (GBPUSD 1h, siehe `test/tdd_mit_claude/ranges/gbp_h1_uptrend_upt
 | Regel | Test |
 |---|---|
 | Läuft NUR über Outer-(Periode-5-)Pivots, keine Periode-2-Verfeinerung (bewusst nicht gebaut, möglicher späterer Ausbau) — und nur, solange der Haupttrend bereits `'uptrend'` ist (ohne bestätigten Haupttrend gibt es nichts, wovon sich ein Gegentrend abheben könnte). | `marketStructureAnalysisChoch.test.js` (gesamte Datei) |
-| Solange der Nested-Tracker noch nicht bestätigt ist, zählt immer nur die AKTUELLE `currRange.high` als gültiger Ursprung — ein neues HH verwirft einen zuvor getrackten, noch unbestätigten Gegentrend-Kandidaten komplett (reseeded auf `null`, wartet auf den nächsten Pullback-Low als neuen Pairing-Punkt). | `marketStructureAnalysisChoch.test.js`: *"Reseed: eine weitere reguläre HH VOR der CHoCH-Bestätigung verwirft den bisherigen Nested-Tracker"* |
+| Die AKTUELLE `currRange.high` ist IMMER der einzig gültige Ursprung — ein neues, ECHTES HH verwirft einen zuvor getrackten Gegentrend-Kandidaten komplett (reseeded auf `null`, wartet auf den nächsten Pullback-Low als neuen Pairing-Punkt). Gilt seit Chat 2026-07-25 explizit AUCH für einen bereits bestätigten (`trend:'downtrend'`) Nested-Tracker — bricht der Haupttrend NACH der CHoCH-Bestätigung noch ein weiteres neues Hoch (widerspricht der Lower-High-Prämisse), war der CHoCH überholt und wird verworfen, statt für den kompletten Rest der Uptrend-Laufzeit stehen zu bleiben (Bug-Report Philip: "Choch Linie immernoch zu weit"). | `marketStructureAnalysisChoch.test.js`: *"Reseed: eine weitere reguläre HH VOR der CHoCH-Bestätigung verwirft den bisherigen Nested-Tracker"*, *"ein bereits bestätigter Nested-Trend wird verworfen, sobald der Haupttrend danach noch ein ECHTES neues Hoch bricht"* |
 | Bestätigung läuft exakt wie beim Haupttrend gespiegelt: ein Bruch von `nestedTrend.currRange.low` (dem ersten Pullback-Low nach dem Nested-Origin-High) durch einen weiteren Low-Pivot bestätigt, sofern ein qualifizierender Pullback-High seit diesem Low existiert -> `protected-high`, `nestedTrend.trend` wird `'downtrend'`. Das ist exakt der CHoCH-Moment. | `marketStructureAnalysisChoch.test.js`: *"CHoCH-Bestätigung: Bruch von pivotB löst tryConfirmTrend(direction='down') aus..."* |
-| Einmal bestätigt, wird der Nested-Tracker NICHT mehr reseeded, läuft aber über weitere Outer-Pivots normal weiter (`protected-high` kann noch weiterrücken) — er ist ab hier bereit für die Promotion (siehe oben). | — (Verhalten aus advanceNestedTrend, kein isolierter Test über die Bestätigung hinaus) |
+| Solange der Ursprung (`currRange.high`) unverändert bleibt, wird ein bereits bestätigter Nested-Tracker NICHT reseeded, läuft aber über weitere Outer-Pivots normal weiter (`protected-high` kann noch weiterrücken, `currRange.low` kann weiter Richtung Promotion wandern) — er ist ab hier bereit für die Promotion (siehe oben). | `marketStructureAnalysisChoch.test.js`: *"firstConfirmedAt bleibt eingefroren, auch wenn der noch nicht promotete Nested-Trend über pivotD hinaus weiterwandert"* |
+| `firstConfirmedAt` (auf `MarketStructureState`, von `tryConfirmTrend` EINMALIG gesetzt, sobald `trend` von `'unknown'` auf `'uptrend'`/`'downtrend'` kippt) friert exakt den Pivot ein, der die ALLERERSTE Bestätigung ausgelöst hat — bleibt unverändert, auch wenn `currRange` bei jeder weiteren Bestätigung normal weiterwandert. Existiert speziell, weil `currRange.low` für die CHoCH-Darstellung der FALSCHE Anker ist (Bug-Report Philip 2026-07-25: "CHOCH Linie geht noch zu weit" — sie wuchs vorher bei jedem weiteren Bruch mit). | `marketStructureAnalysisChoch.test.js`: *"firstConfirmedAt bleibt eingefroren..."* |
 | Der Haupttrend selbst bleibt vom CHoCH komplett unberührt (reines Vorlauf-Signal, kein Reset) — erst die spätere ECHTE Invalidierung (siehe oben) verwertet ihn per Promotion. | `marketStructureAnalysisChoch.test.js`: *"CHoCH-Bestätigung..."* (`state.trend` bleibt `'uptrend'`) |
 | Gespiegelte Richtung (ein bullischer CHoCH innerhalb eines bereits bestätigten Downtrends) ist NICHT verdrahtet — `tryConfirmTrend`/`applyMarketStructurePivot`/`markLqSweeps` sind zwar durch den `direction`-Parameter dafür bereits generisch genug, aber `advanceNestedTrend` selbst prüft aktuell nur `state.trend === 'uptrend'`. Bewusst offen gelassen (Chat 2026-07-25), analog zum bisherigen Muster in dieser Datei. | — (kein Test, kein Code) |
 
@@ -132,9 +133,24 @@ Rein visuell, keine Zustandslogik — kein Test, nur Code-Kommentare in
   'downtrend'` (bestätigt, aber noch nicht promoted) ZWEI Elemente — (1) dieselbe rote
   Verbindungslinie über `nestedTrend.currRange.low` -> `nestedTrend.currRange.high` (Bug-Report
   Philip: "eine rote Verbindungslinie von 1.35583 bis 1.34601"), UND (2) ein Linie+Label ("CHoCH")
-  an der URSPRÜNGLICHEN Nested-Origin-Low (`nestedTrend.appliedPivots[1]`, NICHT
+  von der URSPRÜNGLICHEN Nested-Origin-Low (`nestedTrend.appliedPivots[1]`, NICHT
   `nestedTrend.currRange.low` — das ist nach der Bestätigung der brechende Pivot, nicht die
-  gebrochene Ursprungsstruktur; Bug-Report Philip: "IST 1.34601, SOLL 1.35206"), eigene Farbe
-  (`rangeChoch`). Reiner Vorlauf-Hinweis — nach der Promotion ist `nestedTrend` wieder `null`, dann
-  übernimmt die reguläre `currRange`-Darstellung (inkl. der Live-Verbindungslinie oben) den neuen
-  (jetzt primären) Trend.
+  gebrochene Ursprungsstruktur; Bug-Report Philip: "IST 1.34601, SOLL 1.35206") BIS ZU der ERSTEN
+  Kerze (aus den angezeigten, meist feineren Candles — z.B. M5 bei H1-Pivots), die tatsächlich
+  unter diesem Level SCHLIESST (`firstCloseBelow`). Kurzzeitig auf reine Docht-Berührung
+  umgestellt gewesen (Chat: "das reine Zeichnen ist doch nur bis Kerzenberührung, da reicht sogar
+  ein Docht"), dann aber zurückgebaut (Bug-Report Philip: "entsteht der choch pivot im
+  outer-pivot bereich und direkt paar minuten später berührt ein innerpivot den choch schon") —
+  der H1-Periode-5-Ursprungspivot sitzt auf grober Stundenrasterung, sein `pivotTime` markiert
+  nicht zwingend exakt den echten M5-Extrempunkt; ein Docht-Check direkt danach greift durch
+  normales Kerzenrauschen fast immer sofort. Ein echter Kerzenschluss ist robust genug dagegen —
+  dieselbe Docht-vs-Bruch-Unterscheidung wie bei der Erkennung selbst (`closesBelowLevel`), nur für
+  die Zeichnung statt für die LQ-Sweep/Strukturbruch-Klassifizierung. Weder
+  `nestedTrend.firstConfirmedAt` (der H1-Periode-5-Fraktal-Pivot selbst, Stunden NACH dem
+  eigentlichen Kerzenschluss bestätigt — nur noch Fallback, falls keine Kerze tatsächlich drunter
+  schließt) noch `toLevel`s "bis zur letzten geladenen Kerze" noch `currRange.low` (wandert weiter,
+  solange nicht promoted) sind der richtige Endpunkt — alle drei ließen die Linie in früheren
+  Anläufen zu weit wachsen (Bug-Reports Philip: "CHOCH Linie geht noch zu weit", "Linie sollte
+  irgendwo in der MMM am 16.07. 10:30-13:00 enden"). Eigene Farbe (`rangeChoch`). Reiner
+  Vorlauf-Hinweis — nach der Promotion ist `nestedTrend` wieder `null`, dann übernimmt die reguläre
+  `currRange`-Darstellung (inkl. der Live-Verbindungslinie oben) den neuen (jetzt primären) Trend.

@@ -252,15 +252,17 @@ class SessionBandRenderer {
 
       if (this._options.label) {
         ctx.font = `${Math.round(10 * scope.verticalPixelRatio)}px sans-serif`;
-        ctx.textAlign = "left";
         ctx.fillStyle = this._options.labelColor;
         if (hasHighLow) {
-          // Bug-Report Philip 2026-07-25: bei einer High/Low-Box (schmaler als die volle
-          // Pane-Höhe) saß das Label bisher innen am oberen Rand und überlappte dadurch leicht
-          // die Box/das Session-High selbst -> stattdessen ÜBER der Box.
+          // Bug-Report Philip 2026-07-25 (zwei Runden): bei einer High/Low-Box (schmaler als die
+          // volle Pane-Höhe) saß das Label zuerst innen am oberen Rand (überlappte die Box/das
+          // Session-High) -> über die Box gehoben; dann noch immer linksbündig am Rand statt
+          // "mittig über der Box" -> jetzt horizontal zentriert über der Box-Breite.
+          ctx.textAlign = "center";
           ctx.textBaseline = "bottom";
-          ctx.fillText(this._options.label, left + 4 * scope.horizontalPixelRatio, top - 2 * scope.verticalPixelRatio);
+          ctx.fillText(this._options.label, left + width / 2, top - 2 * scope.verticalPixelRatio);
         } else {
+          ctx.textAlign = "left";
           ctx.textBaseline = "top";
           ctx.fillText(this._options.label, left + 4 * scope.horizontalPixelRatio, top + 4 * scope.verticalPixelRatio);
         }

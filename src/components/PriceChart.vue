@@ -48,6 +48,7 @@ const props = defineProps({
   currentBar: { type: String, required: true },
   trades: { type: Array, default: () => [] },
   poiZones: { type: Array, default: () => [] },
+  showOrderBlocks: { type: Boolean, default: true },
   showHistoricalObs: { type: Boolean, default: false },
   showLiquidity: { type: Boolean, default: true },
   showSweptLiquidity: { type: Boolean, default: false },
@@ -593,7 +594,10 @@ function refreshPoiZonesInternal() {
     // Zonen auftauchen, die "in der Zukunft" (relativ zu X) erst entdeckt wurden.
     zones = props.replayUntil == null ? props.poiZones : props.poiZones.filter((z) => z.startTime <= props.replayUntil);
   }
-  const visibleZones = filterHistorical(zones);
+  // "OBs"-Toggle (Chat 2026-07-25: "nicht nur historische Obs an- und ausschalten ... sondern auch
+  // OBs") — komplett unabhängig von showHistoricalObs, das nur FILTERT, welche der ANGEZEIGTEN
+  // Zonen berücksichtigt werden, nicht ob überhaupt welche angezeigt werden.
+  const visibleZones = props.showOrderBlocks ? filterHistorical(zones) : [];
   renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles);
   poiZonesMetadata.value = visibleZones;
 }
@@ -1240,9 +1244,11 @@ onMounted(() => {
       background: { color: "#131722" },
       textColor: "#d1d4dc",
     },
+    // Chat 2026-07-25: "brauch ich nicht bitte weg damit" — Raster (Stundenlinien X-Achse,
+    // Preislinien Y-Achse) komplett aus, war rein optisch und wurde als störend empfunden.
     grid: {
-      vertLines: { color: "#1e222d" },
-      horzLines: { color: "#1e222d" },
+      vertLines: { visible: false },
+      horzLines: { visible: false },
     },
     timeScale: {
       timeVisible: true,
@@ -1290,6 +1296,12 @@ onMounted(() => {
       lineWidth: nativeLineWidth("emaFast"),
       priceLineVisible: false,
       lastValueVisible: false,
+      // Chat 2026-07-25: "wenn der EMA an ist, dann fokusiert die Maus den EMA, anstatt die
+      // Candles" — der Magnet-Crosshair (Default) snappt sonst auf den Datenpunkt der Serie, die
+      // dem Mauszeiger am nächsten ist, und das ist bei einer glatten EMA-Linie oft eher die EMA
+      // selbst als die Kerze. crosshairMarkerVisible:false nimmt die EMA-Serien komplett aus der
+      // Magnet-Berechnung raus, Fokus bleibt auf den Kerzen.
+      crosshairMarkerVisible: false,
       title: "EMA 50 (M5)",
     });
     ema200Series = chart.addSeries(LineSeries, {
@@ -1297,6 +1309,7 @@ onMounted(() => {
       lineWidth: nativeLineWidth("emaSlow"),
       priceLineVisible: false,
       lastValueVisible: false,
+      crosshairMarkerVisible: false,
       title: "EMA 200 (M5)",
     });
   }
@@ -1401,6 +1414,7 @@ watch(() => props.currentBar, () => {
 });
 watch(() => props.trades, refreshTradeMarkersInternal);
 watch(() => props.poiZones, refreshPoiZonesInternal);
+watch(() => props.showOrderBlocks, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
 watch(() => props.showLiquidity, refreshLiquidityInternal);
 watch(() => props.showSweptLiquidity, refreshLiquidityInternal);

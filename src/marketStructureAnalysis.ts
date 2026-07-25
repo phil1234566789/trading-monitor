@@ -47,6 +47,7 @@ export function initMarketStructureState(a: Pivot, b: Pivot): MarketStructureSta
     appliedPivots: [a, b],
     nestedTrend: null,
     closedRanges: [],
+    firstConfirmedAt: null,
   };
 }
 
@@ -159,6 +160,9 @@ function tryConfirmTrend(state: MarketStructureState, breakingPivot: Pivot, dire
       currRange: advancedRange,
       structurePivots: structurePivots.map(reclassify),
       innerStructurePivots: innerStructurePivots.map(reclassify),
+      // Nur beim ALLERERSTEN Bestätigungsmoment setzen (state.trend war noch 'unknown') — bleibt
+      // danach für immer eingefroren, auch wenn currRange bei weiteren Bestätigungen weiterwandert.
+      firstConfirmedAt: state.firstConfirmedAt ?? breakingPivot,
     };
   }
 
@@ -188,6 +192,7 @@ function tryConfirmTrend(state: MarketStructureState, breakingPivot: Pivot, dire
     currRange: advancedRange,
     structurePivots: structurePivots.map(reclassify),
     innerStructurePivots: innerStructurePivots.map(reclassify),
+    firstConfirmedAt: state.firstConfirmedAt ?? breakingPivot,
   };
 }
 
@@ -507,6 +512,7 @@ export function applyInnerMarketStructurePivot(
             appliedPivots: nested.appliedPivots,
             nestedTrend: null,
             closedRanges: [...sweepChecked.closedRanges, { low: currRange.low, high: currRange.high, trend: "uptrend" }],
+            firstConfirmedAt: nested.firstConfirmedAt,
           };
         }
         // Kein bestätigter Gegentrend vorhanden -> wie bisher kompletter Reset auf 'unknown', kein
@@ -525,6 +531,7 @@ export function applyInnerMarketStructurePivot(
           appliedPivots: [newOriginHigh, newOriginLow],
           nestedTrend: null,
           closedRanges: sweepChecked.closedRanges,
+          firstConfirmedAt: null,
         };
       }
       // Uptrend noch nicht bestätigt -> es gibt nichts zu invalidieren, currRange.low wird
@@ -577,20 +584,24 @@ export function computeRangesPivots(candles: Candle[], period: number, cutoff: n
 // applyMarketStructurePivot-Aufruf angestoßen, NUR wenn der Haupttrend bereits 'uptrend' ist —
 // ohne bestätigten Haupttrend gibt es nichts, wovon sich ein Gegentrend abheben könnte.
 //
-// Solange der Nested-Tracker noch nicht bestätigt ist, zählt immer nur die AKTUELLE currRange.high
-// als gültiger Ursprung: ein neues HH macht ein zuvor getracktes Lower-High irrelevant, der Tracker
-// wird auf das neue High reseeded (nested: null, bis der nächste Pullback-Low als Pairing-Punkt
-// eintrifft — genau wie initMarketStructureState oben auch ein Pivot-Paar braucht, bevor ein
-// State existieren kann). Einmal bestätigt (trend: 'downtrend'), läuft er unverändert über
-// applyMarketStructurePivot mit direction="down" weiter (protected-high kann noch weiterrücken),
-// wird aber nicht mehr reseeded — er ist bereit für die Promotion (siehe
-// applyInnerMarketStructurePivot: Invalidierungs-Zweig).
+// Die AKTUELLE currRange.high ist IMMER der einzig gültige Ursprung, unabhängig davon, ob der
+// Nested-Tracker schon bestätigt ist oder nicht: ein neues HH macht einen zuvor getrackten
+// Gegentrend-Kandidaten komplett irrelevant (reseeded auf null, bis der nächste Pullback-Low als
+// neuer Pairing-Punkt eintrifft — genau wie initMarketStructureState oben auch ein Pivot-Paar
+// braucht, bevor ein State existieren kann). Das gilt SEIT Chat 2026-07-25 (Bug-Report Philip:
+// "Choch Linie immernoch zu weit") explizit AUCH für einen bereits bestätigten (trend:'downtrend')
+// Nested-Tracker: bricht der Haupttrend nach der CHoCH-Bestätigung noch ein weiteres, ECHTES neues
+// Hoch (widerspricht der Lower-High-Prämisse, auf der die Bestätigung beruhte), war der CHoCH
+// falsch/überholt — vorher blieb ein solcher bereits bestätigter, aber längst nicht mehr gültiger
+// Nested-Tracker für den kompletten Rest der Uptrend-Laufzeit stehen (nie reseeded, da die
+// Bestätigung selbst das Reseeden bis dahin blockierte), was in echten Daten zu einer über sehr
+// viele Kerzen hinweg gezogenen CHoCH-Linie führte.
 function advanceNestedTrend(state: MarketStructureState, outerPivot: Pivot, candles: Candle[]): MarketStructureState {
   if (state.trend !== "uptrend") return { ...state, nestedTrend: null };
 
   const nested = state.nestedTrend;
   const originHigh: PivotHigh = { ...state.currRange.high, type: "high" };
-  const isStale = nested != null && nested.trend !== "downtrend" && pivotTimeOf(nested.appliedPivots[0]) !== pivotTimeOf(originHigh);
+  const isStale = nested != null && pivotTimeOf(nested.appliedPivots[0]) !== pivotTimeOf(originHigh);
 
   if (nested == null || isStale) {
     // Noch kein Pullback-Low seit dem (neuen) Origin-High gesehen -> abwarten, nicht raten.
@@ -839,6 +850,31 @@ function toLevel(pivot: Pivot, candles: Candle[]) {
   return { price: pivot.price, pivotTime: pivot.pivotTime ?? 0, endTime };
 }
 
+// Erste Kerze (aus den ANGEZEIGTEN candles, i.d.R. feingranularer als die H1-Pivots selbst — z.B.
+// M5, siehe Bug-Report Philip 2026-07-25) NACH fromTime, die tatsächlich unter price SCHLIESST.
+// Erst auf reine Docht-Berührung umgestellt gewesen (Chat: "das reine Zeichnen ist doch nur bis
+// Kerzenberührung, da reicht sogar ein Docht"), dann aber zurückgebaut (Bug-Report Philip:
+// "entsteht der choch pivot im outer-pivot bereich und direkt paar minuten später berührt ein
+// innerpivot den choch schon") — der H1-Periode-5-Ursprungspivot (chochAnchor) sitzt auf einer
+// groben Stundenrasterung, sein `pivotTime` markiert nicht zwingend exakt den echten M5-Extrempunkt
+// innerhalb dieser Stunde; ein reiner Docht-Check direkt danach greift dadurch fast immer sofort
+// (normales Kerzenrauschen knapp nach einem frischen Swing-Low), lange bevor der eigentliche
+// spätere Bruch passiert. Ein echter Kerzenschluss ist robust genug gegen dieses Rauschen (dieselbe
+// Docht-vs-Bruch-Unterscheidung wie bei der Erkennung selbst, siehe closesBelowLevel — hier nur für
+// die Zeichnung, nicht für die LQ-Sweep/Strukturbruch-Klassifizierung).
+// Der bestätigende Pivot selbst (firstConfirmedAt) sitzt ebenfalls auf der groben H1-Periode-5-
+// Rasterung und kann erst Stunden NACH dem eigentlichen Kerzenschluss offiziell als Fraktal
+// bestätigt sein (braucht period=5 Kerzen danach, siehe detectLiquidityLevels) — "wo schließt eine
+// Kerze tatsächlich unter dem Level" ist ein anderer, FRÜHERER Zeitpunkt als "wo wurde der Pivot
+// als Fraktal bestätigt". Fällt auf `fallbackTime` zurück, falls keine Kerze im geladenen Fenster
+// tatsächlich drunter schließt (z.B. Kerzendaten reichen nicht weit genug).
+function firstCloseBelow(candles: Candle[], fromTime: number, price: number, fallbackTime: number): number {
+  for (const c of candles) {
+    if (c.time > fromTime && c.close < price) return c.time;
+  }
+  return fallbackTime;
+}
+
 // " (1d 3h alt)" hinter einem Label, oder "" ohne pivotTime/nowSec (Chat 2026-07-22: "bei den
 // relevanten LQ-Leveln das Alter anzeigen ... Wochenende nicht mitzählen", 2026-07-22 zweite Runde:
 // "bitte noch bei structure bei 1h LQ-Sweep dazutun") — dieselbe Formel wie im TSC/den
@@ -1010,10 +1046,18 @@ export function renderMarketStructureAnalysis(
     // 1.34601, SOLL 1.35206" — 1.35206 ist die gebrochene Ursprungsstruktur, nicht der Bruch selbst).
     const chochAnchor = nested.appliedPivots[1];
     // Anders als toLevel (das immer bis zur letzten geladenen Kerze zeichnet) endet diese Linie
-    // bewusst an der Kerze/dem Pivot, der die Ursprungsstruktur tatsächlich gebrochen hat
-    // (nested.currRange.low) — Bug-Report Philip 2026-07-25: "CHOCH Linie geht nur bis zur Kerze,
-    // welche die Linie berührt", nicht endlos weiter in die Gegenwart.
-    const chochLevel = { price: chochAnchor.price, pivotTime: chochAnchor.pivotTime ?? 0, endTime: pivotTimeOf(nested.currRange.low) };
+    // bewusst NICHT an currRange.low (wandert weiter, solange nicht promoted — Bug-Report Philip:
+    // "CHOCH Linie geht noch zu weit") und auch NICHT an firstConfirmedAt selbst (dem H1-Periode-5-
+    // Fraktal-Pivot, der erst Stunden NACH dem eigentlichen Kerzenschluss unter dem Level offiziell
+    // bestätigt wird) — sondern an der ERSTEN tatsächlich unter chochAnchor.price schließenden
+    // Kerze der angezeigten (i.d.R. feineren) Candles. Bewusst Kerzenschluss statt reinem Docht
+    // (siehe firstCloseBelow: ein Docht-Check direkt nach dem groben H1-Ursprungspivot greift durch
+    // normales Kerzenrauschen fast immer sofort, Bug-Report Philip: "direkt paar minuten später
+    // berührt ein innerpivot den choch schon").
+    // Bug-Report Philip 2026-07-25: "Linie sollte irgendwo in der MMM am 16.07. 10:30-13:00 enden"
+    // — Stunden VOR dem offiziellen Pivot-Bestätigungszeitpunkt 19:00, siehe .debug/metadata.json.
+    const chochEndTime = firstCloseBelow(candles, chochAnchor.pivotTime ?? 0, chochAnchor.price, pivotTimeOf(nested.firstConfirmedAt!));
+    const chochLevel = { price: chochAnchor.price, pivotTime: chochAnchor.pivotTime ?? 0, endTime: chochEndTime };
     const chochLine = new LiquidityLinePrimitive(
       chochLevel,
       { color: cssColor("rangeChoch"), lineWidth: lineWidth("rangeChoch"), dashed: true, label: "CHoCH", labelSide: "center-below" },
