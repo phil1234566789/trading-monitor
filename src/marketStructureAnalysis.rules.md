@@ -119,7 +119,11 @@ Rein visuell, keine Zustandslogik — kein Test, nur Code-Kommentare in
 - `break-of-structure`: JEDER aktuell so markierte `structurePivot` bekommt eine eigene gestrichelte
   rote Linie + Label ("BOS", ohne Altersangabe — anders als bei `LQ-sweep` für die Handelsentscheidung
   nicht relevant, Chat 2026-07-24), mittig über der Linie im Uptrend / mittig darunter im (noch nicht
-  implementierten) Downtrend, kein eigener Pfeil (reines Warnsignal).
+  implementierten) Downtrend, kein eigener Pfeil (reines Warnsignal). Endet seit Chat 2026-07-25
+  ("BOS Linie soll auch nicht so weit gezeichnet werden ... wie bei CHOCH") genau wie die CHoCH-Linie
+  an der ERSTEN tatsächlich unter dem Level schließenden Kerze (`firstCloseBelow` — derselbe
+  Kerzenschluss, der den Pivot überhaupt erst zu `break-of-structure` reklassifiziert hat), nicht mehr
+  bis zur letzten geladenen Kerze wie `toLevel` es für die übrigen Range-Linien tut.
 - Verbindungslinie der AKTUELL laufenden Range (Chat 2026-07-25, Bug-Report Philip: "auch den
   jetzigen bestätigten uptrend auch verbunden"): sobald `state.trend !== 'unknown'`, eine einfache
   gerade Linie von `currRange.low` nach `currRange.high` (`RangeLinePrimitive`, kein Zigzag —

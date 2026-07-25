@@ -1077,8 +1077,17 @@ export function renderMarketStructureAnalysis(
   // Downtrend — spiegelbildlich zur Trendrichtung.
   for (const bos of state.structurePivots.filter((p) => p.type === "break-of-structure")) {
     const bosColor = cssColor("rangeBreakOfStructure");
+    // Anders als toLevel (das immer bis zur letzten geladenen Kerze zeichnet) endet diese Linie
+    // bewusst an der ERSTEN tatsächlich unter bos.price schließenden Kerze (Chat 2026-07-25: "Die
+    // BOS Linie soll auch nicht so weit gezeichnet werden, sondern nur bis Kerzenberührung, wie bei
+    // CHOCH") — genau der Kerzenschluss, der diesen Pivot überhaupt erst zu 'break-of-structure'
+    // reklassifiziert hat (siehe markLqSweeps). Fallback auf die letzte geladene Kerze (altes
+    // toLevel-Verhalten), falls diese Kerze im gerade angezeigten (evtl. kürzeren) Fenster fehlt.
+    const bosFallback = candles.length > 0 ? candles[candles.length - 1].time : (bos.pivotTime ?? 0);
+    const bosEndTime = firstCloseBelow(candles, bos.pivotTime ?? 0, bos.price, bosFallback);
+    const bosLevel = { price: bos.price, pivotTime: bos.pivotTime ?? 0, endTime: bosEndTime };
     const line = new LiquidityLinePrimitive(
-      toLevel(bos, candles),
+      bosLevel,
       {
         color: bosColor,
         lineWidth: lineWidth("rangeBreakOfStructure"),
