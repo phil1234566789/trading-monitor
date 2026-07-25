@@ -1,30 +1,24 @@
 <script setup>
-import { sessions, addSession, removeSession } from "../sessions.js";
+import { computed } from "vue";
+import { sessions, addSession, removeSession, DANGER_LEVELS } from "../sessions.js";
+import { minutesToTimeInput, timeInputToMinutes } from "../chartTimeUtils.js";
 import MetadataPanel from "./MetadataPanel.vue";
 
+const props = defineProps({ instrument: { type: String, required: true } });
 const emit = defineEmits(["close"]);
 
-// <input type="time" step="1800"> liefert/erwartet "HH:MM" (Browser-Lokalzeit-Anzeige, aber reiner
-// Text ohne Zeitzone) — Speicherformat ist Minuten seit Mitternacht (siehe sessions.js:
-// sessionOccurrences), daher der Roundtrip hier.
-function minutesToTimeInput(minutes) {
-  const h = Math.floor(minutes / 60) % 24;
-  const m = minutes % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-function timeInputToMinutes(value) {
-  const [h, m] = value.split(":").map(Number);
-  return h * 60 + m;
-}
+// Sessions sind seit Chat 2026-07-25 pro Asset getrennt (siehe sessions.js) — dieses Modal
+// zeigt/editiert nur die Sessions des gerade offenen Charts, nicht die anderer Instrumente.
+const instrumentSessions = computed(() => sessions.filter((s) => s.instrument === props.instrument));
 </script>
 
 <template>
-  <MetadataPanel title="🕒 Sessions" @close="emit('close')">
-    <button class="sessions-add" @click="addSession">+ Session hinzufügen</button>
-    <p v-if="sessions.length === 0" class="sessions-empty">
-      Noch keine Sessions angelegt — "+ Session hinzufügen" für die erste.
+  <MetadataPanel :title="`🕒 Sessions (${instrument})`" @close="emit('close')">
+    <button class="sessions-add" @click="addSession(instrument)">+ Session hinzufügen</button>
+    <p v-if="instrumentSessions.length === 0" class="sessions-empty">
+      Noch keine Sessions für {{ instrument }} angelegt — "+ Session hinzufügen" für die erste.
     </p>
-    <section v-for="session in sessions" :key="session.id" class="sessions-item">
+    <section v-for="session in instrumentSessions" :key="session.id" class="sessions-item">
       <div class="sessions-item-top">
         <input v-model="session.label" type="text" class="sessions-label-input" placeholder="Label" />
         <span class="sessions-swatch-wrap">
@@ -62,6 +56,12 @@ function timeInputToMinutes(value) {
       <label class="sessions-highlow-field" title="Aus: reines Entry-Zeitfenster, High/Low dieser Session ist für die Analyse nicht entscheidend">
         <input v-model="session.highLowRelevant" type="checkbox" />
         High/Low entscheidend
+      </label>
+      <label class="sessions-danger-field">
+        Gefahr
+        <select v-model="session.danger" class="sessions-danger-select">
+          <option v-for="level in DANGER_LEVELS" :key="level.value" :value="level.value">{{ level.label }}</option>
+        </select>
       </label>
     </section>
   </MetadataPanel>
@@ -265,5 +265,25 @@ function timeInputToMinutes(value) {
 .sessions-highlow-field input[type="checkbox"] {
   accent-color: #2962ff;
   cursor: pointer;
+}
+
+.sessions-danger-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-left: 2px;
+  font-size: 12px;
+  color: #9aa0ac;
+}
+
+.sessions-danger-select {
+  background: #131722;
+  border: 1px solid #2a2e39;
+  border-radius: 4px;
+  color: #d1d4dc;
+  font-size: 12px;
+  padding: 3px 6px;
+  color-scheme: dark;
 }
 </style>

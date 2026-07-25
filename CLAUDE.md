@@ -167,6 +167,19 @@ refetch-throttle boundaries (`isH1RefreshTick`/`isH4RefreshTick`) are the one ex
 raw UTC hours on purpose, since they need to align with Twelve Data's own (UTC-based) candle
 boundaries and the UTC-based `pg_cron` schedule, not with Berlin trading hours.
 
+Per-instrument trading/alarm windows (which weekdays and hours a trade may open, and separately
+when `poi-watcher` is allowed to actually send a Telegram message) live in the `trading_schedules`
+table, edited via the "Handelszeiten" page — **not** hardcoded constants. This replaced a single
+global `isTradingHours()` window that checked only the time of day, never the weekday (bug report
+2026-07-25: a Saturday Telegram alert fired because Twelve Data keeps serving candles on weekends
+too). `poi-watcher` reads `alarm_windows` per instrument each run (`isInWindows()`); `trading_windows`
+on the same table is currently reference/display-only, read by the Handelszeiten page but not yet
+gating anything in code. Per-asset chart sessions (`sessions` table/`src/sessions.js`, edited via
+the Sessions modal on the chart) got an `instrument` column at the same time (one session list per
+asset, no longer global) plus a `danger` level (`normal`/`caution`/`forbidden`) — this is how a
+sub-window like the GBPUSD/EURUSD "MMM" caution session or a BTC no-trade window is expressed,
+rather than a second schedule concept.
+
 ## Conventions
 
 - Comments are in German, and are written to explain **why** (a past bug, a non-obvious

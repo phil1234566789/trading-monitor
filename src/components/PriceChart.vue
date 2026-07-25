@@ -620,7 +620,10 @@ function refreshLiquidityInternal() {
 function refreshSessionsInternal() {
   if (!candleSeries) return; // watch(sessions) kann vor dem ersten Chart-Mount feuern (Store lädt schon bei Modul-Import)
   const candles = clipReplay(allCandles);
-  renderSessions(candleSeries, props.showSessions ? sessions : [], sessionPrimitives, candles, {
+  // Sessions sind seit Chat 2026-07-25 pro Asset getrennt (siehe sessions.js) — nur die des
+  // gerade angezeigten Symbols rendern, nicht die anderer Instrumente.
+  const symbolSessions = sessions.filter((s) => s.instrument === props.symbol);
+  renderSessions(candleSeries, props.showSessions ? symbolSessions : [], sessionPrimitives, candles, {
     // Funktion statt fixer Zahl (Bug-Report Philip 2026-07-22: Zeitumstellung) — allCandles kann per
     // Lazy-Load Monate zurückreichen, ein einzelner "jetzt"-Offset wäre für Kerzen auf der anderen
     // Seite einer Sommer-/Winterzeit-Umstellung eine Stunde daneben. sessionOccurrences fragt diese

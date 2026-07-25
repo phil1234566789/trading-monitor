@@ -63,6 +63,8 @@ async function saveToRemote() {
     hex: s.hex,
     alpha: s.alpha,
     high_low_relevant: s.highLowRelevant,
+    instrument: s.instrument,
+    danger: s.danger,
   }));
   const { error: deleteError } = await supabase.from("sessions").delete().not("id", "is", null);
   if (deleteError) {
@@ -84,7 +86,7 @@ async function syncFromRemote() {
   try {
     const { data, error } = await supabase
       .from("sessions")
-      .select("id, label, from_minutes, to_minutes, hex, alpha, high_low_relevant");
+      .select("id, label, from_minutes, to_minutes, hex, alpha, high_low_relevant, instrument, danger");
     if (error) throw error;
     if (data && data.length > 0) {
       suppressSave = true;
@@ -99,6 +101,8 @@ async function syncFromRemote() {
           hex: r.hex,
           alpha: r.alpha,
           highLowRelevant: r.high_low_relevant,
+          instrument: r.instrument,
+          danger: r.danger,
         })),
       );
       nextTick(() => {
@@ -113,8 +117,21 @@ async function syncFromRemote() {
 }
 syncFromRemote();
 
+// "normal" | "caution" | "forbidden" (siehe sessions_instrument_danger-Migration) — Chat
+// 2026-07-25: verbindet die Handelszeiten-Seite (trading_schedules) mit den Chart-Sessions,
+// statt ein eigenes Konzept für Vorsicht-/Sperr-Zeitfenster zu bauen (z.B. MMM-Session
+// 10:30-13:00 = caution, ein täglich verbotenes Zeitfenster = forbidden).
+export const DANGER_LEVELS = [
+  { value: "normal", label: "Normal" },
+  { value: "caution", label: "Vorsicht (mehr Bestätigungen nötig)" },
+  { value: "forbidden", label: "Verboten (kein Trade-Entry)" },
+];
+
 let sessionIdSeq = 0;
-export function addSession() {
+// instrument ist Pflicht (Chat 2026-07-25: "getrennte Listen pro Asset" statt einer Session, die
+// für mehrere Assets gilt) — jede Session gehört zu genau einem Instrument, wird nur auf dessen
+// Chart gerendert/im Sessions-Modal angezeigt (siehe PriceChart.vue/SessionsModal.vue).
+export function addSession(instrument) {
   sessions.push({
     id: `session-${Date.now()}-${sessionIdSeq++}`,
     label: "Neue Session",
@@ -127,6 +144,8 @@ export function addSession() {
     // Flag je Session, noch von keinem Algorithmus konsumiert. Default true, weil das bisherige
     // (implizite) Verhalten war, jede Session als Range-relevant zu behandeln.
     highLowRelevant: true,
+    instrument,
+    danger: "normal",
   });
 }
 

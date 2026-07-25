@@ -44,6 +44,7 @@ const lastUpdateText = computed(() =>
         <RouterLink to="/" exact-active-class="active">Dashboard</RouterLink>
         <RouterLink to="/protokoll" exact-active-class="active">Protokoll</RouterLink>
         <RouterLink to="/alarme" exact-active-class="active">Alarme</RouterLink>
+        <RouterLink to="/handelszeiten" exact-active-class="active">Handelszeiten</RouterLink>
       </nav>
       <span class="last-update">{{ lastUpdateText }}</span>
     </header>

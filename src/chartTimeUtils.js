@@ -68,6 +68,20 @@ export function businessSecondsBetween(startSec, endSec) {
   return total;
 }
 
+// <input type="time" step="1800"> liefert/erwartet "HH:MM" (Browser-Lokalzeit-Anzeige, aber reiner
+// Text ohne Zeitzone) — Speicherformat in sessions.js/tradingSchedules.js ist durchgängig Minuten
+// seit Mitternacht, daher der Roundtrip hier (ursprünglich nur in SessionsModal.vue, jetzt auch
+// von der Handelszeiten-Seite gebraucht).
+export function minutesToTimeInput(minutes) {
+  const h = Math.floor(minutes / 60) % 24;
+  const m = minutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+export function timeInputToMinutes(value) {
+  const [h, m] = value.split(":").map(Number);
+  return h * 60 + m;
+}
+
 // "1d 3h" / "3h 15m" / "15m" — Minuten fallen weg, sobald schon Tage angezeigt werden (genug
 // Präzision für eine Alters-ANZEIGE, kein exakter Zeitstempel).
 export function formatAge(seconds) {

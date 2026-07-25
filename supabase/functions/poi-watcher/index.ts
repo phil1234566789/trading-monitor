@@ -163,54 +163,50 @@ function fmt(n: number, precision: number) {
   return n.toLocaleString("de-DE", { maximumFractionDigits: precision });
 }
 
-// Trading-Session-Fenster 8:00-17:30 lokal (Europe/Berlin) — Zonen werden weiterhin normal
-// erkannt/upgedatet (Kontinuität für die touched-Erkennung, kein Nachhol-Alarm-Schwall beim
-// Fenster-Start), nur der Telegram-Versand ist auf die Session begrenzt. Cron laeuft bewusst
-// trotzdem rund um die Uhr weiter (siehe poi_watcher_cron Migration) — wuerde der Cron selbst
-// pausieren, wuerden ueber Nacht liegengebliebene Touches beim naechsten Lauf faelschlich als
-// "gerade eben" markiert und alle auf einmal gemeldet.
-function isTradingHours(date: Date): boolean {
-  const parts = new Intl.DateTimeFormat("de-DE", {
+// Handelszeiten/Alarmfenster kommen seit 2026-07-25 pro Instrument aus `trading_schedules`
+// (Dashboard-Seite "Handelszeiten") statt aus einem einzigen festen 8:00-17:30-Fenster — Auslöser
+// war ein Telegram-Alarm an einem SAMSTAG (Bug-Report Philip): die alte isTradingHours() prüfte
+// nur die Uhrzeit, nie den Wochentag, und Twelve Data liefert auch am Wochenende weiter Candles.
+// Format je Zeile: {"weekday": [[fromMin,toMin], ...], "saturday": [...], "sunday": [...]}
+// (Minuten seit Mitternacht, lokale Zeit).
+type WindowPair = [number, number];
+type WeekdayWindows = { weekday: WindowPair[]; saturday: WindowPair[]; sunday: WindowPair[] };
+
+function localMinutesAndWeekday(date: Date): { minutesSinceMidnight: number; group: keyof WeekdayWindows } {
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Europe/Berlin",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    weekday: "short",
   }).formatToParts(date);
   const hour = Number(parts.find((p) => p.type === "hour")!.value);
   const minute = Number(parts.find((p) => p.type === "minute")!.value);
-  const minutesSinceMidnight = hour * 60 + minute;
-  return minutesSinceMidnight >= TRADING_START_MIN && minutesSinceMidnight < TRADING_END_MIN;
+  const weekday = parts.find((p) => p.type === "weekday")!.value; // "Mon".."Sun"
+  const group: keyof WeekdayWindows = weekday === "Sat" ? "saturday" : weekday === "Sun" ? "sunday" : "weekday";
+  return { minutesSinceMidnight: hour * 60 + minute, group };
 }
 
-// Nachts (außerhalb der Trading-Session) werden fürs Forex-Zonen-Fetching keine Twelve-Data-
-// Requests gebraucht (Philip schläft, kein Alarm um 18/22/3 Uhr bringt was) — spart den
-// Großteil der ~2.300 Twelve-Data-Calls/Tag, die der 24/7-Cron sonst verursacht hätte (Free-
-// Tier: 800/Tag, 8/Min). FETCH_START_BUFFER_MIN Minuten VOR Sessionstart schon wieder holen
-// (nicht erst genau um 8:00) — ein einziger Lauf davor reicht, um über Nacht liegengebliebene
-// Touches noch außerhalb der Session (shouldSend=false) still nachzuholen, damit beim
-// tatsächlichen Sessionstart kein Nachhol-Alarm-Schwall für längst vergangene Touches losgeht
-// (gleicher Grund wie beim 24/7-Cron davor, nur jetzt auf ein kurzes Vorlauf-Fenster verkürzt).
-const TRADING_START_MIN = 8 * 60;
-const TRADING_END_MIN = 17 * 60 + 30;
+function isInWindows(date: Date, windows: WeekdayWindows | undefined, startBufferMin = 0): boolean {
+  if (!windows) return false;
+  const { minutesSinceMidnight, group } = localMinutesAndWeekday(date);
+  return windows[group].some(([from, to]) => minutesSinceMidnight >= from - startBufferMin && minutesSinceMidnight < to);
+}
+
+// Nachts/am Wochenende (außerhalb des Alarmfensters) werden fürs Forex-Zonen-Fetching keine
+// Twelve-Data-Requests gebraucht (Philip schläft bzw. tradet nicht, kein Alarm bringt was) —
+// spart den Großteil der ~2.300 Twelve-Data-Calls/Tag, die ein 24/7-Cron sonst verursachen
+// würde (Free-Tier: 800/Tag, 8/Min). FETCH_START_BUFFER_MIN Minuten VOR Fensterstart schon wieder
+// holen (nicht erst exakt zum Fensterbeginn) — ein einziger Lauf davor reicht, um über Nacht
+// liegengebliebene Touches noch außerhalb des Fensters (shouldSend=false) still nachzuholen,
+// damit beim tatsächlichen Fensterstart kein Nachhol-Alarm-Schwall für längst vergangene Touches
+// losgeht (gleicher Grund wie beim früheren 24/7-Cron, nur jetzt auf ein kurzes Vorlauf-Fenster
+// verkürzt).
 const FETCH_START_BUFFER_MIN = 10;
-
-function isForexFetchWindow(date: Date): boolean {
-  const parts = new Intl.DateTimeFormat("de-DE", {
-    timeZone: "Europe/Berlin",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(date);
-  const hour = Number(parts.find((p) => p.type === "hour")!.value);
-  const minute = Number(parts.find((p) => p.type === "minute")!.value);
-  const minutesSinceMidnight = hour * 60 + minute;
-  return minutesSinceMidnight >= TRADING_START_MIN - FETCH_START_BUFFER_MIN && minutesSinceMidnight < TRADING_END_MIN;
-}
 
 Deno.serve(async () => {
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    const tradingHours = isTradingHours(new Date());
 
     // Ein/Aus-Schalter je Alarm-Typ (siehe "Alarme"-Seite im Dashboard) — steuert NUR den
     // Telegram-Versand, nie die Erkennung/Persistierung selbst (siehe Kommentare unten an den
@@ -222,12 +218,25 @@ Deno.serve(async () => {
     const alarmEnabledMap = new Map((alarmRows ?? []).map((r) => [r.key, r.enabled]));
     const isAlarmOn = (key: string) => alarmEnabledMap.get(key) ?? true;
 
+    // Handelszeiten/Alarmfenster je Instrument (siehe "Handelszeiten"-Seite im Dashboard) — fail-
+    // closed bei fehlender Zeile (leere Windows), anders als bei alarm_settings: ein Instrument
+    // ohne Schedule-Zeile hier zu bevorzugt-an zu setzen würde denselben Wochenend-Alarm-Bug
+    // riskieren, den diese Tabelle gerade beheben soll.
+    const { data: scheduleRows, error: scheduleSelectError } = await supabase
+      .from("trading_schedules")
+      .select("instrument, alarm_windows");
+    if (scheduleSelectError) throw scheduleSelectError;
+    const alarmWindowsByInstrument = new Map<string, WeekdayWindows>(
+      (scheduleRows ?? []).map((r) => [r.instrument, r.alarm_windows as WeekdayWindows]),
+    );
+
     const now = new Date();
-    const forexFetchWindow = isForexFetchWindow(now);
     const h4RefreshTick = isH4RefreshTick(now);
-    const summary: Record<string, unknown> = { dryRun: DRY_RUN, tradingHours, forexFetchWindow, instruments: {} };
+    const summary: Record<string, unknown> = { dryRun: DRY_RUN, instruments: {} };
 
     for (const cfg of INSTRUMENTS) {
+      const alarmWindows = alarmWindowsByInstrument.get(cfg.instrument);
+      const forexFetchWindow = isInWindows(now, alarmWindows, FETCH_START_BUFFER_MIN);
       if (cfg.source === "twelvedata" && !forexFetchWindow) {
         (summary.instruments as Record<string, unknown>)[cfg.instrument] = { skipped: "outside forex fetch window" };
         continue;
@@ -267,8 +276,8 @@ Deno.serve(async () => {
       // Zonen werden für jedes Instrument immer erkannt/gespeichert (Dashboard-Charts brauchen
       // das weiterhin) — `shouldSend` entscheidet nur, ob dafür auch wirklich eine
       // Telegram-Nachricht rausgeht (BTC: nie, per `sendTelegram: false`; sonst: nur innerhalb
-      // der Trading-Session).
-      const shouldSend = cfg.sendTelegram && tradingHours;
+      // des Alarmfensters aus trading_schedules, siehe oben).
+      const shouldSend = cfg.sendTelegram && isInWindows(now, alarmWindows);
       const instrumentSummary: Record<string, unknown> = {};
 
       for (const tf of TIMEFRAMES) {

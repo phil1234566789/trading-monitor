@@ -501,7 +501,7 @@ watch(currentSymbol, () => {
   </div>
 
   <StyleModal v-if="showStyleModal" @close="showStyleModal = false" />
-  <SessionsModal v-if="showSessionsModal" @close="showSessionsModal = false" />
+  <SessionsModal v-if="showSessionsModal" :instrument="currentSymbol" @close="showSessionsModal = false" />
 
   <PriceChart
     ref="priceChartRef"
