@@ -1,5 +1,6 @@
 import { reactive, watch, nextTick } from "vue";
 import { snapToBarTime } from "./chartTimeUtils.js";
+import { canShowLabels } from "./chartZoom.js";
 import { supabase } from "./supabaseClient.js";
 
 // Session-Indikator (Chat 2026-07-22: "es gibt mehrere sessions ... hinzufügen/editieren/löschen,
@@ -221,10 +222,12 @@ function hexToRgba(hex, alpha) {
 }
 
 class SessionBandRenderer {
-  constructor(p1, p2, options) {
+  constructor(p1, p2, options, chart, candles) {
     this._p1 = p1;
     this._p2 = p2;
     this._options = options;
+    this._chart = chart;
+    this._candles = candles;
   }
 
   draw(target) {
@@ -250,7 +253,9 @@ class SessionBandRenderer {
       ctx.fillStyle = this._options.fill;
       ctx.fillRect(left, top, width, height);
 
-      if (this._options.label) {
+      // Chat 2026-07-25: "wenn ich im 1h den chart etwas herauszoome, dann verdecken mir die
+      // Labels die Sicht" — Band selbst bleibt, nur das Label verschwindet bei zu dünnen Kerzen.
+      if (this._options.label && canShowLabels(this._chart, this._candles)) {
         ctx.font = `${Math.round(10 * scope.verticalPixelRatio)}px sans-serif`;
         ctx.fillStyle = this._options.labelColor;
         if (hasHighLow) {
@@ -311,7 +316,7 @@ class SessionBandPaneView {
   }
 
   renderer() {
-    return new SessionBandRenderer(this._p1, this._p2, this._source._options);
+    return new SessionBandRenderer(this._p1, this._p2, this._source._options, this._source._chart, this._source._candles);
   }
 
   // "bottom": hinter den Kerzen zeichnen (lightweight-charts hat kein natives "Hintergrund"-Konzept

@@ -6,6 +6,7 @@
 import { snapToBarTime, businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
 import { cssColor } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
+import { canShowLabels } from "./chartZoom.js";
 
 const RECENT_SWEEP_COUNT = 2; // siehe markTopKRecentTouches in liquidity.pine
 
@@ -150,10 +151,12 @@ export function filterRelevantLevels(levels, maxRelevant, onlyRelevant) {
 }
 
 class LiquidityLineRenderer {
-  constructor(p1, p2, options) {
+  constructor(p1, p2, options, chart, candles) {
     this._p1 = p1;
     this._p2 = p2;
     this._options = options;
+    this._chart = chart;
+    this._candles = candles;
   }
 
   draw(target) {
@@ -182,7 +185,10 @@ class LiquidityLineRenderer {
       // Toggle es will; "end" = rechts vom Linienende (siehe Trendanalyse-Toggle); "center-above"/
       // "center-below" = horizontal mittig über/unter der Linie (Chat 2026-07-24, Break of
       // Structure: "im uptrend über der Linie mittig, im downtrend unter der Linie mittig").
-      if (this._options.label) {
+      // Chat 2026-07-25: "wenn ich im 1h den chart etwas herauszoome, dann verdecken mir die
+      // Labels die Sicht" — sobald die Kerzen zu dünn sind (siehe chartZoom.js), Label weglassen,
+      // Linie selbst bleibt unverändert stehen.
+      if (this._options.label && canShowLabels(this._chart, this._candles)) {
         ctx.font = `${Math.round(10 * scope.verticalPixelRatio)}px sans-serif`;
         ctx.fillStyle = this._options.color;
         if (this._options.labelSide === "end") {
@@ -240,7 +246,7 @@ class LiquidityPaneView {
   }
 
   renderer() {
-    return new LiquidityLineRenderer(this._p1, this._p2, this._source._options);
+    return new LiquidityLineRenderer(this._p1, this._p2, this._source._options, this._source._chart, this._source._candles);
   }
 }
 

@@ -8,6 +8,7 @@
 import { snapToBarTime } from "./chartTimeUtils.js";
 import { cssColorScaled } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
+import { canShowLabels } from "./chartZoom.js";
 
 const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone angelegt
 const WEAK_PCT = 0.15; // Gap kleiner als das gilt als "schwach" (blasser dargestellt)
@@ -88,10 +89,12 @@ function positionsBox(position1Media, position2Media, pixelRatio) {
 }
 
 class ZoneRenderer {
-  constructor(p1, p2, options) {
+  constructor(p1, p2, options, chart, candles) {
     this._p1 = p1;
     this._p2 = p2;
     this._options = options;
+    this._chart = chart;
+    this._candles = candles;
   }
 
   draw(target) {
@@ -109,7 +112,10 @@ class ZoneRenderer {
       ctx.lineWidth = this._options.borderWidth ?? 1;
       ctx.strokeRect(xPos.position, yPos.position, xPos.length, yPos.length);
 
-      if (this._options.label) {
+      // Chat 2026-07-25: "wenn ich im 1h den chart etwas herauszoome, dann verdecken mir die
+      // Labels die Sicht" — Zone selbst bleibt, nur das Timeframe-Tag verschwindet bei zu dünnen
+      // Kerzen.
+      if (this._options.label && canShowLabels(this._chart, this._candles)) {
         ctx.font = `${Math.round(11 * scope.verticalPixelRatio)}px sans-serif`;
         ctx.fillStyle = this._options.textColor;
         ctx.textBaseline = "top";
@@ -158,7 +164,7 @@ class ZonePaneView {
   }
 
   renderer() {
-    return new ZoneRenderer(this._p1, this._p2, this._source._options);
+    return new ZoneRenderer(this._p1, this._p2, this._source._options, this._source._chart, this._source._candles);
   }
 }
 

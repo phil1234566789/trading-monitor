@@ -3,11 +3,12 @@
 import { snapToBarTime } from "./chartTimeUtils.js";
 import { cssColor } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
+import { canShowLabels } from "./chartZoom.js";
 
 const TICK_LENGTH = 16; // px, Strich neben dem Punkt zur Preis-Ablesung
 const DOT_RADIUS = 4; // px
 
-function drawPoint(ctx, point, pixelRatio, color, colorKey, label) {
+function drawPoint(ctx, point, pixelRatio, color, colorKey, label, chart, candles) {
   if (point.x === null || point.y === null) return;
   const x = Math.round(point.x * pixelRatio);
   const y = Math.round(point.y * pixelRatio);
@@ -29,7 +30,9 @@ function drawPoint(ctx, point, pixelRatio, color, colorKey, label) {
   ctx.lineTo(x + tick, y);
   ctx.stroke();
 
-  if (label) {
+  // Chat 2026-07-25: "wenn ich im 1h den chart etwas herauszoome, dann verdecken mir die Labels
+  // die Sicht" — Punkt+Preis-Strich bleiben, nur das Text-Label verschwindet bei zu dünnen Kerzen.
+  if (label && canShowLabels(chart, candles)) {
     ctx.font = `${Math.round(11 * pixelRatio)}px sans-serif`;
     ctx.fillStyle = color;
     ctx.textBaseline = "middle";
@@ -38,10 +41,12 @@ function drawPoint(ctx, point, pixelRatio, color, colorKey, label) {
 }
 
 class TradeMarkerRenderer {
-  constructor(entry, exit, options) {
+  constructor(entry, exit, options, chart, candles) {
     this._entry = entry;
     this._exit = exit;
     this._options = options;
+    this._chart = chart;
+    this._candles = candles;
   }
 
   draw(target) {
@@ -62,8 +67,10 @@ class TradeMarkerRenderer {
         ctx.restore();
       }
 
-      drawPoint(ctx, entry, pixelRatio, this._options.entryColor, this._options.entryColorKey, this._options.entryLabel);
-      if (exit) drawPoint(ctx, exit, pixelRatio, this._options.exitColor, this._options.exitColorKey, this._options.exitLabel);
+      drawPoint(ctx, entry, pixelRatio, this._options.entryColor, this._options.entryColorKey, this._options.entryLabel, this._chart, this._candles);
+      if (exit) {
+        drawPoint(ctx, exit, pixelRatio, this._options.exitColor, this._options.exitColorKey, this._options.exitLabel, this._chart, this._candles);
+      }
     });
   }
 
@@ -106,7 +113,7 @@ class TradeMarkerPaneView {
   }
 
   renderer() {
-    return new TradeMarkerRenderer(this._entry, this._exit, this._source._options);
+    return new TradeMarkerRenderer(this._entry, this._exit, this._source._options, this._source._chart, this._source._candles);
   }
 }
 

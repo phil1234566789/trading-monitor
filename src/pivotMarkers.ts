@@ -1,4 +1,5 @@
 import { snapToBarTime } from "./chartTimeUtils.js";
+import { canShowLabels } from "./chartZoom.js";
 import type { Pivot } from "./range.type";
 
 // Reines Chart-Rendering-Glue für die Ranges-Debug-Pivot-Marker (siehe PriceChart.vue:
@@ -37,10 +38,14 @@ interface RenderOptions {
 class PivotMarkerRenderer {
   private _points: any[];
   private _options: RenderOptions;
+  private _chart: any;
+  private _candles: any[];
 
-  constructor(points: any[], options: RenderOptions) {
+  constructor(points: any[], options: RenderOptions, chart: any, candles: any[]) {
     this._points = points; // [{x,y,label}] in Pane-Koordinaten, siehe PivotMarkerPaneView.update()
     this._options = options;
+    this._chart = chart;
+    this._candles = candles;
   }
 
   draw(target: any) {
@@ -68,7 +73,9 @@ class PivotMarkerRenderer {
       // sah). Nach y sortiert einmal durchlaufen und jedes Label, das näher als minGap am vorigen
       // (schon entzerrten) Label liegt, nach unten schieben — Dots bleiben an der echten
       // Preis-Position, nur die Labels rutschen auseinander.
-      if (this._options.showLabels) {
+      // Chat 2026-07-25: "wenn ich im 1h den chart etwas herauszoome, dann verdecken mir die
+      // Labels die Sicht" — Dots bleiben, nur die Preis-Labels verschwinden bei zu dünnen Kerzen.
+      if (this._options.showLabels && canShowLabels(this._chart, this._candles)) {
         ctx.font = `${Math.round(10 * scope.verticalPixelRatio)}px sans-serif`;
         ctx.textBaseline = "bottom";
         ctx.textAlign = "left";
@@ -147,7 +154,7 @@ class PivotMarkerPaneView {
   }
 
   renderer() {
-    return new PivotMarkerRenderer(this._points, this._source._options);
+    return new PivotMarkerRenderer(this._points, this._source._options, this._source._chart, this._source._candles);
   }
 }
 
