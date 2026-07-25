@@ -215,6 +215,11 @@ function summarizeMarketStructureState(state) {
     structurePivots: state.structurePivots.map(pivotForDisplay),
     innerStructurePivots: state.innerStructurePivots.map(pivotForDisplay),
     appliedPivots: state.appliedPivots.map(pivotForDisplay),
+    // Nested-Gegentrend-Tracker (CHoCH-Erkennung, Chat 2026-07-25) — rekursiv über dieselbe
+    // Funktion, damit er im Debug-Panel genauso einsehbar ist wie der Haupttrend (Bug-Report
+    // Philip: "im structure-state ist KEIN nested-range drinne" — fehlte hier komplett).
+    nestedTrend: summarizeMarketStructureState(state.nestedTrend),
+    closedRanges: state.closedRanges.map((r) => ({ ...r, low: pivotForDisplay(r.low), high: pivotForDisplay(r.high) })),
   };
 }
 const marketStructureState = ref(null);

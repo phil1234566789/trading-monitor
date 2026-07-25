@@ -58,6 +58,8 @@ const GROUPS = [
       { key: "rangeProtectedLow", label: "Protected Low" },
       { key: "rangeLqSweep", label: "LQ-Sweep" },
       { key: "rangeBreakOfStructure", label: "Break of Structure" },
+      { key: "rangeClosed", label: "Abgeschlossene Range" },
+      { key: "rangeChoch", label: "CHoCH" },
       { key: "rangesMarker", label: "Debug-Marker (Periode 5)" },
       { key: "rangesMarker2", label: "Debug-Marker (Periode 2)" },
     ],

@@ -46,7 +46,7 @@ prüft damit 1:1 denselben Pfad wie die Live-App.
 | Ohne mindestens einen qualifizierenden Pullback: keine Bestätigung, `currRange.high` wird trotzdem ersetzt. | `marketStructureAnalysis.test.js`: *rangeState4* |
 | **Bestätigung läuft bei JEDEM weiteren High-Bruch neu**, nicht nur beim ersten Mal — protected-low rückt auf einen neueren ungetouchten Pullback weiter, der alte fällt zurück auf `low`. Kein neuerer Kandidat -> alter bleibt stehen. | `marketStructureAnalysisProtectedLow.test.js`: *"protected-low rückt bei einem weiteren HH-Bruch auf den neueren ungetouchten Pullback weiter..."*, *"ohne einen neueren ungetouchten Pullback bleibt der bisherige protected-low stehen..."* |
 | Ein per Inner-Pivot gesetztes protected-low wird vor jedem `innerStructurePivots`-Reset nach `structurePivots` migriert, statt verloren zu gehen. | `marketStructureAnalysisProtectedLow.test.js`: *"ein per eingebettetem Pivot bestätigtes protected-low überlebt den nächsten übergeordneten Pivot..."* |
-| Downtrend-BESTÄTIGUNG (ein "protected-high" als Pendant zum protected-low, sobald sich nach einer Trend-Invalidierung — siehe unten — eine neue tiefere Struktur bestätigt): **nicht implementiert**, bewusst offen gelassen. | — (kein Test, kein Code) |
+| Downtrend-BESTÄTIGUNG (ein "protected-high" als Pendant zum protected-low): seit Chat 2026-07-25 implementiert — läuft aber NICHT als Fortsetzung nach einer Trend-Invalidierung, sondern parallel zum noch laufenden Uptrend, siehe Abschnitt "Nested-Trend / CHoCH-Erkennung" unten. | siehe dort |
 
 ## Inner-Pivots (Periode 2) — schnellere Vorab-Erkennung
 
@@ -69,8 +69,22 @@ für das reale Ausgangsszenario).
 |---|---|
 | Inner-Pivot bricht `currRange.low` preislich, aber KEINE Kerze schließt drunter -> nur `sweeped-low` (Preis/Zeit von `currRange.low` bleiben), Uptrend bleibt bestehen. | `marketStructureAnalysisTrendInvalidation.test.js`: *"bricht currRange.low NUR preislich (kein Close drunter) -> nur 'sweeped-low'..."* |
 | War der Uptrend noch NICHT bestätigt (`trend==='unknown'`) und eine Kerze schließt echt drunter -> `currRange.low` wird einfach ausgeweitet, nichts zu invalidieren (spiegelbildlich zum unconfirmed Outer-Low-Bruch). | `marketStructureAnalysisTrendInvalidation.test.js`: *"Uptrend noch NICHT bestätigt ... currRange.low wird nur ausgeweitet..."* |
-| War der Uptrend schon bestätigt (`trend==='uptrend'`) und eine Kerze schließt echt drunter -> Trend zurück auf `'unknown'`, komplett frischer Start: `currRange.high` bleibt der ALTE High (weiterverwendet, nicht verworfen — zeitlich VOR dem neuen Low, bärische Origin-Konstellation), `currRange.low` wird der brechende Pivot, `structurePivots`/`innerStructurePivots` geleert, `appliedPivots` nur noch die zwei neuen Origin-Pivots. | `marketStructureAnalysisTrendInvalidation.test.js`: *"bricht currRange.low PREISLICH UND eine Kerze schließt tatsächlich drunter -> Trend zurück auf 'unknown'..."* |
+| War der Uptrend schon bestätigt (`trend==='uptrend'`) und eine Kerze schließt echt drunter, UND läuft KEIN bereits bestätigter Nested-Trend (siehe unten): Trend zurück auf `'unknown'`, komplett frischer Start: `currRange.high` bleibt der ALTE High (weiterverwendet, nicht verworfen — zeitlich VOR dem neuen Low, bärische Origin-Konstellation), `currRange.low` wird der brechende Pivot, `structurePivots`/`innerStructurePivots` geleert, `appliedPivots` nur noch die zwei neuen Origin-Pivots. | `marketStructureAnalysisTrendInvalidation.test.js`: *"bricht currRange.low PREISLICH UND eine Kerze schließt tatsächlich drunter -> Trend zurück auf 'unknown'..."*; `marketStructureAnalysisChoch.test.js`: *"Fallback bleibt erhalten..."* |
+| **PROMOTION** (Chat 2026-07-25): läuft zum Invalidierungszeitpunkt bereits ein bestätigter Nested-Trend (`nestedTrend.trend === 'downtrend'`, siehe "Nested-Trend / CHoCH-Erkennung" unten), übernimmt DER als neuer Outer-Trend statt des vollen Resets — `trend`/`currRange`/`structurePivots`/`appliedPivots` kommen 1:1 vom Nested-State, `nestedTrend` wird `null`. Die alte (jetzt abgeschlossene) Uptrend-Range wird in `closedRanges` archiviert (`{low: alter currRange.low, high: alter currRange.high, trend: 'uptrend'}`) — nur für die Darstellung (einfache Linie, kein Zigzag), keine Zustandslogik hängt daran. | `marketStructureAnalysisChoch.test.js`: *"echte Invalidierung ... übernimmt den bestätigten Nested-Trend statt komplett zurückzusetzen"* |
 | Ein Outer-Pivot bricht `currRange.low` NICHT über Inner-Pivots — der spiegelbildliche Fall für `applyMarketStructurePivot` selbst (Outer-Pivot bricht `currRange.low`, während der Uptrend schon bestätigt ist) ist **nicht implementiert**; die bestehende Outer-Regel weitet `currRange.low` immer nur ohne Invalidierungs-/Kerzen-Check aus. | — (kein Test, kein Code) |
+
+## Nested-Trend / CHoCH-Erkennung (`advanceNestedTrend`)
+
+Live beobachtet (GBPUSD 1h, siehe `test/tdd_mit_claude/ranges/gbp_h1_uptrend_uptrend_break_of_structure_und_trendumkehr.ts`): ein Downtrend kündigt sich oft lange VOR der eigentlichen Invalidierung an — die Outer-Pivots 1.35583 (H) -> 1.35206 (L) -> 1.35429 (LH) -> 1.34601 (LL) bilden bereits eine bestätigte bärische Struktur (Change of Character), obwohl `currRange.low` des Haupttrends formal erst später real bricht. Ein zweiter, gegenläufiger Trend-Tracker (`state.nestedTrend`, dieselbe Form wie `MarketStructureState`) läuft dafür parallel mit, gefüttert über **dieselbe** Bestätigungslogik wie der Haupttrend, nur mit `direction="down"` statt `"up"` (siehe `tryConfirmTrend`/`applyMarketStructurePivot`/`markLqSweeps` — parametrisiert statt dupliziert, `protected-high` ist dafür jetzt kein reines Stub-Literal mehr).
+
+| Regel | Test |
+|---|---|
+| Läuft NUR über Outer-(Periode-5-)Pivots, keine Periode-2-Verfeinerung (bewusst nicht gebaut, möglicher späterer Ausbau) — und nur, solange der Haupttrend bereits `'uptrend'` ist (ohne bestätigten Haupttrend gibt es nichts, wovon sich ein Gegentrend abheben könnte). | `marketStructureAnalysisChoch.test.js` (gesamte Datei) |
+| Solange der Nested-Tracker noch nicht bestätigt ist, zählt immer nur die AKTUELLE `currRange.high` als gültiger Ursprung — ein neues HH verwirft einen zuvor getrackten, noch unbestätigten Gegentrend-Kandidaten komplett (reseeded auf `null`, wartet auf den nächsten Pullback-Low als neuen Pairing-Punkt). | `marketStructureAnalysisChoch.test.js`: *"Reseed: eine weitere reguläre HH VOR der CHoCH-Bestätigung verwirft den bisherigen Nested-Tracker"* |
+| Bestätigung läuft exakt wie beim Haupttrend gespiegelt: ein Bruch von `nestedTrend.currRange.low` (dem ersten Pullback-Low nach dem Nested-Origin-High) durch einen weiteren Low-Pivot bestätigt, sofern ein qualifizierender Pullback-High seit diesem Low existiert -> `protected-high`, `nestedTrend.trend` wird `'downtrend'`. Das ist exakt der CHoCH-Moment. | `marketStructureAnalysisChoch.test.js`: *"CHoCH-Bestätigung: Bruch von pivotB löst tryConfirmTrend(direction='down') aus..."* |
+| Einmal bestätigt, wird der Nested-Tracker NICHT mehr reseeded, läuft aber über weitere Outer-Pivots normal weiter (`protected-high` kann noch weiterrücken) — er ist ab hier bereit für die Promotion (siehe oben). | — (Verhalten aus advanceNestedTrend, kein isolierter Test über die Bestätigung hinaus) |
+| Der Haupttrend selbst bleibt vom CHoCH komplett unberührt (reines Vorlauf-Signal, kein Reset) — erst die spätere ECHTE Invalidierung (siehe oben) verwertet ihn per Promotion. | `marketStructureAnalysisChoch.test.js`: *"CHoCH-Bestätigung..."* (`state.trend` bleibt `'uptrend'`) |
+| Gespiegelte Richtung (ein bullischer CHoCH innerhalb eines bereits bestätigten Downtrends) ist NICHT verdrahtet — `tryConfirmTrend`/`applyMarketStructurePivot`/`markLqSweeps` sind zwar durch den `direction`-Parameter dafür bereits generisch genug, aber `advanceNestedTrend` selbst prüft aktuell nur `state.trend === 'uptrend'`. Bewusst offen gelassen (Chat 2026-07-25), analog zum bisherigen Muster in dieser Datei. | — (kein Test, kein Code) |
 
 ## LQ-Sweep (`markLqSweeps`)
 
@@ -105,3 +119,22 @@ Rein visuell, keine Zustandslogik — kein Test, nur Code-Kommentare in
   rote Linie + Label ("BOS", ohne Altersangabe — anders als bei `LQ-sweep` für die Handelsentscheidung
   nicht relevant, Chat 2026-07-24), mittig über der Linie im Uptrend / mittig darunter im (noch nicht
   implementierten) Downtrend, kein eigener Pfeil (reines Warnsignal).
+- Verbindungslinie der AKTUELL laufenden Range (Chat 2026-07-25, Bug-Report Philip: "auch den
+  jetzigen bestätigten uptrend auch verbunden"): sobald `state.trend !== 'unknown'`, eine einfache
+  gerade Linie von `currRange.low` nach `currRange.high` (`RangeLinePrimitive`, kein Zigzag —
+  bewusst so gewünscht), Farbe nach Trendrichtung (`rangeClosed` grün bullisch, `rangeChoch` rot
+  bärisch — nach einer Promotion ist `state.trend` selbst `'downtrend'`).
+- `closedRanges` (Chat 2026-07-25, Promotion): JE archivierter Range dieselbe Linie wie oben, nur
+  fest auf `low`/`high` zum Archivierungszeitpunkt, immer `rangeClosed` (grün, war ja ein Uptrend).
+  `LiquidityLinePrimitive` kann das nicht (zeichnet nur horizontale Preis-Level), daher eine eigene
+  kleine Primitive (`RangeLinePrimitive`) nach demselben Muster wie `ArrowPrimitive`.
+- Nested-Gegentrend-Struktur/CHoCH (Chat 2026-07-25): solange `state.nestedTrend?.trend ===
+  'downtrend'` (bestätigt, aber noch nicht promoted) ZWEI Elemente — (1) dieselbe rote
+  Verbindungslinie über `nestedTrend.currRange.low` -> `nestedTrend.currRange.high` (Bug-Report
+  Philip: "eine rote Verbindungslinie von 1.35583 bis 1.34601"), UND (2) ein Linie+Label ("CHoCH")
+  an der URSPRÜNGLICHEN Nested-Origin-Low (`nestedTrend.appliedPivots[1]`, NICHT
+  `nestedTrend.currRange.low` — das ist nach der Bestätigung der brechende Pivot, nicht die
+  gebrochene Ursprungsstruktur; Bug-Report Philip: "IST 1.34601, SOLL 1.35206"), eigene Farbe
+  (`rangeChoch`). Reiner Vorlauf-Hinweis — nach der Promotion ist `nestedTrend` wieder `null`, dann
+  übernimmt die reguläre `currRange`-Darstellung (inkl. der Live-Verbindungslinie oben) den neuen
+  (jetzt primären) Trend.

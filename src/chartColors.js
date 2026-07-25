@@ -36,6 +36,14 @@ export const DEFAULT_CHART_COLORS = {
   rangeProtectedLow: { hex: "#ffffff", alpha: 0.95 },
   rangeLqSweep: { hex: "#ffd700", alpha: 0.9 },
   rangeBreakOfStructure: { hex: "#ef5350", alpha: 0.95 },
+  // Abgeschlossene Range nach einer Trend-Promotion (Chat 2026-07-25) — einfache Linie
+  // range.low -> range.high, dieselbe Grundfarbe wie rangeLow (bullische Range), aber
+  // transparenter, damit sie sich als "Historie" von der aktuell laufenden Range abhebt.
+  rangeClosed: { hex: "#00e676", alpha: 0.5 },
+  // CHoCH-Label des Nested-Gegentrend-Trackers (Chat 2026-07-25, siehe advanceNestedTrend) —
+  // eigene Farbe statt rangeBreakOfStructure, weil ein CHoCH (Vorlauf-Signal) fachlich etwas
+  // anderes ist als ein Break of Structure (Warnsignal im bestehenden Trend).
+  rangeChoch: { hex: "#ff7043", alpha: 0.95 },
   rangesMarker: { hex: "#00bcd4", alpha: 0.9 },
   // Periode-2-Debug-Marker (siehe Chat 2026-07-19: "früherer Uptrend-Erkennung") — bewusst
   // dieselbe Grundfarbe wie rangesMarker (Periode 5), aber deutlich transparenter, damit man

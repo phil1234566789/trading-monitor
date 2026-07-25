@@ -71,6 +71,15 @@ export type RangeTrend = "unknown" | "uptrend" | "downtrend";
 // Uptrend-Bestätigung, siehe gbp_h1_uptrend_LQ_sweep_long_setup.ts) sammelt ihre eigenen Pullback-
 // Pivots getrennt von structurePivots (Periode 5) — beide Ebenen sollen unterscheidbar bleiben,
 // nicht in einer Liste vermischt werden.
+// Ein per Promotion (siehe nestedTrend unten) abgeschlossener Range — nur noch für die Darstellung
+// (einfache Linie von low nach high, kein Zigzag, siehe Chat 2026-07-25), keine Zustandslogik
+// hängt mehr daran.
+export type ClosedRange = {
+  low: Pivot;
+  high: Pivot;
+  trend: RangeTrend;
+};
+
 export type MarketStructureState = {
   trend: RangeTrend;
   currRange: {
@@ -80,5 +89,17 @@ export type MarketStructureState = {
   structurePivots: Pivot[];
   innerStructurePivots: Pivot[];
   appliedPivots: Pivot[];
+  // Gegenläufiger Trend-Tracker, der parallel zum bestätigten Haupttrend mitläuft (CHoCH-Erkennung,
+  // Chat 2026-07-25) — dieselbe Form wie der Haupttrend selbst (applyMarketStructurePivot mit
+  // direction="down" statt "up"), rekursiv aber praktisch nie mehr als eine Ebene tief
+  // (nestedTrend.nestedTrend bleibt immer null). Bewusst NICHT "innerTrend" genannt, um keine
+  // Namenskollision mit dem bestehenden innerStructurePivots/Periode-2-Konzept zu erzeugen — das
+  // hier ist eine ganz andere Achse (Gegenrichtung, nicht Periode). null, solange kein bestätigter
+  // Haupttrend läuft oder noch kein Gegentrend-Kandidat gesehen wurde (siehe advanceNestedTrend).
+  nestedTrend: MarketStructureState | null;
+  // Archiv abgeschlossener Ranges für die Darstellung (siehe ClosedRange oben) — wächst nur bei
+  // einer Promotion (siehe applyInnerMarketStructurePivot: Invalidierung mit bereits bestätigtem
+  // nestedTrend), bleibt sonst unverändert durchgereicht.
+  closedRanges: ClosedRange[];
 };
 
