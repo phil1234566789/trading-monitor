@@ -82,9 +82,12 @@ describe("marketStructureAnalysis: Nested-Trend/CHoCH-Erkennung (advanceNestedTr
     // Ein weiterer Pullback + ein NEUER, tieferer Bruch (analog: der Gegentrend läuft weiter,
     // solange die eigentliche Uptrend-Invalidierung noch nicht real passiert ist) — currRange.low
     // rückt vor, firstConfirmedAt darf sich NICHT mitverschieben (Bug-Report Philip 2026-07-25:
-    // "CHOCH Linie geht noch zu weit" — die Linie wuchs vorher mit currRange.low mit).
+    // "CHOCH Linie geht noch zu weit" — die Linie wuchs vorher mit currRange.low mit). Bewusst
+    // ÜBER dem Haupttrend-Ursprung (1.0, originLow) — sonst würde pivotF seit Chat 2026-07-25
+    // ("Punkt 2": Outer-Pivot-Invalidierung) selbst schon den Haupttrend invalidieren/promoten,
+    // was hier NICHT getestet werden soll (siehe eigene Promotion-Tests weiter unten).
     const pivotE = { type: "high", price: 1.08, pivotAt: "pivotE", pivotTime: 80, touched: false };
-    const pivotF = { type: "low", price: 0.98, pivotAt: "pivotF", pivotTime: 90, touched: false };
+    const pivotF = { type: "low", price: 1.01, pivotAt: "pivotF", pivotTime: 90, touched: false };
     state = applyMarketStructurePivot(state, pivotE);
     state = applyMarketStructurePivot(state, pivotF);
 
@@ -168,8 +171,12 @@ describe("marketStructureAnalysis: Promotion bei Invalidierung mit bereits best�
     expect(state.appliedPivots).toEqual(nestedBeforePromotion.appliedPivots);
     expect(state.innerStructurePivots).toEqual([{ ...breakingPivot, type: "low" }]);
     expect(state.nestedTrend).toBeNull();
-    // Alte Uptrend-Range archiviert für die Darstellung (einfache Linie, kein Zigzag).
-    expect(state.closedRanges).toEqual([{ low: { ...originLow, type: "low" }, high: { ...confirmBreak, type: "high" }, trend: "uptrend" }]);
+    // Alte Uptrend-Range archiviert für die Darstellung — ZigZag low->middle->high, middle ist der
+    // zuletzt bestätigte protected-low DIESER (jetzt abgeschlossenen) Range (Chat 2026-07-25,
+    // zweite Runde: "ich hätte gerne die ZickZack Linie ... noch im Chart drin").
+    expect(state.closedRanges).toEqual([
+      { low: { ...originLow, type: "low" }, middle: { ...pullback, type: "protected-low" }, high: { ...confirmBreak, type: "high" }, trend: "uptrend" },
+    ]);
   });
 
   it("Promotion ohne weiteren Bruch: der auslösende Pivot bricht nested.currRange.low NUR preislich (kein Close drunter) -> Range bleibt beim übernommenen Nested-Stand", () => {
@@ -245,10 +252,39 @@ describe("marketStructureAnalysis: Periode-2-Verfeinerung des Nested-Trackers (a
     // CHoCH widerlegt (Preis macht ein neues Hoch über dem alten Nested-Origin) -> frischer Start,
     // KEINE Promotion (ein Nested-Tracker hat selbst keine tiefere Verschachtelung).
     expect(state.nestedTrend.trend).toBe("unknown");
+    // Bug-Report Philip 2026-07-25 (Ursprung-Bug): der alte pivotD wäre chronologisch VOR
+    // innerHigh, was die bärische "High VOR Low"-Eligibility für immer sperren würde (siehe
+    // Kommentar in applyInnerMarketStructurePivotCore) — stattdessen dient der auslösende Pivot
+    // selbst (als "low" umetikettiert) als selbstkorrigierender Platzhalter.
     expect(state.nestedTrend.currRange).toEqual({
       high: { ...innerHigh, type: "high" },
-      low: { ...pivotD, type: "low" }, // alter Nested-Origin-Low wiederverwendet (bullische Origin-Konstellation)
+      low: { ...innerHigh, type: "low" },
     });
+  });
+
+  it("nach der Platzhalter-Invalidierung reicht ein einzelner weiterer Low-Pivot, um die Eligibility zu reparieren, und ein Bruch danach kann wieder bestätigen (Regressionstest für den Ursprung-Bug)", () => {
+    let state = chochConfirmedState();
+    const innerHigh = { type: "high", price: 1.25, pivotAt: "innerHigh", pivotTime: 75, touched: false };
+    state = applyInnerMarketStructurePivot(state, innerHigh, { candles: [] });
+    expect(state.nestedTrend.trend).toBe("unknown");
+
+    // Irgendein Pullback-Low nach der Invalidierung -> repariert die Zeit-Reihenfolge
+    // (lowTime > highTime), OHNE selbst schon zu brechen.
+    const pullback = { type: "low", price: 1.2, pivotAt: "pullback", pivotTime: 80, touched: false };
+    state = applyInnerMarketStructurePivot(state, pullback, { candles: [] });
+    expect(state.nestedTrend.trend).toBe("unknown");
+    expect(state.nestedTrend.currRange.low).toEqual({ ...pullback, type: "low" });
+
+    // Ein weiterer Pullback-High (bricht das Nested-Origin-High 1.25 NICHT) liefert den
+    // qualifizierenden Kandidaten für 'protected-high' bei der nächsten Bestätigung.
+    const pullbackHigh = { type: "high", price: 1.22, pivotAt: "pullbackHigh", pivotTime: 82, touched: false };
+    state = applyInnerMarketStructurePivot(state, pullbackHigh, { candles: [] });
+
+    // Jetzt bricht ein echter Kerzenschluss unter pullback -> sollte wieder bestätigen können.
+    const breakLow = { type: "low", price: 1.1, pivotAt: "breakLow", pivotTime: 90, touched: false };
+    const candles = [{ time: 85, open: 1.2, high: 1.21, low: 1.09, close: 1.1 }];
+    state = applyInnerMarketStructurePivot(state, breakLow, { candles });
+    expect(state.nestedTrend.trend).toBe("downtrend");
   });
 
   it("ohne bereits existierenden Nested-Trend passiert nichts (kein Reseed über Periode-2-Pivots)", () => {
@@ -256,5 +292,63 @@ describe("marketStructureAnalysis: Periode-2-Verfeinerung des Nested-Trackers (a
     const innerLow = { type: "low", price: 1.05, pivotAt: "innerLow", pivotTime: 30, touched: false };
     state = applyInnerMarketStructurePivot(state, innerLow, { candles: [] });
     expect(state.nestedTrend).toBeNull();
+  });
+});
+
+describe("marketStructureAnalysis: Outer-Pivot-Invalidierung (Chat 2026-07-25, Punkt 2: 'Outer-Pivot-Low-Bruch ohne Kerzen-Check ... muss jetzt gemacht werden', applyMarketStructurePivot direction='up')", () => {
+  const pivotB = { type: "low", price: 1.05, pivotAt: "pivotB", pivotTime: 50, touched: false };
+  const pivotC = { type: "high", price: 1.15, pivotAt: "pivotC", pivotTime: 60, touched: false };
+  const pivotD = { type: "low", price: 1.02, pivotAt: "pivotD", pivotTime: 70, touched: false };
+
+  function chochConfirmedState() {
+    let state = confirmedUptrendState();
+    state = applyMarketStructurePivot(state, pivotB);
+    state = applyMarketStructurePivot(state, pivotC);
+    state = applyMarketStructurePivot(state, pivotD);
+    expect(state.nestedTrend.trend).toBe("downtrend");
+    return state;
+  }
+
+  it("Outer-Pivot bricht currRange.low NUR preislich (kein Close drunter) -> nur 'sweeped-low', Uptrend bleibt bestehen (vorher wurde IMMER hart ersetzt, ohne Kerzen-Check)", () => {
+    let state = confirmedUptrendState();
+    const sweepPivot = { type: "low", price: 0.9, pivotAt: "sweep-low", pivotTime: 50, touched: false };
+    // Docht unter 1.0, Close bleibt drüber -> kein echter Bruch.
+    const candles = [{ time: 45, open: 1.02, high: 1.03, low: 0.95, close: 1.01 }];
+
+    state = applyMarketStructurePivot(state, sweepPivot, { candles });
+
+    expect(state.trend).toBe("uptrend"); // unverändert
+    expect(state.currRange.low).toEqual({ ...originLow, type: "sweeped-low" }); // Preis/Zeit unverändert, nur Typ
+    expect(state.currRange.high.pivotAt).toBe("confirm");
+  });
+
+  it("Outer-Pivot bricht currRange.low mit echtem Kerzenschluss, kein bestätigter Nested-Trend -> voller Reset auf 'unknown' (genau wie beim Inner-Pivot-Pfad)", () => {
+    let state = confirmedUptrendState();
+    const breakingPivot = { type: "low", price: 0.9, pivotAt: "break-low", pivotTime: 50, touched: false };
+    const candles = [{ time: 45, open: 0.98, high: 0.99, low: 0.85, close: 0.88 }];
+
+    state = applyMarketStructurePivot(state, breakingPivot, { candles });
+
+    expect(state.trend).toBe("unknown");
+    expect(state.currRange.high).toEqual({ ...confirmBreak, type: "high" }); // alter High weiterverwendet
+    expect(state.currRange.low).toEqual({ ...breakingPivot, type: "low" });
+    expect(state.structurePivots).toEqual([]);
+  });
+
+  it("Outer-Pivot bricht currRange.low mit echtem Kerzenschluss, bereits bestätigter Nested-Trend -> Promotion genau wie beim Inner-Pivot-Pfad (inkl. Re-Check des brechenden Pivots gegen die übernommene Range)", () => {
+    let state = chochConfirmedState();
+    const breakingPivot = { type: "low", price: 0.8, pivotAt: "break-low", pivotTime: 80, touched: false };
+    const candles = [{ time: 75, open: 0.98, high: 0.99, low: 0.75, close: 0.85 }];
+
+    state = applyMarketStructurePivot(state, breakingPivot, { candles });
+
+    expect(state.trend).toBe("downtrend");
+    // Der brechende Pivot (0.8) liegt auch unter nested.currRange.low (1.02) -> wird selbst noch
+    // zum neuen currRange.low, nicht nur Promotion-Auslöser (siehe invalidateUptrend).
+    expect(state.currRange).toEqual({ high: { ...confirmBreak, type: "high" }, low: { ...breakingPivot, type: "low" } });
+    expect(state.nestedTrend).toBeNull();
+    expect(state.closedRanges).toEqual([
+      { low: { ...originLow, type: "low" }, middle: { ...pullback, type: "protected-low" }, high: { ...confirmBreak, type: "high" }, trend: "uptrend" },
+    ]);
   });
 });

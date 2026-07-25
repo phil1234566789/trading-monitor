@@ -21,6 +21,12 @@ export interface Candle {
 // nicht verändert.
 export interface CockpitState {
   h1Trend: "unknown" | "uptrend" | "downtrend";
+  // Chat 2026-07-25 (Bug-Report Philip: "der TSC zeigt nicht an, dass der 1h uptrend schwächelt
+  // (BOS wurde bestätigt)") — true, sobald irgendein structurePivot als 'break-of-structure'
+  // markiert ist. Richtungsunabhängig (dasselbe Feld gilt für Uptrend UND Downtrend, siehe
+  // markLqSweeps' direction-Parameter in marketStructureAnalysis.ts) — welche Konfluenz das genau
+  // entwertet, entscheidet trendSetupConfirmation unten.
+  h1Weakening: boolean;
   h1LqSweep: Pivot | null;
   m5Setup: {
     dir: 1 | -1;
@@ -41,6 +47,7 @@ export interface CockpitState {
 // kleinere LQ-Sweeps mit ein) und wird hier nur nebeneinander dargestellt, nicht verglichen.
 export function computeCockpitState(structureState: MarketStructureState | null, tradeSetups: any[]): CockpitState {
   const h1Trend = structureState?.trend ?? "unknown";
+  const h1Weakening = structureState?.structurePivots.some((p) => p.type === "break-of-structure") ?? false;
   const h1LqSweep = structureState?.structurePivots.find((p) => p.type === "LQ-sweep") ?? null;
   const last = tradeSetups.length > 0 ? tradeSetups[tradeSetups.length - 1] : null;
   const m5Setup = last
@@ -53,7 +60,7 @@ export function computeCockpitState(structureState: MarketStructureState | null,
         obBottom: last.obBottom as number,
       }
     : null;
-  return { h1Trend, h1LqSweep, m5Setup };
+  return { h1Trend, h1Weakening, h1LqSweep, m5Setup };
 }
 
 // --- Zeichnung ----------------------------------------------------------------------------------
@@ -123,11 +130,17 @@ interface HitBox {
 // symmetrisch für Downtrend mitgedacht, auch wenn der Algo den noch nicht produziert (siehe
 // marketStructureAnalysis.ts). Kein Icon ohne Setup oder ohne bekannten Trend — nichts zu
 // bestätigen/widerlegen.
+// KEIN Haken mehr, sobald der Trend schwächelt (h1Weakening, Chat 2026-07-25: "da schwächelnder
+// uptrend: keinen Haken (=Confluence) für einen Long setzen") — ein bestätigtes Break of Structure
+// bedeutet, die Konfluenz mit dem H1-Trend ist nicht mehr belastbar, auch wenn Richtung und Trend
+// formal noch übereinstimmen. Das X bei tatsächlichem Widerspruch bleibt unverändert (schwächelnder
+// Trend macht einen Widerspruch nicht "weniger falsch").
 function trendSetupConfirmation(state: CockpitState): { text: string; color: string } | null {
   if (!state.m5Setup || state.h1Trend === "unknown") return null;
   const setupIsLong = state.m5Setup.dir === -1;
   const trendIsUp = state.h1Trend === "uptrend";
   const confirms = setupIsLong === trendIsUp;
+  if (confirms && state.h1Weakening) return null;
   return confirms ? { text: " ✓", color: cssColor("candleUp") } : { text: " ✗", color: cssColor("candleDown") };
 }
 
@@ -147,7 +160,11 @@ function buildLines(state: CockpitState, formatPrice: (price: number) => string,
   if (state.h1Trend !== "unknown") {
     const color = state.h1Trend === "uptrend" ? cssColor("rangeLow") : cssColor("rangeHigh");
     const suffix = trendSetupConfirmation(state) ?? undefined;
-    lines.push({ text: `1h ${state.h1Trend}`, color, suffix });
+    // Chat 2026-07-25: "der TSC zeigt nicht an, dass der 1h uptrend schwächelt (BOS wurde
+    // bestätigt)" — Text-Hinweis direkt an der Trend-Zeile, unabhängig vom (bei Weakening ja
+    // unterdrückten) Konfluenz-Haken.
+    const weakeningSuffix = state.h1Weakening ? " (schwächelt, BOS)" : "";
+    lines.push({ text: `1h ${state.h1Trend}${weakeningSuffix}`, color, suffix });
   }
   if (state.h1LqSweep) {
     const age = ageSuffix(state.h1LqSweep.pivotTime, nowSec);

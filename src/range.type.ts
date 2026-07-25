@@ -71,11 +71,15 @@ export type RangeTrend = "unknown" | "uptrend" | "downtrend";
 // Uptrend-Bestätigung, siehe gbp_h1_uptrend_LQ_sweep_long_setup.ts) sammelt ihre eigenen Pullback-
 // Pivots getrennt von structurePivots (Periode 5) — beide Ebenen sollen unterscheidbar bleiben,
 // nicht in einer Liste vermischt werden.
-// Ein per Promotion (siehe nestedTrend unten) abgeschlossener Range — nur noch für die Darstellung
-// (einfache Linie von low nach high, kein Zigzag, siehe Chat 2026-07-25), keine Zustandslogik
-// hängt mehr daran.
+// Ein per Promotion (siehe nestedTrend unten) abgeschlossener Range — nur noch für die Darstellung,
+// keine Zustandslogik hängt mehr daran. Zuerst als reine Linie low->high gebaut, seit Chat
+// 2026-07-25 (zweite Runde: "ich hätte gerne die ZickZack Linie ... noch im Chart drin") ein
+// 3-Punkte-ZigZag low->middle->high — `middle` ist der zuletzt bestätigte protected-low/
+// protected-high der abgeschlossenen Range (nicht die volle HH/HL-Historie, die wird nirgends
+// mitprotokolliert), `null` falls keiner bestätigt war.
 export type ClosedRange = {
   low: Pivot;
+  middle: Pivot | null;
   high: Pivot;
   trend: RangeTrend;
 };

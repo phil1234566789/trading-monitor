@@ -782,7 +782,7 @@ function refreshCockpitInternal() {
     // nicht die echte Uhrzeit, sonst wäre das Alter während des Testens falsch/inkonsistent.
     nowSec: props.replayUntil ?? Math.floor(Date.now() / 1000),
   });
-  cockpitMetadata.value = { h1Trend: state.h1Trend, h1LqSweep: pivotForDisplay(state.h1LqSweep), m5Setup: state.m5Setup };
+  cockpitMetadata.value = { h1Trend: state.h1Trend, h1Weakening: state.h1Weakening, h1LqSweep: pivotForDisplay(state.h1LqSweep), m5Setup: state.m5Setup };
 }
 
 // Eigener H1-Fetch fürs Ranges-Metadaten-Panel, unabhängig von tradeSetupH1Candles (siehe oben) —

@@ -228,12 +228,71 @@ function tryConfirmTrend(state: MarketStructureState, breakingPivot: Pivot, dire
 // Nested-Gegentrend-Tracker (siehe advanceNestedTrend) — 'high' ist dann die erkundende Seite (nur
 // ausweiten), 'low' die bestätigende (tryConfirmTrend). Default "up" reproduziert exakt das alte
 // Verhalten, kein bestehender Aufrufer übergibt direction.
+// Gemeinsame Invalidierungs-/Promotion-Entscheidung, sobald ein ECHTER Kerzenschluss currRange.low
+// bricht, während der Uptrend schon bestätigt ist (Philip: "wenn der uptrend gebrochen ist, soll
+// der algo von vorne anfangen") — geteilt zwischen Inner- UND (seit Chat 2026-07-25, Punkt 2:
+// "Outer-Pivot-Low-Bruch ohne Kerzen-Check ... muss jetzt gemacht werden", Bug-Report Philip:
+// "die bestehende Outer-Regel weitet currRange.low immer nur ohne Invalidierungs-/Kerzen-Check
+// aus") Outer-Pivot-Pfad. Nur die Invalidierungs-ENTSCHEIDUNG selbst (Promotion vs. voller Reset)
+// — appliedPivots-/innerStructurePivots-Wachstum drumherum bleibt beim jeweiligen Aufrufer, weil
+// Outer- und Inner-Pivots das strukturell unterschiedlich handhaben (siehe
+// applyMarketStructurePivotCore vs. applyInnerMarketStructurePivotCore).
+function invalidateUptrend(sweepChecked: MarketStructureState, breakingPivot: Pivot, candles: Candle[]): MarketStructureState {
+  const { currRange } = sweepChecked;
+  // PROMOTION (Chat 2026-07-25): läuft bereits ein per Nested-Tracker bestätigter Gegentrend (CHoCH,
+  // siehe advanceNestedTrend), übernimmt DER als neuer Outer-Trend, statt komplett bei Null neu zu
+  // starten — die Vorlaufzeit (structurePivots/protected-high) bleibt damit erhalten. Die alte
+  // Uptrend-Range wird für die Darstellung archiviert (closedRanges, ZigZag low->middle->high, siehe
+  // Chat 2026-07-25 zweite Runde: "ich hätte gerne die ZickZack Linie ... noch im Chart drin" —
+  // middle ist der zuletzt bestätigte protected-low DIESER (jetzt abgeschlossenen) Range, null falls
+  // keiner bestätigt war).
+  if (sweepChecked.nestedTrend?.trend === "downtrend") {
+    const nested = sweepChecked.nestedTrend;
+    const archivedMiddle = sweepChecked.structurePivots.find((p) => p.type === "protected-low" || p.type === "protected-high") ?? null;
+    const promoted: MarketStructureState = {
+      trend: "downtrend",
+      currRange: nested.currRange,
+      structurePivots: nested.structurePivots,
+      innerStructurePivots: [],
+      appliedPivots: nested.appliedPivots,
+      nestedTrend: null,
+      closedRanges: [...sweepChecked.closedRanges, { low: currRange.low, middle: archivedMiddle, high: currRange.high, trend: "uptrend" }],
+      firstConfirmedAt: nested.firstConfirmedAt,
+    };
+    // Der GERADE brechende Pivot selbst (der die Promotion überhaupt erst auslöst, weil er den
+    // ALTEN Uptrend-Ursprung bricht) noch einmal gegen die frisch übernommene Range prüfen
+    // (Bug-Report Philip 2026-07-25: "haben ein innerpivot 1.33003 unter dem range.low 1.33553 ...
+    // neues range.low sollte 1.33003 sein") — vorher wurde dieser Pivot NUR als Auslöser der
+    // Promotion verwendet und danach verworfen, obwohl er selbst durchaus auch nested.currRange.low
+    // weiter hätte unterbieten können.
+    return applyInnerMarketStructurePivotCore(promoted, breakingPivot, { candles, direction: "down" });
+  }
+  // Kein bestätigter Gegentrend vorhanden -> wie bisher kompletter Reset auf 'unknown', kein
+  // direkter Sprung zu 'downtrend', genau wie ein frischer Start auch erstmal 'unknown' ist. Der
+  // alte currRange.high wird als neuer Origin-High WEITERVERWENDET statt verworfen — er liegt
+  // zeitlich vor dem neuen Origin-Low (dem gerade brechenden Pivot), was genau die gespiegelte
+  // Eligibility-Bedingung zum Uptrend ist (dort: High NACH Low = bullisch; hier: High VOR Low =
+  // bärisch, siehe Philip: "ergo es geht tendenz nach unten").
+  const newOriginHigh: PivotHigh = { ...currRange.high, type: "high" };
+  const newOriginLow: PivotLow = { ...breakingPivot, type: "low" };
+  return {
+    trend: "unknown",
+    currRange: { high: newOriginHigh, low: newOriginLow },
+    structurePivots: [],
+    innerStructurePivots: [],
+    appliedPivots: [newOriginHigh, newOriginLow],
+    nestedTrend: null,
+    closedRanges: sweepChecked.closedRanges,
+    firstConfirmedAt: null,
+  };
+}
+
 function applyMarketStructurePivotCore(
   state: MarketStructureState,
   pivot: Pivot,
   { candles = [], direction = "up" }: { candles?: Candle[]; direction?: TrendDirection },
 ): MarketStructureState {
-  const { currRange, innerStructurePivots, appliedPivots } = state;
+  const { currRange, innerStructurePivots, appliedPivots, trend } = state;
   const nextAppliedPivots = [...appliedPivots, pivot];
   // Ein per applyInnerMarketStructurePivot zu 'protected-low'/'protected-high' reklassifizierter
   // eingebetteter Pivot würde durch das innerStructurePivots:[] unten sonst sofort wieder
@@ -249,10 +308,28 @@ function applyMarketStructurePivotCore(
   const structurePivots = markLqSweeps(migratedStructurePivots, candles, latestKnownTime(candles, pivot), direction);
 
   if (direction === "up") {
+    // Docht-vs-Bruch + Invalidierung/Promotion (Chat 2026-07-25, Punkt 2 — vorher weitete ein
+    // reiner Periode-5-Pivot currRange.low IMMER ohne jeden Kerzen-Check aus, unabhängig davon, ob
+    // der Uptrend schon bestätigt war; jetzt exakt dieselbe Regel wie auf der Periode-2-Seite,
+    // siehe invalidateUptrend/applyInnerMarketStructurePivotCore).
     if (pivot.type === "low" && pivot.price < currRange.low.price) {
+      const isRealBreak = closesBelowLevel(candles, pivotTimeOf(currRange.low), pivotTimeOf(pivot), currRange.low.price);
+
+      if (isRealBreak) {
+        if (trend === "uptrend") {
+          return invalidateUptrend({ ...state, structurePivots }, pivot, candles);
+        }
+        return {
+          ...state,
+          currRange: { ...currRange, low: { ...pivot, type: "low" } },
+          structurePivots,
+          innerStructurePivots: [],
+          appliedPivots: nextAppliedPivots,
+        };
+      }
       return {
         ...state,
-        currRange: { ...currRange, low: { ...pivot, type: "low" } },
+        currRange: { ...currRange, low: { ...currRange.low, type: "sweeped-low" } },
         structurePivots,
         innerStructurePivots: [],
         appliedPivots: nextAppliedPivots,
@@ -507,51 +584,10 @@ function applyInnerMarketStructurePivotCore(
       if (isRealBreak) {
         // Ein bereits BESTÄTIGTER Uptrend bricht komplett, sobald eine Kerze wirklich unter
         // currRange.low schließt (Philip: "der uptrend ist komplett gebrochen, trend = unknown...
-        // wenn der uptrend gebrochen ist, soll der algo von vorne anfangen").
+        // wenn der uptrend gebrochen ist, soll der algo von vorne anfangen") — Invalidierung/
+        // Promotion-Entscheidung selbst siehe invalidateUptrend (geteilt mit dem Outer-Pivot-Pfad).
         if (trend === "uptrend") {
-          // PROMOTION (Chat 2026-07-25): läuft bereits ein per Nested-Tracker bestätigter Gegentrend
-          // (CHoCH, siehe advanceNestedTrend), übernimmt DER als neuer Outer-Trend, statt komplett
-          // bei Null neu zu starten — die Vorlaufzeit (structurePivots/protected-high) bleibt damit
-          // erhalten. Die alte Uptrend-Range wird für die Darstellung archiviert (closedRanges,
-          // einfache Linie range.low -> range.high, kein Zigzag).
-          if (sweepChecked.nestedTrend?.trend === "downtrend") {
-            const nested = sweepChecked.nestedTrend;
-            const promoted: MarketStructureState = {
-              trend: "downtrend",
-              currRange: nested.currRange,
-              structurePivots: nested.structurePivots,
-              innerStructurePivots: [],
-              appliedPivots: nested.appliedPivots,
-              nestedTrend: null,
-              closedRanges: [...sweepChecked.closedRanges, { low: currRange.low, high: currRange.high, trend: "uptrend" }],
-              firstConfirmedAt: nested.firstConfirmedAt,
-            };
-            // Der GERADE brechende Pivot selbst (der die Promotion überhaupt erst auslöst, weil er
-            // den ALTEN Uptrend-Ursprung bricht) noch einmal gegen die frisch übernommene Range
-            // prüfen (Bug-Report Philip 2026-07-25: "haben ein innerpivot 1.33003 unter dem
-            // range.low 1.33553 ... neues range.low sollte 1.33003 sein") — vorher wurde dieser
-            // Pivot NUR als Auslöser der Promotion verwendet und danach verworfen, obwohl er selbst
-            // durchaus auch nested.currRange.low weiter hätte unterbieten können.
-            return applyInnerMarketStructurePivotCore(promoted, pivot, { candles, direction: "down" });
-          }
-          // Kein bestätigter Gegentrend vorhanden -> wie bisher kompletter Reset auf 'unknown', kein
-          // direkter Sprung zu 'downtrend', genau wie ein frischer Start auch erstmal 'unknown' ist.
-          // Der alte currRange.high wird als neuer Origin-High WEITERVERWENDET statt verworfen — er
-          // liegt zeitlich vor dem neuen Origin-Low (dem gerade brechenden Pivot), was genau die
-          // gespiegelte Eligibility-Bedingung zum Uptrend ist (dort: High NACH Low = bullisch; hier:
-          // High VOR Low = bärisch, siehe Philip: "ergo es geht tendenz nach unten").
-          const newOriginHigh: PivotHigh = { ...currRange.high, type: "high" };
-          const newOriginLow: PivotLow = { ...pivot, type: "low" };
-          return {
-            trend: "unknown",
-            currRange: { high: newOriginHigh, low: newOriginLow },
-            structurePivots: [],
-            innerStructurePivots: [],
-            appliedPivots: [newOriginHigh, newOriginLow],
-            nestedTrend: null,
-            closedRanges: sweepChecked.closedRanges,
-            firstConfirmedAt: null,
-          };
+          return invalidateUptrend(sweepChecked, pivot, candles);
         }
         // Uptrend noch nicht bestätigt -> es gibt nichts zu invalidieren, currRange.low wird
         // stattdessen einfach ausgeweitet (spiegelbildlich zum unconfirmed Low-Bruch in
@@ -597,14 +633,27 @@ function applyInnerMarketStructurePivotCore(
       if (isRealBreak) {
         if (trend === "downtrend") {
           // Nested-Invalidierung (gespiegelt zur Promotion-Prüfung oben) — OHNE Promotion, siehe
-          // Funktionskommentar: startet einfach frisch vom neuen (widerlegenden) High. Der alte
-          // currRange.low wird als neuer Origin-Low WEITERVERWENDET (bullische Origin-Konstellation:
-          // Low VOR High, spiegelbildlich zu "High VOR Low = bärisch" oben). initMarketStructureState
-          // reicht hier (statt Handbau wie oben), weil ein Nested-Tracker nie eigene closedRanges
-          // ansammelt (appliedPivots[1]=Low bleibt dabei exakt dieselbe Konvention wie beim Seeden
-          // in advanceNestedTrend).
-          const newOriginLow: PivotLow = { ...currRange.low, type: "low" };
+          // Funktionskommentar: startet einfach frisch vom neuen (widerlegenden) High.
+          // Bug-Report Philip 2026-07-25 ("uptrend gebrochen -> trend:'unknown', nestedTrend war
+          // aber nicht da -> Ursprung des Algos"): der alte currRange.low (WEIT vor diesem Pivot
+          // entstanden) wurde hier bisher als neuer Origin-Low wiederverwendet — das verletzt aber
+          // die bärische Origin-Regel "High VOR Low" (tryConfirmTrend, direction='down': eligible
+          // nur wenn lowTime > highTime), weil der alte Low chronologisch VOR diesem neuen High
+          // liegt. Ergebnis: die Eligibility-Prüfung schlägt für den kompletten Rest der Laufzeit
+          // fehl (trend bleibt für immer 'unknown'), außer ein späterer Low bricht zufällig noch
+          // unter diesen alten, oft schon sehr tiefen Low-Wert — im Live-Fall (GBPUSD 1h, 15.07.-
+          // 23.07.) passierte das erst durch denselben Pivot, der gleichzeitig auch den Haupttrend
+          // brach, wodurch beim finalen Bruch kein bestätigter Nested-Downtrend mehr existierte und
+          // die Promotion ausblieb. Fix: statt des alten Lows den auslösenden Pivot selbst (als
+          // "low" umetikettiert) als Platzhalter verwenden — dieselbe Konstruktion, mit der der
+          // Haupttrend-Reset (invalidateUptrend-Fallback) schon immer schnell selbstkorrigiert
+          // (neuester Pivot als frischer Anker). Der Platzhalter hat zwangsläufig lowTime===highTime
+          // (noch nicht eligible), wird aber vom nächsten echten Low-Pivot (Docht-vs-Bruch-Pfad
+          // oben, unbestätigte Ausweitung) sofort auf einen späteren Zeitpunkt nachgezogen, sobald
+          // einer eintrifft — danach ist lowTime > highTime erfüllt und eine neue Bestätigung
+          // wieder möglich.
           const newOriginHigh: PivotHigh = { ...pivot, type: "high" };
+          const newOriginLow: PivotLow = { ...pivot, type: "low" };
           return initMarketStructureState(newOriginHigh, newOriginLow);
         }
         return {
@@ -844,33 +893,36 @@ export class ArrowPrimitive {
   }
 }
 
-// Gerade Linie zwischen zwei beliebigen (Zeit, Preis)-Punkten — für die abgeschlossene Range nach
-// einer Promotion (Chat 2026-07-25: "nur ne Linie, kein Zigzack"). LiquidityLinePrimitive (siehe
-// liquidity.js) zeichnet nur horizontale Preis-Level, keine Diagonalen zwischen zwei
-// unterschiedlichen Preisen — deshalb eine eigene, kleine Primitive nach demselben Muster wie
-// ArrowPrimitive oben (attached/paneViews/Renderer mit useBitmapCoordinateSpace).
+// Gerade Linie(n) durch beliebig viele (Zeit, Preis)-Punkte, der Reihe nach verbunden — für die
+// abgeschlossene Range nach einer Promotion. Erst als reine 2-Punkte-Linie gebaut (Chat 2026-07-25:
+// "nur ne Linie, kein Zigzack"), dann auf beliebig viele Punkte erweitert (Chat 2026-07-25, zweite
+// Runde: "ich hätte gerne die ZickZack Linie ... noch im Chart drin" — 3 Punkte low->middle->high,
+// siehe ClosedRange/invalidateUptrend). LiquidityLinePrimitive (siehe liquidity.js) zeichnet nur
+// horizontale Preis-Level, keine Diagonalen zwischen unterschiedlichen Preisen — deshalb eine
+// eigene, kleine Primitive nach demselben Muster wie ArrowPrimitive oben (attached/paneViews/
+// Renderer mit useBitmapCoordinateSpace).
 class RangeLineRenderer {
-  private _p1: any;
-  private _p2: any;
+  private _points: any[];
   private _options: any;
 
-  constructor(p1: any, p2: any, options: any) {
-    this._p1 = p1;
-    this._p2 = p2;
+  constructor(points: any[], options: any) {
+    this._points = points;
     this._options = options;
   }
 
   draw(target: any) {
-    const { _p1: p1, _p2: p2 } = this;
-    if (p1.x === null || p1.y === null || p2.x === null || p2.y === null) return;
+    const pts = this._points;
+    if (pts.length < 2 || pts.some((p) => p.x === null || p.y === null)) return;
 
     target.useBitmapCoordinateSpace((scope: any) => {
       const ctx = scope.context;
       ctx.strokeStyle = this._options.color;
       ctx.lineWidth = (this._options.lineWidth ?? 1) * scope.horizontalPixelRatio;
       ctx.beginPath();
-      ctx.moveTo(p1.x * scope.horizontalPixelRatio, p1.y * scope.verticalPixelRatio);
-      ctx.lineTo(p2.x * scope.horizontalPixelRatio, p2.y * scope.verticalPixelRatio);
+      ctx.moveTo(pts[0].x * scope.horizontalPixelRatio, pts[0].y * scope.verticalPixelRatio);
+      for (let i = 1; i < pts.length; i++) {
+        ctx.lineTo(pts[i].x * scope.horizontalPixelRatio, pts[i].y * scope.verticalPixelRatio);
+      }
       ctx.stroke();
     });
   }
@@ -878,39 +930,39 @@ class RangeLineRenderer {
 
 class RangeLinePaneView {
   private _source: RangeLinePrimitive;
-  private _p1: any;
-  private _p2: any;
+  private _points: any[];
 
   constructor(source: RangeLinePrimitive) {
     this._source = source;
-    this._p1 = { x: null, y: null };
-    this._p2 = { x: null, y: null };
+    this._points = [];
   }
 
   update() {
     const series = this._source._series;
     const timeScale = this._source._chart.timeScale();
-    const { low, high } = this._source;
-    this._p1 = { x: timeScale.timeToCoordinate(low.pivotTime), y: series.priceToCoordinate(low.price) };
-    this._p2 = { x: timeScale.timeToCoordinate(high.pivotTime), y: series.priceToCoordinate(high.price) };
+    this._points = this._source.pivots.map((p) => ({
+      x: timeScale.timeToCoordinate(p.pivotTime),
+      y: series.priceToCoordinate(p.price),
+    }));
   }
 
   renderer() {
-    return new RangeLineRenderer(this._p1, this._p2, this._source._options);
+    return new RangeLineRenderer(this._points, this._source._options);
   }
 }
 
 class RangeLinePrimitive {
-  low: Pivot;
-  high: Pivot;
+  pivots: Pivot[];
   _options: { color: string; lineWidth?: number };
   _paneViews: RangeLinePaneView[];
   _chart: any;
   _series: any;
 
-  constructor(low: Pivot, high: Pivot, options: { color: string; lineWidth?: number }) {
-    this.low = low;
-    this.high = high;
+  // pivots: mindestens 2 Punkte, in Zeichenreihenfolge (nicht zwingend chronologisch, siehe
+  // ClosedRange: low->middle->high ist bei einem Uptrend-Archiv automatisch auch chronologisch,
+  // müsste es aber nicht sein).
+  constructor(pivots: Pivot[], options: { color: string; lineWidth?: number }) {
+    this.pivots = pivots;
     this._options = options;
     this._paneViews = [new RangeLinePaneView(this)];
     this._chart = null;
@@ -1124,7 +1176,7 @@ export function renderMarketStructureAnalysis(
   // Promotion ist state.trend dann selbst 'downtrend').
   if (state.trend !== "unknown") {
     const liveLineKey = state.trend === "uptrend" ? "rangeClosed" : "rangeChoch";
-    const liveLine = new RangeLinePrimitive(state.currRange.low, state.currRange.high, {
+    const liveLine = new RangeLinePrimitive([state.currRange.low, state.currRange.high], {
       color: cssColor(liveLineKey),
       lineWidth: lineWidth(liveLineKey),
     });
@@ -1133,10 +1185,15 @@ export function renderMarketStructureAnalysis(
   }
 
   // Abgeschlossene Ranges (Chat 2026-07-25, Promotion bei Trend-Invalidierung mit bereits
-  // bestätigtem Nested-Trend) — einfache Linie range.low -> range.high, kein Zigzag (bewusst so
-  // gewünscht: "wie du es umsetzt ist mir egal").
+  // bestätigtem Nested-Trend) — ZigZag low->middle->high (middle = zuletzt bestätigter
+  // protected-low/-high dieser Range, siehe invalidateUptrend; ohne middle nur eine gerade Linie).
+  // Farbe nach der ARCHIVIERTEN Trendrichtung (Chat 2026-07-25, zweite Runde: "kann die Zeichnung
+  // dann noch den uptrend und downtrend farblich unterscheiden?"), nicht nach dem aktuellen
+  // state.trend — war zuvor immer hart grün, unabhängig davon, was archiviert wurde.
   for (const closed of state.closedRanges) {
-    const line = new RangeLinePrimitive(closed.low, closed.high, { color: cssColor("rangeClosed"), lineWidth: lineWidth("rangeClosed") });
+    const closedKey = closed.trend === "uptrend" ? "rangeClosed" : "rangeChoch";
+    const points = closed.middle ? [closed.low, closed.middle, closed.high] : [closed.low, closed.high];
+    const line = new RangeLinePrimitive(points, { color: cssColor(closedKey), lineWidth: lineWidth(closedKey) });
     series.attachPrimitive(line);
     existingPrimitives.push(line);
   }
@@ -1148,7 +1205,7 @@ export function renderMarketStructureAnalysis(
   // reguläre currRange-Darstellung (inkl. der Live-Verbindungslinie oben) den neuen Trend.
   if (state.nestedTrend?.trend === "downtrend") {
     const nested = state.nestedTrend;
-    const nestedLine = new RangeLinePrimitive(nested.currRange.low, nested.currRange.high, {
+    const nestedLine = new RangeLinePrimitive([nested.currRange.low, nested.currRange.high], {
       color: cssColor("rangeChoch"),
       lineWidth: lineWidth("rangeChoch"),
     });
