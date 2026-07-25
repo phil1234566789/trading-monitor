@@ -1067,16 +1067,24 @@ export function renderMarketStructureAnalysis(
   if (!state || candles.length === 0) return;
 
   const hasBreakOfStructure = state.structurePivots.some((p) => p.type === "break-of-structure");
+  // Seit der Promotion-Funktion (Chat 2026-07-25) kann der HAUPTTREND selbst 'downtrend' sein
+  // (übernommener Nested-Tracker) — vorher war state.trend hier praktisch immer 'uptrend', daher
+  // war die gesamte Darstellung unten bis zum Bug-Report Philip 2026-07-26 ("1h-LQ-Sweeps ... mit
+  // einem bullischen Pfeil nach oben angezeigt") hart auf bullisch verdrahtet. isDowntrend steuert
+  // ab hier, welche Seite (high/low) die "geschützte", per Break-of-Structure unterdrückbare Seite
+  // ist — analog zur bereits bestehenden Nested-Tracker-Darstellung weiter unten.
+  const isDowntrend = state.trend === "downtrend";
 
   const highColor = cssColor("rangeHigh");
   const lowColor = cssColor("rangeLow");
   // Gestrichelt statt durchgezogen, solange range.high/low nur "sweeped" ist (Docht durchbrochen,
   // aber noch keine Kerze drüber/drunter geschlossen -> kein bestätigter Bruch, siehe Chat
   // 2026-07-19) — ODER sobald irgendwo ein Break of Structure steht (Schwäche-Signal, unabhängig
-  // vom sweeped-low-Zustand von range.low selbst). Dreieck (ArrowPrimitive) bleibt unverändert —
-  // nur die Linie ändert sich.
-  const highDashed = state.currRange.high.type === "sweeped-high";
-  const lowDashed = state.currRange.low.type === "sweeped-low" || hasBreakOfStructure;
+  // vom sweeped-low-Zustand von range.low selbst) — im Uptrend betrifft das range.low (die
+  // geschützte Seite), im Downtrend gespiegelt range.high. Dreieck (ArrowPrimitive) bleibt
+  // unverändert — nur die Linie ändert sich.
+  const highDashed = state.currRange.high.type === "sweeped-high" || (isDowntrend && hasBreakOfStructure);
+  const lowDashed = state.currRange.low.type === "sweeped-low" || (!isDowntrend && hasBreakOfStructure);
   const highLine = new LiquidityLinePrimitive(
     toLevel(state.currRange.high, candles),
     { color: highColor, lineWidth: lineWidth("rangeHigh"), dashed: highDashed },
@@ -1087,24 +1095,25 @@ export function renderMarketStructureAnalysis(
     { color: lowColor, lineWidth: lineWidth("rangeLow"), dashed: lowDashed },
     candles,
   );
-  // rot: unter der Linie, zeigt nach oben; grün: über der Linie, zeigt nach unten (siehe Chat).
-  // Der grüne range.low-Pfeil fällt bei einem Break of Structure weg (siehe oben) — die Linie
-  // bleibt trotzdem stehen, nur ohne die "hier long suchen"-Andeutung.
-  const highArrow = new ArrowPrimitive(state.currRange.high, { color: highColor, direction: "up" }, candles);
-  const primitives = [highLine, lowLine, highArrow];
-  if (!hasBreakOfStructure) {
-    primitives.push(new ArrowPrimitive(state.currRange.low, { color: lowColor, direction: "down" }, candles));
-  }
+  // Bug-Report Philip 2026-07-26: keine Pfeile mehr an range.high/range.low (nur noch bei
+  // LQ-Sweep, siehe unten) — die Dreiecke (ArrowPrimitive) wurden hier bewusst entfernt, die reine
+  // Linie (inkl. gestrichelt bei sweeped-high/-low bzw. Break of Structure, siehe oben) bleibt.
+  const primitives: LiquidityLinePrimitive[] = [highLine, lowLine];
   for (const primitive of primitives) {
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }
 
-  const protectedLow = state.structurePivots.find((p) => p.type === "protected-low");
-  if (protectedLow) {
+  const protectedPivot = state.structurePivots.find((p) => p.type === (isDowntrend ? "protected-high" : "protected-low"));
+  if (protectedPivot) {
     const line = new LiquidityLinePrimitive(
-      toLevel(protectedLow, candles),
-      { color: cssColor("rangeProtectedLow"), lineWidth: lineWidth("rangeProtectedLow"), label: "1h protected low", labelSide: "end" },
+      toLevel(protectedPivot, candles),
+      {
+        color: cssColor("rangeProtectedLow"),
+        lineWidth: lineWidth("rangeProtectedLow"),
+        label: isDowntrend ? "1h protected high" : "1h protected low",
+        labelSide: "end",
+      },
       candles,
     );
     series.attachPrimitive(line);
@@ -1113,14 +1122,15 @@ export function renderMarketStructureAnalysis(
 
   // Goldene Linie + Pfeil je LQ-Sweep (siehe Chat 2026-07-19: "GOLDENE Linie ... mit dem label '1h
   // LQ-Sweep'", und Chat 2026-07-20: "noch mit nem goldenen Pfeil nach oben") — anders als
-  // protected-low (immer nur der jeweils jüngste) potenziell mehrere gleichzeitig, deshalb hier
-  // eine Linie (+ ggf. Pfeil) PRO markiertem structurePivot statt nur die erste. Pfeil zeigt IMMER
-  // nach oben (direction: "down" löst laut ArrowRenderer den nach-oben-zeigenden Zweig aus, siehe
-  // dortiger Kommentar) — ein LQ-Sweep ist per Definition bullisch (gesweepter Low, der hält).
-  // Downtrend (Pfeil nach unten) noch nicht implementiert, siehe Trend-Logik oben. Seit Chat
+  // protected-low/-high (immer nur der jeweils jüngste) potenziell mehrere gleichzeitig, deshalb
+  // hier eine Linie (+ ggf. Pfeil) PRO markiertem structurePivot statt nur die erste. Pfeilrichtung
+  // folgt state.trend (Bug-Report Philip 2026-07-26: "1h-LQ-Sweeps ... bärisch aber mit
+  // bullischem Pfeil nach oben angezeigt" — nach einer Promotion kann state.structurePivots
+  // bärische LQ-Sweeps enthalten, direction war hier bis dahin hart auf "down"/bullisch verdrahtet,
+  // siehe dieselbe gespiegelte direction bei der Nested-Tracker-Darstellung unten). Seit Chat
   // 2026-07-24 nur noch 1px breit (LQ_SWEEP_LINE_WIDTH) und OHNE Pfeil, sobald ein Break of
-  // Structure existiert — der Long-Gedanke dahinter gilt dann nicht mehr, die Linie bleibt aber
-  // als reine Information stehen.
+  // Structure existiert — der Long-/Short-Gedanke dahinter gilt dann nicht mehr, die Linie bleibt
+  // aber als reine Information stehen.
   for (const lqSweep of state.structurePivots.filter((p) => p.type === "LQ-sweep")) {
     const lqColor = cssColor("rangeLqSweep");
     const line = new LiquidityLinePrimitive(
@@ -1131,7 +1141,7 @@ export function renderMarketStructureAnalysis(
     series.attachPrimitive(line);
     existingPrimitives.push(line);
     if (!hasBreakOfStructure) {
-      const arrow = new ArrowPrimitive(lqSweep, { color: lqColor, direction: "down" }, candles);
+      const arrow = new ArrowPrimitive(lqSweep, { color: lqColor, direction: isDowntrend ? "up" : "down" }, candles);
       series.attachPrimitive(arrow);
       existingPrimitives.push(arrow);
     }

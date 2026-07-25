@@ -108,23 +108,41 @@ Live beobachtet (GBPUSD 1h, siehe `test/tdd_mit_claude/ranges/gbp_h1_uptrend_upt
 Rein visuell, keine Zustandslogik — kein Test, nur Code-Kommentare in
 `marketStructureAnalysis.ts` ab `renderMarketStructureAnalysis`:
 
-- `currRange.high`: immer Pfeil + Linie, gestrichelt solange nur `sweeped-high`.
-- `currRange.low`: immer Linie, gestrichelt solange nur `sweeped-low` ODER sobald irgendwo ein
-  `break-of-structure` existiert (Schwäche-Signal, Chat 2026-07-24). Der grüne Pfeil ("hier long
-  suchen") fällt komplett weg, sobald ein `break-of-structure` existiert — die Linie bleibt.
-- `protected-low`: genau EINE Linie+Label ("1h protected low"), der jeweils aktuelle.
+- Seit der Promotion-Funktion (Chat 2026-07-25) kann der HAUPTTREND selbst `'downtrend'` sein
+  (übernommener Nested-Tracker) — alles unten ist deshalb seit Bug-Report Philip 2026-07-26
+  ("1h-LQ-Sweeps ... bärisch, aber mit bullischem Pfeil nach oben angezeigt") trend-bewusst
+  (`isDowntrend = state.trend === 'downtrend'`), vorher war die gesamte Darstellung hart auf
+  bullisch verdrahtet (state.trend war praktisch immer `'uptrend'`, bevor Promotion existierte).
+  `currRange.high`/`currRange.low` selbst bleiben als PHYSISCHE Grenzen unverändert (rot/oben bzw.
+  grün/unten, unabhängig von der Trendrichtung).
+- `currRange.high`: nur Linie (KEIN Pfeil mehr, siehe unten), gestrichelt solange nur
+  `sweeped-high` ODER (im Downtrend) sobald irgendwo ein `break-of-structure` existiert (Resistance
+  ist im Downtrend die geschützte Seite, gespiegelt zu `currRange.low` im Uptrend).
+- `currRange.low`: nur Linie (KEIN Pfeil mehr, siehe unten), gestrichelt solange nur `sweeped-low`
+  ODER (im Uptrend) sobald irgendwo ein `break-of-structure` existiert (Schwäche-Signal, Chat
+  2026-07-24).
+- Bug-Report Philip 2026-07-26 ("die Pfeile am range.high und range.low möchte ich doch nicht"):
+  `currRange.high`/`currRange.low` bekommen KEINE `ArrowPrimitive`-Dreiecke mehr — nur noch die
+  Linie selbst (inkl. gestrichelt-Logik oben). Der goldene LQ-Sweep-Pfeil (siehe unten) ist davon
+  NICHT betroffen und bleibt bestehen.
+- `protected-low`/`protected-high`: genau EINE Linie+Label (der jeweils aktuelle) — `protected-low`
+  im Uptrend ("1h protected low"), `protected-high` im Downtrend ("1h protected high"), gleiche
+  Farbe (`rangeProtectedLow`, neutraler weißer "geschützt"-Marker) für beide.
 - `LQ-sweep`: JEDER aktuell so markierte `structurePivot` bekommt eine eigene goldene 1px-Linie
-  (im Gegensatz zu protected-low potenziell mehrere gleichzeitig) — der goldene Pfeil nach oben
-  fällt weg, sobald irgendwo ein `break-of-structure` existiert (keine Long-Andeutung mehr, siehe
-  Chat 2026-07-24: "damit ich keine Longs suche").
+  (im Gegensatz zu protected-low/-high potenziell mehrere gleichzeitig) — der goldene Pfeil zeigt im
+  Uptrend nach oben (bullischer Sweep), im Downtrend nach unten (bärischer Sweep, seit Bug-Report
+  Philip 2026-07-26 — vorher hart auf "nach oben" verdrahtet, sichtbar falsch sobald
+  `state.structurePivots` nach einer Promotion bärische LQ-Sweeps enthielt). Fällt komplett weg,
+  sobald irgendwo ein `break-of-structure` existiert (keine Long-/Short-Andeutung mehr, siehe Chat
+  2026-07-24: "damit ich keine Longs suche").
 - `break-of-structure`: JEDER aktuell so markierte `structurePivot` bekommt eine eigene gestrichelte
   rote Linie + Label ("BOS", ohne Altersangabe — anders als bei `LQ-sweep` für die Handelsentscheidung
-  nicht relevant, Chat 2026-07-24), mittig über der Linie im Uptrend / mittig darunter im (noch nicht
-  implementierten) Downtrend, kein eigener Pfeil (reines Warnsignal). Endet seit Chat 2026-07-25
-  ("BOS Linie soll auch nicht so weit gezeichnet werden ... wie bei CHOCH") genau wie die CHoCH-Linie
-  an der ERSTEN tatsächlich unter dem Level schließenden Kerze (`firstCloseBelow` — derselbe
-  Kerzenschluss, der den Pivot überhaupt erst zu `break-of-structure` reklassifiziert hat), nicht mehr
-  bis zur letzten geladenen Kerze wie `toLevel` es für die übrigen Range-Linien tut.
+  nicht relevant, Chat 2026-07-24), mittig über der Linie im Uptrend / mittig darunter im Downtrend,
+  kein eigener Pfeil (reines Warnsignal). Endet seit Chat 2026-07-25 ("BOS Linie soll auch nicht so
+  weit gezeichnet werden ... wie bei CHOCH") genau wie die CHoCH-Linie an der ERSTEN tatsächlich
+  unter dem Level schließenden Kerze (`firstCloseBelow` — derselbe Kerzenschluss, der den Pivot
+  überhaupt erst zu `break-of-structure` reklassifiziert hat), nicht mehr bis zur letzten geladenen
+  Kerze wie `toLevel` es für die übrigen Range-Linien tut.
 - Verbindungslinie der AKTUELL laufenden Range (Chat 2026-07-25, Bug-Report Philip: "auch den
   jetzigen bestätigten uptrend auch verbunden"): sobald `state.trend !== 'unknown'`, eine einfache
   gerade Linie von `currRange.low` nach `currRange.high` (`RangeLinePrimitive`, kein Zigzag —
