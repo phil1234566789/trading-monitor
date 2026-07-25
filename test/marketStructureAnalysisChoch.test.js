@@ -148,7 +148,7 @@ describe("marketStructureAnalysis: Promotion bei Invalidierung mit bereits best�
     return state;
   }
 
-  it("echte Invalidierung (Kerze schließt unter currRange.low) übernimmt den bestätigten Nested-Trend statt komplett zurückzusetzen", () => {
+  it("echte Invalidierung (Kerze schließt unter currRange.low) übernimmt den bestätigten Nested-Trend UND lässt den brechenden Pivot selbst noch gegen die übernommene Range zählen", () => {
     let state = chochConfirmedState();
     const nestedBeforePromotion = state.nestedTrend;
     const breakingPivot = { type: "low", price: 0.8, pivotAt: "break-low", pivotTime: 80, touched: false };
@@ -158,13 +158,41 @@ describe("marketStructureAnalysis: Promotion bei Invalidierung mit bereits best�
     state = applyInnerMarketStructurePivot(state, breakingPivot, { candles });
 
     expect(state.trend).toBe("downtrend"); // nicht 'unknown' -> Promotion statt vollem Reset
-    expect(state.currRange).toEqual(nestedBeforePromotion.currRange);
+    // Der brechende Pivot (0.8) liegt AUCH unter dem übernommenen nested.currRange.low (1.02) —
+    // zählt deshalb nicht nur als Promotion-Auslöser, sondern zieht die übernommene Range noch
+    // einen Schritt weiter (Bug-Report Philip 2026-07-25: "haben ein innerpivot 1.33003 unter dem
+    // range.low ... neues range.low sollte 1.33003 sein" — vorher wurde dieser Pivot NUR als
+    // Auslöser der Promotion verwendet und sein eigener Wert danach verworfen).
+    expect(state.currRange).toEqual({ high: nestedBeforePromotion.currRange.high, low: { ...breakingPivot, type: "low" } });
     expect(state.structurePivots).toEqual(nestedBeforePromotion.structurePivots);
     expect(state.appliedPivots).toEqual(nestedBeforePromotion.appliedPivots);
-    expect(state.innerStructurePivots).toEqual([]);
+    expect(state.innerStructurePivots).toEqual([{ ...breakingPivot, type: "low" }]);
     expect(state.nestedTrend).toBeNull();
     // Alte Uptrend-Range archiviert für die Darstellung (einfache Linie, kein Zigzag).
     expect(state.closedRanges).toEqual([{ low: { ...originLow, type: "low" }, high: { ...confirmBreak, type: "high" }, trend: "uptrend" }]);
+  });
+
+  it("Promotion ohne weiteren Bruch: der auslösende Pivot bricht nested.currRange.low NUR preislich (kein Close drunter) -> Range bleibt beim übernommenen Nested-Stand", () => {
+    let state = chochConfirmedState();
+    const nestedBeforePromotion = state.nestedTrend;
+    const breakingPivot = { type: "low", price: 0.8, pivotAt: "break-low", pivotTime: 80, touched: false };
+    // Frühe Kerze (vor nested.currRange.low, Zeit 70) schließt real unter dem Haupttrend-Ursprung
+    // (1.0) -> löst die Promotion aus. Die einzige Kerze NACH nested.currRange.low (Zeit 70) bleibt
+    // aber über dessen Preis (1.02) -> kein echter Bruch von nested.currRange.low selbst.
+    const candles = [
+      { time: 5, open: 0.6, high: 0.6, low: 0.4, close: 0.5 },
+      { time: 75, open: 1.04, high: 1.05, low: 1.0, close: 1.03 },
+    ];
+
+    state = applyInnerMarketStructurePivot(state, breakingPivot, { candles });
+
+    expect(state.trend).toBe("downtrend");
+    // Kein echter Bruch von nested.currRange.low -> nur 'sweeped-low', Preis/Zeit unverändert.
+    expect(state.currRange).toEqual({
+      high: nestedBeforePromotion.currRange.high,
+      low: { ...nestedBeforePromotion.currRange.low, type: "sweeped-low" },
+    });
+    expect(state.innerStructurePivots).toEqual([{ ...breakingPivot, type: "low" }]);
   });
 
   it("Fallback bleibt erhalten: ohne bestätigten Nested-Trend weiterhin voller Reset auf 'unknown', nestedTrend/closedRanges bleiben leer", () => {

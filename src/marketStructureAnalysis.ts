@@ -516,7 +516,7 @@ function applyInnerMarketStructurePivotCore(
           // einfache Linie range.low -> range.high, kein Zigzag).
           if (sweepChecked.nestedTrend?.trend === "downtrend") {
             const nested = sweepChecked.nestedTrend;
-            return {
+            const promoted: MarketStructureState = {
               trend: "downtrend",
               currRange: nested.currRange,
               structurePivots: nested.structurePivots,
@@ -526,6 +526,13 @@ function applyInnerMarketStructurePivotCore(
               closedRanges: [...sweepChecked.closedRanges, { low: currRange.low, high: currRange.high, trend: "uptrend" }],
               firstConfirmedAt: nested.firstConfirmedAt,
             };
+            // Der GERADE brechende Pivot selbst (der die Promotion überhaupt erst auslöst, weil er
+            // den ALTEN Uptrend-Ursprung bricht) noch einmal gegen die frisch übernommene Range
+            // prüfen (Bug-Report Philip 2026-07-25: "haben ein innerpivot 1.33003 unter dem
+            // range.low 1.33553 ... neues range.low sollte 1.33003 sein") — vorher wurde dieser
+            // Pivot NUR als Auslöser der Promotion verwendet und danach verworfen, obwohl er selbst
+            // durchaus auch nested.currRange.low weiter hätte unterbieten können.
+            return applyInnerMarketStructurePivotCore(promoted, pivot, { candles, direction: "down" });
           }
           // Kein bestätigter Gegentrend vorhanden -> wie bisher kompletter Reset auf 'unknown', kein
           // direkter Sprung zu 'downtrend', genau wie ein frischer Start auch erstmal 'unknown' ist.
@@ -966,6 +973,15 @@ function firstCloseBelow(candles: Candle[], fromTime: number, price: number, fal
   return fallbackTime;
 }
 
+// Spiegelbild von firstCloseBelow für die Nested-BOS-Linie (protected-high, real durch einen
+// Kerzenschluss DRÜBER gebrochen) — sonst identische Begründung.
+function firstCloseAbove(candles: Candle[], fromTime: number, price: number, fallbackTime: number): number {
+  for (const c of candles) {
+    if (c.time > fromTime && c.close > price) return c.time;
+  }
+  return fallbackTime;
+}
+
 // " (1d 3h alt)" hinter einem Label, oder "" ohne pivotTime/nowSec (Chat 2026-07-22: "bei den
 // relevanten LQ-Leveln das Alter anzeigen ... Wochenende nicht mitzählen", 2026-07-22 zweite Runde:
 // "bitte noch bei structure bei 1h LQ-Sweep dazutun") — dieselbe Formel wie im TSC/den
@@ -1138,6 +1154,61 @@ export function renderMarketStructureAnalysis(
     });
     series.attachPrimitive(nestedLine);
     existingPrimitives.push(nestedLine);
+
+    // protected-high/LQ-sweep/break-of-structure für den Nested-Tracker selbst (Chat 2026-07-25,
+    // Bug-Report Philip: "dieser bärische LQ Sweep entstand als der downtrend noch ein nestedTrend
+    // war ... sollte viel früher erkannt werden" — markLqSweeps(direction="down") lief auf
+    // nested.structurePivots schon die ganze Zeit über advanceNestedTrend/advanceNestedTrendInner
+    // mit (die ERKENNUNG war also nie das Problem), nur die DARSTELLUNG zeigte bis hierhin
+    // ausschließlich state.structurePivots — nested.structurePivots wurde nie gerendert, bevor eine
+    // Promotion passierte). Exakt dieselben Elemente wie unten für den Haupttrend, nur an
+    // nested.structurePivots und mit gespiegelter Pfeilrichtung (bärisch statt bullisch).
+    const hasNestedBreakOfStructure = nested.structurePivots.some((p) => p.type === "break-of-structure");
+
+    const protectedHigh = nested.structurePivots.find((p) => p.type === "protected-high");
+    if (protectedHigh) {
+      const line = new LiquidityLinePrimitive(
+        toLevel(protectedHigh, candles),
+        { color: cssColor("rangeProtectedLow"), lineWidth: lineWidth("rangeProtectedLow"), label: "1h protected high", labelSide: "end" },
+        candles,
+      );
+      series.attachPrimitive(line);
+      existingPrimitives.push(line);
+    }
+
+    for (const lqSweep of nested.structurePivots.filter((p) => p.type === "LQ-sweep")) {
+      const lqColor = cssColor("rangeLqSweep");
+      const line = new LiquidityLinePrimitive(
+        toLevel(lqSweep, candles),
+        { color: lqColor, lineWidth: lineWidth("rangeLqSweep"), label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec)}`, labelSide: "end" },
+        candles,
+      );
+      series.attachPrimitive(line);
+      existingPrimitives.push(line);
+      if (!hasNestedBreakOfStructure) {
+        // direction: "up" statt "down" — bärischer Sweep (gehaltener Widerstand), Pfeil zeigt nach
+        // unten weg statt wie beim bullischen Pendant nach oben (siehe ArrowRenderer).
+        const arrow = new ArrowPrimitive(lqSweep, { color: lqColor, direction: "up" }, candles);
+        series.attachPrimitive(arrow);
+        existingPrimitives.push(arrow);
+      }
+    }
+
+    for (const bos of nested.structurePivots.filter((p) => p.type === "break-of-structure")) {
+      const bosColor = cssColor("rangeBreakOfStructure");
+      const bosFallback = candles.length > 0 ? candles[candles.length - 1].time : (bos.pivotTime ?? 0);
+      // firstCloseAbove statt firstCloseBelow — hier bricht ein protected-high durch einen
+      // Kerzenschluss DRÜBER, spiegelbildlich zur BOS-Linie des Haupttrends weiter unten.
+      const bosEndTime = firstCloseAbove(candles, bos.pivotTime ?? 0, bos.price, bosFallback);
+      const bosLevel = { price: bos.price, pivotTime: bos.pivotTime ?? 0, endTime: bosEndTime };
+      const line = new LiquidityLinePrimitive(
+        bosLevel,
+        { color: bosColor, lineWidth: lineWidth("rangeBreakOfStructure"), dashed: true, label: "BOS", labelSide: "center-below" },
+        candles,
+      );
+      series.attachPrimitive(line);
+      existingPrimitives.push(line);
+    }
 
     // CHoCH-Label sitzt an der URSPRÜNGLICHEN Nested-Origin-Low (appliedPivots[1] — siehe
     // advanceNestedTrend: nestedTrend wird IMMER via initMarketStructureState(originHigh, lowPivot)
