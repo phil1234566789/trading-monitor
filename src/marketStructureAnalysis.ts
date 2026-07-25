@@ -207,10 +207,11 @@ function tryConfirmTrend(state: MarketStructureState, breakingPivot: Pivot, dire
 //    hier nicht mehr mit, weil es VOR pivot5 liegt).
 // 3. Pivot liegt innerhalb der aktuellen Range -> Pullback, landet in structurePivots (siehe
 //    rangeState3/5/6) — unabhängig davon, ob er später als "qualifizierend" zählt.
-// NICHT implementiert: die spiegelbildliche Downtrend-Bestätigung (neues Low bricht currRange.low
-// mit genug nachträglichen Pullback-Highs in der Struktur) — dafür gibt es noch kein Beispiel in
-// tdd_mit_claude.ts, also bewusst offen gelassen statt geraten (wie beim alten trendZigzag.ts:
-// "STOPP, schreib den algo erst mal bis hier und nicht weiter").
+// Seit Chat 2026-07-26 implementiert (vorher hier bewusst offen gelassen): die spiegelbildliche
+// Downtrend-Bestätigung (neues Low bricht currRange.low mit genug nachträglichen Pullback-Highs in
+// der Struktur) — siehe direction="down"-Zweig unten UND den zusätzlichen tryConfirmTrend(...,
+// "down")-Versuch im direction="up"-LOW-Zweig (Bug-Report Philip: "kein 1h downtrend erkannt",
+// siehe marketStructureAnalysisDowntrend.test.js).
 // Jeder hier gelesene ÜBERGEORDNETE (z.B. Periode-5-)Pivot räumt innerStructurePivots leer —
 // die eingebettete Struktur bezieht sich immer nur auf "seit dem letzten übergeordneten Pivot"
 // (siehe Chat 2026-07-19, gbp_h1_uptrend_LQ_sweep_long_setup.ts: rangeState1_2 -> rangeState2,
@@ -287,6 +288,41 @@ function invalidateUptrend(sweepChecked: MarketStructureState, breakingPivot: Pi
   };
 }
 
+// Spiegelbild von invalidateUptrend für einen bestätigten TOP-LEVEL-Downtrend (Chat 2026-07-26,
+// Bug-Report Philip: "kein 1h downtrend erkannt" — der Haupttrend konnte bis dahin NUR über
+// 'uptrend' laufen, ein Downtrend entstand ausschließlich über den Umweg Nested-CHoCH+Promotion;
+// startete das sichtbare Fenster/Fixed-Start-Fenster aber schon mitten in einem Downtrend, ohne
+// dass zuvor je ein Uptrend bestätigt wurde, sprang advanceNestedTrend nie an, und der Downtrend
+// blieb für immer unsichtbar). OHNE Promotion-Zweig — ein bullischer Gegentrend-Tracker innerhalb
+// eines Downtrends ist bewusst nicht verdrahtet (siehe rules.md, "gespiegelte Richtung"), es gibt
+// also nie einen bestätigten Nested-Kandidaten zum Übernehmen. Genutzt vom Outer- UND Inner-Pfad
+// (siehe applyMarketStructurePivotCore/applyInnerMarketStructurePivotCore, direction="down") UND
+// vom Nested-Tracker selbst (advanceNestedTrend/-Inner, direction ist dort immer "down") — beim
+// Nested-Tracker landet die archivierte Range in nested.closedRanges, was nirgends gerendert wird
+// (nur state.closedRanges), also folgenlos bleibt.
+// Origin-Konstruktion: der auslösende Pivot dient (als "low" umetikettiert) als selbstkorrigierender
+// Platzhalter für den neuen Origin-Low statt des alten currRange.low — derselbe Grund wie beim
+// bereits gefixten Nested-Invalidierungs-Bug (Chat 2026-07-25): das alte, chronologisch VOR diesem
+// neuen High liegende Low würde die bärische "High vor Low"-Eligibility einer erneuten
+// Downtrend-Bestätigung sonst dauerhaft sperren. Der Platzhalter (lowTime===highTime, noch nicht
+// eligible für IRGENDEINE Richtung) wird vom nächsten echten Pivot automatisch aufgelöst.
+function invalidateDowntrend(sweepChecked: MarketStructureState, breakingPivot: Pivot, candles: Candle[]): MarketStructureState {
+  const { currRange } = sweepChecked;
+  const archivedMiddle = sweepChecked.structurePivots.find((p) => p.type === "protected-low" || p.type === "protected-high") ?? null;
+  const newOriginHigh: PivotHigh = { ...breakingPivot, type: "high" };
+  const newOriginLow: PivotLow = { ...breakingPivot, type: "low" };
+  return {
+    trend: "unknown",
+    currRange: { high: newOriginHigh, low: newOriginLow },
+    structurePivots: [],
+    innerStructurePivots: [],
+    appliedPivots: [newOriginHigh, newOriginLow],
+    nestedTrend: null,
+    closedRanges: [...sweepChecked.closedRanges, { low: currRange.low, middle: archivedMiddle, high: currRange.high, trend: "downtrend" }],
+    firstConfirmedAt: null,
+  };
+}
+
 function applyMarketStructurePivotCore(
   state: MarketStructureState,
   pivot: Pivot,
@@ -319,6 +355,19 @@ function applyMarketStructurePivotCore(
         if (trend === "uptrend") {
           return invalidateUptrend({ ...state, structurePivots }, pivot, candles);
         }
+        // NEU (Chat 2026-07-26, "eigenständige Downtrend-Erkennung", Bug-Report Philip: "kein 1h
+        // downtrend erkannt"): derselbe Bruch kann genauso gut die BESTÄTIGENDE Seite eines
+        // brandneuen Downtrends sein (tryConfirmTrend, direction="down"), nicht nur eine
+        // unbestätigte Ausweitung — vorher wurde ein Downtrend NIE direkt erkannt, nur über den
+        // Umweg "erst Uptrend bestätigen, dann CHoCH, dann Promotion" (advanceNestedTrend läuft
+        // nur, solange trend schon 'uptrend' ist). Landet der allererste Origin-Pivot zufällig als
+        // "High vor Low" (bärische Reihenfolge — z.B. weil ein Fixed-Start-/Replay-Fenster mitten in
+        // einem laufenden Downtrend beginnt), konnte 'uptrend' NIE bestätigen (dessen Eligibility
+        // verlangt "Low vor High") und der Downtrend blieb dadurch für immer unsichtbar.
+        const confirmedDown = tryConfirmTrend({ ...state, structurePivots }, pivot, "down");
+        if (confirmedDown) {
+          return { ...confirmedDown, innerStructurePivots: [], appliedPivots: nextAppliedPivots };
+        }
         return {
           ...state,
           currRange: { ...currRange, low: { ...pivot, type: "low" } },
@@ -350,12 +399,28 @@ function applyMarketStructurePivotCore(
       };
     }
   } else {
-    // Gespiegelt: 'high' weitet nur aus (erkundende Seite), 'low' bricht/bestätigt (siehe
-    // tryConfirmTrend direction="down").
+    // Gespiegelt: 'high' bricht/invalidiert einen bestätigten Downtrend (bzw. weitet nur aus,
+    // solange trend noch 'unknown' ist — reine Erkundung), 'low' bestätigt (tryConfirmTrend
+    // direction="down"). Die Invalidierung (Chat 2026-07-26) fehlte hier bis dahin komplett — ein
+    // ECHTER neuer Höchststand hätte einen bestätigten Downtrend sonst nie zurückgesetzt, sondern
+    // currRange.high stillschweigend für immer weiter ausgeweitet.
     if (pivot.type === "high" && pivot.price > currRange.high.price) {
+      const isRealBreak = closesAboveOldHigh(candles, pivotTimeOf(currRange.high), pivotTimeOf(pivot), currRange.high.price);
+      if (isRealBreak) {
+        if (trend === "downtrend") {
+          return invalidateDowntrend({ ...state, structurePivots }, pivot, candles);
+        }
+        return {
+          ...state,
+          currRange: { ...currRange, high: { ...pivot, type: "high" } },
+          structurePivots,
+          innerStructurePivots: [],
+          appliedPivots: nextAppliedPivots,
+        };
+      }
       return {
         ...state,
-        currRange: { ...currRange, high: { ...pivot, type: "high" } },
+        currRange: { ...currRange, high: { ...currRange.high, type: "sweeped-high" } },
         structurePivots,
         innerStructurePivots: [],
         appliedPivots: nextAppliedPivots,
@@ -589,6 +654,14 @@ function applyInnerMarketStructurePivotCore(
         if (trend === "uptrend") {
           return invalidateUptrend(sweepChecked, pivot, candles);
         }
+        // NEU (Chat 2026-07-26, siehe applyMarketStructurePivotCore für die volle Begründung): auch
+        // hier kann derselbe Bruch direkt einen neuen Downtrend bestätigen statt nur unbestätigt
+        // auszuweiten — Periode-2-Pivots können das sogar VOR dem entsprechenden Periode-5-Pivot
+        // (schnellere Erkennung, analog zur bestehenden Uptrend-Bestätigung).
+        const confirmedDown = tryConfirmTrend(sweepChecked, pivot, "down");
+        if (confirmedDown) {
+          return { ...confirmedDown, innerStructurePivots: [...confirmedDown.innerStructurePivots, pivot] };
+        }
         // Uptrend noch nicht bestätigt -> es gibt nichts zu invalidieren, currRange.low wird
         // stattdessen einfach ausgeweitet (spiegelbildlich zum unconfirmed Low-Bruch in
         // applyMarketStructurePivot — reine Erkundung, kein Bruch von etwas Bestätigtem).
@@ -632,29 +705,10 @@ function applyInnerMarketStructurePivotCore(
 
       if (isRealBreak) {
         if (trend === "downtrend") {
-          // Nested-Invalidierung (gespiegelt zur Promotion-Prüfung oben) — OHNE Promotion, siehe
-          // Funktionskommentar: startet einfach frisch vom neuen (widerlegenden) High.
-          // Bug-Report Philip 2026-07-25 ("uptrend gebrochen -> trend:'unknown', nestedTrend war
-          // aber nicht da -> Ursprung des Algos"): der alte currRange.low (WEIT vor diesem Pivot
-          // entstanden) wurde hier bisher als neuer Origin-Low wiederverwendet — das verletzt aber
-          // die bärische Origin-Regel "High VOR Low" (tryConfirmTrend, direction='down': eligible
-          // nur wenn lowTime > highTime), weil der alte Low chronologisch VOR diesem neuen High
-          // liegt. Ergebnis: die Eligibility-Prüfung schlägt für den kompletten Rest der Laufzeit
-          // fehl (trend bleibt für immer 'unknown'), außer ein späterer Low bricht zufällig noch
-          // unter diesen alten, oft schon sehr tiefen Low-Wert — im Live-Fall (GBPUSD 1h, 15.07.-
-          // 23.07.) passierte das erst durch denselben Pivot, der gleichzeitig auch den Haupttrend
-          // brach, wodurch beim finalen Bruch kein bestätigter Nested-Downtrend mehr existierte und
-          // die Promotion ausblieb. Fix: statt des alten Lows den auslösenden Pivot selbst (als
-          // "low" umetikettiert) als Platzhalter verwenden — dieselbe Konstruktion, mit der der
-          // Haupttrend-Reset (invalidateUptrend-Fallback) schon immer schnell selbstkorrigiert
-          // (neuester Pivot als frischer Anker). Der Platzhalter hat zwangsläufig lowTime===highTime
-          // (noch nicht eligible), wird aber vom nächsten echten Low-Pivot (Docht-vs-Bruch-Pfad
-          // oben, unbestätigte Ausweitung) sofort auf einen späteren Zeitpunkt nachgezogen, sobald
-          // einer eintrifft — danach ist lowTime > highTime erfüllt und eine neue Bestätigung
-          // wieder möglich.
-          const newOriginHigh: PivotHigh = { ...pivot, type: "high" };
-          const newOriginLow: PivotLow = { ...pivot, type: "low" };
-          return initMarketStructureState(newOriginHigh, newOriginLow);
+          // Invalidierung — sowohl für den Nested-Tracker (Gegentrend-Kandidat, KEINE Promotion,
+          // siehe invalidateDowntrend-Funktionskommentar) als auch, seit Chat 2026-07-26, für einen
+          // bestätigten TOP-LEVEL-Downtrend (dann inkl. Archivierung in closedRanges).
+          return invalidateDowntrend(sweepChecked, pivot, candles);
         }
         return {
           ...sweepChecked,
@@ -788,7 +842,16 @@ export function buildMarketStructureState(
 
   const merged = [...outerRest, ...innerRest].sort((a, b) => a.at - b.at);
   for (const entry of merged) {
-    state = entry.outer ? applyMarketStructurePivot(state, entry.pivot, { candles }) : applyInnerMarketStructurePivot(state, entry.pivot, { candles });
+    // direction (Chat 2026-07-26, "eigenständige Downtrend-Erkennung"): NICHT mehr hart "up" —
+    // sobald der Haupttrend selbst schon 'downtrend' ist (siehe applyMarketStructurePivotCore/
+    // applyInnerMarketStructurePivotCore, direction="down"-Bestätigung aus 'unknown' heraus), muss
+    // jeder weitere Pivot auch über die gespiegelten "down"-Zweige laufen (sonst würde z.B. ein
+    // neuer Höchststand fälschlich als Uptrend-Bestätigungsversuch statt als Downtrend-Invalidierung
+    // behandelt). trend wird dafür nach JEDEM Pivot neu ausgelesen, nicht einmalig vorab bestimmt.
+    const direction: TrendDirection = state.trend === "downtrend" ? "down" : "up";
+    state = entry.outer
+      ? applyMarketStructurePivot(state, entry.pivot, { candles, direction })
+      : applyInnerMarketStructurePivot(state, entry.pivot, { candles, direction });
   }
   return state;
 }
