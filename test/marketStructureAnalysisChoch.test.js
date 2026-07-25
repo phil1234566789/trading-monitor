@@ -179,3 +179,54 @@ describe("marketStructureAnalysis: Promotion bei Invalidierung mit bereits best�
     expect(state.closedRanges).toEqual([]);
   });
 });
+
+describe("marketStructureAnalysis: Periode-2-Verfeinerung des Nested-Trackers (applyInnerMarketStructurePivot, direction='down')", () => {
+  const pivotB = { type: "low", price: 1.05, pivotAt: "pivotB", pivotTime: 50, touched: false };
+  const pivotC = { type: "high", price: 1.15, pivotAt: "pivotC", pivotTime: 60, touched: false };
+  const pivotD = { type: "low", price: 1.02, pivotAt: "pivotD", pivotTime: 70, touched: false };
+
+  function chochConfirmedState() {
+    let state = confirmedUptrendState();
+    state = applyMarketStructurePivot(state, pivotB);
+    state = applyMarketStructurePivot(state, pivotC);
+    state = applyMarketStructurePivot(state, pivotD);
+    expect(state.nestedTrend.trend).toBe("downtrend");
+    return state;
+  }
+
+  it("ein Periode-2-Pivot lässt currRange.low des bereits bestätigten Nested-Trends weiter nachrücken (Bug-Report Philip: 'range.low vom nestedTrend sollte schon tiefer sein, ein innerPivot hat sich bereits gebildet')", () => {
+    let state = chochConfirmedState();
+    // Bricht nestedTrend.currRange.low (1.02), aber NICHT den Haupttrend (dessen currRange.low
+    // bleibt bei 1.0) — reiner Periode-2-Pivot, kein Outer-Pivot.
+    const innerLow = { type: "low", price: 1.01, pivotAt: "innerLow", pivotTime: 75, touched: false };
+    state = applyInnerMarketStructurePivot(state, innerLow, { candles: [] });
+
+    expect(state.nestedTrend.currRange.low).toEqual({ ...innerLow, type: "low" });
+    expect(state.nestedTrend.trend).toBe("downtrend"); // bleibt bestätigt, nur weitergerückt
+    expect(state.trend).toBe("uptrend"); // Haupttrend unberührt
+    expect(state.currRange.low).toEqual({ ...originLow, type: "low" });
+  });
+
+  it("ein Periode-2-Pivot invalidiert einen bereits bestätigten Nested-Trend, wenn er dessen Origin-High mit echtem Kerzenschluss bricht", () => {
+    let state = chochConfirmedState();
+    const innerHigh = { type: "high", price: 1.25, pivotAt: "innerHigh", pivotTime: 75, touched: false };
+    state = applyInnerMarketStructurePivot(state, innerHigh, { candles: [] });
+
+    expect(state.trend).toBe("uptrend"); // Haupttrend bestätigt unabhängig weiter
+    expect(state.nestedTrend).not.toBeNull();
+    // CHoCH widerlegt (Preis macht ein neues Hoch über dem alten Nested-Origin) -> frischer Start,
+    // KEINE Promotion (ein Nested-Tracker hat selbst keine tiefere Verschachtelung).
+    expect(state.nestedTrend.trend).toBe("unknown");
+    expect(state.nestedTrend.currRange).toEqual({
+      high: { ...innerHigh, type: "high" },
+      low: { ...pivotD, type: "low" }, // alter Nested-Origin-Low wiederverwendet (bullische Origin-Konstellation)
+    });
+  });
+
+  it("ohne bereits existierenden Nested-Trend passiert nichts (kein Reseed über Periode-2-Pivots)", () => {
+    let state = confirmedUptrendState(); // kein nestedTrend aufgebaut
+    const innerLow = { type: "low", price: 1.05, pivotAt: "innerLow", pivotTime: 30, touched: false };
+    state = applyInnerMarketStructurePivot(state, innerLow, { candles: [] });
+    expect(state.nestedTrend).toBeNull();
+  });
+});
