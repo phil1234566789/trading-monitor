@@ -7,6 +7,7 @@
 // siehe Pine-Kommentar "HTF-Modus" für die Herleitung.
 import { snapToBarTime } from "./chartTimeUtils.js";
 import { cssColorScaled } from "./chartColors.js";
+import { lineWidth } from "./chartLineWidths.js";
 
 const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone angelegt
 const WEAK_PCT = 0.15; // Gap kleiner als das gilt als "schwach" (blasser dargestellt)
@@ -105,7 +106,7 @@ class ZoneRenderer {
       ctx.fillStyle = this._options.fillColor;
       ctx.fillRect(xPos.position, yPos.position, xPos.length, yPos.length);
       ctx.strokeStyle = this._options.borderColor;
-      ctx.lineWidth = 1;
+      ctx.lineWidth = this._options.borderWidth ?? 1;
       ctx.strokeRect(xPos.position, yPos.position, xPos.length, yPos.length);
 
       if (this._options.label) {
@@ -206,6 +207,7 @@ function zoneOptions(z) {
   return {
     fillColor: cssColorScaled(key, fillRatio * dimFactor),
     borderColor: cssColorScaled(key, borderRatio * dimFactor),
+    borderWidth: lineWidth(key),
     textColor: "rgba(209, 212, 220, 0.9)",
     label,
   };

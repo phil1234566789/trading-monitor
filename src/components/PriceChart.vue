@@ -10,6 +10,15 @@ import { computeRangesPivots, buildMarketStructureState, renderMarketStructureAn
 import { computeCockpitState, renderTradeSetupCockpit } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
+import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
+
+// lightweight-charts' native LineSeries-Option lineWidth erwartet eine kleine Ganzzahl (1-4), anders
+// als die Linienstärke unserer eigenen Primitives (liquidity.js/marketStructureAnalysis.ts/...), die
+// jeden positiven Zahlenwert akzeptieren — daher hier gerundet+geclampt, nur für CVD/EMA (die
+// einzigen nativen Serien mit konfigurierbarer Linienstärke, siehe chartLineWidths.js).
+function nativeLineWidth(key) {
+  return Math.min(4, Math.max(1, Math.round(lineWidth(key))));
+}
 import { selectActiveMetadataSections, earliestRelevantTime } from "../debugMetadata.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import {
@@ -151,7 +160,10 @@ const TRADE_SETUP_LS_MAX_DISTANCE_M5 = 5.0 * TRADE_SETUP_PIP_SIZE; // lsMaxDista
 const TRADE_SETUP_OB_MAX_DELAY_SEC = 60 * 60; // obMaxDelayMinutes
 const TRADE_SETUP_LOOKBACK_SEC = 6 * 60 * 60; // protectedHighLookbackHours
 const TRADE_SETUP_OB_WIDTH_SEC = 10 * TRADE_SETUP_GRACE_SEC; // obBoxWidthM5Candles=10, rein optisch
-const TRADE_SETUP_LINE_WIDTH = 2;
+// Linienstärke konfigurierbar seit Chat 2026-07-25 (Style-Modal) — siehe chartLineWidths.js, EIN
+// Wert pro Farb-Key (tradeSetupProtected/tradeSetupShort/tradeSetupLong). Kein Modul-Konstante
+// mehr, damit ein Style-Modal-Wechsel live greift statt nur beim nächsten Seiten-Reload
+// (lineWidth() liest den reaktiven Store live bei jedem Aufruf).
 // tradeSetupShort/-Long dienen sowohl der LS-Linie (chartColors[key].alpha, Default 0.9 = "Haupt"-
 // Transparenz) als auch der OB-Box, deren Fill/Border proportional dazu skalieren (Original-
 // Design-Verhältnis 0.22/0.9 bzw. 0.7/0.9), siehe cssColorScaled in chartColors.js.
@@ -927,15 +939,16 @@ function renderTradeSetupsInternal() {
 
     const fractalLine = new LiquidityLinePrimitive(
       setup.fractal,
-      { color: cssColor("tradeSetupProtected"), lineWidth: TRADE_SETUP_LINE_WIDTH },
+      { color: cssColor("tradeSetupProtected"), lineWidth: lineWidth("tradeSetupProtected") },
       candles,
     );
-    const lsLine = new LiquidityLinePrimitive(setup.ls, { color: lsColor, lineWidth: TRADE_SETUP_LINE_WIDTH }, candles);
+    const lsLine = new LiquidityLinePrimitive(setup.ls, { color: lsColor, lineWidth: lineWidth(key) }, candles);
     const obBox = new OrderBlockPrimitive(
       { top, bottom, startTime: setup.obStartTime, endTime: setup.obStartTime + TRADE_SETUP_OB_WIDTH_SEC },
       {
         fillColor: cssColorScaled(key, TRADE_SETUP_OB_FILL_RATIO),
         borderColor: cssColorScaled(key, TRADE_SETUP_OB_BORDER_RATIO),
+        borderWidth: lineWidth(key),
         textColor: "rgba(255, 255, 255, 0.9)",
         label: setup.label,
       },
@@ -1259,7 +1272,7 @@ onMounted(() => {
       LineSeries,
       {
         color: cssColor("cvdLine"),
-        lineWidth: 2,
+        lineWidth: nativeLineWidth("cvdLine"),
         priceLineVisible: false,
         lastValueVisible: true,
         title: "CVD (Binance Futures)",
@@ -1274,14 +1287,14 @@ onMounted(() => {
     // sobald refreshEmaInternal Daten reinschreibt (siehe watch(showEma)).
     ema50Series = chart.addSeries(LineSeries, {
       color: cssColor("emaFast"),
-      lineWidth: 2,
+      lineWidth: nativeLineWidth("emaFast"),
       priceLineVisible: false,
       lastValueVisible: false,
       title: "EMA 50 (M5)",
     });
     ema200Series = chart.addSeries(LineSeries, {
       color: cssColor("emaSlow"),
-      lineWidth: 2,
+      lineWidth: nativeLineWidth("emaSlow"),
       priceLineVisible: false,
       lastValueVisible: false,
       title: "EMA 200 (M5)",
@@ -1512,6 +1525,20 @@ watch(
     cvdSeries?.applyOptions({ color: cssColor("cvdLine") });
     ema50Series?.applyOptions({ color: cssColor("emaFast") });
     ema200Series?.applyOptions({ color: cssColor("emaSlow") });
+    refreshChart();
+  },
+  { deep: true },
+);
+// Analog zum chartColors-Watcher oben, für Linienstärke (Chat 2026-07-25, Style-Modal) — siehe
+// chartLineWidths.js. Native Serien-Optionen (CVD/EMA) explizit, alles Primitive-basierte über
+// refreshChart() (liest lineWidth() live bei jedem Render-Aufruf, genau wie cssColor()).
+watch(
+  chartLineWidths,
+  () => {
+    if (!chart) return;
+    cvdSeries?.applyOptions({ lineWidth: nativeLineWidth("cvdLine") });
+    ema50Series?.applyOptions({ lineWidth: nativeLineWidth("emaFast") });
+    ema200Series?.applyOptions({ lineWidth: nativeLineWidth("emaSlow") });
     refreshChart();
   },
   { deep: true },

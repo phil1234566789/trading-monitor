@@ -2,11 +2,12 @@
 // "Kerze markiert", sondern der tatsächliche Einstiegs-/Austiegspreis als Marke).
 import { snapToBarTime } from "./chartTimeUtils.js";
 import { cssColor } from "./chartColors.js";
+import { lineWidth } from "./chartLineWidths.js";
 
 const TICK_LENGTH = 16; // px, Strich neben dem Punkt zur Preis-Ablesung
 const DOT_RADIUS = 4; // px
 
-function drawPoint(ctx, point, pixelRatio, color, label) {
+function drawPoint(ctx, point, pixelRatio, color, colorKey, label) {
   if (point.x === null || point.y === null) return;
   const x = Math.round(point.x * pixelRatio);
   const y = Math.round(point.y * pixelRatio);
@@ -19,7 +20,10 @@ function drawPoint(ctx, point, pixelRatio, color, label) {
   ctx.fill();
 
   ctx.strokeStyle = color;
-  ctx.lineWidth = Math.max(1, 1.5 * pixelRatio);
+  // Linienstärke folgt demselben Farb-Key (tradeWin/tradeLoss/tradeOpen/tradeInvalid), damit jeder
+  // im Style-Modal individuell einstellbare Farb-Regler auch eine eigene Linienstärke hat (Chat
+  // 2026-07-25, zweite Runde: "bei jeder Linie, wo man schon die Farbe individuell anpassen kann").
+  ctx.lineWidth = Math.max(1, lineWidth(colorKey) * pixelRatio);
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.lineTo(x + tick, y);
@@ -49,7 +53,7 @@ class TradeMarkerRenderer {
       if (entry.x !== null && exit && exit.x !== null && entry.y !== null && exit.y !== null) {
         ctx.save();
         ctx.strokeStyle = this._options.connectorColor;
-        ctx.lineWidth = Math.max(1.5, 2 * pixelRatio);
+        ctx.lineWidth = Math.max(1.5, lineWidth("tradeConnector") * pixelRatio);
         ctx.setLineDash([5 * pixelRatio, 4 * pixelRatio]);
         ctx.beginPath();
         ctx.moveTo(Math.round(entry.x * pixelRatio), Math.round(entry.y * pixelRatio));
@@ -58,8 +62,8 @@ class TradeMarkerRenderer {
         ctx.restore();
       }
 
-      drawPoint(ctx, entry, pixelRatio, this._options.entryColor, this._options.entryLabel);
-      if (exit) drawPoint(ctx, exit, pixelRatio, this._options.exitColor, this._options.exitLabel);
+      drawPoint(ctx, entry, pixelRatio, this._options.entryColor, this._options.entryColorKey, this._options.entryLabel);
+      if (exit) drawPoint(ctx, exit, pixelRatio, this._options.exitColor, this._options.exitColorKey, this._options.exitLabel);
     });
   }
 
@@ -132,12 +136,14 @@ export class TradeMarkerPrimitive {
 
 function tradeOptions(t) {
   const outcomeKey = { win: "tradeWin", loss: "tradeLoss", open: "tradeOpen", invalid: "tradeInvalid" };
-  const entryColor = cssColor(t.direction === "short" ? "tradeLoss" : "tradeWin");
-  const exitColor = cssColor(outcomeKey[t.outcome] ?? "tradeInvalid");
+  const entryColorKey = t.direction === "short" ? "tradeLoss" : "tradeWin";
+  const exitColorKey = outcomeKey[t.outcome] ?? "tradeInvalid";
   const dirLabel = t.direction === "short" ? "Short" : "Long";
   return {
-    entryColor,
-    exitColor,
+    entryColor: cssColor(entryColorKey),
+    entryColorKey,
+    exitColor: cssColor(exitColorKey),
+    exitColorKey,
     connectorColor: cssColor("tradeConnector"),
     entryLabel: `${dirLabel} Entry ${t.entryPrice}`,
     exitLabel: t.exitPrice != null ? `${t.outcome?.toUpperCase() ?? "EXIT"} ${t.exitPrice}` : null,

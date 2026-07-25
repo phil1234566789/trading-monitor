@@ -1,12 +1,20 @@
 <script setup>
 import { chartColors, resetChartColors } from "../chartColors.js";
+import { chartLineWidths, resetChartLineWidths } from "../chartLineWidths.js";
 import MetadataPanel from "./MetadataPanel.vue";
 
 const emit = defineEmits(["close"]);
 
 // Gruppiert nach Feature statt alphabetisch — so findet man "die Farbe von X" genauso, wie man
 // auch die Toolbar liest (Kerzen/CVD/EMA/Liquidität/Order-Blocks/Trade-Setups/Ranges/
-// Trade-Marker). Keys müssen exakt den Feldern in chartColors.js (DEFAULT_CHART_COLORS) entsprechen.
+// Trade-Marker). Keys müssen exakt den Feldern in chartColors.js (DEFAULT_CHART_COLORS)
+// entsprechen. Linienstärke (Chat 2026-07-25, zweite Runde: "bei jeder Linie, wo man schon die
+// Farbe individuell anpassen kann") wird PRO FELD unten aus chartLineWidths.js dazugerendert,
+// wenn ein Eintrag mit demselben Key existiert (siehe Template: v-if="field.key in
+// chartLineWidths") — kein separates widths-Array mehr nötig, da beide Stores dieselben Keys
+// benutzen. candleUp/candleDown/rangesMarker/rangesMarker2 haben bewusst KEINEN Eintrag in
+// chartLineWidths.js (Kerzenkörper bzw. reine Punkt-Marker ohne Stroke, siehe dort) und bekommen
+// dadurch automatisch keinen Linienstärke-Regler.
 const GROUPS = [
   {
     title: "Kerzen",
@@ -75,11 +83,16 @@ const GROUPS = [
     ],
   },
 ];
+
+function resetAll() {
+  resetChartColors();
+  resetChartLineWidths();
+}
 </script>
 
 <template>
   <MetadataPanel title="🎨 Chart-Style" @close="emit('close')">
-    <button class="style-reset" @click="resetChartColors">Alle zurücksetzen</button>
+    <button class="style-reset" @click="resetAll">Alle zurücksetzen</button>
     <section v-for="group in GROUPS" :key="group.title" class="style-group">
       <h3 class="style-group-title">{{ group.title }}</h3>
       <div v-for="field in group.fields" :key="field.key" class="style-field">
@@ -93,6 +106,10 @@ const GROUPS = [
         <div class="style-field-alpha">
           <input v-model.number="chartColors[field.key].alpha" type="range" min="0" max="1" step="0.01" class="style-alpha-slider" />
           <span class="style-alpha-value">{{ Math.round(chartColors[field.key].alpha * 100) }}%</span>
+        </div>
+        <div v-if="field.key in chartLineWidths" class="style-field-alpha">
+          <input v-model.number="chartLineWidths[field.key]" type="range" min="0.5" max="5" step="0.5" class="style-alpha-slider" />
+          <span class="style-alpha-value">{{ chartLineWidths[field.key] }}px</span>
         </div>
       </div>
     </section>

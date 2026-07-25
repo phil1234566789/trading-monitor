@@ -1,5 +1,6 @@
 import { LiquidityLinePrimitive, detectLiquidityLevels } from "./liquidity.js";
 import { cssColor } from "./chartColors.js";
+import { lineWidth } from "./chartLineWidths.js";
 import { businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
 import type { Pivot, PivotHigh, PivotLow, MarketStructureState } from "./range.type";
 
@@ -822,11 +823,13 @@ class RangeLinePrimitive {
   }
 }
 
-const LINE_WIDTH = 2;
-// Dünner als die übrigen Linien (Chat 2026-07-24: "Linienstärke des 1h LQ Sweep auf 1px") — seit
-// ein Break of Structure existiert, ist ein LQ-Sweep nur noch informativ (keine Long-Chance mehr,
-// siehe hasBreakOfStructure unten), soll also optisch zurücktreten.
-const LQ_SWEEP_LINE_WIDTH = 1;
+// Linienstärke ist seit Chat 2026-07-25 im Style-Modal konfigurierbar, EIN Wert PRO Farb-Key
+// (rangeHigh/rangeLow/rangeProtectedLow/rangeLqSweep/rangeBreakOfStructure/rangeClosed/rangeChoch —
+// siehe chartLineWidths.js, zweite Runde: "bei jeder Linie, wo man schon die Farbe individuell
+// anpassen kann"). rangeLqSweep bleibt per Default dünner als die übrigen (Chat 2026-07-24:
+// "Linienstärke des 1h LQ Sweep auf 1px", seit ein Break of Structure existiert ist ein LQ-Sweep
+// nur noch informativ) — kein Modul-Konstante mehr, `lineWidth(key)` wird direkt an jeder
+// Verwendungsstelle aufgerufen, damit ein Style-Modal-Wechsel live greift.
 
 function toLevel(pivot: Pivot, candles: Candle[]) {
   // Vereinfachung: Linie reicht immer bis zur letzten geladenen Kerze (nicht bis touchedAt-Zeit) —
@@ -881,12 +884,12 @@ export function renderMarketStructureAnalysis(
   const lowDashed = state.currRange.low.type === "sweeped-low" || hasBreakOfStructure;
   const highLine = new LiquidityLinePrimitive(
     toLevel(state.currRange.high, candles),
-    { color: highColor, lineWidth: LINE_WIDTH, dashed: highDashed },
+    { color: highColor, lineWidth: lineWidth("rangeHigh"), dashed: highDashed },
     candles,
   );
   const lowLine = new LiquidityLinePrimitive(
     toLevel(state.currRange.low, candles),
-    { color: lowColor, lineWidth: LINE_WIDTH, dashed: lowDashed },
+    { color: lowColor, lineWidth: lineWidth("rangeLow"), dashed: lowDashed },
     candles,
   );
   // rot: unter der Linie, zeigt nach oben; grün: über der Linie, zeigt nach unten (siehe Chat).
@@ -906,7 +909,7 @@ export function renderMarketStructureAnalysis(
   if (protectedLow) {
     const line = new LiquidityLinePrimitive(
       toLevel(protectedLow, candles),
-      { color: cssColor("rangeProtectedLow"), lineWidth: LINE_WIDTH, label: "1h protected low", labelSide: "end" },
+      { color: cssColor("rangeProtectedLow"), lineWidth: lineWidth("rangeProtectedLow"), label: "1h protected low", labelSide: "end" },
       candles,
     );
     series.attachPrimitive(line);
@@ -927,7 +930,7 @@ export function renderMarketStructureAnalysis(
     const lqColor = cssColor("rangeLqSweep");
     const line = new LiquidityLinePrimitive(
       toLevel(lqSweep, candles),
-      { color: lqColor, lineWidth: LQ_SWEEP_LINE_WIDTH, label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec)}`, labelSide: "end" },
+      { color: lqColor, lineWidth: lineWidth("rangeLqSweep"), label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec)}`, labelSide: "end" },
       candles,
     );
     series.attachPrimitive(line);
@@ -949,7 +952,13 @@ export function renderMarketStructureAnalysis(
     const bosColor = cssColor("rangeBreakOfStructure");
     const line = new LiquidityLinePrimitive(
       toLevel(bos, candles),
-      { color: bosColor, lineWidth: LINE_WIDTH, dashed: true, label: "BOS", labelSide: state.trend === "uptrend" ? "center-above" : "center-below" },
+      {
+        color: bosColor,
+        lineWidth: lineWidth("rangeBreakOfStructure"),
+        dashed: true,
+        label: "BOS",
+        labelSide: state.trend === "uptrend" ? "center-above" : "center-below",
+      },
       candles,
     );
     series.attachPrimitive(line);
@@ -962,9 +971,10 @@ export function renderMarketStructureAnalysis(
   // Trendrichtung (grün bullisch, wie rangeClosed; rot bärisch, wie rangeChoch — nach einer
   // Promotion ist state.trend dann selbst 'downtrend').
   if (state.trend !== "unknown") {
+    const liveLineKey = state.trend === "uptrend" ? "rangeClosed" : "rangeChoch";
     const liveLine = new RangeLinePrimitive(state.currRange.low, state.currRange.high, {
-      color: cssColor(state.trend === "uptrend" ? "rangeClosed" : "rangeChoch"),
-      lineWidth: LINE_WIDTH,
+      color: cssColor(liveLineKey),
+      lineWidth: lineWidth(liveLineKey),
     });
     series.attachPrimitive(liveLine);
     existingPrimitives.push(liveLine);
@@ -974,7 +984,7 @@ export function renderMarketStructureAnalysis(
   // bestätigtem Nested-Trend) — einfache Linie range.low -> range.high, kein Zigzag (bewusst so
   // gewünscht: "wie du es umsetzt ist mir egal").
   for (const closed of state.closedRanges) {
-    const line = new RangeLinePrimitive(closed.low, closed.high, { color: cssColor("rangeClosed"), lineWidth: LINE_WIDTH });
+    const line = new RangeLinePrimitive(closed.low, closed.high, { color: cssColor("rangeClosed"), lineWidth: lineWidth("rangeClosed") });
     series.attachPrimitive(line);
     existingPrimitives.push(line);
   }
@@ -988,7 +998,7 @@ export function renderMarketStructureAnalysis(
     const nested = state.nestedTrend;
     const nestedLine = new RangeLinePrimitive(nested.currRange.low, nested.currRange.high, {
       color: cssColor("rangeChoch"),
-      lineWidth: LINE_WIDTH,
+      lineWidth: lineWidth("rangeChoch"),
     });
     series.attachPrimitive(nestedLine);
     existingPrimitives.push(nestedLine);
@@ -999,9 +1009,14 @@ export function renderMarketStructureAnalysis(
     // aktuellen currRange.low (das ist der zuletzt brechende Pivot, siehe Bug-Report Philip: "IST
     // 1.34601, SOLL 1.35206" — 1.35206 ist die gebrochene Ursprungsstruktur, nicht der Bruch selbst).
     const chochAnchor = nested.appliedPivots[1];
+    // Anders als toLevel (das immer bis zur letzten geladenen Kerze zeichnet) endet diese Linie
+    // bewusst an der Kerze/dem Pivot, der die Ursprungsstruktur tatsächlich gebrochen hat
+    // (nested.currRange.low) — Bug-Report Philip 2026-07-25: "CHOCH Linie geht nur bis zur Kerze,
+    // welche die Linie berührt", nicht endlos weiter in die Gegenwart.
+    const chochLevel = { price: chochAnchor.price, pivotTime: chochAnchor.pivotTime ?? 0, endTime: pivotTimeOf(nested.currRange.low) };
     const chochLine = new LiquidityLinePrimitive(
-      toLevel(chochAnchor, candles),
-      { color: cssColor("rangeChoch"), lineWidth: LQ_SWEEP_LINE_WIDTH, dashed: true, label: "CHoCH", labelSide: "center-below" },
+      chochLevel,
+      { color: cssColor("rangeChoch"), lineWidth: lineWidth("rangeChoch"), dashed: true, label: "CHoCH", labelSide: "center-below" },
       candles,
     );
     series.attachPrimitive(chochLine);

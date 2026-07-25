@@ -5,6 +5,7 @@
 // Chart-Timeframe) neu berechnet.
 import { snapToBarTime, businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
 import { cssColor } from "./chartColors.js";
+import { lineWidth } from "./chartLineWidths.js";
 
 const RECENT_SWEEP_COUNT = 2; // siehe markTopKRecentTouches in liquidity.pine
 
@@ -272,7 +273,7 @@ export class LiquidityLinePrimitive {
   }
 }
 
-const LINE_WIDTH = 1;
+// Konfigurierbar seit Chat 2026-07-25 (Style-Modal), siehe src/chartLineWidths.js.
 
 // " (1d 3h alt)" hinter dem Preis-Label, oder "" ohne pivotTime/nowSec (Chat 2026-07-22: "bei den
 // relevanten LQ-Leveln das Alter anzeigen ... Wochenende nicht mitzählen") — businessSecondsBetween
@@ -287,7 +288,7 @@ function levelOptions(lvl, { debugPrices, formatPrice, nowSec } = {}) {
   const key = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
   const color = cssColor(key);
   const label = debugPrices ? `${formatPrice(lvl.price)}${ageSuffix(lvl.pivotTime, nowSec)}` : null;
-  return { color, lineWidth: LINE_WIDTH, label };
+  return { color, lineWidth: lineWidth(key), label };
 }
 
 // Zeichnet die übergebenen Level neu (komplettes Ersetzen der bisherigen Primitives) —

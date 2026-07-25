@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { DEFAULT_CHART_COLORS } from "../src/chartColors.js";
+import { DEFAULT_CHART_LINE_WIDTHS } from "../src/chartLineWidths.js";
 
 // Bug-Report Philip 2026-07-20: zigzagStructure/zigzagTail blieben nach dem Löschen des alten
 // Zigzag-Trendalgorithmus (siehe marketStructureAnalysis.ts) als verwaiste Konfiguration in
@@ -10,14 +11,24 @@ import { DEFAULT_CHART_COLORS } from "../src/chartColors.js";
 // ein Objekt-Key, der nur noch per String gelesen wird, ist für keinen der beiden toter Code,
 // nur tote Daten. Diese Tests schließen die Lücke, indem sie den Quelltext direkt nach den
 // jeweiligen String-Literalen durchsuchen, statt sich auf Compiler/Linter zu verlassen.
+// Seit Chat 2026-07-25 (Linienstärke konfigurierbar, chartLineWidths.js, zweite Runde: "bei jeder
+// Linie, wo man schon die Farbe individuell anpassen kann") benutzt StyleModal.vue für die
+// Linienstärke-Regler DIESELBEN Keys wie für die Farb-Felder (ein Regler wird nur dazugerendert,
+// wenn der Key auch in chartLineWidths existiert, siehe Template: "field.key in chartLineWidths")
+// — deshalb reicht hier ein Abgleich gegen dieselben styleModalFieldKeys, kein separates Scannen
+// eines "widths"-Arrays mehr nötig.
 
 const SRC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src");
 const SOURCE_EXTENSIONS = new Set([".js", ".ts", ".vue"]);
-// chartColors.js DEFINIERT die Keys (jeder Key steht dort trivial drin) und StyleModal.vue
-// EXPONIERT sie nur als Regler (Zugriff per dynamischem field.key, kein Literal-Aufruf) — beide
-// aus dem "wird tatsächlich gelesen"-Scan ausschließen, sonst wäre der Test unabhängig vom Bug
-// immer grün.
-const EXCLUDED_FROM_USAGE_SCAN = new Set([path.join(SRC_DIR, "chartColors.js"), path.join(SRC_DIR, "components", "StyleModal.vue")]);
+// chartColors.js/chartLineWidths.js DEFINIEREN die Keys (jeder Key steht dort trivial drin) und
+// StyleModal.vue EXPONIERT sie nur als Regler (Zugriff per dynamischem field.key, kein
+// Literal-Aufruf) — beide aus dem "wird tatsächlich gelesen"-Scan ausschließen, sonst wäre der Test
+// unabhängig vom Bug immer grün.
+const EXCLUDED_FROM_USAGE_SCAN = new Set([
+  path.join(SRC_DIR, "chartColors.js"),
+  path.join(SRC_DIR, "chartLineWidths.js"),
+  path.join(SRC_DIR, "components", "StyleModal.vue"),
+]);
 
 function collectSourceFiles(dir) {
   const files = [];
@@ -39,7 +50,10 @@ const usageSource = allSourceFiles
   .join("\n");
 
 const styleModalSource = readFileSync(path.join(SRC_DIR, "components", "StyleModal.vue"), "utf8");
-const styleModalFieldKeys = [...styleModalSource.matchAll(/key:\s*["'](\w+)["']/g)].map((m) => m[1]);
+// Nur innerhalb der "fields: [...]"-Blöcke suchen (non-greedy bis zur schließenden Klammer) — die
+// GROUPS-Objekte haben sonst keine weiteren "key: '...'"-Vorkommen, aber robust ist robust.
+const fieldsBlocks = [...styleModalSource.matchAll(/fields:\s*\[([\s\S]*?)\]/g)].map((m) => m[1]);
+const styleModalFieldKeys = fieldsBlocks.flatMap((block) => [...block.matchAll(/key:\s*["'](\w+)["']/g)].map((m) => m[1]));
 
 describe("chartColors config stays in sync with the rest of the app", () => {
   it("scans a non-trivial number of source files (sanity check for the file walker)", () => {
@@ -69,5 +83,31 @@ describe("chartColors config stays in sync with the rest of the app", () => {
   it("every DEFAULT_CHART_COLORS key is exposed as a StyleModal field", () => {
     const missing = Object.keys(DEFAULT_CHART_COLORS).filter((key) => !styleModalFieldKeys.includes(key));
     expect(missing, "Farb-Keys ohne zugehörigen Regler im Style-Modal (nicht einstellbar für den Nutzer)").toEqual([]);
+  });
+});
+
+describe("chartLineWidths config stays in sync with the rest of the app", () => {
+  it.each(Object.keys(DEFAULT_CHART_LINE_WIDTHS))("%s is actually read somewhere outside chartLineWidths.js/StyleModal.vue", (key) => {
+    const literal = new RegExp(`["'\`]${key}["'\`]`);
+    expect(
+      usageSource,
+      `"${key}" ist in DEFAULT_CHART_LINE_WIDTHS definiert, taucht aber nirgends sonst im Quelltext als String-Literal auf. ` +
+        `Vermutlich wurde das zugehörige Feature entfernt, ohne die Linienstärke-Konfiguration mit aufzuräumen — Key aus ` +
+        `chartLineWidths.js entfernen.`,
+    ).toMatch(literal);
+  });
+
+  it.each(Object.keys(DEFAULT_CHART_LINE_WIDTHS))('DEFAULT_CHART_LINE_WIDTHS key "%s" has a matching StyleModal field (rides along automatically)', (key) => {
+    expect(
+      styleModalFieldKeys,
+      `"${key}" existiert in DEFAULT_CHART_LINE_WIDTHS, aber kein StyleModal-Feld hat diesen Key — der Linienstärke-Regler ` +
+        `wird nur dazugerendert, wenn "field.key in chartLineWidths" zutrifft (siehe StyleModal.vue-Template), taucht hier also ` +
+        `sonst nirgends auf.`,
+    ).toContain(key);
+  });
+
+  it("every DEFAULT_CHART_LINE_WIDTHS key also exists in DEFAULT_CHART_COLORS (widths only make sense on an existing color field)", () => {
+    const orphaned = Object.keys(DEFAULT_CHART_LINE_WIDTHS).filter((key) => !(key in DEFAULT_CHART_COLORS));
+    expect(orphaned, "Linienstärke-Keys ohne zugehörigen Farb-Key in DEFAULT_CHART_COLORS").toEqual([]);
   });
 });
