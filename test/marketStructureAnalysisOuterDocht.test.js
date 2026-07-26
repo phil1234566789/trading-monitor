@@ -69,3 +69,44 @@ describe("marketStructureAnalysis: Outer-Pivot-Bestätigung respektiert Docht-vs
     expect(state.currRange.low).toEqual({ ...wickOnlyBreak, type: "low" });
   });
 });
+
+// asOfTime (Chat 2026-07-26, Bug-Report Philip: "1.32772 gilt als sweep, obwohl der spätere
+// Outer-Pivot 1.32934 längst da ist"): die Kerze, deren DOCHT einen neuen Pivot überhaupt erst
+// bildet, schließt oft selbst noch NICHT über dem alten Level — der echte Schluss drüber passiert
+// erst auf einer NACHFOLGENDEN Kerze. Ohne asOfTime schaut closesAboveOldHigh/closesBelowLevel nur
+// bis pivotTimeOf(pivot) (der Kerze des Pivots selbst) und verpasst diesen späteren Schluss
+// dauerhaft. buildMarketStructureState übergibt seit diesem Fix `entry.at` (pivotTime + Periode*3600,
+// derselbe Anwendungszeitpunkt, der ohnehin schon die Verarbeitungsreihenfolge bestimmt) als
+// asOfTime — bewusst NUR dieses feste, pivot-lokale Zeitfenster, NICHT die letzte irgendwann
+// geladene Kerze (`latestKnownTime`, siehe Git-Stash: das hätte vollständiges Hindsight quer durch
+// die ganze Replay-Historie bedeutet und war der eigentliche Bug im verworfenen ersten Versuch).
+describe("marketStructureAnalysis: asOfTime erlaubt einen verzögerten Kerzenschluss NACH dem Pivot selbst zu berücksichtigen", () => {
+  const originLow = { type: "low", price: 1.0, pivotAt: "lo", pivotTime: 0, touched: false };
+  const originHigh = { type: "high", price: 1.1, pivotAt: "hi", pivotTime: 10, touched: false };
+  const pullback = { type: "low", price: 1.03, pivotAt: "pb", pivotTime: 20, touched: false };
+  // Pivot selbst (Kerze bei pivotTime=40) schließt NICHT über dem alten High 1.1 — erst die Kerze
+  // bei time=45 (NACH dem Pivot) schließt drüber.
+  const delayedBreak = { type: "high", price: 1.2, pivotAt: "wick", pivotTime: 40, touched: false };
+  const candles = [
+    { time: 40, open: 1.09, high: 1.2, low: 1.07, close: 1.08 }, // Pivot-Kerze selbst: Docht drüber, Schluss drunter
+    { time: 45, open: 1.08, high: 1.19, low: 1.07, close: 1.15 }, // SPÄTERE Kerze: schließt klar über 1.1
+  ];
+
+  it("ohne asOfTime (Default = pivotTimeOf(pivot)) bleibt es bei 'sweeped-high' — unverändertes Verhalten", () => {
+    let state = initMarketStructureState(originLow, originHigh);
+    state = applyMarketStructurePivot(state, pullback);
+    state = applyMarketStructurePivot(state, delayedBreak, { candles });
+
+    expect(state.trend).toBe("unknown");
+    expect(state.currRange.high).toEqual({ ...originHigh, type: "sweeped-high" });
+  });
+
+  it("mit asOfTime >= der späteren Kerze zählt der Schluss mit -> echter Bruch, Bestätigung läuft", () => {
+    let state = initMarketStructureState(originLow, originHigh);
+    state = applyMarketStructurePivot(state, pullback);
+    state = applyMarketStructurePivot(state, delayedBreak, { candles, asOfTime: 45 });
+
+    expect(state.trend).toBe("uptrend");
+    expect(state.currRange.high).toEqual({ ...delayedBreak, type: "high" });
+  });
+});

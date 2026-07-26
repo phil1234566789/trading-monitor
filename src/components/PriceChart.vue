@@ -719,6 +719,15 @@ function refreshRangesInternal() {
   structureEarliestTime.value = allPivotTimes.length > 0 ? Math.min(...allPivotTimes) : null;
   refreshRangesMarkersInternal();
   refreshMarketStructureInternal();
+  // Bug-Report Philip 2026-07-26 ("1.32934 ist da, aber sweeped-high kam im Debug-Export nicht"):
+  // loadRangesCandles() (Aufrufer dieser Funktion) läuft als EIGENER async Fetch neben loadInitial()
+  // her — nur loadInitial() ruft refreshChart() auf, das activeMetadataSnapshot neu baut (siehe dort).
+  // Kommt loadInitial() zuerst zurück, baut refreshChart() den Snapshot mit noch alten
+  // rangesH1Candles/marketStructureState — und ohne diesen Aufruf hier bliebe er dann eingefroren,
+  // bis zufällig der nächste Replay-Schritt oder ein Toggle erneut refreshChart() auslöst, obwohl der
+  // Chart selbst (siehe refreshRangesMarkersInternal/refreshMarketStructureInternal oben) längst
+  // aktuell ist.
+  if (chart) activeMetadataSnapshot.value = buildActiveMetadataSnapshot();
 }
 
 // Neuer "1h-Range"-Marktstruktur-Trendalgorithmus (siehe marketStructureAnalysis.ts,

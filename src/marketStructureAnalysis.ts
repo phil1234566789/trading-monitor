@@ -377,17 +377,31 @@ function invalidateDowntrend(sweepChecked: MarketStructureState, breakingPivot: 
 // die Logik zwischen "up" und "down" tatsächlich (nur die "up"-Varianten versuchen zusätzlich eine
 // Downtrend-Bestätigung aus 'unknown' heraus, siehe dort), eine Vereinheitlichung dort würde also
 // echte Unterschiede künstlich verstecken statt nur Duplikation entfernen.
+// asOfTime (Chat 2026-07-26, Bug-Report Philip: "1.32772 gilt als sweep, obwohl der spätere
+// Outer-Pivot 1.32934 längst da ist"): der Docht-vs-Bruch-Check darf nicht bei pivotTimeOf(pivot)
+// abschneiden, wenn der reale Kerzenschluss über/unter dem alten Level erst auf einer NACH diesem
+// Pivot liegenden Kerze passiert — sehr üblich, weil genau die Kerze, deren DOCHT den Pivot
+// überhaupt erst bildet, selbst oft noch NICHT drüber/drunter schließt (der Docht macht den
+// Pivot-Preis aus, nicht den Close). Anders als der verworfene `latestKnownTime`-Versuch (schaute
+// bis zur letzten IRGENDWANN geladenen Kerze — vollständiges Hindsight quer durch die ganze
+// Replay-Historie, siehe Git-Stash) ist asOfTime bewusst auf den tatsächlichen
+// Anwendungszeitpunkt DIESES EINEN Pivots begrenzt (`entry.at` aus buildMarketStructureState,
+// pivotTime + Bestätigungsverzögerung/periodOuter|periodInner) — genau die Kerzen, die zum Zeitpunkt,
+// an dem dieser Pivot überhaupt erst verarbeitet wird, ohnehin schon bekannt sind, nicht mehr und
+// nicht weniger. Optional (Default pivotTimeOf(pivot)), damit kein bestehender Testaufruf (keiner
+// übergibt asOfTime) sein Verhalten ändert.
 function evaluateConfirmingBreak(
   state: MarketStructureState,
   pivot: Pivot,
   direction: TrendDirection,
   candles: Candle[],
+  asOfTime: number,
 ): { kind: "confirmed"; state: MarketStructureState } | { kind: "extend" } | { kind: "sweep" } {
   const { currRange } = state;
   const isRealBreak =
     direction === "up"
-      ? closesAboveOldHigh(candles, pivotTimeOf(currRange.high), pivotTimeOf(pivot), currRange.high.price)
-      : closesBelowLevel(candles, pivotTimeOf(currRange.low), pivotTimeOf(pivot), currRange.low.price);
+      ? closesAboveOldHigh(candles, pivotTimeOf(currRange.high), asOfTime, currRange.high.price)
+      : closesBelowLevel(candles, pivotTimeOf(currRange.low), asOfTime, currRange.low.price);
   if (!isRealBreak) return { kind: "sweep" };
   const confirmed = tryConfirmTrend(state, pivot, direction);
   return confirmed ? { kind: "confirmed", state: confirmed } : { kind: "extend" };
@@ -413,9 +427,10 @@ function isOriginEligible(currRange: MarketStructureState["currRange"], directio
 function applyMarketStructurePivotCore(
   state: MarketStructureState,
   pivot: Pivot,
-  { candles = [], direction = "up" }: { candles?: Candle[]; direction?: TrendDirection },
+  { candles = [], direction = "up", asOfTime }: { candles?: Candle[]; direction?: TrendDirection; asOfTime?: number },
 ): MarketStructureState {
   const { currRange, innerStructurePivots, appliedPivots, trend } = state;
+  const effectiveAsOfTime = asOfTime ?? pivotTimeOf(pivot);
   const nextAppliedPivots = [...appliedPivots, pivot];
   // Ein per applyInnerMarketStructurePivot zu 'protected-low'/'protected-high' reklassifizierter
   // eingebetteter Pivot würde durch das innerStructurePivots:[] unten sonst sofort wieder
@@ -436,7 +451,7 @@ function applyMarketStructurePivotCore(
     // der Uptrend schon bestätigt war; jetzt exakt dieselbe Regel wie auf der Periode-2-Seite,
     // siehe invalidateUptrend/applyInnerMarketStructurePivotCore).
     if (pivot.type === "low" && pivot.price < currRange.low.price) {
-      const isRealBreak = closesBelowLevel(candles, pivotTimeOf(currRange.low), pivotTimeOf(pivot), currRange.low.price);
+      const isRealBreak = closesBelowLevel(candles, pivotTimeOf(currRange.low), effectiveAsOfTime, currRange.low.price);
 
       if (isRealBreak) {
         if (trend === "uptrend") {
@@ -476,7 +491,7 @@ function applyMarketStructurePivotCore(
     // Philip: fehlte hier bis dahin komplett — ein reiner Docht über currRange.high bestätigte
     // bisher ohne Weiteres den Uptrend, siehe Funktionskommentar dort für die volle Begründung).
     if (pivot.type === "high" && pivot.price > currRange.high.price) {
-      const outcome = evaluateConfirmingBreak({ ...state, structurePivots }, pivot, "up", candles);
+      const outcome = evaluateConfirmingBreak({ ...state, structurePivots }, pivot, "up", candles, effectiveAsOfTime);
       if (outcome.kind === "confirmed") {
         return { ...outcome.state, innerStructurePivots: [], appliedPivots: nextAppliedPivots };
       }
@@ -504,7 +519,7 @@ function applyMarketStructurePivotCore(
     // ECHTER neuer Höchststand hätte einen bestätigten Downtrend sonst nie zurückgesetzt, sondern
     // currRange.high stillschweigend für immer weiter ausgeweitet.
     if (pivot.type === "high" && pivot.price > currRange.high.price) {
-      const isRealBreak = closesAboveOldHigh(candles, pivotTimeOf(currRange.high), pivotTimeOf(pivot), currRange.high.price);
+      const isRealBreak = closesAboveOldHigh(candles, pivotTimeOf(currRange.high), effectiveAsOfTime, currRange.high.price);
       if (isRealBreak) {
         if (trend === "downtrend") {
           return invalidateDowntrend({ ...state, structurePivots }, pivot, candles);
@@ -527,7 +542,7 @@ function applyMarketStructurePivotCore(
     }
 
     if (pivot.type === "low" && pivot.price < currRange.low.price) {
-      const outcome = evaluateConfirmingBreak({ ...state, structurePivots }, pivot, "down", candles);
+      const outcome = evaluateConfirmingBreak({ ...state, structurePivots }, pivot, "down", candles, effectiveAsOfTime);
       if (outcome.kind === "confirmed") {
         return { ...outcome.state, innerStructurePivots: [], appliedPivots: nextAppliedPivots };
       }
@@ -575,11 +590,16 @@ function applyMarketStructurePivotCore(
 export function applyMarketStructurePivot(
   state: MarketStructureState,
   pivot: Pivot,
-  { candles = [], direction = "up", nested = false }: { candles?: Candle[]; direction?: TrendDirection; nested?: boolean } = {},
+  {
+    candles = [],
+    direction = "up",
+    nested = false,
+    asOfTime,
+  }: { candles?: Candle[]; direction?: TrendDirection; nested?: boolean; asOfTime?: number } = {},
 ): MarketStructureState {
-  const result = applyMarketStructurePivotCore(state, pivot, { candles, direction });
+  const result = applyMarketStructurePivotCore(state, pivot, { candles, direction, asOfTime });
   if (nested) return result;
-  return advanceNestedTrend(result, pivot, candles);
+  return advanceNestedTrend(result, pivot, candles, asOfTime);
 }
 
 // Analog zu closesBelowOldLow im alten trendZigzag.ts, nur für die Gegenrichtung: prüft, ob
@@ -727,14 +747,15 @@ function markLqSweeps(structurePivots: Pivot[], candles: Candle[], toTime: numbe
 function applyInnerMarketStructurePivotCore(
   state: MarketStructureState,
   pivot: Pivot,
-  { candles = [], direction = "up" }: { candles?: Candle[]; direction?: TrendDirection },
+  { candles = [], direction = "up", asOfTime }: { candles?: Candle[]; direction?: TrendDirection; asOfTime?: number },
 ): MarketStructureState {
   const sweepChecked = { ...state, structurePivots: markLqSweeps(state.structurePivots, candles, latestKnownTime(candles, pivot), direction) };
   const { currRange, innerStructurePivots, trend } = sweepChecked;
+  const effectiveAsOfTime = asOfTime ?? pivotTimeOf(pivot);
 
   if (direction === "up") {
     if (pivot.type === "high" && pivot.price > currRange.high.price) {
-      const outcome = evaluateConfirmingBreak(sweepChecked, pivot, "up", candles);
+      const outcome = evaluateConfirmingBreak(sweepChecked, pivot, "up", candles, effectiveAsOfTime);
       if (outcome.kind === "confirmed") {
         return { ...outcome.state, innerStructurePivots: [...outcome.state.innerStructurePivots, pivot] };
       }
@@ -772,7 +793,7 @@ function applyInnerMarketStructurePivotCore(
     // 1h) bildete sich unter currRange.low (1.33408), mehrere Kerzen schlossen danach tatsächlich
     // drunter — kein bloßer Docht/Sweep mehr.
     if (pivot.type === "low" && pivot.price < currRange.low.price) {
-      const isRealBreak = closesBelowLevel(candles, pivotTimeOf(currRange.low), pivotTimeOf(pivot), currRange.low.price);
+      const isRealBreak = closesBelowLevel(candles, pivotTimeOf(currRange.low), effectiveAsOfTime, currRange.low.price);
 
       if (isRealBreak) {
         // Ein bereits BESTÄTIGTER Uptrend bricht komplett, sobald eine Kerze wirklich unter
@@ -822,7 +843,7 @@ function applyInnerMarketStructurePivotCore(
     // Gespiegelt: 'low' bestätigt/bricht (evaluateConfirmingBreak), 'high' ist die
     // Invalidierungs-Seite.
     if (pivot.type === "low" && pivot.price < currRange.low.price) {
-      const outcome = evaluateConfirmingBreak(sweepChecked, pivot, "down", candles);
+      const outcome = evaluateConfirmingBreak(sweepChecked, pivot, "down", candles, effectiveAsOfTime);
       if (outcome.kind === "confirmed") {
         return { ...outcome.state, innerStructurePivots: [...outcome.state.innerStructurePivots, pivot] };
       }
@@ -846,7 +867,7 @@ function applyInnerMarketStructurePivotCore(
     }
 
     if (pivot.type === "high" && pivot.price > currRange.high.price) {
-      const isRealBreak = closesAboveOldHigh(candles, pivotTimeOf(currRange.high), pivotTimeOf(pivot), currRange.high.price);
+      const isRealBreak = closesAboveOldHigh(candles, pivotTimeOf(currRange.high), effectiveAsOfTime, currRange.high.price);
 
       if (isRealBreak) {
         if (trend === "downtrend") {
@@ -880,11 +901,16 @@ function applyInnerMarketStructurePivotCore(
 export function applyInnerMarketStructurePivot(
   state: MarketStructureState,
   pivot: Pivot,
-  { candles = [], direction = "up", nested = false }: { candles?: Candle[]; direction?: TrendDirection; nested?: boolean } = {},
+  {
+    candles = [],
+    direction = "up",
+    nested = false,
+    asOfTime,
+  }: { candles?: Candle[]; direction?: TrendDirection; nested?: boolean; asOfTime?: number } = {},
 ): MarketStructureState {
-  const result = applyInnerMarketStructurePivotCore(state, pivot, { candles, direction });
+  const result = applyInnerMarketStructurePivotCore(state, pivot, { candles, direction, asOfTime });
   if (nested) return result;
-  return advanceNestedTrendInner(result, pivot, candles);
+  return advanceNestedTrendInner(result, pivot, candles, asOfTime);
 }
 
 // --- Pipeline (Kerzen -> Pivots -> State) --------------------------------------------------------
@@ -937,7 +963,7 @@ export function computeRangesPivots(candles: Candle[], period: number, cutoff: n
 // gültiger Nested-Tracker für den kompletten Rest der Trend-Laufzeit stehen (nie reseeded, da die
 // Bestätigung selbst das Reseeden bis dahin blockierte), was in echten Daten zu einer über sehr
 // viele Kerzen hinweg gezogenen CHoCH-Linie führte.
-function advanceNestedTrend(state: MarketStructureState, outerPivot: Pivot, candles: Candle[]): MarketStructureState {
+function advanceNestedTrend(state: MarketStructureState, outerPivot: Pivot, candles: Candle[], asOfTime?: number): MarketStructureState {
   if (state.trend === "unknown") return { ...state, nestedTrend: null };
 
   const nested = state.nestedTrend;
@@ -950,7 +976,7 @@ function advanceNestedTrend(state: MarketStructureState, outerPivot: Pivot, cand
       if (outerPivot.type !== "low") return { ...state, nestedTrend: null };
       return { ...state, nestedTrend: initMarketStructureState(originHigh, { ...outerPivot, type: "low" }) };
     }
-    return { ...state, nestedTrend: applyMarketStructurePivot(nested, outerPivot, { candles, direction: "down", nested: true }) };
+    return { ...state, nestedTrend: applyMarketStructurePivot(nested, outerPivot, { candles, direction: "down", nested: true, asOfTime }) };
   }
 
   // Gespiegelt (Haupttrend ist 'downtrend'): Ursprung ist currRange.low, wartende Seite ist 'high'.
@@ -960,7 +986,7 @@ function advanceNestedTrend(state: MarketStructureState, outerPivot: Pivot, cand
     if (outerPivot.type !== "high") return { ...state, nestedTrend: null };
     return { ...state, nestedTrend: initMarketStructureState(originLow, { ...outerPivot, type: "high" }) };
   }
-  return { ...state, nestedTrend: applyMarketStructurePivot(nested, outerPivot, { candles, direction: "up", nested: true }) };
+  return { ...state, nestedTrend: applyMarketStructurePivot(nested, outerPivot, { candles, direction: "up", nested: true, asOfTime }) };
 }
 
 // Periode-2-Pendant zu advanceNestedTrend (Chat 2026-07-25, zweite CHoCH-Runde: "range.low vom
@@ -970,10 +996,13 @@ function advanceNestedTrend(state: MarketStructureState, outerPivot: Pivot, cand
 // bleibt exklusiv Sache von advanceNestedTrend/Outer-Pivots, weil der Ursprung
 // (appliedPivots[0]) immer ein Outer-Pivot ist — läuft nur, wenn bereits ein Nested-Tracker
 // existiert, und verfeinert ihn genauso, wie Periode-2 den Haupttrend verfeinert.
-function advanceNestedTrendInner(state: MarketStructureState, innerPivot: Pivot, candles: Candle[]): MarketStructureState {
+function advanceNestedTrendInner(state: MarketStructureState, innerPivot: Pivot, candles: Candle[], asOfTime?: number): MarketStructureState {
   if (state.trend === "unknown" || !state.nestedTrend) return state;
   const nestedDirection: TrendDirection = state.trend === "uptrend" ? "down" : "up";
-  return { ...state, nestedTrend: applyInnerMarketStructurePivot(state.nestedTrend, innerPivot, { candles, direction: nestedDirection, nested: true }) };
+  return {
+    ...state,
+    nestedTrend: applyInnerMarketStructurePivot(state.nestedTrend, innerPivot, { candles, direction: nestedDirection, nested: true, asOfTime }),
+  };
 }
 
 // pivotsOuter/pivotsInner müssen bereits wie computeRangesPivots' Output aussehen (sortiert nach
@@ -1012,9 +1041,14 @@ export function buildMarketStructureState(
     // neuer Höchststand fälschlich als Uptrend-Bestätigungsversuch statt als Downtrend-Invalidierung
     // behandelt). trend wird dafür nach JEDEM Pivot neu ausgelesen, nicht einmalig vorab bestimmt.
     const direction: TrendDirection = state.trend === "downtrend" ? "down" : "up";
+    // asOfTime = entry.at (Chat 2026-07-26, "1.32772/1.32934"-Bug): derselbe Anwendungszeitpunkt,
+    // der hier ohnehin schon die Verarbeitungsreihenfolge bestimmt (pivotTime + Bestätigungsverzögerung),
+    // ist auch die korrekte Obergrenze für den Docht-vs-Bruch-Check (siehe evaluateConfirmingBreak) —
+    // bis zu diesem Zeitpunkt sind die Kerzen bereits "bekannt", egal wie lange der Pivot selbst
+    // schon zurückliegt.
     state = entry.outer
-      ? applyMarketStructurePivot(state, entry.pivot, { candles, direction })
-      : applyInnerMarketStructurePivot(state, entry.pivot, { candles, direction });
+      ? applyMarketStructurePivot(state, entry.pivot, { candles, direction, asOfTime: entry.at })
+      : applyInnerMarketStructurePivot(state, entry.pivot, { candles, direction, asOfTime: entry.at });
   }
   return state;
 }
