@@ -1348,7 +1348,9 @@ onMounted(() => {
       // selbst als die Kerze. crosshairMarkerVisible:false nimmt die EMA-Serien komplett aus der
       // Magnet-Berechnung raus, Fokus bleibt auf den Kerzen.
       crosshairMarkerVisible: false,
-      title: "EMA 50 (M5)",
+      // Kein title: lightweight-charts zeigt den title-Text als eigenes Label neben der
+      // Preisskala an, AUCH wenn lastValueVisible false ist (Bug-Report Philip 2026-07-26: "EMA
+      // 200/50 zeigt mir rechts neben der Price-Y-Skala Labels an, brauch ich nicht").
     });
     ema200Series = chart.addSeries(LineSeries, {
       color: cssColor("emaSlow"),
@@ -1356,7 +1358,6 @@ onMounted(() => {
       priceLineVisible: false,
       lastValueVisible: false,
       crosshairMarkerVisible: false,
-      title: "EMA 200 (M5)",
     });
   }
 

@@ -78,7 +78,17 @@ class NewsMarkerPaneView {
 
   update() {
     const { _chart: chart, _eventTime: eventTime, _candles: candles } = this._source;
-    const barTime = snapToBarTime(candles, eventTime);
+    // snapToBarTime KLEMMT auf die erste/letzte geladene Kerze, wenn eventTime außerhalb des
+    // geladenen Bereichs liegt (genau richtig für Sessions/Zonen, die echte Zeit-SPANNEN sind und
+    // über den Rand hinausragen können, siehe sessions.js) — ein News-Event ist aber ein einzelner
+    // PUNKT in der Zeit. Ohne diesen Bounds-Check würde ein Termin, der Monate vor der geladenen
+    // Historie liegt, fälschlich GENAU AUF die erste geladene Kerze gezeichnet (Bug-Report Philip
+    // 2026-07-26: "Linien in weiter Vergangenheit auch buggy" — derselbe Klemm-Effekt wie beim
+    // vorherigen Zukunfts-Fix im Replay, hier aber unabhängig vom Replay-Modus). Sobald genug
+    // Historie nachgeladen ist (Lazy-Load beim Scrollen), rutscht das Event automatisch an seine
+    // echte Position.
+    const inRange = candles.length > 0 && eventTime >= candles[0].time && eventTime <= candles[candles.length - 1].time;
+    const barTime = inRange ? snapToBarTime(candles, eventTime) : null;
     this._x = barTime != null ? chart.timeScale().timeToCoordinate(barTime) : null;
   }
 
