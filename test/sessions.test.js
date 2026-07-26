@@ -3,7 +3,7 @@
 // die testbare Kernlogik dahinter — berechnet, an welchen Tagen/Zeitpunkten eine täglich
 // wiederkehrende Session innerhalb eines gegebenen Kerzenfensters tatsächlich auftaucht.
 import { describe, expect, it } from "vitest";
-import { sessionOccurrences, highLowInWindow } from "../src/sessions.js";
+import { sessionOccurrences, highLowInWindow, currentSessionDanger } from "../src/sessions.js";
 
 const DAY = 24 * 3600;
 
@@ -110,5 +110,49 @@ describe("highLowInWindow", () => {
   it("gibt null zurück, wenn keine Kerze im Fenster liegt", () => {
     expect(highLowInWindow(candles, 1000, 2000)).toBeNull();
     expect(highLowInWindow([], 0, 100)).toBeNull();
+  });
+});
+
+// Feature-Wunsch Philip 2026-07-26: sessions.danger ("normal"/"caution"/"forbidden") war bisher rein
+// visuell (siehe DANGER_LEVELS) — currentSessionDanger ist die erste Stelle, die es tatsächlich für
+// eine Entscheidung (TSC-No-Go/Anti-Confluence) konsumiert, siehe computeCockpitState in
+// tradeSetupCockpit.ts.
+describe("currentSessionDanger", () => {
+  const dayStart = Date.UTC(2026, 6, 6, 0, 0, 0) / 1000; // Montag 06.07.2026 00:00 UTC
+  const noon = dayStart + 12 * 3600;
+
+  it("gibt null zurück, wenn keine Session gerade aktiv ist", () => {
+    const config = [{ fromMinutes: 9 * 60, toMinutes: 17 * 60, danger: "forbidden", label: "Sperrzeit" }];
+    expect(currentSessionDanger(config, dayStart + 20 * 3600, 0)).toBeNull(); // 20:00, Session ist 09-17 Uhr
+  });
+
+  it("gibt null zurück für eine aktive Session mit danger='normal'", () => {
+    const config = [{ fromMinutes: 9 * 60, toMinutes: 17 * 60, danger: "normal", label: "Normal" }];
+    expect(currentSessionDanger(config, noon, 0)).toBeNull();
+  });
+
+  it("findet eine aktive 'forbidden'-Session", () => {
+    const config = [{ fromMinutes: 9 * 60, toMinutes: 17 * 60, danger: "forbidden", label: "Sperrzeit" }];
+    expect(currentSessionDanger(config, noon, 0)).toEqual({ level: "forbidden", label: "Sperrzeit" });
+  });
+
+  it("findet eine aktive 'caution'-Session", () => {
+    const config = [{ fromMinutes: 9 * 60, toMinutes: 17 * 60, danger: "caution", label: "MMM" }];
+    expect(currentSessionDanger(config, noon, 0)).toEqual({ level: "caution", label: "MMM" });
+  });
+
+  it("nimmt bei mehreren gleichzeitig aktiven Sessions die schwerwiegendere ('forbidden' schlägt 'caution')", () => {
+    const config = [
+      { fromMinutes: 8 * 60, toMinutes: 18 * 60, danger: "caution", label: "Weite Caution-Session" },
+      { fromMinutes: 11 * 60, toMinutes: 13 * 60, danger: "forbidden", label: "Enge Sperrzeit" },
+    ];
+    expect(currentSessionDanger(config, noon, 0)).toEqual({ level: "forbidden", label: "Enge Sperrzeit" });
+  });
+
+  it("ignoriert Sessions eines anderen Instruments nicht selbst — Aufrufer muss vorher filtern", () => {
+    // currentSessionDanger bekommt bereits gefilterte Configs (siehe PriceChart.vue,
+    // `sessions.filter((s) => s.instrument === props.symbol)`) — hier nur der Beleg, dass eine
+    // leere Liste (z.B. nach dem Filtern) korrekt null liefert, kein Crash.
+    expect(currentSessionDanger([], noon, 0)).toBeNull();
   });
 });

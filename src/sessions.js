@@ -128,6 +128,30 @@ export const DANGER_LEVELS = [
   { value: "forbidden", label: "Verboten (kein Trade-Entry)" },
 ];
 
+// Bisher rein visuell (siehe DANGER_LEVELS oben) — hier zum ersten Mal tatsächlich konsumiert,
+// als automatischer No-Go/Anti-Confluence-Input fürs Trade-Setup-Cockpit (Chat 2026-07-26:
+// "ein No-Go könnte direkt Gewichtung 10 sein", siehe computeCockpitState in tradeSetupCockpit.ts).
+// "forbidden" schlägt "caution" schlägt "normal", falls mehrere Sessions eines Instruments
+// gleichzeitig aktiv sind (z.B. eine weite Session + eine engere Caution-/Forbidden-Session darin).
+const DANGER_SEVERITY = { normal: 0, caution: 1, forbidden: 2 };
+
+// sessionConfigs: schon auf ein Instrument gefiltert (siehe PriceChart.vue: `sessions.filter((s) =>
+// s.instrument === props.symbol)`), sonst würde z.B. eine BTC-Sperrzeit auch EURUSD sperren.
+// nowSec/tzOffsetMinutes wie sessionOccurrences — ruft es mit einem 1-Sekunden-Fenster um nowSec
+// auf, um "ist JETZT eine Session mit danger != 'normal' aktiv" statt eines Zeitraums zu prüfen.
+export function currentSessionDanger(sessionConfigs, nowSec, tzOffsetMinutes = 0) {
+  let best = null;
+  for (const session of sessionConfigs) {
+    if (!session.danger || session.danger === "normal") continue;
+    const occurrences = sessionOccurrences(session.fromMinutes, session.toMinutes, nowSec, nowSec + 1, tzOffsetMinutes);
+    if (occurrences.length === 0) continue;
+    if (!best || DANGER_SEVERITY[session.danger] > DANGER_SEVERITY[best.level]) {
+      best = { level: session.danger, label: session.label || "" };
+    }
+  }
+  return best;
+}
+
 let sessionIdSeq = 0;
 // instrument ist Pflicht (Chat 2026-07-25: "getrennte Listen pro Asset" statt einer Session, die
 // für mehrere Assets gilt) — jede Session gehört zu genau einem Instrument, wird nur auf dessen

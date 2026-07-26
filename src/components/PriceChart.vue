@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { createChart, CandlestickSeries, LineSeries, TickMarkType } from "lightweight-charts";
 import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
 import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, LiquidityLinePrimitive } from "../liquidity.js";
-import { sessions, renderSessions } from "../sessions.js";
+import { sessions, renderSessions, currentSessionDanger } from "../sessions.js";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { renderPivotMarkers } from "../pivotMarkers";
 import { computeRangesPivots, buildMarketStructureState, renderMarketStructureAnalysis } from "../marketStructureAnalysis";
@@ -770,7 +770,14 @@ function refreshCockpitInternal() {
     cockpitMetadata.value = null;
     return;
   }
-  const state = computeCockpitState(marketStructureState.value, currentTradeSetups);
+  const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
+  // sessions.danger fürs aktuelle Instrument/JETZT — erster automatischer No-Go/Anti-Confluence-
+  // Input (Chat 2026-07-26, siehe computeCockpitState in tradeSetupCockpit.ts). Gleicher
+  // instrument-Filter + tzOffsetMinutes wie refreshSessionsInternal oben, sonst würde z.B. eine
+  // BTC-Sperrzeit auch EURUSD sperren bzw. die Sommer-/Winterzeit-Umstellung falsch einfließen.
+  const symbolSessions = sessions.filter((s) => s.instrument === props.symbol);
+  const sessionDanger = currentSessionDanger(symbolSessions, nowSec, (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset());
+  const state = computeCockpitState(marketStructureState.value, currentTradeSetups, sessionDanger);
   const precision = pricePrecisionForInstrument(props.symbol);
   renderTradeSetupCockpit(candleSeries, state, cockpitPrimitives, candles, {
     mode: props.tradeSetupCockpitAtCandle ? "candle" : "fixed",
@@ -778,9 +785,16 @@ function refreshCockpitInternal() {
     candleOffset: props.tradeSetupCockpitCandleOffset,
     // "Alter"-Anzeige an den LQ-Sweep-Zeilen (Chat 2026-07-22) — im Replay bezogen auf replayUntil,
     // nicht die echte Uhrzeit, sonst wäre das Alter während des Testens falsch/inkonsistent.
-    nowSec: props.replayUntil ?? Math.floor(Date.now() / 1000),
+    nowSec,
   });
-  cockpitMetadata.value = { h1Trend: state.h1Trend, h1Weakening: state.h1Weakening, h1LqSweep: pivotForDisplay(state.h1LqSweep), m5Setup: state.m5Setup };
+  cockpitMetadata.value = {
+    h1Trend: state.h1Trend,
+    h1Weakening: state.h1Weakening,
+    h1LqSweep: pivotForDisplay(state.h1LqSweep),
+    m5Setup: state.m5Setup,
+    antiConfluences: state.antiConfluences,
+    locked: state.locked,
+  };
 }
 
 // Eigener H1-Fetch fürs Ranges-Metadaten-Panel, unabhängig von tradeSetupH1Candles (siehe oben) —

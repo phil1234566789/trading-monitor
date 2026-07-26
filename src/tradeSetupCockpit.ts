@@ -38,6 +38,39 @@ export interface CockpitState {
     obTop: number;
     obBottom: number;
   } | null;
+  antiConfluences: AntiConfluence[];
+  // No-Go (isNoGo-Eintrag in antiConfluences) ODER Punktesumme >= ANTI_CONFLUENCE_THRESHOLD.
+  locked: boolean;
+}
+
+// "Spricht dagegen"-Eintrag (Chat 2026-07-26: Philips Idee einer Gewichtung für Anti-Confluences,
+// "ab 10 Punkten darf man den Trade nicht machen", No-Gos direkt sperren). isNoGo ist ABSICHTLICH
+// ein eigenes Flag statt einfach "weight = ANTI_CONFLUENCE_THRESHOLD" — sonst würde ein späteres
+// Hochsetzen der Schwelle (z.B. auf 12) ein No-Go rechnerisch stillschweigend entsperren, obwohl
+// ein No-Go per Definition IMMER sperren soll, unabhängig von der Punkte-Schwelle.
+export interface AntiConfluence {
+  text: string;
+  weight: number;
+  isNoGo: boolean;
+}
+
+// Ab dieser Punktesumme (ohne No-Gos, die sperren immer) gilt der Trade als gesperrt. Start-Wert
+// nach Philips Vorschlag — reine Zahl, kein gemessener/kalibrierter Wert, bei Bedarf anpassen.
+export const ANTI_CONFLUENCE_THRESHOLD = 10;
+
+// Erster automatischer Anti-Confluence-Input (Chat 2026-07-26): sessions.danger existierte vorher
+// nur zur Anzeige (siehe DANGER_LEVELS in sessions.js), hier zum ersten Mal tatsächlich konsumiert.
+// "forbidden" ("Verboten (kein Trade-Entry)") ist ein No-Go, "caution" ("mehr Bestätigungen nötig")
+// ein gewichteter Anti-Confluence-Eintrag. Weitere Kandidaten (News-Zeitfenster etc., siehe Chat)
+// folgen später als weitere Einträge in dieser Liste, sobald ihre Datenquelle angebunden ist.
+const SESSION_CAUTION_WEIGHT = 5;
+
+function computeAntiConfluences(sessionDanger: { level: "caution" | "forbidden"; label: string } | null): AntiConfluence[] {
+  if (!sessionDanger) return [];
+  if (sessionDanger.level === "forbidden") {
+    return [{ text: `Sperrzeit-Session aktiv: ${sessionDanger.label}`, weight: 0, isNoGo: true }];
+  }
+  return [{ text: `Vorsicht-Session aktiv: ${sessionDanger.label}`, weight: SESSION_CAUTION_WEIGHT, isNoGo: false }];
 }
 
 // tradeSetups: die schon von computeTradeSetups() berechnete Liste (siehe PriceChart.vue,
@@ -45,7 +78,13 @@ export interface CockpitState {
 // "die aktuell relevante" Analyse. Bewusst NICHT geprüft, ob h1LqSweep und der M5-LQ-Sweep aus
 // m5Setup derselbe sind — das ist laut Philip nicht immer der Fall (Trade-Setups bezieht auch
 // kleinere LQ-Sweeps mit ein) und wird hier nur nebeneinander dargestellt, nicht verglichen.
-export function computeCockpitState(structureState: MarketStructureState | null, tradeSetups: any[]): CockpitState {
+// sessionDanger: schon fürs aktuelle Instrument/JETZT ermittelt (siehe currentSessionDanger in
+// sessions.js) — computeCockpitState bleibt reine Aggregation, keine eigene Zeit-/Session-Logik.
+export function computeCockpitState(
+  structureState: MarketStructureState | null,
+  tradeSetups: any[],
+  sessionDanger: { level: "caution" | "forbidden"; label: string } | null = null,
+): CockpitState {
   const h1Trend = structureState?.trend ?? "unknown";
   const h1Weakening = structureState?.structurePivots.some((p) => p.type === "break-of-structure") ?? false;
   const h1LqSweep = structureState?.structurePivots.find((p) => p.type === "LQ-sweep") ?? null;
@@ -60,7 +99,10 @@ export function computeCockpitState(structureState: MarketStructureState | null,
         obBottom: last.obBottom as number,
       }
     : null;
-  return { h1Trend, h1Weakening, h1LqSweep, m5Setup };
+  const antiConfluences = computeAntiConfluences(sessionDanger);
+  const score = antiConfluences.filter((a) => !a.isNoGo).reduce((sum, a) => sum + a.weight, 0);
+  const locked = antiConfluences.some((a) => a.isNoGo) || score >= ANTI_CONFLUENCE_THRESHOLD;
+  return { h1Trend, h1Weakening, h1LqSweep, m5Setup, antiConfluences, locked };
 }
 
 // --- Zeichnung ----------------------------------------------------------------------------------
@@ -75,6 +117,14 @@ interface Line {
   // Bestätigungs-/Anti-Bestätigungs-Icon direkt hinter dem Zeilentext, in eigener Farbe (siehe
   // trendSetupConfirmation) — z.B. der grüne Haken/rote X neben "1h uptrend".
   suffix?: { text: string; color: string };
+  // Abgedunkelt gezeichnet (siehe draw(), globalAlpha) — bei state.locked für alles außer Titel,
+  // Sperr-Banner und "Spricht dagegen"-Sektion: der Rest der Karte bleibt lesbar (Kontext), tritt
+  // aber sichtbar hinter die eigentlich wichtige Info ("warum gesperrt") zurück.
+  dim?: boolean;
+  // Trennlinie + extra Abstand DIREKT VOR dieser Zeile (siehe draw()) — Chat 2026-07-26 ("'spricht
+  // dagegen' section bitte optisch besser trennen"): ohne das ging die Anti-Confluence-Liste im
+  // selben engen Zeilenraster wie Trend/Setup optisch unter.
+  separator?: boolean;
 }
 
 const FONT_SIZE = 15;
@@ -92,6 +142,10 @@ const DEFAULT_CANDLE_OFFSET = 24;
 // Karte selbst (z.B. fürs Chart dahinter) nicht versehentlich die Position umschalten.
 const BADGE_RADIUS = 9;
 const CARD_RADIUS = 8; // abgerundete Ecken (siehe Chat 2026-07-19), CSS-Pixel
+// Extra Vertikalabstand + Trennlinie vor einer Line mit separator=true (siehe "Spricht dagegen"),
+// CSS-Pixel — deutlich mehr als der normale LINE_HEIGHT-Zeilenabstand, damit die Sektion optisch
+// als eigener Block erkennbar ist statt nur eine weitere Zeile in derselben Liste zu sein.
+const SEPARATOR_GAP = 14;
 
 // Karten-Hintergrund/-Rand färben sich nach der M5-Setup-Richtung ein (Long=grün, Short=rot) —
 // bewusst NICHT dieselben Farben wie die M5-LS-Linie/OB-Box (tradeSetupLong/-Short, siehe
@@ -99,7 +153,16 @@ const CARD_RADIUS = 8; // abgerundete Ecken (siehe Chat 2026-07-19), CSS-Pixel
 // uptrend, das ist damit ich es gut einordnen kann"). Stattdessen die im Rest der App schon
 // etablierte grün/rot-Semantik (candleUp/candleDown, auch tradeWin/tradeLoss) — Grün/Rot heißt
 // hier "Long/Short", nicht "Trend" oder "Erfolg".
+// Bei Sperre (state.locked) übersteuert der No-Go-/Anti-Confluence-Rahmen IMMER den sonstigen
+// Long/Short-Akzent (siehe unten) — "man darf gerade gar nicht traden" ist wichtiger als "in welche
+// Richtung das Setup zeigt". Literal statt cssColor(candleDown), damit spätere Änderungen an der
+// Long/Short-Farbsemantik (Grün/Rot=Richtung) diesen eigenständigen Warnzustand nicht mitverschieben.
+const NO_GO_COLOR = "rgba(239, 83, 80, 0.95)";
+const ANTI_CONFLUENCE_COLOR = "rgba(255, 179, 0, 0.95)";
+const LOCKED_ACCENT = { fill: "rgba(239, 83, 80, 0.22)", border: NO_GO_COLOR };
+
 function cardAccentColors(state: CockpitState): { fill: string; border: string } | null {
+  if (state.locked) return LOCKED_ACCENT;
   if (!state.m5Setup) return null;
   const key = state.m5Setup.dir === -1 ? "candleUp" : "candleDown";
   return { fill: cssColorScaled(key, 0.16), border: cssColor(key) };
@@ -154,31 +217,61 @@ function ageSuffix(pivotTime: number | undefined, nowSec: number | undefined): s
   return age ? ` (${age} alt)` : "";
 }
 
+// Sperr-Banner-Text: bei No-Go dessen eigener Grund, sonst (Sperre allein durch Punktesumme) ein
+// generischer Hinweis mit Punktestand — siehe ANTI_CONFLUENCE_THRESHOLD.
+function lockedReason(state: CockpitState): string {
+  const noGo = state.antiConfluences.find((a) => a.isNoGo);
+  if (noGo) return noGo.text;
+  const score = state.antiConfluences.reduce((sum, a) => sum + a.weight, 0);
+  return `zu viele Anti-Confluences (${score}/${ANTI_CONFLUENCE_THRESHOLD})`;
+}
+
 function buildLines(state: CockpitState, formatPrice: (price: number) => string, nowSec: number | undefined): Line[] {
   const lines: Line[] = [{ text: "Trade-Setup-Cockpit", color: "rgba(209, 212, 220, 0.8)", bold: true }];
 
+  if (state.locked) {
+    lines.push({ text: `🚫 KEIN TRADE — ${lockedReason(state)}`, color: NO_GO_COLOR, bold: true });
+  }
+
+  // Analyse-Inhalt (Trend/LQ-Sweep/M5-Setup) wird bei Sperre abgedunkelt statt entfernt — bleibt
+  // als Kontext lesbar, tritt aber sichtbar hinter das Sperr-Banner/die Anti-Confluences zurück
+  // (siehe Line.dim, CockpitRenderer.draw).
+  let hasContent = false;
   if (state.h1Trend !== "unknown") {
+    hasContent = true;
     const color = state.h1Trend === "uptrend" ? cssColor("rangeLow") : cssColor("rangeHigh");
     const suffix = trendSetupConfirmation(state) ?? undefined;
     // Chat 2026-07-25: "der TSC zeigt nicht an, dass der 1h uptrend schwächelt (BOS wurde
     // bestätigt)" — Text-Hinweis direkt an der Trend-Zeile, unabhängig vom (bei Weakening ja
     // unterdrückten) Konfluenz-Haken.
     const weakeningSuffix = state.h1Weakening ? " (schwächelt, BOS)" : "";
-    lines.push({ text: `1h ${state.h1Trend}${weakeningSuffix}`, color, suffix });
+    lines.push({ text: `1h ${state.h1Trend}${weakeningSuffix}`, color, suffix, dim: state.locked });
   }
   if (state.h1LqSweep) {
+    hasContent = true;
     const age = ageSuffix(state.h1LqSweep.pivotTime, nowSec);
-    lines.push({ text: `1h LQ-Sweep @ ${formatPrice(state.h1LqSweep.price)}${age}`, color: cssColor("rangeLqSweep") });
+    lines.push({ text: `1h LQ-Sweep @ ${formatPrice(state.h1LqSweep.price)}${age}`, color: cssColor("rangeLqSweep"), dim: state.locked });
   }
   if (state.m5Setup) {
+    hasContent = true;
     const color = cssColor(state.m5Setup.dir === -1 ? "tradeSetupLong" : "tradeSetupShort");
     const age = ageSuffix(state.m5Setup.lsPivotTime, nowSec);
-    lines.push({ text: `M5 ${state.m5Setup.label} Setup`, color });
-    lines.push({ text: `  LQ-Sweep @ ${formatPrice(state.m5Setup.lsPrice)}${age}`, color });
-    lines.push({ text: `  M5-OB ${formatPrice(state.m5Setup.obBottom)}–${formatPrice(state.m5Setup.obTop)}`, color });
+    lines.push({ text: `M5 ${state.m5Setup.label} Setup`, color, dim: state.locked });
+    lines.push({ text: `  LQ-Sweep @ ${formatPrice(state.m5Setup.lsPrice)}${age}`, color, dim: state.locked });
+    lines.push({ text: `  M5-OB ${formatPrice(state.m5Setup.obBottom)}–${formatPrice(state.m5Setup.obTop)}`, color, dim: state.locked });
   }
-  if (lines.length === 1) {
-    lines.push({ text: "keine aktive Analyse", color: "rgba(120, 123, 134, 0.9)" });
+  if (!hasContent) {
+    lines.push({ text: "keine aktive Analyse", color: "rgba(120, 123, 134, 0.9)", dim: state.locked });
+  }
+
+  // "Spricht dagegen"-Sektion NIE abgedunkelt, auch nicht bei Sperre — das ist der Teil, der gerade
+  // am wichtigsten zu lesen ist (siehe Chat 2026-07-26).
+  if (state.antiConfluences.length > 0) {
+    lines.push({ text: "Spricht dagegen:", color: "rgba(209, 212, 220, 0.8)", bold: true, separator: true });
+    for (const ac of state.antiConfluences) {
+      const suffix = ac.isNoGo ? " (No-Go)" : ` (${ac.weight})`;
+      lines.push({ text: `  ${ac.text}${suffix}`, color: ac.isNoGo ? NO_GO_COLOR : ANTI_CONFLUENCE_COLOR });
+    }
   }
   return lines;
 }
@@ -229,7 +322,23 @@ class CockpitRenderer {
         maxWidth = Math.max(maxWidth, width);
       }
       const boxWidth = maxWidth + padding * 2;
-      const boxHeight = this._lines.length * lineHeight + padding * 2;
+
+      // Zeilen-Mittelpunkte relativ zum Inhaltsbeginn (boxTop+padding) vorab berechnen statt eines
+      // festen `lineHeight * i` — separator-Zeilen (siehe "Spricht dagegen") bekommen zusätzlich
+      // SEPARATOR_GAP Abstand + eine Trennlinie VOR sich, alle anderen bleiben im normalen Raster.
+      const gapPx = Math.round(SEPARATOR_GAP * scope.verticalPixelRatio);
+      let relCursor = 0;
+      const rowCenterOffsets: number[] = [];
+      const dividerOffsets: number[] = [];
+      for (const line of this._lines) {
+        if (line.separator) {
+          dividerOffsets.push(relCursor + gapPx / 2);
+          relCursor += gapPx;
+        }
+        rowCenterOffsets.push(relCursor + lineHeight / 2);
+        relCursor += lineHeight;
+      }
+      const boxHeight = relCursor + padding * 2;
 
       let boxLeft: number;
       let boxTop: number;
@@ -258,13 +367,34 @@ class CockpitRenderer {
       ctx.lineWidth = this._accent ? Math.max(1.5, Math.round(1.5 * scope.horizontalPixelRatio)) : 1;
       ctx.stroke();
 
+      // Trennlinien für separator-Zeilen (siehe "Spricht dagegen") — neutrale, dezente Farbe statt
+      // an Accent/Setup-Richtung gekoppelt, damit sie in JEDEM Kartenzustand als reine
+      // Struktur-/Gliederungslinie lesbar bleibt.
+      if (dividerOffsets.length > 0) {
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
+        ctx.lineWidth = Math.max(1, Math.round(scope.horizontalPixelRatio));
+        const dividerLeft = boxLeft + padding * 0.6;
+        const dividerRight = boxLeft + boxWidth - padding * 0.6;
+        for (const offset of dividerOffsets) {
+          const y = boxTop + padding + offset;
+          ctx.beginPath();
+          ctx.moveTo(dividerLeft, y);
+          ctx.lineTo(dividerRight, y);
+          ctx.stroke();
+        }
+      }
+
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       this._lines.forEach((line, i) => {
+        // globalAlpha statt die Farbe selbst zu parsen (line.color kommt teils als fertiger
+        // rgba()-String aus cssColor, teils als Literal) — einfacher Weg, jede Farbe gleich
+        // abzudunkeln, siehe Line.dim.
+        ctx.globalAlpha = line.dim ? 0.45 : 1;
         ctx.font = fontFor(line.bold);
         ctx.fillStyle = line.color;
         const x = boxLeft + padding;
-        const y = boxTop + padding + lineHeight * i + lineHeight / 2;
+        const y = boxTop + padding + rowCenterOffsets[i];
         ctx.fillText(line.text, x, y);
         if (line.suffix) {
           const textWidth = ctx.measureText(line.text).width; // dasselbe Font wie gerade gesetzt
@@ -272,6 +402,7 @@ class CockpitRenderer {
           ctx.fillText(line.suffix.text, x + textWidth, y);
         }
       });
+      ctx.globalAlpha = 1;
 
       // Positions-Toggle-Badge, oben rechts an der Karte (siehe Chat: "Ein extra Toggle im TSC
       // selbst"). hitBox wird in CSS-Pixeln (nicht Bitmap-skaliert) gespeichert, weil
