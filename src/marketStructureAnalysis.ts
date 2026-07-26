@@ -136,7 +136,19 @@ function tryConfirmTrend(state: MarketStructureState, breakingPivot: Pivot, dire
 
     const advancedRange = { ...currRange, high: { ...breakingPivot, type: "high" as const } };
     const confirmationMoment = pivotTimeOf(breakingPivot);
-    const qualifyingPullbacks = [...structurePivots, ...innerStructurePivots].filter(
+    // NUR structurePivots (Periode-5) durchsucht — Chat 2026-07-26 ("P5 definiert Struktur, P2
+    // erkennt nur SCHNELLER, wenn diese bereits definierte Struktur bricht"): der qualifizierende
+    // Pullback (protected-low/-high, "Strukturpunkt 2") ist Teil der STRUKTUR-Definition, nicht des
+    // schnelleren Bruch-Triggers (das bleibt weiterhin `breakingPivot` selbst, der sehr wohl ein
+    // Periode-2-Pivot sein darf — siehe applyInnerMarketStructurePivotCore). Vorher konnte auch ein
+    // NIE durch Periode-5 bestätigter reiner Periode-2-Pullback protected-low/-high werden (Bug-
+    // Report Philip: "periode2Pivots sind doch viel zu schwach, wie kann es sein, dass wir daraus
+    // protected-pivots machen?", belegt durch marketStructureAnalysisProtectedLow.test.js: ein rein
+    // eingebetteter Pullback wurde protected-low, ganz ohne Periode-5-Pendant). innerStructurePivots
+    // bleibt trotzdem Teil von `reclassify` unten (ein dort noch stehender, ÄLTERER protected-*-
+    // Eintrag muss weiterhin zurückgestuft werden können, wenn ein neuerer Periode-5-Kandidat
+    // gewinnt), nur die SUCHE nach neuen Kandidaten ist jetzt auf structurePivots beschränkt.
+    const qualifyingPullbacks = structurePivots.filter(
       (p) => (p.type === "low" || p.type === "LQ-sweep") && pivotTimeOf(p) > highTime && isUntouchedAsOf(p, confirmationMoment),
     );
     if (qualifyingPullbacks.length === 0) {
@@ -172,7 +184,9 @@ function tryConfirmTrend(state: MarketStructureState, breakingPivot: Pivot, dire
 
   const advancedRange = { ...currRange, low: { ...breakingPivot, type: "low" as const } };
   const confirmationMoment = pivotTimeOf(breakingPivot);
-  const qualifyingPullbacks = [...structurePivots, ...innerStructurePivots].filter(
+  // Gespiegelt: nur structurePivots (Periode-5) — siehe Kommentar im "up"-Zweig oben für die volle
+  // Begründung.
+  const qualifyingPullbacks = structurePivots.filter(
     (p) => (p.type === "high" || p.type === "LQ-sweep") && pivotTimeOf(p) > lowTime && isUntouchedAsOf(p, confirmationMoment),
   );
   if (qualifyingPullbacks.length === 0) {
@@ -377,6 +391,23 @@ function evaluateConfirmingBreak(
   if (!isRealBreak) return { kind: "sweep" };
   const confirmed = tryConfirmTrend(state, pivot, direction);
   return confirmed ? { kind: "confirmed", state: confirmed } : { kind: "extend" };
+}
+
+// Chat 2026-07-26 (Bug-Report Philip, gefunden über die reale GBPUSD-Fixture in
+// marketStructureAnalysisRealPipeline.test.js — "P5 definiert Struktur, P2 erkennt nur SCHNELLER"
+// blockierte eine echte Bestätigung PERMANENT): die "Punkt 3 muss Outer sein"-Regel (siehe die
+// beiden `evaluateConfirmingBreak`-Aufrufer unten) darf NICHT die Selbstkorrektur der
+// Origin-Zeitreihenfolge verhindern. tryConfirmTrends Eligibility-Prüfung ("Low vor High" für
+// direction='up', gespiegelt für 'down') gilt nur für die ALLERERSTE Bestätigung einer Range —
+// solange sie fehlschlägt, ist currRange.high/low noch gar kein "Strukturpunkt 3" im Sinne der
+// 4-Punkte-Regel, sondern reine Buchhaltung: der (zufällig falsch geordnete) Ursprung braucht
+// noch IRGENDEINEN weiteren Pivot, der die Grenze zeitlich nach vorne schiebt, damit die Reihenfolge
+// sich reparieren kann — das darf jeder Pivot tun, auch Periode-2, weil es keine STRUKTUR aufbaut,
+// sondern nur einen technischen Vorzustand korrigiert. Erst SOBALD die Reihenfolge schon stimmt
+// (eligible), ist eine weitere Ausweitung tatsächlich "Strukturpunkt 3" — und die Beschränkung auf
+// Periode-5 greift.
+function isOriginEligible(currRange: MarketStructureState["currRange"], direction: TrendDirection): boolean {
+  return direction === "up" ? pivotTimeOf(currRange.high) > pivotTimeOf(currRange.low) : pivotTimeOf(currRange.low) > pivotTimeOf(currRange.high);
 }
 
 function applyMarketStructurePivotCore(
@@ -708,6 +739,21 @@ function applyInnerMarketStructurePivotCore(
         return { ...outcome.state, innerStructurePivots: [...outcome.state.innerStructurePivots, pivot] };
       }
       if (outcome.kind === "extend") {
+        // Chat 2026-07-26 ("P5 definiert Struktur, P2 erkennt nur SCHNELLER, wenn diese bereits
+        // definierte Struktur bricht"): ein echter, aber NICHT bestätigender Bruch bewegt currRange
+        // NICHT mehr über einen Periode-2-Pivot — ABER NUR, wenn der Ursprung bereits eligible ist
+        // (siehe isOriginEligible). Ist er das noch NICHT (zufällig falsch geordneter Ursprung,
+        // siehe marketStructureAnalysisRealPipeline.test.js — ein echter Bug, den diese Ausnahme
+        // beheben soll), bleibt die Ausweitung erlaubt: das ist reine Zeit-Reparatur, kein
+        // "Strukturpunkt 3" im Sinne der 4-Punkte-Regel, sonst bliebe eine Range mit unglücklichem
+        // Ursprung für IMMER unbestätigbar. Erst sobald eligible, greift die Beschränkung: eine
+        // Kaskade rein Periode-2-getriebener, unbestätigter Verschiebungen soll dann keinen
+        // "Strukturpunkt" mehr erzeugen können, der nie wirklich als eigenständiger Schwenkpunkt
+        // existiert hat (Bug-Report Philip: Nested-Downtrend bestätigte über genau so eine Kaskade,
+        // "das ist eigentlich nur Noise").
+        if (isOriginEligible(currRange, "up")) {
+          return { ...sweepChecked, innerStructurePivots: [...innerStructurePivots, pivot] };
+        }
         return {
           ...sweepChecked,
           currRange: { ...currRange, high: { ...pivot, type: "high" } },
@@ -744,9 +790,22 @@ function applyInnerMarketStructurePivotCore(
         if (confirmedDown) {
           return { ...confirmedDown, innerStructurePivots: [...confirmedDown.innerStructurePivots, pivot] };
         }
-        // Uptrend noch nicht bestätigt -> es gibt nichts zu invalidieren, currRange.low wird
-        // stattdessen einfach ausgeweitet (spiegelbildlich zum unconfirmed Low-Bruch in
-        // applyMarketStructurePivot — reine Erkundung, kein Bruch von etwas Bestätigtem).
+        // Uptrend noch nicht bestätigt UND (noch) kein qualifizierender Downtrend-Kandidat ->
+        // currRange.low bleibt seit Chat 2026-07-26 unangetastet, wenn der Bruch von einem
+        // Periode-2-Pivot kommt UND der Ursprung für "down" bereits eligible ist (dieses Feld ist
+        // dann bereits "Strukturpunkt 3" für einen möglichen künftigen Downtrend, nicht mehr reine
+        // richtungslose Ursprungs-Erkundung — sonst könnte genau dieselbe P2-Kaskade entstehen, die
+        // den Nested-Downtrend-Bug verursacht hat, nur diesmal auf der Haupttrend-Ebene). Ist der
+        // Ursprung noch NICHT eligible, bleibt die Ausweitung erlaubt — reine Zeit-Reparatur (siehe
+        // isOriginEligible-Kommentar), sonst bliebe ein zufällig falsch geordneter Ursprung für
+        // IMMER unbestätigbar (Bug-Report Philip, gefunden über die reale GBPUSD-Fixture in
+        // marketStructureAnalysisRealPipeline.test.js).
+        if (isOriginEligible(currRange, "down")) {
+          return {
+            ...sweepChecked,
+            innerStructurePivots: [...innerStructurePivots, pivot],
+          };
+        }
         return {
           ...sweepChecked,
           currRange: { ...currRange, low: { ...pivot, type: "low" } },
@@ -768,6 +827,11 @@ function applyInnerMarketStructurePivotCore(
         return { ...outcome.state, innerStructurePivots: [...outcome.state.innerStructurePivots, pivot] };
       }
       if (outcome.kind === "extend") {
+        // Gespiegelt: siehe Kommentar im "up"-Zweig oben für die volle Begründung — nur gesperrt,
+        // wenn der Ursprung schon eligible ist, sonst bleibt die reine Zeit-Reparatur erlaubt.
+        if (isOriginEligible(currRange, "down")) {
+          return { ...sweepChecked, innerStructurePivots: [...innerStructurePivots, pivot] };
+        }
         return {
           ...sweepChecked,
           currRange: { ...currRange, low: { ...pivot, type: "low" } },

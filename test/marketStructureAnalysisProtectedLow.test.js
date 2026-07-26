@@ -166,32 +166,39 @@ describe("marketStructureAnalysis: zeitbewusste Pullback-Auswahl für protected-
     expect(state.currRange.high.pivotAt).toBe("second-break");
   });
 
-  // Chat 2026-07-23 ("protected low verschwindet"): applyInnerMarketStructurePivot lässt ein per
-  // eingebettetem (Periode-2-)Pivot bestätigtes protected-low zunächst in innerStructurePivots
-  // stehen — applyMarketStructurePivot leerte das bisher UNCONDITIONAL, sobald der nächste
-  // übergeordnete Pivot eintraf, egal welchen Typs (Low-Bruch, High-Bruch, reiner Pullback). Damit
-  // verschwand die Markierung, obwohl trend korrekt 'uptrend' blieb.
-  it("ein per eingebettetem Pivot bestätigtes protected-low überlebt den nächsten übergeordneten Pivot (egal welchen Typs)", () => {
+  // Chat 2026-07-23 ("protected low verschwindet"): ursprünglich ein Test dafür, dass ein per
+  // eingebettetem (Periode-2-)Pivot bestätigtes protected-low die nächste übergeordnete Migration
+  // überlebt. Chat 2026-07-26 ("P5 definiert Struktur, P2 erkennt nur SCHNELLER, wenn diese bereits
+  // definierte Struktur bricht", Bug-Report Philip: "periode2Pivots sind doch viel zu schwach, wie
+  // kann es sein, dass wir daraus protected-pivots machen?") hat die Kandidatensuche in
+  // tryConfirmTrend auf `structurePivots` (Periode 5) beschränkt — ein REIN eingebetteter Pullback
+  // kann seitdem gar nicht mehr protected-low werden (er lebt nur in innerStructurePivots, dort
+  // wird nie mehr gesucht). Die Migration selbst (innerStructurePivots -> structurePivots für
+  // BEREITS protected-* Einträge) ist dadurch für NEU entstehende protected-low/-high tote Logik
+  // geworden — ein Kandidat, der jemals protected-* wird, steht durch die Suchbeschränkung von
+  // Anfang an schon in structurePivots, nie nur in innerStructurePivots. Dieser Test dokumentiert
+  // jetzt das GEGENTEIL des ursprünglichen Verhaltens.
+  it("ein rein eingebetteter (Periode-2-)Pullback wird NICHT mehr protected-low, selbst wenn ein eingebetteter Bruch ihn sonst qualifizieren würde", () => {
     const originLow = { type: "low", price: 1.0, pivotAt: "lo", pivotTime: 0, touched: false };
     const originHigh = { type: "high", price: 1.1, pivotAt: "hi", pivotTime: 10, touched: false };
     // Eingebetteter (Periode-2-)Pullback, der beim Bestätigungsmoment noch ungetoucht ist.
     const innerPullback = { type: "low", price: 1.05, pivotAt: "inner-hl", pivotTime: 20, touched: false };
-    // Eingebetteter Bruch, der den Uptrend bestätigt — landet per Design in innerStructurePivots.
+    // Eingebetteter Bruch, der den Uptrend FRÜHER bestätigen würde (schnellere Erkennung bleibt
+    // grundsätzlich möglich) — hier aber ohne Outer-Kandidat, also keine Bestätigung.
     const innerBreak = { type: "high", price: 1.2, pivotAt: "inner-break", pivotTime: 30, touched: false };
 
     let state = initMarketStructureState(originLow, originHigh);
     state = applyInnerMarketStructurePivot(state, innerPullback, {});
     state = applyInnerMarketStructurePivot(state, innerBreak, {});
-    expect(state.trend).toBe("uptrend");
-    expect(state.innerStructurePivots.find((p) => p.pivotAt === "inner-hl")?.type).toBe("protected-low");
+    expect(state.trend).toBe("unknown"); // NICHT bestätigt — kein qualifizierender Outer-Kandidat
+    expect(state.innerStructurePivots.find((p) => p.pivotAt === "inner-hl")?.type).toBe("low"); // bleibt einfacher Pullback
 
-    // Nächster ÜBERGEORDNETER Pivot — bewusst ein simpler Pullback INNERHALB der Range (nicht
-    // selbst ein Bruch), um zu zeigen: die Migration passiert bei JEDEM übergeordneten Pivot, nicht
-    // nur beim nächsten HH-Bruch.
-    const outerPullback = { type: "low", price: 1.15, pivotAt: "outer-pullback", pivotTime: 40, touched: false };
-    state = applyMarketStructurePivot(state, outerPullback);
-
-    expect(state.innerStructurePivots).toHaveLength(0); // wie immer geleert
-    expect(state.structurePivots.find((p) => p.pivotAt === "inner-hl")?.type).toBe("protected-low"); // aber migriert statt verloren
+    // Derselbe Bruch bestätigt aber normal, sobald der Pullback stattdessen Outer ist.
+    const outerPullback = { type: "low", price: 1.05, pivotAt: "outer-hl", pivotTime: 20, touched: false };
+    let state2 = initMarketStructureState(originLow, originHigh);
+    state2 = applyMarketStructurePivot(state2, outerPullback);
+    state2 = applyInnerMarketStructurePivot(state2, innerBreak, {});
+    expect(state2.trend).toBe("uptrend");
+    expect(state2.structurePivots.find((p) => p.pivotAt === "outer-hl")?.type).toBe("protected-low");
   });
 });

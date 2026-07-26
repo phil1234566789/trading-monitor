@@ -262,27 +262,44 @@ describe("marketStructureAnalysis: Periode-2-Verfeinerung des Nested-Trackers (a
     });
   });
 
-  it("nach der Platzhalter-Invalidierung reicht ein einzelner weiterer Low-Pivot, um die Eligibility zu reparieren, und ein Bruch danach kann wieder bestätigen (Regressionstest für den Ursprung-Bug)", () => {
+  it("ein einzelner Periode-2-Pivot repariert den NOCH NICHT eligible Platzhalter (reine Zeit-Reparatur, kein 'Strukturpunkt 3'), aber sobald eligible, bewegt ein WEITERER Periode-2-Pivot die Grenze nicht mehr — nur Outer, und ein Bruch danach kann wieder bestätigen (Regressionstest für den Ursprung-Bug UND für den GBPUSD-Fixture-Bug, siehe marketStructureAnalysisRealPipeline.test.js)", () => {
     let state = chochConfirmedState();
     const innerHigh = { type: "high", price: 1.25, pivotAt: "innerHigh", pivotTime: 75, touched: false };
     state = applyInnerMarketStructurePivot(state, innerHigh, { candles: [] });
     expect(state.nestedTrend.trend).toBe("unknown");
+    // Degenerierter Platzhalter (high===low, gleicher Zeitpunkt) -> NICHT eligible.
+    expect(state.nestedTrend.currRange.low.pivotTime).toBe(state.nestedTrend.currRange.high.pivotTime);
 
-    // Irgendein Pullback-Low nach der Invalidierung -> repariert die Zeit-Reihenfolge
-    // (lowTime > highTime), OHNE selbst schon zu brechen.
-    const pullback = { type: "low", price: 1.2, pivotAt: "pullback", pivotTime: 80, touched: false };
-    state = applyInnerMarketStructurePivot(state, pullback, { candles: [] });
+    // Der Platzhalter ist noch NICHT eligible -> ein Periode-2-Pivot DARF ihn reparieren (reine
+    // Zeit-Korrektur, kein Strukturpunkt-3-Aufbau, siehe isOriginEligible).
+    const innerPullback = { type: "low", price: 1.2, pivotAt: "innerPullback", pivotTime: 80, touched: false };
+    state = applyInnerMarketStructurePivot(state, innerPullback, { candles: [] });
     expect(state.nestedTrend.trend).toBe("unknown");
-    expect(state.nestedTrend.currRange.low).toEqual({ ...pullback, type: "low" });
+    expect(state.nestedTrend.currRange.low).toEqual({ ...innerPullback, type: "low" }); // repariert
+
+    // Jetzt ist der Ursprung eligible (lowTime 80 > highTime 75) -> ein WEITERER Periode-2-Pivot
+    // bewegt die Grenze nicht mehr (das wäre jetzt echter "Strukturpunkt 3"-Aufbau).
+    const innerPullback2 = { type: "low", price: 1.15, pivotAt: "innerPullback2", pivotTime: 83, touched: false };
+    state = applyInnerMarketStructurePivot(state, innerPullback2, { candles: [] });
+    expect(state.nestedTrend.currRange.low).toEqual({ ...innerPullback, type: "low" }); // unverändert
+
+    // Ein Outer-Pivot repariert/bewegt die Grenze weiterhin uneingeschränkt.
+    const outerPullback = { type: "low", price: 1.15, pivotAt: "outerPullback", pivotTime: 84, touched: false };
+    state = applyMarketStructurePivot(state, outerPullback, { candles: [] });
+    expect(state.nestedTrend.currRange.low).toEqual({ ...outerPullback, type: "low" });
+    expect(state.nestedTrend.trend).toBe("unknown"); // noch nicht bestätigt, nur bewegt
 
     // Ein weiterer Pullback-High (bricht das Nested-Origin-High 1.25 NICHT) liefert den
-    // qualifizierenden Kandidaten für 'protected-high' bei der nächsten Bestätigung.
-    const pullbackHigh = { type: "high", price: 1.22, pivotAt: "pullbackHigh", pivotTime: 82, touched: false };
-    state = applyInnerMarketStructurePivot(state, pullbackHigh, { candles: [] });
+    // qualifizierenden Kandidaten für 'protected-high' bei der nächsten Bestätigung — MUSS seit
+    // Chat 2026-07-26 ein Outer-Pivot sein, damit er in nested.structurePivots landet (nicht nur
+    // innerStructurePivots) und als Kandidat zählt (siehe tryConfirmTrend).
+    const pullbackHigh = { type: "high", price: 1.22, pivotAt: "pullbackHigh", pivotTime: 85, touched: false };
+    state = applyMarketStructurePivot(state, pullbackHigh, { candles: [] });
 
-    // Jetzt bricht ein echter Kerzenschluss unter pullback -> sollte wieder bestätigen können.
+    // Jetzt bricht ein echter Kerzenschluss unter outerPullback -> sollte wieder bestätigen können
+    // (der bestätigende Bruch selbst darf weiterhin Periode-2 sein).
     const breakLow = { type: "low", price: 1.1, pivotAt: "breakLow", pivotTime: 90, touched: false };
-    const candles = [{ time: 85, open: 1.2, high: 1.21, low: 1.09, close: 1.1 }];
+    const candles = [{ time: 87, open: 1.15, high: 1.16, low: 1.09, close: 1.1 }];
     state = applyInnerMarketStructurePivot(state, breakLow, { candles });
     expect(state.nestedTrend.trend).toBe("downtrend");
   });

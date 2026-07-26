@@ -34,13 +34,30 @@ describe("marketStructureAnalysis: eigenständige Downtrend-Erkennung aus 'unkno
     expect(state.closedRanges).toEqual([]);
   });
 
-  it("ein Periode-2-Pivot kann den Downtrend genauso direkt bestätigen (schnellere Erkennung, analog zur Uptrend-Bestätigung)", () => {
+  it("ein Periode-2-Pivot kann den bestätigenden Bruch (Strukturpunkt 4) genauso direkt auslösen (schnellere Erkennung) — der qualifizierende Pullback (Strukturpunkt 2) muss aber ein Outer-Pivot sein (Chat 2026-07-26: 'P5 definiert Struktur, P2 erkennt nur schneller, wenn diese bereits definierte Struktur bricht')", () => {
     let state = initMarketStructureState(originHigh, originLow);
-    state = applyInnerMarketStructurePivot(state, pullback, { candles: [] });
+    // Der Pullback (Strukturpunkt 2) MUSS Outer sein, sonst landet er nur in innerStructurePivots
+    // und qualifiziert nicht mehr als protected-high-Kandidat (siehe tryConfirmTrend).
+    state = applyMarketStructurePivot(state, pullback);
     expect(state.trend).toBe("unknown");
+    // Der bestätigende Bruch (Strukturpunkt 4) darf weiterhin Periode-2 sein — genau die
+    // "schneller erkennen"-Eigenschaft, die hier abgesichert wird.
     state = applyInnerMarketStructurePivot(state, confirmBreak, { candles: [] });
     expect(state.trend).toBe("downtrend");
     expect(state.currRange.low).toEqual({ ...confirmBreak, type: "low" });
+  });
+
+  it("ein rein eingebetteter (Periode-2-)Pullback qualifiziert NICHT mehr als protected-high-Kandidat, selbst wenn der bestätigende Bruch ihn zeitlich/preislich erfüllen würde", () => {
+    let state = initMarketStructureState(originHigh, originLow);
+    state = applyInnerMarketStructurePivot(state, pullback, { candles: [] }); // rein inner, nie migriert
+    expect(state.trend).toBe("unknown");
+    state = applyInnerMarketStructurePivot(state, confirmBreak, { candles: [] });
+    expect(state.trend).toBe("unknown"); // bleibt unbestätigt — kein qualifizierender Outer-Kandidat
+    // Strukturpunkt 3 (die Vorbruch-Grenze) bewegt sich seit Chat 2026-07-26 durch einen
+    // unbestätigten Periode-2-Bruch auch nicht mehr — currRange.low bleibt beim Origin stehen.
+    expect(state.currRange.low).toEqual({ ...originLow, type: "low" });
+    expect(state.innerStructurePivots.find((p) => p.pivotAt === "pb")).toBeTruthy(); // Pivot bleibt erhalten
+    expect(state.innerStructurePivots.find((p) => p.pivotAt === "confirm")).toBeTruthy();
   });
 
   it("bullischer Origin (Low vor High) bestätigt weiterhin nur 'uptrend', nie 'downtrend' (Regression: bestehendes Verhalten unverändert)", () => {
