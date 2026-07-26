@@ -97,19 +97,83 @@ function findAllProtectedFractals(fractalLevels, h1Levels, m5Levels, dir, params
   return results; // chronologisch (fractalLevels ist es bereits)
 }
 
-// Gültiges Setup = (1) ein "Protected High/Low" auf M5-Basis + der es sweepende H1- oder
-// M5-LQ-Level, UND (2) ein bestätigendes M5-OB, das zeitlich NACH diesem M5-Fraktal
-// entstanden ist. dir: 1 = Short (Protected High, braucht bärisches M5-OB), -1 = Long
-// (Protected Low, braucht bullisches M5-OB). m5Levels ist i.d.R. dieselbe Array-Referenz wie
-// fractalLevels (ein Fraktal kann auch von einem anderen M5-Fraktal geswept werden). Gibt ALLE
-// im Fenster gefundenen Setups zurück (chronologisch, älteste zuerst) — Aufrufer schneidet
-// selbst auf die gewünschte Anzahl zu (siehe lastTradeSetups im Original).
-export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupObs, params) {
+// Prüft, ob seit `fromTime` (exklusiv) bis `toTime` (inklusiv) irgendeine M5-Kerze STRUKTURELL
+// gegen `levelPrice` geschlossen hat — dieselbe Sweep-vs-Bruch-Unterscheidung wie
+// closesBelowLevel/closesAboveLevel in marketStructureAnalysis.ts (Chat 2026-07-19: "LQ-Sweep
+// darf kein BOS werden"), hier auf M5- statt H1-Kerzen. dir: -1 (Long) -> Bruch = Close UNTER
+// levelPrice, dir: 1 (Short) -> Close DARÜBER.
+function closesBeyondLevel(candles, fromTime, toTime, levelPrice, dir) {
+  return candles.some((c) => c.time > fromTime && c.time <= toTime && (dir === -1 ? c.close < levelPrice : c.close > levelPrice));
+}
+
+// Path B (Chat 2026-07-26, Bug-Report "M5 OB wird nicht als Trade-Setup erkannt"): laut Philips
+// Strategie reicht es AUCH, wenn sich der bestätigende M5-OB sofort (oder kurz) nach einem LS
+// bildet, ohne dass sich zusätzlich noch ein eigenes, per period-5-Williams-Fraktal bestätigtes
+// Protected-Pivot ausbildet — das braucht mindestens 5 M5-Kerzen (25min) Bestätigungszeit und
+// würde ein sofort reagierendes Setup künstlich verzögern. Ergänzt findAllProtectedFractals
+// (Path A), ersetzt es NICHT (explizite Ansage von Philip: "Path A nicht rausschmeißen, es ist
+// laut Strategie BEIDES möglich" — z.B. hält ein 1H-LS-Sweep auch dann, wenn zwischenzeitlich
+// M5-Kerzen dagegen schließen, weil dort weiterhin nur Path A über das spätere Protected-Pivot
+// zählt, siehe gbp_h1_uptrend_LQ_sweep_long_setup Replay-Beispiel 08.07.2026 11:50).
+//
+// Ohne fractal-Kandidat: der LS-Level selbst ist hier der Referenzpunkt. Einzige Bedingung außer
+// dem OB-Timing: seit dem Sweep (ls.touchedTime) darf keine M5-Kerze STRUKTURELL dagegen
+// geschlossen haben (closesBeyondLevel) — das gilt bei Path B (anders als bei Path A) für JEDES
+// LS, ob H1- oder M5-Ursprungs, weil es hier keinen separat bestätigten Fraktal-Puffer gibt, der
+// zwischenzeitliche Gegenbewegungen sonst abfedern würde.
+function findImmediateLsSetups(h1Levels, m5Levels, m5Candles, dir, params) {
+  const oldestAllowed = params.nowTime - params.maxLookbackSec;
+  const results = [];
+  for (const ls of [...h1Levels, ...m5Levels]) {
+    if (!ls.touched || ls.touchedTime == null || ls.touchedTime < oldestAllowed) continue;
+    if (closesBeyondLevel(m5Candles, ls.touchedTime, params.nowTime, ls.price, dir)) continue;
+    results.push(ls);
+  }
+  return results;
+}
+
+// Eindeutiger Schlüssel für ein (ls, ob)-Paar — verhindert, dass Path A und Path B dasselbe
+// Setup doppelt melden, falls beide für dieselbe LS-Sweep/OB-Kombination zutreffen.
+function setupKey(ls, ob) {
+  return `${ls.pivotTime}_${ob.startTime}`;
+}
+
+// Gültiges Setup = ENTWEDER (Path A) ein "Protected High/Low" auf M5-Basis + der es sweepende
+// H1- oder M5-LQ-Level, ODER (Path B) ein LS-Level, das seit dem Sweep strukturell nicht
+// gebrochen wurde (siehe findImmediateLsSetups) — jeweils UND ein bestätigendes M5-OB, das
+// zeitlich danach entstanden ist. dir: 1 = Short (Protected High, braucht bärisches M5-OB), -1 =
+// Long (Protected Low, braucht bullisches M5-OB). m5Levels ist i.d.R. dieselbe Array-Referenz wie
+// fractalLevels (ein Fraktal kann auch von einem anderen M5-Fraktal geswept werden). m5Candles:
+// für Path B's closesBeyondLevel-Prüfung. Gibt ALLE im Fenster gefundenen Setups zurück
+// (chronologisch, älteste zuerst) — Aufrufer schneidet selbst auf die gewünschte Anzahl zu
+// (siehe lastTradeSetups im Original). Fehlt Path A ein eigenes Fraktal (Path-B-Treffer), wird
+// `fractal` auf `ls` gesetzt — dieselbe Semantik wie "der Level, der halten muss", nur ohne
+// separat bestätigten Pivot; hält Downstream-Code (Chart-Rendering, poi-watcher-Dedupe) ohne
+// Sonderfall funktionsfähig.
+export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupObs, params, m5Candles) {
   const obDir = dir === 1 ? -1 : 1;
   const setups = [];
+  const seen = new Set();
+
   for (const { fractal, ls } of findAllProtectedFractals(fractalLevels, h1Levels, m5Levels, dir, params)) {
     const ob = findFirstSetupObAfter(setupObs, obDir, fractal.pivotTime, params.obMaxDelaySec);
-    if (ob) setups.push({ dir, fractal, ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime });
+    if (ob) {
+      setups.push({ dir, fractal, ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime });
+      seen.add(setupKey(ls, ob));
+    }
   }
+
+  if (m5Candles) {
+    for (const ls of findImmediateLsSetups(h1Levels, m5Levels, m5Candles, dir, params)) {
+      const ob = findFirstSetupObAfter(setupObs, obDir, ls.touchedTime, params.obMaxDelaySec);
+      if (!ob) continue;
+      const key = setupKey(ls, ob);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      setups.push({ dir, fractal: ls, ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime });
+    }
+  }
+
+  setups.sort((a, b) => a.obStartTime - b.obStartTime);
   return setups;
 }

@@ -583,8 +583,8 @@ Deno.serve(async () => {
         };
 
         const detected = [
-          detectTradeSetup(1, m5Highs, h1HighsSetup, m5Highs, setupObs, tradeSetupParams),
-          detectTradeSetup(-1, m5Lows, h1LowsSetup, m5Lows, setupObs, tradeSetupParams),
+          detectTradeSetup(1, m5Highs, h1HighsSetup, m5Highs, setupObs, tradeSetupParams, m5Candles),
+          detectTradeSetup(-1, m5Lows, h1LowsSetup, m5Lows, setupObs, tradeSetupParams, m5Candles),
         ].filter((s): s is NonNullable<typeof s> => s !== null);
 
         const { data: existingSetupRows, error: setupSelectError } = await supabase

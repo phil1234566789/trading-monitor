@@ -153,11 +153,61 @@ function findProtectedFractal(
   return null;
 }
 
-// Gültiges Setup = (1) aktuell gültiges "Protected High/Low" auf M5-Basis + der es sweepende
-// H1- oder M5-LQ-Level, UND (2) ein bestätigendes M5-OB, das zeitlich NACH diesem M5-Fraktal
-// entstanden ist. dir: 1 = Short (Protected High, braucht bärisches M5-OB), -1 = Long
-// (Protected Low, braucht bullisches M5-OB). m5Levels ist i.d.R. dieselbe Array-Referenz wie
-// fractalLevels (ein Fraktal kann auch von einem anderen M5-Fraktal geswept werden).
+// Prüft, ob seit `fromTime` (exklusiv) bis `toTime` (inklusiv) irgendeine M5-Kerze STRUKTURELL
+// gegen `levelPrice` geschlossen hat — dieselbe Sweep-vs-Bruch-Unterscheidung wie
+// closesBelowLevel/closesAboveLevel in marketStructureAnalysis.ts (Chat 2026-07-19: "LQ-Sweep
+// darf kein BOS werden"), hier auf M5- statt H1-Kerzen. dir: -1 (Long) -> Bruch = Close UNTER
+// levelPrice, dir: 1 (Short) -> Close DARÜBER.
+function closesBeyondLevel(candles: Candle[], fromTime: number, toTime: number, levelPrice: number, dir: 1 | -1): boolean {
+  return candles.some((c) => c.time > fromTime && c.time <= toTime && (dir === -1 ? c.close < levelPrice : c.close > levelPrice));
+}
+
+// Path B (Chat 2026-07-26, Bug-Report "M5 OB wird nicht als Trade-Setup erkannt"): laut Philips
+// Strategie reicht es AUCH, wenn sich der bestätigende M5-OB sofort (oder kurz) nach einem LS
+// bildet, ohne dass sich zusätzlich noch ein eigenes, per period-5-Williams-Fraktal bestätigtes
+// Protected-Pivot ausbildet (das braucht mindestens 5 M5-Kerzen/25min Bestätigungszeit). Ergänzt
+// findProtectedFractal (Path A), ersetzt es NICHT — explizite Ansage von Philip: "Path A nicht
+// rausschmeißen, es ist laut Strategie BEIDES möglich" (z.B. hält ein 1H-LS-Sweep auch dann, wenn
+// zwischenzeitlich M5-Kerzen dagegen schließen, weil dort weiterhin nur Path A über das spätere
+// Protected-Pivot zählt, siehe gbp_h1_uptrend_LQ_sweep_long_setup Replay-Beispiel 08.07.2026
+// 11:50). Ohne fractal-Kandidat: der LS-Level selbst ist der Referenzpunkt, einzige Bedingung
+// außer dem OB-Timing ist closesBeyondLevel seit dem Sweep — anders als bei Path A gilt das hier
+// für JEDES LS (H1 oder M5), weil kein separat bestätigter Fraktal-Puffer zwischenzeitliche
+// Gegenbewegungen abfedert. Gibt das AKTUELLSTE gültige (LS, OB)-Paar zurück (nicht die erste
+// Übereinstimmung wie findProtectedFractal, weil hier — anders als dort — keine vorsortierte
+// Fraktal-Liste durchsucht wird, sondern h1Levels+m5Levels gemischt).
+function findImmediateLsSetup(
+  h1Levels: LiquidityLevel[],
+  m5Levels: LiquidityLevel[],
+  m5Candles: Candle[],
+  dir: 1 | -1,
+  setupObs: SetupOb[],
+  params: TradeSetupParams,
+): { ls: LiquidityLevel; ob: SetupOb } | null {
+  const oldestAllowed = params.nowTime - params.maxLookbackSec;
+  const obDir: 1 | -1 = dir === 1 ? -1 : 1;
+  let best: { ls: LiquidityLevel; ob: SetupOb } | null = null;
+  for (const ls of [...h1Levels, ...m5Levels]) {
+    if (!ls.touched || ls.touchedTime == null || ls.touchedTime < oldestAllowed) continue;
+    if (closesBeyondLevel(m5Candles, ls.touchedTime, params.nowTime, ls.price, dir)) continue;
+    const ob = findFirstSetupObAfter(setupObs, obDir, ls.touchedTime, params.obMaxDelaySec);
+    if (!ob) continue;
+    if (!best || ob.startTime > best.ob.startTime) best = { ls, ob };
+  }
+  return best;
+}
+
+// Gültiges Setup = ENTWEDER (Path A) ein aktuell gültiges "Protected High/Low" auf M5-Basis + der
+// es sweepende H1- oder M5-LQ-Level, ODER (Path B) ein LS-Level, das seit dem Sweep strukturell
+// nicht gebrochen wurde (siehe findImmediateLsSetup) — jeweils UND ein bestätigendes M5-OB, das
+// zeitlich danach entstanden ist. dir: 1 = Short (Protected High, braucht bärisches M5-OB), -1 =
+// Long (Protected Low, braucht bullisches M5-OB). m5Levels ist i.d.R. dieselbe Array-Referenz wie
+// fractalLevels (ein Fraktal kann auch von einem anderen M5-Fraktal geswept werden). Treffen
+// beide Pfade zu, gewinnt das AKTUELLERE (spätere obStartTime) — bei Gleichstand Path A, weil das
+// einen echten Fraktal-Datensatz mitbringt. Fehlt Path A ein eigenes Fraktal (Path-B-Treffer),
+// wird `fractal` auf `ls` gesetzt — dieselbe Semantik wie "der Level, der halten muss", nur ohne
+// separat bestätigten Pivot; hält den Dedupe-Key (`fractal_pivot_time`, siehe poi-watcher) und
+// die DB-NOT-NULL-Spalten ohne Sonderfall funktionsfähig.
 export function detectTradeSetup(
   dir: 1 | -1,
   fractalLevels: LiquidityLevel[],
@@ -165,11 +215,23 @@ export function detectTradeSetup(
   m5Levels: LiquidityLevel[],
   setupObs: SetupOb[],
   params: TradeSetupParams,
+  m5Candles: Candle[],
 ): DetectedTradeSetup | null {
-  const found = findProtectedFractal(fractalLevels, h1Levels, m5Levels, dir, params);
-  if (!found) return null;
   const obDir: 1 | -1 = dir === 1 ? -1 : 1;
-  const ob = findFirstSetupObAfter(setupObs, obDir, found.fractal.pivotTime, params.obMaxDelaySec);
-  if (!ob) return null;
-  return { dir, fractal: found.fractal, ls: found.ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime };
+
+  let pathA: DetectedTradeSetup | null = null;
+  const foundA = findProtectedFractal(fractalLevels, h1Levels, m5Levels, dir, params);
+  if (foundA) {
+    const ob = findFirstSetupObAfter(setupObs, obDir, foundA.fractal.pivotTime, params.obMaxDelaySec);
+    if (ob) pathA = { dir, fractal: foundA.fractal, ls: foundA.ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime };
+  }
+
+  let pathB: DetectedTradeSetup | null = null;
+  const foundB = findImmediateLsSetup(h1Levels, m5Levels, m5Candles, dir, setupObs, params);
+  if (foundB) {
+    pathB = { dir, fractal: foundB.ls, ls: foundB.ls, obTop: foundB.ob.top, obBottom: foundB.ob.bottom, obStartTime: foundB.ob.startTime };
+  }
+
+  if (pathA && pathB) return pathB.obStartTime > pathA.obStartTime ? pathB : pathA;
+  return pathA ?? pathB;
 }
