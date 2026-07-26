@@ -211,6 +211,32 @@ const debugMenuOpen = ref(false);
 // eigenes verschachteltes Sweep-Untermenü (liquidityMenuOpen), das jetzt innerhalb des
 // Indikatoren-Dropdowns lebt statt auf oberster Ebene.
 const indikatorenMenuOpen = ref(false);
+// Feature-Wunsch Philip 2026-07-26: "Klick auf Indikatoren soll alle darunterliegenden Indikatoren
+// ausblenden" — "Indikatoren" bekommt damit denselben Sammel-Toggle wie Liquidität/OBs (Klick =
+// alle Sub-Indikatoren an/aus, der Caret bleibt separat fürs Dropdown), statt wie bisher rein ein
+// Dropdown-Auslöser zu sein. Snapshot statt pauschalem "alles auf Werkseinstellung" beim
+// Wieder-Einblenden, damit ein Klick nicht z.B. eine bewusst deaktivierte EMA wieder anschaltet.
+const INDIKATOREN_REFS = [showSessions, showEma, showLiquidity, showSweptLiquidity, showOrderBlocks, showHistoricalObs];
+const indikatorenActive = computed(() => INDIKATOREN_REFS.some((r) => r.value));
+let indikatorenSavedState = null;
+function toggleIndikatoren() {
+  if (indikatorenActive.value) {
+    indikatorenSavedState = INDIKATOREN_REFS.map((r) => r.value);
+    INDIKATOREN_REFS.forEach((r) => { r.value = false; });
+  } else if (indikatorenSavedState) {
+    INDIKATOREN_REFS.forEach((r, i) => { r.value = indikatorenSavedState[i]; });
+    indikatorenSavedState = null;
+  } else {
+    // Noch nie über diesen Button ausgeblendet (z.B. alle Sub-Toggles waren schon einzeln aus) —
+    // fällt auf die App-Werkseinstellungen zurück (siehe useLocalStorageRef-Defaults oben).
+    showSessions.value = true;
+    showEma.value = false;
+    showLiquidity.value = true;
+    showSweptLiquidity.value = false;
+    showOrderBlocks.value = true;
+    showHistoricalObs.value = false;
+  }
+}
 function closeMenusOutside(e) {
   if (!e.target.closest?.(".toggle-group")) {
     liquidityMenuOpen.value = false;
@@ -264,12 +290,16 @@ watch(currentSymbol, () => {
     </div>
     <div class="drawing-toggles">
       <div class="toggle-group">
+        <button :class="{ active: indikatorenActive }" @click="toggleIndikatoren">
+          Indikatoren
+        </button>
         <button
-          class="toggle-caret-label"
+          class="toggle-caret"
           :class="{ open: indikatorenMenuOpen }"
+          title="Untermenü"
           @click="indikatorenMenuOpen = !indikatorenMenuOpen"
         >
-          Indikatoren ▾
+          ▾
         </button>
         <div v-if="indikatorenMenuOpen" class="toggle-dropdown indikatoren-dropdown">
           <div class="toggle-dropdown-row">
@@ -767,24 +797,6 @@ watch(currentSymbol, () => {
 .toggle-dropdown-divider {
   height: 1px;
   margin: 4px 6px;
-  background: #2a2e39;
-}
-
-/* "Indikatoren"-Sammelmenü (Chat 2026-07-22): reiner Caret-Auslöser statt Toggle-Button + Caret
-   wie bei Liquidität/Trade-Setups/Structure — "Indikatoren" selbst ist kein Ein/Aus-Schalter,
-   sondern nur der Einstieg ins Untermenü. */
-.toggle-caret-label {
-  background: transparent;
-  border: none;
-  color: #d1d4dc;
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.toggle-caret-label:hover,
-.toggle-caret-label.open {
   background: #2a2e39;
 }
 
