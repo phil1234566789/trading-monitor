@@ -316,8 +316,10 @@ let resizeObserver;
 let orderBlockPrimitives = [];
 let liquidityPrimitives = [];
 let sessionPrimitives = [];
+// Periode-5- UND Periode-2-Debug-Marker laufen seit Chat 2026-07-26 durch EIN gemeinsames
+// renderPivotMarkers-Primitive (siehe refreshRangesMarkersInternal) statt zwei getrennte, damit
+// deckungsgleiche Pivots aus beiden Perioden dieselbe Label-Entzerrung durchlaufen.
 let rangesMarkerPrimitives = [];
-let rangesMarkerPrimitives2 = []; // eingebettete Periode-2-Debug-Marker, siehe refreshRangesMarkersInternal
 let marketStructurePrimitives = [];
 let cockpitPrimitives = [];
 let tradePrimitives = [];
@@ -681,33 +683,29 @@ function computeRangesPivotsFor(period, lookbackHours) {
 // fertig) — ALLE Pivots EINER Periode in EINER Gruppe (nicht mehr eine Gruppe pro Pivot wie
 // früher), damit sich ihre Preis-Labels gegenseitig entzerren können, statt bei eng
 // beieinanderliegenden Pivots übereinander zu fallen (Bug-Report Philip 2026-07-19: im
-// M5-Replay mit Debug-Modus lagen alle H1-Pivot-Labels eng übereinander). Periode-2-Marker
-// (rangesMarkerPrimitives2) laufen als eigene Primitive-Liste in derselben Pane mit — kleinerer
-// dotRadius + eigene, transparentere Farbe (rangesMarker2), damit man beide Periode-Ebenen
-// optisch auseinanderhält (siehe Chat: "Transparenz auf 50%").
+// M5-Replay mit Debug-Modus lagen alle H1-Pivot-Labels eng übereinander). Periode-5- und
+// Periode-2-Gruppe laufen seit Chat 2026-07-26 im SELBEN renderPivotMarkers-Aufruf (vorher zwei
+// getrennte Primitive-Listen mit unabhängiger Entzerrung — Bug-Report Philip: "wenn ein outer und
+// innerpivot auf demselben Punkt liegen, sind die Labels leicht verschoben", weil beide Gruppen
+// dieselbe Preis-Position dann je nach ihren EIGENEN, unterschiedlichen Nachbarn unterschiedlich
+// weit verschoben haben). Periode-2 bekommt weiterhin kleineren dotRadius + eigene,
+// transparentere Farbe (rangesMarker2), damit man beide Periode-Ebenen optisch auseinanderhält
+// (siehe Chat: "Transparenz auf 50%").
 function refreshRangesMarkersInternal() {
   const candles = clipReplay(allCandles);
   const precision = pricePrecisionForInstrument(props.symbol);
   const showMarkers = props.showRanges && props.showLiquidityDebug;
 
-  if (!showMarkers || !rangesPivots) {
+  if (!showMarkers || (!rangesPivots && !rangesPivots2)) {
     renderPivotMarkers(candleSeries, [], rangesMarkerPrimitives, candles);
   } else {
-    const groups = [{ points: rangesPivots, color: cssColor("rangesMarker") }];
+    const groups = [
+      ...(rangesPivots ? [{ points: rangesPivots, color: cssColor("rangesMarker") }] : []),
+      ...(rangesPivots2 ? [{ points: rangesPivots2, color: cssColor("rangesMarker2"), dotRadius: 1.5 }] : []),
+    ];
     renderPivotMarkers(candleSeries, groups, rangesMarkerPrimitives, candles, {
       showLabels: true,
       formatPrice: (price) => fmtPrice(price, precision),
-    });
-  }
-
-  if (!showMarkers || !rangesPivots2) {
-    renderPivotMarkers(candleSeries, [], rangesMarkerPrimitives2, candles);
-  } else {
-    const groups2 = [{ points: rangesPivots2, color: cssColor("rangesMarker2") }];
-    renderPivotMarkers(candleSeries, groups2, rangesMarkerPrimitives2, candles, {
-      showLabels: true,
-      formatPrice: (price) => fmtPrice(price, precision),
-      dotRadius: 1.5,
     });
   }
 }
