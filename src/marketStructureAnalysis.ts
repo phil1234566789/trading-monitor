@@ -347,6 +347,38 @@ function invalidateDowntrend(sweepChecked: MarketStructureState, breakingPivot: 
   };
 }
 
+// Gemeinsame Logik für die BESTÄTIGENDE Seite (HIGH-Bruch für direction="up", LOW-Bruch für
+// direction="down") — bis Chat 2026-07-26 in vier fast identischen Stellen dupliziert (Outer/Inner
+// × up/down). Bug-Report Philip 2026-07-26 ("bullischer Nested-Uptrend bestätigt trotz Docht-only-
+// Bruch von 1.33907 — 1.33937 schließt nie über 1.33907, trotzdem uptrend+CHoCH+protected-low"):
+// die beiden INNER-Kopien hatten den Docht-vs-Bruch-Check (closesAboveOldHigh/closesBelowLevel)
+// schon seit Chat 2026-07-24, die beiden OUTER-Kopien (der ursprüngliche, älteste Teil des
+// Algorithmus) nie — niemand hatte je den Outer-Pfad als Vorlage für den Inner-Fix benutzt oder
+// umgekehrt, weil der Check nirgends als wiederverwendbare Funktion existierte, sondern jedes Mal
+// neu inline geschrieben wurde. Jetzt EINE Implementierung statt vier, damit diese Bug-Klasse
+// (Check an einer von vier Stellen vergessen) strukturell nicht mehr auftreten kann.
+//
+// Bewusst NUR für die bestätigende Seite (nicht auch die invalidierende/erkundende Seite, siehe
+// applyMarketStructurePivotCore/applyInnerMarketStructurePivotCore unten) — dort unterscheidet sich
+// die Logik zwischen "up" und "down" tatsächlich (nur die "up"-Varianten versuchen zusätzlich eine
+// Downtrend-Bestätigung aus 'unknown' heraus, siehe dort), eine Vereinheitlichung dort würde also
+// echte Unterschiede künstlich verstecken statt nur Duplikation entfernen.
+function evaluateConfirmingBreak(
+  state: MarketStructureState,
+  pivot: Pivot,
+  direction: TrendDirection,
+  candles: Candle[],
+): { kind: "confirmed"; state: MarketStructureState } | { kind: "extend" } | { kind: "sweep" } {
+  const { currRange } = state;
+  const isRealBreak =
+    direction === "up"
+      ? closesAboveOldHigh(candles, pivotTimeOf(currRange.high), pivotTimeOf(pivot), currRange.high.price)
+      : closesBelowLevel(candles, pivotTimeOf(currRange.low), pivotTimeOf(pivot), currRange.low.price);
+  if (!isRealBreak) return { kind: "sweep" };
+  const confirmed = tryConfirmTrend(state, pivot, direction);
+  return confirmed ? { kind: "confirmed", state: confirmed } : { kind: "extend" };
+}
+
 function applyMarketStructurePivotCore(
   state: MarketStructureState,
   pivot: Pivot,
@@ -409,14 +441,26 @@ function applyMarketStructurePivotCore(
       };
     }
 
+    // Docht-vs-Bruch-Check hier seit Chat 2026-07-26 über evaluateConfirmingBreak (Bug-Report
+    // Philip: fehlte hier bis dahin komplett — ein reiner Docht über currRange.high bestätigte
+    // bisher ohne Weiteres den Uptrend, siehe Funktionskommentar dort für die volle Begründung).
     if (pivot.type === "high" && pivot.price > currRange.high.price) {
-      const confirmed = tryConfirmTrend({ ...state, structurePivots }, pivot, direction);
-      if (confirmed) {
-        return { ...confirmed, innerStructurePivots: [], appliedPivots: nextAppliedPivots };
+      const outcome = evaluateConfirmingBreak({ ...state, structurePivots }, pivot, "up", candles);
+      if (outcome.kind === "confirmed") {
+        return { ...outcome.state, innerStructurePivots: [], appliedPivots: nextAppliedPivots };
+      }
+      if (outcome.kind === "extend") {
+        return {
+          ...state,
+          currRange: { ...currRange, high: { ...pivot, type: "high" } },
+          structurePivots,
+          innerStructurePivots: [],
+          appliedPivots: nextAppliedPivots,
+        };
       }
       return {
         ...state,
-        currRange: { ...currRange, high: { ...pivot, type: "high" } },
+        currRange: { ...currRange, high: { ...currRange.high, type: "sweeped-high" } },
         structurePivots,
         innerStructurePivots: [],
         appliedPivots: nextAppliedPivots,
@@ -424,7 +468,7 @@ function applyMarketStructurePivotCore(
     }
   } else {
     // Gespiegelt: 'high' bricht/invalidiert einen bestätigten Downtrend (bzw. weitet nur aus,
-    // solange trend noch 'unknown' ist — reine Erkundung), 'low' bestätigt (tryConfirmTrend
+    // solange trend noch 'unknown' ist — reine Erkundung), 'low' bestätigt (evaluateConfirmingBreak,
     // direction="down"). Die Invalidierung (Chat 2026-07-26) fehlte hier bis dahin komplett — ein
     // ECHTER neuer Höchststand hätte einen bestätigten Downtrend sonst nie zurückgesetzt, sondern
     // currRange.high stillschweigend für immer weiter ausgeweitet.
@@ -452,13 +496,22 @@ function applyMarketStructurePivotCore(
     }
 
     if (pivot.type === "low" && pivot.price < currRange.low.price) {
-      const confirmed = tryConfirmTrend({ ...state, structurePivots }, pivot, direction);
-      if (confirmed) {
-        return { ...confirmed, innerStructurePivots: [], appliedPivots: nextAppliedPivots };
+      const outcome = evaluateConfirmingBreak({ ...state, structurePivots }, pivot, "down", candles);
+      if (outcome.kind === "confirmed") {
+        return { ...outcome.state, innerStructurePivots: [], appliedPivots: nextAppliedPivots };
+      }
+      if (outcome.kind === "extend") {
+        return {
+          ...state,
+          currRange: { ...currRange, low: { ...pivot, type: "low" } },
+          structurePivots,
+          innerStructurePivots: [],
+          appliedPivots: nextAppliedPivots,
+        };
       }
       return {
         ...state,
-        currRange: { ...currRange, low: { ...pivot, type: "low" } },
+        currRange: { ...currRange, low: { ...currRange.low, type: "sweeped-low" } },
         structurePivots,
         innerStructurePivots: [],
         appliedPivots: nextAppliedPivots,
@@ -650,13 +703,11 @@ function applyInnerMarketStructurePivotCore(
 
   if (direction === "up") {
     if (pivot.type === "high" && pivot.price > currRange.high.price) {
-      const isRealBreak = closesAboveOldHigh(candles, pivotTimeOf(currRange.high), pivotTimeOf(pivot), currRange.high.price);
-
-      if (isRealBreak) {
-        const confirmed = tryConfirmTrend(sweepChecked, pivot, direction);
-        if (confirmed) {
-          return { ...confirmed, innerStructurePivots: [...confirmed.innerStructurePivots, pivot] };
-        }
+      const outcome = evaluateConfirmingBreak(sweepChecked, pivot, "up", candles);
+      if (outcome.kind === "confirmed") {
+        return { ...outcome.state, innerStructurePivots: [...outcome.state.innerStructurePivots, pivot] };
+      }
+      if (outcome.kind === "extend") {
         return {
           ...sweepChecked,
           currRange: { ...currRange, high: { ...pivot, type: "high" } },
@@ -709,15 +760,14 @@ function applyInnerMarketStructurePivotCore(
       };
     }
   } else {
-    // Gespiegelt: 'low' bestätigt/bricht (tryConfirmTrend), 'high' ist die Invalidierungs-Seite.
+    // Gespiegelt: 'low' bestätigt/bricht (evaluateConfirmingBreak), 'high' ist die
+    // Invalidierungs-Seite.
     if (pivot.type === "low" && pivot.price < currRange.low.price) {
-      const isRealBreak = closesBelowLevel(candles, pivotTimeOf(currRange.low), pivotTimeOf(pivot), currRange.low.price);
-
-      if (isRealBreak) {
-        const confirmed = tryConfirmTrend(sweepChecked, pivot, direction);
-        if (confirmed) {
-          return { ...confirmed, innerStructurePivots: [...confirmed.innerStructurePivots, pivot] };
-        }
+      const outcome = evaluateConfirmingBreak(sweepChecked, pivot, "down", candles);
+      if (outcome.kind === "confirmed") {
+        return { ...outcome.state, innerStructurePivots: [...outcome.state.innerStructurePivots, pivot] };
+      }
+      if (outcome.kind === "extend") {
         return {
           ...sweepChecked,
           currRange: { ...currRange, low: { ...pivot, type: "low" } },
