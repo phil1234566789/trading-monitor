@@ -82,6 +82,10 @@ const GROUPS = [
       { key: "tradeConnector", label: "Verbindung" },
     ],
   },
+  {
+    title: "News",
+    fields: [{ key: "newsEvent", label: "Termin-Marker" }],
+  },
 ];
 
 function resetAll() {

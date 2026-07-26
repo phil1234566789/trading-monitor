@@ -193,22 +193,36 @@ news API. Philip sends a ForexFactory calendar screenshot (already filtered to E
 the red/high-impact rows matter); Claude reads the red rows off the screenshot and writes them via
 a one-off data migration (e.g. `supabase/migrations/20260726120100_news_events_seed_2026-07-23.sql`),
 same pattern as the existing one-off data migrations in this repo (see e.g.
-`20260705170000_move_test_trade_entry.sql`) rather than an anon-key write from the browser — the
-table's RLS only grants anon `SELECT`, no write policy, since the frontend (`src/newsEvents.js`)
-only ever reads it. ForexFactory calendar times are Europe/Berlin, DST-aware — convert to UTC
-before inserting. `currentNewsNoGo()` treats an event as a No-Go for ±`NEWS_NOGO_WINDOW_MINUTES`
-(30, a judgment call, not something Philip specified) around its timestamp, for whichever
-instrument's currency pair it affects (`EURUSD`→EUR/USD, `GBPUSD`→GBP/USD). `syncNewsEvents()`
-(`src/newsEvents.js`) loads the **entire** table, no "recent only" filter — an earlier version
-filtered to the last 24h and that silently hid any event more than a day old, breaking both the
-No-Go check and the chart markers below for anything not freshly entered; the table stays small
-enough (a few rows/week) that loading everything is simpler and safer than re-adding a filter.
+`20260705170000_move_test_trade_entry.sql`). ForexFactory calendar times are Europe/Berlin,
+DST-aware — convert to UTC before inserting. `currentNewsNoGo()` treats an event as a No-Go for
+±`NEWS_NOGO_WINDOW_MINUTES` (30, a judgment call, not something Philip specified) around its
+timestamp, for whichever instrument's currency pair it affects (`EURUSD`→EUR/USD, `GBPUSD`→GBP/USD).
+`syncNewsEvents()` (`src/newsEvents.js`) loads the **entire** table, no "recent only" filter — an
+earlier version filtered to the last 24h and that silently hid any event more than a day old,
+breaking both the No-Go check and the chart markers below for anything not freshly entered; the
+table stays small enough (a few rows/week) that loading everything is simpler and safer than
+re-adding a filter.
+
+There's also a second, manual write path: `NewsModal.vue` ("⚙" next to the "News" toolbar toggle,
+`addNewsEvent`/`removeNewsEvent` in `src/newsEvents.js`) for when Claude isn't available to
+transcribe a screenshot. The table's RLS grants anon both `SELECT` (original migration) and
+`INSERT`/`UPDATE`/`DELETE` (`20260726150000_news_events_anon_write.sql`, added once the manual path
+existed) — same permissive anon-write model as sessions/chart_colors/trading_schedules. Unlike
+those stores, this one does **not** do a "local array mirrors remote, full delete+insert on save"
+sync (sessions.js's pattern) — Claude's migration-inserted rows and Philip's browser-inserted rows
+coexist in the same table, so writes are per-row insert/delete followed by a full re-fetch, never a
+bulk resync that could wipe out rows the other path added.
 
 News events also get a purely visual marker on the chart (`src/newsMarkers.js`, "News" toolbar
 toggle next to EMA/Replay in `Dashboard.vue`) — a dashed vertical line at each relevant event's
 time, independent of the TSC's No-Go window (shows past AND future events, not just ones inside
 ±30min of now). Its labels hide at low zoom via the same `canShowLabels`/`MIN_PIXELS_PER_HOUR_FOR_LABELS`
-threshold as session-band labels — that's expected, not a bug, if a label seems to be missing.
+threshold as session-band labels — that's expected, not a bug, if a label seems to be missing. The
+label itself (`formatEventLabel()`) is deliberately just weekday-short + time (Europe/Berlin,
+e.g. "Do 14:15"), drawn rotated 90° anchored at the bottom of the pane — not currency/title, that
+was Philip's explicit call ("bissl beschriften, damit man sie leichter zuordnen kann"), not an
+oversight. Its color is `chartColors.newsEvent` (StyleModal group "News"), like every other
+chart-drawn indicator in this repo — don't hardcode a color literal here if you touch this file.
 
 ## Conventions
 

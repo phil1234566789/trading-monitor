@@ -54,6 +54,9 @@ export const DEFAULT_CHART_COLORS = {
   tradeOpen: { hex: "#f0b90b", alpha: 1 },
   tradeInvalid: { hex: "#787b86", alpha: 1 },
   tradeConnector: { hex: "#2962ff", alpha: 0.75 },
+  // Vertikale News-Marker (Chat 2026-07-26, siehe newsMarkers.js) — Default = candleDown-Rot,
+  // dieselbe Warnfarbe wie das TSC-No-Go-Banner (NO_GO_COLOR in tradeSetupCockpit.ts).
+  newsEvent: { hex: "#ef5350", alpha: 0.9 },
 };
 
 function loadInitial() {

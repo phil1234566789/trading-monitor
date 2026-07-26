@@ -1,11 +1,27 @@
 import { snapToBarTime } from "./chartTimeUtils.js";
 import { canShowLabels } from "./chartZoom.js";
+import { cssColor } from "./chartColors.js";
 
 // Vertikale Marker für High-Impact-News auf dem Chart (Chat 2026-07-26: "ich würd die News gern
 // visuell irgendwo sehen") — rein visuell, liest nur die schon geladene news_events-Liste (siehe
-// newsEvents.js), keine eigene Erkennung. Gleiche Signalfarbe wie das TSC-No-Go-Banner
-// (NO_GO_COLOR in tradeSetupCockpit.ts), damit "News" im ganzen Dashboard dieselbe Warnfarbe hat.
-const NEWS_COLOR = "rgba(239, 83, 80, 0.9)";
+// newsEvents.js), keine eigene Erkennung. Farbe über den zentralen chartColors-Store (Chat:
+// "Chart-Style bitte noch Farbkonfiguration hinzufügen", siehe StyleModal.vue-Gruppe "News") statt
+// eines Literals — Default ist dasselbe Rot wie das TSC-No-Go-Banner (NO_GO_COLOR in
+// tradeSetupCockpit.ts), aber jetzt individuell änderbar.
+
+// Wochentag (abgekürzt) + Uhrzeit, Europe/Berlin (Chat 2026-07-26: "damit man sie leichter
+// zuordnen kann") — bewusst NICHT Währung/Titel im Label (das steht nicht in Philips Wunsch, und
+// beides zusammen wäre bei mehreren dicht beieinanderliegenden Terminen schnell unleserlich).
+// Intl.DateTimeFormat mit fester Zeitzone statt Browser-Lokalzeit (siehe CLAUDE.md "Trading-hours /
+// timezone handling") — DST-aware, unabhängig davon, wo der Rechner tatsächlich steht.
+const WEEKDAY_FORMATTER = new Intl.DateTimeFormat("de-DE", { weekday: "short", timeZone: "Europe/Berlin" });
+const TIME_FORMATTER = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Berlin" });
+
+export function formatEventLabel(eventTimeSec) {
+  const d = new Date(eventTimeSec * 1000);
+  const weekday = WEEKDAY_FORMATTER.format(d).replace(".", ""); // de-DE liefert "Do." mit Punkt
+  return `${weekday} ${TIME_FORMATTER.format(d)}`;
+}
 
 class NewsMarkerRenderer {
   constructor(x, label, chart, candles) {
@@ -21,8 +37,9 @@ class NewsMarkerRenderer {
     target.useBitmapCoordinateSpace((scope) => {
       const ctx = scope.context;
       const x = Math.round(this._x * scope.horizontalPixelRatio);
+      const color = cssColor("newsEvent");
 
-      ctx.strokeStyle = NEWS_COLOR;
+      ctx.strokeStyle = color;
       ctx.lineWidth = Math.max(1, Math.round(scope.horizontalPixelRatio));
       ctx.setLineDash([4 * scope.horizontalPixelRatio, 4 * scope.horizontalPixelRatio]);
       ctx.beginPath();
@@ -34,11 +51,20 @@ class NewsMarkerRenderer {
       // Label ausblenden, wenn zu viele Kerzen sichtbar sind (siehe sessions.js: gleiches Problem
       // mit sich überlappenden Labels beim Herauszoomen).
       if (canShowLabels(this._chart, this._candles)) {
+        // Schrift ganz unten, um 90° gedreht (Chat 2026-07-26) — translate+rotate(-90°) verschiebt
+        // die lokale +x-Achse nach oben (Richtung Bildschirm-oben), der Text wächst also vom
+        // unteren Anker-Punkt aus nach oben, liest sich von unten nach oben.
+        const bottomY = scope.bitmapSize.height - 6 * scope.verticalPixelRatio;
+        ctx.save();
+        // Abstand zur Linie (Chat 2026-07-26: "bissl zu nah an der Linie") — 8px statt 3px.
+        ctx.translate(x + 8 * scope.horizontalPixelRatio, bottomY);
+        ctx.rotate(-Math.PI / 2);
         ctx.font = `${Math.round(10 * scope.verticalPixelRatio)}px sans-serif`;
-        ctx.fillStyle = NEWS_COLOR;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        ctx.fillText(this._label, x, 4 * scope.verticalPixelRatio);
+        ctx.fillStyle = color;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(this._label, 0, 0);
+        ctx.restore();
       }
     });
   }
@@ -101,7 +127,7 @@ export function renderNewsMarkers(series, events, existingPrimitives, candles) {
   if (candles.length === 0) return;
 
   for (const event of events) {
-    const primitive = new NewsMarkerPrimitive(event.eventTime, `${event.currency} · ${event.title}`, candles);
+    const primitive = new NewsMarkerPrimitive(event.eventTime, formatEventLabel(event.eventTime), candles);
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }

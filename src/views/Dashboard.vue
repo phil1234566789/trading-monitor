@@ -5,6 +5,7 @@ import TradesTable from "../components/TradesTable.vue";
 import TradeStats from "../components/TradeStats.vue";
 import StyleModal from "../components/StyleModal.vue";
 import SessionsModal from "../components/SessionsModal.vue";
+import NewsModal from "../components/NewsModal.vue";
 import { TIMEFRAMES } from "../timeframes.js";
 import { fetchTrades } from "../trades.js";
 import { fetchPoiZones } from "../poiZones.js";
@@ -109,6 +110,9 @@ const showEma = useLocalStorageRef("showEma", false);
 // sehen") — Sichtbarkeits-Toggle wie showEma/showSessions, die Termine selbst kommen aus dem
 // newsEvents.js-Store (siehe PriceChart.vue).
 const showNews = useLocalStorageRef("showNews", false);
+// "News verwalten"-Modal (Chat 2026-07-26: manueller Eintragungsweg als Fallback) — reiner
+// Öffnen/Schließen-Zustand, analog zu showSessionsModal/showStyleModal, nicht persistiert.
+const showNewsModal = ref(false);
 // Sessions-Indikator (Chat 2026-07-22) — Sichtbarkeits-Toggle für die Hintergrundbänder, die
 // eigentlichen Session-Definitionen (Zeiten/Farbe/Label) liegen im sessions.js-Store, den
 // SessionsModal.vue direkt editiert. showSessionsModal ist analog zu showStyleModal reiner
@@ -487,9 +491,14 @@ watch(currentSymbol, () => {
         EMA
       </button>
 
-      <button :class="{ active: showNews }" @click="showNews = !showNews">
-        News
-      </button>
+      <div class="toggle-group">
+        <button :class="{ active: showNews }" @click="showNews = !showNews">
+          News
+        </button>
+        <button class="toggle-caret" title="News verwalten" @click="showNewsModal = true">
+          ⚙
+        </button>
+      </div>
 
       <div class="toggle-group replay-control" :class="{ active: replayActive }">
         <button
@@ -533,6 +542,7 @@ watch(currentSymbol, () => {
 
   <StyleModal v-if="showStyleModal" @close="showStyleModal = false" />
   <SessionsModal v-if="showSessionsModal" :instrument="currentSymbol" @close="showSessionsModal = false" />
+  <NewsModal v-if="showNewsModal" @close="showNewsModal = false" />
 
   <PriceChart
     ref="priceChartRef"
