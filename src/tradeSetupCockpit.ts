@@ -31,6 +31,9 @@ export interface CockpitState {
   m5Setup: {
     dir: 1 | -1;
     label: string;
+    // "A" = eigenes bestätigtes Protected-Pivot, "B" = fractal===ls (Chat 2026-07-26: "möchte es
+    // visuell unterschieden haben"), siehe pathType in tradeSetup.js.
+    pathType: "A" | "B";
     lsPrice: number;
     // Chat 2026-07-22: "im TSC ... bei den relevanten LQ-Leveln das Alter anzeigen" — pivotTime des
     // M5-LQ-Sweeps, nur für die Alters-Anzeige in buildLines, sonst nirgends genutzt.
@@ -109,6 +112,7 @@ export function computeCockpitState(
     ? {
         dir: last.dir as 1 | -1,
         label: last.label as string,
+        pathType: last.pathType as "A" | "B",
         lsPrice: last.ls.price as number,
         lsPivotTime: last.ls.pivotTime as number | undefined,
         obTop: last.obTop as number,
@@ -272,7 +276,11 @@ function buildLines(state: CockpitState, formatPrice: (price: number) => string,
     hasContent = true;
     const color = cssColor(state.m5Setup.dir === -1 ? "tradeSetupLong" : "tradeSetupShort");
     const age = ageSuffix(state.m5Setup.lsPivotTime, nowSec);
-    lines.push({ text: `M5 ${state.m5Setup.label} Setup`, color, dim: state.locked });
+    // "Typ A/B" (Chat 2026-07-26: "möchte es visuell unterschieden haben") — bewusst NICHT in
+    // state.m5Setup.label selbst gebacken, das speist auch das OB-Chart-Label (siehe
+    // PriceChart.vue: renderTradeSetupsInternal), das ein anderes Format braucht ("Long A" statt
+    // "Long Setup Typ A").
+    lines.push({ text: `M5 ${state.m5Setup.label} Setup Typ ${state.m5Setup.pathType}`, color, dim: state.locked });
     lines.push({ text: `  LQ-Sweep @ ${formatPrice(state.m5Setup.lsPrice)}${age}`, color, dim: state.locked });
     lines.push({ text: `  M5-OB ${formatPrice(state.m5Setup.obBottom)}–${formatPrice(state.m5Setup.obTop)}`, color, dim: state.locked });
   }

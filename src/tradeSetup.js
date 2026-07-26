@@ -149,7 +149,9 @@ function setupKey(ls, ob) {
 // (siehe lastTradeSetups im Original). Fehlt Path A ein eigenes Fraktal (Path-B-Treffer), wird
 // `fractal` auf `ls` gesetzt — dieselbe Semantik wie "der Level, der halten muss", nur ohne
 // separat bestätigten Pivot; hält Downstream-Code (Chart-Rendering, poi-watcher-Dedupe) ohne
-// Sonderfall funktionsfähig.
+// Sonderfall funktionsfähig. `pathType` ("A"/"B", Chat 2026-07-26: "möchte es visuell
+// unterschieden haben") — reine Anzeige-Info für Aufrufer (PriceChart.vue-Label, TSC), keine
+// eigene Erkennungslogik: A = eigenes bestätigtes Protected-Pivot, B = fractal===ls.
 export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupObs, params, m5Candles) {
   const obDir = dir === 1 ? -1 : 1;
   const setups = [];
@@ -158,7 +160,7 @@ export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupO
   for (const { fractal, ls } of findAllProtectedFractals(fractalLevels, h1Levels, m5Levels, dir, params)) {
     const ob = findFirstSetupObAfter(setupObs, obDir, fractal.pivotTime, params.obMaxDelaySec);
     if (ob) {
-      setups.push({ dir, fractal, ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime });
+      setups.push({ dir, fractal, ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime, pathType: "A" });
       seen.add(setupKey(ls, ob));
     }
   }
@@ -170,7 +172,7 @@ export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupO
       const key = setupKey(ls, ob);
       if (seen.has(key)) continue;
       seen.add(key);
-      setups.push({ dir, fractal: ls, ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime });
+      setups.push({ dir, fractal: ls, ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime, pathType: "B" });
     }
   }
 

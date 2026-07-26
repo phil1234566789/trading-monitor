@@ -22,6 +22,11 @@ export interface DetectedTradeSetup {
   obTop: number;
   obBottom: number;
   obStartTime: number;
+  // "A" = eigenes bestätigtes Protected-Pivot (fractal !== ls), "B" = fractal === ls (Chat
+  // 2026-07-26: "möchte es visuell unterschieden haben") — reine Anzeige-Info, keine eigene
+  // Erkennungslogik. Aktuell nur von der JS-Kopie (tradeSetup.js/PriceChart.vue-Label/TSC)
+  // konsumiert, hier trotzdem mitgeführt, damit beide Kopien strukturell in Sync bleiben.
+  pathType: "A" | "B";
 }
 
 export interface TradeSetupParams {
@@ -223,13 +228,13 @@ export function detectTradeSetup(
   const foundA = findProtectedFractal(fractalLevels, h1Levels, m5Levels, dir, params);
   if (foundA) {
     const ob = findFirstSetupObAfter(setupObs, obDir, foundA.fractal.pivotTime, params.obMaxDelaySec);
-    if (ob) pathA = { dir, fractal: foundA.fractal, ls: foundA.ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime };
+    if (ob) pathA = { dir, fractal: foundA.fractal, ls: foundA.ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime, pathType: "A" };
   }
 
   let pathB: DetectedTradeSetup | null = null;
   const foundB = findImmediateLsSetup(h1Levels, m5Levels, m5Candles, dir, setupObs, params);
   if (foundB) {
-    pathB = { dir, fractal: foundB.ls, ls: foundB.ls, obTop: foundB.ob.top, obBottom: foundB.ob.bottom, obStartTime: foundB.ob.startTime };
+    pathB = { dir, fractal: foundB.ls, ls: foundB.ls, obTop: foundB.ob.top, obBottom: foundB.ob.bottom, obStartTime: foundB.ob.startTime, pathType: "B" };
   }
 
   if (pathA && pathB) return pathB.obStartTime > pathA.obStartTime ? pathB : pathA;

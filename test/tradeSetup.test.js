@@ -29,6 +29,16 @@ function bullOb({ startTime, top = 1.35, bottom = 1.34 }) {
   return { dir: 1, top, bottom, startTime };
 }
 
+// Short-Setup (dir=1): fractal/ls sind "high"-Level (dir=1), setupObs mit dir=-1 (bärische Lücke)
+// bestätigen. Spiegelbildlich zu lowLevel/bullOb oben — dir-Parametrisierung ist symmetrisch,
+// diese Tests stellen sicher, dass das auch tatsächlich stimmt und nicht nur für Long getestet ist.
+function highLevel({ price, pivotTime, touched = true, touchedTime = null }) {
+  return { price, dir: 1, pivotTime, touched, touchedTime: touchedTime ?? pivotTime, endTime: touchedTime ?? pivotTime };
+}
+function bearOb({ startTime, top = 1.35, bottom = 1.34 }) {
+  return { dir: -1, top, bottom, startTime };
+}
+
 describe("detectTradeSetups — Path A (bestätigtes Protected-Pivot, Altverhalten)", () => {
   it("findet ein Setup über ein noch unberührtes Fraktal + passendes LS + OB danach", () => {
     const fractal = lowLevel({ price: 1.3, pivotTime: 1000, touched: false });
@@ -97,5 +107,33 @@ describe("detectTradeSetups — Path B (sofortige Bestätigung ohne separates Fr
     const setups = detectTradeSetups(-1, [shared], [lsForPathA], [shared], setupObs, params, m5Candles);
     expect(setups).toHaveLength(1); // nicht 2 (einmal je Pfad)
     expect(setups[0].fractal).toBe(shared); // Path A gewinnt (bringt den echten Fraktal-Datensatz mit)
+  });
+});
+
+describe("detectTradeSetups — Short (dir=1, spiegelbildlich zu Long)", () => {
+  it("Path A: findet ein Short-Setup über ein noch unberührtes Fraktal + passendes LS + OB danach", () => {
+    const fractal = highLevel({ price: 1.31, pivotTime: 1000, touched: false });
+    const ls = highLevel({ price: 1.3, pivotTime: 500, touchedTime: 900 }); // unter dem Fraktal (far side für dir=1)
+    const setupObs = [bearOb({ startTime: 1100 })];
+    const setups = detectTradeSetups(1, [fractal], [ls], [fractal], setupObs, params);
+    expect(setups).toHaveLength(1);
+    expect(setups[0].fractal).toBe(fractal);
+    expect(setups[0].ls).toBe(ls);
+  });
+
+  it("Path B: findet ein Short-Setup, wenn der M5-OB sofort nach dem LS kommt, ohne bestätigtes Fraktal", () => {
+    const ls = highLevel({ price: 1.34579, pivotTime: 200, touchedTime: 90_000 });
+    const setupObs = [bearOb({ startTime: 90_300, top: 1.34633, bottom: 1.34619 })];
+    const m5Candles = [{ time: 90_100, open: 1.3455, high: 1.3457, low: 1.3453, close: 1.3454 }]; // schließt nicht über ls.price
+    const setups = detectTradeSetups(1, [], [ls], [], setupObs, params, m5Candles);
+    expect(setups).toHaveLength(1);
+    expect(setups[0].fractal).toBe(ls); // kein eigenes Fraktal -> fractal fällt auf ls zurück
+  });
+
+  it("Path B: findet NICHTS, wenn seit dem Sweep eine M5-Kerze über den LS-Preis geschlossen hat", () => {
+    const ls = highLevel({ price: 1.34579, pivotTime: 200, touchedTime: 90_000 });
+    const setupObs = [bearOb({ startTime: 90_300 })];
+    const m5Candles = [{ time: 90_100, open: 1.3461, high: 1.3463, low: 1.346, close: 1.3462 }]; // Close > 1.34579
+    expect(detectTradeSetups(1, [], [ls], [], setupObs, params, m5Candles)).toEqual([]);
   });
 });

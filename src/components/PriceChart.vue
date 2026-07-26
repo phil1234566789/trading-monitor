@@ -975,6 +975,11 @@ function renderTradeSetupsInternal() {
   tradeSetupPrimitives.length = 0;
   if (!isForex || !props.showTradeSetups) return;
   const candles = clipReplay(allCandles);
+  // Preis-Labels an Fraktal-/LS-Linie, nur bei aktivem Debug-Toggle (Chat 2026-07-26: "ich tu mir
+  // schwer beim debuggen ... bitte die Preiszahlen hinschreiben") — dasselbe Muster wie die
+  // allgemeinen Liquiditäts-Level (siehe refreshLiquidityInternal: debugPrices/formatPrice).
+  const precision = pricePrecisionForInstrument(props.symbol);
+  const formatPrice = (price) => fmtPrice(price, precision);
 
   for (const setup of currentTradeSetups) {
     if (props.replayUntil != null && setup.fractal.pivotTime > props.replayUntil) continue;
@@ -988,10 +993,18 @@ function renderTradeSetupsInternal() {
 
     const fractalLine = new LiquidityLinePrimitive(
       setup.fractal,
-      { color: cssColor("tradeSetupProtected"), lineWidth: lineWidth("tradeSetupProtected") },
+      {
+        color: cssColor("tradeSetupProtected"),
+        lineWidth: lineWidth("tradeSetupProtected"),
+        label: props.showLiquidityDebug ? formatPrice(setup.fractal.price) : null,
+      },
       candles,
     );
-    const lsLine = new LiquidityLinePrimitive(setup.ls, { color: lsColor, lineWidth: lineWidth(key) }, candles);
+    const lsLine = new LiquidityLinePrimitive(
+      setup.ls,
+      { color: lsColor, lineWidth: lineWidth(key), label: props.showLiquidityDebug ? formatPrice(setup.ls.price) : null },
+      candles,
+    );
     const obBox = new OrderBlockPrimitive(
       { top, bottom, startTime: setup.obStartTime, endTime: setup.obStartTime + TRADE_SETUP_OB_WIDTH_SEC },
       {
@@ -999,7 +1012,11 @@ function renderTradeSetupsInternal() {
         borderColor: cssColorScaled(key, TRADE_SETUP_OB_BORDER_RATIO),
         borderWidth: lineWidth(key),
         textColor: "rgba(255, 255, 255, 0.9)",
-        label: setup.label,
+        // "Long"/"Short" + Pfad-Kürzel (Chat 2026-07-26: "möchte es visuell unterschieden haben" —
+        // A = eigenes bestätigtes Protected-Pivot, B = fractal===ls, siehe pathType in
+        // tradeSetup.js). NUR hier am OB-Label angehängt, NICHT in setup.label selbst — die TSC-
+        // Karte (tradeSetupCockpit.ts) baut ihren eigenen "Typ A/B"-Text separat aus pathType.
+        label: `${setup.label} ${setup.pathType}`,
       },
       candles,
     );
@@ -1468,6 +1485,7 @@ watch(() => props.showSweptLiquidity, refreshLiquidityInternal);
 watch(() => props.showLiquidityDebug, () => {
   refreshLiquidityInternal();
   refreshRangesMarkersInternal();
+  renderTradeSetupsInternal();
 });
 watch(() => props.showTradeSetups, renderTradeSetupsInternal);
 watch(() => props.tradeSetupHistoryCount, () => {
