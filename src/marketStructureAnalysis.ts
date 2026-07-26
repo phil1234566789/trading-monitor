@@ -443,7 +443,13 @@ function applyMarketStructurePivotCore(
   // jede neue Kerze bestätigt werden.
   const protectedType: "protected-low" | "protected-high" = direction === "up" ? "protected-low" : "protected-high";
   const migratedStructurePivots = [...state.structurePivots, ...innerStructurePivots.filter((p) => p.type === protectedType)];
-  const structurePivots = markLqSweeps(migratedStructurePivots, candles, latestKnownTime(candles, pivot), direction);
+  const structurePivots = markLqSweeps(
+    migratedStructurePivots,
+    candles,
+    latestKnownTime(candles, pivot),
+    direction,
+    effectiveAsOfTime - pivotTimeOf(pivot),
+  );
 
   if (direction === "up") {
     // Docht-vs-Bruch + Invalidierung/Promotion (Chat 2026-07-25, Punkt 2 — vorher weitete ein
@@ -687,17 +693,43 @@ function closesAboveLevel(candles: Candle[], levelTime: number, toTime: number, 
 // 'low'/'protected-low' und einen Kerzenschluss DRÜBER statt DRUNTER — sonst identische Regel, für
 // den Nested-Gegentrend-Tracker (siehe advanceNestedTrend). Default "up" reproduziert exakt das
 // alte Verhalten.
-function markLqSweeps(structurePivots: Pivot[], candles: Candle[], toTime: number, direction: TrendDirection = "up"): Pivot[] {
+// Der 'protected-type -> break-of-structure'-Zweig prüft den echten Bruch NUR bis zum EIGENEN
+// ersten Touch-Zeitpunkt des Levels PLUS einer Toleranz (`graceSeconds`), NICHT bis `toTime` (Bug-
+// Report Philip 2026-07-26, echter GBPUSD-Fund: `1.33292` wurde am 06.07. protected-low, am 08.07.
+// getoucht (nur Docht, kein Close drunter — korrekt zu 'LQ-sweep' degradiert) und klappte trotzdem
+// sofort im NÄCHSTEN Verarbeitungsschritt auf 'break-of-structure' um, weil `toTime`
+// (`latestKnownTime`) schon bis zum Ende der geladenen Historie reicht und dort — Wochen später, am
+// 22./23.07. — ein völlig anderer, unabhängiger Level (`1.33239`) real bricht; da `1.33239 <
+// 1.33292`, "bricht" das automatisch auch das längst verbrauchte `1.33292` mit). Philips Regel:
+// "als markante Strukturpunkte dürfen nur untouched pivots gelten" — ABER mit Augenmaß: ein
+// zeitgleicher (oder nahezu zeitgleicher) Touch-und-Bruch in EINER durchgehenden Bewegung soll
+// weiterhin zählen (Bug-Report Philip, echter GBPUSD-Fund: `1.33806` bricht real nur 1h NACH
+// seinem eigenen Touch — dieselbe durchgehende Abwärtsbewegung, kein separates, späteres Ereignis
+// wie bei `1.33292`). `graceSeconds` ist dafür dieselbe Bestätigungsverzögerung, die der Algo für
+// diesen Pivot-Typ ohnehin schon toleriert (periodOuter/periodInner, siehe `effectiveAsOfTime -
+// pivotTimeOf(pivot)` an den beiden Aufrufstellen) — kein neuer, willkürlicher Wert. Für den
+// normalen 'low'/'LQ-sweep'-Pendel-Zweig (nicht protected) bleibt `toTime` unverändert — dort geht
+// es nur um die kosmetische Sweep-vs-low-Unterscheidung, nicht um einen dauerhaften Strukturmarker.
+function markLqSweeps(
+  structurePivots: Pivot[],
+  candles: Candle[],
+  toTime: number,
+  direction: TrendDirection = "up",
+  graceSeconds = 0,
+): Pivot[] {
   const baseType: "low" | "high" = direction === "up" ? "low" : "high";
   const protectedType: "protected-low" | "protected-high" = direction === "up" ? "protected-low" : "protected-high";
   const closesPastLevel = direction === "up" ? closesBelowLevel : closesAboveLevel;
   return structurePivots.map((p) => {
     if ((p.type !== baseType && p.type !== "LQ-sweep" && p.type !== protectedType) || isUntouchedAsOf(p, toTime)) return p;
-    const brokenPast = closesPastLevel(candles, pivotTimeOf(p), toTime, p.price);
-    if (brokenPast) {
-      if (p.type === protectedType) return { ...p, type: "break-of-structure" as const };
-      return p.type === baseType ? p : { ...p, type: baseType };
+    if (p.type === protectedType) {
+      const touchedTime = p.touched && typeof p.touched.touchedTime === "number" ? p.touched.touchedTime : pivotTimeOf(p);
+      const bosDeadline = Math.min(toTime, touchedTime + graceSeconds);
+      const brokenWithinGrace = closesPastLevel(candles, pivotTimeOf(p), bosDeadline, p.price);
+      return brokenWithinGrace ? { ...p, type: "break-of-structure" as const } : { ...p, type: "LQ-sweep" as const };
     }
+    const brokenPast = closesPastLevel(candles, pivotTimeOf(p), toTime, p.price);
+    if (brokenPast) return p.type === baseType ? p : { ...p, type: baseType };
     return p.type === "LQ-sweep" ? p : { ...p, type: "LQ-sweep" as const };
   });
 }
@@ -749,9 +781,12 @@ function applyInnerMarketStructurePivotCore(
   pivot: Pivot,
   { candles = [], direction = "up", asOfTime }: { candles?: Candle[]; direction?: TrendDirection; asOfTime?: number },
 ): MarketStructureState {
-  const sweepChecked = { ...state, structurePivots: markLqSweeps(state.structurePivots, candles, latestKnownTime(candles, pivot), direction) };
-  const { currRange, innerStructurePivots, trend } = sweepChecked;
   const effectiveAsOfTime = asOfTime ?? pivotTimeOf(pivot);
+  const sweepChecked = {
+    ...state,
+    structurePivots: markLqSweeps(state.structurePivots, candles, latestKnownTime(candles, pivot), direction, effectiveAsOfTime - pivotTimeOf(pivot)),
+  };
+  const { currRange, innerStructurePivots, trend } = sweepChecked;
 
   if (direction === "up") {
     if (pivot.type === "high" && pivot.price > currRange.high.price) {

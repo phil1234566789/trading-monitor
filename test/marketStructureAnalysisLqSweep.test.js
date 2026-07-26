@@ -89,7 +89,17 @@ describe("marketStructureAnalysis: LQ-sweep-Reklassifizierung (applyInnerMarketS
   // (kein voller Reset wie bei der Trendumkehr über currRange.low, siehe
   // marketStructureAnalysisTrendInvalidation.test.js).
   it("protected-low MIT echtem Close drunter -> wird 'break-of-structure', nicht nur 'low'", () => {
-    const protectedLow = { type: "protected-low", price: 1.3, pivotAt: "pb", pivotTime: 2000, touched: { price: 1.3, touchedAt: "y" } };
+    // touchedTime=2200 (Chat 2026-07-26, BOS-Toleranz-Fix): der Touch fällt hier bewusst mit der
+    // brechenden Kerze selbst zusammen (dieselbe durchgehende Bewegung, kein separates, späteres
+    // Sweep-Ereignis) — sonst würde markLqSweeps' Grace-Fenster (touchedTime + graceSeconds) den
+    // späteren echten Bruch nie mehr sehen, siehe Funktionskommentar dort.
+    const protectedLow = {
+      type: "protected-low",
+      price: 1.3,
+      pivotAt: "pb",
+      pivotTime: 2000,
+      touched: { price: 1.3, touchedAt: "y", touchedTime: 2200 },
+    };
     const state = { ...initMarketStructureState(origin.low, origin.high), trend: "uptrend", structurePivots: [protectedLow] };
 
     const s = applyInnerMarketStructurePivot(state, triggerPivot, { candles }); // candles: echter Close unter 1.3 bei t=2200
@@ -109,7 +119,17 @@ describe("marketStructureAnalysis: LQ-sweep-Reklassifizierung (applyInnerMarketS
   });
 
   it("einmal 'break-of-structure' bleibt dauerhaft — wird bei weiteren Pivots nicht mehr zurückbewertet", () => {
-    const protectedLow = { type: "protected-low", price: 1.3, pivotAt: "pb", pivotTime: 2000, touched: { price: 1.3, touchedAt: "y" } };
+    // touchedTime=2200 (Chat 2026-07-26, BOS-Toleranz-Fix): der Touch fällt hier bewusst mit der
+    // brechenden Kerze selbst zusammen (dieselbe durchgehende Bewegung, kein separates, späteres
+    // Sweep-Ereignis) — sonst würde markLqSweeps' Grace-Fenster (touchedTime + graceSeconds) den
+    // späteren echten Bruch nie mehr sehen, siehe Funktionskommentar dort.
+    const protectedLow = {
+      type: "protected-low",
+      price: 1.3,
+      pivotAt: "pb",
+      pivotTime: 2000,
+      touched: { price: 1.3, touchedAt: "y", touchedTime: 2200 },
+    };
     let state = { ...initMarketStructureState(origin.low, origin.high), trend: "uptrend", structurePivots: [protectedLow] };
     state = applyInnerMarketStructurePivot(state, triggerPivot, { candles });
     expect(state.structurePivots.find((p) => p.pivotAt === "pb").type).toBe("break-of-structure");
@@ -127,7 +147,17 @@ describe("marketStructureAnalysis: LQ-sweep-Reklassifizierung (applyInnerMarketS
   // LQ-sweep/break-of-structure also nie auslösen, egal wie viele davon noch kamen.
   describe("markLqSweeps läuft jetzt auch über applyMarketStructurePivot (Periode 5), nicht nur über die Periode-2-Seite", () => {
     it("ein reiner Periode-5-Pivot mit echtem Kerzenschluss reklassifiziert ein protected-low zu 'break-of-structure'", () => {
-      const protectedLow = { type: "protected-low", price: 1.3, pivotAt: "pb", pivotTime: 2000, touched: { price: 1.3, touchedAt: "y" } };
+      // touchedTime=2200 (Chat 2026-07-26, BOS-Toleranz-Fix): der Touch fällt hier bewusst mit der
+    // brechenden Kerze selbst zusammen (dieselbe durchgehende Bewegung, kein separates, späteres
+    // Sweep-Ereignis) — sonst würde markLqSweeps' Grace-Fenster (touchedTime + graceSeconds) den
+    // späteren echten Bruch nie mehr sehen, siehe Funktionskommentar dort.
+    const protectedLow = {
+      type: "protected-low",
+      price: 1.3,
+      pivotAt: "pb",
+      pivotTime: 2000,
+      touched: { price: 1.3, touchedAt: "y", touchedTime: 2200 },
+    };
       const state = { ...initMarketStructureState(origin.low, origin.high), trend: "uptrend", structurePivots: [protectedLow] };
 
       // triggerPivot bricht hier sogar noch currRange.low selbst (0.9 < origin.low=1.0) — spielt
@@ -145,6 +175,47 @@ describe("marketStructureAnalysis: LQ-sweep-Reklassifizierung (applyInnerMarketS
       const s = applyMarketStructurePivot(state, triggerPivot); // kein drittes Argument — darf nicht crashen, candles defaultet auf []
 
       expect(s.structurePivots.find((p) => p.pivotAt === "untouched").type).toBe("low"); // nie touched -> wird gar nicht erst geprüft
+    });
+  });
+
+  // Chat 2026-07-26 (Bug-Report Philip, echter GBPUSD-Fund): 'protected-low -> break-of-structure'
+  // prüfte den echten Bruch bis dahin nicht nur bis zum eigenen Touch-Zeitpunkt, sondern bis
+  // 'toTime' (latestKnownTime, praktisch das Ende der ganzen geladenen Historie) — ein Level, das
+  // WOCHEN vor einem völlig unabhängigen, viel späteren Bruch schon getoucht (und damit "verbraucht")
+  // war, wurde dadurch fälschlich rückwirkend zu 'break-of-structure'. Philips Regel: "nur untouched
+  // pivots dürfen markante Strukturpunkte sein" — ABER mit einer Toleranz für einen zeitgleichen/
+  // nahezu zeitgleichen Bruch in derselben durchgehenden Bewegung (echter Fund: 1.33806 bricht real
+  // erst 1h NACH seinem eigenen Touch — das soll weiterhin als BOS zählen). Die Toleranz ist dieselbe
+  // Bestätigungsverzögerung, die der Algo für den GERADE verarbeiteten Pivot ohnehin schon toleriert
+  // (asOfTime - pivotTime, siehe applyMarketStructurePivotCore/applyInnerMarketStructurePivotCore).
+  describe("markLqSweeps: BOS-Toleranzfenster (Touch darf den echten Bruch um höchstens die Bestätigungsverzögerung des auslösenden Pivots vorausgehen)", () => {
+    const protectedLow = {
+      type: "protected-low",
+      price: 1.3,
+      pivotAt: "pb",
+      pivotTime: 2000,
+      touched: { price: 1.3, touchedAt: "touch", touchedTime: 2100 }, // Touch bei 2100
+    };
+    // Echter Close drunter erst bei 2500 -> 400s NACH dem Touch (2100).
+    const delayedBreakCandles = [
+      { time: 2100, open: 1.31, high: 1.32, low: 1.29, close: 1.31 }, // Touch-Kerze: Docht drunter, Schluss drüber
+      { time: 2500, open: 1.3, high: 1.3, low: 1.24, close: 1.25 }, // echter Bruch, aber erst 400s später
+    ];
+
+    it("Bruch liegt AUSSERHALB des Toleranzfensters (kleine Bestätigungsverzögerung) -> kein BOS, nur 'low'/'LQ-sweep'", () => {
+      const state = { ...initMarketStructureState(origin.low, origin.high), trend: "uptrend", structurePivots: [protectedLow] };
+      // Verzögerung des auslösenden Pivots = asOfTime - pivotTimeOf(triggerPivot) = 9050-9000=50s,
+      // Toleranzfenster endet bei touchedTime(2100)+50=2150 -> der Bruch bei 2500 liegt weit außerhalb.
+      const s = applyInnerMarketStructurePivot(state, triggerPivot, { candles: delayedBreakCandles, asOfTime: 9050 });
+      expect(s.structurePivots.find((p) => p.pivotAt === "pb").type).not.toBe("break-of-structure");
+    });
+
+    it("Bruch liegt INNERHALB des Toleranzfensters (große genug Bestätigungsverzögerung) -> BOS", () => {
+      const state = { ...initMarketStructureState(origin.low, origin.high), trend: "uptrend", structurePivots: [protectedLow] };
+      // Verzögerung = asOfTime - pivotTimeOf(triggerPivot) = 9600-9000=600s, Toleranzfenster endet
+      // bei touchedTime(2100)+600=2700 -> der Bruch bei 2500 liegt jetzt innerhalb.
+      const s = applyInnerMarketStructurePivot(state, triggerPivot, { candles: delayedBreakCandles, asOfTime: 9600 });
+      expect(s.structurePivots.find((p) => p.pivotAt === "pb").type).toBe("break-of-structure");
     });
   });
 });
