@@ -61,16 +61,30 @@ export const ANTI_CONFLUENCE_THRESHOLD = 10;
 // Erster automatischer Anti-Confluence-Input (Chat 2026-07-26): sessions.danger existierte vorher
 // nur zur Anzeige (siehe DANGER_LEVELS in sessions.js), hier zum ersten Mal tatsächlich konsumiert.
 // "forbidden" ("Verboten (kein Trade-Entry)") ist ein No-Go, "caution" ("mehr Bestätigungen nötig")
-// ein gewichteter Anti-Confluence-Eintrag. Weitere Kandidaten (News-Zeitfenster etc., siehe Chat)
-// folgen später als weitere Einträge in dieser Liste, sobald ihre Datenquelle angebunden ist.
+// ein gewichteter Anti-Confluence-Eintrag.
 const SESSION_CAUTION_WEIGHT = 5;
 
-function computeAntiConfluences(sessionDanger: { level: "caution" | "forbidden"; label: string } | null): AntiConfluence[] {
-  if (!sessionDanger) return [];
-  if (sessionDanger.level === "forbidden") {
-    return [{ text: `Sperrzeit-Session aktiv: ${sessionDanger.label}`, weight: 0, isNoGo: true }];
+// Zweiter automatischer Input (Chat 2026-07-26): High-Impact-News, siehe newsEvents.js. Kein
+// externer API-Feed — Philip trägt die Termine per ForexFactory-Screenshot ein, Claude schreibt sie
+// per Migration in die `news_events`-Tabelle (siehe supabase/migrations/20260726120000_news_events.sql).
+// Immer ein No-Go, nie nur gewichtet — es gibt aktuell keine "leichteren" News-Stufen, weil Philip
+// nur die roten (High-Impact) FF-Termine überhaupt einträgt.
+function computeAntiConfluences(
+  sessionDanger: { level: "caution" | "forbidden"; label: string } | null,
+  newsNoGo: { title: string; currency: string } | null,
+): AntiConfluence[] {
+  const list: AntiConfluence[] = [];
+  if (sessionDanger) {
+    if (sessionDanger.level === "forbidden") {
+      list.push({ text: `Sperrzeit-Session aktiv: ${sessionDanger.label}`, weight: 0, isNoGo: true });
+    } else {
+      list.push({ text: `Vorsicht-Session aktiv: ${sessionDanger.label}`, weight: SESSION_CAUTION_WEIGHT, isNoGo: false });
+    }
   }
-  return [{ text: `Vorsicht-Session aktiv: ${sessionDanger.label}`, weight: SESSION_CAUTION_WEIGHT, isNoGo: false }];
+  if (newsNoGo) {
+    list.push({ text: `News-Event: ${newsNoGo.currency} ${newsNoGo.title}`, weight: 0, isNoGo: true });
+  }
+  return list;
 }
 
 // tradeSetups: die schon von computeTradeSetups() berechnete Liste (siehe PriceChart.vue,
@@ -78,12 +92,14 @@ function computeAntiConfluences(sessionDanger: { level: "caution" | "forbidden";
 // "die aktuell relevante" Analyse. Bewusst NICHT geprüft, ob h1LqSweep und der M5-LQ-Sweep aus
 // m5Setup derselbe sind — das ist laut Philip nicht immer der Fall (Trade-Setups bezieht auch
 // kleinere LQ-Sweeps mit ein) und wird hier nur nebeneinander dargestellt, nicht verglichen.
-// sessionDanger: schon fürs aktuelle Instrument/JETZT ermittelt (siehe currentSessionDanger in
-// sessions.js) — computeCockpitState bleibt reine Aggregation, keine eigene Zeit-/Session-Logik.
+// sessionDanger/newsNoGo: schon fürs aktuelle Instrument/JETZT ermittelt (siehe
+// currentSessionDanger in sessions.js, currentNewsNoGo in newsEvents.js) — computeCockpitState
+// bleibt reine Aggregation, keine eigene Zeit-/Session-/News-Logik.
 export function computeCockpitState(
   structureState: MarketStructureState | null,
   tradeSetups: any[],
   sessionDanger: { level: "caution" | "forbidden"; label: string } | null = null,
+  newsNoGo: { title: string; currency: string } | null = null,
 ): CockpitState {
   const h1Trend = structureState?.trend ?? "unknown";
   const h1Weakening = structureState?.structurePivots.some((p) => p.type === "break-of-structure") ?? false;
@@ -99,7 +115,7 @@ export function computeCockpitState(
         obBottom: last.obBottom as number,
       }
     : null;
-  const antiConfluences = computeAntiConfluences(sessionDanger);
+  const antiConfluences = computeAntiConfluences(sessionDanger, newsNoGo);
   const score = antiConfluences.filter((a) => !a.isNoGo).reduce((sum, a) => sum + a.weight, 0);
   const locked = antiConfluences.some((a) => a.isNoGo) || score >= ANTI_CONFLUENCE_THRESHOLD;
   return { h1Trend, h1Weakening, h1LqSweep, m5Setup, antiConfluences, locked };

@@ -4,6 +4,8 @@ import { createChart, CandlestickSeries, LineSeries, TickMarkType } from "lightw
 import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
 import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, LiquidityLinePrimitive } from "../liquidity.js";
 import { sessions, renderSessions, currentSessionDanger } from "../sessions.js";
+import { newsEvents, currentNewsNoGo, newsEventsForInstrument } from "../newsEvents.js";
+import { renderNewsMarkers } from "../newsMarkers.js";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { renderPivotMarkers } from "../pivotMarkers";
 import { computeRangesPivots, buildMarketStructureState, renderMarketStructureAnalysis } from "../marketStructureAnalysis";
@@ -77,6 +79,10 @@ const props = defineProps({
   rangesFixedStartActive: { type: Boolean, default: false },
   rangesFixedStartTime: { type: Number, default: null },
   showEma: { type: Boolean, default: false },
+  // Vertikale News-Marker auf dem Chart (Chat 2026-07-26: "ich würd die News gern visuell irgendwo
+  // sehen") — die Event-Liste selbst kommt nicht als Prop, sondern direkt aus dem newsEvents.js-
+  // Store (analog zu sessions/showSessions oben), nur die Sichtbarkeit ist ein Toggle.
+  showNews: { type: Boolean, default: false },
   // Sessions-Indikator (Chat 2026-07-22) — Sichtbarkeit der Hintergrundbänder; die Session-Liste
   // selbst kommt nicht als Prop, sondern direkt aus dem sessions.js-Store (siehe deep watch unten,
   // analog zu chartColors: der Store ist die Quelle der Wahrheit, nicht Dashboard.vue).
@@ -316,6 +322,7 @@ let resizeObserver;
 let orderBlockPrimitives = [];
 let liquidityPrimitives = [];
 let sessionPrimitives = [];
+let newsMarkerPrimitives = [];
 // Periode-5- UND Periode-2-Debug-Marker laufen seit Chat 2026-07-26 durch EIN gemeinsames
 // renderPivotMarkers-Primitive (siehe refreshRangesMarkersInternal) statt zwei getrennte, damit
 // deckungsgleiche Pivots aus beiden Perioden dieselbe Label-Entzerrung durchlaufen.
@@ -655,6 +662,15 @@ function refreshSessionsInternal() {
   });
 }
 
+// Vertikale News-Marker (Chat 2026-07-26) — nur Forex (News-Events gibt es nur für EUR/GBP/USD,
+// siehe newsEvents.js), analog zu refreshCockpitInternal/refreshSessionsInternal oben.
+function refreshNewsMarkersInternal() {
+  if (!isForex || !candleSeries) return; // watch(newsEvents) kann vor dem ersten Chart-Mount feuern (Store lädt schon bei Modul-Import)
+  const candles = clipReplay(allCandles);
+  const relevant = props.showNews ? newsEventsForInstrument(newsEvents, props.symbol) : [];
+  renderNewsMarkers(candleSeries, relevant, newsMarkerPrimitives, candles);
+}
+
 // H1-Fraktale im konfigurierten Lookback-Fenster — reine Pivot-Liste, noch keine weak/protected/
 // sweep-Klassifizierung (kommt als nächster Schritt im PA-Analyse-Konzept). Generalisiert auf
 // (period, lookbackHours), damit dieselbe Logik für die Periode-5- UND die eingebettete
@@ -786,7 +802,10 @@ function refreshCockpitInternal() {
   // BTC-Sperrzeit auch EURUSD sperren bzw. die Sommer-/Winterzeit-Umstellung falsch einfließen.
   const symbolSessions = sessions.filter((s) => s.instrument === props.symbol);
   const sessionDanger = currentSessionDanger(symbolSessions, nowSec, (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset());
-  const state = computeCockpitState(marketStructureState.value, currentTradeSetups, sessionDanger);
+  // News-Events kommen fertig aus der DB (siehe newsEvents.js) — Philip trägt sie per Screenshot
+  // ein, hier nur noch der reine "ist gerade eins relevant für dieses Instrument"-Check.
+  const newsNoGo = currentNewsNoGo(newsEvents, props.symbol, nowSec);
+  const state = computeCockpitState(marketStructureState.value, currentTradeSetups, sessionDanger, newsNoGo);
   const precision = pricePrecisionForInstrument(props.symbol);
   renderTradeSetupCockpit(candleSeries, state, cockpitPrimitives, candles, {
     mode: props.tradeSetupCockpitAtCandle ? "candle" : "fixed",
@@ -1114,6 +1133,7 @@ function refreshChart() {
   refreshPoiZonesInternal();
   refreshLiquidityInternal();
   refreshSessionsInternal();
+  refreshNewsMarkersInternal();
   refreshTradeMarkersInternal();
   renderTradeSetupsInternal();
   refreshRangesMarkersInternal();
@@ -1491,6 +1511,11 @@ watch(() => props.showEma, (on) => {
 // kein splice/push) sollen beide sofort neu zeichnen, nicht erst beim nächsten refreshChart()-Zyklus.
 watch(() => props.showSessions, refreshSessionsInternal);
 watch(sessions, refreshSessionsInternal, { deep: true });
+// showNews (Toggle) UND der newsEvents-Store selbst (async-Fetch beim Modul-Laden, siehe
+// newsEvents.js) sollen beide sofort neu zeichnen, nicht erst beim nächsten refreshChart()-Zyklus —
+// sonst blieben die Marker leer, falls der Fetch erst NACH dem ersten refreshChart() ankommt.
+watch(() => props.showNews, refreshNewsMarkersInternal);
+watch(newsEvents, refreshNewsMarkersInternal, { deep: true });
 watch(() => props.showTradeSetupCockpit, () => {
   // showTradeSetupCockpit zählt seit Chat 2026-07-19 mit in rangesNeedsData() (TSC braucht den
   // H1-Range-State immer, auch ohne Trend-Toggle) -> Polling-Zustand neu bewerten, genau wie beim

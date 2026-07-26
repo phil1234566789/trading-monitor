@@ -105,6 +105,10 @@ const showRangesMetadata = useLocalStorageRef("showRangesMetadata", false);
 // EMA 50/200 auf M5 (siehe Chat: "Trend über EMA + Anzahl protected highs/lows") — ein Toggle für
 // beide Linien zusammen, keine separaten Schalter je Periode (nicht verlangt).
 const showEma = useLocalStorageRef("showEma", false);
+// Vertikale News-Marker auf dem Chart (Chat 2026-07-26: "ich würd die News gern visuell irgendwo
+// sehen") — Sichtbarkeits-Toggle wie showEma/showSessions, die Termine selbst kommen aus dem
+// newsEvents.js-Store (siehe PriceChart.vue).
+const showNews = useLocalStorageRef("showNews", false);
 // Sessions-Indikator (Chat 2026-07-22) — Sichtbarkeits-Toggle für die Hintergrundbänder, die
 // eigentlichen Session-Definitionen (Zeiten/Farbe/Label) liegen im sessions.js-Store, den
 // SessionsModal.vue direkt editiert. showSessionsModal ist analog zu showStyleModal reiner
@@ -483,6 +487,10 @@ watch(currentSymbol, () => {
         EMA
       </button>
 
+      <button :class="{ active: showNews }" @click="showNews = !showNews">
+        News
+      </button>
+
       <div class="toggle-group replay-control" :class="{ active: replayActive }">
         <button
           class="replay-toggle-btn"
@@ -551,6 +559,7 @@ watch(currentSymbol, () => {
     :show-ranges="showRanges"
     :show-ranges-metadata="showRangesMetadata"
     :show-ema="showEma"
+    :show-news="showNews"
     :show-sessions="showSessions"
     :show-trade-setup-cockpit="showTradeSetupCockpit"
     :trade-setup-cockpit-at-candle="tradeSetupCockpitAtCandle"

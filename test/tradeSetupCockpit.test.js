@@ -32,4 +32,19 @@ describe("computeCockpitState — Anti-Confluences/No-Go", () => {
     expect(single.antiConfluences[0].weight).toBeLessThan(ANTI_CONFLUENCE_THRESHOLD);
     expect(single.locked).toBe(false);
   });
+
+  it("sperrt sofort bei einem News-No-Go, unabhängig von sessionDanger", () => {
+    const state = computeCockpitState(null, [], null, { title: "Main Refinancing Rate", currency: "EUR" });
+    expect(state.locked).toBe(true);
+    expect(state.antiConfluences).toEqual([{ text: "News-Event: EUR Main Refinancing Rate", weight: 0, isNoGo: true }]);
+  });
+
+  it("listet sessionDanger UND News-No-Go nebeneinander, wenn beide gleichzeitig zutreffen", () => {
+    const state = computeCockpitState(null, [], { level: "caution", label: "MMM" }, { title: "Fed Rate Decision", currency: "USD" });
+    expect(state.locked).toBe(true); // News-No-Go allein reicht schon
+    expect(state.antiConfluences).toEqual([
+      { text: "Vorsicht-Session aktiv: MMM", weight: 5, isNoGo: false },
+      { text: "News-Event: USD Fed Rate Decision", weight: 0, isNoGo: true },
+    ]);
+  });
 });

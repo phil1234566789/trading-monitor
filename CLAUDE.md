@@ -180,6 +180,36 @@ asset, no longer global) plus a `danger` level (`normal`/`caution`/`forbidden`) 
 sub-window like the GBPUSD/EURUSD "MMM" caution session or a BTC no-trade window is expressed,
 rather than a second schedule concept.
 
+### Trade-Setup-Cockpit: No-Gos and anti-confluences
+
+`src/tradeSetupCockpit.ts` (see the file's own header comment for the aggregation-only rule) tracks
+things that speak *against* taking a trade, shown as a "Spricht dagegen" section on the cockpit
+card. `AntiConfluence.isNoGo` is a hard block (always locks the card, shown as "🚫 KEIN TRADE"),
+independent of `ANTI_CONFLUENCE_THRESHOLD` (currently 10) — deliberately not modeled as
+"weight == threshold" so raising the threshold later can never silently unblock a No-Go.
+
+High-impact economic news is a No-Go, sourced from the `news_events` table — **not** an external
+news API. Philip sends a ForexFactory calendar screenshot (already filtered to EUR/GBP/USD, only
+the red/high-impact rows matter); Claude reads the red rows off the screenshot and writes them via
+a one-off data migration (e.g. `supabase/migrations/20260726120100_news_events_seed_2026-07-23.sql`),
+same pattern as the existing one-off data migrations in this repo (see e.g.
+`20260705170000_move_test_trade_entry.sql`) rather than an anon-key write from the browser — the
+table's RLS only grants anon `SELECT`, no write policy, since the frontend (`src/newsEvents.js`)
+only ever reads it. ForexFactory calendar times are Europe/Berlin, DST-aware — convert to UTC
+before inserting. `currentNewsNoGo()` treats an event as a No-Go for ±`NEWS_NOGO_WINDOW_MINUTES`
+(30, a judgment call, not something Philip specified) around its timestamp, for whichever
+instrument's currency pair it affects (`EURUSD`→EUR/USD, `GBPUSD`→GBP/USD). `syncNewsEvents()`
+(`src/newsEvents.js`) loads the **entire** table, no "recent only" filter — an earlier version
+filtered to the last 24h and that silently hid any event more than a day old, breaking both the
+No-Go check and the chart markers below for anything not freshly entered; the table stays small
+enough (a few rows/week) that loading everything is simpler and safer than re-adding a filter.
+
+News events also get a purely visual marker on the chart (`src/newsMarkers.js`, "News" toolbar
+toggle next to EMA/Replay in `Dashboard.vue`) — a dashed vertical line at each relevant event's
+time, independent of the TSC's No-Go window (shows past AND future events, not just ones inside
+±30min of now). Its labels hide at low zoom via the same `canShowLabels`/`MIN_PIXELS_PER_HOUR_FOR_LABELS`
+threshold as session-band labels — that's expected, not a bug, if a label seems to be missing.
+
 ## Conventions
 
 - Comments are in German, and are written to explain **why** (a past bug, a non-obvious
