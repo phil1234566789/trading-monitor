@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from "vue";
-import { sessions, addSession, removeSession, DANGER_LEVELS } from "../sessions.js";
+import { sessions, addSession, removeSession, DANGER_LEVELS, WEEKDAY_LABELS } from "../sessions.js";
 import { minutesToTimeInput, timeInputToMinutes } from "../chartTimeUtils.js";
 import MetadataPanel from "./MetadataPanel.vue";
 
@@ -10,6 +10,25 @@ const emit = defineEmits(["close"]);
 // Sessions sind seit Chat 2026-07-25 pro Asset getrennt (siehe sessions.js) — dieses Modal
 // zeigt/editiert nur die Sessions des gerade offenen Charts, nicht die anderer Instrumente.
 const instrumentSessions = computed(() => sessions.filter((s) => s.instrument === props.instrument));
+
+// Anzeige Mo..So (deutsche Konvention), WEEKDAY_LABELS/session.days sind intern 0=So..6=Sa (wie
+// Date#getDay(), siehe sessions.js) — nur eine Anzeige-Reihenfolge, keine Werteänderung.
+const WEEKDAY_DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+// Feature-Wunsch Philip 2026-07-26: "Session Indikatoren am WE weglassen" — session.days kann bei
+// alten, vor diesem Feature angelegten Sessions noch fehlen (siehe daysOrAll in sessions.js), hier
+// beim ersten Toggle einer solchen Session einmal auf "alle Tage" auffüllen, damit Abwählen
+// überhaupt etwas zu entfernen hat.
+function toggleDay(session, day) {
+  const days = session.days && session.days.length > 0 ? [...session.days] : [0, 1, 2, 3, 4, 5, 6];
+  const idx = days.indexOf(day);
+  if (idx === -1) days.push(day);
+  else days.splice(idx, 1);
+  session.days = days;
+}
+function isDayActive(session, day) {
+  return !session.days || session.days.length === 0 || session.days.includes(day);
+}
 </script>
 
 <template>
@@ -52,6 +71,18 @@ const instrumentSessions = computed(() => sessions.filter((s) => s.instrument ==
       <div class="sessions-item-alpha">
         <input v-model.number="session.alpha" type="range" min="0.02" max="0.5" step="0.01" class="sessions-alpha-slider" />
         <span class="sessions-alpha-value">{{ Math.round(session.alpha * 100) }}%</span>
+      </div>
+      <div class="sessions-days-field">
+        <button
+          v-for="day in WEEKDAY_DISPLAY_ORDER"
+          :key="day"
+          type="button"
+          class="sessions-day-toggle"
+          :class="{ active: isDayActive(session, day) }"
+          @click="toggleDay(session, day)"
+        >
+          {{ WEEKDAY_LABELS[day] }}
+        </button>
       </div>
       <label class="sessions-highlow-field" title="Aus: reines Entry-Zeitfenster, High/Low dieser Session ist für die Analyse nicht entscheidend">
         <input v-model="session.highLowRelevant" type="checkbox" />
@@ -249,6 +280,31 @@ const instrumentSessions = computed(() => sessions.filter((s) => s.instrument ==
   color: #565a64;
   min-width: 32px;
   text-align: right;
+}
+
+.sessions-days-field {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+  padding-left: 2px;
+}
+
+.sessions-day-toggle {
+  flex: 1;
+  background: #131722;
+  border: 1px solid #2a2e39;
+  border-radius: 4px;
+  color: #565a64;
+  font-size: 11px;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: background 0.1s ease, color 0.1s ease, border-color 0.1s ease;
+}
+
+.sessions-day-toggle.active {
+  background: #1f2937;
+  border-color: #2962ff;
+  color: #d1d4dc;
 }
 
 .sessions-highlow-field {

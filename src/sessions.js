@@ -66,6 +66,7 @@ async function saveToRemote() {
     high_low_relevant: s.highLowRelevant,
     instrument: s.instrument,
     danger: s.danger,
+    days: s.days ?? null,
   }));
   const { error: deleteError } = await supabase.from("sessions").delete().not("id", "is", null);
   if (deleteError) {
@@ -87,7 +88,7 @@ async function syncFromRemote() {
   try {
     const { data, error } = await supabase
       .from("sessions")
-      .select("id, label, from_minutes, to_minutes, hex, alpha, high_low_relevant, instrument, danger");
+      .select("id, label, from_minutes, to_minutes, hex, alpha, high_low_relevant, instrument, danger, days");
     if (error) throw error;
     if (data && data.length > 0) {
       suppressSave = true;
@@ -104,6 +105,7 @@ async function syncFromRemote() {
           highLowRelevant: r.high_low_relevant,
           instrument: r.instrument,
           danger: r.danger,
+          days: r.days,
         })),
       );
       nextTick(() => {
@@ -135,6 +137,20 @@ export const DANGER_LEVELS = [
 // gleichzeitig aktiv sind (z.B. eine weite Session + eine engere Caution-/Forbidden-Session darin).
 const DANGER_SEVERITY = { normal: 0, caution: 1, forbidden: 2 };
 
+// Wochentage für das "days"-Feld einer Session (Chat 2026-07-26: "Session Indikatoren am WE
+// weglassen" — normale Forex-Sessions (Asia/London/NY/MMM ...) sollen samstags/sonntags nicht mehr
+// erscheinen, während BTC weiter 24/7 läuft). 0=So..6=Sa wie JS Date#getDay()/#getUTCDay(), damit
+// localWeekday() unten ohne Umrechnung direkt vergleichen kann.
+export const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+export const WEEKDAY_LABELS = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
+// session.days ist null/undefined für alte, vor diesem Feature angelegte Sessions (DB-Spalte kam
+// erst nachträglich dazu) — das bedeutet "jeden Tag", NICHT "nie", sonst würden bestehende
+// Sessions beim ersten Laden nach dem Feature plötzlich unsichtbar.
+function daysOrAll(days) {
+  return days && days.length > 0 ? days : ALL_DAYS;
+}
+
 // sessionConfigs: schon auf ein Instrument gefiltert (siehe PriceChart.vue: `sessions.filter((s) =>
 // s.instrument === props.symbol)`), sonst würde z.B. eine BTC-Sperrzeit auch EURUSD sperren.
 // nowSec/tzOffsetMinutes wie sessionOccurrences — ruft es mit einem 1-Sekunden-Fenster um nowSec
@@ -143,7 +159,7 @@ export function currentSessionDanger(sessionConfigs, nowSec, tzOffsetMinutes = 0
   let best = null;
   for (const session of sessionConfigs) {
     if (!session.danger || session.danger === "normal") continue;
-    const occurrences = sessionOccurrences(session.fromMinutes, session.toMinutes, nowSec, nowSec + 1, tzOffsetMinutes);
+    const occurrences = sessionOccurrences(session.fromMinutes, session.toMinutes, nowSec, nowSec + 1, tzOffsetMinutes, session.days);
     if (occurrences.length === 0) continue;
     if (!best || DANGER_SEVERITY[session.danger] > DANGER_SEVERITY[best.level]) {
       best = { level: session.danger, label: session.label || "" };
@@ -171,6 +187,10 @@ export function addSession(instrument) {
     highLowRelevant: true,
     instrument,
     danger: "normal",
+    // Default "jeden Tag" (siehe daysOrAll) — bewusst kein weekday-Vorurteil hier, weil addSession
+    // instrumentübergreifend genutzt wird (BTC läuft 24/7, bei Forex-Sessions muss Philip Sa/So
+    // bewusst über die Checkboxen im Sessions-Modal abwählen).
+    days: [...ALL_DAYS],
   });
 }
 
@@ -203,6 +223,17 @@ function localMidnightUtc(nearUtcSec, offsetMinutesFn) {
   return utcGuess;
 }
 
+// Lokaler Wochentag (0=So..6=Sa, wie Date#getDay()) eines UTC-Zeitpunkts, der bereits lokale
+// Mitternacht ist (siehe localMidnightUtc) — für das "days"-Feld einer Session (welche Wochentage
+// diese Session überhaupt startet, siehe ALL_DAYS/daysOrAll oben). dayStartUtcSec + offsetSec ist
+// die lokale Wanduhrzeit AUSGEDRÜCKT als UTC-Epoch (gleicher Trick wie in localMidnightUtc) — davon
+// getUTCDay() liefert also den lokalen, nicht den UTC-Wochentag (die beiden können auseinanderfallen,
+// z.B. Berlin-Mitternacht = 23:00 UTC des Vortags).
+function localWeekday(dayStartUtcSec, offsetMinutesFn) {
+  const offsetSec = offsetMinutesFn(dayStartUtcSec) * 60;
+  return new Date((dayStartUtcSec + offsetSec) * 1000).getUTCDay();
+}
+
 // Liefert alle Vorkommen (Start/Ende in echten UTC-Sekunden) einer täglich wiederkehrenden Session
 // im Fenster [rangeStartSec, rangeEndSec]. fromMinutes/toMinutes sind Minuten seit Mitternacht in
 // LOKALER Zeit — toMinutes <= fromMinutes bedeutet eine Session, die über Mitternacht läuft (z.B.
@@ -212,9 +243,14 @@ function localMidnightUtc(nearUtcSec, offsetMinutesFn) {
 // Für den echten Chart übergibt PriceChart.vue `(utcSec) => -new Date(utcSec * 1000).getTimezoneOffset()`
 // — Date().getTimezoneOffset() kennt (über die Timezone-Datenbank des Betriebssystems) die
 // historischen/zukünftigen deutschen DST-Regeln für JEDES Datum, nicht nur für "jetzt".
-export function sessionOccurrences(fromMinutes, toMinutes, rangeStartSec, rangeEndSec, tzOffsetMinutes = 0) {
+// days (optional): welche lokalen Wochentage (0=So..6=Sa) diese Session überhaupt STARTEN darf,
+// siehe ALL_DAYS/daysOrAll — z.B. [1,2,3,4,5] für eine Mo-Fr-Session oder [5] für eine Session, die
+// nur freitags beginnt (aber dank toMinutes > 1440 mehrere Tage lang laufen kann, siehe die
+// Weekend-Gap-Session in der sessions-Migration). null/undefined = jeden Tag (Altverhalten).
+export function sessionOccurrences(fromMinutes, toMinutes, rangeStartSec, rangeEndSec, tzOffsetMinutes = 0, days = null) {
   if (rangeStartSec == null || rangeEndSec == null || rangeEndSec <= rangeStartSec) return [];
   const offsetMinutesFn = typeof tzOffsetMinutes === "function" ? tzOffsetMinutes : () => tzOffsetMinutes;
+  const allowedDays = daysOrAll(days);
 
   // Ein Tag Puffer VOR dem Fenster: eine über Mitternacht laufende Session, die am Vortag beginnt,
   // kann noch bis in rangeStartSec hineinreichen.
@@ -224,11 +260,13 @@ export function sessionOccurrences(fromMinutes, toMinutes, rangeStartSec, rangeE
   // Puffer-Tag NACH dem Fenster ebenso großzügig — der Überlappungs-Filter unten verwirft ohnehin
   // jedes Vorkommen, das tatsächlich außerhalb liegt, eine Iteration zu viel ist also harmlos.
   while (dayStart <= rangeEndSec + DAY_SEC) {
-    const startSec = dayStart + fromMinutes * 60;
-    let endSec = dayStart + toMinutes * 60;
-    if (toMinutes <= fromMinutes) endSec += DAY_SEC;
-    if (endSec > rangeStartSec && startSec < rangeEndSec) {
-      results.push({ startSec, endSec });
+    if (allowedDays.includes(localWeekday(dayStart, offsetMinutesFn))) {
+      const startSec = dayStart + fromMinutes * 60;
+      let endSec = dayStart + toMinutes * 60;
+      if (toMinutes <= fromMinutes) endSec += DAY_SEC;
+      if (endSec > rangeStartSec && startSec < rangeEndSec) {
+        results.push({ startSec, endSec });
+      }
     }
     dayStart = localMidnightUtc(dayStart + DAY_SEC, offsetMinutesFn);
   }
@@ -406,7 +444,7 @@ export function renderSessions(series, sessionConfigs, existingPrimitives, candl
   const rangeEndSec = candles[candles.length - 1].time;
 
   for (const session of sessionConfigs) {
-    const occurrences = sessionOccurrences(session.fromMinutes, session.toMinutes, rangeStartSec, rangeEndSec, tzOffsetMinutes);
+    const occurrences = sessionOccurrences(session.fromMinutes, session.toMinutes, rangeStartSec, rangeEndSec, tzOffsetMinutes, session.days);
     for (const { startSec, endSec } of occurrences) {
       const highLow = session.highLowRelevant ? highLowInWindow(candles, startSec, endSec) : null;
       const primitive = new SessionBandPrimitive(

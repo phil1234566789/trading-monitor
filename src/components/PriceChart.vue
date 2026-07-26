@@ -667,7 +667,12 @@ function refreshSessionsInternal() {
 function refreshNewsMarkersInternal() {
   if (!isForex || !candleSeries) return; // watch(newsEvents) kann vor dem ersten Chart-Mount feuern (Store lädt schon bei Modul-Import)
   const candles = clipReplay(allCandles);
-  const relevant = props.showNews ? newsEventsForInstrument(newsEvents, props.symbol) : [];
+  let relevant = props.showNews ? newsEventsForInstrument(newsEvents, props.symbol) : [];
+  // Im Replay-Modus keine News aus der Zukunft (bezogen auf replayUntil) anzeigen — sonst
+  // verdecken zukünftige Termine die Sicht auf die aktuelle Replay-Kerze (Bug-Report Philip
+  // 2026-07-26). Außerhalb des Replays bewusst weiterhin auch zukünftige Termine zeigen (siehe
+  // CLAUDE.md).
+  if (props.replayUntil != null) relevant = relevant.filter((e) => e.eventTime <= props.replayUntil);
   renderNewsMarkers(candleSeries, relevant, newsMarkerPrimitives, candles);
 }
 

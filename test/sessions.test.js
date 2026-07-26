@@ -57,6 +57,39 @@ describe("sessionOccurrences", () => {
   });
 });
 
+// Bug-Report Philip 2026-07-26: "am WE werden mir Session-Indikatoren angezeigt, die spielen aber
+// überhaupt keine Rolle" — days schränkt ein, an welchen (lokalen) Wochentagen eine Session
+// überhaupt startet (0=So..6=Sa, wie Date#getDay()), z.B. Mo-Fr für normale Forex-Sessions.
+describe("sessionOccurrences mit days (Wochentag-Filter)", () => {
+  it("lässt Vorkommen an nicht erlaubten Wochentagen weg (Mo-Fr, kein Sa/So)", () => {
+    // 04.07.2026 ist ein Samstag, 06./07.07. Mo/Di.
+    const saturdayStart = Date.UTC(2026, 6, 4, 0, 0, 0) / 1000;
+    const result = sessionOccurrences(9 * 60, 17 * 60, saturdayStart, saturdayStart + 4 * DAY, 0, [1, 2, 3, 4, 5]);
+    expect(result).toHaveLength(2); // nur Mo 06.07./Di 07.07., nicht Sa 04.07./So 05.07.
+    expect(result[0].startSec).toBe(Date.UTC(2026, 6, 6, 9, 0, 0) / 1000);
+    expect(result[1].startSec).toBe(Date.UTC(2026, 6, 7, 9, 0, 0) / 1000);
+  });
+
+  it("null/undefined bedeutet weiterhin 'jeden Tag' (Altverhalten für Sessions ohne days)", () => {
+    const dayStart = Date.UTC(2026, 6, 6, 0, 0, 0) / 1000;
+    const withoutDays = sessionOccurrences(9 * 60, 17 * 60, dayStart, dayStart + 3 * DAY, 0);
+    const withNullDays = sessionOccurrences(9 * 60, 17 * 60, dayStart, dayStart + 3 * DAY, 0, null);
+    expect(withNullDays).toEqual(withoutDays);
+    expect(withNullDays).toHaveLength(3);
+  });
+
+  it("berechnet eine Mehrtages-Session (Weekend Gap Fr 23:00 - So 23:00) über to_minutes > 1440", () => {
+    // 03.07.2026 ist ein Freitag.
+    const fridayStart = Date.UTC(2026, 6, 3, 0, 0, 0) / 1000;
+    const result = sessionOccurrences(23 * 60, 23 * 60 + 48 * 60, fridayStart, fridayStart + 4 * DAY, 0, [5]);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      startSec: Date.UTC(2026, 6, 3, 23, 0, 0) / 1000, // Fr 23:00
+      endSec: Date.UTC(2026, 6, 5, 23, 0, 0) / 1000, // So 23:00 (48h später)
+    });
+  });
+});
+
 // Bug-Report Philip 2026-07-22: "prüf ob die sessions auch mit der Zeitumstellung einwandfrei
 // funktionieren, wohne ja in Deutschland" — vorher wurde EIN fester "jetzt"-Offset auf den
 // GESAMTEN Kerzenbereich angewendet (der per Lazy-Load Monate zurückreichen kann), was Sessions auf
