@@ -1,6 +1,10 @@
 // Order-Block-Erkennung, portiert aus tv-indikator/src/calculations.pine (processClosedBar).
-// Vereinfacht für Single-Timeframe/Single-Symbol: kein Pip-System (Schwellen als % vom Preis),
-// keine Session-/Symbol-Filter, keine "nächste 3 zum Preis"-Hervorhebung, keine M1-Entry-Logik.
+// Vereinfacht für Single-Timeframe/Single-Symbol: nur ein simples Pip-Minimum für Lower-TF statt
+// des vollen Pip-Systems dort (siehe LOWER_TF_MIN_GAP_PIPS unten), keine Session-/Symbol-Filter,
+// keine "nächste 3 zum Preis"-Hervorhebung, keine M1-Entry-Logik. Box-Konstruktion (C1-Kante bis
+// C2-Kante) und weak-Klassifizierung (Gap-Größe) folgen weiterhin nur dem Pine-HTF-Modus — der
+// Pine-Lower-TF-Modus hätte dafür eine andere Box (Extrempreis der letzten 3 Kerzen, gekappt) und
+// eine andere weak-Regel (Kerzenkörper vs. Docht statt Gap-Größe), beides hier NICHT portiert.
 //
 // FVG-Fenster über 4 Kerzen (c0..c2 + cur): bullisch, wenn cur.low über c1.high liegt (Gap),
 // bärisch symmetrisch. Zone = C1-Kante bis zur gegenüberliegenden Kante von C2 (inkl. Wick) —
@@ -10,11 +14,26 @@ import { cssColorScaled } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
 import { canShowLabels } from "./chartZoom.js";
 
-const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone angelegt
+const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone angelegt (HTF: 15m/1h/4h/1D)
 const WEAK_PCT = 0.15; // Gap kleiner als das gilt als "schwach" (blasser dargestellt)
 
-export function detectOrderBlocks(candles) {
+// Lower-TF (M1/M3/M5, siehe tv-indikator/src/calculations.pine: capMode=true) hat im Pine-Original
+// gar KEINE Mindestgröße (jede positive Lücke bildet eine Zone) — Bug-Report Philip 2026-07-26:
+// eine 0,01%-FVG auf M5 wurde von IRRELEVANT_PCT (für HTF gedacht, 0,05%) verschluckt, obwohl sie
+// auf M5 durchaus tradebar ist. Statt komplett ohne Minimum (wie im Pine-Original) verlangt Philip
+// explizit "mindestens 1 Pip" — ein Pip-Minimum statt Prozent, weil % vom Preis bei GBPUSD/EURUSDs
+// enger Range (~1.3) für M5-Lücken viel zu grob ist (0,05% sind hier ~6-7 Pip).
+const LOWER_TF_LABELS = new Set(["1m", "3m", "5m"]);
+const LOWER_TF_MIN_GAP_PIPS = 1;
+const PIP_SIZE = 0.0001; // gilt für beide unterstützten FX-Paare (GBPUSD/EURUSD), siehe TRADE_SETUP_PIP_SIZE in PriceChart.vue
+
+// timeframe: TIMEFRAMES-Label (siehe timeframes.js, z.B. "5m") — entscheidet, ob die Pip- (Lower-TF)
+// oder die Prozent-Mindestgröße (HTF) gilt. undefined/unbekanntes Label fällt auf HTF-Verhalten
+// zurück (Altverhalten, falls je ohne Timeframe aufgerufen).
+export function detectOrderBlocks(candles, timeframe) {
   const zones = [];
+  const isLowerTf = LOWER_TF_LABELS.has(timeframe);
+  const minGapAbs = isLowerTf ? LOWER_TF_MIN_GAP_PIPS * PIP_SIZE : null;
 
   for (let i = 3; i < candles.length; i++) {
     const c1 = candles[i - 2];
@@ -22,10 +41,14 @@ export function detectOrderBlocks(candles) {
     const cur = candles[i];
     const refPrice = c1.close;
 
-    const bullGapPct = ((cur.low - c1.high) / refPrice) * 100;
-    const bearGapPct = ((c1.low - cur.high) / refPrice) * 100;
+    const bullGap = cur.low - c1.high;
+    const bearGap = c1.low - cur.high;
+    const bullGapPct = (bullGap / refPrice) * 100;
+    const bearGapPct = (bearGap / refPrice) * 100;
+    const bullRelevant = isLowerTf ? bullGap >= minGapAbs : bullGapPct >= IRRELEVANT_PCT;
+    const bearRelevant = isLowerTf ? bearGap >= minGapAbs : bearGapPct >= IRRELEVANT_PCT;
 
-    if (bullGapPct >= IRRELEVANT_PCT) {
+    if (bullRelevant) {
       for (const z of zones) if (z.dir === 1 && z.active) z.active = false;
       zones.push({
         top: c1.high,
@@ -38,7 +61,7 @@ export function detectOrderBlocks(candles) {
         startTime: c2.time,
         endTime: cur.time,
       });
-    } else if (bearGapPct >= IRRELEVANT_PCT) {
+    } else if (bearRelevant) {
       for (const z of zones) if (z.dir === -1 && z.active) z.active = false;
       zones.push({
         top: c2.high,

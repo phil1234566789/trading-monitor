@@ -594,7 +594,7 @@ function refreshPoiZonesInternal() {
   const candles = clipReplay(allCandles);
   let zones;
   if (isForex) {
-    zones = detectOrderBlocks(candles)
+    zones = detectOrderBlocks(candles, props.currentBar)
       .filter((z) => !z.invalidated)
       .map((z) => ({ ...z, timeframe: props.currentBar.toUpperCase() }));
   } else {
