@@ -7,11 +7,13 @@ import StyleModal from "../components/StyleModal.vue";
 import SessionsModal from "../components/SessionsModal.vue";
 import NewsModal from "../components/NewsModal.vue";
 import { TIMEFRAMES } from "../timeframes.js";
+import { berlinDateStrFor } from "../backtestExport.js";
 import { fetchTrades } from "../trades.js";
 import { fetchPoiZones } from "../poiZones.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
+import { useClaudeAnnotations } from "../composables/useClaudeAnnotations.js";
 
 // Trades/POI-Zonen (ob_zones) gibt es aktuell nur für BTC-USDT — die Forex-OB-Erkennung
 // läuft (noch) nicht über diese Codebase, sondern soll später per TradingView-Webhook
@@ -120,6 +122,18 @@ const showNewsModal = ref(false);
 // wie die übrigen Indikator-Toggles.
 const showSessions = useLocalStorageRef("showSessions", true);
 const showSessionsModal = ref(false);
+// Claude-Antwort-Import (siehe claudeAnnotations.js, trading/backtest-instructions.md) — Button
+// + Modal leben jetzt global in App.vue (neben "Backtest-Daten"), der geteilte Zustand kommt aus
+// useClaudeAnnotations.js (Modul-Singleton, wie useStatusBar.js). claudeAnnotationsDate ist
+// weiterhin hier lokal, weil es den Replay-Zeitpunkt braucht (den nur Dashboard.vue kennt) — löst
+// die "HH:mm"-Zeitangaben der Annotationen auf (gleiche Herleitung wie in BacktestExportModal.vue,
+// damit Export und Import denselben Tag meinen). visibleClaudeAnnotations blendet die Liste aus,
+// wenn der Toggle in App.vue aus ist, ohne die geparsten Annotationen selbst zu verwerfen.
+const { annotations: claudeAnnotations, visible: claudeAnnotationsVisible } = useClaudeAnnotations();
+const visibleClaudeAnnotations = computed(() => (claudeAnnotationsVisible.value ? claudeAnnotations.value : []));
+const claudeAnnotationsDate = computed(() =>
+  replayActive.value ? berlinDateStrFor(replayTime.value) : berlinDateStrFor(Math.floor(Date.now() / 1000)),
+);
 // Trade-Setup-Cockpit (siehe Chat 2026-07-19: "wir wollen jetzt step by step alles
 // zusammenstöpseln") — bündelt H1-Range-Analyse + M5-Trade-Setups in einer Karte im Chart.
 // tradeSetupCockpitAtCandle ist der Positions-Toggle (fester Platz vs. neben der letzten Kerze).
@@ -606,6 +620,8 @@ watch(currentSymbol, () => {
     :trade-setup-cockpit-candle-offset="tradeSetupCockpitCandleOffset"
     :replay-until="replayUntil"
     :show-debug-metadata="showDebugMetadata"
+    :claude-annotations="visibleClaudeAnnotations"
+    :claude-annotations-date="claudeAnnotationsDate"
     @close-ranges-metadata="showRangesMetadata = false"
     @toggle-tsc-position="tradeSetupCockpitAtCandle = !tradeSetupCockpitAtCandle"
     @close-debug-metadata="showDebugMetadata = false"

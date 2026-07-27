@@ -2,10 +2,15 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useStatusBar } from "./composables/useStatusBar.js";
 import { useHttpActivity } from "./composables/useHttpActivity.js";
+import { useClaudeAnnotations } from "./composables/useClaudeAnnotations.js";
 import HttpErrorBanners from "./components/HttpErrorBanners.vue";
 import BacktestExportModal from "./components/BacktestExportModal.vue";
+import ClaudeAnnotationsModal from "./components/ClaudeAnnotationsModal.vue";
 
 const showBacktestExport = ref(false);
+const showClaudeAnnotationsModal = ref(false);
+const { annotations: claudeAnnotations, visible: claudeAnnotationsVisible, apply: applyClaudeAnnotations, clear: clearClaudeAnnotations } =
+  useClaudeAnnotations();
 
 const FRESH_MS = 30_000;
 
@@ -51,9 +56,29 @@ const lastUpdateText = computed(() =>
       </nav>
       <span class="last-update">{{ lastUpdateText }}</span>
       <button class="backtest-export-btn" @click="showBacktestExport = true">📊 Backtest-Daten</button>
+      <div class="toggle-group">
+        <button
+          class="claude-annotations-btn"
+          :class="{ active: claudeAnnotationsVisible }"
+          title="Claude-Notizen im Chart an/aus"
+          @click="claudeAnnotationsVisible = !claudeAnnotationsVisible"
+        >
+          🖍 Claude-Notizen
+        </button>
+        <button class="claude-annotations-caret-btn" title="Claude-Notizen importieren/bearbeiten" @click="showClaudeAnnotationsModal = true">
+          ⚙
+        </button>
+      </div>
     </header>
     <HttpErrorBanners />
     <BacktestExportModal v-if="showBacktestExport" @close="showBacktestExport = false" />
+    <ClaudeAnnotationsModal
+      v-if="showClaudeAnnotationsModal"
+      :count="claudeAnnotations.length"
+      @close="showClaudeAnnotationsModal = false"
+      @apply="applyClaudeAnnotations"
+      @clear="clearClaudeAnnotations"
+    />
     <RouterView />
   </div>
 </template>
@@ -107,6 +132,47 @@ const lastUpdateText = computed(() =>
 }
 
 .backtest-export-btn:hover {
+  border-color: #2962ff;
+  color: #d1d4dc;
+}
+
+.toggle-group {
+  display: flex;
+}
+
+.claude-annotations-btn {
+  background: transparent;
+  border: 1px solid #2a2e39;
+  border-radius: 4px 0 0 4px;
+  border-right: none;
+  color: #787b86;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.claude-annotations-btn:hover {
+  border-color: #2962ff;
+  color: #d1d4dc;
+}
+
+.claude-annotations-btn.active {
+  background: #2962ff;
+  border-color: #2962ff;
+  color: #fff;
+}
+
+.claude-annotations-caret-btn {
+  background: transparent;
+  border: 1px solid #2a2e39;
+  border-radius: 0 4px 4px 0;
+  color: #787b86;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.claude-annotations-caret-btn:hover {
   border-color: #2962ff;
   color: #d1d4dc;
 }

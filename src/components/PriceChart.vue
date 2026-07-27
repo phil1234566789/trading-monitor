@@ -23,6 +23,7 @@ function nativeLineWidth(key) {
 }
 import { selectActiveMetadataSections, earliestRelevantTime } from "../debugMetadata.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
+import { renderClaudeAnnotations } from "../claudeAnnotations.js";
 import {
   binanceIntervalFor,
   fetchInitialDeltas,
@@ -103,6 +104,11 @@ const props = defineProps({
   // Debug-Metadaten-Sammel-Panel (siehe Chat 2026-07-20: "damit ich dir nicht ständig die Daten
   // von dem was ich in TradingView sehe hier schreiben muss") — Toolbar-Unterpunkt bei "Debug".
   showDebugMetadata: { type: Boolean, default: false },
+  // Claude-Antwort-Import (siehe claudeAnnotations.js) — Liste geparster Annotationen +
+  // der Berlin-Kalendertag, gegen den ihre "HH:mm"-Zeitangaben aufgelöst werden (Dashboard.vue
+  // leitet das aus dem Replay-Zeitpunkt ab, analog zu BacktestExportModal.vue).
+  claudeAnnotations: { type: Array, default: () => [] },
+  claudeAnnotationsDate: { type: String, default: null },
 });
 const emit = defineEmits(["close-ranges-metadata", "toggle-tsc-position", "close-debug-metadata"]);
 
@@ -331,6 +337,8 @@ let marketStructurePrimitives = [];
 let cockpitPrimitives = [];
 let tradePrimitives = [];
 let tradeSetupPrimitives = [];
+let claudeAnnotationPrimitives = [];
+let claudeAnnotationPriceLines = [];
 let allCandles = [];
 let allCvdDeltas = [];
 let tradeSetupM5Candles = [];
@@ -575,6 +583,17 @@ function replayToMs(bar) {
 function refreshTradeMarkersInternal() {
   const trades = TRADE_MARKER_BARS.has(props.currentBar) ? props.trades : [];
   renderTradeMarkers(candleSeries, trades, tradePrimitives, clipReplay(allCandles));
+}
+
+function refreshClaudeAnnotationsInternal() {
+  renderClaudeAnnotations(
+    candleSeries,
+    props.claudeAnnotations,
+    claudeAnnotationPrimitives,
+    claudeAnnotationPriceLines,
+    clipReplay(allCandles),
+    props.claudeAnnotationsDate,
+  );
 }
 
 // POI-Zonen kommen vom poi-watcher-Backend (4H+1H, aus `ob_zones`) statt lokal aus den
@@ -1157,6 +1176,7 @@ function refreshChart() {
   refreshSessionsInternal();
   refreshNewsMarkersInternal();
   refreshTradeMarkersInternal();
+  refreshClaudeAnnotationsInternal();
   renderTradeSetupsInternal();
   refreshRangesMarkersInternal();
   refreshMarketStructureInternal(); // ruft refreshCockpitInternal() selbst mit auf, siehe dort
@@ -1477,6 +1497,7 @@ watch(() => props.currentBar, () => {
   scheduleNextPoll(); // neuer Timeframe -> neue Kerzenschluss-Taktung, siehe dort
 });
 watch(() => props.trades, refreshTradeMarkersInternal);
+watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 watch(() => props.poiZones, refreshPoiZonesInternal);
 watch(() => props.showOrderBlocks, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
