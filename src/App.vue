@@ -3,6 +3,9 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useStatusBar } from "./composables/useStatusBar.js";
 import { useHttpActivity } from "./composables/useHttpActivity.js";
 import HttpErrorBanners from "./components/HttpErrorBanners.vue";
+import BacktestExportModal from "./components/BacktestExportModal.vue";
+
+const showBacktestExport = ref(false);
 
 const FRESH_MS = 30_000;
 
@@ -47,8 +50,10 @@ const lastUpdateText = computed(() =>
         <RouterLink to="/handelszeiten" exact-active-class="active">Handelszeiten</RouterLink>
       </nav>
       <span class="last-update">{{ lastUpdateText }}</span>
+      <button class="backtest-export-btn" @click="showBacktestExport = true">📊 Backtest-Daten</button>
     </header>
     <HttpErrorBanners />
+    <BacktestExportModal v-if="showBacktestExport" @close="showBacktestExport = false" />
     <RouterView />
   </div>
 </template>
@@ -89,6 +94,21 @@ const lastUpdateText = computed(() =>
 .last-update {
   margin-left: auto;
   color: #787b86;
+}
+
+.backtest-export-btn {
+  background: transparent;
+  border: 1px solid #2a2e39;
+  color: #787b86;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.backtest-export-btn:hover {
+  border-color: #2962ff;
+  color: #d1d4dc;
 }
 
 .http-activity {
