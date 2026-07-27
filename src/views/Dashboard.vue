@@ -265,7 +265,7 @@ onMounted(() => window.addEventListener("click", closeMenusOutside));
 onUnmounted(() => window.removeEventListener("click", closeMenusOutside));
 const isBtc = computed(() => currentSymbol.value === "BTC-USDT");
 const { data: trades, refresh: refreshTrades } = usePolledFetch(
-  () => (isBtc.value ? fetchTrades(currentSymbol.value) : []),
+  () => fetchTrades(currentSymbol.value),
   { intervalMs: POLL_MS },
 );
 const { data: poiZones, refresh: refreshPoiZones } = usePolledFetch(

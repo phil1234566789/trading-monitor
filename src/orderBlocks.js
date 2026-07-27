@@ -143,11 +143,19 @@ class ZoneRenderer {
         ctx.fillStyle = this._options.textColor;
         ctx.textBaseline = "top";
         ctx.textAlign = "right";
-        ctx.fillText(
-          this._options.label,
-          xPos.position + xPos.length - 4 * scope.horizontalPixelRatio,
-          yPos.position + 2 * scope.verticalPixelRatio,
-        );
+        // Mehrzeilig per "\n" (Chat 2026-07-27: Trade-Setup-OB-Box zeigt im Debug-Modus zusätzlich
+        // die Preise unter dem "Long/Short A #x"-Titel) — fillText selbst kann keine Zeilenumbrüche,
+        // daher hier manuell aufgeteilt. Für den bisherigen Single-Line-Fall (z.B. renderPersistedZones)
+        // unverändert, split() liefert dann ein Array mit einem Element.
+        const lines = this._options.label.split("\n");
+        const lineHeight = 13 * scope.verticalPixelRatio;
+        lines.forEach((line, i) => {
+          ctx.fillText(
+            line,
+            xPos.position + xPos.length - 4 * scope.horizontalPixelRatio,
+            yPos.position + 2 * scope.verticalPixelRatio + i * lineHeight,
+          );
+        });
       }
     });
   }

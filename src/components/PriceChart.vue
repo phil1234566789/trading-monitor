@@ -967,9 +967,14 @@ function computeTradeSetups() {
   // siehe refreshCockpitInternal) bleibt immer vollständig.
   const shorts = takeLast(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, m5Candles));
   const longs = takeLast(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, m5Candles));
+  // setupNumber (1..n je Richtung, chronologisch): nur bei aktiver Historie gesetzt (n > 1) — sonst
+  // gibt's nur eine Box je Richtung, keine Zuordnung nötig. Separates Feld statt in `label`
+  // eingebacken (wie vorher "Short (2)"), weil sowohl die OB-Box (Chart) als auch die TSC-Karte
+  // (tradeSetupCockpit.ts) die Nummer jetzt als "#x"-Suffix brauchen, aber an unterschiedlichen
+  // Stellen im Text (Chat 2026-07-27: "damit ich die Nummer sofort zuordnen kann").
   currentTradeSetups = [
-    ...shorts.map((s, i) => ({ ...s, label: n > 1 ? `Short (${i + 1})` : "Short" })),
-    ...longs.map((s, i) => ({ ...s, label: n > 1 ? `Long (${i + 1})` : "Long" })),
+    ...shorts.map((s, i) => ({ ...s, label: "Short", setupNumber: n > 1 ? i + 1 : null })),
+    ...longs.map((s, i) => ({ ...s, label: "Long", setupNumber: n > 1 ? i + 1 : null })),
   ];
   tradeSetupsMetadata.value = currentTradeSetups;
 }
@@ -1015,15 +1020,52 @@ function renderTradeSetupsInternal() {
       {
         color: cssColor("tradeSetupProtected"),
         lineWidth: lineWidth("tradeSetupProtected"),
-        label: props.showLiquidityDebug ? formatPrice(setup.fractal.price) : null,
+        // Bei Path B ist fractal === ls (identischer Pivot, siehe pathType in tradeSetup.js) — die
+        // Linie liegt exakt auf der LS-Linie darunter, ein eigenes Preislabel hier wäre nur eine
+        // zweite Kopie desselben Preises an derselben Stelle (Bug-Report Philip 2026-07-27: "Label
+        // des LQ-Sweeps ist immer noch doppelt"). Nur bei Path A anzeigen, wo fractal ein eigener,
+        // vom LS verschiedener Pivot ist.
+        // "PP "-Präfix + Positionierung wie bei der LS-Linie (Chat 2026-07-27: "genauso behandeln
+        // wie die LS") — selbe end-above/end-below-Logik + Präfix-Zahlformat.
+        label: props.showLiquidityDebug && setup.pathType !== "B" ? `PP ${formatPrice(setup.fractal.price)}` : null,
+        labelSide: setup.dir === 1 ? "end-above" : "end-below",
       },
       candles,
     );
     const lsLine = new LiquidityLinePrimitive(
       setup.ls,
-      { color: lsColor, lineWidth: lineWidth(key), label: props.showLiquidityDebug ? formatPrice(setup.ls.price) : null },
+      {
+        color: lsColor,
+        lineWidth: lineWidth(key),
+        // "LS "-Präfix (Chat 2026-07-27: "extra Label vor den Preis, 1.3306 -> LS 1.3306") — sonst
+        // bei Path A nicht von der protected-Fraktal-Linie darüber unterscheidbar, beide zeigen
+        // sonst nur eine nackte Zahl.
+        label: props.showLiquidityDebug ? `LS ${formatPrice(setup.ls.price)}` : null,
+        // "end-above"/"end-below" statt Default "start" (Chat 2026-07-27: "muss ständig sau weit
+        // nach links scrollen") — der M5-LQ-Sweep-Pivot liegt oft weit links vom aktuellen
+        // Kerzenrand, das Preislabel soll trotzdem am rechten (aktuellen) Ende der Linie stehen.
+        // Über/unter statt AUF der Linie — Short oben, Long unten, rein zur visuellen
+        // Unterscheidung.
+        labelSide: setup.dir === 1 ? "end-above" : "end-below",
+      },
       candles,
     );
+    // Nummer-Suffix (Chat 2026-07-27: "damit ich die Nummer sofort zuordnen kann", siehe
+    // computeTradeSetups) — nur gesetzt, wenn Trade-Setups-Historie aktiv ist (mehrere Boxen je
+    // Richtung gleichzeitig sichtbar), sonst überflüssig.
+    const numberSuffix = setup.setupNumber != null ? ` #${setup.setupNumber}` : "";
+    // "Long"/"Short" + Pfad-Kürzel + Nummer als erste Zeile (Chat 2026-07-26: "möchte es visuell
+    // unterschieden haben" — A = eigenes bestätigtes Protected-Pivot, B = fractal===ls, siehe
+    // pathType in tradeSetup.js). Danach je eine Zeile Oberkante/Unterkante der OB, NUR im
+    // Debug-Modus (Chat 2026-07-27: "die preise der M5 OB in die Box schreiben, aber nur an, wenn
+    // debug modus an") — dieselbe showLiquidityDebug-Bedingung wie bei den anderen Preis-Labels
+    // hier. Untereinander statt mit "/" getrennt (Chat 2026-07-27: "dann weiß ich, dass die obere
+    // Zahl für die Oberkante ist und die untere für die Unterkante") — reihenfolge top/bottom
+    // spiegelt die Box selbst. NUR hier am OB-Label angehängt, NICHT in setup.label selbst — die
+    // TSC-Karte (tradeSetupCockpit.ts) baut ihren eigenen "Typ A/B #x"-Text separat aus
+    // pathType/setupNumber.
+    const obLabelLines = [`${setup.label} ${setup.pathType}${numberSuffix}`];
+    if (props.showLiquidityDebug) obLabelLines.push(formatPrice(top), formatPrice(bottom));
     const obBox = new OrderBlockPrimitive(
       { top, bottom, startTime: setup.obStartTime, endTime: setup.obStartTime + TRADE_SETUP_OB_WIDTH_SEC },
       {
@@ -1031,11 +1073,9 @@ function renderTradeSetupsInternal() {
         borderColor: cssColorScaled(key, TRADE_SETUP_OB_BORDER_RATIO),
         borderWidth: lineWidth(key),
         textColor: "rgba(255, 255, 255, 0.9)",
-        // "Long"/"Short" + Pfad-Kürzel (Chat 2026-07-26: "möchte es visuell unterschieden haben" —
-        // A = eigenes bestätigtes Protected-Pivot, B = fractal===ls, siehe pathType in
-        // tradeSetup.js). NUR hier am OB-Label angehängt, NICHT in setup.label selbst — die TSC-
-        // Karte (tradeSetupCockpit.ts) baut ihren eigenen "Typ A/B"-Text separat aus pathType.
-        label: `${setup.label} ${setup.pathType}`,
+        // ZoneRenderer (orderBlocks.js) unterstützt mehrzeilige Labels per "\n" (seit diesem Chat) —
+        // vorher war das immer genau eine Zeile.
+        label: obLabelLines.join("\n"),
       },
       candles,
     );
@@ -1411,7 +1451,19 @@ onMounted(() => {
   resizeObserver = new ResizeObserver((entries) => {
     if (!chart) return; // Resize-Callback kann nach chart.remove() noch nachfeuern
     const { width, height } = entries[0].contentRect;
-    chart.resize(width, height);
+    // Bug-Report Philip 2026-07-27: "Preisskala verschwindet regelmäßig beim Verschieben/Ziehen/
+    // Verkleinern/Vergrößern des Browserfensters, muss dann reloaden" — contentRect liefert
+    // Sub-Pixel-Floats (z.B. 842.3984375), lightweight-charts' interne Spalten-/Canvas-Layout-
+    // Berechnung für die rechte Preisskala verträgt das bei bestimmten Zwischenwerten während
+    // eines laufenden Drags nicht und kollabiert die Preisskala-Spalte dauerhaft auf 0 Breite,
+    // bis zum nächsten vollständigen Remount (Reload). Gerundet auf ganze CSS-Pixel vermeidet das.
+    // Zusätzlich: während eines Fenster-Drags kann der Callback kurzzeitig mit width/height 0
+    // feuern (Fenster momentan nicht gerendert) — ein resize(0, ...) sollte nicht angewendet
+    // werden, das ist derselbe Kollaps-Fall, nur durch eine andere Ursache ausgelöst.
+    const roundedWidth = Math.round(width);
+    const roundedHeight = Math.round(height);
+    if (roundedWidth <= 0 || roundedHeight <= 0) return;
+    chart.resize(roundedWidth, roundedHeight);
     positionGauges();
   });
   resizeObserver.observe(chartContainerRef.value);

@@ -184,7 +184,11 @@ class LiquidityLineRenderer {
       // der Linie einblenden. labelSide "start" (Default) = am Pivot-Ursprung, wie der Debug-
       // Toggle es will; "end" = rechts vom Linienende (siehe Trendanalyse-Toggle); "center-above"/
       // "center-below" = horizontal mittig über/unter der Linie (Chat 2026-07-24, Break of
-      // Structure: "im uptrend über der Linie mittig, im downtrend unter der Linie mittig").
+      // Structure: "im uptrend über der Linie mittig, im downtrend unter der Linie mittig");
+      // "end-above"/"end-below" = rechtsbündig am Linienende, aber ÜBER/UNTER statt AUF der Linie
+      // (Chat 2026-07-27, M5-LQ-Sweep im Trade-Setup: "Label fängt nicht am Ende der Linie an,
+      // sondern endet zusammen mit der Linie" — anders als "end" wächst das Label hier nach LINKS
+      // über die Linie statt nach rechts über den Pane-Rand hinaus, kein Clamp nötig).
       // Chat 2026-07-25: "wenn ich im 1h den chart etwas herauszoome, dann verdecken mir die
       // Labels die Sicht" — sobald die Kerzen zu dünn sind (siehe chartZoom.js), Label weglassen,
       // Linie selbst bleibt unverändert stehen.
@@ -201,6 +205,12 @@ class LiquidityLineRenderer {
           ctx.textBaseline = "middle";
           ctx.textAlign = "left";
           ctx.fillText(this._options.label, Math.min(desiredX, maxX), y);
+        } else if (this._options.labelSide === "end-above" || this._options.labelSide === "end-below") {
+          const endX = Math.max(x1, x2);
+          const above = this._options.labelSide === "end-above";
+          ctx.textBaseline = above ? "bottom" : "top";
+          ctx.textAlign = "right";
+          ctx.fillText(this._options.label, endX, y + (above ? -2 : 2) * scope.verticalPixelRatio);
         } else if (this._options.labelSide === "center-above" || this._options.labelSide === "center-below") {
           const midX = (x1 + x2) / 2;
           const above = this._options.labelSide === "center-above";

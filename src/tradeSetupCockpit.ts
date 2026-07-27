@@ -34,6 +34,10 @@ export interface CockpitState {
     // "A" = eigenes bestätigtes Protected-Pivot, "B" = fractal===ls (Chat 2026-07-26: "möchte es
     // visuell unterschieden haben"), siehe pathType in tradeSetup.js.
     pathType: "A" | "B";
+    // 1..n je Richtung, nur bei aktiver Trade-Setups-Historie gesetzt (siehe computeTradeSetups in
+    // PriceChart.vue) — sonst null. Als "#x" ans Kartenlabel angehängt (siehe buildLines), damit
+    // sich die Karte eindeutig der passenden OB-Box im Chart zuordnen lässt (Chat 2026-07-27).
+    setupNumber: number | null;
     lsPrice: number;
     // Chat 2026-07-22: "im TSC ... bei den relevanten LQ-Leveln das Alter anzeigen" — pivotTime des
     // M5-LQ-Sweeps, nur für die Alters-Anzeige in buildLines, sonst nirgends genutzt.
@@ -113,6 +117,7 @@ export function computeCockpitState(
         dir: last.dir as 1 | -1,
         label: last.label as string,
         pathType: last.pathType as "A" | "B",
+        setupNumber: (last.setupNumber ?? null) as number | null,
         lsPrice: last.ls.price as number,
         lsPivotTime: last.ls.pivotTime as number | undefined,
         obTop: last.obTop as number,
@@ -278,9 +283,12 @@ function buildLines(state: CockpitState, formatPrice: (price: number) => string,
     const age = ageSuffix(state.m5Setup.lsPivotTime, nowSec);
     // "Typ A/B" (Chat 2026-07-26: "möchte es visuell unterschieden haben") — bewusst NICHT in
     // state.m5Setup.label selbst gebacken, das speist auch das OB-Chart-Label (siehe
-    // PriceChart.vue: renderTradeSetupsInternal), das ein anderes Format braucht ("Long A" statt
-    // "Long Setup Typ A").
-    lines.push({ text: `M5 ${state.m5Setup.label} Setup Typ ${state.m5Setup.pathType}`, color, dim: state.locked });
+    // PriceChart.vue: renderTradeSetupsInternal), das ein anderes Format braucht ("Long A #x" statt
+    // "Long Setup Typ A #x"). "#x"-Suffix (Chat 2026-07-27) nur bei aktiver Historie (setupNumber
+    // != null) — matcht den Suffix am OB-Chart-Label, damit sich Karte und Box eindeutig zuordnen
+    // lassen.
+    const numberSuffix = state.m5Setup.setupNumber != null ? ` #${state.m5Setup.setupNumber}` : "";
+    lines.push({ text: `M5 ${state.m5Setup.label} Setup Typ ${state.m5Setup.pathType}${numberSuffix}`, color, dim: state.locked });
     lines.push({ text: `  LQ-Sweep @ ${formatPrice(state.m5Setup.lsPrice)}${age}`, color, dim: state.locked });
     lines.push({ text: `  M5-OB ${formatPrice(state.m5Setup.obBottom)}–${formatPrice(state.m5Setup.obTop)}`, color, dim: state.locked });
   }

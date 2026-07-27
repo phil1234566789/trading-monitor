@@ -1,4 +1,5 @@
 <script setup>
+import { reactive, watch } from "vue";
 import { chartColors, resetChartColors } from "../chartColors.js";
 import { chartLineWidths, resetChartLineWidths } from "../chartLineWidths.js";
 import MetadataPanel from "./MetadataPanel.vue";
@@ -92,28 +93,72 @@ function resetAll() {
   resetChartColors();
   resetChartLineWidths();
 }
+
+// Zu viele Gruppen für einen Blick geworden (Chat 2026-07-27: "so viele configs, dass man bissl
+// suchen muss") — Gruppen sind daher standardmäßig eingeklappt, man öffnet nur die, die man
+// gerade sucht. Zustand persistiert wie chartColors/chartLineWidths (localStorage, deep watch),
+// damit einmal geöffnete Gruppen nicht bei jedem Modal-Öffnen wieder zuklappen.
+const COLLAPSE_STORAGE_KEY = "trading-monitor:styleModalCollapsed";
+
+function loadCollapsedInitial() {
+  const result = {};
+  let saved = {};
+  try {
+    const raw = localStorage.getItem(COLLAPSE_STORAGE_KEY);
+    if (raw) saved = JSON.parse(raw);
+  } catch {
+    saved = {}; // korrupter/fremder Wert -> alle Gruppen zugeklappt starten
+  }
+  for (const group of GROUPS) {
+    result[group.title] = typeof saved[group.title] === "boolean" ? saved[group.title] : true;
+  }
+  return result;
+}
+
+const collapsed = reactive(loadCollapsedInitial());
+
+watch(
+  collapsed,
+  (v) => {
+    try {
+      localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(v));
+    } catch {
+      // localStorage kann fehlschlagen (privater Modus, Quota) -> Zustand gilt nur für die Session.
+    }
+  },
+  { deep: true },
+);
+
+function toggleGroup(title) {
+  collapsed[title] = !collapsed[title];
+}
 </script>
 
 <template>
   <MetadataPanel title="🎨 Chart-Style" @close="emit('close')">
     <button class="style-reset" @click="resetAll">Alle zurücksetzen</button>
     <section v-for="group in GROUPS" :key="group.title" class="style-group">
-      <h3 class="style-group-title">{{ group.title }}</h3>
-      <div v-for="field in group.fields" :key="field.key" class="style-field">
-        <div class="style-field-top">
-          <span class="style-field-label">{{ field.label }}</span>
-          <span class="style-swatch-wrap">
-            <input v-model="chartColors[field.key].hex" type="color" class="style-swatch" />
-            <span class="style-hex">{{ chartColors[field.key].hex }}</span>
-          </span>
-        </div>
-        <div class="style-field-alpha">
-          <input v-model.number="chartColors[field.key].alpha" type="range" min="0" max="1" step="0.01" class="style-alpha-slider" />
-          <span class="style-alpha-value">{{ Math.round(chartColors[field.key].alpha * 100) }}%</span>
-        </div>
-        <div v-if="field.key in chartLineWidths" class="style-field-alpha">
-          <input v-model.number="chartLineWidths[field.key]" type="range" min="0.5" max="5" step="0.5" class="style-alpha-slider" />
-          <span class="style-alpha-value">{{ chartLineWidths[field.key] }}px</span>
+      <h3 class="style-group-title" @click="toggleGroup(group.title)">
+        <span class="style-group-chevron" :class="{ collapsed: collapsed[group.title] }">▾</span>
+        {{ group.title }}
+      </h3>
+      <div v-show="!collapsed[group.title]">
+        <div v-for="field in group.fields" :key="field.key" class="style-field">
+          <div class="style-field-top">
+            <span class="style-field-label">{{ field.label }}</span>
+            <span class="style-swatch-wrap">
+              <input v-model="chartColors[field.key].hex" type="color" class="style-swatch" />
+              <span class="style-hex">{{ chartColors[field.key].hex }}</span>
+            </span>
+          </div>
+          <div class="style-field-alpha">
+            <input v-model.number="chartColors[field.key].alpha" type="range" min="0" max="1" step="0.01" class="style-alpha-slider" />
+            <span class="style-alpha-value">{{ Math.round(chartColors[field.key].alpha * 100) }}%</span>
+          </div>
+          <div v-if="field.key in chartLineWidths" class="style-field-alpha">
+            <input v-model.number="chartLineWidths[field.key]" type="range" min="0.5" max="5" step="0.5" class="style-alpha-slider" />
+            <span class="style-alpha-value">{{ chartLineWidths[field.key] }}px</span>
+          </div>
         </div>
       </div>
     </section>
@@ -154,6 +199,24 @@ function resetAll() {
   text-transform: uppercase;
   letter-spacing: 0.6px;
   color: #565a64;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.style-group-title:hover {
+  color: #9aa0ac;
+}
+
+.style-group-chevron {
+  display: inline-block;
+  transition: transform 0.1s ease;
+}
+
+.style-group-chevron.collapsed {
+  transform: rotate(-90deg);
 }
 
 .style-field {
