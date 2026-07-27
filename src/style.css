@@ -45,6 +45,14 @@ body {
   vertical-align: top;
 }
 
+.trade-row {
+  cursor: pointer;
+}
+
+.trade-row:hover td {
+  background: #1a1e28;
+}
+
 .trade-time {
   color: #787b86;
   font-size: 11px;

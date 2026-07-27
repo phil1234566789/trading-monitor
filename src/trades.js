@@ -22,6 +22,7 @@ export async function fetchTrades(instrument) {
 
   return data.map((row) => ({
     id: row.id,
+    instrument: row.instrument,
     direction: row.direction,
     entryTime: Math.floor(new Date(row.triggered_at).getTime() / 1000),
     entryPrice: row.entry_price,

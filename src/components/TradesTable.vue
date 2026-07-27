@@ -1,9 +1,11 @@
 <script setup>
-import { fmtPrice, fmtDateTime, fmtR } from "../format.js";
+import { fmtPrice, fmtDateTime, fmtR, pricePrecisionForInstrument } from "../format.js";
 
 defineProps({
   trades: { type: Array, required: true },
 });
+
+const emit = defineEmits(["select"]);
 
 const OUTCOME_LABEL = {
   win: "Win",
@@ -32,18 +34,18 @@ function outcomeLabel(t) {
       </tr>
     </thead>
     <tbody>
-      <tr v-for="t in trades" :key="t.id">
+      <tr v-for="t in trades" :key="t.id" class="trade-row" @click="emit('select', t)">
         <td>
           <span class="trade-direction" :class="t.direction">{{ t.direction === "short" ? "Short" : "Long" }}</span>
         </td>
         <td>
-          {{ fmtPrice(t.entryPrice) }}<br />
+          {{ fmtPrice(t.entryPrice, pricePrecisionForInstrument(t.instrument)) }}<br />
           <span class="trade-time">{{ fmtDateTime(t.entryTime) }}</span>
         </td>
-        <td>{{ fmtPrice(t.stopLoss) }}</td>
-        <td>{{ fmtPrice(t.takeProfit) }}</td>
+        <td>{{ fmtPrice(t.stopLoss, pricePrecisionForInstrument(t.instrument)) }}</td>
+        <td>{{ fmtPrice(t.takeProfit, pricePrecisionForInstrument(t.instrument)) }}</td>
         <td v-if="t.exitPrice != null">
-          {{ fmtPrice(t.exitPrice) }}<br />
+          {{ fmtPrice(t.exitPrice, pricePrecisionForInstrument(t.instrument)) }}<br />
           <span class="trade-time">{{ fmtDateTime(t.exitTime) }}</span>
         </td>
         <td v-else>–</td>

@@ -630,7 +630,7 @@ watch(currentSymbol, () => {
   <aside class="trades-panel">
     <h2 class="trades-panel-title">Trades</h2>
     <div class="trades-list">
-      <TradesTable :trades="trades" />
+      <TradesTable :trades="trades" @select="(t) => priceChartRef?.jumpToTrade(t.entryTime, t.exitTime)" />
     </div>
     <TradeStats :trades="trades" />
   </aside>

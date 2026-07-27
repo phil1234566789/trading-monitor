@@ -39,7 +39,7 @@ import {
   fetchOlderCandles as fetchOlderForexCandles,
 } from "../forexCandles.js";
 import { fetchCandlesCached } from "../candleCache.js";
-import { replayFetchToMs, nextCandleAfter } from "../chartTimeUtils.js";
+import { replayFetchToMs, nextCandleAfter, snapToBarTime } from "../chartTimeUtils.js";
 import { useStatusBar } from "../composables/useStatusBar.js";
 import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
 import Gauge from "./Gauge.vue";
@@ -1732,6 +1732,34 @@ defineExpose({
       console.error("Nächste Kerze über eine Lücke hinweg suchen fehlgeschlagen:", err);
       return after + barSeconds;
     }
+  },
+
+  // Für den Klick auf eine Zeile in TradesTable.vue (Chat 2026-07-27: "auf den Trade klicken und
+  // dann im Chart gleich an diese Stelle springen") — bewusst NICHT über Replay gelöst (das würde
+  // alle Kerzen nach dem Trade ausblenden, man will beim Review aber gerade sehen, wie's danach
+  // weiterging), sondern ein einfacher Sprung auf der Zeitachse. Per setVisibleLogicalRange (Bar-
+  // Index) statt setVisibleRange (Zeit) UND mit der aktuell schon eingestellten Zoomweite
+  // (getVisibleLogicalRange) reproduziert — ein fester Bar-Count hätte bei jedem Sprung immer
+  // dieselbe (zu enge) Zoomstufe erzwungen, unabhängig davon, wie weit der User gerade rausgezoomt
+  // hatte (Bug-Report Philip 2026-07-27: "muss immer ein ganzes Stück rauszoomen, Candles zu
+  // riesig"). Nur wenn die aktuelle Zoomweite den Trade selbst (Entry bis Exit) nicht einmal
+  // abdecken würde, wird sie für diesen einen Sprung testweise erweitert.
+  jumpToTrade(entryTime, exitTime) {
+    if (!chart) return;
+    const candles = clipReplay(allCandles);
+    if (candles.length === 0) return;
+    const from = snapToBarTime(candles, entryTime) ?? entryTime;
+    const to = exitTime != null ? (snapToBarTime(candles, exitTime) ?? exitTime) : from;
+    const fromIdx = candles.findIndex((c) => c.time === from);
+    const toIdx = candles.findIndex((c) => c.time === to);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    const centerIdx = (fromIdx + toIdx) / 2;
+    const tradeSpanBars = Math.abs(toIdx - fromIdx);
+    const currentRange = chart.timeScale().getVisibleLogicalRange();
+    const currentBars = currentRange ? currentRange.to - currentRange.from : 100;
+    const halfBars = Math.max(currentBars / 2, tradeSpanBars / 2 + 15);
+    chart.timeScale().setVisibleLogicalRange({ from: centerIdx - halfBars, to: centerIdx + halfBars });
   },
 });
 </script>
