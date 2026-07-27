@@ -7,12 +7,22 @@
 import { ref } from "vue";
 import MetadataPanel from "./MetadataPanel.vue";
 import JsonTree from "./JsonTree.vue";
-import { buildBacktestExport, BACKTEST_ASSETS } from "../backtestExport.js";
+import { buildBacktestExport, BACKTEST_ASSETS, berlinDateStrFor } from "../backtestExport.js";
+import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
+import { fmtDateTime } from "../format.js";
 
 defineEmits(["close"]);
 
+// Gleiche Keys/Defaults wie Dashboard.vue (replayTime/replayActive) — kein eigener State, liest
+// nur den bestehenden Replay-Zustand des Charts, damit "Backtest-Daten generieren" bei aktivem
+// Replay automatisch nur bis zu diesem Zeitpunkt aufdeckt (Philip: "wir tun ja so, als wüssten wir
+// nicht, wie der Tag noch verläuft"). Modal wird bei jedem Öffnen neu gemountet (v-if in App.vue),
+// liest also immer den aktuellen Stand.
+const replayTime = useLocalStorageRef("replayTime", 1783011600);
+const replayActive = useLocalStorageRef("replayActive", false);
+
 const asset = ref(BACKTEST_ASSETS[0]);
-const dateStr = ref(new Date().toISOString().slice(0, 10));
+const dateStr = ref(replayActive.value ? berlinDateStrFor(replayTime.value) : new Date().toISOString().slice(0, 10));
 const loading = ref(false);
 const error = ref(null);
 const result = ref(null);
@@ -24,7 +34,11 @@ async function generate() {
   error.value = null;
   result.value = null;
   try {
-    result.value = await buildBacktestExport({ asset: asset.value, dateStr: dateStr.value });
+    result.value = await buildBacktestExport({
+      asset: asset.value,
+      dateStr: dateStr.value,
+      replayUntilSec: replayActive.value ? replayTime.value : null,
+    });
   } catch (err) {
     error.value = err.message || String(err);
   } finally {
@@ -55,6 +69,10 @@ async function copyResult() {
         {{ loading ? "Lädt…" : "Generieren" }}
       </button>
     </div>
+
+    <p v-if="replayActive" class="backtest-empty backtest-replay-hint">
+      ✂️ Replay aktiv: Daten werden nur bis {{ fmtDateTime(replayTime) }} aufgedeckt.
+    </p>
 
     <p v-if="error" class="backtest-empty backtest-error">{{ error }}</p>
 
@@ -116,6 +134,11 @@ async function copyResult() {
 
 .backtest-error {
   color: #ef5350;
+}
+
+.backtest-replay-hint {
+  color: #ffb74d;
+  margin-bottom: 10px;
 }
 
 .backtest-result-header {
