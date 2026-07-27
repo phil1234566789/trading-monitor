@@ -45,17 +45,23 @@ export interface TradeSetupParams {
   nowTime: number; // Referenzzeitpunkt für maxLookbackSec (i.d.R. Zeit der letzten M5-Kerze)
 }
 
-// Eigene, von detectOrderBlocks() unabhängige 3-Kerzen-FVG-Erkennung — bewusst OHNE Session-
+// Eigene, von detectOrderBlocks() unabhängige 3-Kerzen-FVG-Existenzprüfung — bewusst OHNE Session-
 // Filter/Schwäche-/Cap-Einschränkung (siehe pushSetupOb in tradesetup.pine): für die Setup-
 // Erkennung zählt nur, ob die Preislücke überhaupt existiert, unabhängig von Uhrzeit oder Größe.
+// Box-Konstruktion (top/bottom) folgt seit Bug-Report Philip 2026-07-27 ("das ist die FVG, nicht
+// die M5-OB") derselben Konvention wie detectOrderBlocks() (orderBlocks.ts): C1-Kante bis zur
+// GEGENÜBERLIEGENDEN Kante der Impuls-Kerze (i-1), nicht bis zur aktuellen Kerze (i) — vorher
+// schloss die Box die ganze FVG inklusive Impuls-Kerze ein, statt nur die eigentliche OB-Zone.
+// Ändert NICHT, ob/wann ein Setup erkannt wird (dieselbe Lücken-Bedingung, derselbe Index i,
+// dasselbe startTime) — nur die Zonen-Grenzen werden enger. Siehe JS-Kopie (tradeSetup.js).
 export function detectSetupObs(candles: Candle[]): SetupOb[] {
   const obs: SetupOb[] = [];
   for (let i = 2; i < candles.length; i++) {
     const c1 = candles[i - 2];
     const impulse = candles[i - 1];
     const cur = candles[i];
-    if (c1.low - cur.high > 0) obs.push({ dir: -1, top: c1.low, bottom: cur.high, startTime: impulse.time });
-    if (cur.low - c1.high > 0) obs.push({ dir: 1, top: cur.low, bottom: c1.high, startTime: impulse.time });
+    if (c1.low - cur.high > 0) obs.push({ dir: -1, top: impulse.high, bottom: c1.low, startTime: impulse.time });
+    if (cur.low - c1.high > 0) obs.push({ dir: 1, top: c1.high, bottom: impulse.low, startTime: impulse.time });
   }
   return obs;
 }

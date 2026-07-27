@@ -9,7 +9,7 @@ import { renderNewsMarkers } from "../newsMarkers.js";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { renderPivotMarkers } from "../pivotMarkers";
 import { computeRangesPivots, buildMarketStructureState, renderMarketStructureAnalysis } from "../marketStructureAnalysis";
-import { computeCockpitState, renderTradeSetupCockpit } from "../tradeSetupCockpit";
+import { computeCockpitState } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
@@ -45,11 +45,16 @@ import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js
 import Gauge from "./Gauge.vue";
 import MetadataPanel from "./MetadataPanel.vue";
 import JsonTree from "./JsonTree.vue";
+import TradeSetupCockpit from "./TradeSetupCockpit.vue";
 
 const props = defineProps({
   symbol: { type: String, required: true },
   currentBar: { type: String, required: true },
   trades: { type: Array, default: () => [] },
+  // Ein/Ausblenden der eigenen geloggten Trades (Chat 2026-07-27) — bewusst getrennt von
+  // showTradeSetups (das nur die Live-Erkennung steuert, siehe refreshTradeMarkersInternal/
+  // refreshTradeSetupLinksInternal).
+  showTrades: { type: Boolean, default: true },
   poiZones: { type: Array, default: () => [] },
   showOrderBlocks: { type: Boolean, default: true },
   showHistoricalObs: { type: Boolean, default: false },
@@ -93,14 +98,10 @@ const props = defineProps({
   // sehen, während er noch entsteht.
   replayUntil: { type: Number, default: null },
   // Trade-Setup-Cockpit (siehe Chat 2026-07-19: "wir wollen jetzt step by step alles
-  // zusammenstöpseln") — bündelt H1-Range-Analyse + M5-Trade-Setups in einer Karte im Chart.
-  // showTradeSetupCockpit: an/aus. tradeSetupCockpitAtCandle: Positions-Toggle — false (Default)
-  // = fester Platz rechts/mittig (links von der Preis-Skala), true = neben der letzten Kerze.
+  // zusammenstöpseln") — bündelt H1-Range-Analyse + M5-Trade-Setups in einer Karte im Chart. Seit
+  // Chat 2026-07-27 eine echte Vue-Komponente (TradeSetupCockpit.vue), fester Platz rechts/mittig —
+  // der frühere "neben der letzten Kerze"-Modus ist entfallen (siehe tradeSetupCockpit.ts-Kopfkommentar).
   showTradeSetupCockpit: { type: Boolean, default: true },
-  tradeSetupCockpitAtCandle: { type: Boolean, default: false },
-  // Abstand (CSS-Pixel) zur letzten Kerze im 'candle'-Modus — konfigurierbar seit Chat
-  // 2026-07-19 ("etwas zu eng, am besten Abstand konfigurabel machen"), siehe tradeSetupCockpit.ts.
-  tradeSetupCockpitCandleOffset: { type: Number, default: 24 },
   // Debug-Metadaten-Sammel-Panel (siehe Chat 2026-07-20: "damit ich dir nicht ständig die Daten
   // von dem was ich in TradingView sehe hier schreiben muss") — Toolbar-Unterpunkt bei "Debug".
   showDebugMetadata: { type: Boolean, default: false },
@@ -109,8 +110,12 @@ const props = defineProps({
   // leitet das aus dem Replay-Zeitpunkt ab, analog zu BacktestExportModal.vue).
   claudeAnnotations: { type: Array, default: () => [] },
   claudeAnnotationsDate: { type: String, default: null },
+  // Trade-Modus (Chat 2026-07-27: "damit ich nicht versehentlich in den Chart reinklicke") — nur
+  // wenn aktiv, wertet der Klick-Handler unten Klicks auf Trade-Setup-OB-Boxen aus. Sonst bleibt
+  // ein Klick beim Pan/Zoom-Verhalten von lightweight-charts, wie bisher.
+  tradeModeActive: { type: Boolean, default: false },
 });
-const emit = defineEmits(["close-ranges-metadata", "toggle-tsc-position", "close-debug-metadata"]);
+const emit = defineEmits(["close-ranges-metadata", "close-debug-metadata", "select-setup", "toggle-trade-mode"]);
 
 // CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
 // bleiben Gauges/CVD-Pane komplett weg statt leer. Der Wert steht bei onMounted fest:
@@ -334,8 +339,8 @@ let newsMarkerPrimitives = [];
 // deckungsgleiche Pivots aus beiden Perioden dieselbe Label-Entzerrung durchlaufen.
 let rangesMarkerPrimitives = [];
 let marketStructurePrimitives = [];
-let cockpitPrimitives = [];
 let tradePrimitives = [];
+let tradeSetupLinkPrimitives = [];
 let tradeSetupPrimitives = [];
 let claudeAnnotationPrimitives = [];
 let claudeAnnotationPriceLines = [];
@@ -344,6 +349,12 @@ let allCvdDeltas = [];
 let tradeSetupM5Candles = [];
 let tradeSetupH1Candles = [];
 let currentTradeSetups = [];
+// TSC-Fokus (Chat 2026-07-27: "TSC soll das anzeigen, was ich grad im Fokus hab") — überschreibt,
+// solange gesetzt, computeCockpitState()'s Default ("das jüngste Live-Setup") mit genau EINEM
+// bewusst ausgewählten Setup (Trade-Modus-Klick auf eine OB-Box, oder ein Trade aus der Liste mit
+// verknüpftem trade_setups-Datensatz). null = normales Live-Verhalten. Siehe focusTradeSetup/
+// clearTradeSetupFocus (defineExpose) und den watch auf props.tradeModeActive unten.
+let focusedTradeSetup = null;
 let trendAnalysisM5Candles = [];
 let rangesH1Candles = [];
 let rangesPivots = null; // roh (mit pivotTime), Periode 5 — siehe computeRangesPivotsFor/refreshRangesMarkersInternal
@@ -393,6 +404,12 @@ const liquidityMetadata = ref(null);
 const liquidityEarliestTime = ref(null);
 const tradeSetupsMetadata = ref([]);
 const cockpitMetadata = ref(null);
+// Rohes CockpitState fürs TSC-Rendering (TradeSetupCockpit.vue) — getrennt von cockpitMetadata
+// oben, das über pivotForDisplay bereits fürs Debug-Metadaten-Panel aufbereitet ist (formatierte
+// Zeitstrings statt roher pivotTime/touchedTime-Zahlen, die die TSC-Komponente aber für ihre
+// Alters-Berechnung braucht).
+const cockpitState = ref(null);
+const cockpitNowSec = ref(undefined);
 const structureEarliestTime = ref(null);
 
 // Nur die Abschnitte der gerade angetoggelten Features (siehe Chat 2026-07-20: "nur metadaten von
@@ -581,8 +598,40 @@ function replayToMs(bar) {
 }
 
 function refreshTradeMarkersInternal() {
-  const trades = TRADE_MARKER_BARS.has(props.currentBar) ? props.trades : [];
+  const trades = props.showTrades && TRADE_MARKER_BARS.has(props.currentBar) ? props.trades : [];
   renderTradeMarkers(candleSeries, trades, tradePrimitives, clipReplay(allCandles));
+}
+
+// Zeigt die M5-OB, mit der ein geloggter Trade verknüpft ist (Chat 2026-07-27: "ich hab
+// Trade-Setups ausgeblendet, aber die OB des Shorts wurde nicht angezeigt") — bewusst UNABHÄNGIG
+// von showTradeSetups (das steuert nur die laufende Live-Erkennung/das "Rauschen" der ständig neu
+// erkannten Setups): ein bereits geloggter Trade ist kein Rauschen, den will man auch sehen können,
+// wenn die Live-Setups gerade ausgeblendet sind. Label "#<trade_setup_id>" matcht 1:1 die "Setup"-
+// Spalte in TradesTable.vue, damit sich Tabellenzeile und Chart-Box eindeutig zuordnen lassen.
+function refreshTradeSetupLinksInternal() {
+  for (const p of tradeSetupLinkPrimitives) candleSeries.detachPrimitive(p);
+  tradeSetupLinkPrimitives.length = 0;
+  if (!isForex || !props.showTrades) return;
+  const candles = clipReplay(allCandles);
+  for (const t of props.trades) {
+    if (t.tradeSetupId == null || t.tradeSetupObStartTime == null || t.setupEntry == null || t.invalidation == null) continue;
+    const top = Math.max(t.setupEntry, t.invalidation);
+    const bottom = Math.min(t.setupEntry, t.invalidation);
+    const key = t.direction === "short" ? "tradeSetupShort" : "tradeSetupLong";
+    const primitive = new OrderBlockPrimitive(
+      { top, bottom, startTime: t.tradeSetupObStartTime, endTime: t.tradeSetupObStartTime + TRADE_SETUP_OB_WIDTH_SEC },
+      {
+        fillColor: cssColorScaled(key, TRADE_SETUP_OB_FILL_RATIO),
+        borderColor: cssColorScaled(key, TRADE_SETUP_OB_BORDER_RATIO),
+        borderWidth: lineWidth(key),
+        textColor: "rgba(255, 255, 255, 0.9)",
+        label: `#${t.tradeSetupId}`,
+      },
+      candles,
+    );
+    candleSeries.attachPrimitive(primitive);
+    tradeSetupLinkPrimitives.push(primitive);
+  }
 }
 
 function refreshClaudeAnnotationsInternal() {
@@ -815,7 +864,7 @@ function refreshCockpitInternal() {
   if (!isForex || !chart) return; // async loadTradeSetupM5/-H1 können nach unmount noch abschließen
   const candles = clipReplay(allCandles);
   if (!props.showTradeSetupCockpit || candles.length === 0) {
-    renderTradeSetupCockpit(candleSeries, null, cockpitPrimitives, candles);
+    cockpitState.value = null;
     cockpitMetadata.value = null;
     return;
   }
@@ -829,16 +878,14 @@ function refreshCockpitInternal() {
   // News-Events kommen fertig aus der DB (siehe newsEvents.js) — Philip trägt sie per Screenshot
   // ein, hier nur noch der reine "ist gerade eins relevant für dieses Instrument"-Check.
   const newsNoGo = currentNewsNoGo(newsEvents, props.symbol, nowSec);
-  const state = computeCockpitState(marketStructureState.value, currentTradeSetups, sessionDanger, newsNoGo);
-  const precision = pricePrecisionForInstrument(props.symbol);
-  renderTradeSetupCockpit(candleSeries, state, cockpitPrimitives, candles, {
-    mode: props.tradeSetupCockpitAtCandle ? "candle" : "fixed",
-    formatPrice: (price) => fmtPrice(price, precision),
-    candleOffset: props.tradeSetupCockpitCandleOffset,
-    // "Alter"-Anzeige an den LQ-Sweep-Zeilen (Chat 2026-07-22) — im Replay bezogen auf replayUntil,
-    // nicht die echte Uhrzeit, sonst wäre das Alter während des Testens falsch/inkonsistent.
-    nowSec,
-  });
+  // Fokus (falls gesetzt) statt der Live-Liste — computeCockpitState nimmt ohnehin nur das letzte
+  // Element als "aktuell relevantes" Setup, ein Ein-Element-Array reicht also, um sie umzulenken.
+  const tradeSetupsForCockpit = focusedTradeSetup ? [focusedTradeSetup] : currentTradeSetups;
+  const state = computeCockpitState(marketStructureState.value, tradeSetupsForCockpit, sessionDanger, newsNoGo);
+  // "Alter"-Anzeige an den LQ-Sweep-Zeilen (Chat 2026-07-22) — im Replay bezogen auf replayUntil,
+  // nicht die echte Uhrzeit, sonst wäre das Alter während des Testens falsch/inkonsistent.
+  cockpitNowSec.value = nowSec;
+  cockpitState.value = state;
   cockpitMetadata.value = {
     h1Trend: state.h1Trend,
     h1Weakening: state.h1Weakening,
@@ -985,6 +1032,30 @@ function tradeSetupObBoxBounds(setup) {
   return setup.dir === 1
     ? { top: setup.fractal.price, bottom: setup.obTop }
     : { top: setup.obBottom, bottom: setup.fractal.price };
+}
+
+// Trade-Modus-Klick-Hittest (Chat 2026-07-27) — testet gegen genau die Box, die renderTradeSetupsInternal
+// tatsächlich zeichnet (tradeSetupObBoxBounds + obStartTime/-breite), nicht gegen setup.obTop/obBottom
+// direkt (das ist der rohe M5-OB, der für setupEntry/invalidation gebraucht wird, aber optisch eine
+// andere Fläche als die gezeichnete Box sein kann). Respektiert dieselben Sichtbarkeits-Filter wie
+// renderTradeSetupsInternal (Long/Short-Toggle, Replay-Cutoff) — man soll nichts anklicken können,
+// was gerade gar nicht gezeichnet ist.
+function findClickedSetup(param) {
+  if (!param.point || !candleSeries || !chart) return null;
+  const price = candleSeries.coordinateToPrice(param.point.y);
+  const time = chart.timeScale().coordinateToTime(param.point.x);
+  if (price == null || time == null) return null;
+  return (
+    currentTradeSetups.find((s) => {
+      if (props.replayUntil != null && s.fractal.pivotTime > props.replayUntil) return false;
+      if (s.dir === 1 && !props.showTradeSetupsShort) return false;
+      if (s.dir === -1 && !props.showTradeSetupsLong) return false;
+      const { top, bottom } = tradeSetupObBoxBounds(s);
+      const inTime = time >= s.obStartTime && time <= s.obStartTime + TRADE_SETUP_OB_WIDTH_SEC;
+      const inPrice = price <= top && price >= bottom;
+      return inTime && inPrice;
+    }) ?? null
+  );
 }
 
 // Positioniert die aktuell erkannten Setups (currentTradeSetups) gegen `allCandles` (den
@@ -1216,6 +1287,7 @@ function refreshChart() {
   refreshSessionsInternal();
   refreshNewsMarkersInternal();
   refreshTradeMarkersInternal();
+  refreshTradeSetupLinksInternal();
   refreshClaudeAnnotationsInternal();
   renderTradeSetupsInternal();
   refreshRangesMarkersInternal();
@@ -1377,6 +1449,12 @@ onMounted(() => {
       timeVisible: true,
       secondsVisible: false,
       tickMarkFormatter,
+      // Bug-Report Philip 2026-07-27: "die neueste Kerze wird nach ganz rechts auf die Y-Achse
+      // hingemacht, ich muss jedesmal den Chart etwas verschieben" — Default (0) lässt die letzte
+      // Kerze exakt an der Preisskala kleben. Ein paar Bar-Breiten Leerraum rechts, gleichzeitig
+      // ungefähr der Bereich, in dem die TSC-Karte sitzt (siehe TradeSetupCockpit.vue), damit sie
+      // nicht direkt über den jüngsten Kerzen hängt.
+      rightOffset: 70,
     },
     localization: {
       timeFormatter: crosshairTimeFormatter,
@@ -1438,14 +1516,28 @@ onMounted(() => {
     });
   }
 
-  // Positions-Toggle-Badge auf der TSC-Karte (siehe tradeSetupCockpit.ts: CockpitRenderer/
-  // TradeSetupCockpitPrimitive.hitTestToggle) — param.point liegt in CSS-Pixeln, genau wie die dort
-  // gespeicherte hitBox. Zusätzlich zum Toolbar-Dropdown (Dashboard.vue), nicht als Ersatz.
   chart.subscribeClick((param) => {
     if (!param.point) return;
-    if (cockpitPrimitives.some((p) => p.hitTestToggle(param.point))) {
-      emit("toggle-tsc-position");
+    // Trade-Modus (Chat 2026-07-27): Klick auf eine Trade-Setup-OB-Box -> sofort im TSC fokussieren
+    // (unmittelbares Feedback, noch bevor irgendein Formular offen ist) und ans Dashboard
+    // durchreichen, das das Übernahme-Formular öffnet.
+    if (props.tradeModeActive) {
+      const setup = findClickedSetup(param);
+      if (setup) {
+        focusedTradeSetup = setup;
+        refreshCockpitInternal();
+        emit("select-setup", setup);
+      }
     }
+  });
+
+  // Cursor-Feedback im Trade-Modus (Chat 2026-07-27: "Mouse Pointer ändern, wenn was klickbar
+  // ist") — dieselbe Hittest-Funktion wie beim Klick, nur auf jede Mausbewegung statt nur den
+  // eigentlichen Klick angewendet. Außerhalb des Trade-Modus bleibt der Cursor unangetastet
+  // (normales Pan/Zoom-Verhalten von lightweight-charts).
+  chart.subscribeCrosshairMove((param) => {
+    if (!chartContainerRef.value) return;
+    chartContainerRef.value.style.cursor = props.tradeModeActive && param.point && findClickedSetup(param) ? "pointer" : "";
   });
 
   resizeObserver = new ResizeObserver((entries) => {
@@ -1548,7 +1640,10 @@ watch(() => props.currentBar, () => {
   loadInitial();
   scheduleNextPoll(); // neuer Timeframe -> neue Kerzenschluss-Taktung, siehe dort
 });
-watch(() => props.trades, refreshTradeMarkersInternal);
+watch([() => props.trades, () => props.showTrades], () => {
+  refreshTradeMarkersInternal();
+  refreshTradeSetupLinksInternal();
+});
 watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 watch(() => props.poiZones, refreshPoiZonesInternal);
 watch(() => props.showOrderBlocks, refreshPoiZonesInternal);
@@ -1593,6 +1688,22 @@ watch(() => props.ranges2LookbackHours, () => {
 watch([() => props.rangesFixedStartActive, () => props.rangesFixedStartTime], () => {
   if (rangesNeedsData()) loadRangesCandles();
 });
+
+// TSC-Fokus endet, sobald der Trade-Modus verlassen wird (Chat 2026-07-27, Philips Wahl unter den
+// möglichen Optionen) — ein per Listen-Klick gesetzter Fokus (siehe focusTradeSetup unten) bleibt
+// davon unberührt, der hängt nicht am Trade-Modus.
+watch(
+  () => props.tradeModeActive,
+  (active) => {
+    if (!active) {
+      if (focusedTradeSetup) {
+        focusedTradeSetup = null;
+        refreshCockpitInternal();
+      }
+      if (chartContainerRef.value) chartContainerRef.value.style.cursor = "";
+    }
+  },
+);
 watch([() => props.rangesPeriod, () => props.ranges2Period], () => {
   if (rangesH1Candles.length > 0) refreshRangesInternal();
 });
@@ -1620,7 +1731,6 @@ watch(() => props.showTradeSetupCockpit, () => {
   refreshRangesPollingState();
   refreshCockpitInternal();
 });
-watch(() => [props.tradeSetupCockpitAtCandle, props.tradeSetupCockpitCandleOffset], refreshCockpitInternal);
 // Debug-Metadaten-Panel: activeMetadataSnapshot ist bewusst KEIN computed() (siehe dort) und muss
 // deshalb explizit nachgezogen werden — nicht nur am Ende von refreshChart() (das läuft nicht bei
 // jedem einzelnen Toggle-Klick, siehe die spezifischeren Watcher oben), sondern auch direkt beim
@@ -1761,6 +1871,20 @@ defineExpose({
     const halfBars = Math.max(currentBars / 2, tradeSpanBars / 2 + 15);
     chart.timeScale().setVisibleLogicalRange({ from: centerIdx - halfBars, to: centerIdx + halfBars });
   },
+
+  // Für den Klick auf eine Zeile in TradesTable.vue (Chat 2026-07-27: TSC-Fokus soll auch für
+  // einen Trade aus der Liste funktionieren, nicht nur für einen frisch im Trade-Modus
+  // angeklickten Live-Setup) — Dashboard.vue reicht hier ein bereits ins m5Setup-Format gebrachtes
+  // Objekt rein (siehe tradeIntake.js/shapeTradeSetupRow), computeCockpitState liest beide Quellen
+  // identisch.
+  focusTradeSetup(setup) {
+    focusedTradeSetup = setup;
+    refreshCockpitInternal();
+  },
+  clearTradeSetupFocus() {
+    focusedTradeSetup = null;
+    refreshCockpitInternal();
+  },
 });
 </script>
 
@@ -1775,6 +1899,14 @@ defineExpose({
       <Gauge id="window" :value="windowDelta" label="Δ 15m" />
       <Gauge id="daily" :value="dailyDelta" label="Δ Tag (UTC)" />
     </div>
+    <TradeSetupCockpit
+      v-if="isForex"
+      :state="cockpitState"
+      :now-sec="cockpitNowSec"
+      :instrument="symbol"
+      :trade-mode-active="tradeModeActive"
+      @toggle-trade-mode="emit('toggle-trade-mode')"
+    />
     <MetadataPanel v-if="showRangesMetadata" title="Structure-Metadaten" @close="emit('close-ranges-metadata')">
       <div class="metadata-subheading-row">
         <h4 class="metadata-subheading">Structure-State</h4>

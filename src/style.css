@@ -103,3 +103,24 @@ body {
 .trade-outcome.invalid {
   color: #787b86;
 }
+
+.trade-setup-cell {
+  font-family: "Courier New", monospace;
+  color: #787b86;
+  font-size: 11px;
+}
+
+.trade-link-btn {
+  background: transparent;
+  border: none;
+  color: #565a64;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 4px;
+  opacity: 0.6;
+}
+
+.trade-link-btn:hover {
+  opacity: 1;
+  color: #7ea6ff;
+}

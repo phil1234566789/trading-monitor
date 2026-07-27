@@ -6,9 +6,11 @@ import TradeStats from "../components/TradeStats.vue";
 import StyleModal from "../components/StyleModal.vue";
 import SessionsModal from "../components/SessionsModal.vue";
 import NewsModal from "../components/NewsModal.vue";
+import TakeTradeModal from "../components/TakeTradeModal.vue";
 import { TIMEFRAMES } from "../timeframes.js";
 import { berlinDateStrFor } from "../backtestExport.js";
 import { fetchTrades } from "../trades.js";
+import { fetchTradeSetupForCockpit, linkTradeToSetup, directionForSetup } from "../tradeIntake.js";
 import { fetchPoiZones } from "../poiZones.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
@@ -50,6 +52,9 @@ const showLiquidity = useLocalStorageRef("showLiquidity", true);
 const showLiquidityDebug = useLocalStorageRef("showLiquidityDebug", false);
 const showSweptLiquidity = useLocalStorageRef("showSweptLiquidity", false);
 const showTradeSetups = useLocalStorageRef("showTradeSetups", true);
+// Ein/Ausblenden der eigenen geloggten Trades (Entry/Exit-Marker + verlinkte M5-OB/FVG-Box) —
+// Chat 2026-07-27: eigener Toggle, unabhängig von showTradeSetups (siehe Kommentar im Template).
+const showTrades = useLocalStorageRef("showTrades", true);
 // Anzahl vergangener Setups je Richtung, analog zu tradeSetupHistoryCountShort/Long im
 // tv-indikator (dort default 5, 0-50) — 0 zeigt nur das gerade aktive/letzte Setup.
 const tradeSetupHistoryCount = useLocalStorageRef("tradeSetupHistoryCount", 5);
@@ -135,17 +140,63 @@ const claudeAnnotationsDate = computed(() =>
   replayActive.value ? berlinDateStrFor(replayTime.value) : berlinDateStrFor(Math.floor(Date.now() / 1000)),
 );
 // Trade-Setup-Cockpit (siehe Chat 2026-07-19: "wir wollen jetzt step by step alles
-// zusammenstöpseln") — bündelt H1-Range-Analyse + M5-Trade-Setups in einer Karte im Chart.
-// tradeSetupCockpitAtCandle ist der Positions-Toggle (fester Platz vs. neben der letzten Kerze).
+// zusammenstöpseln") — bündelt H1-Range-Analyse + M5-Trade-Setups in einer Karte im Chart. Seit
+// Chat 2026-07-27 eine echte Vue-Komponente mit festem Platz — der frühere "neben der letzten
+// Kerze"-Positionsmodus (und sein Abstands-Regler) ist entfallen, siehe TradeSetupCockpit.vue.
 const showTradeSetupCockpit = useLocalStorageRef("showTradeSetupCockpit", true);
-const tradeSetupCockpitAtCandle = useLocalStorageRef("tradeSetupCockpitAtCandle", false);
-// Abstand zur letzten Kerze im "neben Kerze"-Modus, konfigurierbar (siehe Chat 2026-07-19: "etwas
-// zu eng, am besten Abstand konfigurabel machen") — siehe tradeSetupCockpit.ts: DEFAULT_CANDLE_OFFSET.
-const tradeSetupCockpitCandleOffset = useLocalStorageRef("tradeSetupCockpitCandleOffset", 24);
 // Style-Modal (Farben aller Chart-Indikatoren, siehe StyleModal.vue/chartColors.js) — reiner
 // Öffnen/Schließen-Zustand, NICHT in localStorage (die Farben selbst persistieren bereits über
 // den chartColors-Singleton, das Modal muss nicht offen bleiben).
 const showStyleModal = ref(false);
+// Trade-Modus (Chat 2026-07-27: "damit ich nicht versehentlich in den Chart reinklicke, evtl.
+// Buttons einbauen") — bewusst NICHT persistiert (useLocalStorageRef), ein Reload soll immer im
+// harmlosen Navigieren-Modus starten, nicht mitten im Trade-Modus von der letzten Session.
+const tradeModeActive = ref(false);
+const selectedSetupForTrade = ref(null);
+// Retrofit-Verknüpfung (Chat 2026-07-27: "gibst du mir die Möglichkeit, das im Nachhinein
+// zuzuordnen?") — TradesTable.vue's 🔗-Button armt hierüber "der nächste OB-Klick im Trade-Modus
+// verknüpft DIESEN Trade" statt ein neues Trade-Übernahme-Formular zu öffnen.
+const linkTargetTrade = ref(null);
+function onLinkRequest(t) {
+  linkTargetTrade.value = t;
+  tradeModeActive.value = true;
+}
+// Verlassen des Trade-Modus räumt eine noch "scharfe" Verknüpfung mit ab — sonst würde ein
+// späteres Wieder-Reinklicken in den Trade-Modus (für einen ganz anderen Zweck) unerwartet den
+// alten Trade verknüpfen.
+watch(tradeModeActive, (active) => {
+  if (!active) linkTargetTrade.value = null;
+});
+async function onSelectSetup(setup) {
+  if (linkTargetTrade.value) {
+    const trade = linkTargetTrade.value;
+    linkTargetTrade.value = null;
+    // Richtung muss passen — sonst tippt ein Klick daneben eine falsche Verknüpfung rein, ohne
+    // dass es auffällt (kein eigenes Modal hier, das man sonst als Rückfrage nutzen könnte).
+    if (directionForSetup(setup) !== trade.direction) {
+      console.error("Setup-Richtung passt nicht zum Trade (", trade.direction, "vs.", directionForSetup(setup), ") — keine Verknüpfung vorgenommen.");
+      return;
+    }
+    const ok = await linkTradeToSetup(trade.id, currentSymbol.value, setup);
+    if (ok) refreshTrades();
+    return;
+  }
+  selectedSetupForTrade.value = setup;
+}
+
+// Klick auf eine Zeile in TradesTable.vue: springt im Chart hin (siehe jumpToTrade, Chat
+// 2026-07-27, erste Runde) UND fokussiert den TSC auf das verknüpfte Trade-Setup, falls
+// vorhanden — kein trade_setup_id (älterer/manueller Trade ohne Verknüpfung) räumt einen evtl.
+// noch aktiven Fokus einfach ab, statt eine veraltete Karte stehen zu lassen.
+async function onSelectTrade(t) {
+  priceChartRef.value?.jumpToTrade(t.entryTime, t.exitTime);
+  if (t.tradeSetupId == null) {
+    priceChartRef.value?.clearTradeSetupFocus();
+    return;
+  }
+  const setup = await fetchTradeSetupForCockpit(t.tradeSetupId);
+  if (setup) priceChartRef.value?.focusTradeSetup(setup);
+}
 // Debug-Metadaten-Sammel-Panel (siehe Chat 2026-07-20: "damit ich dir nicht ständig die Daten von
 // dem was ich in TradingView sehe hier schreiben muss") — Unterpunkt bei "Debug", analog zu
 // showRangesMetadata persistiert (bleibt über einen Reload offen, falls man gerade aktiv vergleicht).
@@ -377,7 +428,7 @@ watch(currentSymbol, () => {
 
       <div class="toggle-group">
         <button :class="{ active: showTradeSetups }" @click="showTradeSetups = !showTradeSetups">
-          Trade-Setups
+          Trades
         </button>
         <button
           class="toggle-caret"
@@ -388,11 +439,21 @@ watch(currentSymbol, () => {
           ▾
         </button>
         <div v-if="tradeSetupsMenuOpen" class="toggle-dropdown">
+          <!-- Bewusst NICHT an showTradeSetups (den Toggle oben) gekoppelt (Chat 2026-07-27:
+               "ich hab Trade-Setups ausgeblendet, aber die OB des Shorts wurde nicht angezeigt")
+               — geloggte Trades sind kein Live-Erkennungs-Rauschen, sollen also unabhängig davon
+               ein-/ausblendbar bleiben. -->
+          <button :class="{ active: showTrades }" @click="showTrades = !showTrades">
+            Trades
+          </button>
+
+          <div class="toggle-dropdown-divider"></div>
+
           <button :class="{ active: showTradeSetupsLong }" @click="showTradeSetupsLong = !showTradeSetupsLong">
-            Long
+            Long Setups
           </button>
           <button :class="{ active: showTradeSetupsShort }" @click="showTradeSetupsShort = !showTradeSetupsShort">
-            Short
+            Short Setups
           </button>
           <label class="ranges-lookback-field">
             Historie
@@ -411,19 +472,6 @@ watch(currentSymbol, () => {
           <button :class="{ active: showTradeSetupCockpit }" @click="showTradeSetupCockpit = !showTradeSetupCockpit">
             TSC
           </button>
-          <button :class="{ active: tradeSetupCockpitAtCandle }" @click="tradeSetupCockpitAtCandle = !tradeSetupCockpitAtCandle">
-            TSC neben Kerze
-          </button>
-          <label v-if="tradeSetupCockpitAtCandle" class="ranges-lookback-field">
-            Abstand
-            <input
-              v-model.number="tradeSetupCockpitCandleOffset"
-              type="number"
-              min="0"
-              class="ranges-lookback-input"
-              title="Abstand (Pixel) zwischen letzter Kerze und TSC-Karte im Modus 'Neben Kerze'"
-            />
-          </label>
         </div>
       </div>
 
@@ -559,6 +607,16 @@ watch(currentSymbol, () => {
         </button>
       </div>
 
+      <div class="trade-mode-switcher" :class="{ 'trade-mode-active': tradeModeActive }">
+        <button :class="{ active: !tradeModeActive }" title="Chart normal bedienen (Pan/Zoom)" @click="tradeModeActive = false">
+          🖐 Navigieren
+        </button>
+        <button :class="{ active: tradeModeActive }" title="Auf ein Trade-Setup klicken, um es als Trade zu übernehmen" @click="tradeModeActive = true">
+          🎯 Trade-Modus
+        </button>
+        <span v-if="linkTargetTrade" class="trade-link-armed">🔗 nächster Klick verknüpft Trade #{{ linkTargetTrade.id }}</span>
+      </div>
+
       <div class="toggle-group">
         <button :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
           Debug
@@ -587,6 +645,13 @@ watch(currentSymbol, () => {
   <StyleModal v-if="showStyleModal" @close="showStyleModal = false" />
   <SessionsModal v-if="showSessionsModal" :instrument="currentSymbol" @close="showSessionsModal = false" />
   <NewsModal v-if="showNewsModal" @close="showNewsModal = false" />
+  <TakeTradeModal
+    v-if="selectedSetupForTrade"
+    :instrument="currentSymbol"
+    :setup="selectedSetupForTrade"
+    @close="selectedSetupForTrade = null"
+    @saved="refreshTrades"
+  />
 
   <PriceChart
     ref="priceChartRef"
@@ -594,6 +659,7 @@ watch(currentSymbol, () => {
     :symbol="currentSymbol"
     :current-bar="currentBar"
     :trades="trades"
+    :show-trades="showTrades"
     :poi-zones="poiZones"
     :show-order-blocks="showOrderBlocks"
     :show-historical-obs="showHistoricalObs"
@@ -616,21 +682,21 @@ watch(currentSymbol, () => {
     :show-news="showNews"
     :show-sessions="showSessions"
     :show-trade-setup-cockpit="showTradeSetupCockpit"
-    :trade-setup-cockpit-at-candle="tradeSetupCockpitAtCandle"
-    :trade-setup-cockpit-candle-offset="tradeSetupCockpitCandleOffset"
     :replay-until="replayUntil"
     :show-debug-metadata="showDebugMetadata"
     :claude-annotations="visibleClaudeAnnotations"
     :claude-annotations-date="claudeAnnotationsDate"
+    :trade-mode-active="tradeModeActive"
     @close-ranges-metadata="showRangesMetadata = false"
-    @toggle-tsc-position="tradeSetupCockpitAtCandle = !tradeSetupCockpitAtCandle"
     @close-debug-metadata="showDebugMetadata = false"
+    @select-setup="onSelectSetup"
+    @toggle-trade-mode="tradeModeActive = !tradeModeActive"
   />
 
   <aside class="trades-panel">
     <h2 class="trades-panel-title">Trades</h2>
     <div class="trades-list">
-      <TradesTable :trades="trades" @select="(t) => priceChartRef?.jumpToTrade(t.entryTime, t.exitTime)" />
+      <TradesTable :trades="trades" @select="onSelectTrade" @link-request="onLinkRequest" />
     </div>
     <TradeStats :trades="trades" />
   </aside>
@@ -649,10 +715,23 @@ watch(currentSymbol, () => {
 
 .symbol-switcher,
 .timeframe-switcher,
+.trade-mode-switcher,
 .drawing-toggles {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+/* Eigener Rand statt nur "active"-Button-Highlight (Chat 2026-07-27: Trade-Modus ändert, was ein
+   Chart-Klick tut — soll auffallen, nicht nur wie ein normaler Anzeige-Toggle aussehen). */
+.trade-mode-switcher {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.trade-mode-switcher.trade-mode-active {
+  border-color: rgba(255, 179, 0, 0.6);
 }
 
 .drawing-toggles {
@@ -667,6 +746,7 @@ watch(currentSymbol, () => {
 
 .symbol-switcher button,
 .timeframe-switcher button,
+.trade-mode-switcher button,
 .drawing-toggles button {
   background: transparent;
   border: none;
@@ -679,6 +759,7 @@ watch(currentSymbol, () => {
 
 .symbol-switcher button:hover,
 .timeframe-switcher button:hover,
+.trade-mode-switcher button:hover,
 .drawing-toggles button:hover {
   background: #2a2e39;
   color: #d1d4dc;
@@ -689,6 +770,25 @@ watch(currentSymbol, () => {
 .drawing-toggles button.active {
   background: #2962ff;
   color: #fff;
+}
+
+.trade-mode-switcher button.active {
+  background: #2962ff;
+  color: #fff;
+}
+
+.trade-mode-switcher.trade-mode-active button.active {
+  background: rgba(255, 179, 0, 0.9);
+  color: #131722;
+}
+
+.trade-link-armed {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: rgba(255, 179, 0, 0.9);
+  padding: 0 6px;
+  white-space: nowrap;
 }
 
 .toggle-group {

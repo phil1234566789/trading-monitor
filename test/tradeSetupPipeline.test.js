@@ -41,8 +41,11 @@ const SCENARIOS = [
       lsPrice: 1.33314,
       lsPivotTime: 1783327500,
       lsTouchedTime: 1783501800,
-      obTop: 1.33453,
-      obBottom: 1.33429,
+      // obTop/obBottom seit Bug-Report Philip 2026-07-27 ("das ist die FVG, nicht die M5-OB")
+      // enger — Box geht jetzt bis zur Impuls-Kerzen-Kante statt bis zur aktuellen Kerze, siehe
+      // detectSetupObs. Setup-Erkennung selbst (ls.pivotTime/obStartTime) unverändert.
+      obTop: 1.33429,
+      obBottom: 1.3341,
       obStartTime: 1783503900,
       isPathB: true,
     },
@@ -62,8 +65,11 @@ const SCENARIOS = [
       lsPrice: 1.34579,
       lsPivotTime: 1784516700,
       lsTouchedTime: 1784530800,
-      obTop: 1.34633,
-      obBottom: 1.34619,
+      // obTop/obBottom seit Bug-Report Philip 2026-07-27 ("das ist die FVG, nicht die M5-OB")
+      // enger — Box geht jetzt bis zur Impuls-Kerzen-Kante statt bis zur aktuellen Kerze, siehe
+      // detectSetupObs. Setup-Erkennung selbst (ls.pivotTime/obStartTime) unverändert.
+      obTop: 1.34619,
+      obBottom: 1.34567,
       obStartTime: 1784530800,
       isPathB: true,
     },
@@ -92,8 +98,11 @@ const SCENARIOS = [
       lsPrice: 1.33292,
       lsPivotTime: 1783321200,
       lsTouchedTime: 1783501200,
-      obTop: 1.33453,
-      obBottom: 1.33429,
+      // obTop/obBottom seit Bug-Report Philip 2026-07-27 ("das ist die FVG, nicht die M5-OB")
+      // enger — Box geht jetzt bis zur Impuls-Kerzen-Kante statt bis zur aktuellen Kerze, siehe
+      // detectSetupObs. Setup-Erkennung selbst (ls.pivotTime/obStartTime) unverändert.
+      obTop: 1.33429,
+      obBottom: 1.3341,
       obStartTime: 1783503900,
       isPathB: false,
     },
