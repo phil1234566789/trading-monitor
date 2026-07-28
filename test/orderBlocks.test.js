@@ -38,14 +38,29 @@ describe("detectOrderBlocks — HTF (kein/unbekannter Timeframe, Prozent-Schwell
 });
 
 describe("detectOrderBlocks — Lower-TF (1m/3m/5m, Pip-Schwelle statt Prozent)", () => {
-  it("legt KEINE Zone an, wenn die Lücke unter 1 Pip liegt", () => {
-    const gapAbs = 0.5 * 0.0001; // 0,5 Pip
+  // M5-Minimum am 2026-07-28 von 1 auf 0,5 Pip gesenkt (Bug-Report: eine 0,7-Pip-FVG auf
+  // EURUSD wurde vom 1-Pip-Minimum verschluckt) — M1/M3 blieben bei 1 Pip.
+  it("5m: legt KEINE Zone an, wenn die Lücke unter 0,5 Pip liegt", () => {
+    const gapAbs = 0.3 * 0.0001; // 0,3 Pip
     expect(detectOrderBlocks(candlesWithBullGap(gapAbs), "5m")).toEqual([]);
   });
 
-  it("legt eine Zone an, sobald die Lücke (mindestens) 1 Pip erreicht", () => {
-    const gapAbs = 1.01 * 0.0001; // knapp über 1 Pip statt exakt an der Grenze (Floating-Point)
+  it("5m: legt eine Zone an, sobald die Lücke (mindestens) 0,5 Pip erreicht", () => {
+    const gapAbs = 0.51 * 0.0001; // knapp über 0,5 Pip statt exakt an der Grenze (Floating-Point)
     const zones = detectOrderBlocks(candlesWithBullGap(gapAbs), "5m");
+    expect(zones).toHaveLength(1);
+    expect(zones[0].dir).toBe(1);
+  });
+
+  it("1m/3m: legt KEINE Zone an, wenn die Lücke unter 1 Pip liegt (Minimum dort unverändert)", () => {
+    const gapAbs = 0.5 * 0.0001; // 0,5 Pip — reicht auf 5m mittlerweile, auf 1m/3m nicht
+    expect(detectOrderBlocks(candlesWithBullGap(gapAbs), "1m")).toEqual([]);
+    expect(detectOrderBlocks(candlesWithBullGap(gapAbs), "3m")).toEqual([]);
+  });
+
+  it("1m/3m: legt eine Zone an, sobald die Lücke (mindestens) 1 Pip erreicht", () => {
+    const gapAbs = 1.01 * 0.0001; // knapp über 1 Pip statt exakt an der Grenze (Floating-Point)
+    const zones = detectOrderBlocks(candlesWithBullGap(gapAbs), "1m");
     expect(zones).toHaveLength(1);
     expect(zones[0].dir).toBe(1);
   });

@@ -23,8 +23,10 @@ const WEAK_PCT = 0.15; // Gap kleiner als das gilt als "schwach" (blasser darges
 // auf M5 durchaus tradebar ist. Statt komplett ohne Minimum (wie im Pine-Original) verlangt Philip
 // explizit "mindestens 1 Pip" — ein Pip-Minimum statt Prozent, weil % vom Preis bei GBPUSD/EURUSDs
 // enger Range (~1.3) für M5-Lücken viel zu grob ist (0,05% sind hier ~6-7 Pip).
+// M5 auf 0,5 Pip abgesenkt (Bug-Report Philip 2026-07-28: eine 0,7-Pip-FVG um 12:30 EURUSD wurde
+// vom 1-Pip-Minimum verschluckt) — M1/M3 bleiben bei 1 Pip, da nicht Anlass des Reports.
 const LOWER_TF_LABELS = new Set(["1m", "3m", "5m"]);
-const LOWER_TF_MIN_GAP_PIPS = 1;
+const LOWER_TF_MIN_GAP_PIPS = { "1m": 1, "3m": 1, "5m": 0.5 };
 const PIP_SIZE = 0.0001; // gilt für beide unterstützten FX-Paare (GBPUSD/EURUSD), siehe TRADE_SETUP_PIP_SIZE in PriceChart.vue
 
 // timeframe: TIMEFRAMES-Label (siehe timeframes.js, z.B. "5m") — entscheidet, ob die Pip- (Lower-TF)
@@ -33,7 +35,7 @@ const PIP_SIZE = 0.0001; // gilt für beide unterstützten FX-Paare (GBPUSD/EURU
 export function detectOrderBlocks(candles, timeframe) {
   const zones = [];
   const isLowerTf = LOWER_TF_LABELS.has(timeframe);
-  const minGapAbs = isLowerTf ? LOWER_TF_MIN_GAP_PIPS * PIP_SIZE : null;
+  const minGapAbs = isLowerTf ? LOWER_TF_MIN_GAP_PIPS[timeframe] * PIP_SIZE : null;
 
   for (let i = 3; i < candles.length; i++) {
     const c1 = candles[i - 2];
