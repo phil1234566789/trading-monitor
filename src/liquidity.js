@@ -7,6 +7,7 @@ import { snapToBarTime, businessSecondsBetween, formatAge } from "./chartTimeUti
 import { cssColor } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
 import { canShowLabels } from "./chartZoom.js";
+import { classifyAge } from "./ageTier";
 
 const RECENT_SWEEP_COUNT = 2; // siehe markTopKRecentTouches in liquidity.pine
 
@@ -298,6 +299,20 @@ function ageSuffix(pivotTime, nowSec) {
   if (pivotTime == null || nowSec == null) return "";
   const age = formatAge(businessSecondsBetween(pivotTime, nowSec));
   return age ? ` (${age} alt)` : "";
+}
+
+// "Major LS 1,13545 (22d 19h alt)" — gemeinsames Label-Format für die Trade-Setup-LS-Linie
+// (PriceChart.vue) UND die "1h LQ-Sweep"-Linie (marketStructureAnalysis.ts), Chat 2026-07-28: seit
+// collectH1LqLevels (selber Chat) ist das oft exakt derselbe Pivot, zweimal gezeichnet — mit
+// identischem Label-Text überlappen sich beide Linien lesbar statt zwei leicht unterschiedliche
+// Strings übereinander zu zeigen ("1h LQ-Sweep..." vs. "LS..."). Tier-Präfix ("Major "/"Medium ")
+// nur ab medium — "minor" (< 1 Tag) bewusst ohne Präfix ("aus Platzgründen", Chat 2026-07-28).
+// Kein pivotTime/nowSec (z.B. synthetische Test-Pivots) -> nur "LS {price}", kein Tier/Alter.
+export function formatLsLabel(formattedPrice, pivotTime, nowSec) {
+  if (pivotTime == null || nowSec == null) return `LS ${formattedPrice}`;
+  const tier = classifyAge(businessSecondsBetween(pivotTime, nowSec));
+  const prefix = tier === "minor" ? "" : `${tier[0].toUpperCase()}${tier.slice(1)} `;
+  return `${prefix}LS ${formattedPrice}${ageSuffix(pivotTime, nowSec)}`;
 }
 
 // Bullische Sweep-/Setup-Linien beschriften sich rechtsbündig UNTER, bärische DARÜBER — reine

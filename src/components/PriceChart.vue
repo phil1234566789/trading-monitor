@@ -2,7 +2,14 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { createChart, CandlestickSeries, LineSeries, TickMarkType } from "lightweight-charts";
 import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
-import { detectLiquidityLevels, filterRelevantLevels, renderLiquidityLevels, LiquidityLinePrimitive, bullBearLabelSide } from "../liquidity.js";
+import {
+  detectLiquidityLevels,
+  filterRelevantLevels,
+  renderLiquidityLevels,
+  LiquidityLinePrimitive,
+  bullBearLabelSide,
+  formatLsLabel,
+} from "../liquidity.js";
 import { sessions, renderSessions, currentSessionDanger } from "../sessions.js";
 import { newsEvents, currentNewsNoGo, newsEventsForInstrument } from "../newsEvents.js";
 import { renderNewsMarkers } from "../newsMarkers.js";
@@ -880,10 +887,8 @@ function refreshMarketStructureInternal() {
     // "Alter"-Anzeige an der "1h LQ-Sweep"-Linie (Chat 2026-07-22) — im Replay bezogen auf
     // replayUntil, nicht die echte Uhrzeit, sonst wäre das Alter beim Testen falsch/inkonsistent.
     nowSec: props.replayUntil ?? Math.floor(Date.now() / 1000),
-    // Preis direkt hinterm "1h LQ-Sweep"-Label, nur im Debug-Modus (Bug-Report Philip 2026-07-28:
-    // Preis eines anderen Pivots direkt darunter mit dem LQ-Sweep verwechselt) — dieselbe
-    // debugPrices/formatPrice-Konvention wie refreshLiquidityInternal/renderTradeSetupsInternal.
-    debugPrices: props.showLiquidityDebug,
+    // Preis ist seit Chat 2026-07-28 fester Bestandteil des LQ-Sweep-Labels ("Major LS 1,13545 ..."
+    // statt "1h LQ-Sweep ..."), nicht mehr debug-gated — siehe formatLsLabel (liquidity.js).
     formatPrice: (price) => fmtPrice(price, precision),
   });
   // computeTradeSetups() liest marketStructureState.value (siehe collectH1LqLevels, Chat
@@ -1177,6 +1182,10 @@ function renderTradeSetupsInternal() {
   // allgemeinen Liquiditäts-Level (siehe refreshLiquidityInternal: debugPrices/formatPrice).
   const precision = pricePrecisionForInstrument(props.symbol);
   const formatPrice = (price) => fmtPrice(price, precision);
+  // Für formatLsLabel (Tier-Präfix + Alter am LS-Label, Chat 2026-07-28) — dieselbe Referenzzeit
+  // wie refreshMarketStructureInternal, damit LS-Linie und "1h LQ-Sweep"-Linie bei identischem
+  // Pivot exakt denselben Label-Text zeigen (siehe collectH1LqLevels: oft derselbe Pivot).
+  const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
 
   for (const setup of currentTradeSetups) {
     if (props.replayUntil != null && setup.fractal.pivotTime > props.replayUntil) continue;
@@ -1212,8 +1221,11 @@ function renderTradeSetupsInternal() {
         lineWidth: lineWidth(key),
         // "LS "-Präfix (Chat 2026-07-27: "extra Label vor den Preis, 1.3306 -> LS 1.3306") — sonst
         // bei Path A nicht von der protected-Fraktal-Linie darüber unterscheidbar, beide zeigen
-        // sonst nur eine nackte Zahl.
-        label: props.showLiquidityDebug ? `LS ${formatPrice(setup.ls.price)}` : null,
+        // sonst nur eine nackte Zahl. Seit Chat 2026-07-28 zusätzlich Tier-Präfix + Alter
+        // (formatLsLabel, liquidity.js) — identisches Format wie die "1h LQ-Sweep"-Linie in
+        // marketStructureAnalysis.ts, damit beide beim Überlappen (oft derselbe Pivot, siehe
+        // collectH1LqLevels) lesbar bleiben statt zwei leicht unterschiedliche Strings übereinander.
+        label: props.showLiquidityDebug ? formatLsLabel(formatPrice(setup.ls.price), setup.ls.pivotTime, nowSec) : null,
         // "end-above"/"end-below" statt Default "start" (Chat 2026-07-27: "muss ständig sau weit
         // nach links scrollen") — der M5-LQ-Sweep-Pivot liegt oft weit links vom aktuellen
         // Kerzenrand, das Preislabel soll trotzdem am rechten (aktuellen) Ende der Linie stehen.

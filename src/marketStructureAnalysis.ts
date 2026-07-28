@@ -1,7 +1,6 @@
-import { LiquidityLinePrimitive, detectLiquidityLevels, bullBearLabelSide } from "./liquidity.js";
+import { LiquidityLinePrimitive, detectLiquidityLevels, bullBearLabelSide, formatLsLabel } from "./liquidity.js";
 import { cssColor } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
-import { businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
 import type { Pivot, PivotHigh, PivotLow, MarketStructureState } from "./range.type";
 
 // "up": bestätigt einen Uptrend (bestehendes Verhalten, Default -> ändert nichts an bisherigen
@@ -1424,21 +1423,6 @@ function firstCloseAbove(candles: Candle[], fromTime: number, price: number, fal
   return fallbackTime;
 }
 
-// " (1d 3h alt)" hinter einem Label, oder "" ohne pivotTime/nowSec (Chat 2026-07-22: "bei den
-// relevanten LQ-Leveln das Alter anzeigen ... Wochenende nicht mitzählen", 2026-07-22 zweite Runde:
-// "bitte noch bei structure bei 1h LQ-Sweep dazutun") — dieselbe Formel wie im TSC/den
-// Liquiditäts-Debug-Labels (tradeSetupCockpit.ts/liquidity.js), hier noch mal separat, weil jede
-// Datei ihre eigene, leicht andere Label-Bau-Stelle hat.
-// price optional (Bug-Report Philip 2026-07-28: "1h LQ-Sweep im Debug-Modus mit dem falschen
-// Pivot verwechselt, weil kein Preis dranstand") — nur bei aktivem showLiquidityDebug-Toggle
-// gesetzt, dann zusammen mit dem Alter in derselben Klammer statt einem zweiten Label-Anhängsel.
-function ageSuffix(pivotTime: number | undefined, nowSec: number | undefined, price?: string | null): string {
-  if (pivotTime == null || nowSec == null) return price ? ` (${price})` : "";
-  const age = formatAge(businessSecondsBetween(pivotTime, nowSec));
-  const parts = [age ? `${age} alt` : null, price].filter((p): p is string => Boolean(p));
-  return parts.length ? ` (${parts.join(", ")})` : "";
-}
-
 // Ersetzt existingPrimitives komplett durch die aktuelle Marktstruktur-Darstellung: roter
 // Pfeil+Linie an currRange.high, grüner Pfeil+Linie an currRange.low, bei bestätigtem Trend
 // zusätzlich eine beschriftete Linie am protected-low (siehe Chat). state=null (oder zu wenig
@@ -1454,12 +1438,14 @@ export function renderMarketStructureAnalysis(
   state: MarketStructureState | null,
   existingPrimitives: any[],
   candles: Candle[],
-  { nowSec, debugPrices, formatPrice }: { nowSec?: number; debugPrices?: boolean; formatPrice?: (price: number) => string } = {},
+  { nowSec, formatPrice }: { nowSec?: number; formatPrice?: (price: number) => string } = {},
 ) {
-  // Nur bei aktivem Debug-Toggle einen Preis für den LQ-Sweep-Label-Zusatz auflösen (Chat
-  // 2026-07-28) — dieselbe debugPrices/formatPrice-Konvention wie renderLiquidityLevels
-  // (liquidity.js) und renderTradeSetupsInternal (PriceChart.vue).
-  const lqSweepPrice = (price: number) => (debugPrices && formatPrice ? formatPrice(price) : null);
+  // "Major LS 1,13545 (22d 19h alt)" statt "1h LQ-Sweep (22d 19h alt)" (Chat 2026-07-28: "damit sie
+  // sich mit der Trade-Setup-LS-Linie 1:1 überlappen") — der Preis ist jetzt fester Bestandteil des
+  // Labels (nicht mehr nur im Debug-Modus, siehe formatLsLabel in liquidity.js), daher immer über
+  // formatPrice aufgelöst statt hinter debugPrices versteckt.
+  const lqSweepLabel = (price: number, pivotTime: number | undefined) =>
+    formatLsLabel(formatPrice ? formatPrice(price) : String(price), pivotTime, nowSec);
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
   if (!state || candles.length === 0) return;
@@ -1539,7 +1525,7 @@ export function renderMarketStructureAnalysis(
       {
         color: lqColor,
         lineWidth: lineWidth("rangeLqSweep"),
-        label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec, lqSweepPrice(lqSweep.price))}`,
+        label: lqSweepLabel(lqSweep.price, lqSweep.pivotTime),
         labelSide: bullBearLabelSide(isDowntrend),
       },
       candles,
@@ -1657,7 +1643,7 @@ export function renderMarketStructureAnalysis(
         {
           color: lqColor,
           lineWidth: lineWidth("rangeLqSweep"),
-          label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec, lqSweepPrice(lqSweep.price))}`,
+          label: lqSweepLabel(lqSweep.price, lqSweep.pivotTime),
           labelSide: bullBearLabelSide(true),
         },
         candles,
@@ -1752,7 +1738,7 @@ export function renderMarketStructureAnalysis(
         {
           color: lqColor,
           lineWidth: lineWidth("rangeLqSweep"),
-          label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec, lqSweepPrice(lqSweep.price))}`,
+          label: lqSweepLabel(lqSweep.price, lqSweep.pivotTime),
           labelSide: bullBearLabelSide(false),
         },
         candles,
