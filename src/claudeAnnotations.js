@@ -41,15 +41,26 @@ export function parseAnnotations(jsonText) {
   return list;
 }
 
+// Optionales Datum im time-Feld (Chat 2026-07-28): eine Box/Konsolidierung, die real schon am
+// Vortag begann, ließ sich bisher nicht korrekt zeichnen, weil time nur "HH:mm" akzeptierte und
+// IMMER an den gerade angezeigten Tag gebunden war — Claude musste den Start künstlich auf 00:00
+// Uhr des aktuellen Tages legen und im Text vermerken, seit wann die Auffälligkeit real läuft.
+// "YYYY-MM-DD HH:mm" (ISO-Datum, gleiche Reihenfolge wie das date-Feld im Export — bewusst NICHT
+// DD.MM., um Tag/Monat-Verwechslung zu vermeiden) referenziert jetzt einen beliebigen Tag; reines
+// "HH:mm" bleibt unverändert an den Tag aus dateStr gebunden.
+const DATED_TIME_RE = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})$/;
+
 // "HH:mm" (Europe/Berlin, gleiches Format wie im Export) + der Tag, auf den sich der Import
 // gerade bezieht -> passende geladene Kerze (gesnappt, muss keine exakte Bar-Grenze treffen).
 // Fehlt time (siehe Philips Bestätigung: optional, Fallback aufs letzte sichtbare Kerze), wird
 // die zuletzt geladene Kerze genutzt.
-function resolveTime(candles, dateStr, hhmm) {
+function resolveTime(candles, dateStr, timeValue) {
   if (candles.length === 0) return null;
-  if (hhmm == null) return candles[candles.length - 1].time;
-  const [h, m] = hhmm.split(":").map(Number);
-  const { startUtcMs } = berlinDayRangeUtcMs(dateStr);
+  if (timeValue == null) return candles[candles.length - 1].time;
+  const dated = timeValue.match(DATED_TIME_RE);
+  const effectiveDateStr = dated ? dated[1] : dateStr;
+  const [h, m] = (dated ? dated[2] : timeValue).split(":").map(Number);
+  const { startUtcMs } = berlinDayRangeUtcMs(effectiveDateStr);
   return snapToBarTime(candles, startUtcMs / 1000 + h * 3600 + m * 60);
 }
 
