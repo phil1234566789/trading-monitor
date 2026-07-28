@@ -7,10 +7,11 @@ import { fetchInitialCandles } from "./forexCandles.js";
 import { fmtDateTime } from "./format.js";
 import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructureState } from "./marketStructureAnalysis";
 
-// Aktuell nur GBPUSD: EURUSD bräuchte zusätzlich DXY als Kontext (siehe backtest-instructions.md),
-// das ist noch nicht umgesetzt — Liste bewusst als einzige Quelle der Wahrheit fürs Modal-Dropdown,
-// damit EURUSD nicht versehentlich auswählbar ist, bevor die Datengrundlage dafür steht.
-export const BACKTEST_ASSETS = ["GBPUSD"];
+// EURUSD seit Chat 2026-07-28 freigeschaltet (Philip: "ich weiß wir haben noch keinen DXY da,
+// aber schalte mir mal EUR frei") — DXY-Kontext fehlt weiterhin (siehe backtest-instructions.md),
+// bewusst akzeptierte Lücke, kein Blocker mehr. Liste bleibt die einzige Quelle der Wahrheit fürs
+// Modal-Dropdown.
+export const BACKTEST_ASSETS = ["GBPUSD", "EURUSD"];
 
 // Asia-Session laut Philip: 00:00-07:00 Europe/Berlin, separat ausgewertet (Range/Pips fürs
 // Volatilitätsgefühl) statt nur als Teil der normalen M5-Kerzenliste. Alles ab 07:00 (nach Asia)

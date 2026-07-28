@@ -1335,6 +1335,20 @@ function toLevel(pivot: Pivot, candles: Candle[]) {
   return { price: pivot.price, pivotTime: pivot.pivotTime ?? 0, endTime };
 }
 
+// Gegenstück zu toLevel() oben, für Pivots, die per Definition BEREITS berührt sind (1h-LQ-Sweep-
+// Linien, siehe markLqSweeps: ein Pivot wird erst dann zu 'LQ-sweep', wenn sein Touch schon Fakt
+// ist) — die Linie darf hier nicht bis "jetzt" durchgezeichnet werden, sondern muss am
+// tatsächlichen Sweep-Zeitpunkt enden, genau wie liquidity.js: buildLevel es für normale
+// Liquiditäts-Level schon macht (Bug-Report Philip 2026-07-28: "bereits früher gesweepte 1h
+// LQ-Sweeps werden aktuell durchgezeichnet, bis zur aktuellen Uhrzeit ... in liquidity.js ist es
+// bereits korrekt umgesetzt"). Fällt auf "letzte Kerze" zurück, falls touchedTime ausnahmsweise
+// fehlt (touched=true, aber kein Zeitstempel, siehe PivotTouched.touchedTime als optional).
+function toTouchedLevel(pivot: Pivot, candles: Candle[]) {
+  const touchedTime = pivot.touched ? pivot.touched.touchedTime : undefined;
+  const endTime = touchedTime ?? (candles.length > 0 ? candles[candles.length - 1].time : (pivot.pivotTime ?? 0));
+  return { price: pivot.price, pivotTime: pivot.pivotTime ?? 0, endTime };
+}
+
 // Erste Kerze (aus den ANGEZEIGTEN candles, i.d.R. feingranularer als die H1-Pivots selbst — z.B.
 // M5, siehe Bug-Report Philip 2026-07-25) NACH fromTime, die tatsächlich unter price SCHLIESST.
 // Erst auf reine Docht-Berührung umgestellt gewesen (Chat: "das reine Zeichnen ist doch nur bis
@@ -1469,7 +1483,7 @@ export function renderMarketStructureAnalysis(
   for (const lqSweep of state.structurePivots.filter((p) => p.type === "LQ-sweep")) {
     const lqColor = cssColor("rangeLqSweep");
     const line = new LiquidityLinePrimitive(
-      toLevel(lqSweep, candles),
+      toTouchedLevel(lqSweep, candles),
       { color: lqColor, lineWidth: lineWidth("rangeLqSweep"), label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec)}`, labelSide: "end" },
       candles,
     );
@@ -1581,7 +1595,7 @@ export function renderMarketStructureAnalysis(
     for (const lqSweep of nested.structurePivots.filter((p) => p.type === "LQ-sweep")) {
       const lqColor = cssColor("rangeLqSweep");
       const line = new LiquidityLinePrimitive(
-        toLevel(lqSweep, candles),
+        toTouchedLevel(lqSweep, candles),
         { color: lqColor, lineWidth: lineWidth("rangeLqSweep"), label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec)}`, labelSide: "end" },
         candles,
       );
@@ -1670,7 +1684,7 @@ export function renderMarketStructureAnalysis(
     for (const lqSweep of nested.structurePivots.filter((p) => p.type === "LQ-sweep")) {
       const lqColor = cssColor("rangeLqSweep");
       const line = new LiquidityLinePrimitive(
-        toLevel(lqSweep, candles),
+        toTouchedLevel(lqSweep, candles),
         { color: lqColor, lineWidth: lineWidth("rangeLqSweep"), label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec)}`, labelSide: "end" },
         candles,
       );

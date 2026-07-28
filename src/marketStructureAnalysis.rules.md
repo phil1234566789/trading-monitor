@@ -158,7 +158,12 @@ Rein visuell, keine Zustandslogik — kein Test, nur Code-Kommentare in
   Philip 2026-07-26 — vorher hart auf "nach oben" verdrahtet, sichtbar falsch sobald
   `state.structurePivots` nach einer Promotion bärische LQ-Sweeps enthielt). Fällt komplett weg,
   sobald irgendwo ein `break-of-structure` existiert (keine Long-/Short-Andeutung mehr, siehe Chat
-  2026-07-24: "damit ich keine Longs suche").
+  2026-07-24: "damit ich keine Longs suche"). Endet seit Bug-Report Philip 2026-07-28 ("bereits
+  früher gesweepte 1h LQ-Sweeps werden aktuell durchgezeichnet, bis zur aktuellen Uhrzeit") am
+  tatsächlichen Sweep-Zeitpunkt (`toTouchedLevel`, analog zu `buildLevel` in `liquidity.js`), nicht
+  mehr bis zur letzten geladenen Kerze wie `toLevel` es für die übrigen Range-Linien tut — ein
+  `LQ-sweep`-Pivot ist per Definition schon berührt, anders als `currRange.high`/`.low`/
+  `protected-low`/`-high`.
 - `break-of-structure`: JEDER aktuell so markierte `structurePivot` bekommt eine eigene gestrichelte
   rote Linie + Label ("BOS", ohne Altersangabe — anders als bei `LQ-sweep` für die Handelsentscheidung
   nicht relevant, Chat 2026-07-24), mittig über der Linie im Uptrend / mittig darunter im Downtrend,

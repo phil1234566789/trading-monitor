@@ -9,7 +9,6 @@ import NewsModal from "../components/NewsModal.vue";
 import TakeTradeModal from "../components/TakeTradeModal.vue";
 import TradeEditModal from "../components/TradeEditModal.vue";
 import { TIMEFRAMES } from "../timeframes.js";
-import { berlinDateStrFor } from "../backtestExport.js";
 import { fetchTrades } from "../trades.js";
 import { fetchTradeSetupForCockpit, linkTradeToSetup, directionForSetup, addTargetToTrade } from "../tradeIntake.js";
 import { fetchPoiZones } from "../poiZones.js";
@@ -130,17 +129,14 @@ const showNewsModal = ref(false);
 const showSessions = useLocalStorageRef("showSessions", true);
 const showSessionsModal = ref(false);
 // Claude-Antwort-Import (siehe claudeAnnotations.js, trading/backtest-instructions.md) — Button
-// + Modal leben jetzt global in App.vue (neben "Backtest-Daten"), der geteilte Zustand kommt aus
-// useClaudeAnnotations.js (Modul-Singleton, wie useStatusBar.js). claudeAnnotationsDate ist
-// weiterhin hier lokal, weil es den Replay-Zeitpunkt braucht (den nur Dashboard.vue kennt) — löst
-// die "HH:mm"-Zeitangaben der Annotationen auf (gleiche Herleitung wie in BacktestExportModal.vue,
-// damit Export und Import denselben Tag meinen). visibleClaudeAnnotations blendet die Liste aus,
-// wenn der Toggle in App.vue aus ist, ohne die geparsten Annotationen selbst zu verwerfen.
-const { annotations: claudeAnnotations, visible: claudeAnnotationsVisible } = useClaudeAnnotations();
+// + Modal leben global in App.vue (neben "Backtest-Daten"), in Supabase persistiert (siehe
+// claudeAnnotationsStore.js). instrument/dateStr werden jetzt zentral in useClaudeAnnotations.js
+// hergeleitet (dieselben Keys wie hier: currentSymbol/replayTime/replayActive), nicht mehr separat
+// hier berechnet — claudeAnnotationsDate bleibt als Alias, weil der Prop-Name an PriceChart schon
+// so heißt. visibleClaudeAnnotations blendet die Liste aus, wenn der Toggle in App.vue aus ist,
+// ohne die geladenen Zeichnungen selbst zu verwerfen.
+const { flatAnnotations: claudeAnnotations, visible: claudeAnnotationsVisible, dateStr: claudeAnnotationsDate } = useClaudeAnnotations();
 const visibleClaudeAnnotations = computed(() => (claudeAnnotationsVisible.value ? claudeAnnotations.value : []));
-const claudeAnnotationsDate = computed(() =>
-  replayActive.value ? berlinDateStrFor(replayTime.value) : berlinDateStrFor(Math.floor(Date.now() / 1000)),
-);
 // Trade-Setup-Cockpit (siehe Chat 2026-07-19: "wir wollen jetzt step by step alles
 // zusammenstöpseln") — bündelt H1-Range-Analyse + M5-Trade-Setups in einer Karte im Chart. Seit
 // Chat 2026-07-27 eine echte Vue-Komponente mit festem Platz — der frühere "neben der letzten

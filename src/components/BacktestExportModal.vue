@@ -1,9 +1,10 @@
 <script setup>
 // Copy/Paste-Brücke für den Claude-Project-Backtest (siehe trading/backtest-instructions.md) —
 // Asset+Tag wählen, Rohkerzen generieren, ins Clipboard kopieren. Modal-Look bewusst wie
-// MetadataPanel/JsonTree (PriceChart.vue) gehalten, aber als eigenständiges globales Panel (App.vue),
-// nicht an den aktuell im Chart gewählten Symbol/Timeframe gekoppelt — der Asset+Tag hier ist
-// unabhängig davon, was gerade im Dashboard offen ist.
+// MetadataPanel/JsonTree (PriceChart.vue) gehalten, aber als eigenständiges globales Panel (App.vue).
+// Asset-Auswahl ist NICHT laufend an den Chart gekoppelt (Philip kann hier frei umschalten), startet
+// aber als Komfort mit dem gerade im Dashboard gewählten Symbol vorbelegt (Chat 2026-07-28) — Tag/
+// Timeframe bleiben weiterhin komplett unabhängig vom Dashboard.
 import { ref } from "vue";
 import MetadataPanel from "./MetadataPanel.vue";
 import JsonTree from "./JsonTree.vue";
@@ -34,8 +35,12 @@ const rangesLookbackHours = useLocalStorageRef("rangesLookbackHours", 7 * 24);
 const ranges2LookbackHours = useLocalStorageRef("ranges2LookbackHours", 7 * 24);
 const rangesFixedStartActive = useLocalStorageRef("rangesFixedStartActive", false);
 const rangesFixedStartTime = useLocalStorageRef("rangesFixedStartTime", 1783011600);
+// Gleicher Key/Default wie Dashboard.vue (currentSymbol) — nur fürs Vorbelegen des Dropdowns
+// gelesen, siehe Kommentar oben. Fällt auf BACKTEST_ASSETS[0] zurück, falls im Chart gerade ein
+// Asset gewählt ist, das der Backtest-Export (noch) nicht unterstützt (z.B. BTC-USDT).
+const currentSymbol = useLocalStorageRef("currentSymbol", "GBPUSD");
 
-const asset = ref(BACKTEST_ASSETS[0]);
+const asset = ref(BACKTEST_ASSETS.includes(currentSymbol.value) ? currentSymbol.value : BACKTEST_ASSETS[0]);
 const dateStr = ref(replayActive.value ? berlinDateStrFor(replayTime.value) : new Date().toISOString().slice(0, 10));
 const loading = ref(false);
 const error = ref(null);

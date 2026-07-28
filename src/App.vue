@@ -9,8 +9,10 @@ import ClaudeAnnotationsModal from "./components/ClaudeAnnotationsModal.vue";
 
 const showBacktestExport = ref(false);
 const showClaudeAnnotationsModal = ref(false);
-const { annotations: claudeAnnotations, visible: claudeAnnotationsVisible, apply: applyClaudeAnnotations, clear: clearClaudeAnnotations } =
-  useClaudeAnnotations();
+// Persistiert in Supabase (siehe useClaudeAnnotations.js/claudeAnnotationsStore.js) — hier nur der
+// Sichtbarkeits-Toggle nötig, die Liste selbst verwaltet ClaudeAnnotationsModal.vue direkt über
+// dieselbe Composable.
+const { visible: claudeAnnotationsVisible } = useClaudeAnnotations();
 
 const FRESH_MS = 30_000;
 
@@ -72,13 +74,7 @@ const lastUpdateText = computed(() =>
     </header>
     <HttpErrorBanners />
     <BacktestExportModal v-if="showBacktestExport" @close="showBacktestExport = false" />
-    <ClaudeAnnotationsModal
-      v-if="showClaudeAnnotationsModal"
-      :count="claudeAnnotations.length"
-      @close="showClaudeAnnotationsModal = false"
-      @apply="applyClaudeAnnotations"
-      @clear="clearClaudeAnnotations"
-    />
+    <ClaudeAnnotationsModal v-if="showClaudeAnnotationsModal" @close="showClaudeAnnotationsModal = false" />
     <RouterView />
   </div>
 </template>
