@@ -27,7 +27,8 @@ import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 function nativeLineWidth(key) {
   return Math.min(4, Math.max(1, Math.round(lineWidth(key))));
 }
-import { selectActiveMetadataSections, earliestRelevantTime } from "../debugMetadata.js";
+import { selectActiveMetadataSections, earliestRelevantTime, saveDebugMetadataSection } from "../debugMetadata.js";
+import { useLastBacktestExport } from "../composables/useLastBacktestExport.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import { renderClaudeAnnotations } from "../claudeAnnotations.js";
 import {
@@ -235,6 +236,7 @@ const EMA_PERIOD_FAST = 50;
 const EMA_PERIOD_SLOW = 200;
 
 const { markSuccess } = useStatusBar();
+const { lastBacktestExport } = useLastBacktestExport();
 
 const chartContainerRef = ref(null);
 const gaugesBottom = ref(12);
@@ -266,30 +268,12 @@ async function copyJson(section, value) {
   }
 }
 
-// Lokal in .debug/metadata.json ablegen (siehe vite.config.js: debugMetadataWriter), Chat
-// 2026-07-21: "du siehst nicht alle daten, weil mein Text abgeschnitten wird" (sehr lange
-// Kerzen-Arrays sprengen das Prompt-Fenster beim Einfügen). Eigene Funktion OHNE Clipboard-Zugriff
-// (siehe copyJsonAndSaveLocally unten, das ist NUR der Button) — der Auto-Save weiter unten ruft
-// das im Hintergrund auf, das darf nicht heimlich alle paar Sekunden das System-Clipboard
-// überschreiben. Nur im `vite dev`-Server erreichbar — schlägt der POST fehl (z.B. Production-
-// Build ohne den Dev-Endpoint), still ignorieren.
-async function saveDebugMetadataLocally(value) {
-  try {
-    await fetch("/__debug-metadata", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(value, null, 2),
-    });
-  } catch (err) {
-    console.error("Debug-Metadaten lokal speichern fehlgeschlagen:", err);
-  }
-}
-
 // Für den "kopieren + lokal speichern"-Button im Debug-Metadaten-Panel — Clipboard-Copy UND
-// Datei-Save zusammen, mit dem "✓ kopiert"-Feedback am Button (siehe copyJson).
+// Datei-Save (unter der "chart"-Sektion, siehe debugMetadata.js: saveDebugMetadataSection) zusammen,
+// mit dem "✓ kopiert"-Feedback am Button (siehe copyJson).
 async function copyJsonAndSaveLocally(section, value) {
   await copyJson(section, value);
-  await saveDebugMetadataLocally(value);
+  await saveDebugMetadataSection("chart", value);
 }
 
 // Auto-Save (Chat 2026-07-21: "alle X Sekunden automatisch neu speichern, nur im localhost dann...
@@ -305,9 +289,9 @@ const DEBUG_AUTOSAVE_INTERVAL_MS = 30_000;
 let debugAutosaveTimer = null;
 onMounted(() => {
   if (!import.meta.env.DEV) return;
-  saveDebugMetadataLocally(activeMetadataSnapshot.value);
+  saveDebugMetadataSection("chart", activeMetadataSnapshot.value);
   debugAutosaveTimer = setInterval(() => {
-    saveDebugMetadataLocally(activeMetadataSnapshot.value);
+    saveDebugMetadataSection("chart", activeMetadataSnapshot.value);
   }, DEBUG_AUTOSAVE_INTERVAL_MS);
 });
 onUnmounted(() => clearInterval(debugAutosaveTimer));
@@ -472,6 +456,13 @@ function buildActiveMetadataSnapshot() {
     const candles = clipReplay(allCandles).filter((c) => c.time >= since);
     sections.candles = { since, sinceAt: fmtDateTime(since), timeframe: props.currentBar, count: candles.length, data: candles };
   }
+  // Zuletzt generierter Backtest-Export (siehe BacktestExportModal.vue/useLastBacktestExport.js,
+  // Chat 2026-07-28: "für die Nachvollziehbarkeit wäre es im Frontend auch nicht schlecht") —
+  // ungated, unabhängig vom Symbol/Timeframe des gerade offenen Charts, da der Export sein eigenes
+  // Asset+Datum mitbringt. null, solange in dieser Session noch keiner generiert wurde.
+  if (lastBacktestExport.value != null) {
+    sections.backtestExport = lastBacktestExport.value;
+  }
   return sections;
 }
 const hasActiveMetadata = computed(
@@ -480,7 +471,8 @@ const hasActiveMetadata = computed(
     props.showLiquidity ||
     props.showTradeSetups ||
     props.showTradeSetupCockpit ||
-    props.showRanges,
+    props.showRanges ||
+    activeMetadataSnapshot.value.backtestExport != null,
 );
 
 // lightweight-charts formatiert Zeit standardmäßig in UTC (unabhängig von der

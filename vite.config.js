@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -13,8 +13,14 @@ const DEBUG_FILE = path.join(DEBUG_DIR, "metadata.json");
 // (das Prompt-Fenster kappt sehr lange Pasten, z.B. hunderte Kerzen). Statt den JSON-Blob durchs
 // Chat-Fenster zu schicken, POSTet der Button ihn zusätzlich zum Clipboard-Copy hierher — nur im
 // `vite dev`-Server aktiv (configureServer), im Production-Build (GitHub Pages) gibt's diesen
-// Endpoint gar nicht, braucht dort auch niemand. Immer dieselbe Datei überschrieben (keine
-// Historie) — es geht nur um den JEWEILS aktuellen Stand zum Nachlesen, nicht um ein Archiv.
+// Endpoint gar nicht, braucht dort auch niemand.
+// Seit Chat 2026-07-27: Body ist {section, data} (siehe debugMetadata.js: saveDebugMetadataSection),
+// serverseitig in die BESTEHENDE Datei gemergt (nicht mehr komplett überschrieben) — zwei
+// unabhängige Schreiber (PriceChart.vue-Autosave unter "chart", BacktestExportModal.vue unter
+// "backtestExport") sollen sich nicht gegenseitig wegräumen; Philip will beide gleichzeitig
+// nachlesen können, um eine Diskrepanz zwischen Chart-State und Backtest-Export zu debuggen. Kein
+// Merge INNERHALB einer Sektion (die wird komplett ersetzt) — es geht weiterhin nur um den JEWEILS
+// aktuellen Stand pro Sektion, nicht um ein Archiv.
 function debugMetadataWriter() {
   return {
     name: "debug-metadata-writer",
@@ -29,8 +35,16 @@ function debugMetadataWriter() {
         req.on("data", (chunk) => chunks.push(chunk));
         req.on("end", () => {
           try {
+            const { section, data } = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
+            let existing = {};
+            try {
+              existing = JSON.parse(readFileSync(DEBUG_FILE, "utf-8"));
+            } catch {
+              existing = {}; // Datei fehlt noch oder ist kein gültiges JSON -> frisch anfangen
+            }
+            existing[section] = data;
             mkdirSync(DEBUG_DIR, { recursive: true });
-            writeFileSync(DEBUG_FILE, Buffer.concat(chunks));
+            writeFileSync(DEBUG_FILE, JSON.stringify(existing, null, 2));
             res.statusCode = 200;
             res.end("ok");
           } catch (err) {

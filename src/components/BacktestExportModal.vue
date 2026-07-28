@@ -9,7 +9,11 @@ import MetadataPanel from "./MetadataPanel.vue";
 import JsonTree from "./JsonTree.vue";
 import { buildBacktestExport, BACKTEST_ASSETS, berlinDateStrFor } from "../backtestExport.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
+import { useLastBacktestExport } from "../composables/useLastBacktestExport.js";
+import { saveDebugMetadataSection } from "../debugMetadata.js";
 import { fmtDateTime } from "../format.js";
+
+const { set: setLastBacktestExport } = useLastBacktestExport();
 
 defineEmits(["close"]);
 
@@ -20,6 +24,16 @@ defineEmits(["close"]);
 // liest also immer den aktuellen Stand.
 const replayTime = useLocalStorageRef("replayTime", 1783011600);
 const replayActive = useLocalStorageRef("replayActive", false);
+// Dieselben Keys/Defaults wie Dashboard.vue (rangesPeriod/ranges2Period/.../rangesFixedStart*) —
+// Bug-Report Philip 2026-07-27: der Export nutzte bisher hart die rollierenden Defaults, egal was
+// im "Structure"-Toggle tatsächlich eingestellt war (insbesondere ein aktiver fixer Start wurde
+// ignoriert, wodurch der Export keinen nestedTrend fand, obwohl der Chart selbst einen zeigte).
+const rangesPeriod = useLocalStorageRef("rangesPeriod", 5);
+const ranges2Period = useLocalStorageRef("ranges2Period", 2);
+const rangesLookbackHours = useLocalStorageRef("rangesLookbackHours", 7 * 24);
+const ranges2LookbackHours = useLocalStorageRef("ranges2LookbackHours", 7 * 24);
+const rangesFixedStartActive = useLocalStorageRef("rangesFixedStartActive", false);
+const rangesFixedStartTime = useLocalStorageRef("rangesFixedStartTime", 1783011600);
 
 const asset = ref(BACKTEST_ASSETS[0]);
 const dateStr = ref(replayActive.value ? berlinDateStrFor(replayTime.value) : new Date().toISOString().slice(0, 10));
@@ -38,7 +52,23 @@ async function generate() {
       asset: asset.value,
       dateStr: dateStr.value,
       replayUntilSec: replayActive.value ? replayTime.value : null,
+      structureConfig: {
+        periodOuter: rangesPeriod.value,
+        periodInner: ranges2Period.value,
+        lookbackHoursOuter: rangesLookbackHours.value,
+        lookbackHoursInner: ranges2LookbackHours.value,
+        fixedStartActive: rangesFixedStartActive.value,
+        fixedStartTime: rangesFixedStartTime.value,
+      },
     });
+    // Dev-only (siehe debugMetadata.js/vite.config.js) — damit sich der Export bei einer
+    // Diskrepanz zum Chart-State direkt in .debug/metadata.json nachlesen lässt, ohne dass Philip
+    // ihn manuell in den Chat pasten muss (Philip 2026-07-27).
+    saveDebugMetadataSection("backtestExport", result.value);
+    // Zusätzlich im Frontend-Debug-Metadaten-Panel sichtbar (Philip 2026-07-28: "für die
+    // Nachvollziehbarkeit wäre es im Frontend auch nicht schlecht") — siehe PriceChart.vue:
+    // buildActiveMetadataSnapshot liest denselben Singleton.
+    setLastBacktestExport(result.value);
   } catch (err) {
     error.value = err.message || String(err);
   } finally {

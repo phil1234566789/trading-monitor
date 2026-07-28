@@ -24,20 +24,23 @@ const PIP_SIZE = 0.0001;
 // schneidet ohnehin exakt auf [start, end) zurecht.
 const M5_FETCH_COUNT = 300;
 
-// "1h-Range"-Marktstruktur-Trendalgorithmus (marketStructureAnalysis.ts) — dieselben Defaults wie
-// Dashboard.vue (rangesPeriod/ranges2Period/rangesLookbackHours/ranges2LookbackHours), damit der
-// Backtest-Export exakt den Trend-State zeigt, den Philip auch im Chart sieht ("Structure"-Toggle),
-// nicht eine eigene, abweichende Konfiguration. Philip 2026-07-27: "so viel es geht übernehmen,
-// später wieder rausschmeißen, wenns zu viel wird" — appliedPivots ist die eine schon jetzt als
-// irrelevant markierte Ausnahme (siehe summarizeMarketStructureState-Aufruf unten).
+// "1h-Range"-Marktstruktur-Trendalgorithmus (marketStructureAnalysis.ts) — Defaults hier nur der
+// Fallback, wenn buildBacktestExport OHNE structureConfig aufgerufen wird. BacktestExportModal.vue
+// übergibt normalerweise die TATSÄCHLICH im Dashboard eingestellten Werte (siehe dort), damit der
+// Backtest-Export exakt den Trend-State zeigt, den Philip auch im Chart sieht ("Structure"-Toggle) —
+// Bug-Report Philip 2026-07-27: mit aktivem "fixer Start" erkennt der Chart einen übergeordneten
+// Trend + nestedTrend, der Export (der bis dahin hart die rollierenden Defaults nutzte) nicht.
+// Philip 2026-07-27: "so viel es geht übernehmen, später wieder rausschmeißen, wenns zu viel wird"
+// — appliedPivots ist die eine schon jetzt als irrelevant markierte Ausnahme (siehe
+// summarizeMarketStructureState-Aufruf unten).
 const STRUCTURE_PERIOD_OUTER = 5;
 const STRUCTURE_PERIOD_INNER = 2;
 const STRUCTURE_LOOKBACK_HOURS = 7 * 24;
-// Puffer VOR dem Lookback-Fenster, damit ein Fraktal am Fensterrand nicht unerkannt bleibt (braucht
-// period+4 Kerzen davor, period danach, siehe isUpFractal/isDownFractal in liquidity.js) — analog
-// zu RANGES_CANDLE_BUFFER in PriceChart.vue (dort 20 für beide Perioden gemeinsam), hier etwas
-// großzügiger, da EIN Fetch beide Perioden bedient.
-const STRUCTURE_H1_FETCH_COUNT = STRUCTURE_LOOKBACK_HOURS + 40;
+// Puffer VOR dem Lookback-/Fixed-Start-Fenster, damit ein Fraktal am Fensterrand nicht unerkannt
+// bleibt (braucht period+4 Kerzen davor, period danach, siehe isUpFractal/isDownFractal in
+// liquidity.js) — analog zu RANGES_CANDLE_BUFFER in PriceChart.vue (dort 20 für beide Perioden
+// gemeinsam), hier etwas großzügiger, da EIN Fetch beide Perioden bedient.
+const STRUCTURE_CANDLE_BUFFER_HOURS = 40;
 
 const TIME_FORMATTER = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Berlin" });
 // "longOffset" liefert z.B. "GMT+2" — DST-aware statt fixem Offset, siehe CLAUDE.md
@@ -84,13 +87,32 @@ function formatCandle(c) {
 // Läuft bis currentTimeSec (Replay-Cutoff oder echtes "jetzt") — derselbe "wir kennen die Zukunft
 // noch nicht"-Grundsatz wie beim M5-Export gilt genauso für den Trend-State, sonst würde der
 // Backtest heimlich Wissen aus der Zukunft einfließen lassen.
-async function compute1hStructureState(asset, currentTimeSec) {
-  const raw = await fetchInitialCandles(asset, "1h", STRUCTURE_H1_FETCH_COUNT, currentTimeSec * 1000);
+// structureConfig übernimmt die tatsächlich im Dashboard eingestellten Werte (periodOuter/Inner,
+// lookbackHoursOuter/Inner, fixedStartActive/fixedStartTime) — siehe BacktestExportModal.vue.
+// fixedStartActive gilt für BEIDE Perioden gemeinsam (EIN gemeinsamer Startzeitpunkt), exakt wie
+// computeRangesPivotsFor in PriceChart.vue: der Fixed-Start ERSETZT den rollierenden Cutoff
+// komplett, lookbackHours wird in dem Fall ignoriert.
+async function compute1hStructureState(asset, currentTimeSec, structureConfig = {}) {
+  const {
+    periodOuter = STRUCTURE_PERIOD_OUTER,
+    periodInner = STRUCTURE_PERIOD_INNER,
+    lookbackHoursOuter = STRUCTURE_LOOKBACK_HOURS,
+    lookbackHoursInner = STRUCTURE_LOOKBACK_HOURS,
+    fixedStartActive = false,
+    fixedStartTime = null,
+  } = structureConfig;
+
+  const useFixedStart = fixedStartActive && fixedStartTime != null;
+  const cutoffOuter = useFixedStart ? fixedStartTime : currentTimeSec - lookbackHoursOuter * 3600;
+  const cutoffInner = useFixedStart ? fixedStartTime : currentTimeSec - lookbackHoursInner * 3600;
+  const earliestCutoff = Math.min(cutoffOuter, cutoffInner);
+  const fetchHours = Math.ceil((currentTimeSec - earliestCutoff) / 3600) + STRUCTURE_CANDLE_BUFFER_HOURS;
+
+  const raw = await fetchInitialCandles(asset, "1h", fetchHours, currentTimeSec * 1000);
   const candles = raw.filter((c) => c.time <= currentTimeSec);
-  const cutoff = currentTimeSec - STRUCTURE_LOOKBACK_HOURS * 3600;
-  const pivotsOuter = computeRangesPivots(candles, STRUCTURE_PERIOD_OUTER, cutoff, fmtDateTime);
-  const pivotsInner = computeRangesPivots(candles, STRUCTURE_PERIOD_INNER, cutoff, fmtDateTime);
-  const state = buildMarketStructureState(pivotsOuter, pivotsInner, STRUCTURE_PERIOD_OUTER, STRUCTURE_PERIOD_INNER, candles);
+  const pivotsOuter = computeRangesPivots(candles, periodOuter, cutoffOuter, fmtDateTime);
+  const pivotsInner = computeRangesPivots(candles, periodInner, cutoffInner, fmtDateTime);
+  const state = buildMarketStructureState(pivotsOuter, pivotsInner, periodOuter, periodInner, candles);
   return summarizeMarketStructureState(state, { includeAppliedPivots: false });
 }
 
@@ -108,7 +130,7 @@ function rangeStats(rawCandles) {
 // (PriceChart.vue), damit ein per Replay eingestellter Zeitpunkt exakt dieselbe letzte Kerze zeigt
 // wie im Chart selbst. Liegt der gewählte Tag komplett vor replayUntilSec, hat das keinen Effekt;
 // liegt er komplett danach, kommt korrekterweise ein leerer Export raus (noch nichts "bekannt").
-export async function buildBacktestExport({ asset, dateStr, replayUntilSec = null }) {
+export async function buildBacktestExport({ asset, dateStr, replayUntilSec = null, structureConfig = {} }) {
   const { startUtcMs, endUtcMs } = berlinDayRangeUtcMs(dateStr);
   const startSec = startUtcMs / 1000;
   const endSec = endUtcMs / 1000;
@@ -126,7 +148,7 @@ export async function buildBacktestExport({ asset, dateStr, replayUntilSec = nul
   // bei aktivem Replay immer die echte Klickzeit — Philip: "die info wann ich da genau drauf
   // drücke juckt nicht wirklich, entscheidend ist was die aktuelle Zeit des Snapshots ist".
   const currentTimeSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
-  const structure1h = await compute1hStructureState(asset, currentTimeSec);
+  const structure1h = await compute1hStructureState(asset, currentTimeSec, structureConfig);
 
   return {
     asset,
