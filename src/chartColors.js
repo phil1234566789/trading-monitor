@@ -57,6 +57,11 @@ export const DEFAULT_CHART_COLORS = {
   // Vertikale News-Marker (Chat 2026-07-26, siehe newsMarkers.js) — Default = candleDown-Rot,
   // dieselbe Warnfarbe wie das TSC-No-Go-Banner (NO_GO_COLOR in tradeSetupCockpit.ts).
   newsEvent: { hex: "#ef5350", alpha: 0.9 },
+  // Target-Linien (Chat 2026-07-28, Pivot- oder OB-Ziel eines Trades) — eigene Farbe statt
+  // tradeSetupLong/-Short oder liquidityHigh/-Low, damit ein Target auch dann als "das ist ein
+  // Target" erkennbar bleibt, wenn es zufällig mit einer normalen Liquiditäts-/OB-Zeichnung
+  // überlappt (siehe PriceChart.vue: refreshTradeTargetLinksInternal).
+  tradeTarget: { hex: "#ab47bc", alpha: 0.95 },
 };
 
 function loadInitial() {

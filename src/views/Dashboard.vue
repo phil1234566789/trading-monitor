@@ -197,11 +197,13 @@ watch(tradeModeActive, (active) => {
     targetAddTrade.value = null;
   }
 });
-async function onSelectLiquidityLevel(level) {
+// target: {kind, price, sourceTime, touchedTime} — siehe PriceChart.vue: findClickedTarget (Pivot
+// oder OB, Chat 2026-07-28).
+async function onSelectTarget(target) {
   if (!targetAddTrade.value) return;
   const trade = targetAddTrade.value;
   targetAddTrade.value = null;
-  const ok = await addTargetToTrade(trade.id, level.price);
+  const ok = await addTargetToTrade(trade.id, target);
   if (ok) refreshTrades();
 }
 async function onSelectSetup(setup) {
@@ -652,7 +654,7 @@ watch(currentSymbol, () => {
           🎯 Trade-Modus
         </button>
         <span v-if="linkTargetTrade" class="trade-link-armed">🔗 nächster Klick verknüpft Trade #{{ linkTargetTrade.id }}</span>
-        <span v-if="targetAddTrade" class="trade-link-armed">🎯 nächster Klick fügt Trade #{{ targetAddTrade.id }} ein Ziel hinzu</span>
+        <span v-if="targetAddTrade" class="trade-link-armed">🎯 nächster Klick auf Pivot/OB fügt Trade #{{ targetAddTrade.id }} ein Target hinzu</span>
       </div>
 
       <div class="toggle-group">
@@ -738,7 +740,7 @@ watch(currentSymbol, () => {
     @close-ranges-metadata="showRangesMetadata = false"
     @close-debug-metadata="showDebugMetadata = false"
     @select-setup="onSelectSetup"
-    @select-liquidity-level="onSelectLiquidityLevel"
+    @select-target="onSelectTarget"
     @toggle-trade-mode="tradeModeActive = !tradeModeActive"
   />
 

@@ -41,6 +41,10 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   tradeOpen: 1.5,
   tradeInvalid: 1.5,
   tradeConnector: 2, // gestrichelte Entry->Exit-Verbindungslinie.
+  // Basis-Breite für Target-Linien (Chat 2026-07-28) — wird in PriceChart.vue zusätzlich mit einem
+  // Alters-Tier-Faktor multipliziert (minor/medium/major, siehe ageTier.ts), diese Zahl hier ist
+  // nur der Nutzer-einstellbare Grundwert (wie bei jeder anderen Farbe/Linie im Style-Modal).
+  tradeTarget: 1.5,
 };
 
 function loadInitial() {

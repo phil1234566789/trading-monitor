@@ -126,16 +126,22 @@ export async function linkTradeToSetup(signalId, instrument, setup) {
   return true;
 }
 
-// Ziel hinzufügen (Chat 2026-07-27: "wie wärs, wenn wir ermöglichen, einem Trade ein Target
-// hinzuzufügen ... um es erst mal einfach zu halten sind das LQ-Levels") — ein Trade kann mehrere
-// Ziele haben (trade_targets ist 1:n zu signals, siehe 20260727180000_trade_thesis_and_partial_exits.sql),
-// deshalb einfacher Insert statt Upsert; Duplikate (zweimal derselbe Preis) werden bewusst nicht
-// verhindert, das wäre eine eigene Entscheidung (z.B. ob 1.33158 zweimal Sinn ergibt), keine hier
-// vorweggenommene Regel.
-export async function addTargetToTrade(signalId, price) {
-  const { error } = await supabase.from("trade_targets").insert({ signal_id: signalId, price });
+// Target hinzufügen (Chat 2026-07-27/28: "einem Trade ein Target hinzuzufügen ... ein Pivot
+// targetiere ich oder einen OB") — ein Trade kann mehrere Targets haben (trade_targets ist 1:n zu
+// signals, siehe 20260727180000_trade_thesis_and_partial_exits.sql), deshalb einfacher Insert
+// statt Upsert; Duplikate (zweimal derselbe Preis) werden bewusst nicht verhindert, das wäre eine
+// eigene Entscheidung, keine hier vorweggenommene Regel. `target` kommt im TradeTarget-Rohformat
+// (kind/price/sourceTime/touchedTime) direkt aus PriceChart.vue: findClickedTarget.
+export async function addTargetToTrade(signalId, target) {
+  const { error } = await supabase.from("trade_targets").insert({
+    signal_id: signalId,
+    price: target.price,
+    kind: target.kind,
+    source_time: target.sourceTime != null ? new Date(target.sourceTime * 1000).toISOString() : null,
+    touched_time: target.touchedTime != null ? new Date(target.touchedTime * 1000).toISOString() : null,
+  });
   if (error) {
-    console.error("Ziel hinzufügen fehlgeschlagen:", error);
+    console.error("Target hinzufügen fehlgeschlagen:", error);
     return false;
   }
   return true;

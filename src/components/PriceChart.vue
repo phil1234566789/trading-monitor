@@ -8,7 +8,13 @@ import { newsEvents, currentNewsNoGo, newsEventsForInstrument } from "../newsEve
 import { renderNewsMarkers } from "../newsMarkers.js";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { renderPivotMarkers } from "../pivotMarkers";
-import { computeRangesPivots, buildMarketStructureState, renderMarketStructureAnalysis } from "../marketStructureAnalysis";
+import {
+  computeRangesPivots,
+  buildMarketStructureState,
+  renderMarketStructureAnalysis,
+  pivotForDisplay,
+  summarizeMarketStructureState,
+} from "../marketStructureAnalysis";
 import { computeCockpitState } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
@@ -39,7 +45,9 @@ import {
   fetchOlderCandles as fetchOlderForexCandles,
 } from "../forexCandles.js";
 import { fetchCandlesCached } from "../candleCache.js";
-import { replayFetchToMs, nextCandleAfter, snapToBarTime } from "../chartTimeUtils.js";
+import { replayFetchToMs, nextCandleAfter, snapToBarTime, businessSecondsBetween } from "../chartTimeUtils.js";
+import { classifyAge } from "../ageTier";
+import { kindLabel } from "../tradeTargets";
 import { useStatusBar } from "../composables/useStatusBar.js";
 import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
 import Gauge from "./Gauge.vue";
@@ -116,7 +124,7 @@ const props = defineProps({
   tradeModeActive: { type: Boolean, default: false },
   // Ziel-Modus (Chat 2026-07-27: "einem Trade ein Target hinzufügen ... die Linien klickbar
   // machen") — nur innerhalb von tradeModeActive relevant, schaltet den Klick-Handler von
-  // "OB-Box anklicken" auf "Liquiditäts-Level anklicken" um (siehe Dashboard.vue: targetAddTrade).
+  // "Trade-Setup-OB anklicken" auf "Pivot/OB als Target anklicken" um (siehe Dashboard.vue: targetAddTrade).
   targetModeActive: { type: Boolean, default: false },
 });
 const emit = defineEmits([
@@ -124,7 +132,7 @@ const emit = defineEmits([
   "close-debug-metadata",
   "select-setup",
   "toggle-trade-mode",
-  "select-liquidity-level",
+  "select-target",
 ]);
 
 // CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
@@ -230,38 +238,9 @@ const chartContainerRef = ref(null);
 const gaugesBottom = ref(12);
 const windowDelta = ref(0);
 const dailyDelta = ref(0);
-// pivotTime/touched.touchedTime sind nur intern nötig (Rendern der Zigzag-/Ranges-Linien bzw.
-// zeitbewusste Pullback-Auswahl in tryConfirmUptrend, siehe marketStructureAnalysis.ts), tauchen in
-// den Metadaten-Panels bewusst nicht auf (Philips Pivot-Typ hat kein Pflichtfeld dafür, nur die
-// menschenlesbaren pivotAt/touchedAt).
-function pivotForDisplay(p) {
-  if (!p) return null;
-  const { pivotTime, ...rest } = p;
-  if (rest.touched && typeof rest.touched === "object") {
-    const { touchedTime, ...touchedRest } = rest.touched;
-    rest.touched = touchedRest;
-  }
-  return rest;
-}
-
-// Ergebnis-State des "1h-Range"-Marktstruktur-Algorithmus selbst (nicht nur die rohen Pivot-Listen
-// oben) — zum Gegenprüfen im Replay-Modus gegen die hand-hergeleiteten rangeStateN in
-// gbp_h1_uptrend_LQ_sweep_long_setup.ts (siehe Chat 2026-07-19: "brauch noch das json vom state").
-function summarizeMarketStructureState(state) {
-  if (!state) return null;
-  return {
-    trend: state.trend,
-    currRange: { high: pivotForDisplay(state.currRange.high), low: pivotForDisplay(state.currRange.low) },
-    structurePivots: state.structurePivots.map(pivotForDisplay),
-    innerStructurePivots: state.innerStructurePivots.map(pivotForDisplay),
-    appliedPivots: state.appliedPivots.map(pivotForDisplay),
-    // Nested-Gegentrend-Tracker (CHoCH-Erkennung, Chat 2026-07-25) — rekursiv über dieselbe
-    // Funktion, damit er im Debug-Panel genauso einsehbar ist wie der Haupttrend (Bug-Report
-    // Philip: "im structure-state ist KEIN nested-range drinne" — fehlte hier komplett).
-    nestedTrend: summarizeMarketStructureState(state.nestedTrend),
-    closedRanges: state.closedRanges.map((r) => ({ ...r, low: pivotForDisplay(r.low), high: pivotForDisplay(r.high) })),
-  };
-}
+// pivotForDisplay/summarizeMarketStructureState kommen seit Chat 2026-07-27 aus
+// marketStructureAnalysis.ts (Backtest-Export braucht dieselbe Aufbereitung, siehe
+// backtestExport.js) — hier nur noch der reaktive State drumherum.
 const marketStructureState = ref(null);
 const marketStructureTree = computed(() => summarizeMarketStructureState(marketStructureState.value));
 
@@ -355,6 +334,7 @@ let rangesMarkerPrimitives = [];
 let marketStructurePrimitives = [];
 let tradePrimitives = [];
 let tradeSetupLinkPrimitives = [];
+let tradeTargetLinkPrimitives = [];
 let tradeSetupPrimitives = [];
 let claudeAnnotationPrimitives = [];
 let claudeAnnotationPriceLines = [];
@@ -645,6 +625,45 @@ function refreshTradeSetupLinksInternal() {
     );
     candleSeries.attachPrimitive(primitive);
     tradeSetupLinkPrimitives.push(primitive);
+  }
+}
+
+// Zeichnet die Pivot-/OB-Targets eines Trades als Linie (Chat 2026-07-28: "gezeichnet und
+// gehighlighted werden, genauso wie das Setup-OB") — WiederverwendungLiquidityLinePrimitive für
+// beide Target-Arten (auch OB, siehe findClickedOBZone: nur die nähere Kante wird übernommen, kein
+// eigenes Box-Rendering nötig). Wie bei refreshTradeSetupLinksInternal bewusst UNABHÄNGIG von
+// showLiquidity/showOrderBlocks (nur an showTrades gekoppelt) — ein Target gehört zum Trade, nicht
+// zur Live-Anzeige-Rauschen-Filterung. Ohne source_time (Alt-Targets vor diesem Feature, siehe
+// Migration 20260728140000) wird nichts gezeichnet, da keine Linie rekonstruierbar ist.
+const TARGET_TIER_WIDTH_RATIO = { minor: 1, medium: 1.6, major: 2.2 };
+function refreshTradeTargetLinksInternal() {
+  for (const p of tradeTargetLinkPrimitives) candleSeries.detachPrimitive(p);
+  tradeTargetLinkPrimitives.length = 0;
+  if (!props.showTrades) return;
+  const candles = clipReplay(allCandles);
+  if (candles.length === 0) return;
+  const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
+  const precision = pricePrecisionForInstrument(props.symbol);
+  for (const t of props.trades) {
+    for (const target of t.targets ?? []) {
+      if (target.sourceTime == null) continue;
+      const endTime = target.touchedTime ?? candles[candles.length - 1].time;
+      const tier = classifyAge(businessSecondsBetween(target.sourceTime, target.touchedTime ?? nowSec));
+      const primitive = new LiquidityLinePrimitive(
+        { price: target.price, pivotTime: target.sourceTime, endTime },
+        {
+          color: cssColor("tradeTarget"),
+          lineWidth: lineWidth("tradeTarget") * TARGET_TIER_WIDTH_RATIO[tier],
+          // "🎯 Pivot #12"/"🎯 OB #12" — matcht 1:1 die Zeile in TradesTable/TradeEditModal (siehe
+          // tradeTargets.ts: kindLabel), wie schon beim Setup-"#<id>"-Muster.
+          label: `🎯 ${kindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`,
+          labelSide: "end-above",
+        },
+        candles,
+      );
+      candleSeries.attachPrimitive(primitive);
+      tradeTargetLinkPrimitives.push(primitive);
+    }
   }
 }
 
@@ -1094,6 +1113,36 @@ function findClickedLiquidityLevel(param) {
   );
 }
 
+// Ziel-Modus, zweite Klick-Fläche (Chat 2026-07-28: "ein Pivot targetiere ich oder einen OB") —
+// testet gegen dieselben allgemeinen OB-Zonen, die auch gezeichnet werden (poiZonesMetadata,
+// respektiert also automatisch showOrderBlocks/showHistoricalObs, siehe refreshPoiZonesInternal:
+// die Liste ist bei showOrderBlocks=false schon leer). Nur der Preis (nicht die ganze Box) wird als
+// Target übernommen — die dem Klick NÄHERE Kante, nicht fest nach Richtung, weil ein Klick näher an
+// der Oberkante eher "ich will die Oberkante" meint als andersrum.
+function findClickedOBZone(param) {
+  if (!param.point || !candleSeries || !chart) return null;
+  const price = candleSeries.coordinateToPrice(param.point.y);
+  const time = chart.timeScale().coordinateToTime(param.point.x);
+  if (price == null || time == null) return null;
+  const zone = (poiZonesMetadata.value ?? []).find(
+    (z) => !z.invalidated && time >= z.startTime && time <= z.endTime && price <= z.top && price >= z.bottom,
+  );
+  if (!zone) return null;
+  const nearEdge = Math.abs(price - zone.top) < Math.abs(price - zone.bottom) ? zone.top : zone.bottom;
+  // endTime friert bei detectOrderBlocks() auf die berührende Kerze ein, sobald touched=true wird
+  // (siehe orderBlocks.js) — praktisch also "touchedTime", ohne dass die Zone das Feld extra führt.
+  return { kind: "ob", price: nearEdge, sourceTime: zone.startTime, touchedTime: zone.touched ? zone.endTime : null };
+}
+
+// Vereinigt beide Ziel-Modus-Klick-Flächen (Chat 2026-07-28) — Linie zuerst (präziser, kleinere
+// Toleranz = eindeutigerer Treffer), Box als Fallback. Liefert ein Objekt im TradeTarget-Rohformat
+// (siehe tradeTargets.ts), das direkt an addTargetToTrade durchgereicht werden kann.
+function findClickedTarget(param) {
+  const lvl = findClickedLiquidityLevel(param);
+  if (lvl) return { kind: "pivot", price: lvl.price, sourceTime: lvl.pivotTime, touchedTime: lvl.touchedTime };
+  return findClickedOBZone(param);
+}
+
 // Positioniert die aktuell erkannten Setups (currentTradeSetups) gegen `allCandles` (den
 // gerade angezeigten Chart-Timeframe) — analog zu renderPersistedZones für die 4H/1H-OB-
 // Zonen: das Setup selbst lebt auf M5/H1, gerendert wird aber immer gegen das sichtbare
@@ -1324,6 +1373,7 @@ function refreshChart() {
   refreshNewsMarkersInternal();
   refreshTradeMarkersInternal();
   refreshTradeSetupLinksInternal();
+  refreshTradeTargetLinksInternal();
   refreshClaudeAnnotationsInternal();
   renderTradeSetupsInternal();
   refreshRangesMarkersInternal();
@@ -1554,13 +1604,13 @@ onMounted(() => {
 
   chart.subscribeClick((param) => {
     if (!param.point || !props.tradeModeActive) return;
-    // Ziel-Modus (Chat 2026-07-27): Klick auf eine Liquiditäts-Linie -> ans Dashboard durchreichen,
-    // das den Preis als Ziel zum gerade "scharfen" Trade hinzufügt. Eigener Modus statt einfach
-    // zusätzlich zum Setup-Klick zu testen, damit ein Klick nie mehrdeutig ist (Setup-OB-Box vs.
-    // LQ-Linie könnten sich sonst überlappen).
+    // Ziel-Modus (Chat 2026-07-27/28): Klick auf ein Pivot (Linie) oder eine OB-Zone (Box) -> ans
+    // Dashboard durchreichen, das den Preis als Target zum gerade "scharfen" Trade hinzufügt.
+    // Eigener Modus statt einfach zusätzlich zum Setup-Klick zu testen, damit ein Klick nie
+    // mehrdeutig ist (Setup-OB-Box vs. Ziel-Pivot/-OB könnten sich sonst überlappen).
     if (props.targetModeActive) {
-      const level = findClickedLiquidityLevel(param);
-      if (level) emit("select-liquidity-level", level);
+      const target = findClickedTarget(param);
+      if (target) emit("select-target", target);
       return;
     }
     // Trade-Modus (Chat 2026-07-27): Klick auf eine Trade-Setup-OB-Box -> sofort im TSC fokussieren
@@ -1584,7 +1634,7 @@ onMounted(() => {
       chartContainerRef.value.style.cursor = "";
       return;
     }
-    const hit = props.targetModeActive ? findClickedLiquidityLevel(param) : findClickedSetup(param);
+    const hit = props.targetModeActive ? findClickedTarget(param) : findClickedSetup(param);
     chartContainerRef.value.style.cursor = hit ? "pointer" : "";
   });
 
@@ -1691,6 +1741,7 @@ watch(() => props.currentBar, () => {
 watch([() => props.trades, () => props.showTrades], () => {
   refreshTradeMarkersInternal();
   refreshTradeSetupLinksInternal();
+  refreshTradeTargetLinksInternal();
 });
 watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 watch(() => props.poiZones, refreshPoiZonesInternal);

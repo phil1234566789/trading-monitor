@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, watch } from "vue";
 import { updateTrade, deleteTrade, unlinkTradeSetup, removeTargetFromTrade } from "../tradeIntake.js";
-import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
+import { fmtDateTime } from "../format.js";
+import { formatTargetLabel } from "../tradeTargets";
 import MetadataPanel from "./MetadataPanel.vue";
 
 // Ersetzt die vorherigen Inline-Buttons in TradesTable.vue (🔗 verknüpfen, + Ziel, × Ziel
@@ -16,8 +17,6 @@ const props = defineProps({
   trade: { type: Object, required: true },
 });
 const emit = defineEmits(["close", "saved", "deleted", "request-link", "request-add-target"]);
-
-const precision = computed(() => pricePrecisionForInstrument(props.trade.instrument));
 
 const entryPrice = ref("");
 const stopLoss = ref("");
@@ -81,6 +80,13 @@ async function onRemoveTarget(target) {
   const ok = await removeTargetFromTrade(target.id);
   if (ok) emit("saved");
 }
+
+// Nicht replay-aware (anders als PriceChart.vue) — das Panel zeigt den ECHTEN aktuellen Stand,
+// nicht den Replay-Zeitpunkt; reicht hier als einfache Momentaufnahme beim Öffnen.
+const nowSec = Math.floor(Date.now() / 1000);
+function targetLabel(target) {
+  return formatTargetLabel(target, props.trade.instrument, nowSec);
+}
 </script>
 
 <template>
@@ -101,13 +107,13 @@ async function onRemoveTarget(target) {
     </section>
 
     <section class="tem-section">
-      <h4 class="tem-section-title">Ziele</h4>
-      <div v-if="!trade.targets || trade.targets.length === 0" class="tem-muted">Noch keine Ziele.</div>
+      <h4 class="tem-section-title">Targets</h4>
+      <div v-if="!trade.targets || trade.targets.length === 0" class="tem-muted">Noch keine Targets.</div>
       <div v-for="target in trade.targets" :key="target.id" class="tem-row">
-        <span>{{ fmtPrice(target.price, precision) }}</span>
+        <span>{{ targetLabel(target) }}</span>
         <button class="tem-small-btn" @click="onRemoveTarget(target)">entfernen</button>
       </div>
-      <button class="tem-action-btn" @click="emit('request-add-target')">🎯 Ziel hinzufügen (Trade-Modus, dann LQ-Level anklicken)</button>
+      <button class="tem-action-btn" @click="emit('request-add-target')">🎯 Target hinzufügen (Trade-Modus, dann Pivot oder OB anklicken)</button>
     </section>
 
     <section class="tem-section">

@@ -1088,6 +1088,46 @@ export function buildMarketStructureState(
   return state;
 }
 
+// --- Darstellung/Export (State -> reines JSON) ---------------------------------------------------
+// Extrahiert aus PriceChart.vue (Chat 2026-07-27: Backtest-Export braucht dieselbe Aufbereitung wie
+// das Debug-Metadaten-Panel, siehe backtestExport.js) — vorher lebten pivotForDisplay/
+// summarizeMarketStructureState nur lokal im Vue-Setup. pivotTime/touched.touchedTime sind nur
+// intern nötig (Rendern der Linien bzw. zeitbewusste Pullback-Auswahl in tryConfirmTrend), tauchen
+// in Metadaten-Panels/Export bewusst nicht auf (Philips Pivot-Typ hat kein Pflichtfeld dafür, nur
+// die menschenlesbaren pivotAt/touchedAt).
+export function pivotForDisplay(p: Pivot | null): any {
+  if (!p) return null;
+  const { pivotTime, ...rest } = p as any;
+  if (rest.touched && typeof rest.touched === "object") {
+    const { touchedTime, ...touchedRest } = rest.touched;
+    rest.touched = touchedRest;
+  }
+  return rest;
+}
+
+// includeAppliedPivots=false fürs Backtest-Daten-Export (Chat 2026-07-27, Philip: "appliedPivots
+// ist für die Backtest-Daten komplett irrelevant") — appliedPivots ist reine interne Buchhaltung
+// (jeder je gelesene Pivot, unabhängig davon ob er die Struktur beeinflusst hat), fürs
+// Debug-Metadaten-Panel (Default true, unverändertes Verhalten) aber weiterhin zum Gegenprüfen
+// gegen die hand-hergeleiteten rangeStateN-Fixtures nützlich.
+export function summarizeMarketStructureState(
+  state: MarketStructureState | null,
+  { includeAppliedPivots = true }: { includeAppliedPivots?: boolean } = {},
+): any {
+  if (!state) return null;
+  return {
+    trend: state.trend,
+    currRange: { high: pivotForDisplay(state.currRange.high), low: pivotForDisplay(state.currRange.low) },
+    structurePivots: state.structurePivots.map(pivotForDisplay),
+    innerStructurePivots: state.innerStructurePivots.map(pivotForDisplay),
+    ...(includeAppliedPivots ? { appliedPivots: state.appliedPivots.map(pivotForDisplay) } : {}),
+    // Nested-Gegentrend-Tracker (CHoCH-Erkennung, Chat 2026-07-25) — rekursiv über dieselbe
+    // Funktion, damit er im Debug-Panel/Export genauso einsehbar ist wie der Haupttrend.
+    nestedTrend: summarizeMarketStructureState(state.nestedTrend, { includeAppliedPivots }),
+    closedRanges: state.closedRanges.map((r) => ({ ...r, low: pivotForDisplay(r.low), high: pivotForDisplay(r.high) })),
+  };
+}
+
 // --- Zeichnung ----------------------------------------------------------------------------------
 // Pfeil-Marker (roh: kleines gefülltes Dreieck) für range.high/range.low — sitzt ganz rechts am
 // Pane-Rand (wie das Linienende, siehe toLevel), nicht am Pivot selbst (siehe Chat: "nach ganz

@@ -1,5 +1,6 @@
 <script setup>
 import { fmtPrice, fmtDateTime, fmtR, pricePrecisionForInstrument } from "../format.js";
+import { kindLabel } from "../tradeTargets";
 
 defineProps({
   trades: { type: Array, required: true },
@@ -21,9 +22,12 @@ function outcomeLabel(t) {
   return t.outcome ? (OUTCOME_LABEL[t.outcome] ?? t.outcome) : "Offen";
 }
 
+// Kompakte Form für die Tabelle (Art + Preis, Chat 2026-07-28: "Target gefällt mir besser als
+// Ziele") — Tier/Alter passen hier nicht mehr rein, die stehen ausführlich im Bearbeiten-Panel
+// (siehe TradeEditModal.vue: formatTargetLabel).
 function targetsLabel(t) {
   if (!t.targets || t.targets.length === 0) return "–";
-  return t.targets.map((target) => fmtPrice(target.price, pricePrecisionForInstrument(t.instrument))).join(" / ");
+  return t.targets.map((target) => `${kindLabel(target.kind)} ${fmtPrice(target.price, pricePrecisionForInstrument(t.instrument))}`).join(" / ");
 }
 </script>
 
@@ -36,7 +40,7 @@ function targetsLabel(t) {
         <th>Setup</th>
         <th>Entry</th>
         <th>SL</th>
-        <th>Ziele</th>
+        <th>Targets</th>
         <th>Exit</th>
         <th>Ergebnis</th>
         <th>Begründung</th>

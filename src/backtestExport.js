@@ -5,6 +5,7 @@
 // dupliziert werden.
 import { fetchInitialCandles } from "./forexCandles.js";
 import { fmtDateTime } from "./format.js";
+import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructureState } from "./marketStructureAnalysis";
 
 // Aktuell nur GBPUSD: EURUSD bräuchte zusätzlich DXY als Kontext (siehe backtest-instructions.md),
 // das ist noch nicht umgesetzt — Liste bewusst als einzige Quelle der Wahrheit fürs Modal-Dropdown,
@@ -22,6 +23,21 @@ const PIP_SIZE = 0.0001;
 // (siehe berlinDayRangeUtcMs) nie eine fehlende Randkerze verursachen — der Tages-Filter unten
 // schneidet ohnehin exakt auf [start, end) zurecht.
 const M5_FETCH_COUNT = 300;
+
+// "1h-Range"-Marktstruktur-Trendalgorithmus (marketStructureAnalysis.ts) — dieselben Defaults wie
+// Dashboard.vue (rangesPeriod/ranges2Period/rangesLookbackHours/ranges2LookbackHours), damit der
+// Backtest-Export exakt den Trend-State zeigt, den Philip auch im Chart sieht ("Structure"-Toggle),
+// nicht eine eigene, abweichende Konfiguration. Philip 2026-07-27: "so viel es geht übernehmen,
+// später wieder rausschmeißen, wenns zu viel wird" — appliedPivots ist die eine schon jetzt als
+// irrelevant markierte Ausnahme (siehe summarizeMarketStructureState-Aufruf unten).
+const STRUCTURE_PERIOD_OUTER = 5;
+const STRUCTURE_PERIOD_INNER = 2;
+const STRUCTURE_LOOKBACK_HOURS = 7 * 24;
+// Puffer VOR dem Lookback-Fenster, damit ein Fraktal am Fensterrand nicht unerkannt bleibt (braucht
+// period+4 Kerzen davor, period danach, siehe isUpFractal/isDownFractal in liquidity.js) — analog
+// zu RANGES_CANDLE_BUFFER in PriceChart.vue (dort 20 für beide Perioden gemeinsam), hier etwas
+// großzügiger, da EIN Fetch beide Perioden bedient.
+const STRUCTURE_H1_FETCH_COUNT = STRUCTURE_LOOKBACK_HOURS + 40;
 
 const TIME_FORMATTER = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Berlin" });
 // "longOffset" liefert z.B. "GMT+2" — DST-aware statt fixem Offset, siehe CLAUDE.md
@@ -65,6 +81,19 @@ function formatCandle(c) {
   };
 }
 
+// Läuft bis currentTimeSec (Replay-Cutoff oder echtes "jetzt") — derselbe "wir kennen die Zukunft
+// noch nicht"-Grundsatz wie beim M5-Export gilt genauso für den Trend-State, sonst würde der
+// Backtest heimlich Wissen aus der Zukunft einfließen lassen.
+async function compute1hStructureState(asset, currentTimeSec) {
+  const raw = await fetchInitialCandles(asset, "1h", STRUCTURE_H1_FETCH_COUNT, currentTimeSec * 1000);
+  const candles = raw.filter((c) => c.time <= currentTimeSec);
+  const cutoff = currentTimeSec - STRUCTURE_LOOKBACK_HOURS * 3600;
+  const pivotsOuter = computeRangesPivots(candles, STRUCTURE_PERIOD_OUTER, cutoff, fmtDateTime);
+  const pivotsInner = computeRangesPivots(candles, STRUCTURE_PERIOD_INNER, cutoff, fmtDateTime);
+  const state = buildMarketStructureState(pivotsOuter, pivotsInner, STRUCTURE_PERIOD_OUTER, STRUCTURE_PERIOD_INNER, candles);
+  return summarizeMarketStructureState(state, { includeAppliedPivots: false });
+}
+
 function rangeStats(rawCandles) {
   if (rawCandles.length === 0) return { rangeHigh: null, rangeLow: null, pips: null };
   const rangeHigh = Math.max(...rawCandles.map((c) => c.high));
@@ -97,6 +126,7 @@ export async function buildBacktestExport({ asset, dateStr, replayUntilSec = nul
   // bei aktivem Replay immer die echte Klickzeit — Philip: "die info wann ich da genau drauf
   // drücke juckt nicht wirklich, entscheidend ist was die aktuelle Zeit des Snapshots ist".
   const currentTimeSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
+  const structure1h = await compute1hStructureState(asset, currentTimeSec);
 
   return {
     asset,
@@ -107,6 +137,7 @@ export async function buildBacktestExport({ asset, dateStr, replayUntilSec = nul
     // dem Replay-Modus" — gleiche Form wie PriceChart.vue's replay-Metadaten, bewusst konsistent
     // gehalten statt hier abzuweichen, nur um die paar Zeichen Redundanz zu sparen).
     replay: replayUntilSec == null ? { active: false } : { active: true, until: replayUntilSec, untilAt: fmtDateTime(replayUntilSec) },
+    structure1h,
     asiaSession: {
       ...rangeStats(asiaCandlesRaw),
       candles: asiaCandlesRaw.map(formatCandle),

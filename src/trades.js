@@ -37,7 +37,7 @@ export async function fetchTrades(instrument) {
   // Sammel-Queries statt pro Trade einzeln, um bei vielen Trades nicht N+1 Requests zu erzeugen.
   const ids = data.map((row) => row.id);
   const [{ data: targets, error: targetsError }, { data: partials, error: partialsError }] = await Promise.all([
-    supabase.from("trade_targets").select("id, signal_id, price").in("signal_id", ids),
+    supabase.from("trade_targets").select("id, signal_id, price, kind, source_time, touched_time").in("signal_id", ids),
     supabase.from("trade_partial_exits").select("signal_id, price, exit_time, portion_pct").in("signal_id", ids),
   ]);
   if (targetsError) throw targetsError;
@@ -57,9 +57,18 @@ export async function fetchTrades(instrument) {
     invalidation: row.invalidation,
     tradeSetupId: row.trade_setup_id,
     tradeSetupObStartTime: row.trade_setups?.ob_start_time ? Math.floor(new Date(row.trade_setups.ob_start_time).getTime() / 1000) : null,
-    // {id, price} statt nur des Preises (Chat 2026-07-28: "kann ich das bearbeiten?") — die id
-    // wird für den Entfernen-Button in TradesTable.vue gebraucht (removeTargetFromTrade).
-    targets: (targetsBySignal[row.id] ?? []).map((t) => ({ id: t.id, price: t.price })),
+    // TradeTarget-Rohformat (siehe tradeTargets.ts) statt nur des Preises (Chat 2026-07-28: "kann
+    // ich das bearbeiten?" / "wieso nur der Preis?") — kind/sourceTime/touchedTime fürs
+    // Chart-Rendering (PriceChart.vue: refreshTradeTargetLinksInternal) und die Alters-Einstufung
+    // in der Anzeige; bei Alt-Targets (vor Migration 20260728140000) sind source_time/touched_time
+    // null, dann keine Linie/kein Alter, siehe tradeTargets.ts.
+    targets: (targetsBySignal[row.id] ?? []).map((t) => ({
+      id: t.id,
+      price: t.price,
+      kind: t.kind,
+      sourceTime: t.source_time ? Math.floor(new Date(t.source_time).getTime() / 1000) : null,
+      touchedTime: t.touched_time ? Math.floor(new Date(t.touched_time).getTime() / 1000) : null,
+    })),
     partialExits: (partialsBySignal[row.id] ?? []).map((p) => ({
       price: p.price,
       time: Math.floor(new Date(p.exit_time).getTime() / 1000),
