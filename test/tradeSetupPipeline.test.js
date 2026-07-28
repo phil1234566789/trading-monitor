@@ -9,9 +9,11 @@
 import { describe, expect, it } from "vitest";
 import { detectLiquidityLevels } from "../src/liquidity.js";
 import { detectSetupObs, detectTradeSetups } from "../src/tradeSetup.js";
+import { collectH1LqLevels } from "../src/marketStructureAnalysis";
 import gbpusdM5LongSetup from "./fixtures/gbpusd-m5-2026-07-08-long-setup.json";
 import gbpusdH1LongSetup from "./fixtures/gbpusd-h1-2026-07-08-long-setup.json";
 import gbpusdM5LongSetup0720 from "./fixtures/gbpusd-m5-2026-07-20-long-setup.json";
+import eurusdM5LongSetup0728 from "./fixtures/eurusd-m5-2026-07-28-long-setup.json";
 
 // Dieselben Konstanten wie TRADE_SETUP_* in PriceChart.vue/tradeSetupParams in poi-watcher/index.ts
 // — bei Änderungen dort auch hier nachziehen, sonst testet dieser Test nicht mehr die echte Config.
@@ -149,5 +151,80 @@ describe("Trade-Setup-Pipeline (echte M5-/H1-Kerzen-Fixtures, wie computeTradeSe
     // pathType ("A"/"B", Chat 2026-07-26) speist die "Typ A/B"-Beschriftung in TSC/OB-Label —
     // muss mit derselben fractal===ls-Unterscheidung übereinstimmen.
     expect(match.pathType).toBe(expected.isPathB ? "B" : "A");
+  });
+});
+
+// Bug-Report Philip 2026-07-28 ("warum wird das Long-Setup nicht erkannt"): ein LQ-Sweep-Pivot,
+// das marketStructureAnalysis.ts (der "1h-Range"-Strukturalgorithmus) längst als "1h LQ-Sweep"
+// trackt, wurde von Path A nicht gesehen — die ALTE H1-Level-Quelle (detectLiquidityLevels auf
+// einem eigenen 300-Kerzen/≈12,5-Tage-Fenster, siehe Git-History) konnte ein 32 Tage altes Pivot
+// gar nicht erst laden. Fix: H1-Level kommen jetzt aus marketStructureState.structurePivots
+// (collectH1LqLevels in marketStructureAnalysis.ts) statt einer eigenen, unabhängigen
+// H1-Fraktal-Erkennung — Philip explizit: "auf keinen Fall die 1h Candles hochsetzen, das
+// allermeiste ist nur Datenmüll". Eigener describe-Block statt SCENARIOS-Eintrag, weil die
+// H1-Level hier anders (collectH1LqLevels statt detectLiquidityLevels) gebaut werden.
+describe("Trade-Setup-Pipeline mit marketStructureState-H1-Leveln (collectH1LqLevels, seit Chat 2026-07-28)", () => {
+  it("EURUSD M5, 28.07.2026: 32 Tage altes 1h-LQ-Sweep-Pivot (1.13545) speist Path A trotz kurzem M5-Fenster", () => {
+    // state-Fixture inline statt eigene JSON-Datei — ein einzelnes structurePivots-Element reicht,
+    // um den Bug-Report-Fall (Pivot vom 26.06., erst am 28.07. 12:00 geswept) nachzubilden.
+    const state = {
+      trend: "uptrend",
+      structurePivots: [
+        {
+          type: "LQ-sweep",
+          price: 1.13545,
+          pivotAt: "26.06., 04:00",
+          pivotTime: 1782439200,
+          touched: { price: 1.13545, touchedAt: "28.07., 12:00", touchedTime: 1785232800 },
+        },
+      ],
+      nestedTrend: null,
+    };
+    const h1Lows = collectH1LqLevels(state, -1);
+    const { lows: m5Lows } = detectLiquidityLevels(eurusdM5LongSetup0728, TRADE_SETUP_M5_FRACTAL_PERIOD);
+    const setupObs = detectSetupObs(eurusdM5LongSetup0728);
+    const params = {
+      graceSec: TRADE_SETUP_GRACE_SEC,
+      lsMaxLeadSecH1: TRADE_SETUP_LS_MAX_LEAD_SEC_H1,
+      lsMaxLeadSecM5: TRADE_SETUP_LS_MAX_LEAD_SEC_M5,
+      maxDistanceM5: TRADE_SETUP_LS_MAX_DISTANCE_M5,
+      maxLookbackSec: TRADE_SETUP_LOOKBACK_SEC,
+      obMaxDelaySec: TRADE_SETUP_OB_MAX_DELAY_SEC,
+      nowTime: eurusdM5LongSetup0728[eurusdM5LongSetup0728.length - 1].time,
+    };
+    const setups = detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, eurusdM5LongSetup0728);
+
+    const match = setups.find((s) => s.ls.price === 1.13545 && s.obStartTime === 1785234600);
+    expect(
+      match,
+      `kein Setup mit ls.price=1.13545/obStartTime=1785234600 gefunden (${setups.length} Setups gesamt: ${JSON.stringify(
+        setups.map((s) => ({ ls: s.ls.price, ob: s.obStartTime, path: s.pathType })),
+      )})`,
+    ).toBeDefined();
+    expect(match.pathType).toBe("A");
+    expect(match.fractal.price).toBeCloseTo(1.13542, 5);
+    expect(match.fractal.pivotTime).toBe(1785233400); // 28.07. 12:10 Berlin
+    expect(match.ls.touchedTime).toBe(1785232800); // 28.07. 12:00 Berlin
+    expect(match.obTop).toBeCloseTo(1.13578, 5);
+    expect(match.obBottom).toBeCloseTo(1.13564, 5);
+  });
+
+  it("liefert nur touched Pivots der zur Richtung passenden Trend-Seite (Haupt- + Nested-Trend), mit korrektem dir/touchedTime", () => {
+    const state = {
+      trend: "uptrend",
+      structurePivots: [
+        { type: "low", price: 1.1, pivotAt: "x", pivotTime: 100, touched: false }, // untouched -> kein LS-Kandidat
+        { type: "LQ-sweep", price: 1.2, pivotAt: "x", pivotTime: 200, touched: { price: 1.2, touchedAt: "y", touchedTime: 300 } },
+      ],
+      nestedTrend: {
+        trend: "downtrend",
+        structurePivots: [{ type: "LQ-sweep", price: 1.3, pivotAt: "x", pivotTime: 400, touched: { price: 1.3, touchedAt: "y", touchedTime: 500 } }],
+      },
+    };
+    // Long (dir=-1): Haupttrend uptrend liefert die Low-Seite; der Nested-downtrend-Kandidat ist
+    // die High-Seite (für Short, dir=1), zählt hier also NICHT mit.
+    expect(collectH1LqLevels(state, -1)).toEqual([{ price: 1.2, dir: -1, pivotTime: 200, touched: true, touchedTime: 300, endTime: 300 }]);
+    expect(collectH1LqLevels(state, 1)).toEqual([{ price: 1.3, dir: 1, pivotTime: 400, touched: true, touchedTime: 500, endTime: 500 }]);
+    expect(collectH1LqLevels(null, -1)).toEqual([]);
   });
 });

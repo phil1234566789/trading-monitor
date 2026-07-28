@@ -1,4 +1,4 @@
-import { LiquidityLinePrimitive, detectLiquidityLevels } from "./liquidity.js";
+import { LiquidityLinePrimitive, detectLiquidityLevels, bullBearLabelSide } from "./liquidity.js";
 import { cssColor } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
 import { businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
@@ -1349,6 +1349,47 @@ function toTouchedLevel(pivot: Pivot, candles: Candle[]) {
   return { price: pivot.price, pivotTime: pivot.pivotTime ?? 0, endTime };
 }
 
+// Wandelt einen Pivot in die von tradeSetup.js erwartete LqLevel-Form um (siehe liquidity.js:
+// buildLevel — dieselben Felder: price/dir/pivotTime/touched/touchedTime/endTime). Bug-Report
+// Philip 2026-07-28: Path A/B in tradeSetup.js nutzten bislang eine EIGENE, unabhängige
+// H1-Fraktal-Erkennung (liquidity.js auf einem nur 300 Kerzen/≈12,5 Tage kurzen Fenster,
+// TRADE_SETUP_H1_CANDLE_COUNT in PriceChart.vue) statt der hier längst vorhandenen, sauber
+// gefilterten structurePivots — ein 32 Tage altes, aber gerade erst geswepptes Level (1.13545)
+// war dadurch für Path A/B unsichtbar, obwohl es im Debug-Panel längst als "1h LQ-Sweep"
+// angezeigt wurde ("das allermeiste [an der alten H1-Fraktal-Erkennung] ist nur Datenmüll" —
+// Philip wollte explizit NICHT die Kerzenzahl hochsetzen, sondern die längst gefilterten
+// structurePivots wiederverwenden). dir wird vom Aufrufer mitgegeben, siehe collectH1LqLevels.
+function toLqLevel(pivot: Pivot, dir: 1 | -1) {
+  const touchedTime = pivot.touched ? (pivot.touched.touchedTime ?? null) : null;
+  return {
+    price: pivot.price,
+    dir,
+    pivotTime: pivot.pivotTime ?? 0,
+    touched: pivot.touched !== false,
+    touchedTime,
+    // Nur touched Pivots kommen hier überhaupt an (siehe collectH1LqLevels-Filter), und der
+    // Algorithmus setzt touchedTime für echte (nicht synthetische Test-)Pivots immer — der
+    // pivotTime-Fallback ist rein defensiv für den in der Praxis nicht vorkommenden Fall.
+    endTime: touchedTime ?? (pivot.pivotTime ?? 0),
+  };
+}
+
+// Sammelt alle H1-Level-Kandidaten für EINE tradeSetup-Richtung (dir: -1 Long braucht Low-Seite,
+// 1 Short braucht High-Seite) aus structurePivots — sowohl vom Haupttrend als auch von einem
+// gerade laufenden Nested-Gegentrend-Kandidaten (CHoCH), falls vorhanden. Welche der beiden
+// Pivot-Listen die Low- bzw. High-Seite liefert, hängt vom jeweiligen state.trend ab (uptrend:
+// Haupttrend=Low-Seite; downtrend gespiegelt) — dieselbe Zuordnung wie isDowntrend in
+// renderMarketStructureAnalysis. Nur touched Pivots sind als LS-Kandidat überhaupt relevant
+// (untouched = noch nichts geswept, das ist die Fraktal-Seite, nicht die LS-Seite).
+export function collectH1LqLevels(state: MarketStructureState | null | undefined, dir: 1 | -1) {
+  if (!state) return [];
+  const wantTrend = dir === -1 ? "uptrend" : "downtrend";
+  const pivots: Pivot[] = [];
+  if (state.trend === wantTrend) pivots.push(...state.structurePivots);
+  if (state.nestedTrend && state.nestedTrend.trend === wantTrend) pivots.push(...state.nestedTrend.structurePivots);
+  return pivots.filter((p) => p.touched !== false).map((p) => toLqLevel(p, dir));
+}
+
 // Erste Kerze (aus den ANGEZEIGTEN candles, i.d.R. feingranularer als die H1-Pivots selbst — z.B.
 // M5, siehe Bug-Report Philip 2026-07-25) NACH fromTime, die tatsächlich unter price SCHLIESST.
 // Erst auf reine Docht-Berührung umgestellt gewesen (Chat: "das reine Zeichnen ist doch nur bis
@@ -1388,10 +1429,14 @@ function firstCloseAbove(candles: Candle[], fromTime: number, price: number, fal
 // "bitte noch bei structure bei 1h LQ-Sweep dazutun") — dieselbe Formel wie im TSC/den
 // Liquiditäts-Debug-Labels (tradeSetupCockpit.ts/liquidity.js), hier noch mal separat, weil jede
 // Datei ihre eigene, leicht andere Label-Bau-Stelle hat.
-function ageSuffix(pivotTime: number | undefined, nowSec: number | undefined): string {
-  if (pivotTime == null || nowSec == null) return "";
+// price optional (Bug-Report Philip 2026-07-28: "1h LQ-Sweep im Debug-Modus mit dem falschen
+// Pivot verwechselt, weil kein Preis dranstand") — nur bei aktivem showLiquidityDebug-Toggle
+// gesetzt, dann zusammen mit dem Alter in derselben Klammer statt einem zweiten Label-Anhängsel.
+function ageSuffix(pivotTime: number | undefined, nowSec: number | undefined, price?: string | null): string {
+  if (pivotTime == null || nowSec == null) return price ? ` (${price})` : "";
   const age = formatAge(businessSecondsBetween(pivotTime, nowSec));
-  return age ? ` (${age} alt)` : "";
+  const parts = [age ? `${age} alt` : null, price].filter((p): p is string => Boolean(p));
+  return parts.length ? ` (${parts.join(", ")})` : "";
 }
 
 // Ersetzt existingPrimitives komplett durch die aktuelle Marktstruktur-Darstellung: roter
@@ -1409,8 +1454,12 @@ export function renderMarketStructureAnalysis(
   state: MarketStructureState | null,
   existingPrimitives: any[],
   candles: Candle[],
-  { nowSec }: { nowSec?: number } = {},
+  { nowSec, debugPrices, formatPrice }: { nowSec?: number; debugPrices?: boolean; formatPrice?: (price: number) => string } = {},
 ) {
+  // Nur bei aktivem Debug-Toggle einen Preis für den LQ-Sweep-Label-Zusatz auflösen (Chat
+  // 2026-07-28) — dieselbe debugPrices/formatPrice-Konvention wie renderLiquidityLevels
+  // (liquidity.js) und renderTradeSetupsInternal (PriceChart.vue).
+  const lqSweepPrice = (price: number) => (debugPrices && formatPrice ? formatPrice(price) : null);
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
   if (!state || candles.length === 0) return;
@@ -1484,7 +1533,15 @@ export function renderMarketStructureAnalysis(
     const lqColor = cssColor("rangeLqSweep");
     const line = new LiquidityLinePrimitive(
       toTouchedLevel(lqSweep, candles),
-      { color: lqColor, lineWidth: lineWidth("rangeLqSweep"), label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec)}`, labelSide: "end" },
+      // Rechtsbündig unter/über der Linie statt "end" (Chat 2026-07-28: "genauso wie schon in
+      // trades die Protected Pivots und die LS") — bullischer Sweep (isDowntrend=false) unten,
+      // bärischer oben, siehe bullBearLabelSide (liquidity.js).
+      {
+        color: lqColor,
+        lineWidth: lineWidth("rangeLqSweep"),
+        label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec, lqSweepPrice(lqSweep.price))}`,
+        labelSide: bullBearLabelSide(isDowntrend),
+      },
       candles,
     );
     series.attachPrimitive(line);
@@ -1596,7 +1653,13 @@ export function renderMarketStructureAnalysis(
       const lqColor = cssColor("rangeLqSweep");
       const line = new LiquidityLinePrimitive(
         toTouchedLevel(lqSweep, candles),
-        { color: lqColor, lineWidth: lineWidth("rangeLqSweep"), label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec)}`, labelSide: "end" },
+        // bärischer Nested-Sweep -> Label immer oberhalb (siehe bullBearLabelSide).
+        {
+          color: lqColor,
+          lineWidth: lineWidth("rangeLqSweep"),
+          label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec, lqSweepPrice(lqSweep.price))}`,
+          labelSide: bullBearLabelSide(true),
+        },
         candles,
       );
       series.attachPrimitive(line);
@@ -1685,7 +1748,13 @@ export function renderMarketStructureAnalysis(
       const lqColor = cssColor("rangeLqSweep");
       const line = new LiquidityLinePrimitive(
         toTouchedLevel(lqSweep, candles),
-        { color: lqColor, lineWidth: lineWidth("rangeLqSweep"), label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec)}`, labelSide: "end" },
+        // bullischer Nested-Sweep -> Label immer unterhalb (siehe bullBearLabelSide).
+        {
+          color: lqColor,
+          lineWidth: lineWidth("rangeLqSweep"),
+          label: `1h LQ-Sweep${ageSuffix(lqSweep.pivotTime, nowSec, lqSweepPrice(lqSweep.price))}`,
+          labelSide: bullBearLabelSide(false),
+        },
         candles,
       );
       series.attachPrimitive(line);

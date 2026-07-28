@@ -300,6 +300,15 @@ function ageSuffix(pivotTime, nowSec) {
   return age ? ` (${age} alt)` : "";
 }
 
+// Bullische Sweep-/Setup-Linien beschriften sich rechtsbündig UNTER, bärische DARÜBER — reine
+// visuelle Unterscheidung (siehe PP-/LS-Linien in PriceChart.vue, Chat 2026-07-27). Chat
+// 2026-07-28 ("genauso wie schon in trades die Protected Pivots und die LS") baut die "1h
+// LQ-Sweep"-Linie in marketStructureAnalysis.ts auf dieselbe Regel um statt sie separat zu
+// entscheiden — daher hier als gemeinsame Stelle statt einer dritten eigenen Kopie.
+export function bullBearLabelSide(bearish) {
+  return bearish ? "end-above" : "end-below";
+}
+
 function levelOptions(lvl, { debugPrices, formatPrice, nowSec } = {}) {
   const key = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
   const color = cssColor(key);
