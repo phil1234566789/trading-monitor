@@ -124,3 +124,19 @@ body {
   opacity: 1;
   color: #7ea6ff;
 }
+
+.trade-targets-cell {
+  white-space: nowrap;
+}
+
+.trade-target-item {
+  margin-right: 8px;
+}
+
+.trade-target-item.target-reached {
+  color: #26a69a;
+}
+
+.trade-target-item.target-missed {
+  color: #ef5350;
+}

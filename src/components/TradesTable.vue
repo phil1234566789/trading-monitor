@@ -1,6 +1,6 @@
 <script setup>
 import { fmtPrice, fmtDateTime, fmtR, pricePrecisionForInstrument } from "../format.js";
-import { kindLabel } from "../tradeTargets";
+import { kindLabel, isTargetReached } from "../tradeTargets";
 
 defineProps({
   trades: { type: Array, required: true },
@@ -25,9 +25,19 @@ function outcomeLabel(t) {
 // Kompakte Form für die Tabelle (Art + Preis, Chat 2026-07-28: "Target gefällt mir besser als
 // Ziele") — Tier/Alter passen hier nicht mehr rein, die stehen ausführlich im Bearbeiten-Panel
 // (siehe TradeEditModal.vue: formatTargetLabel).
-function targetsLabel(t) {
-  if (!t.targets || t.targets.length === 0) return "–";
-  return t.targets.map((target) => `${kindLabel(target.kind)} ${fmtPrice(target.price, pricePrecisionForInstrument(t.instrument))}`).join(" / ");
+function targetLabel(t, target) {
+  return `${kindLabel(target.kind)} ${fmtPrice(target.price, pricePrecisionForInstrument(t.instrument))}`;
+}
+// Grün+Haken/Rot+X, sobald der Exit-Preis eine Beurteilung zulässt (Chat 2026-07-28: "brauchen wir
+// später mal für die Statistik") — kein Icon ohne Exit-Preis (noch offener Trade, siehe
+// isTargetReached: null bleibt neutral, keine Farbe).
+function targetReachedClass(t, target) {
+  const reached = isTargetReached(t.direction, t.exitPrice, target.price);
+  return reached == null ? "" : reached ? "target-reached" : "target-missed";
+}
+function targetReachedMark(t, target) {
+  const reached = isTargetReached(t.direction, t.exitPrice, target.price);
+  return reached == null ? "" : reached ? " ✓" : " ✗";
 }
 </script>
 
@@ -63,7 +73,12 @@ function targetsLabel(t) {
           <span class="trade-time">{{ fmtDateTime(t.entryTime) }}</span>
         </td>
         <td>{{ fmtPrice(t.stopLoss, pricePrecisionForInstrument(t.instrument)) }}</td>
-        <td>{{ targetsLabel(t) }}</td>
+        <td class="trade-targets-cell">
+          <span v-if="!t.targets || t.targets.length === 0">–</span>
+          <span v-for="target in t.targets" :key="target.id" class="trade-target-item" :class="targetReachedClass(t, target)">
+            {{ targetLabel(t, target) }}{{ targetReachedMark(t, target) }}
+          </span>
+        </td>
         <td v-if="t.exitPrice != null">
           {{ fmtPrice(t.exitPrice, pricePrecisionForInstrument(t.instrument)) }}<br />
           <span class="trade-time">{{ fmtDateTime(t.exitTime) }}</span>

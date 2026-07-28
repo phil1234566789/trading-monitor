@@ -59,9 +59,11 @@ const props = defineProps({
   symbol: { type: String, required: true },
   currentBar: { type: String, required: true },
   trades: { type: Array, default: () => [] },
-  // Ein/Ausblenden der eigenen geloggten Trades (Chat 2026-07-27) — bewusst getrennt von
-  // showTradeSetups (das nur die Live-Erkennung steuert, siehe refreshTradeMarkersInternal/
-  // refreshTradeSetupLinksInternal).
+  // Ein/Ausblenden der eigenen geloggten Trades (Chat 2026-07-27) — Untermenü-Toggle unter dem
+  // übergeordneten "Trades"-Button (showTradeSetups); beide zusammen müssen an sein, damit Trades
+  // gezeichnet werden (Bug-Report Philip 2026-07-28: "übergeordneter Trades-Toggle soll Trades
+  // auch ausblenden, TSC ist einzige Ausnahme" — siehe refreshTradeMarkersInternal/
+  // refreshTradeSetupLinksInternal/refreshTradeTargetLinksInternal).
   showTrades: { type: Boolean, default: true },
   poiZones: { type: Array, default: () => [] },
   showOrderBlocks: { type: Boolean, default: true },
@@ -592,20 +594,20 @@ function replayToMs(bar) {
 }
 
 function refreshTradeMarkersInternal() {
-  const trades = props.showTrades && TRADE_MARKER_BARS.has(props.currentBar) ? props.trades : [];
+  const visible = props.showTradeSetups && props.showTrades && TRADE_MARKER_BARS.has(props.currentBar);
+  const trades = visible ? props.trades : [];
   renderTradeMarkers(candleSeries, trades, tradePrimitives, clipReplay(allCandles));
 }
 
-// Zeigt die M5-OB, mit der ein geloggter Trade verknüpft ist (Chat 2026-07-27: "ich hab
-// Trade-Setups ausgeblendet, aber die OB des Shorts wurde nicht angezeigt") — bewusst UNABHÄNGIG
-// von showTradeSetups (das steuert nur die laufende Live-Erkennung/das "Rauschen" der ständig neu
-// erkannten Setups): ein bereits geloggter Trade ist kein Rauschen, den will man auch sehen können,
-// wenn die Live-Setups gerade ausgeblendet sind. Label "#<trade_setup_id>" matcht 1:1 die "Setup"-
-// Spalte in TradesTable.vue, damit sich Tabellenzeile und Chart-Box eindeutig zuordnen lassen.
+// Zeigt die M5-OB, mit der ein geloggter Trade verknüpft ist. Label "#<trade_setup_id>" matcht 1:1
+// die "Setup"-Spalte in TradesTable.vue, damit sich Tabellenzeile und Chart-Box eindeutig zuordnen
+// lassen. Bug-Report Philip 2026-07-28: "übergeordneter Trades-Toggle soll Trades auch ausblenden
+// (TSC ist einzige Ausnahme)" — gekoppelt an BEIDE Toggles (showTradeSetups = der übergeordnete,
+// showTrades = das Untermenü) statt nur an showTrades allein, wie ursprünglich am 07-27 gebaut.
 function refreshTradeSetupLinksInternal() {
   for (const p of tradeSetupLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeSetupLinkPrimitives.length = 0;
-  if (!isForex || !props.showTrades) return;
+  if (!isForex || !props.showTradeSetups || !props.showTrades) return;
   const candles = clipReplay(allCandles);
   for (const t of props.trades) {
     if (t.tradeSetupId == null || t.tradeSetupObStartTime == null || t.setupEntry == null || t.invalidation == null) continue;
@@ -628,18 +630,18 @@ function refreshTradeSetupLinksInternal() {
   }
 }
 
-// Zeichnet die Pivot-/OB-Targets eines Trades als Linie (Chat 2026-07-28: "gezeichnet und
-// gehighlighted werden, genauso wie das Setup-OB") — WiederverwendungLiquidityLinePrimitive für
-// beide Target-Arten (auch OB, siehe findClickedOBZone: nur die nähere Kante wird übernommen, kein
-// eigenes Box-Rendering nötig). Wie bei refreshTradeSetupLinksInternal bewusst UNABHÄNGIG von
-// showLiquidity/showOrderBlocks (nur an showTrades gekoppelt) — ein Target gehört zum Trade, nicht
-// zur Live-Anzeige-Rauschen-Filterung. Ohne source_time (Alt-Targets vor diesem Feature, siehe
-// Migration 20260728140000) wird nichts gezeichnet, da keine Linie rekonstruierbar ist.
+// Zeichnet die Pivot-/OB-Targets eines Trades als Linie — Wiederverwendung LiquidityLinePrimitive
+// für beide Target-Arten (auch OB, siehe findClickedOBZone: nur die nähere Kante wird übernommen,
+// kein eigenes Box-Rendering nötig). Bewusst UNABHÄNGIG von showLiquidity/showOrderBlocks (ein
+// Target gehört zum Trade, nicht zur Live-Anzeige-Rauschen-Filterung), aber wie bei
+// refreshTradeSetupLinksInternal an showTradeSetups+showTrades gekoppelt (Bug-Report Philip
+// 2026-07-28, siehe dort). Ohne source_time (Alt-Targets vor diesem Feature, siehe Migration
+// 20260728140000) wird nichts gezeichnet, da keine Linie rekonstruierbar ist.
 const TARGET_TIER_WIDTH_RATIO = { minor: 1, medium: 1.6, major: 2.2 };
 function refreshTradeTargetLinksInternal() {
   for (const p of tradeTargetLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeTargetLinkPrimitives.length = 0;
-  if (!props.showTrades) return;
+  if (!props.showTradeSetups || !props.showTrades) return;
   const candles = clipReplay(allCandles);
   if (candles.length === 0) return;
   const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
@@ -657,7 +659,10 @@ function refreshTradeTargetLinksInternal() {
           // "🎯 Pivot #12"/"🎯 OB #12" — matcht 1:1 die Zeile in TradesTable/TradeEditModal (siehe
           // tradeTargets.ts: kindLabel), wie schon beim Setup-"#<id>"-Muster.
           label: `🎯 ${kindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`,
-          labelSide: "end-above",
+          // Bug-Report Philip 2026-07-28: bei Short-Trades soll das Label UNTER statt über der
+          // Linie stehen (Long bleibt wie bisher) — analog zur Short/Long-Positionierung bei den
+          // Trade-Setup-LS-/Fraktal-Linien weiter oben (renderTradeSetupsInternal).
+          labelSide: t.direction === "short" ? "end-below" : "end-above",
         },
         candles,
       );
@@ -1754,7 +1759,12 @@ watch(() => props.showLiquidityDebug, () => {
   refreshRangesMarkersInternal();
   renderTradeSetupsInternal();
 });
-watch(() => props.showTradeSetups, renderTradeSetupsInternal);
+watch(() => props.showTradeSetups, () => {
+  renderTradeSetupsInternal();
+  refreshTradeMarkersInternal();
+  refreshTradeSetupLinksInternal();
+  refreshTradeTargetLinksInternal();
+});
 watch(() => props.tradeSetupHistoryCount, () => {
   computeTradeSetups();
   renderTradeSetupsInternal();

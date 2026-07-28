@@ -53,8 +53,9 @@ const showLiquidity = useLocalStorageRef("showLiquidity", true);
 const showLiquidityDebug = useLocalStorageRef("showLiquidityDebug", false);
 const showSweptLiquidity = useLocalStorageRef("showSweptLiquidity", false);
 const showTradeSetups = useLocalStorageRef("showTradeSetups", true);
-// Ein/Ausblenden der eigenen geloggten Trades (Entry/Exit-Marker + verlinkte M5-OB/FVG-Box) —
-// Chat 2026-07-27: eigener Toggle, unabhängig von showTradeSetups (siehe Kommentar im Template).
+// Ein/Ausblenden der eigenen geloggten Trades (Entry/Exit-Marker, verlinkte M5-OB-Box, Target-
+// Linien) — Untermenü-Feinschalter unter dem übergeordneten "Trades"-Toggle (showTradeSetups),
+// siehe Kommentar im Template.
 const showTrades = useLocalStorageRef("showTrades", true);
 // Anzahl vergangener Setups je Richtung, analog zu tradeSetupHistoryCountShort/Long im
 // tv-indikator (dort default 5, 0-50) — 0 zeigt nur das gerade aktive/letzte Setup.
@@ -478,10 +479,11 @@ watch(currentSymbol, () => {
           ▾
         </button>
         <div v-if="tradeSetupsMenuOpen" class="toggle-dropdown">
-          <!-- Bewusst NICHT an showTradeSetups (den Toggle oben) gekoppelt (Chat 2026-07-27:
-               "ich hab Trade-Setups ausgeblendet, aber die OB des Shorts wurde nicht angezeigt")
-               — geloggte Trades sind kein Live-Erkennungs-Rauschen, sollen also unabhängig davon
-               ein-/ausblendbar bleiben. -->
+          <!-- Untermenü-Feinschalter: braucht den übergeordneten "Trades"-Toggle (showTradeSetups)
+               zusätzlich an, um überhaupt was anzuzeigen (Bug-Report Philip 2026-07-28: "der
+               übergeordnete Trades-Toggle soll Trades auch ausblenden, TSC ist einzige Ausnahme") —
+               siehe PriceChart.vue: refreshTradeMarkersInternal/-TradeSetupLinksInternal/
+               -TradeTargetLinksInternal, die auf BEIDE Props prüfen. -->
           <button :class="{ active: showTrades }" @click="showTrades = !showTrades">
             Trades
           </button>

@@ -51,3 +51,14 @@ export function formatTargetLabel(target: TradeTarget, instrument: string, nowSe
   const age = formatAge(seconds);
   return `${kind} ${price} · ${tier}${age ? ` (${age} alt)` : ""}`;
 }
+
+// Erreicht = der Exit-Preis ist mindestens bis zum Target gelaufen (Chat 2026-07-28: "kann man ja
+// ganz einfach durch den Exit-Preis prüfen ... brauchen wir später mal für die Statistik") —
+// bewusst als eigene, kleine, reine Funktion statt inline in TradesTable.vue, damit eine spätere
+// Auswertung (Trefferquote je Target-Art/-Tier) dieselbe Regel nutzt statt sie zu duplizieren.
+// null = noch kein Exit-Preis, also (noch) nicht beurteilbar — kein "false", das wäre inhaltlich
+// falsch (ein offener Trade hat das Ziel weder erreicht noch verfehlt).
+export function isTargetReached(direction: "long" | "short", exitPrice: number | null, targetPrice: number): boolean | null {
+  if (exitPrice == null) return null;
+  return direction === "short" ? exitPrice <= targetPrice : exitPrice >= targetPrice;
+}
