@@ -232,3 +232,11 @@ chart-drawn indicator in this repo — don't hardcode a color literal here if yo
 - Prefer small, targeted edits with a comment explaining the non-obvious reasoning over
   refactoring for its own sake — this is a solo hobby project with a lot of hard-won bugfix
   history encoded in comments; don't erase that context while "cleaning up."
+- When explaining a detection-algorithm bug that hinges on price levels/timing (why a setup did
+  or didn't fire, why a sweep did or didn't count), default to a Claude Artifact with an annotated
+  price diagram (candles + the relevant levels/zones/callouts, reusing this app's own
+  `chartColors.js` tokens: `candleUp`/`candleDown`/`liquidityLow`/`liquiditySweep`/`obBull` etc.)
+  instead of a purely textual walkthrough — confirmed 2026-07-28 ("WOW hammer hammer hammer!
+  Nächstes mal bitte genauso, dann muss ich den Text nicht so anstrengend cognitiv übertragen").
+  A text explanation is fine for non-price-geometric questions (e.g. "does X path apply to both
+  Long and Short").
