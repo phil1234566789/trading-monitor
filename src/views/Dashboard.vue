@@ -7,10 +7,11 @@ import StyleModal from "../components/StyleModal.vue";
 import SessionsModal from "../components/SessionsModal.vue";
 import NewsModal from "../components/NewsModal.vue";
 import TakeTradeModal from "../components/TakeTradeModal.vue";
+import TradeEditModal from "../components/TradeEditModal.vue";
 import { TIMEFRAMES } from "../timeframes.js";
 import { berlinDateStrFor } from "../backtestExport.js";
 import { fetchTrades } from "../trades.js";
-import { fetchTradeSetupForCockpit, linkTradeToSetup, directionForSetup } from "../tradeIntake.js";
+import { fetchTradeSetupForCockpit, linkTradeToSetup, directionForSetup, addTargetToTrade } from "../tradeIntake.js";
 import { fetchPoiZones } from "../poiZones.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
@@ -153,20 +154,56 @@ const showStyleModal = ref(false);
 // harmlosen Navigieren-Modus starten, nicht mitten im Trade-Modus von der letzten Session.
 const tradeModeActive = ref(false);
 const selectedSetupForTrade = ref(null);
+// Bearbeiten-Panel (Chat 2026-07-28: "lass die Entity 'trades' CRUD Funktionalität weitermachen",
+// ersetzt die vorherigen Inline-Buttons in TradesTable.vue) — nur die Id gemerkt, nicht der Trade
+// selbst, damit editingTrade unten immer den LIVE-Stand aus der trades-Liste zeigt (z.B. sofort
+// aktualisiert, nachdem im Panel ein Setup/Ziel über den Chart hinzugefügt wurde).
+const editingTradeId = ref(null);
+const editingTrade = computed(() => trades.value.find((t) => t.id === editingTradeId.value) ?? null);
+function onEditRequest(t) {
+  editingTradeId.value = t.id;
+}
+function onTradeDeleted() {
+  editingTradeId.value = null;
+  refreshTrades();
+}
 // Retrofit-Verknüpfung (Chat 2026-07-27: "gibst du mir die Möglichkeit, das im Nachhinein
 // zuzuordnen?") — TradesTable.vue's 🔗-Button armt hierüber "der nächste OB-Klick im Trade-Modus
 // verknüpft DIESEN Trade" statt ein neues Trade-Übernahme-Formular zu öffnen.
 const linkTargetTrade = ref(null);
+// Ziel hinzufügen (Chat 2026-07-27: "wie wärs, wenn wir ermöglichen, einem Trade ein Target
+// hinzuzufügen ... die Linien klickbar machen") — TradesTable.vue's "+"-Button armt hierüber "der
+// nächste Klick auf eine Liquiditäts-Linie im Trade-Modus fügt DIESEM Trade das Level als Ziel
+// hinzu". Eigener Modus statt denselben linkTargetTrade wiederzuverwenden, weil beide gleichzeitig
+// den Klick-Handler in PriceChart.vue umschalten (Setup-OB vs. LQ-Linie, siehe targetModeActive) —
+// nur eines der beiden kann gerade "scharf" sein, siehe die beiden onXRequest-Funktionen unten.
+const targetAddTrade = ref(null);
 function onLinkRequest(t) {
   linkTargetTrade.value = t;
+  targetAddTrade.value = null;
   tradeModeActive.value = true;
 }
-// Verlassen des Trade-Modus räumt eine noch "scharfe" Verknüpfung mit ab — sonst würde ein
-// späteres Wieder-Reinklicken in den Trade-Modus (für einen ganz anderen Zweck) unerwartet den
-// alten Trade verknüpfen.
+function onAddTargetRequest(t) {
+  targetAddTrade.value = t;
+  linkTargetTrade.value = null;
+  tradeModeActive.value = true;
+}
+// Verlassen des Trade-Modus räumt eine noch "scharfe" Verknüpfung/Ziel-Anfrage mit ab — sonst würde
+// ein späteres Wieder-Reinklicken in den Trade-Modus (für einen ganz anderen Zweck) unerwartet den
+// alten Trade verknüpfen/beschenken.
 watch(tradeModeActive, (active) => {
-  if (!active) linkTargetTrade.value = null;
+  if (!active) {
+    linkTargetTrade.value = null;
+    targetAddTrade.value = null;
+  }
 });
+async function onSelectLiquidityLevel(level) {
+  if (!targetAddTrade.value) return;
+  const trade = targetAddTrade.value;
+  targetAddTrade.value = null;
+  const ok = await addTargetToTrade(trade.id, level.price);
+  if (ok) refreshTrades();
+}
 async function onSelectSetup(setup) {
   if (linkTargetTrade.value) {
     const trade = linkTargetTrade.value;
@@ -615,6 +652,7 @@ watch(currentSymbol, () => {
           🎯 Trade-Modus
         </button>
         <span v-if="linkTargetTrade" class="trade-link-armed">🔗 nächster Klick verknüpft Trade #{{ linkTargetTrade.id }}</span>
+        <span v-if="targetAddTrade" class="trade-link-armed">🎯 nächster Klick fügt Trade #{{ targetAddTrade.id }} ein Ziel hinzu</span>
       </div>
 
       <div class="toggle-group">
@@ -652,6 +690,15 @@ watch(currentSymbol, () => {
     @close="selectedSetupForTrade = null"
     @saved="refreshTrades"
   />
+  <TradeEditModal
+    v-if="editingTrade"
+    :trade="editingTrade"
+    @close="editingTradeId = null"
+    @saved="refreshTrades"
+    @deleted="onTradeDeleted"
+    @request-link="onLinkRequest(editingTrade)"
+    @request-add-target="onAddTargetRequest(editingTrade)"
+  />
 
   <PriceChart
     ref="priceChartRef"
@@ -687,16 +734,18 @@ watch(currentSymbol, () => {
     :claude-annotations="visibleClaudeAnnotations"
     :claude-annotations-date="claudeAnnotationsDate"
     :trade-mode-active="tradeModeActive"
+    :target-mode-active="targetAddTrade != null"
     @close-ranges-metadata="showRangesMetadata = false"
     @close-debug-metadata="showDebugMetadata = false"
     @select-setup="onSelectSetup"
+    @select-liquidity-level="onSelectLiquidityLevel"
     @toggle-trade-mode="tradeModeActive = !tradeModeActive"
   />
 
   <aside class="trades-panel">
     <h2 class="trades-panel-title">Trades</h2>
     <div class="trades-list">
-      <TradesTable :trades="trades" @select="onSelectTrade" @link-request="onLinkRequest" />
+      <TradesTable :trades="trades" @select="onSelectTrade" @edit-request="onEditRequest" />
     </div>
     <TradeStats :trades="trades" />
   </aside>

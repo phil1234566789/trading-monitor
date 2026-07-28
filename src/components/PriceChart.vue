@@ -114,8 +114,18 @@ const props = defineProps({
   // wenn aktiv, wertet der Klick-Handler unten Klicks auf Trade-Setup-OB-Boxen aus. Sonst bleibt
   // ein Klick beim Pan/Zoom-Verhalten von lightweight-charts, wie bisher.
   tradeModeActive: { type: Boolean, default: false },
+  // Ziel-Modus (Chat 2026-07-27: "einem Trade ein Target hinzufügen ... die Linien klickbar
+  // machen") — nur innerhalb von tradeModeActive relevant, schaltet den Klick-Handler von
+  // "OB-Box anklicken" auf "Liquiditäts-Level anklicken" um (siehe Dashboard.vue: targetAddTrade).
+  targetModeActive: { type: Boolean, default: false },
 });
-const emit = defineEmits(["close-ranges-metadata", "close-debug-metadata", "select-setup", "toggle-trade-mode"]);
+const emit = defineEmits([
+  "close-ranges-metadata",
+  "close-debug-metadata",
+  "select-setup",
+  "toggle-trade-mode",
+  "select-liquidity-level",
+]);
 
 // CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
 // bleiben Gauges/CVD-Pane komplett weg statt leer. Der Wert steht bei onMounted fest:
@@ -332,6 +342,10 @@ let ema200Series;
 let resizeObserver;
 let orderBlockPrimitives = [];
 let liquidityPrimitives = [];
+// Aktuell gezeichnete Liquiditäts-Level (siehe refreshLiquidityInternal) — für den Zielmodus-
+// Klick-Hittest (Chat 2026-07-27: "Können wir die Linien klickbar machen?") gebraucht, analog zu
+// currentTradeSetups unten für die OB-Boxen.
+let currentLiquidityLevels = [];
 let sessionPrimitives = [];
 let newsMarkerPrimitives = [];
 // Periode-5- UND Periode-2-Debug-Marker laufen seit Chat 2026-07-26 durch EIN gemeinsames
@@ -693,12 +707,14 @@ function refreshLiquidityInternal() {
     renderLiquidityLevels(candleSeries, [], liquidityPrimitives, candles);
     liquidityMetadata.value = null;
     liquidityEarliestTime.value = null;
+    currentLiquidityLevels = [];
     return;
   }
   const { highs, lows } = detectLiquidityLevels(candles, LIQUIDITY_FRACTAL_PERIOD);
   const relevant = props.showSweptLiquidity
     ? [...highs, ...lows]
     : [...filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true), ...filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true)];
+  currentLiquidityLevels = relevant;
   const precision = pricePrecisionForInstrument(props.symbol);
   renderLiquidityLevels(candleSeries, relevant, liquidityPrimitives, candles, {
     debugPrices: props.showLiquidityDebug,
@@ -1054,6 +1070,26 @@ function findClickedSetup(param) {
       const inTime = time >= s.obStartTime && time <= s.obStartTime + TRADE_SETUP_OB_WIDTH_SEC;
       const inPrice = price <= top && price >= bottom;
       return inTime && inPrice;
+    }) ?? null
+  );
+}
+
+// Ziel-Modus-Klick-Hittest (Chat 2026-07-27: "Können wir die Linien klickbar machen?") — Level sind
+// horizontale Linien (keine Fläche), daher Pixel-Toleranz auf der Y-Achse statt eines Preisbereichs
+// (bleibt so bei jedem Zoom-Stand gleich "breit" anklickbar). Zeitbereich [pivotTime, endTime] wie
+// tatsächlich gezeichnet (siehe liquidity.js: buildLevel) — endTime wächst bei einem noch
+// unberührten Level bis zur zuletzt geladenen Kerze mit, ist also praktisch "bis jetzt".
+const LIQUIDITY_LINE_CLICK_TOLERANCE_PX = 6;
+function findClickedLiquidityLevel(param) {
+  if (!param.point || !candleSeries || !chart) return null;
+  const time = chart.timeScale().coordinateToTime(param.point.x);
+  if (time == null) return null;
+  return (
+    currentLiquidityLevels.find((lvl) => {
+      if (time < lvl.pivotTime || time > lvl.endTime) return false;
+      const y = candleSeries.priceToCoordinate(lvl.price);
+      if (y == null) return false;
+      return Math.abs(y - param.point.y) <= LIQUIDITY_LINE_CLICK_TOLERANCE_PX;
     }) ?? null
   );
 }
@@ -1517,17 +1553,24 @@ onMounted(() => {
   }
 
   chart.subscribeClick((param) => {
-    if (!param.point) return;
+    if (!param.point || !props.tradeModeActive) return;
+    // Ziel-Modus (Chat 2026-07-27): Klick auf eine Liquiditäts-Linie -> ans Dashboard durchreichen,
+    // das den Preis als Ziel zum gerade "scharfen" Trade hinzufügt. Eigener Modus statt einfach
+    // zusätzlich zum Setup-Klick zu testen, damit ein Klick nie mehrdeutig ist (Setup-OB-Box vs.
+    // LQ-Linie könnten sich sonst überlappen).
+    if (props.targetModeActive) {
+      const level = findClickedLiquidityLevel(param);
+      if (level) emit("select-liquidity-level", level);
+      return;
+    }
     // Trade-Modus (Chat 2026-07-27): Klick auf eine Trade-Setup-OB-Box -> sofort im TSC fokussieren
     // (unmittelbares Feedback, noch bevor irgendein Formular offen ist) und ans Dashboard
     // durchreichen, das das Übernahme-Formular öffnet.
-    if (props.tradeModeActive) {
-      const setup = findClickedSetup(param);
-      if (setup) {
-        focusedTradeSetup = setup;
-        refreshCockpitInternal();
-        emit("select-setup", setup);
-      }
+    const setup = findClickedSetup(param);
+    if (setup) {
+      focusedTradeSetup = setup;
+      refreshCockpitInternal();
+      emit("select-setup", setup);
     }
   });
 
@@ -1537,7 +1580,12 @@ onMounted(() => {
   // (normales Pan/Zoom-Verhalten von lightweight-charts).
   chart.subscribeCrosshairMove((param) => {
     if (!chartContainerRef.value) return;
-    chartContainerRef.value.style.cursor = props.tradeModeActive && param.point && findClickedSetup(param) ? "pointer" : "";
+    if (!props.tradeModeActive || !param.point) {
+      chartContainerRef.value.style.cursor = "";
+      return;
+    }
+    const hit = props.targetModeActive ? findClickedLiquidityLevel(param) : findClickedSetup(param);
+    chartContainerRef.value.style.cursor = hit ? "pointer" : "";
   });
 
   resizeObserver = new ResizeObserver((entries) => {

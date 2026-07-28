@@ -37,7 +37,7 @@ export async function fetchTrades(instrument) {
   // Sammel-Queries statt pro Trade einzeln, um bei vielen Trades nicht N+1 Requests zu erzeugen.
   const ids = data.map((row) => row.id);
   const [{ data: targets, error: targetsError }, { data: partials, error: partialsError }] = await Promise.all([
-    supabase.from("trade_targets").select("signal_id, price").in("signal_id", ids),
+    supabase.from("trade_targets").select("id, signal_id, price").in("signal_id", ids),
     supabase.from("trade_partial_exits").select("signal_id, price, exit_time, portion_pct").in("signal_id", ids),
   ]);
   if (targetsError) throw targetsError;
@@ -57,7 +57,9 @@ export async function fetchTrades(instrument) {
     invalidation: row.invalidation,
     tradeSetupId: row.trade_setup_id,
     tradeSetupObStartTime: row.trade_setups?.ob_start_time ? Math.floor(new Date(row.trade_setups.ob_start_time).getTime() / 1000) : null,
-    targets: (targetsBySignal[row.id] ?? []).map((t) => t.price),
+    // {id, price} statt nur des Preises (Chat 2026-07-28: "kann ich das bearbeiten?") — die id
+    // wird für den Entfernen-Button in TradesTable.vue gebraucht (removeTargetFromTrade).
+    targets: (targetsBySignal[row.id] ?? []).map((t) => ({ id: t.id, price: t.price })),
     partialExits: (partialsBySignal[row.id] ?? []).map((p) => ({
       price: p.price,
       time: Math.floor(new Date(p.exit_time).getTime() / 1000),

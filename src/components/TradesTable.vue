@@ -5,7 +5,10 @@ defineProps({
   trades: { type: Array, required: true },
 });
 
-const emit = defineEmits(["select", "link-request"]);
+// Seit Chat 2026-07-28 nur noch EIN Aktions-Button pro Zeile ("edit-request", öffnet
+// TradeEditModal.vue) — vorher gab's hier 🔗/+/× einzeln inline, was Philip als "too much,
+// Klickrisiko" zurückgemeldet hat (siehe Memory feedback_trade_editing_ui.md).
+const emit = defineEmits(["select", "edit-request"]);
 
 const OUTCOME_LABEL = {
   win: "Win",
@@ -18,11 +21,9 @@ function outcomeLabel(t) {
   return t.outcome ? (OUTCOME_LABEL[t.outcome] ?? t.outcome) : "Offen";
 }
 
-// Mehrere geplante Ziele (trade_targets, siehe trades.js) statt des früheren einzelnen
-// take_profit-Felds — als Liste in einer Zelle, bis geklärt ist, ob/wie das eigene Spalten braucht.
 function targetsLabel(t) {
   if (!t.targets || t.targets.length === 0) return "–";
-  return t.targets.map((p) => fmtPrice(p, pricePrecisionForInstrument(t.instrument))).join(" / ");
+  return t.targets.map((target) => fmtPrice(target.price, pricePrecisionForInstrument(t.instrument))).join(" / ");
 }
 </script>
 
@@ -69,14 +70,7 @@ function targetsLabel(t) {
         </td>
         <td class="trade-reasoning-cell">{{ t.reasoning ?? "" }}</td>
         <td>
-          <button
-            v-if="t.tradeSetupId == null"
-            class="trade-link-btn"
-            title="Nachträglich mit einem Trade-Setup im Chart verknüpfen (Trade-Modus, dann OB anklicken)"
-            @click.stop="emit('link-request', t)"
-          >
-            🔗
-          </button>
+          <button class="trade-link-btn" title="Trade bearbeiten" @click.stop="emit('edit-request', t)">✏️</button>
         </td>
       </tr>
     </tbody>

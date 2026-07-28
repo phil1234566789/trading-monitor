@@ -125,3 +125,72 @@ export async function linkTradeToSetup(signalId, instrument, setup) {
   }
   return true;
 }
+
+// Ziel hinzufügen (Chat 2026-07-27: "wie wärs, wenn wir ermöglichen, einem Trade ein Target
+// hinzuzufügen ... um es erst mal einfach zu halten sind das LQ-Levels") — ein Trade kann mehrere
+// Ziele haben (trade_targets ist 1:n zu signals, siehe 20260727180000_trade_thesis_and_partial_exits.sql),
+// deshalb einfacher Insert statt Upsert; Duplikate (zweimal derselbe Preis) werden bewusst nicht
+// verhindert, das wäre eine eigene Entscheidung (z.B. ob 1.33158 zweimal Sinn ergibt), keine hier
+// vorweggenommene Regel.
+export async function addTargetToTrade(signalId, price) {
+  const { error } = await supabase.from("trade_targets").insert({ signal_id: signalId, price });
+  if (error) {
+    console.error("Ziel hinzufügen fehlgeschlagen:", error);
+    return false;
+  }
+  return true;
+}
+
+// Ziel entfernen (Chat 2026-07-28: "1,32992 kann ja jetzt raus", z.B. weil es nur automatisch aus
+// dem alten take_profit-Feld übernommen wurde und nicht mehr zutrifft).
+export async function removeTargetFromTrade(targetId) {
+  const { error } = await supabase.from("trade_targets").delete().eq("id", targetId);
+  if (error) {
+    console.error("Ziel entfernen fehlgeschlagen:", error);
+    return false;
+  }
+  return true;
+}
+
+// Trade-CRUD, "U" (Chat 2026-07-28: "lass die Entity 'trades' CRUD Funktionalität weitermachen") —
+// generisches Partial-Update für TradeEditModal.vue. fields nutzt camelCase (wie das Objekt aus
+// trades.js), wird hier auf die DB-Spaltennamen gemappt statt das dem Aufrufer zu überlassen.
+// exitTime kommt als Unix-Sekunden (wie der Rest der App) oder null, nicht als ISO-String.
+export async function updateTrade(signalId, fields) {
+  const payload = {};
+  if ("entryPrice" in fields) payload.entry_price = fields.entryPrice;
+  if ("stopLoss" in fields) payload.stop_loss = fields.stopLoss;
+  if ("exitPrice" in fields) payload.exit_price = fields.exitPrice;
+  if ("exitTime" in fields) payload.exit_time = fields.exitTime != null ? new Date(fields.exitTime * 1000).toISOString() : null;
+  if ("outcome" in fields) payload.outcome = fields.outcome;
+  if ("reasoning" in fields) payload.reasoning = fields.reasoning;
+
+  const { error } = await supabase.from("signals").update(payload).eq("id", signalId);
+  if (error) {
+    console.error("Trade aktualisieren fehlgeschlagen:", error);
+    return false;
+  }
+  return true;
+}
+
+// Trade-CRUD, "D". trade_targets/trade_partial_exits haben `on delete cascade` (siehe
+// 20260727180000_trade_thesis_and_partial_exits.sql), räumen sich also von selbst mit auf.
+export async function deleteTrade(signalId) {
+  const { error } = await supabase.from("signals").delete().eq("id", signalId);
+  if (error) {
+    console.error("Trade löschen fehlgeschlagen:", error);
+    return false;
+  }
+  return true;
+}
+
+// Setup-Verknüpfung wieder entfernen (Gegenstück zu linkTradeToSetup) — für einen versehentlichen
+// oder falschen 🔗-Klick.
+export async function unlinkTradeSetup(signalId) {
+  const { error } = await supabase.from("signals").update({ trade_setup_id: null, setup_entry: null, invalidation: null }).eq("id", signalId);
+  if (error) {
+    console.error("Setup-Verknüpfung entfernen fehlgeschlagen:", error);
+    return false;
+  }
+  return true;
+}
