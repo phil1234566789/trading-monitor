@@ -15,6 +15,15 @@ const LOWER_TF_LABELS = new Set(["1m", "3m", "5m"]);
 const LOWER_TF_MIN_GAP_PIPS: Record<string, number> = { "1m": 1, "3m": 1, "5m": 0.5 };
 const PIP_SIZE = 0.0001; // gilt für beide unterstützten FX-Paare (GBPUSD/EURUSD)
 
+// HTF (1H/4H) Pip-Minimum NUR für Forex (Bug-Report Philip 2026-07-30: eine 4,5-Pip-1H-FVG bei
+// EURUSD wurde von der 0,05%-Prozent-Schwelle verschluckt, ~5,7 Pip bei diesem Kurs nötig) — nicht
+// einfach an die Timeframe gehängt wie bei LOWER_TF_LABELS, weil poi-watcher denselben 1H/4H-Pfad
+// AUCH für BTC durchläuft (TIMEFRAMES-Loop in index.ts läuft für okx+twelvedata gleichermaßen); ein
+// Pip-Minimum wäre bei BTCs Kursniveau (~60k) bedeutungslos. Daher explizites isForex-Flag, das
+// index.ts an dieser Stelle mit `cfg.source === "twelvedata"` setzt. Siehe src/orderBlocks.js.
+const HTF_FOREX_LABELS = new Set(["1H", "4H"]);
+const HTF_FOREX_MIN_GAP_PIPS: Record<string, number> = { "1H": 4, "4H": 8 };
+
 export interface Candle {
   time: number;
   open: number;
@@ -35,13 +44,20 @@ export interface Zone {
   endTime: number;
 }
 
-// timeframe: TIMEFRAMES-Label (z.B. "5m"/"1H"/"4H") — entscheidet, ob die Pip- (Lower-TF) oder die
-// Prozent-Mindestgröße (HTF) gilt. undefined/unbekanntes Label fällt auf HTF-Verhalten zurück
-// (Altverhalten für die bestehenden 4H/1H-Aufrufer in poi-watcher/index.ts).
-export function detectOrderBlocks(candles: Candle[], timeframe?: string): Zone[] {
+// timeframe: TIMEFRAMES-Label (z.B. "5m"/"1H"/"4H") — entscheidet zusammen mit isForex, ob eine
+// Pip- oder die Prozent-Mindestgröße gilt. undefined/unbekanntes Label fällt auf HTF-Prozent-
+// Verhalten zurück (Altverhalten für die bestehenden 4H/1H-Aufrufer in poi-watcher/index.ts).
+// isForex default true, weil detectSetupObs (immer "5m", garantiert Forex-only, siehe tradeSetup.ts)
+// das Flag nicht mitgibt — nur index.ts' 1H/4H-Loop (BTC+Forex gemeinsam) setzt es explizit.
+export function detectOrderBlocks(candles: Candle[], timeframe?: string, isForex = true): Zone[] {
   const zones: Zone[] = [];
   const isLowerTf = timeframe != null && LOWER_TF_LABELS.has(timeframe);
-  const minGapAbs = isLowerTf ? LOWER_TF_MIN_GAP_PIPS[timeframe!] * PIP_SIZE : null;
+  const isHtfForexPip = isForex && timeframe != null && HTF_FOREX_LABELS.has(timeframe);
+  const minGapAbs = isLowerTf
+    ? LOWER_TF_MIN_GAP_PIPS[timeframe!] * PIP_SIZE
+    : isHtfForexPip
+      ? HTF_FOREX_MIN_GAP_PIPS[timeframe!] * PIP_SIZE
+      : null;
 
   for (let i = 3; i < candles.length; i++) {
     const c1 = candles[i - 2];
@@ -53,8 +69,8 @@ export function detectOrderBlocks(candles: Candle[], timeframe?: string): Zone[]
     const bearGap = c1.low - cur.high;
     const bullGapPct = (bullGap / refPrice) * 100;
     const bearGapPct = (bearGap / refPrice) * 100;
-    const bullRelevant = isLowerTf ? bullGap >= minGapAbs! : bullGapPct >= IRRELEVANT_PCT;
-    const bearRelevant = isLowerTf ? bearGap >= minGapAbs! : bearGapPct >= IRRELEVANT_PCT;
+    const bullRelevant = minGapAbs != null ? bullGap >= minGapAbs : bullGapPct >= IRRELEVANT_PCT;
+    const bearRelevant = minGapAbs != null ? bearGap >= minGapAbs : bearGapPct >= IRRELEVANT_PCT;
 
     if (bullRelevant) {
       for (const z of zones) if (z.dir === 1 && z.active) z.active = false;

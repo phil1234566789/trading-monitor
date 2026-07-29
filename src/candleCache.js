@@ -130,11 +130,28 @@ export function mergeCandles(cached, fresh) {
 // darin sind einfach echte Marktschließzeiten, kein Cache-Problem). Ein späterer Request für einen
 // SPÄTEREN Zeitpunkt (wie beim "+1 Kerze"-Klick) liegt dann automatisch über completeUpTo und
 // erzwingt korrekt einen neuen Fetch.
-export function cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetCount) {
+//
+// lookaheadSec: ein Cache-Hit schneidet den Rückgabewert früher IMMER hart bei effectiveEndSec ab
+// — der Lookahead-Puffer, den der ORIGINALE volle Fetch (siehe fetchCandlesCached unten) über
+// effectiveEndSec hinaus mitgeholt und mitgecacht hat, lag zwar noch in `cached`, wurde hier aber
+// weggeschnitten. Für PriceChart.vue:nextReplayTime() (liest direkt aus dem von hier
+// zurückgegebenen allCandles) sah das dann bei jedem zweiten "+1 Kerze"-Klick so aus, als gäbe es
+// keine geladene Kerze mehr nach dem aktuellen Replay-Stand — der Fallback dort fragt daraufhin
+// Kerzen bis 7 Tage in der (Replay-)Zukunft an, was bei einem `after` von vor real "jetzt" real in
+// der Zukunft liegt und deshalb einfach die neuesten ECHTEN Kerzen zurückbekommt, weit jenseits des
+// Replay-Zeitpunkts (Bug-Report Philip 2026-07-29: "+1 Kerze" springt nach ein paar Klicks
+// unvermittelt auf den echten aktuellen Zeitpunkt). Hängt deshalb hier zusätzlich zur
+// Historie noch den bereits gecachten Lookahead an (begrenzt durch completeUpTo — weiter kann
+// auch ein Cache-Hit nicht garantiert vollständig sein).
+export function cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetCount, lookaheadSec = 0) {
   if (completeUpTo == null || effectiveEndSec > completeUpTo) return null;
   const upToEnd = cached.filter((c) => c.time <= effectiveEndSec);
-  if (upToEnd.length >= targetCount) return upToEnd.slice(-targetCount);
-  return null;
+  if (upToEnd.length < targetCount) return null;
+  const history = upToEnd.slice(-targetCount);
+  if (lookaheadSec <= 0) return history;
+  const lookaheadEnd = Math.min(effectiveEndSec + lookaheadSec, completeUpTo);
+  const lookahead = cached.filter((c) => c.time > effectiveEndSec && c.time <= lookaheadEnd);
+  return history.concat(lookahead);
 }
 
 // Ersetzt einen vollen fetchFn(symbol, bar, count, toMs)-Aufruf (siehe forexCandles.js/OKX-
@@ -169,7 +186,7 @@ export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs
   const effectiveEndSec = toMs != null ? Math.floor(toMs / 1000) : Math.floor(Date.now() / 1000);
 
   if (toMs != null && cached.length > 0) {
-    const hit = cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetCount);
+    const hit = cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetCount, lookaheadSec);
     if (hit) return hit;
   }
 

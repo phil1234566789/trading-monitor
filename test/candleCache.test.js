@@ -81,6 +81,37 @@ describe("cachedCandlesUpTo", () => {
     const result = cachedCandlesUpTo(cached, effectiveEndSec, effectiveEndSec, 1000);
     expect(result).toBeNull();
   });
+
+  // Bug-Report Philip 2026-07-29: "+1 Kerze" sprang nach ein paar Klicks unvermittelt auf den
+  // echten aktuellen Zeitpunkt. Ursache: ein Cache-Hit schnitt bisher hart bei effectiveEndSec ab,
+  // obwohl der ORIGINALE volle Fetch (siehe fetchCandlesCached) den Lookahead-Puffer längst mit-
+  // gecacht hatte — PriceChart.vue:nextReplayTime() fand dadurch "keine geladene Kerze mehr" nach
+  // dem Replay-Stand und fiel in seinen Weekend-Gap-Fallback, der mangels echter Zukunftskerzen
+  // einfach die neuesten ECHTEN Kerzen zurückbekam.
+  it("includes the already-cached lookahead beyond effectiveEndSec on a cache hit, capped by completeUpTo", () => {
+    const cached = Array.from({ length: 1200 }, (_, i) => candle(i * BAR_SECONDS));
+    const completeUpTo = cached[cached.length - 1].time; // kompletter Fetch reichte bis hierhin
+    const effectiveEndSec = 999 * BAR_SECONDS; // aktueller Replay-Stand, mitten im gecachten Fenster
+    const lookaheadSec = 100 * BAR_SECONDS;
+
+    const result = cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, 1000, lookaheadSec);
+    expect(result).not.toBeNull();
+    // Historie: die letzten 1000 Kerzen bis effectiveEndSec, wie schon ohne Lookahead.
+    expect(result.slice(0, 1000)[999].time).toBe(effectiveEndSec);
+    // Plus Lookahead: alles zwischen effectiveEndSec (exklusiv) und effectiveEndSec+lookaheadSec.
+    expect(result[result.length - 1].time).toBe(effectiveEndSec + lookaheadSec);
+  });
+
+  it("caps the returned lookahead at completeUpTo when the cached window doesn't reach effectiveEndSec + lookaheadSec", () => {
+    const cached = Array.from({ length: 1050 }, (_, i) => candle(i * BAR_SECONDS));
+    const completeUpTo = cached[cached.length - 1].time; // nur 50 Kerzen Lookahead tatsächlich gecacht
+    const effectiveEndSec = 999 * BAR_SECONDS;
+    const lookaheadSec = 100 * BAR_SECONDS; // mehr angefragt, als der Cache tatsächlich hergibt
+
+    const result = cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, 1000, lookaheadSec);
+    expect(result).not.toBeNull();
+    expect(result[result.length - 1].time).toBe(completeUpTo);
+  });
 });
 
 // Bug-Report Philip 2026-07-21: fetchCandlesCached setzte completeUpTo bisher IMMER auf den vollen

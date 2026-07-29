@@ -30,13 +30,29 @@ const LOWER_TF_LABELS = new Set(["1m", "3m", "5m"]);
 const LOWER_TF_MIN_GAP_PIPS = { "1m": 1, "3m": 1, "5m": 0.5 };
 const PIP_SIZE = 0.0001; // gilt für beide unterstützten FX-Paare (GBPUSD/EURUSD), siehe TRADE_SETUP_PIP_SIZE in PriceChart.vue
 
-// timeframe: TIMEFRAMES-Label (siehe timeframes.js, z.B. "5m") — entscheidet, ob die Pip- (Lower-TF)
-// oder die Prozent-Mindestgröße (HTF) gilt. undefined/unbekanntes Label fällt auf HTF-Verhalten
-// zurück (Altverhalten, falls je ohne Timeframe aufgerufen).
-export function detectOrderBlocks(candles, timeframe) {
+// HTF (1H/4H) Pip-Minimum NUR für Forex (Bug-Report Philip 2026-07-30: eine 4,5-Pip-1H-FVG bei
+// EURUSD wurde von der 0,05%-Prozent-Schwelle verschluckt, ~5,7 Pip bei diesem Kurs nötig) — nicht
+// einfach an die Timeframe gehängt wie bei LOWER_TF_LABELS, weil poi-watcher denselben 1H/4H-Pfad
+// AUCH für BTC durchläuft (siehe index.ts, TIMEFRAMES-Loop läuft für okx+twelvedata gleichermaßen);
+// ein Pip-Minimum wäre bei BTCs Kursniveau (~60k) bedeutungslos (praktisch keine Schwelle mehr).
+// Daher explizites isForex-Flag statt Ableitung aus der Timeframe allein.
+const HTF_FOREX_LABELS = new Set(["1H", "4H"]);
+const HTF_FOREX_MIN_GAP_PIPS = { "1H": 4, "4H": 8 };
+
+// timeframe: TIMEFRAMES-Label (siehe timeframes.js, z.B. "5m"/"1H"/"4H") — entscheidet zusammen mit
+// isForex, ob eine Pip- oder die Prozent-Mindestgröße gilt. undefined/unbekanntes Label fällt auf
+// HTF-Prozent-Verhalten zurück (Altverhalten, falls je ohne Timeframe aufgerufen).
+// isForex default true, weil bislang jeder Aufrufer entweder garantiert Forex ist (detectSetupObs,
+// die Frontend-Forex-Zweige) oder das Flag explizit selbst setzt (poi-watcher, s.o.).
+export function detectOrderBlocks(candles, timeframe, isForex = true) {
   const zones = [];
   const isLowerTf = LOWER_TF_LABELS.has(timeframe);
-  const minGapAbs = isLowerTf ? LOWER_TF_MIN_GAP_PIPS[timeframe] * PIP_SIZE : null;
+  const isHtfForexPip = isForex && HTF_FOREX_LABELS.has(timeframe);
+  const minGapAbs = isLowerTf
+    ? LOWER_TF_MIN_GAP_PIPS[timeframe] * PIP_SIZE
+    : isHtfForexPip
+      ? HTF_FOREX_MIN_GAP_PIPS[timeframe] * PIP_SIZE
+      : null;
 
   for (let i = 3; i < candles.length; i++) {
     const c1 = candles[i - 2];
@@ -48,8 +64,8 @@ export function detectOrderBlocks(candles, timeframe) {
     const bearGap = c1.low - cur.high;
     const bullGapPct = (bullGap / refPrice) * 100;
     const bearGapPct = (bearGap / refPrice) * 100;
-    const bullRelevant = isLowerTf ? bullGap >= minGapAbs : bullGapPct >= IRRELEVANT_PCT;
-    const bearRelevant = isLowerTf ? bearGap >= minGapAbs : bearGapPct >= IRRELEVANT_PCT;
+    const bullRelevant = minGapAbs != null ? bullGap >= minGapAbs : bullGapPct >= IRRELEVANT_PCT;
+    const bearRelevant = minGapAbs != null ? bearGap >= minGapAbs : bearGapPct >= IRRELEVANT_PCT;
 
     if (bullRelevant) {
       for (const z of zones) if (z.dir === 1 && z.active) z.active = false;

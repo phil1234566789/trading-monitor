@@ -302,9 +302,12 @@ Deno.serve(async () => {
           // mergen. Läuft bei 1H/OKX jeden Tick, bei 4H nur an isH4RefreshTick-Ticks (siehe
           // fetchForexBatch).
           // tf.label ("4H"/"1H") explizit mitgeben statt implizit undefined (Chat 2026-07-29) —
-          // beides bleibt HTF/Prozent-Verhalten (nur "1m"/"3m"/"5m" gelten als Lower-TF), aber so
-          // ist derselbe Aufrufer-Stil wie bei detectSetupObs (immer explizites Timeframe-Label).
-          const zones = detectOrderBlocks(candles, tf.label);
+          // beides bleibt HTF-Verhalten (nur "1m"/"3m"/"5m" gelten als Lower-TF), aber so ist
+          // derselbe Aufrufer-Stil wie bei detectSetupObs (immer explizites Timeframe-Label).
+          // isForex explizit mitgeben (Chat 2026-07-30) — dieser Loop laeuft fuer BTC UND Forex
+          // gleichermassen, aber das 1H/4H-Pip-Minimum (HTF_FOREX_MIN_GAP_PIPS) darf nur bei Forex
+          // greifen, sonst waere es bei BTCs Kursniveau (~60k) bedeutungslos.
+          const zones = detectOrderBlocks(candles, tf.label, cfg.source === "twelvedata");
           const existingMap = new Map(
             (existingRows ?? []).map((r) => [
               `${r.direction}_${Math.floor(new Date(r.start_time).getTime() / 1000)}`,
