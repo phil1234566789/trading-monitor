@@ -168,6 +168,18 @@ export function currentSessionDanger(sessionConfigs, nowSec, tzOffsetMinutes = 0
   return best;
 }
 
+// Dünner Wrapper um currentSessionDanger für "war zu DIESEM Zeitpunkt eine 'forbidden'-Session
+// aktiv" (Chat 2026-07-29: "meine Regel, wann ich niemals einen Trade setze" — z.B. Asia
+// 00:00-07:00 und Spread Hour 23:00-00:00, beide als danger="forbidden" im Sessions-Modal
+// gepflegt) — Trade-Setups sollen das direkt rausfiltern statt es nur als TSC-No-Go anzuzeigen
+// (siehe computeTradeSetups in PriceChart.vue). atSec ist bewusst kein "jetzt" wie bei
+// currentSessionDanger, sondern ein beliebiger Zeitpunkt in der Vergangenheit (z.B. setup.obStartTime).
+// "caution" zählt hier bewusst NICHT als forbidden (nur zusätzliche Bestätigung nötig, kein
+// hartes Verbot, siehe DANGER_LEVELS).
+export function isForbiddenAt(sessionConfigs, atSec, tzOffsetMinutes = 0) {
+  return currentSessionDanger(sessionConfigs, atSec, tzOffsetMinutes)?.level === "forbidden";
+}
+
 let sessionIdSeq = 0;
 // instrument ist Pflicht (Chat 2026-07-25: "getrennte Listen pro Asset" statt einer Session, die
 // für mehrere Assets gilt) — jede Session gehört zu genau einem Instrument, wird nur auf dessen

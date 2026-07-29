@@ -317,7 +317,10 @@ const indikatorenMenuOpen = ref(false);
 // alle Sub-Indikatoren an/aus, der Caret bleibt separat fürs Dropdown), statt wie bisher rein ein
 // Dropdown-Auslöser zu sein. Snapshot statt pauschalem "alles auf Werkseinstellung" beim
 // Wieder-Einblenden, damit ein Klick nicht z.B. eine bewusst deaktivierte EMA wieder anschaltet.
-const INDIKATOREN_REFS = [showSessions, showEma, showLiquidity, showSweptLiquidity, showOrderBlocks, showHistoricalObs];
+// Sessions seit Chat 2026-07-29 NICHT mehr dabei ("ich deaktiviere gerne Indikatoren um mehr zu
+// sehen, aber Sessions eig nie — die geben mir Orientierung zur Charthistorie") — eigener,
+// permanenter Toggle links neben News statt im Sammel-Dropdown, siehe Template.
+const INDIKATOREN_REFS = [showEma, showLiquidity, showSweptLiquidity, showOrderBlocks, showHistoricalObs];
 const indikatorenActive = computed(() => INDIKATOREN_REFS.some((r) => r.value));
 let indikatorenSavedState = null;
 function toggleIndikatoren() {
@@ -330,7 +333,6 @@ function toggleIndikatoren() {
   } else {
     // Noch nie über diesen Button ausgeblendet (z.B. alle Sub-Toggles waren schon einzeln aus) —
     // fällt auf die App-Werkseinstellungen zurück (siehe useLocalStorageRef-Defaults oben).
-    showSessions.value = true;
     showEma.value = false;
     showLiquidity.value = true;
     showSweptLiquidity.value = false;
@@ -403,17 +405,6 @@ watch(currentSymbol, () => {
           ▾
         </button>
         <div v-if="indikatorenMenuOpen" class="toggle-dropdown indikatoren-dropdown">
-          <div class="toggle-dropdown-row">
-            <button :class="{ active: showSessions }" @click="showSessions = !showSessions">
-              Sessions
-            </button>
-            <button class="toggle-caret" title="Sessions verwalten" @click="showSessionsModal = true">
-              ⚙
-            </button>
-          </div>
-
-          <div class="toggle-dropdown-divider"></div>
-
           <button :class="{ active: showEma }" @click="showEma = !showEma">
             EMA
           </button>
@@ -619,6 +610,19 @@ watch(currentSymbol, () => {
       <button :class="{ active: showEma }" @click="showEma = !showEma">
         EMA
       </button>
+
+      <!-- Eigener, permanenter Toggle statt im "Indikatoren"-Sammel-Dropdown (Chat 2026-07-29:
+           "ich deaktiviere gerne Indikatoren um mehr zu sehen, aber Sessions eig nie — die geben
+           mir Orientierung zur Charthistorie") — bewusst links neben News, nicht im Indikatoren-
+           Sammel-Toggle enthalten (siehe INDIKATOREN_REFS oben). -->
+      <div class="toggle-group">
+        <button :class="{ active: showSessions }" @click="showSessions = !showSessions">
+          Sessions
+        </button>
+        <button class="toggle-caret" title="Sessions verwalten" @click="showSessionsModal = true">
+          ⚙
+        </button>
+      </div>
 
       <div class="toggle-group">
         <button :class="{ active: showNews }" @click="showNews = !showNews">
@@ -967,16 +971,6 @@ watch(currentSymbol, () => {
 
 .indikatoren-dropdown {
   min-width: 180px;
-}
-
-.toggle-dropdown-row {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.toggle-dropdown-row button:first-child {
-  flex: 1;
 }
 
 .replay-control {

@@ -10,7 +10,7 @@ import {
   bullBearLabelSide,
   formatLsLabel,
 } from "../liquidity.js";
-import { sessions, renderSessions, currentSessionDanger } from "../sessions.js";
+import { sessions, renderSessions, currentSessionDanger, isForbiddenAt } from "../sessions.js";
 import { newsEvents, currentNewsNoGo, newsEventsForInstrument } from "../newsEvents.js";
 import { renderNewsMarkers } from "../newsMarkers.js";
 import { detectSetupObs, detectTradeSetups, tradeSetupObBoxBounds } from "../tradeSetup.js";
@@ -1064,13 +1064,25 @@ function computeTradeSetups() {
   // also nichts (slice(-0) wäre sonst das GANZE Array, daher der Sonderfall).
   const n = Math.max(0, props.tradeSetupHistoryCount);
   const takeLast = (arr) => (n === 0 ? [] : arr.slice(-n));
+  // Setups, deren bestätigende M5-OB in einer "forbidden"-Session entstanden ist, direkt raus
+  // (Chat 2026-07-29: "meine Regel, wann ich niemals einen Trade setze" — z.B. Asia/Spread Hour,
+  // siehe DANGER_LEVELS/isForbiddenAt in sessions.js) statt sie nur als TSC-No-Go anzuzeigen.
+  // obStartTime statt fractal.pivotTime, weil der OB der früheste plausible Entry-Zeitpunkt ist —
+  // ein Setup, dessen Sweep noch in einer erlaubten Session lag, dessen OB aber erst in der
+  // Sperrzeit kommt, ist trotzdem kein handelbarer Entry. VOR takeLast gefiltert, sonst würde ein
+  // rausgefiltertes Setup einen der History-Plätze "verbrauchen", ohne angezeigt zu werden. Gilt
+  // für BEIDE Richtungen (Philips Regel ist "wann ich niemals einen Trade setze", nicht auf Long
+  // beschränkt — sein Beispiel war nur zufällig ein Long-Setup).
+  const symbolSessions = sessions.filter((s) => s.instrument === props.symbol);
+  const tzOffsetMinutes = (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset();
+  const notForbidden = (s) => !isForbiddenAt(symbolSessions, s.obStartTime, tzOffsetMinutes);
   // IMMER beide Richtungen berechnen (unabhängig von showTradeSetupsLong/-Short) — siehe Chat
   // 2026-07-19: "TSC soll den aktuellsten und wahren Stand anzeigen", auch wenn im Chart gerade
   // eine Richtung zur Übersicht ausgetoggelt ist. Die Long/Short-Toggles filtern erst beim
   // ZEICHNEN (renderTradeSetupsInternal), currentTradeSetups selbst (und damit die TSC-Karte,
   // siehe refreshCockpitInternal) bleibt immer vollständig.
-  const shorts = takeLast(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, m5Candles));
-  const longs = takeLast(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, m5Candles));
+  const shorts = takeLast(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, m5Candles).filter(notForbidden));
+  const longs = takeLast(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, m5Candles).filter(notForbidden));
   // setupNumber (1..n je Richtung, chronologisch): nur bei aktiver Historie gesetzt (n > 1) — sonst
   // gibt's nur eine Box je Richtung, keine Zuordnung nötig. Separates Feld statt in `label`
   // eingebacken (wie vorher "Short (2)"), weil sowohl die OB-Box (Chart) als auch die TSC-Karte

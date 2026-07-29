@@ -3,7 +3,7 @@
 // die testbare Kernlogik dahinter — berechnet, an welchen Tagen/Zeitpunkten eine täglich
 // wiederkehrende Session innerhalb eines gegebenen Kerzenfensters tatsächlich auftaucht.
 import { describe, expect, it } from "vitest";
-import { sessionOccurrences, highLowInWindow, currentSessionDanger } from "../src/sessions.js";
+import { sessionOccurrences, highLowInWindow, currentSessionDanger, isForbiddenAt } from "../src/sessions.js";
 
 const DAY = 24 * 3600;
 
@@ -187,5 +187,41 @@ describe("currentSessionDanger", () => {
     // `sessions.filter((s) => s.instrument === props.symbol)`) — hier nur der Beleg, dass eine
     // leere Liste (z.B. nach dem Filtern) korrekt null liefert, kein Crash.
     expect(currentSessionDanger([], noon, 0)).toBeNull();
+  });
+});
+
+// Bug-Report/Feature-Wunsch Philip 2026-07-29: "meine Regel, wann ich niemals einen Trade setze"
+// (Asia/Spread Hour) soll Trade-Setups direkt rausfiltern, nicht nur als TSC-No-Go warnen — siehe
+// isForbiddenAt/computeTradeSetups in PriceChart.vue. EURUSD_SESSIONS ist Philips tatsächliche
+// Live-Konfiguration (aus der `sessions`-Tabelle gelesen, Stand 2026-07-29), nicht erfunden.
+describe("isForbiddenAt", () => {
+  const monday = Date.UTC(2026, 6, 6, 0, 0, 0) / 1000; // Montag 06.07.2026 00:00 UTC
+  const saturday = monday + 5 * 86400; // Samstag derselben Woche
+
+  const EURUSD_SESSIONS = [
+    { label: "Spread Hour", fromMinutes: 1380, toMinutes: 0, danger: "forbidden", days: [1, 2, 3, 4, 5] },
+    { label: "Asia", fromMinutes: 0, toMinutes: 420, danger: "forbidden", days: [1, 2, 3, 4, 5] },
+    { label: "MMM", fromMinutes: 630, toMinutes: 780, danger: "caution", days: [1, 2, 3, 4, 5] },
+    { label: "NY", fromMinutes: 840, toMinutes: 1320, danger: "normal", days: [1, 2, 3, 4, 5] },
+  ];
+
+  it("Asia (00:00-07:00) ist forbidden", () => {
+    expect(isForbiddenAt(EURUSD_SESSIONS, monday + 3 * 3600, 0)).toBe(true);
+  });
+
+  it("Spread Hour (23:00-24:00) ist forbidden", () => {
+    expect(isForbiddenAt(EURUSD_SESSIONS, monday + 23.5 * 3600, 0)).toBe(true);
+  });
+
+  it("MMM ist 'caution', nicht 'forbidden' — zählt hier nicht als Sperrzeit", () => {
+    expect(isForbiddenAt(EURUSD_SESSIONS, monday + 11 * 3600, 0)).toBe(false);
+  });
+
+  it("NY (danger='normal') ist nicht forbidden", () => {
+    expect(isForbiddenAt(EURUSD_SESSIONS, monday + 15 * 3600, 0)).toBe(false);
+  });
+
+  it("Asia gilt nur Mo-Fr (days) — samstags nicht forbidden", () => {
+    expect(isForbiddenAt(EURUSD_SESSIONS, saturday + 3 * 3600, 0)).toBe(false);
   });
 });
