@@ -12,7 +12,7 @@ import {
 } from "../liquidity.js";
 import { sessions, renderSessions, currentSessionDanger, isForbiddenAt } from "../sessions.js";
 import { newsEvents, currentNewsNoGo, newsEventsForInstrument } from "../newsEvents.js";
-import { renderNewsMarkers } from "../newsMarkers.js";
+import { renderNewsMarkers, isSameBerlinDay } from "../newsMarkers.js";
 import { detectSetupObs, detectTradeSetups, tradeSetupObBoxBounds } from "../tradeSetup.js";
 import { renderPivotMarkers } from "../pivotMarkers";
 import {
@@ -827,11 +827,16 @@ function refreshNewsMarkersInternal() {
   if (!isForex || !candleSeries) return; // watch(newsEvents) kann vor dem ersten Chart-Mount feuern (Store lädt schon bei Modul-Import)
   const candles = clipReplay(allCandles);
   let relevant = props.showNews ? newsEventsForInstrument(newsEvents, props.symbol) : [];
-  // Im Replay-Modus keine News aus der Zukunft (bezogen auf replayUntil) anzeigen — sonst
-  // verdecken zukünftige Termine die Sicht auf die aktuelle Replay-Kerze (Bug-Report Philip
-  // 2026-07-26). Außerhalb des Replays bewusst weiterhin auch zukünftige Termine zeigen (siehe
-  // CLAUDE.md).
-  if (props.replayUntil != null) relevant = relevant.filter((e) => e.eventTime <= props.replayUntil);
+  // Zukünftige Termine bis zum Ende des aktuellen/Replay-Tages zeigen, weiter Entferntes ausblenden
+  // (Bug-Report Philip 2026-07-30: "ich muss die Linie vorher sehen, pro Tag reicht" — löst den
+  // pauschalen Replay-Filter vom 2026-07-26 ab, der ALLE zukünftigen Termine versteckte, weil sie
+  // die Sicht auf die aktuelle Replay-Kerze verdeckten; ein Termin vom selben Tag verdeckt nichts,
+  // der ist ja gerade der Punkt). newsMarkers.js zeichnet die Linie jetzt auch über die letzte
+  // geladene Kerze hinaus (siehe dort: extrapolatedX) — das hier ist nur die Scope-Entscheidung,
+  // wie weit im Voraus das noch sinnvoll ist: nächste Woche würde über eine Wochenend-Lücke hinweg
+  // extrapoliert und läge potenziell sichtbar daneben.
+  const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
+  relevant = relevant.filter((e) => e.eventTime <= nowSec || isSameBerlinDay(e.eventTime, nowSec));
   renderNewsMarkers(candleSeries, relevant, newsMarkerPrimitives, candles);
 }
 

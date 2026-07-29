@@ -23,6 +23,31 @@ export function formatEventLabel(eventTimeSec) {
   return `${weekday} ${TIME_FORMATTER.format(d)}`;
 }
 
+// "en-CA" liefert direkt "YYYY-MM-DD" (ISO-Reihenfolge) — günstiger String-Vergleich für "selber
+// Kalendertag in Europe/Berlin" als eigene Mitternacht/DST-Grenzrechnung (siehe PriceChart.vue:
+// refreshNewsMarkersInternal, Bug-Report Philip 2026-07-30).
+const DAY_KEY_FORMATTER = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" });
+export function isSameBerlinDay(aSec, bSec) {
+  return DAY_KEY_FORMATTER.format(new Date(aSec * 1000)) === DAY_KEY_FORMATTER.format(new Date(bSec * 1000));
+}
+
+// Termin liegt NACH der letzten geladenen Kerze — timeToCoordinate() (siehe chartTimeUtils.js:
+// "liefert nur fuer exakt vorhandene Bar-Zeiten ein Ergebnis") kann das nicht direkt umrechnen, es
+// gibt an dieser Stelle ja noch keine echte Kerze. Extrapoliert stattdessen linear von der letzten
+// Kerze aus (barSpacing ist innerhalb einer Serie konstant in Pixel-pro-Bar) — bewusst nur für
+// denselben Tag gedacht (siehe refreshNewsMarkersInternal-Filter), auf dieser kurzen Distanz fällt
+// eine eventuell dazwischenliegende Markt-Schließzeit kaum ins Gewicht.
+function extrapolatedX(chart, candles, targetTime) {
+  if (candles.length < 2) return null;
+  const last = candles[candles.length - 1];
+  const lastX = chart.timeScale().timeToCoordinate(last.time);
+  if (lastX == null) return null;
+  const barSeconds = candles[1].time - candles[0].time;
+  if (!barSeconds) return null;
+  const barSpacing = chart.timeScale().options().barSpacing;
+  return lastX + ((targetTime - last.time) / barSeconds) * barSpacing;
+}
+
 class NewsMarkerRenderer {
   constructor(x, label, chart, candles) {
     this._x = x;
@@ -88,8 +113,17 @@ class NewsMarkerPaneView {
     // Historie nachgeladen ist (Lazy-Load beim Scrollen), rutscht das Event automatisch an seine
     // echte Position.
     const inRange = candles.length > 0 && eventTime >= candles[0].time && eventTime <= candles[candles.length - 1].time;
-    const barTime = inRange ? snapToBarTime(candles, eventTime) : null;
-    this._x = barTime != null ? chart.timeScale().timeToCoordinate(barTime) : null;
+    if (inRange) {
+      const barTime = snapToBarTime(candles, eventTime);
+      this._x = barTime != null ? chart.timeScale().timeToCoordinate(barTime) : null;
+      return;
+    }
+    // Nach der letzten geladenen Kerze, aber PriceChart.vue hat den Termin trotzdem als "relevant"
+    // durchgereicht (selber Tag, siehe refreshNewsMarkersInternal/isSameBerlinDay) -> Linie schon
+    // vorab einzeichnen statt zu warten, bis die Kerzen so weit aufgeholt haben (Bug-Report Philip
+    // 2026-07-30: "ich muss die Linien vorher sehen").
+    const isFuture = candles.length > 0 && eventTime > candles[candles.length - 1].time;
+    this._x = isFuture ? extrapolatedX(chart, candles, eventTime) : null;
   }
 
   renderer() {
