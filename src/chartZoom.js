@@ -15,6 +15,15 @@
 // — bei Bedarf hier einfach anpassen.
 export const MIN_PIXELS_PER_HOUR_FOR_LABELS = 8;
 
+// Eigener (höherer) Schwellwert für Timeframes unter 1h (Bug-Report Philip 2026-07-30: "1h TF ist
+// schon gut, M5 ist noch etwas nervig" — die Pixel-pro-Stunde-Normalisierung oben gleicht zwar die
+// reine Kerzendichte aus, aber auf M5 clustern Indikator-Events (OBs/Liquidität/Sessions/Trades)
+// in derselben Wanduhrzeit-Spanne trotzdem dichter als auf 1h, die Labels drängeln sich also bei
+// GLEICHEM Zoom-Wert schneller. Getrennt von MIN_PIXELS_PER_HOUR_FOR_LABELS (nicht einfach höher
+// gesetzt), damit 1h wie bisher bei 8 bleibt und nur Intraday-TFs strenger gefiltert werden — bei
+// Bedarf hier einfach anpassen.
+export const MIN_PIXELS_PER_HOUR_FOR_LABELS_INTRADAY = 70;
+
 // chart/candles sind optional (manche Primitives werden in Tests ohne echten Chart/ohne Kerzen
 // konstruiert) — ohne beide konservativ IMMER anzeigen, statt fälschlich alles auszublenden.
 export function canShowLabels(chart, candles) {
@@ -24,5 +33,6 @@ export function canShowLabels(chart, candles) {
   const barSeconds = candles[1].time - candles[0].time;
   if (!barSeconds) return true;
   const pixelsPerHour = barSpacing * (3600 / barSeconds);
-  return pixelsPerHour >= MIN_PIXELS_PER_HOUR_FOR_LABELS;
+  const threshold = barSeconds < 3600 ? MIN_PIXELS_PER_HOUR_FOR_LABELS_INTRADAY : MIN_PIXELS_PER_HOUR_FOR_LABELS;
+  return pixelsPerHour >= threshold;
 }

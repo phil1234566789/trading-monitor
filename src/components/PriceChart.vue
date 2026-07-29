@@ -639,7 +639,21 @@ function refreshTradeSetupLinksInternal() {
 // refreshTradeSetupLinksInternal an showTradeSetups+showTrades gekoppelt (Bug-Report Philip
 // 2026-07-28, siehe dort). Ohne source_time (Alt-Targets vor diesem Feature, siehe Migration
 // 20260728140000) wird nichts gezeichnet, da keine Linie rekonstruierbar ist.
+//
+// target.touchedTime (DB-Spalte trade_targets.touched_time) wird NUR einmalig beim Hinzufügen des
+// Targets gesetzt (PriceChart.vue: findClickedOBZone/findClickedPivot lesen dafür den Live-Zustand
+// der Zone/des Levels zu DIESEM Zeitpunkt) und danach nie mehr aktualisiert — es gibt keinen
+// Watcher, der ein bereits gespeichertes Target später nachträgt, wenn der Preis es erst danach
+// berührt. Bug-Report Philip 2026-07-30 (OB 1.13737 #12): Target ohne touched_time zeichnete die
+// Linie deshalb dauerhaft "bis jetzt" weiter, obwohl längst eine Kerze durchgelaufen war. Deshalb
+// hier zusätzlich selbst in den geladenen Kerzen nachschauen (wie orderBlocks.js: z.touched via
+// low<=price<=high) statt dem gespeicherten Stand blind zu vertrauen — self-healt automatisch bei
+// jedem Render, sobald die berührende Kerze geladen ist.
 const TARGET_TIER_WIDTH_RATIO = { minor: 1, medium: 1.6, major: 2.2 };
+function firstCandleTouch(candles, sourceTime, price) {
+  const hit = candles.find((c) => c.time >= sourceTime && c.low <= price && c.high >= price);
+  return hit ? hit.time : null;
+}
 function refreshTradeTargetLinksInternal() {
   for (const p of tradeTargetLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeTargetLinkPrimitives.length = 0;
@@ -651,8 +665,9 @@ function refreshTradeTargetLinksInternal() {
   for (const t of props.trades) {
     for (const target of t.targets ?? []) {
       if (target.sourceTime == null) continue;
-      const endTime = target.touchedTime ?? candles[candles.length - 1].time;
-      const tier = classifyAge(businessSecondsBetween(target.sourceTime, target.touchedTime ?? nowSec));
+      const touchedTime = target.touchedTime ?? firstCandleTouch(candles, target.sourceTime, target.price);
+      const endTime = touchedTime ?? candles[candles.length - 1].time;
+      const tier = classifyAge(businessSecondsBetween(target.sourceTime, touchedTime ?? nowSec));
       const primitive = new LiquidityLinePrimitive(
         { price: target.price, pivotTime: target.sourceTime, endTime },
         {
