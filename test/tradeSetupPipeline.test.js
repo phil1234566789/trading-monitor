@@ -45,9 +45,13 @@ const SCENARIOS = [
       lsTouchedTime: 1783501800,
       // obTop/obBottom seit Bug-Report Philip 2026-07-27 ("das ist die FVG, nicht die M5-OB")
       // enger — Box geht jetzt bis zur Impuls-Kerzen-Kante statt bis zur aktuellen Kerze, siehe
-      // detectSetupObs. Setup-Erkennung selbst (ls.pivotTime/obStartTime) unverändert.
+      // detectSetupObs. obBottom seit Bug-Report 2026-07-29 ("höhere/tiefere Preise vor der FVG
+      // mit dabei haben") wieder weiter: Long erweitert die untere Kante auf den Extremwert
+      // zwischen Sweep-Touch und FVG-Impulskerze (siehe widenObForSweep) — deckt sich hier mit dem
+      // Path-A-Fraktal (1.33239) aus dem Szenario unten, weil beide Fenster sich überlappen.
+      // Setup-Erkennung selbst (ls.pivotTime/obStartTime) unverändert.
       obTop: 1.33429,
-      obBottom: 1.3341,
+      obBottom: 1.33239,
       obStartTime: 1783503900,
       isPathB: true,
     },
@@ -100,11 +104,13 @@ const SCENARIOS = [
       lsPrice: 1.33292,
       lsPivotTime: 1783321200,
       lsTouchedTime: 1783501200,
-      // obTop/obBottom seit Bug-Report Philip 2026-07-27 ("das ist die FVG, nicht die M5-OB")
-      // enger — Box geht jetzt bis zur Impuls-Kerzen-Kante statt bis zur aktuellen Kerze, siehe
-      // detectSetupObs. Setup-Erkennung selbst (ls.pivotTime/obStartTime) unverändert.
+      // obTop/obBottom: siehe Kommentar beim Path-B-Szenario oben (dieselbe Fixture/derselbe
+      // obStartTime) — obBottom deckt sich hier exakt mit fractal.price (1.33239), weil das
+      // widenObForSweep-Fenster (Sweep-Touch bis FVG-Impulskerze) die fraktalbildende Kerze
+      // selbst mit einschließt (genau der von Philip erwartete Zusammenhang: "das ist dann auch
+      // das PP, was sich später durch den Pivot bestätigt").
       obTop: 1.33429,
-      obBottom: 1.3341,
+      obBottom: 1.33239,
       obStartTime: 1783503900,
       isPathB: false,
     },
@@ -205,8 +211,13 @@ describe("Trade-Setup-Pipeline mit marketStructureState-H1-Leveln (collectH1LqLe
     expect(match.fractal.price).toBeCloseTo(1.13542, 5);
     expect(match.fractal.pivotTime).toBe(1785233400); // 28.07. 12:10 Berlin
     expect(match.ls.touchedTime).toBe(1785232800); // 28.07. 12:00 Berlin
+    // obBottom seit Bug-Report Philip 2026-07-29 ("höhere/tiefere Preise vor der FVG mit dabei
+    // haben") auf den Extremwert zwischen Sweep-Touch und FVG-Impulskerze erweitert (siehe
+    // widenObForSweep in tradeSetup.js) — deckt sich hier exakt mit fractal.price (1.13542), weil
+    // das Fenster die fraktalbildende Kerze selbst mit einschließt (genau der von Philip erwartete
+    // Zusammenhang: "das ist dann auch das PP, was sich später durch den Pivot bestätigt").
     expect(match.obTop).toBeCloseTo(1.13578, 5);
-    expect(match.obBottom).toBeCloseTo(1.13564, 5);
+    expect(match.obBottom).toBeCloseTo(1.13542, 5);
   });
 
   it("liefert nur touched Pivots der zur Richtung passenden Trend-Seite (Haupt- + Nested-Trend), mit korrektem dir/touchedTime", () => {

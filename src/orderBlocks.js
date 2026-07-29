@@ -1,14 +1,15 @@
 // Order-Block-Erkennung, portiert aus tv-indikator/src/calculations.pine (processClosedBar).
 // Vereinfacht für Single-Timeframe/Single-Symbol: nur ein simples Pip-Minimum für Lower-TF statt
 // des vollen Pip-Systems dort (siehe LOWER_TF_MIN_GAP_PIPS unten), keine Session-/Symbol-Filter,
-// keine "nächste 3 zum Preis"-Hervorhebung, keine M1-Entry-Logik. Box-Konstruktion (C1-Kante bis
-// C2-Kante) und weak-Klassifizierung (Gap-Größe) folgen weiterhin nur dem Pine-HTF-Modus — der
-// Pine-Lower-TF-Modus hätte dafür eine andere Box (Extrempreis der letzten 3 Kerzen, gekappt) und
-// eine andere weak-Regel (Kerzenkörper vs. Docht statt Gap-Größe), beides hier NICHT portiert.
+// keine "nächste 3 zum Preis"-Hervorhebung, keine M1-Entry-Logik. weak-Klassifizierung (Gap-Größe)
+// folgt weiterhin nur dem Pine-HTF-Modus.
 //
 // FVG-Fenster über 4 Kerzen (c0..c2 + cur): bullisch, wenn cur.low über c1.high liegt (Gap),
-// bärisch symmetrisch. Zone = C1-Kante bis zur gegenüberliegenden Kante von C2 (inkl. Wick) —
-// siehe Pine-Kommentar "HTF-Modus" für die Herleitung.
+// bärisch symmetrisch. Zone = C1-Kante bis zur gegenüberliegenden Kante von C2 (inkl. Wick) — siehe
+// Pine-Kommentar "HTF-Modus" für die Herleitung. Gilt unverändert für HTF (15m/1h/4h/1D). Lower-TF
+// (M1/M3/M5) erweitert seit Bug-Report Philip 2026-07-29 die NICHT-FVG-anknüpfende Kante zusätzlich
+// auf den Extremwert über C1+C2+die Kerze davor (siehe detectOrderBlocks unten) — "zu eng, direkt
+// auf der erstbesten Kerzen-Range".
 import { snapToBarTime } from "./chartTimeUtils.js";
 import { cssColorScaled } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
@@ -52,9 +53,15 @@ export function detectOrderBlocks(candles, timeframe) {
 
     if (bullRelevant) {
       for (const z of zones) if (z.dir === 1 && z.active) z.active = false;
+      // Lower-TF (Bug-Report Philip 2026-07-29: "M5 OB Code noch nicht perfekt ... die Kante, die
+      // NICHT an die FVG anknüpft, ist zu eng, direkt auf der erstbesten Kerzen-Range") — bezieht
+      // die Impuls-Kerze (c2) UND die 2 Kerzen davor mit ein (candles[i-3]/c1/c2), nimmt den
+      // Extremwert. Die FVG-anknüpfende Kante (top hier) bleibt unverändert. HTF (15m/1h/4h/1D)
+      // bleibt bei der alten, engen Box — Philip: "die sind eher, das bleibt so wie es ist".
+      const bottom = isLowerTf ? Math.min(candles[i - 3].low, c1.low, c2.low) : c2.low;
       zones.push({
         top: c1.high,
-        bottom: c2.low,
+        bottom,
         dir: 1,
         weak: bullGapPct < WEAK_PCT,
         active: true,
@@ -65,8 +72,9 @@ export function detectOrderBlocks(candles, timeframe) {
       });
     } else if (bearRelevant) {
       for (const z of zones) if (z.dir === -1 && z.active) z.active = false;
+      const top = isLowerTf ? Math.max(candles[i - 3].high, c1.high, c2.high) : c2.high;
       zones.push({
-        top: c2.high,
+        top,
         bottom: c1.low,
         dir: -1,
         weak: bearGapPct < WEAK_PCT,

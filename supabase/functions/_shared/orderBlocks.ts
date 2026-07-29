@@ -58,9 +58,14 @@ export function detectOrderBlocks(candles: Candle[], timeframe?: string): Zone[]
 
     if (bullRelevant) {
       for (const z of zones) if (z.dir === 1 && z.active) z.active = false;
+      // Lower-TF (Bug-Report Philip 2026-07-29: "die Kante, die NICHT an die FVG anknüpft, ist zu
+      // eng, direkt auf der erstbesten Kerzen-Range") — bezieht die Impuls-Kerze (c2) UND die 2
+      // Kerzen davor mit ein (candles[i-3]/c1/c2), nimmt den Extremwert. Die FVG-anknüpfende Kante
+      // (top hier) bleibt unverändert. HTF bleibt bei der alten, engen Box. Siehe src/orderBlocks.js.
+      const bottom = isLowerTf ? Math.min(candles[i - 3].low, c1.low, c2.low) : c2.low;
       zones.push({
         top: c1.high,
-        bottom: c2.low,
+        bottom,
         dir: 1,
         weak: bullGapPct < WEAK_PCT,
         active: true,
@@ -71,8 +76,9 @@ export function detectOrderBlocks(candles: Candle[], timeframe?: string): Zone[]
       });
     } else if (bearRelevant) {
       for (const z of zones) if (z.dir === -1 && z.active) z.active = false;
+      const top = isLowerTf ? Math.max(candles[i - 3].high, c1.high, c2.high) : c2.high;
       zones.push({
-        top: c2.high,
+        top,
         bottom: c1.low,
         dir: -1,
         weak: bearGapPct < WEAK_PCT,
