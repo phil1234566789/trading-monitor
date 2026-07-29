@@ -301,7 +301,10 @@ Deno.serve(async () => {
           // invalidated ändert sich nur, wenn neue Kerzen dazukommen) und mit dem DB-Stand
           // mergen. Läuft bei 1H/OKX jeden Tick, bei 4H nur an isH4RefreshTick-Ticks (siehe
           // fetchForexBatch).
-          const zones = detectOrderBlocks(candles);
+          // tf.label ("4H"/"1H") explizit mitgeben statt implizit undefined (Chat 2026-07-29) —
+          // beides bleibt HTF/Prozent-Verhalten (nur "1m"/"3m"/"5m" gelten als Lower-TF), aber so
+          // ist derselbe Aufrufer-Stil wie bei detectSetupObs (immer explizites Timeframe-Label).
+          const zones = detectOrderBlocks(candles, tf.label);
           const existingMap = new Map(
             (existingRows ?? []).map((r) => [
               `${r.direction}_${Math.floor(new Date(r.start_time).getTime() / 1000)}`,

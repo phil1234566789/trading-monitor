@@ -6,26 +6,22 @@
 // CE10088) — hier nicht nötig, daher eine einzige, dir-parametrisierte Version. Bei Änderungen
 // an der Setup-Logik im Indikator diese Kopie (und die Deno-Kopie in
 // supabase/functions/_shared/tradeSetup.ts) mitziehen.
+import { detectOrderBlocks } from "./orderBlocks.js";
 
-// Eigene, von detectOrderBlocks() unabhängige 3-Kerzen-FVG-Existenzprüfung — bewusst OHNE Session-
-// Filter/Schwäche-/Cap-Einschränkung (siehe pushSetupOb in tradesetup.pine): für die Setup-
-// Erkennung zählt nur, ob die Preislücke überhaupt existiert, unabhängig von Uhrzeit oder Größe.
-// Box-Konstruktion (top/bottom) folgt seit Bug-Report Philip 2026-07-27 ("das ist die FVG, nicht
-// die M5-OB") derselben Konvention wie detectOrderBlocks() (orderBlocks.js): C1-Kante bis zur
-// GEGENÜBERLIEGENDEN Kante der Impuls-Kerze (i-1), nicht bis zur aktuellen Kerze (i) — vorher
-// schloss die Box die ganze FVG inklusive Impuls-Kerze ein, statt nur die eigentliche OB-Zone.
-// Ändert NICHT, ob/wann ein Setup erkannt wird (dieselbe Lücken-Bedingung, derselbe Index i,
-// dasselbe startTime) — nur die Zonen-Grenzen werden enger.
+// Bis Bug-Report Philip 2026-07-29 ("M5 OBs bei trade-setup passen noch nicht") eine EIGENE, von
+// detectOrderBlocks() unabhängige 3-Kerzen-FVG-Existenzprüfung — bewusst OHNE Mindestgröße (jede
+// positive Lücke zählte), während detectOrderBlocks() für M5 längst ein Pip-Minimum hat (siehe
+// orderBlocks.js: LOWER_TF_MIN_GAP_PIPS). Dadurch konnte ein für Path A/B verwendetes "M5-OB"
+// winziger sein als das, was der normale OB-Zonen-Toggle überhaupt als Zone zeichnet — sichtbar
+// als Diskrepanz zwischen Trade-Setup-Box und OB-Overlay für dieselbe Kerzenfolge. Jetzt direkte
+// Wiederverwendung von detectOrderBlocks() statt einer eigenen Parallel-Kopie, damit beide exakt
+// dieselben Lücken als relevant ansehen — "5m" fest verdrahtet, da detectSetupObs ausschließlich
+// auf M5-Kerzen läuft (siehe Aufrufer in PriceChart.vue/poi-watcher). Box-Grenzen (top/bottom)
+// waren bereits identisch mit detectOrderBlocks() (Bug-Report Philip 2026-07-27), nur die
+// Relevanz-Schwelle war unterschiedlich — das übernimmt detectOrderBlocks() jetzt komplett, hier
+// bleibt nur noch die Reduktion aufs von tradeSetup.js erwartete Feld-Subset.
 export function detectSetupObs(candles) {
-  const obs = [];
-  for (let i = 2; i < candles.length; i++) {
-    const c1 = candles[i - 2];
-    const impulse = candles[i - 1];
-    const cur = candles[i];
-    if (c1.low - cur.high > 0) obs.push({ dir: -1, top: impulse.high, bottom: c1.low, startTime: impulse.time });
-    if (cur.low - c1.high > 0) obs.push({ dir: 1, top: c1.high, bottom: impulse.low, startTime: impulse.time });
-  }
-  return obs;
+  return detectOrderBlocks(candles, "5m").map((z) => ({ dir: z.dir, top: z.top, bottom: z.bottom, startTime: z.startTime }));
 }
 
 // Sucht die zeitlich erste FVG einer Richtung, deren Impuls-Kerze auf afterTime folgt, aber
@@ -184,4 +180,19 @@ export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupO
 
   setups.sort((a, b) => a.obStartTime - b.obStartTime);
   return setups;
+}
+
+// OB (Order Block, siehe orderBlocks.js/detectSetupObs) ≠ FVG — die gezeichnete Setup-Box reicht
+// vom Fraktal bis zur FVG-nächstgelegenen Kante des OB, nicht bis zur FVG selbst (siehe
+// obBoxBounds in tradesetup.pine). Bug-Report Philip 2026-07-29 ("Box Oberkante = OB Oberkante =
+// FVG Unterkante, alles dasselbe"): bull-OB ({top: c1.high, bottom: impulse.low}, siehe
+// orderBlocks.js) und die zugehörige bullische FVG teilen sich GENAU eine Kante — c1.high, also
+// obTop. Long (dir=-1, braucht ein bullisches OB) hatte hier fälschlich obBottom verwendet (die
+// GEGENÜBERLIEGENDE OB-Kante, tief im Docht der Impuls-Kerze, mit der FVG gar nichts zu tun hat) —
+// Short (dir=1, bärisches OB, teilt sich obBottom mit seiner FVG) hatte spiegelbildlich obTop
+// verwendet. Beide vertauscht, seit dem Bug-Report korrigiert.
+export function tradeSetupObBoxBounds(setup) {
+  return setup.dir === 1
+    ? { top: setup.fractal.price, bottom: setup.obBottom }
+    : { top: setup.obTop, bottom: setup.fractal.price };
 }

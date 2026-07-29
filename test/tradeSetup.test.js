@@ -7,7 +7,7 @@
 // 08.07.2026 11:50: ein 1H-LS hält als Setup, obwohl zwischenzeitlich M5-Kerzen dagegen schließen —
 // das funktioniert nur über Path A, weil dort keine closesBeyondLevel-Prüfung läuft).
 import { describe, expect, it } from "vitest";
-import { detectTradeSetups } from "../src/tradeSetup.js";
+import { detectTradeSetups, tradeSetupObBoxBounds } from "../src/tradeSetup.js";
 
 const params = {
   graceSec: 300,
@@ -135,5 +135,23 @@ describe("detectTradeSetups — Short (dir=1, spiegelbildlich zu Long)", () => {
     const setupObs = [bearOb({ startTime: 90_300 })];
     const m5Candles = [{ time: 90_100, open: 1.3461, high: 1.3463, low: 1.346, close: 1.3462 }]; // Close > 1.34579
     expect(detectTradeSetups(1, [], [ls], [], setupObs, params, m5Candles)).toEqual([]);
+  });
+});
+
+// Bug-Report Philip 2026-07-29 ("Box Oberkante = OB Oberkante = FVG Unterkante, alles dasselbe"):
+// das bullische OB {top: c1.high, bottom: impulse.low} (siehe orderBlocks.js) teilt sich mit
+// seiner zugehörigen FVG GENAU eine Kante — c1.high, also obTop. tradeSetupObBoxBounds() nutzte
+// für Long fälschlich obBottom (die GEGENÜBERLIEGENDE OB-Kante, tief im Docht der Impuls-Kerze —
+// hat mit der FVG nichts zu tun), für Short spiegelbildlich obTop statt obBottom. Zahlen aus dem
+// echten EURUSD-28.07.-Fall (siehe tradeSetupPipeline.test.js): Fraktal 1,13542, OB 1,13564–1,13578.
+describe("tradeSetupObBoxBounds", () => {
+  it("Long: Box-Oberkante ist obTop (= FVG-Unterkante), nicht obBottom", () => {
+    const setup = { dir: -1, fractal: { price: 1.13542 }, obTop: 1.13578, obBottom: 1.13564 };
+    expect(tradeSetupObBoxBounds(setup)).toEqual({ top: 1.13578, bottom: 1.13542 });
+  });
+
+  it("Short: Box-Unterkante ist obBottom (= FVG-Oberkante), nicht obTop", () => {
+    const setup = { dir: 1, fractal: { price: 1.34633 }, obTop: 1.3462, obBottom: 1.34605 };
+    expect(tradeSetupObBoxBounds(setup)).toEqual({ top: 1.34633, bottom: 1.34605 });
   });
 });

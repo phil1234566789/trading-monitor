@@ -5,7 +5,7 @@
 // nötig, daher eine einzige, dir-parametrisierte Version. Bei Änderungen an der Setup-Logik
 // im Indikator diese Kopie mitziehen. Alle Zeiten in Sekunden (Unix-Time), wie der Rest dieser
 // Codebase (liquidity.ts/orderBlocks.ts) — nicht Millisekunden wie im Pine-Original.
-import type { Candle } from "./orderBlocks.ts";
+import { detectOrderBlocks, type Candle } from "./orderBlocks.ts";
 import type { LiquidityLevel } from "./liquidity.ts";
 
 export interface SetupOb {
@@ -45,25 +45,15 @@ export interface TradeSetupParams {
   nowTime: number; // Referenzzeitpunkt für maxLookbackSec (i.d.R. Zeit der letzten M5-Kerze)
 }
 
-// Eigene, von detectOrderBlocks() unabhängige 3-Kerzen-FVG-Existenzprüfung — bewusst OHNE Session-
-// Filter/Schwäche-/Cap-Einschränkung (siehe pushSetupOb in tradesetup.pine): für die Setup-
-// Erkennung zählt nur, ob die Preislücke überhaupt existiert, unabhängig von Uhrzeit oder Größe.
-// Box-Konstruktion (top/bottom) folgt seit Bug-Report Philip 2026-07-27 ("das ist die FVG, nicht
-// die M5-OB") derselben Konvention wie detectOrderBlocks() (orderBlocks.ts): C1-Kante bis zur
-// GEGENÜBERLIEGENDEN Kante der Impuls-Kerze (i-1), nicht bis zur aktuellen Kerze (i) — vorher
-// schloss die Box die ganze FVG inklusive Impuls-Kerze ein, statt nur die eigentliche OB-Zone.
-// Ändert NICHT, ob/wann ein Setup erkannt wird (dieselbe Lücken-Bedingung, derselbe Index i,
-// dasselbe startTime) — nur die Zonen-Grenzen werden enger. Siehe JS-Kopie (tradeSetup.js).
+// Bis Bug-Report Philip 2026-07-29 ("egal welcher M5 OB wo in welcher Code-Stelle von uns, sollten
+// alle dieselbe Erkennungslogik haben") eine EIGENE, von detectOrderBlocks() unabhängige 3-Kerzen-
+// FVG-Existenzprüfung ohne Mindestgröße. Jetzt direkte Wiederverwendung von detectOrderBlocks()
+// (orderBlocks.ts) mit "5m" fest verdrahtet (detectSetupObs läuft ausschließlich auf M5-Kerzen,
+// siehe Aufrufer in poi-watcher/index.ts) — dieselbe Änderung wie in der JS-Kopie (tradeSetup.js),
+// aus demselben Grund: alle M5-OB-Erkennungen (Chart-Overlay, Trade-Setup-Frontend,
+// Trade-Setup-Backend/Telegram-Alarme) sollen exakt dieselben Lücken als relevant ansehen.
 export function detectSetupObs(candles: Candle[]): SetupOb[] {
-  const obs: SetupOb[] = [];
-  for (let i = 2; i < candles.length; i++) {
-    const c1 = candles[i - 2];
-    const impulse = candles[i - 1];
-    const cur = candles[i];
-    if (c1.low - cur.high > 0) obs.push({ dir: -1, top: impulse.high, bottom: c1.low, startTime: impulse.time });
-    if (cur.low - c1.high > 0) obs.push({ dir: 1, top: c1.high, bottom: impulse.low, startTime: impulse.time });
-  }
-  return obs;
+  return detectOrderBlocks(candles, "5m").map((z) => ({ dir: z.dir, top: z.top, bottom: z.bottom, startTime: z.startTime }));
 }
 
 // Sucht die zeitlich erste FVG einer Richtung, deren Impuls-Kerze auf afterTime folgt, aber

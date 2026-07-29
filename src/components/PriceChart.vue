@@ -13,7 +13,7 @@ import {
 import { sessions, renderSessions, currentSessionDanger } from "../sessions.js";
 import { newsEvents, currentNewsNoGo, newsEventsForInstrument } from "../newsEvents.js";
 import { renderNewsMarkers } from "../newsMarkers.js";
-import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
+import { detectSetupObs, detectTradeSetups, tradeSetupObBoxBounds } from "../tradeSetup.js";
 import { renderPivotMarkers } from "../pivotMarkers";
 import {
   computeRangesPivots,
@@ -1081,14 +1081,6 @@ function computeTradeSetups() {
     ...longs.map((s, i) => ({ ...s, label: "Long", setupNumber: n > 1 ? i + 1 : null })),
   ];
   tradeSetupsMetadata.value = currentTradeSetups;
-}
-
-// OB (Order Block) ≠ FVG — siehe obBoxBounds in tradesetup.pine: die gezeichnete Box reicht
-// vom Fraktal bis zur ihm am nächsten liegenden Kante der FVG, nicht die FVG selbst.
-function tradeSetupObBoxBounds(setup) {
-  return setup.dir === 1
-    ? { top: setup.fractal.price, bottom: setup.obTop }
-    : { top: setup.obBottom, bottom: setup.fractal.price };
 }
 
 // Trade-Modus-Klick-Hittest (Chat 2026-07-27) — testet gegen genau die Box, die renderTradeSetupsInternal
