@@ -11,7 +11,8 @@ export function computeTradeStats(trades) {
   return { total: trades.length, closed: closed.length, wins, losses, totalR, winrate, avgR };
 }
 
-// signal_id -> Zeilen aus trade_targets/trade_partial_exits gruppieren (beide 1:n zu signals).
+// signal_id -> Zeilen aus trade_targets/trade_partial_exits/trade_confirmations gruppieren (alle
+// drei 1:n zu signals).
 function groupBySignalId(rows) {
   const result = {};
   for (const row of rows) {
@@ -33,18 +34,26 @@ export async function fetchTrades(instrument) {
   if (error) throw error;
   if (data.length === 0) return [];
 
-  // These (trade_targets) und Ausführung (trade_partial_exits) sind je 1:n zu signals — in zwei
-  // Sammel-Queries statt pro Trade einzeln, um bei vielen Trades nicht N+1 Requests zu erzeugen.
+  // These (trade_targets), Ausführung (trade_partial_exits) und Bestätigungen (trade_confirmations,
+  // PLAN-trade-confluences.md #1) sind je 1:n zu signals — in drei Sammel-Queries statt pro Trade
+  // einzeln, um bei vielen Trades nicht N+1 Requests zu erzeugen.
   const ids = data.map((row) => row.id);
-  const [{ data: targets, error: targetsError }, { data: partials, error: partialsError }] = await Promise.all([
+  const [
+    { data: targets, error: targetsError },
+    { data: partials, error: partialsError },
+    { data: confirmations, error: confirmationsError },
+  ] = await Promise.all([
     supabase.from("trade_targets").select("id, signal_id, price, kind, source_time, touched_time").in("signal_id", ids),
     supabase.from("trade_partial_exits").select("signal_id, price, exit_time, portion_pct").in("signal_id", ids),
+    supabase.from("trade_confirmations").select("id, signal_id, price, kind, source_time, touched_time").in("signal_id", ids),
   ]);
   if (targetsError) throw targetsError;
   if (partialsError) throw partialsError;
+  if (confirmationsError) throw confirmationsError;
 
   const targetsBySignal = groupBySignalId(targets);
   const partialsBySignal = groupBySignalId(partials);
+  const confirmationsBySignal = groupBySignalId(confirmations);
 
   return data.map((row) => ({
     id: row.id,
@@ -68,6 +77,15 @@ export async function fetchTrades(instrument) {
       kind: t.kind,
       sourceTime: t.source_time ? Math.floor(new Date(t.source_time).getTime() / 1000) : null,
       touchedTime: t.touched_time ? Math.floor(new Date(t.touched_time).getTime() / 1000) : null,
+    })),
+    // TradeConfirmation-Rohformat (siehe tradeConfirmations.ts) — strukturell identisch zu
+    // targets oben, eigenes Array/eigene Tabelle (siehe tradeIntake.js: addConfirmationToTrade).
+    confirmations: (confirmationsBySignal[row.id] ?? []).map((c) => ({
+      id: c.id,
+      price: c.price,
+      kind: c.kind,
+      sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
+      touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
     })),
     partialExits: (partialsBySignal[row.id] ?? []).map((p) => ({
       price: p.price,

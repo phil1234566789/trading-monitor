@@ -1,8 +1,9 @@
 <script setup>
 import { ref, watch } from "vue";
-import { updateTrade, deleteTrade, unlinkTradeSetup, removeTargetFromTrade } from "../tradeIntake.js";
+import { updateTrade, deleteTrade, unlinkTradeSetup, removeTargetFromTrade, removeConfirmationFromTrade } from "../tradeIntake.js";
 import { fmtDateTime } from "../format.js";
 import { formatTargetLabel } from "../tradeTargets";
+import { formatConfirmationLabel } from "../tradeConfirmations";
 import MetadataPanel from "./MetadataPanel.vue";
 
 // Ersetzt die vorherigen Inline-Buttons in TradesTable.vue (🔗 verknüpfen, + Ziel, × Ziel
@@ -16,7 +17,7 @@ import MetadataPanel from "./MetadataPanel.vue";
 const props = defineProps({
   trade: { type: Object, required: true },
 });
-const emit = defineEmits(["close", "saved", "deleted", "request-link", "request-add-target"]);
+const emit = defineEmits(["close", "saved", "deleted", "request-link", "request-add-target", "request-add-confirmation"]);
 
 const entryPrice = ref("");
 const stopLoss = ref("");
@@ -81,11 +82,19 @@ async function onRemoveTarget(target) {
   if (ok) emit("saved");
 }
 
+async function onRemoveConfirmation(confirmation) {
+  const ok = await removeConfirmationFromTrade(confirmation.id);
+  if (ok) emit("saved");
+}
+
 // Nicht replay-aware (anders als PriceChart.vue) — das Panel zeigt den ECHTEN aktuellen Stand,
 // nicht den Replay-Zeitpunkt; reicht hier als einfache Momentaufnahme beim Öffnen.
 const nowSec = Math.floor(Date.now() / 1000);
 function targetLabel(target) {
   return formatTargetLabel(target, props.trade.instrument, nowSec);
+}
+function confirmationLabel(confirmation) {
+  return formatConfirmationLabel(confirmation, props.trade.instrument, nowSec);
 }
 </script>
 
@@ -114,6 +123,17 @@ function targetLabel(target) {
         <button class="tem-small-btn" @click="onRemoveTarget(target)">entfernen</button>
       </div>
       <button class="tem-action-btn" @click="emit('request-add-target')">🎯 Target hinzufügen (Trade-Modus, dann Pivot oder OB anklicken)</button>
+    </section>
+
+    <section class="tem-section">
+      <!-- PLAN-trade-confluences.md #1: von welchem Sweep/OB kam die Kraft für die Bewegung? -->
+      <h4 class="tem-section-title">Bestätigungen</h4>
+      <div v-if="!trade.confirmations || trade.confirmations.length === 0" class="tem-muted">Noch keine Bestätigungen.</div>
+      <div v-for="confirmation in trade.confirmations" :key="confirmation.id" class="tem-row">
+        <span>{{ confirmationLabel(confirmation) }}</span>
+        <button class="tem-small-btn" @click="onRemoveConfirmation(confirmation)">entfernen</button>
+      </div>
+      <button class="tem-action-btn" @click="emit('request-add-confirmation')">✔ Bestätigung hinzufügen (Trade-Modus, dann Sweep oder OB anklicken)</button>
     </section>
 
     <section class="tem-section">

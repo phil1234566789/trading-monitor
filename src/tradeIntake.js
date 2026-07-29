@@ -179,8 +179,9 @@ export async function updateTrade(signalId, fields) {
   return true;
 }
 
-// Trade-CRUD, "D". trade_targets/trade_partial_exits haben `on delete cascade` (siehe
-// 20260727180000_trade_thesis_and_partial_exits.sql), räumen sich also von selbst mit auf.
+// Trade-CRUD, "D". trade_targets/trade_partial_exits/trade_confirmations haben `on delete
+// cascade` (siehe 20260727180000_trade_thesis_and_partial_exits.sql/20260728160000_trade_confirmations.sql),
+// räumen sich also von selbst mit auf.
 export async function deleteTrade(signalId) {
   const { error } = await supabase.from("signals").delete().eq("id", signalId);
   if (error) {
@@ -196,6 +197,34 @@ export async function unlinkTradeSetup(signalId) {
   const { error } = await supabase.from("signals").update({ trade_setup_id: null, setup_entry: null, invalidation: null }).eq("id", signalId);
   if (error) {
     console.error("Setup-Verknüpfung entfernen fehlgeschlagen:", error);
+    return false;
+  }
+  return true;
+}
+
+// Bestätigung hinzufügen (PLAN-trade-confluences.md #1: "von welchen Sweeps kam die Kraft ...
+// auch OBs") — gleiches Rohformat wie addTargetToTrade (kind/price/sourceTime/touchedTime aus
+// PriceChart.vue: findClickedTarget), eigene Tabelle (trade_confirmations), weil eine Bestätigung
+// bereits passierte Evidenz ist statt einer zukünftigen Preis-Erwartung.
+export async function addConfirmationToTrade(signalId, confirmation) {
+  const { error } = await supabase.from("trade_confirmations").insert({
+    signal_id: signalId,
+    price: confirmation.price,
+    kind: confirmation.kind,
+    source_time: confirmation.sourceTime != null ? new Date(confirmation.sourceTime * 1000).toISOString() : null,
+    touched_time: confirmation.touchedTime != null ? new Date(confirmation.touchedTime * 1000).toISOString() : null,
+  });
+  if (error) {
+    console.error("Bestätigung hinzufügen fehlgeschlagen:", error);
+    return false;
+  }
+  return true;
+}
+
+export async function removeConfirmationFromTrade(confirmationId) {
+  const { error } = await supabase.from("trade_confirmations").delete().eq("id", confirmationId);
+  if (error) {
+    console.error("Bestätigung entfernen fehlgeschlagen:", error);
     return false;
   }
   return true;

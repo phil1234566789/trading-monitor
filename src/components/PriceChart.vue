@@ -56,7 +56,8 @@ import {
 import { fetchCandlesCached } from "../candleCache.js";
 import { replayFetchToMs, nextCandleAfter, snapToBarTime, businessSecondsBetween } from "../chartTimeUtils.js";
 import { classifyAge } from "../ageTier";
-import { kindLabel } from "../tradeTargets";
+import { kindLabel as targetKindLabel } from "../tradeTargets";
+import { kindLabel as confirmationKindLabel } from "../tradeConfirmations";
 import { useStatusBar } from "../composables/useStatusBar.js";
 import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
 import Gauge from "./Gauge.vue";
@@ -332,6 +333,7 @@ let marketStructurePrimitives = [];
 let tradePrimitives = [];
 let tradeSetupLinkPrimitives = [];
 let tradeTargetLinkPrimitives = [];
+let tradeConfirmationLinkPrimitives = [];
 let tradeSetupPrimitives = [];
 let claudeAnnotationPrimitives = [];
 let claudeAnnotationPriceLines = [];
@@ -658,7 +660,7 @@ function refreshTradeTargetLinksInternal() {
           lineWidth: lineWidth("tradeTarget") * TARGET_TIER_WIDTH_RATIO[tier],
           // "🎯 Pivot #12"/"🎯 OB #12" — matcht 1:1 die Zeile in TradesTable/TradeEditModal (siehe
           // tradeTargets.ts: kindLabel), wie schon beim Setup-"#<id>"-Muster.
-          label: `🎯 ${kindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`,
+          label: `🎯 ${targetKindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`,
           // Bug-Report Philip 2026-07-28: bei Short-Trades soll das Label UNTER statt über der
           // Linie stehen (Long bleibt wie bisher) — analog zur Short/Long-Positionierung bei den
           // Trade-Setup-LS-/Fraktal-Linien weiter oben (renderTradeSetupsInternal).
@@ -668,6 +670,40 @@ function refreshTradeTargetLinksInternal() {
       );
       candleSeries.attachPrimitive(primitive);
       tradeTargetLinkPrimitives.push(primitive);
+    }
+  }
+}
+
+// Zeichnet die Sweep-/OB-Bestätigungen eines Trades als Linie (PLAN-trade-confluences.md #1) —
+// strukturell identisch zu refreshTradeTargetLinksInternal (dieselbe Klick-Infrastruktur, dieselbe
+// Tier-Skalierung), eigene Farbe (tradeConfirmation statt tradeTarget) und eigenes Label-Präfix,
+// damit sich Bestätigung (bereits passiert) und Target (zukünftige Erwartung) auf einen Blick
+// unterscheiden lassen, auch wenn beide zufällig an derselben Stelle sitzen.
+function refreshTradeConfirmationLinksInternal() {
+  for (const p of tradeConfirmationLinkPrimitives) candleSeries.detachPrimitive(p);
+  tradeConfirmationLinkPrimitives.length = 0;
+  if (!props.showTradeSetups || !props.showTrades) return;
+  const candles = clipReplay(allCandles);
+  if (candles.length === 0) return;
+  const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
+  const precision = pricePrecisionForInstrument(props.symbol);
+  for (const t of props.trades) {
+    for (const confirmation of t.confirmations ?? []) {
+      if (confirmation.sourceTime == null) continue;
+      const endTime = confirmation.touchedTime ?? candles[candles.length - 1].time;
+      const tier = classifyAge(businessSecondsBetween(confirmation.sourceTime, confirmation.touchedTime ?? nowSec));
+      const primitive = new LiquidityLinePrimitive(
+        { price: confirmation.price, pivotTime: confirmation.sourceTime, endTime },
+        {
+          color: cssColor("tradeConfirmation"),
+          lineWidth: lineWidth("tradeConfirmation") * TARGET_TIER_WIDTH_RATIO[tier],
+          label: `✔ ${confirmationKindLabel(confirmation.kind)} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`,
+          labelSide: t.direction === "short" ? "end-below" : "end-above",
+        },
+        candles,
+      );
+      candleSeries.attachPrimitive(primitive);
+      tradeConfirmationLinkPrimitives.push(primitive);
     }
   }
 }
@@ -1375,6 +1411,7 @@ function refreshChart() {
   refreshTradeMarkersInternal();
   refreshTradeSetupLinksInternal();
   refreshTradeTargetLinksInternal();
+  refreshTradeConfirmationLinksInternal();
   refreshClaudeAnnotationsInternal();
   renderTradeSetupsInternal();
   refreshRangesMarkersInternal();
@@ -1740,6 +1777,7 @@ watch([() => props.trades, () => props.showTrades], () => {
   refreshTradeMarkersInternal();
   refreshTradeSetupLinksInternal();
   refreshTradeTargetLinksInternal();
+  refreshTradeConfirmationLinksInternal();
 });
 watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 watch(() => props.poiZones, refreshPoiZonesInternal);
@@ -1761,6 +1799,7 @@ watch(() => props.showTradeSetups, () => {
   refreshTradeMarkersInternal();
   refreshTradeSetupLinksInternal();
   refreshTradeTargetLinksInternal();
+  refreshTradeConfirmationLinksInternal();
 });
 watch(() => props.tradeSetupHistoryCount, () => {
   computeTradeSetups();

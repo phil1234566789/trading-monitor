@@ -62,6 +62,10 @@ export const DEFAULT_CHART_COLORS = {
   // Target" erkennbar bleibt, wenn es zufällig mit einer normalen Liquiditäts-/OB-Zeichnung
   // überlappt (siehe PriceChart.vue: refreshTradeTargetLinksInternal).
   tradeTarget: { hex: "#ab47bc", alpha: 0.95 },
+  // Bestätigungs-Linien (PLAN-trade-confluences.md #1) — eigene Farbe, damit sich Bestätigung
+  // (bereits passierte Evidenz) und Target (zukünftige Erwartung) auch farblich unterscheiden,
+  // trotz gleicher Klick-/Zeichen-Infrastruktur (siehe refreshTradeConfirmationLinksInternal).
+  tradeConfirmation: { hex: "#5c6bc0", alpha: 0.95 },
 };
 
 function loadInitial() {

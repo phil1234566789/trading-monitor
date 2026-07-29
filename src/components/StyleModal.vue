@@ -82,6 +82,7 @@ const GROUPS = [
       { key: "tradeInvalid", label: "Invalidiert" },
       { key: "tradeConnector", label: "Verbindung" },
       { key: "tradeTarget", label: "Target" },
+      { key: "tradeConfirmation", label: "Bestätigung" },
     ],
   },
   {

@@ -10,7 +10,7 @@ import TakeTradeModal from "../components/TakeTradeModal.vue";
 import TradeEditModal from "../components/TradeEditModal.vue";
 import { TIMEFRAMES } from "../timeframes.js";
 import { fetchTrades } from "../trades.js";
-import { fetchTradeSetupForCockpit, linkTradeToSetup, directionForSetup, addTargetToTrade } from "../tradeIntake.js";
+import { fetchTradeSetupForCockpit, linkTradeToSetup, directionForSetup, addTargetToTrade, addConfirmationToTrade } from "../tradeIntake.js";
 import { fetchPoiZones } from "../poiZones.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
@@ -175,33 +175,57 @@ const linkTargetTrade = ref(null);
 // den Klick-Handler in PriceChart.vue umschalten (Setup-OB vs. LQ-Linie, siehe targetModeActive) —
 // nur eines der beiden kann gerade "scharf" sein, siehe die beiden onXRequest-Funktionen unten.
 const targetAddTrade = ref(null);
+// Bestätigung hinzufügen (PLAN-trade-confluences.md #1: "genau wie bei Targets, dass ich einfach
+// die Linie per Maus anklicke") — dritter Arm-Zustand neben Link/Target, gleicher Grund für die
+// Trennung (nur einer der drei kann gerade "scharf" sein, siehe onXRequest-Funktionen unten und
+// targetModeActive-Berechnung im Template).
+const confirmationAddTrade = ref(null);
 function onLinkRequest(t) {
   linkTargetTrade.value = t;
   targetAddTrade.value = null;
+  confirmationAddTrade.value = null;
   tradeModeActive.value = true;
 }
 function onAddTargetRequest(t) {
   targetAddTrade.value = t;
   linkTargetTrade.value = null;
+  confirmationAddTrade.value = null;
   tradeModeActive.value = true;
 }
-// Verlassen des Trade-Modus räumt eine noch "scharfe" Verknüpfung/Ziel-Anfrage mit ab — sonst würde
-// ein späteres Wieder-Reinklicken in den Trade-Modus (für einen ganz anderen Zweck) unerwartet den
-// alten Trade verknüpfen/beschenken.
+function onAddConfirmationRequest(t) {
+  confirmationAddTrade.value = t;
+  linkTargetTrade.value = null;
+  targetAddTrade.value = null;
+  tradeModeActive.value = true;
+}
+// Verlassen des Trade-Modus räumt eine noch "scharfe" Verknüpfung/Ziel-/Bestätigungs-Anfrage mit
+// ab — sonst würde ein späteres Wieder-Reinklicken in den Trade-Modus (für einen ganz anderen
+// Zweck) unerwartet den alten Trade verknüpfen/beschenken.
 watch(tradeModeActive, (active) => {
   if (!active) {
     linkTargetTrade.value = null;
     targetAddTrade.value = null;
+    confirmationAddTrade.value = null;
   }
 });
 // target: {kind, price, sourceTime, touchedTime} — siehe PriceChart.vue: findClickedTarget (Pivot
-// oder OB, Chat 2026-07-28).
+// oder OB, Chat 2026-07-28). Dieselbe Klick-Quelle bedient jetzt sowohl Target- als auch
+// Bestätigungs-Anfragen (PLAN-trade-confluences.md #1) — welches der beiden gemeint ist, entscheidet
+// allein, welcher Arm-Zustand gerade gesetzt ist.
 async function onSelectTarget(target) {
-  if (!targetAddTrade.value) return;
-  const trade = targetAddTrade.value;
-  targetAddTrade.value = null;
-  const ok = await addTargetToTrade(trade.id, target);
-  if (ok) refreshTrades();
+  if (targetAddTrade.value) {
+    const trade = targetAddTrade.value;
+    targetAddTrade.value = null;
+    const ok = await addTargetToTrade(trade.id, target);
+    if (ok) refreshTrades();
+    return;
+  }
+  if (confirmationAddTrade.value) {
+    const trade = confirmationAddTrade.value;
+    confirmationAddTrade.value = null;
+    const ok = await addConfirmationToTrade(trade.id, target);
+    if (ok) refreshTrades();
+  }
 }
 async function onSelectSetup(setup) {
   if (linkTargetTrade.value) {
@@ -657,6 +681,7 @@ watch(currentSymbol, () => {
         </button>
         <span v-if="linkTargetTrade" class="trade-link-armed">🔗 nächster Klick verknüpft Trade #{{ linkTargetTrade.id }}</span>
         <span v-if="targetAddTrade" class="trade-link-armed">🎯 nächster Klick auf Pivot/OB fügt Trade #{{ targetAddTrade.id }} ein Target hinzu</span>
+        <span v-if="confirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB fügt Trade #{{ confirmationAddTrade.id }} eine Bestätigung hinzu</span>
       </div>
 
       <div class="toggle-group">
@@ -702,6 +727,7 @@ watch(currentSymbol, () => {
     @deleted="onTradeDeleted"
     @request-link="onLinkRequest(editingTrade)"
     @request-add-target="onAddTargetRequest(editingTrade)"
+    @request-add-confirmation="onAddConfirmationRequest(editingTrade)"
   />
 
   <PriceChart
@@ -738,7 +764,7 @@ watch(currentSymbol, () => {
     :claude-annotations="visibleClaudeAnnotations"
     :claude-annotations-date="claudeAnnotationsDate"
     :trade-mode-active="tradeModeActive"
-    :target-mode-active="targetAddTrade != null"
+    :target-mode-active="targetAddTrade != null || confirmationAddTrade != null"
     @close-ranges-metadata="showRangesMetadata = false"
     @close-debug-metadata="showDebugMetadata = false"
     @select-setup="onSelectSetup"

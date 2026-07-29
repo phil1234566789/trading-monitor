@@ -45,6 +45,7 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   // Alters-Tier-Faktor multipliziert (minor/medium/major, siehe ageTier.ts), diese Zahl hier ist
   // nur der Nutzer-einstellbare Grundwert (wie bei jeder anderen Farbe/Linie im Style-Modal).
   tradeTarget: 1.5,
+  tradeConfirmation: 1.5, // gleiches Tier-Skalierungsmuster wie tradeTarget, siehe PriceChart.vue.
 };
 
 function loadInitial() {
