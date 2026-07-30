@@ -81,7 +81,13 @@ const props = defineProps({
   // refreshTradeSetupLinksInternal/refreshTradeTargetLinksInternal).
   showTrades: { type: Boolean, default: true },
   poiZones: { type: Array, default: () => [] },
-  showOrderBlocks: { type: Boolean, default: true },
+  // Ersetzt seit Chat 2026-07-30 den einzelnen showOrderBlocks-Schalter (Bug-Report Philip: "wenn
+  // ich Indikatoren > OBs im M5 anhabe, werden mir ganz viele M5 OBs angezeigt" — showOrderBlocks
+  // folgte bei Forex bisher IMMER dem gerade angezeigten Chart-Timeframe, nie mehrere gleichzeitig).
+  // Jeder der drei Timeframes ist jetzt unabhängig an-/ausschaltbar, siehe refreshPoiZonesInternal.
+  showObsM5: { type: Boolean, default: false },
+  showObs1h: { type: Boolean, default: true },
+  showObs4h: { type: Boolean, default: true },
   showHistoricalObs: { type: Boolean, default: false },
   showLiquidity: { type: Boolean, default: true },
   showSweptLiquidity: { type: Boolean, default: false },
@@ -264,6 +270,15 @@ const TREND_ANALYSIS_CANDLE_COUNT = 1000;
 // BEIDE Perioden (5 und 2) großzügig genug, kein separater Puffer je Periode nötig.
 const RANGES_CANDLE_BUFFER = 20;
 
+// OB-Timeframe-Toggles (Chat 2026-07-30) — 1H (Forex: rangesH1Candles, BTC: props.poiZones) und M5
+// (Forex: tradeSetupM5Candles, läuft für Forex ohnehin schon immer) brauchen KEINEN eigenen Fetch,
+// die Kerzen sind für andere Features bereits da bzw. kommen fertig vom Backend. Nur diese zwei
+// Fälle haben sonst wirklich nichts, das ihre Kerzen laden würde:
+// - 4H bei Forex (kein anderes Feature braucht 4H-Kerzen)
+// - M5 bei BTC (BTC hat weder Trade-Setups noch TSC, die M5 bräuchten)
+const OBS_4H_CANDLE_COUNT = 300; // ≈ 50 Tage, großzügig fürs Erkennen auch länger unberührter Zonen
+const OBS_M5_BTC_CANDLE_COUNT = 2500; // wie TRADE_SETUP_M5_CANDLE_COUNT, gleiche Größenordnung
+
 // EMA 50/200 auf M5 (siehe Chat: Philips "Trend über EMA + Anzahl protected highs/lows"-Idee) —
 // läuft auf trendAnalysisM5Candles (dieselbe M5-Historie wie der Zigzag-Algo), kein eigener Fetch
 // nötig, siehe loadTradeSetupM5.
@@ -396,12 +411,18 @@ let rangesPivots2 = null; // roh (mit pivotTime), eingebettete Periode 2 (siehe 
 let loadInitialFetchSeq = 0;
 let rangesFetchSeq = 0;
 let tradeSetupM5FetchSeq = 0;
+let obs4hCandles = []; // nur Forex, siehe OBS_4H_CANDLE_COUNT oben
+let obs4hFetchSeq = 0;
+let obsM5BtcCandles = []; // nur BTC, siehe OBS_M5_BTC_CANDLE_COUNT oben
+let obsM5BtcFetchSeq = 0;
 let loadingOlder = false;
 let reachedHistoryStart = false;
 let reachedCvdHistoryStart = false;
 let pollTimer = null;
 let tradeSetupM5PollTimer = null;
 let rangesPollTimer = null;
+let obs4hPollTimer = null;
+let obsM5BtcPollTimer = null;
 let windowGaugeTimer = null;
 let dailyGaugeTimer = null;
 const rangesMetadata = ref(null); // Liste der erkannten H1-Periode-5-Pivots fürs Ranges-Metadaten-Panel
@@ -739,7 +760,7 @@ function refreshTradeSetupLinksInternal() {
 
 // Zeichnet die Pivot-/OB-Targets eines Trades als Linie — Wiederverwendung LiquidityLinePrimitive
 // für beide Target-Arten (auch OB, siehe findClickedOBZone: nur die nähere Kante wird übernommen,
-// kein eigenes Box-Rendering nötig). Bewusst UNABHÄNGIG von showLiquidity/showOrderBlocks (ein
+// kein eigenes Box-Rendering nötig). Bewusst UNABHÄNGIG von showLiquidity/showObsM5/-1h/-4h (ein
 // Target gehört zum Trade, nicht zur Live-Anzeige-Rauschen-Filterung), aber wie bei
 // refreshTradeSetupLinksInternal an showTradeSetups+showTrades gekoppelt (Bug-Report Philip
 // 2026-07-28, siehe dort). Ohne source_time (Alt-Targets vor diesem Feature, siehe Migration
@@ -909,36 +930,63 @@ function claudeCalloutTick() {
   }
 }
 
-// POI-Zonen kommen vom poi-watcher-Backend (4H+1H, aus `ob_zones`) statt lokal aus den
-// gerade angezeigten Kerzen neu berechnet — so zeigt der Chart immer exakt das, was der
-// Bot auch tatsächlich beobachtet/alarmiert, unabhängig vom gewählten Chart-Timeframe.
 // "Historische OBs"-Toggle (Dashboard-Toolbar) blendet bereits angetestete, aber noch nicht
 // invalidierte Zonen aus (analog zum tv-indikator-Toggle, siehe PLAN-notifications.md) —
-// invalidierte Zonen bleiben unabhängig davon immer ausgeblendet (eigene, ältere Regel).
+// invalidierte Zonen bleiben unabhängig davon immer ausgeblendet (eigene, ältere Regel). Gilt
+// einheitlich für alle drei Timeframes, kein eigener Feinschalter pro Timeframe nötig.
 function filterHistorical(zones) {
   return props.showHistoricalObs ? zones : zones.filter((z) => !z.touched);
 }
 
-// Für Forex (GBPUSD) gibt es noch kein Backend, das Zonen vorberechnet (siehe PLAN-
-// notifications.md) — hier deshalb direkt aus den geladenen Kerzen des aktuellen
-// Timeframes neu erkannt, statt wie bei BTC aus `ob_zones` (Supabase) gerendert.
+// BTC-Zonen für EIN Timeframe aus props.poiZones (poi-watcher-Backend, `ob_zones`) — im
+// Replay-Modus zusätzlich auf Zonen bis replayUntil beschränkt, damit nicht schon Zonen auftauchen,
+// die "in der Zukunft" (relativ zum Replay-Stand) erst entdeckt wurden.
+function filterBtcObsZones(timeframe) {
+  const byTf = props.poiZones.filter((z) => z.timeframe === timeframe);
+  return props.replayUntil == null ? byTf : byTf.filter((z) => z.startTime <= props.replayUntil);
+}
+
+// Sammelt die Zonen aller AKTIVIERTEN Timeframe-Toggles (Chat 2026-07-30: "Indikatoren > OBs" bekam
+// unabhängige M5-/1H-/4H-Checkboxen statt eines einzelnen showOrderBlocks-Schalters, der bei Forex
+// bisher immer nur den gerade angezeigten Chart-Timeframe zeigte). BTC nutzt für 1H/4H fertige
+// Zonen aus dem Backend (props.poiZones), Forex erkennt live aus den jeweils passenden Kerzen —
+// 1H/M5 laufen dafür auf Kerzen mit, die ohnehin schon für andere Features geladen werden
+// (rangesH1Candles/tradeSetupM5Candles), nur 4H (Forex) und M5 (BTC) haben einen eigenen, neuen
+// Fetch (siehe loadObs4hCandles/loadObsM5BtcCandles unten).
+function collectObsZones() {
+  const zones = [];
+  if (props.showObs4h) {
+    zones.push(
+      ...(isForex
+        ? detectOrderBlocks(clipReplay(obs4hCandles), "4H", true)
+            .filter((z) => !z.invalidated)
+            .map((z) => ({ ...z, timeframe: "4H" }))
+        : filterBtcObsZones("4H")),
+    );
+  }
+  if (props.showObs1h) {
+    zones.push(
+      ...(isForex
+        ? detectOrderBlocks(clipReplay(rangesH1Candles), "1H", true)
+            .filter((z) => !z.invalidated)
+            .map((z) => ({ ...z, timeframe: "1H" }))
+        : filterBtcObsZones("1H")),
+    );
+  }
+  if (props.showObsM5) {
+    const m5Candles = isForex ? tradeSetupM5Candles : obsM5BtcCandles;
+    zones.push(
+      ...detectOrderBlocks(clipReplay(m5Candles), "5m", isForex)
+        .filter((z) => !z.invalidated)
+        .map((z) => ({ ...z, timeframe: "5M" })),
+    );
+  }
+  return zones;
+}
+
 function refreshPoiZonesInternal() {
   const candles = clipReplay(allCandles);
-  let zones;
-  if (isForex) {
-    zones = detectOrderBlocks(candles, props.currentBar)
-      .filter((z) => !z.invalidated)
-      .map((z) => ({ ...z, timeframe: props.currentBar.toUpperCase() }));
-  } else {
-    // BTC-Zonen kommen fertig vom poi-watcher-Backend (props.poiZones) statt lokal erkannt —
-    // im Replay-Modus trotzdem auf Zonen bis replayUntil beschränken, damit nicht schon
-    // Zonen auftauchen, die "in der Zukunft" (relativ zu X) erst entdeckt wurden.
-    zones = props.replayUntil == null ? props.poiZones : props.poiZones.filter((z) => z.startTime <= props.replayUntil);
-  }
-  // "OBs"-Toggle (Chat 2026-07-25: "nicht nur historische Obs an- und ausschalten ... sondern auch
-  // OBs") — komplett unabhängig von showHistoricalObs, das nur FILTERT, welche der ANGEZEIGTEN
-  // Zonen berücksichtigt werden, nicht ob überhaupt welche angezeigt werden.
-  const visibleZones = props.showOrderBlocks ? filterHistorical(zones) : [];
+  const visibleZones = filterHistorical(collectObsZones());
   renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles);
   poiZonesMetadata.value = visibleZones;
 }
@@ -1212,9 +1260,86 @@ async function loadRangesCandles() {
     if (seq !== rangesFetchSeq) return; // inzwischen überholt, siehe oben
     rangesH1Candles = candles;
     refreshRangesInternal();
+    refreshPoiZonesInternal(); // 1H-OB-Toggle (Chat 2026-07-30) läuft auf denselben Kerzen mit
   } catch (err) {
     console.error("Ranges-Kerzen fehlgeschlagen:", err);
   }
+}
+
+// Eigener Fetch NUR für den 4H-OB-Toggle bei Forex (Chat 2026-07-30) — kein anderes Feature
+// braucht 4H-Kerzen, siehe OBS_4H_CANDLE_COUNT oben. Gleiches Out-of-Order-/Poll-Muster wie
+// loadRangesCandles, nur ohne die Ranges-spezifischen Lookback-Optionen (fixer Start etc.).
+async function loadObs4hCandles() {
+  if (!isForex) return;
+  const seq = ++obs4hFetchSeq;
+  try {
+    const candles = await fetchCandlesCached(
+      fetchInitialForexCandles,
+      props.symbol,
+      "4h",
+      OBS_4H_CANDLE_COUNT,
+      replayToMs("4h"),
+      REPLAY_LOOKAHEAD_SEC,
+    );
+    if (seq !== obs4hFetchSeq) return;
+    obs4hCandles = candles;
+    refreshPoiZonesInternal();
+  } catch (err) {
+    console.error("4H-OB-Kerzen fehlgeschlagen:", err);
+  }
+}
+function scheduleNextObs4hPoll() {
+  clearTimeout(obs4hPollTimer);
+  const barMs = barSecondsFor("4h") * 1000;
+  const delay = barMs - (Date.now() % barMs) + CLOSE_POLL_BUFFER_MS;
+  obs4hPollTimer = setTimeout(async () => {
+    if (props.replayUntil == null) await loadObs4hCandles();
+    if (chart) scheduleNextObs4hPoll();
+  }, delay);
+}
+function startObs4hPolling() {
+  loadObs4hCandles();
+  scheduleNextObs4hPoll();
+}
+function stopObs4hPolling() {
+  clearTimeout(obs4hPollTimer);
+  obs4hPollTimer = null;
+}
+
+// Eigener Fetch NUR für den M5-OB-Toggle bei BTC (Chat 2026-07-30) — BTC hat weder Trade-Setups
+// noch TSC, die schon eine M5-Historie laden würden (anders als Forex: tradeSetupM5Candles läuft
+// dort ohnehin immer). Nutzt dieselbe lokale OKX-fetchInitialCandles-Funktion wie loadInitial,
+// über okxBarFor("5m") — Twelve-Data-Rate-Limits spielen bei OKX keine Rolle, kein Cache/Debounce
+// nötig wie bei Forex.
+async function loadObsM5BtcCandles() {
+  if (isForex) return;
+  const seq = ++obsM5BtcFetchSeq;
+  try {
+    const toMs = replayToMs("5m");
+    const candles = await fetchInitialCandles(okxBarFor("5m"), OBS_M5_BTC_CANDLE_COUNT, toMs);
+    if (seq !== obsM5BtcFetchSeq) return;
+    obsM5BtcCandles = candles;
+    refreshPoiZonesInternal();
+  } catch (err) {
+    console.error("BTC-M5-OB-Kerzen fehlgeschlagen:", err);
+  }
+}
+function scheduleNextObsM5BtcPoll() {
+  clearTimeout(obsM5BtcPollTimer);
+  const barMs = barSecondsFor("5m") * 1000;
+  const delay = barMs - (Date.now() % barMs) + CLOSE_POLL_BUFFER_MS;
+  obsM5BtcPollTimer = setTimeout(async () => {
+    if (props.replayUntil == null) await loadObsM5BtcCandles();
+    if (chart) scheduleNextObsM5BtcPoll();
+  }, delay);
+}
+function startObsM5BtcPolling() {
+  loadObsM5BtcCandles();
+  scheduleNextObsM5BtcPoll();
+}
+function stopObsM5BtcPolling() {
+  clearTimeout(obsM5BtcPollTimer);
+  obsM5BtcPollTimer = null;
 }
 
 // showRanges (Marker im Chart) und showRangesMetadata (JSON-Panel) sind getrennte Toggles, teilen
@@ -1228,8 +1353,11 @@ async function loadRangesCandles() {
 // an. Laden läuft also, solange MINDESTENS einer der vier an ist, kein unnötiger
 // Twelve-Data-Request, solange wirklich niemand (auch nicht die TSC-Karte, auch nicht Trade-Setups
 // selbst) hinschaut.
+// showObs1h seit Chat 2026-07-30: der 1H-OB-Toggle nutzt bei Forex dieselben Kerzen mit
+// (detectOrderBlocks(rangesH1Candles, "1H"), siehe collectObsZones), statt einen eigenen 1H-Fetch
+// zu brauchen — muss also ebenfalls dafür sorgen, dass rangesH1Candles geladen bleibt.
 function rangesNeedsData() {
-  return props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups;
+  return props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups || props.showObs1h;
 }
 // An den H1-Kerzenschluss ausgerichtet statt festem Intervall (Chat 2026-07-20) — H1-Kerzen
 // ändern sich nur stündlich, ein häufigerer Poll bringt nichts außer zusätzlichen Requests.
@@ -1373,8 +1501,8 @@ function findClickedLiquidityLevel(param) {
 
 // Ziel-Modus, zweite Klick-Fläche (Chat 2026-07-28: "ein Pivot targetiere ich oder einen OB") —
 // testet gegen dieselben allgemeinen OB-Zonen, die auch gezeichnet werden (poiZonesMetadata,
-// respektiert also automatisch showOrderBlocks/showHistoricalObs, siehe refreshPoiZonesInternal:
-// die Liste ist bei showOrderBlocks=false schon leer). Nur der Preis (nicht die ganze Box) wird als
+// respektiert also automatisch showObsM5/-1h/-4h/showHistoricalObs, siehe refreshPoiZonesInternal:
+// die Liste ist schon leer, wenn alle drei Timeframe-Toggles aus sind). Nur der Preis (nicht die ganze Box) wird als
 // Target übernommen — die dem Klick NÄHERE Kante, nicht fest nach Richtung, weil ein Klick näher an
 // der Oberkante eher "ich will die Oberkante" meint als andersrum.
 function findClickedOBZone(param) {
@@ -1613,6 +1741,7 @@ async function loadTradeSetupM5() {
     renderTradeSetupsInternal();
     refreshEmaInternal();
     refreshCockpitInternal(); // sofort weiterreichen statt auf den nächsten refreshChart() zu warten
+    refreshPoiZonesInternal(); // M5-OB-Toggle (Chat 2026-07-30) läuft auf denselben Kerzen mit
   } catch (err) {
     console.error("Trade-Setup-M5-Kerzen fehlgeschlagen:", err);
   }
@@ -1983,18 +2112,22 @@ onMounted(() => {
     loadTradeSetupM5();
     scheduleNextTradeSetupM5Poll();
     if (rangesNeedsData()) startRangesPolling();
+    if (props.showObs4h) startObs4hPolling();
   }
   if (!isForex) {
     updateWindowGauge();
     updateDailyGauge();
     windowGaugeTimer = setInterval(updateWindowGauge, POLL_MS);
     dailyGaugeTimer = setInterval(updateDailyGauge, POLL_MS);
+    if (props.showObsM5) startObsM5BtcPolling();
   }
   claudeCalloutRafId = requestAnimationFrame(claudeCalloutTick);
 });
 
 onUnmounted(() => {
   if (claudeCalloutRafId != null) cancelAnimationFrame(claudeCalloutRafId);
+  clearTimeout(obs4hPollTimer);
+  clearTimeout(obsM5BtcPollTimer);
   // scheduleNextPoll/-TradeSetupM5Poll/-RangesPoll nutzen setTimeout statt setInterval
   // (Kerzenschluss-Ausrichtung, siehe dort) -> clearTimeout statt clearInterval.
   clearTimeout(pollTimer);
@@ -2030,7 +2163,29 @@ watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 // muss sofort erscheinen/verschwinden, nicht erst beim nächsten claudeAnnotations-Wechsel.
 watch(tscCalloutModeActive, refreshClaudeAnnotationsInternal);
 watch(() => props.poiZones, refreshPoiZonesInternal);
-watch(() => props.showOrderBlocks, refreshPoiZonesInternal);
+// M5/1H/4H unabhängig an-/ausschaltbar (Chat 2026-07-30) — siehe collectObsZones. showObs1h braucht
+// zusätzlich refreshRangesPollingState (rangesNeedsData() prüft jetzt auch showObs1h), showObs4h/
+// showObsM5(BTC) starten/stoppen ihre eigene, unabhängige Poll-Pipeline (siehe loadObs4hCandles/
+// loadObsM5BtcCandles) — Forex-M5 braucht das NICHT (tradeSetupM5Candles läuft für Forex ohnehin
+// immer), daher der isForex-Guard dort.
+watch(() => props.showObs1h, () => {
+  refreshRangesPollingState();
+  refreshPoiZonesInternal();
+});
+watch(() => props.showObs4h, (on) => {
+  if (isForex) {
+    if (on) startObs4hPolling();
+    else stopObs4hPolling();
+  }
+  refreshPoiZonesInternal();
+});
+watch(() => props.showObsM5, (on) => {
+  if (!isForex) {
+    if (on) startObsM5BtcPolling();
+    else stopObsM5BtcPolling();
+  }
+  refreshPoiZonesInternal();
+});
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
 watch(() => props.showLiquidity, refreshLiquidityInternal);
 watch(() => props.showSweptLiquidity, refreshLiquidityInternal);

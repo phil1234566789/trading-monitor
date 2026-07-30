@@ -20,9 +20,10 @@ import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
 import { useClaudeAnnotations } from "../composables/useClaudeAnnotations.js";
 
-// Trades/POI-Zonen (ob_zones) gibt es aktuell nur für BTC-USDT — die Forex-OB-Erkennung
-// läuft (noch) nicht über diese Codebase, sondern soll später per TradingView-Webhook
-// kommen (siehe PLAN-notifications.md). Für GBPUSD/EURUSD bleiben beide Listen also leer.
+// POI-Zonen (ob_zones) rechnet nur das poi-watcher-Backend vor, nur für BTC-USDT — Forex-OBs
+// erkennt PriceChart.vue stattdessen live im Frontend (siehe dort: collectObsZones), da GBPUSD/
+// EURUSD ohnehin schon die dafür nötigen Kerzen laden (rangesH1Candles/tradeSetupM5Candles) bzw.
+// bei 4H einen eigenen, kleinen Fetch bekommen.
 const SYMBOLS = ["GBPUSD", "EURUSD", "BTC-USDT"];
 const POLL_MS = 12_000;
 
@@ -77,12 +78,15 @@ const currentBar = useSessionStorageRef("currentBar", "1h");
 // (dort default auch aus). Ein einzelner Schalter statt pro-Timeframe (4H/1H getrennt wie
 // dort), weil hier ohnehin nur "schon getestet ja/nein" existiert, kein Nearest-3-Ranking.
 const showHistoricalObs = useLocalStorageRef("showHistoricalObs", false);
-// Genereller OBs-An/Aus-Schalter (Chat 2026-07-25: "nicht nur historische Obs an- und ausschalten
-// ... sondern auch OBs") — vorher gab es nur showHistoricalObs, dessen Button aber irreführend
-// schlicht "OBs" hieß, obwohl er nur die bereits angetesteten Zonen aus-/einblendete. Jetzt analog
-// zu showLiquidity/showSweptLiquidity: "OBs" schaltet ALLE Order-Blocks komplett aus, "Historische
-// OBs" (Untermenü, wie Liquidity-Sweeps bei Liquidität) bleibt der Filter für bereits angetestete.
-const showOrderBlocks = useLocalStorageRef("showOrderBlocks", true);
+// Ersetzt seit Chat 2026-07-30 den einzelnen showOrderBlocks-Schalter (Chat 2026-07-25: "nicht nur
+// historische Obs an- und ausschalten ... sondern auch OBs") — Bug-Report Philip: "wenn ich
+// Indikatoren > OBs im M5 anhabe, dann werden mir ganz viele M5 OBs angezeigt", weil showOrderBlocks
+// bei Forex bisher IMMER nur den gerade angezeigten Chart-Timeframe zeigte, nie M5+1H+4H gleichzeitig.
+// Jetzt unabhängig an-/ausschaltbar (siehe PriceChart.vue: collectObsZones), "Historische OBs"
+// (Untermenü) bleibt weiterhin ein gemeinsamer Filter für alle drei.
+const showObsM5 = useLocalStorageRef("showObsM5", false);
+const showObs1h = useLocalStorageRef("showObs1h", true);
+const showObs4h = useLocalStorageRef("showObs4h", true);
 const showLiquidity = useLocalStorageRef("showLiquidity", true);
 // Debug-Hilfsmittel für die Trend-Indikator-Entwicklung: Preise an den Pivot-Linien
 // einblenden und die aktuell ausgeblendeten (bereits gesweepten) Liquiditäts-Level
@@ -382,7 +386,7 @@ const indikatorenMenuOpen = ref(false);
 // Sessions seit Chat 2026-07-29 NICHT mehr dabei ("ich deaktiviere gerne Indikatoren um mehr zu
 // sehen, aber Sessions eig nie — die geben mir Orientierung zur Charthistorie") — eigener,
 // permanenter Toggle links neben News statt im Sammel-Dropdown, siehe Template.
-const INDIKATOREN_REFS = [showEma, showLiquidity, showSweptLiquidity, showOrderBlocks, showHistoricalObs];
+const INDIKATOREN_REFS = [showEma, showLiquidity, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs];
 const indikatorenActive = computed(() => INDIKATOREN_REFS.some((r) => r.value));
 let indikatorenSavedState = null;
 function toggleIndikatoren() {
@@ -398,8 +402,29 @@ function toggleIndikatoren() {
     showEma.value = false;
     showLiquidity.value = true;
     showSweptLiquidity.value = false;
-    showOrderBlocks.value = true;
+    showObsM5.value = false;
+    showObs1h.value = true;
+    showObs4h.value = true;
     showHistoricalObs.value = false;
+  }
+}
+// Eigener Sammel-Toggle für den "OBs"-Hauptbutton (Chat 2026-07-30) — gleiches Snapshot/Restore-
+// Muster wie toggleIndikatoren oben, nur eine Ebene tiefer (nur die drei Timeframe-Schalter, nicht
+// showHistoricalObs — der bleibt unabhängig vom Ein-/Ausschalten aller OBs bestehen, wie bisher).
+const OBS_REFS = [showObsM5, showObs1h, showObs4h];
+const obsActive = computed(() => OBS_REFS.some((r) => r.value));
+let obsSavedState = null;
+function toggleObs() {
+  if (obsActive.value) {
+    obsSavedState = OBS_REFS.map((r) => r.value);
+    OBS_REFS.forEach((r) => { r.value = false; });
+  } else if (obsSavedState) {
+    OBS_REFS.forEach((r, i) => { r.value = obsSavedState[i]; });
+    obsSavedState = null;
+  } else {
+    showObsM5.value = false;
+    showObs1h.value = true;
+    showObs4h.value = true;
   }
 }
 function closeMenusOutside(e) {
@@ -497,7 +522,7 @@ watch(selectedTradingAccountId, refreshTrades);
           <div class="toggle-dropdown-divider"></div>
 
           <div class="toggle-group">
-            <button :class="{ active: showOrderBlocks }" @click="showOrderBlocks = !showOrderBlocks">
+            <button :class="{ active: obsActive }" @click="toggleObs">
               OBs
             </button>
             <button
@@ -508,7 +533,23 @@ watch(selectedTradingAccountId, refreshTrades);
             >
               ▾
             </button>
+            <!-- M5/1H/4H unabhängig an-/ausschaltbar (Chat 2026-07-30, Bug-Report Philip: "wenn ich
+                 Indikatoren > OBs im M5 anhabe, werden mir ganz viele M5 OBs angezeigt" — vorher
+                 folgten Forex-OBs immer nur dem gerade angezeigten Chart-Timeframe, nie mehrere
+                 gleichzeitig, siehe PriceChart.vue: collectObsZones). -->
             <div v-if="obsMenuOpen" class="toggle-dropdown">
+              <button :class="{ active: showObsM5 }" @click="showObsM5 = !showObsM5">
+                M5
+              </button>
+              <button :class="{ active: showObs1h }" @click="showObs1h = !showObs1h">
+                1H
+              </button>
+              <button :class="{ active: showObs4h }" @click="showObs4h = !showObs4h">
+                4H
+              </button>
+
+              <div class="toggle-dropdown-divider"></div>
+
               <button :class="{ active: showHistoricalObs }" @click="showHistoricalObs = !showHistoricalObs">
                 Historische OBs
               </button>
@@ -778,7 +819,9 @@ watch(selectedTradingAccountId, refreshTrades);
     :trades="trades"
     :show-trades="showTrades"
     :poi-zones="poiZones"
-    :show-order-blocks="showOrderBlocks"
+    :show-obs-m5="showObsM5"
+    :show-obs-1h="showObs1h"
+    :show-obs-4h="showObs4h"
     :show-historical-obs="showHistoricalObs"
     :show-liquidity="showLiquidity"
     :show-swept-liquidity="showSweptLiquidity"
