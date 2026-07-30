@@ -41,7 +41,7 @@ function nativeLineWidth(key) {
 import { selectActiveMetadataSections, earliestRelevantTime, saveDebugMetadataSection } from "../debugMetadata.js";
 import { useLastBacktestExport } from "../composables/useLastBacktestExport.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
-import { renderClaudeAnnotations } from "../claudeAnnotations.js";
+import { renderClaudeAnnotations, annotationAnchorPoint, ANNOTATION_COLOR as CLAUDE_ANNOTATION_COLOR } from "../claudeAnnotations.js";
 import {
   binanceIntervalFor,
   fetchInitialDeltas,
@@ -438,6 +438,46 @@ const cockpitState = ref(null);
 const cockpitNowSec = ref(undefined);
 const structureEarliestTime = ref(null);
 
+// TSC-Callouts ("Zeiger-Linien", Chat 2026-07-30, Philip: "ich freu mich auf die 'Zeiger' Linien
+// :D") — Claude-Notizen-Labels (line/marker/label) floaten als eigene DOM-Chips über der TSC-Karte
+// und zeigen per SVG-Linie auf ihren Chart-Punkt, statt direkt auf dem Chart zu stehen. Anfangs
+// automatisch für ALLE Notizen, sobald TSC sichtbar war — bei vielen gleichzeitigen Annotationen
+// (Bias-Pflicht-Block: Invalidierung+Zonen+Targets+Risiko-Level, oft 7+ Stück) ergab das ein
+// unlesbares Spinnennetz aus Verbindungslinien ("okay irgendwie ist es schlimmer als davor
+// HAHAHA"). Jetzt opt-in PRO Annotation über das "pointer"-Feld (siehe claudeAnnotations.js
+// validateAnnotationList) — Claude entscheidet selbst, welche Notiz sich als Zeiger lohnt (z.B. ein
+// enges Level-Cluster) und welche inline über der Linie bleibt (die meisten). Nur überhaupt aktiv,
+// wenn die TSC-Karte gerade tatsächlich sichtbar ist (Forex + Toggle an + State vorhanden) — sonst
+// gibt's keinen sinnvollen Anker, und pointer:true-Notizen fallen automatisch auf inline zurück.
+// Abstand zwischen der TSC-Karten-Oberkante und der Unterkante des Label-Stacks darüber.
+const CALLOUT_STACK_GAP_PX = 10;
+const tscCardRef = ref(null);
+const claudeCalloutItems = ref([]); // [{ id, text, color, x, y }] — x/y = Chart-lokaler Anker (CSS-Px)
+const claudeCalloutLines = ref([]); // [{ id, x1, y1, x2, y2, color }] — x1/y1 = Label-Chip-Position
+const claudeCalloutStackBottom = ref(24); // px von unten in .chart-wrapper, knapp über der TSC-Karte
+const claudeCalloutChipEls = {}; // id -> HTMLElement, NICHT reaktiv (nur fürs Auslesen der Rects im rAF-Tick)
+let claudeCalloutRafId = null;
+// WeakMap statt einer id-Eigenschaft auf den Annotation-Objekten selbst (die kommen roh aus
+// Supabase/claudeAnnotationsStore.js, sollen nicht mutiert werden) — stabile id pro Objekt-Referenz,
+// unabhängig von Array-Position (die sich durchs Filtern auf "hat Text, ist kein hline" verschiebt).
+const claudeCalloutIdMap = new WeakMap();
+let claudeCalloutIdSeq = 0;
+function calloutIdFor(ann) {
+  if (!claudeCalloutIdMap.has(ann)) claudeCalloutIdMap.set(ann, ++claudeCalloutIdSeq);
+  return claudeCalloutIdMap.get(ann);
+}
+
+function setCalloutChipEl(id, el) {
+  if (el) claudeCalloutChipEls[id] = el;
+  else delete claudeCalloutChipEls[id];
+}
+
+// TSC-Karte gerade sichtbar? (siehe TradeSetupCockpit.vue: v-if="isForex" außen, v-if="state"
+// innen — cockpitState wird von refreshCockpitInternal() bereits auf null gesetzt, wenn
+// showTradeSetupCockpit aus ist, die Bedingung hier ist also strenggenommen redundant, aber
+// explizit robuster gegen künftige Änderungen an refreshCockpitInternal.)
+const tscCalloutModeActive = computed(() => isForex && props.showTradeSetupCockpit && cockpitState.value != null);
+
 // Nur die Abschnitte der gerade angetoggelten Features (siehe Chat 2026-07-20: "nur metadaten von
 // den features im Menü, wenn sie angetoggelt sind") — damit bleibt der kopierte JSON-Blob fokussiert
 // auf das, was gerade im Chart tatsächlich zu sehen ist, statt jedes Mal alles (inkl. ausgeblendeter
@@ -788,15 +828,85 @@ function refreshTradeConfirmationLinksInternal() {
   }
 }
 
+// Bug-Report Philip 2026-07-30 ("okay irgendwie ist es schlimmer als davor HAHAHA"): ALLE
+// Annotationen automatisch zu Zeiger-Callouts zu machen, sobald TSC sichtbar ist, ergab bei vielen
+// gleichzeitigen Notizen ein unlesbares Spinnennetz aus Verbindungslinien. Jetzt entscheidet Claude
+// das PRO Annotation über das neue optionale "pointer"-Feld (siehe validateAnnotationList) — nur
+// pointer:true wandert in die schwebenden Chips über der TSC-Karte (siehe claudeCalloutTick), alles
+// andere bleibt wie gehabt inline im Canvas (über der Linie/am Punkt, siehe resolveLabelPlacements).
+// hline behält seinen Text immer (eigenes Preisachsen-Label, kein Überlappungs-/Streich-Problem wie
+// bei line/marker), pointer wird dafür ignoriert.
 function refreshClaudeAnnotationsInternal() {
+  const annotationsForCanvas = tscCalloutModeActive.value
+    ? props.claudeAnnotations.map((a) => (a.type === "hline" || !a.text || !a.pointer ? a : { ...a, text: undefined }))
+    : props.claudeAnnotations;
   renderClaudeAnnotations(
     candleSeries,
-    props.claudeAnnotations,
+    annotationsForCanvas,
     claudeAnnotationPrimitives,
     claudeAnnotationPriceLines,
     clipReplay(allCandles),
     props.claudeAnnotationsDate,
   );
+}
+
+// rAF-Tick statt einzelner Event-Subscriptions (Pan/Zoom/Resize/TSC-Inhaltsänderung durch Locked-
+// Banner etc.) — die Zeiger-Linien müssen auf JEDE Chart-Bewegung reagieren, nicht nur auf Daten-
+// änderungen; ein rAF-Loop garantiert das unabhängig davon, welches Event gerade der Auslöser war,
+// bei vernachlässigbaren Kosten (ein paar timeToCoordinate/getBoundingClientRect-Aufrufe, nur
+// während TSC-Callouts tatsächlich aktiv sind UND es beschriftete Annotationen gibt).
+function claudeCalloutTick() {
+  claudeCalloutRafId = requestAnimationFrame(claudeCalloutTick);
+  if (!chart || !candleSeries || !chartContainerRef.value) return;
+
+  const labeled = tscCalloutModeActive.value ? props.claudeAnnotations.filter((a) => a.type !== "hline" && a.text && a.pointer) : [];
+  if (labeled.length === 0) {
+    if (claudeCalloutItems.value.length > 0) claudeCalloutItems.value = [];
+    if (claudeCalloutLines.value.length > 0) claudeCalloutLines.value = [];
+    return;
+  }
+
+  // .chart-container füllt .chart-wrapper komplett aus (flex:1, einziges layoutrelevantes Kind,
+  // siehe resizeObserver-Kommentar unten) — dessen Rect dient hier als lokaler Koordinaten-
+  // Ursprung, ohne einen eigenen Ref auf .chart-wrapper zu brauchen.
+  const wrapperRect = chartContainerRef.value.getBoundingClientRect();
+
+  // 1) Verbindungslinien ZUERST anhand der aktuell im DOM stehenden Chips (vom letzten Tick)
+  // berechnen — dadurch immer genau einen Frame "hinter" einer Textänderung, aber nie anhand
+  // von Chips berechnet, die zu den gleich neu gesetzten Items gar nicht mehr passen.
+  const lines = [];
+  for (const item of claudeCalloutItems.value) {
+    const chipEl = claudeCalloutChipEls[item.id];
+    if (!chipEl) continue;
+    const chipRect = chipEl.getBoundingClientRect();
+    lines.push({
+      id: item.id,
+      x1: chipRect.left - wrapperRect.left,
+      y1: chipRect.top - wrapperRect.top + chipRect.height / 2,
+      x2: item.x,
+      y2: item.y,
+      color: item.color,
+    });
+  }
+  claudeCalloutLines.value = lines;
+
+  // 2) Label-Inhalte + Chart-Anker fürs nächste Chip-Layout neu berechnen.
+  const candles = clipReplay(allCandles);
+  const items = [];
+  for (const ann of labeled) {
+    const anchor = annotationAnchorPoint(chart, candleSeries, candles, props.claudeAnnotationsDate, ann);
+    if (!anchor) continue; // Zeit/Preis gerade außerhalb des sichtbaren Bereichs
+    items.push({ id: calloutIdFor(ann), text: ann.text, color: ann.color ?? CLAUDE_ANNOTATION_COLOR, x: anchor.x, y: anchor.y });
+  }
+  claudeCalloutItems.value = items;
+
+  // 3) TSC-Karten-Position messen, Label-Stack knapp darüber andocken (Konstante CALLOUT_GAP_PX
+  // unten bei den restlichen Layout-Konstanten).
+  if (tscCardRef.value?.$el?.nodeType === 1) {
+    const tscRect = tscCardRef.value.$el.getBoundingClientRect();
+    const tscTopLocal = tscRect.top - wrapperRect.top;
+    claudeCalloutStackBottom.value = wrapperRect.height - tscTopLocal + CALLOUT_STACK_GAP_PX;
+  }
 }
 
 // POI-Zonen kommen vom poi-watcher-Backend (4H+1H, aus `ob_zones`) statt lokal aus den
@@ -1880,9 +1990,11 @@ onMounted(() => {
     windowGaugeTimer = setInterval(updateWindowGauge, POLL_MS);
     dailyGaugeTimer = setInterval(updateDailyGauge, POLL_MS);
   }
+  claudeCalloutRafId = requestAnimationFrame(claudeCalloutTick);
 });
 
 onUnmounted(() => {
+  if (claudeCalloutRafId != null) cancelAnimationFrame(claudeCalloutRafId);
   // scheduleNextPoll/-TradeSetupM5Poll/-RangesPoll nutzen setTimeout statt setInterval
   // (Kerzenschluss-Ausrichtung, siehe dort) -> clearTimeout statt clearInterval.
   clearTimeout(pollTimer);
@@ -1914,6 +2026,9 @@ watch([() => props.trades, () => props.showTrades], () => {
   refreshTradeConfirmationLinksInternal();
 });
 watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
+// tscCalloutModeActive wechselt (TSC wird ein-/ausgeblendet, Locked-Zustand etc.) -> Canvas-Text
+// muss sofort erscheinen/verschwinden, nicht erst beim nächsten claudeAnnotations-Wechsel.
+watch(tscCalloutModeActive, refreshClaudeAnnotationsInternal);
 watch(() => props.poiZones, refreshPoiZonesInternal);
 watch(() => props.showOrderBlocks, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
@@ -2237,12 +2352,37 @@ defineExpose({
     </div>
     <TradeSetupCockpit
       v-if="isForex"
+      ref="tscCardRef"
       :state="cockpitState"
       :now-sec="cockpitNowSec"
       :instrument="symbol"
       :trade-mode-active="tradeModeActive"
       @toggle-trade-mode="emit('toggle-trade-mode')"
     />
+    <template v-if="claudeCalloutItems.length > 0">
+      <svg class="claude-callout-svg">
+        <line
+          v-for="line in claudeCalloutLines"
+          :key="'callout-line-' + line.id"
+          :x1="line.x1"
+          :y1="line.y1"
+          :x2="line.x2"
+          :y2="line.y2"
+          :stroke="line.color"
+        />
+      </svg>
+      <div class="claude-callout-stack" :style="{ bottom: claudeCalloutStackBottom + 'px' }">
+        <div
+          v-for="item in claudeCalloutItems"
+          :key="'callout-chip-' + item.id"
+          :ref="(el) => setCalloutChipEl(item.id, el)"
+          class="claude-callout-chip"
+          :style="{ borderColor: item.color, color: item.color }"
+        >
+          {{ item.text }}
+        </div>
+      </div>
+    </template>
     <MetadataPanel v-if="showRangesMetadata" title="Structure-Metadaten" @close="emit('close-ranges-metadata')">
       <div class="metadata-subheading-row">
         <h4 class="metadata-subheading">Structure-State</h4>
@@ -2326,6 +2466,47 @@ defineExpose({
   display: flex;
   gap: 8px;
   pointer-events: none;
+}
+
+/* TSC-Callouts ("Zeiger-Linien", siehe claudeCalloutTick in PriceChart.vue) — SVG ohne eigenes
+   viewBox, deckungsgleich mit .chart-wrapper (position:absolute;inset:0 + width/height:100%):
+   1 SVG-Nutzereinheit entspricht dadurch exakt 1 CSS-Pixel, dieselbe Koordinatenbasis wie
+   timeToCoordinate/priceToCoordinate (siehe annotationAnchorPoint in claudeAnnotations.js). */
+.claude-callout-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 7;
+}
+
+.claude-callout-svg line {
+  stroke-width: 1;
+  stroke-dasharray: 3, 3;
+}
+
+.claude-callout-stack {
+  position: absolute;
+  /* Gleicher rechter Anschlag wie .tsc-card (TradeSetupCockpit.vue) — Labels docken an derselben
+     Kante an, wachsen per column-reverse nach oben von der TSC-Karte weg. */
+  right: 70px;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 2px;
+  pointer-events: none;
+  z-index: 7;
+}
+
+/* Bug-Report Philip 2026-07-30: bei vielen Annotationen wurde der Stack mit Zeilenumbruch + Box
+   pro Chip zu hoch, die obersten Labels ragten über den sichtbaren Bereich hinaus. Kein Umbruch
+   (nowrap statt max-width) und keine Box (kein border/background/padding) mehr — jeder Chip ist
+   jetzt nur noch eine einzeilige, unauffällige Textzeile, spart deutlich vertikalen Platz. */
+.claude-callout-chip {
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 .metadata-empty {

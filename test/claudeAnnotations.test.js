@@ -3,7 +3,24 @@
 // parseAnnotations gibt seit dieser Erweiterung immer eine Liste von Gruppen zurück (auch fürs
 // alte, flache Format — dann genau eine Gruppe mit title: null).
 import { describe, expect, it } from "vitest";
-import { parseAnnotations, resolveLabelPlacements } from "../src/claudeAnnotations.js";
+import { parseAnnotations, resolveLabelPlacements, annotationAnchorPoint } from "../src/claudeAnnotations.js";
+import { berlinDayRangeUtcMs } from "../src/backtestExport.js";
+
+// Minimal-Fake von chart/series, nur die zwei Methoden, die annotationAnchorPoint braucht — Preis
+// wird 1:1 (*100) auf einen Koordinatenwert abgebildet, Zeit per Identität durchgereicht (die
+// eigentliche Zeit->Kerze-Auflösung passiert vorher in resolveTime/snapToBarTime, nicht hier).
+function fakeChart() {
+  return { timeScale: () => ({ timeToCoordinate: (t) => (t == null ? null : t) }) };
+}
+function fakeSeries() {
+  return { priceToCoordinate: (p) => (p == null ? null : p * 100) };
+}
+// Reales Datum statt selbst geraten CEST/CET-Offsets, siehe backtestExport.js's berlinDayRangeUtcMs
+// — 2026-07-24 liegt fernab jeder DST-Umstellung.
+const DATE = "2026-07-24";
+const { startUtcMs } = berlinDayRangeUtcMs(DATE);
+const startSec = startUtcMs / 1000;
+const CANDLES = [{ time: startSec + 8 * 3600 }, { time: startSec + 9 * 3600 }, { time: startSec + 10 * 3600 }];
 
 describe("parseAnnotations", () => {
   it("parst das alte flache Array-Format als eine Gruppe mit title: null", () => {
@@ -34,6 +51,23 @@ describe("parseAnnotations", () => {
   it("akzeptiert ein gültiges Hex-color-Feld", () => {
     const json = JSON.stringify([{ type: "hline", price: 1.1, text: "A", color: "#e74c3c" }]);
     expect(parseAnnotations(json)[0].annotations[0].color).toBe("#e74c3c");
+  });
+
+  // Feature 2026-07-30 "Zeiger-Linien": Claude entscheidet PRO Annotation über pointer:true, ob sie
+  // als schwebender Callout über der TSC-Karte statt inline im Chart erscheint (siehe PriceChart.vue).
+  it("akzeptiert ein gültiges pointer-Feld", () => {
+    const json = JSON.stringify([{ type: "marker", time: "09:00", price: 1.1, text: "A", pointer: true }]);
+    expect(parseAnnotations(json)[0].annotations[0].pointer).toBe(true);
+  });
+
+  it("wirft bei ungültigem pointer-Wert (kein Boolean)", () => {
+    const json = JSON.stringify([{ type: "marker", time: "09:00", price: 1.1, text: "A", pointer: "yes" }]);
+    expect(() => parseAnnotations(json)).toThrow(/pointer/);
+  });
+
+  it("fehlt pointer, bleibt die Annotation unverändert (kein pointer-Feld gesetzt)", () => {
+    const json = JSON.stringify([{ type: "marker", time: "09:00", price: 1.1, text: "A" }]);
+    expect(parseAnnotations(json)[0].annotations[0].pointer).toBeUndefined();
   });
 
   it("wirft bei ungültigem color-Wert (keine Hex-Farbe)", () => {
@@ -110,5 +144,42 @@ describe("resolveLabelPlacements", () => {
       { x1: 0, x2: 50, y: 500 },
     ];
     expect(resolveLabelPlacements(labels, 15)).toEqual([100, 500]);
+  });
+});
+
+// Feature 2026-07-30 "Zeiger-Linien" (TSC-Callouts, PriceChart.vue): annotationAnchorPoint liefert
+// den Chart-Punkt, auf den die Verbindungslinie vom außerhalb des Canvas liegenden Label zeigt.
+describe("annotationAnchorPoint", () => {
+  it("liefert den Punkt selbst für marker/label", () => {
+    const ann = { type: "marker", time: "09:00", price: 1.5 };
+    expect(annotationAnchorPoint(fakeChart(), fakeSeries(), CANDLES, DATE, ann)).toEqual({
+      x: CANDLES[1].time,
+      y: 150,
+    });
+  });
+
+  it("liefert den Mittelpunkt für line (Zeit UND Preis gemittelt)", () => {
+    const ann = { type: "line", from: { time: "08:00", price: 1.0 }, to: { time: "10:00", price: 2.0 } };
+    expect(annotationAnchorPoint(fakeChart(), fakeSeries(), CANDLES, DATE, ann)).toEqual({
+      x: (CANDLES[0].time + CANDLES[2].time) / 2,
+      y: 150, // (100 + 200) / 2
+    });
+  });
+
+  it("gibt null zurück, wenn keine Kerzen geladen sind (resolveTime kann nicht auflösen)", () => {
+    const ann = { type: "marker", time: "09:00", price: 1.5 };
+    expect(annotationAnchorPoint(fakeChart(), fakeSeries(), [], DATE, ann)).toBeNull();
+  });
+
+  it("gibt null zurück, wenn der Preis gerade außerhalb der sichtbaren Preisachse liegt", () => {
+    const outOfRangeSeries = { priceToCoordinate: () => null };
+    const ann = { type: "marker", time: "09:00", price: 1.5 };
+    expect(annotationAnchorPoint(fakeChart(), outOfRangeSeries, CANDLES, DATE, ann)).toBeNull();
+  });
+
+  it("gibt null zurück, wenn bei einer line nur ein Endpunkt außerhalb der Preisachse liegt", () => {
+    const partialSeries = { priceToCoordinate: (p) => (p === 2.0 ? null : p * 100) };
+    const ann = { type: "line", from: { time: "08:00", price: 1.0 }, to: { time: "10:00", price: 2.0 } };
+    expect(annotationAnchorPoint(fakeChart(), partialSeries, CANDLES, DATE, ann)).toBeNull();
   });
 });

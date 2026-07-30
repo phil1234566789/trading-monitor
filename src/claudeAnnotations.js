@@ -21,7 +21,7 @@ import { berlinDayRangeUtcMs } from "./backtestExport.js";
 // Indikatoren, das hier ist Ad-hoc-Kommentar-Import, kein dauerhafter Chart-Bestandteil. Nur noch
 // der Fallback, falls eine Annotation kein eigenes "color"-Feld mitbringt (Feature 2026-07-30: die
 // Farbwahl pro Annotation liegt seitdem beim Ersteller/Claude, nicht mehr fest hier verdrahtet).
-const ANNOTATION_COLOR = "#ff2e92";
+export const ANNOTATION_COLOR = "#ff2e92";
 const DOT_RADIUS = 4;
 const MARKER_RADIUS = 7;
 
@@ -40,6 +40,9 @@ function validateAnnotationList(list) {
     }
     if (a.color !== undefined && !HEX_COLOR_RE.test(a.color)) {
       throw new Error(`Annotation ${i}: color muss ein Hex-String sein (z.B. "#e74c3c"), nicht "${a.color}".`);
+    }
+    if (a.pointer !== undefined && typeof a.pointer !== "boolean") {
+      throw new Error(`Annotation ${i}: pointer muss ein Boolean sein, nicht "${a.pointer}".`);
     }
   });
 }
@@ -101,6 +104,35 @@ function resolveTime(candles, dateStr, timeValue) {
   const [h, m] = (dated ? dated[2] : timeValue).split(":").map(Number);
   const { startUtcMs } = berlinDayRangeUtcMs(effectiveDateStr);
   return snapToBarTime(candles, startUtcMs / 1000 + h * 3600 + m * 60);
+}
+
+// Chart-lokaler Anker-Punkt einer Annotation in CSS-Pixeln (KEINE Pixel-Ratio-Skalierung —
+// timeToCoordinate/priceToCoordinate liefern direkt CSS-Pixel, anders als die Bitmap-Koordinaten
+// im Canvas-Renderer oben). Gebraucht für die TSC-Callout-Verbindungslinien (PriceChart.vue,
+// Feature 2026-07-30 "Zeiger-Linien"): die Labels selbst liegen dort außerhalb des Chart-Canvas in
+// einem DOM/SVG-Overlay, brauchen aber trotzdem den exakten Chart-Punkt, auf den sie zeigen. Bei
+// "line" der Linien-Mittelpunkt (der Callout zeigt aufs Level als Ganzes, nicht auf einen der
+// beiden Endpunkte), sonst der Punkt selbst. null, wenn Zeit/Preis gerade außerhalb des sichtbaren
+// Bereichs liegen (timeToCoordinate/priceToCoordinate geben dann selbst null zurück).
+export function annotationAnchorPoint(chart, series, candles, dateStr, ann) {
+  const timeScale = chart.timeScale();
+  if (ann.type === "line") {
+    const t1 = resolveTime(candles, dateStr, ann.from.time);
+    const t2 = resolveTime(candles, dateStr, ann.to.time);
+    if (t1 == null || t2 == null) return null;
+    const x1 = timeScale.timeToCoordinate(t1);
+    const x2 = timeScale.timeToCoordinate(t2);
+    const y1 = series.priceToCoordinate(ann.from.price);
+    const y2 = series.priceToCoordinate(ann.to.price);
+    if (x1 == null || x2 == null || y1 == null || y2 == null) return null;
+    return { x: (x1 + x2) / 2, y: (y1 + y2) / 2 };
+  }
+  const t = resolveTime(candles, dateStr, ann.time);
+  if (t == null) return null;
+  const x = timeScale.timeToCoordinate(t);
+  const y = series.priceToCoordinate(ann.price);
+  if (x == null || y == null) return null;
+  return { x, y };
 }
 
 const LABEL_FONT_PX = 11;
