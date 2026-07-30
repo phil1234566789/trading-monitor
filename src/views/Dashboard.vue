@@ -166,7 +166,7 @@ const showNewsModal = ref(false);
 // wie die übrigen Indikator-Toggles.
 const showSessions = useLocalStorageRef("showSessions", true);
 const showSessionsModal = ref(false);
-// Claude-Antwort-Import (siehe claudeAnnotations.js, trading/backtest-instructions.md) — Button
+// Claude-Antwort-Import (siehe claudeAnnotations.js, trading/chart-daten.md) — Button
 // + Modal leben global in App.vue (neben "Backtest-Daten"), in Supabase persistiert (siehe
 // claudeAnnotationsStore.js). instrument/dateStr werden jetzt zentral in useClaudeAnnotations.js
 // hergeleitet (dieselben Keys wie hier: currentSymbol/replayTime/replayActive), nicht mehr separat

@@ -1,5 +1,5 @@
 <script setup>
-// Copy/Paste-Brücke für den Claude-Project-Backtest (siehe trading/backtest-instructions.md) —
+// Copy/Paste-Brücke für den Claude-Project-Backtest (siehe trading/chart-daten.md) —
 // Asset+Tag wählen, Rohkerzen generieren, ins Clipboard kopieren. Modal-Look bewusst wie
 // MetadataPanel/JsonTree (PriceChart.vue) gehalten, aber als eigenständiges globales Panel (App.vue).
 // Asset-Auswahl ist NICHT laufend an den Chart gekoppelt (Philip kann hier frei umschalten), startet

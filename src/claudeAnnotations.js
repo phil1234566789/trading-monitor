@@ -1,4 +1,4 @@
-// Claude-Antwort-Import (siehe trading/backtest-instructions.md, trading/trading-tagesablauf.md):
+// Claude-Antwort-Import (siehe trading/chart-daten.md, trading/trading-ablauf.md):
 // der Claude-Project-Chat kann uns Chart-Annotationen als JSON zurückgeben (Preis+Text, markierte
 // Kerze, Linie, horizontale Linie), die Philip hier reinpastet, damit er visuell nachvollziehen
 // kann, was Claude meint, statt nur Text zu lesen. Rendering-Pattern (Primitive-Klasse + PaneView +

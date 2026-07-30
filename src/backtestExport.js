@@ -1,15 +1,25 @@
-// Rohdaten-Export fürs Forex-Backtesting (siehe trading/backtest-instructions.md) — liefert M5-
+// Rohdaten-Export fürs Forex-Backtesting (siehe trading/chart-daten.md) — liefert M5-
 // Kerzen für einen kompletten Berlin-Kalendertag, aufbereitet für Copy/Paste in den Claude-
-// Project-Chat. Bewusst NUR Rohdaten, keine vorberechneten OB-/Liquiditätszonen — die Setup-
+// Project-Chat. Bewusst NUR Rohdaten, keine vorberechneten OB-Zonen/Trade-Setups — die Setup-
 // Erkennung soll laut Plan im Claude Project anhand der Strategie-Dokumente passieren, nicht hier
-// dupliziert werden.
+// dupliziert werden. LQ-Levels (liquidityLevels unten) sind die EINE Ausnahme (Chat 2026-07-30,
+// Philip: "ich meinte wirklich dasselbe was ich unter dem Indikator > Liquidität sehe: dort sind
+// bereits relevante Sweeps oder ungetouchte Pivots drinne. Genau das braucht der claude") — exakt
+// dieselbe filterRelevantLevels(..., onlyRelevant=true)-Auswahl wie der Live-Chart-Indikator, für
+// 1H UND M5 ("nimm ruhig dasselbe Objekt, der Liquidität Algo hat ja bereits die ganze Arbeit
+// getan"), NICHT an den gerade im Dashboard gewählten Chart-Timeframe gekoppelt. Nicht redundant zu
+// structure1h: dort stecken nur BEREITS gesweepte H1-Struktur-Pivots (touched-Seite, siehe
+// collectH1LqLevels in marketStructureAnalysis.ts) — eine andere Erkennung (Range-Pivots, nicht
+// Williams-Fractal) mit anderem Zweck (LS-Kandidaten für Trade-Setups).
 import { fetchInitialCandles } from "./forexCandles.js";
 import { fmtDateTime } from "./format.js";
 import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructureState } from "./marketStructureAnalysis";
+import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "./liquidity.js";
+import { barSecondsFor } from "./timeframes.js";
 import { PIP_SIZE } from "./pipConfig.js";
 
 // EURUSD seit Chat 2026-07-28 freigeschaltet (Philip: "ich weiß wir haben noch keinen DXY da,
-// aber schalte mir mal EUR frei") — DXY-Kontext fehlt weiterhin (siehe backtest-instructions.md),
+// aber schalte mir mal EUR frei") — DXY-Kontext fehlt weiterhin (siehe chart-daten.md),
 // bewusst akzeptierte Lücke, kein Blocker mehr. Liste bleibt die einzige Quelle der Wahrheit fürs
 // Modal-Dropdown.
 export const BACKTEST_ASSETS = ["GBPUSD", "EURUSD"];
@@ -40,6 +50,16 @@ const STRUCTURE_LOOKBACK_HOURS = 7 * 24;
 // liquidity.js) — analog zu RANGES_CANDLE_BUFFER in PriceChart.vue (dort 20 für beide Perioden
 // gemeinsam), hier etwas großzügiger, da EIN Fetch beide Perioden bedient.
 const STRUCTURE_CANDLE_BUFFER_HOURS = 40;
+
+// LQ-Levels (liquidity.js, Williams-Fractal) — gleicher Lookback wie die Structure-Analyse oben
+// (7 Tage), aus demselben Grund: ein Level, das schon Wochen unberührt ist, ist oft gerade DESHALB
+// relevant (starke, alte Liquidität), ein zu kurzes Fenster würde genau die interessanten Fälle
+// abschneiden. Immer 1H UND M5 (siehe Datei-Kopfkommentar), nicht an den gerade im Dashboard
+// gewählten Chart-Timeframe gekoppelt — count wird aus Lookback-Stunden + Puffer in Kerzen
+// UMGERECHNET (barSecondsFor), weil "7 Tage" bei M5 eine ganz andere Kerzenzahl ergibt als bei 1H.
+const LIQUIDITY_LOOKBACK_HOURS = 7 * 24;
+const LIQUIDITY_CANDLE_BUFFER = 20; // Bestätigungspuffer, wie RANGES_CANDLE_BUFFER in PriceChart.vue
+const LIQUIDITY_EXPORT_TIMEFRAMES = ["1h", "5m"];
 
 const TIME_FORMATTER = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Berlin" });
 // "longOffset" liefert z.B. "GMT+2" — DST-aware statt fixem Offset, siehe CLAUDE.md
@@ -115,6 +135,52 @@ async function compute1hStructureState(asset, currentTimeSec, structureConfig = 
   return summarizeMarketStructureState(state, { includeAppliedPivots: false });
 }
 
+// "YYYY-MM-DD HH:mm" (Europe/Berlin) — dieselbe Schreibweise, die Claude selbst für datierte
+// Annotationen nutzt (siehe claudeAnnotations.js/trading-ablauf.md), hier nötig, weil der 7-Tage-
+// Lookback fast immer Pivots von VOR dem exportierten Tag enthält (reines "HH:mm" wäre mehrdeutig).
+function formatDatedTime(unixSec) {
+  return `${berlinDateStrFor(unixSec)} ${TIME_FORMATTER.format(new Date(unixSec * 1000))}`;
+}
+
+// touched:false (noch aktiv) ODER touched:true (einer der RECENT_SWEEP_COUNT zuletzt gesweepten,
+// siehe filterRelevantLevels in liquidity.js) — deshalb touchedAt nur bei den touched-Einträgen,
+// sonst wäre es ohnehin null.
+function formatLiquidityLevel(lvl) {
+  return {
+    direction: lvl.dir === 1 ? "high" : "low",
+    price: lvl.price,
+    time: formatDatedTime(lvl.pivotTime),
+    touched: lvl.touched,
+    ...(lvl.touched ? { touchedAt: formatDatedTime(lvl.touchedTime) } : {}),
+  };
+}
+
+// EXAKT dieselbe Auswahl wie der Live-Chart-"Liquidität"-Indikator im Normalmodus (showSweptLiquidity
+// aus, siehe refreshLiquidityInternal in PriceChart.vue): filterRelevantLevels(..., onlyRelevant:
+// true) behält die noch unberührten Level PLUS die RECENT_SWEEP_COUNT zuletzt gesweepten — "relevante
+// Sweeps oder ungetouchte Pivots", wie Philip es nennt. Bewusst dieselbe Funktion wiederverwendet
+// ("der Liquidität Algo hat ja bereits die ganze Arbeit getan"), keine eigene Neu-Filterung.
+async function computeLiquidityLevelsForExport(asset, bar, currentTimeSec) {
+  const barSeconds = barSecondsFor(bar);
+  const count = Math.ceil((LIQUIDITY_LOOKBACK_HOURS * 3600) / barSeconds) + LIQUIDITY_CANDLE_BUFFER;
+  const raw = await fetchInitialCandles(asset, bar, count, currentTimeSec * 1000);
+  const candles = raw.filter((c) => c.time <= currentTimeSec);
+  const { highs, lows } = detectLiquidityLevels(candles, LIQUIDITY_FRACTAL_PERIOD);
+  return {
+    highs: filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true).map(formatLiquidityLevel),
+    lows: filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true).map(formatLiquidityLevel),
+  };
+}
+
+// Läuft 1H+M5 parallel (Promise.all) statt nacheinander — zwei unabhängige Fetches, kein Grund,
+// auf den ersten zu warten, bevor der zweite losläuft.
+async function computeLiquidityLevelsAllTimeframes(asset, currentTimeSec) {
+  const perTimeframe = await Promise.all(
+    LIQUIDITY_EXPORT_TIMEFRAMES.map((bar) => computeLiquidityLevelsForExport(asset, bar, currentTimeSec)),
+  );
+  return Object.fromEntries(LIQUIDITY_EXPORT_TIMEFRAMES.map((bar, i) => [bar, perTimeframe[i]]));
+}
+
 function rangeStats(rawCandles) {
   if (rawCandles.length === 0) return { rangeHigh: null, rangeLow: null, pips: null };
   const rangeHigh = Math.max(...rawCandles.map((c) => c.high));
@@ -148,6 +214,7 @@ export async function buildBacktestExport({ asset, dateStr, replayUntilSec = nul
   // drücke juckt nicht wirklich, entscheidend ist was die aktuelle Zeit des Snapshots ist".
   const currentTimeSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
   const structure1h = await compute1hStructureState(asset, currentTimeSec, structureConfig);
+  const liquidityLevels = await computeLiquidityLevelsAllTimeframes(asset, currentTimeSec);
 
   return {
     asset,
@@ -159,6 +226,7 @@ export async function buildBacktestExport({ asset, dateStr, replayUntilSec = nul
     // gehalten statt hier abzuweichen, nur um die paar Zeichen Redundanz zu sparen).
     replay: replayUntilSec == null ? { active: false } : { active: true, until: replayUntilSec, untilAt: fmtDateTime(replayUntilSec) },
     structure1h,
+    liquidityLevels,
     asiaSession: {
       ...rangeStats(asiaCandlesRaw),
       candles: asiaCandlesRaw.map(formatCandle),

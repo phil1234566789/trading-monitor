@@ -11,6 +11,12 @@ import { classifyAge } from "./ageTier";
 
 const RECENT_SWEEP_COUNT = 2; // siehe markTopKRecentTouches in liquidity.pine
 
+// Exportiert (vorher lokale Konstanten in PriceChart.vue) — seit Chat 2026-07-30 auch von
+// backtestExport.js gebraucht (LQ-Levels im Backtest-Export, siehe dort), eine gemeinsame Quelle
+// statt zweier Kopien, die auseinanderlaufen könnten.
+export const LIQUIDITY_FRACTAL_PERIOD = 5; // Williams-Fractal-Periode, siehe fractals.pine — NICHT anfassen (LQ-Sweeps), siehe Chat
+export const LIQUIDITY_MAX_RELEVANT = 10; // je Richtung, siehe liqMaxRelevant in inputs.pine
+
 // Williams Fractal an chronologischem Index `p` (älteste Kerze zuerst) mit Periode `n`:
 // die `n` Kerzen danach (index p+1..p+n) müssen strikt niedriger sein, die `n` Kerzen
 // davor (index p-1..p-n) ebenfalls, mit Kaskaden-Logik, die Gleichstände bei den ersten

@@ -1,5 +1,5 @@
 <script setup>
-// Claude-Antwort-Import (siehe claudeAnnotations.js, trading/backtest-instructions.md) — Philip
+// Claude-Antwort-Import (siehe claudeAnnotations.js, trading/chart-daten.md) — Philip
 // pastet das JSON, das ihm der Claude-Project-Chat als Antwort auf einen Backtest/Tagesablauf-
 // Review geschickt hat, hier rein, damit er visuell nachvollziehen kann, was gemeint ist, statt
 // nur Text zu lesen. Modal-Look wie NewsModal/SessionsModal (MetadataPanel-Wrapper).
@@ -79,7 +79,7 @@ async function toggleDrawingVisible(d) {
   <MetadataPanel title="🖍 Claude-Notizen" @close="emit('close')">
     <p class="claude-annotations-hint">
       {{ instrument }} — {{ dateStr }}. JSON aus dem Claude-Project-Chat hier einfügen (siehe
-      trading/backtest-instructions.md) und "Zeichnen" klicken — jeder Klick fügt eine weitere
+      trading/chart-daten.md) und "Zeichnen" klicken — jeder Klick fügt eine weitere
       Zeichnung hinzu, ersetzt keine vorherige. Ein Paste mit mehreren
       <code>{"drawings":[{"title":...,"annotations":[...]},...]}</code>-Gruppen legt jede Gruppe
       als eigene, einzeln aus-/einblendbare Zeichnung an.

@@ -9,6 +9,8 @@ import {
   LiquidityLinePrimitive,
   bullBearLabelSide,
   formatLsLabel,
+  LIQUIDITY_FRACTAL_PERIOD,
+  LIQUIDITY_MAX_RELEVANT,
 } from "../liquidity.js";
 import { sessions, renderSessions, currentSessionDanger, isForbiddenAt } from "../sessions.js";
 import { newsEvents, currentNewsNoGo, newsEventsForInstrument } from "../newsEvents.js";
@@ -207,8 +209,6 @@ const INITIAL_CANDLE_COUNT = 1000; // depth loaded on startup / timeframe switch
 const LAZY_LOAD_LOGICAL_THRESHOLD = 20; // fetch older data once this close to the left edge
 const WINDOW_BARS = 15; // letzte 15 Binance-1m-Kerzen für das rollierende Gauge-Fenster
 const TRADE_MARKER_BARS = new Set(["1m", "5m", "15m", "1h"]); // 4h/1D würden zu unübersichtlich
-const LIQUIDITY_FRACTAL_PERIOD = 5; // Williams-Fractal-Periode, siehe fractals.pine — NICHT anfassen (LQ-Sweeps), siehe Chat
-const LIQUIDITY_MAX_RELEVANT = 10; // je Richtung, siehe liqMaxRelevant in inputs.pine
 // Trade-Setup (Liquidity Sweep + Protected M5-Fraktal + M5-OB, siehe tv-indikator/src/
 // tradesetup.pine) — nur für Forex (braucht M5-Kerzen zusätzlich zum aktuell angezeigten
 // Chart-Timeframe). Werte 1:1 aus den getunten Defaults in tv-indikator/src/inputs.pine
