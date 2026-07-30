@@ -167,6 +167,15 @@ refetch-throttle boundaries (`isH1RefreshTick`/`isH4RefreshTick`) are the one ex
 raw UTC hours on purpose, since they need to align with Twelve Data's own (UTC-based) candle
 boundaries and the UTC-based `pg_cron` schedule, not with Berlin trading hours.
 
+**When Claude transcribes/seeds a timestamp itself** (e.g. a one-off data migration entering
+trade history Philip pasted from a screenshot or a broker/bot export), default the source
+timestamp to **Europe/Berlin local time**, not UTC, before converting to the UTC value actually
+stored — Philip is in Germany, and unless he explicitly says a timestamp is already UTC (or some
+other zone), assume it isn't. Bug report 2026-07-30: 11 seeded BTC trades were off by exactly 2h
+because the raw pasted timestamps were entered as literal UTC instead of being treated as
+CEST/UTC+2 first. Double-check CEST vs. CET for the actual date rather than assuming a fixed
+offset.
+
 Per-instrument trading/alarm windows (which weekdays and hours a trade may open, and separately
 when `poi-watcher` is allowed to actually send a Telegram message) live in the `trading_schedules`
 table, edited via the "Handelszeiten" page — **not** hardcoded constants. This replaced a single
