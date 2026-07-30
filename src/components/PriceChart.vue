@@ -29,6 +29,7 @@ import { computeEma } from "../ema.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 import { PIP_SIZE } from "../pipConfig.js";
+import { useTabScopedRef } from "../composables/useTabScopedRef.js";
 
 // lightweight-charts' native LineSeries-Option lineWidth erwartet eine kleine Ganzzahl (1-4), anders
 // als die Linienstärke unserer eigenen Primitives (liquidity.js/marketStructureAnalysis.ts/...), die
@@ -273,6 +274,15 @@ const { markSuccess } = useStatusBar();
 const { lastBacktestExport } = useLastBacktestExport();
 
 const chartContainerRef = ref(null);
+// Chart-Höhe (Chat 2026-07-30, siehe Dashboard.vue: tradesPanelHeight für dieselbe Begründung,
+// inkl. useTabScopedRef statt useLocalStorageRef — pro Tab verstellbar, aber ein frischer Tab/
+// Browser-Neustart startet trotzdem beim zuletzt benutzten Wert). Ein einziger Key (nicht pro
+// Symbol) — Philip will EINE konsistente Chart-Höhe unabhängig davon, welcher Symbol-Tab gerade
+// aktiv ist. PriceChart.vue wird bei Symbolwechsel per :key neu gemountet — kein Problem hier
+// (anders als bei useLocalStorageRef gibt es keinen geteilten Cache, aber es existiert ohnehin nur
+// eine lebende Instanz gleichzeitig, die neue liest beim Mount einfach den zuletzt geschriebenen
+// Wert erneut aus session-/localStorage).
+const chartWrapperHeight = useTabScopedRef("chartWrapperHeight", 675);
 const gaugesBottom = ref(12);
 const windowDelta = ref(0);
 const dailyDelta = ref(0);
@@ -1808,6 +1818,14 @@ onMounted(() => {
     const roundedHeight = Math.round(height);
     if (roundedWidth <= 0 || roundedHeight <= 0) return;
     chart.resize(roundedWidth, roundedHeight);
+    // .chart-container ist flex:1 in .chart-wrapper und dessen einziges layoutrelevantes Kind
+    // (alle Geschwister — Gauges/TSC/Metadaten-Panels — sind position:absolute/fixed) — die
+    // beobachtete Höhe entspricht also praktisch exakt der Höhe von .chart-wrapper. Chat
+    // 2026-07-30: natives CSS `resize` auf .chart-wrapper (siehe Template/Style unten) mutiert
+    // dessen Höhe direkt im DOM: dieser ohnehin schon vorhandene Observer ist der einfachste Weg,
+    // das Ergebnis eines Resize-Drags nach localStorage zurückzuschreiben, ohne einen zweiten,
+    // eigenen ResizeObserver nur dafür zu brauchen.
+    chartWrapperHeight.value = roundedHeight;
     positionGauges();
   });
   resizeObserver.observe(chartContainerRef.value);
@@ -2207,7 +2225,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="chart-wrapper">
+  <div class="chart-wrapper" :style="{ height: chartWrapperHeight + 'px' }">
     <div ref="chartContainerRef" class="chart-container"></div>
     <div v-if="rangesLoading" class="ranges-loading">
       <span class="ranges-spinner"></span>
@@ -2277,8 +2295,22 @@ defineExpose({
 <style scoped>
 .chart-wrapper {
   position: relative;
-  flex: 1;
-  min-height: 0;
+  /* Vorher flex:1;min-height:0 — teilte sich die Höhe mit .trades-panel (Dashboard.vue) innerhalb
+     einer exakt Viewport-hohen (100vh), nie scrollenden Seite (App.vue): je mehr Platz das
+     Trades-Panel brauchte, desto weniger blieb für den Chart übrig (Bug-Report Philip 2026-07-30,
+     "je mehr Trades in der Liste, desto kleiner wird der Chart"). Zwischenstand war eine feste
+     75vh-Höhe; jetzt (Philip: "die allermeisten Trading-Seiten haben unten rechts an der Ecke
+     einen Drag-Handler, genau wie beim Metadaten-Modal") natives CSS `resize` statt eigenem
+     Maus-Drag-Code — dieselbe resize/overflow-Kombination wie MetadataPanel.vue. Höhe kommt aus
+     chartWrapperHeight (Inline-Style, siehe Script), der bestehende ResizeObserver dort schreibt
+     das Ergebnis eines Resize-Drags zurück nach localStorage. App.vue lässt die Seite dafür
+     wachsen/scrollen (min-height statt height:100vh), statt Chart+Trades-Panel in denselben
+     festen Viewport-Raum zu zwingen. .chart-container darunter bleibt flex:1 (füllt diese Höhe
+     komplett aus). */
+  resize: vertical;
+  overflow: hidden;
+  min-height: 300px;
+  max-height: 90vh;
   display: flex;
 }
 

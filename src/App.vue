@@ -84,7 +84,13 @@ const lastUpdateText = computed(() =>
 .app-shell {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  /* min-height statt height (Chat 2026-07-30, Bug-Report Philip: "je mehr Trades in der Liste,
+     desto kleiner wird der Chart") — der Chart teilte sich mit dem Trades-Panel die exakt
+     Viewport-hohe (100vh), nie scrollende Seite, siehe PriceChart.vue: .chart-wrapper hat jetzt
+     eine eigene, feste Höhe statt flex:1. min-height lässt die Seite trotzdem wachsen und
+     scrollen, sobald Chart + Trades-Panel zusammen mehr Platz brauchen als der Viewport hergibt —
+     genau das wollte Philip ("die ganze Seite einfach nach unten hin scrollable machen"). */
+  min-height: 100vh;
 }
 
 .status-bar {

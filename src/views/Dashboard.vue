@@ -17,6 +17,7 @@ import { fetchPoiZones } from "../poiZones.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
+import { useTabScopedRef } from "../composables/useTabScopedRef.js";
 import { useClaudeAnnotations } from "../composables/useClaudeAnnotations.js";
 
 // Trades/POI-Zonen (ob_zones) gibt es aktuell nur für BTC-USDT — die Forex-OB-Erkennung
@@ -32,6 +33,41 @@ const POLL_MS = 12_000;
 // bei jedem Reload aber, deshalb jetzt genau wie die Toggles persistiert. Defaults hier bewusst
 // aufs aktuelle Testszenario gesetzt (GBP 1h) statt auf die alten Werte.
 const currentSymbol = useLocalStorageRef("currentSymbol", "GBPUSD");
+// Trades-Panel-Höhe (Chat 2026-07-30, Bug-Report Philip: "je mehr Trades in der Liste stehen,
+// desto kleiner wird der Chart") — .trades-panel hatte ursprünglich nur `max-height`, also eine
+// vom INHALT abhängige Höhe: mit wenigen Trades war das Panel klein (Chart groß), mit vielen wuchs
+// es bis zum Deckel (Chart entsprechend kleiner). Zweite Runde (Philip: "die tradeliste ist noch
+// etwas klein ... lass mich die ganze Seite scrollable machen") gab dem Chart eine eigene, vom
+// Trades-Panel unabhängige Höhe (siehe PriceChart.vue: .chart-wrapper) und einen ersten,
+// selbstgebauten Maus-Drag-Handle hier. DRITTE Runde (Philip: "wenn ich den Drag-Handle benutze,
+// wird nur die Liste größer, nicht der Chart ... die allermeisten Trading-Seiten haben unten
+// rechts an der Ecke ein Drag-Handler, genau wie beim Metadaten-Modal") — der eigene Maus-Handler
+// hier wird ersetzt durch dasselbe Muster wie MetadataPanel.vue: natives CSS `resize` (kein
+// JS-Drag-Code mehr nötig) auf .trades-panel selbst UND auf PriceChart.vue: .chart-wrapper, damit
+// BEIDE Panels unabhängig voneinander per Ecken-Handle größenveränderbar sind, nicht nur die
+// Grenze dazwischen. tradesPanelHeight wird jetzt vom ResizeObserver unten synchron gehalten
+// statt von eigenen mousemove-Handlern. VIERTE Runde (Philip: "wenn pro Tab getrennt: dann
+// immernoch möglich allgemein zu speichern? Also wenn ich den PC neu starte...") — useTabScopedRef
+// statt useLocalStorageRef: jeder Tab kann unabhängig resizen (wie currentBar), aber ein frischer
+// Tab/Browser-Neustart startet trotzdem beim zuletzt irgendwo benutzten Wert, siehe dort.
+const tradesPanelHeight = useTabScopedRef("tradesPanelHeight", 600);
+const tradesPanelRef = ref(null);
+let tradesPanelResizeObserver;
+onMounted(() => {
+  if (!tradesPanelRef.value) return;
+  tradesPanelResizeObserver = new ResizeObserver((entries) => {
+    // NICHT entries[0].contentRect.height verwenden — das ist die Höhe OHNE Padding, während die
+    // per :style gebundene `height` (bei globalem box-sizing:border-box, siehe style.css) die
+    // Höhe INKLUSIVE Padding meint. .trades-panel hat 10px Padding oben/unten: contentRect direkt
+    // zurückgeschrieben hätte die Höhe bei jedem Observer-Tick um genau 2x10px schrumpfen lassen,
+    // bis sie an min-height hängen blieb (realer Bug, gefunden beim Testen: 600 -> 474 -> 99 ->
+    // an der 120px-Grenze geclamped). borderBoxSize ist die höhen-korrekte Alternative.
+    const height = Math.round(entries[0].borderBoxSize?.[0]?.blockSize ?? entries[0].target.getBoundingClientRect().height);
+    if (height > 0) tradesPanelHeight.value = height;
+  });
+  tradesPanelResizeObserver.observe(tradesPanelRef.value);
+});
+onUnmounted(() => tradesPanelResizeObserver?.disconnect());
 // currentBar bewusst sessionStorage statt localStorage (siehe Chat 2026-07-19: "ich hab zwei Tabs
 // offen, eins im M5 und eins im 1h") — sessionStorage ist pro Tab isoliert, localStorage wäre
 // tab-übergreifend geteilt und würde die beiden Tabs gegenseitig auf denselben TF zwingen.
@@ -777,7 +813,7 @@ watch(selectedTradingAccountId, refreshTrades);
     @toggle-trade-mode="tradeModeActive = !tradeModeActive"
   />
 
-  <aside class="trades-panel">
+  <aside ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">
     <div class="trades-panel-header">
       <h2 class="trades-panel-title">Trades</h2>
       <TradingAccountSwitcher />
@@ -1067,12 +1103,20 @@ watch(selectedTradingAccountId, refreshTrades);
 
 .trades-panel {
   flex-shrink: 0;
-  max-height: 320px;
   background: #1e222d;
   border-top: 1px solid #2a2e39;
   padding: 10px 16px;
   display: flex;
   flex-direction: column;
+  /* Natives CSS resize statt eigenem Maus-Drag-Code (Chat 2026-07-30, "genau wie beim
+     Metadaten-Modal", siehe MetadataPanel.vue: dieselbe resize:.../overflow:hidden-Kombination) —
+     zieht man an der Ecke unten rechts, greift der ResizeObserver im Script (tradesPanelRef) und
+     schreibt die neue Höhe in tradesPanelHeight (persistiert, wie currentSymbol). Nur vertikal,
+     die Breite soll weiterhin die volle Zeile ausfüllen. */
+  resize: vertical;
+  overflow: hidden;
+  min-height: 120px;
+  max-height: 90vh;
 }
 
 .trades-panel-header {
