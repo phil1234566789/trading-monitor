@@ -4,6 +4,14 @@
 // kann, was Claude meint, statt nur Text zu lesen. Rendering-Pattern (Primitive-Klasse + PaneView +
 // Renderer) 1:1 wie liquidity.js/tradeMarkers.js — hline ist die eine Ausnahme, dafür reicht
 // lightweight-charts' eingebaute Preislinie (braucht keine Zeit-Position).
+//
+// Bug-Report Philip 2026-07-30: zwei Annotationen auf demselben Preis-Level (z.B. eine "line" und
+// ein "marker" am selben Sweep-Punkt, mit Absicht so von Claude gesetzt) zeichnen ihre Labels exakt
+// übereinander — unlesbar. Seit diesem Fix laufen ALLE nicht-hline-Annotationen über EINE einzige
+// Primitive/PaneView/Renderer-Instanz (vorher eine pro Annotation), damit der Renderer beim
+// Zeichnen alle Label-Positionen gleichzeitig kennt und kollidierende Labels vertikal auseinander-
+// schieben kann (resolveLabelPlacements) — mit unabhängigen Primitives pro Annotation wäre das
+// nicht möglich, die kennen sich gegenseitig nicht.
 import { LineStyle } from "lightweight-charts";
 import { snapToBarTime } from "./chartTimeUtils.js";
 import { berlinDayRangeUtcMs } from "./backtestExport.js";
@@ -95,117 +103,201 @@ function resolveTime(candles, dateStr, timeValue) {
   return snapToBarTime(candles, startUtcMs / 1000 + h * 3600 + m * 60);
 }
 
-function drawText(ctx, x, y, text, pixelRatio, color) {
-  ctx.font = `${Math.round(11 * pixelRatio)}px sans-serif`;
-  ctx.fillStyle = color;
-  ctx.textBaseline = "middle";
-  ctx.textAlign = "left";
-  ctx.fillText(text, x + 10 * pixelRatio, y);
+const LABEL_FONT_PX = 11;
+const LABEL_TEXT_OFFSET = 10;
+// Vertikaler Versatz-Schritt beim Auseinanderschieben kollidierender Labels — etwas mehr als die
+// Font-Größe, damit übereinandergestapelte Labels eine sichtbare Lücke haben statt aneinander zu
+// kleben.
+const LABEL_LINE_HEIGHT = 15;
+const MAX_LABEL_STACK_ATTEMPTS = 12;
+// Bug-Report Philip 2026-07-30: Label mittig AUF einer langen Linie (z.B. Invalidierungslinie über
+// den ganzen Tag) sah durchgestrichen aus und lag oft weit weg vom eigentlichen Bezugspunkt. Ab
+// dieser Breite (Anteil der sichtbaren Chart-Breite) gilt eine Linie als "lang" -> Label rechtsbündig
+// ans nähere Linienende statt mittig; kürzere Linien bleiben mittig (beides jetzt ÜBER der Linie).
+const LONG_LINE_VIEW_RATIO = 0.3;
+// Vertikaler Abstand zwischen Linie und Label-Unterkante (vor Pixel-Ratio-Skalierung).
+const LINE_LABEL_GAP = 6;
+
+// Reine Geometrie-Funktion (kein Canvas-Zugriff) — deshalb einzeln testbar (siehe
+// test/claudeAnnotations.test.js), losgelöst vom Rest des Renderers, der lightweight-charts'
+// Bitmap-Coordinate-Space braucht. labels: [{ x1, x2, y }] (x1/x2 = horizontale Textbox-Grenzen,
+// y = ursprünglich gewünschte vertikale Mitte) in Zeichenreihenfolge. Gibt die (ggf. angepassten)
+// y-Werte in derselben Reihenfolge zurück.
+//
+// Greedy statt einer "richtigen" Lösung (z.B. Kräfte-basiertes Layout): probiert abwechselnd
+// oberhalb/unterhalb der ursprünglichen Position in wachsenden Vielfachen von lineHeight, bis eine
+// Position gefunden ist, die keine schon platzierte Box überlappt (Überlappungscheck nur, wenn sich
+// auch die x-Bereiche überschneiden — Labels an unterschiedlichen Chart-Zeitpunkten stören sich
+// nicht, selbst wenn sie zufällig dieselbe Höhe hätten). Nach maxAttempts wird die letzte Kandidaten-
+// Position übernommen (Best-Effort statt Endlosschleife) — bei mehr als ein paar Kollisionen am
+// selben Punkt bleibt's zwangsläufig eng, aber lieber leicht überlappend als weit weg vom Anker.
+export function resolveLabelPlacements(labels, lineHeight, maxAttempts = MAX_LABEL_STACK_ATTEMPTS) {
+  const placed = [];
+  const halfHeight = lineHeight / 2;
+  return labels.map(({ x1, x2, y }) => {
+    let candidateY = y;
+    let attempt = 0;
+    const overlaps = () =>
+      placed.some(
+        (b) => x1 < b.x2 && x2 > b.x1 && candidateY - halfHeight < b.y2 && candidateY + halfHeight > b.y1,
+      );
+    while (attempt < maxAttempts && overlaps()) {
+      attempt++;
+      const dir = attempt % 2 === 1 ? 1 : -1;
+      const step = Math.ceil(attempt / 2);
+      candidateY = y + dir * step * lineHeight;
+    }
+    placed.push({ x1, x2, y1: candidateY - halfHeight, y2: candidateY + halfHeight });
+    return candidateY;
+  });
 }
 
-class AnnotationRenderer {
-  constructor(p1, p2, ann) {
-    this._p1 = p1;
-    this._p2 = p2;
-    this._ann = ann;
+// Zeichnet ALLE nicht-hline-Annotationen in einem Rutsch (statt einer Renderer-Instanz pro
+// Annotation) — nur so kennt der Renderer beim Platzieren der Labels alle anderen Labels bereits
+// und kann Kollisionen erkennen (siehe Datei-Kopfkommentar, Bug-Report 2026-07-30).
+class AnnotationsRenderer {
+  constructor(items) {
+    this._items = items; // [{ p1, p2, ann }, ...]
   }
 
   draw(target) {
-    const { p1, p2 } = this;
-    if (p1.x === null || p1.y === null) return;
-    // Fehlt "color" (altes Format ohne Farbfeld), gilt die bisherige Default-Farbe — siehe
-    // Feature-Spec 2026-07-30, bewusste Rückwärtskompatibilität.
-    const color = this._ann.color ?? ANNOTATION_COLOR;
     target.useBitmapCoordinateSpace((scope) => {
       const ctx = scope.context;
       const pr = scope.horizontalPixelRatio;
-      const x1 = Math.round(p1.x * pr);
-      const y1 = Math.round(p1.y * scope.verticalPixelRatio);
+      const vr = scope.verticalPixelRatio;
+      // "point"-Labels (Marker/Punkt) kennen ax/ay schon beim Sammeln (fester Versatz vom Punkt,
+      // unabhängig von der Textbreite). "line"-Labels brauchen dagegen die gemessene Textbreite,
+      // um sich zentriert bzw. rechtsbündig ÜBER der Linie zu platzieren (Bug-Report Philip
+      // 2026-07-30: Label mittig AUF der Linie sah wie durchgestrichen aus) — deren ax/ay wird
+      // erst weiter unten berechnet, nachdem ctx.font gesetzt ist.
+      const labelCandidates = []; // [{ kind: "point", ax, ay, text, color } | { kind: "line", x1, y1, x2, y2, text, color }]
 
-      // Linie (type "line"): p2 vorhanden, sonst Punkt-Annotation (label/marker).
-      if (p2 && p2.x !== null && p2.y !== null) {
-        const x2 = Math.round(p2.x * pr);
-        const y2 = Math.round(p2.y * scope.verticalPixelRatio);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2 * pr;
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-        if (this._ann.text) drawText(ctx, (x1 + x2) / 2, (y1 + y2) / 2, this._ann.text, pr, color);
-        return;
-      }
+      for (const { p1, p2, ann } of this._items) {
+        if (p1.x === null || p1.y === null) continue;
+        // Fehlt "color" (altes Format ohne Farbfeld), gilt die bisherige Default-Farbe.
+        const color = ann.color ?? ANNOTATION_COLOR;
+        const x1 = Math.round(p1.x * pr);
+        const y1 = Math.round(p1.y * vr);
 
-      if (this._ann.type === "marker") {
-        ctx.fillStyle = color;
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2 * pr;
-        if (this._ann.style === "arrow") {
-          const r = MARKER_RADIUS * pr;
+        // Linie (type "line"): p2 vorhanden, sonst Punkt-Annotation (label/marker).
+        if (p2 && p2.x !== null && p2.y !== null) {
+          const x2 = Math.round(p2.x * pr);
+          const y2 = Math.round(p2.y * vr);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2 * pr;
           ctx.beginPath();
-          ctx.moveTo(x1, y1 - r);
-          ctx.lineTo(x1 - r * 0.7, y1 + r * 0.6);
-          ctx.lineTo(x1 + r * 0.7, y1 + r * 0.6);
-          ctx.closePath();
-          ctx.fill();
-        } else {
-          ctx.beginPath();
-          ctx.arc(x1, y1, MARKER_RADIUS * pr, 0, Math.PI * 2);
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
           ctx.stroke();
+          if (ann.text) labelCandidates.push({ kind: "line", x1, y1, x2, y2, text: ann.text, color });
+          continue;
         }
-        if (this._ann.text) drawText(ctx, x1 + MARKER_RADIUS * pr, y1, this._ann.text, pr, color);
-      } else {
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.arc(x1, y1, DOT_RADIUS * pr, 0, Math.PI * 2);
-        ctx.fill();
-        if (this._ann.text) drawText(ctx, x1 + DOT_RADIUS * pr, y1, this._ann.text, pr, color);
+
+        if (ann.type === "marker") {
+          ctx.fillStyle = color;
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2 * pr;
+          if (ann.style === "arrow") {
+            const r = MARKER_RADIUS * pr;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1 - r);
+            ctx.lineTo(x1 - r * 0.7, y1 + r * 0.6);
+            ctx.lineTo(x1 + r * 0.7, y1 + r * 0.6);
+            ctx.closePath();
+            ctx.fill();
+          } else {
+            ctx.beginPath();
+            ctx.arc(x1, y1, MARKER_RADIUS * pr, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          if (ann.text) {
+            labelCandidates.push({ kind: "point", ax: x1 + MARKER_RADIUS * pr + LABEL_TEXT_OFFSET * pr, ay: y1, text: ann.text, color });
+          }
+        } else {
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(x1, y1, DOT_RADIUS * pr, 0, Math.PI * 2);
+          ctx.fill();
+          if (ann.text) {
+            labelCandidates.push({ kind: "point", ax: x1 + DOT_RADIUS * pr + LABEL_TEXT_OFFSET * pr, ay: y1, text: ann.text, color });
+          }
+        }
       }
+
+      if (labelCandidates.length === 0) return;
+
+      ctx.font = `${Math.round(LABEL_FONT_PX * pr)}px sans-serif`;
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "left";
+
+      const boxes = labelCandidates.map((l) => {
+        if (l.kind === "point") {
+          return { x1: l.ax, x2: l.ax + ctx.measureText(l.text).width, y: l.ay };
+        }
+        // "line": lange Linien (> LONG_LINE_VIEW_RATIO der sichtbaren Chart-Breite) sind meist
+        // Invalidierungs-/Zonengrenzen, die über den ganzen Tag laufen — Label mittig würde oft
+        // weit weg vom eigentlichen Preis-Level (z.B. Sweep-Punkt am linken Rand) landen, deshalb
+        // rechtsbündig ans nähere (rechte) Linienende. Kurze Linien bleiben mittig, wie bisher,
+        // nur eben ÜBER statt AUF der Linie.
+        const width = ctx.measureText(l.text).width;
+        const lineLenPx = Math.abs(l.x2 - l.x1);
+        const isLong = lineLenPx > LONG_LINE_VIEW_RATIO * scope.bitmapSize.width;
+        let ax, lineYAtLabel;
+        if (isLong) {
+          const rightIsX2 = l.x2 >= l.x1;
+          const rightX = rightIsX2 ? l.x2 : l.x1;
+          lineYAtLabel = rightIsX2 ? l.y2 : l.y1;
+          ax = rightX - width - LABEL_TEXT_OFFSET * pr;
+        } else {
+          ax = (l.x1 + l.x2) / 2 - width / 2;
+          lineYAtLabel = (l.y1 + l.y2) / 2;
+        }
+        const ay = lineYAtLabel - LINE_LABEL_GAP * pr - (LABEL_LINE_HEIGHT * pr) / 2;
+        return { x1: ax, x2: ax + width, y: ay };
+      });
+      const placedYs = resolveLabelPlacements(boxes, LABEL_LINE_HEIGHT * pr);
+
+      labelCandidates.forEach((label, i) => {
+        ctx.fillStyle = label.color;
+        ctx.fillText(label.text, boxes[i].x1, placedYs[i]);
+      });
     });
-  }
-
-  get p1() {
-    return this._p1;
-  }
-
-  get p2() {
-    return this._p2;
   }
 }
 
-class AnnotationPaneView {
+class AnnotationsPaneView {
   constructor(source) {
     this._source = source;
-    this._p1 = { x: null, y: null };
-    this._p2 = null;
+    this._items = [];
   }
 
   update() {
-    const { series, chart, candles, ann, dateStr } = this._source;
+    const { series, chart, candles, annotations, dateStr } = this._source;
     const timeScale = chart.timeScale();
-    const t1 = resolveTime(candles, dateStr, ann.type === "line" ? ann.from.time : ann.time);
-    const price1 = ann.type === "line" ? ann.from.price : ann.price;
-    this._p1 = { x: t1 != null ? timeScale.timeToCoordinate(t1) : null, y: series.priceToCoordinate(price1) };
-
-    if (ann.type === "line") {
-      const t2 = resolveTime(candles, dateStr, ann.to.time);
-      this._p2 = { x: t2 != null ? timeScale.timeToCoordinate(t2) : null, y: series.priceToCoordinate(ann.to.price) };
-    } else {
-      this._p2 = null;
-    }
+    this._items = annotations.map((ann) => {
+      const t1 = resolveTime(candles, dateStr, ann.type === "line" ? ann.from.time : ann.time);
+      const price1 = ann.type === "line" ? ann.from.price : ann.price;
+      const p1 = { x: t1 != null ? timeScale.timeToCoordinate(t1) : null, y: series.priceToCoordinate(price1) };
+      let p2 = null;
+      if (ann.type === "line") {
+        const t2 = resolveTime(candles, dateStr, ann.to.time);
+        p2 = { x: t2 != null ? timeScale.timeToCoordinate(t2) : null, y: series.priceToCoordinate(ann.to.price) };
+      }
+      return { p1, p2, ann };
+    });
   }
 
   renderer() {
-    return new AnnotationRenderer(this._p1, this._p2, this._source.ann);
+    return new AnnotationsRenderer(this._items);
   }
 }
 
-class AnnotationPrimitive {
-  constructor(ann, candles, dateStr) {
-    this.ann = ann;
+class AnnotationsPrimitive {
+  constructor(annotations, candles, dateStr) {
+    this.annotations = annotations;
     this.candles = candles;
     this.dateStr = dateStr;
-    this._paneViews = [new AnnotationPaneView(this)];
+    this._paneViews = [new AnnotationsPaneView(this)];
     this.chart = null;
     this.series = null;
   }
@@ -227,13 +319,17 @@ class AnnotationPrimitive {
 
 // existingPriceLines ist getrennt von existingPrimitives, weil createPriceLine/removePriceLine
 // eine eigene lightweight-charts-API ist (nicht attachPrimitive/detachPrimitive) — hline braucht
-// keine Zeit-Position, spannt sich automatisch über die volle sichtbare Breite.
+// keine Zeit-Position, spannt sich automatisch über die volle sichtbare Breite. existingPrimitives
+// enthält seit dem Label-Kollisions-Fix höchstens EIN Element (eine gemeinsame AnnotationsPrimitive
+// für alle nicht-hline-Annotationen), bleibt aber ein Array, weil PriceChart.vue es generisch
+// leert/befüllt.
 export function renderClaudeAnnotations(series, annotations, existingPrimitives, existingPriceLines, candles, dateStr) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
   for (const pl of existingPriceLines) series.removePriceLine(pl);
   existingPriceLines.length = 0;
 
+  const nonHline = [];
   for (const ann of annotations) {
     if (ann.type === "hline") {
       const priceLine = series.createPriceLine({
@@ -245,9 +341,12 @@ export function renderClaudeAnnotations(series, annotations, existingPrimitives,
       });
       existingPriceLines.push(priceLine);
     } else {
-      const primitive = new AnnotationPrimitive(ann, candles, dateStr);
-      series.attachPrimitive(primitive);
-      existingPrimitives.push(primitive);
+      nonHline.push(ann);
     }
+  }
+  if (nonHline.length > 0) {
+    const primitive = new AnnotationsPrimitive(nonHline, candles, dateStr);
+    series.attachPrimitive(primitive);
+    existingPrimitives.push(primitive);
   }
 }
