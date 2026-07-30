@@ -1,6 +1,7 @@
 import { LiquidityLinePrimitive, detectLiquidityLevels, bullBearLabelSide, formatLsLabel } from "./liquidity.js";
 import { cssColor } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
+import { PIP_SIZE } from "./pipConfig.js";
 import type { Pivot, PivotHigh, PivotLow, MarketStructureState } from "./range.type";
 
 // "up": bestätigt einen Uptrend (bestehendes Verhalten, Default -> ändert nichts an bisherigen
@@ -1252,12 +1253,17 @@ class RangeLineRenderer {
       const ctx = scope.context;
       ctx.strokeStyle = this._options.color;
       ctx.lineWidth = (this._options.lineWidth ?? 1) * scope.horizontalPixelRatio;
+      // gestrichelt fürs Protected-Fib (Chat 2026-07-30, siehe computeFibLevels) — dieselben
+      // Dash-Werte/derselbe Reset-danach wie LiquidityLinePrimitive (liquidity.js), kein impliziter
+      // Reset zwischen Primitives.
+      ctx.setLineDash(this._options.dashed ? [6 * scope.horizontalPixelRatio, 4 * scope.horizontalPixelRatio] : []);
       ctx.beginPath();
       ctx.moveTo(pts[0].x * scope.horizontalPixelRatio, pts[0].y * scope.verticalPixelRatio);
       for (let i = 1; i < pts.length; i++) {
         ctx.lineTo(pts[i].x * scope.horizontalPixelRatio, pts[i].y * scope.verticalPixelRatio);
       }
       ctx.stroke();
+      ctx.setLineDash([]);
     });
   }
 }
@@ -1287,7 +1293,7 @@ class RangeLinePaneView {
 
 class RangeLinePrimitive {
   pivots: Pivot[];
-  _options: { color: string; lineWidth?: number };
+  _options: { color: string; lineWidth?: number; dashed?: boolean };
   _paneViews: RangeLinePaneView[];
   _chart: any;
   _series: any;
@@ -1295,10 +1301,102 @@ class RangeLinePrimitive {
   // pivots: mindestens 2 Punkte, in Zeichenreihenfolge (nicht zwingend chronologisch, siehe
   // ClosedRange: low->middle->high ist bei einem Uptrend-Archiv automatisch auch chronologisch,
   // müsste es aber nicht sein).
-  constructor(pivots: Pivot[], options: { color: string; lineWidth?: number }) {
+  constructor(pivots: Pivot[], options: { color: string; lineWidth?: number; dashed?: boolean }) {
     this.pivots = pivots;
     this._options = options;
     this._paneViews = [new RangeLinePaneView(this)];
+    this._chart = null;
+    this._series = null;
+  }
+
+  attached({ chart, series, requestUpdate }: { chart: any; series: any; requestUpdate: () => void }) {
+    this._chart = chart;
+    this._series = series;
+    requestUpdate();
+  }
+
+  updateAllViews() {
+    this._paneViews.forEach((v) => v.update());
+  }
+
+  paneViews() {
+    return this._paneViews;
+  }
+}
+
+// Kurzer horizontaler Strich für ein Fib-Level (Chat 2026-07-30, siehe computeFibLevels) — sitzt
+// exakt in der "Mitte der Zickzack-Linie" zwischen den beiden Fib-Ankern a/b: X ist der Pixel-
+// Mittelwert der beiden Anker-Zeitpunkte (NICHT die Zeit-Mitte selbst durch timeToCoordinate
+// gejagt — beides wäre hier äquivalent, aber der Pixel-Mittelwert braucht keine Annahme darüber,
+// ob timeToCoordinate für einen nicht-existenten Zwischen-Zeitstempel sauber interpoliert), Y ist
+// priceToCoordinate des ECHTEN 0,5-Preises (level.price), nicht der Pixel-Mittelwert der beiden
+// Anker-Y-Koordinaten — bei stark unterschiedlicher Preisskala wäre das sonst nicht dasselbe.
+// Feste Pixel-Halbbreite wie ArrowRenderer._size oben, kein Zoom-Skalieren nötig.
+class FibTickRenderer {
+  private _point: any;
+  private _options: any;
+
+  constructor(point: any, options: any) {
+    this._point = point;
+    this._options = options;
+  }
+
+  draw(target: any) {
+    const p = this._point;
+    if (p.x === null || p.y === null) return;
+
+    target.useBitmapCoordinateSpace((scope: any) => {
+      const ctx = scope.context;
+      const x = p.x * scope.horizontalPixelRatio;
+      const y = p.y * scope.verticalPixelRatio;
+      const halfWidth = 8 * scope.horizontalPixelRatio;
+      ctx.strokeStyle = this._options.color;
+      ctx.lineWidth = (this._options.lineWidth ?? 1) * scope.horizontalPixelRatio;
+      ctx.beginPath();
+      ctx.moveTo(x - halfWidth, y);
+      ctx.lineTo(x + halfWidth, y);
+      ctx.stroke();
+    });
+  }
+}
+
+class FibTickPaneView {
+  private _source: FibTickPrimitive;
+  private _point: any;
+
+  constructor(source: FibTickPrimitive) {
+    this._source = source;
+    this._point = { x: null, y: null };
+  }
+
+  update() {
+    const series = this._source._series;
+    const timeScale = this._source._chart.timeScale();
+    const level = this._source._level;
+    const xa = timeScale.timeToCoordinate(level.a.pivotTime);
+    const xb = timeScale.timeToCoordinate(level.b.pivotTime);
+    this._point = {
+      x: xa != null && xb != null ? (xa + xb) / 2 : null,
+      y: series.priceToCoordinate(level.price),
+    };
+  }
+
+  renderer() {
+    return new FibTickRenderer(this._point, this._source._options);
+  }
+}
+
+export class FibTickPrimitive {
+  _level: FibLevel;
+  _options: { color: string; lineWidth?: number };
+  _paneViews: FibTickPaneView[];
+  _chart: any;
+  _series: any;
+
+  constructor(level: FibLevel, options: { color: string; lineWidth?: number }) {
+    this._level = level;
+    this._options = options;
+    this._paneViews = [new FibTickPaneView(this)];
     this._chart = null;
     this._series = null;
   }
@@ -1387,6 +1485,71 @@ export function collectH1LqLevels(state: MarketStructureState | null | undefined
   if (state.trend === wantTrend) pivots.push(...state.structurePivots);
   if (state.nestedTrend && state.nestedTrend.trend === wantTrend) pivots.push(...state.nestedTrend.structurePivots);
   return pivots.filter((p) => p.touched !== false).map((p) => toLqLevel(p, dir));
+}
+
+// --- Fibonacci-Level (Chat 2026-07-30) --------------------------------------------------------
+// Zwei 0,5er-Fib-Varianten pro Trend-Ebene (Haupttrend UND Nested-Trend, siehe computeFibLevels
+// unten) — Bug-Report/Korrektur Philip: die erste Annahme "Fib = currRange.low <-> currRange.high"
+// war falsch. Philips tatsächliche Fib-Ziehweise zieht IMMER vom Pivot, der die ganze Bewegung
+// EINGELEITET hat — das ist der zuletzt bestätigte protected-low/-high ("Strukturpunkt 2"), nicht
+// currRange.low/.high selbst (die Range-Kante kann durch spätere Pullbacks längst weitergewandert
+// sein, ohne dass sich am eigentlichen Ursprung der Bewegung etwas geändert hätte). Er will trotzdem
+// BEIDE Varianten sehen: "Range-Fib" (low<->high der aktuell laufenden Range, reine Orientierung)
+// UND "Protected-Fib" (PP<->gegenüberliegende Range-Kante, die eigentlich gemeinte Bewegung).
+export const RANGE_FIB_MIN_PP_DISTANCE_PIPS = 50; // siehe PIP-SETTINGS.md
+const RANGE_FIB_MIN_PP_DISTANCE = RANGE_FIB_MIN_PP_DISTANCE_PIPS * PIP_SIZE;
+
+// a/b bewusst nicht "low"/"high" genannt — bei der Protected-Variante ist nicht immer klar, welcher
+// der beiden Anker der numerisch höhere ist (nur die Mitte zählt), und die Reihenfolge ist für die
+// Zeichnung (Linie zwischen zwei Punkten, Tick genau in der Mitte) irrelevant.
+export interface FibLevel {
+  a: Pivot;
+  b: Pivot;
+  price: number;
+}
+
+function fibBetween(a: Pivot, b: Pivot): FibLevel {
+  return { a, b, price: (a.price + b.price) / 2 };
+}
+
+// state kann der Haupttrend ODER ein Nested-Trend sein (identischer Typ, siehe advanceNestedTrend)
+// — eine Implementierung für beide Ebenen statt Verdopplung, wie der Rest dieser Datei es auch
+// handhabt (evaluateConfirmingBreak, invalidateUptrend/-Downtrend, ...).
+export function computeFibLevels(
+  state: MarketStructureState,
+  minProtectedDistance: number = RANGE_FIB_MIN_PP_DISTANCE,
+): { rangeFib: FibLevel; protectedFib: FibLevel | null } {
+  const { currRange, structurePivots, trend } = state;
+  const isDown = trend === "downtrend";
+  const rangeFib = fibBetween(currRange.low, currRange.high);
+
+  const protectedType: "protected-low" | "protected-high" = isDown ? "protected-high" : "protected-low";
+  const pp = structurePivots.find((p) => p.type === protectedType) ?? null;
+  const edge = isDown ? currRange.low : currRange.high;
+  const protectedFib = pp && Math.abs(pp.price - edge.price) >= minProtectedDistance ? fibBetween(pp, edge) : null;
+
+  return { rangeFib, protectedFib };
+}
+
+// Sammelt alle Fib-Level (Haupttrend + Nested, falls vorhanden) in klickbarer Form — analog zu
+// collectH1LqLevels, aber ohne dir-Parameter (ein Fib ist nicht long/short-spezifisch). Genutzt
+// von PriceChart.vue für die Trade-Bestätigungs-Klick-Erfassung (kind='fib', siehe
+// tradeConfirmations.ts) — dieselbe A/B-Form wie computeFibLevels, keine gesonderte Aufbereitung
+// nötig, weil die Klick-Trefferprüfung dieselbe Pixel-Mittelpunkt-Berechnung braucht wie die
+// Zeichnung selbst (siehe FibTickPrimitive).
+export function collectFibLevels(
+  state: MarketStructureState | null | undefined,
+  minProtectedDistance: number = RANGE_FIB_MIN_PP_DISTANCE,
+): FibLevel[] {
+  if (!state) return [];
+  const result: FibLevel[] = [];
+  for (const level of [state, state.nestedTrend]) {
+    if (!level || level.trend === "unknown") continue;
+    const { rangeFib, protectedFib } = computeFibLevels(level, minProtectedDistance);
+    result.push(rangeFib);
+    if (protectedFib) result.push(protectedFib);
+  }
+  return result;
 }
 
 // Erste Kerze (aus den ANGEZEIGTEN candles, i.d.R. feingranularer als die H1-Pivots selbst — z.B.
@@ -1786,5 +1949,32 @@ export function renderMarketStructureAnalysis(
     );
     series.attachPrimitive(chochLine);
     existingPrimitives.push(chochLine);
+  }
+
+  // Fib-Level (Chat 2026-07-30, siehe computeFibLevels für die volle Begründung) — EIN Durchlauf
+  // für Haupttrend UND Nested-Trend statt eines eigenen Blocks pro Ebene (beide sind derselbe
+  // MarketStructureState-Typ). Range-Fib nur als Tick (die Verbindungslinie low<->high existiert
+  // schon, siehe rangeClosed/rangeChoch-Linien oben); Protected-Fib zusätzlich als gestrichelte
+  // Zickzack-Linie PP<->gegenüberliegende Range-Kante, weil es diese Linie (anders als bei
+  // Range-Fib) noch nirgends gibt.
+  const fibColor = cssColor("rangeFib");
+  const fibWidth = lineWidth("rangeFib");
+  for (const level of [state, state.nestedTrend]) {
+    if (!level || level.trend === "unknown") continue;
+    const { rangeFib, protectedFib } = computeFibLevels(level);
+
+    const rangeTick = new FibTickPrimitive(rangeFib, { color: fibColor, lineWidth: fibWidth });
+    series.attachPrimitive(rangeTick);
+    existingPrimitives.push(rangeTick);
+
+    if (protectedFib) {
+      const zigzag = new RangeLinePrimitive([protectedFib.a, protectedFib.b], { color: fibColor, lineWidth: fibWidth, dashed: true });
+      series.attachPrimitive(zigzag);
+      existingPrimitives.push(zigzag);
+
+      const protectedTick = new FibTickPrimitive(protectedFib, { color: fibColor, lineWidth: fibWidth });
+      series.attachPrimitive(protectedTick);
+      existingPrimitives.push(protectedTick);
+    }
   }
 }

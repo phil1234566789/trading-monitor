@@ -44,6 +44,10 @@ export const DEFAULT_CHART_COLORS = {
   // eigene Farbe statt rangeBreakOfStructure, weil ein CHoCH (Vorlauf-Signal) fachlich etwas
   // anderes ist als ein Break of Structure (Warnsignal im bestehenden Trend).
   rangeChoch: { hex: "#ff7043", alpha: 0.95 },
+  // 0,5er-Fib-Level (Chat 2026-07-30, siehe marketStructureAnalysis.ts: computeFibLevels) — ein
+  // Key für beide Varianten (reiner Tick am Range-Fib vs. gestrichelte Zickzack-Linie+Tick am
+  // Protected-Fib), weder bullisch noch bärisch, daher eigener neutraler Farbton statt Wiederverwendung.
+  rangeFib: { hex: "#26c6da", alpha: 0.95 },
   rangesMarker: { hex: "#00bcd4", alpha: 0.9 },
   // Periode-2-Debug-Marker (siehe Chat 2026-07-19: "früherer Uptrend-Erkennung") — bewusst
   // dieselbe Grundfarbe wie rangesMarker (Periode 5), aber deutlich transparenter, damit man

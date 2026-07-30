@@ -127,6 +127,27 @@ Live beobachtet (GBPUSD 1h, siehe `test/tdd_mit_claude/ranges/gbp_h1_uptrend_upt
 | Einmal `break-of-structure` wird NICHT mehr zurückbewertet (fällt aus dem Reklassifizierungs-Filter raus) — anders als `low`/`LQ-sweep`, die bei neuen Kerzendaten weiter pendeln können, ist ein bestätigter Strukturbruch ein permanenter historischer Fakt. | `marketStructureAnalysisLqSweep.test.js`: *"einmal 'break-of-structure' bleibt dauerhaft..."* |
 | `markLqSweeps` läuft bei JEDEM neuen Pivot, Outer (Periode 5) UND Inner (Periode 2) gleichermaßen — ein reiner Periode-5-Pivot kann LQ-sweep/break-of-structure also genauso auslösen wie ein Periode-2-Pivot, nur i.d.R. mit größerer Verzögerung (Chat 2026-07-24, Bug-Report: "allerspätestens mit Bildung des folgenden P5-Fraktals sollte ein BOS stehen" — vorher rief `applyMarketStructurePivot` `markLqSweeps` gar nicht auf). `applyMarketStructurePivot` braucht dafür jetzt ebenfalls ein `candles`-Argument (Default `[]`, siehe PriceChart.vue: `rangesCandles` wird an BEIDE Pfade durchgereicht). | `marketStructureAnalysisLqSweep.test.js`: *"ein reiner Periode-5-Pivot mit echtem Kerzenschluss reklassifiziert ein protected-low zu 'break-of-structure'"* |
 
+## Fibonacci-Level (`computeFibLevels`/`collectFibLevels`)
+
+Chat 2026-07-30. Erste Annahme (Fib = `currRange.low` <-> `currRange.high`) war falsch — Philips
+tatsächliche Fib-Ziehweise zieht immer vom Pivot, der die ganze Bewegung EINGELEITET hat, das ist
+der zuletzt bestätigte `protected-low`/`-high`, nicht die (potenziell längst weitergewanderte)
+Range-Kante selbst. Zwei Varianten gleichzeitig, pro Trend-Ebene (Haupttrend UND Nested-Trend,
+`computeFibLevels` läuft auf beiden identisch, da derselbe `MarketStructureState`-Typ):
+
+| Regel | Test |
+|---|---|
+| "Range-Fib" = Mittelwert von `currRange.low`/`.high` — immer vorhanden, sobald der Trend bestätigt ist (`trend !== 'unknown'`), reine Orientierung. | `marketStructureAnalysisFib.test.js` |
+| "Protected-Fib" = Mittelwert vom zuletzt bestätigten `protected-low`/`-high` (Uptrend: `-low`; Downtrend gespiegelt: `-high`) bis zur GEGENÜBERLIEGENDEN `currRange`-Kante (Uptrend: `.high`; Downtrend: `.low`) — das ist die eigentlich gemeinte Bewegung. | `marketStructureAnalysisFib.test.js` |
+| Protected-Fib existiert NUR, wenn (a) überhaupt ein `protected-low`/`-high` in `structurePivots` steht UND (b) der Preisabstand zur gegenüberliegenden Range-Kante mindestens `RANGE_FIB_MIN_PP_DISTANCE_PIPS` (50, siehe PIP-SETTINGS.md) beträgt — sonst `null`, kein Fib gezeichnet. | `marketStructureAnalysisFib.test.js` |
+| `collectFibLevels` sammelt beide Varianten für Haupttrend UND (falls vorhanden, `trend !== 'unknown'`) Nested-Trend in einer flachen Liste — genutzt für die Klick-Erfassung als Trade-Bestätigung (`kind='fib'`, siehe `trade_confirmations`/`tradeConfirmations.ts`), dieselbe A/B-Form wie fürs Zeichnen. | `marketStructureAnalysisFib.test.js` |
+
+Darstellung (kein eigener Test, siehe Abschnitt unten): Range-Fib nur als kurzer horizontaler
+Tick (`FibTickPrimitive`) in der Mitte der bereits bestehenden Live-Verbindungslinie
+(`RangeLinePrimitive`, siehe "Darstellung" unten) — keine eigene Linie, die gibt's schon.
+Protected-Fib zusätzlich als gestrichelte Zickzack-Linie PP<->Range-Kante (`RangeLinePrimitive`
+mit neuem `dashed`-Flag) + eigener Tick. Ein Farb-/Breiten-Key (`rangeFib`) für beide Varianten.
+
 ## Darstellung (`renderMarketStructureAnalysis`)
 
 Rein visuell, keine Zustandslogik — kein Test, nur Code-Kommentare in

@@ -14,6 +14,7 @@ import { snapToBarTime } from "./chartTimeUtils.js";
 import { cssColorScaled } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
 import { canShowLabels } from "./chartZoom.js";
+import { PIP_SIZE } from "./pipConfig.js";
 
 const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone angelegt (HTF: 15m/1h/4h/1D)
 const WEAK_PCT = 0.15; // Gap kleiner als das gilt als "schwach" (blasser dargestellt)
@@ -28,7 +29,6 @@ const WEAK_PCT = 0.15; // Gap kleiner als das gilt als "schwach" (blasser darges
 // vom 1-Pip-Minimum verschluckt) — M1/M3 bleiben bei 1 Pip, da nicht Anlass des Reports.
 const LOWER_TF_LABELS = new Set(["1m", "3m", "5m"]);
 const LOWER_TF_MIN_GAP_PIPS = { "1m": 1, "3m": 1, "5m": 0.5 };
-const PIP_SIZE = 0.0001; // gilt für beide unterstützten FX-Paare (GBPUSD/EURUSD), siehe TRADE_SETUP_PIP_SIZE in PriceChart.vue
 
 // HTF (1H/4H) Pip-Minimum NUR für Forex (Bug-Report Philip 2026-07-30: eine 4,5-Pip-1H-FVG bei
 // EURUSD wurde von der 0,05%-Prozent-Schwelle verschluckt, ~5,7 Pip bei diesem Kurs nötig) — nicht

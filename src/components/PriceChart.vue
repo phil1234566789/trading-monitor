@@ -22,11 +22,13 @@ import {
   pivotForDisplay,
   summarizeMarketStructureState,
   collectH1LqLevels,
+  collectFibLevels,
 } from "../marketStructureAnalysis";
 import { computeCockpitState } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
+import { PIP_SIZE } from "../pipConfig.js";
 
 // lightweight-charts' native LineSeries-Option lineWidth erwartet eine kleine Ganzzahl (1-4), anders
 // als die Linienstärke unserer eigenen Primitives (liquidity.js/marketStructureAnalysis.ts/...), die
@@ -138,6 +140,11 @@ const props = defineProps({
   // machen") — nur innerhalb von tradeModeActive relevant, schaltet den Klick-Handler von
   // "Trade-Setup-OB anklicken" auf "Pivot/OB als Target anklicken" um (siehe Dashboard.vue: targetAddTrade).
   targetModeActive: { type: Boolean, default: false },
+  // Bestätigungs-Modus (Chat 2026-07-30, siehe Dashboard.vue: confirmationAddTrade) — Teilmenge
+  // von targetModeActive (beide setzen tradeModeActive), zusätzlich unterschieden, weil nur im
+  // Bestätigungs-Modus auch Fib-Ticks anklickbar sein sollen (siehe findClickedFibLevel) — ein Fib
+  // ist keine sinnvolle Preis-Erwartung wie ein normales Ziel.
+  confirmationModeActive: { type: Boolean, default: false },
 });
 const emit = defineEmits([
   "close-ranges-metadata",
@@ -219,8 +226,7 @@ const TRADE_SETUP_GRACE_SEC = 5 * 60; // eine M5-Kerzenlänge
 const TRADE_SETUP_LS_MAX_LEAD_SEC_H1 = 120 * 60; // lsMaxLeadMinutesH1 — eigenes, größeres Fenster
 // als M5 (H1-Sweep liegt typischerweise deutlich länger vor dem Fraktal), siehe poi-watcher/index.ts
 const TRADE_SETUP_LS_MAX_LEAD_SEC_M5 = 45 * 60; // lsMaxLeadMinutesM5
-const TRADE_SETUP_PIP_SIZE = 0.0001; // pipSize im Indikator — gilt für beide FX-Paare (GBPUSD/EURUSD)
-const TRADE_SETUP_LS_MAX_DISTANCE_M5 = 5.0 * TRADE_SETUP_PIP_SIZE; // lsMaxDistancePipsM5=5, nur für M5-LS
+const TRADE_SETUP_LS_MAX_DISTANCE_M5 = 5.0 * PIP_SIZE; // lsMaxDistancePipsM5=5, nur für M5-LS
 const TRADE_SETUP_OB_MAX_DELAY_SEC = 60 * 60; // obMaxDelayMinutes
 const TRADE_SETUP_LOOKBACK_SEC = 6 * 60 * 60; // protectedHighLookbackHours
 const TRADE_SETUP_OB_WIDTH_SEC = 10 * TRADE_SETUP_GRACE_SEC; // obBoxWidthM5Candles=10, rein optisch
@@ -339,6 +345,10 @@ let liquidityPrimitives = [];
 // Klick-Hittest (Chat 2026-07-27: "Können wir die Linien klickbar machen?") gebraucht, analog zu
 // currentTradeSetups unten für die OB-Boxen.
 let currentLiquidityLevels = [];
+// Aktuell gezeichnete Fib-Level (Range-Fib + Protected-Fib, Haupt- + Nested-Trend, siehe
+// collectFibLevels in marketStructureAnalysis.ts) — analog zu currentLiquidityLevels oben, für den
+// Bestätigungs-Klick-Hittest (findClickedFibLevel), gefüllt in refreshMarketStructureInternal.
+let currentFibLevels = [];
 let sessionPrimitives = [];
 let newsMarkerPrimitives = [];
 // Periode-5- UND Periode-2-Debug-Marker laufen seit Chat 2026-07-26 durch EIN gemeinsames
@@ -982,6 +992,7 @@ function refreshMarketStructureInternal() {
   if (!chart) return; // async loadRangesCandles kann nach unmount noch abschließen, siehe onUnmounted
   const state = computeMarketStructureState();
   marketStructureState.value = state; // fürs Metadaten-Panel + TSC, unabhängig von showRanges (Zeichnen)
+  currentFibLevels = collectFibLevels(state); // für den Bestätigungs-Klick-Hittest, siehe findClickedFibLevel
   const candles = clipReplay(allCandles);
   const precision = pricePrecisionForInstrument(props.symbol);
   renderMarketStructureAnalysis(candleSeries, props.showRanges ? state : null, marketStructurePrimitives, candles, {
@@ -1259,6 +1270,41 @@ function findClickedOBZone(param) {
   // endTime friert bei detectOrderBlocks() auf die berührende Kerze ein, sobald touched=true wird
   // (siehe orderBlocks.js) — praktisch also "touchedTime", ohne dass die Zone das Feld extra führt.
   return { kind: "ob", price: nearEdge, sourceTime: zone.startTime, touchedTime: zone.touched ? zone.endTime : null };
+}
+
+// Bestätigungs-Modus, dritte Klick-Fläche (Chat 2026-07-30, siehe collectFibLevels in
+// marketStructureAnalysis.ts) — NUR im Bestätigungs-Modus aktiv, nicht im Ziel-Modus (ein Fib ist
+// keine sinnvolle Preis-Erwartung wie Pivot/OB, siehe onSelectTarget in Dashboard.vue). Anders als
+// die Liquiditäts-Linie (horizontal, Zeitbereich [pivotTime, endTime]) ist der Fib-Tick ein PUNKT
+// (kurzer Strich in der Mitte der Fib-Spanne, siehe FibTickPrimitive) — Hit-Test vergleicht deshalb
+// den 2D-Pixel-Abstand zum exakt selben Mittelpunkt, den die Zeichnung auch benutzt, statt eines
+// Zeitbereichs + Y-Toleranz.
+const FIB_TICK_CLICK_TOLERANCE_PX = 8;
+function findClickedFibLevel(param) {
+  if (!param.point || !candleSeries || !chart) return null;
+  const timeScale = chart.timeScale();
+  for (const level of currentFibLevels) {
+    const xa = timeScale.timeToCoordinate(level.a.pivotTime);
+    const xb = timeScale.timeToCoordinate(level.b.pivotTime);
+    if (xa == null || xb == null) continue;
+    const x = (xa + xb) / 2;
+    const y = candleSeries.priceToCoordinate(level.price);
+    if (y == null) continue;
+    const dx = param.point.x - x;
+    const dy = param.point.y - y;
+    if (Math.sqrt(dx * dx + dy * dy) > FIB_TICK_CLICK_TOLERANCE_PX) continue;
+    return {
+      kind: "fib",
+      price: level.price,
+      // Der spätere der beiden Anker-Zeitpunkte — erst ab da existiert dieser konkrete Fib-Wert
+      // überhaupt (vorher stand mindestens einer der beiden Anker noch nicht fest).
+      sourceTime: Math.max(level.a.pivotTime, level.b.pivotTime),
+      touchedTime: null, // kein "getoucht"-Konzept für ein Fib-Level, siehe tradeConfirmations.ts
+      rangeLow: Math.min(level.a.price, level.b.price),
+      rangeHigh: Math.max(level.a.price, level.b.price),
+    };
+  }
+  return null;
 }
 
 // Vereinigt beide Ziel-Modus-Klick-Flächen (Chat 2026-07-28) — Linie zuerst (präziser, kleinere
@@ -1712,7 +1758,10 @@ onMounted(() => {
     // Eigener Modus statt einfach zusätzlich zum Setup-Klick zu testen, damit ein Klick nie
     // mehrdeutig ist (Setup-OB-Box vs. Ziel-Pivot/-OB könnten sich sonst überlappen).
     if (props.targetModeActive) {
-      const target = findClickedTarget(param);
+      // Fib-Tick NUR im Bestätigungs-Modus prüfen (siehe confirmationModeActive-Kommentar oben) —
+      // zuerst, weil er eine feinere Toleranz hat und sonst evtl. von einer überlappenden
+      // Liquiditäts-Linie verdeckt würde.
+      const target = (props.confirmationModeActive && findClickedFibLevel(param)) || findClickedTarget(param);
       if (target) emit("select-target", target);
       return;
     }
@@ -1737,7 +1786,9 @@ onMounted(() => {
       chartContainerRef.value.style.cursor = "";
       return;
     }
-    const hit = props.targetModeActive ? findClickedTarget(param) : findClickedSetup(param);
+    const hit = props.targetModeActive
+      ? (props.confirmationModeActive && findClickedFibLevel(param)) || findClickedTarget(param)
+      : findClickedSetup(param);
     chartContainerRef.value.style.cursor = hit ? "pointer" : "";
   });
 

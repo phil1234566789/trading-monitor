@@ -6,6 +6,7 @@
 import { fetchInitialCandles } from "./forexCandles.js";
 import { fmtDateTime } from "./format.js";
 import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructureState } from "./marketStructureAnalysis";
+import { PIP_SIZE } from "./pipConfig.js";
 
 // EURUSD seit Chat 2026-07-28 freigeschaltet (Philip: "ich weiß wir haben noch keinen DXY da,
 // aber schalte mir mal EUR frei") — DXY-Kontext fehlt weiterhin (siehe backtest-instructions.md),
@@ -17,9 +18,6 @@ export const BACKTEST_ASSETS = ["GBPUSD", "EURUSD"];
 // Volatilitätsgefühl) statt nur als Teil der normalen M5-Kerzenliste. Alles ab 07:00 (nach Asia)
 // ist der eigentliche Handelsbereich.
 const ASIA_SESSION_END_HOUR = 7;
-// 1 Pip = 0.0001 bei GBPUSD/EURUSD (5. Nachkommastelle ist die Pipette) — siehe CLAUDE.md/Twelve-
-// Data-Client-Kommentar zu 5-Dezimalstellen-Präzision bei Forex.
-const PIP_SIZE = 0.0001;
 // Puffer über die reine Tageslänge (288 M5-Kerzen/Tag) hinaus, damit Rundungen an der Tagesgrenze
 // (siehe berlinDayRangeUtcMs) nie eine fehlende Randkerze verursachen — der Tages-Filter unten
 // schneidet ohnehin exakt auf [start, end) zurecht.

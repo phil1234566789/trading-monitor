@@ -69,6 +69,7 @@ const GROUPS = [
       { key: "rangeBreakOfStructure", label: "Break of Structure" },
       { key: "rangeClosed", label: "Abgeschlossene Range" },
       { key: "rangeChoch", label: "CHoCH" },
+      { key: "rangeFib", label: "Fibonacci 50%" },
       { key: "rangesMarker", label: "Debug-Marker (Periode 5)" },
       { key: "rangesMarker2", label: "Debug-Marker (Periode 2)" },
     ],

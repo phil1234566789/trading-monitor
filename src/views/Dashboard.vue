@@ -769,6 +769,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :claude-annotations-date="claudeAnnotationsDate"
     :trade-mode-active="tradeModeActive"
     :target-mode-active="targetAddTrade != null || confirmationAddTrade != null"
+    :confirmation-mode-active="confirmationAddTrade != null"
     @close-ranges-metadata="showRangesMetadata = false"
     @close-debug-metadata="showDebugMetadata = false"
     @select-setup="onSelectSetup"

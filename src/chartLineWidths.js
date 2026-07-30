@@ -36,6 +36,7 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   rangeBreakOfStructure: 2,
   rangeClosed: 2, // Verbindungslinie der laufenden/abgeschlossenen Uptrend-Range.
   rangeChoch: 1, // Nested-Verbindungslinie UND CHoCH-Label teilen sich diese eine Farbe/Breite.
+  rangeFib: 1, // Tick + gestrichelte Protected-Fib-Zickzack-Linie (Chat 2026-07-30).
   tradeWin: 1.5, // Entry/Exit-Preis-Strich, je nach Trade-Ausgang (siehe tradeMarkers.js: outcomeKey).
   tradeLoss: 1.5,
   tradeOpen: 1.5,

@@ -219,6 +219,10 @@ export async function addConfirmationToTrade(signalId, confirmation) {
     kind: confirmation.kind,
     source_time: confirmation.sourceTime != null ? new Date(confirmation.sourceTime * 1000).toISOString() : null,
     touched_time: confirmation.touchedTime != null ? new Date(confirmation.touchedTime * 1000).toISOString() : null,
+    // Nur bei kind='fib' gesetzt (siehe PriceChart.vue: findClickedFibLevel) — die zwei Ankerpreise
+    // des Fib-Werts, sonst bleibt die Spalte null (Default).
+    range_low: confirmation.rangeLow ?? null,
+    range_high: confirmation.rangeHigh ?? null,
   });
   if (error) {
     console.error("Bestätigung hinzufügen fehlgeschlagen:", error);

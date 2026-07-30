@@ -49,7 +49,7 @@ export async function fetchTrades(instrument, accountId = null) {
   ] = await Promise.all([
     supabase.from("trade_targets").select("id, signal_id, price, kind, source_time, touched_time").in("signal_id", ids),
     supabase.from("trade_partial_exits").select("signal_id, price, exit_time, portion_pct").in("signal_id", ids),
-    supabase.from("trade_confirmations").select("id, signal_id, price, kind, source_time, touched_time").in("signal_id", ids),
+    supabase.from("trade_confirmations").select("id, signal_id, price, kind, source_time, touched_time, range_low, range_high").in("signal_id", ids),
   ]);
   if (targetsError) throw targetsError;
   if (partialsError) throw partialsError;
@@ -91,6 +91,10 @@ export async function fetchTrades(instrument, accountId = null) {
       kind: c.kind,
       sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
       touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
+      // Nur bei kind='fib' gesetzt (siehe tradeConfirmations.ts) — die zwei Ankerpreise des
+      // gespeicherten Fib-Werts, sonst null.
+      rangeLow: c.range_low ?? null,
+      rangeHigh: c.range_high ?? null,
     })),
     partialExits: (partialsBySignal[row.id] ?? []).map((p) => ({
       price: p.price,

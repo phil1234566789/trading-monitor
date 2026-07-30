@@ -238,6 +238,9 @@ chart-drawn indicator in this repo — don't hardcode a color literal here if yo
 - Comments are in German, and are written to explain **why** (a past bug, a non-obvious
   constraint, a rejected alternative), not what the code does. Match this when editing
   existing files.
+- **Respond to Philip in German** (chat replies, not just code comments) — confirmed 2026-07-30
+  ("bro DEUTSCH!"). Code identifiers/commit messages/PR text stay English as usual; this is about
+  the conversational reply text.
 - Prefer small, targeted edits with a comment explaining the non-obvious reasoning over
   refactoring for its own sake — this is a solo hobby project with a lot of hard-won bugfix
   history encoded in comments; don't erase that context while "cleaning up."

@@ -137,7 +137,7 @@ function confirmationLabel(confirmation) {
         <span>{{ confirmationLabel(confirmation) }}</span>
         <button class="tem-small-btn" @click="onRemoveConfirmation(confirmation)">entfernen</button>
       </div>
-      <button class="tem-action-btn" @click="emit('request-add-confirmation')">✔ Bestätigung hinzufügen (Trade-Modus, dann Sweep oder OB anklicken)</button>
+      <button class="tem-action-btn" @click="emit('request-add-confirmation')">✔ Bestätigung hinzufügen (Trade-Modus, dann Sweep, OB oder Fib anklicken)</button>
     </section>
 
     <section class="tem-section">
