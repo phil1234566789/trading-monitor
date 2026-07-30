@@ -10,24 +10,17 @@ import { berlinDayRangeUtcMs } from "./backtestExport.js";
 
 // Sehr auffällige, sonst im Chart ungenutzte Akzentfarbe (Philip: "in einer sehr auffälligen
 // Farbe dargestellt") — bewusst NICHT über chartColors.js konfigurierbar wie die übrigen
-// Indikatoren, das hier ist Ad-hoc-Kommentar-Import, kein dauerhafter Chart-Bestandteil.
+// Indikatoren, das hier ist Ad-hoc-Kommentar-Import, kein dauerhafter Chart-Bestandteil. Nur noch
+// der Fallback, falls eine Annotation kein eigenes "color"-Feld mitbringt (Feature 2026-07-30: die
+// Farbwahl pro Annotation liegt seitdem beim Ersteller/Claude, nicht mehr fest hier verdrahtet).
 const ANNOTATION_COLOR = "#ff2e92";
 const DOT_RADIUS = 4;
 const MARKER_RADIUS = 7;
 
 const VALID_TYPES = new Set(["label", "marker", "line", "hline"]);
+const HEX_COLOR_RE = /^#[0-9a-f]{6}$/i;
 
-// Wirft mit einer für Philip verständlichen deutschen Fehlermeldung, statt eine rohe
-// JSON.parse/TypeError-Meldung durchzureichen — landet 1:1 im Import-UI (Dashboard.vue).
-export function parseAnnotations(jsonText) {
-  let data;
-  try {
-    data = JSON.parse(jsonText);
-  } catch {
-    throw new Error("Ungültiges JSON.");
-  }
-  const list = Array.isArray(data) ? data : data?.annotations;
-  if (!Array.isArray(list)) throw new Error('Erwarte ein Array oder { "annotations": [...] }.');
+function validateAnnotationList(list) {
   list.forEach((a, i) => {
     if (!VALID_TYPES.has(a?.type)) throw new Error(`Annotation ${i}: unbekannter type "${a?.type}".`);
     if (a.type === "line") {
@@ -37,8 +30,46 @@ export function parseAnnotations(jsonText) {
     } else if (typeof a.price !== "number") {
       throw new Error(`Annotation ${i} (${a.type}): price fehlt.`);
     }
+    if (a.color !== undefined && !HEX_COLOR_RE.test(a.color)) {
+      throw new Error(`Annotation ${i}: color muss ein Hex-String sein (z.B. "#e74c3c"), nicht "${a.color}".`);
+    }
   });
-  return list;
+}
+
+// Wirft mit einer für Philip verständlichen deutschen Fehlermeldung, statt eine rohe
+// JSON.parse/TypeError-Meldung durchzureichen — landet 1:1 im Import-UI (ClaudeAnnotationsModal.vue).
+//
+// Rückgabe ist immer eine Liste von Gruppen [{ title, annotations }, ...] — auch fürs alte,
+// flache Format (Chat 2026-07-30: mehrere Zeichnungen sollen aus EINEM Paste als eigene,
+// einzeln aus-/einblendbare Zeichnungen gespeichert werden können, statt wie bisher immer genau
+// eine Zeile pro Klick auf "Zeichnen"). title ist null, wenn keins mitgeliefert wurde (flaches
+// Array oder { "annotations": [...] }) — der Aufrufer (ClaudeAnnotationsModal.vue) setzt dafür
+// einen Default-Titel mit aktuellem Zeitstempel, weil "jetzt" hier drin nicht sinnvoll wäre (der
+// Titel soll den Import-Zeitpunkt zeigen, nicht den Parse-Zeitpunkt innerhalb desselben Ticks).
+export function parseAnnotations(jsonText) {
+  let data;
+  try {
+    data = JSON.parse(jsonText);
+  } catch {
+    throw new Error("Ungültiges JSON.");
+  }
+
+  if (Array.isArray(data?.drawings)) {
+    return data.drawings.map((group, gi) => {
+      if (!Array.isArray(group?.annotations)) {
+        throw new Error(`Zeichnung ${gi}: "annotations" fehlt oder ist kein Array.`);
+      }
+      validateAnnotationList(group.annotations);
+      return { title: group.title ?? null, annotations: group.annotations };
+    });
+  }
+
+  const list = Array.isArray(data) ? data : data?.annotations;
+  if (!Array.isArray(list)) {
+    throw new Error('Erwarte ein Array, { "annotations": [...] } oder { "drawings": [...] }.');
+  }
+  validateAnnotationList(list);
+  return [{ title: null, annotations: list }];
 }
 
 // Optionales Datum im time-Feld (Chat 2026-07-28): eine Box/Konsolidierung, die real schon am
@@ -64,9 +95,9 @@ function resolveTime(candles, dateStr, timeValue) {
   return snapToBarTime(candles, startUtcMs / 1000 + h * 3600 + m * 60);
 }
 
-function drawText(ctx, x, y, text, pixelRatio) {
+function drawText(ctx, x, y, text, pixelRatio, color) {
   ctx.font = `${Math.round(11 * pixelRatio)}px sans-serif`;
-  ctx.fillStyle = ANNOTATION_COLOR;
+  ctx.fillStyle = color;
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
   ctx.fillText(text, x + 10 * pixelRatio, y);
@@ -82,6 +113,9 @@ class AnnotationRenderer {
   draw(target) {
     const { p1, p2 } = this;
     if (p1.x === null || p1.y === null) return;
+    // Fehlt "color" (altes Format ohne Farbfeld), gilt die bisherige Default-Farbe — siehe
+    // Feature-Spec 2026-07-30, bewusste Rückwärtskompatibilität.
+    const color = this._ann.color ?? ANNOTATION_COLOR;
     target.useBitmapCoordinateSpace((scope) => {
       const ctx = scope.context;
       const pr = scope.horizontalPixelRatio;
@@ -92,19 +126,19 @@ class AnnotationRenderer {
       if (p2 && p2.x !== null && p2.y !== null) {
         const x2 = Math.round(p2.x * pr);
         const y2 = Math.round(p2.y * scope.verticalPixelRatio);
-        ctx.strokeStyle = ANNOTATION_COLOR;
+        ctx.strokeStyle = color;
         ctx.lineWidth = 2 * pr;
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
         ctx.stroke();
-        if (this._ann.text) drawText(ctx, (x1 + x2) / 2, (y1 + y2) / 2, this._ann.text, pr);
+        if (this._ann.text) drawText(ctx, (x1 + x2) / 2, (y1 + y2) / 2, this._ann.text, pr, color);
         return;
       }
 
       if (this._ann.type === "marker") {
-        ctx.fillStyle = ANNOTATION_COLOR;
-        ctx.strokeStyle = ANNOTATION_COLOR;
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
         ctx.lineWidth = 2 * pr;
         if (this._ann.style === "arrow") {
           const r = MARKER_RADIUS * pr;
@@ -119,13 +153,13 @@ class AnnotationRenderer {
           ctx.arc(x1, y1, MARKER_RADIUS * pr, 0, Math.PI * 2);
           ctx.stroke();
         }
-        if (this._ann.text) drawText(ctx, x1 + MARKER_RADIUS * pr, y1, this._ann.text, pr);
+        if (this._ann.text) drawText(ctx, x1 + MARKER_RADIUS * pr, y1, this._ann.text, pr, color);
       } else {
-        ctx.fillStyle = ANNOTATION_COLOR;
+        ctx.fillStyle = color;
         ctx.beginPath();
         ctx.arc(x1, y1, DOT_RADIUS * pr, 0, Math.PI * 2);
         ctx.fill();
-        if (this._ann.text) drawText(ctx, x1 + DOT_RADIUS * pr, y1, this._ann.text, pr);
+        if (this._ann.text) drawText(ctx, x1 + DOT_RADIUS * pr, y1, this._ann.text, pr, color);
       }
     });
   }
@@ -204,7 +238,7 @@ export function renderClaudeAnnotations(series, annotations, existingPrimitives,
     if (ann.type === "hline") {
       const priceLine = series.createPriceLine({
         price: ann.price,
-        color: ANNOTATION_COLOR,
+        color: ann.color ?? ANNOTATION_COLOR,
         lineWidth: 2,
         lineStyle: LineStyle.Dashed,
         title: ann.text ?? "",

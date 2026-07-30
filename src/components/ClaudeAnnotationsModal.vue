@@ -17,26 +17,36 @@ import { fmtDateTime } from "../format.js";
 
 const emit = defineEmits(["close"]);
 
-const { instrument, dateStr, drawings, loading, add, remove } = useClaudeAnnotations();
+const { instrument, dateStr, drawings, loading, add, remove, setDrawingVisible } = useClaudeAnnotations();
 
 const text = ref("");
 const error = ref(null);
 const saving = ref(false);
 const removingId = ref(null);
+const togglingId = ref(null);
 
+// parseAnnotations gibt seit 2026-07-30 immer eine Liste von Gruppen zurück (auch fürs alte,
+// flache Format — dann genau eine Gruppe mit title: null). Jede Gruppe wird eine eigene Zeile;
+// title: null (altes Format, kein "drawings"-Objekt) bekommt hier einen Default-Titel mit dem
+// aktuellen Zeitstempel, bewusst EIN gemeinsamer Zeitstempel für den ganzen Paste statt pro Gruppe.
 async function applyText() {
-  let parsed;
+  let groups;
   try {
-    parsed = parseAnnotations(text.value);
+    groups = parseAnnotations(text.value);
   } catch (err) {
     error.value = err.message;
     return;
   }
   error.value = null;
   saving.value = true;
+  const defaultTitle = `Claude-Notizen [${fmtDateTime(Math.floor(Date.now() / 1000))}]`;
   try {
-    const row = await add(parsed);
-    if (row) {
+    let allOk = true;
+    for (const group of groups) {
+      const row = await add(group.annotations, group.title ?? defaultTitle);
+      if (!row) allOk = false;
+    }
+    if (allOk) {
       text.value = ""; // bereit für die nächste Zeichnung aus demselben Chat-Verlauf
     } else {
       error.value = "Speichern fehlgeschlagen — siehe Konsole.";
@@ -54,6 +64,15 @@ async function removeDrawing(id) {
     removingId.value = null;
   }
 }
+
+async function toggleDrawingVisible(d) {
+  togglingId.value = d.id;
+  try {
+    await setDrawingVisible(d.id, !d.visible);
+  } finally {
+    togglingId.value = null;
+  }
+}
 </script>
 
 <template>
@@ -61,7 +80,9 @@ async function removeDrawing(id) {
     <p class="claude-annotations-hint">
       {{ instrument }} — {{ dateStr }}. JSON aus dem Claude-Project-Chat hier einfügen (siehe
       trading/backtest-instructions.md) und "Zeichnen" klicken — jeder Klick fügt eine weitere
-      Zeichnung hinzu, ersetzt keine vorherige.
+      Zeichnung hinzu, ersetzt keine vorherige. Ein Paste mit mehreren
+      <code>{"drawings":[{"title":...,"annotations":[...]},...]}</code>-Gruppen legt jede Gruppe
+      als eigene, einzeln aus-/einblendbare Zeichnung an.
     </p>
     <textarea
       v-model="text"
@@ -82,9 +103,20 @@ async function removeDrawing(id) {
     <p v-if="!loading && drawings.length === 0" class="claude-annotations-hint-inline">Noch keine.</p>
     <ul v-else class="claude-annotations-list">
       <li v-for="d in drawings" :key="d.id" class="claude-annotations-list-item">
-        <span class="claude-annotations-list-meta">
-          {{ fmtDateTime(d.created_at) }} · {{ d.annotations.length }} {{ d.annotations.length === 1 ? "Element" : "Elemente" }}
-        </span>
+        <label class="claude-annotations-list-toggle" :title="d.visible ? 'Zeichnung ausblenden' : 'Zeichnung einblenden'">
+          <input
+            type="checkbox"
+            :checked="d.visible"
+            :disabled="togglingId === d.id"
+            @change="toggleDrawingVisible(d)"
+          />
+          <span class="claude-annotations-list-meta">
+            {{ d.title }}
+            <span class="claude-annotations-list-submeta">
+              · {{ fmtDateTime(d.created_at) }} · {{ d.annotations.length }} {{ d.annotations.length === 1 ? "Element" : "Elemente" }}
+            </span>
+          </span>
+        </label>
         <button
           class="claude-annotations-remove-btn"
           :disabled="removingId === d.id"
@@ -193,8 +225,28 @@ async function removeDrawing(id) {
   font-size: 12px;
 }
 
+.claude-annotations-list-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.claude-annotations-list-toggle input {
+  flex: none;
+  cursor: pointer;
+}
+
 .claude-annotations-list-meta {
   color: #d1d4dc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.claude-annotations-list-submeta {
+  color: #787b86;
 }
 
 .claude-annotations-remove-btn {

@@ -1,7 +1,12 @@
 import { ref, computed, watch } from "vue";
 import { useLocalStorageRef } from "./useLocalStorageRef.js";
 import { berlinDateStrFor } from "../backtestExport.js";
-import { fetchClaudeAnnotations, addClaudeAnnotationDrawing, removeClaudeAnnotationDrawing } from "../claudeAnnotationsStore.js";
+import {
+  fetchClaudeAnnotations,
+  addClaudeAnnotationDrawing,
+  removeClaudeAnnotationDrawing,
+  setClaudeAnnotationDrawingVisible,
+} from "../claudeAnnotationsStore.js";
 
 // Modul-weiter Singleton (wie useStatusBar.js) — geteilt zwischen App.vue (Toggle-Button +
 // Import-Modal, global in der Status-Leiste neben "Backtest-Daten") und Dashboard.vue/
@@ -42,8 +47,11 @@ async function load() {
 watch([instrument, dateStr], load, { immediate: true });
 
 // Jeder Klick auf "Zeichnen" legt eine NEUE Zeile an (fügt hinzu), statt die Liste zu ersetzen.
-async function add(annotationsList) {
-  const row = await addClaudeAnnotationDrawing(instrument.value, dateStr.value, annotationsList);
+// Ein Paste kann mehrere Gruppen enthalten (parseAnnotations gibt seit 2026-07-30 immer eine
+// Liste von Gruppen zurück) — ClaudeAnnotationsModal.vue ruft add() einmal pro Gruppe auf, jede
+// wird eine eigene, einzeln aus-/einblendbare Zeile.
+async function add(annotationsList, title) {
+  const row = await addClaudeAnnotationDrawing(instrument.value, dateStr.value, annotationsList, title);
   if (row) {
     drawings.value.push(row);
     visible.value = true; // frisch gezeichnet -> direkt sichtbar, kein zusätzlicher Klick nötig
@@ -57,10 +65,22 @@ async function remove(id) {
   return ok;
 }
 
+// Pro-Zeichnung-Toggle (Checkbox-Liste in ClaudeAnnotationsModal.vue) — unabhängig vom globalen
+// "visible"-Toggle oben, der alle Zeichnungen auf einmal aus-/einblendet.
+async function setDrawingVisible(id, value) {
+  const ok = await setClaudeAnnotationDrawingVisible(id, value);
+  if (ok) {
+    const row = drawings.value.find((d) => d.id === id);
+    if (row) row.visible = value;
+  }
+  return ok;
+}
+
 // Für PriceChart.vue: alle Zeichnungen des aktuellen Tages zu einer flachen Liste zusammengefasst
-// (die Primitives kennen keine "Zeichnung", nur einzelne Annotationen).
-const flatAnnotations = computed(() => drawings.value.flatMap((d) => d.annotations));
+// (die Primitives kennen keine "Zeichnung", nur einzelne Annotationen) — ausgeblendete Zeichnungen
+// (d.visible === false) werden dabei rausgefiltert, zusätzlich zum globalen Toggle.
+const flatAnnotations = computed(() => drawings.value.filter((d) => d.visible).flatMap((d) => d.annotations));
 
 export function useClaudeAnnotations() {
-  return { instrument, dateStr, drawings, visible, loading, flatAnnotations, load, add, remove };
+  return { instrument, dateStr, drawings, visible, loading, flatAnnotations, load, add, remove, setDrawingVisible };
 }
