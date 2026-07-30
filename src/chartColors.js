@@ -25,9 +25,36 @@ export const DEFAULT_CHART_COLORS = {
   liquidityHigh: { hex: "#00e676", alpha: 0.9 },
   liquidityLow: { hex: "#ff9800", alpha: 0.9 },
   liquiditySweep: { hex: "#ffd700", alpha: 0.9 },
-  obBull: { hex: "#26a69a", alpha: 0.28 },
-  obBear: { hex: "#ef5350", alpha: 0.28 },
-  obInactive: { hex: "#787b86", alpha: 0.15 },
+  // Aufgeteilt in M5/1H/4H (Chat 2026-07-30, Bug-Report Philip: "die ganzen OBs lassen sich
+  // schwierig unterscheiden") — vorher EIN gemeinsamer Satz (obBull/obBear/obInactive) für alle
+  // Timeframes, nur 1H bekam einen fest verdrahteten Dimm-Faktor (DIM_FACTOR_1H in orderBlocks.js,
+  // seitdem entfernt), 4H und M5 sahen identisch aus. Defaults hier bewusst nach Timeframe gestuft
+  // (4H am kräftigsten/wichtigsten, M5 am dezentesten, weil "ganz viele" gleichzeitig sichtbar
+  // sind) — reine Startwerte, frei über Chart-Style änderbar.
+  obBullM5: { hex: "#26a69a", alpha: 0.12 },
+  obBearM5: { hex: "#ef5350", alpha: 0.12 },
+  obInactiveM5: { hex: "#787b86", alpha: 0.07 },
+  obBull1h: { hex: "#26a69a", alpha: 0.18 },
+  obBear1h: { hex: "#ef5350", alpha: 0.18 },
+  obInactive1h: { hex: "#787b86", alpha: 0.1 },
+  obBull4h: { hex: "#26a69a", alpha: 0.3 },
+  obBear4h: { hex: "#ef5350", alpha: 0.3 },
+  obInactive4h: { hex: "#787b86", alpha: 0.16 },
+  // Umrandung jetzt eigenständig statt eines fest verdrahteten Alpha-Verhältnisses zur Füllfarbe
+  // (Chat 2026-07-30, Philip: "diese Boxumrandung stylebar machen") — eigene Hex+Alpha pro Zustand/
+  // Timeframe, Breite bleibt wie bisher am Füll-Key (obBull*/obBear*/obInactive*) in
+  // chartLineWidths.js, da es nur einen Stroke gibt, keinen zweiten unabhängigen Breiten-Regler
+  // braucht. Startwerte = alte Default-Verhältnisse (Border ≈ 2,3-2,5× Füll-Alpha) 1:1 übernommen,
+  // damit sich am Erscheinungsbild zunächst nichts ändert.
+  obBullM5Border: { hex: "#26a69a", alpha: 0.3 },
+  obBearM5Border: { hex: "#ef5350", alpha: 0.3 },
+  obInactiveM5Border: { hex: "#787b86", alpha: 0.16 },
+  obBull1hBorder: { hex: "#26a69a", alpha: 0.45 },
+  obBear1hBorder: { hex: "#ef5350", alpha: 0.45 },
+  obInactive1hBorder: { hex: "#787b86", alpha: 0.23 },
+  obBull4hBorder: { hex: "#26a69a", alpha: 0.75 },
+  obBear4hBorder: { hex: "#ef5350", alpha: 0.75 },
+  obInactive4hBorder: { hex: "#787b86", alpha: 0.37 },
   tradeSetupShort: { hex: "#ffd700", alpha: 0.9 },
   tradeSetupLong: { hex: "#2196f3", alpha: 0.9 },
   tradeSetupProtected: { hex: "#ffffff", alpha: 0.95 },

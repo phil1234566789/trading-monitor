@@ -43,12 +43,44 @@ const GROUPS = [
       { key: "liquiditySweep", label: "Gesweept" },
     ],
   },
+  // Aufgeteilt nach Timeframe (Chat 2026-07-30, Bug-Report Philip: "die ganzen OBs lassen sich
+  // schwierig unterscheiden") — vorher eine gemeinsame Gruppe für alle drei Timeframes, siehe
+  // chartColors.js für die Default-Abstufung (4H kräftigsten, M5 am dezentesten).
+  // Umrandung (Chat 2026-07-30, Philip: "diese Boxumrandung stylebar machen") als eigene Farbe,
+  // nicht mehr fest an die Füllfarbe gekoppelt — kein eigener Breiten-Regler dafür (siehe
+  // Template: v-if="field.key in chartLineWidths"), der Fill-Feld-Regler direkt darüber steuert
+  // bereits die Umrandungs-STRICHBREITE (es gibt nur einen Stroke, siehe orderBlocks.js: zoneOptions).
   {
-    title: "Order-Blocks",
+    title: "Order-Blocks — M5",
     fields: [
-      { key: "obBull", label: "Bullish" },
-      { key: "obBear", label: "Bearish" },
-      { key: "obInactive", label: "Inaktiv" },
+      { key: "obBullM5", label: "Bullish" },
+      { key: "obBearM5", label: "Bearish" },
+      { key: "obInactiveM5", label: "Inaktiv" },
+      { key: "obBullM5Border", label: "Umrandung (Bullish)" },
+      { key: "obBearM5Border", label: "Umrandung (Bearish)" },
+      { key: "obInactiveM5Border", label: "Umrandung (Inaktiv)" },
+    ],
+  },
+  {
+    title: "Order-Blocks — 1H",
+    fields: [
+      { key: "obBull1h", label: "Bullish" },
+      { key: "obBear1h", label: "Bearish" },
+      { key: "obInactive1h", label: "Inaktiv" },
+      { key: "obBull1hBorder", label: "Umrandung (Bullish)" },
+      { key: "obBear1hBorder", label: "Umrandung (Bearish)" },
+      { key: "obInactive1hBorder", label: "Umrandung (Inaktiv)" },
+    ],
+  },
+  {
+    title: "Order-Blocks — 4H",
+    fields: [
+      { key: "obBull4h", label: "Bullish" },
+      { key: "obBear4h", label: "Bearish" },
+      { key: "obInactive4h", label: "Inaktiv" },
+      { key: "obBull4hBorder", label: "Umrandung (Bullish)" },
+      { key: "obBear4hBorder", label: "Umrandung (Bearish)" },
+      { key: "obInactive4hBorder", label: "Umrandung (Inaktiv)" },
     ],
   },
   {

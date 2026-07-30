@@ -11,7 +11,7 @@
 // auf den Extremwert über C1+C2+die Kerze davor (siehe detectOrderBlocks unten) — "zu eng, direkt
 // auf der erstbesten Kerzen-Range".
 import { snapToBarTime } from "./chartTimeUtils.js";
-import { cssColorScaled } from "./chartColors.js";
+import { cssColor, cssColorScaled } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
 import { canShowLabels } from "./chartZoom.js";
 import { PIP_SIZE } from "./pipConfig.js";
@@ -249,27 +249,46 @@ export class OrderBlockPrimitive {
   }
 }
 
-// 1H-Zonen etwas dezenter als 4H, damit beide gleichzeitig im Chart unterscheidbar sind.
-const DIM_FACTOR_1H = 0.6;
-
-// chartColors[obBull/obBear/obInactive].alpha ist die "normale" Fill-Transparenz (Default 0.28
-// bzw. 0.15) — weak/Border skalieren proportional dazu (Original-Design-Verhältnis), damit EIN
-// Transparenz-Regler pro Farbe reicht statt vier separate (siehe chartColors.js: cssColorScaled).
+// chartColors[obBull*/obBear*/obInactive*].alpha ist die "normale" Fill-Transparenz — "weak"
+// (kleine FVG) skaliert proportional dazu (Original-Design-Verhältnis), damit EIN Transparenz-
+// Regler pro Farbe reicht statt zwei separate (siehe chartColors.js: cssColorScaled). Gilt für alle
+// drei Timeframes gleichermaßen, nur die Basis-Alpha selbst unterscheidet sich (siehe
+// DEFAULT_CHART_COLORS). Die Umrandung hat seit Chat 2026-07-30 ("diese Boxumrandung stylebar
+// machen") eine EIGENE, unabhängige Farbe/Alpha (obBull*Border/obBear*Border/obInactive*Border),
+// kein Verhältnis zur Füllfarbe mehr — daher hier kein "weak"-Sonderfall für die Umrandung.
 const WEAK_FILL_RATIO = 0.1 / 0.28;
-const BULL_BEAR_BORDER_RATIO = 0.7 / 0.28;
-const INACTIVE_BORDER_RATIO = 0.35 / 0.15;
+
+// M5/1H/4H haben seit Chat 2026-07-30 eigene Farb-/Breiten-Keys (Bug-Report Philip: "die ganzen OBs
+// lassen sich schwierig unterscheiden") statt EINES gemeinsamen Satzes mit fest verdrahtetem
+// 1H-Dimm-Faktor — z.timeframe ist immer "1H"/"4H"/"5M" (siehe PriceChart.vue: collectObsZones).
+// Explizite Literale statt String-Konkatenation ("obBull" + suffix) — chartColors.test.js scannt
+// den Quelltext nach genau diesen Key-Strings, eine dynamisch zusammengesetzte "obBullM5" käme im
+// Scan nie als Literal vor und der Test würde den Key fälschlich als verwaist melden.
+const OB_ZONE_KEYS = {
+  "1H": {
+    bull: "obBull1h", bear: "obBear1h", inactive: "obInactive1h",
+    bullBorder: "obBull1hBorder", bearBorder: "obBear1hBorder", inactiveBorder: "obInactive1hBorder",
+  },
+  "4H": {
+    bull: "obBull4h", bear: "obBear4h", inactive: "obInactive4h",
+    bullBorder: "obBull4hBorder", bearBorder: "obBear4hBorder", inactiveBorder: "obInactive4hBorder",
+  },
+  "5M": {
+    bull: "obBullM5", bear: "obBearM5", inactive: "obInactiveM5",
+    bullBorder: "obBullM5Border", bearBorder: "obBearM5Border", inactiveBorder: "obInactiveM5Border",
+  },
+};
 
 function zoneOptions(z) {
   const inactive = z.touched || z.invalidated;
-  const dim = z.timeframe === "1H";
-  const key = inactive ? "obInactive" : z.dir === 1 ? "obBull" : "obBear";
+  const keys = OB_ZONE_KEYS[z.timeframe] ?? OB_ZONE_KEYS["1H"];
+  const key = inactive ? keys.inactive : z.dir === 1 ? keys.bull : keys.bear;
+  const borderKey = inactive ? keys.inactiveBorder : z.dir === 1 ? keys.bullBorder : keys.bearBorder;
   const fillRatio = !inactive && z.weak ? WEAK_FILL_RATIO : 1;
-  const borderRatio = inactive ? INACTIVE_BORDER_RATIO : BULL_BEAR_BORDER_RATIO;
-  const dimFactor = dim ? DIM_FACTOR_1H : 1;
   const label = z.timeframe ?? "";
   return {
-    fillColor: cssColorScaled(key, fillRatio * dimFactor),
-    borderColor: cssColorScaled(key, borderRatio * dimFactor),
+    fillColor: cssColorScaled(key, fillRatio),
+    borderColor: cssColor(borderKey),
     borderWidth: lineWidth(key),
     textColor: "rgba(209, 212, 220, 0.9)",
     label,

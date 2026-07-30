@@ -23,9 +23,15 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   liquidityHigh: 1,
   liquidityLow: 1,
   liquiditySweep: 1,
-  obBull: 1,
-  obBear: 1,
-  obInactive: 1,
+  obBullM5: 1,
+  obBearM5: 1,
+  obInactiveM5: 1,
+  obBull1h: 1,
+  obBear1h: 1,
+  obInactive1h: 1,
+  obBull4h: 1,
+  obBear4h: 1,
+  obInactive4h: 1,
   tradeSetupShort: 2, // LS-Linie + Order-Block-Rand, wenn Short (siehe PriceChart.vue: key=tradeSetupShort/-Long, dieselbe Farbe für beides)
   tradeSetupLong: 2,
   tradeSetupProtected: 2, // Fractal-Linie im Trade-Setup.
