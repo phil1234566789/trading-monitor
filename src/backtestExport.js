@@ -1,20 +1,23 @@
 // Rohdaten-Export fürs Forex-Backtesting (siehe trading/chart-daten.md) — liefert M5-
 // Kerzen für einen kompletten Berlin-Kalendertag, aufbereitet für Copy/Paste in den Claude-
-// Project-Chat. Bewusst NUR Rohdaten, keine vorberechneten OB-Zonen/Trade-Setups — die Setup-
-// Erkennung soll laut Plan im Claude Project anhand der Strategie-Dokumente passieren, nicht hier
-// dupliziert werden. LQ-Levels (liquidityLevels unten) sind die EINE Ausnahme (Chat 2026-07-30,
-// Philip: "ich meinte wirklich dasselbe was ich unter dem Indikator > Liquidität sehe: dort sind
-// bereits relevante Sweeps oder ungetouchte Pivots drinne. Genau das braucht der claude") — exakt
-// dieselbe filterRelevantLevels(..., onlyRelevant=true)-Auswahl wie der Live-Chart-Indikator, für
-// 1H UND M5 ("nimm ruhig dasselbe Objekt, der Liquidität Algo hat ja bereits die ganze Arbeit
-// getan"), NICHT an den gerade im Dashboard gewählten Chart-Timeframe gekoppelt. Nicht redundant zu
-// structure1h: dort stecken nur BEREITS gesweepte H1-Struktur-Pivots (touched-Seite, siehe
-// collectH1LqLevels in marketStructureAnalysis.ts) — eine andere Erkennung (Range-Pivots, nicht
-// Williams-Fractal) mit anderem Zweck (LS-Kandidaten für Trade-Setups).
+// Project-Chat. Bewusst NUR Rohdaten, keine vorberechnete Trade-Setup-Erkennung — die soll laut
+// Plan im Claude Project anhand der Strategie-Dokumente passieren, nicht hier dupliziert werden.
+// LQ-Levels UND Order-Blocks (liquidityLevels/orderBlocks unten) sind die Ausnahme (Chat
+// 2026-07-30, Philip: "ich meinte wirklich dasselbe was ich unter dem Indikator > Liquidität sehe:
+// dort sind bereits relevante Sweeps oder ungetouchte Pivots drinne. Genau das braucht der claude"
+// bzw. später "1h und 4h OBs sind jetzt bereits ganz gut gefiltert ... die kannst du bitte direkt
+// zu den exportierten Backtest-Daten mit dazupacken. M5 OBs braucht claude erst mal nicht") — exakt
+// dieselbe Live-Chart-Filterung (filterRelevantLevels bzw. !invalidated && !touched), NICHT an den
+// gerade im Dashboard gewählten Chart-Timeframe gekoppelt. Nicht redundant zu structure1h: dort
+// stecken nur BEREITS gesweepte H1-Struktur-Pivots (touched-Seite, siehe collectH1LqLevels in
+// marketStructureAnalysis.ts) — eine andere Erkennung (Range-Pivots, nicht Williams-Fractal/FVG)
+// mit anderem Zweck (LS-Kandidaten für Trade-Setups).
 import { fetchInitialCandles } from "./forexCandles.js";
 import { fmtDateTime } from "./format.js";
 import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructureState } from "./marketStructureAnalysis";
 import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "./liquidity.js";
+import { detectOrderBlocks } from "./orderBlocks.js";
+import { sessions, sessionOccurrences } from "./sessions.js";
 import { barSecondsFor } from "./timeframes.js";
 import { PIP_SIZE } from "./pipConfig.js";
 
@@ -51,15 +54,21 @@ const STRUCTURE_LOOKBACK_HOURS = 7 * 24;
 // gemeinsam), hier etwas großzügiger, da EIN Fetch beide Perioden bedient.
 const STRUCTURE_CANDLE_BUFFER_HOURS = 40;
 
-// LQ-Levels (liquidity.js, Williams-Fractal) — gleicher Lookback wie die Structure-Analyse oben
-// (7 Tage), aus demselben Grund: ein Level, das schon Wochen unberührt ist, ist oft gerade DESHALB
-// relevant (starke, alte Liquidität), ein zu kurzes Fenster würde genau die interessanten Fälle
-// abschneiden. Immer 1H UND M5 (siehe Datei-Kopfkommentar), nicht an den gerade im Dashboard
-// gewählten Chart-Timeframe gekoppelt — count wird aus Lookback-Stunden + Puffer in Kerzen
-// UMGERECHNET (barSecondsFor), weil "7 Tage" bei M5 eine ganz andere Kerzenzahl ergibt als bei 1H.
-const LIQUIDITY_LOOKBACK_HOURS = 7 * 24;
-const LIQUIDITY_CANDLE_BUFFER = 20; // Bestätigungspuffer, wie RANGES_CANDLE_BUFFER in PriceChart.vue
+// LQ-Levels (liquidity.js) UND Order-Blocks (orderBlocks.js) — gleicher Lookback wie die
+// Structure-Analyse oben (7 Tage), aus demselben Grund: ein Level/eine Zone, die schon Wochen
+// unberührt ist, ist oft gerade DESHALB relevant (starke, alte Liquidität/FVG), ein zu kurzes
+// Fenster würde genau die interessanten Fälle abschneiden. Immer feste Timeframes (siehe
+// LIQUIDITY_EXPORT_TIMEFRAMES/OB_EXPORT_TIMEFRAMES), nicht an den gerade im Dashboard gewählten
+// Chart-Timeframe gekoppelt — count wird aus Lookback-Stunden + Puffer in Kerzen UMGERECHNET
+// (barSecondsFor), weil "7 Tage" bei M5 eine ganz andere Kerzenzahl ergibt als bei 1H/4H.
+const EXPORT_LOOKBACK_HOURS = 7 * 24;
+const EXPORT_CANDLE_BUFFER = 20; // Bestätigungspuffer, wie RANGES_CANDLE_BUFFER in PriceChart.vue
 const LIQUIDITY_EXPORT_TIMEFRAMES = ["1h", "5m"];
+// Nur 1H+4H (Chat 2026-07-30, Philip: "1h und 4h OBs sind jetzt bereits ganz gut gefiltert ...
+// M5 OBs braucht claude erst mal nicht") — M5 erzeugt bei Forex "ganz viele" Zonen (siehe
+// Bug-Report zum "Indikatoren > OBs"-Feature am selben Tag), für den Claude-Project-Chat aktuell
+// nicht gewünscht.
+const OB_EXPORT_TIMEFRAMES = ["1h", "4h"];
 
 const TIME_FORMATTER = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Berlin" });
 // "longOffset" liefert z.B. "GMT+2" — DST-aware statt fixem Offset, siehe CLAUDE.md
@@ -142,17 +151,65 @@ function formatDatedTime(unixSec) {
   return `${berlinDateStrFor(unixSec)} ${TIME_FORMATTER.format(new Date(unixSec * 1000))}`;
 }
 
+// Sitzungs-Kontext fürs LQ-Level (Chat 2026-07-30, Philip: "wenn ne Session 'high/low
+// entscheidend' true hat, dann & das LQ-Level gehört zur Session ... context: 'asia high'") — nur
+// Sessions mit highLowRelevant (SessionsModal.vue), deren TATSÄCHLICHES Zeitfenster (DST-aware,
+// dieselbe sessionOccurrences-Funktion wie der Live-Chart-Indikator) den Pivot-Zeitpunkt enthält.
+// Erste passende Session gewinnt — mehrere überlappende highLowRelevant-Sessions desselben
+// Instruments wären ein Konfigurationsfall, den Philip im Sessions-Modal selbst vermeiden müsste,
+// keine eigene Prioritäts-Logik hier nötig. "sessions" ist der reaktive Modul-Singleton aus
+// sessions.js (schon vom App-Start her geladen, sobald Philip den Backtest-Export überhaupt öffnen
+// kann) — kein eigener Fetch.
+function buildSessionContextLookup(asset, rangeStartSec, rangeEndSec) {
+  return sessions
+    .filter((s) => s.instrument === asset && s.highLowRelevant)
+    .map((session) => ({
+      label: session.label || "",
+      occurrences: sessionOccurrences(
+        session.fromMinutes,
+        session.toMinutes,
+        rangeStartSec,
+        rangeEndSec,
+        (utcSec) => berlinOffsetMinutes(utcSec * 1000),
+        session.days,
+      ),
+    }));
+}
+
+// "asia high"/"asia low" (Philips Beispiel) — Label klein geschrieben + high/low je nach
+// Level-Richtung, kein separates Text-Template pro Session nötig. Philip: "selbst wenn noch mehr
+// zum context dazukommt, reicht es einfach mehr Text dazuzuschreiben" — bewusst ein einzelner
+// freier String, keine strukturierte {session, kind}-Aufteilung.
+function contextForPivot(pivotTime, dir, sessionContextLookup) {
+  const direction = dir === 1 ? "high" : "low";
+  for (const { label, occurrences } of sessionContextLookup) {
+    if (occurrences.some((o) => pivotTime >= o.startSec && pivotTime < o.endSec)) {
+      return `${label.toLowerCase()} ${direction}`.trim();
+    }
+  }
+  return null;
+}
+
 // touched:false (noch aktiv) ODER touched:true (einer der RECENT_SWEEP_COUNT zuletzt gesweepten,
 // siehe filterRelevantLevels in liquidity.js) — deshalb touchedAt nur bei den touched-Einträgen,
-// sonst wäre es ohnehin null.
-function formatLiquidityLevel(lvl) {
+// sonst wäre es ohnehin null. context ebenso nur, wenn eine passende Session gefunden wurde.
+function formatLiquidityLevel(lvl, sessionContextLookup) {
+  const context = contextForPivot(lvl.pivotTime, lvl.dir, sessionContextLookup);
   return {
     direction: lvl.dir === 1 ? "high" : "low",
     price: lvl.price,
     time: formatDatedTime(lvl.pivotTime),
     touched: lvl.touched,
     ...(lvl.touched ? { touchedAt: formatDatedTime(lvl.touchedTime) } : {}),
+    ...(context ? { context } : {}),
   };
+}
+
+async function fetchExportCandles(asset, bar, currentTimeSec) {
+  const barSeconds = barSecondsFor(bar);
+  const count = Math.ceil((EXPORT_LOOKBACK_HOURS * 3600) / barSeconds) + EXPORT_CANDLE_BUFFER;
+  const raw = await fetchInitialCandles(asset, bar, count, currentTimeSec * 1000);
+  return raw.filter((c) => c.time <= currentTimeSec);
 }
 
 // EXAKT dieselbe Auswahl wie der Live-Chart-"Liquidität"-Indikator im Normalmodus (showSweptLiquidity
@@ -160,25 +217,52 @@ function formatLiquidityLevel(lvl) {
 // true) behält die noch unberührten Level PLUS die RECENT_SWEEP_COUNT zuletzt gesweepten — "relevante
 // Sweeps oder ungetouchte Pivots", wie Philip es nennt. Bewusst dieselbe Funktion wiederverwendet
 // ("der Liquidität Algo hat ja bereits die ganze Arbeit getan"), keine eigene Neu-Filterung.
-async function computeLiquidityLevelsForExport(asset, bar, currentTimeSec) {
-  const barSeconds = barSecondsFor(bar);
-  const count = Math.ceil((LIQUIDITY_LOOKBACK_HOURS * 3600) / barSeconds) + LIQUIDITY_CANDLE_BUFFER;
-  const raw = await fetchInitialCandles(asset, bar, count, currentTimeSec * 1000);
-  const candles = raw.filter((c) => c.time <= currentTimeSec);
+function computeLiquidityLevelsForExport(candles, asset) {
   const { highs, lows } = detectLiquidityLevels(candles, LIQUIDITY_FRACTAL_PERIOD);
+  const rangeStartSec = candles.length > 0 ? candles[0].time : 0;
+  const rangeEndSec = candles.length > 0 ? candles[candles.length - 1].time + 1 : 0;
+  const sessionContextLookup = buildSessionContextLookup(asset, rangeStartSec, rangeEndSec);
   return {
-    highs: filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true).map(formatLiquidityLevel),
-    lows: filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true).map(formatLiquidityLevel),
+    highs: filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true).map((lvl) => formatLiquidityLevel(lvl, sessionContextLookup)),
+    lows: filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true).map((lvl) => formatLiquidityLevel(lvl, sessionContextLookup)),
   };
 }
 
-// Läuft 1H+M5 parallel (Promise.all) statt nacheinander — zwei unabhängige Fetches, kein Grund,
-// auf den ersten zu warten, bevor der zweite losläuft.
-async function computeLiquidityLevelsAllTimeframes(asset, currentTimeSec) {
-  const perTimeframe = await Promise.all(
-    LIQUIDITY_EXPORT_TIMEFRAMES.map((bar) => computeLiquidityLevelsForExport(asset, bar, currentTimeSec)),
+function formatObZone(z) {
+  return {
+    direction: z.dir === 1 ? "bull" : "bear",
+    top: z.top,
+    bottom: z.bottom,
+    weak: z.weak,
+    time: formatDatedTime(z.startTime),
+  };
+}
+
+// EXAKT dieselbe Live-Chart-Filterung wie "Indikatoren > OBs" im Normalmodus (showHistoricalObs
+// aus, siehe filterHistorical/collectObsZones in PriceChart.vue): nur nicht invalidierte UND noch
+// nicht angetestete Zonen — Philip: "1h und 4h OBs sind jetzt bereits ganz gut gefiltert", keine
+// zusätzliche künstliche Deckelung nötig (anders als bei LQ-Leveln gibt es hier keine
+// filterRelevantLevels-Entsprechung mit fester Obergrenze).
+function computeObZonesForExport(candles, bar) {
+  return detectOrderBlocks(candles, bar.toUpperCase(), true)
+    .filter((z) => !z.invalidated && !z.touched)
+    .map(formatObZone);
+}
+
+// Holt jeden gebrauchten Timeframe genau EINMAL (1H wird sowohl für LQ-Level als auch für
+// Order-Blocks gebraucht, siehe LIQUIDITY_EXPORT_TIMEFRAMES/OB_EXPORT_TIMEFRAMES) und parallel
+// (Promise.all) statt nacheinander — unabhängige Fetches, kein Grund, auf den einen zu warten,
+// bevor der nächste losläuft.
+async function computeExportTimeframeData(asset, currentTimeSec) {
+  const bars = [...new Set([...LIQUIDITY_EXPORT_TIMEFRAMES, ...OB_EXPORT_TIMEFRAMES])];
+  const perBar = await Promise.all(bars.map((bar) => fetchExportCandles(asset, bar, currentTimeSec)));
+  const candlesByBar = Object.fromEntries(bars.map((bar, i) => [bar, perBar[i]]));
+
+  const liquidityLevels = Object.fromEntries(
+    LIQUIDITY_EXPORT_TIMEFRAMES.map((bar) => [bar, computeLiquidityLevelsForExport(candlesByBar[bar], asset)]),
   );
-  return Object.fromEntries(LIQUIDITY_EXPORT_TIMEFRAMES.map((bar, i) => [bar, perTimeframe[i]]));
+  const orderBlocks = Object.fromEntries(OB_EXPORT_TIMEFRAMES.map((bar) => [bar, computeObZonesForExport(candlesByBar[bar], bar)]));
+  return { liquidityLevels, orderBlocks };
 }
 
 function rangeStats(rawCandles) {
@@ -214,7 +298,7 @@ export async function buildBacktestExport({ asset, dateStr, replayUntilSec = nul
   // drücke juckt nicht wirklich, entscheidend ist was die aktuelle Zeit des Snapshots ist".
   const currentTimeSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
   const structure1h = await compute1hStructureState(asset, currentTimeSec, structureConfig);
-  const liquidityLevels = await computeLiquidityLevelsAllTimeframes(asset, currentTimeSec);
+  const { liquidityLevels, orderBlocks } = await computeExportTimeframeData(asset, currentTimeSec);
 
   return {
     asset,
@@ -227,6 +311,7 @@ export async function buildBacktestExport({ asset, dateStr, replayUntilSec = nul
     replay: replayUntilSec == null ? { active: false } : { active: true, until: replayUntilSec, untilAt: fmtDateTime(replayUntilSec) },
     structure1h,
     liquidityLevels,
+    orderBlocks,
     asiaSession: {
       ...rangeStats(asiaCandlesRaw),
       candles: asiaCandlesRaw.map(formatCandle),
