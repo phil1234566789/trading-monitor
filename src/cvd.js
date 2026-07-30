@@ -8,6 +8,10 @@
 const BINANCE_FUTURES_BASE_URL = "https://fapi.binance.com";
 const BINANCE_SYMBOL = "BTCUSDT";
 export const BINANCE_PAGE_SIZE = 1000;
+// Bug-Report Philip 2026-07-30: siehe FETCH_TIMEOUT_MS-Kommentar in PriceChart.vue — dieser Fetch
+// lief bisher ohne Timeout und konnte den parallelen Scroll-Back-Promise.all() für immer hängen
+// lassen (loadingOlder bleibt dann dauerhaft true), analog zum OKX-Fetch dort.
+const FETCH_TIMEOUT_MS = 20_000;
 
 const INTERVAL_MAP = { "1m": "1m", "3m": "3m", "5m": "5m", "15m": "15m", "1h": "1h", "4h": "4h", "1D": "1d" };
 
@@ -27,7 +31,9 @@ async function fetchDeltaPage(interval, { startTime, endTime, limit } = {}) {
   const params = new URLSearchParams({ symbol: BINANCE_SYMBOL, interval, limit: String(limit) });
   if (startTime) params.set("startTime", String(startTime));
   if (endTime) params.set("endTime", String(endTime));
-  const res = await fetch(`${BINANCE_FUTURES_BASE_URL}/fapi/v1/klines?${params}`);
+  const res = await fetch(`${BINANCE_FUTURES_BASE_URL}/fapi/v1/klines?${params}`, {
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const rows = await res.json();
   return rows.map(rowToDelta);

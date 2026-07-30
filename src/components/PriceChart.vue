@@ -155,6 +155,16 @@ const isForex = props.symbol !== "BTC-USDT";
 
 const OKX_BASE_URL = "https://www.okx.com";
 const INST_ID = "BTC-USDT";
+// Bug-Report Philip 2026-07-30: Scroll-Back im BTC-M5-Chart blieb nach einem Nachladen für den
+// Rest der Session hängen, ohne Fehler/weiteren Request. Ursache: fetchCandlePage() (hier) UND
+// cvd.js' Binance-Fetch liefen beide OHNE Timeout — anders als forexCandles.js (siehe dort:
+// AbortSignal.timeout), das jeden Fetch schon immer so absichert. Hängt einer der beiden parallel
+// per Promise.all() laufenden Scroll-Back-Fetches (siehe subscribeVisibleLogicalRangeChange unten)
+// auf unbestimmte Zeit (Netzwerk-Stall, kein Fehler, keine Antwort), erreicht der Code nie
+// `finally` -> `loadingOlder` bleibt für immer true, jeder weitere Scroll-Versuch wird schon in der
+// ersten Guard-Zeile stillschweigend abgewiesen. Ein harter Timeout macht ein Hängenbleiben
+// stattdessen zu einem normalen, gefangenen Fehler.
+const FETCH_TIMEOUT_MS = 20_000;
 const POLL_MS = 12_000; // nur noch für die BTC-CVD-Gauges (windowGaugeTimer/dailyGaugeTimer) — die
 // Haupt-Kerzen pollen seit Chat 2026-07-20 nicht mehr fest im 12s-Takt, siehe scheduleNextPoll.
 const RECENT_PAGE_SIZE = 300; // OKX max per call on /market/candles
@@ -171,6 +181,12 @@ const RECENT_PAGE_SIZE_FOREX = 10;
 // ankommt (siehe scheduleNextPoll) — lieber knapp nach dem Schluss pollen als knapp davor.
 const CLOSE_POLL_BUFFER_MS = 2_000;
 const HISTORY_PAGE_SIZE = 100; // OKX max per call on /market/history-candles
+// jumpToTrade(): Puffer NACH dem Trade-Exit für den ersten Anker-Fetch (siehe dort) — genug, damit
+// auch ein Trade ohne Exit (noch offen) plus etwas "Nachher"-Kontext in die erste Seite passt.
+const JUMP_TARGET_BUFFER_BARS = 20;
+// jumpToTrade(): harte Obergrenze an Nachlade-Seiten für einen einzelnen Sprung, nur als Notbremse
+// für einen ungewöhnlich lang laufenden Trade (Entry Wochen vor Exit) — kein Regelfall.
+const MAX_JUMP_FETCH_PAGES = 5;
 const INITIAL_CANDLE_COUNT = 1000; // depth loaded on startup / timeframe switch
 // Wunsch Philip 2026-07-20: "ich werd bei Replay öfter auf +1 klicken, fetch doch gleich die
 // nächsten Kerzen" — an alle Replay-Fetches (fetchCandlesCached lookaheadSec-Parameter)
@@ -525,7 +541,7 @@ function positionGauges() {
 async function fetchCandlePage(endpoint, bar, { after, limit } = {}) {
   const params = new URLSearchParams({ instId: INST_ID, bar, limit: String(limit) });
   if (after) params.set("after", after);
-  const res = await fetch(`${OKX_BASE_URL}${endpoint}?${params}`);
+  const res = await fetch(`${OKX_BASE_URL}${endpoint}?${params}`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const json = await res.json();
   if (json.code !== "0") throw new Error(`OKX error ${json.code}: ${json.msg}`);
@@ -556,11 +572,21 @@ async function fetchInitialCandles(bar, count, toMs) {
 }
 
 // Für Scroll-Back über das recent-Fenster hinaus: /market/history-candles.
+// Bug-Report Philip 2026-07-30 ("Scroll-Back bleibt hängen"): die eigentliche Ursache war ein
+// fehlender Timeout auf diesem Fetch, siehe FETCH_TIMEOUT_MS oben. Der Retry hier ist eine
+// ZUSÄTZLICHE, kleinere Absicherung: ein leeres data:[] von OKX wurde bisher 1:1 als "Anfang der
+// Historie erreicht" gewertet (siehe reachedHistoryStart im visibleLogicalRangeChange-Handler) —
+// EINMAL leer sollte das nicht permanent bedeuten (BTC-USDT hat nachweislich noch Jahre an Historie
+// vor jedem realistischen Scroll-Back-Punkt), ein zweiter Versuch nach kurzer Pause unterscheidet
+// einen echten Erreichen-des-Datenanfangs von einem einzelnen Aussetzer, kostet im Normalfall
+// (Daten vorhanden) keinen zusätzlichen Request.
 async function fetchOlderCandles(bar, oldestLoadedTime) {
-  const page = await fetchCandlePage("/api/v5/market/history-candles", bar, {
-    after: String(oldestLoadedTime * 1000),
-    limit: HISTORY_PAGE_SIZE,
-  });
+  const params = { after: String(oldestLoadedTime * 1000), limit: HISTORY_PAGE_SIZE };
+  let page = await fetchCandlePage("/api/v5/market/history-candles", bar, params);
+  if (page.length === 0) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    page = await fetchCandlePage("/api/v5/market/history-candles", bar, params);
+  }
   return page.filter((c) => c.time < oldestLoadedTime).reverse(); // älteste zuerst
 }
 
@@ -578,6 +604,25 @@ function mergeRecent(existing, freshRecent) {
 // replayUntil braucht keinen Refetch, nur ein erneutes refreshChart().
 function clipReplay(rows) {
   return props.replayUntil == null ? rows : rows.filter((r) => r.time <= props.replayUntil);
+}
+
+// Für jumpToTrade(): reicht NICHT, nur "time < candles[0].time" zu prüfen (Bug-Report Philip
+// 2026-07-30, dritte Runde) — ein gezielter Sprung dort kann bewusst eine LÜCKE mitten im Array
+// hinterlassen (siehe Kommentar in jumpToTrade), ein späterer Sprung auf einen Zeitpunkt GENAU IN
+// dieser Lücke sähe mit der reinen Array-Anfang-Prüfung fälschlich wie "schon geladen" aus —
+// snapToBarTime würde dann nur die letzte Kerze VOR der Lücke treffen (genau das beobachtete
+// "Kerzen bis 14.07. 20:05, X-Achse springt dann auf 23.07."). Prüft stattdessen, ob die NÄCHSTE
+// Kerze bei/vor `time` höchstens eine Kerzenbreite entfernt liegt.
+function isTimeCovered(candles, time, barSeconds) {
+  if (candles.length === 0 || time < candles[0].time || time > candles[candles.length - 1].time) return false;
+  let lo = 0;
+  let hi = candles.length - 1;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (candles[mid].time <= time) lo = mid;
+    else hi = mid - 1;
+  }
+  return time - candles[lo].time <= barSeconds * 1.5;
 }
 
 // Gegenstück zu clipReplay für die FETCH-Seite: ein fester count/Lookback endet sonst immer bei
@@ -2035,8 +2080,49 @@ defineExpose({
   // hatte (Bug-Report Philip 2026-07-27: "muss immer ein ganzes Stück rauszoomen, Candles zu
   // riesig"). Nur wenn die aktuelle Zoomweite den Trade selbst (Entry bis Exit) nicht einmal
   // abdecken würde, wird sie für diesen einen Sprung testweise erweitert.
-  jumpToTrade(entryTime, exitTime) {
+  // Bug-Report Philip 2026-07-30: wiederholtes Klicken auf einen alten Trade (16 Tage zurück) feuerte
+  // bei jedem Klick genau EINEN weiteren history-candles-Request mit noch früherem "after", kam aber
+  // nie tatsächlich an — diese Funktion sprang bisher einmalig per setVisibleLogicalRange auf den
+  // aktuellen Datenrand (snapToBarTime klemmt ein zu altes entryTime auf candles[0].time, siehe
+  // chartTimeUtils.js) und überließ das eigentliche Nachladen dem beiläufigen Seiteneffekt des
+  // Scroll-Handlers oben — der lädt pro Aufruf aber nur EINE Seite (~8h bei M5), bei 16 Tagen wären
+  // das Dutzende Klicks gewesen. Jetzt wird VOR dem Sprung so lange nachgeladen (derselbe
+  // loadingOlder-Zustand wie der Scroll-Handler, damit sich beide nicht überschneiden), bis
+  // entryTime abgedeckt ist oder wirklich der Anfang der Historie erreicht ist.
+  async jumpToTrade(entryTime, exitTime) {
     if (!chart) return;
+    // Bug-Report Philip 2026-07-30, zweite Runde: die erste Version hier lud Seite für Seite RÜCKWÄRTS
+    // ab dem aktuellen Datenanfang, bis entryTime erreicht war — bei einem 16 Tage alten Trade schon
+    // spürbar langsam, bei einem echt alten Trade (Philip: "2022 Trade der Supergau") wären das
+    // hunderte sequentielle Requests gewesen. Stattdessen jetzt ein GEZIELTER Fetch direkt um den
+    // Trade herum (Anker kurz nach dem Exit, siehe JUMP_TARGET_BUFFER_BARS), unabhängig davon, wie
+    // weit der Trade zurückliegt — das Ergebnis wird vorne an allCandles gehängt, MIT einer
+    // bewussten Lücke zum bisherigen Datenanfang dazwischen (gleiches Prinzip wie mergeCandles in
+    // candleCache.js: eine Lücke in der Mitte ist unkritisch, lightweight-charts braucht nur
+    // strikt aufsteigende Zeiten, keine Lückenlosigkeit). MAX_JUMP_FETCH_PAGES ist nur eine
+    // Notbremse für ungewöhnlich lange Trades (Entry Wochen vor Exit), keine Regelgröße.
+    const barSeconds = barSecondsFor(props.currentBar);
+    if (!loadingOlder && !isTimeCovered(allCandles, entryTime, barSeconds)) {
+      loadingOlder = true;
+      try {
+        let anchor = (exitTime ?? entryTime) + JUMP_TARGET_BUFFER_BARS * barSeconds;
+        let pages = 0;
+        while (pages < MAX_JUMP_FETCH_PAGES && !isTimeCovered(allCandles, entryTime, barSeconds)) {
+          const older = isForex
+            ? await fetchOlderForexCandles(props.symbol, props.currentBar, anchor, HISTORY_PAGE_SIZE)
+            : await fetchOlderCandles(okxBarFor(props.currentBar), anchor);
+          if (older.length === 0) break;
+          allCandles = older.concat(allCandles);
+          anchor = allCandles[0].time;
+          pages++;
+        }
+        refreshChart();
+      } catch (err) {
+        console.error("Kerzen für Trade-Sprung laden fehlgeschlagen:", err);
+      } finally {
+        loadingOlder = false;
+      }
+    }
     const candles = clipReplay(allCandles);
     if (candles.length === 0) return;
     const from = snapToBarTime(candles, entryTime) ?? entryTime;
