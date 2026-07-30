@@ -9,5 +9,6 @@ export const router = createRouter({
     { path: "/protokoll", name: "protokoll", component: () => import("./views/Protokoll.vue") },
     { path: "/alarme", name: "alarme", component: () => import("./views/Alarme.vue") },
     { path: "/handelszeiten", name: "handelszeiten", component: () => import("./views/Handelszeiten.vue") },
+    { path: "/konten", name: "konten", component: () => import("./views/Konten.vue") },
   ],
 });

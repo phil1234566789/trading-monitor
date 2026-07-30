@@ -74,7 +74,11 @@ export async function fetchTradeSetupForCockpit(tradeSetupId) {
 // ... es gibt ein setupEntry, aber kein entryPrice") — outcome bleibt dann null (weder offen noch
 // gewonnen/verloren, siehe signals.outcome-Check: NULL ist erlaubt), erst mit echtem entryPrice
 // wird der Trade als 'open' geführt.
-export async function createTradeFromSetup({ instrument, setup, entryPrice = null, stopLoss = null, reasoning = null }) {
+// tradingAccountId (Chat 2026-07-30): das im Trades-Panel gerade ausgewählte Konto — ein neu
+// übernommener Trade landet direkt in dessen Konto, statt erst nachträglich im Bearbeiten-Modal
+// zugeordnet werden zu müssen. Bewusst optional (default null), damit ein Aufruf ohne Konten-
+// Kontext (z.B. vor dem ersten fetchAccounts()) nicht hart fehlschlägt.
+export async function createTradeFromSetup({ instrument, setup, entryPrice = null, stopLoss = null, reasoning = null, tradingAccountId = null }) {
   const direction = directionForSetup(setup);
   const { setupEntry, invalidation } = deriveSetupEntryInvalidation(setup);
   const tradeSetupId = await findMatchingTradeSetupId(instrument, direction, setup.fractal.pivotTime);
@@ -93,6 +97,7 @@ export async function createTradeFromSetup({ instrument, setup, entryPrice = nul
       outcome: entryPrice != null ? "open" : null,
       reasoning,
       trade_setup_id: tradeSetupId,
+      trading_account_id: tradingAccountId,
     })
     .select()
     .single();
@@ -170,6 +175,7 @@ export async function updateTrade(signalId, fields) {
   if ("exitTime" in fields) payload.exit_time = fields.exitTime != null ? new Date(fields.exitTime * 1000).toISOString() : null;
   if ("outcome" in fields) payload.outcome = fields.outcome;
   if ("reasoning" in fields) payload.reasoning = fields.reasoning;
+  if ("tradingAccountId" in fields) payload.trading_account_id = fields.tradingAccountId;
 
   const { error } = await supabase.from("signals").update(payload).eq("id", signalId);
   if (error) {

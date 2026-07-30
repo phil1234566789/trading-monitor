@@ -21,15 +21,19 @@ function groupBySignalId(rows) {
   return result;
 }
 
-export async function fetchTrades(instrument) {
+// accountId (Chat 2026-07-30, Trading-Konten-Trennung): null/undefined = ungefiltert (z.B. bevor
+// die Konten geladen sind) — Dashboard.vue übergibt hier IMMER das gerade ausgewählte Konto, sonst
+// würde die Trades-Liste versehentlich alle Konten mischen, sobald mehrere existieren.
+export async function fetchTrades(instrument, accountId = null) {
   // trade_setups(ob_start_time) eingebettet (PostgREST-Embedding über die trade_setup_id-FK) —
   // fürs Chart-Rendering der verlinkten M5-OB-Box gebraucht (siehe PriceChart.vue:
   // refreshTradeSetupLinksInternal), ohne dafür pro Trade eine eigene Zusatz-Query zu brauchen.
-  const { data, error } = await supabase
+  let query = supabase
     .from("signals")
     .select("*, trade_setups(ob_start_time)")
-    .eq("instrument", instrument)
-    .order("triggered_at", { ascending: false });
+    .eq("instrument", instrument);
+  if (accountId != null) query = query.eq("trading_account_id", accountId);
+  const { data, error } = await query.order("triggered_at", { ascending: false });
 
   if (error) throw error;
   if (data.length === 0) return [];
@@ -66,6 +70,7 @@ export async function fetchTrades(instrument) {
     invalidation: row.invalidation,
     tradeSetupId: row.trade_setup_id,
     tradeSetupObStartTime: row.trade_setups?.ob_start_time ? Math.floor(new Date(row.trade_setups.ob_start_time).getTime() / 1000) : null,
+    tradingAccountId: row.trading_account_id,
     // TradeTarget-Rohformat (siehe tradeTargets.ts) statt nur des Preises (Chat 2026-07-28: "kann
     // ich das bearbeiten?" / "wieso nur der Preis?") — kind/sourceTime/touchedTime fürs
     // Chart-Rendering (PriceChart.vue: refreshTradeTargetLinksInternal) und die Alters-Einstufung

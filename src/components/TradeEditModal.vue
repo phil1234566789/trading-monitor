@@ -4,6 +4,7 @@ import { updateTrade, deleteTrade, unlinkTradeSetup, removeTargetFromTrade, remo
 import { fmtDateTime } from "../format.js";
 import { formatTargetLabel } from "../tradeTargets";
 import { formatConfirmationLabel } from "../tradeConfirmations";
+import { accounts } from "../tradingAccounts.js";
 import MetadataPanel from "./MetadataPanel.vue";
 
 // Ersetzt die vorherigen Inline-Buttons in TradesTable.vue (🔗 verknüpfen, + Ziel, × Ziel
@@ -25,6 +26,7 @@ const exitPrice = ref("");
 const exitTimeInput = ref("");
 const outcome = ref("");
 const reasoning = ref("");
+const tradingAccountId = ref(null);
 const saving = ref(false);
 
 // <input type="datetime-local"> Roundtrip wie in NewsModal.vue/Dashboard.vue (replayInputValue) —
@@ -48,6 +50,7 @@ watch(
     exitTimeInput.value = t.exitTime != null ? toDatetimeLocal(t.exitTime) : "";
     outcome.value = t.outcome ?? "";
     reasoning.value = t.reasoning ?? "";
+    tradingAccountId.value = t.tradingAccountId ?? null;
   },
   { immediate: true },
 );
@@ -61,6 +64,7 @@ async function save() {
     exitTime: exitTimeInput.value ? Math.floor(new Date(exitTimeInput.value).getTime() / 1000) : null,
     outcome: outcome.value === "" ? null : outcome.value,
     reasoning: reasoning.value.trim() === "" ? null : reasoning.value.trim(),
+    tradingAccountId: tradingAccountId.value,
   });
   saving.value = false;
   if (ok) emit("saved");
@@ -154,6 +158,13 @@ function confirmationLabel(confirmation) {
         <label>
           Exit-Zeit
           <input v-model="exitTimeInput" type="datetime-local" />
+        </label>
+        <label>
+          Trading-Konto
+          <select v-model="tradingAccountId">
+            <option :value="null">— kein Konto —</option>
+            <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
+          </select>
         </label>
         <label>
           Ergebnis

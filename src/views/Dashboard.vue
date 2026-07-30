@@ -8,6 +8,8 @@ import SessionsModal from "../components/SessionsModal.vue";
 import NewsModal from "../components/NewsModal.vue";
 import TakeTradeModal from "../components/TakeTradeModal.vue";
 import TradeEditModal from "../components/TradeEditModal.vue";
+import TradingAccountSwitcher from "../components/TradingAccountSwitcher.vue";
+import { selectedTradingAccountId } from "../tradingAccounts.js";
 import { TIMEFRAMES } from "../timeframes.js";
 import { fetchTrades } from "../trades.js";
 import { fetchTradeSetupForCockpit, linkTradeToSetup, directionForSetup, addTargetToTrade, addConfirmationToTrade } from "../tradeIntake.js";
@@ -378,7 +380,7 @@ onMounted(() => window.addEventListener("click", closeMenusOutside));
 onUnmounted(() => window.removeEventListener("click", closeMenusOutside));
 const isBtc = computed(() => currentSymbol.value === "BTC-USDT");
 const { data: trades, refresh: refreshTrades } = usePolledFetch(
-  () => fetchTrades(currentSymbol.value),
+  () => fetchTrades(currentSymbol.value, selectedTradingAccountId.value),
   { intervalMs: POLL_MS },
 );
 const { data: poiZones, refresh: refreshPoiZones } = usePolledFetch(
@@ -387,10 +389,12 @@ const { data: poiZones, refresh: refreshPoiZones } = usePolledFetch(
 );
 // Symbolwechsel soll sofort auf "leer" (bzw. zurück auf BTC-Daten) springen, statt bis zu
 // POLL_MS lang die Trades/Zonen des vorherigen Symbols über dem neuen Chart hängen zu lassen.
+// Kontowechsel (Chat 2026-07-30) refresht aus demselben Grund sofort statt bis zum nächsten Poll.
 watch(currentSymbol, () => {
   refreshTrades();
   refreshPoiZones();
 });
+watch(selectedTradingAccountId, refreshTrades);
 </script>
 
 <template>
@@ -773,7 +777,10 @@ watch(currentSymbol, () => {
   />
 
   <aside class="trades-panel">
-    <h2 class="trades-panel-title">Trades</h2>
+    <div class="trades-panel-header">
+      <h2 class="trades-panel-title">Trades</h2>
+      <TradingAccountSwitcher />
+    </div>
     <div class="trades-list">
       <TradesTable :trades="trades" @select="onSelectTrade" @edit-request="onEditRequest" />
     </div>
@@ -1067,10 +1074,17 @@ watch(currentSymbol, () => {
   flex-direction: column;
 }
 
+.trades-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
 .trades-panel-title {
   font-size: 13px;
   font-weight: 600;
-  margin: 0 0 8px;
+  margin: 0;
   color: #d1d4dc;
 }
 

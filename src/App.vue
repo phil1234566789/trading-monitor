@@ -55,6 +55,7 @@ const lastUpdateText = computed(() =>
         <RouterLink to="/protokoll" exact-active-class="active">Protokoll</RouterLink>
         <RouterLink to="/alarme" exact-active-class="active">Alarme</RouterLink>
         <RouterLink to="/handelszeiten" exact-active-class="active">Handelszeiten</RouterLink>
+        <RouterLink to="/konten" exact-active-class="active">Konten</RouterLink>
       </nav>
       <span class="last-update">{{ lastUpdateText }}</span>
       <button class="backtest-export-btn" @click="showBacktestExport = true">📊 Backtest-Daten</button>
