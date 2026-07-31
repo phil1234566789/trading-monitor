@@ -330,10 +330,14 @@ transaction (the Supabase JS client can't do that without a dedicated Postgres R
 after the `dealing_ranges` insert, `createTrade` deletes that row again rather than leaving an
 orphan. `update_trade_position`/`update_dealing_range` patch only the fields actually passed
 (`Object.keys(fields)`-driven, see `db.ts`), so omitting a field leaves it untouched while passing
-`null` explicitly clears it. There is currently no tool for adding a SECOND execution to an existing
-idea (re-entries) — `create_trade` always makes a fresh `dealing_ranges` row; ask Philip before
-improvising a workaround if that case comes up. Unlike `post_chart_annotations`, these are
-deliberately NOT allow-listed — a wrong chart drawing is cosmetic, a wrong journal entry corrupts
+`null` explicitly clears it. `add_trade_position(dealingRangeId, ...)` adds a SECOND (or third, ...)
+execution to an EXISTING `dealing_ranges` row instead of making a new idea — common case per Philip
+2026-07-31 ("es gibt ja auch dealing ranges, wo ich keinen entry finde oder meine Limit Order nicht
+abgeholt wird"), i.e. re-entries or a delayed fill on the same idea. Shares its insert logic with
+`create_trade` via `db.ts`'s `insertTradePosition`/`TradePositionInput` — don't duplicate that
+field-mapping if you touch either tool, change the shared helper instead. `dealingRangeId` is the
+same id Philip refers to verbally via the chart's "Long#18"/"Short#N" numbering. Unlike
+`post_chart_annotations`, these are deliberately NOT allow-listed — a wrong chart drawing is cosmetic, a wrong journal entry corrupts
 Philip's trade history, so they still prompt for confirmation unless Philip says otherwise.
 
 **`marketStructureAnalysis.ts` / `marketStructureRendering.ts` split (2026-07-31)**: the trend

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getObZones, getLiquidityLevels, getTradeSetups, getJournal, getNewsEvents, getTradingSchedule } from "../db.js";
+import { getObZones, getLiquidityLevels, getTradeSetups, getJournal, getNewsEvents, getTradingSchedule, getTradingAccounts } from "../db.js";
 import { fetchForexCandles } from "../forexCandles.js";
 import { buildDataExport } from "./dataExport.js";
 
@@ -126,6 +126,16 @@ export function registerReadTools(server: McpServer) {
       inputSchema: { instrument: INSTRUMENT },
     },
     async ({ instrument }) => json(await getTradingSchedule(instrument)),
+  );
+
+  server.registerTool(
+    "get_trading_accounts",
+    {
+      title: "Trading-Konten",
+      description: "Liste der Konten (Demo/Live-Trennung) aus trading_accounts — zum Auflösen von Name -> id für create_trade/update_trade_position.",
+      inputSchema: {},
+    },
+    async () => json(await getTradingAccounts()),
   );
 
   server.registerTool(

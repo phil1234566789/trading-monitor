@@ -44,8 +44,11 @@ const ANNOTATION_SCHEMA = z
   })
   .passthrough();
 
-// Einziges Write-Tool (siehe CLAUDE.md "MCP-Server"): NICHT in eine Auto-Allow-Liste aufnehmen,
-// damit Claude Code vor jedem Aufruf um Bestätigung fragt (Philips "nur mit Approve von mir").
+// Write-Tool (siehe CLAUDE.md "MCP-Server") — Philip hat es 2026-07-31 explizit in
+// .claude/settings.local.json allow-gelistet ("L darf jetzt immer zeichnen, brauch kein go von
+// mir"), läuft also OHNE Bestätigungsprompt. Die Trade-Journal-Write-Tools (trades.ts) sind
+// bewusst NICHT mit-allow-gelistet — nur weil Chart-Zeichnungen freigegeben wurden, heißt das
+// nicht automatisch dasselbe fürs Journal.
 export function registerAnnotationTools(server: McpServer) {
   server.registerTool(
     "post_chart_annotations",

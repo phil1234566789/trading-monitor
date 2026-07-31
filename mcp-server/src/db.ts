@@ -120,3 +120,179 @@ export async function postChartAnnotations(instrument: string, date: string, ann
   if (error) throw new Error(error.message);
   return data;
 }
+
+// Nur zum Auflösen "welches Konto" beim Trade-Anlegen (Philip nennt einen Namen, kein rohes ID) —
+// siehe trading_accounts (20260730130000_trading_accounts.sql), volles anon-CRUD dort.
+export async function getTradingAccounts() {
+  const { data, error } = await supabase.from("trading_accounts").select("id, name, notes").order("name");
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export interface TradePositionInput {
+  source: "backtest" | "paper" | "live";
+  entryPrice?: number | null;
+  stopLoss?: number | null;
+  triggeredAt?: string | null;
+  reasoning?: string | null;
+  outcome?: "win" | "loss" | "open" | "invalid" | null;
+  rMultiple?: number | null;
+  exitPrice?: number | null;
+  exitTime?: string | null;
+  tradingAccountId?: number | null;
+  zoneId?: number | null;
+}
+
+// Gemeinsamer Insert-Kern für create_trade (neue Idee + erste Ausführung) UND add_trade_position
+// (eine WEITERE Ausführung auf eine bereits bestehende Idee, z.B. Re-Entry/nachgezogener Einstieg) —
+// Philip 2026-07-31: "es gibt ja auch dealing ranges, wo ich keinen entry finde oder meine Limit
+// Order nicht abgeholt wird" — kommt also oft genug vor, um ein eigenes Tool zu rechtfertigen, statt
+// nur über create_trade (das würde fälschlich eine zweite, unabhängige Idee anlegen) zu gehen.
+async function insertTradePosition(dealingRangeId: number, fields: TradePositionInput) {
+  const { data, error } = await supabase
+    .from("trade_positions")
+    .insert({
+      dealing_range_id: dealingRangeId,
+      source: fields.source,
+      entry_price: fields.entryPrice ?? null,
+      stop_loss: fields.stopLoss ?? null,
+      ...(fields.triggeredAt ? { triggered_at: fields.triggeredAt } : {}),
+      reasoning: fields.reasoning ?? null,
+      outcome: fields.outcome ?? null,
+      r_multiple: fields.rMultiple ?? null,
+      exit_price: fields.exitPrice ?? null,
+      exit_time: fields.exitTime ?? null,
+      trading_account_id: fields.tradingAccountId ?? null,
+      zone_id: fields.zoneId ?? null,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+// Fügt eine weitere Ausführung zu einer BEREITS BESTEHENDEN dealing_range hinzu (Re-Entry, oder
+// erster tatsächlicher Fill nach einer zunächst nicht abgeholten Limit-Order) — dealingRangeId
+// referenziert die Idee, die im Chart/Journal z.B. als "Long#18" durchnummeriert auftaucht.
+export async function addTradePosition(dealingRangeId: number, fields: TradePositionInput) {
+  return insertTradePosition(dealingRangeId, fields);
+}
+
+export interface CreateTradeArgs extends TradePositionInput {
+  instrument: string;
+  direction: "long" | "short";
+  invalidation?: number | null;
+  tradeSetupId?: number | null;
+  targets?: { price: number; rangeLow?: number | null; rangeHigh?: number | null }[];
+}
+
+// Legt die "Trade Entity" an, die Philip meint: EINE dealing_range (die Idee) + EINE trade_position
+// (die erste Ausführung), optional + trade_targets — siehe supabase/migrations/
+// 20260731120000_dealing_ranges_trade_positions.sql für die Aufteilungs-Begründung. Für eine
+// WEITERE Ausführung auf dieselbe Idee siehe addTradePosition oben, nicht dieses Tool nochmal
+// aufrufen (das würde eine zweite, unabhängige Idee anlegen). Kein echtes DB-Transaktions-RPC
+// (Supabase-JS-Client kann das ohne eigene Postgres-Function nicht) — bei einem Fehler nach dem
+// dealing_ranges-Insert wird die Zeile wieder gelöscht, damit keine verwaiste Idee ohne Ausführung
+// übrig bleibt.
+export async function createTrade(args: CreateTradeArgs) {
+  const { data: dealingRange, error: drError } = await supabase
+    .from("dealing_ranges")
+    .insert({
+      instrument: args.instrument,
+      direction: args.direction,
+      invalidation: args.invalidation ?? null,
+      trade_setup_id: args.tradeSetupId ?? null,
+    })
+    .select("*")
+    .single();
+  if (drError) throw new Error(drError.message);
+
+  let position;
+  try {
+    position = await insertTradePosition(dealingRange.id, args);
+  } catch (err) {
+    await supabase.from("dealing_ranges").delete().eq("id", dealingRange.id);
+    throw err;
+  }
+
+  let targets: unknown[] = [];
+  if (args.targets && args.targets.length > 0) {
+    const { data: targetRows, error: targetError } = await supabase
+      .from("trade_targets")
+      .insert(
+        args.targets.map((t) => ({
+          dealing_range_id: dealingRange.id,
+          price: t.price,
+          range_low: t.rangeLow ?? null,
+          range_high: t.rangeHigh ?? null,
+        })),
+      )
+      .select("*");
+    if (targetError) throw new Error(targetError.message);
+    targets = targetRows ?? [];
+  }
+
+  return { dealingRange, tradePosition: position, targets };
+}
+
+export interface UpdateTradePositionArgs {
+  entryPrice?: number | null;
+  stopLoss?: number | null;
+  triggeredAt?: string;
+  reasoning?: string | null;
+  outcome?: "win" | "loss" | "open" | "invalid" | null;
+  rMultiple?: number | null;
+  exitPrice?: number | null;
+  exitTime?: string | null;
+  tradingAccountId?: number | null;
+  zoneId?: number | null;
+}
+
+const TRADE_POSITION_FIELD_MAP: Record<keyof UpdateTradePositionArgs, string> = {
+  entryPrice: "entry_price",
+  stopLoss: "stop_loss",
+  triggeredAt: "triggered_at",
+  reasoning: "reasoning",
+  outcome: "outcome",
+  rMultiple: "r_multiple",
+  exitPrice: "exit_price",
+  exitTime: "exit_time",
+  tradingAccountId: "trading_account_id",
+  zoneId: "zone_id",
+};
+
+// Nur die tatsächlich übergebenen Felder patchen (nicht übergeben != explizit auf null setzen) —
+// deshalb Object.keys(fields) statt eines festen Feld-Sets.
+export async function updateTradePosition(id: number, fields: UpdateTradePositionArgs) {
+  const patch: Record<string, unknown> = {};
+  for (const key of Object.keys(fields) as (keyof UpdateTradePositionArgs)[]) {
+    patch[TRADE_POSITION_FIELD_MAP[key]] = fields[key];
+  }
+  const { data, error } = await supabase.from("trade_positions").update(patch).eq("id", id).select("*").single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export interface UpdateDealingRangeArgs {
+  instrument?: string;
+  direction?: "long" | "short";
+  invalidation?: number | null;
+  tradeSetupId?: number | null;
+}
+
+const DEALING_RANGE_FIELD_MAP: Record<keyof UpdateDealingRangeArgs, string> = {
+  instrument: "instrument",
+  direction: "direction",
+  invalidation: "invalidation",
+  tradeSetupId: "trade_setup_id",
+};
+
+export async function updateDealingRange(id: number, fields: UpdateDealingRangeArgs) {
+  const patch: Record<string, unknown> = {};
+  for (const key of Object.keys(fields) as (keyof UpdateDealingRangeArgs)[]) {
+    patch[DEALING_RANGE_FIELD_MAP[key]] = fields[key];
+  }
+  const { data, error } = await supabase.from("dealing_ranges").update(patch).eq("id", id).select("*").single();
+  if (error) throw new Error(error.message);
+  return data;
+}
