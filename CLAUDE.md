@@ -292,9 +292,10 @@ approval prompt.
 
 **Auth**: same anon-key pattern as `src/supabaseClient.js` (not service_role) — every table it
 touches already has permissive anon RLS (see the tables' migrations). Read-only for
-`ob_zones`/`liquidity_levels`/`trade_setups`/`dealing_ranges`/`trade_positions`/`trade_targets`/
-`trade_partial_exits`/`news_events`/`trading_schedules`; read+insert for `claude_annotations`
-(matches `src/claudeAnnotationsStore.js`'s own insert shape exactly).
+`ob_zones`/`liquidity_levels`/`trade_setups`/`trade_partial_exits`/`news_events`/
+`trading_schedules`/`trading_accounts`; read+insert for `claude_annotations` (matches
+`src/claudeAnnotationsStore.js`'s own insert shape exactly); full read/write for `dealing_ranges`/
+`trade_positions`/`trade_targets` via the trade-journal tools (see below).
 
 **`get_data_export` is the intended first call** in a session (its tool description tells Claude
 this explicitly) — bundles M5 candles + Asia-session range, the 1H structure/trend, relevant
@@ -319,6 +320,21 @@ re-deriving those from scratch would be worse than a small, low-risk copy — se
 `validateAnnotations`. If you change the originals (`src/dataExport.js`'s Berlin-time helpers,
 `src/liquidity.js`'s `filterRelevantLevels`, `src/claudeAnnotations.js`'s `validateAnnotationList`),
 check whether the port here needs the same fix.
+
+**Trade-journal write tools (`tools/trades.ts`, added 2026-07-31)**: `create_trade` inserts a
+`dealing_ranges` row (the idea — instrument/direction/invalidation/`trade_setup_id`) plus ONE
+`trade_positions` row (the execution — entry/stop/exit/outcome/`trading_account_id`) plus optional
+`trade_targets`, matching the entity split from `20260731120000_dealing_ranges_trade_positions.sql`
+(see that migration's own comment for the full "idea vs. execution, 1-n" reasoning). No real
+transaction (the Supabase JS client can't do that without a dedicated Postgres RPC) — on failure
+after the `dealing_ranges` insert, `createTrade` deletes that row again rather than leaving an
+orphan. `update_trade_position`/`update_dealing_range` patch only the fields actually passed
+(`Object.keys(fields)`-driven, see `db.ts`), so omitting a field leaves it untouched while passing
+`null` explicitly clears it. There is currently no tool for adding a SECOND execution to an existing
+idea (re-entries) — `create_trade` always makes a fresh `dealing_ranges` row; ask Philip before
+improvising a workaround if that case comes up. Unlike `post_chart_annotations`, these are
+deliberately NOT allow-listed — a wrong chart drawing is cosmetic, a wrong journal entry corrupts
+Philip's trade history, so they still prompt for confirmation unless Philip says otherwise.
 
 **`marketStructureAnalysis.ts` / `marketStructureRendering.ts` split (2026-07-31)**: the trend
 algorithm used to be one file that imported `liquidity.js` (for `detectLiquidityLevels`) and, for

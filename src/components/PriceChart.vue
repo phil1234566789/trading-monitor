@@ -769,8 +769,17 @@ function refreshTradeSetupLinksInternal() {
 // low<=price<=high) statt dem gespeicherten Stand blind zu vertrauen — self-healt automatisch bei
 // jedem Render, sobald die berührende Kerze geladen ist.
 const TARGET_TIER_WIDTH_RATIO = { minor: 1, medium: 1.6, major: 2.2 };
+// Bug-Report Philip 2026-07-31 (Debug-Log bewies es: zone.startTime === zone.endTime): ">="
+// ließ die eigene Entstehungs-Kerze des Targets als "Touch" durchgehen, weil deren High/Low die
+// Kante ja per Definition selbst berührt (die Kante IST aus dieser Kerze abgeleitet) — endTime
+// kollabierte dadurch praktisch immer auf sourceTime, Linie/Box wurden unsichtbar bzw. auf einen
+// Punkt zusammengestaucht. ">" schließt die Entstehungs-Kerze aus, sucht nur nach einem SPÄTEREN
+// echten Re-Touch.
+// Nur für Pivot-Targets (eine einzelne, exakte Preis-Marke auf der GLEICHEN Zeitebene wie die
+// gerade angezeigten Kerzen) — für OB-Targets bewusst NICHT verwendet, siehe Kommentar bei
+// refreshTradeTargetLinksInternal weiter unten (Zeitebenen-Mismatch M5-Kerzen vs. 1H/4H-OB).
 function firstCandleTouch(candles, sourceTime, price) {
-  const hit = candles.find((c) => c.time >= sourceTime && c.low <= price && c.high >= price);
+  const hit = candles.find((c) => c.time > sourceTime && c.low <= price && c.high >= price);
   return hit ? hit.time : null;
 }
 function refreshTradeTargetLinksInternal() {
@@ -785,18 +794,21 @@ function refreshTradeTargetLinksInternal() {
     for (const target of t.targets ?? []) {
       if (target.sourceTime == null) continue;
       const label = `🎯 ${targetKindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`;
-      // Reicht bis zum echten Touch, sonst bis zur zuletzt geladenen Kerze (self-healend, wie
-      // firstCandleTouch schon für die Linie) — statt einer festen Box-Breite, die für 1H/4H-OBs
-      // viel zu schmal wäre (Bug-Report Philip 2026-07-31: "OB wird leider nicht weit genug
-      // gezeichnet", TRADE_SETUP_OB_WIDTH_SEC ist auf M5-Trade-Setup-Boxen kalibriert).
-      const touchedTime = target.touchedTime ?? firstCandleTouch(candles, target.sourceTime, target.price);
-      const endTime = touchedTime ?? candles[candles.length - 1].time;
       // OB-Ziele als echte Box statt nur einer Linie an der näheren Kante (Bug-Report Philip
       // 2026-07-31: "es zeichnet sich weder Linie noch Box, nur das Label" — price allein reicht
       // für eine Box nicht, rangeLow/rangeHigh seit Migration 20260731170000 auch auf Targets, wie
       // schon bei Confirmations für kind='fib'). Alt-OB-Targets ohne rangeLow/rangeHigh (vor dieser
       // Migration) fallen zurück auf die bisherige Linie.
+      //
+      // KEIN Self-Heal-Touch-Check hier (anders als bei Pivot-Targets unten) — ein OB kann von
+      // JEDER Zeitebene kommen (M5/1H/4H, siehe findClickedOBZone), aber hier stehen immer nur
+      // die Kerzen der GERADE ANGEZEIGTEN Chart-Timeframe zur Verfügung. Ein 1H-OB gegen M5-Kerzen
+      // zu prüfen kollabiert die Box sofort auf die nächstbeste M5-Kerze, die zufällig irgendwo in
+      // die (viel gröbere) 1H-Zone hineinragt — Bug-Report Philip 2026-07-31, zweite Runde. Deshalb
+      // wie bei Confirmations: touchedTime wird NUR beim Klick selbst festgehalten (aus der jeweils
+      // korrekten Zeitebene, siehe findClickedOBZone), keine nachträgliche Neuberechnung.
       if (target.kind === "ob" && target.rangeLow != null && target.rangeHigh != null) {
+        const endTime = target.touchedTime ?? candles[candles.length - 1].time;
         const primitive = new OrderBlockPrimitive(
           { top: target.rangeHigh, bottom: target.rangeLow, startTime: target.sourceTime, endTime },
           {
@@ -812,6 +824,8 @@ function refreshTradeTargetLinksInternal() {
         tradeTargetLinkPrimitives.push(primitive);
         continue;
       }
+      const touchedTime = target.touchedTime ?? firstCandleTouch(candles, target.sourceTime, target.price);
+      const endTime = touchedTime ?? candles[candles.length - 1].time;
       const tier = classifyAge(businessSecondsBetween(target.sourceTime, touchedTime ?? nowSec));
       const primitive = new LiquidityLinePrimitive(
         { price: target.price, pivotTime: target.sourceTime, endTime },
