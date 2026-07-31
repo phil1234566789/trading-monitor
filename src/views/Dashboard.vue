@@ -15,11 +15,11 @@ import { fetchTrades } from "../trades.js";
 import {
   fetchTradeSetupForCockpit,
   linkTradeToSetup,
-  directionForSetup,
   addTargetToTrade,
   addConfirmationToTrade,
   addRangeConfirmation,
   updateTrade,
+  updateDealingRange,
 } from "../tradeIntake.js";
 import { fetchPoiZones } from "../poiZones.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
@@ -223,16 +223,12 @@ function onTradeDeleted() {
   editingTradeId.value = null;
   refreshTrades();
 }
-// Retrofit-Verknüpfung (Chat 2026-07-27: "gibst du mir die Möglichkeit, das im Nachhinein
-// zuzuordnen?") — TradesTable.vue's 🔗-Button armt hierüber "der nächste OB-Klick im Trade-Modus
-// verknüpft DIESEN Trade" statt ein neues Trade-Übernahme-Formular zu öffnen.
-const linkTargetTrade = ref(null);
 // Ziel hinzufügen (Chat 2026-07-27: "wie wärs, wenn wir ermöglichen, einem Trade ein Target
 // hinzuzufügen ... die Linien klickbar machen") — TradesTable.vue's "+"-Button armt hierüber "der
 // nächste Klick auf eine Liquiditäts-Linie im Trade-Modus fügt DIESEM Trade das Level als Ziel
-// hinzu". Eigener Modus statt denselben linkTargetTrade wiederzuverwenden, weil beide gleichzeitig
-// den Klick-Handler in PriceChart.vue umschalten (Setup-OB vs. LQ-Linie, siehe targetModeActive) —
-// nur eines der beiden kann gerade "scharf" sein, siehe die beiden onXRequest-Funktionen unten.
+// hinzu". Eigener Modus, weil mehrere Arm-Zustände gleichzeitig den Klick-Handler in PriceChart.vue
+// umschalten (Setup-OB vs. LQ-Linie, siehe targetModeActive) — nur einer kann gerade "scharf"
+// sein, siehe die onXRequest-Funktionen unten.
 const targetAddTrade = ref(null);
 // Bestätigung hinzufügen (PLAN-trade-confluences.md #1: "genau wie bei Targets, dass ich einfach
 // die Linie per Maus anklicke") — Arm-Zustand für die Entry-Ebene (trade_position_id). Nur einer
@@ -243,43 +239,50 @@ const confirmationAddTrade = ref(null);
 // haben die gesamte Basis um alles per Klick übernehmen zu können", ersetzt einen kurz zuvor
 // probierten, dann verworfenen manuellen Formular-Weg fürs Dealing-Range-GO.
 const rangeConfirmationAddTrade = ref(null);
-function onLinkRequest(t) {
-  linkTargetTrade.value = t;
-  targetAddTrade.value = null;
-  confirmationAddTrade.value = null;
-  rangeConfirmationAddTrade.value = null;
-  tradeModeActive.value = true;
-}
+// Invalidierung per Chart-Klick setzen (Chat 2026-07-31, zweite Runde: "mach wieder so, dass ich
+// es im Edit-Modal anklicken kann") — nimmt denselben Pivot/OB-Klick wie Target-Modus, aber
+// schreibt den Preis direkt auf dealing_ranges.invalidation statt eine trade_targets-Zeile
+// anzulegen (siehe onSelectTarget unten). Die frühere Retrofit-Verknüpfung (🔗 Setup verknüpfen,
+// linkTargetTrade) ist komplett raus — das automatische Setup-Klick-zu-Bestätigungen
+// (onSelectSetupConfirmations unten) deckt denselben Bedarf ab, siehe TradeEditModal.vue.
+const invalidationAddTrade = ref(null);
 function onAddTargetRequest(t) {
   targetAddTrade.value = t;
-  linkTargetTrade.value = null;
   confirmationAddTrade.value = null;
   rangeConfirmationAddTrade.value = null;
+  invalidationAddTrade.value = null;
   tradeModeActive.value = true;
 }
 function onAddConfirmationRequest(t) {
   confirmationAddTrade.value = t;
-  linkTargetTrade.value = null;
   targetAddTrade.value = null;
   rangeConfirmationAddTrade.value = null;
+  invalidationAddTrade.value = null;
   tradeModeActive.value = true;
 }
 function onAddRangeConfirmationRequest(t) {
   rangeConfirmationAddTrade.value = t;
-  linkTargetTrade.value = null;
   targetAddTrade.value = null;
   confirmationAddTrade.value = null;
+  invalidationAddTrade.value = null;
   tradeModeActive.value = true;
 }
-// Verlassen des Trade-Modus räumt eine noch "scharfe" Verknüpfung/Ziel-/Bestätigungs-Anfrage mit
-// ab — sonst würde ein späteres Wieder-Reinklicken in den Trade-Modus (für einen ganz anderen
-// Zweck) unerwartet den alten Trade verknüpfen/beschenken.
+function onSetInvalidationRequest(t) {
+  invalidationAddTrade.value = t;
+  targetAddTrade.value = null;
+  confirmationAddTrade.value = null;
+  rangeConfirmationAddTrade.value = null;
+  tradeModeActive.value = true;
+}
+// Verlassen des Trade-Modus räumt eine noch "scharfe" Ziel-/Bestätigungs-/Invalidierungs-Anfrage
+// mit ab — sonst würde ein späteres Wieder-Reinklicken in den Trade-Modus (für einen ganz anderen
+// Zweck) unerwartet den alten Trade verändern.
 watch(tradeModeActive, (active) => {
   if (!active) {
-    linkTargetTrade.value = null;
     targetAddTrade.value = null;
     confirmationAddTrade.value = null;
     rangeConfirmationAddTrade.value = null;
+    invalidationAddTrade.value = null;
   }
 });
 // target: {kind, price, sourceTime, touchedTime} — siehe PriceChart.vue: findClickedTarget (Pivot
@@ -306,6 +309,13 @@ async function onSelectTarget(target) {
     const trade = rangeConfirmationAddTrade.value;
     rangeConfirmationAddTrade.value = null;
     const ok = await addRangeConfirmation(trade.dealingRangeId, target);
+    if (ok) refreshTrades();
+    return;
+  }
+  if (invalidationAddTrade.value) {
+    const trade = invalidationAddTrade.value;
+    invalidationAddTrade.value = null;
+    const ok = await updateDealingRange(trade.dealingRangeId, { invalidation: target.price });
     if (ok) refreshTrades();
   }
 }
@@ -356,24 +366,15 @@ async function onSelectSetupConfirmations(setup) {
   if (setup.pathType === "A") {
     await updateTrade(trade.id, { stopLoss: setup.fractal.price });
   }
+  // Übernimmt auch die Setup-Verknüpfung selbst (trade_setup_id + die davon abgeleitete
+  // Invalidierung) — ersetzt die frühere manuelle "🔗 Setup verknüpfen"-Aktion (Chat 2026-07-31,
+  // zweite Runde: "kann weg, da ... die Bestätigungen fügen sich von selbst hinzu"), same Ableitung
+  // wie createTradeFromSetup für einen brandneuen Trade.
+  await linkTradeToSetup(trade.dealingRangeId, currentSymbol.value, setup);
 
   refreshTrades();
 }
 async function onSelectSetup(setup) {
-  if (linkTargetTrade.value) {
-    const trade = linkTargetTrade.value;
-    linkTargetTrade.value = null;
-    // Richtung muss passen — sonst tippt ein Klick daneben eine falsche Verknüpfung rein, ohne
-    // dass es auffällt (kein eigenes Modal hier, das man sonst als Rückfrage nutzen könnte).
-    if (directionForSetup(setup) !== trade.direction) {
-      console.error("Setup-Richtung passt nicht zum Trade (", trade.direction, "vs.", directionForSetup(setup), ") — keine Verknüpfung vorgenommen.");
-      return;
-    }
-    // Setup-Verknüpfung sitzt auf der dealing_range (trade_setup_id lebt seit 2026-07-31 dort).
-    const ok = await linkTradeToSetup(trade.dealingRangeId, currentSymbol.value, setup);
-    if (ok) refreshTrades();
-    return;
-  }
   selectedSetupForTrade.value = setup;
 }
 
@@ -866,10 +867,10 @@ watch(selectedTradingAccountId, refreshTrades);
         <button :class="{ active: tradeModeActive }" title="Auf ein Trade-Setup klicken, um es als Trade zu übernehmen" @click="tradeModeActive = true">
           🎯 Trade-Modus
         </button>
-        <span v-if="linkTargetTrade" class="trade-link-armed">🔗 nächster Klick verknüpft Trade #{{ linkTargetTrade.id }}</span>
         <span v-if="targetAddTrade" class="trade-link-armed">🎯 nächster Klick auf Pivot/OB fügt Trade #{{ targetAddTrade.id }} ein Target hinzu</span>
         <span v-if="confirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB fügt Trade #{{ confirmationAddTrade.id }} eine Bestätigung hinzu</span>
         <span v-if="rangeConfirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB fügt Dealing Range #{{ rangeConfirmationAddTrade.dealingRangeId }} eine Bestätigung hinzu</span>
+        <span v-if="invalidationAddTrade" class="trade-link-armed">🚫 nächster Klick auf Pivot/OB setzt Invalidierung für Dealing Range #{{ invalidationAddTrade.dealingRangeId }}</span>
       </div>
 
       <div class="toggle-group">
@@ -913,10 +914,10 @@ watch(selectedTradingAccountId, refreshTrades);
     @close="editingTradeId = null"
     @saved="refreshTrades"
     @deleted="onTradeDeleted"
-    @request-link="onLinkRequest(editingTrade)"
     @request-add-target="onAddTargetRequest(editingTrade)"
     @request-add-confirmation="onAddConfirmationRequest(editingTrade)"
     @request-add-range-confirmation="onAddRangeConfirmationRequest(editingTrade)"
+    @request-set-invalidation="onSetInvalidationRequest(editingTrade)"
   />
 
   <PriceChart
@@ -955,7 +956,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :claude-annotations="visibleClaudeAnnotations"
     :claude-annotations-date="claudeAnnotationsDate"
     :trade-mode-active="tradeModeActive"
-    :target-mode-active="targetAddTrade != null || confirmationAddTrade != null || rangeConfirmationAddTrade != null"
+    :target-mode-active="targetAddTrade != null || confirmationAddTrade != null || rangeConfirmationAddTrade != null || invalidationAddTrade != null"
     :confirmation-mode-active="confirmationAddTrade != null || rangeConfirmationAddTrade != null"
     @close-ranges-metadata="showRangesMetadata = false"
     @close-debug-metadata="showDebugMetadata = false"

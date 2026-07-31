@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from "vue";
-import { updateTrade, updateDealingRange, deleteTrade, unlinkTradeSetup, removeTargetFromTrade, removeConfirmationFromTrade } from "../tradeIntake.js";
+import { updateTrade, updateDealingRange, deleteTrade, removeTargetFromTrade, removeConfirmationFromTrade } from "../tradeIntake.js";
 import { fmtDateTime } from "../format.js";
 import { formatTargetLabel } from "../tradeTargets";
 import { formatConfirmationLabel } from "../tradeConfirmations";
@@ -22,15 +22,18 @@ const props = defineProps({
 // um alles per Klick übernehmen zu können" — kurz zuvor per Formular ausprobiert, dann wieder
 // verworfen zugunsten des reinen Chart-Klick-Wegs) — request-add-confirmation bleibt Entry-Ebene
 // (trade_position_id, wie bisher), request-add-range-confirmation ist neu für die Idee-Ebene
-// (dealing_range_id), die es vorher gar keinen Klick-Weg für gab.
+// (dealing_range_id), die es vorher gar keinen Klick-Weg für gab. request-set-invalidation (Chat
+// 2026-07-31, zweite Runde) ist derselbe Chart-Klick-Weg fürs Invalidierungs-Preisfeld unten —
+// request-link (Setup-Verknüpfung) ist raus: das automatische Setup-Klick-zu-Bestätigungen
+// (siehe Dashboard.vue: onSelectSetupConfirmations) macht die manuelle Verknüpfung überflüssig.
 const emit = defineEmits([
   "close",
   "saved",
   "deleted",
-  "request-link",
   "request-add-target",
   "request-add-confirmation",
   "request-add-range-confirmation",
+  "request-set-invalidation",
 ]);
 
 const entryPrice = ref("");
@@ -47,6 +50,22 @@ const saving = ref(false);
 
 const invalidation = ref("");
 const savingRange = ref(false);
+// Sichtbares Feedback fürs Invalidierungs-Feld (Chat 2026-07-31, dritte Runde: "ich sehe nicht, ob
+// das erfolgreich übernommen worden ist") — gilt für BEIDE Wege, den Preis zu setzen: das Formular
+// hier UND den Chart-Klick (Dashboard.vue: onSelectTarget schreibt direkt in die DB, das Modal
+// selbst weiß davon nichts außer über den watch unten, der jede externe Änderung am aktuellen
+// Trade abgleicht). Gleiches "kurz aufblitzen, dann zurücksetzen"-Muster wie die "✓ kopiert"-
+// Buttons im Debug-Metadaten-Panel (PriceChart.vue: copiedSection).
+const FEEDBACK_MS = 1200;
+const invalidationJustSaved = ref(false);
+let invalidationFeedbackTimeout = null;
+function flashInvalidationSaved() {
+  invalidationJustSaved.value = true;
+  clearTimeout(invalidationFeedbackTimeout);
+  invalidationFeedbackTimeout = setTimeout(() => {
+    invalidationJustSaved.value = false;
+  }, FEEDBACK_MS);
+}
 
 // <input type="datetime-local"> Roundtrip wie in NewsModal.vue/Dashboard.vue (replayInputValue) —
 // Browser-Lokalzeit, kein eigenes Zeitzonen-Handling nötig.
@@ -62,7 +81,7 @@ function toDatetimeLocal(unixSeconds) {
 // auftauchen (nur in den schreibgeschützten Ziele-/Setup-Listen unten).
 watch(
   () => props.trade,
-  (t) => {
+  (t, oldT) => {
     entryPrice.value = t.entryPrice ?? "";
     stopLoss.value = t.stopLoss ?? "";
     exitPrice.value = t.exitPrice ?? "";
@@ -74,6 +93,11 @@ watch(
     size.value = t.size ?? "";
     netPl.value = t.netPl ?? "";
     commission.value = t.commission ?? "";
+    // Nur bei derselben Dealing Range flashen — sonst würde ein simples "anderen Trade öffnen"
+    // (andere invalidation, weil andere Idee) fälschlich als "gerade gespeichert" aufblitzen.
+    if (oldT && oldT.dealingRangeId === t.dealingRangeId && oldT.invalidation !== t.invalidation) {
+      flashInvalidationSaved();
+    }
   },
   { immediate: true },
 );
@@ -108,19 +132,19 @@ async function onDelete() {
   if (ok) emit("deleted");
 }
 
-async function onUnlinkSetup() {
-  // Setup-Verknüpfung sitzt auf der dealing_range, nicht auf dieser einzelnen Ausführung.
-  const ok = await unlinkTradeSetup(props.trade.dealingRangeId);
-  if (ok) emit("saved");
-}
-
 async function saveInvalidation() {
   savingRange.value = true;
   const ok = await updateDealingRange(props.trade.dealingRangeId, {
     invalidation: invalidation.value === "" ? null : Number(invalidation.value),
   });
   savingRange.value = false;
-  if (ok) emit("saved");
+  if (ok) {
+    emit("saved");
+    // Sofort hier flashen statt nur auf den watch zu warten (Chart-Klick-Weg) — der wartet auf
+    // Dashboard.vue's refreshTrades()-Roundtrip, für den Formular-Submit-Klick soll's aber
+    // spürbar sofort sein.
+    flashInvalidationSaved();
+  }
 }
 
 async function onRemoveTarget(target) {
@@ -162,37 +186,47 @@ function confirmationLabel(confirmation) {
         <form class="tem-inline-form" @submit.prevent="saveInvalidation">
           <input v-model="invalidation" type="number" step="any" placeholder="kein Wert gesetzt" />
           <button type="submit" class="tem-small-save-btn" :disabled="savingRange">Speichern</button>
+          <button
+            type="button"
+            class="tem-icon-btn"
+            title="Invalidierung im Chart anklicken (Trade-Modus, dann Pivot/OB anklicken)"
+            @click="emit('request-set-invalidation')"
+          >
+            🚫
+          </button>
+          <span v-if="invalidationJustSaved" class="tem-saved-feedback">✓ übernommen</span>
         </form>
       </section>
 
       <section class="tem-section">
-        <h4 class="tem-section-title">Setup-Verknüpfung</h4>
-        <div v-if="trade.tradeSetupId != null" class="tem-row">
-          <span>#{{ trade.tradeSetupId }}</span>
-          <button class="tem-small-btn" @click="onUnlinkSetup">entfernen</button>
+        <div class="tem-section-header">
+          <h4 class="tem-section-title">Targets</h4>
+          <button class="tem-icon-btn" title="Target hinzufügen (Trade-Modus, dann Pivot/OB im Chart anklicken)" @click="emit('request-add-target')">🎯</button>
         </div>
-        <button v-else class="tem-action-btn" @click="emit('request-link')">🔗 Setup verknüpfen (Trade-Modus, dann OB anklicken)</button>
-      </section>
-
-      <section class="tem-section">
-        <h4 class="tem-section-title">Targets</h4>
         <div v-if="!trade.targets || trade.targets.length === 0" class="tem-muted">Noch keine Targets.</div>
         <div v-for="target in trade.targets" :key="target.id" class="tem-row">
           <span>{{ targetLabel(target) }}</span>
-          <button class="tem-small-btn" @click="onRemoveTarget(target)">entfernen</button>
+          <button class="tem-remove-btn" title="entfernen" @click="onRemoveTarget(target)">×</button>
         </div>
-        <button class="tem-action-btn" @click="emit('request-add-target')">🎯 Target hinzufügen (Trade-Modus, dann Pivot/OB im Chart anklicken)</button>
       </section>
 
       <section class="tem-section">
         <!-- PLAN-trade-confluences.md #1: von welchem Sweep/OB kam die Kraft für die Bewegung? -->
-        <h4 class="tem-section-title">Bestätigungen (GO für die Idee)</h4>
+        <div class="tem-section-header">
+          <h4 class="tem-section-title">Bestätigungen (GO für die Idee)</h4>
+          <button
+            class="tem-icon-btn"
+            title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Fib anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
+            @click="emit('request-add-range-confirmation')"
+          >
+            ✔
+          </button>
+        </div>
         <div v-if="rangeConfirmations.length === 0" class="tem-muted">Noch keine Bestätigungen.</div>
         <div v-for="confirmation in rangeConfirmations" :key="confirmation.id" class="tem-row">
           <span>{{ confirmationLabel(confirmation) }}</span>
-          <button class="tem-small-btn" @click="onRemoveConfirmation(confirmation)">entfernen</button>
+          <button class="tem-remove-btn" title="entfernen" @click="onRemoveConfirmation(confirmation)">×</button>
         </div>
-        <button class="tem-action-btn" @click="emit('request-add-range-confirmation')">✔ Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Fib anklicken)</button>
       </section>
     </div>
 
@@ -202,13 +236,21 @@ function confirmationLabel(confirmation) {
       <h3 class="tem-group-title">▶ Ausführung #{{ trade.id }}</h3>
 
       <section class="tem-section">
-        <h4 class="tem-section-title">Bestätigungen (GO für diesen Entry)</h4>
+        <div class="tem-section-header">
+          <h4 class="tem-section-title">Bestätigungen (GO für diesen Entry)</h4>
+          <button
+            class="tem-icon-btn"
+            title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Fib anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
+            @click="emit('request-add-confirmation')"
+          >
+            ✔
+          </button>
+        </div>
         <div v-if="positionConfirmations.length === 0" class="tem-muted">Noch keine Bestätigungen.</div>
         <div v-for="confirmation in positionConfirmations" :key="confirmation.id" class="tem-row">
           <span>{{ confirmationLabel(confirmation) }}</span>
-          <button class="tem-small-btn" @click="onRemoveConfirmation(confirmation)">entfernen</button>
+          <button class="tem-remove-btn" title="entfernen" @click="onRemoveConfirmation(confirmation)">×</button>
         </div>
-        <button class="tem-action-btn" @click="emit('request-add-confirmation')">✔ Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Fib anklicken)</button>
       </section>
 
       <section class="tem-section">
@@ -390,6 +432,16 @@ function confirmationLabel(confirmation) {
   cursor: default;
 }
 
+/* Kurzes Aufblitzen nach erfolgreichem Speichern (Chat 2026-07-31, dritte Runde: "ich sehe nicht,
+   ob das erfolgreich übernommen worden ist") — dieselbe Grün-Semantik wie .trade-pl.positive. */
+.tem-saved-feedback {
+  color: #26a69a;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .tem-section-title {
   margin: 0 0 8px;
   font-size: 11px;
@@ -397,6 +449,25 @@ function confirmationLabel(confirmation) {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #565a64;
+}
+
+/* Add-Button oben rechts auf Höhe des Section-Titels (Chat 2026-07-31, dritte Runde) statt als
+   eigene Zeile unter der Liste — Titel verliert seinen unteren Abstand an die Header-Zeile selbst,
+   damit der Button nicht tiefer sitzt als der Text daneben. */
+.tem-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tem-section-header .tem-section-title {
+  margin: 0;
+}
+
+.tem-section-header .tem-icon-btn {
+  margin-top: 0;
 }
 
 .tem-row {
@@ -408,34 +479,40 @@ function confirmationLabel(confirmation) {
   padding: 3px 0;
 }
 
-.tem-small-btn {
+/* Kleiner "×" statt Text-Button (Chat 2026-07-31: "da reicht auch nur ein kleines x", title=
+   nativer Hover-Tooltip statt sichtbarem "entfernen"-Text). */
+.tem-remove-btn {
   background: transparent;
   border: none;
   color: #787b86;
   cursor: pointer;
-  font-size: 11px;
-  padding: 2px 4px;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
 }
 
-.tem-small-btn:hover {
+.tem-remove-btn:hover {
   color: #ef5350;
 }
 
-.tem-action-btn {
-  display: block;
-  width: 100%;
+/* Icon-only statt Text-Button (Chat 2026-07-31: "Buttons ticken größer, nur mit Icon, Text als
+   Hover") — title trägt den vorherigen Button-Text als nativen Tooltip. */
+.tem-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
   margin-top: 6px;
   background: transparent;
   border: 1px solid #2a2e39;
   color: #9aa0ac;
-  padding: 6px 8px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 12px;
-  text-align: left;
+  font-size: 16px;
 }
 
-.tem-action-btn:hover {
+.tem-icon-btn:hover {
   border-color: #2962ff;
   color: #d1d4dc;
 }

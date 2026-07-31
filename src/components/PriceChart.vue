@@ -816,15 +816,17 @@ function refreshTradeTargetLinksInternal() {
       // schon bei Confirmations für kind='fib'). Alt-OB-Targets ohne rangeLow/rangeHigh (vor dieser
       // Migration) fallen zurück auf die bisherige Linie.
       //
-      // Box-Ende kommt bevorzugt aus liveObZoneState (Bug-Report Philip 2026-07-31, dritte Runde:
-      // "genauso wie die anderen 1h OBs vom OB-Algorithmus gezeichnet werden") — dieselbe
-      // detectOrderBlocks()-Erkennung auf der eigenen Zeitebene der Zone (1H/4H/5M), NICHT gegen die
-      // Kerzen der gerade angezeigten Chart-Timeframe (das kollabierte die Box vorher sofort auf die
-      // nächstbeste Nachbarkerze, Bug-Report zweite Runde). Ohne Live-Match (z.B. alte Targets ohne
-      // gespeicherte timeframe) Fallback auf den einmaligen Klick-Snapshot.
+      // Box-Ende: gespeichertes touchedTime hat IMMER Vorrang vor liveObZoneState (Bug-Report
+      // Philip 2026-07-31, vierte Runde: eine schon korrekt auf ihre echte Touch-Kerze gezeichnete
+      // Box zog sich später doch wieder bis "jetzt") — liveObZoneState detectet bei JEDEM Render
+      // neu anhand der GERADE geladenen M5-Kerzen (tradeSetupM5Candles); verschiebt sich deren
+      // Lookback-Fenster später über die damalige Touch-Kerze hinaus, "sieht" die Neuberechnung den
+      // Touch nicht mehr und die Zone erscheint fälschlich wieder aktiv. Ein bereits bekanntes
+      // touchedTime ist dagegen ein einmalig festgehaltener, echter Fakt — wird nie ungültig. Live
+      // nur noch als Versuch für NOCH UNBEKANNTEN Touch-Status (touchedTime null), letzter Fallback
+      // "letzte geladene Kerze" wie bisher.
       if (target.kind === "ob" && target.rangeLow != null && target.rangeHigh != null) {
-        const live = liveObZoneState(target);
-        const endTime = live ? live.endTime : (target.touchedTime ?? candles[candles.length - 1].time);
+        const endTime = target.touchedTime ?? liveObZoneState(target)?.endTime ?? candles[candles.length - 1].time;
         const primitive = new OrderBlockPrimitive(
           { top: target.rangeHigh, bottom: target.rangeLow, startTime: target.sourceTime, endTime },
           {
@@ -882,10 +884,9 @@ function refreshTradeConfirmationLinksInternal() {
       if (confirmation.sourceTime == null) continue;
       const label = `✔ ${confirmationKindLabel(confirmation.kind)} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`;
       // OB-Bestätigungen als echte Box statt nur einer Linie (siehe refreshTradeTargetLinksInternal
-      // — dieselbe Begründung, dasselbe liveObZoneState statt eines statischen Snapshots).
+      // — dieselbe Begründung, dieselbe touchedTime-vor-liveObZoneState-Priorität).
       if (confirmation.kind === "ob" && confirmation.rangeLow != null && confirmation.rangeHigh != null) {
-        const live = liveObZoneState(confirmation);
-        const endTime = live ? live.endTime : (confirmation.touchedTime ?? candles[candles.length - 1].time);
+        const endTime = confirmation.touchedTime ?? liveObZoneState(confirmation)?.endTime ?? candles[candles.length - 1].time;
         const primitive = new OrderBlockPrimitive(
           { top: confirmation.rangeHigh, bottom: confirmation.rangeLow, startTime: confirmation.sourceTime, endTime },
           {

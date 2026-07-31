@@ -238,10 +238,9 @@ export async function deleteTrade(positionId) {
   return true;
 }
 
-// Dealing-Range-CRUD, "U" — bisher gab's dafür kein UI-Feld, invalidation ließ sich nur indirekt
-// über linkTradeToSetup/unlinkTradeSetup setzen/löschen (Chat 2026-07-31: Modal trennt jetzt
-// Dealing-Range- von Trade-Position-Feldern, invalidation braucht dafür einen eigenen, direkten
-// Edit-Weg statt an die Setup-Verknüpfung gekoppelt zu sein).
+// Dealing-Range-CRUD, "U" — invalidation ist per Formular ODER per Chart-Klick setzbar (Chat
+// 2026-07-31, zweite Runde: "mach wieder so, dass ich es im Edit-Modal anklicken kann", siehe
+// Dashboard.vue: onSetInvalidationRequest/onSelectTarget), beides läuft über dieselbe Funktion hier.
 export async function updateDealingRange(dealingRangeId, fields) {
   const payload = {};
   if ("invalidation" in fields) payload.invalidation = fields.invalidation;
@@ -249,18 +248,6 @@ export async function updateDealingRange(dealingRangeId, fields) {
   const { error } = await supabase.from("dealing_ranges").update(payload).eq("id", dealingRangeId);
   if (error) {
     console.error("Dealing Range aktualisieren fehlgeschlagen:", error);
-    return false;
-  }
-  return true;
-}
-
-// Setup-Verknüpfung wieder entfernen (Gegenstück zu linkTradeToSetup) — für einen versehentlichen
-// oder falschen 🔗-Klick. Sitzt auf der dealing_range, seit trade_setup_id/invalidation dort statt
-// auf der einzelnen Ausführung leben.
-export async function unlinkTradeSetup(dealingRangeId) {
-  const { error } = await supabase.from("dealing_ranges").update({ trade_setup_id: null, invalidation: null }).eq("id", dealingRangeId);
-  if (error) {
-    console.error("Setup-Verknüpfung entfernen fehlgeschlagen:", error);
     return false;
   }
   return true;
