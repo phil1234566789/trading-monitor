@@ -21,6 +21,13 @@ dieses Repo. Für den Rest dieser Session gilt:
    wenn eine Zeichnung sinnvoll ist, ohne vorher in Textform um Erlaubnis zu fragen (Philip
    2026-07-31: "L darf jetzt immer zeichnen, brauch kein go von mir"; technisch bestätigungsfrei
    via Allow-Rule in `.claude/settings.local.json`).
+   **Für Schritt 4 (RSI-Pflichtanalyse, siehe `trading-ablauf.md`)** bei GBPUSD/EURUSD
+   `get_forex_rsi` nutzen (M5, Wilder-RSI(14), gleiche `dateStr`/`replayUntilSec`-Semantik wie
+   `get_data_export`) — Divergenzen/Failure-Swings liest du selbst aus der zurückgegebenen
+   Kurs+RSI-Reihe ab, die sind bewusst nicht vorberechnet. Bei BTC stattdessen das separate
+   `okx-market`-MCP-Tool `market_get_indicator` (`indicator: "rsi"`) nutzen, dort schon fertig
+   verfügbar. Für die EMA-Konvergenz-Frühwarnung (Schritt 5, M5-Konsolidierungsgefahr, siehe
+   `ema.md`) analog `get_forex_ema` (EMA 50/200) für GBPUSD/EURUSD.
 4. **Sicherheitsnetz für den Structure-Trend (Philip 2026-07-31): zeichne IMMER den Startpunkt
    deines Trend-Algos ein.** `get_data_export` liefert `structureWindow.cutoffOuterAt`/
    `cutoffInnerAt` (schon im richtigen "YYYY-MM-DD HH:mm"-Format) — sobald du eine Structure-Trend-
