@@ -1,9 +1,9 @@
 import { supabase } from "./supabaseClient.js";
 
 // Dünne Supabase-Query-Helfer, von den Tools in ./tools/*.ts genutzt. Tabellenformen siehe
-// supabase/migrations/*.sql (ob_zones, liquidity_levels, trade_setups, signals, trade_targets,
-// trade_partial_exits, news_events, trading_schedules, claude_annotations) — alle mit
-// anon-select-RLS, siehe CLAUDE.md "MCP-Server".
+// supabase/migrations/*.sql (ob_zones, liquidity_levels, trade_setups, dealing_ranges,
+// trade_positions, trade_targets, trade_partial_exits, news_events, trading_schedules,
+// claude_annotations) — alle mit anon-select-RLS, siehe CLAUDE.md "MCP-Server".
 
 export async function getObZones(instrument: string, timeframe?: string, includeAll = false) {
   let query = supabase.from("ob_zones").select("*").eq("instrument", instrument).order("start_time", { ascending: true });
@@ -74,13 +74,19 @@ export async function getTradeSetups(instrument: string) {
   return data ?? [];
 }
 
+// Trade-Journal: seit 2026-07-31 aufgeteilt in dealing_ranges (die Idee: instrument/direction/
+// invalidation/trade_setup_id, gilt für 1-n Ausführungen) und trade_positions (die einzelne
+// Ausführung: entry/exit/outcome/reasoning) — siehe CLAUDE.md-Abschnitt zum Trade-Journal.
+// instrument/direction sitzen jetzt auf dealing_ranges, deshalb !inner (sonst kann PostgREST auf
+// dem eingebetteten Feld nicht filtern) plus trade_targets gleich mit eingebettet, weil die
+// ebenfalls an dealing_ranges statt an der Ausführung hängen.
 export async function getJournal(instrument?: string, source?: string, limit = 50) {
   let query = supabase
-    .from("signals")
-    .select("*, trade_targets(price), trade_partial_exits(price, exit_time, portion_pct)")
+    .from("trade_positions")
+    .select("*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, trade_targets(price)), trade_partial_exits(price, exit_time, portion_pct)")
     .order("triggered_at", { ascending: false })
     .limit(limit);
-  if (instrument) query = query.eq("instrument", instrument);
+  if (instrument) query = query.eq("dealing_ranges.instrument", instrument);
   if (source) query = query.eq("source", source);
   const { data, error } = await query;
   if (error) throw new Error(error.message);

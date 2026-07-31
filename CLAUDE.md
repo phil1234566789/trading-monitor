@@ -196,6 +196,46 @@ asset, no longer global) plus a `danger` level (`normal`/`caution`/`forbidden`) 
 sub-window like the GBPUSD/EURUSD "MMM" caution session or a BTC no-trade window is expressed,
 rather than a second schedule concept.
 
+### Trade journal: `dealing_ranges` vs. `trade_positions`
+
+Since 2026-07-31, the trade journal is split into two tables instead of one flat `signals` row:
+
+- **`dealing_ranges`** — the trade *idea* (POI → target, "dealing range" in Philip's own
+  terminology): `instrument`, `direction`, `invalidation` (the price at which the whole idea is
+  invalidated — NOT necessarily any one execution's stop-loss), `trade_setup_id` (link to the
+  detected M5-sweep+fractal+OB pattern that originated the idea).
+- **`trade_positions`** (renamed from `signals`) — one *execution* of that idea: `entry_price`,
+  `stop_loss`, `exit_price`/`exit_time`, `outcome`, `r_multiple`, `source`, `reasoning`,
+  `trading_account_id`, FK'd to its `dealing_range_id`. A dealing range can have 1-n positions
+  (re-entries), each with its own entry/stop/outcome — Philip's explicit reasoning: "pro
+  Positions-Ausführung kann es sein, dass sie verschiedene Entry-Kriterien hatten [...] nur die
+  Invalidierung der gesamten Trade-Idee gehört zur dealing range. Stop Loss gehört zu einer
+  Positions-Ausführung."
+
+`trade_targets` (planned target levels) FK to `dealing_ranges` — a target applies to the whole
+idea, shared across every re-entry underneath it. `trade_partial_exits` stay FK'd to
+`trade_positions` — partial closes belong to one specific execution.
+
+`trade_confirmations` is dual-level on purpose: a row FKs to *either* `dealing_range_id` *or*
+`trade_position_id` (nullable columns, `CHECK` constraint enforcing exactly one is set, not a
+generic `parent_type`/`parent_id` pair) — Philip: "gibt confirmations, die mir das GO für die
+dealing range gibt, gibt noch andere confirmations, die mir das go für den entry geben." The old
+`setup_entry` column (the entry-criteria price for a specific execution, formerly its own field on
+`signals`) was dropped entirely and folded into this — an entry criterion and a confirmation are,
+in Philip's words, "so ziemlich das gleiche". `createTradeFromSetup` (`src/tradeIntake.js`) now
+inserts the M5-OB-derived entry price as a `kind='ob'` confirmation on the new position instead of
+a separate field. There's no UI yet to add a *dealing-range-level* confirmation (only
+position-level, via the existing Trade-Modus "Bestätigung hinzufügen" flow) — deferred along with
+the TSC rework below, not an oversight.
+
+`src/trades.js`'s `fetchTrades` still returns one flat row per **position** (not per dealing
+range) with the parent range's fields embedded (`instrument`/`direction`/`invalidation`/
+`tradeSetupId`/`dealingRangeId`) — this keeps `TradesTable.vue`/`TradeEditModal.vue`/
+`PriceChart.vue`'s existing one-row-per-trade rendering working unchanged. There is deliberately no
+new UI yet for viewing a dealing range as a group of its positions, or for adding a second
+position/re-entry to an existing range — Philip, same chat: the TSC ("heftig veraltet") is the
+next thing to tackle, this change is the data-layer foundation for that, not the UI rework itself.
+
 ### Trade-Setup-Cockpit: No-Gos and anti-confluences
 
 `src/tradeSetupCockpit.ts` (see the file's own header comment for the aggregation-only rule) tracks
@@ -252,9 +292,9 @@ approval prompt.
 
 **Auth**: same anon-key pattern as `src/supabaseClient.js` (not service_role) — every table it
 touches already has permissive anon RLS (see the tables' migrations). Read-only for
-`ob_zones`/`liquidity_levels`/`trade_setups`/`signals`/`trade_targets`/`trade_partial_exits`/
-`news_events`/`trading_schedules`; read+insert for `claude_annotations` (matches
-`src/claudeAnnotationsStore.js`'s own insert shape exactly).
+`ob_zones`/`liquidity_levels`/`trade_setups`/`dealing_ranges`/`trade_positions`/`trade_targets`/
+`trade_partial_exits`/`news_events`/`trading_schedules`; read+insert for `claude_annotations`
+(matches `src/claudeAnnotationsStore.js`'s own insert shape exactly).
 
 **`get_data_export` is the intended first call** in a session (its tool description tells Claude
 this explicitly) — bundles M5 candles + Asia-session range, the 1H structure/trend, relevant

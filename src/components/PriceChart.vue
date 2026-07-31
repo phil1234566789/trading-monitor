@@ -731,9 +731,9 @@ function refreshTradeSetupLinksInternal() {
   if (!isForex || !props.showTradeSetups || !props.showTrades) return;
   const candles = clipReplay(allCandles);
   for (const t of props.trades) {
-    if (t.tradeSetupId == null || t.tradeSetupObStartTime == null || t.setupEntry == null || t.invalidation == null) continue;
-    const top = Math.max(t.setupEntry, t.invalidation);
-    const bottom = Math.min(t.setupEntry, t.invalidation);
+    if (t.tradeSetupId == null || t.tradeSetupObStartTime == null || t.tradeSetupObTop == null || t.tradeSetupObBottom == null) continue;
+    const top = t.tradeSetupObTop;
+    const bottom = t.tradeSetupObBottom;
     const key = t.direction === "short" ? "tradeSetupShort" : "tradeSetupLong";
     const primitive = new OrderBlockPrimitive(
       { top, bottom, startTime: t.tradeSetupObStartTime, endTime: t.tradeSetupObStartTime + TRADE_SETUP_OB_WIDTH_SEC },

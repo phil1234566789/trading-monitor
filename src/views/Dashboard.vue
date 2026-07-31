@@ -262,7 +262,8 @@ async function onSelectTarget(target) {
   if (targetAddTrade.value) {
     const trade = targetAddTrade.value;
     targetAddTrade.value = null;
-    const ok = await addTargetToTrade(trade.id, target);
+    // Ziele gehören zur dealing_range, nicht zur einzelnen Ausführung (Chat 2026-07-31).
+    const ok = await addTargetToTrade(trade.dealingRangeId, target);
     if (ok) refreshTrades();
     return;
   }
@@ -283,7 +284,8 @@ async function onSelectSetup(setup) {
       console.error("Setup-Richtung passt nicht zum Trade (", trade.direction, "vs.", directionForSetup(setup), ") — keine Verknüpfung vorgenommen.");
       return;
     }
-    const ok = await linkTradeToSetup(trade.id, currentSymbol.value, setup);
+    // Setup-Verknüpfung sitzt auf der dealing_range (trade_setup_id lebt seit 2026-07-31 dort).
+    const ok = await linkTradeToSetup(trade.dealingRangeId, currentSymbol.value, setup);
     if (ok) refreshTrades();
     return;
   }

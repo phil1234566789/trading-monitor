@@ -95,7 +95,7 @@ export function registerReadTools(server: McpServer) {
     "get_journal",
     {
       title: "Trade-Journal",
-      description: "Einträge aus dem Trade-Journal (signals-Tabelle, inkl. Ziele/Teilausstiege).",
+      description: "Einträge aus dem Trade-Journal (trade_positions je Ausführung, inkl. verknüpfter dealing_ranges-Idee mit Zielen, plus Teilausstiege).",
       inputSchema: {
         instrument: INSTRUMENT.optional(),
         source: z.enum(["backtest", "paper", "live"]).optional(),

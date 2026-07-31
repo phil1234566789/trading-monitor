@@ -2,7 +2,9 @@ import { supabase } from "./supabaseClient.js";
 
 // "Setup als Trade übernehmen" (Chat 2026-07-27, Trade-Modus) — verbindet einen im Chart
 // angeklickten Trade-Setup (dir/label/pathType/obTop/obBottom/ls/fractal, siehe
-// computeTradeSetups in PriceChart.vue) mit einem neuen Eintrag in `signals`.
+// computeTradeSetups in PriceChart.vue) mit einer neuen `dealing_ranges`-Idee + ihrer ersten
+// `trade_positions`-Ausführung (Chat 2026-07-31: Idee/Ausführung aufgeteilt, siehe CLAUDE.md
+// Trade-Journal-Umbau).
 
 // dir=1 -> Short (bärisches OB), dir=-1 -> Long (bullisches OB), siehe computeTradeSetups
 // (detectTradeSetups(1, ...) = shorts, detectTradeSetups(-1, ...) = longs).
@@ -12,7 +14,10 @@ export function directionForSetup(setup) {
 
 // These-Ebene (Soll): "setupEntry ist bärische M5-OB-Unterkante, invalidation ist Oberkante"
 // (Chat 2026-07-27, Philips eigene Definition, bewusst nicht die "Standard"-OB-Lesart) — beim
-// Long spiegelbildlich (Oberkante = Entry, Unterkante = Invalidation).
+// Long spiegelbildlich (Oberkante = Entry, Unterkante = Invalidation). Seit dem Idee/Ausführung-
+// Split (2026-07-31) landen die zwei Werte an verschiedenen Stellen: invalidation auf der
+// dealing_range (gilt für die ganze Idee), setupEntry als Bestätigung auf der jeweiligen
+// trade_position (siehe createTradeFromSetup) — die Funktion selbst bleibt unverändert.
 export function deriveSetupEntryInvalidation(setup) {
   return setup.dir === 1
     ? { setupEntry: setup.obBottom, invalidation: setup.obTop }
@@ -72,57 +77,77 @@ export async function fetchTradeSetupForCockpit(tradeSetupId) {
 
 // entryPrice/stopLoss optional (Chat 2026-07-27: "kann sein, dass mein Trade nicht abgeholt wird
 // ... es gibt ein setupEntry, aber kein entryPrice") — outcome bleibt dann null (weder offen noch
-// gewonnen/verloren, siehe signals.outcome-Check: NULL ist erlaubt), erst mit echtem entryPrice
-// wird der Trade als 'open' geführt.
+// gewonnen/verloren, siehe trade_positions.outcome-Check: NULL ist erlaubt), erst mit echtem
+// entryPrice wird der Trade als 'open' geführt.
 // tradingAccountId (Chat 2026-07-30): das im Trades-Panel gerade ausgewählte Konto — ein neu
 // übernommener Trade landet direkt in dessen Konto, statt erst nachträglich im Bearbeiten-Modal
 // zugeordnet werden zu müssen. Bewusst optional (default null), damit ein Aufruf ohne Konten-
 // Kontext (z.B. vor dem ersten fetchAccounts()) nicht hart fehlschlägt.
+//
+// Legt IMMER beides zusammen an: die dealing_ranges-Idee (instrument/direction/invalidation/
+// trade_setup_id — teilt sich künftige Re-Entries) und ihre erste trade_positions-Ausführung.
+// setupEntry (Entry-Kriterium DIESER Ausführung) landet nicht mehr als eigenes Feld, sondern als
+// ganz normale Bestätigung (kind='ob') auf der neuen Position — Philip 2026-07-31: "die
+// confirmations und das setup für den Entry sind so ziemlich das gleiche".
 export async function createTradeFromSetup({ instrument, setup, entryPrice = null, stopLoss = null, reasoning = null, tradingAccountId = null }) {
   const direction = directionForSetup(setup);
   const { setupEntry, invalidation } = deriveSetupEntryInvalidation(setup);
   const tradeSetupId = await findMatchingTradeSetupId(instrument, direction, setup.fractal.pivotTime);
 
-  const { data, error } = await supabase
-    .from("signals")
+  const { data: range, error: rangeError } = await supabase
+    .from("dealing_ranges")
+    .insert({ instrument, direction, invalidation, trade_setup_id: tradeSetupId })
+    .select()
+    .single();
+  if (rangeError) {
+    console.error("Dealing-Range aus Setup anlegen fehlgeschlagen:", rangeError);
+    return { ok: false, error: rangeError };
+  }
+
+  const { data: position, error } = await supabase
+    .from("trade_positions")
     .insert({
-      instrument,
+      dealing_range_id: range.id,
       source: "live",
-      direction,
       triggered_at: new Date().toISOString(),
-      setup_entry: setupEntry,
-      invalidation,
       entry_price: entryPrice,
       stop_loss: stopLoss,
       outcome: entryPrice != null ? "open" : null,
       reasoning,
-      trade_setup_id: tradeSetupId,
       trading_account_id: tradingAccountId,
     })
     .select()
     .single();
-
   if (error) {
-    console.error("Trade aus Setup anlegen fehlgeschlagen:", error);
+    console.error("Trade-Ausführung anlegen fehlgeschlagen:", error);
     return { ok: false, error };
   }
-  return { ok: true, signal: data };
+
+  if (setupEntry != null) {
+    const { error: confirmError } = await supabase
+      .from("trade_confirmations")
+      .insert({ trade_position_id: position.id, price: setupEntry, kind: "ob" });
+    if (confirmError) console.error("Entry-Bestätigung anlegen fehlgeschlagen:", confirmError);
+  }
+
+  return { ok: true, dealingRange: range, position };
 }
 
 // Nachträgliche Verknüpfung (Chat 2026-07-27: "kannst du die Möglichkeit geben, das im Nachhinein
 // zuzuordnen?") — für Trades, die vor diesem Feature oder ohne rechtzeitig existierenden
-// trade_setups-Datensatz angelegt wurden (poi-watcher hinkt bis zu 5 Minuten hinterher). Nimmt
-// dieselbe Ableitung wie createTradeFromSetup, schreibt aber nur trade_setup_id/setup_entry/
-// invalidation in eine BESTEHENDE Zeile statt eine neue anzulegen.
-export async function linkTradeToSetup(signalId, instrument, setup) {
+// trade_setups-Datensatz angelegt wurden (poi-watcher hinkt bis zu 5 Minuten hinterher). Schreibt
+// trade_setup_id/invalidation auf die BESTEHENDE dealing_range (nicht mehr auf eine einzelne
+// Ausführung, seit die beiden getrennt sind) — setupEntry wird hier bewusst NICHT mehr übernommen,
+// das wäre jetzt eine Bestätigung auf einer konkreten Ausführung, keine Idee-Eigenschaft.
+export async function linkTradeToSetup(dealingRangeId, instrument, setup) {
   const direction = directionForSetup(setup);
-  const { setupEntry, invalidation } = deriveSetupEntryInvalidation(setup);
+  const { invalidation } = deriveSetupEntryInvalidation(setup);
   const tradeSetupId = await findMatchingTradeSetupId(instrument, direction, setup.fractal.pivotTime);
 
   const { error } = await supabase
-    .from("signals")
-    .update({ trade_setup_id: tradeSetupId, setup_entry: setupEntry, invalidation })
-    .eq("id", signalId);
+    .from("dealing_ranges")
+    .update({ trade_setup_id: tradeSetupId, invalidation })
+    .eq("id", dealingRangeId);
 
   if (error) {
     console.error("Trade nachträglich verknüpfen fehlgeschlagen:", error);
@@ -132,14 +157,15 @@ export async function linkTradeToSetup(signalId, instrument, setup) {
 }
 
 // Target hinzufügen (Chat 2026-07-27/28: "einem Trade ein Target hinzuzufügen ... ein Pivot
-// targetiere ich oder einen OB") — ein Trade kann mehrere Targets haben (trade_targets ist 1:n zu
-// signals, siehe 20260727180000_trade_thesis_and_partial_exits.sql), deshalb einfacher Insert
-// statt Upsert; Duplikate (zweimal derselbe Preis) werden bewusst nicht verhindert, das wäre eine
-// eigene Entscheidung, keine hier vorweggenommene Regel. `target` kommt im TradeTarget-Rohformat
-// (kind/price/sourceTime/touchedTime) direkt aus PriceChart.vue: findClickedTarget.
-export async function addTargetToTrade(signalId, target) {
+// targetiere ich oder einen OB") — ein Target gilt für die ganze dealing_range (Chat 2026-07-31:
+// "gehört auch alles zu derselben dealing range"), also 1:n zu dealing_ranges statt zur einzelnen
+// Ausführung, deshalb einfacher Insert statt Upsert; Duplikate (zweimal derselbe Preis) werden
+// bewusst nicht verhindert, das wäre eine eigene Entscheidung, keine hier vorweggenommene Regel.
+// `target` kommt im TradeTarget-Rohformat (kind/price/sourceTime/touchedTime) direkt aus
+// PriceChart.vue: findClickedTarget.
+export async function addTargetToTrade(dealingRangeId, target) {
   const { error } = await supabase.from("trade_targets").insert({
-    signal_id: signalId,
+    dealing_range_id: dealingRangeId,
     price: target.price,
     kind: target.kind,
     source_time: target.sourceTime != null ? new Date(target.sourceTime * 1000).toISOString() : null,
@@ -167,7 +193,7 @@ export async function removeTargetFromTrade(targetId) {
 // generisches Partial-Update für TradeEditModal.vue. fields nutzt camelCase (wie das Objekt aus
 // trades.js), wird hier auf die DB-Spaltennamen gemappt statt das dem Aufrufer zu überlassen.
 // exitTime kommt als Unix-Sekunden (wie der Rest der App) oder null, nicht als ISO-String.
-export async function updateTrade(signalId, fields) {
+export async function updateTrade(positionId, fields) {
   const payload = {};
   if ("entryPrice" in fields) payload.entry_price = fields.entryPrice;
   if ("stopLoss" in fields) payload.stop_loss = fields.stopLoss;
@@ -177,7 +203,7 @@ export async function updateTrade(signalId, fields) {
   if ("reasoning" in fields) payload.reasoning = fields.reasoning;
   if ("tradingAccountId" in fields) payload.trading_account_id = fields.tradingAccountId;
 
-  const { error } = await supabase.from("signals").update(payload).eq("id", signalId);
+  const { error } = await supabase.from("trade_positions").update(payload).eq("id", positionId);
   if (error) {
     console.error("Trade aktualisieren fehlgeschlagen:", error);
     return false;
@@ -185,11 +211,14 @@ export async function updateTrade(signalId, fields) {
   return true;
 }
 
-// Trade-CRUD, "D". trade_targets/trade_partial_exits/trade_confirmations haben `on delete
-// cascade` (siehe 20260727180000_trade_thesis_and_partial_exits.sql/20260728160000_trade_confirmations.sql),
-// räumen sich also von selbst mit auf.
-export async function deleteTrade(signalId) {
-  const { error } = await supabase.from("signals").delete().eq("id", signalId);
+// Trade-CRUD, "D" — löscht nur DIESE Ausführung, nicht die dealing_range darunter (die kann noch
+// weitere Ausführungen/Ziele haben). trade_partial_exits und Position-Bestätigungen haben `on
+// delete cascade` von trade_positions (siehe 20260727180000_trade_thesis_and_partial_exits.sql/
+// 20260731120000_dealing_ranges_trade_positions.sql), räumen sich also von selbst mit auf;
+// trade_targets und dealing_range-Bestätigungen bleiben bewusst erhalten (gehören der Idee, nicht
+// dieser einen Ausführung).
+export async function deleteTrade(positionId) {
+  const { error } = await supabase.from("trade_positions").delete().eq("id", positionId);
   if (error) {
     console.error("Trade löschen fehlgeschlagen:", error);
     return false;
@@ -198,9 +227,10 @@ export async function deleteTrade(signalId) {
 }
 
 // Setup-Verknüpfung wieder entfernen (Gegenstück zu linkTradeToSetup) — für einen versehentlichen
-// oder falschen 🔗-Klick.
-export async function unlinkTradeSetup(signalId) {
-  const { error } = await supabase.from("signals").update({ trade_setup_id: null, setup_entry: null, invalidation: null }).eq("id", signalId);
+// oder falschen 🔗-Klick. Sitzt auf der dealing_range, seit trade_setup_id/invalidation dort statt
+// auf der einzelnen Ausführung leben.
+export async function unlinkTradeSetup(dealingRangeId) {
+  const { error } = await supabase.from("dealing_ranges").update({ trade_setup_id: null, invalidation: null }).eq("id", dealingRangeId);
   if (error) {
     console.error("Setup-Verknüpfung entfernen fehlgeschlagen:", error);
     return false;
@@ -211,10 +241,14 @@ export async function unlinkTradeSetup(signalId) {
 // Bestätigung hinzufügen (PLAN-trade-confluences.md #1: "von welchen Sweeps kam die Kraft ...
 // auch OBs") — gleiches Rohformat wie addTargetToTrade (kind/price/sourceTime/touchedTime aus
 // PriceChart.vue: findClickedTarget), eigene Tabelle (trade_confirmations), weil eine Bestätigung
-// bereits passierte Evidenz ist statt einer zukünftigen Preis-Erwartung.
-export async function addConfirmationToTrade(signalId, confirmation) {
+// bereits passierte Evidenz ist statt einer zukünftigen Preis-Erwartung. Hängt bewusst an der
+// einzelnen Ausführung (trade_position_id), nicht an der dealing_range — das GO für DIESEN Entry
+// kann sich von anderen Re-Entries derselben Idee unterscheiden (Chat 2026-07-31). Eine
+// range-weite Bestätigung (dealing_range_id statt trade_position_id) gibt's als Konzept schon in
+// der DB, aber noch keinen UI-Weg, eine anzulegen — kommt mit dem TSC-Rework (siehe CLAUDE.md).
+export async function addConfirmationToTrade(positionId, confirmation) {
   const { error } = await supabase.from("trade_confirmations").insert({
-    signal_id: signalId,
+    trade_position_id: positionId,
     price: confirmation.price,
     kind: confirmation.kind,
     source_time: confirmation.sourceTime != null ? new Date(confirmation.sourceTime * 1000).toISOString() : null,

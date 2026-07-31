@@ -111,7 +111,8 @@ function labelFor(rawUrl) {
       ob_zones: "POI-Zonen",
       liquidity_levels: "Liquiditäts-Level",
       trade_setups: "Trade-Setups",
-      signals: "Trades",
+      dealing_ranges: "Dealing-Ranges",
+      trade_positions: "Trades",
       chart_colors: "Farben (DB)",
       alarm_settings: "Alarm-Einstellungen",
     };

@@ -51,8 +51,8 @@ export async function updateAccount(id, fields) {
   return true;
 }
 
-// signals.trading_account_id ist "on delete set null" (siehe Migration) — ein gelöschtes Konto
-// reißt also keine Trades mit, die zeigen dann einfach wieder "kein Konto".
+// trade_positions.trading_account_id ist "on delete set null" (siehe Migration) — ein gelöschtes
+// Konto reißt also keine Trades mit, die zeigen dann einfach wieder "kein Konto".
 export async function deleteAccount(id) {
   const { error } = await supabase.from("trading_accounts").delete().eq("id", id);
   if (error) {

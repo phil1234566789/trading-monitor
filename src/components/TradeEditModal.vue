@@ -77,7 +77,8 @@ async function onDelete() {
 }
 
 async function onUnlinkSetup() {
-  const ok = await unlinkTradeSetup(props.trade.id);
+  // Setup-Verknüpfung sitzt auf der dealing_range, nicht auf dieser einzelnen Ausführung.
+  const ok = await unlinkTradeSetup(props.trade.dealingRangeId);
   if (ok) emit("saved");
 }
 
