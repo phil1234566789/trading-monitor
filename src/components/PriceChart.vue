@@ -714,10 +714,25 @@ function replayToMs(bar) {
   return replayFetchToMs(props.replayUntil, bar);
 }
 
+// Bug-Report Philip 2026-07-31: im Replay auf ein früheres Datum springen zeigte trotzdem Marker/
+// Ziele/Bestätigungen/Setup-Links eines SPÄTEREN Trades (z.B. eines Longs vom 30.07., während man
+// im Chart auf dem 27.07. steht) — snapToBarTime (in tradeMarkers.js/liquidity.js/orderBlocks.js)
+// klemmt eine Zeit, die nach der letzten geladenen Kerze liegt, auf eben diese letzte Kerze fest,
+// statt den Trade auszublenden. Ohne Filter stapeln sich dadurch ALLE "noch nicht passierten"
+// Trades am rechten Rand exakt übereinander. Reine Anzeige-Filterung hier (kein DB-/Datenmodell-
+// Fix nötig) — ein Trade "existiert" erst im Chart, sobald seine Einstiegszeit auf oder vor der
+// letzten aktuell geladenen Kerze liegt.
+function tradesVisibleForCandles(trades, candles) {
+  if (candles.length === 0) return [];
+  const lastTime = candles[candles.length - 1].time;
+  return trades.filter((t) => t.entryTime <= lastTime);
+}
+
 function refreshTradeMarkersInternal() {
   const visible = props.showTradeSetups && props.showTrades && TRADE_MARKER_BARS.has(props.currentBar);
-  const trades = visible ? props.trades : [];
-  renderTradeMarkers(candleSeries, trades, tradePrimitives, clipReplay(allCandles));
+  const candles = clipReplay(allCandles);
+  const trades = visible ? tradesVisibleForCandles(props.trades, candles) : [];
+  renderTradeMarkers(candleSeries, trades, tradePrimitives, candles);
 }
 
 // Zeigt die M5-OB, mit der ein geloggter Trade verknüpft ist. Label "#<trade_setup_id>" matcht 1:1
@@ -730,7 +745,7 @@ function refreshTradeSetupLinksInternal() {
   tradeSetupLinkPrimitives.length = 0;
   if (!isForex || !props.showTradeSetups || !props.showTrades) return;
   const candles = clipReplay(allCandles);
-  for (const t of props.trades) {
+  for (const t of tradesVisibleForCandles(props.trades, candles)) {
     if (t.tradeSetupId == null || t.tradeSetupObStartTime == null || t.tradeSetupObTop == null || t.tradeSetupObBottom == null) continue;
     const top = t.tradeSetupObTop;
     const bottom = t.tradeSetupObBottom;
@@ -790,7 +805,7 @@ function refreshTradeTargetLinksInternal() {
   if (candles.length === 0) return;
   const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
   const precision = pricePrecisionForInstrument(props.symbol);
-  for (const t of props.trades) {
+  for (const t of tradesVisibleForCandles(props.trades, candles)) {
     for (const target of t.targets ?? []) {
       if (target.sourceTime == null) continue;
       const label = `🎯 ${targetKindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`;
@@ -861,7 +876,7 @@ function refreshTradeConfirmationLinksInternal() {
   if (candles.length === 0) return;
   const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
   const precision = pricePrecisionForInstrument(props.symbol);
-  for (const t of props.trades) {
+  for (const t of tradesVisibleForCandles(props.trades, candles)) {
     for (const confirmation of t.confirmations ?? []) {
       if (confirmation.sourceTime == null) continue;
       const label = `✔ ${confirmationKindLabel(confirmation.kind)} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`;
