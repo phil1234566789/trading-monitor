@@ -1,5 +1,6 @@
 <script setup>
-import { fmtPrice, fmtDate, fmtTime, pricePrecisionForInstrument } from "../format.js";
+import { fmtPrice, fmtDate, fmtTime, fmtMoney, pricePrecisionForInstrument } from "../format.js";
+import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 
 defineProps({
   trades: { type: Array, required: true },
@@ -25,7 +26,13 @@ function outcomeLabel(t) {
 // Spalten hinzufügen") — eine Zeile pro trade_position wie bisher, aber nur noch Dealing-Range-
 // Kennung (Richtung + #dealing_range_id, NICHT die trade_setup_id-Verknüpfung, das ist ein anderes
 // "#"), Datum, Exit, Ergebnis, Begründung. Kein Entry/SL/Targets/Setup-Link mehr — kommt erst
-// zurück, sobald klar ist, was fürs Edit-Modal-Redesign tatsächlich gebraucht wird.
+// zurück, sobald klar ist, was fürs Edit-Modal-Redesign tatsächlich gebraucht wird. Size/Net P/L/
+// Commission (Chat 2026-07-31, zweite Runde) kamen seitdem dazu.
+
+// Commission braucht Philip "selten" — Spaltenkopf selbst ist der Toggle (Chat 2026-07-31: "du
+// kannst das 'commission'-table-header als Toggle machen"), keine extra Checkbox/kein Menü-Eintrag.
+// Persistiert wie andere Anzeige-Toggles in diesem Repo (useLocalStorageRef).
+const showCommission = useLocalStorageRef("showCommissionColumn", false);
 </script>
 
 <template>
@@ -37,7 +44,13 @@ function outcomeLabel(t) {
         <th>Position</th>
         <th>Date</th>
         <th>Exit</th>
+        <th>Size</th>
         <th>Ergebnis</th>
+        <th>Net P/L</th>
+        <!-- Klick auf den Spaltenkopf selbst schaltet um (Chat 2026-07-31) — keine extra Checkbox. -->
+        <th class="trade-commission-header" title="Klicken zum Ein-/Ausblenden" @click.stop="showCommission = !showCommission">
+          Commission {{ showCommission ? "🔓" : "🔒" }}
+        </th>
         <th>Begründung</th>
         <th></th>
       </tr>
@@ -55,8 +68,18 @@ function outcomeLabel(t) {
         <td>{{ fmtDate(t.entryTime) }}</td>
         <td v-if="t.exitPrice != null">{{ fmtPrice(t.exitPrice, pricePrecisionForInstrument(t.instrument)) }} ({{ fmtTime(t.exitTime) }})</td>
         <td v-else>–</td>
+        <td>{{ t.size ?? "–" }}</td>
         <td>
           <span class="trade-outcome" :class="t.outcome ?? 'open'">{{ outcomeLabel(t) }}</span>
+        </td>
+        <td>
+          <span v-if="t.netPl != null" class="trade-pl" :class="t.netPl >= 0 ? 'positive' : 'negative'">{{ fmtMoney(t.netPl) }}</span>
+          <span v-else>–</span>
+        </td>
+        <td class="trade-commission-cell">
+          <span v-if="!showCommission" class="trade-commission-hidden">•••</span>
+          <span v-else-if="t.commission != null" class="trade-pl" :class="t.commission >= 0 ? 'positive' : 'negative'">{{ fmtMoney(t.commission) }}</span>
+          <span v-else>–</span>
         </td>
         <td class="trade-reasoning-cell">{{ t.reasoning ?? "" }}</td>
         <td>

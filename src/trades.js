@@ -146,6 +146,11 @@ export async function fetchTrades(instrument, accountId = null) {
       rMultiple: row.r_multiple,
       reasoning: row.reasoning,
       source: row.source,
+      // Broker-Ausführungsdetails (Chat 2026-07-31), siehe Migration
+      // 20260731210000_trade_positions_size_pl_commission.sql.
+      size: row.size,
+      netPl: row.net_pl,
+      commission: row.commission,
     };
   });
 }

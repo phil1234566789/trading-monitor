@@ -733,7 +733,7 @@ function refreshTradeMarkersInternal() {
   const visible = props.showTradeSetups && props.showTrades && TRADE_MARKER_BARS.has(props.currentBar);
   const candles = clipReplay(allCandles);
   const trades = visible ? tradesVisibleForCandles(props.trades, candles) : [];
-  renderTradeMarkers(candleSeries, trades, tradePrimitives, candles);
+  renderTradeMarkers(candleSeries, trades, tradePrimitives, candles, props.showLiquidityDebug);
 }
 
 // Zeigt die M5-OB, mit der ein geloggter Trade verknüpft ist. Label "#<trade_setup_id>" matcht 1:1
@@ -2330,6 +2330,7 @@ watch(() => props.showLiquidityDebug, () => {
   refreshLiquidityInternal();
   refreshRangesMarkersInternal();
   renderTradeSetupsInternal();
+  refreshTradeMarkersInternal();
 });
 watch(() => props.showTradeSetups, () => {
   // showTradeSetups zählt seit Chat 2026-07-28 mit in rangesNeedsData() (computeTradeSetups()

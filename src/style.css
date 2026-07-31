@@ -108,6 +108,32 @@ body {
   font-size: 11px;
 }
 
+/* Net P/L + Commission (Chat 2026-07-31) — dieselbe Grün/Rot-Semantik wie .trade-outcome.win/.loss,
+   eigene Klasse statt Wiederverwendung, weil sie nach Vorzeichen statt nach outcome-String
+   entscheidet. */
+.trade-pl.positive {
+  color: #26a69a;
+}
+
+.trade-pl.negative {
+  color: #ef5350;
+}
+
+.trade-commission-header {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.trade-commission-header:hover {
+  color: #d1d4dc;
+}
+
+.trade-commission-hidden {
+  color: #565a64;
+  letter-spacing: 1px;
+}
+
 .trade-link-btn {
   background: transparent;
   border: none;

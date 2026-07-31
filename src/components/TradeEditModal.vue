@@ -40,6 +40,9 @@ const exitTimeInput = ref("");
 const outcome = ref("");
 const reasoning = ref("");
 const tradingAccountId = ref(null);
+const size = ref("");
+const netPl = ref("");
+const commission = ref("");
 const saving = ref(false);
 
 const invalidation = ref("");
@@ -68,6 +71,9 @@ watch(
     reasoning.value = t.reasoning ?? "";
     tradingAccountId.value = t.tradingAccountId ?? null;
     invalidation.value = t.invalidation ?? "";
+    size.value = t.size ?? "";
+    netPl.value = t.netPl ?? "";
+    commission.value = t.commission ?? "";
   },
   { immediate: true },
 );
@@ -88,6 +94,9 @@ async function save() {
     outcome: outcome.value === "" ? null : outcome.value,
     reasoning: reasoning.value.trim() === "" ? null : reasoning.value.trim(),
     tradingAccountId: tradingAccountId.value,
+    size: size.value === "" ? null : Number(size.value),
+    netPl: netPl.value === "" ? null : Number(netPl.value),
+    commission: commission.value === "" ? null : Number(commission.value),
   });
   saving.value = false;
   if (ok) emit("saved");
@@ -220,6 +229,18 @@ function confirmationLabel(confirmation) {
           <label>
             Exit-Zeit
             <input v-model="exitTimeInput" type="datetime-local" />
+          </label>
+          <label>
+            Size (Lots)
+            <input v-model="size" type="number" step="any" placeholder="optional" />
+          </label>
+          <label>
+            Net P/L
+            <input v-model="netPl" type="number" step="any" placeholder="optional" />
+          </label>
+          <label>
+            Commission
+            <input v-model="commission" type="number" step="any" placeholder="optional" />
           </label>
           <label>
             Trading-Konto

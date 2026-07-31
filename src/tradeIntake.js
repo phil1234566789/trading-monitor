@@ -209,6 +209,11 @@ export async function updateTrade(positionId, fields) {
   if ("outcome" in fields) payload.outcome = fields.outcome;
   if ("reasoning" in fields) payload.reasoning = fields.reasoning;
   if ("tradingAccountId" in fields) payload.trading_account_id = fields.tradingAccountId;
+  // Broker-Ausführungsdetails (Chat 2026-07-31) — bisher zweckentfremdet im reasoning-Freitext
+  // (siehe Migration 20260731210000_trade_positions_size_pl_commission.sql).
+  if ("size" in fields) payload.size = fields.size;
+  if ("netPl" in fields) payload.net_pl = fields.netPl;
+  if ("commission" in fields) payload.commission = fields.commission;
 
   const { error } = await supabase.from("trade_positions").update(payload).eq("id", positionId);
   if (error) {

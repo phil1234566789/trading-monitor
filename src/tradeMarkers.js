@@ -1,52 +1,108 @@
-// Zeichnet Entry/Exit als exakten Punkt + Preis-Strich auf den Kerzen-Chart (nicht nur
+// Zeichnet Entry/Exit als exakte Marke + Preis-Strich auf den Kerzen-Chart (nicht nur
 // "Kerze markiert", sondern der tatsächliche Einstiegs-/Austiegspreis als Marke).
 import { snapToBarTime } from "./chartTimeUtils.js";
 import { cssColor } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
-import { canShowLabels } from "./chartZoom.js";
 
-const TICK_LENGTH = 16; // px, Strich neben dem Punkt zur Preis-Ablesung
-const DOT_RADIUS = 4; // px
+const TICK_LENGTH = 16; // px, Strich neben der Marke zur Preis-Ablesung
+const DOT_RADIUS = 3; // px, Exit-Kreis-Fallback (Open/Invalid) — Bug-Report Philip 2026-07-31: klebte zu dominant an den Candles
+const ENTRY_TRIANGLE_SIZE = 5; // px, Entry-Dreieck (Long = Spitze oben, Short = Spitze unten)
+const EXIT_MARK_SIZE = 5; // px, Häkchen (Win) / X (Loss)
 
-function drawPoint(ctx, point, pixelRatio, color, colorKey, label, chart, candles) {
-  if (point.x === null || point.y === null) return;
-  const x = Math.round(point.x * pixelRatio);
-  const y = Math.round(point.y * pixelRatio);
-  const r = DOT_RADIUS * pixelRatio;
-  const tick = TICK_LENGTH * pixelRatio;
-
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-
+function drawTick(ctx, x, y, offset, tick, pixelRatio, color, colorKey) {
   ctx.strokeStyle = color;
   // Linienstärke folgt demselben Farb-Key (tradeWin/tradeLoss/tradeOpen/tradeInvalid), damit jeder
   // im Style-Modal individuell einstellbare Farb-Regler auch eine eigene Linienstärke hat (Chat
   // 2026-07-25, zweite Runde: "bei jeder Linie, wo man schon die Farbe individuell anpassen kann").
   ctx.lineWidth = Math.max(1, lineWidth(colorKey) * pixelRatio);
   ctx.beginPath();
-  ctx.moveTo(x + r, y);
+  ctx.moveTo(x + offset, y);
   ctx.lineTo(x + tick, y);
   ctx.stroke();
+}
 
-  // Chat 2026-07-25: "wenn ich im 1h den chart etwas herauszoome, dann verdecken mir die Labels
-  // die Sicht" — Punkt+Preis-Strich bleiben, nur das Text-Label verschwindet bei zu dünnen Kerzen.
-  if (label && canShowLabels(chart, candles)) {
-    ctx.font = `${Math.round(11 * pixelRatio)}px sans-serif`;
-    ctx.fillStyle = color;
-    ctx.textBaseline = "middle";
-    ctx.fillText(label, x + tick + 4 * pixelRatio, y);
+function drawLabel(ctx, x, y, tick, pixelRatio, color, label) {
+  ctx.font = `${Math.round(11 * pixelRatio)}px sans-serif`;
+  ctx.fillStyle = color;
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, x + tick + 4 * pixelRatio, y);
+}
+
+// Entry-Marke als Richtungs-Dreieck statt Kreis (Chat 2026-07-31: "tausche es aus gegen Dreiecke,
+// Short Dreieck nach unten, Long Dreieck nach oben") — Spitze zeigt in Trade-Richtung.
+function drawEntryPoint(ctx, point, pixelRatio, color, colorKey, label, direction, showLabels) {
+  if (point.x === null || point.y === null) return;
+  const x = Math.round(point.x * pixelRatio);
+  const y = Math.round(point.y * pixelRatio);
+  const size = ENTRY_TRIANGLE_SIZE * pixelRatio;
+  const tick = TICK_LENGTH * pixelRatio;
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  if (direction === "short") {
+    ctx.moveTo(x, y + size);
+    ctx.lineTo(x - size, y - size * 0.6);
+    ctx.lineTo(x + size, y - size * 0.6);
+  } else {
+    ctx.moveTo(x, y - size);
+    ctx.lineTo(x - size, y + size * 0.6);
+    ctx.lineTo(x + size, y + size * 0.6);
   }
+  ctx.closePath();
+  ctx.fill();
+
+  // Bug-Report Philip 2026-07-31: der Strich blieb auch außerhalb des Debug-Modus stehen, obwohl
+  // sein einziger Zweck ist, zur (debug-gated) Beschriftung hinzuführen — jetzt an dieselbe
+  // showLabels-Bedingung gekoppelt wie das Label selbst.
+  if (showLabels) drawTick(ctx, x, y, size, tick, pixelRatio, color, colorKey);
+  if (label && showLabels) drawLabel(ctx, x, y, tick, pixelRatio, color, label);
+}
+
+// Exit-Marke: Häkchen bei Win, X bei Loss (Chat 2026-07-31 — sofort lesbar auch ohne Label);
+// Open/Invalid haben kein sinnvolles Häkchen/X-Äquivalent, bleiben ein kleiner Kreis.
+function drawExitPoint(ctx, point, pixelRatio, color, colorKey, label, outcome, showLabels) {
+  if (point.x === null || point.y === null) return;
+  const x = Math.round(point.x * pixelRatio);
+  const y = Math.round(point.y * pixelRatio);
+  const tick = TICK_LENGTH * pixelRatio;
+  let offset;
+
+  if (outcome === "win" || outcome === "loss") {
+    const size = EXIT_MARK_SIZE * pixelRatio;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1.5, lineWidth(colorKey) * pixelRatio);
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    if (outcome === "win") {
+      ctx.moveTo(x - size, y);
+      ctx.lineTo(x - size * 0.25, y + size * 0.6);
+      ctx.lineTo(x + size, y - size * 0.6);
+    } else {
+      ctx.moveTo(x - size, y - size);
+      ctx.lineTo(x + size, y + size);
+      ctx.moveTo(x - size, y + size);
+      ctx.lineTo(x + size, y - size);
+    }
+    ctx.stroke();
+    offset = size;
+  } else {
+    const r = DOT_RADIUS * pixelRatio;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    offset = r;
+  }
+
+  if (showLabels) drawTick(ctx, x, y, offset, tick, pixelRatio, color, colorKey);
+  if (label && showLabels) drawLabel(ctx, x, y, tick, pixelRatio, color, label);
 }
 
 class TradeMarkerRenderer {
-  constructor(entry, exit, options, chart, candles) {
+  constructor(entry, exit, options) {
     this._entry = entry;
     this._exit = exit;
     this._options = options;
-    this._chart = chart;
-    this._candles = candles;
   }
 
   draw(target) {
@@ -67,9 +123,27 @@ class TradeMarkerRenderer {
         ctx.restore();
       }
 
-      drawPoint(ctx, entry, pixelRatio, this._options.entryColor, this._options.entryColorKey, this._options.entryLabel, this._chart, this._candles);
+      drawEntryPoint(
+        ctx,
+        entry,
+        pixelRatio,
+        this._options.entryColor,
+        this._options.entryColorKey,
+        this._options.entryLabel,
+        this._options.direction,
+        this._options.showLabels,
+      );
       if (exit) {
-        drawPoint(ctx, exit, pixelRatio, this._options.exitColor, this._options.exitColorKey, this._options.exitLabel, this._chart, this._candles);
+        drawExitPoint(
+          ctx,
+          exit,
+          pixelRatio,
+          this._options.exitColor,
+          this._options.exitColorKey,
+          this._options.exitLabel,
+          this._options.outcome,
+          this._options.showLabels,
+        );
       }
     });
   }
@@ -113,7 +187,7 @@ class TradeMarkerPaneView {
   }
 
   renderer() {
-    return new TradeMarkerRenderer(this._entry, this._exit, this._source._options, this._source._chart, this._source._candles);
+    return new TradeMarkerRenderer(this._entry, this._exit, this._source._options);
   }
 }
 
@@ -141,7 +215,7 @@ export class TradeMarkerPrimitive {
   }
 }
 
-function tradeOptions(t) {
+function tradeOptions(t, showLabels) {
   const outcomeKey = { win: "tradeWin", loss: "tradeLoss", open: "tradeOpen", invalid: "tradeInvalid" };
   const entryColorKey = t.direction === "short" ? "tradeLoss" : "tradeWin";
   const exitColorKey = outcomeKey[t.outcome] ?? "tradeInvalid";
@@ -149,20 +223,25 @@ function tradeOptions(t) {
   return {
     entryColor: cssColor(entryColorKey),
     entryColorKey,
+    direction: t.direction,
     exitColor: cssColor(exitColorKey),
     exitColorKey,
+    outcome: t.outcome,
     connectorColor: cssColor("tradeConnector"),
     entryLabel: `${dirLabel} Entry ${t.entryPrice}`,
     exitLabel: t.exitPrice != null ? `${t.outcome?.toUpperCase() ?? "EXIT"} ${t.exitPrice}` : null,
+    showLabels,
   };
 }
 
-export function renderTradeMarkers(series, trades, existingPrimitives, candles) {
+// showLabels: Chat 2026-07-31 — Text-Labels verdecken die Sicht, jetzt hinter demselben "Debug"-
+// Toggle (showLiquidityDebug) wie die übrigen Preis-Labels statt immer/zoomabhängig sichtbar.
+export function renderTradeMarkers(series, trades, existingPrimitives, candles, showLabels) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
   for (const t of trades) {
-    const primitive = new TradeMarkerPrimitive(t, tradeOptions(t), candles);
+    const primitive = new TradeMarkerPrimitive(t, tradeOptions(t, showLabels), candles);
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }

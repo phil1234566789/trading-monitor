@@ -141,6 +141,12 @@ export interface TradePositionInput {
   exitTime?: string | null;
   tradingAccountId?: number | null;
   zoneId?: number | null;
+  // Broker-Ausführungsdetails (Chat 2026-07-31, siehe Migration
+  // 20260731210000_trade_positions_size_pl_commission.sql) — vorher zweckentfremdet im
+  // reasoning-Freitext eingetragen ("Menge 0,5, Netto P/L $27.00").
+  size?: number | null;
+  netPl?: number | null;
+  commission?: number | null;
 }
 
 // Gemeinsamer Insert-Kern für create_trade (neue Idee + erste Ausführung) UND add_trade_position
@@ -164,6 +170,9 @@ async function insertTradePosition(dealingRangeId: number, fields: TradePosition
       exit_time: fields.exitTime ?? null,
       trading_account_id: fields.tradingAccountId ?? null,
       zone_id: fields.zoneId ?? null,
+      size: fields.size ?? null,
+      net_pl: fields.netPl ?? null,
+      commission: fields.commission ?? null,
     })
     .select("*")
     .single();
@@ -246,6 +255,9 @@ export interface UpdateTradePositionArgs {
   exitTime?: string | null;
   tradingAccountId?: number | null;
   zoneId?: number | null;
+  size?: number | null;
+  netPl?: number | null;
+  commission?: number | null;
 }
 
 const TRADE_POSITION_FIELD_MAP: Record<keyof UpdateTradePositionArgs, string> = {
@@ -259,6 +271,9 @@ const TRADE_POSITION_FIELD_MAP: Record<keyof UpdateTradePositionArgs, string> = 
   exitTime: "exit_time",
   tradingAccountId: "trading_account_id",
   zoneId: "zone_id",
+  size: "size",
+  netPl: "net_pl",
+  commission: "commission",
 };
 
 // Nur die tatsächlich übergebenen Felder patchen (nicht übergeben != explizit auf null setzen) —

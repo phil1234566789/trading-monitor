@@ -26,6 +26,11 @@ const TRADE_POSITION_FIELDS = {
   exitTime: z.string().optional().describe("ISO-Zeitstempel"),
   tradingAccountId: z.number().int().optional().describe("siehe get_trading_accounts"),
   zoneId: z.number().int().optional().describe("Link zu einer ob_zones-Zeile, falls der Trade aus einer Zone kam"),
+  // Broker-Ausführungsdetails (Chat 2026-07-31) — eigene Felder statt sie wie bisher in reasoning
+  // hineinzuschreiben ("Menge 0,5, Netto P/L $27.00").
+  size: z.number().optional().describe("Positionsgröße, aktuell immer Forex-Lots (z.B. 0.1, 0.5, 1)"),
+  netPl: z.number().optional().describe("Netto Gewinn/Verlust in Kontowährung, z.B. 13.0 oder -14.4"),
+  commission: z.number().optional().describe("Gebühr, i.d.R. negativ oder 0"),
 };
 
 // Trade-Journal-Write-Tools (Philip 2026-07-31: "Trades, die ich heut gemacht hab einpflegen").
@@ -106,6 +111,9 @@ export function registerTradeTools(server: McpServer) {
         exitTime: z.string().nullable().optional(),
         tradingAccountId: z.number().int().nullable().optional(),
         zoneId: z.number().int().nullable().optional(),
+        size: z.number().nullable().optional(),
+        netPl: z.number().nullable().optional(),
+        commission: z.number().nullable().optional(),
       },
     },
     async ({ id, ...fields }) => json(await updateTradePosition(id, fields)),

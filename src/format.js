@@ -43,3 +43,10 @@ export function fmtTime(input) {
 export function fmtR(r) {
   return r != null ? `${r >= 0 ? "+" : ""}${r.toFixed(2)}R` : "–";
 }
+
+// "$13.00" / "-$14.40" — für Net P/L und Commission (Chat 2026-07-31, Broker-Ausführungsdetails).
+export function fmtMoney(n) {
+  if (n == null) return "–";
+  const sign = n < 0 ? "-" : "";
+  return `${sign}$${Math.abs(n).toFixed(2)}`;
+}
