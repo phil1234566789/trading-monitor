@@ -83,7 +83,7 @@ export async function getTradeSetups(instrument: string) {
 export async function getJournal(instrument?: string, source?: string, limit = 50) {
   let query = supabase
     .from("trade_positions")
-    .select("*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, trade_targets(price)), trade_partial_exits(price, exit_time, portion_pct)")
+    .select("*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, trade_targets(price)), trade_partial_exits(price, exit_time, portion_pct)")
     .order("triggered_at", { ascending: false })
     .limit(limit);
   if (instrument) query = query.eq("dealing_ranges.instrument", instrument);
@@ -293,6 +293,10 @@ export interface UpdateDealingRangeArgs {
   direction?: "long" | "short";
   invalidation?: number | null;
   tradeSetupId?: number | null;
+  // "Lesson"-Verknüpfung (Chat 2026-07-31, vierte Runde, siehe Migration
+  // 20260731230000_dealing_ranges_lesson_link.sql) — self-referencing FK auf eine ANDERE
+  // dealing_range, die "das wäre der richtige Trade gewesen" markiert.
+  lessonDealingRangeId?: number | null;
 }
 
 const DEALING_RANGE_FIELD_MAP: Record<keyof UpdateDealingRangeArgs, string> = {
@@ -300,6 +304,7 @@ const DEALING_RANGE_FIELD_MAP: Record<keyof UpdateDealingRangeArgs, string> = {
   direction: "direction",
   invalidation: "invalidation",
   tradeSetupId: "trade_setup_id",
+  lessonDealingRangeId: "lesson_dealing_range_id",
 };
 
 export async function updateDealingRange(id: number, fields: UpdateDealingRangeArgs) {

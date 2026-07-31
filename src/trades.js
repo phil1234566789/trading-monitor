@@ -36,7 +36,7 @@ export async function fetchTrades(instrument, accountId = null) {
   // fürs Chart-Rendering der verlinkten M5-OB-Box (siehe PriceChart.vue: refreshTradeSetupLinksInternal).
   let query = supabase
     .from("trade_positions")
-    .select("*, dealing_ranges!inner(id, instrument, direction, invalidation, trade_setup_id, trade_setups(ob_start_time, ob_top, ob_bottom))")
+    .select("*, dealing_ranges!inner(id, instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, trade_setups(ob_start_time, ob_top, ob_bottom))")
     .eq("dealing_ranges.instrument", instrument);
   if (accountId != null && accountId !== ALL_ACCOUNTS_ID) query = query.eq("trading_account_id", accountId);
   const { data, error } = await query.order("triggered_at", { ascending: false });
@@ -49,26 +49,48 @@ export async function fetchTrades(instrument, accountId = null) {
   // Sammel-Queries statt pro Trade einzeln, um bei vielen Trades nicht N+1 Requests zu erzeugen.
   const positionIds = data.map((row) => row.id);
   const rangeIds = [...new Set(data.map((row) => row.dealing_ranges.id))];
+  // "Lesson"-Link (Chat 2026-07-31, vierte Runde, siehe Migration
+  // 20260731230000_dealing_ranges_lesson_link.sql): lesson_dealing_range_id ist bereits über den
+  // dealing_ranges-Join oben mit drin, hier zwei Zusatz-Queries für die ANZEIGE — einmal die Ziel-
+  // Range selbst auflösen (Richtung/Instrument fürs Label "Lesson: Long#24"), einmal die
+  // Rückrichtung ("welche ANDERE Range verweist auf MICH als Lesson", damit Long#24 in seinem
+  // eigenen Modal/in der Tabelle auch als Ziel sichtbar ist, obwohl die FK bei Short#23 sitzt).
+  // Bewusst nicht auf `instrument` eingeschränkt — die Lesson-Range kann in seltenen Fällen ein
+  // anderes Instrument sein, das Label zeigt das dann einfach mit an.
+  const lessonTargetIds = [...new Set(data.map((row) => row.dealing_ranges.lesson_dealing_range_id).filter((id) => id != null))];
   const [
     { data: targets, error: targetsError },
     { data: partials, error: partialsError },
     { data: rangeConfirmations, error: rangeConfirmationsError },
     { data: positionConfirmations, error: positionConfirmationsError },
+    { data: lessonTargets, error: lessonTargetsError },
+    { data: lessonSources, error: lessonSourcesError },
   ] = await Promise.all([
     supabase.from("trade_targets").select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high, timeframe").in("dealing_range_id", rangeIds),
     supabase.from("trade_partial_exits").select("trade_position_id, price, exit_time, portion_pct").in("trade_position_id", positionIds),
     supabase.from("trade_confirmations").select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high, timeframe").in("dealing_range_id", rangeIds),
     supabase.from("trade_confirmations").select("id, trade_position_id, price, kind, source_time, touched_time, range_low, range_high, timeframe").in("trade_position_id", positionIds),
+    lessonTargetIds.length > 0
+      ? supabase.from("dealing_ranges").select("id, instrument, direction").in("id", lessonTargetIds)
+      : Promise.resolve({ data: [], error: null }),
+    supabase.from("dealing_ranges").select("id, instrument, direction, lesson_dealing_range_id").in("lesson_dealing_range_id", rangeIds),
   ]);
   if (targetsError) throw targetsError;
   if (partialsError) throw partialsError;
   if (rangeConfirmationsError) throw rangeConfirmationsError;
   if (positionConfirmationsError) throw positionConfirmationsError;
+  if (lessonTargetsError) throw lessonTargetsError;
+  if (lessonSourcesError) throw lessonSourcesError;
 
   const targetsByRange = groupBy(targets, "dealing_range_id");
   const partialsByPosition = groupBy(partials, "trade_position_id");
   const rangeConfirmationsByRange = groupBy(rangeConfirmations, "dealing_range_id");
   const positionConfirmationsByPosition = groupBy(positionConfirmations, "trade_position_id");
+  const lessonTargetById = Object.fromEntries((lessonTargets ?? []).map((r) => [r.id, { id: r.id, instrument: r.instrument, direction: r.direction }]));
+  const lessonSourcesByTargetId = groupBy(
+    (lessonSources ?? []).map((r) => ({ id: r.id, instrument: r.instrument, direction: r.direction, dealing_range_id: r.lesson_dealing_range_id })),
+    "dealing_range_id",
+  );
 
   // level unterscheidet die zwei Ebenen aus trade_confirmations (siehe Migration
   // 20260731120000: dealing_range_id ODER trade_position_id) — TradeEditModal.vue braucht das,
@@ -108,6 +130,12 @@ export async function fetchTrades(instrument, accountId = null) {
       // echten OB-Grenzen aus trade_setups, die waren strukturell eh identisch damit.
       tradeSetupObTop: range.trade_setups?.ob_top ?? null,
       tradeSetupObBottom: range.trade_setups?.ob_bottom ?? null,
+      // "Lesson"-Link (siehe oben): lessonDealingRangeId ist die eigene FK (diese Range zeigt auf
+      // eine andere als "das wäre richtig gewesen"), lessonOfDealingRanges die Rückrichtung (andere
+      // Ranges, die AUF DIESE hier als ihre Lesson zeigen).
+      lessonDealingRangeId: range.lesson_dealing_range_id ?? null,
+      lessonDealingRange: range.lesson_dealing_range_id != null ? (lessonTargetById[range.lesson_dealing_range_id] ?? null) : null,
+      lessonOfDealingRanges: (lessonSourcesByTargetId[range.id] ?? []).map(({ id, instrument, direction }) => ({ id, instrument, direction })),
       tradingAccountId: row.trading_account_id,
       // TradeTarget-Rohformat (siehe tradeTargets.ts) statt nur des Preises (Chat 2026-07-28: "kann
       // ich das bearbeiten?" / "wieso nur der Preis?") — kind/sourceTime/touchedTime fürs

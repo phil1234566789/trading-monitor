@@ -21,6 +21,25 @@ function outcomeLabel(t) {
   return t.outcome ? (OUTCOME_LABEL[t.outcome] ?? t.outcome) : "Offen";
 }
 
+// "Lesson"-Link (Chat 2026-07-31, vierte Runde, siehe TradeEditModal.vue) — als sichtbarer Chip
+// mit Text statt nur einem Hover-Icon (Philip: "muss noch auffälliger werden ... ein 'Chip'
+// hinzukommt mit Lesson"), damit "Short#23 und Long#24 gehören zusammen" ohne Hover erkennbar
+// ist. Ein Chip pro Richtung (eigene FK UND "wer zeigt auf mich als Lesson", siehe trades.js),
+// Verlinken/Entfernen bleibt allein dem Edit-Modal vorbehalten.
+function rangeLabel(t, r) {
+  return `${r.direction === "short" ? "Short" : "Long"}#${r.id}${r.instrument !== t.instrument ? ` (${r.instrument})` : ""}`;
+}
+function lessonBadges(t) {
+  const badges = [];
+  if (t.lessonDealingRangeId != null) {
+    badges.push({ key: `own-${t.lessonDealingRangeId}`, label: `Lesson: ${t.lessonDealingRange ? rangeLabel(t, t.lessonDealingRange) : "#" + t.lessonDealingRangeId}` });
+  }
+  for (const r of t.lessonOfDealingRanges ?? []) {
+    badges.push({ key: `of-${r.id}`, label: `Lesson für ${rangeLabel(t, r)}` });
+  }
+  return badges;
+}
+
 // Bewusst radikal reduziert (Chat 2026-07-31: "Ich schau mir das erst an, dann können wir weitere
 // Spalten hinzufügen") — eine Zeile pro trade_position wie bisher, aber nur noch Dealing-Range-
 // Kennung (Richtung + #dealing_range_id, NICHT die trade_setup_id-Verknüpfung, das ist ein anderes
@@ -59,6 +78,7 @@ const showCommission = useLocalStorageRef("showCommissionColumn", false);
         <td>
           <span class="trade-direction" :class="t.direction">{{ t.direction === "short" ? "Short" : "Long" }}</span>
           #{{ t.dealingRangeId }}
+          <span v-for="badge in lessonBadges(t)" :key="badge.key" class="trade-lesson-chip">🔗 {{ badge.label }}</span>
         </td>
         <!-- Chat 2026-07-31: "damit ich, wenn ich das Modal öffne, besser erkennen kann, welche
              Position ich da eigentlich editiere" — matcht 1:1 den Modal-Titel "Trade #<id>

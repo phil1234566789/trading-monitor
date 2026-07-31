@@ -244,6 +244,10 @@ export async function deleteTrade(positionId) {
 export async function updateDealingRange(dealingRangeId, fields) {
   const payload = {};
   if ("invalidation" in fields) payload.invalidation = fields.invalidation;
+  // "Lesson"-Verknüpfung (Chat 2026-07-31, vierte Runde): "GBP Short#23 war ein dummer Fehler,
+  // Long#24 wäre die Lesson daraus" — self-referencing FK auf eine ANDERE dealing_range, siehe
+  // Migration 20260731230000_dealing_ranges_lesson_link.sql. null = Verknüpfung entfernen.
+  if ("lessonDealingRangeId" in fields) payload.lesson_dealing_range_id = fields.lessonDealingRangeId;
 
   const { error } = await supabase.from("dealing_ranges").update(payload).eq("id", dealingRangeId);
   if (error) {

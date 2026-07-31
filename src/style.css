@@ -104,6 +104,26 @@ body {
   font-size: 11px;
 }
 
+/* "Lesson"-Verlinkungs-Chip (Chat 2026-07-31, vierte Runde) — gleiche Violett-Akzentfarbe wie
+   TradeEditModal.vue's .tem-lesson-badge, damit die beiden Stellen als dasselbe Konzept erkennbar
+   bleiben. Erst nur ein Hover-Icon, Philip: "muss noch auffälliger werden ... ein Chip mit
+   Lesson" — jetzt sichtbarer Text-Chip statt nur Tooltip. Verlinken/Entfernen bleibt allein dem
+   Edit-Modal vorbehalten. */
+.trade-lesson-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(171, 71, 188, 0.16);
+  border: 1px solid rgba(171, 71, 188, 0.5);
+  color: #ce93d8;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 5px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
 /* Net P/L + Commission (Chat 2026-07-31) — dieselbe Grün/Rot-Semantik wie .trade-outcome.win/.loss,
    eigene Klasse statt Wiederverwendung, weil sie nach Vorzeichen statt nach outcome-String
    entscheidet. */

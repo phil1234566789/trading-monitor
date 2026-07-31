@@ -50,6 +50,65 @@ const saving = ref(false);
 
 const invalidation = ref("");
 const savingRange = ref(false);
+
+// "Lesson"-Verknüpfung (Chat 2026-07-31, vierte Runde): "GBP Short#23 war ein dummer Fehler,
+// Long#24 wäre die Lesson daraus" — kann auch eine falsch bestimmte dealing range sein, nicht nur
+// ein Ausführungsfehler, darum an der Range statt an der Position. Bewusst reiner ID-Eingabeweg
+// (Philip: "eine Möglichkeit eine dealing-range mittels Id hinzuzufügen und zu verlinken"), kein
+// Chart-Klick-Arm wie bei Targets/Bestätigungen — es gibt keine sinnvolle Chart-Stelle, die "die
+// andere dealing range" anklickbar machen würde. lessonBadges bildet BEIDE Richtungen ab (eigene
+// FK UND "wer zeigt auf mich als Lesson", siehe trades.js), damit ein × immer auf der Range
+// wirkt, die die FK tatsächlich trägt — nicht zwangsläufig diese hier.
+const lessonInput = ref("");
+const savingLesson = ref(false);
+const lessonError = ref("");
+
+function rangeLabel(r) {
+  return `${r.direction === "short" ? "Short" : "Long"}#${r.id}${r.instrument !== props.trade.instrument ? ` (${r.instrument})` : ""}`;
+}
+
+const lessonBadges = computed(() => {
+  const badges = [];
+  if (props.trade.lessonDealingRangeId != null) {
+    const r = props.trade.lessonDealingRange;
+    badges.push({
+      key: `own-${props.trade.lessonDealingRangeId}`,
+      label: `Lesson: ${r ? rangeLabel(r) : "#" + props.trade.lessonDealingRangeId}`,
+      unlinkRangeId: props.trade.dealingRangeId,
+    });
+  }
+  for (const r of props.trade.lessonOfDealingRanges ?? []) {
+    badges.push({
+      key: `of-${r.id}`,
+      label: `Lesson für ${rangeLabel(r)}`,
+      unlinkRangeId: r.id,
+    });
+  }
+  return badges;
+});
+
+async function linkLesson() {
+  const targetId = Number(lessonInput.value);
+  lessonError.value = "";
+  if (!targetId || targetId === props.trade.dealingRangeId) {
+    lessonError.value = "ungültige ID";
+    return;
+  }
+  savingLesson.value = true;
+  const ok = await updateDealingRange(props.trade.dealingRangeId, { lessonDealingRangeId: targetId });
+  savingLesson.value = false;
+  if (ok) {
+    lessonInput.value = "";
+    emit("saved");
+  } else {
+    lessonError.value = "ID nicht gefunden";
+  }
+}
+
+async function unlinkLesson(badge) {
+  const ok = await updateDealingRange(badge.unlinkRangeId, { lessonDealingRangeId: null });
+  if (ok) emit("saved");
+}
 // Sichtbares Feedback fürs Invalidierungs-Feld (Chat 2026-07-31, dritte Runde: "ich sehe nicht, ob
 // das erfolgreich übernommen worden ist") — gilt für BEIDE Wege, den Preis zu setzen: das Formular
 // hier UND den Chart-Klick (Dashboard.vue: onSelectTarget schreibt direkt in die DB, das Modal
@@ -79,23 +138,42 @@ function toDatetimeLocal(unixSeconds) {
 // den Chart hinzugefügt, siehe oben) mit dem aktuellen DB-Stand neu befüllen — NICHT nur beim
 // ersten Öffnen, sonst würde ein externes Update während offenem Panel nicht in den Feldern
 // auftauchen (nur in den schreibgeschützten Ziele-/Setup-Listen unten).
+//
+// Bug-Report Philip 2026-07-31: "will die Begründung editieren, auf einmal fügt sich irgendein
+// anderer Text ein" — kein Autofill-Problem, sondern Dashboard.vue's usePolledFetch pollt `trades`
+// alle POLL_MS neu (er sah dazu passend "ganz viele requests im Network-Tab"), was hier bei
+// OFFENEM Panel für DENSELBEN Trade eine neue props.trade-Objektreferenz mit dem alten DB-Stand
+// auslöste — der Watcher hat dann blind den gerade getippten Text mit dem zuletzt gespeicherten
+// überschrieben. Fix: "sync-if-untouched" — ein Feld nur aus dem neuen Trade übernehmen, wenn es
+// seit dem letzten Sync unverändert ist (== oldT-Wert), sonst ist der Nutzer gerade mittendrin,
+// es zu bearbeiten. Bei einem echten Trade-Wechsel (andere id) IMMER hart neu befüllen.
+function syncIfUntouched(ref, sameTrade, oldValue, newValue) {
+  if (sameTrade && ref.value !== oldValue) return;
+  ref.value = newValue;
+}
 watch(
   () => props.trade,
   (t, oldT) => {
-    entryPrice.value = t.entryPrice ?? "";
-    stopLoss.value = t.stopLoss ?? "";
-    exitPrice.value = t.exitPrice ?? "";
-    exitTimeInput.value = t.exitTime != null ? toDatetimeLocal(t.exitTime) : "";
-    outcome.value = t.outcome ?? "";
-    reasoning.value = t.reasoning ?? "";
-    tradingAccountId.value = t.tradingAccountId ?? null;
-    invalidation.value = t.invalidation ?? "";
-    size.value = t.size ?? "";
-    netPl.value = t.netPl ?? "";
-    commission.value = t.commission ?? "";
+    const sameTrade = oldT != null && oldT.id === t.id;
+    syncIfUntouched(entryPrice, sameTrade, oldT?.entryPrice ?? "", t.entryPrice ?? "");
+    syncIfUntouched(stopLoss, sameTrade, oldT?.stopLoss ?? "", t.stopLoss ?? "");
+    syncIfUntouched(exitPrice, sameTrade, oldT?.exitPrice ?? "", t.exitPrice ?? "");
+    syncIfUntouched(
+      exitTimeInput,
+      sameTrade,
+      oldT?.exitTime != null ? toDatetimeLocal(oldT.exitTime) : "",
+      t.exitTime != null ? toDatetimeLocal(t.exitTime) : "",
+    );
+    syncIfUntouched(outcome, sameTrade, oldT?.outcome ?? "", t.outcome ?? "");
+    syncIfUntouched(reasoning, sameTrade, oldT?.reasoning ?? "", t.reasoning ?? "");
+    syncIfUntouched(tradingAccountId, sameTrade, oldT?.tradingAccountId ?? null, t.tradingAccountId ?? null);
+    syncIfUntouched(invalidation, sameTrade, oldT?.invalidation ?? "", t.invalidation ?? "");
+    syncIfUntouched(size, sameTrade, oldT?.size ?? "", t.size ?? "");
+    syncIfUntouched(netPl, sameTrade, oldT?.netPl ?? "", t.netPl ?? "");
+    syncIfUntouched(commission, sameTrade, oldT?.commission ?? "", t.commission ?? "");
     // Nur bei derselben Dealing Range flashen — sonst würde ein simples "anderen Trade öffnen"
     // (andere invalidation, weil andere Idee) fälschlich als "gerade gespeichert" aufblitzen.
-    if (oldT && oldT.dealingRangeId === t.dealingRangeId && oldT.invalidation !== t.invalidation) {
+    if (sameTrade && oldT.dealingRangeId === t.dealingRangeId && oldT.invalidation !== t.invalidation) {
       flashInvalidationSaved();
     }
   },
@@ -174,6 +252,18 @@ function confirmationLabel(confirmation) {
       <span class="tem-direction" :class="trade.direction">{{ trade.direction === "short" ? "Short" : "Long" }}</span>
       <span>{{ trade.instrument }}</span>
       <span class="tem-muted">{{ fmtDateTime(trade.entryTime) }}</span>
+
+      <div class="tem-lesson-area">
+        <span v-for="badge in lessonBadges" :key="badge.key" class="tem-lesson-badge">
+          🔗 {{ badge.label }}
+          <button class="tem-lesson-remove" title="Verknüpfung entfernen" @click="unlinkLesson(badge)">×</button>
+        </span>
+        <form v-if="trade.lessonDealingRangeId == null" class="tem-lesson-form" @submit.prevent="linkLesson">
+          <input v-model="lessonInput" type="number" placeholder="Range-ID" title="Dealing-Range-ID der Lesson" />
+          <button type="submit" class="tem-lesson-link-btn" title="als Lesson verlinken" :disabled="savingLesson">🔗</button>
+        </form>
+        <span v-if="lessonError" class="tem-lesson-error">{{ lessonError }}</span>
+      </div>
     </div>
 
     <!-- Dealing Range: die IDEE — gilt für alle Ausführungen unter dieser Range, nicht nur diese
@@ -255,7 +345,7 @@ function confirmationLabel(confirmation) {
 
       <section class="tem-section">
         <h4 class="tem-section-title">Ausführung</h4>
-        <form class="tem-form" @submit.prevent="save">
+        <form class="tem-form" autocomplete="off" @submit.prevent="save">
           <label>
             Entry-Preis
             <input v-model="entryPrice" type="number" step="any" placeholder="leer = nicht gefüllt" />
@@ -302,7 +392,7 @@ function confirmationLabel(confirmation) {
           </label>
           <label>
             Begründung
-            <textarea v-model="reasoning" rows="3"></textarea>
+            <textarea v-model="reasoning" rows="3" autocomplete="off"></textarea>
           </label>
           <button type="submit" class="tem-save-btn" :disabled="saving">Speichern</button>
         </form>
@@ -346,6 +436,89 @@ function confirmationLabel(confirmation) {
 .tem-muted {
   color: #787b86;
   font-size: 12px;
+}
+
+/* "Lesson"-Verknüpfung (Chat 2026-07-31, vierte Runde) — oben rechts in der Header-Zeile
+   (Philip: "gleich oben rechts auf die Zeile"), margin-left: auto schiebt sie ans Ende des
+   bestehenden Flex-Headers statt eine eigene Zeile zu brauchen. Violett statt Grün/Orange
+   (Richtung), Blau (Range) oder Rot (Löschen/Loss) — bewusst eine neue, "auffällige" Akzentfarbe
+   (Philip's eigene Formulierung), damit ein Lesson-Link auf den ersten Blick aus dem Rest
+   heraussticht. */
+.tem-lesson-area {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tem-lesson-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(171, 71, 188, 0.16);
+  border: 1px solid rgba(171, 71, 188, 0.5);
+  color: #ce93d8;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 6px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+
+.tem-lesson-remove {
+  background: transparent;
+  border: none;
+  color: #ce93d8;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 0 0 2px;
+}
+
+.tem-lesson-remove:hover {
+  color: #ef5350;
+}
+
+.tem-lesson-form {
+  display: flex;
+  gap: 4px;
+}
+
+.tem-lesson-form input {
+  width: 64px;
+  background: #131722;
+  border: 1px solid rgba(171, 71, 188, 0.4);
+  border-radius: 4px;
+  color: #d1d4dc;
+  font-size: 12px;
+  padding: 3px 6px;
+  color-scheme: dark;
+}
+
+.tem-lesson-link-btn {
+  background: transparent;
+  border: 1px solid rgba(171, 71, 188, 0.5);
+  color: #ce93d8;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 6px;
+}
+
+.tem-lesson-link-btn:hover:not(:disabled) {
+  background: rgba(171, 71, 188, 0.16);
+}
+
+.tem-lesson-link-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.tem-lesson-error {
+  color: #ef5350;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 /* Zwei sichtbar getrennte Bereiche (Chat 2026-07-31: "seperate dealing range and trade position
