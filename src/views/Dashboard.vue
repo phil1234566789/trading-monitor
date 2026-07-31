@@ -532,10 +532,13 @@ function closeMenusOutside(e) {
 onMounted(() => window.addEventListener("click", closeMenusOutside));
 onUnmounted(() => window.removeEventListener("click", closeMenusOutside));
 const isBtc = computed(() => currentSymbol.value === "BTC-USDT");
-const { data: trades, refresh: refreshTrades } = usePolledFetch(
-  () => fetchTrades(currentSymbol.value, selectedTradingAccountId.value),
-  { intervalMs: POLL_MS },
-);
+// Kein Intervall-Poll mehr (Bug-Report Philip 2026-07-31: Begründung im Edit-Modal wurde alle
+// POLL_MS mit dem alten DB-Stand überschrieben) — Trades ändern sich, anders als BTC-Gauges/
+// POI-Zonen, nur durch explizite Aktionen (Speichern, Symbol-/Kontowechsel, Ziel/Bestätigung im
+// Chart hinzugefügt, siehe die refreshTrades()-Aufrufe unten), kein eigenes intervalMs also kein
+// Hintergrund-Poll (siehe usePolledFetch.js). Eine externe Änderung durch Lana (MCP-Server)
+// erscheint dadurch erst nach einem manuellen Reload/Tab-Wechsel — bewusst in Kauf genommen.
+const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrades(currentSymbol.value, selectedTradingAccountId.value));
 const { data: poiZones, refresh: refreshPoiZones } = usePolledFetch(
   () => (isBtc.value ? fetchPoiZones(currentSymbol.value) : []),
   { intervalMs: POLL_MS },
