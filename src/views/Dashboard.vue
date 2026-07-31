@@ -156,6 +156,10 @@ const showRangesMetadata = useLocalStorageRef("showRangesMetadata", false);
 // EMA 50/200 auf M5 (siehe Chat: "Trend über EMA + Anzahl protected highs/lows") — ein Toggle für
 // beide Linien zusammen, keine separaten Schalter je Periode (nicht verlangt).
 const showEma = useLocalStorageRef("showEma", false);
+// EMA rechnet/rendert nur auf M5 (siehe PriceChart.vue: refreshEmaInternal, currentBar !== "5m"
+// blendet aus) — Button in anderen TFs disabled statt anklickbar-aber-wirkungslos (Bug-Report
+// Philip 2026-07-31: klickt in anderen TFs drauf und wundert sich, dass nichts passiert).
+const emaDisabled = computed(() => currentBar.value !== "5m");
 // Vertikale News-Marker auf dem Chart (Chat 2026-07-26: "ich würd die News gern visuell irgendwo
 // sehen") — Sichtbarkeits-Toggle wie showEma/showSessions, die Termine selbst kommen aus dem
 // newsEvents.js-Store (siehe PriceChart.vue).
@@ -494,7 +498,12 @@ watch(selectedTradingAccountId, refreshTrades);
           ▾
         </button>
         <div v-if="indikatorenMenuOpen" class="toggle-dropdown indikatoren-dropdown">
-          <button :class="{ active: showEma }" @click="showEma = !showEma">
+          <button
+            :class="{ active: showEma }"
+            :disabled="emaDisabled"
+            :title="emaDisabled ? 'EMA nur für M5' : ''"
+            @click="showEma = !showEma"
+          >
             EMA
           </button>
 
@@ -712,7 +721,12 @@ watch(selectedTradingAccountId, refreshTrades);
         </div>
       </div>
 
-      <button :class="{ active: showEma }" @click="showEma = !showEma">
+      <button
+        :class="{ active: showEma }"
+        :disabled="emaDisabled"
+        :title="emaDisabled ? 'EMA nur für M5' : ''"
+        @click="showEma = !showEma"
+      >
         EMA
       </button>
 
@@ -936,6 +950,18 @@ watch(selectedTradingAccountId, refreshTrades);
 .drawing-toggles button.active {
   background: #2962ff;
   color: #fff;
+}
+
+.drawing-toggles button:disabled,
+.toggle-dropdown button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.drawing-toggles button:disabled:hover,
+.toggle-dropdown button:disabled:hover {
+  background: transparent;
+  color: #787b86;
 }
 
 .trade-mode-switcher button.active {
