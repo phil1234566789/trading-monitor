@@ -3,12 +3,27 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getObZones, getLiquidityLevels, getTradeSetups, getJournal, getNewsEvents, getTradingSchedule, getTradingAccounts } from "../db.js";
 import { fetchForexCandles } from "../forexCandles.js";
 import { buildDataExport } from "./dataExport.js";
+import { computeRsi, rsiZone, DEFAULT_RSI_PERIOD } from "../rsi.js";
+// Derselbe computeEma wie der Live-Chart-Overlay (PriceChart.vue) — kein zweiter Port nötig,
+// da die Funktion bereits dependency-frei ist (kein localStorage/import.meta.env), siehe
+// CLAUDE.md "MCP-Server" zum selben Muster bei marketStructureAnalysis.ts.
+import { computeEma } from "../../../src/ema.js";
+import { resolveDayWindow, fetchM5WithWarmup, isWithinDayWindow } from "../indicatorWindow.js";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
 const INSTRUMENT = z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument");
+
+// Wie TREND_ANALYSIS_CANDLE_COUNT/EMA_PERIOD_FAST/EMA_PERIOD_SLOW in PriceChart.vue.
+const EMA_WARMUP_CANDLES = 1000;
+const EMA_PERIOD_FAST = 50;
+const EMA_PERIOD_SLOW = 200;
+
+// "mehrere Vielfache der Periode" (siehe src/ema.js-Kommentar) — für RSI reicht das genauso als
+// Vorlauf, bis die Wilder-Glättung eingependelt ist, bevor der erste Tagespunkt zurückgegeben wird.
+const RSI_WARMUP_MULTIPLIER = 5;
 
 // Registriert alle Read-Tools am Server. get_data_export zuerst und mit Beschreibung, die Claude
 // aktiv dazu anhält, es zuerst aufzurufen (Philips Punkt: nicht zig einzelne GETs am Gesprächs-
@@ -150,5 +165,89 @@ export function registerReadTools(server: McpServer) {
       },
     },
     async ({ instrument, timeframe, count }) => json(await fetchForexCandles(instrument, timeframe, { count })),
+  );
+
+  server.registerTool(
+    "get_forex_rsi",
+    {
+      title: "RSI (M5, Forex)",
+      description:
+        "M5-RSI(14) für GBPUSD/EURUSD (Wilder-Glättung, siehe trading/rsi.md), berechnet aus den " +
+        "gleichen Kerzen wie get_forex_candles — kein zusätzlicher Twelve-Data-Request. Gleiche " +
+        "dateStr/replayUntilSec-Semantik wie get_data_export: ohne Angabe der aktuelle Tag live, " +
+        "mit dateStr ein bestimmter Europe/Berlin-Kalendertag, mit replayUntilSec innerhalb dieses " +
+        "Tages nur bis zu diesem Zeitpunkt (Replay-Simulation) — für Vorlauf vor Tagesbeginn holt " +
+        "das Tool automatisch zusätzliche Kerzen, damit die RSI-Werte am ersten Punkt des Tages " +
+        "schon eingependelt sind. Nur für M5 gedacht, nur um Divergenzen (Kurs vs. RSI) und " +
+        "Überkauft/Überverkauft-Zonen zu prüfen — Philip selbst achtet kaum aktiv auf RSI, " +
+        "kommentiere ihn nur, wenn er auffällig ist oder stark gegen ein Setup spricht (siehe " +
+        "rsi.md 'Philips RSI-Nutzung'). Divergenzen NICHT vorberechnet — vergleiche die " +
+        "zurückgegebene series (Kurs+RSI) selbst auf HH/LH bzw. LL/HL an den jeweiligen Swing-" +
+        "Punkten. Für BTC stattdessen market_get_indicator (okx-market-MCP, indicator='rsi') " +
+        "nutzen, dort bereits fertig verfügbar.",
+      inputSchema: {
+        instrument: INSTRUMENT,
+        dateStr: z.string().optional().describe("YYYY-MM-DD (Europe/Berlin), Default: heute"),
+        replayUntilSec: z.number().optional().describe("Unix-Sekunden — deckt nur bis zu diesem Zeitpunkt auf (Replay-Simulation)"),
+        period: z.number().int().positive().default(DEFAULT_RSI_PERIOD).describe("RSI-Periode, Standard 14"),
+      },
+    },
+    async ({ instrument, dateStr, replayUntilSec, period }) => {
+      const window = resolveDayWindow(dateStr, replayUntilSec);
+      const candles = await fetchM5WithWarmup(instrument, period * RSI_WARMUP_MULTIPLIER, window);
+      const points = computeRsi(candles, period).filter((p) => isWithinDayWindow(p.time, window));
+      const current = points[points.length - 1];
+      return json({
+        instrument,
+        date: window.effectiveDateStr,
+        timezone: "Europe/Berlin",
+        replay: replayUntilSec == null ? { active: false } : { active: true, until: replayUntilSec },
+        period,
+        current: current?.rsi != null ? { time: current.time, close: current.close, rsi: current.rsi, zone: rsiZone(current.rsi) } : null,
+        series: points,
+      });
+    },
+  );
+
+  server.registerTool(
+    "get_forex_ema",
+    {
+      title: "EMA 50/200 (M5, Forex)",
+      description:
+        "M5-EMA(50)/EMA(200) für GBPUSD/EURUSD (siehe trading/ema.md) — nutzt computeEma aus " +
+        `src/ema.js, denselben Code wie der Live-Chart-Overlay, mit ${EMA_WARMUP_CANDLES} Kerzen ` +
+        "Vorlauf vor Tagesbeginn, bis sich EMA200 eingependelt hat (wie TREND_ANALYSIS_CANDLE_COUNT " +
+        "im Frontend). Gleiche dateStr/replayUntilSec-Semantik wie get_data_export/get_forex_rsi: " +
+        "ohne Angabe der aktuelle Tag live, mit dateStr ein bestimmter Europe/Berlin-Kalendertag, " +
+        "mit replayUntilSec innerhalb dieses Tages nur bis zu diesem Zeitpunkt (Replay-Simulation). " +
+        "Laut ema.md NUR grober Trendfilter (Kurs über/unter EMA200 → Bias) und Konsolidierungs-" +
+        "warnung (EMA50/EMA200 konvergieren oder kreuzen → Setup meiden) — kein Einstiegssignal, " +
+        "nur auf M5 relevant (Konvergenz auf 4H/1H ist KEIN Grund, ein M5-Setup abzulehnen). " +
+        "Konvergenz nicht vorberechnet — Abstand ema50 minus ema200 über die series selbst " +
+        "beobachten (schrumpfend = Konsolidierungsgefahr).",
+      inputSchema: {
+        instrument: INSTRUMENT,
+        dateStr: z.string().optional().describe("YYYY-MM-DD (Europe/Berlin), Default: heute"),
+        replayUntilSec: z.number().optional().describe("Unix-Sekunden — deckt nur bis zu diesem Zeitpunkt auf (Replay-Simulation)"),
+      },
+    },
+    async ({ instrument, dateStr, replayUntilSec }) => {
+      const window = resolveDayWindow(dateStr, replayUntilSec);
+      const candles = await fetchM5WithWarmup(instrument, EMA_WARMUP_CANDLES, window);
+      const ema50 = computeEma(candles, EMA_PERIOD_FAST);
+      const ema200 = computeEma(candles, EMA_PERIOD_SLOW);
+      const points = candles
+        .map((c, i) => ({ time: c.time, close: c.close, ema50: ema50[i].value, ema200: ema200[i].value }))
+        .filter((p) => isWithinDayWindow(p.time, window));
+      const current = points[points.length - 1];
+      return json({
+        instrument,
+        date: window.effectiveDateStr,
+        timezone: "Europe/Berlin",
+        replay: replayUntilSec == null ? { active: false } : { active: true, until: replayUntilSec },
+        current: current ? { ...current, trendBias: current.close > current.ema200 ? "bullish" : "bearish" } : null,
+        series: points,
+      });
+    },
   );
 }

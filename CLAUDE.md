@@ -373,6 +373,39 @@ listed in `.claude/settings.local.json` (`mcp__trading-monitor__post_chart_annot
 personal-machine setting, not `.claude/settings.json`) so it runs without a confirmation prompt.
 If Philip asks to tighten this again, remove that allow-list entry — there's no other gate.
 
+**RSI/EMA (`get_forex_rsi`/`get_forex_ema`, added 2026-07-31)**: M5-only indicator tools for
+GBPUSD/EURUSD, both sharing the same `dateStr`/`replayUntilSec` window semantics as
+`get_data_export` (`mcp-server/src/indicatorWindow.ts`'s `resolveDayWindow`/`fetchM5WithWarmup`/
+`isWithinDayWindow`) — no `dateStr` means the current day live, `dateStr` picks a specific
+Europe/Berlin calendar day, `replayUntilSec` caps that day at a simulated point in time. Unlike
+`get_data_export`'s M5 candles, both tools additionally fetch warmup candles *before* the day
+starts (`fetchM5WithWarmup`) so the indicator's own recursion has settled by the first point of
+the day that's actually returned — without that lead-in, the first hour or so of any requested
+day would show inaccurate values, since neither indicator can be seeded correctly from a cold
+start at midnight.
+
+- `get_forex_rsi`: Wilder RSI(14) (`mcp-server/src/rsi.ts`) — GBPUSD/EURUSD only, since BTC already
+  has real RSI values via the separate `okx-market` MCP server's `market_get_indicator`
+  (`indicator: "rsi"`), no need to duplicate that. Divergence detection (HH/LH, LL/HL) is
+  deliberately NOT computed here — Claude compares the returned price+RSI series itself once the
+  numbers exist; the error-prone part worth coding is the Wilder smoothing itself (an LLM can't
+  reliably re-derive it by eyeballing candles), not the pattern-matching on top of it. Per
+  `trading/rsi.md`'s own "Philips RSI-Nutzung" section, Philip barely watches RSI actively — only
+  comment on it when it's genuinely notable (extreme divergence, zone exit) or strongly against an
+  open setup, not as a routine indicator dump.
+- `get_forex_ema`: EMA(50)/EMA(200), reusing `computeEma` from `src/ema.js` directly
+  (cross-directory import, same pattern as `marketStructureAnalysis.ts` above) rather than a port —
+  `computeEma` is already dependency-free (no `localStorage`/`import.meta.env`), so there's no
+  Node-safety reason to duplicate it, and it's the exact function the live chart's EMA overlay
+  uses, so there's no drift risk either. Warmup is a fixed 1000 candles (`EMA_WARMUP_CANDLES`,
+  matching `PriceChart.vue`'s own `TREND_ANALYSIS_CANDLE_COUNT`) rather than a period-derived
+  multiplier, since `computeEma` seeds its recursion from the first candle's close (see that
+  file's own comment) and needs substantially more lead-in than RSI's Wilder smoothing does,
+  especially for the 200-period EMA. Per `trading/ema.md`, this is a trend filter (price vs.
+  EMA200) and a consolidation warning (EMA50/EMA200 converging or crossing on M5 only — 4H/1H
+  convergence doesn't count), never an entry/exit signal; convergence itself isn't precomputed,
+  same reasoning as RSI divergence above.
+
 **"Laniakea" persona (`/l`)**: `.claude/commands/l.md` switches a session from this file's normal
 coding-assistant behavior into "Laniakea", Philip's trading-sparring-partner persona (Bias/Setup-
 analysis, not code) — pointer to `trading/claude-project-instructions.md` (the same persona
