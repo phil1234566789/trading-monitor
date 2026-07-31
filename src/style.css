@@ -53,11 +53,6 @@ body {
   background: #1a1e28;
 }
 
-.trade-time {
-  color: #787b86;
-  font-size: 11px;
-}
-
 .trade-reasoning-cell {
   color: #9aa0ac;
   max-width: 320px;
@@ -71,9 +66,12 @@ body {
   white-space: nowrap;
 }
 
+/* Short = Orange statt Rot (Chat 2026-07-31: "use green and orange for long and short") — Rot
+   bleibt für Win/Loss (.trade-outcome) reserviert, damit Richtung und Ergebnis nicht dieselbe
+   Farbsprache teilen und dadurch verwechselbar werden. */
 .trade-direction.short {
-  background: rgba(239, 83, 80, 0.2);
-  color: #ef5350;
+  background: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
 }
 
 .trade-direction.long {
@@ -104,12 +102,6 @@ body {
   color: #787b86;
 }
 
-.trade-setup-cell {
-  font-family: "Courier New", monospace;
-  color: #787b86;
-  font-size: 11px;
-}
-
 .trade-link-btn {
   background: transparent;
   border: none;
@@ -123,20 +115,4 @@ body {
 .trade-link-btn:hover {
   opacity: 1;
   color: #7ea6ff;
-}
-
-.trade-targets-cell {
-  white-space: nowrap;
-}
-
-.trade-target-item {
-  margin-right: 8px;
-}
-
-.trade-target-item.target-reached {
-  color: #26a69a;
-}
-
-.trade-target-item.target-missed {
-  color: #ef5350;
 }

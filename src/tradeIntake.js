@@ -170,6 +170,11 @@ export async function addTargetToTrade(dealingRangeId, target) {
     kind: target.kind,
     source_time: target.sourceTime != null ? new Date(target.sourceTime * 1000).toISOString() : null,
     touched_time: target.touchedTime != null ? new Date(target.touchedTime * 1000).toISOString() : null,
+    // Nur bei kind='ob' gesetzt (siehe PriceChart.vue: findClickedOBZone) — die zwei Kanten der
+    // Zone, damit sich daraus eine echte OB-Box statt nur einer Linie an der näheren Kante
+    // zeichnen lässt (Bug-Report Philip 2026-07-31).
+    range_low: target.rangeLow ?? null,
+    range_high: target.rangeHigh ?? null,
   });
   if (error) {
     console.error("Target hinzufügen fehlgeschlagen:", error);
@@ -226,6 +231,22 @@ export async function deleteTrade(positionId) {
   return true;
 }
 
+// Dealing-Range-CRUD, "U" — bisher gab's dafür kein UI-Feld, invalidation ließ sich nur indirekt
+// über linkTradeToSetup/unlinkTradeSetup setzen/löschen (Chat 2026-07-31: Modal trennt jetzt
+// Dealing-Range- von Trade-Position-Feldern, invalidation braucht dafür einen eigenen, direkten
+// Edit-Weg statt an die Setup-Verknüpfung gekoppelt zu sein).
+export async function updateDealingRange(dealingRangeId, fields) {
+  const payload = {};
+  if ("invalidation" in fields) payload.invalidation = fields.invalidation;
+
+  const { error } = await supabase.from("dealing_ranges").update(payload).eq("id", dealingRangeId);
+  if (error) {
+    console.error("Dealing Range aktualisieren fehlgeschlagen:", error);
+    return false;
+  }
+  return true;
+}
+
 // Setup-Verknüpfung wieder entfernen (Gegenstück zu linkTradeToSetup) — für einen versehentlichen
 // oder falschen 🔗-Klick. Sitzt auf der dealing_range, seit trade_setup_id/invalidation dort statt
 // auf der einzelnen Ausführung leben.
@@ -241,14 +262,15 @@ export async function unlinkTradeSetup(dealingRangeId) {
 // Bestätigung hinzufügen (PLAN-trade-confluences.md #1: "von welchen Sweeps kam die Kraft ...
 // auch OBs") — gleiches Rohformat wie addTargetToTrade (kind/price/sourceTime/touchedTime aus
 // PriceChart.vue: findClickedTarget), eigene Tabelle (trade_confirmations), weil eine Bestätigung
-// bereits passierte Evidenz ist statt einer zukünftigen Preis-Erwartung. Hängt bewusst an der
-// einzelnen Ausführung (trade_position_id), nicht an der dealing_range — das GO für DIESEN Entry
-// kann sich von anderen Re-Entries derselben Idee unterscheiden (Chat 2026-07-31). Eine
-// range-weite Bestätigung (dealing_range_id statt trade_position_id) gibt's als Konzept schon in
-// der DB, aber noch keinen UI-Weg, eine anzulegen — kommt mit dem TSC-Rework (siehe CLAUDE.md).
-export async function addConfirmationToTrade(positionId, confirmation) {
+// bereits passierte Evidenz ist statt einer zukünftigen Preis-Erwartung. trade_confirmations ist
+// zweigleisig (siehe Migration 20260731120000): eine Zeile hängt entweder an der einzelnen
+// Ausführung (das GO für DIESEN Entry, kann sich von anderen Re-Entries unterscheiden) oder an der
+// dealing_range (das GO für die ganze Idee) — genau eine der beiden IDs wird gesetzt, der Rest
+// bleibt null (DB-CHECK erzwingt das).
+async function insertConfirmation({ tradePositionId = null, dealingRangeId = null, confirmation }) {
   const { error } = await supabase.from("trade_confirmations").insert({
-    trade_position_id: positionId,
+    trade_position_id: tradePositionId,
+    dealing_range_id: dealingRangeId,
     price: confirmation.price,
     kind: confirmation.kind,
     source_time: confirmation.sourceTime != null ? new Date(confirmation.sourceTime * 1000).toISOString() : null,
@@ -263,6 +285,18 @@ export async function addConfirmationToTrade(positionId, confirmation) {
     return false;
   }
   return true;
+}
+
+export async function addConfirmationToTrade(positionId, confirmation) {
+  return insertConfirmation({ tradePositionId: positionId, confirmation });
+}
+
+// Range-weite Bestätigung (das GO für die ganze Idee, z.B. der ursprüngliche Sweep+OB, der die
+// dealing_range ausgelöst hat) — bisher nur per Trade-Modus-Chart-Klick erreichbar war das
+// Entry-GO auf der Ausführung; das hier ist der erste UI-Weg für die Range-Ebene selbst
+// (Chat 2026-07-31: "ich kann nicht die confirmations ... für die dealing range setzen").
+export async function addRangeConfirmation(dealingRangeId, confirmation) {
+  return insertConfirmation({ dealingRangeId, confirmation });
 }
 
 export async function removeConfirmationFromTrade(confirmationId) {

@@ -12,7 +12,14 @@ import TradingAccountSwitcher from "../components/TradingAccountSwitcher.vue";
 import { selectedTradingAccountId } from "../tradingAccounts.js";
 import { TIMEFRAMES } from "../timeframes.js";
 import { fetchTrades } from "../trades.js";
-import { fetchTradeSetupForCockpit, linkTradeToSetup, directionForSetup, addTargetToTrade, addConfirmationToTrade } from "../tradeIntake.js";
+import {
+  fetchTradeSetupForCockpit,
+  linkTradeToSetup,
+  directionForSetup,
+  addTargetToTrade,
+  addConfirmationToTrade,
+  addRangeConfirmation,
+} from "../tradeIntake.js";
 import { fetchPoiZones } from "../poiZones.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
@@ -222,26 +229,40 @@ const linkTargetTrade = ref(null);
 // nur eines der beiden kann gerade "scharf" sein, siehe die beiden onXRequest-Funktionen unten.
 const targetAddTrade = ref(null);
 // Bestätigung hinzufügen (PLAN-trade-confluences.md #1: "genau wie bei Targets, dass ich einfach
-// die Linie per Maus anklicke") — dritter Arm-Zustand neben Link/Target, gleicher Grund für die
-// Trennung (nur einer der drei kann gerade "scharf" sein, siehe onXRequest-Funktionen unten und
-// targetModeActive-Berechnung im Template).
+// die Linie per Maus anklicke") — Arm-Zustand für die Entry-Ebene (trade_position_id). Nur einer
+// der Arm-Zustände kann gerade "scharf" sein, siehe onXRequest-Funktionen unten und
+// targetModeActive-Berechnung im Template.
 const confirmationAddTrade = ref(null);
+// Zweiter Bestätigungs-Arm-Zustand für die Idee-Ebene (dealing_range_id) — Chat 2026-07-31: "wir
+// haben die gesamte Basis um alles per Klick übernehmen zu können", ersetzt einen kurz zuvor
+// probierten, dann verworfenen manuellen Formular-Weg fürs Dealing-Range-GO.
+const rangeConfirmationAddTrade = ref(null);
 function onLinkRequest(t) {
   linkTargetTrade.value = t;
   targetAddTrade.value = null;
   confirmationAddTrade.value = null;
+  rangeConfirmationAddTrade.value = null;
   tradeModeActive.value = true;
 }
 function onAddTargetRequest(t) {
   targetAddTrade.value = t;
   linkTargetTrade.value = null;
   confirmationAddTrade.value = null;
+  rangeConfirmationAddTrade.value = null;
   tradeModeActive.value = true;
 }
 function onAddConfirmationRequest(t) {
   confirmationAddTrade.value = t;
   linkTargetTrade.value = null;
   targetAddTrade.value = null;
+  rangeConfirmationAddTrade.value = null;
+  tradeModeActive.value = true;
+}
+function onAddRangeConfirmationRequest(t) {
+  rangeConfirmationAddTrade.value = t;
+  linkTargetTrade.value = null;
+  targetAddTrade.value = null;
+  confirmationAddTrade.value = null;
   tradeModeActive.value = true;
 }
 // Verlassen des Trade-Modus räumt eine noch "scharfe" Verknüpfung/Ziel-/Bestätigungs-Anfrage mit
@@ -252,6 +273,7 @@ watch(tradeModeActive, (active) => {
     linkTargetTrade.value = null;
     targetAddTrade.value = null;
     confirmationAddTrade.value = null;
+    rangeConfirmationAddTrade.value = null;
   }
 });
 // target: {kind, price, sourceTime, touchedTime} — siehe PriceChart.vue: findClickedTarget (Pivot
@@ -271,6 +293,13 @@ async function onSelectTarget(target) {
     const trade = confirmationAddTrade.value;
     confirmationAddTrade.value = null;
     const ok = await addConfirmationToTrade(trade.id, target);
+    if (ok) refreshTrades();
+    return;
+  }
+  if (rangeConfirmationAddTrade.value) {
+    const trade = rangeConfirmationAddTrade.value;
+    rangeConfirmationAddTrade.value = null;
+    const ok = await addRangeConfirmation(trade.dealingRangeId, target);
     if (ok) refreshTrades();
   }
 }
@@ -779,6 +808,7 @@ watch(selectedTradingAccountId, refreshTrades);
         <span v-if="linkTargetTrade" class="trade-link-armed">🔗 nächster Klick verknüpft Trade #{{ linkTargetTrade.id }}</span>
         <span v-if="targetAddTrade" class="trade-link-armed">🎯 nächster Klick auf Pivot/OB fügt Trade #{{ targetAddTrade.id }} ein Target hinzu</span>
         <span v-if="confirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB fügt Trade #{{ confirmationAddTrade.id }} eine Bestätigung hinzu</span>
+        <span v-if="rangeConfirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB fügt Dealing Range #{{ rangeConfirmationAddTrade.dealingRangeId }} eine Bestätigung hinzu</span>
       </div>
 
       <div class="toggle-group">
@@ -825,6 +855,7 @@ watch(selectedTradingAccountId, refreshTrades);
     @request-link="onLinkRequest(editingTrade)"
     @request-add-target="onAddTargetRequest(editingTrade)"
     @request-add-confirmation="onAddConfirmationRequest(editingTrade)"
+    @request-add-range-confirmation="onAddRangeConfirmationRequest(editingTrade)"
   />
 
   <PriceChart
@@ -863,8 +894,8 @@ watch(selectedTradingAccountId, refreshTrades);
     :claude-annotations="visibleClaudeAnnotations"
     :claude-annotations-date="claudeAnnotationsDate"
     :trade-mode-active="tradeModeActive"
-    :target-mode-active="targetAddTrade != null || confirmationAddTrade != null"
-    :confirmation-mode-active="confirmationAddTrade != null"
+    :target-mode-active="targetAddTrade != null || confirmationAddTrade != null || rangeConfirmationAddTrade != null"
+    :confirmation-mode-active="confirmationAddTrade != null || rangeConfirmationAddTrade != null"
     @close-ranges-metadata="showRangesMetadata = false"
     @close-debug-metadata="showDebugMetadata = false"
     @select-setup="onSelectSetup"

@@ -93,8 +93,8 @@ async function submit() {
 }
 
 .take-trade-direction.short {
-  background: rgba(239, 83, 80, 0.2);
-  color: #ef5350;
+  background: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
 }
 
 .take-trade-direction.long {

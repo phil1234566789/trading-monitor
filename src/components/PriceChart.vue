@@ -784,8 +784,34 @@ function refreshTradeTargetLinksInternal() {
   for (const t of props.trades) {
     for (const target of t.targets ?? []) {
       if (target.sourceTime == null) continue;
+      const label = `🎯 ${targetKindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`;
+      // Reicht bis zum echten Touch, sonst bis zur zuletzt geladenen Kerze (self-healend, wie
+      // firstCandleTouch schon für die Linie) — statt einer festen Box-Breite, die für 1H/4H-OBs
+      // viel zu schmal wäre (Bug-Report Philip 2026-07-31: "OB wird leider nicht weit genug
+      // gezeichnet", TRADE_SETUP_OB_WIDTH_SEC ist auf M5-Trade-Setup-Boxen kalibriert).
       const touchedTime = target.touchedTime ?? firstCandleTouch(candles, target.sourceTime, target.price);
       const endTime = touchedTime ?? candles[candles.length - 1].time;
+      // OB-Ziele als echte Box statt nur einer Linie an der näheren Kante (Bug-Report Philip
+      // 2026-07-31: "es zeichnet sich weder Linie noch Box, nur das Label" — price allein reicht
+      // für eine Box nicht, rangeLow/rangeHigh seit Migration 20260731170000 auch auf Targets, wie
+      // schon bei Confirmations für kind='fib'). Alt-OB-Targets ohne rangeLow/rangeHigh (vor dieser
+      // Migration) fallen zurück auf die bisherige Linie.
+      if (target.kind === "ob" && target.rangeLow != null && target.rangeHigh != null) {
+        const primitive = new OrderBlockPrimitive(
+          { top: target.rangeHigh, bottom: target.rangeLow, startTime: target.sourceTime, endTime },
+          {
+            fillColor: cssColorScaled("tradeTarget", TRADE_SETUP_OB_FILL_RATIO),
+            borderColor: cssColorScaled("tradeTarget", TRADE_SETUP_OB_BORDER_RATIO),
+            borderWidth: lineWidth("tradeTarget"),
+            textColor: "rgba(255, 255, 255, 0.9)",
+            label,
+          },
+          candles,
+        );
+        candleSeries.attachPrimitive(primitive);
+        tradeTargetLinkPrimitives.push(primitive);
+        continue;
+      }
       const tier = classifyAge(businessSecondsBetween(target.sourceTime, touchedTime ?? nowSec));
       const primitive = new LiquidityLinePrimitive(
         { price: target.price, pivotTime: target.sourceTime, endTime },
@@ -794,7 +820,7 @@ function refreshTradeTargetLinksInternal() {
           lineWidth: lineWidth("tradeTarget") * TARGET_TIER_WIDTH_RATIO[tier],
           // "🎯 Pivot #12"/"🎯 OB #12" — matcht 1:1 die Zeile in TradesTable/TradeEditModal (siehe
           // tradeTargets.ts: kindLabel), wie schon beim Setup-"#<id>"-Muster.
-          label: `🎯 ${targetKindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`,
+          label,
           // Bug-Report Philip 2026-07-28: bei Short-Trades soll das Label UNTER statt über der
           // Linie stehen (Long bleibt wie bisher) — analog zur Short/Long-Positionierung bei den
           // Trade-Setup-LS-/Fraktal-Linien weiter oben (renderTradeSetupsInternal).
@@ -824,14 +850,35 @@ function refreshTradeConfirmationLinksInternal() {
   for (const t of props.trades) {
     for (const confirmation of t.confirmations ?? []) {
       if (confirmation.sourceTime == null) continue;
+      const label = `✔ ${confirmationKindLabel(confirmation.kind)} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`;
+      // Reicht bis zum echten Touch, sonst bis zur zuletzt geladenen Kerze — statt einer festen
+      // Box-Breite, die für 1H/4H-OBs viel zu schmal wäre (Bug-Report Philip 2026-07-31).
       const endTime = confirmation.touchedTime ?? candles[candles.length - 1].time;
+      // OB-Bestätigungen als echte Box statt nur einer Linie (siehe refreshTradeTargetLinksInternal
+      // — dieselbe Begründung).
+      if (confirmation.kind === "ob" && confirmation.rangeLow != null && confirmation.rangeHigh != null) {
+        const primitive = new OrderBlockPrimitive(
+          { top: confirmation.rangeHigh, bottom: confirmation.rangeLow, startTime: confirmation.sourceTime, endTime },
+          {
+            fillColor: cssColorScaled("tradeConfirmation", TRADE_SETUP_OB_FILL_RATIO),
+            borderColor: cssColorScaled("tradeConfirmation", TRADE_SETUP_OB_BORDER_RATIO),
+            borderWidth: lineWidth("tradeConfirmation"),
+            textColor: "rgba(255, 255, 255, 0.9)",
+            label,
+          },
+          candles,
+        );
+        candleSeries.attachPrimitive(primitive);
+        tradeConfirmationLinkPrimitives.push(primitive);
+        continue;
+      }
       const tier = classifyAge(businessSecondsBetween(confirmation.sourceTime, confirmation.touchedTime ?? nowSec));
       const primitive = new LiquidityLinePrimitive(
         { price: confirmation.price, pivotTime: confirmation.sourceTime, endTime },
         {
           color: cssColor("tradeConfirmation"),
           lineWidth: lineWidth("tradeConfirmation") * TARGET_TIER_WIDTH_RATIO[tier],
-          label: `✔ ${confirmationKindLabel(confirmation.kind)} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`,
+          label,
           labelSide: t.direction === "short" ? "end-below" : "end-above",
         },
         candles,
@@ -1510,7 +1557,18 @@ function findClickedOBZone(param) {
   const nearEdge = Math.abs(price - zone.top) < Math.abs(price - zone.bottom) ? zone.top : zone.bottom;
   // endTime friert bei detectOrderBlocks() auf die berührende Kerze ein, sobald touched=true wird
   // (siehe orderBlocks.js) — praktisch also "touchedTime", ohne dass die Zone das Feld extra führt.
-  return { kind: "ob", price: nearEdge, sourceTime: zone.startTime, touchedTime: zone.touched ? zone.endTime : null };
+  // rangeLow/rangeHigh (Bug-Report Philip 2026-07-31: "es zeichnet sich weder Linie noch Box, nur
+  // das Label" — price allein reicht für eine Box nicht) — beide Kanten der Zone, damit
+  // refreshTradeTargetLinksInternal/-ConfirmationLinksInternal daraus eine echte OB-Box zeichnen
+  // können statt nur eine Linie an der näheren Kante.
+  return {
+    kind: "ob",
+    price: nearEdge,
+    sourceTime: zone.startTime,
+    touchedTime: zone.touched ? zone.endTime : null,
+    rangeLow: zone.bottom,
+    rangeHigh: zone.top,
+  };
 }
 
 // Bestätigungs-Modus, dritte Klick-Fläche (Chat 2026-07-30, siehe collectFibLevels in

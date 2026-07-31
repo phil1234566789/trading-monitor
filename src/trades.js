@@ -51,7 +51,7 @@ export async function fetchTrades(instrument, accountId = null) {
     { data: rangeConfirmations, error: rangeConfirmationsError },
     { data: positionConfirmations, error: positionConfirmationsError },
   ] = await Promise.all([
-    supabase.from("trade_targets").select("id, dealing_range_id, price, kind, source_time, touched_time").in("dealing_range_id", rangeIds),
+    supabase.from("trade_targets").select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high").in("dealing_range_id", rangeIds),
     supabase.from("trade_partial_exits").select("trade_position_id, price, exit_time, portion_pct").in("trade_position_id", positionIds),
     supabase.from("trade_confirmations").select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high").in("dealing_range_id", rangeIds),
     supabase.from("trade_confirmations").select("id, trade_position_id, price, kind, source_time, touched_time, range_low, range_high").in("trade_position_id", positionIds),
@@ -66,9 +66,13 @@ export async function fetchTrades(instrument, accountId = null) {
   const rangeConfirmationsByRange = groupBy(rangeConfirmations, "dealing_range_id");
   const positionConfirmationsByPosition = groupBy(positionConfirmations, "trade_position_id");
 
-  function toConfirmation(c) {
+  // level unterscheidet die zwei Ebenen aus trade_confirmations (siehe Migration
+  // 20260731120000: dealing_range_id ODER trade_position_id) — TradeEditModal.vue braucht das,
+  // um "GO für die Idee" von "GO für diesen Entry" in der Liste sichtbar zu trennen.
+  function toConfirmation(c, level) {
     return {
       id: c.id,
+      level,
       price: c.price,
       kind: c.kind,
       sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
@@ -110,11 +114,18 @@ export async function fetchTrades(instrument, accountId = null) {
         kind: t.kind,
         sourceTime: t.source_time ? Math.floor(new Date(t.source_time).getTime() / 1000) : null,
         touchedTime: t.touched_time ? Math.floor(new Date(t.touched_time).getTime() / 1000) : null,
+        // Nur bei kind='ob' gesetzt (siehe PriceChart.vue: findClickedOBZone) — die zwei Kanten der
+        // Zone, damit refreshTradeTargetLinksInternal eine Box statt nur eine Linie zeichnen kann.
+        rangeLow: t.range_low ?? null,
+        rangeHigh: t.range_high ?? null,
       })),
       // Bestätigungen fürs GO der ganzen Idee (dealing_range) und fürs GO dieses einen Entries
       // (trade_position, ex-setup_entry) zusammen — beide teilen dieselbe Tabelle/Rohform (siehe
-      // tradeConfirmations.ts), die UI unterscheidet aktuell nicht zwischen den beiden Ebenen.
-      confirmations: [...(rangeConfirmationsByRange[range.id] ?? []), ...(positionConfirmationsByPosition[row.id] ?? [])].map(toConfirmation),
+      // tradeConfirmations.ts), level (siehe toConfirmation) hält auseinander, welche welche ist.
+      confirmations: [
+        ...(rangeConfirmationsByRange[range.id] ?? []).map((c) => toConfirmation(c, "range")),
+        ...(positionConfirmationsByPosition[row.id] ?? []).map((c) => toConfirmation(c, "position")),
+      ],
       partialExits: (partialsByPosition[row.id] ?? []).map((p) => ({
         price: p.price,
         time: Math.floor(new Date(p.exit_time).getTime() / 1000),

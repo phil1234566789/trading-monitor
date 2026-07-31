@@ -3,15 +3,21 @@ import { ref } from "vue";
 
 // Generisches schwebendes Panel: verschiebbar (per Header-Drag), größenveränderbar (natives
 // CSS `resize: both` — kein JS nötig) und scrollbar (Body hat eigenes overflow:auto, damit der
-// Header beim Scrollen fix bleibt). Aktuell nur für den "Metadaten"-Toggle genutzt, aber bewusst
-// ohne Trend-Analyse-spezifischen Inhalt, falls später weitere Debug-Panels dazukommen.
+// Header beim Scrollen fix bleibt). Genutzt vom "Metadaten"-Toggle, TakeTradeModal.vue und
+// TradeEditModal.vue — width/height/position sind Props (statt fix), weil TradeEditModal seit
+// Chat 2026-07-31 spürbar mehr Inhalt hat (Targets/Bestätigungen mit Manuell-Formularen) und
+// deshalb größer + unten rechts starten soll, ohne die anderen beiden Nutzer zu verändern.
 const props = defineProps({
   title: { type: String, default: "" },
+  width: { type: Number, default: 440 },
+  height: { type: Number, default: 500 },
+  position: { type: String, default: "top-right" }, // "top-right" | "bottom-right"
 });
 const emit = defineEmits(["close"]);
 
-const top = ref(72);
-const left = ref(Math.max(20, window.innerWidth - 460));
+const PANEL_MARGIN = 20;
+const top = ref(props.position === "bottom-right" ? Math.max(PANEL_MARGIN, window.innerHeight - props.height - PANEL_MARGIN) : 72);
+const left = ref(Math.max(PANEL_MARGIN, window.innerWidth - props.width - PANEL_MARGIN));
 
 let dragOffsetX = 0;
 let dragOffsetY = 0;
@@ -33,7 +39,7 @@ function stopDrag() {
 </script>
 
 <template>
-  <div class="metadata-panel" :style="{ top: top + 'px', left: left + 'px' }">
+  <div class="metadata-panel" :style="{ top: top + 'px', left: left + 'px', width: width + 'px', height: height + 'px' }">
     <div class="metadata-panel-header" @mousedown="startDrag">
       <span>{{ props.title }}</span>
       <button class="metadata-panel-close" @click="emit('close')">×</button>
@@ -47,8 +53,6 @@ function stopDrag() {
 <style scoped>
 .metadata-panel {
   position: fixed;
-  width: 440px;
-  height: 500px;
   min-width: 260px;
   min-height: 160px;
   max-width: 95vw;
