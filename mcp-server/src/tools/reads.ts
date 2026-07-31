@@ -27,7 +27,11 @@ export function registerReadTools(server: McpServer) {
         "Der Structure-Trend nutzt standardmäßig einen rollierenden 7-Tage-Lookback (Periode " +
         "5/2) — falls Philip im Dashboard einen 'fixen Start' eingestellt hat (nur in seinem " +
         "Browser-localStorage sichtbar, nicht von hier aus abfragbar), frag ihn danach und gib es " +
-        "über structureConfig mit.",
+        "über structureConfig mit. Antwort enthält zusätzlich structureWindow (cutoffOuter/" +
+        "cutoffInner als Unix-Sekunden UND als cutoffOuterAt/cutoffInnerAt in 'YYYY-MM-DD HH:mm' " +
+        "Europe/Berlin, direkt nutzbar als time-Feld für post_chart_annotations) — zeichne diesen " +
+        "Startpunkt IMMER als Marker/Linie ein, wenn du eine Structure-Trend-Analyse zeigst, damit " +
+        "Philip visuell prüfen kann, ob er mit seinem eigenen Chart übereinstimmt.",
       inputSchema: {
         instrument: INSTRUMENT,
         dateStr: z.string().optional().describe("YYYY-MM-DD (Europe/Berlin), Default: heute"),

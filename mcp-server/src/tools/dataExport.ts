@@ -1,5 +1,5 @@
 import { fetchForexCandles, type Candle } from "../forexCandles.js";
-import { berlinDayRangeUtcMs, berlinDateStrFor } from "../berlinTime.js";
+import { berlinDayRangeUtcMs, berlinDateStrFor, berlinDateTimeStrFor } from "../berlinTime.js";
 import { getObZones, getLiquidityLevels } from "../db.js";
 // Reine Trend-Mathematik (siehe CLAUDE.md "MCP-Server") — seit dem Split von marketStructureAnalysis.ts
 // (Chat 2026-07-31, Rendering lebt jetzt separat in marketStructureRendering.ts) frei von Browser-
@@ -40,7 +40,11 @@ export interface StructureConfig {
 }
 
 // Port von compute1hStructureState (src/dataExport.js) — identische Logik, nur candles über den
-// mcp-server-eigenen forexCandles.ts-Client statt src/forexCandles.js geholt.
+// mcp-server-eigenen forexCandles.ts-Client statt src/forexCandles.js geholt. Gibt zusätzlich zum
+// Trend-State das TATSÄCHLICH verwendete Zeitfenster zurück (window) — Philip: "L soll immer den
+// Startpunkt des Trend-Algos mit einzeichnen, damit ich abchecken kann, ob das passt, denn was L
+// sieht ist ja nicht zwingend dasselbe, was ich im Chart sehe" (2026-07-31). Ohne das hätte L keine
+// Möglichkeit, Philip zu zeigen, ab welchem Zeitpunkt sie tatsächlich gerechnet hat.
 async function compute1hStructureState(instrument: string, currentTimeSec: number, structureConfig: StructureConfig = {}) {
   const {
     periodOuter = STRUCTURE_PERIOD_OUTER,
@@ -62,7 +66,18 @@ async function compute1hStructureState(instrument: string, currentTimeSec: numbe
   const pivotsOuter = computeRangesPivots(candles, periodOuter, cutoffOuter);
   const pivotsInner = computeRangesPivots(candles, periodInner, cutoffInner);
   const state = buildMarketStructureState(pivotsOuter, pivotsInner, periodOuter, periodInner, candles);
-  return summarizeMarketStructureState(state, { includeAppliedPivots: false });
+  return {
+    trend: summarizeMarketStructureState(state, { includeAppliedPivots: false }),
+    window: {
+      periodOuter,
+      periodInner,
+      fixedStartActive: useFixedStart,
+      cutoffOuter,
+      cutoffOuterAt: berlinDateTimeStrFor(cutoffOuter),
+      cutoffInner,
+      cutoffInnerAt: berlinDateTimeStrFor(cutoffInner),
+    },
+  };
 }
 
 export interface DataExportArgs {
@@ -91,7 +106,7 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // die echte Wanduhrzeit (analog src/dataExport.js currentTimeSec).
   const currentTimeSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
 
-  const [liquidityLevels, obZones, structure1h] = await Promise.all([
+  const [liquidityLevels, obZones, structureResult] = await Promise.all([
     getLiquidityLevels(instrument),
     getObZones(instrument),
     compute1hStructureState(instrument, currentTimeSec, structureConfig),
@@ -102,7 +117,11 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
     date: effectiveDateStr,
     timezone: "Europe/Berlin",
     replay: replayUntilSec == null ? { active: false } : { active: true, until: replayUntilSec },
-    structure1h,
+    structure1h: structureResult.trend,
+    // Siehe compute1hStructureState oben: der tatsächlich verwendete Cutoff, damit L ihn immer als
+    // Marker/Linie einzeichnen kann (post_chart_annotations) — Philips Sichtkontrolle gegen den
+    // eigenen Chart.
+    structureWindow: structureResult.window,
     liquidityLevels,
     obZones,
     asiaSession: { ...rangeStats(asiaCandles), candles: asiaCandles },
