@@ -135,7 +135,7 @@ export interface TradePositionInput {
   stopLoss?: number | null;
   triggeredAt?: string | null;
   reasoning?: string | null;
-  outcome?: "win" | "loss" | "open" | "invalid" | null;
+  outcome?: "win" | "loss" | "open" | null;
   rMultiple?: number | null;
   exitPrice?: number | null;
   exitTime?: string | null;
@@ -249,7 +249,7 @@ export interface UpdateTradePositionArgs {
   stopLoss?: number | null;
   triggeredAt?: string;
   reasoning?: string | null;
-  outcome?: "win" | "loss" | "open" | "invalid" | null;
+  outcome?: "win" | "loss" | "open" | null;
   rMultiple?: number | null;
   exitPrice?: number | null;
   exitTime?: string | null;

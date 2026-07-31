@@ -15,7 +15,6 @@ const OUTCOME_LABEL = {
   win: "Win",
   loss: "Loss",
   open: "Offen",
-  invalid: "Ungültig",
 };
 
 function outcomeLabel(t) {

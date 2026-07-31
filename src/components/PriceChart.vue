@@ -379,6 +379,7 @@ let tradePrimitives = [];
 let tradeSetupLinkPrimitives = [];
 let tradeTargetLinkPrimitives = [];
 let tradeConfirmationLinkPrimitives = [];
+let invalidationLinePrimitives = [];
 let tradeSetupPrimitives = [];
 let claudeAnnotationPrimitives = [];
 let claudeAnnotationPriceLines = [];
@@ -924,6 +925,62 @@ function refreshTradeConfirmationLinksInternal() {
       candleSeries.attachPrimitive(primitive);
       tradeConfirmationLinkPrimitives.push(primitive);
     }
+  }
+}
+
+// Invalidierungs-Linie einer dealing_range (Chat 2026-07-31: "fehlt nur noch die Visualisierung
+// der Invalidierung ... eine Linie von dem Zeitpunkt des ersten Entries bis zum Zeitpunkt des
+// letzten Exits ALLER trade_positions, die unter einer dealing_range liegen") — bewusst NUR der
+// Preis, keine kind/sourceTime/touchedTime-Referenz wie bei Targets/Bestätigungen: "ob die Idee
+// gestorben ist" lässt sich direkt live gegen die Kerzen prüfen (Philip: "wissen wir doch
+// automatisch, wenn der aktuelle Candle-Preis sie erreicht hat"), keine eigene Touch-Logik nötig.
+// Eine Zeile pro dealing_range (nicht pro Ausführung) — mehrere Positionen unter derselben Range
+// teilen sich denselben invalidation-Wert, deshalb hier gruppiert statt pro Trade gezeichnet.
+function refreshInvalidationLinesInternal() {
+  for (const p of invalidationLinePrimitives) candleSeries.detachPrimitive(p);
+  invalidationLinePrimitives.length = 0;
+  if (!props.showTradeSetups || !props.showTrades) return;
+  const candles = clipReplay(allCandles);
+  if (candles.length === 0) return;
+  const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
+  const precision = pricePrecisionForInstrument(props.symbol);
+
+  const byRange = new Map();
+  for (const t of tradesVisibleForCandles(props.trades, candles)) {
+    if (t.invalidation == null) continue;
+    const exitOrNow = t.exitTime ?? nowSec;
+    const group = byRange.get(t.dealingRangeId);
+    if (!group) {
+      byRange.set(t.dealingRangeId, {
+        invalidation: t.invalidation,
+        direction: t.direction,
+        startTime: t.entryTime,
+        endTime: exitOrNow,
+        stillOpen: t.exitTime == null,
+      });
+    } else {
+      group.startTime = Math.min(group.startTime, t.entryTime);
+      group.endTime = Math.max(group.endTime, exitOrNow);
+      if (t.exitTime == null) group.stillOpen = true;
+    }
+  }
+
+  for (const group of byRange.values()) {
+    // Noch offene Ausführung dabei -> bis zur zuletzt geladenen Kerze wachsend zeichnen, wie eine
+    // noch nicht getouchte Target-/Bestätigungs-Linie (statt beim letzten BEKANNTEN Exit einzufrieren).
+    const endTime = group.stillOpen ? candles[candles.length - 1].time : group.endTime;
+    const primitive = new LiquidityLinePrimitive(
+      { price: group.invalidation, pivotTime: group.startTime, endTime },
+      {
+        color: cssColor("tradeInvalidation"),
+        lineWidth: lineWidth("tradeInvalidation"),
+        label: `🚫 Invalidierung ${fmtPrice(group.invalidation, precision)}`,
+        labelSide: group.direction === "short" ? "end-below" : "end-above",
+      },
+      candles,
+    );
+    candleSeries.attachPrimitive(primitive);
+    invalidationLinePrimitives.push(primitive);
   }
 }
 
@@ -1893,6 +1950,7 @@ function refreshChart() {
   refreshTradeSetupLinksInternal();
   refreshTradeTargetLinksInternal();
   refreshTradeConfirmationLinksInternal();
+  refreshInvalidationLinesInternal();
   refreshClaudeAnnotationsInternal();
   renderTradeSetupsInternal();
   refreshRangesMarkersInternal();
@@ -2295,6 +2353,7 @@ watch([() => props.trades, () => props.showTrades], () => {
   refreshTradeSetupLinksInternal();
   refreshTradeTargetLinksInternal();
   refreshTradeConfirmationLinksInternal();
+  refreshInvalidationLinesInternal();
 });
 watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 // tscCalloutModeActive wechselt (TSC wird ein-/ausgeblendet, Locked-Zustand etc.) -> Canvas-Text
@@ -2343,6 +2402,7 @@ watch(() => props.showTradeSetups, () => {
   refreshTradeSetupLinksInternal();
   refreshTradeTargetLinksInternal();
   refreshTradeConfirmationLinksInternal();
+  refreshInvalidationLinesInternal();
 });
 watch(() => props.tradeSetupHistoryCount, () => {
   computeTradeSetups();

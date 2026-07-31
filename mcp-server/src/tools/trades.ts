@@ -9,7 +9,7 @@ function json(data: unknown) {
 const INSTRUMENT = z.enum(["GBPUSD", "EURUSD"]);
 const DIRECTION = z.enum(["long", "short"]);
 const SOURCE = z.enum(["backtest", "paper", "live"]);
-const OUTCOME = z.enum(["win", "loss", "open", "invalid"]);
+const OUTCOME = z.enum(["win", "loss", "open"]);
 
 // Gemeinsame Felder einer Ausführung (trade_positions) — für create_trade UND add_trade_position,
 // damit beide Tools garantiert dieselben Namen/Beschreibungen haben (siehe db.ts: TradePositionInput,

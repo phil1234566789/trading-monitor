@@ -114,11 +114,11 @@ const GROUPS = [
     fields: [
       { key: "tradeWin", label: "Gewinn" },
       { key: "tradeLoss", label: "Verlust" },
-      { key: "tradeOpen", label: "Offen" },
-      { key: "tradeInvalid", label: "Invalidiert" },
+      { key: "tradeInvalid", label: "Kein Ergebnis (Fallback)" },
       { key: "tradeConnector", label: "Verbindung" },
       { key: "tradeTarget", label: "Target" },
       { key: "tradeConfirmation", label: "Bestätigung" },
+      { key: "tradeInvalidation", label: "Invalidierungs-Linie" },
     ],
   },
   {

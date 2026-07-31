@@ -98,10 +98,6 @@ body {
   color: #f0b90b;
 }
 
-.trade-outcome.invalid {
-  color: #787b86;
-}
-
 .trade-position-cell {
   font-family: "Courier New", monospace;
   color: #787b86;

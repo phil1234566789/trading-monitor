@@ -298,7 +298,6 @@ function confirmationLabel(confirmation) {
               <option value="open">Offen</option>
               <option value="win">Win</option>
               <option value="loss">Loss</option>
-              <option value="invalid">Ungültig</option>
             </select>
           </label>
           <label>

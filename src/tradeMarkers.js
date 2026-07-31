@@ -11,7 +11,7 @@ const EXIT_MARK_SIZE = 5; // px, Häkchen (Win) / X (Loss)
 
 function drawTick(ctx, x, y, offset, tick, pixelRatio, color, colorKey) {
   ctx.strokeStyle = color;
-  // Linienstärke folgt demselben Farb-Key (tradeWin/tradeLoss/tradeOpen/tradeInvalid), damit jeder
+  // Linienstärke folgt demselben Farb-Key (tradeWin/tradeLoss/tradeInvalid), damit jeder
   // im Style-Modal individuell einstellbare Farb-Regler auch eine eigene Linienstärke hat (Chat
   // 2026-07-25, zweite Runde: "bei jeder Linie, wo man schon die Farbe individuell anpassen kann").
   ctx.lineWidth = Math.max(1, lineWidth(colorKey) * pixelRatio);
@@ -215,8 +215,13 @@ export class TradeMarkerPrimitive {
   }
 }
 
+// win/loss sind die einzigen Outcomes mit eigener Marker-Farbe — "open" hat in der Praxis nie
+// gleichzeitig einen Exit-Preis (eine wirklich noch offene Position hat keinen Exit zu markieren),
+// "invalid" gibt's als Outcome seit Chat 2026-07-31 gar nicht mehr (0 Zeilen genutzt, siehe
+// Migration 20260731220000_drop_invalid_outcome.sql). tradeInvalid bleibt als generischer
+// Fallback für den Rest-Fall "Exit-Preis gesetzt, aber noch kein Ergebnis gewählt".
 function tradeOptions(t, showLabels) {
-  const outcomeKey = { win: "tradeWin", loss: "tradeLoss", open: "tradeOpen", invalid: "tradeInvalid" };
+  const outcomeKey = { win: "tradeWin", loss: "tradeLoss" };
   const entryColorKey = t.direction === "short" ? "tradeLoss" : "tradeWin";
   const exitColorKey = outcomeKey[t.outcome] ?? "tradeInvalid";
   const dirLabel = t.direction === "short" ? "Short" : "Long";

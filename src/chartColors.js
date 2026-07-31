@@ -96,7 +96,10 @@ export const DEFAULT_CHART_COLORS = {
   rangesMarker2: { hex: "#00bcd4", alpha: 0.5 },
   tradeWin: { hex: "#26a69a", alpha: 1 },
   tradeLoss: { hex: "#ef5350", alpha: 1 },
-  tradeOpen: { hex: "#f0b90b", alpha: 1 },
+  // Fallback-Farbe für Exit-Marker ohne win/loss-Outcome (Chat 2026-07-31: "open"/"invalid" als
+  // eigene Marker-Farben raus — "open" hat in der Praxis nie einen Exit-Preis, "invalid" gibt's als
+  // Outcome gar nicht mehr, siehe tradeMarkers.js: tradeOptions) — greift nur noch im Rest-Fall
+  // "Exit-Preis gesetzt, aber noch kein Ergebnis gewählt".
   tradeInvalid: { hex: "#787b86", alpha: 1 },
   tradeConnector: { hex: "#2962ff", alpha: 0.75 },
   // Vertikale News-Marker (Chat 2026-07-26, siehe newsMarkers.js) — Default = candleDown-Rot,
@@ -111,6 +114,10 @@ export const DEFAULT_CHART_COLORS = {
   // (bereits passierte Evidenz) und Target (zukünftige Erwartung) auch farblich unterscheiden,
   // trotz gleicher Klick-/Zeichen-Infrastruktur (siehe refreshTradeConfirmationLinksInternal).
   tradeConfirmation: { hex: "#5c6bc0", alpha: 0.95 },
+  // Invalidierungs-Linie einer dealing_range (Chat 2026-07-31) — dieselbe Gefahren-Rot-Semantik
+  // wie NO_GO_COLOR/candleDown/tradeLoss (dieser Preis = die ganze Idee ist tot), eigener Key statt
+  // Wiederverwendung, damit ein späteres Anpassen von z.B. tradeLoss diese Linie nicht mitverschiebt.
+  tradeInvalidation: { hex: "#ef5350", alpha: 0.9 },
 };
 
 function loadInitial() {
