@@ -19,6 +19,7 @@ import {
   addTargetToTrade,
   addConfirmationToTrade,
   addRangeConfirmation,
+  updateTrade,
 } from "../tradeIntake.js";
 import { fetchPoiZones } from "../poiZones.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
@@ -181,6 +182,11 @@ const showNewsModal = ref(false);
 // wie die übrigen Indikator-Toggles.
 const showSessions = useLocalStorageRef("showSessions", true);
 const showSessionsModal = ref(false);
+// Sessions-Bänder markieren Tageszeit-Fenster (Asia/London/NY etc.) — auf 4h/1D-Kerzen liegen
+// mehrere Sessions in einer einzigen Kerze, die Bänder werden dann zu bedeutungslosem Gematsche.
+// Button in diesen TFs disabled statt anklickbar-aber-nutzlos, analog zu emaDisabled oben (Chat
+// 2026-07-31: "genauso wie bei EMA").
+const sessionsDisabled = computed(() => currentBar.value === "4h" || currentBar.value === "1D");
 // Claude-Antwort-Import (siehe claudeAnnotations.js, trading/chart-daten.md) — Button
 // + Modal leben global in App.vue (neben "Backtest-Daten"), in Supabase persistiert (siehe
 // claudeAnnotationsStore.js). instrument/dateStr werden jetzt zentral in useClaudeAnnotations.js
@@ -302,6 +308,56 @@ async function onSelectTarget(target) {
     const ok = await addRangeConfirmation(trade.dealingRangeId, target);
     if (ok) refreshTrades();
   }
+}
+// Ganzes Trade-Setup als Bestätigungen übernehmen (Chat 2026-07-31: "wenn ich ein Trade-Setup
+// anklicke, sollen LS und OB als Bestätigung aufgenommen werden. PP, falls vorhanden, als
+// Stop-Loss der trade_position") — nur im Bestätigungs-Modus erreichbar (PriceChart.vue:
+// subscribeClick), deshalb hier dieselben beiden Arm-Zustände wie onSelectTarget statt eines
+// dritten. LS/OB gehen an dieselbe Ebene (Range oder Position), die gerade "scharf" ist; der
+// Stop-Loss sitzt IMMER auf der Ausführung (trade_position), unabhängig davon, welche Ebene für
+// die Bestätigungen gerade gewählt ist — dafür braucht es aber überhaupt eine offene Ausführung.
+async function onSelectSetupConfirmations(setup) {
+  const trade = confirmationAddTrade.value ?? rangeConfirmationAddTrade.value;
+  if (!trade) return;
+  const isRangeLevel = rangeConfirmationAddTrade.value != null;
+  confirmationAddTrade.value = null;
+  rangeConfirmationAddTrade.value = null;
+
+  const lsConfirmation = {
+    kind: "pivot",
+    price: setup.ls.price,
+    sourceTime: setup.ls.pivotTime,
+    touchedTime: setup.ls.touchedTime ?? null,
+  };
+  // Bewusst die ROHEN (nicht ums Fraktal geweiteten) OB-Kanten (setup.obTop/obBottom), NICHT
+  // tradeSetupObBoxBounds() — Bug-Report Philip 2026-07-31, zweite Runde ("OB zeichnet sich durch
+  // bis zum jetzigen Zeitpunkt, sollte nur bis zur berührenden Kerze"): detectSetupObs() ruft
+  // laut eigenem Kommentar 1:1 detectOrderBlocks(candles, "5m") auf und übernimmt dessen top/bottom
+  // unverändert — mit timeframe:"5M" findet PriceChart.vue: liveObZoneState darüber dieselbe Zone
+  // live wieder und zeichnet die Box bis zum ECHTEN Touch, statt bis "jetzt" (kein Touch bekannt).
+  // Die geweitete Box bleibt dem Setup selbst vorbehalten (dort ist die feste Breite/kein Live-
+  // Tracking ohnehin unkritisch, siehe refreshTradeSetupLinksInternal).
+  const obConfirmation = {
+    kind: "ob",
+    price: setup.dir === 1 ? setup.obBottom : setup.obTop,
+    sourceTime: setup.obStartTime,
+    touchedTime: null,
+    rangeLow: setup.obBottom,
+    rangeHigh: setup.obTop,
+    timeframe: "5M",
+  };
+
+  const addFn = isRangeLevel ? (c) => addRangeConfirmation(trade.dealingRangeId, c) : (c) => addConfirmationToTrade(trade.id, c);
+  await addFn(lsConfirmation);
+  await addFn(obConfirmation);
+
+  // pathType "A" = eigenes bestätigtes Protected-Pivot (siehe tradeSetup.js), "B" = fractal===ls,
+  // also KEIN eigenständiger PP — "falls vorhanden" heißt genau das.
+  if (setup.pathType === "A") {
+    await updateTrade(trade.id, { stopLoss: setup.fractal.price });
+  }
+
+  refreshTrades();
 }
 async function onSelectSetup(setup) {
   if (linkTargetTrade.value) {
@@ -766,7 +822,12 @@ watch(selectedTradingAccountId, refreshTrades);
            mir Orientierung zur Charthistorie") — bewusst links neben News, nicht im Indikatoren-
            Sammel-Toggle enthalten (siehe INDIKATOREN_REFS oben). -->
       <div class="toggle-group">
-        <button :class="{ active: showSessions }" @click="showSessions = !showSessions">
+        <button
+          :class="{ active: showSessions }"
+          :disabled="sessionsDisabled"
+          :title="sessionsDisabled ? 'Sessions nur bis 1h' : ''"
+          @click="showSessions = !showSessions"
+        >
           Sessions
         </button>
         <button class="toggle-caret" title="Sessions verwalten" @click="showSessionsModal = true">
@@ -900,6 +961,7 @@ watch(selectedTradingAccountId, refreshTrades);
     @close-debug-metadata="showDebugMetadata = false"
     @select-setup="onSelectSetup"
     @select-target="onSelectTarget"
+    @select-setup-confirmations="onSelectSetupConfirmations"
     @toggle-trade-mode="tradeModeActive = !tradeModeActive"
   />
 

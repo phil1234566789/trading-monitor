@@ -172,9 +172,11 @@ export async function addTargetToTrade(dealingRangeId, target) {
     touched_time: target.touchedTime != null ? new Date(target.touchedTime * 1000).toISOString() : null,
     // Nur bei kind='ob' gesetzt (siehe PriceChart.vue: findClickedOBZone) — die zwei Kanten der
     // Zone, damit sich daraus eine echte OB-Box statt nur einer Linie an der näheren Kante
-    // zeichnen lässt (Bug-Report Philip 2026-07-31).
+    // zeichnen lässt (Bug-Report Philip 2026-07-31), plus die Zeitebene (1H/4H/5M), damit die Box
+    // später live per detectOrderBlocks nachvollzogen werden kann statt nur einen Snapshot zu zeigen.
     range_low: target.rangeLow ?? null,
     range_high: target.rangeHigh ?? null,
+    timeframe: target.timeframe ?? null,
   });
   if (error) {
     console.error("Target hinzufügen fehlgeschlagen:", error);
@@ -279,6 +281,9 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
     // des Fib-Werts, sonst bleibt die Spalte null (Default).
     range_low: confirmation.rangeLow ?? null,
     range_high: confirmation.rangeHigh ?? null,
+    // Nur bei kind='ob' gesetzt — Zeitebene der Zone (1H/4H/5M), damit die Box live per
+    // detectOrderBlocks nachvollzogen werden kann (siehe addTargetToTrade).
+    timeframe: confirmation.timeframe ?? null,
   });
   if (error) {
     console.error("Bestätigung hinzufügen fehlgeschlagen:", error);

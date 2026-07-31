@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient.js";
+import { ALL_ACCOUNTS_ID } from "./tradingAccounts.js";
 
 export function computeTradeStats(trades) {
   const closed = trades.filter((t) => t.outcome === "win" || t.outcome === "loss");
@@ -25,6 +26,9 @@ function groupBy(rows, key) {
 // accountId (Chat 2026-07-30, Trading-Konten-Trennung): null/undefined = ungefiltert (z.B. bevor
 // die Konten geladen sind) — Dashboard.vue übergibt hier IMMER das gerade ausgewählte Konto, sonst
 // würde die Trades-Liste versehentlich alle Konten mischen, sobald mehrere existieren.
+// ALL_ACCOUNTS_ID (Bug-Report Philip 2026-07-31: eine kontolose Lana-Idee war strukturell
+// unsichtbar, egal welches Konto gewählt war) ist eine EXPLIZITE "zeig alles"-Wahl im Switcher,
+// wird hier genau wie null behandelt (kein Filter) statt als echte Konto-Id.
 export async function fetchTrades(instrument, accountId = null) {
   // Seit 2026-07-31: eine Zeile hier ist eine trade_positions-AUSFÜHRUNG, mit ihrer dealing_ranges-
   // IDEE eingebettet (!inner, weil wir unten auf dealing_ranges.instrument filtern — ohne !inner
@@ -34,7 +38,7 @@ export async function fetchTrades(instrument, accountId = null) {
     .from("trade_positions")
     .select("*, dealing_ranges!inner(id, instrument, direction, invalidation, trade_setup_id, trade_setups(ob_start_time, ob_top, ob_bottom))")
     .eq("dealing_ranges.instrument", instrument);
-  if (accountId != null) query = query.eq("trading_account_id", accountId);
+  if (accountId != null && accountId !== ALL_ACCOUNTS_ID) query = query.eq("trading_account_id", accountId);
   const { data, error } = await query.order("triggered_at", { ascending: false });
 
   if (error) throw error;
@@ -51,10 +55,10 @@ export async function fetchTrades(instrument, accountId = null) {
     { data: rangeConfirmations, error: rangeConfirmationsError },
     { data: positionConfirmations, error: positionConfirmationsError },
   ] = await Promise.all([
-    supabase.from("trade_targets").select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high").in("dealing_range_id", rangeIds),
+    supabase.from("trade_targets").select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high, timeframe").in("dealing_range_id", rangeIds),
     supabase.from("trade_partial_exits").select("trade_position_id, price, exit_time, portion_pct").in("trade_position_id", positionIds),
-    supabase.from("trade_confirmations").select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high").in("dealing_range_id", rangeIds),
-    supabase.from("trade_confirmations").select("id, trade_position_id, price, kind, source_time, touched_time, range_low, range_high").in("trade_position_id", positionIds),
+    supabase.from("trade_confirmations").select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high, timeframe").in("dealing_range_id", rangeIds),
+    supabase.from("trade_confirmations").select("id, trade_position_id, price, kind, source_time, touched_time, range_low, range_high, timeframe").in("trade_position_id", positionIds),
   ]);
   if (targetsError) throw targetsError;
   if (partialsError) throw partialsError;
@@ -81,6 +85,8 @@ export async function fetchTrades(instrument, accountId = null) {
       // gespeicherten Fib-Werts, sonst null.
       rangeLow: c.range_low ?? null,
       rangeHigh: c.range_high ?? null,
+      // Nur bei kind='ob' gesetzt — Zeitebene der Zone, siehe PriceChart.vue: refreshTradeTargetLinksInternal.
+      timeframe: c.timeframe ?? null,
     };
   }
 
@@ -118,6 +124,9 @@ export async function fetchTrades(instrument, accountId = null) {
         // Zone, damit refreshTradeTargetLinksInternal eine Box statt nur eine Linie zeichnen kann.
         rangeLow: t.range_low ?? null,
         rangeHigh: t.range_high ?? null,
+        // Nur bei kind='ob' gesetzt — Zeitebene der Zone (1H/4H/5M), damit die Box live per
+        // detectOrderBlocks nachvollzogen werden kann statt nur einen Snapshot zu zeigen.
+        timeframe: t.timeframe ?? null,
       })),
       // Bestätigungen fürs GO der ganzen Idee (dealing_range) und fürs GO dieses einen Entries
       // (trade_position, ex-setup_entry) zusammen — beide teilen dieselbe Tabelle/Rohform (siehe

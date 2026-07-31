@@ -34,6 +34,7 @@ function outcomeLabel(t) {
     <thead>
       <tr>
         <th>Dealing Range</th>
+        <th>Position</th>
         <th>Date</th>
         <th>Exit</th>
         <th>Ergebnis</th>
@@ -47,6 +48,10 @@ function outcomeLabel(t) {
           <span class="trade-direction" :class="t.direction">{{ t.direction === "short" ? "Short" : "Long" }}</span>
           #{{ t.dealingRangeId }}
         </td>
+        <!-- Chat 2026-07-31: "damit ich, wenn ich das Modal öffne, besser erkennen kann, welche
+             Position ich da eigentlich editiere" — matcht 1:1 den Modal-Titel "Trade #<id>
+             bearbeiten" (siehe TradeEditModal.vue), da trade.id === die trade_position-Id. -->
+        <td class="trade-position-cell">#{{ t.id }}</td>
         <td>{{ fmtDate(t.entryTime) }}</td>
         <td v-if="t.exitPrice != null">{{ fmtPrice(t.exitPrice, pricePrecisionForInstrument(t.instrument)) }} ({{ fmtTime(t.exitTime) }})</td>
         <td v-else>–</td>

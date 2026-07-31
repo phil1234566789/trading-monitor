@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { accounts, selectedTradingAccountId } from "../tradingAccounts.js";
+import { accounts, selectedTradingAccountId, ALL_ACCOUNTS_ID } from "../tradingAccounts.js";
 
 // Konto-Umschalter im Trades-Panel (Chat 2026-07-30) — eigener, in sich geschlossener Klick-außen-
 // Handler statt Dashboard.vue's gemeinsamem closeMenusOutside/.toggle-group (das gehört zur Toolbar,
@@ -9,6 +9,13 @@ const open = ref(false);
 const wrapperRef = ref(null);
 
 const selectedAccount = computed(() => accounts.value.find((a) => a.id === selectedTradingAccountId.value) ?? null);
+// "Alle Konten" (Bug-Report Philip 2026-07-31: eine kontolose Lana-Idee war unsichtbar, weil der
+// Switcher vorher nur echte Konten anbot) — eigenes Label statt des "Kein Konto"-Fallbacks unten,
+// der eigentlich "Auswahl passt zu keinem geladenen Konto" bedeutet, nicht "zeig mir alles".
+const currentLabel = computed(() => {
+  if (selectedTradingAccountId.value === ALL_ACCOUNTS_ID) return "Alle Konten";
+  return selectedAccount.value ? selectedAccount.value.name : "Kein Konto";
+});
 
 function select(id) {
   selectedTradingAccountId.value = id;
@@ -24,9 +31,12 @@ onUnmounted(() => window.removeEventListener("click", onClickOutside));
 <template>
   <div ref="wrapperRef" class="tas-wrapper">
     <button class="tas-current" title="Trading-Konto wechseln" @click="open = !open">
-      🏦 {{ selectedAccount ? selectedAccount.name : "Kein Konto" }}
+      🏦 {{ currentLabel }}
     </button>
     <div v-if="open" class="tas-menu">
+      <button class="tas-option" :class="{ active: selectedTradingAccountId === ALL_ACCOUNTS_ID }" @click="select(ALL_ACCOUNTS_ID)">
+        Alle Konten
+      </button>
       <button
         v-for="account in accounts"
         :key="account.id"

@@ -15,6 +15,13 @@ export const accountsLoaded = ref(false);
 // getroffen (z.B. allererster Start) -> fällt in Dashboard.vue auf das erste geladene Konto zurück.
 export const selectedTradingAccountId = useLocalStorageRef("selectedTradingAccountId", null);
 
+// Sentinel für "kein Konto-Filter" (Bug-Report Philip 2026-07-31: eine von Laniakea per MCP
+// angelegte Idee ohne trading_account_id war im Trades-Panel unsichtbar, WELCHES Konto auch immer
+// gewählt war — der Switcher bot nur echte Konten an, nie "zeig mir alles"). Bewusst ein String
+// statt null: null bleibt "noch keine Auswahl getroffen" (siehe fetchAccounts-Bootstrap unten),
+// "all" ist eine EXPLIZITE, persistente Wahl, die den Bootstrap-Fallback nicht überschreiben soll.
+export const ALL_ACCOUNTS_ID = "all";
+
 export async function fetchAccounts() {
   const { data, error } = await supabase.from("trading_accounts").select("id, name, notes").order("id");
   if (error) {
@@ -24,8 +31,9 @@ export async function fetchAccounts() {
   accounts.value = data;
   accountsLoaded.value = true;
   // Noch keine (oder eine inzwischen gelöschte) Auswahl -> erstes Konto als Default, statt die
-  // Trades-Liste dauerhaft leer zu lassen.
-  if (data.length > 0 && !data.some((a) => a.id === selectedTradingAccountId.value)) {
+  // Trades-Liste dauerhaft leer zu lassen. ALL_ACCOUNTS_ID ist eine gültige, bewusste Auswahl,
+  // kein "ungültiger Zustand" wie eine gelöschte Konto-Id — bleibt deshalb unangetastet.
+  if (data.length > 0 && selectedTradingAccountId.value !== ALL_ACCOUNTS_ID && !data.some((a) => a.id === selectedTradingAccountId.value)) {
     selectedTradingAccountId.value = data[0].id;
   }
 }

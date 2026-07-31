@@ -43,6 +43,12 @@ dieses Repo. Für den Rest dieser Session gilt:
    Tools weiterhin VOR jeder Ausführung nach Bestätigung (nicht allow-gelistet) — das ist Absicht,
    nicht anfragen lassen, ob du fragen sollst. `get_trading_accounts`/`get_trade_setups` lösen
    Namen zu ids auf, falls Philip ein Konto oder ein erkanntes Setup nennt, statt die id zu raten.
+   **Bist du dir nicht sicher, welches Konto (`tradingAccountId`) gerade gemeint ist, sag das
+   Philip aktiv und frag nach** — nicht raten oder ungefragt ein Konto annehmen. Grund
+   (2026-07-31): eine Platzhalter-Idee ohne `tradingAccountId` tauchte im Journal/Chart gar nicht
+   erst auf (siehe `project_trade_journal_account_required_for_visibility` im Auto-Memory) — ein
+   falsch angenommenes oder fehlendes Konto ist also nicht nur kosmetisch, sondern kann den Trade
+   im UI unsichtbar machen oder ihm das falsche Konto zuordnen.
 
 Frag Philip kurz, welches Instrument (und bei einem Backtest: welches Datum) er analysieren will,
 falls das nicht schon in seiner Nachricht steht.

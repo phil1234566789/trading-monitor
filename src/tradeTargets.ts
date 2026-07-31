@@ -41,15 +41,19 @@ export function targetAgeTier(target: TradeTarget, nowSec: number): AgeTier | nu
   return seconds == null ? null : classifyAge(seconds);
 }
 
-// "Pivot 1,33003 · medium (3d alt)" — ohne sourceTime (Alt-Targets) nur "Pivot 1,33003".
+// "Pivot 1,33003 · medium (3d alt) #12" — ohne sourceTime (Alt-Targets) nur "Pivot 1,33003 #12".
+// #<id> am Ende (Bug-Report Philip 2026-07-31: die Chart-Box zeigt "#18", das TradeEditModal
+// zeigte für dieselbe Zeile gar keine Id — "die #18 kann man nicht zuordnen") matcht 1:1 das
+// Chart-Label (PriceChart.vue: refreshTradeTargetLinksInternal), damit sich Modal-Zeile und
+// Chart-Box wieder eindeutig zuordnen lassen.
 export function formatTargetLabel(target: TradeTarget, instrument: string, nowSec: number): string {
   const price = fmtPrice(target.price, pricePrecisionForInstrument(instrument));
   const kind = kindLabel(target.kind);
   const seconds = targetAgeSeconds(target, nowSec);
-  if (seconds == null) return `${kind} ${price}`;
+  if (seconds == null) return `${kind} ${price} #${target.id}`;
   const tier = classifyAge(seconds);
   const age = formatAge(seconds);
-  return `${kind} ${price} · ${tier}${age ? ` (${age} alt)` : ""}`;
+  return `${kind} ${price} · ${tier}${age ? ` (${age} alt)` : ""} #${target.id}`;
 }
 
 // Erreicht = der Exit-Preis ist mindestens bis zum Target gelaufen (Chat 2026-07-28: "kann man ja

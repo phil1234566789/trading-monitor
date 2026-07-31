@@ -154,6 +154,7 @@ const emit = defineEmits([
   "select-setup",
   "toggle-trade-mode",
   "select-target",
+  "select-setup-confirmations",
 ]);
 
 // CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
@@ -815,15 +816,15 @@ function refreshTradeTargetLinksInternal() {
       // schon bei Confirmations für kind='fib'). Alt-OB-Targets ohne rangeLow/rangeHigh (vor dieser
       // Migration) fallen zurück auf die bisherige Linie.
       //
-      // KEIN Self-Heal-Touch-Check hier (anders als bei Pivot-Targets unten) — ein OB kann von
-      // JEDER Zeitebene kommen (M5/1H/4H, siehe findClickedOBZone), aber hier stehen immer nur
-      // die Kerzen der GERADE ANGEZEIGTEN Chart-Timeframe zur Verfügung. Ein 1H-OB gegen M5-Kerzen
-      // zu prüfen kollabiert die Box sofort auf die nächstbeste M5-Kerze, die zufällig irgendwo in
-      // die (viel gröbere) 1H-Zone hineinragt — Bug-Report Philip 2026-07-31, zweite Runde. Deshalb
-      // wie bei Confirmations: touchedTime wird NUR beim Klick selbst festgehalten (aus der jeweils
-      // korrekten Zeitebene, siehe findClickedOBZone), keine nachträgliche Neuberechnung.
+      // Box-Ende kommt bevorzugt aus liveObZoneState (Bug-Report Philip 2026-07-31, dritte Runde:
+      // "genauso wie die anderen 1h OBs vom OB-Algorithmus gezeichnet werden") — dieselbe
+      // detectOrderBlocks()-Erkennung auf der eigenen Zeitebene der Zone (1H/4H/5M), NICHT gegen die
+      // Kerzen der gerade angezeigten Chart-Timeframe (das kollabierte die Box vorher sofort auf die
+      // nächstbeste Nachbarkerze, Bug-Report zweite Runde). Ohne Live-Match (z.B. alte Targets ohne
+      // gespeicherte timeframe) Fallback auf den einmaligen Klick-Snapshot.
       if (target.kind === "ob" && target.rangeLow != null && target.rangeHigh != null) {
-        const endTime = target.touchedTime ?? candles[candles.length - 1].time;
+        const live = liveObZoneState(target);
+        const endTime = live ? live.endTime : (target.touchedTime ?? candles[candles.length - 1].time);
         const primitive = new OrderBlockPrimitive(
           { top: target.rangeHigh, bottom: target.rangeLow, startTime: target.sourceTime, endTime },
           {
@@ -880,12 +881,11 @@ function refreshTradeConfirmationLinksInternal() {
     for (const confirmation of t.confirmations ?? []) {
       if (confirmation.sourceTime == null) continue;
       const label = `✔ ${confirmationKindLabel(confirmation.kind)} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`;
-      // Reicht bis zum echten Touch, sonst bis zur zuletzt geladenen Kerze — statt einer festen
-      // Box-Breite, die für 1H/4H-OBs viel zu schmal wäre (Bug-Report Philip 2026-07-31).
-      const endTime = confirmation.touchedTime ?? candles[candles.length - 1].time;
       // OB-Bestätigungen als echte Box statt nur einer Linie (siehe refreshTradeTargetLinksInternal
-      // — dieselbe Begründung).
+      // — dieselbe Begründung, dasselbe liveObZoneState statt eines statischen Snapshots).
       if (confirmation.kind === "ob" && confirmation.rangeLow != null && confirmation.rangeHigh != null) {
+        const live = liveObZoneState(confirmation);
+        const endTime = live ? live.endTime : (confirmation.touchedTime ?? candles[candles.length - 1].time);
         const primitive = new OrderBlockPrimitive(
           { top: confirmation.rangeHigh, bottom: confirmation.rangeLow, startTime: confirmation.sourceTime, endTime },
           {
@@ -901,7 +901,15 @@ function refreshTradeConfirmationLinksInternal() {
         tradeConfirmationLinkPrimitives.push(primitive);
         continue;
       }
-      const tier = classifyAge(businessSecondsBetween(confirmation.sourceTime, confirmation.touchedTime ?? nowSec));
+      // Self-Heal wie bei Pivot-Targets (firstCandleTouch) — bisher fehlte das hier komplett, eine
+      // Bestätigung ohne touchedTime (z.B. ein Fib, das per findClickedFibLevel IMMER touchedTime:
+      // null liefert, "kein 'getoucht'-Konzept für ein Fib-Level") zog sich deshalb dauerhaft bis
+      // "jetzt" (Bug-Report Philip 2026-07-31). Anders als bei OB-Zonen unkritisch hier: eine
+      // Bestätigung (Pivot ODER Fib) ist immer EIN einzelner Preis, keine Zonenspanne — derselbe
+      // Zeitebenen-Mismatch wie bei OB kann also nicht auftreten.
+      const touchedTime = confirmation.touchedTime ?? firstCandleTouch(candles, confirmation.sourceTime, confirmation.price);
+      const endTime = touchedTime ?? candles[candles.length - 1].time;
+      const tier = classifyAge(businessSecondsBetween(confirmation.sourceTime, touchedTime ?? nowSec));
       const primitive = new LiquidityLinePrimitive(
         { price: confirmation.price, pivotTime: confirmation.sourceTime, endTime },
         {
@@ -1053,6 +1061,27 @@ function collectObsZones() {
   return zones;
 }
 
+// Bug-Report Philip 2026-07-31, dritte Runde zur OB-Target-Box: außerhalb Replay zog sich die Box
+// bis "jetzt" durch, weil sie ohne echten Touch einfach bis zur letzten geladenen Kerze reicht —
+// Philip will stattdessen exakt dasselbe Verhalten wie die live gezeichneten OB-Zonen (dieselbe
+// detectOrderBlocks()-Erkennung auf derselben Zeitebene, nicht nur ein einmaliger Snapshot vom
+// Klick-Zeitpunkt). Sucht die Original-Zone anhand ihrer beim Klick festgehaltenen Kanten
+// (rangeLow/rangeHigh) in der GERADE live neu erkannten Zonen-Liste derselben Zeitebene — bewusst
+// unabhängig von showObs1h/-4h/-M5 (ein Target soll sichtbar bleiben, auch wenn der zugehörige
+// Live-OB-Indikator-Toggle gerade aus ist), deshalb hier direkt detectOrderBlocks/filterBtcObsZones
+// statt collectObsZones.
+function liveObZonesForTimeframe(timeframe) {
+  if (timeframe === "5M") return detectOrderBlocks(clipReplay(isForex ? tradeSetupM5Candles : obsM5BtcCandles), "5m", isForex);
+  if (!isForex) return filterBtcObsZones(timeframe);
+  return detectOrderBlocks(clipReplay(timeframe === "1H" ? rangesH1Candles : obs4hCandles), timeframe, true);
+}
+
+function liveObZoneState(item) {
+  if (item.timeframe == null || item.rangeLow == null || item.rangeHigh == null) return null;
+  const zone = liveObZonesForTimeframe(item.timeframe).find((z) => z.top === item.rangeHigh && z.bottom === item.rangeLow);
+  return zone ? { touched: zone.touched, endTime: zone.endTime } : null;
+}
+
 function refreshPoiZonesInternal() {
   const candles = clipReplay(allCandles);
   const visibleZones = filterHistorical(collectObsZones());
@@ -1104,7 +1133,12 @@ function refreshSessionsInternal() {
   // Sessions sind seit Chat 2026-07-25 pro Asset getrennt (siehe sessions.js) — nur die des
   // gerade angezeigten Symbols rendern, nicht die anderer Instrumente.
   const symbolSessions = sessions.filter((s) => s.instrument === props.symbol);
-  renderSessions(candleSeries, props.showSessions ? symbolSessions : [], sessionPrimitives, candles, {
+  // Auf 4h/1D-Kerzen liegen mehrere Sessions in einer einzigen Kerze, die Bänder werden zu
+  // bedeutungslosem Gematsche — Dashboard.vue disabled den Toggle-Button dafür bereits
+  // (sessionsDisabled), hier zusätzlich gegen props.currentBar geprüft, analog zu
+  // refreshEmaInternal (Chat 2026-07-31: "genauso wie bei EMA").
+  const sessionsAllowedHere = props.currentBar !== "4h" && props.currentBar !== "1D";
+  renderSessions(candleSeries, props.showSessions && sessionsAllowedHere ? symbolSessions : [], sessionPrimitives, candles, {
     // Funktion statt fixer Zahl (Bug-Report Philip 2026-07-22: Zeitumstellung) — allCandles kann per
     // Lazy-Load Monate zurückreichen, ein einzelner "jetzt"-Offset wäre für Kerzen auf der anderen
     // Seite einer Sommer-/Winterzeit-Umstellung eine Stunde daneben. sessionOccurrences fragt diese
@@ -1597,6 +1631,12 @@ function findClickedOBZone(param) {
     touchedTime: zone.touched ? zone.endTime : null,
     rangeLow: zone.bottom,
     rangeHigh: zone.top,
+    // Bug-Report Philip 2026-07-31, dritte Runde: außerhalb Replay wollte die Box exakt wie die
+    // live gezeichneten OB-Zonen laufen (bis zum echten Touch, sonst frei wachsend) — dafür muss
+    // refreshTradeTargetLinksInternal wissen, von welcher Zeitebene die Zone stammt, um dieselbe
+    // detectOrderBlocks()-Erkennung live nachzuvollziehen statt nur einen statischen Snapshot zu
+    // zeigen (siehe dort).
+    timeframe: zone.timeframe,
   };
 }
 
@@ -2090,7 +2130,24 @@ onMounted(() => {
       // Fib-Tick NUR im Bestätigungs-Modus prüfen (siehe confirmationModeActive-Kommentar oben) —
       // zuerst, weil er eine feinere Toleranz hat und sonst evtl. von einer überlappenden
       // Liquiditäts-Linie verdeckt würde.
-      const target = (props.confirmationModeActive && findClickedFibLevel(param)) || findClickedTarget(param);
+      const fib = props.confirmationModeActive && findClickedFibLevel(param);
+      if (fib) {
+        emit("select-target", fib);
+        return;
+      }
+      // Ganzes Trade-Setup (LS+OB, evtl. PP) anklicken -> alle Teile auf einmal als Bestätigungen
+      // übernehmen (Chat 2026-07-31: "ich kann leider kein Short-Setup anklicken ... LS und OB
+      // sollen als Bestätigung aufgenommen werden, PP als Stop-Loss") — NUR im Bestätigungs-Modus,
+      // nicht im reinen Ziel-Modus (ein ganzes Setup als "Target" ergibt keinen Sinn, ein Ziel ist
+      // ein einzelner Preis). Vor findClickedTarget geprüft, weil die Setup-OB-Box i.d.R. dieselbe
+      // Fläche wie eine generische OB-Zone überdeckt — sonst würde nie das Setup, nur das einzelne
+      // Near-Edge-Target treffen.
+      const setup = props.confirmationModeActive && findClickedSetup(param);
+      if (setup) {
+        emit("select-setup-confirmations", setup);
+        return;
+      }
+      const target = findClickedTarget(param);
       if (target) emit("select-target", target);
       return;
     }
@@ -2116,7 +2173,7 @@ onMounted(() => {
       return;
     }
     const hit = props.targetModeActive
-      ? (props.confirmationModeActive && findClickedFibLevel(param)) || findClickedTarget(param)
+      ? (props.confirmationModeActive && (findClickedFibLevel(param) || findClickedSetup(param))) || findClickedTarget(param)
       : findClickedSetup(param);
     chartContainerRef.value.style.cursor = hit ? "pointer" : "";
   });

@@ -43,10 +43,14 @@ export function confirmationAgeTier(confirmation: TradeConfirmation, nowSec: num
   return seconds == null ? null : classifyAge(seconds);
 }
 
-// "Sweep 1,33195 · medium (3d alt)" — ohne sourceTime (sollte praktisch nicht vorkommen, eine
-// Bestätigung wird ja gerade WEIL sie schon passiert ist gewählt) nur "Sweep 1,33195". Bei
+// "Sweep 1,33195 · medium (3d alt) #18" — ohne sourceTime (sollte praktisch nicht vorkommen, eine
+// Bestätigung wird ja gerade WEIL sie schon passiert ist gewählt) nur "Sweep 1,33195 #18". Bei
 // kind='fib' zusätzlich die zwei Ankerpreise ("Fib 1,33195 (1,3273–1,3387) · ..."), sonst wäre der
 // 0,5-Preis allein später nicht mehr nachvollziehbar (siehe rangeLow/rangeHigh-Kommentar oben).
+// #<id> am Ende (Bug-Report Philip 2026-07-31: Chart-Box zeigte "#18", Modal-Zeile für dieselbe
+// Bestätigung gar keine Id) matcht 1:1 das Chart-Label (PriceChart.vue:
+// refreshTradeConfirmationLinksInternal), damit sich Modal-Zeile und Chart-Box eindeutig zuordnen
+// lassen — wie schon bei formatTargetLabel.
 export function formatConfirmationLabel(confirmation: TradeConfirmation, instrument: string, nowSec: number): string {
   const precision = pricePrecisionForInstrument(instrument);
   const price = fmtPrice(confirmation.price, precision);
@@ -56,8 +60,8 @@ export function formatConfirmationLabel(confirmation: TradeConfirmation, instrum
       ? ` (${fmtPrice(confirmation.rangeLow, precision)}–${fmtPrice(confirmation.rangeHigh, precision)})`
       : "";
   const seconds = confirmationAgeSeconds(confirmation, nowSec);
-  if (seconds == null) return `${kind} ${price}${rangeHint}`;
+  if (seconds == null) return `${kind} ${price}${rangeHint} #${confirmation.id}`;
   const tier = classifyAge(seconds);
   const age = formatAge(seconds);
-  return `${kind} ${price}${rangeHint} · ${tier}${age ? ` (${age} alt)` : ""}`;
+  return `${kind} ${price}${rangeHint} · ${tier}${age ? ` (${age} alt)` : ""} #${confirmation.id}`;
 }

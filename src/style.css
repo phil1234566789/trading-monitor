@@ -102,6 +102,12 @@ body {
   color: #787b86;
 }
 
+.trade-position-cell {
+  font-family: "Courier New", monospace;
+  color: #787b86;
+  font-size: 11px;
+}
+
 .trade-link-btn {
   background: transparent;
   border: none;
