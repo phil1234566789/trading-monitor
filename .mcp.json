@@ -2,7 +2,25 @@
   "mcpServers": {
     "okx-market": {
       "command": "npx",
-      "args": ["-y", "@okx_ai/okx-trade-mcp", "--modules", "market", "--read-only"]
+      "args": [
+        "-y",
+        "@okx_ai/okx-trade-mcp",
+        "--modules",
+        "market",
+        "--read-only"
+      ]
+    },
+    "trading-monitor": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "tsx",
+        "mcp-server/src/index.ts"
+      ],
+      "env": {
+        "SUPABASE_URL": "https://vkphwtqcvqrkphksproj.supabase.co",
+        "SUPABASE_ANON_KEY": "sb_publishable_v88yE7w0wPJxR1xQmboJwA_cCx759_7"
+      }
     }
   }
 }

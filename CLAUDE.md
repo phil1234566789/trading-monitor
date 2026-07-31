@@ -233,6 +233,62 @@ was Philip's explicit call ("bissl beschriften, damit man sie leichter zuordnen 
 oversight. Its color is `chartColors.newsEvent` (StyleModal group "News"), like every other
 chart-drawn indicator in this repo — don't hardcode a color literal here if you touch this file.
 
+### MCP server (`mcp-server/`)
+
+A local, stdio-transport MCP server exposing this app's data as tools for Claude, added 2026-07-31
+to replace the manual "Daten-Export button → copy/paste into a separate claude.ai Project → paste
+drawings back" workflow. Own `package.json`/`tsconfig.json` (separate deps from the Vite frontend:
+`@modelcontextprotocol/sdk`, `@supabase/supabase-js`, `zod`, run via `npx tsx`, no build step for
+local use). Registered project-scoped in the committed `.mcp.json` (alongside the pre-existing
+`okx-market` server) — auto-available whenever this repo is opened in Claude Code, after a one-time
+approval prompt.
+
+**Auth**: same anon-key pattern as `src/supabaseClient.js` (not service_role) — every table it
+touches already has permissive anon RLS (see the tables' migrations). Read-only for
+`ob_zones`/`liquidity_levels`/`trade_setups`/`signals`/`trade_targets`/`trade_partial_exits`/
+`news_events`/`trading_schedules`; read+insert for `claude_annotations` (matches
+`src/claudeAnnotationsStore.js`'s own insert shape exactly).
+
+**`get_data_export` is the intended first call** in a session (its tool description tells Claude
+this explicitly) — bundles M5 candles + Asia-session range, relevant liquidity levels, and relevant
+OB zones for an instrument in one call, so Claude doesn't have to fire off half a dozen granular
+`get_*` tools just to get oriented (Philip's explicit ask 2026-07-31). It does **not** include the
+1H structure/trend the frontend "Daten-Export" button provides — see below.
+
+**Why this isn't just `src/dataExport.js` reused verbatim**: `buildDataExport` (and everything it
+transitively imports — `liquidity.js`, `chartColors.js`, `sessions.js`, `marketStructureAnalysis.ts`)
+touches `localStorage` and Vite's `import.meta.env` at module-load time, which don't exist under
+plain Node — importing any of it here crashes immediately. `mcp-server/src/db.ts` instead reads the
+already-persisted `ob_zones`/`liquidity_levels` tables (written by `poi-watcher` every 5min) rather
+than re-detecting from candles — no third port of the detection algorithms, no drift risk. Small,
+stable, self-contained pieces (the Berlin-timezone date-range math, the liquidity
+"relevant"-levels filter, the `claude_annotations` JSON-shape validation) ARE duplicated here in
+Node-safe form, since re-deriving those from scratch would be worse than a small, low-risk copy —
+see `mcp-server/src/berlinTime.ts`, `db.ts`'s `filterRelevantRows`, `tools/annotations.ts`'s
+`validateAnnotations`. If you change the originals (`src/dataExport.js`'s Berlin-time helpers,
+`src/liquidity.js`'s `filterRelevantLevels`, `src/claudeAnnotations.js`'s `validateAnnotationList`),
+check whether the port here needs the same fix.
+
+**Known v1 gap**: no 1H structure/trend tool yet (see above) — `marketStructureAnalysis.ts` needs
+the same Node-incompatible imports. Fixing this properly means extracting the pure pivot/trend math
+into a dependency-free module both sides can import; deliberately deferred rather than done as a
+rushed workaround or a third algorithm port (Philip's call, 2026-07-31).
+
+**Write tool (`post_chart_annotations`) safety**: originally deliberately kept OFF any permission
+auto-allow list ("Schreiben nur mit Philips Zustimmung", Philip 2026-07-31, same day) — reversed a
+few hours later the same day ("L darf jetzt immer zeichnen, brauch kein go von mir"), now allow-
+listed in `.claude/settings.local.json` (`mcp__trading-monitor__post_chart_annotations`, gitignored
+personal-machine setting, not `.claude/settings.json`) so it runs without a confirmation prompt.
+If Philip asks to tighten this again, remove that allow-list entry — there's no other gate.
+
+**"Laniakea" persona (`/l`)**: `.claude/commands/l.md` switches a session from this file's normal
+coding-assistant behavior into "Laniakea", Philip's trading-sparring-partner persona (Bias/Setup-
+analysis, not code) — pointer to `trading/claude-project-instructions.md` (the same persona
+instructions used in Philip's separate claude.ai Project) plus a note to use this repo's MCP tools
+for live data instead of waiting for pasted charts. Deliberately NOT merged into this file's own
+instructions (see "MCP server" intro above) — the persona only applies when explicitly invoked, not
+to every session in this repo.
+
 ## Conventions
 
 - Comments are in German, and are written to explain **why** (a past bug, a non-obvious
