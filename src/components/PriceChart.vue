@@ -17,15 +17,8 @@ import { newsEvents, currentNewsNoGo, newsEventsForInstrument } from "../newsEve
 import { renderNewsMarkers, isSameBerlinDay } from "../newsMarkers.js";
 import { detectSetupObs, detectTradeSetups, tradeSetupObBoxBounds } from "../tradeSetup.js";
 import { renderPivotMarkers } from "../pivotMarkers";
-import {
-  computeRangesPivots,
-  buildMarketStructureState,
-  renderMarketStructureAnalysis,
-  pivotForDisplay,
-  summarizeMarketStructureState,
-  collectH1LqLevels,
-  collectFibLevels,
-} from "../marketStructureAnalysis";
+import { computeRangesPivots, buildMarketStructureState, pivotForDisplay, summarizeMarketStructureState } from "../marketStructureAnalysis";
+import { renderMarketStructureAnalysis, collectH1LqLevels, collectFibLevels } from "../marketStructureRendering";
 import { computeCockpitState } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";

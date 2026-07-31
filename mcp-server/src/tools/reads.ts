@@ -20,18 +20,33 @@ export function registerReadTools(server: McpServer) {
       title: "Daten-Export (Gesamtbild)",
       description:
         "RUFE DIESES TOOL ZUERST AUF, bevor du andere trading-monitor-Tools nutzt. Liefert in einem " +
-        "Call: M5-Kerzen des Tages + Asia-Session-Range, relevante Liquidity-Level (1H+M5) und " +
-        "relevante OB-Zonen (1H+4H) für ein Instrument — dasselbe Bündel wie der 'Daten-Export'-" +
-        "Button in der App. Enthält (noch) KEINEN 1H-Structure-Trend. Nutze die granularen " +
-        "get_*-Tools nur, wenn du darüber hinaus mehr brauchst (andere Zeitspanne, Journal, News, " +
-        "Handelszeiten).",
+        "Call: M5-Kerzen des Tages + Asia-Session-Range, den 1H-Structure-Trend, relevante " +
+        "Liquidity-Level (1H+M5) und relevante OB-Zonen (1H+4H) für ein Instrument — dasselbe " +
+        "Bündel wie der 'Daten-Export'-Button in der App. Nutze die granularen get_*-Tools nur, " +
+        "wenn du darüber hinaus mehr brauchst (andere Zeitspanne, Journal, News, Handelszeiten). " +
+        "Der Structure-Trend nutzt standardmäßig einen rollierenden 7-Tage-Lookback (Periode " +
+        "5/2) — falls Philip im Dashboard einen 'fixen Start' eingestellt hat (nur in seinem " +
+        "Browser-localStorage sichtbar, nicht von hier aus abfragbar), frag ihn danach und gib es " +
+        "über structureConfig mit.",
       inputSchema: {
         instrument: INSTRUMENT,
         dateStr: z.string().optional().describe("YYYY-MM-DD (Europe/Berlin), Default: heute"),
         replayUntilSec: z.number().optional().describe("Unix-Sekunden — deckt nur bis zu diesem Zeitpunkt auf (Replay-Simulation)"),
+        structureConfig: z
+          .object({
+            periodOuter: z.number().int().positive().optional().describe("Default 5"),
+            periodInner: z.number().int().positive().optional().describe("Default 2"),
+            lookbackHoursOuter: z.number().positive().optional().describe("Default 168 (7 Tage)"),
+            lookbackHoursInner: z.number().positive().optional().describe("Default 168 (7 Tage)"),
+            fixedStartActive: z.boolean().optional().describe("true = fixedStartTime statt rollierendem Lookback nutzen"),
+            fixedStartTime: z.number().optional().describe("Unix-Sekunden, nur relevant wenn fixedStartActive"),
+          })
+          .optional()
+          .describe("Nur setzen, wenn Philip explizit von den Dashboard-Defaults abweichende Structure-Settings nennt"),
       },
     },
-    async ({ instrument, dateStr, replayUntilSec }) => json(await buildDataExport({ instrument, dateStr, replayUntilSec })),
+    async ({ instrument, dateStr, replayUntilSec, structureConfig }) =>
+      json(await buildDataExport({ instrument, dateStr, replayUntilSec, structureConfig })),
   );
 
   server.registerTool(

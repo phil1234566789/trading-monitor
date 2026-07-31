@@ -115,6 +115,13 @@ drift). **Whenever you change a rule in this file (not just refactor), update th
 wording for a changed one, add a test reference once a new test exists. Don't let this doc fall
 behind the algorithm the way the JS/TS detection-logic duplication above already does.
 
+Since 2026-07-31, this file holds ONLY the pure algorithm (no chart drawing, no browser-only
+imports) — the state-to-chart-primitives rendering (`renderMarketStructureAnalysis` and friends)
+was split out into `src/marketStructureRendering.ts`, specifically so the algorithm stays importable
+outside the browser (see CLAUDE.md "MCP server" → `get_data_export`'s structure-trend). Don't add a
+new rendering-related import (chart colors, line widths, lightweight-charts primitives) back into
+`marketStructureAnalysis.ts` — that belongs in the rendering file instead.
+
 ### Frontend data flow (`PriceChart.vue`)
 
 `src/components/PriceChart.vue` is the largest component and the hub: it fetches candles (OKX for
@@ -250,29 +257,54 @@ touches already has permissive anon RLS (see the tables' migrations). Read-only 
 `src/claudeAnnotationsStore.js`'s own insert shape exactly).
 
 **`get_data_export` is the intended first call** in a session (its tool description tells Claude
-this explicitly) — bundles M5 candles + Asia-session range, relevant liquidity levels, and relevant
-OB zones for an instrument in one call, so Claude doesn't have to fire off half a dozen granular
-`get_*` tools just to get oriented (Philip's explicit ask 2026-07-31). It does **not** include the
-1H structure/trend the frontend "Daten-Export" button provides — see below.
+this explicitly) — bundles M5 candles + Asia-session range, the 1H structure/trend, relevant
+liquidity levels, and relevant OB zones for an instrument in one call, so Claude doesn't have to
+fire off half a dozen granular `get_*` tools just to get oriented (Philip's explicit ask
+2026-07-31). Structure-trend params (`periodOuter`/`periodInner`/`lookbackHours*`/
+`fixedStartActive`/`fixedStartTime`) default to the same rolling 7-day/period-5/2 values as the
+"Daten-Export" button — if Philip has a non-default "fixer Start" set in his Dashboard, that only
+lives in his browser's `localStorage` (never synced to Supabase, unlike sessions/chartColors), so
+the tool can't discover it on its own; Laniakea (`/l`) should ask Philip when it matters, not guess.
 
 **Why this isn't just `src/dataExport.js` reused verbatim**: `buildDataExport` (and everything it
-transitively imports — `liquidity.js`, `chartColors.js`, `sessions.js`, `marketStructureAnalysis.ts`)
-touches `localStorage` and Vite's `import.meta.env` at module-load time, which don't exist under
-plain Node — importing any of it here crashes immediately. `mcp-server/src/db.ts` instead reads the
-already-persisted `ob_zones`/`liquidity_levels` tables (written by `poi-watcher` every 5min) rather
-than re-detecting from candles — no third port of the detection algorithms, no drift risk. Small,
-stable, self-contained pieces (the Berlin-timezone date-range math, the liquidity
-"relevant"-levels filter, the `claude_annotations` JSON-shape validation) ARE duplicated here in
-Node-safe form, since re-deriving those from scratch would be worse than a small, low-risk copy —
-see `mcp-server/src/berlinTime.ts`, `db.ts`'s `filterRelevantRows`, `tools/annotations.ts`'s
+transitively imports — `liquidity.js`, `chartColors.js`, `sessions.js`) touches `localStorage` and
+Vite's `import.meta.env` at module-load time, which don't exist under plain Node — importing any of
+it here crashes immediately. `mcp-server/src/db.ts` instead reads the already-persisted
+`ob_zones`/`liquidity_levels` tables (written by `poi-watcher` every 5min) rather than re-detecting
+from candles — no third port of the detection algorithms, no drift risk. Small, stable,
+self-contained pieces (the Berlin-timezone date-range math, the liquidity "relevant"-levels filter,
+the `claude_annotations` JSON-shape validation) ARE duplicated here in Node-safe form, since
+re-deriving those from scratch would be worse than a small, low-risk copy — see
+`mcp-server/src/berlinTime.ts`, `db.ts`'s `filterRelevantRows`, `tools/annotations.ts`'s
 `validateAnnotations`. If you change the originals (`src/dataExport.js`'s Berlin-time helpers,
 `src/liquidity.js`'s `filterRelevantLevels`, `src/claudeAnnotations.js`'s `validateAnnotationList`),
 check whether the port here needs the same fix.
 
-**Known v1 gap**: no 1H structure/trend tool yet (see above) — `marketStructureAnalysis.ts` needs
-the same Node-incompatible imports. Fixing this properly means extracting the pure pivot/trend math
-into a dependency-free module both sides can import; deliberately deferred rather than done as a
-rushed workaround or a third algorithm port (Philip's call, 2026-07-31).
+**`marketStructureAnalysis.ts` / `marketStructureRendering.ts` split (2026-07-31)**: the trend
+algorithm used to be one file that imported `liquidity.js` (for `detectLiquidityLevels`) and, for
+its own chart-drawing half, `chartColors.js`/`chartLineWidths.js` — both of which crash under Node
+(see above). Investigation showed only ONE function (`detectLiquidityLevels`) was actually needed by
+the pure pivot/trend math (`computeRangesPivots`/`buildMarketStructureState`/
+`summarizeMarketStructureState`); everything else imported from `liquidity.js` was used exclusively
+by the drawing code. Fix: `detectLiquidityLevels`/`filterRelevantLevels`/the fractal-detection
+internals moved to a new dependency-free `src/liquidityDetection.js` (`liquidity.js` now imports and
+re-exports from there, so its own public API is unchanged); `marketStructureAnalysis.ts` was split
+at its own "--- Zeichnung ---" comment marker — everything above (the algorithm) stayed, everything
+below (`renderMarketStructureAnalysis`, `collectH1LqLevels`, `computeFibLevels`/`collectFibLevels`,
+the Arrow/RangeLine/FibTick primitive classes) moved to the new `src/marketStructureRendering.ts`,
+which still imports `chartColors.js`/`liquidity.js`'s primitives as before. `pivotTimeOf` had to be
+exported from `marketStructureAnalysis.ts` (was module-private) since the rendering file's CHoCH-
+label code needs it across the new file boundary. `PriceChart.vue` and the affected tests now import
+`renderMarketStructureAnalysis`/`collectH1LqLevels`/`collectFibLevels`/`computeFibLevels`/
+`RANGE_FIB_MIN_PP_DISTANCE_PIPS` from `marketStructureRendering` instead of `marketStructureAnalysis`
+— everything else (`computeRangesPivots`/`buildMarketStructureState`/`summarizeMarketStructureState`/
+`initMarketStructureState`/`applyMarketStructurePivot`/`applyInnerMarketStructurePivot`/
+`pivotForDisplay`) kept its old import path, unchanged for existing callers. `tsconfig.json`'s
+`include` list covers both files now. `mcp-server/tsconfig.json` uses `moduleResolution: "bundler"`
++ `allowJs: true` + `noEmit: true` (matching the root tsconfig) specifically so it can type-check
+this cross-directory import (`../../../src/marketStructureAnalysis.js`) without NodeNext's stricter
+extension/declaration-file rules producing spurious errors — this doesn't affect the mcp-server's
+actual runtime (it always runs via `tsx`, never via `tsc` emit).
 
 **Write tool (`post_chart_annotations`) safety**: originally deliberately kept OFF any permission
 auto-allow list ("Schreiben nur mit Philips Zustimmung", Philip 2026-07-31, same day) — reversed a

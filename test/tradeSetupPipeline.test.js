@@ -9,7 +9,7 @@
 import { describe, expect, it } from "vitest";
 import { detectLiquidityLevels } from "../src/liquidity.js";
 import { detectSetupObs, detectTradeSetups } from "../src/tradeSetup.js";
-import { collectH1LqLevels } from "../src/marketStructureAnalysis";
+import { collectH1LqLevels } from "../src/marketStructureRendering";
 import gbpusdM5LongSetup from "./fixtures/gbpusd-m5-2026-07-08-long-setup.json";
 import gbpusdH1LongSetup from "./fixtures/gbpusd-h1-2026-07-08-long-setup.json";
 import gbpusdM5LongSetup0720 from "./fixtures/gbpusd-m5-2026-07-20-long-setup.json";

@@ -3,13 +3,8 @@
 // tatsächliche Fib-Ziehweise ist Protected-Fib (protected-low/-high <-> gegenüberliegende
 // Range-Kante), ab einem Mindestabstand von RANGE_FIB_MIN_PP_DISTANCE_PIPS.
 import { describe, expect, it } from "vitest";
-import {
-  initMarketStructureState,
-  applyMarketStructurePivot,
-  computeFibLevels,
-  collectFibLevels,
-  RANGE_FIB_MIN_PP_DISTANCE_PIPS,
-} from "../src/marketStructureAnalysis";
+import { initMarketStructureState, applyMarketStructurePivot } from "../src/marketStructureAnalysis";
+import { computeFibLevels, collectFibLevels, RANGE_FIB_MIN_PP_DISTANCE_PIPS } from "../src/marketStructureRendering";
 
 const PIP_SIZE = 0.0001;
 
