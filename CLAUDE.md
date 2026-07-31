@@ -252,3 +252,11 @@ chart-drawn indicator in this repo — don't hardcode a color literal here if yo
   Nächstes mal bitte genauso, dann muss ich den Text nicht so anstrengend cognitiv übertragen").
   A text explanation is fine for non-price-geometric questions (e.g. "does X path apply to both
   Long and Short").
+- **When renaming a user-facing label/feature, rename the underlying code identifiers too, not
+  just the visible string** — file names, component names, function/variable names, CSS classes,
+  debug-metadata section keys, and comments that reference the old name. Bug report 2026-07-31:
+  the "Backtest-Daten" button was renamed to "Daten-Export" but `backtestExport.js`,
+  `BacktestExportModal.vue`, `showBacktestExport`, `.backtest-export-btn` etc. were left as-is —
+  Philip explicitly called this out ("das dient zur code-lesbarkeit"). Do the full rename in the
+  same change (`git mv` for files, update every import), and verify with a repo-wide grep for the
+  old name afterward, not just the one call site that was pointed at.

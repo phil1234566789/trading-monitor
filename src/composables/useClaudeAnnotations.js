@@ -1,6 +1,6 @@
 import { ref, computed, watch } from "vue";
 import { useLocalStorageRef } from "./useLocalStorageRef.js";
-import { berlinDateStrFor } from "../backtestExport.js";
+import { berlinDateStrFor } from "../dataExport.js";
 import {
   fetchClaudeAnnotations,
   addClaudeAnnotationDrawing,
@@ -9,7 +9,7 @@ import {
 } from "../claudeAnnotationsStore.js";
 
 // Modul-weiter Singleton (wie useStatusBar.js) — geteilt zwischen App.vue (Toggle-Button +
-// Import-Modal, global in der Status-Leiste neben "Backtest-Daten") und Dashboard.vue/
+// Import-Modal, global in der Status-Leiste neben "Daten-Export") und Dashboard.vue/
 // PriceChart.vue (rendert die Annotationen). Seit Chat 2026-07-28 in Supabase persistiert
 // (claude_annotations, siehe claudeAnnotationsStore.js) statt nur In-Memory — vorher ging beim
 // erneuten Öffnen des Modals die zuletzt gepastete Zeichnung "verloren" (leeres Textfeld), und ein
@@ -21,7 +21,7 @@ import {
 // damit Store-Fetch, Rendering (claudeAnnotationsDate-Prop) und die Anzeige im Modal garantiert
 // denselben Tag/Instrument meinen. "Der aktuelle Chart-Zeitpunkt, oder der Backtest-Tag, falls
 // Replay/Backtest aktiv ist" (Philip 2026-07-28) — exakt dieselbe Herleitung wie
-// BacktestExportModal.vue's dateStr-Vorbelegung.
+// DataExportModal.vue's dateStr-Vorbelegung.
 const currentSymbol = useLocalStorageRef("currentSymbol", "GBPUSD");
 const replayTime = useLocalStorageRef("replayTime", 1783011600);
 const replayActive = useLocalStorageRef("replayActive", false);

@@ -37,9 +37,9 @@ export function earliestRelevantTime(toggles, times) {
 // in .debug/metadata.json schreiben (Dev-only, siehe vite.config.js), aber NUR die eigene Sektion.
 // Der Dev-Server merged serverseitig in die bestehende Datei, statt sie komplett zu überschreiben
 // (Chat 2026-07-27) — zwei unabhängige Schreiber (PriceChart.vue: Autosave alle 30s unter "chart",
-// BacktestExportModal.vue: bei jedem "Generieren" unter "backtestExport") sollen sich nicht
+// DataExportModal.vue: bei jedem "Generieren" unter "dataExport") sollen sich nicht
 // gegenseitig wegräumen, Philip will beide gleichzeitig zum Vergleichen nachlesen können (Bug-
-// Report: Backtest-Export zeigte einen anderen Structure-Trend als der Chart selbst). Schlägt der
+// Report: Daten-Export zeigte einen anderen Structure-Trend als der Chart selbst). Schlägt der
 // POST fehl (z.B. Production-Build ohne den Dev-Endpoint), still ignorieren.
 export async function saveDebugMetadataSection(section, data) {
   try {

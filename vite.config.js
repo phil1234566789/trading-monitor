@@ -16,9 +16,9 @@ const DEBUG_FILE = path.join(DEBUG_DIR, "metadata.json");
 // Endpoint gar nicht, braucht dort auch niemand.
 // Seit Chat 2026-07-27: Body ist {section, data} (siehe debugMetadata.js: saveDebugMetadataSection),
 // serverseitig in die BESTEHENDE Datei gemergt (nicht mehr komplett überschrieben) — zwei
-// unabhängige Schreiber (PriceChart.vue-Autosave unter "chart", BacktestExportModal.vue unter
-// "backtestExport") sollen sich nicht gegenseitig wegräumen; Philip will beide gleichzeitig
-// nachlesen können, um eine Diskrepanz zwischen Chart-State und Backtest-Export zu debuggen. Kein
+// unabhängige Schreiber (PriceChart.vue-Autosave unter "chart", DataExportModal.vue unter
+// "dataExport") sollen sich nicht gegenseitig wegräumen; Philip will beide gleichzeitig
+// nachlesen können, um eine Diskrepanz zwischen Chart-State und Daten-Export zu debuggen. Kein
 // Merge INNERHALB einer Sektion (die wird komplett ersetzt) — es geht weiterhin nur um den JEWEILS
 // aktuellen Stand pro Sektion, nicht um ein Archiv.
 function debugMetadataWriter() {

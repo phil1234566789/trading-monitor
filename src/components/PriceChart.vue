@@ -41,7 +41,7 @@ function nativeLineWidth(key) {
   return Math.min(4, Math.max(1, Math.round(lineWidth(key))));
 }
 import { selectActiveMetadataSections, earliestRelevantTime, saveDebugMetadataSection } from "../debugMetadata.js";
-import { useLastBacktestExport } from "../composables/useLastBacktestExport.js";
+import { useLastDataExport } from "../composables/useLastDataExport.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import { renderClaudeAnnotations, annotationAnchorPoint, ANNOTATION_COLOR as CLAUDE_ANNOTATION_COLOR } from "../claudeAnnotations.js";
 import {
@@ -138,7 +138,7 @@ const props = defineProps({
   showDebugMetadata: { type: Boolean, default: false },
   // Claude-Antwort-Import (siehe claudeAnnotations.js) — Liste geparster Annotationen +
   // der Berlin-Kalendertag, gegen den ihre "HH:mm"-Zeitangaben aufgelöst werden (Dashboard.vue
-  // leitet das aus dem Replay-Zeitpunkt ab, analog zu BacktestExportModal.vue).
+  // leitet das aus dem Replay-Zeitpunkt ab, analog zu DataExportModal.vue).
   claudeAnnotations: { type: Array, default: () => [] },
   claudeAnnotationsDate: { type: String, default: null },
   // Trade-Modus (Chat 2026-07-27: "damit ich nicht versehentlich in den Chart reinklicke") — nur
@@ -286,7 +286,7 @@ const EMA_PERIOD_FAST = 50;
 const EMA_PERIOD_SLOW = 200;
 
 const { markSuccess } = useStatusBar();
-const { lastBacktestExport } = useLastBacktestExport();
+const { lastDataExport } = useLastDataExport();
 
 const chartContainerRef = ref(null);
 // Chart-Höhe (Chat 2026-07-30, siehe Dashboard.vue: tradesPanelHeight für dieselbe Begründung,
@@ -302,8 +302,8 @@ const gaugesBottom = ref(12);
 const windowDelta = ref(0);
 const dailyDelta = ref(0);
 // pivotForDisplay/summarizeMarketStructureState kommen seit Chat 2026-07-27 aus
-// marketStructureAnalysis.ts (Backtest-Export braucht dieselbe Aufbereitung, siehe
-// backtestExport.js) — hier nur noch der reaktive State drumherum.
+// marketStructureAnalysis.ts (Daten-Export braucht dieselbe Aufbereitung, siehe
+// dataExport.js) — hier nur noch der reaktive State drumherum.
 const marketStructureState = ref(null);
 const marketStructureTree = computed(() => summarizeMarketStructureState(marketStructureState.value));
 
@@ -563,12 +563,12 @@ function buildActiveMetadataSnapshot() {
     const candles = clipReplay(allCandles).filter((c) => c.time >= since);
     sections.candles = { since, sinceAt: fmtDateTime(since), timeframe: props.currentBar, count: candles.length, data: candles };
   }
-  // Zuletzt generierter Backtest-Export (siehe BacktestExportModal.vue/useLastBacktestExport.js,
+  // Zuletzt generierter Daten-Export (siehe DataExportModal.vue/useLastDataExport.js,
   // Chat 2026-07-28: "für die Nachvollziehbarkeit wäre es im Frontend auch nicht schlecht") —
   // ungated, unabhängig vom Symbol/Timeframe des gerade offenen Charts, da der Export sein eigenes
   // Asset+Datum mitbringt. null, solange in dieser Session noch keiner generiert wurde.
-  if (lastBacktestExport.value != null) {
-    sections.backtestExport = lastBacktestExport.value;
+  if (lastDataExport.value != null) {
+    sections.dataExport = lastDataExport.value;
   }
   return sections;
 }
@@ -579,7 +579,7 @@ const hasActiveMetadata = computed(
     props.showTradeSetups ||
     props.showTradeSetupCockpit ||
     props.showRanges ||
-    activeMetadataSnapshot.value.backtestExport != null,
+    activeMetadataSnapshot.value.dataExport != null,
 );
 
 // lightweight-charts formatiert Zeit standardmäßig in UTC (unabhängig von der

@@ -4,7 +4,7 @@
 // alte, flache Format — dann genau eine Gruppe mit title: null).
 import { describe, expect, it } from "vitest";
 import { parseAnnotations, resolveLabelPlacements, annotationAnchorPoint } from "../src/claudeAnnotations.js";
-import { berlinDayRangeUtcMs } from "../src/backtestExport.js";
+import { berlinDayRangeUtcMs } from "../src/dataExport.js";
 
 // Minimal-Fake von chart/series, nur die zwei Methoden, die annotationAnchorPoint braucht — Preis
 // wird 1:1 (*100) auf einen Koordinatenwert abgebildet, Zeit per Identität durchgereicht (die
@@ -15,7 +15,7 @@ function fakeChart() {
 function fakeSeries() {
   return { priceToCoordinate: (p) => (p == null ? null : p * 100) };
 }
-// Reales Datum statt selbst geraten CEST/CET-Offsets, siehe backtestExport.js's berlinDayRangeUtcMs
+// Reales Datum statt selbst geraten CEST/CET-Offsets, siehe dataExport.js's berlinDayRangeUtcMs
 // — 2026-07-24 liegt fernab jeder DST-Umstellung.
 const DATE = "2026-07-24";
 const { startUtcMs } = berlinDayRangeUtcMs(DATE);

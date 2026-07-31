@@ -12,7 +12,7 @@ Konstanten ohne zentrale Übersicht).
 
 - **`PIP_SIZE`** — [`src/pipConfig.js`](src/pipConfig.js) — `0.0001`, zentrale Pip-Größe für
   GBPUSD/EURUSD (die einzigen unterstützten FX-Paare). Vorher 3x unabhängig dupliziert
-  (`orderBlocks.js`, `backtestExport.js`, `PriceChart.vue` als `TRADE_SETUP_PIP_SIZE`) — seit
+  (`orderBlocks.js`, `dataExport.js`, `PriceChart.vue` als `TRADE_SETUP_PIP_SIZE`) — seit
   Chat 2026-07-30 zentralisiert, alle Stellen importieren von hier.
 
 ## Pip-Schwellen (Mindestgröße/-abstand)

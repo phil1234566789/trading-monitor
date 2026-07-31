@@ -1089,8 +1089,8 @@ export function buildMarketStructureState(
 }
 
 // --- Darstellung/Export (State -> reines JSON) ---------------------------------------------------
-// Extrahiert aus PriceChart.vue (Chat 2026-07-27: Backtest-Export braucht dieselbe Aufbereitung wie
-// das Debug-Metadaten-Panel, siehe backtestExport.js) — vorher lebten pivotForDisplay/
+// Extrahiert aus PriceChart.vue (Chat 2026-07-27: Daten-Export braucht dieselbe Aufbereitung wie
+// das Debug-Metadaten-Panel, siehe dataExport.js) — vorher lebten pivotForDisplay/
 // summarizeMarketStructureState nur lokal im Vue-Setup. pivotTime/touched.touchedTime sind nur
 // intern nötig (Rendern der Linien bzw. zeitbewusste Pullback-Auswahl in tryConfirmTrend), tauchen
 // in Metadaten-Panels/Export bewusst nicht auf (Philips Pivot-Typ hat kein Pflichtfeld dafür, nur

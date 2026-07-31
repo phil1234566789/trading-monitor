@@ -25,7 +25,7 @@ import { PIP_SIZE } from "./pipConfig.js";
 // aber schalte mir mal EUR frei") — DXY-Kontext fehlt weiterhin (siehe chart-daten.md),
 // bewusst akzeptierte Lücke, kein Blocker mehr. Liste bleibt die einzige Quelle der Wahrheit fürs
 // Modal-Dropdown.
-export const BACKTEST_ASSETS = ["GBPUSD", "EURUSD"];
+export const EXPORT_ASSETS = ["GBPUSD", "EURUSD"];
 
 // Asia-Session laut Philip: 00:00-07:00 Europe/Berlin, separat ausgewertet (Range/Pips fürs
 // Volatilitätsgefühl) statt nur als Teil der normalen M5-Kerzenliste. Alles ab 07:00 (nach Asia)
@@ -37,9 +37,9 @@ const ASIA_SESSION_END_HOUR = 7;
 const M5_FETCH_COUNT = 300;
 
 // "1h-Range"-Marktstruktur-Trendalgorithmus (marketStructureAnalysis.ts) — Defaults hier nur der
-// Fallback, wenn buildBacktestExport OHNE structureConfig aufgerufen wird. BacktestExportModal.vue
+// Fallback, wenn buildDataExport OHNE structureConfig aufgerufen wird. DataExportModal.vue
 // übergibt normalerweise die TATSÄCHLICH im Dashboard eingestellten Werte (siehe dort), damit der
-// Backtest-Export exakt den Trend-State zeigt, den Philip auch im Chart sieht ("Structure"-Toggle) —
+// Daten-Export exakt den Trend-State zeigt, den Philip auch im Chart sieht ("Structure"-Toggle) —
 // Bug-Report Philip 2026-07-27: mit aktivem "fixer Start" erkennt der Chart einen übergeordneten
 // Trend + nestedTrend, der Export (der bis dahin hart die rollierenden Defaults nutzte) nicht.
 // Philip 2026-07-27: "so viel es geht übernehmen, später wieder rausschmeißen, wenns zu viel wird"
@@ -94,7 +94,7 @@ export function berlinDayRangeUtcMs(dateStr) {
 }
 
 // Berlin-Kalendertag ("YYYY-MM-DD") eines Unix-Sekunden-Zeitpunkts — fürs Vorbelegen des
-// Datumsfelds im Modal, wenn Replay aktiv ist (siehe BacktestExportModal.vue). "en-CA" liefert
+// Datumsfelds im Modal, wenn Replay aktiv ist (siehe DataExportModal.vue). "en-CA" liefert
 // direkt das ISO-Format, ohne Teile manuell zusammenzusetzen.
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" });
 export function berlinDateStrFor(unixSec) {
@@ -116,7 +116,7 @@ function formatCandle(c) {
 // noch nicht"-Grundsatz wie beim M5-Export gilt genauso für den Trend-State, sonst würde der
 // Backtest heimlich Wissen aus der Zukunft einfließen lassen.
 // structureConfig übernimmt die tatsächlich im Dashboard eingestellten Werte (periodOuter/Inner,
-// lookbackHoursOuter/Inner, fixedStartActive/fixedStartTime) — siehe BacktestExportModal.vue.
+// lookbackHoursOuter/Inner, fixedStartActive/fixedStartTime) — siehe DataExportModal.vue.
 // fixedStartActive gilt für BEIDE Perioden gemeinsam (EIN gemeinsamer Startzeitpunkt), exakt wie
 // computeRangesPivotsFor in PriceChart.vue: der Fixed-Start ERSETZT den rollierenden Cutoff
 // komplett, lookbackHours wird in dem Fall ignoriert.
@@ -158,7 +158,7 @@ function formatDatedTime(unixSec) {
 // Erste passende Session gewinnt — mehrere überlappende highLowRelevant-Sessions desselben
 // Instruments wären ein Konfigurationsfall, den Philip im Sessions-Modal selbst vermeiden müsste,
 // keine eigene Prioritäts-Logik hier nötig. "sessions" ist der reaktive Modul-Singleton aus
-// sessions.js (schon vom App-Start her geladen, sobald Philip den Backtest-Export überhaupt öffnen
+// sessions.js (schon vom App-Start her geladen, sobald Philip den Daten-Export überhaupt öffnen
 // kann) — kein eigener Fetch.
 function buildSessionContextLookup(asset, rangeStartSec, rangeEndSec) {
   return sessions
@@ -279,7 +279,7 @@ function rangeStats(rawCandles) {
 // (PriceChart.vue), damit ein per Replay eingestellter Zeitpunkt exakt dieselbe letzte Kerze zeigt
 // wie im Chart selbst. Liegt der gewählte Tag komplett vor replayUntilSec, hat das keinen Effekt;
 // liegt er komplett danach, kommt korrekterweise ein leerer Export raus (noch nichts "bekannt").
-export async function buildBacktestExport({ asset, dateStr, replayUntilSec = null, structureConfig = {} }) {
+export async function buildDataExport({ asset, dateStr, replayUntilSec = null, structureConfig = {} }) {
   const { startUtcMs, endUtcMs } = berlinDayRangeUtcMs(dateStr);
   const startSec = startUtcMs / 1000;
   const endSec = endUtcMs / 1000;
