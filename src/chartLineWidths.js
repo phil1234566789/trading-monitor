@@ -40,7 +40,10 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   rangeProtectedLow: 2,
   rangeLqSweep: 1, // dünner als die übrigen Range-Linien (Chat 2026-07-24).
   rangeBreakOfStructure: 2,
-  rangeClosed: 2, // Verbindungslinie der laufenden/abgeschlossenen Uptrend-Range.
+  rangeLiveUptrend: 2, // laufende Uptrend-Range (Chat 2026-07-31, siehe chartColors.js).
+  rangeLiveDowntrend: 1, // laufende Downtrend-Range.
+  rangeClosed: 2, // Verbindungslinie der abgeschlossenen (archivierten) Uptrend-Range.
+  rangeClosedDowntrend: 1, // abgeschlossene (archivierte) Downtrend-Range.
   rangeChoch: 1, // Nested-Verbindungslinie UND CHoCH-Label teilen sich diese eine Farbe/Breite.
   rangeFib: 1, // Tick + gestrichelte Protected-Fib-Zickzack-Linie (Chat 2026-07-30).
   tradeWin: 1.5, // Entry/Exit-Preis-Strich, je nach Trade-Ausgang (siehe tradeMarkers.js: outcomeKey).

@@ -63,10 +63,24 @@ export const DEFAULT_CHART_COLORS = {
   rangeProtectedLow: { hex: "#ffffff", alpha: 0.95 },
   rangeLqSweep: { hex: "#ffd700", alpha: 0.9 },
   rangeBreakOfStructure: { hex: "#ef5350", alpha: 0.95 },
+  // Verbindungslinie der AKTUELL laufenden (noch nicht archivierten) Range, nach Trendrichtung
+  // (Chat 2026-07-31, Bug-Report Philip: "abgeschlossene range konfiguriert nicht die echte
+  // abgeschlossene range, sondern die aktuelle" — vorher teilten sich live und abgeschlossene
+  // Range denselben Key rangeClosed/rangeChoch, siehe dort). Default = alte rangeClosed-Farbe.
+  rangeLiveUptrend: { hex: "#00e676", alpha: 0.5 },
+  // Default = alte rangeChoch-Farbe (siehe unten).
+  rangeLiveDowntrend: { hex: "#ff7043", alpha: 0.95 },
   // Abgeschlossene Range nach einer Trend-Promotion (Chat 2026-07-25) — einfache Linie
   // range.low -> range.high, dieselbe Grundfarbe wie rangeLow (bullische Range), aber
   // transparenter, damit sie sich als "Historie" von der aktuell laufenden Range abhebt.
+  // Seit Chat 2026-07-31 NUR NOCH für archivierte Uptrend-Ranges (siehe rangeLiveUptrend oben für
+  // die laufende Range).
   rangeClosed: { hex: "#00e676", alpha: 0.5 },
+  // Archivierte Downtrend-Range, Pendant zu rangeClosed (Chat 2026-07-31) — bewusst eigener Key
+  // statt weiterhin rangeChoch mitzubenutzen, damit dieser Regler unabhängig von der
+  // CHoCH-Warnfarbe (echtes CHoCH-Signal, siehe rangeChoch unten) einstellbar ist. Default = alte
+  // rangeChoch-Farbe.
+  rangeClosedDowntrend: { hex: "#ff7043", alpha: 0.95 },
   // CHoCH-Label des Nested-Gegentrend-Trackers (Chat 2026-07-25, siehe advanceNestedTrend) —
   // eigene Farbe statt rangeBreakOfStructure, weil ein CHoCH (Vorlauf-Signal) fachlich etwas
   // anderes ist als ein Break of Structure (Warnsignal im bestehenden Trend).

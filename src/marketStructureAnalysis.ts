@@ -1417,7 +1417,8 @@ export class FibTickPrimitive {
 }
 
 // Linienstärke ist seit Chat 2026-07-25 im Style-Modal konfigurierbar, EIN Wert PRO Farb-Key
-// (rangeHigh/rangeLow/rangeProtectedLow/rangeLqSweep/rangeBreakOfStructure/rangeClosed/rangeChoch —
+// (rangeHigh/rangeLow/rangeProtectedLow/rangeLqSweep/rangeBreakOfStructure/rangeLiveUptrend/
+// rangeLiveDowntrend/rangeClosed/rangeClosedDowntrend/rangeChoch —
 // siehe chartLineWidths.js, zweite Runde: "bei jeder Linie, wo man schon die Farbe individuell
 // anpassen kann"). rangeLqSweep bleibt per Default dünner als die übrigen (Chat 2026-07-24:
 // "Linienstärke des 1h LQ Sweep auf 1px", seit ein Break of Structure existiert ist ein LQ-Sweep
@@ -1737,10 +1738,11 @@ export function renderMarketStructureAnalysis(
   // Verbindungslinie der AKTUELL laufenden bestätigten Range (Chat 2026-07-25, Bug-Report Philip:
   // "auch den jetzigen bestätigten uptrend auch verbunden") — dieselbe einfache Linie wie bei
   // closedRanges unten, nur schon VOR einer Promotion/Invalidierung sichtbar. Farbe nach
-  // Trendrichtung (grün bullisch, wie rangeClosed; rot bärisch, wie rangeChoch — nach einer
-  // Promotion ist state.trend dann selbst 'downtrend').
+  // Trendrichtung, aber EIGENE Keys statt rangeClosed/rangeChoch (Chat 2026-07-31, Bug-Report
+  // Philip: "abgeschlossene range konfiguriert ... die aktuelle" — vorher teilten sich Live- und
+  // Closed-Linie denselben Farb-Key, jetzt unabhängig einstellbar, siehe chartColors.js).
   if (state.trend !== "unknown") {
-    const liveLineKey = state.trend === "uptrend" ? "rangeClosed" : "rangeChoch";
+    const liveLineKey = state.trend === "uptrend" ? "rangeLiveUptrend" : "rangeLiveDowntrend";
     const liveLine = new RangeLinePrimitive([state.currRange.low, state.currRange.high], {
       color: cssColor(liveLineKey),
       lineWidth: lineWidth(liveLineKey),
@@ -1754,9 +1756,11 @@ export function renderMarketStructureAnalysis(
   // protected-low/-high dieser Range, siehe invalidateUptrend; ohne middle nur eine gerade Linie).
   // Farbe nach der ARCHIVIERTEN Trendrichtung (Chat 2026-07-25, zweite Runde: "kann die Zeichnung
   // dann noch den uptrend und downtrend farblich unterscheiden?"), nicht nach dem aktuellen
-  // state.trend — war zuvor immer hart grün, unabhängig davon, was archiviert wurde.
+  // state.trend — war zuvor immer hart grün, unabhängig davon, was archiviert wurde. rangeClosed/
+  // rangeClosedDowntrend statt rangeChoch fürs Downtrend-Pendant (Chat 2026-07-31) — eigener Key,
+  // unabhängig von der Live-Linie UND von der CHoCH-Warnfarbe, siehe chartColors.js.
   for (const closed of state.closedRanges) {
-    const closedKey = closed.trend === "uptrend" ? "rangeClosed" : "rangeChoch";
+    const closedKey = closed.trend === "uptrend" ? "rangeClosed" : "rangeClosedDowntrend";
     const points = closed.middle ? [closed.low, closed.middle, closed.high] : [closed.low, closed.high];
     const line = new RangeLinePrimitive(points, { color: cssColor(closedKey), lineWidth: lineWidth(closedKey) });
     series.attachPrimitive(line);

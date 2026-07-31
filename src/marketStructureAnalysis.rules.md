@@ -196,8 +196,11 @@ Rein visuell, keine Zustandslogik — kein Test, nur Code-Kommentare in
 - Verbindungslinie der AKTUELL laufenden Range (Chat 2026-07-25, Bug-Report Philip: "auch den
   jetzigen bestätigten uptrend auch verbunden"): sobald `state.trend !== 'unknown'`, eine einfache
   gerade Linie von `currRange.low` nach `currRange.high` (`RangeLinePrimitive`, kein Zigzag —
-  bewusst so gewünscht), Farbe nach Trendrichtung (`rangeClosed` grün bullisch, `rangeChoch` rot
-  bärisch — nach einer Promotion ist `state.trend` selbst `'downtrend'`).
+  bewusst so gewünscht), Farbe nach Trendrichtung (`rangeLiveUptrend` grün bullisch,
+  `rangeLiveDowntrend` rot bärisch — nach einer Promotion ist `state.trend` selbst `'downtrend'`).
+  Eigene Keys statt `rangeClosed`/`rangeChoch` seit Chat 2026-07-31 (Bug-Report Philip:
+  "abgeschlossene range konfiguriert ... die aktuelle") — vorher teilten sich Live- und
+  Closed-Linie denselben Farb-Key.
 - `closedRanges` (Chat 2026-07-25, Promotion): JE archivierter Range ein ZigZag `low` -> `middle`
   (falls vorhanden) -> `high`, fest zum Archivierungszeitpunkt (`RangeLinePrimitive` nimmt seit der
   zweiten CHoCH-Runde — Bug-Report Philip: "ich hätte gerne die ZickZack Linie ... noch im Chart
@@ -205,9 +208,11 @@ Rein visuell, keine Zustandslogik — kein Test, nur Code-Kommentare in
   Punkte). `middle` = der zuletzt bestätigte `protected-low`/`protected-high` DIESER Range zum
   Archivierungsmoment (`invalidateUptrend` liest ihn aus `sweepChecked.structurePivots`), `null`
   falls keiner bestätigt war — dann nur eine gerade Linie wie zuvor. Farbe nach `closed.trend`
-  (`rangeClosed` grün für ein archiviertes Uptrend, `rangeChoch` rot für ein archiviertes Downtrend
-  — Bug-Report Philip: "kann die Zeichnung dann noch den uptrend und downtrend farblich
-  unterscheiden?"; vorher war die Farbe hart auf grün fixiert). `LiquidityLinePrimitive` kann das
+  (`rangeClosed` grün für ein archiviertes Uptrend, `rangeClosedDowntrend` rot für ein archiviertes
+  Downtrend — Bug-Report Philip: "kann die Zeichnung dann noch den uptrend und downtrend farblich
+  unterscheiden?"; vorher war die Farbe hart auf grün fixiert). `rangeClosedDowntrend` statt weiter
+  `rangeChoch` mitzubenutzen seit Chat 2026-07-31 — eigener Key, unabhängig von der Live-Range-Linie
+  und von der CHoCH-Warnfarbe. `LiquidityLinePrimitive` kann das
   nicht (zeichnet nur horizontale Preis-Level), daher eine eigene kleine Primitive
   (`RangeLinePrimitive`) nach demselben Muster wie `ArrowPrimitive`.
 - Nested-Gegentrend-Struktur/CHoCH (Chat 2026-07-25): solange `state.nestedTrend?.trend ===
