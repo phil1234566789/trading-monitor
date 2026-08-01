@@ -76,6 +76,10 @@ const props = defineProps({
   // die Philip per Rechtsklick dauerhaft "an Lana übergeben" hat, zeichnet einen permanenten
   // (nicht nur Hover-) Ring um deren Entry/Exit, siehe renderTradeMarkers/tradeMarkers.js.
   laniakeaTradeIds: { type: Set, default: () => new Set() },
+  // Laniakea-Kontext für OB-Zonen (Chat 2026-08-01) — Set von obZoneNaturalKey-Strings (siehe
+  // orderBlocks.js), analog zu laniakeaTradeIds oben, aber Natural-Key statt Id (Forex-OB-Boxen
+  // haben keine eigene DB-id im live gezeichneten Zonen-Objekt, siehe collectObsZones).
+  laniakeaObZoneKeys: { type: Set, default: () => new Set() },
   // Ein/Ausblenden der eigenen geloggten Trades (Chat 2026-07-27) — Untermenü-Toggle unter dem
   // übergeordneten "Trades"-Button (showTradeSetups); beide zusammen müssen an sein, damit Trades
   // gezeichnet werden (Bug-Report Philip 2026-07-28: "übergeordneter Trades-Toggle soll Trades
@@ -164,7 +168,7 @@ const emit = defineEmits([
   "toggle-trade-mode",
   "select-target",
   "select-setup-confirmations",
-  "trade-context-menu",
+  "laniakea-context-menu",
 ]);
 
 // CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
@@ -386,7 +390,7 @@ let newsMarkerPrimitives = [];
 let rangesMarkerPrimitives = [];
 let marketStructurePrimitives = [];
 let tradePrimitives = [];
-let tradeContextMenuHandler = null; // Referenz für removeEventListener in onUnmounted, siehe dort
+let laniakeaContextMenuHandler = null; // Referenz für removeEventListener in onUnmounted, siehe dort
 let tradeSetupLinkPrimitives = [];
 let tradeTargetLinkPrimitives = [];
 let tradeConfirmationLinkPrimitives = [];
@@ -1154,7 +1158,7 @@ function liveObZoneState(item) {
 function refreshPoiZonesInternal() {
   const candles = clipReplay(allCandles);
   const visibleZones = filterHistorical(collectObsZones());
-  renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles);
+  renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles, props.laniakeaObZoneKeys);
   poiZonesMetadata.value = visibleZones;
 }
 
@@ -2232,40 +2236,69 @@ onMounted(() => {
     }
   });
 
-  // Rechtsklick auf einen Trade-Marker -> Laniakea-Kontextmenü (Chat 2026-08-01). lightweight-
-  // charts hat kein natives Rechtsklick-Event (nur subscribeClick/subscribeCrosshairMove oben),
-  // daher ein normaler DOM-Listener statt eines chart.subscribe*-Aufrufs. Koordinaten-Umrechnung
-  // exakt wie in claudeCalloutTick (siehe dort): chartContainerRef ist .chart-container, das
-  // .chart-wrapper komplett ausfüllt, dessen getBoundingClientRect() dient als lokaler
-  // Koordinaten-Ursprung — derselbe Pixel-Raum, in dem TradeMarkerPrimitive.hitTest seine
-  // gecachten Entry/Exit-Koordinaten hält (timeToCoordinate/priceToCoordinate liefern bereits
-  // CSS-Pixel, kein pixelRatio-Faktor nötig). preventDefault() NUR bei einem Treffer, sonst
-  // bleibt das native Browser-Menü unangetastet (kein Verhaltens-Bruch außerhalb von Markern).
-  tradeContextMenuHandler = (event) => {
+  // Gemeinsamer Hittest für Rechtsklick UND Cursor-Feedback (siehe subscribeCrosshairMove unten) —
+  // Bug-Report Philip 2026-08-01: "ich tu mir bissl schwer die Box zu klicken, manchmal kommt das
+  // Laniakea-, manchmal das Windows-Kontextmenü" — ohne visuelles Feedback lässt sich vorher nicht
+  // erkennen, ob eine Position tatsächlich trifft. x/y in CSS-Pixeln relativ zum Chart-Container.
+  function findLaniakeaHitAt(x, y) {
+    const hitTrade = tradePrimitives.find((p) => p.hitTest(x, y));
+    if (hitTrade) return { kind: "trade_position", trade: hitTrade.trade };
+    // OB-Zonen — NUR 1H/4H sind hittestbar, M5-Boxen existieren nie in der ob_zones-Tabelle (siehe
+    // orderBlocks.js/collectObsZones-Kommentar), ein Rechtsklick auf eine M5-Box hätte also nichts,
+    // was sich speichern ließe, deshalb erst gar kein eigenes Menü/Cursor-Feedback dafür.
+    const hitZone = orderBlockPrimitives.find((p) => p.zone.timeframe !== "5M" && p.hitTest(x, y));
+    if (hitZone) {
+      return {
+        kind: "ob_zone",
+        zone: { instrument: props.symbol, timeframe: hitZone.zone.timeframe, dir: hitZone.zone.dir, startTime: hitZone.zone.startTime },
+      };
+    }
+    return null;
+  }
+
+  // Rechtsklick -> Laniakea-Kontextmenü (Chat 2026-08-01). lightweight-charts hat kein natives
+  // Rechtsklick-Event (nur subscribeClick/subscribeCrosshairMove oben), daher ein normaler
+  // DOM-Listener statt eines chart.subscribe*-Aufrufs. Koordinaten-Umrechnung exakt wie in
+  // claudeCalloutTick (siehe dort): chartContainerRef ist .chart-container, das .chart-wrapper
+  // komplett ausfüllt, dessen getBoundingClientRect() dient als lokaler Koordinaten-Ursprung —
+  // derselbe Pixel-Raum, in dem TradeMarkerPrimitive/OrderBlockPrimitive.hitTest ihre gecachten
+  // Koordinaten halten (timeToCoordinate/priceToCoordinate liefern bereits CSS-Pixel, kein
+  // pixelRatio-Faktor nötig). preventDefault() NUR bei einem Treffer, sonst bleibt das native
+  // Browser-Menü unangetastet (kein Verhaltens-Bruch außerhalb von Markern/Zonen).
+  laniakeaContextMenuHandler = (event) => {
     const rect = chartContainerRef.value.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const hitPrimitive = tradePrimitives.find((p) => p.hitTest(x, y));
-    if (!hitPrimitive) return;
+    const hit = findLaniakeaHitAt(event.clientX - rect.left, event.clientY - rect.top);
+    if (!hit) return;
     event.preventDefault();
-    emit("trade-context-menu", { trade: hitPrimitive.trade, x: event.clientX, y: event.clientY });
+    emit("laniakea-context-menu", { ...hit, x: event.clientX, y: event.clientY });
   };
-  chartContainerRef.value?.addEventListener("contextmenu", tradeContextMenuHandler);
+  chartContainerRef.value?.addEventListener("contextmenu", laniakeaContextMenuHandler);
 
   // Cursor-Feedback im Trade-Modus (Chat 2026-07-27: "Mouse Pointer ändern, wenn was klickbar
   // ist") — dieselbe Hittest-Funktion wie beim Klick, nur auf jede Mausbewegung statt nur den
-  // eigentlichen Klick angewendet. Außerhalb des Trade-Modus bleibt der Cursor unangetastet
-  // (normales Pan/Zoom-Verhalten von lightweight-charts).
+  // eigentlichen Klick angewendet. Trade-Modus hat Vorrang (eigener, eindeutiger "pointer"-Cursor);
+  // ist NICHTS davon getroffen, zusätzlich gegen den Laniakea-Hittest prüfen (Chat 2026-08-01,
+  // Bug-Report Philip: "manchmal kommt das Laniakea-, manchmal das Windows-Kontextmenü" — ohne
+  // Cursor-Hinweis lässt sich vorher nicht erkennen, ob ein Rechtsklick an dieser Position
+  // überhaupt träfe) — eigener "context-menu"-Cursor, damit sich das visuell vom normalen
+  // Trade-Modus-"pointer" unterscheidet (Linksklick vs. Rechtsklick-Aktion). Läuft unabhängig vom
+  // Trade-Modus, weil Rechtsklick auf einen Marker/eine OB-Zone immer funktioniert.
   chart.subscribeCrosshairMove((param) => {
     if (!chartContainerRef.value) return;
-    if (!props.tradeModeActive || !param.point) {
+    if (!param.point) {
       chartContainerRef.value.style.cursor = "";
       return;
     }
-    const hit = props.targetModeActive
-      ? (props.confirmationModeActive && (findClickedFibLevel(param) || findClickedSetup(param))) || findClickedTarget(param)
-      : findClickedSetup(param);
-    chartContainerRef.value.style.cursor = hit ? "pointer" : "";
+    if (props.tradeModeActive) {
+      const hit = props.targetModeActive
+        ? (props.confirmationModeActive && (findClickedFibLevel(param) || findClickedSetup(param))) || findClickedTarget(param)
+        : findClickedSetup(param);
+      if (hit) {
+        chartContainerRef.value.style.cursor = "pointer";
+        return;
+      }
+    }
+    chartContainerRef.value.style.cursor = findLaniakeaHitAt(param.point.x, param.point.y) ? "context-menu" : "";
   });
 
   resizeObserver = new ResizeObserver((entries) => {
@@ -2364,7 +2397,7 @@ onUnmounted(() => {
   clearInterval(dailyGaugeTimer);
   clearTimeout(replayFetchDebounceTimer);
   resizeObserver?.disconnect();
-  if (tradeContextMenuHandler) chartContainerRef.value?.removeEventListener("contextmenu", tradeContextMenuHandler);
+  if (laniakeaContextMenuHandler) chartContainerRef.value?.removeEventListener("contextmenu", laniakeaContextMenuHandler);
   chart?.remove();
   // Nullen, damit noch laufende Async-Loads (loadInitial/pollRecent) beim Abschluss
   // per Guard erkennen, dass der Chart schon disposed ist, statt lightweight-charts'
@@ -2392,6 +2425,7 @@ watch([() => props.trades, () => props.showTrades], () => {
 // Confirmation-Links und Invalidation-Linien jedes Mal mit neu berechnen.
 watch(() => props.hoveredTradeId, refreshTradeMarkersInternal);
 watch(() => props.laniakeaTradeIds, refreshTradeMarkersInternal);
+watch(() => props.laniakeaObZoneKeys, refreshPoiZonesInternal);
 watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 // tscCalloutModeActive wechselt (TSC wird ein-/ausgeblendet, Locked-Zustand etc.) -> Canvas-Text
 // muss sofort erscheinen/verschwinden, nicht erst beim nächsten claudeAnnotations-Wechsel.

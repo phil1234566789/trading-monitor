@@ -128,6 +128,9 @@ export function detectOrderBlocks(candles, timeframe, isForex = true) {
   return zones;
 }
 
+const LANIAKEA_BORDER_INSET = 3; // px, Abstand des Laniakea-Rahmens nach außen von der normalen Box-Kante
+const LANIAKEA_BORDER_LINE_WIDTH = 2.5; // px
+
 function positionsBox(position1Media, position2Media, pixelRatio) {
   const scaledPosition1 = Math.round(pixelRatio * position1Media);
   const scaledPosition2 = Math.round(pixelRatio * position2Media);
@@ -160,6 +163,19 @@ class ZoneRenderer {
       ctx.strokeStyle = this._options.borderColor;
       ctx.lineWidth = this._options.borderWidth ?? 1;
       ctx.strokeRect(xPos.position, yPos.position, xPos.length, yPos.length);
+
+      // Permanenter Rahmen (Chat 2026-08-01, Laniakea-Kontext) — dieselbe Halo-Logik wie
+      // tradeMarkers.js' Ring, hier als etwas nach außen versetztes gestricheltes Rechteck statt
+      // eines Kreises, weil eine OB-Zone eine Fläche und kein Punkt ist.
+      if (this._options.inLaniakeaContext) {
+        ctx.save();
+        ctx.strokeStyle = this._options.laniakeaColor;
+        ctx.lineWidth = LANIAKEA_BORDER_LINE_WIDTH * scope.horizontalPixelRatio;
+        ctx.setLineDash([6 * scope.horizontalPixelRatio, 4 * scope.horizontalPixelRatio]);
+        const inset = LANIAKEA_BORDER_INSET * scope.horizontalPixelRatio;
+        ctx.strokeRect(xPos.position - inset, yPos.position - inset, xPos.length + inset * 2, yPos.length + inset * 2);
+        ctx.restore();
+      }
 
       // Chat 2026-07-25: "wenn ich im 1h den chart etwas herauszoome, dann verdecken mir die
       // Labels die Sicht" — Zone selbst bleibt, nur das Timeframe-Tag verschwindet bei zu dünnen
@@ -253,6 +269,24 @@ export class OrderBlockPrimitive {
   paneViews() {
     return this._paneViews;
   }
+
+  // Rechtsklick-Hittest fürs Laniakea-Kontextmenü (Chat 2026-08-01, analog zu
+  // TradeMarkerPrimitive.hitTest in tradeMarkers.js) — Box statt Punkt, daher ein einfacher
+  // Rechteck-Containment-Test statt Distanz-zu-Punkt. x/y in CSS-Pixeln relativ zum
+  // Chart-Container, derselbe Koordinatenraum wie die gecachten p1/p2.
+  hitTest(x, y) {
+    const { _p1: p1, _p2: p2 } = this._paneViews[0];
+    if (p1.x === null || p1.y === null || p2.x === null || p2.y === null) return false;
+    const left = Math.min(p1.x, p2.x);
+    const right = Math.max(p1.x, p2.x);
+    const top = Math.min(p1.y, p2.y);
+    const bottom = Math.max(p1.y, p2.y);
+    return x >= left && x <= right && y >= top && y <= bottom;
+  }
+
+  get zone() {
+    return this._zone;
+  }
 }
 
 // chartColors[obBull*/obBear*/obInactive*].alpha ist die "normale" Fill-Transparenz — "weak"
@@ -285,7 +319,7 @@ const OB_ZONE_KEYS = {
   },
 };
 
-function zoneOptions(z) {
+function zoneOptions(z, inLaniakeaContext) {
   const inactive = z.touched || z.invalidated;
   const keys = OB_ZONE_KEYS[z.timeframe] ?? OB_ZONE_KEYS["1H"];
   const key = inactive ? keys.inactive : z.dir === 1 ? keys.bull : keys.bear;
@@ -298,19 +332,32 @@ function zoneOptions(z) {
     borderWidth: lineWidth(key),
     textColor: "rgba(209, 212, 220, 0.9)",
     label,
+    inLaniakeaContext,
+    laniakeaColor: cssColor("laniakea"),
   };
+}
+
+// naturalKeyOf: exakt derselbe Schlüssel wie ob_zones' Unique-Constraint (instrument, timeframe,
+// direction, start_time) MINUS instrument (der Chart zeigt immer nur ein Instrument gleichzeitig,
+// siehe PriceChart.vue) — so lässt sich eine live erkannte Forex-Zone (ohne eigene DB-id) gegen
+// einen gespeicherten Laniakea-Kontext-Eintrag abgleichen, siehe laniakeaContext.js:
+// obZoneNaturalKey (dieselbe Formel, dort auf der DB-Zeile statt der live erkannten Zone).
+export function obZoneNaturalKey(timeframe, dir, startTime) {
+  return `${timeframe}|${dir === 1 ? "long" : "short"}|${startTime}`;
 }
 
 // Zeichnet bereits berechnete Zonen (z.B. aus `ob_zones` in Supabase, mit `timeframe`-Tag)
 // statt sie selbst aus Kerzen neu zu berechnen — für Zonen, die auf einem anderen
-// Timeframe erkannt wurden als dem gerade angezeigten Chart.
-export function renderPersistedZones(series, zones, existingPrimitives, candles) {
+// Timeframe erkannt wurden als dem gerade angezeigten Chart. laniakeaKeys (Chat 2026-08-01,
+// optional): Set von obZoneNaturalKey-Strings, die dauerhaft hervorgehoben werden sollen.
+export function renderPersistedZones(series, zones, existingPrimitives, candles, laniakeaKeys) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
   for (const z of zones) {
     if (z.invalidated) continue;
-    const primitive = new OrderBlockPrimitive(z, zoneOptions(z), candles);
+    const inLaniakeaContext = laniakeaKeys?.has(obZoneNaturalKey(z.timeframe, z.dir, z.startTime)) ?? false;
+    const primitive = new OrderBlockPrimitive(z, zoneOptions(z, inLaniakeaContext), candles);
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }

@@ -26,7 +26,14 @@ import {
   updateDealingRange,
 } from "../tradeIntake.js";
 import { fetchPoiZones } from "../poiZones.js";
-import { fetchLaniakeaContext, addLaniakeaEntry, removeLaniakeaEntry, updateLaniakeaNote } from "../laniakeaContext.js";
+import {
+  fetchLaniakeaContext,
+  addLaniakeaEntry,
+  removeLaniakeaEntry,
+  updateLaniakeaNote,
+  resolveObZoneId,
+  obZoneEntryNaturalKey,
+} from "../laniakeaContext.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
@@ -405,25 +412,43 @@ function onHoverTrade(t) {
   hoveredTradeId.value = t?.id ?? null;
 }
 
-// Laniakea-Kontextmenü (Chat 2026-08-01) — EIN State-Paar für beide Aufrufstellen (Trades-Zeile
-// UND Chart-Marker, siehe TradesTable.vue @trade-context-menu / PriceChart.vue @trade-context-menu),
-// da nie beide gleichzeitig offen sein können.
-const contextMenuTarget = ref(null); // { trade, x, y } | null
-const laniakeaAddPopupTarget = ref(null); // { trade, x, y } | null
+// Laniakea-Kontextmenü (Chat 2026-08-01) — EIN State-Paar für alle Aufrufstellen (Trades-Zeile/
+// Chart-Trade-Marker/Chart-OB-Zone, siehe TradesTable.vue/PriceChart.vue @laniakea-context-menu),
+// da nie mehrere gleichzeitig offen sein können. Payload-Shape: { kind: "trade_position", trade,
+// x, y } | { kind: "ob_zone", zone: {instrument, timeframe, dir, startTime}, x, y }.
+const contextMenuTarget = ref(null);
+const laniakeaAddPopupTarget = ref(null);
+// Nur bei kind="ob_zone" relevant (siehe onLaniakeaAddConfirm) — resolveObZoneId kann fehlschlagen,
+// wenn poi-watcher diese Zone noch nicht persistiert hat; Popup bleibt dann offen statt zu schließen.
+const laniakeaAddPopupError = ref(null);
 
-function onTradeContextMenu({ trade, x, y }) {
-  contextMenuTarget.value = { trade, x, y };
+function onLaniakeaContextMenu(target) {
+  contextMenuTarget.value = target;
 }
 function onContextMenuSelect(key) {
   if (key === "laniakea") {
     laniakeaAddPopupTarget.value = contextMenuTarget.value;
+    laniakeaAddPopupError.value = null;
   }
   contextMenuTarget.value = null;
 }
 async function onLaniakeaAddConfirm(note) {
-  const trade = laniakeaAddPopupTarget.value.trade;
+  const target = laniakeaAddPopupTarget.value;
+  if (target.kind === "ob_zone") {
+    const { instrument, timeframe, dir, startTime } = target.zone;
+    const obZoneId = await resolveObZoneId(instrument, timeframe, dir, startTime);
+    if (obZoneId == null) {
+      // poi-watcher refresht 1H/4H nur einmal pro Stunde/4h-Boundary (siehe CLAUDE.md
+      // poi-watcher-Throttling) — eine gerade erst entstandene Zone kann also noch fehlen.
+      laniakeaAddPopupError.value = "Diese OB-Zone ist noch nicht gespeichert (poi-watcher braucht bis zu einer Stunde) — bitte gleich nochmal versuchen.";
+      return;
+    }
+    await addLaniakeaEntry("ob_zone", obZoneId, note);
+  } else {
+    await addLaniakeaEntry("trade_position", target.trade.id, note);
+  }
   laniakeaAddPopupTarget.value = null;
-  await addLaniakeaEntry(trade.id, note);
+  laniakeaAddPopupError.value = null;
   refreshLaniakeaContext();
 }
 async function onLaniakeaRemove(entryId) {
@@ -596,6 +621,16 @@ const { data: laniakeaContextEntries, refresh: refreshLaniakeaContext } = usePol
 const laniakeaTradeIds = computed(() => {
   const tradeIds = new Set(trades.value.map((t) => t.id));
   return new Set(laniakeaContextEntries.value.filter((e) => tradeIds.has(e.tradePositionId)).map((e) => e.tradePositionId));
+});
+// OB-Zonen-Pendant (Chat 2026-08-01) — Natural-Key statt Id (siehe laniakeaContext.js:
+// obZoneEntryNaturalKey/orderBlocks.js: obZoneNaturalKey), gefiltert aufs aktuelle Symbol (eine
+// OB-Zone aus GBPUSD ergibt im EURUSD-Chart keinen sinnvollen Treffer).
+const laniakeaObZoneKeys = computed(() => {
+  return new Set(
+    laniakeaContextEntries.value
+      .filter((e) => e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value)
+      .map((e) => obZoneEntryNaturalKey(e.obZone)),
+  );
 });
 const { data: poiZones, refresh: refreshPoiZones } = usePolledFetch(
   () => (isBtc.value ? fetchPoiZones(currentSymbol.value) : []),
@@ -993,6 +1028,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :trades="trades"
     :hovered-trade-id="hoveredTradeId"
     :laniakea-trade-ids="laniakeaTradeIds"
+    :laniakea-ob-zone-keys="laniakeaObZoneKeys"
     :show-trades="showTrades"
     :poi-zones="poiZones"
     :show-obs-m5="showObsM5"
@@ -1031,7 +1067,7 @@ watch(selectedTradingAccountId, refreshTrades);
     @select-target="onSelectTarget"
     @select-setup-confirmations="onSelectSetupConfirmations"
     @toggle-trade-mode="tradeModeActive = !tradeModeActive"
-    @trade-context-menu="onTradeContextMenu"
+    @laniakea-context-menu="onLaniakeaContextMenu"
   />
 
   <aside ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">
@@ -1046,7 +1082,7 @@ watch(selectedTradingAccountId, refreshTrades);
         @select="onSelectTrade"
         @edit-request="onEditRequest"
         @hover-trade="onHoverTrade"
-        @trade-context-menu="onTradeContextMenu"
+        @laniakea-context-menu="onLaniakeaContextMenu"
       />
     </div>
     <TradeStats :trades="trades" />
@@ -1064,9 +1100,17 @@ watch(selectedTradingAccountId, refreshTrades);
     v-if="laniakeaAddPopupTarget"
     :x="laniakeaAddPopupTarget.x"
     :y="laniakeaAddPopupTarget.y"
-    :trade-label="`${laniakeaAddPopupTarget.trade.direction === 'short' ? 'Short' : 'Long'} #${laniakeaAddPopupTarget.trade.dealingRangeId}`"
+    :label="
+      laniakeaAddPopupTarget.kind === 'ob_zone'
+        ? `${laniakeaAddPopupTarget.zone.timeframe} ${laniakeaAddPopupTarget.zone.dir === 1 ? 'Bull' : 'Bear'}-OB`
+        : `${laniakeaAddPopupTarget.trade.direction === 'short' ? 'Short' : 'Long'} #${laniakeaAddPopupTarget.trade.dealingRangeId}`
+    "
+    :error="laniakeaAddPopupError"
     @confirm="onLaniakeaAddConfirm"
-    @cancel="laniakeaAddPopupTarget = null"
+    @cancel="
+      laniakeaAddPopupTarget = null;
+      laniakeaAddPopupError = null;
+    "
   />
   <MetadataPanel v-if="showLaniakeaPanel" title="🌌 Laniakea" @close="showLaniakeaPanel = false">
     <LaniakeaPanel :entries="laniakeaContextEntries" :trades="trades" @remove="onLaniakeaRemove" @update-note="onLaniakeaUpdateNote" />

@@ -9,7 +9,11 @@ import { cssColor } from "../chartColors.js";
 const props = defineProps({
   x: { type: Number, required: true },
   y: { type: Number, required: true },
-  tradeLabel: { type: String, default: "" },
+  label: { type: String, default: "" },
+  // Chat 2026-08-01 (OB-Zonen-Erweiterung) — z.B. wenn resolveObZoneId() keine passende DB-Zeile
+  // findet (poi-watcher hat die Zone noch nicht gespeichert). Popup bleibt dann offen statt sich
+  // wie bei "confirm" zu schließen, siehe Dashboard.vue: onLaniakeaAddConfirm.
+  error: { type: String, default: null },
 });
 const emit = defineEmits(["confirm", "cancel"]);
 
@@ -44,8 +48,9 @@ const clampedY = Math.min(props.y, window.innerHeight - ESTIMATED_HEIGHT - 8);
 
 <template>
   <div class="laniakea-add-popup" :style="{ top: clampedY + 'px', left: clampedX + 'px' }" @keydown="onKeydown">
-    <div class="laniakea-add-popup-title">🌌 Laniakea zeigen{{ tradeLabel ? ` — ${tradeLabel}` : "" }}</div>
+    <div class="laniakea-add-popup-title">🌌 Laniakea zeigen{{ label ? ` — ${label}` : "" }}</div>
     <textarea ref="textareaRef" v-model="note" class="laniakea-add-popup-textarea" placeholder="Notiz (optional)" rows="3" />
+    <div v-if="error" class="laniakea-add-popup-error">{{ error }}</div>
     <div class="laniakea-add-popup-actions">
       <button class="laniakea-add-popup-cancel" @click="emit('cancel')">Abbrechen</button>
       <button class="laniakea-add-popup-confirm" :style="{ background: cssColor('laniakea') }" @click="confirm">Hinzufügen</button>
@@ -72,6 +77,11 @@ const clampedY = Math.min(props.y, window.innerHeight - ESTIMATED_HEIGHT - 8);
   color: #d1d4dc;
   font-size: 12px;
   font-weight: 600;
+}
+
+.laniakea-add-popup-error {
+  color: #ef5350;
+  font-size: 11px;
 }
 
 .laniakea-add-popup-textarea {

@@ -17,10 +17,12 @@ const props = defineProps({
 // Hover einer Zeile soll die zugehörige trade_position im Chart hervorgehoben werden, ohne wie
 // "select" auch noch hinzuscrollen (siehe onHoverTrade in Dashboard.vue) — null bei mouseleave,
 // damit die Hervorhebung wieder verschwindet.
-// "trade-context-menu" (Chat 2026-08-01): Rechtsklick auf eine Zeile öffnet Dashboard.vue's
+// "laniakea-context-menu" (Chat 2026-08-01): Rechtsklick auf eine Zeile öffnet Dashboard.vue's
 // ContextMenu.vue an der Cursor-Position (siehe dort für "Laniakea zeigen") — passiert
-// serverseitig nichts hier, TradesTable.vue kennt den Laniakea-Store nicht direkt.
-const emit = defineEmits(["select", "edit-request", "hover-trade", "trade-context-menu"]);
+// serverseitig nichts hier, TradesTable.vue kennt den Laniakea-Store nicht direkt. Gleicher
+// Event-Name wie PriceChart.vue's Chart-Marker/OB-Zonen-Rechtsklick (siehe dort), payload immer
+// { kind, ..., x, y }, damit Dashboard.vue EINEN gemeinsamen Handler nutzen kann.
+const emit = defineEmits(["select", "edit-request", "hover-trade", "laniakea-context-menu"]);
 
 function rowStyle(t) {
   return props.laniakeaTradeIds.has(t.id) ? { backgroundColor: cssColorScaled("laniakea", 0.25) } : undefined;
@@ -98,7 +100,7 @@ const showCommission = useLocalStorageRef("showCommissionColumn", false);
         @click="emit('select', t)"
         @mouseenter="emit('hover-trade', t)"
         @mouseleave="emit('hover-trade', null)"
-        @contextmenu.prevent="emit('trade-context-menu', { trade: t, x: $event.clientX, y: $event.clientY })"
+        @contextmenu.prevent="emit('laniakea-context-menu', { kind: 'trade_position', trade: t, x: $event.clientX, y: $event.clientY })"
       >
         <td>
           <span class="trade-direction" :class="t.direction">{{ t.direction === "short" ? "Short" : "Long" }}</span>

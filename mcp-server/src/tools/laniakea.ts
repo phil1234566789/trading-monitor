@@ -14,11 +14,12 @@ export function registerLaniakeaTools(server: McpServer) {
     {
       title: "Laniakea-Kontext",
       description:
-        "Die trade_positions, die Philip gerade per Rechtsklick (Trades-Tabelle oder Chart-Marker) " +
-        "'an dich übergeben' hat, samt optionaler Notiz und voller Trade-Daten (dealing_range, " +
-        "targets, partial exits). Ruf dieses Tool proaktiv auf, wenn Philip sagt 'schau dir das mal " +
-        "an' o.ä., statt auf eine Beschreibung per Text zu warten — das ist genau der Zweck dieses " +
-        "Tools.",
+        "Die trade_positions und OB-Zonen, die Philip gerade per Rechtsklick (Trades-Tabelle, " +
+        "Chart-Trade-Marker oder Chart-OB-Zone) 'an dich übergeben' hat, samt optionaler Notiz und " +
+        "voller Daten (bei kind='trade_position': dealing_range/targets/partial exits; bei " +
+        "kind='ob_zone': die volle ob_zones-Zeile). Ruf dieses Tool proaktiv auf, wenn Philip sagt " +
+        "'schau dir das mal an' o.ä., statt auf eine Beschreibung per Text zu warten — das ist genau " +
+        "der Zweck dieses Tools.",
       inputSchema: {},
     },
     async () => json(await getLaniakeaContext()),
