@@ -118,6 +118,11 @@ export const DEFAULT_CHART_COLORS = {
   // wie NO_GO_COLOR/candleDown/tradeLoss (dieser Preis = die ganze Idee ist tot), eigener Key statt
   // Wiederverwendung, damit ein späteres Anpassen von z.B. tradeLoss diese Linie nicht mitverschiebt.
   tradeInvalidation: { hex: "#ef5350", alpha: 0.9 },
+  // Hover-Hervorhebung (Chat 2026-08-01) — Halo-Ring um Entry/Exit einer in TradesTable.vue
+  // gehoverten Zeile (siehe tradeMarkers.js: TradeMarkerRenderer). Eigener neutraler Akzentton statt
+  // Wiederverwendung von tradeWin/tradeLoss, weil die Hervorhebung unabhängig von Gewinn/Verlust
+  // immer gleich aussehen soll.
+  tradeHover: { hex: "#ffd600", alpha: 0.9 },
 };
 
 function loadInitial() {

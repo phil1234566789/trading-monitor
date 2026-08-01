@@ -8,6 +8,19 @@ const TICK_LENGTH = 16; // px, Strich neben der Marke zur Preis-Ablesung
 const DOT_RADIUS = 3; // px, Exit-Kreis-Fallback (Open/Invalid) — Bug-Report Philip 2026-07-31: klebte zu dominant an den Candles
 const ENTRY_TRIANGLE_SIZE = 5; // px, Entry-Dreieck (Long = Spitze oben, Short = Spitze unten)
 const EXIT_MARK_SIZE = 5; // px, Häkchen (Win) / X (Loss)
+const HOVER_HALO_RADIUS = 11; // px, Halo-Ring bei Hover über die TradesTable-Zeile (Chat 2026-08-01)
+const HOVER_HALO_LINE_WIDTH = 2; // px, reiner Rand statt Füllung (Bug-Report Philip 2026-08-01: "fetter goldener Kreis" verdeckte zu viel)
+
+// Ungefüllter Ring-Rand hinter Entry/Exit, wenn die Zeile in TradesTable.vue gerade gehovert wird —
+// eigene Funktion statt in drawEntryPoint/drawExitPoint verwoben, weil er unabhängig von
+// Richtung/Outcome immer gleich aussieht.
+function drawHoverHalo(ctx, x, y, pixelRatio, color) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = HOVER_HALO_LINE_WIDTH * pixelRatio;
+  ctx.beginPath();
+  ctx.arc(x, y, HOVER_HALO_RADIUS * pixelRatio, 0, Math.PI * 2);
+  ctx.stroke();
+}
 
 function drawTick(ctx, x, y, offset, tick, pixelRatio, color, colorKey) {
   ctx.strokeStyle = color;
@@ -114,13 +127,24 @@ class TradeMarkerRenderer {
       if (entry.x !== null && exit && exit.x !== null && entry.y !== null && exit.y !== null) {
         ctx.save();
         ctx.strokeStyle = this._options.connectorColor;
-        ctx.lineWidth = Math.max(1.5, lineWidth("tradeConnector") * pixelRatio);
+        // Hervorgehobene Verbindung ist doppelt so dick statt einer eigenen Style-Modal-Linienstärke
+        // — reine Hover-Betonung, kein dauerhaft einstellbares Chart-Layer-Element wie die Farbe selbst.
+        ctx.lineWidth = Math.max(1.5, lineWidth("tradeConnector") * pixelRatio) * (this._options.highlighted ? 2 : 1);
         ctx.setLineDash([5 * pixelRatio, 4 * pixelRatio]);
         ctx.beginPath();
         ctx.moveTo(Math.round(entry.x * pixelRatio), Math.round(entry.y * pixelRatio));
         ctx.lineTo(Math.round(exit.x * pixelRatio), Math.round(exit.y * pixelRatio));
         ctx.stroke();
         ctx.restore();
+      }
+
+      if (this._options.highlighted) {
+        if (entry.x !== null && entry.y !== null) {
+          drawHoverHalo(ctx, Math.round(entry.x * pixelRatio), Math.round(entry.y * pixelRatio), pixelRatio, this._options.hoverColor);
+        }
+        if (exit && exit.x !== null && exit.y !== null) {
+          drawHoverHalo(ctx, Math.round(exit.x * pixelRatio), Math.round(exit.y * pixelRatio), pixelRatio, this._options.hoverColor);
+        }
       }
 
       drawEntryPoint(
@@ -220,7 +244,7 @@ export class TradeMarkerPrimitive {
 // "invalid" gibt's als Outcome seit Chat 2026-07-31 gar nicht mehr (0 Zeilen genutzt, siehe
 // Migration 20260731220000_drop_invalid_outcome.sql). tradeInvalid bleibt als generischer
 // Fallback für den Rest-Fall "Exit-Preis gesetzt, aber noch kein Ergebnis gewählt".
-function tradeOptions(t, showLabels) {
+function tradeOptions(t, showLabels, highlighted) {
   const outcomeKey = { win: "tradeWin", loss: "tradeLoss" };
   const entryColorKey = t.direction === "short" ? "tradeLoss" : "tradeWin";
   const exitColorKey = outcomeKey[t.outcome] ?? "tradeInvalid";
@@ -235,18 +259,25 @@ function tradeOptions(t, showLabels) {
     connectorColor: cssColor("tradeConnector"),
     entryLabel: `${dirLabel} Entry ${t.entryPrice}`,
     exitLabel: t.exitPrice != null ? `${t.outcome?.toUpperCase() ?? "EXIT"} ${t.exitPrice}` : null,
-    showLabels,
+    // Gehoverte Zeile zeigt ihr Label immer, unabhängig vom Debug-Toggle (Chat 2026-08-01) — der
+    // ganze Sinn des Hovers ist ja, Philip beim Reden mit Lana genau diesen Preis lesbar zu machen.
+    showLabels: showLabels || highlighted,
+    highlighted,
+    hoverColor: cssColor("tradeHover"),
   };
 }
 
 // showLabels: Chat 2026-07-31 — Text-Labels verdecken die Sicht, jetzt hinter demselben "Debug"-
 // Toggle (showLiquidityDebug) wie die übrigen Preis-Labels statt immer/zoomabhängig sichtbar.
-export function renderTradeMarkers(series, trades, existingPrimitives, candles, showLabels) {
+// hoveredTradeId (Chat 2026-08-01): trade_positions.id der gerade in TradesTable.vue gehoverten
+// Zeile, zeichnet einen Halo-Ring um deren Entry/Exit (siehe TradeMarkerRenderer.draw).
+export function renderTradeMarkers(series, trades, existingPrimitives, candles, showLabels, hoveredTradeId) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
   for (const t of trades) {
-    const primitive = new TradeMarkerPrimitive(t, tradeOptions(t, showLabels), candles);
+    const highlighted = hoveredTradeId != null && t.id === hoveredTradeId;
+    const primitive = new TradeMarkerPrimitive(t, tradeOptions(t, showLabels, highlighted), candles);
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }

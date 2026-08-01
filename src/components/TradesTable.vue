@@ -9,7 +9,11 @@ defineProps({
 // Seit Chat 2026-07-28 nur noch EIN Aktions-Button pro Zeile ("edit-request", öffnet
 // TradeEditModal.vue) — vorher gab's hier 🔗/+/× einzeln inline, was Philip als "too much,
 // Klickrisiko" zurückgemeldet hat (siehe Memory feedback_trade_editing_ui.md).
-const emit = defineEmits(["select", "edit-request"]);
+// "hover-trade" (Chat 2026-08-01, Philips Wunsch für bessere Live-Kommunikation mit Lana): beim
+// Hover einer Zeile soll die zugehörige trade_position im Chart hervorgehoben werden, ohne wie
+// "select" auch noch hinzuscrollen (siehe onHoverTrade in Dashboard.vue) — null bei mouseleave,
+// damit die Hervorhebung wieder verschwindet.
+const emit = defineEmits(["select", "edit-request", "hover-trade"]);
 
 const OUTCOME_LABEL = {
   win: "Win",
@@ -61,6 +65,7 @@ const showCommission = useLocalStorageRef("showCommissionColumn", false);
         <th>Dealing Range</th>
         <th>Position</th>
         <th>Date</th>
+        <th>Entry</th>
         <th>Exit</th>
         <th>Size</th>
         <th>Ergebnis</th>
@@ -74,7 +79,14 @@ const showCommission = useLocalStorageRef("showCommissionColumn", false);
       </tr>
     </thead>
     <tbody>
-      <tr v-for="t in trades" :key="t.id" class="trade-row" @click="emit('select', t)">
+      <tr
+        v-for="t in trades"
+        :key="t.id"
+        class="trade-row"
+        @click="emit('select', t)"
+        @mouseenter="emit('hover-trade', t)"
+        @mouseleave="emit('hover-trade', null)"
+      >
         <td>
           <span class="trade-direction" :class="t.direction">{{ t.direction === "short" ? "Short" : "Long" }}</span>
           #{{ t.dealingRangeId }}
@@ -85,6 +97,7 @@ const showCommission = useLocalStorageRef("showCommissionColumn", false);
              bearbeiten" (siehe TradeEditModal.vue), da trade.id === die trade_position-Id. -->
         <td class="trade-position-cell">#{{ t.id }}</td>
         <td>{{ fmtDate(t.entryTime) }}</td>
+        <td>{{ t.entryPrice != null ? fmtPrice(t.entryPrice, pricePrecisionForInstrument(t.instrument)) : "–" }}</td>
         <td v-if="t.exitPrice != null">{{ fmtPrice(t.exitPrice, pricePrecisionForInstrument(t.instrument)) }} ({{ fmtTime(t.exitTime) }})</td>
         <td v-else>–</td>
         <td>{{ t.size ?? "–" }}</td>

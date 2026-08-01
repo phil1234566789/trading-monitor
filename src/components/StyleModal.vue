@@ -119,6 +119,7 @@ const GROUPS = [
       { key: "tradeTarget", label: "Target" },
       { key: "tradeConfirmation", label: "Bestätigung" },
       { key: "tradeInvalidation", label: "Invalidierungs-Linie" },
+      { key: "tradeHover", label: "Hover-Hervorhebung" },
     ],
   },
   {

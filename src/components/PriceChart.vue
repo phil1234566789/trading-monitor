@@ -67,6 +67,11 @@ const props = defineProps({
   symbol: { type: String, required: true },
   currentBar: { type: String, required: true },
   trades: { type: Array, default: () => [] },
+  // Hover-Hervorhebung (Chat 2026-08-01, Philips Wunsch für bessere Live-Kommunikation mit Lana):
+  // trade_positions.id der gerade in TradesTable.vue gehoverten Zeile, null wenn keine — siehe
+  // renderTradeMarkers/tradeMarkers.js für die eigentliche Glow-Darstellung. Bewusst NUR eine Id
+  // (kein ganzer Trade), analog zu selectedSetupId-artigen Props andernorts in diesem Repo.
+  hoveredTradeId: { type: [String, Number], default: null },
   // Ein/Ausblenden der eigenen geloggten Trades (Chat 2026-07-27) — Untermenü-Toggle unter dem
   // übergeordneten "Trades"-Button (showTradeSetups); beide zusammen müssen an sein, damit Trades
   // gezeichnet werden (Bug-Report Philip 2026-07-28: "übergeordneter Trades-Toggle soll Trades
@@ -734,7 +739,7 @@ function refreshTradeMarkersInternal() {
   const visible = props.showTradeSetups && props.showTrades && TRADE_MARKER_BARS.has(props.currentBar);
   const candles = clipReplay(allCandles);
   const trades = visible ? tradesVisibleForCandles(props.trades, candles) : [];
-  renderTradeMarkers(candleSeries, trades, tradePrimitives, candles, props.showLiquidityDebug);
+  renderTradeMarkers(candleSeries, trades, tradePrimitives, candles, props.showLiquidityDebug, props.hoveredTradeId);
 }
 
 // Zeigt die M5-OB, mit der ein geloggter Trade verknüpft ist. Label "#<trade_setup_id>" matcht 1:1
@@ -2355,6 +2360,10 @@ watch([() => props.trades, () => props.showTrades], () => {
   refreshTradeConfirmationLinksInternal();
   refreshInvalidationLinesInternal();
 });
+// Eigener, schlanker Watch statt im obigen Trades-Watch mitzulaufen — Hover feuert pro
+// Mausbewegung, soll aber NUR die Marker neu zeichnen, nicht auch noch Setup-/Target-/
+// Confirmation-Links und Invalidation-Linien jedes Mal mit neu berechnen.
+watch(() => props.hoveredTradeId, refreshTradeMarkersInternal);
 watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 // tscCalloutModeActive wechselt (TSC wird ein-/ausgeblendet, Locked-Zustand etc.) -> Canvas-Text
 // muss sofort erscheinen/verschwinden, nicht erst beim nächsten claudeAnnotations-Wechsel.

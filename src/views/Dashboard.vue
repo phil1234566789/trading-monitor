@@ -391,6 +391,14 @@ async function onSelectTrade(t) {
   const setup = await fetchTradeSetupForCockpit(t.tradeSetupId);
   if (setup) priceChartRef.value?.focusTradeSetup(setup);
 }
+
+// Hover statt Klick (Chat 2026-08-01) — bewusst OHNE jumpToTrade/TSC-Fokus wie bei onSelectTrade,
+// nur eine reine Hervorhebung der schon sichtbaren Marker (siehe hoveredTradeId-Prop an
+// PriceChart.vue), damit ein flüchtiges Drüberfahren nicht den Chart wegscrollt.
+const hoveredTradeId = ref(null);
+function onHoverTrade(t) {
+  hoveredTradeId.value = t?.id ?? null;
+}
 // Debug-Metadaten-Sammel-Panel (siehe Chat 2026-07-20: "damit ich dir nicht ständig die Daten von
 // dem was ich in TradingView sehe hier schreiben muss") — Unterpunkt bei "Debug", analog zu
 // showRangesMetadata persistiert (bleibt über einen Reload offen, falls man gerade aktiv vergleicht).
@@ -929,6 +937,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :symbol="currentSymbol"
     :current-bar="currentBar"
     :trades="trades"
+    :hovered-trade-id="hoveredTradeId"
     :show-trades="showTrades"
     :poi-zones="poiZones"
     :show-obs-m5="showObsM5"
@@ -975,7 +984,7 @@ watch(selectedTradingAccountId, refreshTrades);
       <TradingAccountSwitcher />
     </div>
     <div class="trades-list">
-      <TradesTable :trades="trades" @select="onSelectTrade" @edit-request="onEditRequest" />
+      <TradesTable :trades="trades" @select="onSelectTrade" @edit-request="onEditRequest" @hover-trade="onHoverTrade" />
     </div>
     <TradeStats :trades="trades" />
   </aside>
