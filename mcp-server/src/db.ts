@@ -93,6 +93,22 @@ export async function getJournal(instrument?: string, source?: string, limit = 5
   return data ?? [];
 }
 
+// Laniakea-Kontext (Chat 2026-08-01, siehe supabase/migrations/20260801120000_laniakea_context.sql,
+// src/laniakeaContext.js): trade_positions, die Philip per Rechtsklick "an Lana übergeben" hat.
+// Kein Snapshot in der Tabelle selbst — derselbe Embed-Shape wie getJournal (trade_positions.* +
+// dealing_ranges + trade_targets/trade_partial_exits), damit Lana beim Fetch immer die aktuellen
+// Werte sieht statt eines möglicherweise veralteten Stands.
+export async function getLaniakeaContext() {
+  const { data, error } = await supabase
+    .from("laniakea_context")
+    .select(
+      "id, note, created_at, trade_positions(*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, trade_targets(price)), trade_partial_exits(price, exit_time, portion_pct))",
+    )
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 export async function getNewsEvents(fromTime?: string, toTime?: string) {
   let query = supabase.from("news_events").select("*").order("event_time", { ascending: true });
   if (fromTime) query = query.gte("event_time", fromTime);

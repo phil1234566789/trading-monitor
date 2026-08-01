@@ -9,6 +9,10 @@ import NewsModal from "../components/NewsModal.vue";
 import TakeTradeModal from "../components/TakeTradeModal.vue";
 import TradeEditModal from "../components/TradeEditModal.vue";
 import TradingAccountSwitcher from "../components/TradingAccountSwitcher.vue";
+import MetadataPanel from "../components/MetadataPanel.vue";
+import ContextMenu from "../components/ContextMenu.vue";
+import LaniakeaAddPopup from "../components/LaniakeaAddPopup.vue";
+import LaniakeaPanel from "../components/LaniakeaPanel.vue";
 import { selectedTradingAccountId } from "../tradingAccounts.js";
 import { TIMEFRAMES } from "../timeframes.js";
 import { fetchTrades } from "../trades.js";
@@ -22,6 +26,7 @@ import {
   updateDealingRange,
 } from "../tradeIntake.js";
 import { fetchPoiZones } from "../poiZones.js";
+import { fetchLaniakeaContext, addLaniakeaEntry, removeLaniakeaEntry, updateLaniakeaNote } from "../laniakeaContext.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
@@ -399,6 +404,40 @@ const hoveredTradeId = ref(null);
 function onHoverTrade(t) {
   hoveredTradeId.value = t?.id ?? null;
 }
+
+// Laniakea-Kontextmenü (Chat 2026-08-01) — EIN State-Paar für beide Aufrufstellen (Trades-Zeile
+// UND Chart-Marker, siehe TradesTable.vue @trade-context-menu / PriceChart.vue @trade-context-menu),
+// da nie beide gleichzeitig offen sein können.
+const contextMenuTarget = ref(null); // { trade, x, y } | null
+const laniakeaAddPopupTarget = ref(null); // { trade, x, y } | null
+
+function onTradeContextMenu({ trade, x, y }) {
+  contextMenuTarget.value = { trade, x, y };
+}
+function onContextMenuSelect(key) {
+  if (key === "laniakea") {
+    laniakeaAddPopupTarget.value = contextMenuTarget.value;
+  }
+  contextMenuTarget.value = null;
+}
+async function onLaniakeaAddConfirm(note) {
+  const trade = laniakeaAddPopupTarget.value.trade;
+  laniakeaAddPopupTarget.value = null;
+  await addLaniakeaEntry(trade.id, note);
+  refreshLaniakeaContext();
+}
+async function onLaniakeaRemove(entryId) {
+  await removeLaniakeaEntry(entryId);
+  refreshLaniakeaContext();
+}
+async function onLaniakeaUpdateNote(entryId, note) {
+  await updateLaniakeaNote(entryId, note);
+  refreshLaniakeaContext();
+}
+
+// Laniakea-Modal (Chat 2026-08-01) — "genau wie bei Metadaten" (Philip), analog persistiert.
+const showLaniakeaPanel = useLocalStorageRef("showLaniakeaPanel", false);
+
 // Debug-Metadaten-Sammel-Panel (siehe Chat 2026-07-20: "damit ich dir nicht ständig die Daten von
 // dem was ich in TradingView sehe hier schreiben muss") — Unterpunkt bei "Debug", analog zu
 // showRangesMetadata persistiert (bleibt über einen Reload offen, falls man gerade aktiv vergleicht).
@@ -547,6 +586,17 @@ const isBtc = computed(() => currentSymbol.value === "BTC-USDT");
 // Hintergrund-Poll (siehe usePolledFetch.js). Eine externe Änderung durch Lana (MCP-Server)
 // erscheint dadurch erst nach einem manuellen Reload/Tab-Wechsel — bewusst in Kauf genommen.
 const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrades(currentSymbol.value, selectedTradingAccountId.value));
+// Laniakea-Kontext (Chat 2026-08-01, siehe laniakeaContext.js) — symbolunabhängig (anders als
+// `trades` oben), kein intervalMs, da nur durch explizite Aktionen (Rechtsklick "Laniakea zeigen"/
+// Modal-Löschen) geändert, kein Hintergrund-Poll nötig.
+const { data: laniakeaContextEntries, refresh: refreshLaniakeaContext } = usePolledFetch(() => fetchLaniakeaContext());
+// Nur die Ids, die zum GERADE geladenen Symbol gehören (trades enthält nur dessen Trades) — ein
+// Laniakea-Eintrag für ein anderes Symbol kann im Chart/in der Tabelle ohnehin nicht markiert
+// werden, solange dieses Symbol nicht ausgewählt ist.
+const laniakeaTradeIds = computed(() => {
+  const tradeIds = new Set(trades.value.map((t) => t.id));
+  return new Set(laniakeaContextEntries.value.filter((e) => tradeIds.has(e.tradePositionId)).map((e) => e.tradePositionId));
+});
 const { data: poiZones, refresh: refreshPoiZones } = usePolledFetch(
   () => (isBtc.value ? fetchPoiZones(currentSymbol.value) : []),
   { intervalMs: POLL_MS },
@@ -884,6 +934,10 @@ watch(selectedTradingAccountId, refreshTrades);
         <span v-if="invalidationAddTrade" class="trade-link-armed">🚫 nächster Klick auf Pivot/OB setzt Invalidierung für Dealing Range #{{ invalidationAddTrade.dealingRangeId }}</span>
       </div>
 
+      <button :class="{ active: showLaniakeaPanel }" title="An Lana übergebene Trades" @click="showLaniakeaPanel = !showLaniakeaPanel">
+        🌌 Laniakea
+      </button>
+
       <div class="toggle-group">
         <button :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
           Debug
@@ -938,6 +992,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :current-bar="currentBar"
     :trades="trades"
     :hovered-trade-id="hoveredTradeId"
+    :laniakea-trade-ids="laniakeaTradeIds"
     :show-trades="showTrades"
     :poi-zones="poiZones"
     :show-obs-m5="showObsM5"
@@ -976,6 +1031,7 @@ watch(selectedTradingAccountId, refreshTrades);
     @select-target="onSelectTarget"
     @select-setup-confirmations="onSelectSetupConfirmations"
     @toggle-trade-mode="tradeModeActive = !tradeModeActive"
+    @trade-context-menu="onTradeContextMenu"
   />
 
   <aside ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">
@@ -984,10 +1040,37 @@ watch(selectedTradingAccountId, refreshTrades);
       <TradingAccountSwitcher />
     </div>
     <div class="trades-list">
-      <TradesTable :trades="trades" @select="onSelectTrade" @edit-request="onEditRequest" @hover-trade="onHoverTrade" />
+      <TradesTable
+        :trades="trades"
+        :laniakea-trade-ids="laniakeaTradeIds"
+        @select="onSelectTrade"
+        @edit-request="onEditRequest"
+        @hover-trade="onHoverTrade"
+        @trade-context-menu="onTradeContextMenu"
+      />
     </div>
     <TradeStats :trades="trades" />
   </aside>
+
+  <ContextMenu
+    v-if="contextMenuTarget"
+    :x="contextMenuTarget.x"
+    :y="contextMenuTarget.y"
+    :items="[{ key: 'laniakea', label: '🌌 Laniakea zeigen' }]"
+    @select="onContextMenuSelect"
+    @close="contextMenuTarget = null"
+  />
+  <LaniakeaAddPopup
+    v-if="laniakeaAddPopupTarget"
+    :x="laniakeaAddPopupTarget.x"
+    :y="laniakeaAddPopupTarget.y"
+    :trade-label="`${laniakeaAddPopupTarget.trade.direction === 'short' ? 'Short' : 'Long'} #${laniakeaAddPopupTarget.trade.dealingRangeId}`"
+    @confirm="onLaniakeaAddConfirm"
+    @cancel="laniakeaAddPopupTarget = null"
+  />
+  <MetadataPanel v-if="showLaniakeaPanel" title="🌌 Laniakea" @close="showLaniakeaPanel = false">
+    <LaniakeaPanel :entries="laniakeaContextEntries" :trades="trades" @remove="onLaniakeaRemove" @update-note="onLaniakeaUpdateNote" />
+  </MetadataPanel>
 </template>
 
 <style scoped>

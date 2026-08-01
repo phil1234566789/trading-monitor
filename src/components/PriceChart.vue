@@ -72,6 +72,10 @@ const props = defineProps({
   // renderTradeMarkers/tradeMarkers.js für die eigentliche Glow-Darstellung. Bewusst NUR eine Id
   // (kein ganzer Trade), analog zu selectedSetupId-artigen Props andernorts in diesem Repo.
   hoveredTradeId: { type: [String, Number], default: null },
+  // Laniakea-Kontext (Chat 2026-08-01, siehe laniakeaContext.js) — Set von trade_positions.id,
+  // die Philip per Rechtsklick dauerhaft "an Lana übergeben" hat, zeichnet einen permanenten
+  // (nicht nur Hover-) Ring um deren Entry/Exit, siehe renderTradeMarkers/tradeMarkers.js.
+  laniakeaTradeIds: { type: Set, default: () => new Set() },
   // Ein/Ausblenden der eigenen geloggten Trades (Chat 2026-07-27) — Untermenü-Toggle unter dem
   // übergeordneten "Trades"-Button (showTradeSetups); beide zusammen müssen an sein, damit Trades
   // gezeichnet werden (Bug-Report Philip 2026-07-28: "übergeordneter Trades-Toggle soll Trades
@@ -160,6 +164,7 @@ const emit = defineEmits([
   "toggle-trade-mode",
   "select-target",
   "select-setup-confirmations",
+  "trade-context-menu",
 ]);
 
 // CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
@@ -381,6 +386,7 @@ let newsMarkerPrimitives = [];
 let rangesMarkerPrimitives = [];
 let marketStructurePrimitives = [];
 let tradePrimitives = [];
+let tradeContextMenuHandler = null; // Referenz für removeEventListener in onUnmounted, siehe dort
 let tradeSetupLinkPrimitives = [];
 let tradeTargetLinkPrimitives = [];
 let tradeConfirmationLinkPrimitives = [];
@@ -739,7 +745,7 @@ function refreshTradeMarkersInternal() {
   const visible = props.showTradeSetups && props.showTrades && TRADE_MARKER_BARS.has(props.currentBar);
   const candles = clipReplay(allCandles);
   const trades = visible ? tradesVisibleForCandles(props.trades, candles) : [];
-  renderTradeMarkers(candleSeries, trades, tradePrimitives, candles, props.showLiquidityDebug, props.hoveredTradeId);
+  renderTradeMarkers(candleSeries, trades, tradePrimitives, candles, props.showLiquidityDebug, props.hoveredTradeId, props.laniakeaTradeIds);
 }
 
 // Zeigt die M5-OB, mit der ein geloggter Trade verknüpft ist. Label "#<trade_setup_id>" matcht 1:1
@@ -2226,6 +2232,26 @@ onMounted(() => {
     }
   });
 
+  // Rechtsklick auf einen Trade-Marker -> Laniakea-Kontextmenü (Chat 2026-08-01). lightweight-
+  // charts hat kein natives Rechtsklick-Event (nur subscribeClick/subscribeCrosshairMove oben),
+  // daher ein normaler DOM-Listener statt eines chart.subscribe*-Aufrufs. Koordinaten-Umrechnung
+  // exakt wie in claudeCalloutTick (siehe dort): chartContainerRef ist .chart-container, das
+  // .chart-wrapper komplett ausfüllt, dessen getBoundingClientRect() dient als lokaler
+  // Koordinaten-Ursprung — derselbe Pixel-Raum, in dem TradeMarkerPrimitive.hitTest seine
+  // gecachten Entry/Exit-Koordinaten hält (timeToCoordinate/priceToCoordinate liefern bereits
+  // CSS-Pixel, kein pixelRatio-Faktor nötig). preventDefault() NUR bei einem Treffer, sonst
+  // bleibt das native Browser-Menü unangetastet (kein Verhaltens-Bruch außerhalb von Markern).
+  tradeContextMenuHandler = (event) => {
+    const rect = chartContainerRef.value.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const hitPrimitive = tradePrimitives.find((p) => p.hitTest(x, y));
+    if (!hitPrimitive) return;
+    event.preventDefault();
+    emit("trade-context-menu", { trade: hitPrimitive.trade, x: event.clientX, y: event.clientY });
+  };
+  chartContainerRef.value?.addEventListener("contextmenu", tradeContextMenuHandler);
+
   // Cursor-Feedback im Trade-Modus (Chat 2026-07-27: "Mouse Pointer ändern, wenn was klickbar
   // ist") — dieselbe Hittest-Funktion wie beim Klick, nur auf jede Mausbewegung statt nur den
   // eigentlichen Klick angewendet. Außerhalb des Trade-Modus bleibt der Cursor unangetastet
@@ -2338,6 +2364,7 @@ onUnmounted(() => {
   clearInterval(dailyGaugeTimer);
   clearTimeout(replayFetchDebounceTimer);
   resizeObserver?.disconnect();
+  if (tradeContextMenuHandler) chartContainerRef.value?.removeEventListener("contextmenu", tradeContextMenuHandler);
   chart?.remove();
   // Nullen, damit noch laufende Async-Loads (loadInitial/pollRecent) beim Abschluss
   // per Guard erkennen, dass der Chart schon disposed ist, statt lightweight-charts'
@@ -2364,6 +2391,7 @@ watch([() => props.trades, () => props.showTrades], () => {
 // Mausbewegung, soll aber NUR die Marker neu zeichnen, nicht auch noch Setup-/Target-/
 // Confirmation-Links und Invalidation-Linien jedes Mal mit neu berechnen.
 watch(() => props.hoveredTradeId, refreshTradeMarkersInternal);
+watch(() => props.laniakeaTradeIds, refreshTradeMarkersInternal);
 watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 // tscCalloutModeActive wechselt (TSC wird ein-/ausgeblendet, Locked-Zustand etc.) -> Canvas-Text
 // muss sofort erscheinen/verschwinden, nicht erst beim nächsten claudeAnnotations-Wechsel.

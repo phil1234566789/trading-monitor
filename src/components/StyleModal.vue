@@ -126,6 +126,10 @@ const GROUPS = [
     title: "News",
     fields: [{ key: "newsEvent", label: "Termin-Marker" }],
   },
+  {
+    title: "Laniakea",
+    fields: [{ key: "laniakea", label: "Akzentfarbe" }],
+  },
 ];
 
 function resetAll() {

@@ -123,6 +123,14 @@ export const DEFAULT_CHART_COLORS = {
   // Wiederverwendung von tradeWin/tradeLoss, weil die Hervorhebung unabhängig von Gewinn/Verlust
   // immer gleich aussehen soll.
   tradeHover: { hex: "#ffd600", alpha: 0.9 },
+  // Laniakea-Kontext (Chat 2026-08-01, siehe laniakeaContext.js) — EIN Akzentton für alles, was
+  // mit "an Lana übergeben" zu tun hat (permanenter Chart-Ring UND Tabellenzeilen-Tönung), damit
+  // die beiden Stellen erkennbar zusammengehören statt zwei unabhängige Farben zu lernen. Die
+  // dezentere Tabellenzeilen-Tönung wird per cssColorScaled("laniakea", ratio) aus demselben Wert
+  // abgeleitet (Muster wie OB-Fill/Border), kein zweiter Farb-Key nötig.
+  // Pink statt Lila (tradeTarget/tradeConfirmation belegen Lila/Indigo bereits) — soll auf den
+  // ersten Blick nicht mit Target-/Bestätigungs-Linien verwechselbar sein.
+  laniakea: { hex: "#ec407a", alpha: 0.9 },
 };
 
 function loadInitial() {

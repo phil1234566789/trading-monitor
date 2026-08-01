@@ -1,9 +1,13 @@
 <script setup>
 import { fmtPrice, fmtDate, fmtTime, fmtMoney, pricePrecisionForInstrument } from "../format.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
+import { cssColorScaled } from "../chartColors.js";
 
-defineProps({
+const props = defineProps({
   trades: { type: Array, required: true },
+  // Laniakea-Kontext (Chat 2026-08-01, siehe laniakeaContext.js) — Set von trade_positions.id,
+  // die Philip per Rechtsklick dauerhaft "an Lana übergeben" hat, tönt die jeweilige Zeile.
+  laniakeaTradeIds: { type: Set, default: () => new Set() },
 });
 
 // Seit Chat 2026-07-28 nur noch EIN Aktions-Button pro Zeile ("edit-request", öffnet
@@ -13,7 +17,14 @@ defineProps({
 // Hover einer Zeile soll die zugehörige trade_position im Chart hervorgehoben werden, ohne wie
 // "select" auch noch hinzuscrollen (siehe onHoverTrade in Dashboard.vue) — null bei mouseleave,
 // damit die Hervorhebung wieder verschwindet.
-const emit = defineEmits(["select", "edit-request", "hover-trade"]);
+// "trade-context-menu" (Chat 2026-08-01): Rechtsklick auf eine Zeile öffnet Dashboard.vue's
+// ContextMenu.vue an der Cursor-Position (siehe dort für "Laniakea zeigen") — passiert
+// serverseitig nichts hier, TradesTable.vue kennt den Laniakea-Store nicht direkt.
+const emit = defineEmits(["select", "edit-request", "hover-trade", "trade-context-menu"]);
+
+function rowStyle(t) {
+  return props.laniakeaTradeIds.has(t.id) ? { backgroundColor: cssColorScaled("laniakea", 0.25) } : undefined;
+}
 
 const OUTCOME_LABEL = {
   win: "Win",
@@ -83,9 +94,11 @@ const showCommission = useLocalStorageRef("showCommissionColumn", false);
         v-for="t in trades"
         :key="t.id"
         class="trade-row"
+        :style="rowStyle(t)"
         @click="emit('select', t)"
         @mouseenter="emit('hover-trade', t)"
         @mouseleave="emit('hover-trade', null)"
+        @contextmenu.prevent="emit('trade-context-menu', { trade: t, x: $event.clientX, y: $event.clientY })"
       >
         <td>
           <span class="trade-direction" :class="t.direction">{{ t.direction === "short" ? "Short" : "Long" }}</span>
