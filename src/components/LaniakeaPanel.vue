@@ -49,6 +49,17 @@ function onNoteInput(entryId, value) {
           · {{ row.entry.obZone.invalidated ? "Invalidiert" : row.entry.obZone.touched ? "Touched" : "Aktiv" }}
         </div>
       </template>
+      <template v-else-if="row.entry.kind === 'trade_setup'">
+        <div class="laniakea-panel-entry-header">
+          <span class="trade-direction" :class="row.entry.tradeSetup?.direction">{{ row.entry.tradeSetup?.direction === "short" ? "Short" : "Long" }}</span>
+          Setup #{{ row.entry.tradeSetupId }} ({{ row.entry.tradeSetup?.instrument }})
+          <button class="laniakea-panel-remove" title="Aus Laniakea-Kontext entfernen" @click="emit('remove', row.entry.id)">🗑</button>
+        </div>
+        <div v-if="row.entry.tradeSetup" class="laniakea-panel-entry-prices">
+          M5-OB {{ fmtPrice(row.entry.tradeSetup.obBottom, pricePrecisionForInstrument(row.entry.tradeSetup.instrument)) }}
+          – {{ fmtPrice(row.entry.tradeSetup.obTop, pricePrecisionForInstrument(row.entry.tradeSetup.instrument)) }}
+        </div>
+      </template>
       <template v-else-if="row.trade">
         <div class="laniakea-panel-entry-header">
           <span class="trade-direction" :class="row.trade.direction">{{ row.trade.direction === "short" ? "Short" : "Long" }}</span>

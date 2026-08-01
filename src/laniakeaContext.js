@@ -5,15 +5,21 @@
 // Einstellung). Reaktives Halten der Liste übernimmt der Aufrufer (Dashboard.vue) via
 // usePolledFetch, wie bei fetchTrades.
 //
-// Polymorph seit der zweiten Migration: kind = "trade_position" | "ob_zone", genau eine der beiden
-// *_id-Spalten ist gesetzt (DB-CHECK-Constraint erzwingt das). ob_zones wird hier direkt mit
-// eingebettet (anders als trade_position, das gegen Dashboard.vue's bereits geladene `trades`
-// gekreuzt wird, siehe LaniakeaPanel.vue) — es gibt sonst keine reaktive OB-Zonen-Liste in
-// Dashboard.vue, ein Zweit-Fetch für die paar Anzeige-Felder ist hier einfacher als eine.
+// Polymorph seit der zweiten/dritten Migration: kind = "trade_position" | "ob_zone" |
+// "trade_setup", genau eine der drei *_id-Spalten ist gesetzt (DB-CHECK-Constraint erzwingt das).
+// ob_zones/trade_setups werden hier direkt mit eingebettet (anders als trade_position, das gegen
+// Dashboard.vue's bereits geladene `trades` gekreuzt wird, siehe LaniakeaPanel.vue) — es gibt sonst
+// keine reaktive OB-Zonen-/Trade-Setup-Liste in Dashboard.vue, ein Zweit-Fetch für die paar
+// Anzeige-Felder ist hier einfacher als eine.
 import { supabase } from "./supabaseClient.js";
 
+// kind -> DB-Spalte, gemeinsam für Upsert-onConflict UND das Zusammensetzen der Insert-Zeile.
+const REF_COLUMN = { trade_position: "trade_position_id", ob_zone: "ob_zone_id", trade_setup: "trade_setup_id" };
+
 const ROW_COLUMNS =
-  "id, kind, trade_position_id, ob_zone_id, note, created_at, ob_zones(id, instrument, direction, timeframe, top, bottom, start_time, touched, invalidated)";
+  "id, kind, trade_position_id, ob_zone_id, trade_setup_id, note, created_at, " +
+  "ob_zones(id, instrument, direction, timeframe, top, bottom, start_time, touched, invalidated), " +
+  "trade_setups(id, instrument, direction, ob_top, ob_bottom, ob_start_time, ls_touched_time)";
 
 function toEntry(row) {
   return {
@@ -21,6 +27,7 @@ function toEntry(row) {
     kind: row.kind,
     tradePositionId: row.trade_position_id,
     obZoneId: row.ob_zone_id,
+    tradeSetupId: row.trade_setup_id,
     obZone: row.ob_zones
       ? {
           id: row.ob_zones.id,
@@ -32,6 +39,17 @@ function toEntry(row) {
           startTime: row.ob_zones.start_time,
           touched: row.ob_zones.touched,
           invalidated: row.ob_zones.invalidated,
+        }
+      : null,
+    tradeSetup: row.trade_setups
+      ? {
+          id: row.trade_setups.id,
+          instrument: row.trade_setups.instrument,
+          direction: row.trade_setups.direction,
+          obTop: row.trade_setups.ob_top,
+          obBottom: row.trade_setups.ob_bottom,
+          obStartTime: row.trade_setups.ob_start_time,
+          lsTouchedTime: row.trade_setups.ls_touched_time,
         }
       : null,
     note: row.note,
@@ -48,16 +66,14 @@ export async function fetchLaniakeaContext() {
   return (data ?? []).map(toEntry);
 }
 
-// Upsert auf trade_position_id/ob_zone_id (siehe Unique-Indizes in den Migrationen) — ein zweiter
-// Rechtsklick auf dasselbe Objekt legt keinen Zweiteintrag an, sondern aktualisiert nur dessen Notiz.
+// Upsert auf trade_position_id/ob_zone_id/trade_setup_id (siehe Unique-Indizes in den Migrationen)
+// — ein zweiter Rechtsklick auf dasselbe Objekt legt keinen Zweiteintrag an, sondern aktualisiert
+// nur dessen Notiz.
 export async function addLaniakeaEntry(kind, refId, note) {
-  const isObZone = kind === "ob_zone";
+  const column = REF_COLUMN[kind];
   const { data, error } = await supabase
     .from("laniakea_context")
-    .upsert(
-      { kind, trade_position_id: isObZone ? null : refId, ob_zone_id: isObZone ? refId : null, note: note || null },
-      { onConflict: isObZone ? "ob_zone_id" : "trade_position_id" },
-    )
+    .upsert({ kind, trade_position_id: null, ob_zone_id: null, trade_setup_id: null, [column]: refId, note: note || null }, { onConflict: column })
     .select(ROW_COLUMNS)
     .single();
   if (error) {

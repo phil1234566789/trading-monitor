@@ -270,18 +270,23 @@ export class OrderBlockPrimitive {
     return this._paneViews;
   }
 
-  // Rechtsklick-Hittest fürs Laniakea-Kontextmenü (Chat 2026-08-01, analog zu
-  // TradeMarkerPrimitive.hitTest in tradeMarkers.js) — Box statt Punkt, daher ein einfacher
-  // Rechteck-Containment-Test statt Distanz-zu-Punkt. x/y in CSS-Pixeln relativ zum
+  // Distanz zum Laniakea-Kontextmenü (Chat 2026-08-01, zweite Runde — Bug-Report Philip: exaktes
+  // Treffen der Box war trotz Cursor-Fix zu fummelig, "lass mal die anderen Lösungsmöglichkeiten
+  // anschauen") — ersetzt den früheren reinen Boolean-Hittest: PriceChart.vue sammelt jetzt ALLE
+  // Objekte in einem Radius um den Klick statt genau eins exakt zu treffen (siehe
+  // findNearbyLaniakeaCandidates dort), 0 wenn der Punkt IN der Box liegt, sonst Abstand zur
+  // nächsten Kante (Standardformel "Distanz Punkt zu Rechteck"). x/y in CSS-Pixeln relativ zum
   // Chart-Container, derselbe Koordinatenraum wie die gecachten p1/p2.
-  hitTest(x, y) {
+  distanceTo(x, y) {
     const { _p1: p1, _p2: p2 } = this._paneViews[0];
-    if (p1.x === null || p1.y === null || p2.x === null || p2.y === null) return false;
+    if (p1.x === null || p1.y === null || p2.x === null || p2.y === null) return Infinity;
     const left = Math.min(p1.x, p2.x);
     const right = Math.max(p1.x, p2.x);
     const top = Math.min(p1.y, p2.y);
     const bottom = Math.max(p1.y, p2.y);
-    return x >= left && x <= right && y >= top && y <= bottom;
+    const dx = Math.max(left - x, 0, x - right);
+    const dy = Math.max(top - y, 0, y - bottom);
+    return Math.sqrt(dx * dx + dy * dy);
   }
 
   get zone() {

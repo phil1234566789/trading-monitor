@@ -94,21 +94,22 @@ export async function getJournal(instrument?: string, source?: string, limit = 5
 }
 
 // Laniakea-Kontext (Chat 2026-08-01, siehe supabase/migrations/20260801120000_laniakea_context.sql,
-// 20260801130000_laniakea_context_ob_zones.sql, src/laniakeaContext.js): trade_positions ODER
-// ob_zones, die Philip per Rechtsklick "an Lana übergeben" hat (kind unterscheidet, welches der
-// beiden embeds befüllt ist — bei einer trade_position-Zeile ist ob_zones null und umgekehrt, kein
-// zusätzlicher Filter nötig, PostgREST liefert einfach null fürs nicht zutreffende Embed). Kein
-// Snapshot in der Tabelle selbst — derselbe Embed-Shape wie getJournal (trade_positions.* +
-// dealing_ranges + trade_targets/trade_partial_exits) für trade_position, volle ob_zones-Zeile für
-// ob_zone — damit Lana beim Fetch immer die aktuellen Werte sieht statt eines möglicherweise
-// veralteten Stands.
+// 20260801130000_laniakea_context_ob_zones.sql, 20260801140000_laniakea_context_trade_setups.sql,
+// src/laniakeaContext.js): trade_positions, ob_zones ODER trade_setups, die Philip per Rechtsklick
+// "an Lana übergeben" hat (kind unterscheidet, welches der drei embeds befüllt ist — bei z.B. einer
+// trade_position-Zeile sind ob_zones/trade_setups null und umgekehrt, kein zusätzlicher Filter
+// nötig, PostgREST liefert einfach null fürs nicht zutreffende Embed). Kein Snapshot in der Tabelle
+// selbst — derselbe Embed-Shape wie getJournal (trade_positions.* + dealing_ranges + trade_targets/
+// trade_partial_exits) für trade_position, volle Zeile für ob_zone/trade_setup — damit Lana beim
+// Fetch immer die aktuellen Werte sieht statt eines möglicherweise veralteten Stands.
 export async function getLaniakeaContext() {
   const { data, error } = await supabase
     .from("laniakea_context")
     .select(
       "id, kind, note, created_at, " +
         "trade_positions(*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, trade_targets(price)), trade_partial_exits(price, exit_time, portion_pct)), " +
-        "ob_zones(*)",
+        "ob_zones(*), " +
+        "trade_setups(*)",
     )
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);

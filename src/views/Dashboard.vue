@@ -412,25 +412,46 @@ function onHoverTrade(t) {
   hoveredTradeId.value = t?.id ?? null;
 }
 
-// Laniakea-Kontextmenü (Chat 2026-08-01) — EIN State-Paar für alle Aufrufstellen (Trades-Zeile/
-// Chart-Trade-Marker/Chart-OB-Zone, siehe TradesTable.vue/PriceChart.vue @laniakea-context-menu),
-// da nie mehrere gleichzeitig offen sein können. Payload-Shape: { kind: "trade_position", trade,
-// x, y } | { kind: "ob_zone", zone: {instrument, timeframe, dir, startTime}, x, y }.
-const contextMenuTarget = ref(null);
-const laniakeaAddPopupTarget = ref(null);
+// Laniakea-Kontextmenü (Chat 2026-08-01, zweite Runde — "lass mal die anderen Lösungsmöglichkeiten
+// anschauen", Philip tat sich mit dem pixelgenauen Treffen schwer) — TradesTable.vue/PriceChart.vue
+// liefern jetzt immer eine Liste von KANDIDATEN (bei der Tabellenzeile immer genau einer, beim
+// Chart alles im Fangradius um den Klick, siehe PriceChart.vue: findNearbyLaniakeaCandidates). Bei
+// genau einem Kandidaten geht's direkt zum Notiz-Popup, bei mehreren erst eine Auswahl-Liste
+// (laniakeaCandidateMenu) — beide teilen sich denselben Kandidaten-Shape: { kind: "trade_position",
+// trade } | { kind: "ob_zone", zone: {instrument, timeframe, dir, startTime} }.
+const laniakeaCandidateMenu = ref(null); // { candidates, x, y } | null
+const laniakeaAddPopupTarget = ref(null); // { kind, trade?/zone?, x, y } | null
 // Nur bei kind="ob_zone" relevant (siehe onLaniakeaAddConfirm) — resolveObZoneId kann fehlschlagen,
 // wenn poi-watcher diese Zone noch nicht persistiert hat; Popup bleibt dann offen statt zu schließen.
 const laniakeaAddPopupError = ref(null);
 
-function onLaniakeaContextMenu(target) {
-  contextMenuTarget.value = target;
+// Bug-Report Philip 2026-08-01: eine Dealing Range mit mehreren Re-Entries (mehrere
+// trade_positions, siehe CLAUDE.md-Abschnitt zum Trade-Journal) erzeugte in der Kandidaten-Liste
+// mehrere IDENTISCH aussehende Einträge ("Short #26" dreimal) — nicht unterscheidbar, welcher
+// welcher ist. Trade-position-id (dieselbe "#<id>", die auch TradeEditModal.vue im Titel zeigt)
+// dazu, damit jede Zeile eindeutig ist.
+function laniakeaCandidateLabel(c) {
+  if (c.kind === "ob_zone") return `${c.zone.timeframe} ${c.zone.dir === 1 ? "Bull" : "Bear"}-OB`;
+  if (c.kind === "trade_setup") return `${c.direction === "short" ? "Short" : "Long"}-Setup #${c.tradeSetupId} (${c.instrument})`;
+  return `${c.trade.direction === "short" ? "Short" : "Long"} #${c.trade.dealingRangeId} · Position #${c.trade.id}`;
 }
-function onContextMenuSelect(key) {
-  if (key === "laniakea") {
-    laniakeaAddPopupTarget.value = contextMenuTarget.value;
+
+function onLaniakeaContextMenu({ candidates, x, y }) {
+  if (candidates.length === 0) return;
+  if (candidates.length === 1) {
+    laniakeaAddPopupTarget.value = { ...candidates[0], x, y };
     laniakeaAddPopupError.value = null;
+    return;
   }
-  contextMenuTarget.value = null;
+  laniakeaCandidateMenu.value = { candidates, x, y };
+}
+function onLaniakeaCandidateSelect(key) {
+  const menu = laniakeaCandidateMenu.value;
+  laniakeaCandidateMenu.value = null;
+  const candidate = menu?.candidates[Number(key)];
+  if (!candidate) return;
+  laniakeaAddPopupTarget.value = { ...candidate, x: menu.x, y: menu.y };
+  laniakeaAddPopupError.value = null;
 }
 async function onLaniakeaAddConfirm(note) {
   const target = laniakeaAddPopupTarget.value;
@@ -444,6 +465,10 @@ async function onLaniakeaAddConfirm(note) {
       return;
     }
     await addLaniakeaEntry("ob_zone", obZoneId, note);
+  } else if (target.kind === "trade_setup") {
+    // Kein Resolve nötig — trade_setups.id ist schon direkt bekannt (siehe PriceChart.vue:
+    // refreshTradeSetupLinksInternal), anders als bei ob_zone.
+    await addLaniakeaEntry("trade_setup", target.tradeSetupId, note);
   } else {
     await addLaniakeaEntry("trade_position", target.trade.id, note);
   }
@@ -630,6 +655,15 @@ const laniakeaObZoneKeys = computed(() => {
     laniakeaContextEntries.value
       .filter((e) => e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value)
       .map((e) => obZoneEntryNaturalKey(e.obZone)),
+  );
+});
+// Trade-Setup-Pendant (Chat 2026-08-01, dritte Runde) — echte Id (kein Natural-Key-Umweg wie bei
+// ob_zone nötig, siehe laniakeaContext.js), trotzdem aufs aktuelle Symbol gefiltert.
+const laniakeaTradeSetupIds = computed(() => {
+  return new Set(
+    laniakeaContextEntries.value
+      .filter((e) => e.kind === "trade_setup" && e.tradeSetup?.instrument === currentSymbol.value)
+      .map((e) => e.tradeSetupId),
   );
 });
 const { data: poiZones, refresh: refreshPoiZones } = usePolledFetch(
@@ -1029,6 +1063,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :hovered-trade-id="hoveredTradeId"
     :laniakea-trade-ids="laniakeaTradeIds"
     :laniakea-ob-zone-keys="laniakeaObZoneKeys"
+    :laniakea-trade-setup-ids="laniakeaTradeSetupIds"
     :show-trades="showTrades"
     :poi-zones="poiZones"
     :show-obs-m5="showObsM5"
@@ -1089,22 +1124,18 @@ watch(selectedTradingAccountId, refreshTrades);
   </aside>
 
   <ContextMenu
-    v-if="contextMenuTarget"
-    :x="contextMenuTarget.x"
-    :y="contextMenuTarget.y"
-    :items="[{ key: 'laniakea', label: '🌌 Laniakea zeigen' }]"
-    @select="onContextMenuSelect"
-    @close="contextMenuTarget = null"
+    v-if="laniakeaCandidateMenu"
+    :x="laniakeaCandidateMenu.x"
+    :y="laniakeaCandidateMenu.y"
+    :items="laniakeaCandidateMenu.candidates.map((c, i) => ({ key: String(i), label: `🌌 ${laniakeaCandidateLabel(c)}` }))"
+    @select="onLaniakeaCandidateSelect"
+    @close="laniakeaCandidateMenu = null"
   />
   <LaniakeaAddPopup
     v-if="laniakeaAddPopupTarget"
     :x="laniakeaAddPopupTarget.x"
     :y="laniakeaAddPopupTarget.y"
-    :label="
-      laniakeaAddPopupTarget.kind === 'ob_zone'
-        ? `${laniakeaAddPopupTarget.zone.timeframe} ${laniakeaAddPopupTarget.zone.dir === 1 ? 'Bull' : 'Bear'}-OB`
-        : `${laniakeaAddPopupTarget.trade.direction === 'short' ? 'Short' : 'Long'} #${laniakeaAddPopupTarget.trade.dealingRangeId}`
-    "
+    :label="laniakeaCandidateLabel(laniakeaAddPopupTarget)"
     :error="laniakeaAddPopupError"
     @confirm="onLaniakeaAddConfirm"
     @cancel="

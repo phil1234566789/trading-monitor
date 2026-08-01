@@ -14,7 +14,6 @@ const HOVER_HALO_LINE_WIDTH = 2; // px, reiner Rand statt Füllung (Bug-Report P
 // gezeichnet — ein Trade kann gleichzeitig gehovert UND dauerhaft im Laniakea-Kontext sein
 // (zwei ineinanderliegende Ringe statt einer, der den anderen überdeckt).
 const LANIAKEA_HALO_RADIUS = 16; // px
-const HIT_TEST_RADIUS = 12; // px, Rechtsklick-Toleranz auf Entry/Exit (siehe TradeMarkerPrimitive.hitTest)
 
 // Ungefüllter Ring-Rand hinter Entry/Exit — für Hover (Tabellenzeile) UND für "dauerhaft im
 // Laniakea-Kontext" (siehe TradeMarkerRenderer.draw), eigene Funktion statt in
@@ -243,20 +242,23 @@ export class TradeMarkerPrimitive {
     return this._paneViews;
   }
 
-  // Rechtsklick-Hittest fürs Laniakea-Kontextmenü (Chat 2026-08-01, siehe PriceChart.vue:
-  // contextmenu-Listener auf chartContainerRef) — liest die beim letzten Render aktualisierten
-  // Pixel-Koordinaten (_entry/_exit), statt Zeit/Preis erneut selbst umzurechnen. x/y sind
-  // CSS-Pixel relativ zum Chart-Container, exakt derselbe Koordinatenraum wie timeToCoordinate/
-  // priceToCoordinate liefern (kein pixelRatio-Faktor hier, der gilt nur fürs Bitmap-Zeichnen).
-  hitTest(x, y) {
+  // Distanz zum Laniakea-Kontextmenü (Chat 2026-08-01, zweite Runde — siehe PriceChart.vue:
+  // findNearbyLaniakeaCandidates) — kleinste Distanz zu Entry ODER Exit statt eines reinen
+  // Boolean-Treffers, damit sich mehrere nahegelegene Objekte nach Nähe sortieren lassen. Liest
+  // die beim letzten Render aktualisierten Pixel-Koordinaten (_entry/_exit), statt Zeit/Preis
+  // erneut selbst umzurechnen. x/y sind CSS-Pixel relativ zum Chart-Container, exakt derselbe
+  // Koordinatenraum wie timeToCoordinate/priceToCoordinate liefern (kein pixelRatio-Faktor hier,
+  // der gilt nur fürs Bitmap-Zeichnen).
+  distanceTo(x, y) {
     const { _entry: entry, _exit: exit } = this._paneViews[0];
+    let min = Infinity;
     for (const point of [entry, exit]) {
       if (!point || point.x === null || point.y === null) continue;
       const dx = point.x - x;
       const dy = point.y - y;
-      if (Math.sqrt(dx * dx + dy * dy) <= HIT_TEST_RADIUS) return true;
+      min = Math.min(min, Math.sqrt(dx * dx + dy * dy));
     }
-    return false;
+    return min;
   }
 
   get trade() {
