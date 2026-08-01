@@ -60,6 +60,16 @@ function onNoteInput(entryId, value) {
           – {{ fmtPrice(row.entry.tradeSetup.obTop, pricePrecisionForInstrument(row.entry.tradeSetup.instrument)) }}
         </div>
       </template>
+      <template v-else-if="row.entry.kind === 'trade_confirmation'">
+        <div class="laniakea-panel-entry-header">
+          ✔ Bestätigung #{{ row.entry.tradeConfirmationId }}
+          <button class="laniakea-panel-remove" title="Aus Laniakea-Kontext entfernen" @click="emit('remove', row.entry.id)">🗑</button>
+        </div>
+        <div v-if="row.entry.tradeConfirmation" class="laniakea-panel-entry-prices">
+          {{ fmtPrice(row.entry.tradeConfirmation.rangeLow, 5) }} – {{ fmtPrice(row.entry.tradeConfirmation.rangeHigh, 5) }}
+          · {{ row.entry.tradeConfirmation.touchedTime ? "Touched" : "Aktiv" }}
+        </div>
+      </template>
       <template v-else-if="row.trade">
         <div class="laniakea-panel-entry-header">
           <span class="trade-direction" :class="row.trade.direction">{{ row.trade.direction === "short" ? "Short" : "Long" }}</span>

@@ -14,13 +14,15 @@ export function registerLaniakeaTools(server: McpServer) {
     {
       title: "Laniakea-Kontext",
       description:
-        "Die trade_positions, OB-Zonen und Trade-Setups, die Philip gerade per Rechtsklick " +
-        "(Trades-Tabelle, Chart-Trade-Marker, Chart-OB-Zone oder die '#<id>'-Box am ursprünglichen " +
-        "M5-Setup eines geloggten Trades) 'an dich übergeben' hat, samt optionaler Notiz und voller " +
-        "Daten (bei kind='trade_position': dealing_range/targets/partial exits; bei kind='ob_zone': " +
-        "die volle ob_zones-Zeile; bei kind='trade_setup': die volle trade_setups-Zeile). Ruf dieses " +
-        "Tool proaktiv auf, wenn Philip sagt 'schau dir das mal an' o.ä., statt auf eine Beschreibung " +
-        "per Text zu warten — das ist genau der Zweck dieses Tools.",
+        "Die trade_positions, OB-Zonen, Trade-Setups und Trade-Bestätigungen, die Philip gerade " +
+        "per Rechtsklick (Trades-Tabelle, Chart-Trade-Marker, Chart-OB-Zone, die '#<id>'-Box am " +
+        "ursprünglichen M5-Setup eines geloggten Trades, oder die '✔ ...'-Bestätigungs-Box) 'an " +
+        "dich übergeben' hat, samt optionaler Notiz und voller Daten (bei kind='trade_position': " +
+        "dealing_range/targets/partial exits; bei kind='ob_zone': die volle ob_zones-Zeile; bei " +
+        "kind='trade_setup': die volle trade_setups-Zeile; bei kind='trade_confirmation': die volle " +
+        "trade_confirmations-Zeile). Ruf dieses Tool proaktiv auf, wenn Philip sagt 'schau dir das " +
+        "mal an' o.ä., statt auf eine Beschreibung per Text zu warten — das ist genau der Zweck " +
+        "dieses Tools.",
       inputSchema: {},
     },
     async () => json(await getLaniakeaContext()),

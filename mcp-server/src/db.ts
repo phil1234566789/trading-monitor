@@ -95,12 +95,13 @@ export async function getJournal(instrument?: string, source?: string, limit = 5
 
 // Laniakea-Kontext (Chat 2026-08-01, siehe supabase/migrations/20260801120000_laniakea_context.sql,
 // 20260801130000_laniakea_context_ob_zones.sql, 20260801140000_laniakea_context_trade_setups.sql,
-// src/laniakeaContext.js): trade_positions, ob_zones ODER trade_setups, die Philip per Rechtsklick
-// "an Lana übergeben" hat (kind unterscheidet, welches der drei embeds befüllt ist — bei z.B. einer
-// trade_position-Zeile sind ob_zones/trade_setups null und umgekehrt, kein zusätzlicher Filter
-// nötig, PostgREST liefert einfach null fürs nicht zutreffende Embed). Kein Snapshot in der Tabelle
+// 20260801150000_laniakea_context_trade_confirmations.sql, src/laniakeaContext.js):
+// trade_positions, ob_zones, trade_setups ODER trade_confirmations, die Philip per Rechtsklick "an
+// Lana übergeben" hat (kind unterscheidet, welches der vier embeds befüllt ist — bei z.B. einer
+// trade_position-Zeile sind die übrigen drei null und umgekehrt, kein zusätzlicher Filter nötig,
+// PostgREST liefert einfach null fürs nicht zutreffende Embed). Kein Snapshot in der Tabelle
 // selbst — derselbe Embed-Shape wie getJournal (trade_positions.* + dealing_ranges + trade_targets/
-// trade_partial_exits) für trade_position, volle Zeile für ob_zone/trade_setup — damit Lana beim
+// trade_partial_exits) für trade_position, volle Zeile für die übrigen drei — damit Lana beim
 // Fetch immer die aktuellen Werte sieht statt eines möglicherweise veralteten Stands.
 export async function getLaniakeaContext() {
   const { data, error } = await supabase
@@ -109,7 +110,8 @@ export async function getLaniakeaContext() {
       "id, kind, note, created_at, " +
         "trade_positions(*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, trade_targets(price)), trade_partial_exits(price, exit_time, portion_pct)), " +
         "ob_zones(*), " +
-        "trade_setups(*)",
+        "trade_setups(*), " +
+        "trade_confirmations(*)",
     )
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);

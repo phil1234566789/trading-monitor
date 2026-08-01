@@ -83,6 +83,9 @@ const props = defineProps({
   // Laniakea-Kontext, dritte Art (Chat 2026-08-01, dritte Runde) — Set von trade_setups.id, siehe
   // refreshTradeSetupLinksInternal.
   laniakeaTradeSetupIds: { type: Set, default: () => new Set() },
+  // Laniakea-Kontext, vierte Art (Chat 2026-08-01, vierte Runde) — Set von trade_confirmations.id
+  // (nur kind='ob'-Bestätigungen zeichnen überhaupt eine Box, siehe refreshTradeConfirmationLinksInternal).
+  laniakeaTradeConfirmationIds: { type: Set, default: () => new Set() },
   // Ein/Ausblenden der eigenen geloggten Trades (Chat 2026-07-27) — Untermenü-Toggle unter dem
   // übergeordneten "Trades"-Button (showTradeSetups); beide zusammen müssen an sein, damit Trades
   // gezeichnet werden (Bug-Report Philip 2026-07-28: "übergeordneter Trades-Toggle soll Trades
@@ -921,14 +924,20 @@ function refreshTradeConfirmationLinksInternal() {
       // — dieselbe Begründung, dieselbe touchedTime-vor-liveObZoneState-Priorität).
       if (confirmation.kind === "ob" && confirmation.rangeLow != null && confirmation.rangeHigh != null) {
         const endTime = confirmation.touchedTime ?? liveObZoneState(confirmation)?.endTime ?? candles[candles.length - 1].time;
+        // Laniakea-Kontext, vierte Art (Chat 2026-08-01, vierte Runde — Bug-Report Philip: DIESE
+        // Box, "✔ OB 1,15229 #22", wurde mit der Trade-Setup-Link-Box verwechselt, war bisher
+        // komplett unverdrahtet). confirmationId ist bereits die echte trade_confirmations.id.
+        const inLaniakeaContext = props.laniakeaTradeConfirmationIds?.has(confirmation.id) ?? false;
         const primitive = new OrderBlockPrimitive(
-          { top: confirmation.rangeHigh, bottom: confirmation.rangeLow, startTime: confirmation.sourceTime, endTime },
+          { top: confirmation.rangeHigh, bottom: confirmation.rangeLow, startTime: confirmation.sourceTime, endTime, confirmationId: confirmation.id, instrument: t.instrument },
           {
             fillColor: cssColorScaled("tradeConfirmation", TRADE_SETUP_OB_FILL_RATIO),
             borderColor: cssColorScaled("tradeConfirmation", TRADE_SETUP_OB_BORDER_RATIO),
             borderWidth: lineWidth("tradeConfirmation"),
             textColor: "rgba(255, 255, 255, 0.9)",
             label,
+            inLaniakeaContext,
+            laniakeaColor: cssColor("laniakea"),
           },
           candles,
         );
@@ -2295,15 +2304,32 @@ onMounted(() => {
         });
       }
     }
+    // Trade-Bestätigungs-Box, kind='ob' (vierte Art, Chat 2026-08-01, vierte Runde — Bug-Report
+    // Philip: "✔ OB 1,15229 #22" wurde mit der Trade-Setup-Link-Box verwechselt, bisher komplett
+    // unverdrahtet). tradeConfirmationLinkPrimitives ist GEMISCHT (OrderBlockPrimitive für kind='ob',
+    // LiquidityLinePrimitive für kind='pivot'/'fib', siehe refreshTradeConfirmationLinksInternal) —
+    // instanceof-Guard statt einfach .distanceTo() aufzurufen, sonst Crash auf einer Linie ohne
+    // diese Methode. confirmationId ist bereits die echte trade_confirmations.id.
+    for (const p of tradeConfirmationLinkPrimitives) {
+      if (!(p instanceof OrderBlockPrimitive)) continue;
+      const distance = p.distanceTo(x, y);
+      if (distance <= LANIAKEA_SEARCH_RADIUS) {
+        candidates.push({ kind: "trade_confirmation", confirmationId: p.zone.confirmationId, instrument: p.zone.instrument, distance });
+      }
+    }
     // Dedupe (Chat 2026-08-01, dritte Runde) — mehrere Ausführungen (trade_positions) derselben
     // Dealing Range teilen sich dasselbe verlinkte Setup, tauchten deshalb als exakt gleicher
-    // Kandidat mehrfach in der Liste auf ("Short-Setup #105" zweimal). Key ist harmlos generisch
-    // gehalten (kind + jeweilige Id), auch wenn trade_position/ob_zone in der Praxis nie
-    // duplizieren — spart eine kind-Sonderbehandlung hier.
+    // Kandidat mehrfach in der Liste auf ("Short-Setup #105" zweimal).
+    const candidateKey = (c) => {
+      if (c.kind === "trade_position") return `trade_position:${c.trade.id}`;
+      if (c.kind === "ob_zone") return `ob_zone:${c.zone.timeframe}|${c.zone.dir}|${c.zone.startTime}`;
+      if (c.kind === "trade_setup") return `trade_setup:${c.tradeSetupId}`;
+      return `trade_confirmation:${c.confirmationId}`;
+    };
     const seen = new Set();
     const deduped = [];
     for (const c of candidates.sort((a, b) => a.distance - b.distance)) {
-      const key = `${c.kind}:${c.kind === "trade_position" ? c.trade.id : c.kind === "ob_zone" ? `${c.zone.timeframe}|${c.zone.dir}|${c.zone.startTime}` : c.tradeSetupId}`;
+      const key = candidateKey(c);
       if (seen.has(key)) continue;
       seen.add(key);
       deduped.push(c);
@@ -2318,7 +2344,8 @@ onMounted(() => {
     return (
       tradePrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
       orderBlockPrimitives.some((p) => p.zone.timeframe !== "5M" && p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
-      tradeSetupLinkPrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS)
+      tradeSetupLinkPrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
+      tradeConfirmationLinkPrimitives.some((p) => p instanceof OrderBlockPrimitive && p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS)
     );
   }
 
@@ -2496,6 +2523,7 @@ watch(() => props.hoveredTradeId, refreshTradeMarkersInternal);
 watch(() => props.laniakeaTradeIds, refreshTradeMarkersInternal);
 watch(() => props.laniakeaObZoneKeys, refreshPoiZonesInternal);
 watch(() => props.laniakeaTradeSetupIds, refreshTradeSetupLinksInternal);
+watch(() => props.laniakeaTradeConfirmationIds, refreshTradeConfirmationLinksInternal);
 watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 // tscCalloutModeActive wechselt (TSC wird ein-/ausgeblendet, Locked-Zustand etc.) -> Canvas-Text
 // muss sofort erscheinen/verschwinden, nicht erst beim nächsten claudeAnnotations-Wechsel.

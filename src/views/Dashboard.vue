@@ -433,6 +433,7 @@ const laniakeaAddPopupError = ref(null);
 function laniakeaCandidateLabel(c) {
   if (c.kind === "ob_zone") return `${c.zone.timeframe} ${c.zone.dir === 1 ? "Bull" : "Bear"}-OB`;
   if (c.kind === "trade_setup") return `${c.direction === "short" ? "Short" : "Long"}-Setup #${c.tradeSetupId} (${c.instrument})`;
+  if (c.kind === "trade_confirmation") return `✔ Bestätigung #${c.confirmationId} (${c.instrument})`;
   return `${c.trade.direction === "short" ? "Short" : "Long"} #${c.trade.dealingRangeId} · Position #${c.trade.id}`;
 }
 
@@ -469,6 +470,9 @@ async function onLaniakeaAddConfirm(note) {
     // Kein Resolve nötig — trade_setups.id ist schon direkt bekannt (siehe PriceChart.vue:
     // refreshTradeSetupLinksInternal), anders als bei ob_zone.
     await addLaniakeaEntry("trade_setup", target.tradeSetupId, note);
+  } else if (target.kind === "trade_confirmation") {
+    // Kein Resolve nötig — trade_confirmations.id ist schon direkt bekannt, analog zu trade_setup.
+    await addLaniakeaEntry("trade_confirmation", target.confirmationId, note);
   } else {
     await addLaniakeaEntry("trade_position", target.trade.id, note);
   }
@@ -665,6 +669,12 @@ const laniakeaTradeSetupIds = computed(() => {
       .filter((e) => e.kind === "trade_setup" && e.tradeSetup?.instrument === currentSymbol.value)
       .map((e) => e.tradeSetupId),
   );
+});
+// Bestätigungs-Pendant (Chat 2026-08-01, vierte Runde) — echte Id, kein Symbol-Filter möglich
+// (trade_confirmations hat keine eigene instrument-Spalte, siehe laniakeaContext.js) — unkritisch,
+// die zugehörige Box existiert im Chart ohnehin nur für Trades des gerade angezeigten Symbols.
+const laniakeaTradeConfirmationIds = computed(() => {
+  return new Set(laniakeaContextEntries.value.filter((e) => e.kind === "trade_confirmation").map((e) => e.tradeConfirmationId));
 });
 const { data: poiZones, refresh: refreshPoiZones } = usePolledFetch(
   () => (isBtc.value ? fetchPoiZones(currentSymbol.value) : []),
@@ -1064,6 +1074,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :laniakea-trade-ids="laniakeaTradeIds"
     :laniakea-ob-zone-keys="laniakeaObZoneKeys"
     :laniakea-trade-setup-ids="laniakeaTradeSetupIds"
+    :laniakea-trade-confirmation-ids="laniakeaTradeConfirmationIds"
     :show-trades="showTrades"
     :poi-zones="poiZones"
     :show-obs-m5="showObsM5"
