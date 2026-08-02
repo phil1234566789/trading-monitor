@@ -106,9 +106,16 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // die echte Wanduhrzeit (analog src/dataExport.js currentTimeSec).
   const currentTimeSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
 
+  // getLiquidityLevels bekommt currentTimeSec als asOfSec, damit im Replay der Sweep-Stand "as of
+  // Replay-Zeitpunkt" rauskommt statt des aktuellen Live-Stands (siehe db.ts applyAsOf) — sonst
+  // sind spätere Sweeps (nach dem Replay-Punkt) schon "verbraucht" und verdrängen per
+  // RECENT_SWEEP_COUNT genau die Level, die zum Analysezeitpunkt noch relevant/unberührt waren.
+  // getObZones bekommt currentTimeSec als asOfSec aus demselben Grund wie liquidityLevels oben —
+  // sonst zeigt get_data_export bei aktivem Replay auch Zonen, die erst nach dem Replay-Zeitpunkt
+  // entstanden/touched/invalidated wurden (Bug-Report Lana 2026-08-02).
   const [liquidityLevels, obZones, structureResult] = await Promise.all([
-    getLiquidityLevels(instrument),
-    getObZones(instrument),
+    getLiquidityLevels(instrument, undefined, false, currentTimeSec),
+    getObZones(instrument, undefined, false, currentTimeSec),
     compute1hStructureState(instrument, currentTimeSec, structureConfig),
   ]);
 

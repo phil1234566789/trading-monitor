@@ -5,13 +5,43 @@ import { supabase } from "./supabaseClient.js";
 // trade_positions, trade_targets, trade_partial_exits, news_events, trading_schedules,
 // claude_annotations) — alle mit anon-select-RLS, siehe CLAUDE.md "MCP-Server".
 
-export async function getObZones(instrument: string, timeframe?: string, includeAll = false) {
+// Analog zu applyAsOf unten für liquidity_levels, aber für ob_zones: end_time ist hier der
+// deterministische Zeitpunkt, an dem die Zone entweder touched ODER invalidated wurde (siehe
+// detectOrderBlocks in _shared/orderBlocks.ts — waechst mit jeder Kerze, friert bei einem der
+// beiden Ereignisse ein). Ein Pivot/eine Zone, deren start_time NACH asOfSec liegt, existierte zu
+// diesem Zeitpunkt noch nicht; touched/invalidated werden zurückgesetzt, wenn end_time NACH
+// asOfSec liegt (das Ereignis war aus Sicht des Replay-Zeitpunkts noch nicht passiert). Bug-Report
+// Lana 2026-08-02: get_data_export zeigte Zonen mit start_time NACH dem Replay-Cutoff (z.B.
+// 2026-07-31T17:00 bei einem 08:00-Cutoff) — derselbe Live-statt-as-of-Bug wie zuvor bei
+// liquidityLevels.
+function applyAsOfZones<T extends { start_time: string; touched: boolean; invalidated: boolean; end_time: string | null }>(
+  rows: T[],
+  asOfSec: number | undefined,
+): T[] {
+  if (asOfSec == null) return rows;
+  return rows
+    .filter((r) => new Date(r.start_time).getTime() / 1000 <= asOfSec)
+    .map((r) => {
+      if ((r.touched || r.invalidated) && r.end_time != null && new Date(r.end_time).getTime() / 1000 > asOfSec) {
+        return { ...r, touched: false, invalidated: false, end_time: null };
+      }
+      return r;
+    });
+}
+
+export async function getObZones(instrument: string, timeframe?: string, includeAll = false, asOfSec?: number) {
   let query = supabase.from("ob_zones").select("*").eq("instrument", instrument).order("start_time", { ascending: true });
   if (timeframe) query = query.eq("timeframe", timeframe);
-  if (!includeAll) query = query.eq("invalidated", false).eq("touched", false);
+  // Der SQL-seitige !includeAll-Filter arbeitet auf dem LIVE-Stand von touched/invalidated — bei
+  // aktivem asOfSec brauchen wir stattdessen den vollen Zeilensatz, rechnen erst in JS auf den
+  // Replay-Zeitpunkt zurück und filtern danach (sonst würden Zonen, die erst NACH dem Replay-Punkt
+  // touched/invalidated wurden, hier schon in Postgres fälschlich rausfallen).
+  if (!includeAll && asOfSec == null) query = query.eq("invalidated", false).eq("touched", false);
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return data ?? [];
+  let rows = applyAsOfZones(data ?? [], asOfSec);
+  if (!includeAll && asOfSec != null) rows = rows.filter((r) => !r.invalidated && !r.touched);
+  return rows;
 }
 
 const LIQUIDITY_MAX_RELEVANT = 10; // siehe src/liquidity.js LIQUIDITY_MAX_RELEVANT
@@ -48,7 +78,31 @@ function filterRelevantRows<T extends { touched: boolean; end_time: string | nul
   return result;
 }
 
-export async function getLiquidityLevels(instrument: string, timeframe?: string, includeAll = false) {
+// Rekonstruiert den Stand "as of asOfSec" statt des Live-Stands von jetzt: ein Pivot, der erst NACH
+// asOfSec entstanden ist, existierte zu diesem Zeitpunkt noch nicht (raus); ein Level, das laut DB
+// zwar "touched" ist, dessen end_time aber NACH asOfSec liegt, war zu diesem Zeitpunkt noch
+// unberührt (touched/end_time zurück auf false/null) — sonst sieht ein Replay-Snapshot Sweeps, die
+// aus Sicht der simulierten Zeit noch gar nicht passiert sind. Bug-Report Philip 2026-08-02: beim
+// Backtesten von historischen Setups zeigte get_data_export den AKTUELLEN Live-Sweep-Stand
+// (inkl. Sweeps von nach dem Replay-Zeitpunkt) statt des Stands zum Replay-Zeitpunkt — dadurch
+// fielen für den Analysezeitpunkt relevante, damals noch unberührte Level durch den
+// RECENT_SWEEP_COUNT-Filter, weil sie inzwischen (nach dem Replay-Punkt) längst gesweept wurden.
+function applyAsOf<T extends { pivot_time: string; touched: boolean; end_time: string | null }>(
+  rows: T[],
+  asOfSec: number | undefined,
+): T[] {
+  if (asOfSec == null) return rows;
+  return rows
+    .filter((r) => new Date(r.pivot_time).getTime() / 1000 <= asOfSec)
+    .map((r) => {
+      if (r.touched && r.end_time != null && new Date(r.end_time).getTime() / 1000 > asOfSec) {
+        return { ...r, touched: false, end_time: null };
+      }
+      return r;
+    });
+}
+
+export async function getLiquidityLevels(instrument: string, timeframe?: string, includeAll = false, asOfSec?: number) {
   let query = supabase
     .from("liquidity_levels")
     .select("*")
@@ -57,7 +111,7 @@ export async function getLiquidityLevels(instrument: string, timeframe?: string,
   if (timeframe) query = query.eq("timeframe", timeframe);
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  const rows = data ?? [];
+  const rows = applyAsOf(data ?? [], asOfSec);
   if (includeAll) return rows;
   const highs = filterRelevantRows(rows.filter((r) => r.direction === "high"), LIQUIDITY_MAX_RELEVANT);
   const lows = filterRelevantRows(rows.filter((r) => r.direction === "low"), LIQUIDITY_MAX_RELEVANT);

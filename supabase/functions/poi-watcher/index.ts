@@ -17,6 +17,16 @@ const TIMEFRAMES: { label: "4H" | "1H"; okxBar: string; forexPeriod: string }[] 
   { label: "1H", okxBar: "1H", forexPeriod: "1h" },
 ];
 const CANDLE_LIMIT = 300;
+// Nur für den Forex-1H-Fetch (nicht BTC/OKX, nicht Forex-4H — die bleiben bei CANDLE_LIMIT=300):
+// 300h (~12,5 Tage) reichten nicht, um lange unberührte 1H-Liquiditäts-Level (und 1H-OB-Zonen, die
+// denselben Kerzensatz mitnutzen) im Blick zu behalten — Philip tradet von Ziel zu Ziel und
+// braucht dafür ein paar unberührte Level ober-/unterhalb des Kurses, auch wenn die schon
+// Wochen/Monate alt sind. Bug-Report 2026-08-02: ein 45 Tage alter, nie erneut erkannter Pivot
+// (1,15297, 18.06.) fehlte deshalb komplett in liquidity_levels. 3000h (~125 Tage) statt 300h,
+// weiterhin nur EIN Twelve-Data-Request pro Stunde (kostet nichts zusätzlich am Rate-Limit,
+// siehe outputsize-Cap 5000 in _shared/twelvedata/client.ts) — der nächste isH1RefreshTick-Lauf
+// erkennt/backfillt fehlende ältere Level automatisch, kein einmaliges Backfill-Skript nötig.
+const FOREX_H1_LOOKBACK_CANDLES = 3000;
 const LIQUIDITY_FRACTAL_PERIOD = 5; // siehe LIQUIDITY_FRACTAL_PERIOD in PriceChart.vue
 
 // Trade-Setup-Parameter (Liquidity Sweep + Protected M5-Fraktal + M5-OB, siehe
@@ -136,7 +146,7 @@ async function fetchForexBatch(
   includeH4: boolean,
 ): Promise<{ currentPrice: number; candlesByTf: Map<string, Candle[]> }> {
   const [h1Candles, m5Candles, h4Candles] = await Promise.all([
-    includeH1 ? fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "1h", count: CANDLE_LIMIT }) : Promise.resolve(null),
+    includeH1 ? fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "1h", count: FOREX_H1_LOOKBACK_CANDLES }) : Promise.resolve(null),
     fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "5m", count: TRADE_SETUP_M5_CANDLE_LIMIT }),
     includeH4 ? fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "4h", count: CANDLE_LIMIT }) : Promise.resolve(null),
   ]);
@@ -204,9 +214,22 @@ function isInWindows(date: Date, windows: WeekdayWindows | undefined, startBuffe
 // verkürzt).
 const FETCH_START_BUFFER_MIN = 10;
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+    // Manueller Override für den regulären isH1RefreshTick-Gate (nur volle UTC-Stunde) — der
+    // 5min-Cron schickt immer `{}` (siehe poi_watcher_cron_5min-Migration), also bleibt das
+    // reguläre Throttling für den Cron unverändert; nur ein gezielter manueller Aufruf mit
+    // {"forceH1Refresh": true} im Body erzwingt einen sofortigen H1-Refetch (z.B. um nach der
+    // FOREX_H1_LOOKBACK_CANDLES-Erhöhung 2026-08-02 nicht bis zur nächsten vollen Stunde zu warten).
+    let forceH1Refresh = false;
+    try {
+      const body = await req.json();
+      forceH1Refresh = body?.forceH1Refresh === true;
+    } catch {
+      // Kein/kein valides JSON-Body (regulärer Cron-Aufruf mit leerem Body) — kein Fehler, einfach false.
+    }
 
     // Ein/Aus-Schalter je Alarm-Typ (siehe "Alarme"-Seite im Dashboard) — steuert NUR den
     // Telegram-Versand, nie die Erkennung/Persistierung selbst (siehe Kommentare unten an den
@@ -237,7 +260,7 @@ Deno.serve(async () => {
     for (const cfg of INSTRUMENTS) {
       const alarmWindows = alarmWindowsByInstrument.get(cfg.instrument);
       const forexFetchWindow = isInWindows(now, alarmWindows, FETCH_START_BUFFER_MIN);
-      if (cfg.source === "twelvedata" && !forexFetchWindow) {
+      if (cfg.source === "twelvedata" && !forexFetchWindow && !forceH1Refresh) {
         (summary.instruments as Record<string, unknown>)[cfg.instrument] = { skipped: "outside forex fetch window" };
         continue;
       }
@@ -247,7 +270,7 @@ Deno.serve(async () => {
       // in einem eigenen "Fraktal touched"-Konzept). Deshalb hier der forex_h1_cache-Fallback,
       // nicht direkt candlesByTf — sonst würde jeder Skip-Tick trotzdem wieder volle Arbeit
       // machen und der Cache brächte nichts.
-      let h1RefreshTick = isH1RefreshTick(now);
+      let h1RefreshTick = isH1RefreshTick(now) || forceH1Refresh;
       let h1CandlesForSetup: Candle[] | undefined;
       if (cfg.source === "twelvedata" && !h1RefreshTick) {
         const { data: h1CacheRow, error: h1CacheError } = await supabase

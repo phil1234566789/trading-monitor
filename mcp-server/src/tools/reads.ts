@@ -77,9 +77,10 @@ export function registerReadTools(server: McpServer) {
         instrument: INSTRUMENT,
         timeframe: z.enum(["1H", "4H"]).optional(),
         includeAll: z.boolean().optional().describe("Auch invalidierte/angetestete Zonen mitliefern"),
+        asOfSec: z.number().optional().describe("Unix-Sekunden für Backtest/Replay: Touched/Invalidated-Stand wird auf diesen Zeitpunkt zurückgerechnet statt des aktuellen Live-Stands geliefert"),
       },
     },
-    async ({ instrument, timeframe, includeAll }) => json(await getObZones(instrument, timeframe, includeAll)),
+    async ({ instrument, timeframe, includeAll, asOfSec }) => json(await getObZones(instrument, timeframe, includeAll, asOfSec)),
   );
 
   server.registerTool(
@@ -91,9 +92,10 @@ export function registerReadTools(server: McpServer) {
         instrument: INSTRUMENT,
         timeframe: z.enum(["1h", "5m"]).optional(),
         includeAll: z.boolean().optional(),
+        asOfSec: z.number().optional().describe("Unix-Sekunden für Backtest/Replay: Sweep-Stand wird auf diesen Zeitpunkt zurückgerechnet statt des aktuellen Live-Stands geliefert"),
       },
     },
-    async ({ instrument, timeframe, includeAll }) => json(await getLiquidityLevels(instrument, timeframe, includeAll)),
+    async ({ instrument, timeframe, includeAll, asOfSec }) => json(await getLiquidityLevels(instrument, timeframe, includeAll, asOfSec)),
   );
 
   server.registerTool(
