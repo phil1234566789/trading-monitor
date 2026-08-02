@@ -36,9 +36,14 @@ export function registerReadTools(server: McpServer) {
       description:
         "RUFE DIESES TOOL ZUERST AUF, bevor du andere trading-monitor-Tools nutzt. Liefert in einem " +
         "Call: M5-Kerzen des Tages + Asia-Session-Range, den 1H-Structure-Trend, relevante " +
-        "Liquidity-Level (1H+M5) und relevante OB-Zonen (1H+4H) für ein Instrument — dasselbe " +
-        "Bündel wie der 'Daten-Export'-Button in der App. Nutze die granularen get_*-Tools nur, " +
-        "wenn du darüber hinaus mehr brauchst (andere Zeitspanne, Journal, News, Handelszeiten). " +
+        "persistierte Liquidity-Level (1H, inkl. context wie 'asia high' falls eine passende Session " +
+        "existiert) und OB-Zonen (1H+4H) für ein Instrument — dasselbe Bündel wie der 'Daten-Export'-" +
+        "Button in der App. ZUSÄTZLICH m5LiquidityLevels/m5ObZones: live über ein 7-Tage-Fenster neu " +
+        "erkannt (exakt derselbe Algorithmus UND Lookback wie der Button UND Philips 'Liquidität'/" +
+        "'OB M5'-Chart-Toggles, ebenfalls mit context) — anders als liquidityLevels/obZones KEINE " +
+        "DB-Zeilen (M5 wird von poi-watcher nie persistiert), deshalb auch kein späteres Update: " +
+        "touched/invalidated gelten nur zum Zeitpunkt dieses Calls. Nutze die granularen get_*-Tools " +
+        "nur, wenn du darüber hinaus mehr brauchst (andere Zeitspanne, Journal, News, Handelszeiten). " +
         "Der Structure-Trend nutzt standardmäßig einen rollierenden 7-Tage-Lookback (Periode " +
         "5/2) — falls Philip im Dashboard einen 'fixen Start' eingestellt hat (nur in seinem " +
         "Browser-localStorage sichtbar, nicht von hier aus abfragbar), frag ihn danach und gib es " +

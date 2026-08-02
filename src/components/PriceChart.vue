@@ -2276,15 +2276,46 @@ onMounted(() => {
       const distance = p.distanceTo(x, y);
       if (distance <= LANIAKEA_SEARCH_RADIUS) candidates.push({ kind: "trade_position", trade: p.trade, distance });
     }
-    // OB-Zonen — NUR 1H/4H sind Kandidaten, M5-Boxen existieren nie in der ob_zones-Tabelle (siehe
-    // orderBlocks.js/collectObsZones-Kommentar), dafür gäbe es also nichts zu speichern.
+    // OB-Zonen — 1H/4H lösen sich gegen die persistierte ob_zones-Zeile auf (kind="ob_zone").
+    // M5-Boxen existieren dort NIE (siehe orderBlocks.js/collectObsZones-Kommentar) — bekommen
+    // stattdessen einen eigenen Rohdaten-Snapshot-Kind (kind="m5_ob", Chat 2026-08-02: "Rohdaten-
+    // Snapshot", JEDE M5-Box soll klickbar sein, nicht nur bereits zu einem Trade-Setup gehörende).
     for (const p of orderBlockPrimitives) {
-      if (p.zone.timeframe === "5M") continue;
       const distance = p.distanceTo(x, y);
-      if (distance <= LANIAKEA_SEARCH_RADIUS) {
+      if (distance > LANIAKEA_SEARCH_RADIUS) continue;
+      if (p.zone.timeframe === "5M") {
+        candidates.push({
+          kind: "m5_ob",
+          zone: { instrument: props.symbol, dirNum: p.zone.dir, top: p.zone.top, bottom: p.zone.bottom, startTime: p.zone.startTime },
+          distance,
+        });
+      } else {
         candidates.push({
           kind: "ob_zone",
           zone: { instrument: props.symbol, timeframe: p.zone.timeframe, dir: p.zone.dir, startTime: p.zone.startTime },
+          distance,
+        });
+      }
+    }
+    // Liquiditäts-Level — im 1h-Chart entspricht die live gezeichnete Linie einer echten
+    // liquidity_levels-Zeile (poi-watcher persistiert nur Timeframe '1H', siehe supabase/functions/
+    // poi-watcher/index.ts), löst sich also per Natural-Key auf (kind="liquidity_level"). Auf jedem
+    // anderen Timeframe (Bug-Report Philip 2026-08-02: "ich will eine M5 LQ-Linie anklicken") gibt
+    // es dafür keine DB-Zeile, deshalb Rohdaten-Snapshot (kind="m5_liquidity_level", analog zu
+    // m5_ob oben) — inkl. timeframe-Feld (props.currentBar), da das nicht zwingend M5 sein muss.
+    for (const p of liquidityPrimitives) {
+      const distance = p.distanceTo(x, y);
+      if (distance > LANIAKEA_SEARCH_RADIUS) continue;
+      if (props.currentBar === "1h") {
+        candidates.push({
+          kind: "liquidity_level",
+          level: { instrument: props.symbol, timeframe: "1H", dirNum: p.level.dir, pivotTime: p.level.pivotTime },
+          distance,
+        });
+      } else {
+        candidates.push({
+          kind: "m5_liquidity_level",
+          level: { instrument: props.symbol, timeframe: props.currentBar, dirNum: p.level.dir, price: p.level.price, pivotTime: p.level.pivotTime },
           distance,
         });
       }
@@ -2323,7 +2354,10 @@ onMounted(() => {
     const candidateKey = (c) => {
       if (c.kind === "trade_position") return `trade_position:${c.trade.id}`;
       if (c.kind === "ob_zone") return `ob_zone:${c.zone.timeframe}|${c.zone.dir}|${c.zone.startTime}`;
+      if (c.kind === "m5_ob") return `m5_ob:${c.zone.dirNum}|${c.zone.top}|${c.zone.bottom}|${c.zone.startTime}`;
       if (c.kind === "trade_setup") return `trade_setup:${c.tradeSetupId}`;
+      if (c.kind === "liquidity_level") return `liquidity_level:${c.level.dirNum}|${c.level.pivotTime}`;
+      if (c.kind === "m5_liquidity_level") return `m5_liquidity_level:${c.level.timeframe}|${c.level.dirNum}|${c.level.pivotTime}`;
       return `trade_confirmation:${c.confirmationId}`;
     };
     const seen = new Set();
@@ -2343,9 +2377,10 @@ onMounted(() => {
   function hasNearbyLaniakeaCandidate(x, y) {
     return (
       tradePrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
-      orderBlockPrimitives.some((p) => p.zone.timeframe !== "5M" && p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
+      orderBlockPrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
       tradeSetupLinkPrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
-      tradeConfirmationLinkPrimitives.some((p) => p instanceof OrderBlockPrimitive && p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS)
+      tradeConfirmationLinkPrimitives.some((p) => p instanceof OrderBlockPrimitive && p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
+      liquidityPrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS)
     );
   }
 

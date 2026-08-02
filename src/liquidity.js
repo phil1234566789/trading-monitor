@@ -152,6 +152,25 @@ export class LiquidityLinePrimitive {
   paneViews() {
     return this._paneViews;
   }
+
+  get level() {
+    return this._level;
+  }
+
+  // Distanz zum Laniakea-Kontextmenü (Chat 2026-08-02, LQ-Level als fünfte Kontext-Art) — analog zu
+  // OrderBlockPrimitive.distanceTo (orderBlocks.js), aber für eine horizontale Strecke statt eines
+  // Rechtecks: 0 innerhalb des x-Bereichs bei exakter y-Höhe, sonst vertikaler Abstand innerhalb des
+  // Bereichs bzw. euklidischer Abstand zum nächstgelegenen Endpunkt außerhalb davon. x/y in
+  // CSS-Pixeln relativ zum Chart-Container, wie bei allen anderen Primitives hier.
+  distanceTo(x, y) {
+    const { _p1: p1, _p2: p2 } = this._paneViews[0];
+    if (p1.x === null || p1.y === null || p2.x === null || p2.y === null) return Infinity;
+    const left = Math.min(p1.x, p2.x);
+    const right = Math.max(p1.x, p2.x);
+    if (x < left) return Math.hypot(x - left, y - p1.y);
+    if (x > right) return Math.hypot(x - right, y - p1.y);
+    return Math.abs(y - p1.y);
+  }
 }
 
 // Konfigurierbar seit Chat 2026-07-25 (Style-Modal), siehe src/chartLineWidths.js.

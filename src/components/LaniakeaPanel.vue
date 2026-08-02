@@ -32,8 +32,8 @@ function onNoteInput(entryId, value) {
 
 <template>
   <div v-if="rows.length === 0" class="laniakea-panel-empty">
-    Noch nichts an Lana übergeben — Rechtsklick auf eine Trades-Zeile, einen Chart-Marker oder eine
-    OB-Zone → "Laniakea zeigen".
+    Noch nichts an Lana übergeben — Rechtsklick auf eine Trades-Zeile, einen Chart-Marker, eine
+    OB-Zone (auch M5) oder ein 1H-LQ-Level → "Laniakea zeigen".
   </div>
   <div v-else class="laniakea-panel-list">
     <div v-for="row in rows" :key="row.entry.id" class="laniakea-panel-entry">
@@ -68,6 +68,44 @@ function onNoteInput(entryId, value) {
         <div v-if="row.entry.tradeConfirmation" class="laniakea-panel-entry-prices">
           {{ fmtPrice(row.entry.tradeConfirmation.rangeLow, 5) }} – {{ fmtPrice(row.entry.tradeConfirmation.rangeHigh, 5) }}
           · {{ row.entry.tradeConfirmation.touchedTime ? "Touched" : "Aktiv" }}
+        </div>
+      </template>
+      <template v-else-if="row.entry.kind === 'liquidity_level'">
+        <div class="laniakea-panel-entry-header">
+          <span class="trade-direction" :class="row.entry.liquidityLevel?.direction === 'high' ? 'long' : 'short'">
+            {{ row.entry.liquidityLevel?.direction === "high" ? "Hoch" : "Tief" }}
+          </span>
+          1H LQ-Level ({{ row.entry.liquidityLevel?.instrument }})
+          <button class="laniakea-panel-remove" title="Aus Laniakea-Kontext entfernen" @click="emit('remove', row.entry.id)">🗑</button>
+        </div>
+        <div v-if="row.entry.liquidityLevel" class="laniakea-panel-entry-prices">
+          {{ fmtPrice(row.entry.liquidityLevel.price, pricePrecisionForInstrument(row.entry.liquidityLevel.instrument)) }}
+          · {{ row.entry.liquidityLevel.touched ? "Touched" : "Aktiv" }}
+        </div>
+      </template>
+      <template v-else-if="row.entry.kind === 'm5_ob'">
+        <div class="laniakea-panel-entry-header">
+          <span class="trade-direction" :class="row.entry.m5Ob?.direction">{{ row.entry.m5Ob?.direction === "short" ? "Short" : "Long" }}</span>
+          M5-OB ({{ row.entry.m5Ob?.instrument }})
+          <button class="laniakea-panel-remove" title="Aus Laniakea-Kontext entfernen" @click="emit('remove', row.entry.id)">🗑</button>
+        </div>
+        <div v-if="row.entry.m5Ob" class="laniakea-panel-entry-prices">
+          {{ fmtPrice(row.entry.m5Ob.bottom, pricePrecisionForInstrument(row.entry.m5Ob.instrument)) }}
+          – {{ fmtPrice(row.entry.m5Ob.top, pricePrecisionForInstrument(row.entry.m5Ob.instrument)) }}
+          · Snapshot, kein Live-Status
+        </div>
+      </template>
+      <template v-else-if="row.entry.kind === 'm5_liquidity_level'">
+        <div class="laniakea-panel-entry-header">
+          <span class="trade-direction" :class="row.entry.m5Liquidity?.direction === 'high' ? 'long' : 'short'">
+            {{ row.entry.m5Liquidity?.direction === "high" ? "Hoch" : "Tief" }}
+          </span>
+          {{ row.entry.m5Liquidity?.timeframe }} LQ-Level ({{ row.entry.m5Liquidity?.instrument }})
+          <button class="laniakea-panel-remove" title="Aus Laniakea-Kontext entfernen" @click="emit('remove', row.entry.id)">🗑</button>
+        </div>
+        <div v-if="row.entry.m5Liquidity" class="laniakea-panel-entry-prices">
+          {{ fmtPrice(row.entry.m5Liquidity.price, pricePrecisionForInstrument(row.entry.m5Liquidity.instrument)) }}
+          · Snapshot, kein Live-Status
         </div>
       </template>
       <template v-else-if="row.trade">

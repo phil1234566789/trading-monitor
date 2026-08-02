@@ -17,7 +17,8 @@ import { fmtDateTime } from "./format.js";
 import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructureState } from "./marketStructureAnalysis";
 import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "./liquidity.js";
 import { detectOrderBlocks } from "./orderBlocks.js";
-import { sessions, sessionOccurrences } from "./sessions.js";
+import { sessions } from "./sessions.js";
+import { buildSessionContextLookup, contextForPivot } from "./sessionOccurrences.js";
 import { barSecondsFor } from "./timeframes.js";
 import { PIP_SIZE } from "./pipConfig.js";
 
@@ -151,45 +152,6 @@ function formatDatedTime(unixSec) {
   return `${berlinDateStrFor(unixSec)} ${TIME_FORMATTER.format(new Date(unixSec * 1000))}`;
 }
 
-// Sitzungs-Kontext fürs LQ-Level (Chat 2026-07-30, Philip: "wenn ne Session 'high/low
-// entscheidend' true hat, dann & das LQ-Level gehört zur Session ... context: 'asia high'") — nur
-// Sessions mit highLowRelevant (SessionsModal.vue), deren TATSÄCHLICHES Zeitfenster (DST-aware,
-// dieselbe sessionOccurrences-Funktion wie der Live-Chart-Indikator) den Pivot-Zeitpunkt enthält.
-// Erste passende Session gewinnt — mehrere überlappende highLowRelevant-Sessions desselben
-// Instruments wären ein Konfigurationsfall, den Philip im Sessions-Modal selbst vermeiden müsste,
-// keine eigene Prioritäts-Logik hier nötig. "sessions" ist der reaktive Modul-Singleton aus
-// sessions.js (schon vom App-Start her geladen, sobald Philip den Daten-Export überhaupt öffnen
-// kann) — kein eigener Fetch.
-function buildSessionContextLookup(asset, rangeStartSec, rangeEndSec) {
-  return sessions
-    .filter((s) => s.instrument === asset && s.highLowRelevant)
-    .map((session) => ({
-      label: session.label || "",
-      occurrences: sessionOccurrences(
-        session.fromMinutes,
-        session.toMinutes,
-        rangeStartSec,
-        rangeEndSec,
-        (utcSec) => berlinOffsetMinutes(utcSec * 1000),
-        session.days,
-      ),
-    }));
-}
-
-// "asia high"/"asia low" (Philips Beispiel) — Label klein geschrieben + high/low je nach
-// Level-Richtung, kein separates Text-Template pro Session nötig. Philip: "selbst wenn noch mehr
-// zum context dazukommt, reicht es einfach mehr Text dazuzuschreiben" — bewusst ein einzelner
-// freier String, keine strukturierte {session, kind}-Aufteilung.
-function contextForPivot(pivotTime, dir, sessionContextLookup) {
-  const direction = dir === 1 ? "high" : "low";
-  for (const { label, occurrences } of sessionContextLookup) {
-    if (occurrences.some((o) => pivotTime >= o.startSec && pivotTime < o.endSec)) {
-      return `${label.toLowerCase()} ${direction}`.trim();
-    }
-  }
-  return null;
-}
-
 // touched:false (noch aktiv) ODER touched:true (einer der RECENT_SWEEP_COUNT zuletzt gesweepten,
 // siehe filterRelevantLevels in liquidity.js) — deshalb touchedAt nur bei den touched-Einträgen,
 // sonst wäre es ohnehin null. context ebenso nur, wenn eine passende Session gefunden wurde.
@@ -221,7 +183,12 @@ function computeLiquidityLevelsForExport(candles, asset) {
   const { highs, lows } = detectLiquidityLevels(candles, LIQUIDITY_FRACTAL_PERIOD);
   const rangeStartSec = candles.length > 0 ? candles[0].time : 0;
   const rangeEndSec = candles.length > 0 ? candles[candles.length - 1].time + 1 : 0;
-  const sessionContextLookup = buildSessionContextLookup(asset, rangeStartSec, rangeEndSec);
+  const sessionContextLookup = buildSessionContextLookup(
+    sessions.filter((s) => s.instrument === asset),
+    rangeStartSec,
+    rangeEndSec,
+    (utcSec) => berlinOffsetMinutes(utcSec * 1000),
+  );
   return {
     highs: filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true).map((lvl) => formatLiquidityLevel(lvl, sessionContextLookup)),
     lows: filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true).map((lvl) => formatLiquidityLevel(lvl, sessionContextLookup)),

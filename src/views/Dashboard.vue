@@ -29,9 +29,12 @@ import { fetchPoiZones } from "../poiZones.js";
 import {
   fetchLaniakeaContext,
   addLaniakeaEntry,
+  addLaniakeaM5ObEntry,
+  addLaniakeaM5LiquidityEntry,
   removeLaniakeaEntry,
   updateLaniakeaNote,
   resolveObZoneId,
+  resolveLiquidityLevelId,
   obZoneEntryNaturalKey,
 } from "../laniakeaContext.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
@@ -432,8 +435,11 @@ const laniakeaAddPopupError = ref(null);
 // dazu, damit jede Zeile eindeutig ist.
 function laniakeaCandidateLabel(c) {
   if (c.kind === "ob_zone") return `${c.zone.timeframe} ${c.zone.dir === 1 ? "Bull" : "Bear"}-OB`;
+  if (c.kind === "m5_ob") return `M5 ${c.zone.dirNum === 1 ? "Bull" : "Bear"}-OB`;
   if (c.kind === "trade_setup") return `${c.direction === "short" ? "Short" : "Long"}-Setup #${c.tradeSetupId} (${c.instrument})`;
   if (c.kind === "trade_confirmation") return `✔ Bestätigung #${c.confirmationId} (${c.instrument})`;
+  if (c.kind === "liquidity_level") return `1H LQ-Level ${c.level.dirNum === 1 ? "Hoch" : "Tief"}`;
+  if (c.kind === "m5_liquidity_level") return `${c.level.timeframe} LQ-Level ${c.level.dirNum === 1 ? "Hoch" : "Tief"}`;
   return `${c.trade.direction === "short" ? "Short" : "Long"} #${c.trade.dealingRangeId} · Position #${c.trade.id}`;
 }
 
@@ -473,6 +479,24 @@ async function onLaniakeaAddConfirm(note) {
   } else if (target.kind === "trade_confirmation") {
     // Kein Resolve nötig — trade_confirmations.id ist schon direkt bekannt, analog zu trade_setup.
     await addLaniakeaEntry("trade_confirmation", target.confirmationId, note);
+  } else if (target.kind === "liquidity_level") {
+    const { instrument, timeframe, dirNum, pivotTime } = target.level;
+    const liquidityLevelId = await resolveLiquidityLevelId(instrument, timeframe, dirNum, pivotTime);
+    if (liquidityLevelId == null) {
+      // poi-watcher refresht 1H nur einmal pro Stunde (siehe CLAUDE.md poi-watcher-Throttling) —
+      // ein gerade erst entstandenes Level kann also noch fehlen.
+      laniakeaAddPopupError.value = "Dieses Liquiditäts-Level ist noch nicht gespeichert (poi-watcher braucht bis zu einer Stunde) — bitte gleich nochmal versuchen.";
+      return;
+    }
+    await addLaniakeaEntry("liquidity_level", liquidityLevelId, note);
+  } else if (target.kind === "m5_ob") {
+    // Kein Resolve nötig — M5-OBs werden nie persistiert, Rohdaten-Snapshot direkt (siehe
+    // addLaniakeaM5ObEntry).
+    await addLaniakeaM5ObEntry(target.zone, note);
+  } else if (target.kind === "m5_liquidity_level") {
+    // Kein Resolve nötig — Liquiditäts-Level auf einem Nicht-1h-Timeframe werden nie persistiert,
+    // Rohdaten-Snapshot direkt (siehe addLaniakeaM5LiquidityEntry).
+    await addLaniakeaM5LiquidityEntry(target.level, note);
   } else {
     await addLaniakeaEntry("trade_position", target.trade.id, note);
   }

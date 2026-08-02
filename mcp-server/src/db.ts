@@ -165,7 +165,14 @@ export async function getLaniakeaContext() {
         "trade_positions(*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, trade_targets(price)), trade_partial_exits(price, exit_time, portion_pct)), " +
         "ob_zones(*), " +
         "trade_setups(*), " +
-        "trade_confirmations(*)",
+        "trade_confirmations(*), " +
+        "liquidity_levels(*), " +
+        // m5_ob_*/m5_liquidity_* sitzen direkt auf laniakea_context selbst (kein Embed, siehe
+        // 20260802120100_laniakea_context_m5_obs.sql / 20260802130000_laniakea_context_m5_liquidity.sql
+        // — beide nie persistiert, deshalb Rohdaten-Snapshot statt FK), müssen deshalb hier
+        // explizit mit ausgewählt werden.
+        "m5_ob_instrument, m5_ob_direction, m5_ob_top, m5_ob_bottom, m5_ob_start_time, " +
+        "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time",
     )
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
@@ -179,6 +186,28 @@ export async function getNewsEvents(fromTime?: string, toTime?: string) {
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+// Nur für den Session-Kontext an LQ-Leveln in get_data_export (siehe tools/dataExport.ts,
+// sessionOccurrences.js's buildSessionContextLookup) — Node-sicherer Direkt-Read statt src/
+// sessions.js (dessen `sessions`-Singleton beim Modul-Laden localStorage anfasst, siehe CLAUDE.md
+// "MCP-Server"). Nur highLowRelevant-Sessions sind für den Kontext überhaupt relevant (siehe
+// buildSessionContextLookup selbst), aber hier ungefiltert zurückgegeben (dieselbe Spaltenauswahl
+// wie sessions.js' eigener syncFromRemote) — der Filter passiert im Aufrufer, näher an der
+// eigentlichen Verwendung.
+export async function getSessions(instrument: string) {
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("label, from_minutes, to_minutes, high_low_relevant, days")
+    .eq("instrument", instrument);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => ({
+    label: r.label as string | null,
+    fromMinutes: r.from_minutes as number,
+    toMinutes: r.to_minutes as number,
+    highLowRelevant: r.high_low_relevant as boolean,
+    days: r.days as number[] | null,
+  }));
 }
 
 export async function getTradingSchedule(instrument: string) {
