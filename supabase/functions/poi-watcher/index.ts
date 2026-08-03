@@ -1,20 +1,28 @@
 // D2 (vereinfacht): 4H+1H-Zonen-Wächter, jetzt Multi-Instrument (BTC-USDT via OKX,
-// GBPUSD/EURUSD via Twelve Data). Erkennt Order-Block-Zonen, persistiert sie in `ob_zones` und
-// schickt eine Telegram-Nachricht, sobald eine Zone zum ersten Mal vom Preis berührt wird —
+// GBPUSD/EURUSD via cTrader Open API). Erkennt Order-Block-Zonen, persistiert sie in `ob_zones`
+// und schickt eine Telegram-Nachricht, sobald eine Zone zum ersten Mal vom Preis berührt wird —
 // aber nur für Instrumente mit `sendTelegram: true` (siehe INSTRUMENTS unten). BTC lief nur
 // zum Testen der Pipeline; Philip tradet Forex, daher jetzt GBPUSD/EURUSD live, BTC stumm
 // (Zonen werden weiter erkannt/im Dashboard angezeigt, nur der Versand ist aus). Kein M1/
 // Claude-Entry-Check (D3) — das kommt erst, wenn die Strategie ein Regelwerk für Claude hat.
+//
+// Zurück von Twelve Data zu cTrader (2026-08-03, siehe PLAN-notifications.md "Status: cTrader
+// Open API"): Twelve Data ist ein 60+-Liquiditätsprovider-Aggregat, dessen Preisglättung die
+// Docht-Extreme kappt, auf denen FVG/OB-Erkennung aufbaut (Bug-Report 2026-07-27, Setups auf
+// FOREXCOM sichtbar, auf Twelve Data nicht) — strukturelles Problem, kein Bug in
+// orderBlocks.ts/liquidity.ts. Neu diesmal: ein reguläres Pepperstone-Razor-Demokonto statt
+// einer Prop-Firm-Challenge (die beiden vorherigen cTrader-Ausfälle waren beide ein
+// deaktiviertes Challenge-Konto, kein Spotware/cTrader-Problem selbst).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { detectOrderBlocks, type Candle } from "../_shared/orderBlocks.ts";
 import { detectLiquidityLevels, type LiquidityLevel } from "../_shared/liquidity.ts";
-import { fetchCandles as fetchForexCandles } from "../_shared/twelvedata/client.ts";
+import { fetchTrendbarsBatch, type RefreshedTokens } from "../_shared/ctrader/client.ts";
 import { detectSetupObs, detectTradeSetup } from "../_shared/tradeSetup.ts";
 
 const OKX_BASE_URL = "https://www.okx.com";
-const TIMEFRAMES: { label: "4H" | "1H"; okxBar: string; forexPeriod: string }[] = [
-  { label: "4H", okxBar: "4H", forexPeriod: "4h" },
-  { label: "1H", okxBar: "1H", forexPeriod: "1h" },
+const TIMEFRAMES: { label: "4H" | "1H"; okxBar: string }[] = [
+  { label: "4H", okxBar: "4H" },
+  { label: "1H", okxBar: "1H" },
 ];
 const CANDLE_LIMIT = 300;
 // Nur für den Forex-1H-Fetch (nicht BTC/OKX, nicht Forex-4H — die bleiben bei CANDLE_LIMIT=300):
@@ -22,10 +30,11 @@ const CANDLE_LIMIT = 300;
 // denselben Kerzensatz mitnutzen) im Blick zu behalten — Philip tradet von Ziel zu Ziel und
 // braucht dafür ein paar unberührte Level ober-/unterhalb des Kurses, auch wenn die schon
 // Wochen/Monate alt sind. Bug-Report 2026-08-02: ein 45 Tage alter, nie erneut erkannter Pivot
-// (1,15297, 18.06.) fehlte deshalb komplett in liquidity_levels. 3000h (~125 Tage) statt 300h,
-// weiterhin nur EIN Twelve-Data-Request pro Stunde (kostet nichts zusätzlich am Rate-Limit,
-// siehe outputsize-Cap 5000 in _shared/twelvedata/client.ts) — der nächste isH1RefreshTick-Lauf
-// erkennt/backfillt fehlende ältere Level automatisch, kein einmaliges Backfill-Skript nötig.
+// (1,15297, 18.06.) fehlte deshalb komplett in liquidity_levels. 3000h (~125 Tage) statt 300h —
+// cTraders Hard-Limit ist 14000 Bars/Request (siehe fetchOneTrendbar in _shared/ctrader/client.ts),
+// 3000 ist also unproblematisch. Weiterhin nur EIN Fetch pro Stunde (Konsistenz mit dem
+// bestehenden Cache-Verhalten, nicht mehr aus Rate-Limit-Gründen wie bei Twelve Data) — der
+// nächste isH1RefreshTick-Lauf erkennt/backfillt fehlende ältere Level automatisch.
 const FOREX_H1_LOOKBACK_CANDLES = 3000;
 const LIQUIDITY_FRACTAL_PERIOD = 5; // siehe LIQUIDITY_FRACTAL_PERIOD in PriceChart.vue
 
@@ -79,15 +88,15 @@ interface LiquidityLevelRow {
 
 interface InstrumentConfig {
   instrument: string;
-  source: "okx" | "twelvedata";
+  source: "okx" | "ctrader";
   sendTelegram: boolean;
   pricePrecision: number;
 }
 
 const INSTRUMENTS: InstrumentConfig[] = [
   { instrument: "BTC-USDT", source: "okx", sendTelegram: false, pricePrecision: 2 },
-  { instrument: "GBPUSD", source: "twelvedata", sendTelegram: true, pricePrecision: 5 },
-  { instrument: "EURUSD", source: "twelvedata", sendTelegram: true, pricePrecision: 5 },
+  { instrument: "GBPUSD", source: "ctrader", sendTelegram: true, pricePrecision: 5 },
+  { instrument: "EURUSD", source: "ctrader", sendTelegram: true, pricePrecision: 5 },
 ];
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -95,7 +104,12 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const TELEGRAM_CHAT_ID = Deno.env.get("TELEGRAM_CHAT_ID")!;
 const DRY_RUN = (Deno.env.get("DRY_RUN") ?? "false").toLowerCase() === "true";
-const TWELVEDATA_API_KEY = Deno.env.get("TWELVEDATA_API_KEY")!;
+const CTRADER_CLIENT_ID = Deno.env.get("CTRADER_CLIENT_ID")!;
+const CTRADER_CLIENT_SECRET = Deno.env.get("CTRADER_CLIENT_SECRET")!;
+// Fallback fürs allererste Deployment vor der ersten `ctrader_oauth_tokens`-Zeile — siehe
+// selbes Muster in forex-candles/index.ts.
+const CTRADER_ACCESS_TOKEN_FALLBACK = Deno.env.get("CTRADER_ACCESS_TOKEN") ?? "";
+const CTRADER_REFRESH_TOKEN_FALLBACK = Deno.env.get("CTRADER_REFRESH_TOKEN") ?? "";
 
 async function fetchOkxCandles(instId: string, bar: string): Promise<Candle[]> {
   const url = `${OKX_BASE_URL}/api/v5/market/candles?instId=${instId}&bar=${bar}&limit=${CANDLE_LIMIT}`;
@@ -121,11 +135,12 @@ async function fetchOkxPrice(instId: string): Promise<number> {
 }
 
 // Nur beim ersten Lauf nach einem Kerzenschluss neu holen (Chat 2026-07-23: "da ändert sich
-// doch in 4h/1h nichts") — zwischen zwei Kerzenschlüssen liefert Twelve Data (nur geschlossene
-// Kerzen, empirisch verifiziert) exakt dieselbe Kerzenreihe, ein Refetch alle 5min war reine
-// Verschwendung. UTC statt Europe/Berlin, weil sich sowohl der pg_cron-Tick als auch Twelve
-// Datas eigene Bucket-Grenzen an UTC ausrichten. isH4RefreshTick-Ticks sind automatisch eine
-// Teilmenge von isH1RefreshTick-Ticks (jede 4H-Grenze ist auch eine 1H-Grenze).
+// doch in 4h/1h nichts") — zwischen zwei Kerzenschlüssen liefert die Datenquelle (nur
+// geschlossene Kerzen, empirisch verifiziert für Twelve Data UND cTrader) exakt dieselbe
+// Kerzenreihe, ein Refetch alle 5min war reine Verschwendung. UTC statt Europe/Berlin, weil
+// sich sowohl der pg_cron-Tick als auch die Kerzen-Bucket-Grenzen an UTC ausrichten.
+// isH4RefreshTick-Ticks sind automatisch eine Teilmenge von isH1RefreshTick-Ticks (jede
+// 4H-Grenze ist auch eine 1H-Grenze).
 function isH1RefreshTick(date: Date): boolean {
   return date.getUTCMinutes() === 0;
 }
@@ -133,26 +148,42 @@ function isH4RefreshTick(date: Date): boolean {
   return date.getUTCHours() % 4 === 0 && date.getUTCMinutes() === 0;
 }
 
-// Ein REST-Call pro Forex-Instrument+Timeframe (parallel statt sequentiell wie beim alten
-// cTrader-Handshake — Twelve Data hat keine "mehrere Requests über eine Verbindung"
-// Batch-API, das Rate-Limit ist ohnehin pro Minute übers ganze Konto, nicht pro Verbindung).
-// Kein eigener M1-Preis-Call mehr (Chat 2026-07-23) — der Close der letzten M5-Kerze reicht
-// für den Live-Touch-Check völlig, spart einen von vier Calls pro Instrument. 1H fehlt in
-// candlesByTf, wenn includeH1=false — der Aufrufer muss dann auf den forex_h1_cache-Stand
-// zurückfallen (siehe Deno.serve unten), fürs Trade-Setup UND die 1H-Zonen/Liquidity-Level.
+interface CtraderCreds {
+  accessToken: string;
+  refreshToken: string;
+  onTokenRefresh: (tokens: RefreshedTokens) => Promise<void>;
+}
+
+// Ein Connect/Auth-Handshake pro Forex-Instrument für alle benötigten Timeframes in einem
+// Rutsch (fetchTrendbarsBatch, siehe _shared/ctrader/client.ts) — anders als beim
+// zwischenzeitlichen Twelve-Data-Umweg, der das mangels Batch-API in parallele Einzel-REST-
+// Calls aufteilen musste. Kein eigener M1-Preis-Call (Chat 2026-07-23, gilt weiterhin) — der
+// Close der letzten M5-Kerze reicht für den Live-Touch-Check. 1H fehlt in candlesByTf, wenn
+// includeH1=false — der Aufrufer muss dann auf den forex_h1_cache-Stand zurückfallen (siehe
+// Deno.serve unten), fürs Trade-Setup UND die 1H-Zonen/Liquidity-Level.
 async function fetchForexBatch(
   symbol: string,
   includeH1: boolean,
   includeH4: boolean,
+  creds: CtraderCreds,
 ): Promise<{ currentPrice: number; candlesByTf: Map<string, Candle[]> }> {
-  const [h1Candles, m5Candles, h4Candles] = await Promise.all([
-    includeH1 ? fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "1h", count: FOREX_H1_LOOKBACK_CANDLES }) : Promise.resolve(null),
-    fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "5m", count: TRADE_SETUP_M5_CANDLE_LIMIT }),
-    includeH4 ? fetchForexCandles({ apiKey: TWELVEDATA_API_KEY, symbolName: symbol, period: "4h", count: CANDLE_LIMIT }) : Promise.resolve(null),
-  ]);
-  const candlesByTf = new Map<string, Candle[]>([["M5", m5Candles]]);
-  if (h1Candles) candlesByTf.set("1H", h1Candles);
-  if (h4Candles) candlesByTf.set("4H", h4Candles);
+  const requestSpecs: { key: string; period: string; count: number }[] = [
+    { key: "M5", period: "M5", count: TRADE_SETUP_M5_CANDLE_LIMIT },
+  ];
+  if (includeH1) requestSpecs.push({ key: "1H", period: "H1", count: FOREX_H1_LOOKBACK_CANDLES });
+  if (includeH4) requestSpecs.push({ key: "4H", period: "H4", count: CANDLE_LIMIT });
+
+  const results = await fetchTrendbarsBatch({
+    clientId: CTRADER_CLIENT_ID,
+    clientSecret: CTRADER_CLIENT_SECRET,
+    accessToken: creds.accessToken,
+    refreshToken: creds.refreshToken,
+    onTokenRefresh: creds.onTokenRefresh,
+    requests: requestSpecs.map(({ period, count }) => ({ symbolName: symbol, period, count })),
+  });
+
+  const candlesByTf = new Map(requestSpecs.map((spec, i) => [spec.key, results[i]]));
+  const m5Candles = candlesByTf.get("M5")!;
   return { currentPrice: m5Candles[m5Candles.length - 1].close, candlesByTf };
 }
 
@@ -204,9 +235,11 @@ function isInWindows(date: Date, windows: WeekdayWindows | undefined, startBuffe
 }
 
 // Nachts/am Wochenende (außerhalb des Alarmfensters) werden fürs Forex-Zonen-Fetching keine
-// Twelve-Data-Requests gebraucht (Philip schläft bzw. tradet nicht, kein Alarm bringt was) —
-// spart den Großteil der ~2.300 Twelve-Data-Calls/Tag, die ein 24/7-Cron sonst verursachen
-// würde (Free-Tier: 800/Tag, 8/Min). FETCH_START_BUFFER_MIN Minuten VOR Fensterstart schon wieder
+// Requests gebraucht (Philip schläft bzw. tradet nicht, kein Alarm bringt was) — spart unnötige
+// cTrader-Connects (ursprünglich gegen Twelve Datas Free-Tier-Rate-Limit gedacht, 800/Tag,
+// 8/Min; bleibt aber auch ohne dieses Limit sinnvoll, um außerhalb der Handelszeiten keine
+// Zonen-Erkennung/DB-Schreibvorgänge zu verursachen, die eh niemand ansieht). FETCH_START_BUFFER_MIN
+// Minuten VOR Fensterstart schon wieder
 // holen (nicht erst exakt zum Fensterbeginn) — ein einziger Lauf davor reicht, um über Nacht
 // liegengebliebene Touches noch außerhalb des Fensters (shouldSend=false) still nachzuholen,
 // damit beim tatsächlichen Fensterstart kein Nachhol-Alarm-Schwall für längst vergangene Touches
@@ -253,6 +286,28 @@ Deno.serve(async (req) => {
       (scheduleRows ?? []).map((r) => [r.instrument, r.alarm_windows as WeekdayWindows]),
     );
 
+    // cTrader-Access-/Refresh-Token: `ctrader_oauth_tokens` ist die eigentliche Quelle (siehe
+    // Migration 20260722120000), die CTRADER_ACCESS_TOKEN/REFRESH_TOKEN-Secrets nur ein
+    // Fallback fürs allererste Deployment vor der ersten Zeile — gleiches Muster wie in
+    // forex-candles/index.ts. onTokenRefresh schreibt ein automatisch refreshtes Token zurück,
+    // damit der nächste Cron-Tick (und forex-candles) das frische Token sieht.
+    const { data: tokenRow, error: tokenSelectError } = await supabase
+      .from("ctrader_oauth_tokens")
+      .select("access_token, refresh_token")
+      .eq("id", 1)
+      .maybeSingle();
+    if (tokenSelectError) throw tokenSelectError;
+    const ctraderCreds: CtraderCreds = {
+      accessToken: tokenRow?.access_token ?? CTRADER_ACCESS_TOKEN_FALLBACK,
+      refreshToken: tokenRow?.refresh_token ?? CTRADER_REFRESH_TOKEN_FALLBACK,
+      onTokenRefresh: async (fresh) => {
+        const { error } = await supabase
+          .from("ctrader_oauth_tokens")
+          .upsert({ id: 1, access_token: fresh.accessToken, refresh_token: fresh.refreshToken });
+        if (error) console.error("poi-watcher: failed to persist refreshed cTrader token:", error);
+      },
+    };
+
     const now = new Date();
     const h4RefreshTick = isH4RefreshTick(now);
     const summary: Record<string, unknown> = { dryRun: DRY_RUN, instruments: {} };
@@ -260,7 +315,7 @@ Deno.serve(async (req) => {
     for (const cfg of INSTRUMENTS) {
       const alarmWindows = alarmWindowsByInstrument.get(cfg.instrument);
       const forexFetchWindow = isInWindows(now, alarmWindows, FETCH_START_BUFFER_MIN);
-      if (cfg.source === "twelvedata" && !forexFetchWindow && !forceH1Refresh) {
+      if (cfg.source === "ctrader" && !forexFetchWindow && !forceH1Refresh) {
         (summary.instruments as Record<string, unknown>)[cfg.instrument] = { skipped: "outside forex fetch window" };
         continue;
       }
@@ -272,7 +327,7 @@ Deno.serve(async (req) => {
       // machen und der Cache brächte nichts.
       let h1RefreshTick = isH1RefreshTick(now) || forceH1Refresh;
       let h1CandlesForSetup: Candle[] | undefined;
-      if (cfg.source === "twelvedata" && !h1RefreshTick) {
+      if (cfg.source === "ctrader" && !h1RefreshTick) {
         const { data: h1CacheRow, error: h1CacheError } = await supabase
           .from("forex_h1_cache")
           .select("candles")
@@ -286,7 +341,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      const forexBatch = cfg.source === "twelvedata" ? await fetchForexBatch(cfg.instrument, h1RefreshTick, h4RefreshTick) : null;
+      const forexBatch = cfg.source === "ctrader" ? await fetchForexBatch(cfg.instrument, h1RefreshTick, h4RefreshTick, ctraderCreds) : null;
       const freshH1Candles = forexBatch?.candlesByTf.get("1H");
       if (freshH1Candles) {
         h1CandlesForSetup = freshH1Candles;
@@ -330,7 +385,7 @@ Deno.serve(async (req) => {
           // isForex explizit mitgeben (Chat 2026-07-30) — dieser Loop laeuft fuer BTC UND Forex
           // gleichermassen, aber das 1H/4H-Pip-Minimum (HTF_FOREX_MIN_GAP_PIPS) darf nur bei Forex
           // greifen, sonst waere es bei BTCs Kursniveau (~60k) bedeutungslos.
-          const zones = detectOrderBlocks(candles, tf.label, cfg.source === "twelvedata");
+          const zones = detectOrderBlocks(candles, tf.label, cfg.source === "ctrader");
           const existingMap = new Map(
             (existingRows ?? []).map((r) => [
               `${r.direction}_${Math.floor(new Date(r.start_time).getTime() / 1000)}`,
@@ -343,8 +398,9 @@ Deno.serve(async (req) => {
             const existing = existingMap.get(`${direction}_${z.startTime}`);
             const wasTouchedInDb = existing?.touched ?? false;
 
-            // Live-Preis-Touch: Twelve Data liefert nur geschlossene Kerzen, d.h. ohne das hier
-            // wuerde ein Touch erst erkannt, wenn die volle 1H/4H-Kerze schliesst (bis zu 59min
+            // Live-Preis-Touch: sowohl Twelve Data als auch cTrader liefern nur geschlossene
+            // Kerzen, d.h. ohne das hier wuerde ein Touch erst erkannt, wenn die volle 1H/4H-
+            // Kerze schliesst (bis zu 59min
             // Verzoegerung). Einmal getouched bleibt getouched (auch wenn detectOrderBlocks()
             // die noch offene Kerze dementsprechend noch nicht sieht) — sonst faellt der Wert
             // beim naechsten Run auf false zurueck und der Alarm geht beim echten Kerzenschluss
@@ -441,9 +497,9 @@ Deno.serve(async (req) => {
 
       // 1H-Liquiditäts-Level (Fractal-Sweeps, siehe src/liquidity.js) — nur für die
       // Forex-Instrumente (GBPUSD/EURUSD), Philip wollte das explizit nicht für BTC.
-      // Gleiches Live-Preis-Sofort-Touch-Muster wie oben bei den OB-Zonen (Twelve Data liefert
-      // nur geschlossene Kerzen, sonst bis zu 59min Verzoegerung bis zum Alarm).
-      if (cfg.source === "twelvedata") {
+      // Gleiches Live-Preis-Sofort-Touch-Muster wie oben bei den OB-Zonen (die Datenquelle
+      // liefert nur geschlossene Kerzen, sonst bis zu 59min Verzoegerung bis zum Alarm).
+      if (cfg.source === "ctrader") {
         const alarmActive = shouldSend && isAlarmOn("liquidity_1h");
         const candles1h = forexBatch!.candlesByTf.get("1H");
 
@@ -575,7 +631,7 @@ Deno.serve(async (req) => {
       // nur für die Forex-Instrumente — braucht M5-Kerzen, die nur dort abgerufen werden.
       // dir=1 (Short/Protected High) und dir=-1 (Long/Protected Low) laufen mit denselben
       // Kerzen, nur gespiegelt (siehe checkShortSetup/checkLongSetup im Original).
-      if (cfg.source === "twelvedata") {
+      if (cfg.source === "ctrader") {
         const alarmActive = shouldSend && isAlarmOn("trade_setup");
         const m5Candles = forexBatch!.candlesByTf.get("M5")!;
         const candles1hForSetup = h1CandlesForSetup!;
