@@ -18,7 +18,15 @@ const DB_NAME = "trading-monitor-candles";
 // reiner Code-Fix räumt einen schon kaputt geschriebenen completeUpTo-Stand also NICHT auf. Noch
 // ein Versions-Bump für den JETZT schon poisoned Cache; safeCompleteUpTo verhindert ab hier, dass
 // dieselbe Bug-Klasse nochmal einen DAUERHAFTEN (reload-festen) Schaden anrichtet.
-const DB_VERSION = 3;
+//
+// 4 (2026-08-03: Forex-Datenquelle zurück von Twelve Data zu cTrader, siehe poi-watcher/forex-
+// candles) — der Cache-Key ist nur `symbol:bar`, nicht datenquellenabhängig. Für jeden Replay-
+// Zeitpunkt, der schon mal unter Twelve Data geladen/gecacht wurde, würde `completeUpTo` sonst
+// weiterhin einen Cache-Hit melden und die alten (geglätteten, docht-armen) Twelve-Data-Kerzen
+// ausliefern statt neu von cTrader zu fetchen — unsichtbar, da kein Fehler, nur falsche Daten.
+// Kein gezielteres Invalidieren (z.B. nur GBPUSD/EURUSD-Keys) nötig — ein einmaliger Full-Wipe
+// trifft auch BTC/OKX, ist dort aber nur ein günstiger, harmloser Neu-Fetch.
+const DB_VERSION = 4;
 const STORE_NAME = "candles";
 
 // Rein defensiv, KEINE reguläre Obergrenze (siehe oben) — 500k Kerzen sind selbst auf M1 fast ein
