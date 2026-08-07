@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { createTrade, addTradePosition, updateTradePosition, updateDealingRange } from "../db.js";
+import { createTrade, addTradePosition, updateTradePosition, updateDealingRange, addTradeConfirmation } from "../db.js";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -139,5 +139,35 @@ export function registerTradeTools(server: McpServer) {
       },
     },
     async ({ id, ...fields }) => json(await updateDealingRange(id, fields)),
+  );
+
+  server.registerTool(
+    "add_trade_confirmation",
+    {
+      title: "Bestätigung hinzufügen",
+      description:
+        "Fügt eine Bestätigung (Sweep/Pivot, M5-OB-Kante oder Fib-Level — bereits passierte Evidenz " +
+        "für die Idee, nicht ein zukünftiges Ziel wie ein Target) zu einer dealing_range ('GO für die " +
+        "Idee', level='range', id=dealing_range_id) oder einer einzelnen trade_position ('GO für " +
+        "diesen Entry', level='position', id=trade_position_id) hinzu. Bei einem setup-verlinkten " +
+        "Trade (tradeSetupId auf create_trade/update_dealing_range) NICHT automatisch angelegt — " +
+        "explizit nachziehen, sonst zeigt das Edit-Modal trotz Setup-Link keine Bestätigung (siehe " +
+        "get_trade_setups fürs Ableiten von price/sourceTime: bei kind='ob' price = ob_bottom bei " +
+        "Short-Setups bzw. ob_top bei Long-Setups, sourceTime = ob_start_time, rangeLow/rangeHigh = " +
+        "ob_bottom/ob_top, timeframe='5M'; bei kind='pivot' price = ls_price, sourceTime = " +
+        "ls_pivot_time, touchedTime = ls_touched_time).",
+      inputSchema: {
+        level: z.enum(["range", "position"]),
+        id: z.number().int().describe("dealing_range_id bei level='range', trade_position_id bei level='position'"),
+        kind: z.enum(["pivot", "ob", "fib"]),
+        price: z.number(),
+        sourceTime: z.string().nullable().optional().describe("ISO-Zeitstempel, z.B. Pivot-/OB-Startzeit"),
+        touchedTime: z.string().nullable().optional().describe("ISO-Zeitstempel, falls bereits (an)getestet"),
+        rangeLow: z.number().nullable().optional().describe("Bei kind='ob'/'fib': untere Ankerkante"),
+        rangeHigh: z.number().nullable().optional().describe("Bei kind='ob'/'fib': obere Ankerkante"),
+        timeframe: z.string().nullable().optional().describe("Bei kind='ob': Zeitebene der Zone, z.B. '5M'/'1H'/'4H'"),
+      },
+    },
+    async ({ level, id, ...fields }) => json(await addTradeConfirmation({ level, id, ...fields })),
   );
 }

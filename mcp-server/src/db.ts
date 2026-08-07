@@ -424,3 +424,43 @@ export async function updateDealingRange(id: number, fields: UpdateDealingRangeA
   if (error) throw new Error(error.message);
   return data;
 }
+
+export interface AddTradeConfirmationArgs {
+  level: "range" | "position";
+  id: number;
+  kind: "pivot" | "ob" | "fib";
+  price: number;
+  sourceTime?: string | null;
+  touchedTime?: string | null;
+  rangeLow?: number | null;
+  rangeHigh?: number | null;
+  timeframe?: string | null;
+}
+
+// Fehlte bisher komplett auf MCP-Seite (Bug-Report Philip 2026-08-07, siehe Migration
+// 20260807120000_backfill_range_confirmations_27_28.sql): create_trade/add_trade_position setzen
+// zwar tradeSetupId auf die dealing_range, legen aber anders als der Frontend-Chart-Klick-Weg
+// (src/views/Dashboard.vue: onSelectSetupConfirmations/tradeIntake.js: insertConfirmation) nie
+// die zugehörige trade_confirmations-Zeile an — ein per MCP eingepflegter, setup-verlinkter Trade
+// zeigte darum nie eine Bestätigung im Edit-Modal. Gleiche Zweigleisigkeit wie im Frontend: level
+// entscheidet, ob dealing_range_id (GO für die Idee) oder trade_position_id (GO für diesen Entry)
+// gesetzt wird, nie beide.
+export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
+  const { data, error } = await supabase
+    .from("trade_confirmations")
+    .insert({
+      dealing_range_id: args.level === "range" ? args.id : null,
+      trade_position_id: args.level === "position" ? args.id : null,
+      kind: args.kind,
+      price: args.price,
+      source_time: args.sourceTime ?? null,
+      touched_time: args.touchedTime ?? null,
+      range_low: args.rangeLow ?? null,
+      range_high: args.rangeHigh ?? null,
+      timeframe: args.timeframe ?? null,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
