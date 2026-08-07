@@ -68,9 +68,15 @@ class ArrowPaneView {
     const timeScale = this._source._chart.timeScale();
     const candles = this._source._candles;
     const pivot = this._source._pivot;
-    const lastTime = candles.length > 0 ? candles[candles.length - 1].time : null;
+    // Bug-Report Philip 2026-08-07: ArrowPrimitive wird mittlerweile nur noch für LQ-Sweep-Pfeile
+    // verwendet (range.high/low-Pfeile wurden 2026-07-26 entfernt, siehe Aufrufer), deren Linie
+    // (toTouchedLevel) korrekt am touchedTime endet statt bis "jetzt" durchgezeichnet zu werden —
+    // der Pfeil muss also am touchedTime sitzen, nicht an der letzten geladenen Kerze, sonst
+    // klebt er (v.a. im Replay) am rechten Fensterrand statt an der LQ-Linie.
+    const lastCandleTime = candles.length > 0 ? candles[candles.length - 1].time : null;
+    const arrowTime = pivot.touched ? (pivot.touched.touchedTime ?? lastCandleTime) : lastCandleTime;
     this._point = {
-      x: lastTime != null ? timeScale.timeToCoordinate(lastTime) : null,
+      x: arrowTime != null ? timeScale.timeToCoordinate(arrowTime) : null,
       y: series.priceToCoordinate(pivot.price),
     };
   }
