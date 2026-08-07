@@ -829,10 +829,31 @@ const TARGET_TIER_WIDTH_RATIO = { minor: 1, medium: 1.6, major: 2.2 };
 // Punkt zusammengestaucht. ">" schließt die Entstehungs-Kerze aus, sucht nur nach einem SPÄTEREN
 // echten Re-Touch.
 // Nur für Pivot-Targets (eine einzelne, exakte Preis-Marke auf der GLEICHEN Zeitebene wie die
-// gerade angezeigten Kerzen) — für OB-Targets bewusst NICHT verwendet, siehe Kommentar bei
-// refreshTradeTargetLinksInternal weiter unten (Zeitebenen-Mismatch M5-Kerzen vs. 1H/4H-OB).
+// gerade angezeigten Kerzen) — für OB-Targets als PRIMÄRER Weg bewusst NICHT verwendet, siehe
+// Kommentar bei refreshTradeTargetLinksInternal weiter unten (Zeitebenen-Mismatch M5-Kerzen vs.
+// 1H/4H-OB). firstCandleTouchRange (direkt darunter) ist trotzdem KEIN Widerspruch dazu — die
+// dient dort nur als letzter Fallback, nicht als primäre Quelle.
 function firstCandleTouch(candles, sourceTime, price) {
   const hit = candles.find((c) => c.time > sourceTime && c.low <= price && c.high >= price);
+  return hit ? hit.time : null;
+}
+// Bug-Report Philip 2026-08-07 (OB 1,3466 #29, dealing_range #27 vom 03.08.): eine OB-Box ohne
+// touchedTime UND ohne live wiederfindbare Zone (liveObZoneState) zog sich komplett durch den
+// Chart bis "jetzt" — die schmale M5-Live-Lookback (~25h, tradeSetupM5Candles/obsM5BtcCandles,
+// Twelve-Data-Rate-Limit-bedingt bewusst eng gehalten) enthält eine 4 Tage alte Zone gar nicht
+// mehr, liveObZoneState findet sie darum nie wieder, egal wie oft neu gerendert wird — anders als
+// bei firstCandleTouch oben (Bug-Report 2026-07-30) gab es für die Box-Variante bisher GAR KEINEN
+// Fallback, der selbst in den bereits geladenen Kerzen nachschaut. Analog zu firstCandleTouch,
+// aber für eine Preis-SPANNE (rangeLow/rangeHigh) statt eines einzelnen Preises — dieselbe
+// Touch-Definition wie orderBlockDetection.js (low<=top && high>=bottom). Bewusst NUR als
+// Fallback NACH liveObZoneState (siehe refreshTradeTargetLinksInternal/-ConfirmationLinksInternal)
+// eingesetzt, nicht als Ersatz dafür: `candles` ist hier die gerade angezeigte Chart-Zeitebene,
+// die von der tatsächlichen OB-Zeitebene (meist 5M) abweichen kann (derselbe Zeitebenen-Mismatch,
+// wegen dem firstCandleTouch oben für OBs nie primär genutzt wird) — als letzter Ausweg (Zone
+// nicht mehr live auffindbar) ist eine etwas ungenauere, aber tatsächlich endliche Touch-Kerze
+// klar besser als eine für immer bis "jetzt" wachsende Box.
+function firstCandleTouchRange(candles, sourceTime, rangeLow, rangeHigh) {
+  const hit = candles.find((c) => c.time > sourceTime && c.low <= rangeHigh && c.high >= rangeLow);
   return hit ? hit.time : null;
 }
 function refreshTradeTargetLinksInternal() {
@@ -860,10 +881,16 @@ function refreshTradeTargetLinksInternal() {
       // Lookback-Fenster später über die damalige Touch-Kerze hinaus, "sieht" die Neuberechnung den
       // Touch nicht mehr und die Zone erscheint fälschlich wieder aktiv. Ein bereits bekanntes
       // touchedTime ist dagegen ein einmalig festgehaltener, echter Fakt — wird nie ungültig. Live
-      // nur noch als Versuch für NOCH UNBEKANNTEN Touch-Status (touchedTime null), letzter Fallback
-      // "letzte geladene Kerze" wie bisher.
+      // nur noch als Versuch für NOCH UNBEKANNTEN Touch-Status (touchedTime null); fällt die Zone
+      // dabei aus dem schmalen Lookback-Fenster raus (siehe firstCandleTouchRange oben, Bug-Report
+      // 2026-08-07), zuerst noch selbst in den bereits geladenen Kerzen nachschauen, erst dann
+      // "letzte geladene Kerze" als wirklich letzter Ausweg.
       if (target.kind === "ob" && target.rangeLow != null && target.rangeHigh != null) {
-        const endTime = target.touchedTime ?? liveObZoneState(target)?.endTime ?? candles[candles.length - 1].time;
+        const endTime =
+          target.touchedTime ??
+          liveObZoneState(target)?.endTime ??
+          firstCandleTouchRange(candles, target.sourceTime, target.rangeLow, target.rangeHigh) ??
+          candles[candles.length - 1].time;
         const primitive = new OrderBlockPrimitive(
           { top: target.rangeHigh, bottom: target.rangeLow, startTime: target.sourceTime, endTime },
           {
@@ -923,7 +950,11 @@ function refreshTradeConfirmationLinksInternal() {
       // OB-Bestätigungen als echte Box statt nur einer Linie (siehe refreshTradeTargetLinksInternal
       // — dieselbe Begründung, dieselbe touchedTime-vor-liveObZoneState-Priorität).
       if (confirmation.kind === "ob" && confirmation.rangeLow != null && confirmation.rangeHigh != null) {
-        const endTime = confirmation.touchedTime ?? liveObZoneState(confirmation)?.endTime ?? candles[candles.length - 1].time;
+        const endTime =
+          confirmation.touchedTime ??
+          liveObZoneState(confirmation)?.endTime ??
+          firstCandleTouchRange(candles, confirmation.sourceTime, confirmation.rangeLow, confirmation.rangeHigh) ??
+          candles[candles.length - 1].time;
         // Laniakea-Kontext, vierte Art (Chat 2026-08-01, vierte Runde — Bug-Report Philip: DIESE
         // Box, "✔ OB 1,15229 #22", wurde mit der Trade-Setup-Link-Box verwechselt, war bisher
         // komplett unverdrahtet). confirmationId ist bereits die echte trade_confirmations.id.
