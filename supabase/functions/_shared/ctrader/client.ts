@@ -97,7 +97,7 @@ class CTraderConnection {
 
   static async connect(env: "demo" | "live"): Promise<CTraderConnection> {
     const root = loadRoot();
-    const socket = await Deno.connectTls({ hostname: HOSTS[env], port: PORT });
+    const socket = await connectWithTimeout(HOSTS[env]);
     return new CTraderConnection(socket, root);
   }
 
@@ -225,6 +225,45 @@ async function withAutoRefresh<T>(
     }
     return await fn(refreshed.accessToken);
   }
+}
+
+// Deno.connectTls() hat selbst keinen Timeout — anders als die einzelnen send()-Requests unten
+// (10s), die nur auf die ANTWORT warten, nachdem die Verbindung schon steht. Bug-Report Philip
+// 2026-08-07: "signal timed out" (der 20s-Client-Timeout in forexCandles.js) kam ständig, vor
+// allem im Live-Modus, wo PriceChart.vue beim Mount mehrere unabhängige Verbindungen gleichzeitig
+// aufmacht (loadInitial/loadTradeSetupM5/loadRangesCandles/loadObs4hCandles) — hängt der
+// TCP/TLS-Handshake dabei (Netzwerk-Hänger, überlasteter Demo-Server), blieb dieser await bisher
+// UNBEGRENZT offen, weit über den Client-Timeout hinaus: das Frontend gab auf, die Edge-Function-
+// Invocation lief serverseitig weiter. Eigener Timeout hier macht daraus einen klaren, schnellen
+// Fehler statt eines endlosen Hangs. Ein verspätet doch noch aufgebauter Socket wird gleich wieder
+// geschlossen statt als Leak liegen zu bleiben.
+const CONNECT_TIMEOUT_MS = 8000;
+function connectWithTimeout(hostname: string): Promise<Deno.TlsConn> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(`cTrader TLS-Connect timed out after ${CONNECT_TIMEOUT_MS}ms: ${hostname}`));
+    }, CONNECT_TIMEOUT_MS);
+    Deno.connectTls({ hostname, port: PORT }).then(
+      (socket) => {
+        clearTimeout(timer);
+        if (settled) {
+          socket.close();
+          return;
+        }
+        settled = true;
+        resolve(socket);
+      },
+      (err) => {
+        clearTimeout(timer);
+        if (settled) return;
+        settled = true;
+        reject(err);
+      },
+    );
+  });
 }
 
 function concat(a: Uint8Array, b: Uint8Array): Uint8Array {

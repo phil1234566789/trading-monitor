@@ -8,8 +8,14 @@
 // high,low,close,volume}, oldest-first), damit sich am Frontend (src/forexCandles.js) nichts
 // ändert — inkl. derselben timeframes.js-Labels ("1m".."1D") als `period`-Query-Param, hier
 // nur intern auf cTraders TRENDBAR_PERIOD-Namen ("M1".."D1") gemappt.
+//
+// Zwei Request-Formen: GET (ein Request = ein `fetchTrendbars`-Aufruf, eigene cTrader-Verbindung)
+// für einzelne/isolierte Fetches, und POST `{requests:[{symbol,period,count,to}]}` (ein
+// `fetchTrendbarsBatch`-Aufruf, EINE gemeinsame Verbindung für mehrere Trendbar-Requests) für
+// den Fall, dass mehrere Fetches gebündelt ankommen — siehe Bug-Report 2026-08-07 unten am
+// POST-Zweig für den Hintergrund.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { fetchTrendbars, type RefreshedTokens } from "../_shared/ctrader/client.ts";
+import { fetchTrendbars, fetchTrendbarsBatch, type RefreshedTokens } from "../_shared/ctrader/client.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -37,9 +43,92 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "*",
 };
 const MAX_COUNT = 1000;
+const MAX_BATCH_REQUESTS = 10; // großzügig über dem tatsächlichen Bedarf (aktuell max. 4 gleichzeitige Fetches je Chart-Mount, siehe PriceChart.vue)
+
+function errorResponse(status: number, message: string) {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+  });
+}
+
+async function loadTokens(supabase: ReturnType<typeof createClient>) {
+  const { data: tokenRow, error: tokenSelectError } = await supabase
+    .from("ctrader_oauth_tokens")
+    .select("access_token, refresh_token")
+    .eq("id", 1)
+    .maybeSingle();
+  if (tokenSelectError) throw tokenSelectError;
+  return {
+    accessToken: tokenRow?.access_token ?? CTRADER_ACCESS_TOKEN_FALLBACK,
+    refreshToken: tokenRow?.refresh_token ?? CTRADER_REFRESH_TOKEN_FALLBACK,
+  };
+}
+
+function onTokenRefreshFor(supabase: ReturnType<typeof createClient>) {
+  return async (fresh: RefreshedTokens) => {
+    const { error } = await supabase
+      .from("ctrader_oauth_tokens")
+      .upsert({ id: 1, access_token: fresh.accessToken, refresh_token: fresh.refreshToken });
+    if (error) console.error("forex-candles: failed to persist refreshed token:", error);
+  };
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+
+  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+  // Bug-Report Philip 2026-08-07 ("signal timed out" ständig, vor allem im Live-Modus): PriceChart.vue
+  // feuert beim Mount mehrere unabhängige Forex-Fetches (Haupt-Kerzen/M5-Trade-Setups/1H-Ranges/
+  // 4H-OBs) gleichzeitig ab. Ohne Batching baut JEDER davon seine eigene frische cTrader-TLS-
+  // Verbindung + Auth-Handshake auf (`fetchTrendbars`) — mehrere gleichzeitige Handshakes gegen
+  // denselben Account waren der plausibelste Grund für die gehäuften Timeouts. Dieser POST-Zweig
+  // spiegelt exakt das Muster, das `poi-watcher` schon über `fetchTrendbarsBatch` nutzt (siehe
+  // dort): EINE Verbindung/EIN Auth-Handshake für mehrere Trendbar-Requests. Der bestehende GET-
+  // Einzelrequest-Pfad bleibt unverändert für Aufrufer, die (noch) nicht batchen — `src/forexCandles.js`
+  // sammelt kurz gleichzeitig eingehende Fetches und schickt sie hier gebündelt rein, siehe dort.
+  if (req.method === "POST") {
+    let body: { requests?: { symbol: string; period: string; count: number; to?: number }[] };
+    try {
+      body = await req.json();
+    } catch {
+      return errorResponse(400, "Invalid JSON body");
+    }
+    const requests = body.requests ?? [];
+    if (requests.length === 0) return errorResponse(400, "requests must be a non-empty array");
+    if (requests.length > MAX_BATCH_REQUESTS) return errorResponse(400, `Too many batched requests (max ${MAX_BATCH_REQUESTS})`);
+
+    const mapped: { symbolName: string; period: string; count: number; toTimestampMs?: number }[] = [];
+    for (const r of requests) {
+      const ctraderPeriod = PERIOD_MAP[r.period];
+      if (!ctraderPeriod) return errorResponse(400, `Unknown period: ${r.period}`);
+      mapped.push({
+        symbolName: r.symbol,
+        period: ctraderPeriod,
+        count: Math.min(r.count, MAX_COUNT),
+        toTimestampMs: r.to,
+      });
+    }
+
+    try {
+      const { accessToken, refreshToken } = await loadTokens(supabase);
+      const results = await fetchTrendbarsBatch({
+        clientId: CTRADER_CLIENT_ID,
+        clientSecret: CTRADER_CLIENT_SECRET,
+        accessToken,
+        refreshToken,
+        onTokenRefresh: onTokenRefreshFor(supabase),
+        requests: mapped,
+      });
+      return new Response(JSON.stringify({ results }), {
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    } catch (err) {
+      console.error("forex-candles batch error:", err);
+      return errorResponse(502, String(err instanceof Error ? err.message : err));
+    }
+  }
 
   const url = new URL(req.url);
   const symbol = url.searchParams.get("symbol") ?? "GBPUSD";
@@ -48,35 +137,16 @@ Deno.serve(async (req) => {
   const toParam = url.searchParams.get("to"); // ms epoch, exclusive upper bound — for "load older"
 
   const ctraderPeriod = PERIOD_MAP[period];
-  if (!ctraderPeriod) {
-    return new Response(JSON.stringify({ error: `Unknown period: ${period}` }), {
-      status: 400,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-    });
-  }
+  if (!ctraderPeriod) return errorResponse(400, `Unknown period: ${period}`);
 
   try {
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    const { data: tokenRow, error: tokenSelectError } = await supabase
-      .from("ctrader_oauth_tokens")
-      .select("access_token, refresh_token")
-      .eq("id", 1)
-      .maybeSingle();
-    if (tokenSelectError) throw tokenSelectError;
-    const accessToken = tokenRow?.access_token ?? CTRADER_ACCESS_TOKEN_FALLBACK;
-    const refreshToken = tokenRow?.refresh_token ?? CTRADER_REFRESH_TOKEN_FALLBACK;
-
+    const { accessToken, refreshToken } = await loadTokens(supabase);
     const candles = await fetchTrendbars({
       clientId: CTRADER_CLIENT_ID,
       clientSecret: CTRADER_CLIENT_SECRET,
       accessToken,
       refreshToken,
-      onTokenRefresh: async (fresh: RefreshedTokens) => {
-        const { error } = await supabase
-          .from("ctrader_oauth_tokens")
-          .upsert({ id: 1, access_token: fresh.accessToken, refresh_token: fresh.refreshToken });
-        if (error) console.error("forex-candles: failed to persist refreshed token:", error);
-      },
+      onTokenRefresh: onTokenRefreshFor(supabase),
       symbolName: symbol,
       period: ctraderPeriod,
       count,
@@ -87,9 +157,6 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("forex-candles error:", err);
-    return new Response(JSON.stringify({ error: String(err instanceof Error ? err.message : err) }), {
-      status: 502,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-    });
+    return errorResponse(502, String(err instanceof Error ? err.message : err));
   }
 });

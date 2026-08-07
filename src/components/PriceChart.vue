@@ -2499,6 +2499,15 @@ onMounted(() => {
   loadInitial();
   scheduleNextPoll();
   if (isForex) {
+    // Bug-Report Philip 2026-08-07 ("signal timed out" ständig, vor allem im Live-Modus): bis
+    // hierhin lösten loadInitial() oben plus loadTradeSetupM5()/startRangesPolling()/
+    // startObs4hPolling() jede für sich eine EIGENE cTrader-Verbindung (Connect+Auth-Handshake)
+    // aus, alle im selben Tick — mehrere gleichzeitige frische Handshakes gegen denselben Account
+    // waren der plausibelste Grund für die gehäuften Timeouts. Kein Entzerren mehr nötig: die
+    // Fetches laufen unverändert alle sofort los, aber `forexCandles.js` sammelt jetzt kurz
+    // gleichzeitig eingehende Requests und schickt sie als EINEN Batch-Request raus (eine
+    // gemeinsame cTrader-Verbindung statt vier, siehe dort) — Entzerren würde dem sogar im Weg
+    // stehen, weil dann nichts mehr zum Bündeln im selben Fenster ankommt.
     loadTradeSetupM5();
     scheduleNextTradeSetupM5Poll();
     if (rangesNeedsData()) startRangesPolling();
