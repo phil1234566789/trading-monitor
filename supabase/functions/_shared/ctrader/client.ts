@@ -237,7 +237,15 @@ async function withAutoRefresh<T>(
 // Invocation lief serverseitig weiter. Eigener Timeout hier macht daraus einen klaren, schnellen
 // Fehler statt eines endlosen Hangs. Ein verspätet doch noch aufgebauter Socket wird gleich wieder
 // geschlossen statt als Leak liegen zu bleiben.
-const CONNECT_TIMEOUT_MS = 8000;
+//
+// 15s statt anfänglich 8s (Bug-Report Philip 2026-08-07, M1-Live-Test): 8s hat echte, nur
+// langsame (nicht wirklich hängende) Handshakes als Fehler abgeschossen — ein manueller curl-Test
+// gegen forex-candles hatte schon VORHER (bei erfolgreichen Requests!) einzelne Läufe mit 9-15s
+// Gesamtlaufzeit über Connect+App-Auth+Account-Auth+Trendbars zusammen. Bei M1 (60 Polls/h statt
+// z.B. 12/h bei M5) reicht die schiere Anzahl an Requests, um diesen seltenen, aber legitimen
+// Ausreißer regelmäßig zu treffen. 15s lässt dafür Luft, bleibt aber klar unter dem 20s-Client-
+// Timeout in forexCandles.js.
+const CONNECT_TIMEOUT_MS = 15_000;
 function connectWithTimeout(hostname: string): Promise<Deno.TlsConn> {
   return new Promise((resolve, reject) => {
     let settled = false;

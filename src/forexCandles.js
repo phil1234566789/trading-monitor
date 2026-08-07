@@ -12,10 +12,15 @@ const FOREX_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/forex-ca
 const REQUEST_TIMEOUT_MS = 20_000;
 
 // Netzwerkfehler (TypeError "Failed to fetch") und ein abgelaufener AbortSignal.timeout (DOMException
-// "TimeoutError") vs. eine reguläre HTTP-Fehlerantwort (unten als normaler Error mit json.error/
-// `HTTP ${status}` geworfen, name bleibt "Error") — nur Erstere sind einen Retry wert, siehe unten.
-function isNetworkFailure(err) {
-  return err instanceof TypeError || err?.name === "TimeoutError" || err?.name === "AbortError";
+// "TimeoutError") sind IMMER einen Retry wert. Eine reguläre HTTP-Fehlerantwort dagegen nur, wenn
+// die Edge Function selbst mit 502 antwortet (forex-candles/index.ts nutzt 502 als Catch-All für
+// alles, was beim cTrader-Handshake schiefgeht — inkl. des eigenen Connect-Timeouts in
+// _shared/ctrader/client.ts, siehe Bug-Report Philip 2026-08-07 im M1-Live-Test: genau DAS ist der
+// häufigste, transiente Fall, ein 400 bei z.B. einem unbekannten Timeframe-Label wäre dagegen beim
+// Retry identisch nochmal falsch). status wird unten am Error mitgegeben, um das zu unterscheiden.
+function isRetryable(err) {
+  if (err instanceof TypeError || err?.name === "TimeoutError" || err?.name === "AbortError") return true;
+  return err?.status === 502;
 }
 
 async function fetchCandlesOnce(symbol, bar, { count, to } = {}) {
@@ -26,7 +31,11 @@ async function fetchCandlesOnce(symbol, bar, { count, to } = {}) {
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+  if (!res.ok) {
+    const err = new Error(json.error || `HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
   return json; // oldest zuerst
 }
 
@@ -43,20 +52,24 @@ async function fetchCandlesBatchOnce(items) {
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+  if (!res.ok) {
+    const err = new Error(json.error || `HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
   return json.results; // Array von Kerzen-Arrays, gleiche Reihenfolge wie `items`
 }
 
-// Bug-Report Philip 2026-08-07: seit dem Umstieg auf cTrader kommt "signal timed out" ständig,
-// vor allem im Live-Modus — die Edge Function baut PRO Request eine frische cTrader-TLS-
+// Bug-Report Philip 2026-08-07: seit dem Umstieg auf cTrader kommt "signal timed out"/eine 502
+// ständig, vor allem im Live-Modus — die Edge Function baut PRO Request eine frische cTrader-TLS-
 // Verbindung + Auth-Handshake auf (kein Pooling, siehe _shared/ctrader/client.ts). Ein einmaliger
-// Retry NUR bei echten Netzwerkfehlern/Timeouts (nicht bei regulären HTTP-Fehlerantworten) fängt
-// vereinzelte Handshake-Hänger ab, ohne dauerhaft kaputte Requests endlos zu wiederholen.
+// Retry bei transienten Fehlern (siehe isRetryable) fängt vereinzelte Handshake-Hänger/-Ausreißer
+// ab, ohne dauerhaft kaputte Requests (z.B. ein 400) endlos zu wiederholen.
 async function fetchSingleWithRetry(symbol, bar, opts) {
   try {
     return await fetchCandlesOnce(symbol, bar, opts);
   } catch (err) {
-    if (!isNetworkFailure(err)) throw err;
+    if (!isRetryable(err)) throw err;
     return await fetchCandlesOnce(symbol, bar, opts);
   }
 }
@@ -88,7 +101,7 @@ function flushBatch(batch) {
       try {
         results = await fetchCandlesBatchOnce(items);
       } catch (err) {
-        if (!isNetworkFailure(err)) throw err;
+        if (!isRetryable(err)) throw err;
         results = await fetchCandlesBatchOnce(items);
       }
       items.forEach((it, i) => it.resolve(results[i]));
