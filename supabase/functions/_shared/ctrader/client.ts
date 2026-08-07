@@ -200,9 +200,19 @@ async function refreshAccessToken(clientId: string, clientSecret: string, refres
   return { accessToken: body.accessToken, refreshToken: body.refreshToken ?? refreshToken };
 }
 
+// Nur eine ECHTE Fehlerantwort vom cTrader-Server (ERROR_RES, siehe send() oben — z.B. das
+// RET_ACCOUNT_DISABLED aus dem 2026-07-15-Vorfall) rechtfertigt einen Token-Refresh+Retry. Ein
+// eigener Timeout (Connect oder Gesamtbudget, siehe withOverallTimeout) ist NIE ein Auth-Problem
+// und ein blinder Refresh+Retry verdoppelt dabei nur die Wartezeit, statt schnell aufzugeben —
+// Bug-Report Philip 2026-08-07 (vierte Runde, M5-Live-Test): ein 8s-Connect-Timeout kam durch genau
+// diesen blinden Retry als 17s-Gesamtfehler zurück statt in ~8s klar zu scheitern.
+function isAuthFailure(err: unknown): boolean {
+  return err instanceof Error && err.message.startsWith("cTrader error ");
+}
+
 // Der Access-Token läuft nach ~30 Tagen ab (siehe PLAN-notifications.md) — statt den Ablauf
-// selbst zu tracken, einfach den ersten Fehlschlag eines Requests als Signal nehmen und
-// einmal mit einem frisch geholten Token neu versuchen. `onTokenRefresh` ist optional, weil
+// selbst zu tracken, einfach den ersten (echten Auth-)Fehlschlag eines Requests als Signal nehmen
+// und einmal mit einem frisch geholten Token neu versuchen. `onTokenRefresh` ist optional, weil
 // der einmalige manuelle Re-Auth-Flow (scripts/ctrader-reauth.mjs) kein Refresh-Token/Callback
 // hat — dann wird einfach der ursprüngliche Fehler durchgereicht wie bisher.
 async function withAutoRefresh<T>(
@@ -213,7 +223,7 @@ async function withAutoRefresh<T>(
   try {
     return await fn(accessToken);
   } catch (err) {
-    if (!opts.refreshToken) throw err;
+    if (!opts.refreshToken || !isAuthFailure(err)) throw err;
     const refreshed = await refreshAccessToken(opts.clientId, opts.clientSecret, opts.refreshToken);
     try {
       await opts.onTokenRefresh?.(refreshed);
@@ -238,14 +248,12 @@ async function withAutoRefresh<T>(
 // Fehler statt eines endlosen Hangs. Ein verspätet doch noch aufgebauter Socket wird gleich wieder
 // geschlossen statt als Leak liegen zu bleiben.
 //
-// 15s statt anfänglich 8s (Bug-Report Philip 2026-08-07, M1-Live-Test): 8s hat echte, nur
-// langsame (nicht wirklich hängende) Handshakes als Fehler abgeschossen — ein manueller curl-Test
-// gegen forex-candles hatte schon VORHER (bei erfolgreichen Requests!) einzelne Läufe mit 9-15s
-// Gesamtlaufzeit über Connect+App-Auth+Account-Auth+Trendbars zusammen. Bei M1 (60 Polls/h statt
-// z.B. 12/h bei M5) reicht die schiere Anzahl an Requests, um diesen seltenen, aber legitimen
-// Ausreißer regelmäßig zu treffen. 15s lässt dafür Luft, bleibt aber klar unter dem 20s-Client-
-// Timeout in forexCandles.js.
-const CONNECT_TIMEOUT_MS = 15_000;
+// Bewusst NICHT mehr das primäre Zeitbudget (siehe withOverallTimeout weiter unten, Bug-Report
+// Philip 2026-08-07, dritte Runde, M5-Live-Test): 8s statt der zwischenzeitlichen 15s — der
+// Connect ist nur EINER von vier sequenziellen Schritten (Connect+App-Auth+Account-Auth+
+// Trendbars), das GESAMT-Budget dort deckelt jetzt die Summe. Diese Zahl hier muss also nicht mehr
+// allein die volle beobachtete Ausreißer-Bandbreite (9-15s Gesamtlaufzeit, siehe curl-Test) tragen.
+const CONNECT_TIMEOUT_MS = 8_000;
 function connectWithTimeout(hostname: string): Promise<Deno.TlsConn> {
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -382,6 +390,35 @@ async function fetchOneTrendbar(
     .sort((a, b) => a.time - b.time); // API order isn't guaranteed oldest-first
 }
 
+// Bug-Report Philip 2026-08-07 (dritte Runde, M5-Live-Test): trotz des Connect-Timeouts oben kam
+// "signal timed out" weiterhin vor — der deckelt nämlich NUR die TLS-Verbindung selbst. Die drei
+// nachgelagerten, zwingend sequenziellen send()-Requests (App-Auth, Account-Auth-Revalidierung,
+// Trendbars) haben je ihr EIGENES 10s-Limit (siehe send() oben) — im ungünstigsten Fall summierte
+// sich das zu 15s (Connect, alter Wert) + 10s + 10s + 10s = bis zu 45s für EINEN einzelnen
+// Kerzen-Fetch, weit über dem 20s-Client-Timeout in forexCandles.js. Ein Gesamt-Zeitbudget für den
+// KOMPLETTEN Connect+Auth+Fetch-Zyklus (statt nur Teilschritte einzeln zu deckeln) fängt genau das
+// ab — bewusst UNTER dem Client-Timeout, damit die Edge Function immer ZUERST mit einer klaren 502
+// aufgibt (die der Frontend-Retry in forexCandles.js abfängt), statt dass der Client zuerst die
+// Geduld verliert und ein für den Nutzer nichtssagendes, nicht retry-fähiges "signal timed out"
+// sieht. `onTimeout` schließt eine ggf. schon offene Verbindung sofort statt sie liegen zu lassen.
+async function withOverallTimeout<T>(fn: () => Promise<T>, ms: number, onTimeout: () => void): Promise<T> {
+  let timer: number;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      onTimeout();
+      reject(new Error(`cTrader request timed out after ${ms}ms (Connect+Auth+Fetch insgesamt)`));
+    }, ms);
+  });
+  try {
+    return await Promise.race([fn(), timeout]);
+  } finally {
+    clearTimeout(timer!);
+  }
+}
+// 15s: Sicherheitsmarge unter den 20s des Client-Timeouts (siehe oben), großzügig über der
+// beobachteten normalen Laufzeit (700ms-1.1s, siehe curl-Test) für den Single-Fetch-Fall.
+const OVERALL_REQUEST_TIMEOUT_MS = 15_000;
+
 export interface FetchTrendbarsOptions {
   env?: "demo" | "live";
   clientId: string;
@@ -398,13 +435,21 @@ export interface FetchTrendbarsOptions {
 export async function fetchTrendbars(opts: FetchTrendbarsOptions): Promise<Candle[]> {
   const env = opts.env ?? "demo";
   return withAutoRefresh(opts, opts.accessToken, async (accessToken) => {
-    const conn = await CTraderConnection.connect(env);
+    let conn: CTraderConnection | null = null;
     try {
-      const accountId = await authenticate(conn, opts.clientId, opts.clientSecret, accessToken);
-      const symbolId = await resolveSymbolId(conn, accountId, opts.symbolName);
-      return await fetchOneTrendbar(conn, accountId, symbolId, opts.period, opts.count, opts.toTimestampMs);
+      return await withOverallTimeout(
+        async () => {
+          const c = await CTraderConnection.connect(env);
+          conn = c;
+          const accountId = await authenticate(c, opts.clientId, opts.clientSecret, accessToken);
+          const symbolId = await resolveSymbolId(c, accountId, opts.symbolName);
+          return await fetchOneTrendbar(c, accountId, symbolId, opts.period, opts.count, opts.toTimestampMs);
+        },
+        OVERALL_REQUEST_TIMEOUT_MS,
+        () => conn?.close(),
+      );
     } finally {
-      conn.close();
+      conn?.close();
     }
   });
 }
@@ -424,18 +469,33 @@ export interface FetchTrendbarsBatchOptions {
 // nicht für jede einzeln neu aufbauen muss.
 export async function fetchTrendbarsBatch(opts: FetchTrendbarsBatchOptions): Promise<Candle[][]> {
   const env = opts.env ?? "demo";
+  // Skaliert mit der Anzahl gebündelter Requests statt eines fixen Budgets wie beim Single-Fetch
+  // oben (siehe OVERALL_REQUEST_TIMEOUT_MS) — mehr sequenzielle Trendbar-Requests nach dem einen
+  // gemeinsamen Auth-Handshake brauchen legitim mehr Zeit. 18s-Deckel bleibt trotzdem unter dem
+  // 20s-Client-Timeout des Frontend-Batch-Pfads (forexCandles.js) — poi-watcher selbst unterliegt
+  // keinem so engen Client-Timeout, profitiert vom Deckel aber trotzdem (schnellerer, klarer
+  // Fehler statt eines Hangs).
+  const overallTimeoutMs = Math.min(6_000 + 2_000 * opts.requests.length, 18_000);
   return withAutoRefresh(opts, opts.accessToken, async (accessToken) => {
-    const conn = await CTraderConnection.connect(env);
+    let conn: CTraderConnection | null = null;
     try {
-      const accountId = await authenticate(conn, opts.clientId, opts.clientSecret, accessToken);
-      const results: Candle[][] = [];
-      for (const req of opts.requests) {
-        const symbolId = await resolveSymbolId(conn, accountId, req.symbolName);
-        results.push(await fetchOneTrendbar(conn, accountId, symbolId, req.period, req.count, req.toTimestampMs));
-      }
-      return results;
+      return await withOverallTimeout(
+        async () => {
+          const c = await CTraderConnection.connect(env);
+          conn = c;
+          const accountId = await authenticate(c, opts.clientId, opts.clientSecret, accessToken);
+          const results: Candle[][] = [];
+          for (const req of opts.requests) {
+            const symbolId = await resolveSymbolId(c, accountId, req.symbolName);
+            results.push(await fetchOneTrendbar(c, accountId, symbolId, req.period, req.count, req.toTimestampMs));
+          }
+          return results;
+        },
+        overallTimeoutMs,
+        () => conn?.close(),
+      );
     } finally {
-      conn.close();
+      conn?.close();
     }
   });
 }

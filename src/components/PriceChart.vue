@@ -1466,7 +1466,7 @@ function refreshCockpitInternal() {
 // separate cTrader-Connects) — computeRangesPivotsFor schneidet sich aus rangesH1Candles selbst
 // den für die jeweilige Periode passenden, ggf. kürzeren Ausschnitt raus.
 async function loadRangesCandles() {
-  if (!isForex) return;
+  if (!isForex) return true;
   // rangesFetchSeq schützt gegen Out-of-Order-Antworten (siehe Chat 2026-07-20: "im Replay-Modus
   // hängt der Trend-Algorithmus" — schneller mehrfacher Replay-Step feuert mehrfach diesen fetch;
   // ohne Guard kann eine ÄLTERE, aber langsamere Antwort eine NEUERE überschreiben und der Chart
@@ -1491,12 +1491,14 @@ async function loadRangesCandles() {
     // Teilt sich den H1-Cache-Eintrag mit loadInitial (falls currentBar "1h" ist) — statt
     // unabhängig komplett neu zu fetchen, nur der fehlende/neue Teil.
     const candles = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", count, replayToMs("1h"), REPLAY_LOOKAHEAD_SEC);
-    if (seq !== rangesFetchSeq) return; // inzwischen überholt, siehe oben
+    if (seq !== rangesFetchSeq) return true; // inzwischen überholt, siehe oben — kein Fehler
     rangesH1Candles = candles;
     refreshRangesInternal();
     refreshPoiZonesInternal(); // 1H-OB-Toggle (Chat 2026-07-30) läuft auf denselben Kerzen mit
+    return true;
   } catch (err) {
     console.error("Ranges-Kerzen fehlgeschlagen:", err);
+    return false;
   }
 }
 
@@ -1504,7 +1506,7 @@ async function loadRangesCandles() {
 // braucht 4H-Kerzen, siehe OBS_4H_CANDLE_COUNT oben. Gleiches Out-of-Order-/Poll-Muster wie
 // loadRangesCandles, nur ohne die Ranges-spezifischen Lookback-Optionen (fixer Start etc.).
 async function loadObs4hCandles() {
-  if (!isForex) return;
+  if (!isForex) return true;
   const seq = ++obs4hFetchSeq;
   try {
     const candles = await fetchCandlesCached(
@@ -1515,11 +1517,13 @@ async function loadObs4hCandles() {
       replayToMs("4h"),
       REPLAY_LOOKAHEAD_SEC,
     );
-    if (seq !== obs4hFetchSeq) return;
+    if (seq !== obs4hFetchSeq) return true; // inzwischen überholt, siehe oben — kein Fehler
     obs4hCandles = candles;
     refreshPoiZonesInternal();
+    return true;
   } catch (err) {
     console.error("4H-OB-Kerzen fehlgeschlagen:", err);
+    return false;
   }
 }
 function scheduleNextObs4hPoll() {
@@ -1527,7 +1531,7 @@ function scheduleNextObs4hPoll() {
   const barMs = barSecondsFor("4h") * 1000;
   const delay = barMs - (Date.now() % barMs) + CLOSE_POLL_BUFFER_MS;
   obs4hPollTimer = setTimeout(async () => {
-    if (props.replayUntil == null) await loadObs4hCandles();
+    await withPollRetries(loadObs4hCandles);
     if (chart) scheduleNextObs4hPoll();
   }, delay);
 }
@@ -1602,7 +1606,8 @@ function scheduleNextRangesPoll() {
   rangesPollTimer = setTimeout(async () => {
     // Im Replay-Modus bringt der echte Kerzenschluss nichts (siehe pollRecent) — Timer läuft
     // trotzdem weiter, damit Live-Updates beim Verlassen des Replays automatisch wieder anspringen.
-    if (props.replayUntil == null) await loadRangesCandles();
+    // withPollRetries prüft replayUntil selbst vor jedem Versuch, siehe dort.
+    await withPollRetries(loadRangesCandles);
     if (chart) scheduleNextRangesPoll();
   }, delay);
 }
@@ -1961,7 +1966,7 @@ async function fetchTrendAnalysisM5History(symbol, targetCount, toMs) {
 // computeTradeSetups/refreshMarketStructureInternal), das läuft am rangesH1Candles-Poll mit, kein
 // eigener H1-Fetch für Trade-Setups mehr nötig.
 async function loadTradeSetupM5() {
-  if (!isForex) return;
+  if (!isForex) return true;
   const seq = ++tradeSetupM5FetchSeq; // Out-of-Order-Guard, siehe loadRangesCandles
   try {
     const toMs = replayToMs("5m");
@@ -1985,7 +1990,7 @@ async function loadTradeSetupM5() {
       );
     }
     const [m5, trendM5] = await Promise.all(fetches);
-    if (seq !== tradeSetupM5FetchSeq) return; // inzwischen überholt
+    if (seq !== tradeSetupM5FetchSeq) return true; // inzwischen überholt — kein Fehler
     tradeSetupM5Candles = m5;
     if (trendM5) trendAnalysisM5Candles = trendM5;
     computeTradeSetups();
@@ -1993,8 +1998,10 @@ async function loadTradeSetupM5() {
     refreshEmaInternal();
     refreshCockpitInternal(); // sofort weiterreichen statt auf den nächsten refreshChart() zu warten
     refreshPoiZonesInternal(); // M5-OB-Toggle (Chat 2026-07-30) läuft auf denselben Kerzen mit
+    return true;
   } catch (err) {
     console.error("Trade-Setup-M5-Kerzen fehlgeschlagen:", err);
+    return false;
   }
 }
 
@@ -2004,7 +2011,7 @@ function scheduleNextTradeSetupM5Poll() {
   const delay = barMs - (Date.now() % barMs) + CLOSE_POLL_BUFFER_MS;
   tradeSetupM5PollTimer = setTimeout(async () => {
     // Siehe scheduleNextRangesPoll — im Replay bringt der echte Kerzenschluss nichts.
-    if (props.replayUntil == null) await loadTradeSetupM5();
+    await withPollRetries(loadTradeSetupM5);
     if (chart) scheduleNextTradeSetupM5Poll(); // Komponente könnte während des awaits unmounted worden sein
   }, delay);
 }
@@ -2089,13 +2096,19 @@ async function loadInitial() {
   }
 }
 
+// Rückgabewert (true/false) treibt den Kurz-Retry in scheduleNextPoll unten — bis 2026-08-07
+// wurde jeder Fehler hier nur geloggt, der nächste Versuch lief dann erst beim NÄCHSTEN
+// Kerzenschluss (bei M5 also bis zu 5min später). Bug-Report Philip: "M5 Candle um 13:00 noch
+// nicht da" 1-2min nach dem eigentlichen Schluss — ein einzelner fehlgeschlagener Poll (z.B. durch
+// die cTrader-Latenz-Ausreißer, siehe _shared/ctrader/client.ts) ließ den Chart dadurch bis zu
+// eine ganze Kerze lang auf altem Stand hängen, statt es zeitnah nochmal zu versuchen.
 async function pollRecent() {
   // Im Replay-Modus bringt ein Update auf die echte "jetzt"-Kerze nichts (wird von clipReplay()
   // ohnehin weggefiltert) — kostet aber trotzdem einen Twelve-Data-Request im Hintergrund, egal ob
   // gerade "+1 Kerze" geklickt wird oder nicht (Bug-Report Philip 2026-07-23: 429 beim Replay-
   // Klicken). Timer läuft trotzdem weiter (siehe scheduleNextPoll) — Live-Updates springen beim
   // Verlassen des Replays automatisch wieder an, ohne dass hier extra gestartet/gestoppt werden muss.
-  if (props.replayUntil != null) return;
+  if (props.replayUntil != null) return true;
   // Bar-Mismatch-Guard (Bug-Report Philip 2026-07-19: "1h -> M5 -> wieder 1h, Chart zeigt nur noch
   // M5-Kerzen"): pollRecent() läuft über einen eigenen setTimeout-Timer (scheduleNextPoll) und
   // liest props.currentBar/props.symbol nur EINMAL beim Start der Fetches oben — läuft der Timer
@@ -2123,13 +2136,39 @@ async function pollRecent() {
         }),
       ]);
     }
-    if (seq !== loadInitialFetchSeq) return; // inzwischen überholt, siehe oben
+    if (seq !== loadInitialFetchSeq) return true; // inzwischen überholt, siehe oben — kein Fehler, einfach nichts zu tun
     allCandles = mergeRecent(allCandles, recent);
     if (freshDeltas) allCvdDeltas = mergeRecentDeltas(allCvdDeltas, freshDeltas);
     refreshChart();
     markSuccess();
+    return true;
   } catch (err) {
     console.error("Kerzen-Update fehlgeschlagen:", err);
+    return false;
+  }
+}
+
+const POLL_RETRY_DELAY_MS = 15_000;
+const POLL_MAX_RETRIES = 8; // ~2min zusätzlicher Puffer, bevor der reguläre Kerzenschluss-Poll übernimmt
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Generischer Kurz-Retry für alle vier Forex-Poller (pollRecent/loadRangesCandles/
+// loadObs4hCandles/loadTradeSetupM5, siehe jeweilige scheduleNext...Poll unten) — alle vier hatten
+// dieselbe Schwäche: ein Fehlschlag wurde nur geloggt, der nächste Versuch lief erst beim NÄCHSTEN
+// Kerzenschluss (siehe pollRecent-Kommentar). Bug-Report Philip 2026-08-07 (Folgerunde): das erste,
+// auf 3 Retries/45s ausgelegte Fenster reichte nicht — cTraders Demo-Server hatte eine mehrminütige
+// Verbindungs-Flaute (502 Connect-Timeout gefolgt von rohen "Failed to fetch"-Netzwerkfehlern).
+// 8 Retries/~2min decken das ab, ohne bei einem wirklich längeren Ausfall unbegrenzt weiterzuhämmern
+// — danach übernimmt ganz normal wieder der reguläre, an den Kerzenschluss gekoppelte Poll. Bricht
+// sofort ab, wenn währenddessen unmounted oder in den Replay-Modus gewechselt wurde.
+async function withPollRetries(loadFn) {
+  for (let attempt = 0; attempt <= POLL_MAX_RETRIES; attempt++) {
+    if (!chart || props.replayUntil != null) return;
+    if (await loadFn()) return;
+    if (attempt < POLL_MAX_RETRIES) await sleep(POLL_RETRY_DELAY_MS);
   }
 }
 
@@ -2146,7 +2185,7 @@ function scheduleNextPoll() {
   const msIntoBar = Date.now() % barMs;
   const delay = barMs - msIntoBar + CLOSE_POLL_BUFFER_MS;
   pollTimer = setTimeout(async () => {
-    await pollRecent();
+    await withPollRetries(pollRecent);
     if (chart) scheduleNextPoll(); // Komponente könnte während des awaits unmounted worden sein
   }, delay);
 }
