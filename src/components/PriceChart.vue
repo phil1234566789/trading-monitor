@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { createChart, CandlestickSeries, LineSeries, TickMarkType } from "lightweight-charts";
+import { createChart, CandlestickSeries, LineSeries, TickMarkType, CrosshairMode } from "lightweight-charts";
 import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
 import {
   detectLiquidityLevels,
@@ -2233,6 +2233,11 @@ onMounted(() => {
     },
     localization: {
       timeFormatter: crosshairTimeFormatter,
+    },
+    // Bug-Report Philip 2026-08-07: Magnet-Crosshair (Default) snappt den Mauszeiger auf die
+    // nächste Kerze statt der tatsächlichen Cursor-Position zu folgen — wollte er nicht.
+    crosshair: {
+      mode: CrosshairMode.Normal,
     },
   });
 
