@@ -334,6 +334,13 @@ export async function createTrade(args: CreateTradeArgs) {
 
   let targets: unknown[] = [];
   if (args.targets && args.targets.length > 0) {
+    // source_time NICHT weglassen (Bug-Report Philip 2026-08-07, dealing_range #32: "3 targets
+    // drin, aber man sieht sie nicht im Chart") — refreshTradeTargetLinksInternal in PriceChart.vue
+    // überspringt jedes Target mit sourceTime==null komplett (siehe Migration
+    // 20260728140000_trade_targets_kind_and_source.sql: ohne bekannte source_time ist aus dem
+    // reinen Preis keine Linie rekonstruierbar). position.triggered_at ist der beste verfügbare
+    // Anker, den dieses Tool kennt — der tatsächliche DB-Wert (auch wenn triggeredAt im Aufruf
+    // fehlte und die Spalte selbst einen Default zog), nicht args.triggeredAt.
     const { data: targetRows, error: targetError } = await supabase
       .from("trade_targets")
       .insert(
@@ -342,6 +349,7 @@ export async function createTrade(args: CreateTradeArgs) {
           price: t.price,
           range_low: t.rangeLow ?? null,
           range_high: t.rangeHigh ?? null,
+          source_time: position.triggered_at,
         })),
       )
       .select("*");
