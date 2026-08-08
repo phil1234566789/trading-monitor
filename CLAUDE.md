@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A personal Forex/crypto trading dashboard for Philip. Vue 3 SPA (deployed to GitHub Pages) +
 Supabase (Postgres + Edge Functions) backend. Live price charts (BTC-USDT via OKX, GBPUSD/EURUSD
-via Twelve Data) with order-block/liquidity/trade-setup detection, a cron-driven alert watcher
+via cTrader Open API) with order-block/liquidity/trade-setup detection, a cron-driven alert watcher
 that posts to Telegram, and a trade journal ("Protokoll").
 
 `PLAN-notifications.md` is a running dev log/plan doc with historical context on major features
@@ -56,38 +56,51 @@ Pine Script source of truth for the trade-setup tuning constants lives in a sibl
 `tv-indikator` project (`tv-indikator/src/inputs.pine`), referenced in comments but not in this
 repo.
 
-### Forex candle data: Twelve Data, not a broker API
+### Forex candle data: cTrader Open API (again), not Twelve Data
 
-GBPUSD/EURUSD candles come from the Twelve Data REST API (`supabase/functions/_shared/twelvedata/client.ts`),
-proxied through the `forex-candles` edge function so the frontend never holds the API key.
-`src/forexCandles.js` is the frontend fetch wrapper (mirrors the shape of the OKX fetch functions
-used for BTC: `{time,open,high,low,close,volume}`, oldest-first).
+GBPUSD/EURUSD candles come from the cTrader Open API (`supabase/functions/_shared/ctrader/client.ts`,
+`ctrader_oauth_tokens` table for the OAuth token pair), proxied through the `forex-candles` edge
+function so the frontend never holds credentials directly. `src/forexCandles.js` is the frontend
+fetch wrapper (mirrors the shape of the OKX fetch functions used for BTC: `{time,open,high,low,close,volume}`,
+oldest-first) — same shape regardless of which broker/provider is behind it.
 
-This replaced a cTrader Open API integration (`supabase/functions/_shared/ctrader/`,
-`ctrader-candles` function, `scripts/ctrader-reauth.mjs`, the `ctrader_oauth_tokens` table) after
-the broker/challenge provider changed and no longer offered cTrader. That code is intentionally
-left in place but unwired (not imported by anything live) rather than deleted, in case a future
-broker supports cTrader again — don't be surprised it's there, and don't wire it back up without
-checking whether the OAuth tokens are even still valid.
+This flipped back and forth twice — worth knowing the full history since the "current" state has
+changed direction before and may again:
+1. Originally cTrader, on a prop-firm challenge account.
+2. The challenge account got deactivated (twice, actually — both prior cTrader outages were this,
+   not a Spotware/cTrader problem itself) → switched to the Twelve Data REST API
+   (`supabase/functions/_shared/twelvedata/client.ts`) as a broker-independent fallback.
+3. Bug report 2026-07-27 ("Setups auf FOREXCOM sichtbar, auf Twelve Data nicht"): Twelve Data
+   aggregates 60+ liquidity providers, and that aggregation smooths away the exact wick extremes
+   the FVG/OB detection depends on — a structural mismatch, not a bug in `orderBlocks.ts`/`liquidity.ts`.
+4. **Since 2026-08-03: back to cTrader**, this time on a regular Pepperstone Razor demo account
+   instead of a prop-firm challenge (see `PLAN-notifications.md` "Status: cTrader Open API" for the
+   full writeup) — chosen specifically to avoid another challenge-account deactivation.
 
-**Twelve Data free tier is tight**: 800 requests/day, 8/minute. Both `poi-watcher` and the
-frontend's interactive polling (e.g. toggling the EMA overlay pulls extra M5 history) draw from
-the same per-account limit — a 429 from Twelve Data is a real, expected failure mode on the free
-tier, not a bug. `poi-watcher` already throttles aggressively (see below); if 429s keep
-happening, the real fix is upgrading the plan, not further shaving edge-function requests.
+The Twelve Data client code (`_shared/twelvedata/`) is the one left in place-but-unwired now (mirror
+image of how the cTrader code sat unused during step 2) — don't be surprised it's still there, and
+don't assume it's what's live without checking `poi-watcher`'s `INSTRUMENTS` config
+(`source: "ctrader"` per instrument) first.
+
+**cTrader's hard limit is 14000 bars/request** (see `fetchOneTrendbar` in `_shared/ctrader/client.ts`)
+— generous compared to Twelve Data's free-tier 800/day, 8/minute, which is why `poi-watcher`'s
+throttling (see below) is no longer about surviving a tight rate limit; it's now purely for cache
+consistency and to avoid hammering the OAuth-token-backed connection unnecessarily.
 
 ### `poi-watcher`: the alert cron, and its request-budget throttling
 
 `supabase/functions/poi-watcher/index.ts` runs on a `pg_cron` schedule (every 5 min, see
 `supabase/migrations/20260713120000_poi_watcher_cron_5min.sql`) and does three things per
-instrument (BTC via OKX, GBPUSD/EURUSD via Twelve Data): detect order-block zones, detect 1H
+instrument (BTC via OKX, GBPUSD/EURUSD via cTrader): detect order-block zones, detect 1H
 liquidity levels, detect trade setups (M5 sweep + fractal + OB) — persisting all of it to
 `ob_zones` / `liquidity_levels` / `trade_setups`, and sending a Telegram message the first time a
 zone/level is "touched" by price, gated by both a trading-hours window and per-alert-type toggles
 in the `alarm_settings` table (the "Alarme" page in the UI).
 
-Because Twelve Data has only closed candles and a tight rate limit, this function does **not**
-naively re-fetch everything every 5 minutes:
+Only closed candles are available (no live ticker), so this function does **not** naively
+re-fetch everything every 5 minutes — this throttling predates the 2026-08-03 switch back to
+cTrader (it was originally built to survive Twelve Data's tight rate limit) but is kept
+unchanged for cache consistency, not because cTrader needs it the same way:
 - Forex fetching only happens inside a fetch window around the configured trading session
   (`isForexFetchWindow`) — outside it, GBPUSD/EURUSD are skipped entirely (BTC/OKX is unaffected,
   no rate limit there).
