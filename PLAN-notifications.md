@@ -277,4 +277,50 @@ API gebraucht wird, braucht es einen neuen Autorisierungs-Durchlauf mit `scope=t
 
 ---
 
+## Experiment: Kronos LLM-Forecast als Entry-Filter getestet — 2026-08-08 (verworfen)
+
+Kurzer Ausflug, kein Teil der App: [Kronos](https://github.com/shiyu-coder/Kronos), ein
+Open-Source-Foundation-Model fürs Vorhersagen von Candlestick-Sequenzen (AAAI-2026-Paper,
+MIT-Lizenz), lokal getestet (Python/PyTorch, GPU) als möglicher zusätzlicher Filter für
+Trade-Entries — auf BTC und GBPUSD, M5/1H, per Replay-Backtest (historischer Zeitpunkt →
+Kronos simuliert N mögliche Zukunftspfade → Vergleich mit dem, was danach tatsächlich
+passiert ist). Code lag in `kronos-prototype/` (Python-Standalone, eigenes venv, nicht Teil
+des Vue/Supabase-Stacks), **wurde nach dem Test wieder gelöscht** — Ergebnis unten war zu
+schwach, um den Ordner zu behalten; bei Interesse müsste man von vorn anfangen (Repo klonen,
+`pip install`, siehe Kronos-eigenes README für den Ablauf).
+
+**Ergebnisse/Beobachtungen (jeweils kleine Stichproben, keine große Studie):**
+- BTC-USDT, 1H, 15 Replay-Punkte (24h-Horizont): Richtungs-Trefferquote 40% — **schlechter
+  als Münzwurf** (50%), Brier Score 0,354 (schlechter als 0,25 = Zufalls-Baseline).
+- Die von Kronos' eigener Live-Demo gezeigte "Upside Probability" vergleicht NUR den
+  Endpreis am Horizont-Ende gegen den Startpreis — ignoriert komplett den Weg dahin
+  (Drawdown/Runup unterwegs). Ein GBPUSD-M5-Test (4h-Horizont) zeigte genau das Problem:
+  Kronos sagte durchgehend 55-70% "up", real ging der Kurs erst 16 Pips ins Minus, endete
+  am Ende sogar leicht negativ — ein "Treffer" nach der reinen Endpunkt-Metrik wäre hier
+  irreführend gewesen.
+- Bei nur 20 Simulationen ist die Probability selbst instabil: identischer Input, zwei
+  Läufe hintereinander ergaben 100% vs. 90% — reines Stichproben-Rauschen, kein stabiler
+  Wert.
+- Nach einem plötzlichen Preissprung wird Kronos auffällig **überkonfident** (durchgehend
+  0%/100% über viele Folge-Zeitpunkte) und lag dabei mehrfach klar daneben (starke
+  Mean-Reversion vorhergesagt, die real nicht eintrat) — Konfidenz und tatsächliche
+  Trefferquote laufen auseinander.
+- Eine "Ziel-vs-Stop-Wettlauf"-Metrik (pro Simulation: wird zuerst das Gewinnziel oder das
+  Verlustlimit erreicht, per High/Low nicht nur Close) war der brauchbarste Ansatz für echte
+  Entry-Bewertung, deckte aber auch auf: ein simulierter Docht riss einen 6-Pip-Stop nur 5
+  Minuten bevor der reale Kurs um +45 Pips durchstartete — Beispiel dafür, wie knapp
+  Stop-Platzierung an Zufall hängt, unabhängig von Kronos' eigener Qualität.
+- **Praxistest am konkreten Fall:** Short-Setup-Idee vom 07.08. 09:15 (GBPUSD) mit echten
+  500 1H-Kerzen Lookback geprüft — Kronos' Mehrheitsvotum für die Folgekerze war 80%
+  BULLISCH (16/20 Simulationen), hätte also klar vom Short abgeraten. Die echte Kerze war
+  BÄRISCH (-4,8 Pips) — Kronos hätte hier den richtigen Trade verhindert.
+
+**Fazit (Philip, 2026-08-08): "was für ein Scheiß"** — aktuell kein brauchbarer Zusatzfilter
+für Entries, weder auf BTC noch auf Forex, weder auf 1H noch auf M5. Größere Sweeps (mehr
+Replay-Punkte), `Kronos-base` statt `-small`, oder eine bessere kalibrierte Metrik könnten
+das Bild ändern, wurden aber nicht mehr verfolgt. Falls das Thema nochmal aufkommt: bei
+Null anfangen, dieser Eintrag ist nur die Zusammenfassung, kein lauffähiger Code mehr da.
+
+---
+
 **Nächster Schritt:** Phase A — tiefere Kerzenhistorie von OKX holen (Pagination), dann Backtesting-Modul aufsetzen.
