@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-// Manuelle Re-Authentifizierung für den cTrader Open API Access-Token (läuft nach ~30
-// Tagen ab, siehe PLAN-notifications.md "Bekannte Lücken"). Kein automatischer Refresh
-// im Projekt eingebaut, daher dieser einmalige Helper statt eines Postman/curl-Handrolls.
+// Manuelle Re-Authentifizierung für den cTrader Open API Access-Token. Der automatische
+// Refresh (_shared/ctrader/client.ts, withAutoRefresh) deckt den normalen ~30-Tage-Ablauf
+// ab — dieser Helper ist nur für den Fall nötig, dass das gespeicherte Refresh-Token selbst
+// ungültig geworden ist (z.B. Vorfall 2026-08-08: ACCESS_DENIED beim automatischen Refresh),
+// weil es dafür kein automatisches Recovery gibt.
 //
 // Nutzung:
 //   1) Env setzen (nicht committen!):

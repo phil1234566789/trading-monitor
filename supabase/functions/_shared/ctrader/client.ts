@@ -210,6 +210,30 @@ function isAuthFailure(err: unknown): boolean {
   return err instanceof Error && err.message.startsWith("cTrader error ");
 }
 
+// Spotwares Refresh-Token ist Single-Use (rotiert bei jedem Refresh) — schlägt das
+// Wegschreiben des NEUEN Tokens fehl, ist das ALTE (in der DB stehende) bereits verbraucht,
+// und ab dann scheitert jeder weitere Refresh-Versuch mit ACCESS_DENIED, bis jemand manuell
+// per Browser neu einloggt (scripts/ctrader-reauth.mjs). Kein automatisches Recovery davon.
+// Vorfall Philip 2026-08-08: genau dieses Muster (vermutlich ein einmaliger transienter
+// DB-Fehler beim Schreiben) legte für Stunden alle Forex-Kerzen lahm. Ein paar Retries mit
+// kurzem Backoff kosten im Erfolgsfall nichts und drücken die Wahrscheinlichkeit, dass ein
+// kurzer DB-Hänger zum dauerhaften Lockout wird, deutlich runter.
+async function persistWithRetry(
+  onTokenRefresh: (tokens: RefreshedTokens) => Promise<void> | void,
+  tokens: RefreshedTokens,
+): Promise<void> {
+  const ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    try {
+      await onTokenRefresh(tokens);
+      return;
+    } catch (err) {
+      if (attempt === ATTEMPTS) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+    }
+  }
+}
+
 // Der Access-Token läuft nach ~30 Tagen ab (siehe PLAN-notifications.md) — statt den Ablauf
 // selbst zu tracken, einfach den ersten (echten Auth-)Fehlschlag eines Requests als Signal nehmen
 // und einmal mit einem frisch geholten Token neu versuchen. `onTokenRefresh` ist optional, weil
@@ -225,13 +249,16 @@ async function withAutoRefresh<T>(
   } catch (err) {
     if (!opts.refreshToken || !isAuthFailure(err)) throw err;
     const refreshed = await refreshAccessToken(opts.clientId, opts.clientSecret, opts.refreshToken);
-    try {
-      await opts.onTokenRefresh?.(refreshed);
-    } catch (persistErr) {
-      // Frisches Token trotzdem für DIESEN Request nutzen, auch wenn das Wegschreiben
-      // (z.B. DB down) fehlschlägt — sonst scheitert ein funktionierender Request unnötig
-      // an einem Persistenzproblem, das den nächsten Kaltstart betrifft, nicht diesen Call.
-      console.error("cTrader: failed to persist refreshed token:", persistErr);
+    if (opts.onTokenRefresh) {
+      try {
+        await persistWithRetry(opts.onTokenRefresh, refreshed);
+      } catch (persistErr) {
+        // Frisches Token trotzdem für DIESEN Request nutzen, auch wenn das Wegschreiben
+        // (z.B. DB down) nach allen Retries weiter fehlschlägt — sonst scheitert ein
+        // funktionierender Request unnötig an einem Persistenzproblem, das den nächsten
+        // Kaltstart betrifft, nicht diesen Call.
+        console.error("cTrader: failed to persist refreshed token after retries:", persistErr);
+      }
     }
     return await fn(refreshed.accessToken);
   }
