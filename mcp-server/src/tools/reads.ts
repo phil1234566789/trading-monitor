@@ -177,19 +177,25 @@ export function registerReadTools(server: McpServer) {
         "Rohkerzen für GBPUSD/EURUSD, automatisch archive-first: liegt der angefragte Bereich im " +
         "persistierten Kerzen-Archiv (aktuell: GBPUSD, 5m/1h/4h, ab 2026-01-01), kommt die Antwort " +
         "von dort — kein cTrader-Call, kein Timeout-Risiko. Nur außerhalb davon (EURUSD, andere " +
-        "Timeframes, oder der kleine Rest seit dem letzten Backfill-Lauf bis 'jetzt') geht es live " +
-        "über die forex-candles Edge Function gegen cTrader (eigener OAuth-Handshake pro Call, " +
-        "daher dort gelegentlich träge/timeout-anfällig) — schlägt dieser Live-Rest fehl, kommt " +
-        "trotzdem der archivierte Teil zurück statt eines Fehlers. get_forex_candles_archive direkt " +
-        "nutzen, wenn ein expliziter fromTime/toTime-Bereich gebraucht wird statt 'neueste N bis zu " +
-        "einem Zeitpunkt'. Für BTC den okx-market-MCP-Server nutzen.",
+        "Timeframes wie z.B. 1m — die liegen NIE im Archiv, siehe get_forex_candles_archive, das nur " +
+        "5m/1h/4h führt —, oder der kleine Rest seit dem letzten Backfill-Lauf bis 'jetzt') geht es " +
+        "live über die forex-candles Edge Function gegen cTrader (eigener OAuth-Handshake pro Call, " +
+        "daher dort gelegentlich träge/timeout-anfällig, ggf. selbst 1-2x wiederholen) — schlägt " +
+        "dieser Live-Rest fehl, kommt trotzdem der archivierte Teil zurück statt eines Fehlers. " +
+        "Optional `toSec`: liefert die neuesten `count` Kerzen bis zu diesem Zeitpunkt statt bis " +
+        "jetzt — damit auch ein historischer Ausschnitt auf NICHT archivierten Timeframes (v.a. M1) " +
+        "möglich, ohne extra Skript. get_forex_candles_archive direkt nutzen, wenn ein expliziter " +
+        "fromTime/toTime-Bereich gebraucht wird statt 'neueste N bis zu einem Zeitpunkt'. Für BTC " +
+        "den okx-market-MCP-Server nutzen.",
       inputSchema: {
         instrument: INSTRUMENT,
         timeframe: z.enum(["1m", "3m", "5m", "15m", "1h", "4h", "1D"]),
         count: z.number().int().positive().max(5000).default(300),
+        toSec: z.number().optional().describe("Unix-Sekunden — liefert die neuesten `count` Kerzen bis zu diesem Zeitpunkt statt bis jetzt (für einen historischen Ausschnitt, z.B. auf M1)"),
       },
     },
-    async ({ instrument, timeframe, count }) => json(await fetchForexCandles(instrument, timeframe, { count })),
+    async ({ instrument, timeframe, count, toSec }) =>
+      json(await fetchForexCandles(instrument, timeframe, { count, toMs: toSec != null ? toSec * 1000 : undefined })),
   );
 
   server.registerTool(
