@@ -53,7 +53,7 @@ export function registerReadTools(server: McpServer) {
         "DB-Zeilen (M5 wird von poi-watcher nie persistiert), deshalb auch kein späteres Update: " +
         "touched/invalidated gelten nur zum Zeitpunkt dieses Calls. Nutze die granularen get_*-Tools " +
         "nur, wenn du darüber hinaus mehr brauchst (andere Zeitspanne, Journal, News, Handelszeiten). " +
-        "Der Structure-Trend nutzt standardmäßig einen rollierenden 7-Tage-Lookback (Periode " +
+        "Der Structure-Trend nutzt standardmäßig einen rollierenden 21-Tage-Lookback (Periode " +
         "5/2) — falls Philip im Dashboard einen 'fixen Start' eingestellt hat (nur in seinem " +
         "Browser-localStorage sichtbar, nicht von hier aus abfragbar), frag ihn danach und gib es " +
         "über structureConfig mit. Antwort enthält zusätzlich structureWindow (cutoffOuter/" +
@@ -69,8 +69,8 @@ export function registerReadTools(server: McpServer) {
           .object({
             periodOuter: z.number().int().positive().optional().describe("Default 5"),
             periodInner: z.number().int().positive().optional().describe("Default 2"),
-            lookbackHoursOuter: z.number().positive().optional().describe("Default 168 (7 Tage)"),
-            lookbackHoursInner: z.number().positive().optional().describe("Default 168 (7 Tage)"),
+            lookbackHoursOuter: z.number().positive().optional().describe("Default 504 (21 Tage)"),
+            lookbackHoursInner: z.number().positive().optional().describe("Default 504 (21 Tage)"),
             fixedStartActive: z.boolean().optional().describe("true = fixedStartTime statt rollierendem Lookback nutzen"),
             fixedStartTime: z.number().optional().describe("Unix-Sekunden, nur relevant wenn fixedStartActive"),
           })
@@ -172,13 +172,17 @@ export function registerReadTools(server: McpServer) {
   server.registerTool(
     "get_forex_candles",
     {
-      title: "Forex-Kerzen (live)",
+      title: "Forex-Kerzen",
       description:
-        "Rohkerzen für GBPUSD/EURUSD über die forex-candles Edge Function, live von cTrader geholt " +
-        "(eigener OAuth-Handshake pro Call, daher gelegentlich träge/timeout-anfällig bei größeren " +
-        "count-Werten). Für einen bereits per Backfill archivierten Bereich (aktuell: GBPUSD, " +
-        "5m/1h/4h, ab 2026-07-01) get_forex_candles_archive vorziehen — schneller, kein Timeout-" +
-        "Risiko. Für BTC den okx-market-MCP-Server nutzen.",
+        "Rohkerzen für GBPUSD/EURUSD, automatisch archive-first: liegt der angefragte Bereich im " +
+        "persistierten Kerzen-Archiv (aktuell: GBPUSD, 5m/1h/4h, ab 2026-01-01), kommt die Antwort " +
+        "von dort — kein cTrader-Call, kein Timeout-Risiko. Nur außerhalb davon (EURUSD, andere " +
+        "Timeframes, oder der kleine Rest seit dem letzten Backfill-Lauf bis 'jetzt') geht es live " +
+        "über die forex-candles Edge Function gegen cTrader (eigener OAuth-Handshake pro Call, " +
+        "daher dort gelegentlich träge/timeout-anfällig) — schlägt dieser Live-Rest fehl, kommt " +
+        "trotzdem der archivierte Teil zurück statt eines Fehlers. get_forex_candles_archive direkt " +
+        "nutzen, wenn ein expliziter fromTime/toTime-Bereich gebraucht wird statt 'neueste N bis zu " +
+        "einem Zeitpunkt'. Für BTC den okx-market-MCP-Server nutzen.",
       inputSchema: {
         instrument: INSTRUMENT,
         timeframe: z.enum(["1m", "3m", "5m", "15m", "1h", "4h", "1D"]),
@@ -191,21 +195,24 @@ export function registerReadTools(server: McpServer) {
   server.registerTool(
     "get_forex_candles_archive",
     {
-      title: "Forex-Kerzen-Archiv (persistiert, Pilot)",
+      title: "Forex-Kerzen-Archiv (persistiert)",
       description:
-        "Kerzen aus der forex_candles-Tabelle — einmalig per Backfill-Script befüllt (siehe " +
-        "mcp-server/src/scripts/backfillForexCandles.ts), statt einem Live-cTrader-Request über " +
-        "get_forex_candles: kein OAuth-Handshake, kein Timeout-Risiko, beliebig oft wiederholbar. " +
-        "PILOT-STAND (2026-08-09), NUR dieser Bereich ist befüllt: Instrument GBPUSD, Timeframes " +
-        "5m/1h/4h, Zeitraum ab 2026-07-01 (Europe/Berlin) bis zum letzten Backfill-Lauf. Für " +
-        "EURUSD, andere Timeframes oder Zeiträume davor liefert dieses Tool ein leeres Array — dann " +
-        "stattdessen get_forex_candles (live) nutzen, nicht als Fehler werten. fromTime/toTime als " +
-        "ISO-Zeitstempel (inklusive Grenzen); ohne Angabe die ältesten verfügbaren Kerzen bis zum " +
-        "limit. Praktisch v.a. für historische Analysen über mehrere Tage/Wochen (z.B. 'zeig mir " +
-        "alle Order-Blocks der letzten 3 Wochen') statt vieler einzelner get_forex_candles-Calls.",
+        "Kerzen aus der forex_candles-Tabelle, per Backfill-Script befüllt (siehe " +
+        "mcp-server/src/scripts/backfillForexCandles.ts) — kein OAuth-Handshake, kein Timeout-" +
+        "Risiko, beliebig oft wiederholbar. get_forex_candles nutzt intern automatisch dasselbe " +
+        "Archiv (archive-first mit Live-Fallback) — DIESES Tool hier nur direkt aufrufen, wenn ein " +
+        "EXPLIZITER fromTime/toTime-Bereich gebraucht wird (get_forex_candles kennt nur 'neueste N " +
+        "Kerzen bis zu einem Zeitpunkt', keinen Start+Ende-Bereich). Aktuell befüllt: Instrument " +
+        "GBPUSD, Timeframes 5m/1h/4h, ab 2026-01-01 (Europe/Berlin) bis zum letzten Backfill-Lauf. " +
+        "Für EURUSD, andere Timeframes oder Zeiträume davor liefert dieses Tool ein leeres Array — " +
+        "get_forex_candles fängt das für den 'neueste N'-Fall selbst per Live-Fallback ab, hier " +
+        "musst du das selbst tun. fromTime/toTime als ISO-Zeitstempel (inklusive Grenzen); ohne " +
+        "Angabe die ältesten verfügbaren Kerzen bis zum limit. Praktisch v.a. für historische " +
+        "Analysen über mehrere Tage/Wochen (z.B. 'zeig mir alle Order-Blocks der letzten 3 " +
+        "Wochen') statt vieler einzelner get_forex_candles-Calls.",
       inputSchema: {
         instrument: INSTRUMENT,
-        timeframe: z.enum(["5m", "1h", "4h"]).describe("Nur diese drei sind aktuell befüllt (Pilot-Stand)"),
+        timeframe: z.enum(["5m", "1h", "4h"]).describe("Nur diese drei sind aktuell befüllt"),
         fromTime: z.string().optional().describe("ISO-Zeitstempel, untere Grenze (inklusiv)"),
         toTime: z.string().optional().describe("ISO-Zeitstempel, obere Grenze (inklusiv)"),
         limit: z.number().int().positive().max(20000).default(5000),

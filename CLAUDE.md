@@ -315,8 +315,12 @@ this explicitly) — bundles M5 candles + Asia-session range, the 1H structure/t
 liquidity levels, and relevant OB zones for an instrument in one call, so Claude doesn't have to
 fire off half a dozen granular `get_*` tools just to get oriented (Philip's explicit ask
 2026-07-31). Structure-trend params (`periodOuter`/`periodInner`/`lookbackHours*`/
-`fixedStartActive`/`fixedStartTime`) default to the same rolling 7-day/period-5/2 values as the
-"Daten-Export" button — if Philip has a non-default "fixer Start" set in his Dashboard, that only
+`fixedStartActive`/`fixedStartTime`) default to the same period-5/2 values as the "Daten-Export"
+button, but a longer 21-day rolling lookback (`STRUCTURE_LOOKBACK_HOURS` in `dataExport.ts`,
+mcp-server-only — the button itself stays at 7 days) — bumped from 7 days 2026-08-09 because a
+too-short window can cut off the origin of a multi-level nested trend (see
+`marketStructureAnalysis.rules.md` "beliebige Verschachtelungstiefe") before it ever forms. If
+Philip has a non-default "fixer Start" set in his Dashboard, that only
 lives in his browser's `localStorage` (never synced to Supabase, unlike sessions/chartColors), so
 the tool can't discover it on its own; Laniakea (`/l`) should ask Philip when it matters, not guess.
 
@@ -434,25 +438,35 @@ edge function other callers use, paginated, batch-upserted with `ON CONFLICT DO 
 idempotency/resumability — cTrader connects are flaky enough that a plain sequential fetch loop
 needs its own retry-with-delay, see the script's `withRetries`; parametrized via
 `BACKFILL_INSTRUMENTS`/`BACKFILL_BARS`/`BACKFILL_START_DATE` env vars instead of hand-editing
-constants per extension). Read via the `get_forex_candles_archive` MCP tool
-(`mcp-server/src/db.ts`'s `getForexCandlesArchive`) — same `{time,open,high,low,close,volume}`
-shape as `get_forex_candles`, just serviced from Postgres instead of cTrader, so no timeout risk
-and no OAuth overhead. Current coverage: GBPUSD, 5m/1h/4h, from 2026-01-01 onward — EURUSD or
-older data returns an empty array, not an error, from `get_forex_candles_archive`; treat that as
-"not backfilled yet, fall back to `get_forex_candles`", not a bug.
+constants per extension). Current coverage: GBPUSD, 5m/1h/4h, from 2026-01-01 onward.
 
-**Frontend chart is DB-first too, not just Laniakea** — `src/forexCandles.js`'s
-`fetchOlderCandles` (scroll-back) and `fetchInitialCandles` (mount/TF-switch/replay-jump, and
-therefore also `loadTradeSetupM5`/the 1H-ranges/4H-OBs pollers that all funnel through it) try
-`forex_candles` first, only hitting cTrader for whatever the archive doesn't cover (usually just
-a small "since the last backfill run" tail, or nothing at all — see `fetchInitialCandles`'s
-graceful degradation: a failing live top-up returns the archived data instead of throwing, so a
-chart never hangs on a cTrader timeout the way it used to before 2026-08-09).
-`pollRecent()` stays live-only, on purpose — the archive is frozen at whatever the last backfill
-run saw, it structurally can't serve "the candle that just closed". There is **no ongoing sync**
-otherwise — the table stops growing the moment a backfill script run finishes; extending
-`poi-watcher`'s already-running M5 fetch to also persist here (avoiding any extra cTrader load)
-is the natural next step once Philip wants it, not yet built.
+**Both the frontend chart AND Laniakea's `fetchForexCandles` are archive-first, transparently** —
+this took two passes to actually get right, worth knowing if you touch either again. Pass one
+(2026-08-09) added `get_forex_candles_archive` as a new, separate MCP tool and made the
+*frontend's* `fetchOlderCandles`/`fetchInitialCandles` (`src/forexCandles.js`) archive-first, but
+left the MCP server's own `fetchForexCandles` (`mcp-server/src/forexCandles.ts` — used by
+`get_data_export`, `get_forex_rsi`/`get_forex_ema` via `indicatorWindow.ts`'s
+`fetchM5WithWarmup`, AND `get_forex_candles` itself) untouched: still 100% live, every call, no
+exception. Bug-Report Philip 2026-08-10: Laniakea tried live cTrader 3× (all timed out) for a
+GBPUSD date squarely inside the archived range, then had to notice this herself and manually
+call `get_forex_candles_archive` as a workaround instead of it just working — a documentation/
+wiring gap, not a data gap (the candles were there all along). Pass two fixed this properly:
+`fetchForexCandles` (mcp-server) itself now tries the archive first (`db.ts`'s new
+`getForexCandlesArchiveUpTo` — "newest N candles up to a cutoff", the same query shape as the
+frontend's `fetchArchivedUpTo`, NOT the same as `getForexCandlesArchive`'s "ascending from a
+`fromTime`" shape, which serves a different query pattern and is kept as a separate function),
+live only for whatever's missing, with the same graceful-degradation-on-live-failure as the
+frontend. Since `fetchForexCandles` is the single low-level function every MCP forex-candle
+caller goes through, this fixed `get_data_export`/RSI/EMA/`get_forex_candles` all at once, no
+call-site changes needed anywhere else. `get_forex_candles_archive` remains useful as its own
+tool only for an *explicit* `fromTime`+`toTime` range query (multi-day historical scans) — for
+anything with "newest N up to a point" semantics, `get_forex_candles` already covers it now, no
+need to reach for the archive tool directly. `pollRecent()` (frontend live-tail polling) stays
+live-only, on purpose — the archive is frozen at whatever the last backfill run saw, it
+structurally can't serve "the candle that just closed". There is **no ongoing sync** otherwise —
+the table stops growing the moment a backfill script run finishes; extending `poi-watcher`'s
+already-running M5 fetch to also persist here (avoiding any extra cTrader load) is the natural
+next step once Philip wants it, not yet built.
 
 **Historical `ob_zones` backfill (`mcp-server/src/scripts/backfillObZones.ts`, since 2026-08-09)**:
 `ob_zones` used to only ever hold what `poi-watcher`'s live cron detected going forward — a

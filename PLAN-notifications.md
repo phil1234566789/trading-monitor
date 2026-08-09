@@ -442,6 +442,28 @@ außerdem `candleCache.js`s `DB_VERSION` auf 5 gebumpt (der fehlerhafte Fetch wu
 auf). Mit Playwright verifiziert: derselbe Replay-Zeitpunkt zeigt jetzt durchgehend Kerzen,
 Sessions, OB-Zonen und ein korrektes Trade-Setup-Cockpit, keine Konsolenfehler.
 
+**Nachtrag, Folgetag (2026-08-10), vierte Runde**: anderer Bug als oben, gleiche Baustelle.
+Philip fragte, warum Lana in einer Analyse selbst erwähnte, dass sie 3× live cTrader versucht
+(alles Timeouts) und sich DANN selbst mit `get_forex_candles_archive` beholfen hat — für ein
+GBPUSD-Datum (03.06.2026), das längst im Archiv liegt. Ursache: Pass eins (08-09) hatte
+`get_forex_candles_archive` nur als NEUES, separates Tool hinzugefügt und die *Frontend*-Fetches
+archive-first gemacht — `mcp-server/src/forexCandles.ts`s `fetchForexCandles` selbst (die einzige
+Stelle, über die `get_data_export`/`get_forex_rsi`/`get_forex_ema`/`get_forex_candles`
+ÜBERHAUPT Kerzen holen) blieb dabei unangetastet, 100% live, ausnahmslos. Kein Datenproblem —
+die Kerzen waren längst da — sondern eine Verkabelungslücke: das Archiv-Tool war nur eine
+zusätzliche Option, kein automatischer Ersatz.
+
+Fix: `fetchForexCandles` selbst archive-first gemacht (neue `getForexCandlesArchiveUpTo` in
+`db.ts` — "neueste N Kerzen bis zu einem Zeitpunkt", bewusst eine eigene Funktion neben der
+bestehenden `getForexCandlesArchive` (die "aufsteigend ab `fromTime`" bedient, eine andere
+Query-Form) — dieselbe Query-Form wie das Frontend-Pendant). Da JEDER MCP-Kerzen-Aufrufer über
+diese eine Funktion läuft, war das ein Ein-Stellen-Fix ohne Änderungen an dataExport.ts/
+indicatorWindow.ts selbst. Smoke-Test mit `buildDataExport({instrument:"GBPUSD",
+dateStr:"2026-06-03"})` (genau Lanas Szenario): 474ms statt 3× Timeout, korrekte Kerzen/OB-Zonen/
+Liquidity-Level/Structure-Trend für den Tag. Tool-Beschreibungen von `get_forex_candles`/
+`get_forex_candles_archive` entsprechend nachgezogen (nicht mehr "get_forex_candles = immer
+live").
+
 ---
 
 **Nächster Schritt:** Phase A — tiefere Kerzenhistorie von OKX holen (Pagination), dann Backtesting-Modul aufsetzen.

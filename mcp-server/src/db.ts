@@ -226,6 +226,51 @@ export async function getForexCandlesArchive(instrument: string, bar: string, fr
   }));
 }
 
+// Pendant zu getForexCandlesArchive oben, aber "neueste `count` Kerzen bis (inklusive) toIso"
+// statt "ab fromTime aufsteigend" — das ist die Form, die forexCandles.ts's fetchForexCandles
+// braucht (siehe dort), um transparent archive-first zu werden: absteigend paginiert, dann
+// umgedreht. Bug-Report Philip 2026-08-10: get_data_export versuchte für ein GBPUSD-Datum
+// mitten im archivierten Bereich (03.06.2026) trotzdem live cTrader (3× Timeout) und musste sich
+// selbst mit get_forex_candles_archive behelfen — dataExport.ts/indicatorWindow.ts riefen bisher
+// ausschließlich das rohe, live-only fetchForexCandles auf, das neue get_forex_candles_archive-
+// Tool war nur eine ZUSÄTZLICHE Option, kein automatischer Ersatz. Null nur, wenn wirklich nichts
+// im Archiv gefunden wurde (Signal: live fetchen).
+export async function getForexCandlesArchiveUpTo(instrument: string, bar: string, count: number, toIso: string) {
+  const rows: { time: string; open: number; high: number; low: number; close: number; volume: number }[] = [];
+  let boundary = toIso;
+  let inclusive = true;
+  while (rows.length < count) {
+    const pageLimit = Math.min(DB_READ_PAGE_SIZE, count - rows.length);
+    let query = supabase
+      .from("forex_candles")
+      .select("time, open, high, low, close, volume")
+      .eq("instrument", instrument)
+      .eq("bar", bar)
+      .order("time", { ascending: false })
+      .limit(pageLimit);
+    query = inclusive ? query.lte("time", boundary) : query.lt("time", boundary);
+    const { data, error } = await query;
+    if (error) {
+      console.error("Kerzen-Archiv lesen fehlgeschlagen, falle auf Live-cTrader zurück:", error.message);
+      break;
+    }
+    if (!data || data.length === 0) break;
+    rows.push(...data);
+    if (data.length < pageLimit) break;
+    boundary = data[data.length - 1].time;
+    inclusive = false;
+  }
+  if (rows.length === 0) return null;
+  return rows.reverse().map((r) => ({
+    time: Math.floor(new Date(r.time).getTime() / 1000),
+    open: r.open,
+    high: r.high,
+    low: r.low,
+    close: r.close,
+    volume: r.volume,
+  }));
+}
+
 export async function getNewsEvents(fromTime?: string, toTime?: string) {
   let query = supabase.from("news_events").select("*").order("event_time", { ascending: true });
   if (fromTime) query = query.gte("event_time", fromTime);

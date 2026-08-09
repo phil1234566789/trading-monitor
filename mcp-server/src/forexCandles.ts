@@ -1,4 +1,5 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient.js";
+import { getForexCandlesArchiveUpTo } from "./db.js";
 
 // Node-Port von src/forexCandles.js — ruft dieselbe `forex-candles` Edge Function auf, mit dem
 // anon-key als Bearer-Token (exakt das Pattern, das pg_cron laut
@@ -15,11 +16,7 @@ export interface Candle {
   volume: number;
 }
 
-export async function fetchForexCandles(
-  symbol: string,
-  bar: string,
-  { count, toMs }: { count: number; toMs?: number },
-): Promise<Candle[]> {
+async function fetchLiveForexCandles(symbol: string, bar: string, { count, toMs }: { count: number; toMs?: number }): Promise<Candle[]> {
   const params = new URLSearchParams({ symbol, period: bar, count: String(count) });
   if (toMs) params.set("to", String(toMs));
   const res = await fetch(`${FOREX_FN_URL}?${params}`, {
@@ -29,4 +26,31 @@ export async function fetchForexCandles(
   const json = await res.json();
   if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
   return json; // oldest zuerst
+}
+
+// Bug-Report Philip 2026-08-10: Lana versuchte für ein GBPUSD-Datum mitten im archivierten
+// Bereich (03.06.2026) trotzdem 3× live cTrader, bevor sie sich selbst mit
+// get_forex_candles_archive beholfen hat — dieses Modul (genutzt von get_data_export,
+// get_forex_rsi/-ema via indicatorWindow.ts, UND dem get_forex_candles-Tool selbst) rief bisher
+// ausschließlich fetchLiveForexCandles auf. Das neue Archiv-Tool war nur eine ZUSÄTZLICHE,
+// separat aufzurufende Option, kein automatischer Ersatz — dieselbe Lücke wie beim Frontend-Chart
+// vor dem DB-first-Fix, nur hier noch nicht geschlossen. Jetzt exakt dasselbe Muster wie
+// src/forexCandles.js's fetchInitialCandles: erst das Archiv bis toMs/"jetzt", live nur noch für
+// den Rest danach — schlägt der Live-Rest fehl, wird NICHT geworfen, sondern der archivierte
+// Stand zurückgegeben. Gilt jetzt für JEDEN Aufrufer dieser Funktion, ohne dass dataExport.ts/
+// indicatorWindow.ts selbst etwas davon wissen müssen.
+export async function fetchForexCandles(symbol: string, bar: string, { count, toMs }: { count: number; toMs?: number }): Promise<Candle[]> {
+  const toIso = new Date(toMs ?? Date.now()).toISOString();
+  const archived = await getForexCandlesArchiveUpTo(symbol, bar, count, toIso);
+  if (!archived) return fetchLiveForexCandles(symbol, bar, { count, toMs });
+  if (archived.length >= count) return archived;
+
+  const lastArchivedMs = archived[archived.length - 1].time * 1000;
+  try {
+    const rest = await fetchLiveForexCandles(symbol, bar, { count: count - archived.length, toMs });
+    return archived.concat(rest.filter((c) => c.time * 1000 > lastArchivedMs));
+  } catch (err) {
+    console.error("Live-Rest seit Archiv-Ende fehlgeschlagen, gebe nur archivierten Stand zurück:", err);
+    return archived;
+  }
 }
