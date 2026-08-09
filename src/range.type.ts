@@ -95,11 +95,14 @@ export type MarketStructureState = {
   appliedPivots: Pivot[];
   // Gegenläufiger Trend-Tracker, der parallel zum bestätigten Haupttrend mitläuft (CHoCH-Erkennung,
   // Chat 2026-07-25) — dieselbe Form wie der Haupttrend selbst (applyMarketStructurePivot mit
-  // direction="down" statt "up"), rekursiv aber praktisch nie mehr als eine Ebene tief
-  // (nestedTrend.nestedTrend bleibt immer null). Bewusst NICHT "innerTrend" genannt, um keine
-  // Namenskollision mit dem bestehenden innerStructurePivots/Periode-2-Konzept zu erzeugen — das
-  // hier ist eine ganz andere Achse (Gegenrichtung, nicht Periode). null, solange kein bestätigter
-  // Haupttrend läuft oder noch kein Gegentrend-Kandidat gesehen wurde (siehe advanceNestedTrend).
+  // direction="down" statt "up"), ECHT rekursiv: nestedTrend.nestedTrend kann seit Chat 2026-08-09
+  // ("wie viele Ebenen wie möglich") selbst wieder gesetzt sein (ein Gegentrend-Kandidat INNERHALB
+  // des Gegentrend-Kandidaten, usw.) — beliebig tief, begrenzt nur durch die tatsächlich in den
+  // Pivot-Daten bestätigten Trendwechsel, nicht durch ein Hardcap. Bewusst NICHT "innerTrend"
+  // genannt, um keine Namenskollision mit dem bestehenden innerStructurePivots/Periode-2-Konzept zu
+  // erzeugen — das hier ist eine ganz andere Achse (Gegenrichtung, nicht Periode). null, solange
+  // kein bestätigter Haupttrend läuft oder noch kein Gegentrend-Kandidat gesehen wurde (siehe
+  // advanceNestedTrend).
   nestedTrend: MarketStructureState | null;
   // Archiv abgeschlossener Ranges für die Darstellung (siehe ClosedRange oben) — wächst nur bei
   // einer Promotion (siehe applyInnerMarketStructurePivot: Invalidierung mit bereits bestätigtem

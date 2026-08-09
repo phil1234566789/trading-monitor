@@ -275,7 +275,13 @@ function invalidateUptrend(sweepChecked: MarketStructureState, breakingPivot: Pi
       structurePivots: nested.structurePivots,
       innerStructurePivots: [],
       appliedPivots: nested.appliedPivots,
-      nestedTrend: null,
+      // nested.nestedTrend statt hart null (Chat 2026-08-09, "wie viele Ebenen wie möglich"): eine
+      // dritte Ebene (ein Gegentrend-Kandidat, der schon GEGEN diesen nested-Tracker selbst
+      // mitlief, siehe advanceNestedTrend jetzt auch für Nested-Zustände) rutscht bei der Promotion
+      // einfach eine Ebene nach oben, statt verworfen zu werden — sonst würde jede Promotion die
+      // komplette Vorlaufzeit einer bereits laufenden tieferen Ebene zunichtemachen, genau das
+      // Problem, das die Promotion für die ERSTE Ebene ja überhaupt vermeiden soll.
+      nestedTrend: nested.nestedTrend,
       closedRanges: [...sweepChecked.closedRanges, { low: currRange.low, middle: archivedMiddle, high: currRange.high, trend: "uptrend" }],
       firstConfirmedAt: nested.firstConfirmedAt,
     };
@@ -316,9 +322,12 @@ function invalidateUptrend(sweepChecked: MarketStructureState, breakingPivot: Pi
 // applyMarketStructurePivotCore/applyInnerMarketStructurePivotCore, direction="down") UND vom
 // Nested-Tracker selbst (advanceNestedTrend/-Inner, direction="down" — der bärische CHoCH-Kandidat
 // innerhalb eines Uptrends) — beim Nested-Tracker landet die archivierte Range in
-// nested.closedRanges, was nirgends gerendert wird (nur state.closedRanges), also folgenlos bleibt,
-// UND `nestedTrend` dort ist immer schon null (ein Nested-Tracker hat selbst keine tiefere
-// Verschachtelung), weshalb der PROMOTION-Zweig unten für ihn nie greift.
+// nested.closedRanges, was nirgends gerendert wird (nur state.closedRanges), also folgenlos bleibt.
+// `nestedTrend` an dieser Stelle war bis Chat 2026-08-09 immer null (ein Nested-Tracker hatte keine
+// tiefere Verschachtelung), wodurch der PROMOTION-Zweig unten für ihn faktisch nie griff — seit der
+// Rekursions-Freigabe (siehe applyMarketStructurePivot) kann ein Nested-Tracker selbst wieder einen
+// bestätigten Gegentrend (Ebene 3) tragen, der hier dann genau wie beim Top-Level eine Ebene
+// nach oben rückt.
 // PROMOTION (Chat 2026-07-26, gespiegelt zu invalidateUptrend, auf "Bescheid :D" hin gebaut — der
 // bullische Gegentrend-Tracker innerhalb eines Downtrends): läuft bereits ein per Nested-Tracker
 // bestätigter Gegentrend (`nestedTrend.trend === 'uptrend'`, siehe advanceNestedTrend), übernimmt
@@ -334,7 +343,9 @@ function invalidateDowntrend(sweepChecked: MarketStructureState, breakingPivot: 
       structurePivots: nested.structurePivots,
       innerStructurePivots: [],
       appliedPivots: nested.appliedPivots,
-      nestedTrend: null,
+      // nested.nestedTrend statt hart null — siehe Kommentar im gespiegelten Uptrend-Zweig in
+      // invalidateUptrend für die volle Begründung.
+      nestedTrend: nested.nestedTrend,
       closedRanges: [...sweepChecked.closedRanges, { low: currRange.low, middle: archivedMiddle, high: currRange.high, trend: "downtrend" }],
       firstConfirmedAt: nested.firstConfirmedAt,
     };
@@ -584,32 +595,24 @@ function applyMarketStructurePivotCore(
   };
 }
 
-// Öffentlicher Einstiegspunkt: wickelt applyMarketStructurePivotCore ein und stößt danach — AUSSER
-// wenn `nested: true` übergeben wird — den Gegentrend-Tracker an (advanceNestedTrend, CHoCH-
-// Erkennung, Chat 2026-07-25/26). `nested` (NICHT `direction`!) entscheidet das, seit der Nested-
-// Tracker seit Chat 2026-07-26 in BEIDE Richtungen laufen kann (ein bärischer CHoCH-Kandidat
-// innerhalb eines Uptrends UND, gespiegelt, ein bullischer Kandidat innerhalb eines Downtrends,
-// siehe advanceNestedTrend) — `direction` allein könnte das nicht mehr unterscheiden, weil
-// direction="down" jetzt sowohl "das ist der (bärische) Nested-Tracker selbst" als auch "das ist
-// der TOP-LEVEL-Haupttrend, der gerade ein 'downtrend' ist" bedeuten kann (buildMarketStructureState
-// wählt `direction` rein anhand von state.trend, unabhängig von der Verschachtelungsebene). Der
-// Nested-Tracker selbst wird intern IMMER mit `nested: true` gefüttert (siehe advanceNestedTrend),
-// sonst würde jede Ebene eine eigene Nested-Ebene aufspannen (unendliche Verschachtelung). Dieser
-// Wrapper ist bewusst die einzige öffentliche Stelle, damit direkte Testaufrufe (wie überall sonst
-// in diesem Modul üblich) genauso automatisch einen Nested-Tracker mitführen wie der eigentliche
-// buildMarketStructureState-Fold.
+// Öffentlicher Einstiegspunkt: wickelt applyMarketStructurePivotCore ein und stößt danach IMMER den
+// Gegentrend-Tracker an (advanceNestedTrend, CHoCH-Erkennung, Chat 2026-07-25/26). Bis Chat
+// 2026-08-09 gab es hier ein `nested`-Flag, das genau das für den rekursiven Aufruf AUF dem
+// Nested-Tracker selbst unterdrückte ("nestedTrend.nestedTrend bleibt immer null") — künstlich auf
+// eine Verschachtelungsebene gedeckelt (Philip: "wie viele Ebenen wie möglich"). Der Typ
+// (`nestedTrend: MarketStructureState | null`, siehe range.type.ts) ist von Anfang an
+// selbstreferenziell und trägt beliebige Tiefe ohne jede Änderung — die einzige Sperre war dieser
+// Flag. Ohne ihn läuft advanceNestedTrend jetzt auch auf JEDEM bereits existierenden Nested-Tracker
+// selbst mit demselben Pivot weiter (siehe dort) und baut dadurch automatisch so viele Ebenen auf,
+// wie die Pivot-Historie tatsächlich hergibt (Ebene N+1 kann nur entstehen, wenn Ebene N bereits
+// bestätigt ist — kein Endlos-Risiko, die Rekursionstiefe ist durch die Zahl real bestätigter
+// Trendwechsel in den Daten begrenzt, nicht durch die Pivot-Anzahl selbst).
 export function applyMarketStructurePivot(
   state: MarketStructureState,
   pivot: Pivot,
-  {
-    candles = [],
-    direction = "up",
-    nested = false,
-    asOfTime,
-  }: { candles?: Candle[]; direction?: TrendDirection; nested?: boolean; asOfTime?: number } = {},
+  { candles = [], direction = "up", asOfTime }: { candles?: Candle[]; direction?: TrendDirection; asOfTime?: number } = {},
 ): MarketStructureState {
   const result = applyMarketStructurePivotCore(state, pivot, { candles, direction, asOfTime });
-  if (nested) return result;
   return advanceNestedTrend(result, pivot, candles, asOfTime);
 }
 
@@ -775,12 +778,15 @@ function markLqSweeps(
 // sein, ein innerPivot hat sich bereits gebildet" — der Nested-Tracker lief bis dahin NUR über
 // Outer-Pivots, siehe advanceNestedTrend, wodurch currRange.low sichtbar hinterherhinkte). "down"
 // spiegelt die komplette Funktion für den Nested-Gegentrend-Tracker: 'low' ist dann die
-// bestätigende Seite (tryConfirmTrend), 'high' die "darf nicht brechen"-Seite — OHNE
-// Promotion-Prüfung beim Invalidieren (anders als bei direction="up"), weil ein Nested-Tracker
-// selbst keine tiefere Verschachtelung hat (nestedTrend bleibt dort immer null) — ein durch einen
-// echten Kerzenschluss widerlegter CHoCH startet deshalb einfach frisch vom neuen High, statt
-// irgendwas zu "promoten". Default "up" reproduziert exakt das alte Verhalten, kein bestehender
-// Aufrufer übergibt direction.
+// bestätigende Seite (tryConfirmTrend), 'high' die "darf nicht brechen"-Seite — läuft beim
+// Invalidieren über DIESELBE invalidateDowntrend-Funktion wie ein TOP-LEVEL-Downtrend (siehe dort),
+// inklusive Promotion-Zweig. Bis Chat 2026-08-09 war `nestedTrend` an dieser Stelle IMMER null (ein
+// Nested-Tracker hatte keine tiefere Verschachtelung), wodurch die Promotion hier zwar im Code
+// vorhanden, aber praktisch nie erreichbar war — ein widerlegter CHoCH startete dadurch faktisch
+// immer frisch vom neuen High. Seit der Rekursions-Freigabe (siehe applyMarketStructurePivot) kann
+// genau das jetzt einen zuvor durch DIESEN Nested-Tracker selbst getrackten Gegentrend (Ebene 3)
+// zur neuen Ebene 2 befördern, statt ihn zu verwerfen. Default "up" reproduziert exakt das alte
+// Verhalten, kein bestehender Aufrufer übergibt direction.
 function applyInnerMarketStructurePivotCore(
   state: MarketStructureState,
   pivot: Pivot,
@@ -934,22 +940,15 @@ function applyInnerMarketStructurePivotCore(
 }
 
 // Öffentlicher Einstiegspunkt, analog zu applyMarketStructurePivot: wickelt
-// applyInnerMarketStructurePivotCore ein und stößt danach — AUSSER wenn `nested: true` übergeben
-// wird (siehe dortiger Kommentar für die volle Begründung, warum `nested` statt `direction` das
-// entscheidet) — auch den Nested-Tracker mit demselben (Periode-2-)Pivot an
-// (advanceNestedTrendInner).
+// applyInnerMarketStructurePivotCore ein und stößt danach IMMER auch den Nested-Tracker mit
+// demselben (Periode-2-)Pivot an (advanceNestedTrendInner) — kein `nested`-Flag mehr, siehe
+// applyMarketStructurePivot oben für die volle Begründung der Rekursions-Freigabe.
 export function applyInnerMarketStructurePivot(
   state: MarketStructureState,
   pivot: Pivot,
-  {
-    candles = [],
-    direction = "up",
-    nested = false,
-    asOfTime,
-  }: { candles?: Candle[]; direction?: TrendDirection; nested?: boolean; asOfTime?: number } = {},
+  { candles = [], direction = "up", asOfTime }: { candles?: Candle[]; direction?: TrendDirection; asOfTime?: number } = {},
 ): MarketStructureState {
   const result = applyInnerMarketStructurePivotCore(state, pivot, { candles, direction, asOfTime });
-  if (nested) return result;
   return advanceNestedTrendInner(result, pivot, candles, asOfTime);
 }
 
@@ -1016,7 +1015,7 @@ function advanceNestedTrend(state: MarketStructureState, outerPivot: Pivot, cand
       if (outerPivot.type !== "low") return { ...state, nestedTrend: null };
       return { ...state, nestedTrend: initMarketStructureState(originHigh, { ...outerPivot, type: "low" }) };
     }
-    return { ...state, nestedTrend: applyMarketStructurePivot(nested, outerPivot, { candles, direction: "down", nested: true, asOfTime }) };
+    return { ...state, nestedTrend: applyMarketStructurePivot(nested, outerPivot, { candles, direction: "down", asOfTime }) };
   }
 
   // Gespiegelt (Haupttrend ist 'downtrend'): Ursprung ist currRange.low, wartende Seite ist 'high'.
@@ -1026,7 +1025,7 @@ function advanceNestedTrend(state: MarketStructureState, outerPivot: Pivot, cand
     if (outerPivot.type !== "high") return { ...state, nestedTrend: null };
     return { ...state, nestedTrend: initMarketStructureState(originLow, { ...outerPivot, type: "high" }) };
   }
-  return { ...state, nestedTrend: applyMarketStructurePivot(nested, outerPivot, { candles, direction: "up", nested: true, asOfTime }) };
+  return { ...state, nestedTrend: applyMarketStructurePivot(nested, outerPivot, { candles, direction: "up", asOfTime }) };
 }
 
 // Periode-2-Pendant zu advanceNestedTrend (Chat 2026-07-25, zweite CHoCH-Runde: "range.low vom
@@ -1041,7 +1040,7 @@ function advanceNestedTrendInner(state: MarketStructureState, innerPivot: Pivot,
   const nestedDirection: TrendDirection = state.trend === "uptrend" ? "down" : "up";
   return {
     ...state,
-    nestedTrend: applyInnerMarketStructurePivot(state.nestedTrend, innerPivot, { candles, direction: nestedDirection, nested: true, asOfTime }),
+    nestedTrend: applyInnerMarketStructurePivot(state.nestedTrend, innerPivot, { candles, direction: nestedDirection, asOfTime }),
   };
 }
 
@@ -1123,12 +1122,14 @@ export function summarizeMarketStructureState(
   return {
     trend: state.trend,
     currRange: { high: pivotForDisplay(state.currRange.high), low: pivotForDisplay(state.currRange.low) },
+    // Nested-Gegentrend-Tracker (CHoCH-Erkennung, Chat 2026-07-25) — rekursiv über dieselbe
+    // Funktion, damit er im Debug-Panel/Export genauso einsehbar ist wie der Haupttrend. Direkt
+    // nach currRange statt hinter den (teils langen) Pivot-Arrays (Chat 2026-08-09, Philip: bei
+    // mehrstufig verschachtelten Trends sonst mühsam zu finden zwischen 30+ structurePivots).
+    nestedTrend: summarizeMarketStructureState(state.nestedTrend, { includeAppliedPivots }),
     structurePivots: state.structurePivots.map(pivotForDisplay),
     innerStructurePivots: state.innerStructurePivots.map(pivotForDisplay),
     ...(includeAppliedPivots ? { appliedPivots: state.appliedPivots.map(pivotForDisplay) } : {}),
-    // Nested-Gegentrend-Tracker (CHoCH-Erkennung, Chat 2026-07-25) — rekursiv über dieselbe
-    // Funktion, damit er im Debug-Panel/Export genauso einsehbar ist wie der Haupttrend.
-    nestedTrend: summarizeMarketStructureState(state.nestedTrend, { includeAppliedPivots }),
     closedRanges: state.closedRanges.map((r) => ({ ...r, low: pivotForDisplay(r.low), high: pivotForDisplay(r.high) })),
   };
 }

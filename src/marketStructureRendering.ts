@@ -373,9 +373,28 @@ export function collectH1LqLevels(state: MarketStructureState | null | undefined
   if (!state) return [];
   const wantTrend = dir === -1 ? "uptrend" : "downtrend";
   const pivots: Pivot[] = [];
-  if (state.trend === wantTrend) pivots.push(...state.structurePivots);
-  if (state.nestedTrend && state.nestedTrend.trend === wantTrend) pivots.push(...state.nestedTrend.structurePivots);
+  for (const level of collectNestedChain(state)) {
+    if (level.trend === wantTrend) pivots.push(...level.structurePivots);
+  }
   return pivots.filter((p) => p.touched !== false).map((p) => toLqLevel(p, dir));
+}
+
+// Läuft die Nested-Tracker-Kette ab state selbst ab (state zuerst, dann state.nestedTrend,
+// state.nestedTrend.nestedTrend, ...) — seit der Rekursions-Freigabe in marketStructureAnalysis.ts
+// (Chat 2026-08-09, "wie viele Ebenen wie möglich") kann state.nestedTrend beliebig tief
+// verschachtelt sein, nicht mehr nur eine Ebene. Bricht am ersten `null` oder unbestätigten
+// ('unknown') Glied ab — eine tiefere Ebene kann per Konstruktion nur existieren, wenn ihr
+// Parent-Trend bereits bestätigt ist (siehe advanceNestedTrend). Ersetzt die vorher an drei Stellen
+// (hier, collectFibLevels, renderMarketStructureAnalysis) fest auf `[state, state.nestedTrend]`
+// gedeckelten Schleifen.
+function collectNestedChain(state: MarketStructureState): MarketStructureState[] {
+  const chain: MarketStructureState[] = [state];
+  let level = state.nestedTrend;
+  while (level && level.trend !== "unknown") {
+    chain.push(level);
+    level = level.nestedTrend;
+  }
+  return chain;
 }
 
 // --- Fibonacci-Level (Chat 2026-07-30) --------------------------------------------------------
@@ -434,8 +453,8 @@ export function collectFibLevels(
 ): FibLevel[] {
   if (!state) return [];
   const result: FibLevel[] = [];
-  for (const level of [state, state.nestedTrend]) {
-    if (!level || level.trend === "unknown") continue;
+  for (const level of collectNestedChain(state)) {
+    if (level.trend === "unknown") continue;
     const { rangeFib, protectedFib } = computeFibLevels(level, minProtectedDistance);
     result.push(rangeFib);
     if (protectedFib) result.push(protectedFib);
@@ -475,6 +494,102 @@ function firstCloseAbove(candles: Candle[], fromTime: number, price: number, fal
     if (c.time > fromTime && c.close > price) return c.time;
   }
   return fallbackTime;
+}
+
+// Zeichnet EINEN bestätigten Nested-Tracker (CHoCH) — Verbindungslinie, protected-high/-low,
+// LQ-Sweeps, BOS-Linien, CHoCH-Label. Bis Chat 2026-08-09 gab es hierfür zwei fast identische ~80-
+// Zeilen-Blöcke direkt in renderMarketStructureAnalysis (einen für `nestedTrend.trend==='downtrend'`
+// — bärischer Kandidat innerhalb eines Uptrends —, einen gespiegelt für `'uptrend'`), die zusammen
+// GENAU eine Verschachtelungsebene zeichnen konnten. Seit der Rekursions-Freigabe in
+// marketStructureAnalysis.ts kann `state.nestedTrend.nestedTrend...` beliebig tief sein — diese
+// Funktion, aufgerufen in einer Schleife über collectNestedChain (siehe renderMarketStructureAnalysis
+// unten), zeichnet jede Ebene gleich, egal ob sie bärisch (nested.trend==='downtrend') oder
+// bullisch (nested.trend==='uptrend') ist. `isDown` entscheidet dieselben Spiegelungen wie vorher
+// die beiden getrennten Blöcke: protected-Typ, BOS/CHoCH-Labelseite, LQ-Sweep-Pfeilrichtung,
+// welche firstCloseAbove/Below-Variante das CHoCH/BOS-Linienende bestimmt.
+function renderNestedLevel(
+  series: any,
+  nested: MarketStructureState,
+  candles: Candle[],
+  existingPrimitives: any[],
+  lqSweepLabel: (price: number, pivotTime: number | undefined) => string,
+) {
+  const isDown = nested.trend === "downtrend";
+  const protectedType: "protected-high" | "protected-low" = isDown ? "protected-high" : "protected-low";
+  const protectedLabel = isDown ? "1h protected high" : "1h protected low";
+  // BOS/CHoCH sitzen im bärischen Fall unterhalb der Linie (spiegelbildlich zum Haupttrend-Block
+  // oben, wo BOS im Uptrend oberhalb sitzt), im bullischen Fall oberhalb — siehe die beiden vorher
+  // getrennten Blöcke.
+  const labelSide = isDown ? "center-below" : "center-above";
+  // LQ-Sweep-Pfeilrichtung ist gespiegelt zur eigenen Richtung (bärischer Sweep zeigt nach unten
+  // weg -> ArrowRenderer direction:"up", bullischer nach oben weg -> direction:"down").
+  const sweepArrowDirection: "up" | "down" = isDown ? "up" : "down";
+  const firstClosePast = isDown ? firstCloseAbove : firstCloseBelow;
+
+  const nestedLine = new RangeLinePrimitive([nested.currRange.low, nested.currRange.high], {
+    color: cssColor("rangeChoch"),
+    lineWidth: lineWidth("rangeChoch"),
+  });
+  series.attachPrimitive(nestedLine);
+  existingPrimitives.push(nestedLine);
+
+  const hasNestedBreakOfStructure = nested.structurePivots.some((p) => p.type === "break-of-structure");
+
+  const protectedPivot = nested.structurePivots.find((p) => p.type === protectedType);
+  if (protectedPivot) {
+    const line = new LiquidityLinePrimitive(
+      toLevel(protectedPivot, candles),
+      { color: cssColor("rangeProtectedLow"), lineWidth: lineWidth("rangeProtectedLow"), label: protectedLabel, labelSide: "end" },
+      candles,
+    );
+    series.attachPrimitive(line);
+    existingPrimitives.push(line);
+  }
+
+  for (const lqSweep of nested.structurePivots.filter((p) => p.type === "LQ-sweep")) {
+    const lqColor = cssColor("rangeLqSweep");
+    const line = new LiquidityLinePrimitive(
+      toTouchedLevel(lqSweep, candles),
+      { color: lqColor, lineWidth: lineWidth("rangeLqSweep"), label: lqSweepLabel(lqSweep.price, lqSweep.pivotTime), labelSide: bullBearLabelSide(isDown) },
+      candles,
+    );
+    series.attachPrimitive(line);
+    existingPrimitives.push(line);
+    if (!hasNestedBreakOfStructure) {
+      const arrow = new ArrowPrimitive(lqSweep, { color: lqColor, direction: sweepArrowDirection }, candles);
+      series.attachPrimitive(arrow);
+      existingPrimitives.push(arrow);
+    }
+  }
+
+  for (const bos of nested.structurePivots.filter((p) => p.type === "break-of-structure")) {
+    const bosColor = cssColor("rangeBreakOfStructure");
+    const bosFallback = candles.length > 0 ? candles[candles.length - 1].time : (bos.pivotTime ?? 0);
+    const bosEndTime = firstClosePast(candles, bos.pivotTime ?? 0, bos.price, bosFallback);
+    const bosLevel = { price: bos.price, pivotTime: bos.pivotTime ?? 0, endTime: bosEndTime };
+    const line = new LiquidityLinePrimitive(
+      bosLevel,
+      { color: bosColor, lineWidth: lineWidth("rangeBreakOfStructure"), dashed: true, label: "BOS", labelSide },
+      candles,
+    );
+    series.attachPrimitive(line);
+    existingPrimitives.push(line);
+  }
+
+  // CHoCH-Label sitzt an der URSPRÜNGLICHEN Nested-Origin (appliedPivots[1] — advanceNestedTrend
+  // seedet IMMER via initMarketStructureState(origin, wartenderPivot), appliedPivots[0]/[1] sind
+  // damit garantiert Ursprung/wartende Seite), NICHT am aktuellen currRange (das ist der zuletzt
+  // brechende Pivot, siehe Bug-Report Philip: "IST 1.34601, SOLL 1.35206").
+  const chochAnchor = nested.appliedPivots[1];
+  const chochEndTime = firstClosePast(candles, chochAnchor.pivotTime ?? 0, chochAnchor.price, pivotTimeOf(nested.firstConfirmedAt!));
+  const chochLevel = { price: chochAnchor.price, pivotTime: chochAnchor.pivotTime ?? 0, endTime: chochEndTime };
+  const chochLine = new LiquidityLinePrimitive(
+    chochLevel,
+    { color: cssColor("rangeChoch"), lineWidth: lineWidth("rangeChoch"), dashed: true, label: "CHoCH", labelSide },
+    candles,
+  );
+  series.attachPrimitive(chochLine);
+  existingPrimitives.push(chochLine);
 }
 
 // Ersetzt existingPrimitives komplett durch die aktuelle Marktstruktur-Darstellung: roter
@@ -657,204 +772,30 @@ export function renderMarketStructureAnalysis(
     existingPrimitives.push(line);
   }
 
-  // Nested-Gegentrend-Struktur (CHoCH), sobald bestätigt, aber noch nicht promoted (Chat 2026-07-25,
-  // Bug-Report Philip: "eine rote Verbindungslinie von 1.35583 bis 1.34601") — rote Linie über die
-  // GESAMTE nested Range (aktueller high/low-Stand, kann über die reine Origin-Spanne hinaus
-  // weitergewandert sein). Nach der Promotion ist nestedTrend wieder null, dann übernimmt die
-  // reguläre currRange-Darstellung (inkl. der Live-Verbindungslinie oben) den neuen Trend.
-  if (state.nestedTrend?.trend === "downtrend") {
-    const nested = state.nestedTrend;
-    const nestedLine = new RangeLinePrimitive([nested.currRange.low, nested.currRange.high], {
-      color: cssColor("rangeChoch"),
-      lineWidth: lineWidth("rangeChoch"),
-    });
-    series.attachPrimitive(nestedLine);
-    existingPrimitives.push(nestedLine);
-
-    // protected-high/LQ-sweep/break-of-structure für den Nested-Tracker selbst (Chat 2026-07-25,
-    // Bug-Report Philip: "dieser bärische LQ Sweep entstand als der downtrend noch ein nestedTrend
-    // war ... sollte viel früher erkannt werden" — markLqSweeps(direction="down") lief auf
-    // nested.structurePivots schon die ganze Zeit über advanceNestedTrend/advanceNestedTrendInner
-    // mit (die ERKENNUNG war also nie das Problem), nur die DARSTELLUNG zeigte bis hierhin
-    // ausschließlich state.structurePivots — nested.structurePivots wurde nie gerendert, bevor eine
-    // Promotion passierte). Exakt dieselben Elemente wie unten für den Haupttrend, nur an
-    // nested.structurePivots und mit gespiegelter Pfeilrichtung (bärisch statt bullisch).
-    const hasNestedBreakOfStructure = nested.structurePivots.some((p) => p.type === "break-of-structure");
-
-    const protectedHigh = nested.structurePivots.find((p) => p.type === "protected-high");
-    if (protectedHigh) {
-      const line = new LiquidityLinePrimitive(
-        toLevel(protectedHigh, candles),
-        { color: cssColor("rangeProtectedLow"), lineWidth: lineWidth("rangeProtectedLow"), label: "1h protected high", labelSide: "end" },
-        candles,
-      );
-      series.attachPrimitive(line);
-      existingPrimitives.push(line);
-    }
-
-    for (const lqSweep of nested.structurePivots.filter((p) => p.type === "LQ-sweep")) {
-      const lqColor = cssColor("rangeLqSweep");
-      const line = new LiquidityLinePrimitive(
-        toTouchedLevel(lqSweep, candles),
-        // bärischer Nested-Sweep -> Label immer oberhalb (siehe bullBearLabelSide).
-        {
-          color: lqColor,
-          lineWidth: lineWidth("rangeLqSweep"),
-          label: lqSweepLabel(lqSweep.price, lqSweep.pivotTime),
-          labelSide: bullBearLabelSide(true),
-        },
-        candles,
-      );
-      series.attachPrimitive(line);
-      existingPrimitives.push(line);
-      if (!hasNestedBreakOfStructure) {
-        // direction: "up" statt "down" — bärischer Sweep (gehaltener Widerstand), Pfeil zeigt nach
-        // unten weg statt wie beim bullischen Pendant nach oben (siehe ArrowRenderer).
-        const arrow = new ArrowPrimitive(lqSweep, { color: lqColor, direction: "up" }, candles);
-        series.attachPrimitive(arrow);
-        existingPrimitives.push(arrow);
-      }
-    }
-
-    for (const bos of nested.structurePivots.filter((p) => p.type === "break-of-structure")) {
-      const bosColor = cssColor("rangeBreakOfStructure");
-      const bosFallback = candles.length > 0 ? candles[candles.length - 1].time : (bos.pivotTime ?? 0);
-      // firstCloseAbove statt firstCloseBelow — hier bricht ein protected-high durch einen
-      // Kerzenschluss DRÜBER, spiegelbildlich zur BOS-Linie des Haupttrends weiter unten.
-      const bosEndTime = firstCloseAbove(candles, bos.pivotTime ?? 0, bos.price, bosFallback);
-      const bosLevel = { price: bos.price, pivotTime: bos.pivotTime ?? 0, endTime: bosEndTime };
-      const line = new LiquidityLinePrimitive(
-        bosLevel,
-        { color: bosColor, lineWidth: lineWidth("rangeBreakOfStructure"), dashed: true, label: "BOS", labelSide: "center-below" },
-        candles,
-      );
-      series.attachPrimitive(line);
-      existingPrimitives.push(line);
-    }
-
-    // CHoCH-Label sitzt an der URSPRÜNGLICHEN Nested-Origin-Low (appliedPivots[1] — siehe
-    // advanceNestedTrend: nestedTrend wird IMMER via initMarketStructureState(originHigh, lowPivot)
-    // geseedet, appliedPivots[0]/[1] sind damit garantiert High/Low des Ursprungs), NICHT am
-    // aktuellen currRange.low (das ist der zuletzt brechende Pivot, siehe Bug-Report Philip: "IST
-    // 1.34601, SOLL 1.35206" — 1.35206 ist die gebrochene Ursprungsstruktur, nicht der Bruch selbst).
-    const chochAnchor = nested.appliedPivots[1];
-    // Anders als toLevel (das immer bis zur letzten geladenen Kerze zeichnet) endet diese Linie
-    // bewusst NICHT an currRange.low (wandert weiter, solange nicht promoted — Bug-Report Philip:
-    // "CHOCH Linie geht noch zu weit") und auch NICHT an firstConfirmedAt selbst (dem H1-Periode-5-
-    // Fraktal-Pivot, der erst Stunden NACH dem eigentlichen Kerzenschluss unter dem Level offiziell
-    // bestätigt wird) — sondern an der ERSTEN tatsächlich unter chochAnchor.price schließenden
-    // Kerze der angezeigten (i.d.R. feineren) Candles. Bewusst Kerzenschluss statt reinem Docht
-    // (siehe firstCloseBelow: ein Docht-Check direkt nach dem groben H1-Ursprungspivot greift durch
-    // normales Kerzenrauschen fast immer sofort, Bug-Report Philip: "direkt paar minuten später
-    // berührt ein innerpivot den choch schon").
-    // Bug-Report Philip 2026-07-25: "Linie sollte irgendwo in der MMM am 16.07. 10:30-13:00 enden"
-    // — Stunden VOR dem offiziellen Pivot-Bestätigungszeitpunkt 19:00, siehe .debug/metadata.json.
-    const chochEndTime = firstCloseBelow(candles, chochAnchor.pivotTime ?? 0, chochAnchor.price, pivotTimeOf(nested.firstConfirmedAt!));
-    const chochLevel = { price: chochAnchor.price, pivotTime: chochAnchor.pivotTime ?? 0, endTime: chochEndTime };
-    const chochLine = new LiquidityLinePrimitive(
-      chochLevel,
-      { color: cssColor("rangeChoch"), lineWidth: lineWidth("rangeChoch"), dashed: true, label: "CHoCH", labelSide: "center-below" },
-      candles,
-    );
-    series.attachPrimitive(chochLine);
-    existingPrimitives.push(chochLine);
-  }
-
-  // Gespiegelt zum Block oben: bullischer Nested-Gegentrend-Kandidat innerhalb eines bestätigten
-  // Downtrends (Chat 2026-07-26, "Bescheid :D" auf die Rückfrage, ob das auch noch gebaut werden
-  // soll) — exakt dieselben Elemente, nur an einem 'uptrend'-Nested-Tracker und mit gespiegelter
-  // Pfeilrichtung/Kerzenschluss-Prüfung (bullisch statt bärisch). Dieselbe Farbe (rangeChoch) wie
-  // oben — "CHoCH" ist als Vorlauf-Signal eine eigene Kategorie, unabhängig von der Richtung.
-  if (state.nestedTrend?.trend === "uptrend") {
-    const nested = state.nestedTrend;
-    const nestedLine = new RangeLinePrimitive([nested.currRange.low, nested.currRange.high], {
-      color: cssColor("rangeChoch"),
-      lineWidth: lineWidth("rangeChoch"),
-    });
-    series.attachPrimitive(nestedLine);
-    existingPrimitives.push(nestedLine);
-
-    const hasNestedBreakOfStructure = nested.structurePivots.some((p) => p.type === "break-of-structure");
-
-    const protectedLow = nested.structurePivots.find((p) => p.type === "protected-low");
-    if (protectedLow) {
-      const line = new LiquidityLinePrimitive(
-        toLevel(protectedLow, candles),
-        { color: cssColor("rangeProtectedLow"), lineWidth: lineWidth("rangeProtectedLow"), label: "1h protected low", labelSide: "end" },
-        candles,
-      );
-      series.attachPrimitive(line);
-      existingPrimitives.push(line);
-    }
-
-    for (const lqSweep of nested.structurePivots.filter((p) => p.type === "LQ-sweep")) {
-      const lqColor = cssColor("rangeLqSweep");
-      const line = new LiquidityLinePrimitive(
-        toTouchedLevel(lqSweep, candles),
-        // bullischer Nested-Sweep -> Label immer unterhalb (siehe bullBearLabelSide).
-        {
-          color: lqColor,
-          lineWidth: lineWidth("rangeLqSweep"),
-          label: lqSweepLabel(lqSweep.price, lqSweep.pivotTime),
-          labelSide: bullBearLabelSide(false),
-        },
-        candles,
-      );
-      series.attachPrimitive(line);
-      existingPrimitives.push(line);
-      if (!hasNestedBreakOfStructure) {
-        // direction: "down" statt "up" — bullischer Sweep (gehaltener Support), Pfeil zeigt nach
-        // oben weg, spiegelbildlich zum bärischen Pendant oben (siehe ArrowRenderer).
-        const arrow = new ArrowPrimitive(lqSweep, { color: lqColor, direction: "down" }, candles);
-        series.attachPrimitive(arrow);
-        existingPrimitives.push(arrow);
-      }
-    }
-
-    for (const bos of nested.structurePivots.filter((p) => p.type === "break-of-structure")) {
-      const bosColor = cssColor("rangeBreakOfStructure");
-      const bosFallback = candles.length > 0 ? candles[candles.length - 1].time : (bos.pivotTime ?? 0);
-      // firstCloseBelow — hier bricht ein protected-low durch einen Kerzenschluss DRUNTER,
-      // spiegelbildlich zur BOS-Linie des bärischen Nested-Trackers oben.
-      const bosEndTime = firstCloseBelow(candles, bos.pivotTime ?? 0, bos.price, bosFallback);
-      const bosLevel = { price: bos.price, pivotTime: bos.pivotTime ?? 0, endTime: bosEndTime };
-      const line = new LiquidityLinePrimitive(
-        bosLevel,
-        { color: bosColor, lineWidth: lineWidth("rangeBreakOfStructure"), dashed: true, label: "BOS", labelSide: "center-above" },
-        candles,
-      );
-      series.attachPrimitive(line);
-      existingPrimitives.push(line);
-    }
-
-    // CHoCH-Label an der URSPRÜNGLICHEN Nested-Origin-High (appliedPivots[1] — advanceNestedTrend
-    // seedet den bullischen Nested-Tracker via initMarketStructureState(originLow, highPivot),
-    // appliedPivots[0]/[1] sind damit garantiert Low/High des Ursprungs), NICHT am aktuellen
-    // currRange.high (das ist der zuletzt brechende Pivot, siehe Begründung oben, gespiegelt).
-    const chochAnchor = nested.appliedPivots[1];
-    // firstCloseAbove statt firstCloseBelow — hier endet die Linie an der ERSTEN tatsächlich über
-    // chochAnchor.price schließenden Kerze, spiegelbildlich zum bärischen Pendant oben.
-    const chochEndTime = firstCloseAbove(candles, chochAnchor.pivotTime ?? 0, chochAnchor.price, pivotTimeOf(nested.firstConfirmedAt!));
-    const chochLevel = { price: chochAnchor.price, pivotTime: chochAnchor.pivotTime ?? 0, endTime: chochEndTime };
-    const chochLine = new LiquidityLinePrimitive(
-      chochLevel,
-      { color: cssColor("rangeChoch"), lineWidth: lineWidth("rangeChoch"), dashed: true, label: "CHoCH", labelSide: "center-above" },
-      candles,
-    );
-    series.attachPrimitive(chochLine);
-    existingPrimitives.push(chochLine);
+  // Nested-Gegentrend-Struktur (CHoCH) je Ebene, sobald bestätigt, aber noch nicht promoted (Chat
+  // 2026-07-25, Bug-Report Philip: "eine rote Verbindungslinie von 1.35583 bis 1.34601"). Bis Chat
+  // 2026-08-09 gab es hier zwei feste Blöcke (ein bärischer für `nestedTrend.trend==='downtrend'`,
+  // ein gespiegelter bullischer für `'uptrend'`) — GENAU eine Ebene. Seit der Rekursions-Freigabe in
+  // marketStructureAnalysis.ts kann state.nestedTrend beliebig tief verschachtelt sein
+  // (nestedTrend.nestedTrend.nestedTrend...); diese Schleife zeichnet jede bestätigte Ebene über
+  // renderNestedLevel (siehe dort), egal ob bärisch oder bullisch, egal wie tief. Nach einer
+  // Promotion rückt die jeweils tiefere Ebene automatisch nach — dann übernimmt für sie die
+  // reguläre currRange-Darstellung (inkl. der Live-Verbindungslinie oben) den (jetzt promoteten)
+  // neuen Haupttrend, exakt wie vorher.
+  for (const nested of collectNestedChain(state).slice(1)) {
+    renderNestedLevel(series, nested, candles, existingPrimitives, lqSweepLabel);
   }
 
   // Fib-Level (Chat 2026-07-30, siehe computeFibLevels für die volle Begründung) — EIN Durchlauf
-  // für Haupttrend UND Nested-Trend statt eines eigenen Blocks pro Ebene (beide sind derselbe
-  // MarketStructureState-Typ). Range-Fib nur als Tick (die Verbindungslinie low<->high existiert
-  // schon, siehe rangeClosed/rangeChoch-Linien oben); Protected-Fib zusätzlich als gestrichelte
-  // Zickzack-Linie PP<->gegenüberliegende Range-Kante, weil es diese Linie (anders als bei
-  // Range-Fib) noch nirgends gibt.
+  // für die GESAMTE Nested-Kette statt eines eigenen Blocks pro Ebene (alle sind derselbe
+  // MarketStructureState-Typ, siehe collectNestedChain). Range-Fib nur als Tick (die
+  // Verbindungslinie low<->high existiert schon, siehe rangeClosed/rangeChoch-Linien oben);
+  // Protected-Fib zusätzlich als gestrichelte Zickzack-Linie PP<->gegenüberliegende Range-Kante,
+  // weil es diese Linie (anders als bei Range-Fib) noch nirgends gibt.
   const fibColor = cssColor("rangeFib");
   const fibWidth = lineWidth("rangeFib");
-  for (const level of [state, state.nestedTrend]) {
-    if (!level || level.trend === "unknown") continue;
+  for (const level of collectNestedChain(state)) {
+    if (level.trend === "unknown") continue;
     const { rangeFib, protectedFib } = computeFibLevels(level);
 
     const rangeTick = new FibTickPrimitive(rangeFib, { color: fibColor, lineWidth: fibWidth });
