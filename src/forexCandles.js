@@ -5,6 +5,8 @@
 // hier am Frontend blieb dabei unverändert, deshalb hat sich an diesem File selbst kaum was
 // geändert. Antwortform {time,open,high,low,close,volume}, oldest-first — unverändert ggü. den
 // OKX-Fetch-Funktionen in PriceChart.vue, damit sich beide Datenquellen dort gleich behandeln lassen.
+import { supabase } from "./supabaseClient.js";
+
 const FOREX_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/forex-candles`;
 // Die Edge Function baut pro Request eine frische cTrader-TLS-Verbindung inkl. Auth-Handshake auf
 // (_shared/ctrader/client.ts) — ein großzügiger Client-Timeout schadet trotzdem nicht (siehe Chat:
@@ -125,20 +127,113 @@ function fetchCandles(symbol, bar, { count, to } = {}) {
   });
 }
 
+// Pilot-Backfill (Chat 2026-08-09, siehe CLAUDE.md "Persisted candle archive"): nur diese drei
+// Timeframes und nur GBPUSD sind aktuell in forex_candles gefüllt (Migration
+// 20260809120000_forex_candles.sql) — EURUSD oder andere Timeframes liefern hier einfach 0 Zeilen
+// zurück, kein Sonderfall nötig, aber der Set spart pro Miss eine unnötige Supabase-Anfrage.
+const DB_ARCHIVED_BARS = new Set(["5m", "1h", "4h"]);
+
+function mapArchivedRows(rows) {
+  return rows
+    .map((r) => ({
+      time: Math.floor(new Date(r.time).getTime() / 1000),
+      open: r.open,
+      high: r.high,
+      low: r.low,
+      close: r.close,
+      volume: r.volume,
+    }))
+    .reverse(); // Query ist "neueste zuerst" (fürs LIMIT auf den jüngsten Teil), Rest der App erwartet oldest-first
+}
+
+// Die neuesten `count` archivierten Kerzen bis (inklusive) toIso — für den Initial-/TF-Wechsel-Load
+// (siehe fetchInitialCandles unten). Analog zu fetchOlderCandlesFromDb, aber `lte` statt `lt`
+// (dort: strikt VOR einer bereits geladenen Kerze; hier: EINSCHLIESSLICH der neuesten verfügbaren).
+async function fetchArchivedUpTo(symbol, bar, count, toIso) {
+  if (!DB_ARCHIVED_BARS.has(bar)) return null;
+  const { data, error } = await supabase
+    .from("forex_candles")
+    .select("time, open, high, low, close, volume")
+    .eq("instrument", symbol)
+    .eq("bar", bar)
+    .lte("time", toIso)
+    .order("time", { ascending: false })
+    .limit(count);
+  if (error) {
+    console.error("Kerzen-Archiv lesen fehlgeschlagen, falle auf Live-cTrader zurück:", error);
+    return null;
+  }
+  if (!data || data.length === 0) return null;
+  return mapArchivedRows(data);
+}
+
 // toMs (optional, ms-Epoch): ohne das die neuesten `count` Kerzen bis "jetzt" — für den
 // Replay-Modus (siehe PriceChart.vue: clipReplay/loadRangesCandles/loadTradeSetupCandles) muss
 // der initiale Fetch aber bis zum Replay-Zeitpunkt zurückreichen, nicht bis zur echten aktuellen
 // Zeit, sonst deckt ein festes count/Lookback-Fenster den geclippten Bereich nicht ab.
+//
+// Bug-Report Philip 2026-08-09: TF-Wechsel auf 1H hing komplett fest an einem cTrader-Timeout —
+// dieser Fetch (via loadInitial/fetchCandlesCached, genutzt von JEDEM Forex-Erstladen: Haupt-
+// Kerzen, loadTradeSetupM5, 1H-Ranges, 4H-OBs) lief bisher IMMER live, unabhängig vom DB-first-Fix
+// für Scroll-Back oben. Jetzt erst das Archiv bis toMs/"jetzt", live nur noch für den Rest DANACH
+// (meist nur eine Handvoll Kerzen, da das Archiv höchstens seit dem letzten Backfill-Lauf hinterher
+// hinkt) — schlägt der Live-Rest fehl, wird NICHT geworfen, sondern einfach der (leicht veraltete)
+// Archiv-Stand zurückgegeben. Lieber ein paar Minuten alter Chart als ein hängender.
 export async function fetchInitialCandles(symbol, bar, count, toMs) {
-  return fetchCandles(symbol, bar, { count, to: toMs });
+  const toIso = new Date(toMs ?? Date.now()).toISOString();
+  const archived = await fetchArchivedUpTo(symbol, bar, count, toIso);
+  if (!archived) return fetchCandles(symbol, bar, { count, to: toMs });
+  if (archived.length >= count) return archived;
+
+  const lastArchivedMs = archived[archived.length - 1].time * 1000;
+  try {
+    const rest = await fetchCandles(symbol, bar, { count: count - archived.length, to: toMs });
+    return archived.concat(rest.filter((c) => c.time * 1000 > lastArchivedMs));
+  } catch (err) {
+    console.error("Live-Rest seit Archiv-Ende fehlgeschlagen, zeige nur archivierten Stand:", err);
+    return archived;
+  }
 }
 
 export async function fetchRecentCandles(symbol, bar, count) {
   return fetchCandles(symbol, bar, { count });
 }
 
-// Für Scroll-Back: Kerzen strikt vor `oldestLoadedTime` (Sekunden).
+// Scroll-Back zuerst aus dem DB-Archiv statt live von cTrader (Bug-Report/Wunsch Philip
+// 2026-08-09: "hast du schon eingebaut, dass wir zuerst in der DB die Candles holen"), da JEDER
+// Live-Fetch einen eigenen cTrader-OAuth-Handshake kostet und genau das die Timeout-Serie hinter
+// PriceChart.vue's showLoadOlderButton verursacht hat. `count` wird hier NICHT auf das
+// cTrader-Live-Limit gekappt — Postgres liefert auch ein paar tausend Zeilen in einem Call
+// problemlos, damit deckt ein einziger Scroll-Back-Schritt gleich mehrere Handelstage ab statt in
+// 100er-Schritten nachzuladen. `null` (statt leerem Array) heißt "hier nicht anwendbar/nichts
+// gefunden" und ist das Signal für den Aufrufer, auf den Live-Fetch zurückzufallen — ein
+// tatsächlich leeres Live-Ergebnis (echtes Ende der Historie) bleibt dagegen ein echtes `[]`.
+async function fetchOlderCandlesFromDb(symbol, bar, oldestLoadedTime, count) {
+  if (!DB_ARCHIVED_BARS.has(bar)) return null;
+  const { data, error } = await supabase
+    .from("forex_candles")
+    .select("time, open, high, low, close, volume")
+    .eq("instrument", symbol)
+    .eq("bar", bar)
+    .lt("time", new Date(oldestLoadedTime * 1000).toISOString())
+    .order("time", { ascending: false })
+    .limit(count);
+  if (error) {
+    console.error("Kerzen-Archiv lesen fehlgeschlagen, falle auf Live-cTrader zurück:", error);
+    return null;
+  }
+  if (!data || data.length === 0) return null; // nicht (mehr) im Archiv abgedeckt -> live fetchen
+  return mapArchivedRows(data);
+}
+
+// Für Scroll-Back: Kerzen strikt vor `oldestLoadedTime` (Sekunden). Erst DB-Archiv versuchen
+// (siehe fetchOlderCandlesFromDb), nur bei einem Miss (nicht abgedecktes Instrument/Timeframe/
+// Zeitraum) live von cTrader nachfetchen — der Live-Zweig bleibt dabei unverändert vom
+// count-Aufrufer abhängig, die forex-candles Edge Function kappt serverseitig ohnehin auf
+// MAX_COUNT (aktuell 1000).
 export async function fetchOlderCandles(symbol, bar, oldestLoadedTime, count) {
+  const fromDb = await fetchOlderCandlesFromDb(symbol, bar, oldestLoadedTime, count);
+  if (fromDb) return fromDb;
   const page = await fetchCandles(symbol, bar, { count, to: oldestLoadedTime * 1000 });
   return page.filter((c) => c.time < oldestLoadedTime);
 }

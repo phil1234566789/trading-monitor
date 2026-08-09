@@ -323,4 +323,110 @@ Null anfangen, dieser Eintrag ist nur die Zusammenfassung, kein lauffähiger Cod
 
 ---
 
+## Status: Persistiertes Forex-Kerzen-Archiv (Pilot) — 2026-08-09
+
+Auslöser: der neue Retry-Button fürs Scroll-Back-Nachladen im Chart (cTrader-Timeouts beim
+Zurückscrollen, siehe `PriceChart.vue`'s `showLoadOlderButton`) legte offen, dass praktisch
+JEDER historische Read — Chart-Scroll-Back, Replay, UND Lanas Analysen über den MCP-Server —
+über eine frische Live-cTrader-Verbindung läuft, nicht bloß der Chart. Philips Einwand
+("ich dachte wir haben einen IndexedDB-Cache?") war berechtigt, aber der Cache
+(`src/candleCache.js`) deckt nur Initial-Load/TF-Wechsel/Replay-Sprung ab — NICHT das
+Scroll-Back-Nachladen selbst (das ruft `fetchOlderCandles` direkt auf, ohne je durch den
+Cache zu gehen), und läuft als Browser-API (IndexedDB) für Lana (Node-Prozess) ohnehin gar
+nicht mit.
+
+Philips Idee: statt bei jedem Read live gegen cTrader zu fetchen, die Kerzen einmalig in die
+eigene DB holen — dort sowohl für den Chart als auch für Lana lesbar, cTrader nur noch für
+Live-Preise/aktuelle Kerze nötig, "vor allem gut für Live-Analysen: sämtliche historischen
+OBs dann leichter verfügbar".
+
+**Umgesetzt (Pilot-Umfang, bewusst klein — Philip will sich das Ergebnis erst ansehen, bevor
+wir aufs ganze Jahr + EURUSD ausweiten):**
+- Neue Tabelle `forex_candles` (Migration `20260809120000_forex_candles.sql`), eine Row pro
+  Kerze (PK `instrument, bar, time`) — bewusst NICHT ein JSON-Blob pro Tag: bei der
+  Datenmenge hier (~14k Zeilen für den Piloten, ~150k fürs ganze Jahr + EURUSD) ist Storage
+  kein Thema, und Row-per-Candle bleibt konsistent mit jeder anderen Tabelle in diesem
+  Schema (direkt per `WHERE time BETWEEN ... ORDER BY time` lesbar, kein Entpacken nötig).
+- Backfill-Script (`mcp-server/src/scripts/backfillForexCandles.ts`, manueller Einmal-Lauf,
+  kein MCP-Tool) — paginiert rückwärts über dieselbe `forex-candles` Edge Function, die auch
+  Live-Reads nutzen, batch-upsertet (`ON CONFLICT DO NOTHING`, damit ein erneuter Lauf nach
+  einem Abbruch einfach überspringt statt zu duplizieren). cTrader-Connects waren dabei
+  tatsächlich wie erwartet flaky (mehrere Timeouts im ersten Testlauf) — ein simpler
+  Retry-mit-Pause (`withRetries`, 3s zwischen Versuchen) hat gereicht, sofortiges Retry ohne
+  Pause schien die Lage eher zu verschlimmern.
+- Ergebnis: GBPUSD, 5m/1h/4h, ab 2026-07-01 — **8.015 M5-, 671 H1-, 167 H4-Kerzen** (8.853
+  gesamt), verifiziert per Direkt-Query (älteste/neueste Kerze, Zeilen-Count pro Timeframe).
+- Neues MCP-Tool `get_forex_candles_archive` (`mcp-server/src/db.ts`'s
+  `getForexCandlesArchive`, registriert in `tools/reads.ts`) — gleiche
+  `{time,open,high,low,close,volume}`-Form wie `get_forex_candles`, liest aber aus der
+  Tabelle statt live von cTrader. Tool-Beschreibung macht den Pilot-Umfang explizit (leeres
+  Array statt Fehler außerhalb des befüllten Bereichs) und verweist bei `get_forex_candles`
+  selbst auf das Archiv-Tool als schnellere Alternative, wo verfügbar — plus dort gleich die
+  seit dem 08-03-Umstieg zurück auf cTrader veraltete "Twelve Data"-Erwähnung gefixt.
+
+**Bewusst NICHT Teil dieses Piloten:** kein automatischer Sync mehr — die Tabelle wächst nach
+dem Script-Lauf nicht weiter. `poi-watcher`s ohnehin laufender M5-Fetch dort mit reinschreiben
+zu lassen (kein zusätzlicher cTrader-Call) ist der naheliegende nächste Schritt, sobald Philip
+sich für die Ausweitung entscheidet — genau wie EURUSD und das restliche Jahr.
+
+---
+
+## Status: Archiv-Ausbau + historischer OB-Backfill — 2026-08-09, Fortsetzung
+
+Direkte Fortsetzung des Piloten oben, gleicher Tag. Drei Anlässe:
+
+1. **Chart-Feedback**: Scroll-Back "ging schon ganz gut", aber TF-Wechsel auf 1H hing komplett an
+   einem cTrader-Timeout fest — der Pilot deckte nur `fetchOlderCandles` ab, `loadInitial()` (TF-
+   Wechsel, Mount, UND `loadTradeSetupM5`/1H-Ranges/4H-OBs, die alle über dieselbe Funktion laufen)
+   ging weiterhin zu 100% live. Fix: `fetchInitialCandles` in `forexCandles.js` jetzt auch DB-first
+   (Archiv bis zum angefragten Zeitpunkt, live nur für den kleinen Rest danach) — UND schlägt dieser
+   Rest fehl, wird nicht mehr geworfen, sondern einfach der archivierte Stand zurückgegeben. Live
+   mit Playwright verifiziert (M5→1H-Wechsel, Screenshot, keine Konsolenfehler, ~6s statt Hänger).
+2. **Größere Page-Size**: `FOREX_HISTORY_PAGE_SIZE` 100→2000 für Forex-Scroll-Back (zeilenbasiert,
+   nicht tagebasiert — funktioniert dadurch automatisch sinnvoll für M5 UND H1/H4 gleichermaßen).
+3. **Sidequest — Lana braucht OBs für Backtests**: Philip wollte GBPUSD 4H fürs ganze Jahr
+   nachladen, dann kam die eigentliche Lücke ans Licht: `ob_zones` hatte für einen alten
+   Backtest-Zeitpunkt (z.B. April) schlicht nichts — die Tabelle enthält nur, was `poi-watcher`s
+   Live-Cron seit Start der jeweiligen Instrument-Anbindung erkannt hat, kein rückwirkender Batch.
+
+**Umgesetzt:**
+- Kerzen-Archiv erweitert: GBPUSD 5m/1h/4h jetzt komplett ab 2026-01-01 (vorher nur Juli+August) —
+  **44.882 M5-, 3.747 H1-, 936 4H-Kerzen** neu geholt (`backfillForexCandles.ts`, jetzt per
+  `BACKFILL_INSTRUMENTS`/`BACKFILL_BARS`/`BACKFILL_START_DATE`-Env-Vars parametrisierbar statt
+  Konstanten von Hand zu ändern).
+- Neues Script `backfillObZones.ts`: liest die komplette archivierte Kerzenserie pro
+  Instrument/Timeframe, lässt `detectOrderBlocks` (bereits Node-tauglich, kein dritter Port nötig)
+  einmal drüberlaufen statt nur über ein rollierendes Live-Fenster, upserted die Zonen in
+  `ob_zones`. Kein `sendTelegram`-Aufruf irgendwo im Script — historische Zonen dürfen nie einen
+  echten Alarm auslösen.
+- **Design-Entscheidung (Philip via Frage): M5-OBs werden für den archivierten Zeitraum jetzt
+  auch persistiert** — bricht bewusst mit der bisherigen "M5 nie in DB"-Regel (dafür musste
+  `ob_zones.timeframe`s CHECK-Constraint um `'5M'` erweitert werden), gilt aber NUR für diesen
+  historischen Backfill, `poi-watcher`s Live-Cron bleibt unverändert bei nur 1H/4H.
+- `ob_zones` war anon-select-only (nur `poi-watcher` per `service_role` durfte schreiben) — zwei
+  neue Migrationen (anon-insert, anon-delete) haben das geöffnet, angeglichen an den Rest des
+  Schemas, weil das Backfill-Script (lokal, kein `service_role` verfügbar) sonst nicht schreiben
+  konnte.
+- Ergebnis: **7.244 M5-, 425 H1-, 110 4H-OB-Zonen** neu erkannt/gesichert. Verifiziert per
+  `get_ob_zones`-Smoke-Test mit `asOfSec` für ein simuliertes 15.04.2026-Backtest-Datum — liefert
+  korrekt zurückgerechnete aktive Zonen für alle drei Timeframes, kein neues MCP-Tool nötig
+  (`asOfSec` gab's dafür schon).
+
+**Ein echter Bug unterwegs, selbst gefangen und korrigiert**: `fetchAllCandles`s
+`.range()`-Pagination in `backfillObZones.ts` brach nach der ersten Seite ab, weil Supabase/
+PostgREST eine einzelne Response serverseitig auf offenbar 1000 Zeilen deckelt, UNABHÄNGIG von der
+angefragten `.range()`-Größe — `data.length < angefragte Page-Size` ist deshalb kein verlässliches
+Abbruchsignal. Dadurch lief der erste OB-Backfill-Versuch nur über die ersten 1000 (statt 44k) M5-
+Kerzen, erzeugte 262 falsche Zonen (basierend auf einer künstlich abgeschnittenen Kerzenserie).
+Per `created_at`-Zeitstempel präzise von echten, älteren `poi-watcher`-Daten unterschieden
+(überraschender Fund dabei: es gab schon einen legitimen historischen 1H-Zonen-Bestand von einem
+`poi-watcher`-Kaltstart-Lauf vom 09.07. — nicht anfassen), gelöscht, Pagination gefixt (jetzt um
+`data.length` statt um die angefragte Page-Size weiterzählen), sauber neu gelaufen.
+
+**Weiterhin offen:** EURUSD komplett unbefüllt, kein laufender Sync (Kerzen UND OB-Zonen wachsen
+nur bei einem erneuten manuellen Script-Lauf) — beides bekannte, akzeptierte Lücken, kein
+nächster Schritt ohne Philips Ansage.
+
+---
+
 **Nächster Schritt:** Phase A — tiefere Kerzenhistorie von OKX holen (Pagination), dann Backtesting-Modul aufsetzen.

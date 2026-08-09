@@ -419,6 +419,83 @@ start at midnight.
   convergence doesn't count), never an entry/exit signal; convergence itself isn't precomputed,
   same reasoning as RSI divergence above.
 
+**Persisted candle archive (`forex_candles`, since 2026-08-09)**: `get_forex_candles`/the live
+chart both routed every historical read through a fresh cTrader connection (own OAuth handshake
+per request) — that's the actual cause of the cTrader timeouts behind `PriceChart.vue`'s
+`showLoadOlderButton` (see there), and it's just as true for Laniakea: the MCP server runs in
+Node, has no IndexedDB (that's a browser API — `src/candleCache.js`'s cache never applies here),
+so every `get_forex_candles` call was a live fetch, every time, no caching anywhere.
+`forex_candles` (migration `20260809120000_forex_candles.sql`, one row per candle — deliberately
+not a JSON-blob-per-day table, to stay consistent with every other table in this schema and stay
+directly queryable by time range) is a growing, append-only archive of *closed* candles meant to
+fix both gaps at once, backfilled by a manual one-off script
+(`mcp-server/src/scripts/backfillForexCandles.ts`, itself just calling the same `forex-candles`
+edge function other callers use, paginated, batch-upserted with `ON CONFLICT DO NOTHING` for
+idempotency/resumability — cTrader connects are flaky enough that a plain sequential fetch loop
+needs its own retry-with-delay, see the script's `withRetries`; parametrized via
+`BACKFILL_INSTRUMENTS`/`BACKFILL_BARS`/`BACKFILL_START_DATE` env vars instead of hand-editing
+constants per extension). Read via the `get_forex_candles_archive` MCP tool
+(`mcp-server/src/db.ts`'s `getForexCandlesArchive`) — same `{time,open,high,low,close,volume}`
+shape as `get_forex_candles`, just serviced from Postgres instead of cTrader, so no timeout risk
+and no OAuth overhead. Current coverage: GBPUSD, 5m/1h/4h, from 2026-01-01 onward — EURUSD or
+older data returns an empty array, not an error, from `get_forex_candles_archive`; treat that as
+"not backfilled yet, fall back to `get_forex_candles`", not a bug.
+
+**Frontend chart is DB-first too, not just Laniakea** — `src/forexCandles.js`'s
+`fetchOlderCandles` (scroll-back) and `fetchInitialCandles` (mount/TF-switch/replay-jump, and
+therefore also `loadTradeSetupM5`/the 1H-ranges/4H-OBs pollers that all funnel through it) try
+`forex_candles` first, only hitting cTrader for whatever the archive doesn't cover (usually just
+a small "since the last backfill run" tail, or nothing at all — see `fetchInitialCandles`'s
+graceful degradation: a failing live top-up returns the archived data instead of throwing, so a
+chart never hangs on a cTrader timeout the way it used to before 2026-08-09).
+`pollRecent()` stays live-only, on purpose — the archive is frozen at whatever the last backfill
+run saw, it structurally can't serve "the candle that just closed". There is **no ongoing sync**
+otherwise — the table stops growing the moment a backfill script run finishes; extending
+`poi-watcher`'s already-running M5 fetch to also persist here (avoiding any extra cTrader load)
+is the natural next step once Philip wants it, not yet built.
+
+**Historical `ob_zones` backfill (`mcp-server/src/scripts/backfillObZones.ts`, since 2026-08-09)**:
+`ob_zones` used to only ever hold what `poi-watcher`'s live cron detected going forward — a
+Laniakea backtest of an old date (e.g. April 2026) had literally no OB zones to read, since this
+app didn't even track GBPUSD that far back. Fixed the same way as the candle gap: run the exact
+same detection function (`detectOrderBlocks`, already Node-safe/dependency-free in
+`src/orderBlockDetection.js` — no third port) once over the *entire* archived candle series per
+instrument/timeframe instead of a live rolling window, then upsert the results
+(`onConflict: instrument,timeframe,start_time,direction`, `ignoreDuplicates: true` — deliberately
+NOT a real update, so this backfill can never clobber a zone `poi-watcher` is already live-tracking
+with more accurate intraday touch data; a re-run is always safe/idempotent). No `sendTelegram`
+call anywhere in this script — historical zones must never trigger a real alert, and
+`notified`/`notified_at` are set the same way `poi-watcher` itself already handles a zone that's
+already touched the first time it's ever seen (`notified: z.touched`, `notified_at: null`, see
+`index.ts`'s `!existing` branch) so a live run later doesn't re-fire on it either. No new MCP tool
+needed — `get_ob_zones`'s existing `asOfSec` param (`applyAsOfZones` in `db.ts`) already
+reconstructs "as of a past point in time" correctly against the backfilled rows.
+
+Two schema changes this required, both worth knowing about if you touch `ob_zones` again:
+- `timeframe` CHECK constraint extended to allow `'5M'` (migration
+  `20260809130000_ob_zones_allow_5m.sql`) — M5 OB zones were *never* persisted before this,
+  deliberately (`poi-watcher` still doesn't; `get_data_export`'s `m5ObZones` still live-redetects
+  over a rolling 7-day window for the same reason). Persisting M5 here is a scoped exception for
+  the *backfilled historical archive only* — a fixed past backtest date has nothing to gain from
+  "live" redetection, unlike a rolling live window. Don't read this as "M5 is persisted now" in
+  general.
+- `ob_zones` was anon-select-only before (only `poi-watcher`, via `service_role`, could write) —
+  unlike almost every other table in this schema. The backfill script runs with the anon key (no
+  `service_role` available for a local one-off script), so two migrations
+  (`20260809140000_ob_zones_anon_insert.sql`, `...150000_ob_zones_anon_delete.sql`) opened it up,
+  aligning it with the permissive single-user model everywhere else. `poi-watcher` itself still
+  writes via `service_role`, unchanged.
+
+**Gotcha hit while building this**: Supabase/PostgREST caps a single response's row count
+server-side (looked like `max_rows=1000` here) *regardless of what `.range()` asks for* — a
+`.range(from, from + 5000)` read-pagination loop that advances `from` by the requested page size
+instead of the actually-returned row count will silently skip most of the data once a page comes
+back capped. First `backfillObZones.ts` run only saw the first 1000 candles of a 44k-row M5
+series because of exactly this (produced 262 wrong `ob_zones` rows from that truncated view,
+individually deleted by `created_at` before re-running correctly — the DELETE granted above turned
+out useful for exactly this class of mistake). Always advance a `.range()` loop by
+`data.length`, not by the requested page size.
+
 **"Laniakea" persona (`/l`)**: `.claude/commands/l.md` switches a session from this file's normal
 coding-assistant behavior into "Laniakea", Philip's trading-sparring-partner persona (Bias/Setup-
 analysis, not code) — pointer to `trading/claude-project-instructions.md` (the same persona

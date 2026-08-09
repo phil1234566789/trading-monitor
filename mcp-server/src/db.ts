@@ -179,6 +179,35 @@ export async function getLaniakeaContext() {
   return data ?? [];
 }
 
+// Liest aus der forex_candles-Tabelle (Pilot-Backfill 2026-08-09, siehe Migration
+// 20260809120000_forex_candles.sql + mcp-server/src/scripts/backfillForexCandles.ts) statt einem
+// Live-cTrader-Request — kein Timeout-Risiko, aber nur für den tatsächlich befüllten Bereich
+// nutzbar (aktuell: nur GBPUSD, nur 5m/1h/4h, nur ab 2026-07-01). Rückgabeform exakt wie
+// fetchForexCandles/get_forex_candles ({time,open,high,low,close,volume}, time in Unix-Sekunden,
+// oldest-first) — time kommt aus Postgres als timestamptz-String zurück, hier zurückgerechnet,
+// damit ein Aufrufer nicht zwischen "Live" und "Archiv" unterscheiden muss.
+export async function getForexCandlesArchive(instrument: string, bar: string, fromTime?: string, toTime?: string, limit = 5000) {
+  let query = supabase
+    .from("forex_candles")
+    .select("time, open, high, low, close, volume")
+    .eq("instrument", instrument)
+    .eq("bar", bar)
+    .order("time", { ascending: true })
+    .limit(limit);
+  if (fromTime) query = query.gte("time", fromTime);
+  if (toTime) query = query.lte("time", toTime);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => ({
+    time: Math.floor(new Date(r.time as string).getTime() / 1000),
+    open: r.open as number,
+    high: r.high as number,
+    low: r.low as number,
+    close: r.close as number,
+    volume: r.volume as number,
+  }));
+}
+
 export async function getNewsEvents(fromTime?: string, toTime?: string) {
   let query = supabase.from("news_events").select("*").order("event_time", { ascending: true });
   if (fromTime) query = query.gte("event_time", fromTime);

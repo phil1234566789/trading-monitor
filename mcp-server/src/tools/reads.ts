@@ -1,6 +1,15 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getObZones, getLiquidityLevels, getTradeSetups, getJournal, getNewsEvents, getTradingSchedule, getTradingAccounts } from "../db.js";
+import {
+  getObZones,
+  getLiquidityLevels,
+  getTradeSetups,
+  getJournal,
+  getNewsEvents,
+  getTradingSchedule,
+  getTradingAccounts,
+  getForexCandlesArchive,
+} from "../db.js";
 import { fetchForexCandles } from "../forexCandles.js";
 import { buildDataExport } from "./dataExport.js";
 import { computeRsi, rsiZone, DEFAULT_RSI_PERIOD } from "../rsi.js";
@@ -163,8 +172,13 @@ export function registerReadTools(server: McpServer) {
   server.registerTool(
     "get_forex_candles",
     {
-      title: "Forex-Kerzen",
-      description: "Rohkerzen für GBPUSD/EURUSD über die forex-candles Edge Function (Twelve Data). Für BTC den okx-market-MCP-Server nutzen.",
+      title: "Forex-Kerzen (live)",
+      description:
+        "Rohkerzen für GBPUSD/EURUSD über die forex-candles Edge Function, live von cTrader geholt " +
+        "(eigener OAuth-Handshake pro Call, daher gelegentlich träge/timeout-anfällig bei größeren " +
+        "count-Werten). Für einen bereits per Backfill archivierten Bereich (aktuell: GBPUSD, " +
+        "5m/1h/4h, ab 2026-07-01) get_forex_candles_archive vorziehen — schneller, kein Timeout-" +
+        "Risiko. Für BTC den okx-market-MCP-Server nutzen.",
       inputSchema: {
         instrument: INSTRUMENT,
         timeframe: z.enum(["1m", "3m", "5m", "15m", "1h", "4h", "1D"]),
@@ -172,6 +186,33 @@ export function registerReadTools(server: McpServer) {
       },
     },
     async ({ instrument, timeframe, count }) => json(await fetchForexCandles(instrument, timeframe, { count })),
+  );
+
+  server.registerTool(
+    "get_forex_candles_archive",
+    {
+      title: "Forex-Kerzen-Archiv (persistiert, Pilot)",
+      description:
+        "Kerzen aus der forex_candles-Tabelle — einmalig per Backfill-Script befüllt (siehe " +
+        "mcp-server/src/scripts/backfillForexCandles.ts), statt einem Live-cTrader-Request über " +
+        "get_forex_candles: kein OAuth-Handshake, kein Timeout-Risiko, beliebig oft wiederholbar. " +
+        "PILOT-STAND (2026-08-09), NUR dieser Bereich ist befüllt: Instrument GBPUSD, Timeframes " +
+        "5m/1h/4h, Zeitraum ab 2026-07-01 (Europe/Berlin) bis zum letzten Backfill-Lauf. Für " +
+        "EURUSD, andere Timeframes oder Zeiträume davor liefert dieses Tool ein leeres Array — dann " +
+        "stattdessen get_forex_candles (live) nutzen, nicht als Fehler werten. fromTime/toTime als " +
+        "ISO-Zeitstempel (inklusive Grenzen); ohne Angabe die ältesten verfügbaren Kerzen bis zum " +
+        "limit. Praktisch v.a. für historische Analysen über mehrere Tage/Wochen (z.B. 'zeig mir " +
+        "alle Order-Blocks der letzten 3 Wochen') statt vieler einzelner get_forex_candles-Calls.",
+      inputSchema: {
+        instrument: INSTRUMENT,
+        timeframe: z.enum(["5m", "1h", "4h"]).describe("Nur diese drei sind aktuell befüllt (Pilot-Stand)"),
+        fromTime: z.string().optional().describe("ISO-Zeitstempel, untere Grenze (inklusiv)"),
+        toTime: z.string().optional().describe("ISO-Zeitstempel, obere Grenze (inklusiv)"),
+        limit: z.number().int().positive().max(20000).default(5000),
+      },
+    },
+    async ({ instrument, timeframe, fromTime, toTime, limit }) =>
+      json(await getForexCandlesArchive(instrument, timeframe, fromTime, toTime, limit)),
   );
 
   server.registerTool(

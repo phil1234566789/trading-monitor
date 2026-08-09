@@ -211,6 +211,14 @@ const RECENT_PAGE_SIZE_FOREX = 10;
 // ankommt (siehe scheduleNextPoll) — lieber knapp nach dem Schluss pollen als knapp davor.
 const CLOSE_POLL_BUFFER_MS = 2_000;
 const HISTORY_PAGE_SIZE = 100; // OKX max per call on /market/history-candles
+// Forex-Scroll-Back (Chat 2026-08-09, Philip: "sollen mehr Candles geholt werden als 100"): seit
+// forexCandles.js' fetchOlderCandles zuerst das DB-Archiv (forex_candles) versucht, ist ein
+// größerer count fürs Archiv praktisch kostenlos (Postgres liefert ein paar tausend Zeilen in
+// einem Call problemlos) — deckt damit gleich mehrere Handelstage pro Scroll-Back-Schritt ab statt
+// in 100er-Häppchen. Für den Live-cTrader-Fallback (außerhalb des Archivs) kappt die
+// forex-candles Edge Function ohnehin serverseitig auf MAX_COUNT (aktuell 1000), dieser Wert ist
+// also KEIN neues Live-Request-Limit, nur die Obergrenze für den (häufigeren) Archiv-Treffer.
+const FOREX_HISTORY_PAGE_SIZE = 2000;
 // jumpToTrade(): Puffer NACH dem Trade-Exit für den ersten Anker-Fetch (siehe dort) — genug, damit
 // auch ein Trade ohne Exit (noch offen) plus etwas "Nachher"-Kontext in die erste Seite passt.
 const JUMP_TARGET_BUFFER_BARS = 20;
@@ -2039,7 +2047,7 @@ async function loadOlderCandlesNow() {
     const tasks = [];
     if (!reachedHistoryStart) {
       const olderPromise = isForex
-        ? fetchOlderForexCandles(props.symbol, props.currentBar, allCandles[0].time, HISTORY_PAGE_SIZE)
+        ? fetchOlderForexCandles(props.symbol, props.currentBar, allCandles[0].time, FOREX_HISTORY_PAGE_SIZE)
         : fetchOlderCandles(okxBarFor(props.currentBar), allCandles[0].time);
       tasks.push(
         olderPromise.then((older) => {
@@ -2980,7 +2988,7 @@ defineExpose({
         let pages = 0;
         while (pages < MAX_JUMP_FETCH_PAGES && !isTimeCovered(allCandles, entryTime, barSeconds)) {
           const older = isForex
-            ? await fetchOlderForexCandles(props.symbol, props.currentBar, anchor, HISTORY_PAGE_SIZE)
+            ? await fetchOlderForexCandles(props.symbol, props.currentBar, anchor, FOREX_HISTORY_PAGE_SIZE)
             : await fetchOlderCandles(okxBarFor(props.currentBar), anchor);
           if (older.length === 0) break;
           allCandles = older.concat(allCandles);
