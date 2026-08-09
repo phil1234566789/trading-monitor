@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { createTrade, addTradePosition, updateTradePosition, updateDealingRange, addTradeConfirmation } from "../db.js";
+import { createTrade, addTradePosition, updateTradePosition, updateDealingRange, addTradeConfirmation, addTradeTarget, updateTradeTarget, deleteTradeTarget } from "../db.js";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -169,5 +169,58 @@ export function registerTradeTools(server: McpServer) {
       },
     },
     async ({ level, id, ...fields }) => json(await addTradeConfirmation({ level, id, ...fields })),
+  );
+
+  server.registerTool(
+    "add_trade_target",
+    {
+      title: "Target zu einer Dealing Range hinzufügen",
+      description:
+        "Fügt einer BEREITS BESTEHENDEN dealing_range ein weiteres Target (TP1/TP2/TP3/...) hinzu — " +
+        "für eine initiale Anlage siehe stattdessen `targets` auf create_trade. dealingRangeId ist die " +
+        "id der Idee (siehe get_journal, Feld dealing_ranges.id). sourceTime angeben, wenn bekannt " +
+        "(z.B. Pivot-/OB-Zeitpunkt) — ohne sourceTime bleibt das Target im Chart unsichtbar, auch " +
+        "wenn die DB-Zeile existiert.",
+      inputSchema: {
+        dealingRangeId: z.number().int(),
+        price: z.number(),
+        rangeLow: z.number().nullable().optional().describe("Für OB-Ziele: Zonen-Unterkante"),
+        rangeHigh: z.number().nullable().optional().describe("Für OB-Ziele: Zonen-Oberkante"),
+        sourceTime: z.string().nullable().optional().describe("ISO-Zeitstempel, z.B. Pivot-/OB-Zeitpunkt"),
+      },
+    },
+    async ({ dealingRangeId, ...fields }) => json(await addTradeTarget(dealingRangeId, fields)),
+  );
+
+  server.registerTool(
+    "update_trade_target",
+    {
+      title: "Target bearbeiten",
+      description:
+        "Bearbeitet ein bestehendes Target (Preis/Zonen-Kanten/Quellzeit) über seine id (siehe " +
+        "get_journal, eingebettet unter dealing_ranges.trade_targets — dort aktuell nur price " +
+        "sichtbar, für die id ggf. get_laniakea_context oder direkt nachfragen). Nur übergebene " +
+        "Felder werden geändert.",
+      inputSchema: {
+        id: z.number().int(),
+        price: z.number().optional(),
+        rangeLow: z.number().nullable().optional(),
+        rangeHigh: z.number().nullable().optional(),
+        sourceTime: z.string().nullable().optional(),
+      },
+    },
+    async ({ id, ...fields }) => json(await updateTradeTarget(id, fields)),
+  );
+
+  server.registerTool(
+    "delete_trade_target",
+    {
+      title: "Target löschen",
+      description: "Löscht ein Target über seine id — z.B. wenn TP1/TP2 falsch gesetzt wurden und neu sollen statt nur überschrieben zu werden.",
+      inputSchema: {
+        id: z.number().int(),
+      },
+    },
+    async ({ id }) => json(await deleteTradeTarget(id)),
   );
 }

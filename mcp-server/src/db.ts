@@ -137,7 +137,7 @@ export async function getTradeSetups(instrument: string) {
 export async function getJournal(instrument?: string, source?: string, limit = 50) {
   let query = supabase
     .from("trade_positions")
-    .select("*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, trade_targets(price)), trade_partial_exits(price, exit_time, portion_pct)")
+    .select("*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, trade_targets(id, price)), trade_partial_exits(price, exit_time, portion_pct)")
     .order("triggered_at", { ascending: false })
     .limit(limit);
   if (instrument) query = query.eq("dealing_ranges.instrument", instrument);
@@ -162,7 +162,7 @@ export async function getLaniakeaContext() {
     .from("laniakea_context")
     .select(
       "id, kind, note, created_at, " +
-        "trade_positions(*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, trade_targets(price)), trade_partial_exits(price, exit_time, portion_pct)), " +
+        "trade_positions(*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, trade_targets(id, price)), trade_partial_exits(price, exit_time, portion_pct)), " +
         "ob_zones(*), " +
         "trade_setups(*), " +
         "trade_confirmations(*), " +
@@ -563,4 +563,66 @@ export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
     .single();
   if (error) throw new Error(error.message);
   return data;
+}
+
+export interface AddTradeTargetArgs {
+  price: number;
+  rangeLow?: number | null;
+  rangeHigh?: number | null;
+  sourceTime?: string | null;
+}
+
+// Fügt einer BEREITS BESTEHENDEN dealing_range ein weiteres Target hinzu (createTrade oben legt
+// Targets nur bei der initialen Anlage an) — fehlte bisher komplett, ebenso wie update/delete
+// (Bug-Report Philip 2026-08-09: TP1/TP2 nachträglich korrigieren war über MCP nicht möglich,
+// nur über create_trade neu anlegen). sourceTime NICHT automatisch gesetzt wie bei createTrade
+// (dort aus position.triggered_at abgeleitet) — hier gibt es keinen so eindeutigen Anker, deshalb
+// beim Aufrufer belassen; ohne sourceTime bleibt das Target laut refreshTradeTargetLinksInternal
+// (PriceChart.vue, siehe Migration 20260728140000_trade_targets_kind_and_source.sql) unsichtbar im
+// Chart, auch wenn die DB-Zeile existiert.
+export async function addTradeTarget(dealingRangeId: number, args: AddTradeTargetArgs) {
+  const { data, error } = await supabase
+    .from("trade_targets")
+    .insert({
+      dealing_range_id: dealingRangeId,
+      price: args.price,
+      range_low: args.rangeLow ?? null,
+      range_high: args.rangeHigh ?? null,
+      source_time: args.sourceTime ?? null,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export interface UpdateTradeTargetArgs {
+  price?: number;
+  rangeLow?: number | null;
+  rangeHigh?: number | null;
+  sourceTime?: string | null;
+}
+
+const TRADE_TARGET_FIELD_MAP: Record<keyof UpdateTradeTargetArgs, string> = {
+  price: "price",
+  rangeLow: "range_low",
+  rangeHigh: "range_high",
+  sourceTime: "source_time",
+};
+
+// Nur die tatsächlich übergebenen Felder patchen, wie updateTradePosition/updateDealingRange oben.
+export async function updateTradeTarget(id: number, fields: UpdateTradeTargetArgs) {
+  const patch: Record<string, unknown> = {};
+  for (const key of Object.keys(fields) as (keyof UpdateTradeTargetArgs)[]) {
+    patch[TRADE_TARGET_FIELD_MAP[key]] = fields[key];
+  }
+  const { data, error } = await supabase.from("trade_targets").update(patch).eq("id", id).select("*").single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function deleteTradeTarget(id: number) {
+  const { error } = await supabase.from("trade_targets").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return { deleted: true, id };
 }
