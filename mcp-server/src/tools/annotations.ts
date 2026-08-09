@@ -44,6 +44,18 @@ const ANNOTATION_SCHEMA = z
   })
   .passthrough();
 
+// Eine benannte Zeichnungs-Gruppe (siehe trading/chart-annotationen.md "Struktur der Antwort") —
+// wird als EIGENE claude_annotations-Zeile gespeichert, damit sie im "Claude-Notizen"-Panel einzeln
+// über ihre eigene Checkbox aus-/einblendbar ist (siehe parseAnnotations in src/claudeAnnotations.js,
+// das genau dasselbe für den manuellen Copy-Paste-Weg tut — dieses Tool spiegelt das jetzt 1:1,
+// siehe Chat 2026-08-09: eine komplette Trading-Tag-Analyse landete fälschlich als EIN flacher
+// annotations-Block/EINE Zeile, weil das Tool-Schema vorher nur den flachen Fall kannte, obwohl die
+// Doku längst das `drawings`-Gruppen-Format als Normalfall beschreibt).
+const DRAWING_GROUP_SCHEMA = z.object({
+  title: z.string().describe("Name dieser Zeichnung — erscheint als eigene Checkbox im 'Claude-Notizen'-Panel, sollte zum zugehörigen Text-Abschnitt passen"),
+  annotations: z.array(ANNOTATION_SCHEMA).min(1),
+});
+
 // Write-Tool (siehe CLAUDE.md "MCP-Server") — Philip hat es 2026-07-31 explizit in
 // .claude/settings.local.json allow-gelistet ("L darf jetzt immer zeichnen, brauch kein go von
 // mir"), läuft also OHNE Bestätigungsprompt. Die Trade-Journal-Write-Tools (trades.ts) sind
@@ -55,18 +67,44 @@ export function registerAnnotationTools(server: McpServer) {
     {
       title: "Chart-Annotationen schreiben",
       description:
-        "Schreibt eine Zeichnung (Preis-Level/Marker/Linien mit Text) direkt in die claude_annotations-" +
-        "Tabelle, sichtbar im Chart unter 'Claude-Notizen' — ersetzt das manuelle Copy/Paste ins " +
-        "Import-Modal. Nutze dasselbe JSON-Format wie beim manuellen Paste (siehe trading/trading-" +
-        "ablauf.md).",
+        "Schreibt eine oder mehrere Zeichnungen (Preis-Level/Marker/Linien mit Text) direkt in die " +
+        "claude_annotations-Tabelle, sichtbar im Chart unter 'Claude-Notizen' — ersetzt das manuelle " +
+        "Copy/Paste ins Import-Modal. ZWEI Formen: (1) `annotations` (flach) + optionales `title` — " +
+        "genau EINE Zeichnung/Checkbox, nur für einen wirklich isolierten Einzel-Hinweis außerhalb " +
+        "einer vollständigen Analyse. (2) `drawings` — ein Array benannter Gruppen ({title, " +
+        "annotations}), jede Gruppe wird als EIGENE, einzeln aus-/einblendbare Zeichnung gespeichert " +
+        "(exakt das `{\"drawings\":[...]}`-Format aus trading/chart-annotationen.md). Bei JEDER " +
+        "vollständigen Trading-Tag-Analyse mit mehreren Abschnitten (Schritt 2, Schritt 3, " +
+        "Szenarien, ...) IMMER `drawings` mit einer Gruppe pro Abschnitt nutzen, NIE alles in ein " +
+        "einzelnes flaches `annotations`-Array packen — sonst landet die gesamte Analyse als eine " +
+        "einzige, nicht einzeln umschaltbare Zeichnung im Panel.",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]),
         date: z.string().describe("YYYY-MM-DD (Europe/Berlin), auf das sich die Zeichnung bezieht"),
-        annotations: z.array(ANNOTATION_SCHEMA).min(1),
-        title: z.string().optional().describe('Default: "Claude-Notizen" + Zeitstempel'),
+        annotations: z
+          .array(ANNOTATION_SCHEMA)
+          .min(1)
+          .optional()
+          .describe("Flaches Format für GENAU EINE Zeichnung — nicht für eine vollständige Mehr-Abschnitte-Analyse verwenden, dafür `drawings`. Exklusiv zu `drawings`."),
+        title: z.string().optional().describe('Nur zusammen mit `annotations` (flaches Format). Default: "Claude-Notizen" + Zeitstempel'),
+        drawings: z
+          .array(DRAWING_GROUP_SCHEMA)
+          .min(1)
+          .optional()
+          .describe("Mehrere benannte Zeichnungs-Gruppen — Standardfall für eine vollständige Trading-Tag-Analyse (eine Gruppe pro Text-Abschnitt). Jede Gruppe wird als eigene Zeile/Checkbox gespeichert. Exklusiv zu `annotations`/`title`."),
       },
     },
-    async ({ instrument, date, annotations, title }) => {
+    async ({ instrument, date, annotations, title, drawings }) => {
+      if (drawings && drawings.length > 0) {
+        if (annotations) throw new Error("Entweder `annotations` ODER `drawings` angeben, nicht beides.");
+        const rows = [];
+        for (const group of drawings) {
+          validateAnnotations(group.annotations);
+          rows.push(await postChartAnnotations(instrument, date, group.annotations, group.title));
+        }
+        return { content: [{ type: "text" as const, text: JSON.stringify(rows, null, 2) }] };
+      }
+      if (!annotations) throw new Error("Entweder `annotations` oder `drawings` ist Pflicht.");
       validateAnnotations(annotations);
       const row = await postChartAnnotations(instrument, date, annotations, title);
       return { content: [{ type: "text" as const, text: JSON.stringify(row, null, 2) }] };
