@@ -36,15 +36,18 @@ const M5_DETECTION_LOOKBACK_HOURS = 7 * 24;
 const M5_DETECTION_CANDLE_BUFFER = 20;
 const M5_BAR_SECONDS = 300;
 
-// Defaults exakt wie im "Daten-Export"-Button (src/dataExport.js) — dieselben rollierenden
-// Lookback-Werte, damit L ohne explizite structureConfig-Angabe dasselbe sieht wie der Chart im
-// Standard-Zustand. Philips TATSÄCHLICH im Dashboard eingestellte Werte (falls von den Defaults
+// periodOuter/periodInner sind weiterhin exakt wie im "Daten-Export"-Button (src/dataExport.js).
+// lookbackHours dagegen ist seit Chat 2026-08-09 auf Philips Wunsch bewusst LÄNGER als der Button
+// (dessen STRUCTURE_LOOKBACK_HOURS bleibt bei 7 Tagen) — ein zu kurzes Fenster ließ mehrstufig
+// verschachtelte Trends (siehe marketStructureAnalysis.rules.md, "beliebige Verschachtelungstiefe")
+// beim Laniakea-Backtest gar nicht erst entstehen, weil der Ursprung der äußersten Ebene oft schon
+// außerhalb von 7 Tagen liegt. Philips TATSÄCHLICH im Dashboard eingestellte Werte (falls
 // abweichend, z.B. "fixer Start") leben nur in seinem Browser-localStorage (siehe CLAUDE.md-Notiz)
 // — dafür nimmt get_data_export optionale structureConfig-Parameter entgegen, die L bei Bedarf von
 // Philip erfragen kann, statt sie zu erraten.
 const STRUCTURE_PERIOD_OUTER = 5;
 const STRUCTURE_PERIOD_INNER = 2;
-const STRUCTURE_LOOKBACK_HOURS = 7 * 24;
+const STRUCTURE_LOOKBACK_HOURS = 21 * 24;
 const STRUCTURE_CANDLE_BUFFER_HOURS = 40;
 
 function rangeStats(rawCandles: Candle[]) {
