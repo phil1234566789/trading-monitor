@@ -440,6 +440,15 @@ let obsM5BtcFetchSeq = 0;
 let loadingOlder = false;
 let reachedHistoryStart = false;
 let reachedCvdHistoryStart = false;
+// Bug-Report Philip 2026-08-09: Scroll-Back-Nachladen (siehe subscribeVisibleLogicalRangeChange
+// unten) hängt bei einem cTrader-Timeout unauffällig fest — der Fehler landet nur in der Konsole,
+// der User sieht bloß leere Fläche links im Chart und muss zufällig nochmal scrollen, damit der
+// Handler erneut feuert. showLoadOlderButton zeigt stattdessen einen expliziten Retry-Button genau
+// dann, wenn die sichtbare Logical Range über den Datenanfang hinausragt (from < 0, siehe
+// updateLoadOlderButtonVisibility) UND wirklich noch mehr Historie zu holen wäre (!reachedHistoryStart
+// — bei echtem Datenanfang bleibt die Lücke bewusst ohne Button).
+const showLoadOlderButton = ref(false);
+const loadOlderButtonBusy = ref(false);
 let pollTimer = null;
 let tradeSetupM5PollTimer = null;
 let rangesPollTimer = null;
@@ -2005,6 +2014,68 @@ async function loadTradeSetupM5() {
   }
 }
 
+// Prüft, ob die aktuell sichtbare Logical Range über den geladenen Datenanfang hinausragt
+// (from < 0 => links vom ältesten Balken ist auf der X-Achse gerade nichts zu sehen) UND ob dort
+// tatsächlich noch mehr Historie zu holen wäre — sonst würde der Retry-Button auch am echten Anfang
+// der Historie (reachedHistoryStart) dauerhaft angezeigt, wo ein erneuter Fetch nur wieder 0 Kerzen
+// zurückgäbe. range optional, damit sowohl der Scroll-Handler (hat es schon) als auch
+// loadOlderCandlesNow()/loadInitial() (müssten es sonst extra abfragen) denselben Check nutzen können.
+function updateLoadOlderButtonVisibility(range) {
+  const r = range ?? chart?.timeScale().getVisibleLogicalRange();
+  showLoadOlderButton.value = !!r && r.from < 0 && !reachedHistoryStart;
+}
+
+// Gemeinsame Fetch-Logik für den beiläufigen Scroll-Back-Trigger (subscribeVisibleLogicalRangeChange
+// oben) UND den manuellen Retry-Button (siehe showLoadOlderButton) — Bug-Report Philip 2026-08-09:
+// bei einem cTrader-Timeout blieb das Nachladen unauffällig hängen, bis der User zufällig noch mal
+// scrollte und den Handler erneut auslöste. Der Button ruft exakt dieselbe Funktion auf, damit sich
+// beide Wege nicht unterscheiden (gleicher loadingOlder-Zustand, gleiche reachedHistoryStart-Logik).
+async function loadOlderCandlesNow() {
+  if (!chart || loadingOlder || allCandles.length === 0) return;
+  if (reachedHistoryStart && reachedCvdHistoryStart) return;
+
+  loadingOlder = true;
+  try {
+    const tasks = [];
+    if (!reachedHistoryStart) {
+      const olderPromise = isForex
+        ? fetchOlderForexCandles(props.symbol, props.currentBar, allCandles[0].time, HISTORY_PAGE_SIZE)
+        : fetchOlderCandles(okxBarFor(props.currentBar), allCandles[0].time);
+      tasks.push(
+        olderPromise.then((older) => {
+          if (older.length === 0) reachedHistoryStart = true;
+          else allCandles = older.concat(allCandles);
+        }),
+      );
+    }
+    if (!reachedCvdHistoryStart && allCvdDeltas.length > 0) {
+      tasks.push(
+        fetchOlderDeltas(binanceIntervalFor(props.currentBar), allCvdDeltas[0].time).then((older) => {
+          if (older.length === 0) reachedCvdHistoryStart = true;
+          else allCvdDeltas = older.concat(allCvdDeltas);
+        }),
+      );
+    }
+    await Promise.all(tasks);
+    refreshChart();
+    updateLoadOlderButtonVisibility();
+  } catch (err) {
+    console.error("Ältere Daten laden fehlgeschlagen:", err);
+  } finally {
+    loadingOlder = false;
+  }
+}
+
+async function retryLoadOlderCandles() {
+  if (loadingOlder) return;
+  loadOlderButtonBusy.value = true;
+  try {
+    await loadOlderCandlesNow();
+  } finally {
+    loadOlderButtonBusy.value = false;
+  }
+}
+
 function scheduleNextTradeSetupM5Poll() {
   clearTimeout(tradeSetupM5PollTimer);
   const barMs = barSecondsFor("5m") * 1000;
@@ -2089,6 +2160,7 @@ async function loadInitial() {
     allCvdDeltas = deltas;
     reachedHistoryStart = false;
     reachedCvdHistoryStart = isForex; // keine CVD-Historie zum Nachladen bei Forex
+    showLoadOlderButton.value = false; // frischer Datensatz, Sichtbarkeit racet sonst mit dem nächsten Scroll-Event
     refreshChart();
     markSuccess();
   } catch (err) {
@@ -2535,40 +2607,13 @@ onMounted(() => {
   resizeObserver.observe(chartContainerRef.value);
   positionGauges();
 
-  chart.timeScale().subscribeVisibleLogicalRangeChange(async (range) => {
-    if (!chart || !range || loadingOlder || allCandles.length === 0) return;
+  chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+    if (!chart || !range || allCandles.length === 0) return;
+    updateLoadOlderButtonVisibility(range);
+    if (loadingOlder) return;
     if (range.from > LAZY_LOAD_LOGICAL_THRESHOLD) return;
     if (reachedHistoryStart && reachedCvdHistoryStart) return;
-
-    loadingOlder = true;
-    try {
-      const tasks = [];
-      if (!reachedHistoryStart) {
-        const olderPromise = isForex
-          ? fetchOlderForexCandles(props.symbol, props.currentBar, allCandles[0].time, HISTORY_PAGE_SIZE)
-          : fetchOlderCandles(okxBarFor(props.currentBar), allCandles[0].time);
-        tasks.push(
-          olderPromise.then((older) => {
-            if (older.length === 0) reachedHistoryStart = true;
-            else allCandles = older.concat(allCandles);
-          }),
-        );
-      }
-      if (!reachedCvdHistoryStart && allCvdDeltas.length > 0) {
-        tasks.push(
-          fetchOlderDeltas(binanceIntervalFor(props.currentBar), allCvdDeltas[0].time).then((older) => {
-            if (older.length === 0) reachedCvdHistoryStart = true;
-            else allCvdDeltas = older.concat(allCvdDeltas);
-          }),
-        );
-      }
-      await Promise.all(tasks);
-      refreshChart();
-    } catch (err) {
-      console.error("Ältere Daten laden fehlgeschlagen:", err);
-    } finally {
-      loadingOlder = false;
-    }
+    loadOlderCandlesNow();
   });
 
   loadInitial();
@@ -2988,6 +3033,16 @@ defineExpose({
       <span class="ranges-spinner"></span>
       Ranges laden…
     </div>
+    <button
+      v-if="showLoadOlderButton"
+      class="load-older-btn"
+      :disabled="loadOlderButtonBusy"
+      title="Nachladen der älteren Kerzen ist offenbar hängengeblieben (z.B. cTrader-Timeout) — hier erneut auslösen"
+      @click="retryLoadOlderCandles"
+    >
+      <span v-if="loadOlderButtonBusy" class="ranges-spinner"></span>
+      {{ loadOlderButtonBusy ? "lädt…" : "⟲ Ältere Kerzen laden" }}
+    </button>
     <div v-if="!isForex" class="cvd-gauges" :style="{ bottom: gaugesBottom + 'px' }">
       <Gauge id="window" :value="windowDelta" label="Δ 15m" />
       <Gauge id="daily" :value="dailyDelta" label="Δ Tag (UTC)" />
@@ -3222,6 +3277,37 @@ defineExpose({
   border-top-color: #d1d4dc;
   border-radius: 50%;
   animation: ranges-spin 0.8s linear infinite;
+}
+
+/* Retry-Button für hängengebliebenes Scroll-Back-Nachladen (siehe showLoadOlderButton in
+   PriceChart.vue) — links vertikal zentriert, dort wo bei einer Lücke sonst nur leere Fläche auf
+   der X-Achse zu sehen ist. */
+.load-older-btn {
+  position: absolute;
+  z-index: 6;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #2962ff;
+  background: rgba(30, 34, 45, 0.9);
+  color: #d1d4dc;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.load-older-btn:hover:not(:disabled) {
+  background: #2962ff;
+}
+
+.load-older-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
 }
 
 @keyframes ranges-spin {
