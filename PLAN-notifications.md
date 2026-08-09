@@ -489,8 +489,10 @@ gerade erst selbst (unvollständig) geschriebenen Archiv-Zeilen zu, statt sauber
 zupaginieren. Ersten Lauf abgebrochen, Script auf die neu exportierte reine
 `fetchLiveForexCandles` umgestellt (ein Backfill darf nie aus dem Archiv lesen, das es selbst
 befüllt), neu gestartet. Ergebnis: **44.894 M5-, 3.744 H1-, 936 4H-Kerzen** für EURUSD,
-01.01.–07.08.2026 — praktisch deckungsgleich mit GBPUSDs Zahlen von vorhin. OB-Zonen-Backfill für
-EURUSD noch nicht gelaufen, kein Auftrag dafür bisher.
+01.01.–07.08.2026 — praktisch deckungsgleich mit GBPUSDs Zahlen von vorhin. Direkt im Anschluss
+(Philip: "yes OBs auch befüllen bitte") `backfillObZones.ts` für EURUSD gelaufen — 7.095 M5-,
+331 H1-, 98 4H-OB-Zonen neu erkannt/gesichert, kein Code-Change nötig (nur `BACKFILL_INSTRUMENTS`).
+Beide Instrumente (GBPUSD/EURUSD) sind damit jetzt bei Kerzen UND OB-Zonen symmetrisch befüllt.
 
 ---
 
