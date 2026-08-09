@@ -143,28 +143,62 @@ function mapArchivedRows(rows) {
       close: r.close,
       volume: r.volume,
     }))
-    .reverse(); // Query ist "neueste zuerst" (fürs LIMIT auf den jüngsten Teil), Rest der App erwartet oldest-first
+    .reverse(); // Rows kommen "neueste zuerst" (fürs LIMIT auf den jüngsten Teil), Rest der App erwartet oldest-first
+}
+
+// Supabase/PostgREST deckelt eine einzelne Response serverseitig bei diesem Wert (empirisch
+// bestätigt) — UNABHÄNGIG davon, wie groß .limit()/.range() angefragt wird, kein Fehler, einfach
+// weniger Zeilen als erbeten. Bug-Report Philip 2026-08-09: ein Replay-Sprung auf GBPUSD M5
+// (INITIAL_CANDLE_COUNT 1000 + REPLAY_LOOKAHEAD_SEC-Kerzen, macht zusammen 3500) zeigte fast gar
+// keine Kerzen — fetchArchivedPage unten fragte 3500 an, bekam still 1000 zurück (aus einem
+// Zeitfenster WEIT NACH dem eigentlichen Replay-Punkt, weil "neueste zuerst" ja beim Lookahead-
+// Ende ansetzt), der komplette eigentlich sichtbare Bereich fehlte. Exakt derselbe Fund wie in
+// mcp-server/src/scripts/backfillObZones.ts's fetchAllCandles — dort per Pagination gefixt, hier
+// jetzt genauso.
+const DB_READ_PAGE_SIZE = 1000;
+
+// Liest bis zu `count` archivierte Kerzen absteigend ab einer Zeitgrenze — entweder `ltIso`
+// (exklusiv, für Scroll-Back: strikt VOR einer schon geladenen Kerze) oder `lteIso` (inklusiv,
+// für Initial-/TF-Wechsel-Load: bis EINSCHLIESSLICH eines Zeitpunkts). Paginiert in
+// DB_READ_PAGE_SIZE-Schritten statt eines einzelnen großen .limit(count) (siehe oben) — jede
+// Folgeseite grenzt exklusiv an die vorherige an (sonst würde die Grenz-Kerze doppelt gezählt).
+// null nur, wenn WIRKLICH nichts gefunden wurde (Signal an den Aufrufer: live fetchen) — bei
+// einem Fehler nach bereits erfolgreich gelesenen Seiten lieber das Teilergebnis zurückgeben als
+// alles wegzuwerfen.
+async function fetchArchivedPage(symbol, bar, count, { ltIso, lteIso }) {
+  if (!DB_ARCHIVED_BARS.has(bar)) return null;
+  const rows = [];
+  let boundary = ltIso ?? lteIso;
+  let inclusive = ltIso == null;
+  while (rows.length < count) {
+    const pageLimit = Math.min(DB_READ_PAGE_SIZE, count - rows.length);
+    let query = supabase
+      .from("forex_candles")
+      .select("time, open, high, low, close, volume")
+      .eq("instrument", symbol)
+      .eq("bar", bar)
+      .order("time", { ascending: false })
+      .limit(pageLimit);
+    query = inclusive ? query.lte("time", boundary) : query.lt("time", boundary);
+    const { data, error } = await query;
+    if (error) {
+      console.error("Kerzen-Archiv lesen fehlgeschlagen, falle auf Live-cTrader zurück:", error);
+      break;
+    }
+    if (!data || data.length === 0) break;
+    rows.push(...data);
+    if (data.length < pageLimit) break; // ehrlich weniger Historie vorhanden als angefragt, fertig
+    boundary = data[data.length - 1].time; // ältestes in dieser Seite (data ist desc sortiert)
+    inclusive = false;
+  }
+  if (rows.length === 0) return null;
+  return mapArchivedRows(rows);
 }
 
 // Die neuesten `count` archivierten Kerzen bis (inklusive) toIso — für den Initial-/TF-Wechsel-Load
-// (siehe fetchInitialCandles unten). Analog zu fetchOlderCandlesFromDb, aber `lte` statt `lt`
-// (dort: strikt VOR einer bereits geladenen Kerze; hier: EINSCHLIESSLICH der neuesten verfügbaren).
+// (siehe fetchInitialCandles unten).
 async function fetchArchivedUpTo(symbol, bar, count, toIso) {
-  if (!DB_ARCHIVED_BARS.has(bar)) return null;
-  const { data, error } = await supabase
-    .from("forex_candles")
-    .select("time, open, high, low, close, volume")
-    .eq("instrument", symbol)
-    .eq("bar", bar)
-    .lte("time", toIso)
-    .order("time", { ascending: false })
-    .limit(count);
-  if (error) {
-    console.error("Kerzen-Archiv lesen fehlgeschlagen, falle auf Live-cTrader zurück:", error);
-    return null;
-  }
-  if (!data || data.length === 0) return null;
-  return mapArchivedRows(data);
+  return fetchArchivedPage(symbol, bar, count, { lteIso: toIso });
 }
 
 // toMs (optional, ms-Epoch): ohne das die neuesten `count` Kerzen bis "jetzt" — für den
@@ -209,21 +243,7 @@ export async function fetchRecentCandles(symbol, bar, count) {
 // gefunden" und ist das Signal für den Aufrufer, auf den Live-Fetch zurückzufallen — ein
 // tatsächlich leeres Live-Ergebnis (echtes Ende der Historie) bleibt dagegen ein echtes `[]`.
 async function fetchOlderCandlesFromDb(symbol, bar, oldestLoadedTime, count) {
-  if (!DB_ARCHIVED_BARS.has(bar)) return null;
-  const { data, error } = await supabase
-    .from("forex_candles")
-    .select("time, open, high, low, close, volume")
-    .eq("instrument", symbol)
-    .eq("bar", bar)
-    .lt("time", new Date(oldestLoadedTime * 1000).toISOString())
-    .order("time", { ascending: false })
-    .limit(count);
-  if (error) {
-    console.error("Kerzen-Archiv lesen fehlgeschlagen, falle auf Live-cTrader zurück:", error);
-    return null;
-  }
-  if (!data || data.length === 0) return null; // nicht (mehr) im Archiv abgedeckt -> live fetchen
-  return mapArchivedRows(data);
+  return fetchArchivedPage(symbol, bar, count, { ltIso: new Date(oldestLoadedTime * 1000).toISOString() });
 }
 
 // Für Scroll-Back: Kerzen strikt vor `oldestLoadedTime` (Sekunden). Erst DB-Archiv versuchen

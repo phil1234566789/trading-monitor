@@ -427,6 +427,21 @@ Per `created_at`-Zeitstempel präzise von echten, älteren `poi-watcher`-Daten u
 nur bei einem erneuten manuellen Script-Lauf) — beides bekannte, akzeptierte Lücken, kein
 nächster Schritt ohne Philips Ansage.
 
+**Nachtrag, gleicher Tag, dritte Runde**: der oben "gefixte" Pagination-Bug steckte noch an zwei
+weiteren Stellen — nicht nur im Backfill-Script. Bug-Report Philip: GBPUSD-M5-Replay auf
+08.07.2026 13:40 zeigte fast keine Kerzen (Screenshot: nur zwei kleine Cluster, riesige Lücken,
+EMA-Linie lief aber durch — Hinweis, dass der EMA-Datensatz woanders herkam als die Haupt-Kerzen).
+Ursache: `fetchInitialCandles` fragte `count = INITIAL_CANDLE_COUNT + REPLAY_LOOKAHEAD_SEC`-Bars
+(1000+2500=3500 bei M5) über ein einzelnes `.limit()` an, bekam vom selben PostgREST-Cap still nur
+1000 zurück — aus einem Fenster WEIT NACH dem eigentlichen Replay-Punkt (da "neueste zuerst" beim
+Lookahead-Ende ansetzt), nicht um ihn herum. Derselbe Bug auch in `getForexCandlesArchive` (dem
+MCP-Tool, das Lana nutzt!) bei einem `limit` über 1000. Alle drei Stellen jetzt auf dieselbe
+Pagination umgestellt (`fetchArchivedPage` in `forexCandles.js`, analoges Pattern in `db.ts`) —
+außerdem `candleCache.js`s `DB_VERSION` auf 5 gebumpt (der fehlerhafte Fetch wurde ganz normal als
+"vollständig" gecacht, ein reiner Code-Fix räumt einen schon vergifteten IndexedDB-Eintrag nicht
+auf). Mit Playwright verifiziert: derselbe Replay-Zeitpunkt zeigt jetzt durchgehend Kerzen,
+Sessions, OB-Zonen und ein korrektes Trade-Setup-Cockpit, keine Konsolenfehler.
+
 ---
 
 **Nächster Schritt:** Phase A — tiefere Kerzenhistorie von OKX holen (Pagination), dann Backtesting-Modul aufsetzen.

@@ -486,15 +486,28 @@ Two schema changes this required, both worth knowing about if you touch `ob_zone
   aligning it with the permissive single-user model everywhere else. `poi-watcher` itself still
   writes via `service_role`, unchanged.
 
-**Gotcha hit while building this**: Supabase/PostgREST caps a single response's row count
-server-side (looked like `max_rows=1000` here) *regardless of what `.range()` asks for* — a
-`.range(from, from + 5000)` read-pagination loop that advances `from` by the requested page size
-instead of the actually-returned row count will silently skip most of the data once a page comes
-back capped. First `backfillObZones.ts` run only saw the first 1000 candles of a 44k-row M5
-series because of exactly this (produced 262 wrong `ob_zones` rows from that truncated view,
-individually deleted by `created_at` before re-running correctly — the DELETE granted above turned
-out useful for exactly this class of mistake). Always advance a `.range()` loop by
-`data.length`, not by the requested page size.
+**Gotcha (hit THREE times while building this — it's not just a backfill-script thing)**:
+Supabase/PostgREST caps a single response's row count server-side (empirically confirmed at
+1000 here) *regardless of what `.limit()`/`.range()` asks for* — no error, just silently fewer
+rows than requested. First surfaced in `backfillObZones.ts`'s read-pagination (a `.range()` loop
+that advanced `from` by the requested page size instead of the actually-returned row count skips
+most of the data once a page comes back capped — only saw the first 1000 of a 44k-row M5 series,
+produced 262 wrong `ob_zones` rows from that truncated view, individually deleted by `created_at`
+before re-running correctly). Looked fixed there, but the SAME bug was still live in
+`src/forexCandles.js`'s `fetchInitialCandles`/`fetchOlderCandles` (a plain `.limit(count)` with
+`count` > 1000 for a replay jump with `REPLAY_LOOKAHEAD_SEC` lookahead, or a large
+`FOREX_HISTORY_PAGE_SIZE` scroll-back) AND in `get_forex_candles_archive`'s `getForexCandlesArchive`
+— Bug-Report Philip 2026-08-09: a GBPUSD M5 replay jump to 08.07. 13:40 showed almost no candles,
+because the capped single-page fetch silently returned a candle window from *after* the lookahead
+end instead of around the actual replay point. Fixed by paginating properly in all three places
+(`fetchArchivedPage` in `forexCandles.js`, same shape in `getForexCandlesArchive`) — advance the
+cursor by `data.length`, never by the requested page size, and only treat a truly *empty* page as
+"done". Also bumped `candleCache.js`'s `DB_VERSION` (3rd time this exact poisoning class has
+forced a bump, see the version-3 comment there) — the broken fetch got cached as "complete" like
+any other successful one, so a code fix alone doesn't clear an already-poisoned IndexedDB entry.
+**If you add another `.limit()`/`.range()` read against `forex_candles` (or any table) that could
+plausibly need more than ~1000 rows, assume it needs the same pagination loop — don't rely on
+`.limit()` alone.**
 
 **"Laniakea" persona (`/l`)**: `.claude/commands/l.md` switches a session from this file's normal
 coding-assistant behavior into "Laniakea", Philip's trading-sparring-partner persona (Bias/Setup-

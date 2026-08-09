@@ -179,32 +179,50 @@ export async function getLaniakeaContext() {
   return data ?? [];
 }
 
-// Liest aus der forex_candles-Tabelle (Pilot-Backfill 2026-08-09, siehe Migration
+// Supabase/PostgREST deckelt eine einzelne Response serverseitig bei diesem Wert (empirisch
+// bestätigt beim Bau von backfillObZones.ts UND src/forexCandles.js) — unabhängig davon, wie groß
+// .limit() angefragt wird. Ein `limit` über 1000 hier würde sonst still nur die ersten 1000 Zeilen
+// liefern statt eines Fehlers.
+const DB_READ_PAGE_SIZE = 1000;
+
+// Liest aus der forex_candles-Tabelle (Backfill 2026-08-09, siehe Migration
 // 20260809120000_forex_candles.sql + mcp-server/src/scripts/backfillForexCandles.ts) statt einem
 // Live-cTrader-Request — kein Timeout-Risiko, aber nur für den tatsächlich befüllten Bereich
-// nutzbar (aktuell: nur GBPUSD, nur 5m/1h/4h, nur ab 2026-07-01). Rückgabeform exakt wie
+// nutzbar (aktuell: GBPUSD, 5m/1h/4h, ab 2026-01-01). Rückgabeform exakt wie
 // fetchForexCandles/get_forex_candles ({time,open,high,low,close,volume}, time in Unix-Sekunden,
 // oldest-first) — time kommt aus Postgres als timestamptz-String zurück, hier zurückgerechnet,
-// damit ein Aufrufer nicht zwischen "Live" und "Archiv" unterscheiden muss.
+// damit ein Aufrufer nicht zwischen "Live" und "Archiv" unterscheiden muss. Paginiert in
+// DB_READ_PAGE_SIZE-Schritten (siehe oben) statt eines einzelnen großen .limit(limit).
 export async function getForexCandlesArchive(instrument: string, bar: string, fromTime?: string, toTime?: string, limit = 5000) {
-  let query = supabase
-    .from("forex_candles")
-    .select("time, open, high, low, close, volume")
-    .eq("instrument", instrument)
-    .eq("bar", bar)
-    .order("time", { ascending: true })
-    .limit(limit);
-  if (fromTime) query = query.gte("time", fromTime);
-  if (toTime) query = query.lte("time", toTime);
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((r) => ({
-    time: Math.floor(new Date(r.time as string).getTime() / 1000),
-    open: r.open as number,
-    high: r.high as number,
-    low: r.low as number,
-    close: r.close as number,
-    volume: r.volume as number,
+  const rows: { time: string; open: number; high: number; low: number; close: number; volume: number }[] = [];
+  let cursor = fromTime;
+  let inclusive = true;
+  while (rows.length < limit) {
+    const pageLimit = Math.min(DB_READ_PAGE_SIZE, limit - rows.length);
+    let query = supabase
+      .from("forex_candles")
+      .select("time, open, high, low, close, volume")
+      .eq("instrument", instrument)
+      .eq("bar", bar)
+      .order("time", { ascending: true })
+      .limit(pageLimit);
+    if (cursor) query = inclusive ? query.gte("time", cursor) : query.gt("time", cursor);
+    if (toTime) query = query.lte("time", toTime);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+    rows.push(...data);
+    if (data.length < pageLimit) break; // ehrlich weniger Kerzen im Zeitraum als angefragt, fertig
+    cursor = data[data.length - 1].time; // jüngstes in dieser Seite (data ist asc sortiert)
+    inclusive = false;
+  }
+  return rows.map((r) => ({
+    time: Math.floor(new Date(r.time).getTime() / 1000),
+    open: r.open,
+    high: r.high,
+    low: r.low,
+    close: r.close,
+    volume: r.volume,
   }));
 }
 

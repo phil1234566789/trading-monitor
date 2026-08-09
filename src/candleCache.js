@@ -26,7 +26,17 @@ const DB_NAME = "trading-monitor-candles";
 // ausliefern statt neu von cTrader zu fetchen — unsichtbar, da kein Fehler, nur falsche Daten.
 // Kein gezielteres Invalidieren (z.B. nur GBPUSD/EURUSD-Keys) nötig — ein einmaliger Full-Wipe
 // trifft auch BTC/OKX, ist dort aber nur ein günstiger, harmloser Neu-Fetch.
-const DB_VERSION = 4;
+//
+// 5 (2026-08-09: forex_candles-Archiv + DB-first fetchInitialCandles/fetchOlderCandles, siehe
+// forexCandles.js) — derselbe Poisoning-Mechanismus wie bei Version 3, nur eine andere Ursache:
+// ein Pagination-Bug (Supabase/PostgREST kappt eine Response serverseitig bei ~1000 Zeilen,
+// unabhängig vom angefragten .limit()/.range()) lieferte für größere Requests (Replay-Sprünge mit
+// Lookahead, TF-Wechsel) ein KOMPLETT falsches Zeitfenster zurück (Bug-Report Philip: GBPUSD-M5-
+// Replay auf 08.07. zeigte fast keine Kerzen). Der fehlerhafte Fetch wurde dabei ganz normal als
+// "vollständig bis effectiveEndSec" gecacht (safeCompleteUpTo sieht keinen Fehler, nur falsche
+// Daten) — ein reiner Code-Fix räumt einen schon so vergifteten Cache-Eintrag nicht auf, siehe
+// Kommentar zu Version 3.
+const DB_VERSION = 5;
 const STORE_NAME = "candles";
 
 // Rein defensiv, KEINE reguläre Obergrenze (siehe oben) — 500k Kerzen sind selbst auf M1 fast ein
