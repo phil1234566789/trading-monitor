@@ -16,7 +16,16 @@ export interface Candle {
   volume: number;
 }
 
-async function fetchLiveForexCandles(symbol: string, bar: string, { count, toMs }: { count: number; toMs?: number }): Promise<Candle[]> {
+// Exportiert (statt privat), damit backfillForexCandles.ts das aufrufen kann — Bug-Report Philip
+// 2026-08-10: das Script (dessen ganzer Zweck ist, frisch von cTrader zu lesen und ins Archiv zu
+// SCHREIBEN) importierte bisher fetchForexCandles unten, das archive-first ist. Sobald der
+// Backfill-Lauf selbst schon ein paar Zeilen fürs gerade laufende Instrument/Timeframe geschrieben
+// hatte, griffen SPÄTERE Seiten desselben Laufs auf genau diese frisch geschriebenen (aber noch
+// unvollständigen) Archiv-Zeilen zu — ein Teiltreffer löste denselben "Live-Rest nachladen"-Zweig
+// aus wie bei jedem anderen Aufrufer, nur dass hier der zurückgegebene Kerzen-Umfang nicht mehr
+// zur eigenen Pagination-Cursor-Arithmetik des Backfill-Scripts passte (Lücken/Doppelungen
+// riskiert). Ein Backfill-Script darf nie im Archiv lesen, das es selbst gerade befüllt.
+export async function fetchLiveForexCandles(symbol: string, bar: string, { count, toMs }: { count: number; toMs?: number }): Promise<Candle[]> {
   const params = new URLSearchParams({ symbol, period: bar, count: String(count) });
   if (toMs) params.set("to", String(toMs));
   const res = await fetch(`${FOREX_FN_URL}?${params}`, {

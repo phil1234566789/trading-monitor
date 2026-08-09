@@ -1,7 +1,11 @@
 // Einmaliges Backfill-Script für die forex_candles-Tabelle (siehe Migration
 // 20260809120000_forex_candles.sql) — holt abgeschlossene Kerzen über dieselbe forex-candles Edge
-// Function, die auch Chart/MCP-Live-Reads nutzen (`fetchForexCandles`, kein direkter cTrader-
-// Zugriff hier, die Edge Function kümmert sich um OAuth-Token/Refresh). Kein Tool im laufenden
+// Function, die auch Chart/MCP-Live-Reads nutzen (kein direkter cTrader-Zugriff hier, die Edge
+// Function kümmert sich um OAuth-Token/Refresh). Nutzt bewusst `fetchLiveForexCandles` (die reine
+// Live-Variante), NICHT das archive-first `fetchForexCandles` aus demselben Modul — Bug-Report
+// Philip 2026-08-10: mit der archive-first-Variante griffen spätere Seiten desselben Backfill-
+// Laufs auf die vom Lauf selbst gerade erst (unvollständig) geschriebenen Archiv-Zeilen zu, ein
+// Backfill-Script darf nie aus dem Archiv lesen, das es selbst gerade befüllt. Kein Tool im laufenden
 // MCP-Server (siehe index.ts) — manueller Lauf, per Env-Vars parametrisierbar statt die Konstanten
 // unten für jede Ausweitung von Hand zu ändern (Chat 2026-08-09, zweite Runde: erst GBP 5m/1h/4h
 // Juli+August, dann GBP 4h fürs ganze Jahr — beides derselbe Lauf, andere Env-Vars):
@@ -13,7 +17,7 @@
 // Secret). Idempotent (ON CONFLICT DO NOTHING beim Upsert unten), ein erneuter Lauf mit
 // überlappendem/größerem Zeitraum überspringt bereits Vorhandenes einfach statt es zu duplizieren.
 import { supabase } from "../supabaseClient.js";
-import { fetchForexCandles, type Candle } from "../forexCandles.js";
+import { fetchLiveForexCandles, type Candle } from "../forexCandles.js";
 import { berlinDayRangeUtcMs } from "../berlinTime.js";
 
 type Bar = "5m" | "1h" | "4h";
@@ -90,7 +94,7 @@ async function backfillOne(instrument: string, bar: Bar) {
   let pages = 0;
 
   for (;;) {
-    const page = await withRetries(() => fetchForexCandles(instrument, bar, { count: PAGE_SIZE, toMs: cursorToMs }));
+    const page = await withRetries(() => fetchLiveForexCandles(instrument, bar, { count: PAGE_SIZE, toMs: cursorToMs }));
     pages++;
     if (page.length === 0) break;
 

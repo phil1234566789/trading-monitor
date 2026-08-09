@@ -480,6 +480,18 @@ statt aus der rohen Sekundenzahl, damit count/Zeitfenster konsistent bleiben. Pl
 `DB_VERSION` auf 6 gebumpt (gleicher Poisoning-Grund wie zuvor). Mit Playwright verifiziert:
 GBPUSD M1, Replay 08.07.2026 13:40, zeigt jetzt korrekt Kerzen + Sessions + Trade-Setup-Cockpit.
 
+**Nachtrag, gleicher Tag, sechste Runde**: EURUSD-Kerzen-Archiv nachgezogen (5m/1h/4h, ab
+01.01.2026, Philip: "alles läuft sehr gut, dann hol bitte für EU auch alle candles" — M1
+ausdrücklich NICHT, "auf Bedarf"). Dabei ein Bug im Backfill-Script selbst gefunden: seit
+`fetchForexCandles` (mcp-server) archive-first ist (siehe vierte Runde oben), griff
+`backfillForexCandles.ts` — das dieselbe Funktion importierte — mitten im eigenen Lauf auf die
+gerade erst selbst (unvollständig) geschriebenen Archiv-Zeilen zu, statt sauber live weiter
+zupaginieren. Ersten Lauf abgebrochen, Script auf die neu exportierte reine
+`fetchLiveForexCandles` umgestellt (ein Backfill darf nie aus dem Archiv lesen, das es selbst
+befüllt), neu gestartet. Ergebnis: **44.894 M5-, 3.744 H1-, 936 4H-Kerzen** für EURUSD,
+01.01.–07.08.2026 — praktisch deckungsgleich mit GBPUSDs Zahlen von vorhin. OB-Zonen-Backfill für
+EURUSD noch nicht gelaufen, kein Auftrag dafür bisher.
+
 ---
 
 **Nächster Schritt:** Phase A — tiefere Kerzenhistorie von OKX holen (Pagination), dann Backtesting-Modul aufsetzen.

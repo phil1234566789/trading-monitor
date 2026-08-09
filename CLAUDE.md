@@ -438,7 +438,18 @@ edge function other callers use, paginated, batch-upserted with `ON CONFLICT DO 
 idempotency/resumability — cTrader connects are flaky enough that a plain sequential fetch loop
 needs its own retry-with-delay, see the script's `withRetries`; parametrized via
 `BACKFILL_INSTRUMENTS`/`BACKFILL_BARS`/`BACKFILL_START_DATE` env vars instead of hand-editing
-constants per extension). Current coverage: GBPUSD, 5m/1h/4h, from 2026-01-01 onward.
+constants per extension). Current coverage: GBPUSD + EURUSD, 5m/1h/4h, from 2026-01-01 onward.
+
+**The backfill script must never read the archive it's writing to.** `backfillForexCandles.ts`
+imports `fetchLiveForexCandles` (the plain live-only function, now exported from
+`mcp-server/src/forexCandles.ts` specifically for this) instead of that module's own
+`fetchForexCandles` (archive-first, see above). Bug-Report Philip 2026-08-10, mid-EURUSD-backfill:
+once the script had already written a few pages for the instrument/timeframe it was currently
+backfilling, *later* pages of the SAME run started hitting those freshly-written (but still
+incomplete) archive rows through `fetchForexCandles`'s archive-first path — a partial archive hit
+triggered its "top up from live" branch, and the returned candle count no longer matched what the
+script's own pagination cursor expected (gap/duplicate risk). Any other one-off script that writes
+to `forex_candles` should import `fetchLiveForexCandles` the same way, not `fetchForexCandles`.
 
 **Both the frontend chart AND Laniakea's `fetchForexCandles` are archive-first, transparently** —
 this took two passes to actually get right, worth knowing if you touch either again. Pass one
