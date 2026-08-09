@@ -42,7 +42,14 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "*",
 };
-const MAX_COUNT = 1000;
+// Bug-Report Philip 2026-08-10: bei 1000 lieferte ein GBPUSD-M1-Replay-Fetch (targetCount 1000 +
+// bis zu MAX_LOOKAHEAD_BARS=2500 Lookahead-Kerzen, siehe src/candleCache.js) mit angefragtem
+// count=3500 hier nur die (gekappten) neuesten 1000 zurück — aus einem Fenster nah am
+// (Lookahead-verschobenen) `to`, NICHT um den eigentlichen Replay-Zeitpunkt. clipReplay() im
+// Frontend filterte das komplett weg -> leerer Chart, kein Fehler. 5000 deckt targetCount(2500,
+// TRADE_SETUP_M5_CANDLE_COUNT) + MAX_LOOKAHEAD_BARS(2500) — den größten vorkommenden Fall — mit
+// Puffer ab, bleibt weit unter cTraders eigenem 14.000-Bars-Limit (siehe CLAUDE.md).
+const MAX_COUNT = 5000;
 const MAX_BATCH_REQUESTS = 10; // großzügig über dem tatsächlichen Bedarf (aktuell max. 4 gleichzeitige Fetches je Chart-Mount, siehe PriceChart.vue)
 
 function errorResponse(status: number, message: string) {

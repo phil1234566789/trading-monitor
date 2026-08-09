@@ -36,12 +36,26 @@ const DB_NAME = "trading-monitor-candles";
 // "vollständig bis effectiveEndSec" gecacht (safeCompleteUpTo sieht keinen Fehler, nur falsche
 // Daten) — ein reiner Code-Fix räumt einen schon so vergifteten Cache-Eintrag nicht auf, siehe
 // Kommentar zu Version 3.
-const DB_VERSION = 5;
+//
+// 6 (2026-08-10: MAX_LOOKAHEAD_BARS-Deckelung, siehe fetchCandlesCached unten) — wieder derselbe
+// Poisoning-Mechanismus: ein GBPUSD-M1-Replay-Fetch VOR diesem Fix bekam Kerzen aus einem falschen
+// (zu weit in der Zukunft liegenden) Zeitfenster zurück, safeCompleteUpTo markierte das trotzdem
+// als "vollständig" — ein bereits so vergifteter M1-Cache-Eintrag würde ohne den Versions-Bump
+// weiterhin fälschlich als Treffer durchgehen, obwohl der Fetch selbst jetzt repariert ist.
+const DB_VERSION = 6;
 const STORE_NAME = "candles";
 
 // Rein defensiv, KEINE reguläre Obergrenze (siehe oben) — 500k Kerzen sind selbst auf M1 fast ein
 // Jahr durchgehend Handel; jenseits davon ist mit Sicherheit ein Bug am Werk, kein legitimer Fall.
 const SANITY_MAX_CANDLES = 500_000;
+
+// Deckelt, wie viele Lookahead-Kerzen aus REPLAY_LOOKAHEAD_SEC (einer festen Sekundenzahl, siehe
+// timeframes.js) für ein einzelnes Timeframe berechnet werden dürfen — siehe fetchCandlesCached
+// unten für den Bug, den das verhindert (M1-Replay: 12.500 statt der beabsichtigten 2.500
+// Lookahead-Kerzen, weit über das hinaus, was ein Live-Fetch in einem Request liefern kann).
+// 2500 = REPLAY_LOOKAHEAD_SEC's eigener Kalibrierungswert für M5 (siehe dort) — bei 5m ändert der
+// Cap dadurch nichts, nur feinere Timeframes (M1/M3) werden gebremst.
+const MAX_LOOKAHEAD_BARS = 2500;
 
 let dbPromise = null;
 function openDb() {
@@ -231,8 +245,24 @@ export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs
   // fetchEffectiveEndSec (siehe cachedCandlesUpTo oben) -> completeUpTo entsprechend hochsetzen,
   // im Live-Fall (toMs null) unangetastet lassen (siehe Delta-Zweig oben, dieselbe Begründung:
   // "jetzt" ist kein stabiler Vergleichspunkt für später).
-  const lookaheadBars = toMs != null && lookaheadSec > 0 ? Math.ceil(lookaheadSec / barSecondsFor(bar)) : 0;
-  const fetchToMs = lookaheadBars > 0 ? toMs + lookaheadSec * 1000 : toMs;
+  //
+  // Bug-Report Philip 2026-08-10: GBPUSD M1 im Replay-Modus zeigte einen komplett leeren Chart,
+  // ohne Fehler. REPLAY_LOOKAHEAD_SEC ist eine FESTE Sekundenzahl (aus 2500 M5-Kerzen abgeleitet,
+  // siehe timeframes.js) — für ein feingranulares Timeframe wie M1 (60s/Kerze statt 300s) ergibt
+  // dieselbe Sekundenzahl 12.500 statt 2.500 Lookahead-Kerzen. Der addierte count (targetCount +
+  // 12.500) sprengt jeden Live-Request; die Forex-Fetch-Funktionen (forexCandles.js) bekommen vom
+  // Server dann still weniger Kerzen zurück, aus einem Fenster NAH AM (weit in der Zukunft
+  // liegenden) fetchToMs statt um den eigentlichen Replay-Zeitpunkt — clipReplay() im Chart
+  // filtert diese "falschen" Kerzen danach komplett weg, macht den Chart leer, kein Fehler, weil
+  // der Fetch selbst ja erfolgreich war. MAX_LOOKAHEAD_BARS deckelt das auf den Wert, für den
+  // REPLAY_LOOKAHEAD_SEC ursprünglich kalibriert wurde (M5s eigener Wert bleibt dadurch
+  // unverändert, nur feinere Timeframes wie M1/M3 werden jetzt gebremst) — UND lookaheadSec wird
+  // aus genau diesem gedeckelten Wert zurückgerechnet (nicht die volle REPLAY_LOOKAHEAD_SEC
+  // verwendet), sonst bliebe fetchToMs trotz gedeckeltem count viel zu weit in der Zukunft und
+  // dieselbe Fensterverschiebung träte einfach abgeschwächt wieder auf.
+  const lookaheadBars = toMs != null && lookaheadSec > 0 ? Math.min(Math.ceil(lookaheadSec / barSecondsFor(bar)), MAX_LOOKAHEAD_BARS) : 0;
+  const cappedLookaheadSec = lookaheadBars * barSecondsFor(bar);
+  const fetchToMs = lookaheadBars > 0 ? toMs + cappedLookaheadSec * 1000 : toMs;
   const fetchEffectiveEndSec = fetchToMs != null ? Math.floor(fetchToMs / 1000) : effectiveEndSec;
   const fresh = await fetchFn(symbol, bar, targetCount + lookaheadBars, fetchToMs);
   const merged = cached.length > 0 ? mergeCandles(cached, fresh) : fresh;

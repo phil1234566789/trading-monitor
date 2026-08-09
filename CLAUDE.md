@@ -523,6 +523,25 @@ any other successful one, so a code fix alone doesn't clear an already-poisoned 
 plausibly need more than ~1000 rows, assume it needs the same pagination loop — don't rely on
 `.limit()` alone.**
 
+**A second, unrelated gotcha in the same neighborhood**: `REPLAY_LOOKAHEAD_SEC` (`timeframes.js`)
+is a fixed *seconds* value, calibrated for M5 (2500 bars). For a finer timeframe (M1: 60s/bar
+instead of 300s), the same seconds value scales into 12,500 lookahead bars instead of 2500 —
+`targetCount + lookaheadBars` then blows straight through whatever the live edge function can
+return in one request, and the *same* wrong-window symptom as above shows up again (candles from
+near the far, lookahead-shifted end of the request instead of around the real replay point,
+`clipReplay()` then filters all of it away — empty chart, no error). Bug-Report Philip
+2026-08-10: GBPUSD M1 in replay mode, blank chart. Fixed two ways together (`candleCache.js`'s
+`fetchCandlesCached`): `MAX_LOOKAHEAD_BARS` (2500, M5's own original calibration value) caps how
+many lookahead bars any timeframe can request — and the `toMs` pushed into the future for that
+lookahead is derived from the *capped* bar count converted back to seconds, not from the raw
+`REPLAY_LOOKAHEAD_SEC`, so count and time-window stay consistent. Paired with raising the
+`forex-candles` edge function's own `MAX_COUNT` from 1000 to 5000 (deployed via `npx supabase
+functions deploy forex-candles` — this one's a live edge function, a git commit alone doesn't
+ship it) so `targetCount(2500) + MAX_LOOKAHEAD_BARS(2500)` — the largest case, from
+`TRADE_SETUP_M5_CANDLE_COUNT` — actually fits in one request; still well under cTrader's own
+14,000-bar limit. `DB_VERSION` bumped to 6 for the same "already-poisoned cache from before the
+fix" reason as version 5.
+
 **"Laniakea" persona (`/l`)**: `.claude/commands/l.md` switches a session from this file's normal
 coding-assistant behavior into "Laniakea", Philip's trading-sparring-partner persona (Bias/Setup-
 analysis, not code) — pointer to `trading/claude-project-instructions.md` (the same persona

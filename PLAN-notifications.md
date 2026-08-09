@@ -464,6 +464,22 @@ Liquidity-Level/Structure-Trend für den Tag. Tool-Beschreibungen von `get_forex
 `get_forex_candles_archive` entsprechend nachgezogen (nicht mehr "get_forex_candles = immer
 live").
 
+**Nachtrag, Folgetag (2026-08-10), fünfte Runde**: Bug-Report Philip — GBPUSD M1 im Replay-Modus,
+komplett leerer Chart, kein Loading, kein Fehler. Live per Playwright nachgestellt und mit
+Tracing durchleuchtet: der Live-Fallback-Fetch (M1 ist nicht archiviert) kam tatsächlich
+erfolgreich zurück (~1s), aber mit Kerzen aus dem FALSCHEN Zeitfenster. Ursache: `REPLAY_LOOKAHEAD_SEC`
+ist eine feste Sekundenzahl, kalibriert für M5 (2500 Kerzen) — bei M1 (60s statt 300s/Kerze)
+ergibt dieselbe Sekundenzahl 12.500 statt 2.500 Lookahead-Kerzen, der addierte count sprengt die
+Edge Function's `MAX_COUNT` (1000), der gekappte Live-Fetch liefert Kerzen nah am (weit in der
+Zukunft liegenden) Lookahead-Ende statt um den echten Replay-Punkt, `clipReplay()` filtert alles
+weg. Gefixt mit zwei zusammenspielenden Änderungen: `MAX_LOOKAHEAD_BARS`-Deckel (2500, M5s eigener
+Kalibrierungswert) in `candleCache.js`, UND `toMs` wird aus dem gedeckelten Wert zurückgerechnet
+statt aus der rohen Sekundenzahl, damit count/Zeitfenster konsistent bleiben. Plus Edge-Function-
+`MAX_COUNT` 1000→5000 angehoben und deployed (deckt jetzt auch den größten Fall,
+`TRADE_SETUP_M5_CANDLE_COUNT`(2500)+Lookahead(2500), ab — weit unter cTraders 14.000-Limit).
+`DB_VERSION` auf 6 gebumpt (gleicher Poisoning-Grund wie zuvor). Mit Playwright verifiziert:
+GBPUSD M1, Replay 08.07.2026 13:40, zeigt jetzt korrekt Kerzen + Sessions + Trade-Setup-Cockpit.
+
 ---
 
 **Nächster Schritt:** Phase A — tiefere Kerzenhistorie von OKX holen (Pagination), dann Backtesting-Modul aufsetzen.
