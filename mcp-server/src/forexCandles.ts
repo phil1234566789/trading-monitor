@@ -48,16 +48,34 @@ export async function fetchLiveForexCandles(symbol: string, bar: string, { count
 // den Rest danach — schlägt der Live-Rest fehl, wird NICHT geworfen, sondern der archivierte
 // Stand zurückgegeben. Gilt jetzt für JEDEN Aufrufer dieser Funktion, ohne dass dataExport.ts/
 // indicatorWindow.ts selbst etwas davon wissen müssen.
+//
+// Bug-Report Philip 2026-08-10 (zweiter Fund, selbe Ursache wie im Frontend-Chart): `forex_candles`
+// wird nur durch den einmaligen Backfill-Lauf gefüllt, es gibt keinen laufenden Sync (siehe
+// CLAUDE.md "Persisted candle archive") — die neueste archivierte Kerze kann also beliebig alt
+// sein, auch wenn `archived.length >= count` längst erfüllt ist (genug Historie != aktuell). Ohne
+// Frische-Check hätte Laniakea an einem Montag nach dem WE für "jetzt" den Freitagsschluss aus dem
+// Archiv bekommen, exakt wie beim Frontend-Chart. Fix: neueste archivierte Kerze gegen toMs prüfen,
+// bei Veraltung (>1,5 Bar-Perioden) IMMER live nachladen statt nur bei zu wenigen Archiv-Zeilen.
+const BAR_SECONDS: Record<string, number> = { "1m": 60, "3m": 180, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400 };
+function barSecondsFor(bar: string): number {
+  return BAR_SECONDS[bar.toLowerCase()] ?? 60;
+}
+
 export async function fetchForexCandles(symbol: string, bar: string, { count, toMs }: { count: number; toMs?: number }): Promise<Candle[]> {
-  const toIso = new Date(toMs ?? Date.now()).toISOString();
+  const now = toMs ?? Date.now();
+  const toIso = new Date(now).toISOString();
   const archived = await getForexCandlesArchiveUpTo(symbol, bar, count, toIso);
   if (!archived) return fetchLiveForexCandles(symbol, bar, { count, toMs });
-  if (archived.length >= count) return archived;
 
   const lastArchivedMs = archived[archived.length - 1].time * 1000;
+  const isStale = now - lastArchivedMs > barSecondsFor(bar) * 1000 * 1.5;
+  if (archived.length >= count && !isStale) return archived;
+
   try {
-    const rest = await fetchLiveForexCandles(symbol, bar, { count: count - archived.length, toMs });
-    return archived.concat(rest.filter((c) => c.time * 1000 > lastArchivedMs));
+    const liveCount = archived.length >= count ? count : count - archived.length;
+    const rest = await fetchLiveForexCandles(symbol, bar, { count: liveCount, toMs });
+    const merged = archived.concat(rest.filter((c) => c.time * 1000 > lastArchivedMs));
+    return merged.slice(-count);
   } catch (err) {
     console.error("Live-Rest seit Archiv-Ende fehlgeschlagen, gebe nur archivierten Stand zurück:", err);
     return archived;

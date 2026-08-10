@@ -42,7 +42,15 @@ const DB_NAME = "trading-monitor-candles";
 // (zu weit in der Zukunft liegenden) Zeitfenster zurück, safeCompleteUpTo markierte das trotzdem
 // als "vollständig" — ein bereits so vergifteter M1-Cache-Eintrag würde ohne den Versions-Bump
 // weiterhin fälschlich als Treffer durchgehen, obwohl der Fetch selbst jetzt repariert ist.
-const DB_VERSION = 6;
+//
+// 7 (2026-08-10, zweiter Fund am selben Tag: fetchInitialCandles überspringt den Live-Fetch NICHT
+// mehr, nur weil das Archiv genug Zeilen hat, siehe forexCandles.js) — Bug-Report Philip: GBPUSD
+// im Live-Modus blieb am Freitag-Marktschluss hängen, obwohl am Montag längst neue Kerzen da waren,
+// weil `forex_candles` seit dem einmaligen Backfill nicht weiterwächst und der alte Code das nie
+// gegen "jetzt" geprüft hat. Derselbe Poisoning-Mechanismus wie bei Version 3/5/6: ein VOR diesem
+// Fix geladener Live-Cache-Eintrag wurde trotz fehlender aktueller Kerzen als "vollständig"
+// markiert.
+const DB_VERSION = 7;
 const STORE_NAME = "candles";
 
 // Rein defensiv, KEINE reguläre Obergrenze (siehe oben) — 500k Kerzen sind selbst auf M1 fast ein

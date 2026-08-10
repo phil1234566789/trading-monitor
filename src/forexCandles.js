@@ -6,6 +6,7 @@
 // geändert. Antwortform {time,open,high,low,close,volume}, oldest-first — unverändert ggü. den
 // OKX-Fetch-Funktionen in PriceChart.vue, damit sich beide Datenquellen dort gleich behandeln lassen.
 import { supabase } from "./supabaseClient.js";
+import { barSecondsFor } from "./timeframes.js";
 
 const FOREX_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/forex-candles`;
 // Die Edge Function baut pro Request eine frische cTrader-TLS-Verbindung inkl. Auth-Handshake auf
@@ -210,19 +211,34 @@ async function fetchArchivedUpTo(symbol, bar, count, toIso) {
 // dieser Fetch (via loadInitial/fetchCandlesCached, genutzt von JEDEM Forex-Erstladen: Haupt-
 // Kerzen, loadTradeSetupM5, 1H-Ranges, 4H-OBs) lief bisher IMMER live, unabhängig vom DB-first-Fix
 // für Scroll-Back oben. Jetzt erst das Archiv bis toMs/"jetzt", live nur noch für den Rest DANACH
-// (meist nur eine Handvoll Kerzen, da das Archiv höchstens seit dem letzten Backfill-Lauf hinterher
-// hinkt) — schlägt der Live-Rest fehl, wird NICHT geworfen, sondern einfach der (leicht veraltete)
+// — schlägt der Live-Rest fehl, wird NICHT geworfen, sondern einfach der (leicht veraltete)
 // Archiv-Stand zurückgegeben. Lieber ein paar Minuten alter Chart als ein hängender.
+//
+// Bug-Report Philip 2026-08-10: Live-Modus GBPUSD blieb komplett am Freitag-Marktschluss hängen,
+// obwohl am Montag längst neue Asia-Session-Kerzen existierten. Ursache: `forex_candles` wird NUR
+// durch den einmaligen Backfill-Lauf gefüllt, es gibt (noch) keinen laufenden Sync (siehe
+// CLAUDE.md "Persisted candle archive") — das Archiv hat also immer genug Zeilen für
+// `archived.length >= count`, aber die NEUESTE archivierte Kerze kann beliebig alt sein (hier:
+// der letzte Kerzenschluss vorm Wochenende). Der alte Code hat bei "genug Zeilen" den Live-Rest
+// komplett übersprungen, egal wie veraltet die neueste Zeile war. Fix: die Frische der neuesten
+// archivierten Kerze gegen toMs prüfen (>1,5 Bar-Perioden alt = potenziell veraltet) und in dem
+// Fall IMMER live nachladen, dann mergen + auf `count` kappen — nicht mehr nur, wenn das Archiv zu
+// wenige Zeilen hatte.
 export async function fetchInitialCandles(symbol, bar, count, toMs) {
-  const toIso = new Date(toMs ?? Date.now()).toISOString();
+  const now = toMs ?? Date.now();
+  const toIso = new Date(now).toISOString();
   const archived = await fetchArchivedUpTo(symbol, bar, count, toIso);
   if (!archived) return fetchCandles(symbol, bar, { count, to: toMs });
-  if (archived.length >= count) return archived;
 
   const lastArchivedMs = archived[archived.length - 1].time * 1000;
+  const isStale = now - lastArchivedMs > barSecondsFor(bar) * 1000 * 1.5;
+  if (archived.length >= count && !isStale) return archived;
+
   try {
-    const rest = await fetchCandles(symbol, bar, { count: count - archived.length, to: toMs });
-    return archived.concat(rest.filter((c) => c.time * 1000 > lastArchivedMs));
+    const liveCount = archived.length >= count ? count : count - archived.length;
+    const rest = await fetchCandles(symbol, bar, { count: liveCount, to: toMs });
+    const merged = archived.concat(rest.filter((c) => c.time * 1000 > lastArchivedMs));
+    return merged.slice(-count);
   } catch (err) {
     console.error("Live-Rest seit Archiv-Ende fehlgeschlagen, zeige nur archivierten Stand:", err);
     return archived;
