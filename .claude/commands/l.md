@@ -10,8 +10,9 @@ dieses Repo. Für den Rest dieser Session gilt:
 1. Lies `trading/claude-project-instructions.md` (Rolle, Pflichtprüfungen, Stil-Vorgaben) und
    übernimm diese Instructions vollständig als deine Persona.
 2. Bei jeder Trading-Tages-Analyse (live oder Backtest, z.B. "Backtest GBPUSD 15.01.2026") ist
-   `trading/trading-ablauf.md` der Einstiegspunkt — arbeite dessen Schritte der Reihe nach ab,
-   statt frei zu analysieren.
+   `trading/00-trading-steps/00-trading-steps.md` der Einstiegspunkt — arbeite dessen Schritte 1-9
+   der Reihe nach ab (jeder Schritt verlinkt auf seine eigene Datei unter
+   `00-trading-steps/NN-name/NN-name.md`), statt frei zu analysieren.
 3. Unterschied zum claude.ai-Project: du bekommst hier NICHT nur gepastete Charts. Nutze die
    `trading-monitor`-MCP-Tools für Live-Daten — `get_data_export` zuerst (Candles + Asia-Range +
    1H-Structure-Trend + relevante Liquidity-Level/OB-Zonen in einem Call), danach bei Bedarf
@@ -21,13 +22,13 @@ dieses Repo. Für den Rest dieser Session gilt:
    wenn eine Zeichnung sinnvoll ist, ohne vorher in Textform um Erlaubnis zu fragen (Philip
    2026-07-31: "L darf jetzt immer zeichnen, brauch kein go von mir"; technisch bestätigungsfrei
    via Allow-Rule in `.claude/settings.local.json`).
-   **Für Schritt 4 (RSI-Pflichtanalyse, siehe `trading-ablauf.md`)** bei GBPUSD/EURUSD
-   `get_forex_rsi` nutzen (M5, Wilder-RSI(14), gleiche `dateStr`/`replayUntilSec`-Semantik wie
-   `get_data_export`) — Divergenzen/Failure-Swings liest du selbst aus der zurückgegebenen
-   Kurs+RSI-Reihe ab, die sind bewusst nicht vorberechnet. Bei BTC stattdessen das separate
-   `okx-market`-MCP-Tool `market_get_indicator` (`indicator: "rsi"`) nutzen, dort schon fertig
-   verfügbar. Für die EMA-Konvergenz-Frühwarnung (Schritt 5, M5-Konsolidierungsgefahr, siehe
-   `ema.md`) analog `get_forex_ema` (EMA 50/200) für GBPUSD/EURUSD.
+   **Für Schritt 7 (RSI-Pflichtanalyse, siehe `00-trading-steps/00-trading-steps.md`)** bei
+   GBPUSD/EURUSD `get_forex_rsi` nutzen (M5, Wilder-RSI(14), gleiche `dateStr`/`replayUntilSec`-
+   Semantik wie `get_data_export`) — Divergenzen/Failure-Swings liest du selbst aus der
+   zurückgegebenen Kurs+RSI-Reihe ab, die sind bewusst nicht vorberechnet. Bei BTC stattdessen das
+   separate `okx-market`-MCP-Tool `market_get_indicator` (`indicator: "rsi"`) nutzen, dort schon
+   fertig verfügbar. Für die EMA-Konvergenz-Frühwarnung (Schritt 8, M5-Konsolidierungsgefahr,
+   siehe `ema.md`) analog `get_forex_ema` (EMA 50/200) für GBPUSD/EURUSD.
 4. **Sicherheitsnetz für den Structure-Trend (Philip 2026-07-31): zeichne IMMER den Startpunkt
    deines Trend-Algos ein.** `get_data_export` liefert `structureWindow.cutoffOuterAt`/
    `cutoffInnerAt` (schon im richtigen "YYYY-MM-DD HH:mm"-Format) — sobald du eine Structure-Trend-
