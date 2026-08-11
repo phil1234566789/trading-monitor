@@ -6,7 +6,7 @@ import { berlinDayRangeUtcMs, berlinDateStrFor } from "./berlinTime.js";
 // tag, replayUntilSec deckt innerhalb dieses Tages nur bis zu diesem Zeitpunkt auf (Replay-
 // Simulation). Anders als beim Daten-Export brauchen RSI/EMA zusätzlich Vorlauf-Kerzen VOR dem
 // Tagesbeginn, damit die Indikator-Rekursion (Wilder-Glättung bzw. EMA-Seed ab erster Kerze) beim
-// ersten sichtbaren Punkt des Tages schon eingependelt ist — siehe rsi.ts/ema.js-Kommentare.
+// ersten sichtbaren Punkt des Tages schon eingependelt ist — siehe src/rsi.js/ema.js-Kommentare.
 export interface DayWindow {
   effectiveDateStr: string;
   startSec: number;

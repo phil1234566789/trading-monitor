@@ -20,6 +20,7 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   cvdLine: 2,
   emaFast: 2,
   emaSlow: 2,
+  rsi: 2,
   liquidityHigh: 1,
   liquidityLow: 1,
   liquiditySweep: 1,

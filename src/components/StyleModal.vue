@@ -36,6 +36,10 @@ const GROUPS = [
     ],
   },
   {
+    title: "RSI",
+    fields: [{ key: "rsi", label: "Linie" }],
+  },
+  {
     title: "Liquidität",
     fields: [
       { key: "liquidityHigh", label: "High-Level" },

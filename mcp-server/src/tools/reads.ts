@@ -12,10 +12,12 @@ import {
 } from "../db.js";
 import { fetchForexCandles } from "../forexCandles.js";
 import { buildDataExport } from "./dataExport.js";
-import { computeRsi, rsiZone, DEFAULT_RSI_PERIOD } from "../rsi.js";
-// Derselbe computeEma wie der Live-Chart-Overlay (PriceChart.vue) — kein zweiter Port nötig,
-// da die Funktion bereits dependency-frei ist (kein localStorage/import.meta.env), siehe
-// CLAUDE.md "MCP-Server" zum selben Muster bei marketStructureAnalysis.ts.
+// Derselbe computeRsi/computeEma wie der Live-Chart (PriceChart.vue) — kein zweiter Port nötig,
+// da beide Funktionen bereits dependency-frei sind (kein localStorage/import.meta.env), siehe
+// CLAUDE.md "MCP-Server" zum selben Muster bei marketStructureAnalysis.ts. rsi.ts lebte bis
+// 2026-08-11 nur hier im mcp-server, wurde beim Bau des Chart-RSI-Panels nach src/rsi.js
+// verschoben, damit es nicht ein zweites Mal implementiert werden musste.
+import { computeRsi, rsiZone, DEFAULT_RSI_PERIOD } from "../../../src/rsi.js";
 import { computeEma } from "../../../src/ema.js";
 import { resolveDayWindow, fetchM5WithWarmup, isWithinDayWindow } from "../indicatorWindow.js";
 

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { createChart, CandlestickSeries, LineSeries, TickMarkType, CrosshairMode } from "lightweight-charts";
+import { createChart, CandlestickSeries, LineSeries, TickMarkType, CrosshairMode, LineStyle } from "lightweight-charts";
 import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
 import {
   detectLiquidityLevels,
@@ -21,6 +21,7 @@ import { computeRangesPivots, buildMarketStructureState, pivotForDisplay, summar
 import { renderMarketStructureAnalysis, collectH1LqLevels, collectFibLevels } from "../marketStructureRendering";
 import { computeCockpitState } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
+import { computeRsi, DEFAULT_RSI_PERIOD } from "../rsi.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 import { PIP_SIZE } from "../pipConfig.js";
@@ -128,6 +129,10 @@ const props = defineProps({
   rangesFixedStartActive: { type: Boolean, default: false },
   rangesFixedStartTime: { type: Number, default: null },
   showEma: { type: Boolean, default: false },
+  // RSI(14)-Panel (Chat 2026-08-11) — anders als EMA (immer M5, siehe refreshEmaInternal) folgt
+  // RSI bewusst dem gerade gewählten Chart-Timeframe (allCandles), wie ein klassisches
+  // Oszillator-Panel unter dem Candlestick-Chart, siehe refreshRsiInternal.
+  showRsi: { type: Boolean, default: false },
   // Vertikale News-Marker auf dem Chart (Chat 2026-07-26: "ich würd die News gern visuell irgendwo
   // sehen") — die Event-Liste selbst kommt nicht als Prop, sondern direkt aus dem newsEvents.js-
   // Store (analog zu sessions/showSessions oben), nur die Sichtbarkeit ist ein Toggle.
@@ -312,6 +317,12 @@ const OBS_M5_BTC_CANDLE_COUNT = 2500; // wie TRADE_SETUP_M5_CANDLE_COUNT, gleich
 const EMA_PERIOD_FAST = 50;
 const EMA_PERIOD_SLOW = 200;
 
+// RSI(14)-Panel (Chat 2026-08-11) — eigene Pane unterhalb des Candlestick-Charts wie CVD. CVD
+// belegt Pane-Index 1 nur bei BTC (siehe unten, isForex-Verzweigung), RSI kommt danach: bei Forex
+// direkt Pane 1 (kein CVD da), bei BTC Pane 2. positionGauges() (siehe dort) verlässt sich
+// weiterhin auf Pane-Index 1 = CVD bei BTC — RSI_PANE_INDEX daher bewusst NACH der CVD-Pane.
+const RSI_PANE_INDEX = isForex ? 1 : 2;
+
 const { markSuccess } = useStatusBar();
 const { lastDataExport } = useLastDataExport();
 
@@ -390,6 +401,9 @@ let candleSeries;
 let cvdSeries;
 let ema50Series;
 let ema200Series;
+let rsiSeries;
+let rsiOverboughtLine;
+let rsiOversoldLine;
 let resizeObserver;
 let orderBlockPrimitives = [];
 let liquidityPrimitives = [];
@@ -651,10 +665,15 @@ function crosshairTimeFormatter(time) {
 }
 
 // Gauges an die untere rechte Ecke der Kerzen-Pane pinnen, direkt oberhalb der CVD-Pane —
-// sonst überlappen sie deren Preisskala/Legende.
+// sonst überlappen sie deren Preisskala/Legende. Seit dem RSI-Panel (Chat 2026-08-11) ist CVD
+// bei BTC nicht mehr zwingend die unterste Pane (RSI kann darunter sitzen, siehe RSI_PANE_INDEX)
+// — dessen Höhe muss mit in den Offset, sonst überlappen die Gauges die RSI-Pane (Bug-Report beim
+// Testen: Gauges lagen über der RSI-Preisskala, wenn RSI bei BTC eingeschaltet war).
 function positionGauges() {
   const cvdPane = chart.panes()[1];
-  if (cvdPane) gaugesBottom.value = cvdPane.getHeight() + 12;
+  if (!cvdPane) return;
+  const rsiPane = chart.panes()[RSI_PANE_INDEX];
+  gaugesBottom.value = cvdPane.getHeight() + (rsiPane?.getHeight() ?? 0) + 12;
 }
 
 // OKX-Pagination: "after" liefert Kerzen VOR diesem Timestamp (ms) — für ältere Daten.
@@ -1962,6 +1981,60 @@ function refreshEmaInternal() {
   ema200Series?.setData(computeEma(candles, EMA_PERIOD_SLOW));
 }
 
+// RSI(14) — anders als EMA oben bewusst auf allCandles (dem gerade angezeigten Chart-Timeframe),
+// kein eigener Fetch nötig. Series+Pane werden hier erst bei Bedarf angelegt/entfernt (siehe
+// Kommentar an der ursprünglichen addSeries-Stelle im onMounted-Block) statt permanent zu
+// existieren und nur leerzulaufen wie ema50Series/ema200Series — echtes chart.removePane()
+// vermeidet die Interferenz mit CVDs eigener Stretch-Factor-Pane bei BTC.
+function refreshRsiInternal() {
+  if (!chart) return;
+  if (!props.showRsi) {
+    if (rsiSeries) {
+      chart.removeSeries(rsiSeries);
+      chart.removePane(RSI_PANE_INDEX);
+      rsiSeries = null;
+      rsiOverboughtLine = null;
+      rsiOversoldLine = null;
+      positionGauges(); // Pane weg -> BTC-Gauges (siehe dort) müssen nachrücken
+    }
+    return;
+  }
+  if (!rsiSeries) {
+    rsiSeries = chart.addSeries(
+      LineSeries,
+      {
+        color: cssColor("rsi"),
+        lineWidth: nativeLineWidth("rsi"),
+        priceLineVisible: false,
+        lastValueVisible: true,
+        title: "RSI(14)",
+        // Feste 0-100-Skala statt Auto-Zoom auf die sichtbare Spanne — sonst würde ein RSI, der
+        // z.B. nur zwischen 55 und 65 pendelt, die Y-Achse voll ausfüllen und wie ein extremer
+        // Ausschlag aussehen, obwohl er nahe der Mitte liegt (klassische Oszillator-Darstellung
+        // braucht die volle 0-100-Referenz).
+        autoscaleInfoProvider: () => ({
+          priceRange: { minValue: 0, maxValue: 100 },
+        }),
+      },
+      RSI_PANE_INDEX,
+    );
+    // Default-Scale-Margins (10% oben/unten) würden die 0-100-Skala zusätzlich aufblähen (Achse
+    // zeigte 0-120 statt 0-100) — hier eng gehalten, RSI-Linie darf ruhig nah an den Panerand.
+    rsiSeries.priceScale().applyOptions({ scaleMargins: { top: 0.05, bottom: 0.05 } });
+    // Stretch-Factor statt fixer Pixel-Höhe, wie CVD (siehe chart.panes()[1]?.setStretchFactor
+    // oben) — konsistent mit CVDs eigener Pane-Größe, statt zwei verschiedene Sizing-Mechanismen
+    // in derselben Chart-Instanz zu mischen.
+    chart.panes()[RSI_PANE_INDEX]?.setStretchFactor(0.25);
+    rsiOverboughtLine = rsiSeries.createPriceLine({ price: 70, color: cssColor("rsi"), lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "70" });
+    rsiOversoldLine = rsiSeries.createPriceLine({ price: 30, color: cssColor("rsi"), lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "30" });
+  }
+  const points = computeRsi(clipReplay(allCandles), DEFAULT_RSI_PERIOD)
+    .filter((p) => p.rsi != null)
+    .map((p) => ({ time: p.time, value: p.rsi }));
+  rsiSeries.setData(points);
+  positionGauges();
+}
+
 // TREND_ANALYSIS_CANDLE_COUNT (2000) liegt über dem Edge-Function-Limit pro Request (1000,
 // siehe forexCandles.js) -> seitenweise rückwärts nachladen, analog zu fetchAllSince im
 // fetch-trend-fixture.mjs-Script.
@@ -2115,6 +2188,7 @@ function refreshChart() {
   refreshRangesMarkersInternal();
   refreshMarketStructureInternal(); // ruft refreshCockpitInternal() selbst mit auf, siehe dort
   refreshEmaInternal();
+  refreshRsiInternal();
   cvdSeries?.setData(cumulativeFromDeltas(clipReplay(allCvdDeltas)));
   positionGauges();
   activeMetadataSnapshot.value = buildActiveMetadataSnapshot();
@@ -2375,6 +2449,13 @@ onMounted(() => {
       crosshairMarkerVisible: false,
     });
   }
+
+  // RSI(14)-Panel (Chat 2026-08-11) — Series+Pane werden erst bei refreshRsiInternal() angelegt
+  // (siehe dort), nicht hier fest verdrahtet: ein permanent existierendes, nur leer-genulltes
+  // RSI-Panel (analog zu CVD) hat sich beim Testen NICHT sauber mit CVDs Stretch-Factor-Pane
+  // vertragen (setHeight(0) auf einer dritten Pane verzerrte CVDs eigene 0.25-Stretch-Aufteilung,
+  // Gauges landeten mitten in der RSI-Pane) — echtes chart.removePane() beim Ausschalten umgeht
+  // das komplett, der Chart ist dann wieder exakt im alten 2-Panes-Zustand (bzw. 1 bei Forex).
 
   chart.subscribeClick((param) => {
     if (!param.point || !props.tradeModeActive) return;
@@ -2675,6 +2756,9 @@ onUnmounted(() => {
   cvdSeries = null;
   ema50Series = null;
   ema200Series = null;
+  rsiSeries = null;
+  rsiOverboughtLine = null;
+  rsiOversoldLine = null;
 });
 
 watch(() => props.currentBar, () => {
@@ -2803,6 +2887,9 @@ watch(() => props.showEma, (on) => {
   if (on && trendAnalysisM5Candles.length === 0) loadTradeSetupM5();
   else refreshEmaInternal();
 });
+// RSI braucht keinen Nachlade-Zweig wie EMA oben — läuft auf allCandles, das für den Chart selbst
+// ohnehin immer schon geladen ist.
+watch(() => props.showRsi, refreshRsiInternal);
 // showSessions (Toggle) UND der sessions-Store selbst (Hinzufügen/Editieren/Löschen in
 // SessionsModal.vue, deep weil Label/Zeiten/Farbe direkt auf den reactive-Objekten mutiert werden,
 // kein splice/push) sollen beide sofort neu zeichnen, nicht erst beim nächsten refreshChart()-Zyklus.
@@ -2878,6 +2965,9 @@ watch(
     cvdSeries?.applyOptions({ color: cssColor("cvdLine") });
     ema50Series?.applyOptions({ color: cssColor("emaFast") });
     ema200Series?.applyOptions({ color: cssColor("emaSlow") });
+    rsiSeries?.applyOptions({ color: cssColor("rsi") });
+    rsiOverboughtLine?.applyOptions({ color: cssColor("rsi") });
+    rsiOversoldLine?.applyOptions({ color: cssColor("rsi") });
     refreshChart();
   },
   { deep: true },
@@ -2892,6 +2982,7 @@ watch(
     cvdSeries?.applyOptions({ lineWidth: nativeLineWidth("cvdLine") });
     ema50Series?.applyOptions({ lineWidth: nativeLineWidth("emaFast") });
     ema200Series?.applyOptions({ lineWidth: nativeLineWidth("emaSlow") });
+    rsiSeries?.applyOptions({ lineWidth: nativeLineWidth("rsi") });
     refreshChart();
   },
   { deep: true },

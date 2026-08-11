@@ -22,6 +22,10 @@ export const DEFAULT_CHART_COLORS = {
   cvdLine: { hex: "#f0b90b", alpha: 1 },
   emaFast: { hex: "#42a5f5", alpha: 1 },
   emaSlow: { hex: "#ffb74d", alpha: 1 },
+  // RSI(14)-Panel (Chat 2026-08-11, siehe rsi.js/PriceChart.vue: refreshRsiInternal) — eigene
+  // Pane unterhalb des Candlestick-Charts wie CVD, aber eigener Farbton (kein Gold/Blau/Orange,
+  // schon von cvdLine/emaFast/emaSlow belegt).
+  rsi: { hex: "#7e57c2", alpha: 1 },
   liquidityHigh: { hex: "#00e676", alpha: 0.9 },
   liquidityLow: { hex: "#ff9800", alpha: 0.9 },
   liquiditySweep: { hex: "#ffd700", alpha: 0.9 },
