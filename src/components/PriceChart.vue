@@ -21,7 +21,8 @@ import { computeRangesPivots, buildMarketStructureState, pivotForDisplay, summar
 import { renderMarketStructureAnalysis, collectH1LqLevels, collectFibLevels } from "../marketStructureRendering";
 import { computeCockpitState } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
-import { computeRsi, DEFAULT_RSI_PERIOD } from "../rsi.js";
+import { computeRsi, detectRsiDivergence, DEFAULT_RSI_PERIOD } from "../rsi.js";
+import { DivergenceLinePrimitive } from "../rsiRendering.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 import { PIP_SIZE } from "../pipConfig.js";
@@ -133,6 +134,10 @@ const props = defineProps({
   // RSI bewusst dem gerade gewählten Chart-Timeframe (allCandles), wie ein klassisches
   // Oszillator-Panel unter dem Candlestick-Chart, siehe refreshRsiInternal.
   showRsi: { type: Boolean, default: false },
+  // Divergenz-Konnektoren (Chat 2026-08-11, siehe rsi.js: detectRsiDivergence) — nur wirksam,
+  // wenn showRsi auch an ist (siehe refreshRsiDivergenceInternal), da ohne RSI-Pane kein RSI-Bein
+  // zum Zeichnen existiert.
+  showRsiDivergence: { type: Boolean, default: false },
   // Vertikale News-Marker auf dem Chart (Chat 2026-07-26: "ich würd die News gern visuell irgendwo
   // sehen") — die Event-Liste selbst kommt nicht als Prop, sondern direkt aus dem newsEvents.js-
   // Store (analog zu sessions/showSessions oben), nur die Sichtbarkeit ist ein Toggle.
@@ -429,6 +434,8 @@ let tradeSetupLinkPrimitives = [];
 let tradeTargetLinkPrimitives = [];
 let tradeConfirmationLinkPrimitives = [];
 let invalidationLinePrimitives = [];
+let divergencePriceLinePrimitives = []; // Preis-Bein der Divergenz-Konnektoren, an candleSeries
+let divergenceRsiLinePrimitives = []; // RSI-Bein, an rsiSeries — siehe refreshRsiDivergenceInternal
 let tradeSetupPrimitives = [];
 let claudeAnnotationPrimitives = [];
 let claudeAnnotationPriceLines = [];
@@ -2035,6 +2042,37 @@ function refreshRsiInternal() {
   positionGauges();
 }
 
+// Divergenz-Konnektoren (Chat 2026-08-11) — läuft NACH refreshRsiInternal (siehe refreshChart()),
+// damit rsiSeries bei showRsi+showRsiDivergence schon existiert. Zwei Primitive-Instanzen pro
+// gefundener Divergenz (Preis-Bein an candleSeries, RSI-Bein an rsiSeries, siehe rsiRendering.js)
+// statt einer einzigen über beide Panes hinweg — lightweight-charts' Primitives hängen immer an
+// genau einer Series/Pane.
+function refreshRsiDivergenceInternal() {
+  for (const p of divergencePriceLinePrimitives) candleSeries.detachPrimitive(p);
+  divergencePriceLinePrimitives.length = 0;
+  for (const p of divergenceRsiLinePrimitives) rsiSeries?.detachPrimitive(p);
+  divergenceRsiLinePrimitives.length = 0;
+  if (!props.showRsiDivergence || !props.showRsi || !rsiSeries) return;
+
+  const candles = clipReplay(allCandles);
+  if (candles.length === 0) return;
+  const precision = pricePrecisionForInstrument(props.symbol);
+
+  for (const d of detectRsiDivergence(candles)) {
+    const colorKey = d.type === "bearish" ? "divergenceBearish" : "divergenceBullish";
+    const label = `${d.type === "bearish" ? "▽" : "△"} ${fmtPrice(d.fromPrice, precision)} → ${fmtPrice(d.toPrice, precision)}`;
+    const opts = { color: cssColor(colorKey), lineWidth: lineWidth(colorKey), label };
+
+    const pricePrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromPrice }, { time: d.toTime, price: d.toPrice }, opts, candles);
+    candleSeries.attachPrimitive(pricePrimitive);
+    divergencePriceLinePrimitives.push(pricePrimitive);
+
+    const rsiPrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromRsi }, { time: d.toTime, price: d.toRsi }, opts, candles);
+    rsiSeries.attachPrimitive(rsiPrimitive);
+    divergenceRsiLinePrimitives.push(rsiPrimitive);
+  }
+}
+
 // TREND_ANALYSIS_CANDLE_COUNT (2000) liegt über dem Edge-Function-Limit pro Request (1000,
 // siehe forexCandles.js) -> seitenweise rückwärts nachladen, analog zu fetchAllSince im
 // fetch-trend-fixture.mjs-Script.
@@ -2189,6 +2227,7 @@ function refreshChart() {
   refreshMarketStructureInternal(); // ruft refreshCockpitInternal() selbst mit auf, siehe dort
   refreshEmaInternal();
   refreshRsiInternal();
+  refreshRsiDivergenceInternal();
   cvdSeries?.setData(cumulativeFromDeltas(clipReplay(allCvdDeltas)));
   positionGauges();
   activeMetadataSnapshot.value = buildActiveMetadataSnapshot();
@@ -2889,7 +2928,11 @@ watch(() => props.showEma, (on) => {
 });
 // RSI braucht keinen Nachlade-Zweig wie EMA oben — läuft auf allCandles, das für den Chart selbst
 // ohnehin immer schon geladen ist.
-watch(() => props.showRsi, refreshRsiInternal);
+watch(() => props.showRsi, () => {
+  refreshRsiInternal();
+  refreshRsiDivergenceInternal(); // showRsi aus -> rsiSeries verschwindet, Divergenz-Linien müssen mit
+});
+watch(() => props.showRsiDivergence, refreshRsiDivergenceInternal);
 // showSessions (Toggle) UND der sessions-Store selbst (Hinzufügen/Editieren/Löschen in
 // SessionsModal.vue, deep weil Label/Zeiten/Farbe direkt auf den reactive-Objekten mutiert werden,
 // kein splice/push) sollen beide sofort neu zeichnen, nicht erst beim nächsten refreshChart()-Zyklus.

@@ -21,6 +21,8 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   emaFast: 2,
   emaSlow: 2,
   rsi: 2,
+  divergenceBearish: 1.5,
+  divergenceBullish: 1.5,
   liquidityHigh: 1,
   liquidityLow: 1,
   liquiditySweep: 1,

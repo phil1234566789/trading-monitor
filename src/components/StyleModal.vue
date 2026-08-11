@@ -37,7 +37,11 @@ const GROUPS = [
   },
   {
     title: "RSI",
-    fields: [{ key: "rsi", label: "Linie" }],
+    fields: [
+      { key: "rsi", label: "Linie" },
+      { key: "divergenceBearish", label: "Divergenz (bearish)" },
+      { key: "divergenceBullish", label: "Divergenz (bullish)" },
+    ],
   },
   {
     title: "Liquidität",

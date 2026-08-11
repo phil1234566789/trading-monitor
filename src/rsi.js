@@ -4,10 +4,13 @@
 // (PriceChart.vue) und dem MCP-Tool get_forex_rsi (mcp-server/src/tools/reads.ts), kein zweiter
 // Port, kein Drift-Risiko (siehe CLAUDE.md "MCP-Server").
 //
-// Divergenz-Erkennung (HH/LH etc.) wird bewusst NICHT hier codiert, sondern Claude/Lana überlassen:
-// sobald eine saubere RSI-Zahlenreihe neben den Kerzen vorliegt, ist das Musterabgleich, kein
-// Rechenrisiko mehr. Die RSI-Berechnung selbst (Wilder-Glättung über viele Kerzen) ist der
-// fehleranfällige Teil, den ein LLM nicht im Kopf zuverlässig nachrechnen kann — deshalb hier.
+// Divergenz-Erkennung (HH/LH etc.) war bis 2026-08-11 bewusst NICHT hier codiert, sondern
+// Claude/Lana überlassen (Musterabgleich auf einer sauberen Preis+RSI-Zahlenreihe, kein
+// Rechenrisiko). Philip nach einem Live-Beispiel (GBPUSD 10.08.): "du hast das doch schon
+// geschafft" — die Muster-Erkennung war tatsächlich simpel + mechanisch genug (N-Bar-Fraktal +
+// Vergleich), um sie doch zu codieren, siehe detectRsiDivergence() unten. Die eigentliche
+// RSI-Berechnung bleibt trotzdem der Grund, warum diese Datei existiert: Wilder-Glättung über
+// viele Kerzen ist der Teil, den ein LLM nicht im Kopf zuverlässig nachrechnen kann.
 
 export const DEFAULT_RSI_PERIOD = 14;
 
@@ -65,4 +68,120 @@ export function rsiZone(value) {
   if (value > 70) return "overbought";
   if (value < 30) return "oversold";
   return "neutral";
+}
+
+// --- Divergenz-Erkennung (seit 2026-08-11) ---
+
+export const DEFAULT_DIVERGENCE_FRACTAL_PERIOD = 3; // N-Bar-Fraktal — Swing braucht je 3 niedrigere/höhere Nachbarn davor+danach
+export const DEFAULT_DIVERGENCE_LOOKBACK_BARS = 100; // wie weit zurück nach einer "härteren" Referenz-Spitze gesucht wird (~8h auf M5)
+const MIN_DIVERGENCE_RSI_DELTA = 3; // filtert Rauschen (minimal unterschiedliche RSI-Werte durch Rundung/Mikrobewegung)
+
+// Swing-Hoch/-Tief an close, NICHT an den Docht-Extremen (candle.high/low) — bewusst dieselbe
+// Preis-Basis wie computeRsi selbst (Wilder-RSI rechnet ausschließlich auf close, siehe oben).
+// Erster Versuch mit high/low (klassischer für Chartmuster) fand am GBPUSD-10.08.-Beispiel NICHT
+// dieselbe Divergenz, die beim manuellen Prüfen auffiel: ein Docht kann den unmittelbaren
+// Nachbar-Swing knapp überragen (hier 08:15 mit einem 0.4-Pip höheren Hoch als 08:05), obwohl
+// dessen RSI (aus dem CLOSE) deutlich niedriger war — die Divergenz "steckt" dann im Close, nicht
+// im Wick. Eigene, einfache Fraktal-Funktion statt liquidityDetection.js's isUpFractal/isDownFractal
+// wiederzuverwenden: die dort ist ans Pine-Script-Original der LQ-Sweep-Erkennung gebunden
+// (kaskadierende Gleichstands-Regeln, "NICHT anfassen") — für Divergenzen reicht ein simpler,
+// generischer Fraktal-Check.
+function isSwingHigh(candles, i, period) {
+  for (let k = 1; k <= period; k++) {
+    if (i - k < 0 || i + k >= candles.length) return false;
+    if (candles[i - k].close >= candles[i].close || candles[i + k].close >= candles[i].close) return false;
+  }
+  return true;
+}
+
+function isSwingLow(candles, i, period) {
+  for (let k = 1; k <= period; k++) {
+    if (i - k < 0 || i + k >= candles.length) return false;
+    if (candles[i - k].close <= candles[i].close || candles[i + k].close <= candles[i].close) return false;
+  }
+  return true;
+}
+
+// Nur EIN Swing-Hoch/-Tief wird auf Divergenz geprüft, nicht jeder je gefundene (erste Version,
+// Chat 2026-08-11, Bug-Report Philip: "zig tausend Linien im Chart") — bei viel geladener
+// Chart-Historie (allCandles wächst mit jedem Scroll-Zurück) hätte ein Vergleich JEDES Swings
+// gegen seine beste Referenz Dutzende überlappende, historische Divergenzen gleichzeitig
+// gezeichnet. Maximal 2 Ergebnisse (eine bearish, eine bullish), exakt wie im Artifact-Beispiel.
+//
+// "j" (der geprüfte Swing) ist NICHT der chronologisch letzte, sondern der mit dem EXTREMSTEN
+// Preis innerhalb von lookbackBars (höchstes Hoch fürs bearish-Bein, tiefstes Tief fürs
+// bullish-Bein) — zweiter Bug-Report Philip, selbe Session: die erste Version nahm den
+// chronologisch letzten Swing, wodurch dieselbe alte Referenz (08:05, RSI 75.2) mit JEDEM neuen,
+// aber SCHWÄCHEREN Swing danach (12:30/12:55/13:35/14:05, alle unter dem eigentlichen Hoch um
+// 11:10) eine "neue" Divergenz vortäuschte, obwohl der Kurs sein Extrem (11:10) nie wieder
+// erreichte — die Linie "wanderte nach rechts", obwohl die erwartete Bewegung (der Drop
+// 11:10->12:00) längst gelaufen war. Mit "extremster Preis" bleibt j automatisch bei 11:10
+// stehen, solange kein späterer Swing dieses Hoch tatsächlich bricht — kein separater
+// Ablauf-Timer nötig, das ergibt sich strukturell.
+//
+// Referenz bleibt die "härteste" vorherige (höchstes RSI unter allen Swing-Hochs mit niedrigerem
+// Preis / niedrigstes RSI unter allen Swing-Tiefs mit höherem Preis) innerhalb von lookbackBars
+// VOR j, nicht nur der unmittelbar vorherige Swing — sonst wäre "RSI-Hoch früh in der Session,
+// Preis klettert über mehrere Zwischenswings hinweg immer weiter, ohne dass RSI je wieder dahin
+// kommt" unsichtbar (der ursprüngliche Fund: 08:05 RSI 75.2 vs. 11:10 RSI nur noch 66.2, trotz
+// höherem Preis-Hoch).
+function findLatestDivergence(swingIdx, candles, rsi, lookbackBars, type) {
+  if (swingIdx.length === 0) return null;
+  const isBearish = type === "bearish";
+  const mostRecent = swingIdx[swingIdx.length - 1];
+
+  let j = null;
+  for (const i of swingIdx) {
+    if (mostRecent - i > lookbackBars) continue;
+    const isMoreExtreme = j == null || (isBearish ? candles[i].close > candles[j].close : candles[i].close < candles[j].close);
+    if (isMoreExtreme) j = i;
+  }
+  if (j == null || rsi[j].rsi == null) return null;
+
+  let best = null;
+  for (const i of swingIdx) {
+    if (i >= j || j - i > lookbackBars || rsi[i].rsi == null) continue;
+    const priceQualifies = isBearish ? candles[i].close < candles[j].close : candles[i].close > candles[j].close;
+    if (!priceQualifies) continue;
+    const isBetterReference = best == null || (isBearish ? rsi[i].rsi > rsi[best].rsi : rsi[i].rsi < rsi[best].rsi);
+    if (isBetterReference) best = i;
+  }
+  if (best == null) return null;
+
+  const rsiDelta = isBearish ? rsi[best].rsi - rsi[j].rsi : rsi[j].rsi - rsi[best].rsi;
+  if (rsiDelta < MIN_DIVERGENCE_RSI_DELTA) return null;
+
+  return {
+    type,
+    fromTime: candles[best].time,
+    toTime: candles[j].time,
+    fromPrice: candles[best].close,
+    toPrice: candles[j].close,
+    fromRsi: rsi[best].rsi,
+    toRsi: rsi[j].rsi,
+  };
+}
+
+/**
+ * @param {{time: number, close: number}[]} candles
+ * @param {number} [period]
+ * @param {number} [lookbackBars]
+ * @returns {{type: "bearish" | "bullish", fromTime: number, toTime: number, fromPrice: number, toPrice: number, fromRsi: number, toRsi: number}[]}
+ */
+export function detectRsiDivergence(candles, period = DEFAULT_DIVERGENCE_FRACTAL_PERIOD, lookbackBars = DEFAULT_DIVERGENCE_LOOKBACK_BARS) {
+  const rsi = computeRsi(candles);
+
+  const swingHighIdx = [];
+  const swingLowIdx = [];
+  for (let i = 0; i < candles.length; i++) {
+    if (isSwingHigh(candles, i, period)) swingHighIdx.push(i);
+    if (isSwingLow(candles, i, period)) swingLowIdx.push(i);
+  }
+
+  const result = [];
+  const bearish = findLatestDivergence(swingHighIdx, candles, rsi, lookbackBars, "bearish");
+  if (bearish) result.push(bearish);
+  const bullish = findLatestDivergence(swingLowIdx, candles, rsi, lookbackBars, "bullish");
+  if (bullish) result.push(bullish);
+  return result;
 }

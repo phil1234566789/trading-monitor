@@ -186,6 +186,11 @@ const emaDisabled = computed(() => currentBar.value !== "5m");
 // RSI(14)-Panel (Chat 2026-08-11) — anders als EMA nicht auf M5 beschränkt (folgt dem gerade
 // gewählten Chart-Timeframe, siehe PriceChart.vue: refreshRsiInternal), daher kein *Disabled-Pendant.
 const showRsi = useLocalStorageRef("showRsi", false);
+// Divergenz-Konnektoren (Chat 2026-08-11, siehe rsi.js: detectRsiDivergence) — braucht die
+// RSI-Pane selbst, deshalb disabled statt wirkungslos anklickbar, wenn showRsi aus ist (Muster
+// wie emaDisabled oben).
+const showRsiDivergence = useLocalStorageRef("showRsiDivergence", false);
+const rsiDivergenceDisabled = computed(() => !showRsi.value);
 // Vertikale News-Marker auf dem Chart (Chat 2026-07-26: "ich würd die News gern visuell irgendwo
 // sehen") — Sichtbarkeits-Toggle wie showEma/showSessions, die Termine selbst kommen aus dem
 // newsEvents.js-Store (siehe PriceChart.vue).
@@ -606,7 +611,7 @@ const indikatorenMenuOpen = ref(false);
 // Sessions seit Chat 2026-07-29 NICHT mehr dabei ("ich deaktiviere gerne Indikatoren um mehr zu
 // sehen, aber Sessions eig nie — die geben mir Orientierung zur Charthistorie") — eigener,
 // permanenter Toggle links neben News statt im Sammel-Dropdown, siehe Template.
-const INDIKATOREN_REFS = [showEma, showRsi, showLiquidity, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs];
+const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showLiquidity, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs];
 const indikatorenActive = computed(() => INDIKATOREN_REFS.some((r) => r.value));
 let indikatorenSavedState = null;
 function toggleIndikatoren() {
@@ -621,6 +626,7 @@ function toggleIndikatoren() {
     // fällt auf die App-Werkseinstellungen zurück (siehe useLocalStorageRef-Defaults oben).
     showEma.value = false;
     showRsi.value = false;
+    showRsiDivergence.value = false;
     showLiquidity.value = true;
     showSweptLiquidity.value = false;
     showObsM5.value = false;
@@ -764,6 +770,14 @@ watch(selectedTradingAccountId, refreshTrades);
           </button>
           <button :class="{ active: showRsi }" @click="showRsi = !showRsi">
             RSI
+          </button>
+          <button
+            :class="{ active: showRsiDivergence }"
+            :disabled="rsiDivergenceDisabled"
+            :title="rsiDivergenceDisabled ? 'Braucht RSI' : ''"
+            @click="showRsiDivergence = !showRsiDivergence"
+          >
+            RSI-Divergenz
           </button>
 
           <div class="toggle-dropdown-divider"></div>
@@ -1129,6 +1143,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :show-ranges-metadata="showRangesMetadata"
     :show-ema="showEma"
     :show-rsi="showRsi"
+    :show-rsi-divergence="showRsiDivergence"
     :show-news="showNews"
     :show-sessions="showSessions"
     :show-trade-setup-cockpit="showTradeSetupCockpit"

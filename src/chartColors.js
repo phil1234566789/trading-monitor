@@ -26,6 +26,12 @@ export const DEFAULT_CHART_COLORS = {
   // Pane unterhalb des Candlestick-Charts wie CVD, aber eigener Farbton (kein Gold/Blau/Orange,
   // schon von cvdLine/emaFast/emaSlow belegt).
   rsi: { hex: "#7e57c2", alpha: 1 },
+  // Divergenz-Konnektoren (Chat 2026-08-11, siehe rsi.js: detectRsiDivergence/rsiRendering.js) —
+  // dieselbe Rot/Grün-Warnsemantik wie candleDown/candleUp, aber eigene Keys statt Wiederverwendung
+  // (Muster wie tradeInvalidation: ein späteres Anpassen von candleDown soll diese Linien nicht
+  // mitverschieben).
+  divergenceBearish: { hex: "#ef5350", alpha: 0.85 },
+  divergenceBullish: { hex: "#26a69a", alpha: 0.85 },
   liquidityHigh: { hex: "#00e676", alpha: 0.9 },
   liquidityLow: { hex: "#ff9800", alpha: 0.9 },
   liquiditySweep: { hex: "#ffd700", alpha: 0.9 },
