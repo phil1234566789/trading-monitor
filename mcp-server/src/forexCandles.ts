@@ -16,6 +16,36 @@ export interface Candle {
   volume: number;
 }
 
+// Bug-Report Philip 2026-08-11: dieselbe cTrader-Verbindungs-Flakiness, die im Frontend schon
+// 2026-08-07 gefixt wurde (siehe src/forexCandles.js: isRetryable/fetchSingleWithRetry — ein
+// einmaliger Retry fängt vereinzelte TLS-Handshake-Hänger ab), war hier nie gelandet. Für einen
+// reinen Live-Tail-Fetch war das nur ärgerlich (nächster Poll holt's nach); für fetchForexCandles'
+// Archiv-Fallback unten (siehe dort) macht ein einzelner transienter Fehler den Unterschied
+// zwischen "ein paar Minuten alter Archiv-Stand" und stillschweigend TAGE alten Kerzen, wenn das
+// Archiv den angefragten Zeitraum noch nicht erreicht — Bug-Report anhand eines GBPUSD-M5-`toSec`-
+// Requests für 10.08., der drei Tage alte (07.08.) Archiv-Kerzen zurückgab, weil genau dieser eine
+// Live-Versuch an einem 8s-TLS-Timeout scheiterte (ein direkter, isolierter Aufruf derselben
+// Funktion unmittelbar danach ging sofort durch — kein dauerhafter Ausfall, nur ein Ausreißer).
+function isRetryable(err: unknown): boolean {
+  if (err instanceof TypeError) return true;
+  if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) return true;
+  return (err as { status?: number })?.status === 502;
+}
+
+async function fetchLiveForexCandlesOnce(params: URLSearchParams): Promise<Candle[]> {
+  const res = await fetch(`${FOREX_FN_URL}?${params}`, {
+    headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const err = new Error(json.error || `HTTP ${res.status}`) as Error & { status?: number };
+    err.status = res.status;
+    throw err;
+  }
+  return json; // oldest zuerst
+}
+
 // Exportiert (statt privat), damit backfillForexCandles.ts das aufrufen kann — Bug-Report Philip
 // 2026-08-10: das Script (dessen ganzer Zweck ist, frisch von cTrader zu lesen und ins Archiv zu
 // SCHREIBEN) importierte bisher fetchForexCandles unten, das archive-first ist. Sobald der
@@ -28,13 +58,12 @@ export interface Candle {
 export async function fetchLiveForexCandles(symbol: string, bar: string, { count, toMs }: { count: number; toMs?: number }): Promise<Candle[]> {
   const params = new URLSearchParams({ symbol, period: bar, count: String(count) });
   if (toMs) params.set("to", String(toMs));
-  const res = await fetch(`${FOREX_FN_URL}?${params}`, {
-    headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-  return json; // oldest zuerst
+  try {
+    return await fetchLiveForexCandlesOnce(params);
+  } catch (err) {
+    if (!isRetryable(err)) throw err;
+    return await fetchLiveForexCandlesOnce(params);
+  }
 }
 
 // Bug-Report Philip 2026-08-10: Lana versuchte für ein GBPUSD-Datum mitten im archivierten
