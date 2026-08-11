@@ -27,7 +27,15 @@ const LOWER_TF_MIN_GAP_PIPS = { "1m": 1, "3m": 1, "5m": 0.5 };
 // ein Pip-Minimum wäre bei BTCs Kursniveau (~60k) bedeutungslos (praktisch keine Schwelle mehr).
 // Daher explizites isForex-Flag statt Ableitung aus der Timeframe allein.
 const HTF_FOREX_LABELS = new Set(["1H", "4H"]);
-const HTF_FOREX_MIN_GAP_PIPS = { "1H": 4, "4H": 8 };
+const HTF_FOREX_MIN_GAP_PIPS = { "1H": 1.5, "4H": 8 }; // 1H von 4 auf 1.5 gesenkt (Bug-Report Philip 2026-08-11: eine 1,5-Pip-1H-FVG bei GBPUSD am 10.08. 07:00 wurde vom alten 4-Pip-Minimum verschluckt)
+
+// Bug-Report Philip 2026-08-11, direkt im Anschluss an die 1,5-Pip-Absenkung oben: genau die Zone,
+// die die Absenkung freischalten sollte, blieb trotzdem verschluckt — ihre Gap ist real EXAKT 1,5
+// Pip (1.34919 - 1.34904), aber IEEE-754-Rundung liefert 0.00014999999999987246 statt 0.00015, also
+// hauchdünn UNTER der ebenfalls float-berechneten Schwelle (1.5 * 0.0001 = 0.00015000000000000001).
+// Epsilon statt exaktem >=, damit ein Gap, das auf Pip-Genauigkeit exakt der Schwelle entspricht,
+// nicht von Rundungsrauschen ins "nicht relevant" kippt.
+const GAP_EPSILON = 1e-9;
 
 // FVG-Fenster über 4 Kerzen (c0..c2 + cur): bullisch, wenn cur.low über c1.high liegt (Gap),
 // bärisch symmetrisch. Zone = C1-Kante bis zur gegenüberliegenden Kante von C2 (inkl. Wick) — siehe
@@ -60,8 +68,8 @@ export function detectOrderBlocks(candles, timeframe, isForex = true) {
     const bearGap = c1.low - cur.high;
     const bullGapPct = (bullGap / refPrice) * 100;
     const bearGapPct = (bearGap / refPrice) * 100;
-    const bullRelevant = minGapAbs != null ? bullGap >= minGapAbs : bullGapPct >= IRRELEVANT_PCT;
-    const bearRelevant = minGapAbs != null ? bearGap >= minGapAbs : bearGapPct >= IRRELEVANT_PCT;
+    const bullRelevant = minGapAbs != null ? bullGap >= minGapAbs - GAP_EPSILON : bullGapPct >= IRRELEVANT_PCT;
+    const bearRelevant = minGapAbs != null ? bearGap >= minGapAbs - GAP_EPSILON : bearGapPct >= IRRELEVANT_PCT;
 
     if (bullRelevant) {
       for (const z of zones) if (z.dir === 1 && z.active) z.active = false;

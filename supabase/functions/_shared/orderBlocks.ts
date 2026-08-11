@@ -22,7 +22,12 @@ const PIP_SIZE = 0.0001; // gilt für beide unterstützten FX-Paare (GBPUSD/EURU
 // Pip-Minimum wäre bei BTCs Kursniveau (~60k) bedeutungslos. Daher explizites isForex-Flag, das
 // index.ts an dieser Stelle mit `cfg.source === "ctrader"` setzt. Siehe src/orderBlocks.js.
 const HTF_FOREX_LABELS = new Set(["1H", "4H"]);
-const HTF_FOREX_MIN_GAP_PIPS: Record<string, number> = { "1H": 4, "4H": 8 };
+const HTF_FOREX_MIN_GAP_PIPS: Record<string, number> = { "1H": 1.5, "4H": 8 }; // 1H von 4 auf 1.5 gesenkt, siehe src/orderBlockDetection.js
+
+// Float-Rundungs-Epsilon (Bug-Report Philip 2026-08-11), siehe src/orderBlockDetection.js für die
+// volle Herleitung: eine Gap, die real exakt der Pip-Schwelle entspricht, kann durch IEEE-754-
+// Rundung hauchdünn drunter landen und faelschlich rausfallen.
+const GAP_EPSILON = 1e-9;
 
 export interface Candle {
   time: number;
@@ -69,8 +74,8 @@ export function detectOrderBlocks(candles: Candle[], timeframe?: string, isForex
     const bearGap = c1.low - cur.high;
     const bullGapPct = (bullGap / refPrice) * 100;
     const bearGapPct = (bearGap / refPrice) * 100;
-    const bullRelevant = minGapAbs != null ? bullGap >= minGapAbs : bullGapPct >= IRRELEVANT_PCT;
-    const bearRelevant = minGapAbs != null ? bearGap >= minGapAbs : bearGapPct >= IRRELEVANT_PCT;
+    const bullRelevant = minGapAbs != null ? bullGap >= minGapAbs - GAP_EPSILON : bullGapPct >= IRRELEVANT_PCT;
+    const bearRelevant = minGapAbs != null ? bearGap >= minGapAbs - GAP_EPSILON : bearGapPct >= IRRELEVANT_PCT;
 
     if (bullRelevant) {
       for (const z of zones) if (z.dir === 1 && z.active) z.active = false;

@@ -17,12 +17,17 @@ Konstanten ohne zentrale Übersicht).
 
 ## Pip-Schwellen (Mindestgröße/-abstand)
 
-- **`LOWER_TF_MIN_GAP_PIPS`** — [`src/orderBlocks.js:31`](src/orderBlocks.js#L31) — Mindest-Gap
-  (in Pips) für eine FVG/Order-Block-Zone auf M1/M3/M5, statt der prozentualen
+- **`LOWER_TF_MIN_GAP_PIPS`** — [`src/orderBlockDetection.js:21`](src/orderBlockDetection.js#L21)
+  (Backend-Duplikat: [`supabase/functions/_shared/orderBlocks.ts:15`](supabase/functions/_shared/orderBlocks.ts#L15))
+  — Mindest-Gap (in Pips) für eine FVG/Order-Block-Zone auf M1/M3/M5, statt der prozentualen
   `IRRELEVANT_PCT`-Schwelle (die auf Forex-Kursniveau für Intraday-TFs zu grob wäre).
-- **`HTF_FOREX_MIN_GAP_PIPS`** — [`src/orderBlocks.js:40`](src/orderBlocks.js#L40) — dasselbe für
-  1H/4H, nur bei Forex (BTC bleibt bei der Prozent-Schwelle, ein Pip-Minimum wäre bei ~60k
-  bedeutungslos).
+- **`HTF_FOREX_MIN_GAP_PIPS`** — [`src/orderBlockDetection.js:30`](src/orderBlockDetection.js#L30)
+  (Backend-Duplikat: [`supabase/functions/_shared/orderBlocks.ts:25`](supabase/functions/_shared/orderBlocks.ts#L25))
+  — dasselbe für 1H/4H, nur bei Forex (BTC bleibt bei der Prozent-Schwelle, ein Pip-Minimum wäre bei
+  ~60k bedeutungslos). 1H seit 2026-08-11 bei 1,5 Pip (vorher 4 — verschluckte eine reale GBPUSD-FVG).
+  Die Erkennungslogik selbst zog seit Chat 2026-08-02 von `src/orderBlocks.js` nach
+  `src/orderBlockDetection.js` um (Node-Safety fürs MCP-Backfill-Script) — `orderBlocks.js`
+  re-exportiert `detectOrderBlocks` nur noch, die Konstanten selbst stehen nicht mehr dort.
 - **`TRADE_SETUP_LS_MAX_DISTANCE_M5`** — [`src/components/PriceChart.vue:224`](src/components/PriceChart.vue#L224)
   — `5 * PIP_SIZE`, maximaler Preisabstand zwischen M5-Fraktal und Liquidity-Sweep für einen
   gültigen Trade-Setup-Pfad A/B (`lsMaxDistancePipsM5` im Pine-Original).
