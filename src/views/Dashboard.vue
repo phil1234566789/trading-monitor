@@ -31,6 +31,7 @@ import {
   addLaniakeaEntry,
   addLaniakeaM5ObEntry,
   addLaniakeaM5LiquidityEntry,
+  addLaniakeaRsiDivergenceEntry,
   removeLaniakeaEntry,
   updateLaniakeaNote,
   resolveObZoneId,
@@ -454,6 +455,7 @@ function laniakeaCandidateLabel(c) {
   if (c.kind === "trade_confirmation") return `✔ Bestätigung #${c.confirmationId} (${c.instrument})`;
   if (c.kind === "liquidity_level") return `1H LQ-Level ${c.level.dirNum === 1 ? "Hoch" : "Tief"}`;
   if (c.kind === "m5_liquidity_level") return `${c.level.timeframe} LQ-Level ${c.level.dirNum === 1 ? "Hoch" : "Tief"}`;
+  if (c.kind === "rsi_divergence") return `RSI-Divergenz (${c.divergence.type === "bearish" ? "bearish" : "bullish"}, ${c.instrument})`;
   return `${c.trade.direction === "short" ? "Short" : "Long"} #${c.trade.dealingRangeId} · Position #${c.trade.id}`;
 }
 
@@ -511,6 +513,10 @@ async function onLaniakeaAddConfirm(note) {
     // Kein Resolve nötig — Liquiditäts-Level auf einem Nicht-1h-Timeframe werden nie persistiert,
     // Rohdaten-Snapshot direkt (siehe addLaniakeaM5LiquidityEntry).
     await addLaniakeaM5LiquidityEntry(target.level, note);
+  } else if (target.kind === "rsi_divergence") {
+    // Kein Resolve nötig — Divergenzen werden nie persistiert, Rohdaten-Snapshot direkt (siehe
+    // addLaniakeaRsiDivergenceEntry).
+    await addLaniakeaRsiDivergenceEntry(target.instrument, target.divergence, note);
   } else {
     await addLaniakeaEntry("trade_position", target.trade.id, note);
   }

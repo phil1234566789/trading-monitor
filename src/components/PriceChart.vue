@@ -2079,11 +2079,11 @@ function refreshRsiDivergenceInternal() {
     const label = `${d.type === "bearish" ? "▽" : "△"} ${fmtPrice(d.fromPrice, precision)} → ${fmtPrice(d.toPrice, precision)}`;
     const opts = { color: cssColor(colorKey), lineWidth: lineWidth(colorKey), label };
 
-    const pricePrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromPrice }, { time: d.toTime, price: d.toPrice }, opts, candles);
+    const pricePrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromPrice }, { time: d.toTime, price: d.toPrice }, opts, candles, d);
     candleSeries.attachPrimitive(pricePrimitive);
     divergencePriceLinePrimitives.push(pricePrimitive);
 
-    const rsiPrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromRsi }, { time: d.toTime, price: d.toRsi }, opts, candles);
+    const rsiPrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromRsi }, { time: d.toTime, price: d.toRsi }, opts, candles, d);
     rsiSeries.attachPrimitive(rsiPrimitive);
     divergenceRsiLinePrimitives.push(rsiPrimitive);
   }
@@ -2639,6 +2639,17 @@ onMounted(() => {
         candidates.push({ kind: "trade_confirmation", confirmationId: p.zone.confirmationId, instrument: p.zone.instrument, distance });
       }
     }
+    // RSI-Divergenz-Konnektoren (Chat 2026-08-11, Philip: "ich will DIR paar Stellen zeigen ... wir
+    // haben ja die Funktion da") — nur das Preis-Bein (divergencePriceLinePrimitives), nicht auch
+    // das RSI-Bein in der eigenen Pane: dessen priceToCoordinate()-Y ist relativ zur RSI-Pane, nicht
+    // zum ganzen Chart-Container wie hier gerechnet (siehe laniakeaContextMenuHandler unten) — für
+    // "eine Divergenz anklicken" reicht das Preis-Bein, beide Beine wären ohnehin derselbe DB-Eintrag.
+    for (const p of divergencePriceLinePrimitives) {
+      const distance = p.distanceTo(x, y);
+      if (distance <= LANIAKEA_SEARCH_RADIUS) {
+        candidates.push({ kind: "rsi_divergence", divergence: p.divergence, instrument: props.symbol, distance });
+      }
+    }
     // Dedupe (Chat 2026-08-01, dritte Runde) — mehrere Ausführungen (trade_positions) derselben
     // Dealing Range teilen sich dasselbe verlinkte Setup, tauchten deshalb als exakt gleicher
     // Kandidat mehrfach in der Liste auf ("Short-Setup #105" zweimal).
@@ -2649,6 +2660,7 @@ onMounted(() => {
       if (c.kind === "trade_setup") return `trade_setup:${c.tradeSetupId}`;
       if (c.kind === "liquidity_level") return `liquidity_level:${c.level.dirNum}|${c.level.pivotTime}`;
       if (c.kind === "m5_liquidity_level") return `m5_liquidity_level:${c.level.timeframe}|${c.level.dirNum}|${c.level.pivotTime}`;
+      if (c.kind === "rsi_divergence") return `rsi_divergence:${c.divergence.type}|${c.divergence.fromTime}|${c.divergence.toTime}`;
       return `trade_confirmation:${c.confirmationId}`;
     };
     const seen = new Set();
@@ -2671,7 +2683,8 @@ onMounted(() => {
       orderBlockPrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
       tradeSetupLinkPrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
       tradeConfirmationLinkPrimitives.some((p) => p instanceof OrderBlockPrimitive && p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
-      liquidityPrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS)
+      liquidityPrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
+      divergencePriceLinePrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS)
     );
   }
 

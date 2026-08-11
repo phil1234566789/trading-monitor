@@ -167,12 +167,15 @@ export async function getLaniakeaContext() {
         "trade_setups(*), " +
         "trade_confirmations(*), " +
         "liquidity_levels(*), " +
-        // m5_ob_*/m5_liquidity_* sitzen direkt auf laniakea_context selbst (kein Embed, siehe
-        // 20260802120100_laniakea_context_m5_obs.sql / 20260802130000_laniakea_context_m5_liquidity.sql
-        // — beide nie persistiert, deshalb Rohdaten-Snapshot statt FK), müssen deshalb hier
+        // m5_ob_*/m5_liquidity_*/rsi_divergence_* sitzen direkt auf laniakea_context selbst (kein
+        // Embed, siehe 20260802120100_laniakea_context_m5_obs.sql /
+        // 20260802130000_laniakea_context_m5_liquidity.sql / 20260811170000_laniakea_context_rsi_divergence.sql
+        // — alle drei nie persistiert, deshalb Rohdaten-Snapshot statt FK), müssen deshalb hier
         // explizit mit ausgewählt werden.
         "m5_ob_instrument, m5_ob_direction, m5_ob_top, m5_ob_bottom, m5_ob_start_time, " +
-        "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time",
+        "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
+        "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
+        "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi",
     )
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);

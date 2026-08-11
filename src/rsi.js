@@ -76,6 +76,47 @@ export const DEFAULT_DIVERGENCE_FRACTAL_PERIOD = 3; // N-Bar-Fraktal — Swing b
 export const DEFAULT_DIVERGENCE_LOOKBACK_BARS = 100; // wie weit zurück nach einer "härteren" Referenz-Spitze gesucht wird (~8h auf M5)
 const MIN_DIVERGENCE_RSI_DELTA = 3; // filtert Rauschen (minimal unterschiedliche RSI-Werte durch Rundung/Mikrobewegung)
 
+// --- Fehlalarm-Filter (Chat 2026-08-11, dritte Runde) ---
+// Philip hat über den Laniakea-Rechtsklick zwei konkrete Fehlalarme markiert (siehe Notizen in
+// laniakea_context) und explizit gesagt: "wir basteln gerade", d.h. diese Kriterien sind noch
+// nicht in Stein gemeißelt. Deshalb bewusst als EIGENE, kleine Funktionen statt direkt in
+// findLatestDivergence/collectDivergenceHistory verdrahtet — einzelne Filter (oder DIVERGENCE_FILTERS
+// als Ganzes) lassen sich damit schnell rausnehmen oder die Schwellen anpassen, ohne die
+// eigentliche Swing-/Referenz-Suche anzufassen.
+const RSI_EXTREME_HIGH = 70;
+const RSI_EXTREME_LOW = 30;
+
+// Filter 1 — Beispiel Philip: bullish 44.7 -> 48.6 ("kein Punkt im Extrembereich"). Weder Referenz
+// noch Vergleichspunkt war überkauft/überverkauft — ohne mindestens einen Extrempunkt ist es kein
+// Momentum-Signal, nur Rauschen in der Mitte der Skala.
+function passesExtremeZoneFilter(candles, rsi, bestIdx, jIdx) {
+  const bestRsi = rsi[bestIdx].rsi;
+  const jRsi = rsi[jIdx].rsi;
+  return bestRsi >= RSI_EXTREME_HIGH || bestRsi <= RSI_EXTREME_LOW || jRsi >= RSI_EXTREME_HIGH || jRsi <= RSI_EXTREME_LOW;
+}
+
+// Filter 2 — Beispiel Philip: bearish 72.4 -> 64.5 ("RSI springt von 70 auf 30, daher Fehlalarm").
+// Beide Endpunkte für sich sahen plausibel aus, aber dazwischen ist der RSI bis in den
+// ENTGEGENGESETZTEN Extrembereich durchgerutscht und wieder zurück — die beiden Punkte gehören
+// dann zu zwei unabhängigen Wellen (die erste ist durch den Sweep bis 30 längst invalidiert),
+// kein durchgehendes Nachlassen von Momentum, auch wenn die reinen Endwerte danach aussehen.
+function passesNoOppositeExtremeBetweenFilter(candles, rsi, bestIdx, jIdx, isBearish) {
+  const oppositeThreshold = isBearish ? RSI_EXTREME_LOW : RSI_EXTREME_HIGH;
+  for (let i = bestIdx + 1; i < jIdx; i++) {
+    if (rsi[i].rsi == null) continue;
+    if (isBearish ? rsi[i].rsi <= oppositeThreshold : rsi[i].rsi >= oppositeThreshold) return false;
+  }
+  return true;
+}
+
+// Reihenfolge/Zusammenstellung — hier einen Eintrag entfernen, um genau diesen Filter
+// auszuschalten, ohne den Rest anzufassen.
+const DIVERGENCE_FILTERS = [passesExtremeZoneFilter, passesNoOppositeExtremeBetweenFilter];
+
+function passesAllDivergenceFilters(candles, rsi, bestIdx, jIdx, isBearish) {
+  return DIVERGENCE_FILTERS.every((filter) => filter(candles, rsi, bestIdx, jIdx, isBearish));
+}
+
 // Swing-Hoch/-Tief an close, NICHT an den Docht-Extremen (candle.high/low) — bewusst dieselbe
 // Preis-Basis wie computeRsi selbst (Wilder-RSI rechnet ausschließlich auf close, siehe oben).
 // Erster Versuch mit high/low (klassischer für Chartmuster) fand am GBPUSD-10.08.-Beispiel NICHT
@@ -169,6 +210,7 @@ function findLatestDivergence(swingIdx, candles, rsi, lookbackBars, type) {
 
   const rsiDelta = isBearish ? rsi[best].rsi - rsi[j].rsi : rsi[j].rsi - rsi[best].rsi;
   if (rsiDelta < MIN_DIVERGENCE_RSI_DELTA) return null;
+  if (!passesAllDivergenceFilters(candles, rsi, best, j, isBearish)) return null;
 
   return buildDivergenceEntry(type, best, j, candles, rsi);
 }
@@ -237,7 +279,7 @@ function collectDivergenceHistory(swingIdx, candles, rsi, lookbackBars, type) {
     const best = findBestReference(j, swingIdx, candles, rsi, lookbackBars, isBearish);
     if (best != null) {
       const rsiDelta = isBearish ? rsi[best].rsi - rsi[j].rsi : rsi[j].rsi - rsi[best].rsi;
-      if (rsiDelta >= MIN_DIVERGENCE_RSI_DELTA) {
+      if (rsiDelta >= MIN_DIVERGENCE_RSI_DELTA && passesAllDivergenceFilters(candles, rsi, best, j, isBearish)) {
         const entry = buildDivergenceEntry(type, best, j, candles, rsi);
         if (best === lastRef && result.length > 0) result[result.length - 1] = entry;
         else result.push(entry);

@@ -33,7 +33,7 @@ function onNoteInput(entryId, value) {
 <template>
   <div v-if="rows.length === 0" class="laniakea-panel-empty">
     Noch nichts an Lana übergeben — Rechtsklick auf eine Trades-Zeile, einen Chart-Marker, eine
-    OB-Zone (auch M5) oder ein 1H-LQ-Level → "Laniakea zeigen".
+    OB-Zone (auch M5), ein 1H-LQ-Level oder eine RSI-Divergenz-Linie → "Laniakea zeigen".
   </div>
   <div v-else class="laniakea-panel-list">
     <div v-for="row in rows" :key="row.entry.id" class="laniakea-panel-entry">
@@ -106,6 +106,20 @@ function onNoteInput(entryId, value) {
         <div v-if="row.entry.m5Liquidity" class="laniakea-panel-entry-prices">
           {{ fmtPrice(row.entry.m5Liquidity.price, pricePrecisionForInstrument(row.entry.m5Liquidity.instrument)) }}
           · Snapshot, kein Live-Status
+        </div>
+      </template>
+      <template v-else-if="row.entry.kind === 'rsi_divergence'">
+        <div class="laniakea-panel-entry-header">
+          <span class="trade-direction" :class="row.entry.rsiDivergence?.type === 'bearish' ? 'short' : 'long'">
+            {{ row.entry.rsiDivergence?.type === "bearish" ? "Bearish" : "Bullish" }}
+          </span>
+          RSI-Divergenz ({{ row.entry.rsiDivergence?.instrument }})
+          <button class="laniakea-panel-remove" title="Aus Laniakea-Kontext entfernen" @click="emit('remove', row.entry.id)">🗑</button>
+        </div>
+        <div v-if="row.entry.rsiDivergence" class="laniakea-panel-entry-prices">
+          {{ fmtPrice(row.entry.rsiDivergence.fromPrice, pricePrecisionForInstrument(row.entry.rsiDivergence.instrument)) }}
+          → {{ fmtPrice(row.entry.rsiDivergence.toPrice, pricePrecisionForInstrument(row.entry.rsiDivergence.instrument)) }}
+          · RSI {{ row.entry.rsiDivergence.fromRsi?.toFixed(1) }} → {{ row.entry.rsiDivergence.toRsi?.toFixed(1) }}
         </div>
       </template>
       <template v-else-if="row.trade">

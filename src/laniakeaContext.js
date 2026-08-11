@@ -31,6 +31,8 @@ const ROW_COLUMNS =
   "id, kind, trade_position_id, ob_zone_id, trade_setup_id, trade_confirmation_id, liquidity_level_id, " +
   "m5_ob_instrument, m5_ob_direction, m5_ob_top, m5_ob_bottom, m5_ob_start_time, " +
   "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
+  "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
+  "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi, " +
   "note, created_at, " +
   "ob_zones(id, instrument, direction, timeframe, top, bottom, start_time, touched, invalidated), " +
   "trade_setups(id, instrument, direction, ob_top, ob_bottom, ob_start_time, ls_touched_time), " +
@@ -78,6 +80,21 @@ function toEntry(row) {
             direction: row.m5_liquidity_direction,
             price: row.m5_liquidity_price,
             pivotTime: row.m5_liquidity_pivot_time,
+          }
+        : null,
+    // Rohdaten-Snapshot, kein Embed — nur bei kind='rsi_divergence' gesetzt (Divergenzen werden nie
+    // persistiert, siehe 20260811170000_laniakea_context_rsi_divergence.sql).
+    rsiDivergence:
+      row.rsi_divergence_instrument != null
+        ? {
+            instrument: row.rsi_divergence_instrument,
+            type: row.rsi_divergence_type,
+            fromTime: row.rsi_divergence_from_time,
+            toTime: row.rsi_divergence_to_time,
+            fromPrice: row.rsi_divergence_from_price,
+            toPrice: row.rsi_divergence_to_price,
+            fromRsi: row.rsi_divergence_from_rsi,
+            toRsi: row.rsi_divergence_to_rsi,
           }
         : null,
     obZone: row.ob_zones
@@ -218,6 +235,44 @@ export async function addLaniakeaM5LiquidityEntry(level, note) {
     .single();
   if (error) {
     console.error("Laniakea-M5-Liquidity-Eintrag anlegen fehlgeschlagen:", error);
+    return null;
+  }
+  return toEntry(data);
+}
+
+// Analog zu addLaniakeaM5ObEntry/addLaniakeaM5LiquidityEntry, für einen RSI-Divergenz-Konnektor
+// (Chat 2026-08-11, siehe 20260811170000_laniakea_context_rsi_divergence.sql) — Divergenzen werden
+// nie persistiert (detectRsiDivergence()/detectRsiDivergenceHistory() rechnen live), also wieder
+// ein Rohdaten-Snapshot statt einer FK. divergence: das Objekt, wie es rsi.js zurückgibt
+// ({type, fromTime, toTime, fromPrice, toPrice, fromRsi, toRsi}, Zeiten in Unix-Sekunden), plus
+// instrument (props.symbol — steht selbst nicht auf dem Divergenz-Objekt).
+export async function addLaniakeaRsiDivergenceEntry(instrument, divergence, note) {
+  const { data, error } = await supabase
+    .from("laniakea_context")
+    .upsert(
+      {
+        kind: "rsi_divergence",
+        trade_position_id: null,
+        ob_zone_id: null,
+        trade_setup_id: null,
+        trade_confirmation_id: null,
+        liquidity_level_id: null,
+        rsi_divergence_instrument: instrument,
+        rsi_divergence_type: divergence.type,
+        rsi_divergence_from_time: new Date(divergence.fromTime * 1000).toISOString(),
+        rsi_divergence_to_time: new Date(divergence.toTime * 1000).toISOString(),
+        rsi_divergence_from_price: divergence.fromPrice,
+        rsi_divergence_to_price: divergence.toPrice,
+        rsi_divergence_from_rsi: divergence.fromRsi,
+        rsi_divergence_to_rsi: divergence.toRsi,
+        note: note || null,
+      },
+      { onConflict: "rsi_divergence_instrument,rsi_divergence_type,rsi_divergence_from_time,rsi_divergence_to_time" },
+    )
+    .select(ROW_COLUMNS)
+    .single();
+  if (error) {
+    console.error("Laniakea-RSI-Divergenz-Eintrag anlegen fehlgeschlagen:", error);
     return null;
   }
   return toEntry(data);

@@ -82,12 +82,16 @@ class DivergenceLinePaneView {
 export class DivergenceLinePrimitive {
   // from/to: {time, price} — bei der RSI-Bein-Instanz ist "price" der RSI-Wert (0-100). candles:
   // fürs canShowLabels-Zoom-Gating (siehe Renderer), dieselbe clipReplay(allCandles)-Referenz wie
-  // beim Aufruf von detectRsiDivergence in PriceChart.vue.
-  constructor(from, to, options, candles) {
+  // beim Aufruf von detectRsiDivergence in PriceChart.vue. divergence: das rohe rsi.js-Objekt
+  // ({type, fromTime, toTime, fromPrice, toPrice, fromRsi, toRsi}) — nur für den Laniakea-
+  // Kontextmenü-Kandidaten gebraucht (siehe PriceChart.vue: findNearbyLaniakeaCandidates), nicht
+  // fürs Zeichnen selbst (from/to reichen dafür).
+  constructor(from, to, options, candles, divergence) {
     this._from = from;
     this._to = to;
     this._options = options; // {color, lineWidth, label}
     this._candles = candles;
+    this.divergence = divergence;
     this._paneViews = [new DivergenceLinePaneView(this)];
     this._chart = null;
     this._series = null;
@@ -105,5 +109,21 @@ export class DivergenceLinePrimitive {
 
   paneViews() {
     return this._paneViews;
+  }
+
+  // Fürs Laniakea-Kontextmenü (Chat 2026-08-11, siehe PriceChart.vue: findNearbyLaniakeaCandidates)
+  // — anders als LiquidityLinePrimitive.distanceTo (horizontale Strecke, siehe liquidity.js) ist
+  // dieser Konnektor diagonal, deshalb echte Punkt-zu-Strecke-Projektion statt der horizontalen
+  // Abkürzung dort. x/y in CSS-Pixeln relativ zum Chart-Container, wie bei allen anderen
+  // Primitives hier.
+  distanceTo(x, y) {
+    const [p1, p2] = this._paneViews[0]._points;
+    if (p1.x === null || p1.y === null || p2.x === null || p2.y === null) return Infinity;
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const lengthSquared = dx * dx + dy * dy;
+    if (lengthSquared === 0) return Math.hypot(x - p1.x, y - p1.y);
+    const t = Math.max(0, Math.min(1, ((x - p1.x) * dx + (y - p1.y) * dy) / lengthSquared));
+    return Math.hypot(x - (p1.x + t * dx), y - (p1.y + t * dy));
   }
 }
