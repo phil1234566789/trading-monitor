@@ -124,7 +124,33 @@ function isSwingLow(candles, i, period) {
 // VOR j, nicht nur der unmittelbar vorherige Swing — sonst wäre "RSI-Hoch früh in der Session,
 // Preis klettert über mehrere Zwischenswings hinweg immer weiter, ohne dass RSI je wieder dahin
 // kommt" unsichtbar (der ursprüngliche Fund: 08:05 RSI 75.2 vs. 11:10 RSI nur noch 66.2, trotz
-// höherem Preis-Hoch).
+// höherem Preis-Hoch). Geteilt mit collectDivergenceHistory() unten (Chat 2026-08-11, zweite
+// Runde: "wie viel Aufwand wäre es historische Divergenzen anzuzeigen") über denselben
+// findBestReference()-Baustein, damit die Referenz-Logik nicht doppelt gepflegt werden muss.
+function findBestReference(j, swingIdx, candles, rsi, lookbackBars, isBearish) {
+  let best = null;
+  for (const i of swingIdx) {
+    if (i >= j || j - i > lookbackBars || rsi[i].rsi == null) continue;
+    const priceQualifies = isBearish ? candles[i].close < candles[j].close : candles[i].close > candles[j].close;
+    if (!priceQualifies) continue;
+    const isBetterReference = best == null || (isBearish ? rsi[i].rsi > rsi[best].rsi : rsi[i].rsi < rsi[best].rsi);
+    if (isBetterReference) best = i;
+  }
+  return best;
+}
+
+function buildDivergenceEntry(type, bestIdx, jIdx, candles, rsi) {
+  return {
+    type,
+    fromTime: candles[bestIdx].time,
+    toTime: candles[jIdx].time,
+    fromPrice: candles[bestIdx].close,
+    toPrice: candles[jIdx].close,
+    fromRsi: rsi[bestIdx].rsi,
+    toRsi: rsi[jIdx].rsi,
+  };
+}
+
 function findLatestDivergence(swingIdx, candles, rsi, lookbackBars, type) {
   if (swingIdx.length === 0) return null;
   const isBearish = type === "bearish";
@@ -138,28 +164,13 @@ function findLatestDivergence(swingIdx, candles, rsi, lookbackBars, type) {
   }
   if (j == null || rsi[j].rsi == null) return null;
 
-  let best = null;
-  for (const i of swingIdx) {
-    if (i >= j || j - i > lookbackBars || rsi[i].rsi == null) continue;
-    const priceQualifies = isBearish ? candles[i].close < candles[j].close : candles[i].close > candles[j].close;
-    if (!priceQualifies) continue;
-    const isBetterReference = best == null || (isBearish ? rsi[i].rsi > rsi[best].rsi : rsi[i].rsi < rsi[best].rsi);
-    if (isBetterReference) best = i;
-  }
+  const best = findBestReference(j, swingIdx, candles, rsi, lookbackBars, isBearish);
   if (best == null) return null;
 
   const rsiDelta = isBearish ? rsi[best].rsi - rsi[j].rsi : rsi[j].rsi - rsi[best].rsi;
   if (rsiDelta < MIN_DIVERGENCE_RSI_DELTA) return null;
 
-  return {
-    type,
-    fromTime: candles[best].time,
-    toTime: candles[j].time,
-    fromPrice: candles[best].close,
-    toPrice: candles[j].close,
-    fromRsi: rsi[best].rsi,
-    toRsi: rsi[j].rsi,
-  };
+  return buildDivergenceEntry(type, best, j, candles, rsi);
 }
 
 /**
@@ -184,4 +195,85 @@ export function detectRsiDivergence(candles, period = DEFAULT_DIVERGENCE_FRACTAL
   const bullish = findLatestDivergence(swingLowIdx, candles, rsi, lookbackBars, "bullish");
   if (bullish) result.push(bullish);
   return result;
+}
+
+export const DEFAULT_DIVERGENCE_HISTORY_COUNT = 5; // je Richtung, wie tradeSetupHistoryCount in Dashboard.vue
+
+// Läuft chronologisch durch alle Swings und merkt sich den jeweils "regierenden" Extrempunkt
+// (den bisher höchsten Swing-Hoch bzw. tiefsten Swing-Tief seit dem letzten Ereignis) — ein
+// Swing, der dieses Extrem NICHT bricht, wird komplett übersprungen (dasselbe Anti-Wander-Prinzip
+// wie in findLatestDivergence, nur fortlaufend statt einmalig am Ende). Erst wenn ein Swing das
+// bisherige Extrem tatsächlich überbietet, wird er auf Divergenz geprüft UND wird selbst zum
+// neuen Extrempunkt — so entsteht eine Folge von NICHT überlappenden, je einmal gezeichneten
+// Ereignissen statt der "zig tausend Linien" einer naiven "jeder Swing gegen jede Referenz"-Suche.
+//
+// "peak brechen" gilt nur INNERHALB von lookbackBars (Bug beim ersten Test: ein sehr altes,
+// tiefes Tief von zwei Tagen zuvor blieb sonst für immer der "regierende" Peak und unterdrückte
+// jede spätere, echte Divergenz — auch die bereits einzeln bestätigte GBPUSD-10.08.-Bullish, die
+// detectRsiDivergence() im "aktuell"-Modus richtig fand). Ist der alte Peak zu weit weg, zählt er
+// nicht mehr als Referenzpunkt fürs Brechen (er kann aber selbst noch als RSI-Referenz für spätere
+// Swings dienen, das prüft findBestReference separat mit demselben Fenster).
+//
+// Zweiter Bug beim ersten Test: solange derselbe alte Anker (z.B. 08:05) noch die "härteste"
+// Referenz bleibt, bricht JEDER neue, leicht höhere Swing (09:40, 10:10, 11:10, ...) für sich
+// genommen den Peak — macht aus EINER echten Divergenz wieder mehrere fast identische Einträge
+// (dieselbe "zig tausend Linien"-Falle wie bei findLatestDivergence, nur historisch statt live).
+// Fix: bleibt die Referenz (best) zum vorherigen Ereignis gleich, wird der letzte Eintrag
+// AKTUALISIERT statt ein neuer angehängt — eine Divergenz-"Geschichte" bekommt genau einen
+// Eintrag, der bis zu ihrem tatsächlichen Extrempunkt mitwächst; erst ein Swing mit einer WIRKLICH
+// anderen (neueren) Referenz zählt als eigenständiges, neues Ereignis.
+function collectDivergenceHistory(swingIdx, candles, rsi, lookbackBars, type) {
+  const isBearish = type === "bearish";
+  const result = [];
+  let peak = null;
+  let lastRef = null;
+
+  for (const j of swingIdx) {
+    if (rsi[j].rsi == null) continue;
+    if (peak != null && j - peak <= lookbackBars) {
+      const breaksPeak = isBearish ? candles[j].close > candles[peak].close : candles[j].close < candles[peak].close;
+      if (!breaksPeak) continue; // schwächeres Echo unter/über dem bisherigen Extrem, kein eigenes Ereignis
+    }
+    const best = findBestReference(j, swingIdx, candles, rsi, lookbackBars, isBearish);
+    if (best != null) {
+      const rsiDelta = isBearish ? rsi[best].rsi - rsi[j].rsi : rsi[j].rsi - rsi[best].rsi;
+      if (rsiDelta >= MIN_DIVERGENCE_RSI_DELTA) {
+        const entry = buildDivergenceEntry(type, best, j, candles, rsi);
+        if (best === lastRef && result.length > 0) result[result.length - 1] = entry;
+        else result.push(entry);
+        lastRef = best;
+      }
+    }
+    peak = j;
+  }
+  return result;
+}
+
+/**
+ * Wie detectRsiDivergence, aber die komplette (nicht überlappende) Ereignis-Historie statt nur der
+ * aktuell gültigen Divergenz — maxCount begrenzt je Richtung auf die jeweils JÜNGSTEN Ereignisse.
+ * @param {{time: number, close: number}[]} candles
+ * @param {number} [period]
+ * @param {number} [lookbackBars]
+ * @param {number} [maxCount]
+ * @returns {{type: "bearish" | "bullish", fromTime: number, toTime: number, fromPrice: number, toPrice: number, fromRsi: number, toRsi: number}[]}
+ */
+export function detectRsiDivergenceHistory(
+  candles,
+  period = DEFAULT_DIVERGENCE_FRACTAL_PERIOD,
+  lookbackBars = DEFAULT_DIVERGENCE_LOOKBACK_BARS,
+  maxCount = DEFAULT_DIVERGENCE_HISTORY_COUNT,
+) {
+  const rsi = computeRsi(candles);
+
+  const swingHighIdx = [];
+  const swingLowIdx = [];
+  for (let i = 0; i < candles.length; i++) {
+    if (isSwingHigh(candles, i, period)) swingHighIdx.push(i);
+    if (isSwingLow(candles, i, period)) swingLowIdx.push(i);
+  }
+
+  const bearish = collectDivergenceHistory(swingHighIdx, candles, rsi, lookbackBars, "bearish").slice(-maxCount);
+  const bullish = collectDivergenceHistory(swingLowIdx, candles, rsi, lookbackBars, "bullish").slice(-maxCount);
+  return [...bearish, ...bullish].sort((a, b) => a.toTime - b.toTime);
 }

@@ -190,6 +190,12 @@ const showRsi = useLocalStorageRef("showRsi", false);
 // RSI-Pane selbst, deshalb disabled statt wirkungslos anklickbar, wenn showRsi aus ist (Muster
 // wie emaDisabled oben).
 const showRsiDivergence = useLocalStorageRef("showRsiDivergence", false);
+// Zusätzlicher, unabhängiger Toggle für die komplette Divergenz-Historie statt nur der aktuell
+// gültigen (Chat 2026-08-11, zweite Runde: "wie viel Aufwand wäre es historische Divergenzen
+// anzuzeigen") — läuft NEBEN showRsiDivergence, ersetzt es nicht. rsiDivergenceHistoryCount analog
+// zu tradeSetupHistoryCount (siehe unten): wie viele Ereignisse je Richtung.
+const showRsiDivergenceHistory = useLocalStorageRef("showRsiDivergenceHistory", false);
+const rsiDivergenceHistoryCount = useLocalStorageRef("rsiDivergenceHistoryCount", 5);
 const rsiDivergenceDisabled = computed(() => !showRsi.value);
 // Vertikale News-Marker auf dem Chart (Chat 2026-07-26: "ich würd die News gern visuell irgendwo
 // sehen") — Sichtbarkeits-Toggle wie showEma/showSessions, die Termine selbst kommen aus dem
@@ -592,6 +598,7 @@ async function stepReplayForward() {
 // Toolbar wurde zu voll (siehe Chat) -> Liquidity-Sweeps unter "Liquidität", Periode/Lookback
 // unter "Structure" als Dropdown. Reiner UI-Zustand, bewusst NICHT in localStorage (anders als die
 // Toggles selbst) — welches Dropdown gerade offen ist, ist keine Einstellung, die überdauern muss.
+const rsiMenuOpen = ref(false);
 const liquidityMenuOpen = ref(false);
 const obsMenuOpen = ref(false);
 const rangesMenuOpen = ref(false);
@@ -611,7 +618,7 @@ const indikatorenMenuOpen = ref(false);
 // Sessions seit Chat 2026-07-29 NICHT mehr dabei ("ich deaktiviere gerne Indikatoren um mehr zu
 // sehen, aber Sessions eig nie — die geben mir Orientierung zur Charthistorie") — eigener,
 // permanenter Toggle links neben News statt im Sammel-Dropdown, siehe Template.
-const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showLiquidity, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs];
+const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs];
 const indikatorenActive = computed(() => INDIKATOREN_REFS.some((r) => r.value));
 let indikatorenSavedState = null;
 function toggleIndikatoren() {
@@ -627,6 +634,7 @@ function toggleIndikatoren() {
     showEma.value = false;
     showRsi.value = false;
     showRsiDivergence.value = false;
+    showRsiDivergenceHistory.value = false;
     showLiquidity.value = true;
     showSweptLiquidity.value = false;
     showObsM5.value = false;
@@ -656,6 +664,7 @@ function toggleObs() {
 }
 function closeMenusOutside(e) {
   if (!e.target.closest?.(".toggle-group")) {
+    rsiMenuOpen.value = false;
     liquidityMenuOpen.value = false;
     obsMenuOpen.value = false;
     rangesMenuOpen.value = false;
@@ -768,17 +777,48 @@ watch(selectedTradingAccountId, refreshTrades);
           >
             EMA
           </button>
-          <button :class="{ active: showRsi }" @click="showRsi = !showRsi">
-            RSI
-          </button>
-          <button
-            :class="{ active: showRsiDivergence }"
-            :disabled="rsiDivergenceDisabled"
-            :title="rsiDivergenceDisabled ? 'Braucht RSI' : ''"
-            @click="showRsiDivergence = !showRsiDivergence"
-          >
-            RSI-Divergenz
-          </button>
+          <div class="toggle-group">
+            <button :class="{ active: showRsi }" @click="showRsi = !showRsi">
+              RSI
+            </button>
+            <button
+              class="toggle-caret"
+              :class="{ open: rsiMenuOpen }"
+              title="Untermenü"
+              @click="rsiMenuOpen = !rsiMenuOpen"
+            >
+              ▾
+            </button>
+            <div v-if="rsiMenuOpen" class="toggle-dropdown">
+              <button
+                :class="{ active: showRsiDivergence }"
+                :disabled="rsiDivergenceDisabled"
+                :title="rsiDivergenceDisabled ? 'Braucht RSI' : ''"
+                @click="showRsiDivergence = !showRsiDivergence"
+              >
+                Divergenz
+              </button>
+              <button
+                :class="{ active: showRsiDivergenceHistory }"
+                :disabled="rsiDivergenceDisabled"
+                :title="rsiDivergenceDisabled ? 'Braucht RSI' : ''"
+                @click="showRsiDivergenceHistory = !showRsiDivergenceHistory"
+              >
+                Divergenz (Historie)
+              </button>
+              <label class="ranges-lookback-field">
+                Historie
+                <input
+                  v-model.number="rsiDivergenceHistoryCount"
+                  type="number"
+                  min="1"
+                  max="50"
+                  class="ranges-lookback-input"
+                  title="Anzahl vergangener Divergenzen je Richtung"
+                />
+              </label>
+            </div>
+          </div>
 
           <div class="toggle-dropdown-divider"></div>
 
@@ -1144,6 +1184,8 @@ watch(selectedTradingAccountId, refreshTrades);
     :show-ema="showEma"
     :show-rsi="showRsi"
     :show-rsi-divergence="showRsiDivergence"
+    :show-rsi-divergence-history="showRsiDivergenceHistory"
+    :rsi-divergence-history-count="rsiDivergenceHistoryCount"
     :show-news="showNews"
     :show-sessions="showSessions"
     :show-trade-setup-cockpit="showTradeSetupCockpit"

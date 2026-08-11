@@ -21,7 +21,7 @@ import { computeRangesPivots, buildMarketStructureState, pivotForDisplay, summar
 import { renderMarketStructureAnalysis, collectH1LqLevels, collectFibLevels } from "../marketStructureRendering";
 import { computeCockpitState } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
-import { computeRsi, detectRsiDivergence, DEFAULT_RSI_PERIOD } from "../rsi.js";
+import { computeRsi, detectRsiDivergence, detectRsiDivergenceHistory, DEFAULT_RSI_PERIOD } from "../rsi.js";
 import { DivergenceLinePrimitive } from "../rsiRendering.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
@@ -138,6 +138,12 @@ const props = defineProps({
   // wenn showRsi auch an ist (siehe refreshRsiDivergenceInternal), da ohne RSI-Pane kein RSI-Bein
   // zum Zeichnen existiert.
   showRsiDivergence: { type: Boolean, default: false },
+  // Zusätzlicher, unabhängiger Toggle für die komplette (nicht überlappende) Divergenz-Historie
+  // statt nur der aktuell gültigen (Chat 2026-08-11, zweite Runde: "wie viel Aufwand wäre es
+  // historische Divergenzen anzuzeigen") — siehe rsi.js: detectRsiDivergenceHistory. Läuft
+  // zusätzlich zu showRsiDivergence, ersetzt es nicht.
+  showRsiDivergenceHistory: { type: Boolean, default: false },
+  rsiDivergenceHistoryCount: { type: Number, default: 5 },
   // Vertikale News-Marker auf dem Chart (Chat 2026-07-26: "ich würd die News gern visuell irgendwo
   // sehen") — die Event-Liste selbst kommt nicht als Prop, sondern direkt aus dem newsEvents.js-
   // Store (analog zu sessions/showSessions oben), nur die Sichtbarkeit ist ein Toggle.
@@ -2047,18 +2053,28 @@ function refreshRsiInternal() {
 // gefundener Divergenz (Preis-Bein an candleSeries, RSI-Bein an rsiSeries, siehe rsiRendering.js)
 // statt einer einzigen über beide Panes hinweg — lightweight-charts' Primitives hängen immer an
 // genau einer Series/Pane.
+//
+// showRsiDivergenceHistory (Chat 2026-08-11, zweite Runde) läuft ZUSÄTZLICH zu showRsiDivergence,
+// ersetzt es nicht — beide zusammen zeichnen dieselbe "aktuelle" Divergenz zwar doppelt (die
+// Historie endet strukturell auf demselben letzten Ereignis), das ist aber nur dieselbe Linie
+// zweimal übereinander, kein sichtbarer Unterschied.
 function refreshRsiDivergenceInternal() {
   for (const p of divergencePriceLinePrimitives) candleSeries.detachPrimitive(p);
   divergencePriceLinePrimitives.length = 0;
   for (const p of divergenceRsiLinePrimitives) rsiSeries?.detachPrimitive(p);
   divergenceRsiLinePrimitives.length = 0;
-  if (!props.showRsiDivergence || !props.showRsi || !rsiSeries) return;
+  if ((!props.showRsiDivergence && !props.showRsiDivergenceHistory) || !props.showRsi || !rsiSeries) return;
 
   const candles = clipReplay(allCandles);
   if (candles.length === 0) return;
   const precision = pricePrecisionForInstrument(props.symbol);
 
-  for (const d of detectRsiDivergence(candles)) {
+  const divergences = [
+    ...(props.showRsiDivergence ? detectRsiDivergence(candles) : []),
+    ...(props.showRsiDivergenceHistory ? detectRsiDivergenceHistory(candles, undefined, undefined, props.rsiDivergenceHistoryCount) : []),
+  ];
+
+  for (const d of divergences) {
     const colorKey = d.type === "bearish" ? "divergenceBearish" : "divergenceBullish";
     const label = `${d.type === "bearish" ? "▽" : "△"} ${fmtPrice(d.fromPrice, precision)} → ${fmtPrice(d.toPrice, precision)}`;
     const opts = { color: cssColor(colorKey), lineWidth: lineWidth(colorKey), label };
@@ -2933,6 +2949,8 @@ watch(() => props.showRsi, () => {
   refreshRsiDivergenceInternal(); // showRsi aus -> rsiSeries verschwindet, Divergenz-Linien müssen mit
 });
 watch(() => props.showRsiDivergence, refreshRsiDivergenceInternal);
+watch(() => props.showRsiDivergenceHistory, refreshRsiDivergenceInternal);
+watch(() => props.rsiDivergenceHistoryCount, refreshRsiDivergenceInternal);
 // showSessions (Toggle) UND der sessions-Store selbst (Hinzufügen/Editieren/Löschen in
 // SessionsModal.vue, deep weil Label/Zeiten/Farbe direkt auf den reactive-Objekten mutiert werden,
 // kein splice/push) sollen beide sofort neu zeichnen, nicht erst beim nächsten refreshChart()-Zyklus.
