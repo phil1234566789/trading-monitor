@@ -23,6 +23,7 @@ import { computeCockpitState } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
 import { computeRsi, detectRsiDivergence, detectRsiDivergenceHistory, DEFAULT_RSI_PERIOD } from "../rsi.js";
 import { DivergenceLinePrimitive } from "../rsiRendering.js";
+import { classifyDivergenceOutcome } from "../rsiDivergenceOutcome.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 import { PIP_SIZE } from "../pipConfig.js";
@@ -144,6 +145,12 @@ const props = defineProps({
   // zusätzlich zu showRsiDivergence, ersetzt es nicht.
   showRsiDivergenceHistory: { type: Boolean, default: false },
   rsiDivergenceHistoryCount: { type: Number, default: 5 },
+  // Debug-Overlay für die Outcome-Klassifikation (Chat 2026-08-11, dritte Runde, Philip: "kannst du
+  // debug mäßig die hits und misses im chart anzeigen") — zeichnet pro sichtbarer Divergenz die
+  // Struktur-Marke (rsiDivergenceOutcome.js: classifyDivergenceOutcome), grün bis zum Bruch bei
+  // "hit", rot bis zum Fensterende bei "miss". Bewusst EIGENER Toggle statt an showRsiDivergence/
+  // -History gekoppelt — reine Debug-Ansicht, kein Feature für den Dauerbetrieb.
+  showRsiDivergenceOutcomeDebug: { type: Boolean, default: false },
   // Vertikale News-Marker auf dem Chart (Chat 2026-07-26: "ich würd die News gern visuell irgendwo
   // sehen") — die Event-Liste selbst kommt nicht als Prop, sondern direkt aus dem newsEvents.js-
   // Store (analog zu sessions/showSessions oben), nur die Sichtbarkeit ist ein Toggle.
@@ -442,6 +449,7 @@ let tradeConfirmationLinkPrimitives = [];
 let invalidationLinePrimitives = [];
 let divergencePriceLinePrimitives = []; // Preis-Bein der Divergenz-Konnektoren, an candleSeries
 let divergenceRsiLinePrimitives = []; // RSI-Bein, an rsiSeries — siehe refreshRsiDivergenceInternal
+let divergenceOutcomeDebugPrimitives = []; // Struktur-Marken-Linien fürs Outcome-Debug, an candleSeries
 let tradeSetupPrimitives = [];
 let claudeAnnotationPrimitives = [];
 let claudeAnnotationPriceLines = [];
@@ -2063,6 +2071,8 @@ function refreshRsiDivergenceInternal() {
   divergencePriceLinePrimitives.length = 0;
   for (const p of divergenceRsiLinePrimitives) rsiSeries?.detachPrimitive(p);
   divergenceRsiLinePrimitives.length = 0;
+  for (const p of divergenceOutcomeDebugPrimitives) candleSeries.detachPrimitive(p);
+  divergenceOutcomeDebugPrimitives.length = 0;
   if ((!props.showRsiDivergence && !props.showRsiDivergenceHistory) || !props.showRsi || !rsiSeries) return;
 
   const candles = clipReplay(allCandles);
@@ -2086,6 +2096,34 @@ function refreshRsiDivergenceInternal() {
     const rsiPrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromRsi }, { time: d.toTime, price: d.toRsi }, opts, candles, d);
     rsiSeries.attachPrimitive(rsiPrimitive);
     divergenceRsiLinePrimitives.push(rsiPrimitive);
+  }
+
+  // Outcome-Debug (Chat 2026-08-11, dritte Runde) — zeichnet für jede oben schon gezeichnete
+  // Divergenz die Struktur-Marke aus classifyDivergenceOutcome: grün bis zum Bruch-Zeitpunkt bei
+  // "hit", rot bis zum geprüften Fensterende bei "miss", grau bei "pending" (noch nicht genug
+  // Kerzen danach geladen). Bewusst literale Farben statt chartColors-Tokens — reine Wegwerf-
+  // Debug-Ansicht (siehe rsiDivergenceOutcome.js-Kommentar "wir basteln gerade"), kein
+  // Style-Modal-Eintrag für etwas, das übermorgen wieder rausfliegen kann.
+  if (props.showRsiDivergenceOutcomeDebug) {
+    const OUTCOME_COLOR = { hit: "#26a69a", miss: "#ef5350", pending: "#787b86" };
+    for (const d of divergences) {
+      const result = classifyDivergenceOutcome(candles, d);
+      if (result.structureLevel == null) continue;
+      const color = OUTCOME_COLOR[result.outcome] ?? "#787b86";
+      const endTime = result.outcome === "hit" ? result.breakTime : result.windowEndTime;
+      const label =
+        result.outcome === "hit"
+          ? `HIT (${result.barsToBreak} Bars) · Struktur ${fmtPrice(result.structureLevel, precision)}`
+          : `${result.outcome.toUpperCase()} · Struktur ${fmtPrice(result.structureLevel, precision)}`;
+      const debugPrimitive = new DivergenceLinePrimitive(
+        { time: result.structureTime, price: result.structureLevel },
+        { time: endTime, price: result.structureLevel },
+        { color, lineWidth: 1.5, label },
+        candles,
+      );
+      candleSeries.attachPrimitive(debugPrimitive);
+      divergenceOutcomeDebugPrimitives.push(debugPrimitive);
+    }
   }
 }
 
@@ -2964,6 +3002,7 @@ watch(() => props.showRsi, () => {
 watch(() => props.showRsiDivergence, refreshRsiDivergenceInternal);
 watch(() => props.showRsiDivergenceHistory, refreshRsiDivergenceInternal);
 watch(() => props.rsiDivergenceHistoryCount, refreshRsiDivergenceInternal);
+watch(() => props.showRsiDivergenceOutcomeDebug, refreshRsiDivergenceInternal);
 // showSessions (Toggle) UND der sessions-Store selbst (Hinzufügen/Editieren/Löschen in
 // SessionsModal.vue, deep weil Label/Zeiten/Farbe direkt auf den reactive-Objekten mutiert werden,
 // kein splice/push) sollen beide sofort neu zeichnen, nicht erst beim nächsten refreshChart()-Zyklus.

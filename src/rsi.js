@@ -127,7 +127,10 @@ function passesAllDivergenceFilters(candles, rsi, bestIdx, jIdx, isBearish) {
 // wiederzuverwenden: die dort ist ans Pine-Script-Original der LQ-Sweep-Erkennung gebunden
 // (kaskadierende Gleichstands-Regeln, "NICHT anfassen") — für Divergenzen reicht ein simpler,
 // generischer Fraktal-Check.
-function isSwingHigh(candles, i, period) {
+// Exportiert (statt privat) — rsiDivergenceOutcome.js (Chat 2026-08-11, experimentell, siehe dort)
+// braucht denselben Fraktal-Check, um rückwärts die Struktur-Marke vor einem Divergenz-Pivot zu
+// finden. Kein zweiter Port, dieselbe Funktion.
+export function isSwingHigh(candles, i, period) {
   for (let k = 1; k <= period; k++) {
     if (i - k < 0 || i + k >= candles.length) return false;
     if (candles[i - k].close >= candles[i].close || candles[i + k].close >= candles[i].close) return false;
@@ -135,7 +138,7 @@ function isSwingHigh(candles, i, period) {
   return true;
 }
 
-function isSwingLow(candles, i, period) {
+export function isSwingLow(candles, i, period) {
   for (let k = 1; k <= period; k++) {
     if (i - k < 0 || i + k >= candles.length) return false;
     if (candles[i - k].close <= candles[i].close || candles[i + k].close <= candles[i].close) return false;

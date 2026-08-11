@@ -197,6 +197,12 @@ const showRsiDivergence = useLocalStorageRef("showRsiDivergence", false);
 // zu tradeSetupHistoryCount (siehe unten): wie viele Ereignisse je Richtung.
 const showRsiDivergenceHistory = useLocalStorageRef("showRsiDivergenceHistory", false);
 const rsiDivergenceHistoryCount = useLocalStorageRef("rsiDivergenceHistoryCount", 5);
+// Outcome-Debug (Chat 2026-08-11, dritte Runde, Philip: "kannst du debug mäßig die hits und misses
+// im chart anzeigen") — zeichnet die Struktur-Marke aus rsiDivergenceOutcome.js pro Divergenz,
+// grün/rot/grau je nach hit/miss/pending. Bewusst NICHT in localStorage (anders als die anderen
+// Toggles hier) — reine Wegwerf-Debug-Ansicht, kein Zustand, der über einen Reload hinaus Sinn
+// macht, während noch an der Klassifikation selbst herumexperimentiert wird.
+const showRsiDivergenceOutcomeDebug = ref(false);
 const rsiDivergenceDisabled = computed(() => !showRsi.value);
 // Vertikale News-Marker auf dem Chart (Chat 2026-07-26: "ich würd die News gern visuell irgendwo
 // sehen") — Sichtbarkeits-Toggle wie showEma/showSessions, die Termine selbst kommen aus dem
@@ -823,6 +829,17 @@ watch(selectedTradingAccountId, refreshTrades);
                   title="Anzahl vergangener Divergenzen je Richtung"
                 />
               </label>
+
+              <div class="toggle-dropdown-divider"></div>
+
+              <button
+                :class="{ active: showRsiDivergenceOutcomeDebug }"
+                :disabled="rsiDivergenceDisabled"
+                :title="rsiDivergenceDisabled ? 'Braucht RSI' : 'Debug: zeichnet fuer jede sichtbare Divergenz die Struktur-Marke (gruen=hit/rot=miss/grau=pending)'"
+                @click="showRsiDivergenceOutcomeDebug = !showRsiDivergenceOutcomeDebug"
+              >
+                Outcome-Debug
+              </button>
             </div>
           </div>
 
@@ -1192,6 +1209,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :show-rsi-divergence="showRsiDivergence"
     :show-rsi-divergence-history="showRsiDivergenceHistory"
     :rsi-divergence-history-count="rsiDivergenceHistoryCount"
+    :show-rsi-divergence-outcome-debug="showRsiDivergenceOutcomeDebug"
     :show-news="showNews"
     :show-sessions="showSessions"
     :show-trade-setup-cockpit="showTradeSetupCockpit"
