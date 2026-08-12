@@ -203,6 +203,11 @@ const rsiDivergenceHistoryCount = useLocalStorageRef("rsiDivergenceHistoryCount"
 // Toggles hier) — reine Wegwerf-Debug-Ansicht, kein Zustand, der über einen Reload hinaus Sinn
 // macht, während noch an der Klassifikation selbst herumexperimentiert wird.
 const showRsiDivergenceOutcomeDebug = ref(false);
+// Statistik-Modal (Chat 2026-08-11, vierte Runde: "ich denke wir wären jetzt bereit für
+// statistik") — persistiert wie showRangesMetadata/showDebugMetadata/showLaniakeaPanel (gleiches
+// Modal-Muster: bleibt über einen Reload hinweg offen, statt bei jedem Reload neu geöffnet werden
+// zu müssen).
+const showRsiDivergenceStats = useLocalStorageRef("showRsiDivergenceStats", false);
 const rsiDivergenceDisabled = computed(() => !showRsi.value);
 // Vertikale News-Marker auf dem Chart (Chat 2026-07-26: "ich würd die News gern visuell irgendwo
 // sehen") — Sichtbarkeits-Toggle wie showEma/showSessions, die Termine selbst kommen aus dem
@@ -840,6 +845,14 @@ watch(selectedTradingAccountId, refreshTrades);
               >
                 Outcome-Debug
               </button>
+              <button
+                :class="{ active: showRsiDivergenceStats }"
+                :disabled="rsiDivergenceDisabled"
+                :title="rsiDivergenceDisabled ? 'Braucht RSI' : 'Liste aller sichtbaren Divergenzen inkl. Statistik'"
+                @click="showRsiDivergenceStats = !showRsiDivergenceStats"
+              >
+                Statistik
+              </button>
             </div>
           </div>
 
@@ -1210,6 +1223,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :show-rsi-divergence-history="showRsiDivergenceHistory"
     :rsi-divergence-history-count="rsiDivergenceHistoryCount"
     :show-rsi-divergence-outcome-debug="showRsiDivergenceOutcomeDebug"
+    :show-rsi-divergence-stats="showRsiDivergenceStats"
     :show-news="showNews"
     :show-sessions="showSessions"
     :show-trade-setup-cockpit="showTradeSetupCockpit"
@@ -1222,6 +1236,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :confirmation-mode-active="confirmationAddTrade != null || rangeConfirmationAddTrade != null"
     @close-ranges-metadata="showRangesMetadata = false"
     @close-debug-metadata="showDebugMetadata = false"
+    @close-rsi-divergence-stats="showRsiDivergenceStats = false"
     @select-setup="onSelectSetup"
     @select-target="onSelectTarget"
     @select-setup-confirmations="onSelectSetupConfirmations"

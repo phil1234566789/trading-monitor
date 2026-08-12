@@ -21,9 +21,9 @@ import { computeRangesPivots, buildMarketStructureState, pivotForDisplay, summar
 import { renderMarketStructureAnalysis, collectH1LqLevels, collectFibLevels } from "../marketStructureRendering";
 import { computeCockpitState } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
-import { computeRsi, detectRsiDivergence, detectRsiDivergenceHistory, DEFAULT_RSI_PERIOD } from "../rsi.js";
+import { computeRsi, detectRsiDivergence, detectRsiDivergenceHistory, DEFAULT_RSI_PERIOD, DEFAULT_DIVERGENCE_LOOKBACK_BARS } from "../rsi.js";
 import { DivergenceLinePrimitive } from "../rsiRendering.js";
-import { classifyDivergenceOutcome } from "../rsiDivergenceOutcome.js";
+import { classifyDivergenceOutcome, DEFAULT_DIVERGENCE_OUTCOME_LOOKFORWARD_BARS } from "../rsiDivergenceOutcome.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 import { PIP_SIZE } from "../pipConfig.js";
@@ -64,6 +64,7 @@ import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js
 import Gauge from "./Gauge.vue";
 import MetadataPanel from "./MetadataPanel.vue";
 import JsonTree from "./JsonTree.vue";
+import RsiDivergenceStatsPanel from "./RsiDivergenceStatsPanel.vue";
 import TradeSetupCockpit from "./TradeSetupCockpit.vue";
 
 const props = defineProps({
@@ -151,6 +152,12 @@ const props = defineProps({
   // "hit", rot bis zum Fensterende bei "miss". Bewusst EIGENER Toggle statt an showRsiDivergence/
   // -History gekoppelt — reine Debug-Ansicht, kein Feature für den Dauerbetrieb.
   showRsiDivergenceOutcomeDebug: { type: Boolean, default: false },
+  // Statistik-Modal (Chat 2026-08-11, vierte Runde: "ich denke wir wären jetzt bereit für
+  // statistik") — listet alle gerade im Chart sichtbaren Divergenzen (dieselbe Menge wie oben)
+  // inkl. Outcome-Klassifikation in einer Tabelle, plus Aggregat-Werte. Löst dieselbe
+  // classifyDivergenceOutcome-Berechnung wie showRsiDivergenceOutcomeDebug aus (siehe
+  // refreshRsiDivergenceInternal: EINMAL berechnet, für beide Zwecke wiederverwendet).
+  showRsiDivergenceStats: { type: Boolean, default: false },
   // Vertikale News-Marker auf dem Chart (Chat 2026-07-26: "ich würd die News gern visuell irgendwo
   // sehen") — die Event-Liste selbst kommt nicht als Prop, sondern direkt aus dem newsEvents.js-
   // Store (analog zu sessions/showSessions oben), nur die Sichtbarkeit ist ein Toggle.
@@ -193,6 +200,7 @@ const props = defineProps({
 const emit = defineEmits([
   "close-ranges-metadata",
   "close-debug-metadata",
+  "close-rsi-divergence-stats",
   "select-setup",
   "toggle-trade-mode",
   "select-target",
@@ -499,6 +507,11 @@ let obs4hPollTimer = null;
 let obsM5BtcPollTimer = null;
 let windowGaugeTimer = null;
 let dailyGaugeTimer = null;
+// Für das RSI-Divergenz-Statistik-Panel (Chat 2026-08-11, vierte Runde) — { divergences (inkl.
+// Outcome-Klassifikation), lookbackBars, lookforwardBars } oder null, wenn der Toggle aus ist
+// bzw. gerade keine Divergenzen vorliegen. Befüllt in refreshRsiDivergenceInternal, analog zu
+// rangesMetadata unten.
+const rsiDivergenceStatsData = ref(null);
 const rangesMetadata = ref(null); // Liste der erkannten H1-Periode-5-Pivots fürs Ranges-Metadaten-Panel
 const rangesMetadata2 = ref(null); // dito für die eingebettete Periode-2-Erkennung — siehe Chat 2026-07-19:
 // EIN gemeinsames Metadaten-Panel für beide Perioden reicht ("wenn es zu schwer ist zwei Modals
@@ -2073,58 +2086,92 @@ function refreshRsiDivergenceInternal() {
   divergenceRsiLinePrimitives.length = 0;
   for (const p of divergenceOutcomeDebugPrimitives) candleSeries.detachPrimitive(p);
   divergenceOutcomeDebugPrimitives.length = 0;
-  if ((!props.showRsiDivergence && !props.showRsiDivergenceHistory) || !props.showRsi || !rsiSeries) return;
+
+  // needsDrawing/needsStats bewusst getrennt (Korrektur Philip, vierte Runde: "die liste soll alle
+  // divergenzen anzeigen, die durch die historie eh schon berechnet sind" — das Statistik-Panel
+  // hängt NICHT an showRsiDivergence/-History/rsiDivergenceHistoryCount, das sind reine
+  // Chart-Zeichnungs-Toggles/-Caps. Erste Version dieses Panels hatte fälschlich dieselbe Menge
+  // wiederverwendet ("was gerade im Chart sichtbar ist"), das war nicht gemeint.
+  const needsDrawing = (props.showRsiDivergence || props.showRsiDivergenceHistory) && props.showRsi && !!rsiSeries;
+  const needsStats = props.showRsiDivergenceStats && props.showRsi;
+  if (!needsDrawing && !needsStats) {
+    rsiDivergenceStatsData.value = null;
+    return;
+  }
 
   const candles = clipReplay(allCandles);
-  if (candles.length === 0) return;
+  if (candles.length === 0) {
+    rsiDivergenceStatsData.value = null;
+    return;
+  }
   const precision = pricePrecisionForInstrument(props.symbol);
 
-  const divergences = [
-    ...(props.showRsiDivergence ? detectRsiDivergence(candles) : []),
-    ...(props.showRsiDivergenceHistory ? detectRsiDivergenceHistory(candles, undefined, undefined, props.rsiDivergenceHistoryCount) : []),
-  ];
+  if (needsDrawing) {
+    const drawnDivergences = [
+      ...(props.showRsiDivergence ? detectRsiDivergence(candles) : []),
+      ...(props.showRsiDivergenceHistory ? detectRsiDivergenceHistory(candles, undefined, undefined, props.rsiDivergenceHistoryCount) : []),
+    ];
 
-  for (const d of divergences) {
-    const colorKey = d.type === "bearish" ? "divergenceBearish" : "divergenceBullish";
-    const label = `${d.type === "bearish" ? "▽" : "△"} ${fmtPrice(d.fromPrice, precision)} → ${fmtPrice(d.toPrice, precision)}`;
-    const opts = { color: cssColor(colorKey), lineWidth: lineWidth(colorKey), label };
+    for (const d of drawnDivergences) {
+      const colorKey = d.type === "bearish" ? "divergenceBearish" : "divergenceBullish";
+      const label = `${d.type === "bearish" ? "▽" : "△"} ${fmtPrice(d.fromPrice, precision)} → ${fmtPrice(d.toPrice, precision)}`;
+      const opts = { color: cssColor(colorKey), lineWidth: lineWidth(colorKey), label };
 
-    const pricePrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromPrice }, { time: d.toTime, price: d.toPrice }, opts, candles, d);
-    candleSeries.attachPrimitive(pricePrimitive);
-    divergencePriceLinePrimitives.push(pricePrimitive);
+      const pricePrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromPrice }, { time: d.toTime, price: d.toPrice }, opts, candles, d);
+      candleSeries.attachPrimitive(pricePrimitive);
+      divergencePriceLinePrimitives.push(pricePrimitive);
 
-    const rsiPrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromRsi }, { time: d.toTime, price: d.toRsi }, opts, candles, d);
-    rsiSeries.attachPrimitive(rsiPrimitive);
-    divergenceRsiLinePrimitives.push(rsiPrimitive);
-  }
+      const rsiPrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromRsi }, { time: d.toTime, price: d.toRsi }, opts, candles, d);
+      rsiSeries.attachPrimitive(rsiPrimitive);
+      divergenceRsiLinePrimitives.push(rsiPrimitive);
+    }
 
-  // Outcome-Debug (Chat 2026-08-11, dritte Runde) — zeichnet für jede oben schon gezeichnete
-  // Divergenz die Struktur-Marke aus classifyDivergenceOutcome: grün bis zum Bruch-Zeitpunkt bei
-  // "hit", rot bis zum geprüften Fensterende bei "miss", grau bei "pending" (noch nicht genug
-  // Kerzen danach geladen). Bewusst literale Farben statt chartColors-Tokens — reine Wegwerf-
-  // Debug-Ansicht (siehe rsiDivergenceOutcome.js-Kommentar "wir basteln gerade"), kein
-  // Style-Modal-Eintrag für etwas, das übermorgen wieder rausfliegen kann.
-  if (props.showRsiDivergenceOutcomeDebug) {
-    const OUTCOME_COLOR = { hit: "#26a69a", miss: "#ef5350", pending: "#787b86" };
-    for (const d of divergences) {
-      const result = classifyDivergenceOutcome(candles, d);
-      if (result.structureLevel == null) continue;
-      const color = OUTCOME_COLOR[result.outcome] ?? "#787b86";
-      const endTime = result.outcome === "hit" ? result.breakTime : result.windowEndTime;
-      const label =
-        result.outcome === "hit"
-          ? `HIT (${result.barsToBreak} Bars) · Struktur ${fmtPrice(result.structureLevel, precision)}`
-          : `${result.outcome.toUpperCase()} · Struktur ${fmtPrice(result.structureLevel, precision)}`;
-      const debugPrimitive = new DivergenceLinePrimitive(
-        { time: result.structureTime, price: result.structureLevel },
-        { time: endTime, price: result.structureLevel },
-        { color, lineWidth: 1.5, label },
-        candles,
-      );
-      candleSeries.attachPrimitive(debugPrimitive);
-      divergenceOutcomeDebugPrimitives.push(debugPrimitive);
+    // Outcome-Debug — zeichnet für jede oben schon gezeichnete Divergenz die Struktur-Marke aus
+    // classifyDivergenceOutcome: grün bis zum Bruch-Zeitpunkt bei "hit", rot bis zum geprüften
+    // Fensterende bei "miss", grau bei "pending" (noch nicht genug Kerzen danach geladen). Bewusst
+    // literale Farben statt chartColors-Tokens — reine Wegwerf-Debug-Ansicht (siehe
+    // rsiDivergenceOutcome.js-Kommentar "wir basteln gerade"), kein Style-Modal-Eintrag für etwas,
+    // das übermorgen wieder rausfliegen kann. Bleibt bewusst an denselben Chart-Toggles/-Cap wie
+    // die Linien selbst (zeigt Outcomes für das, was gerade gezeichnet ist), anders als die
+    // Statistik unten.
+    if (props.showRsiDivergenceOutcomeDebug) {
+      const OUTCOME_COLOR = { hit: "#26a69a", miss: "#ef5350", pending: "#787b86" };
+      for (const d of drawnDivergences) {
+        const result = classifyDivergenceOutcome(candles, d);
+        if (result.structureLevel == null) continue;
+        const color = OUTCOME_COLOR[result.outcome] ?? "#787b86";
+        const endTime = result.outcome === "hit" ? result.breakTime : result.windowEndTime;
+        const label =
+          result.outcome === "hit"
+            ? `HIT (${result.barsToBreak} Bars) · Struktur ${fmtPrice(result.structureLevel, precision)}`
+            : `${result.outcome.toUpperCase()} · Struktur ${fmtPrice(result.structureLevel, precision)}`;
+        const debugPrimitive = new DivergenceLinePrimitive(
+          { time: result.structureTime, price: result.structureLevel },
+          { time: endTime, price: result.structureLevel },
+          { color, lineWidth: 1.5, label },
+          candles,
+        );
+        candleSeries.attachPrimitive(debugPrimitive);
+        divergenceOutcomeDebugPrimitives.push(debugPrimitive);
+      }
     }
   }
+
+  // Statistik-Panel — IMMER die volle, von der Historie-Erkennung gelieferte Menge (maxCount=
+  // Infinity, siehe collectDivergenceHistory: .slice(-Infinity) ergibt das komplette Array), nicht
+  // die evtl. viel kleinere rsiDivergenceHistoryCount-Chart-Anzeige-Grenze und unabhängig davon, ob
+  // die Chart-Toggles selbst an sind — nur showRsi (RSI-Berechnung nötig) und der Statistik-Toggle
+  // selbst zählen.
+  rsiDivergenceStatsData.value = needsStats
+    ? {
+        divergences: detectRsiDivergenceHistory(candles, undefined, undefined, Infinity).map((d) => ({
+          ...d,
+          ...classifyDivergenceOutcome(candles, d),
+        })),
+        lookbackBars: DEFAULT_DIVERGENCE_LOOKBACK_BARS,
+        lookforwardBars: DEFAULT_DIVERGENCE_OUTCOME_LOOKFORWARD_BARS,
+      }
+    : null;
 }
 
 // TREND_ANALYSIS_CANDLE_COUNT (2000) liegt über dem Edge-Function-Limit pro Request (1000,
@@ -3003,6 +3050,7 @@ watch(() => props.showRsiDivergence, refreshRsiDivergenceInternal);
 watch(() => props.showRsiDivergenceHistory, refreshRsiDivergenceInternal);
 watch(() => props.rsiDivergenceHistoryCount, refreshRsiDivergenceInternal);
 watch(() => props.showRsiDivergenceOutcomeDebug, refreshRsiDivergenceInternal);
+watch(() => props.showRsiDivergenceStats, refreshRsiDivergenceInternal);
 // showSessions (Toggle) UND der sessions-Store selbst (Hinzufügen/Editieren/Löschen in
 // SessionsModal.vue, deep weil Label/Zeiten/Farbe direkt auf den reactive-Objekten mutiert werden,
 // kein splice/push) sollen beide sofort neu zeichnen, nicht erst beim nächsten refreshChart()-Zyklus.
@@ -3129,6 +3177,66 @@ watch(
 // Fund ist kein Wochenende/Feiertag mehr, sondern ein Bug — lieber nichts zurückgeben (Button tut
 // dann einmal nichts) als kommentarlos auf einen falschen Zeitpunkt springen.
 const MAX_PLAUSIBLE_GAP_SEC = 7 * 24 * 3600;
+
+// Aus dem früheren defineExpose-jumpToTrade herausgezogen (Chat 2026-08-11, vierte Runde) — das
+// RSI-Divergenz-Statistik-Panel (rsiDivergenceStatsData/Template unten) will auf denselben
+// "auf einen Zeitraum springen"-Mechanismus zurückgreifen, ohne sich selbst über die exposeRef
+// aufzurufen (unnötiger Umweg innerhalb derselben Komponente). jumpToTrade bleibt als dünner
+// Wrapper für externe Aufrufer (TradesTable.vue etc.) bestehen.
+async function jumpToTimeRange(entryTime, exitTime) {
+  if (!chart) return;
+  // Bug-Report Philip 2026-07-30, zweite Runde: die erste Version hier lud Seite für Seite RÜCKWÄRTS
+  // ab dem aktuellen Datenanfang, bis entryTime erreicht war — bei einem 16 Tage alten Trade schon
+  // spürbar langsam, bei einem echt alten Trade (Philip: "2022 Trade der Supergau") wären das
+  // hunderte sequentielle Requests gewesen. Stattdessen jetzt ein GEZIELTER Fetch direkt um den
+  // Trade herum (Anker kurz nach dem Exit, siehe JUMP_TARGET_BUFFER_BARS), unabhängig davon, wie
+  // weit der Trade zurückliegt — das Ergebnis wird vorne an allCandles gehängt, MIT einer
+  // bewussten Lücke zum bisherigen Datenanfang dazwischen (gleiches Prinzip wie mergeCandles in
+  // candleCache.js: eine Lücke in der Mitte ist unkritisch, lightweight-charts braucht nur
+  // strikt aufsteigende Zeiten, keine Lückenlosigkeit). MAX_JUMP_FETCH_PAGES ist nur eine
+  // Notbremse für ungewöhnlich lange Trades (Entry Wochen vor Exit), keine Regelgröße.
+  const barSeconds = barSecondsFor(props.currentBar);
+  if (!loadingOlder && !isTimeCovered(allCandles, entryTime, barSeconds)) {
+    loadingOlder = true;
+    try {
+      let anchor = (exitTime ?? entryTime) + JUMP_TARGET_BUFFER_BARS * barSeconds;
+      let pages = 0;
+      while (pages < MAX_JUMP_FETCH_PAGES && !isTimeCovered(allCandles, entryTime, barSeconds)) {
+        const older = isForex
+          ? await fetchOlderForexCandles(props.symbol, props.currentBar, anchor, FOREX_HISTORY_PAGE_SIZE)
+          : await fetchOlderCandles(okxBarFor(props.currentBar), anchor);
+        if (older.length === 0) break;
+        allCandles = older.concat(allCandles);
+        anchor = allCandles[0].time;
+        pages++;
+      }
+      refreshChart();
+    } catch (err) {
+      console.error("Kerzen für Trade-Sprung laden fehlgeschlagen:", err);
+    } finally {
+      loadingOlder = false;
+    }
+  }
+  const candles = clipReplay(allCandles);
+  if (candles.length === 0) return;
+  const from = snapToBarTime(candles, entryTime) ?? entryTime;
+  const to = exitTime != null ? (snapToBarTime(candles, exitTime) ?? exitTime) : from;
+  const fromIdx = candles.findIndex((c) => c.time === from);
+  const toIdx = candles.findIndex((c) => c.time === to);
+  if (fromIdx === -1 || toIdx === -1) return;
+
+  const centerIdx = (fromIdx + toIdx) / 2;
+  const tradeSpanBars = Math.abs(toIdx - fromIdx);
+  const currentRange = chart.timeScale().getVisibleLogicalRange();
+  const currentBars = currentRange ? currentRange.to - currentRange.from : 100;
+  const halfBars = Math.max(currentBars / 2, tradeSpanBars / 2 + 15);
+  chart.timeScale().setVisibleLogicalRange({ from: centerIdx - halfBars, to: centerIdx + halfBars });
+}
+
+function jumpToDivergence(d) {
+  jumpToTimeRange(d.fromTime, d.toTime);
+}
+
 defineExpose({
   async nextReplayTime(after) {
     if (after == null) return allCandles[0]?.time ?? null;
@@ -3173,53 +3281,7 @@ defineExpose({
   // loadingOlder-Zustand wie der Scroll-Handler, damit sich beide nicht überschneiden), bis
   // entryTime abgedeckt ist oder wirklich der Anfang der Historie erreicht ist.
   async jumpToTrade(entryTime, exitTime) {
-    if (!chart) return;
-    // Bug-Report Philip 2026-07-30, zweite Runde: die erste Version hier lud Seite für Seite RÜCKWÄRTS
-    // ab dem aktuellen Datenanfang, bis entryTime erreicht war — bei einem 16 Tage alten Trade schon
-    // spürbar langsam, bei einem echt alten Trade (Philip: "2022 Trade der Supergau") wären das
-    // hunderte sequentielle Requests gewesen. Stattdessen jetzt ein GEZIELTER Fetch direkt um den
-    // Trade herum (Anker kurz nach dem Exit, siehe JUMP_TARGET_BUFFER_BARS), unabhängig davon, wie
-    // weit der Trade zurückliegt — das Ergebnis wird vorne an allCandles gehängt, MIT einer
-    // bewussten Lücke zum bisherigen Datenanfang dazwischen (gleiches Prinzip wie mergeCandles in
-    // candleCache.js: eine Lücke in der Mitte ist unkritisch, lightweight-charts braucht nur
-    // strikt aufsteigende Zeiten, keine Lückenlosigkeit). MAX_JUMP_FETCH_PAGES ist nur eine
-    // Notbremse für ungewöhnlich lange Trades (Entry Wochen vor Exit), keine Regelgröße.
-    const barSeconds = barSecondsFor(props.currentBar);
-    if (!loadingOlder && !isTimeCovered(allCandles, entryTime, barSeconds)) {
-      loadingOlder = true;
-      try {
-        let anchor = (exitTime ?? entryTime) + JUMP_TARGET_BUFFER_BARS * barSeconds;
-        let pages = 0;
-        while (pages < MAX_JUMP_FETCH_PAGES && !isTimeCovered(allCandles, entryTime, barSeconds)) {
-          const older = isForex
-            ? await fetchOlderForexCandles(props.symbol, props.currentBar, anchor, FOREX_HISTORY_PAGE_SIZE)
-            : await fetchOlderCandles(okxBarFor(props.currentBar), anchor);
-          if (older.length === 0) break;
-          allCandles = older.concat(allCandles);
-          anchor = allCandles[0].time;
-          pages++;
-        }
-        refreshChart();
-      } catch (err) {
-        console.error("Kerzen für Trade-Sprung laden fehlgeschlagen:", err);
-      } finally {
-        loadingOlder = false;
-      }
-    }
-    const candles = clipReplay(allCandles);
-    if (candles.length === 0) return;
-    const from = snapToBarTime(candles, entryTime) ?? entryTime;
-    const to = exitTime != null ? (snapToBarTime(candles, exitTime) ?? exitTime) : from;
-    const fromIdx = candles.findIndex((c) => c.time === from);
-    const toIdx = candles.findIndex((c) => c.time === to);
-    if (fromIdx === -1 || toIdx === -1) return;
-
-    const centerIdx = (fromIdx + toIdx) / 2;
-    const tradeSpanBars = Math.abs(toIdx - fromIdx);
-    const currentRange = chart.timeScale().getVisibleLogicalRange();
-    const currentBars = currentRange ? currentRange.to - currentRange.from : 100;
-    const halfBars = Math.max(currentBars / 2, tradeSpanBars / 2 + 15);
-    chart.timeScale().setVisibleLogicalRange({ from: centerIdx - halfBars, to: centerIdx + halfBars });
+    return jumpToTimeRange(entryTime, exitTime);
   },
 
   // Für den Klick auf eine Zeile in TradesTable.vue (Chat 2026-07-27: TSC-Fokus soll auch für
@@ -3337,6 +3399,24 @@ defineExpose({
         Keine der erfassten Features (Liquidität/Trade-Setups/TSC/Structure) ist gerade angetoggelt.
       </p>
       <JsonTree v-else :value="activeMetadataSnapshot" />
+    </MetadataPanel>
+
+    <MetadataPanel
+      v-if="showRsiDivergenceStats"
+      title="RSI-Divergenz-Statistik"
+      :width="900"
+      :height="650"
+      @close="emit('close-rsi-divergence-stats')"
+    >
+      <RsiDivergenceStatsPanel
+        v-if="rsiDivergenceStatsData"
+        :divergences="rsiDivergenceStatsData.divergences"
+        :lookback-bars="rsiDivergenceStatsData.lookbackBars"
+        :lookforward-bars="rsiDivergenceStatsData.lookforwardBars"
+        :instrument="symbol"
+        @select="jumpToDivergence"
+      />
+      <p v-else class="metadata-empty">Kein RSI/Divergenz-Toggle aktiv — "RSI" und "Divergenz" bzw. "Divergenz (Historie)" einschalten.</p>
     </MetadataPanel>
   </div>
 </template>

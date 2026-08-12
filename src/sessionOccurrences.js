@@ -50,6 +50,21 @@ function localWeekday(dayStartUtcSec, offsetMinutesFn) {
 // Funktion (utcSec) => Offset-Minuten (für echte DST-Korrektheit).
 // days (optional): welche lokalen Wochentage (0=So..6=Sa) diese Session überhaupt STARTEN darf,
 // siehe ALL_DAYS/daysOrAll. null/undefined = jeden Tag (Altverhalten).
+//
+// JSDoc-Typ für tzOffsetMinutes hier nicht nur Doku — ohne den Union-Typ leitet TS' allowJs-
+// Inferenz für einen Cross-Directory-Import aus mcp-server (siehe rsiDivergenceStats.ts) nur
+// `number` aus dem Default-Wert `= 0` her und lehnt eine Funktions-Übergabe ab, obwohl die Laufzeit
+// (typeof tzOffsetMinutes === "function") beides längst unterstützt — gleiches Muster wie
+// computeRsi in rsi.js (siehe dortiger Kommentar).
+/**
+ * @param {number} fromMinutes
+ * @param {number} toMinutes
+ * @param {number} rangeStartSec
+ * @param {number} rangeEndSec
+ * @param {number | ((utcSec: number) => number)} [tzOffsetMinutes]
+ * @param {number[] | null} [days]
+ * @returns {{startSec: number, endSec: number}[]}
+ */
 export function sessionOccurrences(fromMinutes, toMinutes, rangeStartSec, rangeEndSec, tzOffsetMinutes = 0, days = null) {
   if (rangeStartSec == null || rangeEndSec == null || rangeEndSec <= rangeStartSec) return [];
   const offsetMinutesFn = typeof tzOffsetMinutes === "function" ? tzOffsetMinutes : () => tzOffsetMinutes;
