@@ -47,6 +47,13 @@ function outcomeLabel(t) {
 function rangeLabel(t, r) {
   return `${r.direction === "short" ? "Short" : "Long"}#${r.id}${r.instrument !== t.instrument ? ` (${r.instrument})` : ""}`;
 }
+// "Favorit"-Stern (Chat 2026-08-13): reine Anzeige, NICHT klickbar — Philip explizit dagegen,
+// weil ein Stern direkt in der Zeile zu leicht aus Versehen getroffen wird (gleiches Klickrisiko
+// wie die alten Inline-Buttons, siehe Memory feedback_trade_editing_ui.md). Setzen/entfernen geht
+// nur über TradeEditModal.vue.
+function isFavorite(t) {
+  return t.setupType === "10/10-Trade";
+}
 function lessonBadges(t) {
   const badges = [];
   if (t.lessonDealingRangeId != null) {
@@ -104,6 +111,7 @@ const showCommission = useLocalStorageRef("showCommissionColumn", false);
         @contextmenu.prevent="emit('laniakea-context-menu', { candidates: [{ kind: 'trade_position', trade: t }], x: $event.clientX, y: $event.clientY })"
       >
         <td>
+          <span v-if="isFavorite(t)" class="trade-favorite-indicator" title="10/10-Trade">★</span>
           <span class="trade-direction" :class="t.direction">{{ t.direction === "short" ? "Short" : "Long" }}</span>
           #{{ t.dealingRangeId }}
           <span v-for="badge in lessonBadges(t)" :key="badge.key" class="trade-lesson-chip">🔗 {{ badge.label }}</span>

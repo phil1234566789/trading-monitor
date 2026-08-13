@@ -248,6 +248,9 @@ export async function updateDealingRange(dealingRangeId, fields) {
   // Long#24 wäre die Lesson daraus" — self-referencing FK auf eine ANDERE dealing_range, siehe
   // Migration 20260731230000_dealing_ranges_lesson_link.sql. null = Verknüpfung entfernen.
   if ("lessonDealingRangeId" in fields) payload.lesson_dealing_range_id = fields.lessonDealingRangeId;
+  // "Favorit"-Markierung (Chat 2026-08-13, siehe Migration 20260813120000_dealing_ranges_setup_type.sql)
+  // — null entfernt die Markierung wieder.
+  if ("setupType" in fields) payload.setup_type = fields.setupType;
 
   const { error } = await supabase.from("dealing_ranges").update(payload).eq("id", dealingRangeId);
   if (error) {

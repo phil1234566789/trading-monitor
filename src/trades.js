@@ -36,7 +36,7 @@ export async function fetchTrades(instrument, accountId = null) {
   // fürs Chart-Rendering der verlinkten M5-OB-Box (siehe PriceChart.vue: refreshTradeSetupLinksInternal).
   let query = supabase
     .from("trade_positions")
-    .select("*, dealing_ranges!inner(id, instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, trade_setups(ob_start_time, ob_top, ob_bottom))")
+    .select("*, dealing_ranges!inner(id, instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, trade_setups(ob_start_time, ob_top, ob_bottom))")
     .eq("dealing_ranges.instrument", instrument);
   if (accountId != null && accountId !== ALL_ACCOUNTS_ID) query = query.eq("trading_account_id", accountId);
   const { data, error } = await query.order("triggered_at", { ascending: false });
@@ -136,6 +136,9 @@ export async function fetchTrades(instrument, accountId = null) {
       lessonDealingRangeId: range.lesson_dealing_range_id ?? null,
       lessonDealingRange: range.lesson_dealing_range_id != null ? (lessonTargetById[range.lesson_dealing_range_id] ?? null) : null,
       lessonOfDealingRanges: (lessonSourcesByTargetId[range.id] ?? []).map(({ id, instrument, direction }) => ({ id, instrument, direction })),
+      // "Favorit"-Markierung (Chat 2026-08-13, siehe Migration 20260813120000_dealing_ranges_setup_type.sql)
+      // — aktuell nur ein Wert ('10/10-Trade'), null = nicht markiert.
+      setupType: range.setup_type ?? null,
       tradingAccountId: row.trading_account_id,
       // TradeTarget-Rohformat (siehe tradeTargets.ts) statt nur des Preises (Chat 2026-07-28: "kann
       // ich das bearbeiten?" / "wieso nur der Preis?") — kind/sourceTime/touchedTime fürs

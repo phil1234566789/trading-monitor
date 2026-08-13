@@ -137,7 +137,7 @@ export async function getTradeSetups(instrument: string) {
 export async function getJournal(instrument?: string, source?: string, limit = 50) {
   let query = supabase
     .from("trade_positions")
-    .select("*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, trade_targets(id, price)), trade_partial_exits(price, exit_time, portion_pct)")
+    .select("*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, trade_targets(id, price)), trade_partial_exits(price, exit_time, portion_pct)")
     .order("triggered_at", { ascending: false })
     .limit(limit);
   if (instrument) query = query.eq("dealing_ranges.instrument", instrument);
@@ -162,7 +162,7 @@ export async function getLaniakeaContext() {
     .from("laniakea_context")
     .select(
       "id, kind, note, created_at, " +
-        "trade_positions(*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, trade_targets(id, price)), trade_partial_exits(price, exit_time, portion_pct)), " +
+        "trade_positions(*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, trade_targets(id, price)), trade_partial_exits(price, exit_time, portion_pct)), " +
         "ob_zones(*), " +
         "trade_setups(*), " +
         "trade_confirmations(*), " +
@@ -508,6 +508,10 @@ export interface UpdateDealingRangeArgs {
   // 20260731230000_dealing_ranges_lesson_link.sql) — self-referencing FK auf eine ANDERE
   // dealing_range, die "das wäre der richtige Trade gewesen" markiert.
   lessonDealingRangeId?: number | null;
+  // "Favorit"-Markierung (Chat 2026-08-13, siehe Migration
+  // 20260813120000_dealing_ranges_setup_type.sql) — aktuell nur ein Enum-Wert ('10/10-Trade'),
+  // null entfernt die Markierung wieder.
+  setupType?: "10/10-Trade" | null;
 }
 
 const DEALING_RANGE_FIELD_MAP: Record<keyof UpdateDealingRangeArgs, string> = {
@@ -516,6 +520,7 @@ const DEALING_RANGE_FIELD_MAP: Record<keyof UpdateDealingRangeArgs, string> = {
   invalidation: "invalidation",
   tradeSetupId: "trade_setup_id",
   lessonDealingRangeId: "lesson_dealing_range_id",
+  setupType: "setup_type",
 };
 
 export async function updateDealingRange(id: number, fields: UpdateDealingRangeArgs) {

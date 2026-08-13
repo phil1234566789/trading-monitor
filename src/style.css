@@ -150,6 +150,21 @@ body {
   letter-spacing: 1px;
 }
 
+/* "Favorit"-Stern (Chat 2026-08-13, siehe Migration 20260813120000_dealing_ranges_setup_type.sql)
+   — Gold/Amber statt Violett (Lesson) oder Blau (Range-Akzent in TradeEditModal.vue), damit ein
+   markierter Trade auf den ersten Blick als eigenes Konzept auffällt. Bewusst NICHT klickbar
+   (Philip, gleiche Session: Klickrisiko wie bei den alten Inline-Buttons, siehe Memory
+   feedback_trade_editing_ui.md) — reine Anzeige, Setzen/Entfernen nur über TradeEditModal.vue.
+   Nur bei aktivem Favorit gerendert (kein leerer ☆ für alle anderen Zeilen), damit hier auch
+   optisch kein Klick-Ziel suggeriert wird. */
+.trade-favorite-indicator {
+  color: #f0b90b;
+  font-size: 15px;
+  line-height: 1;
+  padding: 2px 3px;
+  vertical-align: middle;
+}
+
 .trade-link-btn {
   background: transparent;
   border: none;

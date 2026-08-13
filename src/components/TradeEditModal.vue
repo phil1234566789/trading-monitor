@@ -109,6 +109,18 @@ async function unlinkLesson(badge) {
   const ok = await updateDealingRange(badge.unlinkRangeId, { lessonDealingRangeId: null });
   if (ok) emit("saved");
 }
+
+// "Favorit"-Toggle (Chat 2026-08-13, siehe Migration 20260813120000_dealing_ranges_setup_type.sql
+// + TradesTable.vue's Stern für den Schnell-Toggle) — hier zusätzlich im Modal, gleiches
+// direktes Schreiben+"saved" wie linkLesson/unlinkLesson oben.
+const savingFavorite = ref(false);
+const isFavorite = computed(() => props.trade.setupType === "10/10-Trade");
+async function toggleFavorite() {
+  savingFavorite.value = true;
+  const ok = await updateDealingRange(props.trade.dealingRangeId, { setupType: isFavorite.value ? null : "10/10-Trade" });
+  savingFavorite.value = false;
+  if (ok) emit("saved");
+}
 // Sichtbares Feedback fürs Invalidierungs-Feld (Chat 2026-07-31, dritte Runde: "ich sehe nicht, ob
 // das erfolgreich übernommen worden ist") — gilt für BEIDE Wege, den Preis zu setzen: das Formular
 // hier UND den Chart-Klick (Dashboard.vue: onSelectTarget schreibt direkt in die DB, das Modal
@@ -269,7 +281,18 @@ function confirmationLabel(confirmation) {
     <!-- Dealing Range: die IDEE — gilt für alle Ausführungen unter dieser Range, nicht nur diese
          eine (Chat 2026-07-31: "seperate dealing range and trade position in the edit modal"). -->
     <div class="tem-group tem-group-range">
-      <h3 class="tem-group-title">📐 Dealing Range #{{ trade.dealingRangeId }}</h3>
+      <h3 class="tem-group-title">
+        📐 Dealing Range #{{ trade.dealingRangeId }}
+        <button
+          class="tem-favorite-btn"
+          :class="{ active: isFavorite }"
+          :title="isFavorite ? '10/10-Trade — Markierung entfernen' : 'Als 10/10-Trade markieren'"
+          :disabled="savingFavorite"
+          @click="toggleFavorite"
+        >
+          {{ isFavorite ? "★ 10/10-Trade" : "☆ 10/10-Trade" }}
+        </button>
+      </h3>
 
       <section class="tem-section">
         <h4 class="tem-section-title">Invalidierung</h4>
@@ -553,6 +576,37 @@ function confirmationLabel(confirmation) {
 
 .tem-group-range .tem-group-title {
   color: #7ea6ff;
+}
+
+/* "Favorit"-Toggle (Chat 2026-08-13) — gleiches Gold/Amber wie TradesTable.vue's .trade-favorite-indicator
+   (style.css), damit beide Stellen als dasselbe Konzept erkennbar bleiben. Editierbar NUR hier im
+   Modal, nicht in der Tabelle (Klickrisiko, siehe dort). */
+.tem-favorite-btn {
+  margin-left: 8px;
+  background: transparent;
+  border: 1px solid rgba(240, 185, 11, 0.4);
+  color: #9aa0ac;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+}
+
+.tem-favorite-btn:hover:not(:disabled) {
+  background: rgba(240, 185, 11, 0.12);
+  color: #f0b90b;
+}
+
+.tem-favorite-btn.active {
+  border-color: #f0b90b;
+  color: #f0b90b;
+  background: rgba(240, 185, 11, 0.12);
+}
+
+.tem-favorite-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .tem-section {

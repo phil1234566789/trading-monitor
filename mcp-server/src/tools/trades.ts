@@ -125,10 +125,13 @@ export function registerTradeTools(server: McpServer) {
       title: "Trade-Idee bearbeiten",
       description:
         "Bearbeitet eine bestehende dealing_range (Instrument/Richtung/Invalidation/Setup-Link/" +
-        "Lesson-Verknüpfung) über ihre id (siehe get_journal, Feld dealing_ranges.id). Nur " +
-        "übergebene Felder werden geändert. lessonDealingRangeId verlinkt eine ANDERE dealing_range " +
-        "als 'das wäre der richtige Trade gewesen' (z.B. nach einem Fehler-Trade oder einer falsch " +
-        "bestimmten Range) — null setzt eine bestehende Verknüpfung zurück.",
+        "Lesson-Verknüpfung/Favorit-Markierung) über ihre id (siehe get_journal, Feld " +
+        "dealing_ranges.id). Nur übergebene Felder werden geändert. lessonDealingRangeId verlinkt " +
+        "eine ANDERE dealing_range als 'das wäre der richtige Trade gewesen' (z.B. nach einem " +
+        "Fehler-Trade oder einer falsch bestimmten Range) — null setzt eine bestehende Verknüpfung " +
+        "zurück. setupType markiert die Idee als Top-Setup für Philips Strategie ('10/10-Trade' — " +
+        "aktuell der einzige Wert, weitere Kategorien kommen erst mit einer zweiten Strategie) — " +
+        "null entfernt die Markierung wieder.",
       inputSchema: {
         id: z.number().int(),
         instrument: INSTRUMENT.optional(),
@@ -136,6 +139,7 @@ export function registerTradeTools(server: McpServer) {
         invalidation: z.number().nullable().optional(),
         tradeSetupId: z.number().int().nullable().optional(),
         lessonDealingRangeId: z.number().int().nullable().optional(),
+        setupType: z.enum(["10/10-Trade"]).nullable().optional(),
       },
     },
     async ({ id, ...fields }) => json(await updateDealingRange(id, fields)),
