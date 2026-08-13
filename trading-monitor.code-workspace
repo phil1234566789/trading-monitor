@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../trading"
+		},
+		{
+			"path": "../milk-city"
 		}
 	],
 	"settings": {}

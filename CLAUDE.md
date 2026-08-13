@@ -588,3 +588,10 @@ to every session in this repo.
   Philip explicitly called this out ("das dient zur code-lesbarkeit"). Do the full rename in the
   same change (`git mv` for files, update every import), and verify with a repo-wide grep for the
   old name afterward, not just the one call site that was pointed at.
+- **milk-city ticket status**: at the start of any task, check whether it clearly matches an open
+  ticket in the `milk-city` MCP server (`list_tickets`) — e.g. a task mentioning "RSI" clearly
+  matches the `rsi-divergenz` ticket. If it clearly matches, call `set_ticket_status(id, "carried")`
+  immediately and start working, no confirmation needed. If it's unclear whether/which ticket
+  applies, ask Philip immediately before starting the actual work. On finishing the task, call
+  `set_ticket_status(id, "done")`. This is what drives milk-city's live "who's working on what"
+  display — see `milk-city/supabase/functions/mcp/` for the tool implementations.

@@ -21,6 +21,13 @@
         "SUPABASE_URL": "https://vkphwtqcvqrkphksproj.supabase.co",
         "SUPABASE_ANON_KEY": "sb_publishable_v88yE7w0wPJxR1xQmboJwA_cCx759_7"
       }
+    },
+    "milk-city": {
+      "type": "http",
+      "url": "https://lpivzczsvuszblodeaxf.supabase.co/functions/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer ${MILK_CITY_MCP_TOKEN}"
+      }
     }
   }
 }
