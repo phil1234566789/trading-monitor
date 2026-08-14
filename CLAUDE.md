@@ -595,8 +595,21 @@ to every session in this repo.
   applies, ask Philip immediately before starting the actual work. **On finishing the task, do NOT
   set `status="done"` directly — set `status="review"` instead** and tell Philip it's ready for
   review; only set `status="done"` once Philip has explicitly confirmed the result in chat ("passt"
-  o.ä.). If he instead says something needs fixing, set `status="work in progress"` again and repeat
-  the cycle (work in progress → review) until he confirms. **Once the agent actually runs `git push`
+  o.ä.). **Setting `status="review"` is the agent's own action the moment it's done implementing —
+  never wait for Philip to say "go ahead and set it to review" or phrase a reply as if that
+  decision were his to trigger** (e.g. don't say "sag Bescheid, dann setz ich auf review" — set it
+  first, then tell him it's ready). Only the done↔review handoff itself needs his confirmation, not
+  the work-in-progress→review one. Missed 2026-08-14: after finishing implementation, the agent
+  told Philip it would set `status="review"` once he confirmed it looked right, instead of setting
+  it immediately and asking him to review — Philip had to point out the mixup. If he instead says something needs fixing, set `status="work in progress"` again and repeat
+  the cycle (work in progress → review) until he confirms. **"Needs fixing" includes any plain
+  follow-up change/refinement request, not just an explicit "das passt nicht" — and the revert to
+  `work in progress` must happen proactively, before starting on the new request, not only after
+  Philip notices the status is stale and asks about it himself.** Missed twice, 2026-08-14: a
+  task was moved to `review`, Philip replied with a follow-up change request (no explicit "passt
+  nicht"), the agent just started implementing it without reverting the status first — Philip had
+  to ask "ist der status nicht zurück in work in progress gegangne?" himself both times. **Once the
+  agent actually runs `git push`
   for that task's commit(s), it must call `set_task_status(id, "released")` itself right after the
   push succeeds** — don't leave it on `done` waiting for something else to notice. Do NOT rely on a
   CI/deploy step to bulk-flip `done`→`released` on every deploy: several agents commonly work in
