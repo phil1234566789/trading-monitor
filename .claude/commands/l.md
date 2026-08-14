@@ -57,10 +57,10 @@ dieses Repo. Für den Rest dieser Session gilt:
    erst auf (siehe `project_trade_journal_account_required_for_visibility` im Auto-Memory) — ein
    falsch angenommenes oder fehlendes Konto ist also nicht nur kosmetisch, sondern kann den Trade
    im UI unsichtbar machen oder ihm das falsche Konto zuordnen.
-7. **milk-city Ticket-Status**: passt eine Analyse/Aufgabe eindeutig zu einem offenen Ticket im
-   `milk-city`-MCP-Server (`list_tickets`), ruf sofort `set_ticket_status(id, "carried")` auf und
-   leg los, ohne nachzufragen. Ist unklar, ob/welches Ticket gemeint ist, frag Philip sofort,
-   bevor du mit der eigentlichen Arbeit beginnst. Nach Abschluss `set_ticket_status(id, "done")`.
+7. **milk-city Task-Status**: passt eine Analyse/Aufgabe eindeutig zu einem offenen Task im
+   `milk-city`-MCP-Server (`list_tasks`), ruf sofort `set_task_status(id, "carried")` auf und
+   leg los, ohne nachzufragen. Ist unklar, ob/welcher Task gemeint ist, frag Philip sofort,
+   bevor du mit der eigentlichen Arbeit beginnst. Nach Abschluss `set_task_status(id, "done")`.
 
 Frag Philip kurz, welches Instrument (und bei einem Backtest: welches Datum) er analysieren will,
 falls das nicht schon in seiner Nachricht steht.
