@@ -590,14 +590,30 @@ to every session in this repo.
   old name afterward, not just the one call site that was pointed at.
 - **milk-city task status**: at the start of any task, check whether it clearly matches an open
   task in the `milk-city` MCP server (`list_tasks`) — e.g. a task mentioning "RSI" clearly
-  matches the `rsi-divergenz` task. If it clearly matches, call `set_task_status(id, "carried")`
+  matches the `rsi-divergenz` task. If it clearly matches, call `set_task_status(id, "work in progress")`
   immediately and start working, no confirmation needed. If it's unclear whether/which task
-  applies, ask Philip immediately before starting the actual work. On finishing the task, call
-  `set_task_status(id, "done")`. This is what drives milk-city's live "who's working on what"
-  display — see `milk-city/supabase/functions/mcp/` for the tool implementations. (Renamed from
-  "ticket" to "task" 2026-08-14, Philip: "Ticket passt iwie nicht mehr, Task passt viel besser" —
-  same DB table/MCP tools, just renamed throughout, see milk-city's own migration
-  `20260814090000_tickets_rename_to_tasks.sql`.)
+  applies, ask Philip immediately before starting the actual work. **On finishing the task, do NOT
+  set `status="done"` directly — set `status="review"` instead** and tell Philip it's ready for
+  review; only set `status="done"` once Philip has explicitly confirmed the result in chat ("passt"
+  o.ä.). If he instead says something needs fixing, set `status="work in progress"` again and repeat
+  the cycle (work in progress → review) until he confirms. **Once the agent actually runs `git push`
+  for that task's commit(s), it must call `set_task_status(id, "released")` itself right after the
+  push succeeds** — don't leave it on `done` waiting for something else to notice. Do NOT rely on a
+  CI/deploy step to bulk-flip `done`→`released` on every deploy: several agents commonly work in
+  parallel across different tasks with separate commits/pushes, so a shared deploy trigger can't
+  tell which specific task a given deploy actually shipped — only the agent that did the push knows.
+  (Philip 2026-08-14, rejecting a "deploy auto-marks all done tasks released" task idea proposed
+  right after this: "da gleich mehrere agenten arbeiten und unterschiedliche commits und pushes
+  machen, muss jeder agent den task status selbst setzen, nachdem er gepusht hat".) This is what
+  drives milk-city's live "who's working on what" display — see `milk-city/supabase/functions/mcp/`
+  for the tool implementations. (Renamed from "ticket" to "task" 2026-08-14, Philip: "Ticket passt iwie nicht
+  mehr, Task passt viel besser" — same DB table/MCP tools, just renamed throughout, see milk-city's
+  own migration `20260814090000_tickets_rename_to_tasks.sql`. `review` status added 2026-08-14
+  right after the `carried`→`work in progress` rename, same chat, Philip: "das bedeutet: du bist
+  fertig, ich soll es reviewen ... sobald ich sag: das passt noch nicht, fix das und jenes => dann
+  wieder von vorne: work-in-progress -> review" — in the world, the responsible character stays in
+  its idle animation during review but shows an exclamation-mark badge over its head instead of the
+  working animation, see milk-city's `WorldScene.js` `handleTaskReview()`.)
 - **milk-city: auto-create a task from a confirmed-feasible idea**: when Philip asks a
   "geht das/ist das teuer einzubauen?"-style question about a potential feature and the answer
   confirms it's feasible with a concrete approach (not just "yes in theory"), call `create_task`
@@ -605,7 +621,7 @@ to every session in this repo.
   approach, not just the restated problem) instead of leaving it sitting in chat — don't wait to
   be told "make this a task" each time. If it's unclear which project the idea belongs to, ask
   rather than guess. Creating the task doesn't imply starting it — only call
-  `set_task_status(id, "carried")` once work actually begins, per the convention above. Philip
+  `set_task_status(id, "work in progress")` once work actually begins, per the convention above. Philip
   2026-08-14, right after the `tasks.description` column shipped, gave a worked example (Tile-
   Editor undo-stack question) and said explicitly "wenn ich dir sowas gebe, sollst du das direkt
   in einen task umwandeln."
