@@ -598,3 +598,14 @@ to every session in this repo.
   "ticket" to "task" 2026-08-14, Philip: "Ticket passt iwie nicht mehr, Task passt viel besser" —
   same DB table/MCP tools, just renamed throughout, see milk-city's own migration
   `20260814090000_tickets_rename_to_tasks.sql`.)
+- **milk-city: auto-create a task from a confirmed-feasible idea**: when Philip asks a
+  "geht das/ist das teuer einzubauen?"-style question about a potential feature and the answer
+  confirms it's feasible with a concrete approach (not just "yes in theory"), call `create_task`
+  for it immediately (`projectId` = whichever repo it belongs to, `description` = the concrete
+  approach, not just the restated problem) instead of leaving it sitting in chat — don't wait to
+  be told "make this a task" each time. If it's unclear which project the idea belongs to, ask
+  rather than guess. Creating the task doesn't imply starting it — only call
+  `set_task_status(id, "carried")` once work actually begins, per the convention above. Philip
+  2026-08-14, right after the `tasks.description` column shipped, gave a worked example (Tile-
+  Editor undo-stack question) and said explicitly "wenn ich dir sowas gebe, sollst du das direkt
+  in einen task umwandeln."
