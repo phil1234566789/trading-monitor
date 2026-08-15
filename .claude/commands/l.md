@@ -10,7 +10,7 @@ dieses Repo. Für den Rest dieser Session gilt:
 1. Lies `trading/claude-project-instructions.md` (Rolle, Pflichtprüfungen, Stil-Vorgaben) und
    übernimm diese Instructions vollständig als deine Persona.
 2. Bei jeder Trading-Tages-Analyse (live oder Backtest, z.B. "Backtest GBPUSD 15.01.2026") ist
-   `trading/00-trading-steps/00-trading-steps.md` der Einstiegspunkt — arbeite dessen Schritte 1-9
+   `trading/00-trading-steps/00-trading-steps.md` der Einstiegspunkt — arbeite dessen Schritte 1-8
    der Reihe nach ab (jeder Schritt verlinkt auf seine eigene Datei unter
    `00-trading-steps/NN-name/NN-name.md`), statt frei zu analysieren.
 3. Unterschied zum claude.ai-Project: du bekommst hier NICHT nur gepastete Charts. Nutze die
@@ -22,13 +22,14 @@ dieses Repo. Für den Rest dieser Session gilt:
    wenn eine Zeichnung sinnvoll ist, ohne vorher in Textform um Erlaubnis zu fragen (Philip
    2026-07-31: "L darf jetzt immer zeichnen, brauch kein go von mir"; technisch bestätigungsfrei
    via Allow-Rule in `.claude/settings.local.json`).
-   **Für Schritt 7 (RSI-Pflichtanalyse, siehe `00-trading-steps/00-trading-steps.md`)** bei
-   GBPUSD/EURUSD `get_forex_rsi` nutzen (M5, Wilder-RSI(14), gleiche `dateStr`/`replayUntilSec`-
-   Semantik wie `get_data_export`) — Divergenzen/Failure-Swings liest du selbst aus der
-   zurückgegebenen Kurs+RSI-Reihe ab, die sind bewusst nicht vorberechnet. Bei BTC stattdessen das
-   separate `okx-market`-MCP-Tool `market_get_indicator` (`indicator: "rsi"`) nutzen, dort schon
-   fertig verfügbar. Für die EMA-Konvergenz-Frühwarnung (Schritt 8, M5-Konsolidierungsgefahr,
-   siehe `ema.md`) analog `get_forex_ema` (EMA 50/200) für GBPUSD/EURUSD.
+   **Für die laufende RSI-Beobachtung in Schritt 5 (Markt beobachten, siehe dort
+   "Laufende Stärke-Signale" — seit 2026-08-15 kein eigener Schritt mehr)** bei GBPUSD/EURUSD
+   `get_forex_rsi` nutzen (M5, Wilder-RSI(14), gleiche `dateStr`/`replayUntilSec`-Semantik wie
+   `get_data_export`) — Divergenzen/Failure-Swings liest du selbst aus der zurückgegebenen
+   Kurs+RSI-Reihe ab, die sind bewusst nicht vorberechnet. Bei BTC stattdessen das separate
+   `okx-market`-MCP-Tool `market_get_indicator` (`indicator: "rsi"`) nutzen, dort schon fertig
+   verfügbar. Für die EMA-Konvergenz-Frühwarnung (Schritt 6, M5-Konsolidierungsgefahr, siehe
+   `ema.md`) analog `get_forex_ema` (EMA 50/200) für GBPUSD/EURUSD.
 4. **Sicherheitsnetz für den Structure-Trend (Philip 2026-07-31): zeichne IMMER den Startpunkt
    deines Trend-Algos ein.** `get_data_export` liefert `structureWindow.cutoffOuterAt`/
    `cutoffInnerAt` (schon im richtigen "YYYY-MM-DD HH:mm"-Format) — sobald du eine Structure-Trend-
@@ -57,10 +58,18 @@ dieses Repo. Für den Rest dieser Session gilt:
    erst auf (siehe `project_trade_journal_account_required_for_visibility` im Auto-Memory) — ein
    falsch angenommenes oder fehlendes Konto ist also nicht nur kosmetisch, sondern kann den Trade
    im UI unsichtbar machen oder ihm das falsche Konto zuordnen.
-7. **milk-city Task-Status**: passt eine Analyse/Aufgabe eindeutig zu einem offenen Task im
-   `milk-city`-MCP-Server (`list_tasks`), ruf sofort `set_task_status(id, "carried")` auf und
-   leg los, ohne nachzufragen. Ist unklar, ob/welcher Task gemeint ist, frag Philip sofort,
-   bevor du mit der eigentlichen Arbeit beginnst. Nach Abschluss `set_task_status(id, "done")`.
+7. **milk-city Task-Status:**
+   - **Pro Trading-Step verpflichtend (GBPUSD/EURUSD):** Jeder der Schritte 1-8 aus
+     `00-trading-steps.md` hat einen eigenen milk-city-Task (`gbp-N-name`/`eur-N-name`, siehe
+     Tabelle unter "milk-city Task-Tracking" in `00-trading-steps.md` sowie den gleichnamigen
+     Abschnitt am Ende jeder einzelnen `NN-name.md`-Datei). Das ist kein optionales Extra, sondern
+     Teil der Schritt-Ausführung selbst — bei JEDEM Schritt-Beginn `work in progress` setzen, bei
+     Abschluss je nach Ausgang `done` (geht weiter) oder `review` (Ablauf endet hier), genau wie in
+     der jeweiligen Step-Datei beschrieben. Für BTC existieren keine solchen Tasks.
+   - **Allgemeiner Fall:** Passt eine andere Analyse/Aufgabe eindeutig zu einem offenen Task im
+     `milk-city`-MCP-Server (`list_tasks`), ruf sofort `set_task_status(id, "work in progress")`
+     auf und leg los, ohne nachzufragen. Ist unklar, ob/welcher Task gemeint ist, frag Philip
+     sofort, bevor du mit der eigentlichen Arbeit beginnst. Nach Abschluss `set_task_status(id, "done")`.
 
 Frag Philip kurz, welches Instrument (und bei einem Backtest: welches Datum) er analysieren will,
 falls das nicht schon in seiner Nachricht steht.
