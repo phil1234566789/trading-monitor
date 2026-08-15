@@ -68,8 +68,14 @@ export async function fetchTrades(instrument, accountId = null) {
   ] = await Promise.all([
     supabase.from("trade_targets").select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high, timeframe").in("dealing_range_id", rangeIds),
     supabase.from("trade_partial_exits").select("trade_position_id, price, exit_time, portion_pct").in("trade_position_id", positionIds),
-    supabase.from("trade_confirmations").select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high, timeframe").in("dealing_range_id", rangeIds),
-    supabase.from("trade_confirmations").select("id, trade_position_id, price, kind, source_time, touched_time, range_low, range_high, timeframe").in("trade_position_id", positionIds),
+    supabase
+      .from("trade_confirmations")
+      .select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi")
+      .in("dealing_range_id", rangeIds),
+    supabase
+      .from("trade_confirmations")
+      .select("id, trade_position_id, price, kind, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi")
+      .in("trade_position_id", positionIds),
     lessonTargetIds.length > 0
       ? supabase.from("dealing_ranges").select("id, instrument, direction").in("id", lessonTargetIds)
       : Promise.resolve({ data: [], error: null }),
@@ -109,6 +115,13 @@ export async function fetchTrades(instrument, accountId = null) {
       rangeHigh: c.range_high ?? null,
       // Nur bei kind='ob' gesetzt — Zeitebene der Zone, siehe PriceChart.vue: refreshTradeTargetLinksInternal.
       timeframe: c.timeframe ?? null,
+      // Nur bei kind='rsi_divergence' gesetzt (siehe tradeConfirmations.ts) — price/sourceTime/
+      // touchedTime tragen bereits toPrice/fromTime/toTime, diese drei zusätzlich, damit sich die
+      // Divergenz als vollständiger Zwei-Bein-Konnektor nachzeichnen lässt.
+      fromPrice: c.from_price ?? null,
+      fromRsi: c.from_rsi ?? null,
+      toRsi: c.to_rsi ?? null,
+      divergenceType: c.divergence_type ?? null,
     };
   }
 

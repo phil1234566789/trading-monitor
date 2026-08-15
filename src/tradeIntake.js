@@ -283,6 +283,13 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
     // Nur bei kind='ob' gesetzt — Zeitebene der Zone (1H/4H/5M), damit die Box live per
     // detectOrderBlocks nachvollzogen werden kann (siehe addTargetToTrade).
     timeframe: confirmation.timeframe ?? null,
+    // Nur bei kind='rsi_divergence' gesetzt (siehe PriceChart.vue: findClickedDivergence) — price/
+    // source_time/touched_time tragen bereits toPrice/fromTime/toTime, diese drei zusätzlichen
+    // Felder machen die Divergenz später wieder als vollständigen Zwei-Bein-Konnektor zeichenbar.
+    divergence_type: confirmation.divergenceType ?? null,
+    from_price: confirmation.fromPrice ?? null,
+    from_rsi: confirmation.fromRsi ?? null,
+    to_rsi: confirmation.toRsi ?? null,
   });
   if (error) {
     console.error("Bestätigung hinzufügen fehlgeschlagen:", error);

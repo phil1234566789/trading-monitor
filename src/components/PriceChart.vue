@@ -1017,6 +1017,22 @@ function refreshTradeConfirmationLinksInternal() {
     for (const confirmation of t.confirmations ?? []) {
       if (confirmation.sourceTime == null) continue;
       const label = `✔ ${confirmationKindLabel(confirmation.kind)} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`;
+      // RSI-Divergenz-Bestätigungen als echter Zwei-Bein-Konnektor (dieselbe DivergenceLinePrimitive
+      // wie die live erkannten Divergenzen, siehe refreshRsiDivergenceInternal) statt nur einer
+      // horizontalen Linie — sourceTime/touchedTime tragen bereits fromTime/toTime (siehe
+      // findClickedDivergence), price/fromPrice die beiden Preis-Enden. Nur an candleSeries, kein
+      // eigenes RSI-Bein hier (die Bestätigungs-Box soll auch ohne offene RSI-Pane sichtbar sein).
+      if (confirmation.kind === "rsi_divergence" && confirmation.fromPrice != null) {
+        const primitive = new DivergenceLinePrimitive(
+          { time: confirmation.sourceTime, price: confirmation.fromPrice },
+          { time: confirmation.touchedTime, price: confirmation.price },
+          { color: cssColor("tradeConfirmation"), lineWidth: lineWidth("tradeConfirmation"), label },
+          candles,
+        );
+        candleSeries.attachPrimitive(primitive);
+        tradeConfirmationLinkPrimitives.push(primitive);
+        continue;
+      }
       // OB-Bestätigungen als echte Box statt nur einer Linie (siehe refreshTradeTargetLinksInternal
       // — dieselbe Begründung, dieselbe touchedTime-vor-liveObZoneState-Priorität).
       if (confirmation.kind === "ob" && confirmation.rangeLow != null && confirmation.rangeHigh != null) {
@@ -1881,6 +1897,37 @@ function findClickedFibLevel(param) {
   return null;
 }
 
+// Bestätigungs-Modus, vierte Klick-Fläche (milk-city Task "Divergenzen zur Dealing Range
+// verknüpfen (klickbar)", 2026-08-15) — NUR im Bestätigungs-Modus aktiv (analog zu Fib: eine
+// Divergenz ist bereits passierte Evidenz, keine sinnvolle künftige Preis-Erwartung wie Pivot/OB).
+// Nutzt dieselben Primitives wie die live Divergenz-Zeichnung (divergencePriceLinePrimitives,
+// siehe refreshRsiDivergenceInternal) samt ihrer bereits vorhandenen distanceTo()-Punkt-zu-Strecke-
+// Projektion — eine Divergenz ist also nur klickbar, wenn sie gerade sichtbar gezeichnet ist
+// (showRsiDivergence/-History + showRsi an), wie ein Fib-Tick nur bei aktiver Struktur-Anzeige.
+// price=toPrice/sourceTime=fromTime/touchedTime=toTime (wie ein Pivot: Linie von Entstehung bis
+// späterem "Touch", hier: von Referenz- bis geprüfter Schwungmarke) — fromPrice/fromRsi/toRsi/
+// divergenceType zusätzlich, sonst wäre die Divergenz später nicht mehr nachzeichenbar (siehe
+// Migration 20260815120000_trade_confirmations_rsi_divergence.sql).
+const DIVERGENCE_CLICK_TOLERANCE_PX = 10;
+function findClickedDivergence(param) {
+  if (!param.point) return null;
+  for (const p of divergencePriceLinePrimitives) {
+    if (p.distanceTo(param.point.x, param.point.y) > DIVERGENCE_CLICK_TOLERANCE_PX) continue;
+    const d = p.divergence;
+    return {
+      kind: "rsi_divergence",
+      price: d.toPrice,
+      sourceTime: d.fromTime,
+      touchedTime: d.toTime,
+      fromPrice: d.fromPrice,
+      fromRsi: d.fromRsi,
+      toRsi: d.toRsi,
+      divergenceType: d.type,
+    };
+  }
+  return null;
+}
+
 // Vereinigt beide Ziel-Modus-Klick-Flächen (Chat 2026-07-28) — Linie zuerst (präziser, kleinere
 // Toleranz = eindeutigerer Treffer), Box als Fallback. Liefert ein Objekt im TradeTarget-Rohformat
 // (siehe tradeTargets.ts), das direkt an addTargetToTrade durchgereicht werden kann.
@@ -2612,6 +2659,14 @@ onMounted(() => {
         emit("select-target", fib);
         return;
       }
+      // RSI-Divergenz NUR im Bestätigungs-Modus (siehe findClickedDivergence), vor findClickedTarget
+      // geprüft — sonst würde ein Klick auf den Divergenz-Konnektor evtl. stattdessen eine darunter
+      // liegende Liquiditäts-Linie/OB-Zone treffen.
+      const divergence = props.confirmationModeActive && findClickedDivergence(param);
+      if (divergence) {
+        emit("select-target", divergence);
+        return;
+      }
       // Ganzes Trade-Setup (LS+OB, evtl. PP) anklicken -> alle Teile auf einmal als Bestätigungen
       // übernehmen (Chat 2026-07-31: "ich kann leider kein Short-Setup anklicken ... LS und OB
       // sollen als Bestätigung aufgenommen werden, PP als Stop-Loss") — NUR im Bestätigungs-Modus,
@@ -2811,7 +2866,8 @@ onMounted(() => {
     if (props.tradeModeActive) {
       const point = { point: { x, y } };
       const hit = props.targetModeActive
-        ? (props.confirmationModeActive && (findClickedFibLevel(point) || findClickedSetup(point))) || findClickedTarget(point)
+        ? (props.confirmationModeActive && (findClickedFibLevel(point) || findClickedDivergence(point) || findClickedSetup(point))) ||
+          findClickedTarget(point)
         : findClickedSetup(point);
       chartContainerRef.value.style.cursor = hit ? "pointer" : "";
       return;

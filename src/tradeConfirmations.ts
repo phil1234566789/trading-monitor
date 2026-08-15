@@ -8,7 +8,7 @@ import { businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
 import { classifyAge, type AgeTier } from "./ageTier";
 import { fmtPrice, pricePrecisionForInstrument } from "./format.js";
 
-export type TradeConfirmationKind = "pivot" | "ob" | "fib";
+export type TradeConfirmationKind = "pivot" | "ob" | "fib" | "rsi_divergence";
 
 export interface TradeConfirmation {
   id: number;
@@ -22,11 +22,20 @@ export interface TradeConfirmation {
   // weitergewandert ist (der ganze Grund, wieso Philip das als Trade-Bestätigung festhalten will).
   rangeLow: number | null;
   rangeHigh: number | null;
+  // Nur bei kind='rsi_divergence' gesetzt (siehe src/rsi.js: detectRsiDivergence/-History) —
+  // sourceTime/touchedTime tragen bereits fromTime/toTime, price bereits toPrice (wie 'ob' den
+  // nahen Zonen-Rand als price führt); diese drei zusätzlichen Felder machen die Divergenz später
+  // wieder als vollständigen Zwei-Bein-Konnektor zeichenbar (DivergenceLinePrimitive), nicht nur
+  // als einzelne Linie.
+  fromPrice: number | null;
+  fromRsi: number | null;
+  toRsi: number | null;
+  divergenceType: "bearish" | "bullish" | null;
 }
 
 // "Sweep" statt "Pivot" (anders als tradeTargets.ts: kindLabel) — eine Bestätigung ist per
 // Definition schon geschehen, "Pivot" allein würde das nicht ausdrücken.
-const KIND_LABEL: Record<TradeConfirmationKind, string> = { pivot: "Sweep", ob: "OB", fib: "Fib" };
+const KIND_LABEL: Record<TradeConfirmationKind, string> = { pivot: "Sweep", ob: "OB", fib: "Fib", rsi_divergence: "Div" };
 
 export function kindLabel(kind: TradeConfirmationKind): string {
   return KIND_LABEL[kind] ?? kind;
@@ -58,7 +67,9 @@ export function formatConfirmationLabel(confirmation: TradeConfirmation, instrum
   const rangeHint =
     confirmation.kind === "fib" && confirmation.rangeLow != null && confirmation.rangeHigh != null
       ? ` (${fmtPrice(confirmation.rangeLow, precision)}–${fmtPrice(confirmation.rangeHigh, precision)})`
-      : "";
+      : confirmation.kind === "rsi_divergence" && confirmation.fromPrice != null
+        ? ` (${confirmation.divergenceType === "bearish" ? "▽" : "△"} ${fmtPrice(confirmation.fromPrice, precision)}→${price})`
+        : "";
   const seconds = confirmationAgeSeconds(confirmation, nowSec);
   if (seconds == null) return `${kind} ${price}${rangeHint} #${confirmation.id}`;
   const tier = classifyAge(seconds);
