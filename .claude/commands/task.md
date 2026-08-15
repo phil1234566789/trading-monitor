@@ -1,12 +1,31 @@
 ---
-description: "Nur milk-city Task/Feature/Project-Datenpflege (list/get/create/update/set_status) -- KEIN Code schreiben, ausser bei explizitem '/task do <task>'-Praefix (dann: referenzierten Task tatsaechlich umsetzen)"
+description: "Nur milk-city Task/Feature/Project-Datenpflege (list/get/create/update/set_status) -- KEIN Code schreiben, ausser bei explizitem '/task do <task>'-Praefix (dann: referenzierten Task tatsaechlich umsetzen). '/task new <text>' legt sofort einen neuen Task an, ohne dass Philip das erst ausformulieren muss."
 ---
+
+## Modus "/task new <text>": Sofort einen neuen Task anlegen
+
+Prüfe, ob Philips Anfrage mit `new ` beginnt (z.B. `/task new RSI-Tooltip fehlt bei Hover auf
+Divergenz-Marker`). Falls ja: Philip will direkt einen neuen Task anlegen, ohne das erst in Worten
+("leg mir bitte einen neuen Task an...") einleiten zu müssen — der Text nach `new ` IST die
+Rohbeschreibung des gewünschten Tasks, nicht eine Frage oder ein anderer Befehl. Verfahre wie folgt:
+
+1. Lies den Text nach `new ` als Ist-Zustand/Problem/Ziel des neuen Tasks.
+2. `projectId`: Standardmäßig das Repo, in dem diese Session gerade läuft (cwd) — außer der Text
+   nennt explizit ein anderes Projekt (z.B. "unter milk-city", "in trading"). Bei Unklarheit lieber
+   kurz auf Deutsch nachfragen als raten (gilt weiterhin, wie unten beschrieben).
+3. Titel und Beschreibung nach den selben Regeln formulieren wie im Rest dieses Dokuments (nicht
+   1:1 übernehmen, umformulieren, KI-optimiert, vorher `list_tasks` auf Stil/Länge prüfen) — dieser
+   Modus ändert nur, DASS sofort angelegt wird, nicht WIE Titel/Beschreibung entstehen.
+4. Status bleibt `open` (Default von `create_task`), es sei denn Philip sagt im selben Atemzug,
+   dass sofort losgelegt werden soll — dann zusätzlich `set_task_status(id, "work in progress")`.
+5. `new` legt nur die Task-Daten an, implementiert nichts — dafür ist der `do`-Modus unten da (ein
+   bestehender, bereits angelegter Task).
 
 ## Modus "/task do <task>": Ausnahme von der Datenpflege-Regel
 
-Prüfe zuerst, ob Philips Anfrage (siehe `$ARGUMENTS` ganz unten) mit `do ` beginnt (z.B. `/task do
-rsi-divergenz`, `/task do task-xyz`, `/task do Tile-Editor Undo`). Falls ja, gilt ab hier NICHT die
-"keine Implementierung"-Regel weiter unten — stattdessen:
+Prüfe als nächstes, ob Philips Anfrage (siehe `$ARGUMENTS` ganz unten) mit `do ` beginnt (z.B.
+`/task do rsi-divergenz`, `/task do task-xyz`, `/task do Tile-Editor Undo`). Falls ja, gilt ab hier
+NICHT die "keine Implementierung"-Regel weiter unten — stattdessen:
 
 1. Finde den gemeinten Task über `list_tasks`/`get_task` (per ID oder Titel-Fuzzy-Match auf den
    Text nach `do `). Bei mehreren plausiblen Treffern oder wenn nichts eindeutig passt: kurz auf
@@ -22,7 +41,7 @@ rsi-divergenz`, `/task do task-xyz`, `/task do Tile-Editor Undo`). Falls ja, gil
    Folge-Feedback vor dem Weitermachen zurück auf `work in progress`; erst nach Philips expliziter
    Bestätigung `done`; nach einem eigenen `git push` für diesen Task selbst `released` setzen.
 
-Ist Philips Anfrage NICHT mit `do ` eingeleitet, gilt ab hier ausschliesslich die
+Ist Philips Anfrage weder mit `new ` noch mit `do ` eingeleitet, gilt ab hier ausschliesslich die
 Datenpflege-Beschreibung im Rest dieses Dokuments — dann will Philip ausschliesslich milk-city-**Tasks**, -**Features** (die
 übergeordnete Gruppierung mehrerer Tasks, ein "Raum" im MC-Raster) oder -**Projects** über die
 MCP-Tools (`list_tasks`, `get_task`, `create_task`, `update_task`, `set_task_status`,
