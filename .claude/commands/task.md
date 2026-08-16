@@ -1,5 +1,5 @@
 ---
-description: "Nur milk-city Task/Feature/Project-Datenpflege (list/get/create/update/set_status) -- KEIN Code schreiben, ausser bei explizitem '/task do <task>'-Praefix (dann: referenzierten Task tatsaechlich umsetzen). '/task new <text>' legt sofort einen neuen Task an, ohne dass Philip das erst ausformulieren muss."
+description: "Nur milk-city Task/Feature/Project-Datenpflege (list/get/create/update/set_status) -- KEIN Code schreiben, ausser bei explizitem '/task do <task>'-Praefix (dann: referenzierten Task tatsaechlich umsetzen). '/task new <text>' legt sofort einen neuen Task an, ohne dass Philip das erst ausformulieren muss. '/task refine <task-oder-idee>' plant erst gemeinsam im Chat, bevor Task-Daten angelegt/geaendert werden -- fuer den Fall, dass Philip selbst noch nicht weiss, wie etwas umgesetzt werden soll."
 ---
 
 ## Modus "/task new <text>": Sofort einen neuen Task anlegen
@@ -9,10 +9,15 @@ Divergenz-Marker`). Falls ja: Philip will direkt einen neuen Task anlegen, ohne 
 ("leg mir bitte einen neuen Task an...") einleiten zu müssen — der Text nach `new ` IST die
 Rohbeschreibung des gewünschten Tasks, nicht eine Frage oder ein anderer Befehl. Verfahre wie folgt:
 
-1. Lies den Text nach `new ` als Ist-Zustand/Problem/Ziel des neuen Tasks.
+1. Lies den Text nach `new ` als Ist-Zustand/Problem/Ziel des neuen Tasks. Geht daraus nicht klar
+   hervor, WAS konkret gemacht werden soll (nur ein Problem beschrieben, aber kein Ansatz; mehrere
+   plausible Lesarten; eine für eine spätere Implementierung ohne Rückfrage nötige Angabe fehlt):
+   nicht raten und nicht mit einer vagen Beschreibung anlegen — sofort auf Deutsch nachfragen und ab
+   da wie im `refine`-Modus unten gemeinsam klären, bis ein konkreter Ansatz steht. Erst dann mit
+   Schritt 2 weiter.
 2. `projectId`: Standardmäßig das Repo, in dem diese Session gerade läuft (cwd) — außer der Text
    nennt explizit ein anderes Projekt (z.B. "unter milk-city", "in trading"). Bei Unklarheit lieber
-   kurz auf Deutsch nachfragen als raten (gilt weiterhin, wie unten beschrieben).
+   kurz auf Deutsch nachfragen als raten.
 3. Titel und Beschreibung nach den selben Regeln formulieren wie im Rest dieses Dokuments (nicht
    1:1 übernehmen, umformulieren, KI-optimiert, vorher `list_tasks` auf Stil/Länge prüfen) — dieser
    Modus ändert nur, DASS sofort angelegt wird, nicht WIE Titel/Beschreibung entstehen.
@@ -20,6 +25,38 @@ Rohbeschreibung des gewünschten Tasks, nicht eine Frage oder ein anderer Befehl
    dass sofort losgelegt werden soll — dann zusätzlich `set_task_status(id, "work in progress")`.
 5. `new` legt nur die Task-Daten an, implementiert nichts — dafür ist der `do`-Modus unten da (ein
    bestehender, bereits angelegter Task).
+
+## Modus "/task refine <task-oder-idee>": Erst gemeinsam planen, bevor Task-Daten entstehen
+
+Prüfe, ob Philips Anfrage mit `refine ` beginnt (z.B. `/task refine Tile-Editor Undo`, `/task
+refine Sprite soll nach links schauen können`). Dieser Modus ist für den Fall, dass Philip selbst
+noch nicht weiß, WIE etwas umgesetzt werden soll — Ziel ist ein gemeinsames Durchdenken im Chat.
+**Wie die normale Datenpflege-Regel unten gilt auch hier: keine Implementierung, unter keinen
+Umständen** — anders als `do` gibt es in `refine` keine Ausnahme davon, auch nicht auf Zuruf
+("leg direkt los"). Will Philip nach dem Klären tatsächlich sofort umsetzen, ist das ein separater,
+expliziter `/task do <task>`-Aufruf danach, nicht Teil von `refine` selbst.
+
+1. Prüfe per `list_tasks`/`get_task`, ob der Text auf einen bestehenden Task passt (gleicher
+   Fuzzy-Match wie im `do`-Modus). Zwei Fälle:
+   - **Bestehender Task gefunden**: dessen aktuelle Beschreibung ist die Diskussionsgrundlage,
+     wird aber NICHT sofort verändert.
+   - **Kein passender Task**: Philip bringt ein neues Thema/eine neue Idee ein, die noch gar nicht
+     als Task existiert — der Normalfall, wenn er selbst noch keinen Ansatz hat. Auch hier: noch
+     nichts anlegen.
+2. Führe ein echtes Planungsgespräch statt Task-Daten zu schreiben: Ist-Zustand kurz einordnen
+   (Code lesen/grep bei Bedarf, wie in der Beschreibungs-Regel unten — reine Recherche, keine
+   Implementierung), mögliche Ansätze samt Trade-offs nennen, offene Fragen konkret stellen. Kein
+   Rätselraten und keine stillschweigenden Annahmen — lieber eine Frage zu viel als eine falsche
+   Annahme, die Philip erst hinterher korrigieren muss.
+3. Erst NACHDEM Philip einen konkreten Ansatz bestätigt hat, Task-Daten schreiben (nie vorher):
+   - Bestehender Task → `update_task` mit der neu formulierten, jetzt konkreten Beschreibung
+     (gleiche Qualitätsregel wie unten: KI-optimiert, Ist-Zustand + Ziel/Ansatz, keine
+     1:1-Übernahme von Philips Formulierung).
+   - Neue Idee → `create_task` (Status bleibt `open`; `work in progress` NICHT setzen, selbst wenn
+     Philip direkt loslegen will — das läuft dann über `/task do`, s.o.).
+4. Solange der Ansatz noch nicht steht: keine Tool-Aufrufe, die Task/Feature-Daten verändern
+   (`create_task`/`update_task`/`set_task_status`) — dieser Modus lebt vom Gespräch, nicht vom
+   frühzeitigen Festschreiben einer halbfertigen Beschreibung.
 
 ## Modus "/task do <task>": Ausnahme von der Datenpflege-Regel
 
@@ -41,7 +78,7 @@ NICHT die "keine Implementierung"-Regel weiter unten — stattdessen:
    Folge-Feedback vor dem Weitermachen zurück auf `work in progress`; erst nach Philips expliziter
    Bestätigung `done`; nach einem eigenen `git push` für diesen Task selbst `released` setzen.
 
-Ist Philips Anfrage weder mit `new ` noch mit `do ` eingeleitet, gilt ab hier ausschliesslich die
+Ist Philips Anfrage weder mit `new `, `refine ` noch mit `do ` eingeleitet, gilt ab hier ausschliesslich die
 Datenpflege-Beschreibung im Rest dieses Dokuments — dann will Philip ausschliesslich milk-city-**Tasks**, -**Features** (die
 übergeordnete Gruppierung mehrerer Tasks, ein "Raum" im MC-Raster) oder -**Projects** über die
 MCP-Tools (`list_tasks`, `get_task`, `create_task`, `update_task`, `set_task_status`,
