@@ -293,15 +293,30 @@ was Philip's explicit call ("bissl beschriften, damit man sie leichter zuordnen 
 oversight. Its color is `chartColors.newsEvent` (StyleModal group "News"), like every other
 chart-drawn indicator in this repo — don't hardcode a color literal here if you touch this file.
 
-### MCP server (`mcp-server/`)
+### MCP server (`mcp-server/` source → `supabase/functions/trading-monitor-mcp/` deployed)
 
-A local, stdio-transport MCP server exposing this app's data as tools for Claude, added 2026-07-31
-to replace the manual "Daten-Export button → copy/paste into a separate claude.ai Project → paste
-drawings back" workflow. Own `package.json`/`tsconfig.json` (separate deps from the Vite frontend:
-`@modelcontextprotocol/sdk`, `@supabase/supabase-js`, `zod`, run via `npx tsx`, no build step for
-local use). Registered project-scoped in the committed `.mcp.json` (alongside the pre-existing
-`okx-market` server) — auto-available whenever this repo is opened in Claude Code, after a one-time
-approval prompt.
+Exposes this app's data as tools for Claude, added 2026-07-31 to replace the manual "Daten-Export
+button → copy/paste into a separate claude.ai Project → paste drawings back" workflow. Originally a
+local, stdio-transport server (`mcp-server/`, `npx tsx src/index.ts`) — **since 2026-08-16/17
+(`c0fb43b`/`c154887`) deployed as the `trading-monitor-mcp` Supabase Edge Function**, HTTP transport,
+so it no longer needs Claude Code (or any local process) running to work. `.mcp.json` now points at
+`https://<project>.supabase.co/functions/v1/trading-monitor-mcp` with an
+`Authorization: Bearer ${TRADING_MONITOR_MCP_TOKEN}` header (own bearer-token scheme, not a Supabase
+JWT — `verify_jwt = false` for this function in `supabase/config.toml`, same pattern as milk-city's
+own `mcp` function) instead of the old "one-time local approval prompt" flow. Because the transport
+is HTTP now rather than stdio, this server (like milk-city's) can also be registered as a custom/
+remote connector directly in Claude Desktop or claude.ai — not just Claude Code.
+
+`mcp-server/` (own `package.json`/`tsconfig.json`, `@modelcontextprotocol/sdk`/`@supabase/supabase-js`/
+`zod`, run via `npx tsx`) still exists and is **not dead code** — it's the hand-edited authoring
+source: a change is written there first, then manually ported into
+`supabase/functions/trading-monitor-mcp/` (Deno-compatible imports — `npm:`-prefixed specifiers and
+`.ts` instead of `.js` extensions, see `c0fb43b`'s commit message for the exact conversion steps). The
+two copies are otherwise kept identical; if you change tool logic in one, check whether the other
+needs the same edit. `mcp-server/src/scripts/` (`backfillForexCandles.ts`, `backfillObZones.ts`,
+`rsiDivergenceStats.ts`) is the one part that stays Node-only on purpose — one-off local scripts,
+never ported to the edge function (a stray copy of these was even removed again from the edge
+function directory in `c154887` for exactly that reason).
 
 **Auth**: same anon-key pattern as `src/supabaseClient.js` (not service_role) — every table it
 touches already has permissive anon RLS (see the tables' migrations). Read-only for
@@ -385,10 +400,41 @@ actual runtime (it always runs via `tsx`, never via `tsc` emit).
 
 **Write tool (`post_chart_annotations`) safety**: originally deliberately kept OFF any permission
 auto-allow list ("Schreiben nur mit Philips Zustimmung", Philip 2026-07-31, same day) — reversed a
-few hours later the same day ("L darf jetzt immer zeichnen, brauch kein go von mir"), now allow-
-listed in `.claude/settings.local.json` (`mcp__trading-monitor__post_chart_annotations`, gitignored
-personal-machine setting, not `.claude/settings.json`) so it runs without a confirmation prompt.
-If Philip asks to tighten this again, remove that allow-list entry — there's no other gate.
+few hours later the same day ("L darf jetzt immer zeichnen, brauch kein go von mir"). **Since
+2026-08-17 (`a9cd42b`), `post_chart_annotations` is documented as NACHRANGIG (secondary) to the Pin
+tools below** — Philip: "sie soll primär die Pin-Funktion benutzen, chart_annotations nur noch, wenn
+eine Pin-Funktion das nicht kann" (remaining cases: marking a single candle, a free price note with
+no underlying detected object, RSI-divergence special cases). The tool's own description now states
+this explicitly, so Claude should reach for `add_pin_entry` first for anything with a matching Pin
+`kind`. `.claude/settings.local.json` (gitignored, personal-machine, not `.claude/settings.json`)
+allow-lists all three write tools — `add_pin_entry`/`remove_pin_entry`/`post_chart_annotations` —
+so none of them prompt for confirmation; `post_chart_annotations`'s entry had briefly dropped out of
+that file (caught and re-added 2026-08-17), so double-check the file directly if a confirmation
+prompt for it ever reappears unexpectedly.
+
+**Pin (`tools/pins.ts`, renamed from "Laniakea" 2026-08-17, `f2146a8`)**: lets Claude pin/unpin chart
+POIs — `ob_zone`/`liquidity_level`/`trade_setup`/`m5_ob`/`m5_liquidity_level`/`rsi_divergence` — into
+the `pin_context` table (renamed from `laniakea_context` in the same commit), mirroring Philip's own
+right-click "an Lana übergeben" action in the browser (Trades-Tabelle, Chart-Trade-Marker, an OB-zone,
+the setup-origin `#<id>` box, a confirmation box, an LQ-level line, an M5-OB box, or an RSI-divergence
+line). Was read-only until 2026-08-17 (`c724b33`) — Philip then asked for write access too so Claude
+doesn't have to wait for him to pin things manually. `trade_position`/`trade_confirmation` stay
+browser-only (right-click is the only way to add those, no MCP write tool for them) — Pin's write
+tools only cover the six chart-object kinds above. Three of those kinds (`m5_ob`/`m5_liquidity_level`/
+`rsi_divergence`) are pure snapshots (never persisted as their own DB rows — M5 OBs/liquidity levels/
+RSI divergences are all live-detected, not stored), so a pin's touched/invalidated state or the
+underlying RSI reading can have drifted since the snapshot was taken, with no later refresh.
+
+Two side effects landed in the same 2026-08-17 change (`c724b33`), not just the MCP tools themselves:
+chart highlighting (a "Pin-Halo" behind the line/box) for the previously-missing `liquidity_level`/
+`m5_liquidity_level` kinds (`src/liquidity.js`) and `rsi_divergence` (`src/rsiRendering.js`) — `m5_ob`
+already rode along on the existing `pinObZoneKeys` highlight set; and a Telegram "touch" alarm in
+`poi-watcher`, a consolidated pass over `pin_context` after the main per-instrument loop, checking
+`ob_zone`/`liquidity_level`/`trade_setup` pins against the freshly-upserted `touched` state from that
+same run and `m5_ob`/`m5_liquidity_level` pins directly against the current price — gated by its own
+`alarm_settings` toggle (`pin_context`) and new `notified`/`notified_at` columns, same pattern as
+every other alert type in this function. `rsi_divergence` pins are deliberately excluded from this
+alarm (a formation event, not a touch event — different alarm shape, left as a separate future task).
 
 **RSI/EMA (`get_forex_rsi`/`get_forex_ema`, added 2026-07-31)**: M5-only indicator tools for
 GBPUSD/EURUSD, both sharing the same `dateStr`/`replayUntilSec` window semantics as
@@ -569,6 +615,22 @@ to every session in this repo.
 - **Respond to Philip in German** (chat replies, not just code comments) — confirmed 2026-07-30
   ("bro DEUTSCH!"). Code identifiers/commit messages/PR text stay English as usual; this is about
   the conversational reply text.
+- **When Philip corrects a mistake in how Claude worked (not a trading-analysis call, but the
+  agent's own process — wrong tool priority, a skipped step, a missed convention), fix it
+  durably, not by writing an auto-memory entry alone.** Memory is a recall aid for Claude itself,
+  not an enforced mechanism — the same mistake can still happen again next time even with a memory
+  entry in place, because nothing guarantees the entry gets read or applied before the mistake
+  repeats. The actual fix belongs wherever it will structurally take effect next time: this
+  CLAUDE.md itself, an MCP tool's own description, a step file in the `trading` repo, a
+  `PreToolUse` hook, or server-side validation — whichever closes the root cause, not just the one
+  symptom. A memory entry can still be written in addition (context/why), but never as a
+  substitute for the durable fix. Bug report 2026-08-17 (missed the Pin-before-
+  `post_chart_annotations` rule during a EURUSD analysis): "wie oft soll ich noch sagen, dass es
+  mir nichts bringt wenn du die memory anpasst... dann machst du es beim nächsten mal wieder
+  falsch." This generalizes the same principle already documented for the Laniakea persona in
+  `trading/claude-project-instructions.md` ("Korrekturen — Doku/Regel fixen, nicht nur den
+  Output", scoped there to trading-analysis mistakes) to any process mistake in this repo, not
+  just trading-analysis ones.
 - Prefer small, targeted edits with a comment explaining the non-obvious reasoning over
   refactoring for its own sake — this is a solo hobby project with a lot of hard-won bugfix
   history encoded in comments; don't erase that context while "cleaning up."
