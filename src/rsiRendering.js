@@ -14,6 +14,8 @@
 // zwischen "Preis" und "RSI-Wert", solange es der Skala der jeweils angehängten Series entspricht).
 import { canShowLabels } from "./chartZoom.js";
 
+const PIN_HALO_EXTRA_WIDTH = 3; // px, zusätzlich zur normalen lineWidth (Chat 2026-08-17)
+
 class DivergenceLineRenderer {
   constructor(points, options, chart, candles) {
     this._points = points;
@@ -28,6 +30,19 @@ class DivergenceLineRenderer {
 
     target.useBitmapCoordinateSpace((scope) => {
       const ctx = scope.context;
+
+      // Pin-Halo (Chat 2026-08-17, analog zu liquidity.js/LiquidityLineRenderer) — dickere,
+      // durchgezogene Linie in der Pin-Akzentfarbe HINTER dem gestrichelten Konnektor.
+      if (this._options.inPinContext) {
+        ctx.strokeStyle = this._options.pinColor;
+        ctx.lineWidth = ((this._options.lineWidth ?? 1.5) + PIN_HALO_EXTRA_WIDTH) * scope.horizontalPixelRatio;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x * scope.horizontalPixelRatio, pts[0].y * scope.verticalPixelRatio);
+        ctx.lineTo(pts[1].x * scope.horizontalPixelRatio, pts[1].y * scope.verticalPixelRatio);
+        ctx.stroke();
+      }
+
       ctx.strokeStyle = this._options.color;
       ctx.lineWidth = (this._options.lineWidth ?? 1.5) * scope.horizontalPixelRatio;
       ctx.setLineDash([6 * scope.horizontalPixelRatio, 4 * scope.horizontalPixelRatio]);

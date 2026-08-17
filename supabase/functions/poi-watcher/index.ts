@@ -93,6 +93,32 @@ interface InstrumentConfig {
   pricePrecision: number;
 }
 
+// Pin-Touch-Alarm (siehe resolvePinTouch/Deno.serve unten) — explizit typisiert wie ObZoneRow/
+// LiquidityLevelRow oben, gleicher Grund (PostgREST-Embed-Typinferenz kollabiert sonst auf `{}`).
+// Die drei Embeds sind je nach `kind` gesetzt, sonst null (PostgREST liefert null fürs nicht
+// zutreffende Embed, kein zusätzlicher Filter nötig — gleiches Muster wie mcp-server/src/db.ts:
+// getPinContext).
+interface PinAlarmRow {
+  id: number;
+  kind: string;
+  note: string | null;
+  m5_ob_instrument: string | null;
+  m5_ob_direction: string | null;
+  m5_ob_top: number | null;
+  m5_ob_bottom: number | null;
+  m5_liquidity_instrument: string | null;
+  m5_liquidity_direction: string | null;
+  m5_liquidity_price: number | null;
+  ob_zones: { instrument: string; timeframe: string; direction: string; top: number; bottom: number; touched: boolean; invalidated: boolean } | null;
+  liquidity_levels: { instrument: string; direction: string; price: number; touched: boolean } | null;
+  trade_setups: { instrument: string; direction: string; ob_top: number; ob_bottom: number } | null;
+}
+
+interface PinTouchHit {
+  instrument: string;
+  message: string;
+}
+
 const INSTRUMENTS: InstrumentConfig[] = [
   { instrument: "BTC-USDT", source: "okx", sendTelegram: false, pricePrecision: 2 },
   { instrument: "GBPUSD", source: "ctrader", sendTelegram: true, pricePrecision: 5 },
@@ -204,6 +230,77 @@ function fmt(n: number, precision: number) {
   return n.toLocaleString("de-DE", { maximumFractionDigits: precision });
 }
 
+// Prüft, ob eine gepinnte Stelle gerade vom Preis erreicht ist — null, wenn (a) noch nicht
+// getroffen, oder (b) das zugehörige Instrument diesen Tick nicht gefetcht wurde (siehe
+// currentPriceByInstrument-Kommentar im Deno.serve-Handler). Für ob_zone/liquidity_level liest
+// das einfach die JETZT (im Haupt-Loop oben) frisch upgeserteten touched-Flags der referenzierten
+// Zeile — kein zweites detectOrderBlocks/detectLiquidityLevels nötig. trade_setup hat selbst
+// keine touched-Spalte; "getroffen" bedeutet hier Preis zurück im M5-Entry-OB (ob_top/ob_bottom)
+// — der eigentliche Trade-Trigger, nicht ls_touched_time (das ist längst wahr, sobald das Setup
+// überhaupt erkannt wurde, sonst gäbe es die Zeile nicht). m5_ob/m5_liquidity_level sind reine
+// Rohdaten-Snapshots ohne DB-Live-Status — hier direkter Preisvergleich gegen die beim Pinnen
+// eingefrorenen Grenzen.
+function resolvePinTouch(row: PinAlarmRow, currentPriceByInstrument: Record<string, number>): PinTouchHit | null {
+  const precisionFor = (instrument: string) => INSTRUMENTS.find((i) => i.instrument === instrument)?.pricePrecision ?? 2;
+
+  if (row.kind === "ob_zone" && row.ob_zones) {
+    const z = row.ob_zones;
+    const price = currentPriceByInstrument[z.instrument];
+    if (price == null || !z.touched || z.invalidated) return null;
+    const label = z.direction === "long" ? "Bullish" : "Bearish";
+    const p = precisionFor(z.instrument);
+    return {
+      instrument: z.instrument,
+      message: `📌 ${z.instrument} ${z.timeframe} ${label} OB (gepinnt) erreicht\nZone: ${fmt(z.bottom, p)} – ${fmt(z.top, p)}\nPreis: ${fmt(price, p)}`,
+    };
+  }
+  if (row.kind === "liquidity_level" && row.liquidity_levels) {
+    const l = row.liquidity_levels;
+    const price = currentPriceByInstrument[l.instrument];
+    if (price == null || !l.touched) return null;
+    const label = l.direction === "high" ? "Hoch" : "Tief";
+    const p = precisionFor(l.instrument);
+    return {
+      instrument: l.instrument,
+      message: `📌 ${l.instrument} 1H Liquiditäts-Level (${label}, gepinnt) angetestet\nLevel: ${fmt(l.price, p)}\nPreis: ${fmt(price, p)}`,
+    };
+  }
+  if (row.kind === "trade_setup" && row.trade_setups) {
+    const s = row.trade_setups;
+    const price = currentPriceByInstrument[s.instrument];
+    if (price == null || price > s.ob_top || price < s.ob_bottom) return null;
+    const label = s.direction === "short" ? "Short" : "Long";
+    const p = precisionFor(s.instrument);
+    return {
+      instrument: s.instrument,
+      message: `📌 ${s.instrument} Trade-Setup (${label}, gepinnt): Preis im M5-Entry-OB\nM5-OB: ${fmt(s.ob_bottom, p)} – ${fmt(s.ob_top, p)}\nPreis: ${fmt(price, p)}`,
+    };
+  }
+  if (row.kind === "m5_ob" && row.m5_ob_instrument != null) {
+    const price = currentPriceByInstrument[row.m5_ob_instrument];
+    if (price == null || price > row.m5_ob_top! || price < row.m5_ob_bottom!) return null;
+    const label = row.m5_ob_direction === "long" ? "Bullish" : "Bearish";
+    const p = precisionFor(row.m5_ob_instrument);
+    return {
+      instrument: row.m5_ob_instrument,
+      message: `📌 ${row.m5_ob_instrument} M5-OB (${label}, gepinnt) erreicht\nZone: ${fmt(row.m5_ob_bottom!, p)} – ${fmt(row.m5_ob_top!, p)}\nPreis: ${fmt(price, p)}`,
+    };
+  }
+  if (row.kind === "m5_liquidity_level" && row.m5_liquidity_instrument != null) {
+    const price = currentPriceByInstrument[row.m5_liquidity_instrument];
+    if (price == null) return null;
+    const touched = row.m5_liquidity_direction === "high" ? price >= row.m5_liquidity_price! : price <= row.m5_liquidity_price!;
+    if (!touched) return null;
+    const label = row.m5_liquidity_direction === "high" ? "Hoch" : "Tief";
+    const p = precisionFor(row.m5_liquidity_instrument);
+    return {
+      instrument: row.m5_liquidity_instrument,
+      message: `📌 ${row.m5_liquidity_instrument} Liquiditäts-Level (${label}, gepinnt) angetestet\nLevel: ${fmt(row.m5_liquidity_price!, p)}\nPreis: ${fmt(price, p)}`,
+    };
+  }
+  return null;
+}
+
 // Handelszeiten/Alarmfenster kommen seit 2026-07-25 pro Instrument aus `trading_schedules`
 // (Dashboard-Seite "Handelszeiten") statt aus einem einzigen festen 8:00-17:30-Fenster — Auslöser
 // war ein Telegram-Alarm an einem SAMSTAG (Bug-Report Philip): die alte isTradingHours() prüfte
@@ -311,6 +408,15 @@ Deno.serve(async (req) => {
     const now = new Date();
     const h4RefreshTick = isH4RefreshTick(now);
     const summary: Record<string, unknown> = { dryRun: DRY_RUN, instruments: {} };
+    // Für den Pin-Touch-Alarm-Durchlauf ganz unten (nach diesem Loop) — der braucht pro Instrument
+    // den aktuellen Preis UND das Alarm-Gating, hat aber selbst keinen eigenen Fetch (reine
+    // Nachlese auf dem, was hier oben ohnehin schon geholt/berechnet wurde). Bleibt für ein
+    // Instrument leer, wenn dieser Tick es übersprungen hat (außerhalb des Forex-Fetch-Fensters,
+    // siehe forexFetchWindow-Check unten) — dann kann für M5-OB/M5-Liquidity-Pins in diesem Lauf
+    // kein frischer Preis-Vergleich stattfinden, der nächste Lauf im Fenster holt das nach
+    // (gleiches Throttling-Prinzip wie der Rest dieser Datei).
+    const currentPriceByInstrument: Record<string, number> = {};
+    const shouldSendByInstrument: Record<string, boolean> = {};
 
     for (const cfg of INSTRUMENTS) {
       const alarmWindows = alarmWindowsByInstrument.get(cfg.instrument);
@@ -356,6 +462,8 @@ Deno.serve(async (req) => {
       // Telegram-Nachricht rausgeht (BTC: nie, per `sendTelegram: false`; sonst: nur innerhalb
       // des Alarmfensters aus trading_schedules, siehe oben).
       const shouldSend = cfg.sendTelegram && isInWindows(now, alarmWindows);
+      currentPriceByInstrument[cfg.instrument] = currentPrice;
+      shouldSendByInstrument[cfg.instrument] = shouldSend;
       const instrumentSummary: Record<string, unknown> = {};
 
       for (const tf of TIMEFRAMES) {
@@ -735,6 +843,49 @@ Deno.serve(async (req) => {
 
       (summary.instruments as Record<string, unknown>)[cfg.instrument] = { currentPrice, shouldSend, ...instrumentSummary };
     }
+
+    // Pin-Touch-Alarm (Chat 2026-08-17, siehe Task "Pin-Kontext: MCP-Write, fehlende
+    // Chart-Highlights, Touch-Alarm") — EIN konsolidierter Durchlauf über pin_context statt in
+    // die Timeframe-/Instrument-Schleifen oben verwoben, weil pin_context quer über alle Kinds/
+    // Instrumente geht und für ob_zone/liquidity_level/trade_setup ohnehin nur die JETZT (oben)
+    // frisch upgeserteten touched-Zustände der referenzierten Zeilen nachliest (kein zweites
+    // detectOrderBlocks/detectLiquidityLevels nötig). m5_ob/m5_liquidity_level (reine Rohdaten-
+    // Snapshots ohne eigene Tabelle) werden hier direkt gegen currentPriceByInstrument geprüft.
+    // rsi_divergence bewusst NICHT hier — eigener, separater Task ("RSI-Divergenz: Telegram-Alarm
+    // bei Entstehung") mit Formations- statt Touch-Semantik.
+    const { data: pinRows, error: pinSelectError } = await supabase
+      .from("pin_context")
+      .select(
+        "id, kind, note, notified, " +
+          "m5_ob_instrument, m5_ob_direction, m5_ob_top, m5_ob_bottom, " +
+          "m5_liquidity_instrument, m5_liquidity_direction, m5_liquidity_price, " +
+          "ob_zones(instrument, timeframe, direction, top, bottom, touched, invalidated), " +
+          "liquidity_levels(instrument, direction, price, touched), " +
+          "trade_setups(instrument, direction, ob_top, ob_bottom)",
+      )
+      .eq("notified", false)
+      .returns<PinAlarmRow[]>();
+    if (pinSelectError) throw pinSelectError;
+
+    let pinNotifiedCount = 0;
+    for (const row of pinRows ?? []) {
+      const hit = resolvePinTouch(row, currentPriceByInstrument);
+      if (!hit) continue; // (noch) nicht getroffen, oder Instrument diesen Tick nicht gefetcht
+
+      const alarmActive = (shouldSendByInstrument[hit.instrument] ?? false) && isAlarmOn("pin_context");
+      if (!alarmActive) continue; // getroffen, aber außerhalb des Alarmfensters — nächster Lauf versucht's erneut
+
+      const { error: pinUpdateError } = await supabase
+        .from("pin_context")
+        .update({ notified: true, notified_at: new Date().toISOString() })
+        .eq("id", row.id);
+      if (pinUpdateError) throw pinUpdateError;
+
+      pinNotifiedCount++;
+      const noteLine = row.note ? `\n📝 ${row.note}` : "";
+      await sendTelegram(`${hit.message}${noteLine}`);
+    }
+    (summary as Record<string, unknown>).pinNotified = pinNotifiedCount;
 
     return new Response(JSON.stringify(summary), { headers: { "Content-Type": "application/json" } });
   } catch (err) {

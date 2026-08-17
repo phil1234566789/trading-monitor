@@ -90,6 +90,15 @@ const props = defineProps({
   // Pin-Kontext, vierte Art (Chat 2026-08-01, vierte Runde) — Set von trade_confirmations.id
   // (nur kind='ob'-Bestätigungen zeichnen überhaupt eine Box, siehe refreshTradeConfirmationLinksInternal).
   pinTradeConfirmationIds: { type: Set, default: () => new Set() },
+  // Pin-Kontext für Liquiditäts-Level (Chat 2026-08-17) — Set von liquidityLevelNaturalKey-Strings
+  // (siehe liquidity.js), analog zu pinObZoneKeys. Deckt kind='liquidity_level' (1H, echte DB-
+  // Zeile) UND kind='m5_liquidity_level' (Nicht-1h-Snapshot) ab — Dashboard.vue mischt beide je
+  // nach aktuellem Timeframe in dieselbe Menge, da hier immer nur EIN Timeframe sichtbar ist.
+  pinLiquidityLevelKeys: { type: Set, default: () => new Set() },
+  // Pin-Kontext für RSI-Divergenz-Konnektoren (Chat 2026-08-17) — Set von
+  // "type|fromTime|toTime"-Strings (siehe rsi.js: rsiDivergenceEntryNaturalKey in pinContext.js),
+  // siehe refreshRsiDivergenceInternal.
+  pinRsiDivergenceKeys: { type: Set, default: () => new Set() },
   // Ein/Ausblenden der eigenen geloggten Trades (Chat 2026-07-27) — Untermenü-Toggle unter dem
   // übergeordneten "Trades"-Button (showTradeSetups); beide zusammen müssen an sein, damit Trades
   // gezeichnet werden (Bug-Report Philip 2026-07-28: "übergeordneter Trades-Toggle soll Trades
@@ -1335,6 +1344,7 @@ function refreshLiquidityInternal() {
     // "Alter"-Anzeige an den Debug-Preis-Labels (Chat 2026-07-22) — im Replay bezogen auf
     // replayUntil, nicht die echte Uhrzeit, sonst wäre das Alter beim Testen falsch/inkonsistent.
     nowSec: props.replayUntil ?? Math.floor(Date.now() / 1000),
+    pinKeys: props.pinLiquidityLevelKeys,
   });
   liquidityMetadata.value = relevant.map(pivotForDisplay);
   liquidityEarliestTime.value = relevant.length > 0 ? Math.min(...relevant.map((lvl) => lvl.pivotTime)) : null;
@@ -2162,7 +2172,11 @@ function refreshRsiDivergenceInternal() {
     for (const d of drawnDivergences) {
       const colorKey = d.type === "bearish" ? "divergenceBearish" : "divergenceBullish";
       const label = `${d.type === "bearish" ? "▽" : "△"} ${fmtPrice(d.fromPrice, precision)} → ${fmtPrice(d.toPrice, precision)}`;
-      const opts = { color: cssColor(colorKey), lineWidth: lineWidth(colorKey), label };
+      // Pin-Kontext (Chat 2026-08-17) — derselbe "type|fromTime|toTime"-Schlüssel wie
+      // findNearbyPinCandidates' candidateKey für kind='rsi_divergence' (siehe pinContext.js:
+      // rsiDivergenceEntryNaturalKey), hier direkt aus den rohen rsi.js-Unix-Sekunden gebaut.
+      const inPinContext = props.pinRsiDivergenceKeys?.has(`${d.type}|${d.fromTime}|${d.toTime}`) ?? false;
+      const opts = { color: cssColor(colorKey), lineWidth: lineWidth(colorKey), label, inPinContext, pinColor: cssColor("pin") };
 
       const pricePrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromPrice }, { time: d.toTime, price: d.toPrice }, opts, candles, d);
       candleSeries.attachPrimitive(pricePrimitive);
@@ -2989,6 +3003,8 @@ watch(() => props.pinTradeIds, refreshTradeMarkersInternal);
 watch(() => props.pinObZoneKeys, refreshPoiZonesInternal);
 watch(() => props.pinTradeSetupIds, refreshTradeSetupLinksInternal);
 watch(() => props.pinTradeConfirmationIds, refreshTradeConfirmationLinksInternal);
+watch(() => props.pinLiquidityLevelKeys, refreshLiquidityInternal);
+watch(() => props.pinRsiDivergenceKeys, refreshRsiDivergenceInternal);
 watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 // tscCalloutModeActive wechselt (TSC wird ein-/ausgeblendet, Locked-Zustand etc.) -> Canvas-Text
 // muss sofort erscheinen/verschwinden, nicht erst beim nächsten claudeAnnotations-Wechsel.

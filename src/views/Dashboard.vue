@@ -37,6 +37,10 @@ import {
   resolveObZoneId,
   resolveLiquidityLevelId,
   obZoneEntryNaturalKey,
+  m5ObEntryNaturalKey,
+  liquidityLevelEntryNaturalKey,
+  m5LiquidityEntryNaturalKey,
+  rsiDivergenceEntryNaturalKey,
 } from "../pinContext.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
@@ -713,13 +717,19 @@ const pinTradeIds = computed(() => {
 });
 // OB-Zonen-Pendant (Chat 2026-08-01) — Natural-Key statt Id (siehe pinContext.js:
 // obZoneEntryNaturalKey/orderBlocks.js: obZoneNaturalKey), gefiltert aufs aktuelle Symbol (eine
-// OB-Zone aus GBPUSD ergibt im EURUSD-Chart keinen sinnvollen Treffer).
+// OB-Zone aus GBPUSD ergibt im EURUSD-Chart keinen sinnvollen Treffer). Mischt seit Chat
+// 2026-08-17 kind='m5_ob' mit rein (m5ObEntryNaturalKey baut denselben "5M|..."-Schlüssel wie
+// obZoneNaturalKey für M5-Zonen, siehe dort) — M5-OBs laufen im Chart über dieselbe
+// renderPersistedZones-Funktion wie 1H/4H, brauchen also keinen eigenen Prop.
 const pinObZoneKeys = computed(() => {
-  return new Set(
-    pinContextEntries.value
+  return new Set([
+    ...pinContextEntries.value
       .filter((e) => e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value)
       .map((e) => obZoneEntryNaturalKey(e.obZone)),
-  );
+    ...pinContextEntries.value
+      .filter((e) => e.kind === "m5_ob" && e.m5Ob?.instrument === currentSymbol.value)
+      .map((e) => m5ObEntryNaturalKey(e.m5Ob)),
+  ]);
 });
 // Trade-Setup-Pendant (Chat 2026-08-01, dritte Runde) — echte Id (kein Natural-Key-Umweg wie bei
 // ob_zone nötig, siehe pinContext.js), trotzdem aufs aktuelle Symbol gefiltert.
@@ -735,6 +745,32 @@ const pinTradeSetupIds = computed(() => {
 // die zugehörige Box existiert im Chart ohnehin nur für Trades des gerade angezeigten Symbols.
 const pinTradeConfirmationIds = computed(() => {
   return new Set(pinContextEntries.value.filter((e) => e.kind === "trade_confirmation").map((e) => e.tradeConfirmationId));
+});
+// Liquiditäts-Level-Pendant (Chat 2026-08-17) — mischt kind='liquidity_level' (1H, echte DB-
+// Zeile) und kind='m5_liquidity_level' (Nicht-1h-Snapshot) in EINE Menge, weil im Chart immer nur
+// Level EINES Timeframes gleichzeitig sichtbar sind (siehe liquidity.js: liquidityLevelNaturalKey-
+// Kommentar) — liquidity_level nur bei currentBar==="1h" berücksichtigen, m5_liquidity_level nur
+// wenn sein gespeichertes timeframe-Feld zum gerade angezeigten currentBar passt.
+const pinLiquidityLevelKeys = computed(() => {
+  return new Set([
+    ...(currentBar.value === "1h"
+      ? pinContextEntries.value
+          .filter((e) => e.kind === "liquidity_level" && e.liquidityLevel?.instrument === currentSymbol.value)
+          .map((e) => liquidityLevelEntryNaturalKey(e.liquidityLevel))
+      : []),
+    ...pinContextEntries.value
+      .filter((e) => e.kind === "m5_liquidity_level" && e.m5Liquidity?.instrument === currentSymbol.value && e.m5Liquidity?.timeframe === currentBar.value)
+      .map((e) => m5LiquidityEntryNaturalKey(e.m5Liquidity)),
+  ]);
+});
+// RSI-Divergenz-Pendant (Chat 2026-08-17) — nur nach Symbol gefiltert, kein Timeframe-Filter
+// nötig (RSI-Divergenz-Erkennung läuft ausschließlich auf M5, siehe rsi.js/CLAUDE.md).
+const pinRsiDivergenceKeys = computed(() => {
+  return new Set(
+    pinContextEntries.value
+      .filter((e) => e.kind === "rsi_divergence" && e.rsiDivergence?.instrument === currentSymbol.value)
+      .map((e) => rsiDivergenceEntryNaturalKey(e.rsiDivergence)),
+  );
 });
 const { data: poiZones, refresh: refreshPoiZones } = usePolledFetch(
   () => (isBtc.value ? fetchPoiZones(currentSymbol.value) : []),
@@ -1196,6 +1232,8 @@ watch(selectedTradingAccountId, refreshTrades);
     :pin-ob-zone-keys="pinObZoneKeys"
     :pin-trade-setup-ids="pinTradeSetupIds"
     :pin-trade-confirmation-ids="pinTradeConfirmationIds"
+    :pin-liquidity-level-keys="pinLiquidityLevelKeys"
+    :pin-rsi-divergence-keys="pinRsiDivergenceKeys"
     :show-trades="showTrades"
     :poi-zones="poiZones"
     :show-obs-m5="showObsM5"

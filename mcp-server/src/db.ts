@@ -150,7 +150,7 @@ export async function getJournal(instrument?: string, source?: string, limit = 5
 // Pin-Kontext (Chat 2026-08-01, siehe supabase/migrations/20260801120000_laniakea_context.sql,
 // 20260801130000_laniakea_context_ob_zones.sql, 20260801140000_laniakea_context_trade_setups.sql,
 // 20260801150000_laniakea_context_trade_confirmations.sql — Migrationsdateien behalten ihren
-// historischen Namen, siehe 20260817_rename_laniakea_context_to_pin_context.sql für den Rename
+// historischen Namen, siehe 20260817120000_rename_laniakea_context_to_pin_context.sql für den Rename
 // auf DB-Ebene; src/pinContext.js):
 // trade_positions, ob_zones, trade_setups ODER trade_confirmations, die Philip per Rechtsklick "an
 // Lana übergeben" hat (kind unterscheidet, welches der vier embeds befüllt ist — bei z.B. einer
@@ -182,6 +182,158 @@ export async function getPinContext() {
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+// Schreib-Pendant zu getPinContext (Chat 2026-08-17: Lana darf Chart-POIs jetzt selbst pinnen,
+// vorher read-only) — spiegelt addPinEntry/addPinM5ObEntry/addPinM5LiquidityEntry/
+// addPinRsiDivergenceEntry/removePinEntry aus src/pinContext.js 1:1 (Upsert-Keys/onConflict
+// identisch, siehe dort), nur mit throw statt console.error+null (Konvention dieser Datei, siehe
+// createTrade/postChartAnnotations oben) und dem hiesigen supabaseClient.ts statt dem
+// Browser-Client. `.select()` bewusst schmal (nur Bestätigungs-Felder) statt getPinContext's
+// vollem Embed-Shape — der Rückgabewert dient nur der Rückmeldung an Lana, kein Re-Fetch-Ersatz.
+// Bewusst NUR die Chart-POI-Kinds (ob_zone/liquidity_level/trade_setup/m5_ob/m5_liquidity_level/
+// rsi_divergence) — trade_position/trade_confirmation bleiben Philip-only (Journal-Einträge, kein
+// Chart-Highlight), siehe Task "Pin-Kontext: MCP-Write, fehlende Chart-Highlights, Touch-Alarm".
+const PIN_CONFIRM_COLUMNS = "id, kind, note, created_at";
+const PIN_REF_COLUMN: Record<string, string> = {
+  ob_zone: "ob_zone_id",
+  trade_setup: "trade_setup_id",
+  liquidity_level: "liquidity_level_id",
+};
+
+export async function addPinEntry(kind: "ob_zone" | "trade_setup" | "liquidity_level", refId: number, note?: string) {
+  const column = PIN_REF_COLUMN[kind];
+  const { data, error } = await supabase
+    .from("pin_context")
+    .upsert(
+      {
+        kind,
+        trade_position_id: null,
+        ob_zone_id: null,
+        trade_setup_id: null,
+        trade_confirmation_id: null,
+        liquidity_level_id: null,
+        [column]: refId,
+        note: note || null,
+      },
+      { onConflict: column },
+    )
+    .select(PIN_CONFIRM_COLUMNS)
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export interface PinM5Ob {
+  instrument: string;
+  direction: "long" | "short";
+  top: number;
+  bottom: number;
+  startTimeUnixSec: number;
+}
+
+export async function addPinM5ObEntry(zone: PinM5Ob, note?: string) {
+  const { data, error } = await supabase
+    .from("pin_context")
+    .upsert(
+      {
+        kind: "m5_ob",
+        trade_position_id: null,
+        ob_zone_id: null,
+        trade_setup_id: null,
+        trade_confirmation_id: null,
+        liquidity_level_id: null,
+        m5_ob_instrument: zone.instrument,
+        m5_ob_direction: zone.direction,
+        m5_ob_top: zone.top,
+        m5_ob_bottom: zone.bottom,
+        m5_ob_start_time: new Date(zone.startTimeUnixSec * 1000).toISOString(),
+        note: note || null,
+      },
+      { onConflict: "m5_ob_instrument,m5_ob_direction,m5_ob_top,m5_ob_bottom,m5_ob_start_time" },
+    )
+    .select(PIN_CONFIRM_COLUMNS)
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export interface PinM5Liquidity {
+  instrument: string;
+  timeframe: string;
+  direction: "high" | "low";
+  price: number;
+  pivotTimeUnixSec: number;
+}
+
+export async function addPinM5LiquidityEntry(level: PinM5Liquidity, note?: string) {
+  const { data, error } = await supabase
+    .from("pin_context")
+    .upsert(
+      {
+        kind: "m5_liquidity_level",
+        trade_position_id: null,
+        ob_zone_id: null,
+        trade_setup_id: null,
+        trade_confirmation_id: null,
+        liquidity_level_id: null,
+        m5_liquidity_instrument: level.instrument,
+        m5_liquidity_timeframe: level.timeframe,
+        m5_liquidity_direction: level.direction,
+        m5_liquidity_price: level.price,
+        m5_liquidity_pivot_time: new Date(level.pivotTimeUnixSec * 1000).toISOString(),
+        note: note || null,
+      },
+      { onConflict: "m5_liquidity_instrument,m5_liquidity_timeframe,m5_liquidity_direction,m5_liquidity_pivot_time" },
+    )
+    .select(PIN_CONFIRM_COLUMNS)
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export interface PinRsiDivergence {
+  type: "bearish" | "bullish";
+  fromTimeUnixSec: number;
+  toTimeUnixSec: number;
+  fromPrice: number;
+  toPrice: number;
+  fromRsi: number;
+  toRsi: number;
+}
+
+export async function addPinRsiDivergenceEntry(instrument: string, divergence: PinRsiDivergence, note?: string) {
+  const { data, error } = await supabase
+    .from("pin_context")
+    .upsert(
+      {
+        kind: "rsi_divergence",
+        trade_position_id: null,
+        ob_zone_id: null,
+        trade_setup_id: null,
+        trade_confirmation_id: null,
+        liquidity_level_id: null,
+        rsi_divergence_instrument: instrument,
+        rsi_divergence_type: divergence.type,
+        rsi_divergence_from_time: new Date(divergence.fromTimeUnixSec * 1000).toISOString(),
+        rsi_divergence_to_time: new Date(divergence.toTimeUnixSec * 1000).toISOString(),
+        rsi_divergence_from_price: divergence.fromPrice,
+        rsi_divergence_to_price: divergence.toPrice,
+        rsi_divergence_from_rsi: divergence.fromRsi,
+        rsi_divergence_to_rsi: divergence.toRsi,
+        note: note || null,
+      },
+      { onConflict: "rsi_divergence_instrument,rsi_divergence_type,rsi_divergence_from_time,rsi_divergence_to_time" },
+    )
+    .select(PIN_CONFIRM_COLUMNS)
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function removePinEntry(id: number) {
+  const { error } = await supabase.from("pin_context").delete().eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
 // Supabase/PostgREST deckelt eine einzelne Response serverseitig bei diesem Wert (empirisch

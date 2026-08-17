@@ -24,6 +24,11 @@ export const ALARM_TYPES = [
     label: "Trade-Setup erkannt",
     description: "Liquidity Sweep + Protected M5-Fraktal + bestätigendes M5-OB, in dieser Reihenfolge (GBPUSD/EURUSD).",
   },
+  {
+    key: "pin_context",
+    label: "Gepinnte Stelle erreicht",
+    description: "Preis erreicht eine per Rechtsklick 'Anpinnen' (oder von Lana per MCP) markierte Chart-Stelle — OB-Zone/1H-Liquiditäts-Level/Trade-Setup/M5-OB/M5-Liquiditäts-Level (GBPUSD/EURUSD).",
+  },
 ];
 
 export async function fetchAlarmSettings() {

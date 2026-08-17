@@ -352,3 +352,44 @@ export function obZoneEntryNaturalKey(obZone) {
   const startTimeUnixSec = Math.floor(new Date(obZone.startTime).getTime() / 1000);
   return `${obZone.timeframe}|${obZone.direction}|${startTimeUnixSec}`;
 }
+
+// Analog zu obZoneEntryNaturalKey, aber für einen kind='m5_ob'-Rohdaten-Snapshot (row.m5Ob) statt
+// der ob_zones-Embed — M5-Boxen laufen über dieselbe obZoneNaturalKey-Formel wie 1H/4H (siehe
+// orderBlocks.js: renderPersistedZones wird für ALLE Timeframes inkl. "5M" aufgerufen, siehe
+// PriceChart.vue: collectObsZones), deshalb wird hier derselbe String-Schlüssel gebaut (fixes
+// timeframe "5M", direction ist schon "long"/"short"-String wie bei obZone) — Dashboard.vue mischt
+// beide Kind-Arten in DIESELBE pinObZoneKeys-Menge, kein eigener Chart-Prop nötig (Chat 2026-08-17).
+export function m5ObEntryNaturalKey(m5Ob) {
+  const startTimeUnixSec = Math.floor(new Date(m5Ob.startTime).getTime() / 1000);
+  return `5M|${m5Ob.direction}|${startTimeUnixSec}`;
+}
+
+// Analog zu obZoneEntryNaturalKey, für ein 1H-Liquiditäts-Level (row.liquidityLevel, echte DB-
+// Zeile) — dieselbe Formel wie liquidity.js: liquidityLevelNaturalKey, hier auf der Embed-Zeile
+// statt dem live erkannten Level. timeframe bewusst NICHT Teil des Strings (siehe dortiger
+// Kommentar) — Dashboard.vue filtert vorher nach currentBar==="1h", bevor diese Keys in die Menge
+// gemischt werden, die an renderLiquidityLevels' pinKeys-Parameter geht.
+export function liquidityLevelEntryNaturalKey(liquidityLevel) {
+  const pivotTimeUnixSec = Math.floor(new Date(liquidityLevel.pivotTime).getTime() / 1000);
+  return `${liquidityLevel.direction === "high" ? "high" : "low"}|${pivotTimeUnixSec}`;
+}
+
+// Analog zu liquidityLevelEntryNaturalKey, für ein Liquiditäts-Level auf einem Nicht-1h-Timeframe
+// (row.m5Liquidity, reiner Rohdaten-Snapshot, siehe addPinM5LiquidityEntry) — derselbe
+// timeframe-lose String-Schlüssel wie beim 1H-Fall, da Dashboard.vue schon vorher nach
+// e.m5Liquidity.timeframe === currentBar filtert (immer nur EIN Timeframe gleichzeitig sichtbar).
+export function m5LiquidityEntryNaturalKey(m5Liquidity) {
+  const pivotTimeUnixSec = Math.floor(new Date(m5Liquidity.pivotTime).getTime() / 1000);
+  return `${m5Liquidity.direction === "high" ? "high" : "low"}|${pivotTimeUnixSec}`;
+}
+
+// Für einen RSI-Divergenz-Konnektor (row.rsiDivergence, reiner Rohdaten-Snapshot, siehe
+// addPinRsiDivergenceEntry) — derselbe Schlüssel-Aufbau wie PriceChart.vue's candidateKey für
+// kind='rsi_divergence' (type|fromTime|toTime identifiziert eine Divergenz eindeutig, siehe
+// findNearbyPinCandidates), hier auf ISO-Zeiten aus der DB statt den rohen Unix-Sekunden von
+// rsi.js: detectRsiDivergence.
+export function rsiDivergenceEntryNaturalKey(rsiDivergence) {
+  const fromTimeUnixSec = Math.floor(new Date(rsiDivergence.fromTime).getTime() / 1000);
+  const toTimeUnixSec = Math.floor(new Date(rsiDivergence.toTime).getTime() / 1000);
+  return `${rsiDivergence.type}|${fromTimeUnixSec}|${toTimeUnixSec}`;
+}

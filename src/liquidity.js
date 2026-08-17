@@ -15,6 +15,8 @@ import { LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT, detectLiquidityLevels
 
 export { LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT, detectLiquidityLevels, filterRelevantLevels };
 
+const PIN_HALO_EXTRA_WIDTH = 3; // px, zusätzlich zur normalen lineWidth (Chat 2026-08-17)
+
 class LiquidityLineRenderer {
   constructor(p1, p2, options, chart, candles) {
     this._p1 = p1;
@@ -33,6 +35,20 @@ class LiquidityLineRenderer {
       const y = Math.round(p1.y * scope.verticalPixelRatio);
       const x1 = Math.round(p1.x * scope.horizontalPixelRatio);
       const x2 = Math.round(p2.x * scope.horizontalPixelRatio);
+      // Pin-Halo (Chat 2026-08-17, analog zum Rahmen bei OrderBlockPrimitive/Ring bei
+      // TradeMarkerPrimitive) — dickere Linie in der Pin-Akzentfarbe HINTER der eigentlichen
+      // Linie, damit gepinnte Level auch bei kräftigen Sweep-/High-/Low-Farben noch erkennbar
+      // hervorstechen, ohne deren semantische Farbe zu verlieren.
+      if (this._options.inPinContext) {
+        ctx.strokeStyle = this._options.pinColor;
+        ctx.lineWidth = (this._options.lineWidth + PIN_HALO_EXTRA_WIDTH) * scope.horizontalPixelRatio;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(Math.min(x1, x2), y);
+        ctx.lineTo(Math.max(x1, x2), y);
+        ctx.stroke();
+      }
+
       ctx.strokeStyle = this._options.color;
       ctx.lineWidth = this._options.lineWidth;
       // gestrichelt für "sweeped" (Docht durchbrochen, aber noch kein bestätigter Bruch) — siehe
@@ -207,22 +223,36 @@ export function bullBearLabelSide(bearish) {
   return bearish ? "end-above" : "end-below";
 }
 
-function levelOptions(lvl, { debugPrices, formatPrice, nowSec } = {}) {
+function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext } = {}) {
   const key = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
   const color = cssColor(key);
   const label = debugPrices ? `${formatPrice(lvl.price)}${ageSuffix(lvl.pivotTime, nowSec)}` : null;
-  return { color, lineWidth: lineWidth(key), label };
+  return { color, lineWidth: lineWidth(key), label, inPinContext, pinColor: cssColor("pin") };
+}
+
+// Timeframe bewusst NICHT Teil des Strings (anders als obZoneNaturalKey/orderBlocks.js) — diese
+// Funktion baut den Schlüssel nur für die Level des GERADE angezeigten Chart-Timeframes (siehe
+// renderLiquidityLevels-Aufrufer in PriceChart.vue: es existiert immer nur eine currentBar-Menge
+// gleichzeitig), Dashboard.vue filtert schon vorher nach Timeframe/kind (liquidity_level=1H vs.
+// m5_liquidity_level=aktueller Nicht-1h-Timeframe), bevor beide Kind-Arten in DIESELBE Pin-Keys-
+// Menge gemischt werden — pinContext.js: liquidityLevelEntryNaturalKey/m5LiquidityEntryNaturalKey
+// bauen denselben String aus der DB-Zeile/dem Rohdaten-Snapshot.
+export function liquidityLevelNaturalKey(dir, pivotTime) {
+  return `${dir === 1 ? "high" : "low"}|${pivotTime}`;
 }
 
 // Zeichnet die übergebenen Level neu (komplettes Ersetzen der bisherigen Primitives) —
 // analog zu renderPersistedZones in orderBlocks.js. `debugPrices`/`formatPrice` steuern das
 // Preis-Label am Pivot-Ursprung (Debug-Toggle im Dashboard) — ohne `formatPrice` bleibt es aus.
-export function renderLiquidityLevels(series, levels, existingPrimitives, candles, { debugPrices, formatPrice, nowSec } = {}) {
+// `pinKeys` (Chat 2026-08-17, analog zu renderPersistedZones' pinKeys-Parameter): Set von
+// liquidityLevelNaturalKey-Strings, die dauerhaft hervorgehoben werden sollen.
+export function renderLiquidityLevels(series, levels, existingPrimitives, candles, { debugPrices, formatPrice, nowSec, pinKeys } = {}) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
   for (const lvl of levels) {
-    const primitive = new LiquidityLinePrimitive(lvl, levelOptions(lvl, { debugPrices, formatPrice, nowSec }), candles);
+    const inPinContext = pinKeys?.has(liquidityLevelNaturalKey(lvl.dir, lvl.pivotTime)) ?? false;
+    const primitive = new LiquidityLinePrimitive(lvl, levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext }), candles);
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }
