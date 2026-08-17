@@ -12,7 +12,10 @@
     },
     "trading-monitor": {
       "type": "http",
-      "url": "https://vkphwtqcvqrkphksproj.supabase.co/functions/v1/trading-monitor-mcp/rpc"
+      "url": "https://vkphwtqcvqrkphksproj.supabase.co/functions/v1/trading-monitor-mcp",
+      "headers": {
+        "Authorization": "Bearer ${TRADING_MONITOR_MCP_TOKEN}"
+      }
     },
     "milk-city": {
       "type": "http",

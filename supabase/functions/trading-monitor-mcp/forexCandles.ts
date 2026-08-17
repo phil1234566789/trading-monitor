@@ -1,5 +1,5 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient.js";
-import { getForexCandlesArchiveUpTo } from "./db.js";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient.ts";
+import { getForexCandlesArchiveUpTo } from "./db.ts";
 
 // Node-Port von src/forexCandles.js — ruft dieselbe `forex-candles` Edge Function auf, mit dem
 // anon-key als Bearer-Token (exakt das Pattern, das pg_cron laut

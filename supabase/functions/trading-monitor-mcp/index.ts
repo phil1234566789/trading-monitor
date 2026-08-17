@@ -1,99 +1,57 @@
-import { McpServer } from "npm:@modelcontextprotocol/sdk@1.12.0/server/mcp.js";
-import type { Transport, JSONRPCMessage } from "npm:@modelcontextprotocol/sdk@1.12.0/types.js";
-import { registerReadTools } from "./tools/reads.js";
-import { registerAnnotationTools } from "./tools/annotations.js";
-import { registerTradeTools } from "./tools/trades.js";
-import { registerLaniakeaTools } from "./tools/laniakea.js";
+// trading-monitor MCP-Server als Supabase Edge Function (Deno) — Port des bisherigen lokalen
+// stdio-Servers (mcp-server/, jetzt nur noch Basis für die einmaligen Wartungsskripte in
+// mcp-server/src/scripts/, siehe dessen package.json). Grund: auf dem DATEV-Firmenrechner
+// scheitert `npx tsx mcp-server/src/index.ts` an der dortigen TLS-Inspection, während eine
+// deployte Edge Function ganz normal per HTTPS erreichbar ist — kein lokaler Node-Prozess mehr
+// nötig, funktioniert von jedem Rechner/Client aus (Claude Web, VS Code, ...), analog zu
+// milk-city (siehe dessen supabase/functions/mcp/index.ts, 1:1 Vorbild für Transport+Auth-Muster
+// hier).
+//
+// Transport: WebStandardStreamableHTTPServerTransport statt der Node-spezifischen
+// StreamableHTTPServerTransport (die der alte stdio-Server via StdioServerTransport nutzte) — vom
+// SDK selbst als Deno-taugliche Web-Standard-Variante ausgewiesen, passt 1:1 zum Deno.serve-
+// Handler-Muster der anderen Edge Functions in diesem Repo. Stateless (sessionIdGenerator:
+// undefined): Edge-Function-Instanzen sind nicht langlebig genug für sitzungsgebundenen State
+// zwischen Requests — pro Request ein frisches Server+Transport-Paar.
+//
+// Auth: eigenes Bearer-Token-Schema (TRADING_MONITOR_MCP_TOKEN als Function Secret), KEIN
+// Supabase-JWT (siehe supabase/config.toml [functions.trading-monitor-mcp] verify_jwt=false) —
+// Einzelnutzer-App (nur Philip), deshalb ein einziges Token statt milk-citys Token->Character-Map.
+import { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
+import { WebStandardStreamableHTTPServerTransport } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/webStandardStreamableHttp.js";
+import { registerReadTools } from "./tools/reads.ts";
+import { registerAnnotationTools } from "./tools/annotations.ts";
+import { registerTradeTools } from "./tools/trades.ts";
+import { registerPinTools } from "./tools/pins.ts";
 
-class HttpTransport implements Transport {
-  private onMessage: (msg: JSONRPCMessage) => void = () => {};
-  private onError: (error: Error) => void = () => {};
-  private onClose: () => void = () => {};
-  private responseDeferreds = new Map<string, (msg: JSONRPCMessage) => void>();
+const MCP_TOKEN = Deno.env.get("TRADING_MONITOR_MCP_TOKEN");
 
-  async send(message: JSONRPCMessage): Promise<void> {
-    const msg = message as JSONRPCMessage & { _id?: string };
-    const id = msg._id;
-    if (id) {
-      const resolve = this.responseDeferreds.get(id);
-      if (resolve) {
-        resolve(message);
-      }
-    }
-  }
-
-  async close(): Promise<void> {
-    this.onClose();
-  }
-
-  setMessageHandler(callback: (msg: JSONRPCMessage) => void): void {
-    this.onMessage = callback;
-  }
-
-  setErrorHandler(callback: (error: Error) => void): void {
-    this.onError = callback;
-  }
-
-  setCloseHandler(callback: () => void): void {
-    this.onClose = callback;
-  }
+function authenticate(req: Request): boolean {
+  if (!MCP_TOKEN) return false;
+  const auth = req.headers.get("Authorization") ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  return token === MCP_TOKEN;
 }
 
-const server = new McpServer({ name: "trading-monitor", version: "0.1.0" });
-const transport = new HttpTransport();
+function buildServer() {
+  const server = new McpServer({ name: "trading-monitor", version: "0.1.0" });
+  registerReadTools(server);
+  registerAnnotationTools(server);
+  registerTradeTools(server);
+  registerPinTools(server);
+  return server;
+}
 
-registerReadTools(server);
-registerAnnotationTools(server);
-registerTradeTools(server);
-registerLaniakeaTools(server);
-
-await server.connect(transport);
-
-Deno.serve({ port: 3000 }, async (req: Request) => {
-  if (req.method === "POST" && req.url.includes("/rpc")) {
-    try {
-      const message = await req.json() as JSONRPCMessage & { _id?: string };
-      const id = crypto.randomUUID();
-      message._id = id;
-
-      return await new Promise<Response>((resolve) => {
-        const timeout = setTimeout(() => {
-          transport["responseDeferreds"].delete(id);
-          resolve(
-            new Response(
-              JSON.stringify({
-                jsonrpc: "2.0",
-                error: { code: -32000, message: "Timeout" },
-                id: (message as any).id,
-              }),
-              { status: 500, headers: { "Content-Type": "application/json" } }
-            )
-          );
-        }, 30000);
-
-        transport["responseDeferreds"].set(id, (response) => {
-          clearTimeout(timeout);
-          transport["responseDeferreds"].delete(id);
-          resolve(
-            new Response(JSON.stringify(response), {
-              headers: { "Content-Type": "application/json" },
-            })
-          );
-        });
-
-        transport.setMessageHandler((msg) => server["requestHandler"](msg));
-        transport["onMessage"](message);
-      });
-    } catch (err) {
-      return new Response(
-        JSON.stringify({
-          jsonrpc: "2.0",
-          error: { code: -32700, message: "Parse error" },
-        }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
+Deno.serve(async (req) => {
+  if (!authenticate(req)) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
-  return new Response("OK");
+  const server = buildServer();
+  const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  await server.connect(transport);
+  return transport.handleRequest(req);
 });

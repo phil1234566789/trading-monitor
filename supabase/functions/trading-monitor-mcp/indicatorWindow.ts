@@ -1,5 +1,5 @@
-import { fetchForexCandles, type Candle } from "./forexCandles.js";
-import { berlinDayRangeUtcMs, berlinDateStrFor } from "./berlinTime.js";
+import { fetchForexCandles, type Candle } from "./forexCandles.ts";
+import { berlinDayRangeUtcMs, berlinDateStrFor } from "./berlinTime.ts";
 
 // Gemeinsames dateStr/replayUntilSec-Fenster für get_forex_rsi/get_forex_ema — dieselbe Semantik
 // wie get_data_export (buildDataExport in dataExport.ts): dateStr wählt den Europe/Berlin-Kalender-

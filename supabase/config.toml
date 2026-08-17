@@ -371,6 +371,13 @@ authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
 
+[functions.trading-monitor-mcp]
+# Eigenes Bearer-Token-Schema (TRADING_MONITOR_MCP_TOKEN, siehe functions/trading-monitor-mcp/index.ts)
+# statt eines Supabase-JWTs im Authorization-Header — ohne verify_jwt=false würde Supabases Gateway
+# jeden Request schon vor Erreichen der Function ablehnen, weil unser Token kein gültiges Supabase-JWT
+# ist (gleiches Muster wie milk-city, siehe dessen supabase/config.toml [functions.mcp]).
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

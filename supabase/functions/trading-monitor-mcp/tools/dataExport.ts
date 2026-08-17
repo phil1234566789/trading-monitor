@@ -1,10 +1,10 @@
-import { fetchForexCandles, type Candle } from "../forexCandles.js";
-import { berlinDayRangeUtcMs, berlinDateStrFor, berlinDateTimeStrFor, berlinOffsetMinutes } from "../berlinTime.js";
-import { getObZones, getLiquidityLevels, getSessions } from "../db.js";
+import { fetchForexCandles, type Candle } from "../forexCandles.ts";
+import { berlinDayRangeUtcMs, berlinDateStrFor, berlinDateTimeStrFor, berlinOffsetMinutes } from "../berlinTime.ts";
+import { getObZones, getLiquidityLevels, getSessions } from "../db.ts";
 // Reine Trend-Mathematik (siehe CLAUDE.md "MCP-Server") — seit dem Split von marketStructureAnalysis.ts
 // (Chat 2026-07-31, Rendering lebt jetzt separat in marketStructureRendering.ts) frei von Browser-
 // Abhängigkeiten und direkt aus dem Frontend-Quellbaum importierbar, kein dritter Algorithmus-Port.
-import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructureState } from "./marketStructureAnalysis.js";
+import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructureState } from "../marketStructureAnalysis.ts";
 // M5-Liquidity/M5-OB werden von KEINEM Backend persistiert (poi-watcher speichert liquidity_levels
 // nur 1H, ob_zones nur 1H/4H, siehe CLAUDE.md poi-watcher-Throttling) — Lana bekam sie bisher gar
 // nicht (Bug-Report Philip 2026-08-02: "Lana braucht mehr Daten ... M5 LQ-Levels/M5 OBs genau die
@@ -15,12 +15,12 @@ import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructur
 // (marketStructureAnalysis.js oben). detectLiquidityLevels lebt schon dependency-frei in
 // liquidityDetection.js; detectOrderBlocks wurde für diesen Zweck neu nach orderBlockDetection.js
 // extrahiert (aus orderBlocks.js, das über chartColors.js/chartZoom.js Browser-Only-Imports zieht).
-import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "./liquidityDetection.js";
-import { detectOrderBlocks } from "./orderBlockDetection.js";
+import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "../liquidityDetection.js";
+import { detectOrderBlocks } from "../orderBlockDetection.js";
 // Session-Kontext ("asia high" etc., siehe src/dataExport.js) — sessionOccurrences.js ist seit
 // Chat 2026-08-02 dependency-frei (aus sessions.js extrahiert, dessen `sessions`-Singleton
 // localStorage anfasst), deshalb direkt cross-directory importierbar wie oben.
-import { buildSessionContextLookup, contextForPivot } from "./sessionOccurrences.js";
+import { buildSessionContextLookup, contextForPivot } from "../sessionOccurrences.js";
 
 // Asia-Session laut Philip: 00:00-07:00 Europe/Berlin, separat ausgewertet — siehe
 // src/dataExport.js ASIA_SESSION_END_HOUR (dieselbe Konvention, hier dupliziert statt importiert,

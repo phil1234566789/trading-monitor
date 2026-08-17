@@ -1,5 +1,5 @@
 import { z } from "npm:zod@3.24.1";
-import type { McpServer } from "npm:@modelcontextprotocol/sdk@1.12.0/server/mcp.js";
+import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import {
   getObZones,
   getLiquidityLevels,
@@ -9,17 +9,17 @@ import {
   getTradingSchedule,
   getTradingAccounts,
   getForexCandlesArchive,
-} from "../db.js";
-import { fetchForexCandles } from "../forexCandles.js";
-import { buildDataExport } from "./dataExport.js";
+} from "../db.ts";
+import { fetchForexCandles } from "../forexCandles.ts";
+import { buildDataExport } from "./dataExport.ts";
 // Derselbe computeRsi/computeEma wie der Live-Chart (PriceChart.vue) — kein zweiter Port nötig,
 // da beide Funktionen bereits dependency-frei sind (kein localStorage/import.meta.env), siehe
 // CLAUDE.md "MCP-Server" zum selben Muster bei marketStructureAnalysis.ts. rsi.ts lebte bis
 // 2026-08-11 nur hier im mcp-server, wurde beim Bau des Chart-RSI-Panels nach src/rsi.js
 // verschoben, damit es nicht ein zweites Mal implementiert werden musste.
-import { computeRsi, rsiZone, DEFAULT_RSI_PERIOD } from "./rsi.js";
-import { computeEma } from "./ema.js";
-import { resolveDayWindow, fetchM5WithWarmup, isWithinDayWindow } from "../indicatorWindow.js";
+import { computeRsi, rsiZone, DEFAULT_RSI_PERIOD } from "../rsi.js";
+import { computeEma } from "../ema.js";
+import { resolveDayWindow, fetchM5WithWarmup, isWithinDayWindow } from "../indicatorWindow.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };

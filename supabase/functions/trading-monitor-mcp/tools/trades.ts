@@ -1,6 +1,6 @@
 import { z } from "npm:zod@3.24.1";
-import type { McpServer } from "npm:@modelcontextprotocol/sdk@1.12.0/server/mcp.js";
-import { createTrade, addTradePosition, updateTradePosition, updateDealingRange, addTradeConfirmation, addTradeTarget, updateTradeTarget, deleteTradeTarget } from "../db.js";
+import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
+import { createTrade, addTradePosition, updateTradePosition, updateDealingRange, addTradeConfirmation, addTradeTarget, updateTradeTarget, deleteTradeTarget } from "../db.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -203,7 +203,7 @@ export function registerTradeTools(server: McpServer) {
       description:
         "Bearbeitet ein bestehendes Target (Preis/Zonen-Kanten/Quellzeit) über seine id (siehe " +
         "get_journal, eingebettet unter dealing_ranges.trade_targets — dort aktuell nur price " +
-        "sichtbar, für die id ggf. get_laniakea_context oder direkt nachfragen). Nur übergebene " +
+        "sichtbar, für die id ggf. get_pin_context oder direkt nachfragen). Nur übergebene " +
         "Felder werden geändert.",
       inputSchema: {
         id: z.number().int(),
