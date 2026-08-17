@@ -17,8 +17,8 @@ import { detectOrderBlocks } from "./orderBlockDetection.js";
 
 export { detectOrderBlocks };
 
-const LANIAKEA_BORDER_INSET = 3; // px, Abstand des Laniakea-Rahmens nach außen von der normalen Box-Kante
-const LANIAKEA_BORDER_LINE_WIDTH = 2.5; // px
+const PIN_BORDER_INSET = 3; // px, Abstand des Pin-Rahmens nach außen von der normalen Box-Kante
+const PIN_BORDER_LINE_WIDTH = 2.5; // px
 
 function positionsBox(position1Media, position2Media, pixelRatio) {
   const scaledPosition1 = Math.round(pixelRatio * position1Media);
@@ -53,15 +53,15 @@ class ZoneRenderer {
       ctx.lineWidth = this._options.borderWidth ?? 1;
       ctx.strokeRect(xPos.position, yPos.position, xPos.length, yPos.length);
 
-      // Permanenter Rahmen (Chat 2026-08-01, Laniakea-Kontext) — dieselbe Halo-Logik wie
+      // Permanenter Rahmen (Chat 2026-08-01, Pin-Kontext) — dieselbe Halo-Logik wie
       // tradeMarkers.js' Ring, hier als etwas nach außen versetztes gestricheltes Rechteck statt
       // eines Kreises, weil eine OB-Zone eine Fläche und kein Punkt ist.
-      if (this._options.inLaniakeaContext) {
+      if (this._options.inPinContext) {
         ctx.save();
-        ctx.strokeStyle = this._options.laniakeaColor;
-        ctx.lineWidth = LANIAKEA_BORDER_LINE_WIDTH * scope.horizontalPixelRatio;
+        ctx.strokeStyle = this._options.pinColor;
+        ctx.lineWidth = PIN_BORDER_LINE_WIDTH * scope.horizontalPixelRatio;
         ctx.setLineDash([6 * scope.horizontalPixelRatio, 4 * scope.horizontalPixelRatio]);
-        const inset = LANIAKEA_BORDER_INSET * scope.horizontalPixelRatio;
+        const inset = PIN_BORDER_INSET * scope.horizontalPixelRatio;
         ctx.strokeRect(xPos.position - inset, yPos.position - inset, xPos.length + inset * 2, yPos.length + inset * 2);
         ctx.restore();
       }
@@ -159,11 +159,11 @@ export class OrderBlockPrimitive {
     return this._paneViews;
   }
 
-  // Distanz zum Laniakea-Kontextmenü (Chat 2026-08-01, zweite Runde — Bug-Report Philip: exaktes
+  // Distanz zum Pin-Kontextmenü (Chat 2026-08-01, zweite Runde — Bug-Report Philip: exaktes
   // Treffen der Box war trotz Cursor-Fix zu fummelig, "lass mal die anderen Lösungsmöglichkeiten
   // anschauen") — ersetzt den früheren reinen Boolean-Hittest: PriceChart.vue sammelt jetzt ALLE
   // Objekte in einem Radius um den Klick statt genau eins exakt zu treffen (siehe
-  // findNearbyLaniakeaCandidates dort), 0 wenn der Punkt IN der Box liegt, sonst Abstand zur
+  // findNearbyPinCandidates dort), 0 wenn der Punkt IN der Box liegt, sonst Abstand zur
   // nächsten Kante (Standardformel "Distanz Punkt zu Rechteck"). x/y in CSS-Pixeln relativ zum
   // Chart-Container, derselbe Koordinatenraum wie die gecachten p1/p2.
   distanceTo(x, y) {
@@ -213,7 +213,7 @@ const OB_ZONE_KEYS = {
   },
 };
 
-function zoneOptions(z, inLaniakeaContext) {
+function zoneOptions(z, inPinContext) {
   const inactive = z.touched || z.invalidated;
   const keys = OB_ZONE_KEYS[z.timeframe] ?? OB_ZONE_KEYS["1H"];
   const key = inactive ? keys.inactive : z.dir === 1 ? keys.bull : keys.bear;
@@ -226,15 +226,15 @@ function zoneOptions(z, inLaniakeaContext) {
     borderWidth: lineWidth(key),
     textColor: "rgba(209, 212, 220, 0.9)",
     label,
-    inLaniakeaContext,
-    laniakeaColor: cssColor("laniakea"),
+    inPinContext,
+    pinColor: cssColor("pin"),
   };
 }
 
 // naturalKeyOf: exakt derselbe Schlüssel wie ob_zones' Unique-Constraint (instrument, timeframe,
 // direction, start_time) MINUS instrument (der Chart zeigt immer nur ein Instrument gleichzeitig,
 // siehe PriceChart.vue) — so lässt sich eine live erkannte Forex-Zone (ohne eigene DB-id) gegen
-// einen gespeicherten Laniakea-Kontext-Eintrag abgleichen, siehe laniakeaContext.js:
+// einen gespeicherten Pin-Kontext-Eintrag abgleichen, siehe pinContext.js:
 // obZoneNaturalKey (dieselbe Formel, dort auf der DB-Zeile statt der live erkannten Zone).
 export function obZoneNaturalKey(timeframe, dir, startTime) {
   return `${timeframe}|${dir === 1 ? "long" : "short"}|${startTime}`;
@@ -242,16 +242,16 @@ export function obZoneNaturalKey(timeframe, dir, startTime) {
 
 // Zeichnet bereits berechnete Zonen (z.B. aus `ob_zones` in Supabase, mit `timeframe`-Tag)
 // statt sie selbst aus Kerzen neu zu berechnen — für Zonen, die auf einem anderen
-// Timeframe erkannt wurden als dem gerade angezeigten Chart. laniakeaKeys (Chat 2026-08-01,
+// Timeframe erkannt wurden als dem gerade angezeigten Chart. pinKeys (Chat 2026-08-01,
 // optional): Set von obZoneNaturalKey-Strings, die dauerhaft hervorgehoben werden sollen.
-export function renderPersistedZones(series, zones, existingPrimitives, candles, laniakeaKeys) {
+export function renderPersistedZones(series, zones, existingPrimitives, candles, pinKeys) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
   for (const z of zones) {
     if (z.invalidated) continue;
-    const inLaniakeaContext = laniakeaKeys?.has(obZoneNaturalKey(z.timeframe, z.dir, z.startTime)) ?? false;
-    const primitive = new OrderBlockPrimitive(z, zoneOptions(z, inLaniakeaContext), candles);
+    const inPinContext = pinKeys?.has(obZoneNaturalKey(z.timeframe, z.dir, z.startTime)) ?? false;
+    const primitive = new OrderBlockPrimitive(z, zoneOptions(z, inPinContext), candles);
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }

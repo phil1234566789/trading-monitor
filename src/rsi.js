@@ -77,8 +77,8 @@ export const DEFAULT_DIVERGENCE_LOOKBACK_BARS = 100; // wie weit zurück nach ei
 const MIN_DIVERGENCE_RSI_DELTA = 3; // filtert Rauschen (minimal unterschiedliche RSI-Werte durch Rundung/Mikrobewegung)
 
 // --- Fehlalarm-Filter (Chat 2026-08-11, dritte Runde) ---
-// Philip hat über den Laniakea-Rechtsklick zwei konkrete Fehlalarme markiert (siehe Notizen in
-// laniakea_context) und explizit gesagt: "wir basteln gerade", d.h. diese Kriterien sind noch
+// Philip hat über den Pin-Rechtsklick zwei konkrete Fehlalarme markiert (siehe Notizen in
+// pin_context) und explizit gesagt: "wir basteln gerade", d.h. diese Kriterien sind noch
 // nicht in Stein gemeißelt. Deshalb bewusst als EIGENE, kleine Funktionen statt direkt in
 // findLatestDivergence/collectDivergenceHistory verdrahtet — einzelne Filter (oder DIVERGENCE_FILTERS
 // als Ganzes) lassen sich damit schnell rausnehmen oder die Schwellen anpassen, ohne die

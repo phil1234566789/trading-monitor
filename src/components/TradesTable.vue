@@ -5,9 +5,9 @@ import { cssColorScaled } from "../chartColors.js";
 
 const props = defineProps({
   trades: { type: Array, required: true },
-  // Laniakea-Kontext (Chat 2026-08-01, siehe laniakeaContext.js) — Set von trade_positions.id,
+  // Pin-Kontext (Chat 2026-08-01, siehe pinContext.js) — Set von trade_positions.id,
   // die Philip per Rechtsklick dauerhaft "an Lana übergeben" hat, tönt die jeweilige Zeile.
-  laniakeaTradeIds: { type: Set, default: () => new Set() },
+  pinTradeIds: { type: Set, default: () => new Set() },
 });
 
 // Seit Chat 2026-07-28 nur noch EIN Aktions-Button pro Zeile ("edit-request", öffnet
@@ -17,16 +17,16 @@ const props = defineProps({
 // Hover einer Zeile soll die zugehörige trade_position im Chart hervorgehoben werden, ohne wie
 // "select" auch noch hinzuscrollen (siehe onHoverTrade in Dashboard.vue) — null bei mouseleave,
 // damit die Hervorhebung wieder verschwindet.
-// "laniakea-context-menu" (Chat 2026-08-01): Rechtsklick auf eine Zeile öffnet direkt Dashboard.vue's
-// Notiz-Popup (siehe dort: onLaniakeaContextMenu) — passiert serverseitig nichts hier, TradesTable.vue
-// kennt den Laniakea-Store nicht direkt. Gleicher Event-Name UND Payload-Shape
+// "pin-context-menu" (Chat 2026-08-01): Rechtsklick auf eine Zeile öffnet direkt Dashboard.vue's
+// Notiz-Popup (siehe dort: onPinContextMenu) — passiert serverseitig nichts hier, TradesTable.vue
+// kennt den Pin-Store nicht direkt. Gleicher Event-Name UND Payload-Shape
 // { candidates: [...], x, y } wie PriceChart.vue's Chart-Marker/OB-Zonen-Rechtsklick (siehe dort),
 // hier immer genau EIN Kandidat (eine Tabellenzeile ist nie mehrdeutig), damit Dashboard.vue EINEN
 // gemeinsamen Handler nutzen kann.
-const emit = defineEmits(["select", "edit-request", "hover-trade", "laniakea-context-menu"]);
+const emit = defineEmits(["select", "edit-request", "hover-trade", "pin-context-menu"]);
 
 function rowStyle(t) {
-  return props.laniakeaTradeIds.has(t.id) ? { backgroundColor: cssColorScaled("laniakea", 0.25) } : undefined;
+  return props.pinTradeIds.has(t.id) ? { backgroundColor: cssColorScaled("pin", 0.25) } : undefined;
 }
 
 const OUTCOME_LABEL = {
@@ -108,7 +108,7 @@ const showCommission = useLocalStorageRef("showCommissionColumn", false);
         @click="emit('select', t)"
         @mouseenter="emit('hover-trade', t)"
         @mouseleave="emit('hover-trade', null)"
-        @contextmenu.prevent="emit('laniakea-context-menu', { candidates: [{ kind: 'trade_position', trade: t }], x: $event.clientX, y: $event.clientY })"
+        @contextmenu.prevent="emit('pin-context-menu', { candidates: [{ kind: 'trade_position', trade: t }], x: $event.clientX, y: $event.clientY })"
       >
         <td>
           <span v-if="isFavorite(t)" class="trade-favorite-indicator" title="10/10-Trade">★</span>

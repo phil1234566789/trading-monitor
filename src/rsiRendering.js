@@ -83,8 +83,8 @@ export class DivergenceLinePrimitive {
   // from/to: {time, price} — bei der RSI-Bein-Instanz ist "price" der RSI-Wert (0-100). candles:
   // fürs canShowLabels-Zoom-Gating (siehe Renderer), dieselbe clipReplay(allCandles)-Referenz wie
   // beim Aufruf von detectRsiDivergence in PriceChart.vue. divergence: das rohe rsi.js-Objekt
-  // ({type, fromTime, toTime, fromPrice, toPrice, fromRsi, toRsi}) — nur für den Laniakea-
-  // Kontextmenü-Kandidaten gebraucht (siehe PriceChart.vue: findNearbyLaniakeaCandidates), nicht
+  // ({type, fromTime, toTime, fromPrice, toPrice, fromRsi, toRsi}) — nur für den Pin-
+  // Kontextmenü-Kandidaten gebraucht (siehe PriceChart.vue: findNearbyPinCandidates), nicht
   // fürs Zeichnen selbst (from/to reichen dafür).
   constructor(from, to, options, candles, divergence) {
     this._from = from;
@@ -111,7 +111,7 @@ export class DivergenceLinePrimitive {
     return this._paneViews;
   }
 
-  // Fürs Laniakea-Kontextmenü (Chat 2026-08-11, siehe PriceChart.vue: findNearbyLaniakeaCandidates)
+  // Fürs Pin-Kontextmenü (Chat 2026-08-11, siehe PriceChart.vue: findNearbyPinCandidates)
   // — anders als LiquidityLinePrimitive.distanceTo (horizontale Strecke, siehe liquidity.js) ist
   // dieser Konnektor diagonal, deshalb echte Punkt-zu-Strecke-Projektion statt der horizontalen
   // Abkürzung dort. x/y in CSS-Pixeln relativ zum Chart-Container, wie bei allen anderen

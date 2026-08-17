@@ -76,20 +76,20 @@ const props = defineProps({
   // renderTradeMarkers/tradeMarkers.js für die eigentliche Glow-Darstellung. Bewusst NUR eine Id
   // (kein ganzer Trade), analog zu selectedSetupId-artigen Props andernorts in diesem Repo.
   hoveredTradeId: { type: [String, Number], default: null },
-  // Laniakea-Kontext (Chat 2026-08-01, siehe laniakeaContext.js) — Set von trade_positions.id,
+  // Pin-Kontext (Chat 2026-08-01, siehe pinContext.js) — Set von trade_positions.id,
   // die Philip per Rechtsklick dauerhaft "an Lana übergeben" hat, zeichnet einen permanenten
   // (nicht nur Hover-) Ring um deren Entry/Exit, siehe renderTradeMarkers/tradeMarkers.js.
-  laniakeaTradeIds: { type: Set, default: () => new Set() },
-  // Laniakea-Kontext für OB-Zonen (Chat 2026-08-01) — Set von obZoneNaturalKey-Strings (siehe
-  // orderBlocks.js), analog zu laniakeaTradeIds oben, aber Natural-Key statt Id (Forex-OB-Boxen
+  pinTradeIds: { type: Set, default: () => new Set() },
+  // Pin-Kontext für OB-Zonen (Chat 2026-08-01) — Set von obZoneNaturalKey-Strings (siehe
+  // orderBlocks.js), analog zu pinTradeIds oben, aber Natural-Key statt Id (Forex-OB-Boxen
   // haben keine eigene DB-id im live gezeichneten Zonen-Objekt, siehe collectObsZones).
-  laniakeaObZoneKeys: { type: Set, default: () => new Set() },
-  // Laniakea-Kontext, dritte Art (Chat 2026-08-01, dritte Runde) — Set von trade_setups.id, siehe
+  pinObZoneKeys: { type: Set, default: () => new Set() },
+  // Pin-Kontext, dritte Art (Chat 2026-08-01, dritte Runde) — Set von trade_setups.id, siehe
   // refreshTradeSetupLinksInternal.
-  laniakeaTradeSetupIds: { type: Set, default: () => new Set() },
-  // Laniakea-Kontext, vierte Art (Chat 2026-08-01, vierte Runde) — Set von trade_confirmations.id
+  pinTradeSetupIds: { type: Set, default: () => new Set() },
+  // Pin-Kontext, vierte Art (Chat 2026-08-01, vierte Runde) — Set von trade_confirmations.id
   // (nur kind='ob'-Bestätigungen zeichnen überhaupt eine Box, siehe refreshTradeConfirmationLinksInternal).
-  laniakeaTradeConfirmationIds: { type: Set, default: () => new Set() },
+  pinTradeConfirmationIds: { type: Set, default: () => new Set() },
   // Ein/Ausblenden der eigenen geloggten Trades (Chat 2026-07-27) — Untermenü-Toggle unter dem
   // übergeordneten "Trades"-Button (showTradeSetups); beide zusammen müssen an sein, damit Trades
   // gezeichnet werden (Bug-Report Philip 2026-07-28: "übergeordneter Trades-Toggle soll Trades
@@ -205,7 +205,7 @@ const emit = defineEmits([
   "toggle-trade-mode",
   "select-target",
   "select-setup-confirmations",
-  "laniakea-context-menu",
+  "pin-context-menu",
 ]);
 
 // CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
@@ -268,11 +268,11 @@ const INITIAL_CANDLE_COUNT = 1000; // depth loaded on startup / timeframe switch
 const LAZY_LOAD_LOGICAL_THRESHOLD = 20; // fetch older data once this close to the left edge
 const WINDOW_BARS = 15; // letzte 15 Binance-1m-Kerzen für das rollierende Gauge-Fenster
 const TRADE_MARKER_BARS = new Set(["1m", "5m", "15m", "1h"]); // 4h/1D würden zu unübersichtlich
-// Laniakea-Rechtsklick (Chat 2026-08-01, zweite Runde) — großzügiger Fang-Radius statt exaktem
-// Treffen, siehe findNearbyLaniakeaCandidates. MAX_CANDIDATES deckelt die Auswahl-Liste, damit ein
+// Pin-Rechtsklick (Chat 2026-08-01, zweite Runde) — großzügiger Fang-Radius statt exaktem
+// Treffen, siehe findNearbyPinCandidates. MAX_CANDIDATES deckelt die Auswahl-Liste, damit ein
 // dicht bevölkerter Chart-Bereich kein unübersichtlich langes Menü erzeugt.
-const LANIAKEA_SEARCH_RADIUS = 40; // px
-const LANIAKEA_MAX_CANDIDATES = 6;
+const PIN_SEARCH_RADIUS = 40; // px
+const PIN_MAX_CANDIDATES = 6;
 // Trade-Setup (Liquidity Sweep + Protected M5-Fraktal + M5-OB, siehe tv-indikator/src/
 // tradesetup.pine) — nur für Forex (braucht M5-Kerzen zusätzlich zum aktuell angezeigten
 // Chart-Timeframe). Werte 1:1 aus den getunten Defaults in tv-indikator/src/inputs.pine
@@ -449,8 +449,8 @@ let newsMarkerPrimitives = [];
 let rangesMarkerPrimitives = [];
 let marketStructurePrimitives = [];
 let tradePrimitives = [];
-let laniakeaContextMenuHandler = null; // Referenz für removeEventListener in onUnmounted, siehe dort
-let laniakeaCursorHandler = null; // dito
+let pinContextMenuHandler = null; // Referenz für removeEventListener in onUnmounted, siehe dort
+let pinCursorHandler = null; // dito
 let tradeSetupLinkPrimitives = [];
 let tradeTargetLinkPrimitives = [];
 let tradeConfirmationLinkPrimitives = [];
@@ -831,7 +831,7 @@ function refreshTradeMarkersInternal() {
   const visible = props.showTradeSetups && props.showTrades && TRADE_MARKER_BARS.has(props.currentBar);
   const candles = clipReplay(allCandles);
   const trades = visible ? tradesVisibleForCandles(props.trades, candles) : [];
-  renderTradeMarkers(candleSeries, trades, tradePrimitives, candles, props.showLiquidityDebug, props.hoveredTradeId, props.laniakeaTradeIds);
+  renderTradeMarkers(candleSeries, trades, tradePrimitives, candles, props.showLiquidityDebug, props.hoveredTradeId, props.pinTradeIds);
 }
 
 // Zeigt die M5-OB, mit der ein geloggter Trade verknüpft ist. Label "#<trade_setup_id>" matcht 1:1
@@ -849,13 +849,13 @@ function refreshTradeSetupLinksInternal() {
     const top = t.tradeSetupObTop;
     const bottom = t.tradeSetupObBottom;
     const key = t.direction === "short" ? "tradeSetupShort" : "tradeSetupLong";
-    // Laniakea-Kontext, dritte Art (Chat 2026-08-01, dritte Runde — Bug-Report Philip: genau DIESE
+    // Pin-Kontext, dritte Art (Chat 2026-08-01, dritte Runde — Bug-Report Philip: genau DIESE
     // Box, "OB 1.15229#22", war bisher nie klickbar, weil sie über einen eigenen Rendering-Pfad
     // läuft statt über collectObsZones/orderBlockPrimitives). tradeSetupId ist bereits die echte
     // trade_setups.id (kein Natural-Key-Umweg wie bei ob_zone nötig) — direction/instrument vom
     // Trade selbst mitgegeben, damit die Kandidaten-Liste in Dashboard.vue ohne Zusatz-Fetch ein
-    // Label bauen kann (siehe PriceChart.vue: findNearbyLaniakeaCandidates).
-    const inLaniakeaContext = props.laniakeaTradeSetupIds?.has(t.tradeSetupId) ?? false;
+    // Label bauen kann (siehe PriceChart.vue: findNearbyPinCandidates).
+    const inPinContext = props.pinTradeSetupIds?.has(t.tradeSetupId) ?? false;
     const primitive = new OrderBlockPrimitive(
       { top, bottom, startTime: t.tradeSetupObStartTime, endTime: t.tradeSetupObStartTime + TRADE_SETUP_OB_WIDTH_SEC, tradeSetupId: t.tradeSetupId, direction: t.direction, instrument: t.instrument },
       {
@@ -864,8 +864,8 @@ function refreshTradeSetupLinksInternal() {
         borderWidth: lineWidth(key),
         textColor: "rgba(255, 255, 255, 0.9)",
         label: `#${t.tradeSetupId}`,
-        inLaniakeaContext,
-        laniakeaColor: cssColor("laniakea"),
+        inPinContext,
+        pinColor: cssColor("pin"),
       },
       candles,
     );
@@ -1041,10 +1041,10 @@ function refreshTradeConfirmationLinksInternal() {
           liveObZoneState(confirmation)?.endTime ??
           firstCandleTouchRange(candles, confirmation.sourceTime, confirmation.rangeLow, confirmation.rangeHigh) ??
           candles[candles.length - 1].time;
-        // Laniakea-Kontext, vierte Art (Chat 2026-08-01, vierte Runde — Bug-Report Philip: DIESE
+        // Pin-Kontext, vierte Art (Chat 2026-08-01, vierte Runde — Bug-Report Philip: DIESE
         // Box, "✔ OB 1,15229 #22", wurde mit der Trade-Setup-Link-Box verwechselt, war bisher
         // komplett unverdrahtet). confirmationId ist bereits die echte trade_confirmations.id.
-        const inLaniakeaContext = props.laniakeaTradeConfirmationIds?.has(confirmation.id) ?? false;
+        const inPinContext = props.pinTradeConfirmationIds?.has(confirmation.id) ?? false;
         const primitive = new OrderBlockPrimitive(
           { top: confirmation.rangeHigh, bottom: confirmation.rangeLow, startTime: confirmation.sourceTime, endTime, confirmationId: confirmation.id, instrument: t.instrument },
           {
@@ -1053,8 +1053,8 @@ function refreshTradeConfirmationLinksInternal() {
             borderWidth: lineWidth("tradeConfirmation"),
             textColor: "rgba(255, 255, 255, 0.9)",
             label,
-            inLaniakeaContext,
-            laniakeaColor: cssColor("laniakea"),
+            inPinContext,
+            pinColor: cssColor("pin"),
           },
           candles,
         );
@@ -1302,7 +1302,7 @@ function liveObZoneState(item) {
 function refreshPoiZonesInternal() {
   const candles = clipReplay(allCandles);
   const visibleZones = filterHistorical(collectObsZones());
-  renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles, props.laniakeaObZoneKeys);
+  renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles, props.pinObZoneKeys);
   poiZonesMetadata.value = visibleZones;
 }
 
@@ -2697,15 +2697,15 @@ onMounted(() => {
   // Kandidatensuche im Radius statt Exakt-Hittest (Chat 2026-08-01, zweite Runde — Bug-Report
   // Philip: "tu mir schwer die Box zu treffen ... lass mal die anderen Lösungsmöglichkeiten
   // anschauen") — Rechtsklick funktioniert jetzt IRGENDWO in der Nähe eines Objekts statt exakt
-  // darauf; sammelt alle Trade-Marker/1H-4H-OB-Zonen im LANIAKEA_SEARCH_RADIUS um den Klick, nach
-  // Distanz sortiert (nächstes zuerst), gekappt auf LANIAKEA_MAX_CANDIDATES. Bei genau einem
+  // darauf; sammelt alle Trade-Marker/1H-4H-OB-Zonen im PIN_SEARCH_RADIUS um den Klick, nach
+  // Distanz sortiert (nächstes zuerst), gekappt auf PIN_MAX_CANDIDATES. Bei genau einem
   // Treffer öffnet Dashboard.vue direkt das Notiz-Popup, bei mehreren eine Auswahl-Liste (siehe
-  // dort: onLaniakeaContextMenu) — Philip wählt dann aus, statt pixelgenau zielen zu müssen.
-  function findNearbyLaniakeaCandidates(x, y) {
+  // dort: onPinContextMenu) — Philip wählt dann aus, statt pixelgenau zielen zu müssen.
+  function findNearbyPinCandidates(x, y) {
     const candidates = [];
     for (const p of tradePrimitives) {
       const distance = p.distanceTo(x, y);
-      if (distance <= LANIAKEA_SEARCH_RADIUS) candidates.push({ kind: "trade_position", trade: p.trade, distance });
+      if (distance <= PIN_SEARCH_RADIUS) candidates.push({ kind: "trade_position", trade: p.trade, distance });
     }
     // OB-Zonen — 1H/4H lösen sich gegen die persistierte ob_zones-Zeile auf (kind="ob_zone").
     // M5-Boxen existieren dort NIE (siehe orderBlocks.js/collectObsZones-Kommentar) — bekommen
@@ -2713,7 +2713,7 @@ onMounted(() => {
     // Snapshot", JEDE M5-Box soll klickbar sein, nicht nur bereits zu einem Trade-Setup gehörende).
     for (const p of orderBlockPrimitives) {
       const distance = p.distanceTo(x, y);
-      if (distance > LANIAKEA_SEARCH_RADIUS) continue;
+      if (distance > PIN_SEARCH_RADIUS) continue;
       if (p.zone.timeframe === "5M") {
         candidates.push({
           kind: "m5_ob",
@@ -2736,7 +2736,7 @@ onMounted(() => {
     // m5_ob oben) — inkl. timeframe-Feld (props.currentBar), da das nicht zwingend M5 sein muss.
     for (const p of liquidityPrimitives) {
       const distance = p.distanceTo(x, y);
-      if (distance > LANIAKEA_SEARCH_RADIUS) continue;
+      if (distance > PIN_SEARCH_RADIUS) continue;
       if (props.currentBar === "1h") {
         candidates.push({
           kind: "liquidity_level",
@@ -2756,7 +2756,7 @@ onMounted(() => {
     // refreshTradeSetupLinksInternal.
     for (const p of tradeSetupLinkPrimitives) {
       const distance = p.distanceTo(x, y);
-      if (distance <= LANIAKEA_SEARCH_RADIUS) {
+      if (distance <= PIN_SEARCH_RADIUS) {
         candidates.push({
           kind: "trade_setup",
           tradeSetupId: p.zone.tradeSetupId,
@@ -2775,18 +2775,18 @@ onMounted(() => {
     for (const p of tradeConfirmationLinkPrimitives) {
       if (!(p instanceof OrderBlockPrimitive)) continue;
       const distance = p.distanceTo(x, y);
-      if (distance <= LANIAKEA_SEARCH_RADIUS) {
+      if (distance <= PIN_SEARCH_RADIUS) {
         candidates.push({ kind: "trade_confirmation", confirmationId: p.zone.confirmationId, instrument: p.zone.instrument, distance });
       }
     }
     // RSI-Divergenz-Konnektoren (Chat 2026-08-11, Philip: "ich will DIR paar Stellen zeigen ... wir
     // haben ja die Funktion da") — nur das Preis-Bein (divergencePriceLinePrimitives), nicht auch
     // das RSI-Bein in der eigenen Pane: dessen priceToCoordinate()-Y ist relativ zur RSI-Pane, nicht
-    // zum ganzen Chart-Container wie hier gerechnet (siehe laniakeaContextMenuHandler unten) — für
+    // zum ganzen Chart-Container wie hier gerechnet (siehe pinContextMenuHandler unten) — für
     // "eine Divergenz anklicken" reicht das Preis-Bein, beide Beine wären ohnehin derselbe DB-Eintrag.
     for (const p of divergencePriceLinePrimitives) {
       const distance = p.distanceTo(x, y);
-      if (distance <= LANIAKEA_SEARCH_RADIUS) {
+      if (distance <= PIN_SEARCH_RADIUS) {
         candidates.push({ kind: "rsi_divergence", divergence: p.divergence, instrument: props.symbol, distance });
       }
     }
@@ -2811,24 +2811,24 @@ onMounted(() => {
       seen.add(key);
       deduped.push(c);
     }
-    return deduped.slice(0, LANIAKEA_MAX_CANDIDATES);
+    return deduped.slice(0, PIN_MAX_CANDIDATES);
   }
 
   // Leichtgewichtiger Boolean-Check fürs Cursor-Feedback (jede Mausbewegung) — baut anders als
-  // findNearbyLaniakeaCandidates() keine Objekte/kein Sortieren, nur "gibt's überhaupt was in der
+  // findNearbyPinCandidates() keine Objekte/kein Sortieren, nur "gibt's überhaupt was in der
   // Nähe".
-  function hasNearbyLaniakeaCandidate(x, y) {
+  function hasNearbyPinCandidate(x, y) {
     return (
-      tradePrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
-      orderBlockPrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
-      tradeSetupLinkPrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
-      tradeConfirmationLinkPrimitives.some((p) => p instanceof OrderBlockPrimitive && p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
-      liquidityPrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS) ||
-      divergencePriceLinePrimitives.some((p) => p.distanceTo(x, y) <= LANIAKEA_SEARCH_RADIUS)
+      tradePrimitives.some((p) => p.distanceTo(x, y) <= PIN_SEARCH_RADIUS) ||
+      orderBlockPrimitives.some((p) => p.distanceTo(x, y) <= PIN_SEARCH_RADIUS) ||
+      tradeSetupLinkPrimitives.some((p) => p.distanceTo(x, y) <= PIN_SEARCH_RADIUS) ||
+      tradeConfirmationLinkPrimitives.some((p) => p instanceof OrderBlockPrimitive && p.distanceTo(x, y) <= PIN_SEARCH_RADIUS) ||
+      liquidityPrimitives.some((p) => p.distanceTo(x, y) <= PIN_SEARCH_RADIUS) ||
+      divergencePriceLinePrimitives.some((p) => p.distanceTo(x, y) <= PIN_SEARCH_RADIUS)
     );
   }
 
-  // Rechtsklick -> Laniakea-Kontextmenü (Chat 2026-08-01). lightweight-charts hat kein natives
+  // Rechtsklick -> Pin-Kontextmenü (Chat 2026-08-01). lightweight-charts hat kein natives
   // Rechtsklick-Event (nur subscribeClick/subscribeCrosshairMove oben), daher ein normaler
   // DOM-Listener statt eines chart.subscribe*-Aufrufs. Koordinaten-Umrechnung exakt wie in
   // claudeCalloutTick (siehe dort): chartContainerRef ist .chart-container, das .chart-wrapper
@@ -2837,28 +2837,28 @@ onMounted(() => {
   // Koordinaten halten (timeToCoordinate/priceToCoordinate liefern bereits CSS-Pixel, kein
   // pixelRatio-Faktor nötig). preventDefault() NUR bei mindestens einem Treffer, sonst bleibt das
   // native Browser-Menü unangetastet (kein Verhaltens-Bruch abseits von Markern/Zonen).
-  laniakeaContextMenuHandler = (event) => {
+  pinContextMenuHandler = (event) => {
     const rect = chartContainerRef.value.getBoundingClientRect();
-    const candidates = findNearbyLaniakeaCandidates(event.clientX - rect.left, event.clientY - rect.top);
+    const candidates = findNearbyPinCandidates(event.clientX - rect.left, event.clientY - rect.top);
     if (candidates.length === 0) return;
     event.preventDefault();
-    emit("laniakea-context-menu", { candidates, x: event.clientX, y: event.clientY });
+    emit("pin-context-menu", { candidates, x: event.clientX, y: event.clientY });
   };
-  chartContainerRef.value?.addEventListener("contextmenu", laniakeaContextMenuHandler);
+  chartContainerRef.value?.addEventListener("contextmenu", pinContextMenuHandler);
 
-  // Cursor-Feedback (Trade-Modus, Chat 2026-07-27, UND Laniakea, Chat 2026-08-01) — EIN einziger
+  // Cursor-Feedback (Trade-Modus, Chat 2026-07-27, UND Pin, Chat 2026-08-01) — EIN einziger
   // roher mousemove-Listener statt (wie ursprünglich) zwei getrennter (chart.subscribeCrosshairMove
   // fürs eine, ein eigener addEventListener fürs andere): Bug-Report Philip 2026-08-01 "Cursor
   // bleibt immer normal" — lightweight-charts feuert subscribeCrosshairMove bei JEDER Mausbewegung
   // auch außerhalb des Trade-Modus und setzte dort den Cursor unconditional auf "" zurück; das lief
-  // als zweiter, unabhängiger Listener und überschrieb den gerade erst per Laniakea-Hittest
+  // als zweiter, unabhängiger Listener und überschrieb den gerade erst per Pin-Hittest
   // gesetzten "context-menu"-Cursor auf jedem einzelnen Frame wieder — sah dadurch aus, als würde
   // sich der Cursor nie ändern, obwohl der Rechtsklick-Hittest selbst (ein einzelnes Event, nicht
   // pro Frame überschreibbar) längst korrekt traf. EIN Listener, EINE Entscheidung pro Bewegung,
   // behebt das strukturell. findClickedSetup/-FibLevel/-Target lesen nachweislich nur param.point
   // (siehe deren Implementierung), ein synthetisches { point: { x, y } } aus derselben
-  // rect-basierten Rechnung wie laniakeaContextMenuHandler reicht ihnen also.
-  laniakeaCursorHandler = (event) => {
+  // rect-basierten Rechnung wie pinContextMenuHandler reicht ihnen also.
+  pinCursorHandler = (event) => {
     if (!chartContainerRef.value) return;
     const rect = chartContainerRef.value.getBoundingClientRect();
     const x = event.clientX - rect.left;
@@ -2872,9 +2872,9 @@ onMounted(() => {
       chartContainerRef.value.style.cursor = hit ? "pointer" : "";
       return;
     }
-    chartContainerRef.value.style.cursor = hasNearbyLaniakeaCandidate(x, y) ? "context-menu" : "";
+    chartContainerRef.value.style.cursor = hasNearbyPinCandidate(x, y) ? "context-menu" : "";
   };
-  chartContainerRef.value?.addEventListener("mousemove", laniakeaCursorHandler);
+  chartContainerRef.value?.addEventListener("mousemove", pinCursorHandler);
 
   resizeObserver = new ResizeObserver((entries) => {
     if (!chart) return; // Resize-Callback kann nach chart.remove() noch nachfeuern
@@ -2954,8 +2954,8 @@ onUnmounted(() => {
   clearInterval(dailyGaugeTimer);
   clearTimeout(replayFetchDebounceTimer);
   resizeObserver?.disconnect();
-  if (laniakeaContextMenuHandler) chartContainerRef.value?.removeEventListener("contextmenu", laniakeaContextMenuHandler);
-  if (laniakeaCursorHandler) chartContainerRef.value?.removeEventListener("mousemove", laniakeaCursorHandler);
+  if (pinContextMenuHandler) chartContainerRef.value?.removeEventListener("contextmenu", pinContextMenuHandler);
+  if (pinCursorHandler) chartContainerRef.value?.removeEventListener("mousemove", pinCursorHandler);
   chart?.remove();
   // Nullen, damit noch laufende Async-Loads (loadInitial/pollRecent) beim Abschluss
   // per Guard erkennen, dass der Chart schon disposed ist, statt lightweight-charts'
@@ -2985,10 +2985,10 @@ watch([() => props.trades, () => props.showTrades], () => {
 // Mausbewegung, soll aber NUR die Marker neu zeichnen, nicht auch noch Setup-/Target-/
 // Confirmation-Links und Invalidation-Linien jedes Mal mit neu berechnen.
 watch(() => props.hoveredTradeId, refreshTradeMarkersInternal);
-watch(() => props.laniakeaTradeIds, refreshTradeMarkersInternal);
-watch(() => props.laniakeaObZoneKeys, refreshPoiZonesInternal);
-watch(() => props.laniakeaTradeSetupIds, refreshTradeSetupLinksInternal);
-watch(() => props.laniakeaTradeConfirmationIds, refreshTradeConfirmationLinksInternal);
+watch(() => props.pinTradeIds, refreshTradeMarkersInternal);
+watch(() => props.pinObZoneKeys, refreshPoiZonesInternal);
+watch(() => props.pinTradeSetupIds, refreshTradeSetupLinksInternal);
+watch(() => props.pinTradeConfirmationIds, refreshTradeConfirmationLinksInternal);
 watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 // tscCalloutModeActive wechselt (TSC wird ein-/ausgeblendet, Locked-Zustand etc.) -> Canvas-Text
 // muss sofort erscheinen/verschwinden, nicht erst beim nächsten claudeAnnotations-Wechsel.

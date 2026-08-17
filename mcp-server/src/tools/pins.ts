@@ -1,18 +1,18 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getLaniakeaContext } from "../db.js";
+import { getPinContext } from "../db.js";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-// Read-only (Chat 2026-08-01) — Philip entfernt Einträge selbst im Laniakea-Modal
-// (LaniakeaPanel.vue), kein Lösch-/Konsum-Tool von Lana-Seite nötig, siehe PLAN
-// "Laniakea-Kontext" 2026-08-01.
-export function registerLaniakeaTools(server: McpServer) {
+// Read-only (Chat 2026-08-01) — Philip entfernt Einträge selbst im Pin-Modal
+// (PinPanel.vue), kein Lösch-/Konsum-Tool von Lana-Seite nötig, siehe PLAN
+// "Pin-Kontext" 2026-08-01.
+export function registerPinTools(server: McpServer) {
   server.registerTool(
-    "get_laniakea_context",
+    "get_pin_context",
     {
-      title: "Laniakea-Kontext",
+      title: "Pin-Kontext",
       description:
         "Die trade_positions, OB-Zonen, Trade-Setups, Trade-Bestätigungen, Liquiditäts-Level, " +
         "M5-OB-Boxen und RSI-Divergenz-Konnektoren, die Philip gerade per Rechtsklick " +
@@ -37,6 +37,6 @@ export function registerLaniakeaTools(server: McpServer) {
         "Beschreibung per Text zu warten — das ist genau der Zweck dieses Tools.",
       inputSchema: {},
     },
-    async () => json(await getLaniakeaContext()),
+    async () => json(await getPinContext()),
   );
 }

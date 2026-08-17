@@ -135,8 +135,8 @@ const GROUPS = [
     fields: [{ key: "newsEvent", label: "Termin-Marker" }],
   },
   {
-    title: "Laniakea",
-    fields: [{ key: "laniakea", label: "Akzentfarbe" }],
+    title: "Pin",
+    fields: [{ key: "pin", label: "Akzentfarbe" }],
   },
 ];
 

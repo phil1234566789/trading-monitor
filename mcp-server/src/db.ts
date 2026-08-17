@@ -147,9 +147,11 @@ export async function getJournal(instrument?: string, source?: string, limit = 5
   return data ?? [];
 }
 
-// Laniakea-Kontext (Chat 2026-08-01, siehe supabase/migrations/20260801120000_laniakea_context.sql,
+// Pin-Kontext (Chat 2026-08-01, siehe supabase/migrations/20260801120000_laniakea_context.sql,
 // 20260801130000_laniakea_context_ob_zones.sql, 20260801140000_laniakea_context_trade_setups.sql,
-// 20260801150000_laniakea_context_trade_confirmations.sql, src/laniakeaContext.js):
+// 20260801150000_laniakea_context_trade_confirmations.sql — Migrationsdateien behalten ihren
+// historischen Namen, siehe 20260817_rename_laniakea_context_to_pin_context.sql für den Rename
+// auf DB-Ebene; src/pinContext.js):
 // trade_positions, ob_zones, trade_setups ODER trade_confirmations, die Philip per Rechtsklick "an
 // Lana übergeben" hat (kind unterscheidet, welches der vier embeds befüllt ist — bei z.B. einer
 // trade_position-Zeile sind die übrigen drei null und umgekehrt, kein zusätzlicher Filter nötig,
@@ -157,9 +159,9 @@ export async function getJournal(instrument?: string, source?: string, limit = 5
 // selbst — derselbe Embed-Shape wie getJournal (trade_positions.* + dealing_ranges + trade_targets/
 // trade_partial_exits) für trade_position, volle Zeile für die übrigen drei — damit Lana beim
 // Fetch immer die aktuellen Werte sieht statt eines möglicherweise veralteten Stands.
-export async function getLaniakeaContext() {
+export async function getPinContext() {
   const { data, error } = await supabase
-    .from("laniakea_context")
+    .from("pin_context")
     .select(
       "id, kind, note, created_at, " +
         "trade_positions(*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, trade_targets(id, price)), trade_partial_exits(price, exit_time, portion_pct)), " +
@@ -167,7 +169,7 @@ export async function getLaniakeaContext() {
         "trade_setups(*), " +
         "trade_confirmations(*), " +
         "liquidity_levels(*), " +
-        // m5_ob_*/m5_liquidity_*/rsi_divergence_* sitzen direkt auf laniakea_context selbst (kein
+        // m5_ob_*/m5_liquidity_*/rsi_divergence_* sitzen direkt auf pin_context selbst (kein
         // Embed, siehe 20260802120100_laniakea_context_m5_obs.sql /
         // 20260802130000_laniakea_context_m5_liquidity.sql / 20260811170000_laniakea_context_rsi_divergence.sql
         // — alle drei nie persistiert, deshalb Rohdaten-Snapshot statt FK), müssen deshalb hier

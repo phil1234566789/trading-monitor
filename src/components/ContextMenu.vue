@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, onUnmounted } from "vue";
 
-// Generisches Rechtsklick-Kontextmenü (Chat 2026-08-01, erster Nutzer: "Laniakea zeigen" auf
+// Generisches Rechtsklick-Kontextmenü (Chat 2026-08-01, erster Nutzer: "Anpinnen" auf
 // Trades-Zeilen/Chart-Marker, siehe TradesTable.vue/PriceChart.vue). Ersetzt bewusst NICHT das
 // native Browser-Kontextmenü generell (kein globaler contextmenu-Override) — der Aufrufer ruft
 // event.preventDefault() nur, wenn er tatsächlich etwas Eigenes anzubieten hat (siehe

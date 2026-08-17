@@ -157,7 +157,7 @@ export class LiquidityLinePrimitive {
     return this._level;
   }
 
-  // Distanz zum Laniakea-Kontextmenü (Chat 2026-08-02, LQ-Level als fünfte Kontext-Art) — analog zu
+  // Distanz zum Pin-Kontextmenü (Chat 2026-08-02, LQ-Level als fünfte Kontext-Art) — analog zu
   // OrderBlockPrimitive.distanceTo (orderBlocks.js), aber für eine horizontale Strecke statt eines
   // Rechtecks: 0 innerhalb des x-Bereichs bei exakter y-Höhe, sonst vertikaler Abstand innerhalb des
   // Bereichs bzw. euklidischer Abstand zum nächstgelegenen Endpunkt außerhalb davon. x/y in

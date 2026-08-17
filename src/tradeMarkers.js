@@ -10,13 +10,13 @@ const ENTRY_TRIANGLE_SIZE = 5; // px, Entry-Dreieck (Long = Spitze oben, Short =
 const EXIT_MARK_SIZE = 5; // px, Häkchen (Win) / X (Loss)
 const HOVER_HALO_RADIUS = 11; // px, Halo-Ring bei Hover über die TradesTable-Zeile (Chat 2026-08-01)
 const HOVER_HALO_LINE_WIDTH = 2; // px, reiner Rand statt Füllung (Bug-Report Philip 2026-08-01: "fetter goldener Kreis" verdeckte zu viel)
-// Laniakea-Ring (Chat 2026-08-01) bewusst größer als der Hover-Ring UND unabhängig von ihm
-// gezeichnet — ein Trade kann gleichzeitig gehovert UND dauerhaft im Laniakea-Kontext sein
+// Pin-Ring (Chat 2026-08-01) bewusst größer als der Hover-Ring UND unabhängig von ihm
+// gezeichnet — ein Trade kann gleichzeitig gehovert UND dauerhaft im Pin-Kontext sein
 // (zwei ineinanderliegende Ringe statt einer, der den anderen überdeckt).
-const LANIAKEA_HALO_RADIUS = 16; // px
+const PIN_HALO_RADIUS = 16; // px
 
 // Ungefüllter Ring-Rand hinter Entry/Exit — für Hover (Tabellenzeile) UND für "dauerhaft im
-// Laniakea-Kontext" (siehe TradeMarkerRenderer.draw), eigene Funktion statt in
+// Pin-Kontext" (siehe TradeMarkerRenderer.draw), eigene Funktion statt in
 // drawEntryPoint/drawExitPoint verwoben, weil er unabhängig von Richtung/Outcome immer gleich
 // aussieht.
 function drawHaloRing(ctx, x, y, pixelRatio, color, radius) {
@@ -148,7 +148,7 @@ class TradeMarkerRenderer {
         const x = Math.round(point.x * pixelRatio);
         const y = Math.round(point.y * pixelRatio);
         if (this._options.hovered) drawHaloRing(ctx, x, y, pixelRatio, this._options.hoverColor, HOVER_HALO_RADIUS);
-        if (this._options.inLaniakeaContext) drawHaloRing(ctx, x, y, pixelRatio, this._options.laniakeaColor, LANIAKEA_HALO_RADIUS);
+        if (this._options.inPinContext) drawHaloRing(ctx, x, y, pixelRatio, this._options.pinColor, PIN_HALO_RADIUS);
       }
 
       drawEntryPoint(
@@ -242,8 +242,8 @@ export class TradeMarkerPrimitive {
     return this._paneViews;
   }
 
-  // Distanz zum Laniakea-Kontextmenü (Chat 2026-08-01, zweite Runde — siehe PriceChart.vue:
-  // findNearbyLaniakeaCandidates) — kleinste Distanz zu Entry ODER Exit statt eines reinen
+  // Distanz zum Pin-Kontextmenü (Chat 2026-08-01, zweite Runde — siehe PriceChart.vue:
+  // findNearbyPinCandidates) — kleinste Distanz zu Entry ODER Exit statt eines reinen
   // Boolean-Treffers, damit sich mehrere nahegelegene Objekte nach Nähe sortieren lassen. Liest
   // die beim letzten Render aktualisierten Pixel-Koordinaten (_entry/_exit), statt Zeit/Preis
   // erneut selbst umzurechnen. x/y sind CSS-Pixel relativ zum Chart-Container, exakt derselbe
@@ -271,7 +271,7 @@ export class TradeMarkerPrimitive {
 // "invalid" gibt's als Outcome seit Chat 2026-07-31 gar nicht mehr (0 Zeilen genutzt, siehe
 // Migration 20260731220000_drop_invalid_outcome.sql). tradeInvalid bleibt als generischer
 // Fallback für den Rest-Fall "Exit-Preis gesetzt, aber noch kein Ergebnis gewählt".
-function tradeOptions(t, showLabels, hovered, inLaniakeaContext) {
+function tradeOptions(t, showLabels, hovered, inPinContext) {
   const outcomeKey = { win: "tradeWin", loss: "tradeLoss" };
   const entryColorKey = t.direction === "short" ? "tradeLoss" : "tradeWin";
   const exitColorKey = outcomeKey[t.outcome] ?? "tradeInvalid";
@@ -286,31 +286,31 @@ function tradeOptions(t, showLabels, hovered, inLaniakeaContext) {
     connectorColor: cssColor("tradeConnector"),
     entryLabel: `${dirLabel} Entry ${t.entryPrice}`,
     exitLabel: t.exitPrice != null ? `${t.outcome?.toUpperCase() ?? "EXIT"} ${t.exitPrice}` : null,
-    // Gehoverte/im Laniakea-Kontext gespeicherte Trades zeigen ihr Label immer, unabhängig vom
+    // Gehoverte/im Pin-Kontext gespeicherte Trades zeigen ihr Label immer, unabhängig vom
     // Debug-Toggle (Chat 2026-08-01) — der ganze Sinn ist ja, Philip beim Reden mit Lana genau
     // diesen Preis dauerhaft lesbar zu machen.
-    showLabels: showLabels || hovered || inLaniakeaContext,
+    showLabels: showLabels || hovered || inPinContext,
     hovered,
-    inLaniakeaContext,
+    inPinContext,
     hoverColor: cssColor("tradeHover"),
-    laniakeaColor: cssColor("laniakea"),
+    pinColor: cssColor("pin"),
   };
 }
 
 // showLabels: Chat 2026-07-31 — Text-Labels verdecken die Sicht, jetzt hinter demselben "Debug"-
 // Toggle (showLiquidityDebug) wie die übrigen Preis-Labels statt immer/zoomabhängig sichtbar.
 // hoveredTradeId (Chat 2026-08-01): trade_positions.id der gerade in TradesTable.vue gehoverten
-// Zeile. laniakeaTradeIds (Chat 2026-08-01): Set von trade_positions.id, die dauerhaft im
-// Laniakea-Kontext gespeichert sind (siehe laniakeaContext.js) — beide zeichnen unabhängig
+// Zeile. pinTradeIds (Chat 2026-08-01): Set von trade_positions.id, die dauerhaft im
+// Pin-Kontext gespeichert sind (siehe pinContext.js) — beide zeichnen unabhängig
 // voneinander einen Halo-Ring um Entry/Exit (siehe TradeMarkerRenderer.draw).
-export function renderTradeMarkers(series, trades, existingPrimitives, candles, showLabels, hoveredTradeId, laniakeaTradeIds) {
+export function renderTradeMarkers(series, trades, existingPrimitives, candles, showLabels, hoveredTradeId, pinTradeIds) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
   for (const t of trades) {
     const hovered = hoveredTradeId != null && t.id === hoveredTradeId;
-    const inLaniakeaContext = laniakeaTradeIds?.has(t.id) ?? false;
-    const primitive = new TradeMarkerPrimitive(t, tradeOptions(t, showLabels, hovered, inLaniakeaContext), candles);
+    const inPinContext = pinTradeIds?.has(t.id) ?? false;
+    const primitive = new TradeMarkerPrimitive(t, tradeOptions(t, showLabels, hovered, inPinContext), candles);
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }

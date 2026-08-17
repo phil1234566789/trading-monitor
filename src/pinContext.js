@@ -1,4 +1,4 @@
-// Laniakea-Kontext (Chat 2026-08-01, siehe supabase/migrations/20260801120000_laniakea_context.sql,
+// Pin-Kontext (Chat 2026-08-01, siehe supabase/migrations/20260801120000_laniakea_context.sql,
 // 20260801130000_laniakea_context_ob_zones.sql): Dinge, die Philip per Rechtsklick (Trades-Tabelle/
 // Chart-Marker/OB-Zonen-Box) "an Lana übergeben" hat — schlanker Supabase-Wrapper wie
 // claudeAnnotationsStore.js, kein localStorage-Sync nötig (das hier sind Live-Daten, keine
@@ -10,15 +10,15 @@
 // Spalten (oder bei "m5_ob" die m5_ob_*-Rohdaten-Spalten) ist gesetzt (DB-CHECK-Constraint erzwingt
 // das). ob_zones/trade_setups/trade_confirmations/liquidity_levels werden hier direkt mit
 // eingebettet (anders als trade_position, das gegen Dashboard.vue's bereits geladene `trades`
-// gekreuzt wird, siehe LaniakeaPanel.vue) — es gibt sonst keine reaktive Liste dieser Arten in
+// gekreuzt wird, siehe PinPanel.vue) — es gibt sonst keine reaktive Liste dieser Arten in
 // Dashboard.vue, ein Zweit-Fetch für die paar Anzeige-Felder ist hier einfacher als eine. "m5_ob"
 // braucht kein Embed — M5-OBs werden nie persistiert (siehe resolveObZoneId-Kommentar unten),
-// deshalb liegt hier ein Rohdaten-Snapshot direkt auf der laniakea_context-Zeile selbst (siehe
+// deshalb liegt hier ein Rohdaten-Snapshot direkt auf der pin_context-Zeile selbst (siehe
 // 20260802120100_laniakea_context_m5_obs.sql).
 import { supabase } from "./supabaseClient.js";
 
 // kind -> DB-Spalte, gemeinsam für Upsert-onConflict UND das Zusammensetzen der Insert-Zeile.
-// "m5_ob" fehlt hier bewusst (kein einzelner refId, siehe addLaniakeaM5ObEntry unten).
+// "m5_ob" fehlt hier bewusst (kein einzelner refId, siehe addPinM5ObEntry unten).
 const REF_COLUMN = {
   trade_position: "trade_position_id",
   ob_zone: "ob_zone_id",
@@ -136,10 +136,10 @@ function toEntry(row) {
   };
 }
 
-export async function fetchLaniakeaContext() {
-  const { data, error } = await supabase.from("laniakea_context").select(ROW_COLUMNS).order("created_at", { ascending: true });
+export async function fetchPinContext() {
+  const { data, error } = await supabase.from("pin_context").select(ROW_COLUMNS).order("created_at", { ascending: true });
   if (error) {
-    console.error("Laniakea-Kontext laden fehlgeschlagen:", error);
+    console.error("Pin-Kontext laden fehlgeschlagen:", error);
     return [];
   }
   return (data ?? []).map(toEntry);
@@ -148,10 +148,10 @@ export async function fetchLaniakeaContext() {
 // Upsert auf trade_position_id/ob_zone_id/trade_setup_id (siehe Unique-Indizes in den Migrationen)
 // — ein zweiter Rechtsklick auf dasselbe Objekt legt keinen Zweiteintrag an, sondern aktualisiert
 // nur dessen Notiz.
-export async function addLaniakeaEntry(kind, refId, note) {
+export async function addPinEntry(kind, refId, note) {
   const column = REF_COLUMN[kind];
   const { data, error } = await supabase
-    .from("laniakea_context")
+    .from("pin_context")
     .upsert(
       {
         kind,
@@ -168,19 +168,19 @@ export async function addLaniakeaEntry(kind, refId, note) {
     .select(ROW_COLUMNS)
     .single();
   if (error) {
-    console.error("Laniakea-Eintrag anlegen fehlgeschlagen:", error);
+    console.error("Pin-Eintrag anlegen fehlgeschlagen:", error);
     return null;
   }
   return toEntry(data);
 }
 
-// "m5_ob" passt nicht ins REF_COLUMN/addLaniakeaEntry-Schema (kein einzelner refId — M5-OBs werden
+// "m5_ob" passt nicht ins REF_COLUMN/addPinEntry-Schema (kein einzelner refId — M5-OBs werden
 // nie persistiert, siehe 20260802120100_laniakea_context_m5_obs.sql), deshalb eigene Funktion mit
 // Upsert auf den Natural-Key (instrument, direction, top, bottom, startTime) statt einer DB-id.
 // zone: { instrument, dirNum: 1|-1, top, bottom, startTime (Unix-Sekunden) }.
-export async function addLaniakeaM5ObEntry(zone, note) {
+export async function addPinM5ObEntry(zone, note) {
   const { data, error } = await supabase
-    .from("laniakea_context")
+    .from("pin_context")
     .upsert(
       {
         kind: "m5_ob",
@@ -201,19 +201,19 @@ export async function addLaniakeaM5ObEntry(zone, note) {
     .select(ROW_COLUMNS)
     .single();
   if (error) {
-    console.error("Laniakea-M5-OB-Eintrag anlegen fehlgeschlagen:", error);
+    console.error("Pin-M5-OB-Eintrag anlegen fehlgeschlagen:", error);
     return null;
   }
   return toEntry(data);
 }
 
-// Analog zu addLaniakeaM5ObEntry, für ein Liquiditäts-Level auf einem Nicht-1h-Chart-Timeframe
+// Analog zu addPinM5ObEntry, für ein Liquiditäts-Level auf einem Nicht-1h-Chart-Timeframe
 // (siehe 20260802130000_laniakea_context_m5_liquidity.sql — der 1h-Fall läuft weiter über
 // kind='liquidity_level' + resolveLiquidityLevelId, echte FK). level: { instrument, timeframe
 // (props.currentBar, z.B. "5m"), dirNum: 1 (high) | -1 (low), price, pivotTime (Unix-Sekunden) }.
-export async function addLaniakeaM5LiquidityEntry(level, note) {
+export async function addPinM5LiquidityEntry(level, note) {
   const { data, error } = await supabase
-    .from("laniakea_context")
+    .from("pin_context")
     .upsert(
       {
         kind: "m5_liquidity_level",
@@ -234,21 +234,21 @@ export async function addLaniakeaM5LiquidityEntry(level, note) {
     .select(ROW_COLUMNS)
     .single();
   if (error) {
-    console.error("Laniakea-M5-Liquidity-Eintrag anlegen fehlgeschlagen:", error);
+    console.error("Pin-M5-Liquidity-Eintrag anlegen fehlgeschlagen:", error);
     return null;
   }
   return toEntry(data);
 }
 
-// Analog zu addLaniakeaM5ObEntry/addLaniakeaM5LiquidityEntry, für einen RSI-Divergenz-Konnektor
+// Analog zu addPinM5ObEntry/addPinM5LiquidityEntry, für einen RSI-Divergenz-Konnektor
 // (Chat 2026-08-11, siehe 20260811170000_laniakea_context_rsi_divergence.sql) — Divergenzen werden
 // nie persistiert (detectRsiDivergence()/detectRsiDivergenceHistory() rechnen live), also wieder
 // ein Rohdaten-Snapshot statt einer FK. divergence: das Objekt, wie es rsi.js zurückgibt
 // ({type, fromTime, toTime, fromPrice, toPrice, fromRsi, toRsi}, Zeiten in Unix-Sekunden), plus
 // instrument (props.symbol — steht selbst nicht auf dem Divergenz-Objekt).
-export async function addLaniakeaRsiDivergenceEntry(instrument, divergence, note) {
+export async function addPinRsiDivergenceEntry(instrument, divergence, note) {
   const { data, error } = await supabase
-    .from("laniakea_context")
+    .from("pin_context")
     .upsert(
       {
         kind: "rsi_divergence",
@@ -272,25 +272,25 @@ export async function addLaniakeaRsiDivergenceEntry(instrument, divergence, note
     .select(ROW_COLUMNS)
     .single();
   if (error) {
-    console.error("Laniakea-RSI-Divergenz-Eintrag anlegen fehlgeschlagen:", error);
+    console.error("Pin-RSI-Divergenz-Eintrag anlegen fehlgeschlagen:", error);
     return null;
   }
   return toEntry(data);
 }
 
-export async function removeLaniakeaEntry(id) {
-  const { error } = await supabase.from("laniakea_context").delete().eq("id", id);
+export async function removePinEntry(id) {
+  const { error } = await supabase.from("pin_context").delete().eq("id", id);
   if (error) {
-    console.error("Laniakea-Eintrag löschen fehlgeschlagen:", error);
+    console.error("Pin-Eintrag löschen fehlgeschlagen:", error);
     return false;
   }
   return true;
 }
 
-export async function updateLaniakeaNote(id, note) {
-  const { error } = await supabase.from("laniakea_context").update({ note: note || null }).eq("id", id);
+export async function updatePinNote(id, note) {
+  const { error } = await supabase.from("pin_context").update({ note: note || null }).eq("id", id);
   if (error) {
-    console.error("Laniakea-Notiz speichern fehlgeschlagen:", error);
+    console.error("Pin-Notiz speichern fehlgeschlagen:", error);
     return false;
   }
   return true;
@@ -323,7 +323,7 @@ export async function resolveObZoneId(instrument, timeframe, dirNum, startTimeUn
 // (siehe supabase/functions/poi-watcher/index.ts), die live auf dem Chart gezeichnete Linie trägt
 // selbst keine DB-id. Natural-Key (instrument, timeframe, direction, pivot_time) wie poi-watchers
 // eigener Unique-Constraint. Liefert null, wenn (a) der Chart gerade NICHT im 1h-Timeframe ist (das
-// filtert schon PriceChart.vue vor dem Aufruf raus, siehe findNearbyLaniakeaCandidates) oder
+// filtert schon PriceChart.vue vor dem Aufruf raus, siehe findNearbyPinCandidates) oder
 // (b) poi-watcher dieses Level noch nicht gespeichert hat (frisch entstanden, nächster stündlicher
 // Refresh-Tick steht noch aus). dirNum: 1 (high) | -1 (low), wie im lokalen Level-Objekt (siehe
 // liquidityDetection.js: buildLevel).
@@ -344,9 +344,9 @@ export async function resolveLiquidityLevelId(instrument, timeframe, dirNum, piv
 }
 
 // Dieselbe Formel wie orderBlocks.js: obZoneNaturalKey, hier auf einer bereits geladenen
-// laniakea_context-Zeile (row.obZone) statt einer live erkannten Zone — für den Abgleich "ist DIESE
+// pin_context-Zeile (row.obZone) statt einer live erkannten Zone — für den Abgleich "ist DIESE
 // gerade gezeichnete Zone die gleiche wie dieser gespeicherte Eintrag" (siehe PriceChart.vue,
-// renderPersistedZones' laniakeaKeys-Parameter). instrument bewusst NICHT Teil des Strings (der
+// renderPersistedZones' pinKeys-Parameter). instrument bewusst NICHT Teil des Strings (der
 // Chart zeigt immer nur ein Symbol gleichzeitig, siehe dort).
 export function obZoneEntryNaturalKey(obZone) {
   const startTimeUnixSec = Math.floor(new Date(obZone.startTime).getTime() / 1000);

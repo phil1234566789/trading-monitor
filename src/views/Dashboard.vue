@@ -11,8 +11,8 @@ import TradeEditModal from "../components/TradeEditModal.vue";
 import TradingAccountSwitcher from "../components/TradingAccountSwitcher.vue";
 import MetadataPanel from "../components/MetadataPanel.vue";
 import ContextMenu from "../components/ContextMenu.vue";
-import LaniakeaAddPopup from "../components/LaniakeaAddPopup.vue";
-import LaniakeaPanel from "../components/LaniakeaPanel.vue";
+import PinAddPopup from "../components/PinAddPopup.vue";
+import PinPanel from "../components/PinPanel.vue";
 import { selectedTradingAccountId } from "../tradingAccounts.js";
 import { TIMEFRAMES } from "../timeframes.js";
 import { fetchTrades } from "../trades.js";
@@ -27,17 +27,17 @@ import {
 } from "../tradeIntake.js";
 import { fetchPoiZones } from "../poiZones.js";
 import {
-  fetchLaniakeaContext,
-  addLaniakeaEntry,
-  addLaniakeaM5ObEntry,
-  addLaniakeaM5LiquidityEntry,
-  addLaniakeaRsiDivergenceEntry,
-  removeLaniakeaEntry,
-  updateLaniakeaNote,
+  fetchPinContext,
+  addPinEntry,
+  addPinM5ObEntry,
+  addPinM5LiquidityEntry,
+  addPinRsiDivergenceEntry,
+  removePinEntry,
+  updatePinNote,
   resolveObZoneId,
   resolveLiquidityLevelId,
   obZoneEntryNaturalKey,
-} from "../laniakeaContext.js";
+} from "../pinContext.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
@@ -204,7 +204,7 @@ const rsiDivergenceHistoryCount = useLocalStorageRef("rsiDivergenceHistoryCount"
 // macht, während noch an der Klassifikation selbst herumexperimentiert wird.
 const showRsiDivergenceOutcomeDebug = ref(false);
 // Statistik-Modal (Chat 2026-08-11, vierte Runde: "ich denke wir wären jetzt bereit für
-// statistik") — persistiert wie showRangesMetadata/showDebugMetadata/showLaniakeaPanel (gleiches
+// statistik") — persistiert wie showRangesMetadata/showDebugMetadata/showPinPanel (gleiches
 // Modal-Muster: bleibt über einen Reload hinweg offen, statt bei jedem Reload neu geöffnet werden
 // zu müssen).
 const showRsiDivergenceStats = useLocalStorageRef("showRsiDivergenceStats", false);
@@ -441,25 +441,25 @@ function onHoverTrade(t) {
   hoveredTradeId.value = t?.id ?? null;
 }
 
-// Laniakea-Kontextmenü (Chat 2026-08-01, zweite Runde — "lass mal die anderen Lösungsmöglichkeiten
+// Pin-Kontextmenü (Chat 2026-08-01, zweite Runde — "lass mal die anderen Lösungsmöglichkeiten
 // anschauen", Philip tat sich mit dem pixelgenauen Treffen schwer) — TradesTable.vue/PriceChart.vue
 // liefern jetzt immer eine Liste von KANDIDATEN (bei der Tabellenzeile immer genau einer, beim
-// Chart alles im Fangradius um den Klick, siehe PriceChart.vue: findNearbyLaniakeaCandidates). Bei
+// Chart alles im Fangradius um den Klick, siehe PriceChart.vue: findNearbyPinCandidates). Bei
 // genau einem Kandidaten geht's direkt zum Notiz-Popup, bei mehreren erst eine Auswahl-Liste
-// (laniakeaCandidateMenu) — beide teilen sich denselben Kandidaten-Shape: { kind: "trade_position",
+// (pinCandidateMenu) — beide teilen sich denselben Kandidaten-Shape: { kind: "trade_position",
 // trade } | { kind: "ob_zone", zone: {instrument, timeframe, dir, startTime} }.
-const laniakeaCandidateMenu = ref(null); // { candidates, x, y } | null
-const laniakeaAddPopupTarget = ref(null); // { kind, trade?/zone?, x, y } | null
-// Nur bei kind="ob_zone" relevant (siehe onLaniakeaAddConfirm) — resolveObZoneId kann fehlschlagen,
+const pinCandidateMenu = ref(null); // { candidates, x, y } | null
+const pinAddPopupTarget = ref(null); // { kind, trade?/zone?, x, y } | null
+// Nur bei kind="ob_zone" relevant (siehe onPinAddConfirm) — resolveObZoneId kann fehlschlagen,
 // wenn poi-watcher diese Zone noch nicht persistiert hat; Popup bleibt dann offen statt zu schließen.
-const laniakeaAddPopupError = ref(null);
+const pinAddPopupError = ref(null);
 
 // Bug-Report Philip 2026-08-01: eine Dealing Range mit mehreren Re-Entries (mehrere
 // trade_positions, siehe CLAUDE.md-Abschnitt zum Trade-Journal) erzeugte in der Kandidaten-Liste
 // mehrere IDENTISCH aussehende Einträge ("Short #26" dreimal) — nicht unterscheidbar, welcher
 // welcher ist. Trade-position-id (dieselbe "#<id>", die auch TradeEditModal.vue im Titel zeigt)
 // dazu, damit jede Zeile eindeutig ist.
-function laniakeaCandidateLabel(c) {
+function pinCandidateLabel(c) {
   if (c.kind === "ob_zone") return `${c.zone.timeframe} ${c.zone.dir === 1 ? "Bull" : "Bear"}-OB`;
   if (c.kind === "m5_ob") return `M5 ${c.zone.dirNum === 1 ? "Bull" : "Bear"}-OB`;
   if (c.kind === "trade_setup") return `${c.direction === "short" ? "Short" : "Long"}-Setup #${c.tradeSetupId} (${c.instrument})`;
@@ -470,82 +470,82 @@ function laniakeaCandidateLabel(c) {
   return `${c.trade.direction === "short" ? "Short" : "Long"} #${c.trade.dealingRangeId} · Position #${c.trade.id}`;
 }
 
-function onLaniakeaContextMenu({ candidates, x, y }) {
+function onPinContextMenu({ candidates, x, y }) {
   if (candidates.length === 0) return;
   if (candidates.length === 1) {
-    laniakeaAddPopupTarget.value = { ...candidates[0], x, y };
-    laniakeaAddPopupError.value = null;
+    pinAddPopupTarget.value = { ...candidates[0], x, y };
+    pinAddPopupError.value = null;
     return;
   }
-  laniakeaCandidateMenu.value = { candidates, x, y };
+  pinCandidateMenu.value = { candidates, x, y };
 }
-function onLaniakeaCandidateSelect(key) {
-  const menu = laniakeaCandidateMenu.value;
-  laniakeaCandidateMenu.value = null;
+function onPinCandidateSelect(key) {
+  const menu = pinCandidateMenu.value;
+  pinCandidateMenu.value = null;
   const candidate = menu?.candidates[Number(key)];
   if (!candidate) return;
-  laniakeaAddPopupTarget.value = { ...candidate, x: menu.x, y: menu.y };
-  laniakeaAddPopupError.value = null;
+  pinAddPopupTarget.value = { ...candidate, x: menu.x, y: menu.y };
+  pinAddPopupError.value = null;
 }
-async function onLaniakeaAddConfirm(note) {
-  const target = laniakeaAddPopupTarget.value;
+async function onPinAddConfirm(note) {
+  const target = pinAddPopupTarget.value;
   if (target.kind === "ob_zone") {
     const { instrument, timeframe, dir, startTime } = target.zone;
     const obZoneId = await resolveObZoneId(instrument, timeframe, dir, startTime);
     if (obZoneId == null) {
       // poi-watcher refresht 1H/4H nur einmal pro Stunde/4h-Boundary (siehe CLAUDE.md
       // poi-watcher-Throttling) — eine gerade erst entstandene Zone kann also noch fehlen.
-      laniakeaAddPopupError.value = "Diese OB-Zone ist noch nicht gespeichert (poi-watcher braucht bis zu einer Stunde) — bitte gleich nochmal versuchen.";
+      pinAddPopupError.value = "Diese OB-Zone ist noch nicht gespeichert (poi-watcher braucht bis zu einer Stunde) — bitte gleich nochmal versuchen.";
       return;
     }
-    await addLaniakeaEntry("ob_zone", obZoneId, note);
+    await addPinEntry("ob_zone", obZoneId, note);
   } else if (target.kind === "trade_setup") {
     // Kein Resolve nötig — trade_setups.id ist schon direkt bekannt (siehe PriceChart.vue:
     // refreshTradeSetupLinksInternal), anders als bei ob_zone.
-    await addLaniakeaEntry("trade_setup", target.tradeSetupId, note);
+    await addPinEntry("trade_setup", target.tradeSetupId, note);
   } else if (target.kind === "trade_confirmation") {
     // Kein Resolve nötig — trade_confirmations.id ist schon direkt bekannt, analog zu trade_setup.
-    await addLaniakeaEntry("trade_confirmation", target.confirmationId, note);
+    await addPinEntry("trade_confirmation", target.confirmationId, note);
   } else if (target.kind === "liquidity_level") {
     const { instrument, timeframe, dirNum, pivotTime } = target.level;
     const liquidityLevelId = await resolveLiquidityLevelId(instrument, timeframe, dirNum, pivotTime);
     if (liquidityLevelId == null) {
       // poi-watcher refresht 1H nur einmal pro Stunde (siehe CLAUDE.md poi-watcher-Throttling) —
       // ein gerade erst entstandenes Level kann also noch fehlen.
-      laniakeaAddPopupError.value = "Dieses Liquiditäts-Level ist noch nicht gespeichert (poi-watcher braucht bis zu einer Stunde) — bitte gleich nochmal versuchen.";
+      pinAddPopupError.value = "Dieses Liquiditäts-Level ist noch nicht gespeichert (poi-watcher braucht bis zu einer Stunde) — bitte gleich nochmal versuchen.";
       return;
     }
-    await addLaniakeaEntry("liquidity_level", liquidityLevelId, note);
+    await addPinEntry("liquidity_level", liquidityLevelId, note);
   } else if (target.kind === "m5_ob") {
     // Kein Resolve nötig — M5-OBs werden nie persistiert, Rohdaten-Snapshot direkt (siehe
-    // addLaniakeaM5ObEntry).
-    await addLaniakeaM5ObEntry(target.zone, note);
+    // addPinM5ObEntry).
+    await addPinM5ObEntry(target.zone, note);
   } else if (target.kind === "m5_liquidity_level") {
     // Kein Resolve nötig — Liquiditäts-Level auf einem Nicht-1h-Timeframe werden nie persistiert,
-    // Rohdaten-Snapshot direkt (siehe addLaniakeaM5LiquidityEntry).
-    await addLaniakeaM5LiquidityEntry(target.level, note);
+    // Rohdaten-Snapshot direkt (siehe addPinM5LiquidityEntry).
+    await addPinM5LiquidityEntry(target.level, note);
   } else if (target.kind === "rsi_divergence") {
     // Kein Resolve nötig — Divergenzen werden nie persistiert, Rohdaten-Snapshot direkt (siehe
-    // addLaniakeaRsiDivergenceEntry).
-    await addLaniakeaRsiDivergenceEntry(target.instrument, target.divergence, note);
+    // addPinRsiDivergenceEntry).
+    await addPinRsiDivergenceEntry(target.instrument, target.divergence, note);
   } else {
-    await addLaniakeaEntry("trade_position", target.trade.id, note);
+    await addPinEntry("trade_position", target.trade.id, note);
   }
-  laniakeaAddPopupTarget.value = null;
-  laniakeaAddPopupError.value = null;
-  refreshLaniakeaContext();
+  pinAddPopupTarget.value = null;
+  pinAddPopupError.value = null;
+  refreshPinContext();
 }
-async function onLaniakeaRemove(entryId) {
-  await removeLaniakeaEntry(entryId);
-  refreshLaniakeaContext();
+async function onPinRemove(entryId) {
+  await removePinEntry(entryId);
+  refreshPinContext();
 }
-async function onLaniakeaUpdateNote(entryId, note) {
-  await updateLaniakeaNote(entryId, note);
-  refreshLaniakeaContext();
+async function onPinUpdateNote(entryId, note) {
+  await updatePinNote(entryId, note);
+  refreshPinContext();
 }
 
-// Laniakea-Modal (Chat 2026-08-01) — "genau wie bei Metadaten" (Philip), analog persistiert.
-const showLaniakeaPanel = useLocalStorageRef("showLaniakeaPanel", false);
+// Pin-Modal (Chat 2026-08-01) — "genau wie bei Metadaten" (Philip), analog persistiert.
+const showPinPanel = useLocalStorageRef("showPinPanel", false);
 
 // Debug-Metadaten-Sammel-Panel (siehe Chat 2026-07-20: "damit ich dir nicht ständig die Daten von
 // dem was ich in TradingView sehe hier schreiben muss") — Unterpunkt bei "Debug", analog zu
@@ -700,41 +700,41 @@ const isBtc = computed(() => currentSymbol.value === "BTC-USDT");
 // Hintergrund-Poll (siehe usePolledFetch.js). Eine externe Änderung durch Lana (MCP-Server)
 // erscheint dadurch erst nach einem manuellen Reload/Tab-Wechsel — bewusst in Kauf genommen.
 const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrades(currentSymbol.value, selectedTradingAccountId.value));
-// Laniakea-Kontext (Chat 2026-08-01, siehe laniakeaContext.js) — symbolunabhängig (anders als
-// `trades` oben), kein intervalMs, da nur durch explizite Aktionen (Rechtsklick "Laniakea zeigen"/
+// Pin-Kontext (Chat 2026-08-01, siehe pinContext.js) — symbolunabhängig (anders als
+// `trades` oben), kein intervalMs, da nur durch explizite Aktionen (Rechtsklick "Anpinnen"/
 // Modal-Löschen) geändert, kein Hintergrund-Poll nötig.
-const { data: laniakeaContextEntries, refresh: refreshLaniakeaContext } = usePolledFetch(() => fetchLaniakeaContext());
+const { data: pinContextEntries, refresh: refreshPinContext } = usePolledFetch(() => fetchPinContext());
 // Nur die Ids, die zum GERADE geladenen Symbol gehören (trades enthält nur dessen Trades) — ein
-// Laniakea-Eintrag für ein anderes Symbol kann im Chart/in der Tabelle ohnehin nicht markiert
+// Pin-Eintrag für ein anderes Symbol kann im Chart/in der Tabelle ohnehin nicht markiert
 // werden, solange dieses Symbol nicht ausgewählt ist.
-const laniakeaTradeIds = computed(() => {
+const pinTradeIds = computed(() => {
   const tradeIds = new Set(trades.value.map((t) => t.id));
-  return new Set(laniakeaContextEntries.value.filter((e) => tradeIds.has(e.tradePositionId)).map((e) => e.tradePositionId));
+  return new Set(pinContextEntries.value.filter((e) => tradeIds.has(e.tradePositionId)).map((e) => e.tradePositionId));
 });
-// OB-Zonen-Pendant (Chat 2026-08-01) — Natural-Key statt Id (siehe laniakeaContext.js:
+// OB-Zonen-Pendant (Chat 2026-08-01) — Natural-Key statt Id (siehe pinContext.js:
 // obZoneEntryNaturalKey/orderBlocks.js: obZoneNaturalKey), gefiltert aufs aktuelle Symbol (eine
 // OB-Zone aus GBPUSD ergibt im EURUSD-Chart keinen sinnvollen Treffer).
-const laniakeaObZoneKeys = computed(() => {
+const pinObZoneKeys = computed(() => {
   return new Set(
-    laniakeaContextEntries.value
+    pinContextEntries.value
       .filter((e) => e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value)
       .map((e) => obZoneEntryNaturalKey(e.obZone)),
   );
 });
 // Trade-Setup-Pendant (Chat 2026-08-01, dritte Runde) — echte Id (kein Natural-Key-Umweg wie bei
-// ob_zone nötig, siehe laniakeaContext.js), trotzdem aufs aktuelle Symbol gefiltert.
-const laniakeaTradeSetupIds = computed(() => {
+// ob_zone nötig, siehe pinContext.js), trotzdem aufs aktuelle Symbol gefiltert.
+const pinTradeSetupIds = computed(() => {
   return new Set(
-    laniakeaContextEntries.value
+    pinContextEntries.value
       .filter((e) => e.kind === "trade_setup" && e.tradeSetup?.instrument === currentSymbol.value)
       .map((e) => e.tradeSetupId),
   );
 });
 // Bestätigungs-Pendant (Chat 2026-08-01, vierte Runde) — echte Id, kein Symbol-Filter möglich
-// (trade_confirmations hat keine eigene instrument-Spalte, siehe laniakeaContext.js) — unkritisch,
+// (trade_confirmations hat keine eigene instrument-Spalte, siehe pinContext.js) — unkritisch,
 // die zugehörige Box existiert im Chart ohnehin nur für Trades des gerade angezeigten Symbols.
-const laniakeaTradeConfirmationIds = computed(() => {
-  return new Set(laniakeaContextEntries.value.filter((e) => e.kind === "trade_confirmation").map((e) => e.tradeConfirmationId));
+const pinTradeConfirmationIds = computed(() => {
+  return new Set(pinContextEntries.value.filter((e) => e.kind === "trade_confirmation").map((e) => e.tradeConfirmationId));
 });
 const { data: poiZones, refresh: refreshPoiZones } = usePolledFetch(
   () => (isBtc.value ? fetchPoiZones(currentSymbol.value) : []),
@@ -1134,8 +1134,8 @@ watch(selectedTradingAccountId, refreshTrades);
         <span v-if="invalidationAddTrade" class="trade-link-armed">🚫 nächster Klick auf Pivot/OB setzt Invalidierung für Dealing Range #{{ invalidationAddTrade.dealingRangeId }}</span>
       </div>
 
-      <button :class="{ active: showLaniakeaPanel }" title="An Lana übergebene Trades" @click="showLaniakeaPanel = !showLaniakeaPanel">
-        🌌 Laniakea
+      <button :class="{ active: showPinPanel }" title="Angepinnte Stellen im Chart" @click="showPinPanel = !showPinPanel">
+        📌 Pins
       </button>
 
       <div class="toggle-group">
@@ -1192,10 +1192,10 @@ watch(selectedTradingAccountId, refreshTrades);
     :current-bar="currentBar"
     :trades="trades"
     :hovered-trade-id="hoveredTradeId"
-    :laniakea-trade-ids="laniakeaTradeIds"
-    :laniakea-ob-zone-keys="laniakeaObZoneKeys"
-    :laniakea-trade-setup-ids="laniakeaTradeSetupIds"
-    :laniakea-trade-confirmation-ids="laniakeaTradeConfirmationIds"
+    :pin-trade-ids="pinTradeIds"
+    :pin-ob-zone-keys="pinObZoneKeys"
+    :pin-trade-setup-ids="pinTradeSetupIds"
+    :pin-trade-confirmation-ids="pinTradeConfirmationIds"
     :show-trades="showTrades"
     :poi-zones="poiZones"
     :show-obs-m5="showObsM5"
@@ -1241,7 +1241,7 @@ watch(selectedTradingAccountId, refreshTrades);
     @select-target="onSelectTarget"
     @select-setup-confirmations="onSelectSetupConfirmations"
     @toggle-trade-mode="tradeModeActive = !tradeModeActive"
-    @laniakea-context-menu="onLaniakeaContextMenu"
+    @pin-context-menu="onPinContextMenu"
   />
 
   <aside ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">
@@ -1252,38 +1252,38 @@ watch(selectedTradingAccountId, refreshTrades);
     <div class="trades-list">
       <TradesTable
         :trades="trades"
-        :laniakea-trade-ids="laniakeaTradeIds"
+        :pin-trade-ids="pinTradeIds"
         @select="onSelectTrade"
         @edit-request="onEditRequest"
         @hover-trade="onHoverTrade"
-        @laniakea-context-menu="onLaniakeaContextMenu"
+        @pin-context-menu="onPinContextMenu"
       />
     </div>
     <TradeStats :trades="trades" />
   </aside>
 
   <ContextMenu
-    v-if="laniakeaCandidateMenu"
-    :x="laniakeaCandidateMenu.x"
-    :y="laniakeaCandidateMenu.y"
-    :items="laniakeaCandidateMenu.candidates.map((c, i) => ({ key: String(i), label: `🌌 ${laniakeaCandidateLabel(c)}` }))"
-    @select="onLaniakeaCandidateSelect"
-    @close="laniakeaCandidateMenu = null"
+    v-if="pinCandidateMenu"
+    :x="pinCandidateMenu.x"
+    :y="pinCandidateMenu.y"
+    :items="pinCandidateMenu.candidates.map((c, i) => ({ key: String(i), label: `📌 ${pinCandidateLabel(c)}` }))"
+    @select="onPinCandidateSelect"
+    @close="pinCandidateMenu = null"
   />
-  <LaniakeaAddPopup
-    v-if="laniakeaAddPopupTarget"
-    :x="laniakeaAddPopupTarget.x"
-    :y="laniakeaAddPopupTarget.y"
-    :label="laniakeaCandidateLabel(laniakeaAddPopupTarget)"
-    :error="laniakeaAddPopupError"
-    @confirm="onLaniakeaAddConfirm"
+  <PinAddPopup
+    v-if="pinAddPopupTarget"
+    :x="pinAddPopupTarget.x"
+    :y="pinAddPopupTarget.y"
+    :label="pinCandidateLabel(pinAddPopupTarget)"
+    :error="pinAddPopupError"
+    @confirm="onPinAddConfirm"
     @cancel="
-      laniakeaAddPopupTarget = null;
-      laniakeaAddPopupError = null;
+      pinAddPopupTarget = null;
+      pinAddPopupError = null;
     "
   />
-  <MetadataPanel v-if="showLaniakeaPanel" title="🌌 Laniakea" @close="showLaniakeaPanel = false">
-    <LaniakeaPanel :entries="laniakeaContextEntries" :trades="trades" @remove="onLaniakeaRemove" @update-note="onLaniakeaUpdateNote" />
+  <MetadataPanel v-if="showPinPanel" title="📌 Pins" @close="showPinPanel = false">
+    <PinPanel :entries="pinContextEntries" :trades="trades" @remove="onPinRemove" @update-note="onPinUpdateNote" />
   </MetadataPanel>
 </template>
 
