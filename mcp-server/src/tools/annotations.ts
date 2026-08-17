@@ -61,12 +61,23 @@ const DRAWING_GROUP_SCHEMA = z.object({
 // mir"), läuft also OHNE Bestätigungsprompt. Die Trade-Journal-Write-Tools (trades.ts) sind
 // bewusst NICHT mit-allow-gelistet — nur weil Chart-Zeichnungen freigegeben wurden, heißt das
 // nicht automatisch dasselbe fürs Journal.
+//
+// Seit Chat 2026-08-17 nachrangig zu add_pin_entry (pins.ts, ebenfalls allow-gelistet) — Philip:
+// "sie soll primär die Pin-Funktion benutzen, chart_annotations nur noch, wenn eine Pin-Funktion
+// das nicht kann" (genannte verbleibende Fälle: einzelne Kerzen markieren, RSI-Divergenz). Siehe
+// Tool-Beschreibung unten für die genaue Abgrenzung.
 export function registerAnnotationTools(server: McpServer) {
   server.registerTool(
     "post_chart_annotations",
     {
       title: "Chart-Annotationen schreiben",
       description:
+        "NACHRANGIG zu add_pin_entry (siehe pins.ts, Chat 2026-08-17): für alles, was einem der dortigen " +
+        "kind-Werte entspricht (OB-Zone/Liquiditäts-Level/Trade-Setup/M5-OB/M5-Liquiditäts-Level/RSI-" +
+        "Divergenz), IMMER add_pin_entry statt dieses Tools nutzen — Pins sind mit der echten Chart-" +
+        "Stelle verknüpft (Touch-Alarm möglich) statt nur eine freie Zeichnung an derselben Koordinate. " +
+        "Dieses Tool bleibt für alles, was kein Pin-kind abdeckt, z.B. eine einzelne Kerze markieren " +
+        "oder eine freie Preis-Notiz ohne zugrundeliegendes erkanntes Objekt. " +
         "Schreibt eine oder mehrere Zeichnungen (Preis-Level/Marker/Linien mit Text) direkt in die " +
         "claude_annotations-Tabelle, sichtbar im Chart unter 'Claude-Notizen' — ersetzt das manuelle " +
         "Copy/Paste ins Import-Modal. ZWEI Formen: (1) `annotations` (flach) + optionales `title` — " +
