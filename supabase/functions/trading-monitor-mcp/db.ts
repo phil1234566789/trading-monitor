@@ -692,7 +692,12 @@ export interface AddTradeConfirmationArgs {
   id: number;
   kind: "pivot" | "ob" | "fib";
   price: number;
-  sourceTime?: string | null;
+  // Pflicht seit Bug-Report Philip 2026-08-18 (siehe Task "Lana soll confirmations/targets sauber
+  // in der dealing range verknüpfen") — ohne sourceTime kann PriceChart.vue die Box/Linie nicht
+  // positionieren (snapToBarTime braucht einen Zeitpunkt), die Bestätigung landete im Journal, blieb
+  // im Chart aber für immer unsichtbar. Vorher optional, per Tool-Beschreibung "sollte" statt
+  // erzwungen — reichte nicht zuverlässig.
+  sourceTime: string;
   touchedTime?: string | null;
   rangeLow?: number | null;
   rangeHigh?: number | null;
@@ -715,7 +720,7 @@ export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
       trade_position_id: args.level === "position" ? args.id : null,
       kind: args.kind,
       price: args.price,
-      source_time: args.sourceTime ?? null,
+      source_time: args.sourceTime,
       touched_time: args.touchedTime ?? null,
       range_low: args.rangeLow ?? null,
       range_high: args.rangeHigh ?? null,
@@ -731,17 +736,20 @@ export interface AddTradeTargetArgs {
   price: number;
   rangeLow?: number | null;
   rangeHigh?: number | null;
-  sourceTime?: string | null;
+  // Pflicht seit Bug-Report Philip 2026-08-18 (siehe AddTradeConfirmationArgs.sourceTime oben,
+  // dieselbe Begründung) — ohne sourceTime bleibt das Target im Chart unsichtbar, auch wenn die
+  // DB-Zeile existiert.
+  sourceTime: string;
 }
 
 // Fügt einer BEREITS BESTEHENDEN dealing_range ein weiteres Target hinzu (createTrade oben legt
 // Targets nur bei der initialen Anlage an) — fehlte bisher komplett, ebenso wie update/delete
 // (Bug-Report Philip 2026-08-09: TP1/TP2 nachträglich korrigieren war über MCP nicht möglich,
-// nur über create_trade neu anlegen). sourceTime NICHT automatisch gesetzt wie bei createTrade
-// (dort aus position.triggered_at abgeleitet) — hier gibt es keinen so eindeutigen Anker, deshalb
-// beim Aufrufer belassen; ohne sourceTime bleibt das Target laut refreshTradeTargetLinksInternal
-// (PriceChart.vue, siehe Migration 20260728140000_trade_targets_kind_and_source.sql) unsichtbar im
-// Chart, auch wenn die DB-Zeile existiert.
+// nur über create_trade neu anlegen). sourceTime ist seit 2026-08-18 Pflicht (Zod-Schema in
+// tools/trades.ts erzwingt es) statt nur optional beim Aufrufer zu liegen — ohne sourceTime bleibt
+// das Target laut refreshTradeTargetLinksInternal (PriceChart.vue, siehe Migration
+// 20260728140000_trade_targets_kind_and_source.sql) unsichtbar im Chart, auch wenn die DB-Zeile
+// existiert, und das reine Doku-"sollte" reichte nicht zuverlässig (Bug-Report Philip 2026-08-18).
 export async function addTradeTarget(dealingRangeId: number, args: AddTradeTargetArgs) {
   const { data, error } = await supabase
     .from("trade_targets")
@@ -750,7 +758,7 @@ export async function addTradeTarget(dealingRangeId: number, args: AddTradeTarge
       price: args.price,
       range_low: args.rangeLow ?? null,
       range_high: args.rangeHigh ?? null,
-      source_time: args.sourceTime ?? null,
+      source_time: args.sourceTime,
     })
     .select("*")
     .single();

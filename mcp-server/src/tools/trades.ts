@@ -159,20 +159,30 @@ export function registerTradeTools(server: McpServer) {
         "get_trade_setups fürs Ableiten von price/sourceTime: bei kind='ob' price = ob_bottom bei " +
         "Short-Setups bzw. ob_top bei Long-Setups, sourceTime = ob_start_time, rangeLow/rangeHigh = " +
         "ob_bottom/ob_top, timeframe='5M'; bei kind='pivot' price = ls_price, sourceTime = " +
-        "ls_pivot_time, touchedTime = ls_touched_time).",
+        "ls_pivot_time, touchedTime = ls_touched_time). sourceTime ist PFLICHT (bei kind='ob' " +
+        "zusätzlich rangeLow/rangeHigh) — ohne diese Felder speichert das Tool nichts, weil die " +
+        "Bestätigung sonst im Journal existiert, aber für immer unsichtbar im Chart bliebe.",
       inputSchema: {
         level: z.enum(["range", "position"]),
         id: z.number().int().describe("dealing_range_id bei level='range', trade_position_id bei level='position'"),
         kind: z.enum(["pivot", "ob", "fib"]),
         price: z.number(),
-        sourceTime: z.string().nullable().optional().describe("ISO-Zeitstempel, z.B. Pivot-/OB-Startzeit"),
+        sourceTime: z.string().describe("ISO-Zeitstempel, z.B. Pivot-/OB-Startzeit — PFLICHT, sonst keine Chart-Position berechenbar."),
         touchedTime: z.string().nullable().optional().describe("ISO-Zeitstempel, falls bereits (an)getestet"),
-        rangeLow: z.number().nullable().optional().describe("Bei kind='ob'/'fib': untere Ankerkante"),
-        rangeHigh: z.number().nullable().optional().describe("Bei kind='ob'/'fib': obere Ankerkante"),
+        rangeLow: z.number().nullable().optional().describe("Bei kind='ob': PFLICHT (untere Zonen-Kante), bei kind='fib' optionale Ankerkante."),
+        rangeHigh: z.number().nullable().optional().describe("Bei kind='ob': PFLICHT (obere Zonen-Kante), bei kind='fib' optionale Ankerkante."),
         timeframe: z.string().nullable().optional().describe("Bei kind='ob': Zeitebene der Zone, z.B. '5M'/'1H'/'4H'"),
       },
     },
-    async ({ level, id, ...fields }) => json(await addTradeConfirmation({ level, id, ...fields })),
+    async ({ level, id, ...fields }) => {
+      // rangeLow/rangeHigh lassen sich in Zods flachem inputSchema nicht deklarativ auf "Pflicht nur
+      // bei kind='ob'" beschränken (kein discriminatedUnion, gleiches Muster wie add_pin_entry oben)
+      // — deshalb Laufzeit-Check statt Schema-Constraint.
+      if (fields.kind === "ob" && (fields.rangeLow == null || fields.rangeHigh == null)) {
+        throw new Error("rangeLow und rangeHigh sind Pflicht bei kind='ob' (siehe Tool-Beschreibung), sonst bleibt die Box im Chart unsichtbar.");
+      }
+      return json(await addTradeConfirmation({ level, id, ...fields }));
+    },
   );
 
   server.registerTool(
@@ -182,15 +192,15 @@ export function registerTradeTools(server: McpServer) {
       description:
         "Fügt einer BEREITS BESTEHENDEN dealing_range ein weiteres Target (TP1/TP2/TP3/...) hinzu — " +
         "für eine initiale Anlage siehe stattdessen `targets` auf create_trade. dealingRangeId ist die " +
-        "id der Idee (siehe get_journal, Feld dealing_ranges.id). sourceTime angeben, wenn bekannt " +
-        "(z.B. Pivot-/OB-Zeitpunkt) — ohne sourceTime bleibt das Target im Chart unsichtbar, auch " +
-        "wenn die DB-Zeile existiert.",
+        "id der Idee (siehe get_journal, Feld dealing_ranges.id). sourceTime ist PFLICHT (z.B. Pivot-/" +
+        "OB-Zeitpunkt) — ohne sourceTime bleibt das Target im Chart unsichtbar, auch wenn die " +
+        "DB-Zeile existiert, deshalb erzwingt das Tool das Feld.",
       inputSchema: {
         dealingRangeId: z.number().int(),
         price: z.number(),
         rangeLow: z.number().nullable().optional().describe("Für OB-Ziele: Zonen-Unterkante"),
         rangeHigh: z.number().nullable().optional().describe("Für OB-Ziele: Zonen-Oberkante"),
-        sourceTime: z.string().nullable().optional().describe("ISO-Zeitstempel, z.B. Pivot-/OB-Zeitpunkt"),
+        sourceTime: z.string().describe("ISO-Zeitstempel, z.B. Pivot-/OB-Zeitpunkt — PFLICHT, sonst keine Chart-Position berechenbar."),
       },
     },
     async ({ dealingRangeId, ...fields }) => json(await addTradeTarget(dealingRangeId, fields)),
