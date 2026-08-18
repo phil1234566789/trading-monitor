@@ -6,7 +6,30 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "node \".claude/hooks/handbuch-check-reminder.js\""
+                        "command": "node",
+                        "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/handbuch-check-reminder.js"]
+                    }
+                ]
+            },
+            {
+                "matcher": "Read",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node",
+                        "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/trading-run-step-track.js"]
+                    }
+                ]
+            }
+        ],
+        "PostToolUse": [
+            {
+                "matcher": "mcp__trading-monitor__get_data_export",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node",
+                        "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/trading-run-export-track.js"]
                     }
                 ]
             }
