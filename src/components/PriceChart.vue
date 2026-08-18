@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { createChart, CandlestickSeries, LineSeries, TickMarkType, CrosshairMode, LineStyle } from "lightweight-charts";
-import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
+import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive, obZoneNaturalKey } from "../orderBlocks.js";
 import {
   detectLiquidityLevels,
   filterRelevantLevels,
@@ -11,6 +11,7 @@ import {
   formatLsLabel,
   LIQUIDITY_FRACTAL_PERIOD,
   LIQUIDITY_MAX_RELEVANT,
+  liquidityLevelNaturalKey,
 } from "../liquidity.js";
 import { sessions, renderSessions, currentSessionDanger, isForbiddenAt } from "../sessions.js";
 import { newsEvents, currentNewsNoGo, newsEventsForInstrument } from "../newsEvents.js";
@@ -91,6 +92,21 @@ const props = defineProps({
   hoveredPinTradeConfirmationId: { type: [String, Number], default: null },
   hoveredPinLiquidityLevelKey: { type: String, default: null },
   hoveredPinRsiDivergenceKey: { type: String, default: null },
+  // Gepinnte Objekte, direkt aus ihren pin_context-Daten gebaut statt nur als Vergleichsschlüssel
+  // gegen eine Live-Neuberechnung genutzt (Chat 2026-08-18, Task "Pin-Kontext: gepinnte Objekte
+  // direkt rendern statt nur per Live-Redetection") — ein Pin, dessen Zeitpunkt außerhalb des
+  // aktuell live neu erkannten Ergebnisses liegt (zu alt, showObsX-Toggle aus, showHistoricalObs
+  // aus, oder — nur bei liquidity/m5-Snapshots — falscher currentBar), bekommt dadurch trotzdem ein
+  // Chart-Objekt zum Anheften, siehe refreshPoiZonesInternal/refreshLiquidityInternal/
+  // refreshTradeSetupLinksInternal/refreshRsiDivergenceInternal (mergePinnedZones/-Levels dort).
+  // Bereits vollständig zonen-/level-/setup-/divergenz-förmige Objekte (siehe Dashboard.vue:
+  // pinnedObZones/pinnedLiquidityLevels/pinnedTradeSetups/pinnedRsiDivergences), touched===null
+  // markiert einen reinen Snapshot ohne bekannten Live-Status (m5_ob/m5_liquidity_level) — wird
+  // hier anhand der aktuell geladenen Kerzen self-geheilt statt für immer "aktiv" zu bleiben.
+  pinnedObZones: { type: Array, default: () => [] },
+  pinnedLiquidityLevels: { type: Array, default: () => [] },
+  pinnedTradeSetups: { type: Array, default: () => [] },
+  pinnedRsiDivergences: { type: Array, default: () => [] },
   // Pin-Kontext (Chat 2026-08-01, siehe pinContext.js) — Set von trade_positions.id,
   // die Philip per Rechtsklick dauerhaft "an Lana übergeben" hat, zeichnet einen permanenten
   // (nicht nur Hover-) Ring um deren Entry/Exit, siehe renderTradeMarkers/tradeMarkers.js.
@@ -868,8 +884,10 @@ function refreshTradeSetupLinksInternal() {
   tradeSetupLinkPrimitives.length = 0;
   if (!isForex || !props.showTradeSetups || !props.showTrades) return;
   const candles = clipReplay(allCandles);
+  const drawnTradeSetupIds = new Set();
   for (const t of tradesVisibleForCandles(props.trades, candles)) {
     if (t.tradeSetupId == null || t.tradeSetupObStartTime == null || t.tradeSetupObTop == null || t.tradeSetupObBottom == null) continue;
+    drawnTradeSetupIds.add(t.tradeSetupId);
     const top = t.tradeSetupObTop;
     const bottom = t.tradeSetupObBottom;
     const key = t.direction === "short" ? "tradeSetupShort" : "tradeSetupLong";
@@ -890,6 +908,43 @@ function refreshTradeSetupLinksInternal() {
         textColor: "rgba(255, 255, 255, 0.9)",
         label: `#${t.tradeSetupId}`,
         inPinContext,
+        pinColor: cssColor("pin"),
+        isSelectedPin,
+        hoverColor: cssColor("tradeHover"),
+      },
+      candles,
+    );
+    candleSeries.attachPrimitive(primitive);
+    tradeSetupLinkPrimitives.push(primitive);
+  }
+
+  // Gepinnte Trade-Setups OHNE verknüpften (gerade sichtbaren) Trade (Task "Pin-Kontext: gepinnte
+  // Objekte direkt rendern", Punkt 6) — diese Funktion loopte bisher NUR über
+  // tradesVisibleForCandles, ein trade_setup-Pin ohne Trade (z.B. ein von Lana interessant
+  // gefundenes, noch nicht ausgeführtes Setup) hatte dadurch gar keinen Rendering-Pfad.
+  // drawnTradeSetupIds dedupliziert gegen die oben schon gezeichneten Setups, damit ein Setup, das
+  // ZUSÄTZLICH gepinnt ist, keine doppelte Box bekommt.
+  for (const setup of props.pinnedTradeSetups) {
+    if (drawnTradeSetupIds.has(setup.tradeSetupId) || setup.instrument !== props.symbol) continue;
+    const key = setup.direction === "short" ? "tradeSetupShort" : "tradeSetupLong";
+    const isSelectedPin = props.hoveredPinTradeSetupId != null && props.hoveredPinTradeSetupId === setup.tradeSetupId;
+    const primitive = new OrderBlockPrimitive(
+      {
+        top: setup.top,
+        bottom: setup.bottom,
+        startTime: setup.startTime,
+        endTime: setup.startTime + TRADE_SETUP_OB_WIDTH_SEC,
+        tradeSetupId: setup.tradeSetupId,
+        direction: setup.direction,
+        instrument: setup.instrument,
+      },
+      {
+        fillColor: cssColorScaled(key, TRADE_SETUP_OB_FILL_RATIO),
+        borderColor: cssColorScaled(key, TRADE_SETUP_OB_BORDER_RATIO),
+        borderWidth: lineWidth(key),
+        textColor: "rgba(255, 255, 255, 0.9)",
+        label: `#${setup.tradeSetupId}`,
+        inPinContext: true,
         pinColor: cssColor("pin"),
         isSelectedPin,
         hoverColor: cssColor("tradeHover"),
@@ -1032,6 +1087,15 @@ function refreshTradeTargetLinksInternal() {
 // Tier-Skalierung), eigene Farbe (tradeConfirmation statt tradeTarget) und eigenes Label-Präfix,
 // damit sich Bestätigung (bereits passiert) und Target (zukünftige Erwartung) auf einen Blick
 // unterscheiden lassen, auch wenn beide zufällig an derselben Stelle sitzen.
+//
+// Bewusste Lücke (Task "Pin-Kontext: gepinnte Objekte direkt rendern", Punkt 7): loopt wie
+// refreshTradeSetupLinksInternal nur über tradesVisibleForCandles — ein trade_confirmation-Pin
+// dessen Trade gerade nicht sichtbar ist (anderes Symbol/Konto/Zeitraum) hat dadurch aktuell KEINEN
+// Rendering-Pfad. Anders als bei trade_setup nicht gefixt: pinContext.js' trade_confirmations-Embed
+// (ROW_COLUMNS) bringt kein instrument/keine Trade-Referenz mit (nur id/kind/price/range_low/
+// range_high/touched_time) — ein Direkt-Render bräuchte zuerst eine Embed-Erweiterung (parent
+// trade_position_id + instrument), das rechtfertigt hier den Aufwand (noch) nicht, da Bestätigungen
+// ohne sichtbaren Trade seltener sind als die anderen Fälle.
 function refreshTradeConfirmationLinksInternal() {
   for (const p of tradeConfirmationLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeConfirmationLinkPrimitives.length = 0;
@@ -1329,9 +1393,34 @@ function liveObZoneState(item) {
   return zone ? { touched: zone.touched, endTime: zone.endTime } : null;
 }
 
+// Gepinnte Zonen (ob_zone + m5_ob) werden zusätzlich zur live erkannten Liste gerendert (Task
+// "Pin-Kontext: gepinnte Objekte direkt rendern"), damit ein Pin unabhängig von showObsX-Toggles/
+// showHistoricalObs/dem aktuell live neu erkannten Ergebnis trotzdem ein Chart-Objekt zum Anheften
+// bekommt. touched===null (nur bei kind='m5_ob', reiner Snapshot ohne Live-Status, siehe
+// Dashboard.vue: pinnedObZones) wird anhand der aktuell geladenen Kerzen self-geheilt (dieselbe
+// firstCandleTouchRange-Technik wie refreshTradeConfirmationLinksInternal) — sonst würde eine
+// längst gesweepte M5-OB-Pin-Box für immer als "aktiv" bis "jetzt" gezeichnet.
+function mergePinnedZones(zones, pinnedZones, candles) {
+  if (!pinnedZones || pinnedZones.length === 0) return zones;
+  const seen = new Set(zones.map((z) => obZoneNaturalKey(z.timeframe, z.dir, z.startTime)));
+  const extra = [];
+  for (const z of pinnedZones) {
+    const key = obZoneNaturalKey(z.timeframe, z.dir, z.startTime);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (z.touched != null) {
+      extra.push({ ...z, endTime: z.endTime ?? candles[candles.length - 1]?.time ?? z.startTime });
+      continue;
+    }
+    const touchTime = firstCandleTouchRange(candles, z.startTime, z.top, z.bottom);
+    extra.push({ ...z, touched: touchTime != null, endTime: touchTime ?? candles[candles.length - 1]?.time ?? z.startTime });
+  }
+  return [...zones, ...extra];
+}
+
 function refreshPoiZonesInternal() {
   const candles = clipReplay(allCandles);
-  const visibleZones = filterHistorical(collectObsZones());
+  const visibleZones = mergePinnedZones(filterHistorical(collectObsZones()), props.pinnedObZones, candles);
   renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles, props.pinObZoneKeys, props.hoveredPinObZoneKey);
   poiZonesMetadata.value = visibleZones;
 }
@@ -1344,10 +1433,42 @@ function refreshPoiZonesInternal() {
 // keine maxRelevant-Deckelung) — auch längst berührte. Für die Trendanalyse-Diskussion mit
 // Philip: er braucht wirklich jeden Pivot sichtbar, nicht nur die 10 neuesten je Richtung, die
 // filterRelevantLevels selbst mit onlyRelevant=false noch abschneiden würde.
+// Gepinnte Level (liquidity_level + m5_liquidity_level) werden zusätzlich zur live erkannten Liste
+// gerendert (Task "Pin-Kontext: gepinnte Objekte direkt rendern") — bewusst auch bei
+// showLiquidity=false und UNABHÄNGIG vom aktuell gewählten currentBar (Philip 2026-08-18: ein
+// gepinntes 1H-Level soll auch sichtbar bleiben, wenn der Chart gerade auf M5/4H steht, siehe
+// Dashboard.vue: pinnedLiquidityLevels ohne currentBar-Filterung — anders als bei live/nicht
+// gepinnten Leveln, die weiterhin nur für EINEN Timeframe gleichzeitig berechnet werden).
+// touched===null (nur bei kind='m5_liquidity_level', reiner Snapshot ohne Live-Status) wird anhand
+// der aktuell geladenen Kerzen self-geheilt, analog zu mergePinnedZones.
+function mergePinnedLevels(levels, pinnedLevels, candles) {
+  if (!pinnedLevels || pinnedLevels.length === 0) return levels;
+  const seen = new Set(levels.map((l) => liquidityLevelNaturalKey(l.dir, l.pivotTime)));
+  const extra = [];
+  for (const lvl of pinnedLevels) {
+    const key = liquidityLevelNaturalKey(lvl.dir, lvl.pivotTime);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (lvl.touched != null) {
+      extra.push({ ...lvl, endTime: lvl.endTime ?? candles[candles.length - 1]?.time ?? lvl.pivotTime });
+      continue;
+    }
+    const touchCandle = candles.find(
+      (c) => c.time > lvl.pivotTime && ((lvl.dir === 1 && c.high >= lvl.price) || (lvl.dir === -1 && c.low <= lvl.price)),
+    );
+    extra.push({ ...lvl, touched: touchCandle != null, endTime: touchCandle?.time ?? candles[candles.length - 1]?.time ?? lvl.pivotTime });
+  }
+  return [...levels, ...extra];
+}
+
 function refreshLiquidityInternal() {
   const candles = clipReplay(allCandles);
   if (!props.showLiquidity) {
-    renderLiquidityLevels(candleSeries, [], liquidityPrimitives, candles);
+    const pinnedOnly = mergePinnedLevels([], props.pinnedLiquidityLevels, candles);
+    renderLiquidityLevels(candleSeries, pinnedOnly, liquidityPrimitives, candles, {
+      pinKeys: props.pinLiquidityLevelKeys,
+      hoveredKey: props.hoveredPinLiquidityLevelKey,
+    });
     liquidityMetadata.value = null;
     liquidityEarliestTime.value = null;
     currentLiquidityLevels = [];
@@ -1359,7 +1480,7 @@ function refreshLiquidityInternal() {
     : [...filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true), ...filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true)];
   currentLiquidityLevels = relevant;
   const precision = pricePrecisionForInstrument(props.symbol);
-  renderLiquidityLevels(candleSeries, relevant, liquidityPrimitives, candles, {
+  renderLiquidityLevels(candleSeries, mergePinnedLevels(relevant, props.pinnedLiquidityLevels, candles), liquidityPrimitives, candles, {
     debugPrices: props.showLiquidityDebug,
     formatPrice: (price) => fmtPrice(price, precision),
     // "Alter"-Anzeige an den Debug-Preis-Labels (Chat 2026-07-22) — im Replay bezogen auf
@@ -2158,6 +2279,28 @@ function refreshRsiInternal() {
 // ersetzt es nicht — beide zusammen zeichnen dieselbe "aktuelle" Divergenz zwar doppelt (die
 // Historie endet strukturell auf demselben letzten Ereignis), das ist aber nur dieselbe Linie
 // zweimal übereinander, kein sichtbarer Unterschied.
+// Gepinnte Divergenz zusätzlich zur Live-/Historie-Liste rendern (Task "Pin-Kontext: gepinnte
+// Objekte direkt rendern") — bewusst NUR bei exaktem Zeit-Treffer (kein Snap-Toleranz wie bei
+// Zonen/Leveln): rsi_divergence speichert keine eigene Timeframe-Spalte (siehe pinContext.js), ein
+// exakter Treffer von fromTime/toTime auf eine aktuell geladene Kerze ist der einzige verfügbare
+// Proxy dafür, dass der Chart gerade auf demselben Timeframe steht, auf dem die Divergenz erkannt
+// wurde (Philip 2026-08-18, bestätigt: RSI-Werte sind timeframe-abhängig, ANDERS als Zonen/Level
+// bewusst NICHT timeframe-entkoppeln) — ein M5-Zeitstempel trifft auf einem 1H-Chart so gut wie nie
+// exakt eine Kerzenzeit.
+function mergePinnedDivergences(divergences, pinnedDivergences, candles) {
+  if (!pinnedDivergences || pinnedDivergences.length === 0) return divergences;
+  const seen = new Set(divergences.map((d) => `${d.type}|${d.fromTime}|${d.toTime}`));
+  const candleTimes = new Set(candles.map((c) => c.time));
+  const extra = [];
+  for (const d of pinnedDivergences) {
+    const key = `${d.type}|${d.fromTime}|${d.toTime}`;
+    if (seen.has(key) || !candleTimes.has(d.fromTime) || !candleTimes.has(d.toTime)) continue;
+    seen.add(key);
+    extra.push(d);
+  }
+  return [...divergences, ...extra];
+}
+
 function refreshRsiDivergenceInternal() {
   for (const p of divergencePriceLinePrimitives) candleSeries.detachPrimitive(p);
   divergencePriceLinePrimitives.length = 0;
@@ -2171,7 +2314,8 @@ function refreshRsiDivergenceInternal() {
   // hängt NICHT an showRsiDivergence/-History/rsiDivergenceHistoryCount, das sind reine
   // Chart-Zeichnungs-Toggles/-Caps. Erste Version dieses Panels hatte fälschlich dieselbe Menge
   // wiederverwendet ("was gerade im Chart sichtbar ist"), das war nicht gemeint.
-  const needsDrawing = (props.showRsiDivergence || props.showRsiDivergenceHistory) && props.showRsi && !!rsiSeries;
+  const needsDrawing =
+    (props.showRsiDivergence || props.showRsiDivergenceHistory || props.pinnedRsiDivergences.length > 0) && props.showRsi && !!rsiSeries;
   const needsStats = props.showRsiDivergenceStats && props.showRsi;
   if (!needsDrawing && !needsStats) {
     rsiDivergenceStatsData.value = null;
@@ -2186,10 +2330,14 @@ function refreshRsiDivergenceInternal() {
   const precision = pricePrecisionForInstrument(props.symbol);
 
   if (needsDrawing) {
-    const drawnDivergences = [
-      ...(props.showRsiDivergence ? detectRsiDivergence(candles) : []),
-      ...(props.showRsiDivergenceHistory ? detectRsiDivergenceHistory(candles, undefined, undefined, props.rsiDivergenceHistoryCount) : []),
-    ];
+    const drawnDivergences = mergePinnedDivergences(
+      [
+        ...(props.showRsiDivergence ? detectRsiDivergence(candles) : []),
+        ...(props.showRsiDivergenceHistory ? detectRsiDivergenceHistory(candles, undefined, undefined, props.rsiDivergenceHistoryCount) : []),
+      ],
+      props.pinnedRsiDivergences,
+      candles,
+    );
 
     for (const d of drawnDivergences) {
       const colorKey = d.type === "bearish" ? "divergenceBearish" : "divergenceBullish";
@@ -3036,6 +3184,12 @@ watch(() => props.hoveredPinTradeSetupId, refreshTradeSetupLinksInternal);
 watch(() => props.hoveredPinTradeConfirmationId, refreshTradeConfirmationLinksInternal);
 watch(() => props.hoveredPinLiquidityLevelKey, refreshLiquidityInternal);
 watch(() => props.hoveredPinRsiDivergenceKey, refreshRsiDivergenceInternal);
+// Direkt-Rendering gepinnter Objekte (Chat 2026-08-18, Task "Pin-Kontext: gepinnte Objekte direkt
+// rendern") — dieselben Refresh-Funktionen wie die zugehörigen pin*Keys/hoveredPin*-Watches oben.
+watch(() => props.pinnedObZones, refreshPoiZonesInternal);
+watch(() => props.pinnedLiquidityLevels, refreshLiquidityInternal);
+watch(() => props.pinnedTradeSetups, refreshTradeSetupLinksInternal);
+watch(() => props.pinnedRsiDivergences, refreshRsiDivergenceInternal);
 watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 // tscCalloutModeActive wechselt (TSC wird ein-/ausgeblendet, Locked-Zustand etc.) -> Canvas-Text
 // muss sofort erscheinen/verschwinden, nicht erst beim nächsten claudeAnnotations-Wechsel.

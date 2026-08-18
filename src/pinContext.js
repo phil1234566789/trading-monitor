@@ -34,10 +34,17 @@ const ROW_COLUMNS =
   "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
   "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi, " +
   "note, created_at, " +
-  "ob_zones(id, instrument, direction, timeframe, top, bottom, start_time, touched, invalidated), " +
+  // end_time (Chat 2026-08-18, siehe Task "Pin-Kontext: gepinnte Objekte direkt rendern") — für die
+  // Direkt-Rendering-Fallback-Box/-Linie eines gepinnten ob_zone/liquidity_level (siehe
+  // PriceChart.vue: refreshPoiZonesInternal/refreshLiquidityInternal), dieselbe Spalte, die
+  // detectOrderBlocks()/poi-watcher schon für die Live-Zeichnung berechnen (siehe
+  // 20260705240000_ob_zones_end_time.sql/20260717130000_liquidity_levels_end_time.sql) — bisher nur
+  // für den mcp-server relevant (dessen getPinContext() `ob_zones(*)`/`liquidity_levels(*)` fetcht),
+  // hier bisher nicht mit ausgewählt, weil ungenutzt.
+  "ob_zones(id, instrument, direction, timeframe, top, bottom, start_time, end_time, touched, invalidated), " +
   "trade_setups(id, instrument, direction, ob_top, ob_bottom, ob_start_time, ls_touched_time), " +
   "trade_confirmations(id, kind, price, range_low, range_high, touched_time), " +
-  "liquidity_levels(id, instrument, direction, timeframe, price, pivot_time, touched)";
+  "liquidity_levels(id, instrument, direction, timeframe, price, pivot_time, end_time, touched)";
 
 function toEntry(row) {
   return {
@@ -57,6 +64,7 @@ function toEntry(row) {
           price: row.liquidity_levels.price,
           pivotTime: row.liquidity_levels.pivot_time,
           touched: row.liquidity_levels.touched,
+          endTime: row.liquidity_levels.end_time,
         }
       : null,
     // Rohdaten-Snapshot, kein Embed (siehe ROW_COLUMNS-Kommentar) — nur bei kind='m5_ob' gesetzt.
@@ -106,6 +114,7 @@ function toEntry(row) {
           top: row.ob_zones.top,
           bottom: row.ob_zones.bottom,
           startTime: row.ob_zones.start_time,
+          endTime: row.ob_zones.end_time,
           touched: row.ob_zones.touched,
           invalidated: row.ob_zones.invalidated,
         }

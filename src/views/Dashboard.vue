@@ -601,6 +601,99 @@ function toUnixSec(iso) {
   return iso == null ? null : Math.floor(new Date(iso).getTime() / 1000);
 }
 
+// Gepinnte Objekte, direkt aus ihren pin_context-Daten gebaut statt nur als Vergleichsschlüssel
+// (Chat 2026-08-18, Task "Pin-Kontext: gepinnte Objekte direkt rendern statt nur per
+// Live-Redetection") — siehe PriceChart.vue: mergePinnedZones/mergePinnedLevels/
+// mergePinnedDivergences/refreshTradeSetupLinksInternal für die Verwendung. touched: null markiert
+// einen reinen Snapshot ohne bekannten Live-Status (m5_ob/m5_liquidity_level) — PriceChart.vue
+// self-heilt das anhand der aktuell geladenen Kerzen.
+const pinnedObZones = computed(() => {
+  return pinContextEntries.value
+    .filter(
+      (e) => (e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value) || (e.kind === "m5_ob" && e.m5Ob?.instrument === currentSymbol.value),
+    )
+    .map((e) => {
+      if (e.kind === "ob_zone") {
+        return {
+          top: e.obZone.top,
+          bottom: e.obZone.bottom,
+          startTime: toUnixSec(e.obZone.startTime),
+          dir: e.obZone.direction === "long" ? 1 : -1,
+          timeframe: e.obZone.timeframe,
+          touched: e.obZone.touched,
+          invalidated: e.obZone.invalidated,
+          endTime: toUnixSec(e.obZone.endTime),
+        };
+      }
+      return {
+        top: e.m5Ob.top,
+        bottom: e.m5Ob.bottom,
+        startTime: toUnixSec(e.m5Ob.startTime),
+        dir: e.m5Ob.direction === "long" ? 1 : -1,
+        timeframe: "5M",
+        touched: null,
+        invalidated: false,
+        endTime: null,
+      };
+    });
+});
+// ANDERS als pinLiquidityLevelKeys oben bewusst OHNE currentBar-Filterung (Philip 2026-08-18: ein
+// gepinntes 1H-Level soll auch auf M5/4H sichtbar bleiben, siehe PriceChart.vue: mergePinnedLevels).
+const pinnedLiquidityLevels = computed(() => {
+  return pinContextEntries.value
+    .filter(
+      (e) =>
+        (e.kind === "liquidity_level" && e.liquidityLevel?.instrument === currentSymbol.value) ||
+        (e.kind === "m5_liquidity_level" && e.m5Liquidity?.instrument === currentSymbol.value),
+    )
+    .map((e) => {
+      if (e.kind === "liquidity_level") {
+        return {
+          price: e.liquidityLevel.price,
+          dir: e.liquidityLevel.direction === "high" ? 1 : -1,
+          pivotTime: toUnixSec(e.liquidityLevel.pivotTime),
+          touched: e.liquidityLevel.touched,
+          endTime: toUnixSec(e.liquidityLevel.endTime),
+        };
+      }
+      return {
+        price: e.m5Liquidity.price,
+        dir: e.m5Liquidity.direction === "high" ? 1 : -1,
+        pivotTime: toUnixSec(e.m5Liquidity.pivotTime),
+        touched: null,
+        endTime: null,
+      };
+    });
+});
+const pinnedTradeSetups = computed(() => {
+  return pinContextEntries.value
+    .filter((e) => e.kind === "trade_setup" && e.tradeSetup?.instrument === currentSymbol.value)
+    .map((e) => ({
+      tradeSetupId: e.tradeSetupId,
+      instrument: e.tradeSetup.instrument,
+      direction: e.tradeSetup.direction,
+      top: e.tradeSetup.obTop,
+      bottom: e.tradeSetup.obBottom,
+      startTime: toUnixSec(e.tradeSetup.obStartTime),
+    }));
+});
+// TF-Kopplung bewusst NICHT aufgehoben (siehe PriceChart.vue: mergePinnedDivergences) — RSI-Werte
+// sind timeframe-abhängig, ein Divergenz-Pin bleibt daher nur auf seinem ursprünglichen Timeframe
+// sichtbar (Philip 2026-08-18, bestätigt).
+const pinnedRsiDivergences = computed(() => {
+  return pinContextEntries.value
+    .filter((e) => e.kind === "rsi_divergence" && e.rsiDivergence?.instrument === currentSymbol.value)
+    .map((e) => ({
+      type: e.rsiDivergence.type,
+      fromTime: toUnixSec(e.rsiDivergence.fromTime),
+      toTime: toUnixSec(e.rsiDivergence.toTime),
+      fromPrice: e.rsiDivergence.fromPrice,
+      toPrice: e.rsiDivergence.toPrice,
+      fromRsi: e.rsiDivergence.fromRsi,
+      toRsi: e.rsiDivergence.toRsi,
+    }));
+});
+
 // Warum ein Eintrag (noch) nicht ins Chart springen kann — null = passt, kann springen. Reine
 // Berechnung ohne State, damit sie sowohl für den Hover-Hinweis (computed unten) als auch als
 // Sprung-Guard in onSelectPin wiederverwendet werden kann, ohne die Bedingungen doppelt zu pflegen.
@@ -1353,6 +1446,10 @@ watch(selectedTradingAccountId, refreshTrades);
     :hovered-pin-trade-confirmation-id="hoveredPinTradeConfirmationId"
     :hovered-pin-liquidity-level-key="hoveredPinLiquidityLevelKey"
     :hovered-pin-rsi-divergence-key="hoveredPinRsiDivergenceKey"
+    :pinned-ob-zones="pinnedObZones"
+    :pinned-liquidity-levels="pinnedLiquidityLevels"
+    :pinned-trade-setups="pinnedTradeSetups"
+    :pinned-rsi-divergences="pinnedRsiDivergences"
     :show-trades="showTrades"
     :poi-zones="poiZones"
     :show-obs-m5="showObsM5"
