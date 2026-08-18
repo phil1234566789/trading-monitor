@@ -71,6 +71,11 @@ dieses Repo. Für den Rest dieser Session gilt:
      auf und leg los, ohne nachzufragen. Ist unklar, ob/welcher Task gemeint ist, frag Philip
      sofort, bevor du mit der eigentlichen Arbeit beginnst. Nach Abschluss `set_task_status(id, "done")`.
 
+8. **Doku-Änderungen am Handbuch (`trading`-Repo):** Ein `PreToolUse`-Hook
+   (`.claude/settings.json` → `handbuch-check-reminder.js`) erinnert automatisch vor jedem
+   Edit/Write auf eine `.md`-Datei im `trading`-Repo an den Skill `handbuch-check` — kein manuelles
+   Dran-Denken hier nötig, der Hook übernimmt das zuverlässig.
+
 Frag Philip kurz, welches Instrument (und bei einem Backtest: welches Datum) er analysieren will,
 falls das nicht schon in seiner Nachricht steht.
 
