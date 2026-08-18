@@ -548,6 +548,120 @@ async function onPinUpdateNote(entryId, note) {
   refreshPinContext();
 }
 
+// Pin-Panel-Hover → Chart-Auswahl-Halo (Chat 2026-08-18, Task "Pin-Kontext: Listen-Hover hebt
+// Chart-Highlight hervor, Klick springt hin") — Philip: bei einer ganzen Liste von Pins (z.B. von
+// Lana via add_pin_entry angelegt) muss er erst zuordnen können, welcher Listen-Eintrag zu welchem
+// Chart-Highlight gehört. Analog zu onHoverTrade oben, aber für alle Pin-Kinds. kind='trade_position'
+// läuft bewusst über das bestehende hoveredTradeId (kein eigener Prop nötig, siehe dort) — beide
+// Quellen (TradesTable.vue-Hover UND PinPanel.vue-Hover) schreiben denselben Ref, es kann ohnehin
+// immer nur EINE Zeile gleichzeitig gehovert sein.
+const hoveredPinEntry = ref(null);
+function onPinHover(entry) {
+  hoveredPinEntry.value = entry;
+  if (entry == null || entry.kind === "trade_position") {
+    hoveredTradeId.value = entry?.tradePositionId ?? null;
+  }
+}
+// Dieselben Filter (aktuelles Symbol/Timeframe) wie pinObZoneKeys & Co. oben — ein gehoverter
+// Eintrag für ein anderes Symbol/Timeframe ergibt hier bewusst KEINEN Treffer (die zugehörige
+// Chart-Stelle existiert im gerade sichtbaren Chart schlicht nicht).
+const hoveredPinObZoneKey = computed(() => {
+  const e = hoveredPinEntry.value;
+  if (!e) return null;
+  if (e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value) return obZoneEntryNaturalKey(e.obZone);
+  if (e.kind === "m5_ob" && e.m5Ob?.instrument === currentSymbol.value) return m5ObEntryNaturalKey(e.m5Ob);
+  return null;
+});
+const hoveredPinTradeSetupId = computed(() => {
+  const e = hoveredPinEntry.value;
+  return e?.kind === "trade_setup" && e.tradeSetup?.instrument === currentSymbol.value ? e.tradeSetupId : null;
+});
+const hoveredPinTradeConfirmationId = computed(() =>
+  hoveredPinEntry.value?.kind === "trade_confirmation" ? hoveredPinEntry.value.tradeConfirmationId : null,
+);
+const hoveredPinLiquidityLevelKey = computed(() => {
+  const e = hoveredPinEntry.value;
+  if (!e) return null;
+  if (e.kind === "liquidity_level" && currentBar.value === "1h" && e.liquidityLevel?.instrument === currentSymbol.value) {
+    return liquidityLevelEntryNaturalKey(e.liquidityLevel);
+  }
+  if (e.kind === "m5_liquidity_level" && e.m5Liquidity?.instrument === currentSymbol.value && e.m5Liquidity?.timeframe === currentBar.value) {
+    return m5LiquidityEntryNaturalKey(e.m5Liquidity);
+  }
+  return null;
+});
+const hoveredPinRsiDivergenceKey = computed(() => {
+  const e = hoveredPinEntry.value;
+  return e?.kind === "rsi_divergence" && e.rsiDivergence?.instrument === currentSymbol.value ? rsiDivergenceEntryNaturalKey(e.rsiDivergence) : null;
+});
+
+// ISO-Zeiten aus pinContext.js müssen zurück in Unix-Sekunden (jumpToPin/jumpToTimeRange erwarten
+// dasselbe Format wie candle.time).
+function toUnixSec(iso) {
+  return iso == null ? null : Math.floor(new Date(iso).getTime() / 1000);
+}
+
+// Warum ein Eintrag (noch) nicht ins Chart springen kann — null = passt, kann springen. Reine
+// Berechnung ohne State, damit sie sowohl für den Hover-Hinweis (computed unten) als auch als
+// Sprung-Guard in onSelectPin wiederverwendet werden kann, ohne die Bedingungen doppelt zu pflegen.
+// trade_confirmation ohne touchedTime hat kein Sprungziel — kein Instrument-/Timeframe-Fall, aber
+// dieselbe "kann gerade nicht springen"-Semantik.
+function pinJumpMismatch(entry) {
+  if (!entry || entry.kind === "trade_position") return null;
+  if (entry.kind === "ob_zone") return entry.obZone?.instrument !== currentSymbol.value ? `Erst zu ${entry.obZone?.instrument} wechseln.` : null;
+  if (entry.kind === "m5_ob") {
+    if (entry.m5Ob?.instrument !== currentSymbol.value) return `Erst zu ${entry.m5Ob?.instrument} wechseln.`;
+    return currentBar.value !== "5m" ? "Erst zu M5 wechseln." : null;
+  }
+  if (entry.kind === "trade_setup") {
+    return entry.tradeSetup?.instrument !== currentSymbol.value ? `Erst zu ${entry.tradeSetup?.instrument} wechseln.` : null;
+  }
+  if (entry.kind === "trade_confirmation") return entry.tradeConfirmation?.touchedTime == null ? "Noch nicht getoucht, kein Sprungziel." : null;
+  if (entry.kind === "liquidity_level") {
+    if (entry.liquidityLevel?.instrument !== currentSymbol.value) return `Erst zu ${entry.liquidityLevel?.instrument} wechseln.`;
+    return currentBar.value !== "1h" ? "Erst zu 1h wechseln." : null;
+  }
+  if (entry.kind === "m5_liquidity_level") {
+    if (entry.m5Liquidity?.instrument !== currentSymbol.value) return `Erst zu ${entry.m5Liquidity?.instrument} wechseln.`;
+    return entry.m5Liquidity?.timeframe !== currentBar.value ? `Erst zu ${entry.m5Liquidity?.timeframe} wechseln.` : null;
+  }
+  if (entry.kind === "rsi_divergence") {
+    return entry.rsiDivergence?.instrument !== currentSymbol.value ? `Erst zu ${entry.rsiDivergence?.instrument} wechseln.` : null;
+  }
+  return null;
+}
+
+// Hinweis lebt bewusst nur so lange wie der Hover selbst (Philip 2026-08-18: "nicht 4 Sekunden
+// lang, sondern nur solange ich hovere") — kein Timer, reine Ableitung aus hoveredPinEntry, wie der
+// Chart-Auswahl-Halo selbst. Klick auf eine Zeile setzt IMMER erst einen Hover voraus (Maus muss
+// über der Zeile sein), der Hinweis ist zum Klick-Zeitpunkt also schon sichtbar.
+const pinJumpHint = computed(() => {
+  const message = pinJumpMismatch(hoveredPinEntry.value);
+  return message ? { entryId: hoveredPinEntry.value.id, message } : null;
+});
+
+function onSelectPin(entry) {
+  if (!entry || pinJumpMismatch(entry)) return;
+  if (entry.kind === "trade_position") {
+    const t = trades.value.find((x) => x.id === entry.tradePositionId);
+    if (t) priceChartRef.value?.jumpToTrade(t.entryTime, t.exitTime);
+  } else if (entry.kind === "ob_zone") {
+    priceChartRef.value?.jumpToPin(toUnixSec(entry.obZone.startTime));
+  } else if (entry.kind === "m5_ob") {
+    priceChartRef.value?.jumpToPin(toUnixSec(entry.m5Ob.startTime));
+  } else if (entry.kind === "trade_setup") {
+    priceChartRef.value?.jumpToPin(toUnixSec(entry.tradeSetup.obStartTime));
+  } else if (entry.kind === "trade_confirmation") {
+    priceChartRef.value?.jumpToPin(toUnixSec(entry.tradeConfirmation.touchedTime));
+  } else if (entry.kind === "liquidity_level") {
+    priceChartRef.value?.jumpToPin(toUnixSec(entry.liquidityLevel.pivotTime));
+  } else if (entry.kind === "m5_liquidity_level") {
+    priceChartRef.value?.jumpToPin(toUnixSec(entry.m5Liquidity.pivotTime));
+  } else if (entry.kind === "rsi_divergence") {
+    priceChartRef.value?.jumpToPin(toUnixSec(entry.rsiDivergence.fromTime), toUnixSec(entry.rsiDivergence.toTime));
+  }
+}
+
 // Pin-Modal (Chat 2026-08-01) — "genau wie bei Metadaten" (Philip), analog persistiert.
 const showPinPanel = useLocalStorageRef("showPinPanel", false);
 
@@ -1234,6 +1348,11 @@ watch(selectedTradingAccountId, refreshTrades);
     :pin-trade-confirmation-ids="pinTradeConfirmationIds"
     :pin-liquidity-level-keys="pinLiquidityLevelKeys"
     :pin-rsi-divergence-keys="pinRsiDivergenceKeys"
+    :hovered-pin-ob-zone-key="hoveredPinObZoneKey"
+    :hovered-pin-trade-setup-id="hoveredPinTradeSetupId"
+    :hovered-pin-trade-confirmation-id="hoveredPinTradeConfirmationId"
+    :hovered-pin-liquidity-level-key="hoveredPinLiquidityLevelKey"
+    :hovered-pin-rsi-divergence-key="hoveredPinRsiDivergenceKey"
     :show-trades="showTrades"
     :poi-zones="poiZones"
     :show-obs-m5="showObsM5"
@@ -1321,7 +1440,15 @@ watch(selectedTradingAccountId, refreshTrades);
     "
   />
   <MetadataPanel v-if="showPinPanel" title="📌 Pins" @close="showPinPanel = false">
-    <PinPanel :entries="pinContextEntries" :trades="trades" @remove="onPinRemove" @update-note="onPinUpdateNote" />
+    <PinPanel
+      :entries="pinContextEntries"
+      :trades="trades"
+      :mismatch-hint="pinJumpHint"
+      @remove="onPinRemove"
+      @update-note="onPinUpdateNote"
+      @hover="onPinHover"
+      @select="onSelectPin"
+    />
   </MetadataPanel>
 </template>
 

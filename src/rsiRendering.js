@@ -15,6 +15,9 @@
 import { canShowLabels } from "./chartZoom.js";
 
 const PIN_HALO_EXTRA_WIDTH = 3; // px, zusätzlich zur normalen lineWidth (Chat 2026-08-17)
+// Auswahl-Halo (Chat 2026-08-18, PinPanel.vue-Hover) — analog zu liquidity.js, breiter als der
+// Pin-Halo und davor gezeichnet, damit beide gleichzeitig als Glow-Ringe sichtbar bleiben.
+const SELECTED_HALO_EXTRA_WIDTH = 7; // px
 
 class DivergenceLineRenderer {
   constructor(points, options, chart, candles) {
@@ -30,6 +33,18 @@ class DivergenceLineRenderer {
 
     target.useBitmapCoordinateSpace((scope) => {
       const ctx = scope.context;
+
+      // Auswahl-Halo bei Hover über die zugehörige PinPanel.vue-Zeile (Chat 2026-08-18) — VOR dem
+      // Pin-Halo gezeichnet (breiter, liegt also dahinter), analog zu liquidity.js.
+      if (this._options.isSelectedPin) {
+        ctx.strokeStyle = this._options.hoverColor;
+        ctx.lineWidth = ((this._options.lineWidth ?? 1.5) + SELECTED_HALO_EXTRA_WIDTH) * scope.horizontalPixelRatio;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x * scope.horizontalPixelRatio, pts[0].y * scope.verticalPixelRatio);
+        ctx.lineTo(pts[1].x * scope.horizontalPixelRatio, pts[1].y * scope.verticalPixelRatio);
+        ctx.stroke();
+      }
 
       // Pin-Halo (Chat 2026-08-17, analog zu liquidity.js/LiquidityLineRenderer) — dickere,
       // durchgezogene Linie in der Pin-Akzentfarbe HINTER dem gestrichelten Konnektor.

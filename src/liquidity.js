@@ -16,6 +16,10 @@ import { LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT, detectLiquidityLevels
 export { LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT, detectLiquidityLevels, filterRelevantLevels };
 
 const PIN_HALO_EXTRA_WIDTH = 3; // px, zusätzlich zur normalen lineWidth (Chat 2026-08-17)
+// Auswahl-Halo (Chat 2026-08-18, PinPanel.vue-Hover) — breiter als der Pin-Halo, wird ZUERST
+// (also am weitesten hinten) gezeichnet, damit beide Halos gleichzeitig als "Glow"-Ringe um die
+// eigentliche Linie sichtbar bleiben, analog zu orderBlocks.js' zwei ineinanderliegenden Rahmen.
+const SELECTED_HALO_EXTRA_WIDTH = 7; // px
 
 class LiquidityLineRenderer {
   constructor(p1, p2, options, chart, candles) {
@@ -35,6 +39,18 @@ class LiquidityLineRenderer {
       const y = Math.round(p1.y * scope.verticalPixelRatio);
       const x1 = Math.round(p1.x * scope.horizontalPixelRatio);
       const x2 = Math.round(p2.x * scope.horizontalPixelRatio);
+      // Auswahl-Halo bei Hover über die zugehörige PinPanel.vue-Zeile (Chat 2026-08-18) — VOR dem
+      // Pin-Halo gezeichnet (breiter, liegt also dahinter), damit beide gleichzeitig sichtbar bleiben.
+      if (this._options.isSelectedPin) {
+        ctx.strokeStyle = this._options.hoverColor;
+        ctx.lineWidth = (this._options.lineWidth + SELECTED_HALO_EXTRA_WIDTH) * scope.horizontalPixelRatio;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(Math.min(x1, x2), y);
+        ctx.lineTo(Math.max(x1, x2), y);
+        ctx.stroke();
+      }
+
       // Pin-Halo (Chat 2026-08-17, analog zum Rahmen bei OrderBlockPrimitive/Ring bei
       // TradeMarkerPrimitive) — dickere Linie in der Pin-Akzentfarbe HINTER der eigentlichen
       // Linie, damit gepinnte Level auch bei kräftigen Sweep-/High-/Low-Farben noch erkennbar
@@ -223,11 +239,11 @@ export function bullBearLabelSide(bearish) {
   return bearish ? "end-above" : "end-below";
 }
 
-function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext } = {}) {
+function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin } = {}) {
   const key = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
   const color = cssColor(key);
   const label = debugPrices ? `${formatPrice(lvl.price)}${ageSuffix(lvl.pivotTime, nowSec)}` : null;
-  return { color, lineWidth: lineWidth(key), label, inPinContext, pinColor: cssColor("pin") };
+  return { color, lineWidth: lineWidth(key), label, inPinContext, pinColor: cssColor("pin"), isSelectedPin, hoverColor: cssColor("tradeHover") };
 }
 
 // Timeframe bewusst NICHT Teil des Strings (anders als obZoneNaturalKey/orderBlocks.js) — diese
@@ -245,14 +261,19 @@ export function liquidityLevelNaturalKey(dir, pivotTime) {
 // analog zu renderPersistedZones in orderBlocks.js. `debugPrices`/`formatPrice` steuern das
 // Preis-Label am Pivot-Ursprung (Debug-Toggle im Dashboard) — ohne `formatPrice` bleibt es aus.
 // `pinKeys` (Chat 2026-08-17, analog zu renderPersistedZones' pinKeys-Parameter): Set von
-// liquidityLevelNaturalKey-Strings, die dauerhaft hervorgehoben werden sollen.
-export function renderLiquidityLevels(series, levels, existingPrimitives, candles, { debugPrices, formatPrice, nowSec, pinKeys } = {}) {
+// liquidityLevelNaturalKey-Strings, die dauerhaft hervorgehoben werden sollen. `hoveredKey`
+// (Chat 2026-08-18, optional): EIN liquidityLevelNaturalKey-String, der zusätzlich per
+// Auswahl-Halo hervorgehoben wird (PinPanel.vue-Zeilen-Hover, siehe Dashboard.vue:
+// hoveredPinLiquidityLevelKey).
+export function renderLiquidityLevels(series, levels, existingPrimitives, candles, { debugPrices, formatPrice, nowSec, pinKeys, hoveredKey } = {}) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
   for (const lvl of levels) {
-    const inPinContext = pinKeys?.has(liquidityLevelNaturalKey(lvl.dir, lvl.pivotTime)) ?? false;
-    const primitive = new LiquidityLinePrimitive(lvl, levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext }), candles);
+    const key = liquidityLevelNaturalKey(lvl.dir, lvl.pivotTime);
+    const inPinContext = pinKeys?.has(key) ?? false;
+    const isSelectedPin = hoveredKey != null && hoveredKey === key;
+    const primitive = new LiquidityLinePrimitive(lvl, levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin }), candles);
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }

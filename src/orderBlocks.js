@@ -19,6 +19,11 @@ export { detectOrderBlocks };
 
 const PIN_BORDER_INSET = 3; // px, Abstand des Pin-Rahmens nach außen von der normalen Box-Kante
 const PIN_BORDER_LINE_WIDTH = 2.5; // px
+// Auswahl-Rahmen (Chat 2026-08-18, PinPanel.vue-Hover) — weiter außen als der Pin-Rahmen, damit
+// beide gleichzeitig sichtbar sind (Pendant zu tradeMarkers.js' "zwei ineinanderliegende Ringe"),
+// durchgezogen statt gestrichelt, damit er sich von der dauerhaften Pin-Markierung unterscheidet.
+const SELECTED_BORDER_INSET = 6.5; // px
+const SELECTED_BORDER_LINE_WIDTH = 2.5; // px
 
 function positionsBox(position1Media, position2Media, pixelRatio) {
   const scaledPosition1 = Math.round(pixelRatio * position1Media);
@@ -62,6 +67,19 @@ class ZoneRenderer {
         ctx.lineWidth = PIN_BORDER_LINE_WIDTH * scope.horizontalPixelRatio;
         ctx.setLineDash([6 * scope.horizontalPixelRatio, 4 * scope.horizontalPixelRatio]);
         const inset = PIN_BORDER_INSET * scope.horizontalPixelRatio;
+        ctx.strokeRect(xPos.position - inset, yPos.position - inset, xPos.length + inset * 2, yPos.length + inset * 2);
+        ctx.restore();
+      }
+
+      // Auswahl-Rahmen bei Hover über die zugehörige PinPanel.vue-Zeile (Chat 2026-08-18) — eigener,
+      // weiter außen liegender durchgezogener Rahmen statt den Pin-Rahmen zu ersetzen, damit "dauerhaft
+      // gepinnt" und "gerade in der Liste gehovert" gleichzeitig erkennbar bleiben.
+      if (this._options.isSelectedPin) {
+        ctx.save();
+        ctx.strokeStyle = this._options.hoverColor;
+        ctx.lineWidth = SELECTED_BORDER_LINE_WIDTH * scope.horizontalPixelRatio;
+        ctx.setLineDash([]);
+        const inset = SELECTED_BORDER_INSET * scope.horizontalPixelRatio;
         ctx.strokeRect(xPos.position - inset, yPos.position - inset, xPos.length + inset * 2, yPos.length + inset * 2);
         ctx.restore();
       }
@@ -213,7 +231,7 @@ const OB_ZONE_KEYS = {
   },
 };
 
-function zoneOptions(z, inPinContext) {
+function zoneOptions(z, inPinContext, isSelectedPin) {
   const inactive = z.touched || z.invalidated;
   const keys = OB_ZONE_KEYS[z.timeframe] ?? OB_ZONE_KEYS["1H"];
   const key = inactive ? keys.inactive : z.dir === 1 ? keys.bull : keys.bear;
@@ -228,6 +246,8 @@ function zoneOptions(z, inPinContext) {
     label,
     inPinContext,
     pinColor: cssColor("pin"),
+    isSelectedPin,
+    hoverColor: cssColor("tradeHover"),
   };
 }
 
@@ -244,14 +264,19 @@ export function obZoneNaturalKey(timeframe, dir, startTime) {
 // statt sie selbst aus Kerzen neu zu berechnen — für Zonen, die auf einem anderen
 // Timeframe erkannt wurden als dem gerade angezeigten Chart. pinKeys (Chat 2026-08-01,
 // optional): Set von obZoneNaturalKey-Strings, die dauerhaft hervorgehoben werden sollen.
-export function renderPersistedZones(series, zones, existingPrimitives, candles, pinKeys) {
+// hoveredKey (Chat 2026-08-18, optional): EIN obZoneNaturalKey-String, der zusätzlich per
+// Auswahl-Rahmen hervorgehoben wird (PinPanel.vue-Zeilen-Hover, siehe Dashboard.vue:
+// hoveredPinObZoneKey).
+export function renderPersistedZones(series, zones, existingPrimitives, candles, pinKeys, hoveredKey) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
   for (const z of zones) {
     if (z.invalidated) continue;
-    const inPinContext = pinKeys?.has(obZoneNaturalKey(z.timeframe, z.dir, z.startTime)) ?? false;
-    const primitive = new OrderBlockPrimitive(z, zoneOptions(z, inPinContext), candles);
+    const key = obZoneNaturalKey(z.timeframe, z.dir, z.startTime);
+    const inPinContext = pinKeys?.has(key) ?? false;
+    const isSelectedPin = hoveredKey != null && hoveredKey === key;
+    const primitive = new OrderBlockPrimitive(z, zoneOptions(z, inPinContext, isSelectedPin), candles);
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }

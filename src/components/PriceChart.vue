@@ -72,10 +72,25 @@ const props = defineProps({
   currentBar: { type: String, required: true },
   trades: { type: Array, default: () => [] },
   // Hover-Hervorhebung (Chat 2026-08-01, Philips Wunsch für bessere Live-Kommunikation mit Lana):
-  // trade_positions.id der gerade in TradesTable.vue gehoverten Zeile, null wenn keine — siehe
+  // trade_positions.id der gerade in TradesTable.vue ODER (seit Chat 2026-08-18) einer
+  // PinPanel.vue-Zeile mit kind='trade_position' gehoverten Zeile, null wenn keine — siehe
   // renderTradeMarkers/tradeMarkers.js für die eigentliche Glow-Darstellung. Bewusst NUR eine Id
   // (kein ganzer Trade), analog zu selectedSetupId-artigen Props andernorts in diesem Repo.
   hoveredTradeId: { type: [String, Number], default: null },
+  // Pin-Panel-Hover (Chat 2026-08-18, siehe PinPanel.vue: @mouseenter je Zeile) — zusätzlich zum
+  // dauerhaften pinObZoneKeys/pinTradeSetupIds/…-Highlight EIN kurzzeitig hervorgehobenes Objekt,
+  // wenn Philip mit der Maus über die zugehörige PinPanel-Zeile fährt, damit er einer langen
+  // Pin-Liste die einzelnen Chart-Highlights zuordnen kann (Philip 2026-08-17/18: "ich muss dann
+  // erst mal zuordnen, welcher Pin welcher im Chart ist"). Analog zu hoveredTradeId oben, aber EIN
+  // Prop pro Pin-Art (Natural-Key bzw. Id, je nach Art, siehe die jeweiligen pin*Keys/pin*Ids-Props
+  // oben) — eine Chart-Stelle kann nur je EINE davon gleichzeitig sein. kind='trade_position' läuft
+  // bewusst über das bestehende hoveredTradeId statt eines eigenen Props (siehe Dashboard.vue:
+  // onPinHover).
+  hoveredPinObZoneKey: { type: String, default: null },
+  hoveredPinTradeSetupId: { type: [String, Number], default: null },
+  hoveredPinTradeConfirmationId: { type: [String, Number], default: null },
+  hoveredPinLiquidityLevelKey: { type: String, default: null },
+  hoveredPinRsiDivergenceKey: { type: String, default: null },
   // Pin-Kontext (Chat 2026-08-01, siehe pinContext.js) — Set von trade_positions.id,
   // die Philip per Rechtsklick dauerhaft "an Lana übergeben" hat, zeichnet einen permanenten
   // (nicht nur Hover-) Ring um deren Entry/Exit, siehe renderTradeMarkers/tradeMarkers.js.
@@ -865,6 +880,7 @@ function refreshTradeSetupLinksInternal() {
     // Trade selbst mitgegeben, damit die Kandidaten-Liste in Dashboard.vue ohne Zusatz-Fetch ein
     // Label bauen kann (siehe PriceChart.vue: findNearbyPinCandidates).
     const inPinContext = props.pinTradeSetupIds?.has(t.tradeSetupId) ?? false;
+    const isSelectedPin = props.hoveredPinTradeSetupId != null && props.hoveredPinTradeSetupId === t.tradeSetupId;
     const primitive = new OrderBlockPrimitive(
       { top, bottom, startTime: t.tradeSetupObStartTime, endTime: t.tradeSetupObStartTime + TRADE_SETUP_OB_WIDTH_SEC, tradeSetupId: t.tradeSetupId, direction: t.direction, instrument: t.instrument },
       {
@@ -875,6 +891,8 @@ function refreshTradeSetupLinksInternal() {
         label: `#${t.tradeSetupId}`,
         inPinContext,
         pinColor: cssColor("pin"),
+        isSelectedPin,
+        hoverColor: cssColor("tradeHover"),
       },
       candles,
     );
@@ -1054,6 +1072,7 @@ function refreshTradeConfirmationLinksInternal() {
         // Box, "✔ OB 1,15229 #22", wurde mit der Trade-Setup-Link-Box verwechselt, war bisher
         // komplett unverdrahtet). confirmationId ist bereits die echte trade_confirmations.id.
         const inPinContext = props.pinTradeConfirmationIds?.has(confirmation.id) ?? false;
+        const isSelectedPin = props.hoveredPinTradeConfirmationId != null && props.hoveredPinTradeConfirmationId === confirmation.id;
         const primitive = new OrderBlockPrimitive(
           { top: confirmation.rangeHigh, bottom: confirmation.rangeLow, startTime: confirmation.sourceTime, endTime, confirmationId: confirmation.id, instrument: t.instrument },
           {
@@ -1064,6 +1083,8 @@ function refreshTradeConfirmationLinksInternal() {
             label,
             inPinContext,
             pinColor: cssColor("pin"),
+            isSelectedPin,
+            hoverColor: cssColor("tradeHover"),
           },
           candles,
         );
@@ -1311,7 +1332,7 @@ function liveObZoneState(item) {
 function refreshPoiZonesInternal() {
   const candles = clipReplay(allCandles);
   const visibleZones = filterHistorical(collectObsZones());
-  renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles, props.pinObZoneKeys);
+  renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles, props.pinObZoneKeys, props.hoveredPinObZoneKey);
   poiZonesMetadata.value = visibleZones;
 }
 
@@ -1345,6 +1366,7 @@ function refreshLiquidityInternal() {
     // replayUntil, nicht die echte Uhrzeit, sonst wäre das Alter beim Testen falsch/inkonsistent.
     nowSec: props.replayUntil ?? Math.floor(Date.now() / 1000),
     pinKeys: props.pinLiquidityLevelKeys,
+    hoveredKey: props.hoveredPinLiquidityLevelKey,
   });
   liquidityMetadata.value = relevant.map(pivotForDisplay);
   liquidityEarliestTime.value = relevant.length > 0 ? Math.min(...relevant.map((lvl) => lvl.pivotTime)) : null;
@@ -2175,8 +2197,10 @@ function refreshRsiDivergenceInternal() {
       // Pin-Kontext (Chat 2026-08-17) — derselbe "type|fromTime|toTime"-Schlüssel wie
       // findNearbyPinCandidates' candidateKey für kind='rsi_divergence' (siehe pinContext.js:
       // rsiDivergenceEntryNaturalKey), hier direkt aus den rohen rsi.js-Unix-Sekunden gebaut.
-      const inPinContext = props.pinRsiDivergenceKeys?.has(`${d.type}|${d.fromTime}|${d.toTime}`) ?? false;
-      const opts = { color: cssColor(colorKey), lineWidth: lineWidth(colorKey), label, inPinContext, pinColor: cssColor("pin") };
+      const divergenceKey = `${d.type}|${d.fromTime}|${d.toTime}`;
+      const inPinContext = props.pinRsiDivergenceKeys?.has(divergenceKey) ?? false;
+      const isSelectedPin = props.hoveredPinRsiDivergenceKey != null && props.hoveredPinRsiDivergenceKey === divergenceKey;
+      const opts = { color: cssColor(colorKey), lineWidth: lineWidth(colorKey), label, inPinContext, pinColor: cssColor("pin"), isSelectedPin, hoverColor: cssColor("tradeHover") };
 
       const pricePrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromPrice }, { time: d.toTime, price: d.toPrice }, opts, candles, d);
       candleSeries.attachPrimitive(pricePrimitive);
@@ -3005,6 +3029,13 @@ watch(() => props.pinTradeSetupIds, refreshTradeSetupLinksInternal);
 watch(() => props.pinTradeConfirmationIds, refreshTradeConfirmationLinksInternal);
 watch(() => props.pinLiquidityLevelKeys, refreshLiquidityInternal);
 watch(() => props.pinRsiDivergenceKeys, refreshRsiDivergenceInternal);
+// Pin-Panel-Hover (Chat 2026-08-18) — dieselben Refresh-Funktionen wie die dauerhaften pin*Keys/
+// pin*Ids-Watches oben, nur für die zusätzliche Auswahl-Hervorhebung.
+watch(() => props.hoveredPinObZoneKey, refreshPoiZonesInternal);
+watch(() => props.hoveredPinTradeSetupId, refreshTradeSetupLinksInternal);
+watch(() => props.hoveredPinTradeConfirmationId, refreshTradeConfirmationLinksInternal);
+watch(() => props.hoveredPinLiquidityLevelKey, refreshLiquidityInternal);
+watch(() => props.hoveredPinRsiDivergenceKey, refreshRsiDivergenceInternal);
 watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 // tscCalloutModeActive wechselt (TSC wird ein-/ausgeblendet, Locked-Zustand etc.) -> Canvas-Text
 // muss sofort erscheinen/verschwinden, nicht erst beim nächsten claudeAnnotations-Wechsel.
@@ -3354,6 +3385,14 @@ defineExpose({
   // entryTime abgedeckt ist oder wirklich der Anfang der Historie erreicht ist.
   async jumpToTrade(entryTime, exitTime) {
     return jumpToTimeRange(entryTime, exitTime);
+  },
+
+  // Für den Klick (nicht Hover, siehe hoveredPin*-Props oben) auf eine PinPanel.vue-Zeile
+  // (Chat 2026-08-18) — dünner Wrapper wie jumpToTrade/jumpToDivergence, aber generisch für jede
+  // Pin-Art: toTimeUnixSec optional (Default = fromTimeUnixSec), da die meisten Pin-Kinds nur EINEN
+  // Zeitpunkt haben (Zonen-/Level-Start), nur rsi_divergence hat wie ein Trade zwei (fromTime/toTime).
+  async jumpToPin(fromTimeUnixSec, toTimeUnixSec) {
+    return jumpToTimeRange(fromTimeUnixSec, toTimeUnixSec ?? fromTimeUnixSec);
   },
 
   // Für den Klick auf eine Zeile in TradesTable.vue (Chat 2026-07-27: TSC-Fokus soll auch für

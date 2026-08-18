@@ -131,7 +131,10 @@ export const DEFAULT_CHART_COLORS = {
   // Hover-Hervorhebung (Chat 2026-08-01) — Halo-Ring um Entry/Exit einer in TradesTable.vue
   // gehoverten Zeile (siehe tradeMarkers.js: TradeMarkerRenderer). Eigener neutraler Akzentton statt
   // Wiederverwendung von tradeWin/tradeLoss, weil die Hervorhebung unabhängig von Gewinn/Verlust
-  // immer gleich aussehen soll.
+  // immer gleich aussehen soll. Seit Chat 2026-08-18 derselbe Akzentton auch für den Auswahl-Ring/
+  // -Halo bei Hover über eine PinPanel.vue-Zeile (orderBlocks.js/liquidity.js/rsiRendering.js) —
+  // bewusst wiederverwendet statt eines eigenen Farbwerts, "Gold = gerade gehovert" soll appweit
+  // dasselbe bedeuten, egal ob Trade-Tabelle oder Pin-Liste.
   tradeHover: { hex: "#ffd600", alpha: 0.9 },
   // Pin-Kontext (Chat 2026-08-01, siehe pinContext.js) — EIN Akzentton für alles, was
   // mit "an Lana übergeben" zu tun hat (permanenter Chart-Ring UND Tabellenzeilen-Tönung), damit

@@ -11,8 +11,16 @@ import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 const props = defineProps({
   entries: { type: Array, required: true },
   trades: { type: Array, required: true },
+  // { entryId, message } | null (Chat 2026-08-18, siehe Dashboard.vue: onSelectPin) — kurzer
+  // Hinweis unter EINER Zeile, wenn ein Klick nicht zum Chart springen konnte, weil Instrument/
+  // Timeframe gerade nicht passen (Philip-Entscheidung: kein automatischer Wechsel, siehe Task
+  // "Pin-Kontext: Listen-Hover hebt Chart-Highlight hervor, Klick springt hin").
+  mismatchHint: { type: Object, default: null },
 });
-const emit = defineEmits(["remove", "update-note"]);
+// "hover" (Chat 2026-08-18): row.entry oder null bei mouseleave — treibt den Auswahl-Halo im Chart
+// (siehe Dashboard.vue: onPinHover/hoveredPin*-Props an PriceChart.vue). "select": Klick auf eine
+// Zeile (außerhalb von Notiz-Textarea/🗑-Button, siehe onEntryClick) — springt im Chart hin.
+const emit = defineEmits(["remove", "update-note", "hover", "select"]);
 
 const OUTCOME_LABEL = { win: "Win", loss: "Loss", open: "Offen" };
 
@@ -28,6 +36,14 @@ function onNoteInput(entryId, value) {
   clearTimeout(noteSaveTimers[entryId]);
   noteSaveTimers[entryId] = setTimeout(() => emit("update-note", entryId, value), 500);
 }
+
+// Klick soll NUR bei einem Klick auf die Zeile selbst (Header/Preise) springen, nicht beim Tippen
+// in der Notiz oder beim Entfernen — .closest() statt @click.stop an jeder einzelnen Stelle, damit
+// die acht kind-spezifischen Templates oben nicht alle einzeln angefasst werden müssen.
+function onEntryClick(event, entry) {
+  if (event.target.closest("textarea, button")) return;
+  emit("select", entry);
+}
 </script>
 
 <template>
@@ -36,7 +52,14 @@ function onNoteInput(entryId, value) {
     OB-Zone (auch M5), ein 1H-LQ-Level oder eine RSI-Divergenz-Linie → "Anpinnen".
   </div>
   <div v-else class="pin-panel-list">
-    <div v-for="row in rows" :key="row.entry.id" class="pin-panel-entry">
+    <div
+      v-for="row in rows"
+      :key="row.entry.id"
+      class="pin-panel-entry"
+      @mouseenter="emit('hover', row.entry)"
+      @mouseleave="emit('hover', null)"
+      @click="onEntryClick($event, row.entry)"
+    >
       <template v-if="row.entry.kind === 'ob_zone'">
         <div class="pin-panel-entry-header">
           <span class="trade-direction" :class="row.entry.obZone?.direction">{{ row.entry.obZone?.direction === "short" ? "Short" : "Long" }}</span>
@@ -145,6 +168,7 @@ function onNoteInput(entryId, value) {
         :value="row.entry.note ?? ''"
         @input="onNoteInput(row.entry.id, $event.target.value)"
       />
+      <div v-if="mismatchHint?.entryId === row.entry.id" class="pin-panel-mismatch-hint">{{ mismatchHint.message }}</div>
     </div>
   </div>
 </template>
@@ -166,6 +190,19 @@ function onNoteInput(entryId, value) {
   border: 1px solid #2a2e39;
   border-radius: 6px;
   padding: 8px;
+  cursor: pointer;
+}
+
+/* Hover/Klick (Chat 2026-08-18) — leichte Aufhellung, damit erkennbar ist, dass eine Zeile
+   interaktiv ist (treibt den Auswahl-Halo im Chart, siehe Dashboard.vue: onPinHover/onSelectPin). */
+.pin-panel-entry:hover {
+  background: #1c2030;
+}
+
+.pin-panel-mismatch-hint {
+  color: #ef5350;
+  font-size: 11px;
+  margin-top: 4px;
 }
 
 .pin-panel-entry-header {
