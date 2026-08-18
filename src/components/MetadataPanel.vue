@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 
 // Generisches schwebendes Panel: verschiebbar (per Header-Drag), größenveränderbar (natives
 // CSS `resize: both` — kein JS nötig) und scrollbar (Body hat eigenes overflow:auto, damit der
@@ -18,6 +18,13 @@ const emit = defineEmits(["close"]);
 const PANEL_MARGIN = 20;
 const top = ref(props.position === "bottom-right" ? Math.max(PANEL_MARGIN, window.innerHeight - props.height - PANEL_MARGIN) : 72);
 const left = ref(Math.max(PANEL_MARGIN, window.innerWidth - props.width - PANEL_MARGIN));
+// width/height als eigene refs (statt direkt props.width/height im Style-Binding), weil sonst
+// jedes Re-Render (z.B. Datenänderung im Slot-Inhalt) die per natives `resize: both` vom Nutzer
+// gezogene Größe wieder auf den Prop-Default zurückschreibt.
+const width = ref(props.width);
+const height = ref(props.height);
+const panelEl = ref(null);
+let resizeObserver = null;
 
 let dragOffsetX = 0;
 let dragOffsetY = 0;
@@ -36,13 +43,27 @@ function stopDrag() {
   window.removeEventListener("mousemove", onDrag);
   window.removeEventListener("mouseup", stopDrag);
 }
+
+onMounted(() => {
+  if (!panelEl.value) return;
+  resizeObserver = new ResizeObserver((entries) => {
+    const entry = entries[0];
+    if (!entry) return;
+    width.value = entry.contentRect.width;
+    height.value = entry.contentRect.height;
+  });
+  resizeObserver.observe(panelEl.value);
+});
+onUnmounted(() => {
+  resizeObserver?.disconnect();
+});
 </script>
 
 <template>
-  <div class="metadata-panel" :style="{ top: top + 'px', left: left + 'px', width: width + 'px', height: height + 'px' }">
+  <div ref="panelEl" class="metadata-panel" :style="{ top: top + 'px', left: left + 'px', width: width + 'px', height: height + 'px' }">
     <div class="metadata-panel-header" @mousedown="startDrag">
       <span>{{ props.title }}</span>
-      <button class="metadata-panel-close" @click="emit('close')">×</button>
+      <button type="button" class="metadata-panel-close" @click="emit('close')">×</button>
     </div>
     <div class="metadata-panel-body">
       <slot />
