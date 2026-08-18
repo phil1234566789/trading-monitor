@@ -50,7 +50,14 @@ const DB_NAME = "trading-monitor-candles";
 // gegen "jetzt" geprüft hat. Derselbe Poisoning-Mechanismus wie bei Version 3/5/6: ein VOR diesem
 // Fix geladener Live-Cache-Eintrag wurde trotz fehlender aktueller Kerzen als "vollständig"
 // markiert.
-const DB_VERSION = 7;
+//
+// 8 (2026-08-18: fetchCandlesCached-Delta-Zweig lässt keine Lücke zwischen `cached` und `fresh`
+// mehr klaglos stehen, siehe Kommentar dort) — Bug-Report Philip: EURUSD-Live-Chart zeigte eine
+// ~16h-Lücke exakt an der Nahtstelle zwischen einem alten, disconnected `cached`-Stand und einem
+// zu knapp gedeckelten Delta-Fetch. Derselbe Poisoning-Mechanismus wie bei Version 3/5/6/7: ein VOR
+// diesem Fix geschriebener Cache-Eintrag enthält die Lücke bereits fest im Array, ein reiner
+// Code-Fix räumt das nicht auf.
+const DB_VERSION = 8;
 const STORE_NAME = "candles";
 
 // Rein defensiv, KEINE reguläre Obergrenze (siehe oben) — 500k Kerzen sind selbst auf M1 fast ein
@@ -242,7 +249,17 @@ export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs
     // Replay-Request in genau diese neue Lücke fälschlich als "gecacht" durchgehen.
     const catchUpCount = Math.min(elapsedBars + 5, targetCount);
     const fresh = await fetchFn(symbol, bar, catchUpCount, undefined);
-    const merged = mergeCandles(cached, fresh);
+    // Bug-Report Philip 2026-08-18: der gedeckelte Delta-Fetch reichte nicht bis lastCachedTime
+    // zurück (Ursache damals: forex_candles-Archiv seit Tagen eingefroren, siehe forexCandles.js'
+    // MAX_ARCHIVE_GAP_SEC) — mergeCandles hat die Lücke zwischen dem alten `cached`-Stand und
+    // `fresh` klaglos stehen gelassen, komplett unproblematisch für den (hier bewusst nicht
+    // gesetzten) completeUpTo-Mechanismus wie im Kommentar oben beschrieben, ABER der zurückgegebene
+    // Array landet 1:1 als allCandles im Chart — die Lücke war sichtbar (EURUSD M5, ~16h). Reicht
+    // `fresh` nicht bis lastCachedTime zurück (mehr als MAX_ACCEPTABLE_GAP_SEC dazwischen, also kein
+    // plausibles Wochenende/Feiertag), den nicht mehr erreichbaren alten `cached`-Teil verwerfen
+    // statt mit Loch weiterzumergen — fresh deckt targetCount für sich allein bereits ab.
+    const bridgesGap = fresh.length > 0 && fresh[0].time - lastCachedTime <= MAX_ACCEPTABLE_GAP_SEC;
+    const merged = bridgesGap ? mergeCandles(cached, fresh) : fresh;
     await setCachedCandles(symbol, bar, merged, completeUpTo);
     return merged.slice(-targetCount);
   }
