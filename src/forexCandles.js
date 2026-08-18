@@ -258,8 +258,28 @@ export async function fetchRecentCandles(symbol, bar, count) {
 // 100er-Schritten nachzuladen. `null` (statt leerem Array) heißt "hier nicht anwendbar/nichts
 // gefunden" und ist das Signal für den Aufrufer, auf den Live-Fetch zurückzufallen — ein
 // tatsächlich leeres Live-Ergebnis (echtes Ende der Historie) bleibt dagegen ein echtes `[]`.
+// Wochenend-/Feiertagslücken (Markt zu, ~60h Fr-Abend bis So-Abend, gelegentlich mehr bei
+// Feiertagen) sind ECHTE Marktschließzeiten, kein Bug — dieselbe Abwägung wie candleCache.js'
+// MAX_ACCEPTABLE_GAP_SEC (dort 4 Tage, siehe Kommentar dort). Ein Schwellwert nah an einer
+// Bar-Periode würde JEDEN Wochenend-Scroll fälschlich als Archiv-Lücke werten und unnötig live
+// nachfetchen — genau der Timeout-Fall, den der DB-first-Ansatz eigentlich vermeiden soll.
+const MAX_ARCHIVE_GAP_SEC = 4 * 24 * 3600;
+
 async function fetchOlderCandlesFromDb(symbol, bar, oldestLoadedTime, count) {
-  return fetchArchivedPage(symbol, bar, count, { ltIso: new Date(oldestLoadedTime * 1000).toISOString() });
+  const page = await fetchArchivedPage(symbol, bar, count, { ltIso: new Date(oldestLoadedTime * 1000).toISOString() });
+  if (!page) return null;
+  // Lücken-Check: `forex_candles` wächst nicht automatisch mit (kein laufender Sync, nur ein
+  // manueller Backfill-Lauf, siehe CLAUDE.md "Persisted candle archive") — die neueste archivierte
+  // Kerze kann dadurch beliebig weit vor oldestLoadedTime liegen, obwohl bei cTrader live
+  // durchgehend Daten existieren. Ohne diesen Check würde loadOlderCandlesNow eine NICHT an
+  // oldestLoadedTime anschließende Kerzenreihe klaglos vor die schon geladenen Kerzen hängen —
+  // sichtbare Lücke im Chart (Bug-Report Philip 2026-08-18: EURUSD M5 fehlte 07.08. 22:55 bis
+  // 13.08. 11:40 komplett, weil das Archiv seit 07.08. 20:55 UTC nicht mehr weitergewachsen ist —
+  // ein Zeitraum weit über jede plausible Wochenend-/Feiertagslücke hinaus). null zurückgeben
+  // lässt den Aufrufer stattdessen live nachfetchen, wie bei einem echten Archiv-Miss.
+  const newestArchived = page[page.length - 1].time;
+  if (oldestLoadedTime - newestArchived > MAX_ARCHIVE_GAP_SEC) return null;
+  return page;
 }
 
 // Für Scroll-Back: Kerzen strikt vor `oldestLoadedTime` (Sekunden). Erst DB-Archiv versuchen
