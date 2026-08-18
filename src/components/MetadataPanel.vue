@@ -49,8 +49,15 @@ onMounted(() => {
   resizeObserver = new ResizeObserver((entries) => {
     const entry = entries[0];
     if (!entry) return;
-    width.value = entry.contentRect.width;
-    height.value = entry.contentRect.height;
+    // NICHT entry.contentRect verwenden — das ist ohne Border, während die per :style gebundene
+    // width/height (bei globalem box-sizing:border-box, siehe style.css) die Größe INKLUSIVE
+    // Border meint. Gleicher Bug wie bei tradesPanelHeight in Dashboard.vue (dort dokumentiert:
+    // contentRect zurückgeschrieben schrumpft die Größe bei jedem Observer-Tick, bis sie an
+    // min-width/min-height clamped) — borderBoxSize ist die korrekte Alternative.
+    const w = Math.round(entry.borderBoxSize?.[0]?.inlineSize ?? entry.target.getBoundingClientRect().width);
+    const h = Math.round(entry.borderBoxSize?.[0]?.blockSize ?? entry.target.getBoundingClientRect().height);
+    if (w > 0) width.value = w;
+    if (h > 0) height.value = h;
   });
   resizeObserver.observe(panelEl.value);
 });
