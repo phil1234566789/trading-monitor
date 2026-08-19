@@ -203,6 +203,14 @@ export async function removeTargetFromTrade(targetId) {
 export async function updateTrade(positionId, fields) {
   const payload = {};
   if ("entryPrice" in fields) payload.entry_price = fields.entryPrice;
+  // entryTime editiert bewusst triggered_at mit (nicht ein neues Feld) — das ist bereits die
+  // Spalte, aus der trades.js:entryTime gelesen wird und die den Entry-Marker im Chart
+  // positioniert (siehe PriceChart.vue: jumpToTrade/entryTime-Nutzung). Anders als exitTime NICHT
+  // nullbar (triggered_at ist `not null` in der DB) — leeres Feld im Formular wird ignoriert statt
+  // gesendet. Bug-Report Philip 2026-08-19: Entry-Preis war editierbar, Entry-Zeit nicht —
+  // triggered_at blieb dann auf dem reinen DB-Insert-Zeitpunkt stehen statt dem tatsächlichen
+  // Fill, der Marker saß am falschen Punkt im Chart.
+  if ("entryTime" in fields && fields.entryTime != null) payload.triggered_at = new Date(fields.entryTime * 1000).toISOString();
   if ("stopLoss" in fields) payload.stop_loss = fields.stopLoss;
   if ("exitPrice" in fields) payload.exit_price = fields.exitPrice;
   if ("exitTime" in fields) payload.exit_time = fields.exitTime != null ? new Date(fields.exitTime * 1000).toISOString() : null;
