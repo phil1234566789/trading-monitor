@@ -37,6 +37,7 @@ const emit = defineEmits([
 ]);
 
 const entryPrice = ref("");
+const entryTimeInput = ref("");
 const stopLoss = ref("");
 const exitPrice = ref("");
 const exitTimeInput = ref("");
@@ -168,6 +169,12 @@ watch(
   (t, oldT) => {
     const sameTrade = oldT != null && oldT.id === t.id;
     syncIfUntouched(entryPrice, sameTrade, oldT?.entryPrice ?? "", t.entryPrice ?? "");
+    syncIfUntouched(
+      entryTimeInput,
+      sameTrade,
+      oldT?.entryTime != null ? toDatetimeLocal(oldT.entryTime) : "",
+      t.entryTime != null ? toDatetimeLocal(t.entryTime) : "",
+    );
     syncIfUntouched(stopLoss, sameTrade, oldT?.stopLoss ?? "", t.stopLoss ?? "");
     syncIfUntouched(exitPrice, sameTrade, oldT?.exitPrice ?? "", t.exitPrice ?? "");
     syncIfUntouched(
@@ -202,6 +209,7 @@ async function save() {
   saving.value = true;
   const ok = await updateTrade(props.trade.id, {
     entryPrice: entryPrice.value === "" ? null : Number(entryPrice.value),
+    entryTime: entryTimeInput.value ? Math.floor(new Date(entryTimeInput.value).getTime() / 1000) : null,
     stopLoss: stopLoss.value === "" ? null : Number(stopLoss.value),
     exitPrice: exitPrice.value === "" ? null : Number(exitPrice.value),
     exitTime: exitTimeInput.value ? Math.floor(new Date(exitTimeInput.value).getTime() / 1000) : null,
@@ -372,6 +380,10 @@ function confirmationLabel(confirmation) {
           <label>
             Entry-Preis
             <input v-model="entryPrice" type="number" step="any" placeholder="leer = nicht gefüllt" />
+          </label>
+          <label>
+            Entry-Zeit
+            <input v-model="entryTimeInput" type="datetime-local" />
           </label>
           <label>
             Stop-Loss
