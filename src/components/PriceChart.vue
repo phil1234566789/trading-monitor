@@ -3447,16 +3447,29 @@ async function jumpToTimeRange(entryTime, exitTime) {
   // spürbar langsam, bei einem echt alten Trade (Philip: "2022 Trade der Supergau") wären das
   // hunderte sequentielle Requests gewesen. Stattdessen jetzt ein GEZIELTER Fetch direkt um den
   // Trade herum (Anker kurz nach dem Exit, siehe JUMP_TARGET_BUFFER_BARS), unabhängig davon, wie
-  // weit der Trade zurückliegt — das Ergebnis wird vorne an allCandles gehängt, MIT einer
-  // bewussten Lücke zum bisherigen Datenanfang dazwischen (gleiches Prinzip wie mergeCandles in
-  // candleCache.js: eine Lücke in der Mitte ist unkritisch, lightweight-charts braucht nur
-  // strikt aufsteigende Zeiten, keine Lückenlosigkeit). MAX_JUMP_FETCH_PAGES ist nur eine
-  // Notbremse für ungewöhnlich lange Trades (Entry Wochen vor Exit), keine Regelgröße.
+  // weit der Trade zurückliegt. MAX_JUMP_FETCH_PAGES ist nur eine Notbremse für ungewöhnlich lange
+  // Trades (Entry Wochen vor Exit), keine Regelgröße.
+  //
+  // Bug-Report Philip 2026-08-18: der Anker startete bisher IMMER nah am Trade selbst — das Ergebnis
+  // landet vorne an allCandles, MIT einer bewussten Lücke zum bisherigen Datenanfang dazwischen
+  // (lightweight-charts selbst braucht nur strikt aufsteigende Zeiten, keine Lückenlosigkeit, das war
+  // hier absichtlich in Kauf genommen). Scrollt man danach über das Trade-Fenster hinaus weiter
+  // Richtung "jetzt", landet man sichtbar in genau dieser Lücke — kein Mechanismus füllt sie je nach,
+  // subscribeVisibleLogicalRangeChange oben reagiert nur auf die LINKE/ältere Kante. Passt die Lücke
+  // zum bereits geladenen Fenster ins MAX_JUMP_FETCH_PAGES-Budget (der übliche Fall — ein paar Tage/
+  // Wochen alter Trade wie Short EUR#43), startet der Anker jetzt stattdessen an der bereits
+  // geladenen Kante: dann schließt jede nachgeladene Seite lückenlos an die vorherige an, die Lücke
+  // entsteht gar nicht erst. Reicht das Budget nicht (Philips "2022 Supergau"-Fall), bleibt es beim
+  // alten Verhalten: nah am Trade starten, Lücke zum Rest bewusst in Kauf nehmen statt hunderte
+  // Requests zu feuern.
   const barSeconds = barSecondsFor(props.currentBar);
   if (!loadingOlder && !isTimeCovered(allCandles, entryTime, barSeconds)) {
     loadingOlder = true;
     try {
-      let anchor = (exitTime ?? entryTime) + JUMP_TARGET_BUFFER_BARS * barSeconds;
+      const nearAnchor = (exitTime ?? entryTime) + JUMP_TARGET_BUFFER_BARS * barSeconds;
+      const bridgeBudgetSeconds = MAX_JUMP_FETCH_PAGES * FOREX_HISTORY_PAGE_SIZE * barSeconds;
+      const canBridge = allCandles.length > 0 && allCandles[0].time - entryTime <= bridgeBudgetSeconds;
+      let anchor = canBridge ? allCandles[0].time : nearAnchor;
       let pages = 0;
       while (pages < MAX_JUMP_FETCH_PAGES && !isTimeCovered(allCandles, entryTime, barSeconds)) {
         const older = isForex
