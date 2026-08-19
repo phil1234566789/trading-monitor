@@ -1200,7 +1200,14 @@ function refreshInvalidationLinesInternal() {
 
   const byRange = new Map();
   for (const t of tradesVisibleForCandles(props.trades, candles)) {
-    if (t.invalidation == null) continue;
+    // entryPrice == null heißt "nie tatsächlich gefüllt" (siehe tradeIntake.js:
+    // createTradeFromSetup-Kommentar "es gibt ein setupEntry, aber kein entryPrice") — ohne
+    // echten Entry gibt es auch keinen "ersten Entry", ab dem die Linie laut Konzept oben
+    // beginnen soll. Ohne diesen Filter zählte so ein Trade trotzdem als "still open" (kein
+    // exitTime) und ließ die Linie bis zur letzten geladenen Kerze wachsen — Bug-Report Philip
+    // 2026-08-19: DR#40 (nie gefüllte Backtest-Idee vom 03.06., siehe Journal) zeichnete die
+    // Invalidierung quer über Monate an live geladenen Kerzen "bis ins Unendliche".
+    if (t.invalidation == null || t.entryPrice == null) continue;
     const exitOrNow = t.exitTime ?? nowSec;
     const group = byRange.get(t.dealingRangeId);
     if (!group) {
