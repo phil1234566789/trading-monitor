@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 660" width="780" height="660" font-family="Georgia, 'Times New Roman', serif">
+  <rect width="780" height="660" fill="#f7f4ec"/>
+  <text x="390" y="55" text-anchor="middle" font-size="34" fill="#1f1b16">When Properties Collide</text>
+  <text x="390" y="92" text-anchor="middle" font-size="18" fill="#3a352c" font-family="Arial, sans-serif">Most real-world AI failures are two properties meeting at the</text>
+  <text x="390" y="116" text-anchor="middle" font-size="18" fill="#3a352c" font-family="Arial, sans-serif">same time.</text>
+
+  <rect x="30" y="150" width="720" height="480" rx="16" fill="#ffffff" stroke="#e4ddcf" stroke-width="1.5"/>
+
+  <!-- connecting lines: complete graph over 4 nodes -->
+  <g stroke="#d8d2c4" stroke-width="1.5">
+    <line x1="215" y1="275" x2="565" y2="275"/>
+    <line x1="245" y1="515" x2="245" y2="515"/>
+    <line x1="215" y1="275" x2="480" y2="515"/>
+    <line x1="565" y1="275" x2="300" y2="515"/>
+    <line x1="215" y1="275" x2="300" y2="515"/>
+    <line x1="565" y1="275" x2="480" y2="515"/>
+    <line x1="300" y1="515" x2="480" y2="515"/>
+  </g>
+
+  <!-- Next Token Prediction (top-left) -->
+  <g transform="translate(215,275)">
+    <path d="M0,-32 L8,-10 L30,-10 L12,4 L18,26 L0,12 L-18,26 L-12,4 L-30,-10 L-8,-10 Z" fill="none" stroke="#1f1b16" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="20" cy="18" r="12" fill="#efe9d8" stroke="#1f1b16" stroke-width="1.5"/>
+    <path d="M14,18 L18,22 L26,13" fill="none" stroke="#1f1b16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="0" y="65" text-anchor="middle" font-size="19" fill="#1f1b16">Next Token</text>
+    <text x="0" y="88" text-anchor="middle" font-size="19" fill="#1f1b16">Prediction</text>
+    <text x="0" y="112" text-anchor="middle" font-size="14" fill="#8a8474" font-family="Arial, sans-serif">Generates what sounds</text>
+    <text x="0" y="130" text-anchor="middle" font-size="14" fill="#8a8474" font-family="Arial, sans-serif">right</text>
+  </g>
+
+  <!-- Knowledge (top-right) -->
+  <g transform="translate(565,275)">
+    <circle cx="0" cy="0" r="30" fill="none" stroke="#1f1b16" stroke-width="2.5"/>
+    <ellipse cx="0" cy="0" rx="30" ry="12" fill="none" stroke="#1f1b16" stroke-width="1.5"/>
+    <ellipse cx="0" cy="0" rx="12" ry="30" fill="none" stroke="#1f1b16" stroke-width="1.5"/>
+    <line x1="-30" y1="0" x2="30" y2="0" stroke="#1f1b16" stroke-width="1.5"/>
+    <line x1="0" y1="-30" x2="0" y2="30" stroke="#1f1b16" stroke-width="1.5"/>
+    <circle cx="0" cy="0" r="4" fill="#1f1b16"/>
+    <text x="0" y="65" text-anchor="middle" font-size="19" fill="#1f1b16">Knowledge</text>
+    <text x="0" y="88" text-anchor="middle" font-size="14" fill="#8a8474" font-family="Arial, sans-serif">Knows what it was trained</text>
+    <text x="0" y="106" text-anchor="middle" font-size="14" fill="#8a8474" font-family="Arial, sans-serif">on</text>
+  </g>
+
+  <!-- Working Memory (bottom-left) -->
+  <g transform="translate(245,505)">
+    <rect x="-24" y="-24" width="48" height="48" rx="4" fill="none" stroke="#1f1b16" stroke-width="2.5"/>
+    <rect x="-12" y="-12" width="24" height="24" fill="none" stroke="#1f1b16" stroke-width="1.5"/>
+    <g stroke="#1f1b16" stroke-width="2">
+      <line x1="-8" y1="-24" x2="-8" y2="-32"/>
+      <line x1="8" y1="-24" x2="8" y2="-32"/>
+      <line x1="-8" y1="24" x2="-8" y2="32"/>
+      <line x1="8" y1="24" x2="8" y2="32"/>
+      <line x1="-24" y1="-8" x2="-32" y2="-8"/>
+      <line x1="-24" y1="8" x2="-32" y2="8"/>
+      <line x1="24" y1="-8" x2="32" y2="-8"/>
+      <line x1="24" y1="8" x2="32" y2="8"/>
+    </g>
+    <text x="0" y="65" text-anchor="middle" font-size="19" fill="#1f1b16">Working Memory</text>
+    <text x="0" y="88" text-anchor="middle" font-size="14" fill="#8a8474" font-family="Arial, sans-serif">Attends to what's nearby</text>
+  </g>
+
+  <!-- Steerability (bottom-right) -->
+  <g transform="translate(480,505)">
+    <path d="M-16,20 C-16,-4 -4,-24 10,-24 C22,-24 30,-16 30,-6 L30,10" fill="none" stroke="#1f1b16" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M-16,20 L-16,4 C-16,-2 -8,-2 -8,4 L-8,22 C-8,26 -4,28 0,28 L14,28 C22,28 28,22 28,14 L28,4" fill="none" stroke="#1f1b16" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="10" cy="-24" r="6" fill="#efe9d8" stroke="#1f1b16" stroke-width="2"/>
+    <text x="0" y="65" text-anchor="middle" font-size="19" fill="#1f1b16">Steerability</text>
+    <text x="0" y="88" text-anchor="middle" font-size="14" fill="#8a8474" font-family="Arial, sans-serif">Follows the loudest</text>
+    <text x="0" y="106" text-anchor="middle" font-size="14" fill="#8a8474" font-family="Arial, sans-serif">instruction</text>
+  </g>
+</svg>
