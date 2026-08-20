@@ -3462,21 +3462,26 @@ async function jumpToTimeRange(entryTime, exitTime) {
   // (lightweight-charts selbst braucht nur strikt aufsteigende Zeiten, keine Lückenlosigkeit, das war
   // hier absichtlich in Kauf genommen). Scrollt man danach über das Trade-Fenster hinaus weiter
   // Richtung "jetzt", landet man sichtbar in genau dieser Lücke — kein Mechanismus füllt sie je nach,
-  // subscribeVisibleLogicalRangeChange oben reagiert nur auf die LINKE/ältere Kante. Passt die Lücke
-  // zum bereits geladenen Fenster ins MAX_JUMP_FETCH_PAGES-Budget (der übliche Fall — ein paar Tage/
-  // Wochen alter Trade wie Short EUR#43), startet der Anker jetzt stattdessen an der bereits
-  // geladenen Kante: dann schließt jede nachgeladene Seite lückenlos an die vorherige an, die Lücke
-  // entsteht gar nicht erst. Reicht das Budget nicht (Philips "2022 Supergau"-Fall), bleibt es beim
-  // alten Verhalten: nah am Trade starten, Lücke zum Rest bewusst in Kauf nehmen statt hunderte
-  // Requests zu feuern.
+  // subscribeVisibleLogicalRangeChange oben reagiert nur auf die LINKE/ältere Kante.
+  //
+  // Erster Fix-Versuch (selber Tag) hat VOR dem Fetch per Kalender-Sekunden geschätzt, ob die Lücke
+  // ins Budget passt, und nur dann an der bereits geladenen Kante statt nah am Trade geankert. Bug-
+  // Report Philip 2026-08-19 (DR#40, 03.06., über zwei Monate alt): die Schätzung war zu ungenau —
+  // Wochenenden ohne Kerzen lassen sich in Wirklichkeit viel weiter zurückbrücken, als eine reine
+  // Kalendertage-Rechnung annimmt (leeres Wochenende kostet 0 vom Kerzen-Budget, aber 2 Kalendertage),
+  // die Schätzung hat bei DR#40 fälschlich "zu weit weg" geurteilt und ist unnötig auf die alte
+  // Nah-am-Trade-Variante zurückgefallen. Jetzt stattdessen ECHT versuchen statt schätzen: zuerst wie
+  // bisher gezielt um den Trade herum laden (garantiert IMMER die unmittelbare Trade-Umgebung, auch
+  // bei Philips "2022 Supergau"-Fall), danach mit eigenem Page-Budget versuchen, die entstandene Lücke
+  // zum vorher schon geladenen Fenster per Splice INS Array einzufügen (nicht per concat davor, die
+  // Brücke gehört zeitlich dazwischen) — nur übernehmen, wenn sie auch WIRKLICH lückenlos verbindet,
+  // sonst lieber die alte, bewusste Lücke behalten als eine neue, nur halb gefüllte zu hinterlassen.
   const barSeconds = barSecondsFor(props.currentBar);
   if (!loadingOlder && !isTimeCovered(allCandles, entryTime, barSeconds)) {
     loadingOlder = true;
     try {
-      const nearAnchor = (exitTime ?? entryTime) + JUMP_TARGET_BUFFER_BARS * barSeconds;
-      const bridgeBudgetSeconds = MAX_JUMP_FETCH_PAGES * FOREX_HISTORY_PAGE_SIZE * barSeconds;
-      const canBridge = allCandles.length > 0 && allCandles[0].time - entryTime <= bridgeBudgetSeconds;
-      let anchor = canBridge ? allCandles[0].time : nearAnchor;
+      const preexistingOldest = allCandles.length > 0 ? allCandles[0].time : null;
+      let anchor = (exitTime ?? entryTime) + JUMP_TARGET_BUFFER_BARS * barSeconds;
       let pages = 0;
       while (pages < MAX_JUMP_FETCH_PAGES && !isTimeCovered(allCandles, entryTime, barSeconds)) {
         const older = isForex
@@ -3487,6 +3492,29 @@ async function jumpToTimeRange(entryTime, exitTime) {
         anchor = allCandles[0].time;
         pages++;
       }
+
+      if (preexistingOldest != null) {
+        const boundaryIdx = allCandles.findIndex((c) => c.time === preexistingOldest);
+        if (boundaryIdx > 0) {
+          let bridge = [];
+          let bridgeAnchor = preexistingOldest;
+          let bridgePages = 0;
+          while (bridgePages < MAX_JUMP_FETCH_PAGES) {
+            const older = isForex
+              ? await fetchOlderForexCandles(props.symbol, props.currentBar, bridgeAnchor, FOREX_HISTORY_PAGE_SIZE)
+              : await fetchOlderCandles(okxBarFor(props.currentBar), bridgeAnchor);
+            if (older.length === 0) break;
+            bridge = older.concat(bridge);
+            bridgeAnchor = bridge[0].time;
+            bridgePages++;
+            if (bridgeAnchor <= allCandles[boundaryIdx - 1].time) break;
+          }
+          if (bridge.length > 0 && bridgeAnchor <= allCandles[boundaryIdx - 1].time) {
+            allCandles = [...allCandles.slice(0, boundaryIdx), ...bridge, ...allCandles.slice(boundaryIdx)];
+          }
+        }
+      }
+
       refreshChart();
     } catch (err) {
       console.error("Kerzen für Trade-Sprung laden fehlgeschlagen:", err);
