@@ -579,13 +579,16 @@ const hoveredPinTradeSetupId = computed(() => {
 const hoveredPinTradeConfirmationId = computed(() =>
   hoveredPinEntry.value?.kind === "trade_confirmation" ? hoveredPinEntry.value.tradeConfirmationId : null,
 );
+// Bewusst OHNE currentBar-Filterung, analog zu pinnedLiquidityLevels/pinLiquidityLevelKeys unten
+// (Bug 2026-08-21: die Linie selbst rendert längst TF-unabhängig, der Hover-Halo blieb aber an
+// currentBar hängen — ein auf 4H gepinntes Level bekam auf M5 keinen Halo).
 const hoveredPinLiquidityLevelKey = computed(() => {
   const e = hoveredPinEntry.value;
   if (!e) return null;
-  if (e.kind === "liquidity_level" && currentBar.value === "1h" && e.liquidityLevel?.instrument === currentSymbol.value) {
+  if (e.kind === "liquidity_level" && e.liquidityLevel?.instrument === currentSymbol.value) {
     return liquidityLevelEntryNaturalKey(e.liquidityLevel);
   }
-  if (e.kind === "m5_liquidity_level" && e.m5Liquidity?.instrument === currentSymbol.value && e.m5Liquidity?.timeframe === currentBar.value) {
+  if (e.kind === "m5_liquidity_level" && e.m5Liquidity?.instrument === currentSymbol.value) {
     return m5LiquidityEntryNaturalKey(e.m5Liquidity);
   }
   return null;
@@ -954,19 +957,18 @@ const pinTradeConfirmationIds = computed(() => {
   return new Set(pinContextEntries.value.filter((e) => e.kind === "trade_confirmation").map((e) => e.tradeConfirmationId));
 });
 // Liquiditäts-Level-Pendant (Chat 2026-08-17) — mischt kind='liquidity_level' (1H, echte DB-
-// Zeile) und kind='m5_liquidity_level' (Nicht-1h-Snapshot) in EINE Menge, weil im Chart immer nur
-// Level EINES Timeframes gleichzeitig sichtbar sind (siehe liquidity.js: liquidityLevelNaturalKey-
-// Kommentar) — liquidity_level nur bei currentBar==="1h" berücksichtigen, m5_liquidity_level nur
-// wenn sein gespeichertes timeframe-Feld zum gerade angezeigten currentBar passt.
+// Zeile) und kind='m5_liquidity_level' (Nicht-1h-Snapshot) in EINE Menge. Bewusst OHNE
+// currentBar-Filterung (Bug 2026-08-21, analog zum Fix bei pinnedLiquidityLevels/
+// hoveredPinLiquidityLevelKey): pinnedLiquidityLevels rendert die Linie schon seit 2026-08-18 auf
+// JEDEM Timeframe, der Halo blieb aber an currentBar hängen — zwei auf 4H gepinnte Level bekamen
+// auf M5 keinen Halo, obwohl die Linie dort sichtbar war.
 const pinLiquidityLevelKeys = computed(() => {
   return new Set([
-    ...(currentBar.value === "1h"
-      ? pinContextEntries.value
-          .filter((e) => e.kind === "liquidity_level" && e.liquidityLevel?.instrument === currentSymbol.value)
-          .map((e) => liquidityLevelEntryNaturalKey(e.liquidityLevel))
-      : []),
     ...pinContextEntries.value
-      .filter((e) => e.kind === "m5_liquidity_level" && e.m5Liquidity?.instrument === currentSymbol.value && e.m5Liquidity?.timeframe === currentBar.value)
+      .filter((e) => e.kind === "liquidity_level" && e.liquidityLevel?.instrument === currentSymbol.value)
+      .map((e) => liquidityLevelEntryNaturalKey(e.liquidityLevel)),
+    ...pinContextEntries.value
+      .filter((e) => e.kind === "m5_liquidity_level" && e.m5Liquidity?.instrument === currentSymbol.value)
       .map((e) => m5LiquidityEntryNaturalKey(e.m5Liquidity)),
   ]);
 });
