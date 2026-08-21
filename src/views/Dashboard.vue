@@ -14,7 +14,7 @@ import ContextMenu from "../components/ContextMenu.vue";
 import PinAddPopup from "../components/PinAddPopup.vue";
 import PinPanel from "../components/PinPanel.vue";
 import { selectedTradingAccountId } from "../tradingAccounts.js";
-import { TIMEFRAMES } from "../timeframes.js";
+import { TIMEFRAMES, barSecondsForTimeframeCi } from "../timeframes.js";
 import { fetchTrades } from "../trades.js";
 import {
   fetchTradeSetupForCockpit,
@@ -562,14 +562,31 @@ function onPinHover(entry) {
     hoveredTradeId.value = entry?.tradePositionId ?? null;
   }
 }
-// Dieselben Filter (aktuelles Symbol/Timeframe) wie pinObZoneKeys & Co. oben — ein gehoverter
-// Eintrag für ein anderes Symbol/Timeframe ergibt hier bewusst KEINEN Treffer (die zugehörige
-// Chart-Stelle existiert im gerade sichtbaren Chart schlicht nicht).
+// Kaskaden-Regel für gepinnte 1h/4h/M5-Objekte (Bug 2026-08-21, Philip: "1h/4h OBs oder
+// LQ-Levels, die ich anpinne, sollen im M5 trotzdem angezeigt werden ... M5 OBs in 4h TF
+// anzuzeigen ist nicht so hilfreich, es verdeckt die Sicht") — ein gepinntes Objekt wird nur auf
+// seinem EIGENEN oder einem FEINEREN Timeframe angezeigt (z.B. ein 4h-Pin ist auf 4h/1h/M5
+// sichtbar, aber NICHT umgekehrt ein M5-Pin auf 4h). barSecondsForTimeframeCi liefert null bei
+// unbekanntem/fehlendem Timeframe-String — dann fail-open (true), ein Datenlücken-Fall bleibt
+// lieber sichtbar als dass er unsichtbar verschwindet.
+function pinVisibleOnCurrentTf(pinTimeframeRaw) {
+  const pinSec = barSecondsForTimeframeCi(pinTimeframeRaw);
+  const currentSec = barSecondsForTimeframeCi(currentBar.value);
+  if (pinSec == null || currentSec == null) return true;
+  return currentSec <= pinSec;
+}
+// Dieselben Filter (aktuelles Symbol/Timeframe/Kaskaden-Regel) wie pinObZoneKeys & Co. oben — ein
+// gehoverter Eintrag für ein anderes Symbol oder einen gröberen Timeframe ergibt hier bewusst
+// KEINEN Treffer (die zugehörige Chart-Stelle existiert im gerade sichtbaren Chart schlicht nicht).
 const hoveredPinObZoneKey = computed(() => {
   const e = hoveredPinEntry.value;
   if (!e) return null;
-  if (e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value) return obZoneEntryNaturalKey(e.obZone);
-  if (e.kind === "m5_ob" && e.m5Ob?.instrument === currentSymbol.value) return m5ObEntryNaturalKey(e.m5Ob);
+  if (e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value && pinVisibleOnCurrentTf(e.obZone.timeframe)) {
+    return obZoneEntryNaturalKey(e.obZone);
+  }
+  if (e.kind === "m5_ob" && e.m5Ob?.instrument === currentSymbol.value && pinVisibleOnCurrentTf("5M")) {
+    return m5ObEntryNaturalKey(e.m5Ob);
+  }
   return null;
 });
 const hoveredPinTradeSetupId = computed(() => {
@@ -579,16 +596,16 @@ const hoveredPinTradeSetupId = computed(() => {
 const hoveredPinTradeConfirmationId = computed(() =>
   hoveredPinEntry.value?.kind === "trade_confirmation" ? hoveredPinEntry.value.tradeConfirmationId : null,
 );
-// Bewusst OHNE currentBar-Filterung, analog zu pinnedLiquidityLevels/pinLiquidityLevelKeys unten
-// (Bug 2026-08-21: die Linie selbst rendert längst TF-unabhängig, der Hover-Halo blieb aber an
-// currentBar hängen — ein auf 4H gepinntes Level bekam auf M5 keinen Halo).
+// Kaskaden-Regel statt reiner currentBar-Gleichheit (Bug 2026-08-21, siehe pinVisibleOnCurrentTf
+// oben) — ein auf 4H gepinntes Level bekommt jetzt auch auf 1H/M5 einen Halo, nicht nur auf 4H
+// selbst; ein auf M5 gepinntes Level aber weiterhin keinen auf 1H/4H.
 const hoveredPinLiquidityLevelKey = computed(() => {
   const e = hoveredPinEntry.value;
   if (!e) return null;
-  if (e.kind === "liquidity_level" && e.liquidityLevel?.instrument === currentSymbol.value) {
+  if (e.kind === "liquidity_level" && e.liquidityLevel?.instrument === currentSymbol.value && pinVisibleOnCurrentTf("1H")) {
     return liquidityLevelEntryNaturalKey(e.liquidityLevel);
   }
-  if (e.kind === "m5_liquidity_level" && e.m5Liquidity?.instrument === currentSymbol.value) {
+  if (e.kind === "m5_liquidity_level" && e.m5Liquidity?.instrument === currentSymbol.value && pinVisibleOnCurrentTf(e.m5Liquidity.timeframe)) {
     return m5LiquidityEntryNaturalKey(e.m5Liquidity);
   }
   return null;
@@ -609,11 +626,14 @@ function toUnixSec(iso) {
 // Live-Redetection") — siehe PriceChart.vue: mergePinnedZones/mergePinnedLevels/
 // mergePinnedDivergences/refreshTradeSetupLinksInternal für die Verwendung. touched: null markiert
 // einen reinen Snapshot ohne bekannten Live-Status (m5_ob/m5_liquidity_level) — PriceChart.vue
-// self-heilt das anhand der aktuell geladenen Kerzen.
+// self-heilt das anhand der aktuell geladenen Kerzen. pinVisibleOnCurrentTf (Bug 2026-08-21) filtert
+// zusätzlich per Kaskaden-Regel: nur auf dem eigenen oder einem feineren Timeframe sichtbar.
 const pinnedObZones = computed(() => {
   return pinContextEntries.value
     .filter(
-      (e) => (e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value) || (e.kind === "m5_ob" && e.m5Ob?.instrument === currentSymbol.value),
+      (e) =>
+        (e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value && pinVisibleOnCurrentTf(e.obZone.timeframe)) ||
+        (e.kind === "m5_ob" && e.m5Ob?.instrument === currentSymbol.value && pinVisibleOnCurrentTf("5M")),
     )
     .map((e) => {
       if (e.kind === "ob_zone") {
@@ -640,14 +660,15 @@ const pinnedObZones = computed(() => {
       };
     });
 });
-// ANDERS als pinLiquidityLevelKeys oben bewusst OHNE currentBar-Filterung (Philip 2026-08-18: ein
-// gepinntes 1H-Level soll auch auf M5/4H sichtbar bleiben, siehe PriceChart.vue: mergePinnedLevels).
+// Kaskaden-Regel statt reiner currentBar-Gleichheit (Bug 2026-08-21, siehe pinVisibleOnCurrentTf
+// oben, Philip 2026-08-18/21: ein gepinntes 1H/4H-Level soll auch auf M5 sichtbar bleiben, siehe
+// PriceChart.vue: mergePinnedLevels — aber NICHT umgekehrt ein M5-Level auf 4H).
 const pinnedLiquidityLevels = computed(() => {
   return pinContextEntries.value
     .filter(
       (e) =>
-        (e.kind === "liquidity_level" && e.liquidityLevel?.instrument === currentSymbol.value) ||
-        (e.kind === "m5_liquidity_level" && e.m5Liquidity?.instrument === currentSymbol.value),
+        (e.kind === "liquidity_level" && e.liquidityLevel?.instrument === currentSymbol.value && pinVisibleOnCurrentTf("1H")) ||
+        (e.kind === "m5_liquidity_level" && e.m5Liquidity?.instrument === currentSymbol.value && pinVisibleOnCurrentTf(e.m5Liquidity.timeframe)),
     )
     .map((e) => {
       if (e.kind === "liquidity_level") {
@@ -930,14 +951,16 @@ const pinTradeIds = computed(() => {
 // OB-Zone aus GBPUSD ergibt im EURUSD-Chart keinen sinnvollen Treffer). Mischt seit Chat
 // 2026-08-17 kind='m5_ob' mit rein (m5ObEntryNaturalKey baut denselben "5M|..."-Schlüssel wie
 // obZoneNaturalKey für M5-Zonen, siehe dort) — M5-OBs laufen im Chart über dieselbe
-// renderPersistedZones-Funktion wie 1H/4H, brauchen also keinen eigenen Prop.
+// renderPersistedZones-Funktion wie 1H/4H, brauchen also keinen eigenen Prop. pinVisibleOnCurrentTf
+// (Bug 2026-08-21) filtert zusätzlich per Kaskaden-Regel: nur auf dem eigenen oder einem feineren
+// Timeframe gehighlightet (ein M5-OB-Pin bekommt auf 4H bewusst keinen Halo mehr).
 const pinObZoneKeys = computed(() => {
   return new Set([
     ...pinContextEntries.value
-      .filter((e) => e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value)
+      .filter((e) => e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value && pinVisibleOnCurrentTf(e.obZone.timeframe))
       .map((e) => obZoneEntryNaturalKey(e.obZone)),
     ...pinContextEntries.value
-      .filter((e) => e.kind === "m5_ob" && e.m5Ob?.instrument === currentSymbol.value)
+      .filter((e) => e.kind === "m5_ob" && e.m5Ob?.instrument === currentSymbol.value && pinVisibleOnCurrentTf("5M"))
       .map((e) => m5ObEntryNaturalKey(e.m5Ob)),
   ]);
 });
@@ -957,18 +980,21 @@ const pinTradeConfirmationIds = computed(() => {
   return new Set(pinContextEntries.value.filter((e) => e.kind === "trade_confirmation").map((e) => e.tradeConfirmationId));
 });
 // Liquiditäts-Level-Pendant (Chat 2026-08-17) — mischt kind='liquidity_level' (1H, echte DB-
-// Zeile) und kind='m5_liquidity_level' (Nicht-1h-Snapshot) in EINE Menge. Bewusst OHNE
-// currentBar-Filterung (Bug 2026-08-21, analog zum Fix bei pinnedLiquidityLevels/
-// hoveredPinLiquidityLevelKey): pinnedLiquidityLevels rendert die Linie schon seit 2026-08-18 auf
-// JEDEM Timeframe, der Halo blieb aber an currentBar hängen — zwei auf 4H gepinnte Level bekamen
-// auf M5 keinen Halo, obwohl die Linie dort sichtbar war.
+// Zeile) und kind='m5_liquidity_level' (Nicht-1h-Snapshot) in EINE Menge. Kaskaden-Regel statt
+// reiner currentBar-Gleichheit (Bug 2026-08-21, siehe pinVisibleOnCurrentTf oben, analog zum Fix
+// bei pinnedLiquidityLevels/hoveredPinLiquidityLevelKey): ein auf 4H gepinntes Level bekommt jetzt
+// auch auf 1H/M5 einen Halo (Philip: "1h/4h ... sollen im M5 trotzdem angezeigt werden"), ein auf
+// M5 gepinntes Level aber weiterhin keinen auf 1H/4H (Philip: "M5 OBs in 4h TF anzuzeigen ist
+// nicht so hilfreich").
 const pinLiquidityLevelKeys = computed(() => {
   return new Set([
     ...pinContextEntries.value
-      .filter((e) => e.kind === "liquidity_level" && e.liquidityLevel?.instrument === currentSymbol.value)
+      .filter((e) => e.kind === "liquidity_level" && e.liquidityLevel?.instrument === currentSymbol.value && pinVisibleOnCurrentTf("1H"))
       .map((e) => liquidityLevelEntryNaturalKey(e.liquidityLevel)),
     ...pinContextEntries.value
-      .filter((e) => e.kind === "m5_liquidity_level" && e.m5Liquidity?.instrument === currentSymbol.value)
+      .filter(
+        (e) => e.kind === "m5_liquidity_level" && e.m5Liquidity?.instrument === currentSymbol.value && pinVisibleOnCurrentTf(e.m5Liquidity.timeframe),
+      )
       .map((e) => m5LiquidityEntryNaturalKey(e.m5Liquidity)),
   ]);
 });

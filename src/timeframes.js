@@ -21,6 +21,16 @@ export function barSecondsFor(label) {
   return BAR_SECONDS[label] ?? 60;
 }
 
+// Case-insensitive Variante von BAR_SECONDS: ob_zones/liquidity_levels' eigene `timeframe`-Spalte
+// nutzt Grossbuchstaben ("1H"/"4H"/"5M"), Dashboard.vue's currentBar/m5_liquidity_level-Snapshots
+// dagegen die TIMEFRAMES-Label-Schreibweise ("1h"/"4h"/"5m") — für den Pin-Kaskaden-Vergleich
+// (Bug 2026-08-21: gepinnte 1h/4h-Objekte sollen auf jedem feineren/gleichen Timeframe sichtbar
+// bleiben, nicht umgekehrt) beide Varianten gegen dieselbe Sekundenzahl auflösen.
+const BAR_SECONDS_BY_UPPER = Object.fromEntries(Object.entries(BAR_SECONDS).map(([label, sec]) => [label.toUpperCase(), sec]));
+export function barSecondsForTimeframeCi(raw) {
+  return BAR_SECONDS_BY_UPPER[String(raw).toUpperCase()] ?? null;
+}
+
 // Wie weit im Replay-Modus vorausgefetcht wird (siehe PriceChart.vue: fetchCandlesCached-Aufrufe),
 // damit wiederholtes "+1 Kerze"-Klicken erstmal komplett aus dem Cache bedient wird (Chat
 // 2026-07-23: 429 beim Replay-Klicken, vorher nur 4h). Aus 2500 M5-Kerzen abgeleitet (Twelve Data
