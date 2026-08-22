@@ -772,6 +772,34 @@ Deno.serve(async (req) => {
           // ob_zones/liquidity_levels-Verhalten beim allerersten Lauf.
           const shouldAlert = hasAnySetupRow[direction] && alarmActive;
 
+          // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren": das M5-OB, das
+          // dieses Setup bestätigt, wird jetzt zusätzlich als eigene ob_zones-Zeile referenziert
+          // (statt nur ob_top/ob_bottom/ob_start_time als Kopie zu führen) — direction entspricht
+          // hier exakt der Setup-Direction selbst (siehe Migration
+          // 20260822100000_trade_setups_confirmations_ob_zone_id.sql für die Herleitung dieser
+          // Äquivalenz). Nur die tatsächlich referenzierte Teilmenge der M5-OBs landet so in
+          // ob_zones, nicht das gesamte M5-Universum (bewusste Entscheidung, siehe Plan-Datei).
+          // Normaler Upsert statt ignoreDuplicates, damit .select() bei einem bereits vorhandenen
+          // Konflikt trotzdem die id zurückgibt (touched/invalidated bleiben hier bewusst auf
+          // Default false — dieses Referenz-Objekt wird nicht live nachverfolgt, das übernimmt
+          // weiterhin die Indikator-Overlay-Live-Erkennung).
+          const { data: setupObZone, error: obZoneUpsertError } = await supabase
+            .from("ob_zones")
+            .upsert(
+              {
+                instrument: cfg.instrument,
+                timeframe: "5M",
+                direction,
+                top: setup.obTop,
+                bottom: setup.obBottom,
+                start_time: new Date(setup.obStartTime * 1000).toISOString(),
+              },
+              { onConflict: "instrument,timeframe,start_time,direction" },
+            )
+            .select("id")
+            .single();
+          if (obZoneUpsertError) throw obZoneUpsertError;
+
           const { error: setupUpsertError } = await supabase.from("trade_setups").upsert(
             {
               instrument: cfg.instrument,
@@ -784,6 +812,7 @@ Deno.serve(async (req) => {
               ob_top: setup.obTop,
               ob_bottom: setup.obBottom,
               ob_start_time: new Date(setup.obStartTime * 1000).toISOString(),
+              ob_zone_id: setupObZone.id,
               alert_price: currentPrice,
               notified: shouldAlert,
               notified_at: shouldAlert ? new Date().toISOString() : null,

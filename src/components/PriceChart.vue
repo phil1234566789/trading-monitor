@@ -1849,6 +1849,13 @@ function findClickedOBZone(param) {
     touchedTime: zone.touched ? zone.endTime : null,
     rangeLow: zone.bottom,
     rangeHigh: zone.top,
+    // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren" — instrument/direction
+    // (dieselbe long/short-Konvention wie poi-watcher: dir===1 -> "long", siehe dortiger
+    // Kommentar) werden mitgegeben, damit tradeIntake.js beim Anlegen der Bestätigung die
+    // zugehörige ob_zones-Zeile per Natural Key finden/anlegen und referenzieren kann, statt nur
+    // den Preis-Snapshot zu speichern.
+    instrument: props.symbol,
+    direction: zone.dir === 1 ? "long" : "short",
     // Bug-Report Philip 2026-07-31, dritte Runde: außerhalb Replay wollte die Box exakt wie die
     // live gezeichneten OB-Zonen laufen (bis zum echten Touch, sonst frei wachsend) — dafür muss
     // refreshTradeTargetLinksInternal wissen, von welcher Zeitebene die Zone stammt, um dieselbe
