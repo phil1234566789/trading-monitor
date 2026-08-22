@@ -95,6 +95,12 @@ const props = defineProps({
   // markiert einen reinen Snapshot ohne bekannten Live-Status (m5_ob/m5_liquidity_level) — wird
   // hier anhand der aktuell geladenen Kerzen self-geheilt statt für immer "aktiv" zu bleiben.
   pinnedObZones: { type: Array, default: () => [] },
+  // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 7 — die von
+  // poi-watcher persistierten 1H/4H-Zonen (src/obZones.js: fetchObZones, in Dashboard.vue gepollt),
+  // ungefiltert über alle Instrumente, siehe filterDbObZones/collectObsZones unten für die
+  // Instrument-/Replay-Filterung. Ersetzt dort den bisherigen Live-Recompute, der auf ein fest
+  // begrenztes Kerzenfenster begrenzt war und ältere Zonen strukturell nie fand.
+  dbObZones: { type: Array, default: () => [] },
   pinnedLiquidityLevels: { type: Array, default: () => [] },
   pinnedTradeSetups: { type: Array, default: () => [] },
   pinnedRsiDivergences: { type: Array, default: () => [] },
@@ -343,11 +349,6 @@ const TREND_ANALYSIS_CANDLE_COUNT = 1000;
 // BEIDE Perioden (5 und 2) großzügig genug, kein separater Puffer je Periode nötig.
 const RANGES_CANDLE_BUFFER = 20;
 
-// OB-Timeframe-Toggle 4H (Chat 2026-07-30) — 1H (rangesH1Candles) und M5 (tradeSetupM5Candles,
-// läuft ohnehin schon immer) brauchen KEINEN eigenen Fetch, die Kerzen sind für andere Features
-// bereits da. Nur 4H hat sonst wirklich nichts, das seine Kerzen laden würde.
-const OBS_4H_CANDLE_COUNT = 300; // ≈ 50 Tage, großzügig fürs Erkennen auch länger unberührter Zonen
-
 // EMA 50/200 auf M5 (siehe Chat: Philips "Trend über EMA + Anzahl protected highs/lows"-Idee) —
 // läuft auf trendAnalysisM5Candles (dieselbe M5-Historie wie der Zigzag-Algo), kein eigener Fetch
 // nötig, siehe loadTradeSetupM5.
@@ -488,8 +489,6 @@ let rangesPivots2 = null; // roh (mit pivotTime), eingebettete Periode 2 (siehe 
 let loadInitialFetchSeq = 0;
 let rangesFetchSeq = 0;
 let tradeSetupM5FetchSeq = 0;
-let obs4hCandles = []; // siehe OBS_4H_CANDLE_COUNT oben
-let obs4hFetchSeq = 0;
 let loadingOlder = false;
 let reachedHistoryStart = false;
 // Bug-Report Philip 2026-08-09: Scroll-Back-Nachladen (siehe subscribeVisibleLogicalRangeChange
@@ -504,7 +503,6 @@ const loadOlderButtonBusy = ref(false);
 let pollTimer = null;
 let tradeSetupM5PollTimer = null;
 let rangesPollTimer = null;
-let obs4hPollTimer = null;
 // Für das RSI-Divergenz-Statistik-Panel (Chat 2026-08-11, vierte Runde) — { divergences (inkl.
 // Outcome-Klassifikation), lookbackBars, lookforwardBars } oder null, wenn der Toggle aus ist
 // bzw. gerade keine Divergenzen vorliegen. Befüllt in refreshRsiDivergenceInternal, analog zu
@@ -1225,27 +1223,29 @@ function filterHistorical(zones) {
   return props.showHistoricalObs ? zones : zones.filter((z) => !z.touched);
 }
 
+// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 7 — 1H/4H kommen jetzt
+// aus den von poi-watcher persistierten ob_zones statt live über ein fest begrenztes Kerzenfenster
+// neu erkannt zu werden (Bug: die alte, inzwischen entfernte 4H-Kerzenladung/das Ranges-Lookback-
+// Fenster begrenzten, wie weit zurück eine Zone überhaupt gefunden werden konnte — ältere Zonen
+// tauchten nie auf, bis man manuell zurückscrollte). Im Replay zusätzlich auf Zonen bis replayUntil
+// beschränkt, damit nicht schon
+// Zonen auftauchen, die "in der Zukunft" (relativ zum Replay-Stand) erst entdeckt wurden — analog
+// zum alten filterBtcObsZones-Muster.
+function filterDbObZones(timeframe) {
+  const byTf = props.dbObZones.filter((z) => z.instrument === props.symbol && z.timeframe === timeframe);
+  return props.replayUntil == null ? byTf : byTf.filter((z) => z.startTime <= props.replayUntil);
+}
+
 // Sammelt die Zonen aller AKTIVIERTEN Timeframe-Toggles (Chat 2026-07-30: "Indikatoren > OBs" bekam
 // unabhängige M5-/1H-/4H-Checkboxen statt eines einzelnen showOrderBlocks-Schalters, der bisher
-// immer nur den gerade angezeigten Chart-Timeframe zeigte). 1H/M5 laufen auf Kerzen mit, die
-// ohnehin schon für andere Features geladen werden (rangesH1Candles/tradeSetupM5Candles), nur 4H
-// hat einen eigenen, neuen Fetch (siehe loadObs4hCandles unten).
+// immer nur den gerade angezeigten Chart-Timeframe zeigte). M5 läuft weiterhin live auf Kerzen, die
+// ohnehin schon für andere Features geladen werden (tradeSetupM5Candles) — nur die tatsächlich
+// referenzierte Teilmenge der M5-OBs wird persistiert (siehe PLAN-chart-objekte-forex.md Abschnitt
+// 5), das volle M5-Universum bleibt bewusst Live-Recompute.
 function collectObsZones() {
   const zones = [];
-  if (props.showObs4h) {
-    zones.push(
-      ...detectOrderBlocks(clipReplay(obs4hCandles), "4H", true)
-        .filter((z) => !z.invalidated)
-        .map((z) => ({ ...z, timeframe: "4H" })),
-    );
-  }
-  if (props.showObs1h) {
-    zones.push(
-      ...detectOrderBlocks(clipReplay(rangesH1Candles), "1H", true)
-        .filter((z) => !z.invalidated)
-        .map((z) => ({ ...z, timeframe: "1H" })),
-    );
-  }
+  if (props.showObs4h) zones.push(...filterDbObZones("4H").filter((z) => !z.invalidated));
+  if (props.showObs1h) zones.push(...filterDbObZones("1H").filter((z) => !z.invalidated));
   if (props.showObsM5) {
     zones.push(
       ...detectOrderBlocks(clipReplay(tradeSetupM5Candles), "5m", true)
@@ -1261,13 +1261,15 @@ function collectObsZones() {
 // Philip will stattdessen exakt dasselbe Verhalten wie die live gezeichneten OB-Zonen (dieselbe
 // detectOrderBlocks()-Erkennung auf derselben Zeitebene, nicht nur ein einmaliger Snapshot vom
 // Klick-Zeitpunkt). Sucht die Original-Zone anhand ihrer beim Klick festgehaltenen Kanten
-// (rangeLow/rangeHigh) in der GERADE live neu erkannten Zonen-Liste derselben Zeitebene — bewusst
+// (rangeLow/rangeHigh) in der GERADE aktuellen Zonen-Liste derselben Zeitebene — bewusst
 // unabhängig von showObs1h/-4h/-M5 (ein Target soll sichtbar bleiben, auch wenn der zugehörige
-// Live-OB-Indikator-Toggle gerade aus ist), deshalb hier direkt detectOrderBlocks statt
-// collectObsZones.
+// Live-OB-Indikator-Toggle gerade aus ist), deshalb hier direkt filterDbObZones/detectOrderBlocks
+// statt collectObsZones. 1H/4H seit Punkt 7 (DB-Read) dieselbe Quelle wie die gezeichneten Zonen
+// selbst — sonst könnte eine Target-/Confirmation-Box einen anderen touched/endTime-Stand zeigen
+// als die daneben gezeichnete Indikator-Zone.
 function liveObZonesForTimeframe(timeframe) {
   if (timeframe === "5M") return detectOrderBlocks(clipReplay(tradeSetupM5Candles), "5m", true);
-  return detectOrderBlocks(clipReplay(timeframe === "1H" ? rangesH1Candles : obs4hCandles), timeframe, true);
+  return filterDbObZones(timeframe);
 }
 
 function liveObZoneState(item) {
@@ -1621,47 +1623,6 @@ async function loadRangesCandles() {
   }
 }
 
-// Eigener Fetch NUR für den 4H-OB-Toggle (Chat 2026-07-30) — kein anderes Feature braucht
-// 4H-Kerzen, siehe OBS_4H_CANDLE_COUNT oben. Gleiches Out-of-Order-/Poll-Muster wie
-// loadRangesCandles, nur ohne die Ranges-spezifischen Lookback-Optionen (fixer Start etc.).
-async function loadObs4hCandles() {
-  const seq = ++obs4hFetchSeq;
-  try {
-    const candles = await fetchCandlesCached(
-      fetchInitialForexCandles,
-      props.symbol,
-      "4h",
-      OBS_4H_CANDLE_COUNT,
-      replayToMs("4h"),
-      REPLAY_LOOKAHEAD_SEC,
-    );
-    if (seq !== obs4hFetchSeq) return true; // inzwischen überholt, siehe oben — kein Fehler
-    obs4hCandles = candles;
-    refreshPoiZonesInternal();
-    return true;
-  } catch (err) {
-    console.error("4H-OB-Kerzen fehlgeschlagen:", err);
-    return false;
-  }
-}
-function scheduleNextObs4hPoll() {
-  clearTimeout(obs4hPollTimer);
-  const barMs = barSecondsFor("4h") * 1000;
-  const delay = barMs - (Date.now() % barMs) + CLOSE_POLL_BUFFER_MS;
-  obs4hPollTimer = setTimeout(async () => {
-    await withPollRetries(loadObs4hCandles);
-    if (chart) scheduleNextObs4hPoll();
-  }, delay);
-}
-function startObs4hPolling() {
-  loadObs4hCandles();
-  scheduleNextObs4hPoll();
-}
-function stopObs4hPolling() {
-  clearTimeout(obs4hPollTimer);
-  obs4hPollTimer = null;
-}
-
 // showRanges (Marker im Chart) und showRangesMetadata (JSON-Panel) sind getrennte Toggles, teilen
 // sich aber dieselben H1-Kerzen/Pivots. showTradeSetupCockpit zählt seit Chat 2026-07-19 ebenfalls
 // mit ("TSC soll den aktuellsten und wahren Stand anzeigen, selbst wenn Trend im Chart gerade zur
@@ -1677,7 +1638,7 @@ function stopObs4hPolling() {
 // (detectOrderBlocks(rangesH1Candles, "1H"), siehe collectObsZones), statt einen eigenen 1H-Fetch
 // zu brauchen — muss also ebenfalls dafür sorgen, dass rangesH1Candles geladen bleibt.
 function rangesNeedsData() {
-  return props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups || props.showObs1h;
+  return props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups;
 }
 // An den H1-Kerzenschluss ausgerichtet statt festem Intervall (Chat 2026-07-20) — H1-Kerzen
 // ändern sich nur stündlich, ein häufigerer Poll bringt nichts außer zusätzlichen Requests.
@@ -2466,10 +2427,10 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Generischer Kurz-Retry für alle vier Forex-Poller (pollRecent/loadRangesCandles/
-// loadObs4hCandles/loadTradeSetupM5, siehe jeweilige scheduleNext...Poll unten) — alle vier hatten
-// dieselbe Schwäche: ein Fehlschlag wurde nur geloggt, der nächste Versuch lief erst beim NÄCHSTEN
-// Kerzenschluss (siehe pollRecent-Kommentar). Bug-Report Philip 2026-08-07 (Folgerunde): das erste,
+// Generischer Kurz-Retry für die Forex-Poller (pollRecent/loadRangesCandles/loadTradeSetupM5,
+// siehe jeweilige scheduleNext...Poll unten) — alle hatten dieselbe Schwäche: ein Fehlschlag wurde
+// nur geloggt, der nächste Versuch lief erst beim NÄCHSTEN Kerzenschluss (siehe pollRecent-
+// Kommentar). Bug-Report Philip 2026-08-07 (Folgerunde): das erste,
 // auf 3 Retries/45s ausgelegte Fenster reichte nicht — cTraders Demo-Server hatte eine mehrminütige
 // Verbindungs-Flaute (502 Connect-Timeout gefolgt von rohen "Failed to fetch"-Netzwerkfehlern).
 // 8 Retries/~2min decken das ab, ohne bei einem wirklich längeren Ausfall unbegrenzt weiterzuhämmern
@@ -2848,24 +2809,22 @@ onMounted(() => {
   loadInitial();
   scheduleNextPoll();
   // Bug-Report Philip 2026-08-07 ("signal timed out" ständig, vor allem im Live-Modus): bis
-  // hierhin lösten loadInitial() oben plus loadTradeSetupM5()/startRangesPolling()/
-  // startObs4hPolling() jede für sich eine EIGENE cTrader-Verbindung (Connect+Auth-Handshake)
-  // aus, alle im selben Tick — mehrere gleichzeitige frische Handshakes gegen denselben Account
-  // waren der plausibelste Grund für die gehäuften Timeouts. Kein Entzerren mehr nötig: die
-  // Fetches laufen unverändert alle sofort los, aber `forexCandles.js` sammelt jetzt kurz
-  // gleichzeitig eingehende Requests und schickt sie als EINEN Batch-Request raus (eine
-  // gemeinsame cTrader-Verbindung statt vier, siehe dort) — Entzerren würde dem sogar im Weg
-  // stehen, weil dann nichts mehr zum Bündeln im selben Fenster ankommt.
+  // hierhin lösten loadInitial() oben plus loadTradeSetupM5()/startRangesPolling() jede für sich
+  // eine EIGENE cTrader-Verbindung (Connect+Auth-Handshake) aus, alle im selben Tick — mehrere
+  // gleichzeitige frische Handshakes gegen denselben Account waren der plausibelste Grund für die
+  // gehäuften Timeouts. Kein Entzerren mehr nötig: die Fetches laufen unverändert alle sofort los,
+  // aber `forexCandles.js` sammelt jetzt kurz gleichzeitig eingehende Requests und schickt sie als
+  // EINEN Batch-Request raus (eine gemeinsame cTrader-Verbindung statt mehreren, siehe dort) —
+  // Entzerren würde dem sogar im Weg stehen, weil dann nichts mehr zum Bündeln im selben Fenster
+  // ankommt.
   loadTradeSetupM5();
   scheduleNextTradeSetupM5Poll();
   if (rangesNeedsData()) startRangesPolling();
-  if (props.showObs4h) startObs4hPolling();
   claudeCalloutRafId = requestAnimationFrame(claudeCalloutTick);
 });
 
 onUnmounted(() => {
   if (claudeCalloutRafId != null) cancelAnimationFrame(claudeCalloutRafId);
-  clearTimeout(obs4hPollTimer);
   // scheduleNextPoll/-TradeSetupM5Poll/-RangesPoll nutzen setTimeout statt setInterval
   // (Kerzenschluss-Ausrichtung, siehe dort) -> clearTimeout statt clearInterval.
   clearTimeout(pollTimer);
@@ -2926,20 +2885,15 @@ watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 // tscCalloutModeActive wechselt (TSC wird ein-/ausgeblendet, Locked-Zustand etc.) -> Canvas-Text
 // muss sofort erscheinen/verschwinden, nicht erst beim nächsten claudeAnnotations-Wechsel.
 watch(tscCalloutModeActive, refreshClaudeAnnotationsInternal);
-// M5/1H/4H unabhängig an-/ausschaltbar (Chat 2026-07-30) — siehe collectObsZones. showObs1h braucht
-// zusätzlich refreshRangesPollingState (rangesNeedsData() prüft jetzt auch showObs1h), showObs4h
-// startet/stoppt seine eigene, unabhängige Poll-Pipeline (siehe loadObs4hCandles) — M5 braucht das
-// NICHT (tradeSetupM5Candles läuft ohnehin immer), nur ein Neuzeichnen beim Toggle.
-watch(() => props.showObs1h, () => {
-  refreshRangesPollingState();
-  refreshPoiZonesInternal();
-});
-watch(() => props.showObs4h, (on) => {
-  if (on) startObs4hPolling();
-  else stopObs4hPolling();
-  refreshPoiZonesInternal();
-});
+// M5/1H/4H unabhängig an-/ausschaltbar (Chat 2026-07-30) — siehe collectObsZones. Seit Punkt 7 der
+// ob_zones-Konsolidierung (2026-08-22) kommen 1H/4H per DB-Read (dbObZones-Prop, in Dashboard.vue
+// gepollt), brauchen also keine eigene Poll-Pipeline/Kerzen-Abhängigkeit mehr — nur M5 läuft weiter
+// live auf tradeSetupM5Candles, das ohnehin immer geladen ist. Alle drei Toggles daher einheitlich
+// nur ein Neuzeichnen.
+watch(() => props.showObs1h, refreshPoiZonesInternal);
+watch(() => props.showObs4h, refreshPoiZonesInternal);
 watch(() => props.showObsM5, refreshPoiZonesInternal);
+watch(() => props.dbObZones, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
 watch(() => props.showLiquidity, refreshLiquidityInternal);
 watch(() => props.showSweptLiquidity, refreshLiquidityInternal);

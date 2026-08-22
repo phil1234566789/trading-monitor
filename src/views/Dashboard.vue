@@ -25,6 +25,7 @@ import {
   updateTrade,
   updateDealingRange,
 } from "../tradeIntake.js";
+import { fetchObZones } from "../obZones.js";
 import {
   fetchPinContext,
   addPinEntry,
@@ -932,6 +933,12 @@ const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrade
 // `trades` oben), kein intervalMs, da nur durch explizite Aktionen (Rechtsklick "Anpinnen"/
 // Modal-Löschen) geändert, kein Hintergrund-Poll nötig.
 const { data: pinContextEntries, refresh: refreshPinContext } = usePolledFetch(() => fetchPinContext());
+// 1H/4H-OB-Zonen (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 7) —
+// anders als trades/pinContextEntries oben ändert sich das hier NICHT nur durch explizite
+// Browser-Aktionen, sondern im Hintergrund durch poi-watcher (Cron alle 5min) — deshalb, anders als
+// die beiden Fälle oben, MIT intervalMs. 60s reicht: schneller als jede sinnvolle manuelle
+// Beobachtung, ohne unnötig oft zu pollen.
+const { data: dbObZones } = usePolledFetch(() => fetchObZones(), { intervalMs: 60_000 });
 // Nur die Ids, die zum GERADE geladenen Symbol gehören (trades enthält nur dessen Trades) — ein
 // Pin-Eintrag für ein anderes Symbol kann im Chart/in der Tabelle ohnehin nicht markiert
 // werden, solange dieses Symbol nicht ausgewählt ist.
@@ -1463,6 +1470,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :hovered-pin-liquidity-level-key="hoveredPinLiquidityLevelKey"
     :hovered-pin-rsi-divergence-key="hoveredPinRsiDivergenceKey"
     :pinned-ob-zones="pinnedObZones"
+    :db-ob-zones="dbObZones"
     :pinned-liquidity-levels="pinnedLiquidityLevels"
     :pinned-trade-setups="pinnedTradeSetups"
     :pinned-rsi-divergences="pinnedRsiDivergences"
