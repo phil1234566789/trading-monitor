@@ -15,7 +15,7 @@ export interface Candle {
 
 // Twelve Data kennt kein "3min"-Intervall (siehe Doku-Recherche 2026-07-22) — für "3m" wird
 // unten aus 1min-Kerzen serverseitig resampled, damit der 3m-Button im Dashboard (siehe
-// timeframes.js TIMEFRAMES) für Forex genauso funktioniert wie für BTC/OKX.
+// timeframes.js TIMEFRAMES) auch für Forex funktioniert.
 const INTERVAL_MAP: Record<string, string> = {
   "1m": "1min",
   "5m": "5min",

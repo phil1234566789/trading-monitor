@@ -37,7 +37,7 @@ const rangesFixedStartActive = useLocalStorageRef("rangesFixedStartActive", fals
 const rangesFixedStartTime = useLocalStorageRef("rangesFixedStartTime", 1783011600);
 // Gleicher Key/Default wie Dashboard.vue (currentSymbol) — nur fürs Vorbelegen des Dropdowns
 // gelesen, siehe Kommentar oben. Fällt auf EXPORT_ASSETS[0] zurück, falls im Chart gerade ein
-// Asset gewählt ist, das der Daten-Export (noch) nicht unterstützt (z.B. BTC-USDT).
+// Asset gewählt ist, das der Daten-Export (noch) nicht unterstützt.
 const currentSymbol = useLocalStorageRef("currentSymbol", "GBPUSD");
 
 const asset = ref(EXPORT_ASSETS.includes(currentSymbol.value) ? currentSymbol.value : EXPORT_ASSETS[0]);

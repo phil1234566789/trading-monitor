@@ -25,7 +25,6 @@ import {
   updateTrade,
   updateDealingRange,
 } from "../tradeIntake.js";
-import { fetchPoiZones } from "../poiZones.js";
 import {
   fetchPinContext,
   addPinEntry,
@@ -48,12 +47,7 @@ import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
 import { useClaudeAnnotations } from "../composables/useClaudeAnnotations.js";
 
-// POI-Zonen (ob_zones) rechnet nur das poi-watcher-Backend vor, nur für BTC-USDT — Forex-OBs
-// erkennt PriceChart.vue stattdessen live im Frontend (siehe dort: collectObsZones), da GBPUSD/
-// EURUSD ohnehin schon die dafür nötigen Kerzen laden (rangesH1Candles/tradeSetupM5Candles) bzw.
-// bei 4H einen eigenen, kleinen Fetch bekommen.
-const SYMBOLS = ["GBPUSD", "EURUSD", "BTC-USDT"];
-const POLL_MS = 12_000;
+const SYMBOLS = ["GBPUSD", "EURUSD"];
 
 // Toggle-Zustand persistiert in localStorage (siehe useLocalStorageRef), damit ein Reload nicht
 // jedes Mal auf die Default-Werte zurückspringt — die Defaults hier gelten nur beim allerersten
@@ -927,13 +921,12 @@ function closeMenusOutside(e) {
 }
 onMounted(() => window.addEventListener("click", closeMenusOutside));
 onUnmounted(() => window.removeEventListener("click", closeMenusOutside));
-const isBtc = computed(() => currentSymbol.value === "BTC-USDT");
 // Kein Intervall-Poll mehr (Bug-Report Philip 2026-07-31: Begründung im Edit-Modal wurde alle
-// POLL_MS mit dem alten DB-Stand überschrieben) — Trades ändern sich, anders als BTC-Gauges/
-// POI-Zonen, nur durch explizite Aktionen (Speichern, Symbol-/Kontowechsel, Ziel/Bestätigung im
-// Chart hinzugefügt, siehe die refreshTrades()-Aufrufe unten), kein eigenes intervalMs also kein
-// Hintergrund-Poll (siehe usePolledFetch.js). Eine externe Änderung durch Lana (MCP-Server)
-// erscheint dadurch erst nach einem manuellen Reload/Tab-Wechsel — bewusst in Kauf genommen.
+// POLL_MS mit dem alten DB-Stand überschrieben) — Trades ändern sich nur durch explizite Aktionen
+// (Speichern, Symbol-/Kontowechsel, Ziel/Bestätigung im Chart hinzugefügt, siehe die
+// refreshTrades()-Aufrufe unten), kein eigenes intervalMs also kein Hintergrund-Poll (siehe
+// usePolledFetch.js). Eine externe Änderung durch Lana (MCP-Server) erscheint dadurch erst nach
+// einem manuellen Reload/Tab-Wechsel — bewusst in Kauf genommen.
 const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrades(currentSymbol.value, selectedTradingAccountId.value));
 // Pin-Kontext (Chat 2026-08-01, siehe pinContext.js) — symbolunabhängig (anders als
 // `trades` oben), kein intervalMs, da nur durch explizite Aktionen (Rechtsklick "Anpinnen"/
@@ -1007,16 +1000,11 @@ const pinRsiDivergenceKeys = computed(() => {
       .map((e) => rsiDivergenceEntryNaturalKey(e.rsiDivergence)),
   );
 });
-const { data: poiZones, refresh: refreshPoiZones } = usePolledFetch(
-  () => (isBtc.value ? fetchPoiZones(currentSymbol.value) : []),
-  { intervalMs: POLL_MS },
-);
-// Symbolwechsel soll sofort auf "leer" (bzw. zurück auf BTC-Daten) springen, statt bis zu
-// POLL_MS lang die Trades/Zonen des vorherigen Symbols über dem neuen Chart hängen zu lassen.
-// Kontowechsel (Chat 2026-07-30) refresht aus demselben Grund sofort statt bis zum nächsten Poll.
+// Symbolwechsel soll sofort auf die Trades des neuen Symbols springen, statt bis zum nächsten
+// Poll die des vorherigen Symbols über dem neuen Chart hängen zu lassen. Kontowechsel (Chat
+// 2026-07-30) refresht aus demselben Grund sofort statt bis zum nächsten Poll.
 watch(currentSymbol, () => {
   refreshTrades();
-  refreshPoiZones();
 });
 watch(selectedTradingAccountId, refreshTrades);
 </script>
@@ -1479,7 +1467,6 @@ watch(selectedTradingAccountId, refreshTrades);
     :pinned-trade-setups="pinnedTradeSetups"
     :pinned-rsi-divergences="pinnedRsiDivergences"
     :show-trades="showTrades"
-    :poi-zones="poiZones"
     :show-obs-m5="showObsM5"
     :show-obs-1h="showObs1h"
     :show-obs-4h="showObs4h"

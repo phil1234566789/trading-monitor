@@ -1,9 +1,8 @@
 // HTTP wrapper around the cTrader Open API trendbars fetch (see `_shared/ctrader/client.ts`)
-// so the frontend can request forex candles the same way it already requests OKX candles —
-// a plain cross-origin GET — without ever holding the client secret/access token itself.
+// so the frontend can request forex candles via a plain cross-origin GET, without ever holding
+// the client secret/access token itself.
 // No persistence: this proxies live, it doesn't cache into a table (unlike poi-watcher/
-// ob_zones, which is BTC-only for now — forex OB detection is still meant to come from a
-// TradingView webhook per PLAN-notifications.md, not from this codebase).
+// ob_zones, which detects and persists OB zones itself, see poi-watcher/index.ts).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { fetchTrendbars, TRENDBAR_PERIOD, type RefreshedTokens } from "../_shared/ctrader/client.ts";
 

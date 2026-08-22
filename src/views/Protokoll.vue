@@ -4,10 +4,8 @@ import ProtokollTable from "../components/ProtokollTable.vue";
 import { fetchAlarmLog } from "../alarmLog.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 
-// Gleiche Instrument-Liste wie im Dashboard-Symbol-Switcher — BTC hat nur OB-Zonen
-// (Liquidität/Trade-Setup laufen ausschliesslich für die cTrader-Instrumente, siehe
-// poi-watcher/index.ts), GBPUSD/EURUSD sind die tatsächlich live alarmierten Instrumente.
-const SYMBOLS = ["GBPUSD", "EURUSD", "BTC-USDT"];
+// Gleiche Instrument-Liste wie im Dashboard-Symbol-Switcher.
+const SYMBOLS = ["GBPUSD", "EURUSD"];
 const POLL_MS = 15_000;
 
 const currentSymbol = ref("GBPUSD");

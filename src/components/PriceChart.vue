@@ -32,7 +32,7 @@ import { useTabScopedRef } from "../composables/useTabScopedRef.js";
 
 // lightweight-charts' native LineSeries-Option lineWidth erwartet eine kleine Ganzzahl (1-4), anders
 // als die Linienstärke unserer eigenen Primitives (liquidity.js/marketStructureAnalysis.ts/...), die
-// jeden positiven Zahlenwert akzeptieren — daher hier gerundet+geclampt, nur für CVD/EMA (die
+// jeden positiven Zahlenwert akzeptieren — daher hier gerundet+geclampt, nur für EMA/RSI (die
 // einzigen nativen Serien mit konfigurierbarer Linienstärke, siehe chartLineWidths.js).
 function nativeLineWidth(key) {
   return Math.min(4, Math.max(1, Math.round(lineWidth(key))));
@@ -41,15 +41,7 @@ import { selectActiveMetadataSections, earliestRelevantTime, saveDebugMetadataSe
 import { useLastDataExport } from "../composables/useLastDataExport.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import { renderClaudeAnnotations, annotationAnchorPoint, ANNOTATION_COLOR as CLAUDE_ANNOTATION_COLOR } from "../claudeAnnotations.js";
-import {
-  binanceIntervalFor,
-  fetchInitialDeltas,
-  fetchDailyDeltas,
-  fetchOlderDeltas,
-  mergeRecentDeltas,
-  cumulativeFromDeltas,
-} from "../cvd.js";
-import { okxBarFor, barSecondsFor, REPLAY_LOOKAHEAD_SEC } from "../timeframes.js";
+import { barSecondsFor, REPLAY_LOOKAHEAD_SEC } from "../timeframes.js";
 import {
   fetchInitialCandles as fetchInitialForexCandles,
   fetchRecentCandles as fetchRecentForexCandles,
@@ -62,7 +54,6 @@ import { kindLabel as targetKindLabel } from "../tradeTargets";
 import { kindLabel as confirmationKindLabel } from "../tradeConfirmations";
 import { useStatusBar } from "../composables/useStatusBar.js";
 import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
-import Gauge from "./Gauge.vue";
 import MetadataPanel from "./MetadataPanel.vue";
 import JsonTree from "./JsonTree.vue";
 import RsiDivergenceStatsPanel from "./RsiDivergenceStatsPanel.vue";
@@ -136,7 +127,6 @@ const props = defineProps({
   // auch ausblenden, TSC ist einzige Ausnahme" — siehe refreshTradeMarkersInternal/
   // refreshTradeSetupLinksInternal/refreshTradeTargetLinksInternal).
   showTrades: { type: Boolean, default: true },
-  poiZones: { type: Array, default: () => [] },
   // Ersetzt seit Chat 2026-07-30 den einzelnen showOrderBlocks-Schalter (Bug-Report Philip: "wenn
   // ich Indikatoren > OBs im M5 anhabe, werden mir ganz viele M5 OBs angezeigt" — showOrderBlocks
   // folgte bei Forex bisher IMMER dem gerade angezeigten Chart-Timeframe, nie mehrere gleichzeitig).
@@ -248,41 +238,27 @@ const emit = defineEmits([
   "pin-context-menu",
 ]);
 
-// CVD (Binance-Futures-Orderflow) gibt es nur für BTC-USDT — für Forex-Symbole (cTrader)
-// bleiben Gauges/CVD-Pane komplett weg statt leer. Der Wert steht bei onMounted fest:
-// Dashboard.vue rendert <PriceChart :key="symbol">, ein Symbolwechsel montiert die
-// Komponente also neu, statt dieses Flag zur Laufzeit umzuschalten.
-const isForex = props.symbol !== "BTC-USDT";
-
-const OKX_BASE_URL = "https://www.okx.com";
-const INST_ID = "BTC-USDT";
-// Bug-Report Philip 2026-07-30: Scroll-Back im BTC-M5-Chart blieb nach einem Nachladen für den
-// Rest der Session hängen, ohne Fehler/weiteren Request. Ursache: fetchCandlePage() (hier) UND
-// cvd.js' Binance-Fetch liefen beide OHNE Timeout — anders als forexCandles.js (siehe dort:
-// AbortSignal.timeout), das jeden Fetch schon immer so absichert. Hängt einer der beiden parallel
-// per Promise.all() laufenden Scroll-Back-Fetches (siehe subscribeVisibleLogicalRangeChange unten)
-// auf unbestimmte Zeit (Netzwerk-Stall, kein Fehler, keine Antwort), erreicht der Code nie
-// `finally` -> `loadingOlder` bleibt für immer true, jeder weitere Scroll-Versuch wird schon in der
-// ersten Guard-Zeile stillschweigend abgewiesen. Ein harter Timeout macht ein Hängenbleiben
-// stattdessen zu einem normalen, gefangenen Fehler.
+// Bug-Report Philip 2026-07-30: Scroll-Back im Chart blieb nach einem Nachladen für den
+// Rest der Session hängen, ohne Fehler/weiteren Request. Ursache: ein Fetch lief ohne Timeout —
+// anders als forexCandles.js (siehe dort: AbortSignal.timeout), das jeden Fetch schon immer so
+// absichert. Hängt einer der parallel per Promise.all() laufenden Scroll-Back-Fetches (siehe
+// subscribeVisibleLogicalRangeChange unten) auf unbestimmte Zeit (Netzwerk-Stall, kein Fehler,
+// keine Antwort), erreicht der Code nie `finally` -> `loadingOlder` bleibt für immer true, jeder
+// weitere Scroll-Versuch wird schon in der ersten Guard-Zeile stillschweigend abgewiesen. Ein
+// harter Timeout macht ein Hängenbleiben stattdessen zu einem normalen, gefangenen Fehler.
 const FETCH_TIMEOUT_MS = 20_000;
-const POLL_MS = 12_000; // nur noch für die BTC-CVD-Gauges (windowGaugeTimer/dailyGaugeTimer) — die
-// Haupt-Kerzen pollen seit Chat 2026-07-20 nicht mehr fest im 12s-Takt, siehe scheduleNextPoll.
-const RECENT_PAGE_SIZE = 300; // OKX max per call on /market/candles
-// Forex-Pendant zu RECENT_PAGE_SIZE, aber bewusst viel kleiner (siehe Chat 2026-07-20: "unnötige
-// cTrader Aufrufe") — RECENT_PAGE_SIZE ist ein OKX-Seitenlimit, kein Forex-Bedarf: pollRecent
-// braucht pro Tick nur die 1-2 Kerzen, die sich seit dem letzten Poll geändert haben können,
-// mergeRecent() ersetzt ohnehin nur den Schwanz von allCandles. 10 als Puffer für einen verpassten
-// Poll (z.B. Tab im Hintergrund gedrosselt) — pro cTrader-Connect trotzdem 30x weniger Daten.
-const RECENT_PAGE_SIZE_FOREX = 10;
+// pollRecent() braucht pro Tick nur die 1-2 Kerzen, die sich seit dem letzten Poll geändert haben
+// können, mergeRecent() ersetzt ohnehin nur den Schwanz von allCandles. 10 als Puffer für einen
+// verpassten Poll (z.B. Tab im Hintergrund gedrosselt) — pro cTrader-Connect trotzdem deutlich
+// weniger Daten als ein voller Seiten-Fetch (siehe Chat 2026-07-20: "unnötige cTrader Aufrufe").
+const RECENT_PAGE_SIZE = 10;
 // An den Kerzenschluss ausgerichtetes Polling statt fester Intervall-Taktung (siehe Chat
 // 2026-07-20: "die wackelt immer in die falsche Richtung ... mir reicht pro M1 Kerzenschluss ...
 // wichtig ist bloß, dass M1 Kerzen sofort da sind, wenn sie schließen, nicht 30s zu spät"). Kleiner
 // Puffer nach der erwarteten Schlusszeit, bis die frisch geschlossene Kerze beim Broker/Backend
 // ankommt (siehe scheduleNextPoll) — lieber knapp nach dem Schluss pollen als knapp davor.
 const CLOSE_POLL_BUFFER_MS = 2_000;
-const HISTORY_PAGE_SIZE = 100; // OKX max per call on /market/history-candles
-// Forex-Scroll-Back (Chat 2026-08-09, Philip: "sollen mehr Candles geholt werden als 100"): seit
+// Scroll-Back (Chat 2026-08-09, Philip: "sollen mehr Candles geholt werden als 100"): seit
 // forexCandles.js' fetchOlderCandles zuerst das DB-Archiv (forex_candles) versucht, ist ein
 // größerer count fürs Archiv praktisch kostenlos (Postgres liefert ein paar tausend Zeilen in
 // einem Call problemlos) — deckt damit gleich mehrere Handelstage pro Scroll-Back-Schritt ab statt
@@ -306,7 +282,6 @@ const INITIAL_CANDLE_COUNT = 1000; // depth loaded on startup / timeframe switch
 // weil sich der Wert aus TRADE_SETUP_M5_CANDLE_COUNT ableitet und für alle Timeframes gleich sein
 // soll.
 const LAZY_LOAD_LOGICAL_THRESHOLD = 20; // fetch older data once this close to the left edge
-const WINDOW_BARS = 15; // letzte 15 Binance-1m-Kerzen für das rollierende Gauge-Fenster
 const TRADE_MARKER_BARS = new Set(["1m", "5m", "15m", "1h"]); // 4h/1D würden zu unübersichtlich
 // Pin-Rechtsklick (Chat 2026-08-01, zweite Runde) — großzügiger Fang-Radius statt exaktem
 // Treffen, siehe findNearbyPinCandidates. MAX_CANDIDATES deckelt die Auswahl-Liste, damit ein
@@ -368,14 +343,10 @@ const TREND_ANALYSIS_CANDLE_COUNT = 1000;
 // BEIDE Perioden (5 und 2) großzügig genug, kein separater Puffer je Periode nötig.
 const RANGES_CANDLE_BUFFER = 20;
 
-// OB-Timeframe-Toggles (Chat 2026-07-30) — 1H (Forex: rangesH1Candles, BTC: props.poiZones) und M5
-// (Forex: tradeSetupM5Candles, läuft für Forex ohnehin schon immer) brauchen KEINEN eigenen Fetch,
-// die Kerzen sind für andere Features bereits da bzw. kommen fertig vom Backend. Nur diese zwei
-// Fälle haben sonst wirklich nichts, das ihre Kerzen laden würde:
-// - 4H bei Forex (kein anderes Feature braucht 4H-Kerzen)
-// - M5 bei BTC (BTC hat weder Trade-Setups noch TSC, die M5 bräuchten)
+// OB-Timeframe-Toggle 4H (Chat 2026-07-30) — 1H (rangesH1Candles) und M5 (tradeSetupM5Candles,
+// läuft ohnehin schon immer) brauchen KEINEN eigenen Fetch, die Kerzen sind für andere Features
+// bereits da. Nur 4H hat sonst wirklich nichts, das seine Kerzen laden würde.
 const OBS_4H_CANDLE_COUNT = 300; // ≈ 50 Tage, großzügig fürs Erkennen auch länger unberührter Zonen
-const OBS_M5_BTC_CANDLE_COUNT = 2500; // wie TRADE_SETUP_M5_CANDLE_COUNT, gleiche Größenordnung
 
 // EMA 50/200 auf M5 (siehe Chat: Philips "Trend über EMA + Anzahl protected highs/lows"-Idee) —
 // läuft auf trendAnalysisM5Candles (dieselbe M5-Historie wie der Zigzag-Algo), kein eigener Fetch
@@ -383,11 +354,9 @@ const OBS_M5_BTC_CANDLE_COUNT = 2500; // wie TRADE_SETUP_M5_CANDLE_COUNT, gleich
 const EMA_PERIOD_FAST = 50;
 const EMA_PERIOD_SLOW = 200;
 
-// RSI(14)-Panel (Chat 2026-08-11) — eigene Pane unterhalb des Candlestick-Charts wie CVD. CVD
-// belegt Pane-Index 1 nur bei BTC (siehe unten, isForex-Verzweigung), RSI kommt danach: bei Forex
-// direkt Pane 1 (kein CVD da), bei BTC Pane 2. positionGauges() (siehe dort) verlässt sich
-// weiterhin auf Pane-Index 1 = CVD bei BTC — RSI_PANE_INDEX daher bewusst NACH der CVD-Pane.
-const RSI_PANE_INDEX = isForex ? 1 : 2;
+// RSI(14)-Panel (Chat 2026-08-11) — eigene Pane unterhalb des Candlestick-Charts, direkt Pane 1
+// (Pane 0 ist die Candlestick-Pane selbst).
+const RSI_PANE_INDEX = 1;
 
 const { markSuccess } = useStatusBar();
 const { lastDataExport } = useLastDataExport();
@@ -402,9 +371,6 @@ const chartContainerRef = ref(null);
 // eine lebende Instanz gleichzeitig, die neue liest beim Mount einfach den zuletzt geschriebenen
 // Wert erneut aus session-/localStorage).
 const chartWrapperHeight = useTabScopedRef("chartWrapperHeight", 675);
-const gaugesBottom = ref(12);
-const windowDelta = ref(0);
-const dailyDelta = ref(0);
 // pivotForDisplay/summarizeMarketStructureState kommen seit Chat 2026-07-27 aus
 // marketStructureAnalysis.ts (Daten-Export braucht dieselbe Aufbereitung, siehe
 // dataExport.js) — hier nur noch der reaktive State drumherum.
@@ -464,7 +430,6 @@ onUnmounted(() => clearInterval(debugAutosaveTimer));
 // nie ein Template, nur Chart-Methodenaufrufe.
 let chart;
 let candleSeries;
-let cvdSeries;
 let ema50Series;
 let ema200Series;
 let rsiSeries;
@@ -502,7 +467,6 @@ let tradeSetupPrimitives = [];
 let claudeAnnotationPrimitives = [];
 let claudeAnnotationPriceLines = [];
 let allCandles = [];
-let allCvdDeltas = [];
 let tradeSetupM5Candles = [];
 let currentTradeSetups = [];
 // TSC-Fokus (Chat 2026-07-27: "TSC soll das anzeigen, was ich grad im Fokus hab") — überschreibt,
@@ -524,13 +488,10 @@ let rangesPivots2 = null; // roh (mit pivotTime), eingebettete Periode 2 (siehe 
 let loadInitialFetchSeq = 0;
 let rangesFetchSeq = 0;
 let tradeSetupM5FetchSeq = 0;
-let obs4hCandles = []; // nur Forex, siehe OBS_4H_CANDLE_COUNT oben
+let obs4hCandles = []; // siehe OBS_4H_CANDLE_COUNT oben
 let obs4hFetchSeq = 0;
-let obsM5BtcCandles = []; // nur BTC, siehe OBS_M5_BTC_CANDLE_COUNT oben
-let obsM5BtcFetchSeq = 0;
 let loadingOlder = false;
 let reachedHistoryStart = false;
-let reachedCvdHistoryStart = false;
 // Bug-Report Philip 2026-08-09: Scroll-Back-Nachladen (siehe subscribeVisibleLogicalRangeChange
 // unten) hängt bei einem cTrader-Timeout unauffällig fest — der Fehler landet nur in der Konsole,
 // der User sieht bloß leere Fläche links im Chart und muss zufällig nochmal scrollen, damit der
@@ -544,9 +505,6 @@ let pollTimer = null;
 let tradeSetupM5PollTimer = null;
 let rangesPollTimer = null;
 let obs4hPollTimer = null;
-let obsM5BtcPollTimer = null;
-let windowGaugeTimer = null;
-let dailyGaugeTimer = null;
 // Für das RSI-Divergenz-Statistik-Panel (Chat 2026-08-11, vierte Runde) — { divergences (inkl.
 // Outcome-Klassifikation), lookbackBars, lookforwardBars } oder null, wenn der Toggle aus ist
 // bzw. gerade keine Divergenzen vorliegen. Befüllt in refreshRsiDivergenceInternal, analog zu
@@ -620,11 +578,11 @@ function setCalloutChipEl(id, el) {
   else delete claudeCalloutChipEls[id];
 }
 
-// TSC-Karte gerade sichtbar? (siehe TradeSetupCockpit.vue: v-if="isForex" außen, v-if="state"
-// innen — cockpitState wird von refreshCockpitInternal() bereits auf null gesetzt, wenn
-// showTradeSetupCockpit aus ist, die Bedingung hier ist also strenggenommen redundant, aber
-// explizit robuster gegen künftige Änderungen an refreshCockpitInternal.)
-const tscCalloutModeActive = computed(() => isForex && props.showTradeSetupCockpit && cockpitState.value != null);
+// TSC-Karte gerade sichtbar? (siehe TradeSetupCockpit.vue: v-if="state" innen — cockpitState wird
+// von refreshCockpitInternal() bereits auf null gesetzt, wenn showTradeSetupCockpit aus ist, die
+// Bedingung hier ist also strenggenommen redundant, aber explizit robuster gegen künftige
+// Änderungen an refreshCockpitInternal.)
+const tscCalloutModeActive = computed(() => props.showTradeSetupCockpit && cockpitState.value != null);
 
 // Nur die Abschnitte der gerade angetoggelten Features (siehe Chat 2026-07-20: "nur metadaten von
 // den features im Menü, wenn sie angetoggelt sind") — damit bleibt der kopierte JSON-Blob fokussiert
@@ -738,71 +696,6 @@ function crosshairTimeFormatter(time) {
   return `${d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" })} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
-// Gauges an die untere rechte Ecke der Kerzen-Pane pinnen, direkt oberhalb der CVD-Pane —
-// sonst überlappen sie deren Preisskala/Legende. Seit dem RSI-Panel (Chat 2026-08-11) ist CVD
-// bei BTC nicht mehr zwingend die unterste Pane (RSI kann darunter sitzen, siehe RSI_PANE_INDEX)
-// — dessen Höhe muss mit in den Offset, sonst überlappen die Gauges die RSI-Pane (Bug-Report beim
-// Testen: Gauges lagen über der RSI-Preisskala, wenn RSI bei BTC eingeschaltet war).
-function positionGauges() {
-  const cvdPane = chart.panes()[1];
-  if (!cvdPane) return;
-  const rsiPane = chart.panes()[RSI_PANE_INDEX];
-  gaugesBottom.value = cvdPane.getHeight() + (rsiPane?.getHeight() ?? 0) + 12;
-}
-
-// OKX-Pagination: "after" liefert Kerzen VOR diesem Timestamp (ms) — für ältere Daten.
-async function fetchCandlePage(endpoint, bar, { after, limit } = {}) {
-  const params = new URLSearchParams({ instId: INST_ID, bar, limit: String(limit) });
-  if (after) params.set("after", after);
-  const res = await fetch(`${OKX_BASE_URL}${endpoint}?${params}`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  if (json.code !== "0") throw new Error(`OKX error ${json.code}: ${json.msg}`);
-  return json.data.map((row) => ({
-    time: Math.floor(Number(row[0]) / 1000),
-    open: Number(row[1]),
-    high: Number(row[2]),
-    low: Number(row[3]),
-    close: Number(row[4]),
-  })); // neueste zuerst
-}
-
-// Holt die letzten `count` Kerzen über mehrere Seiten von /market/candles (recent-Fenster).
-// toMs (optional): Startpunkt für die erste Seite statt "jetzt" — siehe replayToMs()/loadInitial,
-// sonst reicht ein fester count im Replay-Modus bei TF-Wechsel ggf. nicht bis replayUntil zurück
-// (siehe Chat 2026-07-19: "1h auf M5 gewechselt und sehe keinen Chart").
-async function fetchInitialCandles(bar, count, toMs) {
-  let all = [];
-  let after = toMs ? String(toMs) : undefined;
-  while (all.length < count) {
-    const page = await fetchCandlePage("/api/v5/market/candles", bar, { after, limit: RECENT_PAGE_SIZE });
-    if (page.length === 0) break;
-    all = all.concat(page);
-    after = String(page[page.length - 1].time * 1000);
-    if (page.length < RECENT_PAGE_SIZE) break;
-  }
-  return all.reverse(); // älteste zuerst
-}
-
-// Für Scroll-Back über das recent-Fenster hinaus: /market/history-candles.
-// Bug-Report Philip 2026-07-30 ("Scroll-Back bleibt hängen"): die eigentliche Ursache war ein
-// fehlender Timeout auf diesem Fetch, siehe FETCH_TIMEOUT_MS oben. Der Retry hier ist eine
-// ZUSÄTZLICHE, kleinere Absicherung: ein leeres data:[] von OKX wurde bisher 1:1 als "Anfang der
-// Historie erreicht" gewertet (siehe reachedHistoryStart im visibleLogicalRangeChange-Handler) —
-// EINMAL leer sollte das nicht permanent bedeuten (BTC-USDT hat nachweislich noch Jahre an Historie
-// vor jedem realistischen Scroll-Back-Punkt), ein zweiter Versuch nach kurzer Pause unterscheidet
-// einen echten Erreichen-des-Datenanfangs von einem einzelnen Aussetzer, kostet im Normalfall
-// (Daten vorhanden) keinen zusätzlichen Request.
-async function fetchOlderCandles(bar, oldestLoadedTime) {
-  const params = { after: String(oldestLoadedTime * 1000), limit: HISTORY_PAGE_SIZE };
-  let page = await fetchCandlePage("/api/v5/market/history-candles", bar, params);
-  if (page.length === 0) {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    page = await fetchCandlePage("/api/v5/market/history-candles", bar, params);
-  }
-  return page.filter((c) => c.time < oldestLoadedTime).reverse(); // älteste zuerst
-}
-
 function mergeRecent(existing, freshRecent) {
   if (existing.length === 0 || freshRecent.length === 0) return freshRecent;
   const freshStart = freshRecent[0].time;
@@ -845,10 +738,9 @@ function isTimeCovered(candles, time, barSeconds) {
 // 12 Tagen Lookback + Replay nicht weit genug zurück"). loadRangesCandles/loadTradeSetupM5/-H1
 // übergeben das hier an fetchInitialForexCandles, damit der Fetch selbst schon bis replayUntil
 // zurückreicht statt erst hinterher (zu kurz) geclippt zu werden.
-// bar (Forex-Aufrufe): siehe replayFetchToMs in chartTimeUtils.js — cTrader liefert die Kerze GENAU
-// an replayUntil sonst strukturell nie mit (Bug-Report Philip 2026-07-21: "letzte Kerze nur 22:00
-// statt 23:00", "+1 Kerze" brachte deshalb nie die neu angeforderte Kerze). OKX/BTC-Aufrufe lassen
-// bar bewusst weg (kein bekanntes Analogon zu diesem cTrader-Verhalten).
+// bar: siehe replayFetchToMs in chartTimeUtils.js — cTrader liefert die Kerze GENAU an replayUntil
+// sonst strukturell nie mit (Bug-Report Philip 2026-07-21: "letzte Kerze nur 22:00 statt 23:00",
+// "+1 Kerze" brachte deshalb nie die neu angeforderte Kerze).
 function replayToMs(bar) {
   return replayFetchToMs(props.replayUntil, bar);
 }
@@ -882,7 +774,7 @@ function refreshTradeMarkersInternal() {
 function refreshTradeSetupLinksInternal() {
   for (const p of tradeSetupLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeSetupLinkPrimitives.length = 0;
-  if (!isForex || !props.showTradeSetups || !props.showTrades) return;
+  if (!props.showTradeSetups || !props.showTrades) return;
   const candles = clipReplay(allCandles);
   const drawnTradeSetupIds = new Set();
   for (const t of tradesVisibleForCandles(props.trades, candles)) {
@@ -991,7 +883,7 @@ function firstCandleTouch(candles, sourceTime, price) {
 }
 // Bug-Report Philip 2026-08-07 (OB 1,3466 #29, dealing_range #27 vom 03.08.): eine OB-Box ohne
 // touchedTime UND ohne live wiederfindbare Zone (liveObZoneState) zog sich komplett durch den
-// Chart bis "jetzt" — die schmale M5-Live-Lookback (~25h, tradeSetupM5Candles/obsM5BtcCandles,
+// Chart bis "jetzt" — die schmale M5-Live-Lookback (~25h, tradeSetupM5Candles,
 // Twelve-Data-Rate-Limit-bedingt bewusst eng gehalten) enthält eine 4 Tage alte Zone gar nicht
 // mehr, liveObZoneState findet sie darum nie wieder, egal wie oft neu gerendert wird — anders als
 // bei firstCandleTouch oben (Bug-Report 2026-07-30) gab es für die Box-Variante bisher GAR KEINEN
@@ -1333,45 +1225,30 @@ function filterHistorical(zones) {
   return props.showHistoricalObs ? zones : zones.filter((z) => !z.touched);
 }
 
-// BTC-Zonen für EIN Timeframe aus props.poiZones (poi-watcher-Backend, `ob_zones`) — im
-// Replay-Modus zusätzlich auf Zonen bis replayUntil beschränkt, damit nicht schon Zonen auftauchen,
-// die "in der Zukunft" (relativ zum Replay-Stand) erst entdeckt wurden.
-function filterBtcObsZones(timeframe) {
-  const byTf = props.poiZones.filter((z) => z.timeframe === timeframe);
-  return props.replayUntil == null ? byTf : byTf.filter((z) => z.startTime <= props.replayUntil);
-}
-
 // Sammelt die Zonen aller AKTIVIERTEN Timeframe-Toggles (Chat 2026-07-30: "Indikatoren > OBs" bekam
-// unabhängige M5-/1H-/4H-Checkboxen statt eines einzelnen showOrderBlocks-Schalters, der bei Forex
-// bisher immer nur den gerade angezeigten Chart-Timeframe zeigte). BTC nutzt für 1H/4H fertige
-// Zonen aus dem Backend (props.poiZones), Forex erkennt live aus den jeweils passenden Kerzen —
-// 1H/M5 laufen dafür auf Kerzen mit, die ohnehin schon für andere Features geladen werden
-// (rangesH1Candles/tradeSetupM5Candles), nur 4H (Forex) und M5 (BTC) haben einen eigenen, neuen
-// Fetch (siehe loadObs4hCandles/loadObsM5BtcCandles unten).
+// unabhängige M5-/1H-/4H-Checkboxen statt eines einzelnen showOrderBlocks-Schalters, der bisher
+// immer nur den gerade angezeigten Chart-Timeframe zeigte). 1H/M5 laufen auf Kerzen mit, die
+// ohnehin schon für andere Features geladen werden (rangesH1Candles/tradeSetupM5Candles), nur 4H
+// hat einen eigenen, neuen Fetch (siehe loadObs4hCandles unten).
 function collectObsZones() {
   const zones = [];
   if (props.showObs4h) {
     zones.push(
-      ...(isForex
-        ? detectOrderBlocks(clipReplay(obs4hCandles), "4H", true)
-            .filter((z) => !z.invalidated)
-            .map((z) => ({ ...z, timeframe: "4H" }))
-        : filterBtcObsZones("4H")),
+      ...detectOrderBlocks(clipReplay(obs4hCandles), "4H", true)
+        .filter((z) => !z.invalidated)
+        .map((z) => ({ ...z, timeframe: "4H" })),
     );
   }
   if (props.showObs1h) {
     zones.push(
-      ...(isForex
-        ? detectOrderBlocks(clipReplay(rangesH1Candles), "1H", true)
-            .filter((z) => !z.invalidated)
-            .map((z) => ({ ...z, timeframe: "1H" }))
-        : filterBtcObsZones("1H")),
+      ...detectOrderBlocks(clipReplay(rangesH1Candles), "1H", true)
+        .filter((z) => !z.invalidated)
+        .map((z) => ({ ...z, timeframe: "1H" })),
     );
   }
   if (props.showObsM5) {
-    const m5Candles = isForex ? tradeSetupM5Candles : obsM5BtcCandles;
     zones.push(
-      ...detectOrderBlocks(clipReplay(m5Candles), "5m", isForex)
+      ...detectOrderBlocks(clipReplay(tradeSetupM5Candles), "5m", true)
         .filter((z) => !z.invalidated)
         .map((z) => ({ ...z, timeframe: "5M" })),
     );
@@ -1386,11 +1263,10 @@ function collectObsZones() {
 // Klick-Zeitpunkt). Sucht die Original-Zone anhand ihrer beim Klick festgehaltenen Kanten
 // (rangeLow/rangeHigh) in der GERADE live neu erkannten Zonen-Liste derselben Zeitebene — bewusst
 // unabhängig von showObs1h/-4h/-M5 (ein Target soll sichtbar bleiben, auch wenn der zugehörige
-// Live-OB-Indikator-Toggle gerade aus ist), deshalb hier direkt detectOrderBlocks/filterBtcObsZones
-// statt collectObsZones.
+// Live-OB-Indikator-Toggle gerade aus ist), deshalb hier direkt detectOrderBlocks statt
+// collectObsZones.
 function liveObZonesForTimeframe(timeframe) {
-  if (timeframe === "5M") return detectOrderBlocks(clipReplay(isForex ? tradeSetupM5Candles : obsM5BtcCandles), "5m", isForex);
-  if (!isForex) return filterBtcObsZones(timeframe);
+  if (timeframe === "5M") return detectOrderBlocks(clipReplay(tradeSetupM5Candles), "5m", true);
   return detectOrderBlocks(clipReplay(timeframe === "1H" ? rangesH1Candles : obs4hCandles), timeframe, true);
 }
 
@@ -1432,10 +1308,9 @@ function refreshPoiZonesInternal() {
   poiZonesMetadata.value = visibleZones;
 }
 
-// Liquiditäts-Level (Fractal-Pivots, siehe tv-indikator/src/liquidity.pine) gibt es
-// bisher für kein Symbol aus dem Backend — anders als die BTC-OB-Zonen (`ob_zones`)
-// deshalb hier für beide (BTC + Forex) direkt aus den geladenen Kerzen des aktuellen
-// Chart-Timeframes neu erkannt, analog zur Forex-OB-Erkennung oben.
+// Liquiditäts-Level (Fractal-Pivots, siehe tv-indikator/src/liquidity.pine) gibt es bisher nicht
+// aus dem Backend — deshalb hier direkt aus den geladenen Kerzen des aktuellen Chart-Timeframes
+// neu erkannt, analog zur OB-Erkennung oben.
 // `showSweptLiquidity` zeigt ALLE erkannten M5-Pivots ungefiltert (kein filterRelevantLevels,
 // keine maxRelevant-Deckelung) — auch längst berührte. Für die Trendanalyse-Diskussion mit
 // Philip: er braucht wirklich jeden Pivot sichtbar, nicht nur die 10 neuesten je Richtung, die
@@ -1524,10 +1399,10 @@ function refreshSessionsInternal() {
   });
 }
 
-// Vertikale News-Marker (Chat 2026-07-26) — nur Forex (News-Events gibt es nur für EUR/GBP/USD,
-// siehe newsEvents.js), analog zu refreshCockpitInternal/refreshSessionsInternal oben.
+// Vertikale News-Marker (Chat 2026-07-26) — News-Events gibt es nur für EUR/GBP/USD, siehe
+// newsEvents.js.
 function refreshNewsMarkersInternal() {
-  if (!isForex || !candleSeries) return; // watch(newsEvents) kann vor dem ersten Chart-Mount feuern (Store lädt schon bei Modul-Import)
+  if (!candleSeries) return; // watch(newsEvents) kann vor dem ersten Chart-Mount feuern (Store lädt schon bei Modul-Import)
   const candles = clipReplay(allCandles);
   let relevant = props.showNews ? newsEventsForInstrument(newsEvents, props.symbol) : [];
   // Zukünftige Termine bis zum Ende des aktuellen/Replay-Tages zeigen, weiter Entferntes ausblenden
@@ -1665,12 +1540,11 @@ function refreshMarketStructureInternal() {
 
 // Trade-Setup-Cockpit (siehe Chat 2026-07-19) — reine Zusammenfassung, liest marketStructureState.value
 // und currentTradeSetups direkt aus der Closure (dieselbe Liste, die renderTradeSetupsInternal schon
-// positioniert) — kein eigener Fetch/eigene Erkennung. Nur für Forex (wie Ranges/Trade-Setups
-// selbst). Wird sowohl von refreshMarketStructureInternal als auch von loadTradeSetupM5/-H1 direkt
-// aufgerufen (siehe dort), nicht erst über den nächsten refreshChart() — sonst hinkt die Karte den
-// eigentlich schon fertigen Daten hinterher.
+// positioniert) — kein eigener Fetch/eigene Erkennung. Wird sowohl von refreshMarketStructureInternal
+// als auch von loadTradeSetupM5/-H1 direkt aufgerufen (siehe dort), nicht erst über den nächsten
+// refreshChart() — sonst hinkt die Karte den eigentlich schon fertigen Daten hinterher.
 function refreshCockpitInternal() {
-  if (!isForex || !chart) return; // async loadTradeSetupM5/-H1 können nach unmount noch abschließen
+  if (!chart) return; // async loadTradeSetupM5/-H1 können nach unmount noch abschließen
   const candles = clipReplay(allCandles);
   if (!props.showTradeSetupCockpit || candles.length === 0) {
     cockpitState.value = null;
@@ -1681,7 +1555,7 @@ function refreshCockpitInternal() {
   // sessions.danger fürs aktuelle Instrument/JETZT — erster automatischer No-Go/Anti-Confluence-
   // Input (Chat 2026-07-26, siehe computeCockpitState in tradeSetupCockpit.ts). Gleicher
   // instrument-Filter + tzOffsetMinutes wie refreshSessionsInternal oben, sonst würde z.B. eine
-  // BTC-Sperrzeit auch EURUSD sperren bzw. die Sommer-/Winterzeit-Umstellung falsch einfließen.
+  // GBPUSD-Sperrzeit auch EURUSD sperren bzw. die Sommer-/Winterzeit-Umstellung falsch einfließen.
   const symbolSessions = sessions.filter((s) => s.instrument === props.symbol);
   const sessionDanger = currentSessionDanger(symbolSessions, nowSec, (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset());
   // News-Events kommen fertig aus der DB (siehe newsEvents.js) — Philip trägt sie per Screenshot
@@ -1712,7 +1586,6 @@ function refreshCockpitInternal() {
 // separate cTrader-Connects) — computeRangesPivotsFor schneidet sich aus rangesH1Candles selbst
 // den für die jeweilige Periode passenden, ggf. kürzeren Ausschnitt raus.
 async function loadRangesCandles() {
-  if (!isForex) return true;
   // rangesFetchSeq schützt gegen Out-of-Order-Antworten (siehe Chat 2026-07-20: "im Replay-Modus
   // hängt der Trend-Algorithmus" — schneller mehrfacher Replay-Step feuert mehrfach diesen fetch;
   // ohne Guard kann eine ÄLTERE, aber langsamere Antwort eine NEUERE überschreiben und der Chart
@@ -1748,11 +1621,10 @@ async function loadRangesCandles() {
   }
 }
 
-// Eigener Fetch NUR für den 4H-OB-Toggle bei Forex (Chat 2026-07-30) — kein anderes Feature
-// braucht 4H-Kerzen, siehe OBS_4H_CANDLE_COUNT oben. Gleiches Out-of-Order-/Poll-Muster wie
+// Eigener Fetch NUR für den 4H-OB-Toggle (Chat 2026-07-30) — kein anderes Feature braucht
+// 4H-Kerzen, siehe OBS_4H_CANDLE_COUNT oben. Gleiches Out-of-Order-/Poll-Muster wie
 // loadRangesCandles, nur ohne die Ranges-spezifischen Lookback-Optionen (fixer Start etc.).
 async function loadObs4hCandles() {
-  if (!isForex) return true;
   const seq = ++obs4hFetchSeq;
   try {
     const candles = await fetchCandlesCached(
@@ -1788,42 +1660,6 @@ function startObs4hPolling() {
 function stopObs4hPolling() {
   clearTimeout(obs4hPollTimer);
   obs4hPollTimer = null;
-}
-
-// Eigener Fetch NUR für den M5-OB-Toggle bei BTC (Chat 2026-07-30) — BTC hat weder Trade-Setups
-// noch TSC, die schon eine M5-Historie laden würden (anders als Forex: tradeSetupM5Candles läuft
-// dort ohnehin immer). Nutzt dieselbe lokale OKX-fetchInitialCandles-Funktion wie loadInitial,
-// über okxBarFor("5m") — Twelve-Data-Rate-Limits spielen bei OKX keine Rolle, kein Cache/Debounce
-// nötig wie bei Forex.
-async function loadObsM5BtcCandles() {
-  if (isForex) return;
-  const seq = ++obsM5BtcFetchSeq;
-  try {
-    const toMs = replayToMs("5m");
-    const candles = await fetchInitialCandles(okxBarFor("5m"), OBS_M5_BTC_CANDLE_COUNT, toMs);
-    if (seq !== obsM5BtcFetchSeq) return;
-    obsM5BtcCandles = candles;
-    refreshPoiZonesInternal();
-  } catch (err) {
-    console.error("BTC-M5-OB-Kerzen fehlgeschlagen:", err);
-  }
-}
-function scheduleNextObsM5BtcPoll() {
-  clearTimeout(obsM5BtcPollTimer);
-  const barMs = barSecondsFor("5m") * 1000;
-  const delay = barMs - (Date.now() % barMs) + CLOSE_POLL_BUFFER_MS;
-  obsM5BtcPollTimer = setTimeout(async () => {
-    if (props.replayUntil == null) await loadObsM5BtcCandles();
-    if (chart) scheduleNextObsM5BtcPoll();
-  }, delay);
-}
-function startObsM5BtcPolling() {
-  loadObsM5BtcCandles();
-  scheduleNextObsM5BtcPoll();
-}
-function stopObsM5BtcPolling() {
-  clearTimeout(obsM5BtcPollTimer);
-  obsM5BtcPollTimer = null;
 }
 
 // showRanges (Marker im Chart) und showRangesMetadata (JSON-Panel) sind getrennte Toggles, teilen
@@ -2107,7 +1943,7 @@ function renderTradeSetupsInternal() {
   if (!chart) return;
   for (const p of tradeSetupPrimitives) candleSeries.detachPrimitive(p);
   tradeSetupPrimitives.length = 0;
-  if (!isForex || !props.showTradeSetups) return;
+  if (!props.showTradeSetups) return;
   const candles = clipReplay(allCandles);
   // Preis-Labels an Fraktal-/LS-Linie, nur bei aktivem Debug-Toggle (Chat 2026-07-26: "ich tu mir
   // schwer beim debuggen ... bitte die Preiszahlen hinschreiben") — dasselbe Muster wie die
@@ -2211,7 +2047,6 @@ function renderTradeSetupsInternal() {
 // Deshalb hier zusätzlich zum Toggle gegen props.currentBar geprüft — daher jetzt auch bei jedem
 // TF-Wechsel über refreshChart() aufgerufen, nicht mehr nur bei loadTradeSetupM5/watch(showEma).
 function refreshEmaInternal() {
-  if (!isForex) return;
   if (!props.showEma || props.currentBar !== "5m" || trendAnalysisM5Candles.length === 0) {
     ema50Series?.setData([]);
     ema200Series?.setData([]);
@@ -2225,8 +2060,7 @@ function refreshEmaInternal() {
 // RSI(14) — anders als EMA oben bewusst auf allCandles (dem gerade angezeigten Chart-Timeframe),
 // kein eigener Fetch nötig. Series+Pane werden hier erst bei Bedarf angelegt/entfernt (siehe
 // Kommentar an der ursprünglichen addSeries-Stelle im onMounted-Block) statt permanent zu
-// existieren und nur leerzulaufen wie ema50Series/ema200Series — echtes chart.removePane()
-// vermeidet die Interferenz mit CVDs eigener Stretch-Factor-Pane bei BTC.
+// existieren und nur leerzulaufen wie ema50Series/ema200Series.
 function refreshRsiInternal() {
   if (!chart) return;
   if (!props.showRsi) {
@@ -2236,7 +2070,6 @@ function refreshRsiInternal() {
       rsiSeries = null;
       rsiOverboughtLine = null;
       rsiOversoldLine = null;
-      positionGauges(); // Pane weg -> BTC-Gauges (siehe dort) müssen nachrücken
     }
     return;
   }
@@ -2262,9 +2095,7 @@ function refreshRsiInternal() {
     // Default-Scale-Margins (10% oben/unten) würden die 0-100-Skala zusätzlich aufblähen (Achse
     // zeigte 0-120 statt 0-100) — hier eng gehalten, RSI-Linie darf ruhig nah an den Panerand.
     rsiSeries.priceScale().applyOptions({ scaleMargins: { top: 0.05, bottom: 0.05 } });
-    // Stretch-Factor statt fixer Pixel-Höhe, wie CVD (siehe chart.panes()[1]?.setStretchFactor
-    // oben) — konsistent mit CVDs eigener Pane-Größe, statt zwei verschiedene Sizing-Mechanismen
-    // in derselben Chart-Instanz zu mischen.
+    // Stretch-Factor statt fixer Pixel-Höhe für die RSI-Pane relativ zur Candlestick-Pane.
     chart.panes()[RSI_PANE_INDEX]?.setStretchFactor(0.25);
     rsiOverboughtLine = rsiSeries.createPriceLine({ price: 70, color: cssColor("rsi"), lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "70" });
     rsiOversoldLine = rsiSeries.createPriceLine({ price: 30, color: cssColor("rsi"), lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "30" });
@@ -2273,7 +2104,6 @@ function refreshRsiInternal() {
     .filter((p) => p.rsi != null)
     .map((p) => ({ time: p.time, value: p.rsi }));
   rsiSeries.setData(points);
-  positionGauges();
 }
 
 // Divergenz-Konnektoren (Chat 2026-08-11) — läuft NACH refreshRsiInternal (siehe refreshChart()),
@@ -2435,7 +2265,6 @@ async function fetchTrendAnalysisM5History(symbol, targetCount, toMs) {
 // computeTradeSetups/refreshMarketStructureInternal), das läuft am rangesH1Candles-Poll mit, kein
 // eigener H1-Fetch für Trade-Setups mehr nötig.
 async function loadTradeSetupM5() {
-  if (!isForex) return true;
   const seq = ++tradeSetupM5FetchSeq; // Out-of-Order-Guard, siehe loadRangesCandles
   try {
     const toMs = replayToMs("5m");
@@ -2492,31 +2321,13 @@ function updateLoadOlderButtonVisibility(range) {
 // beide Wege nicht unterscheiden (gleicher loadingOlder-Zustand, gleiche reachedHistoryStart-Logik).
 async function loadOlderCandlesNow() {
   if (!chart || loadingOlder || allCandles.length === 0) return;
-  if (reachedHistoryStart && reachedCvdHistoryStart) return;
+  if (reachedHistoryStart) return;
 
   loadingOlder = true;
   try {
-    const tasks = [];
-    if (!reachedHistoryStart) {
-      const olderPromise = isForex
-        ? fetchOlderForexCandles(props.symbol, props.currentBar, allCandles[0].time, FOREX_HISTORY_PAGE_SIZE)
-        : fetchOlderCandles(okxBarFor(props.currentBar), allCandles[0].time);
-      tasks.push(
-        olderPromise.then((older) => {
-          if (older.length === 0) reachedHistoryStart = true;
-          else allCandles = older.concat(allCandles);
-        }),
-      );
-    }
-    if (!reachedCvdHistoryStart && allCvdDeltas.length > 0) {
-      tasks.push(
-        fetchOlderDeltas(binanceIntervalFor(props.currentBar), allCvdDeltas[0].time).then((older) => {
-          if (older.length === 0) reachedCvdHistoryStart = true;
-          else allCvdDeltas = older.concat(allCvdDeltas);
-        }),
-      );
-    }
-    await Promise.all(tasks);
+    const older = await fetchOlderForexCandles(props.symbol, props.currentBar, allCandles[0].time, FOREX_HISTORY_PAGE_SIZE);
+    if (older.length === 0) reachedHistoryStart = true;
+    else allCandles = older.concat(allCandles);
     refreshChart();
     updateLoadOlderButtonVisibility();
   } catch (err) {
@@ -2569,8 +2380,6 @@ function refreshChart() {
   refreshEmaInternal();
   refreshRsiInternal();
   refreshRsiDivergenceInternal();
-  cvdSeries?.setData(cumulativeFromDeltas(clipReplay(allCvdDeltas)));
-  positionGauges();
   activeMetadataSnapshot.value = buildActiveMetadataSnapshot();
 }
 
@@ -2582,46 +2391,23 @@ async function loadInitial() {
   // gleichzeitig laufen haben, die out-of-order zurückkommen.
   const seq = ++loadInitialFetchSeq;
   try {
-    let candles, deltas;
     // Fester count (INITIAL_CANDLE_COUNT) reicht "bis jetzt" gerechnet nicht bei jedem Timeframe
     // gleich weit zurück (1000 M5-Kerzen ~3,5 Tage, 1000 H1-Kerzen ~41 Tage) — ohne replayToMs()
     // würde ein TF-Wechsel während eines weit zurückliegenden Replays (z.B. 1h -> M5) einen leeren
     // Kerzenbereich laden, der nach clipReplay komplett verschwindet (siehe Chat 2026-07-19: "1h
-    // auf M5 gewechselt und sehe keinen Chart"). bar nur für Forex (siehe replayToMs) — der OKX-Fetch
-    // (BTC, else-Zweig unten) bekommt bewusst KEIN bar, kein bekanntes Analogon zum cTrader-Verhalten.
-    const toMs = replayToMs(isForex ? props.currentBar : undefined);
-    if (isForex) {
-      candles = await fetchCandlesCached(
-        fetchInitialForexCandles,
-        props.symbol,
-        props.currentBar,
-        INITIAL_CANDLE_COUNT,
-        toMs,
-        REPLAY_LOOKAHEAD_SEC,
-      );
-      deltas = [];
-    } else {
-      const binanceInterval = binanceIntervalFor(props.currentBar);
-      [candles, deltas] = await Promise.all([
-        fetchCandlesCached(
-          (symbol, bar, count, ms) => fetchInitialCandles(okxBarFor(bar), count, ms),
-          props.symbol,
-          props.currentBar,
-          INITIAL_CANDLE_COUNT,
-          toMs,
-          REPLAY_LOOKAHEAD_SEC,
-        ),
-        fetchInitialDeltas(binanceInterval, INITIAL_CANDLE_COUNT).catch((err) => {
-          console.error("CVD-Historie fehlgeschlagen:", err);
-          return [];
-        }),
-      ]);
-    }
+    // auf M5 gewechselt und sehe keinen Chart").
+    const toMs = replayToMs(props.currentBar);
+    const candles = await fetchCandlesCached(
+      fetchInitialForexCandles,
+      props.symbol,
+      props.currentBar,
+      INITIAL_CANDLE_COUNT,
+      toMs,
+      REPLAY_LOOKAHEAD_SEC,
+    );
     if (seq !== loadInitialFetchSeq) return; // inzwischen überholt, siehe oben
     allCandles = candles;
-    allCvdDeltas = deltas;
     reachedHistoryStart = false;
-    reachedCvdHistoryStart = isForex; // keine CVD-Historie zum Nachladen bei Forex
     showLoadOlderButton.value = false; // frischer Datensatz, Sichtbarkeit racet sonst mit dem nächsten Scroll-Event
     refreshChart();
     markSuccess();
@@ -2654,25 +2440,9 @@ async function pollRecent() {
   // Polls verändert, ist die Antwort für einen inzwischen überholten Stand und wird verworfen.
   const seq = loadInitialFetchSeq;
   try {
-    let recent, freshDeltas;
-    if (isForex) {
-      recent = await fetchRecentForexCandles(props.symbol, props.currentBar, RECENT_PAGE_SIZE_FOREX);
-      freshDeltas = null;
-    } else {
-      const binanceInterval = binanceIntervalFor(props.currentBar);
-      [recent, freshDeltas] = await Promise.all([
-        fetchCandlePage("/api/v5/market/candles", okxBarFor(props.currentBar), { limit: RECENT_PAGE_SIZE }).then((rows) =>
-          rows.reverse(),
-        ),
-        fetchInitialDeltas(binanceInterval, RECENT_PAGE_SIZE).catch((err) => {
-          console.error("CVD-Update fehlgeschlagen:", err);
-          return null;
-        }),
-      ]);
-    }
+    const recent = await fetchRecentForexCandles(props.symbol, props.currentBar, RECENT_PAGE_SIZE);
     if (seq !== loadInitialFetchSeq) return true; // inzwischen überholt, siehe oben — kein Fehler, einfach nichts zu tun
     allCandles = mergeRecent(allCandles, recent);
-    if (freshDeltas) allCvdDeltas = mergeRecentDeltas(allCvdDeltas, freshDeltas);
     refreshChart();
     markSuccess();
     return true;
@@ -2724,24 +2494,6 @@ function scheduleNextPoll() {
   }, delay);
 }
 
-async function updateWindowGauge() {
-  try {
-    const deltas = await fetchInitialDeltas("1m", WINDOW_BARS);
-    windowDelta.value = deltas.reduce((sum, d) => sum + d.delta, 0);
-  } catch (err) {
-    console.error("Gauge (15m) fehlgeschlagen:", err);
-  }
-}
-
-async function updateDailyGauge() {
-  try {
-    const deltas = await fetchDailyDeltas();
-    dailyDelta.value = deltas.reduce((sum, d) => sum + d.delta, 0);
-  } catch (err) {
-    console.error("Gauge (Tag) fehlgeschlagen:", err);
-  }
-}
-
 onMounted(() => {
   chart = createChart(chartContainerRef.value, {
     layout: {
@@ -2781,61 +2533,42 @@ onMounted(() => {
     borderVisible: false,
     wickUpColor: cssColor("candleUp"),
     wickDownColor: cssColor("candleDown"),
-    // Default (precision 2 / minMove 0.01) passt für BTC-USD, macht Forex-Kurse (GBPUSD
-    // z.B. 1.33941) aber auf 1.34 gerundet fast nutzlos — 5 Nachkommastellen (Pipette).
-    priceFormat: isForex
-      ? { type: "price", precision: 5, minMove: 0.00001 }
-      : { type: "price", precision: 2, minMove: 0.01 },
+    // Forex-Kurse (GBPUSD z.B. 1.33941) brauchen 5 Nachkommastellen (Pipette) — der Default
+    // (precision 2 / minMove 0.01) würde sie auf 1.34 gerundet fast nutzlos machen.
+    priceFormat: { type: "price", precision: 5, minMove: 0.00001 },
   });
 
-  if (!isForex) {
-    cvdSeries = chart.addSeries(
-      LineSeries,
-      {
-        color: cssColor("cvdLine"),
-        lineWidth: nativeLineWidth("cvdLine"),
-        priceLineVisible: false,
-        lastValueVisible: true,
-        title: "CVD (Binance Futures)",
-      },
-      1, // eigene Pane unterhalb des Candlestick-Charts
-    );
-    chart.panes()[1]?.setStretchFactor(0.25);
-  }
-
-  if (isForex) {
-    // EMA 50/200 (M5) direkt in der Candlestick-Pane (keine eigene Pane, wie CVD) — sichtbar erst
-    // sobald refreshEmaInternal Daten reinschreibt (siehe watch(showEma)).
-    ema50Series = chart.addSeries(LineSeries, {
-      color: cssColor("emaFast"),
-      lineWidth: nativeLineWidth("emaFast"),
-      priceLineVisible: false,
-      lastValueVisible: false,
-      // Chat 2026-07-25: "wenn der EMA an ist, dann fokusiert die Maus den EMA, anstatt die
-      // Candles" — der Magnet-Crosshair (Default) snappt sonst auf den Datenpunkt der Serie, die
-      // dem Mauszeiger am nächsten ist, und das ist bei einer glatten EMA-Linie oft eher die EMA
-      // selbst als die Kerze. crosshairMarkerVisible:false nimmt die EMA-Serien komplett aus der
-      // Magnet-Berechnung raus, Fokus bleibt auf den Kerzen.
-      crosshairMarkerVisible: false,
-      // Kein title: lightweight-charts zeigt den title-Text als eigenes Label neben der
-      // Preisskala an, AUCH wenn lastValueVisible false ist (Bug-Report Philip 2026-07-26: "EMA
-      // 200/50 zeigt mir rechts neben der Price-Y-Skala Labels an, brauch ich nicht").
-    });
-    ema200Series = chart.addSeries(LineSeries, {
-      color: cssColor("emaSlow"),
-      lineWidth: nativeLineWidth("emaSlow"),
-      priceLineVisible: false,
-      lastValueVisible: false,
-      crosshairMarkerVisible: false,
-    });
-  }
+  // EMA 50/200 (M5) direkt in der Candlestick-Pane (keine eigene Pane) — sichtbar erst
+  // sobald refreshEmaInternal Daten reinschreibt (siehe watch(showEma)).
+  ema50Series = chart.addSeries(LineSeries, {
+    color: cssColor("emaFast"),
+    lineWidth: nativeLineWidth("emaFast"),
+    priceLineVisible: false,
+    lastValueVisible: false,
+    // Chat 2026-07-25: "wenn der EMA an ist, dann fokusiert die Maus den EMA, anstatt die
+    // Candles" — der Magnet-Crosshair (Default) snappt sonst auf den Datenpunkt der Serie, die
+    // dem Mauszeiger am nächsten ist, und das ist bei einer glatten EMA-Linie oft eher die EMA
+    // selbst als die Kerze. crosshairMarkerVisible:false nimmt die EMA-Serien komplett aus der
+    // Magnet-Berechnung raus, Fokus bleibt auf den Kerzen.
+    crosshairMarkerVisible: false,
+    // Kein title: lightweight-charts zeigt den title-Text als eigenes Label neben der
+    // Preisskala an, AUCH wenn lastValueVisible false ist (Bug-Report Philip 2026-07-26: "EMA
+    // 200/50 zeigt mir rechts neben der Price-Y-Skala Labels an, brauch ich nicht").
+  });
+  ema200Series = chart.addSeries(LineSeries, {
+    color: cssColor("emaSlow"),
+    lineWidth: nativeLineWidth("emaSlow"),
+    priceLineVisible: false,
+    lastValueVisible: false,
+    crosshairMarkerVisible: false,
+  });
 
   // RSI(14)-Panel (Chat 2026-08-11) — Series+Pane werden erst bei refreshRsiInternal() angelegt
   // (siehe dort), nicht hier fest verdrahtet: ein permanent existierendes, nur leer-genulltes
-  // RSI-Panel (analog zu CVD) hat sich beim Testen NICHT sauber mit CVDs Stretch-Factor-Pane
-  // vertragen (setHeight(0) auf einer dritten Pane verzerrte CVDs eigene 0.25-Stretch-Aufteilung,
-  // Gauges landeten mitten in der RSI-Pane) — echtes chart.removePane() beim Ausschalten umgeht
-  // das komplett, der Chart ist dann wieder exakt im alten 2-Panes-Zustand (bzw. 1 bei Forex).
+  // RSI-Panel hat sich beim Testen nicht sauber mit dem Stretch-Factor der Pane vertragen
+  // (setHeight(0) auf einer zusätzlichen Pane verzerrte die eigene 0.25-Stretch-Aufteilung) —
+  // echtes chart.removePane() beim Ausschalten umgeht das komplett, der Chart ist dann wieder
+  // exakt im alten 1-Pane-Zustand.
 
   chart.subscribeClick((param) => {
     if (!param.point || !props.tradeModeActive) return;
@@ -3086,65 +2819,51 @@ onMounted(() => {
     if (roundedWidth <= 0 || roundedHeight <= 0) return;
     chart.resize(roundedWidth, roundedHeight);
     // .chart-container ist flex:1 in .chart-wrapper und dessen einziges layoutrelevantes Kind
-    // (alle Geschwister — Gauges/TSC/Metadaten-Panels — sind position:absolute/fixed) — die
+    // (alle Geschwister — TSC/Metadaten-Panels — sind position:absolute/fixed) — die
     // beobachtete Höhe entspricht also praktisch exakt der Höhe von .chart-wrapper. Chat
     // 2026-07-30: natives CSS `resize` auf .chart-wrapper (siehe Template/Style unten) mutiert
     // dessen Höhe direkt im DOM: dieser ohnehin schon vorhandene Observer ist der einfachste Weg,
     // das Ergebnis eines Resize-Drags nach localStorage zurückzuschreiben, ohne einen zweiten,
     // eigenen ResizeObserver nur dafür zu brauchen.
     chartWrapperHeight.value = roundedHeight;
-    positionGauges();
   });
   resizeObserver.observe(chartContainerRef.value);
-  positionGauges();
 
   chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
     if (!chart || !range || allCandles.length === 0) return;
     updateLoadOlderButtonVisibility(range);
     if (loadingOlder) return;
     if (range.from > LAZY_LOAD_LOGICAL_THRESHOLD) return;
-    if (reachedHistoryStart && reachedCvdHistoryStart) return;
+    if (reachedHistoryStart) return;
     loadOlderCandlesNow();
   });
 
   loadInitial();
   scheduleNextPoll();
-  if (isForex) {
-    // Bug-Report Philip 2026-08-07 ("signal timed out" ständig, vor allem im Live-Modus): bis
-    // hierhin lösten loadInitial() oben plus loadTradeSetupM5()/startRangesPolling()/
-    // startObs4hPolling() jede für sich eine EIGENE cTrader-Verbindung (Connect+Auth-Handshake)
-    // aus, alle im selben Tick — mehrere gleichzeitige frische Handshakes gegen denselben Account
-    // waren der plausibelste Grund für die gehäuften Timeouts. Kein Entzerren mehr nötig: die
-    // Fetches laufen unverändert alle sofort los, aber `forexCandles.js` sammelt jetzt kurz
-    // gleichzeitig eingehende Requests und schickt sie als EINEN Batch-Request raus (eine
-    // gemeinsame cTrader-Verbindung statt vier, siehe dort) — Entzerren würde dem sogar im Weg
-    // stehen, weil dann nichts mehr zum Bündeln im selben Fenster ankommt.
-    loadTradeSetupM5();
-    scheduleNextTradeSetupM5Poll();
-    if (rangesNeedsData()) startRangesPolling();
-    if (props.showObs4h) startObs4hPolling();
-  }
-  if (!isForex) {
-    updateWindowGauge();
-    updateDailyGauge();
-    windowGaugeTimer = setInterval(updateWindowGauge, POLL_MS);
-    dailyGaugeTimer = setInterval(updateDailyGauge, POLL_MS);
-    if (props.showObsM5) startObsM5BtcPolling();
-  }
+  // Bug-Report Philip 2026-08-07 ("signal timed out" ständig, vor allem im Live-Modus): bis
+  // hierhin lösten loadInitial() oben plus loadTradeSetupM5()/startRangesPolling()/
+  // startObs4hPolling() jede für sich eine EIGENE cTrader-Verbindung (Connect+Auth-Handshake)
+  // aus, alle im selben Tick — mehrere gleichzeitige frische Handshakes gegen denselben Account
+  // waren der plausibelste Grund für die gehäuften Timeouts. Kein Entzerren mehr nötig: die
+  // Fetches laufen unverändert alle sofort los, aber `forexCandles.js` sammelt jetzt kurz
+  // gleichzeitig eingehende Requests und schickt sie als EINEN Batch-Request raus (eine
+  // gemeinsame cTrader-Verbindung statt vier, siehe dort) — Entzerren würde dem sogar im Weg
+  // stehen, weil dann nichts mehr zum Bündeln im selben Fenster ankommt.
+  loadTradeSetupM5();
+  scheduleNextTradeSetupM5Poll();
+  if (rangesNeedsData()) startRangesPolling();
+  if (props.showObs4h) startObs4hPolling();
   claudeCalloutRafId = requestAnimationFrame(claudeCalloutTick);
 });
 
 onUnmounted(() => {
   if (claudeCalloutRafId != null) cancelAnimationFrame(claudeCalloutRafId);
   clearTimeout(obs4hPollTimer);
-  clearTimeout(obsM5BtcPollTimer);
   // scheduleNextPoll/-TradeSetupM5Poll/-RangesPoll nutzen setTimeout statt setInterval
   // (Kerzenschluss-Ausrichtung, siehe dort) -> clearTimeout statt clearInterval.
   clearTimeout(pollTimer);
   clearTimeout(tradeSetupM5PollTimer);
   clearTimeout(rangesPollTimer);
-  clearInterval(windowGaugeTimer);
-  clearInterval(dailyGaugeTimer);
   clearTimeout(replayFetchDebounceTimer);
   resizeObserver?.disconnect();
   if (pinContextMenuHandler) chartContainerRef.value?.removeEventListener("contextmenu", pinContextMenuHandler);
@@ -3155,7 +2874,6 @@ onUnmounted(() => {
   // "Object is disposed" auszulösen.
   chart = null;
   candleSeries = null;
-  cvdSeries = null;
   ema50Series = null;
   ema200Series = null;
   rsiSeries = null;
@@ -3201,30 +2919,20 @@ watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
 // tscCalloutModeActive wechselt (TSC wird ein-/ausgeblendet, Locked-Zustand etc.) -> Canvas-Text
 // muss sofort erscheinen/verschwinden, nicht erst beim nächsten claudeAnnotations-Wechsel.
 watch(tscCalloutModeActive, refreshClaudeAnnotationsInternal);
-watch(() => props.poiZones, refreshPoiZonesInternal);
 // M5/1H/4H unabhängig an-/ausschaltbar (Chat 2026-07-30) — siehe collectObsZones. showObs1h braucht
-// zusätzlich refreshRangesPollingState (rangesNeedsData() prüft jetzt auch showObs1h), showObs4h/
-// showObsM5(BTC) starten/stoppen ihre eigene, unabhängige Poll-Pipeline (siehe loadObs4hCandles/
-// loadObsM5BtcCandles) — Forex-M5 braucht das NICHT (tradeSetupM5Candles läuft für Forex ohnehin
-// immer), daher der isForex-Guard dort.
+// zusätzlich refreshRangesPollingState (rangesNeedsData() prüft jetzt auch showObs1h), showObs4h
+// startet/stoppt seine eigene, unabhängige Poll-Pipeline (siehe loadObs4hCandles) — M5 braucht das
+// NICHT (tradeSetupM5Candles läuft ohnehin immer), nur ein Neuzeichnen beim Toggle.
 watch(() => props.showObs1h, () => {
   refreshRangesPollingState();
   refreshPoiZonesInternal();
 });
 watch(() => props.showObs4h, (on) => {
-  if (isForex) {
-    if (on) startObs4hPolling();
-    else stopObs4hPolling();
-  }
+  if (on) startObs4hPolling();
+  else stopObs4hPolling();
   refreshPoiZonesInternal();
 });
-watch(() => props.showObsM5, (on) => {
-  if (!isForex) {
-    if (on) startObsM5BtcPolling();
-    else stopObsM5BtcPolling();
-  }
-  refreshPoiZonesInternal();
-});
+watch(() => props.showObsM5, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
 watch(() => props.showLiquidity, refreshLiquidityInternal);
 watch(() => props.showSweptLiquidity, refreshLiquidityInternal);
@@ -3368,12 +3076,12 @@ watch(() => props.replayUntil, () => {
   clearTimeout(replayFetchDebounceTimer);
   replayFetchDebounceTimer = setTimeout(() => {
     loadInitial();
-    if (isForex) loadTradeSetupM5();
+    loadTradeSetupM5();
     if (rangesNeedsData()) loadRangesCandles();
   }, REPLAY_FETCH_DEBOUNCE_MS);
 });
 // StyleModal (Dashboard.vue) schreibt direkt in den chartColors-Singleton — Serien-OPTIONEN
-// (Candles/CVD/EMA) werden von refreshChart() nicht angefasst (das setzt nur setData), deshalb
+// (Candles/EMA) werden von refreshChart() nicht angefasst (das setzt nur setData), deshalb
 // hier explizit; alle Primitive-basierten Farben (Liquidität/OB/Ranges/Trade-Setups/
 // Trade-Marker) lesen chartColors ohnehin live bei jedem Render-Aufruf, ein refreshChart() reicht
 // dafür.
@@ -3387,7 +3095,6 @@ watch(
       wickUpColor: cssColor("candleUp"),
       wickDownColor: cssColor("candleDown"),
     });
-    cvdSeries?.applyOptions({ color: cssColor("cvdLine") });
     ema50Series?.applyOptions({ color: cssColor("emaFast") });
     ema200Series?.applyOptions({ color: cssColor("emaSlow") });
     rsiSeries?.applyOptions({ color: cssColor("rsi") });
@@ -3398,13 +3105,12 @@ watch(
   { deep: true },
 );
 // Analog zum chartColors-Watcher oben, für Linienstärke (Chat 2026-07-25, Style-Modal) — siehe
-// chartLineWidths.js. Native Serien-Optionen (CVD/EMA) explizit, alles Primitive-basierte über
+// chartLineWidths.js. Native Serien-Optionen (EMA) explizit, alles Primitive-basierte über
 // refreshChart() (liest lineWidth() live bei jedem Render-Aufruf, genau wie cssColor()).
 watch(
   chartLineWidths,
   () => {
     if (!chart) return;
-    cvdSeries?.applyOptions({ lineWidth: nativeLineWidth("cvdLine") });
     ema50Series?.applyOptions({ lineWidth: nativeLineWidth("emaFast") });
     ema200Series?.applyOptions({ lineWidth: nativeLineWidth("emaSlow") });
     rsiSeries?.applyOptions({ lineWidth: nativeLineWidth("rsi") });
@@ -3431,8 +3137,8 @@ watch(
 // der Freitag! Am WE gibts kein Forex!!") -> gezielt 7 Tage weiter nachfragen (deckt jede normale
 // Markt-Schließzeit ab) und daraus die früheste Kerze NACH `after` nehmen — cTrader liefert nur
 // "N Kerzen BIS X" (rückwärts), nie "AB X vorwärts", daher der Umweg über einen extra Fetch statt
-// eines direkten Vorwärts-Lookups. Rein arithmetischer Fallback (+ eine Kerzenlänge) nur noch für
-// BTC/OKX (kein bekanntes Markt-Schließzeit-Analogon) und falls der Extra-Fetch selbst fehlschlägt.
+// eines direkten Vorwärts-Lookups. Rein arithmetischer Fallback (+ eine Kerzenlänge) nur noch,
+// falls der Extra-Fetch selbst fehlschlägt.
 // Sanity-Check auf den Fund (Bug-Report Philip 2026-07-29: "+1 Kerze" sprang unvermittelt auf den
 // echten aktuellen Zeitpunkt): liegt `after` weiter als die angefragten 7 Tage in der Vergangenheit
 // zurück (z.B. weil allCandles durch den oben genannten Cache-Hit-Bug fälschlich schon "erschöpft"
@@ -3484,9 +3190,7 @@ async function jumpToTimeRange(entryTime, exitTime) {
       let anchor = (exitTime ?? entryTime) + JUMP_TARGET_BUFFER_BARS * barSeconds;
       let pages = 0;
       while (pages < MAX_JUMP_FETCH_PAGES && !isTimeCovered(allCandles, entryTime, barSeconds)) {
-        const older = isForex
-          ? await fetchOlderForexCandles(props.symbol, props.currentBar, anchor, FOREX_HISTORY_PAGE_SIZE)
-          : await fetchOlderCandles(okxBarFor(props.currentBar), anchor);
+        const older = await fetchOlderForexCandles(props.symbol, props.currentBar, anchor, FOREX_HISTORY_PAGE_SIZE);
         if (older.length === 0) break;
         allCandles = older.concat(allCandles);
         anchor = allCandles[0].time;
@@ -3500,9 +3204,7 @@ async function jumpToTimeRange(entryTime, exitTime) {
           let bridgeAnchor = preexistingOldest;
           let bridgePages = 0;
           while (bridgePages < MAX_JUMP_FETCH_PAGES) {
-            const older = isForex
-              ? await fetchOlderForexCandles(props.symbol, props.currentBar, bridgeAnchor, FOREX_HISTORY_PAGE_SIZE)
-              : await fetchOlderCandles(okxBarFor(props.currentBar), bridgeAnchor);
+            const older = await fetchOlderForexCandles(props.symbol, props.currentBar, bridgeAnchor, FOREX_HISTORY_PAGE_SIZE);
             if (older.length === 0) break;
             bridge = older.concat(bridge);
             bridgeAnchor = bridge[0].time;
@@ -3548,7 +3250,6 @@ defineExpose({
     const barSeconds = barSecondsFor(props.currentBar);
     const loaded = nextCandleAfter(allCandles, after);
     if (loaded != null) return loaded;
-    if (!isForex) return after + barSeconds;
     try {
       const probe = await fetchInitialForexCandles(props.symbol, props.currentBar, 200, (after + MAX_PLAUSIBLE_GAP_SEC) * 1000);
       const candidate = nextCandleAfter(probe, after);
@@ -3630,12 +3331,7 @@ defineExpose({
       <span v-if="loadOlderButtonBusy" class="ranges-spinner"></span>
       {{ loadOlderButtonBusy ? "lädt…" : "⟲ Ältere Kerzen laden" }}
     </button>
-    <div v-if="!isForex" class="cvd-gauges" :style="{ bottom: gaugesBottom + 'px' }">
-      <Gauge id="window" :value="windowDelta" label="Δ 15m" />
-      <Gauge id="daily" :value="dailyDelta" label="Δ Tag (UTC)" />
-    </div>
     <TradeSetupCockpit
-      v-if="isForex"
       ref="tscCardRef"
       :state="cockpitState"
       :now-sec="cockpitNowSec"
@@ -3759,15 +3455,6 @@ defineExpose({
 .chart-container {
   flex: 1;
   min-height: 0;
-}
-
-.cvd-gauges {
-  position: absolute;
-  z-index: 5;
-  right: 12px;
-  display: flex;
-  gap: 8px;
-  pointer-events: none;
 }
 
 /* TSC-Callouts ("Zeiger-Linien", siehe claudeCalloutTick in PriceChart.vue) — SVG ohne eigenes

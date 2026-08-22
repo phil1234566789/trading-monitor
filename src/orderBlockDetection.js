@@ -22,10 +22,11 @@ const LOWER_TF_MIN_GAP_PIPS = { "1m": 1, "3m": 1, "5m": 0.5 };
 
 // HTF (1H/4H) Pip-Minimum NUR für Forex (Bug-Report Philip 2026-07-30: eine 4,5-Pip-1H-FVG bei
 // EURUSD wurde von der 0,05%-Prozent-Schwelle verschluckt, ~5,7 Pip bei diesem Kurs nötig) — nicht
-// einfach an die Timeframe gehängt wie bei LOWER_TF_LABELS, weil poi-watcher denselben 1H/4H-Pfad
-// AUCH für BTC durchläuft (siehe index.ts, TIMEFRAMES-Loop läuft für okx+twelvedata gleichermaßen);
-// ein Pip-Minimum wäre bei BTCs Kursniveau (~60k) bedeutungslos (praktisch keine Schwelle mehr).
-// Daher explizites isForex-Flag statt Ableitung aus der Timeframe allein.
+// einfach an die Timeframe gehängt wie bei LOWER_TF_LABELS, sondern über ein explizites isForex-Flag
+// (historisch: musste früher auch für BTCs ganz anderes Kursniveau unterscheidbar bleiben, siehe
+// Git-Historie — heute läuft ausschließlich Forex durch diese Funktion, das Flag bleibt trotzdem
+// explizit statt aus der Timeframe abgeleitet, da eine zukünftige Nicht-Forex-Instrument-Zone sonst
+// stillschweigend ein für sie bedeutungsloses Pip-Minimum bekäme).
 const HTF_FOREX_LABELS = new Set(["1H", "4H"]);
 const HTF_FOREX_MIN_GAP_PIPS = { "1H": 1.5, "4H": 8 }; // 1H von 4 auf 1.5 gesenkt (Bug-Report Philip 2026-08-11: eine 1,5-Pip-1H-FVG bei GBPUSD am 10.08. 07:00 wurde vom alten 4-Pip-Minimum verschluckt)
 

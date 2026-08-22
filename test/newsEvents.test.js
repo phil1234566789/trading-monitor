@@ -37,9 +37,9 @@ describe("currentNewsNoGo", () => {
     expect(currentNewsNoGo(events, "GBPUSD", NOW)).toBeNull();
   });
 
-  it("gibt null für ein unbekanntes Instrument zurück (z.B. BTC-USDT, TSC läuft dort ohnehin nicht)", () => {
+  it("gibt null für ein unbekanntes Instrument zurück (z.B. XAUUSD, TSC läuft dort ohnehin nicht)", () => {
     const events = [{ eventTime: NOW, currency: "USD", title: "Fed Rate Decision" }];
-    expect(currentNewsNoGo(events, "BTC-USDT", NOW)).toBeNull();
+    expect(currentNewsNoGo(events, "XAUUSD", NOW)).toBeNull();
   });
 
   it("gibt null bei leerer Event-Liste zurück", () => {
@@ -66,6 +66,6 @@ describe("newsEventsForInstrument", () => {
   });
 
   it("gibt ein leeres Array für ein unbekanntes Instrument zurück", () => {
-    expect(newsEventsForInstrument(events, "BTC-USDT")).toEqual([]);
+    expect(newsEventsForInstrument(events, "XAUUSD")).toEqual([]);
   });
 });

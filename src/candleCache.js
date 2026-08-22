@@ -3,7 +3,7 @@ import { barSecondsFor } from "./timeframes.js";
 // Kerzen-Cache in IndexedDB (siehe Chat 2026-07-20: "cTrader ist das allerteuerste" + "TF-Wechsel
 // ist sehr laggy") — abgeschlossene Kerzen ändern sich nie wieder, also lohnt es sich, sie über
 // Reloads/TF-Wechsel/zweite Tabs hinweg zu behalten statt bei jedem Laden komplett neu von
-// cTrader/OKX zu holen. Nur der potenziell neue/noch offene Teil wird frisch geholt, der Rest kommt
+// cTrader zu holen. Nur der potenziell neue/noch offene Teil wird frisch geholt, der Rest kommt
 // aus dem Cache (siehe fetchCandlesCached) — funktioniert sowohl im Live-Modus (Delta seit dem
 // letzten Fetch) als auch im Replay-Modus (fixer Zeitpunkt in der Vergangenheit, oft komplett aus
 // dem Cache bedienbar, siehe unten — Default-Zustand der App ist Replay AN, siehe Dashboard.vue).
@@ -201,8 +201,8 @@ export function cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetC
   return history.concat(lookahead);
 }
 
-// Ersetzt einen vollen fetchFn(symbol, bar, count, toMs)-Aufruf (siehe forexCandles.js/OKX-
-// Pendant in PriceChart.vue): liefert `targetCount` Kerzen für symbol+bar bis toMs (bzw. bis
+// Ersetzt einen vollen fetchFn(symbol, bar, count, toMs)-Aufruf (siehe forexCandles.js):
+// liefert `targetCount` Kerzen für symbol+bar bis toMs (bzw. bis
 // "jetzt", wenn toMs null ist) — holt dabei aber nur, was seit dem letzten Cache-Stand fehlt:
 //
 // - Replay (toMs gesetzt) UND wir haben schon einmal erfolgreich bis mindestens diesen Zeitpunkt

@@ -1,8 +1,7 @@
-// Forex-Kerzen (aktuell nur GBPUSD) über die `ctrader-candles`-Edge-Function — die spricht
+// Forex-Kerzen (GBPUSD/EURUSD) über die `ctrader-candles`-Edge-Function — die spricht
 // das cTrader-Open-API-Protokoll (TLS-Socket, Protobuf), das im Browser nicht nutzbar ist,
-// und braucht das Client-Secret/den Access-Token, die nie ins Frontend dürfen. Antwortform
-// entspricht bewusst den OKX-Fetch-Funktionen in PriceChart.vue (oldest-first, {time,open,
-// high,low,close}), damit sich beide Datenquellen dort gleich behandeln lassen.
+// und braucht das Client-Secret/den Access-Token, die nie ins Frontend dürfen. Antwortform:
+// oldest-first, {time,open,high,low,close}.
 const CTRADER_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ctrader-candles`;
 const PERIOD_MAP = { "1m": "M1", "3m": "M3", "5m": "M5", "15m": "M15", "1h": "H1", "4h": "H4", "1D": "D1" };
 // Deno.connectTls im Edge-Function-Client (siehe supabase/functions/_shared/ctrader/client.ts)

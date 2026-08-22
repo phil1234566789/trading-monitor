@@ -8,10 +8,6 @@ export const TIMEFRAMES = [
   { label: "1D", bar: "1D" },
 ];
 
-export function okxBarFor(label) {
-  return TIMEFRAMES.find((tf) => tf.label === label).bar;
-}
-
 // Bar-Dauer in Sekunden je TIMEFRAMES-Label — zentrale Quelle, u.a. für candleCache.js (Delta-
 // Fetch-Größe) und PriceChart.vue (an den Kerzenschluss ausgerichtetes Polling, siehe Chat
 // 2026-07-20: "mir reicht pro M1 Kerzenschluss ... nicht 30s zu spät gefetched").

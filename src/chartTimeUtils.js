@@ -27,8 +27,7 @@ export function snapToBarTime(candles, targetTime) {
 // "+1 Kerze" bringt dadurch strukturell nie die frisch angeforderte Kerze mit). clipReplay()
 // (PriceChart.vue) zeigt diese Kerze korrekt an (Filter ist `<=`), der FETCH selbst muss also um
 // eine Barlänge WEITER als replayUntil anfragen, damit sie bei cTrader überhaupt "geschlossen"
-// genug ist, um in der Antwort mitzukommen. bar=null/undefined (z.B. OKX/BTC, wo dieses cTrader-
-// spezifische Verhalten laut bisherigen Bug-Reports nicht auftritt) -> kein Offset, unverändert.
+// genug ist, um in der Antwort mitzukommen. bar=null/undefined -> kein Offset, unverändert.
 export function replayFetchToMs(replayUntilSec, bar) {
   if (replayUntilSec == null) return undefined;
   const barOffsetMs = bar ? barSecondsFor(bar) * 1000 : 0;

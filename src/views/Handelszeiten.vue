@@ -2,7 +2,7 @@
 import { tradingSchedules, WEEKDAY_GROUPS, addWindow, removeWindow } from "../tradingSchedules.js";
 import { minutesToTimeInput, timeInputToMinutes } from "../chartTimeUtils.js";
 
-const INSTRUMENTS = ["BTC-USDT", "GBPUSD", "EURUSD", "XAUUSD"];
+const INSTRUMENTS = ["GBPUSD", "EURUSD", "XAUUSD"];
 </script>
 
 <template>

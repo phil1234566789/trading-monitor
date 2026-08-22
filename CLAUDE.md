@@ -4,10 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A personal Forex/crypto trading dashboard for Philip. Vue 3 SPA (deployed to GitHub Pages) +
-Supabase (Postgres + Edge Functions) backend. Live price charts (BTC-USDT via OKX, GBPUSD/EURUSD
-via cTrader Open API) with order-block/liquidity/trade-setup detection, a cron-driven alert watcher
-that posts to Telegram, and a trade journal ("Protokoll").
+A personal Forex trading dashboard for Philip. Vue 3 SPA (deployed to GitHub Pages) +
+Supabase (Postgres + Edge Functions) backend. Live price charts (GBPUSD/EURUSD via cTrader Open
+API) with order-block/liquidity/trade-setup detection, a cron-driven alert watcher that posts to
+Telegram, and a trade journal ("Protokoll"). Until 2026-08-21 this also tracked BTC-USDT via OKX
+(crypto) alongside Forex — Philip stopped trading BTC with the current strategy, so that code path
+(frontend chart branch, `poi-watcher`'s OKX fetch, the `okx-market` MCP server) was removed
+entirely; existing BTC rows in `ob_zones`/`trade_positions`/etc. are untouched, just no longer
+written to or read from by live code.
 
 `PLAN-notifications.md` is a running dev log/plan doc with historical context on major features
 and decisions (dated entries) — check it for the "why" behind non-obvious design choices before
@@ -61,8 +65,7 @@ repo.
 GBPUSD/EURUSD candles come from the cTrader Open API (`supabase/functions/_shared/ctrader/client.ts`,
 `ctrader_oauth_tokens` table for the OAuth token pair), proxied through the `forex-candles` edge
 function so the frontend never holds credentials directly. `src/forexCandles.js` is the frontend
-fetch wrapper (mirrors the shape of the OKX fetch functions used for BTC: `{time,open,high,low,close,volume}`,
-oldest-first) — same shape regardless of which broker/provider is behind it.
+fetch wrapper — response shape `{time,open,high,low,close,volume}`, oldest-first.
 
 This flipped back and forth twice — worth knowing the full history since the "current" state has
 changed direction before and may again:
@@ -79,8 +82,8 @@ changed direction before and may again:
 
 The Twelve Data client code (`_shared/twelvedata/`) is the one left in place-but-unwired now (mirror
 image of how the cTrader code sat unused during step 2) — don't be surprised it's still there, and
-don't assume it's what's live without checking `poi-watcher`'s `INSTRUMENTS` config
-(`source: "ctrader"` per instrument) first.
+don't assume it's what's live without checking `poi-watcher`'s `INSTRUMENTS` config first (all
+entries fetch via cTrader now that BTC/OKX is gone, see below).
 
 **cTrader's hard limit is 14000 bars/request** (see `fetchOneTrendbar` in `_shared/ctrader/client.ts`)
 — generous compared to Twelve Data's free-tier 800/day, 8/minute, which is why `poi-watcher`'s
@@ -91,7 +94,7 @@ consistency and to avoid hammering the OAuth-token-backed connection unnecessari
 
 `supabase/functions/poi-watcher/index.ts` runs on a `pg_cron` schedule (every 5 min, see
 `supabase/migrations/20260713120000_poi_watcher_cron_5min.sql`) and does three things per
-instrument (BTC via OKX, GBPUSD/EURUSD via cTrader): detect order-block zones, detect 1H
+instrument (GBPUSD/EURUSD via cTrader): detect order-block zones, detect 1H
 liquidity levels, detect trade setups (M5 sweep + fractal + OB) — persisting all of it to
 `ob_zones` / `liquidity_levels` / `trade_setups`, and sending a Telegram message the first time a
 zone/level is "touched" by price, gated by both a trading-hours window and per-alert-type toggles
@@ -102,8 +105,7 @@ re-fetch everything every 5 minutes — this throttling predates the 2026-08-03 
 cTrader (it was originally built to survive Twelve Data's tight rate limit) but is kept
 unchanged for cache consistency, not because cTrader needs it the same way:
 - Forex fetching only happens inside a fetch window around the configured trading session
-  (`isForexFetchWindow`) — outside it, GBPUSD/EURUSD are skipped entirely (BTC/OKX is unaffected,
-  no rate limit there).
+  (`isForexFetchWindow`) — outside it, GBPUSD/EURUSD are skipped entirely.
 - 4H candles are only re-fetched once per 4H boundary (`isH4RefreshTick`); in between, only the
   already-detected zones in `ob_zones` are checked against the live price (no re-fetch, no
   re-detect).
@@ -137,8 +139,8 @@ new rendering-related import (chart colors, line widths, lightweight-charts prim
 
 ### Frontend data flow (`PriceChart.vue`)
 
-`src/components/PriceChart.vue` is the largest component and the hub: it fetches candles (OKX for
-BTC, `forexCandles.js` for GBPUSD/EURUSD), runs the frontend copies of the detection algorithms,
+`src/components/PriceChart.vue` is the largest component and the hub: it fetches candles
+(`forexCandles.js` for GBPUSD/EURUSD), runs the frontend copies of the detection algorithms,
 renders everything via `lightweight-charts` primitives, and drives the debug-metadata panel (see
 below). `src/candleCache.js` (`fetchCandlesCached`) wraps the raw fetch functions with an
 incremental-fetch cache so timeframe/symbol switches and polling don't refetch a whole window
@@ -206,8 +208,8 @@ on the same table is currently reference/display-only, read by the Handelszeiten
 gating anything in code. Per-asset chart sessions (`sessions` table/`src/sessions.js`, edited via
 the Sessions modal on the chart) got an `instrument` column at the same time (one session list per
 asset, no longer global) plus a `danger` level (`normal`/`caution`/`forbidden`) — this is how a
-sub-window like the GBPUSD/EURUSD "MMM" caution session or a BTC no-trade window is expressed,
-rather than a second schedule concept.
+sub-window like the GBPUSD/EURUSD "MMM" caution session is expressed, rather than a second
+schedule concept.
 
 ### Trade journal: `dealing_ranges` vs. `trade_positions`
 
@@ -447,10 +449,10 @@ the day that's actually returned — without that lead-in, the first hour or so 
 day would show inaccurate values, since neither indicator can be seeded correctly from a cold
 start at midnight.
 
-- `get_forex_rsi`: Wilder RSI(14) (`mcp-server/src/rsi.ts`) — GBPUSD/EURUSD only, since BTC already
-  has real RSI values via the separate `okx-market` MCP server's `market_get_indicator`
-  (`indicator: "rsi"`), no need to duplicate that. Divergence detection (HH/LH, LL/HL) is
-  deliberately NOT computed here — Claude compares the returned price+RSI series itself once the
+- `get_forex_rsi`: Wilder RSI(14) (`mcp-server/src/rsi.ts`) — GBPUSD/EURUSD only (the only two
+  instruments this app tracks; a separate `okx-market` MCP server previously covered BTC's RSI via
+  `market_get_indicator`, removed 2026-08-21 along with the rest of the BTC/OKX code path).
+  Divergence detection (HH/LH, LL/HL) is deliberately NOT computed here — Claude compares the returned price+RSI series itself once the
   numbers exist; the error-prone part worth coding is the Wilder smoothing itself (an LLM can't
   reliably re-derive it by eyeballing candles), not the pattern-matching on top of it. Per
   `trading/rsi.md`'s own "Philips RSI-Nutzung" section, Philip barely watches RSI actively — only

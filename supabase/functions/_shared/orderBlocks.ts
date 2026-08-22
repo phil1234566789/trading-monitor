@@ -17,10 +17,9 @@ const PIP_SIZE = 0.0001; // gilt für beide unterstützten FX-Paare (GBPUSD/EURU
 
 // HTF (1H/4H) Pip-Minimum NUR für Forex (Bug-Report Philip 2026-07-30: eine 4,5-Pip-1H-FVG bei
 // EURUSD wurde von der 0,05%-Prozent-Schwelle verschluckt, ~5,7 Pip bei diesem Kurs nötig) — nicht
-// einfach an die Timeframe gehängt wie bei LOWER_TF_LABELS, weil poi-watcher denselben 1H/4H-Pfad
-// AUCH für BTC durchläuft (TIMEFRAMES-Loop in index.ts läuft für okx+ctrader gleichermaßen); ein
-// Pip-Minimum wäre bei BTCs Kursniveau (~60k) bedeutungslos. Daher explizites isForex-Flag, das
-// index.ts an dieser Stelle mit `cfg.source === "ctrader"` setzt. Siehe src/orderBlocks.js.
+// einfach an die Timeframe gehängt wie bei LOWER_TF_LABELS, sondern über ein explizites isForex-
+// Flag (Default true, da index.ts inzwischen ausschließlich Forex-Instrumente verarbeitet). Siehe
+// src/orderBlocks.js.
 const HTF_FOREX_LABELS = new Set(["1H", "4H"]);
 const HTF_FOREX_MIN_GAP_PIPS: Record<string, number> = { "1H": 1.5, "4H": 8 }; // 1H von 4 auf 1.5 gesenkt, siehe src/orderBlockDetection.js
 
@@ -52,8 +51,8 @@ export interface Zone {
 // timeframe: TIMEFRAMES-Label (z.B. "5m"/"1H"/"4H") — entscheidet zusammen mit isForex, ob eine
 // Pip- oder die Prozent-Mindestgröße gilt. undefined/unbekanntes Label fällt auf HTF-Prozent-
 // Verhalten zurück (Altverhalten für die bestehenden 4H/1H-Aufrufer in poi-watcher/index.ts).
-// isForex default true, weil detectSetupObs (immer "5m", garantiert Forex-only, siehe tradeSetup.ts)
-// das Flag nicht mitgibt — nur index.ts' 1H/4H-Loop (BTC+Forex gemeinsam) setzt es explizit.
+// isForex default true — jeder Aufrufer (detectSetupObs, index.ts' 1H/4H-Loop) ist inzwischen
+// garantiert Forex-only.
 export function detectOrderBlocks(candles: Candle[], timeframe?: string, isForex = true): Zone[] {
   const zones: Zone[] = [];
   const isLowerTf = timeframe != null && LOWER_TF_LABELS.has(timeframe);

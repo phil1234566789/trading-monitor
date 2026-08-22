@@ -187,8 +187,7 @@ export function registerReadTools(server: McpServer) {
         "Optional `toSec`: liefert die neuesten `count` Kerzen bis zu diesem Zeitpunkt statt bis " +
         "jetzt — damit auch ein historischer Ausschnitt auf NICHT archivierten Timeframes (v.a. M1) " +
         "möglich, ohne extra Skript. get_forex_candles_archive direkt nutzen, wenn ein expliziter " +
-        "fromTime/toTime-Bereich gebraucht wird statt 'neueste N bis zu einem Zeitpunkt'. Für BTC " +
-        "den okx-market-MCP-Server nutzen.",
+        "fromTime/toTime-Bereich gebraucht wird statt 'neueste N bis zu einem Zeitpunkt'.",
       inputSchema: {
         instrument: INSTRUMENT,
         timeframe: z.enum(["1m", "3m", "5m", "15m", "1h", "4h", "1D"]),
@@ -246,8 +245,7 @@ export function registerReadTools(server: McpServer) {
         "kommentiere ihn nur, wenn er auffällig ist oder stark gegen ein Setup spricht (siehe " +
         "rsi.md 'Philips RSI-Nutzung'). Divergenzen NICHT vorberechnet — vergleiche die " +
         "zurückgegebene series (Kurs+RSI) selbst auf HH/LH bzw. LL/HL an den jeweiligen Swing-" +
-        "Punkten. Für BTC stattdessen market_get_indicator (okx-market-MCP, indicator='rsi') " +
-        "nutzen, dort bereits fertig verfügbar.",
+        "Punkten.",
       inputSchema: {
         instrument: INSTRUMENT,
         dateStr: z.string().optional().describe("YYYY-MM-DD (Europe/Berlin), Default: heute"),

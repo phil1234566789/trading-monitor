@@ -20,7 +20,6 @@ export const WEEKDAY_GROUPS = [
 const EMPTY_WINDOWS = { weekday: [], saturday: [], sunday: [] };
 
 export const DEFAULT_SCHEDULES = {
-  "BTC-USDT": { tradingWindows: EMPTY_WINDOWS, alarmWindows: EMPTY_WINDOWS, notes: "" },
   GBPUSD: { tradingWindows: EMPTY_WINDOWS, alarmWindows: EMPTY_WINDOWS, notes: "" },
   EURUSD: { tradingWindows: EMPTY_WINDOWS, alarmWindows: EMPTY_WINDOWS, notes: "" },
   XAUUSD: { tradingWindows: EMPTY_WINDOWS, alarmWindows: EMPTY_WINDOWS, notes: "" },

@@ -54,7 +54,7 @@ describe("replayFetchToMs", () => {
     expect(replayFetchToMs(replayUntilSec, "15m")).toBe(replayUntilSec * 1000 + 15 * 60_000);
   });
 
-  it("ohne bar (z.B. OKX/BTC) kein Offset — nur der reine replayUntil-Zeitpunkt", () => {
+  it("ohne bar kein Offset — nur der reine replayUntil-Zeitpunkt", () => {
     const replayUntilSec = 1783112400;
     expect(replayFetchToMs(replayUntilSec)).toBe(replayUntilSec * 1000);
     expect(replayFetchToMs(replayUntilSec, null)).toBe(replayUntilSec * 1000);

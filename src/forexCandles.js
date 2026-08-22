@@ -3,8 +3,7 @@
 // (neues Pepperstone-Demokonto statt der zuvor deaktivierten Prop-Firm-Challenge, siehe
 // forex-candles/index.ts und _shared/ctrader/client.ts) — die Response-Form/das Bar-Label-Mapping
 // hier am Frontend blieb dabei unverändert, deshalb hat sich an diesem File selbst kaum was
-// geändert. Antwortform {time,open,high,low,close,volume}, oldest-first — unverändert ggü. den
-// OKX-Fetch-Funktionen in PriceChart.vue, damit sich beide Datenquellen dort gleich behandeln lassen.
+// geändert. Antwortform {time,open,high,low,close,volume}, oldest-first.
 import { supabase } from "./supabaseClient.js";
 import { barSecondsFor } from "./timeframes.js";
 

@@ -148,7 +148,7 @@ const DANGER_SEVERITY = { normal: 0, caution: 1, forbidden: 2 };
 export const WEEKDAY_LABELS = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 
 // sessionConfigs: schon auf ein Instrument gefiltert (siehe PriceChart.vue: `sessions.filter((s) =>
-// s.instrument === props.symbol)`), sonst würde z.B. eine BTC-Sperrzeit auch EURUSD sperren.
+// s.instrument === props.symbol)`), sonst würde z.B. eine GBPUSD-Sperrzeit auch EURUSD sperren.
 // nowSec/tzOffsetMinutes wie sessionOccurrences — ruft es mit einem 1-Sekunden-Fenster um nowSec
 // auf, um "ist JETZT eine Session mit danger != 'normal' aktiv" statt eines Zeitraums zu prüfen.
 export function currentSessionDanger(sessionConfigs, nowSec, tzOffsetMinutes = 0) {
@@ -195,9 +195,8 @@ export function addSession(instrument) {
     highLowRelevant: true,
     instrument,
     danger: "normal",
-    // Default "jeden Tag" (siehe daysOrAll) — bewusst kein weekday-Vorurteil hier, weil addSession
-    // instrumentübergreifend genutzt wird (BTC läuft 24/7, bei Forex-Sessions muss Philip Sa/So
-    // bewusst über die Checkboxen im Sessions-Modal abwählen).
+    // Default "jeden Tag" (siehe daysOrAll) — bewusst kein weekday-Vorurteil hier, Philip muss Sa/So
+    // bei Bedarf selbst über die Checkboxen im Sessions-Modal abwählen.
     days: [...ALL_DAYS],
   });
 }

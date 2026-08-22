@@ -2,8 +2,8 @@ import { computed, reactive } from "vue";
 
 // Registriert JEDEN `fetch()`-Aufruf der App (Modul-weiter Singleton, wie useStatusBar) —
 // einmaliges Patchen von window.fetch statt jede einzelne HTTP-Funktion (forexCandles.js,
-// cvd.js, PriceChart.vue-OKX-Fetch, alle supabase-js-Queries in poiZones.js/alarmLog.js/
-// trades.js/alarmSettings.js/chartColors.js) selbst instrumentieren zu müssen (siehe Chat:
+// alle supabase-js-Queries in poiZones.js/alarmLog.js/trades.js/alarmSettings.js/chartColors.js)
+// selbst instrumentieren zu müssen (siehe Chat:
 // "Ladeindikator für jede HTTP-Funktion die im Code rausgefeuert wird"). supabase-js nutzt in
 // der Browser-Umgebung intern ebenfalls window.fetch (kein eigener HTTP-Client, siehe
 // supabaseClient.js: kein custom `fetch` an createClient übergeben) — ein Patch-Punkt deckt
@@ -87,7 +87,7 @@ export function installHttpActivityTracking() {
 }
 
 // Grobe Zuordnung URL -> sprechendes Label, an den tatsächlich genutzten Endpunkten
-// festgemacht (siehe ctraderCandles.js, cvd.js, PriceChart.vue, poiZones.js, alarmLog.js,
+// festgemacht (siehe ctraderCandles.js, PriceChart.vue, poiZones.js, alarmLog.js,
 // trades.js, alarmSettings.js, chartColors.js). Unbekannte Supabase-Tabellen/Hosts fallen auf
 // Hostname+Pfad zurück statt zu verschwinden — lieber ein technisches Label als ein
 // stillschweigend nicht getrackter Aufruf.
@@ -101,8 +101,6 @@ function labelFor(rawUrl) {
   const path = u.pathname;
 
   if (path.includes("/functions/v1/forex-candles")) return "Forex-Kerzen";
-  if (u.hostname.endsWith("okx.com")) return "OKX-Kerzen";
-  if (u.hostname.endsWith("binance.com")) return "CVD (Binance)";
 
   const restMatch = path.match(/\/rest\/v1\/([^/?]+)/);
   if (restMatch) {

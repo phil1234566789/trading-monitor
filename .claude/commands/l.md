@@ -26,10 +26,9 @@ dieses Repo. Für den Rest dieser Session gilt:
    "Laufende Stärke-Signale" — seit 2026-08-15 kein eigener Schritt mehr)** bei GBPUSD/EURUSD
    `get_forex_rsi` nutzen (M5, Wilder-RSI(14), gleiche `dateStr`/`replayUntilSec`-Semantik wie
    `get_data_export`) — Divergenzen/Failure-Swings liest du selbst aus der zurückgegebenen
-   Kurs+RSI-Reihe ab, die sind bewusst nicht vorberechnet. Bei BTC stattdessen das separate
-   `okx-market`-MCP-Tool `market_get_indicator` (`indicator: "rsi"`) nutzen, dort schon fertig
-   verfügbar. Für die EMA-Konvergenz-Frühwarnung (Schritt 6, M5-Konsolidierungsgefahr, siehe
-   `ema.md`) analog `get_forex_ema` (EMA 50/200) für GBPUSD/EURUSD.
+   Kurs+RSI-Reihe ab, die sind bewusst nicht vorberechnet. Für die EMA-Konvergenz-Frühwarnung
+   (Schritt 6, M5-Konsolidierungsgefahr, siehe `ema.md`) analog `get_forex_ema` (EMA 50/200) für
+   GBPUSD/EURUSD.
 4. **Sicherheitsnetz für den Structure-Trend (Philip 2026-07-31): zeichne IMMER den Startpunkt
    deines Trend-Algos ein.** `get_data_export` liefert `structureWindow.cutoffOuterAt`/
    `cutoffInnerAt` (schon im richtigen "YYYY-MM-DD HH:mm"-Format) — sobald du eine Structure-Trend-
@@ -65,7 +64,7 @@ dieses Repo. Für den Rest dieser Session gilt:
      Abschnitt am Ende jeder einzelnen `NN-name.md`-Datei). Das ist kein optionales Extra, sondern
      Teil der Schritt-Ausführung selbst — bei JEDEM Schritt-Beginn `work in progress` setzen, bei
      Abschluss je nach Ausgang `done` (geht weiter) oder `review` (Ablauf endet hier), genau wie in
-     der jeweiligen Step-Datei beschrieben. Für BTC existieren keine solchen Tasks.
+     der jeweiligen Step-Datei beschrieben.
    - **Allgemeiner Fall:** Passt eine andere Analyse/Aufgabe eindeutig zu einem offenen Task im
      `milk-city`-MCP-Server (`list_tasks`), ruf sofort `set_task_status(id, "work in progress")`
      auf und leg los, ohne nachzufragen. Ist unklar, ob/welcher Task gemeint ist, frag Philip

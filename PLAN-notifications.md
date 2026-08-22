@@ -13,6 +13,13 @@ Pipeline gebaut wird. Reihenfolge unten entsprechend angepasst.
 Wird Stück für Stück abgearbeitet, ggf. über mehrere Sessions verteilt. Checkboxen
 markieren den Fortschritt.
 
+**Update 2026-08-21: BTC-USDT/OKX komplett entfernt.** Philip tradet BTC mit der aktuellen
+Strategie nicht mehr — der OKX-Fetch/-Cron-Pfad und der `BTC-USDT`-Symbol-Switcher sind aus dem
+Code raus (bestehende `ob_zones`/Journal-Zeilen für BTC bleiben unangetastet in der DB). Die
+Abschnitte unten (insbesondere "Zwei Instrumente..." und "Status: cTrader Open API") beschreiben
+den historischen Verlauf inkl. BTC und bleiben unverändert stehen — für den aktuellen Code-Stand
+zählt nur noch Forex (GBPUSD/EURUSD).
+
 ---
 
 ## Zwei Instrumente, zwei Datenquellen, eine Pipeline

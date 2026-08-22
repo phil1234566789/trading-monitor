@@ -1,10 +1,12 @@
-// D2 (vereinfacht): 4H+1H-Zonen-Wächter, jetzt Multi-Instrument (BTC-USDT via OKX,
-// GBPUSD/EURUSD via cTrader Open API). Erkennt Order-Block-Zonen, persistiert sie in `ob_zones`
-// und schickt eine Telegram-Nachricht, sobald eine Zone zum ersten Mal vom Preis berührt wird —
-// aber nur für Instrumente mit `sendTelegram: true` (siehe INSTRUMENTS unten). BTC lief nur
-// zum Testen der Pipeline; Philip tradet Forex, daher jetzt GBPUSD/EURUSD live, BTC stumm
-// (Zonen werden weiter erkannt/im Dashboard angezeigt, nur der Versand ist aus). Kein M1/
-// Claude-Entry-Check (D3) — das kommt erst, wenn die Strategie ein Regelwerk für Claude hat.
+// D2 (vereinfacht): 4H+1H-Zonen-Wächter für die Forex-Instrumente (GBPUSD/EURUSD via cTrader
+// Open API). Erkennt Order-Block-Zonen, persistiert sie in `ob_zones` und schickt eine
+// Telegram-Nachricht, sobald eine Zone zum ersten Mal vom Preis berührt wird — aber nur für
+// Instrumente mit `sendTelegram: true` (siehe INSTRUMENTS unten). Kein M1/Claude-Entry-Check
+// (D3) — das kommt erst, wenn die Strategie ein Regelwerk für Claude hat.
+//
+// (BTC-USDT lief hier bis 2026-08-21 über OKX mit; Philip tradet BTC mit der aktuellen Strategie
+// nicht mehr, der OKX-Zweig ist komplett raus — bereits erkannte BTC-Zonen bleiben unangetastet
+// in der DB, nur die Erkennung/der Alarm-Pfad läuft nicht mehr.)
 //
 // Zurück von Twelve Data zu cTrader (2026-08-03, siehe PLAN-notifications.md "Status: cTrader
 // Open API"): Twelve Data ist ein 60+-Liquiditätsprovider-Aggregat, dessen Preisglättung die
@@ -19,13 +21,9 @@ import { detectLiquidityLevels, type LiquidityLevel } from "../_shared/liquidity
 import { fetchTrendbarsBatch, type RefreshedTokens } from "../_shared/ctrader/client.ts";
 import { detectSetupObs, detectTradeSetup } from "../_shared/tradeSetup.ts";
 
-const OKX_BASE_URL = "https://www.okx.com";
-const TIMEFRAMES: { label: "4H" | "1H"; okxBar: string }[] = [
-  { label: "4H", okxBar: "4H" },
-  { label: "1H", okxBar: "1H" },
-];
+const TIMEFRAMES: { label: "4H" | "1H" }[] = [{ label: "4H" }, { label: "1H" }];
 const CANDLE_LIMIT = 300;
-// Nur für den Forex-1H-Fetch (nicht BTC/OKX, nicht Forex-4H — die bleiben bei CANDLE_LIMIT=300):
+// Nur für den 1H-Fetch (nicht 4H — der bleibt bei CANDLE_LIMIT=300):
 // 300h (~12,5 Tage) reichten nicht, um lange unberührte 1H-Liquiditäts-Level (und 1H-OB-Zonen, die
 // denselben Kerzensatz mitnutzen) im Blick zu behalten — Philip tradet von Ziel zu Ziel und
 // braucht dafür ein paar unberührte Level ober-/unterhalb des Kurses, auch wenn die schon
@@ -88,7 +86,6 @@ interface LiquidityLevelRow {
 
 interface InstrumentConfig {
   instrument: string;
-  source: "okx" | "ctrader";
   sendTelegram: boolean;
   pricePrecision: number;
 }
@@ -120,9 +117,8 @@ interface PinTouchHit {
 }
 
 const INSTRUMENTS: InstrumentConfig[] = [
-  { instrument: "BTC-USDT", source: "okx", sendTelegram: false, pricePrecision: 2 },
-  { instrument: "GBPUSD", source: "ctrader", sendTelegram: true, pricePrecision: 5 },
-  { instrument: "EURUSD", source: "ctrader", sendTelegram: true, pricePrecision: 5 },
+  { instrument: "GBPUSD", sendTelegram: true, pricePrecision: 5 },
+  { instrument: "EURUSD", sendTelegram: true, pricePrecision: 5 },
 ];
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -136,29 +132,6 @@ const CTRADER_CLIENT_SECRET = Deno.env.get("CTRADER_CLIENT_SECRET")!;
 // selbes Muster in forex-candles/index.ts.
 const CTRADER_ACCESS_TOKEN_FALLBACK = Deno.env.get("CTRADER_ACCESS_TOKEN") ?? "";
 const CTRADER_REFRESH_TOKEN_FALLBACK = Deno.env.get("CTRADER_REFRESH_TOKEN") ?? "";
-
-async function fetchOkxCandles(instId: string, bar: string): Promise<Candle[]> {
-  const url = `${OKX_BASE_URL}/api/v5/market/candles?instId=${instId}&bar=${bar}&limit=${CANDLE_LIMIT}`;
-  const res = await fetch(url);
-  const json = await res.json();
-  if (json.code !== "0") throw new Error(`OKX candles error ${json.code}: ${json.msg}`);
-  return (json.data as string[][])
-    .map((row) => ({
-      time: Math.floor(Number(row[0]) / 1000),
-      open: Number(row[1]),
-      high: Number(row[2]),
-      low: Number(row[3]),
-      close: Number(row[4]),
-    }))
-    .reverse(); // älteste zuerst
-}
-
-async function fetchOkxPrice(instId: string): Promise<number> {
-  const res = await fetch(`${OKX_BASE_URL}/api/v5/market/ticker?instId=${instId}`);
-  const json = await res.json();
-  if (json.code !== "0") throw new Error(`OKX ticker error ${json.code}: ${json.msg}`);
-  return Number(json.data[0].last);
-}
 
 // Nur beim ersten Lauf nach einem Kerzenschluss neu holen (Chat 2026-07-23: "da ändert sich
 // doch in 4h/1h nichts") — zwischen zwei Kerzenschlüssen liefert die Datenquelle (nur
@@ -421,7 +394,7 @@ Deno.serve(async (req) => {
     for (const cfg of INSTRUMENTS) {
       const alarmWindows = alarmWindowsByInstrument.get(cfg.instrument);
       const forexFetchWindow = isInWindows(now, alarmWindows, FETCH_START_BUFFER_MIN);
-      if (cfg.source === "ctrader" && !forexFetchWindow && !forceH1Refresh) {
+      if (!forexFetchWindow && !forceH1Refresh) {
         (summary.instruments as Record<string, unknown>)[cfg.instrument] = { skipped: "outside forex fetch window" };
         continue;
       }
@@ -433,7 +406,7 @@ Deno.serve(async (req) => {
       // machen und der Cache brächte nichts.
       let h1RefreshTick = isH1RefreshTick(now) || forceH1Refresh;
       let h1CandlesForSetup: Candle[] | undefined;
-      if (cfg.source === "ctrader" && !h1RefreshTick) {
+      if (!h1RefreshTick) {
         const { data: h1CacheRow, error: h1CacheError } = await supabase
           .from("forex_h1_cache")
           .select("candles")
@@ -447,8 +420,8 @@ Deno.serve(async (req) => {
         }
       }
 
-      const forexBatch = cfg.source === "ctrader" ? await fetchForexBatch(cfg.instrument, h1RefreshTick, h4RefreshTick, ctraderCreds) : null;
-      const freshH1Candles = forexBatch?.candlesByTf.get("1H");
+      const forexBatch = await fetchForexBatch(cfg.instrument, h1RefreshTick, h4RefreshTick, ctraderCreds);
+      const freshH1Candles = forexBatch.candlesByTf.get("1H");
       if (freshH1Candles) {
         h1CandlesForSetup = freshH1Candles;
         const { error: h1CacheWriteError } = await supabase
@@ -456,11 +429,11 @@ Deno.serve(async (req) => {
           .upsert({ instrument: cfg.instrument, candles: freshH1Candles });
         if (h1CacheWriteError) throw h1CacheWriteError;
       }
-      const currentPrice = cfg.source === "okx" ? await fetchOkxPrice(cfg.instrument) : forexBatch!.currentPrice;
+      const currentPrice = forexBatch.currentPrice;
       // Zonen werden für jedes Instrument immer erkannt/gespeichert (Dashboard-Charts brauchen
       // das weiterhin) — `shouldSend` entscheidet nur, ob dafür auch wirklich eine
-      // Telegram-Nachricht rausgeht (BTC: nie, per `sendTelegram: false`; sonst: nur innerhalb
-      // des Alarmfensters aus trading_schedules, siehe oben).
+      // Telegram-Nachricht rausgeht (nur innerhalb des Alarmfensters aus trading_schedules,
+      // siehe oben).
       const shouldSend = cfg.sendTelegram && isInWindows(now, alarmWindows);
       currentPriceByInstrument[cfg.instrument] = currentPrice;
       shouldSendByInstrument[cfg.instrument] = shouldSend;
@@ -469,8 +442,7 @@ Deno.serve(async (req) => {
       for (const tf of TIMEFRAMES) {
         // z.B. "ob_zone_4h"/"ob_zone_1h" — je Timeframe einzeln umschaltbar.
         const alarmActive = shouldSend && isAlarmOn(`ob_zone_${tf.label.toLowerCase()}`);
-        const candles =
-          cfg.source === "okx" ? await fetchOkxCandles(cfg.instrument, tf.okxBar) : forexBatch!.candlesByTf.get(tf.label);
+        const candles = forexBatch.candlesByTf.get(tf.label);
 
         const { data: existingRows, error: selectError } = await supabase
           .from("ob_zones")
@@ -485,15 +457,12 @@ Deno.serve(async (req) => {
         if (candles) {
           // Voller Durchlauf: Zonen frisch aus den Kerzen erkennen (structural touched/
           // invalidated ändert sich nur, wenn neue Kerzen dazukommen) und mit dem DB-Stand
-          // mergen. Läuft bei 1H/OKX jeden Tick, bei 4H nur an isH4RefreshTick-Ticks (siehe
+          // mergen. Läuft bei 1H jeden Tick, bei 4H nur an isH4RefreshTick-Ticks (siehe
           // fetchForexBatch).
           // tf.label ("4H"/"1H") explizit mitgeben statt implizit undefined (Chat 2026-07-29) —
           // beides bleibt HTF-Verhalten (nur "1m"/"3m"/"5m" gelten als Lower-TF), aber so ist
           // derselbe Aufrufer-Stil wie bei detectSetupObs (immer explizites Timeframe-Label).
-          // isForex explizit mitgeben (Chat 2026-07-30) — dieser Loop laeuft fuer BTC UND Forex
-          // gleichermassen, aber das 1H/4H-Pip-Minimum (HTF_FOREX_MIN_GAP_PIPS) darf nur bei Forex
-          // greifen, sonst waere es bei BTCs Kursniveau (~60k) bedeutungslos.
-          const zones = detectOrderBlocks(candles, tf.label, cfg.source === "ctrader");
+          const zones = detectOrderBlocks(candles, tf.label);
           const existingMap = new Map(
             (existingRows ?? []).map((r) => [
               `${r.direction}_${Math.floor(new Date(r.start_time).getTime() / 1000)}`,
@@ -603,13 +572,12 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 1H-Liquiditäts-Level (Fractal-Sweeps, siehe src/liquidity.js) — nur für die
-      // Forex-Instrumente (GBPUSD/EURUSD), Philip wollte das explizit nicht für BTC.
-      // Gleiches Live-Preis-Sofort-Touch-Muster wie oben bei den OB-Zonen (die Datenquelle
-      // liefert nur geschlossene Kerzen, sonst bis zu 59min Verzoegerung bis zum Alarm).
-      if (cfg.source === "ctrader") {
+      // 1H-Liquiditäts-Level (Fractal-Sweeps, siehe src/liquidity.js). Gleiches Live-Preis-
+      // Sofort-Touch-Muster wie oben bei den OB-Zonen (die Datenquelle liefert nur geschlossene
+      // Kerzen, sonst bis zu 59min Verzoegerung bis zum Alarm).
+      {
         const alarmActive = shouldSend && isAlarmOn("liquidity_1h");
-        const candles1h = forexBatch!.candlesByTf.get("1H");
+        const candles1h = forexBatch.candlesByTf.get("1H");
 
         const { data: existingLiqRows, error: liqSelectError } = await supabase
           .from("liquidity_levels")
@@ -735,13 +703,12 @@ Deno.serve(async (req) => {
       }
 
       // Trade-Setup: Liquidity Sweep + Protected M5-Fraktal + M5-OB, in dieser Reihenfolge
-      // (siehe tv-indikator/src/tradesetup.pine, portiert nach _shared/tradeSetup.ts). Läuft
-      // nur für die Forex-Instrumente — braucht M5-Kerzen, die nur dort abgerufen werden.
+      // (siehe tv-indikator/src/tradesetup.pine, portiert nach _shared/tradeSetup.ts).
       // dir=1 (Short/Protected High) und dir=-1 (Long/Protected Low) laufen mit denselben
       // Kerzen, nur gespiegelt (siehe checkShortSetup/checkLongSetup im Original).
-      if (cfg.source === "ctrader") {
+      {
         const alarmActive = shouldSend && isAlarmOn("trade_setup");
-        const m5Candles = forexBatch!.candlesByTf.get("M5")!;
+        const m5Candles = forexBatch.candlesByTf.get("M5")!;
         const candles1hForSetup = h1CandlesForSetup!;
         const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5Candles, TRADE_SETUP_M5_FRACTAL_PERIOD);
         const { highs: h1HighsSetup, lows: h1LowsSetup } = detectLiquidityLevels(candles1hForSetup, TRADE_SETUP_H1_FRACTAL_PERIOD);

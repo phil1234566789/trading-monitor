@@ -23,8 +23,8 @@ Konstanten ohne zentrale Übersicht).
   `IRRELEVANT_PCT`-Schwelle (die auf Forex-Kursniveau für Intraday-TFs zu grob wäre).
 - **`HTF_FOREX_MIN_GAP_PIPS`** — [`src/orderBlockDetection.js:30`](src/orderBlockDetection.js#L30)
   (Backend-Duplikat: [`supabase/functions/_shared/orderBlocks.ts:25`](supabase/functions/_shared/orderBlocks.ts#L25))
-  — dasselbe für 1H/4H, nur bei Forex (BTC bleibt bei der Prozent-Schwelle, ein Pip-Minimum wäre bei
-  ~60k bedeutungslos). 1H seit 2026-08-11 bei 1,5 Pip (vorher 4 — verschluckte eine reale GBPUSD-FVG).
+  — dasselbe für 1H/4H, nur bei Forex. 1H seit 2026-08-11 bei 1,5 Pip (vorher 4 — verschluckte eine
+  reale GBPUSD-FVG).
   Die Erkennungslogik selbst zog seit Chat 2026-08-02 von `src/orderBlocks.js` nach
   `src/orderBlockDetection.js` um (Node-Safety fürs MCP-Backfill-Script) — `orderBlocks.js`
   re-exportiert `detectOrderBlocks` nur noch, die Konstanten selbst stehen nicht mehr dort.

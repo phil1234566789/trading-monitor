@@ -1,7 +1,6 @@
 // Minimal cTrader Open API client: opens a fresh TLS/protobuf connection per call,
 // does the required auth handshake, fetches trendbars for one symbol, then disconnects.
-// No persistent/streaming connection — matches the request/response pattern the rest of
-// this codebase already uses for OKX (fetch on demand, poll on an interval from the client).
+// No persistent/streaming connection — fetch on demand, poll on an interval from the client.
 //
 // Wire protocol verified manually against demo.ctraderapi.com:5035 (see chat history):
 // 4-byte big-endian length prefix + binary-encoded ProtoMessage envelope. Deno's TLS
