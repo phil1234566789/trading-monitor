@@ -1228,12 +1228,27 @@ function filterHistorical(zones) {
 // neu erkannt zu werden (Bug: die alte, inzwischen entfernte 4H-Kerzenladung/das Ranges-Lookback-
 // Fenster begrenzten, wie weit zurück eine Zone überhaupt gefunden werden konnte — ältere Zonen
 // tauchten nie auf, bis man manuell zurückscrollte). Im Replay zusätzlich auf Zonen bis replayUntil
-// beschränkt, damit nicht schon
-// Zonen auftauchen, die "in der Zukunft" (relativ zum Replay-Stand) erst entdeckt wurden — analog
-// zum alten filterBtcObsZones-Muster.
+// beschränkt, damit nicht schon Zonen auftauchen, die "in der Zukunft" (relativ zum Replay-Stand)
+// erst entdeckt wurden — analog zum alten filterBtcObsZones-Muster.
+//
+// Punkt 9 (Pip-Distanz-Eingrenzung): läuft hier client-seitig statt als SQL-WHERE, weil die
+// Kosten bei der hier vorliegenden Zeilenzahl ohnehin vernachlässigbar sind (siehe
+// PLAN-chart-objekte-forex.md Abschnitt 4a/4b) UND weil "aktueller Preis" für den Vergleich nur
+// hier (im Chart, über die gerade geladenen Kerzen) ohne Zusatz-Parameter verfügbar ist — der
+// Dashboard-seitige Poll in obZones.js kennt keinen Preis. PIP_OB_RELEVANCE_THRESHOLD ist ein
+// Platzhalter-Wert (bewusst NICHT final, siehe Rückmeldung an Philip) — wie weit eine Zone vom
+// aktuellen Preis entfernt sein darf und trotzdem noch als "relevant" geladen wird, ist eine
+// UX-Entscheidung, keine rein technische.
+const PIP_OB_RELEVANCE_THRESHOLD = 200 * PIP_SIZE;
+function currentPriceEstimate() {
+  return allCandles.length > 0 ? allCandles[allCandles.length - 1].close : null;
+}
 function filterDbObZones(timeframe) {
   const byTf = props.dbObZones.filter((z) => z.instrument === props.symbol && z.timeframe === timeframe);
-  return props.replayUntil == null ? byTf : byTf.filter((z) => z.startTime <= props.replayUntil);
+  const byReplay = props.replayUntil == null ? byTf : byTf.filter((z) => z.startTime <= props.replayUntil);
+  const price = currentPriceEstimate();
+  if (price == null) return byReplay;
+  return byReplay.filter((z) => z.bottom - PIP_OB_RELEVANCE_THRESHOLD <= price && price <= z.top + PIP_OB_RELEVANCE_THRESHOLD);
 }
 
 // Sammelt die Zonen aller AKTIVIERTEN Timeframe-Toggles (Chat 2026-07-30: "Indikatoren > OBs" bekam
