@@ -1318,11 +1318,42 @@ function mergePinnedZones(zones, pinnedZones, candles) {
   return [...zones, ...extra];
 }
 
+// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 10 — DB-Read (Punkt 7)
+// löst nur "kennt das System die Zone", nicht "kann sie gezeichnet werden": ZonePaneView.update()
+// (orderBlocks.js) braucht eine Kerze bei/vor z.startTime in `candles`, sonst bleibt die Box
+// unsichtbar (x: null). Statt die Box auf die älteste geladene Kerze zu klemmen (verworfen, Philip
+// 2026-08-21: "das Ziel ist wirklich [...] die OB [...] im Chart zu haben, obwohl die
+// Entstehungs-Impuls-Candle noch nicht im Chart geladen ist" — eine geklemmte Box hätte die falsche
+// Form) wird hier automatisch Archiv-Historie nachgeladen (billiger DB-Read, kein Live-cTrader-Call,
+// siehe forex_candles-Archiv). Nutzt die bereits bestehende Scroll-Back-Lazy-Load-Funktion
+// (loadOlderCandlesNow) wieder, statt eine eigene Fetch-Pipeline zu bauen — die ruft selbst
+// refreshChart() -> refreshPoiZonesInternal() auf, sobald die nächste Seite da ist, das treibt den
+// Catch-up also von selbst weiter, bis entweder genug geladen ist oder reachedHistoryStart greift.
+// loadOlderCandlesNow guardet selbst gegen einen bereits laufenden Fetch (loadingOlder) — pro Aufruf
+// hier also höchstens ein zusätzlicher No-Op, kein Risiko einer Endlosschleife.
+//
+// M5 bewusst ausgenommen (Philip 2026-08-22: "M5 TF ist recht reingezoomt [...] uuuralte M5 OBs
+// sind so selten noch relevant, dass ich dafür nicht unendlich viele M5 Candles nachladen will,
+// welche NICHT bereits in unserer DB liegen — sehr teuer der cTrader-Aufruf") — loadOlderCandlesNow
+// lädt Kerzen im GERADE angezeigten Chart-Timeframe (props.currentBar), nicht im Timeframe der
+// Zone selbst; steht der Chart z.B. auf M5, würde ein uralt gepinntes M5-OB sonst einen
+// Nachlade-Versuch über Monate von M5-Kerzen auslösen (potenziell nicht archiviert, dann teurer
+// Live-cTrader-Fetch statt billigem DB-Read). Ein altes M5-OB bleibt also weiterhin nur durch
+// manuelles Zurückscrollen sichtbar, wie bisher — nur 1H/4H triggern den Auto-Catch-up.
+function ensureCandlesCoverOldestZone(zones, candles) {
+  if (reachedHistoryStart || loadingOlder || candles.length === 0) return;
+  const relevant = zones.filter((z) => z.timeframe !== "5M");
+  if (relevant.length === 0) return;
+  const oldestNeeded = Math.min(...relevant.map((z) => z.startTime));
+  if (oldestNeeded < candles[0].time) loadOlderCandlesNow();
+}
+
 function refreshPoiZonesInternal() {
   const candles = clipReplay(allCandles);
   const visibleZones = mergePinnedZones(filterHistorical(collectObsZones()), props.pinnedObZones, candles);
   renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles, props.pinObZoneKeys, props.hoveredPinObZoneKey);
   poiZonesMetadata.value = visibleZones;
+  ensureCandlesCoverOldestZone(visibleZones, candles);
 }
 
 // Liquiditäts-Level (Fractal-Pivots, siehe tv-indikator/src/liquidity.pine) gibt es bisher nicht
