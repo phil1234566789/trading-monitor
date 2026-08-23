@@ -223,7 +223,7 @@ function toggleGroup(title) {
             <span class="style-alpha-value">{{ Math.round(chartColors[field.key].alpha * 100) }}%</span>
           </div>
           <div v-if="field.key in chartLineWidths" class="style-field-alpha">
-            <input v-model.number="chartLineWidths[field.key]" type="range" min="0.5" max="5" step="0.5" class="style-alpha-slider" />
+            <input v-model.number="chartLineWidths[field.key]" type="range" min="1" max="5" step="1" class="style-alpha-slider" />
             <span class="style-alpha-value">{{ chartLineWidths[field.key] }}px</span>
           </div>
         </div>

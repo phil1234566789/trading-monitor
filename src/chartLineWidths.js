@@ -21,8 +21,8 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   emaFast: 2,
   emaSlow: 2,
   rsi: 2,
-  divergenceBearish: 1.5,
-  divergenceBullish: 1.5,
+  divergenceBearish: 2,
+  divergenceBullish: 2,
   liquidityHighM5: 1,
   liquidityLowM5: 1,
   liquiditySweepM5: 1,
@@ -55,16 +55,16 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   rangeClosedDowntrend: 1, // abgeschlossene (archivierte) Downtrend-Range.
   rangeChoch: 1, // Nested-Verbindungslinie UND CHoCH-Label teilen sich diese eine Farbe/Breite.
   rangeFib: 1, // Tick + gestrichelte Protected-Fib-Zickzack-Linie (Chat 2026-07-30).
-  tradeWin: 1.5, // Entry/Exit-Preis-Strich, je nach Trade-Ausgang (siehe tradeMarkers.js: outcomeKey).
-  tradeLoss: 1.5,
-  tradeInvalid: 1.5, // Fallback für Exit ohne win/loss-Outcome, siehe chartColors.js.
+  tradeWin: 2, // Entry/Exit-Preis-Strich, je nach Trade-Ausgang (siehe tradeMarkers.js: outcomeKey).
+  tradeLoss: 2,
+  tradeInvalid: 2, // Fallback für Exit ohne win/loss-Outcome, siehe chartColors.js.
   tradeConnector: 2, // gestrichelte Entry->Exit-Verbindungslinie.
   // Basis-Breite für Target-Linien (Chat 2026-07-28) — wird in PriceChart.vue zusätzlich mit einem
   // Alters-Tier-Faktor multipliziert (minor/medium/major, siehe ageTier.ts), diese Zahl hier ist
   // nur der Nutzer-einstellbare Grundwert (wie bei jeder anderen Farbe/Linie im Style-Modal).
-  tradeTarget: 1.5,
-  tradeConfirmation: 1.5, // gleiches Tier-Skalierungsmuster wie tradeTarget, siehe PriceChart.vue.
-  tradeInvalidation: 1.5, // keine Alters-Tier-Skalierung (siehe PriceChart.vue: refreshInvalidationLinesInternal).
+  tradeTarget: 2,
+  tradeConfirmation: 2, // gleiches Tier-Skalierungsmuster wie tradeTarget, siehe PriceChart.vue.
+  tradeInvalidation: 2, // keine Alters-Tier-Skalierung (siehe PriceChart.vue: refreshInvalidationLinesInternal).
 };
 
 function loadInitial() {
