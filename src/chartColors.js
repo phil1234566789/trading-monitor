@@ -35,21 +35,6 @@ export const DEFAULT_CHART_COLORS = {
   liquidityHigh: { hex: "#00e676", alpha: 0.9 },
   liquidityLow: { hex: "#ff9800", alpha: 0.9 },
   liquiditySweep: { hex: "#ffd700", alpha: 0.9 },
-  // Getrennt von den drei Keys oben (Chat 2026-08-23, Philip: "4h LQ-Levels dicker machen") — die
-  // OBEN stehenden liquidityHigh/-Low/-Sweep bleiben für den live auf dem gerade angezeigten
-  // Chart-Timeframe erkannten Satz (egal ob M5/1H/4H); diese hier NUR für die zusätzlich
-  // eingeblendeten, TF-unabhängig relevanten HTF-Level aus liquidity_levels (siehe
-  // selectRelevantHtfLevels/computeHtfLiquidityLevels in PriceChart.vue) — lvl.timeframe
-  // entscheidet in liquidity.js: levelOptions, welcher Satz greift. Startwerte bewusst identisch
-  // zu den Live-Farben oben (reiner Startpunkt, frei über Chart-Style änderbar, gleiche
-  // Gradations-Idee wie bei den OB-Timeframes unten, nur ohne eigene Alpha-Abstufung — das war hier
-  // nicht der Wunsch, nur die Linienstärke).
-  liquidityHigh1h: { hex: "#00e676", alpha: 0.9 },
-  liquidityLow1h: { hex: "#ff9800", alpha: 0.9 },
-  liquiditySweep1h: { hex: "#ffd700", alpha: 0.9 },
-  liquidityHigh4h: { hex: "#00e676", alpha: 0.9 },
-  liquidityLow4h: { hex: "#ff9800", alpha: 0.9 },
-  liquiditySweep4h: { hex: "#ffd700", alpha: 0.9 },
   // Aufgeteilt in M5/1H/4H (Chat 2026-07-30, Bug-Report Philip: "die ganzen OBs lassen sich
   // schwierig unterscheiden") — vorher EIN gemeinsamer Satz (obBull/obBear/obInactive) für alle
   // Timeframes, nur 1H bekam einen fest verdrahteten Dimm-Faktor (DIM_FACTOR_1H in orderBlocks.js,

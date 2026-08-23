@@ -51,26 +51,6 @@ const GROUPS = [
       { key: "liquiditySweep", label: "Gesweept" },
     ],
   },
-  // Getrennt von der Gruppe oben (Chat 2026-08-23, Philip: "4h LQ-Levels dicker machen") — die
-  // Gruppe oben bleibt für den live auf dem gerade angezeigten Chart-Timeframe erkannten Satz,
-  // diese beiden hier nur für die zusätzlich eingeblendeten, TF-unabhängig relevanten HTF-Level
-  // (siehe liquidity.js: liquidityStyleKey).
-  {
-    title: "Liquidität — 1H",
-    fields: [
-      { key: "liquidityHigh1h", label: "High-Level" },
-      { key: "liquidityLow1h", label: "Low-Level" },
-      { key: "liquiditySweep1h", label: "Gesweept" },
-    ],
-  },
-  {
-    title: "Liquidität — 4H",
-    fields: [
-      { key: "liquidityHigh4h", label: "High-Level" },
-      { key: "liquidityLow4h", label: "Low-Level" },
-      { key: "liquiditySweep4h", label: "Gesweept" },
-    ],
-  },
   // Aufgeteilt nach Timeframe (Chat 2026-07-30, Bug-Report Philip: "die ganzen OBs lassen sich
   // schwierig unterscheiden") — vorher eine gemeinsame Gruppe für alle drei Timeframes, siehe
   // chartColors.js für die Default-Abstufung (4H kräftigsten, M5 am dezentesten).
