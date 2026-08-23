@@ -316,7 +316,8 @@ source: a change is written there first, then manually ported into
 `.ts` instead of `.js` extensions, see `c0fb43b`'s commit message for the exact conversion steps). The
 two copies are otherwise kept identical; if you change tool logic in one, check whether the other
 needs the same edit. `mcp-server/src/scripts/` (`backfillForexCandles.ts`, `backfillObZones.ts`,
-`rsiDivergenceStats.ts`) is the one part that stays Node-only on purpose — one-off local scripts,
+`backfillLiquidityLevels.ts`, `rsiDivergenceStats.ts`) is the one part that stays Node-only on
+purpose — one-off local scripts,
 never ported to the edge function (a stray copy of these was even removed again from the edge
 function directory in `c154887` for exactly that reason).
 
@@ -571,6 +572,22 @@ Two schema changes this required, both worth knowing about if you touch `ob_zone
   (`20260809140000_ob_zones_anon_insert.sql`, `...150000_ob_zones_anon_delete.sql`) opened it up,
   aligning it with the permissive single-user model everywhere else. `poi-watcher` itself still
   writes via `service_role`, unchanged.
+
+**Historical `liquidity_levels` backfill (`mcp-server/src/scripts/backfillLiquidityLevels.ts`,
+since 2026-08-23)** — same shape as the `ob_zones` backfill above, same underlying cause:
+`poi-watcher` only ever detects 1H liquidity levels over a rolling `FOREX_H1_LOOKBACK_CANDLES=3000`
+(~125 days) window, so a pivot older than that relative to *every* run since the window was last
+widened (2026-08-02) was never persisted, no matter how long you wait for the next cron tick —
+this is what a 2026-08-23 bug report ("Dieses Liquiditäts-Level ist noch nicht gespeichert") traced
+back to, for a February 2026 level. Runs `detectLiquidityLevels` (dependency-free,
+`src/liquidityDetection.js`) once over the entire archived 1H candle series per instrument instead
+of the live rolling window, upserts with `ignoreDuplicates: true` (never clobbers a live-tracked
+row) and the same "already-touched-when-first-seen counts as notified" trick as the OB version, so
+no retroactive Telegram alert fires later. `liquidity_levels` needed the same anon-insert-policy
+treatment as `ob_zones` (`20260823130000_liquidity_levels_anon_insert.sql`) for the same reason
+(local script, no `service_role`). Run manually whenever a pin/lookup hits this gap again:
+`SUPABASE_URL=... SUPABASE_ANON_KEY=... [BACKFILL_INSTRUMENTS=GBPUSD,EURUSD] npx tsx
+mcp-server/src/scripts/backfillLiquidityLevels.ts`.
 
 **Gotcha (hit THREE times while building this — it's not just a backfill-script thing)**:
 Supabase/PostgREST caps a single response's row count server-side (empirically confirmed at
