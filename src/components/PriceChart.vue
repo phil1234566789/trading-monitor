@@ -1440,7 +1440,12 @@ function refreshLiquidityInternal() {
     currentLiquidityLevels = [];
     return;
   }
-  const { highs, lows } = detectLiquidityLevels(candles, LIQUIDITY_FRACTAL_PERIOD);
+  // timeframe = der gerade angezeigte Chart-Timeframe (Task "Chart-Objekte..." Nachbesserung
+  // 2026-08-23: M5/1H/4H-Chart-Style-Kategorien, siehe liquidity.js: liquidityStyleTimeframe) —
+  // live erkannte Level tragen sonst kein eigenes Timeframe-Feld wie die persistierten HTF-Level.
+  const { highs: rawHighs, lows: rawLows } = detectLiquidityLevels(candles, LIQUIDITY_FRACTAL_PERIOD);
+  const highs = rawHighs.map((l) => ({ ...l, timeframe: props.currentBar }));
+  const lows = rawLows.map((l) => ({ ...l, timeframe: props.currentBar }));
   const liveRelevant = props.showSweptLiquidity
     ? [...highs, ...lows]
     : [...filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true), ...filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true)];

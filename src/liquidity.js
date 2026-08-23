@@ -245,8 +245,31 @@ export function bullBearLabelSide(bearish) {
   return bearish ? "end-above" : "end-below";
 }
 
+// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Nachbesserung 2026-08-23,
+// Philip: "M5/1H/4H als Chart-Style-Kategorien, konsistent mit den Order-Blöcken" — anders als
+// beim ersten Anlauf (verworfen: Style hing davon ab, ob ein Level live erkannt oder als
+// zusätzliches HTF-Level eingeblendet wurde, nicht vom tatsächlichen Timeframe) richtet sich der
+// Style-Key jetzt nach `lvl.timeframe` selbst: bei den persistierten HTF-Leveln (computeHtfLiquidityLevels)
+// schon '1H'/'4H', bei live erkannten (refreshLiquidityInternal: highs/lows) und bei gepinnten
+// Leveln (Dashboard.vue: pinnedLiquidityLevels) der jeweils aktuelle Chart-Timeframe zum
+// Pin-/Erkennungs-Zeitpunkt (z.B. "1h"/"5m"/"15m") — Groß-/Kleinschreibung ist dabei uneinheitlich
+// zwischen DB-Werten ('1H') und currentBar-Werten ('1h'), deshalb hier per .toUpperCase()
+// vereinheitlicht statt an zwei Stellen verschieden zu schreiben. Alles außer exakt 1H/4H (also
+// 1m/3m/5m/15m/1D, oder kein Timeframe gesetzt) fällt in den M5-Topf — die feinste/detailreichste
+// Kategorie ist der sinnvollste Sammelplatz für "alles andere".
+const LIQUIDITY_STYLE_KEYS = {
+  M5: { liquidityHigh: "liquidityHighM5", liquidityLow: "liquidityLowM5", liquiditySweep: "liquiditySweepM5" },
+  "1H": { liquidityHigh: "liquidityHigh1h", liquidityLow: "liquidityLow1h", liquiditySweep: "liquiditySweep1h" },
+  "4H": { liquidityHigh: "liquidityHigh4h", liquidityLow: "liquidityLow4h", liquiditySweep: "liquiditySweep4h" },
+};
+function liquidityStyleTimeframe(rawTimeframe) {
+  const upper = String(rawTimeframe ?? "").toUpperCase();
+  return upper === "1H" || upper === "4H" ? upper : "M5";
+}
+
 function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin } = {}) {
-  const key = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
+  const base = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
+  const key = LIQUIDITY_STYLE_KEYS[liquidityStyleTimeframe(lvl.timeframe)][base];
   const color = cssColor(key);
   const label = debugPrices ? `${formatPrice(lvl.price)}${ageSuffix(lvl.pivotTime, nowSec)}` : null;
   return { color, lineWidth: lineWidth(key), label, inPinContext, pinColor: cssColor("pin"), isSelectedPin, hoverColor: cssColor("tradeHover") };

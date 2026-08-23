@@ -44,11 +44,27 @@ const GROUPS = [
     ],
   },
   {
-    title: "Liquidität",
+    title: "Liquidität — M5",
     fields: [
-      { key: "liquidityHigh", label: "High-Level" },
-      { key: "liquidityLow", label: "Low-Level" },
-      { key: "liquiditySweep", label: "Gesweept" },
+      { key: "liquidityHighM5", label: "High-Level" },
+      { key: "liquidityLowM5", label: "Low-Level" },
+      { key: "liquiditySweepM5", label: "Gesweept" },
+    ],
+  },
+  {
+    title: "Liquidität — 1H",
+    fields: [
+      { key: "liquidityHigh1h", label: "High-Level" },
+      { key: "liquidityLow1h", label: "Low-Level" },
+      { key: "liquiditySweep1h", label: "Gesweept" },
+    ],
+  },
+  {
+    title: "Liquidität — 4H",
+    fields: [
+      { key: "liquidityHigh4h", label: "High-Level" },
+      { key: "liquidityLow4h", label: "Low-Level" },
+      { key: "liquiditySweep4h", label: "Gesweept" },
     ],
   },
   // Aufgeteilt nach Timeframe (Chat 2026-07-30, Bug-Report Philip: "die ganzen OBs lassen sich

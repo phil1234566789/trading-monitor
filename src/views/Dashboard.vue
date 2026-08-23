@@ -661,6 +661,9 @@ const pinnedLiquidityLevels = computed(() => {
           pivotTime: toUnixSec(e.liquidityLevel.pivotTime),
           touched: e.liquidityLevel.touched,
           endTime: toUnixSec(e.liquidityLevel.endTime),
+          // Chart-Style-Kategorie (M5/1H/4H, siehe liquidity.js: liquidityStyleTimeframe) —
+          // liquidity_levels.timeframe ist seit 2026-08-23 '1H' ODER '4H' (vorher nur '1H').
+          timeframe: e.liquidityLevel.timeframe,
         };
       }
       return {
@@ -669,6 +672,9 @@ const pinnedLiquidityLevels = computed(() => {
         pivotTime: toUnixSec(e.m5Liquidity.pivotTime),
         touched: null,
         endTime: null,
+        // Roh-Wert vom Pin-Zeitpunkt (z.B. "5m"/"15m"/"1h"/"4h") — liquidityStyleTimeframe
+        // bucketet alles außer exakt 1H/4H in die M5-Kategorie.
+        timeframe: e.m5Liquidity.timeframe,
       };
     });
 });

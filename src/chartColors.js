@@ -32,9 +32,22 @@ export const DEFAULT_CHART_COLORS = {
   // mitverschieben).
   divergenceBearish: { hex: "#ef5350", alpha: 0.85 },
   divergenceBullish: { hex: "#26a69a", alpha: 0.85 },
-  liquidityHigh: { hex: "#00e676", alpha: 0.9 },
-  liquidityLow: { hex: "#ff9800", alpha: 0.9 },
-  liquiditySweep: { hex: "#ffd700", alpha: 0.9 },
+  // Aufgeteilt in M5/1H/4H (Chat 2026-08-23, Philip: "konsistent mit den Order-Blöcken" — siehe
+  // dortige Begründung direkt darunter, dieselbe Logik) — der Timeframe kommt vom jeweiligen
+  // Level selbst (liquidityLevelStyleTimeframe in liquidity.js), nicht vom gerade angezeigten
+  // Chart-Timeframe: ein live auf dem 1H-Chart erkanntes Level UND ein zusätzlich eingeblendetes,
+  // persistiertes 1H-Level nutzen dadurch denselben Satz, keine versteckte Inkonsistenz je nach
+  // Herkunft. Startwerte identisch zu den alten, timeframe-losen liquidityHigh/-Low/-Sweep-Farben
+  // (reiner Startpunkt, frei über Chart-Style änderbar).
+  liquidityHighM5: { hex: "#00e676", alpha: 0.9 },
+  liquidityLowM5: { hex: "#ff9800", alpha: 0.9 },
+  liquiditySweepM5: { hex: "#ffd700", alpha: 0.9 },
+  liquidityHigh1h: { hex: "#00e676", alpha: 0.9 },
+  liquidityLow1h: { hex: "#ff9800", alpha: 0.9 },
+  liquiditySweep1h: { hex: "#ffd700", alpha: 0.9 },
+  liquidityHigh4h: { hex: "#00e676", alpha: 0.9 },
+  liquidityLow4h: { hex: "#ff9800", alpha: 0.9 },
+  liquiditySweep4h: { hex: "#ffd700", alpha: 0.9 },
   // Aufgeteilt in M5/1H/4H (Chat 2026-07-30, Bug-Report Philip: "die ganzen OBs lassen sich
   // schwierig unterscheiden") — vorher EIN gemeinsamer Satz (obBull/obBear/obInactive) für alle
   // Timeframes, nur 1H bekam einen fest verdrahteten Dimm-Faktor (DIM_FACTOR_1H in orderBlocks.js,
