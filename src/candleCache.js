@@ -57,7 +57,17 @@ const DB_NAME = "trading-monitor-candles";
 // zu knapp gedeckelten Delta-Fetch. Derselbe Poisoning-Mechanismus wie bei Version 3/5/6/7: ein VOR
 // diesem Fix geschriebener Cache-Eintrag enthält die Lücke bereits fest im Array, ein reiner
 // Code-Fix räumt das nicht auf.
-const DB_VERSION = 8;
+//
+// 9 (2026-08-23: mergeCandles verwirft keine gecachten Kerzen mehr, nur weil sie chronologisch
+// INNERHALB von fresh's eigenem Fenster liegen, siehe Kommentar dort) — Bug-Report Philip: GBPUSD
+// 1H zeigte eine 12-Tage-Lücke (07.08.–19.08.) mitten in der Historie, obwohl das Archiv für genau
+// diesen Zeitraum lückenlos Kerzen hat. Die alte before/after-Grenzfilterung verwarf jede gecachte
+// Kerze im Zeitfenster von `fresh`, in der impliziten Annahme, `fresh` decke sein eigenes Fenster
+// selbst lückenlos ab — hatte der zugrundeliegende Live-Fetch dort selbst eine interne Lücke,
+// verschwand die eigentlich schon korrekt gecachte alte Kerze trotzdem, nichts füllte sie wieder
+// auf. Derselbe Poisoning-Mechanismus wie bei Version 3/5/6/7/8: ein VOR diesem Fix geschriebener
+// Cache-Eintrag hat die Lücke bereits fest im Array, ein reiner Code-Fix räumt das nicht auf.
+const DB_VERSION = 9;
 const STORE_NAME = "candles";
 
 // Rein defensiv, KEINE reguläre Obergrenze (siehe oben) — 500k Kerzen sind selbst auf M1 fast ein
@@ -144,14 +154,25 @@ async function setCachedCandles(symbol, bar, candles, completeUpTo) {
 // Vereinigung hier ist in jede Richtung sicher. Kann dabei bewusst eine LÜCKE zwischen `before` und
 // `fresh` (oder `fresh` und `after`) stehen lassen, wenn `fresh` nicht direkt anschließt (siehe
 // cachedCandlesUpTo unten, wieso das für den Cache-Hit-Check kein Problem mehr ist).
+// Bug-Report Philip 2026-08-23: GBPUSD 1H zeigte eine 12-Tage-Lücke (07.08.–19.08.) mitten in der
+// geladenen Historie, obwohl das Archiv für genau diesen Zeitraum lückenlos Kerzen hat. Ursache:
+// die vorherige Version filterte `before`/`after` per Zeit-GRENZE (c.time < freshStart /
+// c.time > freshEnd) und verwarf damit JEDE gecachte Kerze innerhalb von [freshStart, freshEnd] —
+// unter der impliziten Annahme, `fresh` decke sein eigenes Fenster lückenlos ab. Hatte der
+// zugrundeliegende Live-Fetch selbst eine interne Lücke in diesem Fenster (Ursache dafür separat,
+// nicht hier), verschwand die an der Stelle bereits korrekt gecachte alte Kerze trotzdem — nichts
+// füllte die Lücke wieder auf. Jetzt stattdessen ein Merge nach Zeitstempel: `fresh` überschreibt
+// bei echten Duplikaten (frischer Stand gewinnt, unverändertes Verhalten), aber eine gecachte
+// Kerze, die in `fresh` schlicht NICHT vorkommt, bleibt erhalten statt kommentarlos zu
+// verschwinden. Eine Lücke GENAU an der Naht zwischen before/fresh (oder fresh/after) bleibt
+// weiterhin möglich und ist unverändert kein Problem für sich (siehe cachedCandlesUpTo/completeUpTo
+// unten) — hier geht es nur um Lücken, die INNERHALB von fresh selbst schon vorhanden waren.
 export function mergeCandles(cached, fresh) {
   if (fresh.length === 0) return cached;
   if (cached.length === 0) return fresh;
-  const freshStart = fresh[0].time;
-  const freshEnd = fresh[fresh.length - 1].time;
-  const before = cached.filter((c) => c.time < freshStart);
-  const after = cached.filter((c) => c.time > freshEnd);
-  return [...before, ...fresh, ...after];
+  const byTime = new Map(cached.map((c) => [c.time, c]));
+  for (const c of fresh) byTime.set(c.time, c);
+  return [...byTime.values()].sort((a, b) => a.time - b.time);
 }
 
 // Kern-Entscheidung für den Replay-Cache-Hit (toMs gesetzt): liefert die letzten `targetCount`

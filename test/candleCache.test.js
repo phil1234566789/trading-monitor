@@ -215,4 +215,23 @@ describe("mergeCandles: zweites Nachladen hängt nur vorne an, fasst die Histori
     // Historie VOR dem Überlapp bleibt unverändert erhalten.
     expect(merged.slice(0, firstWindow.length - overlapBars)).toEqual(firstWindow.slice(0, firstWindow.length - overlapBars));
   });
+
+  // Bug-Report Philip 2026-08-23: GBPUSD 1H zeigte eine 12-Tage-Lücke mitten in der Historie,
+  // obwohl das Archiv für genau diesen Zeitraum lückenlos Kerzen hatte — Ursache war ein `fresh`-
+  // Fetch, der INNERHALB seines eigenen [start,end]-Fensters selbst eine Lücke hatte (z.B. ein
+  // Live-Fetch, der genau in diesem Bereich unvollständig war). Die alte before/after-Grenzfilterung
+  // verwarf dabei jede gecachte Kerze in diesem Fenster, unabhängig davon, ob `fresh` an genau
+  // dieser Stelle überhaupt etwas mitbrachte.
+  it("behält eine gecachte Kerze, die innerhalb von fresh's Fenster liegt, aber dort selbst fehlt (fresh hat eine eigene Lücke)", () => {
+    const cached = Array.from({ length: 20 }, (_, i) => candle(i * BAR_SECONDS)); // 0..19*BAR_SECONDS, lückenlos
+    // fresh deckt nominell dasselbe Gesamtfenster ab, hat aber selbst eine Lücke von Index 5 bis 14
+    // (Kerzen 5..14 fehlen einfach, wie bei einem unvollständigen Live-Fetch).
+    const fresh = [...Array.from({ length: 5 }, (_, i) => candle(i * BAR_SECONDS)), ...Array.from({ length: 5 }, (_, i) => candle((15 + i) * BAR_SECONDS))];
+
+    const merged = mergeCandles(cached, fresh);
+
+    // Lückenlos von 0 bis 19*BAR_SECONDS — die alten gecachten Kerzen 5..14 füllen fresh's eigene Lücke.
+    const times = merged.map((c) => c.time);
+    expect(times).toEqual(Array.from({ length: 20 }, (_, i) => i * BAR_SECONDS));
+  });
 });
