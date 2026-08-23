@@ -47,11 +47,25 @@ export async function getObZones(instrument: string, timeframe?: string, include
 const LIQUIDITY_MAX_RELEVANT = 10; // siehe src/liquidity.js LIQUIDITY_MAX_RELEVANT
 const RECENT_SWEEP_COUNT = 2; // siehe src/liquidity.js RECENT_SWEEP_COUNT
 
-// Port von filterRelevantLevels (src/liquidity.js) auf DB-Zeilen statt In-Memory-Detektions-
-// objekten — gleiche Auswahl-Logik (neuestes Level, unberührte Level, RECENT_SWEEP_COUNT zuletzt
-// gesweepte, insgesamt max. maxRelevant), damit "relevant" hier dasselbe bedeutet wie im Live-Chart.
-// rows müssen chronologisch aufsteigend (älteste zuerst) sortiert sein, wie levels in liquidity.js.
-function filterRelevantRows<T extends { touched: boolean; end_time: string | null }>(rows: T[], maxRelevant: number): T[] {
+// Port von filterRelevantLevels (src/liquidityDetection.js) auf DB-Zeilen statt In-Memory-
+// Detektionsobjekten — gleiche Auswahl-Logik (neuestes Level, unberührte Level, RECENT_SWEEP_COUNT
+// zuletzt gesweepte, insgesamt max. maxRelevant), damit "relevant" hier dasselbe bedeutet wie im
+// Live-Chart. rows müssen chronologisch aufsteigend (älteste zuerst) sortiert sein, wie levels in
+// liquidityDetection.js.
+//
+// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 13 — currentPrice/
+// priceThreshold (optional, Default null = unverändertes Verhalten) für dasselbe dritte
+// Relevanz-Kriterium wie im Frontend (filterRelevantLevels): ein berührtes Level bleibt auch
+// relevant, wenn es aktuell in Preis-Reichweite liegt, unabhängig davon wie lange der Sweep her
+// ist. Bewusst noch nicht in getLiquidityLevels/get_data_export verdrahtet — "aktueller Preis"
+// bräuchte dort eine eigene, Replay-konsistente Herleitung, die dieser Task nicht abdeckt; die
+// Signatur ist aber schon bereit dafür.
+function filterRelevantRows<T extends { touched: boolean; end_time: string | null; price: number }>(
+  rows: T[],
+  maxRelevant: number,
+  currentPrice: number | null = null,
+  priceThreshold: number | null = null,
+): T[] {
   const n = rows.length;
   if (n === 0) return [];
   const newestActive = !rows[n - 1].touched;
@@ -70,7 +84,8 @@ function filterRelevantRows<T extends { touched: boolean; end_time: string | nul
     const row = rows[i];
     const isNewest = newestActive && i === n - 1;
     const isRecentSweep = recentSweepIdx.has(i);
-    if (isNewest || !row.touched || isRecentSweep) {
+    const isPriceRelevant = currentPrice != null && priceThreshold != null && Math.abs(row.price - currentPrice) <= priceThreshold;
+    if (isNewest || !row.touched || isRecentSweep || isPriceRelevant) {
       if (relevantCount < maxRelevant) result.push(row);
       relevantCount += 1;
     }

@@ -142,6 +142,12 @@ const props = defineProps({
   showObs4h: { type: Boolean, default: true },
   showHistoricalObs: { type: Boolean, default: false },
   showLiquidity: { type: Boolean, default: true },
+  // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 12 — die von
+  // poi-watcher persistierten 1H-Level (src/liquidityLevels.js: fetchLiquidityLevels1h, in
+  // Dashboard.vue gepollt) plus der zugehörige Toggle, unabhängig vom aktuell gewählten
+  // Chart-Timeframe (anders als showLiquidity, das immer nur currentBar live zeigt).
+  dbLiquidityLevels1h: { type: Array, default: () => [] },
+  showLiquidity1h: { type: Boolean, default: false },
   showSweptLiquidity: { type: Boolean, default: false },
   showLiquidityDebug: { type: Boolean, default: false },
   showTradeSetups: { type: Boolean, default: true },
@@ -1235,11 +1241,9 @@ function filterHistorical(zones) {
 // Kosten bei der hier vorliegenden Zeilenzahl ohnehin vernachlässigbar sind (siehe
 // PLAN-chart-objekte-forex.md Abschnitt 4a/4b) UND weil "aktueller Preis" für den Vergleich nur
 // hier (im Chart, über die gerade geladenen Kerzen) ohne Zusatz-Parameter verfügbar ist — der
-// Dashboard-seitige Poll in obZones.js kennt keinen Preis. PIP_OB_RELEVANCE_THRESHOLD ist ein
-// Platzhalter-Wert (bewusst NICHT final, siehe Rückmeldung an Philip) — wie weit eine Zone vom
-// aktuellen Preis entfernt sein darf und trotzdem noch als "relevant" geladen wird, ist eine
-// UX-Entscheidung, keine rein technische.
-const PIP_OB_RELEVANCE_THRESHOLD = 200 * PIP_SIZE;
+// Dashboard-seitige Poll in obZones.js kennt keinen Preis. 200 Pips von Philip bestätigt
+// (2026-08-22), gilt einheitlich für OB-Zonen UND (Punkt 12/13) Liquidity-Level.
+const PIP_RELEVANCE_THRESHOLD = 200 * PIP_SIZE;
 function currentPriceEstimate() {
   return allCandles.length > 0 ? allCandles[allCandles.length - 1].close : null;
 }
@@ -1248,7 +1252,7 @@ function filterDbObZones(timeframe) {
   const byReplay = props.replayUntil == null ? byTf : byTf.filter((z) => z.startTime <= props.replayUntil);
   const price = currentPriceEstimate();
   if (price == null) return byReplay;
-  return byReplay.filter((z) => z.bottom - PIP_OB_RELEVANCE_THRESHOLD <= price && price <= z.top + PIP_OB_RELEVANCE_THRESHOLD);
+  return byReplay.filter((z) => z.bottom - PIP_RELEVANCE_THRESHOLD <= price && price <= z.top + PIP_RELEVANCE_THRESHOLD);
 }
 
 // Sammelt die Zonen aller AKTIVIERTEN Timeframe-Toggles (Chat 2026-07-30: "Indikatoren > OBs" bekam
@@ -1391,23 +1395,63 @@ function mergePinnedLevels(levels, pinnedLevels, candles) {
   return [...levels, ...extra];
 }
 
+// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 12/13 — die
+// persistierten 1H-Level (nur wenn showLiquidity1h an), unabhängig von showLiquidity/currentBar.
+// Instrument-/Replay-Filter wie filterDbObZones; das dritte Relevanz-Kriterium aus Punkt 13
+// (kürzlich gesweept ODER aktuell in Pip-Reichweite) läuft direkt über filterRelevantLevels' neue
+// currentPrice/priceThreshold-Parameter. endTime wird selbst geheilt (wie mergePinnedLevels), da
+// ein noch unberührtes DB-Level end_time=null führt (wächst live mit, statt eingefroren zu sein).
+function computeDb1hLiquidityLevels(candles) {
+  if (!props.showLiquidity1h) return [];
+  const byInstrument = props.dbLiquidityLevels1h.filter((l) => l.instrument === props.symbol);
+  const byReplay = props.replayUntil == null ? byInstrument : byInstrument.filter((l) => l.pivotTime <= props.replayUntil);
+  const price = currentPriceEstimate();
+  const highs = filterRelevantLevels(byReplay.filter((l) => l.dir === 1), LIQUIDITY_MAX_RELEVANT, true, price, PIP_RELEVANCE_THRESHOLD);
+  const lows = filterRelevantLevels(byReplay.filter((l) => l.dir === -1), LIQUIDITY_MAX_RELEVANT, true, price, PIP_RELEVANCE_THRESHOLD);
+  return [...highs, ...lows].map((l) => ({ ...l, endTime: l.endTime ?? candles[candles.length - 1]?.time ?? l.pivotTime }));
+}
+
+// Merge per Natural Key (wie mergePinnedZones/-Levels) — bei currentBar==="1H" überschneiden sich
+// live erkannte und DB-1H-Level meist, dann gewinnt die live erkannte Version (schon in `levels`)
+// und wird nicht dupliziert; alles, was NUR in der DB steht (älter als das geladene Kerzenfenster),
+// kommt zusätzlich dazu — genau das macht "alte, aber relevante 1H-Level sichtbar" möglich.
+function mergeDbLiquidityLevels(levels, dbLevels) {
+  if (dbLevels.length === 0) return levels;
+  const seen = new Set(levels.map((l) => liquidityLevelNaturalKey(l.dir, l.pivotTime)));
+  const extra = dbLevels.filter((l) => !seen.has(liquidityLevelNaturalKey(l.dir, l.pivotTime)));
+  return [...levels, ...extra];
+}
+
+// Analog zu ensureCandlesCoverOldestZone (OBs, Punkt 10), aber für Liquidity-Level (pivotTime statt
+// startTime). Kein Timeframe-Ausschluss nötig wie dort — computeDb1hLiquidityLevels liefert
+// ausschließlich 1H-Level, nie M5.
+function ensureCandlesCoverOldestLevel(levels, candles) {
+  if (reachedHistoryStart || loadingOlder || candles.length === 0 || levels.length === 0) return;
+  const oldestNeeded = Math.min(...levels.map((l) => l.pivotTime));
+  if (oldestNeeded < candles[0].time) loadOlderCandlesNow();
+}
+
 function refreshLiquidityInternal() {
   const candles = clipReplay(allCandles);
+  const db1h = computeDb1hLiquidityLevels(candles);
   if (!props.showLiquidity) {
-    const pinnedOnly = mergePinnedLevels([], props.pinnedLiquidityLevels, candles);
+    const merged = mergeDbLiquidityLevels([], db1h);
+    const pinnedOnly = mergePinnedLevels(merged, props.pinnedLiquidityLevels, candles);
     renderLiquidityLevels(candleSeries, pinnedOnly, liquidityPrimitives, candles, {
       pinKeys: props.pinLiquidityLevelKeys,
       hoveredKey: props.hoveredPinLiquidityLevelKey,
     });
-    liquidityMetadata.value = null;
-    liquidityEarliestTime.value = null;
-    currentLiquidityLevels = [];
+    liquidityMetadata.value = merged.length > 0 ? merged.map(pivotForDisplay) : null;
+    liquidityEarliestTime.value = merged.length > 0 ? Math.min(...merged.map((lvl) => lvl.pivotTime)) : null;
+    currentLiquidityLevels = merged;
+    ensureCandlesCoverOldestLevel(merged, candles);
     return;
   }
   const { highs, lows } = detectLiquidityLevels(candles, LIQUIDITY_FRACTAL_PERIOD);
-  const relevant = props.showSweptLiquidity
+  const liveRelevant = props.showSweptLiquidity
     ? [...highs, ...lows]
     : [...filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true), ...filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true)];
+  const relevant = mergeDbLiquidityLevels(liveRelevant, db1h);
   currentLiquidityLevels = relevant;
   const precision = pricePrecisionForInstrument(props.symbol);
   renderLiquidityLevels(candleSeries, mergePinnedLevels(relevant, props.pinnedLiquidityLevels, candles), liquidityPrimitives, candles, {
@@ -1421,6 +1465,7 @@ function refreshLiquidityInternal() {
   });
   liquidityMetadata.value = relevant.map(pivotForDisplay);
   liquidityEarliestTime.value = relevant.length > 0 ? Math.min(...relevant.map((lvl) => lvl.pivotTime)) : null;
+  ensureCandlesCoverOldestLevel(relevant, candles);
 }
 
 // Sessions-Hintergrundbänder (Chat 2026-07-22) — tzOffsetMinutes kommt aus der Browser-Lokalzeit
@@ -2942,6 +2987,8 @@ watch(() => props.showObsM5, refreshPoiZonesInternal);
 watch(() => props.dbObZones, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
 watch(() => props.showLiquidity, refreshLiquidityInternal);
+watch(() => props.showLiquidity1h, refreshLiquidityInternal);
+watch(() => props.dbLiquidityLevels1h, refreshLiquidityInternal);
 watch(() => props.showSweptLiquidity, refreshLiquidityInternal);
 watch(() => props.showLiquidityDebug, () => {
   refreshLiquidityInternal();

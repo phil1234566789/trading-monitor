@@ -26,6 +26,7 @@ import {
   updateDealingRange,
 } from "../tradeIntake.js";
 import { fetchObZones } from "../obZones.js";
+import { fetchLiquidityLevels1h } from "../liquidityLevels.js";
 import {
   fetchPinContext,
   addPinEntry,
@@ -111,6 +112,12 @@ const showObsM5 = useLocalStorageRef("showObsM5", false);
 const showObs1h = useLocalStorageRef("showObs1h", true);
 const showObs4h = useLocalStorageRef("showObs4h", true);
 const showLiquidity = useLocalStorageRef("showLiquidity", true);
+// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 12 (Philip 2026-08-22:
+// "neuer unabhängiger 1H-Level-Toggle") — zeigt persistierte 1H-Level (liquidity_levels) IMMER
+// zusätzlich an, unabhängig vom gerade gewählten Chart-Timeframe, analog zu showObs1h bei den
+// Order Blocks. Default false: additives Feature, kein Ersatz für showLiquidity (das weiterhin nur
+// den aktuellen currentBar live zeigt).
+const showLiquidity1h = useLocalStorageRef("showLiquidity1h", false);
 // Debug-Hilfsmittel für die Trend-Indikator-Entwicklung: Preise an den Pivot-Linien
 // einblenden und die aktuell ausgeblendeten (bereits gesweepten) Liquiditäts-Level
 // mitanzeigen. Beide default aus, um den Chart im Normalbetrieb nicht zuzumüllen.
@@ -865,7 +872,7 @@ const indikatorenMenuOpen = ref(false);
 // Sessions seit Chat 2026-07-29 NICHT mehr dabei ("ich deaktiviere gerne Indikatoren um mehr zu
 // sehen, aber Sessions eig nie — die geben mir Orientierung zur Charthistorie") — eigener,
 // permanenter Toggle links neben News statt im Sammel-Dropdown, siehe Template.
-const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs];
+const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showLiquidity1h, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs];
 const indikatorenActive = computed(() => INDIKATOREN_REFS.some((r) => r.value));
 let indikatorenSavedState = null;
 function toggleIndikatoren() {
@@ -939,6 +946,9 @@ const { data: pinContextEntries, refresh: refreshPinContext } = usePolledFetch((
 // die beiden Fälle oben, MIT intervalMs. 60s reicht: schneller als jede sinnvolle manuelle
 // Beobachtung, ohne unnötig oft zu pollen.
 const { data: dbObZones } = usePolledFetch(() => fetchObZones(), { intervalMs: 60_000 });
+// 1H-Liquidity-Level (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 12)
+// — analog zu dbObZones oben, gleicher Grund für intervalMs (poi-watcher-Cron im Hintergrund).
+const { data: dbLiquidityLevels1h } = usePolledFetch(() => fetchLiquidityLevels1h(), { intervalMs: 60_000 });
 // Nur die Ids, die zum GERADE geladenen Symbol gehören (trades enthält nur dessen Trades) — ein
 // Pin-Eintrag für ein anderes Symbol kann im Chart/in der Tabelle ohnehin nicht markiert
 // werden, solange dieses Symbol nicht ausgewählt ist.
@@ -1139,6 +1149,11 @@ watch(selectedTradingAccountId, refreshTrades);
             <div v-if="liquidityMenuOpen" class="toggle-dropdown">
               <button :class="{ active: showSweptLiquidity }" @click="showSweptLiquidity = !showSweptLiquidity">
                 Liquidity-Sweeps
+              </button>
+              <!-- Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 12 —
+                   zeigt persistierte 1H-Level immer zusätzlich, unabhängig vom Chart-Timeframe. -->
+              <button :class="{ active: showLiquidity1h }" @click="showLiquidity1h = !showLiquidity1h">
+                1H-Level
               </button>
             </div>
           </div>
@@ -1471,6 +1486,8 @@ watch(selectedTradingAccountId, refreshTrades);
     :hovered-pin-rsi-divergence-key="hoveredPinRsiDivergenceKey"
     :pinned-ob-zones="pinnedObZones"
     :db-ob-zones="dbObZones"
+    :db-liquidity-levels-1h="dbLiquidityLevels1h"
+    :show-liquidity-1h="showLiquidity1h"
     :pinned-liquidity-levels="pinnedLiquidityLevels"
     :pinned-trade-setups="pinnedTradeSetups"
     :pinned-rsi-divergences="pinnedRsiDivergences"
