@@ -1425,15 +1425,22 @@ function computeHtfLiquidityLevels(candles) {
   return result.map((l) => ({ ...l, endTime: l.endTime ?? candles[candles.length - 1]?.time ?? l.pivotTime }));
 }
 
-// Merge per Natural Key (wie mergePinnedZones/-Levels) — bei currentBar==="1H" überschneiden sich
-// live erkannte und DB-1H-Level meist, dann gewinnt die live erkannte Version (schon in `levels`)
-// und wird nicht dupliziert; alles, was NUR in der DB steht (älter als das geladene Kerzenfenster),
-// kommt zusätzlich dazu — genau das macht "alte, aber relevante 1H-Level sichtbar" möglich.
+// Merge per Natural Key (wie mergePinnedZones/-Levels) — Bug-Report Philip 2026-08-23 (die
+// Live-Neuberechnung zeigte ein längst laut poi-watcher getouchtes 1H-Level trotzdem als bis
+// "jetzt" durchgezeichnet an): bis dahin gewann bei einer Überschneidung die LIVE erkannte Version
+// gegen die DB-Version — für 1H/4H ist das aber dieselbe Krankheit, die Punkt 7 bei den OB-Zonen
+// schon behoben hat (die Live-Neuberechnung im Browser läuft über eine andere, potenziell
+// unvollständige/andere Kerzenquelle als poi-watcher, siehe candleCache.js: mergeCandles-Fix vom
+// selben Tag). Priorität deshalb umgedreht: die DB-Version (poi-watcher, `dbLevels`) gewinnt jetzt
+// IMMER bei einer Überschneidung — nur was NUR live erkannt wurde (z.B. M5, oder ein 1H/4H-Pivot,
+// den poi-watcher noch nicht persistiert hat, siehe CLAUDE.md poi-watcher-Throttling), kommt
+// zusätzlich dazu. "Alte, aber relevante 1H-Level sichtbar machen" bleibt davon unberührt — das
+// leistet weiterhin computeHtfLiquidityLevels, unabhängig von dieser Funktion hier.
 function mergeDbLiquidityLevels(levels, dbLevels) {
   if (dbLevels.length === 0) return levels;
-  const seen = new Set(levels.map((l) => liquidityLevelNaturalKey(l.dir, l.pivotTime)));
-  const extra = dbLevels.filter((l) => !seen.has(liquidityLevelNaturalKey(l.dir, l.pivotTime)));
-  return [...levels, ...extra];
+  const dbKeys = new Set(dbLevels.map((l) => liquidityLevelNaturalKey(l.dir, l.pivotTime)));
+  const liveOnly = levels.filter((l) => !dbKeys.has(liquidityLevelNaturalKey(l.dir, l.pivotTime)));
+  return [...liveOnly, ...dbLevels];
 }
 
 // Kein Auto-Nachladen mehr (siehe refreshPoiZonesInternal-Kommentar, Punkt 10 — dieselbe
