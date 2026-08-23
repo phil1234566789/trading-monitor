@@ -86,6 +86,52 @@ async function fetchAllCandles(instrument: string, bar: string): Promise<CandleR
 
 type Level = ReturnType<typeof detectLiquidityLevels>["highs"][number];
 
+// Bug-Report Philip 2026-08-23: ein Level außerhalb von poi-watchers rollierendem Live-Fenster
+// (FOREX_H1_LOOKBACK_CANDLES, siehe poi-watcher/index.ts) wurde real vom Preis erreicht, blieb
+// aber touched=false für immer, weil poi-watchers Live-Preis-Prüfung ein solches Level strukturell
+// nie wieder besucht (dortiger Fix behebt das nur für KÜNFTIGE Touches). Diese Funktion korrigiert
+// bereits verpasste, in der Vergangenheit liegende Touches: für jede bereits vorhandene, noch
+// touched=false-Zeile, deren Preis laut der REINEN Archiv-Neuberechnung (detectLiquidityLevels
+// über die komplette Kerzenserie, s.o.) tatsächlich schon berührt wurde, wird die Zeile
+// aktualisiert (touched/end_time/notified) — anders als upsertLevels unten, das eine bereits
+// vorhandene Zeile bewusst NIE anfasst (siehe deren eigener Kommentar), weil das den Normalfall
+// (live getrackte Zeile ist genauer als diese reine Kerzenschluss-Berechnung) korrekt bevorzugt.
+// Hier geht es nur um den Sonderfall "poi-watcher konnte diese Zeile aus Fenstergründen strukturell
+// nie selbst korrigieren" — alert_price/notified_at bleiben null (kein echter Live-Preis bekannt,
+// analog zum Verhalten bei einem beim Backfill schon "touched" vorgefundenen neuen Level).
+async function correctMissedTouches(instrument: string, dbTimeframe: string, levels: (Level & { direction: "high" | "low" })[]) {
+  const { data: existingRows, error } = await supabase
+    .from("liquidity_levels")
+    .select("pivot_time, direction, price, touched")
+    .eq("instrument", instrument)
+    .eq("timeframe", dbTimeframe)
+    .eq("touched", false);
+  if (error) throw new Error(`Liquiditäts-Level lesen fehlgeschlagen (${instrument} ${dbTimeframe}): ${error.message}`);
+  if (!existingRows || existingRows.length === 0) return 0;
+
+  const untouchedKeys = new Set(
+    existingRows.map((r) => `${r.direction}_${Math.floor(new Date(r.pivot_time).getTime() / 1000)}`),
+  );
+
+  let corrected = 0;
+  for (const l of levels) {
+    if (!l.touched || l.endTime == null) continue;
+    const key = `${l.direction}_${l.pivotTime}`;
+    if (!untouchedKeys.has(key)) continue;
+
+    const { error: updateError } = await supabase
+      .from("liquidity_levels")
+      .update({ touched: true, end_time: new Date(l.endTime * 1000).toISOString(), notified: true })
+      .eq("instrument", instrument)
+      .eq("timeframe", dbTimeframe)
+      .eq("direction", l.direction)
+      .eq("pivot_time", new Date(l.pivotTime * 1000).toISOString());
+    if (updateError) throw new Error(`Liquiditäts-Level korrigieren fehlgeschlagen (${instrument} ${dbTimeframe}): ${updateError.message}`);
+    corrected += 1;
+  }
+  return corrected;
+}
+
 async function upsertLevels(instrument: string, dbTimeframe: string, levels: (Level & { direction: "high" | "low" })[]) {
   for (let i = 0; i < levels.length; i += UPSERT_BATCH_SIZE) {
     const batch = levels.slice(i, i + UPSERT_BATCH_SIZE).map((l) => ({
@@ -121,8 +167,11 @@ async function backfillOne(instrument: string, bar: string) {
     ...highs.map((l) => ({ ...l, direction: "high" as const })),
     ...lows.map((l) => ({ ...l, direction: "low" as const })),
   ];
+  const corrected = await correctMissedTouches(instrument, config.dbTimeframe, levels);
   await upsertLevels(instrument, config.dbTimeframe, levels);
-  console.log(`${instrument} ${bar} (${candles.length} Kerzen): ${levels.length} Liquiditäts-Level erkannt/gesichert.`);
+  console.log(
+    `${instrument} ${bar} (${candles.length} Kerzen): ${levels.length} Liquiditäts-Level erkannt/gesichert, ${corrected} verpasste Touches korrigiert.`,
+  );
 }
 
 for (const instrument of INSTRUMENTS) {

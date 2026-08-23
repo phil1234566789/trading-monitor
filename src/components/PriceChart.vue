@@ -1472,7 +1472,8 @@ function refreshLiquidityInternal() {
   const liveRelevant = props.showSweptLiquidity
     ? [...highs, ...lows]
     : [...filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true), ...filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true)];
-  const relevant = mergeDbLiquidityLevels(liveRelevant, computeHtfLiquidityLevels(candles));
+  const htfLevels = computeHtfLiquidityLevels(candles);
+  const relevant = mergeDbLiquidityLevels(liveRelevant, htfLevels);
   currentLiquidityLevels = relevant;
   const precision = pricePrecisionForInstrument(props.symbol);
   const finalLevels = mergePinnedLevels(relevant, props.pinnedLiquidityLevels, candles);

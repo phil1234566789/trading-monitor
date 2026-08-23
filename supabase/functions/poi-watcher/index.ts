@@ -667,6 +667,52 @@ Deno.serve(async (req) => {
             }
           }
 
+          // Bug-Report Philip 2026-08-23: ein Feb-Pivot (weit außerhalb des rollierenden
+          // FOREX_H1_LOOKBACK_CANDLES-Fensters) wurde am 21.08. um 09:00 UTC (Stundenkerze, also
+          // exakt der isH1RefreshTick-Zeitpunkt) tatsächlich vom Preis erreicht, blieb aber für
+          // immer touched=false. Ursache: dieser "if"-Zweig prüft nur `levels` (frisch aus dem
+          // AKTUELL geladenen Fenster erkannt) gegen currentPrice — ein Level, dessen Pivot
+          // außerhalb dieses Fensters liegt, taucht in `levels` nie wieder auf und wird hier nie
+          // geprüft. Der "else"-Zweig unten deckt genau das ab (alle DB-Zeilen gegen currentPrice),
+          // läuft aber nur in den ANDEREN ~55 Minuten der Stunde (kein frisches 1H-Kerzen-Fetch) —
+          // ausgerechnet zur vollen Stunde (wenn ein Spike in genau dieser Kerze auftritt und bis
+          // zum nächsten 5-Min-Tick schon wieder abgeklungen ist) entsteht so ein permanenter
+          // blinder Fleck. Fix: dieselbe Live-Preis-Prüfung wie im "else"-Zweig zusätzlich für
+          // jede existierende DB-Zeile, die NICHT in `levels` (also außerhalb des Fensters) liegt.
+          const levelsKeySet = new Set(levels.map((l) => `${l.direction}_${l.pivotTime}`));
+          for (const row of existingLiqRows ?? []) {
+            const rowPivotSec = Math.floor(new Date(row.pivot_time).getTime() / 1000);
+            if (levelsKeySet.has(`${row.direction}_${rowPivotSec}`)) continue;
+            if (row.touched) continue;
+            const touchedNow = row.direction === "high" ? currentPrice >= row.price : currentPrice <= row.price;
+            if (!touchedNow) continue;
+
+            const { error: updateOffWindowLiqError } = await supabase
+              .from("liquidity_levels")
+              .update({
+                touched: true,
+                notified: true,
+                alert_price: currentPrice,
+                end_time: new Date().toISOString(),
+                notified_at: alarmActive ? new Date().toISOString() : row.notified_at ?? null,
+              })
+              .eq("instrument", cfg.instrument)
+              .eq("timeframe", tf.label)
+              .eq("direction", row.direction)
+              .eq("pivot_time", row.pivot_time);
+            if (updateOffWindowLiqError) throw updateOffWindowLiqError;
+
+            if (alarmActive) {
+              liqNotifiedCount++;
+              const label = row.direction === "high" ? "Hoch" : "Tief";
+              await sendTelegram(
+                `💧 ${cfg.instrument} ${tf.label} Liquiditäts-Level (${label}) angetestet\n` +
+                  `Level: ${fmt(row.price, cfg.pricePrecision)}\n` +
+                  `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+              );
+            }
+          }
+
           instrumentSummary[`${tf.label}_liquidity`] = { levelsSeen: levels.length, notified: liqNotifiedCount };
         } else {
           // Skip-Tick (siehe isH1RefreshTick/isH4RefreshTick oben): keine frischen Kerzen für
