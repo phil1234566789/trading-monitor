@@ -245,8 +245,26 @@ export function bullBearLabelSide(bearish) {
   return bearish ? "end-above" : "end-below";
 }
 
+// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Nachbesserung 2026-08-23,
+// Philip: "4h LQ-Levels dicker machen" — die persistierten HTF-Level aus liquidity_levels tragen
+// ein `timeframe`-Feld ('1H'/'4H', siehe liquidityLevels.js/computeHtfLiquidityLevels), live auf
+// dem gerade angezeigten Chart-Timeframe erkannte Level (detectLiquidityLevels-Output) haben
+// keins — TF-Suffix nur anhängen, wenn eins gesetzt ist, sonst bleibt's beim bisherigen
+// gemeinsamen Satz (liquidityHigh/-Low/-Sweep ohne Suffix). Explizite Lookup-Tabelle statt
+// Template-String-Konkatenation, damit jeder neue Key auch als Literal im Quelltext auftaucht
+// (siehe test/chartColors.test.js: scannt genau danach, eine gebaute "${base}1h"-Zeichenkette
+// würde den Test sonst fälschlich als toten Key melden).
+const LIQUIDITY_STYLE_KEYS = {
+  "1H": { liquidityHigh: "liquidityHigh1h", liquidityLow: "liquidityLow1h", liquiditySweep: "liquiditySweep1h" },
+  "4H": { liquidityHigh: "liquidityHigh4h", liquidityLow: "liquidityLow4h", liquiditySweep: "liquiditySweep4h" },
+};
+function liquidityStyleKey(base, timeframe) {
+  return LIQUIDITY_STYLE_KEYS[timeframe]?.[base] ?? base;
+}
+
 function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin } = {}) {
-  const key = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
+  const base = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
+  const key = liquidityStyleKey(base, lvl.timeframe);
   const color = cssColor(key);
   const label = debugPrices ? `${formatPrice(lvl.price)}${ageSuffix(lvl.pivotTime, nowSec)}` : null;
   return { color, lineWidth: lineWidth(key), label, inPinContext, pinColor: cssColor("pin"), isSelectedPin, hoverColor: cssColor("tradeHover") };

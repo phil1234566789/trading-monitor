@@ -26,6 +26,15 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   liquidityHigh: 1,
   liquidityLow: 1,
   liquiditySweep: 1,
+  // Getrennt von den drei Keys oben (Chat 2026-08-23, Philip: "4h LQ-Levels dicker machen als 1h")
+  // — siehe chartColors.js für die ausführliche Begründung, warum es zwei zusätzliche Sätze
+  // braucht statt die bestehenden drei wiederzuverwenden.
+  liquidityHigh1h: 1,
+  liquidityLow1h: 1,
+  liquiditySweep1h: 1,
+  liquidityHigh4h: 1,
+  liquidityLow4h: 1,
+  liquiditySweep4h: 1,
   obBullM5: 1,
   obBearM5: 1,
   obInactiveM5: 1,
