@@ -1325,41 +1325,23 @@ function mergePinnedZones(zones, pinnedZones, candles) {
 }
 
 // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 10 — DB-Read (Punkt 7)
-// löst nur "kennt das System die Zone", nicht "kann sie gezeichnet werden": ZonePaneView.update()
-// (orderBlocks.js) braucht eine Kerze bei/vor z.startTime in `candles`, sonst bleibt die Box
-// unsichtbar (x: null). Statt die Box auf die älteste geladene Kerze zu klemmen (verworfen, Philip
-// 2026-08-21: "das Ziel ist wirklich [...] die OB [...] im Chart zu haben, obwohl die
-// Entstehungs-Impuls-Candle noch nicht im Chart geladen ist" — eine geklemmte Box hätte die falsche
-// Form) wird hier automatisch Archiv-Historie nachgeladen (billiger DB-Read, kein Live-cTrader-Call,
-// siehe forex_candles-Archiv). Nutzt die bereits bestehende Scroll-Back-Lazy-Load-Funktion
-// (loadOlderCandlesNow) wieder, statt eine eigene Fetch-Pipeline zu bauen — die ruft selbst
-// refreshChart() -> refreshPoiZonesInternal() auf, sobald die nächste Seite da ist, das treibt den
-// Catch-up also von selbst weiter, bis entweder genug geladen ist oder reachedHistoryStart greift.
-// loadOlderCandlesNow guardet selbst gegen einen bereits laufenden Fetch (loadingOlder) — pro Aufruf
-// hier also höchstens ein zusätzlicher No-Op, kein Risiko einer Endlosschleife.
-//
-// M5 bewusst ausgenommen (Philip 2026-08-22: "M5 TF ist recht reingezoomt [...] uuuralte M5 OBs
-// sind so selten noch relevant, dass ich dafür nicht unendlich viele M5 Candles nachladen will,
-// welche NICHT bereits in unserer DB liegen — sehr teuer der cTrader-Aufruf") — loadOlderCandlesNow
-// lädt Kerzen im GERADE angezeigten Chart-Timeframe (props.currentBar), nicht im Timeframe der
-// Zone selbst; steht der Chart z.B. auf M5, würde ein uralt gepinntes M5-OB sonst einen
-// Nachlade-Versuch über Monate von M5-Kerzen auslösen (potenziell nicht archiviert, dann teurer
-// Live-cTrader-Fetch statt billigem DB-Read). Ein altes M5-OB bleibt also weiterhin nur durch
-// manuelles Zurückscrollen sichtbar, wie bisher — nur 1H/4H triggern den Auto-Catch-up.
-function ensureCandlesCoverOldestZone(zones, candles) {
-  if (reachedHistoryStart || loadingOlder || candles.length === 0) return;
-  const relevant = zones.filter((z) => z.timeframe !== "5M");
-  if (relevant.length === 0) return;
-  const oldestNeeded = Math.min(...relevant.map((z) => z.startTime));
-  if (oldestNeeded < candles[0].time) loadOlderCandlesNow();
-}
-
+// löst nur "kennt das System die Zone", nicht "wo zeichnen wir sie": ZonePaneView.update()
+// (orderBlocks.js) ruft snapToBarTime(candles, z.startTime) auf — findet sich dort KEINE Kerze
+// bei/vor z.startTime, wird auf die älteste geladene Kerze geklemmt (siehe chartTimeUtils.js), die
+// Box startet also links am Kerzenrand statt an ihrem echten Ursprung. Bis 2026-08-23 wurde das
+// stattdessen per Auto-Nachladen aus dem Archiv vermieden (ensureCandlesCoverOldestZone, seit
+// entfernt) — Philip 2026-08-21 hatte das Klemmen explizit abgelehnt ("falsche Form"), aber 2026-08-23
+// (nach demselben Problem bei Liquidity-Leveln: mehrere sequenzielle Nachlade-Requests, spürbare
+// Wartezeit, u.a. relevant für Lana/4D — "wenn sie dafür mehrere Requests eigenständig feuern muss,
+// spricht das gegen das 4D Prinzip") diese Entscheidung bewusst umgekehrt: sofort geklemmt zeichnen,
+// kein Extra-Request. Die Box korrigiert sich von selbst auf die echte Form, sobald aus einem
+// ANDEREN Grund (normales Zurückscrollen) genug Kerzen geladen sind — snapToBarTime läuft bei jedem
+// Neuzeichnen neu, keine eigene Nachhol-Logik nötig.
 function refreshPoiZonesInternal() {
   const candles = clipReplay(allCandles);
   const visibleZones = mergePinnedZones(filterHistorical(collectObsZones()), props.pinnedObZones, candles);
   renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles, props.pinObZoneKeys, props.hoveredPinObZoneKey);
   poiZonesMetadata.value = visibleZones;
-  ensureCandlesCoverOldestZone(visibleZones, candles);
 }
 
 // Liquiditäts-Level (Fractal-Pivots, siehe tv-indikator/src/liquidity.pine) gibt es bisher nicht
@@ -1426,15 +1408,11 @@ function mergeDbLiquidityLevels(levels, dbLevels) {
   return [...levels, ...extra];
 }
 
-// Analog zu ensureCandlesCoverOldestZone (OBs, Punkt 10), aber für Liquidity-Level (pivotTime statt
-// startTime). Kein Timeframe-Ausschluss nötig wie dort — computeDb1hLiquidityLevels liefert
-// ausschließlich 1H-Level, nie M5.
-function ensureCandlesCoverOldestLevel(levels, candles) {
-  if (reachedHistoryStart || loadingOlder || candles.length === 0 || levels.length === 0) return;
-  const oldestNeeded = Math.min(...levels.map((l) => l.pivotTime));
-  if (oldestNeeded < candles[0].time) loadOlderCandlesNow();
-}
-
+// Kein Auto-Nachladen mehr (siehe refreshPoiZonesInternal-Kommentar, Punkt 10 — dieselbe
+// Entscheidung 2026-08-23 umgekehrt): eine relevante 1H-Zeile, deren pivotTime vor der geladenen
+// Kerzenserie liegt, wird per snapToBarTime auf die älteste geladene Kerze geklemmt statt einen
+// Nachlade-Request auszulösen. Korrigiert sich von selbst, sobald aus einem anderen Grund
+// (normales Zurückscrollen) genug Kerzen geladen sind.
 function refreshLiquidityInternal() {
   const candles = clipReplay(allCandles);
   if (!props.showLiquidity) {
@@ -1448,7 +1426,6 @@ function refreshLiquidityInternal() {
     liquidityMetadata.value = null;
     liquidityEarliestTime.value = null;
     currentLiquidityLevels = [];
-    ensureCandlesCoverOldestLevel(pinnedOnly, candles);
     return;
   }
   const { highs, lows } = detectLiquidityLevels(candles, LIQUIDITY_FRACTAL_PERIOD);
@@ -1469,7 +1446,6 @@ function refreshLiquidityInternal() {
   });
   liquidityMetadata.value = relevant.map(pivotForDisplay);
   liquidityEarliestTime.value = relevant.length > 0 ? Math.min(...relevant.map((lvl) => lvl.pivotTime)) : null;
-  ensureCandlesCoverOldestLevel(relevant, candles);
 }
 
 // Sessions-Hintergrundbänder (Chat 2026-07-22) — tzOffsetMinutes kommt aus der Browser-Lokalzeit
