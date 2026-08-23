@@ -119,6 +119,18 @@ Noch nicht entschieden, nur skizziert:
         Sobald die DB-Query (s.u.) eine relevante Zone mit `startTime` vor der aktuell geladenen
         Kerzenserie liefert, wird im Hintergrund automatisch genug Archiv-Historie nachgeladen/
         vorangestellt, damit `snapToBarTime` einen echten Balken findet.
+      - **Umgekehrt, 2026-08-23**: Dieselbe Auto-Nachlade-Idee wurde für die neuen relevanten
+        1H-Liquiditäts-Level (Punkt 12/13) übernommen — dort zeigte sich das eigentliche Problem
+        des Ansatzes: mehrere sequenzielle Nachlade-Requests (jeder ein Neuzeichnen-Zyklus), bis
+        genug Historie da ist, spürbar langsam bei einem alte(re)n Level. Philip: "Lana soll ja beim
+        analysieren einmal die relevanten Level bekommen. Wenn sie dafür mehrere Requests
+        eigenständig feuern muss [...], spricht das gegen das 4D Prinzip." Auto-Nachladen
+        (`ensureCandlesCoverOldestZone`/`-Level`) daraufhin komplett entfernt, für OB-Zonen UND
+        Liquiditäts-Level, 1H+4H — zurück zum ursprünglich verworfenen Klemmen (`snapToBarTime`
+        klemmt ohnehin schon auf die älteste geladene Kerze). Box/Linie erscheint sofort (links
+        abgeschnitten), korrigiert sich von selbst auf die echte Form, sobald aus einem ANDEREN
+        Grund (normales Zurückscrollen) genug Kerzen geladen sind — kein eigener Request nötig, nur
+        um eine relevante Stelle überhaupt sichtbar zu machen.
       - **Query-Eingrenzung per Pip-Distanz (2026-08-21)**: um nicht pauschal ALLE je erkannten
         Zonen aus `ob_zones`/`liquidity_levels` zu laden, wird serverseitig nach Pip-Abstand vom
         aktuellen Preis gefiltert (`abs(top - preis) <= schwelle OR abs(bottom - preis) <= schwelle`,
