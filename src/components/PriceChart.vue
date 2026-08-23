@@ -1475,7 +1475,8 @@ function refreshLiquidityInternal() {
   const relevant = mergeDbLiquidityLevels(liveRelevant, computeHtfLiquidityLevels(candles));
   currentLiquidityLevels = relevant;
   const precision = pricePrecisionForInstrument(props.symbol);
-  renderLiquidityLevels(candleSeries, mergePinnedLevels(relevant, props.pinnedLiquidityLevels, candles), liquidityPrimitives, candles, {
+  const finalLevels = mergePinnedLevels(relevant, props.pinnedLiquidityLevels, candles);
+  renderLiquidityLevels(candleSeries, finalLevels, liquidityPrimitives, candles, {
     debugPrices: props.showLiquidityDebug,
     formatPrice: (price) => fmtPrice(price, precision),
     // "Alter"-Anzeige an den Debug-Preis-Labels (Chat 2026-07-22) — im Replay bezogen auf

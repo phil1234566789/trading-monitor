@@ -924,9 +924,15 @@ onUnmounted(() => window.removeEventListener("click", closeMenusOutside));
 // einem manuellen Reload/Tab-Wechsel — bewusst in Kauf genommen.
 const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrades(currentSymbol.value, selectedTradingAccountId.value));
 // Pin-Kontext (Chat 2026-08-01, siehe pinContext.js) — symbolunabhängig (anders als
-// `trades` oben), kein intervalMs, da nur durch explizite Aktionen (Rechtsklick "Anpinnen"/
-// Modal-Löschen) geändert, kein Hintergrund-Poll nötig.
-const { data: pinContextEntries, refresh: refreshPinContext } = usePolledFetch(() => fetchPinContext());
+// `trades` oben). MIT intervalMs seit Bug-Report Philip 2026-08-23: die pin_context-ZEILE selbst
+// (kind/ids) ändert sich zwar nur durch explizite Aktionen, aber die eingebetteten
+// liquidity_levels/ob_zones/trade_setups-Felder (touched/end_time) ändert poi-watcher im
+// Hintergrund per Cron — exakt derselbe Grund wie bei dbObZones/dbLiquidityLevelsHtf unten. Ohne
+// Poll blieb ein gepinntes, längst getouchtes 1H-Level dauerhaft auf dem touched=false-Stand von
+// vor dem Pin hängen, sobald es aus computeHtfLiquidityLevels' Top-N-"relevant"-Fenster
+// rausgefallen war (neuere Touches verdrängen ältere) und die Pin-Kopie die einzige verbliebene
+// Quelle war.
+const { data: pinContextEntries, refresh: refreshPinContext } = usePolledFetch(() => fetchPinContext(), { intervalMs: 60_000 });
 // 1H/4H-OB-Zonen (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 7) —
 // anders als trades/pinContextEntries oben ändert sich das hier NICHT nur durch explizite
 // Browser-Aktionen, sondern im Hintergrund durch poi-watcher (Cron alle 5min) — deshalb, anders als
