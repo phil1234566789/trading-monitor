@@ -6,19 +6,22 @@
 // usePolledFetch, wie bei fetchTrades.
 //
 // Polymorph seit der zweiten bis sechsten Migration: kind = "trade_position" | "ob_zone" |
-// "trade_setup" | "trade_confirmation" | "liquidity_level" | "m5_ob", genau eine der fünf *_id-
-// Spalten (oder bei "m5_ob" die m5_ob_*-Rohdaten-Spalten) ist gesetzt (DB-CHECK-Constraint erzwingt
-// das). ob_zones/trade_setups/trade_confirmations/liquidity_levels werden hier direkt mit
-// eingebettet (anders als trade_position, das gegen Dashboard.vue's bereits geladene `trades`
-// gekreuzt wird, siehe PinPanel.vue) — es gibt sonst keine reaktive Liste dieser Arten in
-// Dashboard.vue, ein Zweit-Fetch für die paar Anzeige-Felder ist hier einfacher als eine. "m5_ob"
-// braucht kein Embed — M5-OBs werden nie persistiert (siehe resolveObZoneId-Kommentar unten),
-// deshalb liegt hier ein Rohdaten-Snapshot direkt auf der pin_context-Zeile selbst (siehe
-// 20260802120100_laniakea_context_m5_obs.sql).
+// "trade_setup" | "trade_confirmation" | "liquidity_level" | "m5_liquidity_level" |
+// "rsi_divergence", genau eine der fünf *_id-Spalten (oder bei den beiden m5/rsi-Snapshot-Kinds die
+// jeweiligen Rohdaten-Spalten) ist gesetzt (DB-CHECK-Constraint erzwingt das). ob_zones/
+// trade_setups/trade_confirmations/liquidity_levels werden hier direkt mit eingebettet (anders als
+// trade_position, das gegen Dashboard.vue's bereits geladene `trades` gekreuzt wird, siehe
+// PinPanel.vue) — es gibt sonst keine reaktive Liste dieser Arten in Dashboard.vue, ein Zweit-Fetch
+// für die paar Anzeige-Felder ist hier einfacher als eine. Seit Task "Chart-Objekte: OBs auf
+// kanonische ob_zones-ID konsolidieren", Punkt 6 (Migration 20260823120000) läuft ein M5-OB-Pin
+// über dasselbe kind="ob_zone" wie 1H/4H (find-or-create in ob_zones beim Pinnen, siehe
+// addPinM5ObEntry unten) — kein eigener "m5_ob"-Kind mehr.
 import { supabase } from "./supabaseClient.js";
+import { findOrCreateObZoneId } from "./tradeIntake.js";
 
 // kind -> DB-Spalte, gemeinsam für Upsert-onConflict UND das Zusammensetzen der Insert-Zeile.
-// "m5_ob" fehlt hier bewusst (kein einzelner refId, siehe addPinM5ObEntry unten).
+// addPinM5ObEntry (unten) löst erst per find-or-create einen ob_zone_id auf und ruft dann ganz
+// normal addPinEntry("ob_zone", ...) auf, statt hier eine eigene Zeile zu brauchen.
 const REF_COLUMN = {
   trade_position: "trade_position_id",
   ob_zone: "ob_zone_id",
@@ -29,7 +32,6 @@ const REF_COLUMN = {
 
 const ROW_COLUMNS =
   "id, kind, trade_position_id, ob_zone_id, trade_setup_id, trade_confirmation_id, liquidity_level_id, " +
-  "m5_ob_instrument, m5_ob_direction, m5_ob_top, m5_ob_bottom, m5_ob_start_time, " +
   "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
   "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
   "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi, " +
@@ -67,17 +69,6 @@ function toEntry(row) {
           endTime: row.liquidity_levels.end_time,
         }
       : null,
-    // Rohdaten-Snapshot, kein Embed (siehe ROW_COLUMNS-Kommentar) — nur bei kind='m5_ob' gesetzt.
-    m5Ob:
-      row.m5_ob_instrument != null
-        ? {
-            instrument: row.m5_ob_instrument,
-            direction: row.m5_ob_direction,
-            top: row.m5_ob_top,
-            bottom: row.m5_ob_bottom,
-            startTime: row.m5_ob_start_time,
-          }
-        : null,
     // Rohdaten-Snapshot, kein Embed — nur bei kind='m5_liquidity_level' gesetzt (Liquiditäts-Level
     // auf einem Nicht-1h-Chart-Timeframe, siehe 20260802130000_laniakea_context_m5_liquidity.sql).
     m5Liquidity:
@@ -183,37 +174,23 @@ export async function addPinEntry(kind, refId, note) {
   return toEntry(data);
 }
 
-// "m5_ob" passt nicht ins REF_COLUMN/addPinEntry-Schema (kein einzelner refId — M5-OBs werden
-// nie persistiert, siehe 20260802120100_laniakea_context_m5_obs.sql), deshalb eigene Funktion mit
-// Upsert auf den Natural-Key (instrument, direction, top, bottom, startTime) statt einer DB-id.
-// zone: { instrument, dirNum: 1|-1, top, bottom, startTime (Unix-Sekunden) }.
+// Seit Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 6 (2026-08-23):
+// M5-OBs werden beim Pinnen per find-or-create in ob_zones geschrieben (dieselbe Funktion, die
+// tradeIntake.js für trade_setups/trade_confirmations nutzt) und landen danach als ganz normaler
+// kind="ob_zone"-Eintrag — kein eigener "m5_ob"-Snapshot-Kind mehr. Name/Signatur bleiben
+// unverändert (zone: { instrument, dirNum: 1|-1, top, bottom, startTime (Unix-Sekunden) }), damit
+// Dashboard.vue/die MCP-Tools nicht angepasst werden müssen.
 export async function addPinM5ObEntry(zone, note) {
-  const { data, error } = await supabase
-    .from("pin_context")
-    .upsert(
-      {
-        kind: "m5_ob",
-        trade_position_id: null,
-        ob_zone_id: null,
-        trade_setup_id: null,
-        trade_confirmation_id: null,
-        liquidity_level_id: null,
-        m5_ob_instrument: zone.instrument,
-        m5_ob_direction: zone.dirNum === 1 ? "long" : "short",
-        m5_ob_top: zone.top,
-        m5_ob_bottom: zone.bottom,
-        m5_ob_start_time: new Date(zone.startTime * 1000).toISOString(),
-        note: note || null,
-      },
-      { onConflict: "m5_ob_instrument,m5_ob_direction,m5_ob_top,m5_ob_bottom,m5_ob_start_time" },
-    )
-    .select(ROW_COLUMNS)
-    .single();
-  if (error) {
-    console.error("Pin-M5-OB-Eintrag anlegen fehlgeschlagen:", error);
-    return null;
-  }
-  return toEntry(data);
+  const obZoneId = await findOrCreateObZoneId({
+    instrument: zone.instrument,
+    timeframe: "5M",
+    direction: zone.dirNum === 1 ? "long" : "short",
+    top: zone.top,
+    bottom: zone.bottom,
+    startTimeSec: zone.startTime,
+  });
+  if (obZoneId == null) return null;
+  return addPinEntry("ob_zone", obZoneId, note);
 }
 
 // Analog zu addPinM5ObEntry, für ein Liquiditäts-Level auf einem Nicht-1h-Chart-Timeframe
@@ -360,17 +337,6 @@ export async function resolveLiquidityLevelId(instrument, timeframe, dirNum, piv
 export function obZoneEntryNaturalKey(obZone) {
   const startTimeUnixSec = Math.floor(new Date(obZone.startTime).getTime() / 1000);
   return `${obZone.timeframe}|${obZone.direction}|${startTimeUnixSec}`;
-}
-
-// Analog zu obZoneEntryNaturalKey, aber für einen kind='m5_ob'-Rohdaten-Snapshot (row.m5Ob) statt
-// der ob_zones-Embed — M5-Boxen laufen über dieselbe obZoneNaturalKey-Formel wie 1H/4H (siehe
-// orderBlocks.js: renderPersistedZones wird für ALLE Timeframes inkl. "5M" aufgerufen, siehe
-// PriceChart.vue: collectObsZones), deshalb wird hier derselbe String-Schlüssel gebaut (fixes
-// timeframe "5M", direction ist schon "long"/"short"-String wie bei obZone) — Dashboard.vue mischt
-// beide Kind-Arten in DIESELBE pinObZoneKeys-Menge, kein eigener Chart-Prop nötig (Chat 2026-08-17).
-export function m5ObEntryNaturalKey(m5Ob) {
-  const startTimeUnixSec = Math.floor(new Date(m5Ob.startTime).getTime() / 1000);
-  return `5M|${m5Ob.direction}|${startTimeUnixSec}`;
 }
 
 // Analog zu obZoneEntryNaturalKey, für ein 1H-Liquiditäts-Level (row.liquidityLevel, echte DB-

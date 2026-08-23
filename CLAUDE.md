@@ -422,10 +422,17 @@ the setup-origin `#<id>` box, a confirmation box, an LQ-level line, an M5-OB box
 line). Was read-only until 2026-08-17 (`c724b33`) — Philip then asked for write access too so Claude
 doesn't have to wait for him to pin things manually. `trade_position`/`trade_confirmation` stay
 browser-only (right-click is the only way to add those, no MCP write tool for them) — Pin's write
-tools only cover the six chart-object kinds above. Three of those kinds (`m5_ob`/`m5_liquidity_level`/
-`rsi_divergence`) are pure snapshots (never persisted as their own DB rows — M5 OBs/liquidity levels/
-RSI divergences are all live-detected, not stored), so a pin's touched/invalidated state or the
-underlying RSI reading can have drifted since the snapshot was taken, with no later refresh.
+tools only cover the six chart-object kinds above. Since 2026-08-23 (Task "Chart-Objekte: OBs auf
+kanonische ob_zones-ID konsolidieren", Punkt 6), `m5_ob` is **not** a separate DB kind anymore —
+pinning one does a find-or-create into `ob_zones` (timeframe `'5M'`, same natural key as `poi-watcher`'s
+1H/4H rows) and stores the pin as an ordinary `kind='ob_zone'` row, same as a 1H/4H pin. `m5_ob` stays
+a distinct value only on the *input* side of `add_pin_entry`/the chart's client-side pin-candidate
+list (`PriceChart.vue`: `findNearbyPinCandidates`), since resolving it still needs the find-or-create
+step instead of the plain by-id lookup 1H/4H uses. `m5_liquidity_level`/`rsi_divergence` remain pure
+snapshots (never persisted as their own DB rows — liquidity levels on a non-1H timeframe and RSI
+divergences are both live-detected, not stored), so a pin's underlying RSI reading (or, for an M5 OB
+pin specifically, its touched/invalidated state — see below) can still drift from what was true at
+pin time, with no later refresh.
 
 Two side effects landed in the same 2026-08-17 change (`c724b33`), not just the MCP tools themselves:
 chart highlighting (a "Pin-Halo" behind the line/box) for the previously-missing `liquidity_level`/
@@ -433,10 +440,16 @@ chart highlighting (a "Pin-Halo" behind the line/box) for the previously-missing
 already rode along on the existing `pinObZoneKeys` highlight set; and a Telegram "touch" alarm in
 `poi-watcher`, a consolidated pass over `pin_context` after the main per-instrument loop, checking
 `ob_zone`/`liquidity_level`/`trade_setup` pins against the freshly-upserted `touched` state from that
-same run and `m5_ob`/`m5_liquidity_level` pins directly against the current price — gated by its own
-`alarm_settings` toggle (`pin_context`) and new `notified`/`notified_at` columns, same pattern as
-every other alert type in this function. `rsi_divergence` pins are deliberately excluded from this
-alarm (a formation event, not a touch event — different alarm shape, left as a separate future task).
+same run and `m5_liquidity_level` pins directly against the current price — gated by its own
+`alarm_settings` toggle (`pin_context`) and `notified`/`notified_at` columns, same pattern as every
+other alert type in this function. Since the Punkt-6 consolidation above, a pinned M5 OB is a
+`kind='ob_zone'` row too, but `poi-watcher` only ever live-tracks/updates `touched`/`invalidated` for
+1H/4H rows (M5 stays live-recompute-only for the indicator overlay, see "Persistierungs-Umfang" in
+`PLAN-chart-objekte-forex.md`) — so `resolvePinTouch` (`poi-watcher/index.ts`) special-cases
+`ob_zones.timeframe === '5M'` back to a direct price-vs-bounds comparison instead of trusting the
+(permanently stale) `touched` flag, same effective check as the old dedicated `m5_ob` alarm branch.
+`rsi_divergence` pins are deliberately excluded from this alarm (a formation event, not a touch
+event — different alarm shape, left as a separate future task).
 
 **RSI/EMA (`get_forex_rsi`/`get_forex_ema`, added 2026-07-31)**: M5-only indicator tools for
 GBPUSD/EURUSD, both sharing the same `dateStr`/`replayUntilSec` window semantics as

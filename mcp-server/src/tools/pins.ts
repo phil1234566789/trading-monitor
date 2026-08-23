@@ -30,8 +30,9 @@ export function registerPinTools(server: McpServer) {
         "kind='ob_zone': die volle ob_zones-Zeile; bei kind='trade_setup': die volle trade_setups-" +
         "Zeile; bei kind='trade_confirmation': die volle trade_confirmations-Zeile; bei " +
         "kind='liquidity_level': die volle liquidity_levels-Zeile (nur 1h-Chart, echte DB-Zeile); " +
-        "bei kind='m5_ob': reiner Rohdaten-Snapshot — m5_ob_instrument/_direction/_top/_bottom/" +
-        "_start_time, keine eigene Tabelle, da M5-OBs nie persistiert werden; bei " +
+        "bei kind='m5_ob': die volle ob_zones-Zeile wie bei kind='ob_zone' (timeframe='5M') — beim " +
+        "Pinnen per find-or-create angelegt, falls noch nicht vorhanden; touched/invalidated werden " +
+        "für M5-Zeilen aber nie live nachverfolgt, bleiben also auf ihrem Insert-Default; bei " +
         "kind='m5_liquidity_level': reiner Rohdaten-Snapshot einer Liquiditäts-Level-Linie auf " +
         "einem Nicht-1h-Chart-Timeframe (m5_liquidity_instrument/_timeframe/_direction/_price/" +
         "_pivot_time); bei kind='rsi_divergence': reiner Rohdaten-Snapshot eines RSI(14)-Divergenz-" +
@@ -58,7 +59,8 @@ export function registerPinTools(server: McpServer) {
         "der Rechtsklick-Weg im Browser der einzige Weg). Fünf kind-Werte, jeweils mit eigenen " +
         "Pflichtfeldern: 'ob_zone'/'trade_setup'/'liquidity_level' brauchen `refId` (die echte " +
         "DB-id aus get_ob_zones/get_trade_setups/get_liquidity_levels); 'm5_ob' braucht `m5Ob` " +
-        "(M5-Orderblock, wird nie persistiert, deshalb Rohdaten statt id); 'm5_liquidity_level' " +
+        "(M5-Orderblock — Rohdaten statt id, weil poi-watcher M5 nie live erkennt/persistiert; wird " +
+        "beim Pinnen per find-or-create in ob_zones angelegt); 'm5_liquidity_level' " +
         "braucht `m5Liquidity` (Liquiditäts-Level auf einem Nicht-1h-Timeframe, ebenfalls nie " +
         "persistiert); 'rsi_divergence' braucht `instrument` + `divergence` (aus " +
         "get_forex_rsi/detectRsiDivergence). Ein zweiter Aufruf für dieselbe Stelle aktualisiert " +

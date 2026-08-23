@@ -50,8 +50,10 @@ async function findMatchingTradeSetupId(instrument, direction, fractalPivotTimeS
 // hat (z.B. ein frisch entstandenes M5-OB, dessen Trade-Setup-Zeile noch nicht existiert). Normaler
 // Upsert (kein ignoreDuplicates), damit .select() bei einem bereits vorhandenen Konflikt trotzdem
 // die id liefert — touched/invalidated bleiben auf Default false, dieses Objekt wird nicht live
-// nachverfolgt (das übernimmt weiterhin die Indikator-Overlay-Live-Erkennung im Chart).
-async function findOrCreateObZoneId({ instrument, timeframe, direction, top, bottom, startTimeSec }) {
+// nachverfolgt (das übernimmt weiterhin die Indikator-Overlay-Live-Erkennung im Chart). Exportiert,
+// weil pinContext.js (addPinM5ObEntry, Punkt 6) dieselbe find-or-create-Logik braucht, statt sie
+// ein zweites Mal zu bauen.
+export async function findOrCreateObZoneId({ instrument, timeframe, direction, top, bottom, startTimeSec }) {
   const { data, error } = await supabase
     .from("ob_zones")
     .upsert(

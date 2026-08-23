@@ -92,8 +92,9 @@ const props = defineProps({
   // refreshTradeSetupLinksInternal/refreshRsiDivergenceInternal (mergePinnedZones/-Levels dort).
   // Bereits vollständig zonen-/level-/setup-/divergenz-förmige Objekte (siehe Dashboard.vue:
   // pinnedObZones/pinnedLiquidityLevels/pinnedTradeSetups/pinnedRsiDivergences), touched===null
-  // markiert einen reinen Snapshot ohne bekannten Live-Status (m5_ob/m5_liquidity_level) — wird
-  // hier anhand der aktuell geladenen Kerzen self-geheilt statt für immer "aktiv" zu bleiben.
+  // markiert einen reinen Snapshot ohne bekannten Live-Status (M5-ob_zones-Zeilen/
+  // m5_liquidity_level, siehe Dashboard.vue: pinnedObZones-Kommentar) — wird hier anhand der
+  // aktuell geladenen Kerzen self-geheilt statt für immer "aktiv" zu bleiben.
   pinnedObZones: { type: Array, default: () => [] },
   // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 7 — die von
   // poi-watcher persistierten 1H/4H-Zonen (src/obZones.js: fetchObZones, in Dashboard.vue gepollt),
@@ -1297,13 +1298,13 @@ function liveObZoneState(item) {
   return zone ? { touched: zone.touched, endTime: zone.endTime } : null;
 }
 
-// Gepinnte Zonen (ob_zone + m5_ob) werden zusätzlich zur live erkannten Liste gerendert (Task
-// "Pin-Kontext: gepinnte Objekte direkt rendern"), damit ein Pin unabhängig von showObsX-Toggles/
-// showHistoricalObs/dem aktuell live neu erkannten Ergebnis trotzdem ein Chart-Objekt zum Anheften
-// bekommt. touched===null (nur bei kind='m5_ob', reiner Snapshot ohne Live-Status, siehe
-// Dashboard.vue: pinnedObZones) wird anhand der aktuell geladenen Kerzen self-geheilt (dieselbe
-// firstCandleTouchRange-Technik wie refreshTradeConfirmationLinksInternal) — sonst würde eine
-// längst gesweepte M5-OB-Pin-Box für immer als "aktiv" bis "jetzt" gezeichnet.
+// Gepinnte Zonen (ob_zone, alle Timeframes inkl. M5) werden zusätzlich zur live erkannten Liste
+// gerendert (Task "Pin-Kontext: gepinnte Objekte direkt rendern"), damit ein Pin unabhängig von
+// showObsX-Toggles/showHistoricalObs/dem aktuell live neu erkannten Ergebnis trotzdem ein
+// Chart-Objekt zum Anheften bekommt. touched===null (nur bei einer M5-ob_zones-Zeile, die nie live
+// nachverfolgt wird, siehe Dashboard.vue: pinnedObZones) wird anhand der aktuell geladenen Kerzen
+// self-geheilt (dieselbe firstCandleTouchRange-Technik wie refreshTradeConfirmationLinksInternal)
+// — sonst würde eine längst gesweepte M5-OB-Pin-Box für immer als "aktiv" bis "jetzt" gezeichnet.
 function mergePinnedZones(zones, pinnedZones, candles) {
   if (!pinnedZones || pinnedZones.length === 0) return zones;
   const seen = new Set(zones.map((z) => obZoneNaturalKey(z.timeframe, z.dir, z.startTime)));
@@ -2692,10 +2693,13 @@ onMounted(() => {
       const distance = p.distanceTo(x, y);
       if (distance <= PIN_SEARCH_RADIUS) candidates.push({ kind: "trade_position", trade: p.trade, distance });
     }
-    // OB-Zonen — 1H/4H lösen sich gegen die persistierte ob_zones-Zeile auf (kind="ob_zone").
-    // M5-Boxen existieren dort NIE (siehe orderBlocks.js/collectObsZones-Kommentar) — bekommen
-    // stattdessen einen eigenen Rohdaten-Snapshot-Kind (kind="m5_ob", Chat 2026-08-02: "Rohdaten-
-    // Snapshot", JEDE M5-Box soll klickbar sein, nicht nur bereits zu einem Trade-Setup gehörende).
+    // OB-Zonen — 1H/4H lösen sich gegen die bereits persistierte ob_zones-Zeile auf (kind="ob_zone",
+    // resolveObZoneId, SELECT-only). M5-Boxen existieren dort meist NOCH NICHT (nur die referenzierte
+    // Teilmenge wird persistiert, siehe PLAN-chart-objekte-forex.md Abschnitt 5) — bekommen deshalb
+    // weiterhin einen eigenen Kandidaten-Kind (kind="m5_ob", Chat 2026-08-02: "Rohdaten-Snapshot",
+    // JEDE M5-Box soll klickbar sein, nicht nur bereits zu einem Trade-Setup gehörende), der beim
+    // tatsächlichen Pinnen die ob_zones-Zeile per find-or-create nachzieht (siehe pinContext.js:
+    // addPinM5ObEntry, Punkt 6) statt weiter einen reinen Snapshot zu schreiben.
     for (const p of orderBlockPrimitives) {
       const distance = p.distanceTo(x, y);
       if (distance > PIN_SEARCH_RADIUS) continue;

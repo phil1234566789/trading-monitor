@@ -232,6 +232,17 @@ Nicht "jede M5-OB der ganzen Historie persistieren", sondern:
   historisch eingefrorenes Protokoll dessen, was zum jeweiligen Zeitpunkt als relevant galt, nicht
   zwingend das, was ein heutiger Re-Run liefern würde. Konsistent mit dem bereits bestehenden
   Verhalten von `poi-watcher` selbst (persistiert bei Erkennung, nie rückwirkend neu berechnet).
-- **Nebeneffekt**: `pin_context.kind='m5_ob'` (heute eigene Snapshot-Spalten, siehe Abschnitt 1)
-  könnte dann ebenfalls `ob_zone_id` nutzen wie `ob_zone`/`trade_setup`/`liquidity_level` — eine
-  Unterscheidung weniger im Pin-Schema. Noch nicht im Detail durchdacht, nur als Chance notiert.
+- [x] **Nebeneffekt, umgesetzt 2026-08-23 (Migration 20260823120000)**: `pin_context.kind='m5_ob'`
+      (vorher eigene Snapshot-Spalten, siehe Abschnitt 1) nutzt jetzt `ob_zone_id` wie `ob_zone`/
+      `trade_setup`/`liquidity_level` — eine Unterscheidung weniger im Pin-Schema. Beim Pinnen wird
+      per find-or-create (dieselbe Funktion, die `trade_setups`/`trade_confirmations` schon nutzen)
+      eine `ob_zones`-Zeile mit `timeframe='5M'` angelegt/gefunden, danach ein ganz normaler
+      `kind='ob_zone'`-Pin gesetzt. `m5_ob` bleibt nur noch als clientseitiger Kandidaten-/Tool-
+      Input-Wert übrig (Chart-Rechtsklick-Kandidat, `add_pin_entry`-Parameter) — nicht mehr als
+      eigener DB-Wert. Einzige Nebenwirkung: `poi-watcher` erkennt/aktualisiert `touched`/
+      `invalidated` weiterhin nur für 1H/4H live (M5 bleibt Live-Recompute-only fürs Indikator-
+      Overlay, siehe Persistierungs-Umfang oben) — der Pin-Touch-Alarm (`resolvePinTouch`) und die
+      Chart-Darstellung (`Dashboard.vue`: `pinnedObZones`) behandeln eine `timeframe==='5M'`-Zeile
+      deshalb weiterhin wie vorher den Rohdaten-Snapshot (direkter Preis-Grenzen-Vergleich bzw.
+      `touched: null` zum Self-Heal gegen geladene Kerzen), statt den nie aktualisierten DB-Wert zu
+      glauben.
