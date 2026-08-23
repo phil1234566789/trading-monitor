@@ -55,7 +55,11 @@ class ZoneRenderer {
       ctx.fillStyle = this._options.fillColor;
       ctx.fillRect(xPos.position, yPos.position, xPos.length, yPos.length);
       ctx.strokeStyle = this._options.borderColor;
-      ctx.lineWidth = this._options.borderWidth ?? 1;
+      // Gleicher Bug wie liquidity.js: LiquidityLineRenderer.draw (Bug-Report Philip 2026-08-23,
+      // dort gefunden/gefixt) — fehlender horizontalPixelRatio-Faktor, während der Pin-/Auswahl-
+      // Rahmen weiter unten ihn schon korrekt anwenden. Auf HiDPI-Displays landet ein Wert unter 1
+      // dadurch unter einem echten Canvas-Pixel und wird anti-aliased/transparent statt dünner.
+      ctx.lineWidth = (this._options.borderWidth ?? 1) * scope.horizontalPixelRatio;
       ctx.strokeRect(xPos.position, yPos.position, xPos.length, yPos.length);
 
       // Permanenter Rahmen (Chat 2026-08-01, Pin-Kontext) — dieselbe Halo-Logik wie
