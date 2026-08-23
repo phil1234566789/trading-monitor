@@ -45,6 +45,30 @@ async function findMatchingTradeSetupId(instrument, direction, fractalPivotTimeS
   return data?.id ?? null;
 }
 
+// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren" — findet die ob_zones-Zeile
+// für eine gegebene OB per Natural Key oder legt sie an, falls poi-watcher sie noch nicht erfasst
+// hat (z.B. ein frisch entstandenes M5-OB, dessen Trade-Setup-Zeile noch nicht existiert). Normaler
+// Upsert (kein ignoreDuplicates), damit .select() bei einem bereits vorhandenen Konflikt trotzdem
+// die id liefert — touched/invalidated bleiben auf Default false, dieses Objekt wird nicht live
+// nachverfolgt (das übernimmt weiterhin die Indikator-Overlay-Live-Erkennung im Chart). Exportiert,
+// weil pinContext.js (addPinM5ObEntry, Punkt 6) dieselbe find-or-create-Logik braucht, statt sie
+// ein zweites Mal zu bauen.
+export async function findOrCreateObZoneId({ instrument, timeframe, direction, top, bottom, startTimeSec }) {
+  const { data, error } = await supabase
+    .from("ob_zones")
+    .upsert(
+      { instrument, timeframe, direction, top, bottom, start_time: new Date(startTimeSec * 1000).toISOString() },
+      { onConflict: "instrument,timeframe,start_time,direction" },
+    )
+    .select("id")
+    .single();
+  if (error) {
+    console.error("ob_zones-Referenz anlegen/finden fehlgeschlagen:", error);
+    return null;
+  }
+  return data.id;
+}
+
 // Für den Klick auf eine Zeile in TradesTable.vue (Chat 2026-07-27: TSC-Fokus auch für einen
 // bereits geloggten Trade, nicht nur für einen frisch im Trade-Modus angeklickten Live-Setup) —
 // baut aus dem persistierten trade_setups-Datensatz dasselbe Format, das computeCockpitState von
@@ -124,9 +148,19 @@ export async function createTradeFromSetup({ instrument, setup, entryPrice = nul
   }
 
   if (setupEntry != null) {
+    // Alle Setup-OBs sind laut detectSetupObs() immer Timeframe "5m" -> ob_zones.timeframe '5M'
+    // (dieselbe Konvention wie poi-watcher beim Persistieren neuer Trade-Setups).
+    const obZoneId = await findOrCreateObZoneId({
+      instrument,
+      timeframe: "5M",
+      direction,
+      top: setup.obTop,
+      bottom: setup.obBottom,
+      startTimeSec: setup.obStartTime,
+    });
     const { error: confirmError } = await supabase
       .from("trade_confirmations")
-      .insert({ trade_position_id: position.id, price: setupEntry, kind: "ob" });
+      .insert({ trade_position_id: position.id, price: setupEntry, kind: "ob", ob_zone_id: obZoneId });
     if (confirmError) console.error("Entry-Bestätigung anlegen fehlgeschlagen:", confirmError);
   }
 
@@ -277,6 +311,27 @@ export async function updateDealingRange(dealingRangeId, fields) {
 // dealing_range (das GO für die ganze Idee) — genau eine der beiden IDs wird gesetzt, der Rest
 // bleibt null (DB-CHECK erzwingt das).
 async function insertConfirmation({ tradePositionId = null, dealingRangeId = null, confirmation }) {
+  // Nur bei kind='ob' gesetzt (siehe findClickedOBZone) — Natural-Key-Lookup/-Anlage der
+  // referenzierten ob_zones-Zeile, damit die Bestätigung per FK statt nur per Preis-Snapshot auf
+  // die OB verweist (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren").
+  const obZoneId =
+    confirmation.kind === "ob" &&
+    confirmation.instrument != null &&
+    confirmation.direction != null &&
+    confirmation.timeframe != null &&
+    confirmation.rangeLow != null &&
+    confirmation.rangeHigh != null &&
+    confirmation.sourceTime != null
+      ? await findOrCreateObZoneId({
+          instrument: confirmation.instrument,
+          timeframe: confirmation.timeframe,
+          direction: confirmation.direction,
+          top: confirmation.rangeHigh,
+          bottom: confirmation.rangeLow,
+          startTimeSec: confirmation.sourceTime,
+        })
+      : null;
+
   const { error } = await supabase.from("trade_confirmations").insert({
     trade_position_id: tradePositionId,
     dealing_range_id: dealingRangeId,
@@ -291,6 +346,7 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
     // Nur bei kind='ob' gesetzt — Zeitebene der Zone (1H/4H/5M), damit die Box live per
     // detectOrderBlocks nachvollzogen werden kann (siehe addTargetToTrade).
     timeframe: confirmation.timeframe ?? null,
+    ob_zone_id: obZoneId,
     // Nur bei kind='rsi_divergence' gesetzt (siehe PriceChart.vue: findClickedDivergence) — price/
     // source_time/touched_time tragen bereits toPrice/fromTime/toTime, diese drei zusätzlichen
     // Felder machen die Divergenz später wieder als vollständigen Zwei-Bein-Konnektor zeichenbar.

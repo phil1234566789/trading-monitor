@@ -99,10 +99,6 @@ interface PinAlarmRow {
   id: number;
   kind: string;
   note: string | null;
-  m5_ob_instrument: string | null;
-  m5_ob_direction: string | null;
-  m5_ob_top: number | null;
-  m5_ob_bottom: number | null;
   m5_liquidity_instrument: string | null;
   m5_liquidity_direction: string | null;
   m5_liquidity_price: number | null;
@@ -210,8 +206,8 @@ function fmt(n: number, precision: number) {
 // Zeile — kein zweites detectOrderBlocks/detectLiquidityLevels nötig. trade_setup hat selbst
 // keine touched-Spalte; "getroffen" bedeutet hier Preis zurück im M5-Entry-OB (ob_top/ob_bottom)
 // — der eigentliche Trade-Trigger, nicht ls_touched_time (das ist längst wahr, sobald das Setup
-// überhaupt erkannt wurde, sonst gäbe es die Zeile nicht). m5_ob/m5_liquidity_level sind reine
-// Rohdaten-Snapshots ohne DB-Live-Status — hier direkter Preisvergleich gegen die beim Pinnen
+// überhaupt erkannt wurde, sonst gäbe es die Zeile nicht). m5_liquidity_level ist ein reiner
+// Rohdaten-Snapshot ohne DB-Live-Status — hier direkter Preisvergleich gegen die beim Pinnen
 // eingefrorenen Grenzen.
 function resolvePinTouch(row: PinAlarmRow, currentPriceByInstrument: Record<string, number>): PinTouchHit | null {
   const precisionFor = (instrument: string) => INSTRUMENTS.find((i) => i.instrument === instrument)?.pricePrecision ?? 2;
@@ -219,9 +215,23 @@ function resolvePinTouch(row: PinAlarmRow, currentPriceByInstrument: Record<stri
   if (row.kind === "ob_zone" && row.ob_zones) {
     const z = row.ob_zones;
     const price = currentPriceByInstrument[z.instrument];
-    if (price == null || !z.touched || z.invalidated) return null;
+    if (price == null) return null;
     const label = z.direction === "long" ? "Bullish" : "Bearish";
     const p = precisionFor(z.instrument);
+    // M5-ob_zones-Zeilen sind reine, beim Pinnen einmalig persistierte Snapshots (Task
+    // "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 6) — anders als 1H/4H
+    // erkennt/aktualisiert poi-watcher touched/invalidated für sie nie live (M5 bleibt bewusst
+    // Live-Recompute fürs Indikator-Overlay, siehe PLAN-chart-objekte-forex.md Abschnitt 5), daher
+    // hier derselbe direkte Preis-Grenzen-Vergleich wie vorher bei kind='m5_ob'. Für 1H/4H bleibt
+    // der bestehende touched/invalidated-Weg.
+    if (z.timeframe === "5M") {
+      if (price > z.top || price < z.bottom) return null;
+      return {
+        instrument: z.instrument,
+        message: `📌 ${z.instrument} M5-OB (${label}, gepinnt) erreicht\nZone: ${fmt(z.bottom, p)} – ${fmt(z.top, p)}\nPreis: ${fmt(price, p)}`,
+      };
+    }
+    if (!z.touched || z.invalidated) return null;
     return {
       instrument: z.instrument,
       message: `📌 ${z.instrument} ${z.timeframe} ${label} OB (gepinnt) erreicht\nZone: ${fmt(z.bottom, p)} – ${fmt(z.top, p)}\nPreis: ${fmt(price, p)}`,
@@ -247,16 +257,6 @@ function resolvePinTouch(row: PinAlarmRow, currentPriceByInstrument: Record<stri
     return {
       instrument: s.instrument,
       message: `📌 ${s.instrument} Trade-Setup (${label}, gepinnt): Preis im M5-Entry-OB\nM5-OB: ${fmt(s.ob_bottom, p)} – ${fmt(s.ob_top, p)}\nPreis: ${fmt(price, p)}`,
-    };
-  }
-  if (row.kind === "m5_ob" && row.m5_ob_instrument != null) {
-    const price = currentPriceByInstrument[row.m5_ob_instrument];
-    if (price == null || price > row.m5_ob_top! || price < row.m5_ob_bottom!) return null;
-    const label = row.m5_ob_direction === "long" ? "Bullish" : "Bearish";
-    const p = precisionFor(row.m5_ob_instrument);
-    return {
-      instrument: row.m5_ob_instrument,
-      message: `📌 ${row.m5_ob_instrument} M5-OB (${label}, gepinnt) erreicht\nZone: ${fmt(row.m5_ob_bottom!, p)} – ${fmt(row.m5_ob_top!, p)}\nPreis: ${fmt(price, p)}`,
     };
   }
   if (row.kind === "m5_liquidity_level" && row.m5_liquidity_instrument != null) {
@@ -772,6 +772,34 @@ Deno.serve(async (req) => {
           // ob_zones/liquidity_levels-Verhalten beim allerersten Lauf.
           const shouldAlert = hasAnySetupRow[direction] && alarmActive;
 
+          // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren": das M5-OB, das
+          // dieses Setup bestätigt, wird jetzt zusätzlich als eigene ob_zones-Zeile referenziert
+          // (statt nur ob_top/ob_bottom/ob_start_time als Kopie zu führen) — direction entspricht
+          // hier exakt der Setup-Direction selbst (siehe Migration
+          // 20260822100000_trade_setups_confirmations_ob_zone_id.sql für die Herleitung dieser
+          // Äquivalenz). Nur die tatsächlich referenzierte Teilmenge der M5-OBs landet so in
+          // ob_zones, nicht das gesamte M5-Universum (bewusste Entscheidung, siehe Plan-Datei).
+          // Normaler Upsert statt ignoreDuplicates, damit .select() bei einem bereits vorhandenen
+          // Konflikt trotzdem die id zurückgibt (touched/invalidated bleiben hier bewusst auf
+          // Default false — dieses Referenz-Objekt wird nicht live nachverfolgt, das übernimmt
+          // weiterhin die Indikator-Overlay-Live-Erkennung).
+          const { data: setupObZone, error: obZoneUpsertError } = await supabase
+            .from("ob_zones")
+            .upsert(
+              {
+                instrument: cfg.instrument,
+                timeframe: "5M",
+                direction,
+                top: setup.obTop,
+                bottom: setup.obBottom,
+                start_time: new Date(setup.obStartTime * 1000).toISOString(),
+              },
+              { onConflict: "instrument,timeframe,start_time,direction" },
+            )
+            .select("id")
+            .single();
+          if (obZoneUpsertError) throw obZoneUpsertError;
+
           const { error: setupUpsertError } = await supabase.from("trade_setups").upsert(
             {
               instrument: cfg.instrument,
@@ -784,6 +812,7 @@ Deno.serve(async (req) => {
               ob_top: setup.obTop,
               ob_bottom: setup.obBottom,
               ob_start_time: new Date(setup.obStartTime * 1000).toISOString(),
+              ob_zone_id: setupObZone.id,
               alert_price: currentPrice,
               notified: shouldAlert,
               notified_at: shouldAlert ? new Date().toISOString() : null,
@@ -816,15 +845,15 @@ Deno.serve(async (req) => {
     // die Timeframe-/Instrument-Schleifen oben verwoben, weil pin_context quer über alle Kinds/
     // Instrumente geht und für ob_zone/liquidity_level/trade_setup ohnehin nur die JETZT (oben)
     // frisch upgeserteten touched-Zustände der referenzierten Zeilen nachliest (kein zweites
-    // detectOrderBlocks/detectLiquidityLevels nötig). m5_ob/m5_liquidity_level (reine Rohdaten-
-    // Snapshots ohne eigene Tabelle) werden hier direkt gegen currentPriceByInstrument geprüft.
-    // rsi_divergence bewusst NICHT hier — eigener, separater Task ("RSI-Divergenz: Telegram-Alarm
-    // bei Entstehung") mit Formations- statt Touch-Semantik.
+    // detectOrderBlocks/detectLiquidityLevels nötig; M5-ob_zones-Zeilen sind die Ausnahme, siehe
+    // resolvePinTouch). m5_liquidity_level (reiner Rohdaten-Snapshot ohne eigene Tabelle) wird hier
+    // direkt gegen currentPriceByInstrument geprüft. rsi_divergence bewusst NICHT hier — eigener,
+    // separater Task ("RSI-Divergenz: Telegram-Alarm bei Entstehung") mit Formations- statt
+    // Touch-Semantik.
     const { data: pinRows, error: pinSelectError } = await supabase
       .from("pin_context")
       .select(
         "id, kind, note, notified, " +
-          "m5_ob_instrument, m5_ob_direction, m5_ob_top, m5_ob_bottom, " +
           "m5_liquidity_instrument, m5_liquidity_direction, m5_liquidity_price, " +
           "ob_zones(instrument, timeframe, direction, top, bottom, touched, invalidated), " +
           "liquidity_levels(instrument, direction, price, touched), " +

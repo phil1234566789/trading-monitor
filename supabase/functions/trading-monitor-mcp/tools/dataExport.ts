@@ -193,19 +193,33 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
     pivotTime: pivotTimeSec,
   }));
 
+  // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 8 — m5ObZones bleibt
+  // Live-Recompute (siehe Kommentar unten), aber falls eine der live erkannten M5-Boxen bereits als
+  // referenzierte Teilmenge in ob_zones persistiert wurde (Trade-Setup/Pin/Confirmation, siehe
+  // PLAN-chart-objekte-forex.md Abschnitt 5), bekommt sie hier ihre echte id mit — damit Lana per
+  // ID matchen kann (z.B. gegen trade_setups.ob_zone_id oder pin_context), statt über Preisnähe zu
+  // raten. obZones oben ist bereits ungefiltert nach Timeframe geholt (getObZones ohne timeframe-
+  // Arg), enthält also auch etwaige persistierte 5M-Zeilen mit — kein zweiter DB-Call nötig.
+  const m5ObZoneIdByKey = new Map(
+    obZones.filter((z) => z.timeframe === "5M").map((z) => [`${z.direction}_${Math.floor(new Date(z.start_time).getTime() / 1000)}`, z.id]),
+  );
   // .filter(!invalidated) analog zu collectObsZones (PriceChart.vue) — invalidierte Zonen werden
   // im Chart standardmäßig auch nicht mehr angezeigt.
   const m5ObZones = detectOrderBlocks(m5CandlesForDetection, "5m", true)
     .filter((z) => !z.invalidated)
-    .map((z) => ({
-      direction: z.dir === 1 ? ("long" as const) : ("short" as const),
-      top: z.top,
-      bottom: z.bottom,
-      weak: z.weak,
-      touched: z.touched,
-      startTime: z.startTime,
-      endTime: z.endTime,
-    }));
+    .map((z) => {
+      const direction = z.dir === 1 ? ("long" as const) : ("short" as const);
+      return {
+        id: m5ObZoneIdByKey.get(`${direction}_${z.startTime}`) ?? null,
+        direction,
+        top: z.top,
+        bottom: z.bottom,
+        weak: z.weak,
+        touched: z.touched,
+        startTime: z.startTime,
+        endTime: z.endTime,
+      };
+    });
 
   // Session-Kontext auch für die persistierten 1H-Level (Philip 2026-08-02: "konsistent halten wo
   // es geht" — der Button gibt ihn für 1h UND 5m, nicht nur 5m). pivot_time kommt als ISO-String aus

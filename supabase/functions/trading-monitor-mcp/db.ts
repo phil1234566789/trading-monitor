@@ -47,11 +47,25 @@ export async function getObZones(instrument: string, timeframe?: string, include
 const LIQUIDITY_MAX_RELEVANT = 10; // siehe src/liquidity.js LIQUIDITY_MAX_RELEVANT
 const RECENT_SWEEP_COUNT = 2; // siehe src/liquidity.js RECENT_SWEEP_COUNT
 
-// Port von filterRelevantLevels (src/liquidity.js) auf DB-Zeilen statt In-Memory-Detektions-
-// objekten — gleiche Auswahl-Logik (neuestes Level, unberührte Level, RECENT_SWEEP_COUNT zuletzt
-// gesweepte, insgesamt max. maxRelevant), damit "relevant" hier dasselbe bedeutet wie im Live-Chart.
-// rows müssen chronologisch aufsteigend (älteste zuerst) sortiert sein, wie levels in liquidity.js.
-function filterRelevantRows<T extends { touched: boolean; end_time: string | null }>(rows: T[], maxRelevant: number): T[] {
+// Port von filterRelevantLevels (src/liquidityDetection.js) auf DB-Zeilen statt In-Memory-
+// Detektionsobjekten — gleiche Auswahl-Logik (neuestes Level, unberührte Level, RECENT_SWEEP_COUNT
+// zuletzt gesweepte, insgesamt max. maxRelevant), damit "relevant" hier dasselbe bedeutet wie im
+// Live-Chart. rows müssen chronologisch aufsteigend (älteste zuerst) sortiert sein, wie levels in
+// liquidityDetection.js.
+//
+// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 13 — currentPrice/
+// priceThreshold (optional, Default null = unverändertes Verhalten) für dasselbe dritte
+// Relevanz-Kriterium wie im Frontend (filterRelevantLevels): ein berührtes Level bleibt auch
+// relevant, wenn es aktuell in Preis-Reichweite liegt, unabhängig davon wie lange der Sweep her
+// ist. Bewusst noch nicht in getLiquidityLevels/get_data_export verdrahtet — "aktueller Preis"
+// bräuchte dort eine eigene, Replay-konsistente Herleitung, die dieser Task nicht abdeckt; die
+// Signatur ist aber schon bereit dafür.
+function filterRelevantRows<T extends { touched: boolean; end_time: string | null; price: number }>(
+  rows: T[],
+  maxRelevant: number,
+  currentPrice: number | null = null,
+  priceThreshold: number | null = null,
+): T[] {
   const n = rows.length;
   if (n === 0) return [];
   const newestActive = !rows[n - 1].touched;
@@ -70,7 +84,8 @@ function filterRelevantRows<T extends { touched: boolean; end_time: string | nul
     const row = rows[i];
     const isNewest = newestActive && i === n - 1;
     const isRecentSweep = recentSweepIdx.has(i);
-    if (isNewest || !row.touched || isRecentSweep) {
+    const isPriceRelevant = currentPrice != null && priceThreshold != null && Math.abs(row.price - currentPrice) <= priceThreshold;
+    if (isNewest || !row.touched || isRecentSweep || isPriceRelevant) {
       if (relevantCount < maxRelevant) result.push(row);
       relevantCount += 1;
     }
@@ -169,12 +184,11 @@ export async function getPinContext() {
         "trade_setups(*), " +
         "trade_confirmations(*), " +
         "liquidity_levels(*), " +
-        // m5_ob_*/m5_liquidity_*/rsi_divergence_* sitzen direkt auf pin_context selbst (kein
-        // Embed, siehe 20260802120100_laniakea_context_m5_obs.sql /
+        // m5_liquidity_*/rsi_divergence_* sitzen direkt auf pin_context selbst (kein Embed, siehe
         // 20260802130000_laniakea_context_m5_liquidity.sql / 20260811170000_laniakea_context_rsi_divergence.sql
-        // — alle drei nie persistiert, deshalb Rohdaten-Snapshot statt FK), müssen deshalb hier
-        // explizit mit ausgewählt werden.
-        "m5_ob_instrument, m5_ob_direction, m5_ob_top, m5_ob_bottom, m5_ob_start_time, " +
+        // — beide nie persistiert, deshalb Rohdaten-Snapshot statt FK), müssen deshalb hier
+        // explizit mit ausgewählt werden. kind='m5_ob' nutzt seit Punkt 6 (Migration
+        // 20260823120000) dieselbe ob_zones(*)-Embed wie 1H/4H, kein Snapshot mehr.
         "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
         "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
         "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi",
@@ -232,30 +246,30 @@ export interface PinM5Ob {
   startTimeUnixSec: number;
 }
 
-export async function addPinM5ObEntry(zone: PinM5Ob, note?: string) {
+// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 6 — Deno-seitiges
+// Pendant zu src/tradeIntake.js: findOrCreateObZoneId (Browser). M5-OBs werden von poi-watcher nie
+// live erkannt/persistiert (siehe PLAN-chart-objekte-forex.md Abschnitt 5), deshalb hier ein
+// normaler Upsert (kein ignoreDuplicates, damit .select() bei bereits vorhandenem Konflikt
+// trotzdem die id liefert) statt eines reinen Lookups.
+async function findOrCreateObZoneId(instrument: string, timeframe: string, direction: string, top: number, bottom: number, startTimeSec: number) {
   const { data, error } = await supabase
-    .from("pin_context")
+    .from("ob_zones")
     .upsert(
-      {
-        kind: "m5_ob",
-        trade_position_id: null,
-        ob_zone_id: null,
-        trade_setup_id: null,
-        trade_confirmation_id: null,
-        liquidity_level_id: null,
-        m5_ob_instrument: zone.instrument,
-        m5_ob_direction: zone.direction,
-        m5_ob_top: zone.top,
-        m5_ob_bottom: zone.bottom,
-        m5_ob_start_time: new Date(zone.startTimeUnixSec * 1000).toISOString(),
-        note: note || null,
-      },
-      { onConflict: "m5_ob_instrument,m5_ob_direction,m5_ob_top,m5_ob_bottom,m5_ob_start_time" },
+      { instrument, timeframe, direction, top, bottom, start_time: new Date(startTimeSec * 1000).toISOString() },
+      { onConflict: "instrument,timeframe,start_time,direction" },
     )
-    .select(PIN_CONFIRM_COLUMNS)
+    .select("id")
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data.id as number;
+}
+
+// Landet seit Punkt 6 als ganz normaler kind='ob_zone'-Pin (find-or-create in ob_zones, dann
+// addPinEntry) statt eines eigenen m5_ob-Rohdaten-Snapshots — Signatur bleibt unverändert, damit
+// pins.ts (add_pin_entry-Tool, Lanas stabiles Interface) nicht angepasst werden muss.
+export async function addPinM5ObEntry(zone: PinM5Ob, note?: string) {
+  const obZoneId = await findOrCreateObZoneId(zone.instrument, "5M", zone.direction, zone.top, zone.bottom, zone.startTimeUnixSec);
+  return addPinEntry("ob_zone", obZoneId, note);
 }
 
 export interface PinM5Liquidity {

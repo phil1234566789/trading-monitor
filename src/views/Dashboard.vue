@@ -25,6 +25,8 @@ import {
   updateTrade,
   updateDealingRange,
 } from "../tradeIntake.js";
+import { fetchObZones } from "../obZones.js";
+import { fetchLiquidityLevels1h } from "../liquidityLevels.js";
 import {
   fetchPinContext,
   addPinEntry,
@@ -36,7 +38,6 @@ import {
   resolveObZoneId,
   resolveLiquidityLevelId,
   obZoneEntryNaturalKey,
-  m5ObEntryNaturalKey,
   liquidityLevelEntryNaturalKey,
   m5LiquidityEntryNaturalKey,
   rsiDivergenceEntryNaturalKey,
@@ -110,6 +111,12 @@ const showObsM5 = useLocalStorageRef("showObsM5", false);
 const showObs1h = useLocalStorageRef("showObs1h", true);
 const showObs4h = useLocalStorageRef("showObs4h", true);
 const showLiquidity = useLocalStorageRef("showLiquidity", true);
+// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 12 (Philip 2026-08-22:
+// "neuer unabhängiger 1H-Level-Toggle") — zeigt persistierte 1H-Level (liquidity_levels) IMMER
+// zusätzlich an, unabhängig vom gerade gewählten Chart-Timeframe, analog zu showObs1h bei den
+// Order Blocks. Default false: additives Feature, kein Ersatz für showLiquidity (das weiterhin nur
+// den aktuellen currentBar live zeigt).
+const showLiquidity1h = useLocalStorageRef("showLiquidity1h", false);
 // Debug-Hilfsmittel für die Trend-Indikator-Entwicklung: Preise an den Pivot-Linien
 // einblenden und die aktuell ausgeblendeten (bereits gesweepten) Liquiditäts-Level
 // mitanzeigen. Beide default aus, um den Chart im Normalbetrieb nicht zuzumüllen.
@@ -515,8 +522,10 @@ async function onPinAddConfirm(note) {
     }
     await addPinEntry("liquidity_level", liquidityLevelId, note);
   } else if (target.kind === "m5_ob") {
-    // Kein Resolve nötig — M5-OBs werden nie persistiert, Rohdaten-Snapshot direkt (siehe
-    // addPinM5ObEntry).
+    // "m5_ob" bleibt hier ein rein clientseitiger Kandidaten-Kind (siehe PriceChart.vue:
+    // findNearbyPinCandidates) — anders als resolveObZoneId oben (SELECT-only, wartet auf
+    // poi-watcher) legt addPinM5ObEntry die ob_zones-Zeile bei Bedarf per find-or-create gleich mit
+    // an (Punkt 6), landet danach aber als ganz normaler kind='ob_zone'-Pin.
     await addPinM5ObEntry(target.zone, note);
   } else if (target.kind === "m5_liquidity_level") {
     // Kein Resolve nötig — Liquiditäts-Level auf einem Nicht-1h-Timeframe werden nie persistiert,
@@ -575,11 +584,10 @@ function pinVisibleOnCurrentTf(pinTimeframeRaw) {
 const hoveredPinObZoneKey = computed(() => {
   const e = hoveredPinEntry.value;
   if (!e) return null;
+  // M5-OB-Pins laufen seit Punkt 6 (Migration 20260823120000) über denselben kind='ob_zone' wie
+  // 1H/4H (e.obZone.timeframe === "5M") — kein eigener m5_ob-Zweig mehr nötig.
   if (e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value && pinVisibleOnCurrentTf(e.obZone.timeframe)) {
     return obZoneEntryNaturalKey(e.obZone);
-  }
-  if (e.kind === "m5_ob" && e.m5Ob?.instrument === currentSymbol.value && pinVisibleOnCurrentTf("5M")) {
-    return m5ObEntryNaturalKey(e.m5Ob);
   }
   return null;
 });
@@ -619,40 +627,27 @@ function toUnixSec(iso) {
 // (Chat 2026-08-18, Task "Pin-Kontext: gepinnte Objekte direkt rendern statt nur per
 // Live-Redetection") — siehe PriceChart.vue: mergePinnedZones/mergePinnedLevels/
 // mergePinnedDivergences/refreshTradeSetupLinksInternal für die Verwendung. touched: null markiert
-// einen reinen Snapshot ohne bekannten Live-Status (m5_ob/m5_liquidity_level) — PriceChart.vue
-// self-heilt das anhand der aktuell geladenen Kerzen. pinVisibleOnCurrentTf (Bug 2026-08-21) filtert
-// zusätzlich per Kaskaden-Regel: nur auf dem eigenen oder einem feineren Timeframe sichtbar.
+// einen reinen Snapshot ohne bekannten Live-Status — PriceChart.vue self-heilt das anhand der
+// aktuell geladenen Kerzen. pinVisibleOnCurrentTf (Bug 2026-08-21) filtert zusätzlich per
+// Kaskaden-Regel: nur auf dem eigenen oder einem feineren Timeframe sichtbar.
 const pinnedObZones = computed(() => {
   return pinContextEntries.value
-    .filter(
-      (e) =>
-        (e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value && pinVisibleOnCurrentTf(e.obZone.timeframe)) ||
-        (e.kind === "m5_ob" && e.m5Ob?.instrument === currentSymbol.value && pinVisibleOnCurrentTf("5M")),
-    )
-    .map((e) => {
-      if (e.kind === "ob_zone") {
-        return {
-          top: e.obZone.top,
-          bottom: e.obZone.bottom,
-          startTime: toUnixSec(e.obZone.startTime),
-          dir: e.obZone.direction === "long" ? 1 : -1,
-          timeframe: e.obZone.timeframe,
-          touched: e.obZone.touched,
-          invalidated: e.obZone.invalidated,
-          endTime: toUnixSec(e.obZone.endTime),
-        };
-      }
-      return {
-        top: e.m5Ob.top,
-        bottom: e.m5Ob.bottom,
-        startTime: toUnixSec(e.m5Ob.startTime),
-        dir: e.m5Ob.direction === "long" ? 1 : -1,
-        timeframe: "5M",
-        touched: null,
-        invalidated: false,
-        endTime: null,
-      };
-    });
+    .filter((e) => e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value && pinVisibleOnCurrentTf(e.obZone.timeframe))
+    .map((e) => ({
+      top: e.obZone.top,
+      bottom: e.obZone.bottom,
+      startTime: toUnixSec(e.obZone.startTime),
+      dir: e.obZone.direction === "long" ? 1 : -1,
+      timeframe: e.obZone.timeframe,
+      // M5-ob_zones-Zeilen werden nie live nachverfolgt (nur die referenzierte Teilmenge wird beim
+      // Pinnen einmalig persistiert, siehe PLAN-chart-objekte-forex.md Abschnitt 5/Punkt 6) —
+      // touched bleibt in der DB für immer auf ihrem Insert-Default (false) stehen. touched: null
+      // löst hier denselben Self-Heal-gegen-geladene-Kerzen-Pfad in PriceChart.vue aus wie vorher
+      // beim eigenen kind='m5_ob'-Snapshot, statt den nie aktualisierten DB-Wert zu glauben.
+      touched: e.obZone.timeframe === "5M" ? null : e.obZone.touched,
+      invalidated: e.obZone.invalidated,
+      endTime: toUnixSec(e.obZone.endTime),
+    }));
 });
 // Kaskaden-Regel statt reiner currentBar-Gleichheit (Bug 2026-08-21, siehe pinVisibleOnCurrentTf
 // oben, Philip 2026-08-18/21: ein gepinntes 1H/4H-Level soll auch auf M5 sichtbar bleiben, siehe
@@ -719,10 +714,12 @@ const pinnedRsiDivergences = computed(() => {
 // dieselbe "kann gerade nicht springen"-Semantik.
 function pinJumpMismatch(entry) {
   if (!entry || entry.kind === "trade_position") return null;
-  if (entry.kind === "ob_zone") return entry.obZone?.instrument !== currentSymbol.value ? `Erst zu ${entry.obZone?.instrument} wechseln.` : null;
-  if (entry.kind === "m5_ob") {
-    if (entry.m5Ob?.instrument !== currentSymbol.value) return `Erst zu ${entry.m5Ob?.instrument} wechseln.`;
-    return currentBar.value !== "5m" ? "Erst zu M5 wechseln." : null;
+  if (entry.kind === "ob_zone") {
+    if (entry.obZone?.instrument !== currentSymbol.value) return `Erst zu ${entry.obZone?.instrument} wechseln.`;
+    // Kaskaden-Regel wie pinVisibleOnCurrentTf (Bug 2026-08-21) — für 5M (feinster Timeframe hier)
+    // kollabiert das auf "nur auf 5M selbst sichtbar", exakt das alte kind='m5_ob'-Verhalten
+    // (ehemals ein hartes currentBar.value !== "5m"-Check), jetzt generisch für jeden Timeframe.
+    return pinVisibleOnCurrentTf(entry.obZone.timeframe) ? null : `Erst zu ${entry.obZone.timeframe} wechseln.`;
   }
   if (entry.kind === "trade_setup") {
     return entry.tradeSetup?.instrument !== currentSymbol.value ? `Erst zu ${entry.tradeSetup?.instrument} wechseln.` : null;
@@ -758,8 +755,6 @@ function onSelectPin(entry) {
     if (t) priceChartRef.value?.jumpToTrade(t.entryTime, t.exitTime);
   } else if (entry.kind === "ob_zone") {
     priceChartRef.value?.jumpToPin(toUnixSec(entry.obZone.startTime));
-  } else if (entry.kind === "m5_ob") {
-    priceChartRef.value?.jumpToPin(toUnixSec(entry.m5Ob.startTime));
   } else if (entry.kind === "trade_setup") {
     priceChartRef.value?.jumpToPin(toUnixSec(entry.tradeSetup.obStartTime));
   } else if (entry.kind === "trade_confirmation") {
@@ -864,7 +859,7 @@ const indikatorenMenuOpen = ref(false);
 // Sessions seit Chat 2026-07-29 NICHT mehr dabei ("ich deaktiviere gerne Indikatoren um mehr zu
 // sehen, aber Sessions eig nie — die geben mir Orientierung zur Charthistorie") — eigener,
 // permanenter Toggle links neben News statt im Sammel-Dropdown, siehe Template.
-const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs];
+const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showLiquidity1h, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs];
 const indikatorenActive = computed(() => INDIKATOREN_REFS.some((r) => r.value));
 let indikatorenSavedState = null;
 function toggleIndikatoren() {
@@ -932,6 +927,15 @@ const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrade
 // `trades` oben), kein intervalMs, da nur durch explizite Aktionen (Rechtsklick "Anpinnen"/
 // Modal-Löschen) geändert, kein Hintergrund-Poll nötig.
 const { data: pinContextEntries, refresh: refreshPinContext } = usePolledFetch(() => fetchPinContext());
+// 1H/4H-OB-Zonen (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 7) —
+// anders als trades/pinContextEntries oben ändert sich das hier NICHT nur durch explizite
+// Browser-Aktionen, sondern im Hintergrund durch poi-watcher (Cron alle 5min) — deshalb, anders als
+// die beiden Fälle oben, MIT intervalMs. 60s reicht: schneller als jede sinnvolle manuelle
+// Beobachtung, ohne unnötig oft zu pollen.
+const { data: dbObZones } = usePolledFetch(() => fetchObZones(), { intervalMs: 60_000 });
+// 1H-Liquidity-Level (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 12)
+// — analog zu dbObZones oben, gleicher Grund für intervalMs (poi-watcher-Cron im Hintergrund).
+const { data: dbLiquidityLevels1h } = usePolledFetch(() => fetchLiquidityLevels1h(), { intervalMs: 60_000 });
 // Nur die Ids, die zum GERADE geladenen Symbol gehören (trades enthält nur dessen Trades) — ein
 // Pin-Eintrag für ein anderes Symbol kann im Chart/in der Tabelle ohnehin nicht markiert
 // werden, solange dieses Symbol nicht ausgewählt ist.
@@ -941,21 +945,18 @@ const pinTradeIds = computed(() => {
 });
 // OB-Zonen-Pendant (Chat 2026-08-01) — Natural-Key statt Id (siehe pinContext.js:
 // obZoneEntryNaturalKey/orderBlocks.js: obZoneNaturalKey), gefiltert aufs aktuelle Symbol (eine
-// OB-Zone aus GBPUSD ergibt im EURUSD-Chart keinen sinnvollen Treffer). Mischt seit Chat
-// 2026-08-17 kind='m5_ob' mit rein (m5ObEntryNaturalKey baut denselben "5M|..."-Schlüssel wie
-// obZoneNaturalKey für M5-Zonen, siehe dort) — M5-OBs laufen im Chart über dieselbe
-// renderPersistedZones-Funktion wie 1H/4H, brauchen also keinen eigenen Prop. pinVisibleOnCurrentTf
-// (Bug 2026-08-21) filtert zusätzlich per Kaskaden-Regel: nur auf dem eigenen oder einem feineren
-// Timeframe gehighlightet (ein M5-OB-Pin bekommt auf 4H bewusst keinen Halo mehr).
+// OB-Zone aus GBPUSD ergibt im EURUSD-Chart keinen sinnvollen Treffer). Seit Punkt 6 (Migration
+// 20260823120000) läuft ein M5-OB-Pin über denselben kind='ob_zone' wie 1H/4H (e.obZone.timeframe
+// === "5M") — kein eigener m5_ob-Zweig mehr nötig, obZoneEntryNaturalKey baut für "5M" denselben
+// "5M|..."-Schlüssel wie zuvor die eigene m5ObEntryNaturalKey. pinVisibleOnCurrentTf (Bug 2026-08-21)
+// filtert per Kaskaden-Regel: nur auf dem eigenen oder einem feineren Timeframe gehighlightet (ein
+// M5-OB-Pin bekommt auf 4H bewusst keinen Halo mehr).
 const pinObZoneKeys = computed(() => {
-  return new Set([
-    ...pinContextEntries.value
+  return new Set(
+    pinContextEntries.value
       .filter((e) => e.kind === "ob_zone" && e.obZone?.instrument === currentSymbol.value && pinVisibleOnCurrentTf(e.obZone.timeframe))
       .map((e) => obZoneEntryNaturalKey(e.obZone)),
-    ...pinContextEntries.value
-      .filter((e) => e.kind === "m5_ob" && e.m5Ob?.instrument === currentSymbol.value && pinVisibleOnCurrentTf("5M"))
-      .map((e) => m5ObEntryNaturalKey(e.m5Ob)),
-  ]);
+  );
 });
 // Trade-Setup-Pendant (Chat 2026-08-01, dritte Runde) — echte Id (kein Natural-Key-Umweg wie bei
 // ob_zone nötig, siehe pinContext.js), trotzdem aufs aktuelle Symbol gefiltert.
@@ -1132,6 +1133,11 @@ watch(selectedTradingAccountId, refreshTrades);
             <div v-if="liquidityMenuOpen" class="toggle-dropdown">
               <button :class="{ active: showSweptLiquidity }" @click="showSweptLiquidity = !showSweptLiquidity">
                 Liquidity-Sweeps
+              </button>
+              <!-- Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 12 —
+                   zeigt persistierte 1H-Level immer zusätzlich, unabhängig vom Chart-Timeframe. -->
+              <button :class="{ active: showLiquidity1h }" @click="showLiquidity1h = !showLiquidity1h">
+                1H-Level
               </button>
             </div>
           </div>
@@ -1463,6 +1469,9 @@ watch(selectedTradingAccountId, refreshTrades);
     :hovered-pin-liquidity-level-key="hoveredPinLiquidityLevelKey"
     :hovered-pin-rsi-divergence-key="hoveredPinRsiDivergenceKey"
     :pinned-ob-zones="pinnedObZones"
+    :db-ob-zones="dbObZones"
+    :db-liquidity-levels-1h="dbLiquidityLevels1h"
+    :show-liquidity-1h="showLiquidity1h"
     :pinned-liquidity-levels="pinnedLiquidityLevels"
     :pinned-trade-setups="pinnedTradeSetups"
     :pinned-rsi-divergences="pinnedRsiDivergences"

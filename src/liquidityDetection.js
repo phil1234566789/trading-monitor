@@ -123,7 +123,13 @@ export function detectLiquidityLevels(candles, period) {
 // nicht berührten älteren Level, sowie die RECENT_SWEEP_COUNT zeitlich zuletzt berührten
 // Level — insgesamt aber höchstens maxRelevant, von neu nach alt gezählt. Bei
 // onlyRelevant=false zählen einfach die maxRelevant neuesten Level.
-export function filterRelevantLevels(levels, maxRelevant, onlyRelevant) {
+//
+// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 13 — currentPrice/
+// priceThreshold (beide optional, Default null = altes Verhalten unverändert) ergänzen ein DRITTES
+// Relevanz-Kriterium für ein bereits berührtes Level: relevant, wenn es ENTWEDER kürzlich gesweept
+// wurde (isRecentSweep, wie bisher) ODER aktuell in Preis-/Pip-Reichweite von currentPrice liegt —
+// z.B. ein Retest eines längst gesweepten alten Levels (Philip 2026-08-21, bestätigt).
+export function filterRelevantLevels(levels, maxRelevant, onlyRelevant, currentPrice = null, priceThreshold = null) {
   const n = levels.length;
   if (n === 0) return [];
 
@@ -143,7 +149,8 @@ export function filterRelevantLevels(levels, maxRelevant, onlyRelevant) {
     const lvl = levels[i];
     const isNewest = newestActive && i === n - 1;
     const isRecentSweep = recentSweepIdx.has(i);
-    const baseRelevant = !onlyRelevant || isNewest || !lvl.touched || isRecentSweep;
+    const isPriceRelevant = currentPrice != null && priceThreshold != null && Math.abs(lvl.price - currentPrice) <= priceThreshold;
+    const baseRelevant = !onlyRelevant || isNewest || !lvl.touched || isRecentSweep || isPriceRelevant;
     if (baseRelevant) {
       if (relevantCount < maxRelevant) result.push(lvl);
       relevantCount += 1;

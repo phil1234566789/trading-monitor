@@ -69,7 +69,20 @@ function onEntryClick(event, entry) {
         <div v-if="row.entry.obZone" class="pin-panel-entry-prices">
           {{ fmtPrice(row.entry.obZone.bottom, pricePrecisionForInstrument(row.entry.obZone.instrument)) }}
           – {{ fmtPrice(row.entry.obZone.top, pricePrecisionForInstrument(row.entry.obZone.instrument)) }}
-          · {{ row.entry.obZone.invalidated ? "Invalidiert" : row.entry.obZone.touched ? "Touched" : "Aktiv" }}
+          ·
+          {{
+            // M5-ob_zones-Zeilen werden nie live nachverfolgt (Punkt 6, siehe Dashboard.vue:
+            // pinnedObZones-Kommentar) — touched/invalidated bleiben für immer auf ihrem
+            // Insert-Default stehen, deshalb hier derselbe ehrliche Hinweis wie vorher beim eigenen
+            // kind='m5_ob'-Snapshot statt eines irreführenden "Aktiv".
+            row.entry.obZone.timeframe === "5M"
+              ? "Snapshot, kein Live-Status"
+              : row.entry.obZone.invalidated
+                ? "Invalidiert"
+                : row.entry.obZone.touched
+                  ? "Touched"
+                  : "Aktiv"
+          }}
         </div>
       </template>
       <template v-else-if="row.entry.kind === 'trade_setup'">
@@ -104,18 +117,6 @@ function onEntryClick(event, entry) {
         <div v-if="row.entry.liquidityLevel" class="pin-panel-entry-prices">
           {{ fmtPrice(row.entry.liquidityLevel.price, pricePrecisionForInstrument(row.entry.liquidityLevel.instrument)) }}
           · {{ row.entry.liquidityLevel.touched ? "Touched" : "Aktiv" }}
-        </div>
-      </template>
-      <template v-else-if="row.entry.kind === 'm5_ob'">
-        <div class="pin-panel-entry-header">
-          <span class="trade-direction" :class="row.entry.m5Ob?.direction">{{ row.entry.m5Ob?.direction === "short" ? "Short" : "Long" }}</span>
-          M5-OB ({{ row.entry.m5Ob?.instrument }})
-          <button class="pin-panel-remove" title="Aus Pin-Kontext entfernen" @click="emit('remove', row.entry.id)">🗑</button>
-        </div>
-        <div v-if="row.entry.m5Ob" class="pin-panel-entry-prices">
-          {{ fmtPrice(row.entry.m5Ob.bottom, pricePrecisionForInstrument(row.entry.m5Ob.instrument)) }}
-          – {{ fmtPrice(row.entry.m5Ob.top, pricePrecisionForInstrument(row.entry.m5Ob.instrument)) }}
-          · Snapshot, kein Live-Status
         </div>
       </template>
       <template v-else-if="row.entry.kind === 'm5_liquidity_level'">

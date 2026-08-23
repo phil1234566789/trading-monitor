@@ -22,8 +22,9 @@ korrigieren reicht nicht" (drei Fehlerwiederholungen am selben Tag, bis der Skil
    zusammenfassen — das reicht dem Tool nicht, die Bestätigung bleibt sonst im Chart unsichtbar.
    - `sourceTime` ist PFLICHT und steht selten im Markdown-Output-Text der Analyse (dort oft nur
      ein grobes Datum wie "10.07., 4 Tage alt") — den exakten ISO-Timestamp aus der zugehörigen
-     Pin-Zeile holen (`get_pin_context`, Felder `m5_liquidity_pivot_time`/`m5_ob_start_time`/
-     `liquidity_levels.pivot_time`/`ob_zones.start_time`), nicht erfinden oder weglassen.
+     Pin-Zeile holen (`get_pin_context`, Felder `m5_liquidity_pivot_time`/`ob_zones.start_time` —
+     Letzteres deckt auch M5-OB-Pins ab, `kind='m5_ob'` liefert seit Punkt 6 der ob_zones-
+     Konsolidierung dieselbe ob_zones-Zeile wie `kind='ob_zone'`), nicht erfinden oder weglassen.
    - `kind="ob"`: `price` = `ob_bottom` bei Short, `ob_top` bei Long; `rangeLow`/`rangeHigh`
      PFLICHT (Zonenkanten); `timeframe` mitgeben (z. B. `"5M"`).
    - `kind="pivot"`: `price` = der gesweepte Pivot-Preis; `touchedTime` = wann der Sweep passierte,
