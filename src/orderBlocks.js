@@ -135,8 +135,16 @@ class ZonePaneView {
     const z = this._source._zone;
     const candles = this._source._candles;
 
+    // Bug-Report Philip 2026-08-23: z.endTime einer noch aktiven (untouched/nicht invalidierten)
+    // Zone ist nur ein Nebenprodukt von detectOrderBlocks() (wächst dort mit jeder durchlaufenen
+    // Kerze mit, siehe orderBlockDetection.js) — für 1H/4H, die seit Punkt 7 (DB-Read statt Live-
+    // Recompute) aus `ob_zones` kommen, ist dieser Wert nur so aktuell wie poi-watchers letzter
+    // erfolgreicher Lauf, nicht "jetzt". Eine noch offene Zone hat konzeptionell KEIN sinnvolles
+    // Ende — sie soll bis zur letzten geladenen Kerze reichen, nicht bis zu einem gespeicherten
+    // Zeitpunkt. snapToBarTime klemmt einen zu großen targetTime ohnehin auf die letzte Kerze,
+    // Infinity nutzt genau das statt eine eigene "letzte Kerze"-Sonderbehandlung zu brauchen.
     const startBarTime = snapToBarTime(candles, z.startTime);
-    const endBarTime = snapToBarTime(candles, z.endTime);
+    const endBarTime = snapToBarTime(candles, z.touched || z.invalidated ? z.endTime : Infinity);
     this._p1 = {
       x: startBarTime != null ? timeScale.timeToCoordinate(startBarTime) : null,
       y: series.priceToCoordinate(z.top),

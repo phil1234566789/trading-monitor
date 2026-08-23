@@ -22,8 +22,6 @@ import { fetchTrendbarsBatch, type RefreshedTokens } from "../_shared/ctrader/cl
 import { detectSetupObs, detectTradeSetup } from "../_shared/tradeSetup.ts";
 
 const TIMEFRAMES: { label: "4H" | "1H" }[] = [{ label: "4H" }, { label: "1H" }];
-const CANDLE_LIMIT = 300;
-// Nur für den 1H-Fetch (nicht 4H — der bleibt bei CANDLE_LIMIT=300):
 // 300h (~12,5 Tage) reichten nicht, um lange unberührte 1H-Liquiditäts-Level (und 1H-OB-Zonen, die
 // denselben Kerzensatz mitnutzen) im Blick zu behalten — Philip tradet von Ziel zu Ziel und
 // braucht dafür ein paar unberührte Level ober-/unterhalb des Kurses, auch wenn die schon
@@ -34,6 +32,14 @@ const CANDLE_LIMIT = 300;
 // bestehenden Cache-Verhalten, nicht mehr aus Rate-Limit-Gründen wie bei Twelve Data) — der
 // nächste isH1RefreshTick-Lauf erkennt/backfillt fehlende ältere Level automatisch.
 const FOREX_H1_LOOKBACK_CANDLES = 3000;
+// Bug-Report Philip 2026-08-23: eine 4H-OB-Zone vom 12.05. (start_time außerhalb des alten
+// CANDLE_LIMIT=300-Fensters, ~50 Tage) wurde real getouched+invalidated (Kerzen-Vollarchiv-
+// Neuberechnung bestätigt: 19.08. ~13:00 UTC), blieb in der DB aber für immer touched=false —
+// derselbe Fensterblindfleck wie oben bei FOREX_H1_LOOKBACK_CANDLES, nur diesmal beim 4H-Fetch, der
+// bis dahin bei den alten 300 Kerzen (~50 Tage) belassen wurde. Auf dieselbe Größenordnung wie 1H
+// angehoben (3000 4H-Kerzen = ~500 Tage) — läuft nur an isH4RefreshTick-Ticks (alle 4h), also kein
+// zusätzlicher API-Druck.
+const FOREX_H4_LOOKBACK_CANDLES = 3000;
 const LIQUIDITY_FRACTAL_PERIOD = 5; // siehe LIQUIDITY_FRACTAL_PERIOD in PriceChart.vue
 
 // Trade-Setup-Parameter (Liquidity Sweep + Protected M5-Fraktal + M5-OB, siehe
@@ -166,7 +172,7 @@ async function fetchForexBatch(
     { key: "M5", period: "M5", count: TRADE_SETUP_M5_CANDLE_LIMIT },
   ];
   if (includeH1) requestSpecs.push({ key: "1H", period: "H1", count: FOREX_H1_LOOKBACK_CANDLES });
-  if (includeH4) requestSpecs.push({ key: "4H", period: "H4", count: CANDLE_LIMIT });
+  if (includeH4) requestSpecs.push({ key: "4H", period: "H4", count: FOREX_H4_LOOKBACK_CANDLES });
 
   const results = await fetchTrendbarsBatch({
     clientId: CTRADER_CLIENT_ID,
@@ -527,6 +533,47 @@ Deno.serve(async (req) => {
               await sendTelegram(
                 `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
                   `Zone: ${fmt(z.bottom, cfg.pricePrecision)} – ${fmt(z.top, cfg.pricePrecision)}${z.weak ? " (schwach)" : ""}\n` +
+                  `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+              );
+            }
+          }
+
+          // Bug-Report Philip 2026-08-23 (analog zum liquidity_levels-Fix weiter unten): eine Zone,
+          // deren start_time außerhalb des gerade geholten Kerzenfensters liegt, taucht in `zones`
+          // gar nicht erst auf und wurde vom Loop oben nie wieder angefasst — für immer eingefroren,
+          // selbst wenn der Preis sie inzwischen längst berührt hat. Dasselbe simple Live-Preis-
+          // Sicherheitsnetz wie im "else"-Zweig unten, hier zusätzlich auch an einem Refresh-Tick,
+          // nicht nur an einem Skip-Tick. Kein Ersatz für die volle Kerzenhistorie (ein Spike, der
+          // sich vor dem nächsten poi-watcher-Lauf schon wieder zurückzieht, rutscht weiterhin durch
+          // — dafür braucht es die einmalige Archiv-Korrektur, siehe backfillObZones.ts), aber besser
+          // als "nie wieder geprüft".
+          const zoneKeysInWindow = new Set(zones.map((z) => `${z.dir === 1 ? "long" : "short"}_${z.startTime}`));
+          for (const row of existingRows ?? []) {
+            if (row.invalidated || row.touched) continue;
+            const rowStartSec = Math.floor(new Date(row.start_time).getTime() / 1000);
+            if (zoneKeysInWindow.has(`${row.direction}_${rowStartSec}`)) continue;
+            if (currentPrice > row.top || currentPrice < row.bottom) continue;
+
+            const { error: updateOffWindowError } = await supabase
+              .from("ob_zones")
+              .update({
+                touched: true,
+                notified: true,
+                alert_price: currentPrice,
+                notified_at: alarmActive ? new Date().toISOString() : row.notified_at ?? null,
+              })
+              .eq("instrument", cfg.instrument)
+              .eq("timeframe", tf.label)
+              .eq("direction", row.direction)
+              .eq("start_time", row.start_time);
+            if (updateOffWindowError) throw updateOffWindowError;
+
+            if (alarmActive) {
+              notifiedCount++;
+              const label = row.direction === "long" ? "Bullish" : "Bearish";
+              await sendTelegram(
+                `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
+                  `Zone: ${fmt(row.bottom, cfg.pricePrecision)} – ${fmt(row.top, cfg.pricePrecision)}${row.weak ? " (schwach)" : ""}\n` +
                   `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
               );
             }

@@ -81,6 +81,53 @@ async function fetchAllCandles(instrument: string, bar: string): Promise<CandleR
   return all;
 }
 
+// Bug-Report Philip 2026-08-23: eine Zone (start_time außerhalb von poi-watchers rollierendem
+// Live-Fenster, siehe FOREX_H4_LOOKBACK_CANDLES in poi-watcher/index.ts) wurde real vom Preis
+// getouched (sogar invalidated), blieb in der DB aber für immer touched=false, weil poi-watchers
+// "if (candles)"-Zweig eine Zone außerhalb des Fensters nie wieder aus `zones` bekommt. Analog zu
+// backfillLiquidityLevels.ts: für jede vorhandene, noch touched=false-Zeile, deren Zustand laut der
+// REINEN Archiv-Neuberechnung (detectOrderBlocks über die komplette Kerzenserie, s.o.) tatsächlich
+// schon touched/invalidated ist, wird die Zeile aktualisiert.
+//
+// KEIN analoger "end_time nachziehen"-Fall für weiterhin korrekt untouched Zonen (früherer Versuch,
+// wieder verworfen, Chat 2026-08-23) — orderBlocks.js' ZonePaneView zeichnet eine noch aktive Zone
+// jetzt bis zur letzten geladenen Kerze statt bis zu einem gespeicherten end_time-Wert (derselbe
+// Bug-Report), also liest fürs Rendering niemand mehr end_time einer untouched Zeile. Ein
+// Nachziehen hier wäre reine Arbeit ohne Leser.
+async function correctMissedTouches(instrument: string, dbTimeframe: string, zones: ReturnType<typeof detectOrderBlocks>) {
+  const { data: existingRows, error } = await supabase
+    .from("ob_zones")
+    .select("start_time, direction, top, bottom, touched")
+    .eq("instrument", instrument)
+    .eq("timeframe", dbTimeframe)
+    .eq("touched", false);
+  if (error) throw new Error(`OB-Zonen lesen fehlgeschlagen (${instrument} ${dbTimeframe}): ${error.message}`);
+  if (!existingRows || existingRows.length === 0) return 0;
+
+  const untouchedKeys = new Set(
+    existingRows.map((r) => `${r.direction}_${Math.floor(new Date(r.start_time).getTime() / 1000)}`),
+  );
+
+  let corrected = 0;
+  for (const z of zones) {
+    if (!z.touched) continue;
+    const direction = z.dir === 1 ? "long" : "short";
+    const key = `${direction}_${z.startTime}`;
+    if (!untouchedKeys.has(key)) continue;
+
+    const { error: updateError } = await supabase
+      .from("ob_zones")
+      .update({ touched: true, invalidated: z.invalidated, end_time: new Date(z.endTime * 1000).toISOString(), notified: true })
+      .eq("instrument", instrument)
+      .eq("timeframe", dbTimeframe)
+      .eq("direction", direction)
+      .eq("start_time", new Date(z.startTime * 1000).toISOString());
+    if (updateError) throw new Error(`OB-Zone korrigieren fehlgeschlagen (${instrument} ${dbTimeframe}): ${updateError.message}`);
+    corrected += 1;
+  }
+  return corrected;
+}
+
 async function upsertZones(instrument: string, dbTimeframe: string, zones: ReturnType<typeof detectOrderBlocks>) {
   for (let i = 0; i < zones.length; i += UPSERT_BATCH_SIZE) {
     const batch = zones.slice(i, i + UPSERT_BATCH_SIZE).map((z) => ({
@@ -123,8 +170,11 @@ async function backfillOne(instrument: string, bar: string) {
     return;
   }
   const zones = detectOrderBlocks(candles, config.detectParam, true);
+  const corrected = await correctMissedTouches(instrument, config.dbTimeframe, zones);
   await upsertZones(instrument, config.dbTimeframe, zones);
-  console.log(`${instrument} ${bar} (${candles.length} Kerzen): ${zones.length} OB-Zonen erkannt/gesichert.`);
+  console.log(
+    `${instrument} ${bar} (${candles.length} Kerzen): ${zones.length} OB-Zonen erkannt/gesichert, ${corrected} verpasste Touches korrigiert.`,
+  );
 }
 
 for (const instrument of INSTRUMENTS) {
