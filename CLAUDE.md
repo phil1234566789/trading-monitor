@@ -536,10 +536,20 @@ tool only for an *explicit* `fromTime`+`toTime` range query (multi-day historica
 anything with "newest N up to a point" semantics, `get_forex_candles` already covers it now, no
 need to reach for the archive tool directly. `pollRecent()` (frontend live-tail polling) stays
 live-only, on purpose — the archive is frozen at whatever the last backfill run saw, it
-structurally can't serve "the candle that just closed". There is **no ongoing sync** otherwise —
-the table stops growing the moment a backfill script run finishes; extending `poi-watcher`'s
-already-running M5 fetch to also persist here (avoiding any extra cTrader load) is the natural
-next step once Philip wants it, not yet built.
+structurally can't serve "the candle that just closed" ahead of the next live fetch that covers it.
+
+**Since 2026-08-23, the archive also grows from ordinary live traffic, not just manual backfill
+runs.** `forex-candles` (the edge function every caller — frontend, MCP server, `poi-watcher` —
+already goes through for any live cTrader fetch) upserts every closed candle it returns into
+`forex_candles` on the way out (`persistClosedCandles`, both the GET single-fetch and POST
+batch-fetch paths), `ignoreDuplicates: true` same as the backfill script. This needed no new
+plumbing: `fetchOneTrendbar` (`_shared/ctrader/client.ts`) already only ever returns closed bars
+(cTrader's own `count - 1` behavior, see that function's comment) and the function already runs
+with `service_role`, so no RLS change was needed either. Only `period` values in `forex_candles`'
+own `bar` CHECK constraint (`'5m'|'1h'|'4h'`) get persisted — a `1m`/`3m`/`15m`/`1D` fetch (replay
+fine-tuning, mostly) stays a pure live read, same as before. Net effect: any range that's ever
+been fetched live once (by anyone) no longer needs a live cTrader round-trip again — only a true
+gap (never fetched by anything) still costs one.
 
 **Historical `ob_zones` backfill (`mcp-server/src/scripts/backfillObZones.ts`, since 2026-08-09)**:
 `ob_zones` used to only ever hold what `poi-watcher`'s live cron detected going forward — a

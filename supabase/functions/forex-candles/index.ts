@@ -59,6 +59,44 @@ function errorResponse(status: number, message: string) {
   });
 }
 
+// Schreibt jeden Live-Fetch ins forex_candles-Archiv zurück (Chat 2026-08-23: Philip will nicht
+// jedes Mal dieselben Kerzen erneut über cTrader ziehen). fetchOneTrendbar liefert laut eigenem
+// Kommentar dort NIE die noch laufende Kerze mit (die API gibt count-1 abgeschlossene Bars
+// zurück) — jede hier ankommende Candle ist also schon geschlossen, kein extra Filtern nötig.
+// Nur 5m/1h/4h persistieren (forex_candles' bar-CHECK-Constraint, siehe Migration
+// 20260809120000) — 1m/3m/15m/1D-Fetches (z.B. Replay-Feintuning) bleiben reine Live-Reads wie
+// bisher. Chunked wie im Backfill-Script (backfillForexCandles.ts), da ein Single-Fetch bis zu
+// MAX_COUNT=5000 Kerzen zurückgeben kann. Ein Archiv-Schreibfehler darf einen sonst erfolgreichen
+// Live-Fetch nicht scheitern lassen — nur loggen, Response geht trotzdem raus.
+const PERSISTABLE_BARS = new Set(["5m", "1h", "4h"]);
+const UPSERT_CHUNK_SIZE = 1000;
+
+async function persistClosedCandles(
+  supabase: ReturnType<typeof createClient>,
+  instrument: string,
+  period: string,
+  candles: { time: number; open: number; high: number; low: number; close: number; volume: number }[],
+) {
+  if (!PERSISTABLE_BARS.has(period) || candles.length === 0) return;
+  const rows = candles.map((c) => ({
+    instrument,
+    bar: period,
+    time: new Date(c.time * 1000).toISOString(),
+    open: c.open,
+    high: c.high,
+    low: c.low,
+    close: c.close,
+    volume: c.volume,
+  }));
+  for (let i = 0; i < rows.length; i += UPSERT_CHUNK_SIZE) {
+    const chunk = rows.slice(i, i + UPSERT_CHUNK_SIZE);
+    const { error } = await supabase
+      .from("forex_candles")
+      .upsert(chunk, { onConflict: "instrument,bar,time", ignoreDuplicates: true });
+    if (error) console.error(`forex-candles: Archiv-Upsert fehlgeschlagen (${instrument} ${period}):`, error);
+  }
+}
+
 async function loadTokens(supabase: ReturnType<typeof createClient>) {
   const { data: tokenRow, error: tokenSelectError } = await supabase
     .from("ctrader_oauth_tokens")
@@ -128,6 +166,9 @@ Deno.serve(async (req) => {
         onTokenRefresh: onTokenRefreshFor(supabase),
         requests: mapped,
       });
+      await Promise.all(
+        requests.map((r, i) => persistClosedCandles(supabase, r.symbol, r.period, results[i])),
+      );
       return new Response(JSON.stringify({ results }), {
         headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       });
@@ -159,6 +200,7 @@ Deno.serve(async (req) => {
       count,
       toTimestampMs: toParam ? Number(toParam) : undefined,
     });
+    await persistClosedCandles(supabase, symbol, period, candles);
     return new Response(JSON.stringify(candles), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
