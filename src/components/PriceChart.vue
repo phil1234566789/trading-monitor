@@ -511,6 +511,22 @@ let reachedHistoryStart = false;
 // — bei echtem Datenanfang bleibt die Lücke bewusst ohne Button).
 const showLoadOlderButton = ref(false);
 const loadOlderButtonBusy = ref(false);
+// Bug-Report Philip 2026-08-23: weit auf 1H herauszoomen ließ die ganze App einfrieren — das
+// Archiv deckt nur GBPUSD/EURUSD ab 2026-01-01 ab (siehe CLAUDE.md "Persisted candle archive"),
+// eine Kerze davor löst in fetchOlderCandles automatisch einen LIVE-cTrader-Fetch aus. Beim
+// Herauszoomen feuert subscribeVisibleLogicalRangeChange aber wiederholt in kurzer Folge (jede
+// neu vorangestellte Seite verschiebt die sichtbare Logical Range nur um genau diese Seitengröße,
+// bei starkem Herauszoomen bleibt sie also weiter unter LAZY_LOAD_LOGICAL_THRESHOLD) — das reiht
+// mehrere langsame Live-Fetches automatisch UND ungefragt aneinander, ohne dass der User eingreifen
+// kann. Philip: "ich brauche Candles vom letzten Jahr nicht wirklich ... ich könnte selbst
+// entscheiden, ob ich die wirklich laden möchte" — loadOlderCandlesNow versucht deshalb zuerst
+// NUR das Archiv (allowLive: false, siehe forexCandles.js), und zeigt bei einem Archiv-Miss diesen
+// Banner statt automatisch live nachzuladen. liveHistoryConfirmed bleibt an, bis Symbol/Timeframe
+// wechselt (wie reachedHistoryStart) — sonst müsste bei jeder weiteren Seite jenseits des Archivs
+// erneut bestätigt werden.
+const showLiveHistoryConfirm = ref(false);
+const liveHistoryConfirmBusy = ref(false);
+let liveHistoryConfirmed = false;
 let pollTimer = null;
 let tradeSetupM5PollTimer = null;
 let rangesPollTimer = null;
@@ -2367,7 +2383,9 @@ async function loadTradeSetupM5() {
 // loadOlderCandlesNow()/loadInitial() (müssten es sonst extra abfragen) denselben Check nutzen können.
 function updateLoadOlderButtonVisibility(range) {
   const r = range ?? chart?.timeScale().getVisibleLogicalRange();
-  showLoadOlderButton.value = !!r && r.from < 0 && !reachedHistoryStart;
+  // showLiveHistoryConfirm hat Vorrang (gleiche Bildschirmposition, siehe Template) — sonst
+  // würden beide Banner um denselben Platz konkurrieren, sobald der Archiv-Miss erkannt ist.
+  showLoadOlderButton.value = !!r && r.from < 0 && !reachedHistoryStart && !showLiveHistoryConfirm.value;
 }
 
 // Gemeinsame Fetch-Logik für den beiläufigen Scroll-Back-Trigger (subscribeVisibleLogicalRangeChange
@@ -2378,10 +2396,19 @@ function updateLoadOlderButtonVisibility(range) {
 async function loadOlderCandlesNow() {
   if (!chart || loadingOlder || allCandles.length === 0) return;
   if (reachedHistoryStart) return;
+  if (showLiveHistoryConfirm.value) return; // wartet auf confirmLoadLiveHistory/den Banner-Button
 
   loadingOlder = true;
   try {
-    const older = await fetchOlderForexCandles(props.symbol, props.currentBar, allCandles[0].time, FOREX_HISTORY_PAGE_SIZE);
+    const older = await fetchOlderForexCandles(props.symbol, props.currentBar, allCandles[0].time, FOREX_HISTORY_PAGE_SIZE, {
+      allowLive: liveHistoryConfirmed,
+    });
+    if (older === null) {
+      // Archiv erschöpft (vor 2026-01-01) UND noch nicht bestätigt — Banner zeigen statt
+      // automatisch live nachzuladen (siehe showLiveHistoryConfirm-Kommentar oben).
+      showLiveHistoryConfirm.value = true;
+      return;
+    }
     if (older.length === 0) reachedHistoryStart = true;
     else allCandles = older.concat(allCandles);
     refreshChart();
@@ -2400,6 +2427,20 @@ async function retryLoadOlderCandles() {
     await loadOlderCandlesNow();
   } finally {
     loadOlderButtonBusy.value = false;
+  }
+}
+
+// Banner-Bestätigung (siehe showLiveHistoryConfirm oben) — liveHistoryConfirmed bleibt für den
+// Rest dieser Symbol-/Timeframe-Sitzung an, damit nicht jede weitere Seite jenseits des Archivs
+// erneut nachfragt.
+async function confirmLoadLiveHistory() {
+  liveHistoryConfirmed = true;
+  showLiveHistoryConfirm.value = false;
+  liveHistoryConfirmBusy.value = true;
+  try {
+    await loadOlderCandlesNow();
+  } finally {
+    liveHistoryConfirmBusy.value = false;
   }
 }
 
@@ -2464,6 +2505,8 @@ async function loadInitial() {
     if (seq !== loadInitialFetchSeq) return; // inzwischen überholt, siehe oben
     allCandles = candles;
     reachedHistoryStart = false;
+    liveHistoryConfirmed = false; // neues Symbol/Timeframe/Replay-Sprung -> erneut nachfragen, siehe showLiveHistoryConfirm
+    showLiveHistoryConfirm.value = false;
     showLoadOlderButton.value = false; // frischer Datensatz, Sichtbarkeit racet sonst mit dem nächsten Scroll-Event
     refreshChart();
     markSuccess();
@@ -3384,6 +3427,14 @@ defineExpose({
       <span v-if="loadOlderButtonBusy" class="ranges-spinner"></span>
       {{ loadOlderButtonBusy ? "lädt…" : "⟲ Ältere Kerzen laden" }}
     </button>
+    <div v-if="showLiveHistoryConfirm" class="live-history-confirm">
+      <span>Kerzen vor dem archivierten Zeitraum (ab 01.01.2026) — live von cTrader laden? Kann langsam sein.</span>
+      <button :disabled="liveHistoryConfirmBusy" @click="confirmLoadLiveHistory">
+        <span v-if="liveHistoryConfirmBusy" class="ranges-spinner"></span>
+        {{ liveHistoryConfirmBusy ? "lädt…" : "Ja, laden" }}
+      </button>
+      <button :disabled="liveHistoryConfirmBusy" @click="showLiveHistoryConfirm = false">Abbrechen</button>
+    </div>
     <TradeSetupCockpit
       ref="tscCardRef"
       :state="cockpitState"
@@ -3651,6 +3702,53 @@ defineExpose({
 }
 
 .load-older-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* Bestätigungs-Banner für einen Live-cTrader-Fetch jenseits des archivierten Zeitraums (Bug-Report
+   Philip 2026-08-23: weites Herauszoomen auf 1H fror die App ein, weil das automatisch mehrere
+   langsame Live-Fetches am Stück auslöste) — bewusst ROT statt der neutralen Blau-Optik von
+   .load-older-btn, damit klar ist, dass hier eine potenziell langsame Aktion bevorsteht, die der
+   User aktiv bestätigen muss, statt dass sie automatisch losläuft. Gleiche Position/Ausrichtung
+   wie .load-older-btn (schließen sich laut updateLoadOlderButtonVisibility gegenseitig aus). */
+.live-history-confirm {
+  position: absolute;
+  z-index: 6;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 260px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  border: 1px solid #ef5350;
+  background: rgba(45, 24, 24, 0.95);
+  color: #d1d4dc;
+  font-size: 12px;
+}
+
+.live-history-confirm button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid #ef5350;
+  background: transparent;
+  color: #d1d4dc;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.live-history-confirm button:hover:not(:disabled) {
+  background: #ef5350;
+}
+
+.live-history-confirm button:disabled {
   cursor: default;
   opacity: 0.7;
 }

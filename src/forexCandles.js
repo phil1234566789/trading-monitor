@@ -286,9 +286,15 @@ async function fetchOlderCandlesFromDb(symbol, bar, oldestLoadedTime, count) {
 // Zeitraum) live von cTrader nachfetchen — der Live-Zweig bleibt dabei unverändert vom
 // count-Aufrufer abhängig, die forex-candles Edge Function kappt serverseitig ohnehin auf
 // MAX_COUNT (aktuell 1000).
-export async function fetchOlderCandles(symbol, bar, oldestLoadedTime, count) {
+// `allowLive` (Bug-Report Philip 2026-08-23, siehe PriceChart.vue: loadOlderCandlesNow) — mit
+// `false` liefert diese Funktion bei einem Archiv-Miss `null` statt automatisch live nachzufetchen,
+// damit der Aufrufer erst eine Bestätigung einholen kann (weit Herauszoomen löste sonst eine
+// automatische Kette mehrerer langsamer Live-Fetches aus, ohne dass der User eingreifen konnte).
+// Default `true` (unverändertes Verhalten) für alle bestehenden Aufrufer.
+export async function fetchOlderCandles(symbol, bar, oldestLoadedTime, count, { allowLive = true } = {}) {
   const fromDb = await fetchOlderCandlesFromDb(symbol, bar, oldestLoadedTime, count);
   if (fromDb) return fromDb;
+  if (!allowLive) return null;
   const page = await fetchCandles(symbol, bar, { count, to: oldestLoadedTime * 1000 });
   return page.filter((c) => c.time < oldestLoadedTime);
 }
