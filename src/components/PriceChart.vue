@@ -5,6 +5,7 @@ import { detectOrderBlocks, renderPersistedZones, OrderBlockPrimitive, obZoneNat
 import {
   detectLiquidityLevels,
   filterRelevantLevels,
+  selectRelevantHtfLevels,
   renderLiquidityLevels,
   LiquidityLinePrimitive,
   bullBearLabelSide,
@@ -13,6 +14,7 @@ import {
   LIQUIDITY_MAX_RELEVANT,
   liquidityLevelNaturalKey,
 } from "../liquidity.js";
+import { LQ_RELEVANCE } from "../liquidityRelevanceConfig.js";
 import { sessions, renderSessions, currentSessionDanger, isForbiddenAt } from "../sessions.js";
 import { newsEvents, currentNewsNoGo, newsEventsForInstrument } from "../newsEvents.js";
 import { renderNewsMarkers, isSameBerlinDay } from "../newsMarkers.js";
@@ -144,12 +146,13 @@ const props = defineProps({
   showHistoricalObs: { type: Boolean, default: false },
   showLiquidity: { type: Boolean, default: true },
   // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 12 — die von
-  // poi-watcher persistierten 1H-Level (src/liquidityLevels.js: fetchLiquidityLevels1h, in
-  // Dashboard.vue gepollt), unabhängig vom aktuell gewählten Chart-Timeframe. War bis 2026-08-23
-  // ein eigener, von showLiquidity unabhängiger Toggle ("1H-Level") — Philip: sollte kein
-  // zusätzlicher Klick sein, relevante 1H-Level sollen schon über den normalen Liquidität-Toggle
-  // mitlaufen (siehe computeDb1hLiquidityLevels/refreshLiquidityInternal unten).
-  dbLiquidityLevels1h: { type: Array, default: () => [] },
+  // poi-watcher persistierten HTF-Level (1H+4H seit 2026-08-23, siehe src/liquidityLevels.js:
+  // fetchLiquidityLevelsHtf, in Dashboard.vue gepollt), unabhängig vom aktuell gewählten
+  // Chart-Timeframe. War bis 2026-08-23 ein eigener, von showLiquidity unabhängiger Toggle
+  // ("1H-Level") — Philip: sollte kein zusätzlicher Klick sein, relevante Level sollen schon über
+  // den normalen Liquidität-Toggle mitlaufen (siehe computeHtfLiquidityLevels/
+  // refreshLiquidityInternal unten).
+  dbLiquidityLevelsHtf: { type: Array, default: () => [] },
   showSweptLiquidity: { type: Boolean, default: false },
   showLiquidityDebug: { type: Boolean, default: false },
   showTradeSetups: { type: Boolean, default: true },
@@ -1379,22 +1382,31 @@ function mergePinnedLevels(levels, pinnedLevels, candles) {
   return [...levels, ...extra];
 }
 
-// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 12/13 — die
-// persistierten 1H-Level, unabhängig vom aktuell gewählten Chart-Timeframe (ein 1H-Level bleibt
-// z.B. auch auf M5 relevant sichtbar). Bis 2026-08-23 ein eigener Toggle, unabhängig von
-// showLiquidity — jetzt Teil von showLiquidity selbst (siehe refreshLiquidityInternal: nur im
-// showLiquidity=true-Zweig aufgerufen), Philip wollte keinen extra Klick für "relevantes 1H-Level
-// sehen". Instrument-/Replay-Filter wie filterDbObZones; das dritte Relevanz-Kriterium aus Punkt 13
-// (kürzlich gesweept ODER aktuell in Pip-Reichweite) läuft direkt über filterRelevantLevels' neue
-// currentPrice/priceThreshold-Parameter. endTime wird selbst geheilt (wie mergePinnedLevels), da
-// ein noch unberührtes DB-Level end_time=null führt (wächst live mit, statt eingefroren zu sein).
-function computeDb1hLiquidityLevels(candles) {
-  const byInstrument = props.dbLiquidityLevels1h.filter((l) => l.instrument === props.symbol);
+// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 12/13, Nachbesserung
+// 2026-08-23 — die persistierten HTF-Level (1H+4H), unabhängig vom aktuell gewählten
+// Chart-Timeframe (ein 1H/4H-Level bleibt z.B. auch auf M5 sichtbar, KEINE Kaskaden-Filterung wie
+// bei Pins — Philip: "alles ist im M5-4H TF sichtbar"). Bis 2026-08-23 ein eigener Toggle,
+// unabhängig von showLiquidity — jetzt Teil von showLiquidity selbst (siehe
+// refreshLiquidityInternal: nur im showLiquidity=true-Zweig aufgerufen).
+//
+// Auswahl läuft seit derselben Nachbesserung über selectRelevantHtfLevels statt
+// filterRelevantLevels' Rezenz-Deckel (Bug: ein Monate altes, aber preisnahes Level fiel
+// strukturell aus dem alten Top-10-nach-Rezenz-Cap raus, egal wie relevant es gerade war, siehe
+// Git-Historie dieser Funktion) — pro Timeframe getrennt, mit eigener Stückzahl aus
+// liquidityRelevanceConfig.js (1H: mehr/enger, 4H: weniger/gröber). highs+lows werden dafür VOR
+// dem Aufruf gemischt (selectRelevantHtfLevels wählt nach Preis-Nähe, nicht nach Richtung).
+// endTime wird selbst geheilt (wie mergePinnedLevels), da ein noch unberührtes DB-Level
+// end_time=null führt (wächst live mit, statt eingefroren zu sein).
+function computeHtfLiquidityLevels(candles) {
+  const byInstrument = props.dbLiquidityLevelsHtf.filter((l) => l.instrument === props.symbol);
   const byReplay = props.replayUntil == null ? byInstrument : byInstrument.filter((l) => l.pivotTime <= props.replayUntil);
   const price = currentPriceEstimate();
-  const highs = filterRelevantLevels(byReplay.filter((l) => l.dir === 1), LIQUIDITY_MAX_RELEVANT, true, price, PIP_RELEVANCE_THRESHOLD);
-  const lows = filterRelevantLevels(byReplay.filter((l) => l.dir === -1), LIQUIDITY_MAX_RELEVANT, true, price, PIP_RELEVANCE_THRESHOLD);
-  return [...highs, ...lows].map((l) => ({ ...l, endTime: l.endTime ?? candles[candles.length - 1]?.time ?? l.pivotTime }));
+  const result = [];
+  for (const timeframe of Object.keys(LQ_RELEVANCE)) {
+    const forTf = byReplay.filter((l) => l.timeframe === timeframe);
+    result.push(...selectRelevantHtfLevels(forTf, price, LQ_RELEVANCE[timeframe]));
+  }
+  return result.map((l) => ({ ...l, endTime: l.endTime ?? candles[candles.length - 1]?.time ?? l.pivotTime }));
 }
 
 // Merge per Natural Key (wie mergePinnedZones/-Levels) — bei currentBar==="1H" überschneiden sich
@@ -1432,7 +1444,7 @@ function refreshLiquidityInternal() {
   const liveRelevant = props.showSweptLiquidity
     ? [...highs, ...lows]
     : [...filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true), ...filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true)];
-  const relevant = mergeDbLiquidityLevels(liveRelevant, computeDb1hLiquidityLevels(candles));
+  const relevant = mergeDbLiquidityLevels(liveRelevant, computeHtfLiquidityLevels(candles));
   currentLiquidityLevels = relevant;
   const precision = pricePrecisionForInstrument(props.symbol);
   renderLiquidityLevels(candleSeries, mergePinnedLevels(relevant, props.pinnedLiquidityLevels, candles), liquidityPrimitives, candles, {
@@ -2970,7 +2982,7 @@ watch(() => props.showObsM5, refreshPoiZonesInternal);
 watch(() => props.dbObZones, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
 watch(() => props.showLiquidity, refreshLiquidityInternal);
-watch(() => props.dbLiquidityLevels1h, refreshLiquidityInternal);
+watch(() => props.dbLiquidityLevelsHtf, refreshLiquidityInternal);
 watch(() => props.showSweptLiquidity, refreshLiquidityInternal);
 watch(() => props.showLiquidityDebug, () => {
   refreshLiquidityInternal();

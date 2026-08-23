@@ -158,3 +158,36 @@ export function filterRelevantLevels(levels, maxRelevant, onlyRelevant, currentP
   }
   return result;
 }
+
+// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Nachbesserung 2026-08-23 —
+// Auswahl für die persistierten HTF-Level (1H/4H, aus liquidity_levels statt live erkannt),
+// ersetzt filterRelevantLevels' Rezenz-Deckel für diesen Fall: Bug-Report Philip, ein Level war
+// trotz Backfill nicht als "relevant" gelistet, weil `maxRelevant` jedes unberührte Level gleich
+// zählte — die letzten paar Wochen an unberührten Pivots füllten den Deckel, egal wie weit sie vom
+// aktuellen Kurs entfernt lagen, ein Monate altes aber preisnahes Level fiel dadurch strukturell
+// immer raus. Hier stattdessen: die `untouchedAbove`/`untouchedBelow` PREISNÄCHSTEN unberührten
+// Level je Seite (Richtung "high"/"low" spielt keine Rolle, nur der Preis-Abstand) plus die
+// `recentSwept` zuletzt tatsächlich gesweepten Level (nach touchedTime, unabhängig vom Preis).
+// `levels`: highs+lows GEMISCHT für EINEN Timeframe (nicht wie filterRelevantLevels getrennt nach
+// Richtung aufgerufen) — "über/unter dem Kurs" ist eine reine Preisfrage, keine Richtungsfrage.
+// Config-Werte kommen aus liquidityRelevanceConfig.js, nicht hier hartkodiert.
+export function selectRelevantHtfLevels(levels, currentPrice, { untouchedAbove = 0, untouchedBelow = 0, recentSwept = 0 } = {}) {
+  const untouched = levels.filter((l) => !l.touched);
+  let above = [];
+  let below = [];
+  if (currentPrice != null) {
+    above = untouched
+      .filter((l) => l.price > currentPrice)
+      .sort((a, b) => a.price - b.price)
+      .slice(0, untouchedAbove);
+    below = untouched
+      .filter((l) => l.price < currentPrice)
+      .sort((a, b) => b.price - a.price)
+      .slice(0, untouchedBelow);
+  }
+  const swept = levels
+    .filter((l) => l.touched && l.touchedTime != null)
+    .sort((a, b) => b.touchedTime - a.touchedTime)
+    .slice(0, recentSwept);
+  return [...above, ...below, ...swept];
+}

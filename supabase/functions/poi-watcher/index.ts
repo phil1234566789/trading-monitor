@@ -103,7 +103,7 @@ interface PinAlarmRow {
   m5_liquidity_direction: string | null;
   m5_liquidity_price: number | null;
   ob_zones: { instrument: string; timeframe: string; direction: string; top: number; bottom: number; touched: boolean; invalidated: boolean } | null;
-  liquidity_levels: { instrument: string; direction: string; price: number; touched: boolean } | null;
+  liquidity_levels: { instrument: string; timeframe: string; direction: string; price: number; touched: boolean } | null;
   trade_setups: { instrument: string; direction: string; ob_top: number; ob_bottom: number } | null;
 }
 
@@ -245,7 +245,7 @@ function resolvePinTouch(row: PinAlarmRow, currentPriceByInstrument: Record<stri
     const p = precisionFor(l.instrument);
     return {
       instrument: l.instrument,
-      message: `📌 ${l.instrument} 1H Liquiditäts-Level (${label}, gepinnt) angetestet\nLevel: ${fmt(l.price, p)}\nPreis: ${fmt(price, p)}`,
+      message: `📌 ${l.instrument} ${l.timeframe} Liquiditäts-Level (${label}, gepinnt) angetestet\nLevel: ${fmt(l.price, p)}\nPreis: ${fmt(price, p)}`,
     };
   }
   if (row.kind === "trade_setup" && row.trade_setups) {
@@ -572,25 +572,30 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 1H-Liquiditäts-Level (Fractal-Sweeps, siehe src/liquidity.js). Gleiches Live-Preis-
-      // Sofort-Touch-Muster wie oben bei den OB-Zonen (die Datenquelle liefert nur geschlossene
-      // Kerzen, sonst bis zu 59min Verzoegerung bis zum Alarm).
-      {
-        const alarmActive = shouldSend && isAlarmOn("liquidity_1h");
-        const candles1h = forexBatch.candlesByTf.get("1H");
+      // HTF-Liquiditäts-Level (Fractal-Sweeps, siehe _shared/liquidity.ts) — 1H UND 4H (Task
+      // "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Nachbesserung 2026-08-23,
+      // Philip: Preisnahe relevante 4H-Level zusätzlich zu 1H). Läuft über dieselbe TIMEFRAMES-
+      // Schleife wie die OB-Zonen oben und nutzt dieselben schon geholten `candlesByTf`-Kerzen —
+      // kein zusätzlicher Fetch, 4H bleibt automatisch an isH4RefreshTick gekoppelt (siehe
+      // fetchForexBatch), genau wie bei den OB-Zonen. Gleiches Live-Preis-Sofort-Touch-Muster wie
+      // oben bei den OB-Zonen (die Datenquelle liefert nur geschlossene Kerzen, sonst bis zu 59min
+      // Verzoegerung bis zum Alarm).
+      for (const tf of TIMEFRAMES) {
+        const alarmActive = shouldSend && isAlarmOn(`liquidity_${tf.label.toLowerCase()}`);
+        const candlesForTf = forexBatch.candlesByTf.get(tf.label);
 
         const { data: existingLiqRows, error: liqSelectError } = await supabase
           .from("liquidity_levels")
           .select("pivot_time, direction, price, touched, notified, notified_at, end_time, alert_price")
           .eq("instrument", cfg.instrument)
-          .eq("timeframe", "1H")
+          .eq("timeframe", tf.label)
           .returns<LiquidityLevelRow[]>();
         if (liqSelectError) throw liqSelectError;
 
         let liqNotifiedCount = 0;
 
-        if (candles1h) {
-          const { highs, lows } = detectLiquidityLevels(candles1h, LIQUIDITY_FRACTAL_PERIOD);
+        if (candlesForTf) {
+          const { highs, lows } = detectLiquidityLevels(candlesForTf, LIQUIDITY_FRACTAL_PERIOD);
           const levels = [
             ...highs.map((l) => ({ ...l, direction: "high" as const })),
             ...lows.map((l) => ({ ...l, direction: "low" as const })),
@@ -635,7 +640,7 @@ Deno.serve(async (req) => {
             const { error: upsertLiqError } = await supabase.from("liquidity_levels").upsert(
               {
                 instrument: cfg.instrument,
-                timeframe: "1H",
+                timeframe: tf.label,
                 direction: lvl.direction,
                 price: lvl.price,
                 pivot_time: new Date(lvl.pivotTime * 1000).toISOString(),
@@ -655,18 +660,18 @@ Deno.serve(async (req) => {
               liqNotifiedCount++;
               const label = lvl.direction === "high" ? "Hoch" : "Tief";
               await sendTelegram(
-                `💧 ${cfg.instrument} 1H Liquiditäts-Level (${label}) angetestet\n` +
+                `💧 ${cfg.instrument} ${tf.label} Liquiditäts-Level (${label}) angetestet\n` +
                   `Level: ${fmt(lvl.price, cfg.pricePrecision)}\n` +
                   `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
               );
             }
           }
 
-          instrumentSummary["1H_liquidity"] = { levelsSeen: levels.length, notified: liqNotifiedCount };
+          instrumentSummary[`${tf.label}_liquidity`] = { levelsSeen: levels.length, notified: liqNotifiedCount };
         } else {
-          // Skip-Tick (siehe isH1RefreshTick oben): keine frischen 1H-Kerzen, also auch keine
-          // neuen Fraktale möglich — nur den DB-Stand gegen den aktuellen Preis pruefen, gleiches
-          // Muster wie beim 4H-OB-Zonen-Skip-Pfad.
+          // Skip-Tick (siehe isH1RefreshTick/isH4RefreshTick oben): keine frischen Kerzen für
+          // diesen Timeframe, also auch keine neuen Fraktale möglich — nur den DB-Stand gegen den
+          // aktuellen Preis pruefen, gleiches Muster wie beim OB-Zonen-Skip-Pfad.
           for (const row of existingLiqRows ?? []) {
             if (row.touched) continue;
             const touchedNow = row.direction === "high" ? currentPrice >= row.price : currentPrice <= row.price;
@@ -682,7 +687,7 @@ Deno.serve(async (req) => {
                 notified_at: alarmActive ? new Date().toISOString() : row.notified_at ?? null,
               })
               .eq("instrument", cfg.instrument)
-              .eq("timeframe", "1H")
+              .eq("timeframe", tf.label)
               .eq("direction", row.direction)
               .eq("pivot_time", row.pivot_time);
             if (updateLiqError) throw updateLiqError;
@@ -691,14 +696,14 @@ Deno.serve(async (req) => {
               liqNotifiedCount++;
               const label = row.direction === "high" ? "Hoch" : "Tief";
               await sendTelegram(
-                `💧 ${cfg.instrument} 1H Liquiditäts-Level (${label}) angetestet\n` +
+                `💧 ${cfg.instrument} ${tf.label} Liquiditäts-Level (${label}) angetestet\n` +
                   `Level: ${fmt(row.price, cfg.pricePrecision)}\n` +
                   `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
               );
             }
           }
 
-          instrumentSummary["1H_liquidity"] = { levelsSeen: (existingLiqRows ?? []).length, notified: liqNotifiedCount, cached: true };
+          instrumentSummary[`${tf.label}_liquidity`] = { levelsSeen: (existingLiqRows ?? []).length, notified: liqNotifiedCount, cached: true };
         }
       }
 
@@ -856,7 +861,7 @@ Deno.serve(async (req) => {
         "id, kind, note, notified, " +
           "m5_liquidity_instrument, m5_liquidity_direction, m5_liquidity_price, " +
           "ob_zones(instrument, timeframe, direction, top, bottom, touched, invalidated), " +
-          "liquidity_levels(instrument, direction, price, touched), " +
+          "liquidity_levels(instrument, timeframe, direction, price, touched), " +
           "trade_setups(instrument, direction, ob_top, ob_bottom)",
       )
       .eq("notified", false)

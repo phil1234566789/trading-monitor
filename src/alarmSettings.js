@@ -20,6 +20,11 @@ export const ALARM_TYPES = [
     description: "Ein 1H-Fraktal-Level (Hoch/Tief) wird angetestet/durchbrochen (GBPUSD/EURUSD).",
   },
   {
+    key: "liquidity_4h",
+    label: "4H Liquiditäts-Level geswept",
+    description: "Ein 4H-Fraktal-Level (Hoch/Tief) wird angetestet/durchbrochen (GBPUSD/EURUSD).",
+  },
+  {
     key: "trade_setup",
     label: "Trade-Setup erkannt",
     description: "Liquidity Sweep + Protected M5-Fraktal + bestätigendes M5-OB, in dieser Reihenfolge (GBPUSD/EURUSD).",

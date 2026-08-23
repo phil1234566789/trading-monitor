@@ -26,7 +26,7 @@ import {
   updateDealingRange,
 } from "../tradeIntake.js";
 import { fetchObZones } from "../obZones.js";
-import { fetchLiquidityLevels1h } from "../liquidityLevels.js";
+import { fetchLiquidityLevelsHtf } from "../liquidityLevels.js";
 import {
   fetchPinContext,
   addPinEntry,
@@ -927,9 +927,10 @@ const { data: pinContextEntries, refresh: refreshPinContext } = usePolledFetch((
 // die beiden Fälle oben, MIT intervalMs. 60s reicht: schneller als jede sinnvolle manuelle
 // Beobachtung, ohne unnötig oft zu pollen.
 const { data: dbObZones } = usePolledFetch(() => fetchObZones(), { intervalMs: 60_000 });
-// 1H-Liquidity-Level (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 12)
-// — analog zu dbObZones oben, gleicher Grund für intervalMs (poi-watcher-Cron im Hintergrund).
-const { data: dbLiquidityLevels1h } = usePolledFetch(() => fetchLiquidityLevels1h(), { intervalMs: 60_000 });
+// HTF-Liquidity-Level, 1H+4H (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren",
+// Punkt 12, seit 2026-08-23 auch 4H) — analog zu dbObZones oben, gleicher Grund für intervalMs
+// (poi-watcher-Cron im Hintergrund).
+const { data: dbLiquidityLevelsHtf } = usePolledFetch(() => fetchLiquidityLevelsHtf(), { intervalMs: 60_000 });
 // Nur die Ids, die zum GERADE geladenen Symbol gehören (trades enthält nur dessen Trades) — ein
 // Pin-Eintrag für ein anderes Symbol kann im Chart/in der Tabelle ohnehin nicht markiert
 // werden, solange dieses Symbol nicht ausgewählt ist.
@@ -1459,7 +1460,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :hovered-pin-rsi-divergence-key="hoveredPinRsiDivergenceKey"
     :pinned-ob-zones="pinnedObZones"
     :db-ob-zones="dbObZones"
-    :db-liquidity-levels-1h="dbLiquidityLevels1h"
+    :db-liquidity-levels-htf="dbLiquidityLevelsHtf"
     :pinned-liquidity-levels="pinnedLiquidityLevels"
     :pinned-trade-setups="pinnedTradeSetups"
     :pinned-rsi-divergences="pinnedRsiDivergences"

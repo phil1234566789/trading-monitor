@@ -11,9 +11,15 @@ import { classifyAge } from "./ageTier";
 // Reine Fraktal-Erkennung seit Chat 2026-07-31 nach liquidityDetection.js ausgelagert (dort auch
 // die Begründung) — hier nur re-exportiert, damit sich an der öffentlichen API dieser Datei nichts
 // ändert (PriceChart.vue/dataExport.js importieren weiterhin von hier).
-import { LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT, detectLiquidityLevels, filterRelevantLevels } from "./liquidityDetection.js";
+import {
+  LIQUIDITY_FRACTAL_PERIOD,
+  LIQUIDITY_MAX_RELEVANT,
+  detectLiquidityLevels,
+  filterRelevantLevels,
+  selectRelevantHtfLevels,
+} from "./liquidityDetection.js";
 
-export { LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT, detectLiquidityLevels, filterRelevantLevels };
+export { LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT, detectLiquidityLevels, filterRelevantLevels, selectRelevantHtfLevels };
 
 const PIN_HALO_EXTRA_WIDTH = 3; // px, zusätzlich zur normalen lineWidth (Chat 2026-08-17)
 // Auswahl-Halo (Chat 2026-08-18, PinPanel.vue-Hover) — breiter als der Pin-Halo, wird ZUERST
