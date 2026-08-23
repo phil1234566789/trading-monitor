@@ -72,7 +72,15 @@ class LiquidityLineRenderer {
       }
 
       ctx.strokeStyle = this._options.color;
-      ctx.lineWidth = this._options.lineWidth;
+      // Bug-Report Philip 2026-08-23: "0.5px wird nicht dünner, nur transparenter" — fehlender
+      // horizontalPixelRatio-Faktor hier (anders als bei den beiden Halo-Linien oben und jeder
+      // anderen Stroke-Primitive im Repo, siehe rsiRendering.js/marketStructureRendering.ts).
+      // ctx.lineWidth arbeitet im Canvas-Bitmap-Koordinatenraum (useBitmapCoordinateSpace), CSS-px
+      // müssen also mit dem Pixel-Ratio hochskaliert werden — auf einem HiDPI-Display (ratio>1)
+      // landete ein CSS-Wert wie 0.5 dadurch UNTER einem echten Canvas-Pixel: nicht mehr sauber
+      // deckend zeichenbar, der Browser rendert stattdessen eine anti-aliased, halbtransparente
+      // 1-Pixel-Linie statt sie tatsächlich dünner zu machen.
+      ctx.lineWidth = this._options.lineWidth * scope.horizontalPixelRatio;
       // gestrichelt für "sweeped" (Docht durchbrochen, aber noch kein bestätigter Bruch) — siehe
       // marketStructureAnalysis.ts: renderMarketStructureAnalysis, Chat 2026-07-19. setLineDash([]) = durchgezogen,
       // muss bei jedem draw() neu gesetzt werden (kein impliziter Reset zwischen Primitives).
