@@ -42,7 +42,8 @@ class LiquidityLineRenderer {
 
     target.useBitmapCoordinateSpace((scope) => {
       const ctx = scope.context;
-      const y = Math.round(p1.y * scope.verticalPixelRatio);
+      const yBase = p1.y * scope.verticalPixelRatio;
+      const y = Math.round(yBase); // für Halos — deren leichte Unschärfe fällt bei einem Glow-Effekt nicht auf
       const x1 = Math.round(p1.x * scope.horizontalPixelRatio);
       const x2 = Math.round(p2.x * scope.horizontalPixelRatio);
       // Auswahl-Halo bei Hover über die zugehörige PinPanel.vue-Zeile (Chat 2026-08-18) — VOR dem
@@ -80,14 +81,24 @@ class LiquidityLineRenderer {
       // landete ein CSS-Wert wie 0.5 dadurch UNTER einem echten Canvas-Pixel: nicht mehr sauber
       // deckend zeichenbar, der Browser rendert stattdessen eine anti-aliased, halbtransparente
       // 1-Pixel-Linie statt sie tatsächlich dünner zu machen.
-      ctx.lineWidth = this._options.lineWidth * scope.horizontalPixelRatio;
+      const mainLineWidth = this._options.lineWidth * scope.horizontalPixelRatio;
+      ctx.lineWidth = mainLineWidth;
+      // Folge-Bug-Report, selbe Ursache in Grün: "1px vs. 2px sieht nicht dicker aus, nur
+      // kräftiger" — eine Linie zentriert auf einer GANZZAHLIGEN Bitmap-Koordinate liegt bei einer
+      // GERADEN Breite (2, 4, ...) exakt auf vollen Pixelreihen (scharf, 100% Deckkraft), bei einer
+      // UNGERADEN Breite (1, 3, ...) dagegen genau zwischen zwei Pixelreihen (auf beide zu je 50%
+      // Deckkraft verteilt, unscharf). 1px und 2px landen dadurch zufällig auf derselben sichtbaren
+      // Fläche (2 Pixelreihen), nur mit unterschiedlicher Deckkraft — "keine Breite, nur mehr
+      // Farbe". Fix: bei ungerader (gerundeter) Breite die Koordinate um einen halben Pixel
+      // versetzen, klassische Canvas-"crisp lines"-Technik.
+      const yMain = Math.round(mainLineWidth) % 2 === 0 ? y : Math.floor(yBase) + 0.5;
       // gestrichelt für "sweeped" (Docht durchbrochen, aber noch kein bestätigter Bruch) — siehe
       // marketStructureAnalysis.ts: renderMarketStructureAnalysis, Chat 2026-07-19. setLineDash([]) = durchgezogen,
       // muss bei jedem draw() neu gesetzt werden (kein impliziter Reset zwischen Primitives).
       ctx.setLineDash(this._options.dashed ? [6 * scope.horizontalPixelRatio, 4 * scope.horizontalPixelRatio] : []);
       ctx.beginPath();
-      ctx.moveTo(Math.min(x1, x2), y);
-      ctx.lineTo(Math.max(x1, x2), y);
+      ctx.moveTo(Math.min(x1, x2), yMain);
+      ctx.lineTo(Math.max(x1, x2), yMain);
       ctx.stroke();
       ctx.setLineDash([]);
 
