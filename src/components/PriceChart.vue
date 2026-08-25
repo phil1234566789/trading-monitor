@@ -32,7 +32,7 @@ import { renderMarketStructureAnalysis, collectH1LqLevels, collectFibLevels } fr
 import { computeCockpitState } from "../tradeSetupCockpit";
 import { computeEma } from "../ema.js";
 import { computeRsi, detectRsiDivergence, detectRsiDivergenceHistory, DEFAULT_RSI_PERIOD, DEFAULT_DIVERGENCE_LOOKBACK_BARS } from "../rsi.js";
-import { DivergenceLinePrimitive } from "../rsiRendering.js";
+import { DivergenceLinePrimitive, mergePinnedDivergences } from "../rsiRendering.js";
 import { classifyDivergenceOutcome, DEFAULT_DIVERGENCE_OUTCOME_LOOKFORWARD_BARS } from "../rsiDivergenceOutcome.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
@@ -2007,20 +2007,6 @@ function refreshRsiInternal() {
 // wurde (Philip 2026-08-18, bestätigt: RSI-Werte sind timeframe-abhängig, ANDERS als Zonen/Level
 // bewusst NICHT timeframe-entkoppeln) — ein M5-Zeitstempel trifft auf einem 1H-Chart so gut wie nie
 // exakt eine Kerzenzeit.
-function mergePinnedDivergences(divergences, pinnedDivergences, candles) {
-  if (!pinnedDivergences || pinnedDivergences.length === 0) return divergences;
-  const seen = new Set(divergences.map((d) => `${d.type}|${d.fromTime}|${d.toTime}`));
-  const candleTimes = new Set(candles.map((c) => c.time));
-  const extra = [];
-  for (const d of pinnedDivergences) {
-    const key = `${d.type}|${d.fromTime}|${d.toTime}`;
-    if (seen.has(key) || !candleTimes.has(d.fromTime) || !candleTimes.has(d.toTime)) continue;
-    seen.add(key);
-    extra.push(d);
-  }
-  return [...divergences, ...extra];
-}
-
 function refreshRsiDivergenceInternal() {
   for (const p of divergencePriceLinePrimitives) candleSeries.detachPrimitive(p);
   divergencePriceLinePrimitives.length = 0;

@@ -157,3 +157,27 @@ export class DivergenceLinePrimitive {
     return Math.hypot(x - (p1.x + t * dx), y - (p1.y + t * dy));
   }
 }
+
+// Ursprünglich lokale Funktion in PriceChart.vue, per Refactoring-Task "Sehr große Dateien
+// refactoren" (Phase 4, 2026-08-25) hierher verschoben — war bereits pure. Gepinnte Divergenz
+// zusätzlich zur Live-/Historie-Liste rendern (Task "Pin-Kontext: gepinnte Objekte direkt
+// rendern") — bewusst NUR bei exaktem Zeit-Treffer (kein Snap-Toleranz wie bei Zonen/Leveln):
+// rsi_divergence speichert keine eigene Timeframe-Spalte (siehe pinContext.js), ein exakter
+// Treffer von fromTime/toTime auf eine aktuell geladene Kerze ist der einzige verfügbare Proxy
+// dafür, dass der Chart gerade auf demselben Timeframe steht, auf dem die Divergenz erkannt wurde
+// (Philip 2026-08-18, bestätigt: RSI-Werte sind timeframe-abhängig, ANDERS als Zonen/Level bewusst
+// NICHT timeframe-entkoppeln) — ein M5-Zeitstempel trifft auf einem 1H-Chart so gut wie nie exakt
+// eine Kerzenzeit.
+export function mergePinnedDivergences(divergences, pinnedDivergences, candles) {
+  if (!pinnedDivergences || pinnedDivergences.length === 0) return divergences;
+  const seen = new Set(divergences.map((d) => `${d.type}|${d.fromTime}|${d.toTime}`));
+  const candleTimes = new Set(candles.map((c) => c.time));
+  const extra = [];
+  for (const d of pinnedDivergences) {
+    const key = `${d.type}|${d.fromTime}|${d.toTime}`;
+    if (seen.has(key) || !candleTimes.has(d.fromTime) || !candleTimes.has(d.toTime)) continue;
+    seen.add(key);
+    extra.push(d);
+  }
+  return [...divergences, ...extra];
+}
