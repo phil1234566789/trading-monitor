@@ -99,7 +99,11 @@ async function fetchAllCandles(instrument: string, bar: string): Promise<CandleR
     if (!data || data.length === 0) break;
     all.push(...(data as any[]).map((r) => ({ ...r, time: Math.floor(new Date(r.time).getTime() / 1000) })));
     from += data.length;
+    // Fortschritts-Log (2026-08-24, Philip: "dauert echt so lang" bei stillem Paginierungs-Warten
+    // über ein volles Jahr) — \r statt \n, überschreibt sich in einem echten Terminal selbst.
+    process.stderr.write(`\r${instrument} ${bar}: ${all.length} Kerzen geladen...`);
   }
+  process.stderr.write("\n");
   return all;
 }
 

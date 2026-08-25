@@ -23,18 +23,26 @@ export function daysOrAll(days) {
   return days && days.length > 0 ? days : ALL_DAYS;
 }
 
-// Findet den UTC-Zeitpunkt der LOKALEN Mitternacht des Tages, der "nearUtcSec" lokal enthält — pro
-// KANDIDATENTAG einzeln über offsetMinutesFn abgefragt, statt EINES festen Offsets für den ganzen
-// Bereich (Bug-Report Philip 2026-07-22, siehe sessions.js-Historie). Zwei Iterationen genügen
-// (Fixpunkt-Iteration, ähnlich wie Timezone-Bibliotheken lokale Wanduhrzeit -> UTC auflösen).
+// Findet den UTC-Zeitpunkt der LOKALEN Mitternacht des Tages, der "nearUtcSec" lokal enthält.
+// 2026-08-24: die vorige 2-Schritt-Fixpunkt-Iteration (Offset an nearUtcSec selbst abgefragt) hing
+// sich am Tag der Herbst-Umstellung (lokal 25h, z.B. 26.10.2025) endlos auf — der zweite
+// Iterationsschritt oszillierte exakt zwischen den beiden Offset-Regimen der doppelt vorkommenden
+// Stunde und lieferte "utcGuess" unverändert zurück, wodurch sessionOccurrences' äußere Schleife
+// (dayStart bleibt stehen) nie terminierte (gefunden beim Jahres-Backtest über
+// rsiDivergenceStats.ts, das als erster Aufrufer je eine so lange Zeitspanne am Stück durchlief).
+// Fix: den Offset an einem Punkt knapp NACH der groben Mitternacht abfragen (30min genügt, jede
+// DST-Umstellung passiert lokal frühestens um 01:00) statt an der Tagesgrenze selbst — das liegt
+// nie in der doppelten Stunde. Damit das auch bei einem 25h-Tag den nächsten Kalendertag trifft statt
+// wieder denselben, ruft sessionOccurrences() diese Funktion mit einer +3h-Sicherheitsmarge auf
+// (siehe dort), nicht mehr mit einem reinen "+DAY_SEC".
 function localMidnightUtc(nearUtcSec, offsetMinutesFn) {
-  let utcGuess = nearUtcSec;
-  for (let i = 0; i < 2; i++) {
-    const offsetSec = offsetMinutesFn(utcGuess) * 60;
-    const localMidnightLocalSec = Math.floor((utcGuess + offsetSec) / DAY_SEC) * DAY_SEC;
-    utcGuess = localMidnightLocalSec - offsetSec;
-  }
-  return utcGuess;
+  const roughOffsetSec = offsetMinutesFn(nearUtcSec) * 60;
+  const roughLocalSec = nearUtcSec + roughOffsetSec;
+  const dayStartRoughLocalSec = Math.floor(roughLocalSec / DAY_SEC) * DAY_SEC;
+  const probeLocalSec = dayStartRoughLocalSec + 30 * 60;
+  const probeApproxUtcSec = probeLocalSec - roughOffsetSec;
+  const offsetSec = offsetMinutesFn(probeApproxUtcSec) * 60;
+  return dayStartRoughLocalSec - offsetSec;
 }
 
 // Lokaler Wochentag (0=So..6=Sa) eines UTC-Zeitpunkts, der bereits lokale Mitternacht ist.
@@ -86,7 +94,10 @@ export function sessionOccurrences(fromMinutes, toMinutes, rangeStartSec, rangeE
         results.push({ startSec, endSec });
       }
     }
-    dayStart = localMidnightUtc(dayStart + DAY_SEC, offsetMinutesFn);
+    // +3h Marge statt reinem "+DAY_SEC": ein Herbst-Umstellungstag hat lokal 25h, +DAY_SEC allein
+    // würde noch INNERHALB desselben Tages landen und localMidnightUtc liefert (korrekt) dessen
+    // eigene Mitternacht erneut zurück -> Endlosschleife, siehe Kommentar dort.
+    dayStart = localMidnightUtc(dayStart + DAY_SEC + 3 * 3600, offsetMinutesFn);
   }
   return results;
 }
