@@ -14,6 +14,7 @@ import {
   mergeRecent,
   isTimeCovered,
   tradesVisibleForCandles,
+  computeNextReplayTime,
 } from "../src/chartTimeUtils.js";
 
 // Bug-Report Philip 2026-07-22: "session indikator wird mir für 02.07. 23:00 - 03.07. 07:00 nicht
@@ -216,5 +217,70 @@ describe("tradesVisibleForCandles", () => {
   it("filtert Trades mit entryTime nach der letzten geladenen Kerze raus", () => {
     const trades = [{ id: 1, entryTime: 900 }, { id: 2, entryTime: 1600 }, { id: 3, entryTime: 9999 }];
     expect(tradesVisibleForCandles(trades, candles)).toEqual([{ id: 1, entryTime: 900 }, { id: 2, entryTime: 1600 }]);
+  });
+});
+
+function candleAt(time) {
+  return { time, open: 1, high: 1, low: 1, close: 1 };
+}
+
+// Für den "+1 Kerze"-Button (PriceChart.vue: defineExpose().nextReplayTime). Bug-Report Philip
+// 2026-07-19 ("Button tat einfach nichts") + 2026-07-21 ("Das ist der Freitag! Am WE gibts kein
+// Forex!!") + 2026-07-29 ("+1 Kerze sprang unvermittelt auf den echten aktuellen Zeitpunkt").
+describe("computeNextReplayTime", () => {
+  const barSeconds = 300; // 5m
+  const maxGap = 7 * 24 * 3600;
+
+  it("liefert die älteste geladene Kerze, wenn after=null ist (Live -> erster Replay-Schritt)", async () => {
+    const candles = [candleAt(1000), candleAt(1300)];
+    await expect(computeNextReplayTime(candles, null, barSeconds, async () => [], maxGap)).resolves.toBe(1000);
+  });
+
+  it("liefert null, wenn after=null ist und keine Kerzen geladen sind", async () => {
+    await expect(computeNextReplayTime([], null, barSeconds, async () => [], maxGap)).resolves.toBeNull();
+  });
+
+  it("nutzt die bereits geladene nächste Kerze, ohne nachzufragen", async () => {
+    const candles = [candleAt(1000), candleAt(1300), candleAt(1600)];
+    let fetchCalled = false;
+    const result = await computeNextReplayTime(candles, 1000, barSeconds, async () => {
+      fetchCalled = true;
+      return [];
+    }, maxGap);
+    expect(result).toBe(1300);
+    expect(fetchCalled).toBe(false);
+  });
+
+  it("fragt gezielt nach (Wochenend-Lücke) und übernimmt den ersten plausiblen Fund", async () => {
+    const candles = [candleAt(1000)]; // keine spätere Kerze bereits geladen
+    const fridayClose = 1000;
+    const mondayOpen = fridayClose + 60 * 3600; // ~60h Wochenende
+    const probe = [candleAt(mondayOpen), candleAt(mondayOpen + barSeconds)];
+    const result = await computeNextReplayTime(candles, fridayClose, barSeconds, async (after) => {
+      expect(after).toBe(fridayClose);
+      return probe;
+    }, maxGap);
+    expect(result).toBe(mondayOpen);
+  });
+
+  it("verwirft einen Fund, der weiter als maxPlausibleGapSec entfernt liegt (Bug-Report 2026-07-29)", async () => {
+    const after = 1000;
+    const tooFar = after + maxGap + barSeconds;
+    const result = await computeNextReplayTime([candleAt(1000)], after, barSeconds, async () => [candleAt(tooFar)], maxGap);
+    expect(result).toBeNull();
+  });
+
+  it("fällt auf +1 Kerzenlänge zurück, wenn der Fetch gar keinen Kandidaten liefert", async () => {
+    const after = 1000;
+    const result = await computeNextReplayTime([candleAt(1000)], after, barSeconds, async () => [], maxGap);
+    expect(result).toBe(after + barSeconds);
+  });
+
+  it("fällt auf +1 Kerzenlänge zurück, wenn der Fetch selbst fehlschlägt", async () => {
+    const after = 1000;
+    const result = await computeNextReplayTime([candleAt(1000)], after, barSeconds, async () => {
+      throw new Error("network down");
+    }, maxGap);
+    expect(result).toBe(after + barSeconds);
   });
 });

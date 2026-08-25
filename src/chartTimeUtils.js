@@ -138,3 +138,43 @@ export function tradesVisibleForCandles(trades, candles) {
   const lastTime = candles[candles.length - 1].time;
   return trades.filter((t) => t.entryTime <= lastTime);
 }
+
+// PriceChart.vue: defineExpose().nextReplayTime — für den "+1 Kerze"-Button in Dashboard.vue.
+// `after == null` (noch kein Replay aktiv) liefert die älteste geladene Kerze, damit der Button
+// auch aus Live heraus sofort funktioniert.
+// Seit Chat 2026-07-19 (Bug-Report: Button tat einfach nichts) BEWUSST NICHT rein arithmetisch,
+// sondern sucht per nextCandleAfter die nächste TATSÄCHLICH geladene Kerze — reicht das geladene
+// Fenster nicht (z.B. Wochenende/Feiertag bei Forex — Chat 2026-07-21: "Das ist der Freitag! Am WE
+// gibts kein Forex!!"), fragt fetchProbeCandles(after) gezielt weiter nach (PriceChart.vue: ein
+// 7-Tage-Fenster ab `after`, deckt jede normale Markt-Schließzeit ab) und daraus wird die früheste
+// Kerze NACH `after` genommen — cTrader liefert nur "N Kerzen BIS X" (rückwärts), nie "AB X
+// vorwärts", daher der Umweg über einen extra Fetch statt eines direkten Vorwärts-Lookups. Rein
+// arithmetischer Fallback (+ eine Kerzenlänge) nur noch, falls der Extra-Fetch selbst fehlschlägt.
+//
+// Sanity-Check auf den Fund (Bug-Report Philip 2026-07-29: "+1 Kerze" sprang unvermittelt auf den
+// echten aktuellen Zeitpunkt): liegt `after` weiter als maxPlausibleGapSec in der Vergangenheit
+// zurück (z.B. weil allCandles durch einen Cache-Hit-Bug fälschlich schon "erschöpft" aussah),
+// landet der Fetch-Zeitraum selbst in der ECHTEN Zukunft — der Broker kann keine Zukunft liefern
+// und gibt dann einfach die neuesten ECHTEN Kerzen zurück, beliebig weit von `after` entfernt. So
+// ein Fund ist kein Wochenende/Feiertag mehr, sondern ein Bug — lieber null zurückgeben (Button tut
+// dann einmal nichts) als kommentarlos auf einen falschen Zeitpunkt springen.
+export async function computeNextReplayTime(allCandles, after, barSeconds, fetchProbeCandles, maxPlausibleGapSec) {
+  if (after == null) return allCandles[0]?.time ?? null;
+  const loaded = nextCandleAfter(allCandles, after);
+  if (loaded != null) return loaded;
+  try {
+    const probe = await fetchProbeCandles(after);
+    const candidate = nextCandleAfter(probe, after);
+    if (candidate != null && candidate - after > maxPlausibleGapSec) {
+      console.error(
+        `nextReplayTime: Fund (${candidate}) liegt weiter als ${maxPlausibleGapSec}s nach after (${after}) — ` +
+          "vermutlich echte 'jetzt'-Kerzen statt einer echten Markt-Lücke, verworfen.",
+      );
+      return null;
+    }
+    return candidate ?? after + barSeconds;
+  } catch (err) {
+    console.error("Nächste Kerze über eine Lücke hinweg suchen fehlgeschlagen:", err);
+    return after + barSeconds;
+  }
+}

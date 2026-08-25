@@ -58,11 +58,11 @@ import {
 import { fetchCandlesCached } from "../candleCache.js";
 import {
   replayFetchToMs,
-  nextCandleAfter,
   businessSecondsBetween,
   mergeRecent,
   isTimeCovered,
   tradesVisibleForCandles,
+  computeNextReplayTime,
 } from "../chartTimeUtils.js";
 import { loadCandlesAroundTrade, computeJumpViewport } from "../priceChartJumpToTime.js";
 import { classifyAge } from "../ageTier";
@@ -2530,30 +2530,14 @@ watch(
 // Für den "+1 Kerze"-Button in Dashboard.vue: replayUntil lebt dort (fließt nur als Prop rein),
 // daher kein direktes Setzen von hier aus möglich — stattdessen den Zeitpunkt der nächsten Kerze
 // im AKTUELLEN Timeframe zurückgeben, den Dashboard.vue dann als neuen replayUntil-Wert übernimmt.
-// `after == null` (noch kein Replay aktiv) liefert die älteste geladene Kerze, damit der Button
-// auch aus Live heraus sofort funktioniert.
-// Seit Chat 2026-07-19 (Bug-Report: Button tat einfach nichts) BEWUSST NICHT rein arithmetisch,
-// sondern sucht per nextCandleAfter (chartTimeUtils.js) die nächste TATSÄCHLICH geladene Kerze —
-// dank REPLAY_LOOKAHEAD_SEC (2500 M5-Kerzen Historie + 2500 Lookahead, siehe timeframes.js)
-// enthält allCandles inzwischen auch schon Kerzen ETWAS über replayUntil hinaus, die alte Sorge
-// ("allCandles hat strukturell nie eine Kerze nach dem Replay-Stand") gilt also nicht mehr
-// uneingeschränkt — WICHTIG: das stimmt nur, wenn allCandles gerade aus einem vollen Fetch stammt.
-// Ein Cache-HIT (candleCache.js: cachedCandlesUpTo) muss den dort schon gecachten Lookahead
-// deshalb ausdrücklich mit zurückgeben, sonst sieht's hier bei jedem zweiten "+1 Kerze"-Klick nach
-// "keine geladene Kerze mehr" aus, obwohl sie im Cache längst daliegt.
-// Reicht das geladene Fenster nicht (z.B. Wochenende/Feiertag bei Forex — Chat 2026-07-21: "Das ist
-// der Freitag! Am WE gibts kein Forex!!") -> gezielt 7 Tage weiter nachfragen (deckt jede normale
-// Markt-Schließzeit ab) und daraus die früheste Kerze NACH `after` nehmen — cTrader liefert nur
-// "N Kerzen BIS X" (rückwärts), nie "AB X vorwärts", daher der Umweg über einen extra Fetch statt
-// eines direkten Vorwärts-Lookups. Rein arithmetischer Fallback (+ eine Kerzenlänge) nur noch,
-// falls der Extra-Fetch selbst fehlschlägt.
-// Sanity-Check auf den Fund (Bug-Report Philip 2026-07-29: "+1 Kerze" sprang unvermittelt auf den
-// echten aktuellen Zeitpunkt): liegt `after` weiter als die angefragten 7 Tage in der Vergangenheit
-// zurück (z.B. weil allCandles durch den oben genannten Cache-Hit-Bug fälschlich schon "erschöpft"
-// aussah), landet `toMs` selbst in der ECHTEN Zukunft — Twelve Data kann keine Zukunft liefern und
-// gibt dann einfach die neuesten ECHTEN Kerzen zurück, beliebig weit von `after` entfernt. So ein
-// Fund ist kein Wochenende/Feiertag mehr, sondern ein Bug — lieber nichts zurückgeben (Button tut
-// dann einmal nichts) als kommentarlos auf einen falschen Zeitpunkt springen.
+// Kernlogik + Bug-Historie lebt in computeNextReplayTime (chartTimeUtils.js, samt Testfällen) —
+// dank REPLAY_LOOKAHEAD_SEC (2500 M5-Kerzen Historie + 2500 Lookahead, siehe timeframes.js) enthält
+// allCandles inzwischen auch schon Kerzen ETWAS über replayUntil hinaus, die alte Sorge ("allCandles
+// hat strukturell nie eine Kerze nach dem Replay-Stand") gilt also nicht mehr uneingeschränkt —
+// WICHTIG: das stimmt nur, wenn allCandles gerade aus einem vollen Fetch stammt. Ein Cache-HIT
+// (candleCache.js: cachedCandlesUpTo) muss den dort schon gecachten Lookahead deshalb ausdrücklich
+// mit zurückgeben, sonst sieht's hier bei jedem zweiten "+1 Kerze"-Klick nach "keine geladene Kerze
+// mehr" aus, obwohl sie im Cache längst daliegt.
 const MAX_PLAUSIBLE_GAP_SEC = 7 * 24 * 3600;
 
 // Aus dem früheren defineExpose-jumpToTrade herausgezogen (Chat 2026-08-11, vierte Runde) — das
@@ -2595,25 +2579,14 @@ function jumpToDivergence(d) {
 
 defineExpose({
   async nextReplayTime(after) {
-    if (after == null) return allCandles[0]?.time ?? null;
     const barSeconds = barSecondsFor(props.currentBar);
-    const loaded = nextCandleAfter(allCandles, after);
-    if (loaded != null) return loaded;
-    try {
-      const probe = await fetchInitialForexCandles(props.symbol, props.currentBar, 200, (after + MAX_PLAUSIBLE_GAP_SEC) * 1000);
-      const candidate = nextCandleAfter(probe, after);
-      if (candidate != null && candidate - after > MAX_PLAUSIBLE_GAP_SEC) {
-        console.error(
-          `nextReplayTime: Fund (${candidate}) liegt weiter als ${MAX_PLAUSIBLE_GAP_SEC}s nach after (${after}) — ` +
-            "vermutlich echte 'jetzt'-Kerzen statt einer echten Markt-Lücke, verworfen.",
-        );
-        return null;
-      }
-      return candidate ?? after + barSeconds;
-    } catch (err) {
-      console.error("Nächste Kerze über eine Lücke hinweg suchen fehlgeschlagen:", err);
-      return after + barSeconds;
-    }
+    return computeNextReplayTime(
+      allCandles,
+      after,
+      barSeconds,
+      (afterSec) => fetchInitialForexCandles(props.symbol, props.currentBar, 200, (afterSec + MAX_PLAUSIBLE_GAP_SEC) * 1000),
+      MAX_PLAUSIBLE_GAP_SEC,
+    );
   },
 
   // Für den Klick auf eine Zeile in TradesTable.vue (Chat 2026-07-27: "auf den Trade klicken und
