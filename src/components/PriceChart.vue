@@ -818,7 +818,13 @@ function refreshTradeSetupLinksInternal() {
     const inPinContext = props.pinTradeSetupIds?.has(t.tradeSetupId) ?? false;
     const isSelectedPin = props.hoveredPinTradeSetupId != null && props.hoveredPinTradeSetupId === t.tradeSetupId;
     const primitive = new OrderBlockPrimitive(
-      { top, bottom, startTime: t.tradeSetupObStartTime, endTime: t.tradeSetupObStartTime + TRADE_SETUP_OB_WIDTH_SEC, tradeSetupId: t.tradeSetupId, direction: t.direction, instrument: t.instrument },
+      // touched: true ist hier KEIN echter Touch-Status, sondern erzwingt (siehe orderBlocks.js:
+      // ZonePaneView.update, Regression aus 7c2ea77), dass die feste, rein optische Box-Breite
+      // (TRADE_SETUP_OB_WIDTH_SEC) tatsächlich respektiert wird, statt wie bei den Target-/
+      // Bestätigungs-Boxen mangels touched-Flag bis zur letzten Kerze zu laufen — dieselbe
+      // Regression, hier aber ohne echten Touch-Zustand zu tracken (der Box-Breite ist von Natur
+      // aus fix, nicht "bis zum Touch").
+      { top, bottom, startTime: t.tradeSetupObStartTime, endTime: t.tradeSetupObStartTime + TRADE_SETUP_OB_WIDTH_SEC, touched: true, tradeSetupId: t.tradeSetupId, direction: t.direction, instrument: t.instrument },
       {
         fillColor: cssColorScaled(key, TRADE_SETUP_OB_FILL_RATIO),
         borderColor: cssColorScaled(key, TRADE_SETUP_OB_BORDER_RATIO),
@@ -852,6 +858,7 @@ function refreshTradeSetupLinksInternal() {
         bottom: setup.bottom,
         startTime: setup.startTime,
         endTime: setup.startTime + TRADE_SETUP_OB_WIDTH_SEC,
+        touched: true, // siehe Kommentar bei der ersten OrderBlockPrimitive-Stelle oben
         tradeSetupId: setup.tradeSetupId,
         direction: setup.direction,
         instrument: setup.instrument,
@@ -2124,7 +2131,8 @@ function renderTradeSetupsInternal() {
     const obLabelLines = [`${setup.label} ${setup.pathType}${numberSuffix}`];
     if (props.showLiquidityDebug) obLabelLines.push(formatPrice(top), formatPrice(bottom));
     const obBox = new OrderBlockPrimitive(
-      { top, bottom, startTime: setup.obStartTime, endTime: setup.obStartTime + TRADE_SETUP_OB_WIDTH_SEC },
+      // touched: true erzwingt die feste Box-Breite, siehe Kommentar bei refreshTradeSetupLinksInternal.
+      { top, bottom, startTime: setup.obStartTime, endTime: setup.obStartTime + TRADE_SETUP_OB_WIDTH_SEC, touched: true },
       {
         fillColor: cssColorScaled(key, TRADE_SETUP_OB_FILL_RATIO),
         borderColor: cssColorScaled(key, TRADE_SETUP_OB_BORDER_RATIO),
