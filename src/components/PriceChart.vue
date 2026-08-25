@@ -11,7 +11,15 @@ import {
   collectObsZones,
   mergePinnedZones,
 } from "../priceChartObZones.js";
-import { matchTradeSetup, matchLiquidityLevel, matchOBZone, matchFibLevel, matchDivergence } from "../priceChartHitTest.js";
+import {
+  matchTradeSetup,
+  matchLiquidityLevel,
+  matchOBZone,
+  matchFibLevel,
+  matchDivergence,
+  findNearbyPinCandidates as findNearbyPinCandidatesPure,
+  hasNearbyPinCandidate as hasNearbyPinCandidatePure,
+} from "../priceChartHitTest.js";
 import {
   detectLiquidityLevels,
   filterRelevantLevels,
@@ -51,12 +59,12 @@ import { fetchCandlesCached } from "../candleCache.js";
 import {
   replayFetchToMs,
   nextCandleAfter,
-  snapToBarTime,
   businessSecondsBetween,
   mergeRecent,
   isTimeCovered,
   tradesVisibleForCandles,
 } from "../chartTimeUtils.js";
+import { loadCandlesAroundTrade, computeJumpViewport } from "../priceChartJumpToTime.js";
 import { classifyAge } from "../ageTier";
 import { kindLabel as targetKindLabel } from "../tradeTargets";
 import { tradesVisible } from "../tradeVisibility.js";
@@ -307,11 +315,6 @@ const INITIAL_CANDLE_COUNT = 1000; // depth loaded on startup / timeframe switch
 // soll.
 const LAZY_LOAD_LOGICAL_THRESHOLD = 20; // fetch older data once this close to the left edge
 const TRADE_MARKER_BARS = new Set(["1m", "5m", "15m", "1h"]); // 4h/1D würden zu unübersichtlich
-// Pin-Rechtsklick (Chat 2026-08-01, zweite Runde) — großzügiger Fang-Radius statt exaktem
-// Treffen, siehe findNearbyPinCandidates. MAX_CANDIDATES deckelt die Auswahl-Liste, damit ein
-// dicht bevölkerter Chart-Bereich kein unübersichtlich langes Menü erzeugt.
-const PIN_SEARCH_RADIUS = 40; // px
-const PIN_MAX_CANDIDATES = 6;
 // Trade-Setup (Liquidity Sweep + Protected M5-Fraktal + M5-OB, siehe tv-indikator/src/
 // tradesetup.pine) — nur für Forex (braucht M5-Kerzen zusätzlich zum aktuell angezeigten
 // Chart-Timeframe). Werte 1:1 aus den getunten Defaults in tv-indikator/src/inputs.pine
@@ -2155,141 +2158,24 @@ onMounted(() => {
     }
   });
 
-  // Kandidatensuche im Radius statt Exakt-Hittest (Chat 2026-08-01, zweite Runde — Bug-Report
-  // Philip: "tu mir schwer die Box zu treffen ... lass mal die anderen Lösungsmöglichkeiten
-  // anschauen") — Rechtsklick funktioniert jetzt IRGENDWO in der Nähe eines Objekts statt exakt
-  // darauf; sammelt alle Trade-Marker/1H-4H-OB-Zonen im PIN_SEARCH_RADIUS um den Klick, nach
-  // Distanz sortiert (nächstes zuerst), gekappt auf PIN_MAX_CANDIDATES. Bei genau einem
-  // Treffer öffnet Dashboard.vue direkt das Notiz-Popup, bei mehreren eine Auswahl-Liste (siehe
-  // dort: onPinContextMenu) — Philip wählt dann aus, statt pixelgenau zielen zu müssen.
-  function findNearbyPinCandidates(x, y) {
-    const candidates = [];
-    for (const p of tradePrimitives) {
-      const distance = p.distanceTo(x, y);
-      if (distance <= PIN_SEARCH_RADIUS) candidates.push({ kind: "trade_position", trade: p.trade, distance });
-    }
-    // OB-Zonen — 1H/4H lösen sich gegen die bereits persistierte ob_zones-Zeile auf (kind="ob_zone",
-    // resolveObZoneId, SELECT-only). M5-Boxen existieren dort meist NOCH NICHT (nur die referenzierte
-    // Teilmenge wird persistiert, siehe PLAN-chart-objekte-forex.md Abschnitt 5) — bekommen deshalb
-    // weiterhin einen eigenen Kandidaten-Kind (kind="m5_ob", Chat 2026-08-02: "Rohdaten-Snapshot",
-    // JEDE M5-Box soll klickbar sein, nicht nur bereits zu einem Trade-Setup gehörende), der beim
-    // tatsächlichen Pinnen die ob_zones-Zeile per find-or-create nachzieht (siehe pinContext.js:
-    // addPinM5ObEntry, Punkt 6) statt weiter einen reinen Snapshot zu schreiben.
-    for (const p of orderBlockPrimitives) {
-      const distance = p.distanceTo(x, y);
-      if (distance > PIN_SEARCH_RADIUS) continue;
-      if (p.zone.timeframe === "5M") {
-        candidates.push({
-          kind: "m5_ob",
-          zone: { instrument: props.symbol, dirNum: p.zone.dir, top: p.zone.top, bottom: p.zone.bottom, startTime: p.zone.startTime },
-          distance,
-        });
-      } else {
-        candidates.push({
-          kind: "ob_zone",
-          zone: { instrument: props.symbol, timeframe: p.zone.timeframe, dir: p.zone.dir, startTime: p.zone.startTime },
-          distance,
-        });
-      }
-    }
-    // Liquiditäts-Level — im 1h-Chart entspricht die live gezeichnete Linie einer echten
-    // liquidity_levels-Zeile (poi-watcher persistiert nur Timeframe '1H', siehe supabase/functions/
-    // poi-watcher/index.ts), löst sich also per Natural-Key auf (kind="liquidity_level"). Auf jedem
-    // anderen Timeframe (Bug-Report Philip 2026-08-02: "ich will eine M5 LQ-Linie anklicken") gibt
-    // es dafür keine DB-Zeile, deshalb Rohdaten-Snapshot (kind="m5_liquidity_level", analog zu
-    // m5_ob oben) — inkl. timeframe-Feld (props.currentBar), da das nicht zwingend M5 sein muss.
-    for (const p of liquidityPrimitives) {
-      const distance = p.distanceTo(x, y);
-      if (distance > PIN_SEARCH_RADIUS) continue;
-      if (props.currentBar === "1h") {
-        candidates.push({
-          kind: "liquidity_level",
-          level: { instrument: props.symbol, timeframe: "1H", dirNum: p.level.dir, pivotTime: p.level.pivotTime },
-          distance,
-        });
-      } else {
-        candidates.push({
-          kind: "m5_liquidity_level",
-          level: { instrument: props.symbol, timeframe: props.currentBar, dirNum: p.level.dir, price: p.level.price, pivotTime: p.level.pivotTime },
-          distance,
-        });
-      }
-    }
-    // Trade-Setup-Link-Box (dritte Art, Chat 2026-08-01, dritte Runde) — eigener Primitive-Array
-    // (tradeSetupLinkPrimitives), tradeSetupId ist bereits die echte trade_setups.id, siehe
-    // refreshTradeSetupLinksInternal.
-    for (const p of tradeSetupLinkPrimitives) {
-      const distance = p.distanceTo(x, y);
-      if (distance <= PIN_SEARCH_RADIUS) {
-        candidates.push({
-          kind: "trade_setup",
-          tradeSetupId: p.zone.tradeSetupId,
-          direction: p.zone.direction,
-          instrument: p.zone.instrument,
-          distance,
-        });
-      }
-    }
-    // Trade-Bestätigungs-Box, kind='ob' (vierte Art, Chat 2026-08-01, vierte Runde — Bug-Report
-    // Philip: "✔ OB 1,15229 #22" wurde mit der Trade-Setup-Link-Box verwechselt, bisher komplett
-    // unverdrahtet). tradeConfirmationLinkPrimitives ist GEMISCHT (OrderBlockPrimitive für kind='ob',
-    // LiquidityLinePrimitive für kind='pivot'/'fib', siehe refreshTradeConfirmationLinksInternal) —
-    // instanceof-Guard statt einfach .distanceTo() aufzurufen, sonst Crash auf einer Linie ohne
-    // diese Methode. confirmationId ist bereits die echte trade_confirmations.id.
-    for (const p of tradeConfirmationLinkPrimitives) {
-      if (!(p instanceof OrderBlockPrimitive)) continue;
-      const distance = p.distanceTo(x, y);
-      if (distance <= PIN_SEARCH_RADIUS) {
-        candidates.push({ kind: "trade_confirmation", confirmationId: p.zone.confirmationId, instrument: p.zone.instrument, distance });
-      }
-    }
-    // RSI-Divergenz-Konnektoren (Chat 2026-08-11, Philip: "ich will DIR paar Stellen zeigen ... wir
-    // haben ja die Funktion da") — nur das Preis-Bein (divergencePriceLinePrimitives), nicht auch
-    // das RSI-Bein in der eigenen Pane: dessen priceToCoordinate()-Y ist relativ zur RSI-Pane, nicht
-    // zum ganzen Chart-Container wie hier gerechnet (siehe pinContextMenuHandler unten) — für
-    // "eine Divergenz anklicken" reicht das Preis-Bein, beide Beine wären ohnehin derselbe DB-Eintrag.
-    for (const p of priceChartRsi.divergencePriceLinePrimitives) {
-      const distance = p.distanceTo(x, y);
-      if (distance <= PIN_SEARCH_RADIUS) {
-        candidates.push({ kind: "rsi_divergence", divergence: p.divergence, instrument: props.symbol, distance });
-      }
-    }
-    // Dedupe (Chat 2026-08-01, dritte Runde) — mehrere Ausführungen (trade_positions) derselben
-    // Dealing Range teilen sich dasselbe verlinkte Setup, tauchten deshalb als exakt gleicher
-    // Kandidat mehrfach in der Liste auf ("Short-Setup #105" zweimal).
-    const candidateKey = (c) => {
-      if (c.kind === "trade_position") return `trade_position:${c.trade.id}`;
-      if (c.kind === "ob_zone") return `ob_zone:${c.zone.timeframe}|${c.zone.dir}|${c.zone.startTime}`;
-      if (c.kind === "m5_ob") return `m5_ob:${c.zone.dirNum}|${c.zone.top}|${c.zone.bottom}|${c.zone.startTime}`;
-      if (c.kind === "trade_setup") return `trade_setup:${c.tradeSetupId}`;
-      if (c.kind === "liquidity_level") return `liquidity_level:${c.level.dirNum}|${c.level.pivotTime}`;
-      if (c.kind === "m5_liquidity_level") return `m5_liquidity_level:${c.level.timeframe}|${c.level.dirNum}|${c.level.pivotTime}`;
-      if (c.kind === "rsi_divergence") return `rsi_divergence:${c.divergence.type}|${c.divergence.fromTime}|${c.divergence.toTime}`;
-      return `trade_confirmation:${c.confirmationId}`;
+  // Kandidaten-Aufbau/Dedupe + der Boolean-Check leben in priceChartHitTest.js (samt Bug-Historie
+  // als Kommentar + Testfälle, siehe test/priceChartHitTest.test.js) — hier nur noch das Bündeln
+  // der aktuellen Primitive-Arrays, die PriceChart.vue selbst führt.
+  function pinPrimitivesBag() {
+    return {
+      tradePrimitives,
+      orderBlockPrimitives,
+      liquidityPrimitives,
+      tradeSetupLinkPrimitives,
+      tradeConfirmationLinkPrimitives,
+      divergencePrimitives: priceChartRsi.divergencePriceLinePrimitives,
     };
-    const seen = new Set();
-    const deduped = [];
-    for (const c of candidates.sort((a, b) => a.distance - b.distance)) {
-      const key = candidateKey(c);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      deduped.push(c);
-    }
-    return deduped.slice(0, PIN_MAX_CANDIDATES);
   }
-
-  // Leichtgewichtiger Boolean-Check fürs Cursor-Feedback (jede Mausbewegung) — baut anders als
-  // findNearbyPinCandidates() keine Objekte/kein Sortieren, nur "gibt's überhaupt was in der
-  // Nähe".
+  function findNearbyPinCandidates(x, y) {
+    return findNearbyPinCandidatesPure(x, y, pinPrimitivesBag(), { symbol: props.symbol, currentBar: props.currentBar });
+  }
   function hasNearbyPinCandidate(x, y) {
-    return (
-      tradePrimitives.some((p) => p.distanceTo(x, y) <= PIN_SEARCH_RADIUS) ||
-      orderBlockPrimitives.some((p) => p.distanceTo(x, y) <= PIN_SEARCH_RADIUS) ||
-      tradeSetupLinkPrimitives.some((p) => p.distanceTo(x, y) <= PIN_SEARCH_RADIUS) ||
-      tradeConfirmationLinkPrimitives.some((p) => p instanceof OrderBlockPrimitive && p.distanceTo(x, y) <= PIN_SEARCH_RADIUS) ||
-      liquidityPrimitives.some((p) => p.distanceTo(x, y) <= PIN_SEARCH_RADIUS) ||
-      priceChartRsi.divergencePriceLinePrimitives.some((p) => p.distanceTo(x, y) <= PIN_SEARCH_RADIUS)
-    );
+    return hasNearbyPinCandidatePure(x, y, pinPrimitivesBag());
   }
 
   // Rechtsklick -> Pin-Kontextmenü (Chat 2026-08-01). lightweight-charts hat kein natives
@@ -2675,70 +2561,23 @@ const MAX_PLAUSIBLE_GAP_SEC = 7 * 24 * 3600;
 // "auf einen Zeitraum springen"-Mechanismus zurückgreifen, ohne sich selbst über die exposeRef
 // aufzurufen (unnötiger Umweg innerhalb derselben Komponente). jumpToTrade bleibt als dünner
 // Wrapper für externe Aufrufer (TradesTable.vue etc.) bestehen.
+// Nachlade-/Verbrück-Algorithmus + Viewport-Berechnung leben in priceChartJumpToTime.js (samt
+// Bug-Historie als Testfälle, siehe test/priceChartJumpToTime.test.js) — hier nur noch der
+// loadingOlder-Guard (gemeinsam mit dem Scroll-Handler) und die eigentlichen chart-Aufrufe.
 async function jumpToTimeRange(entryTime, exitTime) {
   if (!chart) return;
-  // Bug-Report Philip 2026-07-30, zweite Runde: die erste Version hier lud Seite für Seite RÜCKWÄRTS
-  // ab dem aktuellen Datenanfang, bis entryTime erreicht war — bei einem 16 Tage alten Trade schon
-  // spürbar langsam, bei einem echt alten Trade (Philip: "2022 Trade der Supergau") wären das
-  // hunderte sequentielle Requests gewesen. Stattdessen jetzt ein GEZIELTER Fetch direkt um den
-  // Trade herum (Anker kurz nach dem Exit, siehe JUMP_TARGET_BUFFER_BARS), unabhängig davon, wie
-  // weit der Trade zurückliegt. MAX_JUMP_FETCH_PAGES ist nur eine Notbremse für ungewöhnlich lange
-  // Trades (Entry Wochen vor Exit), keine Regelgröße.
-  //
-  // Bug-Report Philip 2026-08-18: der Anker startete bisher IMMER nah am Trade selbst — das Ergebnis
-  // landet vorne an allCandles, MIT einer bewussten Lücke zum bisherigen Datenanfang dazwischen
-  // (lightweight-charts selbst braucht nur strikt aufsteigende Zeiten, keine Lückenlosigkeit, das war
-  // hier absichtlich in Kauf genommen). Scrollt man danach über das Trade-Fenster hinaus weiter
-  // Richtung "jetzt", landet man sichtbar in genau dieser Lücke — kein Mechanismus füllt sie je nach,
-  // subscribeVisibleLogicalRangeChange oben reagiert nur auf die LINKE/ältere Kante.
-  //
-  // Erster Fix-Versuch (selber Tag) hat VOR dem Fetch per Kalender-Sekunden geschätzt, ob die Lücke
-  // ins Budget passt, und nur dann an der bereits geladenen Kante statt nah am Trade geankert. Bug-
-  // Report Philip 2026-08-19 (DR#40, 03.06., über zwei Monate alt): die Schätzung war zu ungenau —
-  // Wochenenden ohne Kerzen lassen sich in Wirklichkeit viel weiter zurückbrücken, als eine reine
-  // Kalendertage-Rechnung annimmt (leeres Wochenende kostet 0 vom Kerzen-Budget, aber 2 Kalendertage),
-  // die Schätzung hat bei DR#40 fälschlich "zu weit weg" geurteilt und ist unnötig auf die alte
-  // Nah-am-Trade-Variante zurückgefallen. Jetzt stattdessen ECHT versuchen statt schätzen: zuerst wie
-  // bisher gezielt um den Trade herum laden (garantiert IMMER die unmittelbare Trade-Umgebung, auch
-  // bei Philips "2022 Supergau"-Fall), danach mit eigenem Page-Budget versuchen, die entstandene Lücke
-  // zum vorher schon geladenen Fenster per Splice INS Array einzufügen (nicht per concat davor, die
-  // Brücke gehört zeitlich dazwischen) — nur übernehmen, wenn sie auch WIRKLICH lückenlos verbindet,
-  // sonst lieber die alte, bewusste Lücke behalten als eine neue, nur halb gefüllte zu hinterlassen.
   const barSeconds = barSecondsFor(props.currentBar);
   if (!loadingOlder && !isTimeCovered(allCandles, entryTime, barSeconds)) {
     loadingOlder = true;
     try {
-      const preexistingOldest = allCandles.length > 0 ? allCandles[0].time : null;
-      let anchor = (exitTime ?? entryTime) + JUMP_TARGET_BUFFER_BARS * barSeconds;
-      let pages = 0;
-      while (pages < MAX_JUMP_FETCH_PAGES && !isTimeCovered(allCandles, entryTime, barSeconds)) {
-        const older = await fetchOlderForexCandles(props.symbol, props.currentBar, anchor, FOREX_HISTORY_PAGE_SIZE);
-        if (older.length === 0) break;
-        allCandles = older.concat(allCandles);
-        anchor = allCandles[0].time;
-        pages++;
-      }
-
-      if (preexistingOldest != null) {
-        const boundaryIdx = allCandles.findIndex((c) => c.time === preexistingOldest);
-        if (boundaryIdx > 0) {
-          let bridge = [];
-          let bridgeAnchor = preexistingOldest;
-          let bridgePages = 0;
-          while (bridgePages < MAX_JUMP_FETCH_PAGES) {
-            const older = await fetchOlderForexCandles(props.symbol, props.currentBar, bridgeAnchor, FOREX_HISTORY_PAGE_SIZE);
-            if (older.length === 0) break;
-            bridge = older.concat(bridge);
-            bridgeAnchor = bridge[0].time;
-            bridgePages++;
-            if (bridgeAnchor <= allCandles[boundaryIdx - 1].time) break;
-          }
-          if (bridge.length > 0 && bridgeAnchor <= allCandles[boundaryIdx - 1].time) {
-            allCandles = [...allCandles.slice(0, boundaryIdx), ...bridge, ...allCandles.slice(boundaryIdx)];
-          }
-        }
-      }
-
+      allCandles = await loadCandlesAroundTrade(
+        allCandles,
+        entryTime,
+        exitTime,
+        barSeconds,
+        (anchor) => fetchOlderForexCandles(props.symbol, props.currentBar, anchor, FOREX_HISTORY_PAGE_SIZE),
+        { bufferBars: JUMP_TARGET_BUFFER_BARS, maxPages: MAX_JUMP_FETCH_PAGES },
+      );
       refreshChart();
     } catch (err) {
       console.error("Kerzen für Trade-Sprung laden fehlgeschlagen:", err);
@@ -2746,20 +2585,8 @@ async function jumpToTimeRange(entryTime, exitTime) {
       loadingOlder = false;
     }
   }
-  const candles = clipReplay(allCandles);
-  if (candles.length === 0) return;
-  const from = snapToBarTime(candles, entryTime) ?? entryTime;
-  const to = exitTime != null ? (snapToBarTime(candles, exitTime) ?? exitTime) : from;
-  const fromIdx = candles.findIndex((c) => c.time === from);
-  const toIdx = candles.findIndex((c) => c.time === to);
-  if (fromIdx === -1 || toIdx === -1) return;
-
-  const centerIdx = (fromIdx + toIdx) / 2;
-  const tradeSpanBars = Math.abs(toIdx - fromIdx);
-  const currentRange = chart.timeScale().getVisibleLogicalRange();
-  const currentBars = currentRange ? currentRange.to - currentRange.from : 100;
-  const halfBars = Math.max(currentBars / 2, tradeSpanBars / 2 + 15);
-  chart.timeScale().setVisibleLogicalRange({ from: centerIdx - halfBars, to: centerIdx + halfBars });
+  const viewport = computeJumpViewport(clipReplay(allCandles), entryTime, exitTime, chart.timeScale().getVisibleLogicalRange());
+  if (viewport) chart.timeScale().setVisibleLogicalRange(viewport);
 }
 
 function jumpToDivergence(d) {

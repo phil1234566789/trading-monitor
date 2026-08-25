@@ -5,10 +5,14 @@ import {
   matchOBZone,
   matchFibLevel,
   matchDivergence,
+  findNearbyPinCandidates,
+  hasNearbyPinCandidate,
   LIQUIDITY_LINE_CLICK_TOLERANCE_PX,
   FIB_TICK_CLICK_TOLERANCE_PX,
   DIVERGENCE_CLICK_TOLERANCE_PX,
+  PIN_SEARCH_RADIUS,
 } from "../src/priceChartHitTest.js";
+import { OrderBlockPrimitive } from "../src/orderBlocks.js";
 
 // Trade-Modus-Klick-Hittest (Chat 2026-07-27) — testet gegen genau die Box, die
 // renderTradeSetupsInternal tatsächlich zeichnet, respektiert Long/Short-Toggle + Replay-Cutoff.
@@ -152,5 +156,123 @@ describe("matchDivergence", () => {
 
   it("gibt null für eine leere Primitive-Liste zurück", () => {
     expect(matchDivergence([], 10, 20)).toBeNull();
+  });
+});
+
+function primitiveAt(distance) {
+  return { distanceTo: () => distance };
+}
+// Echte OrderBlockPrimitive-Instanz für den instanceof-Guard (tradeConfirmationLinkPrimitives ist
+// GEMISCHT, siehe findNearbyPinCandidates-Kommentar) — .distanceTo überschrieben statt über
+// attached()/update() ein echtes lightweight-charts-Setup zu brauchen (frisch konstruiert liefert
+// die echte Methode ohnehin nur Infinity, siehe orderBlocks.js: ZonePaneView-Konstruktor).
+function obPrimitiveAt(distance, zone) {
+  const p = new OrderBlockPrimitive(zone, {}, []);
+  p.distanceTo = () => distance;
+  return p;
+}
+function emptyPrimitives(overrides = {}) {
+  return {
+    tradePrimitives: [],
+    orderBlockPrimitives: [],
+    liquidityPrimitives: [],
+    tradeSetupLinkPrimitives: [],
+    tradeConfirmationLinkPrimitives: [],
+    divergencePrimitives: [],
+    ...overrides,
+  };
+}
+
+// Kandidatensuche im Radius statt Exakt-Hittest (Chat 2026-08-01, zweite Runde — Bug-Report Philip:
+// "tu mir schwer die Box zu treffen"). Deckt alle acht Kandidaten-Arten + Dedupe + Radius-Filter ab.
+describe("findNearbyPinCandidates", () => {
+  const opts = { symbol: "GBPUSD", currentBar: "5m" };
+
+  it("findet eine trade_position innerhalb des Radius", () => {
+    const trade = { id: 42 };
+    const primitives = emptyPrimitives({ tradePrimitives: [{ ...primitiveAt(10), trade }] });
+    const result = findNearbyPinCandidates(0, 0, primitives, opts);
+    expect(result).toEqual([{ kind: "trade_position", trade, distance: 10 }]);
+  });
+
+  it("ignoriert Kandidaten außerhalb von PIN_SEARCH_RADIUS", () => {
+    const primitives = emptyPrimitives({ tradePrimitives: [{ ...primitiveAt(PIN_SEARCH_RADIUS + 1), trade: { id: 1 } }] });
+    expect(findNearbyPinCandidates(0, 0, primitives, opts)).toEqual([]);
+  });
+
+  it("unterscheidet ob_zone (1H/4H) von m5_ob (M5) anhand zone.timeframe", () => {
+    const primitives = emptyPrimitives({
+      orderBlockPrimitives: [
+        { ...primitiveAt(5), zone: { timeframe: "1H", dir: 1, startTime: 100, top: 1.2, bottom: 1.1 } },
+        { ...primitiveAt(5), zone: { timeframe: "5M", dir: -1, startTime: 200, top: 1.3, bottom: 1.2 } },
+      ],
+    });
+    const result = findNearbyPinCandidates(0, 0, primitives, opts);
+    expect(result.map((c) => c.kind).sort()).toEqual(["m5_ob", "ob_zone"]);
+  });
+
+  it("unterscheidet liquidity_level (nur auf 1h-Chart) von m5_liquidity_level (jeder andere Timeframe)", () => {
+    const level = { dir: 1, pivotTime: 100, price: 1.2 };
+    const primitivesOn1h = emptyPrimitives({ liquidityPrimitives: [{ ...primitiveAt(5), level }] });
+    expect(findNearbyPinCandidates(0, 0, primitivesOn1h, { symbol: "GBPUSD", currentBar: "1h" })[0].kind).toBe("liquidity_level");
+    expect(findNearbyPinCandidates(0, 0, primitivesOn1h, { symbol: "GBPUSD", currentBar: "5m" })[0].kind).toBe("m5_liquidity_level");
+  });
+
+  it("findet trade_setup und trade_confirmation (nur OrderBlockPrimitive-Instanzen, nicht Linien)", () => {
+    const primitives = emptyPrimitives({
+      tradeSetupLinkPrimitives: [{ ...primitiveAt(5), zone: { tradeSetupId: 7, direction: "long", instrument: "GBPUSD" } }],
+      tradeConfirmationLinkPrimitives: [
+        obPrimitiveAt(5, { confirmationId: 9, instrument: "GBPUSD" }),
+        { ...primitiveAt(1), notAnOrderBlock: true }, // z.B. eine LiquidityLinePrimitive (kind='pivot'/'fib') -- muss ignoriert werden
+      ],
+    });
+    const result = findNearbyPinCandidates(0, 0, primitives, opts);
+    expect(result).toEqual([
+      { kind: "trade_setup", tradeSetupId: 7, direction: "long", instrument: "GBPUSD", distance: 5 },
+      { kind: "trade_confirmation", confirmationId: 9, instrument: "GBPUSD", distance: 5 },
+    ]);
+  });
+
+  it("findet rsi_divergence", () => {
+    const divergence = { type: "bullish", fromTime: 1, toTime: 2 };
+    const primitives = emptyPrimitives({ divergencePrimitives: [{ ...primitiveAt(5), divergence }] });
+    expect(findNearbyPinCandidates(0, 0, primitives, opts)).toEqual([{ kind: "rsi_divergence", divergence, instrument: "GBPUSD", distance: 5 }]);
+  });
+
+  it("dedupliziert per Natural Key, behält den nächstgelegenen Kandidaten", () => {
+    const primitives = emptyPrimitives({
+      tradeSetupLinkPrimitives: [
+        { ...primitiveAt(20), zone: { tradeSetupId: 7, direction: "long", instrument: "GBPUSD" } },
+        { ...primitiveAt(5), zone: { tradeSetupId: 7, direction: "long", instrument: "GBPUSD" } },
+      ],
+    });
+    const result = findNearbyPinCandidates(0, 0, primitives, opts);
+    expect(result).toHaveLength(1);
+    expect(result[0].distance).toBe(5);
+  });
+
+  it("kappt die Ergebnisliste auf maxCandidates", () => {
+    const primitives = emptyPrimitives({
+      tradePrimitives: Array.from({ length: 10 }, (_, i) => ({ ...primitiveAt(i), trade: { id: i } })),
+    });
+    expect(findNearbyPinCandidates(0, 0, primitives, opts, 100, 3)).toHaveLength(3);
+  });
+});
+
+describe("hasNearbyPinCandidate", () => {
+  it("true, wenn irgendein Primitive im Radius liegt", () => {
+    const primitives = emptyPrimitives({ liquidityPrimitives: [primitiveAt(5)] });
+    expect(hasNearbyPinCandidate(0, 0, primitives)).toBe(true);
+  });
+
+  it("false, wenn nichts im Radius liegt", () => {
+    expect(hasNearbyPinCandidate(0, 0, emptyPrimitives())).toBe(false);
+  });
+
+  it("respektiert den instanceof-Guard bei tradeConfirmationLinkPrimitives wie findNearbyPinCandidates", () => {
+    const primitives = emptyPrimitives({ tradeConfirmationLinkPrimitives: [{ ...primitiveAt(5), notAnOrderBlock: true }] });
+    expect(hasNearbyPinCandidate(0, 0, primitives)).toBe(false);
+    const withRealOb = emptyPrimitives({ tradeConfirmationLinkPrimitives: [obPrimitiveAt(5, {})] });
+    expect(hasNearbyPinCandidate(0, 0, withRealOb)).toBe(true);
   });
 });
