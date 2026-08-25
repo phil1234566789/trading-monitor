@@ -88,30 +88,21 @@ const props = defineProps({
   hoveredTradeId: { type: [String, Number], default: null },
   // Pin-Panel-Hover (Chat 2026-08-18, siehe PinPanel.vue: @mouseenter je Zeile) — zusätzlich zum
   // dauerhaften pinObZoneKeys/pinTradeSetupIds/…-Highlight EIN kurzzeitig hervorgehobenes Objekt,
-  // wenn Philip mit der Maus über die zugehörige PinPanel-Zeile fährt, damit er einer langen
-  // Pin-Liste die einzelnen Chart-Highlights zuordnen kann (Philip 2026-08-17/18: "ich muss dann
-  // erst mal zuordnen, welcher Pin welcher im Chart ist"). Analog zu hoveredTradeId oben, aber EIN
-  // Prop pro Pin-Art (Natural-Key bzw. Id, je nach Art, siehe die jeweiligen pin*Keys/pin*Ids-Props
-  // oben) — eine Chart-Stelle kann nur je EINE davon gleichzeitig sein. kind='trade_position' läuft
-  // bewusst über das bestehende hoveredTradeId statt eines eigenen Props (siehe Dashboard.vue:
-  // onPinHover).
+  // damit Philip einer langen Pin-Liste die einzelnen Chart-Highlights zuordnen kann. Analog zu
+  // hoveredTradeId, aber EIN Prop pro Pin-Art; kind='trade_position' läuft bewusst über das
+  // bestehende hoveredTradeId statt eines eigenen Props (siehe Dashboard.vue: onPinHover).
   hoveredPinObZoneKey: { type: String, default: null },
   hoveredPinTradeSetupId: { type: [String, Number], default: null },
   hoveredPinTradeConfirmationId: { type: [String, Number], default: null },
   hoveredPinLiquidityLevelKey: { type: String, default: null },
   hoveredPinRsiDivergenceKey: { type: String, default: null },
   // Gepinnte Objekte, direkt aus ihren pin_context-Daten gebaut statt nur als Vergleichsschlüssel
-  // gegen eine Live-Neuberechnung genutzt (Chat 2026-08-18, Task "Pin-Kontext: gepinnte Objekte
-  // direkt rendern statt nur per Live-Redetection") — ein Pin, dessen Zeitpunkt außerhalb des
-  // aktuell live neu erkannten Ergebnisses liegt (zu alt, showObsX-Toggle aus, showHistoricalObs
-  // aus, oder — nur bei liquidity/m5-Snapshots — falscher currentBar), bekommt dadurch trotzdem ein
-  // Chart-Objekt zum Anheften, siehe refreshPoiZonesInternal/refreshLiquidityInternal/
-  // refreshTradeSetupLinksInternal/refreshRsiDivergenceInternal (mergePinnedZones/-Levels dort).
-  // Bereits vollständig zonen-/level-/setup-/divergenz-förmige Objekte (siehe Dashboard.vue:
-  // pinnedObZones/pinnedLiquidityLevels/pinnedTradeSetups/pinnedRsiDivergences), touched===null
-  // markiert einen reinen Snapshot ohne bekannten Live-Status (M5-ob_zones-Zeilen/
-  // m5_liquidity_level, siehe Dashboard.vue: pinnedObZones-Kommentar) — wird hier anhand der
-  // aktuell geladenen Kerzen self-geheilt statt für immer "aktiv" zu bleiben.
+  // gegen eine Live-Neuberechnung genutzt (Task "Pin-Kontext: gepinnte Objekte direkt rendern") —
+  // ein Pin, dessen Zeitpunkt außerhalb des aktuell live erkannten Ergebnisses liegt, bekommt so
+  // trotzdem ein Chart-Objekt zum Anheften (siehe mergePinnedZones/-Levels in refreshPoiZonesInternal/
+  // refreshLiquidityInternal/refreshTradeSetupLinksInternal/refreshRsiDivergenceInternal).
+  // touched===null (nur M5-ob_zones-Zeilen/m5_liquidity_level, reiner Snapshot ohne Live-Status,
+  // siehe Dashboard.vue: pinnedObZones-Kommentar) wird anhand der geladenen Kerzen self-geheilt.
   pinnedObZones: { type: Array, default: () => [] },
   // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 7 — die von
   // poi-watcher persistierten 1H/4H-Zonen (src/obZones.js: fetchObZones, in Dashboard.vue gepollt),
@@ -160,13 +151,10 @@ const props = defineProps({
   showObs4h: { type: Boolean, default: true },
   showHistoricalObs: { type: Boolean, default: false },
   showLiquidity: { type: Boolean, default: true },
-  // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 12 — die von
-  // poi-watcher persistierten HTF-Level (1H+4H seit 2026-08-23, siehe src/liquidityLevels.js:
-  // fetchLiquidityLevelsHtf, in Dashboard.vue gepollt), unabhängig vom aktuell gewählten
-  // Chart-Timeframe. War bis 2026-08-23 ein eigener, von showLiquidity unabhängiger Toggle
-  // ("1H-Level") — Philip: sollte kein zusätzlicher Klick sein, relevante Level sollen schon über
-  // den normalen Liquidität-Toggle mitlaufen (siehe computeHtfLiquidityLevels/
-  // refreshLiquidityInternal unten).
+  // Die von poi-watcher persistierten HTF-Level (1H+4H, siehe src/liquidityLevels.js:
+  // fetchLiquidityLevelsHtf, in Dashboard.vue gepollt), unabhängig vom Chart-Timeframe. Seit
+  // 2026-08-23 Teil von showLiquidity statt eigenem Toggle (kein zusätzlicher Klick nötig, siehe
+  // computeHtfLiquidityLevels/refreshLiquidityInternal).
   dbLiquidityLevelsHtf: { type: Array, default: () => [] },
   showSweptLiquidity: { type: Boolean, default: false },
   showLiquidityDebug: { type: Boolean, default: false },
@@ -270,14 +258,10 @@ const emit = defineEmits([
   "pin-context-menu",
 ]);
 
-// Bug-Report Philip 2026-07-30: Scroll-Back im Chart blieb nach einem Nachladen für den
-// Rest der Session hängen, ohne Fehler/weiteren Request. Ursache: ein Fetch lief ohne Timeout —
-// anders als forexCandles.js (siehe dort: AbortSignal.timeout), das jeden Fetch schon immer so
-// absichert. Hängt einer der parallel per Promise.all() laufenden Scroll-Back-Fetches (siehe
-// subscribeVisibleLogicalRangeChange unten) auf unbestimmte Zeit (Netzwerk-Stall, kein Fehler,
-// keine Antwort), erreicht der Code nie `finally` -> `loadingOlder` bleibt für immer true, jeder
-// weitere Scroll-Versuch wird schon in der ersten Guard-Zeile stillschweigend abgewiesen. Ein
-// harter Timeout macht ein Hängenbleiben stattdessen zu einem normalen, gefangenen Fehler.
+// Bug-Report Philip 2026-07-30: ein Scroll-Back-Fetch ohne Timeout blieb bei einem Netzwerk-Stall
+// unbegrenzt hängen -> `finally` (loadingOlder=false) wird nie erreicht, jeder weitere Scroll-
+// Versuch wird stillschweigend abgewiesen. Harter Timeout macht das zu einem normalen, gefangenen
+// Fehler (forexCandles.js sichert das schon länger per AbortSignal.timeout ab).
 const FETCH_TIMEOUT_MS = 20_000;
 // pollRecent() braucht pro Tick nur die 1-2 Kerzen, die sich seit dem letzten Poll geändert haben
 // können, mergeRecent() ersetzt ohnehin nur den Schwanz von allCandles. 10 als Puffer für einen
@@ -290,13 +274,10 @@ const RECENT_PAGE_SIZE = 10;
 // Puffer nach der erwarteten Schlusszeit, bis die frisch geschlossene Kerze beim Broker/Backend
 // ankommt (siehe scheduleNextPoll) — lieber knapp nach dem Schluss pollen als knapp davor.
 const CLOSE_POLL_BUFFER_MS = 2_000;
-// Scroll-Back (Chat 2026-08-09, Philip: "sollen mehr Candles geholt werden als 100"): seit
-// forexCandles.js' fetchOlderCandles zuerst das DB-Archiv (forex_candles) versucht, ist ein
-// größerer count fürs Archiv praktisch kostenlos (Postgres liefert ein paar tausend Zeilen in
-// einem Call problemlos) — deckt damit gleich mehrere Handelstage pro Scroll-Back-Schritt ab statt
-// in 100er-Häppchen. Für den Live-cTrader-Fallback (außerhalb des Archivs) kappt die
-// forex-candles Edge Function ohnehin serverseitig auf MAX_COUNT (aktuell 1000), dieser Wert ist
-// also KEIN neues Live-Request-Limit, nur die Obergrenze für den (häufigeren) Archiv-Treffer.
+// Scroll-Back: ein größerer count fürs DB-Archiv (forexCandles.js: fetchOlderCandles versucht das
+// zuerst) ist praktisch kostenlos und deckt mehrere Handelstage pro Schritt ab statt 100er-Häppchen.
+// Für den Live-cTrader-Fallback ohne Bedeutung — die Edge Function kappt dort ohnehin serverseitig
+// auf MAX_COUNT (aktuell 1000).
 const FOREX_HISTORY_PAGE_SIZE = 2000;
 // jumpToTrade(): Puffer NACH dem Trade-Exit für den ersten Anker-Fetch (siehe dort) — genug, damit
 // auch ein Trade ohne Exit (noch offen) plus etwas "Nachher"-Kontext in die erste Seite passt.
@@ -305,14 +286,6 @@ const JUMP_TARGET_BUFFER_BARS = 20;
 // für einen ungewöhnlich lang laufenden Trade (Entry Wochen vor Exit) — kein Regelfall.
 const MAX_JUMP_FETCH_PAGES = 5;
 const INITIAL_CANDLE_COUNT = 1000; // depth loaded on startup / timeframe switch
-// Wunsch Philip 2026-07-20: "ich werd bei Replay öfter auf +1 klicken, fetch doch gleich die
-// nächsten Kerzen" — an alle Replay-Fetches (fetchCandlesCached lookaheadSec-Parameter)
-// durchgereicht, damit wiederholtes "+1 Kerze"-Klicken innerhalb dieses Fensters ohne neuen
-// Roundtrip auskommt (siehe candleCache.js: der Hit-Check bleibt dabei strikt am WAHREN
-// replayUntil, nur der tatsächliche Fetch/completeUpTo reicht weiter). Jetzt in timeframes.js
-// (Chat 2026-07-23: von 4h auf ~8,68 Tage hochgesetzt, 429 beim Replay-Klicken) statt hier lokal,
-// weil sich der Wert aus TRADE_SETUP_M5_CANDLE_COUNT ableitet und für alle Timeframes gleich sein
-// soll.
 const LAZY_LOAD_LOGICAL_THRESHOLD = 20; // fetch older data once this close to the left edge
 const TRADE_MARKER_BARS = new Set(["1m", "5m", "15m", "1h"]); // 4h/1D würden zu unübersichtlich
 // Trade-Setup (Liquidity Sweep + Protected M5-Fraktal + M5-OB, siehe tv-indikator/src/
@@ -321,13 +294,10 @@ const TRADE_MARKER_BARS = new Set(["1m", "5m", "15m", "1h"]); // 4h/1D würden z
 // übernommen (TRADE-SETUP-Gruppen), nicht neu geraten — siehe auch poi-watcher/index.ts,
 // das dieselben Werte serverseitig für die Telegram-Alarme nutzt.
 const TRADE_SETUP_M5_FRACTAL_PERIOD = 5; // liqM5Period
-// H1-Level kamen bis Chat 2026-07-28 aus einer eigenen liquidity.js-Fraktal-Erkennung (liqH1Period
-// = 10) auf einem eigenen, nur 300 Kerzen (≈12,5 Tage) kurzen H1-Fenster — Bug-Report Philip: ein
-// 32 Tage altes, aber gerade erst geswepptes Level (1.13545) war dadurch unsichtbar. Statt das
-// Fenster zu vergrößern ("das allermeiste ist nur Datenmüll") kommen H1-Level jetzt aus den längst
-// gefilterten structurePivots des "1h-Range"-Strukturalgorithmus (siehe collectH1LqLevels in
-// marketStructureAnalysis.ts, aufgerufen in computeTradeSetups) — kein eigenes H1-Fenster mehr
-// nötig, siehe rangesH1Candles/loadRangesCandles weiter unten.
+// H1-Level kamen bis Chat 2026-07-28 aus einer eigenen, nur 300 Kerzen kurzen H1-Fraktal-Erkennung
+// (Bug: ein 32 Tage altes, aber gerade erst geswepptes Level war dadurch unsichtbar) — kommen jetzt
+// aus den längst gefilterten structurePivots des "1h-Range"-Algorithmus (collectH1LqLevels in
+// marketStructureAnalysis.ts, aufgerufen in computeTradeSetups), kein eigenes H1-Fenster mehr nötig.
 const TRADE_SETUP_M5_CANDLE_COUNT = 2500;
 const TRADE_SETUP_GRACE_SEC = 5 * 60; // eine M5-Kerzenlänge
 const TRADE_SETUP_LS_MAX_LEAD_SEC_H1 = 120 * 60; // lsMaxLeadMinutesH1 — eigenes, größeres Fenster
@@ -353,21 +323,11 @@ const TRADE_SETUP_OB_BORDER_RATIO = 0.7 / 0.9;
 // TREND_ANALYSIS_CANDLE_COUNT über dem Edge-Function-Limit pro Request (1000) liegt.
 const TREND_ANALYSIS_CANDLE_COUNT = 1000;
 
-// "Ranges" — erster Baustein des neuen PA-Analyse-Konzepts (siehe Chat 2026-07-18): H1-Fraktale
-// im konfigurierbaren Lookback-Fenster (rangesLookbackHours), noch ohne weak/protected/sweep-
-// Klassifizierung. Periode ist jetzt konfigurierbar (props.rangesPeriod, Default 5, wie
-// liqM5Period-Analogon auf H1) — seit Chat 2026-07-19 läuft zusätzlich ein zweiter, eingebetteter
-// Lauf mit eigener Periode/Lookback (props.ranges2Period/ranges2LookbackHours, Default 2) für eine
-// schnellere Uptrend-Erkennung, siehe computeRangesPivotsFor. Bis Chat 2026-07-28 bewusst
-// unabhängig von den H1-Leveln der Trade-Setup-Erkennung gehalten ("die Konzepte sollen sich
-// nicht querbeeinflussen") — diese Trennung ist seitdem aufgehoben: computeTradeSetups() liest
-// jetzt genau diese Pivots (siehe collectH1LqLevels), rangesH1Candles/marketStructureState müssen
-// also auch dann geladen sein, wenn nur Trade-Setups (nicht Ranges selbst) sichtbar sind, siehe
-// rangesNeedsData().
-// Puffer vor/nach dem Lookback-Fenster: ein Fraktal braucht period+4 Kerzen davor und period
-// danach, um überhaupt erkannt zu werden (siehe isUpFractal/isDownFractal in liquidity.js) — ohne
-// Puffer würden Fraktale am Rand des konfigurierten Fensters unter den Tisch fallen. 20 ist für
-// BEIDE Perioden (5 und 2) großzügig genug, kein separater Puffer je Periode nötig.
+// "Ranges" — H1-Fraktale im Lookback-Fenster (props.rangesPeriod/-2), Basis für
+// computeRangesPivotsFor/rangesNeedsData/computeTradeSetups (collectH1LqLevels liest dieselben
+// Pivots, siehe dort). Puffer vor/nach dem Lookback-Fenster: ein Fraktal braucht period+4 Kerzen
+// davor und period danach, um überhaupt erkannt zu werden (siehe isUpFractal/isDownFractal in
+// liquidity.js) — 20 ist für BEIDE Perioden (5 und 2) großzügig genug.
 const RANGES_CANDLE_BUFFER = 20;
 
 const { markSuccess } = useStatusBar();
@@ -379,14 +339,9 @@ const { refreshSessions, refreshNewsMarkers } = usePriceChartSessionsAndNews();
 const priceChartRsi = usePriceChartRsi();
 
 const chartContainerRef = ref(null);
-// Chart-Höhe (Chat 2026-07-30, siehe Dashboard.vue: tradesPanelHeight für dieselbe Begründung,
-// inkl. useTabScopedRef statt useLocalStorageRef — pro Tab verstellbar, aber ein frischer Tab/
-// Browser-Neustart startet trotzdem beim zuletzt benutzten Wert). Ein einziger Key (nicht pro
-// Symbol) — Philip will EINE konsistente Chart-Höhe unabhängig davon, welcher Symbol-Tab gerade
-// aktiv ist. PriceChart.vue wird bei Symbolwechsel per :key neu gemountet — kein Problem hier
-// (anders als bei useLocalStorageRef gibt es keinen geteilten Cache, aber es existiert ohnehin nur
-// eine lebende Instanz gleichzeitig, die neue liest beim Mount einfach den zuletzt geschriebenen
-// Wert erneut aus session-/localStorage).
+// Chart-Höhe (siehe Dashboard.vue: tradesPanelHeight, dieselbe Begründung) — useTabScopedRef statt
+// useLocalStorageRef: pro Tab verstellbar, ein frischer Tab startet beim zuletzt benutzten Wert.
+// Ein einziger Key (nicht pro Symbol) — Philip will EINE konsistente Höhe unabhängig vom Symbol-Tab.
 const chartWrapperHeight = useTabScopedRef("chartWrapperHeight", 675);
 // pivotForDisplay/summarizeMarketStructureState kommen seit Chat 2026-07-27 aus
 // marketStructureAnalysis.ts (Daten-Export braucht dieselbe Aufbereitung, siehe
@@ -422,15 +377,10 @@ async function copyJsonAndSaveLocally(section, value) {
   await saveDebugMetadataSection("chart", value);
 }
 
-// Auto-Save (Chat 2026-07-21: "alle X Sekunden automatisch neu speichern, nur im localhost dann...
-// einmal bei App-Start und dann alle X Sekunden, so dass es nicht zu belastend für den PC ist") —
-// damit .debug/metadata.json immer aktuell ist, ohne dass Philip vor jedem Bug-Report erst den
-// Button klicken muss. import.meta.env.DEV ist Vites eingebautes "läuft das gerade im
-// `vite dev`-Server" (true nur dort, false im Production-Build/`vite preview`) — deckt sich exakt
-// mit "nur im localhost", ohne Hostname-Sniffing nötig; der Endpoint existiert im Production-Build
-// ohnehin nicht (siehe vite.config.js), der Fetch würde dort sowieso ins Leere laufen.
-// 30s: JSON bauen + ein kleiner lokaler POST sind beide sehr billig (auch bei ~1000 Kerzen), 30s
-// ist trotzdem großzügig genug, um den PC nicht unnötig zu belasten.
+// Auto-Save, nur im Dev-Server (import.meta.env.DEV, deckt sich mit "nur lokal" ohne Hostname-
+// Sniffing — der Endpoint existiert im Production-Build ohnehin nicht) — damit .debug/metadata.json
+// immer aktuell ist, ohne dass Philip vor jedem Bug-Report erst den Button klicken muss. 30s ist
+// großzügig genug, um den PC nicht unnötig zu belasten (JSON bauen + lokaler POST sind billig).
 const DEBUG_AUTOSAVE_INTERVAL_MS = 30_000;
 let debugAutosaveTimer = null;
 onMounted(() => {
@@ -488,39 +438,27 @@ let trendAnalysisM5Candles = [];
 let rangesH1Candles = [];
 let rangesPivots = null; // roh (mit pivotTime), Periode 5 — siehe computeRangesPivotsFor/refreshRangesMarkersInternal
 let rangesPivots2 = null; // roh (mit pivotTime), eingebettete Periode 2 (siehe Chat 2026-07-19)
-// Out-of-Order-Guards für loadInitial/loadRangesCandles/loadTradeSetupM5, siehe dort (Chat
-// 2026-07-20: "im Replay-Modus hängt der Trend-Algorithmus"). loadInitialFetchSeq wird
-// zusätzlich von pollRecent() als Bar-Mismatch-Guard gelesen (siehe dort, Bug-Report Philip
-// 2026-07-19: "1h -> M5 -> wieder 1h, Chart zeigt nur noch M5-Kerzen") — jeder echte Neu-Load von
-// allCandles (TF-/Symbol-Wechsel, Replay-Schritt) zählt hoch, ein noch laufender pollRecent()-Fetch
-// von VOR diesem Wechsel erkennt daran, dass er überholt ist.
+// Out-of-Order-Guards für loadInitial/loadRangesCandles/loadTradeSetupM5, siehe dort.
+// loadInitialFetchSeq wird zusätzlich von pollRecent() als Bar-Mismatch-Guard gelesen (Bug-Report
+// Philip 2026-07-19: "1h -> M5 -> wieder 1h, Chart zeigt nur noch M5-Kerzen") — jeder echte Neu-Load
+// zählt hoch, ein noch laufender Fetch von VOR dem Wechsel erkennt daran, dass er überholt ist.
 let loadInitialFetchSeq = 0;
 let rangesFetchSeq = 0;
 let tradeSetupM5FetchSeq = 0;
 let loadingOlder = false;
 let reachedHistoryStart = false;
-// Bug-Report Philip 2026-08-09: Scroll-Back-Nachladen (siehe subscribeVisibleLogicalRangeChange
-// unten) hängt bei einem cTrader-Timeout unauffällig fest — der Fehler landet nur in der Konsole,
-// der User sieht bloß leere Fläche links im Chart und muss zufällig nochmal scrollen, damit der
-// Handler erneut feuert. showLoadOlderButton zeigt stattdessen einen expliziten Retry-Button genau
-// dann, wenn die sichtbare Logical Range über den Datenanfang hinausragt (from < 0, siehe
-// updateLoadOlderButtonVisibility) UND wirklich noch mehr Historie zu holen wäre (!reachedHistoryStart
-// — bei echtem Datenanfang bleibt die Lücke bewusst ohne Button).
+// Bug-Report Philip 2026-08-09: ein hängender Scroll-Back-Fetch (cTrader-Timeout) landet nur in der
+// Konsole, der User sieht bloß leere Fläche links. showLoadOlderButton zeigt stattdessen einen
+// expliziten Retry-Button, wenn die sichtbare Logical Range über den Datenanfang hinausragt UND
+// wirklich noch mehr Historie zu holen wäre (siehe updateLoadOlderButtonVisibility).
 const showLoadOlderButton = ref(false);
 const loadOlderButtonBusy = ref(false);
-// Bug-Report Philip 2026-08-23: weit auf 1H herauszoomen ließ die ganze App einfrieren — das
-// Archiv deckt nur GBPUSD/EURUSD ab 2026-01-01 ab (siehe CLAUDE.md "Persisted candle archive"),
-// eine Kerze davor löst in fetchOlderCandles automatisch einen LIVE-cTrader-Fetch aus. Beim
-// Herauszoomen feuert subscribeVisibleLogicalRangeChange aber wiederholt in kurzer Folge (jede
-// neu vorangestellte Seite verschiebt die sichtbare Logical Range nur um genau diese Seitengröße,
-// bei starkem Herauszoomen bleibt sie also weiter unter LAZY_LOAD_LOGICAL_THRESHOLD) — das reiht
-// mehrere langsame Live-Fetches automatisch UND ungefragt aneinander, ohne dass der User eingreifen
-// kann. Philip: "ich brauche Candles vom letzten Jahr nicht wirklich ... ich könnte selbst
-// entscheiden, ob ich die wirklich laden möchte" — loadOlderCandlesNow versucht deshalb zuerst
-// NUR das Archiv (allowLive: false, siehe forexCandles.js), und zeigt bei einem Archiv-Miss diesen
-// Banner statt automatisch live nachzuladen. liveHistoryConfirmed bleibt an, bis Symbol/Timeframe
-// wechselt (wie reachedHistoryStart) — sonst müsste bei jeder weiteren Seite jenseits des Archivs
-// erneut bestätigt werden.
+// Bug-Report Philip 2026-08-23: weit auf 1H herauszoomen ließ die App einfrieren — das Archiv deckt
+// nur GBPUSD/EURUSD ab 2026-01-01 ab, eine Kerze davor löst automatisch einen LIVE-cTrader-Fetch
+// aus, und beim Herauszoomen feuert subscribeVisibleLogicalRangeChange wiederholt in kurzer Folge,
+// was mehrere langsame Live-Fetches ungefragt aneinanderreiht. loadOlderCandlesNow versucht deshalb
+// zuerst NUR das Archiv und zeigt bei einem Miss diesen Banner statt automatisch live nachzuladen.
+// liveHistoryConfirmed bleibt an, bis Symbol/Timeframe wechselt (wie reachedHistoryStart).
 const showLiveHistoryConfirm = ref(false);
 const liveHistoryConfirmBusy = ref(false);
 let liveHistoryConfirmed = false;
@@ -533,26 +471,21 @@ let rangesPollTimer = null;
 // rangesMetadata unten.
 const rsiDivergenceStatsData = ref(null);
 const rangesMetadata = ref(null); // Liste der erkannten H1-Periode-5-Pivots fürs Ranges-Metadaten-Panel
-const rangesMetadata2 = ref(null); // dito für die eingebettete Periode-2-Erkennung — siehe Chat 2026-07-19:
-// EIN gemeinsames Metadaten-Panel für beide Perioden reicht ("wenn es zu schwer ist zwei Modals
-// gleichzeitig offen zu haben"), daher kein zweiter showRangesMetadata2-Toggle.
-// Der erste H1-Fetch (loadRangesCandles) ist ein frischer cTrader-TLS-Connect+Auth-Handshake
-// (siehe forexCandles.js/_shared/twelvedata/client.ts) statt eines simplen DB-Reads — das kann
-// spürbar dauern und lief bisher komplett unsichtbar (siehe Chat: "dauert echt lange bis es
-// aufm Chart erscheint"). rangesMetadata bleibt null bis zum ersten erfolgreichen Fetch, danach
-// nie wieder (auch nicht während der 60s-Hintergrund-Polls) — genau das späte "leer -> gefüllt"
-// ist der Moment, der ohne Feedback wie ein Hänger wirkt.
+// Dito für die eingebettete Periode-2-Erkennung — EIN gemeinsames Metadaten-Panel für beide
+// Perioden reicht, daher kein zweiter showRangesMetadata2-Toggle.
+const rangesMetadata2 = ref(null);
+// Der erste H1-Fetch (loadRangesCandles) ist ein frischer cTrader-Connect+Auth-Handshake statt
+// eines simplen DB-Reads, kann spürbar dauern und lief bisher komplett unsichtbar. rangesMetadata
+// bleibt null bis zum ersten erfolgreichen Fetch, danach nie wieder — genau das späte
+// "leer -> gefüllt" ist der Moment, der ohne Feedback wie ein Hänger wirkt.
 const rangesLoading = computed(() => (props.showRanges || props.showRangesMetadata) && rangesMetadata.value === null);
 
 // Fürs Debug-Metadaten-Sammel-Panel (buildActiveMetadataSnapshot unten) — dieselben Werte, die auch
 // fürs Zeichnen berechnet werden, hier zusätzlich in Refs gespiegelt statt aus den Primitives
-// zurückzulesen (die kennen nur Pixel-Koordinaten, keine Rohdaten mehr). poiZonesMetadata hat
-// bewusst kein eigenes Toggle-Gate (siehe buildActiveMetadataSnapshot) — POI-/OB-Zonen haben anders
-// als Liquidität/Trade-Setups/Structure keinen eigenen An/Aus-Schalter in der Toolbar, sie werden
-// immer gezeichnet. liquidityEarliestTime/structureEarliestTime halten den frühesten ROHEN
-// pivotTime der jeweils zuletzt berechneten Levels/Pivots (die *Metadata-Refs selbst sind schon
-// pivotForDisplay-bereinigt, siehe pivotForDisplay oben) — nur für die Kerzen-Relevanz unten,
-// tauchen selbst nicht im kopierten JSON auf.
+// zurückzulesen (die kennen nur Pixel-Koordinaten). poiZonesMetadata hat bewusst kein eigenes
+// Toggle-Gate — POI-/OB-Zonen haben anders als Liquidität/Trade-Setups/Structure keinen eigenen
+// An/Aus-Schalter, sie werden immer gezeichnet. liquidityEarliestTime/structureEarliestTime halten
+// den frühesten ROHEN pivotTime nur für die Kerzen-Relevanz unten, tauchen nicht im JSON auf.
 const poiZonesMetadata = ref(null);
 const liquidityMetadata = ref(null);
 const liquidityEarliestTime = ref(null);
@@ -566,17 +499,13 @@ const cockpitState = ref(null);
 const cockpitNowSec = ref(undefined);
 const structureEarliestTime = ref(null);
 
-// TSC-Callouts ("Zeiger-Linien", Chat 2026-07-30, Philip: "ich freu mich auf die 'Zeiger' Linien
-// :D") — Claude-Notizen-Labels (line/marker/label) floaten als eigene DOM-Chips über der TSC-Karte
-// und zeigen per SVG-Linie auf ihren Chart-Punkt, statt direkt auf dem Chart zu stehen. Anfangs
-// automatisch für ALLE Notizen, sobald TSC sichtbar war — bei vielen gleichzeitigen Annotationen
-// (Bias-Pflicht-Block: Invalidierung+Zonen+Targets+Risiko-Level, oft 7+ Stück) ergab das ein
-// unlesbares Spinnennetz aus Verbindungslinien ("okay irgendwie ist es schlimmer als davor
-// HAHAHA"). Jetzt opt-in PRO Annotation über das "pointer"-Feld (siehe claudeAnnotations.js
-// validateAnnotationList) — Claude entscheidet selbst, welche Notiz sich als Zeiger lohnt (z.B. ein
-// enges Level-Cluster) und welche inline über der Linie bleibt (die meisten). Nur überhaupt aktiv,
-// wenn die TSC-Karte gerade tatsächlich sichtbar ist (Forex + Toggle an + State vorhanden) — sonst
-// gibt's keinen sinnvollen Anker, und pointer:true-Notizen fallen automatisch auf inline zurück.
+// TSC-Callouts ("Zeiger-Linien") — Claude-Notizen-Labels (line/marker/label) floaten als eigene
+// DOM-Chips über der TSC-Karte und zeigen per SVG-Linie auf ihren Chart-Punkt. Bug-Report Philip:
+// automatisch für ALLE Notizen ergab bei vielen gleichzeitigen Annotationen ein unlesbares
+// Spinnennetz ("okay irgendwie ist es schlimmer als davor HAHAHA") — jetzt opt-in PRO Annotation
+// über das "pointer"-Feld (claudeAnnotations.js: validateAnnotationList), Claude entscheidet selbst,
+// welche Notiz sich als Zeiger lohnt. Nur aktiv, wenn die TSC-Karte sichtbar ist — sonst kein
+// sinnvoller Anker, pointer:true-Notizen fallen automatisch auf inline zurück.
 // Abstand zwischen der TSC-Karten-Oberkante und der Unterkante des Label-Stacks darüber.
 const CALLOUT_STACK_GAP_PX = 10;
 const tscCardRef = ref(null);
@@ -606,27 +535,18 @@ function setCalloutChipEl(id, el) {
 // Änderungen an refreshCockpitInternal.)
 const tscCalloutModeActive = computed(() => props.showTradeSetupCockpit && cockpitState.value != null);
 
-// Nur die Abschnitte der gerade angetoggelten Features (siehe Chat 2026-07-20: "nur metadaten von
-// den features im Menü, wenn sie angetoggelt sind") — damit bleibt der kopierte JSON-Blob fokussiert
-// auf das, was gerade im Chart tatsächlich zu sehen ist, statt jedes Mal alles (inkl. ausgeblendeter
-// Sachen) mitzuschleppen. orderBlocks bewusst ungated, siehe poiZonesMetadata oben. context (Symbol/
-// TF/Replay) läuft IMMER mit, unabhängig von Toggles — ohne das lässt sich ein kopiertes OB
-// (z.B. "startTime": 1782709200) gar nicht einordnen (Chat 2026-07-20: "fehlt ... replaymodus
-// inputs, TF, Währungspaar").
+// Nur die Abschnitte der gerade angetoggelten Features — der kopierte JSON-Blob bleibt fokussiert
+// auf das, was im Chart sichtbar ist, statt immer alles mitzuschleppen. orderBlocks bewusst
+// ungated (siehe poiZonesMetadata oben). context (Symbol/TF/Replay) läuft IMMER mit, sonst lässt
+// sich ein kopiertes OB nicht einordnen.
 //
-// candles: die "Option A" aus demselben Chat ("du suchst selbst aus den Metadaten, welche Uhrzeit
-// noch relevant ist") — ab dem FRÜHESTEN Zeitpunkt, auf den irgendeine aktive Sektion verweist
-// (OB-Zone startTime, Liquiditäts-/Structure-Pivot pivotTime, Trade-Setup fractal/ls/obStartTime),
-// bis zum aktuellen (bzw. im Replay: replayUntil) Kerzenende. Bewusst ein Filter auf das ohnehin
-// schon geladene allCandles-Fenster statt eines eigenen Fetches — bleibt der gewählte
-// Zeitpunkt VOR der ältesten geladenen Kerze, fehlt entsprechend der Anfang (kein Nachladen bisher,
-// siehe Chat: "falls kompliziert, lass uns das gemeinsam refinen").
+// candles: ab dem FRÜHESTEN Zeitpunkt, auf den irgendeine aktive Sektion verweist, bis zum
+// aktuellen (bzw. Replay-)Kerzenende — ein Filter auf das ohnehin geladene allCandles-Fenster statt
+// eines eigenen Fetches; liegt der Zeitpunkt vor der ältesten geladenen Kerze, fehlt der Anfang.
 //
-// Bewusst eine imperativ befüllte Ref statt eines computed() — allCandles ist absichtlich KEIN
-// reaktiver State (siehe Kommentar bei den Closure-Variablen oben), ein computed() würde also nie
-// neu laufen, wenn sich NUR allCandles ändert. buildActiveMetadataSnapshot() wird deshalb explizit
-// am Ende von refreshChart() aufgerufen (derselbe Zyklus, der auch alle anderen *Metadata-Refs
-// aktuell hält) sowie beim Öffnen des Panels selbst.
+// Bewusst eine imperativ befüllte Ref statt eines computed() — allCandles ist KEIN reaktiver State,
+// ein computed() würde also nie neu laufen, wenn sich NUR allCandles ändert. Deshalb explizit am
+// Ende von refreshChart() sowie beim Öffnen des Panels aufgerufen.
 const activeMetadataSnapshot = ref({ context: {}, orderBlocks: [] });
 function buildActiveMetadataSnapshot() {
   const toggles = {
@@ -727,16 +647,12 @@ function clipReplay(rows) {
   return props.replayUntil == null ? rows : rows.filter((r) => r.time <= props.replayUntil);
 }
 
-// Gegenstück zu clipReplay für die FETCH-Seite: ein fester count/Lookback endet sonst immer bei
-// der echten aktuellen Zeit (siehe forexCandles.js: toMs ohne Wert = "jetzt"), unabhängig von
-// replayUntil — bei einem Replay-Zeitpunkt, der weiter zurückliegt als count reicht, deckt das
-// geladene Fenster den gewünschten Bereich dann gar nicht ab (siehe Chat: "Ranges-Pivots gehen bei
-// 12 Tagen Lookback + Replay nicht weit genug zurück"). loadRangesCandles/loadTradeSetupM5/-H1
-// übergeben das hier an fetchInitialForexCandles, damit der Fetch selbst schon bis replayUntil
-// zurückreicht statt erst hinterher (zu kurz) geclippt zu werden.
-// bar: siehe replayFetchToMs in chartTimeUtils.js — cTrader liefert die Kerze GENAU an replayUntil
-// sonst strukturell nie mit (Bug-Report Philip 2026-07-21: "letzte Kerze nur 22:00 statt 23:00",
-// "+1 Kerze" brachte deshalb nie die neu angeforderte Kerze).
+// Gegenstück zu clipReplay für die FETCH-Seite: ein fester count/Lookback endet sonst immer bei der
+// echten aktuellen Zeit, unabhängig von replayUntil — bei einem weit zurückliegenden Replay-Zeitpunkt
+// deckt das geladene Fenster den gewünschten Bereich dann nicht ab. loadRangesCandles/
+// loadTradeSetupM5/-H1 übergeben das an fetchInitialForexCandles, damit der Fetch selbst schon bis
+// replayUntil zurückreicht. bar: siehe replayFetchToMs (Bug-Report Philip 2026-07-21: "letzte Kerze
+// nur 22:00 statt 23:00" — cTrader liefert die Kerze GENAU an replayUntil sonst strukturell nie mit).
 function replayToMs(bar) {
   return replayFetchToMs(props.replayUntil, bar);
 }
@@ -765,12 +681,10 @@ function refreshTradeSetupLinksInternal() {
     const top = t.tradeSetupObTop;
     const bottom = t.tradeSetupObBottom;
     const key = t.direction === "short" ? "tradeSetupShort" : "tradeSetupLong";
-    // Pin-Kontext, dritte Art (Chat 2026-08-01, dritte Runde — Bug-Report Philip: genau DIESE
-    // Box, "OB 1.15229#22", war bisher nie klickbar, weil sie über einen eigenen Rendering-Pfad
-    // läuft statt über collectObsZones/orderBlockPrimitives). tradeSetupId ist bereits die echte
-    // trade_setups.id (kein Natural-Key-Umweg wie bei ob_zone nötig) — direction/instrument vom
-    // Trade selbst mitgegeben, damit die Kandidaten-Liste in Dashboard.vue ohne Zusatz-Fetch ein
-    // Label bauen kann (siehe PriceChart.vue: findNearbyPinCandidates).
+    // Pin-Kontext, dritte Art (Bug-Report Philip: Box "OB 1.15229#22" war bisher nie klickbar, weil
+    // sie über einen eigenen Rendering-Pfad läuft statt über collectObsZones/orderBlockPrimitives).
+    // tradeSetupId ist bereits die echte trade_setups.id — direction/instrument mitgegeben, damit
+    // findNearbyPinCandidates ohne Zusatz-Fetch ein Label bauen kann.
     const inPinContext = props.pinTradeSetupIds?.has(t.tradeSetupId) ?? false;
     const isSelectedPin = props.hoveredPinTradeSetupId != null && props.hoveredPinTradeSetupId === t.tradeSetupId;
     const primitive = new OrderBlockPrimitive(
@@ -838,22 +752,15 @@ function refreshTradeSetupLinksInternal() {
 }
 
 // Zeichnet die Pivot-/OB-Targets eines Trades als Linie — Wiederverwendung LiquidityLinePrimitive
-// für beide Target-Arten (auch OB, siehe findClickedOBZone: nur die nähere Kante wird übernommen,
-// kein eigenes Box-Rendering nötig). Bewusst UNABHÄNGIG von showLiquidity/showObsM5/-1h/-4h (ein
-// Target gehört zum Trade, nicht zur Live-Anzeige-Rauschen-Filterung), aber wie bei
-// refreshTradeSetupLinksInternal an showTradeSetups+showTrades gekoppelt (Bug-Report Philip
-// 2026-07-28, siehe dort). Ohne source_time (Alt-Targets vor diesem Feature, siehe Migration
-// 20260728140000) wird nichts gezeichnet, da keine Linie rekonstruierbar ist.
+// für beide Target-Arten (auch OB, siehe findClickedOBZone: nur die nähere Kante wird übernommen).
+// Bewusst UNABHÄNGIG von showLiquidity/showObsM5/-1h/-4h, aber wie refreshTradeSetupLinksInternal
+// an showTradeSetups+showTrades gekoppelt.
 //
-// target.touchedTime (DB-Spalte trade_targets.touched_time) wird NUR einmalig beim Hinzufügen des
-// Targets gesetzt (PriceChart.vue: findClickedOBZone/findClickedPivot lesen dafür den Live-Zustand
-// der Zone/des Levels zu DIESEM Zeitpunkt) und danach nie mehr aktualisiert — es gibt keinen
-// Watcher, der ein bereits gespeichertes Target später nachträgt, wenn der Preis es erst danach
-// berührt. Bug-Report Philip 2026-07-30 (OB 1.13737 #12): Target ohne touched_time zeichnete die
-// Linie deshalb dauerhaft "bis jetzt" weiter, obwohl längst eine Kerze durchgelaufen war. Deshalb
-// hier zusätzlich selbst in den geladenen Kerzen nachschauen (wie orderBlocks.js: z.touched via
-// low<=price<=high) statt dem gespeicherten Stand blind zu vertrauen — self-healt automatisch bei
-// jedem Render, sobald die berührende Kerze geladen ist.
+// target.touchedTime wird NUR einmalig beim Hinzufügen des Targets gesetzt, nie mehr aktualisiert.
+// Bug-Report Philip 2026-07-30 (OB 1.13737 #12): ein Target ohne touched_time zeichnete die Linie
+// deshalb dauerhaft "bis jetzt" weiter, obwohl längst eine Kerze durchgelaufen war — deshalb hier
+// zusätzlich selbst in den geladenen Kerzen nachschauen statt dem gespeicherten Stand blind zu
+// vertrauen (self-healt automatisch bei jedem Render).
 const TARGET_TIER_WIDTH_RATIO = { minor: 1, medium: 1.6, major: 2.2 };
 
 // obBoxTouchState/firstCandleTouch/firstCandleTouchRange brauchen den "gerade live erkannten
@@ -883,22 +790,11 @@ function refreshTradeTargetLinksInternal() {
       if (target.sourceTime == null) continue;
       const label = `🎯 ${targetKindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`;
       // OB-Ziele als echte Box statt nur einer Linie an der näheren Kante (Bug-Report Philip
-      // 2026-07-31: "es zeichnet sich weder Linie noch Box, nur das Label" — price allein reicht
-      // für eine Box nicht, rangeLow/rangeHigh seit Migration 20260731170000 auch auf Targets, wie
-      // schon bei Confirmations für kind='fib'). Alt-OB-Targets ohne rangeLow/rangeHigh (vor dieser
-      // Migration) fallen zurück auf die bisherige Linie.
+      // 2026-07-31: "es zeichnet sich weder Linie noch Box, nur das Label"). Alt-OB-Targets ohne
+      // rangeLow/rangeHigh (vor Migration 20260731170000) fallen zurück auf die bisherige Linie.
       //
-      // Box-Ende: gespeichertes touchedTime hat IMMER Vorrang vor liveObZoneState (Bug-Report
-      // Philip 2026-07-31, vierte Runde: eine schon korrekt auf ihre echte Touch-Kerze gezeichnete
-      // Box zog sich später doch wieder bis "jetzt") — liveObZoneState detectet bei JEDEM Render
-      // neu anhand der GERADE geladenen M5-Kerzen (tradeSetupM5Candles); verschiebt sich deren
-      // Lookback-Fenster später über die damalige Touch-Kerze hinaus, "sieht" die Neuberechnung den
-      // Touch nicht mehr und die Zone erscheint fälschlich wieder aktiv. Ein bereits bekanntes
-      // touchedTime ist dagegen ein einmalig festgehaltener, echter Fakt — wird nie ungültig. Live
-      // nur noch als Versuch für NOCH UNBEKANNTEN Touch-Status (touchedTime null); fällt die Zone
-      // dabei aus dem schmalen Lookback-Fenster raus (siehe firstCandleTouchRange oben, Bug-Report
-      // 2026-08-07), zuerst noch selbst in den bereits geladenen Kerzen nachschauen, erst dann
-      // "letzte geladene Kerze" als wirklich letzter Ausweg.
+      // Box-Ende: siehe obBoxTouchState (priceChartObZones.js) für die Priorität touchedTime ->
+      // liveObZoneState -> Selbstheilung -> "letzte geladene Kerze" (Bug-Report 2026-07-31/08-07).
       if (target.kind === "ob" && target.rangeLow != null && target.rangeHigh != null) {
         const { touched, endTime } = obBoxTouchState(target, candles, obZoneCtx());
         const primitive = new OrderBlockPrimitive(
@@ -948,20 +844,14 @@ function refreshTradeTargetLinksInternal() {
   }
 }
 
-// Zeichnet die Sweep-/OB-Bestätigungen eines Trades als Linie (PLAN-trade-confluences.md #1) —
-// strukturell identisch zu refreshTradeTargetLinksInternal (dieselbe Klick-Infrastruktur, dieselbe
-// Tier-Skalierung), eigene Farbe (tradeConfirmation statt tradeTarget) und eigenes Label-Präfix,
-// damit sich Bestätigung (bereits passiert) und Target (zukünftige Erwartung) auf einen Blick
-// unterscheiden lassen, auch wenn beide zufällig an derselben Stelle sitzen.
+// Zeichnet die Sweep-/OB-Bestätigungen eines Trades als Linie — strukturell identisch zu
+// refreshTradeTargetLinksInternal, eigene Farbe (tradeConfirmation) + Label-Präfix, damit sich
+// Bestätigung (bereits passiert) und Target (Erwartung) auf einen Blick unterscheiden lassen.
 //
-// Bewusste Lücke (Task "Pin-Kontext: gepinnte Objekte direkt rendern", Punkt 7): loopt wie
-// refreshTradeSetupLinksInternal nur über tradesVisibleForCandles — ein trade_confirmation-Pin
-// dessen Trade gerade nicht sichtbar ist (anderes Symbol/Konto/Zeitraum) hat dadurch aktuell KEINEN
-// Rendering-Pfad. Anders als bei trade_setup nicht gefixt: pinContext.js' trade_confirmations-Embed
-// (ROW_COLUMNS) bringt kein instrument/keine Trade-Referenz mit (nur id/kind/price/range_low/
-// range_high/touched_time) — ein Direkt-Render bräuchte zuerst eine Embed-Erweiterung (parent
-// trade_position_id + instrument), das rechtfertigt hier den Aufwand (noch) nicht, da Bestätigungen
-// ohne sichtbaren Trade seltener sind als die anderen Fälle.
+// Bewusste Lücke: loopt nur über tradesVisibleForCandles — ein trade_confirmation-Pin dessen Trade
+// gerade nicht sichtbar ist, hat dadurch keinen Rendering-Pfad. Anders als bei trade_setup nicht
+// gefixt: pinContext.js' trade_confirmations-Embed bringt kein instrument mit, ein Direkt-Render
+// bräuchte erst eine Embed-Erweiterung — rechtfertigt den Aufwand (noch) nicht (seltener Fall).
 function refreshTradeConfirmationLinksInternal() {
   for (const p of tradeConfirmationLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeConfirmationLinkPrimitives.length = 0;
@@ -1018,15 +908,11 @@ function refreshTradeConfirmationLinksInternal() {
         tradeConfirmationLinkPrimitives.push(primitive);
         continue;
       }
-      // Self-Heal wie bei Pivot-Targets (firstCandleTouch) — bisher fehlte das hier komplett, eine
-      // Bestätigung ohne touchedTime (z.B. ein Fib, das per findClickedFibLevel IMMER touchedTime:
-      // null liefert, "kein 'getoucht'-Konzept für ein Fib-Level") zog sich deshalb dauerhaft bis
-      // "jetzt" (Bug-Report Philip 2026-07-31). Anders als bei OB-Zonen unkritisch hier: eine
-      // Bestätigung (Pivot ODER Fib) ist immer EIN einzelner Preis, keine Zonenspanne — derselbe
-      // Zeitebenen-Mismatch wie bei OB kann also nicht auftreten.
-      // Analog zu refreshTradeTargetLinksInternal: eine Pivot-Bestätigung mit liquidity_level_id
-      // läuft über die native renderLiquidityLevels+Pin-Halo-Anzeige, nicht mehr über eine eigene
-      // Linie hier.
+      // Self-Heal wie bei Pivot-Targets (firstCandleTouch) — eine Bestätigung ohne touchedTime (z.B.
+      // ein Fib, das per findClickedFibLevel IMMER touchedTime:null liefert) zog sich sonst dauerhaft
+      // bis "jetzt" (Bug-Report Philip 2026-07-31). Eine Pivot-Bestätigung mit liquidity_level_id
+      // läuft analog zu refreshTradeTargetLinksInternal über die native renderLiquidityLevels+
+      // Pin-Halo-Anzeige, nicht mehr über eine eigene Linie hier.
       if (confirmation.kind === "pivot" && confirmation.liquidityLevel) continue;
       const touchedTime = confirmation.touchedTime ?? firstCandleTouch(candles, confirmation.sourceTime, confirmation.price);
       const endTime = touchedTime ?? candles[candles.length - 1].time;
@@ -1047,14 +933,10 @@ function refreshTradeConfirmationLinksInternal() {
   }
 }
 
-// Invalidierungs-Linie einer dealing_range (Chat 2026-07-31: "fehlt nur noch die Visualisierung
-// der Invalidierung ... eine Linie von dem Zeitpunkt des ersten Entries bis zum Zeitpunkt des
-// letzten Exits ALLER trade_positions, die unter einer dealing_range liegen") — bewusst NUR der
-// Preis, keine kind/sourceTime/touchedTime-Referenz wie bei Targets/Bestätigungen: "ob die Idee
-// gestorben ist" lässt sich direkt live gegen die Kerzen prüfen (Philip: "wissen wir doch
-// automatisch, wenn der aktuelle Candle-Preis sie erreicht hat"), keine eigene Touch-Logik nötig.
-// Eine Zeile pro dealing_range (nicht pro Ausführung) — mehrere Positionen unter derselben Range
-// teilen sich denselben invalidation-Wert, deshalb hier gruppiert statt pro Trade gezeichnet.
+// Invalidierungs-Linie einer dealing_range — eine Linie vom ersten Entry bis zum letzten Exit ALLER
+// trade_positions darunter. Bewusst NUR der Preis, keine eigene Touch-Logik: "ob die Idee gestorben
+// ist" lässt sich direkt live gegen die Kerzen prüfen. Eine Zeile pro dealing_range (nicht pro
+// Ausführung) — mehrere Positionen darunter teilen sich denselben invalidation-Wert.
 function refreshInvalidationLinesInternal() {
   for (const p of invalidationLinePrimitives) candleSeries.detachPrimitive(p);
   invalidationLinePrimitives.length = 0;
@@ -1111,13 +993,10 @@ function refreshInvalidationLinesInternal() {
 }
 
 // Bug-Report Philip 2026-07-30 ("okay irgendwie ist es schlimmer als davor HAHAHA"): ALLE
-// Annotationen automatisch zu Zeiger-Callouts zu machen, sobald TSC sichtbar ist, ergab bei vielen
-// gleichzeitigen Notizen ein unlesbares Spinnennetz aus Verbindungslinien. Jetzt entscheidet Claude
-// das PRO Annotation über das neue optionale "pointer"-Feld (siehe validateAnnotationList) — nur
-// pointer:true wandert in die schwebenden Chips über der TSC-Karte (siehe claudeCalloutTick), alles
-// andere bleibt wie gehabt inline im Canvas (über der Linie/am Punkt, siehe resolveLabelPlacements).
-// hline behält seinen Text immer (eigenes Preisachsen-Label, kein Überlappungs-/Streich-Problem wie
-// bei line/marker), pointer wird dafür ignoriert.
+// Annotationen automatisch zu Zeiger-Callouts zu machen ergab bei vielen Notizen ein unlesbares
+// Spinnennetz. Jetzt entscheidet Claude das PRO Annotation über das optionale "pointer"-Feld — nur
+// pointer:true wandert in die schwebenden Chips (siehe claudeCalloutTick), alles andere bleibt
+// inline im Canvas. hline behält seinen Text immer, pointer wird dafür ignoriert.
 function refreshClaudeAnnotationsInternal() {
   const annotationsForCanvas = tscCalloutModeActive.value
     ? props.claudeAnnotations.map((a) => (a.type === "hline" || !a.text || !a.pointer ? a : { ...a, text: undefined }))
@@ -1191,19 +1070,12 @@ function claudeCalloutTick() {
   }
 }
 
-// Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 10 — DB-Read (Punkt 7)
-// löst nur "kennt das System die Zone", nicht "wo zeichnen wir sie": ZonePaneView.update()
-// (orderBlocks.js) ruft snapToBarTime(candles, z.startTime) auf — findet sich dort KEINE Kerze
-// bei/vor z.startTime, wird auf die älteste geladene Kerze geklemmt (siehe chartTimeUtils.js), die
-// Box startet also links am Kerzenrand statt an ihrem echten Ursprung. Bis 2026-08-23 wurde das
-// stattdessen per Auto-Nachladen aus dem Archiv vermieden (ensureCandlesCoverOldestZone, seit
-// entfernt) — Philip 2026-08-21 hatte das Klemmen explizit abgelehnt ("falsche Form"), aber 2026-08-23
-// (nach demselben Problem bei Liquidity-Leveln: mehrere sequenzielle Nachlade-Requests, spürbare
-// Wartezeit, u.a. relevant für Lana/4D — "wenn sie dafür mehrere Requests eigenständig feuern muss,
-// spricht das gegen das 4D Prinzip") diese Entscheidung bewusst umgekehrt: sofort geklemmt zeichnen,
-// kein Extra-Request. Die Box korrigiert sich von selbst auf die echte Form, sobald aus einem
-// ANDEREN Grund (normales Zurückscrollen) genug Kerzen geladen sind — snapToBarTime läuft bei jedem
-// Neuzeichnen neu, keine eigene Nachhol-Logik nötig.
+// ZonePaneView.update() (orderBlocks.js) ruft snapToBarTime(candles, z.startTime) auf — findet sich
+// dort keine Kerze bei/vor z.startTime, wird auf die älteste geladene Kerze geklemmt, die Box
+// startet also links am Kerzenrand statt am echten Ursprung. Bewusst kein Auto-Nachladen mehr dafür
+// (2026-08-23 umgekehrt, nach demselben Problem bei Liquidity-Leveln — mehrere sequenzielle
+// Nachlade-Requests widersprechen dem 4D-Prinzip): die Box korrigiert sich von selbst, sobald aus
+// einem anderen Grund (normales Zurückscrollen) genug Kerzen geladen sind.
 function refreshPoiZonesInternal() {
   const candles = clipReplay(allCandles);
   const zones = collectObsZones({
@@ -1285,41 +1157,26 @@ function refreshNewsMarkersInternal() {
 }
 
 // H1-Fraktale im konfigurierten Lookback-Fenster — reine Pivot-Liste, noch keine weak/protected/
-// sweep-Klassifizierung (kommt als nächster Schritt im PA-Analyse-Konzept). Generalisiert auf
-// (period, lookbackHours), damit dieselbe Logik für die Periode-5- UND die eingebettete
-// Periode-2-Erkennung läuft (siehe Chat 2026-07-19), statt sie zu duplizieren. cutoff statt
-// einfach "alle erkannten Pivots", weil RANGES_CANDLE_BUFFER zusätzliche Kerzen VOR dem
-// eigentlichen Lookback-Fenster lädt (siehe loadRangesCandles) — die dort möglicherweise
-// erkannten Fraktale sollen nicht mitgezählt werden. pivotTime bleibt (roh) erhalten, weil
-// refreshRangesMarkersInternal die Koordinaten braucht — erst pivotForDisplay (siehe oben, schon
-// für den Zigzag-State genutzt) entfernt es fürs Metadaten-Panel.
+// sweep-Klassifizierung. Generalisiert auf (period, lookbackHours), damit dieselbe Logik für die
+// Periode-5- UND die eingebettete Periode-2-Erkennung läuft. cutoff statt "alle erkannten Pivots",
+// weil RANGES_CANDLE_BUFFER zusätzliche Kerzen VOR dem Lookback-Fenster lädt (siehe
+// loadRangesCandles) — die dort erkannten Fraktale sollen nicht mitgezählt werden.
 function computeRangesPivotsFor(period, lookbackHours) {
-  // Im Replay-Modus zählt das Lookback-Fenster ab replayUntil, nicht ab der echten aktuellen
-  // Zeit — sonst wäre das Fenster (7 Tage vor "jetzt") komplett am geclippten Kerzen-Ende
-  // vorbei, sobald replayUntil mehr als lookbackHours in der Vergangenheit liegt.
-  // rangesFixedStartActive (siehe Chat 2026-07-21: "im Replaymodus wird das ja immer dynamisch
-  // angepasst ... für Testszenarien bräuchte ich einen fixen Punkt") ersetzt den ROLLIERENDEN
-  // Cutoff durch einen ABSOLUTEN — bleibt beim Scrubben durch den Replay-Modus stabil, statt sich
-  // mit replayUntil mitzuverschieben. lookbackHours wird in dem Fall komplett ignoriert.
+  // Im Replay-Modus zählt das Lookback-Fenster ab replayUntil, nicht ab der echten aktuellen Zeit.
+  // rangesFixedStartActive ersetzt den ROLLIERENDEN Cutoff durch einen ABSOLUTEN — bleibt beim
+  // Scrubben durch den Replay-Modus stabil; lookbackHours wird in dem Fall komplett ignoriert.
   const now = props.replayUntil ?? Math.floor(Date.now() / 1000);
   const cutoff = props.rangesFixedStartActive && props.rangesFixedStartTime != null ? props.rangesFixedStartTime : now - lookbackHours * 3600;
   return computeRangesPivots(clipReplay(rangesH1Candles), period, cutoff, fmtDateTime);
 }
 
-// Punkt-Marker für die H1-Ranges-Pivots — nur sichtbar, wenn sowohl das Ranges-Metadaten-Panel
-// als auch der Debug-Modus an sind (siehe Chat: "wenn ranges angetoggelt ist und debug modus").
-// Nutzt renderPivotMarkers aus pivotMarkers.ts (Punkt + entzertes Preis-Label ist dort schon
-// fertig) — ALLE Pivots EINER Periode in EINER Gruppe (nicht mehr eine Gruppe pro Pivot wie
-// früher), damit sich ihre Preis-Labels gegenseitig entzerren können, statt bei eng
-// beieinanderliegenden Pivots übereinander zu fallen (Bug-Report Philip 2026-07-19: im
-// M5-Replay mit Debug-Modus lagen alle H1-Pivot-Labels eng übereinander). Periode-5- und
-// Periode-2-Gruppe laufen seit Chat 2026-07-26 im SELBEN renderPivotMarkers-Aufruf (vorher zwei
-// getrennte Primitive-Listen mit unabhängiger Entzerrung — Bug-Report Philip: "wenn ein outer und
-// innerpivot auf demselben Punkt liegen, sind die Labels leicht verschoben", weil beide Gruppen
-// dieselbe Preis-Position dann je nach ihren EIGENEN, unterschiedlichen Nachbarn unterschiedlich
-// weit verschoben haben). Periode-2 bekommt weiterhin kleineren dotRadius + eigene,
-// transparentere Farbe (rangesMarker2), damit man beide Periode-Ebenen optisch auseinanderhält
-// (siehe Chat: "Transparenz auf 50%").
+// Punkt-Marker für die H1-Ranges-Pivots — nur sichtbar, wenn Ranges-Metadaten-Panel + Debug-Modus
+// beide an sind. ALLE Pivots EINER Periode in EINER renderPivotMarkers-Gruppe (nicht eine Gruppe
+// pro Pivot), damit sich ihre Preis-Labels gegenseitig entzerren statt bei eng beieinanderliegenden
+// Pivots übereinander zu fallen (Bug-Report Philip 2026-07-19). Periode-5 und Periode-2 laufen im
+// SELBEN renderPivotMarkers-Aufruf (vorher zwei getrennte Listen mit unabhängiger Entzerrung —
+// Bug-Report: Labels bei deckungsgleichem Pivot leicht verschoben). Periode-2 bekommt kleineren
+// dotRadius + eigene, transparentere Farbe (rangesMarker2), um beide Ebenen optisch zu trennen.
 function refreshRangesMarkersInternal() {
   const candles = clipReplay(allCandles);
   const precision = pricePrecisionForInstrument(props.symbol);
@@ -1348,28 +1205,19 @@ function refreshRangesInternal() {
   structureEarliestTime.value = allPivotTimes.length > 0 ? Math.min(...allPivotTimes) : null;
   refreshRangesMarkersInternal();
   refreshMarketStructureInternal();
-  // Bug-Report Philip 2026-07-26 ("1.32934 ist da, aber sweeped-high kam im Debug-Export nicht"):
-  // loadRangesCandles() (Aufrufer dieser Funktion) läuft als EIGENER async Fetch neben loadInitial()
-  // her — nur loadInitial() ruft refreshChart() auf, das activeMetadataSnapshot neu baut (siehe dort).
-  // Kommt loadInitial() zuerst zurück, baut refreshChart() den Snapshot mit noch alten
-  // rangesH1Candles/marketStructureState — und ohne diesen Aufruf hier bliebe er dann eingefroren,
-  // bis zufällig der nächste Replay-Schritt oder ein Toggle erneut refreshChart() auslöst, obwohl der
-  // Chart selbst (siehe refreshRangesMarkersInternal/refreshMarketStructureInternal oben) längst
-  // aktuell ist.
+  // Bug-Report Philip 2026-07-26: loadRangesCandles() läuft als EIGENER async Fetch neben
+  // loadInitial() her — nur loadInitial() ruft refreshChart() auf (baut activeMetadataSnapshot neu).
+  // Ohne diesen Aufruf hier bliebe der Snapshot auf altem Stand eingefroren, obwohl der Chart selbst
+  // längst aktuell ist.
   if (chart) activeMetadataSnapshot.value = buildActiveMetadataSnapshot();
 }
 
 // Neuer "1h-Range"-Marktstruktur-Trendalgorithmus (siehe marketStructureAnalysis.ts,
-// test/tdd_mit_claude.ts) — läuft über dieselben H1-Pivots wie die Debug-Punktmarker oben, aber
-// unabhängig vom Debug-Toggle: das ist das eigentliche Analyse-Ergebnis der Ranges-Funktion, nicht
-// nur eine Debug-Hilfe. Reine Weiterleitung an buildMarketStructureState (marketStructureAnalysis.ts)
-// — die eigentliche Merge-/Apply-Logik lebt dort, NICHT hier, damit Tests exakt denselben Code
-// aufrufen können wie die App (siehe Chat 2026-07-24: "wie kann es sein, dass Tests grün laufen
-// aber der Algo trotzdem nicht das macht, was die Tests eigentlich sicherstellen sollen?" — vorher
-// war diese Funktion lokal und für Tests nur über eine von Hand nachgebaute Kopie erreichbar).
-// Für closesAboveOldHigh/closesBelowLevel/markLqSweeps: dieselben H1-Kerzen wie die Pivot-Erkennung
-// selbst (rangesH1Candles), nicht allCandles — das wäre je nach gewähltem Chart-Timeframe eine
-// andere Auflösung.
+// test/tdd_mit_claude.ts) — läuft über dieselben H1-Pivots wie die Debug-Punktmarker, unabhängig
+// vom Debug-Toggle: das eigentliche Analyse-Ergebnis. Reine Weiterleitung an buildMarketStructureState
+// (marketStructureAnalysis.ts) — die Merge-/Apply-Logik lebt dort, NICHT hier, damit Tests exakt
+// denselben Code aufrufen wie die App. Nutzt rangesH1Candles (nicht allCandles) — andere Auflösung
+// je nach gewähltem Chart-Timeframe.
 function computeMarketStructureState() {
   return buildMarketStructureState(rangesPivots, rangesPivots2, props.rangesPeriod, props.ranges2Period, clipReplay(rangesH1Candles));
 }
@@ -1460,13 +1308,10 @@ async function loadRangesCandles() {
   // gilt noch als aktuell, ältere Ergebnisse werden beim Eintreffen verworfen.
   const seq = ++rangesFetchSeq;
   try {
-    // rangesFixedStartActive: genug Historie ab dem fixen Startzeitpunkt laden (bis zur echten
-    // aktuellen/Replay-Zeit) statt der rollierenden lookbackHours — sonst reicht der Fetch bei
-    // einem weit zurückliegenden fixen Start nicht aus (siehe cutoff in computeRangesPivotsFor).
-    // Math.ceil zwingend (Bug-Report Philip 2026-07-21: "+1 Kerze hängt") — (nowSec-fixedStart)/3600
-    // ist so gut wie NIE eine glatte Stundenzahl, das nicht-ganzzahlige `hours` lief ungeprüft bis in
-    // `count` und von dort als Feld in den cTrader-Edge-Function-Request (letztlich ein Protobuf-
-    // Feld Richtung Broker) — ein Bruchteil-count dort ist vermutlich der Auslöser des Hängers.
+    // rangesFixedStartActive: genug Historie ab dem fixen Startzeitpunkt laden statt der
+    // rollierenden lookbackHours (siehe cutoff in computeRangesPivotsFor). Math.ceil zwingend
+    // (Bug-Report Philip 2026-07-21: "+1 Kerze hängt") — ein nicht-ganzzahliges `hours`/`count` lief
+    // ungeprüft bis in den cTrader-Request und war vermutlich der Auslöser des Hängers.
     const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
     const hours =
       props.rangesFixedStartActive && props.rangesFixedStartTime != null
@@ -1487,20 +1332,12 @@ async function loadRangesCandles() {
   }
 }
 
-// showRanges (Marker im Chart) und showRangesMetadata (JSON-Panel) sind getrennte Toggles, teilen
-// sich aber dieselben H1-Kerzen/Pivots. showTradeSetupCockpit zählt seit Chat 2026-07-19 ebenfalls
-// mit ("TSC soll den aktuellsten und wahren Stand anzeigen, selbst wenn Trend im Chart gerade zur
-// Übersicht ausgetoggelt ist") — sonst würde marketStructureState (siehe refreshMarketStructureInternal)
-// beim Wegtoggeln von Ranges/Metadaten stumpf auf dem letzten Stand einfrieren statt weiter mit-
-// zulaufen. showTradeSetups seit Chat 2026-07-28 ebenfalls: computeTradeSetups() liest
-// marketStructureState.value für die H1-Level (siehe collectH1LqLevels) — ohne das hier bliebe
-// Path A/B ohne H1-Sweeps hängen, sobald Ranges/TSC ausgetoggelt sind, aber Trade-Setups selbst
-// an. Laden läuft also, solange MINDESTENS einer der vier an ist, kein unnötiger
-// Twelve-Data-Request, solange wirklich niemand (auch nicht die TSC-Karte, auch nicht Trade-Setups
-// selbst) hinschaut.
-// showObs1h seit Chat 2026-07-30: der 1H-OB-Toggle nutzt bei Forex dieselben Kerzen mit
-// (detectOrderBlocks(rangesH1Candles, "1H"), siehe collectObsZones), statt einen eigenen 1H-Fetch
-// zu brauchen — muss also ebenfalls dafür sorgen, dass rangesH1Candles geladen bleibt.
+// showRanges (Marker) und showRangesMetadata (JSON-Panel) sind getrennte Toggles, teilen sich aber
+// dieselben H1-Kerzen/Pivots. showTradeSetupCockpit zählt ebenfalls mit — sonst würde
+// marketStructureState beim Wegtoggeln von Ranges/Metadaten einfrieren statt weiterzulaufen.
+// showTradeSetups ebenso: computeTradeSetups() liest marketStructureState.value für die H1-Level
+// (collectH1LqLevels). showObs1h ebenso: der 1H-OB-Toggle nutzt dieselben Kerzen (collectObsZones).
+// Laden läuft also, solange MINDESTENS einer der vier an ist.
 function rangesNeedsData() {
   return props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups;
 }
@@ -1531,14 +1368,10 @@ function refreshRangesPollingState() {
   else stopRangesPolling();
 }
 
-// Erkennung läuft nur, wenn sich die M5-Kerzen oder marketStructureState geändert haben (siehe
-// loadTradeSetupM5/refreshMarketStructureInternal) — das Ergebnis (currentTradeSetups) bleibt
-// über Timeframe-Wechsel/refreshChart-Aufrufe hinweg stehen, nur renderTradeSetupsInternal()
-// (Positionierung) läuft bei jedem Refresh neu. Zeigt die letzten `tradeSetupHistoryCount`
-// Setups JE Richtung (analog zu tradeSetupHistoryCountShort/Long + lastTradeSetups im Original)
-// — nicht nur das gerade aktive. Nummerierung (1..n, chronologisch) nur für die angezeigte
-// Auswahl, nicht global über die gesamte Historie — wir haben keinen fortlaufenden Zähler wie
-// das Pine-Original, das bei jedem neuen Live-Setup hochzählt.
+// Erkennung läuft nur, wenn sich M5-Kerzen oder marketStructureState geändert haben (siehe
+// loadTradeSetupM5/refreshMarketStructureInternal) — currentTradeSetups bleibt über Refreshs hinweg
+// stehen, nur renderTradeSetupsInternal() (Positionierung) läuft bei jedem Refresh neu. Zeigt die
+// letzten `tradeSetupHistoryCount` Setups JE Richtung, nicht nur das aktive.
 function computeTradeSetups() {
   const m5Candles = clipReplay(tradeSetupM5Candles);
   if (m5Candles.length === 0) {
@@ -1570,15 +1403,10 @@ function computeTradeSetups() {
   // also nichts (slice(-0) wäre sonst das GANZE Array, daher der Sonderfall).
   const n = Math.max(0, props.tradeSetupHistoryCount);
   const takeLast = (arr) => (n === 0 ? [] : arr.slice(-n));
-  // Setups, deren bestätigende M5-OB in einer "forbidden"-Session entstanden ist, direkt raus
-  // (Chat 2026-07-29: "meine Regel, wann ich niemals einen Trade setze" — z.B. Asia/Spread Hour,
-  // siehe DANGER_LEVELS/isForbiddenAt in sessions.js) statt sie nur als TSC-No-Go anzuzeigen.
-  // obStartTime statt fractal.pivotTime, weil der OB der früheste plausible Entry-Zeitpunkt ist —
-  // ein Setup, dessen Sweep noch in einer erlaubten Session lag, dessen OB aber erst in der
-  // Sperrzeit kommt, ist trotzdem kein handelbarer Entry. VOR takeLast gefiltert, sonst würde ein
-  // rausgefiltertes Setup einen der History-Plätze "verbrauchen", ohne angezeigt zu werden. Gilt
-  // für BEIDE Richtungen (Philips Regel ist "wann ich niemals einen Trade setze", nicht auf Long
-  // beschränkt — sein Beispiel war nur zufällig ein Long-Setup).
+  // Setups, deren bestätigende M5-OB in einer "forbidden"-Session entstanden ist, direkt raus (z.B.
+  // Asia/Spread Hour, siehe isForbiddenAt in sessions.js) statt nur als TSC-No-Go anzuzeigen.
+  // obStartTime statt fractal.pivotTime, weil der OB der früheste plausible Entry-Zeitpunkt ist. VOR
+  // takeLast gefiltert, sonst würde ein rausgefiltertes Setup einen History-Platz "verbrauchen".
   const symbolSessions = sessions.filter((s) => s.instrument === props.symbol);
   const tzOffsetMinutes = (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset();
   const notForbidden = (s) => !isForbiddenAt(symbolSessions, s.obStartTime, tzOffsetMinutes);
@@ -1733,16 +1561,11 @@ function renderTradeSetupsInternal() {
     // computeTradeSetups) — nur gesetzt, wenn Trade-Setups-Historie aktiv ist (mehrere Boxen je
     // Richtung gleichzeitig sichtbar), sonst überflüssig.
     const numberSuffix = setup.setupNumber != null ? ` #${setup.setupNumber}` : "";
-    // "Long"/"Short" + Pfad-Kürzel + Nummer als erste Zeile (Chat 2026-07-26: "möchte es visuell
-    // unterschieden haben" — A = eigenes bestätigtes Protected-Pivot, B = fractal===ls, siehe
-    // pathType in tradeSetup.js). Danach je eine Zeile Oberkante/Unterkante der OB, NUR im
-    // Debug-Modus (Chat 2026-07-27: "die preise der M5 OB in die Box schreiben, aber nur an, wenn
-    // debug modus an") — dieselbe showLiquidityDebug-Bedingung wie bei den anderen Preis-Labels
-    // hier. Untereinander statt mit "/" getrennt (Chat 2026-07-27: "dann weiß ich, dass die obere
-    // Zahl für die Oberkante ist und die untere für die Unterkante") — reihenfolge top/bottom
-    // spiegelt die Box selbst. NUR hier am OB-Label angehängt, NICHT in setup.label selbst — die
-    // TSC-Karte (tradeSetupCockpit.ts) baut ihren eigenen "Typ A/B #x"-Text separat aus
-    // pathType/setupNumber.
+    // "Long"/"Short" + Pfad-Kürzel + Nummer als erste Zeile (A = eigenes bestätigtes Protected-Pivot,
+    // B = fractal===ls, siehe pathType in tradeSetup.js). Danach je eine Zeile Oberkante/Unterkante
+    // der OB, NUR im Debug-Modus, untereinander statt mit "/" getrennt (Bug-Report Philip: "dann weiß
+    // ich, dass die obere Zahl für die Oberkante ist"). NUR hier angehängt, NICHT in setup.label —
+    // die TSC-Karte baut ihren eigenen "Typ A/B #x"-Text separat aus pathType/setupNumber.
     const obLabelLines = [`${setup.label} ${setup.pathType}${numberSuffix}`];
     if (props.showLiquidityDebug) obLabelLines.push(formatPrice(top), formatPrice(bottom));
     const obBox = new OrderBlockPrimitive(
@@ -1996,14 +1819,10 @@ async function pollRecent() {
   // Verlassen des Replays automatisch wieder an, ohne dass hier extra gestartet/gestoppt werden muss.
   if (props.replayUntil != null) return true;
   // Bar-Mismatch-Guard (Bug-Report Philip 2026-07-19: "1h -> M5 -> wieder 1h, Chart zeigt nur noch
-  // M5-Kerzen"): pollRecent() läuft über einen eigenen setTimeout-Timer (scheduleNextPoll) und
-  // liest props.currentBar/props.symbol nur EINMAL beim Start der Fetches oben — läuft der Timer
-  // kurz vor einem TF-Wechsel an (oder ist der Fetch selbst schon unterwegs), kommt die Antwort
-  // ggf. erst NACH dem Wechsel zurück und würde sonst ungeprüft Kerzen des ALTEN Timeframes per
-  // mergeRecent() in das inzwischen schon auf den neuen TF umgestellte allCandles mischen.
-  // loadInitialFetchSeq wird bei jedem echten Neu-Laden von allCandles hochgezählt (TF-Wechsel,
-  // Symbol-Wechsel, Replay-Schritt, siehe loadInitial) — hat sich der Zähler seit Start dieses
-  // Polls verändert, ist die Antwort für einen inzwischen überholten Stand und wird verworfen.
+  // M5-Kerzen"): läuft der Poll-Timer kurz vor einem TF-Wechsel an, kommt die Antwort ggf. erst
+  // NACH dem Wechsel zurück und würde sonst Kerzen des ALTEN Timeframes einmischen. loadInitialFetchSeq
+  // zählt bei jedem echten Neu-Laden von allCandles hoch — eine Antwort für einen inzwischen
+  // überholten Stand wird verworfen.
   const seq = loadInitialFetchSeq;
   try {
     const recent = await fetchRecentForexCandles(props.symbol, props.currentBar, RECENT_PAGE_SIZE);
@@ -2025,15 +1844,11 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Generischer Kurz-Retry für die Forex-Poller (pollRecent/loadRangesCandles/loadTradeSetupM5,
-// siehe jeweilige scheduleNext...Poll unten) — alle hatten dieselbe Schwäche: ein Fehlschlag wurde
-// nur geloggt, der nächste Versuch lief erst beim NÄCHSTEN Kerzenschluss (siehe pollRecent-
-// Kommentar). Bug-Report Philip 2026-08-07 (Folgerunde): das erste,
-// auf 3 Retries/45s ausgelegte Fenster reichte nicht — cTraders Demo-Server hatte eine mehrminütige
-// Verbindungs-Flaute (502 Connect-Timeout gefolgt von rohen "Failed to fetch"-Netzwerkfehlern).
-// 8 Retries/~2min decken das ab, ohne bei einem wirklich längeren Ausfall unbegrenzt weiterzuhämmern
-// — danach übernimmt ganz normal wieder der reguläre, an den Kerzenschluss gekoppelte Poll. Bricht
-// sofort ab, wenn währenddessen unmounted oder in den Replay-Modus gewechselt wurde.
+// Generischer Kurz-Retry für die Forex-Poller (pollRecent/loadRangesCandles/loadTradeSetupM5) —
+// ein Fehlschlag wurde sonst nur geloggt, der nächste Versuch lief erst beim NÄCHSTEN
+// Kerzenschluss. Bug-Report Philip 2026-08-07: cTraders Demo-Server hatte eine mehrminütige
+// Verbindungs-Flaute, 8 Retries/~2min decken das ab, ohne unbegrenzt weiterzuhämmern — danach
+// übernimmt wieder der reguläre Poll. Bricht sofort ab bei Unmount/Replay-Wechsel.
 async function withPollRetries(loadFn) {
   for (let attempt = 0; attempt <= POLL_MAX_RETRIES; attempt++) {
     if (!chart || props.replayUntil != null) return;
@@ -2178,15 +1993,10 @@ onMounted(() => {
     return hasNearbyPinCandidatePure(x, y, pinPrimitivesBag());
   }
 
-  // Rechtsklick -> Pin-Kontextmenü (Chat 2026-08-01). lightweight-charts hat kein natives
-  // Rechtsklick-Event (nur subscribeClick/subscribeCrosshairMove oben), daher ein normaler
-  // DOM-Listener statt eines chart.subscribe*-Aufrufs. Koordinaten-Umrechnung exakt wie in
-  // claudeCalloutTick (siehe dort): chartContainerRef ist .chart-container, das .chart-wrapper
-  // komplett ausfüllt, dessen getBoundingClientRect() dient als lokaler Koordinaten-Ursprung —
-  // derselbe Pixel-Raum, in dem TradeMarkerPrimitive/OrderBlockPrimitive.distanceTo ihre gecachten
-  // Koordinaten halten (timeToCoordinate/priceToCoordinate liefern bereits CSS-Pixel, kein
-  // pixelRatio-Faktor nötig). preventDefault() NUR bei mindestens einem Treffer, sonst bleibt das
-  // native Browser-Menü unangetastet (kein Verhaltens-Bruch abseits von Markern/Zonen).
+  // Rechtsklick -> Pin-Kontextmenü. lightweight-charts hat kein natives Rechtsklick-Event, daher ein
+  // normaler DOM-Listener. Koordinaten-Umrechnung exakt wie in claudeCalloutTick (chartContainerRef
+  // per getBoundingClientRect() als lokaler Ursprung, derselbe Pixel-Raum wie *Primitive.distanceTo).
+  // preventDefault() NUR bei mindestens einem Treffer, sonst bleibt das native Browser-Menü an.
   pinContextMenuHandler = (event) => {
     const rect = chartContainerRef.value.getBoundingClientRect();
     const candidates = findNearbyPinCandidates(event.clientX - rect.left, event.clientY - rect.top);
@@ -2196,18 +2006,12 @@ onMounted(() => {
   };
   chartContainerRef.value?.addEventListener("contextmenu", pinContextMenuHandler);
 
-  // Cursor-Feedback (Trade-Modus, Chat 2026-07-27, UND Pin, Chat 2026-08-01) — EIN einziger
-  // roher mousemove-Listener statt (wie ursprünglich) zwei getrennter (chart.subscribeCrosshairMove
-  // fürs eine, ein eigener addEventListener fürs andere): Bug-Report Philip 2026-08-01 "Cursor
-  // bleibt immer normal" — lightweight-charts feuert subscribeCrosshairMove bei JEDER Mausbewegung
-  // auch außerhalb des Trade-Modus und setzte dort den Cursor unconditional auf "" zurück; das lief
-  // als zweiter, unabhängiger Listener und überschrieb den gerade erst per Pin-Hittest
-  // gesetzten "context-menu"-Cursor auf jedem einzelnen Frame wieder — sah dadurch aus, als würde
-  // sich der Cursor nie ändern, obwohl der Rechtsklick-Hittest selbst (ein einzelnes Event, nicht
-  // pro Frame überschreibbar) längst korrekt traf. EIN Listener, EINE Entscheidung pro Bewegung,
-  // behebt das strukturell. findClickedSetup/-FibLevel/-Target lesen nachweislich nur param.point
-  // (siehe deren Implementierung), ein synthetisches { point: { x, y } } aus derselben
-  // rect-basierten Rechnung wie pinContextMenuHandler reicht ihnen also.
+  // Cursor-Feedback (Trade-Modus UND Pin) — EIN einziger roher mousemove-Listener statt zwei
+  // getrennter. Bug-Report Philip 2026-08-01 "Cursor bleibt immer normal": chart.subscribeCrosshairMove
+  // feuerte als zweiter, unabhängiger Listener bei JEDER Mausbewegung und überschrieb den gerade per
+  // Pin-Hittest gesetzten Cursor jedes Frame wieder. EIN Listener, EINE Entscheidung pro Bewegung
+  // behebt das strukturell — findClickedSetup/-FibLevel/-Target lesen nur param.point, ein
+  // synthetisches { point: { x, y } } reicht ihnen also.
   pinCursorHandler = (event) => {
     if (!chartContainerRef.value) return;
     const rect = chartContainerRef.value.getBoundingClientRect();
@@ -2229,15 +2033,11 @@ onMounted(() => {
   resizeObserver = new ResizeObserver((entries) => {
     if (!chart) return; // Resize-Callback kann nach chart.remove() noch nachfeuern
     const { width, height } = entries[0].contentRect;
-    // Bug-Report Philip 2026-07-27: "Preisskala verschwindet regelmäßig beim Verschieben/Ziehen/
-    // Verkleinern/Vergrößern des Browserfensters, muss dann reloaden" — contentRect liefert
-    // Sub-Pixel-Floats (z.B. 842.3984375), lightweight-charts' interne Spalten-/Canvas-Layout-
-    // Berechnung für die rechte Preisskala verträgt das bei bestimmten Zwischenwerten während
-    // eines laufenden Drags nicht und kollabiert die Preisskala-Spalte dauerhaft auf 0 Breite,
-    // bis zum nächsten vollständigen Remount (Reload). Gerundet auf ganze CSS-Pixel vermeidet das.
-    // Zusätzlich: während eines Fenster-Drags kann der Callback kurzzeitig mit width/height 0
-    // feuern (Fenster momentan nicht gerendert) — ein resize(0, ...) sollte nicht angewendet
-    // werden, das ist derselbe Kollaps-Fall, nur durch eine andere Ursache ausgelöst.
+    // Bug-Report Philip 2026-07-27: "Preisskala verschwindet regelmäßig beim Verschieben/Ziehen des
+    // Browserfensters" — contentRect liefert Sub-Pixel-Floats, lightweight-charts' Preisskala-
+    // Layout kollabiert bei bestimmten Zwischenwerten dauerhaft auf 0 Breite. Gerundet auf ganze
+    // CSS-Pixel vermeidet das. width/height 0 (Fenster momentan nicht gerendert) ist derselbe
+    // Kollaps-Fall, nur anders ausgelöst — resize(0, ...) wird deshalb nicht angewendet.
     const roundedWidth = Math.round(width);
     const roundedHeight = Math.round(height);
     if (roundedWidth <= 0 || roundedHeight <= 0) return;
@@ -2264,15 +2064,10 @@ onMounted(() => {
 
   loadInitial();
   scheduleNextPoll();
-  // Bug-Report Philip 2026-08-07 ("signal timed out" ständig, vor allem im Live-Modus): bis
-  // hierhin lösten loadInitial() oben plus loadTradeSetupM5()/startRangesPolling() jede für sich
-  // eine EIGENE cTrader-Verbindung (Connect+Auth-Handshake) aus, alle im selben Tick — mehrere
-  // gleichzeitige frische Handshakes gegen denselben Account waren der plausibelste Grund für die
-  // gehäuften Timeouts. Kein Entzerren mehr nötig: die Fetches laufen unverändert alle sofort los,
-  // aber `forexCandles.js` sammelt jetzt kurz gleichzeitig eingehende Requests und schickt sie als
-  // EINEN Batch-Request raus (eine gemeinsame cTrader-Verbindung statt mehreren, siehe dort) —
-  // Entzerren würde dem sogar im Weg stehen, weil dann nichts mehr zum Bündeln im selben Fenster
-  // ankommt.
+  // Bug-Report Philip 2026-08-07 ("signal timed out" ständig): loadInitial() plus loadTradeSetupM5()/
+  // startRangesPolling() lösten jede für sich eine EIGENE cTrader-Verbindung im selben Tick aus —
+  // mehrere gleichzeitige Handshakes waren der plausibelste Grund für die Timeouts. Fetches laufen
+  // unverändert alle sofort los, aber forexCandles.js bündelt sie jetzt zu EINEM Batch-Request.
   loadTradeSetupM5();
   scheduleNextTradeSetupM5Poll();
   if (rangesNeedsData()) startRangesPolling();
@@ -2468,15 +2263,11 @@ watch(
   },
 );
 // Hauptkerzen (allCandles) BRAUCHEN hier einen Refetch (Bug-Report Philip 2026-07-19: "+1
-// Kerze"-Button tat einfach nichts) — loadInitial() bindet den Fetch selbst an replayToMs()
-// (siehe dort: "1h auf M5 gewechselt und sehe keinen Chart"), allCandles endet also IMMER exakt
-// an dem Replay-Zeitpunkt, zu dem es zuletzt geladen wurde, nie später. Ohne Neu-Laden hier bleibt
-// es für immer auf diesem alten Stand hängen, sobald replayUntil weiterrückt (z.B. per "+1
-// Kerze") — refreshChart() allein rendert dann nur denselben, schon geclippten Datenstand neu.
-// Trade-Setups/Ranges brauchen aus demselben Grund ebenfalls ein echtes Neu-Fetchen: ihr fester
-// count/Lookback hängt ohne replayToMs() am alten Anker (vorheriger replayUntil bzw. "jetzt")
-// fest und deckt den neuen Replay-Zeitpunkt ggf. gar nicht mehr ab (siehe Chat: "Ranges-Pivots
-// gehen bei 12 Tagen Lookback + Replay nicht weit genug zurück").
+// Kerze"-Button tat einfach nichts) — loadInitial() bindet den Fetch an replayToMs(), allCandles
+// endet also IMMER exakt am zuletzt geladenen Replay-Zeitpunkt, nie später; refreshChart() allein
+// würde nur denselben, schon geclippten Datenstand neu rendern. Trade-Setups/Ranges brauchen aus
+// demselben Grund ebenfalls ein echtes Neu-Fetchen: ihr fester count/Lookback deckt den neuen
+// Replay-Zeitpunkt sonst ggf. nicht mehr ab.
 let replayFetchDebounceTimer = null;
 const REPLAY_FETCH_DEBOUNCE_MS = 400; // siehe Chat 2026-07-20: "im Replay-Modus hängt der Algo"
 watch(() => props.replayUntil, () => {
@@ -2527,27 +2318,19 @@ watch(
   { deep: true },
 );
 
-// Für den "+1 Kerze"-Button in Dashboard.vue: replayUntil lebt dort (fließt nur als Prop rein),
-// daher kein direktes Setzen von hier aus möglich — stattdessen den Zeitpunkt der nächsten Kerze
-// im AKTUELLEN Timeframe zurückgeben, den Dashboard.vue dann als neuen replayUntil-Wert übernimmt.
-// Kernlogik + Bug-Historie lebt in computeNextReplayTime (chartTimeUtils.js, samt Testfällen) —
-// dank REPLAY_LOOKAHEAD_SEC (2500 M5-Kerzen Historie + 2500 Lookahead, siehe timeframes.js) enthält
-// allCandles inzwischen auch schon Kerzen ETWAS über replayUntil hinaus, die alte Sorge ("allCandles
-// hat strukturell nie eine Kerze nach dem Replay-Stand") gilt also nicht mehr uneingeschränkt —
-// WICHTIG: das stimmt nur, wenn allCandles gerade aus einem vollen Fetch stammt. Ein Cache-HIT
-// (candleCache.js: cachedCandlesUpTo) muss den dort schon gecachten Lookahead deshalb ausdrücklich
-// mit zurückgeben, sonst sieht's hier bei jedem zweiten "+1 Kerze"-Klick nach "keine geladene Kerze
-// mehr" aus, obwohl sie im Cache längst daliegt.
+// Für den "+1 Kerze"-Button in Dashboard.vue: replayUntil lebt dort, daher kein direktes Setzen von
+// hier aus möglich — gibt stattdessen den Zeitpunkt der nächsten Kerze zurück, den Dashboard.vue als
+// neuen replayUntil-Wert übernimmt. Kernlogik + Bug-Historie lebt in computeNextReplayTime
+// (chartTimeUtils.js). WICHTIG: setzt voraus, dass allCandles gerade aus einem vollen Fetch stammt
+// (inkl. REPLAY_LOOKAHEAD_SEC) — ein Cache-HIT muss den gecachten Lookahead mit zurückgeben, sonst
+// sieht's hier nach "keine geladene Kerze mehr" aus, obwohl sie im Cache längst daliegt.
 const MAX_PLAUSIBLE_GAP_SEC = 7 * 24 * 3600;
 
-// Aus dem früheren defineExpose-jumpToTrade herausgezogen (Chat 2026-08-11, vierte Runde) — das
-// RSI-Divergenz-Statistik-Panel (rsiDivergenceStatsData/Template unten) will auf denselben
-// "auf einen Zeitraum springen"-Mechanismus zurückgreifen, ohne sich selbst über die exposeRef
-// aufzurufen (unnötiger Umweg innerhalb derselben Komponente). jumpToTrade bleibt als dünner
-// Wrapper für externe Aufrufer (TradesTable.vue etc.) bestehen.
+// Aus dem früheren defineExpose-jumpToTrade herausgezogen — das RSI-Divergenz-Statistik-Panel will
+// auf denselben "auf einen Zeitraum springen"-Mechanismus zurückgreifen, ohne sich selbst über die
+// exposeRef aufzurufen. jumpToTrade bleibt als dünner Wrapper für externe Aufrufer bestehen.
 // Nachlade-/Verbrück-Algorithmus + Viewport-Berechnung leben in priceChartJumpToTime.js (samt
-// Bug-Historie als Testfälle, siehe test/priceChartJumpToTime.test.js) — hier nur noch der
-// loadingOlder-Guard (gemeinsam mit dem Scroll-Handler) und die eigentlichen chart-Aufrufe.
+// Bug-Historie als Testfälle) — hier nur noch der loadingOlder-Guard und die chart-Aufrufe.
 async function jumpToTimeRange(entryTime, exitTime) {
   if (!chart) return;
   const barSeconds = barSecondsFor(props.currentBar);
