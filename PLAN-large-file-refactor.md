@@ -1,9 +1,16 @@
 # PLAN: Sehr große Dateien refactoren (PriceChart.vue u.a.)
 
 Task: `sehr-gro-e-dateien-refactoren-z-b-pricechart-vue` (milk-city, trading-monitor).
-Status: Analyse abgeschlossen, Plan steht — Umsetzung noch nicht begonnen (Philip: "erst Analyse +
-Plan, kein Code-Split" für diese Runde; danach explizit "schritt für schritt migrieren, mit Tests
-absichern").
+Status (2026-08-25): Phase 1-5 umgesetzt und committet (Philip: "schritt für schritt migrieren, mit
+Tests absichern"), je ein eigener Commit pro Phase, `npm run test`+`npm run build`+Dev-Server-
+Kompilier-Check nach jedem Schritt grün. `PriceChart.vue`: 3801 → 3453 Zeilen. Phase 6 offen.
+
+Phase 5 lief anders als unten ursprünglich skizziert: statt eines Mocks für das komplette
+`chart`/`candleSeries`-Objekt injiziert PriceChart.vue nur die jeweils gebrauchte einzelne
+Koordinaten-Umrechnungsfunktion (`priceToCoordinate`/`timeToCoordinate` als `(value) =>
+number|null`) in die neuen reinen `match*`-Funktionen (`priceChartHitTest.js`) — dadurch komplett
+ohne lightweight-charts-Mock testbar, keine neue Test-Infrastruktur nötig. Einfacher als gedacht,
+siehe Commit-Historie für die tatsächliche Aufteilung je Phase.
 
 ## Ausgangslage
 
