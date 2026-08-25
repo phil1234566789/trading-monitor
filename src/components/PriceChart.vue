@@ -11,6 +11,7 @@ import {
   collectObsZones,
   mergePinnedZones,
 } from "../priceChartObZones.js";
+import { matchTradeSetup, matchLiquidityLevel, matchOBZone, matchFibLevel, matchDivergence } from "../priceChartHitTest.js";
 import {
   detectLiquidityLevels,
   filterRelevantLevels,
@@ -1651,159 +1652,53 @@ function computeTradeSetups() {
   tradeSetupsMetadata.value = currentTradeSetups;
 }
 
-// Trade-Modus-Klick-Hittest (Chat 2026-07-27) — testet gegen genau die Box, die renderTradeSetupsInternal
-// tatsächlich zeichnet (tradeSetupObBoxBounds + obStartTime/-breite), nicht gegen setup.obTop/obBottom
-// direkt (das ist der rohe M5-OB, der für setupEntry/invalidation gebraucht wird, aber optisch eine
-// andere Fläche als die gezeichnete Box sein kann). Respektiert dieselben Sichtbarkeits-Filter wie
-// renderTradeSetupsInternal (Long/Short-Toggle, Replay-Cutoff) — man soll nichts anklicken können,
-// was gerade gar nicht gezeichnet ist.
+// Dünne Koordinaten-Wrapper um die reinen Match-Funktionen in priceChartHitTest.js (siehe dort für
+// die eigentliche Hittest-Logik samt Bug-Report-Historie) — lösen param.point einmalig gegen
+// chart/candleSeries auf und reichen Preis/Zeit bzw. die passende Koordinaten-Umrechnungsfunktion
+// weiter.
 function findClickedSetup(param) {
   if (!param.point || !candleSeries || !chart) return null;
   const price = candleSeries.coordinateToPrice(param.point.y);
   const time = chart.timeScale().coordinateToTime(param.point.x);
   if (price == null || time == null) return null;
-  return (
-    currentTradeSetups.find((s) => {
-      if (props.replayUntil != null && s.fractal.pivotTime > props.replayUntil) return false;
-      if (s.dir === 1 && !props.showTradeSetupsShort) return false;
-      if (s.dir === -1 && !props.showTradeSetupsLong) return false;
-      const { top, bottom } = tradeSetupObBoxBounds(s);
-      const inTime = time >= s.obStartTime && time <= s.obStartTime + TRADE_SETUP_OB_WIDTH_SEC;
-      const inPrice = price <= top && price >= bottom;
-      return inTime && inPrice;
-    }) ?? null
-  );
+  return matchTradeSetup(currentTradeSetups, price, time, {
+    replayUntil: props.replayUntil,
+    showTradeSetupsShort: props.showTradeSetupsShort,
+    showTradeSetupsLong: props.showTradeSetupsLong,
+    obWidthSec: TRADE_SETUP_OB_WIDTH_SEC,
+  });
 }
 
-// Ziel-Modus-Klick-Hittest (Chat 2026-07-27: "Können wir die Linien klickbar machen?") — Level sind
-// horizontale Linien (keine Fläche), daher Pixel-Toleranz auf der Y-Achse statt eines Preisbereichs
-// (bleibt so bei jedem Zoom-Stand gleich "breit" anklickbar). Zeitbereich [pivotTime, endTime] wie
-// tatsächlich gezeichnet (siehe liquidity.js: buildLevel) — endTime wächst bei einem noch
-// unberührten Level bis zur zuletzt geladenen Kerze mit, ist also praktisch "bis jetzt".
-const LIQUIDITY_LINE_CLICK_TOLERANCE_PX = 6;
 function findClickedLiquidityLevel(param) {
   if (!param.point || !candleSeries || !chart) return null;
   const time = chart.timeScale().coordinateToTime(param.point.x);
   if (time == null) return null;
-  return (
-    currentLiquidityLevels.find((lvl) => {
-      if (time < lvl.pivotTime || time > lvl.endTime) return false;
-      const y = candleSeries.priceToCoordinate(lvl.price);
-      if (y == null) return false;
-      return Math.abs(y - param.point.y) <= LIQUIDITY_LINE_CLICK_TOLERANCE_PX;
-    }) ?? null
-  );
+  return matchLiquidityLevel(currentLiquidityLevels, time, param.point.y, (price) => candleSeries.priceToCoordinate(price));
 }
 
-// Ziel-Modus, zweite Klick-Fläche (Chat 2026-07-28: "ein Pivot targetiere ich oder einen OB") —
-// testet gegen dieselben allgemeinen OB-Zonen, die auch gezeichnet werden (poiZonesMetadata,
-// respektiert also automatisch showObsM5/-1h/-4h/showHistoricalObs, siehe refreshPoiZonesInternal:
-// die Liste ist schon leer, wenn alle drei Timeframe-Toggles aus sind). Nur der Preis (nicht die ganze Box) wird als
-// Target übernommen — die dem Klick NÄHERE Kante, nicht fest nach Richtung, weil ein Klick näher an
-// der Oberkante eher "ich will die Oberkante" meint als andersrum.
 function findClickedOBZone(param) {
   if (!param.point || !candleSeries || !chart) return null;
   const price = candleSeries.coordinateToPrice(param.point.y);
   const time = chart.timeScale().coordinateToTime(param.point.x);
   if (price == null || time == null) return null;
-  const zone = (poiZonesMetadata.value ?? []).find(
-    (z) => !z.invalidated && time >= z.startTime && time <= z.endTime && price <= z.top && price >= z.bottom,
-  );
-  if (!zone) return null;
-  const nearEdge = Math.abs(price - zone.top) < Math.abs(price - zone.bottom) ? zone.top : zone.bottom;
-  // endTime friert bei detectOrderBlocks() auf die berührende Kerze ein, sobald touched=true wird
-  // (siehe orderBlocks.js) — praktisch also "touchedTime", ohne dass die Zone das Feld extra führt.
-  // rangeLow/rangeHigh (Bug-Report Philip 2026-07-31: "es zeichnet sich weder Linie noch Box, nur
-  // das Label" — price allein reicht für eine Box nicht) — beide Kanten der Zone, damit
-  // refreshTradeTargetLinksInternal/-ConfirmationLinksInternal daraus eine echte OB-Box zeichnen
-  // können statt nur eine Linie an der näheren Kante.
-  return {
-    kind: "ob",
-    price: nearEdge,
-    sourceTime: zone.startTime,
-    touchedTime: zone.touched ? zone.endTime : null,
-    rangeLow: zone.bottom,
-    rangeHigh: zone.top,
-    // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren" — instrument/direction
-    // (dieselbe long/short-Konvention wie poi-watcher: dir===1 -> "long", siehe dortiger
-    // Kommentar) werden mitgegeben, damit tradeIntake.js beim Anlegen der Bestätigung die
-    // zugehörige ob_zones-Zeile per Natural Key finden/anlegen und referenzieren kann, statt nur
-    // den Preis-Snapshot zu speichern.
-    instrument: props.symbol,
-    direction: zone.dir === 1 ? "long" : "short",
-    // Bug-Report Philip 2026-07-31, dritte Runde: außerhalb Replay wollte die Box exakt wie die
-    // live gezeichneten OB-Zonen laufen (bis zum echten Touch, sonst frei wachsend) — dafür muss
-    // refreshTradeTargetLinksInternal wissen, von welcher Zeitebene die Zone stammt, um dieselbe
-    // detectOrderBlocks()-Erkennung live nachzuvollziehen statt nur einen statischen Snapshot zu
-    // zeigen (siehe dort).
-    timeframe: zone.timeframe,
-  };
+  return matchOBZone(poiZonesMetadata.value, price, time, props.symbol);
 }
 
-// Bestätigungs-Modus, dritte Klick-Fläche (Chat 2026-07-30, siehe collectFibLevels in
-// marketStructureAnalysis.ts) — NUR im Bestätigungs-Modus aktiv, nicht im Ziel-Modus (ein Fib ist
-// keine sinnvolle Preis-Erwartung wie Pivot/OB, siehe onSelectTarget in Dashboard.vue). Anders als
-// die Liquiditäts-Linie (horizontal, Zeitbereich [pivotTime, endTime]) ist der Fib-Tick ein PUNKT
-// (kurzer Strich in der Mitte der Fib-Spanne, siehe FibTickPrimitive) — Hit-Test vergleicht deshalb
-// den 2D-Pixel-Abstand zum exakt selben Mittelpunkt, den die Zeichnung auch benutzt, statt eines
-// Zeitbereichs + Y-Toleranz.
-const FIB_TICK_CLICK_TOLERANCE_PX = 8;
 function findClickedFibLevel(param) {
   if (!param.point || !candleSeries || !chart) return null;
   const timeScale = chart.timeScale();
-  for (const level of currentFibLevels) {
-    const xa = timeScale.timeToCoordinate(level.a.pivotTime);
-    const xb = timeScale.timeToCoordinate(level.b.pivotTime);
-    if (xa == null || xb == null) continue;
-    const x = (xa + xb) / 2;
-    const y = candleSeries.priceToCoordinate(level.price);
-    if (y == null) continue;
-    const dx = param.point.x - x;
-    const dy = param.point.y - y;
-    if (Math.sqrt(dx * dx + dy * dy) > FIB_TICK_CLICK_TOLERANCE_PX) continue;
-    return {
-      kind: "fib",
-      price: level.price,
-      // Der spätere der beiden Anker-Zeitpunkte — erst ab da existiert dieser konkrete Fib-Wert
-      // überhaupt (vorher stand mindestens einer der beiden Anker noch nicht fest).
-      sourceTime: Math.max(level.a.pivotTime, level.b.pivotTime),
-      touchedTime: null, // kein "getoucht"-Konzept für ein Fib-Level, siehe tradeConfirmations.ts
-      rangeLow: Math.min(level.a.price, level.b.price),
-      rangeHigh: Math.max(level.a.price, level.b.price),
-    };
-  }
-  return null;
+  return matchFibLevel(
+    currentFibLevels,
+    param.point.x,
+    param.point.y,
+    (time) => timeScale.timeToCoordinate(time),
+    (price) => candleSeries.priceToCoordinate(price),
+  );
 }
 
-// Bestätigungs-Modus, vierte Klick-Fläche (milk-city Task "Divergenzen zur Dealing Range
-// verknüpfen (klickbar)", 2026-08-15) — NUR im Bestätigungs-Modus aktiv (analog zu Fib: eine
-// Divergenz ist bereits passierte Evidenz, keine sinnvolle künftige Preis-Erwartung wie Pivot/OB).
-// Nutzt dieselben Primitives wie die live Divergenz-Zeichnung (divergencePriceLinePrimitives,
-// siehe refreshRsiDivergenceInternal) samt ihrer bereits vorhandenen distanceTo()-Punkt-zu-Strecke-
-// Projektion — eine Divergenz ist also nur klickbar, wenn sie gerade sichtbar gezeichnet ist
-// (showRsiDivergence/-History + showRsi an), wie ein Fib-Tick nur bei aktiver Struktur-Anzeige.
-// price=toPrice/sourceTime=fromTime/touchedTime=toTime (wie ein Pivot: Linie von Entstehung bis
-// späterem "Touch", hier: von Referenz- bis geprüfter Schwungmarke) — fromPrice/fromRsi/toRsi/
-// divergenceType zusätzlich, sonst wäre die Divergenz später nicht mehr nachzeichenbar (siehe
-// Migration 20260815120000_trade_confirmations_rsi_divergence.sql).
-const DIVERGENCE_CLICK_TOLERANCE_PX = 10;
 function findClickedDivergence(param) {
   if (!param.point) return null;
-  for (const p of divergencePriceLinePrimitives) {
-    if (p.distanceTo(param.point.x, param.point.y) > DIVERGENCE_CLICK_TOLERANCE_PX) continue;
-    const d = p.divergence;
-    return {
-      kind: "rsi_divergence",
-      price: d.toPrice,
-      sourceTime: d.fromTime,
-      touchedTime: d.toTime,
-      fromPrice: d.fromPrice,
-      fromRsi: d.fromRsi,
-      toRsi: d.toRsi,
-      divergenceType: d.type,
-    };
-  }
-  return null;
+  return matchDivergence(divergencePriceLinePrimitives, param.point.x, param.point.y);
 }
 
 // Vereinigt beide Ziel-Modus-Klick-Flächen (Chat 2026-07-28) — Linie zuerst (präziser, kleinere
