@@ -23,9 +23,9 @@ import {
   LIQUIDITY_MAX_RELEVANT,
 } from "../liquidity.js";
 import { mergePinnedLevels, computeHtfLiquidityLevels, mergeDbLiquidityLevels } from "../priceChartLiquidity.js";
-import { sessions, renderSessions, currentSessionDanger, isForbiddenAt } from "../sessions.js";
-import { newsEvents, currentNewsNoGo, newsEventsForInstrument } from "../newsEvents.js";
-import { renderNewsMarkers, isSameBerlinDay } from "../newsMarkers.js";
+import { sessions, currentSessionDanger, isForbiddenAt } from "../sessions.js";
+import { newsEvents, currentNewsNoGo } from "../newsEvents.js";
+import { usePriceChartSessionsAndNews } from "../composables/usePriceChartSessionsAndNews.js";
 import { detectSetupObs, detectTradeSetups, tradeSetupObBoxBounds } from "../tradeSetup.js";
 import { renderPivotMarkers } from "../pivotMarkers";
 import { computeRangesPivots, buildMarketStructureState, pivotForDisplay, summarizeMarketStructureState } from "../marketStructureAnalysis";
@@ -389,6 +389,7 @@ const RSI_PANE_INDEX = 1;
 
 const { markSuccess } = useStatusBar();
 const { lastDataExport } = useLastDataExport();
+const { refreshSessions, refreshNewsMarkers } = usePriceChartSessionsAndNews();
 
 const chartContainerRef = ref(null);
 // Chart-Höhe (Chat 2026-07-30, siehe Dashboard.vue: tradesPanelHeight für dieselbe Begründung,
@@ -475,8 +476,6 @@ let currentLiquidityLevels = [];
 // collectFibLevels in marketStructureAnalysis.ts) — analog zu currentLiquidityLevels oben, für den
 // Bestätigungs-Klick-Hittest (findClickedFibLevel), gefüllt in refreshMarketStructureInternal.
 let currentFibLevels = [];
-let sessionPrimitives = [];
-let newsMarkerPrimitives = [];
 // Periode-5- UND Periode-2-Debug-Marker laufen seit Chat 2026-07-26 durch EIN gemeinsames
 // renderPivotMarkers-Primitive (siehe refreshRangesMarkersInternal) statt zwei getrennte, damit
 // deckungsgleiche Pivots aus beiden Perioden dieselbe Label-Entzerrung durchlaufen.
@@ -1292,47 +1291,16 @@ function refreshLiquidityInternal() {
   liquidityEarliestTime.value = relevant.length > 0 ? Math.min(...relevant.map((lvl) => lvl.pivotTime)) : null;
 }
 
-// Sessions-Hintergrundbänder (Chat 2026-07-22) — tzOffsetMinutes kommt aus der Browser-Lokalzeit
-// (-getTimezoneOffset() dreht JS' vorzeichenverkehrtes Offset ins übliche "UTC+X"-Format), passend
-// zur restlichen Chart-Zeitachse (siehe tickMarkFormatter). Läuft auf allCandles wie refreshLiquidityInternal,
-// nicht auf einem der Analyse-spezifischen Kerzen-Arrays (rangesH1Candles etc.).
+// Sessions/News-Marker-Zeichenlogik lebt seit Phase 6 des Große-Dateien-Refactorings in
+// usePriceChartSessionsAndNews.js (siehe dort) — hier nur noch dünne Wrapper, die candleSeries/
+// Kerzen/Props durchreichen, damit alle bestehenden Call-Sites (refreshChart(), watch(...) unten)
+// unverändert bleiben.
 function refreshSessionsInternal() {
-  if (!candleSeries) return; // watch(sessions) kann vor dem ersten Chart-Mount feuern (Store lädt schon bei Modul-Import)
-  const candles = clipReplay(allCandles);
-  // Sessions sind seit Chat 2026-07-25 pro Asset getrennt (siehe sessions.js) — nur die des
-  // gerade angezeigten Symbols rendern, nicht die anderer Instrumente.
-  const symbolSessions = sessions.filter((s) => s.instrument === props.symbol);
-  // Auf 4h/1D-Kerzen liegen mehrere Sessions in einer einzigen Kerze, die Bänder werden zu
-  // bedeutungslosem Gematsche — Dashboard.vue disabled den Toggle-Button dafür bereits
-  // (sessionsDisabled), hier zusätzlich gegen props.currentBar geprüft, analog zu
-  // refreshEmaInternal (Chat 2026-07-31: "genauso wie bei EMA").
-  const sessionsAllowedHere = props.currentBar !== "4h" && props.currentBar !== "1D";
-  renderSessions(candleSeries, props.showSessions && sessionsAllowedHere ? symbolSessions : [], sessionPrimitives, candles, {
-    // Funktion statt fixer Zahl (Bug-Report Philip 2026-07-22: Zeitumstellung) — allCandles kann per
-    // Lazy-Load Monate zurückreichen, ein einzelner "jetzt"-Offset wäre für Kerzen auf der anderen
-    // Seite einer Sommer-/Winterzeit-Umstellung eine Stunde daneben. sessionOccurrences fragt diese
-    // Funktion PRO TAG einzeln ab (siehe sessions.js: localMidnightUtc).
-    tzOffsetMinutes: (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset(),
-  });
+  refreshSessions(candleSeries, clipReplay(allCandles), { showSessions: props.showSessions, currentBar: props.currentBar, symbol: props.symbol });
 }
 
-// Vertikale News-Marker (Chat 2026-07-26) — News-Events gibt es nur für EUR/GBP/USD, siehe
-// newsEvents.js.
 function refreshNewsMarkersInternal() {
-  if (!candleSeries) return; // watch(newsEvents) kann vor dem ersten Chart-Mount feuern (Store lädt schon bei Modul-Import)
-  const candles = clipReplay(allCandles);
-  let relevant = props.showNews ? newsEventsForInstrument(newsEvents, props.symbol) : [];
-  // Zukünftige Termine bis zum Ende des aktuellen/Replay-Tages zeigen, weiter Entferntes ausblenden
-  // (Bug-Report Philip 2026-07-30: "ich muss die Linie vorher sehen, pro Tag reicht" — löst den
-  // pauschalen Replay-Filter vom 2026-07-26 ab, der ALLE zukünftigen Termine versteckte, weil sie
-  // die Sicht auf die aktuelle Replay-Kerze verdeckten; ein Termin vom selben Tag verdeckt nichts,
-  // der ist ja gerade der Punkt). newsMarkers.js zeichnet die Linie jetzt auch über die letzte
-  // geladene Kerze hinaus (siehe dort: extrapolatedX) — das hier ist nur die Scope-Entscheidung,
-  // wie weit im Voraus das noch sinnvoll ist: nächste Woche würde über eine Wochenend-Lücke hinweg
-  // extrapoliert und läge potenziell sichtbar daneben.
-  const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
-  relevant = relevant.filter((e) => e.eventTime <= nowSec || isSameBerlinDay(e.eventTime, nowSec));
-  renderNewsMarkers(candleSeries, relevant, newsMarkerPrimitives, candles);
+  refreshNewsMarkers(candleSeries, clipReplay(allCandles), { showNews: props.showNews, symbol: props.symbol, replayUntil: props.replayUntil });
 }
 
 // H1-Fraktale im konfigurierten Lookback-Fenster — reine Pivot-Liste, noch keine weak/protected/
