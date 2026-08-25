@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { createChart, CandlestickSeries, LineSeries, TickMarkType, CrosshairMode, LineStyle } from "lightweight-charts";
+import { createChart, CandlestickSeries, TickMarkType, CrosshairMode } from "lightweight-charts";
 import { renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
 import {
   firstCandleTouch,
@@ -31,22 +31,12 @@ import { renderPivotMarkers } from "../pivotMarkers";
 import { computeRangesPivots, buildMarketStructureState, pivotForDisplay, summarizeMarketStructureState } from "../marketStructureAnalysis";
 import { renderMarketStructureAnalysis, collectH1LqLevels, collectFibLevels } from "../marketStructureRendering";
 import { computeCockpitState } from "../tradeSetupCockpit";
-import { computeEma } from "../ema.js";
-import { computeRsi, detectRsiDivergence, detectRsiDivergenceHistory, DEFAULT_RSI_PERIOD, DEFAULT_DIVERGENCE_LOOKBACK_BARS } from "../rsi.js";
-import { DivergenceLinePrimitive, mergePinnedDivergences } from "../rsiRendering.js";
-import { classifyDivergenceOutcome, DEFAULT_DIVERGENCE_OUTCOME_LOOKFORWARD_BARS } from "../rsiDivergenceOutcome.js";
+import { DivergenceLinePrimitive } from "../rsiRendering.js";
+import { usePriceChartRsi } from "../composables/usePriceChartRsi.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 import { PIP_SIZE } from "../pipConfig.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
-
-// lightweight-charts' native LineSeries-Option lineWidth erwartet eine kleine Ganzzahl (1-4), anders
-// als die Linienstärke unserer eigenen Primitives (liquidity.js/marketStructureAnalysis.ts/...), die
-// jeden positiven Zahlenwert akzeptieren — daher hier gerundet+geclampt, nur für EMA/RSI (die
-// einzigen nativen Serien mit konfigurierbarer Linienstärke, siehe chartLineWidths.js).
-function nativeLineWidth(key) {
-  return Math.min(4, Math.max(1, Math.round(lineWidth(key))));
-}
 import { selectActiveMetadataSections, earliestRelevantTime, saveDebugMetadataSection } from "../debugMetadata.js";
 import { useLastDataExport } from "../composables/useLastDataExport.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
@@ -377,19 +367,13 @@ const TREND_ANALYSIS_CANDLE_COUNT = 1000;
 // BEIDE Perioden (5 und 2) großzügig genug, kein separater Puffer je Periode nötig.
 const RANGES_CANDLE_BUFFER = 20;
 
-// EMA 50/200 auf M5 (siehe Chat: Philips "Trend über EMA + Anzahl protected highs/lows"-Idee) —
-// läuft auf trendAnalysisM5Candles (dieselbe M5-Historie wie der Zigzag-Algo), kein eigener Fetch
-// nötig, siehe loadTradeSetupM5.
-const EMA_PERIOD_FAST = 50;
-const EMA_PERIOD_SLOW = 200;
-
-// RSI(14)-Panel (Chat 2026-08-11) — eigene Pane unterhalb des Candlestick-Charts, direkt Pane 1
-// (Pane 0 ist die Candlestick-Pane selbst).
-const RSI_PANE_INDEX = 1;
-
 const { markSuccess } = useStatusBar();
 const { lastDataExport } = useLastDataExport();
 const { refreshSessions, refreshNewsMarkers } = usePriceChartSessionsAndNews();
+// EMA-/RSI-/Divergenz-Series-Lifecycle + Zeichenlogik (siehe usePriceChartRsi.js, Phase 6b) —
+// priceChartRsi.create(chart, candleSeries) wird in onMounted aufgerufen, priceChartRsi.dispose()
+// in onUnmounted.
+const priceChartRsi = usePriceChartRsi();
 
 const chartContainerRef = ref(null);
 // Chart-Höhe (Chat 2026-07-30, siehe Dashboard.vue: tradesPanelHeight für dieselbe Begründung,
@@ -460,11 +444,6 @@ onUnmounted(() => clearInterval(debugAutosaveTimer));
 // nie ein Template, nur Chart-Methodenaufrufe.
 let chart;
 let candleSeries;
-let ema50Series;
-let ema200Series;
-let rsiSeries;
-let rsiOverboughtLine;
-let rsiOversoldLine;
 let resizeObserver;
 let orderBlockPrimitives = [];
 let liquidityPrimitives = [];
@@ -488,9 +467,8 @@ let tradeSetupLinkPrimitives = [];
 let tradeTargetLinkPrimitives = [];
 let tradeConfirmationLinkPrimitives = [];
 let invalidationLinePrimitives = [];
-let divergencePriceLinePrimitives = []; // Preis-Bein der Divergenz-Konnektoren, an candleSeries
-let divergenceRsiLinePrimitives = []; // RSI-Bein, an rsiSeries — siehe refreshRsiDivergenceInternal
-let divergenceOutcomeDebugPrimitives = []; // Struktur-Marken-Linien fürs Outcome-Debug, an candleSeries
+// divergencePriceLinePrimitives (Preis-Bein der Divergenz-Konnektoren) lebt seit Phase 6b in
+// priceChartRsi (usePriceChartRsi.js) — hier per priceChartRsi.divergencePriceLinePrimitives gelesen.
 let tradeSetupPrimitives = [];
 let claudeAnnotationPrimitives = [];
 let claudeAnnotationPriceLines = [];
@@ -1666,7 +1644,7 @@ function findClickedFibLevel(param) {
 
 function findClickedDivergence(param) {
   if (!param.point) return null;
-  return matchDivergence(divergencePriceLinePrimitives, param.point.x, param.point.y);
+  return matchDivergence(priceChartRsi.divergencePriceLinePrimitives, param.point.x, param.point.y);
 }
 
 // Vereinigt beide Ziel-Modus-Klick-Flächen (Chat 2026-07-28) — Linie zuerst (präziser, kleinere
@@ -1786,194 +1764,20 @@ function renderTradeSetupsInternal() {
   }
 }
 
-// EMA 50/200 (M5) — läuft auf trendAnalysisM5Candles, M5-aufgelöst. Nur sichtbar, wenn der Chart
-// selbst auch auf M5 steht: auf einem gröberen Timeframe (z.B. 1h) teilt sich die EMA-LineSeries
-// die Zeitachse mit der 1h-Candlestick-Serie, und die viel dichteren M5-Zeitpunkte quetschen dort
-// die Kerzen zusammen (siehe Chat: "candles werden ganz komisch dünn, wenn man den EMA anschaltet").
-// Deshalb hier zusätzlich zum Toggle gegen props.currentBar geprüft — daher jetzt auch bei jedem
-// TF-Wechsel über refreshChart() aufgerufen, nicht mehr nur bei loadTradeSetupM5/watch(showEma).
+// EMA-/RSI-/Divergenz-Zeichenlogik lebt seit Phase 6b des Große-Dateien-Refactorings in
+// usePriceChartRsi.js (siehe dort, inkl. der EMA/RSI-Series-Anlage aus onMounted und den
+// Style-Watcher-Zeilen weiter unten) — hier nur noch dünne Wrapper, damit alle bestehenden
+// Call-Sites (refreshChart(), watch(...) unten) unverändert bleiben.
 function refreshEmaInternal() {
-  if (!props.showEma || props.currentBar !== "5m" || trendAnalysisM5Candles.length === 0) {
-    ema50Series?.setData([]);
-    ema200Series?.setData([]);
-    return;
-  }
-  const candles = clipReplay(trendAnalysisM5Candles);
-  ema50Series?.setData(computeEma(candles, EMA_PERIOD_FAST));
-  ema200Series?.setData(computeEma(candles, EMA_PERIOD_SLOW));
+  priceChartRsi.refreshEma(clipReplay(trendAnalysisM5Candles), { showEma: props.showEma, currentBar: props.currentBar });
 }
 
-// RSI(14) — anders als EMA oben bewusst auf allCandles (dem gerade angezeigten Chart-Timeframe),
-// kein eigener Fetch nötig. Series+Pane werden hier erst bei Bedarf angelegt/entfernt (siehe
-// Kommentar an der ursprünglichen addSeries-Stelle im onMounted-Block) statt permanent zu
-// existieren und nur leerzulaufen wie ema50Series/ema200Series.
 function refreshRsiInternal() {
-  if (!chart) return;
-  if (!props.showRsi) {
-    if (rsiSeries) {
-      chart.removeSeries(rsiSeries);
-      chart.removePane(RSI_PANE_INDEX);
-      rsiSeries = null;
-      rsiOverboughtLine = null;
-      rsiOversoldLine = null;
-    }
-    return;
-  }
-  if (!rsiSeries) {
-    rsiSeries = chart.addSeries(
-      LineSeries,
-      {
-        color: cssColor("rsi"),
-        lineWidth: nativeLineWidth("rsi"),
-        priceLineVisible: false,
-        lastValueVisible: true,
-        title: "RSI(14)",
-        // Feste 0-100-Skala statt Auto-Zoom auf die sichtbare Spanne — sonst würde ein RSI, der
-        // z.B. nur zwischen 55 und 65 pendelt, die Y-Achse voll ausfüllen und wie ein extremer
-        // Ausschlag aussehen, obwohl er nahe der Mitte liegt (klassische Oszillator-Darstellung
-        // braucht die volle 0-100-Referenz).
-        autoscaleInfoProvider: () => ({
-          priceRange: { minValue: 0, maxValue: 100 },
-        }),
-      },
-      RSI_PANE_INDEX,
-    );
-    // Default-Scale-Margins (10% oben/unten) würden die 0-100-Skala zusätzlich aufblähen (Achse
-    // zeigte 0-120 statt 0-100) — hier eng gehalten, RSI-Linie darf ruhig nah an den Panerand.
-    rsiSeries.priceScale().applyOptions({ scaleMargins: { top: 0.05, bottom: 0.05 } });
-    // Stretch-Factor statt fixer Pixel-Höhe für die RSI-Pane relativ zur Candlestick-Pane.
-    chart.panes()[RSI_PANE_INDEX]?.setStretchFactor(0.25);
-    rsiOverboughtLine = rsiSeries.createPriceLine({ price: 70, color: cssColor("rsi"), lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "70" });
-    rsiOversoldLine = rsiSeries.createPriceLine({ price: 30, color: cssColor("rsi"), lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "30" });
-  }
-  const points = computeRsi(clipReplay(allCandles), DEFAULT_RSI_PERIOD)
-    .filter((p) => p.rsi != null)
-    .map((p) => ({ time: p.time, value: p.rsi }));
-  rsiSeries.setData(points);
+  priceChartRsi.refreshRsi(clipReplay(allCandles), props.showRsi);
 }
 
-// Divergenz-Konnektoren (Chat 2026-08-11) — läuft NACH refreshRsiInternal (siehe refreshChart()),
-// damit rsiSeries bei showRsi+showRsiDivergence schon existiert. Zwei Primitive-Instanzen pro
-// gefundener Divergenz (Preis-Bein an candleSeries, RSI-Bein an rsiSeries, siehe rsiRendering.js)
-// statt einer einzigen über beide Panes hinweg — lightweight-charts' Primitives hängen immer an
-// genau einer Series/Pane.
-//
-// showRsiDivergenceHistory (Chat 2026-08-11, zweite Runde) läuft ZUSÄTZLICH zu showRsiDivergence,
-// ersetzt es nicht — beide zusammen zeichnen dieselbe "aktuelle" Divergenz zwar doppelt (die
-// Historie endet strukturell auf demselben letzten Ereignis), das ist aber nur dieselbe Linie
-// zweimal übereinander, kein sichtbarer Unterschied.
-// Gepinnte Divergenz zusätzlich zur Live-/Historie-Liste rendern (Task "Pin-Kontext: gepinnte
-// Objekte direkt rendern") — bewusst NUR bei exaktem Zeit-Treffer (kein Snap-Toleranz wie bei
-// Zonen/Leveln): rsi_divergence speichert keine eigene Timeframe-Spalte (siehe pinContext.js), ein
-// exakter Treffer von fromTime/toTime auf eine aktuell geladene Kerze ist der einzige verfügbare
-// Proxy dafür, dass der Chart gerade auf demselben Timeframe steht, auf dem die Divergenz erkannt
-// wurde (Philip 2026-08-18, bestätigt: RSI-Werte sind timeframe-abhängig, ANDERS als Zonen/Level
-// bewusst NICHT timeframe-entkoppeln) — ein M5-Zeitstempel trifft auf einem 1H-Chart so gut wie nie
-// exakt eine Kerzenzeit.
 function refreshRsiDivergenceInternal() {
-  for (const p of divergencePriceLinePrimitives) candleSeries.detachPrimitive(p);
-  divergencePriceLinePrimitives.length = 0;
-  for (const p of divergenceRsiLinePrimitives) rsiSeries?.detachPrimitive(p);
-  divergenceRsiLinePrimitives.length = 0;
-  for (const p of divergenceOutcomeDebugPrimitives) candleSeries.detachPrimitive(p);
-  divergenceOutcomeDebugPrimitives.length = 0;
-
-  // needsDrawing/needsStats bewusst getrennt (Korrektur Philip, vierte Runde: "die liste soll alle
-  // divergenzen anzeigen, die durch die historie eh schon berechnet sind" — das Statistik-Panel
-  // hängt NICHT an showRsiDivergence/-History/rsiDivergenceHistoryCount, das sind reine
-  // Chart-Zeichnungs-Toggles/-Caps. Erste Version dieses Panels hatte fälschlich dieselbe Menge
-  // wiederverwendet ("was gerade im Chart sichtbar ist"), das war nicht gemeint.
-  const needsDrawing =
-    (props.showRsiDivergence || props.showRsiDivergenceHistory || props.pinnedRsiDivergences.length > 0) && props.showRsi && !!rsiSeries;
-  const needsStats = props.showRsiDivergenceStats && props.showRsi;
-  if (!needsDrawing && !needsStats) {
-    rsiDivergenceStatsData.value = null;
-    return;
-  }
-
-  const candles = clipReplay(allCandles);
-  if (candles.length === 0) {
-    rsiDivergenceStatsData.value = null;
-    return;
-  }
-  const precision = pricePrecisionForInstrument(props.symbol);
-
-  if (needsDrawing) {
-    const drawnDivergences = mergePinnedDivergences(
-      [
-        ...(props.showRsiDivergence ? detectRsiDivergence(candles) : []),
-        ...(props.showRsiDivergenceHistory ? detectRsiDivergenceHistory(candles, undefined, undefined, props.rsiDivergenceHistoryCount) : []),
-      ],
-      props.pinnedRsiDivergences,
-      candles,
-    );
-
-    for (const d of drawnDivergences) {
-      const colorKey = d.type === "bearish" ? "divergenceBearish" : "divergenceBullish";
-      const label = `${d.type === "bearish" ? "▽" : "△"} ${fmtPrice(d.fromPrice, precision)} → ${fmtPrice(d.toPrice, precision)}`;
-      // Pin-Kontext (Chat 2026-08-17) — derselbe "type|fromTime|toTime"-Schlüssel wie
-      // findNearbyPinCandidates' candidateKey für kind='rsi_divergence' (siehe pinContext.js:
-      // rsiDivergenceEntryNaturalKey), hier direkt aus den rohen rsi.js-Unix-Sekunden gebaut.
-      const divergenceKey = `${d.type}|${d.fromTime}|${d.toTime}`;
-      const inPinContext = props.pinRsiDivergenceKeys?.has(divergenceKey) ?? false;
-      const isSelectedPin = props.hoveredPinRsiDivergenceKey != null && props.hoveredPinRsiDivergenceKey === divergenceKey;
-      const opts = { color: cssColor(colorKey), lineWidth: lineWidth(colorKey), label, inPinContext, pinColor: cssColor("pin"), isSelectedPin, hoverColor: cssColor("tradeHover") };
-
-      const pricePrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromPrice }, { time: d.toTime, price: d.toPrice }, opts, candles, d);
-      candleSeries.attachPrimitive(pricePrimitive);
-      divergencePriceLinePrimitives.push(pricePrimitive);
-
-      const rsiPrimitive = new DivergenceLinePrimitive({ time: d.fromTime, price: d.fromRsi }, { time: d.toTime, price: d.toRsi }, opts, candles, d);
-      rsiSeries.attachPrimitive(rsiPrimitive);
-      divergenceRsiLinePrimitives.push(rsiPrimitive);
-    }
-
-    // Outcome-Debug — zeichnet für jede oben schon gezeichnete Divergenz die Struktur-Marke aus
-    // classifyDivergenceOutcome: grün bis zum Bruch-Zeitpunkt bei "hit", rot bis zum geprüften
-    // Fensterende bei "miss", grau bei "pending" (noch nicht genug Kerzen danach geladen). Bewusst
-    // literale Farben statt chartColors-Tokens — reine Wegwerf-Debug-Ansicht (siehe
-    // rsiDivergenceOutcome.js-Kommentar "wir basteln gerade"), kein Style-Modal-Eintrag für etwas,
-    // das übermorgen wieder rausfliegen kann. Bleibt bewusst an denselben Chart-Toggles/-Cap wie
-    // die Linien selbst (zeigt Outcomes für das, was gerade gezeichnet ist), anders als die
-    // Statistik unten.
-    if (props.showRsiDivergenceOutcomeDebug) {
-      const OUTCOME_COLOR = { hit: "#26a69a", miss: "#ef5350", pending: "#787b86" };
-      for (const d of drawnDivergences) {
-        const result = classifyDivergenceOutcome(candles, d);
-        if (result.structureLevel == null) continue;
-        const color = OUTCOME_COLOR[result.outcome] ?? "#787b86";
-        const endTime = result.outcome === "hit" ? result.breakTime : result.windowEndTime;
-        const label =
-          result.outcome === "hit"
-            ? `HIT (${result.barsToBreak} Bars) · Struktur ${fmtPrice(result.structureLevel, precision)}`
-            : `${result.outcome.toUpperCase()} · Struktur ${fmtPrice(result.structureLevel, precision)}`;
-        const debugPrimitive = new DivergenceLinePrimitive(
-          { time: result.structureTime, price: result.structureLevel },
-          { time: endTime, price: result.structureLevel },
-          { color, lineWidth: 1.5, label },
-          candles,
-        );
-        candleSeries.attachPrimitive(debugPrimitive);
-        divergenceOutcomeDebugPrimitives.push(debugPrimitive);
-      }
-    }
-  }
-
-  // Statistik-Panel — IMMER die volle, von der Historie-Erkennung gelieferte Menge (maxCount=
-  // Infinity, siehe collectDivergenceHistory: .slice(-Infinity) ergibt das komplette Array), nicht
-  // die evtl. viel kleinere rsiDivergenceHistoryCount-Chart-Anzeige-Grenze und unabhängig davon, ob
-  // die Chart-Toggles selbst an sind — nur showRsi (RSI-Berechnung nötig) und der Statistik-Toggle
-  // selbst zählen.
-  rsiDivergenceStatsData.value = needsStats
-    ? {
-        divergences: detectRsiDivergenceHistory(candles, undefined, undefined, Infinity).map((d) => ({
-          ...d,
-          ...classifyDivergenceOutcome(candles, d),
-        })),
-        lookbackBars: DEFAULT_DIVERGENCE_LOOKBACK_BARS,
-        lookforwardBars: DEFAULT_DIVERGENCE_OUTCOME_LOOKFORWARD_BARS,
-      }
-    : null;
+  priceChartRsi.refreshDivergence(clipReplay(allCandles), props.symbol, props, rsiDivergenceStatsData);
 }
 
 // TREND_ANALYSIS_CANDLE_COUNT (2000) liegt über dem Edge-Function-Limit pro Request (1000,
@@ -2297,37 +2101,9 @@ onMounted(() => {
     priceFormat: { type: "price", precision: 5, minMove: 0.00001 },
   });
 
-  // EMA 50/200 (M5) direkt in der Candlestick-Pane (keine eigene Pane) — sichtbar erst
-  // sobald refreshEmaInternal Daten reinschreibt (siehe watch(showEma)).
-  ema50Series = chart.addSeries(LineSeries, {
-    color: cssColor("emaFast"),
-    lineWidth: nativeLineWidth("emaFast"),
-    priceLineVisible: false,
-    lastValueVisible: false,
-    // Chat 2026-07-25: "wenn der EMA an ist, dann fokusiert die Maus den EMA, anstatt die
-    // Candles" — der Magnet-Crosshair (Default) snappt sonst auf den Datenpunkt der Serie, die
-    // dem Mauszeiger am nächsten ist, und das ist bei einer glatten EMA-Linie oft eher die EMA
-    // selbst als die Kerze. crosshairMarkerVisible:false nimmt die EMA-Serien komplett aus der
-    // Magnet-Berechnung raus, Fokus bleibt auf den Kerzen.
-    crosshairMarkerVisible: false,
-    // Kein title: lightweight-charts zeigt den title-Text als eigenes Label neben der
-    // Preisskala an, AUCH wenn lastValueVisible false ist (Bug-Report Philip 2026-07-26: "EMA
-    // 200/50 zeigt mir rechts neben der Price-Y-Skala Labels an, brauch ich nicht").
-  });
-  ema200Series = chart.addSeries(LineSeries, {
-    color: cssColor("emaSlow"),
-    lineWidth: nativeLineWidth("emaSlow"),
-    priceLineVisible: false,
-    lastValueVisible: false,
-    crosshairMarkerVisible: false,
-  });
-
-  // RSI(14)-Panel (Chat 2026-08-11) — Series+Pane werden erst bei refreshRsiInternal() angelegt
-  // (siehe dort), nicht hier fest verdrahtet: ein permanent existierendes, nur leer-genulltes
-  // RSI-Panel hat sich beim Testen nicht sauber mit dem Stretch-Factor der Pane vertragen
-  // (setHeight(0) auf einer zusätzlichen Pane verzerrte die eigene 0.25-Stretch-Aufteilung) —
-  // echtes chart.removePane() beim Ausschalten umgeht das komplett, der Chart ist dann wieder
-  // exakt im alten 1-Pane-Zustand.
+  // EMA-Serien + RSI-Panel-Lifecycle leben in usePriceChartRsi.js (Phase 6b) — legt hier die
+  // EMA-Serien an (RSI-Series+Pane erst bei Bedarf, siehe refreshRsiInternal/priceChartRsi.refreshRsi).
+  priceChartRsi.create(chart, candleSeries);
 
   chart.subscribeClick((param) => {
     if (!param.point || !props.tradeModeActive) return;
@@ -2472,7 +2248,7 @@ onMounted(() => {
     // das RSI-Bein in der eigenen Pane: dessen priceToCoordinate()-Y ist relativ zur RSI-Pane, nicht
     // zum ganzen Chart-Container wie hier gerechnet (siehe pinContextMenuHandler unten) — für
     // "eine Divergenz anklicken" reicht das Preis-Bein, beide Beine wären ohnehin derselbe DB-Eintrag.
-    for (const p of divergencePriceLinePrimitives) {
+    for (const p of priceChartRsi.divergencePriceLinePrimitives) {
       const distance = p.distanceTo(x, y);
       if (distance <= PIN_SEARCH_RADIUS) {
         candidates.push({ kind: "rsi_divergence", divergence: p.divergence, instrument: props.symbol, distance });
@@ -2512,7 +2288,7 @@ onMounted(() => {
       tradeSetupLinkPrimitives.some((p) => p.distanceTo(x, y) <= PIN_SEARCH_RADIUS) ||
       tradeConfirmationLinkPrimitives.some((p) => p instanceof OrderBlockPrimitive && p.distanceTo(x, y) <= PIN_SEARCH_RADIUS) ||
       liquidityPrimitives.some((p) => p.distanceTo(x, y) <= PIN_SEARCH_RADIUS) ||
-      divergencePriceLinePrimitives.some((p) => p.distanceTo(x, y) <= PIN_SEARCH_RADIUS)
+      priceChartRsi.divergencePriceLinePrimitives.some((p) => p.distanceTo(x, y) <= PIN_SEARCH_RADIUS)
     );
   }
 
@@ -2634,11 +2410,7 @@ onUnmounted(() => {
   // "Object is disposed" auszulösen.
   chart = null;
   candleSeries = null;
-  ema50Series = null;
-  ema200Series = null;
-  rsiSeries = null;
-  rsiOverboughtLine = null;
-  rsiOversoldLine = null;
+  priceChartRsi.dispose();
 });
 
 watch(() => props.currentBar, () => {
@@ -2851,25 +2623,19 @@ watch(
       wickUpColor: cssColor("candleUp"),
       wickDownColor: cssColor("candleDown"),
     });
-    ema50Series?.applyOptions({ color: cssColor("emaFast") });
-    ema200Series?.applyOptions({ color: cssColor("emaSlow") });
-    rsiSeries?.applyOptions({ color: cssColor("rsi") });
-    rsiOverboughtLine?.applyOptions({ color: cssColor("rsi") });
-    rsiOversoldLine?.applyOptions({ color: cssColor("rsi") });
+    priceChartRsi.applyColorOptions();
     refreshChart();
   },
   { deep: true },
 );
 // Analog zum chartColors-Watcher oben, für Linienstärke (Chat 2026-07-25, Style-Modal) — siehe
-// chartLineWidths.js. Native Serien-Optionen (EMA) explizit, alles Primitive-basierte über
+// chartLineWidths.js. Native Serien-Optionen (EMA/RSI) explizit, alles Primitive-basierte über
 // refreshChart() (liest lineWidth() live bei jedem Render-Aufruf, genau wie cssColor()).
 watch(
   chartLineWidths,
   () => {
     if (!chart) return;
-    ema50Series?.applyOptions({ lineWidth: nativeLineWidth("emaFast") });
-    ema200Series?.applyOptions({ lineWidth: nativeLineWidth("emaSlow") });
-    rsiSeries?.applyOptions({ lineWidth: nativeLineWidth("rsi") });
+    priceChartRsi.applyLineWidthOptions();
     refreshChart();
   },
   { deep: true },
