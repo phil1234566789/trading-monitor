@@ -92,3 +92,49 @@ export function formatAge(seconds) {
   if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
   return `${minutes}m`;
 }
+
+// PriceChart.vue: pollRecent() holt pro Tick nur die letzten RECENT_PAGE_SIZE Kerzen (Puffer für
+// einen verpassten Poll, z.B. Tab im Hintergrund gedrosselt) — mergt sie mit dem bereits geladenen
+// allCandles, indem der ältere Teil bis zum Start der frischen Seite übernommen und der Rest
+// (potenziell überlappende/neue Kerzen) durch die frische Seite ersetzt wird.
+export function mergeRecent(existing, freshRecent) {
+  if (existing.length === 0 || freshRecent.length === 0) return freshRecent;
+  const freshStart = freshRecent[0].time;
+  const olderPrefix = existing.filter((c) => c.time < freshStart);
+  return olderPrefix.concat(freshRecent);
+}
+
+// PriceChart.vue: jumpToTrade()/jumpToTimeRange() — reicht NICHT, nur "time < candles[0].time" zu
+// prüfen (Bug-Report Philip 2026-07-30, dritte Runde) — ein gezielter Sprung dort kann bewusst eine
+// LÜCKE mitten im Array hinterlassen (siehe Kommentar in jumpToTimeRange), ein späterer Sprung auf
+// einen Zeitpunkt GENAU IN dieser Lücke sähe mit der reinen Array-Anfang-Prüfung fälschlich wie
+// "schon geladen" aus — snapToBarTime würde dann nur die letzte Kerze VOR der Lücke treffen (genau
+// das beobachtete "Kerzen bis 14.07. 20:05, X-Achse springt dann auf 23.07."). Prüft stattdessen,
+// ob die NÄCHSTE Kerze bei/vor `time` höchstens eine Kerzenbreite entfernt liegt.
+export function isTimeCovered(candles, time, barSeconds) {
+  if (candles.length === 0 || time < candles[0].time || time > candles[candles.length - 1].time) return false;
+  let lo = 0;
+  let hi = candles.length - 1;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (candles[mid].time <= time) lo = mid;
+    else hi = mid - 1;
+  }
+  return time - candles[lo].time <= barSeconds * 1.5;
+}
+
+// PriceChart.vue: refreshTradeMarkersInternal/-TradeSetupLinksInternal/-TradeTargetLinksInternal/
+// -TradeConfirmationLinksInternal/-InvalidationLinesInternal — Bug-Report Philip 2026-07-31: im
+// Replay auf ein früheres Datum springen zeigte trotzdem Marker/Ziele/Bestätigungen/Setup-Links
+// eines SPÄTEREN Trades (z.B. eines Longs vom 30.07., während man im Chart auf dem 27.07. steht) —
+// snapToBarTime (in tradeMarkers.js/liquidity.js/orderBlocks.js) klemmt eine Zeit, die nach der
+// letzten geladenen Kerze liegt, auf eben diese letzte Kerze fest, statt den Trade auszublenden.
+// Ohne Filter stapeln sich dadurch ALLE "noch nicht passierten" Trades am rechten Rand exakt
+// übereinander. Reine Anzeige-Filterung hier (kein DB-/Datenmodell-Fix nötig) — ein Trade
+// "existiert" erst im Chart, sobald seine Einstiegszeit auf oder vor der letzten aktuell geladenen
+// Kerze liegt.
+export function tradesVisibleForCandles(trades, candles) {
+  if (candles.length === 0) return [];
+  const lastTime = candles[candles.length - 1].time;
+  return trades.filter((t) => t.entryTime <= lastTime);
+}

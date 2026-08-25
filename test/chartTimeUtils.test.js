@@ -5,7 +5,16 @@
 // Open-Zeit exakt replayUntil entspricht, obwohl clipReplay() (PriceChart.vue) sie korrekt anzeigen
 // würde (Filter ist `<=`).
 import { describe, expect, it } from "vitest";
-import { replayFetchToMs, nextCandleAfter, businessSecondsBetween, formatAge, snapToBarTime } from "../src/chartTimeUtils.js";
+import {
+  replayFetchToMs,
+  nextCandleAfter,
+  businessSecondsBetween,
+  formatAge,
+  snapToBarTime,
+  mergeRecent,
+  isTimeCovered,
+  tradesVisibleForCandles,
+} from "../src/chartTimeUtils.js";
 
 // Bug-Report Philip 2026-07-22: "session indikator wird mir für 02.07. 23:00 - 03.07. 07:00 nicht
 // angezeigt, bei dem tag davor und danach schon" — die Session war zeitlich vollständig innerhalb
@@ -135,5 +144,77 @@ describe("formatAge", () => {
   it("gibt null für negative/fehlende Werte zurück", () => {
     expect(formatAge(-1)).toBeNull();
     expect(formatAge(null)).toBeNull();
+  });
+});
+
+// Ursprünglich lokale Funktionen in PriceChart.vue, per Refactoring-Task "Sehr große Dateien
+// refactoren" (2026-08-25, Phase 1) hierher verschoben — reine Funktionen ohne chart/candleSeries-
+// Abhängigkeit, bisher ohne eigene Tests.
+describe("mergeRecent", () => {
+  it("übernimmt freshRecent unverändert, wenn existing leer ist", () => {
+    const fresh = [{ time: 100 }, { time: 200 }];
+    expect(mergeRecent([], fresh)).toBe(fresh);
+  });
+
+  it("gibt freshRecent (auch leer) zurück, wenn freshRecent leer ist — existing bleibt unangetastet", () => {
+    const existing = [{ time: 100 }];
+    expect(mergeRecent(existing, [])).toEqual([]);
+  });
+
+  it("behält den älteren Teil von existing und hängt freshRecent dahinter", () => {
+    const existing = [{ time: 100 }, { time: 200 }, { time: 300 }];
+    const fresh = [{ time: 300, close: 1.5 }, { time: 400 }];
+    expect(mergeRecent(existing, fresh)).toEqual([{ time: 100 }, { time: 200 }, { time: 300, close: 1.5 }, { time: 400 }]);
+  });
+
+  it("ersetzt eine überlappende Kerze durch die frische Version statt sie zu duplizieren", () => {
+    const existing = [{ time: 100, close: 1.0 }, { time: 200, close: 1.1 }];
+    const fresh = [{ time: 200, close: 1.2 }];
+    expect(mergeRecent(existing, fresh)).toEqual([{ time: 100, close: 1.0 }, { time: 200, close: 1.2 }]);
+  });
+});
+
+// Bug-Report Philip 2026-07-30, dritte Runde (siehe jumpToTimeRange in PriceChart.vue): ein
+// gezielter Sprung kann bewusst eine Lücke mitten in allCandles hinterlassen — ein späterer Sprung
+// auf einen Zeitpunkt GENAU in dieser Lücke soll trotzdem als "nicht geladen" erkannt werden.
+describe("isTimeCovered", () => {
+  const barSeconds = 300; // 5m
+  const candles = [{ time: 1000 }, { time: 1300 }, { time: 1600 }, { time: 4000 }, { time: 4300 }]; // Lücke 1600 -> 4000
+
+  it("false für ein leeres Kerzenarray", () => {
+    expect(isTimeCovered([], 1000, barSeconds)).toBe(false);
+  });
+
+  it("false, wenn time vor der ersten oder nach der letzten Kerze liegt", () => {
+    expect(isTimeCovered(candles, 500, barSeconds)).toBe(false);
+    expect(isTimeCovered(candles, 5000, barSeconds)).toBe(false);
+  });
+
+  it("true, wenn time exakt auf eine geladene Kerze trifft", () => {
+    expect(isTimeCovered(candles, 1300, barSeconds)).toBe(true);
+  });
+
+  it("true innerhalb einer normalen Kerzenbreite nach der letzten Kerze davor", () => {
+    expect(isTimeCovered(candles, 1450, barSeconds)).toBe(true); // 150s nach 1300, < 1.5*300
+  });
+
+  it("false mitten in einer Lücke, die größer als 1.5 Kerzenbreiten ist", () => {
+    expect(isTimeCovered(candles, 2500, barSeconds)).toBe(false); // 900s nach 1600, > 1.5*300
+  });
+});
+
+// Bug-Report Philip 2026-07-31 (siehe refreshTradeMarkersInternal & Co. in PriceChart.vue): ein
+// Trade "existiert" erst im Chart, sobald seine Einstiegszeit auf oder vor der letzten aktuell
+// geladenen Kerze liegt — sonst stapeln sich noch nicht passierte Trades am rechten Rand.
+describe("tradesVisibleForCandles", () => {
+  const candles = [{ time: 1000 }, { time: 1300 }, { time: 1600 }];
+
+  it("gibt ein leeres Array zurück, wenn keine Kerzen geladen sind", () => {
+    expect(tradesVisibleForCandles([{ entryTime: 1000 }], [])).toEqual([]);
+  });
+
+  it("filtert Trades mit entryTime nach der letzten geladenen Kerze raus", () => {
+    const trades = [{ id: 1, entryTime: 900 }, { id: 2, entryTime: 1600 }, { id: 3, entryTime: 9999 }];
+    expect(tradesVisibleForCandles(trades, candles)).toEqual([{ id: 1, entryTime: 900 }, { id: 2, entryTime: 1600 }]);
   });
 });
