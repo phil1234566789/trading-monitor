@@ -926,6 +926,24 @@ function firstCandleTouchRange(candles, sourceTime, rangeLow, rangeHigh) {
   const hit = candles.find((c) => c.time > sourceTime && c.low <= rangeHigh && c.high >= rangeLow);
   return hit ? hit.time : null;
 }
+
+// Bug-Report Philip 2026-08-25: eine OB-Target-/Bestätigungs-Box mit längst bekanntem touchedTime
+// wurde trotzdem bis zur letzten geladenen Kerze gezeichnet, nicht bis zum Touch. Ursache: der
+// hier berechnete endTime-Wert kam zwar korrekt (kurz) an, aber ZonePaneView.update()
+// (orderBlocks.js) nutzt endTime NUR, wenn z.touched||z.invalidated wahr ist — sonst IMMER
+// Infinity (= letzte Kerze). refreshTradeTargetLinksInternal/-TradeConfirmationLinksInternal
+// setzten dieses touched-Flag auf der Zone bisher gar nicht mit, endTime wurde dadurch faktisch
+// ignoriert. Bündelt touched+endTime jetzt in EINER Funktion (vorher zweimal fast wortgleich
+// dupliziert), damit dieselbe Prioritätskette (bekanntes touchedTime -> live erkannte Zone ->
+// Selbstheilung in geladenen Kerzen -> noch aktiv bis jetzt) nur an einer Stelle steht.
+function obBoxTouchState(item, candles) {
+  if (item.touchedTime != null) return { touched: true, endTime: item.touchedTime };
+  const live = liveObZoneState(item);
+  if (live) return { touched: live.touched, endTime: live.endTime };
+  const selfHealed = firstCandleTouchRange(candles, item.sourceTime, item.rangeLow, item.rangeHigh);
+  if (selfHealed != null) return { touched: true, endTime: selfHealed };
+  return { touched: false, endTime: candles[candles.length - 1].time };
+}
 function refreshTradeTargetLinksInternal() {
   for (const p of tradeTargetLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeTargetLinkPrimitives.length = 0;
@@ -956,13 +974,9 @@ function refreshTradeTargetLinksInternal() {
       // 2026-08-07), zuerst noch selbst in den bereits geladenen Kerzen nachschauen, erst dann
       // "letzte geladene Kerze" als wirklich letzter Ausweg.
       if (target.kind === "ob" && target.rangeLow != null && target.rangeHigh != null) {
-        const endTime =
-          target.touchedTime ??
-          liveObZoneState(target)?.endTime ??
-          firstCandleTouchRange(candles, target.sourceTime, target.rangeLow, target.rangeHigh) ??
-          candles[candles.length - 1].time;
+        const { touched, endTime } = obBoxTouchState(target, candles);
         const primitive = new OrderBlockPrimitive(
-          { top: target.rangeHigh, bottom: target.rangeLow, startTime: target.sourceTime, endTime },
+          { top: target.rangeHigh, bottom: target.rangeLow, startTime: target.sourceTime, endTime, touched },
           {
             fillColor: cssColorScaled("tradeTarget", TRADE_SETUP_OB_FILL_RATIO),
             borderColor: cssColorScaled("tradeTarget", TRADE_SETUP_OB_BORDER_RATIO),
@@ -1053,18 +1067,14 @@ function refreshTradeConfirmationLinksInternal() {
       // OB-Bestätigungen als echte Box statt nur einer Linie (siehe refreshTradeTargetLinksInternal
       // — dieselbe Begründung, dieselbe touchedTime-vor-liveObZoneState-Priorität).
       if (confirmation.kind === "ob" && confirmation.rangeLow != null && confirmation.rangeHigh != null) {
-        const endTime =
-          confirmation.touchedTime ??
-          liveObZoneState(confirmation)?.endTime ??
-          firstCandleTouchRange(candles, confirmation.sourceTime, confirmation.rangeLow, confirmation.rangeHigh) ??
-          candles[candles.length - 1].time;
+        const { touched, endTime } = obBoxTouchState(confirmation, candles);
         // Pin-Kontext, vierte Art (Chat 2026-08-01, vierte Runde — Bug-Report Philip: DIESE
         // Box, "✔ OB 1,15229 #22", wurde mit der Trade-Setup-Link-Box verwechselt, war bisher
         // komplett unverdrahtet). confirmationId ist bereits die echte trade_confirmations.id.
         const inPinContext = props.pinTradeConfirmationIds?.has(confirmation.id) ?? false;
         const isSelectedPin = props.hoveredPinTradeConfirmationId != null && props.hoveredPinTradeConfirmationId === confirmation.id;
         const primitive = new OrderBlockPrimitive(
-          { top: confirmation.rangeHigh, bottom: confirmation.rangeLow, startTime: confirmation.sourceTime, endTime, confirmationId: confirmation.id, instrument: t.instrument },
+          { top: confirmation.rangeHigh, bottom: confirmation.rangeLow, startTime: confirmation.sourceTime, endTime, touched, confirmationId: confirmation.id, instrument: t.instrument },
           {
             fillColor: cssColorScaled("tradeConfirmation", TRADE_SETUP_OB_FILL_RATIO),
             borderColor: cssColorScaled("tradeConfirmation", TRADE_SETUP_OB_BORDER_RATIO),
