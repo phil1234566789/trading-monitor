@@ -194,10 +194,14 @@ applies when explicitly invoked, not to every session in this repo.
 - Prefer small, targeted edits with a comment explaining the non-obvious reasoning over
   refactoring for its own sake — this is a solo hobby project with a lot of hard-won bugfix
   history encoded in comments; don't erase that context while "cleaning up."
-- **Keep the codebase clean: no file should balloon past ~1000 lines.** When a file approaches or
-  exceeds that, look for a sensible split (see `PLAN-large-file-refactor.md` for the pattern used
-  on `PriceChart.vue`: pure/testable logic into its own file + Vitest tests, chart-bound code into
-  a composable with its own lifecycle) — an ongoing standard, not a one-off cleanup task.
+- **Keep the codebase clean as you go, not as a later cleanup pass.** When adding or extending
+  functionality, put a distinct concern (a new algorithm, a rendering/composable piece, a reusable
+  utility) into its own file rather than appending to an already-large one — decide this while
+  writing the code, not after the file has grown. ~1000 lines is a hard backstop, not the trigger:
+  a file approaching it means the proactive splitting already fell behind. See
+  `PLAN-large-file-refactor.md` for the extraction pattern used on `PriceChart.vue` (pure/testable
+  logic into its own file + Vitest tests, chart-bound code into a composable with its own
+  lifecycle) if a file needs catching up.
 - **A comment block over ~4-5 lines needs a real reason** (e.g. several independent bug reports
   that genuinely belong at that one spot) — otherwise trim it. This doesn't override the WHY-comment
   rule above: keep the actual reasoning, cut quotes/repetition/anything already documented
