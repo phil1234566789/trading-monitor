@@ -171,10 +171,27 @@ export function isSwingLow(candles, i, period) {
 // höherem Preis-Hoch). Geteilt mit collectDivergenceHistory() unten (Chat 2026-08-11, zweite
 // Runde: "wie viel Aufwand wäre es historische Divergenzen anzuzeigen") über denselben
 // findBestReference()-Baustein, damit die Referenz-Logik nicht doppelt gepflegt werden muss.
+// swingIdx ist aufsteigend sortiert (siehe Aufbau in detectRsiDivergence/-History) -> per
+// Binärsuche direkt zum ersten Kandidaten innerhalb von lookbackBars springen, statt bei jedem
+// Aufruf das komplette Array zu scannen (2026-08-24, Perf-Fund beim vollen Jahres-Backtest über
+// rsiDivergenceStats.ts: bei mehreren tausend Swings über 8+ Monate wurde collectDivergenceHistory
+// dadurch quadratisch und brauchte >5 Minuten ohne Ergebnis). Gleiche Kandidaten, gleiches "best" —
+// nur die Schleife bleibt jetzt auf das relevante Fenster beschränkt statt bei jedem Treffer erneut
+// alles zu durchlaufen.
 function findBestReference(j, swingIdx, candles, rsi, lookbackBars, isBearish) {
   let best = null;
-  for (const i of swingIdx) {
-    if (i >= j || j - i > lookbackBars || rsi[i].rsi == null) continue;
+  const minI = j - lookbackBars;
+  let lo = 0;
+  let hi = swingIdx.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (swingIdx[mid] < minI) lo = mid + 1;
+    else hi = mid;
+  }
+  for (let k = lo; k < swingIdx.length; k++) {
+    const i = swingIdx[k];
+    if (i >= j) break;
+    if (rsi[i].rsi == null) continue;
     const priceQualifies = isBearish ? candles[i].close < candles[j].close : candles[i].close > candles[j].close;
     if (!priceQualifies) continue;
     const isBetterReference = best == null || (isBearish ? rsi[i].rsi > rsi[best].rsi : rsi[i].rsi < rsi[best].rsi);
@@ -195,27 +212,20 @@ function buildDivergenceEntry(type, bestIdx, jIdx, candles, rsi) {
   };
 }
 
+// Bis 2026-08-24 eigene, unabhängige "j"-Suche: extremster Swing innerhalb von lookbackBars ab dem
+// chronologisch LETZTEN Swing im Fenster. Bug (Philip, GBPUSD 21.08., Task
+// "RSI-Wert falsch"): ein nie gebrochenes Hoch/Tief "altert" so nach lookbackBars aus dem
+// Suchfenster, selbst wenn seither kein extremerer Swing mehr aufgetaucht ist — ein schwächerer,
+// aber noch "in Reichweite" liegender späterer Swing wird dann fälschlich als j gewählt und gegen
+// eine ältere Referenz zu einer Divergenz erklärt, obwohl der eigentliche (jüngere, extremere,
+// nicht gebrochene) Peak dazwischen Preis UND RSI synchron bewegt hat — keine echte Divergenz.
+// Fix: dieselbe Peak-Tracking-Logik wie collectDivergenceHistory (ein Peak bleibt "regierend", bis
+// ihn ein Swing tatsächlich bricht, statt nach einer festen Bar-Distanz zu verfallen) — "aktuell"
+// ist damit strukturell derselbe letzte Eintrag wie die Historie, kein zweiter, abweichender
+// Suchpfad mehr.
 function findLatestDivergence(swingIdx, candles, rsi, lookbackBars, type) {
-  if (swingIdx.length === 0) return null;
-  const isBearish = type === "bearish";
-  const mostRecent = swingIdx[swingIdx.length - 1];
-
-  let j = null;
-  for (const i of swingIdx) {
-    if (mostRecent - i > lookbackBars) continue;
-    const isMoreExtreme = j == null || (isBearish ? candles[i].close > candles[j].close : candles[i].close < candles[j].close);
-    if (isMoreExtreme) j = i;
-  }
-  if (j == null || rsi[j].rsi == null) return null;
-
-  const best = findBestReference(j, swingIdx, candles, rsi, lookbackBars, isBearish);
-  if (best == null) return null;
-
-  const rsiDelta = isBearish ? rsi[best].rsi - rsi[j].rsi : rsi[j].rsi - rsi[best].rsi;
-  if (rsiDelta < MIN_DIVERGENCE_RSI_DELTA) return null;
-  if (!passesAllDivergenceFilters(candles, rsi, best, j, isBearish)) return null;
-
-  return buildDivergenceEntry(type, best, j, candles, rsi);
+  const history = collectDivergenceHistory(swingIdx, candles, rsi, lookbackBars, type);
+  return history.length > 0 ? history[history.length - 1] : null;
 }
 
 /**
