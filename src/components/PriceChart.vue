@@ -2589,25 +2589,8 @@ defineExpose({
     );
   },
 
-  // Für den Klick auf eine Zeile in TradesTable.vue (Chat 2026-07-27: "auf den Trade klicken und
-  // dann im Chart gleich an diese Stelle springen") — bewusst NICHT über Replay gelöst (das würde
-  // alle Kerzen nach dem Trade ausblenden, man will beim Review aber gerade sehen, wie's danach
-  // weiterging), sondern ein einfacher Sprung auf der Zeitachse. Per setVisibleLogicalRange (Bar-
-  // Index) statt setVisibleRange (Zeit) UND mit der aktuell schon eingestellten Zoomweite
-  // (getVisibleLogicalRange) reproduziert — ein fester Bar-Count hätte bei jedem Sprung immer
-  // dieselbe (zu enge) Zoomstufe erzwungen, unabhängig davon, wie weit der User gerade rausgezoomt
-  // hatte (Bug-Report Philip 2026-07-27: "muss immer ein ganzes Stück rauszoomen, Candles zu
-  // riesig"). Nur wenn die aktuelle Zoomweite den Trade selbst (Entry bis Exit) nicht einmal
-  // abdecken würde, wird sie für diesen einen Sprung testweise erweitert.
-  // Bug-Report Philip 2026-07-30: wiederholtes Klicken auf einen alten Trade (16 Tage zurück) feuerte
-  // bei jedem Klick genau EINEN weiteren history-candles-Request mit noch früherem "after", kam aber
-  // nie tatsächlich an — diese Funktion sprang bisher einmalig per setVisibleLogicalRange auf den
-  // aktuellen Datenrand (snapToBarTime klemmt ein zu altes entryTime auf candles[0].time, siehe
-  // chartTimeUtils.js) und überließ das eigentliche Nachladen dem beiläufigen Seiteneffekt des
-  // Scroll-Handlers oben — der lädt pro Aufruf aber nur EINE Seite (~8h bei M5), bei 16 Tagen wären
-  // das Dutzende Klicks gewesen. Jetzt wird VOR dem Sprung so lange nachgeladen (derselbe
-  // loadingOlder-Zustand wie der Scroll-Handler, damit sich beide nicht überschneiden), bis
-  // entryTime abgedeckt ist oder wirklich der Anfang der Historie erreicht ist.
+  // Für den Klick auf eine Zeile in TradesTable.vue (Chat 2026-07-27) — dünner Wrapper, die
+  // eigentliche Logik samt Bug-Historie steckt in jumpToTimeRange/priceChartJumpToTime.js.
   async jumpToTrade(entryTime, exitTime) {
     return jumpToTimeRange(entryTime, exitTime);
   },
