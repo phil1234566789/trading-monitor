@@ -27,8 +27,27 @@ korrigieren reicht nicht" (drei Fehlerwiederholungen am selben Tag, bis der Skil
      Konsolidierung dieselbe ob_zones-Zeile wie `kind='ob_zone'`), nicht erfinden oder weglassen.
    - `kind="ob"`: `price` = `ob_bottom` bei Short, `ob_top` bei Long; `rangeLow`/`rangeHigh`
      PFLICHT (Zonenkanten); `timeframe` mitgeben (z. B. `"5M"`).
-   - `kind="pivot"`: `price` = der gesweepte Pivot-Preis; `touchedTime` = wann der Sweep passierte,
-     falls bekannt.
+   - `kind="pivot"` bedeutet AUSSCHLIESSLICH Liquiditäts-Sweep, nichts anderes: `price` = der
+     gesweepte Pivot-Preis (Kurs hat ihn angetippt/durchstochen und ist DANACH umgekehrt),
+     `touchedTime` = wann der Sweep passierte. Ein Sweep ist ein Reversal-Signal in die
+     GEGENRICHTUNG des gesweepten Levels (gesweeptes Tief → bullisch, gesweeptes Hoch → bärisch,
+     siehe [Liquiditäts-Sweep](../../../../trading/liquidität.md#liquiditäts-sweep--mechanismus)).
+   - **Vor jedem `kind="pivot"`-Call explizit prüfen: ist das wirklich ein Sweep (antippen +
+     umkehren), oder ein BOS/Bruch (Kerzenschluss durch das Level + Fortsetzung in dieselbe
+     Richtung)?** Ein BOS ist die entgegengesetzte Mechanik zu einem Sweep (Fortsetzungssignal,
+     kein Reversal) und hat KEINEN passenden `kind` in diesem Tool — nicht ersatzweise unter
+     `kind="pivot"` eintragen, das erzeugt ein invertiertes, verwirrendes Bild (ein "Sweep" eines
+     Tiefs sieht dann wie eine bullische Bestätigung aus, obwohl es als Short-Beleg gemeint war).
+     Passt keiner der drei `kind`-Werte (`pivot`/`ob`/`fib`) zur eigentlichen Bestätigung aus
+     Schritt 5 (z. B. BOS, EMA-Kreuzung, RSI-Level), bleibt sie nur im Reasoning-Text erwähnt, statt
+     sie in einen falschen `kind` zu zwingen — siehe milk-city-Task
+     `confluence-tracking-bei-dealing-ranges-add-trade-confirmation-kind-confluence` für den noch
+     fehlenden `kind` für genau solche Fälle. Bug-Beispiel 24.08.2026 (EURUSD, Dealing Range #45):
+     ein echter BOS (1H-HL 1,16867 mit Kerzenschluss gebrochen) wurde fälschlich als
+     `kind="pivot"` (= Sweep) eingetragen — Philip im Journal-UI: „wie kann eine
+     Short-Bestätigung im unteren Bereich liegen" (zu Recht, ein gesweeptes Tief wäre bullisch
+     gewesen). Es gab zudem kein Tool, den Fehler danach selbst zu korrigieren (kein
+     `delete_trade_confirmation`) — Philip musste die Zeile manuell im Journal-UI löschen.
 
 3. **Verifizieren per `get_journal`**, dass die Dealing Range mit allen Bestätigungen UND dem
    Target auftaucht, bevor die Aufgabe als erledigt gilt — nicht nur auf die Tool-Response von

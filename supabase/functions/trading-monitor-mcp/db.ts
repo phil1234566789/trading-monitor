@@ -264,6 +264,27 @@ async function findOrCreateObZoneId(instrument: string, timeframe: string, direc
   return data.id as number;
 }
 
+// Analoges Gegenstück zu findOrCreateObZoneId, für kind='pivot'-Targets/Bestätigungen (Task
+// "1H-Struktur-Pivots auf kanonische liquidity_levels-ID konsolidieren", 2026-08-24/25). Ein
+// structure1h-Pivot (marketStructureAnalysis.ts) hat oft keine eigene liquidity_levels-Zeile —
+// poi-watchers Fraktal-Erkennung läuft unabhängig davon und findet nicht zwangsläufig denselben
+// Preispunkt. Nutzt denselben unique(instrument,timeframe,direction,pivot_time)-Constraint wie
+// poi-watcher selbst (Migration 20260715120000) — trifft der Upsert auf einen bereits von
+// poi-watcher erkannten Pivot, wird dessen Zeile wiederverwendet (keine Dopplung), sonst neu
+// angelegt. timeframe ist hier '1H' oder '4H' (siehe liquidity_levels-Check-Constraint).
+async function findOrCreateLiquidityLevelId(instrument: string, timeframe: string, direction: string, price: number, pivotTimeSec: number) {
+  const { data, error } = await supabase
+    .from("liquidity_levels")
+    .upsert(
+      { instrument, timeframe, direction, price, pivot_time: new Date(pivotTimeSec * 1000).toISOString() },
+      { onConflict: "instrument,timeframe,direction,pivot_time" },
+    )
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return data.id as number;
+}
+
 // Landet seit Punkt 6 als ganz normaler kind='ob_zone'-Pin (find-or-create in ob_zones, dann
 // addPinEntry) statt eines eigenen m5_ob-Rohdaten-Snapshots — Signatur bleibt unverändert, damit
 // pins.ts (add_pin_entry-Tool, Lanas stabiles Interface) nicht angepasst werden muss.
@@ -563,7 +584,14 @@ export interface CreateTradeArgs extends TradePositionInput {
   direction: "long" | "short";
   invalidation?: number | null;
   tradeSetupId?: number | null;
-  targets?: { price: number; rangeLow?: number | null; rangeHigh?: number | null }[];
+  targets?: {
+    price: number;
+    rangeLow?: number | null;
+    rangeHigh?: number | null;
+    instrument?: string;
+    timeframe?: string;
+    direction?: "high" | "low";
+  }[];
 }
 
 // Legt die "Trade Entity" an, die Philip meint: EINE dealing_range (die Idee) + EINE trade_position
@@ -604,15 +632,19 @@ export async function createTrade(args: CreateTradeArgs) {
     // reinen Preis keine Linie rekonstruierbar). position.triggered_at ist der beste verfügbare
     // Anker, den dieses Tool kennt — der tatsächliche DB-Wert (auch wenn triggeredAt im Aufruf
     // fehlte und die Spalte selbst einen Default zog), nicht args.triggeredAt.
+    const liquidityLevelIds = await Promise.all(
+      args.targets.map((t) => resolvePivotLiquidityLevelId({ ...t, sourceTime: position.triggered_at })),
+    );
     const { data: targetRows, error: targetError } = await supabase
       .from("trade_targets")
       .insert(
-        args.targets.map((t) => ({
+        args.targets.map((t, i) => ({
           dealing_range_id: dealingRange.id,
           price: t.price,
           range_low: t.rangeLow ?? null,
           range_high: t.rangeHigh ?? null,
           source_time: position.triggered_at,
+          liquidity_level_id: liquidityLevelIds[i],
         })),
       )
       .select("*");
@@ -716,6 +748,13 @@ export interface AddTradeConfirmationArgs {
   rangeLow?: number | null;
   rangeHigh?: number | null;
   timeframe?: string | null;
+  // Nur bei kind='pivot' sinnvoll (Task "liquidity_level_id-Konsolidierung", 2026-08-24/25) — wenn
+  // alle drei zusammen mit price/sourceTime gegeben sind, wird der Pivot per find-or-create in
+  // liquidity_levels aufgelöst statt nur als roher Snapshot gespeichert (siehe
+  // findOrCreateLiquidityLevelId). Fehlen sie, bleibt liquidity_level_id null (Alt-Verhalten,
+  // weiterhin unterstützt).
+  instrument?: string;
+  direction?: "high" | "low";
 }
 
 // Fehlte bisher komplett auf MCP-Seite (Bug-Report Philip 2026-08-07, siehe Migration
@@ -727,6 +766,16 @@ export interface AddTradeConfirmationArgs {
 // entscheidet, ob dealing_range_id (GO für die Idee) oder trade_position_id (GO für diesen Entry)
 // gesetzt wird, nie beide.
 export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
+  let liquidityLevelId: number | null = null;
+  if (args.kind === "pivot" && args.instrument && args.timeframe && args.direction) {
+    liquidityLevelId = await findOrCreateLiquidityLevelId(
+      args.instrument,
+      args.timeframe,
+      args.direction,
+      args.price,
+      Math.floor(new Date(args.sourceTime).getTime() / 1000),
+    );
+  }
   const { data, error } = await supabase
     .from("trade_confirmations")
     .insert({
@@ -739,6 +788,7 @@ export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
       range_low: args.rangeLow ?? null,
       range_high: args.rangeHigh ?? null,
       timeframe: args.timeframe ?? null,
+      liquidity_level_id: liquidityLevelId,
     })
     .select("*")
     .single();
@@ -754,6 +804,17 @@ export interface AddTradeTargetArgs {
   // dieselbe Begründung) — ohne sourceTime bleibt das Target im Chart unsichtbar, auch wenn die
   // DB-Zeile existiert.
   sourceTime: string;
+  // Nur sinnvoll für ein reines Pivot-Target (kein rangeLow/rangeHigh) — siehe
+  // AddTradeConfirmationArgs.instrument/direction, gleiche find-or-create-Logik.
+  instrument?: string;
+  timeframe?: string;
+  direction?: "high" | "low";
+}
+
+async function resolvePivotLiquidityLevelId(args: { rangeLow?: number | null; rangeHigh?: number | null; instrument?: string; timeframe?: string; direction?: "high" | "low"; price: number; sourceTime: string }) {
+  if (args.rangeLow != null || args.rangeHigh != null) return null; // OB-Ziel, kein Pivot
+  if (!args.instrument || !args.timeframe || !args.direction) return null;
+  return findOrCreateLiquidityLevelId(args.instrument, args.timeframe, args.direction, args.price, Math.floor(new Date(args.sourceTime).getTime() / 1000));
 }
 
 // Fügt einer BEREITS BESTEHENDEN dealing_range ein weiteres Target hinzu (createTrade oben legt
@@ -765,6 +826,7 @@ export interface AddTradeTargetArgs {
 // 20260728140000_trade_targets_kind_and_source.sql) unsichtbar im Chart, auch wenn die DB-Zeile
 // existiert, und das reine Doku-"sollte" reichte nicht zuverlässig (Bug-Report Philip 2026-08-18).
 export async function addTradeTarget(dealingRangeId: number, args: AddTradeTargetArgs) {
+  const liquidityLevelId = await resolvePivotLiquidityLevelId(args);
   const { data, error } = await supabase
     .from("trade_targets")
     .insert({
@@ -773,6 +835,7 @@ export async function addTradeTarget(dealingRangeId: number, args: AddTradeTarge
       range_low: args.rangeLow ?? null,
       range_high: args.rangeHigh ?? null,
       source_time: args.sourceTime,
+      liquidity_level_id: liquidityLevelId,
     })
     .select("*")
     .single();
@@ -785,6 +848,7 @@ export interface UpdateTradeTargetArgs {
   rangeLow?: number | null;
   rangeHigh?: number | null;
   sourceTime?: string | null;
+  liquidityLevelId?: number | null;
 }
 
 const TRADE_TARGET_FIELD_MAP: Record<keyof UpdateTradeTargetArgs, string> = {
@@ -792,6 +856,7 @@ const TRADE_TARGET_FIELD_MAP: Record<keyof UpdateTradeTargetArgs, string> = {
   rangeLow: "range_low",
   rangeHigh: "range_high",
   sourceTime: "source_time",
+  liquidityLevelId: "liquidity_level_id",
 };
 
 // Nur die tatsächlich übergebenen Felder patchen, wie updateTradePosition/updateDealingRange oben.

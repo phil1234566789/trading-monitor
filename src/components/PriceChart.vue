@@ -53,6 +53,7 @@ import { fetchCandlesCached } from "../candleCache.js";
 import { replayFetchToMs, nextCandleAfter, snapToBarTime, businessSecondsBetween } from "../chartTimeUtils.js";
 import { classifyAge } from "../ageTier";
 import { kindLabel as targetKindLabel } from "../tradeTargets";
+import { tradesVisible } from "../tradeVisibility.js";
 import { kindLabel as confirmationKindLabel } from "../tradeConfirmations";
 import { useStatusBar } from "../composables/useStatusBar.js";
 import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
@@ -799,7 +800,7 @@ function refreshTradeMarkersInternal() {
 function refreshTradeSetupLinksInternal() {
   for (const p of tradeSetupLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeSetupLinkPrimitives.length = 0;
-  if (!props.showTradeSetups || !props.showTrades) return;
+  if (!tradesVisible(props.showTradeSetups, props.showTrades)) return;
   const candles = clipReplay(allCandles);
   const drawnTradeSetupIds = new Set();
   for (const t of tradesVisibleForCandles(props.trades, candles)) {
@@ -928,7 +929,7 @@ function firstCandleTouchRange(candles, sourceTime, rangeLow, rangeHigh) {
 function refreshTradeTargetLinksInternal() {
   for (const p of tradeTargetLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeTargetLinkPrimitives.length = 0;
-  if (!props.showTradeSetups || !props.showTrades) return;
+  if (!tradesVisible(props.showTradeSetups, props.showTrades)) return;
   const candles = clipReplay(allCandles);
   if (candles.length === 0) return;
   const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
@@ -975,6 +976,14 @@ function refreshTradeTargetLinksInternal() {
         tradeTargetLinkPrimitives.push(primitive);
         continue;
       }
+      // Ein Pivot-Target mit liquidity_level_id (Task "1H-Struktur-Pivots auf kanonische
+      // liquidity_levels-ID konsolidieren", 2026-08-24/25) wird NICHT mehr hier eigenständig
+      // gezeichnet — dasselbe Level läuft bereits über renderLiquidityLevels (Dashboard.vue:
+      // pinnedLiquidityLevels/pinLiquidityLevelKeys hängen es dort mit Pin-Halo ein), Philip:
+      // "soll einfach das LQ-Chartobjekt selbst sein, nur gehighlighted" statt einer eigenen,
+      // abweichenden Linie. Alt-Targets ohne liquidity_level_id (vor der Migration) fallen
+      // weiterhin auf die bisherige Linie zurück.
+      if (target.kind === "pivot" && target.liquidityLevel) continue;
       const touchedTime = target.touchedTime ?? firstCandleTouch(candles, target.sourceTime, target.price);
       const endTime = touchedTime ?? candles[candles.length - 1].time;
       const tier = classifyAge(businessSecondsBetween(target.sourceTime, touchedTime ?? nowSec));
@@ -1016,7 +1025,7 @@ function refreshTradeTargetLinksInternal() {
 function refreshTradeConfirmationLinksInternal() {
   for (const p of tradeConfirmationLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeConfirmationLinkPrimitives.length = 0;
-  if (!props.showTradeSetups || !props.showTrades) return;
+  if (!tradesVisible(props.showTradeSetups, props.showTrades)) return;
   const candles = clipReplay(allCandles);
   if (candles.length === 0) return;
   const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
@@ -1079,6 +1088,10 @@ function refreshTradeConfirmationLinksInternal() {
       // "jetzt" (Bug-Report Philip 2026-07-31). Anders als bei OB-Zonen unkritisch hier: eine
       // Bestätigung (Pivot ODER Fib) ist immer EIN einzelner Preis, keine Zonenspanne — derselbe
       // Zeitebenen-Mismatch wie bei OB kann also nicht auftreten.
+      // Analog zu refreshTradeTargetLinksInternal: eine Pivot-Bestätigung mit liquidity_level_id
+      // läuft über die native renderLiquidityLevels+Pin-Halo-Anzeige, nicht mehr über eine eigene
+      // Linie hier.
+      if (confirmation.kind === "pivot" && confirmation.liquidityLevel) continue;
       const touchedTime = confirmation.touchedTime ?? firstCandleTouch(candles, confirmation.sourceTime, confirmation.price);
       const endTime = touchedTime ?? candles[candles.length - 1].time;
       const tier = classifyAge(businessSecondsBetween(confirmation.sourceTime, touchedTime ?? nowSec));
@@ -1109,7 +1122,7 @@ function refreshTradeConfirmationLinksInternal() {
 function refreshInvalidationLinesInternal() {
   for (const p of invalidationLinePrimitives) candleSeries.detachPrimitive(p);
   invalidationLinePrimitives.length = 0;
-  if (!props.showTradeSetups || !props.showTrades) return;
+  if (!tradesVisible(props.showTradeSetups, props.showTrades)) return;
   const candles = clipReplay(allCandles);
   if (candles.length === 0) return;
   const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);

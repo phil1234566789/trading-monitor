@@ -27,6 +27,8 @@ import {
 } from "../tradeIntake.js";
 import { fetchObZones } from "../obZones.js";
 import { fetchLiquidityLevelsHtf } from "../liquidityLevels.js";
+import { liquidityLevelNaturalKey } from "../liquidity.js";
+import { tradesVisible } from "../tradeVisibility.js";
 import {
   fetchPinContext,
   addPinEntry,
@@ -643,11 +645,35 @@ const pinnedObZones = computed(() => {
       endTime: toUnixSec(e.obZone.endTime),
     }));
 });
+// Trade-Targets/-Bestätigungen mit liquidity_level_id (Task "1H-Struktur-Pivots auf kanonische
+// liquidity_levels-ID konsolidieren", 2026-08-24/25, siehe trades.js: toLiquidityLevel) — dieselbe
+// Form wie ein pin_context-Level oben, deshalb hier genauso in pinnedLiquidityLevels/
+// pinLiquidityLevelKeys eingemischt, statt einen eigenen Zeichenpfad zu brauchen (PriceChart.vue:
+// refreshTradeTargetLinksInternal zeichnet ein kind='pivot'-Target/eine Bestätigung MIT
+// liquidity_level_id deshalb nicht mehr selbst, siehe dort). Dedupliziert per Natural Key, falls
+// mehrere Targets/Bestätigungen auf denselben Pivot zeigen.
+const tradeLinkedLiquidityLevels = computed(() => {
+  // Denselben Trades-Toggle respektieren wie PriceChart.vue's Trade-Zeichenpfade (Bug-Report
+  // Philip 2026-08-25: diese Linien blieben beim Ausschalten von "Trades" stehen) — siehe
+  // tradeVisibility.js für die gemeinsame Regel, damit sie nicht ein sechstes Mal separat
+  // nachgebaut wird.
+  if (!tradesVisible(showTradeSetups.value, showTrades.value)) return [];
+  const byKey = new Map();
+  for (const t of trades.value) {
+    if (t.instrument !== currentSymbol.value) continue;
+    for (const item of [...t.targets, ...t.confirmations]) {
+      const lvl = item.liquidityLevel;
+      if (!lvl) continue;
+      byKey.set(liquidityLevelNaturalKey(lvl.dir, lvl.pivotTime), lvl);
+    }
+  }
+  return [...byKey.values()];
+});
 // Kaskaden-Regel statt reiner currentBar-Gleichheit (Bug 2026-08-21, siehe pinVisibleOnCurrentTf
 // oben, Philip 2026-08-18/21: ein gepinntes 1H/4H-Level soll auch auf M5 sichtbar bleiben, siehe
 // PriceChart.vue: mergePinnedLevels — aber NICHT umgekehrt ein M5-Level auf 4H).
 const pinnedLiquidityLevels = computed(() => {
-  return pinContextEntries.value
+  const fromPins = pinContextEntries.value
     .filter(
       (e) =>
         (e.kind === "liquidity_level" && e.liquidityLevel?.instrument === currentSymbol.value && pinVisibleOnCurrentTf("1H")) ||
@@ -677,6 +703,9 @@ const pinnedLiquidityLevels = computed(() => {
         timeframe: e.m5Liquidity.timeframe,
       };
     });
+  const seen = new Set(fromPins.map((l) => liquidityLevelNaturalKey(l.dir, l.pivotTime)));
+  const fromTrades = tradeLinkedLiquidityLevels.value.filter((l) => !seen.has(liquidityLevelNaturalKey(l.dir, l.pivotTime)));
+  return [...fromPins, ...fromTrades];
 });
 const pinnedTradeSetups = computed(() => {
   return pinContextEntries.value
@@ -997,6 +1026,10 @@ const pinLiquidityLevelKeys = computed(() => {
         (e) => e.kind === "m5_liquidity_level" && e.m5Liquidity?.instrument === currentSymbol.value && pinVisibleOnCurrentTf(e.m5Liquidity.timeframe),
       )
       .map((e) => m5LiquidityEntryNaturalKey(e.m5Liquidity)),
+    // Trade-Targets/-Bestätigungen mit liquidity_level_id bekommen denselben Halo wie ein Pin
+    // (siehe tradeLinkedLiquidityLevels oben) — sie sind ohnehin schon Teil der Idee, ein
+    // zusätzliches manuelles Anpinnen wäre nur Mehrarbeit für dasselbe Ergebnis.
+    ...tradeLinkedLiquidityLevels.value.map((l) => liquidityLevelNaturalKey(l.dir, l.pivotTime)),
   ]);
 });
 // RSI-Divergenz-Pendant (Chat 2026-08-17) — nur nach Symbol gefiltert, kein Timeframe-Filter

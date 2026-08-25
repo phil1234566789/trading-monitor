@@ -64,6 +64,9 @@ export function registerTradeTools(server: McpServer) {
               price: z.number(),
               rangeLow: z.number().optional().describe("Für OB-Ziele: Zonen-Unterkante"),
               rangeHigh: z.number().optional().describe("Für OB-Ziele: Zonen-Oberkante"),
+              instrument: INSTRUMENT.optional().describe("Nur bei reinen Pivot-Zielen (kein rangeLow/rangeHigh): löst per find-or-create eine liquidity_levels-Zeile auf, siehe add_trade_target"),
+              timeframe: z.string().optional().describe("Nur bei reinen Pivot-Zielen: '1H' oder '4H'"),
+              direction: z.enum(["high", "low"]).optional().describe("Nur bei reinen Pivot-Zielen"),
             }),
           )
           .optional()
@@ -161,7 +164,12 @@ export function registerTradeTools(server: McpServer) {
         "ob_bottom/ob_top, timeframe='5M'; bei kind='pivot' price = ls_price, sourceTime = " +
         "ls_pivot_time, touchedTime = ls_touched_time). sourceTime ist PFLICHT (bei kind='ob' " +
         "zusätzlich rangeLow/rangeHigh) — ohne diese Felder speichert das Tool nichts, weil die " +
-        "Bestätigung sonst im Journal existiert, aber für immer unsichtbar im Chart bliebe.",
+        "Bestätigung sonst im Journal existiert, aber für immer unsichtbar im Chart bliebe. Bei " +
+        "kind='pivot' zusätzlich instrument/direction (und timeframe='1H'/'4H') mitgeben, wenn der " +
+        "Pivot ein echter Struktur-/Liquiditäts-Pivot ist (nicht z.B. ein synthetischer Preis) — " +
+        "löst ihn per find-or-create in liquidity_levels auf (dieselbe Zeile wie ein von poi-watcher " +
+        "erkannter Pivot, falls der Preis/Zeitpunkt exakt übereinstimmt), statt nur einen rohen " +
+        "Snapshot zu speichern. Fehlen sie, bleibt das alte Rohdaten-Verhalten (kein Fehler).",
       inputSchema: {
         level: z.enum(["range", "position"]),
         id: z.number().int().describe("dealing_range_id bei level='range', trade_position_id bei level='position'"),
@@ -171,7 +179,9 @@ export function registerTradeTools(server: McpServer) {
         touchedTime: z.string().nullable().optional().describe("ISO-Zeitstempel, falls bereits (an)getestet"),
         rangeLow: z.number().nullable().optional().describe("Bei kind='ob': PFLICHT (untere Zonen-Kante), bei kind='fib' optionale Ankerkante."),
         rangeHigh: z.number().nullable().optional().describe("Bei kind='ob': PFLICHT (obere Zonen-Kante), bei kind='fib' optionale Ankerkante."),
-        timeframe: z.string().nullable().optional().describe("Bei kind='ob': Zeitebene der Zone, z.B. '5M'/'1H'/'4H'"),
+        timeframe: z.string().nullable().optional().describe("Bei kind='ob': Zeitebene der Zone, z.B. '5M'/'1H'/'4H'. Bei kind='pivot': '1H'/'4H', siehe oben."),
+        instrument: INSTRUMENT.optional().describe("Nur bei kind='pivot': siehe Tool-Beschreibung."),
+        direction: z.enum(["high", "low"]).optional().describe("Nur bei kind='pivot': siehe Tool-Beschreibung."),
       },
     },
     async ({ level, id, ...fields }) => {
@@ -194,13 +204,20 @@ export function registerTradeTools(server: McpServer) {
         "für eine initiale Anlage siehe stattdessen `targets` auf create_trade. dealingRangeId ist die " +
         "id der Idee (siehe get_journal, Feld dealing_ranges.id). sourceTime ist PFLICHT (z.B. Pivot-/" +
         "OB-Zeitpunkt) — ohne sourceTime bleibt das Target im Chart unsichtbar, auch wenn die " +
-        "DB-Zeile existiert, deshalb erzwingt das Tool das Feld.",
+        "DB-Zeile existiert, deshalb erzwingt das Tool das Feld. Für ein reines Pivot-Ziel (kein " +
+        "rangeLow/rangeHigh) zusätzlich instrument/direction/timeframe mitgeben, wenn es ein echter " +
+        "Struktur-/Liquiditäts-Pivot ist — löst ihn per find-or-create in liquidity_levels auf " +
+        "(siehe add_trade_confirmation für dieselbe Logik), statt nur einen rohen Snapshot zu " +
+        "speichern. Fehlen sie, bleibt das alte Rohdaten-Verhalten (kein Fehler).",
       inputSchema: {
         dealingRangeId: z.number().int(),
         price: z.number(),
         rangeLow: z.number().nullable().optional().describe("Für OB-Ziele: Zonen-Unterkante"),
         rangeHigh: z.number().nullable().optional().describe("Für OB-Ziele: Zonen-Oberkante"),
         sourceTime: z.string().describe("ISO-Zeitstempel, z.B. Pivot-/OB-Zeitpunkt — PFLICHT, sonst keine Chart-Position berechenbar."),
+        instrument: INSTRUMENT.optional().describe("Nur bei einem reinen Pivot-Ziel: siehe Tool-Beschreibung."),
+        timeframe: z.string().optional().describe("Nur bei einem reinen Pivot-Ziel: '1H' oder '4H'."),
+        direction: z.enum(["high", "low"]).optional().describe("Nur bei einem reinen Pivot-Ziel."),
       },
     },
     async ({ dealingRangeId, ...fields }) => json(await addTradeTarget(dealingRangeId, fields)),
@@ -221,6 +238,7 @@ export function registerTradeTools(server: McpServer) {
         rangeLow: z.number().nullable().optional(),
         rangeHigh: z.number().nullable().optional(),
         sourceTime: z.string().nullable().optional(),
+        liquidityLevelId: z.number().int().nullable().optional().describe("Manuelle Verlinkung/Korrektur auf eine liquidity_levels-Zeile, siehe get_liquidity_levels."),
       },
     },
     async ({ id, ...fields }) => json(await updateTradeTarget(id, fields)),

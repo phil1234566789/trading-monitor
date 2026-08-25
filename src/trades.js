@@ -66,15 +66,22 @@ export async function fetchTrades(instrument, accountId = null) {
     { data: lessonTargets, error: lessonTargetsError },
     { data: lessonSources, error: lessonSourcesError },
   ] = await Promise.all([
-    supabase.from("trade_targets").select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high, timeframe").in("dealing_range_id", rangeIds),
+    supabase
+      .from("trade_targets")
+      .select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high, timeframe, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)")
+      .in("dealing_range_id", rangeIds),
     supabase.from("trade_partial_exits").select("trade_position_id, price, exit_time, portion_pct").in("trade_position_id", positionIds),
     supabase
       .from("trade_confirmations")
-      .select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi")
+      .select(
+        "id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
+      )
       .in("dealing_range_id", rangeIds),
     supabase
       .from("trade_confirmations")
-      .select("id, trade_position_id, price, kind, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi")
+      .select(
+        "id, trade_position_id, price, kind, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
+      )
       .in("trade_position_id", positionIds),
     lessonTargetIds.length > 0
       ? supabase.from("dealing_ranges").select("id, instrument, direction").in("id", lessonTargetIds)
@@ -98,6 +105,25 @@ export async function fetchTrades(instrument, accountId = null) {
     "dealing_range_id",
   );
 
+  // Bringt eine per liquidity_level_id eingebettete liquidity_levels-Zeile (Task
+  // "1H-Struktur-Pivots auf kanonische liquidity_levels-ID konsolidieren", 2026-08-24/25) in genau
+  // die Form, die Dashboard.vue für pinnedLiquidityLevels/renderLiquidityLevels erwartet (dir als
+  // 1/-1 statt "high"/"low", Unix-Sekunden statt ISO) — so kann ein Target/eine Bestätigung mit
+  // liquidity_level_id im Chart über denselben nativen Pin-Highlight-Mechanismus gerendert werden
+  // statt über einen eigenen Zeichenpfad (siehe PriceChart.vue: refreshTradeTargetLinksInternal).
+  function toLiquidityLevel(row) {
+    if (!row?.liquidity_levels) return null;
+    const lvl = row.liquidity_levels;
+    return {
+      price: lvl.price,
+      dir: lvl.direction === "high" ? 1 : -1,
+      pivotTime: Math.floor(new Date(lvl.pivot_time).getTime() / 1000),
+      touched: lvl.touched,
+      endTime: lvl.end_time ? Math.floor(new Date(lvl.end_time).getTime() / 1000) : null,
+      timeframe: lvl.timeframe,
+    };
+  }
+
   // level unterscheidet die zwei Ebenen aus trade_confirmations (siehe Migration
   // 20260731120000: dealing_range_id ODER trade_position_id) — TradeEditModal.vue braucht das,
   // um "GO für die Idee" von "GO für diesen Entry" in der Liste sichtbar zu trennen.
@@ -109,6 +135,7 @@ export async function fetchTrades(instrument, accountId = null) {
       kind: c.kind,
       sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
       touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
+      liquidityLevel: toLiquidityLevel(c),
       // Nur bei kind='fib' gesetzt (siehe tradeConfirmations.ts) — die zwei Ankerpreise des
       // gespeicherten Fib-Werts, sonst null.
       rangeLow: c.range_low ?? null,
@@ -171,6 +198,7 @@ export async function fetchTrades(instrument, accountId = null) {
         // Nur bei kind='ob' gesetzt — Zeitebene der Zone (1H/4H/5M), damit die Box live per
         // detectOrderBlocks nachvollzogen werden kann statt nur einen Snapshot zu zeigen.
         timeframe: t.timeframe ?? null,
+        liquidityLevel: toLiquidityLevel(t),
       })),
       // Bestätigungen fürs GO der ganzen Idee (dealing_range) und fürs GO dieses einen Entries
       // (trade_position, ex-setup_entry) zusammen — beide teilen dieselbe Tabelle/Rohform (siehe
