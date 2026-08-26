@@ -113,8 +113,10 @@ class LiquidityLineRenderer {
       // über die Linie statt nach rechts über den Pane-Rand hinaus, kein Clamp nötig).
       // Chat 2026-07-25: "wenn ich im 1h den chart etwas herauszoome, dann verdecken mir die
       // Labels die Sicht" — sobald die Kerzen zu dünn sind (siehe chartZoom.js), Label weglassen,
-      // Linie selbst bleibt unverändert stehen.
-      if (this._options.label && canShowLabels(this._chart, this._candles)) {
+      // Linie selbst bleibt unverändert stehen. lenientLabels (Bug-Report Philip 2026-08-26: HTF-
+      // Label auf M5 unsichtbar) — HTF-Level nutzen bewusst die lockere Schwelle unabhängig vom
+      // Chart-Timeframe, siehe levelOptions/canShowLabels.
+      if (this._options.label && canShowLabels(this._chart, this._candles, this._options.lenientLabels)) {
         ctx.font = `${Math.round(10 * scope.verticalPixelRatio)}px sans-serif`;
         ctx.fillStyle = this._options.color;
         if (this._options.labelSide === "end") {
@@ -333,6 +335,7 @@ function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isS
     lineWidth: lineWidth(key),
     label,
     labelSide: bullBearLabelSide(lvl.dir === 1),
+    lenientLabels: isHtf,
     inPinContext,
     pinColor: cssColor("pin"),
     isSelectedPin,

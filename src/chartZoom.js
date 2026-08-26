@@ -26,13 +26,20 @@ export const MIN_PIXELS_PER_HOUR_FOR_LABELS_INTRADAY = 70;
 
 // chart/candles sind optional (manche Primitives werden in Tests ohne echten Chart/ohne Kerzen
 // konstruiert) — ohne beide konservativ IMMER anzeigen, statt fälschlich alles auszublenden.
-export function canShowLabels(chart, candles) {
+// `lenientThreshold` (Bug-Report Philip 2026-08-26: "die Labels der HTF LQ-Levels werden im M5
+// nicht angezeigt") — die INTRADAY-Schwelle wurde gegen Gedrängel bei den VIELEN M5-eigenen Events
+// gebaut (s.o.), greift aber unabsichtlich auch für die wenigen 1H/4H-Level, die seit derselben
+// Session (Punkt 0, "HTF-Level bekommen IMMER ein Label") absichtlich chart-timeframe-unabhängig
+// sichtbar sein sollen — mit nur einer Handvoll HTF-Leveln besteht dort nicht dasselbe
+// Gedrängel-Risiko wie bei M5-eigenen Events. true = immer die lockere Schwelle nutzen, unabhängig
+// von barSeconds.
+export function canShowLabels(chart, candles, lenientThreshold = false) {
   if (!chart) return true;
   const barSpacing = chart.timeScale().options().barSpacing;
   if (!candles || candles.length < 2) return true; // keine Kerzendauer ermittelbar -> nicht raten
   const barSeconds = candles[1].time - candles[0].time;
   if (!barSeconds) return true;
   const pixelsPerHour = barSpacing * (3600 / barSeconds);
-  const threshold = barSeconds < 3600 ? MIN_PIXELS_PER_HOUR_FOR_LABELS_INTRADAY : MIN_PIXELS_PER_HOUR_FOR_LABELS;
+  const threshold = !lenientThreshold && barSeconds < 3600 ? MIN_PIXELS_PER_HOUR_FOR_LABELS_INTRADAY : MIN_PIXELS_PER_HOUR_FOR_LABELS;
   return pixelsPerHour >= threshold;
 }

@@ -182,6 +182,11 @@ applies when explicitly invoked, not to every session in this repo.
 - **Respond to Philip in German** (chat replies, not just code comments) — code
   identifiers/commit messages/PR text stay English as usual; this is about the conversational
   reply text.
+- **State every clock time to Philip in Europe/Berlin local time, never raw UTC** — this is about
+  the chat reply text specifically (DB values/timestamps can stay UTC internally). Convert before
+  stating it, and double-check CEST vs. CET for the actual date rather than assuming a fixed
+  offset. This is a stricter version of the general Berlin-timezone convention above (which covers
+  code); it applies even when reasoning about times purely in conversation, not just when writing code.
 - **When Philip corrects a mistake in how Claude worked (not a trading-analysis call, but the
   agent's own process — wrong tool priority, a skipped step, a missed convention), fix it
   durably, not by writing an auto-memory entry alone.** Memory is a recall aid, not an enforced
