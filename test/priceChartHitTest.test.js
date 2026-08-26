@@ -211,11 +211,34 @@ describe("findNearbyPinCandidates", () => {
     expect(result.map((c) => c.kind).sort()).toEqual(["m5_ob", "ob_zone"]);
   });
 
-  it("unterscheidet liquidity_level (nur auf 1h-Chart) von m5_liquidity_level (jeder andere Timeframe)", () => {
+  // Bug-Report Philip 2026-08-26: "wenn ich rechtsklick mache, zum anpinnen, dann sind nur die M5
+  // Level verfügbar" — die Unterscheidung richtet sich seit 2026-08-23 nach dem timeframe-Feld des
+  // Levels SELBST (1H/4H-Level sind seit derselben Änderung unabhängig vom Chart-Timeframe
+  // sichtbar), nicht mehr nach currentBar.
+  it("liquidity_level (1H/4H) richtet sich nach dem eigenen timeframe-Feld des Levels, nicht nach currentBar", () => {
+    const level1h = { dir: 1, pivotTime: 100, price: 1.2, timeframe: "1H" };
+    const level4h = { dir: 1, pivotTime: 100, price: 1.2, timeframe: "4H" };
+    const levelM5 = { dir: 1, pivotTime: 100, price: 1.2, timeframe: "5m" };
+    const primitivesFor = (level) => emptyPrimitives({ liquidityPrimitives: [{ ...primitiveAt(5), level }] });
+    // Auf dem M5-Chart (currentBar="5m") mitgezeichnete 1H/4H-Level bleiben "liquidity_level".
+    expect(findNearbyPinCandidates(0, 0, primitivesFor(level1h), { symbol: "GBPUSD", currentBar: "5m" })[0]).toMatchObject({
+      kind: "liquidity_level",
+      level: { timeframe: "1H" },
+    });
+    expect(findNearbyPinCandidates(0, 0, primitivesFor(level4h), { symbol: "GBPUSD", currentBar: "5m" })[0]).toMatchObject({
+      kind: "liquidity_level",
+      level: { timeframe: "4H" },
+    });
+    expect(findNearbyPinCandidates(0, 0, primitivesFor(levelM5), { symbol: "GBPUSD", currentBar: "5m" })[0]).toMatchObject({
+      kind: "m5_liquidity_level",
+      level: { timeframe: "5m" },
+    });
+  });
+
+  it("fällt ohne eigenes timeframe-Feld auf currentBar zurück", () => {
     const level = { dir: 1, pivotTime: 100, price: 1.2 };
-    const primitivesOn1h = emptyPrimitives({ liquidityPrimitives: [{ ...primitiveAt(5), level }] });
-    expect(findNearbyPinCandidates(0, 0, primitivesOn1h, { symbol: "GBPUSD", currentBar: "1h" })[0].kind).toBe("liquidity_level");
-    expect(findNearbyPinCandidates(0, 0, primitivesOn1h, { symbol: "GBPUSD", currentBar: "5m" })[0].kind).toBe("m5_liquidity_level");
+    const primitives = emptyPrimitives({ liquidityPrimitives: [{ ...primitiveAt(5), level }] });
+    expect(findNearbyPinCandidates(0, 0, primitives, { symbol: "GBPUSD", currentBar: "5m" })[0].kind).toBe("m5_liquidity_level");
   });
 
   it("findet trade_setup und trade_confirmation (nur OrderBlockPrimitive-Instanzen, nicht Linien)", () => {

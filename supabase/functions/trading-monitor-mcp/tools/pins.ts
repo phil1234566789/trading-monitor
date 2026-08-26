@@ -58,7 +58,7 @@ export function registerPinTools(server: McpServer) {
         "trade_position/trade_confirmation (Journal-Einträge bleiben Philip-only, dafür bleibt " +
         "der Rechtsklick-Weg im Browser der einzige Weg). Fünf kind-Werte, jeweils mit eigenen " +
         "Pflichtfeldern: 'ob_zone'/'trade_setup'/'liquidity_level' brauchen `refId` (die echte " +
-        "DB-id aus get_ob_zones/get_trade_setups/get_liquidity_levels); 'm5_ob' braucht `m5Ob` " +
+        "DB-id aus get_ob_zones/get_trade_setups/get_near_relevant_liquidity_levels); 'm5_ob' braucht `m5Ob` " +
         "(M5-Orderblock — Rohdaten statt id, weil poi-watcher M5 nie live erkennt/persistiert; wird " +
         "beim Pinnen per find-or-create in ob_zones angelegt); 'm5_liquidity_level' " +
         "braucht `m5Liquidity` (Liquiditäts-Level auf einem Nicht-1h-Timeframe, ebenfalls nie " +

@@ -305,13 +305,13 @@ export async function resolveObZoneId(instrument, timeframe, dirNum, startTimeUn
   return data?.id ?? null;
 }
 
-// Analog zu resolveObZoneId, für Liquiditäts-Level: poi-watcher persistiert nur Timeframe '1H'
+// Analog zu resolveObZoneId, für Liquiditäts-Level: poi-watcher persistiert Timeframe '1H'+'4H'
 // (siehe supabase/functions/poi-watcher/index.ts), die live auf dem Chart gezeichnete Linie trägt
 // selbst keine DB-id. Natural-Key (instrument, timeframe, direction, pivot_time) wie poi-watchers
-// eigener Unique-Constraint. Liefert null, wenn (a) der Chart gerade NICHT im 1h-Timeframe ist (das
-// filtert schon PriceChart.vue vor dem Aufruf raus, siehe findNearbyPinCandidates) oder
-// (b) poi-watcher dieses Level noch nicht gespeichert hat (frisch entstanden, nächster stündlicher
-// Refresh-Tick steht noch aus). dirNum: 1 (high) | -1 (low), wie im lokalen Level-Objekt (siehe
+// eigener Unique-Constraint. Liefert null, wenn poi-watcher dieses Level noch nicht gespeichert hat
+// (frisch entstanden, nächster stündlicher Refresh-Tick steht noch aus) — timeframe kommt seit
+// 2026-08-26 vom Level selbst (findNearbyPinCandidates), nicht mehr von einem harten "nur auf
+// 1h-Chart"-Filter. dirNum: 1 (high) | -1 (low), wie im lokalen Level-Objekt (siehe
 // liquidityDetection.js: buildLevel).
 export async function resolveLiquidityLevelId(instrument, timeframe, dirNum, pivotTimeUnixSec) {
   const { data, error } = await supabase
@@ -339,11 +339,11 @@ export function obZoneEntryNaturalKey(obZone) {
   return `${obZone.timeframe}|${obZone.direction}|${startTimeUnixSec}`;
 }
 
-// Analog zu obZoneEntryNaturalKey, für ein 1H-Liquiditäts-Level (row.liquidityLevel, echte DB-
+// Analog zu obZoneEntryNaturalKey, für ein 1H/4H-Liquiditäts-Level (row.liquidityLevel, echte DB-
 // Zeile) — dieselbe Formel wie liquidity.js: liquidityLevelNaturalKey, hier auf der Embed-Zeile
 // statt dem live erkannten Level. timeframe bewusst NICHT Teil des Strings (siehe dortiger
-// Kommentar) — Dashboard.vue filtert vorher nach currentBar==="1h", bevor diese Keys in die Menge
-// gemischt werden, die an renderLiquidityLevels' pinKeys-Parameter geht.
+// Kommentar) — Dashboard.vue filtert vorher per pinVisibleOnCurrentTf(e.liquidityLevel.timeframe),
+// bevor diese Keys in die Menge gemischt werden, die an renderLiquidityLevels' pinKeys-Parameter geht.
 export function liquidityLevelEntryNaturalKey(liquidityLevel) {
   const pivotTimeUnixSec = Math.floor(new Date(liquidityLevel.pivotTime).getTime() / 1000);
   return `${liquidityLevel.direction === "high" ? "high" : "low"}|${pivotTimeUnixSec}`;

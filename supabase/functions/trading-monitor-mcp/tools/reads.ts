@@ -2,7 +2,6 @@ import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import {
   getObZones,
-  getLiquidityLevels,
   getTradeSetups,
   getJournal,
   getNewsEvents,
@@ -12,6 +11,7 @@ import {
 } from "../db.ts";
 import { fetchForexCandles } from "../forexCandles.ts";
 import { buildDataExport } from "./dataExport.ts";
+import { buildNearRelevantLiquidityLevels, NEAR_RANGE_PIPS } from "./nearRelevantLiquidityLevels.ts";
 // Derselbe computeRsi/computeEma wie der Live-Chart (PriceChart.vue) — kein zweiter Port nötig,
 // da beide Funktionen bereits dependency-frei sind (kein localStorage/import.meta.env), siehe
 // CLAUDE.md "MCP-Server" zum selben Muster bei marketStructureAnalysis.ts. rsi.ts lebte bis
@@ -47,11 +47,12 @@ export function registerReadTools(server: McpServer) {
       description:
         "RUFE DIESES TOOL ZUERST AUF, bevor du andere trading-monitor-Tools nutzt. Liefert in einem " +
         "Call: M5-Kerzen des Tages + Asia-Session-Range, den 1H-Structure-Trend, relevante " +
-        "persistierte Liquidity-Level (1H, inkl. context wie 'asia high' falls eine passende Session " +
-        "existiert) und OB-Zonen (1H+4H) für ein Instrument — dasselbe Bündel wie der 'Daten-Export'-" +
+        "persistierte Liquidity-Level (1H+4H, inkl. context wie 'asia high' und kontext wie " +
+        "'Asia-High Major (26d alt)' falls eine passende Session existiert) und OB-Zonen " +
+        "(1H+4H) für ein Instrument — dasselbe Bündel wie der 'Daten-Export'-" +
         "Button in der App. ZUSÄTZLICH m5LiquidityLevels/m5ObZones: live über ein 7-Tage-Fenster neu " +
         "erkannt (exakt derselbe Algorithmus UND Lookback wie der Button UND Philips 'Liquidität'/" +
-        "'OB M5'-Chart-Toggles, ebenfalls mit context) — anders als liquidityLevels/obZones KEINE " +
+        "'OB M5'-Chart-Toggles, ebenfalls mit context/kontext) — anders als liquidityLevels/obZones KEINE " +
         "DB-Zeilen (M5 wird von poi-watcher nie persistiert), deshalb auch kein späteres Update: " +
         "touched/invalidated gelten nur zum Zeitpunkt dieses Calls. Nutze die granularen get_*-Tools " +
         "nur, wenn du darüber hinaus mehr brauchst (andere Zeitspanne, Journal, News, Handelszeiten). " +
@@ -99,19 +100,35 @@ export function registerReadTools(server: McpServer) {
     async ({ instrument, timeframe, includeAll, asOfSec }) => json(await getObZones(instrument, timeframe, includeAll, asOfSec)),
   );
 
+  // Chat 2026-08-26, Philip: ersetzt das alte get_liquidity_levels (reine, ungefilterte DB-Abfrage)
+  // — "früher war die Idee, dass Lana alles selbst herausfindet, solange sie ALLE Daten zur
+  // Verfügung hat. Die Realität zeigt, dass sie damit nicht klarkommt, wir müssen die Daten besser
+  // vorbereiten." Siehe nearRelevantLiquidityLevels.ts für die Zeit-/Preis-Auswahlregel.
   server.registerTool(
-    "get_liquidity_levels",
+    "get_near_relevant_liquidity_levels",
     {
-      title: "Liquidity-Level",
-      description: "Liquiditäts-Level aus der liquidity_levels-Tabelle. Default: nur relevante Level (unberührte + die 2 zuletzt gesweepten pro Richtung, wie der Live-Chart-Indikator).",
+      title: "Relevante Liquidity-Level in der Nähe",
+      description:
+        `Liquiditäts-Level (1H/4H) aus der liquidity_levels-Tabelle, bereits kuratiert statt roh: ` +
+        `bereits GETOUCHTE Level nur, wenn ihr Sweep-Zeitpunkt im Fenster [fromSec, toSec] liegt; ` +
+        `noch UNGETOUCHTE Level nur, wenn ihr Preis innerhalb von ${NEAR_RANGE_PIPS} Pips um den ` +
+        `Referenzpreis (Kurs "as of" toSec) liegt — Preis-Nähe zählt bei ungetouchten Leveln mehr ` +
+        `als Alter, ein Monate alter aber preisnaher Pivot bleibt also drin. Jedes Level trägt ein ` +
+        `kontext-Feld wie in get_data_export (z.B. "Asia-High Major (26d alt)") — Sweep/High/Low ` +
+        `steht NICHT im Text (siehe direction/touched-Felder), das ist der Farbe/Position am Chart ` +
+        `vorbehalten.`,
       inputSchema: {
         instrument: INSTRUMENT,
-        timeframe: z.enum(["1h", "5m"]).optional(),
-        includeAll: z.boolean().optional(),
-        asOfSec: z.number().optional().describe("Unix-Sekunden für Backtest/Replay: Sweep-Stand wird auf diesen Zeitpunkt zurückgerechnet statt des aktuellen Live-Stands geliefert"),
+        fromSec: z.number().optional().describe("Unix-Sekunden, Fenster-Start für die Touch-Zeit-Filterung. Default: toSec minus 7 Tage."),
+        toSec: z
+          .number()
+          .optional()
+          .describe(
+            "Unix-Sekunden, Fenster-Ende UND Referenzzeitpunkt für Preis/Sweep-Stand (Backtest/Replay: der simulierte Zeitpunkt). Default: jetzt.",
+          ),
       },
     },
-    async ({ instrument, timeframe, includeAll, asOfSec }) => json(await getLiquidityLevels(instrument, timeframe, includeAll, asOfSec)),
+    async ({ instrument, fromSec, toSec }) => json(await buildNearRelevantLiquidityLevels({ instrument, fromSec, toSec })),
   );
 
   server.registerTool(

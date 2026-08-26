@@ -66,6 +66,27 @@ describe("computeHtfLiquidityLevels", () => {
     const result = computeHtfLiquidityLevels(candles, dbLevels, "GBPUSD", null, 1.15);
     expect(result[0].endTime).toBe(999);
   });
+
+  // Chat 2026-08-26, Philip: "liegt ein 4H LQ-Level auf demselben Preis wie ein 1H-Level, gewinnt
+  // das 4H-Level" — vorher wurden 1H/4H unabhängig ausgewählt und beide gezeigt.
+  it("4H gewinnt gegen ein 1H-Level auf demselben Preis", () => {
+    const dbLevels = [
+      { instrument: "GBPUSD", timeframe: "1H", pivotTime: 50, price: 1.2, dir: 1 },
+      { instrument: "GBPUSD", timeframe: "4H", pivotTime: 60, price: 1.2, dir: 1 },
+    ];
+    const result = computeHtfLiquidityLevels(candles, dbLevels, "GBPUSD", null, 1.15);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ timeframe: "4H", pivotTime: 60 });
+  });
+
+  it("behält beide, wenn sie preislich nicht kollidieren", () => {
+    const dbLevels = [
+      { instrument: "GBPUSD", timeframe: "1H", pivotTime: 50, price: 1.2, dir: 1 },
+      { instrument: "GBPUSD", timeframe: "4H", pivotTime: 60, price: 1.25, dir: 1 },
+    ];
+    const result = computeHtfLiquidityLevels(candles, dbLevels, "GBPUSD", null, 1.15);
+    expect(result.map((l) => l.timeframe).sort()).toEqual(["1H", "4H"]);
+  });
 });
 
 // Bug-Report Philip 2026-08-23: die DB-Version (poi-watcher) gewinnt IMMER bei einer Überschneidung
@@ -88,6 +109,35 @@ describe("mergeDbLiquidityLevels", () => {
     expect(mergeDbLiquidityLevels(levels, dbLevels)).toEqual([
       { dir: 1, pivotTime: 100, source: "live" },
       { dir: -1, pivotTime: 200, source: "db" },
+    ]);
+  });
+
+  // Chat 2026-08-26, Philip: ein M5-Level auf demselben Preis wie ein angezeigtes HTF-Level ist
+  // redundant — das HTF-Level ist bedeutsamer, das M5-Level fällt raus statt doppelt gezeichnet zu werden.
+  it("verwirft ein live M5-Level, das preislich mit einem HTF-Level derselben Richtung zusammenfällt", () => {
+    const levels = [{ dir: 1, pivotTime: 100, price: 1.2, source: "live-m5" }];
+    const dbLevels = [{ dir: 1, pivotTime: 999, price: 1.2, source: "db-1h" }];
+    expect(mergeDbLiquidityLevels(levels, dbLevels)).toEqual([{ dir: 1, pivotTime: 999, price: 1.2, source: "db-1h" }]);
+  });
+
+  it("verwirft NICHT bei unterschiedlicher Richtung, selbst bei identischem Preis", () => {
+    const levels = [{ dir: -1, pivotTime: 100, price: 1.2, source: "live-m5" }];
+    const dbLevels = [{ dir: 1, pivotTime: 999, price: 1.2, source: "db-1h" }];
+    expect(mergeDbLiquidityLevels(levels, dbLevels)).toEqual([
+      { dir: -1, pivotTime: 100, price: 1.2, source: "live-m5" },
+      { dir: 1, pivotTime: 999, price: 1.2, source: "db-1h" },
+    ]);
+  });
+
+  it("toleriert minimale Float-Differenzen, verwirft aber nicht bei echtem Preisabstand", () => {
+    const levels = [
+      { dir: 1, pivotTime: 100, price: 1.2 + 1e-9, source: "live-m5-nah" }, // Float-Rundung, keine echte Distanz
+      { dir: 1, pivotTime: 101, price: 1.2005, source: "live-m5-fern" }, // 5 Pip entfernt, eigenständiges Level
+    ];
+    const dbLevels = [{ dir: 1, pivotTime: 999, price: 1.2, source: "db-1h" }];
+    expect(mergeDbLiquidityLevels(levels, dbLevels)).toEqual([
+      { dir: 1, pivotTime: 101, price: 1.2005, source: "live-m5-fern" },
+      { dir: 1, pivotTime: 999, price: 1.2, source: "db-1h" },
     ]);
   });
 });

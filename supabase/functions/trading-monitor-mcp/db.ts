@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient.ts";
+import { PIP_SIZE } from "./pipConfig.js";
 
 // Dünne Supabase-Query-Helfer, von den Tools in ./tools/*.ts genutzt. Tabellenformen siehe
 // supabase/migrations/*.sql (ob_zones, liquidity_levels, trade_setups, dealing_ranges,
@@ -117,6 +118,16 @@ function applyAsOf<T extends { pivot_time: string; touched: boolean; end_time: s
     });
 }
 
+// Chat 2026-08-26, Philip: "liegt ein 4H LQ-Level auf demselben Preis wie ein 1H-Level, gewinnt das
+// 4H-Level, das 1H-Level kann raus" — analog zur selben Rangfolge im Frontend
+// (src/priceChartLiquidity.js: computeHtfLiquidityLevels/HTF_TIMEFRAME_PRIORITY), gleiches Epsilon
+// gegen Float-Differenzen. rows sind hier bereits nach EINER Richtung gefiltert (highs bzw. lows).
+const SAME_PRICE_EPSILON = 0.05 * PIP_SIZE;
+function dropLowerTfDuplicates<T extends { price: number; timeframe: string }>(rows: T[]): T[] {
+  const htfRows = rows.filter((r) => r.timeframe === "4H");
+  return rows.filter((r) => r.timeframe !== "1H" || !htfRows.some((h) => Math.abs(h.price - r.price) <= SAME_PRICE_EPSILON));
+}
+
 export async function getLiquidityLevels(instrument: string, timeframe?: string, includeAll = false, asOfSec?: number) {
   let query = supabase
     .from("liquidity_levels")
@@ -128,8 +139,8 @@ export async function getLiquidityLevels(instrument: string, timeframe?: string,
   if (error) throw new Error(error.message);
   const rows = applyAsOf(data ?? [], asOfSec);
   if (includeAll) return rows;
-  const highs = filterRelevantRows(rows.filter((r) => r.direction === "high"), LIQUIDITY_MAX_RELEVANT);
-  const lows = filterRelevantRows(rows.filter((r) => r.direction === "low"), LIQUIDITY_MAX_RELEVANT);
+  const highs = dropLowerTfDuplicates(filterRelevantRows(rows.filter((r) => r.direction === "high"), LIQUIDITY_MAX_RELEVANT));
+  const lows = dropLowerTfDuplicates(filterRelevantRows(rows.filter((r) => r.direction === "low"), LIQUIDITY_MAX_RELEVANT));
   return [...highs, ...lows];
 }
 

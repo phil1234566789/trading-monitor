@@ -12,6 +12,7 @@ import {
   detectLiquidityLevels,
   filterRelevantLevels,
   renderLiquidityLevels,
+  formatLiquidityLevelLabel,
   LIQUIDITY_FRACTAL_PERIOD,
   LIQUIDITY_MAX_RELEVANT,
 } from "../liquidity.js";
@@ -19,6 +20,8 @@ import { mergePinnedLevels, computeHtfLiquidityLevels, mergeDbLiquidityLevels } 
 import { currentPriceEstimate } from "../priceChartObZones.js";
 import { pivotForDisplay } from "../marketStructureAnalysis";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
+import { sessions } from "../sessions.js";
+import { buildSessionContextLookup, bonusLabelForPivot } from "../sessionOccurrences.js";
 import { ref } from "vue";
 
 export function usePriceChartLiquidity() {
@@ -43,6 +46,22 @@ export function usePriceChartLiquidity() {
     candleSeries = null;
   }
 
+  // Chat 2026-08-26, Philip: "<bonus>" fürs Label — Session-Kontext (z.B. "Asia-High"), siehe
+  // sessionOccurrences.js: bonusLabelForPivot. tzOffsetMinutes exakt wie bei den Sessions-Bändern
+  // selbst (usePriceChartSessionsAndNews.js: refreshSessions) — Browser-Lokalzeit statt eines
+  // fest verdrahteten Berlin-Intl-Offsets, damit ein Bonus-Label niemals von den Session-Bändern
+  // abweicht, die Philip auf demselben Chart ohnehin schon sieht.
+  function attachBonus(levels, candles, symbol) {
+    if (levels.length === 0) return levels;
+    const sessionContextLookup = buildSessionContextLookup(
+      sessions.filter((s) => s.instrument === symbol),
+      candles[0]?.time ?? 0,
+      (candles[candles.length - 1]?.time ?? 0) + 1,
+      (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset(),
+    );
+    return levels.map((lvl) => ({ ...lvl, bonus: bonusLabelForPivot(lvl.pivotTime, lvl.dir, sessionContextLookup) }));
+  }
+
   // Liquiditäts-Level (Fractal-Pivots, siehe tv-indikator/src/liquidity.pine) gibt es bisher nicht
   // aus dem Backend — deshalb hier direkt aus den geladenen Kerzen des aktuellen Chart-Timeframes
   // neu erkannt, analog zur OB-Erkennung. `showSweptLiquidity` zeigt ALLE erkannten M5-Pivots
@@ -60,12 +79,14 @@ export function usePriceChartLiquidity() {
   // candles = bereits clipReplay-gefiltertes allCandles, allCandles = das ungefilterte Original
   // (nur für currentPriceEstimate gebraucht, siehe computeHtfLiquidityLevels).
   function refresh(candles, allCandles, ctx) {
-    const { showLiquidity, pinnedLiquidityLevels, pinLiquidityLevelKeys, hoveredPinLiquidityLevelKey } = ctx;
+    const { showLiquidity, pinnedLiquidityLevels, pinLiquidityLevelKeys, hoveredPinLiquidityLevelKey, symbol } = ctx;
     if (!showLiquidity) {
       // Kein db1h hier (mehr) — die relevanten 1H-Level sind seit 2026-08-23 an showLiquidity
       // gekoppelt (s.u.), bei showLiquidity=false bleiben nur Pins sichtbar, wie vor Punkt 12/13.
-      const pinnedOnly = mergePinnedLevels([], pinnedLiquidityLevels, candles);
+      // Trotzdem mit bonus/nowSec, da HTF-Pins (Punkt 0, 2026-08-26) auch hier ihr Label brauchen.
+      const pinnedOnly = attachBonus(mergePinnedLevels([], pinnedLiquidityLevels, candles), candles, symbol);
       renderLiquidityLevels(candleSeries, pinnedOnly, liquidityPrimitives, candles, {
+        nowSec: ctx.replayUntil ?? Math.floor(Date.now() / 1000),
         pinKeys: pinLiquidityLevelKeys,
         hoveredKey: hoveredPinLiquidityLevelKey,
       });
@@ -74,7 +95,7 @@ export function usePriceChartLiquidity() {
       currentLiquidityLevels = [];
       return;
     }
-    const { showSweptLiquidity, dbLiquidityLevelsHtf, symbol, replayUntil, showLiquidityDebug, currentBar } = ctx;
+    const { showSweptLiquidity, dbLiquidityLevelsHtf, replayUntil, showLiquidityDebug, currentBar } = ctx;
     // timeframe = der gerade angezeigte Chart-Timeframe (Task "Chart-Objekte..." Nachbesserung
     // 2026-08-23: M5/1H/4H-Chart-Style-Kategorien, siehe liquidity.js: liquidityStyleTimeframe) —
     // live erkannte Level tragen sonst kein eigenes Timeframe-Feld wie die persistierten HTF-Level.
@@ -89,16 +110,23 @@ export function usePriceChartLiquidity() {
     currentLiquidityLevels = relevant;
     const precision = pricePrecisionForInstrument(symbol);
     const finalLevels = mergePinnedLevels(relevant, pinnedLiquidityLevels, candles);
-    renderLiquidityLevels(candleSeries, finalLevels, liquidityPrimitives, candles, {
+    // "Alter"-Anzeige an den Labels (Chat 2026-07-22) — im Replay bezogen auf replayUntil, nicht die
+    // echte Uhrzeit, sonst wäre das Alter beim Testen falsch/inkonsistent.
+    const nowSec = replayUntil ?? Math.floor(Date.now() / 1000);
+    renderLiquidityLevels(candleSeries, attachBonus(finalLevels, candles, symbol), liquidityPrimitives, candles, {
       debugPrices: showLiquidityDebug,
       formatPrice: (price) => fmtPrice(price, precision),
-      // "Alter"-Anzeige an den Debug-Preis-Labels (Chat 2026-07-22) — im Replay bezogen auf
-      // replayUntil, nicht die echte Uhrzeit, sonst wäre das Alter beim Testen falsch/inkonsistent.
-      nowSec: replayUntil ?? Math.floor(Date.now() / 1000),
+      nowSec,
       pinKeys: pinLiquidityLevelKeys,
       hoveredKey: hoveredPinLiquidityLevelKey,
     });
-    liquidityMetadata.value = relevant.map(pivotForDisplay);
+    // Chat 2026-08-26, Philip: "kontext"-Feld fürs Debug-Metadaten-Panel (".debug/metadata.json",
+    // "kopieren + lokal speichern"-Button) — dieselbe Label-Formel wie am Chart, ohne den Preis
+    // (der steht schon separat im "price"-Feld).
+    liquidityMetadata.value = attachBonus(relevant, candles, symbol).map((lvl) => ({
+      ...pivotForDisplay(lvl),
+      kontext: formatLiquidityLevelLabel(lvl, { bonus: lvl.bonus, nowSec }),
+    }));
     liquidityEarliestTime.value = relevant.length > 0 ? Math.min(...relevant.map((lvl) => lvl.pivotTime)) : null;
   }
 

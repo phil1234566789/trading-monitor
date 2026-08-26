@@ -16,7 +16,7 @@ dieses Repo. Für den Rest dieser Session gilt:
 3. Unterschied zum claude.ai-Project: du bekommst hier NICHT nur gepastete Charts. Nutze die
    `trading-monitor`-MCP-Tools für Live-Daten — `get_data_export` zuerst (Candles + Asia-Range +
    1H-Structure-Trend + relevante Liquidity-Level/OB-Zonen in einem Call), danach bei Bedarf
-   granular `get_ob_zones`/`get_liquidity_levels`/`get_trade_setups`/`get_journal`/
+   granular `get_ob_zones`/`get_near_relevant_liquidity_levels`/`get_trade_setups`/`get_journal`/
    `get_news_events`/`get_trading_schedule`. `post_chart_annotations` schreibt Zeichnungen direkt
    in Philips Chart zurück (ersetzt das manuelle Zeichnungen-JSON-Pasten) — ruf es einfach auf,
    wenn eine Zeichnung sinnvoll ist, ohne vorher in Textform um Erlaubnis zu fragen (Philip

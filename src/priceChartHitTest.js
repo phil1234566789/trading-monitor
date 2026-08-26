@@ -204,25 +204,32 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
       });
     }
   }
-  // Liquiditäts-Level — im 1h-Chart entspricht die live gezeichnete Linie einer echten
-  // liquidity_levels-Zeile (poi-watcher persistiert nur Timeframe '1H', siehe supabase/functions/
-  // poi-watcher/index.ts), löst sich also per Natural-Key auf (kind="liquidity_level"). Auf jedem
-  // anderen Timeframe (Bug-Report Philip 2026-08-02: "ich will eine M5 LQ-Linie anklicken") gibt
-  // es dafür keine DB-Zeile, deshalb Rohdaten-Snapshot (kind="m5_liquidity_level", analog zu m5_ob
-  // oben) — inkl. timeframe-Feld (currentBar), da das nicht zwingend M5 sein muss.
+  // Liquiditäts-Level — ein 1H/4H-Level entspricht einer echten liquidity_levels-Zeile (poi-watcher
+  // persistiert seit 2026-08-23 beide, siehe supabase/functions/poi-watcher/index.ts), löst sich
+  // also per Natural-Key auf (kind="liquidity_level"). Auf jedem anderen Timeframe (Bug-Report
+  // Philip 2026-08-02: "ich will eine M5 LQ-Linie anklicken") gibt es dafür keine DB-Zeile, deshalb
+  // Rohdaten-Snapshot (kind="m5_liquidity_level", analog zu m5_ob oben).
+  // Entscheidend ist das Level-EIGENE timeframe-Feld, NICHT der aktuell gewählte Chart-Timeframe
+  // (currentBar) — seit derselben 2026-08-23-Änderung werden 1H/4H-Level unabhängig vom
+  // Chart-Timeframe gezeichnet (siehe computeHtfLiquidityLevels), ein `currentBar === "1h"`-Check
+  // hätte auf M5 jedes dort mitgezeichnete 1H/4H-Level fälschlich als M5-Rohdaten-Snapshot
+  // eingeordnet statt gegen seine echte liquidity_levels-Zeile aufzulösen (Bug-Report Philip
+  // 2026-08-26: "wenn ich rechtsklick mache, zum anpinnen, dann sind nur die M5 Level verfügbar").
+  // Fallback auf currentBar nur für den Fall eines Levels ganz ohne eigenes timeframe-Feld.
   for (const p of liquidityPrimitives) {
     const distance = p.distanceTo(x, y);
     if (distance > radius) continue;
-    if (currentBar === "1h") {
+    const levelTimeframe = p.level.timeframe ?? currentBar;
+    if (levelTimeframe === "1H" || levelTimeframe === "4H") {
       candidates.push({
         kind: "liquidity_level",
-        level: { instrument: symbol, timeframe: "1H", dirNum: p.level.dir, pivotTime: p.level.pivotTime },
+        level: { instrument: symbol, timeframe: levelTimeframe, dirNum: p.level.dir, pivotTime: p.level.pivotTime },
         distance,
       });
     } else {
       candidates.push({
         kind: "m5_liquidity_level",
-        level: { instrument: symbol, timeframe: currentBar, dirNum: p.level.dir, price: p.level.price, pivotTime: p.level.pivotTime },
+        level: { instrument: symbol, timeframe: levelTimeframe, dirNum: p.level.dir, price: p.level.price, pivotTime: p.level.pivotTime },
         distance,
       });
     }

@@ -134,3 +134,21 @@ export function contextForPivot(pivotTime, dir, sessionContextLookup) {
   }
   return null;
 }
+
+// Chat 2026-08-26, Philip: "<bonus>" fürs LQ-Level-Label (Chart-Rendering, siehe liquidity.js:
+// formatLiquidityLevelLabel) UND fürs "kontext"-Feld im Datenexport (Lana) — "Asia-High"/"NY-Low"/
+// "MMM-High" statt contextForPivot's kleingeschriebenem "asia high". Eigene Funktion statt
+// contextForPivot's Ausgabe nachträglich umzuformatieren: contextForPivot schreibt das Label
+// bewusst klein (siehe dortiger Kommentar, Philip 2026-07-30, gilt für seine bisherigen
+// Verwendungen unverändert weiter) — hier bleibt session.label dagegen UNVERÄNDERT stehen, weil
+// Philip Session-Namen im Sessions-Modal bereits in der gewünschten Schreibweise tippt ("NY"/"MMM"/
+// "Asia"); ein nachträgliches .toLowerCase() würde "NY" zu "Ny" verstümmeln.
+export function bonusLabelForPivot(pivotTime, dir, sessionContextLookup) {
+  const direction = dir === 1 ? "High" : "Low";
+  for (const { label, occurrences } of sessionContextLookup) {
+    if (occurrences.some((o) => pivotTime >= o.startSec && pivotTime < o.endSec)) {
+      return label ? `${label}-${direction}` : null;
+    }
+  }
+  return null;
+}

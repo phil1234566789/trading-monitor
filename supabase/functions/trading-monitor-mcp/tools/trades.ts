@@ -238,7 +238,7 @@ export function registerTradeTools(server: McpServer) {
         rangeLow: z.number().nullable().optional(),
         rangeHigh: z.number().nullable().optional(),
         sourceTime: z.string().nullable().optional(),
-        liquidityLevelId: z.number().int().nullable().optional().describe("Manuelle Verlinkung/Korrektur auf eine liquidity_levels-Zeile, siehe get_liquidity_levels."),
+        liquidityLevelId: z.number().int().nullable().optional().describe("Manuelle Verlinkung/Korrektur auf eine liquidity_levels-Zeile, siehe get_near_relevant_liquidity_levels."),
       },
     },
     async ({ id, ...fields }) => json(await updateTradeTarget(id, fields)),

@@ -4,6 +4,19 @@
 // die PriceChart.vue bisher über Closures (props, allCandles) statt über Parameter berechnet hat.
 import { selectRelevantHtfLevels, liquidityLevelNaturalKey } from "./liquidity.js";
 import { LQ_RELEVANCE } from "./liquidityRelevanceConfig.js";
+import { PIP_SIZE } from "./pipConfig.js";
+
+// Chat 2026-08-26, Philip: zwei Level auf (praktisch) demselben Preis sind redundant, das
+// bedeutsamere gewinnt — einmal zwischen HTF (1H/4H) und live erkanntem M5 (mergeDbLiquidityLevels
+// unten), einmal zwischen 1H und 4H selbst (computeHtfLiquidityLevels unten). Epsilon statt
+// strikter Gleichheit als Schutz gegen Float-Differenzen zwischen unabhängig geladenen
+// Kerzenreihen — 0.05 Pip ist klein genug, um zwei tatsächlich unterschiedliche Level nicht
+// fälschlich zusammenzulegen. Nur gleiche Richtung (high/high bzw. low/low) zählt als Kollision,
+// ein High und ein Low auf demselben Preis sind unabhängige Informationen.
+const SAME_PRICE_EPSILON = 0.05 * PIP_SIZE;
+function coincidesWithHtf(level, htfLevels) {
+  return htfLevels.some((h) => h.dir === level.dir && Math.abs(h.price - level.price) <= SAME_PRICE_EPSILON);
+}
 
 // Liquiditäts-Level (Fractal-Pivots, siehe tv-indikator/src/liquidity.pine) gibt es bisher nicht
 // aus dem Backend — deshalb direkt aus den geladenen Kerzen des aktuellen Chart-Timeframes neu
@@ -51,15 +64,25 @@ export function mergePinnedLevels(levels, pinnedLevels, candles) {
 // dem Aufruf gemischt (selectRelevantHtfLevels wählt nach Preis-Nähe, nicht nach Richtung).
 // endTime wird selbst geheilt (wie mergePinnedLevels), da ein noch unberührtes DB-Level
 // end_time=null führt (wächst live mit, statt eingefroren zu sein).
+//
+// Timeframe-Rangfolge nach Bedeutsamkeit, höchster zuerst — Chat 2026-08-26, Philip: "liegt ein 4H
+// LQ-Level auf demselben Preis wie ein 1H-Level, gewinnt das 4H-Level, das 1H-Level kann raus"
+// (Bug-Report: bisher wurden 1H- und 4H-Auswahl unabhängig voneinander berechnet und beide gezeigt,
+// selbst wenn beide auf demselben Pivot lagen). Eigenes Array statt sich auf die Objekt-Key-
+// Reihenfolge von LQ_RELEVANCE zu verlassen — explizite Prioritäts-Aussage statt impliziter Zufall.
+const HTF_TIMEFRAME_PRIORITY = ["4H", "1H"];
 export function computeHtfLiquidityLevels(candles, dbLiquidityLevelsHtf, symbol, replayUntil, price) {
   const byInstrument = dbLiquidityLevelsHtf.filter((l) => l.instrument === symbol);
   const byReplay = replayUntil == null ? byInstrument : byInstrument.filter((l) => l.pivotTime <= replayUntil);
-  const result = [];
-  for (const timeframe of Object.keys(LQ_RELEVANCE)) {
+  const kept = [];
+  for (const timeframe of HTF_TIMEFRAME_PRIORITY) {
     const forTf = byReplay.filter((l) => l.timeframe === timeframe);
-    result.push(...selectRelevantHtfLevels(forTf, price, LQ_RELEVANCE[timeframe]));
+    const selected = selectRelevantHtfLevels(forTf, price, LQ_RELEVANCE[timeframe]);
+    for (const lvl of selected) {
+      if (!coincidesWithHtf(lvl, kept)) kept.push(lvl);
+    }
   }
-  return result.map((l) => ({ ...l, endTime: l.endTime ?? candles[candles.length - 1]?.time ?? l.pivotTime }));
+  return kept.map((l) => ({ ...l, endTime: l.endTime ?? candles[candles.length - 1]?.time ?? l.pivotTime }));
 }
 
 // Merge per Natural Key (wie mergePinnedZones/-Levels) — Bug-Report Philip 2026-08-23 (die
@@ -73,9 +96,14 @@ export function computeHtfLiquidityLevels(candles, dbLiquidityLevelsHtf, symbol,
 // den poi-watcher noch nicht persistiert hat, siehe CLAUDE.md poi-watcher-Throttling), kommt
 // zusätzlich dazu. "Alte, aber relevante 1H-Level sichtbar machen" bleibt davon unberührt — das
 // leistet weiterhin computeHtfLiquidityLevels, unabhängig von dieser Funktion hier.
+// Chat 2026-08-26, Philip: liegt ein live erkanntes M5-Level auf demselben Preis wie ein
+// angezeigtes HTF-Level (1H/4H), ist das HTF-Level das bedeutsamere — das M5-Level bringt dann
+// keinen zusätzlichen Informationsgehalt, nur eine doppelte Linie (coincidesWithHtf, siehe oben).
 export function mergeDbLiquidityLevels(levels, dbLevels) {
   if (dbLevels.length === 0) return levels;
   const dbKeys = new Set(dbLevels.map((l) => liquidityLevelNaturalKey(l.dir, l.pivotTime)));
-  const liveOnly = levels.filter((l) => !dbKeys.has(liquidityLevelNaturalKey(l.dir, l.pivotTime)));
+  const liveOnly = levels
+    .filter((l) => !dbKeys.has(liquidityLevelNaturalKey(l.dir, l.pivotTime)))
+    .filter((l) => !coincidesWithHtf(l, dbLevels));
   return [...liveOnly, ...dbLevels];
 }

@@ -264,6 +264,24 @@ export function bullBearLabelSide(bearish) {
   return bearish ? "end-above" : "end-below";
 }
 
+// Chat 2026-08-26, Philip: allgemeines LQ-Level-Label — "<bonus> <Major/Medium> <Alter>" ohne
+// Debug, zusätzlich "<Preis>" ans Ende mit Debug. Der Sweep/High/Low-Typtext ist wieder raus (Chat
+// 2026-08-26, zweite Runde: "dann kann das label 'sweep|high|low' ja weg" — BOS/CHoCH lassen sich
+// hier ohnehin nicht mit reinnehmen, siehe dortige Begründung, ohne die war der reine Typtext nicht
+// genug Mehrwert; Farbe (liquidityHigh/-Low/-Sweep, siehe levelOptions) und die über/unter-Position
+// per bullBearLabelSide zeigen High/Low/Sweep am Chart weiterhin an, nur nicht mehr als Text). bonus
+// ist der optionale Session-Kontext (sessionOccurrences.js: bonusLabelForPivot, z.B. "Asia-High").
+// Kein Tier-Präfix bei "minor" (< 1 Geschäftstag), aus Platzgründen — dieselbe Konvention wie
+// formatLsLabel.
+export function formatLiquidityLevelLabel(lvl, { bonus, nowSec, formatPrice, includePrice } = {}) {
+  const tier = lvl.pivotTime != null && nowSec != null ? classifyAge(businessSecondsBetween(lvl.pivotTime, nowSec)) : null;
+  const tierLabel = tier && tier !== "minor" ? `${tier[0].toUpperCase()}${tier.slice(1)}` : null;
+  const age = lvl.pivotTime != null && nowSec != null ? formatAge(businessSecondsBetween(lvl.pivotTime, nowSec)) : null;
+  const ageLabel = age ? `(${age} alt)` : null;
+  const priceLabel = includePrice && formatPrice ? formatPrice(lvl.price) : null;
+  return [bonus, tierLabel, ageLabel, priceLabel].filter(Boolean).join(" ");
+}
+
 // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Nachbesserung 2026-08-23,
 // Philip: "M5/1H/4H als Chart-Style-Kategorien, konsistent mit den Order-Blöcken" — anders als
 // beim ersten Anlauf (verworfen: Style hing davon ab, ob ein Level live erkannt oder als
@@ -286,12 +304,37 @@ function liquidityStyleTimeframe(rawTimeframe) {
   return upper === "1H" || upper === "4H" ? upper : "M5";
 }
 
+// Chat 2026-08-26, Philip: HTF-Level (1H/4H) bekommen IMMER ein Label, nicht mehr nur im Debug-
+// Modus (debugPrices steuert dort nur noch, ob der Preis zusätzlich ans Label angehängt wird, siehe
+// formatLiquidityLevelLabel). M5/live erkannte Level bleiben unverändert Debug-only.
+// labelSide über bullBearLabelSide statt eines pauschalen "end" (Bug-Report Philip: erst linksbündig,
+// dann zwar rechtsbündig aber ohne die über/unter-Aufteilung "wie bei den anderen Linien") —
+// dieselbe Funktion, die PP/LS (usePriceChartTradeSetupDrawing.js) und die "1h LQ-Sweep"-Linie
+// (marketStructureRendering.ts) schon nutzen, statt eine vierte eigene Variante zu bauen. High
+// (dir===1, Resistance von oben) sitzt wie ein bärischer Pivot ÜBER der Linie, Low (dir===-1,
+// Support von unten) wie ein bullischer UNTER der Linie — geometrisch dieselbe Regel, die dort
+// bereits gilt: die Kerzen liegen bei einem High UNTER dem Pivot (Label drüber vermeidet Overlap),
+// bei einem Low DARÜBER (Label drunter). Richtet sich nach lvl.dir, nicht nach touched — ein
+// gesweeptes Level bleibt geometrisch derselbe Pivot (nur die Farbe wechselt auf liquiditySweep*,
+// siehe base/key unten; der Labeltext selbst kennt touched seit der zweiten Runde nicht mehr).
 function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin } = {}) {
+  const tfCategory = liquidityStyleTimeframe(lvl.timeframe);
+  const isHtf = tfCategory !== "M5";
   const base = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
-  const key = LIQUIDITY_STYLE_KEYS[liquidityStyleTimeframe(lvl.timeframe)][base];
+  const key = LIQUIDITY_STYLE_KEYS[tfCategory][base];
   const color = cssColor(key);
-  const label = debugPrices ? `${formatPrice(lvl.price)}${ageSuffix(lvl.pivotTime, nowSec)}` : null;
-  return { color, lineWidth: lineWidth(key), label, inPinContext, pinColor: cssColor("pin"), isSelectedPin, hoverColor: cssColor("tradeHover") };
+  const label =
+    debugPrices || isHtf ? formatLiquidityLevelLabel(lvl, { bonus: lvl.bonus, nowSec, formatPrice, includePrice: debugPrices }) : null;
+  return {
+    color,
+    lineWidth: lineWidth(key),
+    label,
+    labelSide: bullBearLabelSide(lvl.dir === 1),
+    inPinContext,
+    pinColor: cssColor("pin"),
+    isSelectedPin,
+    hoverColor: cssColor("tradeHover"),
+  };
 }
 
 // Timeframe bewusst NICHT Teil des Strings (anders als obZoneNaturalKey/orderBlocks.js) — diese
