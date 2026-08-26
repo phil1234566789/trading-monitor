@@ -31,16 +31,16 @@ import {
   LIQUIDITY_MAX_RELEVANT,
 } from "../liquidity.js";
 import { mergePinnedLevels, computeHtfLiquidityLevels, mergeDbLiquidityLevels } from "../priceChartLiquidity.js";
-import { sessions, currentSessionDanger, isForbiddenAt } from "../sessions.js";
-import { newsEvents, currentNewsNoGo } from "../newsEvents.js";
+import { sessions, isForbiddenAt } from "../sessions.js";
+import { newsEvents } from "../newsEvents.js";
 import { usePriceChartSessionsAndNews } from "../composables/usePriceChartSessionsAndNews.js";
 import { detectSetupObs, detectTradeSetups, tradeSetupObBoxBounds } from "../tradeSetup.js";
 import { renderPivotMarkers } from "../pivotMarkers";
 import { computeRangesPivots, buildMarketStructureState, pivotForDisplay, summarizeMarketStructureState } from "../marketStructureAnalysis";
 import { renderMarketStructureAnalysis, collectH1LqLevels, collectFibLevels } from "../marketStructureRendering";
-import { computeCockpitState } from "../tradeSetupCockpit";
 import { DivergenceLinePrimitive } from "../rsiRendering.js";
 import { usePriceChartRsi } from "../composables/usePriceChartRsi.js";
+import { usePriceChartCockpit } from "../composables/usePriceChartCockpit.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
@@ -295,6 +295,10 @@ const { refreshSessions, refreshNewsMarkers } = usePriceChartSessionsAndNews();
 // priceChartRsi.create(chart, candleSeries) wird in onMounted aufgerufen, priceChartRsi.dispose()
 // in onUnmounted.
 const priceChartRsi = usePriceChartRsi();
+// TSC-Zustandsberechnung (siehe usePriceChartCockpit.js, Phase 6c) — cockpitState/-Metadata/
+// -NowSec werden direkt im Template gebunden (TradeSetupCockpit-Komponente), daher hier destructured
+// statt hinter priceChartCockpit.* versteckt.
+const { cockpitState, cockpitMetadata, cockpitNowSec, refreshCockpit } = usePriceChartCockpit();
 
 const chartContainerRef = ref(null);
 // Chart-Höhe (siehe Dashboard.vue: tradesPanelHeight, dieselbe Begründung) — useTabScopedRef statt
@@ -446,13 +450,6 @@ const poiZonesMetadata = ref(null);
 const liquidityMetadata = ref(null);
 const liquidityEarliestTime = ref(null);
 const tradeSetupsMetadata = ref([]);
-const cockpitMetadata = ref(null);
-// Rohes CockpitState fürs TSC-Rendering (TradeSetupCockpit.vue) — getrennt von cockpitMetadata
-// oben, das über pivotForDisplay bereits fürs Debug-Metadaten-Panel aufbereitet ist (formatierte
-// Zeitstrings statt roher pivotTime/touchedTime-Zahlen, die die TSC-Komponente aber für ihre
-// Alters-Berechnung braucht).
-const cockpitState = ref(null);
-const cockpitNowSec = ref(undefined);
 const structureEarliestTime = ref(null);
 
 // TSC-Callouts ("Zeiger-Linien") — Claude-Notizen-Labels (line/marker/label) floaten als eigene
@@ -1205,45 +1202,21 @@ function refreshMarketStructureInternal() {
   refreshCockpitInternal();
 }
 
-// Trade-Setup-Cockpit (siehe Chat 2026-07-19) — reine Zusammenfassung, liest marketStructureState.value
-// und currentTradeSetups direkt aus der Closure (dieselbe Liste, die renderTradeSetupsInternal schon
-// positioniert) — kein eigener Fetch/eigene Erkennung. Wird sowohl von refreshMarketStructureInternal
-// als auch von loadTradeSetupM5/-H1 direkt aufgerufen (siehe dort), nicht erst über den nächsten
-// refreshChart() — sonst hinkt die Karte den eigentlich schon fertigen Daten hinterher.
+// TSC-Zustandsberechnung lebt seit Phase 6c des Große-Dateien-Refactorings in
+// usePriceChartCockpit.js (siehe dort für die volle Begründung) — hier nur noch der
+// chart-Lifecycle-Guard und das Zusammenstellen der aktuellen Werte. Fokus (falls gesetzt) statt
+// der Live-Liste — computeCockpitState nimmt ohnehin nur das letzte Element als "aktuell
+// relevantes" Setup, ein Ein-Element-Array reicht also, um sie umzulenken.
 function refreshCockpitInternal() {
   if (!chart) return; // async loadTradeSetupM5/-H1 können nach unmount noch abschließen
-  const candles = clipReplay(allCandles);
-  if (!props.showTradeSetupCockpit || candles.length === 0) {
-    cockpitState.value = null;
-    cockpitMetadata.value = null;
-    return;
-  }
-  const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
-  // sessions.danger fürs aktuelle Instrument/JETZT — erster automatischer No-Go/Anti-Confluence-
-  // Input (Chat 2026-07-26, siehe computeCockpitState in tradeSetupCockpit.ts). Gleicher
-  // instrument-Filter + tzOffsetMinutes wie refreshSessionsInternal oben, sonst würde z.B. eine
-  // GBPUSD-Sperrzeit auch EURUSD sperren bzw. die Sommer-/Winterzeit-Umstellung falsch einfließen.
-  const symbolSessions = sessions.filter((s) => s.instrument === props.symbol);
-  const sessionDanger = currentSessionDanger(symbolSessions, nowSec, (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset());
-  // News-Events kommen fertig aus der DB (siehe newsEvents.js) — Philip trägt sie per Screenshot
-  // ein, hier nur noch der reine "ist gerade eins relevant für dieses Instrument"-Check.
-  const newsNoGo = currentNewsNoGo(newsEvents, props.symbol, nowSec);
-  // Fokus (falls gesetzt) statt der Live-Liste — computeCockpitState nimmt ohnehin nur das letzte
-  // Element als "aktuell relevantes" Setup, ein Ein-Element-Array reicht also, um sie umzulenken.
-  const tradeSetupsForCockpit = focusedTradeSetup ? [focusedTradeSetup] : currentTradeSetups;
-  const state = computeCockpitState(marketStructureState.value, tradeSetupsForCockpit, sessionDanger, newsNoGo);
-  // "Alter"-Anzeige an den LQ-Sweep-Zeilen (Chat 2026-07-22) — im Replay bezogen auf replayUntil,
-  // nicht die echte Uhrzeit, sonst wäre das Alter während des Testens falsch/inkonsistent.
-  cockpitNowSec.value = nowSec;
-  cockpitState.value = state;
-  cockpitMetadata.value = {
-    h1Trend: state.h1Trend,
-    h1Weakening: state.h1Weakening,
-    h1LqSweep: pivotForDisplay(state.h1LqSweep),
-    m5Setup: state.m5Setup,
-    antiConfluences: state.antiConfluences,
-    locked: state.locked,
-  };
+  refreshCockpit({
+    showTradeSetupCockpit: props.showTradeSetupCockpit,
+    candles: clipReplay(allCandles),
+    replayUntil: props.replayUntil,
+    symbol: props.symbol,
+    marketStructureState: marketStructureState.value,
+    tradeSetupsForCockpit: focusedTradeSetup ? [focusedTradeSetup] : currentTradeSetups,
+  });
 }
 
 // Eigener H1-Fetch fürs Ranges-Metadaten-Panel (und seit Chat 2026-07-28 auch für die H1-Level
