@@ -272,12 +272,15 @@ export function bullBearLabelSide(bearish) {
 // per bullBearLabelSide zeigen High/Low/Sweep am Chart weiterhin an, nur nicht mehr als Text). bonus
 // ist der optionale Session-Kontext (sessionOccurrences.js: bonusLabelForPivot, z.B. "Asia-High").
 // Kein Tier-Präfix bei "minor" (< 1 Geschäftstag), aus Platzgründen — dieselbe Konvention wie
-// formatLsLabel.
+// formatLsLabel. Alter als reines "(3h)" statt "(3h alt)" (dritte Runde desselben Chats: "es ist
+// absolut klar mittlerweile was damit gemeint ist") — bewusst NUR hier, formatLsLabel/ageSuffix
+// (PP/LS-Linien, "1h LQ-Sweep") behalten ihr "alt" unverändert, das ist eine andere, ältere
+// Konvention, um die es hier nicht ging.
 export function formatLiquidityLevelLabel(lvl, { bonus, nowSec, formatPrice, includePrice } = {}) {
   const tier = lvl.pivotTime != null && nowSec != null ? classifyAge(businessSecondsBetween(lvl.pivotTime, nowSec)) : null;
   const tierLabel = tier && tier !== "minor" ? `${tier[0].toUpperCase()}${tier.slice(1)}` : null;
   const age = lvl.pivotTime != null && nowSec != null ? formatAge(businessSecondsBetween(lvl.pivotTime, nowSec)) : null;
-  const ageLabel = age ? `(${age} alt)` : null;
+  const ageLabel = age ? `(${age})` : null;
   const priceLabel = includePrice && formatPrice ? formatPrice(lvl.price) : null;
   return [bonus, tierLabel, ageLabel, priceLabel].filter(Boolean).join(" ");
 }

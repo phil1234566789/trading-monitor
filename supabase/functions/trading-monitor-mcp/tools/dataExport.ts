@@ -97,13 +97,14 @@ function formatAgeShort(seconds: number): string | null {
 }
 // Sweep/High/Low-Typtext ist wieder raus (Chat 2026-08-26, zweite Runde: "dann kann das label
 // 'sweep|high|low' ja weg" — dasselbe Pendant zu src/liquidity.js: formatLiquidityLevelLabel, siehe
-// dortige Begründung). dirNum/touched deshalb keine Parameter mehr hier.
+// dortige Begründung). dirNum/touched deshalb keine Parameter mehr hier. Alter als reines "(3h)"
+// statt "(3h alt)" (dritte Runde desselben Chats, dasselbe Pendant zu formatLiquidityLevelLabel).
 export function formatKontext(bonus: string | null, pivotTimeSec: number, nowSec: number): string {
   const businessSec = businessSecondsBetween(pivotTimeSec, nowSec);
   const tier = classifyAgeTier(businessSec);
   const tierLabel = tier !== "minor" ? `${tier[0].toUpperCase()}${tier.slice(1)}` : null;
   const age = formatAgeShort(businessSec);
-  const ageLabel = age ? `(${age} alt)` : null;
+  const ageLabel = age ? `(${age})` : null;
   return [bonus, tierLabel, ageLabel].filter((p): p is string => p != null && p !== "").join(" ");
 }
 

@@ -48,7 +48,7 @@ export function registerReadTools(server: McpServer) {
         "RUFE DIESES TOOL ZUERST AUF, bevor du andere trading-monitor-Tools nutzt. Liefert in einem " +
         "Call: M5-Kerzen des Tages + Asia-Session-Range, den 1H-Structure-Trend, relevante " +
         "persistierte Liquidity-Level (1H+4H, inkl. context wie 'asia high' und kontext wie " +
-        "'Asia-High Major (26d alt)' falls eine passende Session existiert) und OB-Zonen " +
+        "'Asia-High Major (26d)' falls eine passende Session existiert) und OB-Zonen " +
         "(1H+4H) für ein Instrument — dasselbe Bündel wie der 'Daten-Export'-" +
         "Button in der App. ZUSÄTZLICH m5LiquidityLevels/m5ObZones: live über ein 7-Tage-Fenster neu " +
         "erkannt (exakt derselbe Algorithmus UND Lookback wie der Button UND Philips 'Liquidität'/" +
@@ -114,7 +114,7 @@ export function registerReadTools(server: McpServer) {
         `noch UNGETOUCHTE Level nur, wenn ihr Preis innerhalb von ${NEAR_RANGE_PIPS} Pips um den ` +
         `Referenzpreis (Kurs "as of" toSec) liegt — Preis-Nähe zählt bei ungetouchten Leveln mehr ` +
         `als Alter, ein Monate alter aber preisnaher Pivot bleibt also drin. Jedes Level trägt ein ` +
-        `kontext-Feld wie in get_data_export (z.B. "Asia-High Major (26d alt)") — Sweep/High/Low ` +
+        `kontext-Feld wie in get_data_export (z.B. "Asia-High Major (26d)") — Sweep/High/Low ` +
         `steht NICHT im Text (siehe direction/touched-Felder), das ist der Farbe/Position am Chart ` +
         `vorbehalten.`,
       inputSchema: {
