@@ -651,7 +651,7 @@ function toUnixSec(iso) {
 // aktuell geladenen Kerzen. pinVisibleOnCurrentTf (Bug 2026-08-21) filtert zusätzlich per
 // Kaskaden-Regel: nur auf dem eigenen oder einem feineren Timeframe sichtbar.
 const pinnedObZones = computed(() => {
-  return pinContextEntries.value
+  return visiblePinContextEntries.value
     .filter((e) => pinEntryVisible(e, "ob_zone", "obZone"))
     .map((e) => ({
       top: e.obZone.top,
@@ -698,7 +698,7 @@ const tradeLinkedLiquidityLevels = computed(() => {
 // PriceChart.vue: mergePinnedLevels — aber NICHT umgekehrt ein M5-Level auf 4H). e.liquidityLevel.
 // timeframe statt hartem "1H" seit Nachbesserung 2026-08-26, siehe hoveredPinLiquidityLevelKey oben.
 const pinnedLiquidityLevels = computed(() => {
-  const fromPins = pinContextEntries.value
+  const fromPins = visiblePinContextEntries.value
     .filter((e) => pinEntryVisible(e, "liquidity_level", "liquidityLevel") || pinEntryVisible(e, "m5_liquidity_level", "m5Liquidity"))
     .map((e) => {
       if (e.kind === "liquidity_level") {
@@ -729,7 +729,7 @@ const pinnedLiquidityLevels = computed(() => {
   return [...fromPins, ...fromTrades];
 });
 const pinnedTradeSetups = computed(() => {
-  return pinContextEntries.value
+  return visiblePinContextEntries.value
     .filter((e) => e.kind === "trade_setup" && e.tradeSetup?.instrument === currentSymbol.value)
     .map((e) => ({
       tradeSetupId: e.tradeSetupId,
@@ -744,7 +744,7 @@ const pinnedTradeSetups = computed(() => {
 // sind timeframe-abhängig, ein Divergenz-Pin bleibt daher nur auf seinem ursprünglichen Timeframe
 // sichtbar (Philip 2026-08-18, bestätigt).
 const pinnedRsiDivergences = computed(() => {
-  return pinContextEntries.value
+  return visiblePinContextEntries.value
     .filter((e) => e.kind === "rsi_divergence" && e.rsiDivergence?.instrument === currentSymbol.value)
     .map((e) => ({
       type: e.rsiDivergence.type,
@@ -978,6 +978,11 @@ const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrade
 // rausgefallen war (neuere Touches verdrängen ältere) und die Pin-Kopie die einzige verbliebene
 // Quelle war.
 const { data: pinContextEntries, refresh: refreshPinContext } = usePolledFetch(() => fetchPinContext(), { intervalMs: 60_000 });
+// Bug-Report Philip: Pin-Visualisierung (Halos + direkt gerenderte Pin-Objekte) blieb im Chart/in
+// der Trades-Tabelle stehen, egal ob der "📌 Pins"-Button (showPinPanel) an oder aus war — analog
+// zum bereits gefixten Trades-Toggle-Bug 2026-08-25 (siehe tradeLinkedLiquidityLevels oben). Eine
+// gemeinsame Quelle statt showPinPanel in jedem der ~10 abgeleiteten Computeds einzeln zu prüfen.
+const visiblePinContextEntries = computed(() => (showPinPanel.value ? pinContextEntries.value : []));
 // 1H/4H-OB-Zonen (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 7) —
 // anders als trades/pinContextEntries oben ändert sich das hier NICHT nur durch explizite
 // Browser-Aktionen, sondern im Hintergrund durch poi-watcher (Cron alle 5min) — deshalb, anders als
@@ -993,7 +998,7 @@ const { data: dbLiquidityLevelsHtf } = usePolledFetch(() => fetchLiquidityLevels
 // werden, solange dieses Symbol nicht ausgewählt ist.
 const pinTradeIds = computed(() => {
   const tradeIds = new Set(trades.value.map((t) => t.id));
-  return new Set(pinContextEntries.value.filter((e) => tradeIds.has(e.tradePositionId)).map((e) => e.tradePositionId));
+  return new Set(visiblePinContextEntries.value.filter((e) => tradeIds.has(e.tradePositionId)).map((e) => e.tradePositionId));
 });
 // OB-Zonen-Pendant (Chat 2026-08-01) — Natural-Key statt Id (siehe pinContext.js:
 // obZoneEntryNaturalKey/orderBlocks.js: obZoneNaturalKey), gefiltert aufs aktuelle Symbol (eine
@@ -1005,7 +1010,7 @@ const pinTradeIds = computed(() => {
 // M5-OB-Pin bekommt auf 4H bewusst keinen Halo mehr).
 const pinObZoneKeys = computed(() => {
   return new Set(
-    pinContextEntries.value
+    visiblePinContextEntries.value
       .filter((e) => pinEntryVisible(e, "ob_zone", "obZone"))
       .map((e) => obZoneEntryNaturalKey(e.obZone)),
   );
@@ -1014,7 +1019,7 @@ const pinObZoneKeys = computed(() => {
 // ob_zone nötig, siehe pinContext.js), trotzdem aufs aktuelle Symbol gefiltert.
 const pinTradeSetupIds = computed(() => {
   return new Set(
-    pinContextEntries.value
+    visiblePinContextEntries.value
       .filter((e) => e.kind === "trade_setup" && e.tradeSetup?.instrument === currentSymbol.value)
       .map((e) => e.tradeSetupId),
   );
@@ -1023,7 +1028,7 @@ const pinTradeSetupIds = computed(() => {
 // (trade_confirmations hat keine eigene instrument-Spalte, siehe pinContext.js) — unkritisch,
 // die zugehörige Box existiert im Chart ohnehin nur für Trades des gerade angezeigten Symbols.
 const pinTradeConfirmationIds = computed(() => {
-  return new Set(pinContextEntries.value.filter((e) => e.kind === "trade_confirmation").map((e) => e.tradeConfirmationId));
+  return new Set(visiblePinContextEntries.value.filter((e) => e.kind === "trade_confirmation").map((e) => e.tradeConfirmationId));
 });
 // Liquiditäts-Level-Pendant (Chat 2026-08-17) — mischt kind='liquidity_level' (1H/4H, echte DB-
 // Zeile) und kind='m5_liquidity_level' (Nicht-HTF-Snapshot) in EINE Menge. Kaskaden-Regel statt
@@ -1034,10 +1039,10 @@ const pinTradeConfirmationIds = computed(() => {
 // nicht so hilfreich"). e.liquidityLevel.timeframe statt hartem "1H" seit Nachbesserung 2026-08-26.
 const pinLiquidityLevelKeys = computed(() => {
   return new Set([
-    ...pinContextEntries.value
+    ...visiblePinContextEntries.value
       .filter((e) => pinEntryVisible(e, "liquidity_level", "liquidityLevel"))
       .map((e) => liquidityLevelEntryNaturalKey(e.liquidityLevel)),
-    ...pinContextEntries.value
+    ...visiblePinContextEntries.value
       .filter((e) => pinEntryVisible(e, "m5_liquidity_level", "m5Liquidity"))
       .map((e) => m5LiquidityEntryNaturalKey(e.m5Liquidity)),
     // Trade-Targets/-Bestätigungen mit liquidity_level_id bekommen denselben Halo wie ein Pin
@@ -1050,7 +1055,7 @@ const pinLiquidityLevelKeys = computed(() => {
 // nötig (RSI-Divergenz-Erkennung läuft ausschließlich auf M5, siehe rsi.js/CLAUDE.md).
 const pinRsiDivergenceKeys = computed(() => {
   return new Set(
-    pinContextEntries.value
+    visiblePinContextEntries.value
       .filter((e) => e.kind === "rsi_divergence" && e.rsiDivergence?.instrument === currentSymbol.value)
       .map((e) => rsiDivergenceEntryNaturalKey(e.rsiDivergence)),
   );
