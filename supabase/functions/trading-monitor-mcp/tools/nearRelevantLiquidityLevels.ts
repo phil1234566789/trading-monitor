@@ -92,7 +92,7 @@ export async function buildNearRelevantLiquidityLevels({ instrument, fromSec, to
       pivotTime: pivotTimeSec,
       touchedTime: touchedTimeSec,
       context: contextForPivot(pivotTimeSec, dirNum, lookup),
-      kontext: formatKontext(bonus, pivotTimeSec, effectiveToSec),
+      kontext: formatKontext(bonus, pivotTimeSec, touchedTimeSec, effectiveToSec),
     };
   });
 

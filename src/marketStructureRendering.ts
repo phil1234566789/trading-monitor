@@ -512,7 +512,7 @@ function renderNestedLevel(
   nested: MarketStructureState,
   candles: Candle[],
   existingPrimitives: any[],
-  lqSweepLabel: (price: number, pivotTime: number | undefined) => string,
+  lqSweepLabel: (price: number, pivotTime: number | undefined, touchedTime: number | undefined) => string,
 ) {
   const isDown = nested.trend === "downtrend";
   const protectedType: "protected-high" | "protected-low" = isDown ? "protected-high" : "protected-low";
@@ -550,7 +550,12 @@ function renderNestedLevel(
     const lqColor = cssColor("rangeLqSweep");
     const line = new LiquidityLinePrimitive(
       toTouchedLevel(lqSweep, candles),
-      { color: lqColor, lineWidth: lineWidth("rangeLqSweep"), label: lqSweepLabel(lqSweep.price, lqSweep.pivotTime), labelSide: bullBearLabelSide(isDown) },
+      {
+        color: lqColor,
+        lineWidth: lineWidth("rangeLqSweep"),
+        label: lqSweepLabel(lqSweep.price, lqSweep.pivotTime, lqSweep.touched ? lqSweep.touched.touchedTime : undefined),
+        labelSide: bullBearLabelSide(isDown),
+      },
       candles,
     );
     series.attachPrimitive(line);
@@ -613,8 +618,11 @@ export function renderMarketStructureAnalysis(
   // sich mit der Trade-Setup-LS-Linie 1:1 überlappen") — der Preis ist jetzt fester Bestandteil des
   // Labels (nicht mehr nur im Debug-Modus, siehe formatLsLabel in liquidity.js), daher immer über
   // formatPrice aufgelöst statt hinter debugPrices versteckt.
-  const lqSweepLabel = (price: number, pivotTime: number | undefined) =>
-    formatLsLabel(formatPrice ? formatPrice(price) : String(price), pivotTime, nowSec);
+  // touchedTime optional (Bug-Report Philip 2026-08-26: "Alter bedeutet von Entstehungspunkt bis
+  // touched, falls nie touched bis jetzt — gilt überall so") — hat Vorrang vor nowSec, siehe
+  // formatLsLabel/ageReferenceTime.
+  const lqSweepLabel = (price: number, pivotTime: number | undefined, touchedTime: number | undefined) =>
+    formatLsLabel(formatPrice ? formatPrice(price) : String(price), pivotTime, nowSec, touchedTime);
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
   if (!state || candles.length === 0) return;
@@ -694,7 +702,7 @@ export function renderMarketStructureAnalysis(
       {
         color: lqColor,
         lineWidth: lineWidth("rangeLqSweep"),
-        label: lqSweepLabel(lqSweep.price, lqSweep.pivotTime),
+        label: lqSweepLabel(lqSweep.price, lqSweep.pivotTime, lqSweep.touched ? lqSweep.touched.touchedTime : undefined),
         labelSide: bullBearLabelSide(isDowntrend),
       },
       candles,

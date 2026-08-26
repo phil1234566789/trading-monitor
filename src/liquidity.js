@@ -3,7 +3,7 @@
 // orderBlocks.js): kein Ringpuffer/Streaming-State pro geschlossener Bar, stattdessen
 // bei jedem Refresh einmal komplett über das geladene `candles`-Array (aktueller
 // Chart-Timeframe) neu berechnet.
-import { snapToBarTime, businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
+import { snapToBarTime, businessSecondsBetween, formatAge, ageReferenceTime } from "./chartTimeUtils.js";
 import { cssColor } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
 import { canShowLabels } from "./chartZoom.js";
@@ -234,12 +234,16 @@ export class LiquidityLinePrimitive {
 
 // Konfigurierbar seit Chat 2026-07-25 (Style-Modal), siehe src/chartLineWidths.js.
 
-// " (1d 3h alt)" hinter dem Preis-Label, oder "" ohne pivotTime/nowSec (Chat 2026-07-22: "bei den
-// relevanten LQ-Leveln das Alter anzeigen ... Wochenende nicht mitzählen") — businessSecondsBetween
-// lässt Sa/So komplett raus.
-function ageSuffix(pivotTime, nowSec) {
-  if (pivotTime == null || nowSec == null) return "";
-  const age = formatAge(businessSecondsBetween(pivotTime, nowSec));
+// " (1d 3h alt)" hinter dem Preis-Label, oder "" ohne pivotTime/Referenzzeitpunkt (Chat 2026-07-22:
+// "bei den relevanten LQ-Leveln das Alter anzeigen ... Wochenende nicht mitzählen") —
+// businessSecondsBetween lässt Sa/So komplett raus. touchedTime (optional) hat Vorrang vor nowSec
+// als Referenzzeitpunkt (Bug-Report Philip 2026-08-26, dieselbe Regel wie tradeSetupCockpit.ts seit
+// 2026-07-27: "Alter bedeutet von Entstehungspunkt bis touched, falls nie touched bis jetzt — gilt
+// überall so") — ageReferenceTime (chartTimeUtils.js) ist die gemeinsame Stelle für diese Regel.
+function ageSuffix(pivotTime, nowSec, touchedTime = null) {
+  const reference = ageReferenceTime(touchedTime, nowSec);
+  if (pivotTime == null || reference == null) return "";
+  const age = formatAge(businessSecondsBetween(pivotTime, reference));
   return age ? ` (${age} alt)` : "";
 }
 
@@ -250,11 +254,24 @@ function ageSuffix(pivotTime, nowSec) {
 // Strings übereinander zu zeigen ("1h LQ-Sweep..." vs. "LS..."). Tier-Präfix ("Major "/"Medium ")
 // nur ab medium — "minor" (< 1 Tag) bewusst ohne Präfix ("aus Platzgründen", Chat 2026-07-28).
 // Kein pivotTime/nowSec (z.B. synthetische Test-Pivots) -> nur "LS {price}", kein Tier/Alter.
-export function formatLsLabel(formattedPrice, pivotTime, nowSec) {
+// touchedTime optional (Bug-Report Philip 2026-08-26, siehe ageSuffix oben) — hat Vorrang vor
+// nowSec für Tier UND Alter. JSDoc-Typ hier nicht nur Doku — ohne den Union-Typ leitet TS'
+// allowJs-Inferenz aus dem Aufruf von marketStructureRendering.ts (.ts-Datei, ruft mit einem
+// `number | undefined`-Wert auf) nur `null` aus dem Default-Wert her und lehnt den Aufruf ab,
+// obwohl die Laufzeit number/null/undefined längst unterstützt — gleiches Muster wie
+// sessionOccurrences.js: sessionOccurrences (tzOffsetMinutes) und rsi.js: computeRsi.
+/**
+ * @param {string} formattedPrice
+ * @param {number | undefined} pivotTime
+ * @param {number | undefined} nowSec
+ * @param {number | null | undefined} [touchedTime]
+ */
+export function formatLsLabel(formattedPrice, pivotTime, nowSec, touchedTime = null) {
   if (pivotTime == null || nowSec == null) return `LS ${formattedPrice}`;
-  const tier = classifyAge(businessSecondsBetween(pivotTime, nowSec));
+  const reference = ageReferenceTime(touchedTime, nowSec);
+  const tier = classifyAge(businessSecondsBetween(pivotTime, reference));
   const prefix = tier === "minor" ? "" : `${tier[0].toUpperCase()}${tier.slice(1)} `;
-  return `${prefix}LS ${formattedPrice}${ageSuffix(pivotTime, nowSec)}`;
+  return `${prefix}LS ${formattedPrice}${ageSuffix(pivotTime, nowSec, touchedTime)}`;
 }
 
 // Bullische Sweep-/Setup-Linien beschriften sich rechtsbündig UNTER, bärische DARÜBER — reine
@@ -278,10 +295,18 @@ export function bullBearLabelSide(bearish) {
 // absolut klar mittlerweile was damit gemeint ist") — bewusst NUR hier, formatLsLabel/ageSuffix
 // (PP/LS-Linien, "1h LQ-Sweep") behalten ihr "alt" unverändert, das ist eine andere, ältere
 // Konvention, um die es hier nicht ging.
+// Vierte Runde, Philip: "Alter bedeutet von Entstehungspunkt bis touched. Falls noch nie touched,
+// dann halt eben bis jetzt. Das gilt überall so." — Alter/Tier laufen bis lvl.touchedTime (falls
+// gesetzt), nicht bis nowSec weiter, sobald das Level längst gesweept ist (ein vor Tagen gesweeptes
+// Level wächst sonst scheinbar unbegrenzt "älter", obwohl der eigentliche Sweep selbst z.B. nur 6h
+// nach dem Pivot passierte) — dieselbe Regel wie tradeSetupCockpit.ts seit 2026-07-27, jetzt über
+// ageReferenceTime (chartTimeUtils.js) an EINER Stelle statt zweimal parallel gebaut; ageSuffix/
+// formatLsLabel oben nutzen dieselbe Funktion.
 export function formatLiquidityLevelLabel(lvl, { bonus, nowSec, formatPrice, includePrice } = {}) {
-  const tier = lvl.pivotTime != null && nowSec != null ? classifyAge(businessSecondsBetween(lvl.pivotTime, nowSec)) : null;
+  const ageEndSec = ageReferenceTime(lvl.touchedTime, nowSec);
+  const tier = lvl.pivotTime != null && ageEndSec != null ? classifyAge(businessSecondsBetween(lvl.pivotTime, ageEndSec)) : null;
   const tierLabel = tier && tier !== "minor" ? `${tier[0].toUpperCase()}${tier.slice(1)}` : null;
-  const age = lvl.pivotTime != null && nowSec != null ? formatAge(businessSecondsBetween(lvl.pivotTime, nowSec)) : null;
+  const age = lvl.pivotTime != null && ageEndSec != null ? formatAge(businessSecondsBetween(lvl.pivotTime, ageEndSec)) : null;
   const ageLabel = age ? `(${age})` : null;
   const priceLabel = includePrice && formatPrice ? formatPrice(lvl.price) : null;
   return [bonus, tierLabel, ageLabel, priceLabel].filter(Boolean).join(" ");

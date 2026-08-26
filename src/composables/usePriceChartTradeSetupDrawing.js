@@ -80,7 +80,7 @@ export function usePriceChartTradeSetupDrawing() {
           // (formatLsLabel, liquidity.js) — identisches Format wie die "1h LQ-Sweep"-Linie in
           // marketStructureAnalysis.ts, damit beide beim Überlappen (oft derselbe Pivot, siehe
           // collectH1LqLevels) lesbar bleiben statt zwei leicht unterschiedliche Strings übereinander.
-          label: showLiquidityDebug ? formatLsLabel(formatPrice(setup.ls.price), setup.ls.pivotTime, nowSec) : null,
+          label: showLiquidityDebug ? formatLsLabel(formatPrice(setup.ls.price), setup.ls.pivotTime, nowSec, setup.ls.touchedTime) : null,
           // "end-above"/"end-below" statt Default "start" (Chat 2026-07-27: "muss ständig sau weit
           // nach links scrollen") — der M5-LQ-Sweep-Pivot liegt oft weit links vom aktuellen
           // Kerzenrand, das Preislabel soll trotzdem am rechten (aktuellen) Ende der Linie stehen.

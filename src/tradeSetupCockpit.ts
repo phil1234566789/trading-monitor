@@ -13,7 +13,7 @@
 // bewusst in Kauf genommen ("kann damit leben").
 import type { MarketStructureState, Pivot } from "./range.type";
 import { cssColor, cssColorScaled } from "./chartColors.js";
-import { businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
+import { businessSecondsBetween, formatAge, ageReferenceTime } from "./chartTimeUtils.js";
 
 // Locker getypt (any) statt einer eigenen TradeSetup-Interface-Kopie — die eigentliche Form kommt
 // aus detectTradeSetups() in tradeSetup.js (JS, kein eigener Typ dort) und wird hier nur gelesen,
@@ -190,9 +190,10 @@ export function trendSetupConfirmation(state: CockpitState): { text: string; col
 // bis der Pivot durch eine andere Candle gesweept worden ist" — die Zeile zeigt einen bereits
 // geschehenen Sweep an, das Alter soll also eine FIXE historische Dauer sein (Pivot -> Sweep), nicht
 // live weiterwachsen. touchedTime hat Vorrang; nowSec bleibt nur der Fallback für den (praktisch
-// nicht vorkommenden) Fall eines LQ-Sweep-Eintrags ohne touchedTime.
+// nicht vorkommenden) Fall eines LQ-Sweep-Eintrags ohne touchedTime. ageReferenceTime (chartTimeUtils.js)
+// seit 2026-08-26 die gemeinsame Stelle für diese Regel — dieselbe Funktion nutzt jetzt auch liquidity.js.
 export function ageSuffix(pivotTime: number | undefined, touchedTime: number | undefined, nowSec: number | undefined): string {
-  const reference = touchedTime ?? nowSec;
+  const reference = ageReferenceTime(touchedTime, nowSec);
   if (pivotTime == null || reference == null) return "";
   const age = formatAge(businessSecondsBetween(pivotTime, reference));
   return age ? ` (${age} alt)` : "";

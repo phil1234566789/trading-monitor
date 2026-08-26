@@ -67,6 +67,18 @@ export function businessSecondsBetween(startSec, endSec) {
   return total;
 }
 
+// Bug-Report Philip 2026-07-27 (tradeSetupCockpit.ts, damals lokal gefixt): "bei dem Alter gehts
+// nicht um die Zeit bis jetzt, sondern die Zeit, bis der Pivot durch eine andere Candle gesweept
+// worden ist" — erneut bestätigt 2026-08-26 für die LQ-Level-Labels ("Alter bedeutet von
+// Entstehungspunkt bis touched. Falls noch nie touched, dann halt eben bis jetzt. Das gilt
+// überall so."). EINE gemeinsame Stelle für JEDE Alters-/Tier-Berechnung in der App (liquidity.js:
+// ageSuffix/formatLsLabel/formatLiquidityLevelLabel, tradeSetupCockpit.ts: ageSuffix) statt es an
+// mehreren Stellen parallel zu bauen — genau das war schon einmal auseinandergelaufen (TSC hatte
+// den Touch-Vorrang längst, liquidity.js noch nicht).
+export function ageReferenceTime(touchedTime, nowSec) {
+  return touchedTime ?? nowSec;
+}
+
 // <input type="time" step="1800"> liefert/erwartet "HH:MM" (Browser-Lokalzeit-Anzeige, aber reiner
 // Text ohne Zeitzone) — Speicherformat in sessions.js/tradingSchedules.js ist durchgängig Minuten
 // seit Mitternacht, daher der Roundtrip hier (ursprünglich nur in SessionsModal.vue, jetzt auch

@@ -30,6 +30,14 @@ describe("formatLsLabel", () => {
     expect(formatLsLabel("1,13545", undefined, NOW)).toBe("LS 1,13545");
     expect(formatLsLabel("1,13545", NOW, undefined)).toBe("LS 1,13545");
   });
+
+  // Bug-Report Philip 2026-07-27 (tradeSetupCockpit.ts) / erneut bestätigt 2026-08-26: Alter läuft
+  // bis touchedTime, nicht bis nowSec weiter, sobald der Sweep längst passiert ist.
+  it("touchedTime hat Vorrang vor nowSec für Tier UND Alter", () => {
+    const pivotTime = NOW - 31 * 3600; // 31h alt (würde ohne touchedTime "Medium" ergeben)
+    const touchedTime = NOW - 25 * 3600; // aber nur 6h nach dem Pivot gesweept
+    expect(formatLsLabel("1,13545", pivotTime, NOW, touchedTime)).toBe("LS 1,13545 (6h alt)");
+  });
 });
 
 describe("bullBearLabelSide", () => {
@@ -44,6 +52,8 @@ describe("bullBearLabelSide", () => {
 // "dann kann das label 'sweep|high|low' ja weg") — Farbe + über/unter-Position zeigen das am Chart
 // weiterhin an, touched/dir fließen also NICHT mehr in den Label-Text ein. Alter als reines "(3h)"
 // statt "(3h alt)" (dritte Runde: "es ist absolut klar mittlerweile was damit gemeint ist").
+// Vierte Runde: "Alter bedeutet von Entstehungspunkt bis touched. Falls noch nie touched, dann
+// halt eben bis jetzt." — Alter/Tier laufen bis touchedTime, nicht bis nowSec weiter.
 describe("formatLiquidityLevelLabel", () => {
   const formatPrice = (p) => p.toFixed(5);
 
@@ -61,6 +71,18 @@ describe("formatLiquidityLevelLabel", () => {
   it("touched/dir beeinflussen den Text nicht mehr (nur noch Farbe/Position am Chart)", () => {
     const lvl = { price: 1.2, dir: 1, touched: true, pivotTime: NOW - 3 * 3600 };
     expect(formatLiquidityLevelLabel(lvl, { nowSec: NOW })).toBe("(3h)");
+  });
+
+  // Bug-Report Philip: Pivot vor 31h, aber nur 6h bis zum Touch — soll "minor" (kein Tier-Präfix,
+  // "(6h)") bleiben statt "Medium" (was pivotTime-bis-nowSec ergäbe).
+  it("Alter läuft bis touchedTime, nicht bis nowSec weiter", () => {
+    const lvl = { price: 1.2, dir: -1, touched: true, pivotTime: NOW - 31 * 3600, touchedTime: NOW - 25 * 3600 };
+    expect(formatLiquidityLevelLabel(lvl, { nowSec: NOW })).toBe("(6h)");
+  });
+
+  it("ohne touchedTime (noch nicht gesweept) läuft das Alter weiterhin bis nowSec", () => {
+    const lvl = { price: 1.2, dir: -1, touched: false, pivotTime: NOW - 31 * 3600, touchedTime: null };
+    expect(formatLiquidityLevelLabel(lvl, { nowSec: NOW })).toBe("Medium (1d 7h)");
   });
 
   it("major + bonus: 'Asia-High' vorangestellt", () => {

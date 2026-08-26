@@ -95,12 +95,20 @@ function formatAgeShort(seconds: number): string | null {
   if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
   return `${minutes}m`;
 }
+// Bug-Report Philip 2026-08-26, dritte Runde: "Alter bedeutet von Entstehungspunkt bis touched.
+// Falls noch nie touched, dann halt eben bis jetzt. Das gilt überall so." — Port von
+// ageReferenceTime (src/chartTimeUtils.js), hier dupliziert wie der Rest dieses Moduls.
+function ageReferenceTime(touchedTimeSec: number | null, nowSec: number): number {
+  return touchedTimeSec ?? nowSec;
+}
 // Sweep/High/Low-Typtext ist wieder raus (Chat 2026-08-26, zweite Runde: "dann kann das label
 // 'sweep|high|low' ja weg" — dasselbe Pendant zu src/liquidity.js: formatLiquidityLevelLabel, siehe
-// dortige Begründung). dirNum/touched deshalb keine Parameter mehr hier. Alter als reines "(3h)"
-// statt "(3h alt)" (dritte Runde desselben Chats, dasselbe Pendant zu formatLiquidityLevelLabel).
-export function formatKontext(bonus: string | null, pivotTimeSec: number, nowSec: number): string {
-  const businessSec = businessSecondsBetween(pivotTimeSec, nowSec);
+// dortige Begründung). Alter als reines "(3h)" statt "(3h alt)" (dritte Runde desselben Chats).
+// touchedTimeSec (vierte Runde) hat Vorrang vor nowSec für Tier UND Alter — ein vor Tagen
+// gesweeptes Level soll nicht scheinbar unbegrenzt "älter" werden, nur weil seither Zeit vergeht.
+export function formatKontext(bonus: string | null, pivotTimeSec: number, touchedTimeSec: number | null, nowSec: number): string {
+  const reference = ageReferenceTime(touchedTimeSec, nowSec);
+  const businessSec = businessSecondsBetween(pivotTimeSec, reference);
   const tier = classifyAgeTier(businessSec);
   const tierLabel = tier !== "minor" ? `${tier[0].toUpperCase()}${tier.slice(1)}` : null;
   const age = formatAgeShort(businessSec);
@@ -181,8 +189,9 @@ export interface DataExportArgs {
 // (siehe [[project_liquidity_levels_history_gap]]) noch einen korrekten Kontext bekommt.
 // Chat 2026-08-26, Philip: zusätzlich ein `kontext`-Feld (siehe formatKontext oben) — dieselbe
 // Session-Lookup-Berechnung wird für beide Felder wiederverwendet statt sie zweimal aufzubauen,
-// deshalb `nowSec` jetzt mit im Spiel.
-function attachSessionContext<T extends { pivotTimeSec: number; dirNum: 1 | -1 }>(
+// deshalb `nowSec`/`touchedTimeSec` jetzt mit im Spiel (touchedTimeSec hat seit der dritten
+// Nachbesserung Vorrang vor nowSec für Tier/Alter, siehe formatKontext).
+function attachSessionContext<T extends { pivotTimeSec: number; dirNum: 1 | -1; touchedTimeSec: number | null }>(
   levels: T[],
   sessionConfigs: Awaited<ReturnType<typeof getSessions>>,
   nowSec: number,
@@ -196,7 +205,7 @@ function attachSessionContext<T extends { pivotTimeSec: number; dirNum: 1 | -1 }
     return {
       ...l,
       context: contextForPivot(l.pivotTimeSec, l.dirNum, lookup),
-      kontext: formatKontext(bonus, l.pivotTimeSec, nowSec),
+      kontext: formatKontext(bonus, l.pivotTimeSec, l.touchedTimeSec, nowSec),
     };
   });
 }
@@ -244,7 +253,7 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
       price: l.price,
       pivotTimeSec: l.pivotTime,
       touched: l.touched,
-      touchedTime: l.touchedTime,
+      touchedTimeSec: l.touchedTime,
       endTime: l.endTime,
     })),
     ...filterRelevantLevels(m5LiquidityLows, LIQUIDITY_MAX_RELEVANT, true).map((l) => ({
@@ -253,7 +262,7 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
       price: l.price,
       pivotTimeSec: l.pivotTime,
       touched: l.touched,
-      touchedTime: l.touchedTime,
+      touchedTimeSec: l.touchedTime,
       endTime: l.endTime,
     })),
   ];
@@ -262,9 +271,10 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // Level unnötig einen Session-Context berechnen).
   const m5LiquidityLevelsDeduped = m5LiquidityLevelsRaw.filter((l) => !coincidesWithHtf(l, liquidityLevels));
   const m5LiquidityLevels = attachSessionContext(m5LiquidityLevelsDeduped, sessionConfigs, currentTimeSec).map(
-    ({ pivotTimeSec, dirNum: _dirNum, ...rest }) => ({
+    ({ pivotTimeSec, dirNum: _dirNum, touchedTimeSec, ...rest }) => ({
       ...rest,
       pivotTime: pivotTimeSec,
+      touchedTime: touchedTimeSec,
     }),
   );
 
@@ -300,10 +310,15 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // es geht" — der Button gibt ihn für 1h UND 5m, nicht nur 5m). pivot_time kommt als ISO-String aus
   // der DB, direction schon als "high"/"low"-String (anders als bei den live erkannten M5-Leveln).
   const liquidityLevelsWithContext = attachSessionContext(
-    liquidityLevels.map((l) => ({ ...l, pivotTimeSec: Math.floor(new Date(l.pivot_time).getTime() / 1000), dirNum: l.direction === "high" ? (1 as const) : (-1 as const) })),
+    liquidityLevels.map((l) => ({
+      ...l,
+      pivotTimeSec: Math.floor(new Date(l.pivot_time).getTime() / 1000),
+      dirNum: l.direction === "high" ? (1 as const) : (-1 as const),
+      touchedTimeSec: l.touched && l.end_time != null ? Math.floor(new Date(l.end_time).getTime() / 1000) : null,
+    })),
     sessionConfigs,
     currentTimeSec,
-  ).map(({ pivotTimeSec: _pivotTimeSec, dirNum: _dirNum, ...rest }) => rest);
+  ).map(({ pivotTimeSec: _pivotTimeSec, dirNum: _dirNum, touchedTimeSec: _touchedTimeSec, ...rest }) => rest);
 
   return {
     instrument,
