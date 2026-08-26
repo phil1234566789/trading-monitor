@@ -199,6 +199,13 @@ applies when explicitly invoked, not to every session in this repo.
 - Prefer small, targeted edits with a comment explaining the non-obvious reasoning over
   refactoring for its own sake — this is a solo hobby project with a lot of hard-won bugfix
   history encoded in comments; don't erase that context while "cleaning up."
+- **DRY within a single runtime, even for a trivial one-liner.** Before writing new logic, check
+  whether the same computation already exists elsewhere in the same runtime (frontend or backend)
+  and reuse/extract it instead of writing a second copy — "it's just one line" is not an exemption,
+  duplicated logic is exactly what drifts apart later (e.g. two `touchedTime ?? nowSec` age
+  calculations that quietly diverge). This is separate from the deliberate frontend/backend
+  duplication documented above (that split is cross-runtime and unavoidable); duplication *within*
+  one runtime should default to a shared function instead.
 - **Keep the codebase clean as you go, not as a later cleanup pass.** When adding or extending
   functionality, put a distinct concern (a new algorithm, a rendering/composable piece, a reusable
   utility) into its own file rather than appending to an already-large one — decide this while
