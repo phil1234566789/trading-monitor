@@ -68,7 +68,6 @@ import {
   RANGES_CANDLE_BUFFER,
   COPIED_FEEDBACK_MS,
   DEBUG_AUTOSAVE_INTERVAL_MS,
-  CALLOUT_STACK_GAP_PX,
   TARGET_TIER_WIDTH_RATIO,
   POLL_RETRY_DELAY_MS,
   POLL_MAX_RETRIES,
@@ -77,8 +76,8 @@ import {
 } from "../priceChartConstants.js";
 import { selectActiveMetadataSections, earliestRelevantTime, saveDebugMetadataSection } from "../debugMetadata.js";
 import { useLastDataExport } from "../composables/useLastDataExport.js";
+import { usePriceChartClaudeAnnotations } from "../composables/usePriceChartClaudeAnnotations.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
-import { renderClaudeAnnotations, annotationAnchorPoint, ANNOTATION_COLOR as CLAUDE_ANNOTATION_COLOR } from "../claudeAnnotations.js";
 import { barSecondsFor, REPLAY_LOOKAHEAD_SEC } from "../timeframes.js";
 import {
   fetchInitialCandles as fetchInitialForexCandles,
@@ -299,6 +298,20 @@ const priceChartRsi = usePriceChartRsi();
 // -NowSec werden direkt im Template gebunden (TradeSetupCockpit-Komponente), daher hier destructured
 // statt hinter priceChartCockpit.* versteckt.
 const { cockpitState, cockpitMetadata, cockpitNowSec, refreshCockpit } = usePriceChartCockpit();
+// Claude-Notizen-Zeichnung + TSC-Zeiger-Callouts (siehe usePriceChartClaudeAnnotations.js,
+// Phase 6d) — tscCardRef/claudeCallout*-Refs direkt im Template gebunden, daher destructured.
+const {
+  tscCardRef,
+  claudeCalloutItems,
+  claudeCalloutLines,
+  claudeCalloutStackBottom,
+  setCalloutChipEl,
+  refresh: refreshClaudeAnnotations,
+  create: createClaudeAnnotations,
+  dispose: disposeClaudeAnnotations,
+  startTick: startClaudeCalloutTick,
+  stopTick: stopClaudeCalloutTick,
+} = usePriceChartClaudeAnnotations();
 
 const chartContainerRef = ref(null);
 // Chart-Höhe (siehe Dashboard.vue: tradesPanelHeight, dieselbe Begründung) — useTabScopedRef statt
@@ -383,8 +396,7 @@ let invalidationLinePrimitives = [];
 // divergencePriceLinePrimitives (Preis-Bein der Divergenz-Konnektoren) lebt seit Phase 6b in
 // priceChartRsi (usePriceChartRsi.js) — hier per priceChartRsi.divergencePriceLinePrimitives gelesen.
 let tradeSetupPrimitives = [];
-let claudeAnnotationPrimitives = [];
-let claudeAnnotationPriceLines = [];
+// claudeAnnotationPrimitives/-PriceLines leben seit Phase 6d in usePriceChartClaudeAnnotations.js.
 let allCandles = [];
 let tradeSetupM5Candles = [];
 let currentTradeSetups = [];
@@ -451,34 +463,6 @@ const liquidityMetadata = ref(null);
 const liquidityEarliestTime = ref(null);
 const tradeSetupsMetadata = ref([]);
 const structureEarliestTime = ref(null);
-
-// TSC-Callouts ("Zeiger-Linien") — Claude-Notizen-Labels (line/marker/label) floaten als eigene
-// DOM-Chips über der TSC-Karte und zeigen per SVG-Linie auf ihren Chart-Punkt. Bug-Report Philip:
-// automatisch für ALLE Notizen ergab bei vielen gleichzeitigen Annotationen ein unlesbares
-// Spinnennetz ("okay irgendwie ist es schlimmer als davor HAHAHA") — jetzt opt-in PRO Annotation
-// über das "pointer"-Feld (claudeAnnotations.js: validateAnnotationList), Claude entscheidet selbst,
-// welche Notiz sich als Zeiger lohnt. Nur aktiv, wenn die TSC-Karte sichtbar ist — sonst kein
-// sinnvoller Anker, pointer:true-Notizen fallen automatisch auf inline zurück.
-const tscCardRef = ref(null);
-const claudeCalloutItems = ref([]); // [{ id, text, color, x, y }] — x/y = Chart-lokaler Anker (CSS-Px)
-const claudeCalloutLines = ref([]); // [{ id, x1, y1, x2, y2, color }] — x1/y1 = Label-Chip-Position
-const claudeCalloutStackBottom = ref(24); // px von unten in .chart-wrapper, knapp über der TSC-Karte
-const claudeCalloutChipEls = {}; // id -> HTMLElement, NICHT reaktiv (nur fürs Auslesen der Rects im rAF-Tick)
-let claudeCalloutRafId = null;
-// WeakMap statt einer id-Eigenschaft auf den Annotation-Objekten selbst (die kommen roh aus
-// Supabase/claudeAnnotationsStore.js, sollen nicht mutiert werden) — stabile id pro Objekt-Referenz,
-// unabhängig von Array-Position (die sich durchs Filtern auf "hat Text, ist kein hline" verschiebt).
-const claudeCalloutIdMap = new WeakMap();
-let claudeCalloutIdSeq = 0;
-function calloutIdFor(ann) {
-  if (!claudeCalloutIdMap.has(ann)) claudeCalloutIdMap.set(ann, ++claudeCalloutIdSeq);
-  return claudeCalloutIdMap.get(ann);
-}
-
-function setCalloutChipEl(id, el) {
-  if (el) claudeCalloutChipEls[id] = el;
-  else delete claudeCalloutChipEls[id];
-}
 
 // TSC-Karte gerade sichtbar? (siehe TradeSetupCockpit.vue: v-if="state" innen — cockpitState wird
 // von refreshCockpitInternal() bereits auf null gesetzt, wenn showTradeSetupCockpit aus ist, die
@@ -942,82 +926,16 @@ function refreshInvalidationLinesInternal() {
   }
 }
 
-// Bug-Report Philip 2026-07-30 ("okay irgendwie ist es schlimmer als davor HAHAHA"): ALLE
-// Annotationen automatisch zu Zeiger-Callouts zu machen ergab bei vielen Notizen ein unlesbares
-// Spinnennetz. Jetzt entscheidet Claude das PRO Annotation über das optionale "pointer"-Feld — nur
-// pointer:true wandert in die schwebenden Chips (siehe claudeCalloutTick), alles andere bleibt
-// inline im Canvas. hline behält seinen Text immer, pointer wird dafür ignoriert.
+// Dünner Wrapper um usePriceChartClaudeAnnotations' refresh() — baut die Argumente aus Props/
+// allCandles/tscCalloutModeActive zusammen (siehe usePriceChartClaudeAnnotations.js für die
+// eigentliche Zeichenlogik + volle Bug-Historie).
 function refreshClaudeAnnotationsInternal() {
-  const annotationsForCanvas = tscCalloutModeActive.value
-    ? props.claudeAnnotations.map((a) => (a.type === "hline" || !a.text || !a.pointer ? a : { ...a, text: undefined }))
-    : props.claudeAnnotations;
-  renderClaudeAnnotations(
-    candleSeries,
-    annotationsForCanvas,
-    claudeAnnotationPrimitives,
-    claudeAnnotationPriceLines,
-    clipReplay(allCandles),
-    props.claudeAnnotationsDate,
-  );
-}
-
-// rAF-Tick statt einzelner Event-Subscriptions (Pan/Zoom/Resize/TSC-Inhaltsänderung durch Locked-
-// Banner etc.) — die Zeiger-Linien müssen auf JEDE Chart-Bewegung reagieren, nicht nur auf Daten-
-// änderungen; ein rAF-Loop garantiert das unabhängig davon, welches Event gerade der Auslöser war,
-// bei vernachlässigbaren Kosten (ein paar timeToCoordinate/getBoundingClientRect-Aufrufe, nur
-// während TSC-Callouts tatsächlich aktiv sind UND es beschriftete Annotationen gibt).
-function claudeCalloutTick() {
-  claudeCalloutRafId = requestAnimationFrame(claudeCalloutTick);
-  if (!chart || !candleSeries || !chartContainerRef.value) return;
-
-  const labeled = tscCalloutModeActive.value ? props.claudeAnnotations.filter((a) => a.type !== "hline" && a.text && a.pointer) : [];
-  if (labeled.length === 0) {
-    if (claudeCalloutItems.value.length > 0) claudeCalloutItems.value = [];
-    if (claudeCalloutLines.value.length > 0) claudeCalloutLines.value = [];
-    return;
-  }
-
-  // .chart-container füllt .chart-wrapper komplett aus (flex:1, einziges layoutrelevantes Kind,
-  // siehe resizeObserver-Kommentar unten) — dessen Rect dient hier als lokaler Koordinaten-
-  // Ursprung, ohne einen eigenen Ref auf .chart-wrapper zu brauchen.
-  const wrapperRect = chartContainerRef.value.getBoundingClientRect();
-
-  // 1) Verbindungslinien ZUERST anhand der aktuell im DOM stehenden Chips (vom letzten Tick)
-  // berechnen — dadurch immer genau einen Frame "hinter" einer Textänderung, aber nie anhand
-  // von Chips berechnet, die zu den gleich neu gesetzten Items gar nicht mehr passen.
-  const lines = [];
-  for (const item of claudeCalloutItems.value) {
-    const chipEl = claudeCalloutChipEls[item.id];
-    if (!chipEl) continue;
-    const chipRect = chipEl.getBoundingClientRect();
-    lines.push({
-      id: item.id,
-      x1: chipRect.left - wrapperRect.left,
-      y1: chipRect.top - wrapperRect.top + chipRect.height / 2,
-      x2: item.x,
-      y2: item.y,
-      color: item.color,
-    });
-  }
-  claudeCalloutLines.value = lines;
-
-  // 2) Label-Inhalte + Chart-Anker fürs nächste Chip-Layout neu berechnen.
-  const candles = clipReplay(allCandles);
-  const items = [];
-  for (const ann of labeled) {
-    const anchor = annotationAnchorPoint(chart, candleSeries, candles, props.claudeAnnotationsDate, ann);
-    if (!anchor) continue; // Zeit/Preis gerade außerhalb des sichtbaren Bereichs
-    items.push({ id: calloutIdFor(ann), text: ann.text, color: ann.color ?? CLAUDE_ANNOTATION_COLOR, x: anchor.x, y: anchor.y });
-  }
-  claudeCalloutItems.value = items;
-
-  // 3) TSC-Karten-Position messen, Label-Stack knapp darüber andocken (Konstante CALLOUT_GAP_PX
-  // unten bei den restlichen Layout-Konstanten).
-  if (tscCardRef.value?.$el?.nodeType === 1) {
-    const tscRect = tscCardRef.value.$el.getBoundingClientRect();
-    const tscTopLocal = tscRect.top - wrapperRect.top;
-    claudeCalloutStackBottom.value = wrapperRect.height - tscTopLocal + CALLOUT_STACK_GAP_PX;
-  }
+  refreshClaudeAnnotations({
+    annotations: props.claudeAnnotations,
+    annotationsDate: props.claudeAnnotationsDate,
+    candles: clipReplay(allCandles),
+    tscCalloutModeActive: tscCalloutModeActive.value,
+  });
 }
 
 // ZonePaneView.update() (orderBlocks.js) ruft snapToBarTime(candles, z.startTime) auf — findet sich
@@ -1845,6 +1763,7 @@ onMounted(() => {
   // EMA-Serien + RSI-Panel-Lifecycle leben in usePriceChartRsi.js (Phase 6b) — legt hier die
   // EMA-Serien an (RSI-Series+Pane erst bei Bedarf, siehe refreshRsiInternal/priceChartRsi.refreshRsi).
   priceChartRsi.create(chart, candleSeries);
+  createClaudeAnnotations(chart, candleSeries);
 
   chart.subscribeClick((param) => {
     if (!param.point || !props.tradeModeActive) return;
@@ -1994,11 +1913,22 @@ onMounted(() => {
   loadTradeSetupM5();
   scheduleNextTradeSetupM5Poll();
   if (rangesNeedsData()) startRangesPolling();
-  claudeCalloutRafId = requestAnimationFrame(claudeCalloutTick);
+  // getCtx liefert dem rAF-Tick (usePriceChartClaudeAnnotations.js) pro Frame frisch, was NICHT über
+  // createClaudeAnnotations() gesetzt werden kann (chartContainerRef/allCandles/Props ändern sich
+  // laufend, chart/candleSeries dagegen sind für die Lebensdauer der Component fix).
+  startClaudeCalloutTick(() => ({
+    wrapperEl: chartContainerRef.value,
+    candles: clipReplay(allCandles),
+    annotations: props.claudeAnnotations,
+    annotationsDate: props.claudeAnnotationsDate,
+    tscCalloutModeActive: tscCalloutModeActive.value,
+    tscCardEl: tscCardRef.value?.$el?.nodeType === 1 ? tscCardRef.value.$el : null,
+  }));
 });
 
 onUnmounted(() => {
-  if (claudeCalloutRafId != null) cancelAnimationFrame(claudeCalloutRafId);
+  stopClaudeCalloutTick();
+  disposeClaudeAnnotations();
   // scheduleNextPoll/-TradeSetupM5Poll/-RangesPoll nutzen setTimeout statt setInterval
   // (Kerzenschluss-Ausrichtung, siehe dort) -> clearTimeout statt clearInterval.
   clearTimeout(pollTimer);
