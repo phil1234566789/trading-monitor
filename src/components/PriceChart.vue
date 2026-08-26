@@ -31,13 +31,13 @@ import {
   LIQUIDITY_MAX_RELEVANT,
 } from "../liquidity.js";
 import { mergePinnedLevels, computeHtfLiquidityLevels, mergeDbLiquidityLevels } from "../priceChartLiquidity.js";
-import { sessions, isForbiddenAt } from "../sessions.js";
+import { sessions } from "../sessions.js";
 import { newsEvents } from "../newsEvents.js";
 import { usePriceChartSessionsAndNews } from "../composables/usePriceChartSessionsAndNews.js";
-import { detectSetupObs, detectTradeSetups, tradeSetupObBoxBounds } from "../tradeSetup.js";
+import { tradeSetupObBoxBounds } from "../tradeSetup.js";
 import { renderPivotMarkers } from "../pivotMarkers";
 import { computeRangesPivots, buildMarketStructureState, pivotForDisplay, summarizeMarketStructureState } from "../marketStructureAnalysis";
-import { renderMarketStructureAnalysis, collectH1LqLevels, collectFibLevels } from "../marketStructureRendering";
+import { renderMarketStructureAnalysis, collectFibLevels } from "../marketStructureRendering";
 import { DivergenceLinePrimitive } from "../rsiRendering.js";
 import { usePriceChartRsi } from "../composables/usePriceChartRsi.js";
 import { usePriceChartCockpit } from "../composables/usePriceChartCockpit.js";
@@ -53,18 +53,9 @@ import {
   INITIAL_CANDLE_COUNT,
   LAZY_LOAD_LOGICAL_THRESHOLD,
   TRADE_MARKER_BARS,
-  TRADE_SETUP_M5_FRACTAL_PERIOD,
-  TRADE_SETUP_M5_CANDLE_COUNT,
-  TRADE_SETUP_GRACE_SEC,
-  TRADE_SETUP_LS_MAX_LEAD_SEC_H1,
-  TRADE_SETUP_LS_MAX_LEAD_SEC_M5,
-  TRADE_SETUP_LS_MAX_DISTANCE_M5,
-  TRADE_SETUP_OB_MAX_DELAY_SEC,
-  TRADE_SETUP_LOOKBACK_SEC,
   TRADE_SETUP_OB_WIDTH_SEC,
   TRADE_SETUP_OB_FILL_RATIO,
   TRADE_SETUP_OB_BORDER_RATIO,
-  TREND_ANALYSIS_CANDLE_COUNT,
   RANGES_CANDLE_BUFFER,
   COPIED_FEEDBACK_MS,
   DEBUG_AUTOSAVE_INTERVAL_MS,
@@ -77,6 +68,7 @@ import {
 import { buildActiveMetadataSnapshot, hasActiveMetadata as hasActiveMetadataFor, saveDebugMetadataSection } from "../debugMetadata.js";
 import { useLastDataExport } from "../composables/useLastDataExport.js";
 import { usePriceChartClaudeAnnotations } from "../composables/usePriceChartClaudeAnnotations.js";
+import { usePriceChartTradeSetups } from "../composables/usePriceChartTradeSetups.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import { barSecondsFor, REPLAY_LOOKAHEAD_SEC } from "../timeframes.js";
 import {
@@ -312,6 +304,16 @@ const {
   startTick: startClaudeCalloutTick,
   stopTick: stopClaudeCalloutTick,
 } = usePriceChartClaudeAnnotations();
+// Trade-Setup-Erkennung + M5-Polling (siehe usePriceChartTradeSetups.js, Phase 6f) —
+// tradeSetupsMetadata direkt im Template gebunden (Debug-Metadaten-Panel), daher destructured.
+// Ersetzt das bisherige DOPPELTE currentTradeSetups(let)+tradeSetupsMetadata(ref) hier im File.
+const {
+  tradeSetupsMetadata,
+  getM5Candles: getTradeSetupM5Candles,
+  getTrendAnalysisM5Candles,
+  computeTradeSetups: computeTradeSetupsPure,
+  fetchM5Candles: fetchTradeSetupM5Candles,
+} = usePriceChartTradeSetups();
 
 const chartContainerRef = ref(null);
 // Chart-Höhe (siehe Dashboard.vue: tradesPanelHeight, dieselbe Begründung) — useTabScopedRef statt
@@ -398,15 +400,14 @@ let invalidationLinePrimitives = [];
 let tradeSetupPrimitives = [];
 // claudeAnnotationPrimitives/-PriceLines leben seit Phase 6d in usePriceChartClaudeAnnotations.js.
 let allCandles = [];
-let tradeSetupM5Candles = [];
-let currentTradeSetups = [];
+// tradeSetupM5Candles/trendAnalysisM5Candles/currentTradeSetups leben seit Phase 6f in
+// usePriceChartTradeSetups.js (getM5Candles()/getTrendAnalysisM5Candles()/tradeSetupsMetadata-Ref).
 // TSC-Fokus (Chat 2026-07-27: "TSC soll das anzeigen, was ich grad im Fokus hab") — überschreibt,
 // solange gesetzt, computeCockpitState()'s Default ("das jüngste Live-Setup") mit genau EINEM
 // bewusst ausgewählten Setup (Trade-Modus-Klick auf eine OB-Box, oder ein Trade aus der Liste mit
 // verknüpftem trade_setups-Datensatz). null = normales Live-Verhalten. Siehe focusTradeSetup/
 // clearTradeSetupFocus (defineExpose) und den watch auf props.tradeModeActive unten.
 let focusedTradeSetup = null;
-let trendAnalysisM5Candles = [];
 let rangesH1Candles = [];
 let rangesPivots = null; // roh (mit pivotTime), Periode 5 — siehe computeRangesPivotsFor/refreshRangesMarkersInternal
 let rangesPivots2 = null; // roh (mit pivotTime), eingebettete Periode 2 (siehe Chat 2026-07-19)
@@ -416,7 +417,6 @@ let rangesPivots2 = null; // roh (mit pivotTime), eingebettete Periode 2 (siehe 
 // zählt hoch, ein noch laufender Fetch von VOR dem Wechsel erkennt daran, dass er überholt ist.
 let loadInitialFetchSeq = 0;
 let rangesFetchSeq = 0;
-let tradeSetupM5FetchSeq = 0;
 let loadingOlder = false;
 let reachedHistoryStart = false;
 // Bug-Report Philip 2026-08-09: ein hängender Scroll-Back-Fetch (cTrader-Timeout) landet nur in der
@@ -458,10 +458,10 @@ const rangesLoading = computed(() => (props.showRanges || props.showRangesMetada
 // Toggle-Gate — POI-/OB-Zonen haben anders als Liquidität/Trade-Setups/Structure keinen eigenen
 // An/Aus-Schalter, sie werden immer gezeichnet. liquidityEarliestTime/structureEarliestTime halten
 // den frühesten ROHEN pivotTime nur für die Kerzen-Relevanz unten, tauchen nicht im JSON auf.
+// tradeSetupsMetadata kommt seit Phase 6f direkt aus usePriceChartTradeSetups() (oben destructured).
 const poiZonesMetadata = ref(null);
 const liquidityMetadata = ref(null);
 const liquidityEarliestTime = ref(null);
-const tradeSetupsMetadata = ref([]);
 const structureEarliestTime = ref(null);
 
 // TSC-Karte gerade sichtbar? (siehe TradeSetupCockpit.vue: v-if="state" innen — cockpitState wird
@@ -684,7 +684,7 @@ function refreshTradeSetupLinksInternal() {
 // gebündelt für refreshTradeTargetLinksInternal/-TradeConfirmationLinksInternal.
 function obZoneCtx() {
   return {
-    m5Candles: clipReplay(tradeSetupM5Candles),
+    m5Candles: clipReplay(getTradeSetupM5Candles()),
     dbObZones: props.dbObZones,
     symbol: props.symbol,
     replayUntil: props.replayUntil,
@@ -1092,7 +1092,7 @@ function refreshMarketStructureInternal() {
   // computeTradeSetups() liest marketStructureState.value (siehe collectH1LqLevels, Chat
   // 2026-07-28) — muss also nach JEDEM Recompute hier neu laufen, nicht nur bei neuen M5-Kerzen
   // (siehe loadTradeSetupM5). Reine lokale Berechnung, kein Netzwerk-Call.
-  computeTradeSetups();
+  computeTradeSetupsInternal();
   renderTradeSetupsInternal();
   // Sofort weiterreichen statt auf den nächsten refreshChart()/Poll zu warten (siehe Chat
   // 2026-07-19: "TSC scheint zu hängen, dauert ne Weile bis da was drin steht") — marketStructureState
@@ -1114,7 +1114,7 @@ function refreshCockpitInternal() {
     replayUntil: props.replayUntil,
     symbol: props.symbol,
     marketStructureState: marketStructureState.value,
-    tradeSetupsForCockpit: focusedTradeSetup ? [focusedTradeSetup] : currentTradeSetups,
+    tradeSetupsForCockpit: focusedTradeSetup ? [focusedTradeSetup] : tradeSetupsMetadata.value,
   });
 }
 
@@ -1193,65 +1193,18 @@ function refreshRangesPollingState() {
   else stopRangesPolling();
 }
 
-// Erkennung läuft nur, wenn sich M5-Kerzen oder marketStructureState geändert haben (siehe
-// loadTradeSetupM5/refreshMarketStructureInternal) — currentTradeSetups bleibt über Refreshs hinweg
-// stehen, nur renderTradeSetupsInternal() (Positionierung) läuft bei jedem Refresh neu. Zeigt die
-// letzten `tradeSetupHistoryCount` Setups JE Richtung, nicht nur das aktive.
-function computeTradeSetups() {
-  const m5Candles = clipReplay(tradeSetupM5Candles);
-  if (m5Candles.length === 0) {
-    currentTradeSetups = [];
-    tradeSetupsMetadata.value = currentTradeSetups;
-    return;
-  }
-  const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5Candles, TRADE_SETUP_M5_FRACTAL_PERIOD);
-  // H1-Level kommen seit Chat 2026-07-28 aus marketStructureState.structurePivots statt einer
-  // eigenen H1-Fraktal-Erkennung (siehe Kommentar bei TRADE_SETUP_M5_CANDLE_COUNT oben) — kann
-  // leer sein, solange marketStructureState.value noch nicht geladen ist (siehe
-  // refreshMarketStructureInternal/rangesNeedsData); Path A/B finden dann übergangsweise nur
-  // M5-basierte Setups, kein Absturz.
-  const h1Highs = collectH1LqLevels(marketStructureState.value, 1);
-  const h1Lows = collectH1LqLevels(marketStructureState.value, -1);
-  const setupObs = detectSetupObs(m5Candles);
-  const params = {
-    graceSec: TRADE_SETUP_GRACE_SEC,
-    lsMaxLeadSecH1: TRADE_SETUP_LS_MAX_LEAD_SEC_H1,
-    lsMaxLeadSecM5: TRADE_SETUP_LS_MAX_LEAD_SEC_M5,
-    maxDistanceM5: TRADE_SETUP_LS_MAX_DISTANCE_M5,
-    maxLookbackSec: TRADE_SETUP_LOOKBACK_SEC,
-    obMaxDelaySec: TRADE_SETUP_OB_MAX_DELAY_SEC,
-    nowTime: m5Candles[m5Candles.length - 1].time,
-  };
-  // Anders als tradeSetupHistoryCountShort/Long im Original (dort "zusätzlich zum aktuell
-  // aktiven", 0 = nur das aktive) zählt n hier die GESAMTE Anzahl gezeigter Setups je
-  // Richtung — wir zeichnen kein separates "Live"-Setup, siehe detectTradeSetups. n=0 zeigt
-  // also nichts (slice(-0) wäre sonst das GANZE Array, daher der Sonderfall).
-  const n = Math.max(0, props.tradeSetupHistoryCount);
-  const takeLast = (arr) => (n === 0 ? [] : arr.slice(-n));
-  // Setups, deren bestätigende M5-OB in einer "forbidden"-Session entstanden ist, direkt raus (z.B.
-  // Asia/Spread Hour, siehe isForbiddenAt in sessions.js) statt nur als TSC-No-Go anzuzeigen.
-  // obStartTime statt fractal.pivotTime, weil der OB der früheste plausible Entry-Zeitpunkt ist. VOR
-  // takeLast gefiltert, sonst würde ein rausgefiltertes Setup einen History-Platz "verbrauchen".
-  const symbolSessions = sessions.filter((s) => s.instrument === props.symbol);
-  const tzOffsetMinutes = (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset();
-  const notForbidden = (s) => !isForbiddenAt(symbolSessions, s.obStartTime, tzOffsetMinutes);
-  // IMMER beide Richtungen berechnen (unabhängig von showTradeSetupsLong/-Short) — siehe Chat
-  // 2026-07-19: "TSC soll den aktuellsten und wahren Stand anzeigen", auch wenn im Chart gerade
-  // eine Richtung zur Übersicht ausgetoggelt ist. Die Long/Short-Toggles filtern erst beim
-  // ZEICHNEN (renderTradeSetupsInternal), currentTradeSetups selbst (und damit die TSC-Karte,
-  // siehe refreshCockpitInternal) bleibt immer vollständig.
-  const shorts = takeLast(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, m5Candles).filter(notForbidden));
-  const longs = takeLast(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, m5Candles).filter(notForbidden));
-  // setupNumber (1..n je Richtung, chronologisch): nur bei aktiver Historie gesetzt (n > 1) — sonst
-  // gibt's nur eine Box je Richtung, keine Zuordnung nötig. Separates Feld statt in `label`
-  // eingebacken (wie vorher "Short (2)"), weil sowohl die OB-Box (Chart) als auch die TSC-Karte
-  // (tradeSetupCockpit.ts) die Nummer jetzt als "#x"-Suffix brauchen, aber an unterschiedlichen
-  // Stellen im Text (Chat 2026-07-27: "damit ich die Nummer sofort zuordnen kann").
-  currentTradeSetups = [
-    ...shorts.map((s, i) => ({ ...s, label: "Short", setupNumber: n > 1 ? i + 1 : null })),
-    ...longs.map((s, i) => ({ ...s, label: "Long", setupNumber: n > 1 ? i + 1 : null })),
-  ];
-  tradeSetupsMetadata.value = currentTradeSetups;
+// Dünner Wrapper um usePriceChartTradeSetups' computeTradeSetups() (siehe dort für die
+// eigentliche Erkennungslogik samt voller Bug-Historie) — läuft nur, wenn sich M5-Kerzen oder
+// marketStructureState geändert haben (siehe loadTradeSetupM5Internal/refreshMarketStructureInternal);
+// tradeSetupsMetadata bleibt über Refreshs hinweg stehen, nur renderTradeSetupsInternal()
+// (Positionierung) läuft bei jedem Chart-Refresh neu.
+function computeTradeSetupsInternal() {
+  computeTradeSetupsPure({
+    candles: clipReplay(getTradeSetupM5Candles()),
+    marketStructureState: marketStructureState.value,
+    symbol: props.symbol,
+    tradeSetupHistoryCount: props.tradeSetupHistoryCount,
+  });
 }
 
 // Dünne Koordinaten-Wrapper um die reinen Match-Funktionen in priceChartHitTest.js (siehe dort für
@@ -1263,7 +1216,7 @@ function findClickedSetup(param) {
   const price = candleSeries.coordinateToPrice(param.point.y);
   const time = chart.timeScale().coordinateToTime(param.point.x);
   if (price == null || time == null) return null;
-  return matchTradeSetup(currentTradeSetups, price, time, {
+  return matchTradeSetup(tradeSetupsMetadata.value, price, time, {
     replayUntil: props.replayUntil,
     showTradeSetupsShort: props.showTradeSetupsShort,
     showTradeSetupsLong: props.showTradeSetupsLong,
@@ -1334,10 +1287,10 @@ function renderTradeSetupsInternal() {
   // Pivot exakt denselben Label-Text zeigen (siehe collectH1LqLevels: oft derselbe Pivot).
   const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
 
-  for (const setup of currentTradeSetups) {
+  for (const setup of tradeSetupsMetadata.value) {
     if (props.replayUntil != null && setup.fractal.pivotTime > props.replayUntil) continue;
-    // Long/Short-Toggle filtert NUR das Zeichnen (siehe computeTradeSetups: currentTradeSetups
-    // selbst bleibt immer vollständig, fürs TSC).
+    // Long/Short-Toggle filtert NUR das Zeichnen (siehe usePriceChartTradeSetups.js:
+    // computeTradeSetups — tradeSetupsMetadata selbst bleibt immer vollständig, fürs TSC).
     if (setup.dir === 1 && !props.showTradeSetupsShort) continue;
     if (setup.dir === -1 && !props.showTradeSetupsLong) continue;
     const key = setup.dir === 1 ? "tradeSetupShort" : "tradeSetupLong";
@@ -1420,7 +1373,7 @@ function renderTradeSetupsInternal() {
 // Style-Watcher-Zeilen weiter unten) — hier nur noch dünne Wrapper, damit alle bestehenden
 // Call-Sites (refreshChart(), watch(...) unten) unverändert bleiben.
 function refreshEmaInternal() {
-  priceChartRsi.refreshEma(clipReplay(trendAnalysisM5Candles), { showEma: props.showEma, currentBar: props.currentBar });
+  priceChartRsi.refreshEma(clipReplay(getTrendAnalysisM5Candles()), { showEma: props.showEma, currentBar: props.currentBar });
 }
 
 function refreshRsiInternal() {
@@ -1431,63 +1384,22 @@ function refreshRsiDivergenceInternal() {
   priceChartRsi.refreshDivergence(clipReplay(allCandles), props.symbol, props, rsiDivergenceStatsData);
 }
 
-// TREND_ANALYSIS_CANDLE_COUNT (2000) liegt über dem Edge-Function-Limit pro Request (1000,
-// siehe forexCandles.js) -> seitenweise rückwärts nachladen, analog zu fetchAllSince im
-// fetch-trend-fixture.mjs-Script.
-async function fetchTrendAnalysisM5History(symbol, targetCount, toMs) {
-  let all = await fetchInitialForexCandles(symbol, "5m", Math.min(targetCount, 1000), toMs);
-  while (all.length < targetCount && all.length > 0) {
-    const older = await fetchOlderForexCandles(symbol, "5m", all[0].time, 1000);
-    if (older.length === 0) break;
-    all = older.concat(all);
-  }
-  return all;
-}
-
-// M5-Kerzen für die Trade-Setup-Erkennung — unabhängig vom aktuell gewählten Chart-Timeframe
-// (props.currentBar), da ein Setup immer auf M5-Fraktal + M5-OB basiert, egal ob der Nutzer
-// gerade den 1h- oder den 15m-Chart anschaut. Bis Chat 2026-07-28 gab es hier zusätzlich einen
-// eigenen H1-Poll (loadTradeSetupH1/scheduleNextTradeSetupH1Poll) für eine eigene H1-Fraktal-
-// Erkennung — ersetzt durch collectH1LqLevels() auf marketStructureState.structurePivots (siehe
-// computeTradeSetups/refreshMarketStructureInternal), das läuft am rangesH1Candles-Poll mit, kein
-// eigener H1-Fetch für Trade-Setups mehr nötig.
+// Dünner Wrapper um usePriceChartTradeSetups' fetchM5Candles() (siehe dort für
+// fetchTrendAnalysisM5History/die volle Bug-Historie) — löst nur den Fetch aus, die Refresh-
+// Kaskade danach (Erkennung + alles, was auf M5-Kerzen/Trade-Setups reagiert) bleibt hier, siehe
+// usePriceChartTradeSetups.js-Kopfkommentar für die Begründung. M5-Kerzen sind unabhängig vom
+// aktuell gewählten Chart-Timeframe (props.currentBar) — ein Setup basiert immer auf M5-Fraktal +
+// M5-OB, egal ob der Nutzer gerade den 1h- oder den 15m-Chart anschaut.
 async function loadTradeSetupM5() {
-  const seq = ++tradeSetupM5FetchSeq; // Out-of-Order-Guard, siehe loadRangesCandles
-  try {
-    const toMs = replayToMs("5m");
-    // Holt bei aktivem EMA-Toggle zusätzlich die größere M5-Historie für die EMA-Berechnung
-    // (siehe TREND_ANALYSIS_CANDLE_COUNT) — nur dann, um unnötige cTrader-Connects zu vermeiden.
-    // Hängt hier dran (nicht an einem dritten eigenen Poller), weil EMA ohnehin M5-Kerzen braucht
-    // und dieser Poll schon läuft — inhaltlich hat EMA nichts mit Trade-Setups zu tun, siehe Chat.
-    const fetches = [
-      fetchCandlesCached(fetchInitialForexCandles, props.symbol, "5m", TRADE_SETUP_M5_CANDLE_COUNT, toMs, REPLAY_LOOKAHEAD_SEC),
-    ];
-    if (props.showEma) {
-      fetches.push(
-        fetchCandlesCached(
-          (symbol, bar, count, ms) => fetchTrendAnalysisM5History(symbol, count, ms),
-          props.symbol,
-          "5m",
-          TREND_ANALYSIS_CANDLE_COUNT,
-          toMs,
-          REPLAY_LOOKAHEAD_SEC,
-        ),
-      );
-    }
-    const [m5, trendM5] = await Promise.all(fetches);
-    if (seq !== tradeSetupM5FetchSeq) return true; // inzwischen überholt — kein Fehler
-    tradeSetupM5Candles = m5;
-    if (trendM5) trendAnalysisM5Candles = trendM5;
-    computeTradeSetups();
+  const { ok, applied } = await fetchTradeSetupM5Candles({ symbol: props.symbol, toMs: replayToMs("5m"), showEma: props.showEma });
+  if (ok && applied) {
+    computeTradeSetupsInternal();
     renderTradeSetupsInternal();
     refreshEmaInternal();
     refreshCockpitInternal(); // sofort weiterreichen statt auf den nächsten refreshChart() zu warten
     refreshPoiZonesInternal(); // M5-OB-Toggle (Chat 2026-07-30) läuft auf denselben Kerzen mit
-    return true;
-  } catch (err) {
-    console.error("Trade-Setup-M5-Kerzen fehlgeschlagen:", err);
-    return false;
   }
+  return ok;
 }
 
 // Prüft, ob die aktuell sichtbare Logical Range über den geladenen Datenanfang hinausragt
@@ -1998,7 +1910,7 @@ watch(() => props.showTradeSetups, () => {
   refreshInvalidationLinesInternal();
 });
 watch(() => props.tradeSetupHistoryCount, () => {
-  computeTradeSetups();
+  computeTradeSetupsInternal();
   renderTradeSetupsInternal();
 });
 // Nur Re-Render, kein computeTradeSetups() — currentTradeSetups bleibt unabhängig von diesem
@@ -2052,7 +1964,7 @@ watch([() => props.rangesPeriod, () => props.ranges2Period], () => {
 // dann einmal nachladen; beim Ausschalten reicht refreshEmaInternal (blendet aus, kein Neu-Fetch
 // nötig). Nur der M5-Poller, H1 hat mit EMA nichts zu tun.
 watch(() => props.showEma, (on) => {
-  if (on && trendAnalysisM5Candles.length === 0) loadTradeSetupM5();
+  if (on && getTrendAnalysisM5Candles().length === 0) loadTradeSetupM5();
   else refreshEmaInternal();
 });
 // RSI braucht keinen Nachlade-Zweig wie EMA oben — läuft auf allCandles, das für den Chart selbst
