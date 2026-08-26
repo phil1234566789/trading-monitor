@@ -1,10 +1,12 @@
-// Debug-Metadaten-Sammel-Panel (siehe PriceChart.vue: buildActiveMetadataSnapshot, Chat
-// 2026-07-20: "damit ich dir nicht ständig die Daten von dem was ich in TradingView sehe hier
-// schreiben muss"). Die Gating-Logik ("nur metadaten von den features im Menü, wenn sie
-// angetoggelt sind") lebt bewusst hier als reine Funktion statt nur inline im Vue-Setup, damit sie
-// sich ohne Chart/lightweight-charts/Component-Mount testen lässt (siehe test/debugMetadata.test.js,
-// Chat: "hast du einen unit test geschrieben, welcher testet, dass nur metadaten von aktiven
-// features beinhaltet sein sollen?").
+// Debug-Metadaten-Sammel-Panel (Chat 2026-07-20: "damit ich dir nicht ständig die Daten von dem
+// was ich in TradingView sehe hier schreiben muss"). Reine Funktionen statt inline im Vue-Setup,
+// damit sie sich ohne Chart/lightweight-charts/Component-Mount testen lassen (siehe
+// test/debugMetadata.test.js, Chat: "hast du einen unit test geschrieben, welcher testet, dass nur
+// metadaten von aktiven features beinhaltet sein sollen?"). buildActiveMetadataSnapshot/
+// hasActiveMetadata kamen per Refactoring-Task "Sehr große Dateien refactoren" (Phase 6e,
+// 2026-08-26) aus PriceChart.vue hierher — dort nur noch ein dünner Wrapper, der ctx aus
+// Props/lokalen Refs zusammenbaut (siehe buildActiveMetadataSnapshotInternal dort).
+import { fmtDateTime } from "./format.js";
 
 // context (Symbol/Timeframe/Replay) und orderBlocks laufen IMMER mit, unabhängig von toggles —
 // context, weil ein kopiertes Objekt sonst nicht einzuordnen ist (Chat: "fehlt ... replaymodus
@@ -31,6 +33,72 @@ export function earliestRelevantTime(toggles, times) {
   if (toggles.showRanges) relevant.push(...(times.structure ?? []));
   const finite = relevant.filter((t) => typeof t === "number" && Number.isFinite(t));
   return finite.length > 0 ? Math.min(...finite) : null;
+}
+
+// Baut den kompletten Snapshot fürs Panel zusammen — Gating über selectActiveMetadataSections/
+// earliestRelevantTime oben, plus die Zusammenstellung von context/structure/candles/dataExport.
+// ctx = plain object statt Vue-Refs/Props direkt (siehe PriceChart.vue:
+// buildActiveMetadataSnapshotInternal für die Übersetzung), macht die Funktion hier unabhängig
+// testbar. ctx.candles ist bereits das clipReplay-gefilterte allCandles-Fenster.
+export function buildActiveMetadataSnapshot(ctx) {
+  const toggles = {
+    showLiquidity: ctx.showLiquidity,
+    showTradeSetups: ctx.showTradeSetups,
+    showTradeSetupCockpit: ctx.showTradeSetupCockpit,
+    showRanges: ctx.showRanges,
+  };
+  const tradeSetupTimes = (ctx.tradeSetupsMetadata ?? [])
+    .flatMap((s) => [s.fractal?.pivotTime, s.ls?.pivotTime, s.obStartTime])
+    .filter((t) => t != null);
+
+  const sections = selectActiveMetadataSections(toggles, {
+    context: ctx.context,
+    orderBlocks: ctx.poiZonesMetadata ?? [],
+    liquidity: ctx.liquidityMetadata ?? [],
+    tradeSetups: ctx.tradeSetupsMetadata,
+    tradeSetupCockpit: ctx.cockpitMetadata,
+    structure: {
+      state: ctx.marketStructureTree,
+      window:
+        ctx.rangesFixedStartActive && ctx.rangesFixedStartTime != null
+          ? { mode: "fixed", since: ctx.rangesFixedStartTime, sinceAt: fmtDateTime(ctx.rangesFixedStartTime) }
+          : { mode: "lookback" },
+      period5: { period: ctx.rangesPeriod, lookbackHours: ctx.rangesLookbackHours, pivots: ctx.rangesMetadata ?? [] },
+      period2Embedded: { period: ctx.ranges2Period, lookbackHours: ctx.ranges2LookbackHours, pivots: ctx.rangesMetadata2 ?? [] },
+    },
+  });
+
+  const since = earliestRelevantTime(toggles, {
+    orderBlocks: (ctx.poiZonesMetadata ?? []).map((z) => z.startTime).filter((t) => t != null),
+    liquidity: ctx.liquidityEarliestTime != null ? [ctx.liquidityEarliestTime] : [],
+    tradeSetups: tradeSetupTimes,
+    structure: ctx.structureEarliestTime != null ? [ctx.structureEarliestTime] : [],
+  });
+  if (since != null) {
+    const candles = ctx.candles.filter((c) => c.time >= since);
+    sections.candles = { since, sinceAt: fmtDateTime(since), timeframe: ctx.timeframe, count: candles.length, data: candles };
+  }
+  // Zuletzt generierter Daten-Export (siehe DataExportModal.vue/useLastDataExport.js, Chat
+  // 2026-07-28) — ungated, unabhängig vom Symbol/Timeframe des gerade offenen Charts, da der
+  // Export sein eigenes Asset+Datum mitbringt. undefined/null, solange in dieser Session noch
+  // keiner generiert wurde.
+  if (ctx.lastDataExport != null) {
+    sections.dataExport = ctx.lastDataExport;
+  }
+  return sections;
+}
+
+// Panel-"leer"-Zustand — dieselben Toggles wie oben, plus ob überhaupt schon OB-Zonen (ungated)
+// oder ein Daten-Export vorliegen.
+export function hasActiveMetadata(snapshot, toggles) {
+  return (
+    snapshot.orderBlocks.length > 0 ||
+    toggles.showLiquidity ||
+    toggles.showTradeSetups ||
+    toggles.showTradeSetupCockpit ||
+    toggles.showRanges ||
+    snapshot.dataExport != null
+  );
 }
 
 // Einziger side-effecting Export hier (Rest der Datei bewusst pure Funktionen, siehe oben) — lokal

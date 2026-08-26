@@ -74,7 +74,7 @@ import {
   REPLAY_FETCH_DEBOUNCE_MS,
   MAX_PLAUSIBLE_GAP_SEC,
 } from "../priceChartConstants.js";
-import { selectActiveMetadataSections, earliestRelevantTime, saveDebugMetadataSection } from "../debugMetadata.js";
+import { buildActiveMetadataSnapshot, hasActiveMetadata as hasActiveMetadataFor, saveDebugMetadataSection } from "../debugMetadata.js";
 import { useLastDataExport } from "../composables/useLastDataExport.js";
 import { usePriceChartClaudeAnnotations } from "../composables/usePriceChartClaudeAnnotations.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
@@ -483,65 +483,46 @@ const tscCalloutModeActive = computed(() => props.showTradeSetupCockpit && cockp
 // ein computed() würde also nie neu laufen, wenn sich NUR allCandles ändert. Deshalb explizit am
 // Ende von refreshChart() sowie beim Öffnen des Panels aufgerufen.
 const activeMetadataSnapshot = ref({ context: {}, orderBlocks: [] });
-function buildActiveMetadataSnapshot() {
-  const toggles = {
+// Dünner Wrapper um buildActiveMetadataSnapshot (debugMetadata.js, Phase 6e) — übersetzt
+// Props/lokale Refs in das ctx-Format der reinen Funktion dort.
+function buildActiveMetadataSnapshotInternal() {
+  return buildActiveMetadataSnapshot({
     showLiquidity: props.showLiquidity,
     showTradeSetups: props.showTradeSetups,
     showTradeSetupCockpit: props.showTradeSetupCockpit,
     showRanges: props.showRanges,
-  };
-  const tradeSetupTimes = (tradeSetupsMetadata.value ?? [])
-    .flatMap((s) => [s.fractal?.pivotTime, s.ls?.pivotTime, s.obStartTime])
-    .filter((t) => t != null);
-
-  const sections = selectActiveMetadataSections(toggles, {
     context: {
       symbol: props.symbol,
       timeframe: props.currentBar,
       replay: props.replayUntil == null ? { active: false } : { active: true, until: props.replayUntil, untilAt: fmtDateTime(props.replayUntil) },
     },
-    orderBlocks: poiZonesMetadata.value ?? [],
-    liquidity: liquidityMetadata.value ?? [],
-    tradeSetups: tradeSetupsMetadata.value,
-    tradeSetupCockpit: cockpitMetadata.value,
-    structure: {
-      state: marketStructureTree.value,
-      window:
-        props.rangesFixedStartActive && props.rangesFixedStartTime != null
-          ? { mode: "fixed", since: props.rangesFixedStartTime, sinceAt: fmtDateTime(props.rangesFixedStartTime) }
-          : { mode: "lookback" },
-      period5: { period: props.rangesPeriod, lookbackHours: props.rangesLookbackHours, pivots: rangesMetadata.value ?? [] },
-      period2Embedded: { period: props.ranges2Period, lookbackHours: props.ranges2LookbackHours, pivots: rangesMetadata2.value ?? [] },
-    },
+    poiZonesMetadata: poiZonesMetadata.value,
+    liquidityMetadata: liquidityMetadata.value,
+    liquidityEarliestTime: liquidityEarliestTime.value,
+    tradeSetupsMetadata: tradeSetupsMetadata.value,
+    structureEarliestTime: structureEarliestTime.value,
+    cockpitMetadata: cockpitMetadata.value,
+    marketStructureTree: marketStructureTree.value,
+    rangesFixedStartActive: props.rangesFixedStartActive,
+    rangesFixedStartTime: props.rangesFixedStartTime,
+    rangesPeriod: props.rangesPeriod,
+    rangesLookbackHours: props.rangesLookbackHours,
+    rangesMetadata: rangesMetadata.value,
+    ranges2Period: props.ranges2Period,
+    ranges2LookbackHours: props.ranges2LookbackHours,
+    rangesMetadata2: rangesMetadata2.value,
+    candles: clipReplay(allCandles),
+    timeframe: props.currentBar,
+    lastDataExport: lastDataExport.value,
   });
-
-  const since = earliestRelevantTime(toggles, {
-    orderBlocks: (poiZonesMetadata.value ?? []).map((z) => z.startTime).filter((t) => t != null),
-    liquidity: liquidityEarliestTime.value != null ? [liquidityEarliestTime.value] : [],
-    tradeSetups: tradeSetupTimes,
-    structure: structureEarliestTime.value != null ? [structureEarliestTime.value] : [],
-  });
-  if (since != null) {
-    const candles = clipReplay(allCandles).filter((c) => c.time >= since);
-    sections.candles = { since, sinceAt: fmtDateTime(since), timeframe: props.currentBar, count: candles.length, data: candles };
-  }
-  // Zuletzt generierter Daten-Export (siehe DataExportModal.vue/useLastDataExport.js,
-  // Chat 2026-07-28: "für die Nachvollziehbarkeit wäre es im Frontend auch nicht schlecht") —
-  // ungated, unabhängig vom Symbol/Timeframe des gerade offenen Charts, da der Export sein eigenes
-  // Asset+Datum mitbringt. null, solange in dieser Session noch keiner generiert wurde.
-  if (lastDataExport.value != null) {
-    sections.dataExport = lastDataExport.value;
-  }
-  return sections;
 }
-const hasActiveMetadata = computed(
-  () =>
-    activeMetadataSnapshot.value.orderBlocks.length > 0 ||
-    props.showLiquidity ||
-    props.showTradeSetups ||
-    props.showTradeSetupCockpit ||
-    props.showRanges ||
-    activeMetadataSnapshot.value.dataExport != null,
+const hasActiveMetadata = computed(() =>
+  hasActiveMetadataFor(activeMetadataSnapshot.value, {
+    showLiquidity: props.showLiquidity,
+    showTradeSetups: props.showTradeSetups,
+    showTradeSetupCockpit: props.showTradeSetupCockpit,
+    showRanges: props.showRanges,
+  }),
 );
 
 // lightweight-charts formatiert Zeit standardmäßig in UTC (unabhängig von der
@@ -1077,7 +1058,7 @@ function refreshRangesInternal() {
   // loadInitial() her — nur loadInitial() ruft refreshChart() auf (baut activeMetadataSnapshot neu).
   // Ohne diesen Aufruf hier bliebe der Snapshot auf altem Stand eingefroren, obwohl der Chart selbst
   // längst aktuell ist.
-  if (chart) activeMetadataSnapshot.value = buildActiveMetadataSnapshot();
+  if (chart) activeMetadataSnapshot.value = buildActiveMetadataSnapshotInternal();
 }
 
 // Neuer "1h-Range"-Marktstruktur-Trendalgorithmus (siehe marketStructureAnalysis.ts,
@@ -1611,7 +1592,7 @@ function refreshChart() {
   refreshEmaInternal();
   refreshRsiInternal();
   refreshRsiDivergenceInternal();
-  activeMetadataSnapshot.value = buildActiveMetadataSnapshot();
+  activeMetadataSnapshot.value = buildActiveMetadataSnapshotInternal();
 }
 
 async function loadInitial() {
@@ -2112,7 +2093,7 @@ watch(() => props.showTradeSetupCockpit, () => {
 watch(
   [() => props.showLiquidity, () => props.showTradeSetups, () => props.showTradeSetupCockpit, () => props.showRanges, () => props.showDebugMetadata],
   () => {
-    activeMetadataSnapshot.value = buildActiveMetadataSnapshot();
+    activeMetadataSnapshot.value = buildActiveMetadataSnapshotInternal();
   },
 );
 // Hauptkerzen (allCandles) BRAUCHEN hier einen Refetch (Bug-Report Philip 2026-07-19: "+1
