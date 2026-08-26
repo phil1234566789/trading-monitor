@@ -71,9 +71,31 @@ export function mergePinnedLevels(levels, pinnedLevels, candles) {
 // selbst wenn beide auf demselben Pivot lagen). Eigenes Array statt sich auf die Objekt-Key-
 // Reihenfolge von LQ_RELEVANCE zu verlassen — explizite Prioritäts-Aussage statt impliziter Zufall.
 const HTF_TIMEFRAME_PRIORITY = ["4H", "1H"];
+
+// Bug-Report Philip 2026-08-26: ein 1H-Level, dessen realer Sweep NACH dem Replay-Zeitpunkt liegt,
+// zeigte sich auf M5 nicht (aber auf dem 1h-Chart schon, über dessen eigene replay-geclippte
+// Live-Neuerkennung, siehe usePriceChartLiquidity.js: candles = clipReplay(allCandles)). Ursache:
+// fetchLiquidityLevelsHtf() liefert immer den LIVE-Stand von touched/touchedTime (kein asOfSec-
+// Parameter, alle 60s gepollt) — der Zeilenfilter unten (byReplay) filtert bisher nur nach
+// pivotTime, ein Level, das erst NACH replayUntil real gesweept wurde, blieb touched=true mit
+// einem Touch-Zeitpunkt aus der "Zukunft". selectRelevantHtfLevels zählt es dadurch als kürzlich
+// gesweept (mit einem uneinholbar aktuellen touchedTime) statt als weiterhin unberührt — verdrängt
+// dadurch knapp andere, aus Replay-Sicht tatsächlich relevantere Level vom recentSwept-Deckel.
+// Exaktes Pendant zu applyAsOf (supabase/functions/trading-monitor-mcp/db.ts), hier nur fürs
+// Frontend nachgezogen — dieselbe Bug-Klasse wie [[project_liquidity_levels_history_gap]].
+function applyReplayAsOf(levels, replayUntil) {
+  if (replayUntil == null) return levels;
+  return levels.map((l) =>
+    l.touched && l.touchedTime != null && l.touchedTime > replayUntil ? { ...l, touched: false, touchedTime: null, endTime: null } : l,
+  );
+}
+
 export function computeHtfLiquidityLevels(candles, dbLiquidityLevelsHtf, symbol, replayUntil, price) {
   const byInstrument = dbLiquidityLevelsHtf.filter((l) => l.instrument === symbol);
-  const byReplay = replayUntil == null ? byInstrument : byInstrument.filter((l) => l.pivotTime <= replayUntil);
+  const byReplay = applyReplayAsOf(
+    replayUntil == null ? byInstrument : byInstrument.filter((l) => l.pivotTime <= replayUntil),
+    replayUntil,
+  );
   const kept = [];
   for (const timeframe of HTF_TIMEFRAME_PRIORITY) {
     const forTf = byReplay.filter((l) => l.timeframe === timeframe);

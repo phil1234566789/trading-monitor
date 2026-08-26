@@ -87,6 +87,26 @@ describe("computeHtfLiquidityLevels", () => {
     const result = computeHtfLiquidityLevels(candles, dbLevels, "GBPUSD", null, 1.15);
     expect(result.map((l) => l.timeframe).sort()).toEqual(["1H", "4H"]);
   });
+
+  // Bug-Report Philip 2026-08-26: ein 1H-Level, real erst NACH dem Replay-Zeitpunkt gesweept, zeigte
+  // sich auf M5 nicht (dort gibt es keine replay-geclippte Live-Neuerkennung als Fallback, anders
+  // als auf dem 1h-Chart selbst) — fetchLiquidityLevelsHtf() liefert immer den LIVE-Sweep-Stand,
+  // ohne applyReplayAsOf zählte ein Level dadurch fälschlich als "kürzlich gesweept" mit einem
+  // Touch-Zeitpunkt aus der Zukunft und verdrängte andere, aus Replay-Sicht tatsächlich
+  // relevantere Level vom recentSwept-Deckel. Pendant zu applyAsOf (db.ts).
+  it("setzt touched zurück, wenn der reale Sweep NACH replayUntil liegt", () => {
+    const dbLevels = [{ instrument: "GBPUSD", timeframe: "1H", pivotTime: 50, price: 1.2, dir: 1, touched: true, touchedTime: 350, endTime: 350 }];
+    const result = computeHtfLiquidityLevels(candles, dbLevels, "GBPUSD", 300, 1.15);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ touched: false, touchedTime: null, endTime: 200 }); // endTime selbst geheilt auf letzte Kerze
+  });
+
+  it("behält touched, wenn der Sweep vor/an replayUntil liegt", () => {
+    const dbLevels = [{ instrument: "GBPUSD", timeframe: "1H", pivotTime: 50, price: 1.2, dir: 1, touched: true, touchedTime: 150, endTime: 150 }];
+    const result = computeHtfLiquidityLevels(candles, dbLevels, "GBPUSD", 300, 1.15);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ touched: true, touchedTime: 150, endTime: 150 });
+  });
 });
 
 // Bug-Report Philip 2026-08-23: die DB-Version (poi-watcher) gewinnt IMMER bei einer Überschneidung
