@@ -167,6 +167,20 @@ export async function createTradeFromSetup({ instrument, setup, entryPrice = nul
   return { ok: true, dealingRange: range, position };
 }
 
+// Nur die Idee, OHNE gleichzeitig eine trade_positions-Ausführung (anders als createTradeFromSetup
+// oben) — für die TSC (Chat 2026-08-26: "ich nehme oft auch manuell über den TSC Dealing Ranges
+// an"). direction kommt dort NICHT von einem erkannten Setup, sondern von der ersten OB-Bestätigung,
+// die der Nutzer im Trade-Modus anklickt (Philip: "das entscheidet eine Bestätigung, welche einen
+// OB enthält") — siehe Dashboard.vue: onSelectTarget, tscBootstrapArmed-Zweig.
+export async function createDealingRange({ instrument, direction }) {
+  const { data, error } = await supabase.from("dealing_ranges").insert({ instrument, direction }).select().single();
+  if (error) {
+    console.error("Dealing-Range anlegen fehlgeschlagen:", error);
+    return null;
+  }
+  return data;
+}
+
 // Nachträgliche Verknüpfung (Chat 2026-07-27: "kannst du die Möglichkeit geben, das im Nachhinein
 // zuzuordnen?") — für Trades, die vor diesem Feature oder ohne rechtzeitig existierenden
 // trade_setups-Datensatz angelegt wurden (poi-watcher hinkt bis zu 5 Minuten hinterher). Schreibt

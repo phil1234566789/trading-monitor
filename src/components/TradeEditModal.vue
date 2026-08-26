@@ -6,6 +6,7 @@ import { formatTargetLabel } from "../tradeTargets";
 import { formatConfirmationLabel } from "../tradeConfirmations";
 import { accounts } from "../tradingAccounts.js";
 import MetadataPanel from "./MetadataPanel.vue";
+import CrudListSection from "./CrudListSection.vue";
 
 // Ersetzt die vorherigen Inline-Buttons in TradesTable.vue (🔗 verknüpfen, + Ziel, × Ziel
 // entfernen) — Chat 2026-07-27/28: "das war jetzt bissl too much, was ist wenn man versehentlich
@@ -319,36 +320,30 @@ function confirmationLabel(confirmation) {
         </form>
       </section>
 
-      <section class="tem-section">
-        <div class="tem-section-header">
-          <h4 class="tem-section-title">Targets</h4>
-          <button class="tem-icon-btn" title="Target hinzufügen (Trade-Modus, dann Pivot/OB im Chart anklicken)" @click="emit('request-add-target')">🎯</button>
-        </div>
-        <div v-if="!trade.targets || trade.targets.length === 0" class="tem-muted">Noch keine Targets.</div>
-        <div v-for="target in trade.targets" :key="target.id" class="tem-row">
-          <span>{{ targetLabel(target) }}</span>
-          <button class="tem-remove-btn" title="entfernen" @click="onRemoveTarget(target)">×</button>
-        </div>
-      </section>
+      <!-- PLAN-trade-confluences.md #1: von welchem Sweep/OB kam die Kraft für die Bewegung? -->
+      <CrudListSection
+        title="Bestätigungen (GO für die Idee)"
+        icon="✔"
+        add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Fib anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
+        :items="rangeConfirmations"
+        :item-key="(c) => c.id"
+        :item-label="confirmationLabel"
+        empty-text="Noch keine Bestätigungen."
+        @add="emit('request-add-range-confirmation')"
+        @remove="onRemoveConfirmation"
+      />
 
-      <section class="tem-section">
-        <!-- PLAN-trade-confluences.md #1: von welchem Sweep/OB kam die Kraft für die Bewegung? -->
-        <div class="tem-section-header">
-          <h4 class="tem-section-title">Bestätigungen (GO für die Idee)</h4>
-          <button
-            class="tem-icon-btn"
-            title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Fib anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
-            @click="emit('request-add-range-confirmation')"
-          >
-            ✔
-          </button>
-        </div>
-        <div v-if="rangeConfirmations.length === 0" class="tem-muted">Noch keine Bestätigungen.</div>
-        <div v-for="confirmation in rangeConfirmations" :key="confirmation.id" class="tem-row">
-          <span>{{ confirmationLabel(confirmation) }}</span>
-          <button class="tem-remove-btn" title="entfernen" @click="onRemoveConfirmation(confirmation)">×</button>
-        </div>
-      </section>
+      <CrudListSection
+        title="Targets"
+        icon="🎯"
+        add-title="Target hinzufügen (Trade-Modus, dann Pivot/OB im Chart anklicken)"
+        :items="trade.targets ?? []"
+        :item-key="(t) => t.id"
+        :item-label="targetLabel"
+        empty-text="Noch keine Targets."
+        @add="emit('request-add-target')"
+        @remove="onRemoveTarget"
+      />
     </div>
 
     <!-- Trade Position: diese EINE Ausführung — Entry-Kriterien/Ergebnis können sich von anderen
@@ -356,23 +351,17 @@ function confirmationLabel(confirmation) {
     <div class="tem-group tem-group-position">
       <h3 class="tem-group-title">▶ Ausführung #{{ trade.id }}</h3>
 
-      <section class="tem-section">
-        <div class="tem-section-header">
-          <h4 class="tem-section-title">Bestätigungen (GO für diesen Entry)</h4>
-          <button
-            class="tem-icon-btn"
-            title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Fib anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
-            @click="emit('request-add-confirmation')"
-          >
-            ✔
-          </button>
-        </div>
-        <div v-if="positionConfirmations.length === 0" class="tem-muted">Noch keine Bestätigungen.</div>
-        <div v-for="confirmation in positionConfirmations" :key="confirmation.id" class="tem-row">
-          <span>{{ confirmationLabel(confirmation) }}</span>
-          <button class="tem-remove-btn" title="entfernen" @click="onRemoveConfirmation(confirmation)">×</button>
-        </div>
-      </section>
+      <CrudListSection
+        title="Bestätigungen (GO für diesen Entry)"
+        icon="✔"
+        add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Fib anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
+        :items="positionConfirmations"
+        :item-key="(c) => c.id"
+        :item-label="confirmationLabel"
+        empty-text="Noch keine Bestätigungen."
+        @add="emit('request-add-confirmation')"
+        @remove="onRemoveConfirmation"
+      />
 
       <section class="tem-section">
         <h4 class="tem-section-title">Ausführung</h4>
@@ -689,52 +678,9 @@ function confirmationLabel(confirmation) {
   color: #565a64;
 }
 
-/* Add-Button oben rechts auf Höhe des Section-Titels (Chat 2026-07-31, dritte Runde) statt als
-   eigene Zeile unter der Liste — Titel verliert seinen unteren Abstand an die Header-Zeile selbst,
-   damit der Button nicht tiefer sitzt als der Text daneben. */
-.tem-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.tem-section-header .tem-section-title {
-  margin: 0;
-}
-
-.tem-section-header .tem-icon-btn {
-  margin-top: 0;
-}
-
-.tem-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 13px;
-  color: #d1d4dc;
-  padding: 3px 0;
-}
-
-/* Kleiner "×" statt Text-Button (Chat 2026-07-31: "da reicht auch nur ein kleines x", title=
-   nativer Hover-Tooltip statt sichtbarem "entfernen"-Text). */
-.tem-remove-btn {
-  background: transparent;
-  border: none;
-  color: #787b86;
-  cursor: pointer;
-  font-size: 16px;
-  line-height: 1;
-  padding: 2px 6px;
-}
-
-.tem-remove-btn:hover {
-  color: #ef5350;
-}
-
-/* Icon-only statt Text-Button (Chat 2026-07-31: "Buttons ticken größer, nur mit Icon, Text als
-   Hover") — title trägt den vorherigen Button-Text als nativen Tooltip. */
+/* Bestätigungen/Targets-Listen sind seit dem Chat 2026-08-26 CrudListSection.vue (eigene
+   .cls-*-Klassen dort) — .tem-icon-btn bleibt hier nur noch für den Invalidierungs-Button unten
+   stehen. */
 .tem-icon-btn {
   display: inline-flex;
   align-items: center;

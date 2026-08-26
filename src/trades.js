@@ -226,3 +226,72 @@ export async function fetchTrades(instrument, accountId = null) {
     };
   });
 }
+
+// Schlanker Fetch NUR für die TSC (Chat 2026-08-26, TSC-Neuaufbau: manuell angelegte Dealing
+// Range direkt aus der Cockpit-Karte heraus) — anders als fetchTrades geht das hier NICHT über
+// trade_positions (eine frisch aus der TSC angelegte Range hat zu Beginn noch gar keine
+// Ausführung), sondern lädt eine einzelne dealing_ranges-Zeile direkt + ihre range-level
+// Bestätigungen/Targets. Dupliziert bewusst einen Teil der Mapping-Logik aus fetchTrades statt sie
+// zu teilen — dort ist toConfirmation eng an die Mehrere-Ranges-auf-einmal-Gruppierung gekoppelt,
+// hier reicht eine einzelne Range mit zwei einfachen Queries. liquidityLevel bleibt bewusst null
+// (nur fürs Chart-Rendering gebraucht, nicht für formatConfirmationLabel/formatTargetLabel).
+export async function fetchDealingRangeCockpit(dealingRangeId) {
+  const { data: range, error: rangeError } = await supabase
+    .from("dealing_ranges")
+    .select("id, instrument, direction")
+    .eq("id", dealingRangeId)
+    .maybeSingle();
+  if (rangeError) throw rangeError;
+  if (!range) return null;
+
+  const [
+    { data: confirmations, error: confirmationsError },
+    { data: targets, error: targetsError },
+  ] = await Promise.all([
+    supabase
+      .from("trade_confirmations")
+      .select("id, price, kind, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi")
+      .eq("dealing_range_id", dealingRangeId)
+      .order("created_at"),
+    supabase
+      .from("trade_targets")
+      .select("id, price, kind, source_time, touched_time, range_low, range_high, timeframe")
+      .eq("dealing_range_id", dealingRangeId)
+      .order("created_at"),
+  ]);
+  if (confirmationsError) throw confirmationsError;
+  if (targetsError) throw targetsError;
+
+  return {
+    id: range.id,
+    instrument: range.instrument,
+    direction: range.direction,
+    confirmations: (confirmations ?? []).map((c) => ({
+      id: c.id,
+      level: "range",
+      price: c.price,
+      kind: c.kind,
+      sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
+      touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
+      liquidityLevel: null,
+      rangeLow: c.range_low ?? null,
+      rangeHigh: c.range_high ?? null,
+      timeframe: c.timeframe ?? null,
+      fromPrice: c.from_price ?? null,
+      fromRsi: c.from_rsi ?? null,
+      toRsi: c.to_rsi ?? null,
+      divergenceType: c.divergence_type ?? null,
+    })),
+    targets: (targets ?? []).map((t) => ({
+      id: t.id,
+      price: t.price,
+      kind: t.kind,
+      sourceTime: t.source_time ? Math.floor(new Date(t.source_time).getTime() / 1000) : null,
+      touchedTime: t.touched_time ? Math.floor(new Date(t.touched_time).getTime() / 1000) : null,
+      rangeLow: t.range_low ?? null,
+      rangeHigh: t.range_high ?? null,
+      timeframe: t.timeframe ?? null,
+      liquidityLevel: null,
+    })),
+  };
+}

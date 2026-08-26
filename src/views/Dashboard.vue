@@ -15,15 +15,18 @@ import PinAddPopup from "../components/PinAddPopup.vue";
 import PinPanel from "../components/PinPanel.vue";
 import { selectedTradingAccountId } from "../tradingAccounts.js";
 import { TIMEFRAMES, barSecondsForTimeframeCi } from "../timeframes.js";
-import { fetchTrades } from "../trades.js";
+import { fetchTrades, fetchDealingRangeCockpit } from "../trades.js";
 import {
   fetchTradeSetupForCockpit,
   linkTradeToSetup,
   addTargetToTrade,
   addConfirmationToTrade,
   addRangeConfirmation,
+  removeTargetFromTrade,
+  removeConfirmationFromTrade,
   updateTrade,
   updateDealingRange,
+  createDealingRange,
 } from "../tradeIntake.js";
 import { fetchObZones } from "../obZones.js";
 import { fetchLiquidityLevelsHtf } from "../liquidityLevels.js";
@@ -288,6 +291,12 @@ const rangeConfirmationAddTrade = ref(null);
 // linkTargetTrade) ist komplett raus — das automatische Setup-Klick-zu-Bestätigungen
 // (onSelectSetupConfirmations unten) deckt denselben Bedarf ab, siehe TradeEditModal.vue.
 const invalidationAddTrade = ref(null);
+// TSC-Bootstrap (Chat 2026-08-26, TSC-Neuaufbau: "ich nehme oft auch manuell über den TSC Dealing
+// Ranges an") — dritter Bestätigungs-Arm-Zustand, NUR solange die TSC noch KEINE dealingRangeId
+// hat. Sobald eine existiert, läuft alles über den normalen rangeConfirmationAddTrade/
+// targetAddTrade-Weg oben (mit einem synthetischen { dealingRangeId, isTsc: true } statt eines
+// echten `trade`-Objekts) — siehe onTscAddConfirmationRequest/onTscAddTargetRequest unten.
+const tscBootstrapArmed = ref(false);
 function onAddTargetRequest(t) {
   targetAddTrade.value = t;
   confirmationAddTrade.value = null;
@@ -307,6 +316,7 @@ function onAddRangeConfirmationRequest(t) {
   targetAddTrade.value = null;
   confirmationAddTrade.value = null;
   invalidationAddTrade.value = null;
+  tscBootstrapArmed.value = false;
   tradeModeActive.value = true;
 }
 function onSetInvalidationRequest(t) {
@@ -314,6 +324,7 @@ function onSetInvalidationRequest(t) {
   targetAddTrade.value = null;
   confirmationAddTrade.value = null;
   rangeConfirmationAddTrade.value = null;
+  tscBootstrapArmed.value = false;
   tradeModeActive.value = true;
 }
 // Verlassen des Trade-Modus räumt eine noch "scharfe" Ziel-/Bestätigungs-/Invalidierungs-Anfrage
@@ -325,8 +336,52 @@ watch(tradeModeActive, (active) => {
     confirmationAddTrade.value = null;
     rangeConfirmationAddTrade.value = null;
     invalidationAddTrade.value = null;
+    tscBootstrapArmed.value = false;
   }
 });
+
+// TSC-Dealing-Range (Chat 2026-08-26) — instrumentgebunden, setzt sich beim Symbolwechsel zurück
+// (keine Persistenz über Reload/Symbolwechsel fürs Erste, siehe PLAN-find-targets.md). direction
+// steht erst fest, sobald die erste Bestätigung ein OB ist (Philip: "das entscheidet eine
+// Bestätigung, welche einen OB enthält") — bis dahin ist tscRangeId null und die TSC zeigt einen
+// leeren, ungefärbten Zustand.
+const tscRangeId = ref(null);
+const tscRange = ref(null);
+async function refreshTscRange() {
+  tscRange.value = tscRangeId.value != null ? await fetchDealingRangeCockpit(tscRangeId.value) : null;
+}
+watch(currentSymbol, () => {
+  tscRangeId.value = null;
+  tscRange.value = null;
+});
+
+function onTscAddConfirmationRequest() {
+  if (tscRangeId.value != null) {
+    onAddRangeConfirmationRequest({ dealingRangeId: tscRangeId.value, isTsc: true });
+    return;
+  }
+  // Bootstrap-Fall: noch keine Range, der nächste Klick MUSS ein OB sein (siehe onSelectTarget).
+  tscBootstrapArmed.value = true;
+  targetAddTrade.value = null;
+  confirmationAddTrade.value = null;
+  rangeConfirmationAddTrade.value = null;
+  invalidationAddTrade.value = null;
+  tradeModeActive.value = true;
+}
+function onTscAddTargetRequest() {
+  // 🎯 bleibt in der TSC gesperrt, solange keine Range (= keine Richtung) existiert — siehe
+  // TradeSetupCockpit.vue :disabled auf der Targets-Sektion.
+  if (tscRangeId.value == null) return;
+  onAddTargetRequest({ dealingRangeId: tscRangeId.value, isTsc: true });
+}
+async function onTscRemoveConfirmation(c) {
+  const ok = await removeConfirmationFromTrade(c.id);
+  if (ok) refreshTscRange();
+}
+async function onTscRemoveTarget(t) {
+  const ok = await removeTargetFromTrade(t.id);
+  if (ok) refreshTscRange();
+}
 // target: {kind, price, sourceTime, touchedTime} — siehe PriceChart.vue: findClickedTarget (Pivot
 // oder OB, Chat 2026-07-28). Dieselbe Klick-Quelle bedient jetzt sowohl Target- als auch
 // Bestätigungs-Anfragen (PLAN-trade-confluences.md #1) — welches der beiden gemeint ist, entscheidet
@@ -337,7 +392,7 @@ async function onSelectTarget(target) {
     targetAddTrade.value = null;
     // Ziele gehören zur dealing_range, nicht zur einzelnen Ausführung (Chat 2026-07-31).
     const ok = await addTargetToTrade(trade.dealingRangeId, target);
-    if (ok) refreshTrades();
+    if (ok) (trade.isTsc ? refreshTscRange() : refreshTrades());
     return;
   }
   if (confirmationAddTrade.value) {
@@ -351,7 +406,7 @@ async function onSelectTarget(target) {
     const trade = rangeConfirmationAddTrade.value;
     rangeConfirmationAddTrade.value = null;
     const ok = await addRangeConfirmation(trade.dealingRangeId, target);
-    if (ok) refreshTrades();
+    if (ok) (trade.isTsc ? refreshTscRange() : refreshTrades());
     return;
   }
   if (invalidationAddTrade.value) {
@@ -359,6 +414,24 @@ async function onSelectTarget(target) {
     invalidationAddTrade.value = null;
     const ok = await updateDealingRange(trade.dealingRangeId, { invalidation: target.price });
     if (ok) refreshTrades();
+    return;
+  }
+  if (tscBootstrapArmed.value) {
+    tscBootstrapArmed.value = false;
+    // Erste Bestätigung ist meist der LQ-Sweep, nicht der OB (Philip-Korrektur 2026-08-26: "als
+    // erstes kommt der LQ-Sweep. Vielleicht bildet sich eine OB danach. Aber nur vielleicht") —
+    // beide Kinds tragen inzwischen `direction` (Sweep: siehe PriceChart.vue: findClickedTarget,
+    // Sweep eines Tiefs = Long-Erwartung, eines Hochs = Short; OB: siehe findClickedOBZone). Fib/
+    // RSI-Divergenz haben keine so eindeutige Richtungs-Semantik, bleiben deshalb außen vor.
+    if (target.kind !== "ob" && target.kind !== "pivot") {
+      alert("Die erste Bestätigung einer neuen Dealing Range muss ein Sweep (Pivot) oder ein OB sein — die legt die Richtung fest.");
+      return;
+    }
+    const range = await createDealingRange({ instrument: currentSymbol.value, direction: target.direction });
+    if (!range) return;
+    tscRangeId.value = range.id;
+    const ok = await addRangeConfirmation(range.id, target);
+    if (ok) refreshTscRange();
   }
 }
 // Ganzes Trade-Setup als Bestätigungen übernehmen (Chat 2026-07-31: "wenn ich ein Trade-Setup
@@ -1563,8 +1636,11 @@ watch(selectedTradingAccountId, refreshTrades);
     :claude-annotations="visibleClaudeAnnotations"
     :claude-annotations-date="claudeAnnotationsDate"
     :trade-mode-active="tradeModeActive"
-    :target-mode-active="targetAddTrade != null || confirmationAddTrade != null || rangeConfirmationAddTrade != null || invalidationAddTrade != null"
+    :target-mode-active="
+      targetAddTrade != null || confirmationAddTrade != null || rangeConfirmationAddTrade != null || invalidationAddTrade != null || tscBootstrapArmed
+    "
     :confirmation-mode-active="confirmationAddTrade != null || rangeConfirmationAddTrade != null"
+    :tsc-range="tscRange"
     @close-ranges-metadata="showRangesMetadata = false"
     @close-debug-metadata="showDebugMetadata = false"
     @close-rsi-divergence-stats="showRsiDivergenceStats = false"
@@ -1573,6 +1649,10 @@ watch(selectedTradingAccountId, refreshTrades);
     @select-setup-confirmations="onSelectSetupConfirmations"
     @toggle-trade-mode="tradeModeActive = !tradeModeActive"
     @pin-context-menu="onPinContextMenu"
+    @tsc-add-confirmation="onTscAddConfirmationRequest"
+    @tsc-add-target="onTscAddTargetRequest"
+    @tsc-remove-confirmation="onTscRemoveConfirmation"
+    @tsc-remove-target="onTscRemoveTarget"
   />
 
   <aside ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">

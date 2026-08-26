@@ -1,131 +1,83 @@
 <script setup>
 import { computed } from "vue";
-import {
-  cardAccentColors,
-  trendSetupConfirmation,
-  ageSuffix,
-  lockedReason,
-  NO_GO_COLOR,
-  ANTI_CONFLUENCE_COLOR,
-} from "../tradeSetupCockpit";
-import { cssColor } from "../chartColors.js";
-import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
+import { formatConfirmationLabel } from "../tradeConfirmations";
+import { formatTargetLabel } from "../tradeTargets";
+import CrudListSection from "./CrudListSection.vue";
 
-// Trade-Setup-Cockpit als echte Vue-Komponente (Chat 2026-07-27: "ich glaub es ist besser ne Vue
-// Component draus zu machen") — vorher ein lightweight-charts-Primitive mit eigenem Canvas-Draw
-// (siehe tradeSetupCockpit.ts vor diesem Commit). Reine Präsentation: liest CockpitState + die
-// Formatierungs-Helper aus tradeSetupCockpit.ts, zeichnet selbst nichts, berechnet selbst nichts
-// Fachliches. Fester Platz am rechten Rand, vertikal mittig — der frühere "neben der letzten
-// Kerze"-Modus ist bewusst weggefallen (kein sinnvolles Pixel-Tracking der Kerze mehr aus einer
-// Vue-Komponente heraus, Philip: "kann damit leben").
+// Trade-Setup-Cockpit (Chat 2026-08-26: "TSC clear, fangen wir von vorne an") — Neuaufbau Schritt
+// 1: Bestätigungen + Targets, "erst mal alles manuell" (Philip) heißt hier: keine automatische
+// Setup-Erkennung mehr, aber ansonsten 1:1 derselbe Weg wie im Trade-Edit-Modal (Chart-Klick im
+// Trade-Modus, echte dealing_ranges/trade_confirmations/trade_targets-Zeilen) — über dieselbe
+// CrudListSection.vue wie dort. `range` kommt von Dashboard.vue (tscRange, siehe dort) und ist
+// null, solange noch keine Dealing Range über die TSC angelegt wurde. Deren Richtung entscheidet
+// die ERSTE Bestätigung (meist ein Sweep, optional ein OB — Philip: "als erstes kommt der
+// LQ-Sweep, vielleicht bildet sich eine OB danach, aber nur vielleicht", siehe Dashboard.vue:
+// tscBootstrapArmed) — bis dahin gibt's hier keine Long/Short-Einfärbung und Targets bleiben
+// gesperrt.
 const props = defineProps({
   state: { type: Object, default: null },
   nowSec: { type: Number, default: undefined },
   instrument: { type: String, required: true },
-  tradeModeActive: { type: Boolean, default: false },
+  range: { type: Object, default: null },
 });
-const emit = defineEmits(["toggle-trade-mode"]);
+const emit = defineEmits(["add-confirmation", "add-target", "remove-confirmation", "remove-target"]);
 
-const precision = computed(() => pricePrecisionForInstrument(props.instrument));
-function formatPrice(price) {
-  return fmtPrice(price, precision.value);
+const confirmations = computed(() => props.range?.confirmations ?? []);
+const targets = computed(() => props.range?.targets ?? []);
+const direction = computed(() => props.range?.direction ?? null);
+
+const nowSecResolved = computed(() => props.nowSec ?? Math.floor(Date.now() / 1000));
+function confirmationLabel(c) {
+  return formatConfirmationLabel(c, props.instrument, nowSecResolved.value);
+}
+function targetLabel(t) {
+  return formatTargetLabel(t, props.instrument, nowSecResolved.value);
 }
 
-const accent = computed(() => (props.state ? cardAccentColors(props.state) : null));
-const trendConfirm = computed(() => (props.state ? trendSetupConfirmation(props.state) : null));
-const lockedText = computed(() => (props.state?.locked ? lockedReason(props.state) : ""));
-const hasContent = computed(() => {
-  const s = props.state;
-  return !!s && (s.h1Trend !== "unknown" || !!s.h1LqSweep || !!s.m5Setup);
-});
-const h1TrendColor = computed(() => (props.state?.h1Trend === "uptrend" ? cssColor("rangeLow") : cssColor("rangeHigh")));
-const h1LqAge = computed(() => {
-  const sweep = props.state?.h1LqSweep;
-  if (!sweep) return "";
-  const touchedTime = sweep.touched ? sweep.touched.touchedTime : undefined;
-  return ageSuffix(sweep.pivotTime, touchedTime, props.nowSec);
-});
-const m5Color = computed(() => {
-  const setup = props.state?.m5Setup;
-  if (!setup) return "";
-  return cssColor(setup.dir === -1 ? "tradeSetupLong" : "tradeSetupShort");
-});
-const m5Age = computed(() => {
-  const setup = props.state?.m5Setup;
-  if (!setup) return "";
-  return ageSuffix(setup.lsPivotTime, setup.lsTouchedTime, props.nowSec);
-});
-// "#x" nur bei aktiver Trade-Setups-Historie (setupNumber != null) — matcht den Suffix an der
-// OB-Chart-Box (siehe PriceChart.vue: renderTradeSetupsInternal).
-const numberSuffix = computed(() => (props.state?.m5Setup?.setupNumber != null ? ` #${props.state.m5Setup.setupNumber}` : ""));
-// "#105" nur wenn der TSC gerade auf einen geloggten Trade fokussiert ist (siehe
-// tradeIntake.js: fetchTradeSetupForCockpit) — matcht 1:1 die "#<id>"-Box im Chart
-// (refreshTradeSetupLinksInternal in PriceChart.vue).
-const idSuffix = computed(() => (props.state?.m5Setup?.tradeSetupId != null ? ` #${props.state.m5Setup.tradeSetupId}` : ""));
-
-const cardStyle = computed(() => {
-  const a = accent.value;
-  return {
-    borderColor: a ? a.border : "rgba(120, 123, 134, 0.5)",
-    borderWidth: a ? "1.5px" : "1px",
-    backgroundImage: a ? `linear-gradient(${a.fill}, ${a.fill})` : "none",
-  };
+// Färbt Rahmen/Header je nach Richtung (Philip: "sobald ich eine OB als confirmation auswähle,
+// färbt sich das TSC je nach Richtung der DR") — dieselben Long/Short-Töne wie überall sonst in
+// der App (TradeEditModal.vue: .tem-direction, TradesTable.vue). Neutral/blau, solange keine
+// Richtung feststeht.
+const accentStyle = computed(() => {
+  if (direction.value === "long") return { "--tsc-accent-bg": "rgba(38, 166, 154, 0.14)", "--tsc-accent-border": "rgba(38, 166, 154, 0.4)" };
+  if (direction.value === "short") return { "--tsc-accent-bg": "rgba(255, 152, 0, 0.14)", "--tsc-accent-border": "rgba(255, 152, 0, 0.4)" };
+  return {};
 });
 </script>
 
 <template>
-  <div v-if="state" class="tsc-card" :style="cardStyle">
+  <div v-if="state" class="tsc-card" :style="accentStyle">
     <div class="tsc-header">
-      <span class="tsc-title">Trade-Setup-Cockpit</span>
-      <!-- Icon statt eines Textbuttons (Chat 2026-07-27: "reicht ein Icon"), title = nativer
-           Hover-Tooltip. pointer-events: auto trotz pointer-events:none auf der Karte (siehe
-           .tsc-card unten) — Klicks außerhalb des Icons sollen weiterhin bis zum Chart
-           durchgereicht werden (z.B. eine Trade-Setup-OB-Box unter der Karte anklicken können),
-           genau wie beim früheren Positions-Badge. -->
-      <button
-        class="tsc-trade-mode-btn"
-        :class="{ active: tradeModeActive }"
-        title="Trade-Modus: Trade-Setup-OB im Chart anklicken, um es als Trade zu übernehmen oder einen bestehenden Trade nachträglich damit zu verknüpfen"
-        @click="emit('toggle-trade-mode')"
-      >
-        🎯
-      </button>
+      <h3 class="tsc-title">Trade-Setup-Cockpit</h3>
+      <!-- Gleiches Label/Styling wie TradeEditModal.vue: .tem-direction (Philip: "dasselbe Label
+           wie im trade-edit-modal"). -->
+      <span v-if="direction" class="tsc-direction" :class="direction">{{ direction === "short" ? "Short" : "Long" }}</span>
     </div>
 
-    <div v-if="state.locked" class="tsc-locked-banner">🚫 KEIN TRADE — {{ lockedText }}</div>
+    <CrudListSection
+      title="Bestätigungen"
+      icon="✔"
+      add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Fib anklicken) — ohne bestehende Range muss der erste Klick ein Sweep oder OB sein, der legt die Richtung fest"
+      :items="confirmations"
+      :item-key="(c) => c.id"
+      :item-label="confirmationLabel"
+      empty-text="Noch keine Bestätigungen."
+      @add="emit('add-confirmation')"
+      @remove="(c) => emit('remove-confirmation', c)"
+    />
 
-    <div class="tsc-content" :class="{ dim: state.locked }">
-      <div v-if="state.h1Trend !== 'unknown'" class="tsc-line" :style="{ color: h1TrendColor }">
-        1h {{ state.h1Trend }}{{ state.h1Weakening ? " (schwächelt, BOS)" : "" }}
-        <span v-if="trendConfirm" :style="{ color: trendConfirm.color }"> {{ trendConfirm.text }}</span>
-      </div>
-      <div v-if="state.h1LqSweep" class="tsc-line" :style="{ color: cssColor('rangeLqSweep') }">
-        1h LQ-Sweep @ {{ formatPrice(state.h1LqSweep.price) }}{{ h1LqAge }}
-      </div>
-      <template v-if="state.m5Setup">
-        <div class="tsc-line" :style="{ color: m5Color }">
-          M5 {{ state.m5Setup.label }} Setup Typ {{ state.m5Setup.pathType }}{{ numberSuffix }}
-        </div>
-        <div class="tsc-line tsc-indent" :style="{ color: m5Color }">LQ-Sweep @ {{ formatPrice(state.m5Setup.lsPrice) }}{{ m5Age }}</div>
-        <div class="tsc-line tsc-indent" :style="{ color: m5Color }">
-          M5-OB {{ formatPrice(state.m5Setup.obBottom) }}–{{ formatPrice(state.m5Setup.obTop) }}{{ idSuffix }}
-        </div>
-      </template>
-      <div v-if="!hasContent" class="tsc-line" style="color: rgba(120, 123, 134, 0.9)">keine aktive Analyse</div>
-    </div>
-
-    <template v-if="state.antiConfluences.length > 0">
-      <div class="tsc-divider"></div>
-      <div class="tsc-line tsc-anti-title">Spricht dagegen:</div>
-      <div
-        v-for="(ac, i) in state.antiConfluences"
-        :key="i"
-        class="tsc-line tsc-indent"
-        :style="{ color: ac.isNoGo ? NO_GO_COLOR : ANTI_CONFLUENCE_COLOR }"
-      >
-        {{ ac.text }} {{ ac.isNoGo ? "(No-Go)" : `(${ac.weight})` }}
-      </div>
-    </template>
+    <CrudListSection
+      title="Targets"
+      icon="🎯"
+      :add-title="range ? 'Target hinzufügen (Trade-Modus, dann Pivot/OB im Chart anklicken)' : 'Erst eine Bestätigung (OB) hinzufügen — legt die Richtung fest'"
+      :disabled="!range"
+      :items="targets"
+      :item-key="(t) => t.id"
+      :item-label="targetLabel"
+      empty-text="Noch keine Targets."
+      @add="emit('add-target')"
+      @remove="(t) => emit('remove-target', t)"
+    />
   </div>
 </template>
 
@@ -147,13 +99,9 @@ const cardStyle = computed(() => {
   padding: 16px;
   border-radius: 8px;
   background-color: rgba(19, 23, 34, 0.92);
-  border-style: solid;
+  border: 1px solid var(--tsc-accent-border, rgba(120, 123, 134, 0.5));
   font-size: 15px;
   line-height: 24px;
-  /* Klicks fallen bis zum Chart durch (z.B. eine OB-Box unter der Karte anklicken), nur das
-     Trade-Modus-Icon selbst reagiert (siehe .tsc-trade-mode-btn) — analog zum früheren
-     Positions-Badge, das ebenfalls als einziges Element der Karte klickbar war. */
-  pointer-events: none;
 }
 
 .tsc-header {
@@ -161,58 +109,42 @@ const cardStyle = computed(() => {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  /* Bleedet über das Card-Padding hinaus bis an den Kartenrand, damit die Hintergrundfarbe als
+     eigener Balken erkennbar ist statt nur als Trennlinie (Philip: "andere Hintergrundfarbe"
+     reichte allein per Border nicht als Abgrenzung). */
+  margin: -16px -16px 10px -16px;
+  padding: 10px 16px;
+  border-radius: 8px 8px 0 0;
+  background-color: var(--tsc-accent-bg, rgba(126, 166, 255, 0.14));
+  border-bottom: 1px solid var(--tsc-accent-border, rgba(126, 166, 255, 0.35));
 }
 
 .tsc-title {
-  font-weight: 700;
-  color: rgba(209, 212, 220, 0.8);
-}
-
-.tsc-trade-mode-btn {
-  pointer-events: auto;
-  background: transparent;
-  border: 1px solid rgba(120, 123, 134, 0.4);
-  border-radius: 5px;
+  margin: 0;
   font-size: 13px;
-  line-height: 1;
-  padding: 3px 5px;
-  cursor: pointer;
-}
-
-.tsc-trade-mode-btn:hover {
-  border-color: #7ea6ff;
-}
-
-.tsc-trade-mode-btn.active {
-  background: rgba(255, 179, 0, 0.9);
-  border-color: rgba(255, 179, 0, 0.9);
-}
-
-.tsc-locked-banner {
-  color: v-bind(NO_GO_COLOR);
   font-weight: 700;
-  margin-top: 2px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7ea6ff;
 }
 
-.tsc-content.dim {
-  opacity: 0.45;
+/* 1:1 TradeEditModal.vue: .tem-direction/.tem-direction.long/.tem-direction.short (Philip:
+   "dasselbe Label wie im trade-edit-modal") — Short = Orange statt Rot (Chat 2026-07-31: "use
+   green and orange for long and short"), Rot bleibt für Win/Loss reserviert. */
+.tsc-direction {
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
 }
 
-.tsc-line {
-  white-space: nowrap;
+.tsc-direction.short {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
 }
 
-.tsc-indent {
-  padding-left: 14px;
-}
-
-.tsc-divider {
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-  margin: 10px 0 6px;
-}
-
-.tsc-anti-title {
-  font-weight: 700;
-  color: rgba(209, 212, 220, 0.8);
+.tsc-direction.long {
+  background: rgba(38, 166, 154, 0.2);
+  color: #26a69a;
 }
 </style>

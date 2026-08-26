@@ -256,6 +256,9 @@ const props = defineProps({
   // Bestätigungs-Modus auch Fib-Ticks anklickbar sein sollen (siehe findClickedFibLevel) — ein Fib
   // ist keine sinnvolle Preis-Erwartung wie ein normales Ziel.
   confirmationModeActive: { type: Boolean, default: false },
+  // TSC-Dealing-Range (Chat 2026-08-26, TSC-Neuaufbau) — reine Durchreiche von Dashboard.vue
+  // (tscRange) an TradeSetupCockpit.vue, null solange die TSC noch keine Range angelegt hat.
+  tscRange: { type: Object, default: null },
 });
 const emit = defineEmits([
   "close-ranges-metadata",
@@ -266,6 +269,10 @@ const emit = defineEmits([
   "select-target",
   "select-setup-confirmations",
   "pin-context-menu",
+  "tsc-add-confirmation",
+  "tsc-add-target",
+  "tsc-remove-confirmation",
+  "tsc-remove-target",
 ]);
 
 const { markSuccess } = useStatusBar();
@@ -696,6 +703,18 @@ function obZoneCtx() {
   };
 }
 
+// TSC-Dealing-Range (Chat 2026-08-26) mit in dieselbe "trade-artige" Iteration wie props.trades —
+// Philip: "wieso geht das im trade-edit-modal, aber beim TSC nicht?" — der einzige Grund war,
+// dass tscRange nicht Teil von props.trades ist (fetchTrades() braucht zwingend eine
+// trade_positions-Zeile, die eine frische TSC-Range noch nicht hat). Kein Natural-Key-Umweg über
+// den Pin-Mechanismus nötig: rangeLow/rangeHigh/price/sourceTime/touchedTime stehen schon direkt
+// auf jeder Zeile (trades.js: fetchDealingRangeCockpit), also läuft die TSC hier einfach als
+// zusätzlicher "Trade" mit, ungefiltert von tradesVisibleForCandles (keine entryTime vorhanden,
+// eine laufende Analyse soll ohnehin immer sichtbar sein, nicht nur bis zur letzten Kerze).
+function tradeLikeEntriesForCandles(candles) {
+  return props.tscRange ? [...tradesVisibleForCandles(props.trades, candles), props.tscRange] : tradesVisibleForCandles(props.trades, candles);
+}
+
 function refreshTradeTargetLinksInternal() {
   for (const p of tradeTargetLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeTargetLinkPrimitives.length = 0;
@@ -704,7 +723,7 @@ function refreshTradeTargetLinksInternal() {
   if (candles.length === 0) return;
   const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
   const precision = pricePrecisionForInstrument(props.symbol);
-  for (const t of tradesVisibleForCandles(props.trades, candles)) {
+  for (const t of tradeLikeEntriesForCandles(candles)) {
     for (const target of t.targets ?? []) {
       if (target.sourceTime == null) continue;
       const label = `🎯 ${targetKindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`;
@@ -779,7 +798,7 @@ function refreshTradeConfirmationLinksInternal() {
   if (candles.length === 0) return;
   const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
   const precision = pricePrecisionForInstrument(props.symbol);
-  for (const t of tradesVisibleForCandles(props.trades, candles)) {
+  for (const t of tradeLikeEntriesForCandles(candles)) {
     for (const confirmation of t.confirmations ?? []) {
       if (confirmation.sourceTime == null) continue;
       const label = `✔ ${confirmationKindLabel(confirmation.kind)} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`;
@@ -1170,10 +1189,15 @@ function findClickedDivergence(param) {
 
 // Vereinigt beide Ziel-Modus-Klick-Flächen (Chat 2026-07-28) — Linie zuerst (präziser, kleinere
 // Toleranz = eindeutigerer Treffer), Box als Fallback. Liefert ein Objekt im TradeTarget-Rohformat
-// (siehe tradeTargets.ts), das direkt an addTargetToTrade durchgereicht werden kann.
+// (siehe tradeTargets.ts), das direkt an addTargetToTrade durchgereicht werden kann. direction
+// (Chat 2026-08-26, TSC-Bootstrap: "als erstes kommt der LQ-Sweep, vielleicht bildet sich eine OB
+// danach" — Philip-Korrektur, ein Sweep ist der eigentliche erste Trigger, nicht der OB) — Sweep
+// eines Tiefs (dir=-1) impliziert bullische Reversal-Erwartung (Long), Sweep eines Hochs (dir=1)
+// bärische (Short); ungenutzt für normales Target-Hinzufügen, nur für Dashboard.vue:
+// tscBootstrapArmed gebraucht.
 function findClickedTarget(param) {
   const lvl = findClickedLiquidityLevel(param);
-  if (lvl) return { kind: "pivot", price: lvl.price, sourceTime: lvl.pivotTime, touchedTime: lvl.touchedTime };
+  if (lvl) return { kind: "pivot", price: lvl.price, sourceTime: lvl.pivotTime, touchedTime: lvl.touchedTime, direction: lvl.dir === 1 ? "short" : "long" };
   return findClickedOBZone(param);
 }
 
@@ -1680,7 +1704,7 @@ watch(() => props.currentBar, () => {
   loadInitial();
   scheduleNextPoll(); // neuer Timeframe -> neue Kerzenschluss-Taktung, siehe dort
 });
-watch([() => props.trades, () => props.showTrades], () => {
+watch([() => props.trades, () => props.showTrades, () => props.tscRange], () => {
   refreshTradeMarkersInternal();
   refreshTradeSetupLinksInternal();
   refreshTradeTargetLinksInternal();
@@ -2012,8 +2036,11 @@ defineExpose({
       :state="cockpitState"
       :now-sec="cockpitNowSec"
       :instrument="symbol"
-      :trade-mode-active="tradeModeActive"
-      @toggle-trade-mode="emit('toggle-trade-mode')"
+      :range="tscRange"
+      @add-confirmation="emit('tsc-add-confirmation')"
+      @add-target="emit('tsc-add-target')"
+      @remove-confirmation="emit('tsc-remove-confirmation', $event)"
+      @remove-target="emit('tsc-remove-target', $event)"
     />
     <template v-if="claudeCalloutItems.length > 0">
       <svg class="claude-callout-svg">
