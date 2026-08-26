@@ -87,7 +87,7 @@ describe("loadCandlesAroundTrade", () => {
       expect(result.length).toBeGreaterThan(existing.length + 1);
     });
 
-    it("behält die alte, bewusste Lücke, wenn die Brücke nicht lückenlos anschließt (Notbremse maxPages)", async () => {
+    it("behält eine (kleinere) Lücke, wenn die Brücke preexistingOldest nicht ganz erreicht (Notbremse maxPages)", async () => {
       const preexistingOldest = 200_000;
       const existing = [candle(preexistingOldest)];
       const entryTime = 100_000;
@@ -99,11 +99,35 @@ describe("loadCandlesAroundTrade", () => {
         return page(anchor, 3, barSeconds);
       };
       const result = await loadCandlesAroundTrade(existing, entryTime, entryTime, barSeconds, fetchOlder, { bufferBars: 0, maxPages: 2 });
-      // Die ursprüngliche Kerze bei preexistingOldest bleibt erhalten, aber es gibt eine Lücke
-      // (nicht durchgehend barSeconds-Abstand) zum neu geladenen Trade-Fenster davor.
+      // Die ursprüngliche Kerze bei preexistingOldest bleibt erhalten. Seit dem Bug-Report
+      // 2026-08-26 (siehe loadCandlesAroundTrade: mergeCandles statt Splice) wird der TEILWEISE
+      // gefetchte Brücken-Fortschritt trotzdem übernommen (strikt aufsteigend dank mergeCandles) —
+      // die Lücke wird dadurch kleiner, verschwindet bei einer zu kurzen Brücke aber nicht ganz.
       expect(result.some((c) => c.time === preexistingOldest)).toBe(true);
       const hasGap = result.some((c, i) => i > 0 && result[i].time - result[i - 1].time !== barSeconds);
       expect(hasGap).toBe(true);
+      expect(result).toEqual([...result].sort((a, b) => a.time - b.time));
+    });
+
+    // Bug-Report Philip 2026-08-26: zwei nacheinander folgende Sprünge auf unterschiedliche,
+    // nicht anschließende Zeiträume — das zweite Sprungziel fällt chronologisch MITTEN in die vom
+    // ersten Sprung übrig gebliebene Lücke. Der alte `older.concat(candles)`-Prepend ging IMMER
+    // davon aus, dass frisch gefetchte Kerzen vor dem KOMPLETTEN bisherigen Array liegen — hier
+    // nicht der Fall, das Ergebnis war nicht mehr aufsteigend sortiert und lightweight-charts brach
+    // mit "data must be asc ordered by time" ab (siehe PriceChart.vue:1354 refreshChart).
+    it("bleibt strikt aufsteigend, wenn das Sprungziel mitten in eine bereits bestehende Lücke fällt", async () => {
+      // Zwei bereits geladene, disjunkte Blöcke mit einer Lücke dazwischen (z.B. Ergebnis eines
+      // vorherigen Sprungs auf einen anderen, älteren Trade).
+      const blockA = [candle(100_000), candle(100_300)]; // altes Sprungziel
+      const blockB = [candle(500_000), candle(500_300)]; // ursprüngliches "jetzt"-Fenster
+      const existing = [...blockA, ...blockB];
+      const entryTime = 300_000; // liegt chronologisch MITTEN in der Lücke zwischen blockA und blockB
+      const fetchOlder = async (anchor) => page(anchor, 5, barSeconds); // Fenster um den neuen Trade, komplett innerhalb der Lücke
+      const result = await loadCandlesAroundTrade(existing, entryTime, entryTime, barSeconds, fetchOlder, { bufferBars: 0, maxPages: 5 });
+      expect(result).toEqual([...result].sort((a, b) => a.time - b.time));
+      expect(result.some((c) => c.time === entryTime - barSeconds)).toBe(true); // neu geladenes Fenster ist da
+      expect(result.some((c) => c.time === 100_000)).toBe(true); // alte Blöcke bleiben erhalten
+      expect(result.some((c) => c.time === 500_000)).toBe(true);
     });
   });
 });

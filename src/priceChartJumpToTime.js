@@ -5,6 +5,7 @@
 // Fetch statt echtem Netzwerk) und die reine Viewport-Positionierung (synchron, keine chart/
 // candleSeries-Abhängigkeit — anders als der Rest von PriceChart.vue).
 import { isTimeCovered, snapToBarTime } from "./chartTimeUtils.js";
+import { mergeCandles } from "./candleCache.js";
 
 // Bug-Report Philip 2026-07-30, zweite Runde: die erste Version lud Seite für Seite RÜCKWÄRTS ab
 // dem aktuellen Datenanfang, bis entryTime erreicht war — bei einem 16 Tage alten Trade schon
@@ -30,6 +31,15 @@ import { isTimeCovered, snapToBarTime } from "./chartTimeUtils.js";
 //
 // fetchOlderCandles(anchorTime): Promise<candle[]> — injiziert statt fest verdrahtet, damit hier
 // ohne echtes Netzwerk getestet werden kann (PriceChart.vue übergibt fetchOlderForexCandles).
+// Bug-Report Philip 2026-08-26: springt man NACHEINANDER auf zwei Trades in unterschiedlichen,
+// nicht direkt anschließenden Zeiträumen, kann das Sprung-Ziel des zweiten Sprungs chronologisch
+// MITTEN in eine schon bestehende Lücke fallen (vom ersten Sprung übrig geblieben) — der naive
+// `older.concat(candles)`-Prepend geht aber immer davon aus, dass frisch gefetchte Kerzen VOR dem
+// KOMPLETTEN bisherigen Array liegen. Fällt das nicht zu, entsteht ein nicht mehr aufsteigend
+// sortiertes Array, an dem lightweight-charts mit "data must be asc ordered by time" abbricht.
+// mergeCandles (candleCache.js, für genau dieses Problem beim normalen Scroll-Back-Fetch gebaut)
+// merged/sortiert stattdessen per Zeit-Key, unabhängig davon, wie die beiden Arrays zueinander
+// liegen — sicher für Lücken, Overlaps und "mitten reingefallene" Fenster gleichermaßen.
 export async function loadCandlesAroundTrade(allCandles, entryTime, exitTime, barSeconds, fetchOlderCandles, { bufferBars, maxPages }) {
   if (isTimeCovered(allCandles, entryTime, barSeconds)) return allCandles;
 
@@ -40,8 +50,11 @@ export async function loadCandlesAroundTrade(allCandles, entryTime, exitTime, ba
   while (pages < maxPages && !isTimeCovered(candles, entryTime, barSeconds)) {
     const older = await fetchOlderCandles(anchor);
     if (older.length === 0) break;
-    candles = older.concat(candles);
-    anchor = candles[0].time;
+    // anchor rückt am FRONTIER dieses Fetches weiter (older[0], nicht candles[0] nach dem Merge) —
+    // nach dem Merge könnte candles[0] durch bereits vorhandene, unabhängig ältere Daten (z.B. von
+    // einem früheren Sprung) früher liegen, als wo dieser Fetch gerade tatsächlich weitermachen soll.
+    anchor = older[0].time;
+    candles = mergeCandles(candles, older);
     pages++;
   }
 
@@ -55,13 +68,11 @@ export async function loadCandlesAroundTrade(allCandles, entryTime, exitTime, ba
         const older = await fetchOlderCandles(bridgeAnchor);
         if (older.length === 0) break;
         bridge = older.concat(bridge);
-        bridgeAnchor = bridge[0].time;
+        bridgeAnchor = older[0].time;
         bridgePages++;
         if (bridgeAnchor <= candles[boundaryIdx - 1].time) break;
       }
-      if (bridge.length > 0 && bridgeAnchor <= candles[boundaryIdx - 1].time) {
-        candles = [...candles.slice(0, boundaryIdx), ...bridge, ...candles.slice(boundaryIdx)];
-      }
+      if (bridge.length > 0) candles = mergeCandles(candles, bridge);
     }
   }
   return candles;
