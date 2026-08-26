@@ -215,21 +215,32 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
   // hätte auf M5 jedes dort mitgezeichnete 1H/4H-Level fälschlich als M5-Rohdaten-Snapshot
   // eingeordnet statt gegen seine echte liquidity_levels-Zeile aufzulösen (Bug-Report Philip
   // 2026-08-26: "wenn ich rechtsklick mache, zum anpinnen, dann sind nur die M5 Level verfügbar").
+  // Vergleich case-insensitiv + normalisiert auf Großschreibung (Bug-Report Philip 2026-08-26,
+  // zweite Runde: ein Pivot, der zwar auf dem 1h-Chart live erkannt, aber NICHT in die kuratierte
+  // HTF-Auswahl aufgenommen wurde — computeHtfLiquidityLevels/selectRelevantHtfLevels deckeln die
+  // Anzahl, siehe liquidityRelevanceConfig.js — behält sein timeframe-Feld auf currentBar ("1h",
+  // kleingeschrieben) statt der DB-Form "1H" (liquidityStyleTimeframe in liquidity.js macht dieselbe
+  // Normalisierung fürs Farb-Styling, hier bisher übersehen). Ohne die Normalisierung landete so ein
+  // Level als m5_liquidity_level-Rohdaten-Snapshot statt gegen seine echte liquidity_levels-Zeile
+  // aufgelöst zu werden — beim späteren Rendern auf einem anderen Timeframe (M5) musste
+  // mergePinnedLevels den Sweep-Stand dann blind aus den dort geladenen Kerzen raten, was bei einem
+  // Pivot außerhalb des geladenen Fensters eine falsch (rückwärts) gezeichnete Linie ergab.
   // Fallback auf currentBar nur für den Fall eines Levels ganz ohne eigenes timeframe-Feld.
   for (const p of liquidityPrimitives) {
     const distance = p.distanceTo(x, y);
     if (distance > radius) continue;
-    const levelTimeframe = p.level.timeframe ?? currentBar;
-    if (levelTimeframe === "1H" || levelTimeframe === "4H") {
+    const rawTimeframe = p.level.timeframe ?? currentBar;
+    const normalizedTimeframe = String(rawTimeframe).toUpperCase();
+    if (normalizedTimeframe === "1H" || normalizedTimeframe === "4H") {
       candidates.push({
         kind: "liquidity_level",
-        level: { instrument: symbol, timeframe: levelTimeframe, dirNum: p.level.dir, pivotTime: p.level.pivotTime },
+        level: { instrument: symbol, timeframe: normalizedTimeframe, dirNum: p.level.dir, pivotTime: p.level.pivotTime },
         distance,
       });
     } else {
       candidates.push({
         kind: "m5_liquidity_level",
-        level: { instrument: symbol, timeframe: levelTimeframe, dirNum: p.level.dir, price: p.level.price, pivotTime: p.level.pivotTime },
+        level: { instrument: symbol, timeframe: rawTimeframe, dirNum: p.level.dir, price: p.level.price, pivotTime: p.level.pivotTime },
         distance,
       });
     }

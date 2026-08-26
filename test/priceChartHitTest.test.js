@@ -241,6 +241,25 @@ describe("findNearbyPinCandidates", () => {
     expect(findNearbyPinCandidates(0, 0, primitives, { symbol: "GBPUSD", currentBar: "5m" })[0].kind).toBe("m5_liquidity_level");
   });
 
+  // Bug-Report Philip 2026-08-26, zweite Runde: ein auf dem 1h-Chart live erkannter, aber NICHT in
+  // die kuratierte HTF-Auswahl (selectRelevantHtfLevels) aufgenommener Pivot behält sein
+  // timeframe-Feld auf currentBar ("1h", kleingeschrieben) statt der DB-Form "1H" — der Vergleich
+  // muss deshalb case-insensitiv sein UND das Ergebnis auf die kanonische Großschreibung
+  // normalisieren (sonst löst sich der spätere resolveLiquidityLevelId-Call gegen die DB nicht auf).
+  it("normalisiert ein kleingeschriebenes timeframe-Feld ('1h'/'4h') auf 'liquidity_level' mit Großschreibung", () => {
+    const level1hLower = { dir: -1, pivotTime: 100, price: 1.36213, timeframe: "1h" };
+    const level4hLower = { dir: -1, pivotTime: 100, price: 1.36213, timeframe: "4h" };
+    const primitivesFor = (level) => emptyPrimitives({ liquidityPrimitives: [{ ...primitiveAt(5), level }] });
+    expect(findNearbyPinCandidates(0, 0, primitivesFor(level1hLower), { symbol: "GBPUSD", currentBar: "5m" })[0]).toMatchObject({
+      kind: "liquidity_level",
+      level: { timeframe: "1H" },
+    });
+    expect(findNearbyPinCandidates(0, 0, primitivesFor(level4hLower), { symbol: "GBPUSD", currentBar: "5m" })[0]).toMatchObject({
+      kind: "liquidity_level",
+      level: { timeframe: "4H" },
+    });
+  });
+
   it("findet trade_setup und trade_confirmation (nur OrderBlockPrimitive-Instanzen, nicht Linien)", () => {
     const primitives = emptyPrimitives({
       tradeSetupLinkPrimitives: [{ ...primitiveAt(5), zone: { tradeSetupId: 7, direction: "long", instrument: "GBPUSD" } }],
