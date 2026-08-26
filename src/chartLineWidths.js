@@ -65,6 +65,7 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   tradeTarget: 2,
   tradeConfirmation: 2, // gleiches Tier-Skalierungsmuster wie tradeTarget, siehe PriceChart.vue.
   tradeInvalidation: 2, // keine Alters-Tier-Skalierung (siehe PriceChart.vue: refreshInvalidationLinesInternal).
+  newsEvent: 1, // gestrichelte Termin-Linie, siehe newsMarkers.js.
 };
 
 function loadInitial() {

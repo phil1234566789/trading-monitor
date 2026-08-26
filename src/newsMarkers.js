@@ -1,6 +1,7 @@
 import { snapToBarTime } from "./chartTimeUtils.js";
 import { canShowLabels } from "./chartZoom.js";
 import { cssColor } from "./chartColors.js";
+import { lineWidth } from "./chartLineWidths.js";
 
 // Vertikale Marker für High-Impact-News auf dem Chart (Chat 2026-07-26: "ich würd die News gern
 // visuell irgendwo sehen") — rein visuell, liest nur die schon geladene news_events-Liste (siehe
@@ -65,7 +66,9 @@ class NewsMarkerRenderer {
       const color = cssColor("newsEvent");
 
       ctx.strokeStyle = color;
-      ctx.lineWidth = Math.max(1, Math.round(scope.horizontalPixelRatio));
+      // Konfigurierbar seit Chat 2026-08-26 (Chart-Style, wie bei den übrigen Linien) — mit
+      // horizontalPixelRatio skaliert (Bitmap-Koordinatenraum), analog zu liquidity.js.
+      ctx.lineWidth = lineWidth("newsEvent") * scope.horizontalPixelRatio;
       ctx.setLineDash([4 * scope.horizontalPixelRatio, 4 * scope.horizontalPixelRatio]);
       ctx.beginPath();
       ctx.moveTo(x, 0);
