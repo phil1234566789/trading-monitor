@@ -20,19 +20,12 @@ import {
   findNearbyPinCandidates as findNearbyPinCandidatesPure,
   hasNearbyPinCandidate as hasNearbyPinCandidatePure,
 } from "../priceChartHitTest.js";
-import {
-  detectLiquidityLevels,
-  filterRelevantLevels,
-  renderLiquidityLevels,
-  LiquidityLinePrimitive,
-  LIQUIDITY_FRACTAL_PERIOD,
-  LIQUIDITY_MAX_RELEVANT,
-} from "../liquidity.js";
-import { mergePinnedLevels, computeHtfLiquidityLevels, mergeDbLiquidityLevels } from "../priceChartLiquidity.js";
+import { LiquidityLinePrimitive } from "../liquidity.js";
+import { usePriceChartLiquidity } from "../composables/usePriceChartLiquidity.js";
 import { sessions } from "../sessions.js";
 import { newsEvents } from "../newsEvents.js";
 import { usePriceChartSessionsAndNews } from "../composables/usePriceChartSessionsAndNews.js";
-import { pivotForDisplay, summarizeMarketStructureState } from "../marketStructureAnalysis";
+import { summarizeMarketStructureState } from "../marketStructureAnalysis";
 import { DivergenceLinePrimitive } from "../rsiRendering.js";
 import { usePriceChartRsi } from "../composables/usePriceChartRsi.js";
 import { usePriceChartCockpit } from "../composables/usePriceChartCockpit.js";
@@ -329,14 +322,27 @@ const {
 // Trade-Setup-Zeichnung (siehe usePriceChartTradeSetupDrawing.js, Phase 6h) — reine Zeichenfunktion,
 // liest tradeSetupsMetadata (oben) als Parameter statt eigenen Zustand zu besitzen.
 const { create: createTradeSetupDrawing, dispose: disposeTradeSetupDrawing, refresh: refreshTradeSetupDrawing } = usePriceChartTradeSetupDrawing();
+// Liquiditäts-Level-Zeichnung (siehe usePriceChartLiquidity.js, Phase 6i) — analog zu
+// usePriceChartTradeSetupDrawing, aber mit eigenem Zustand (currentLiquidityLevels/
+// liquidityMetadata/liquidityEarliestTime), da hier zusätzlich die Roh-Erkennung + der Klick-
+// Hittest-Zustand dranhängen, nicht nur die reine Zeichnung.
+const {
+  liquidityMetadata,
+  liquidityEarliestTime,
+  liquidityPrimitives,
+  getCurrentLiquidityLevels,
+  create: createLiquidity,
+  dispose: disposeLiquidity,
+  refresh: refreshLiquidity,
+} = usePriceChartLiquidity();
 
 const chartContainerRef = ref(null);
 // Chart-Höhe (siehe Dashboard.vue: tradesPanelHeight, dieselbe Begründung) — useTabScopedRef statt
 // useLocalStorageRef: pro Tab verstellbar, ein frischer Tab startet beim zuletzt benutzten Wert.
 // Ein einziger Key (nicht pro Symbol) — Philip will EINE konsistente Höhe unabhängig vom Symbol-Tab.
 const chartWrapperHeight = useTabScopedRef("chartWrapperHeight", 675);
-// pivotForDisplay/summarizeMarketStructureState kommen seit Chat 2026-07-27 aus
-// marketStructureAnalysis.ts (Daten-Export braucht dieselbe Aufbereitung, siehe dataExport.js).
+// summarizeMarketStructureState kommt seit Chat 2026-07-27 aus marketStructureAnalysis.ts
+// (Daten-Export braucht dieselbe Aufbereitung, siehe dataExport.js).
 // marketStructureState kommt seit Phase 6g aus usePriceChartMarketStructure() (oben destructured).
 const marketStructureTree = computed(() => summarizeMarketStructureState(marketStructureState.value));
 
@@ -388,11 +394,9 @@ let chart;
 let candleSeries;
 let resizeObserver;
 let orderBlockPrimitives = [];
-let liquidityPrimitives = [];
-// Aktuell gezeichnete Liquiditäts-Level (siehe refreshLiquidityInternal) — für den Zielmodus-
-// Klick-Hittest (Chat 2026-07-27: "Können wir die Linien klickbar machen?") gebraucht, analog zu
-// currentTradeSetups unten für die OB-Boxen.
-let currentLiquidityLevels = [];
+// liquidityPrimitives/currentLiquidityLevels leben seit Phase 6i in usePriceChartLiquidity.js
+// (liquidityPrimitives als direkte Array-Referenz, getCurrentLiquidityLevels() für den
+// Zielmodus-Klick-Hittest, siehe findClickedLiquidityLevel).
 // currentFibLevels/rangesMarkerPrimitives/marketStructurePrimitives/rangesPivots/rangesH1Candles
 // leben seit Phase 6g in usePriceChartMarketStructure.js (getCurrentFibLevels() für den
 // Bestätigungs-Klick-Hittest, siehe findClickedFibLevel).
@@ -459,9 +463,9 @@ const rangesLoading = computed(() => (props.showRanges || props.showRangesMetada
 // An/Aus-Schalter, sie werden immer gezeichnet. liquidityEarliestTime/structureEarliestTime halten
 // den frühesten ROHEN pivotTime nur für die Kerzen-Relevanz unten, tauchen nicht im JSON auf.
 // tradeSetupsMetadata kommt seit Phase 6f direkt aus usePriceChartTradeSetups() (oben destructured).
+// liquidityMetadata/liquidityEarliestTime kommen seit Phase 6i direkt aus usePriceChartLiquidity()
+// (oben destructured).
 const poiZonesMetadata = ref(null);
-const liquidityMetadata = ref(null);
-const liquidityEarliestTime = ref(null);
 const structureEarliestTime = ref(null);
 
 // TSC-Karte gerade sichtbar? (siehe TradeSetupCockpit.vue: v-if="state" innen — cockpitState wird
@@ -938,59 +942,21 @@ function refreshPoiZonesInternal() {
   poiZonesMetadata.value = visibleZones;
 }
 
-// Liquiditäts-Level (Fractal-Pivots, siehe tv-indikator/src/liquidity.pine) gibt es bisher nicht
-// aus dem Backend — deshalb hier direkt aus den geladenen Kerzen des aktuellen Chart-Timeframes
-// neu erkannt, analog zur OB-Erkennung oben.
-// `showSweptLiquidity` zeigt ALLE erkannten M5-Pivots ungefiltert (kein filterRelevantLevels,
-// keine maxRelevant-Deckelung) — auch längst berührte. Für die Trendanalyse-Diskussion mit
-// Philip: er braucht wirklich jeden Pivot sichtbar, nicht nur die 10 neuesten je Richtung, die
-// filterRelevantLevels selbst mit onlyRelevant=false noch abschneiden würde.
-
-// Kein Auto-Nachladen mehr (siehe refreshPoiZonesInternal-Kommentar, Punkt 10 — dieselbe
-// Entscheidung 2026-08-23 umgekehrt): eine relevante 1H-Zeile, deren pivotTime vor der geladenen
-// Kerzenserie liegt, wird per snapToBarTime auf die älteste geladene Kerze geklemmt statt einen
-// Nachlade-Request auszulösen. Korrigiert sich von selbst, sobald aus einem anderen Grund
-// (normales Zurückscrollen) genug Kerzen geladen sind.
+// Dünner Wrapper um usePriceChartLiquidity's refresh() (siehe dort für die volle Bug-Historie zur
+// Erkennung/Zeichnung selbst) — übersetzt Props/lokale Refs in dessen ctx-Format.
 function refreshLiquidityInternal() {
-  const candles = clipReplay(allCandles);
-  if (!props.showLiquidity) {
-    // Kein db1h hier (mehr) — die relevanten 1H-Level sind seit 2026-08-23 an showLiquidity
-    // gekoppelt (s.o.), bei showLiquidity=false bleiben nur Pins sichtbar, wie vor Punkt 12/13.
-    const pinnedOnly = mergePinnedLevels([], props.pinnedLiquidityLevels, candles);
-    renderLiquidityLevels(candleSeries, pinnedOnly, liquidityPrimitives, candles, {
-      pinKeys: props.pinLiquidityLevelKeys,
-      hoveredKey: props.hoveredPinLiquidityLevelKey,
-    });
-    liquidityMetadata.value = null;
-    liquidityEarliestTime.value = null;
-    currentLiquidityLevels = [];
-    return;
-  }
-  // timeframe = der gerade angezeigte Chart-Timeframe (Task "Chart-Objekte..." Nachbesserung
-  // 2026-08-23: M5/1H/4H-Chart-Style-Kategorien, siehe liquidity.js: liquidityStyleTimeframe) —
-  // live erkannte Level tragen sonst kein eigenes Timeframe-Feld wie die persistierten HTF-Level.
-  const { highs: rawHighs, lows: rawLows } = detectLiquidityLevels(candles, LIQUIDITY_FRACTAL_PERIOD);
-  const highs = rawHighs.map((l) => ({ ...l, timeframe: props.currentBar }));
-  const lows = rawLows.map((l) => ({ ...l, timeframe: props.currentBar }));
-  const liveRelevant = props.showSweptLiquidity
-    ? [...highs, ...lows]
-    : [...filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true), ...filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true)];
-  const htfLevels = computeHtfLiquidityLevels(candles, props.dbLiquidityLevelsHtf, props.symbol, props.replayUntil, currentPriceEstimate(allCandles));
-  const relevant = mergeDbLiquidityLevels(liveRelevant, htfLevels);
-  currentLiquidityLevels = relevant;
-  const precision = pricePrecisionForInstrument(props.symbol);
-  const finalLevels = mergePinnedLevels(relevant, props.pinnedLiquidityLevels, candles);
-  renderLiquidityLevels(candleSeries, finalLevels, liquidityPrimitives, candles, {
-    debugPrices: props.showLiquidityDebug,
-    formatPrice: (price) => fmtPrice(price, precision),
-    // "Alter"-Anzeige an den Debug-Preis-Labels (Chat 2026-07-22) — im Replay bezogen auf
-    // replayUntil, nicht die echte Uhrzeit, sonst wäre das Alter beim Testen falsch/inkonsistent.
-    nowSec: props.replayUntil ?? Math.floor(Date.now() / 1000),
-    pinKeys: props.pinLiquidityLevelKeys,
-    hoveredKey: props.hoveredPinLiquidityLevelKey,
+  refreshLiquidity(clipReplay(allCandles), allCandles, {
+    showLiquidity: props.showLiquidity,
+    pinnedLiquidityLevels: props.pinnedLiquidityLevels,
+    pinLiquidityLevelKeys: props.pinLiquidityLevelKeys,
+    hoveredPinLiquidityLevelKey: props.hoveredPinLiquidityLevelKey,
+    showSweptLiquidity: props.showSweptLiquidity,
+    dbLiquidityLevelsHtf: props.dbLiquidityLevelsHtf,
+    symbol: props.symbol,
+    replayUntil: props.replayUntil,
+    showLiquidityDebug: props.showLiquidityDebug,
+    currentBar: props.currentBar,
   });
-  liquidityMetadata.value = relevant.map(pivotForDisplay);
-  liquidityEarliestTime.value = relevant.length > 0 ? Math.min(...relevant.map((lvl) => lvl.pivotTime)) : null;
 }
 
 // Sessions/News-Marker-Zeichenlogik lebt seit Phase 6 des Große-Dateien-Refactorings in
@@ -1174,7 +1140,7 @@ function findClickedLiquidityLevel(param) {
   if (!param.point || !candleSeries || !chart) return null;
   const time = chart.timeScale().coordinateToTime(param.point.x);
   if (time == null) return null;
-  return matchLiquidityLevel(currentLiquidityLevels, time, param.point.y, (price) => candleSeries.priceToCoordinate(price));
+  return matchLiquidityLevel(getCurrentLiquidityLevels(), time, param.point.y, (price) => candleSeries.priceToCoordinate(price));
 }
 
 function findClickedOBZone(param) {
@@ -1523,6 +1489,7 @@ onMounted(() => {
   createClaudeAnnotations(chart, candleSeries);
   createMarketStructure(chart, candleSeries);
   createTradeSetupDrawing(candleSeries);
+  createLiquidity(candleSeries);
 
   chart.subscribeClick((param) => {
     if (!param.point || !props.tradeModeActive) return;
@@ -1690,6 +1657,7 @@ onUnmounted(() => {
   disposeClaudeAnnotations();
   disposeMarketStructure();
   disposeTradeSetupDrawing();
+  disposeLiquidity();
   // scheduleNextPoll/-TradeSetupM5Poll/-RangesPoll nutzen setTimeout statt setInterval
   // (Kerzenschluss-Ausrichtung, siehe dort) -> clearTimeout statt clearInterval.
   clearTimeout(pollTimer);
