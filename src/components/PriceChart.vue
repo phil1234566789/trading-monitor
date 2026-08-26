@@ -35,9 +35,7 @@ import { sessions } from "../sessions.js";
 import { newsEvents } from "../newsEvents.js";
 import { usePriceChartSessionsAndNews } from "../composables/usePriceChartSessionsAndNews.js";
 import { tradeSetupObBoxBounds } from "../tradeSetup.js";
-import { renderPivotMarkers } from "../pivotMarkers";
-import { computeRangesPivots, buildMarketStructureState, pivotForDisplay, summarizeMarketStructureState } from "../marketStructureAnalysis";
-import { renderMarketStructureAnalysis, collectFibLevels } from "../marketStructureRendering";
+import { pivotForDisplay, summarizeMarketStructureState } from "../marketStructureAnalysis";
 import { DivergenceLinePrimitive } from "../rsiRendering.js";
 import { usePriceChartRsi } from "../composables/usePriceChartRsi.js";
 import { usePriceChartCockpit } from "../composables/usePriceChartCockpit.js";
@@ -56,7 +54,6 @@ import {
   TRADE_SETUP_OB_WIDTH_SEC,
   TRADE_SETUP_OB_FILL_RATIO,
   TRADE_SETUP_OB_BORDER_RATIO,
-  RANGES_CANDLE_BUFFER,
   COPIED_FEEDBACK_MS,
   DEBUG_AUTOSAVE_INTERVAL_MS,
   TARGET_TIER_WIDTH_RATIO,
@@ -69,6 +66,7 @@ import { buildActiveMetadataSnapshot, hasActiveMetadata as hasActiveMetadataFor,
 import { useLastDataExport } from "../composables/useLastDataExport.js";
 import { usePriceChartClaudeAnnotations } from "../composables/usePriceChartClaudeAnnotations.js";
 import { usePriceChartTradeSetups } from "../composables/usePriceChartTradeSetups.js";
+import { usePriceChartMarketStructure } from "../composables/usePriceChartMarketStructure.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import { barSecondsFor, REPLAY_LOOKAHEAD_SEC } from "../timeframes.js";
 import {
@@ -314,6 +312,22 @@ const {
   computeTradeSetups: computeTradeSetupsPure,
   fetchM5Candles: fetchTradeSetupM5Candles,
 } = usePriceChartTradeSetups();
+// Ranges/1h-Struktur-Trend + Market-Structure-Zeichnung (siehe usePriceChartMarketStructure.js,
+// Phase 6g) — marketStructureState/rangesMetadata/rangesMetadata2 direkt im Template/in anderen
+// Composables' ctx gebunden, daher destructured.
+const {
+  marketStructureState,
+  rangesMetadata,
+  rangesMetadata2,
+  getRangesH1Candles,
+  getCurrentFibLevels,
+  create: createMarketStructure,
+  dispose: disposeMarketStructure,
+  computeRangesPivotsAndMetadata,
+  refreshRangesMarkers: refreshRangesMarkersPure,
+  refreshMarketStructure: refreshMarketStructurePure,
+  fetchRangesCandles,
+} = usePriceChartMarketStructure();
 
 const chartContainerRef = ref(null);
 // Chart-Höhe (siehe Dashboard.vue: tradesPanelHeight, dieselbe Begründung) — useTabScopedRef statt
@@ -321,9 +335,8 @@ const chartContainerRef = ref(null);
 // Ein einziger Key (nicht pro Symbol) — Philip will EINE konsistente Höhe unabhängig vom Symbol-Tab.
 const chartWrapperHeight = useTabScopedRef("chartWrapperHeight", 675);
 // pivotForDisplay/summarizeMarketStructureState kommen seit Chat 2026-07-27 aus
-// marketStructureAnalysis.ts (Daten-Export braucht dieselbe Aufbereitung, siehe
-// dataExport.js) — hier nur noch der reaktive State drumherum.
-const marketStructureState = ref(null);
+// marketStructureAnalysis.ts (Daten-Export braucht dieselbe Aufbereitung, siehe dataExport.js).
+// marketStructureState kommt seit Phase 6g aus usePriceChartMarketStructure() (oben destructured).
 const marketStructureTree = computed(() => summarizeMarketStructureState(marketStructureState.value));
 
 // Copy-Button neben den Metadaten-Überschriften (siehe Chat 2026-07-19) — kopiert den jeweiligen
@@ -379,15 +392,9 @@ let liquidityPrimitives = [];
 // Klick-Hittest (Chat 2026-07-27: "Können wir die Linien klickbar machen?") gebraucht, analog zu
 // currentTradeSetups unten für die OB-Boxen.
 let currentLiquidityLevels = [];
-// Aktuell gezeichnete Fib-Level (Range-Fib + Protected-Fib, Haupt- + Nested-Trend, siehe
-// collectFibLevels in marketStructureAnalysis.ts) — analog zu currentLiquidityLevels oben, für den
-// Bestätigungs-Klick-Hittest (findClickedFibLevel), gefüllt in refreshMarketStructureInternal.
-let currentFibLevels = [];
-// Periode-5- UND Periode-2-Debug-Marker laufen seit Chat 2026-07-26 durch EIN gemeinsames
-// renderPivotMarkers-Primitive (siehe refreshRangesMarkersInternal) statt zwei getrennte, damit
-// deckungsgleiche Pivots aus beiden Perioden dieselbe Label-Entzerrung durchlaufen.
-let rangesMarkerPrimitives = [];
-let marketStructurePrimitives = [];
+// currentFibLevels/rangesMarkerPrimitives/marketStructurePrimitives/rangesPivots/rangesH1Candles
+// leben seit Phase 6g in usePriceChartMarketStructure.js (getCurrentFibLevels() für den
+// Bestätigungs-Klick-Hittest, siehe findClickedFibLevel).
 let tradePrimitives = [];
 let pinContextMenuHandler = null; // Referenz für removeEventListener in onUnmounted, siehe dort
 let pinCursorHandler = null; // dito
@@ -408,15 +415,11 @@ let allCandles = [];
 // verknüpftem trade_setups-Datensatz). null = normales Live-Verhalten. Siehe focusTradeSetup/
 // clearTradeSetupFocus (defineExpose) und den watch auf props.tradeModeActive unten.
 let focusedTradeSetup = null;
-let rangesH1Candles = [];
-let rangesPivots = null; // roh (mit pivotTime), Periode 5 — siehe computeRangesPivotsFor/refreshRangesMarkersInternal
-let rangesPivots2 = null; // roh (mit pivotTime), eingebettete Periode 2 (siehe Chat 2026-07-19)
-// Out-of-Order-Guards für loadInitial/loadRangesCandles/loadTradeSetupM5, siehe dort.
+// Out-of-Order-Guards für loadInitial/fetchRangesCandles/loadTradeSetupM5, siehe dort.
 // loadInitialFetchSeq wird zusätzlich von pollRecent() als Bar-Mismatch-Guard gelesen (Bug-Report
 // Philip 2026-07-19: "1h -> M5 -> wieder 1h, Chart zeigt nur noch M5-Kerzen") — jeder echte Neu-Load
 // zählt hoch, ein noch laufender Fetch von VOR dem Wechsel erkennt daran, dass er überholt ist.
 let loadInitialFetchSeq = 0;
-let rangesFetchSeq = 0;
 let loadingOlder = false;
 let reachedHistoryStart = false;
 // Bug-Report Philip 2026-08-09: ein hängender Scroll-Back-Fetch (cTrader-Timeout) landet nur in der
@@ -440,13 +443,9 @@ let rangesPollTimer = null;
 // Für das RSI-Divergenz-Statistik-Panel (Chat 2026-08-11, vierte Runde) — { divergences (inkl.
 // Outcome-Klassifikation), lookbackBars, lookforwardBars } oder null, wenn der Toggle aus ist
 // bzw. gerade keine Divergenzen vorliegen. Befüllt in refreshRsiDivergenceInternal, analog zu
-// rangesMetadata unten.
+// rangesMetadata (usePriceChartMarketStructure.js, Phase 6g).
 const rsiDivergenceStatsData = ref(null);
-const rangesMetadata = ref(null); // Liste der erkannten H1-Periode-5-Pivots fürs Ranges-Metadaten-Panel
-// Dito für die eingebettete Periode-2-Erkennung — EIN gemeinsames Metadaten-Panel für beide
-// Perioden reicht, daher kein zweiter showRangesMetadata2-Toggle.
-const rangesMetadata2 = ref(null);
-// Der erste H1-Fetch (loadRangesCandles) ist ein frischer cTrader-Connect+Auth-Handshake statt
+// Der erste H1-Fetch (fetchRangesCandles) ist ein frischer cTrader-Connect+Auth-Handshake statt
 // eines simplen DB-Reads, kann spürbar dauern und lief bisher komplett unsichtbar. rangesMetadata
 // bleibt null bis zum ersten erfolgreichen Fetch, danach nie wieder — genau das späte
 // "leer -> gefüllt" ist der Moment, der ohne Feedback wie ein Hänger wirkt.
@@ -1005,89 +1004,54 @@ function refreshNewsMarkersInternal() {
   refreshNewsMarkers(candleSeries, clipReplay(allCandles), { showNews: props.showNews, symbol: props.symbol, replayUntil: props.replayUntil });
 }
 
-// H1-Fraktale im konfigurierten Lookback-Fenster — reine Pivot-Liste, noch keine weak/protected/
-// sweep-Klassifizierung. Generalisiert auf (period, lookbackHours), damit dieselbe Logik für die
-// Periode-5- UND die eingebettete Periode-2-Erkennung läuft. cutoff statt "alle erkannten Pivots",
-// weil RANGES_CANDLE_BUFFER zusätzliche Kerzen VOR dem Lookback-Fenster lädt (siehe
-// loadRangesCandles) — die dort erkannten Fraktale sollen nicht mitgezählt werden.
-function computeRangesPivotsFor(period, lookbackHours) {
-  // Im Replay-Modus zählt das Lookback-Fenster ab replayUntil, nicht ab der echten aktuellen Zeit.
-  // rangesFixedStartActive ersetzt den ROLLIERENDEN Cutoff durch einen ABSOLUTEN — bleibt beim
-  // Scrubben durch den Replay-Modus stabil; lookbackHours wird in dem Fall komplett ignoriert.
-  const now = props.replayUntil ?? Math.floor(Date.now() / 1000);
-  const cutoff = props.rangesFixedStartActive && props.rangesFixedStartTime != null ? props.rangesFixedStartTime : now - lookbackHours * 3600;
-  return computeRangesPivots(clipReplay(rangesH1Candles), period, cutoff, fmtDateTime);
-}
-
-// Punkt-Marker für die H1-Ranges-Pivots — nur sichtbar, wenn Ranges-Metadaten-Panel + Debug-Modus
-// beide an sind. ALLE Pivots EINER Periode in EINER renderPivotMarkers-Gruppe (nicht eine Gruppe
-// pro Pivot), damit sich ihre Preis-Labels gegenseitig entzerren statt bei eng beieinanderliegenden
-// Pivots übereinander zu fallen (Bug-Report Philip 2026-07-19). Periode-5 und Periode-2 laufen im
-// SELBEN renderPivotMarkers-Aufruf (vorher zwei getrennte Listen mit unabhängiger Entzerrung —
-// Bug-Report: Labels bei deckungsgleichem Pivot leicht verschoben). Periode-2 bekommt kleineren
-// dotRadius + eigene, transparentere Farbe (rangesMarker2), um beide Ebenen optisch zu trennen.
+// Dünner Wrapper um usePriceChartMarketStructure' refreshRangesMarkers() (siehe dort für die
+// volle Bug-Historie zu den Debug-Punktmarkern).
 function refreshRangesMarkersInternal() {
-  const candles = clipReplay(allCandles);
-  const precision = pricePrecisionForInstrument(props.symbol);
-  const showMarkers = props.showRanges && props.showLiquidityDebug;
-
-  if (!showMarkers || (!rangesPivots && !rangesPivots2)) {
-    renderPivotMarkers(candleSeries, [], rangesMarkerPrimitives, candles);
-  } else {
-    const groups = [
-      ...(rangesPivots ? [{ points: rangesPivots, color: cssColor("rangesMarker") }] : []),
-      ...(rangesPivots2 ? [{ points: rangesPivots2, color: cssColor("rangesMarker2"), dotRadius: 1.5 }] : []),
-    ];
-    renderPivotMarkers(candleSeries, groups, rangesMarkerPrimitives, candles, {
-      showLabels: true,
-      formatPrice: (price) => fmtPrice(price, precision),
-    });
-  }
+  refreshRangesMarkersPure({
+    candles: clipReplay(allCandles),
+    symbol: props.symbol,
+    showRanges: props.showRanges,
+    showLiquidityDebug: props.showLiquidityDebug,
+  });
 }
 
+// Dünner Wrapper um usePriceChartMarketStructure' computeRangesPivotsAndMetadata() — baut die
+// H1-Pivots + Metadaten-Panel-Spiegelung neu und stößt danach die abhängigen Refreshs an
+// (Zeichnung + Market-Structure-Trendalgorithmus + Debug-Metadaten-Panel).
 function refreshRangesInternal() {
-  rangesPivots = rangesH1Candles.length > 0 ? computeRangesPivotsFor(props.rangesPeriod, props.rangesLookbackHours) : null;
-  rangesPivots2 = rangesH1Candles.length > 0 ? computeRangesPivotsFor(props.ranges2Period, props.ranges2LookbackHours) : null;
-  rangesMetadata.value = rangesPivots ? rangesPivots.map(pivotForDisplay) : null;
-  rangesMetadata2.value = rangesPivots2 ? rangesPivots2.map(pivotForDisplay) : null;
-  const allPivotTimes = [...(rangesPivots ?? []), ...(rangesPivots2 ?? [])].map((p) => p.pivotTime);
-  structureEarliestTime.value = allPivotTimes.length > 0 ? Math.min(...allPivotTimes) : null;
+  const { earliestTime } = computeRangesPivotsAndMetadata(clipReplay(getRangesH1Candles()), {
+    rangesPeriod: props.rangesPeriod,
+    rangesLookbackHours: props.rangesLookbackHours,
+    ranges2Period: props.ranges2Period,
+    ranges2LookbackHours: props.ranges2LookbackHours,
+    replayUntil: props.replayUntil,
+    rangesFixedStartActive: props.rangesFixedStartActive,
+    rangesFixedStartTime: props.rangesFixedStartTime,
+  });
+  structureEarliestTime.value = earliestTime;
   refreshRangesMarkersInternal();
   refreshMarketStructureInternal();
-  // Bug-Report Philip 2026-07-26: loadRangesCandles() läuft als EIGENER async Fetch neben
+  // Bug-Report Philip 2026-07-26: fetchRangesCandles() läuft als EIGENER async Fetch neben
   // loadInitial() her — nur loadInitial() ruft refreshChart() auf (baut activeMetadataSnapshot neu).
   // Ohne diesen Aufruf hier bliebe der Snapshot auf altem Stand eingefroren, obwohl der Chart selbst
   // längst aktuell ist.
   if (chart) activeMetadataSnapshot.value = buildActiveMetadataSnapshotInternal();
 }
 
-// Neuer "1h-Range"-Marktstruktur-Trendalgorithmus (siehe marketStructureAnalysis.ts,
-// test/tdd_mit_claude.ts) — läuft über dieselben H1-Pivots wie die Debug-Punktmarker, unabhängig
-// vom Debug-Toggle: das eigentliche Analyse-Ergebnis. Reine Weiterleitung an buildMarketStructureState
-// (marketStructureAnalysis.ts) — die Merge-/Apply-Logik lebt dort, NICHT hier, damit Tests exakt
-// denselben Code aufrufen wie die App. Nutzt rangesH1Candles (nicht allCandles) — andere Auflösung
-// je nach gewähltem Chart-Timeframe.
-function computeMarketStructureState() {
-  return buildMarketStructureState(rangesPivots, rangesPivots2, props.rangesPeriod, props.ranges2Period, clipReplay(rangesH1Candles));
-}
-
-// Roter Pfeil+Linie an range.high, grüner an range.low, ggf. "1h protected low"-Linie +
-// Trend-Label rechts/mittig (siehe Chat) — sichtbar, sobald showRanges an ist, unabhängig vom
-// Debug-Toggle (im Gegensatz zu den rohen Punktmarkern oben).
+// Dünner Wrapper um usePriceChartMarketStructure' refreshMarketStructure() (siehe dort für die
+// volle Bug-Historie zum "1h-Range"-Trendalgorithmus/der Zeichnung) — stößt danach die Refreshs
+// an, die auf marketStructureState reagieren (Trade-Setups brauchen die H1-Level, siehe
+// collectH1LqLevels in usePriceChartTradeSetups.js; TSC braucht beides).
 function refreshMarketStructureInternal() {
-  if (!chart) return; // async loadRangesCandles kann nach unmount noch abschließen, siehe onUnmounted
-  const state = computeMarketStructureState();
-  marketStructureState.value = state; // fürs Metadaten-Panel + TSC, unabhängig von showRanges (Zeichnen)
-  currentFibLevels = collectFibLevels(state); // für den Bestätigungs-Klick-Hittest, siehe findClickedFibLevel
-  const candles = clipReplay(allCandles);
-  const precision = pricePrecisionForInstrument(props.symbol);
-  renderMarketStructureAnalysis(candleSeries, props.showRanges ? state : null, marketStructurePrimitives, candles, {
-    // "Alter"-Anzeige an der "1h LQ-Sweep"-Linie (Chat 2026-07-22) — im Replay bezogen auf
-    // replayUntil, nicht die echte Uhrzeit, sonst wäre das Alter beim Testen falsch/inkonsistent.
-    nowSec: props.replayUntil ?? Math.floor(Date.now() / 1000),
-    // Preis ist seit Chat 2026-07-28 fester Bestandteil des LQ-Sweep-Labels ("Major LS 1,13545 ..."
-    // statt "1h LQ-Sweep ..."), nicht mehr debug-gated — siehe formatLsLabel (liquidity.js).
-    formatPrice: (price) => fmtPrice(price, precision),
+  if (!chart) return; // async fetchRangesCandles kann nach unmount noch abschließen, siehe onUnmounted
+  refreshMarketStructurePure({
+    candles: clipReplay(allCandles),
+    h1CandlesClipped: clipReplay(getRangesH1Candles()),
+    symbol: props.symbol,
+    replayUntil: props.replayUntil,
+    showRanges: props.showRanges,
+    rangesPeriod: props.rangesPeriod,
+    ranges2Period: props.ranges2Period,
   });
   // computeTradeSetups() liest marketStructureState.value (siehe collectH1LqLevels, Chat
   // 2026-07-28) — muss also nach JEDEM Recompute hier neu laufen, nicht nur bei neuen M5-Kerzen
@@ -1118,43 +1082,24 @@ function refreshCockpitInternal() {
   });
 }
 
-// Eigener H1-Fetch fürs Ranges-Metadaten-Panel (und seit Chat 2026-07-28 auch für die H1-Level
-// der Trade-Setup-Erkennung, siehe collectH1LqLevels) — lädt genug Historie für das GRÖSSERE der
-// beiden Lookback-Fenster (Periode 5 + eingebettete
-// Periode 2, siehe Chat 2026-07-19) + Erkennungspuffer. EIN Fetch für beide Perioden (nicht zwei
-// separate cTrader-Connects) — computeRangesPivotsFor schneidet sich aus rangesH1Candles selbst
-// den für die jeweilige Periode passenden, ggf. kürzeren Ausschnitt raus.
+// Dünner Wrapper um usePriceChartMarketStructure' fetchRangesCandles() (siehe dort für die volle
+// Bug-Historie zum H1-Fetch) — löst nur den Fetch aus, die Refresh-Kaskade danach bleibt hier
+// (Pivots/Trendanalyse neu berechnen + 1H-OB-Zonen, die auf denselben Kerzen mitlaufen).
 async function loadRangesCandles() {
-  // rangesFetchSeq schützt gegen Out-of-Order-Antworten (siehe Chat 2026-07-20: "im Replay-Modus
-  // hängt der Trend-Algorithmus" — schneller mehrfacher Replay-Step feuert mehrfach diesen fetch;
-  // ohne Guard kann eine ÄLTERE, aber langsamere Antwort eine NEUERE überschreiben und der Chart
-  // bleibt auf einem veralteten Replay-Stand hängen, bis zufällig wieder die richtige Antwort
-  // zuletzt eintrifft). Jeder Aufruf zieht seine eigene Sequenznummer; nur die zuletzt GESTARTETE
-  // gilt noch als aktuell, ältere Ergebnisse werden beim Eintreffen verworfen.
-  const seq = ++rangesFetchSeq;
-  try {
-    // rangesFixedStartActive: genug Historie ab dem fixen Startzeitpunkt laden statt der
-    // rollierenden lookbackHours (siehe cutoff in computeRangesPivotsFor). Math.ceil zwingend
-    // (Bug-Report Philip 2026-07-21: "+1 Kerze hängt") — ein nicht-ganzzahliges `hours`/`count` lief
-    // ungeprüft bis in den cTrader-Request und war vermutlich der Auslöser des Hängers.
-    const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
-    const hours =
-      props.rangesFixedStartActive && props.rangesFixedStartTime != null
-        ? Math.max(1, Math.ceil((nowSec - props.rangesFixedStartTime) / 3600))
-        : Math.max(props.rangesLookbackHours, props.ranges2LookbackHours);
-    const count = hours + RANGES_CANDLE_BUFFER;
-    // Teilt sich den H1-Cache-Eintrag mit loadInitial (falls currentBar "1h" ist) — statt
-    // unabhängig komplett neu zu fetchen, nur der fehlende/neue Teil.
-    const candles = await fetchCandlesCached(fetchInitialForexCandles, props.symbol, "1h", count, replayToMs("1h"), REPLAY_LOOKAHEAD_SEC);
-    if (seq !== rangesFetchSeq) return true; // inzwischen überholt, siehe oben — kein Fehler
-    rangesH1Candles = candles;
+  const { ok, applied } = await fetchRangesCandles({
+    symbol: props.symbol,
+    toMs: replayToMs("1h"),
+    replayUntil: props.replayUntil,
+    rangesFixedStartActive: props.rangesFixedStartActive,
+    rangesFixedStartTime: props.rangesFixedStartTime,
+    rangesLookbackHours: props.rangesLookbackHours,
+    ranges2LookbackHours: props.ranges2LookbackHours,
+  });
+  if (ok && applied) {
     refreshRangesInternal();
     refreshPoiZonesInternal(); // 1H-OB-Toggle (Chat 2026-07-30) läuft auf denselben Kerzen mit
-    return true;
-  } catch (err) {
-    console.error("Ranges-Kerzen fehlgeschlagen:", err);
-    return false;
   }
+  return ok;
 }
 
 // showRanges (Marker) und showRangesMetadata (JSON-Panel) sind getrennte Toggles, teilen sich aber
@@ -1243,7 +1188,7 @@ function findClickedFibLevel(param) {
   if (!param.point || !candleSeries || !chart) return null;
   const timeScale = chart.timeScale();
   return matchFibLevel(
-    currentFibLevels,
+    getCurrentFibLevels(),
     param.point.x,
     param.point.y,
     (time) => timeScale.timeToCoordinate(time),
@@ -1657,6 +1602,7 @@ onMounted(() => {
   // EMA-Serien an (RSI-Series+Pane erst bei Bedarf, siehe refreshRsiInternal/priceChartRsi.refreshRsi).
   priceChartRsi.create(chart, candleSeries);
   createClaudeAnnotations(chart, candleSeries);
+  createMarketStructure(chart, candleSeries);
 
   chart.subscribeClick((param) => {
     if (!param.point || !props.tradeModeActive) return;
@@ -1822,6 +1768,7 @@ onMounted(() => {
 onUnmounted(() => {
   stopClaudeCalloutTick();
   disposeClaudeAnnotations();
+  disposeMarketStructure();
   // scheduleNextPoll/-TradeSetupM5Poll/-RangesPoll nutzen setTimeout statt setInterval
   // (Kerzenschluss-Ausrichtung, siehe dort) -> clearTimeout statt clearInterval.
   clearTimeout(pollTimer);
@@ -1958,7 +1905,7 @@ watch(
   },
 );
 watch([() => props.rangesPeriod, () => props.ranges2Period], () => {
-  if (rangesH1Candles.length > 0) refreshRangesInternal();
+  if (getRangesH1Candles().length > 0) refreshRangesInternal();
 });
 // Braucht trendAnalysisM5Candles (siehe loadTradeSetupM5) -> beim Einschalten fehlt sie evtl. noch,
 // dann einmal nachladen; beim Ausschalten reicht refreshEmaInternal (blendet aus, kein Neu-Fetch
