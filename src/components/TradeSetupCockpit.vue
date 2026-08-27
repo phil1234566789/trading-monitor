@@ -31,6 +31,7 @@ const emit = defineEmits([
   "request-set-invalidation",
   "invalidation-saved",
   "reset",
+  "open-target-picker",
 ]);
 
 const confirmations = computed(() => props.range?.confirmations ?? []);
@@ -149,7 +150,20 @@ const accentStyle = computed(() => {
       empty-text="Noch keine Targets."
       @add="emit('add-target')"
       @remove="(t) => emit('remove-target', t)"
-    />
+    >
+      <template #extra-action>
+        <!-- find_targets, erster Baustein (PLAN-find-targets.md, Chat 2026-08-27) — Vorschlagsliste
+             statt Chart-Klick, erst ab 2 Bestätigungen sinnvoll (die legen Richtung/Kontext fest). -->
+        <button
+          class="tsc-target-picker-btn"
+          title="Target-Vorschläge (nächste LQ-Level)"
+          :disabled="confirmations.length < 2"
+          @click="emit('open-target-picker')"
+        >
+          🔎
+        </button>
+      </template>
+    </CrudListSection>
 
     <InvalidationField
       v-if="range"
@@ -291,5 +305,33 @@ const accentStyle = computed(() => {
 
 .tsc-reset-icon-btn:hover {
   background: rgba(239, 83, 80, 0.12);
+}
+
+/* Target-Picker-Button (Chat 2026-08-27, PLAN-find-targets.md) — sitzt per CrudListSection.vue:
+   extra-action-Slot direkt neben deren eigenem Add-Icon, deshalb dieselbe 34x34-Optik wie
+   .cls-icon-btn dort (scoped styles greifen komponentenübergreifend nicht, daher hier dupliziert
+   statt importiert). */
+.tsc-target-picker-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: transparent;
+  border: 1px solid #2a2e39;
+  color: #9aa0ac;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.tsc-target-picker-btn:hover:not(:disabled) {
+  border-color: #2962ff;
+  color: #d1d4dc;
+}
+
+.tsc-target-picker-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 </style>

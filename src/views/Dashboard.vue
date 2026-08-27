@@ -398,6 +398,14 @@ async function onTscRemoveTarget(t) {
   const ok = await removeTargetFromTrade(t.id);
   if (ok) refreshTscRange();
 }
+// Target-Vorschläge (PLAN-find-targets.md, Chat 2026-08-27) — PriceChart.vue: openTargetPicker
+// baut das Pivot-Target bereits fertig (dieselbe Form wie ein Chart-Klick, siehe findClickedTarget),
+// hier nur noch der ganz normale addTargetToTrade-Weg wie bei jedem anderen Target.
+async function onTscAddTargetFromPicker(target) {
+  if (tscRangeId.value == null) return;
+  const ok = await addTargetToTrade(tscRangeId.value, target);
+  if (ok) refreshTscRange();
+}
 // "In die Trades-Liste überführen" (Chat 2026-08-27) — legt eine leere trade_positions-Zeile für
 // die bestehende TSC-Range an und öffnet sie sofort im Trade-Edit-Modal, damit Philip Entry/
 // Stop-Loss/etc. dort ganz normal ausfüllt statt in einem zweiten, redundanten Formular in der TSC.
@@ -1751,6 +1759,7 @@ watch(selectedTradingAccountId, refreshTrades);
     @tsc-set-invalidation="onTscSetInvalidationRequest"
     @tsc-invalidation-saved="refreshTscRange"
     @tsc-reset="onTscReset"
+    @tsc-add-target-from-picker="onTscAddTargetFromPicker"
   />
 
   <aside ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">

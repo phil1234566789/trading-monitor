@@ -20,7 +20,8 @@ import {
   findNearbyPinCandidates as findNearbyPinCandidatesPure,
   hasNearbyPinCandidate as hasNearbyPinCandidatePure,
 } from "../priceChartHitTest.js";
-import { LiquidityLinePrimitive } from "../liquidity.js";
+import { LiquidityLinePrimitive, liquidityLevelNaturalKey } from "../liquidity.js";
+import { findNearestLiquidityTargets } from "../findTargets.js";
 import { usePriceChartLiquidity } from "../composables/usePriceChartLiquidity.js";
 import { sessions } from "../sessions.js";
 import { newsEvents } from "../newsEvents.js";
@@ -85,6 +86,7 @@ import MetadataPanel from "./MetadataPanel.vue";
 import JsonTree from "./JsonTree.vue";
 import RsiDivergenceStatsPanel from "./RsiDivergenceStatsPanel.vue";
 import TradeSetupCockpit from "./TradeSetupCockpit.vue";
+import TargetPickerModal from "./TargetPickerModal.vue";
 
 const props = defineProps({
   symbol: { type: String, required: true },
@@ -277,6 +279,7 @@ const emit = defineEmits([
   "tsc-set-invalidation",
   "tsc-invalidation-saved",
   "tsc-reset",
+  "tsc-add-target-from-picker",
 ]);
 
 const { markSuccess } = useStatusBar();
@@ -979,6 +982,51 @@ function refreshPoiZonesInternal() {
   poiZonesMetadata.value = visibleZones;
 }
 
+// Target-Vorschläge (PLAN-find-targets.md, Chat 2026-08-27) — Auswahl-Logik in findTargets.js,
+// hier nur Modal-State + die zwei Dinge, die den Chart betreffen (Hover-Highlight über die
+// bestehende LQ-Pin-Halo-Anzeige, siehe unten; Kandidaten-Ermittlung braucht getCurrentLiquidityLevels()
+// + currentPriceEstimate(), beides nur hier lokal verfügbar, siehe openTargetPicker).
+const targetPickerOpen = ref(false);
+const targetPickerCandidates = ref([]);
+const targetPickerHoveredKey = ref(null);
+function openTargetPicker() {
+  if (!props.tscRange) return;
+  // clipReplay() statt rohem allCandles (Bug-Report Philip 2026-08-27, Replay 24.08. 15:35: "die
+  // LQs, die ausgewählt werden, stimmen nicht") — allCandles enthält im Replay bewusst ein paar
+  // Lookahead-Kerzen über replayUntil hinaus (siehe CLAUDE.md-Gotcha zu REPLAY_LOOKAHEAD_SEC/
+  // MAX_LOOKAHEAD_BARS, für die "+1 Kerze"-Taktung ohne Nachladen), currentPriceEstimate(allCandles)
+  // hätte also den Preis EINER Kerze NACH dem Replay-Zeitpunkt genommen statt des tatsächlichen
+  // "aktuellen" (Replay-)Preises.
+  const currentPrice = currentPriceEstimate(clipReplay(allCandles));
+  targetPickerCandidates.value =
+    props.tscRange.direction === "short"
+      ? findNearestLiquidityTargets(getCurrentLiquidityLevels(), { direction: "short", currentPrice, limit: 2 })
+      : [];
+  targetPickerOpen.value = true;
+}
+function onTargetPickerHover(level) {
+  targetPickerHoveredKey.value = level ? liquidityLevelNaturalKey(level.dir, level.pivotTime) : null;
+  refreshLiquidityInternal();
+}
+function onTargetPickerSelect(level) {
+  targetPickerOpen.value = false;
+  targetPickerHoveredKey.value = null;
+  refreshLiquidityInternal();
+  emit("tsc-add-target-from-picker", {
+    kind: "pivot",
+    price: level.price,
+    sourceTime: level.pivotTime,
+    touchedTime: level.touchedTime ?? null,
+    direction: level.dir === 1 ? "short" : "long",
+    levelDirection: level.dir === 1 ? "high" : "low",
+    instrument: props.symbol,
+    // .toUpperCase() (siehe findClickedTarget) — HTF-Level tragen ihr timeframe schon als '1H'/'4H',
+    // live erkannte Level dagegen den rohen, kleingeschriebenen currentBar-Wert (z.B. "5m"); erst
+    // die Normalisierung matcht findOrCreateLiquidityLevelId's erwartete '1H'/'4H'/'5M'-Werte.
+    timeframe: level.timeframe?.toUpperCase() ?? null,
+  });
+}
+
 // Dünner Wrapper um usePriceChartLiquidity's refresh() (siehe dort für die volle Bug-Historie zur
 // Erkennung/Zeichnung selbst) — übersetzt Props/lokale Refs in dessen ctx-Format.
 function refreshLiquidityInternal() {
@@ -986,7 +1034,9 @@ function refreshLiquidityInternal() {
     showLiquidity: props.showLiquidity,
     pinnedLiquidityLevels: props.pinnedLiquidityLevels,
     pinLiquidityLevelKeys: props.pinLiquidityLevelKeys,
-    hoveredPinLiquidityLevelKey: props.hoveredPinLiquidityLevelKey,
+    // Target-Picker-Hover (siehe oben) läuft über denselben Pin-Halo-Highlight-Mechanismus wie ein
+    // gehoverter Pin — eigenständige Zeichnung wäre dieselbe Linie ein zweites Mal.
+    hoveredPinLiquidityLevelKey: props.hoveredPinLiquidityLevelKey ?? targetPickerHoveredKey.value,
     showSweptLiquidity: props.showSweptLiquidity,
     dbLiquidityLevelsHtf: props.dbLiquidityLevelsHtf,
     symbol: props.symbol,
@@ -2093,6 +2143,21 @@ defineExpose({
       @request-set-invalidation="emit('tsc-set-invalidation')"
       @invalidation-saved="emit('tsc-invalidation-saved')"
       @reset="emit('tsc-reset')"
+      @open-target-picker="openTargetPicker"
+    />
+    <TargetPickerModal
+      v-if="targetPickerOpen"
+      :instrument="symbol"
+      :direction="tscRange?.direction ?? null"
+      :candidates="targetPickerCandidates"
+      :now-sec="props.replayUntil ?? Math.floor(Date.now() / 1000)"
+      @close="
+        targetPickerOpen = false;
+        targetPickerHoveredKey = null;
+        refreshLiquidityInternal();
+      "
+      @hover="onTargetPickerHover"
+      @select="onTargetPickerSelect"
     />
     <template v-if="claudeCalloutItems.length > 0">
       <svg class="claude-callout-svg">

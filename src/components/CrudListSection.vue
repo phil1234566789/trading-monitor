@@ -26,7 +26,12 @@ const emit = defineEmits(["add", "remove"]);
   <section class="cls-section">
     <div class="cls-section-header">
       <h4 class="cls-section-title">{{ title }}</h4>
-      <button class="cls-icon-btn" :title="addTitle" :disabled="disabled" @click="emit('add')">{{ icon }}</button>
+      <div class="cls-header-actions">
+        <!-- Optionaler Zweit-Button neben dem Add-Icon (Chat 2026-08-27: TSC-Targets brauchen einen
+             eigenen "Vorschläge"-Button, siehe TradeSetupCockpit.vue) — leerer Slot überall sonst. -->
+        <slot name="extra-action" />
+        <button class="cls-icon-btn" :title="addTitle" :disabled="disabled" @click="emit('add')">{{ icon }}</button>
+      </div>
     </div>
     <div v-if="items.length === 0" class="cls-muted">{{ emptyText }}</div>
     <div v-for="item in items" :key="itemKey(item)" class="cls-row">
@@ -55,6 +60,12 @@ const emit = defineEmits(["add", "remove"]);
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 8px;
+}
+
+.cls-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .cls-section-title {
