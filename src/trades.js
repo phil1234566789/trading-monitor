@@ -29,19 +29,35 @@ function groupBy(rows, key) {
 // ALL_ACCOUNTS_ID (Bug-Report Philip 2026-07-31: eine kontolose Lana-Idee war strukturell
 // unsichtbar, egal welches Konto gewählt war) ist eine EXPLIZITE "zeig alles"-Wahl im Switcher,
 // wird hier genau wie null behandelt (kein Filter) statt als echte Konto-Id.
+// Supabase/PostgREST deckelt eine einzelne Response serverseitig bei ~1000 Zeilen, unabhängig
+// davon, was .limit()/.range() anfragt (siehe CLAUDE.md-Gotcha, u.a. schon in forexCandles.js/
+// backfillObZones.ts/get_forex_candles_archive gefixt) — Bug-Report Philip 2026-08-27: zwei gerade
+// per TSC angelegte Positionen tauchten trotz "Alle Konten" nicht in der Trades-Liste auf, weil
+// fetchTrades bisher gar keine Pagination hatte. Cursor wandert um die TATSÄCHLICH zurückgegebene
+// Zeilenzahl weiter (nicht um PAGE_SIZE), nur eine wirklich LEERE Seite gilt als "fertig".
+const TRADE_POSITIONS_PAGE_SIZE = 1000;
+
 export async function fetchTrades(instrument, accountId = null) {
   // Seit 2026-07-31: eine Zeile hier ist eine trade_positions-AUSFÜHRUNG, mit ihrer dealing_ranges-
   // IDEE eingebettet (!inner, weil wir unten auf dealing_ranges.instrument filtern — ohne !inner
   // kann PostgREST nicht auf einem eingebetteten Feld filtern) plus deren trade_setups(ob_start_time)
   // fürs Chart-Rendering der verlinkten M5-OB-Box (siehe PriceChart.vue: refreshTradeSetupLinksInternal).
-  let query = supabase
-    .from("trade_positions")
-    .select("*, dealing_ranges!inner(id, instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, trade_setups(ob_start_time, ob_top, ob_bottom))")
-    .eq("dealing_ranges.instrument", instrument);
-  if (accountId != null && accountId !== ALL_ACCOUNTS_ID) query = query.eq("trading_account_id", accountId);
-  const { data, error } = await query.order("triggered_at", { ascending: false });
-
-  if (error) throw error;
+  const data = [];
+  let offset = 0;
+  while (true) {
+    let query = supabase
+      .from("trade_positions")
+      .select("*, dealing_ranges!inner(id, instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, trade_setups(ob_start_time, ob_top, ob_bottom))")
+      .eq("dealing_ranges.instrument", instrument);
+    if (accountId != null && accountId !== ALL_ACCOUNTS_ID) query = query.eq("trading_account_id", accountId);
+    const { data: page, error } = await query
+      .order("triggered_at", { ascending: false })
+      .range(offset, offset + TRADE_POSITIONS_PAGE_SIZE - 1);
+    if (error) throw error;
+    if (page.length === 0) break;
+    data.push(...page);
+    offset += page.length;
+  }
   if (data.length === 0) return [];
 
   // targets/confirmations hängen an der dealing_range (der IDEE, gilt für alle Ausführungen

@@ -13,7 +13,7 @@ import MetadataPanel from "../components/MetadataPanel.vue";
 import ContextMenu from "../components/ContextMenu.vue";
 import PinAddPopup from "../components/PinAddPopup.vue";
 import PinPanel from "../components/PinPanel.vue";
-import { selectedTradingAccountId } from "../tradingAccounts.js";
+import { selectedTradingAccountId, writableTradingAccountId } from "../tradingAccounts.js";
 import { TIMEFRAMES, barSecondsForTimeframeCi } from "../timeframes.js";
 import { fetchTrades, fetchDealingRangeCockpit, fetchActiveTscRangeId } from "../trades.js";
 import {
@@ -416,17 +416,32 @@ async function onTscAddTargetFromPicker(target) {
 // überhaupt. Die Uhrzeit ist dabei bewusst egal ("Uhrzeit brauch ma für ne DR nicht ... gibts ja
 // bei Positionen") — die reicht einfach mit, weil sourceTime sie ohnehin trägt; die echte
 // Entry-Zeit trägt erst die tatsächliche Ausführung im Trade-Edit-Modal ein.
+//
+// Nachbesserung (Bug-Report Philip, DRL#82): eine reine Sweep-Bestätigung nahm bisher sourceTime
+// (= wann der Pivot/das Level ENTSTANDEN ist) statt touchedTime (= wann es tatsächlich GESWEEPT
+// wurde) — "die DR zählt für den Tag, an dem der Sweep PASSIERT ist", nicht für den Entstehungstag
+// des gesweepten Levels, der oft deutlich früher liegt. Feste, kind-abhängige Regel statt eines
+// generischen Fallbacks (Philip: "das gilt immer so", nicht nur "bevorzugt"): LQ-Sweep (kind=
+// 'pivot') IMMER touchedTime, OB-Bestätigung (kind='ob') IMMER sourceTime — bei einer OB ist die
+// Formations-Zeit selbst schon der relevante Anker (das Setup ENTSTEHT dort), bei einem Sweep erst
+// der tatsächliche Touch. Andere Bestätigungs-Arten (fib/rsi_divergence) haben keine explizite
+// Regel bekommen, bleiben beim bisherigen touchedTime-vor-sourceTime-Fallback.
+function confirmationAnchorTime(c) {
+  if (c?.kind === "pivot") return c.touchedTime ?? null;
+  if (c?.kind === "ob") return c.sourceTime ?? null;
+  return c?.touchedTime ?? c?.sourceTime ?? null;
+}
 async function onTscTransferToTrades() {
   if (tscRangeId.value == null) return;
   const confirmations = tscRange.value?.confirmations ?? [];
-  const obConfirmation = confirmations.find((c) => c.kind === "ob" && c.sourceTime != null);
-  const earliestConfirmation = confirmations.reduce(
-    (earliest, c) => (c.sourceTime != null && (earliest == null || c.sourceTime < earliest.sourceTime) ? c : earliest),
-    null,
-  );
-  const triggeredAt = (obConfirmation ?? earliestConfirmation)?.sourceTime ?? null;
+  const obConfirmation = confirmations.find((c) => c.kind === "ob" && confirmationAnchorTime(c) != null);
+  const earliestConfirmation = confirmations.reduce((earliest, c) => {
+    const t = confirmationAnchorTime(c);
+    return t != null && (earliest == null || t < confirmationAnchorTime(earliest)) ? c : earliest;
+  }, null);
+  const triggeredAt = confirmationAnchorTime(obConfirmation ?? earliestConfirmation);
 
-  const position = await addPositionToDealingRange(tscRangeId.value, { tradingAccountId: selectedTradingAccountId.value, triggeredAt });
+  const position = await addPositionToDealingRange(tscRangeId.value, { tradingAccountId: writableTradingAccountId.value, triggeredAt });
   if (!position) return;
   await refreshTrades();
   editingTradeId.value = position.id;

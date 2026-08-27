@@ -2,7 +2,7 @@
 import { ref, computed } from "vue";
 import { createTradeFromSetup, directionForSetup, deriveSetupEntryInvalidation } from "../tradeIntake.js";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
-import { selectedTradingAccountId } from "../tradingAccounts.js";
+import { writableTradingAccountId } from "../tradingAccounts.js";
 import MetadataPanel from "./MetadataPanel.vue";
 
 // Trade-Modus (Chat 2026-07-27): ein im Chart angeklicktes Trade-Setup als Trade übernehmen.
@@ -34,7 +34,7 @@ async function submit() {
     entryPrice: entryPrice.value === "" ? null : Number(entryPrice.value),
     stopLoss: stopLoss.value === "" ? null : Number(stopLoss.value),
     reasoning: reasoning.value.trim() || null,
-    tradingAccountId: selectedTradingAccountId.value,
+    tradingAccountId: writableTradingAccountId.value,
   });
   saving.value = false;
   if (!result.ok) {

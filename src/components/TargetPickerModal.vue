@@ -65,9 +65,8 @@ function candidateLabel(candidate) {
 
 <template>
   <MetadataPanel title="🎯 Target-Vorschläge" :width="340" :height="420" @close="emit('close')">
-    <div v-if="direction !== 'short'" class="target-picker-hint">Long ist hier noch nicht unterstützt — bisher nur Short.</div>
-    <div v-else-if="mergedCandidates.length === 0" class="target-picker-hint">
-      Keine unberührten LQ-Level/OBs unterhalb des aktuellen Preises gefunden.
+    <div v-if="mergedCandidates.length === 0" class="target-picker-hint">
+      Keine unberührten LQ-Level/OBs {{ direction === "short" ? "unterhalb" : "oberhalb" }} des aktuellen Preises gefunden.
     </div>
     <div v-else class="target-picker-list">
       <div

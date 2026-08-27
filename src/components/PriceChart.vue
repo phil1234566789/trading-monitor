@@ -1008,22 +1008,21 @@ function openTargetPicker() {
   const currentPrice = currentPriceEstimate(clipReplay(allCandles));
   const direction = props.tscRange.direction;
   targetPickerCurrentPrice.value = currentPrice;
-  targetPickerLiquidityCandidates.value = direction === "short" ? findNearestLiquidityTargets(getCurrentLiquidityLevels(), { direction, currentPrice }) : [];
-  if (direction === "short") {
-    const general = findNearestObTargets(poiZonesMetadata.value, { direction, currentPrice });
-    const seenKeys = new Set(general.map((z) => obZoneNaturalKey(z.timeframe, z.dir, z.startTime)));
-    // Zusätzlich IMMER den nächsten 1H- und 4H-OB zeigen (Philip: "zusätzlich den nächsten 1h OB
-    // und den nächsten 4h OB"), auch wenn sie es nicht in die allgemeine, zeitebenen-übergreifende
-    // Top-N-Liste geschafft haben — Dedupe über dieselbe Natural-Key-Formel wie
-    // renderPersistedZones/obZoneNaturalKey, falls einer der beiden ohnehin schon Teil davon ist.
-    const extras = [
-      ...findNearestObTargets(poiZonesMetadata.value, { direction, currentPrice, limit: 1, timeframe: "1H" }),
-      ...findNearestObTargets(poiZonesMetadata.value, { direction, currentPrice, limit: 1, timeframe: "4H" }),
-    ].filter((z) => !seenKeys.has(obZoneNaturalKey(z.timeframe, z.dir, z.startTime)));
-    targetPickerObCandidates.value = [...general, ...extras];
-  } else {
-    targetPickerObCandidates.value = [];
-  }
+  // Long-Unterstützung (Chat 2026-08-27, Philip: "jetzt implementier noch die Target-Findung für
+  // Long") — findNearestLiquidityTargets/-ObTargets waren von Anfang an direction-generisch gebaut
+  // (siehe findTargets.js), nur diese Verdrahtung hier war bisher hart auf "short" beschränkt.
+  targetPickerLiquidityCandidates.value = findNearestLiquidityTargets(getCurrentLiquidityLevels(), { direction, currentPrice });
+  const general = findNearestObTargets(poiZonesMetadata.value, { direction, currentPrice });
+  const seenKeys = new Set(general.map((z) => obZoneNaturalKey(z.timeframe, z.dir, z.startTime)));
+  // Zusätzlich IMMER den nächsten 1H- und 4H-OB zeigen (Philip: "zusätzlich den nächsten 1h OB
+  // und den nächsten 4h OB"), auch wenn sie es nicht in die allgemeine, zeitebenen-übergreifende
+  // Top-N-Liste geschafft haben — Dedupe über dieselbe Natural-Key-Formel wie
+  // renderPersistedZones/obZoneNaturalKey, falls einer der beiden ohnehin schon Teil davon ist.
+  const extras = [
+    ...findNearestObTargets(poiZonesMetadata.value, { direction, currentPrice, limit: 1, timeframe: "1H" }),
+    ...findNearestObTargets(poiZonesMetadata.value, { direction, currentPrice, limit: 1, timeframe: "4H" }),
+  ].filter((z) => !seenKeys.has(obZoneNaturalKey(z.timeframe, z.dir, z.startTime)));
+  targetPickerObCandidates.value = [...general, ...extras];
   targetPickerOpen.value = true;
 }
 function onTargetPickerHover(candidate) {

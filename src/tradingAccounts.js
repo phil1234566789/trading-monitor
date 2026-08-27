@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { supabase } from "./supabaseClient.js";
 import { useLocalStorageRef } from "./composables/useLocalStorageRef.js";
 
@@ -21,6 +21,15 @@ export const selectedTradingAccountId = useLocalStorageRef("selectedTradingAccou
 // statt null: null bleibt "noch keine Auswahl getroffen" (siehe fetchAccounts-Bootstrap unten),
 // "all" ist eine EXPLIZITE, persistente Wahl, die den Bootstrap-Fallback nicht überschreiben soll.
 export const ALL_ACCOUNTS_ID = "all";
+
+// Bug-Report Philip 2026-08-27: "Dealing Range anlegen"/eine neue Position schrieb bei Auswahl
+// "Alle Konten" den rohen String "all" in trade_positions.trading_account_id (bigint) — Postgres-
+// Fehler 22P02. selectedTradingAccountId ist für LESEN (trades.js: fetchTrades) korrekt "all" ==
+// kein Filter, für ein INSERT/UPDATE gibt es aber kein Konto namens "all" — dort muss null rein
+// (= "kein Konto zugeordnet", genau wie der explizite null-Fall). Ein Computed statt an jeder
+// Schreibstelle (TakeTradeModal.vue, Dashboard.vue: onTscTransferToTrades, ...) einzeln denselben
+// Vergleich zu wiederholen.
+export const writableTradingAccountId = computed(() => (selectedTradingAccountId.value === ALL_ACCOUNTS_ID ? null : selectedTradingAccountId.value));
 
 export async function fetchAccounts() {
   const { data, error } = await supabase.from("trading_accounts").select("id, name, notes").order("id");
