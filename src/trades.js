@@ -118,7 +118,16 @@ export async function fetchTrades(instrument, accountId = null) {
       price: lvl.price,
       dir: lvl.direction === "high" ? 1 : -1,
       pivotTime: Math.floor(new Date(lvl.pivot_time).getTime() / 1000),
-      touched: lvl.touched,
+      // Bug-Report Philip 2026-08-27: eine per TSC-Klick verknüpfte LQ-Linie zeichnete sich
+      // durch bis "jetzt", statt am Touch zu enden — touched=false/end_time=null aus der DB kann
+      // entweder "poi-watcher hat live bestätigt: noch unberührt" ODER "diese Zeile kam gerade erst
+      // per findOrCreateLiquidityLevelId rein, poi-watcher hat sie nie gesehen/aktualisiert"
+      // bedeuten, beides sieht in der DB identisch aus. null (statt false) triggert denselben
+      // Self-Heal-gegen-geladene-Kerzen-Pfad wie bei einem reinen m5_liquidity_level-Snapshot
+      // (siehe priceChartLiquidity.js: mergePinnedLevels) — bei einem echten "noch unberührt"
+      // findet der Self-Heal ohnehin keine Touch-Kerze, das Ergebnis ist identisch; nur im
+      // Bug-Fall wird der tatsächliche Touch jetzt korrekt gefunden statt ignoriert.
+      touched: lvl.touched === true ? true : lvl.end_time != null ? false : null,
       endTime: lvl.end_time ? Math.floor(new Date(lvl.end_time).getTime() / 1000) : null,
       timeframe: lvl.timeframe,
     };
@@ -296,7 +305,16 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
       price: lvl.price,
       dir: lvl.direction === "high" ? 1 : -1,
       pivotTime: Math.floor(new Date(lvl.pivot_time).getTime() / 1000),
-      touched: lvl.touched,
+      // Bug-Report Philip 2026-08-27: eine per TSC-Klick verknüpfte LQ-Linie zeichnete sich
+      // durch bis "jetzt", statt am Touch zu enden — touched=false/end_time=null aus der DB kann
+      // entweder "poi-watcher hat live bestätigt: noch unberührt" ODER "diese Zeile kam gerade erst
+      // per findOrCreateLiquidityLevelId rein, poi-watcher hat sie nie gesehen/aktualisiert"
+      // bedeuten, beides sieht in der DB identisch aus. null (statt false) triggert denselben
+      // Self-Heal-gegen-geladene-Kerzen-Pfad wie bei einem reinen m5_liquidity_level-Snapshot
+      // (siehe priceChartLiquidity.js: mergePinnedLevels) — bei einem echten "noch unberührt"
+      // findet der Self-Heal ohnehin keine Touch-Kerze, das Ergebnis ist identisch; nur im
+      // Bug-Fall wird der tatsächliche Touch jetzt korrekt gefunden statt ignoriert.
+      touched: lvl.touched === true ? true : lvl.end_time != null ? false : null,
       endTime: lvl.end_time ? Math.floor(new Date(lvl.end_time).getTime() / 1000) : null,
       timeframe: lvl.timeframe,
     };

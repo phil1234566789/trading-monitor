@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { findNearestLiquidityTargets, findNearestObTargets } from "./findTargets.js";
+import { findNearestLiquidityTargets, findNearestObTargets, isTooFarFromPrice } from "./findTargets.js";
 
 describe("findNearestLiquidityTargets", () => {
   const currentPrice = 1.365;
@@ -11,7 +11,7 @@ describe("findNearestLiquidityTargets", () => {
       { price: 1.355, touched: false },
       { price: 1.37, touched: false }, // falsche Seite (oberhalb)
     ];
-    const result = findNearestLiquidityTargets(levels, { direction: "short", currentPrice });
+    const result = findNearestLiquidityTargets(levels, { direction: "short", currentPrice, limit: 2 });
     expect(result.map((l) => l.price)).toEqual([1.36, 1.359]);
   });
 
@@ -22,7 +22,7 @@ describe("findNearestLiquidityTargets", () => {
       { price: 1.375, touched: false },
       { price: 1.36, touched: false }, // falsche Seite (unterhalb)
     ];
-    const result = findNearestLiquidityTargets(levels, { direction: "long", currentPrice });
+    const result = findNearestLiquidityTargets(levels, { direction: "long", currentPrice, limit: 2 });
     expect(result.map((l) => l.price)).toEqual([1.37, 1.372]);
   });
 
@@ -67,7 +67,7 @@ describe("findNearestObTargets", () => {
       { top: 1.37, bottom: 1.368, dir: 1, touched: false, invalidated: false }, // falsche Seite (oberhalb)
       { top: 1.361, bottom: 1.359, dir: -1, touched: false, invalidated: false }, // falsche Richtung (bärisch)
     ];
-    const result = findNearestObTargets(zones, { direction: "short", currentPrice });
+    const result = findNearestObTargets(zones, { direction: "short", currentPrice, limit: 2 });
     expect(result.map((z) => z.targetPrice)).toEqual([1.36, 1.359]);
   });
 
@@ -99,5 +99,33 @@ describe("findNearestObTargets", () => {
     ];
     expect(findNearestObTargets(zones, { direction: "short", currentPrice, limit: 1 }).map((z) => z.targetPrice)).toEqual([1.36]);
     expect(findNearestObTargets(zones, { direction: "short", currentPrice: null })).toEqual([]);
+  });
+
+  it("filters to a single timeframe when given (nearest 1H/4H OB)", () => {
+    const zones = [
+      { top: 1.36, bottom: 1.358, dir: 1, timeframe: "5M", touched: false, invalidated: false },
+      { top: 1.359, bottom: 1.357, dir: 1, timeframe: "1H", touched: false, invalidated: false },
+      { top: 1.357, bottom: 1.355, dir: 1, timeframe: "4H", touched: false, invalidated: false },
+    ];
+    expect(findNearestObTargets(zones, { direction: "short", currentPrice, limit: 1, timeframe: "1H" }).map((z) => z.targetPrice)).toEqual([1.359]);
+    expect(findNearestObTargets(zones, { direction: "short", currentPrice, limit: 1, timeframe: "4H" }).map((z) => z.targetPrice)).toEqual([1.357]);
+  });
+});
+
+describe("isTooFarFromPrice", () => {
+  const currentPrice = 1.365;
+
+  it("flags a candidate more than 50 pips away", () => {
+    expect(isTooFarFromPrice(1.36, currentPrice)).toBe(false); // 50 pips genau, nicht "über"
+    expect(isTooFarFromPrice(1.3599, currentPrice)).toBe(true); // 50.1 pips
+  });
+
+  it("respects a custom pip threshold", () => {
+    expect(isTooFarFromPrice(1.363, currentPrice, 10)).toBe(true); // 20 pips > 10
+    expect(isTooFarFromPrice(1.364, currentPrice, 10)).toBe(false); // 10 pips
+  });
+
+  it("is never too far without a current price", () => {
+    expect(isTooFarFromPrice(1.0, null)).toBe(false);
   });
 });

@@ -234,7 +234,7 @@ export class LiquidityLinePrimitive {
 
 // Konfigurierbar seit Chat 2026-07-25 (Style-Modal), siehe src/chartLineWidths.js.
 
-// " (1d 3h alt)" hinter dem Preis-Label, oder "" ohne pivotTime/Referenzzeitpunkt (Chat 2026-07-22:
+// " (1d 3h)" hinter dem Preis-Label, oder "" ohne pivotTime/Referenzzeitpunkt (Chat 2026-07-22:
 // "bei den relevanten LQ-Leveln das Alter anzeigen ... Wochenende nicht mitzählen") —
 // businessSecondsBetween lässt Sa/So komplett raus. touchedTime (optional) hat Vorrang vor nowSec
 // als Referenzzeitpunkt (Bug-Report Philip 2026-08-26, dieselbe Regel wie tradeSetupCockpit.ts seit
@@ -244,10 +244,10 @@ function ageSuffix(pivotTime, nowSec, touchedTime = null) {
   const reference = ageReferenceTime(touchedTime, nowSec);
   if (pivotTime == null || reference == null) return "";
   const age = formatAge(businessSecondsBetween(pivotTime, reference));
-  return age ? ` (${age} alt)` : "";
+  return age ? ` (${age})` : "";
 }
 
-// "Major LS 1,13545 (22d 19h alt)" — gemeinsames Label-Format für die Trade-Setup-LS-Linie
+// "Major LS 1,13545 (22d 19h)" — gemeinsames Label-Format für die Trade-Setup-LS-Linie
 // (PriceChart.vue) UND die "1h LQ-Sweep"-Linie (marketStructureAnalysis.ts), Chat 2026-07-28: seit
 // collectH1LqLevels (selber Chat) ist das oft exakt derselbe Pivot, zweimal gezeichnet — mit
 // identischem Label-Text überlappen sich beide Linien lesbar statt zwei leicht unterschiedliche
@@ -292,9 +292,10 @@ export function bullBearLabelSide(bearish) {
 // ist der optionale Session-Kontext (sessionOccurrences.js: bonusLabelForPivot, z.B. "Asia-High").
 // Kein Tier-Präfix bei "minor" (< 1 Geschäftstag), aus Platzgründen — dieselbe Konvention wie
 // formatLsLabel. Alter als reines "(3h)" statt "(3h alt)" (dritte Runde desselben Chats: "es ist
-// absolut klar mittlerweile was damit gemeint ist") — bewusst NUR hier, formatLsLabel/ageSuffix
-// (PP/LS-Linien, "1h LQ-Sweep") behalten ihr "alt" unverändert, das ist eine andere, ältere
-// Konvention, um die es hier nicht ging.
+// absolut klar mittlerweile was damit gemeint ist") — das "alt" ist seit Chat 2026-08-27 ("brauch
+// ich überhaupt nicht mehr, lösch es überall raus") auch aus formatLsLabel/ageSuffix und den
+// Bestätigungs-/Target-Listen (tradeConfirmations.ts/tradeTargets.ts) raus, überall dieselbe
+// Kurzform.
 // Vierte Runde, Philip: "Alter bedeutet von Entstehungspunkt bis touched. Falls noch nie touched,
 // dann halt eben bis jetzt. Das gilt überall so." — Alter/Tier laufen bis lvl.touchedTime (falls
 // gesetzt), nicht bis nowSec weiter, sobald das Level längst gesweept ist (ein vor Tagen gesweeptes

@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import { formatLiquidityLevelLabel } from "../liquidity.js";
+import { isTooFarFromPrice, MAX_TARGET_DISTANCE_PIPS } from "../findTargets.js";
 import MetadataPanel from "./MetadataPanel.vue";
 
 // Target-Vorschläge (PLAN-find-targets.md, erster Baustein, Chat 2026-08-27) — Auswahl-Logik
@@ -11,18 +12,19 @@ import MetadataPanel from "./MetadataPanel.vue";
 // PinPanel.vue es für den Auswahl-Halo im Chart tut — hier highlightet PriceChart.vue darüber
 // dieselbe LQ-Linie/OB-Zone, keine eigene Zeichnung nötig.
 //
-// Zwei Kandidaten-Arten (Philip 2026-08-27: "nimm noch untouched OBs auf, die nähesten 2") kommen
-// als getrennte Props rein (liquidityCandidates: Rohformat wie getCurrentLiquidityLevels();
-// obCandidates: Rohformat wie poiZonesMetadata, plus targetPrice, siehe findTargets.js), weil sie
-// aus zwei unabhängigen findTargets.js-Funktionen mit je eigenem Limit stammen — angezeigt werden
-// sie aber als EINE gemeinsam nach Preis sortierte Liste (Philip: "schaffst du es beides
-// zusammenzuführen und nach Preis zu sortieren?"), ein kleines Kind-Badge pro Zeile hält
-// LQ/OB trotzdem unterscheidbar. hover/select tragen {kind: "pivot"|"ob", item}.
+// Zwei Kandidaten-Arten (Philip 2026-08-27: "nimm noch untouched OBs auf") kommen als getrennte
+// Props rein (liquidityCandidates: Rohformat wie getCurrentLiquidityLevels(); obCandidates:
+// Rohformat wie poiZonesMetadata, plus targetPrice, siehe findTargets.js), weil sie aus zwei
+// unabhängigen findTargets.js-Funktionen mit je eigenem Limit stammen — angezeigt werden sie aber
+// als EINE gemeinsam nach Preis sortierte Liste (Philip: "schaffst du es beides zusammenzuführen
+// und nach Preis zu sortieren?"), ein kleines Kind-Badge pro Zeile hält LQ/OB trotzdem
+// unterscheidbar. hover/select tragen {kind: "pivot"|"ob", item}.
 const props = defineProps({
   instrument: { type: String, required: true },
   direction: { type: String, default: null }, // "long" | "short" | null
   liquidityCandidates: { type: Array, required: true },
   obCandidates: { type: Array, required: true },
+  currentPrice: { type: Number, default: null },
   nowSec: { type: Number, required: true },
 });
 const emit = defineEmits(["close", "hover", "select"]);
@@ -31,14 +33,19 @@ const precision = computed(() => pricePrecisionForInstrument(props.instrument));
 
 // Alle Kandidaten liegen bereits einseitig vom aktuellen Preis (findNearestLiquidityTargets/
 // -ObTargets filtern das schon) — bei Short also alle UNTERHALB, "am nächsten" heißt dort "am
-// höchsten Preis". Sortierung nach reinem Preis reicht deshalb, ohne currentPrice hier erneut
-// durchreichen zu müssen.
+// höchsten Preis". Sortierung nach reinem Preis reicht deshalb.
+//
+// disabled (Philip 2026-08-27: "falls ein LQ-Level oder OB ... über 50 pips weit entfernt ist,
+// dann disable sie in der Liste, sodass man sie nicht als Target auswählen kann") — nur die
+// Auswahl wird gesperrt (siehe Template: @click), sichtbar bleibt der Kandidat trotzdem.
 const mergedCandidates = computed(() => {
   const items = [
     ...props.liquidityCandidates.map((level) => ({ kind: "pivot", item: level, price: level.price })),
     ...props.obCandidates.map((zone) => ({ kind: "ob", item: zone, price: zone.targetPrice })),
   ];
-  return items.sort((a, b) => (props.direction === "short" ? b.price - a.price : a.price - b.price));
+  return items
+    .map((c) => ({ ...c, disabled: isTooFarFromPrice(c.price, props.currentPrice) }))
+    .sort((a, b) => (props.direction === "short" ? b.price - a.price : a.price - b.price));
 });
 
 function candidateLabel(candidate) {
@@ -67,12 +74,15 @@ function candidateLabel(candidate) {
         v-for="candidate in mergedCandidates"
         :key="`${candidate.kind}-${candidate.item.timeframe}-${candidate.kind === 'ob' ? candidate.item.startTime : candidate.item.pivotTime}`"
         class="target-picker-row"
+        :class="{ disabled: candidate.disabled }"
         @mouseenter="emit('hover', candidate)"
         @mouseleave="emit('hover', null)"
-        @click="emit('select', candidate)"
+        @click="!candidate.disabled && emit('select', candidate)"
       >
         <span class="target-picker-kind" :class="candidate.kind">{{ candidate.kind === "ob" ? "OB" : "LQ" }}</span>
+        <span class="target-picker-tf">{{ candidate.item.timeframe?.toUpperCase() }}</span>
         {{ candidateLabel(candidate) }}
+        <span v-if="candidate.disabled" class="target-picker-far-hint" :title="`Mehr als ${MAX_TARGET_DISTANCE_PIPS} Pips entfernt`">&gt;{{ MAX_TARGET_DISTANCE_PIPS }}p</span>
       </div>
     </div>
   </MetadataPanel>
@@ -107,6 +117,16 @@ function candidateLabel(candidate) {
   border-color: #2962ff;
 }
 
+.target-picker-row.disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.target-picker-row.disabled:hover {
+  background: none;
+  border-color: #2a2e39;
+}
+
 .target-picker-kind {
   flex-shrink: 0;
   font-size: 10px;
@@ -121,5 +141,18 @@ function candidateLabel(candidate) {
 .target-picker-kind.ob {
   color: #7ea6ff;
   border-color: rgba(41, 98, 255, 0.4);
+}
+
+.target-picker-tf {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #787b86;
+}
+
+.target-picker-far-hint {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: #787b86;
 }
 </style>

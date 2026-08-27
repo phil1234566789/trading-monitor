@@ -992,6 +992,7 @@ function refreshPoiZonesInternal() {
 // auf, die nähesten 2") — bewusst zwei getrennte Listen/Limits statt einer gemeinsam sortierten,
 // "einfach halber" (Philip) und weil LQ-Level und OB-Kanten fachlich unterschiedliche Dinge sind.
 const targetPickerOpen = ref(false);
+const targetPickerCurrentPrice = ref(null);
 const targetPickerLiquidityCandidates = ref([]);
 const targetPickerObCandidates = ref([]);
 const targetPickerHoveredLiquidityKey = ref(null);
@@ -1006,10 +1007,23 @@ function openTargetPicker() {
   // "aktuellen" (Replay-)Preises.
   const currentPrice = currentPriceEstimate(clipReplay(allCandles));
   const direction = props.tscRange.direction;
-  targetPickerLiquidityCandidates.value =
-    direction === "short" ? findNearestLiquidityTargets(getCurrentLiquidityLevels(), { direction, currentPrice, limit: 5 }) : [];
-  targetPickerObCandidates.value =
-    direction === "short" ? findNearestObTargets(poiZonesMetadata.value, { direction, currentPrice, limit: 2 }) : [];
+  targetPickerCurrentPrice.value = currentPrice;
+  targetPickerLiquidityCandidates.value = direction === "short" ? findNearestLiquidityTargets(getCurrentLiquidityLevels(), { direction, currentPrice }) : [];
+  if (direction === "short") {
+    const general = findNearestObTargets(poiZonesMetadata.value, { direction, currentPrice });
+    const seenKeys = new Set(general.map((z) => obZoneNaturalKey(z.timeframe, z.dir, z.startTime)));
+    // Zusätzlich IMMER den nächsten 1H- und 4H-OB zeigen (Philip: "zusätzlich den nächsten 1h OB
+    // und den nächsten 4h OB"), auch wenn sie es nicht in die allgemeine, zeitebenen-übergreifende
+    // Top-N-Liste geschafft haben — Dedupe über dieselbe Natural-Key-Formel wie
+    // renderPersistedZones/obZoneNaturalKey, falls einer der beiden ohnehin schon Teil davon ist.
+    const extras = [
+      ...findNearestObTargets(poiZonesMetadata.value, { direction, currentPrice, limit: 1, timeframe: "1H" }),
+      ...findNearestObTargets(poiZonesMetadata.value, { direction, currentPrice, limit: 1, timeframe: "4H" }),
+    ].filter((z) => !seenKeys.has(obZoneNaturalKey(z.timeframe, z.dir, z.startTime)));
+    targetPickerObCandidates.value = [...general, ...extras];
+  } else {
+    targetPickerObCandidates.value = [];
+  }
   targetPickerOpen.value = true;
 }
 function onTargetPickerHover(candidate) {
@@ -2177,6 +2191,7 @@ defineExpose({
       :direction="tscRange?.direction ?? null"
       :liquidity-candidates="targetPickerLiquidityCandidates"
       :ob-candidates="targetPickerObCandidates"
+      :current-price="targetPickerCurrentPrice"
       :now-sec="props.replayUntil ?? Math.floor(Date.now() / 1000)"
       @close="
         targetPickerOpen = false;

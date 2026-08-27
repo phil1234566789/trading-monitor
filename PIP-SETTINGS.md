@@ -35,6 +35,10 @@ Konstanten ohne zentrale Übersicht).
   — `50`, Mindestabstand zwischen einem `protected-low`/`-high` und der gegenüberliegenden
   Range-Kante, ab dem das "Protected-Fib" (siehe `computeFibLevels`) überhaupt gezeichnet/als
   Bestätigung angeboten wird — bei kleinerem Abstand ist ein 0,5er-Fib-Level nicht aussagekräftig.
+- **`MAX_TARGET_DISTANCE_PIPS`** — [`src/findTargets.js`](src/findTargets.js) — `50`, aber
+  Höchst- statt Mindestabstand: ein Target-Vorschlag (LQ-Level oder OB-Kante) im TSC-Target-Picker
+  weiter als das vom aktuellen Preis entfernt wird nicht ausgeblendet, nur deaktiviert (nicht mehr
+  auswählbar), siehe TargetPickerModal.vue.
 
 ## Pixel-Schwellen (Label-Sichtbarkeit beim Zoomen)
 

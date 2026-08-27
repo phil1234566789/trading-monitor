@@ -10,7 +10,8 @@ Ziel: Datenaufbereitung, die Targets besser vorschlägt.
 - Long: Target > aktueller Preis. Short: Target < aktueller Preis.
 - Unterscheidung Trend vs. Countertrend (Trend kommt vorerst als Funktionsparameter rein, keine
   eigene Trend-Berechnung im Algorithmus).
-- Countertrend: **ein** Target (Auswahlregel unter Kandidaten — OB vs. LQ Präferenz — noch offen).
+- Countertrend: **1-2** Targets (Auswahlregel unter Kandidaten — OB vs. LQ Präferenz — noch offen;
+  Korrektur 2026-08-27, vorher "ein Target").
 - Trend: geordnete Kandidatenliste (Distanz), Lana/Philip wählen manuell.
 - Target-Kandidaten:
   - OB-Kanten: Long -> Unterkante bärische OB. Short -> Oberkante bullische OB.

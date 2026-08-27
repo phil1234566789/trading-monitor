@@ -52,7 +52,7 @@ export function confirmationAgeTier(confirmation: TradeConfirmation, nowSec: num
   return seconds == null ? null : classifyAge(seconds);
 }
 
-// "Sweep 1,33195 · medium (3d alt) #18" — ohne sourceTime (sollte praktisch nicht vorkommen, eine
+// "Sweep 1,33195 · medium (3d) #18" — ohne sourceTime (sollte praktisch nicht vorkommen, eine
 // Bestätigung wird ja gerade WEIL sie schon passiert ist gewählt) nur "Sweep 1,33195 #18". Bei
 // kind='fib' zusätzlich die zwei Ankerpreise ("Fib 1,33195 (1,3273–1,3387) · ..."), sonst wäre der
 // 0,5-Preis allein später nicht mehr nachvollziehbar (siehe rangeLow/rangeHigh-Kommentar oben).
@@ -74,5 +74,5 @@ export function formatConfirmationLabel(confirmation: TradeConfirmation, instrum
   if (seconds == null) return `${kind} ${price}${rangeHint} #${confirmation.id}`;
   const tier = classifyAge(seconds);
   const age = formatAge(seconds);
-  return `${kind} ${price}${rangeHint} · ${tier}${age ? ` (${age} alt)` : ""} #${confirmation.id}`;
+  return `${kind} ${price}${rangeHint} · ${tier}${age ? ` (${age})` : ""} #${confirmation.id}`;
 }
