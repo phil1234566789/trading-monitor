@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { createChart, CandlestickSeries, TickMarkType, CrosshairMode } from "lightweight-charts";
-import { renderPersistedZones, OrderBlockPrimitive } from "../orderBlocks.js";
+import { renderPersistedZones, OrderBlockPrimitive, obZoneNaturalKey } from "../orderBlocks.js";
 import {
   firstCandleTouch,
   firstCandleTouchRange,
@@ -21,7 +21,7 @@ import {
   hasNearbyPinCandidate as hasNearbyPinCandidatePure,
 } from "../priceChartHitTest.js";
 import { LiquidityLinePrimitive, liquidityLevelNaturalKey } from "../liquidity.js";
-import { findNearestLiquidityTargets } from "../findTargets.js";
+import { findNearestLiquidityTargets, findNearestObTargets } from "../findTargets.js";
 import { usePriceChartLiquidity } from "../composables/usePriceChartLiquidity.js";
 import { sessions } from "../sessions.js";
 import { newsEvents } from "../newsEvents.js";
@@ -978,17 +978,24 @@ function refreshPoiZonesInternal() {
     ...obZoneCtx(),
   });
   const visibleZones = mergePinnedZones(filterHistorical(zones, props.showHistoricalObs), props.pinnedObZones, candles);
-  renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles, props.pinObZoneKeys, props.hoveredPinObZoneKey);
+  // Target-Picker-Hover (siehe openTargetPicker weiter unten) läuft über denselben Pin-Halo-
+  // Highlight-Mechanismus wie eine gehoverte gepinnte OB-Zone.
+  renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles, props.pinObZoneKeys, props.hoveredPinObZoneKey ?? targetPickerHoveredObKey.value);
   poiZonesMetadata.value = visibleZones;
 }
 
 // Target-Vorschläge (PLAN-find-targets.md, Chat 2026-08-27) — Auswahl-Logik in findTargets.js,
-// hier nur Modal-State + die zwei Dinge, die den Chart betreffen (Hover-Highlight über die
-// bestehende LQ-Pin-Halo-Anzeige, siehe unten; Kandidaten-Ermittlung braucht getCurrentLiquidityLevels()
-// + currentPriceEstimate(), beides nur hier lokal verfügbar, siehe openTargetPicker).
+// hier nur Modal-State + die Dinge, die den Chart betreffen (Hover-Highlight über die bestehenden
+// Pin-Halo-Anzeigen von LQ-Leveln/OB-Zonen, siehe unten; Kandidaten-Ermittlung braucht
+// getCurrentLiquidityLevels()/poiZonesMetadata + currentPriceEstimate(), alles nur hier lokal
+// verfügbar, siehe openTargetPicker). Zwei Kandidaten-Arten (Philip: "nimm noch untouched OBs
+// auf, die nähesten 2") — bewusst zwei getrennte Listen/Limits statt einer gemeinsam sortierten,
+// "einfach halber" (Philip) und weil LQ-Level und OB-Kanten fachlich unterschiedliche Dinge sind.
 const targetPickerOpen = ref(false);
-const targetPickerCandidates = ref([]);
-const targetPickerHoveredKey = ref(null);
+const targetPickerLiquidityCandidates = ref([]);
+const targetPickerObCandidates = ref([]);
+const targetPickerHoveredLiquidityKey = ref(null);
+const targetPickerHoveredObKey = ref(null);
 function openTargetPicker() {
   if (!props.tscRange) return;
   // clipReplay() statt rohem allCandles (Bug-Report Philip 2026-08-27, Replay 24.08. 15:35: "die
@@ -998,20 +1005,39 @@ function openTargetPicker() {
   // hätte also den Preis EINER Kerze NACH dem Replay-Zeitpunkt genommen statt des tatsächlichen
   // "aktuellen" (Replay-)Preises.
   const currentPrice = currentPriceEstimate(clipReplay(allCandles));
-  targetPickerCandidates.value =
-    props.tscRange.direction === "short"
-      ? findNearestLiquidityTargets(getCurrentLiquidityLevels(), { direction: "short", currentPrice, limit: 2 })
-      : [];
+  const direction = props.tscRange.direction;
+  targetPickerLiquidityCandidates.value =
+    direction === "short" ? findNearestLiquidityTargets(getCurrentLiquidityLevels(), { direction, currentPrice, limit: 5 }) : [];
+  targetPickerObCandidates.value =
+    direction === "short" ? findNearestObTargets(poiZonesMetadata.value, { direction, currentPrice, limit: 2 }) : [];
   targetPickerOpen.value = true;
 }
-function onTargetPickerHover(level) {
-  targetPickerHoveredKey.value = level ? liquidityLevelNaturalKey(level.dir, level.pivotTime) : null;
+function onTargetPickerHover(candidate) {
+  targetPickerHoveredLiquidityKey.value = candidate?.kind === "pivot" ? liquidityLevelNaturalKey(candidate.item.dir, candidate.item.pivotTime) : null;
+  targetPickerHoveredObKey.value = candidate?.kind === "ob" ? obZoneNaturalKey(candidate.item.timeframe, candidate.item.dir, candidate.item.startTime) : null;
   refreshLiquidityInternal();
+  refreshPoiZonesInternal();
 }
-function onTargetPickerSelect(level) {
+function onTargetPickerSelect(candidate) {
   targetPickerOpen.value = false;
-  targetPickerHoveredKey.value = null;
+  targetPickerHoveredLiquidityKey.value = null;
+  targetPickerHoveredObKey.value = null;
   refreshLiquidityInternal();
+  refreshPoiZonesInternal();
+  if (candidate.kind === "ob") {
+    const zone = candidate.item;
+    emit("tsc-add-target-from-picker", {
+      kind: "ob",
+      price: zone.targetPrice,
+      sourceTime: zone.startTime,
+      touchedTime: zone.touched ? zone.endTime : null,
+      rangeLow: zone.bottom,
+      rangeHigh: zone.top,
+      timeframe: zone.timeframe,
+    });
+    return;
+  }
+  const level = candidate.item;
   emit("tsc-add-target-from-picker", {
     kind: "pivot",
     price: level.price,
@@ -1036,7 +1062,7 @@ function refreshLiquidityInternal() {
     pinLiquidityLevelKeys: props.pinLiquidityLevelKeys,
     // Target-Picker-Hover (siehe oben) läuft über denselben Pin-Halo-Highlight-Mechanismus wie ein
     // gehoverter Pin — eigenständige Zeichnung wäre dieselbe Linie ein zweites Mal.
-    hoveredPinLiquidityLevelKey: props.hoveredPinLiquidityLevelKey ?? targetPickerHoveredKey.value,
+    hoveredPinLiquidityLevelKey: props.hoveredPinLiquidityLevelKey ?? targetPickerHoveredLiquidityKey.value,
     showSweptLiquidity: props.showSweptLiquidity,
     dbLiquidityLevelsHtf: props.dbLiquidityLevelsHtf,
     symbol: props.symbol,
@@ -2149,12 +2175,15 @@ defineExpose({
       v-if="targetPickerOpen"
       :instrument="symbol"
       :direction="tscRange?.direction ?? null"
-      :candidates="targetPickerCandidates"
+      :liquidity-candidates="targetPickerLiquidityCandidates"
+      :ob-candidates="targetPickerObCandidates"
       :now-sec="props.replayUntil ?? Math.floor(Date.now() / 1000)"
       @close="
         targetPickerOpen = false;
-        targetPickerHoveredKey = null;
+        targetPickerHoveredLiquidityKey = null;
+        targetPickerHoveredObKey = null;
         refreshLiquidityInternal();
+        refreshPoiZonesInternal();
       "
       @hover="onTargetPickerHover"
       @select="onTargetPickerSelect"

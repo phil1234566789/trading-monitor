@@ -17,7 +17,6 @@ import { supabase } from "./supabaseClient.js";
 const STORAGE_KEY = "trading-monitor:chartLineWidths";
 
 export const DEFAULT_CHART_LINE_WIDTHS = {
-  cvdLine: 2,
   emaFast: 2,
   emaSlow: 2,
   rsi: 2,

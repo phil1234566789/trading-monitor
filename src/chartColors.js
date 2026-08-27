@@ -1,7 +1,7 @@
 import { reactive, watch, nextTick } from "vue";
 import { supabase } from "./supabaseClient.js";
 
-// Zentraler, reaktiver Farb-Store für sämtliche Chart-Indikatoren (Kerzen, CVD, EMA, Liquidität,
+// Zentraler, reaktiver Farb-Store für sämtliche Chart-Indikatoren (Kerzen, EMA, Liquidität,
 // Order-Blocks, Trade-Setups, Ranges, Trade-Marker) — als ES-Modul-Singleton (nicht an
 // eine Vue-Komponente gebunden), damit jedes Render-Modul (liquidity.js, orderBlocks.js,
 // pivotMarkers.ts, marketStructureAnalysis.ts, tradeMarkers.js) und das StyleModal dieselbe Instanz lesen/
@@ -19,12 +19,11 @@ const STORAGE_KEY = "trading-monitor:chartColors";
 export const DEFAULT_CHART_COLORS = {
   candleUp: { hex: "#26a69a", alpha: 1 },
   candleDown: { hex: "#ef5350", alpha: 1 },
-  cvdLine: { hex: "#f0b90b", alpha: 1 },
   emaFast: { hex: "#42a5f5", alpha: 1 },
   emaSlow: { hex: "#ffb74d", alpha: 1 },
   // RSI(14)-Panel (Chat 2026-08-11, siehe rsi.js/PriceChart.vue: refreshRsiInternal) — eigene
-  // Pane unterhalb des Candlestick-Charts wie CVD, aber eigener Farbton (kein Gold/Blau/Orange,
-  // schon von cvdLine/emaFast/emaSlow belegt).
+  // Pane unterhalb des Candlestick-Charts, eigener Farbton (kein Blau/Orange, schon von emaFast/
+  // emaSlow belegt).
   rsi: { hex: "#7e57c2", alpha: 1 },
   // Divergenz-Konnektoren (Chat 2026-08-11, siehe rsi.js: detectRsiDivergence/rsiRendering.js) —
   // dieselbe Rot/Grün-Warnsemantik wie candleDown/candleUp, aber eigene Keys statt Wiederverwendung

@@ -9,40 +9,70 @@ import MetadataPanel from "./MetadataPanel.vue";
 // Hover/Klick. Gleiche Bausteine wie an anderer Stelle schon etabliert: MetadataPanel.vue als
 // Rahmen (wie PinPanel.vue/TakeTradeModal.vue), Hover-Zeile emittiert "hover" genau wie
 // PinPanel.vue es für den Auswahl-Halo im Chart tut — hier highlightet PriceChart.vue darüber
-// dieselbe LQ-Linie, keine eigene Zeichnung nötig.
+// dieselbe LQ-Linie/OB-Zone, keine eigene Zeichnung nötig.
+//
+// Zwei Kandidaten-Arten (Philip 2026-08-27: "nimm noch untouched OBs auf, die nähesten 2") kommen
+// als getrennte Props rein (liquidityCandidates: Rohformat wie getCurrentLiquidityLevels();
+// obCandidates: Rohformat wie poiZonesMetadata, plus targetPrice, siehe findTargets.js), weil sie
+// aus zwei unabhängigen findTargets.js-Funktionen mit je eigenem Limit stammen — angezeigt werden
+// sie aber als EINE gemeinsam nach Preis sortierte Liste (Philip: "schaffst du es beides
+// zusammenzuführen und nach Preis zu sortieren?"), ein kleines Kind-Badge pro Zeile hält
+// LQ/OB trotzdem unterscheidbar. hover/select tragen {kind: "pivot"|"ob", item}.
 const props = defineProps({
   instrument: { type: String, required: true },
   direction: { type: String, default: null }, // "long" | "short" | null
-  candidates: { type: Array, required: true }, // Rohformat wie getCurrentLiquidityLevels()
+  liquidityCandidates: { type: Array, required: true },
+  obCandidates: { type: Array, required: true },
   nowSec: { type: Number, required: true },
 });
 const emit = defineEmits(["close", "hover", "select"]);
 
 const precision = computed(() => pricePrecisionForInstrument(props.instrument));
 
-function label(level) {
-  return formatLiquidityLevelLabel(level, {
-    nowSec: props.nowSec,
-    formatPrice: (price) => fmtPrice(price, precision.value),
-    includePrice: true,
-  });
+// Alle Kandidaten liegen bereits einseitig vom aktuellen Preis (findNearestLiquidityTargets/
+// -ObTargets filtern das schon) — bei Short also alle UNTERHALB, "am nächsten" heißt dort "am
+// höchsten Preis". Sortierung nach reinem Preis reicht deshalb, ohne currentPrice hier erneut
+// durchreichen zu müssen.
+const mergedCandidates = computed(() => {
+  const items = [
+    ...props.liquidityCandidates.map((level) => ({ kind: "pivot", item: level, price: level.price })),
+    ...props.obCandidates.map((zone) => ({ kind: "ob", item: zone, price: zone.targetPrice })),
+  ];
+  return items.sort((a, b) => (props.direction === "short" ? b.price - a.price : a.price - b.price));
+});
+
+function candidateLabel(candidate) {
+  const formatPrice = (price) => fmtPrice(price, precision.value);
+  if (candidate.kind === "ob") {
+    const zone = candidate.item;
+    // Dasselbe Preis-/Alter-Label wie bei einem LQ-Level, nur mit den OB-eigenen Feldern
+    // (targetPrice statt price, startTime/touched/endTime statt pivotTime/touchedTime).
+    return formatLiquidityLevelLabel(
+      { price: zone.targetPrice, pivotTime: zone.startTime, touchedTime: zone.touched ? zone.endTime : null },
+      { nowSec: props.nowSec, formatPrice, includePrice: true },
+    );
+  }
+  return formatLiquidityLevelLabel(candidate.item, { nowSec: props.nowSec, formatPrice, includePrice: true });
 }
 </script>
 
 <template>
-  <MetadataPanel title="🎯 Target-Vorschläge" :width="340" :height="320" @close="emit('close')">
+  <MetadataPanel title="🎯 Target-Vorschläge" :width="340" :height="420" @close="emit('close')">
     <div v-if="direction !== 'short'" class="target-picker-hint">Long ist hier noch nicht unterstützt — bisher nur Short.</div>
-    <div v-else-if="candidates.length === 0" class="target-picker-hint">Keine unberührten LQ-Level unterhalb des aktuellen Preises gefunden.</div>
+    <div v-else-if="mergedCandidates.length === 0" class="target-picker-hint">
+      Keine unberührten LQ-Level/OBs unterhalb des aktuellen Preises gefunden.
+    </div>
     <div v-else class="target-picker-list">
       <div
-        v-for="level in candidates"
-        :key="`${level.timeframe}-${level.pivotTime}`"
+        v-for="candidate in mergedCandidates"
+        :key="`${candidate.kind}-${candidate.item.timeframe}-${candidate.kind === 'ob' ? candidate.item.startTime : candidate.item.pivotTime}`"
         class="target-picker-row"
-        @mouseenter="emit('hover', level)"
+        @mouseenter="emit('hover', candidate)"
         @mouseleave="emit('hover', null)"
-        @click="emit('select', level)"
+        @click="emit('select', candidate)"
       >
-        {{ label(level) }}
+        <span class="target-picker-kind" :class="candidate.kind">{{ candidate.kind === "ob" ? "OB" : "LQ" }}</span>
+        {{ candidateLabel(candidate) }}
       </div>
     </div>
   </MetadataPanel>
@@ -61,6 +91,9 @@ function label(level) {
 }
 
 .target-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   border: 1px solid #2a2e39;
   border-radius: 6px;
   padding: 8px 10px;
@@ -72,5 +105,21 @@ function label(level) {
 .target-picker-row:hover {
   background: #1c2030;
   border-color: #2962ff;
+}
+
+.target-picker-kind {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: #9aa0ac;
+  background: #1a1e28;
+  border: 1px solid #2a2e39;
+}
+
+.target-picker-kind.ob {
+  color: #7ea6ff;
+  border-color: rgba(41, 98, 255, 0.4);
 }
 </style>

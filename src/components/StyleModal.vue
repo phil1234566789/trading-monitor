@@ -7,7 +7,7 @@ import MetadataPanel from "./MetadataPanel.vue";
 const emit = defineEmits(["close"]);
 
 // Gruppiert nach Feature statt alphabetisch — so findet man "die Farbe von X" genauso, wie man
-// auch die Toolbar liest (Kerzen/CVD/EMA/Liquidität/Order-Blocks/Trade-Setups/Ranges/
+// auch die Toolbar liest (Kerzen/EMA/Liquidität/Order-Blocks/Trade-Setups/Ranges/
 // Trade-Marker). Keys müssen exakt den Feldern in chartColors.js (DEFAULT_CHART_COLORS)
 // entsprechen. Linienstärke (Chat 2026-07-25, zweite Runde: "bei jeder Linie, wo man schon die
 // Farbe individuell anpassen kann") wird PRO FELD unten aus chartLineWidths.js dazugerendert,
@@ -23,10 +23,6 @@ const GROUPS = [
       { key: "candleUp", label: "Bullish" },
       { key: "candleDown", label: "Bearish" },
     ],
-  },
-  {
-    title: "CVD",
-    fields: [{ key: "cvdLine", label: "Linie" }],
   },
   {
     title: "EMA",
