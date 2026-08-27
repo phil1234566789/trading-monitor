@@ -204,6 +204,54 @@ export async function linkTradeToSetup(dealingRangeId, instrument, setup) {
   return true;
 }
 
+// Analoges Gegenstück zu findOrCreateObZoneId, für kind='pivot' (Task "1H-Struktur-Pivots auf
+// kanonische liquidity_levels-ID konsolidieren", 2026-08-24/25) — bisher nur serverseitig für
+// Lanas MCP-Tools gebaut (supabase/functions/trading-monitor-mcp/db.ts: findOrCreateLiquidityLevelId,
+// dieselbe Formel), nie für den Chart-Klick-Weg im Frontend. Bug-Report Philip 2026-08-27: eine
+// TSC-Sweep-Bestätigung zeichnete dadurch bisher eine zweite, leicht dickere Linie statt das
+// bestehende LQ-Chartobjekt zu highlighten — "soll einfach das LQ-Chartobjekt selbst sein, nur
+// gehighlighted", genau der Zweck der liquidity_level_id-Verknüpfung (siehe
+// refreshTradeTargetLinksInternal/-ConfirmationLinksInternal in PriceChart.vue). Philip
+// ausdrücklich: "ich will echte Verknüpfungen, kein Snapshot-Feld auf trade_confirmations" — daher
+// 1H/4H/5M statt eines Duplikats von direction auf trade_confirmations/trade_targets, dieselbe
+// Abkehr von "M5 wird nie persistiert" wie schon bei ob_zones (Migration
+// 20260827120000_liquidity_levels_allow_5m.sql, siehe dort). direction hier ist 'high'/'low'
+// (welche Seite geswept wurde), NICHT die daraus abgeleitete Long/Short-Bias (siehe
+// PriceChart.vue: findClickedTarget). Feinere Timeframes (1m/3m/15m/1D) bleiben unverknüpfte
+// Preis-Snapshots — für die Sweep-Erkennung dieser App nicht relevant, kein 5M-analoger Bedarf.
+export async function findOrCreateLiquidityLevelId({ instrument, timeframe, direction, price, pivotTimeSec }) {
+  if (timeframe !== "1H" && timeframe !== "4H" && timeframe !== "5M") return null;
+  const { data, error } = await supabase
+    .from("liquidity_levels")
+    .upsert(
+      { instrument, timeframe, direction, price, pivot_time: new Date(pivotTimeSec * 1000).toISOString() },
+      { onConflict: "instrument,timeframe,direction,pivot_time" },
+    )
+    .select("id")
+    .single();
+  if (error) {
+    console.error("Liquiditäts-Level-Referenz anlegen/finden fehlgeschlagen:", error);
+    return null;
+  }
+  return data.id;
+}
+
+// Nur bei kind='pivot' mit vollständigem Kontext versucht (siehe findClickedTarget) — ein Alt-Klick-
+// Pfad ohne instrument/timeframe/levelDirection (sollte praktisch nicht mehr vorkommen) liefert
+// einfach null, bleibt dann wie bisher ein reiner Preis-Snapshot.
+async function resolvePivotLiquidityLevelId(target) {
+  if (target.kind !== "pivot" || target.instrument == null || target.levelDirection == null || target.timeframe == null || target.sourceTime == null) {
+    return null;
+  }
+  return findOrCreateLiquidityLevelId({
+    instrument: target.instrument,
+    timeframe: target.timeframe,
+    direction: target.levelDirection,
+    price: target.price,
+    pivotTimeSec: target.sourceTime,
+  });
+}
+
 // Target hinzufügen (Chat 2026-07-27/28: "einem Trade ein Target hinzuzufügen ... ein Pivot
 // targetiere ich oder einen OB") — ein Target gilt für die ganze dealing_range (Chat 2026-07-31:
 // "gehört auch alles zu derselben dealing range"), also 1:n zu dealing_ranges statt zur einzelnen
@@ -212,6 +260,7 @@ export async function linkTradeToSetup(dealingRangeId, instrument, setup) {
 // `target` kommt im TradeTarget-Rohformat (kind/price/sourceTime/touchedTime) direkt aus
 // PriceChart.vue: findClickedTarget.
 export async function addTargetToTrade(dealingRangeId, target) {
+  const liquidityLevelId = await resolvePivotLiquidityLevelId(target);
   const { error } = await supabase.from("trade_targets").insert({
     dealing_range_id: dealingRangeId,
     price: target.price,
@@ -220,11 +269,13 @@ export async function addTargetToTrade(dealingRangeId, target) {
     touched_time: target.touchedTime != null ? new Date(target.touchedTime * 1000).toISOString() : null,
     // Nur bei kind='ob' gesetzt (siehe PriceChart.vue: findClickedOBZone) — die zwei Kanten der
     // Zone, damit sich daraus eine echte OB-Box statt nur einer Linie an der näheren Kante
-    // zeichnen lässt (Bug-Report Philip 2026-07-31), plus die Zeitebene (1H/4H/5M), damit die Box
-    // später live per detectOrderBlocks nachvollzogen werden kann statt nur einen Snapshot zu zeigen.
+    // zeichnen lässt (Bug-Report Philip 2026-07-31), plus die Zeitebene (1H/4H/5M bei OB, 1H/4H bei
+    // pivot), damit die Box später live per detectOrderBlocks nachvollzogen werden kann statt nur
+    // einen Snapshot zu zeigen.
     range_low: target.rangeLow ?? null,
     range_high: target.rangeHigh ?? null,
     timeframe: target.timeframe ?? null,
+    liquidity_level_id: liquidityLevelId,
   });
   if (error) {
     console.error("Target hinzufügen fehlgeschlagen:", error);
@@ -345,6 +396,7 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
           startTimeSec: confirmation.sourceTime,
         })
       : null;
+  const liquidityLevelId = await resolvePivotLiquidityLevelId(confirmation);
 
   const { error } = await supabase.from("trade_confirmations").insert({
     trade_position_id: tradePositionId,
@@ -357,10 +409,12 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
     // des Fib-Werts, sonst bleibt die Spalte null (Default).
     range_low: confirmation.rangeLow ?? null,
     range_high: confirmation.rangeHigh ?? null,
-    // Nur bei kind='ob' gesetzt — Zeitebene der Zone (1H/4H/5M), damit die Box live per
-    // detectOrderBlocks nachvollzogen werden kann (siehe addTargetToTrade).
+    // Bei kind='ob' die Zeitebene der Zone (1H/4H/5M), bei kind='pivot' die Chart-Zeitebene des
+    // Klicks (siehe findClickedTarget) — nur bei 1H/4H führt Letzteres zu einer echten
+    // liquidity_level_id (siehe resolvePivotLiquidityLevelId).
     timeframe: confirmation.timeframe ?? null,
     ob_zone_id: obZoneId,
+    liquidity_level_id: liquidityLevelId,
     // Nur bei kind='rsi_divergence' gesetzt (siehe PriceChart.vue: findClickedDivergence) — price/
     // source_time/touched_time tragen bereits toPrice/fromTime/toTime, diese drei zusätzlichen
     // Felder machen die Divergenz später wieder als vollständigen Zwei-Bein-Konnektor zeichenbar.

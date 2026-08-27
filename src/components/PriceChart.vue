@@ -716,6 +716,12 @@ function tradeLikeEntriesForCandles(candles) {
 }
 
 function refreshTradeTargetLinksInternal() {
+  // tscRange (siehe tradeLikeEntriesForCandles) kann per watch feuern, bevor candleSeries im
+  // onMounted-Chart-Setup steht (Bug-Report Philip 2026-08-27, Crash "Cannot read properties of
+  // null (reading 'detachPrimitive')") — derselbe Guard wie an anderen Stellen im File (z.B.
+  // findClickedOBZone). loadInitial() ruft diese Funktion nach dem ersten Kerzen-Laden ohnehin
+  // erneut auf, ein früher Abbruch hier verliert also nichts.
+  if (!candleSeries) return;
   for (const p of tradeTargetLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeTargetLinkPrimitives.length = 0;
   if (!tradesVisible(props.showTradeSetups, props.showTrades)) return;
@@ -791,6 +797,8 @@ function refreshTradeTargetLinksInternal() {
 // gefixt: pinContext.js' trade_confirmations-Embed bringt kein instrument mit, ein Direkt-Render
 // bräuchte erst eine Embed-Erweiterung — rechtfertigt den Aufwand (noch) nicht (seltener Fall).
 function refreshTradeConfirmationLinksInternal() {
+  // Siehe refreshTradeTargetLinksInternal: gleicher candleSeries-Guard, gleicher Grund.
+  if (!candleSeries) return;
   for (const p of tradeConfirmationLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeConfirmationLinkPrimitives.length = 0;
   if (!tradesVisible(props.showTradeSetups, props.showTrades)) return;
@@ -1189,15 +1197,36 @@ function findClickedDivergence(param) {
 
 // Vereinigt beide Ziel-Modus-Klick-Flächen (Chat 2026-07-28) — Linie zuerst (präziser, kleinere
 // Toleranz = eindeutigerer Treffer), Box als Fallback. Liefert ein Objekt im TradeTarget-Rohformat
-// (siehe tradeTargets.ts), das direkt an addTargetToTrade durchgereicht werden kann. direction
-// (Chat 2026-08-26, TSC-Bootstrap: "als erstes kommt der LQ-Sweep, vielleicht bildet sich eine OB
-// danach" — Philip-Korrektur, ein Sweep ist der eigentliche erste Trigger, nicht der OB) — Sweep
-// eines Tiefs (dir=-1) impliziert bullische Reversal-Erwartung (Long), Sweep eines Hochs (dir=1)
-// bärische (Short); ungenutzt für normales Target-Hinzufügen, nur für Dashboard.vue:
-// tscBootstrapArmed gebraucht.
+// (siehe tradeTargets.ts), das direkt an addTargetToTrade durchgereicht werden kann.
+//
+// direction (Chat 2026-08-26, TSC-Bootstrap: "als erstes kommt der LQ-Sweep, vielleicht bildet
+// sich eine OB danach" — Philip-Korrektur, ein Sweep ist der eigentliche erste Trigger, nicht der
+// OB) — Sweep eines Tiefs (dir=-1) impliziert bullische Reversal-Erwartung (Long), Sweep eines
+// Hochs (dir=1) bärische (Short); nur für Dashboard.vue: tscBootstrapArmed gebraucht.
+//
+// levelDirection/instrument/timeframe (Chat 2026-08-27, Bug-Report Philip: eine TSC-Sweep-
+// Bestätigung zeichnete eine zweite, dickere Linie statt das bestehende LQ-Chartobjekt zu
+// highlighten) — Rohmaterial für tradeIntake.js: findOrCreateLiquidityLevelId, die daraus
+// (nur auf 1H/4H) eine echte liquidity_levels-Zeile findet/anlegt, damit die Bestätigung/das
+// Target denselben Pin-Halo-Mechanismus wie ein gepinntes Level nutzen kann statt einer eigenen
+// Linie (siehe PriceChart.vue: refreshTradeTargetLinksInternal/-ConfirmationLinksInternal, die
+// bei vorhandenem .liquidityLevel bewusst NICHT mehr selbst zeichnen). levelDirection ist
+// 'high'/'low' (welche Seite geswept wurde) — NICHT dasselbe wie `direction` oben (die daraus
+// abgeleitete Long/Short-Bias).
 function findClickedTarget(param) {
   const lvl = findClickedLiquidityLevel(param);
-  if (lvl) return { kind: "pivot", price: lvl.price, sourceTime: lvl.pivotTime, touchedTime: lvl.touchedTime, direction: lvl.dir === 1 ? "short" : "long" };
+  if (lvl) {
+    return {
+      kind: "pivot",
+      price: lvl.price,
+      sourceTime: lvl.pivotTime,
+      touchedTime: lvl.touchedTime,
+      direction: lvl.dir === 1 ? "short" : "long",
+      levelDirection: lvl.dir === 1 ? "high" : "low",
+      instrument: props.symbol,
+      timeframe: props.currentBar.toUpperCase(),
+    };
+  }
   return findClickedOBZone(param);
 }
 

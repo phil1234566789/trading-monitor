@@ -227,14 +227,37 @@ export async function fetchTrades(instrument, accountId = null) {
   });
 }
 
+// Welche dealing_ranges-Zeile ist gerade "die aktive TSC-Range" für ein Instrument? (Chat
+// 2026-08-27, Philip: "wieso nicht gleich CRUD auf die DR?" — zurecht, ein Client-Zeiger auf die
+// ID war der falsche Reflex, wo sich das strukturell aus der DB ableiten lässt.) Eine über die TSC
+// angelegte Range hat (noch) keine trade_positions-Zeile — genau das unterscheidet "wird gerade
+// analysiert" von "schon ausgeführt". Bei mehreren offenen Ranges für dasselbe Instrument (z.B.
+// eine alte, nie zu Ende gedachte Idee) gewinnt die zuletzt angelegte. `.limit(20)` reicht für eine
+// persönliche Journal-Größenordnung locker, kein echtes NOT-EXISTS nötig (PostgREST kann das nicht
+// direkt, Client-seitiges Filtern über die letzten paar Ranges ist hier simpler als eine RPC).
+export async function fetchActiveTscRangeId(instrument) {
+  const { data, error } = await supabase
+    .from("dealing_ranges")
+    .select("id, trade_positions(id)")
+    .eq("instrument", instrument)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (error) throw error;
+  return data.find((r) => (r.trade_positions ?? []).length === 0)?.id ?? null;
+}
+
 // Schlanker Fetch NUR für die TSC (Chat 2026-08-26, TSC-Neuaufbau: manuell angelegte Dealing
 // Range direkt aus der Cockpit-Karte heraus) — anders als fetchTrades geht das hier NICHT über
 // trade_positions (eine frisch aus der TSC angelegte Range hat zu Beginn noch gar keine
 // Ausführung), sondern lädt eine einzelne dealing_ranges-Zeile direkt + ihre range-level
 // Bestätigungen/Targets. Dupliziert bewusst einen Teil der Mapping-Logik aus fetchTrades statt sie
 // zu teilen — dort ist toConfirmation eng an die Mehrere-Ranges-auf-einmal-Gruppierung gekoppelt,
-// hier reicht eine einzelne Range mit zwei einfachen Queries. liquidityLevel bleibt bewusst null
-// (nur fürs Chart-Rendering gebraucht, nicht für formatConfirmationLabel/formatTargetLabel).
+// hier reicht eine einzelne Range mit zwei einfachen Queries. liquidity_levels wird eingebettet
+// (Chat 2026-08-27, Bug-Report Philip: eine Sweep-Bestätigung zeichnete eine zweite, dickere Linie
+// statt das bestehende LQ-Chartobjekt zu highlighten) — dieselbe toLiquidityLevel-Formel wie
+// fetchTrades, damit PriceChart.vue: refreshTradeTargetLinksInternal/-ConfirmationLinksInternal
+// bei vorhandenem .liquidityLevel genau wie bei einem geloggten Trade auf die eigene Linie
+// verzichtet und stattdessen den nativen Pin-Halo-Zeichenpfad nutzt.
 export async function fetchDealingRangeCockpit(dealingRangeId) {
   const { data: range, error: rangeError } = await supabase
     .from("dealing_ranges")
@@ -244,23 +267,40 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
   if (rangeError) throw rangeError;
   if (!range) return null;
 
+  const LIQUIDITY_LEVEL_EMBED = "liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)";
   const [
     { data: confirmations, error: confirmationsError },
     { data: targets, error: targetsError },
   ] = await Promise.all([
     supabase
       .from("trade_confirmations")
-      .select("id, price, kind, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi")
+      .select(`id, price, kind, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, ${LIQUIDITY_LEVEL_EMBED}`)
       .eq("dealing_range_id", dealingRangeId)
       .order("created_at"),
     supabase
       .from("trade_targets")
-      .select("id, price, kind, source_time, touched_time, range_low, range_high, timeframe")
+      .select(`id, price, kind, source_time, touched_time, range_low, range_high, timeframe, ${LIQUIDITY_LEVEL_EMBED}`)
       .eq("dealing_range_id", dealingRangeId)
       .order("created_at"),
   ]);
   if (confirmationsError) throw confirmationsError;
   if (targetsError) throw targetsError;
+
+  // Identisch zu fetchTrades' gleichnamiger lokaler Funktion (siehe dort für die Begründung der
+  // Felder) — hier nicht geteilt, weil fetchTrades' Version ein Zeilen-Objekt mit dealing_range_id
+  // erwartet (Gruppierungs-Kontext), das es für diesen Einzel-Range-Fetch nicht braucht.
+  function toLiquidityLevel(row) {
+    if (!row?.liquidity_levels) return null;
+    const lvl = row.liquidity_levels;
+    return {
+      price: lvl.price,
+      dir: lvl.direction === "high" ? 1 : -1,
+      pivotTime: Math.floor(new Date(lvl.pivot_time).getTime() / 1000),
+      touched: lvl.touched,
+      endTime: lvl.end_time ? Math.floor(new Date(lvl.end_time).getTime() / 1000) : null,
+      timeframe: lvl.timeframe,
+    };
+  }
 
   return {
     id: range.id,
@@ -273,7 +313,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
       kind: c.kind,
       sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
       touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
-      liquidityLevel: null,
+      liquidityLevel: toLiquidityLevel(c),
       rangeLow: c.range_low ?? null,
       rangeHigh: c.range_high ?? null,
       timeframe: c.timeframe ?? null,
@@ -291,7 +331,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
       rangeLow: t.range_low ?? null,
       rangeHigh: t.range_high ?? null,
       timeframe: t.timeframe ?? null,
-      liquidityLevel: null,
+      liquidityLevel: toLiquidityLevel(t),
     })),
   };
 }

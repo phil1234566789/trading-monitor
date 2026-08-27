@@ -15,7 +15,7 @@ import PinAddPopup from "../components/PinAddPopup.vue";
 import PinPanel from "../components/PinPanel.vue";
 import { selectedTradingAccountId } from "../tradingAccounts.js";
 import { TIMEFRAMES, barSecondsForTimeframeCi } from "../timeframes.js";
-import { fetchTrades, fetchDealingRangeCockpit } from "../trades.js";
+import { fetchTrades, fetchDealingRangeCockpit, fetchActiveTscRangeId } from "../trades.js";
 import {
   fetchTradeSetupForCockpit,
   linkTradeToSetup,
@@ -340,20 +340,26 @@ watch(tradeModeActive, (active) => {
   }
 });
 
-// TSC-Dealing-Range (Chat 2026-08-26) — instrumentgebunden, setzt sich beim Symbolwechsel zurück
-// (keine Persistenz über Reload/Symbolwechsel fürs Erste, siehe PLAN-find-targets.md). direction
-// steht erst fest, sobald die erste Bestätigung ein OB ist (Philip: "das entscheidet eine
-// Bestätigung, welche einen OB enthält") — bis dahin ist tscRangeId null und die TSC zeigt einen
-// leeren, ungefärbten Zustand.
+// TSC-Dealing-Range (Chat 2026-08-26) — welche dealing_ranges-Zeile "die aktive TSC-Range" für das
+// aktuelle Instrument ist, kommt direkt aus der DB (fetchActiveTscRangeId: die zuletzt angelegte
+// Range ohne trade_positions), kein Client-Zeiger (Philip 2026-08-27: "wieso nicht gleich CRUD auf
+// die DR?" — zu Recht, ein localStorage-Zeiger war der falsche Reflex für etwas, das sich
+// strukturell aus der DB ableiten lässt). Ein Reload/Symbolwechsel findet die Range also von
+// selbst wieder, ohne dass irgendwo eine ID gemerkt werden muss. direction steht erst fest, sobald
+// die erste Bestätigung ein Sweep oder OB ist (siehe onSelectTarget: tscBootstrapArmed) — bis
+// dahin ist tscRangeId null und die TSC zeigt einen leeren, ungefärbten Zustand.
 const tscRangeId = ref(null);
 const tscRange = ref(null);
 async function refreshTscRange() {
   tscRange.value = tscRangeId.value != null ? await fetchDealingRangeCockpit(tscRangeId.value) : null;
 }
-watch(currentSymbol, () => {
-  tscRangeId.value = null;
-  tscRange.value = null;
-});
+async function loadActiveTscRange() {
+  tscRangeId.value = await fetchActiveTscRangeId(currentSymbol.value);
+  await refreshTscRange();
+}
+// immediate: true holt beim Mount (Reload) UND bei jedem Symbolwechsel die aktive Range fürs
+// jeweils aktuelle Instrument nach.
+watch(currentSymbol, loadActiveTscRange, { immediate: true });
 
 function onTscAddConfirmationRequest() {
   if (tscRangeId.value != null) {
@@ -756,7 +762,11 @@ const tradeLinkedLiquidityLevels = computed(() => {
   // nachgebaut wird.
   if (!tradesVisible(showTradeSetups.value, showTrades.value)) return [];
   const byKey = new Map();
-  for (const t of trades.value) {
+  // tscRange (Chat 2026-08-27, Bug-Report Philip: TSC-Sweep-Bestätigung zeichnete eine eigene
+  // Linie statt gehighlightet zu werden) mit in dieselbe Liste wie geloggte Trades — dieselbe
+  // Form (targets/confirmations mit .liquidityLevel), nur (noch) keine trade_positions-Zeile.
+  const rangeLikeEntries = tscRange.value ? [...trades.value, tscRange.value] : trades.value;
+  for (const t of rangeLikeEntries) {
     if (t.instrument !== currentSymbol.value) continue;
     for (const item of [...t.targets, ...t.confirmations]) {
       const lvl = item.liquidityLevel;
