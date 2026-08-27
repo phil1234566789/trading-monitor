@@ -133,12 +133,31 @@ export function liveObZoneState(item, ctx) {
 // dadurch faktisch ignoriert. Bündelt touched+endTime jetzt in EINER Funktion (vorher zweimal fast
 // wortgleich dupliziert), damit dieselbe Prioritätskette (bekanntes touchedTime -> live erkannte
 // Zone -> Selbstheilung in geladenen Kerzen -> noch aktiv bis jetzt) nur an einer Stelle steht.
+// Bug-Report Philip 2026-08-27 (DR#48, GBP, "Trades > Trades"): eine OB-Box zog sich nach dem
+// Verlassen des Replay-Modus wieder bis "jetzt" durch. Ursache: liveObZoneState fand für 1H/4H
+// eine per findOrCreateObZoneId per Klick angelegte ob_zones-Zeile, deren touched/end_time nie von
+// poi-watcher aktualisiert wurde (dieselbe Bug-Klasse wie bei den LQ-Leveln, siehe trades.js:
+// toLiquidityLevel) — "false" aus der DB wurde bisher blind als "wirklich noch unberührt"
+// akzeptiert, obwohl es genauso gut "nie live nachverfolgt" bedeuten kann. Ein POSITIVER Live-Fund
+// (touched:true) bleibt weiterhin bevorzugt (präzisere, timeframe-eigene detectOrderBlocks()-
+// Semantik statt der reinen Wick-Overlap-Näherung von firstCandleTouchRange) — nur ein negativer/
+// fehlender Live-Fund wird jetzt zusätzlich gegen die tatsächlich geladenen Kerzen gegengeprüft,
+// bevor die Box als "noch aktiv" durchgezeichnet wird.
+//
+// Nachbesserung selbes Bug-Report: "live bevorzugen, sonst self-heal" reichte nicht — live nutzt
+// für M5 eine ANDERE Kerzenquelle (getTradeSetupM5Candles(), eigenes 2500er-Fenster fürs
+// Trade-Setup-Feature) als der Self-Heal (die tatsächlich am Hauptchart geladenen candles), beide
+// können unabhängig voneinander veraltet/unterschiedlich befüllt sein. Statt zu raten, welche
+// Quelle gerade vertrauenswürdiger ist, werden jetzt BEIDE berechnet und das FRÜHERE Ergebnis
+// gewinnt — kann die Box dadurch nur enger, nie weiter machen als nötig.
 export function obBoxTouchState(item, candles, ctx) {
   if (item.touchedTime != null) return { touched: true, endTime: item.touchedTime };
   const live = liveObZoneState(item, ctx);
-  if (live) return { touched: live.touched, endTime: live.endTime };
   const selfHealed = firstCandleTouchRange(candles, item.sourceTime, item.rangeLow, item.rangeHigh);
+  if (live?.touched && selfHealed != null) return { touched: true, endTime: Math.min(live.endTime, selfHealed) };
+  if (live?.touched) return { touched: true, endTime: live.endTime };
   if (selfHealed != null) return { touched: true, endTime: selfHealed };
+  if (live) return { touched: live.touched, endTime: live.endTime };
   return { touched: false, endTime: candles[candles.length - 1].time };
 }
 

@@ -187,6 +187,34 @@ describe("obBoxTouchState", () => {
     expect(obBoxTouchState(item, candles, emptyCtx)).toEqual({ touched: true, endTime: 200 });
   });
 
+  // Bug-Report Philip 2026-08-27 (DR#48, GBP): eine per Klick angelegte ob_zones-Zeile, die
+  // poi-watcher nie live aktualisiert hat, blieb in der DB für immer touched=false — bisher wurde
+  // das blind übernommen, obwohl die geladenen Kerzen längst einen echten Touch zeigen.
+  it("vertraut einem NEGATIVEN Live-Fund nicht blind, sondern heilt zusätzlich über die Kerzen", () => {
+    const dbObZones = [{ instrument: "GBPUSD", timeframe: "1H", startTime: 100, top: 1.25, bottom: 1.15, touched: false, endTime: null, invalidated: false }];
+    const item = { touchedTime: null, sourceTime: 100, rangeLow: 1.15, rangeHigh: 1.25, timeframe: "1H" };
+    const ctx = { ...emptyCtx, dbObZones };
+    expect(obBoxTouchState(item, candles, ctx)).toEqual({ touched: true, endTime: 200 });
+  });
+
+  // Nachbesserung 2026-08-27: "live bevorzugen" reichte nicht, wenn live (andere Kerzenquelle,
+  // siehe Kommentar an obBoxTouchState) selbst mit touched=true einen zu SPÄTEN endTime liefert —
+  // das FRÜHERE der beiden Ergebnisse gewinnt jetzt, statt live blind zu vertrauen.
+  it("nimmt bei zwei positiven Funden das FRÜHERE Ende (Kerzenquellen können divergieren)", () => {
+    const dbObZones = [{ instrument: "GBPUSD", timeframe: "1H", startTime: 100, top: 1.25, bottom: 1.15, touched: true, endTime: 900, invalidated: false }];
+    const item = { touchedTime: null, sourceTime: 100, rangeLow: 1.15, rangeHigh: 1.25, timeframe: "1H" };
+    const ctx = { ...emptyCtx, dbObZones };
+    // Self-Heal findet den Touch schon bei 200 (siehe candles oben), live behauptet fälschlich 900.
+    expect(obBoxTouchState(item, candles, ctx)).toEqual({ touched: true, endTime: 200 });
+  });
+
+  it("übernimmt einen negativen Live-Fund trotzdem, wenn auch die Selbstheilung nichts findet", () => {
+    const dbObZones = [{ instrument: "GBPUSD", timeframe: "1H", startTime: 100, top: 60, bottom: 50, touched: false, endTime: null, invalidated: false }];
+    const item = { touchedTime: null, sourceTime: 100, rangeLow: 50, rangeHigh: 60, timeframe: "1H" };
+    const ctx = { ...emptyCtx, dbObZones };
+    expect(obBoxTouchState(item, candles, ctx)).toEqual({ touched: false, endTime: null });
+  });
+
   it("bleibt unberührt bis zur letzten geladenen Kerze, wenn nichts greift", () => {
     const item = { touchedTime: null, sourceTime: 100, rangeLow: 50, rangeHigh: 60, timeframe: null };
     expect(obBoxTouchState(item, candles, emptyCtx)).toEqual({ touched: false, endTime: 300 });
