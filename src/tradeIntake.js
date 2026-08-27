@@ -480,11 +480,21 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
   // (Long: Unterkante, Short: Oberkante), nur auf Range-Ebene und NUR wenn noch keine Invalidierung
   // gesetzt ist (eine bereits vorhandene, evtl. manuell nachjustierte Invalidierung wird von einer
   // weiteren OB-Bestätigung nicht überschrieben).
+  //
+  // direction (Bug-Report Philip 2026-08-27: TSC bootstrappte über einen LQ-Sweep zuerst auf
+  // "Long", eine danach hinzugefügte bärische OB-Bestätigung änderte daran nichts — "nicht die
+  // erste Bestätigung soll die Richtung festlegen, sondern sobald ich eine OB auswähle, denn die
+  // OB ist bärisch oder bullisch") — anders als invalidation wird direction hier IMMER überschrieben,
+  // nicht nur wenn noch leer: eine OB ist laut Philip das eindeutigere Signal als ein bloßer Sweep
+  // (der je nach Kontext Reversal oder Fortsetzung bedeuten kann), soll also auch eine beim
+  // Bootstrap aus einem Sweep geratene Richtung nachträglich korrigieren dürfen.
   if (dealingRangeId != null && confirmation.kind === "ob" && confirmation.rangeLow != null && confirmation.rangeHigh != null && confirmation.direction != null) {
-    const { data: range } = await supabase.from("dealing_ranges").select("invalidation").eq("id", dealingRangeId).maybeSingle();
-    if (range && range.invalidation == null) {
-      const invalidation = confirmation.direction === "long" ? confirmation.rangeLow : confirmation.rangeHigh;
-      await supabase.from("dealing_ranges").update({ invalidation }).eq("id", dealingRangeId);
+    const { data: range } = await supabase.from("dealing_ranges").select("invalidation, direction").eq("id", dealingRangeId).maybeSingle();
+    if (range) {
+      const updates = {};
+      if (range.direction !== confirmation.direction) updates.direction = confirmation.direction;
+      if (range.invalidation == null) updates.invalidation = confirmation.direction === "long" ? confirmation.rangeLow : confirmation.rangeHigh;
+      if (Object.keys(updates).length > 0) await supabase.from("dealing_ranges").update(updates).eq("id", dealingRangeId);
     }
   }
   return true;
