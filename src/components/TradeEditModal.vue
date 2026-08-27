@@ -7,6 +7,7 @@ import { formatConfirmationLabel } from "../tradeConfirmations";
 import { accounts } from "../tradingAccounts.js";
 import MetadataPanel from "./MetadataPanel.vue";
 import CrudListSection from "./CrudListSection.vue";
+import InvalidationField from "./InvalidationField.vue";
 
 // Ersetzt die vorherigen Inline-Buttons in TradesTable.vue (🔗 verknüpfen, + Ziel, × Ziel
 // entfernen) — Chat 2026-07-27/28: "das war jetzt bissl too much, was ist wenn man versehentlich
@@ -303,22 +304,13 @@ function confirmationLabel(confirmation) {
         </button>
       </h3>
 
-      <section class="tem-section">
-        <h4 class="tem-section-title">Invalidierung</h4>
-        <form class="tem-inline-form" @submit.prevent="saveInvalidation">
-          <input v-model="invalidation" type="number" step="any" placeholder="kein Wert gesetzt" />
-          <button type="submit" class="tem-small-save-btn" :disabled="savingRange">Speichern</button>
-          <button
-            type="button"
-            class="tem-icon-btn"
-            title="Invalidierung im Chart anklicken (Trade-Modus, dann Pivot/OB anklicken)"
-            @click="emit('request-set-invalidation')"
-          >
-            🚫
-          </button>
-          <span v-if="invalidationJustSaved" class="tem-saved-feedback">✓ übernommen</span>
-        </form>
-      </section>
+      <InvalidationField
+        v-model="invalidation"
+        :saving="savingRange"
+        :just-saved="invalidationJustSaved"
+        @save="saveInvalidation"
+        @request-chart-click="emit('request-set-invalidation')"
+      />
 
       <!-- PLAN-trade-confluences.md #1: von welchem Sweep/OB kam die Kraft für die Bewegung? -->
       <CrudListSection
@@ -622,53 +614,8 @@ function confirmationLabel(confirmation) {
   margin-bottom: 0;
 }
 
-.tem-inline-form {
-  display: flex;
-  gap: 6px;
-}
-
-.tem-inline-form input {
-  flex: 1;
-  min-width: 0;
-  background: #131722;
-  border: 1px solid #2a2e39;
-  border-radius: 4px;
-  color: #d1d4dc;
-  font-size: 13px;
-  padding: 5px 8px;
-  color-scheme: dark;
-}
-
-.tem-small-save-btn {
-  flex-shrink: 0;
-  background: transparent;
-  border: 1px solid #2962ff;
-  color: #7ea6ff;
-  padding: 5px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.tem-small-save-btn:hover:not(:disabled) {
-  background: rgba(41, 98, 255, 0.12);
-}
-
-.tem-small-save-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-/* Kurzes Aufblitzen nach erfolgreichem Speichern (Chat 2026-07-31, dritte Runde: "ich sehe nicht,
-   ob das erfolgreich übernommen worden ist") — dieselbe Grün-Semantik wie .trade-pl.positive. */
-.tem-saved-feedback {
-  color: #26a69a;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
+/* Bestätigungen/Targets/Invalidierung sind seit Chat 2026-08-26/27 in CrudListSection.vue bzw.
+   InvalidationField.vue ausgelagert (eigene Klassen-Präfixe dort). */
 .tem-section-title {
   margin: 0 0 8px;
   font-size: 11px;
@@ -676,29 +623,6 @@ function confirmationLabel(confirmation) {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #565a64;
-}
-
-/* Bestätigungen/Targets-Listen sind seit dem Chat 2026-08-26 CrudListSection.vue (eigene
-   .cls-*-Klassen dort) — .tem-icon-btn bleibt hier nur noch für den Invalidierungs-Button unten
-   stehen. */
-.tem-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  margin-top: 6px;
-  background: transparent;
-  border: 1px solid #2a2e39;
-  color: #9aa0ac;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-.tem-icon-btn:hover {
-  border-color: #2962ff;
-  color: #d1d4dc;
 }
 
 .tem-form {

@@ -19,6 +19,7 @@ import { fetchTrades, fetchDealingRangeCockpit, fetchActiveTscRangeId } from "..
 import {
   fetchTradeSetupForCockpit,
   linkTradeToSetup,
+  directionForSetup,
   addTargetToTrade,
   addConfirmationToTrade,
   addRangeConfirmation,
@@ -27,6 +28,8 @@ import {
   updateTrade,
   updateDealingRange,
   createDealingRange,
+  addPositionToDealingRange,
+  deleteDealingRange,
 } from "../tradeIntake.js";
 import { fetchObZones } from "../obZones.js";
 import { fetchLiquidityLevelsHtf } from "../liquidityLevels.js";
@@ -380,6 +383,13 @@ function onTscAddTargetRequest() {
   if (tscRangeId.value == null) return;
   onAddTargetRequest({ dealingRangeId: tscRangeId.value, isTsc: true });
 }
+// 🚫-Icon in InvalidationField.vue (Chat 2026-08-27) — derselbe Chart-Klick-Arm-Mechanismus wie
+// im Trade-Edit-Modal (onSetInvalidationRequest), nur mit dem synthetischen TSC-Objekt statt eines
+// echten Trades. Ohne Range ergibt Invalidierung keinen Sinn, siehe InvalidationField v-if="range".
+function onTscSetInvalidationRequest() {
+  if (tscRangeId.value == null) return;
+  onSetInvalidationRequest({ dealingRangeId: tscRangeId.value, isTsc: true });
+}
 async function onTscRemoveConfirmation(c) {
   const ok = await removeConfirmationFromTrade(c.id);
   if (ok) refreshTscRange();
@@ -387,6 +397,43 @@ async function onTscRemoveConfirmation(c) {
 async function onTscRemoveTarget(t) {
   const ok = await removeTargetFromTrade(t.id);
   if (ok) refreshTscRange();
+}
+// "In die Trades-Liste überführen" (Chat 2026-08-27) — legt eine leere trade_positions-Zeile für
+// die bestehende TSC-Range an und öffnet sie sofort im Trade-Edit-Modal, damit Philip Entry/
+// Stop-Loss/etc. dort ganz normal ausfüllt statt in einem zweiten, redundanten Formular in der TSC.
+//
+// triggeredAt (Bug-Report Philip: Range #48/Position #76 bekam "heute" als Datum, obwohl das
+// zugrundeliegende Setup ein Backtest war) — statt "jetzt" das Datum der OB-Bestätigung nehmen
+// (bevorzugt, konkreteste zeitliche Verankerung der Idee), sonst die früheste Bestätigung
+// überhaupt. Die Uhrzeit ist dabei bewusst egal ("Uhrzeit brauch ma für ne DR nicht ... gibts ja
+// bei Positionen") — die reicht einfach mit, weil sourceTime sie ohnehin trägt; die echte
+// Entry-Zeit trägt erst die tatsächliche Ausführung im Trade-Edit-Modal ein.
+async function onTscTransferToTrades() {
+  if (tscRangeId.value == null) return;
+  const confirmations = tscRange.value?.confirmations ?? [];
+  const obConfirmation = confirmations.find((c) => c.kind === "ob" && c.sourceTime != null);
+  const earliestConfirmation = confirmations.reduce(
+    (earliest, c) => (c.sourceTime != null && (earliest == null || c.sourceTime < earliest.sourceTime) ? c : earliest),
+    null,
+  );
+  const triggeredAt = (obConfirmation ?? earliestConfirmation)?.sourceTime ?? null;
+
+  const position = await addPositionToDealingRange(tscRangeId.value, { tradingAccountId: selectedTradingAccountId.value, triggeredAt });
+  if (!position) return;
+  await refreshTrades();
+  editingTradeId.value = position.id;
+}
+// Reset (Chat 2026-08-27, Philip: "jetzt einen reset button im TSC hinzufügen") — verwirft die
+// komplette Idee, nicht nur die Anzeige (sonst würde fetchActiveTscRangeId dieselbe Range nach
+// einem Reload/Symbolwechsel einfach wiederfinden, siehe dort). Confirm() wie sonst bei
+// destruktiven Aktionen (TradeEditModal.vue: onDelete).
+async function onTscReset() {
+  if (tscRangeId.value == null) return;
+  if (!confirm("TSC wirklich zurücksetzen? Löscht die Dealing Range inkl. aller Bestätigungen/Targets.")) return;
+  const ok = await deleteDealingRange(tscRangeId.value);
+  if (!ok) return;
+  tscRangeId.value = null;
+  tscRange.value = null;
 }
 // target: {kind, price, sourceTime, touchedTime} — siehe PriceChart.vue: findClickedTarget (Pivot
 // oder OB, Chat 2026-07-28). Dieselbe Klick-Quelle bedient jetzt sowohl Target- als auch
@@ -419,7 +466,7 @@ async function onSelectTarget(target) {
     const trade = invalidationAddTrade.value;
     invalidationAddTrade.value = null;
     const ok = await updateDealingRange(trade.dealingRangeId, { invalidation: target.price });
-    if (ok) refreshTrades();
+    if (ok) (trade.isTsc ? refreshTscRange() : refreshTrades());
     return;
   }
   if (tscBootstrapArmed.value) {
@@ -443,22 +490,37 @@ async function onSelectTarget(target) {
 // Ganzes Trade-Setup als Bestätigungen übernehmen (Chat 2026-07-31: "wenn ich ein Trade-Setup
 // anklicke, sollen LS und OB als Bestätigung aufgenommen werden. PP, falls vorhanden, als
 // Stop-Loss der trade_position") — nur im Bestätigungs-Modus erreichbar (PriceChart.vue:
-// subscribeClick), deshalb hier dieselben beiden Arm-Zustände wie onSelectTarget statt eines
-// dritten. LS/OB gehen an dieselbe Ebene (Range oder Position), die gerade "scharf" ist; der
-// Stop-Loss sitzt IMMER auf der Ausführung (trade_position), unabhängig davon, welche Ebene für
-// die Bestätigungen gerade gewählt ist — dafür braucht es aber überhaupt eine offene Ausführung.
+// subscribeClick), deshalb hier dieselben Arm-Zustände wie onSelectTarget statt eines eigenen.
+// LS/OB gehen an dieselbe Ebene (Range oder Position), die gerade "scharf" ist; der Stop-Loss
+// sitzt IMMER auf der Ausführung (trade_position), unabhängig davon, welche Ebene für die
+// Bestätigungen gerade gewählt ist — dafür braucht es aber überhaupt eine offene Ausführung.
+//
+// TSC-Bootstrap (Chat 2026-08-27, Philip: "ich will auch Orderblöcke — in diesem Fall ein
+// Short-Setup — als Bestätigung verknüpfen können") — ein ganzes Trade-Setup (LS+OB) ist der
+// naheliegendste erste Klick, nicht nur eine einzelne Sweep-Linie/OB-Box: direction kommt hier
+// direkt aus setup.dir (directionForSetup), linkTradeToSetup trägt trade_setup_id+invalidation
+// gleich mit ein — genau das, was die alte, automatische TSC vorher live berechnet hat.
 async function onSelectSetupConfirmations(setup) {
   const trade = confirmationAddTrade.value ?? rangeConfirmationAddTrade.value;
-  if (!trade) return;
-  const isRangeLevel = rangeConfirmationAddTrade.value != null;
+  if (!trade && !tscBootstrapArmed.value) return;
+  const bootstrapping = tscBootstrapArmed.value && !trade;
+  const isRangeLevel = bootstrapping || rangeConfirmationAddTrade.value != null;
   confirmationAddTrade.value = null;
   rangeConfirmationAddTrade.value = null;
+  tscBootstrapArmed.value = false;
 
   const lsConfirmation = {
     kind: "pivot",
     price: setup.ls.price,
     sourceTime: setup.ls.pivotTime,
     touchedTime: setup.ls.touchedTime ?? null,
+    // Für die liquidity_level_id-Verknüpfung (siehe PriceChart.vue: findClickedTarget) — ein
+    // Trade-Setup-LS ist immer M5, unabhängig vom gerade angezeigten Chart-Timeframe. setup.dir
+    // folgt derselben 1=high/-1=low-Konvention wie ein Liquiditäts-Level (directionForSetup:
+    // dir===1 -> Short, also Sweep eines Hochs).
+    instrument: currentSymbol.value,
+    timeframe: "5M",
+    levelDirection: setup.dir === 1 ? "high" : "low",
   };
   // Bewusst die ROHEN (nicht ums Fraktal geweiteten) OB-Kanten (setup.obTop/obBottom), NICHT
   // tradeSetupObBoxBounds() — Bug-Report Philip 2026-07-31, zweite Runde ("OB zeichnet sich durch
@@ -476,24 +538,43 @@ async function onSelectSetupConfirmations(setup) {
     rangeLow: setup.obBottom,
     rangeHigh: setup.obTop,
     timeframe: "5M",
+    // ob_zone_id-Auflösung (siehe insertConfirmation/findOrCreateObZoneId) braucht instrument/
+    // direction zusätzlich zu rangeLow/rangeHigh/timeframe/sourceTime.
+    instrument: currentSymbol.value,
+    direction: directionForSetup(setup),
   };
 
-  const addFn = isRangeLevel ? (c) => addRangeConfirmation(trade.dealingRangeId, c) : (c) => addConfirmationToTrade(trade.id, c);
+  let dealingRangeId;
+  if (bootstrapping) {
+    const range = await createDealingRange({ instrument: currentSymbol.value, direction: directionForSetup(setup) });
+    if (!range) return;
+    dealingRangeId = range.id;
+    tscRangeId.value = range.id;
+  } else {
+    dealingRangeId = trade.dealingRangeId;
+  }
+
+  const addFn = isRangeLevel ? (c) => addRangeConfirmation(dealingRangeId, c) : (c) => addConfirmationToTrade(trade.id, c);
   await addFn(lsConfirmation);
   await addFn(obConfirmation);
 
   // pathType "A" = eigenes bestätigtes Protected-Pivot (siehe tradeSetup.js), "B" = fractal===ls,
-  // also KEIN eigenständiger PP — "falls vorhanden" heißt genau das.
-  if (setup.pathType === "A") {
+  // also KEIN eigenständiger PP — "falls vorhanden" heißt genau das. Nur bei einer echten
+  // Ausführung sinnvoll (trade.id) — bootstrapping/TSC hat noch keine trade_position.
+  if (setup.pathType === "A" && !bootstrapping && !trade?.isTsc) {
     await updateTrade(trade.id, { stopLoss: setup.fractal.price });
   }
   // Übernimmt auch die Setup-Verknüpfung selbst (trade_setup_id + die davon abgeleitete
   // Invalidierung) — ersetzt die frühere manuelle "🔗 Setup verknüpfen"-Aktion (Chat 2026-07-31,
   // zweite Runde: "kann weg, da ... die Bestätigungen fügen sich von selbst hinzu"), same Ableitung
   // wie createTradeFromSetup für einen brandneuen Trade.
-  await linkTradeToSetup(trade.dealingRangeId, currentSymbol.value, setup);
+  await linkTradeToSetup(dealingRangeId, currentSymbol.value, setup);
 
-  refreshTrades();
+  if (bootstrapping || trade?.isTsc) {
+    refreshTscRange();
+  } else {
+    refreshTrades();
+  }
 }
 async function onSelectSetup(setup) {
   selectedSetupForTrade.value = setup;
@@ -760,12 +841,15 @@ const tradeLinkedLiquidityLevels = computed(() => {
   // Philip 2026-08-25: diese Linien blieben beim Ausschalten von "Trades" stehen) — siehe
   // tradeVisibility.js für die gemeinsame Regel, damit sie nicht ein sechstes Mal separat
   // nachgebaut wird.
-  if (!tradesVisible(showTradeSetups.value, showTrades.value)) return [];
+  // Trades und TSC bewusst UNABHÄNGIG voneinander gated — siehe PriceChart.vue:
+  // tradeLikeEntriesForCandles für die volle Bug-Historie (Philip: "Trades > Trades hab ich
+  // deaktiviert, weil das ja die Zeichnungen von der Trade-Liste sind" / "toggle für die TSC
+  // Visualisierungen sollte Trades > TSC sein" = showTradeSetupCockpit).
+  const rangeLikeEntries = [
+    ...(tradesVisible(showTradeSetups.value, showTrades.value) ? trades.value : []),
+    ...(showTradeSetupCockpit.value && tscRange.value ? [tscRange.value] : []),
+  ];
   const byKey = new Map();
-  // tscRange (Chat 2026-08-27, Bug-Report Philip: TSC-Sweep-Bestätigung zeichnete eine eigene
-  // Linie statt gehighlightet zu werden) mit in dieselbe Liste wie geloggte Trades — dieselbe
-  // Form (targets/confirmations mit .liquidityLevel), nur (noch) keine trade_positions-Zeile.
-  const rangeLikeEntries = tscRange.value ? [...trades.value, tscRange.value] : trades.value;
   for (const t of rangeLikeEntries) {
     if (t.instrument !== currentSymbol.value) continue;
     for (const item of [...t.targets, ...t.confirmations]) {
@@ -1649,7 +1733,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :target-mode-active="
       targetAddTrade != null || confirmationAddTrade != null || rangeConfirmationAddTrade != null || invalidationAddTrade != null || tscBootstrapArmed
     "
-    :confirmation-mode-active="confirmationAddTrade != null || rangeConfirmationAddTrade != null"
+    :confirmation-mode-active="confirmationAddTrade != null || rangeConfirmationAddTrade != null || tscBootstrapArmed"
     :tsc-range="tscRange"
     @close-ranges-metadata="showRangesMetadata = false"
     @close-debug-metadata="showDebugMetadata = false"
@@ -1663,6 +1747,10 @@ watch(selectedTradingAccountId, refreshTrades);
     @tsc-add-target="onTscAddTargetRequest"
     @tsc-remove-confirmation="onTscRemoveConfirmation"
     @tsc-remove-target="onTscRemoveTarget"
+    @tsc-transfer-to-trades="onTscTransferToTrades"
+    @tsc-set-invalidation="onTscSetInvalidationRequest"
+    @tsc-invalidation-saved="refreshTscRange"
+    @tsc-reset="onTscReset"
   />
 
   <aside ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">

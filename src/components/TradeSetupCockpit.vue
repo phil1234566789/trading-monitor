@@ -1,8 +1,10 @@
 <script setup>
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
+import { updateDealingRange } from "../tradeIntake.js";
 import { formatConfirmationLabel } from "../tradeConfirmations";
 import { formatTargetLabel } from "../tradeTargets";
 import CrudListSection from "./CrudListSection.vue";
+import InvalidationField from "./InvalidationField.vue";
 
 // Trade-Setup-Cockpit (Chat 2026-08-26: "TSC clear, fangen wir von vorne an") — Neuaufbau Schritt
 // 1: Bestätigungen + Targets, "erst mal alles manuell" (Philip) heißt hier: keine automatische
@@ -20,11 +22,75 @@ const props = defineProps({
   instrument: { type: String, required: true },
   range: { type: Object, default: null },
 });
-const emit = defineEmits(["add-confirmation", "add-target", "remove-confirmation", "remove-target"]);
+const emit = defineEmits([
+  "add-confirmation",
+  "add-target",
+  "remove-confirmation",
+  "remove-target",
+  "transfer-to-trades",
+  "request-set-invalidation",
+  "invalidation-saved",
+  "reset",
+]);
 
 const confirmations = computed(() => props.range?.confirmations ?? []);
 const targets = computed(() => props.range?.targets ?? []);
 const direction = computed(() => props.range?.direction ?? null);
+
+// Mindestqualität, bevor aus der Idee eine Ausführung werden darf (Chat 2026-08-27, Philip: "bitte
+// dealing range anlegen nur enablen wenn: mind. 2 Bestätigung, mind. 1 Target, required
+// Invalidierung") — prüft den GESPEICHERTEN Stand (props.range.invalidation), nicht das gerade
+// eingetippte, noch nicht per "Speichern" bestätigte Invalidierungsfeld.
+const transferBlockReason = computed(() => {
+  const missing = [];
+  if (confirmations.value.length < 2) missing.push("mind. 2 Bestätigungen");
+  if (targets.value.length < 1) missing.push("mind. 1 Target");
+  if (props.range?.invalidation == null) missing.push("Invalidierung");
+  return missing.length > 0 ? `Fehlt noch: ${missing.join(", ")}` : "";
+});
+const canTransfer = computed(() => transferBlockReason.value === "");
+
+// Invalidierung — 1:1 wie TradeEditModal.vue (Philip: "genau wie im trade-edit-modal, am besten
+// reused Code"), über dieselbe InvalidationField.vue. Der Formular-Weg (Zahl eintippen) schreibt
+// direkt (wie im Modal, nicht per Emit — das Modal macht dasselbe), der Chart-Klick-Weg (🚫-Icon)
+// geht über Dashboard.vue (dort lebt der Trade-Modus-Klick-Arm-Mechanismus, siehe
+// onTscSetInvalidationRequest). syncIfUntouched wie im Modal, damit ein externes Update (z.B. über
+// den Chart-Klick-Weg) laufendes Tippen hier nicht überschreibt.
+const invalidation = ref("");
+const savingInvalidation = ref(false);
+const invalidationJustSaved = ref(false);
+const FEEDBACK_MS = 1200;
+let invalidationFeedbackTimeout = null;
+function flashInvalidationSaved() {
+  invalidationJustSaved.value = true;
+  clearTimeout(invalidationFeedbackTimeout);
+  invalidationFeedbackTimeout = setTimeout(() => {
+    invalidationJustSaved.value = false;
+  }, FEEDBACK_MS);
+}
+function syncIfUntouched(target, sameRange, oldValue, newValue) {
+  if (sameRange && target.value !== oldValue) return;
+  target.value = newValue;
+}
+watch(
+  () => props.range,
+  (r, oldR) => {
+    const sameRange = oldR != null && r != null && oldR.id === r.id;
+    syncIfUntouched(invalidation, sameRange, oldR?.invalidation ?? "", r?.invalidation ?? "");
+    if (sameRange && oldR.invalidation !== r.invalidation) flashInvalidationSaved();
+  },
+  { immediate: true },
+);
+async function saveInvalidation() {
+  if (!props.range) return;
+  savingInvalidation.value = true;
+  const ok = await updateDealingRange(props.range.id, { invalidation: invalidation.value === "" ? null : Number(invalidation.value) });
+  savingInvalidation.value = false;
+  if (ok) {
+    flashInvalidationSaved();
+    emit("invalidation-saved");
+  }
+}
 
 const nowSecResolved = computed(() => props.nowSec ?? Math.floor(Date.now() / 1000));
 function confirmationLabel(c) {
@@ -49,9 +115,15 @@ const accentStyle = computed(() => {
   <div v-if="state" class="tsc-card" :style="accentStyle">
     <div class="tsc-header">
       <h3 class="tsc-title">Trade-Setup-Cockpit</h3>
-      <!-- Gleiches Label/Styling wie TradeEditModal.vue: .tem-direction (Philip: "dasselbe Label
-           wie im trade-edit-modal"). -->
-      <span v-if="direction" class="tsc-direction" :class="direction">{{ direction === "short" ? "Short" : "Long" }}</span>
+      <div class="tsc-header-right">
+        <!-- Gleiches Label/Styling wie TradeEditModal.vue: .tem-direction (Philip: "dasselbe Label
+             wie im trade-edit-modal"). -->
+        <span v-if="direction" class="tsc-direction" :class="direction">{{ direction === "short" ? "Short" : "Long" }}</span>
+        <!-- Reset (Chat 2026-08-27, Philip: "icon reicht, brauch den Text nicht, außer als
+             Hover-Hint ... rechts neben dem Short-Label") — verwirft die ganze Idee (Range +
+             Bestätigungen + Targets), nicht nur die Anzeige, siehe Dashboard.vue: onTscReset. -->
+        <button v-if="range" class="tsc-reset-icon-btn" title="Zurücksetzen" @click="emit('reset')">↺</button>
+      </div>
     </div>
 
     <CrudListSection
@@ -78,6 +150,29 @@ const accentStyle = computed(() => {
       @add="emit('add-target')"
       @remove="(t) => emit('remove-target', t)"
     />
+
+    <InvalidationField
+      v-if="range"
+      v-model="invalidation"
+      :saving="savingInvalidation"
+      :just-saved="invalidationJustSaved"
+      @save="saveInvalidation"
+      @request-chart-click="emit('request-set-invalidation')"
+    />
+
+    <!-- Überführt die Range als leere Ausführung in die Trades-Liste (Chat 2026-08-27, Philip:
+         "bau jetzt einen Button, wo ich die DR in die trading-liste überführen kann") — Entry-
+         Preis/Stop-Loss/etc. füllt das sich öffnende Trade-Edit-Modal aus, kein zweites Formular
+         hier. Nur sichtbar, wenn überhaupt schon eine Range existiert. -->
+    <button
+      v-if="range"
+      class="tsc-transfer-btn"
+      :disabled="!canTransfer"
+      :title="canTransfer ? '' : transferBlockReason"
+      @click="emit('transfer-to-trades')"
+    >
+      Dealing Range anlegen
+    </button>
   </div>
 </template>
 
@@ -128,6 +223,12 @@ const accentStyle = computed(() => {
   color: #7ea6ff;
 }
 
+.tsc-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* 1:1 TradeEditModal.vue: .tem-direction/.tem-direction.long/.tem-direction.short (Philip:
    "dasselbe Label wie im trade-edit-modal") — Short = Orange statt Rot (Chat 2026-07-31: "use
    green and orange for long and short"), Rot bleibt für Win/Loss reserviert. */
@@ -146,5 +247,49 @@ const accentStyle = computed(() => {
 .tsc-direction.long {
   background: rgba(38, 166, 154, 0.2);
   color: #26a69a;
+}
+
+.tsc-transfer-btn {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  background: transparent;
+  border: 1px solid #2962ff;
+  color: #7ea6ff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tsc-transfer-btn:hover:not(:disabled) {
+  background: rgba(41, 98, 255, 0.12);
+}
+
+.tsc-transfer-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Icon-only, destruktive Farbe wie TradeEditModal.vue: .tem-delete-btn — bewusst klein, weil der
+   Header nur 10px Padding hat (Philip: "icon reicht ... rechts neben dem Short-Label"). */
+.tsc-reset-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: 1px solid rgba(239, 83, 80, 0.4);
+  color: #ef5350;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.tsc-reset-icon-btn:hover {
+  background: rgba(239, 83, 80, 0.12);
 }
 </style>

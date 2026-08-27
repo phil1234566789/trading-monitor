@@ -181,6 +181,52 @@ export async function createDealingRange({ instrument, direction }) {
   return data;
 }
 
+// TSC-Reset (Chat 2026-08-27, Philip: "jetzt einen reset button im TSC hinzufügen") — löscht die
+// komplette Idee wieder, wenn eine Analyse verworfen wird. trade_confirmations/trade_targets
+// hängen mit `on delete cascade` an dealing_ranges (Migration 20260731120000), ein einziges
+// DELETE hier reicht also. Nur sinnvoll, solange die Range noch keine trade_positions-Zeile hat —
+// die TSC zeigt eine Range mit Ausführung ohnehin nicht mehr an (siehe fetchActiveTscRangeId).
+export async function deleteDealingRange(dealingRangeId) {
+  const { error } = await supabase.from("dealing_ranges").delete().eq("id", dealingRangeId);
+  if (error) {
+    console.error("Dealing-Range löschen fehlgeschlagen:", error);
+    return false;
+  }
+  return true;
+}
+
+// "In die Trades-Liste überführen" (Chat 2026-08-27, TSC) — Gegenstück zu createTradeFromSetup,
+// aber für eine BEREITS bestehende dealing_ranges-Zeile (die TSC hat sie schon vor dem Klick
+// angelegt, siehe createDealingRange oben) statt beides auf einmal anzulegen. Leere Ausführung
+// (entry_price/stop_loss null, outcome null wie bei createTradeFromSetup ohne entryPrice) — Philip
+// füllt Entry/Stop-Loss/etc. danach ganz normal im sich öffnenden Trade-Edit-Modal aus, statt hier
+// ein zweites Formular zu duplizieren. Erlaubt bewusst mehrere Aufrufe für dieselbe Range (Re-Entry,
+// siehe CLAUDE.md: "1-n untergeordnete Ausführungen").
+//
+// triggeredAt (Bug-Report Philip 2026-08-27, Range #48/Position #76): "jetzt" ist bei einem
+// Backtest-Setup falsch — die Range entstand historisch, nicht im Moment des Button-Klicks.
+// Dashboard.vue: onTscTransferToTrades übergibt stattdessen das Datum der OB-Bestätigung (oder,
+// falls keine OB dabei ist, der frühesten Bestätigung) — die genaue Uhrzeit ist hier bewusst
+// unwichtig ("Uhrzeit brauch ma für ne DR nicht"), die bekommt erst die echte Ausführung im
+// Trade-Edit-Modal. Fällt auf "jetzt" zurück, falls kein Anker übergeben wird.
+export async function addPositionToDealingRange(dealingRangeId, { tradingAccountId = null, triggeredAt = null } = {}) {
+  const { data, error } = await supabase
+    .from("trade_positions")
+    .insert({
+      dealing_range_id: dealingRangeId,
+      source: "live",
+      triggered_at: (triggeredAt != null ? new Date(triggeredAt * 1000) : new Date()).toISOString(),
+      trading_account_id: tradingAccountId,
+    })
+    .select()
+    .single();
+  if (error) {
+    console.error("Trade-Position anlegen fehlgeschlagen:", error);
+    return null;
+  }
+  return data;
+}
+
 // Nachträgliche Verknüpfung (Chat 2026-07-27: "kannst du die Möglichkeit geben, das im Nachhinein
 // zuzuordnen?") — für Trades, die vor diesem Feature oder ohne rechtzeitig existierenden
 // trade_setups-Datensatz angelegt wurden (poi-watcher hinkt bis zu 5 Minuten hinterher). Schreibt
@@ -426,6 +472,20 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
   if (error) {
     console.error("Bestätigung hinzufügen fehlgeschlagen:", error);
     return false;
+  }
+  // Bug-Report Philip 2026-08-27: eine per Chart-Klick einzeln hinzugefügte OB-Bestätigung (nicht
+  // über das ganze Trade-Setup, siehe onSelectSetupConfirmations/linkTradeToSetup in Dashboard.vue)
+  // übernahm die Invalidierung bisher nicht, obwohl der Klick auf das ganze Setup das schon konnte
+  // — Erwartung war "genauso wie vorhin". Dieselbe Fern-Kante-Regel wie deriveSetupEntryInvalidation
+  // (Long: Unterkante, Short: Oberkante), nur auf Range-Ebene und NUR wenn noch keine Invalidierung
+  // gesetzt ist (eine bereits vorhandene, evtl. manuell nachjustierte Invalidierung wird von einer
+  // weiteren OB-Bestätigung nicht überschrieben).
+  if (dealingRangeId != null && confirmation.kind === "ob" && confirmation.rangeLow != null && confirmation.rangeHigh != null && confirmation.direction != null) {
+    const { data: range } = await supabase.from("dealing_ranges").select("invalidation").eq("id", dealingRangeId).maybeSingle();
+    if (range && range.invalidation == null) {
+      const invalidation = confirmation.direction === "long" ? confirmation.rangeLow : confirmation.rangeHigh;
+      await supabase.from("dealing_ranges").update({ invalidation }).eq("id", dealingRangeId);
+    }
   }
   return true;
 }

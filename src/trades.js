@@ -261,7 +261,7 @@ export async function fetchActiveTscRangeId(instrument) {
 export async function fetchDealingRangeCockpit(dealingRangeId) {
   const { data: range, error: rangeError } = await supabase
     .from("dealing_ranges")
-    .select("id, instrument, direction")
+    .select("id, instrument, direction, invalidation")
     .eq("id", dealingRangeId)
     .maybeSingle();
   if (rangeError) throw rangeError;
@@ -306,6 +306,10 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
     id: range.id,
     instrument: range.instrument,
     direction: range.direction,
+    // Bug-Report Philip 2026-08-27: fehlte hier komplett (weder im select() oben noch hier) —
+    // die TSC-Karte bekam eine per Code abgeleitete Invalidierung (z.B. aus einer OB-Bestätigung,
+    // siehe tradeIntake.js: insertConfirmation) dadurch nie zu sehen, obwohl sie in der DB stand.
+    invalidation: range.invalidation ?? null,
     confirmations: (confirmations ?? []).map((c) => ({
       id: c.id,
       level: "range",

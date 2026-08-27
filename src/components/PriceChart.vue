@@ -273,6 +273,10 @@ const emit = defineEmits([
   "tsc-add-target",
   "tsc-remove-confirmation",
   "tsc-remove-target",
+  "tsc-transfer-to-trades",
+  "tsc-set-invalidation",
+  "tsc-invalidation-saved",
+  "tsc-reset",
 ]);
 
 const { markSuccess } = useStatusBar();
@@ -711,8 +715,16 @@ function obZoneCtx() {
 // auf jeder Zeile (trades.js: fetchDealingRangeCockpit), also läuft die TSC hier einfach als
 // zusätzlicher "Trade" mit, ungefiltert von tradesVisibleForCandles (keine entryTime vorhanden,
 // eine laufende Analyse soll ohnehin immer sichtbar sein, nicht nur bis zur letzten Kerze).
+//
+// Trades und TSC bewusst UNABHÄNGIG voneinander gated (Bug-Report Philip 2026-08-27: OB-/Sweep-
+// Bestätigungen blieben unsichtbar, weil "Trades" ausgeschaltet war — Philip: "Trades > Trades
+// hab ich deaktiviert, weil das ja die Zeichnungen von der Trade-Liste sind"; Folge-Korrektur:
+// "toggle für die TSC Visualisierungen sollte Trades > TSC sein") — showTradeSetupCockpit ist
+// exakt dieser Menüpunkt (Dashboard.vue: "Trades"-Dropdown, Button "TSC").
 function tradeLikeEntriesForCandles(candles) {
-  return props.tscRange ? [...tradesVisibleForCandles(props.trades, candles), props.tscRange] : tradesVisibleForCandles(props.trades, candles);
+  const trades = tradesVisible(props.showTradeSetups, props.showTrades) ? tradesVisibleForCandles(props.trades, candles) : [];
+  const tsc = props.showTradeSetupCockpit && props.tscRange ? [props.tscRange] : [];
+  return [...trades, ...tsc];
 }
 
 function refreshTradeTargetLinksInternal() {
@@ -724,7 +736,6 @@ function refreshTradeTargetLinksInternal() {
   if (!candleSeries) return;
   for (const p of tradeTargetLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeTargetLinkPrimitives.length = 0;
-  if (!tradesVisible(props.showTradeSetups, props.showTrades)) return;
   const candles = clipReplay(allCandles);
   if (candles.length === 0) return;
   const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
@@ -801,7 +812,6 @@ function refreshTradeConfirmationLinksInternal() {
   if (!candleSeries) return;
   for (const p of tradeConfirmationLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeConfirmationLinkPrimitives.length = 0;
-  if (!tradesVisible(props.showTradeSetups, props.showTrades)) return;
   const candles = clipReplay(allCandles);
   if (candles.length === 0) return;
   const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
@@ -1883,6 +1893,15 @@ watch(() => props.showTradeSetupCockpit, () => {
   // showRanges/showRangesMetadata-Watcher oben.
   refreshRangesPollingState();
   refreshCockpitInternal();
+  // Bug-Report Philip 2026-08-27: die TSC-OB-Bestätigungsbox blieb nach reinem Toggle-Klick stehen
+  // bzw. erschien nicht (nur ein voller Reload zeichnete sie einmalig neu, siehe tradeLikeEntries-
+  // ForCandles) — dieser Watcher rief bisher nur refreshCockpitInternal() (die alte Callout-Karte)
+  // auf, nicht die eigentlichen Ziel-/Bestätigungs-/Marker-Zeichenpfade, die jetzt an
+  // showTradeSetupCockpit hängen. Die native Pivot-/Sweep-Hervorhebung (pinnedLiquidityLevels)
+  // brauchte das nicht extra, weil sie über einen reaktiven Dashboard.vue-computed läuft.
+  refreshTradeMarkersInternal();
+  refreshTradeTargetLinksInternal();
+  refreshTradeConfirmationLinksInternal();
 });
 // Debug-Metadaten-Panel: activeMetadataSnapshot ist bewusst KEIN computed() (siehe dort) und muss
 // deshalb explizit nachgezogen werden — nicht nur am Ende von refreshChart() (das läuft nicht bei
@@ -2070,6 +2089,10 @@ defineExpose({
       @add-target="emit('tsc-add-target')"
       @remove-confirmation="emit('tsc-remove-confirmation', $event)"
       @remove-target="emit('tsc-remove-target', $event)"
+      @transfer-to-trades="emit('tsc-transfer-to-trades')"
+      @request-set-invalidation="emit('tsc-set-invalidation')"
+      @invalidation-saved="emit('tsc-invalidation-saved')"
+      @reset="emit('tsc-reset')"
     />
     <template v-if="claudeCalloutItems.length > 0">
       <svg class="claude-callout-svg">
