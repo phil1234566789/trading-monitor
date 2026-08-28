@@ -281,8 +281,10 @@ const emit = defineEmits([
   "pin-context-menu",
   "tsc-add-confirmation",
   "tsc-add-target",
+  "tsc-add-confluence",
   "tsc-remove-confirmation",
   "tsc-remove-target",
+  "tsc-remove-confluence",
   "tsc-transfer-to-trades",
   "tsc-set-invalidation",
   "tsc-invalidation-saved",
@@ -2190,8 +2192,10 @@ defineExpose({
       :range="tscRange"
       @add-confirmation="emit('tsc-add-confirmation')"
       @add-target="emit('tsc-add-target')"
+      @add-confluence="emit('tsc-add-confluence')"
       @remove-confirmation="emit('tsc-remove-confirmation', $event)"
       @remove-target="emit('tsc-remove-target', $event)"
+      @remove-confluence="emit('tsc-remove-confluence', $event)"
       @transfer-to-trades="emit('tsc-transfer-to-trades')"
       @request-set-invalidation="emit('tsc-set-invalidation')"
       @invalidation-saved="emit('tsc-invalidation-saved')"
