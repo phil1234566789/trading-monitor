@@ -179,3 +179,8 @@ body {
   opacity: 1;
   color: #7ea6ff;
 }
+
+.trade-link-btn.active {
+  opacity: 1;
+  color: #f0b90b;
+}

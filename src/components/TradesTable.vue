@@ -8,6 +8,9 @@ const props = defineProps({
   // Pin-Kontext (Chat 2026-08-01, siehe pinContext.js) — Set von trade_positions.id,
   // die Philip per Rechtsklick dauerhaft "an Lana übergeben" hat, tönt die jeweilige Zeile.
   pinTradeIds: { type: Set, default: () => new Set() },
+  // "Isolieren"-Modus (Task trade-journal-dr-im-chart-isolieren-zeilen-button, 2026-08-28):
+  // dealing_ranges.id der aktuell im Chart isolierten Range, nur für den 🔍-Button-Zustand.
+  isolatedDealingRangeId: { type: [String, Number], default: null },
 });
 
 // Seit Chat 2026-07-28 nur noch EIN Aktions-Button pro Zeile ("edit-request", öffnet
@@ -23,7 +26,7 @@ const props = defineProps({
 // { candidates: [...], x, y } wie PriceChart.vue's Chart-Marker/OB-Zonen-Rechtsklick (siehe dort),
 // hier immer genau EIN Kandidat (eine Tabellenzeile ist nie mehrdeutig), damit Dashboard.vue EINEN
 // gemeinsamen Handler nutzen kann.
-const emit = defineEmits(["select", "edit-request", "hover-trade", "pin-context-menu"]);
+const emit = defineEmits(["select", "edit-request", "hover-trade", "pin-context-menu", "isolate-request"]);
 
 function rowStyle(t) {
   return props.pinTradeIds.has(t.id) ? { backgroundColor: cssColorScaled("pin", 0.25) } : undefined;
@@ -139,6 +142,12 @@ const showCommission = useLocalStorageRef("showCommissionColumn", false);
         </td>
         <td class="trade-reasoning-cell">{{ t.reasoning ?? "" }}</td>
         <td>
+          <button
+            class="trade-link-btn"
+            :class="{ active: t.dealingRangeId === isolatedDealingRangeId }"
+            :title="t.dealingRangeId === isolatedDealingRangeId ? 'Isolieren aufheben (alle Trades wieder im Chart zeigen)' : 'Nur diese Dealing Range im Chart zeigen'"
+            @click.stop="emit('isolate-request', t)"
+          >🔍</button>
           <button class="trade-link-btn" title="Trade bearbeiten" @click.stop="emit('edit-request', t)">✏️</button>
         </td>
       </tr>

@@ -939,7 +939,7 @@ const tradeLinkedLiquidityLevels = computed(() => {
   // deaktiviert, weil das ja die Zeichnungen von der Trade-Liste sind" / "toggle für die TSC
   // Visualisierungen sollte Trades > TSC sein" = showTradeSetupCockpit).
   const rangeLikeEntries = [
-    ...(tradesVisible(showTradeSetups.value, showTrades.value) ? trades.value : []),
+    ...(tradesVisible(showTradeSetups.value, showTrades.value) ? isolatedTrades.value : []),
     ...(showTradeSetupCockpit.value && tscRange.value ? [tscRange.value] : []),
   ];
   const byKey = new Map();
@@ -1228,6 +1228,24 @@ onUnmounted(() => window.removeEventListener("click", closeMenusOutside));
 // usePolledFetch.js). Eine externe Änderung durch Lana (MCP-Server) erscheint dadurch erst nach
 // einem manuellen Reload/Tab-Wechsel — bewusst in Kauf genommen.
 const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrades(currentSymbol.value, selectedTradingAccountId.value));
+// "Isolieren"-Modus (Task trade-journal-dr-im-chart-isolieren-zeilen-button, 2026-08-28): Philip
+// tat sich schwer, Journal-Zeilen den richtigen Chart-Objekten zuzuordnen, wenn mehrere Trades im
+// selben Zeitfenster liegen. isolatedTrades filtert NUR den Chart-Feed (PriceChart.vue's
+// props.trades speist Marker/Setup-OB-Boxen/Target-/Bestätigungslinien direkt daraus, siehe
+// tradeLikeEntriesForCandles) — TradesTable/TradeStats bekommen weiterhin die volle `trades`-Liste,
+// die Journal-Liste selbst soll dabei nicht schrumpfen.
+const isolatedDealingRangeId = ref(null);
+const isolatedTrades = computed(() =>
+  isolatedDealingRangeId.value == null ? trades.value : trades.value.filter((t) => t.dealingRangeId === isolatedDealingRangeId.value),
+);
+function onIsolateTrade(t) {
+  const activating = isolatedDealingRangeId.value !== t.dealingRangeId;
+  isolatedDealingRangeId.value = activating ? t.dealingRangeId : null;
+  // Beim Aktivieren zusätzlich hinspringen (wie ein normaler Zeilen-Klick) — der ganze Zweck ist,
+  // sofort zu sehen, was isoliert wurde. Beim Deaktivieren NICHT wegspringen, Philip schaut zu dem
+  // Zeitpunkt oft schon woanders im Chart.
+  if (activating) onSelectTrade(t);
+}
 // Pin-Kontext (Chat 2026-08-01, siehe pinContext.js) — symbolunabhängig (anders als
 // `trades` oben). MIT intervalMs seit Bug-Report Philip 2026-08-23: die pin_context-ZEILE selbst
 // (kind/ids) ändert sich zwar nur durch explizite Aktionen, aber die eingebetteten
@@ -1325,8 +1343,12 @@ const pinRsiDivergenceKeys = computed(() => {
 // 2026-07-30) refresht aus demselben Grund sofort statt bis zum nächsten Poll.
 watch(currentSymbol, () => {
   refreshTrades();
+  isolatedDealingRangeId.value = null;
 });
-watch(selectedTradingAccountId, refreshTrades);
+watch(selectedTradingAccountId, () => {
+  refreshTrades();
+  isolatedDealingRangeId.value = null;
+});
 </script>
 
 <template>
@@ -1773,7 +1795,7 @@ watch(selectedTradingAccountId, refreshTrades);
     :key="currentSymbol"
     :symbol="currentSymbol"
     :current-bar="currentBar"
-    :trades="trades"
+    :trades="isolatedTrades"
     :hovered-trade-id="hoveredTradeId"
     :pin-trade-ids="pinTradeIds"
     :pin-ob-zone-keys="pinObZoneKeys"
@@ -1869,10 +1891,12 @@ watch(selectedTradingAccountId, refreshTrades);
       <TradesTable
         :trades="trades"
         :pin-trade-ids="pinTradeIds"
+        :isolated-dealing-range-id="isolatedDealingRangeId"
         @select="onSelectTrade"
         @edit-request="onEditRequest"
         @hover-trade="onHoverTrade"
         @pin-context-menu="onPinContextMenu"
+        @isolate-request="onIsolateTrade"
       />
     </div>
     <TradeStats :trades="trades" />
