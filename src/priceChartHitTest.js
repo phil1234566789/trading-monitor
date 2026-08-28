@@ -114,7 +114,7 @@ export function matchFibLevel(currentFibLevels, pointX, pointY, timeToCoordinate
       // Der spätere der beiden Anker-Zeitpunkte — erst ab da existiert dieser konkrete Fib-Wert
       // überhaupt (vorher stand mindestens einer der beiden Anker noch nicht fest).
       sourceTime: Math.max(level.a.pivotTime, level.b.pivotTime),
-      touchedTime: null, // kein "getoucht"-Konzept für ein Fib-Level, siehe tradeConfirmations.ts
+      touchedTime: null, // kein "getoucht"-Konzept für ein Fib-Level, siehe tradeEvidence.ts
       rangeLow: Math.min(level.a.price, level.b.price),
       rangeHigh: Math.max(level.a.price, level.b.price),
     };
@@ -259,7 +259,7 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
   // unverdrahtet). tradeConfirmationLinkPrimitives ist GEMISCHT (OrderBlockPrimitive für kind='ob',
   // LiquidityLinePrimitive für kind='pivot'/'fib', siehe refreshTradeConfirmationLinksInternal) —
   // instanceof-Guard statt einfach .distanceTo() aufzurufen, sonst Crash auf einer Linie ohne diese
-  // Methode. confirmationId ist bereits die echte trade_confirmations.id.
+  // Methode. confirmationId ist bereits die echte trade_evidence.id.
   for (const p of tradeConfirmationLinkPrimitives) {
     if (!(p instanceof OrderBlockPrimitive)) continue;
     const distance = p.distanceTo(x, y);

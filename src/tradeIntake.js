@@ -159,7 +159,7 @@ export async function createTradeFromSetup({ instrument, setup, entryPrice = nul
       startTimeSec: setup.obStartTime,
     });
     const { error: confirmError } = await supabase
-      .from("trade_confirmations")
+      .from("trade_evidence")
       .insert({ trade_position_id: position.id, price: setupEntry, kind: "ob", ob_zone_id: obZoneId });
     if (confirmError) console.error("Entry-Bestätigung anlegen fehlgeschlagen:", confirmError);
   }
@@ -182,7 +182,7 @@ export async function createDealingRange({ instrument, direction }) {
 }
 
 // TSC-Reset (Chat 2026-08-27, Philip: "jetzt einen reset button im TSC hinzufügen") — löscht die
-// komplette Idee wieder, wenn eine Analyse verworfen wird. trade_confirmations/trade_targets
+// komplette Idee wieder, wenn eine Analyse verworfen wird. trade_evidence/trade_targets
 // hängen mit `on delete cascade` an dealing_ranges (Migration 20260731120000), ein einziges
 // DELETE hier reicht also. Nur sinnvoll, solange die Range noch keine trade_positions-Zeile hat —
 // die TSC zeigt eine Range mit Ausführung ohnehin nicht mehr an (siehe fetchActiveTscRangeId).
@@ -259,7 +259,7 @@ export async function linkTradeToSetup(dealingRangeId, instrument, setup) {
 // gehighlighted", genau der Zweck der liquidity_level_id-Verknüpfung (siehe
 // refreshTradeTargetLinksInternal/-ConfirmationLinksInternal in PriceChart.vue). Philip
 // ausdrücklich: "ich will echte Verknüpfungen, kein Snapshot-Feld auf trade_confirmations" — daher
-// 1H/4H/5M statt eines Duplikats von direction auf trade_confirmations/trade_targets, dieselbe
+// 1H/4H/5M statt eines Duplikats von direction auf trade_evidence/trade_targets, dieselbe
 // Abkehr von "M5 wird nie persistiert" wie schon bei ob_zones (Migration
 // 20260827120000_liquidity_levels_allow_5m.sql, siehe dort). direction hier ist 'high'/'low'
 // (welche Seite geswept wurde), NICHT die daraus abgeleitete Long/Short-Bias (siehe
@@ -413,11 +413,13 @@ export async function updateDealingRange(dealingRangeId, fields) {
   return true;
 }
 
-// Bestätigung hinzufügen (PLAN-trade-confluences.md #1: "von welchen Sweeps kam die Kraft ...
-// auch OBs") — gleiches Rohformat wie addTargetToTrade (kind/price/sourceTime/touchedTime aus
-// PriceChart.vue: findClickedTarget), eigene Tabelle (trade_confirmations), weil eine Bestätigung
-// bereits passierte Evidenz ist statt einer zukünftigen Preis-Erwartung. trade_confirmations ist
-// zweigleisig (siehe Migration 20260731120000): eine Zeile hängt entweder an der einzelnen
+// Bestätigung/Zusatzargument hinzufügen (PLAN-trade-confluences.md #1: "von welchen Sweeps kam die
+// Kraft ... auch OBs") — gleiches Rohformat wie addTargetToTrade (kind/price/sourceTime/touchedTime
+// aus PriceChart.vue: findClickedTarget), eigene Tabelle (trade_evidence), weil eine Bestätigung/
+// ein Zusatzargument bereits passierte Evidenz ist statt einer zukünftigen Preis-Erwartung.
+// category (confirmation/confluence, siehe trade-from-poi.md#confirmation-confluence-und-anti-
+// confluence--wie-eine-dealing-range-go-bekommt) ergibt sich automatisch aus kind, hier nicht
+// gesetzt. trade_evidence ist zweigleisig (siehe Migration 20260731120000): eine Zeile hängt entweder an der einzelnen
 // Ausführung (das GO für DIESEN Entry, kann sich von anderen Re-Entries unterscheiden) oder an der
 // dealing_range (das GO für die ganze Idee) — genau eine der beiden IDs wird gesetzt, der Rest
 // bleibt null (DB-CHECK erzwingt das).
@@ -444,7 +446,7 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
       : null;
   const liquidityLevelId = await resolvePivotLiquidityLevelId(confirmation);
 
-  const { error } = await supabase.from("trade_confirmations").insert({
+  const { error } = await supabase.from("trade_evidence").insert({
     trade_position_id: tradePositionId,
     dealing_range_id: dealingRangeId,
     price: confirmation.price,
@@ -513,7 +515,7 @@ export async function addRangeConfirmation(dealingRangeId, confirmation) {
 }
 
 export async function removeConfirmationFromTrade(confirmationId) {
-  const { error } = await supabase.from("trade_confirmations").delete().eq("id", confirmationId);
+  const { error } = await supabase.from("trade_evidence").delete().eq("id", confirmationId);
   if (error) {
     console.error("Bestätigung entfernen fehlgeschlagen:", error);
     return false;

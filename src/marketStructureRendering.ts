@@ -444,7 +444,7 @@ export function computeFibLevels(
 // Sammelt alle Fib-Level (Haupttrend + Nested, falls vorhanden) in klickbarer Form — analog zu
 // collectH1LqLevels, aber ohne dir-Parameter (ein Fib ist nicht long/short-spezifisch). Genutzt
 // von PriceChart.vue für die Trade-Bestätigungs-Klick-Erfassung (kind='fib', siehe
-// tradeConfirmations.ts) — dieselbe A/B-Form wie computeFibLevels, keine gesonderte Aufbereitung
+// tradeEvidence.ts) — dieselbe A/B-Form wie computeFibLevels, keine gesonderte Aufbereitung
 // nötig, weil die Klick-Trefferprüfung dieselbe Pixel-Mittelpunkt-Berechnung braucht wie die
 // Zeichnung selbst (siehe FibTickPrimitive).
 export function collectFibLevels(

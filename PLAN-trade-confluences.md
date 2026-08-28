@@ -36,6 +36,13 @@ festgehalten.
       eigene Chart-Linie, nur implizit als eine Kante der verlinkten Setup-OB-Box. Noch nicht
       entschieden, ob/wie das eine eigene Darstellung braucht.
 
+**Status 2026-08-28:** `trade_confirmations` in `trade_evidence` umbenannt, mit generierter
+`category`-Spalte — Confirmation (`kind` Pivot/OB, gibt das GO) vs. Confluence (`kind` Fib/
+RSI-Divergenz, gibt nur Sicherheit ohne GO), siehe CLAUDE.md und `trading`-Repo
+`trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt`.
+TSC UND TradeEditModal zeigen jetzt beide Kategorien als getrennte Sektionen
+("Bestätigungen"/"Zusatzargumente"), auf beiden Ebenen (Idee/Entry).
+
 ## 2. Trend-Kontext
 
 Mit dem Trend traden ist besser (bessere Targets/RR möglich) als gegen den Trend (braucht mehr/

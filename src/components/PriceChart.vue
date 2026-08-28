@@ -79,7 +79,7 @@ import { loadCandlesAroundTrade, computeJumpViewport } from "../priceChartJumpTo
 import { classifyAge } from "../ageTier";
 import { kindLabel as targetKindLabel } from "../tradeTargets";
 import { tradesVisible } from "../tradeVisibility.js";
-import { kindLabel as confirmationKindLabel } from "../tradeConfirmations";
+import { kindLabel as confirmationKindLabel } from "../tradeEvidence";
 import { useStatusBar } from "../composables/useStatusBar.js";
 import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
 import MetadataPanel from "./MetadataPanel.vue";
@@ -136,7 +136,7 @@ const props = defineProps({
   // Pin-Kontext, dritte Art (Chat 2026-08-01, dritte Runde) — Set von trade_setups.id, siehe
   // refreshTradeSetupLinksInternal.
   pinTradeSetupIds: { type: Set, default: () => new Set() },
-  // Pin-Kontext, vierte Art (Chat 2026-08-01, vierte Runde) — Set von trade_confirmations.id
+  // Pin-Kontext, vierte Art (Chat 2026-08-01, vierte Runde) — Set von trade_evidence.id
   // (nur kind='ob'-Bestätigungen zeichnen überhaupt eine Box, siehe refreshTradeConfirmationLinksInternal).
   pinTradeConfirmationIds: { type: Set, default: () => new Set() },
   // Pin-Kontext für Liquiditäts-Level (Chat 2026-08-17) — Set von liquidityLevelNaturalKey-Strings
@@ -254,10 +254,18 @@ const props = defineProps({
   // "Trade-Setup-OB anklicken" auf "Pivot/OB als Target anklicken" um (siehe Dashboard.vue: targetAddTrade).
   targetModeActive: { type: Boolean, default: false },
   // Bestätigungs-Modus (Chat 2026-07-30, siehe Dashboard.vue: confirmationAddTrade) — Teilmenge
-  // von targetModeActive (beide setzen tradeModeActive), zusätzlich unterschieden, weil nur im
-  // Bestätigungs-Modus auch Fib-Ticks anklickbar sein sollen (siehe findClickedFibLevel) — ein Fib
-  // ist keine sinnvolle Preis-Erwartung wie ein normales Ziel.
+  // von targetModeActive (beide setzen tradeModeActive). Nur noch fürs komplette Setup (LS+OB,
+  // siehe findClickedSetup) relevant — Fib/Divergenz-Ticks laufen seit der Confirmation/Confluence-
+  // Trennung (2026-08-28, siehe trade-from-poi.md#confirmation-confluence-und-anti-confluence--
+  // wie-eine-dealing-range-go-bekommt) über den eigenen confluenceModeActive-Modus unten, weil sie
+  // begrifflich kein GO sind wie ein Sweep/OB.
   confirmationModeActive: { type: Boolean, default: false },
+  // Zusatzargument-Modus (Chat 2026-08-28) — analog zu confirmationModeActive, aber für Fib/
+  // RSI-Divergenz (Confluence: gibt mehr Sicherheit, aber kein GO) statt Sweep/OB (Confirmation).
+  // Eigener Modus statt confirmationModeActive mitzubenutzen, damit "Bestätigung hinzufügen" und
+  // "Zusatzargument hinzufügen" in der UI zwei getrennte Buttons/Sektionen bleiben, die jeweils nur
+  // ihre eigene Art Chart-Objekt annehmen.
+  confluenceModeActive: { type: Boolean, default: false },
   // TSC-Dealing-Range (Chat 2026-08-26, TSC-Neuaufbau) — reine Durchreiche von Dashboard.vue
   // (tscRange) an TradeSetupCockpit.vue, null solange die TSC noch keine Range angelegt hat.
   tscRange: { type: Object, default: null },
@@ -808,7 +816,7 @@ function refreshTradeTargetLinksInternal() {
 //
 // Bewusste Lücke: loopt nur über tradesVisibleForCandles — ein trade_confirmation-Pin dessen Trade
 // gerade nicht sichtbar ist, hat dadurch keinen Rendering-Pfad. Anders als bei trade_setup nicht
-// gefixt: pinContext.js' trade_confirmations-Embed bringt kein instrument mit, ein Direkt-Render
+// gefixt: pinContext.js' trade_evidence-Embed bringt kein instrument mit, ein Direkt-Render
 // bräuchte erst eine Embed-Erweiterung — rechtfertigt den Aufwand (noch) nicht (seltener Fall).
 function refreshTradeConfirmationLinksInternal() {
   // Siehe refreshTradeTargetLinksInternal: gleicher candleSeries-Guard, gleicher Grund.
@@ -822,7 +830,12 @@ function refreshTradeConfirmationLinksInternal() {
   for (const t of tradeLikeEntriesForCandles(candles)) {
     for (const confirmation of t.confirmations ?? []) {
       if (confirmation.sourceTime == null) continue;
-      const label = `✔ ${confirmationKindLabel(confirmation.kind)} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`;
+      // Confirmation (GO-Signal: pivot/ob) vs. Confluence (Zusatzargument, kein GO: fib/
+      // rsi_divergence) — siehe trade-from-poi.md#confirmation-confluence-und-anti-confluence--
+      // wie-eine-dealing-range-go-bekommt — bekommen unterschiedliche Präfixe, damit im Chart auf
+      // einen Blick erkennbar ist, was tatsächlich das GO gab und was nur zusätzliche Sicherheit ist.
+      const icon = confirmation.category === "confluence" ? "💡" : "✔";
+      const label = `${icon} ${confirmationKindLabel(confirmation.kind)} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`;
       // RSI-Divergenz-Bestätigungen als echter Zwei-Bein-Konnektor (dieselbe DivergenceLinePrimitive
       // wie die live erkannten Divergenzen, siehe refreshRsiDivergenceInternal) statt nur einer
       // horizontalen Linie — sourceTime/touchedTime tragen bereits fromTime/toTime (siehe
@@ -845,7 +858,7 @@ function refreshTradeConfirmationLinksInternal() {
         const { touched, endTime } = obBoxTouchState(confirmation, candles, obZoneCtx());
         // Pin-Kontext, vierte Art (Chat 2026-08-01, vierte Runde — Bug-Report Philip: DIESE
         // Box, "✔ OB 1,15229 #22", wurde mit der Trade-Setup-Link-Box verwechselt, war bisher
-        // komplett unverdrahtet). confirmationId ist bereits die echte trade_confirmations.id.
+        // komplett unverdrahtet). confirmationId ist bereits die echte trade_evidence.id.
         const inPinContext = props.pinTradeConfirmationIds?.has(confirmation.id) ?? false;
         const isSelectedPin = props.hoveredPinTradeConfirmationId != null && props.hoveredPinTradeConfirmationId === confirmation.id;
         const primitive = new OrderBlockPrimitive(
@@ -1650,18 +1663,18 @@ onMounted(() => {
     // Eigener Modus statt einfach zusätzlich zum Setup-Klick zu testen, damit ein Klick nie
     // mehrdeutig ist (Setup-OB-Box vs. Ziel-Pivot/-OB könnten sich sonst überlappen).
     if (props.targetModeActive) {
-      // Fib-Tick NUR im Bestätigungs-Modus prüfen (siehe confirmationModeActive-Kommentar oben) —
+      // Fib-Tick NUR im Zusatzargument-Modus prüfen (siehe confluenceModeActive-Kommentar oben) —
       // zuerst, weil er eine feinere Toleranz hat und sonst evtl. von einer überlappenden
       // Liquiditäts-Linie verdeckt würde.
-      const fib = props.confirmationModeActive && findClickedFibLevel(param);
+      const fib = props.confluenceModeActive && findClickedFibLevel(param);
       if (fib) {
         emit("select-target", fib);
         return;
       }
-      // RSI-Divergenz NUR im Bestätigungs-Modus (siehe findClickedDivergence), vor findClickedTarget
-      // geprüft — sonst würde ein Klick auf den Divergenz-Konnektor evtl. stattdessen eine darunter
-      // liegende Liquiditäts-Linie/OB-Zone treffen.
-      const divergence = props.confirmationModeActive && findClickedDivergence(param);
+      // RSI-Divergenz NUR im Zusatzargument-Modus (siehe findClickedDivergence), vor
+      // findClickedTarget geprüft — sonst würde ein Klick auf den Divergenz-Konnektor evtl.
+      // stattdessen eine darunter liegende Liquiditäts-Linie/OB-Zone treffen.
+      const divergence = props.confluenceModeActive && findClickedDivergence(param);
       if (divergence) {
         emit("select-target", divergence);
         return;
@@ -1740,7 +1753,8 @@ onMounted(() => {
     if (props.tradeModeActive) {
       const point = { point: { x, y } };
       const hit = props.targetModeActive
-        ? (props.confirmationModeActive && (findClickedFibLevel(point) || findClickedDivergence(point) || findClickedSetup(point))) ||
+        ? (props.confluenceModeActive && (findClickedFibLevel(point) || findClickedDivergence(point))) ||
+          (props.confirmationModeActive && findClickedSetup(point)) ||
           findClickedTarget(point)
         : findClickedSetup(point);
       chartContainerRef.value.style.cursor = hit ? "pointer" : "";

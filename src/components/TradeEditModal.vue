@@ -3,7 +3,7 @@ import { ref, computed, watch } from "vue";
 import { updateTrade, updateDealingRange, deleteTrade, removeTargetFromTrade, removeConfirmationFromTrade } from "../tradeIntake.js";
 import { fmtDateTime } from "../format.js";
 import { formatTargetLabel } from "../tradeTargets";
-import { formatConfirmationLabel } from "../tradeConfirmations";
+import { formatEvidenceLabel } from "../tradeEvidence";
 import { accounts } from "../tradingAccounts.js";
 import MetadataPanel from "./MetadataPanel.vue";
 import CrudListSection from "./CrudListSection.vue";
@@ -35,6 +35,8 @@ const emit = defineEmits([
   "request-add-target",
   "request-add-confirmation",
   "request-add-range-confirmation",
+  "request-add-confluence",
+  "request-add-range-confluence",
   "request-set-invalidation",
 ]);
 
@@ -201,11 +203,15 @@ watch(
   { immediate: true },
 );
 
-// Confirmations sind seit dem dealing_ranges-Split (trades.js: toConfirmation) mit einem
-// level-Tag versehen — hier aufgeteilt statt in einer gemeinsamen Liste, damit "GO für die Idee"
-// und "GO für diesen Entry" auch strukturell (nicht nur farblich) in den passenden Bereich fallen.
-const rangeConfirmations = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "range"));
-const positionConfirmations = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "position"));
+// Evidenz-Zeilen (trades.js: toConfirmation) sind mit level ("range"/"position") UND category
+// ("confirmation"/"confluence", generierte Spalte, siehe Migration 20260828120000) versehen — erst
+// nach level aufgeteilt, damit "GO für die Idee" und "GO für diesen Entry" strukturell getrennt
+// bleiben, dann je Ebene zusätzlich nach category für Bestätigungen vs. Zusatzargumente (siehe
+// trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt).
+const rangeConfirmations = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "range" && c.category === "confirmation"));
+const positionConfirmations = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "position" && c.category === "confirmation"));
+const rangeConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "range" && c.category === "confluence"));
+const positionConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "position" && c.category === "confluence"));
 
 async function save() {
   saving.value = true;
@@ -264,7 +270,7 @@ function targetLabel(target) {
   return formatTargetLabel(target, props.trade.instrument, nowSec);
 }
 function confirmationLabel(confirmation) {
-  return formatConfirmationLabel(confirmation, props.trade.instrument, nowSec);
+  return formatEvidenceLabel(confirmation, props.trade.instrument, nowSec);
 }
 </script>
 
@@ -316,12 +322,27 @@ function confirmationLabel(confirmation) {
       <CrudListSection
         title="Bestätigungen (GO für die Idee)"
         icon="✔"
-        add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Fib anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
+        add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
         :items="rangeConfirmations"
         :item-key="(c) => c.id"
         :item-label="confirmationLabel"
         empty-text="Noch keine Bestätigungen."
         @add="emit('request-add-range-confirmation')"
+        @remove="onRemoveConfirmation"
+      />
+
+      <!-- Zusatzargumente (Confluence: gibt mehr Sicherheit, aber kein GO — Fib/RSI-Divergenz),
+           siehe trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-
+           range-go-bekommt. -->
+      <CrudListSection
+        title="Zusatzargumente (Idee)"
+        icon="💡"
+        add-title="Zusatzargument hinzufügen (Trade-Modus, dann Fib/Divergenz anklicken)"
+        :items="rangeConfluences"
+        :item-key="(c) => c.id"
+        :item-label="confirmationLabel"
+        empty-text="Noch keine Zusatzargumente."
+        @add="emit('request-add-range-confluence')"
         @remove="onRemoveConfirmation"
       />
 
@@ -346,12 +367,24 @@ function confirmationLabel(confirmation) {
       <CrudListSection
         title="Bestätigungen (GO für diesen Entry)"
         icon="✔"
-        add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Fib anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
+        add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
         :items="positionConfirmations"
         :item-key="(c) => c.id"
         :item-label="confirmationLabel"
         empty-text="Noch keine Bestätigungen."
         @add="emit('request-add-confirmation')"
+        @remove="onRemoveConfirmation"
+      />
+
+      <CrudListSection
+        title="Zusatzargumente (Entry)"
+        icon="💡"
+        add-title="Zusatzargument hinzufügen (Trade-Modus, dann Fib/Divergenz anklicken)"
+        :items="positionConfluences"
+        :item-key="(c) => c.id"
+        :item-label="confirmationLabel"
+        empty-text="Noch keine Zusatzargumente."
+        @add="emit('request-add-confluence')"
         @remove="onRemoveConfirmation"
       />
 

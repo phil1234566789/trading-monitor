@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { updateDealingRange } from "../tradeIntake.js";
-import { formatConfirmationLabel } from "../tradeConfirmations";
+import { formatEvidenceLabel } from "../tradeEvidence";
 import { formatTargetLabel } from "../tradeTargets";
 import CrudListSection from "./CrudListSection.vue";
 import InvalidationField from "./InvalidationField.vue";
@@ -9,8 +9,11 @@ import InvalidationField from "./InvalidationField.vue";
 // Trade-Setup-Cockpit (Chat 2026-08-26: "TSC clear, fangen wir von vorne an") — Neuaufbau Schritt
 // 1: Bestätigungen + Targets, "erst mal alles manuell" (Philip) heißt hier: keine automatische
 // Setup-Erkennung mehr, aber ansonsten 1:1 derselbe Weg wie im Trade-Edit-Modal (Chart-Klick im
-// Trade-Modus, echte dealing_ranges/trade_confirmations/trade_targets-Zeilen) — über dieselbe
-// CrudListSection.vue wie dort. `range` kommt von Dashboard.vue (tscRange, siehe dort) und ist
+// Trade-Modus, echte dealing_ranges/trade_evidence/trade_targets-Zeilen) — über dieselbe
+// CrudListSection.vue wie dort. Seit 2026-08-28 zusätzlich Zusatzargumente (Confluence) als eigene
+// Sektion, getrennt von Bestätigungen (Confirmation) — beide teilen dieselbe range.confirmations-
+// Liste, nur nach category gefiltert (siehe computed unten). `range` kommt von Dashboard.vue
+// (tscRange, siehe dort) und ist
 // null, solange noch keine Dealing Range über die TSC angelegt wurde. Deren Richtung entscheidet
 // die ERSTE Bestätigung (meist ein Sweep, optional ein OB — Philip: "als erstes kommt der
 // LQ-Sweep, vielleicht bildet sich eine OB danach, aber nur vielleicht", siehe Dashboard.vue:
@@ -25,8 +28,10 @@ const props = defineProps({
 const emit = defineEmits([
   "add-confirmation",
   "add-target",
+  "add-confluence",
   "remove-confirmation",
   "remove-target",
+  "remove-confluence",
   "transfer-to-trades",
   "request-set-invalidation",
   "invalidation-saved",
@@ -34,7 +39,13 @@ const emit = defineEmits([
   "open-target-picker",
 ]);
 
-const confirmations = computed(() => props.range?.confirmations ?? []);
+// category (Confirmation="Bestätigung"/GO-Signal vs. Confluence="Zusatzargument"/kein GO, siehe
+// trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt)
+// trennt eine gemeinsam geladene Liste (range.confirmations, siehe trades.js) in zwei Sektionen —
+// exakt dasselbe Filter-Muster wie TradeEditModal.vue: rangeConfirmations/positionConfirmations
+// (dort nach `level`, hier zusätzlich nach `category`).
+const confirmations = computed(() => (props.range?.confirmations ?? []).filter((c) => c.category === "confirmation"));
+const confluences = computed(() => (props.range?.confirmations ?? []).filter((c) => c.category === "confluence"));
 const targets = computed(() => props.range?.targets ?? []);
 const direction = computed(() => props.range?.direction ?? null);
 
@@ -95,7 +106,7 @@ async function saveInvalidation() {
 
 const nowSecResolved = computed(() => props.nowSec ?? Math.floor(Date.now() / 1000));
 function confirmationLabel(c) {
-  return formatConfirmationLabel(c, props.instrument, nowSecResolved.value);
+  return formatEvidenceLabel(c, props.instrument, nowSecResolved.value);
 }
 function targetLabel(t) {
   return formatTargetLabel(t, props.instrument, nowSecResolved.value);
@@ -130,13 +141,30 @@ const accentStyle = computed(() => {
     <CrudListSection
       title="Bestätigungen"
       icon="✔"
-      add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Fib anklicken) — ohne bestehende Range muss der erste Klick ein Sweep oder OB sein, der legt die Richtung fest"
+      add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB anklicken) — der erste Klick legt die Richtung fest"
       :items="confirmations"
       :item-key="(c) => c.id"
       :item-label="confirmationLabel"
       empty-text="Noch keine Bestätigungen."
       @add="emit('add-confirmation')"
       @remove="(c) => emit('remove-confirmation', c)"
+    />
+
+    <!-- Zusatzargumente (Confluence: gibt mehr Sicherheit, aber kein GO — Fib/RSI-Divergenz, siehe
+         trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt).
+         Gesperrt ohne Range (Chat 2026-08-28, analog zu Targets) — ohne Richtung/Idee gibt es noch
+         nichts, zu dem ein Zusatzargument gehören könnte. -->
+    <CrudListSection
+      title="Zusatzargumente"
+      icon="💡"
+      :add-title="range ? 'Zusatzargument hinzufügen (Trade-Modus, dann Fib/Divergenz anklicken)' : 'Erst eine Bestätigung (Sweep/OB) hinzufügen — legt die Richtung fest'"
+      :disabled="!range"
+      :items="confluences"
+      :item-key="(c) => c.id"
+      :item-label="confirmationLabel"
+      empty-text="Noch keine Zusatzargumente."
+      @add="emit('add-confluence')"
+      @remove="(c) => emit('remove-confluence', c)"
     />
 
     <CrudListSection

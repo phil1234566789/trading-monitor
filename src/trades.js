@@ -12,8 +12,8 @@ export function computeTradeStats(trades) {
   return { total: trades.length, closed: closed.length, wins, losses, totalR, winrate, avgR };
 }
 
-// Gruppiert Zeilen nach einer FK-Spalte (trade_targets/trade_confirmations -> dealing_range_id,
-// trade_partial_exits/trade_confirmations -> trade_position_id — seit 2026-07-31 aufgeteilt, siehe
+// Gruppiert Zeilen nach einer FK-Spalte (trade_targets/trade_evidence -> dealing_range_id,
+// trade_partial_exits/trade_evidence -> trade_position_id — seit 2026-07-31 aufgeteilt, siehe
 // CLAUDE.md: Trade-Journal-Umbau).
 function groupBy(rows, key) {
   const result = {};
@@ -88,15 +88,15 @@ export async function fetchTrades(instrument, accountId = null) {
       .in("dealing_range_id", rangeIds),
     supabase.from("trade_partial_exits").select("trade_position_id, price, exit_time, portion_pct").in("trade_position_id", positionIds),
     supabase
-      .from("trade_confirmations")
+      .from("trade_evidence")
       .select(
-        "id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
+        "id, dealing_range_id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
       )
       .in("dealing_range_id", rangeIds),
     supabase
-      .from("trade_confirmations")
+      .from("trade_evidence")
       .select(
-        "id, trade_position_id, price, kind, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
+        "id, trade_position_id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
       )
       .in("trade_position_id", positionIds),
     lessonTargetIds.length > 0
@@ -149,25 +149,29 @@ export async function fetchTrades(instrument, accountId = null) {
     };
   }
 
-  // level unterscheidet die zwei Ebenen aus trade_confirmations (siehe Migration
-  // 20260731120000: dealing_range_id ODER trade_position_id) — TradeEditModal.vue braucht das,
-  // um "GO für die Idee" von "GO für diesen Entry" in der Liste sichtbar zu trennen.
+  // level unterscheidet die zwei Ebenen aus trade_evidence (siehe Migration 20260731120000:
+  // dealing_range_id ODER trade_position_id) — TradeEditModal.vue braucht das, um "GO für die
+  // Idee" von "GO für diesen Entry" in der Liste sichtbar zu trennen. category (generierte Spalte,
+  // siehe Migration 20260828120000) trennt zusätzlich Confirmation ("Bestätigung", GO-Signal:
+  // pivot/ob) von Confluence ("Zusatzargument", kein GO: fib/rsi_divergence) — TradeSetupCockpit.vue/
+  // TradeEditModal.vue filtern beide Ebenen zusätzlich danach in je zwei Sektionen.
   function toConfirmation(c, level) {
     return {
       id: c.id,
       level,
       price: c.price,
       kind: c.kind,
+      category: c.category,
       sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
       touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
       liquidityLevel: toLiquidityLevel(c),
-      // Nur bei kind='fib' gesetzt (siehe tradeConfirmations.ts) — die zwei Ankerpreise des
+      // Nur bei kind='fib' gesetzt (siehe tradeEvidence.ts) — die zwei Ankerpreise des
       // gespeicherten Fib-Werts, sonst null.
       rangeLow: c.range_low ?? null,
       rangeHigh: c.range_high ?? null,
       // Nur bei kind='ob' gesetzt — Zeitebene der Zone, siehe PriceChart.vue: refreshTradeTargetLinksInternal.
       timeframe: c.timeframe ?? null,
-      // Nur bei kind='rsi_divergence' gesetzt (siehe tradeConfirmations.ts) — price/sourceTime/
+      // Nur bei kind='rsi_divergence' gesetzt (siehe tradeEvidence.ts) — price/sourceTime/
       // touchedTime tragen bereits toPrice/fromTime/toTime, diese drei zusätzlich, damit sich die
       // Divergenz als vollständiger Zwei-Bein-Konnektor nachzeichnen lässt.
       fromPrice: c.from_price ?? null,
@@ -227,7 +231,7 @@ export async function fetchTrades(instrument, accountId = null) {
       })),
       // Bestätigungen fürs GO der ganzen Idee (dealing_range) und fürs GO dieses einen Entries
       // (trade_position, ex-setup_entry) zusammen — beide teilen dieselbe Tabelle/Rohform (siehe
-      // tradeConfirmations.ts), level (siehe toConfirmation) hält auseinander, welche welche ist.
+      // tradeEvidence.ts), level (siehe toConfirmation) hält auseinander, welche welche ist.
       confirmations: [
         ...(rangeConfirmationsByRange[range.id] ?? []).map((c) => toConfirmation(c, "range")),
         ...(positionConfirmationsByPosition[row.id] ?? []).map((c) => toConfirmation(c, "position")),
@@ -298,8 +302,8 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
     { data: targets, error: targetsError },
   ] = await Promise.all([
     supabase
-      .from("trade_confirmations")
-      .select(`id, price, kind, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, ${LIQUIDITY_LEVEL_EMBED}`)
+      .from("trade_evidence")
+      .select(`id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, ${LIQUIDITY_LEVEL_EMBED}`)
       .eq("dealing_range_id", dealingRangeId)
       .order("created_at"),
     supabase
@@ -349,6 +353,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
       level: "range",
       price: c.price,
       kind: c.kind,
+      category: c.category,
       sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
       touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
       liquidityLevel: toLiquidityLevel(c),

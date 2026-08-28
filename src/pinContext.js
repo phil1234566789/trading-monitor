@@ -9,7 +9,7 @@
 // "trade_setup" | "trade_confirmation" | "liquidity_level" | "m5_liquidity_level" |
 // "rsi_divergence", genau eine der fünf *_id-Spalten (oder bei den beiden m5/rsi-Snapshot-Kinds die
 // jeweiligen Rohdaten-Spalten) ist gesetzt (DB-CHECK-Constraint erzwingt das). ob_zones/
-// trade_setups/trade_confirmations/liquidity_levels werden hier direkt mit eingebettet (anders als
+// trade_setups/trade_evidence/liquidity_levels werden hier direkt mit eingebettet (anders als
 // trade_position, das gegen Dashboard.vue's bereits geladene `trades` gekreuzt wird, siehe
 // PinPanel.vue) — es gibt sonst keine reaktive Liste dieser Arten in Dashboard.vue, ein Zweit-Fetch
 // für die paar Anzeige-Felder ist hier einfacher als eine. Seit Task "Chart-Objekte: OBs auf
@@ -45,7 +45,7 @@ const ROW_COLUMNS =
   // hier bisher nicht mit ausgewählt, weil ungenutzt.
   "ob_zones(id, instrument, direction, timeframe, top, bottom, start_time, end_time, touched, invalidated), " +
   "trade_setups(id, instrument, direction, ob_top, ob_bottom, ob_start_time, ls_touched_time), " +
-  "trade_confirmations(id, kind, price, range_low, range_high, touched_time), " +
+  "trade_evidence(id, kind, category, price, range_low, range_high, touched_time), " +
   "liquidity_levels(id, instrument, direction, timeframe, price, pivot_time, end_time, touched)";
 
 function toEntry(row) {
@@ -121,14 +121,15 @@ function toEntry(row) {
           lsTouchedTime: row.trade_setups.ls_touched_time,
         }
       : null,
-    tradeConfirmation: row.trade_confirmations
+    tradeConfirmation: row.trade_evidence
       ? {
-          id: row.trade_confirmations.id,
-          kind: row.trade_confirmations.kind,
-          price: row.trade_confirmations.price,
-          rangeLow: row.trade_confirmations.range_low,
-          rangeHigh: row.trade_confirmations.range_high,
-          touchedTime: row.trade_confirmations.touched_time,
+          id: row.trade_evidence.id,
+          kind: row.trade_evidence.kind,
+          category: row.trade_evidence.category,
+          price: row.trade_evidence.price,
+          rangeLow: row.trade_evidence.range_low,
+          rangeHigh: row.trade_evidence.range_high,
+          touchedTime: row.trade_evidence.touched_time,
         }
       : null,
     note: row.note,
@@ -176,7 +177,7 @@ export async function addPinEntry(kind, refId, note) {
 
 // Seit Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 6 (2026-08-23):
 // M5-OBs werden beim Pinnen per find-or-create in ob_zones geschrieben (dieselbe Funktion, die
-// tradeIntake.js für trade_setups/trade_confirmations nutzt) und landen danach als ganz normaler
+// tradeIntake.js für trade_setups/trade_evidence nutzt) und landen danach als ganz normaler
 // kind="ob_zone"-Eintrag — kein eigener "m5_ob"-Snapshot-Kind mehr. Name/Signatur bleiben
 // unverändert (zone: { instrument, dirNum: 1|-1, top, bottom, startTime (Unix-Sekunden) }), damit
 // Dashboard.vue/die MCP-Tools nicht angepasst werden müssen.

@@ -178,7 +178,7 @@ export async function getJournal(instrument?: string, source?: string, limit = 5
 // 20260801150000_laniakea_context_trade_confirmations.sql — Migrationsdateien behalten ihren
 // historischen Namen, siehe 20260817120000_rename_laniakea_context_to_pin_context.sql für den Rename
 // auf DB-Ebene; src/pinContext.js):
-// trade_positions, ob_zones, trade_setups ODER trade_confirmations, die Philip per Rechtsklick "an
+// trade_positions, ob_zones, trade_setups ODER trade_evidence, die Philip per Rechtsklick "an
 // Lana übergeben" hat (kind unterscheidet, welches der vier embeds befüllt ist — bei z.B. einer
 // trade_position-Zeile sind die übrigen drei null und umgekehrt, kein zusätzlicher Filter nötig,
 // PostgREST liefert einfach null fürs nicht zutreffende Embed). Kein Snapshot in der Tabelle
@@ -193,7 +193,7 @@ export async function getPinContext() {
         "trade_positions(*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, trade_targets(id, price)), trade_partial_exits(price, exit_time, portion_pct)), " +
         "ob_zones(*), " +
         "trade_setups(*), " +
-        "trade_confirmations(*), " +
+        "trade_evidence(*), " +
         "liquidity_levels(*), " +
         // m5_liquidity_*/rsi_divergence_* sitzen direkt auf pin_context selbst (kein Embed, siehe
         // 20260802130000_laniakea_context_m5_liquidity.sql / 20260811170000_laniakea_context_rsi_divergence.sql
@@ -760,7 +760,7 @@ export async function createDealingRange(instrument: string, direction: "long" |
   return data;
 }
 
-// TSC-Reset — Port von src/tradeIntake.js: deleteDealingRange. trade_confirmations/trade_targets
+// TSC-Reset — Port von src/tradeIntake.js: deleteDealingRange. trade_evidence/trade_targets
 // hängen mit `on delete cascade` an dealing_ranges (Migration 20260731120000), ein einziges DELETE
 // hier reicht also. Nur sinnvoll, solange die Range noch keine trade_positions-Zeile hat (siehe
 // fetchActiveTscRangeId) — kein serverseitiger Schutz davor, dieselbe Vorsicht wie im Frontend.
@@ -828,8 +828,8 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
     { data: targets, error: targetsError },
   ] = await Promise.all([
     supabase
-      .from("trade_confirmations")
-      .select(`id, price, kind, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, ${LIQUIDITY_LEVEL_EMBED}`)
+      .from("trade_evidence")
+      .select(`id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, ${LIQUIDITY_LEVEL_EMBED}`)
       .eq("dealing_range_id", dealingRangeId)
       .order("created_at"),
     supabase
@@ -851,6 +851,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
       level: "range",
       price: c.price,
       kind: c.kind,
+      category: c.category,
       sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
       touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
       liquidityLevel: toLiquidityLevel(c),
@@ -879,7 +880,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
 export interface AddTradeConfirmationArgs {
   level: "range" | "position";
   id: number;
-  kind: "pivot" | "ob" | "fib";
+  kind: "pivot" | "ob" | "fib" | "rsi_divergence";
   price: number;
   // Pflicht seit Bug-Report Philip 2026-08-18 (siehe Task "Lana soll confirmations/targets sauber
   // in der dealing range verknüpfen") — ohne sourceTime kann PriceChart.vue die Box/Linie nicht
@@ -907,13 +908,23 @@ export interface AddTradeConfirmationArgs {
   // dealing_range fort (Port von src/tradeIntake.js: insertConfirmation, dortiger Kommentar für die
   // "direction immer überschreiben, invalidation nur wenn leer"-Regel).
   obDirection?: "long" | "short";
+  // Nur bei kind='rsi_divergence' sinnvoll (Task "Lana-MCP: Confirmations/Confluences/
+  // Anti-Confluences/Targets vollständig für eine Dealing Range anlegbar") — price/sourceTime/
+  // touchedTime tragen bereits toPrice/fromTime/toTime (wie bei 'ob' der nahe Zonen-Rand als price
+  // dient), diese drei zusätzlichen Felder machen die Divergenz später als vollständigen
+  // Zwei-Bein-Konnektor nachzeichenbar (siehe src/tradeEvidence.ts, gleiches Feld-Set wie beim
+  // Frontend-Chart-Klick-Weg).
+  divergenceType?: "bearish" | "bullish";
+  fromPrice?: number;
+  fromRsi?: number;
+  toRsi?: number;
 }
 
 // Fehlte bisher komplett auf MCP-Seite (Bug-Report Philip 2026-08-07, siehe Migration
 // 20260807120000_backfill_range_confirmations_27_28.sql): create_trade/add_trade_position setzen
 // zwar tradeSetupId auf die dealing_range, legen aber anders als der Frontend-Chart-Klick-Weg
 // (src/views/Dashboard.vue: onSelectSetupConfirmations/tradeIntake.js: insertConfirmation) nie
-// die zugehörige trade_confirmations-Zeile an — ein per MCP eingepflegter, setup-verlinkter Trade
+// die zugehörige trade_evidence-Zeile an — ein per MCP eingepflegter, setup-verlinkter Trade
 // zeigte darum nie eine Bestätigung im Edit-Modal. Gleiche Zweigleisigkeit wie im Frontend: level
 // entscheidet, ob dealing_range_id (GO für die Idee) oder trade_position_id (GO für diesen Entry)
 // gesetzt wird, nie beide.
@@ -943,7 +954,7 @@ export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
     );
   }
   const { data, error } = await supabase
-    .from("trade_confirmations")
+    .from("trade_evidence")
     .insert({
       dealing_range_id: args.level === "range" ? args.id : null,
       trade_position_id: args.level === "position" ? args.id : null,
@@ -956,6 +967,10 @@ export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
       timeframe: args.timeframe ?? null,
       liquidity_level_id: liquidityLevelId,
       ob_zone_id: obZoneId,
+      divergence_type: args.divergenceType ?? null,
+      from_price: args.fromPrice ?? null,
+      from_rsi: args.fromRsi ?? null,
+      to_rsi: args.toRsi ?? null,
     })
     .select("*")
     .single();

@@ -153,10 +153,15 @@ export function registerTradeTools(server: McpServer) {
     {
       title: "Bestätigung hinzufügen",
       description:
-        "Fügt eine Bestätigung (Sweep/Pivot, M5-OB-Kante oder Fib-Level — bereits passierte Evidenz " +
-        "für die Idee, nicht ein zukünftiges Ziel wie ein Target) zu einer dealing_range ('GO für die " +
-        "Idee', level='range', id=dealing_range_id) oder einer einzelnen trade_position ('GO für " +
-        "diesen Entry', level='position', id=trade_position_id) hinzu. Bei einem setup-verlinkten " +
+        "Fügt eine Bestätigung ODER ein Zusatzargument (Sweep/Pivot, M5-OB-Kante, Fib-Level oder " +
+        "RSI-Divergenz — bereits passierte Evidenz für die Idee, nicht ein zukünftiges Ziel wie ein " +
+        "Target) zu einer dealing_range ('GO für die Idee', level='range', id=dealing_range_id) oder " +
+        "einer einzelnen trade_position ('GO für diesen Entry', level='position', id=trade_position_id) " +
+        "hinzu. kind='pivot'/'ob' sind Confirmations (geben tatsächlich das GO), kind='fib'/" +
+        "'rsi_divergence' sind Confluences (geben nur zusätzliche Sicherheit, kein GO) — siehe " +
+        "trading-Repo trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt " +
+        "für die Begriffsdefinition; category ergibt sich automatisch aus kind, nicht selbst mitgeben. " +
+        "Bei einem setup-verlinkten " +
         "Trade (tradeSetupId auf create_trade/update_dealing_range) NICHT automatisch angelegt — " +
         "explizit nachziehen, sonst zeigt das Edit-Modal trotz Setup-Link keine Bestätigung (siehe " +
         "get_trade_setups fürs Ableiten von price/sourceTime: bei kind='ob' price = ob_bottom bei " +
@@ -178,11 +183,15 @@ export function registerTradeTools(server: McpServer) {
         "IMMER auf obDirection gesetzt (eine OB ist das eindeutigere Signal als ein bloßer Sweep), " +
         "invalidation NUR, falls dort noch nichts gesetzt ist (eine bereits vorhandene, evtl. manuell " +
         "nachjustierte Invalidierung bleibt unangetastet) — TSC-Bootstrap-Fall, wenn Philip eine Idee " +
-        "zuerst über einen Sweep anlegt und die OB-Bestätigung erst danach hinzukommt.",
+        "zuerst über einen Sweep anlegt und die OB-Bestätigung erst danach hinzukommt. Bei " +
+        "kind='rsi_divergence': price/sourceTime/touchedTime tragen den geprüften (jüngeren) " +
+        "Divergenz-Schwungpunkt (toPrice/toTime), fromPrice/fromRsi/toRsi/divergenceType den " +
+        "Referenzpunkt und die RSI-Werte beider Beine (siehe get_forex_rsi) — ohne sie ist die " +
+        "Divergenz später nicht mehr als Zwei-Bein-Konnektor nachzeichenbar, aber kein harter Fehler.",
       inputSchema: {
         level: z.enum(["range", "position"]),
         id: z.number().int().describe("dealing_range_id bei level='range', trade_position_id bei level='position'"),
-        kind: z.enum(["pivot", "ob", "fib"]),
+        kind: z.enum(["pivot", "ob", "fib", "rsi_divergence"]),
         price: z.number(),
         sourceTime: z.string().describe("ISO-Zeitstempel, z.B. Pivot-/OB-Startzeit — PFLICHT, sonst keine Chart-Position berechenbar."),
         touchedTime: z.string().nullable().optional().describe("ISO-Zeitstempel, falls bereits (an)getestet"),
@@ -192,6 +201,10 @@ export function registerTradeTools(server: McpServer) {
         instrument: INSTRUMENT.optional().describe("Bei kind='pivot' oder kind='ob': siehe Tool-Beschreibung."),
         direction: z.enum(["high", "low"]).optional().describe("Nur bei kind='pivot': siehe Tool-Beschreibung."),
         obDirection: z.enum(["long", "short"]).optional().describe("Nur bei kind='ob': siehe Tool-Beschreibung."),
+        divergenceType: z.enum(["bearish", "bullish"]).optional().describe("Nur bei kind='rsi_divergence'."),
+        fromPrice: z.number().optional().describe("Nur bei kind='rsi_divergence': Preis des Referenz-Schwungpunkts."),
+        fromRsi: z.number().optional().describe("Nur bei kind='rsi_divergence': RSI-Wert am Referenz-Schwungpunkt."),
+        toRsi: z.number().optional().describe("Nur bei kind='rsi_divergence': RSI-Wert am geprüften Schwungpunkt (price)."),
       },
     },
     async ({ level, id, ...fields }) => {

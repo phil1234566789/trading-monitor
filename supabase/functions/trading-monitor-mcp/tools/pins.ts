@@ -28,7 +28,7 @@ export function registerPinTools(server: McpServer) {
         "M5-OB-Box oder eine RSI-Divergenz-Linie) 'an dich übergeben' hat, samt optionaler Notiz " +
         "und voller Daten (bei kind='trade_position': dealing_range/targets/partial exits; bei " +
         "kind='ob_zone': die volle ob_zones-Zeile; bei kind='trade_setup': die volle trade_setups-" +
-        "Zeile; bei kind='trade_confirmation': die volle trade_confirmations-Zeile; bei " +
+        "Zeile; bei kind='trade_confirmation': die volle trade_evidence-Zeile; bei " +
         "kind='liquidity_level': die volle liquidity_levels-Zeile (nur 1h-Chart, echte DB-Zeile); " +
         "bei kind='m5_ob': die volle ob_zones-Zeile wie bei kind='ob_zone' (timeframe='5M') — beim " +
         "Pinnen per find-or-create angelegt, falls noch nicht vorhanden; touched/invalidated werden " +

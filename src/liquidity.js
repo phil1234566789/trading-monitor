@@ -294,7 +294,7 @@ export function bullBearLabelSide(bearish) {
 // formatLsLabel. Alter als reines "(3h)" statt "(3h alt)" (dritte Runde desselben Chats: "es ist
 // absolut klar mittlerweile was damit gemeint ist") — das "alt" ist seit Chat 2026-08-27 ("brauch
 // ich überhaupt nicht mehr, lösch es überall raus") auch aus formatLsLabel/ageSuffix und den
-// Bestätigungs-/Target-Listen (tradeConfirmations.ts/tradeTargets.ts) raus, überall dieselbe
+// Bestätigungs-/Target-Listen (tradeEvidence.ts/tradeTargets.ts) raus, überall dieselbe
 // Kurzform.
 // Vierte Runde, Philip: "Alter bedeutet von Entstehungspunkt bis touched. Falls noch nie touched,
 // dann halt eben bis jetzt. Das gilt überall so." — Alter/Tier laufen bis lvl.touchedTime (falls

@@ -45,7 +45,7 @@ export function registerTscTools(server: McpServer) {
       title: "TSC: Dealing-Range-Idee verwerfen",
       description:
         "Löscht eine dealing_range wieder (TSC-Reset, z.B. wenn eine Analyse verworfen wird) — " +
-        "trade_confirmations/trade_targets hängen per on-delete-cascade mit dran, werden also " +
+        "trade_evidence/trade_targets hängen per on-delete-cascade mit dran, werden also " +
         "automatisch mitgelöscht. Nur sinnvoll, solange die Range noch keine trade_positions-Zeile " +
         "hat (siehe get_tsc_range) — eine bereits ausgeführte Idee NICHT über dieses Tool löschen.",
       inputSchema: {

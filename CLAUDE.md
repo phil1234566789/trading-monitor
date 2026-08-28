@@ -128,13 +128,18 @@ The trade journal is split into two tables instead of one flat row:
 idea, shared across every re-entry underneath it. `trade_partial_exits` stay FK'd to
 `trade_positions` — partial closes belong to one specific execution.
 
-`trade_confirmations` is dual-level on purpose: a row FKs to *either* `dealing_range_id` *or*
-`trade_position_id` (nullable columns, `CHECK` constraint enforcing exactly one is set, not a
-generic `parent_type`/`parent_id` pair) — some confirmations give the GO for the dealing range
-itself, others give the GO for a specific entry. `createTradeFromSetup` (`src/tradeIntake.js`)
-inserts the M5-OB-derived entry price as a `kind='ob'` confirmation on the new position. There's
-no UI yet to add a *dealing-range-level* confirmation (only position-level, via the existing
-Trade-Modus "Bestätigung hinzufügen" flow) — deferred along with a TSC rework, not an oversight.
+`trade_evidence` (table name; `src/tradeEvidence.ts` for the frontend types/formatting) is
+dual-level on purpose: a row FKs to *either* `dealing_range_id` *or* `trade_position_id` (nullable
+columns, `CHECK` constraint enforcing exactly one is set, not a generic `parent_type`/`parent_id`
+pair) — some evidence gives the GO for the dealing range itself, others for a specific entry. A
+generated `category` column (`'confirmation'` for `kind IN ('pivot','ob')`, `'confluence'` for
+`kind IN ('fib','rsi_divergence')`) separates a **Confirmation** ("Bestätigung", actually gives the
+GO) from a **Confluence** ("Zusatzargument", adds confidence but isn't a GO on its own — see
+`trading` repo `trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-
+range-go-bekommt` for the full definition). `TradeSetupCockpit.vue` and `TradeEditModal.vue`
+(range- and position-level) render both as separate sections, sharing the same
+click-in-chart-while-in-Trade-Modus mechanism. `createTradeFromSetup` (`src/tradeIntake.js`)
+inserts the M5-OB-derived entry price as a `kind='ob'` confirmation on the new position.
 
 `src/trades.js`'s `fetchTrades` still returns one flat row per **position** (not per dealing
 range) with the parent range's fields embedded (`instrument`/`direction`/`invalidation`/
