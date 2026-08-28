@@ -18,7 +18,8 @@ existiert.
 
 `marketStructureAnalysis.ts` enthält NUR den reinen Algorithmus (kein Chart-Drawing, keine
 Browser-only-Imports) — dadurch bleibt sie außerhalb des Browsers importierbar (siehe
-`docs/mcp-server.md` → `get_data_export`s Structure-Trend). Die State-zu-Chart-Primitives-
+`docs/mcp-server.md` → `get_data_export`s Structure-Trend, dort jetzt die alleinige Deno-Kopie in
+`supabase/functions/trading-monitor-mcp/`). Die State-zu-Chart-Primitives-
 Rendering-Logik (`renderMarketStructureAnalysis` und Verwandte) liegt in
 `marketStructureRendering.ts`. Keinen neuen rendering-bezogenen Import (Chart-Farben,
 Linienbreiten, lightweight-charts-Primitives) zurück in `marketStructureAnalysis.ts` einbauen —

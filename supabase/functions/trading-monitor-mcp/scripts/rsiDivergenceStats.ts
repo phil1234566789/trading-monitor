@@ -2,11 +2,11 @@
 // Zeitraum ... damit wir wissen, wie wir den Indikator einstellen" + "wir müssen die Divergenzen
 // zusammen mit den Sessions vergleichen ... MMM Session ... hohe Fehlalarm-Quote") — bewusste
 // Alternative zur Live-Modal-Lösung (RsiDivergenceStatsPanel.vue, die Philip explizit behalten
-// wollte): fürs reine Tuning/Analysieren ist ein einmaliges Node-Script über das KOMPLETTE
+// wollte): fürs reine Tuning/Analysieren ist ein einmaliges Script über das KOMPLETTE
 // archivierte Jahr simpler als Browser+IndexedDB-Cache+Datums-Range-UI — kein Lücken-Risiko im
 // Cache, kein 10-20s-UI-Delay bei jedem Öffnen, beliebig oft mit anderen Parametern wiederholbar
 // (siehe LOOKFORWARD-Kommaliste unten). Gleiches Muster wie backfillObZones.ts: eigenständiges
-// tsx-Script, liest nur (forex_candles + sessions), schreibt nichts.
+// Script, liest nur (forex_candles + sessions), schreibt nichts in die DB.
 //
 // Ordnet jede gefundene Divergenz zusätzlich der Session zu, in der ihr toTime (der Divergenz-
 // Pivot-Zeitpunkt) liegt (dieselbe sessionOccurrences-Logik wie der Live-Chart, Berlin-Zeitzonen-
@@ -18,18 +18,23 @@
 //   SUPABASE_URL=... SUPABASE_ANON_KEY=... \
 //     [STATS_INSTRUMENTS=GBPUSD,EURUSD] [STATS_BAR=5m] [STATS_LOOKBACK=100] \
 //     [STATS_LOOKFORWARD=60] \
-//     npx tsx mcp-server/src/scripts/rsiDivergenceStats.ts
+//     deno run --allow-net --allow-env --allow-write --allow-read \
+//     supabase/functions/trading-monitor-mcp/scripts/rsiDivergenceStats.ts
 //
 // STATS_LOOKFORWARD akzeptiert eine Kommaliste (z.B. "15,30,60") für einen direkten
 // Parameter-Vergleich in einem Lauf — genau der Wert, den Philip schon als "vermutlich zu hoch"
 // vermutet hatte (siehe rsiDivergenceOutcome.js).
-import { mkdirSync, writeFileSync } from "fs";
-import { join } from "path";
-import { supabase } from "../supabaseClient.js";
-import { berlinOffsetMinutes, berlinDateStrFor, berlinDateTimeStrFor } from "../berlinTime.js";
-import { detectRsiDivergenceHistory, DEFAULT_DIVERGENCE_LOOKBACK_BARS } from "../../../src/rsi.js";
-import { classifyDivergenceOutcome, DEFAULT_DIVERGENCE_OUTCOME_LOOKFORWARD_BARS } from "../../../src/rsiDivergenceOutcome.js";
-import { sessionOccurrences } from "../../../src/sessionOccurrences.js";
+//
+// 2026-08-27 von der Node-Autoren-Kopie (mcp-server/, gelöscht) nach Deno portiert, einzige
+// verbleibende Kopie — process.env → Deno.env.get, node:fs/path → Deno.mkdirSync/writeTextFileSync,
+// process.stderr.write → Deno.stderr.writeSync, Cross-Directory-Imports aus ../../../src/ ersetzt
+// durch die lokalen, bereits vorhandenen Kopien (../rsi.js, ../rsiDivergenceOutcome.js,
+// ../sessionOccurrences.js), sonst unverändert.
+import { supabase } from "../supabaseClient.ts";
+import { berlinOffsetMinutes, berlinDateStrFor, berlinDateTimeStrFor } from "../berlinTime.ts";
+import { detectRsiDivergenceHistory, DEFAULT_DIVERGENCE_LOOKBACK_BARS } from "../rsi.js";
+import { classifyDivergenceOutcome, DEFAULT_DIVERGENCE_OUTCOME_LOOKFORWARD_BARS } from "../rsiDivergenceOutcome.js";
+import { sessionOccurrences } from "../sessionOccurrences.js";
 
 interface CandleRow {
   time: number;
@@ -66,10 +71,10 @@ interface ClassifiedDivergence {
   session: string;
 }
 
-const INSTRUMENTS = (process.env.STATS_INSTRUMENTS ?? "GBPUSD,EURUSD").split(",").map((s) => s.trim());
-const BAR = process.env.STATS_BAR ?? "5m";
-const LOOKBACK = Number(process.env.STATS_LOOKBACK ?? DEFAULT_DIVERGENCE_LOOKBACK_BARS);
-const LOOKFORWARD_VALUES = (process.env.STATS_LOOKFORWARD ?? String(DEFAULT_DIVERGENCE_OUTCOME_LOOKFORWARD_BARS))
+const INSTRUMENTS = (Deno.env.get("STATS_INSTRUMENTS") ?? "GBPUSD,EURUSD").split(",").map((s) => s.trim());
+const BAR = Deno.env.get("STATS_BAR") ?? "5m";
+const LOOKBACK = Number(Deno.env.get("STATS_LOOKBACK") ?? DEFAULT_DIVERGENCE_LOOKBACK_BARS);
+const LOOKFORWARD_VALUES = (Deno.env.get("STATS_LOOKFORWARD") ?? String(DEFAULT_DIVERGENCE_OUTCOME_LOOKFORWARD_BARS))
   .split(",")
   .map((s) => Number(s.trim()));
 
@@ -80,6 +85,11 @@ const LOOKFORWARD_VALUES = (process.env.STATS_LOOKFORWARD ?? String(DEFAULT_DIVE
 const berlinOffsetFromSec = (utcSec: number) => berlinOffsetMinutes(utcSec * 1000);
 
 const READ_PAGE_SIZE = 5000; // siehe backfillObZones.ts — großzügig angefragt, PostgREST kappt serverseitig ohnehin auf ~1000
+
+const stderrEncoder = new TextEncoder();
+function writeStderr(text: string) {
+  Deno.stderr.writeSync(stderrEncoder.encode(text));
+}
 
 // Aufsteigend sortierte, komplette archivierte Kerzenserie — via .range()-Pagination, weiterzählen
 // um die TATSÄCHLICH zurückgegebene Zeilenzahl statt READ_PAGE_SIZE (siehe backfillObZones.ts-
@@ -101,9 +111,9 @@ async function fetchAllCandles(instrument: string, bar: string): Promise<CandleR
     from += data.length;
     // Fortschritts-Log (2026-08-24, Philip: "dauert echt so lang" bei stillem Paginierungs-Warten
     // über ein volles Jahr) — \r statt \n, überschreibt sich in einem echten Terminal selbst.
-    process.stderr.write(`\r${instrument} ${bar}: ${all.length} Kerzen geladen...`);
+    writeStderr(`\r${instrument} ${bar}: ${all.length} Kerzen geladen...`);
   }
-  process.stderr.write("\n");
+  writeStderr("\n");
   return all;
 }
 
@@ -203,9 +213,9 @@ function printMonthlyBreakdown(list: ClassifiedDivergence[]) {
 // maschinen-lokal, gleicher Ordner wie metadata.json), damit Philip die Rohdaten in Excel/Sheets
 // selbst weiterverarbeiten kann, ohne dass sich das Script um jede denkbare Auswertung kümmern muss.
 function exportCsv(instrument: string, bar: string, lookforward: number, list: ClassifiedDivergence[]) {
-  const dir = join(process.cwd(), ".debug");
-  mkdirSync(dir, { recursive: true });
-  const path = join(dir, `rsi-divergence-stats-${instrument}-${bar}-lf${lookforward}.csv`);
+  const dir = `${Deno.cwd()}/.debug`;
+  Deno.mkdirSync(dir, { recursive: true });
+  const path = `${dir}/rsi-divergence-stats-${instrument}-${bar}-lf${lookforward}.csv`;
   const headers = [
     "type",
     "from_time_berlin",
@@ -236,7 +246,7 @@ function exportCsv(instrument: string, bar: string, lookforward: number, list: C
       berlinDateStrFor(d.toTime).slice(0, 7),
     ].join(","),
   );
-  writeFileSync(path, [headers.join(","), ...rows].join("\n"), "utf-8");
+  Deno.writeTextFileSync(path, [headers.join(","), ...rows].join("\n"));
   console.log(`  CSV exportiert: ${path} (${list.length} Zeilen)`);
 }
 

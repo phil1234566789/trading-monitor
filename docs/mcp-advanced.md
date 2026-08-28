@@ -41,8 +41,10 @@ kein Bedarf.
 ## Transports
 
 - **STDIO** — Standard-I/O-Streams, Initialisierungs-Handshake. Das war der ursprüngliche
-  Transport von `mcp-server/` (lokal, `npx tsx`), bevor beide Server am 2026-08-16/17 auf HTTP
-  umgestellt wurden (siehe Haupt-CLAUDE.md "MCP server"-Abschnitt).
+  Transport von `mcp-server/` (damals eine zusätzliche lokale Node/`npx tsx`-Kopie, inzwischen
+  komplett gelöscht — siehe "Eine Kopie, Deno" oben in `docs/mcp-server.md`), bevor beide
+  damaligen Kopien am 2026-08-16/17 auf HTTP umgestellt wurden (siehe Haupt-CLAUDE.md
+  "MCP server"-Abschnitt).
 - **StreamableHTTP** — Server-Sent Events (SSE) für Server→Client-Kommunikation, Session-
   Management, Dual-Connection-Architektur. Das ist der Transport, den unsere Edge Functions
   faktisch nutzen (HTTP + Bearer-Token, `verify_jwt = false`).

@@ -99,8 +99,8 @@ interface InstrumentConfig {
 // Pin-Touch-Alarm (siehe resolvePinTouch/Deno.serve unten) — explizit typisiert wie ObZoneRow/
 // LiquidityLevelRow oben, gleicher Grund (PostgREST-Embed-Typinferenz kollabiert sonst auf `{}`).
 // Die drei Embeds sind je nach `kind` gesetzt, sonst null (PostgREST liefert null fürs nicht
-// zutreffende Embed, kein zusätzlicher Filter nötig — gleiches Muster wie mcp-server/src/db.ts:
-// getPinContext).
+// zutreffende Embed, kein zusätzlicher Filter nötig — gleiches Muster wie trading-monitor-mcp/
+// db.ts: getPinContext).
 interface PinAlarmRow {
   id: number;
   kind: string;

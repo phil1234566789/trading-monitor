@@ -1,7 +1,8 @@
-// trading-monitor MCP-Server als Supabase Edge Function (Deno) — Port des bisherigen lokalen
-// stdio-Servers (mcp-server/, jetzt nur noch Basis für die einmaligen Wartungsskripte in
-// mcp-server/src/scripts/, siehe dessen package.json). Grund: auf dem DATEV-Firmenrechner
-// scheitert `npx tsx mcp-server/src/index.ts` an der dortigen TLS-Inspection, während eine
+// trading-monitor MCP-Server als Supabase Edge Function (Deno) — Port des ursprünglich lokalen
+// stdio-Servers (`mcp-server/`, eine Node-Autoren-Kopie; inzwischen komplett gelöscht, diese
+// Deno-Kopie ist die einzige verbleibende — die einmaligen Wartungsskripte leben jetzt unter
+// `scripts/` in diesem Ordner). Grund für den Umstieg damals: auf dem DATEV-Firmenrechner
+// scheiterte `npx tsx mcp-server/src/index.ts` an der dortigen TLS-Inspection, während eine
 // deployte Edge Function ganz normal per HTTPS erreichbar ist — kein lokaler Node-Prozess mehr
 // nötig, funktioniert von jedem Rechner/Client aus (Claude Web, VS Code, ...), analog zu
 // milk-city (siehe dessen supabase/functions/mcp/index.ts, 1:1 Vorbild für Transport+Auth-Muster
@@ -23,6 +24,7 @@ import { registerReadTools } from "./tools/reads.ts";
 import { registerAnnotationTools } from "./tools/annotations.ts";
 import { registerTradeTools } from "./tools/trades.ts";
 import { registerPinTools } from "./tools/pins.ts";
+import { registerTscTools } from "./tools/tsc.ts";
 
 const MCP_TOKEN = Deno.env.get("TRADING_MONITOR_MCP_TOKEN");
 
@@ -39,6 +41,7 @@ function buildServer() {
   registerAnnotationTools(server);
   registerTradeTools(server);
   registerPinTools(server);
+  registerTscTools(server);
   return server;
 }
 

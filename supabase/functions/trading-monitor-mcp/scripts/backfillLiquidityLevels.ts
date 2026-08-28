@@ -6,7 +6,7 @@
 // zurücklag, wurde dadurch nie persistiert, egal wie lange man wartet. Analog zu
 // backfillObZones.ts: läuft dieselbe Erkennung, die auch poi-watcher live nutzt
 // (`detectLiquidityLevels`, siehe liquidityDetection.js — bewusst dependency-frei, genau für
-// diesen Node-Anwendungsfall) einmalig über die KOMPLETTE archivierte Kerzenserie statt nur über
+// diesen Anwendungsfall) einmalig über die KOMPLETTE archivierte Kerzenserie statt nur über
 // das rollierende Live-Fenster — die Funktion ist rein (touched/endTime deterministisch aus der
 // übergebenen Kerzenserie berechnet), braucht also keinen Live-Zustand.
 //
@@ -34,10 +34,15 @@
 // Migration 20260823130000_liquidity_levels_anon_insert.sql schaltet anon-Insert frei
 // (liquidity_levels war bisher anon-select-only, gleiches Muster wie ob_zones vor 20260809140000).
 //
+// 2026-08-27 von der Node-Autoren-Kopie (mcp-server/, gelöscht) nach Deno portiert, einzige
+// verbleibende Kopie — process.env → Deno.env.get, Cross-Directory-Import aus ../../../src/ ersetzt
+// durch die lokale, bereits vorhandene Kopie ../liquidityDetection.js, sonst unverändert:
+//
 //   SUPABASE_URL=... SUPABASE_ANON_KEY=... [BACKFILL_INSTRUMENTS=GBPUSD,EURUSD] \
-//     [BACKFILL_BARS=1h,4h] npx tsx mcp-server/src/scripts/backfillLiquidityLevels.ts
-import { supabase } from "../supabaseClient.js";
-import { detectLiquidityLevels, LIQUIDITY_FRACTAL_PERIOD } from "../../../src/liquidityDetection.js";
+//     [BACKFILL_BARS=1h,4h] deno run --allow-net --allow-env \
+//     supabase/functions/trading-monitor-mcp/scripts/backfillLiquidityLevels.ts
+import { supabase } from "../supabaseClient.ts";
+import { detectLiquidityLevels, LIQUIDITY_FRACTAL_PERIOD } from "../liquidityDetection.js";
 
 // forex_candles.bar ("1h"/"4h", unsere eigene Konvention, siehe backfillForexCandles.ts) auf den
 // liquidity_levels.timeframe-Spaltenwert gemappt (uneinheitlich großgeschrieben, siehe
@@ -47,8 +52,8 @@ const BAR_CONFIG: Record<string, { dbTimeframe: string }> = {
   "4h": { dbTimeframe: "4H" },
 };
 
-const INSTRUMENTS = (process.env.BACKFILL_INSTRUMENTS ?? "GBPUSD,EURUSD").split(",").map((s) => s.trim());
-const BARS = (process.env.BACKFILL_BARS ?? "1h,4h").split(",").map((s) => s.trim());
+const INSTRUMENTS = (Deno.env.get("BACKFILL_INSTRUMENTS") ?? "GBPUSD,EURUSD").split(",").map((s) => s.trim());
+const BARS = (Deno.env.get("BACKFILL_BARS") ?? "1h,4h").split(",").map((s) => s.trim());
 
 const READ_PAGE_SIZE = 5000; // Supabase-Read-Pagination — siehe backfillObZones.ts
 const UPSERT_BATCH_SIZE = 500;

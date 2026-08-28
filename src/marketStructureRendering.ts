@@ -1,7 +1,7 @@
 // Zeichnung/Primitives fürs "1h-Range"-Marktstruktur-Feature (PriceChart.vue) — abgetrennt von
 // marketStructureAnalysis.ts (Chat 2026-07-31), damit die reine Trend-Mathematik dort ohne
 // Browser-Abhängigkeiten (chartColors.js/liquidity.js-Primitives) importierbar bleibt, u.a. für den
-// mcp-server (siehe CLAUDE.md "MCP-Server"). Diese Datei zeichnet, importiert also bewusst weiter
+// MCP-Server (siehe CLAUDE.md "MCP-Server"). Diese Datei zeichnet, importiert also bewusst weiter
 // alles Chart-bezogene — computeRangesPivots/buildMarketStructureState/summarizeMarketStructureState
 // bleiben in marketStructureAnalysis.ts, hier nur der State -> Chart-Primitives-Teil.
 import { LiquidityLinePrimitive, bullBearLabelSide, formatLsLabel } from "./liquidity.js";

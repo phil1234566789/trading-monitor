@@ -169,7 +169,16 @@ export function registerTradeTools(server: McpServer) {
         "Pivot ein echter Struktur-/Liquiditäts-Pivot ist (nicht z.B. ein synthetischer Preis) — " +
         "löst ihn per find-or-create in liquidity_levels auf (dieselbe Zeile wie ein von poi-watcher " +
         "erkannter Pivot, falls der Preis/Zeitpunkt exakt übereinstimmt), statt nur einen rohen " +
-        "Snapshot zu speichern. Fehlen sie, bleibt das alte Rohdaten-Verhalten (kein Fehler).",
+        "Snapshot zu speichern. Fehlen sie, bleibt das alte Rohdaten-Verhalten (kein Fehler). Bei " +
+        "kind='ob' zusätzlich instrument/timeframe/obDirection mitgeben, um die Zone per " +
+        "find-or-create in ob_zones aufzulösen (analog zu instrument/direction bei kind='pivot', nur " +
+        "eigenes Feld — obDirection ist die Long/Short-Richtung der OB selbst, eine andere Achse als " +
+        "direction, das nur für einen Pivot 'high'/'low' bedeutet). Bei level='range' UND kind='ob' " +
+        "mit obDirection zieht das Tool zusätzlich die dealing_range selbst nach: direction wird " +
+        "IMMER auf obDirection gesetzt (eine OB ist das eindeutigere Signal als ein bloßer Sweep), " +
+        "invalidation NUR, falls dort noch nichts gesetzt ist (eine bereits vorhandene, evtl. manuell " +
+        "nachjustierte Invalidierung bleibt unangetastet) — TSC-Bootstrap-Fall, wenn Philip eine Idee " +
+        "zuerst über einen Sweep anlegt und die OB-Bestätigung erst danach hinzukommt.",
       inputSchema: {
         level: z.enum(["range", "position"]),
         id: z.number().int().describe("dealing_range_id bei level='range', trade_position_id bei level='position'"),
@@ -180,8 +189,9 @@ export function registerTradeTools(server: McpServer) {
         rangeLow: z.number().nullable().optional().describe("Bei kind='ob': PFLICHT (untere Zonen-Kante), bei kind='fib' optionale Ankerkante."),
         rangeHigh: z.number().nullable().optional().describe("Bei kind='ob': PFLICHT (obere Zonen-Kante), bei kind='fib' optionale Ankerkante."),
         timeframe: z.string().nullable().optional().describe("Bei kind='ob': Zeitebene der Zone, z.B. '5M'/'1H'/'4H'. Bei kind='pivot': '1H'/'4H', siehe oben."),
-        instrument: INSTRUMENT.optional().describe("Nur bei kind='pivot': siehe Tool-Beschreibung."),
+        instrument: INSTRUMENT.optional().describe("Bei kind='pivot' oder kind='ob': siehe Tool-Beschreibung."),
         direction: z.enum(["high", "low"]).optional().describe("Nur bei kind='pivot': siehe Tool-Beschreibung."),
+        obDirection: z.enum(["long", "short"]).optional().describe("Nur bei kind='ob': siehe Tool-Beschreibung."),
       },
     },
     async ({ level, id, ...fields }) => {
@@ -208,13 +218,19 @@ export function registerTradeTools(server: McpServer) {
         "rangeLow/rangeHigh) zusätzlich instrument/direction/timeframe mitgeben, wenn es ein echter " +
         "Struktur-/Liquiditäts-Pivot ist — löst ihn per find-or-create in liquidity_levels auf " +
         "(siehe add_trade_confirmation für dieselbe Logik), statt nur einen rohen Snapshot zu " +
-        "speichern. Fehlen sie, bleibt das alte Rohdaten-Verhalten (kein Fehler).",
+        "speichern. Fehlen sie, bleibt das alte Rohdaten-Verhalten (kein Fehler). kind ('pivot' oder " +
+        "'ob') sollte mitgegeben werden, sonst kann das Chart ein OB-Ziel (rangeLow/rangeHigh gesetzt) " +
+        "nicht von einem Pivot-Ziel unterscheiden. touchedTime, falls das Ziel bereits erreicht wurde " +
+        "(sonst offen). Jedes Target sollte einer der Kandidaten aus find_targets sein — nicht " +
+        "eigenständig einen Preis außerhalb dieser Liste bestimmen.",
       inputSchema: {
         dealingRangeId: z.number().int(),
         price: z.number(),
+        kind: z.enum(["pivot", "ob"]).nullable().optional(),
         rangeLow: z.number().nullable().optional().describe("Für OB-Ziele: Zonen-Unterkante"),
         rangeHigh: z.number().nullable().optional().describe("Für OB-Ziele: Zonen-Oberkante"),
         sourceTime: z.string().describe("ISO-Zeitstempel, z.B. Pivot-/OB-Zeitpunkt — PFLICHT, sonst keine Chart-Position berechenbar."),
+        touchedTime: z.string().nullable().optional().describe("ISO-Zeitstempel, falls das Ziel bereits erreicht wurde"),
         instrument: INSTRUMENT.optional().describe("Nur bei einem reinen Pivot-Ziel: siehe Tool-Beschreibung."),
         timeframe: z.string().optional().describe("Nur bei einem reinen Pivot-Ziel: '1H' oder '4H'."),
         direction: z.enum(["high", "low"]).optional().describe("Nur bei einem reinen Pivot-Ziel."),

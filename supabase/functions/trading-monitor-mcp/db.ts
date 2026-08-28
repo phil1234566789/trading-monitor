@@ -282,8 +282,12 @@ async function findOrCreateObZoneId(instrument: string, timeframe: string, direc
 // Preispunkt. Nutzt denselben unique(instrument,timeframe,direction,pivot_time)-Constraint wie
 // poi-watcher selbst (Migration 20260715120000) — trifft der Upsert auf einen bereits von
 // poi-watcher erkannten Pivot, wird dessen Zeile wiederverwendet (keine Dopplung), sonst neu
-// angelegt. timeframe ist hier '1H' oder '4H' (siehe liquidity_levels-Check-Constraint).
+// angelegt. timeframe ist '1H'/'4H' oder seit Migration 20260827120000 auch '5M' (M5-Sweep-
+// Bestätigung/-Target, siehe src/tradeIntake.js: findOrCreateLiquidityLevelId, dieselbe Formel) —
+// Guard hier nachgezogen (fehlte bisher nur in dieser Deno-Kopie), sonst würde ein Fremd-Timeframe
+// den liquidity_levels-Check-Constraint verletzen statt sauber null zurückzugeben.
 async function findOrCreateLiquidityLevelId(instrument: string, timeframe: string, direction: string, price: number, pivotTimeSec: number) {
+  if (timeframe !== "1H" && timeframe !== "4H" && timeframe !== "5M") return null;
   const { data, error } = await supabase
     .from("liquidity_levels")
     .upsert(
@@ -389,7 +393,7 @@ export async function removePinEntry(id: number) {
 const DB_READ_PAGE_SIZE = 1000;
 
 // Liest aus der forex_candles-Tabelle (Backfill 2026-08-09, siehe Migration
-// 20260809120000_forex_candles.sql + mcp-server/src/scripts/backfillForexCandles.ts) statt einem
+// 20260809120000_forex_candles.sql + scripts/backfillForexCandles.ts) statt einem
 // Live-cTrader-Request — kein Timeout-Risiko, aber nur für den tatsächlich befüllten Bereich
 // nutzbar (aktuell: GBPUSD, 5m/1h/4h, ab 2026-01-01). Rückgabeform exakt wie
 // fetchForexCandles/get_forex_candles ({time,open,high,low,close,volume}, time in Unix-Sekunden,
@@ -744,6 +748,134 @@ export async function updateDealingRange(id: number, fields: UpdateDealingRangeA
   return data;
 }
 
+// Nur die Idee, OHNE gleichzeitig eine trade_positions-Ausführung (anders als createTrade oben) —
+// Port von src/tradeIntake.js: createDealingRange, fürs TSC-über-MCP-Bedienen (Philip: "jetzt
+// bereite bitte alles so vor, dass Lana ... den TSC bedienen kann"). direction kommt NICHT von
+// einem erkannten Setup, sondern von der ersten OB-Bestätigung, siehe addTradeConfirmation unten
+// (obDirection-Zweig) — analog zum Frontend-Flow (Dashboard.vue: onSelectTarget,
+// tscBootstrapArmed-Zweig).
+export async function createDealingRange(instrument: string, direction: "long" | "short") {
+  const { data, error } = await supabase.from("dealing_ranges").insert({ instrument, direction }).select("*").single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+// TSC-Reset — Port von src/tradeIntake.js: deleteDealingRange. trade_confirmations/trade_targets
+// hängen mit `on delete cascade` an dealing_ranges (Migration 20260731120000), ein einziges DELETE
+// hier reicht also. Nur sinnvoll, solange die Range noch keine trade_positions-Zeile hat (siehe
+// fetchActiveTscRangeId) — kein serverseitiger Schutz davor, dieselbe Vorsicht wie im Frontend.
+export async function deleteDealingRange(id: number) {
+  const { error } = await supabase.from("dealing_ranges").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return { deleted: true, id };
+}
+
+// Port von src/trades.js: fetchActiveTscRangeId — welche dealing_ranges-Zeile ist gerade "die
+// aktive TSC-Range" für ein Instrument? Eine über die TSC angelegte Range hat (noch) keine
+// trade_positions-Zeile — genau das unterscheidet "wird gerade analysiert" von "schon ausgeführt".
+// Bei mehreren offenen Ranges für dasselbe Instrument gewinnt die zuletzt angelegte. `.limit(20)`
+// reicht für eine persönliche Journal-Größenordnung locker, kein echtes NOT-EXISTS nötig
+// (PostgREST kann das nicht direkt).
+export async function fetchActiveTscRangeId(instrument: string) {
+  const { data, error } = await supabase
+    .from("dealing_ranges")
+    .select("id, trade_positions(id)")
+    .eq("instrument", instrument)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (error) throw new Error(error.message);
+  return (data ?? []).find((r) => (r.trade_positions ?? []).length === 0)?.id ?? null;
+}
+
+function toLiquidityLevel(row: { liquidity_levels?: { price: number; direction: string; timeframe: string; pivot_time: string; touched: boolean; end_time: string | null } | null } | null) {
+  if (!row?.liquidity_levels) return null;
+  const lvl = row.liquidity_levels;
+  return {
+    price: lvl.price,
+    dir: lvl.direction === "high" ? 1 : -1,
+    pivotTime: Math.floor(new Date(lvl.pivot_time).getTime() / 1000),
+    // Bug-Report Philip 2026-08-27: eine per TSC-Klick verknüpfte LQ-Linie zeichnete sich durch
+    // bis "jetzt", statt am Touch zu enden — touched=false/end_time=null aus der DB kann entweder
+    // "poi-watcher hat live bestätigt: noch unberührt" ODER "diese Zeile kam gerade erst per
+    // findOrCreateLiquidityLevelId rein, poi-watcher hat sie nie gesehen/aktualisiert" bedeuten,
+    // beides sieht in der DB identisch aus. null (statt false) triggert denselben
+    // Self-Heal-gegen-geladene-Kerzen-Pfad wie bei einem reinen m5_liquidity_level-Snapshot (siehe
+    // src/priceChartLiquidity.js: mergePinnedLevels).
+    touched: lvl.touched === true ? true : lvl.end_time != null ? false : null,
+    endTime: lvl.end_time ? Math.floor(new Date(lvl.end_time).getTime() / 1000) : null,
+    timeframe: lvl.timeframe,
+  };
+}
+
+// Schlanker Fetch NUR für die TSC — Port von src/trades.js: fetchDealingRangeCockpit. Anders als
+// getJournal geht das hier NICHT über trade_positions (eine frisch aus der TSC angelegte Range hat
+// zu Beginn noch gar keine Ausführung), sondern lädt eine einzelne dealing_ranges-Zeile direkt +
+// ihre range-level Bestätigungen/Targets. liquidity_levels wird eingebettet, damit eine
+// Sweep-Bestätigung/-Target das bestehende LQ-Chartobjekt highlighten kann statt eine zweite,
+// dickere Linie zu zeichnen (dieselbe toLiquidityLevel-Formel wie getJournal).
+export async function fetchDealingRangeCockpit(dealingRangeId: number) {
+  const { data: range, error: rangeError } = await supabase
+    .from("dealing_ranges")
+    .select("id, instrument, direction, invalidation")
+    .eq("id", dealingRangeId)
+    .maybeSingle();
+  if (rangeError) throw new Error(rangeError.message);
+  if (!range) return null;
+
+  const LIQUIDITY_LEVEL_EMBED = "liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)";
+  const [
+    { data: confirmations, error: confirmationsError },
+    { data: targets, error: targetsError },
+  ] = await Promise.all([
+    supabase
+      .from("trade_confirmations")
+      .select(`id, price, kind, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, ${LIQUIDITY_LEVEL_EMBED}`)
+      .eq("dealing_range_id", dealingRangeId)
+      .order("created_at"),
+    supabase
+      .from("trade_targets")
+      .select(`id, price, kind, source_time, touched_time, range_low, range_high, timeframe, ${LIQUIDITY_LEVEL_EMBED}`)
+      .eq("dealing_range_id", dealingRangeId)
+      .order("created_at"),
+  ]);
+  if (confirmationsError) throw new Error(confirmationsError.message);
+  if (targetsError) throw new Error(targetsError.message);
+
+  return {
+    id: range.id,
+    instrument: range.instrument,
+    direction: range.direction,
+    invalidation: range.invalidation ?? null,
+    confirmations: (confirmations ?? []).map((c: any) => ({
+      id: c.id,
+      level: "range",
+      price: c.price,
+      kind: c.kind,
+      sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
+      touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
+      liquidityLevel: toLiquidityLevel(c),
+      rangeLow: c.range_low ?? null,
+      rangeHigh: c.range_high ?? null,
+      timeframe: c.timeframe ?? null,
+      fromPrice: c.from_price ?? null,
+      fromRsi: c.from_rsi ?? null,
+      toRsi: c.to_rsi ?? null,
+      divergenceType: c.divergence_type ?? null,
+    })),
+    targets: (targets ?? []).map((t: any) => ({
+      id: t.id,
+      price: t.price,
+      kind: t.kind,
+      sourceTime: t.source_time ? Math.floor(new Date(t.source_time).getTime() / 1000) : null,
+      touchedTime: t.touched_time ? Math.floor(new Date(t.touched_time).getTime() / 1000) : null,
+      rangeLow: t.range_low ?? null,
+      rangeHigh: t.range_high ?? null,
+      timeframe: t.timeframe ?? null,
+      liquidityLevel: toLiquidityLevel(t),
+    })),
+  };
+}
+
 export interface AddTradeConfirmationArgs {
   level: "range" | "position";
   id: number;
@@ -766,6 +898,15 @@ export interface AddTradeConfirmationArgs {
   // weiterhin unterstützt).
   instrument?: string;
   direction?: "high" | "low";
+  // Nur bei kind='ob' sinnvoll — die Long/Short-Richtung der OB selbst (NICHT dieselbe Achse wie
+  // direction oben, das ist 'high'/'low' für einen Pivot). Bewusst ein eigenes Feld statt direction
+  // zu überladen (Philip: "das entscheidet eine Bestätigung, welche einen OB enthält" — die OB ist
+  // bärisch oder bullisch, ein Sweep-Pivot ist high oder low, zwei verschiedene Achsen). Löst analog
+  // zu direction/liquidity_level_id die ob_zones-Zeile per find-or-create auf (siehe
+  // findOrCreateObZoneId) UND schreibt — nur bei level='range' — die direction/invalidation der
+  // dealing_range fort (Port von src/tradeIntake.js: insertConfirmation, dortiger Kommentar für die
+  // "direction immer überschreiben, invalidation nur wenn leer"-Regel).
+  obDirection?: "long" | "short";
 }
 
 // Fehlte bisher komplett auf MCP-Seite (Bug-Report Philip 2026-08-07, siehe Migration
@@ -787,6 +928,20 @@ export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
       Math.floor(new Date(args.sourceTime).getTime() / 1000),
     );
   }
+  // Analog zu liquidityLevelId oben, für kind='ob' — Port der find-or-create-Auflösung aus
+  // src/tradeIntake.js: insertConfirmation (fehlte hier bisher komplett, siehe
+  // AddTradeConfirmationArgs.obDirection-Kommentar).
+  let obZoneId: number | null = null;
+  if (args.kind === "ob" && args.instrument && args.timeframe && args.obDirection && args.rangeLow != null && args.rangeHigh != null) {
+    obZoneId = await findOrCreateObZoneId(
+      args.instrument,
+      args.timeframe,
+      args.obDirection,
+      args.rangeHigh,
+      args.rangeLow,
+      Math.floor(new Date(args.sourceTime).getTime() / 1000),
+    );
+  }
   const { data, error } = await supabase
     .from("trade_confirmations")
     .insert({
@@ -800,21 +955,48 @@ export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
       range_high: args.rangeHigh ?? null,
       timeframe: args.timeframe ?? null,
       liquidity_level_id: liquidityLevelId,
+      ob_zone_id: obZoneId,
     })
     .select("*")
     .single();
   if (error) throw new Error(error.message);
+
+  // Port von src/tradeIntake.js: insertConfirmation (dortiger Kommentar für die Herleitung) — nur
+  // bei level='range': direction wird IMMER überschrieben (die OB ist das eindeutigere Signal als
+  // ein bloßer Sweep), invalidation NUR wenn noch leer (eine bereits gesetzte, evtl. manuell
+  // nachjustierte Invalidierung wird nicht überschrieben).
+  if (args.level === "range" && args.kind === "ob" && args.rangeLow != null && args.rangeHigh != null && args.obDirection != null) {
+    const { data: range, error: rangeError } = await supabase.from("dealing_ranges").select("invalidation, direction").eq("id", args.id).maybeSingle();
+    if (rangeError) throw new Error(rangeError.message);
+    if (range) {
+      const updates: Record<string, unknown> = {};
+      if (range.direction !== args.obDirection) updates.direction = args.obDirection;
+      if (range.invalidation == null) updates.invalidation = args.obDirection === "long" ? args.rangeLow : args.rangeHigh;
+      if (Object.keys(updates).length > 0) {
+        const { error: updateError } = await supabase.from("dealing_ranges").update(updates).eq("id", args.id);
+        if (updateError) throw new Error(updateError.message);
+      }
+    }
+  }
+
   return data;
 }
 
 export interface AddTradeTargetArgs {
   price: number;
+  // 'pivot'|'ob' — fehlte hier bisher komplett (nur DB-Default), Port von src/tradeIntake.js:
+  // addTargetToTrade. Ohne kind kann PriceChart.vue: refreshTradeTargetLinksInternal ein OB-Target
+  // (rangeLow/rangeHigh gesetzt) nicht von einem Pivot-Target unterscheiden.
+  kind?: "pivot" | "ob" | null;
   rangeLow?: number | null;
   rangeHigh?: number | null;
   // Pflicht seit Bug-Report Philip 2026-08-18 (siehe AddTradeConfirmationArgs.sourceTime oben,
   // dieselbe Begründung) — ohne sourceTime bleibt das Target im Chart unsichtbar, auch wenn die
   // DB-Zeile existiert.
   sourceTime: string;
+  // Tatsächlicher Erreichungs-Zeitpunkt (TP schon getroffen) — fehlte hier bisher komplett, Port
+  // von src/tradeIntake.js: addTargetToTrade. null solange das Target noch offen ist.
+  touchedTime?: string | null;
   // Nur sinnvoll für ein reines Pivot-Target (kein rangeLow/rangeHigh) — siehe
   // AddTradeConfirmationArgs.instrument/direction, gleiche find-or-create-Logik.
   instrument?: string;
@@ -843,9 +1025,12 @@ export async function addTradeTarget(dealingRangeId: number, args: AddTradeTarge
     .insert({
       dealing_range_id: dealingRangeId,
       price: args.price,
+      kind: args.kind ?? null,
       range_low: args.rangeLow ?? null,
       range_high: args.rangeHigh ?? null,
       source_time: args.sourceTime,
+      touched_time: args.touchedTime ?? null,
+      timeframe: args.timeframe ?? null,
       liquidity_level_id: liquidityLevelId,
     })
     .select("*")

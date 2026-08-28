@@ -41,7 +41,7 @@ const ROW_COLUMNS =
   // PriceChart.vue: refreshPoiZonesInternal/refreshLiquidityInternal), dieselbe Spalte, die
   // detectOrderBlocks()/poi-watcher schon für die Live-Zeichnung berechnen (siehe
   // 20260705240000_ob_zones_end_time.sql/20260717130000_liquidity_levels_end_time.sql) — bisher nur
-  // für den mcp-server relevant (dessen getPinContext() `ob_zones(*)`/`liquidity_levels(*)` fetcht),
+  // für den MCP-Server relevant (dessen getPinContext() `ob_zones(*)`/`liquidity_levels(*)` fetcht),
   // hier bisher nicht mit ausgewählt, weil ungenutzt.
   "ob_zones(id, instrument, direction, timeframe, top, bottom, start_time, end_time, touched, invalidated), " +
   "trade_setups(id, instrument, direction, ob_top, ob_bottom, ob_start_time, ls_touched_time), " +

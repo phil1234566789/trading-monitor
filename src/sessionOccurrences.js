@@ -1,6 +1,6 @@
 // Reine Session-Vorkommen-Berechnung + Kontext-Zuordnung, extrahiert aus sessions.js/dataExport.js
 // (Chat 2026-08-02) — bewusst OHNE jeden Browser-Import (kein localStorage/Vue-reactive/Supabase-
-// Client), damit dieses Modul auch außerhalb des Browsers (Node, mcp-server) direkt importierbar
+// Client), damit dieses Modul auch außerhalb des Browsers (Deno, MCP-Server) direkt importierbar
 // ist. Gleicher Schnitt wie liquidity.js → liquidityDetection.js und orderBlocks.js →
 // orderBlockDetection.js (siehe CLAUDE.md "MCP-Server") — sessions.js selbst importiert
 // sessionOccurrences/ALL_DAYS jetzt von hier und re-exportiert sie, öffentliche API unverändert.
@@ -60,7 +60,7 @@ function localWeekday(dayStartUtcSec, offsetMinutesFn) {
 // siehe ALL_DAYS/daysOrAll. null/undefined = jeden Tag (Altverhalten).
 //
 // JSDoc-Typ für tzOffsetMinutes hier nicht nur Doku — ohne den Union-Typ leitet TS' allowJs-
-// Inferenz für einen Cross-Directory-Import aus mcp-server (siehe rsiDivergenceStats.ts) nur
+// Inferenz für einen Cross-Directory-Import aus dem MCP-Server (siehe scripts/rsiDivergenceStats.ts) nur
 // `number` aus dem Default-Wert `= 0` her und lehnt eine Funktions-Übergabe ab, obwohl die Laufzeit
 // (typeof tzOffsetMinutes === "function") beides längst unterstützt — gleiches Muster wie
 // computeRsi in rsi.js (siehe dortiger Kommentar).

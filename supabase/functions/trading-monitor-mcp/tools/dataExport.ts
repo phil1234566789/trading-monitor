@@ -133,7 +133,7 @@ export interface StructureConfig {
 }
 
 // Port von compute1hStructureState (src/dataExport.js) — identische Logik, nur candles über den
-// mcp-server-eigenen forexCandles.ts-Client statt src/forexCandles.js geholt. Gibt zusätzlich zum
+// MCP-Server-eigenen forexCandles.ts-Client statt src/forexCandles.js geholt. Gibt zusätzlich zum
 // Trend-State das TATSÄCHLICH verwendete Zeitfenster zurück (window) — Philip: "L soll immer den
 // Startpunkt des Trend-Algos mit einzeichnen, damit ich abchecken kann, ob das passt, denn was L
 // sieht ist ja nicht zwingend dasselbe, was ich im Chart sehe" (2026-07-31). Ohne das hätte L keine

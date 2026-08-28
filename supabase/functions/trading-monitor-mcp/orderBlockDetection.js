@@ -1,5 +1,5 @@
 // Reine Order-Block-Erkennung, extrahiert aus orderBlocks.js (Chat 2026-08-02) — bewusst OHNE
-// jeden Browser-Import, damit dieses Modul auch außerhalb des Browsers (Node, mcp-server) direkt
+// jeden Browser-Import, damit dieses Modul auch außerhalb des Browsers (Deno, MCP-Server) direkt
 // importierbar ist, ohne chartColors.js/chartZoom.js/chartTimeUtils.js (localStorage/
 // import.meta.env) mitzuschleppen. Gleicher Schnitt wie bei liquidity.js → liquidityDetection.js
 // (siehe dort/CLAUDE.md "MCP-Server") — orderBlocks.js selbst importiert detectOrderBlocks jetzt

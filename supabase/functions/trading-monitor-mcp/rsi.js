@@ -1,7 +1,7 @@
 // Wilder's RSI, Standard-Periode 14 (siehe trading/rsi.md). Kanonischer Ort seit 2026-08-11 (vorher
-// nur in mcp-server/src/rsi.ts, das dorthin verschoben wurde, weil es bereits dependency-frei war —
+// nur im MCP-Server, das dorthin verschoben wurde, weil es bereits dependency-frei war —
 // analog zu computeEma in ema.js: EIN Ort, geteilt zwischen dem Live-Chart-RSI-Panel
-// (PriceChart.vue) und dem MCP-Tool get_forex_rsi (mcp-server/src/tools/reads.ts), kein zweiter
+// (PriceChart.vue) und dem MCP-Tool get_forex_rsi (supabase/functions/trading-monitor-mcp/tools/reads.ts), kein zweiter
 // Port, kein Drift-Risiko (siehe CLAUDE.md "MCP-Server").
 //
 // Divergenz-Erkennung (HH/LH etc.) war bis 2026-08-11 bewusst NICHT hier codiert, sondern
@@ -14,8 +14,8 @@
 
 export const DEFAULT_RSI_PERIOD = 14;
 
-// JSDoc-Typen hier nicht nur Doku — ohne sie leitet TS' allowJs-Inferenz für mcp-server/src/tools/
-// reads.ts' cross-directory Import (siehe CLAUDE.md "MCP-Server") einen zu unscharfen Rückgabetyp
+// JSDoc-Typen hier nicht nur Doku — ohne sie leitet TS' allowJs-Inferenz für tools/reads.ts'
+// cross-directory Import (siehe CLAUDE.md "MCP-Server") einen zu unscharfen Rückgabetyp
 // her (rsi bleibt beim `.filter()`-Callback dort implizit `any`, `tsc --noEmit` schlägt fehl).
 /**
  * @param {{time: number, close: number}[]} candles

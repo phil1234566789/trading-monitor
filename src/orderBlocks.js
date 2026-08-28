@@ -5,7 +5,7 @@
 // weak-Klassifizierung (Gap-Größe) folgt weiterhin nur dem Pine-HTF-Modus.
 //
 // detectOrderBlocks selbst lebt seit Chat 2026-08-02 in orderBlockDetection.js (dependency-frei,
-// siehe dort — gleicher Schnitt wie liquidity.js → liquidityDetection.js, damit mcp-server die
+// siehe dort — gleicher Schnitt wie liquidity.js → liquidityDetection.js, damit der MCP-Server die
 // reine Erkennung direkt cross-directory importieren kann, ohne die Browser-Imports unten
 // mitzuschleppen); hier nur re-exportiert, damit sich an der öffentlichen API dieses Moduls
 // nichts ändert.

@@ -1,20 +1,21 @@
 # MCP-Server: tiefere Referenz
 
 Exponiert die App-Daten als Tools für Claude (ersetzt das alte "Daten-Export-Button →
-copy/paste"-Verfahren). Source: `mcp-server/` → deployed: `supabase/functions/trading-monitor-mcp/`.
+copy/paste"-Verfahren). Einzige Kopie, Deno: `supabase/functions/trading-monitor-mcp/`.
 
-## Dual-Copy: erst `mcp-server/`, dann Deno-Port
+## Eine Kopie, Deno (früher Dual-Copy mit `mcp-server/`)
 
-`mcp-server/` (eigenes `package.json`/`tsconfig.json`, läuft via `npx tsx`) ist die
-Original-/Authoring-Quelle, **kein toter Code**. Jede Tool-Änderung wird dort zuerst geschrieben,
-dann von Hand nach `supabase/functions/trading-monitor-mcp/` portiert (Deno-kompatible Imports:
-`npm:`-Präfix statt bloßer Paketname, `.ts`- statt `.js`-Extensions). Beide Kopien müssen
-inhaltlich identisch bleiben — bei jeder Tool-Logik-Änderung prüfen, ob die andere Kopie denselben
-Fix braucht.
+Bis 2026-08-27 gab es zusätzlich `mcp-server/`, eine lokale Node/`npx tsx`-Authoring-Kopie, von der
+aus jede Tool-Änderung von Hand nach `supabase/functions/trading-monitor-mcp/` portiert wurde
+(Deno-kompatible Imports: `npm:`-Präfix statt bloßer Paketname, `.ts`- statt `.js`-Extensions).
+Komplett gelöscht (Philip: "war von früher, als wir den MCP nur lokal verwendet haben") —
+`supabase/functions/trading-monitor-mcp/` ist jetzt die einzige Kopie, kein Portier-Schritt mehr
+nötig.
 
-`mcp-server/src/scripts/` (`backfillForexCandles.ts`, `backfillObZones.ts`,
-`backfillLiquidityLevels.ts`, `rsiDivergenceStats.ts`) bleibt bewusst Node-only — nie in die
-Edge Function portieren, das sind lokale One-off-Scripts.
+`supabase/functions/trading-monitor-mcp/scripts/` (`backfillForexCandles.ts`, `backfillObZones.ts`,
+`backfillLiquidityLevels.ts`, `rsiDivergenceStats.ts`) sind manuelle One-off-Scripts (`deno run`,
+kein laufendes Tool im MCP-Server selbst) — bei der Löschung von `mcp-server/` nach Deno portiert,
+damit die Backfill-Funktionalität erhalten bleibt.
 
 ## Deployment
 
@@ -38,7 +39,7 @@ Bündelt M5-Kerzen + Asia-Session-Range, 1H-Struktur/Trend, relevante Liquidity-
 für ein Instrument in einem Call, statt ein halbes Dutzend `get_*`-Tools einzeln zu feuern.
 Struktur-Trend-Parameter (`periodOuter`/`periodInner`/`lookbackHours*`/`fixedStartActive`/
 `fixedStartTime`) defaulten auf dieselben period-5/2-Werte wie der "Daten-Export"-Button, aber mit
-21 Tagen rollierendem Lookback (`STRUCTURE_LOOKBACK_HOURS` in `dataExport.ts`, mcp-server-only —
+21 Tagen rollierendem Lookback (`STRUCTURE_LOOKBACK_HOURS` in `dataExport.ts`, MCP-Server-only —
 der Button selbst bleibt bei 7 Tagen), damit ein zu kurzes Fenster nicht den Ursprung eines
 mehrfach verschachtelten Trends abschneidet (siehe `marketStructureAnalysis.rules.md`
 "beliebige Verschachtelungstiefe"). Ein nicht-default "fixer Start" lebt nur in Philips
@@ -48,11 +49,11 @@ Bedarf nachfragen statt raten.
 ## Warum nicht einfach `src/dataExport.js` wiederverwenden
 
 `buildDataExport` (und transitiv `liquidity.js`/`chartColors.js`/`sessions.js`) fasst
-`localStorage` und `import.meta.env` zur Modul-Ladezeit an — crasht sofort unter Node.
-`mcp-server/src/db.ts` liest stattdessen die bereits von `poi-watcher` persistierten
+`localStorage` und `import.meta.env` zur Modul-Ladezeit an — crasht sofort außerhalb des Browsers.
+`db.ts` liest stattdessen die bereits von `poi-watcher` persistierten
 `ob_zones`/`liquidity_levels`-Tabellen statt aus Kerzen neu zu detektieren (kein dritter Port der
-Detection-Algorithmen). Kleine, stabile, dependency-freie Stücke sind hier in Node-sicherer Form
-dupliziert: `mcp-server/src/berlinTime.ts` (Berlin-Zeitzonen-Datumsmathe aus `dataExport.js`),
+Detection-Algorithmen). Kleine, stabile, dependency-freie Stücke sind hier in Deno-sicherer Form
+dupliziert: `berlinTime.ts` (Berlin-Zeitzonen-Datumsmathe aus `dataExport.js`),
 `db.ts`s `filterRelevantRows` (aus `liquidity.js`s `filterRelevantLevels`), `tools/annotations.ts`s
 `validateAnnotations` (aus `claudeAnnotations.js`s `validateAnnotationList`). Wird eines der
 Originale geändert, prüfen ob der Port hier denselben Fix braucht.
@@ -74,14 +75,6 @@ duplizieren. `dealingRangeId` ist dieselbe ID, die Philip verbal über "Long#N"/
 Anders als `post_chart_annotations` sind diese Tools NICHT allow-gelistet — eine falsche
 Chart-Zeichnung ist kosmetisch, ein falscher Journal-Eintrag verfälscht die Trade-Historie, also
 weiter Bestätigung abfragen, außer Philip sagt explizit was anderes.
-
-## `marketStructureAnalysis.ts` Cross-Directory-Import
-
-`mcp-server` importiert die reine Algorithmus-Datei direkt aus dem Hauptrepo
-(`../../../src/marketStructureAnalysis.js`), nicht als eigener Port. `mcp-server/tsconfig.json`
-nutzt `moduleResolution: "bundler"` + `allowJs: true` + `noEmit: true`, damit dieser
-Cross-Directory-Import ohne NodeNexts strengere Extension-/Declaration-File-Regeln durchgeht —
-betrifft nur `tsc`-Typecheck, nicht die eigentliche Laufzeit (läuft immer via `tsx`).
 
 ## Write-Tool-Safety: `post_chart_annotations` vs. Pin
 
@@ -137,7 +130,7 @@ ist (sonst wäre die erste Stunde jedes Tages ungenau).
 
 ## Candle-Archiv (`forex_candles`)
 
-Sowohl Frontend als auch `mcp-server`s `fetchForexCandles` sind archive-first: erst
+Sowohl Frontend als auch der MCP-Server-eigene `fetchForexCandles` sind archive-first: erst
 `getForexCandlesArchiveUpTo` ("neueste N Kerzen bis zu einem Cutoff"), live nur für das
 Fehlende, mit gleichem Graceful-Degradation-Verhalten bei Live-Fehlern. `get_forex_candles_archive`
 bleibt als eigenes Tool nur für explizite `fromTime`+`toTime`-Bereichs-Queries relevant (mehrtägige
@@ -152,7 +145,7 @@ abgerufene Bereich (von irgendwem) braucht danach keinen erneuten Live-Roundtrip
 `period`-Werte im `bar`-CHECK-Constraint (`'5m'|'1h'|'4h'`) werden persistiert — `1m`/`3m`/`15m`/
 `1D`-Fetches (Replay-Feintuning) bleiben reine Live-Reads.
 
-## Backfill-Scripts (`mcp-server/src/scripts/`)
+## Backfill-Scripts (`supabase/functions/trading-monitor-mcp/scripts/`)
 
 `backfillForexCandles.ts`/`backfillObZones.ts`/`backfillLiquidityLevels.ts` — manuell auszuführen,
 wenn ein Pin-/Backtest-Lookup auf eine historische Lücke stößt (z. B. `poi-watcher`s rollierendes
@@ -169,10 +162,10 @@ während desselben Laufs die "top up from live"-Logik auf die eigenen, noch unvo
 frisch geschriebenen Archiv-Zeilen zu und die Pagination-Cursor-Erwartung des Scripts stimmt nicht
 mehr (Gap-/Duplikat-Risiko).
 
-`SUPABASE_URL=... SUPABASE_ANON_KEY=... [BACKFILL_INSTRUMENTS=GBPUSD,EURUSD] npx tsx
-mcp-server/src/scripts/backfillLiquidityLevels.ts` — analog für die anderen Scripts, Parameter
-über Env-Vars (`BACKFILL_INSTRUMENTS`/`BACKFILL_BARS`/`BACKFILL_START_DATE` je nach Script) statt
-Konstanten im Code.
+`SUPABASE_URL=... SUPABASE_ANON_KEY=... [BACKFILL_INSTRUMENTS=GBPUSD,EURUSD] deno run --allow-net
+--allow-env supabase/functions/trading-monitor-mcp/scripts/backfillLiquidityLevels.ts` — analog
+für die anderen Scripts, Parameter über Env-Vars (`BACKFILL_INSTRUMENTS`/`BACKFILL_BARS`/
+`BACKFILL_START_DATE` je nach Script) statt Konstanten im Code.
 
 `ob_zones`/`liquidity_levels` brauchten dafür eine anon-insert(-delete)-RLS-Policy (die Scripts
 laufen mit Anon-Key, kein `service_role` lokal verfügbar) — `poi-watcher` selbst schreibt weiter

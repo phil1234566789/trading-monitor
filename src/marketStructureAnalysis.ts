@@ -1,7 +1,8 @@
 // Reine Trend-/Pivot-Mathematik — bewusst OHNE Browser-Abhängigkeiten (Chat 2026-07-31: vorher zog
 // der Import von liquidity.js transitiv chartColors.js/supabaseClient.js mit, die beim Laden
-// localStorage/import.meta.env anfassen und dadurch außerhalb des Browsers, z.B. im mcp-server,
-// sofort crashen — siehe CLAUDE.md "MCP-Server"). detectLiquidityLevels kommt seitdem aus dem
+// localStorage/import.meta.env anfassen und dadurch außerhalb des Browsers, z.B. im MCP-Server
+// (Deno, supabase/functions/trading-monitor-mcp/), sofort crashen — siehe CLAUDE.md "MCP-Server").
+// detectLiquidityLevels kommt seitdem aus dem
 // eigens dafür extrahierten, abhängigkeitsfreien liquidityDetection.js. Die Zeichnung (State ->
 // Chart-Primitives, inkl. LiquidityLinePrimitive/cssColor/lineWidth/PIP_SIZE) lebt seitdem separat
 // in marketStructureRendering.ts.

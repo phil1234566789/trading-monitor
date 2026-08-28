@@ -2,7 +2,7 @@
 // Sidequest: "Lana braucht schon die ganzen OBs (4h 1h M5 bei entry setup)" für Backtests eines
 // festen historischen Zeitraums). Läuft dieselbe Erkennung, die auch poi-watcher live nutzt
 // (`detectOrderBlocks`, siehe orderBlockDetection.js — bewusst dependency-frei rausgeschnitten,
-// genau für diesen Node-Anwendungsfall) einmalig über die KOMPLETTE archivierte Kerzenserie statt
+// genau für diesen Anwendungsfall) einmalig über die KOMPLETTE archivierte Kerzenserie statt
 // nur über ein rollierendes Live-Fenster — die Funktion ist rein (touched/invalidated/end_time
 // werden deterministisch aus der übergebenen Kerzenserie berechnet), braucht also keinen
 // Live-Zustand.
@@ -21,10 +21,15 @@
 // Voraussetzung: forex_candles muss den gewünschten Zeitraum für JEDEN Timeframe schon abdecken
 // (siehe backfillForexCandles.ts) — dieses Script liest nur, holt nichts von cTrader selbst.
 //
+// 2026-08-27 von der Node-Autoren-Kopie (mcp-server/, gelöscht) nach Deno portiert, einzige
+// verbleibende Kopie — process.env → Deno.env.get, Cross-Directory-Import aus ../../../src/ ersetzt
+// durch die lokale, bereits vorhandene Kopie ../orderBlockDetection.js, sonst unverändert:
+//
 //   SUPABASE_URL=... SUPABASE_ANON_KEY=... [BACKFILL_INSTRUMENTS=GBPUSD] [BACKFILL_BARS=5m,1h,4h] \
-//     npx tsx mcp-server/src/scripts/backfillObZones.ts
-import { supabase } from "../supabaseClient.js";
-import { detectOrderBlocks } from "../../../src/orderBlockDetection.js";
+//     deno run --allow-net --allow-env \
+//     supabase/functions/trading-monitor-mcp/scripts/backfillObZones.ts
+import { supabase } from "../supabaseClient.ts";
+import { detectOrderBlocks } from "../orderBlockDetection.js";
 
 // forex_candles.bar ("5m"/"1h"/"4h", unsere eigene Konvention, siehe backfillForexCandles.ts) auf
 // die von detectOrderBlocks() erwarteten Timeframe-Labels UND den ob_zones.timeframe-Spaltenwert
@@ -38,8 +43,8 @@ const BAR_CONFIG: Record<string, { detectParam: string; dbTimeframe: string }> =
   "4h": { detectParam: "4H", dbTimeframe: "4H" },
 };
 
-const INSTRUMENTS = (process.env.BACKFILL_INSTRUMENTS ?? "GBPUSD").split(",").map((s) => s.trim());
-const BARS = (process.env.BACKFILL_BARS ?? "5m,1h,4h").split(",").map((s) => s.trim());
+const INSTRUMENTS = (Deno.env.get("BACKFILL_INSTRUMENTS") ?? "GBPUSD").split(",").map((s) => s.trim());
+const BARS = (Deno.env.get("BACKFILL_BARS") ?? "5m,1h,4h").split(",").map((s) => s.trim());
 
 const READ_PAGE_SIZE = 5000; // Supabase-Read-Pagination — M5 übers ganze Jahr sind >70k Zeilen, weit über dem PostgREST-Default-Limit
 const UPSERT_BATCH_SIZE = 500;

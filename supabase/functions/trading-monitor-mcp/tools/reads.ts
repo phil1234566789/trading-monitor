@@ -15,7 +15,7 @@ import { buildNearRelevantLiquidityLevels, NEAR_RANGE_PIPS } from "./nearRelevan
 // Derselbe computeRsi/computeEma wie der Live-Chart (PriceChart.vue) — kein zweiter Port nötig,
 // da beide Funktionen bereits dependency-frei sind (kein localStorage/import.meta.env), siehe
 // CLAUDE.md "MCP-Server" zum selben Muster bei marketStructureAnalysis.ts. rsi.ts lebte bis
-// 2026-08-11 nur hier im mcp-server, wurde beim Bau des Chart-RSI-Panels nach src/rsi.js
+// 2026-08-11 nur hier im MCP-Server, wurde beim Bau des Chart-RSI-Panels nach src/rsi.js
 // verschoben, damit es nicht ein zweites Mal implementiert werden musste.
 import { computeRsi, rsiZone, DEFAULT_RSI_PERIOD } from "../rsi.js";
 import { computeEma } from "../ema.js";
@@ -222,7 +222,7 @@ export function registerReadTools(server: McpServer) {
       title: "Forex-Kerzen-Archiv (persistiert)",
       description:
         "Kerzen aus der forex_candles-Tabelle, per Backfill-Script befüllt (siehe " +
-        "mcp-server/src/scripts/backfillForexCandles.ts) — kein OAuth-Handshake, kein Timeout-" +
+        "scripts/backfillForexCandles.ts) — kein OAuth-Handshake, kein Timeout-" +
         "Risiko, beliebig oft wiederholbar. get_forex_candles nutzt intern automatisch dasselbe " +
         "Archiv (archive-first mit Live-Fallback) — DIESES Tool hier nur direkt aufrufen, wenn ein " +
         "EXPLIZITER fromTime/toTime-Bereich gebraucht wird (get_forex_candles kennt nur 'neueste N " +

@@ -1,6 +1,6 @@
 // Reine Liquiditäts-Level-Erkennung (Williams-Fractal-Pivots), extrahiert aus liquidity.js (Chat
-// 2026-07-31) — bewusst OHNE jeden Import, damit dieses Modul auch außerhalb des Browsers (Node,
-// mcp-server/marketStructureAnalysis.ts) importierbar ist, ohne chartColors.js/supabaseClient.js
+// 2026-07-31) — bewusst OHNE jeden Import, damit dieses Modul auch außerhalb des Browsers (Deno,
+// supabase/functions/trading-monitor-mcp/) importierbar ist, ohne chartColors.js/supabaseClient.js
 // (localStorage/import.meta.env) mitzuschleppen. liquidity.js selbst importiert diese Funktionen
 // jetzt von hier und re-exportiert sie, damit sich an dessen öffentlicher API nichts ändert.
 

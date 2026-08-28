@@ -8,17 +8,20 @@
 // Backfill-Script darf nie aus dem Archiv lesen, das es selbst gerade befüllt. Kein Tool im laufenden
 // MCP-Server (siehe index.ts) — manueller Lauf, per Env-Vars parametrisierbar statt die Konstanten
 // unten für jede Ausweitung von Hand zu ändern (Chat 2026-08-09, zweite Runde: erst GBP 5m/1h/4h
-// Juli+August, dann GBP 4h fürs ganze Jahr — beides derselbe Lauf, andere Env-Vars):
+// Juli+August, dann GBP 4h fürs ganze Jahr — beides derselbe Lauf, andere Env-Vars). 2026-08-27
+// von der Node-Autoren-Kopie (mcp-server/, gelöscht) nach Deno portiert, einzige verbleibende
+// Kopie — process.env → Deno.env.get, sonst unverändert:
 //
 //   SUPABASE_URL=... SUPABASE_ANON_KEY=... [BACKFILL_INSTRUMENTS=GBPUSD] [BACKFILL_BARS=5m,1h,4h] \
-//     [BACKFILL_START_DATE=2026-07-01] npx tsx mcp-server/src/scripts/backfillForexCandles.ts
+//     [BACKFILL_START_DATE=2026-07-01] deno run --allow-net --allow-env \
+//     supabase/functions/trading-monitor-mcp/scripts/backfillForexCandles.ts
 //
 // (SUPABASE_*-Werte wie in .mcp.json, siehe dort — anon-Key ist ein "publishable" Key, kein
-// Secret). Idempotent (ON CONFLICT DO NOTHING beim Upsert unten), ein erneuter Lauf mit
+// Secret). Idempotent (ignoreDuplicates beim Upsert unten), ein erneuter Lauf mit
 // überlappendem/größerem Zeitraum überspringt bereits Vorhandenes einfach statt es zu duplizieren.
-import { supabase } from "../supabaseClient.js";
-import { fetchLiveForexCandles, type Candle } from "../forexCandles.js";
-import { berlinDayRangeUtcMs } from "../berlinTime.js";
+import { supabase } from "../supabaseClient.ts";
+import { fetchLiveForexCandles, type Candle } from "../forexCandles.ts";
+import { berlinDayRangeUtcMs } from "../berlinTime.ts";
 
 type Bar = "5m" | "1h" | "4h";
 const ALL_BARS: Bar[] = ["5m", "1h", "4h"];
@@ -33,9 +36,9 @@ function parseBars(raw: string | undefined): Bar[] {
 
 // Defaults entsprechen dem ursprünglichen Piloten (GBPUSD, 5m/1h/4h, ab Juli 2026) — ohne Env-Vars
 // verhält sich ein erneuter Lauf also unverändert.
-const INSTRUMENTS = (process.env.BACKFILL_INSTRUMENTS ?? "GBPUSD").split(",").map((s) => s.trim());
-const BARS = parseBars(process.env.BACKFILL_BARS);
-const START_DATE = process.env.BACKFILL_START_DATE ?? "2026-07-01"; // Europe/Berlin, inklusive — Ende ist implizit "jetzt"
+const INSTRUMENTS = (Deno.env.get("BACKFILL_INSTRUMENTS") ?? "GBPUSD").split(",").map((s) => s.trim());
+const BARS = parseBars(Deno.env.get("BACKFILL_BARS") ?? undefined);
+const START_DATE = Deno.env.get("BACKFILL_START_DATE") ?? "2026-07-01"; // Europe/Berlin, inklusive — Ende ist implizit "jetzt"
 
 // MAX_COUNT der forex-candles Edge Function (siehe supabase/functions/forex-candles/index.ts) —
 // mehr pro Request ist serverseitig eh gekappt, cTraders eigenes 14.000-Bars-Limit spielt hier

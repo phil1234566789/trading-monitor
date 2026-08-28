@@ -152,9 +152,7 @@ function mapArchivedRows(rows) {
 // (INITIAL_CANDLE_COUNT 1000 + REPLAY_LOOKAHEAD_SEC-Kerzen, macht zusammen 3500) zeigte fast gar
 // keine Kerzen — fetchArchivedPage unten fragte 3500 an, bekam still 1000 zurück (aus einem
 // Zeitfenster WEIT NACH dem eigentlichen Replay-Punkt, weil "neueste zuerst" ja beim Lookahead-
-// Ende ansetzt), der komplette eigentlich sichtbare Bereich fehlte. Exakt derselbe Fund wie in
-// mcp-server/src/scripts/backfillObZones.ts's fetchAllCandles — dort per Pagination gefixt, hier
-// jetzt genauso.
+// Ende ansetzt), der komplette eigentlich sichtbare Bereich fehlte. Per Pagination gefixt.
 const DB_READ_PAGE_SIZE = 1000;
 
 // Liest bis zu `count` archivierte Kerzen absteigend ab einer Zeitgrenze — entweder `ltIso`

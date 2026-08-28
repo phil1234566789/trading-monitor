@@ -1,7 +1,7 @@
 // Divergenz-Konnektor-Primitive (Chat 2026-08-11) — gestrichelte Linie zwischen zwei beliebigen
 // (time, price)-Punkten + Label, fürs Zeichnen der von detectRsiDivergence() (rsi.js) gefundenen
 // Divergenzen. Eigene, kleine Datei statt in rsi.js: die muss dependency-frei bleiben (siehe
-// dort — cross-directory Import in mcp-server/tools/reads.ts würde an Canvas-Primitives sofort
+// dort — cross-directory Import in supabase/functions/trading-monitor-mcp/tools/reads.ts würde an Canvas-Primitives sofort
 // scheitern), und statt in marketStructureRendering.ts (dessen RangeLinePrimitive strukturell
 // dasselbe macht) an dessen strikten Pivot-Typ (touched/pivotAt/type als Pflichtfelder) zu binden,
 // reicht hier ein eigenes, kleines Primitive mit zwei rohen Punkten — dieselbe Renderer/PaneView-
