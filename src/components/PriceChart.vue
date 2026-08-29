@@ -85,7 +85,6 @@ import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js
 import MetadataPanel from "./MetadataPanel.vue";
 import JsonTree from "./JsonTree.vue";
 import RsiDivergenceStatsPanel from "./RsiDivergenceStatsPanel.vue";
-import TradeSetupCockpit from "./TradeSetupCockpit.vue";
 import TargetPickerModal from "./TargetPickerModal.vue";
 
 const props = defineProps({
@@ -233,9 +232,11 @@ const props = defineProps({
   // sehen, während er noch entsteht.
   replayUntil: { type: Number, default: null },
   // Trade-Setup-Cockpit (siehe Chat 2026-07-19: "wir wollen jetzt step by step alles
-  // zusammenstöpseln") — bündelt H1-Range-Analyse + M5-Trade-Setups in einer Karte im Chart. Seit
-  // Chat 2026-07-27 eine echte Vue-Komponente (TradeSetupCockpit.vue), fester Platz rechts/mittig —
-  // der frühere "neben der letzten Kerze"-Modus ist entfallen (siehe tradeSetupCockpit.ts-Kopfkommentar).
+  // zusammenstöpseln") — bündelt H1-Range-Analyse + M5-Trade-Setups. Die Karte selbst
+  // (TradeSetupCockpit.vue) lebt seit Chat 2026-08-28 in Dashboard.vue als eigene Sidebar-Spalte,
+  // nicht mehr hier im Chart-Overlay (Philip: "übersichtlicher, wenn der TSC nicht mehr über dem
+  // Chart liegt") — dieser Toggle steuert seitdem nur noch die TSC-Range-Zeichnung AUF dem
+  // Candlestick-Chart selbst (siehe renderTradeSetupsInternal weiter unten).
   showTradeSetupCockpit: { type: Boolean, default: true },
   // Debug-Metadaten-Sammel-Panel (siehe Chat 2026-07-20: "damit ich dir nicht ständig die Daten
   // von dem was ich in TradingView sehe hier schreiben muss") — Toolbar-Unterpunkt bei "Debug".
@@ -272,8 +273,11 @@ const props = defineProps({
   // gegenläufiger OB oder eine gegenläufige Divergenz) — anders als confirmationModeActive/
   // confluenceModeActive, die jeweils nur eine Hälfte des Kind-Satzes zulassen.
   antiConfluenceModeActive: { type: Boolean, default: false },
-  // TSC-Dealing-Range (Chat 2026-08-26, TSC-Neuaufbau) — reine Durchreiche von Dashboard.vue
-  // (tscRange) an TradeSetupCockpit.vue, null solange die TSC noch keine Range angelegt hat.
+  // TSC-Dealing-Range (Chat 2026-08-26, TSC-Neuaufbau) — null solange die TSC noch keine Range
+  // angelegt hat. Seit Chat 2026-08-28 (TSC-Karte zog in eine eigene Dashboard.vue-Sidebar-Spalte
+  // um, siehe TradeSetupCockpit.vue) nur noch für die Range-Zeichnung AUF dem Candlestick-Chart
+  // selbst gebraucht (renderTradeSetupsInternal) und für TargetPickerModal (direction), nicht mehr
+  // für die Karte.
   tscRange: { type: Object, default: null },
 });
 const emit = defineEmits([
@@ -285,18 +289,6 @@ const emit = defineEmits([
   "select-target",
   "select-setup-confirmations",
   "pin-context-menu",
-  "tsc-add-confirmation",
-  "tsc-add-target",
-  "tsc-add-confluence",
-  "tsc-add-anti-confluence",
-  "tsc-remove-confirmation",
-  "tsc-remove-target",
-  "tsc-remove-confluence",
-  "tsc-remove-anti-confluence",
-  "tsc-transfer-to-trades",
-  "tsc-set-invalidation",
-  "tsc-invalidation-saved",
-  "tsc-reset",
   "tsc-add-target-from-picker",
 ]);
 
@@ -307,24 +299,12 @@ const { refreshSessions, refreshNewsMarkers } = usePriceChartSessionsAndNews();
 // priceChartRsi.create(chart, candleSeries) wird in onMounted aufgerufen, priceChartRsi.dispose()
 // in onUnmounted.
 const priceChartRsi = usePriceChartRsi();
-// TSC-Zustandsberechnung (siehe usePriceChartCockpit.js, Phase 6c) — cockpitState/-Metadata/
-// -NowSec werden direkt im Template gebunden (TradeSetupCockpit-Komponente), daher hier destructured
-// statt hinter priceChartCockpit.* versteckt.
-const { cockpitState, cockpitMetadata, cockpitNowSec, refreshCockpit } = usePriceChartCockpit();
-// Claude-Notizen-Zeichnung + TSC-Zeiger-Callouts (siehe usePriceChartClaudeAnnotations.js,
-// Phase 6d) — tscCardRef/claudeCallout*-Refs direkt im Template gebunden, daher destructured.
-const {
-  tscCardRef,
-  claudeCalloutItems,
-  claudeCalloutLines,
-  claudeCalloutStackBottom,
-  setCalloutChipEl,
-  refresh: refreshClaudeAnnotations,
-  create: createClaudeAnnotations,
-  dispose: disposeClaudeAnnotations,
-  startTick: startClaudeCalloutTick,
-  stopTick: stopClaudeCalloutTick,
-} = usePriceChartClaudeAnnotations();
+// TSC-Zustandsberechnung (siehe usePriceChartCockpit.js, Phase 6c) — die TSC-Karte selbst liest
+// das seit Chat 2026-08-28 (Umzug in eine eigene Dashboard.vue-Sidebar-Spalte) nicht mehr, cockpitState
+// bleibt aber Quelle fürs Debug-Metadaten-Panel (cockpitMetadata unten) — deshalb weiterhin berechnet.
+const { cockpitMetadata, refreshCockpit } = usePriceChartCockpit();
+// Claude-Notizen-Zeichnung (siehe usePriceChartClaudeAnnotations.js, Phase 6d).
+const { refresh: refreshClaudeAnnotations, create: createClaudeAnnotations, dispose: disposeClaudeAnnotations } = usePriceChartClaudeAnnotations();
 // Trade-Setup-Erkennung + M5-Polling (siehe usePriceChartTradeSetups.js, Phase 6f) —
 // tradeSetupsMetadata direkt im Template gebunden (Debug-Metadaten-Panel), daher destructured.
 // Ersetzt das bisherige DOPPELTE currentTradeSetups(let)+tradeSetupsMetadata(ref) hier im File.
@@ -499,12 +479,6 @@ const rangesLoading = computed(() => (props.showRanges || props.showRangesMetada
 // (oben destructured).
 const poiZonesMetadata = ref(null);
 const structureEarliestTime = ref(null);
-
-// TSC-Karte gerade sichtbar? (siehe TradeSetupCockpit.vue: v-if="state" innen — cockpitState wird
-// von refreshCockpitInternal() bereits auf null gesetzt, wenn showTradeSetupCockpit aus ist, die
-// Bedingung hier ist also strenggenommen redundant, aber explizit robuster gegen künftige
-// Änderungen an refreshCockpitInternal.)
-const tscCalloutModeActive = computed(() => props.showTradeSetupCockpit && cockpitState.value != null);
 
 // Nur die Abschnitte der gerade angetoggelten Features — der kopierte JSON-Blob bleibt fokussiert
 // auf das, was im Chart sichtbar ist, statt immer alles mitzuschleppen. orderBlocks bewusst
@@ -995,14 +969,12 @@ function refreshInvalidationLinesInternal() {
 }
 
 // Dünner Wrapper um usePriceChartClaudeAnnotations' refresh() — baut die Argumente aus Props/
-// allCandles/tscCalloutModeActive zusammen (siehe usePriceChartClaudeAnnotations.js für die
-// eigentliche Zeichenlogik + volle Bug-Historie).
+// allCandles zusammen (siehe usePriceChartClaudeAnnotations.js für die eigentliche Zeichenlogik).
 function refreshClaudeAnnotationsInternal() {
   refreshClaudeAnnotations({
     annotations: props.claudeAnnotations,
     annotationsDate: props.claudeAnnotationsDate,
     candles: clipReplay(allCandles),
-    tscCalloutModeActive: tscCalloutModeActive.value,
   });
 }
 
@@ -1652,9 +1624,9 @@ onMounted(() => {
       tickMarkFormatter,
       // Bug-Report Philip 2026-07-27: "die neueste Kerze wird nach ganz rechts auf die Y-Achse
       // hingemacht, ich muss jedesmal den Chart etwas verschieben" — Default (0) lässt die letzte
-      // Kerze exakt an der Preisskala kleben. Ein paar Bar-Breiten Leerraum rechts, gleichzeitig
-      // ungefähr der Bereich, in dem die TSC-Karte sitzt (siehe TradeSetupCockpit.vue), damit sie
-      // nicht direkt über den jüngsten Kerzen hängt.
+      // Kerze exakt an der Preisskala kleben. Ein paar Bar-Breiten Leerraum rechts bleibt auch nach
+      // dem TSC-Umzug in eine eigene Sidebar-Spalte (Chat 2026-08-28) sinnvoll, unabhängig von der
+      // TSC-Karte.
       rightOffset: 70,
     },
     localization: {
@@ -1835,21 +1807,9 @@ onMounted(() => {
   loadTradeSetupM5();
   scheduleNextTradeSetupM5Poll();
   if (rangesNeedsData()) startRangesPolling();
-  // getCtx liefert dem rAF-Tick (usePriceChartClaudeAnnotations.js) pro Frame frisch, was NICHT über
-  // createClaudeAnnotations() gesetzt werden kann (chartContainerRef/allCandles/Props ändern sich
-  // laufend, chart/candleSeries dagegen sind für die Lebensdauer der Component fix).
-  startClaudeCalloutTick(() => ({
-    wrapperEl: chartContainerRef.value,
-    candles: clipReplay(allCandles),
-    annotations: props.claudeAnnotations,
-    annotationsDate: props.claudeAnnotationsDate,
-    tscCalloutModeActive: tscCalloutModeActive.value,
-    tscCardEl: tscCardRef.value?.$el?.nodeType === 1 ? tscCardRef.value.$el : null,
-  }));
 });
 
 onUnmounted(() => {
-  stopClaudeCalloutTick();
   disposeClaudeAnnotations();
   disposeMarketStructure();
   disposeTradeSetupDrawing();
@@ -1907,9 +1867,6 @@ watch(() => props.pinnedLiquidityLevels, refreshLiquidityInternal);
 watch(() => props.pinnedTradeSetups, refreshTradeSetupLinksInternal);
 watch(() => props.pinnedRsiDivergences, refreshRsiDivergenceInternal);
 watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
-// tscCalloutModeActive wechselt (TSC wird ein-/ausgeblendet, Locked-Zustand etc.) -> Canvas-Text
-// muss sofort erscheinen/verschwinden, nicht erst beim nächsten claudeAnnotations-Wechsel.
-watch(tscCalloutModeActive, refreshClaudeAnnotationsInternal);
 // M5/1H/4H unabhängig an-/ausschaltbar (Chat 2026-07-30) — siehe collectObsZones. Seit Punkt 7 der
 // ob_zones-Konsolidierung (2026-08-22) kommen 1H/4H per DB-Read (dbObZones-Prop, in Dashboard.vue
 // gepollt), brauchen also keine eigene Poll-Pipeline/Kerzen-Abhängigkeit mehr — nur M5 läuft weiter
@@ -2184,6 +2141,14 @@ defineExpose({
     focusedTradeSetup = null;
     refreshCockpitInternal();
   },
+
+  // Seit Chat 2026-08-28: der 🔎-Target-Vorschläge-Button sitzt in der TSC-Karte, die jetzt in
+  // Dashboard.vue als eigene Sidebar-Spalte lebt (siehe TradeSetupCockpit.vue) — die eigentliche
+  // Picker-Logik (Kandidaten sammeln, Chart-Hover-Highlight) bleibt hier, weil sie tief an
+  // chart-internen Funktionen hängt (clipReplay, currentPriceEstimate, getCurrentLiquidityLevels,
+  // refreshLiquidityInternal/refreshPoiZonesInternal fürs Hover). Dashboard.vue ruft das nur noch
+  // per Ref auf, statt es über den jetzt entfallenen tsc-*-Event-Relay zu bekommen.
+  openTargetPicker,
 });
 </script>
 
@@ -2212,26 +2177,6 @@ defineExpose({
       </button>
       <button :disabled="liveHistoryConfirmBusy" @click="showLiveHistoryConfirm = false">Abbrechen</button>
     </div>
-    <TradeSetupCockpit
-      ref="tscCardRef"
-      :state="cockpitState"
-      :now-sec="cockpitNowSec"
-      :instrument="symbol"
-      :range="tscRange"
-      @add-confirmation="emit('tsc-add-confirmation')"
-      @add-target="emit('tsc-add-target')"
-      @add-confluence="emit('tsc-add-confluence')"
-      @add-anti-confluence="emit('tsc-add-anti-confluence')"
-      @remove-confirmation="emit('tsc-remove-confirmation', $event)"
-      @remove-target="emit('tsc-remove-target', $event)"
-      @remove-confluence="emit('tsc-remove-confluence', $event)"
-      @remove-anti-confluence="emit('tsc-remove-anti-confluence', $event)"
-      @transfer-to-trades="emit('tsc-transfer-to-trades')"
-      @request-set-invalidation="emit('tsc-set-invalidation')"
-      @invalidation-saved="emit('tsc-invalidation-saved')"
-      @reset="emit('tsc-reset')"
-      @open-target-picker="openTargetPicker"
-    />
     <TargetPickerModal
       v-if="targetPickerOpen"
       :instrument="symbol"
@@ -2250,30 +2195,6 @@ defineExpose({
       @hover="onTargetPickerHover"
       @select="onTargetPickerSelect"
     />
-    <template v-if="claudeCalloutItems.length > 0">
-      <svg class="claude-callout-svg">
-        <line
-          v-for="line in claudeCalloutLines"
-          :key="'callout-line-' + line.id"
-          :x1="line.x1"
-          :y1="line.y1"
-          :x2="line.x2"
-          :y2="line.y2"
-          :stroke="line.color"
-        />
-      </svg>
-      <div class="claude-callout-stack" :style="{ bottom: claudeCalloutStackBottom + 'px' }">
-        <div
-          v-for="item in claudeCalloutItems"
-          :key="'callout-chip-' + item.id"
-          :ref="(el) => setCalloutChipEl(item.id, el)"
-          class="claude-callout-chip"
-          :style="{ borderColor: item.color, color: item.color }"
-        >
-          {{ item.text }}
-        </div>
-      </div>
-    </template>
     <MetadataPanel v-if="showRangesMetadata" title="Structure-Metadaten" @close="emit('close-ranges-metadata')">
       <div class="metadata-subheading-row">
         <h4 class="metadata-subheading">Structure-State</h4>
@@ -2366,47 +2287,6 @@ defineExpose({
 .chart-container {
   flex: 1;
   min-height: 0;
-}
-
-/* TSC-Callouts ("Zeiger-Linien", siehe claudeCalloutTick in PriceChart.vue) — SVG ohne eigenes
-   viewBox, deckungsgleich mit .chart-wrapper (position:absolute;inset:0 + width/height:100%):
-   1 SVG-Nutzereinheit entspricht dadurch exakt 1 CSS-Pixel, dieselbe Koordinatenbasis wie
-   timeToCoordinate/priceToCoordinate (siehe annotationAnchorPoint in claudeAnnotations.js). */
-.claude-callout-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 7;
-}
-
-.claude-callout-svg line {
-  stroke-width: 1;
-  stroke-dasharray: 3, 3;
-}
-
-.claude-callout-stack {
-  position: absolute;
-  /* Gleicher rechter Anschlag wie .tsc-card (TradeSetupCockpit.vue) — Labels docken an derselben
-     Kante an, wachsen per column-reverse nach oben von der TSC-Karte weg. */
-  right: 70px;
-  display: flex;
-  flex-direction: column-reverse;
-  align-items: flex-end;
-  gap: 2px;
-  pointer-events: none;
-  z-index: 7;
-}
-
-/* Bug-Report Philip 2026-07-30: bei vielen Annotationen wurde der Stack mit Zeilenumbruch + Box
-   pro Chip zu hoch, die obersten Labels ragten über den sichtbaren Bereich hinaus. Kein Umbruch
-   (nowrap statt max-width) und keine Box (kein border/background/padding) mehr — jeder Chip ist
-   jetzt nur noch eine einzeilige, unauffällige Textzeile, spart deutlich vertikalen Platz. */
-.claude-callout-chip {
-  font-size: 11px;
-  line-height: 1.3;
-  white-space: nowrap;
 }
 
 .metadata-empty {

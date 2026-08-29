@@ -10,17 +10,22 @@ import InvalidationField from "./InvalidationField.vue";
 // 1: Bestätigungen + Targets, "erst mal alles manuell" (Philip) heißt hier: keine automatische
 // Setup-Erkennung mehr, aber ansonsten 1:1 derselbe Weg wie im Trade-Edit-Modal (Chart-Klick im
 // Trade-Modus, echte dealing_ranges/trade_evidence/trade_targets-Zeilen) — über dieselbe
-// CrudListSection.vue wie dort. Seit 2026-08-28 zusätzlich Zusatzargumente (Confluence) als eigene
-// Sektion, getrennt von Bestätigungen (Confirmation) — beide teilen dieselbe range.confirmations-
-// Liste, nur nach category gefiltert (siehe computed unten). `range` kommt von Dashboard.vue
-// (tscRange, siehe dort) und ist
-// null, solange noch keine Dealing Range über die TSC angelegt wurde. Deren Richtung entscheidet
-// die ERSTE Bestätigung (meist ein Sweep, optional ein OB — Philip: "als erstes kommt der
-// LQ-Sweep, vielleicht bildet sich eine OB danach, aber nur vielleicht", siehe Dashboard.vue:
-// tscBootstrapArmed) — bis dahin gibt's hier keine Long/Short-Einfärbung und Targets bleiben
-// gesperrt.
+// CrudListSection.vue wie dort. Seit 2026-08-28 zusätzlich Zusatzargumente (Confluence) und
+// Anti-Confluences als eigene Sektionen, getrennt von Bestätigungen (Confirmation) — alle drei
+// teilen dieselbe range.confirmations-Liste, nur nach category gefiltert (siehe computed unten).
+// `range` kommt von Dashboard.vue (tscRange, siehe dort) und ist null, solange noch keine Dealing
+// Range über die TSC angelegt wurde. Deren Richtung entscheidet die ERSTE Bestätigung (meist ein
+// Sweep, optional ein OB — Philip: "als erstes kommt der LQ-Sweep, vielleicht bildet sich eine OB
+// danach, aber nur vielleicht", siehe Dashboard.vue: tscBootstrapArmed) — bis dahin gibt's hier
+// keine Long/Short-Einfärbung und Targets/Zusatzargumente/Anti-Confluences bleiben gesperrt.
+//
+// Lebt seit Chat 2026-08-28 als eigene Sidebar-Spalte in Dashboard.vue (vorher ein Chart-Overlay
+// INNERHALB von PriceChart.vue) — die Komponente selbst ist jetzt IMMER gerendert, kein `state`-
+// Prop/v-if-Gate mehr (das kam vorher aus PriceChart-internem cockpitState, nur um "TSC gerade
+// sichtbar" zu entscheiden — Philip: "kannst du den TSC immer sichtbar lassen, der Toggle soll nur
+// die Visualisierungen togglen" — showTradeSetupCockpit steuert seitdem nur noch die TSC-Range-
+// Zeichnung auf dem Candlestick-Chart selbst, siehe PriceChart.vue).
 const props = defineProps({
-  state: { type: Object, default: null },
   nowSec: { type: Number, default: undefined },
   instrument: { type: String, required: true },
   range: { type: Object, default: null },
@@ -137,7 +142,7 @@ const accentStyle = computed(() => {
 </script>
 
 <template>
-  <div v-if="state" class="tsc-card" :style="accentStyle">
+  <div class="tsc-card" :style="accentStyle">
     <div class="tsc-header">
       <h3 class="tsc-title">Trade-Setup-Cockpit</h3>
       <div class="tsc-header-right">
@@ -251,22 +256,21 @@ const accentStyle = computed(() => {
 </template>
 
 <style scoped>
+/* Bis Chat 2026-08-28 ein position:absolute-Overlay über dem Chart (siehe Git-Historie vor diesem
+   Commit für den früheren rechts/vertikal-zentrierten Overlay-Stil) — Philip: "übersichtlicher,
+   wenn der TSC nicht mehr über dem Chart liegt", jetzt eine eigene, statische Spalte rechts neben
+   dem Chart (siehe Dashboard.vue: .chart-tsc-row/.chart-tsc-row-tsc). Feste Breite statt der
+   früheren max-width (Philip: "Chart-Breite soll sich nicht ändern" — eine feste Spaltenbreite
+   erfüllt das automatisch, kein Reflow nötig). overflow-y: auto + Höhe von der Flex-Row geerbt
+   (align-items: stretch, Default), damit eine lange Anti-Confluences/Zusatzargumente-Liste selbst
+   scrollt statt die ganze Seite zu strecken.
+*/
 .tsc-card {
-  position: absolute;
-  z-index: 5;
-  /* Bug-Report Philip 2026-07-27: "TSC verdeckt die Preis-Y-Achse" — 12px reichte nicht, das
-     überlappte die rechte Preisskala von lightweight-charts (die Teil desselben Chart-Canvas ist,
-     kein eigenes DOM-Element, dem man ausweichen könnte). Fixer, großzügiger Wert statt die
-     tatsächliche Preisskala-Breite zur Laufzeit abzufragen — die TSC läuft ohnehin nur für Forex
-     (5 Nachkommastellen, immer ähnlich breite Preis-Labels), kein wirklich variabler Fall.
-  */
-  right: 70px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: max-content;
-  /* 320px -> 360px (Chat 2026-08-28), Platz für das neue Tag-Label im Header, ohne dass es mit
-     dem Short/Long-Badge/Reset-Button umbricht. */
-  max-width: 360px;
+  /* 360px (nicht 320px) — Philip hatte die Karte kurz zuvor schon fürs Tag-Label im Header
+     verbreitert (Chat 2026-08-28), das bleibt bei diesem Umbau erhalten. */
+  width: 360px;
+  flex: none;
+  overflow-y: auto;
   padding: 16px;
   border-radius: 8px;
   background-color: rgba(19, 23, 34, 0.92);

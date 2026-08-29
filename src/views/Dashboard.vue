@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import PriceChart from "../components/PriceChart.vue";
+import TradeSetupCockpit from "../components/TradeSetupCockpit.vue";
 import TradesTable from "../components/TradesTable.vue";
 import TradeStats from "../components/TradeStats.vue";
 import StyleModal from "../components/StyleModal.vue";
@@ -1825,10 +1826,19 @@ watch(selectedTradingAccountId, () => {
     @request-set-invalidation="onSetInvalidationRequest(editingTrade)"
   />
 
-  <PriceChart
-    ref="priceChartRef"
-    :key="currentSymbol"
-    :symbol="currentSymbol"
+  <!-- Chart + TSC nebeneinander (Chat 2026-08-28, Philip: "übersichtlicher, wenn der TSC nicht
+       mehr über dem Chart liegt ... RECHTS vom Chart ... als eigenständigen Bereich") — die
+       TSC-Karte war vorher ein position:absolute-Overlay INNERHALB von PriceChart.vue
+       (TradeSetupCockpit.vue), jetzt echte Sidebar-Spalte hier. Breite bewusst FEST (Philip: "Chart-
+       Breite soll sich nicht ändern, wenn ich TSC toggle" — die Karte bleibt daher IMMER sichtbar,
+       showTradeSetupCockpit steuert seitdem nur noch die TSC-Range-Zeichnung auf dem Candlestick-
+       Chart selbst, nicht mehr die Karte). -->
+  <div class="chart-tsc-row">
+    <PriceChart
+      ref="priceChartRef"
+      class="chart-tsc-row-chart"
+      :key="currentSymbol"
+      :symbol="currentSymbol"
     :current-bar="currentBar"
     :trades="isolatedTrades"
     :hovered-trade-id="hoveredTradeId"
@@ -1897,20 +1907,28 @@ watch(selectedTradingAccountId, () => {
     @select-setup-confirmations="onSelectSetupConfirmations"
     @toggle-trade-mode="tradeModeActive = !tradeModeActive"
     @pin-context-menu="onPinContextMenu"
-    @tsc-add-confirmation="onTscAddConfirmationRequest"
-    @tsc-add-target="onTscAddTargetRequest"
-    @tsc-add-confluence="onTscAddConfluenceRequest"
-    @tsc-add-anti-confluence="onTscAddAntiConfluenceRequest"
-    @tsc-remove-confirmation="onTscRemoveConfirmation"
-    @tsc-remove-target="onTscRemoveTarget"
-    @tsc-remove-confluence="onTscRemoveConfluence"
-    @tsc-remove-anti-confluence="onTscRemoveAntiConfluence"
-    @tsc-transfer-to-trades="onTscTransferToTrades"
-    @tsc-set-invalidation="onTscSetInvalidationRequest"
-    @tsc-invalidation-saved="refreshTscRange"
-    @tsc-reset="onTscReset"
     @tsc-add-target-from-picker="onTscAddTargetFromPicker"
-  />
+    />
+    <TradeSetupCockpit
+      class="chart-tsc-row-tsc"
+      :instrument="currentSymbol"
+      :now-sec="replayUntil"
+      :range="tscRange"
+      @add-confirmation="onTscAddConfirmationRequest"
+      @add-target="onTscAddTargetRequest"
+      @add-confluence="onTscAddConfluenceRequest"
+      @add-anti-confluence="onTscAddAntiConfluenceRequest"
+      @remove-confirmation="onTscRemoveConfirmation"
+      @remove-target="onTscRemoveTarget"
+      @remove-confluence="onTscRemoveConfluence"
+      @remove-anti-confluence="onTscRemoveAntiConfluence"
+      @transfer-to-trades="onTscTransferToTrades"
+      @request-set-invalidation="onTscSetInvalidationRequest"
+      @invalidation-saved="refreshTscRange"
+      @reset="onTscReset"
+      @open-target-picker="priceChartRef?.openTargetPicker()"
+    />
+  </div>
 
   <aside ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">
     <div class="trades-panel-header">
@@ -2251,6 +2269,21 @@ watch(selectedTradingAccountId, () => {
 
 .replay-step-btn:hover {
   background: #363b47;
+}
+
+/* Chart + TSC nebeneinander (Chat 2026-08-28) — .chart-tsc-row-chart landet als Fallthrough-Class
+   auf PriceChart.vue's Root (.chart-wrapper), .chart-tsc-row-tsc auf TradeSetupCockpit.vue's Root
+   (.tsc-card, die dort auf statische Sidebar-Breite statt des früheren Chart-Overlays umgebaut
+   wurde). align-items: stretch (Default) lässt beide dieselbe Höhe wie .chart-wrapper teilen — die
+   TSC-Karte scrollt bei Bedarf selbst (siehe .tsc-card: overflow-y). */
+.chart-tsc-row {
+  display: flex;
+  gap: 12px;
+}
+
+.chart-tsc-row-chart {
+  flex: 1;
+  min-width: 0;
 }
 
 .trades-panel {
