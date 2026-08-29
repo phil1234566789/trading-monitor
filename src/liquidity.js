@@ -8,6 +8,7 @@ import { cssColor } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
 import { canShowLabels } from "./chartZoom.js";
 import { classifyAge } from "./ageTier";
+import { drawIconLabel } from "./chartIconLabel.js";
 // Reine Fraktal-Erkennung seit Chat 2026-07-31 nach liquidityDetection.js ausgelagert (dort auch
 // die Begründung) — hier nur re-exportiert, damit sich an der öffentlichen API dieser Datei nichts
 // ändert (PriceChart.vue/dataExport.js importieren weiterhin von hier).
@@ -117,7 +118,8 @@ class LiquidityLineRenderer {
       // Label auf M5 unsichtbar) — HTF-Level nutzen bewusst die lockere Schwelle unabhängig vom
       // Chart-Timeframe, siehe levelOptions/canShowLabels.
       if (this._options.label && canShowLabels(this._chart, this._candles, this._options.lenientLabels)) {
-        ctx.font = `${Math.round(10 * scope.verticalPixelRatio)}px sans-serif`;
+        const fontSizePx = Math.round(10 * scope.verticalPixelRatio);
+        ctx.font = `${fontSizePx}px sans-serif`;
         ctx.fillStyle = this._options.color;
         if (this._options.labelSide === "end") {
           // Linien, die bis "jetzt" reichen (z.B. Swing High/Low), enden direkt am rechten
@@ -132,9 +134,21 @@ class LiquidityLineRenderer {
         } else if (this._options.labelSide === "end-above" || this._options.labelSide === "end-below") {
           const endX = Math.max(x1, x2);
           const above = this._options.labelSide === "end-above";
-          ctx.textBaseline = above ? "bottom" : "top";
-          ctx.textAlign = "right";
-          ctx.fillText(this._options.label, endX, y + (above ? -2 : 2) * scope.verticalPixelRatio);
+          // Optionales, größer skaliertes führendes Icon (Chat 2026-08-28: "Totenkopf 1,5x größer,
+          // Rest normal", siehe chartIconLabel.js) — einzige labelSide-Variante, die Evidenz-Labels
+          // (Bestätigung/Zusatzargument/Anti-Confluence) tatsächlich nutzen.
+          drawIconLabel(ctx, {
+            icon: this._options.icon,
+            text: this._options.label,
+            x: endX,
+            y: y + (above ? -2 : 2) * scope.verticalPixelRatio,
+            align: "right",
+            baseline: above ? "bottom" : "top",
+            fontSizePx,
+            fontFamily: "sans-serif",
+            iconScale: this._options.iconScale ?? 1,
+            gapPx: 3 * scope.horizontalPixelRatio,
+          });
         } else if (this._options.labelSide === "center-above" || this._options.labelSide === "center-below") {
           const midX = (x1 + x2) / 2;
           const above = this._options.labelSide === "center-above";

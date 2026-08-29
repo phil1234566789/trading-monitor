@@ -37,6 +37,8 @@ const emit = defineEmits([
   "request-add-range-confirmation",
   "request-add-confluence",
   "request-add-range-confluence",
+  "request-add-anti-confluence",
+  "request-add-range-anti-confluence",
   "request-set-invalidation",
 ]);
 
@@ -204,14 +206,17 @@ watch(
 );
 
 // Evidenz-Zeilen (trades.js: toConfirmation) sind mit level ("range"/"position") UND category
-// ("confirmation"/"confluence", generierte Spalte, siehe Migration 20260828120000) versehen — erst
-// nach level aufgeteilt, damit "GO für die Idee" und "GO für diesen Entry" strukturell getrennt
-// bleiben, dann je Ebene zusätzlich nach category für Bestätigungen vs. Zusatzargumente (siehe
-// trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt).
+// ("confirmation"/"confluence"/"anti_confluence", seit Migration 20260828130000 eine normale,
+// explizit gesetzte Spalte statt generiert) versehen — erst nach level aufgeteilt, damit "GO für
+// die Idee" und "GO für diesen Entry" strukturell getrennt bleiben, dann je Ebene zusätzlich nach
+// category für Bestätigungen/Zusatzargumente/Anti-Confluences (siehe trade-from-poi.md#confirmation-
+// confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt).
 const rangeConfirmations = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "range" && c.category === "confirmation"));
 const positionConfirmations = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "position" && c.category === "confirmation"));
 const rangeConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "range" && c.category === "confluence"));
 const positionConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "position" && c.category === "confluence"));
+const rangeAntiConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "range" && c.category === "anti_confluence"));
+const positionAntiConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "position" && c.category === "anti_confluence"));
 
 async function save() {
   saving.value = true;
@@ -346,6 +351,21 @@ function confirmationLabel(confirmation) {
         @remove="onRemoveConfirmation"
       />
 
+      <!-- Anti-Confluence (spricht gegen den Trade), erster Schritt nur klickbare Chart-Objekte
+           (Philip, Chat 2026-08-28), siehe trade-from-poi.md#confirmation-confluence-und-anti-
+           confluence--wie-eine-dealing-range-go-bekommt. -->
+      <CrudListSection
+        title="Anti-Confluences (Idee)"
+        icon="💀"
+        add-title="Anti-Confluence hinzufügen (Trade-Modus, dann Sweep/OB/Fib/Divergenz anklicken)"
+        :items="rangeAntiConfluences"
+        :item-key="(c) => c.id"
+        :item-label="confirmationLabel"
+        empty-text="Noch keine Anti-Confluences."
+        @add="emit('request-add-range-anti-confluence')"
+        @remove="onRemoveConfirmation"
+      />
+
       <CrudListSection
         title="Targets"
         icon="🎯"
@@ -385,6 +405,18 @@ function confirmationLabel(confirmation) {
         :item-label="confirmationLabel"
         empty-text="Noch keine Zusatzargumente."
         @add="emit('request-add-confluence')"
+        @remove="onRemoveConfirmation"
+      />
+
+      <CrudListSection
+        title="Anti-Confluences (Entry)"
+        icon="💀"
+        add-title="Anti-Confluence hinzufügen (Trade-Modus, dann Sweep/OB/Fib/Divergenz anklicken)"
+        :items="positionAntiConfluences"
+        :item-key="(c) => c.id"
+        :item-label="confirmationLabel"
+        empty-text="Noch keine Anti-Confluences."
+        @add="emit('request-add-anti-confluence')"
         @remove="onRemoveConfirmation"
       />
 

@@ -13,6 +13,7 @@ import { snapToBarTime } from "./chartTimeUtils.js";
 import { cssColor, cssColorScaled } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
 import { canShowLabels } from "./chartZoom.js";
+import { drawIconLabel } from "./chartIconLabel.js";
 import { detectOrderBlocks } from "./orderBlockDetection.js";
 
 export { detectOrderBlocks };
@@ -92,22 +93,38 @@ class ZoneRenderer {
       // Labels die Sicht" — Zone selbst bleibt, nur das Timeframe-Tag verschwindet bei zu dünnen
       // Kerzen.
       if (this._options.label && canShowLabels(this._chart, this._candles)) {
-        ctx.font = `${Math.round(11 * scope.verticalPixelRatio)}px sans-serif`;
+        const fontSizePx = Math.round(11 * scope.verticalPixelRatio);
         ctx.fillStyle = this._options.textColor;
-        ctx.textBaseline = "top";
-        ctx.textAlign = "right";
         // Mehrzeilig per "\n" (Chat 2026-07-27: Trade-Setup-OB-Box zeigt im Debug-Modus zusätzlich
         // die Preise unter dem "Long/Short A #x"-Titel) — fillText selbst kann keine Zeilenumbrüche,
         // daher hier manuell aufgeteilt. Für den bisherigen Single-Line-Fall (z.B. renderPersistedZones)
-        // unverändert, split() liefert dann ein Array mit einem Element.
+        // unverändert, split() liefert dann ein Array mit einem Element. Ein optionales, größer
+        // skaliertes Icon (Chat 2026-08-28: "Totenkopf 1,5x größer, Rest normal", siehe
+        // chartIconLabel.js) gilt nur für die erste Zeile.
         const lines = this._options.label.split("\n");
         const lineHeight = 13 * scope.verticalPixelRatio;
+        const xEnd = xPos.position + xPos.length - 4 * scope.horizontalPixelRatio;
         lines.forEach((line, i) => {
-          ctx.fillText(
-            line,
-            xPos.position + xPos.length - 4 * scope.horizontalPixelRatio,
-            yPos.position + 2 * scope.verticalPixelRatio + i * lineHeight,
-          );
+          const y = yPos.position + 2 * scope.verticalPixelRatio + i * lineHeight;
+          if (i === 0 && this._options.icon) {
+            drawIconLabel(ctx, {
+              icon: this._options.icon,
+              text: line,
+              x: xEnd,
+              y,
+              align: "right",
+              baseline: "top",
+              fontSizePx,
+              fontFamily: "sans-serif",
+              iconScale: this._options.iconScale ?? 1,
+              gapPx: 3 * scope.horizontalPixelRatio,
+            });
+          } else {
+            ctx.font = `${fontSizePx}px sans-serif`;
+            ctx.textBaseline = "top";
+            ctx.textAlign = "right";
+            ctx.fillText(line, xEnd, y);
+          }
         });
       }
     });

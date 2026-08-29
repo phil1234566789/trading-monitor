@@ -136,6 +136,13 @@ export const DEFAULT_CHART_COLORS = {
   // (bereits passierte Evidenz) und Target (zukünftige Erwartung) auch farblich unterscheiden,
   // trotz gleicher Klick-/Zeichen-Infrastruktur (siehe refreshTradeConfirmationLinksInternal).
   tradeConfirmation: { hex: "#5c6bc0", alpha: 0.95 },
+  // Anti-Confluence-Linien/-Boxen (Chat 2026-08-28) — eigener Key statt tradeConfirmation
+  // mitzubenutzen: Philip explizit "die Einfärbung ist gold, ich brauch eher ne alarmierende
+  // Farbe" (er meinte den nativ goldenen ⚠️-Emoji-Glyph im Label, canvas fillStyle kann Emoji-
+  // Eigenfarben nicht überschreiben — echte Abhilfe ist eine eigene, tatsächlich steuerbare
+  // Box-/Linienfarbe plus ein neutraleres Symbol, siehe PriceChart.vue). Dieselbe Gefahren-Rot-
+  // Semantik wie NO_GO_COLOR/tradeInvalidation/newsEvent.
+  antiConfluence: { hex: "#ef5350", alpha: 0.95 },
   // Invalidierungs-Linie einer dealing_range (Chat 2026-07-31) — dieselbe Gefahren-Rot-Semantik
   // wie NO_GO_COLOR/candleDown/tradeLoss (dieser Preis = die ganze Idee ist tot), eigener Key statt
   // Wiederverwendung, damit ein späteres Anpassen von z.B. tradeLoss diese Linie nicht mitverschiebt.

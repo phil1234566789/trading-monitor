@@ -29,9 +29,11 @@ const emit = defineEmits([
   "add-confirmation",
   "add-target",
   "add-confluence",
+  "add-anti-confluence",
   "remove-confirmation",
   "remove-target",
   "remove-confluence",
+  "remove-anti-confluence",
   "transfer-to-trades",
   "request-set-invalidation",
   "invalidation-saved",
@@ -39,13 +41,15 @@ const emit = defineEmits([
   "open-target-picker",
 ]);
 
-// category (Confirmation="Bestätigung"/GO-Signal vs. Confluence="Zusatzargument"/kein GO, siehe
-// trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt)
-// trennt eine gemeinsam geladene Liste (range.confirmations, siehe trades.js) in zwei Sektionen —
-// exakt dasselbe Filter-Muster wie TradeEditModal.vue: rangeConfirmations/positionConfirmations
-// (dort nach `level`, hier zusätzlich nach `category`).
+// category (Confirmation="Bestätigung"/GO-Signal, Confluence="Zusatzargument"/kein GO,
+// Anti-Confluence/spricht dagegen — siehe trade-from-poi.md#confirmation-confluence-und-anti-
+// confluence--wie-eine-dealing-range-go-bekommt) trennt eine gemeinsam geladene Liste
+// (range.confirmations, siehe trades.js) in drei Sektionen — exakt dasselbe Filter-Muster wie
+// TradeEditModal.vue: rangeConfirmations/positionConfirmations (dort nach `level`, hier
+// zusätzlich nach `category`).
 const confirmations = computed(() => (props.range?.confirmations ?? []).filter((c) => c.category === "confirmation"));
 const confluences = computed(() => (props.range?.confirmations ?? []).filter((c) => c.category === "confluence"));
+const antiConfluences = computed(() => (props.range?.confirmations ?? []).filter((c) => c.category === "anti_confluence"));
 const targets = computed(() => props.range?.targets ?? []);
 const direction = computed(() => props.range?.direction ?? null);
 
@@ -105,6 +109,15 @@ async function saveInvalidation() {
 }
 
 const nowSecResolved = computed(() => props.nowSec ?? Math.floor(Date.now() / 1000));
+// Tag-Label im Header (Chat 2026-08-28, Philip: "damit man weiß für welchen Tag das Setup im TSC
+// gerade gilt") — bewusst nowSecResolved (Live-Zeit ODER Replay-Zeitpunkt, siehe oben), nicht ein
+// aus den Bestätigungen abgeleitetes Datum: die TSC-Karte selbst ist an "gerade jetzt" (bzw. den
+// Replay-Stand) gebunden, nicht an eine bestimmte Bestätigung. Europe/Berlin statt Browser-
+// Lokalzeit (siehe CLAUDE.md "Trading-hours / timezone handling"). .replace(".", "") entfernt das
+// von de-DE angehängte Punkt-Suffix am Wochentag ("Fr." -> "Fr"), gleiches Muster wie
+// newsMarkers.js: formatEventLabel.
+const TSC_DATE_FORMATTER = new Intl.DateTimeFormat("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "Europe/Berlin" });
+const dateLabel = computed(() => TSC_DATE_FORMATTER.format(new Date(nowSecResolved.value * 1000)).replace(".", ""));
 function confirmationLabel(c) {
   return formatEvidenceLabel(c, props.instrument, nowSecResolved.value);
 }
@@ -128,6 +141,7 @@ const accentStyle = computed(() => {
     <div class="tsc-header">
       <h3 class="tsc-title">Trade-Setup-Cockpit</h3>
       <div class="tsc-header-right">
+        <span class="tsc-date">{{ dateLabel }}</span>
         <!-- Gleiches Label/Styling wie TradeEditModal.vue: .tem-direction (Philip: "dasselbe Label
              wie im trade-edit-modal"). -->
         <span v-if="direction" class="tsc-direction" :class="direction">{{ direction === "short" ? "Short" : "Long" }}</span>
@@ -165,6 +179,24 @@ const accentStyle = computed(() => {
       empty-text="Noch keine Zusatzargumente."
       @add="emit('add-confluence')"
       @remove="(c) => emit('remove-confluence', c)"
+    />
+
+    <!-- Anti-Confluence (spricht gegen den Trade, siehe trade-from-poi.md#confirmation-confluence-
+         und-anti-confluence--wie-eine-dealing-range-go-bekommt) — erster Schritt nur klickbare
+         Chart-Objekte (Philip, Chat 2026-08-28), gleicher kind-Satz wie Bestätigungen/
+         Zusatzargumente zusammen (Sweep/OB/Fib/Divergenz). Name bewusst englisch, nicht "Spricht
+         dagegen" (Philip). Gesperrt ohne Range wie Zusatzargumente/Targets. -->
+    <CrudListSection
+      title="Anti-Confluences"
+      icon="💀"
+      :add-title="range ? 'Anti-Confluence hinzufügen (Trade-Modus, dann Sweep/OB/Fib/Divergenz anklicken)' : 'Erst eine Bestätigung (Sweep/OB) hinzufügen — legt die Richtung fest'"
+      :disabled="!range"
+      :items="antiConfluences"
+      :item-key="(c) => c.id"
+      :item-label="confirmationLabel"
+      empty-text="Noch keine Anti-Confluences."
+      @add="emit('add-anti-confluence')"
+      @remove="(c) => emit('remove-anti-confluence', c)"
     />
 
     <CrudListSection
@@ -232,7 +264,9 @@ const accentStyle = computed(() => {
   top: 50%;
   transform: translateY(-50%);
   width: max-content;
-  max-width: 320px;
+  /* 320px -> 360px (Chat 2026-08-28), Platz für das neue Tag-Label im Header, ohne dass es mit
+     dem Short/Long-Badge/Reset-Button umbricht. */
+  max-width: 360px;
   padding: 16px;
   border-radius: 8px;
   background-color: rgba(19, 23, 34, 0.92);
@@ -269,6 +303,15 @@ const accentStyle = computed(() => {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Tag-Label (Chat 2026-08-28) — neutral/dezent statt akzentuiert wie .tsc-direction, ist reine
+   Orientierung ("für welchen Tag gilt das gerade"), keine Statusfarbe wie Long/Short. */
+.tsc-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9aa0ac;
+  white-space: nowrap;
 }
 
 /* 1:1 TradeEditModal.vue: .tem-direction/.tem-direction.long/.tem-direction.short (Philip:

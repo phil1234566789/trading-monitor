@@ -266,6 +266,12 @@ const props = defineProps({
   // "Zusatzargument hinzufügen" in der UI zwei getrennte Buttons/Sektionen bleiben, die jeweils nur
   // ihre eigene Art Chart-Objekt annehmen.
   confluenceModeActive: { type: Boolean, default: false },
+  // Anti-Confluence-Modus (Chat 2026-08-28) — nimmt denselben Klick-Satz wie Confirmation UND
+  // Confluence zusammen an (pivot/ob über findClickedTarget UND fib/divergence), weil ein
+  // gegenläufiges Chart-Objekt jeder der vier Arten als Anti-Confluence taugt (z.B. ein
+  // gegenläufiger OB oder eine gegenläufige Divergenz) — anders als confirmationModeActive/
+  // confluenceModeActive, die jeweils nur eine Hälfte des Kind-Satzes zulassen.
+  antiConfluenceModeActive: { type: Boolean, default: false },
   // TSC-Dealing-Range (Chat 2026-08-26, TSC-Neuaufbau) — reine Durchreiche von Dashboard.vue
   // (tscRange) an TradeSetupCockpit.vue, null solange die TSC noch keine Range angelegt hat.
   tscRange: { type: Object, default: null },
@@ -282,9 +288,11 @@ const emit = defineEmits([
   "tsc-add-confirmation",
   "tsc-add-target",
   "tsc-add-confluence",
+  "tsc-add-anti-confluence",
   "tsc-remove-confirmation",
   "tsc-remove-target",
   "tsc-remove-confluence",
+  "tsc-remove-anti-confluence",
   "tsc-transfer-to-trades",
   "tsc-set-invalidation",
   "tsc-invalidation-saved",
@@ -834,12 +842,28 @@ function refreshTradeConfirmationLinksInternal() {
   for (const t of tradeLikeEntriesForCandles(candles)) {
     for (const confirmation of t.confirmations ?? []) {
       if (confirmation.sourceTime == null) continue;
-      // Confirmation (GO-Signal: pivot/ob) vs. Confluence (Zusatzargument, kein GO: fib/
-      // rsi_divergence) — siehe trade-from-poi.md#confirmation-confluence-und-anti-confluence--
+      // Confirmation (GO-Signal), Confluence (Zusatzargument, kein GO) und Anti-Confluence (spricht
+      // gegen den Trade) — siehe trade-from-poi.md#confirmation-confluence-und-anti-confluence--
       // wie-eine-dealing-range-go-bekommt — bekommen unterschiedliche Präfixe, damit im Chart auf
-      // einen Blick erkennbar ist, was tatsächlich das GO gab und was nur zusätzliche Sicherheit ist.
-      const icon = confirmation.category === "confluence" ? "💡" : "✔";
-      const label = `${icon} ${confirmationKindLabel(confirmation.kind)} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`;
+      // einen Blick erkennbar ist, was tatsächlich das GO gab, was nur zusätzliche Sicherheit ist
+      // und was dagegen spricht. 💀 statt ⚠️ (Bug-Report Philip 2026-08-28: der ⚠️-Glyph ist ein
+      // Farb-Emoji mit fest goldener Eigenfarbe, canvas fillStyle kann das nicht überschreiben —
+      // 💀 ist neutraler und kollidiert nicht mit der jetzt roten antiConfluence-Box-/Linienfarbe
+      // unten). Die eigentliche "alarmierende Farbe", die Philip wollte, kommt aus colorKey.
+      const isAntiConfluence = confirmation.category === "anti_confluence";
+      const icon = confirmation.category === "confluence" ? "💡" : isAntiConfluence ? "💀" : "✔";
+      const kindPriceId = `${confirmationKindLabel(confirmation.kind)} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`;
+      // Anti-Confluence zeichnet das Icon getrennt und größer statt es wie bei Confirmation/
+      // Confluence einfach vor den Text zu schreiben (Philip, Chat 2026-08-28: erst "Label 2x
+      // größer" gewünscht, dann korrigiert auf "nur der Totenkopf 1,5x größer, Rest der Schrift
+      // normal" — siehe chartIconLabel.js für die Umsetzung, da fillText nur eine Schriftgröße pro
+      // Aufruf kann).
+      const label = isAntiConfluence ? kindPriceId : `${icon} ${kindPriceId}`;
+      const iconOptions = isAntiConfluence ? { icon: "💀", iconScale: 1.5 } : {};
+      // Anti-Confluences bekommen die eigene, alarmierende Rot-Farbe (chartColors.js: antiConfluence)
+      // statt der gemeinsamen Confirmation/Confluence-Farbe — Philip: "ich brauch eher ne andere
+      // Farbe, ne alarmierende Farbe".
+      const colorKey = isAntiConfluence ? "antiConfluence" : "tradeConfirmation";
       // RSI-Divergenz-Bestätigungen als echter Zwei-Bein-Konnektor (dieselbe DivergenceLinePrimitive
       // wie die live erkannten Divergenzen, siehe refreshRsiDivergenceInternal) statt nur einer
       // horizontalen Linie — sourceTime/touchedTime tragen bereits fromTime/toTime (siehe
@@ -849,7 +873,7 @@ function refreshTradeConfirmationLinksInternal() {
         const primitive = new DivergenceLinePrimitive(
           { time: confirmation.sourceTime, price: confirmation.fromPrice },
           { time: confirmation.touchedTime, price: confirmation.price },
-          { color: cssColor("tradeConfirmation"), lineWidth: lineWidth("tradeConfirmation"), label },
+          { color: cssColor(colorKey), lineWidth: lineWidth(colorKey), label, ...iconOptions },
           candles,
         );
         candleSeries.attachPrimitive(primitive);
@@ -868,11 +892,12 @@ function refreshTradeConfirmationLinksInternal() {
         const primitive = new OrderBlockPrimitive(
           { top: confirmation.rangeHigh, bottom: confirmation.rangeLow, startTime: confirmation.sourceTime, endTime, touched, confirmationId: confirmation.id, instrument: t.instrument },
           {
-            fillColor: cssColorScaled("tradeConfirmation", TRADE_SETUP_OB_FILL_RATIO),
-            borderColor: cssColorScaled("tradeConfirmation", TRADE_SETUP_OB_BORDER_RATIO),
-            borderWidth: lineWidth("tradeConfirmation"),
+            fillColor: cssColorScaled(colorKey, TRADE_SETUP_OB_FILL_RATIO),
+            borderColor: cssColorScaled(colorKey, TRADE_SETUP_OB_BORDER_RATIO),
+            borderWidth: lineWidth(colorKey),
             textColor: "rgba(255, 255, 255, 0.9)",
             label,
+            ...iconOptions,
             inPinContext,
             pinColor: cssColor("pin"),
             isSelectedPin,
@@ -896,9 +921,10 @@ function refreshTradeConfirmationLinksInternal() {
       const primitive = new LiquidityLinePrimitive(
         { price: confirmation.price, pivotTime: confirmation.sourceTime, endTime },
         {
-          color: cssColor("tradeConfirmation"),
-          lineWidth: lineWidth("tradeConfirmation") * TARGET_TIER_WIDTH_RATIO[tier],
+          color: cssColor(colorKey),
+          lineWidth: lineWidth(colorKey) * TARGET_TIER_WIDTH_RATIO[tier],
           label,
+          ...iconOptions,
           labelSide: t.direction === "short" ? "end-below" : "end-above",
         },
         candles,
@@ -1667,18 +1693,18 @@ onMounted(() => {
     // Eigener Modus statt einfach zusätzlich zum Setup-Klick zu testen, damit ein Klick nie
     // mehrdeutig ist (Setup-OB-Box vs. Ziel-Pivot/-OB könnten sich sonst überlappen).
     if (props.targetModeActive) {
-      // Fib-Tick NUR im Zusatzargument-Modus prüfen (siehe confluenceModeActive-Kommentar oben) —
-      // zuerst, weil er eine feinere Toleranz hat und sonst evtl. von einer überlappenden
-      // Liquiditäts-Linie verdeckt würde.
-      const fib = props.confluenceModeActive && findClickedFibLevel(param);
+      // Fib-Tick im Zusatzargument- ODER Anti-Confluence-Modus prüfen (siehe confluenceModeActive-/
+      // antiConfluenceModeActive-Kommentar oben) — zuerst, weil er eine feinere Toleranz hat und
+      // sonst evtl. von einer überlappenden Liquiditäts-Linie verdeckt würde.
+      const fib = (props.confluenceModeActive || props.antiConfluenceModeActive) && findClickedFibLevel(param);
       if (fib) {
         emit("select-target", fib);
         return;
       }
-      // RSI-Divergenz NUR im Zusatzargument-Modus (siehe findClickedDivergence), vor
-      // findClickedTarget geprüft — sonst würde ein Klick auf den Divergenz-Konnektor evtl.
+      // RSI-Divergenz im Zusatzargument- ODER Anti-Confluence-Modus (siehe findClickedDivergence),
+      // vor findClickedTarget geprüft — sonst würde ein Klick auf den Divergenz-Konnektor evtl.
       // stattdessen eine darunter liegende Liquiditäts-Linie/OB-Zone treffen.
-      const divergence = props.confluenceModeActive && findClickedDivergence(param);
+      const divergence = (props.confluenceModeActive || props.antiConfluenceModeActive) && findClickedDivergence(param);
       if (divergence) {
         emit("select-target", divergence);
         return;
@@ -1757,7 +1783,7 @@ onMounted(() => {
     if (props.tradeModeActive) {
       const point = { point: { x, y } };
       const hit = props.targetModeActive
-        ? (props.confluenceModeActive && (findClickedFibLevel(point) || findClickedDivergence(point))) ||
+        ? ((props.confluenceModeActive || props.antiConfluenceModeActive) && (findClickedFibLevel(point) || findClickedDivergence(point))) ||
           (props.confirmationModeActive && findClickedSetup(point)) ||
           findClickedTarget(point)
         : findClickedSetup(point);
@@ -2195,9 +2221,11 @@ defineExpose({
       @add-confirmation="emit('tsc-add-confirmation')"
       @add-target="emit('tsc-add-target')"
       @add-confluence="emit('tsc-add-confluence')"
+      @add-anti-confluence="emit('tsc-add-anti-confluence')"
       @remove-confirmation="emit('tsc-remove-confirmation', $event)"
       @remove-target="emit('tsc-remove-target', $event)"
       @remove-confluence="emit('tsc-remove-confluence', $event)"
+      @remove-anti-confluence="emit('tsc-remove-anti-confluence', $event)"
       @transfer-to-trades="emit('tsc-transfer-to-trades')"
       @request-set-invalidation="emit('tsc-set-invalidation')"
       @invalidation-saved="emit('tsc-invalidation-saved')"

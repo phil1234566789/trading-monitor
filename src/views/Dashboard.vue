@@ -297,6 +297,14 @@ const rangeConfirmationAddTrade = ref(null);
 // (category ergibt sich automatisch aus kind, siehe tradeIntake.js) — kein neuer DB-Call nötig.
 const confluenceAddTrade = ref(null);
 const rangeConfluenceAddTrade = ref(null);
+// Anti-Confluence hinzufügen (Chat 2026-08-28, direkt im Anschluss an Confirmation/Confluence) —
+// Philip: "im ersten Schritt klickbare Chart-Objekte", gleicher kind-Satz wie Confirmation/
+// Confluence (pivot/ob/fib/rsi_divergence), aber category kommt jetzt vom Arm-Zustand statt aus
+// kind (siehe tradeIntake.js: insertConfirmation, Migration 20260828130000) — z.B. ein
+// gegenläufiger OB ist als Confirmation ODER Anti-Confluence klickbar, je nachdem, welcher Button
+// gerade "scharf" ist.
+const antiConfluenceAddTrade = ref(null);
+const rangeAntiConfluenceAddTrade = ref(null);
 // Invalidierung per Chart-Klick setzen (Chat 2026-07-31, zweite Runde: "mach wieder so, dass ich
 // es im Edit-Modal anklicken kann") — nimmt denselben Pivot/OB-Klick wie Target-Modus, aber
 // schreibt den Preis direkt auf dealing_ranges.invalidation statt eine trade_targets-Zeile
@@ -310,76 +318,74 @@ const invalidationAddTrade = ref(null);
 // targetAddTrade-Weg oben (mit einem synthetischen { dealingRangeId, isTsc: true } statt eines
 // echten `trade`-Objekts) — siehe onTscAddConfirmationRequest/onTscAddTargetRequest unten.
 const tscBootstrapArmed = ref(false);
+// Räumt alle Arm-Zustände außer dem übergebenen Namen. Ersetzt die vorherige, pro Funktion
+// ausgeschriebene Reset-Liste (Chat 2026-08-28: mit Anti-Confluence wären das sonst 7 Refs x 8
+// Stellen geworden) — ein Objekt aus Name -> Ref, statt jede Ref einzeln in jeder Funktion zu
+// nennen, hält das wartbar, wenn ein achter Arm-Zustand dazukommt.
+const ARM_STATES = {
+  target: targetAddTrade,
+  confirmation: confirmationAddTrade,
+  rangeConfirmation: rangeConfirmationAddTrade,
+  confluence: confluenceAddTrade,
+  rangeConfluence: rangeConfluenceAddTrade,
+  antiConfluence: antiConfluenceAddTrade,
+  rangeAntiConfluence: rangeAntiConfluenceAddTrade,
+  invalidation: invalidationAddTrade,
+};
+function clearArmStatesExcept(keep) {
+  for (const [key, ref] of Object.entries(ARM_STATES)) {
+    if (key !== keep) ref.value = null;
+  }
+  tscBootstrapArmed.value = false;
+}
+// PriceChart.vue: target-mode-active — irgendein Arm-Zustand "scharf" (egal welcher), schaltet den
+// Chart-Klick-Handler von Pan/Zoom auf "nimmt den nächsten Treffer entgegen" um.
+const anyArmStateActive = computed(() => Object.values(ARM_STATES).some((r) => r.value != null) || tscBootstrapArmed.value);
 function onAddTargetRequest(t) {
+  clearArmStatesExcept("target");
   targetAddTrade.value = t;
-  confirmationAddTrade.value = null;
-  rangeConfirmationAddTrade.value = null;
-  confluenceAddTrade.value = null;
-  rangeConfluenceAddTrade.value = null;
-  invalidationAddTrade.value = null;
   tradeModeActive.value = true;
 }
 function onAddConfirmationRequest(t) {
+  clearArmStatesExcept("confirmation");
   confirmationAddTrade.value = t;
-  targetAddTrade.value = null;
-  rangeConfirmationAddTrade.value = null;
-  confluenceAddTrade.value = null;
-  rangeConfluenceAddTrade.value = null;
-  invalidationAddTrade.value = null;
   tradeModeActive.value = true;
 }
 function onAddRangeConfirmationRequest(t) {
+  clearArmStatesExcept("rangeConfirmation");
   rangeConfirmationAddTrade.value = t;
-  targetAddTrade.value = null;
-  confirmationAddTrade.value = null;
-  confluenceAddTrade.value = null;
-  rangeConfluenceAddTrade.value = null;
-  invalidationAddTrade.value = null;
-  tscBootstrapArmed.value = false;
   tradeModeActive.value = true;
 }
 function onAddConfluenceRequest(t) {
+  clearArmStatesExcept("confluence");
   confluenceAddTrade.value = t;
-  targetAddTrade.value = null;
-  confirmationAddTrade.value = null;
-  rangeConfirmationAddTrade.value = null;
-  rangeConfluenceAddTrade.value = null;
-  invalidationAddTrade.value = null;
   tradeModeActive.value = true;
 }
 function onAddRangeConfluenceRequest(t) {
+  clearArmStatesExcept("rangeConfluence");
   rangeConfluenceAddTrade.value = t;
-  targetAddTrade.value = null;
-  confirmationAddTrade.value = null;
-  rangeConfirmationAddTrade.value = null;
-  confluenceAddTrade.value = null;
-  invalidationAddTrade.value = null;
-  tscBootstrapArmed.value = false;
+  tradeModeActive.value = true;
+}
+function onAddAntiConfluenceRequest(t) {
+  clearArmStatesExcept("antiConfluence");
+  antiConfluenceAddTrade.value = t;
+  tradeModeActive.value = true;
+}
+function onAddRangeAntiConfluenceRequest(t) {
+  clearArmStatesExcept("rangeAntiConfluence");
+  rangeAntiConfluenceAddTrade.value = t;
   tradeModeActive.value = true;
 }
 function onSetInvalidationRequest(t) {
+  clearArmStatesExcept("invalidation");
   invalidationAddTrade.value = t;
-  targetAddTrade.value = null;
-  confirmationAddTrade.value = null;
-  rangeConfirmationAddTrade.value = null;
-  confluenceAddTrade.value = null;
-  rangeConfluenceAddTrade.value = null;
-  tscBootstrapArmed.value = false;
   tradeModeActive.value = true;
 }
 // Verlassen des Trade-Modus räumt eine noch "scharfe" Ziel-/Bestätigungs-/Zusatzargument-/
 // Invalidierungs-Anfrage mit ab — sonst würde ein späteres Wieder-Reinklicken in den Trade-Modus
 // (für einen ganz anderen Zweck) unerwartet den alten Trade verändern.
 watch(tradeModeActive, (active) => {
-  if (!active) {
-    targetAddTrade.value = null;
-    confirmationAddTrade.value = null;
-    rangeConfirmationAddTrade.value = null;
-    confluenceAddTrade.value = null;
-    rangeConfluenceAddTrade.value = null;
-    invalidationAddTrade.value = null;
-    tscBootstrapArmed.value = false;
-  }
+  if (!active) clearArmStatesExcept(null);
 });
 
 // TSC-Dealing-Range (Chat 2026-08-26) — welche dealing_ranges-Zeile "die aktive TSC-Range" für das
@@ -409,13 +415,8 @@ function onTscAddConfirmationRequest() {
     return;
   }
   // Bootstrap-Fall: noch keine Range, der nächste Klick MUSS ein OB sein (siehe onSelectTarget).
+  clearArmStatesExcept(null);
   tscBootstrapArmed.value = true;
-  targetAddTrade.value = null;
-  confirmationAddTrade.value = null;
-  rangeConfirmationAddTrade.value = null;
-  confluenceAddTrade.value = null;
-  rangeConfluenceAddTrade.value = null;
-  invalidationAddTrade.value = null;
   tradeModeActive.value = true;
 }
 function onTscAddTargetRequest() {
@@ -431,6 +432,12 @@ function onTscAddConfluenceRequest() {
   if (tscRangeId.value == null) return;
   onAddRangeConfluenceRequest({ dealingRangeId: tscRangeId.value, isTsc: true });
 }
+function onTscAddAntiConfluenceRequest() {
+  // ⚠️ bleibt in der TSC gesperrt, solange keine Range existiert — aus demselben Grund wie
+  // Zusatzargumente oben.
+  if (tscRangeId.value == null) return;
+  onAddRangeAntiConfluenceRequest({ dealingRangeId: tscRangeId.value, isTsc: true });
+}
 // 🚫-Icon in InvalidationField.vue (Chat 2026-08-27) — derselbe Chart-Klick-Arm-Mechanismus wie
 // im Trade-Edit-Modal (onSetInvalidationRequest), nur mit dem synthetischen TSC-Objekt statt eines
 // echten Trades. Ohne Range ergibt Invalidierung keinen Sinn, siehe InvalidationField v-if="range".
@@ -445,6 +452,10 @@ async function onTscRemoveConfirmation(c) {
 // Gleiche Funktion wie onTscRemoveConfirmation — removeConfirmationFromTrade löscht generisch per
 // id aus trade_evidence, unabhängig von category (siehe tradeIntake.js).
 async function onTscRemoveConfluence(c) {
+  const ok = await removeConfirmationFromTrade(c.id);
+  if (ok) refreshTscRange();
+}
+async function onTscRemoveAntiConfluence(c) {
   const ok = await removeConfirmationFromTrade(c.id);
   if (ok) refreshTscRange();
 }
@@ -528,30 +539,48 @@ async function onSelectTarget(target) {
   if (confirmationAddTrade.value) {
     const trade = confirmationAddTrade.value;
     confirmationAddTrade.value = null;
-    const ok = await addConfirmationToTrade(trade.id, target);
+    const ok = await addConfirmationToTrade(trade.id, target, "confirmation");
     if (ok) refreshTrades();
     return;
   }
   if (rangeConfirmationAddTrade.value) {
     const trade = rangeConfirmationAddTrade.value;
     rangeConfirmationAddTrade.value = null;
-    const ok = await addRangeConfirmation(trade.dealingRangeId, target);
+    const ok = await addRangeConfirmation(trade.dealingRangeId, target, "confirmation");
     if (ok) (trade.isTsc ? refreshTscRange() : refreshTrades());
     return;
   }
   // Zusatzargument (Confluence: Fib/RSI-Divergenz) — derselbe Insert-Pfad wie eine Confirmation,
-  // category ergibt sich automatisch aus target.kind (siehe tradeIntake.js: insertConfirmation).
+  // category kommt seit der Anti-Confluence-Einführung explizit vom Arm-Zustand statt aus
+  // target.kind abgeleitet zu werden (siehe tradeIntake.js: insertConfirmation).
   if (confluenceAddTrade.value) {
     const trade = confluenceAddTrade.value;
     confluenceAddTrade.value = null;
-    const ok = await addConfirmationToTrade(trade.id, target);
+    const ok = await addConfirmationToTrade(trade.id, target, "confluence");
     if (ok) refreshTrades();
     return;
   }
   if (rangeConfluenceAddTrade.value) {
     const trade = rangeConfluenceAddTrade.value;
     rangeConfluenceAddTrade.value = null;
-    const ok = await addRangeConfirmation(trade.dealingRangeId, target);
+    const ok = await addRangeConfirmation(trade.dealingRangeId, target, "confluence");
+    if (ok) (trade.isTsc ? refreshTscRange() : refreshTrades());
+    return;
+  }
+  // Anti-Confluence — gleicher kind-Satz wie Confirmation/Confluence (pivot/ob/fib/rsi_divergence),
+  // nur die category unterscheidet, siehe trade-from-poi.md#confirmation-confluence-und-anti-
+  // confluence--wie-eine-dealing-range-go-bekommt.
+  if (antiConfluenceAddTrade.value) {
+    const trade = antiConfluenceAddTrade.value;
+    antiConfluenceAddTrade.value = null;
+    const ok = await addConfirmationToTrade(trade.id, target, "anti_confluence");
+    if (ok) refreshTrades();
+    return;
+  }
+  if (rangeAntiConfluenceAddTrade.value) {
+    const trade = rangeAntiConfluenceAddTrade.value;
+    rangeAntiConfluenceAddTrade.value = null;
+    const ok = await addRangeConfirmation(trade.dealingRangeId, target, "anti_confluence");
     if (ok) (trade.isTsc ? refreshTscRange() : refreshTrades());
     return;
   }
@@ -576,7 +605,7 @@ async function onSelectTarget(target) {
     const range = await createDealingRange({ instrument: currentSymbol.value, direction: target.direction });
     if (!range) return;
     tscRangeId.value = range.id;
-    const ok = await addRangeConfirmation(range.id, target);
+    const ok = await addRangeConfirmation(range.id, target, "confirmation");
     if (ok) refreshTscRange();
   }
 }
@@ -647,7 +676,9 @@ async function onSelectSetupConfirmations(setup) {
     dealingRangeId = trade.dealingRangeId;
   }
 
-  const addFn = isRangeLevel ? (c) => addRangeConfirmation(dealingRangeId, c) : (c) => addConfirmationToTrade(trade.id, c);
+  // Ein ganzes Trade-Setup (LS+OB) ist immer eine echte Confirmation (GO), nie ein
+  // Anti-Confluence-Klick — dafür gibt es die eigenen Arm-Zustände oben.
+  const addFn = isRangeLevel ? (c) => addRangeConfirmation(dealingRangeId, c, "confirmation") : (c) => addConfirmationToTrade(trade.id, c, "confirmation");
   await addFn(lsConfirmation);
   await addFn(obConfirmation);
 
@@ -1734,6 +1765,8 @@ watch(selectedTradingAccountId, () => {
         <span v-if="rangeConfirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB fügt Dealing Range #{{ rangeConfirmationAddTrade.dealingRangeId }} eine Bestätigung hinzu</span>
         <span v-if="confluenceAddTrade" class="trade-link-armed">💡 nächster Klick auf Fib/Divergenz fügt Trade #{{ confluenceAddTrade.id }} ein Zusatzargument hinzu</span>
         <span v-if="rangeConfluenceAddTrade" class="trade-link-armed">💡 nächster Klick auf Fib/Divergenz fügt Dealing Range #{{ rangeConfluenceAddTrade.dealingRangeId }} ein Zusatzargument hinzu</span>
+        <span v-if="antiConfluenceAddTrade" class="trade-link-armed">⚠️ nächster Klick auf Sweep/OB/Fib/Divergenz fügt Trade #{{ antiConfluenceAddTrade.id }} eine Anti-Confluence hinzu</span>
+        <span v-if="rangeAntiConfluenceAddTrade" class="trade-link-armed">⚠️ nächster Klick auf Sweep/OB/Fib/Divergenz fügt Dealing Range #{{ rangeAntiConfluenceAddTrade.dealingRangeId }} eine Anti-Confluence hinzu</span>
         <span v-if="invalidationAddTrade" class="trade-link-armed">🚫 nächster Klick auf Pivot/OB setzt Invalidierung für Dealing Range #{{ invalidationAddTrade.dealingRangeId }}</span>
       </div>
 
@@ -1787,6 +1820,8 @@ watch(selectedTradingAccountId, () => {
     @request-add-range-confirmation="onAddRangeConfirmationRequest(editingTrade)"
     @request-add-confluence="onAddConfluenceRequest(editingTrade)"
     @request-add-range-confluence="onAddRangeConfluenceRequest(editingTrade)"
+    @request-add-anti-confluence="onAddAntiConfluenceRequest(editingTrade)"
+    @request-add-range-anti-confluence="onAddRangeAntiConfluenceRequest(editingTrade)"
     @request-set-invalidation="onSetInvalidationRequest(editingTrade)"
   />
 
@@ -1849,17 +1884,10 @@ watch(selectedTradingAccountId, () => {
     :claude-annotations="visibleClaudeAnnotations"
     :claude-annotations-date="claudeAnnotationsDate"
     :trade-mode-active="tradeModeActive"
-    :target-mode-active="
-      targetAddTrade != null ||
-      confirmationAddTrade != null ||
-      rangeConfirmationAddTrade != null ||
-      confluenceAddTrade != null ||
-      rangeConfluenceAddTrade != null ||
-      invalidationAddTrade != null ||
-      tscBootstrapArmed
-    "
+    :target-mode-active="anyArmStateActive"
     :confirmation-mode-active="confirmationAddTrade != null || rangeConfirmationAddTrade != null || tscBootstrapArmed"
     :confluence-mode-active="confluenceAddTrade != null || rangeConfluenceAddTrade != null"
+    :anti-confluence-mode-active="antiConfluenceAddTrade != null || rangeAntiConfluenceAddTrade != null"
     :tsc-range="tscRange"
     @close-ranges-metadata="showRangesMetadata = false"
     @close-debug-metadata="showDebugMetadata = false"
@@ -1872,9 +1900,11 @@ watch(selectedTradingAccountId, () => {
     @tsc-add-confirmation="onTscAddConfirmationRequest"
     @tsc-add-target="onTscAddTargetRequest"
     @tsc-add-confluence="onTscAddConfluenceRequest"
+    @tsc-add-anti-confluence="onTscAddAntiConfluenceRequest"
     @tsc-remove-confirmation="onTscRemoveConfirmation"
     @tsc-remove-target="onTscRemoveTarget"
     @tsc-remove-confluence="onTscRemoveConfluence"
+    @tsc-remove-anti-confluence="onTscRemoveAntiConfluence"
     @tsc-transfer-to-trades="onTscTransferToTrades"
     @tsc-set-invalidation="onTscSetInvalidationRequest"
     @tsc-invalidation-saved="refreshTscRange"

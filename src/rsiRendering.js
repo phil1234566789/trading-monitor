@@ -13,6 +13,7 @@
 // "price" — priceToCoordinate() ist bei lightweight-charts generisch, kennt keinen Unterschied
 // zwischen "Preis" und "RSI-Wert", solange es der Skala der jeweils angehängten Series entspricht).
 import { canShowLabels } from "./chartZoom.js";
+import { drawIconLabel } from "./chartIconLabel.js";
 
 const PIN_HALO_EXTRA_WIDTH = 3; // px, zusätzlich zur normalen lineWidth (Chat 2026-08-17)
 // Auswahl-Halo (Chat 2026-08-18, PinPanel.vue-Hover) — analog zu liquidity.js, breiter als der
@@ -72,15 +73,21 @@ class DivergenceLineRenderer {
       // dieselbe Schwelle wie bei Liquidität/Sessions/News/OBs: Linie bleibt stehen, nur der Text
       // verschwindet, bis wieder genug Platz da ist.
       if (this._options.label && canShowLabels(this._chart, this._candles)) {
-        ctx.font = `${11 * scope.verticalPixelRatio}px -apple-system, "Segoe UI", Roboto, sans-serif`;
         ctx.fillStyle = this._options.color;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "bottom";
-        ctx.fillText(
-          this._options.label,
-          pts[1].x * scope.horizontalPixelRatio + 6 * scope.horizontalPixelRatio,
-          pts[1].y * scope.verticalPixelRatio - 4 * scope.verticalPixelRatio,
-        );
+        // Optionales, größer skaliertes führendes Icon (Chat 2026-08-28: "Totenkopf 1,5x größer,
+        // Rest normal", siehe chartIconLabel.js).
+        drawIconLabel(ctx, {
+          icon: this._options.icon,
+          text: this._options.label,
+          x: pts[1].x * scope.horizontalPixelRatio + 6 * scope.horizontalPixelRatio,
+          y: pts[1].y * scope.verticalPixelRatio - 4 * scope.verticalPixelRatio,
+          align: "left",
+          baseline: "bottom",
+          fontSizePx: 11 * scope.verticalPixelRatio,
+          fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+          iconScale: this._options.iconScale ?? 1,
+          gapPx: 3 * scope.horizontalPixelRatio,
+        });
       }
     });
   }

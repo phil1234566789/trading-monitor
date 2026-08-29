@@ -160,7 +160,7 @@ export async function createTradeFromSetup({ instrument, setup, entryPrice = nul
     });
     const { error: confirmError } = await supabase
       .from("trade_evidence")
-      .insert({ trade_position_id: position.id, price: setupEntry, kind: "ob", ob_zone_id: obZoneId });
+      .insert({ trade_position_id: position.id, price: setupEntry, kind: "ob", category: "confirmation", ob_zone_id: obZoneId });
     if (confirmError) console.error("Entry-Bestätigung anlegen fehlgeschlagen:", confirmError);
   }
 
@@ -417,13 +417,16 @@ export async function updateDealingRange(dealingRangeId, fields) {
 // Kraft ... auch OBs") — gleiches Rohformat wie addTargetToTrade (kind/price/sourceTime/touchedTime
 // aus PriceChart.vue: findClickedTarget), eigene Tabelle (trade_evidence), weil eine Bestätigung/
 // ein Zusatzargument bereits passierte Evidenz ist statt einer zukünftigen Preis-Erwartung.
-// category (confirmation/confluence, siehe trade-from-poi.md#confirmation-confluence-und-anti-
-// confluence--wie-eine-dealing-range-go-bekommt) ergibt sich automatisch aus kind, hier nicht
-// gesetzt. trade_evidence ist zweigleisig (siehe Migration 20260731120000): eine Zeile hängt entweder an der einzelnen
-// Ausführung (das GO für DIESEN Entry, kann sich von anderen Re-Entries unterscheiden) oder an der
-// dealing_range (das GO für die ganze Idee) — genau eine der beiden IDs wird gesetzt, der Rest
-// bleibt null (DB-CHECK erzwingt das).
-async function insertConfirmation({ tradePositionId = null, dealingRangeId = null, confirmation }) {
+// category (confirmation/confluence/anti_confluence, siehe trade-from-poi.md#confirmation-
+// confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt) lässt sich seit es
+// Anti-Confluences gibt NICHT mehr rein aus kind ableiten (derselbe kind='ob' kann je nach
+// Klick-Button Confirmation ODER Anti-Confluence sein, siehe Migration 20260828130000) — kommt
+// darum als expliziter Parameter vom Aufrufer (Dashboard.vue kennt den gerade "scharfen"
+// Arm-Zustand). trade_evidence ist zweigleisig (siehe Migration 20260731120000): eine Zeile hängt
+// entweder an der einzelnen Ausführung (das GO/Argument für DIESEN Entry, kann sich von anderen
+// Re-Entries unterscheiden) oder an der dealing_range (für die ganze Idee) — genau eine der beiden
+// IDs wird gesetzt, der Rest bleibt null (DB-CHECK erzwingt das).
+async function insertConfirmation({ tradePositionId = null, dealingRangeId = null, category, confirmation }) {
   // Nur bei kind='ob' gesetzt (siehe findClickedOBZone) — Natural-Key-Lookup/-Anlage der
   // referenzierten ob_zones-Zeile, damit die Bestätigung per FK statt nur per Preis-Snapshot auf
   // die OB verweist (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren").
@@ -451,6 +454,7 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
     dealing_range_id: dealingRangeId,
     price: confirmation.price,
     kind: confirmation.kind,
+    category,
     source_time: confirmation.sourceTime != null ? new Date(confirmation.sourceTime * 1000).toISOString() : null,
     touched_time: confirmation.touchedTime != null ? new Date(confirmation.touchedTime * 1000).toISOString() : null,
     // Nur bei kind='fib' gesetzt (siehe PriceChart.vue: findClickedFibLevel) — die zwei Ankerpreise
@@ -490,7 +494,18 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
   // nicht nur wenn noch leer: eine OB ist laut Philip das eindeutigere Signal als ein bloßer Sweep
   // (der je nach Kontext Reversal oder Fortsetzung bedeuten kann), soll also auch eine beim
   // Bootstrap aus einem Sweep geratene Richtung nachträglich korrigieren dürfen.
-  if (dealingRangeId != null && confirmation.kind === "ob" && confirmation.rangeLow != null && confirmation.rangeHigh != null && confirmation.direction != null) {
+  // category === "confirmation"-Guard (Chat 2026-08-28, Anti-Confluence-Einführung): ein
+  // gegenläufiger OB, den Philip bewusst als Anti-Confluence anklickt (z.B. ein bullischer OB
+  // gegen ein Short-Setup), darf die Range-Richtung NICHT umdrehen — nur eine echte Confirmation
+  // ist das eindeutigere Signal, das laut Philip die Richtung überschreiben soll.
+  if (
+    dealingRangeId != null &&
+    category === "confirmation" &&
+    confirmation.kind === "ob" &&
+    confirmation.rangeLow != null &&
+    confirmation.rangeHigh != null &&
+    confirmation.direction != null
+  ) {
     const { data: range } = await supabase.from("dealing_ranges").select("invalidation, direction").eq("id", dealingRangeId).maybeSingle();
     if (range) {
       const updates = {};
@@ -502,16 +517,16 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
   return true;
 }
 
-export async function addConfirmationToTrade(positionId, confirmation) {
-  return insertConfirmation({ tradePositionId: positionId, confirmation });
+export async function addConfirmationToTrade(positionId, confirmation, category) {
+  return insertConfirmation({ tradePositionId: positionId, category, confirmation });
 }
 
 // Range-weite Bestätigung (das GO für die ganze Idee, z.B. der ursprüngliche Sweep+OB, der die
 // dealing_range ausgelöst hat) — bisher nur per Trade-Modus-Chart-Klick erreichbar war das
 // Entry-GO auf der Ausführung; das hier ist der erste UI-Weg für die Range-Ebene selbst
 // (Chat 2026-07-31: "ich kann nicht die confirmations ... für die dealing range setzen").
-export async function addRangeConfirmation(dealingRangeId, confirmation) {
-  return insertConfirmation({ dealingRangeId, confirmation });
+export async function addRangeConfirmation(dealingRangeId, confirmation, category) {
+  return insertConfirmation({ dealingRangeId, category, confirmation });
 }
 
 export async function removeConfirmationFromTrade(confirmationId) {

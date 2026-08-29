@@ -928,6 +928,19 @@ export interface AddTradeConfirmationArgs {
 // zeigte darum nie eine Bestätigung im Edit-Modal. Gleiche Zweigleisigkeit wie im Frontend: level
 // entscheidet, ob dealing_range_id (GO für die Idee) oder trade_position_id (GO für diesen Entry)
 // gesetzt wird, nie beide.
+//
+// category (Migration 20260828130000) ist seit der Anti-Confluence-Einführung keine generierte
+// Spalte mehr, muss also explizit gesetzt werden. Das Tool hat (noch) keinen eigenen
+// Anti-Confluence-Weg (siehe milk-city Task "Lana-MCP: Confirmations/Confluences/Anti-Confluences/
+// Targets vollständig für eine Dealing Range anlegbar") — bildet darum 1:1 die frühere generierte
+// Ableitung nach, bis dieser Task das erweitert.
+const KIND_TO_CATEGORY: Record<AddTradeConfirmationArgs["kind"], "confirmation" | "confluence"> = {
+  pivot: "confirmation",
+  ob: "confirmation",
+  fib: "confluence",
+  rsi_divergence: "confluence",
+};
+
 export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
   let liquidityLevelId: number | null = null;
   if (args.kind === "pivot" && args.instrument && args.timeframe && args.direction) {
@@ -959,6 +972,7 @@ export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
       dealing_range_id: args.level === "range" ? args.id : null,
       trade_position_id: args.level === "position" ? args.id : null,
       kind: args.kind,
+      category: KIND_TO_CATEGORY[args.kind],
       price: args.price,
       source_time: args.sourceTime,
       touched_time: args.touchedTime ?? null,
