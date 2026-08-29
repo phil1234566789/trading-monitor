@@ -1,0 +1,12 @@
+-- Bug-Report Philip 2026-08-29: eine per Chart-Klick hinzugefügte Sweep-Bestätigung (kind='pivot')
+-- verlor den Session-Kontext ("Asia-Mid", siehe sessionOccurrences.js: bonusLabelForPivot) komplett
+-- — das Label zeigte nur noch generisch "Sweep 1,35946 · minor (3h 25m) #143". bonus ist bewusst
+-- eine eigene Spalte statt aus price/source_time später neu berechnet zu werden: die Berechnung
+-- braucht Session-Konfiguration + die Kerzen der jeweiligen Session-Occurrence (für
+-- rangeHigh/rangeLow, siehe attachRangeExtremes) — beides ist zum Anzeigezeitpunkt einer alten
+-- Bestätigung nicht mehr zuverlässig verfügbar (Sessions können sich ändern, alte Kerzen sind evtl.
+-- nicht mehr geladen). Snapshot beim Klick, analog zu den bereits bestehenden Snapshot-Feldern für
+-- kind='fib'/'rsi_divergence' (range_low/range_high, divergence_type/from_price/from_rsi/to_rsi).
+-- Nur bei kind='pivot' sinnvoll (Session-Kontext existiert nur für Liquiditäts-Level), bleibt bei
+-- allen anderen kinds null.
+alter table trade_evidence add column bonus text;

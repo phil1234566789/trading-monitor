@@ -14,15 +14,16 @@ import { classifyAge, type AgeTier } from "./ageTier";
 import { fmtPrice, pricePrecisionForInstrument } from "./format.js";
 
 export type TradeEvidenceKind = "pivot" | "ob" | "fib" | "rsi_divergence";
-export type TradeEvidenceCategory = "confirmation" | "confluence";
+export type TradeEvidenceCategory = "confirmation" | "confluence" | "anti_confluence";
 
 export interface TradeEvidence {
   id: number;
   price: number;
   kind: TradeEvidenceKind;
-  // Generierte Spalte (siehe Migration 20260828120000) — 'pivot'/'ob' -> 'confirmation' (GO-Signal),
-  // 'fib'/'rsi_divergence' -> 'confluence' (zusätzliche Sicherheit, kein GO). Immer aus kind
-  // abgeleitet, nie eigenständig gesetzt.
+  // Bis Migration 20260828130000 eine generierte Spalte (1:1 aus kind abgeleitet) — seit
+  // Anti-Confluences (derselbe kind-Satz, aber je nach Klick-Button eine andere category, z.B. ein
+  // gegenläufiger OB als Confirmation ODER Anti-Confluence) eine normale Spalte, vom Arm-Zustand in
+  // Dashboard.vue explizit gesetzt (siehe tradeIntake.js: insertConfirmation).
   category: TradeEvidenceCategory;
   sourceTime: number | null;
   touchedTime: number | null;
@@ -41,6 +42,10 @@ export interface TradeEvidence {
   fromRsi: number | null;
   toRsi: number | null;
   divergenceType: "bearish" | "bullish" | null;
+  // Nur bei kind='pivot' gesetzt (siehe sessionOccurrences.js: bonusLabelForPivot) — Session-
+  // Kontext wie "Asia-Mid", Snapshot beim Klick (Migration 20260829120000: Bug-Report Philip, ging
+  // vorher komplett verloren, das Label zeigte nur noch generisch "Sweep ...").
+  bonus: string | null;
 }
 
 // "Sweep" statt "Pivot" (anders als tradeTargets.ts: kindLabel) — eine Bestätigung/ein
@@ -74,6 +79,10 @@ export function formatEvidenceLabel(evidence: TradeEvidence, instrument: string,
   const precision = pricePrecisionForInstrument(instrument);
   const price = fmtPrice(evidence.price, precision);
   const kind = kindLabel(evidence.kind);
+  // Nur bei kind='pivot' gesetzt — "Sweep Asia-Mid 1,33195 ..." statt des generischen "Sweep
+  // 1,33195 ...", das den Session-Kontext eines Levels sonst komplett verschluckt (Bug-Report
+  // Philip 2026-08-29).
+  const bonusHint = evidence.bonus ? ` ${evidence.bonus}` : "";
   const rangeHint =
     evidence.kind === "fib" && evidence.rangeLow != null && evidence.rangeHigh != null
       ? ` (${fmtPrice(evidence.rangeLow, precision)}–${fmtPrice(evidence.rangeHigh, precision)})`
@@ -81,8 +90,8 @@ export function formatEvidenceLabel(evidence: TradeEvidence, instrument: string,
         ? ` (${evidence.divergenceType === "bearish" ? "▽" : "△"} ${fmtPrice(evidence.fromPrice, precision)}→${price})`
         : "";
   const seconds = evidenceAgeSeconds(evidence, nowSec);
-  if (seconds == null) return `${kind} ${price}${rangeHint} #${evidence.id}`;
+  if (seconds == null) return `${kind}${bonusHint} ${price}${rangeHint} #${evidence.id}`;
   const tier = classifyAge(seconds);
   const age = formatAge(seconds);
-  return `${kind} ${price}${rangeHint} · ${tier}${age ? ` (${age})` : ""} #${evidence.id}`;
+  return `${kind}${bonusHint} ${price}${rangeHint} · ${tier}${age ? ` (${age})` : ""} #${evidence.id}`;
 }

@@ -90,13 +90,13 @@ export async function fetchTrades(instrument, accountId = null) {
     supabase
       .from("trade_evidence")
       .select(
-        "id, dealing_range_id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
+        "id, dealing_range_id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
       )
       .in("dealing_range_id", rangeIds),
     supabase
       .from("trade_evidence")
       .select(
-        "id, trade_position_id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
+        "id, trade_position_id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
       )
       .in("trade_position_id", positionIds),
     lessonTargetIds.length > 0
@@ -178,6 +178,8 @@ export async function fetchTrades(instrument, accountId = null) {
       fromRsi: c.from_rsi ?? null,
       toRsi: c.to_rsi ?? null,
       divergenceType: c.divergence_type ?? null,
+      // Nur bei kind='pivot' gesetzt (siehe tradeEvidence.ts) — Session-Kontext wie "Asia-Mid".
+      bonus: c.bonus ?? null,
     };
   }
 
@@ -303,7 +305,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
   ] = await Promise.all([
     supabase
       .from("trade_evidence")
-      .select(`id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, ${LIQUIDITY_LEVEL_EMBED}`)
+      .select(`id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, ${LIQUIDITY_LEVEL_EMBED}`)
       .eq("dealing_range_id", dealingRangeId)
       .order("created_at"),
     supabase
@@ -364,6 +366,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
       fromRsi: c.from_rsi ?? null,
       toRsi: c.to_rsi ?? null,
       divergenceType: c.divergence_type ?? null,
+      bonus: c.bonus ?? null,
     })),
     targets: (targets ?? []).map((t) => ({
       id: t.id,

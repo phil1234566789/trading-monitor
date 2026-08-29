@@ -205,6 +205,7 @@ export function registerTradeTools(server: McpServer) {
         fromPrice: z.number().optional().describe("Nur bei kind='rsi_divergence': Preis des Referenz-Schwungpunkts."),
         fromRsi: z.number().optional().describe("Nur bei kind='rsi_divergence': RSI-Wert am Referenz-Schwungpunkt."),
         toRsi: z.number().optional().describe("Nur bei kind='rsi_divergence': RSI-Wert am geprüften Schwungpunkt (price)."),
+        bonus: z.string().optional().describe("Nur bei kind='pivot': Session-Kontext wie 'Asia-Mid', falls bekannt (siehe get_near_relevant_liquidity_levels)."),
       },
     },
     async ({ level, id, ...fields }) => {

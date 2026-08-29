@@ -467,6 +467,9 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
     timeframe: confirmation.timeframe ?? null,
     ob_zone_id: obZoneId,
     liquidity_level_id: liquidityLevelId,
+    // Nur bei kind='pivot' gesetzt (siehe PriceChart.vue: findClickedTarget) — Session-Kontext wie
+    // "Asia-Mid", Snapshot beim Klick (Begründung siehe Migration 20260829120000).
+    bonus: confirmation.bonus ?? null,
     // Nur bei kind='rsi_divergence' gesetzt (siehe PriceChart.vue: findClickedDivergence) — price/
     // source_time/touched_time tragen bereits toPrice/fromTime/toTime, diese drei zusätzlichen
     // Felder machen die Divergenz später wieder als vollständigen Zwei-Bein-Konnektor zeichenbar.

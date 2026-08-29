@@ -829,7 +829,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
   ] = await Promise.all([
     supabase
       .from("trade_evidence")
-      .select(`id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, ${LIQUIDITY_LEVEL_EMBED}`)
+      .select(`id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, ${LIQUIDITY_LEVEL_EMBED}`)
       .eq("dealing_range_id", dealingRangeId)
       .order("created_at"),
     supabase
@@ -862,6 +862,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
       fromRsi: c.from_rsi ?? null,
       toRsi: c.to_rsi ?? null,
       divergenceType: c.divergence_type ?? null,
+      bonus: c.bonus ?? null,
     })),
     targets: (targets ?? []).map((t: any) => ({
       id: t.id,
@@ -918,6 +919,10 @@ export interface AddTradeConfirmationArgs {
   fromPrice?: number;
   fromRsi?: number;
   toRsi?: number;
+  // Nur bei kind='pivot' sinnvoll — Session-Kontext wie "Asia-Mid" (siehe
+  // src/sessionOccurrences.js: bonusLabelForPivot, src/tradeEvidence.ts). Lana müsste das aus
+  // get_data_export/get_near_relevant_liquidity_levels ableiten, wenn sie es mitgeben will.
+  bonus?: string;
 }
 
 // Fehlte bisher komplett auf MCP-Seite (Bug-Report Philip 2026-08-07, siehe Migration
@@ -985,6 +990,7 @@ export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
       from_price: args.fromPrice ?? null,
       from_rsi: args.fromRsi ?? null,
       to_rsi: args.toRsi ?? null,
+      bonus: args.bonus ?? null,
     })
     .select("*")
     .single();

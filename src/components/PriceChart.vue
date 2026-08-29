@@ -826,7 +826,11 @@ function refreshTradeConfirmationLinksInternal() {
       // unten). Die eigentliche "alarmierende Farbe", die Philip wollte, kommt aus colorKey.
       const isAntiConfluence = confirmation.category === "anti_confluence";
       const icon = confirmation.category === "confluence" ? "💡" : isAntiConfluence ? "💀" : "✔";
-      const kindPriceId = `${confirmationKindLabel(confirmation.kind)} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`;
+      // bonus (nur kind='pivot', z.B. "Asia-Mid") — Bug-Report Philip 2026-08-29: ging bisher
+      // komplett verloren, das Chart-Label zeigte nur generisch "Sweep ...". Gleiches Muster wie
+      // tradeEvidence.ts: formatEvidenceLabel.
+      const bonusHint = confirmation.bonus ? ` ${confirmation.bonus}` : "";
+      const kindPriceId = `${confirmationKindLabel(confirmation.kind)}${bonusHint} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`;
       // Anti-Confluence zeichnet das Icon getrennt und größer statt es wie bei Confirmation/
       // Confluence einfach vor den Text zu schreiben (Philip, Chat 2026-08-28: erst "Label 2x
       // größer" gewünscht, dann korrigiert auf "nur der Totenkopf 1,5x größer, Rest der Schrift
@@ -1339,6 +1343,10 @@ function findClickedTarget(param) {
       levelDirection: lvl.dir === 1 ? "high" : "low",
       instrument: props.symbol,
       timeframe: props.currentBar.toUpperCase(),
+      // Session-Kontext (z.B. "Asia-Mid", siehe usePriceChartLiquidity.js: attachBonus) — Bug-Report
+      // Philip 2026-08-29: ging bisher komplett verloren, weil currentLiquidityLevels (die
+      // Klick-Hittest-Quelle) bonus nicht trug. Nur bei Liquiditäts-Leveln vorhanden, sonst undefined.
+      bonus: lvl.bonus ?? null,
     };
   }
   return findClickedOBZone(param);

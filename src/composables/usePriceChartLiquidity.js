@@ -108,13 +108,19 @@ export function usePriceChartLiquidity() {
       : [...filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true), ...filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true)];
     const htfLevels = computeHtfLiquidityLevels(candles, dbLiquidityLevelsHtf, symbol, replayUntil, currentPriceEstimate(allCandles));
     const relevant = mergeDbLiquidityLevels(liveRelevant, htfLevels);
-    currentLiquidityLevels = relevant;
     const precision = pricePrecisionForInstrument(symbol);
-    const finalLevels = mergePinnedLevels(relevant, pinnedLiquidityLevels, candles);
+    // Bug-Report Philip 2026-08-29: eine per Chart-Klick hinzugefügte Sweep-Bestätigung verlor den
+    // Session-Kontext ("Asia-Mid") komplett, weil currentLiquidityLevels (das Klick-Hittest-Array,
+    // siehe getCurrentLiquidityLevels/findClickedTarget in PriceChart.vue) bisher VOR attachBonus
+    // gesetzt wurde — bonus existierte also nur auf den separat für renderLiquidityLevels
+    // berechneten Objekten, nie auf den tatsächlich anklickbaren. Jetzt derselbe bonus-behaftete
+    // Level-Satz für Klick-Hittest UND Rendering, kein zweiter, abweichender Datensatz mehr.
+    const finalLevels = attachBonus(mergePinnedLevels(relevant, pinnedLiquidityLevels, candles), candles, symbol);
+    currentLiquidityLevels = finalLevels;
     // "Alter"-Anzeige an den Labels (Chat 2026-07-22) — im Replay bezogen auf replayUntil, nicht die
     // echte Uhrzeit, sonst wäre das Alter beim Testen falsch/inkonsistent.
     const nowSec = replayUntil ?? Math.floor(Date.now() / 1000);
-    renderLiquidityLevels(candleSeries, attachBonus(finalLevels, candles, symbol), liquidityPrimitives, candles, {
+    renderLiquidityLevels(candleSeries, finalLevels, liquidityPrimitives, candles, {
       debugPrices: showLiquidityDebug,
       formatPrice: (price) => fmtPrice(price, precision),
       nowSec,
