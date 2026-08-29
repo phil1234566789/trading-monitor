@@ -160,7 +160,11 @@ export function registerTradeTools(server: McpServer) {
         "hinzu. kind='pivot'/'ob' sind Confirmations (geben tatsächlich das GO), kind='fib'/" +
         "'rsi_divergence' sind Confluences (geben nur zusätzliche Sicherheit, kein GO) — siehe " +
         "trading-Repo trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt " +
-        "für die Begriffsdefinition; category ergibt sich automatisch aus kind, nicht selbst mitgeben. " +
+        "für die Begriffsdefinition; category ergibt sich standardmäßig automatisch aus kind, NUR bei " +
+        "Anti-Confluence (spricht gegen den Trade, z.B. ein gegenläufiges OB oder eine gegenläufige " +
+        "Divergenz) explizit category='anti_confluence' mitgeben — sonst würde z.B. ein gegenläufiges " +
+        "'ob' fälschlich als Confirmation gewertet und (bei level='range') sogar die Range-Richtung " +
+        "umdrehen. " +
         "Bei einem setup-verlinkten " +
         "Trade (tradeSetupId auf create_trade/update_dealing_range) NICHT automatisch angelegt — " +
         "explizit nachziehen, sonst zeigt das Edit-Modal trotz Setup-Link keine Bestätigung (siehe " +
@@ -187,13 +191,29 @@ export function registerTradeTools(server: McpServer) {
         "kind='rsi_divergence': price/sourceTime/touchedTime tragen den geprüften (jüngeren) " +
         "Divergenz-Schwungpunkt (toPrice/toTime), fromPrice/fromRsi/toRsi/divergenceType den " +
         "Referenzpunkt und die RSI-Werte beider Beine (siehe get_forex_rsi) — ohne sie ist die " +
-        "Divergenz später nicht mehr als Zwei-Bein-Konnektor nachzeichenbar, aber kein harter Fehler.",
+        "Divergenz später nicht mehr als Zwei-Bein-Konnektor nachzeichenbar, aber kein harter Fehler. " +
+        "Statt kind/price/sourceTime/rangeLow/rangeHigh/timeframe/instrument/direction/obDirection/" +
+        "divergenceType/fromPrice/fromRsi/toRsi manuell mitzugeben, kann pinId gesetzt werden (id aus " +
+        "get_pin_context/add_pin_entry) — der Server leitet all das dann selbst aus der pin_context-" +
+        "Zeile ab (kind='ob_zone'→'ob', 'liquidity_level'/'m5_liquidity_level'→'pivot', " +
+        "'rsi_divergence'→'rsi_divergence'; 'trade_position'/'trade_setup'/'trade_confirmation' als " +
+        "Pin-Quelle werden abgelehnt, keine sinnvolle neue Bestätigung daraus ableitbar). Jedes hier " +
+        "trotzdem explizit gesetzte Feld überschreibt den abgeleiteten Wert (z.B. touchedTime " +
+        "nachtragen, wenn der Pin selbst noch nicht 'touched' war).",
       inputSchema: {
         level: z.enum(["range", "position"]),
         id: z.number().int().describe("dealing_range_id bei level='range', trade_position_id bei level='position'"),
-        kind: z.enum(["pivot", "ob", "fib", "rsi_divergence"]),
-        price: z.number(),
-        sourceTime: z.string().describe("ISO-Zeitstempel, z.B. Pivot-/OB-Startzeit — PFLICHT, sonst keine Chart-Position berechenbar."),
+        pinId: z.number().int().optional().describe("Statt kind/price/sourceTime/... manuell: id aus get_pin_context, siehe Tool-Beschreibung."),
+        kind: z.enum(["pivot", "ob", "fib", "rsi_divergence"]).optional().describe("Pflicht, außer pinId ist gesetzt (dann daraus abgeleitet)."),
+        category: z
+          .enum(["confirmation", "confluence", "anti_confluence"])
+          .optional()
+          .describe(
+            "Überschreibt die automatische kind->category-Ableitung — NUR für Anti-Confluence " +
+              "gedacht (spricht gegen den Trade), sonst weglassen. Siehe Tool-Beschreibung.",
+          ),
+        price: z.number().optional().describe("Pflicht, außer pinId ist gesetzt."),
+        sourceTime: z.string().optional().describe("ISO-Zeitstempel, z.B. Pivot-/OB-Startzeit — Pflicht, außer pinId ist gesetzt, sonst keine Chart-Position berechenbar."),
         touchedTime: z.string().nullable().optional().describe("ISO-Zeitstempel, falls bereits (an)getestet"),
         rangeLow: z.number().nullable().optional().describe("Bei kind='ob': PFLICHT (untere Zonen-Kante), bei kind='fib' optionale Ankerkante."),
         rangeHigh: z.number().nullable().optional().describe("Bei kind='ob': PFLICHT (obere Zonen-Kante), bei kind='fib' optionale Ankerkante."),
@@ -208,15 +228,10 @@ export function registerTradeTools(server: McpServer) {
         bonus: z.string().optional().describe("Nur bei kind='pivot': Session-Kontext wie 'Asia-Mid', falls bekannt (siehe get_near_relevant_liquidity_levels)."),
       },
     },
-    async ({ level, id, ...fields }) => {
-      // rangeLow/rangeHigh lassen sich in Zods flachem inputSchema nicht deklarativ auf "Pflicht nur
-      // bei kind='ob'" beschränken (kein discriminatedUnion, gleiches Muster wie add_pin_entry oben)
-      // — deshalb Laufzeit-Check statt Schema-Constraint.
-      if (fields.kind === "ob" && (fields.rangeLow == null || fields.rangeHigh == null)) {
-        throw new Error("rangeLow und rangeHigh sind Pflicht bei kind='ob' (siehe Tool-Beschreibung), sonst bleibt die Box im Chart unsichtbar.");
-      }
-      return json(await addTradeConfirmation({ level, id, ...fields }));
-    },
+    // Validierung (kind/price/sourceTime Pflicht, rangeLow/rangeHigh bei kind='ob') sitzt jetzt in
+    // addTradeConfirmation selbst, nicht mehr hier — sie muss auch nach einer pinId-Ableitung
+    // greifen, die auf dieser Ebene noch nicht aufgelöst ist.
+    async ({ level, id, ...fields }) => json(await addTradeConfirmation({ level, id, ...fields })),
   );
 
   server.registerTool(

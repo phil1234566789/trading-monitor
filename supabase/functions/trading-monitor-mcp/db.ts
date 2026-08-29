@@ -881,14 +881,21 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
 export interface AddTradeConfirmationArgs {
   level: "range" | "position";
   id: number;
-  kind: "pivot" | "ob" | "fib" | "rsi_divergence";
-  price: number;
+  // Task "add_trade_confirmation: pinId-Parameter für Auto-Ableitung aus Pin" (Philip 2026-08-19,
+  // umgesetzt 2026-08-29) — wenn gesetzt, werden kind/price/sourceTime/rangeLow/rangeHigh/timeframe/
+  // instrument/direction/obDirection/divergenceType/fromPrice/fromRsi/toRsi aus der pin_context-
+  // Zeile abgeleitet (siehe deriveConfirmationFromPin), statt sie hier manuell mitzugeben. Jedes
+  // trotzdem explizit gesetzte Feld gewinnt gegen die Ableitung (z.B. touchedTime nachtragen).
+  pinId?: number;
+  // Pflicht, AUSSER pinId ist gesetzt (dann daraus abgeleitet) — siehe addTradeConfirmation-Guard.
+  kind?: "pivot" | "ob" | "fib" | "rsi_divergence";
   // Pflicht seit Bug-Report Philip 2026-08-18 (siehe Task "Lana soll confirmations/targets sauber
   // in der dealing range verknüpfen") — ohne sourceTime kann PriceChart.vue die Box/Linie nicht
   // positionieren (snapToBarTime braucht einen Zeitpunkt), die Bestätigung landete im Journal, blieb
   // im Chart aber für immer unsichtbar. Vorher optional, per Tool-Beschreibung "sollte" statt
-  // erzwungen — reichte nicht zuverlässig.
-  sourceTime: string;
+  // erzwungen — reichte nicht zuverlässig. Pflicht, außer pinId ist gesetzt.
+  price?: number;
+  sourceTime?: string;
   touchedTime?: string | null;
   rangeLow?: number | null;
   rangeHigh?: number | null;
@@ -923,6 +930,11 @@ export interface AddTradeConfirmationArgs {
   // src/sessionOccurrences.js: bonusLabelForPivot, src/tradeEvidence.ts). Lana müsste das aus
   // get_data_export/get_near_relevant_liquidity_levels ableiten, wenn sie es mitgeben will.
   bonus?: string;
+  // Überschreibt die kind-basierte Default-Ableitung (KIND_TO_CATEGORY unten) — vor allem für
+  // Anti-Confluence gedacht: derselbe kind (z.B. ein gegenläufiges 'ob') ist sonst IMMER
+  // Confirmation/Confluence, nie Anti-Confluence, siehe trade-from-poi.md#confirmation-confluence-
+  // und-anti-confluence--wie-eine-dealing-range-go-bekommt.
+  category?: "confirmation" | "confluence" | "anti_confluence";
 }
 
 // Fehlte bisher komplett auf MCP-Seite (Bug-Report Philip 2026-08-07, siehe Migration
@@ -935,18 +947,126 @@ export interface AddTradeConfirmationArgs {
 // gesetzt wird, nie beide.
 //
 // category (Migration 20260828130000) ist seit der Anti-Confluence-Einführung keine generierte
-// Spalte mehr, muss also explizit gesetzt werden. Das Tool hat (noch) keinen eigenen
-// Anti-Confluence-Weg (siehe milk-city Task "Lana-MCP: Confirmations/Confluences/Anti-Confluences/
-// Targets vollständig für eine Dealing Range anlegbar") — bildet darum 1:1 die frühere generierte
-// Ableitung nach, bis dieser Task das erweitert.
-const KIND_TO_CATEGORY: Record<AddTradeConfirmationArgs["kind"], "confirmation" | "confluence"> = {
+// Spalte mehr, muss also explizit gesetzt werden. Default bildet 1:1 die frühere generierte
+// Ableitung nach — args.category (siehe AddTradeConfirmationArgs) überschreibt das explizit, z.B.
+// wenn Lana denselben kind (etwa ein gegenläufiges 'ob') als Anti-Confluence statt als Confirmation
+// anlegen will (Chat 2026-08-29, milk-city Task "Lana-MCP: ... Anti-Confluences ... vollständig für
+// eine Dealing Range anlegbar").
+const KIND_TO_CATEGORY: Record<Exclude<AddTradeConfirmationArgs["kind"], undefined>, "confirmation" | "confluence"> = {
   pivot: "confirmation",
   ob: "confirmation",
   fib: "confluence",
   rsi_divergence: "confluence",
 };
 
-export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
+// Holt eine einzelne pin_context-Zeile für die pinId-Ableitung unten — schmaleres Pendant zu
+// getPinContext (nur die für kind='ob_zone'/'liquidity_level'/'m5_liquidity_level'/'rsi_divergence'
+// relevanten Spalten/Embeds, kein trade_positions/trade_setups/trade_evidence-Embed nötig, da diese
+// drei Pin-Kinds als Bestätigungs-Quelle ohnehin abgelehnt werden, siehe deriveConfirmationFromPin).
+async function getPinContextRowById(id: number) {
+  const { data, error } = await supabase
+    .from("pin_context")
+    .select(
+      "id, kind, " +
+        "ob_zones(*), " +
+        "liquidity_levels(*), " +
+        "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
+        "rsi_divergence_type, rsi_divergence_to_time, rsi_divergence_from_price, rsi_divergence_to_price, " +
+        "rsi_divergence_from_rsi, rsi_divergence_to_rsi",
+    )
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+// Ableitungs-Tabelle für den pinId-Parameter (Task "add_trade_confirmation: pinId-Parameter für
+// Auto-Ableitung aus Pin") — spiegelt die Formeln, die die Tool-Beschreibung bisher Lana manuell
+// aus get_trade_setups/get_pin_context ablesen ließ (bei kind='ob' price = ob_bottom bei
+// Short-/ob_top bei Long-Zonen usw.), nur jetzt serverseitig statt von Hand eingetippt.
+// kind='trade_position'/'trade_setup'/'trade_confirmation' liefern keine sinnvolle NEUE
+// Bestätigung (Journal-/Setup-Objekte, keine Sweep-/OB-/Divergenz-Geometrie) — bewusst abgelehnt
+// statt eine falsche Ableitung zu raten.
+function deriveConfirmationFromPin(pin: Record<string, any>): Partial<AddTradeConfirmationArgs> {
+  if (pin.kind === "ob_zone") {
+    const oz = pin.ob_zones;
+    if (!oz) throw new Error(`pin_context ${pin.id} (kind='ob_zone') hat keine verknüpfte ob_zones-Zeile mehr.`);
+    const isLong = oz.direction === "long";
+    return {
+      kind: "ob",
+      price: isLong ? oz.top : oz.bottom,
+      sourceTime: oz.start_time,
+      touchedTime: oz.touched ? oz.touched_at : null,
+      rangeLow: oz.bottom,
+      rangeHigh: oz.top,
+      timeframe: oz.timeframe,
+      instrument: oz.instrument,
+      obDirection: oz.direction,
+    };
+  }
+  if (pin.kind === "liquidity_level") {
+    const lvl = pin.liquidity_levels;
+    if (!lvl) throw new Error(`pin_context ${pin.id} (kind='liquidity_level') hat keine verknüpfte liquidity_levels-Zeile mehr.`);
+    return {
+      kind: "pivot",
+      price: lvl.price,
+      sourceTime: lvl.pivot_time,
+      timeframe: lvl.timeframe,
+      instrument: lvl.instrument,
+      direction: lvl.direction,
+    };
+  }
+  if (pin.kind === "m5_liquidity_level") {
+    return {
+      kind: "pivot",
+      price: pin.m5_liquidity_price,
+      sourceTime: pin.m5_liquidity_pivot_time,
+      // Rohdaten-Snapshot speichert timeframe klein ("5m", siehe PinM5Liquidity), aber
+      // findOrCreateLiquidityLevelId erwartet Großschreibung ("5M") — ohne Normalisierung würde die
+      // find-or-create-Auflösung unten still übersprungen (kein Fehler, nur verpasste Verlinkung).
+      timeframe: String(pin.m5_liquidity_timeframe ?? "").toUpperCase(),
+      instrument: pin.m5_liquidity_instrument,
+      direction: pin.m5_liquidity_direction,
+    };
+  }
+  if (pin.kind === "rsi_divergence") {
+    return {
+      kind: "rsi_divergence",
+      price: pin.rsi_divergence_to_price,
+      sourceTime: pin.rsi_divergence_to_time,
+      divergenceType: pin.rsi_divergence_type,
+      fromPrice: pin.rsi_divergence_from_price,
+      fromRsi: pin.rsi_divergence_from_rsi,
+      toRsi: pin.rsi_divergence_to_rsi,
+    };
+  }
+  throw new Error(
+    `pin_context ${pin.id} (kind='${pin.kind}') lässt sich nicht zu einer Bestätigung ableiten — nur ` +
+      "'ob_zone'/'liquidity_level'/'m5_liquidity_level'/'rsi_divergence' unterstützt.",
+  );
+}
+
+export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
+  let args = rawArgs;
+  if (rawArgs.pinId != null) {
+    const pin = await getPinContextRowById(rawArgs.pinId);
+    if (!pin) throw new Error(`pin_context ${rawArgs.pinId} nicht gefunden — evtl. schon entfernt (siehe get_pin_context).`);
+    // Abgeleitete Werte zuerst, dann von Lana trotzdem explizit mitgegebene Felder drüber — Object
+    // spread lässt explizite Werte gewinnen, ohne die (im JSON-Request meist fehlenden statt
+    // `undefined` gesetzten) übrigen Felder zu berühren.
+    args = { ...deriveConfirmationFromPin(pin), ...rawArgs };
+  }
+  if (!args.kind) throw new Error("kind fehlt (weder explizit gegeben noch aus pinId ableitbar).");
+  if (args.price == null) throw new Error("price fehlt (weder explizit gegeben noch aus pinId ableitbar).");
+  if (!args.sourceTime) throw new Error("sourceTime fehlt (weder explizit gegeben noch aus pinId ableitbar).");
+  // rangeLow/rangeHigh lassen sich in Zods flachem inputSchema nicht deklarativ auf "Pflicht nur bei
+  // kind='ob'" beschränken (kein discriminatedUnion, gleiches Muster wie add_pin_entry) — deshalb
+  // Laufzeit-Check hier statt im trades.ts-Tool-Wrapper, damit er auch nach einer pinId-Ableitung
+  // greift (ein 'ob_zone'-Pin liefert rangeLow/rangeHigh zwar immer mit, ein zukünftiger Aufrufer
+  // könnte sie aber trotzdem explizit auf null überschreiben).
+  if (args.kind === "ob" && (args.rangeLow == null || args.rangeHigh == null)) {
+    throw new Error("rangeLow und rangeHigh sind Pflicht bei kind='ob' (siehe Tool-Beschreibung), sonst bleibt die Box im Chart unsichtbar.");
+  }
   let liquidityLevelId: number | null = null;
   if (args.kind === "pivot" && args.instrument && args.timeframe && args.direction) {
     liquidityLevelId = await findOrCreateLiquidityLevelId(
@@ -971,13 +1091,14 @@ export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
       Math.floor(new Date(args.sourceTime).getTime() / 1000),
     );
   }
+  const resolvedCategory = args.category ?? KIND_TO_CATEGORY[args.kind];
   const { data, error } = await supabase
     .from("trade_evidence")
     .insert({
       dealing_range_id: args.level === "range" ? args.id : null,
       trade_position_id: args.level === "position" ? args.id : null,
       kind: args.kind,
-      category: KIND_TO_CATEGORY[args.kind],
+      category: resolvedCategory,
       price: args.price,
       source_time: args.sourceTime,
       touched_time: args.touchedTime ?? null,
@@ -999,8 +1120,18 @@ export async function addTradeConfirmation(args: AddTradeConfirmationArgs) {
   // Port von src/tradeIntake.js: insertConfirmation (dortiger Kommentar für die Herleitung) — nur
   // bei level='range': direction wird IMMER überschrieben (die OB ist das eindeutigere Signal als
   // ein bloßer Sweep), invalidation NUR wenn noch leer (eine bereits gesetzte, evtl. manuell
-  // nachjustierte Invalidierung wird nicht überschrieben).
-  if (args.level === "range" && args.kind === "ob" && args.rangeLow != null && args.rangeHigh != null && args.obDirection != null) {
+  // nachjustierte Invalidierung wird nicht überschrieben). resolvedCategory === "confirmation"-Guard
+  // (Chat 2026-08-29, analog zum Frontend-Fix bei der Anti-Confluence-Einführung): ein gegenläufiges
+  // OB, das Lana bewusst als Anti-Confluence anlegt (args.category="anti_confluence"), darf die
+  // Range-Richtung NICHT umdrehen — nur eine echte Confirmation ist das eindeutigere Signal.
+  if (
+    args.level === "range" &&
+    args.kind === "ob" &&
+    resolvedCategory === "confirmation" &&
+    args.rangeLow != null &&
+    args.rangeHigh != null &&
+    args.obDirection != null
+  ) {
     const { data: range, error: rangeError } = await supabase.from("dealing_ranges").select("invalidation, direction").eq("id", args.id).maybeSingle();
     if (rangeError) throw new Error(rangeError.message);
     if (range) {
