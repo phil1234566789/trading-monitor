@@ -561,6 +561,8 @@ function pad2(n) {
   return String(n).padStart(2, "0");
 }
 
+const WEEKDAYS_DE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
 function tickMarkFormatter(time, tickMarkType) {
   const d = new Date(time * 1000);
   switch (tickMarkType) {
@@ -569,7 +571,7 @@ function tickMarkFormatter(time, tickMarkType) {
     case TickMarkType.Month:
       return d.toLocaleDateString("de-DE", { month: "short", year: "numeric" });
     case TickMarkType.DayOfMonth:
-      return d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" });
+      return `${WEEKDAYS_DE[d.getDay()]} ${d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" })}`;
     case TickMarkType.TimeWithSeconds:
       return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
     default:
