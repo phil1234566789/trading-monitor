@@ -178,6 +178,12 @@ applies when explicitly invoked, not to every session in this repo.
 - **`poi-watcher`'s refresh-tick boundaries (`isH1RefreshTick`/`isH4RefreshTick`) use raw UTC
   hours, not Berlin time** — the one deliberate exception to the Berlin-timezone convention above,
   since they must align with the UTC-based `pg_cron` schedule. Don't "fix" this to Berlin time.
+- **cTrader `ACCESS_DENIED` lockout, no automatic recovery** (`cTrader error ACCESS_DENIED: ...` in
+  logs/Telegram — happened 2026-08-08 and 2026-08-23) — Spotware's refresh token is single-use; if
+  persisting a just-rotated token ever fails, the old one in `ctrader_oauth_tokens` is already
+  burned and every future auto-refresh fails with this same error forever. Fix: run
+  `node scripts/ctrader-reauth.mjs` (see its header comment for the full walkthrough — opens a
+  login URL, exchanges the code for fresh tokens, prints the SQL to reseed the table).
 
 ## Conventions
 
