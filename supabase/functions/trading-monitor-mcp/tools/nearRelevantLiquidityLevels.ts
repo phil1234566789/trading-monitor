@@ -67,6 +67,12 @@ export async function buildNearRelevantLiquidityLevels({ instrument, fromSec, to
   // alter, preisnaher (aber zeitlich weit außerhalb von range liegender) Pivot noch einen
   // korrekten Kontext bekommt.
   const pivotTimesSec = relevant.map((r) => Math.floor(new Date(r.pivot_time).getTime() / 1000));
+  // Kein candles-Parameter hier (anders als dataExport.ts: attachSessionContext) — dieses Tool holt
+  // bewusst nur EINE Kerze für referencePrice (siehe oben), ein 7-Tage-M5-Fetch nur für die
+  // Session-Preis-Verifikation (sessionExtremeSuffix, siehe sessionOccurrences.js) wäre hier
+  // unverhältnismäßig teuer. bonusLabelForPivot/contextForPivot fallen dadurch auf die alte rein
+  // zeitfenster-basierte Zuordnung zurück (Bug-Report Philip 2026-08-29 bleibt für DIESES Tool
+  // bestehen, ist aber in get_data_export/get_forex_candles_archive-Flows bereits gefixt).
   const lookup = buildSessionContextLookup(
     sessionConfigs,
     Math.min(...pivotTimesSec) - DAY_SEC,
@@ -82,7 +88,7 @@ export async function buildNearRelevantLiquidityLevels({ instrument, fromSec, to
     const pivotTimeSec = pivotTimesSec[i];
     const dirNum: 1 | -1 = r.direction === "high" ? 1 : -1;
     const touchedTimeSec = r.touched && r.end_time != null ? Math.floor(new Date(r.end_time).getTime() / 1000) : null;
-    const bonus = bonusLabelForPivot(pivotTimeSec, dirNum, lookup);
+    const bonus = bonusLabelForPivot(pivotTimeSec, dirNum, r.price, lookup);
     return {
       id: r.id,
       timeframe: r.timeframe,
@@ -91,7 +97,7 @@ export async function buildNearRelevantLiquidityLevels({ instrument, fromSec, to
       touched: r.touched,
       pivotTime: pivotTimeSec,
       touchedTime: touchedTimeSec,
-      context: contextForPivot(pivotTimeSec, dirNum, lookup),
+      context: contextForPivot(pivotTimeSec, dirNum, r.price, lookup),
       kontext: formatKontext(bonus, pivotTimeSec, touchedTimeSec, effectiveToSec),
     };
   });

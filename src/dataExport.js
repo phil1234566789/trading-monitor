@@ -156,7 +156,7 @@ function formatDatedTime(unixSec) {
 // siehe filterRelevantLevels in liquidity.js) — deshalb touchedAt nur bei den touched-Einträgen,
 // sonst wäre es ohnehin null. context ebenso nur, wenn eine passende Session gefunden wurde.
 function formatLiquidityLevel(lvl, sessionContextLookup) {
-  const context = contextForPivot(lvl.pivotTime, lvl.dir, sessionContextLookup);
+  const context = contextForPivot(lvl.pivotTime, lvl.dir, lvl.price, sessionContextLookup);
   return {
     direction: lvl.dir === 1 ? "high" : "low",
     price: lvl.price,
@@ -188,6 +188,7 @@ function computeLiquidityLevelsForExport(candles, asset) {
     rangeStartSec,
     rangeEndSec,
     (utcSec) => berlinOffsetMinutes(utcSec * 1000),
+    candles,
   );
   return {
     highs: filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true).map((lvl) => formatLiquidityLevel(lvl, sessionContextLookup)),

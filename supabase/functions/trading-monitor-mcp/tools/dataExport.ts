@@ -191,20 +191,34 @@ export interface DataExportArgs {
 // Session-Lookup-Berechnung wird für beide Felder wiederverwendet statt sie zweimal aufzubauen,
 // deshalb `nowSec`/`touchedTimeSec` jetzt mit im Spiel (touchedTimeSec hat seit der dritten
 // Nachbesserung Vorrang vor nowSec für Tier/Alter, siehe formatKontext).
-function attachSessionContext<T extends { pivotTimeSec: number; dirNum: 1 | -1; touchedTimeSec: number | null }>(
+// candles (optional, oldest-first {time,high,low}): Basis für den echten Session-High/Low je
+// Session-Occurrence (siehe sessionOccurrences.js: buildSessionContextLookup/sessionExtremeSuffix)
+// — Bug-Report Philip 2026-08-29: ohne Preisvergleich vergab bonusLabelForPivot "Asia-High" allein
+// über die Zeitfenster-Zugehörigkeit, auch wenn der Pivot-Preis gar nicht dem tatsächlichen
+// Session-Extremwert entsprach. Best-effort: deckt m5CandlesForDetection (7-Tage-M5-Lookback, siehe
+// buildDataExport unten) die Occurrence nicht ab (z.B. ein Monate alter, weiterhin unberührter
+// 1H-Pivot), bleibt sessionExtremeSuffix beim alten rein zeitfenster-basierten Fallback.
+function attachSessionContext<T extends { pivotTimeSec: number; dirNum: 1 | -1; touchedTimeSec: number | null; price: number }>(
   levels: T[],
   sessionConfigs: Awaited<ReturnType<typeof getSessions>>,
   nowSec: number,
+  candles: Candle[] = [],
 ): (T & { context: string | null; kontext: string })[] {
   if (levels.length === 0) return [];
   const rangeStartSec = Math.min(...levels.map((l) => l.pivotTimeSec)) - DAY_SEC;
   const rangeEndSec = Math.max(...levels.map((l) => l.pivotTimeSec)) + DAY_SEC;
-  const lookup = buildSessionContextLookup(sessionConfigs, rangeStartSec, rangeEndSec, (utcSec: number) => berlinOffsetMinutes(utcSec * 1000));
+  const lookup = buildSessionContextLookup(
+    sessionConfigs,
+    rangeStartSec,
+    rangeEndSec,
+    (utcSec: number) => berlinOffsetMinutes(utcSec * 1000),
+    candles,
+  );
   return levels.map((l) => {
-    const bonus = bonusLabelForPivot(l.pivotTimeSec, l.dirNum, lookup);
+    const bonus = bonusLabelForPivot(l.pivotTimeSec, l.dirNum, l.price, lookup);
     return {
       ...l,
-      context: contextForPivot(l.pivotTimeSec, l.dirNum, lookup),
+      context: contextForPivot(l.pivotTimeSec, l.dirNum, l.price, lookup),
       kontext: formatKontext(bonus, l.pivotTimeSec, l.touchedTimeSec, nowSec),
     };
   });
@@ -270,7 +284,7 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // siehe coincidesWithHtf oben. Filter läuft vor attachSessionContext (dort würden ausgefilterte
   // Level unnötig einen Session-Context berechnen).
   const m5LiquidityLevelsDeduped = m5LiquidityLevelsRaw.filter((l) => !coincidesWithHtf(l, liquidityLevels));
-  const m5LiquidityLevels = attachSessionContext(m5LiquidityLevelsDeduped, sessionConfigs, currentTimeSec).map(
+  const m5LiquidityLevels = attachSessionContext(m5LiquidityLevelsDeduped, sessionConfigs, currentTimeSec, m5CandlesForDetection).map(
     ({ pivotTimeSec, dirNum: _dirNum, touchedTimeSec, ...rest }) => ({
       ...rest,
       pivotTime: pivotTimeSec,
@@ -318,6 +332,7 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
     })),
     sessionConfigs,
     currentTimeSec,
+    m5CandlesForDetection,
   ).map(({ pivotTimeSec: _pivotTimeSec, dirNum: _dirNum, touchedTimeSec: _touchedTimeSec, ...rest }) => rest);
 
   return {

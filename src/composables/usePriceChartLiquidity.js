@@ -58,8 +58,9 @@ export function usePriceChartLiquidity() {
       candles[0]?.time ?? 0,
       (candles[candles.length - 1]?.time ?? 0) + 1,
       (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset(),
+      candles,
     );
-    return levels.map((lvl) => ({ ...lvl, bonus: bonusLabelForPivot(lvl.pivotTime, lvl.dir, sessionContextLookup) }));
+    return levels.map((lvl) => ({ ...lvl, bonus: bonusLabelForPivot(lvl.pivotTime, lvl.dir, lvl.price, sessionContextLookup) }));
   }
 
   // Liquiditäts-Level (Fractal-Pivots, siehe tv-indikator/src/liquidity.pine) gibt es bisher nicht

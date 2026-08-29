@@ -10,7 +10,65 @@
 // `sessions`-Singleton bzw. eine fest verdrahtete Berlin-Funktion vorauszusetzen — sonst wäre eine
 // der beiden Browser-Abhängigkeiten (sessions.js' localStorage-Singleton) wieder mit drin.
 
+import { PIP_SIZE } from "./pipConfig.js";
+
 const DAY_SEC = 24 * 3600;
+
+// Bug-Report Philip 2026-08-29: bonusLabelForPivot/contextForPivot vergaben "Asia-High" allein
+// darüber, ob ein Pivot ZEITLICH in die Asia-Session fiel und dir===1 war ("high"-Pivot-Typ,
+// higher/lower high) — nicht darüber, ob sein PREIS tatsächlich dem höchsten Punkt der Session
+// entspricht. Ein M5-Sweep-Level mitten in der Session (z.B. 1.35946) wurde so fälschlich als
+// "Asia-High" gelabelt, obwohl das echte Asia-High bei 1.35985 lag. Fix: sessionExtremeSuffix
+// vergleicht den Pivot-Preis gegen rangeHigh/rangeLow der Occurrence (aus echten Kerzen berechnet,
+// siehe attachRangeExtremes) — Epsilon wie SAME_PRICE_EPSILON in dataExport.ts (0.05 Pips), da
+// Pivot- und Kerzen-Preis aus derselben Kerzenserie stammen und bei echter Übereinstimmung exakt
+// gleich sein sollten.
+const SESSION_EXTREME_EPSILON = 0.05 * PIP_SIZE;
+
+// Nachbesserung Philip 2026-08-29 (4 angepinnte GBPUSD-M5-Level, Asia-Session 28.08.2026, echtes
+// High 1.35985 / Low 1.35875 / Mid 1.35930, Range 11 Pips): der erste Wurf gab ALLES, was nicht
+// exakt High/Low traf, pauschal als "Mid" aus — dadurch wurden zwei Level fälschlich als "Asia-Mid"
+// gelabelt, die weder nah am High noch nah am rechnerischen Mid lagen (1.35981, 5,1 Pips vom Mid
+// entfernt/46% der Range; 1.35966, 3,6 Pips/33%), während die beiden echten Fälle (1.35985 exakt
+// High; 1.35946, 1,6 Pips vom Mid/15%) korrekt sein sollten. "Mid" ist (anders als High/Low) kein
+// echter Tick, sondern ein rein rechnerischer Wert — ein Sweep trifft ihn so gut wie nie exakt,
+// braucht also eine Toleranzzone statt eines Epsilon-Vergleichs wie bei High/Low. 20% der Range
+// um den Mittelpunkt liegt zwischen dem größten bestätigten Treffer (15%) und dem kleinsten
+// bestätigten Nicht-Treffer (33%) — bei weiteren Fehlklassifizierungen hier nachjustieren, echte
+// Kalibrierungsdaten schlagen jede a-priori-Zahl.
+const SESSION_MID_TOLERANCE_RATIO = 0.2;
+
+// Berechnet den tatsächlichen High/Low-Preis der Session-Occurrence aus den übergebenen Kerzen
+// (oldest-first, {time,high,low}) — null, wenn keine Kerze in den Zeitraum fällt (z.B. weil der
+// Aufrufer gar keine/zu wenig Kerzen mitgibt, siehe candles-Parameter unten). Nur EINMAL pro
+// Occurrence berechnet (in buildSessionContextLookup), nicht pro Pivot.
+function attachRangeExtremes(occurrence, candles) {
+  let rangeHigh = null;
+  let rangeLow = null;
+  for (const c of candles) {
+    if (c.time < occurrence.startSec || c.time >= occurrence.endSec) continue;
+    if (rangeHigh == null || c.high > rangeHigh) rangeHigh = c.high;
+    if (rangeLow == null || c.low < rangeLow) rangeLow = c.low;
+  }
+  return { ...occurrence, rangeHigh, rangeLow };
+}
+
+// "High"/"Low"/"Mid"/null. Fallback auf die alte rein zeitfenster-basierte Zuordnung (dir-abhängig,
+// kein Preisvergleich), wenn für diese Occurrence kein rangeHigh/rangeLow bekannt ist (kein/leerer
+// candles-Parameter, oder die Occurrence liegt außerhalb des mitgegebenen Kerzenfensters, z.B. ein
+// Monate alter, weiterhin unberührter 1H-Pivot außerhalb des 7-Tage-M5-Lookbacks) — für diesen Fall
+// ist eine echte Preis-Verifikation nicht möglich, alte Zuordnung ist die beste verfügbare Näherung.
+// null (kein Treffer) bedeutet: kein besonderes Merkmal, weder High/Low noch Mid — nicht "irgendwas
+// dazwischen ist automatisch Mid" (das war der Bug-Report 2026-08-29, siehe SESSION_MID_TOLERANCE_RATIO).
+function sessionExtremeSuffix(price, dir, occurrence) {
+  if (occurrence.rangeHigh == null || occurrence.rangeLow == null) return dir === 1 ? "High" : "Low";
+  if (dir === 1 && Math.abs(price - occurrence.rangeHigh) <= SESSION_EXTREME_EPSILON) return "High";
+  if (dir === -1 && Math.abs(price - occurrence.rangeLow) <= SESSION_EXTREME_EPSILON) return "Low";
+  const range = occurrence.rangeHigh - occurrence.rangeLow;
+  const mid = (occurrence.rangeHigh + occurrence.rangeLow) / 2;
+  if (range > 0 && Math.abs(price - mid) <= SESSION_MID_TOLERANCE_RATIO * range) return "Mid";
+  return null;
+}
 
 // Wochentage für das "days"-Feld einer Session (Chat 2026-07-26: "Session Indikatoren am WE
 // weglassen"). 0=So..6=Sa wie JS Date#getDay()/#getUTCDay().
@@ -111,25 +169,34 @@ export function sessionOccurrences(fromMinutes, toMinutes, rangeStartSec, rangeE
 // sessionConfigs: schon auf ein Instrument gefiltert (Aufrufer-Pflicht, siehe PriceChart.vue's
 // `sessions.filter((s) => s.instrument === props.symbol)`-Muster) — hier zusätzlich auf
 // highLowRelevant gefiltert. tzOffsetMinutesFn: (utcSec) => Offset-Minuten, z.B. Berlin-Offset.
-export function buildSessionContextLookup(sessionConfigs, rangeStartSec, rangeEndSec, tzOffsetMinutesFn) {
+// candles (optional, oldest-first {time,high,low}): Basis für den echten Session-High/Low je
+// Occurrence (siehe attachRangeExtremes/sessionExtremeSuffix oben) — ohne candles (Default []),
+// z.B. wenn ein Aufrufer keine passende Kerzenserie zur Hand hat, greift der alte rein
+// zeitfenster-basierte Fallback in sessionExtremeSuffix.
+export function buildSessionContextLookup(sessionConfigs, rangeStartSec, rangeEndSec, tzOffsetMinutesFn, candles = []) {
   return sessionConfigs
     .filter((s) => s.highLowRelevant)
     .map((session) => ({
       label: session.label || "",
-      occurrences: sessionOccurrences(session.fromMinutes, session.toMinutes, rangeStartSec, rangeEndSec, tzOffsetMinutesFn, session.days),
+      occurrences: sessionOccurrences(session.fromMinutes, session.toMinutes, rangeStartSec, rangeEndSec, tzOffsetMinutesFn, session.days).map(
+        (o) => attachRangeExtremes(o, candles),
+      ),
     }));
 }
 
-// "asia high"/"asia low" (Philips Beispiel) — Label klein geschrieben + high/low je nach
-// Level-Richtung, kein separates Text-Template pro Session nötig. Philip: "selbst wenn noch mehr
-// zum context dazukommt, reicht es einfach mehr Text dazuzuschreiben" — bewusst ein einzelner
-// freier String, keine strukturierte {session, kind}-Aufteilung. dir: 1 (high) | -1 (low), wie im
-// lokalen Liquidity-Level-Objekt (siehe liquidityDetection.js: buildLevel).
-export function contextForPivot(pivotTime, dir, sessionContextLookup) {
-  const direction = dir === 1 ? "high" : "low";
+// "asia high"/"asia low"/"asia mid" (Philips Beispiel) — Label klein geschrieben, Suffix nach
+// tatsächlichem Preisvergleich (sessionExtremeSuffix, siehe Bug-Report-Kommentar oben), kein
+// separates Text-Template pro Session nötig. Philip: "selbst wenn noch mehr zum context
+// dazukommt, reicht es einfach mehr Text dazuzuschreiben" — bewusst ein einzelner freier String,
+// keine strukturierte {session, kind}-Aufteilung. dir: 1 (high) | -1 (low), wie im lokalen
+// Liquidity-Level-Objekt (siehe liquidityDetection.js: buildLevel). price: der Pivot-Preis selbst,
+// für den Vergleich gegen den echten Session-Extremwert.
+export function contextForPivot(pivotTime, dir, price, sessionContextLookup) {
   for (const { label, occurrences } of sessionContextLookup) {
-    if (occurrences.some((o) => pivotTime >= o.startSec && pivotTime < o.endSec)) {
-      return `${label.toLowerCase()} ${direction}`.trim();
+    const occurrence = occurrences.find((o) => pivotTime >= o.startSec && pivotTime < o.endSec);
+    if (occurrence) {
+      const suffix = sessionExtremeSuffix(price, dir, occurrence);
+      return suffix ? `${label.toLowerCase()} ${suffix.toLowerCase()}`.trim() : null;
     }
   }
   return null;
@@ -143,11 +210,12 @@ export function contextForPivot(pivotTime, dir, sessionContextLookup) {
 // Verwendungen unverändert weiter) — hier bleibt session.label dagegen UNVERÄNDERT stehen, weil
 // Philip Session-Namen im Sessions-Modal bereits in der gewünschten Schreibweise tippt ("NY"/"MMM"/
 // "Asia"); ein nachträgliches .toLowerCase() würde "NY" zu "Ny" verstümmeln.
-export function bonusLabelForPivot(pivotTime, dir, sessionContextLookup) {
-  const direction = dir === 1 ? "High" : "Low";
+export function bonusLabelForPivot(pivotTime, dir, price, sessionContextLookup) {
   for (const { label, occurrences } of sessionContextLookup) {
-    if (occurrences.some((o) => pivotTime >= o.startSec && pivotTime < o.endSec)) {
-      return label ? `${label}-${direction}` : null;
+    const occurrence = occurrences.find((o) => pivotTime >= o.startSec && pivotTime < o.endSec);
+    if (occurrence) {
+      const suffix = sessionExtremeSuffix(price, dir, occurrence);
+      return suffix && label ? `${label}-${suffix}` : null;
     }
   }
   return null;
