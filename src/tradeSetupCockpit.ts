@@ -11,8 +11,9 @@
 // hier unten konsumiert. Verloren dabei: der "neben der letzten Kerze"-Positionsmodus (kein
 // Pixel-Tracking der Kerze mehr aus einer Vue-Komponente heraus sinnvoll) — Philip hat das
 // bewusst in Kauf genommen ("kann damit leben").
-import type { MarketStructureState, Pivot } from "./range.type";
+import type { MarketStructureState, Pivot, RangeTrend } from "./range.type";
 import { cssColor, cssColorScaled } from "./chartColors.js";
+import { businessSecondsBetween } from "./chartTimeUtils.js";
 
 // Locker getypt (any) statt einer eigenen TradeSetup-Interface-Kopie — die eigentliche Form kommt
 // aus detectTradeSetups() in tradeSetup.js (JS, kein eigener Typ dort) und wird hier nur gelesen,
@@ -188,4 +189,103 @@ export function lockedReason(state: CockpitState): string {
   if (noGo) return noGo.text;
   const score = state.antiConfluences.reduce((sum, a) => sum + a.weight, 0);
   return `zu viele Anti-Confluences (${score}/${ANTI_CONFLUENCE_THRESHOLD})`;
+}
+
+// Trend-Kette fürs TSC (Chat 2026-08-29, Philip: "der Trend soll rein") — läuft die rekursive
+// nestedTrend-Verschachtelung des 1h-Structure-Algos ab (siehe range.type.ts: MarketStructureState.
+// nestedTrend) und liefert pro Ebene Trend + Alter. WICHTIG: das ist KEINE echte 4H/1H/M5-
+// Mehrfach-Timeframe-Berechnung — der ganze State kommt aus computeMarketStructure auf reinen
+// 1H-Kerzen (siehe compute1hStructureState in der MCP dataExport.ts), die Verschachtelungstiefe
+// steht nur ANALOG für "großer Trend -> Korrektur -> Gegenkorrektur" (siehe trendChainLevelDisplay).
+// Terminiert von selbst: ein State mit trend==='unknown' hat laut advanceNestedTrend
+// (marketStructureAnalysis.ts) immer nestedTrend=null.
+export interface TrendChainLevel {
+  trend: RangeTrend;
+  ageSeconds: number | null;
+  // Nur fürs "seit Do, 27.08."-Fallback bei < 1 Tag Alter gebraucht (siehe formatTrendAge) — sonst
+  // wäre ageSeconds allein (nur die Differenz) nicht genug, um ein Kalenderdatum zu formatieren.
+  originTimeSec: number | null;
+}
+
+// Bug-Report Philip 2026-08-29: erste Version nahm firstConfirmedAt als Anker ("seit wann läuft
+// dieser Trend") — falsch, das ist der EINMALIGE Bestätigungs-Zeitpunkt (siehe firstConfirmedAt-
+// Kommentar in range.type.ts, für die CHoCH-Darstellung gedacht), nicht der eigentliche Range-
+// Ursprung. Ein Downtrend-Beispiel zeigte "1d 17h", obwohl currRange (high 21.08./low 27.08.) klar
+// eine ~6-tägige Range war. Richtiger Anker ist der Pivot, an dem die aktuelle Range tatsächlich
+// STARTET: der jeweils ÄLTERE der beiden currRange-Randpunkte — bei einem bestätigten Downtrend ist
+// das strukturell immer currRange.high (der Ausgangspunkt der Bewegung), currRange.low der aktuell
+// fortlaufende, JÜNGERE Extrempunkt; symmetrisch beim Uptrend. Min() statt Direction-Verzweigung
+// deckt so automatisch auch trend==='unknown' mit ab, wo dieselbe fixer-Ursprung-plus-wandernder-
+// Kandidat-Struktur gilt (siehe initMarketStructureState in marketStructureAnalysis.ts), nur die
+// Richtung noch nicht feststeht — Philip 2026-08-29 wollte explizit auch dafür ein Alter sehen
+// ("2 Tage Trend: Unbekannt").
+function trendOriginPivotTime(state: MarketStructureState): number | null {
+  const highTime = state.currRange.high.pivotTime ?? null;
+  const lowTime = state.currRange.low.pivotTime ?? null;
+  if (highTime == null) return lowTime;
+  if (lowTime == null) return highTime;
+  return Math.min(highTime, lowTime);
+}
+
+export function computeTrendChain(structureState: MarketStructureState | null, nowSec: number): TrendChainLevel[] {
+  const chain: TrendChainLevel[] = [];
+  let state: MarketStructureState | null = structureState;
+  while (state) {
+    const originTime = trendOriginPivotTime(state);
+    chain.push({
+      trend: state.trend,
+      ageSeconds: originTime != null ? businessSecondsBetween(originTime, nowSec) : null,
+      originTimeSec: originTime,
+    });
+    state = state.nestedTrend;
+  }
+  return chain;
+}
+
+// Pfeil-Symbole (Philip: "ein grüner Pfeil der hochgeht ... vice versa für die anderen") —
+// diagonale Pfeile statt gerader ▲/▼, näher an seinem "Zigzag"-Vorschlag; reine Textglyphen (kein
+// Emoji) statt 📈/📉, damit sie über --level-color dieselbe Richtungsfarbe wie der Rest des Chips
+// bekommen (ein Farb-Emoji würde die eigene fixe Farbe behalten). KEIN Text-Label (Uptrend/
+// Downtrend/Unbekannt) mehr daneben (Philip 2026-08-29: "dank den Pfeilen sind die wörter doch
+// redundant") — der Pfeil allein trägt die Richtung, der Chip zeigt nur noch das Alter.
+const TREND_DIRECTION_ICON: Record<RangeTrend, string> = { uptrend: "↗", downtrend: "↘", unknown: "→" };
+const TREND_UNKNOWN_COLOR = "#9aa0ac"; // dasselbe Grau wie .tsc-date (TradeSetupCockpit.vue) — neutral, keine Richtung
+
+// Hover-Hint je Verschachtelungstiefe (Philip 2026-08-29: "als mouse hover hint reicht mir: outer
+// structure, nested structure, nested nested structure") — ersetzt die vorherige, jetzt nicht mehr
+// sichtbare Trend/Korrektur/Gegenkorrektur-Beschriftung; erklärt die Tiefe nur noch beim Hovern,
+// nicht mehr im Fließtext. Ab Tiefe 3 (bisher in der Praxis nicht vorgekommen) generisch
+// weitergezählt statt eines vierten festen Namens.
+function trendChainDepthHint(depth: number): string {
+  if (depth === 0) return "outer structure";
+  return `${Array(depth).fill("nested").join(" ")} structure`;
+}
+
+// Bewusst NICHT das gemeinsame formatAge (chartTimeUtils.js, "1d 3h") — Philip 2026-08-29: "Die
+// Stunden info interessiert mich nicht", nur ganze Tage. Unter einem Tag lieber ein konkretes
+// Kalenderdatum ("seit Do, 27.08.") als eine vage "< 1 Tag"-Angabe (Philip: "wenn '< Tag', dann
+// lieber schreiben: '(seit Do, 27.08.)'") — Europe/Berlin wie überall sonst in der App (siehe
+// CLAUDE.md Timezone-Konvention). .replace(".", "") entfernt nur den ERSTEN Punkt (den von de-DE an
+// den Wochentag angehängten, "Do." -> "Do") — der Punkt am Datum ("27.08.") bleibt, exakt dasselbe
+// Muster wie TSC_DATE_FORMATTER/dateLabel in TradeSetupCockpit.vue (hier separat gehalten statt von
+// dort importiert, damit diese reine Formatierungslogik nicht an eine Vue-Komponente koppelt).
+const TREND_AGE_DATE_FORMATTER = new Intl.DateTimeFormat("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "Europe/Berlin" });
+
+// Unter 1 Tag bleibt die "(seit ...)"-Klammer erhalten (Philip 2026-08-29 hatte das explizit so
+// gewünscht), auch nachdem "Trend: {Richtung}" daneben wegfiel — ab 1 Tag nur noch die reine
+// Tage-Zahl, keine Klammer mehr nötig (nichts, woran sie noch "hängen" würde).
+function formatTrendAge(seconds: number, originTimeSec: number): string {
+  const days = Math.floor(seconds / 86400);
+  if (days >= 1) return days === 1 ? "1 Tag" : `${days} Tage`;
+  return `(seit ${TREND_AGE_DATE_FORMATTER.format(new Date(originTimeSec * 1000)).replace(".", "")})`;
+}
+
+// Nur noch das Alter als Text (Philip 2026-08-29: "dank den Pfeilen sind die wörter doch redundant"
+// — IST "{Tage} Trend: {Richtung}", SOLL "{Tage}") — Richtung steckt komplett im Pfeil (icon,
+// TREND_DIRECTION_ICON), die Tiefe nur noch im hint (trendChainDepthHint). "–" ohne Alter (praktisch
+// nie der Fall, siehe trendOriginPivotTime — nur wenn currRange gänzlich ohne pivotTime ist).
+export function trendChainLevelDisplay(level: TrendChainLevel, depth: number): { text: string; icon: string; color: string; hint: string } {
+  const color = level.trend === "uptrend" ? cssColor("candleUp") : level.trend === "downtrend" ? cssColor("candleDown") : TREND_UNKNOWN_COLOR;
+  const text = level.ageSeconds != null && level.originTimeSec != null ? formatTrendAge(level.ageSeconds, level.originTimeSec) : "–";
+  return { text, icon: TREND_DIRECTION_ICON[level.trend], color, hint: trendChainDepthHint(depth) };
 }

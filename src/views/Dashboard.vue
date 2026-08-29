@@ -1155,6 +1155,10 @@ const rangesFixedStartInputValue = computed({
 // Zeitpunkt gesetzt) springt der erste Klick auf die älteste geladene Kerze (siehe nextReplayTime)
 // und aktiviert Replay gleich mit — sonst würde der Klick unsichtbar ins Leere laufen.
 const priceChartRef = ref(null);
+// Trend-Kette fürs TSC (Chat 2026-08-29) — reaktiver computed über PriceChart.vue's defineExpose
+// (trendChain dort ist selbst ein computed über marketStructureState, siehe dort) statt eines
+// eigenen Emit-Zyklus, analog zu anderem reinen Zustands-Durchreichen aus der Kind-Komponente.
+const trendChain = computed(() => priceChartRef.value?.trendChain ?? []);
 // nextReplayTime ist seit Chat 2026-07-21 async (kann bei einer Markt-Schließlücke, z.B. Wochenende,
 // selbst nachfetchen, siehe PriceChart.vue) — stepReplayInFlight verhindert überlappende Aufrufe bei
 // mehrfachem schnellen Klicken, während der vorige Aufruf noch fetcht.
@@ -1914,6 +1918,7 @@ watch(selectedTradingAccountId, () => {
       :instrument="currentSymbol"
       :now-sec="replayUntil"
       :range="tscRange"
+      :trend-chain="trendChain"
       @add-confirmation="onTscAddConfirmationRequest"
       @add-target="onTscAddTargetRequest"
       @add-confluence="onTscAddConfluenceRequest"

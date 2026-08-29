@@ -27,6 +27,7 @@ import { sessions } from "../sessions.js";
 import { newsEvents } from "../newsEvents.js";
 import { usePriceChartSessionsAndNews } from "../composables/usePriceChartSessionsAndNews.js";
 import { summarizeMarketStructureState } from "../marketStructureAnalysis";
+import { computeTrendChain } from "../tradeSetupCockpit";
 import { DivergenceLinePrimitive } from "../rsiRendering.js";
 import { usePriceChartRsi } from "../composables/usePriceChartRsi.js";
 import { usePriceChartCockpit } from "../composables/usePriceChartCockpit.js";
@@ -361,6 +362,13 @@ const chartWrapperHeight = useTabScopedRef("chartWrapperHeight", 675);
 // (Daten-Export braucht dieselbe Aufbereitung, siehe dataExport.js).
 // marketStructureState kommt seit Phase 6g aus usePriceChartMarketStructure() (oben destructured).
 const marketStructureTree = computed(() => summarizeMarketStructureState(marketStructureState.value));
+// Trend-Kette fürs TSC (Chat 2026-08-29, Philip: "der Trend soll rein") — roh statt über
+// marketStructureTree/summarizeMarketStructureState, weil pivotForDisplay dort pivotTime verwirft
+// (für die Alters-Berechnung in computeTrendChain gebraucht). Bewusst UNABHÄNGIG von
+// props.showTradeSetupCockpit (das steuert seit Chat 2026-08-28 nur noch die TSC-Range-Zeichnung
+// auf dem Candlestick-Chart, nicht mehr die TSC-Karte selbst, siehe TradeSetupCockpit.vue) — anders
+// als refreshCockpit/cockpitState, das bei showTradeSetupCockpit=false auf null springt.
+const trendChain = computed(() => computeTrendChain(marketStructureState.value, props.replayUntil ?? Math.floor(Date.now() / 1000)));
 
 // Copy-Button neben den Metadaten-Überschriften (siehe Chat 2026-07-19) — kopiert den jeweiligen
 // Abschnitt als JSON, z.B. zum 1:1-Abgleich gegen die hand-hergeleiteten rangeStateN in
@@ -2115,6 +2123,12 @@ function jumpToDivergence(d) {
 }
 
 defineExpose({
+  // Für die TSC-Karte in Dashboard.vue (Chat 2026-08-29) — Dashboard.vue liest das reaktiv über
+  // einen eigenen computed (priceChartRef.value?.trendChain), analog zum bereits etablierten
+  // Muster, refs über defineExpose auf den public instance zu legen statt einen eigenen Emit-Zyklus
+  // für reine Zustands-Weiterreichung zu bauen.
+  trendChain,
+
   async nextReplayTime(after) {
     const barSeconds = barSecondsFor(props.currentBar);
     return computeNextReplayTime(

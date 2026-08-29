@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue";
 import { updateDealingRange } from "../tradeIntake.js";
 import { formatEvidenceLabel } from "../tradeEvidence";
 import { formatTargetLabel } from "../tradeTargets";
+import { trendChainLevelDisplay } from "../tradeSetupCockpit";
 import CrudListSection from "./CrudListSection.vue";
 import InvalidationField from "./InvalidationField.vue";
 
@@ -29,6 +30,11 @@ const props = defineProps({
   nowSec: { type: Number, default: undefined },
   instrument: { type: String, required: true },
   range: { type: Object, default: null },
+  // Trend-Kette aus dem 1h-Structure-Algo (Chat 2026-08-29, Philip: "der Trend soll rein") — kommt
+  // reaktiv von PriceChart.vue über Dashboard.vue's trendChain-computed, siehe computeTrendChain
+  // in tradeSetupCockpit.ts für die volle Begründung (KEINE echte 4H/1H/M5-Mehrfach-Timeframe-
+  // Berechnung, nur die rekursive Verschachtelungstiefe desselben 1H-States).
+  trendChain: { type: Array, default: () => [] },
 });
 const emit = defineEmits([
   "add-confirmation",
@@ -134,6 +140,11 @@ function targetLabel(t) {
 // färbt sich das TSC je nach Richtung der DR") — dieselben Long/Short-Töne wie überall sonst in
 // der App (TradeEditModal.vue: .tem-direction, TradesTable.vue). Neutral/blau, solange keine
 // Richtung feststeht.
+// Trend-Kette (Chat 2026-08-29) — trendChainLevelDisplay rechnet pro Ebene Label+Text+Farbe fertig
+// aus (tradeSetupCockpit.ts), hier nur noch die Zuordnung Ebene -> Tiefe fürs Label ("Trend"/
+// "Korrektur"/"Gegenkorrektur").
+const trendChainDisplay = computed(() => props.trendChain.map((level, depth) => trendChainLevelDisplay(level, depth)));
+
 const accentStyle = computed(() => {
   if (direction.value === "long") return { "--tsc-accent-bg": "rgba(38, 166, 154, 0.14)", "--tsc-accent-border": "rgba(38, 166, 154, 0.4)" };
   if (direction.value === "short") return { "--tsc-accent-bg": "rgba(255, 152, 0, 0.14)", "--tsc-accent-border": "rgba(255, 152, 0, 0.4)" };
@@ -154,6 +165,20 @@ const accentStyle = computed(() => {
              Hover-Hint ... rechts neben dem Short-Label") — verwirft die ganze Idee (Range +
              Bestätigungen + Targets), nicht nur die Anzeige, siehe Dashboard.vue: onTscReset. -->
         <button v-if="range" class="tsc-reset-icon-btn" title="Zurücksetzen" @click="emit('reset')">↺</button>
+      </div>
+    </div>
+
+    <!-- Trend-Kette (Chat 2026-08-29, Philip: "der Trend soll rein") — Kontext, kein Bestätigungs-
+         Objekt (kein Chart-Klick-Mechanismus, anders als die Sektionen unten), deshalb eigene Zeile
+         statt CrudListSection. Untereinander statt nebeneinander (Philip: "die chips sollen
+         übereinander sein"), Richtungs-Pfeil LINKS neben dem Chip statt im Text (Philip: "das pfeil
+         symbol ist cool! aber lieber links von dem chip anzeigen und bissl größer"). Die Tiefe
+         (outer/nested/nested nested, siehe trendChainDepthHint in tradeSetupCockpit.ts) steckt nur
+         noch im Hover-Title pro Chip, nicht mehr im Fließtext. -->
+    <div v-if="trendChainDisplay.length" class="tsc-trend-chain">
+      <div v-for="(d, i) in trendChainDisplay" :key="i" class="tsc-trend-row">
+        <span class="tsc-trend-icon" :style="{ color: d.color }">{{ d.icon }}</span>
+        <span class="tsc-trend-level" :style="{ '--level-color': d.color }" :title="d.hint">{{ d.text }}</span>
       </div>
     </div>
 
@@ -336,6 +361,51 @@ const accentStyle = computed(() => {
 .tsc-direction.long {
   background: rgba(38, 166, 154, 0.2);
   color: #26a69a;
+}
+
+/* Trend-Kette (Chat 2026-08-29) — dieselbe Chip-Optik wie .tsc-direction, aber neutral/grau
+   umrandet statt akzentuiert (mehrere gleichzeitig sichtbare Chips, keine einzelne Statusfarbe wie
+   Long/Short) und je Chip über --level-color eingefärbt (Uptrend/Downtrend/Unbekannt, siehe
+   trendChainLevelDisplay). Eigene Zeile mit Bottom-Border statt im Header (dort schon Datum/
+   Richtung/Reset-Icon, für 3 Chips zu eng), aber ohne den Header-Bleed-Trick (kein eigener
+   Hintergrundbalken nötig). Nebeneinander mit Umbruch (Philip: erst "übereinander" gewünscht,
+   nach der Text-Kürzung auf nur noch das Alter — "4 Tage" statt "4 Tage Trend: Downtrend" — dann
+   "jetzt kannst du die chips doch nebeneinander tun" — die Zeilen sind jetzt kurz genug, dass
+   Nebeneinander wieder passt). flex-wrap für den Fall, dass mal mehr als 3 Ebenen nicht mehr in
+   die 360px-Kartenbreite passen. */
+.tsc-trend-chain {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(120, 123, 134, 0.25);
+}
+
+/* Icon + Chip nebeneinander innerhalb einer Ebene (Philip: "Pfeil links von dem Chip") — die Ebenen
+   selbst laufen jetzt in einer Reihe (siehe .tsc-trend-chain: flex-wrap statt flex-direction:column). */
+.tsc-trend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tsc-trend-icon {
+  /* Deutlich größer als der Chip-Text (Philip: "bissl größer") — als eigenständiges Richtungssymbol
+     links vom Chip, nicht mehr als kleiner Text-Präfix darin. */
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tsc-trend-level {
+  font-weight: 600;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--level-color, rgba(120, 123, 134, 0.4));
+  color: var(--level-color, #9aa0ac);
 }
 
 .tsc-transfer-btn {
