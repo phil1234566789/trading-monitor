@@ -73,3 +73,25 @@ describe("bonusLabelForPivot/contextForPivot: Preisvergleich gegen echten Sessio
     expect(contextForPivot(outsideTime, 1, 1.36, lookup)).toBeNull();
   });
 });
+
+// Philip 2026-08-29, direkt im Anschluss an die Asia-Mid-Kalibrierung: "Mid" nur für Asia — bei
+// anderen Sessions (NY, MMM, ...) reicht ihm ein korrektes High/Low, kein Mid-Konzept gewünscht.
+describe("sessionExtremeSuffix: 'Mid' gilt nur für die Asia-Session", () => {
+  const NY_SESSION = { label: "NY", highLowRelevant: true, fromMinutes: 13 * 60, toMinutes: 22 * 60 };
+  // Gleiche Range/Mid-Konstellation wie Level #204 oben (gültiger Asia-Mid-Fall), nur diesmal in
+  // der NY-Session -> darf trotzdem kein "NY-Mid" ergeben.
+  const nyCandles = [candle(14, 1.35985, 1.3597), candle(17, 1.3589, 1.35875)];
+  const nyPivotTime = DAY_START + 15 * 3600;
+
+  it("Preis nah genug am rechnerischen Mid, aber Session ist NY -> kein Kontext (null), kein 'NY-Mid'", () => {
+    const lookup = buildSessionContextLookup([NY_SESSION], DAY_START, DAY_START + DAY, 0, nyCandles);
+    expect(bonusLabelForPivot(nyPivotTime, 1, 1.35946, lookup)).toBeNull();
+    expect(contextForPivot(nyPivotTime, 1, 1.35946, lookup)).toBeNull();
+  });
+
+  it("NY-High/-Low funktionieren weiterhin normal (nur Mid ist Asia-exklusiv)", () => {
+    const lookup = buildSessionContextLookup([NY_SESSION], DAY_START, DAY_START + DAY, 0, nyCandles);
+    expect(bonusLabelForPivot(nyPivotTime, 1, 1.35985, lookup)).toBe("NY-High");
+    expect(bonusLabelForPivot(nyPivotTime, -1, 1.35875, lookup)).toBe("NY-Low");
+  });
+});

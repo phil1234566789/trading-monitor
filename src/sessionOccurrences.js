@@ -36,6 +36,11 @@ const SESSION_EXTREME_EPSILON = 0.05 * PIP_SIZE;
 // um den Mittelpunkt liegt zwischen dem größten bestätigten Treffer (15%) und dem kleinsten
 // bestätigten Nicht-Treffer (33%) — bei weiteren Fehlklassifizierungen hier nachjustieren, echte
 // Kalibrierungsdaten schlagen jede a-priori-Zahl.
+// Philip 2026-08-29, direkt im Anschluss: "Mid" nur für Asia — bei NY/MMM/anderen Sessions reicht
+// ihm ein korrektes High/Low, kein Mid-Konzept gewünscht. Deshalb per Label statt global geprüft
+// (MID_RELEVANT_SESSION_LABEL), nicht über ein neues Sessions-Modal-Flag — "Asia" ist der einzige
+// Session-Name, den Philip dafür bisher nennt.
+const MID_RELEVANT_SESSION_LABEL = "asia";
 const SESSION_MID_TOLERANCE_RATIO = 0.2;
 
 // Berechnet den tatsächlichen High/Low-Preis der Session-Occurrence aus den übergebenen Kerzen
@@ -60,13 +65,17 @@ function attachRangeExtremes(occurrence, candles) {
 // ist eine echte Preis-Verifikation nicht möglich, alte Zuordnung ist die beste verfügbare Näherung.
 // null (kein Treffer) bedeutet: kein besonderes Merkmal, weder High/Low noch Mid — nicht "irgendwas
 // dazwischen ist automatisch Mid" (das war der Bug-Report 2026-08-29, siehe SESSION_MID_TOLERANCE_RATIO).
-function sessionExtremeSuffix(price, dir, occurrence) {
+// label: der Session-Name (z.B. "Asia"/"NY"/"MMM") — Mid gilt nur für MID_RELEVANT_SESSION_LABEL,
+// alle anderen Sessions bekommen ausschließlich High/Low (oder null), siehe Kommentar oben.
+function sessionExtremeSuffix(price, dir, occurrence, label) {
   if (occurrence.rangeHigh == null || occurrence.rangeLow == null) return dir === 1 ? "High" : "Low";
   if (dir === 1 && Math.abs(price - occurrence.rangeHigh) <= SESSION_EXTREME_EPSILON) return "High";
   if (dir === -1 && Math.abs(price - occurrence.rangeLow) <= SESSION_EXTREME_EPSILON) return "Low";
-  const range = occurrence.rangeHigh - occurrence.rangeLow;
-  const mid = (occurrence.rangeHigh + occurrence.rangeLow) / 2;
-  if (range > 0 && Math.abs(price - mid) <= SESSION_MID_TOLERANCE_RATIO * range) return "Mid";
+  if (label.toLowerCase() === MID_RELEVANT_SESSION_LABEL) {
+    const range = occurrence.rangeHigh - occurrence.rangeLow;
+    const mid = (occurrence.rangeHigh + occurrence.rangeLow) / 2;
+    if (range > 0 && Math.abs(price - mid) <= SESSION_MID_TOLERANCE_RATIO * range) return "Mid";
+  }
   return null;
 }
 
@@ -195,7 +204,7 @@ export function contextForPivot(pivotTime, dir, price, sessionContextLookup) {
   for (const { label, occurrences } of sessionContextLookup) {
     const occurrence = occurrences.find((o) => pivotTime >= o.startSec && pivotTime < o.endSec);
     if (occurrence) {
-      const suffix = sessionExtremeSuffix(price, dir, occurrence);
+      const suffix = sessionExtremeSuffix(price, dir, occurrence, label);
       return suffix ? `${label.toLowerCase()} ${suffix.toLowerCase()}`.trim() : null;
     }
   }
@@ -214,7 +223,7 @@ export function bonusLabelForPivot(pivotTime, dir, price, sessionContextLookup) 
   for (const { label, occurrences } of sessionContextLookup) {
     const occurrence = occurrences.find((o) => pivotTime >= o.startSec && pivotTime < o.endSec);
     if (occurrence) {
-      const suffix = sessionExtremeSuffix(price, dir, occurrence);
+      const suffix = sessionExtremeSuffix(price, dir, occurrence, label);
       return suffix && label ? `${label}-${suffix}` : null;
     }
   }
