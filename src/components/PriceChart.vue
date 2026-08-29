@@ -266,6 +266,10 @@ const props = defineProps({
   // Eigener Modus statt confirmationModeActive mitzubenutzen, damit "Bestätigung hinzufügen" und
   // "Zusatzargument hinzufügen" in der UI zwei getrennte Buttons/Sektionen bleiben, die jeweils nur
   // ihre eigene Art Chart-Objekt annehmen.
+  // Faktisch nicht ganz sauber getrennt: findClickedTarget (Pivot/OB) läuft im Klick-Handler unten
+  // als ungegateter Fallback, sobald Fib/Divergenz nicht treffen — ein Pivot/OB-Klick im
+  // Confluence-Modus landet also trotzdem als Confluence, nicht nur im Confirmation-Modus. Laut
+  // Philip 2026-08-29 momentan okay, kein Fix nötig.
   confluenceModeActive: { type: Boolean, default: false },
   // Anti-Confluence-Modus (Chat 2026-08-28) — nimmt denselben Klick-Satz wie Confirmation UND
   // Confluence zusammen an (pivot/ob über findClickedTarget UND fib/divergence), weil ein
