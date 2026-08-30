@@ -1252,14 +1252,19 @@ const indikatorenMenuOpen = ref(false);
 // permanenter Toggle links neben News statt im Sammel-Dropdown, siehe Template.
 const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs];
 const indikatorenActive = computed(() => INDIKATOREN_REFS.some((r) => r.value));
-let indikatorenSavedState = null;
+// War bis 2026-08-30 eine reine JS-Variable (nicht in localStorage) — ein Reload zwischen
+// Ausblenden und Wieder-Einblenden (z.B. Tab zu/wieder auf am nächsten Handelstag) verlor den
+// Snapshot, toggleIndikatoren landete dann im else-Zweig und EMA/RSI blieben dauerhaft aus,
+// während Liquidity/OBs (Default true) wieder anzeigten — sah aus wie "EMA und RSI schalten sich
+// immer wieder von selbst aus". Bug-Report Philip 2026-08-30.
+const indikatorenSavedState = useLocalStorageRef("indikatorenSavedState", null);
 function toggleIndikatoren() {
   if (indikatorenActive.value) {
-    indikatorenSavedState = INDIKATOREN_REFS.map((r) => r.value);
+    indikatorenSavedState.value = INDIKATOREN_REFS.map((r) => r.value);
     INDIKATOREN_REFS.forEach((r) => { r.value = false; });
-  } else if (indikatorenSavedState) {
-    INDIKATOREN_REFS.forEach((r, i) => { r.value = indikatorenSavedState[i]; });
-    indikatorenSavedState = null;
+  } else if (indikatorenSavedState.value) {
+    INDIKATOREN_REFS.forEach((r, i) => { r.value = indikatorenSavedState.value[i]; });
+    indikatorenSavedState.value = null;
   } else {
     // Noch nie über diesen Button ausgeblendet (z.B. alle Sub-Toggles waren schon einzeln aus) —
     // fällt auf die App-Werkseinstellungen zurück (siehe useLocalStorageRef-Defaults oben).
@@ -1278,16 +1283,17 @@ function toggleIndikatoren() {
 // Eigener Sammel-Toggle für den "OBs"-Hauptbutton (Chat 2026-07-30) — gleiches Snapshot/Restore-
 // Muster wie toggleIndikatoren oben, nur eine Ebene tiefer (nur die drei Timeframe-Schalter, nicht
 // showHistoricalObs — der bleibt unabhängig vom Ein-/Ausschalten aller OBs bestehen, wie bisher).
+// obsSavedState ebenfalls in localStorage (2026-08-30, gleicher Reload-Bug wie indikatorenSavedState).
 const OBS_REFS = [showObsM5, showObs1h, showObs4h];
 const obsActive = computed(() => OBS_REFS.some((r) => r.value));
-let obsSavedState = null;
+const obsSavedState = useLocalStorageRef("obsSavedState", null);
 function toggleObs() {
   if (obsActive.value) {
-    obsSavedState = OBS_REFS.map((r) => r.value);
+    obsSavedState.value = OBS_REFS.map((r) => r.value);
     OBS_REFS.forEach((r) => { r.value = false; });
-  } else if (obsSavedState) {
-    OBS_REFS.forEach((r, i) => { r.value = obsSavedState[i]; });
-    obsSavedState = null;
+  } else if (obsSavedState.value) {
+    OBS_REFS.forEach((r, i) => { r.value = obsSavedState.value[i]; });
+    obsSavedState.value = null;
   } else {
     showObsM5.value = false;
     showObs1h.value = true;
@@ -1821,15 +1827,6 @@ watch(selectedTradingAccountId, () => {
           </label>
         </div>
       </div>
-
-      <button
-        :class="{ active: showEma }"
-        :disabled="emaDisabled"
-        :title="emaDisabled ? 'EMA nur für M5' : ''"
-        @click="showEma = !showEma"
-      >
-        EMA
-      </button>
 
       <!-- Eigener, permanenter Toggle statt im "Indikatoren"-Sammel-Dropdown (Chat 2026-07-29:
            "ich deaktiviere gerne Indikatoren um mehr zu sehen, aber Sessions eig nie — die geben
