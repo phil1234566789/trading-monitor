@@ -144,6 +144,19 @@ export interface StructureConfig {
 // wollen aktiv das rollierende Lookback-Fenster) von "gar nicht angegeben" (kein Override -> neuer
 // 1D-Pivot-Default greift) unterscheiden zu können — ein `= false` an dieser Stelle hätte diese
 // Unterscheidung sofort wieder verschluckt.
+// Bug-Report Philip 2026-08-30: "unknown" heißt nicht Konsolidierung, sondern nur, dass der
+// Algorithmus noch mehr Strukturpunkte braucht, um sich einzupegeln — reine Interna, keine
+// brauchbare Info für Lana ("kann damit nichts anfangen, soll auch nicht damit doktern"). Rekursiv,
+// weil ein bestätigter Außentrend durchaus einen noch unbestätigten (unknown) Nested-CHoCH-
+// Kandidaten tragen kann — der fliegt dann ebenfalls raus, alles darunter ist laut
+// advanceNestedTrend (marketStructureAnalysis.ts) ohnehin garantiert null. Bewusst NICHT in
+// summarizeMarketStructureState selbst (das speist auch den Debug-Export/das Frontend-Pendant
+// unverändert) — nur hier am get_data_export-Rand gefiltert.
+function dropUnknownStructureLevels(summarized: ReturnType<typeof summarizeMarketStructureState>): ReturnType<typeof summarizeMarketStructureState> {
+  if (!summarized || summarized.trend === "unknown") return null;
+  return { ...summarized, nestedTrend: dropUnknownStructureLevels(summarized.nestedTrend) };
+}
+
 async function compute1hStructureState(instrument: string, currentTimeSec: number, structureConfig: StructureConfig = {}) {
   const {
     periodOuter = STRUCTURE_PERIOD_OUTER,
@@ -177,7 +190,7 @@ async function compute1hStructureState(instrument: string, currentTimeSec: numbe
   const pivotsInner = computeRangesPivots(candles, periodInner, cutoffInner);
   const state = buildMarketStructureState(pivotsOuter, pivotsInner, periodOuter, periodInner, candles);
   return {
-    trend: summarizeMarketStructureState(state, { includeAppliedPivots: false }),
+    trend: dropUnknownStructureLevels(summarizeMarketStructureState(state, { includeAppliedPivots: false })),
     window: {
       periodOuter,
       periodInner,

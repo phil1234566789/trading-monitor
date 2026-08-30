@@ -113,6 +113,19 @@ function formatCandle(c) {
   };
 }
 
+// Bug-Report Philip 2026-08-30: "unknown" heißt nicht Konsolidierung, sondern nur, dass der
+// Algorithmus noch mehr Strukturpunkte braucht, um sich einzupegeln — reine Interna, keine
+// brauchbare Info für einen Export-Konsumenten ("kann damit nichts anfangen"). Rekursiv, weil ein
+// bestätigter Außentrend durchaus einen noch unbestätigten (unknown) Nested-CHoCH-Kandidaten tragen
+// kann — der fliegt dann ebenfalls raus, alles darunter ist laut advanceNestedTrend
+// (marketStructureAnalysis.ts) ohnehin garantiert null. Bewusst NICHT in summarizeMarketStructureState
+// selbst (das speist auch das Debug-Metadaten-Panel, das die volle Rohstruktur unabhängig vom
+// Bestätigungsstatus zeigen soll) — nur hier am Export-Rand gefiltert.
+function dropUnknownStructureLevels(summarized) {
+  if (!summarized || summarized.trend === "unknown") return null;
+  return { ...summarized, nestedTrend: dropUnknownStructureLevels(summarized.nestedTrend) };
+}
+
 // Läuft bis currentTimeSec (Replay-Cutoff oder echtes "jetzt") — derselbe "wir kennen die Zukunft
 // noch nicht"-Grundsatz wie beim M5-Export gilt genauso für den Trend-State, sonst würde der
 // Backtest heimlich Wissen aus der Zukunft einfließen lassen.
@@ -142,7 +155,7 @@ async function compute1hStructureState(asset, currentTimeSec, structureConfig = 
   const pivotsOuter = computeRangesPivots(candles, periodOuter, cutoffOuter, fmtDateTime);
   const pivotsInner = computeRangesPivots(candles, periodInner, cutoffInner, fmtDateTime);
   const state = buildMarketStructureState(pivotsOuter, pivotsInner, periodOuter, periodInner, candles);
-  return summarizeMarketStructureState(state, { includeAppliedPivots: false });
+  return dropUnknownStructureLevels(summarizeMarketStructureState(state, { includeAppliedPivots: false }));
 }
 
 // "YYYY-MM-DD HH:mm" (Europe/Berlin) — dieselbe Schreibweise, die Claude selbst für datierte

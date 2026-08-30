@@ -58,7 +58,7 @@ describe("computeTrendChain", () => {
     expect(computeTrendChain(null, 1000)).toEqual([]);
   });
 
-  it("läuft die nestedTrend-Verschachtelung ab, Alter aus currRange (nicht firstConfirmedAt) — auch für trend='unknown'", () => {
+  it("läuft die nestedTrend-Verschachtelung ab, Alter aus currRange (nicht firstConfirmedAt)", () => {
     const state = {
       trend: "uptrend",
       // Uptrend-Ursprung ist currRange.low (0) — currRange.high (weit später) ist nur der aktuell
@@ -77,7 +77,10 @@ describe("computeTrendChain", () => {
       },
     };
     const chain = computeTrendChain(state, 21 * DAY);
-    expect(chain).toHaveLength(3);
+    // Bug-Report Philip 2026-08-30: die unbestätigte (unknown) Ebene liefert keinen Mehrwert ("Algo
+    // pegelt sich noch ein") und fliegt komplett aus der Kette, statt als dritte Ebene mitgezählt zu
+    // werden — siehe eigenen Test weiter unten.
+    expect(chain).toHaveLength(2);
     expect(chain[0]).toMatchObject({ trend: "uptrend", originTimeSec: 0 });
     // 21 Tage minus 0 (currRange.low) abzüglich Wochenenden (businessSecondsBetween) — deutlich
     // mehr als die 6 Tage bis currRange.high, die der alte (falsche) Anker fälschlich als "Alter"
@@ -85,16 +88,29 @@ describe("computeTrendChain", () => {
     expect(chain[0].ageSeconds).toBeGreaterThanOrEqual(15 * DAY);
     expect(chain[1]).toMatchObject({ trend: "downtrend", originTimeSec: 10 * DAY });
     expect(typeof chain[1].ageSeconds).toBe("number");
-    // Auch die unbestätigte (unknown) Ebene bekommt jetzt ein Alter, solange currRange gesetzt ist
-    // (Philip 2026-08-29 wollte explizit "2 Tage Trend: Unbekannt" sehen) — der ÄLTERE der beiden
-    // currRange-Randpunkte (hier 19 Tage) ist der Ursprung.
-    expect(chain[2]).toMatchObject({ trend: "unknown", originTimeSec: 19 * DAY });
-    expect(typeof chain[2].ageSeconds).toBe("number");
   });
 
   it("liefert kein Alter, wenn currRange keine pivotTime trägt", () => {
-    const state = { trend: "unknown", currRange: { high: {}, low: {} }, nestedTrend: null };
-    expect(computeTrendChain(state, 1000)).toEqual([{ trend: "unknown", ageSeconds: null, originTimeSec: null }]);
+    const state = { trend: "uptrend", currRange: { high: {}, low: {} }, nestedTrend: null };
+    expect(computeTrendChain(state, 1000)).toEqual([{ trend: "uptrend", ageSeconds: null, originTimeSec: null }]);
+  });
+
+  // Bug-Report Philip 2026-08-30: "unknown" heißt nicht Konsolidierung, sondern nur, dass der
+  // Algorithmus noch mehr Strukturpunkte braucht, um sich einzupegeln — keine brauchbare Info fürs
+  // TSC. 'unknown'-Level (und alles darunter, garantiert null laut advanceNestedTrend) fliegen
+  // deshalb komplett aus der Kette.
+  it("filtert eine 'unknown'-Ebene und alles darunter komplett aus der Kette", () => {
+    const state = {
+      trend: "uptrend",
+      currRange: { low: { pivotTime: 0 }, high: { pivotTime: 15 * DAY } },
+      nestedTrend: { trend: "unknown", currRange: { high: { pivotTime: 19 * DAY }, low: { pivotTime: 20 * DAY } }, nestedTrend: null },
+    };
+    expect(computeTrendChain(state, 21 * DAY)).toHaveLength(1);
+  });
+
+  it("liefert eine leere Kette, wenn schon der äußerste Trend 'unknown' ist", () => {
+    const state = { trend: "unknown", currRange: { high: { pivotTime: 0 }, low: { pivotTime: DAY } }, nestedTrend: null };
+    expect(computeTrendChain(state, 1000)).toEqual([]);
   });
 });
 

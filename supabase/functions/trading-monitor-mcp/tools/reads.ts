@@ -61,7 +61,11 @@ export function registerReadTools(server: McpServer) {
         "täglicher Cron) — nur solange dafür noch kein Pivot vorliegt, fällt er auf einen " +
         "rollierenden 21-Tage-Lookback zurück. Falls Philip im Dashboard EXPLIZIT einen anderen " +
         "'fixen Start' eingestellt hat (nur in seinem Browser-localStorage sichtbar, nicht von " +
-        "hier aus abfragbar), frag ihn danach und gib es über structureConfig mit. Antwort enthält " +
+        "hier aus abfragbar), frag ihn danach und gib es über structureConfig mit. structure1h (und " +
+        "dessen nestedTrend-Kette) enthält NIE eine Ebene mit trend='unknown' — die wird samt allem " +
+        "darunter rausgefiltert (bedeutet nur 'Algo braucht noch mehr Strukturpunkte', keine " +
+        "brauchbare Info). structure1h kann dadurch komplett null sein, auch wenn currRange/Pivots " +
+        "technisch schon existieren — das ist kein Fehler. Antwort enthält " +
         "zusätzlich structureWindow (cutoffOuter/" +
         "cutoffInner als Unix-Sekunden UND als cutoffOuterAt/cutoffInnerAt in 'YYYY-MM-DD HH:mm' " +
         "Europe/Berlin, direkt nutzbar als time-Feld für post_chart_annotations) — zeichne diesen " +

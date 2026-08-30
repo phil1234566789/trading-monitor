@@ -216,9 +216,9 @@ export interface TrendChainLevel {
 // das strukturell immer currRange.high (der Ausgangspunkt der Bewegung), currRange.low der aktuell
 // fortlaufende, JÜNGERE Extrempunkt; symmetrisch beim Uptrend. Min() statt Direction-Verzweigung
 // deckt so automatisch auch trend==='unknown' mit ab, wo dieselbe fixer-Ursprung-plus-wandernder-
-// Kandidat-Struktur gilt (siehe initMarketStructureState in marketStructureAnalysis.ts), nur die
-// Richtung noch nicht feststeht — Philip 2026-08-29 wollte explizit auch dafür ein Alter sehen
-// ("2 Tage Trend: Unbekannt").
+// Kandidat-Struktur gilt (siehe initMarketStructureState in marketStructureAnalysis.ts) — praktisch
+// bedeutungslos seit 2026-08-30: computeTrendChain filtert 'unknown'-Level komplett aus der Kette,
+// diese Funktion wird für sie also nie mehr aufgerufen (siehe dort).
 function trendOriginPivotTime(state: MarketStructureState): number | null {
   const highTime = state.currRange.high.pivotTime ?? null;
   const lowTime = state.currRange.low.pivotTime ?? null;
@@ -227,10 +227,14 @@ function trendOriginPivotTime(state: MarketStructureState): number | null {
   return Math.min(highTime, lowTime);
 }
 
+// Bug-Report Philip 2026-08-30: "unknown" bedeutet nicht Konsolidierung, sondern nur, dass der
+// Algorithmus noch mehr Strukturpunkte braucht, um sich einzupegeln — reine Interna, "kann ich
+// nichts mit anfangen". 'unknown'-Level (und alles darunter, siehe advanceNestedTrend-Garantie
+// oben) fliegen deshalb komplett aus der Kette statt sie als eigene Ebene mitzuzählen.
 export function computeTrendChain(structureState: MarketStructureState | null, nowSec: number): TrendChainLevel[] {
   const chain: TrendChainLevel[] = [];
   let state: MarketStructureState | null = structureState;
-  while (state) {
+  while (state && state.trend !== "unknown") {
     const originTime = trendOriginPivotTime(state);
     chain.push({
       trend: state.trend,
