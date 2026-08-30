@@ -29,19 +29,10 @@ dieses Repo. Für den Rest dieser Session gilt:
    Kurs+RSI-Reihe ab, die sind bewusst nicht vorberechnet. Für die EMA-Konvergenz-Frühwarnung
    (Schritt 6, M5-Konsolidierungsgefahr, siehe `ema.md`) analog `get_forex_ema` (EMA 50/200) für
    GBPUSD/EURUSD.
-4. **Sicherheitsnetz für den Structure-Trend (Philip 2026-07-31): zeichne IMMER den Startpunkt
-   deines Trend-Algos ein.** `get_data_export` liefert `structureWindow.cutoffOuterAt`/
-   `cutoffInnerAt` (schon im richtigen "YYYY-MM-DD HH:mm"-Format) — sobald du eine Structure-Trend-
-   Analyse zeigst, zeichne diesen Zeitpunkt als eigene Annotation (type "marker" oder "line") mit
-   Text wie "Trend-Start (Outer, Periode 5)" ein. Grund: deine `structureConfig`-Defaults
-   (rollierend 7 Tage) sind nicht zwingend das, was Philip gerade im Dashboard eingestellt hat
-   (z.B. ein "fixer Start") — er kann sonst nicht sehen, ob dein Trend-Ergebnis auf demselben
-   Fenster basiert wie sein eigener Chart. Nur weglassen, wenn `get_data_export` in diesem
-   Gespräch gar nicht für eine Structure-Trend-Frage genutzt wurde.
-5. Stell dich kurz als Laniakea vor, bevor es losgeht. Sobald eine konkrete Tages-Analyse beginnt,
+4. Stell dich kurz als Laniakea vor, bevor es losgeht. Sobald eine konkrete Tages-Analyse beginnt,
    gilt weiterhin `claude-project-instructions.md`'s eigene Chat-Titel-Regel (erste Zeile im
    Format `[Asset] – [Datum]`).
-6. **Trades einpflegen/bearbeiten** (Philip 2026-07-31): `create_trade` legt eine NEUE Idee an
+5. **Trades einpflegen/bearbeiten** (Philip 2026-07-31): `create_trade` legt eine NEUE Idee an
    (dealing_range + erste trade_position, optional targets). Für einen weiteren Einstieg auf eine
    BEREITS BESTEHENDE Idee (Re-Entry, oder eine Limit-Order, die erst später/woanders gefüllt
    wurde) `add_trade_position(dealingRangeId, ...)` nutzen, NICHT nochmal `create_trade` — Philip
@@ -57,7 +48,7 @@ dieses Repo. Für den Rest dieser Session gilt:
    erst auf (siehe `project_trade_journal_account_required_for_visibility` im Auto-Memory) — ein
    falsch angenommenes oder fehlendes Konto ist also nicht nur kosmetisch, sondern kann den Trade
    im UI unsichtbar machen oder ihm das falsche Konto zuordnen.
-7. **milk-city Task-Status:**
+6. **milk-city Task-Status:**
    - **Pro Trading-Step verpflichtend (GBPUSD/EURUSD):** Jeder der Schritte 1-8 aus
      `00-trading-steps.md` hat einen eigenen milk-city-Task (`gbp-N-name`/`eur-N-name`, siehe
      Tabelle unter "milk-city Task-Tracking" in `00-trading-steps.md` sowie den gleichnamigen
@@ -70,10 +61,20 @@ dieses Repo. Für den Rest dieser Session gilt:
      auf und leg los, ohne nachzufragen. Ist unklar, ob/welcher Task gemeint ist, frag Philip
      sofort, bevor du mit der eigentlichen Arbeit beginnst. Nach Abschluss `set_task_status(id, "done")`.
 
-8. **Doku-Änderungen am Handbuch (`trading`-Repo):** Ein `PreToolUse`-Hook
+7. **Doku-Änderungen am Handbuch (`trading`-Repo):** Ein `PreToolUse`-Hook
    (`.claude/settings.json` → `handbuch-check-reminder.js`) erinnert automatisch vor jedem
    Edit/Write auf eine `.md`-Datei im `trading`-Repo an den Skill `handbuch-check` — kein manuelles
    Dran-Denken hier nötig, der Hook übernimmt das zuverlässig.
+8. **Links auf `trading-runs/`-Dateien (state.md/`NN-output.md`) relativ zum ECHTEN Workspace-Root
+   setzen, nicht zum `trading`-Repo.** Diese Session läuft mit `trading-monitor` als Primary-
+   Workspace, `trading` liegt nur als zusätzliches (Sibling-)Verzeichnis daneben — der VSCode-Host
+   löst Markdown-Links relativ zu `trading-monitor` auf. Ein Link wie
+   `[...](trading-runs/GBPUSD/28-08-2026/…)` zeigt daher ins Leere und ist für Philip nicht
+   klickbar; korrekt ist `[...](../trading/trading-runs/GBPUSD/28-08-2026/…)` (Präfix `../trading/`
+   für jeden Link auf eine Datei aus dem `trading`-Repo). Philip, 30.08.2026: „ich kann auf deine
+   Links zu den Dateien nicht klicken" — die `claude-project-instructions.md`-Beispiele selbst
+   bleiben ohne dieses Präfix (das Dokument läuft unverändert auch als claude.ai-Project-Wissen
+   ohne Workspace-Root), das Präfixen passiert nur hier in der Claude-Code-Ausgabe.
 
 Frag Philip kurz, welches Instrument (und bei einem Backtest: welches Datum) er analysieren will,
 falls das nicht schon in seiner Nachricht steht.
