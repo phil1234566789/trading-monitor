@@ -361,7 +361,7 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // applyAsOf/applyAsOfZones) — sonst sind spätere Sweeps (nach dem Replay-Punkt) schon "verbraucht"
   // und verdrängen per RECENT_SWEEP_COUNT genau die Level/Zonen, die zum Analysezeitpunkt noch
   // relevant/unberührt waren (Bug-Report Lana 2026-08-02 für obZones).
-  const [raw, m5DetectionRaw, liquidityLevels, obZonesRaw, structureResult, sessionConfigs] = await Promise.all([
+  const [raw, m5DetectionRaw, liquidityLevelsRaw, obZonesRaw, structureResult, sessionConfigs] = await Promise.all([
     fetchForexCandles(instrument, "5m", { count: M5_FETCH_COUNT, toMs: endUtcMs }),
     // Eigener, größerer Kerzensatz statt `raw` — 7-Tage-Lookback wie der "Daten-Export"-Button
     // (siehe EXPORT_LOOKBACK_HOURS oben), endet an currentTimeSec statt am Tagesende, damit ein
@@ -379,6 +379,16 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
     compute1hStructureState(instrument, currentTimeSec, structureConfig),
     getSessions(instrument),
   ]);
+  // getLiquidityLevels(instrument, undefined, ...) fragt ALLE Timeframes ab, nicht nur 1H/4H — kann
+  // dadurch auch vereinzelte persistierte 5M-Zeilen zurückgeben (z.B. von add_trade_confirmation/
+  // add_trade_target's find-or-create, siehe findOrCreateLiquidityLevelId in db.ts). coincidesWithHtf
+  // unten geht aber explizit von "liquidityLevels = 1H+4H" aus (siehe Kommentar dort) — ohne diesen
+  // Filter würde eine SOLCHE 5M-Zeile mit sich selbst "kollidieren" und ihr eigenes live erkanntes
+  // M5-Gegenstück aus m5LiquidityLevels rausfiltern, obwohl es gar kein HTF-Level ist. Bug-Beispiel
+  // 28.08.2026 (GBPUSD, Backtest bis 08:45): Sweep-Level 1,35946 fehlte dadurch in m5LiquidityLevels,
+  // Philip musste es manuell anpinnen, siehe milk-city Task
+  // "m5LiquidityLevels liefert bekannten M5-Pivot nicht".
+  const liquidityLevels = liquidityLevelsRaw.filter((l) => l.timeframe === "1H" || l.timeframe === "4H");
 
   const dayCandles = raw.filter((c) => c.time >= startSec && c.time < endSec && (replayUntilSec == null || c.time <= replayUntilSec));
   const asiaCandles = dayCandles.filter((c) => c.time < asiaEndSec);
@@ -522,7 +532,6 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // touched/pivotTime/touchedTime/context/kontext), poi-watcher-interne Buchhaltung raus.
   const liquidityLevelsWithContext = attachSessionContext(
     liquidityLevels
-      .filter((l) => l.timeframe === "1H" || l.timeframe === "4H")
       .map((l) => ({
         ...l,
         pivotTimeSec: Math.floor(new Date(l.pivot_time).getTime() / 1000),
