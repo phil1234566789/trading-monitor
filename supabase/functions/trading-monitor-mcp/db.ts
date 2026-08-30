@@ -367,11 +367,34 @@ export interface PinM5Ob {
 // live erkannt/persistiert (siehe PLAN-chart-objekte-forex.md Abschnitt 5), deshalb hier ein
 // normaler Upsert (kein ignoreDuplicates, damit .select() bei bereits vorhandenem Konflikt
 // trotzdem die id liefert) statt eines reinen Lookups.
+// NUR für 5M — 1H/4H-Zonen werden AUSSCHLIESSLICH von poi-watcher angelegt, nie hier (Bug
+// 30.08.2026: ein falscher sourceTime in add_trade_confirmation liess den Upsert keine
+// bestehende 1H-Zone finden und legte fälschlich eine neue, falsch datierte Duplikat-Zone an,
+// statt einen Fehler zu werfen — Philip: "M5 selbst anlegen ok, aber HTF OBs nicht, wüsste nicht
+// wieso"). Für 1H/4H deshalb reiner Lookup unten, der bei keinem Treffer laut und eindeutig
+// fehlschlägt, statt still eine Zeile zu erfinden.
 async function findOrCreateObZoneId(instrument: string, timeframe: string, direction: string, top: number, bottom: number, startTimeSec: number) {
+  const startTimeIso = new Date(startTimeSec * 1000).toISOString();
+  if (timeframe !== "5M") {
+    const { data, error } = await supabase
+      .from("ob_zones")
+      .select("id")
+      .match({ instrument, timeframe, direction, start_time: startTimeIso })
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) {
+      throw new Error(
+        `Keine ${timeframe}-OB-Zone bei ${instrument} ${direction} mit start_time=${startTimeIso} gefunden. ` +
+          `1H/4H-Zonen werden nur von poi-watcher angelegt, nie automatisch hier — sourceTime ist vermutlich ` +
+          `falsch (die echte start_time über get_ob_zones/get_data_export prüfen statt sie selbst zu berechnen).`,
+      );
+    }
+    return data.id as number;
+  }
   const { data, error } = await supabase
     .from("ob_zones")
     .upsert(
-      { instrument, timeframe, direction, top, bottom, start_time: new Date(startTimeSec * 1000).toISOString() },
+      { instrument, timeframe, direction, top, bottom, start_time: startTimeIso },
       { onConflict: "instrument,timeframe,start_time,direction" },
     )
     .select("id")
