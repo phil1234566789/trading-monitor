@@ -48,15 +48,10 @@ dieses Repo. Für den Rest dieser Session gilt:
    erst auf (siehe `project_trade_journal_account_required_for_visibility` im Auto-Memory) — ein
    falsch angenommenes oder fehlendes Konto ist also nicht nur kosmetisch, sondern kann den Trade
    im UI unsichtbar machen oder ihm das falsche Konto zuordnen.
-6. **milk-city Task-Status:**
-   - **Pro Trading-Step verpflichtend (GBPUSD/EURUSD):** Jeder der Schritte 1-8 aus
-     `00-trading-steps.md` hat einen eigenen milk-city-Task (`gbp-N-name`/`eur-N-name`, siehe
-     Tabelle unter "milk-city Task-Tracking" in `00-trading-steps.md` sowie den gleichnamigen
-     Abschnitt am Ende jeder einzelnen `NN-name.md`-Datei). Das ist kein optionales Extra, sondern
-     Teil der Schritt-Ausführung selbst — bei JEDEM Schritt-Beginn `work in progress` setzen, bei
-     Abschluss je nach Ausgang `done` (geht weiter) oder `review` (Ablauf endet hier), genau wie in
-     der jeweiligen Step-Datei beschrieben.
-   - **Allgemeiner Fall:** Passt eine andere Analyse/Aufgabe eindeutig zu einem offenen Task im
+6. **milk-city Task-Status:** Kein eigenes Task-Tracking mehr pro Trading-Step (30.08.2026 aus
+   `00-trading-steps.md`/den `NN-name.md`-Dateien entfernt — Philip baut das Gamification-/
+   Task-Tracking-System später neu auf). Nur noch der allgemeine Fall gilt:
+   - Passt eine andere Analyse/Aufgabe eindeutig zu einem offenen Task im
      `milk-city`-MCP-Server (`list_tasks`), ruf sofort `set_task_status(id, "work in progress")`
      auf und leg los, ohne nachzufragen. Ist unklar, ob/welcher Task gemeint ist, frag Philip
      sofort, bevor du mit der eigentlichen Arbeit beginnst. Nach Abschluss `set_task_status(id, "done")`.
