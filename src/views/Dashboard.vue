@@ -167,24 +167,26 @@ const ranges2LookbackDays = computed({
   get: () => ranges2LookbackHours.value / 24,
   set: (days) => { ranges2LookbackHours.value = Math.round(days * 24); },
 });
-// Fixer Startzeitpunkt statt rollierendem "letzte X Tage"-Fenster (Chat 2026-07-21: "im
-// Replaymodus wird das ja immer dynamisch angepasst ... für Testszenarien bräuchte ich einen
-// fixen Punkt, ab wann die Pivots gezählt werden sollen") — beim Scrubben durch den Replay-Modus
-// verschiebt sich sonst ständig, welche Pivots überhaupt als "die letzten X Tage" zählen, was ein
-// Testszenario nicht reproduzierbar macht. EIN gemeinsamer Startzeitpunkt für Periode 5 UND die
-// eingebettete Periode 2 (nicht zwei getrennte) — Philip wollte "ab Zeitpunkt X", nicht zwei
-// unabhängige Fixpunkte. Bewusst additiv (rangesLookbackHours/ranges2LookbackHours bleiben
-// unangetastet, der bestehende Rolling-Modus ist weiterhin der Default) — rangesFixedStartActive
-// schaltet nur um, welcher der beiden Cutoff-Berechnungen computeRangesPivotsFor/loadRangesCandles
-// (PriceChart.vue) tatsächlich verwenden.
+// Start-Zeitpunkt für die Structure-Pivot-Zählung (Periode 5 + eingebettete Periode 2 gemeinsam,
+// Philip wollte "ab Zeitpunkt X", nicht zwei unabhängige Fixpunkte) — drei Modi statt eines reinen
+// An/Aus-Toggles (Task "Structure: 3 Start-Modi", 2026-08-30, ersetzt den bisherigen "Fixer
+// Start"-Toggle aus Chat 2026-07-21):
+// - "days": rollierendes "letzte X Tage/Stunden"-Fenster (rangesLookbackHours/ranges2LookbackHours,
+//   bisheriger Default-Modus).
+// - "date": fester, von Philip manuell gewählter Zeitpunkt (rangesFixedStartDateInput) — bleibt
+//   beim Scrubben durch den Replay-Modus stabil, für reproduzierbare Testszenarien.
+// - "pivot": automatisch der letzte persistierte 1D-Periode-4-Struktur-Pivot dieses Instruments
+//   (daily_structure_pivots, siehe latestDailyPivotStructureStartTime weiter unten) — Default.
+// rangesFixedStartActive/-Time bleiben als die EFFEKTIVEN, tatsächlich an PriceChart.vue
+// durchgereichten Werte bestehen (siehe Watcher weiter unten, bei dbDailyPivots) — DataExportModal.vue
+// liest via useLocalStorageRef's Key-Cache dieselbe Instanz und soll denselben effektiven Stand
+// sehen wie der Chart, nicht nur den "date"-Modus-Rohwert. rangesFixedStartDateInput ist die vom
+// Modus UNABHÄNGIGE, im "Datum"-Modus eingegebene Roh-Zeit, damit ein Moduswechsel den zuletzt
+// eingegebenen Wert nicht überschreibt.
 const rangesFixedStartActive = useLocalStorageRef("rangesFixedStartActive", false);
-const rangesFixedStartTime = useLocalStorageRef("rangesFixedStartTime", 1783011600); // Default = derselbe Testszenario-Start wie replayTime
-// Task "Market-Structure-Startpunkt: 1D-Periode-4-Pivots" (2026-08-30): roher localStorage-Wert
-// VOR jeder Ref-Erzeugung geprüft (useLocalStorageRef oben hat den Wert ggf. schon aus einem
-// bestehenden Eintrag geladen, aber noch nichts zurückgeschrieben) — true nur, wenn Philip diesen
-// Toggle in diesem Browser noch NIE selbst angefasst hat. Siehe rangesFixedStartAutoApplied/Watcher
-// weiter unten (dbDailyPivots).
-const rangesFixedStartNeverSet = localStorage.getItem("trading-monitor:rangesFixedStartActive") === null;
+const rangesFixedStartTime = useLocalStorageRef("rangesFixedStartTime", 1783011600);
+const rangesStartMode = useLocalStorageRef("rangesStartMode", "pivot"); // "date" | "days" | "pivot"
+const rangesFixedStartDateInput = useLocalStorageRef("rangesFixedStartDateInput", 1783011600); // Default = derselbe Testszenario-Start wie replayTime
 // showRanges (Punkt-Marker im Chart, siehe PriceChart.vue) und showRangesMetadata (JSON-Panel)
 // sind bewusst getrennte Toggles — Philip will Ranges anzeigen können, ohne dafür das
 // Metadaten-Panel offen zu haben (siehe Chat: "man kann ranges nicht einzelnd toggeln"). EIN
@@ -1151,9 +1153,9 @@ const replayInputValue = computed({
   },
 });
 const rangesFixedStartInputValue = computed({
-  get: () => (rangesFixedStartTime.value == null ? "" : toDatetimeLocal(rangesFixedStartTime.value)),
+  get: () => (rangesFixedStartDateInput.value == null ? "" : toDatetimeLocal(rangesFixedStartDateInput.value)),
   set: (v) => {
-    rangesFixedStartTime.value = v ? Math.floor(new Date(v).getTime() / 1000) : null;
+    rangesFixedStartDateInput.value = v ? Math.floor(new Date(v).getTime() / 1000) : null;
   },
 });
 // "+1 Kerze"-Button: den Zeitpunkt der nächsten geladenen Kerze im aktuellen Timeframe holt
@@ -1317,24 +1319,44 @@ const { data: dbLiquidityLevelsHtf } = usePolledFetch(() => fetchLiquidityLevels
 // 1D-Periode-4-Struktur-Pivots (Task "Market-Structure-Startpunkt: 1D-Periode-4-Pivots") — analog
 // zu dbLiquidityLevelsHtf oben, gleicher Grund für intervalMs (die tägliche daily-structure-pivots-
 // Cron-Function läuft im Hintergrund). Feed für die Dreieck-Marker (PriceChart.vue) UND für den
-// einmaligen Default-Prefill unten.
+// "1D-Pivot"-Start-Modus unten.
 const { data: dbDailyPivots } = usePolledFetch(() => fetchDailyStructurePivots(), { intervalMs: 60_000 });
-// Einmaliger Default-Prefill für "Fixer Start" (rangesFixedStartNeverSet oben) — sobald ein Pivot
-// mit aufgelöstem structure_start_time für currentSymbol vorliegt, rangesFixedStartTime/-Active
-// darauf setzen und rangesFixedStartAutoApplied dauerhaft markieren, damit das (anders als ein
-// reiner Check auf rangesFixedStartActive.value) auch dann nie wieder automatisch eingreift, wenn
-// Philip den Toggle danach selbst wieder ausschaltet.
-const rangesFixedStartAutoApplied = useLocalStorageRef("rangesFixedStartAutoApplied", false);
-watch(dbDailyPivots, (pivots) => {
-  if (!rangesFixedStartNeverSet || rangesFixedStartAutoApplied.value) return;
-  const latest = pivots
+// Neuester Pivot mit aufgelöstem structure_start_time für currentSymbol — treibt sowohl den
+// "1D-Pivot"-Modus (Watcher unten) als auch dessen Read-only-Anzeige im Dropdown.
+const latestDailyPivotStructureStartTime = computed(() => {
+  const latest = dbDailyPivots.value
     .filter((p) => p.instrument === currentSymbol.value && p.structureStartTime != null)
     .sort((a, b) => b.pivotTime - a.pivotTime)[0];
-  if (!latest) return;
-  rangesFixedStartTime.value = latest.structureStartTime;
-  rangesFixedStartActive.value = true;
-  rangesFixedStartAutoApplied.value = true;
+  return latest ? latest.structureStartTime : null;
 });
+const rangesPivotStartDisplay = computed(() =>
+  latestDailyPivotStructureStartTime.value == null ? "" : toDatetimeLocal(latestDailyPivotStructureStartTime.value),
+);
+// Leitet die EFFEKTIVEN rangesFixedStartActive/-Time aus dem gewählten Modus ab (siehe
+// rangesStartMode-Kommentar oben) — läuft bei jedem Moduswechsel UND bei jeder Pivot-/Datum-
+// Änderung erneut, damit der "1D-Pivot"-Modus automatisch mitzieht, sobald ein neuer Pivot dazu
+// kommt (kein einmaliger Prefill mehr wie in der Vorversion, echter Live-Modus).
+watch(
+  [rangesStartMode, rangesFixedStartDateInput, latestDailyPivotStructureStartTime],
+  () => {
+    if (rangesStartMode.value === "days") {
+      rangesFixedStartActive.value = false;
+    } else if (rangesStartMode.value === "date") {
+      rangesFixedStartActive.value = true;
+      rangesFixedStartTime.value = rangesFixedStartDateInput.value;
+    } else {
+      // "pivot": bleibt so lange auf dem zuletzt bekannten Wert stehen, wie für dieses Symbol noch
+      // kein aufgelöster Pivot vorliegt (z.B. currentSymbol gerade erst gewechselt, Poll noch nicht
+      // durch) — kein Zurückfallen auf false/null, das würde beim Umschalten kurz auf den
+      // rollierenden Lookback zurückspringen lassen.
+      rangesFixedStartActive.value = latestDailyPivotStructureStartTime.value != null;
+      if (latestDailyPivotStructureStartTime.value != null) {
+        rangesFixedStartTime.value = latestDailyPivotStructureStartTime.value;
+      }
+    }
+  },
+  { immediate: true },
+);
 // Nur die Ids, die zum GERADE geladenen Symbol gehören (trades enthält nur dessen Trades) — ein
 // Pin-Eintrag für ein anderes Symbol kann im Chart/in der Tabelle ohnehin nicht markiert
 // werden, solange dieses Symbol nicht ausgewählt ist.
@@ -1644,19 +1666,47 @@ watch(selectedTradingAccountId, () => {
           ▾
         </button>
         <div v-if="rangesMenuOpen" class="toggle-dropdown">
+          <button :class="{ active: showRangesMetadata }" @click="showRangesMetadata = !showRangesMetadata">
+            Metadaten
+          </button>
+
+          <div class="toggle-dropdown-divider"></div>
+
           <button
-            :class="{ active: rangesFixedStartActive }"
-            title="Fester Startzeitpunkt statt 'letzte X Tage' — bleibt beim Scrubben im Replay-Modus stabil, statt sich mitzuverschieben (gilt für Periode 5 UND die eingebettete Periode 2)"
-            @click="rangesFixedStartActive = !rangesFixedStartActive"
+            :class="{ active: rangesStartMode === 'date' }"
+            title="Fester, von Hand gewählter Startzeitpunkt — bleibt beim Scrubben im Replay-Modus stabil (gilt für Periode 5 UND die eingebettete Periode 2)"
+            @click="rangesStartMode = 'date'"
           >
-            Fixer Start
+            Start ab Datum
           </button>
           <input
-            v-if="rangesFixedStartActive"
+            v-if="rangesStartMode === 'date'"
             v-model="rangesFixedStartInputValue"
             type="datetime-local"
             class="replay-input ranges-fixed-start-input"
             title="Ab diesem Zeitpunkt werden Structure-Pivots gezählt (beide Perioden)"
+          />
+          <button
+            :class="{ active: rangesStartMode === 'days' }"
+            title="Rollierendes 'letzte X Tage/Stunden'-Fenster ab jetzt (bzw. ab dem Replay-Zeitpunkt)"
+            @click="rangesStartMode = 'days'"
+          >
+            Start ab X Tagen
+          </button>
+          <button
+            :class="{ active: rangesStartMode === 'pivot' }"
+            title="Automatisch: letzter persistierter 1D-Periode-4-Struktur-Pivot dieses Instruments (Default)"
+            @click="rangesStartMode = 'pivot'"
+          >
+            Start ab 1D-Pivot
+          </button>
+          <input
+            v-if="rangesStartMode === 'pivot'"
+            :value="rangesPivotStartDisplay"
+            type="datetime-local"
+            class="replay-input ranges-fixed-start-input"
+            disabled
+            title="Automatisch aufgelöst aus dem letzten 1D-Periode-4-Pivot — nicht editierbar"
           />
 
           <div class="toggle-dropdown-divider"></div>
@@ -1679,7 +1729,7 @@ watch(selectedTradingAccountId, () => {
               min="1"
               class="ranges-lookback-input"
               title="Lookback in Tagen — rechnet automatisch in Stunden um"
-              :disabled="rangesFixedStartActive"
+              :disabled="rangesStartMode !== 'days'"
             />
           </label>
           <label class="ranges-lookback-field">
@@ -1690,18 +1740,14 @@ watch(selectedTradingAccountId, () => {
               min="1"
               class="ranges-lookback-input"
               title="Lookback in Stunden (maßgeblicher Wert für die Fraktal-Suche)"
-              :disabled="rangesFixedStartActive"
+              :disabled="rangesStartMode !== 'days'"
             />
           </label>
 
           <div class="toggle-dropdown-divider"></div>
 
-          <button :class="{ active: showRangesMetadata }" @click="showRangesMetadata = !showRangesMetadata">
-            Metadaten
-          </button>
-
           <label class="ranges-period-field">
-            Periode
+            Periode (eingebettet)
             <input
               v-model.number="ranges2Period"
               type="number"
@@ -1718,7 +1764,7 @@ watch(selectedTradingAccountId, () => {
               min="1"
               class="ranges-lookback-input"
               title="Lookback in Tagen (eingebettete Periode) — rechnet automatisch in Stunden um"
-              :disabled="rangesFixedStartActive"
+              :disabled="rangesStartMode !== 'days'"
             />
           </label>
           <label class="ranges-lookback-field">
@@ -1729,7 +1775,7 @@ watch(selectedTradingAccountId, () => {
               min="1"
               class="ranges-lookback-input"
               title="Lookback in Stunden (eingebettete Periode)"
-              :disabled="rangesFixedStartActive"
+              :disabled="rangesStartMode !== 'days'"
             />
           </label>
         </div>

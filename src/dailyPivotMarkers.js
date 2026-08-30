@@ -10,6 +10,10 @@ import { snapToBarTime } from "./chartTimeUtils.js";
 import { cssColor } from "./chartColors.js";
 
 const TRIANGLE_SIZE = 6; // px, etwas größer als das Trade-Entry-Dreieck (5px) — eigenständiger HTF-Marker
+// Bug-Report Philip 2026-08-30: Dreieck klebte direkt an der Kerze/dem Docht, dessen Preis es
+// markiert — Abstand zwischen Preis-Koordinate und Dreieck-Basis, in dieselbe Richtung wie die
+// Spitze zeigt (High-Pivot nach oben weg vom Preis, Low-Pivot nach unten).
+const PRICE_GAP = 10;
 
 function drawTriangle(ctx, x, y, size, dir, color) {
   ctx.fillStyle = color;
@@ -69,9 +73,10 @@ class DailyPivotMarkerPaneView {
       // — genau der Zeitpunkt, den structureStartTime auflösen soll. Fallback auf pivotTime nur
       // für Alt-Pivots ohne aufgelösten Wert (1H-Archiv deckt ihren Tag noch nicht ab).
       const barTime = snapToBarTime(candles, p.structureStartTime ?? p.pivotTime);
+      const priceY = series.priceToCoordinate(p.price);
       return {
         x: barTime != null ? timeScale.timeToCoordinate(barTime) : null,
-        y: series.priceToCoordinate(p.price),
+        y: priceY != null ? priceY + (p.dir === 1 ? -PRICE_GAP : PRICE_GAP) : null,
         dir: p.dir,
         color: cssColor(p.dir === 1 ? "dailyPivotHigh" : "dailyPivotLow"),
       };
