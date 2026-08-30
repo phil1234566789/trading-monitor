@@ -65,12 +65,15 @@ export function registerReadTools(server: McpServer) {
         "dessen nestedTrend-Kette) enthält NIE eine Ebene mit trend='unknown' — die wird samt allem " +
         "darunter rausgefiltert (bedeutet nur 'Algo braucht noch mehr Strukturpunkte', keine " +
         "brauchbare Info). structure1h kann dadurch komplett null sein, auch wenn currRange/Pivots " +
-        "technisch schon existieren — das ist kein Fehler. Antwort enthält " +
-        "zusätzlich structureWindow (cutoffOuter/" +
-        "cutoffInner als Unix-Sekunden UND als cutoffOuterAt/cutoffInnerAt in 'YYYY-MM-DD HH:mm' " +
-        "Europe/Berlin, direkt nutzbar als time-Feld für post_chart_annotations) — zeichne diesen " +
-        "Startpunkt IMMER als Marker/Linie ein, wenn du eine Structure-Trend-Analyse zeigst, damit " +
-        "Philip visuell prüfen kann, ob er mit seinem eigenen Chart übereinstimmt.",
+        "technisch schon existieren — das ist kein Fehler. structureTrendAge liefert zusätzlich " +
+        "dieselbe Ebenen-Kette (äußerste bis innerste bestätigte Ebene) mit fertigem, " +
+        "wochenend-bereinigtem Alter je Ebene (ageDays/ageText/originAt) — IMMER DIESES Feld für " +
+        "'seit wann läuft der Trend'/'wie alt ist er' nutzen, NIEMALS selbst aus " +
+        "currRange.high/low.pivotAt (ein roher Unix-Sekunden-String OHNE Wochenend-Bereinigung) " +
+        "zurückrechnen (Bug-Report Philip 2026-08-30: genau das lieferte ein falsches, zu hohes " +
+        "Alter, weil Wochenenden mitgezählt wurden). Antwort enthält zusätzlich " +
+        "structureWindow (cutoffOuter/cutoffInner als Unix-Sekunden UND als cutoffOuterAt/" +
+        "cutoffInnerAt in 'YYYY-MM-DD HH:mm' Europe/Berlin).",
       inputSchema: {
         instrument: INSTRUMENT,
         dateStr: z.string().optional().describe("YYYY-MM-DD (Europe/Berlin), Default: heute"),

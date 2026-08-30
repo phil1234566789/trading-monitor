@@ -15,6 +15,7 @@
 import { fetchInitialCandles } from "./forexCandles.js";
 import { fmtDateTime } from "./format.js";
 import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructureState } from "./marketStructureAnalysis";
+import { computeTrendChain, trendChainLevelDisplay } from "./tradeSetupCockpit";
 import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "./liquidity.js";
 import { detectOrderBlocks } from "./orderBlocks.js";
 import { sessions } from "./sessions.js";
@@ -126,6 +127,23 @@ function dropUnknownStructureLevels(summarized) {
   return { ...summarized, nestedTrend: dropUnknownStructureLevels(summarized.nestedTrend) };
 }
 
+// Bug-Report Philip 2026-08-30 (Live-Test mit Lana, via trading-monitor-mcp): Lana ermittelte
+// "seit Fr, 21.08. -> 7 Tage Downtrend", die TSC-Anzeige zeigte für denselben Trend korrekt
+// "4 Tage" — der bisherige Export lieferte nur den rohen Pivot-Zeitstempel (currRange.high/
+// low.pivotAt, ein Unix-Sekunden-String ohne Wochenend-Bereinigung), Lana musste sich das Alter
+// selbst ausrechnen. Wiederverwendet computeTrendChain/trendChainLevelDisplay (tradeSetupCockpit.ts,
+// exakt dieselbe Funktion wie die TSC-Anzeige) statt einer weiteren Kopie — hier im selben Runtime
+// (Frontend) unproblematisch, kein Deno-Cross-Directory-Grund für eine eigene Kopie wie im
+// MCP-Server-Pendant (compute1hStructureState, supabase/functions/trading-monitor-mcp/tools/dataExport.ts).
+function computeTrendChainAges(state, nowSec) {
+  return computeTrendChain(state, nowSec).map((level, depth) => ({
+    trend: level.trend,
+    ageDays: level.ageSeconds != null ? Math.floor(level.ageSeconds / 86400) : null,
+    ageText: trendChainLevelDisplay(level, depth).text,
+    originAt: level.originTimeSec != null ? fmtDateTime(level.originTimeSec) : null,
+  }));
+}
+
 // Läuft bis currentTimeSec (Replay-Cutoff oder echtes "jetzt") — derselbe "wir kennen die Zukunft
 // noch nicht"-Grundsatz wie beim M5-Export gilt genauso für den Trend-State, sonst würde der
 // Backtest heimlich Wissen aus der Zukunft einfließen lassen.
@@ -155,7 +173,10 @@ async function compute1hStructureState(asset, currentTimeSec, structureConfig = 
   const pivotsOuter = computeRangesPivots(candles, periodOuter, cutoffOuter, fmtDateTime);
   const pivotsInner = computeRangesPivots(candles, periodInner, cutoffInner, fmtDateTime);
   const state = buildMarketStructureState(pivotsOuter, pivotsInner, periodOuter, periodInner, candles);
-  return dropUnknownStructureLevels(summarizeMarketStructureState(state, { includeAppliedPivots: false }));
+  return {
+    trend: dropUnknownStructureLevels(summarizeMarketStructureState(state, { includeAppliedPivots: false })),
+    trendAge: computeTrendChainAges(state, currentTimeSec),
+  };
 }
 
 // "YYYY-MM-DD HH:mm" (Europe/Berlin) — dieselbe Schreibweise, die Claude selbst für datierte
@@ -278,7 +299,7 @@ export async function buildDataExport({ asset, dateStr, replayUntilSec = null, s
   // bei aktivem Replay immer die echte Klickzeit — Philip: "die info wann ich da genau drauf
   // drücke juckt nicht wirklich, entscheidend ist was die aktuelle Zeit des Snapshots ist".
   const currentTimeSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
-  const structure1h = await compute1hStructureState(asset, currentTimeSec, structureConfig);
+  const { trend: structure1h, trendAge: structureTrendAge } = await compute1hStructureState(asset, currentTimeSec, structureConfig);
   const { liquidityLevels, orderBlocks } = await computeExportTimeframeData(asset, currentTimeSec);
 
   return {
@@ -291,6 +312,10 @@ export async function buildDataExport({ asset, dateStr, replayUntilSec = null, s
     // gehalten statt hier abzuweichen, nur um die paar Zeichen Redundanz zu sparen).
     replay: replayUntilSec == null ? { active: false } : { active: true, until: replayUntilSec, untilAt: fmtDateTime(replayUntilSec) },
     structure1h,
+    // Fertiges, wochenend-bereinigtes Alter je Ebene der structure1h-Kette — siehe
+    // computeTrendChainAges oben. Immer dieses Feld für "seit wann läuft der Trend" nutzen, nie
+    // selbst aus currRange.high/low.pivotAt zurückrechnen.
+    structureTrendAge,
     liquidityLevels,
     orderBlocks,
     asiaSession: {

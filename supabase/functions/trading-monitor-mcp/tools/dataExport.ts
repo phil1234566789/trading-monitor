@@ -157,6 +157,55 @@ function dropUnknownStructureLevels(summarized: ReturnType<typeof summarizeMarke
   return { ...summarized, nestedTrend: dropUnknownStructureLevels(summarized.nestedTrend) };
 }
 
+// Bug-Report Philip 2026-08-30 (Live-Test mit Lana): Lana ermittelte "seit Fr, 21.08. -> 7 Tage
+// Downtrend", die TSC-Anzeige (usePriceChartMarketStructure.js/tradeSetupCockpit.ts:
+// computeTrendChain) zeigte für denselben Trend korrekt "4 Tage" — Lana bekam bisher nur den
+// rohen Pivot-Zeitstempel (currRange.high/low.pivotAt, ein reiner Unix-Sekunden-STRING ohne
+// Wochentag/Alter, siehe pivotForDisplay) und musste sich das Alter selbst ausrechnen, offenbar per
+// naiver Kalendertag-Subtraktion statt der im Chart verwendeten wochenend-bereinigten
+// businessSecondsBetween. Genau die Art Kopfrechnen, die serverseitig vorberechnet gehört statt
+// Lana überlassen zu werden (Vorbild: calc_rr-Tool, siehe CLAUDE.md "Mechanical Subcomputations").
+// Port von computeTrendChain/trendOriginPivotTime/formatTrendAge (src/tradeSetupCockpit.ts), hier
+// auf der ROHEN (noch nicht pivotForDisplay-bereinigten) state-Kette berechnet, weil dort
+// pivotTime noch als Zahl vorliegt — dieselbe Kette wie structure1h/nestedTrend (äußerste bis
+// innerste bestätigte Ebene, 'unknown' bereits ausgeschlossen), nur mit fertigem Alter pro Ebene.
+const TREND_AGE_DATE_FORMATTER = new Intl.DateTimeFormat("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "Europe/Berlin" });
+function trendOriginPivotTime(state: { currRange: { high: { pivotTime?: number | null }; low: { pivotTime?: number | null } } }): number | null {
+  const highTime = state.currRange.high.pivotTime ?? null;
+  const lowTime = state.currRange.low.pivotTime ?? null;
+  if (highTime == null) return lowTime;
+  if (lowTime == null) return highTime;
+  return Math.min(highTime, lowTime);
+}
+// "1 Tag"/"4 Tage" wie im TSC (nur ganze Tage, keine Stunden — Philip 2026-08-29: "Die Stunden
+// Info interessiert mich nicht"), unter 1 Tag dasselbe "(seit Do, 27.08.)"-Kalenderdatum-Fallback.
+function formatTrendAge(seconds: number, originTimeSec: number): string {
+  const days = Math.floor(seconds / 86400);
+  if (days >= 1) return days === 1 ? "1 Tag" : `${days} Tage`;
+  return `(seit ${TREND_AGE_DATE_FORMATTER.format(new Date(originTimeSec * 1000)).replace(".", "")})`;
+}
+function computeTrendChainAges(
+  state: ReturnType<typeof buildMarketStructureState>,
+  nowSec: number,
+): { trend: "uptrend" | "downtrend"; ageDays: number; ageText: string; originAt: string }[] {
+  const chain: { trend: "uptrend" | "downtrend"; ageDays: number; ageText: string; originAt: string }[] = [];
+  let s = state;
+  while (s && s.trend !== "unknown") {
+    const originTime = trendOriginPivotTime(s);
+    if (originTime != null) {
+      const ageSeconds = businessSecondsBetween(originTime, nowSec);
+      chain.push({
+        trend: s.trend as "uptrend" | "downtrend",
+        ageDays: Math.floor(ageSeconds / 86400),
+        ageText: formatTrendAge(ageSeconds, originTime),
+        originAt: berlinDateTimeStrFor(originTime),
+      });
+    }
+    s = s.nestedTrend;
+  }
+  return chain;
+}
+
 async function compute1hStructureState(instrument: string, currentTimeSec: number, structureConfig: StructureConfig = {}) {
   const {
     periodOuter = STRUCTURE_PERIOD_OUTER,
@@ -191,6 +240,7 @@ async function compute1hStructureState(instrument: string, currentTimeSec: numbe
   const state = buildMarketStructureState(pivotsOuter, pivotsInner, periodOuter, periodInner, candles);
   return {
     trend: dropUnknownStructureLevels(summarizeMarketStructureState(state, { includeAppliedPivots: false })),
+    trendAge: computeTrendChainAges(state, currentTimeSec),
     window: {
       periodOuter,
       periodInner,
@@ -371,9 +421,12 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
     timezone: "Europe/Berlin",
     replay: replayUntilSec == null ? { active: false } : { active: true, until: replayUntilSec },
     structure1h: structureResult.trend,
-    // Siehe compute1hStructureState oben: der tatsächlich verwendete Cutoff, damit L ihn immer als
-    // Marker/Linie einzeichnen kann (post_chart_annotations) — Philips Sichtkontrolle gegen den
-    // eigenen Chart.
+    // Fertiges, wochenend-bereinigtes Alter je Ebene der structure1h-Kette (äußerste bis innerste
+    // bestätigte Ebene) — siehe computeTrendChainAges oben. IMMER diese Werte für "seit wann läuft
+    // der Trend"/"wie alt" nutzen, NIE selbst aus currRange.*.pivotAt (ein roher Unix-Sekunden-
+    // String ohne Wochenend-Bereinigung) zurückrechnen.
+    structureTrendAge: structureResult.trendAge,
+    // Siehe compute1hStructureState oben: der tatsächlich verwendete Cutoff (Outer/Inner-Fenster).
     structureWindow: structureResult.window,
     liquidityLevels: liquidityLevelsWithContext,
     obZones,
