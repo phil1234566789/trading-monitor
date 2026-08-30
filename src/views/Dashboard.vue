@@ -34,6 +34,7 @@ import {
 } from "../tradeIntake.js";
 import { fetchObZones } from "../obZones.js";
 import { fetchLiquidityLevelsHtf } from "../liquidityLevels.js";
+import { fetchDailyStructurePivots } from "../dailyPivots.js";
 import { liquidityLevelNaturalKey } from "../liquidity.js";
 import { tradesVisible } from "../tradeVisibility.js";
 import {
@@ -178,6 +179,12 @@ const ranges2LookbackDays = computed({
 // (PriceChart.vue) tatsächlich verwenden.
 const rangesFixedStartActive = useLocalStorageRef("rangesFixedStartActive", false);
 const rangesFixedStartTime = useLocalStorageRef("rangesFixedStartTime", 1783011600); // Default = derselbe Testszenario-Start wie replayTime
+// Task "Market-Structure-Startpunkt: 1D-Periode-4-Pivots" (2026-08-30): roher localStorage-Wert
+// VOR jeder Ref-Erzeugung geprüft (useLocalStorageRef oben hat den Wert ggf. schon aus einem
+// bestehenden Eintrag geladen, aber noch nichts zurückgeschrieben) — true nur, wenn Philip diesen
+// Toggle in diesem Browser noch NIE selbst angefasst hat. Siehe rangesFixedStartAutoApplied/Watcher
+// weiter unten (dbDailyPivots).
+const rangesFixedStartNeverSet = localStorage.getItem("trading-monitor:rangesFixedStartActive") === null;
 // showRanges (Punkt-Marker im Chart, siehe PriceChart.vue) und showRangesMetadata (JSON-Panel)
 // sind bewusst getrennte Toggles — Philip will Ranges anzeigen können, ohne dafür das
 // Metadaten-Panel offen zu haben (siehe Chat: "man kann ranges nicht einzelnd toggeln"). EIN
@@ -1307,6 +1314,27 @@ const { data: dbObZones } = usePolledFetch(() => fetchObZones(), { intervalMs: 6
 // Punkt 12, seit 2026-08-23 auch 4H) — analog zu dbObZones oben, gleicher Grund für intervalMs
 // (poi-watcher-Cron im Hintergrund).
 const { data: dbLiquidityLevelsHtf } = usePolledFetch(() => fetchLiquidityLevelsHtf(), { intervalMs: 60_000 });
+// 1D-Periode-4-Struktur-Pivots (Task "Market-Structure-Startpunkt: 1D-Periode-4-Pivots") — analog
+// zu dbLiquidityLevelsHtf oben, gleicher Grund für intervalMs (die tägliche daily-structure-pivots-
+// Cron-Function läuft im Hintergrund). Feed für die Dreieck-Marker (PriceChart.vue) UND für den
+// einmaligen Default-Prefill unten.
+const { data: dbDailyPivots } = usePolledFetch(() => fetchDailyStructurePivots(), { intervalMs: 60_000 });
+// Einmaliger Default-Prefill für "Fixer Start" (rangesFixedStartNeverSet oben) — sobald ein Pivot
+// mit aufgelöstem structure_start_time für currentSymbol vorliegt, rangesFixedStartTime/-Active
+// darauf setzen und rangesFixedStartAutoApplied dauerhaft markieren, damit das (anders als ein
+// reiner Check auf rangesFixedStartActive.value) auch dann nie wieder automatisch eingreift, wenn
+// Philip den Toggle danach selbst wieder ausschaltet.
+const rangesFixedStartAutoApplied = useLocalStorageRef("rangesFixedStartAutoApplied", false);
+watch(dbDailyPivots, (pivots) => {
+  if (!rangesFixedStartNeverSet || rangesFixedStartAutoApplied.value) return;
+  const latest = pivots
+    .filter((p) => p.instrument === currentSymbol.value && p.structureStartTime != null)
+    .sort((a, b) => b.pivotTime - a.pivotTime)[0];
+  if (!latest) return;
+  rangesFixedStartTime.value = latest.structureStartTime;
+  rangesFixedStartActive.value = true;
+  rangesFixedStartAutoApplied.value = true;
+});
 // Nur die Ids, die zum GERADE geladenen Symbol gehören (trades enthält nur dessen Trades) — ein
 // Pin-Eintrag für ein anderes Symbol kann im Chart/in der Tabelle ohnehin nicht markiert
 // werden, solange dieses Symbol nicht ausgewählt ist.
@@ -1860,6 +1888,7 @@ watch(selectedTradingAccountId, () => {
     :pinned-ob-zones="pinnedObZones"
     :db-ob-zones="dbObZones"
     :db-liquidity-levels-htf="dbLiquidityLevelsHtf"
+    :db-daily-pivots="dbDailyPivots"
     :pinned-liquidity-levels="pinnedLiquidityLevels"
     :pinned-trade-setups="pinnedTradeSetups"
     :pinned-rsi-divergences="pinnedRsiDivergences"

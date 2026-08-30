@@ -1,6 +1,6 @@
 import { fetchForexCandles, type Candle } from "../forexCandles.ts";
 import { berlinDayRangeUtcMs, berlinDateStrFor, berlinDateTimeStrFor, berlinOffsetMinutes } from "../berlinTime.ts";
-import { getObZones, getLiquidityLevels, getSessions } from "../db.ts";
+import { getObZones, getLiquidityLevels, getSessions, getLatestDailyStructureStartTime } from "../db.ts";
 // Reine Trend-Mathematik (siehe CLAUDE.md "MCP-Server") — seit dem Split von marketStructureAnalysis.ts
 // (Chat 2026-07-31, Rendering lebt jetzt separat in marketStructureRendering.ts) frei von Browser-
 // Abhängigkeiten und direkt aus dem Frontend-Quellbaum importierbar, kein dritter Algorithmus-Port.
@@ -15,7 +15,7 @@ import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructur
 // (marketStructureAnalysis.js oben). detectLiquidityLevels lebt schon dependency-frei in
 // liquidityDetection.js; detectOrderBlocks wurde für diesen Zweck neu nach orderBlockDetection.js
 // extrahiert (aus orderBlocks.js, das über chartColors.js/chartZoom.js Browser-Only-Imports zieht).
-import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "../liquidityDetection.js";
+import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "../../_shared/liquidityDetection.ts";
 import { detectOrderBlocks } from "../orderBlockDetection.js";
 import { PIP_SIZE } from "../pipConfig.js";
 // Session-Kontext ("asia high" etc., siehe src/dataExport.js) — sessionOccurrences.js ist seit
@@ -138,19 +138,36 @@ export interface StructureConfig {
 // Startpunkt des Trend-Algos mit einzeichnen, damit ich abchecken kann, ob das passt, denn was L
 // sieht ist ja nicht zwingend dasselbe, was ich im Chart sehe" (2026-07-31). Ohne das hätte L keine
 // Möglichkeit, Philip zu zeigen, ab welchem Zeitpunkt sie tatsächlich gerechnet hat.
+//
+// Default-Startpunkt (Task "Market-Structure-Startpunkt: 1D-Periode-4-Pivots", 2026-08-30):
+// destrukturiert `fixedStartActive` bewusst OHNE Default-Wert, um "explizit false" (Philip/Claude
+// wollen aktiv das rollierende Lookback-Fenster) von "gar nicht angegeben" (kein Override -> neuer
+// 1D-Pivot-Default greift) unterscheiden zu können — ein `= false` an dieser Stelle hätte diese
+// Unterscheidung sofort wieder verschluckt.
 async function compute1hStructureState(instrument: string, currentTimeSec: number, structureConfig: StructureConfig = {}) {
   const {
     periodOuter = STRUCTURE_PERIOD_OUTER,
     periodInner = STRUCTURE_PERIOD_INNER,
     lookbackHoursOuter = STRUCTURE_LOOKBACK_HOURS,
     lookbackHoursInner = STRUCTURE_LOOKBACK_HOURS,
-    fixedStartActive = false,
+    fixedStartActive,
     fixedStartTime = null,
   } = structureConfig;
 
-  const useFixedStart = fixedStartActive && fixedStartTime != null;
-  const cutoffOuter = useFixedStart ? fixedStartTime : currentTimeSec - lookbackHoursOuter * 3600;
-  const cutoffInner = useFixedStart ? fixedStartTime : currentTimeSec - lookbackHoursInner * 3600;
+  let useFixedStart: boolean;
+  let effectiveFixedStartTime: number | null;
+  if (fixedStartActive === undefined) {
+    // Kein explizites Override -> letzter 1D-Periode-4-Pivot dieses Instruments als Default
+    // (siehe daily-structure-pivots/index.ts), Fallback aufs bisherige rollierende Lookback-
+    // Fenster, solange für dieses Instrument noch kein aufgelöster Pivot vorliegt.
+    effectiveFixedStartTime = await getLatestDailyStructureStartTime(instrument);
+    useFixedStart = effectiveFixedStartTime != null;
+  } else {
+    useFixedStart = fixedStartActive && fixedStartTime != null;
+    effectiveFixedStartTime = fixedStartTime;
+  }
+  const cutoffOuter = useFixedStart ? effectiveFixedStartTime! : currentTimeSec - lookbackHoursOuter * 3600;
+  const cutoffInner = useFixedStart ? effectiveFixedStartTime! : currentTimeSec - lookbackHoursInner * 3600;
   const earliestCutoff = Math.min(cutoffOuter, cutoffInner);
   const fetchHours = Math.ceil((currentTimeSec - earliestCutoff) / 3600) + STRUCTURE_CANDLE_BUFFER_HOURS;
 

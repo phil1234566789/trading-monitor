@@ -18,7 +18,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { detectOrderBlocks, type Candle } from "../_shared/orderBlocks.ts";
 import { detectLiquidityLevels, type LiquidityLevel } from "../_shared/liquidity.ts";
-import { fetchTrendbarsBatch, type RefreshedTokens } from "../_shared/ctrader/client.ts";
+import { fetchTrendbarsBatch } from "../_shared/ctrader/client.ts";
+import { loadCtraderCreds, type CtraderCreds } from "../_shared/ctraderCreds.ts";
 import { detectSetupObs, detectTradeSetup } from "../_shared/tradeSetup.ts";
 
 const TIMEFRAMES: { label: "4H" | "1H" }[] = [{ label: "4H" }, { label: "1H" }];
@@ -147,12 +148,6 @@ function isH1RefreshTick(date: Date): boolean {
 }
 function isH4RefreshTick(date: Date): boolean {
   return date.getUTCHours() % 4 === 0 && date.getUTCMinutes() === 0;
-}
-
-interface CtraderCreds {
-  accessToken: string;
-  refreshToken: string;
-  onTokenRefresh: (tokens: RefreshedTokens) => Promise<void>;
 }
 
 // Ein Connect/Auth-Handshake pro Forex-Instrument für alle benötigten Timeframes in einem
@@ -365,24 +360,14 @@ Deno.serve(async (req) => {
     // cTrader-Access-/Refresh-Token: `ctrader_oauth_tokens` ist die eigentliche Quelle (siehe
     // Migration 20260722120000), die CTRADER_ACCESS_TOKEN/REFRESH_TOKEN-Secrets nur ein
     // Fallback fürs allererste Deployment vor der ersten Zeile — gleiches Muster wie in
-    // forex-candles/index.ts. onTokenRefresh schreibt ein automatisch refreshtes Token zurück,
-    // damit der nächste Cron-Tick (und forex-candles) das frische Token sieht.
-    const { data: tokenRow, error: tokenSelectError } = await supabase
-      .from("ctrader_oauth_tokens")
-      .select("access_token, refresh_token")
-      .eq("id", 1)
-      .maybeSingle();
-    if (tokenSelectError) throw tokenSelectError;
-    const ctraderCreds: CtraderCreds = {
-      accessToken: tokenRow?.access_token ?? CTRADER_ACCESS_TOKEN_FALLBACK,
-      refreshToken: tokenRow?.refresh_token ?? CTRADER_REFRESH_TOKEN_FALLBACK,
-      onTokenRefresh: async (fresh) => {
-        const { error } = await supabase
-          .from("ctrader_oauth_tokens")
-          .upsert({ id: 1, access_token: fresh.accessToken, refresh_token: fresh.refreshToken });
-        if (error) console.error("poi-watcher: failed to persist refreshed cTrader token:", error);
-      },
-    };
+    // forex-candles/index.ts (beide seit 2026-08-30 über _shared/ctraderCreds.ts). onTokenRefresh
+    // schreibt ein automatisch refreshtes Token zurück, damit der nächste Cron-Tick (und
+    // forex-candles) das frische Token sieht.
+    const ctraderCreds: CtraderCreds = await loadCtraderCreds(
+      supabase,
+      { accessToken: CTRADER_ACCESS_TOKEN_FALLBACK, refreshToken: CTRADER_REFRESH_TOKEN_FALLBACK },
+      "poi-watcher",
+    );
 
     const now = new Date();
     const h4RefreshTick = isH4RefreshTick(now);

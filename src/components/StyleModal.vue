@@ -127,6 +127,8 @@ const GROUPS = [
       { key: "rangeFib", label: "Fibonacci 50%" },
       { key: "rangesMarker", label: "Debug-Marker (Periode 5)" },
       { key: "rangesMarker2", label: "Debug-Marker (Periode 2)" },
+      { key: "dailyPivotHigh", label: "1D-Struktur-Pivot (High)" },
+      { key: "dailyPivotLow", label: "1D-Struktur-Pivot (Low)" },
     ],
   },
   {

@@ -15,7 +15,9 @@
 // den Fall, dass mehrere Fetches gebündelt ankommen — siehe Bug-Report 2026-08-07 unten am
 // POST-Zweig für den Hintergrund.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { fetchTrendbars, fetchTrendbarsBatch, type RefreshedTokens } from "../_shared/ctrader/client.ts";
+import { fetchTrendbars, fetchTrendbarsBatch } from "../_shared/ctrader/client.ts";
+import { loadCtraderCreds } from "../_shared/ctraderCreds.ts";
+import { persistClosedCandles } from "../_shared/forexCandlesArchive.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -63,60 +65,23 @@ function errorResponse(status: number, message: string) {
 // jedes Mal dieselben Kerzen erneut über cTrader ziehen). fetchOneTrendbar liefert laut eigenem
 // Kommentar dort NIE die noch laufende Kerze mit (die API gibt count-1 abgeschlossene Bars
 // zurück) — jede hier ankommende Candle ist also schon geschlossen, kein extra Filtern nötig.
-// Nur 5m/1h/4h persistieren (forex_candles' bar-CHECK-Constraint, siehe Migration
-// 20260809120000) — 1m/3m/15m/1D-Fetches (z.B. Replay-Feintuning) bleiben reine Live-Reads wie
-// bisher. Chunked wie im Backfill-Script (backfillForexCandles.ts), da ein Single-Fetch bis zu
-// MAX_COUNT=5000 Kerzen zurückgeben kann. Ein Archiv-Schreibfehler darf einen sonst erfolgreichen
-// Live-Fetch nicht scheitern lassen — nur loggen, Response geht trotzdem raus.
-const PERSISTABLE_BARS = new Set(["5m", "1h", "4h"]);
-const UPSERT_CHUNK_SIZE = 1000;
+// Nur 5m/1h/4h/1D persistieren (forex_candles' bar-CHECK-Constraint, siehe Migration
+// 20260809120000, seit 20260830090000 auch '1D') — 1m/3m/15m-Fetches (z.B. Replay-Feintuning)
+// bleiben reine Live-Reads. '1D' seit Task "Market-Structure-Startpunkt: 1D-Periode-4-Pivots"
+// (2026-08-30), gebraucht von der neuen daily-structure-pivots-Funktion für die
+// 1D-Periode-4-Fraktal-Erkennung. Chunked wie im Backfill-Script (backfillForexCandles.ts), da ein
+// Single-Fetch bis zu MAX_COUNT=5000 Kerzen zurückgeben kann. Ein Archiv-Schreibfehler darf einen
+// sonst erfolgreichen Live-Fetch nicht scheitern lassen — nur loggen, Response geht trotzdem raus.
+const PERSISTABLE_BARS = new Set(["5m", "1h", "4h", "1D"]);
 
-async function persistClosedCandles(
+async function persistIfArchivable(
   supabase: ReturnType<typeof createClient>,
   instrument: string,
   period: string,
   candles: { time: number; open: number; high: number; low: number; close: number; volume: number }[],
 ) {
-  if (!PERSISTABLE_BARS.has(period) || candles.length === 0) return;
-  const rows = candles.map((c) => ({
-    instrument,
-    bar: period,
-    time: new Date(c.time * 1000).toISOString(),
-    open: c.open,
-    high: c.high,
-    low: c.low,
-    close: c.close,
-    volume: c.volume,
-  }));
-  for (let i = 0; i < rows.length; i += UPSERT_CHUNK_SIZE) {
-    const chunk = rows.slice(i, i + UPSERT_CHUNK_SIZE);
-    const { error } = await supabase
-      .from("forex_candles")
-      .upsert(chunk, { onConflict: "instrument,bar,time", ignoreDuplicates: true });
-    if (error) console.error(`forex-candles: Archiv-Upsert fehlgeschlagen (${instrument} ${period}):`, error);
-  }
-}
-
-async function loadTokens(supabase: ReturnType<typeof createClient>) {
-  const { data: tokenRow, error: tokenSelectError } = await supabase
-    .from("ctrader_oauth_tokens")
-    .select("access_token, refresh_token")
-    .eq("id", 1)
-    .maybeSingle();
-  if (tokenSelectError) throw tokenSelectError;
-  return {
-    accessToken: tokenRow?.access_token ?? CTRADER_ACCESS_TOKEN_FALLBACK,
-    refreshToken: tokenRow?.refresh_token ?? CTRADER_REFRESH_TOKEN_FALLBACK,
-  };
-}
-
-function onTokenRefreshFor(supabase: ReturnType<typeof createClient>) {
-  return async (fresh: RefreshedTokens) => {
-    const { error } = await supabase
-      .from("ctrader_oauth_tokens")
-      .upsert({ id: 1, access_token: fresh.accessToken, refresh_token: fresh.refreshToken });
-    if (error) console.error("forex-candles: failed to persist refreshed token:", error);
-  };
+  if (!PERSISTABLE_BARS.has(period)) return;
+  await persistClosedCandles(supabase, instrument, period, candles, "forex-candles");
 }
 
 Deno.serve(async (req) => {
@@ -157,17 +122,21 @@ Deno.serve(async (req) => {
     }
 
     try {
-      const { accessToken, refreshToken } = await loadTokens(supabase);
+      const { accessToken, refreshToken, onTokenRefresh } = await loadCtraderCreds(
+        supabase,
+        { accessToken: CTRADER_ACCESS_TOKEN_FALLBACK, refreshToken: CTRADER_REFRESH_TOKEN_FALLBACK },
+        "forex-candles",
+      );
       const results = await fetchTrendbarsBatch({
         clientId: CTRADER_CLIENT_ID,
         clientSecret: CTRADER_CLIENT_SECRET,
         accessToken,
         refreshToken,
-        onTokenRefresh: onTokenRefreshFor(supabase),
+        onTokenRefresh,
         requests: mapped,
       });
       await Promise.all(
-        requests.map((r, i) => persistClosedCandles(supabase, r.symbol, r.period, results[i])),
+        requests.map((r, i) => persistIfArchivable(supabase, r.symbol, r.period, results[i])),
       );
       return new Response(JSON.stringify({ results }), {
         headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
@@ -188,19 +157,23 @@ Deno.serve(async (req) => {
   if (!ctraderPeriod) return errorResponse(400, `Unknown period: ${period}`);
 
   try {
-    const { accessToken, refreshToken } = await loadTokens(supabase);
+    const { accessToken, refreshToken, onTokenRefresh } = await loadCtraderCreds(
+      supabase,
+      { accessToken: CTRADER_ACCESS_TOKEN_FALLBACK, refreshToken: CTRADER_REFRESH_TOKEN_FALLBACK },
+      "forex-candles",
+    );
     const candles = await fetchTrendbars({
       clientId: CTRADER_CLIENT_ID,
       clientSecret: CTRADER_CLIENT_SECRET,
       accessToken,
       refreshToken,
-      onTokenRefresh: onTokenRefreshFor(supabase),
+      onTokenRefresh,
       symbolName: symbol,
       period: ctraderPeriod,
       count,
       toTimestampMs: toParam ? Number(toParam) : undefined,
     });
-    await persistClosedCandles(supabase, symbol, period, candles);
+    await persistIfArchivable(supabase, symbol, period, candles);
     return new Response(JSON.stringify(candles), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });

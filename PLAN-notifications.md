@@ -503,4 +503,43 @@ Beide Instrumente (GBPUSD/EURUSD) sind damit jetzt bei Kerzen UND OB-Zonen symme
 
 ---
 
+## Status: Market-Structure-Startpunkt: 1D-Periode-4-Pivots — 2026-08-30
+
+Auslöser: der 1H-Market-Structure-Algo (`marketStructureAnalysis.ts`) hatte keinen fundierten
+Default-Startpunkt, nur ein rollierendes Lookback-Fenster (7 Tage Frontend, 21 Tage MCP-Server) —
+Philip wollte stattdessen den zuletzt gebildeten 1D-Periode-4-Fraktal-Pivot als Default-Start.
+
+**Umgesetzt:**
+- `forex_candles` persistiert jetzt auch `1D`-Kerzen (Migration `20260830090000`, `forex-candles`-
+  Edge-Function erweitert) — bisher explizit ausgeschlossen ("1D bleibt reiner Live-Read").
+- Neue Tabelle `daily_structure_pivots` (Migration `20260830091000`) + neue, tägliche Edge Function
+  `daily-structure-pivots`: holt/persistiert 1D-Kerzen für GBPUSD/EURUSD, erkennt Periode-4-
+  Fraktal-Pivots darauf (`_shared/liquidityDetection.ts`, aus `trading-monitor-mcp/liquidityDetection.js`
+  nach `_shared/` verschoben, damit sie von mehreren Functions genutzt werden kann) und löst pro
+  Pivot die tatsächliche 1H-Kerze auf (`_shared/resolveStructureStartTime.ts`, Preis-Match mit
+  Epsilon-Toleranz, ältester Treffer bei mehreren am selben Tag) — eine 1D-Kerze hat selbst keinen
+  Intraday-Zeitpunkt, den der 1H-Algo als Cutoff braucht. Cron auf `22:15 UTC` (Migration
+  `20260830092000`) — empirisch verifiziert (Live-Fetch gegen `forex-candles`) statt geraten: D1
+  rollt aktuell (Sommerzeit) um 21:00 UTC, 22:15 UTC bleibt auch nach dem Winterzeit-Sprung
+  (22:00 UTC) sicher danach.
+- `ctrader_oauth_tokens`-Laden/Zurückschreiben (bis dahin doppelt in `poi-watcher`/`forex-candles`
+  dupliziert) nach `_shared/ctraderCreds.ts` extrahiert, alle drei Functions nutzen das jetzt —
+  eine dritte Kopie für die neue Function hätte die "DRY within a single runtime"-Regel verletzt.
+- Default-Einspeisung bleibt umschaltbar: MCP-Server (`compute1hStructureState`) nutzt den neuesten
+  Pivot nur, wenn `structureConfig.fixedStartActive` GAR NICHT übergeben wird (nicht `false`),
+  Fallback aufs alte 21-Tage-Fenster ohne Pivot. Frontend (`Dashboard.vue`) füllt `rangesFixedStartTime`/
+  `-Active` einmalig automatisch vor, nur wenn Philip diesen Toggle in diesem Browser noch nie
+  angefasst hat (roher `localStorage`-Check) — ein späteres manuelles Zurückschalten auf
+  rollierenden Lookback bleibt danach dauerhaft unangetastet.
+- Dreieck-Marker (▲ High-Pivot, ▼ Low-Pivot) über alle Timeframes hinweg, an den Kerzenrand
+  geklemmt statt bei weggescrolltem Fenster zu verschwinden (`src/dailyPivotMarkers.js`,
+  `usePriceChartDailyPivots.js`) — eigene Chart-Farben `dailyPivotHigh`/`dailyPivotLow`.
+
+**Noch offen (Philips erster Versuch, über Zeit zu validieren):** `touched` auf
+`daily_structure_pivots` wird nur beim Ersterkennen gesetzt, nicht laufend nachgeführt (kein
+aktiver Nutzer dieses Felds bisher — reine Parität zu `liquidity_levels`). Erste echte Cron-Läufe
+und der resultierende Default-Cutoff sind nach dem Deploy noch mit Philip zu verifizieren.
+
+---
+
 **Nächster Schritt:** Phase A — tiefere Kerzenhistorie von OKX holen (Pagination), dann Backtesting-Modul aufsetzen.

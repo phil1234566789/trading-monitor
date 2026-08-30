@@ -23,6 +23,7 @@ import {
 import { LiquidityLinePrimitive, liquidityLevelNaturalKey } from "../liquidity.js";
 import { findNearestLiquidityTargets, findNearestObTargets } from "../findTargets.js";
 import { usePriceChartLiquidity } from "../composables/usePriceChartLiquidity.js";
+import { usePriceChartDailyPivots } from "../composables/usePriceChartDailyPivots.js";
 import { sessions } from "../sessions.js";
 import { newsEvents } from "../newsEvents.js";
 import { usePriceChartSessionsAndNews } from "../composables/usePriceChartSessionsAndNews.js";
@@ -168,6 +169,10 @@ const props = defineProps({
   // 2026-08-23 Teil von showLiquidity statt eigenem Toggle (kein zusätzlicher Klick nötig, siehe
   // computeHtfLiquidityLevels/refreshLiquidityInternal).
   dbLiquidityLevelsHtf: { type: Array, default: () => [] },
+  // 1D-Periode-4-Struktur-Pivots (Task "Market-Structure-Startpunkt: 1D-Periode-4-Pivots", siehe
+  // src/dailyPivots.js: fetchDailyStructurePivots, in Dashboard.vue gepollt) — immer sichtbar
+  // (kein eigener Toggle), über alle Timeframes hinweg, siehe usePriceChartDailyPivots.js.
+  dbDailyPivots: { type: Array, default: () => [] },
   showSweptLiquidity: { type: Boolean, default: false },
   showLiquidityDebug: { type: Boolean, default: false },
   showTradeSetups: { type: Boolean, default: true },
@@ -352,6 +357,11 @@ const {
   dispose: disposeLiquidity,
   refresh: refreshLiquidity,
 } = usePriceChartLiquidity();
+// 1D-Struktur-Pivot-Dreiecke (Task "Market-Structure-Startpunkt: 1D-Periode-4-Pivots") — dünnste
+// Variante des Composable-Musters (wie usePriceChartTradeSetupDrawing), da hier weder Roh-Erkennung
+// noch Klick-Hittest-Zustand dranhängt, nur reines Zeichnen der bereits fertig gelieferten
+// dbDailyPivots-Prop.
+const { create: createDailyPivots, dispose: disposeDailyPivots, refresh: refreshDailyPivots } = usePriceChartDailyPivots();
 
 const chartContainerRef = ref(null);
 // Chart-Höhe (siehe Dashboard.vue: tradesPanelHeight, dieselbe Begründung) — useTabScopedRef statt
@@ -1116,6 +1126,12 @@ function refreshLiquidityInternal() {
   });
 }
 
+// Dünner Wrapper um usePriceChartDailyPivots' refresh() — 1D-Struktur-Pivot-Dreiecke, immer
+// sichtbar (kein eigener Toggle, siehe dbDailyPivots-Prop-Kommentar).
+function refreshDailyPivotsInternal() {
+  refreshDailyPivots(clipReplay(allCandles), { dbDailyPivots: props.dbDailyPivots, symbol: props.symbol });
+}
+
 // Sessions/News-Marker-Zeichenlogik lebt seit Phase 6 des Große-Dateien-Refactorings in
 // usePriceChartSessionsAndNews.js (siehe dort) — hier nur noch dünne Wrapper, die candleSeries/
 // Kerzen/Props durchreichen, damit alle bestehenden Call-Sites (refreshChart(), watch(...) unten)
@@ -1507,6 +1523,7 @@ function refreshChart() {
   candleSeries.setData(clipReplay(allCandles));
   refreshPoiZonesInternal();
   refreshLiquidityInternal();
+  refreshDailyPivotsInternal();
   refreshSessionsInternal();
   refreshNewsMarkersInternal();
   refreshTradeMarkersInternal();
@@ -1677,6 +1694,7 @@ onMounted(() => {
   createMarketStructure(chart, candleSeries);
   createTradeSetupDrawing(candleSeries);
   createLiquidity(candleSeries);
+  createDailyPivots(candleSeries);
 
   chart.subscribeClick((param) => {
     if (!param.point || !props.tradeModeActive) return;
@@ -1834,6 +1852,7 @@ onUnmounted(() => {
   disposeMarketStructure();
   disposeTradeSetupDrawing();
   disposeLiquidity();
+  disposeDailyPivots();
   // scheduleNextPoll/-TradeSetupM5Poll/-RangesPoll nutzen setTimeout statt setInterval
   // (Kerzenschluss-Ausrichtung, siehe dort) -> clearTimeout statt clearInterval.
   clearTimeout(pollTimer);
@@ -1899,6 +1918,7 @@ watch(() => props.dbObZones, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
 watch(() => props.showLiquidity, refreshLiquidityInternal);
 watch(() => props.dbLiquidityLevelsHtf, refreshLiquidityInternal);
+watch(() => props.dbDailyPivots, refreshDailyPivotsInternal);
 watch(() => props.showSweptLiquidity, refreshLiquidityInternal);
 watch(() => props.showLiquidityDebug, () => {
   refreshLiquidityInternal();

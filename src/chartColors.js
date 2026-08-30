@@ -163,6 +163,12 @@ export const DEFAULT_CHART_COLORS = {
   // Pink statt Lila (tradeTarget/tradeConfirmation belegen Lila/Indigo bereits) — soll auf den
   // ersten Blick nicht mit Target-/Bestätigungs-Linien verwechselbar sein.
   pin: { hex: "#ec407a", alpha: 0.9 },
+  // Dreieck-Marker für die persistierten 1D-Periode-4-Struktur-Pivots (Task "Market-Structure-
+  // Startpunkt: 1D-Periode-4-Pivots", siehe dailyPivotMarkers.js) — eigene Keys statt
+  // Wiederverwendung von rangeHigh/rangeLow, damit ein späteres Anpassen der Ranges-Debug-Farben
+  // diese Marker nicht mitverschiebt.
+  dailyPivotHigh: { hex: "#ef5350", alpha: 0.95 },
+  dailyPivotLow: { hex: "#00e676", alpha: 0.95 },
 };
 
 function loadInitial() {

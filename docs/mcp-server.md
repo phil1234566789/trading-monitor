@@ -38,12 +38,19 @@ Anon-Key-Pattern wie `src/supabaseClient.js` (kein `service_role`):
 Bündelt M5-Kerzen + Asia-Session-Range, 1H-Struktur/Trend, relevante Liquidity-Levels und OB-Zonen
 für ein Instrument in einem Call, statt ein halbes Dutzend `get_*`-Tools einzeln zu feuern.
 Struktur-Trend-Parameter (`periodOuter`/`periodInner`/`lookbackHours*`/`fixedStartActive`/
-`fixedStartTime`) defaulten auf dieselben period-5/2-Werte wie der "Daten-Export"-Button, aber mit
-21 Tagen rollierendem Lookback (`STRUCTURE_LOOKBACK_HOURS` in `dataExport.ts`, MCP-Server-only —
-der Button selbst bleibt bei 7 Tagen), damit ein zu kurzes Fenster nicht den Ursprung eines
-mehrfach verschachtelten Trends abschneidet (siehe `marketStructureAnalysis.rules.md`
-"beliebige Verschachtelungstiefe"). Ein nicht-default "fixer Start" lebt nur in Philips
-Browser-`localStorage` (nie zu Supabase synced) — der Tool kann ihn nicht selbst entdecken, bei
+`fixedStartTime`) defaulten auf dieselben period-5/2-Werte wie der "Daten-Export"-Button. Seit Task
+"Market-Structure-Startpunkt: 1D-Periode-4-Pivots" (2026-08-30) ist der Default-Cutoff (wenn
+`fixedStartActive` GAR NICHT im Aufruf steht, nicht explizit `false`) der letzte persistierte
+1D-Periode-4-Fraktal-Pivot dieses Instruments (`daily_structure_pivots`, aufgelöst über
+`structure_start_time` — siehe `daily-structure-pivots/index.ts` und
+`src/marketStructureAnalysis.notes.md`), nicht mehr ein rollierendes Zeitfenster. Nur solange für
+ein Instrument noch kein Pivot vorliegt, fällt `compute1hStructureState` auf das alte Verhalten
+zurück: 21 Tage rollierender Lookback (`STRUCTURE_LOOKBACK_HOURS` in `dataExport.ts`,
+MCP-Server-only — der Button selbst bleibt bei 7 Tagen), damit ein zu kurzes Fenster nicht den
+Ursprung eines mehrfach verschachtelten Trends abschneidet (siehe `marketStructureAnalysis.rules.md`
+"beliebige Verschachtelungstiefe"). Ein explizit übergebener "fixer Start"
+(`fixedStartActive: true`) hat weiterhin Vorrang vor beidem — lebt nur in Philips
+Browser-`localStorage` (nie zu Supabase synced), der Tool kann ihn nicht selbst entdecken, bei
 Bedarf nachfragen statt raten.
 
 ## Warum nicht einfach `src/dataExport.js` wiederverwenden

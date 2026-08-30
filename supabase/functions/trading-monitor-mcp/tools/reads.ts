@@ -56,10 +56,13 @@ export function registerReadTools(server: McpServer) {
         "DB-Zeilen (M5 wird von poi-watcher nie persistiert), deshalb auch kein späteres Update: " +
         "touched/invalidated gelten nur zum Zeitpunkt dieses Calls. Nutze die granularen get_*-Tools " +
         "nur, wenn du darüber hinaus mehr brauchst (andere Zeitspanne, Journal, News, Handelszeiten). " +
-        "Der Structure-Trend nutzt standardmäßig einen rollierenden 21-Tage-Lookback (Periode " +
-        "5/2) — falls Philip im Dashboard einen 'fixen Start' eingestellt hat (nur in seinem " +
-        "Browser-localStorage sichtbar, nicht von hier aus abfragbar), frag ihn danach und gib es " +
-        "über structureConfig mit. Antwort enthält zusätzlich structureWindow (cutoffOuter/" +
+        "Der Structure-Trend (Periode 5/2) nutzt standardmäßig den letzten persistierten " +
+        "1D-Periode-4-Struktur-Pivot dieses Instruments als Startpunkt (daily_structure_pivots, " +
+        "täglicher Cron) — nur solange dafür noch kein Pivot vorliegt, fällt er auf einen " +
+        "rollierenden 21-Tage-Lookback zurück. Falls Philip im Dashboard EXPLIZIT einen anderen " +
+        "'fixen Start' eingestellt hat (nur in seinem Browser-localStorage sichtbar, nicht von " +
+        "hier aus abfragbar), frag ihn danach und gib es über structureConfig mit. Antwort enthält " +
+        "zusätzlich structureWindow (cutoffOuter/" +
         "cutoffInner als Unix-Sekunden UND als cutoffOuterAt/cutoffInnerAt in 'YYYY-MM-DD HH:mm' " +
         "Europe/Berlin, direkt nutzbar als time-Feld für post_chart_annotations) — zeichne diesen " +
         "Startpunkt IMMER als Marker/Linie ein, wenn du eine Structure-Trend-Analyse zeigst, damit " +

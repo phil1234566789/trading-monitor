@@ -144,6 +144,25 @@ export async function getLiquidityLevels(instrument: string, timeframe?: string,
   return [...highs, ...lows];
 }
 
+// Neuester 1D-Periode-4-Pivot mit aufgelöstem structure_start_time (siehe daily-structure-pivots/
+// index.ts) — der Default-Startpunkt für compute1hStructureState (tools/dataExport.ts), statt des
+// bisherigen rollierenden Lookback-Fensters. null, falls noch kein Pivot vorliegt (frisches
+// Instrument, oder der Cron ist noch nicht gelaufen) ODER dessen structure_start_time noch nicht
+// aufgelöst werden konnte (1H-Historie für den Pivot-Tag fehlte zum Erkennungszeitpunkt) — der
+// Aufrufer fällt dann auf das alte Verhalten zurück.
+export async function getLatestDailyStructureStartTime(instrument: string): Promise<number | null> {
+  const { data, error } = await supabase
+    .from("daily_structure_pivots")
+    .select("structure_start_time")
+    .eq("instrument", instrument)
+    .not("structure_start_time", "is", null)
+    .order("pivot_time", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? Math.floor(new Date(data.structure_start_time as string).getTime() / 1000) : null;
+}
+
 export async function getTradeSetups(instrument: string) {
   const { data, error } = await supabase
     .from("trade_setups")

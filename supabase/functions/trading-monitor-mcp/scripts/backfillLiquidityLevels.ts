@@ -42,7 +42,7 @@
 //     [BACKFILL_BARS=1h,4h] deno run --allow-net --allow-env \
 //     supabase/functions/trading-monitor-mcp/scripts/backfillLiquidityLevels.ts
 import { supabase } from "../supabaseClient.ts";
-import { detectLiquidityLevels, LIQUIDITY_FRACTAL_PERIOD } from "../liquidityDetection.js";
+import { detectLiquidityLevels, LIQUIDITY_FRACTAL_PERIOD } from "../../_shared/liquidityDetection.ts";
 
 // forex_candles.bar ("1h"/"4h", unsere eigene Konvention, siehe backfillForexCandles.ts) auf den
 // liquidity_levels.timeframe-Spaltenwert gemappt (uneinheitlich großgeschrieben, siehe

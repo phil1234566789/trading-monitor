@@ -5,7 +5,7 @@
 // eigens dafür extrahierten, abhängigkeitsfreien liquidityDetection.js. Die Zeichnung (State ->
 // Chart-Primitives, inkl. LiquidityLinePrimitive/cssColor/lineWidth/PIP_SIZE) lebt seitdem separat
 // in marketStructureRendering.ts.
-import { detectLiquidityLevels } from "./liquidityDetection.js";
+import { detectLiquidityLevels } from "../_shared/liquidityDetection.ts";
 import type { Pivot, PivotHigh, PivotLow, MarketStructureState } from "./range.type";
 
 // "up": bestätigt einen Uptrend (bestehendes Verhalten, Default -> ändert nichts an bisherigen

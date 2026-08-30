@@ -9,7 +9,7 @@
 // Sessions, Asia-Range) mitzuziehen — find_targets braucht nur die Kandidaten + den aktuellen Preis.
 import { fetchForexCandles } from "./forexCandles.ts";
 import { getLiquidityLevels, getObZones } from "./db.ts";
-import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "./liquidityDetection.js";
+import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "../_shared/liquidityDetection.ts";
 import { detectOrderBlocks } from "./orderBlockDetection.js";
 import { PIP_SIZE } from "./pipConfig.js";
 
