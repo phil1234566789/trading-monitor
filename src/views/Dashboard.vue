@@ -490,6 +490,15 @@ async function onTscAddTargetFromPicker(target) {
   const ok = await addTargetToTrade(tscRangeId.value, target);
   if (ok) refreshTscRange();
 }
+// Anti-Confluence-Vorschläge (Chat 2026-08-30) — PriceChart.vue: openAntiConfluencePicker baut das
+// Confirmation-Rohformat bereits fertig (dieselbe Form wie ein Chart-Klick), hier nur noch der ganz
+// normale addRangeConfirmation-Weg mit explizitem category='anti_confluence' wie bei jeder anderen
+// Anti-Confluence.
+async function onTscAddAntiConfluenceFromPicker(confirmation) {
+  if (tscRangeId.value == null) return;
+  const ok = await addRangeConfirmation(tscRangeId.value, confirmation, "anti_confluence");
+  if (ok) refreshTscRange();
+}
 // "In die Trades-Liste überführen" (Chat 2026-08-27) — legt eine leere trade_positions-Zeile für
 // die bestehende TSC-Range an und öffnet sie sofort im Trade-Edit-Modal, damit Philip Entry/
 // Stop-Loss/etc. dort ganz normal ausfüllt statt in einem zweiten, redundanten Formular in der TSC.
@@ -2028,6 +2037,7 @@ watch(selectedTradingAccountId, () => {
     @toggle-trade-mode="tradeModeActive = !tradeModeActive"
     @pin-context-menu="onPinContextMenu"
     @tsc-add-target-from-picker="onTscAddTargetFromPicker"
+    @tsc-add-anti-confluence-from-picker="onTscAddAntiConfluenceFromPicker"
     />
     <TradeSetupCockpit
       class="chart-tsc-row-tsc"
@@ -2048,6 +2058,7 @@ watch(selectedTradingAccountId, () => {
       @invalidation-saved="refreshTscRange"
       @reset="onTscReset"
       @open-target-picker="priceChartRef?.openTargetPicker()"
+      @open-anti-confluence-picker="priceChartRef?.openAntiConfluencePicker()"
       @hover-evidence="hoveredCockpitEvidenceItem = $event"
       @hover-target="hoveredCockpitTargetItem = $event"
     />

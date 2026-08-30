@@ -63,8 +63,10 @@ const SAME_PRICE_EPSILON = 0.05 * PIP_SIZE;
 
 // Baut den Kandidaten-Pool (M5 live + HTF DB, beide Richtungen, beide Objektarten) für ein
 // Instrument zu einem Zeitpunkt — dieselbe Zusammenstellung wie tools/dataExport.ts:229-307, nur
-// ohne die dortigen Struktur-Trend-/Sessions-/Asia-Range-Bausteine.
-async function buildCandidatePool(instrument, currentTimeSec) {
+// ohne die dortigen Struktur-Trend-/Sessions-/Asia-Range-Bausteine. Exportiert (statt modul-privat)
+// — findAntiConfluenceCandidates.js braucht denselben Pool (M5 live + HTF DB, beide Richtungen),
+// nur mit anderen Filtern als find_targets, kein zweiter DB-Fetch dafür (DRY, siehe CLAUDE.md).
+export async function buildCandidatePool(instrument, currentTimeSec) {
   const m5DetectionCount = Math.ceil((M5_DETECTION_LOOKBACK_HOURS * 3600) / M5_BAR_SECONDS) + M5_DETECTION_CANDLE_BUFFER;
   const [m5DetectionRaw, liquidityLevels, obZones] = await Promise.all([
     fetchForexCandles(instrument, "5m", { count: m5DetectionCount, toMs: currentTimeSec * 1000 }),
@@ -134,6 +136,10 @@ async function buildCandidatePool(instrument, currentTimeSec) {
   return {
     liquidityLevels: [...m5Liquidity, ...htfLiquidity],
     obZones: [...m5Ob, ...htfOb],
+    // Zusätzlich zurückgegeben (find_targets selbst braucht es nicht) — findAntiConfluenceCandidates.js
+    // will RSI-Divergenzen auf denselben M5-Kerzen erkennen, ohne den identischen Fetch ein zweites
+    // Mal auszulösen (DRY, siehe CLAUDE.md).
+    m5Candles,
   };
 }
 

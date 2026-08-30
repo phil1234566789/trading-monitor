@@ -22,6 +22,7 @@ import {
 } from "../priceChartHitTest.js";
 import { LiquidityLinePrimitive, liquidityLevelNaturalKey } from "../liquidity.js";
 import { findNearestLiquidityTargets, findNearestObTargets } from "../findTargets.js";
+import { findAntiConfluenceCandidates } from "../findAntiConfluences.js";
 import { usePriceChartLiquidity } from "../composables/usePriceChartLiquidity.js";
 import { usePriceChartDailyPivots } from "../composables/usePriceChartDailyPivots.js";
 import { sessions } from "../sessions.js";
@@ -88,6 +89,7 @@ import MetadataPanel from "./MetadataPanel.vue";
 import JsonTree from "./JsonTree.vue";
 import RsiDivergenceStatsPanel from "./RsiDivergenceStatsPanel.vue";
 import TargetPickerModal from "./TargetPickerModal.vue";
+import AntiConfluencePickerModal from "./AntiConfluencePickerModal.vue";
 
 const props = defineProps({
   symbol: { type: String, required: true },
@@ -304,6 +306,7 @@ const emit = defineEmits([
   "select-setup-confirmations",
   "pin-context-menu",
   "tsc-add-target-from-picker",
+  "tsc-add-anti-confluence-from-picker",
 ]);
 
 const { markSuccess } = useStatusBar();
@@ -1040,9 +1043,16 @@ function refreshPoiZonesInternal() {
     ...obZoneCtx(),
   });
   const visibleZones = mergePinnedZones(filterHistorical(zones, props.showHistoricalObs), props.pinnedObZones, candles);
-  // Target-Picker-Hover (siehe openTargetPicker weiter unten) läuft über denselben Pin-Halo-
-  // Highlight-Mechanismus wie eine gehoverte gepinnte OB-Zone.
-  renderPersistedZones(candleSeries, visibleZones, orderBlockPrimitives, candles, props.pinObZoneKeys, props.hoveredPinObZoneKey ?? targetPickerHoveredObKey.value);
+  // Target-/Anti-Confluence-Picker-Hover (siehe openTargetPicker/openAntiConfluencePicker weiter
+  // unten) laufen über denselben Pin-Halo-Highlight-Mechanismus wie eine gehoverte gepinnte OB-Zone.
+  renderPersistedZones(
+    candleSeries,
+    visibleZones,
+    orderBlockPrimitives,
+    candles,
+    props.pinObZoneKeys,
+    props.hoveredPinObZoneKey ?? targetPickerHoveredObKey.value ?? antiConfluencePickerHoveredObKey.value,
+  );
   poiZonesMetadata.value = visibleZones;
 }
 
@@ -1128,6 +1138,100 @@ function onTargetPickerSelect(candidate) {
   });
 }
 
+// Anti-Confluence-Vorschläge (Chat 2026-08-30, Philip: "Lana tut sich schwer selbst anti-
+// confluences zu finden") — Auswahl-Logik in findAntiConfluences.js, hier nur Modal-State + dieselbe
+// lokale Datenquelle wie openTargetPicker (getCurrentLiquidityLevels()/poiZonesMetadata/
+// clipReplay(allCandles), kein neuer Fetch). Braucht mind. 1 Target (definiert die ferne Zonen-
+// Kante), siehe TradeSetupCockpit.vue: disabled auf dem Lupe-Button.
+const antiConfluencePickerOpen = ref(false);
+const antiConfluencePickerCurrentPrice = ref(null);
+const antiConfluencePickerObCandidates = ref([]);
+const antiConfluencePickerSweepCandidates = ref([]);
+const antiConfluencePickerDivergenceCandidates = ref([]);
+const antiConfluencePickerInvalidationObCandidates = ref([]);
+const antiConfluencePickerHoveredLiquidityKey = ref(null);
+const antiConfluencePickerHoveredObKey = ref(null);
+function openAntiConfluencePicker() {
+  const targets = props.tscRange?.targets ?? [];
+  if (!props.tscRange || targets.length === 0) return;
+  const direction = props.tscRange.direction;
+  // Ferne Zonen-Kante: tiefstes Short- bzw. höchstes Long-Target (Philip 2026-08-30: "wenn es
+  // mehrere short targets gibt, dann ist das tiefste short target die range").
+  const zoneBoundPrice = direction === "short" ? Math.min(...targets.map((t) => t.price)) : Math.max(...targets.map((t) => t.price));
+  const currentPrice = currentPriceEstimate(clipReplay(allCandles));
+  antiConfluencePickerCurrentPrice.value = currentPrice;
+  const result = findAntiConfluenceCandidates({
+    direction,
+    zoneBoundPrice,
+    currentPrice,
+    invalidation: props.tscRange.invalidation,
+    obZones: poiZonesMetadata.value,
+    liquidityLevels: getCurrentLiquidityLevels(),
+    candles: clipReplay(allCandles),
+    nowSec: props.replayUntil ?? Math.floor(Date.now() / 1000),
+  });
+  antiConfluencePickerObCandidates.value = result.obCandidates;
+  antiConfluencePickerSweepCandidates.value = result.sweepCandidates;
+  antiConfluencePickerDivergenceCandidates.value = result.divergenceCandidates;
+  antiConfluencePickerInvalidationObCandidates.value = result.invalidationObCandidates;
+  antiConfluencePickerOpen.value = true;
+}
+function onAntiConfluencePickerHover(candidate) {
+  antiConfluencePickerHoveredLiquidityKey.value = candidate?.kind === "pivot" ? liquidityLevelNaturalKey(candidate.item.dir, candidate.item.pivotTime) : null;
+  antiConfluencePickerHoveredObKey.value =
+    candidate?.kind === "ob" || candidate?.kind === "ob-inv" ? obZoneNaturalKey(candidate.item.timeframe, candidate.item.dir, candidate.item.startTime) : null;
+  refreshLiquidityInternal();
+  refreshPoiZonesInternal();
+}
+function onAntiConfluencePickerSelect(candidate) {
+  antiConfluencePickerOpen.value = false;
+  antiConfluencePickerHoveredLiquidityKey.value = null;
+  antiConfluencePickerHoveredObKey.value = null;
+  refreshLiquidityInternal();
+  refreshPoiZonesInternal();
+  if (candidate.kind === "ob" || candidate.kind === "ob-inv") {
+    const zone = candidate.item;
+    emit("tsc-add-anti-confluence-from-picker", {
+      kind: "ob",
+      price: zone.edgePrice,
+      sourceTime: zone.startTime,
+      touchedTime: zone.held ? zone.endTime : null,
+      rangeLow: zone.bottom,
+      rangeHigh: zone.top,
+      timeframe: zone.timeframe,
+      instrument: props.symbol,
+      // Die OB-EIGENE Richtung ("obDirection"), NICHT die Trade-Richtung — siehe insertConfirmation
+      // in tradeIntake.js (obZoneId-Auflösung braucht die tatsächliche Long/Short-Natur der Zone).
+      direction: zone.dir === 1 ? "long" : "short",
+    });
+    return;
+  }
+  if (candidate.kind === "pivot") {
+    const level = candidate.item;
+    emit("tsc-add-anti-confluence-from-picker", {
+      kind: "pivot",
+      price: level.price,
+      sourceTime: level.pivotTime,
+      touchedTime: level.touchedTime ?? null,
+      levelDirection: level.dir === 1 ? "high" : "low",
+      instrument: props.symbol,
+      timeframe: level.timeframe?.toUpperCase() ?? null,
+    });
+    return;
+  }
+  const divergence = candidate.item;
+  emit("tsc-add-anti-confluence-from-picker", {
+    kind: "rsi_divergence",
+    price: divergence.toPrice,
+    sourceTime: divergence.toTime,
+    touchedTime: divergence.toTime,
+    divergenceType: divergence.type,
+    fromPrice: divergence.fromPrice,
+    fromRsi: divergence.fromRsi,
+    toRsi: divergence.toRsi,
+  });
+}
+
 // Dünner Wrapper um usePriceChartLiquidity's refresh() (siehe dort für die volle Bug-Historie zur
 // Erkennung/Zeichnung selbst) — übersetzt Props/lokale Refs in dessen ctx-Format.
 function refreshLiquidityInternal() {
@@ -1135,9 +1239,9 @@ function refreshLiquidityInternal() {
     showLiquidity: props.showLiquidity,
     pinnedLiquidityLevels: props.pinnedLiquidityLevels,
     pinLiquidityLevelKeys: props.pinLiquidityLevelKeys,
-    // Target-Picker-Hover (siehe oben) läuft über denselben Pin-Halo-Highlight-Mechanismus wie ein
-    // gehoverter Pin — eigenständige Zeichnung wäre dieselbe Linie ein zweites Mal.
-    hoveredPinLiquidityLevelKey: props.hoveredPinLiquidityLevelKey ?? targetPickerHoveredLiquidityKey.value,
+    // Target-/Anti-Confluence-Picker-Hover (siehe oben) laufen über denselben Pin-Halo-Highlight-
+    // Mechanismus wie ein gehoverter Pin — eigenständige Zeichnung wäre dieselbe Linie ein zweites Mal.
+    hoveredPinLiquidityLevelKey: props.hoveredPinLiquidityLevelKey ?? targetPickerHoveredLiquidityKey.value ?? antiConfluencePickerHoveredLiquidityKey.value,
     showSweptLiquidity: props.showSweptLiquidity,
     dbLiquidityLevelsHtf: props.dbLiquidityLevelsHtf,
     symbol: props.symbol,
@@ -2217,6 +2321,7 @@ defineExpose({
   // refreshLiquidityInternal/refreshPoiZonesInternal fürs Hover). Dashboard.vue ruft das nur noch
   // per Ref auf, statt es über den jetzt entfallenen tsc-*-Event-Relay zu bekommen.
   openTargetPicker,
+  openAntiConfluencePicker,
 });
 </script>
 
@@ -2262,6 +2367,26 @@ defineExpose({
       "
       @hover="onTargetPickerHover"
       @select="onTargetPickerSelect"
+    />
+    <AntiConfluencePickerModal
+      v-if="antiConfluencePickerOpen"
+      :instrument="symbol"
+      :direction="tscRange?.direction ?? null"
+      :ob-candidates="antiConfluencePickerObCandidates"
+      :sweep-candidates="antiConfluencePickerSweepCandidates"
+      :divergence-candidates="antiConfluencePickerDivergenceCandidates"
+      :invalidation-ob-candidates="antiConfluencePickerInvalidationObCandidates"
+      :current-price="antiConfluencePickerCurrentPrice"
+      :now-sec="props.replayUntil ?? Math.floor(Date.now() / 1000)"
+      @close="
+        antiConfluencePickerOpen = false;
+        antiConfluencePickerHoveredLiquidityKey = null;
+        antiConfluencePickerHoveredObKey = null;
+        refreshLiquidityInternal();
+        refreshPoiZonesInternal();
+      "
+      @hover="onAntiConfluencePickerHover"
+      @select="onAntiConfluencePickerSelect"
     />
     <MetadataPanel v-if="showRangesMetadata" title="Structure-Metadaten" @close="emit('close-ranges-metadata')">
       <div class="metadata-subheading-row">

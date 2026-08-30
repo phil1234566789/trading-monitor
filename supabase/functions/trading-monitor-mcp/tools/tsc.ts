@@ -2,6 +2,7 @@ import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import { createDealingRange, deleteDealingRange, fetchActiveTscRangeId, fetchDealingRangeCockpit } from "../db.ts";
 import { findTargetCandidates } from "../findTargetCandidates.js";
+import { findAntiConfluenceCandidates } from "../findAntiConfluenceCandidates.js";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -97,5 +98,35 @@ export function registerTscTools(server: McpServer) {
       },
     },
     async (args) => json(await findTargetCandidates(args)),
+  );
+
+  server.registerTool(
+    "find_anti_confluences",
+    {
+      title: "Anti-Confluence-Kandidaten finden",
+      description:
+        "Liefert Kandidaten für Dinge, die GEGEN eine Dealing-Range-Idee sprechen (Anti-Confluences) " +
+        "— analog find_targets, aber für die Gegenrichtung. Zone = tiefstes Short-Target bis " +
+        "aktueller Preis (bzw. aktueller Preis bis höchstes Long-Target) — zoneBoundPrice ist die " +
+        "ferne Kante dieser Zone (aus den bereits per add_trade_target gesetzten Targets der Range, " +
+        "siehe get_tsc_range: nimm dort das preislich extremste Target). Liefert 4 Kandidatenlisten: " +
+        "obCandidates (gegenläufige — bullische bei Short, bärische bei Long — OBs in der Zone, " +
+        "offen ODER bereits berührt-aber-gehalten, siehe held-Flag), sweepCandidates (gegenläufige " +
+        "LQ-Sweeps in der Zone), divergenceCandidates (gegenläufige RSI-Divergenz in der Zone), " +
+        "invalidationObCandidates (unberührte gegenläufige OBs knapp jenseits der Invalidierung, " +
+        "max 10 Pips — nur befüllt, wenn invalidation mitgegeben wird). WICHTIG: jede per " +
+        "add_trade_confirmation (category='anti_confluence') gespeicherte Anti-Confluence MUSS " +
+        "einer dieser Kandidaten sein, nicht eigenständig einen Preis/ein Objekt außerhalb dieser " +
+        "Listen wählen. currentTimeSec optional für einen Replay-Zeitpunkt (Default: jetzt, wie " +
+        "get_data_export's replayUntilSec).",
+      inputSchema: {
+        instrument: INSTRUMENT,
+        direction: DIRECTION,
+        zoneBoundPrice: z.number().describe("Ferne Kante der Zone: tiefstes Short-Target bzw. höchstes Long-Target"),
+        invalidation: z.number().optional().describe("Für invalidationObCandidates — ohne diesen Parameter bleibt die Liste leer"),
+        currentTimeSec: z.number().int().optional().describe("Unix-Sekunden, Default: jetzt"),
+      },
+    },
+    async (args) => json(await findAntiConfluenceCandidates(args)),
   );
 }

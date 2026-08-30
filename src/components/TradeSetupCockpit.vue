@@ -50,6 +50,7 @@ const emit = defineEmits([
   "invalidation-saved",
   "reset",
   "open-target-picker",
+  "open-anti-confluence-picker",
   // Hover über eine Bestätigungs-/Zusatzargument-/Anti-Confluence- ODER Target-Zeile (Chat
   // 2026-08-30) — highlightet das zugehörige Chart-Objekt, siehe Dashboard.vue. Zwei separate
   // Events statt eines gemeinsamen, weil trade_evidence.id und trade_targets.id unabhängige
@@ -247,7 +248,21 @@ const accentStyle = computed(() => {
       @add="emit('add-anti-confluence')"
       @remove="(c) => emit('remove-anti-confluence', c)"
       @hover="(c) => emit('hover-evidence', c)"
-    />
+    >
+      <template #extra-action>
+        <!-- find_anti_confluences (Chat 2026-08-30, analog find_targets/PLAN-find-targets.md) —
+             Vorschlagsliste statt Chart-Klick, braucht mind. 1 Target (definiert die ferne
+             Zonen-Kante, siehe findAntiConfluences.js). -->
+        <button
+          class="tsc-target-picker-btn"
+          title="Anti-Confluence-Vorschläge (gegenläufige OBs/Sweeps/Divergenz in der Ziel-Zone)"
+          :disabled="targets.length < 1"
+          @click="emit('open-anti-confluence-picker')"
+        >
+          🔎
+        </button>
+      </template>
+    </CrudListSection>
 
     <CrudListSection
       title="Targets"
