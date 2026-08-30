@@ -1,0 +1,19 @@
+{
+  "instrument": "GBPUSD",
+  "trading_windows": {
+    "sunday": [],
+    "weekday": [
+      [480, 1080]
+    ],
+    "saturday": []
+  },
+  "alarm_windows": {
+    "sunday": [],
+    "weekday": [
+      [420, 1065]
+    ],
+    "saturday": []
+  },
+  "notes": "10:30-13:00 (MMM-Session) nur mit zusätzlichen Bestätigungen handeln — siehe \"danger\"-Flag der MMM-Session auf dem Chart (Sessions-Modal).",
+  "updated_at": "2026-07-25T10:30:10.229506+00:00"
+}

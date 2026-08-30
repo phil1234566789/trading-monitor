@@ -83,16 +83,26 @@ export function registerReadTools(server: McpServer) {
       title: "Daten-Export (Gesamtbild)",
       description:
         "RUFE DIESES TOOL ZUERST AUF, bevor du andere trading-monitor-Tools nutzt. Liefert in einem " +
-        "Call: M5-Kerzen des Tages + Asia-Session-Range, den 1H-Structure-Trend, relevante " +
-        "persistierte Liquidity-Level (1H+4H, inkl. context wie 'asia high' und kontext wie " +
-        "'Asia-High Major (26d)' falls eine passende Session existiert) und OB-Zonen " +
-        "(1H+4H) für ein Instrument — dasselbe Bündel wie der 'Daten-Export'-" +
-        "Button in der App. ZUSÄTZLICH m5LiquidityLevels/m5ObZones: live über ein 7-Tage-Fenster neu " +
-        "erkannt (exakt derselbe Algorithmus UND Lookback wie der Button UND Philips 'Liquidität'/" +
-        "'OB M5'-Chart-Toggles, ebenfalls mit context/kontext) — anders als liquidityLevels/obZones KEINE " +
-        "DB-Zeilen (M5 wird von poi-watcher nie persistiert), deshalb auch kein späteres Update: " +
-        "touched/invalidated gelten nur zum Zeitpunkt dieses Calls. Nutze die granularen get_*-Tools " +
-        "nur, wenn du darüber hinaus mehr brauchst (andere Zeitspanne, Journal, News, Handelszeiten). " +
+        "Call: M5-Kerzen des Tages + Asia-Session-Range (nur rangeHigh/rangeLow, keine Kerzen), den " +
+        "1H-Structure-Trend, sowie relevante Liquidity-Level und OB-Zonen — beide sauber getrennt " +
+        "nach Timeframe (liquidityLevels1h/liquidityLevels4h bzw. obZones1h/obZones4h, jeweils inkl. " +
+        "kontext-Feld: bei Liquidity-Leveln zusätzlich context wie 'asia high' und kontext wie " +
+        "'Asia-High Major (26d)', bei OB-Zonen (und m5ObZones) kontext OHNE Session-Bonus, nur die " +
+        "Alters-Tier-Formel wie '(7h)'/'Medium (1d 18h)') statt eines gemischten Felds ohne " +
+        "Alters-Info. Seit 2026-08-30 PREIS-/ZEIT-gefiltert (dieselbe Logik wie " +
+        "get_near_relevant_liquidity_levels/get_near_relevant_ob_zones: ~40 Pips um den Kurs für " +
+        "ungetouchte, 7-Tage-Fenster für kürzlich getouchte/invalidierte) statt des gesamten " +
+        "historischen Bestands — kann dadurch auch kürzlich getouchte/invalidierte Zonen/Level " +
+        "enthalten, touched/invalidated-Feld beachten. m5LiquidityLevels/m5ObZones: live über ein " +
+        "7-Tage-Fenster neu erkannt (exakt derselbe Algorithmus UND Lookback wie der Button UND " +
+        "Philips 'Liquidität'/'OB M5'-Chart-Toggles) — anders als die 1h/4h-Felder KEINE DB-Zeilen " +
+        "(M5 wird von poi-watcher nie persistiert), deshalb auch kein späteres Update: " +
+        "touched/invalidated gelten nur zum Zeitpunkt dieses Calls. m5ObZones ist seit 2026-08-30 " +
+        "ebenfalls gefiltert, aber NUR nach Preis (~20 Pips um den Kurs, unabhängig vom touched-" +
+        "Status) statt der Preis-ODER-Zeit-Logik der 1H/4H-Felder — bei M5 ist 'vor Tagen getoucht' " +
+        "der Normalfall (jede Zone wird binnen Stunden getoucht), ein Zeit-Ausnahme-Zweig würde dort " +
+        "kaum etwas rausfiltern. Nutze die granularen get_*-Tools nur, wenn du darüber " +
+        "hinaus mehr brauchst (andere Zeitspanne, Journal, News, Handelszeiten). " +
         "Der Structure-Trend (Periode 5/2) nutzt standardmäßig den letzten persistierten " +
         "1D-Periode-4-Struktur-Pivot dieses Instruments als Startpunkt (daily_structure_pivots, " +
         "täglicher Cron) — nur solange dafür noch kein Pivot vorliegt, fällt er auf einen " +
@@ -102,13 +112,18 @@ export function registerReadTools(server: McpServer) {
         "dessen nestedTrend-Kette) enthält NIE eine Ebene mit trend='unknown' — die wird samt allem " +
         "darunter rausgefiltert (bedeutet nur 'Algo braucht noch mehr Strukturpunkte', keine " +
         "brauchbare Info). structure1h kann dadurch komplett null sein, auch wenn currRange/Pivots " +
-        "technisch schon existieren — das ist kein Fehler. structureTrendAge liefert zusätzlich " +
+        "technisch schon existieren — das ist kein Fehler. structurePivots ist seit 2026-08-30 je " +
+        "Ebene auf die letzten 8 Einträge gekappt (4 volle Swings, reicht für Target-Suche + " +
+        "Trend-Kraft-Check) — für die vollständige Historie das Debug-Metadata-Panel im Dashboard " +
+        "nutzen, nicht dieses Tool. pivotAt/touchedAt sind seit 2026-08-30 Berlin-formatierte " +
+        "Strings ('YYYY-MM-DD HH:mm', vorher ein roher Unix-Sekunden-String) — direkt für " +
+        "post_chart_annotations' time-Feld nutzbar. structureTrendAge liefert zusätzlich " +
         "dieselbe Ebenen-Kette (äußerste bis innerste bestätigte Ebene) mit fertigem, " +
         "wochenend-bereinigtem Alter je Ebene (ageDays/ageText/originAt) — IMMER DIESES Feld für " +
         "'seit wann läuft der Trend'/'wie alt ist er' nutzen, NIEMALS selbst aus " +
-        "currRange.high/low.pivotAt (ein roher Unix-Sekunden-String OHNE Wochenend-Bereinigung) " +
-        "zurückrechnen (Bug-Report Philip 2026-08-30: genau das lieferte ein falsches, zu hohes " +
-        "Alter, weil Wochenenden mitgezählt wurden). Antwort enthält zusätzlich " +
+        "currRange.high/low.pivotAt zurückrechnen (Bug-Report Philip 2026-08-30: eine naive " +
+        "Kalendertag-Subtraktion daraus liefert ein falsches, zu hohes Alter, weil Wochenenden " +
+        "mitgezählt werden — gilt unabhängig vom Zeitformat). Antwort enthält zusätzlich " +
         "structureWindow (cutoffOuter/cutoffInner als Unix-Sekunden UND als cutoffOuterAt/" +
         "cutoffInnerAt in 'YYYY-MM-DD HH:mm' Europe/Berlin).",
       inputSchema: {
@@ -185,30 +200,46 @@ export function registerReadTools(server: McpServer) {
       description:
         "Erkannte Trade-Setups (M5 Sweep + Fraktal + OB) aus der trade_setups-Tabelle. Bug-Report " +
         "Philip 2026-08-30: ein GBPUSD-Call ohne Eingrenzung lief über das Token-Limit (143k " +
-        "Zeichen/4410 Zeilen) — limit hat deshalb einen Default (50), fromSec zusätzlich für ein " +
-        "explizites Zeitfenster. Für 'nur das aktuellste Setup je Richtung' get_data_snapshot " +
-        "nutzen statt hier selbst zu filtern.",
+        "Zeichen/4410 Zeilen) — limit hat deshalb einen Default (2, für den Normalfall 'die letzten " +
+        "paar Setups' völlig ausreichend), fromSec zusätzlich für ein explizites Zeitfenster, für " +
+        "eine breitere Abfrage limit explizit höher setzen (max. 500). Für 'nur das aktuellste " +
+        "Setup je Richtung' get_data_snapshot " +
+        "nutzen statt hier selbst zu filtern. replayUntilSec (seit 2026-08-30) filtert zusätzlich " +
+        "auf `created_at` (poi-watcher-Erkennungszeitpunkt) — OHNE dieses Feld liefert der Call bei " +
+        "einem Backtest/Replay auch Setups zurück, die zum simulierten Zeitpunkt live noch gar " +
+        "nicht existiert hätten (Bug-Report Philip 2026-08-30, GBPUSD-Backtest bis 08:45: Setups " +
+        "mit `created_at` Stunden nach dem Cutoff kamen unfiltered zurück und mussten manuell " +
+        "verworfen werden). IMMER setzen, sobald der Call für einen Replay/Backtest-Zeitpunkt " +
+        "gedacht ist, nicht nur für einen Live-Stand.",
       inputSchema: {
         instrument: INSTRUMENT,
         fromSec: z.number().optional().describe("Unix-Sekunden, untere Grenze für fractal_pivot_time"),
-        limit: z.number().int().positive().max(500).default(50),
+        limit: z.number().int().positive().max(500).default(2).describe("Default 2 (die letzten 2 reichen für den Normalfall) — für eine breitere Abfrage explizit höher setzen"),
+        replayUntilSec: z.number().optional().describe("Unix-Sekunden — nur Setups, deren created_at (Erkennungszeitpunkt) bis zu diesem Zeitpunkt lag (Replay-Simulation)"),
       },
     },
-    async ({ instrument, fromSec, limit }) => json(await getTradeSetups(instrument, fromSec, limit)),
+    async ({ instrument, fromSec, limit, replayUntilSec }) => json(await getTradeSetups(instrument, fromSec, limit, replayUntilSec)),
   );
 
   server.registerTool(
     "get_journal",
     {
       title: "Trade-Journal",
-      description: "Einträge aus dem Trade-Journal (trade_positions je Ausführung, inkl. verknüpfter dealing_ranges-Idee mit Zielen, plus Teilausstiege).",
+      description:
+        "Einträge aus dem Trade-Journal (trade_positions je Ausführung, inkl. verknüpfter " +
+        "dealing_ranges-Idee mit Zielen, plus Teilausstiege). dateStr (seit 2026-08-30) filtert auf " +
+        "einen einzelnen Europe/Berlin-Kalendertag (triggered_at, der tatsächliche Handelszeitpunkt) " +
+        "— OHNE dateStr liefert das Tool nur 'die letzten `limit` Einträge über alle Tage', kein " +
+        "Tages-Fenster (Bug-Report Philip 2026-08-30: bis dahin gab es gar keinen Datums-Parameter, " +
+        "nur limit als grobe Annäherung an 'die letzten paar Tage').",
       inputSchema: {
         instrument: INSTRUMENT.optional(),
         source: z.enum(["backtest", "paper", "live"]).optional(),
         limit: z.number().int().positive().max(200).optional(),
+        dateStr: z.string().optional().describe("YYYY-MM-DD (Europe/Berlin) — nur Positionen mit triggered_at an diesem Kalendertag"),
       },
     },
-    async ({ instrument, source, limit }) => json(await getJournal(instrument, source, limit)),
+    async ({ instrument, source, limit, dateStr }) => json(await getJournal(instrument, source, limit, dateStr)),
   );
 
   server.registerTool(

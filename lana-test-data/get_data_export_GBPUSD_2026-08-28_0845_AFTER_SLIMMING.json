@@ -1,0 +1,966 @@
+﻿{
+  "instrument": "GBPUSD",
+  "date": "2026-08-28",
+  "timezone": "Europe/Berlin",
+  "replay": {
+    "active": true,
+    "until": 1787899500
+  },
+  "structure1h": {
+    "trend": "downtrend",
+    "currRange": {
+      "high": {
+        "type": "high",
+        "price": 1.36753,
+        "pivotAt": "2026-08-21 11:00",
+        "touched": false
+      },
+      "low": {
+        "type": "low",
+        "price": 1.3571,
+        "pivotAt": "2026-08-27 12:00",
+        "touched": false
+      }
+    },
+    "nestedTrend": null,
+    "structurePivots": [
+      {
+        "type": "low",
+        "price": 1.35829,
+        "pivotAt": "2026-08-26 16:00",
+        "touched": {
+          "price": 1.35829,
+          "touchedAt": "2026-08-27 10:00"
+        }
+      },
+      {
+        "type": "low",
+        "price": 1.3584,
+        "pivotAt": "2026-08-26 23:00",
+        "touched": {
+          "price": 1.3584,
+          "touchedAt": "2026-08-27 10:00"
+        }
+      },
+      {
+        "type": "LQ-sweep",
+        "price": 1.35986,
+        "pivotAt": "2026-08-27 01:00",
+        "touched": {
+          "price": 1.35986,
+          "touchedAt": "2026-08-27 15:00"
+        }
+      },
+      {
+        "type": "break-of-structure",
+        "price": 1.35969,
+        "pivotAt": "2026-08-27 09:00",
+        "touched": {
+          "price": 1.35969,
+          "touchedAt": "2026-08-27 15:00"
+        }
+      },
+      {
+        "type": "low",
+        "price": 1.3571,
+        "pivotAt": "2026-08-27 12:00",
+        "touched": false
+      },
+      {
+        "type": "high",
+        "price": 1.36028,
+        "pivotAt": "2026-08-27 15:00",
+        "touched": false
+      },
+      {
+        "type": "low",
+        "price": 1.35797,
+        "pivotAt": "2026-08-27 23:00",
+        "touched": false
+      },
+      {
+        "type": "high",
+        "price": 1.35985,
+        "pivotAt": "2026-08-28 01:00",
+        "touched": false
+      }
+    ],
+    "innerStructurePivots": [],
+    "closedRanges": []
+  },
+  "structureTrendAge": [
+    {
+      "trend": "downtrend",
+      "ageDays": 4,
+      "ageText": "4 Tage",
+      "originAt": "2026-08-21 11:00"
+    }
+  ],
+  "structureWindow": {
+    "periodOuter": 5,
+    "periodInner": 2,
+    "fixedStartActive": true,
+    "cutoffOuter": 1787302800,
+    "cutoffOuterAt": "2026-08-21 11:00",
+    "cutoffInner": 1787302800,
+    "cutoffInnerAt": "2026-08-21 11:00"
+  },
+  "liquidityLevels1h": [
+    {
+      "id": 246284,
+      "timeframe": "1H",
+      "direction": "high",
+      "price": 1.35985,
+      "touched": false,
+      "pivotTime": 1787871600,
+      "touchedTime": null,
+      "context": "asia high",
+      "kontext": "Asia-High (7h 45m)"
+    },
+    {
+      "id": 246283,
+      "timeframe": "1H",
+      "direction": "high",
+      "price": 1.36028,
+      "touched": false,
+      "pivotTime": 1787835600,
+      "touchedTime": null,
+      "context": "ny high",
+      "kontext": "NY-High (17h 45m)"
+    },
+    {
+      "id": 245528,
+      "timeframe": "1H",
+      "direction": "high",
+      "price": 1.35969,
+      "touched": true,
+      "pivotTime": 1787814000,
+      "touchedTime": 1787835600,
+      "context": null,
+      "kontext": "(6h)"
+    },
+    {
+      "id": 246467,
+      "timeframe": "1H",
+      "direction": "low",
+      "price": 1.35797,
+      "touched": false,
+      "pivotTime": 1787864400,
+      "touchedTime": null,
+      "context": "spread hour low",
+      "kontext": "Spread Hour-Low (9h 45m)"
+    },
+    {
+      "id": 240538,
+      "timeframe": "1H",
+      "direction": "low",
+      "price": 1.3584,
+      "touched": true,
+      "pivotTime": 1787778000,
+      "touchedTime": 1787817600,
+      "context": "spread hour low",
+      "kontext": "Spread Hour-Low (11h)"
+    },
+    {
+      "id": 240537,
+      "timeframe": "1H",
+      "direction": "low",
+      "price": 1.35829,
+      "touched": true,
+      "pivotTime": 1787752800,
+      "touchedTime": 1787817600,
+      "context": "ny low",
+      "kontext": "NY-Low (18h)"
+    }
+  ],
+  "liquidityLevels4h": [
+    {
+      "id": 250119,
+      "timeframe": "4H",
+      "direction": "low",
+      "price": 1.3571,
+      "touched": false,
+      "pivotTime": 1787821200,
+      "touchedTime": null,
+      "context": "mmm low",
+      "kontext": "MMM-Low (21h 45m)"
+    }
+  ],
+  "obZones1h": [
+    {
+      "id": 2467027,
+      "timeframe": "1H",
+      "direction": "short",
+      "top": 1.3644,
+      "bottom": 1.36355,
+      "touched": true,
+      "invalidated": true,
+      "startTime": 1778522400,
+      "endTime": 1787302800,
+      "kontext": "Major (73d 15h)"
+    },
+    {
+      "id": 3040442,
+      "timeframe": "1H",
+      "direction": "long",
+      "top": 1.35606,
+      "bottom": 1.35527,
+      "touched": false,
+      "invalidated": false,
+      "startTime": 1787140800,
+      "endTime": null,
+      "kontext": "Medium (6d 18h)"
+    },
+    {
+      "id": 3042514,
+      "timeframe": "1H",
+      "direction": "long",
+      "top": 1.36027,
+      "bottom": 1.35949,
+      "touched": true,
+      "invalidated": true,
+      "startTime": 1787144400,
+      "endTime": 1787770800,
+      "kontext": "Medium (5d 6h)"
+    },
+    {
+      "id": 3067414,
+      "timeframe": "1H",
+      "direction": "long",
+      "top": 1.36171,
+      "bottom": 1.36087,
+      "touched": true,
+      "invalidated": true,
+      "startTime": 1787209200,
+      "endTime": 1787752800,
+      "kontext": "Medium (4d 7h)"
+    },
+    {
+      "id": 3094574,
+      "timeframe": "1H",
+      "direction": "long",
+      "top": 1.36295,
+      "bottom": 1.36251,
+      "touched": true,
+      "invalidated": true,
+      "startTime": 1787263200,
+      "endTime": 1787749200,
+      "kontext": "Medium (3d 15h)"
+    },
+    {
+      "id": 3135374,
+      "timeframe": "1H",
+      "direction": "long",
+      "top": 1.36459,
+      "bottom": 1.36394,
+      "touched": true,
+      "invalidated": true,
+      "startTime": 1787331600,
+      "endTime": 1787558400,
+      "kontext": "(15h)"
+    },
+    {
+      "id": 3138160,
+      "timeframe": "1H",
+      "direction": "long",
+      "top": 1.36463,
+      "bottom": 1.36425,
+      "touched": true,
+      "invalidated": true,
+      "startTime": 1787526000,
+      "endTime": 1787558400,
+      "kontext": "(8h)"
+    },
+    {
+      "id": 3152665,
+      "timeframe": "1H",
+      "direction": "short",
+      "top": 1.3643,
+      "bottom": 1.36395,
+      "touched": true,
+      "invalidated": true,
+      "startTime": 1787652000,
+      "endTime": 1787684400,
+      "kontext": "(9h)"
+    },
+    {
+      "id": 3155822,
+      "timeframe": "1H",
+      "direction": "short",
+      "top": 1.36417,
+      "bottom": 1.36396,
+      "touched": true,
+      "invalidated": false,
+      "startTime": 1787713200,
+      "endTime": 1787727600,
+      "kontext": "(4h)"
+    },
+    {
+      "id": 3163090,
+      "timeframe": "1H",
+      "direction": "short",
+      "top": 1.36353,
+      "bottom": 1.36205,
+      "touched": false,
+      "invalidated": false,
+      "startTime": 1787745600,
+      "endTime": 1787925600,
+      "kontext": "Medium (1d 18h)"
+    },
+    {
+      "id": 3164983,
+      "timeframe": "1H",
+      "direction": "short",
+      "top": 1.36027,
+      "bottom": 1.36015,
+      "touched": true,
+      "invalidated": false,
+      "startTime": 1787752800,
+      "endTime": 1787835600,
+      "kontext": "(23h)"
+    },
+    {
+      "id": 3164984,
+      "timeframe": "1H",
+      "direction": "long",
+      "top": 1.35926,
+      "bottom": 1.35931,
+      "touched": true,
+      "invalidated": true,
+      "startTime": 1787781600,
+      "endTime": 1787803200,
+      "kontext": "(6h)"
+    },
+    {
+      "id": 3168981,
+      "timeframe": "1H",
+      "direction": "short",
+      "top": 1.35949,
+      "bottom": 1.35866,
+      "touched": true,
+      "invalidated": true,
+      "startTime": 1787817600,
+      "endTime": 1787871600,
+      "kontext": "(15h)"
+    },
+    {
+      "id": 3173452,
+      "timeframe": "1H",
+      "direction": "short",
+      "top": 1.3597,
+      "bottom": 1.35913,
+      "touched": true,
+      "invalidated": false,
+      "startTime": 1787850000,
+      "endTime": 1787860800,
+      "kontext": "(3h)"
+    }
+  ],
+  "obZones4h": [
+    {
+      "id": 3064839,
+      "timeframe": "4H",
+      "direction": "long",
+      "top": 1.35658,
+      "bottom": 1.35476,
+      "touched": true,
+      "invalidated": false,
+      "startTime": 1787130000,
+      "endTime": 1787893200,
+      "kontext": "Medium (6d 20h)"
+    },
+    {
+      "id": 3166279,
+      "timeframe": "4H",
+      "direction": "short",
+      "top": 1.36353,
+      "bottom": 1.36248,
+      "touched": false,
+      "invalidated": false,
+      "startTime": 1787734800,
+      "endTime": 1787893200,
+      "kontext": "Medium (1d 21h)"
+    },
+    {
+      "id": 3166280,
+      "timeframe": "4H",
+      "direction": "short",
+      "top": 1.3609,
+      "bottom": 1.3607,
+      "touched": false,
+      "invalidated": false,
+      "startTime": 1787749200,
+      "endTime": 1787893200,
+      "kontext": "Medium (1d 17h)"
+    }
+  ],
+  "m5LiquidityLevels": [
+    {
+      "direction": "high",
+      "price": 1.3589,
+      "touched": true,
+      "endTime": 1787896200,
+      "context": null,
+      "kontext": "(35m)",
+      "pivotTime": 1787894100,
+      "touchedTime": 1787896200
+    },
+    {
+      "direction": "high",
+      "price": 1.35981,
+      "touched": false,
+      "endTime": 1787899500,
+      "context": null,
+      "kontext": "(5h 40m)",
+      "pivotTime": 1787879100,
+      "touchedTime": null
+    },
+    {
+      "direction": "high",
+      "price": 1.36016,
+      "touched": false,
+      "endTime": 1787899500,
+      "context": null,
+      "kontext": "(14h 10m)",
+      "pivotTime": 1787848500,
+      "touchedTime": null
+    },
+    {
+      "direction": "high",
+      "price": 1.36078,
+      "touched": false,
+      "endTime": 1787899500,
+      "context": null,
+      "kontext": "Medium (1d 16h)",
+      "pivotTime": 1787752200,
+      "touchedTime": null
+    },
+    {
+      "direction": "high",
+      "price": 1.36353,
+      "touched": false,
+      "endTime": 1787899500,
+      "context": "ny high",
+      "kontext": "NY-High Medium (1d 18h)",
+      "pivotTime": 1787746500,
+      "touchedTime": null
+    },
+    {
+      "direction": "high",
+      "price": 1.36371,
+      "touched": false,
+      "endTime": 1787899500,
+      "context": null,
+      "kontext": "Medium (1d 22h)",
+      "pivotTime": 1787731800,
+      "touchedTime": null
+    },
+    {
+      "direction": "low",
+      "price": 1.35869,
+      "touched": false,
+      "endTime": 1787899500,
+      "context": null,
+      "kontext": "(1h 5m)",
+      "pivotTime": 1787895600,
+      "touchedTime": null
+    },
+    {
+      "direction": "low",
+      "price": 1.35889,
+      "touched": true,
+      "endTime": 1787889300,
+      "context": null,
+      "kontext": "(1h 10m)",
+      "pivotTime": 1787885100,
+      "touchedTime": 1787889300
+    },
+    {
+      "direction": "low",
+      "price": 1.35879,
+      "touched": true,
+      "endTime": 1787891400,
+      "context": null,
+      "kontext": "(2h 20m)",
+      "pivotTime": 1787883000,
+      "touchedTime": 1787891400
+    },
+    {
+      "direction": "low",
+      "price": 1.35839,
+      "touched": false,
+      "endTime": 1787899500,
+      "context": null,
+      "kontext": "(9h)",
+      "pivotTime": 1787867100,
+      "touchedTime": null
+    },
+    {
+      "direction": "low",
+      "price": 1.35712,
+      "touched": false,
+      "endTime": 1787899500,
+      "context": null,
+      "kontext": "(19h)",
+      "pivotTime": 1787831100,
+      "touchedTime": null
+    },
+    {
+      "direction": "low",
+      "price": 1.35476,
+      "touched": false,
+      "endTime": 1787899500,
+      "context": null,
+      "kontext": "Medium (6d 19h)",
+      "pivotTime": 1787139600,
+      "touchedTime": null
+    },
+    {
+      "direction": "low",
+      "price": 1.35443,
+      "touched": false,
+      "endTime": 1787899500,
+      "context": null,
+      "kontext": "Medium (6d 23h)",
+      "pivotTime": 1787123700,
+      "touchedTime": null
+    }
+  ],
+  "m5ObZones": [
+    {
+      "id": null,
+      "direction": "long",
+      "top": 1.35891,
+      "bottom": 1.35726,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787143500,
+      "endTime": 1787754000,
+      "kontext": "Medium (5d 1h)"
+    },
+    {
+      "id": null,
+      "direction": "short",
+      "top": 1.36164,
+      "bottom": 1.36085,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787748900,
+      "endTime": 1787749500,
+      "kontext": "(10m)"
+    },
+    {
+      "id": 3182127,
+      "direction": "short",
+      "top": 1.36078,
+      "bottom": 1.36017,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787752800,
+      "endTime": 1787837100,
+      "kontext": "(23h 25m)"
+    },
+    {
+      "id": null,
+      "direction": "short",
+      "top": 1.36,
+      "bottom": 1.35964,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787753700,
+      "endTime": 1787758500,
+      "kontext": "(1h 20m)"
+    },
+    {
+      "id": null,
+      "direction": "short",
+      "top": 1.35994,
+      "bottom": 1.35934,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787754000,
+      "endTime": 1787754900,
+      "kontext": "(15m)"
+    },
+    {
+      "id": 3169439,
+      "direction": "long",
+      "top": 1.35786,
+      "bottom": 1.35721,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787825700,
+      "endTime": 1787826900,
+      "kontext": "(20m)"
+    },
+    {
+      "id": 3171223,
+      "direction": "long",
+      "top": 1.35759,
+      "bottom": 1.35712,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787831400,
+      "endTime": 1787834100,
+      "kontext": "(45m)"
+    },
+    {
+      "id": null,
+      "direction": "long",
+      "top": 1.35754,
+      "bottom": 1.35733,
+      "weak": true,
+      "touched": false,
+      "startTime": 1787835600,
+      "endTime": 1787899500,
+      "kontext": "(17h 45m)"
+    },
+    {
+      "id": null,
+      "direction": "long",
+      "top": 1.35826,
+      "bottom": 1.35733,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787835900,
+      "endTime": 1787842200,
+      "kontext": "(1h 45m)"
+    },
+    {
+      "id": null,
+      "direction": "long",
+      "top": 1.35853,
+      "bottom": 1.35733,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787836200,
+      "endTime": 1787840400,
+      "kontext": "(1h 10m)"
+    },
+    {
+      "id": 3172007,
+      "direction": "short",
+      "top": 1.36015,
+      "bottom": 1.35966,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787838000,
+      "endTime": 1787839500,
+      "kontext": "(25m)"
+    },
+    {
+      "id": 3182136,
+      "direction": "short",
+      "top": 1.36016,
+      "bottom": 1.35993,
+      "weak": true,
+      "touched": false,
+      "startTime": 1787848800,
+      "endTime": 1787899500,
+      "kontext": "(14h 5m)"
+    },
+    {
+      "id": null,
+      "direction": "short",
+      "top": 1.36016,
+      "bottom": 1.35976,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787849100,
+      "endTime": 1787872200,
+      "kontext": "(6h 25m)"
+    },
+    {
+      "id": null,
+      "direction": "long",
+      "top": 1.35843,
+      "bottom": 1.35797,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787865000,
+      "endTime": 1787867100,
+      "kontext": "(35m)"
+    },
+    {
+      "id": null,
+      "direction": "long",
+      "top": 1.35849,
+      "bottom": 1.35797,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787865300,
+      "endTime": 1787866800,
+      "kontext": "(25m)"
+    },
+    {
+      "id": null,
+      "direction": "long",
+      "top": 1.35863,
+      "bottom": 1.35797,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787865600,
+      "endTime": 1787866800,
+      "kontext": "(20m)"
+    },
+    {
+      "id": null,
+      "direction": "long",
+      "top": 1.35931,
+      "bottom": 1.35858,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787866200,
+      "endTime": 1787866800,
+      "kontext": "(10m)"
+    },
+    {
+      "id": null,
+      "direction": "long",
+      "top": 1.359,
+      "bottom": 1.35839,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787867700,
+      "endTime": 1787882400,
+      "kontext": "(4h 5m)"
+    },
+    {
+      "id": null,
+      "direction": "long",
+      "top": 1.35903,
+      "bottom": 1.35864,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787868000,
+      "endTime": 1787882100,
+      "kontext": "(3h 55m)"
+    },
+    {
+      "id": null,
+      "direction": "short",
+      "top": 1.35981,
+      "bottom": 1.35965,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787879400,
+      "endTime": 1787880900,
+      "kontext": "(25m)"
+    },
+    {
+      "id": 3182131,
+      "direction": "short",
+      "top": 1.35966,
+      "bottom": 1.3595,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787881500,
+      "endTime": 1787898300,
+      "kontext": "(4h 40m)"
+    },
+    {
+      "id": null,
+      "direction": "short",
+      "top": 1.35942,
+      "bottom": 1.35927,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787888100,
+      "endTime": 1787897400,
+      "kontext": "(2h 35m)"
+    },
+    {
+      "id": null,
+      "direction": "short",
+      "top": 1.35942,
+      "bottom": 1.35914,
+      "weak": true,
+      "touched": true,
+      "startTime": 1787888400,
+      "endTime": 1787896500,
+      "kontext": "(2h 15m)"
+    }
+  ],
+  "asiaSession": {
+    "rangeHigh": 1.35985,
+    "rangeLow": 1.35875
+  },
+  "candles": [
+    {
+      "time": 1787893200,
+      "open": 1.35885,
+      "high": 1.35889,
+      "low": 1.35876,
+      "close": 1.35879,
+      "volume": 222
+    },
+    {
+      "time": 1787893500,
+      "open": 1.35875,
+      "high": 1.35889,
+      "low": 1.35875,
+      "close": 1.3588,
+      "volume": 290
+    },
+    {
+      "time": 1787893800,
+      "open": 1.3588,
+      "high": 1.35882,
+      "low": 1.35873,
+      "close": 1.35878,
+      "volume": 265
+    },
+    {
+      "time": 1787894100,
+      "open": 1.35879,
+      "high": 1.3589,
+      "low": 1.35875,
+      "close": 1.35883,
+      "volume": 225
+    },
+    {
+      "time": 1787894400,
+      "open": 1.35882,
+      "high": 1.35888,
+      "low": 1.35873,
+      "close": 1.35875,
+      "volume": 212
+    },
+    {
+      "time": 1787894700,
+      "open": 1.35875,
+      "high": 1.35883,
+      "low": 1.35873,
+      "close": 1.35881,
+      "volume": 276
+    },
+    {
+      "time": 1787895000,
+      "open": 1.35878,
+      "high": 1.35886,
+      "low": 1.35872,
+      "close": 1.35877,
+      "volume": 260
+    },
+    {
+      "time": 1787895300,
+      "open": 1.35877,
+      "high": 1.35883,
+      "low": 1.35872,
+      "close": 1.35875,
+      "volume": 354
+    },
+    {
+      "time": 1787895600,
+      "open": 1.35874,
+      "high": 1.3588,
+      "low": 1.35869,
+      "close": 1.35877,
+      "volume": 395
+    },
+    {
+      "time": 1787895900,
+      "open": 1.35876,
+      "high": 1.35887,
+      "low": 1.35872,
+      "close": 1.35875,
+      "volume": 295
+    },
+    {
+      "time": 1787896200,
+      "open": 1.35875,
+      "high": 1.3589,
+      "low": 1.35873,
+      "close": 1.3589,
+      "volume": 276
+    },
+    {
+      "time": 1787896500,
+      "open": 1.35891,
+      "high": 1.35916,
+      "low": 1.3589,
+      "close": 1.35891,
+      "volume": 344
+    },
+    {
+      "time": 1787896800,
+      "open": 1.35889,
+      "high": 1.35914,
+      "low": 1.3588,
+      "close": 1.35897,
+      "volume": 479
+    },
+    {
+      "time": 1787897100,
+      "open": 1.35898,
+      "high": 1.35908,
+      "low": 1.35892,
+      "close": 1.35908,
+      "volume": 367
+    },
+    {
+      "time": 1787897400,
+      "open": 1.35907,
+      "high": 1.35927,
+      "low": 1.35907,
+      "close": 1.35914,
+      "volume": 387
+    },
+    {
+      "time": 1787897700,
+      "open": 1.35913,
+      "high": 1.35916,
+      "low": 1.3589,
+      "close": 1.35891,
+      "volume": 471
+    },
+    {
+      "time": 1787898000,
+      "open": 1.35892,
+      "high": 1.3594,
+      "low": 1.35892,
+      "close": 1.35923,
+      "volume": 470
+    },
+    {
+      "time": 1787898300,
+      "open": 1.35923,
+      "high": 1.3595,
+      "low": 1.35905,
+      "close": 1.35938,
+      "volume": 534
+    },
+    {
+      "time": 1787898600,
+      "open": 1.35937,
+      "high": 1.35942,
+      "low": 1.35898,
+      "close": 1.35917,
+      "volume": 544
+    },
+    {
+      "time": 1787898900,
+      "open": 1.35922,
+      "high": 1.35933,
+      "low": 1.35896,
+      "close": 1.35906,
+      "volume": 590
+    },
+    {
+      "time": 1787899200,
+      "open": 1.35903,
+      "high": 1.35939,
+      "low": 1.35895,
+      "close": 1.35935,
+      "volume": 472
+    },
+    {
+      "time": 1787899500,
+      "open": 1.35937,
+      "high": 1.35944,
+      "low": 1.35912,
+      "close": 1.35921,
+      "volume": 498
+    }
+  ]
+}

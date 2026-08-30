@@ -1,5 +1,6 @@
 import { supabase } from "./supabaseClient.ts";
 import { PIP_SIZE } from "./pipConfig.js";
+import { berlinDayRangeUtcMs } from "./berlinTime.ts";
 
 // Dünne Supabase-Query-Helfer, von den Tools in ./tools/*.ts genutzt. Tabellenformen siehe
 // supabase/migrations/*.sql (ob_zones, liquidity_levels, trade_setups, dealing_ranges,
@@ -193,7 +194,18 @@ export async function getLatestDailyStructureStartTime(instrument: string): Prom
 // (143k Zeichen/4410 Zeilen, musste in eine Datei umgeleitet werden) — fromSec/limit analog zu
 // get_near_relevant_liquidity_levels. limit hat auch OHNE fromSec einen Default (50), damit der
 // Fall strukturell nicht wieder auftreten kann.
-export async function getTradeSetups(instrument: string, fromSec?: number, limit = 50) {
+// replayUntilSec (Bug-Report Philip 2026-08-30, GBPUSD-Backtest bis 08:45): das Tool war bis dahin
+// nicht replay-aware — Setups, deren `created_at` (poi-watcher-Erkennungszeitpunkt) weit NACH dem
+// Replay-Cutoff lag, kamen trotzdem zurück, weil nur nach `fractal_pivot_time` gefiltert wurde
+// (ein Setup kann live erst Stunden nach seinem Fraktal-Pivot erkannt werden, sobald der
+// bestätigende OB entsteht). Filtert wie getLatestTradeSetupPerDirection auf `created_at`, NICHT
+// auf `fractal_pivot_time` — sonst sähe ein Replay-Snapshot ein Setup, dessen bestätigender OB
+// (und damit die ganze Zeile) erst nach dem simulierten Zeitpunkt entstanden ist.
+// Default 2 (Philip 2026-08-30, Nachbesserung zum obigen Bug-Report): "sie braucht ja nicht die
+// letzten 100 setups, die letzten 2 reichen ja" — 50 war schon ein Fix gegen das Token-Limit, aber
+// für den Normalfall (kurzer Blick auf die juengsten Setups) weiterhin deutlich mehr als noetig. Ein
+// expliziter hoeherer limit-Wert bleibt fuer breitere Abfragen moeglich (max. 500), nur der Default sinkt.
+export async function getTradeSetups(instrument: string, fromSec?: number, limit = 2, replayUntilSec?: number) {
   let query = supabase
     .from("trade_setups")
     .select("*")
@@ -201,6 +213,7 @@ export async function getTradeSetups(instrument: string, fromSec?: number, limit
     .order("fractal_pivot_time", { ascending: false })
     .limit(limit);
   if (fromSec != null) query = query.gte("fractal_pivot_time", new Date(fromSec * 1000).toISOString());
+  if (replayUntilSec != null) query = query.lte("created_at", new Date(replayUntilSec * 1000).toISOString());
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -242,7 +255,13 @@ export async function getLatestTradeSetupPerDirection(instrument: string, replay
 // instrument/direction sitzen jetzt auf dealing_ranges, deshalb !inner (sonst kann PostgREST auf
 // dem eingebetteten Feld nicht filtern) plus trade_targets gleich mit eingebettet, weil die
 // ebenfalls an dealing_ranges statt an der Ausführung hängen.
-export async function getJournal(instrument?: string, source?: string, limit = 50) {
+// dateStr (Bug-Report Philip 2026-08-30, GBPUSD-Backtest bis 08:45): bis dahin hatte das Tool
+// KEINEN Datums-Filter, nur `limit` — Philips Wunsch war ein direktes "was steht für diesen einen
+// Tag im Journal", nicht ein "letzte N Einträge, dann selbst nach Datum durchsuchen". Analog zu
+// get_data_export/get_forex_rsi/get_forex_ema: YYYY-MM-DD (Europe/Berlin), filtert `triggered_at`
+// (nicht `created_at` — Philip trägt Trades oft erst später ins Journal ein, `triggered_at` ist der
+// tatsächliche Handelszeitpunkt, um den es bei einer Tages-Abfrage geht) auf den Berlin-Kalendertag.
+export async function getJournal(instrument?: string, source?: string, limit = 50, dateStr?: string) {
   let query = supabase
     .from("trade_positions")
     .select("*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, trade_targets(id, price)), trade_partial_exits(price, exit_time, portion_pct)")
@@ -250,6 +269,10 @@ export async function getJournal(instrument?: string, source?: string, limit = 5
     .limit(limit);
   if (instrument) query = query.eq("dealing_ranges.instrument", instrument);
   if (source) query = query.eq("source", source);
+  if (dateStr) {
+    const { startUtcMs, endUtcMs } = berlinDayRangeUtcMs(dateStr);
+    query = query.gte("triggered_at", new Date(startUtcMs).toISOString()).lt("triggered_at", new Date(endUtcMs).toISOString());
+  }
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return data ?? [];

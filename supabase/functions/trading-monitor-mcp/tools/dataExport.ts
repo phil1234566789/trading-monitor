@@ -18,6 +18,13 @@ import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructur
 import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "../../_shared/liquidityDetection.ts";
 import { detectOrderBlocks } from "../orderBlockDetection.js";
 import { PIP_SIZE } from "../pipConfig.js";
+// Dieselbe Preis-/Zeit-Relevanzlogik wie get_near_relevant_liquidity_levels/get_near_relevant_ob_zones
+// (siehe filterRelevantObZoneRows dort) — Bug-Report Philip 2026-08-30: get_data_export gab obZones
+// bisher als ROHEN, ungefilterten getObZones-Rückgabewert weiter (216 Zonen über den gesamten
+// historischen Bestand statt preisnaher/relevanter), während der neuere near-relevant-Weg fürs
+// exakt selbe Problem schon eine geprüfte Lösung hatte — DRY-Fix statt einer zweiten Definition von
+// "relevant".
+import { filterRelevantObZoneRows } from "./nearRelevantObZones.ts";
 // Session-Kontext ("asia high" etc., siehe src/dataExport.js) — sessionOccurrences.js ist seit
 // Chat 2026-08-02 dependency-frei (aus sessions.js extrahiert, dessen `sessions`-Singleton
 // localStorage anfasst), deshalb direkt cross-directory importierbar wie oben.
@@ -50,6 +57,18 @@ const STRUCTURE_PERIOD_OUTER = 5;
 const STRUCTURE_PERIOD_INNER = 2;
 const STRUCTURE_LOOKBACK_HOURS = 21 * 24;
 const STRUCTURE_CANDLE_BUFFER_HOURS = 40;
+// Philip 2026-08-30 ("was würdest du sagen auf was reduzieren?"): 4 volle Swings (4x Hoch + 4x
+// Tief) reichen für beide tatsächlichen Verwendungen in Schritt 3 — Target-Suche (der jüngste
+// untouched Pivot in Trendrichtung steht i.d.R. schon in currRange, die Liste wird nur für den
+// Fall gebraucht, dass DER schon touched ist) und die Trend-Kraft-HH/HL- bzw. LH/LL-Sequenz (dafür
+// reicht ein paar Swings Kontext). Wird NUR am get_data_export-Rand gekappt (siehe
+// capStructurePivots unten), NICHT in summarizeMarketStructureState selbst — das speist auch das
+// Debug-Metadata-Panel, wo Philip die volle Historie zum Nachvollziehen braucht.
+const STRUCTURE_PIVOTS_MAX_EXPOSED = 8;
+// Preis-Radius für die M5-Variante der obZones/liquidityLevels-Relevanzfilterung — enger als die
+// 40 Pips für 1H/4H (Philip 2026-08-30: "M5 dann 20 Pips nach oben und unten"), weil M5-Zonen viel
+// kleinteiliger/dichter beieinander liegen als HTF-Zonen.
+const M5_OB_RANGE_PIPS = 20;
 
 // Chat 2026-08-26, Philip: ein live erkanntes M5-Level auf demselben Preis wie ein 1H/4H-Level
 // ist für Lana redundant — das HTF-Level ist bedeutsamer (Frontend-Pendant: siehe
@@ -157,6 +176,20 @@ function dropUnknownStructureLevels(summarized: ReturnType<typeof summarizeMarke
   return { ...summarized, nestedTrend: dropUnknownStructureLevels(summarized.nestedTrend) };
 }
 
+// Kappt structurePivots je Ebene auf die letzten STRUCTURE_PIVOTS_MAX_EXPOSED (siehe Konstante
+// oben) — rekursiv über dieselbe nestedTrend-Kette wie dropUnknownStructureLevels, läuft danach
+// (nach dem unknown-Filter), damit eine bereits rausgefilterte Ebene nicht unnötig verarbeitet
+// wird. Pivots liegen chronologisch aufsteigend vor (älteste zuerst), .slice(-N) behält also die
+// jüngsten.
+function capStructurePivots(summarized: ReturnType<typeof summarizeMarketStructureState>): ReturnType<typeof summarizeMarketStructureState> {
+  if (!summarized) return null;
+  return {
+    ...summarized,
+    structurePivots: summarized.structurePivots.slice(-STRUCTURE_PIVOTS_MAX_EXPOSED),
+    nestedTrend: capStructurePivots(summarized.nestedTrend),
+  };
+}
+
 // Bug-Report Philip 2026-08-30 (Live-Test mit Lana): Lana ermittelte "seit Fr, 21.08. -> 7 Tage
 // Downtrend", die TSC-Anzeige (usePriceChartMarketStructure.js/tradeSetupCockpit.ts:
 // computeTrendChain) zeigte für denselben Trend korrekt "4 Tage" — Lana bekam bisher nur den
@@ -235,11 +268,19 @@ async function compute1hStructureState(instrument: string, currentTimeSec: numbe
 
   const raw = await fetchForexCandles(instrument, "1h", { count: fetchHours, toMs: currentTimeSec * 1000 });
   const candles = raw.filter((c) => c.time <= currentTimeSec);
-  const pivotsOuter = computeRangesPivots(candles, periodOuter, cutoffOuter);
-  const pivotsInner = computeRangesPivots(candles, periodInner, cutoffInner);
+  // berlinDateTimeStrFor als formatTime (Bug-Report Philip 2026-08-30, GBPUSD-Backtest bis 08:45):
+  // computeRangesPivots hat einen formatTime-Parameter genau für diesen Zweck, der bisher NICHT
+  // übergeben wurde — fiel auf den Default (t) => String(t) zurück, ein roher Unix-Sekunden-STRING
+  // ohne Wochentag/Uhrzeit. Lana musste sich daraus Alter/Datum selbst herleiten (derselbe
+  // Fehlerquell wie beim structureTrendAge-Fix vom selben Tag, siehe Kommentar dort) — pivotAt/
+  // touchedAt sind laut pivotForDisplay (marketStructureAnalysis.ts) ohnehin als "die
+  // menschenlesbaren" Felder gedacht (pivotTime/touchedTime, die rohen Unix-Werte, werden dort
+  // schon bewusst entfernt), nur die MCP-Seite hatte bisher keinen Formatter übergeben.
+  const pivotsOuter = computeRangesPivots(candles, periodOuter, cutoffOuter, berlinDateTimeStrFor);
+  const pivotsInner = computeRangesPivots(candles, periodInner, cutoffInner, berlinDateTimeStrFor);
   const state = buildMarketStructureState(pivotsOuter, pivotsInner, periodOuter, periodInner, candles);
   return {
-    trend: dropUnknownStructureLevels(summarizeMarketStructureState(state, { includeAppliedPivots: false })),
+    trend: capStructurePivots(dropUnknownStructureLevels(summarizeMarketStructureState(state, { includeAppliedPivots: false }))),
     trendAge: computeTrendChainAges(state, currentTimeSec),
     window: {
       periodOuter,
@@ -320,14 +361,21 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // applyAsOf/applyAsOfZones) — sonst sind spätere Sweeps (nach dem Replay-Punkt) schon "verbraucht"
   // und verdrängen per RECENT_SWEEP_COUNT genau die Level/Zonen, die zum Analysezeitpunkt noch
   // relevant/unberührt waren (Bug-Report Lana 2026-08-02 für obZones).
-  const [raw, m5DetectionRaw, liquidityLevels, obZones, structureResult, sessionConfigs] = await Promise.all([
+  const [raw, m5DetectionRaw, liquidityLevels, obZonesRaw, structureResult, sessionConfigs] = await Promise.all([
     fetchForexCandles(instrument, "5m", { count: M5_FETCH_COUNT, toMs: endUtcMs }),
     // Eigener, größerer Kerzensatz statt `raw` — 7-Tage-Lookback wie der "Daten-Export"-Button
     // (siehe EXPORT_LOOKBACK_HOURS oben), endet an currentTimeSec statt am Tagesende, damit ein
     // Replay-Zeitpunkt MITTEN im Tag nicht versehentlich schon spätere Kerzen des Tages sieht.
     fetchForexCandles(instrument, "5m", { count: m5DetectionCount, toMs: currentTimeSec * 1000 }),
     getLiquidityLevels(instrument, undefined, false, currentTimeSec),
-    getObZones(instrument, undefined, false, currentTimeSec),
+    // includeAll:true statt false (Bug-Report Philip 2026-08-30, siehe filterRelevantObZoneRows-
+    // Import oben) — der volle, Replay-konsistent zurückgerechnete Zeilensatz (auch touched/
+    // invalidated), weil filterRelevantObZoneRows unten selbst entscheidet, welche davon relevant
+    // sind (u.a. kürzlich getouchte/invalidierte). Der SQL-seitige !includeAll-Filter würde bei
+    // aktivem asOfSec ohnehin übersprungen (siehe getObZones/db.ts). Bleibt ungefiltert nach
+    // Timeframe (enthält also weiterhin auch etwaige persistierte 5M-Zeilen), siehe
+    // m5ObZoneIdByKey unten.
+    getObZones(instrument, undefined, true, currentTimeSec),
     compute1hStructureState(instrument, currentTimeSec, structureConfig),
     getSessions(instrument),
   ]);
@@ -377,13 +425,66 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // referenzierte Teilmenge in ob_zones persistiert wurde (Trade-Setup/Pin/Confirmation, siehe
   // PLAN-chart-objekte-forex.md Abschnitt 5), bekommt sie hier ihre echte id mit — damit Lana per
   // ID matchen kann (z.B. gegen trade_setups.ob_zone_id oder pin_context), statt über Preisnähe zu
-  // raten. obZones oben ist bereits ungefiltert nach Timeframe geholt (getObZones ohne timeframe-
+  // raten. obZonesRaw oben ist bereits ungefiltert nach Timeframe geholt (getObZones ohne timeframe-
   // Arg), enthält also auch etwaige persistierte 5M-Zeilen mit — kein zweiter DB-Call nötig.
   const m5ObZoneIdByKey = new Map(
-    obZones.filter((z) => z.timeframe === "5M").map((z) => [`${z.direction}_${Math.floor(new Date(z.start_time).getTime() / 1000)}`, z.id]),
+    obZonesRaw.filter((z) => z.timeframe === "5M").map((z) => [`${z.direction}_${Math.floor(new Date(z.start_time).getTime() / 1000)}`, z.id]),
   );
-  // .filter(!invalidated) analog zu collectObsZones (PriceChart.vue) — invalidierte Zonen werden
-  // im Chart standardmäßig auch nicht mehr angezeigt.
+  // Preis-/Zeit-gefilterte 1H/4H-Teilmenge (siehe filterRelevantObZoneRows-Import oben) —
+  // referencePrice aus derselben m5CandlesForDetection-Reihe wie oben (letzte Kerze <=
+  // currentTimeSec), fromSec = dieselbe 7-Tage-Konvention wie der Rest dieses Moduls
+  // (M5_DETECTION_LOOKBACK_HOURS). Kombiniert gefiltert (dropLowerTfDuplicateZones in
+  // filterRelevantObZoneRows braucht 1H UND 4H zusammen, um 4H-vor-1H-Duplikate zu erkennen), erst
+  // danach für die Antwort in zwei saubere Felder gesplittet (Philip 2026-08-30: "Orderblöcke
+  // sollen sauber aufgeteilt werden in M5, 1h und 4h").
+  const obZonesReferencePrice = m5CandlesForDetection[m5CandlesForDetection.length - 1]?.close ?? null;
+  const obZonesRelevant = filterRelevantObZoneRows(
+    obZonesRaw.filter((z) => z.timeframe === "1H" || z.timeframe === "4H"),
+    { referencePrice: obZonesReferencePrice, fromSec: currentTimeSec - M5_DETECTION_LOOKBACK_HOURS * 3600, toSec: currentTimeSec },
+  );
+  // Kuratierte Form statt roher DB-Zeile (dieselbe Auswahl wie buildNearRelevantObZones' zones —
+  // Philip 2026-08-30: poi-watcher-interne Buchhaltung notified/notified_at/created_at/updated_at/
+  // alert_price ist für Lanas Analyse irrelevant, siehe get_near_relevant_liquidity_levels für
+  // dieselbe Begründung) + start_time/end_time als Unix-Sekunden statt ISO-UTC-String (einheitlich
+  // mit m5ObZones/m5LiquidityLevels statt einer zweiten Zeit-Repräsentation im selben Response).
+  // kontext (Lana-Review 2026-08-30 am Testoutput, Philip: "mach so bitte"): anders als
+  // liquidityLevels hatten obZones bisher KEIN Alters-Feld — Lana müsste sich "wie alt ist diese
+  // Zone" sonst aus startTime/endTime selbst herleiten, derselbe Fehlerquell wie beim
+  // structurePivots.pivotAt-Bug (siehe compute1hStructureState oben). Ohne bonus-Präfix (`null`
+  // statt eines Session-Labels wie "Asia-High") — bonusLabelForPivot ist auf einen einzelnen
+  // Pivot-Preis zugeschnitten (Session-Extremwert-Abgleich), eine OB-Zone hat keinen einzelnen
+  // Preis, dafür wäre eine eigene Herleitung nötig, die hier bewusst nicht mitgebaut wird.
+  function curateObZoneRow(z: (typeof obZonesRelevant)[number]) {
+    const startTime = Math.floor(new Date(z.start_time).getTime() / 1000);
+    const endTime = z.end_time != null ? Math.floor(new Date(z.end_time).getTime() / 1000) : null;
+    return {
+      id: z.id,
+      timeframe: z.timeframe,
+      direction: z.direction,
+      top: z.top,
+      bottom: z.bottom,
+      touched: z.touched,
+      invalidated: z.invalidated,
+      startTime,
+      endTime,
+      kontext: formatKontext(null, startTime, z.touched || z.invalidated ? endTime : null, currentTimeSec),
+    };
+  }
+  const obZones1h = obZonesRelevant.filter((z) => z.timeframe === "1H").map(curateObZoneRow);
+  const obZones4h = obZonesRelevant.filter((z) => z.timeframe === "4H").map(curateObZoneRow);
+
+  // M5-Relevanzfilter (Philip 2026-08-30: "Orderblöcke sollen sauber aufgeteilt werden in M5, 1h
+  // und 4h. Und davon auch nur relevante") — NUR Preis-Band (M5_OB_RANGE_PIPS), unabhängig vom
+  // touched-Status, bewusst OHNE den Zeit-Ausnahme-Zweig, den filterRelevantObZoneRows für 1H/4H
+  // nutzt ("getoucht = zeitlich relevant, Preis egal"). Lana-Review 2026-08-30 am Testoutput: mit
+  // dem 1H/4H-Zeit-Zweig blieben bei M5 33 von 42 Zonen übrig (nur ~21% Reduktion, u.a. Zonen 70+
+  // Pips vom Kurs entfernt, weil sie irgendwann in den letzten 7 Tagen getoucht wurden) — bei M5
+  // ist "vor Tagen getoucht" der Normalfall statt eines bedeutsamen Sweeps (jede Zone wird
+  // innerhalb weniger Stunden getoucht), anders als bei den wenigen, bedeutsamen 1H/4H-Zonen, für
+  // die der Zeit-Zweig gedacht ist. invalidated-Zweig ebenfalls nicht nötig, weil invalidierte
+  // M5-Zonen unten schon vorab rausfallen (.filter(!invalidated), analog zu collectObsZones in
+  // PriceChart.vue — invalidierte Zonen werden im Chart standardmäßig auch nicht mehr angezeigt).
+  const M5_OB_RANGE_PRICE = M5_OB_RANGE_PIPS * PIP_SIZE;
   const m5ObZones = detectOrderBlocks(m5CandlesForDetection, "5m", true)
     .filter((z) => !z.invalidated)
     .map((z) => {
@@ -397,23 +498,53 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
         touched: z.touched,
         startTime: z.startTime,
         endTime: z.endTime,
+        // kontext wie bei obZones1h/4h (siehe curateObZoneRow oben) — ohne bonus-Präfix, dieselbe
+        // Begründung. z.endTime ist bei detectOrderBlocks IMMER gesetzt (bei untouched Zonen die
+        // letzte Kerzenzeit statt null, siehe orderBlockDetection.js) — deshalb hier explizit nur
+        // bei touched=true als touchedTimeSec übergeben, sonst fällt formatKontext korrekt auf
+        // currentTimeSec zurück statt fälschlich das "endTime = jetzt"-Artefakt als Touch-Alter zu lesen.
+        kontext: formatKontext(null, z.startTime, z.touched ? z.endTime : null, currentTimeSec),
       };
+    })
+    .filter((z) => {
+      if (obZonesReferencePrice == null) return false;
+      const withinBand = Math.min(Math.abs(z.top - obZonesReferencePrice), Math.abs(z.bottom - obZonesReferencePrice)) <= M5_OB_RANGE_PRICE;
+      const priceInsideZone = z.bottom <= obZonesReferencePrice && z.top >= obZonesReferencePrice;
+      return withinBand || priceInsideZone;
     });
 
-  // Session-Kontext auch für die persistierten 1H-Level (Philip 2026-08-02: "konsistent halten wo
+  // Session-Kontext auch für die persistierten 1H/4H-Level (Philip 2026-08-02: "konsistent halten wo
   // es geht" — der Button gibt ihn für 1h UND 5m, nicht nur 5m). pivot_time kommt als ISO-String aus
   // der DB, direction schon als "high"/"low"-String (anders als bei den live erkannten M5-Leveln).
+  // Kuratierte Form + Split in 1h/4h (Philip 2026-08-30, dieselbe Begründung wie obZones oben) —
+  // pivotTime/touchedTime als Unix-Sekunden statt der eingangs entfernten ISO-Strings, dieselbe
+  // Feldauswahl wie get_near_relevant_liquidity_levels' levels (id/timeframe/direction/price/
+  // touched/pivotTime/touchedTime/context/kontext), poi-watcher-interne Buchhaltung raus.
   const liquidityLevelsWithContext = attachSessionContext(
-    liquidityLevels.map((l) => ({
-      ...l,
-      pivotTimeSec: Math.floor(new Date(l.pivot_time).getTime() / 1000),
-      dirNum: l.direction === "high" ? (1 as const) : (-1 as const),
-      touchedTimeSec: l.touched && l.end_time != null ? Math.floor(new Date(l.end_time).getTime() / 1000) : null,
-    })),
+    liquidityLevels
+      .filter((l) => l.timeframe === "1H" || l.timeframe === "4H")
+      .map((l) => ({
+        ...l,
+        pivotTimeSec: Math.floor(new Date(l.pivot_time).getTime() / 1000),
+        dirNum: l.direction === "high" ? (1 as const) : (-1 as const),
+        touchedTimeSec: l.touched && l.end_time != null ? Math.floor(new Date(l.end_time).getTime() / 1000) : null,
+      })),
     sessionConfigs,
     currentTimeSec,
     m5CandlesForDetection,
-  ).map(({ pivotTimeSec: _pivotTimeSec, dirNum: _dirNum, touchedTimeSec: _touchedTimeSec, ...rest }) => rest);
+  ).map(({ pivotTimeSec, dirNum: _dirNum, touchedTimeSec, ...l }) => ({
+    id: l.id,
+    timeframe: l.timeframe,
+    direction: l.direction,
+    price: l.price,
+    touched: l.touched,
+    pivotTime: pivotTimeSec,
+    touchedTime: touchedTimeSec,
+    context: l.context,
+    kontext: l.kontext,
+  }));
+  const liquidityLevels1h = liquidityLevelsWithContext.filter((l) => l.timeframe === "1H");
+  const liquidityLevels4h = liquidityLevelsWithContext.filter((l) => l.timeframe === "4H");
 
   return {
     instrument,
@@ -423,18 +554,24 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
     structure1h: structureResult.trend,
     // Fertiges, wochenend-bereinigtes Alter je Ebene der structure1h-Kette (äußerste bis innerste
     // bestätigte Ebene) — siehe computeTrendChainAges oben. IMMER diese Werte für "seit wann läuft
-    // der Trend"/"wie alt" nutzen, NIE selbst aus currRange.*.pivotAt (ein roher Unix-Sekunden-
-    // String ohne Wochenend-Bereinigung) zurückrechnen.
+    // der Trend"/"wie alt" nutzen, NIE selbst aus currRange.*.pivotAt zurückrechnen (seit dem
+    // formatTime-Fix oben ein Berlin-formatierter String, aber weiterhin ohne Wochenend-Bereinigung
+    // — eine naive Kalendertag-Subtraktion daraus liefert dasselbe falsche Alter wie zuvor).
     structureTrendAge: structureResult.trendAge,
     // Siehe compute1hStructureState oben: der tatsächlich verwendete Cutoff (Outer/Inner-Fenster).
     structureWindow: structureResult.window,
-    liquidityLevels: liquidityLevelsWithContext,
-    obZones,
+    liquidityLevels1h,
+    liquidityLevels4h,
+    obZones1h,
+    obZones4h,
     // Live erkannt, 7-Tage-Lookback (siehe m5CandlesForDetection oben) — nicht aus der DB, es gibt
     // dafür keine Backend-Persistierung.
     m5LiquidityLevels,
     m5ObZones,
-    asiaSession: { ...rangeStats(asiaCandles), candles: asiaCandles },
+    // Nur Range (rangeHigh/rangeLow), keine rohen Kerzen mehr (Philip 2026-08-30: "asiasession.candles
+    // kann raus") — 03-htf-bias.md prüft ohnehin nur rangeHigh/rangeLow gegen, die 84 rohen M5-Kerzen
+    // waren größter Einzelposten ohne dokumentierten Verwendungszweck über die Range hinaus.
+    asiaSession: rangeStats(asiaCandles),
     candles: mainCandles,
   };
 }
