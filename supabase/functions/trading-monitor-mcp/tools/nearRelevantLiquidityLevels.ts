@@ -21,7 +21,6 @@ import { formatKontext } from "./dataExport.ts";
 // Enthält dasselbe kontext-Feld wie get_data_export (formatKontext, von dort re-exportiert statt
 // ein drittes Mal dupliziert).
 export const NEAR_RANGE_PIPS = 40;
-const NEAR_RANGE_PRICE = NEAR_RANGE_PIPS * PIP_SIZE;
 const DAY_SEC = 24 * 3600;
 // Default für fromSec, falls nicht angegeben — dieselbe 7-Tage-Konvention wie
 // M5_DETECTION_LOOKBACK_HOURS/EXPORT_LOOKBACK_HOURS (dataExport.ts/src/dataExport.js).
@@ -31,11 +30,16 @@ export interface NearRelevantLiquidityLevelsArgs {
   instrument: string;
   fromSec?: number;
   toSec?: number;
+  // get_data_snapshot (Task "schlankes Schritt-5-Tool", 2026-08-30) braucht einen engeren Radius
+  // als das bestehende get_near_relevant_liquidity_levels (40 Pips) — Default bleibt für dessen
+  // Aufrufer unverändert, nur ein expliziter Override ändert das Verhalten.
+  rangePips?: number;
 }
 
-export async function buildNearRelevantLiquidityLevels({ instrument, fromSec, toSec }: NearRelevantLiquidityLevelsArgs) {
+export async function buildNearRelevantLiquidityLevels({ instrument, fromSec, toSec, rangePips = NEAR_RANGE_PIPS }: NearRelevantLiquidityLevelsArgs) {
   const effectiveToSec = toSec ?? Math.floor(Date.now() / 1000);
   const effectiveFromSec = fromSec ?? effectiveToSec - DEFAULT_LOOKBACK_HOURS * 3600;
+  const rangePrice = rangePips * PIP_SIZE;
 
   // includeAll:true + asOfSec:effectiveToSec — ALLE 1H/4H-Zeilen, touched/end_time bereits auf den
   // Stand "as of effectiveToSec" zurückgerechnet (Replay-konsistent, siehe db.ts: applyAsOf), roher
@@ -54,12 +58,12 @@ export async function buildNearRelevantLiquidityLevels({ instrument, fromSec, to
       const touchedSec = r.end_time != null ? Math.floor(new Date(r.end_time).getTime() / 1000) : null;
       return touchedSec != null && touchedSec >= effectiveFromSec && touchedSec <= effectiveToSec;
     }
-    return referencePrice != null && Math.abs(r.price - referencePrice) <= NEAR_RANGE_PRICE;
+    return referencePrice != null && Math.abs(r.price - referencePrice) <= rangePrice;
   });
 
   const range = { fromSec: effectiveFromSec, toSec: effectiveToSec };
   if (relevant.length === 0) {
-    return { instrument, referencePrice, range, rangePips: NEAR_RANGE_PIPS, levels: [] };
+    return { instrument, referencePrice, range, rangePips, levels: [] };
   }
 
   // Session-Kontext-Fenster aus den tatsächlich relevanten Pivots abgeleitet (±1 Tag Puffer),
@@ -102,5 +106,5 @@ export async function buildNearRelevantLiquidityLevels({ instrument, fromSec, to
     };
   });
 
-  return { instrument, referencePrice, range, rangePips: NEAR_RANGE_PIPS, levels };
+  return { instrument, referencePrice, range, rangePips, levels };
 }

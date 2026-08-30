@@ -26,6 +26,7 @@ import { registerTradeTools } from "./tools/trades.ts";
 import { registerPinTools } from "./tools/pins.ts";
 import { registerTscTools } from "./tools/tsc.ts";
 import { registerCalcRrTool } from "./tools/calcRr.ts";
+import { registerDataSnapshotTools } from "./tools/dataSnapshot.ts";
 
 const MCP_TOKEN = Deno.env.get("TRADING_MONITOR_MCP_TOKEN");
 
@@ -44,6 +45,7 @@ function buildServer() {
   registerPinTools(server);
   registerTscTools(server);
   registerCalcRrTool(server);
+  registerDataSnapshotTools(server);
   return server;
 }
 

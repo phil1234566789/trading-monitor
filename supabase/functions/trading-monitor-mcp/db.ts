@@ -30,17 +30,39 @@ function applyAsOfZones<T extends { start_time: string; touched: boolean; invali
     });
 }
 
+// Bug-Report Philip 2026-08-30: get_ob_zones lieferte für GBPUSD (8397 Zeilen, aufsteigend
+// sortiert) nur noch uralte 2025er-Zonen — derselbe PostgREST-~1000-Zeilen-Cap wie in CLAUDE.md
+// für backfillObZones/forexCandles dokumentiert (siehe fetchAllCandles dort, exakt dasselbe
+// Cursor-Muster hier übernommen), nur bisher nicht auf getObZones/getLiquidityLevels anwandt —
+// data.length < READ_PAGE_SIZE ist KEIN verlässliches "letzte Seite"-Signal (kann auch nur der
+// Server-Cap sein), deshalb um die TATSÄCHLICH zurückgegebene Zeilenzahl weiterzählen statt um
+// READ_PAGE_SIZE, nur eine wirklich leere Seite beendet die Schleife.
+const READ_PAGE_SIZE = 1000;
+async function fetchAllRows<T>(buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
+  const all: T[] = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await buildQuery(from, from + READ_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    from += data.length;
+  }
+  return all;
+}
+
 export async function getObZones(instrument: string, timeframe?: string, includeAll = false, asOfSec?: number) {
-  let query = supabase.from("ob_zones").select("*").eq("instrument", instrument).order("start_time", { ascending: true });
-  if (timeframe) query = query.eq("timeframe", timeframe);
-  // Der SQL-seitige !includeAll-Filter arbeitet auf dem LIVE-Stand von touched/invalidated — bei
-  // aktivem asOfSec brauchen wir stattdessen den vollen Zeilensatz, rechnen erst in JS auf den
-  // Replay-Zeitpunkt zurück und filtern danach (sonst würden Zonen, die erst NACH dem Replay-Punkt
-  // touched/invalidated wurden, hier schon in Postgres fälschlich rausfallen).
-  if (!includeAll && asOfSec == null) query = query.eq("invalidated", false).eq("touched", false);
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  let rows = applyAsOfZones(data ?? [], asOfSec);
+  const data = await fetchAllRows((from, to) => {
+    let query = supabase.from("ob_zones").select("*").eq("instrument", instrument).order("start_time", { ascending: true }).range(from, to);
+    if (timeframe) query = query.eq("timeframe", timeframe);
+    // Der SQL-seitige !includeAll-Filter arbeitet auf dem LIVE-Stand von touched/invalidated — bei
+    // aktivem asOfSec brauchen wir stattdessen den vollen Zeilensatz, rechnen erst in JS auf den
+    // Replay-Zeitpunkt zurück und filtern danach (sonst würden Zonen, die erst NACH dem Replay-Punkt
+    // touched/invalidated wurden, hier schon in Postgres fälschlich rausfallen).
+    if (!includeAll && asOfSec == null) query = query.eq("invalidated", false).eq("touched", false);
+    return query;
+  });
+  let rows = applyAsOfZones(data, asOfSec);
   if (!includeAll && asOfSec != null) rows = rows.filter((r) => !r.invalidated && !r.touched);
   return rows;
 }
@@ -129,15 +151,19 @@ function dropLowerTfDuplicates<T extends { price: number; timeframe: string }>(r
 }
 
 export async function getLiquidityLevels(instrument: string, timeframe?: string, includeAll = false, asOfSec?: number) {
-  let query = supabase
-    .from("liquidity_levels")
-    .select("*")
-    .eq("instrument", instrument)
-    .order("pivot_time", { ascending: true });
-  if (timeframe) query = query.eq("timeframe", timeframe);
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  const rows = applyAsOf(data ?? [], asOfSec);
+  // Pagination-Fix siehe fetchAllRows/getObZones oben (Bug-Report Philip 2026-08-30) — GBPUSD
+  // liegt mit 1076 Zeilen bereits über dem PostgREST-Cap, die neuesten ~76 fehlten dadurch.
+  const data = await fetchAllRows((from, to) => {
+    let query = supabase
+      .from("liquidity_levels")
+      .select("*")
+      .eq("instrument", instrument)
+      .order("pivot_time", { ascending: true })
+      .range(from, to);
+    if (timeframe) query = query.eq("timeframe", timeframe);
+    return query;
+  });
+  const rows = applyAsOf(data, asOfSec);
   if (includeAll) return rows;
   const highs = dropLowerTfDuplicates(filterRelevantRows(rows.filter((r) => r.direction === "high"), LIQUIDITY_MAX_RELEVANT));
   const lows = dropLowerTfDuplicates(filterRelevantRows(rows.filter((r) => r.direction === "low"), LIQUIDITY_MAX_RELEVANT));
@@ -163,14 +189,51 @@ export async function getLatestDailyStructureStartTime(instrument: string): Prom
   return data ? Math.floor(new Date(data.structure_start_time as string).getTime() / 1000) : null;
 }
 
-export async function getTradeSetups(instrument: string) {
-  const { data, error } = await supabase
+// Bug-Report Philip 2026-08-30: ein GBPUSD-Call lief ohne jede Eingrenzung über das Token-Limit
+// (143k Zeichen/4410 Zeilen, musste in eine Datei umgeleitet werden) — fromSec/limit analog zu
+// get_near_relevant_liquidity_levels. limit hat auch OHNE fromSec einen Default (50), damit der
+// Fall strukturell nicht wieder auftreten kann.
+export async function getTradeSetups(instrument: string, fromSec?: number, limit = 50) {
+  let query = supabase
     .from("trade_setups")
     .select("*")
     .eq("instrument", instrument)
-    .order("fractal_pivot_time", { ascending: false });
+    .order("fractal_pivot_time", { ascending: false })
+    .limit(limit);
+  if (fromSec != null) query = query.gte("fractal_pivot_time", new Date(fromSec * 1000).toISOString());
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+// Für get_data_snapshot: das je Richtung aktuellste Trade-Setup, statt Lana die volle Historie
+// selbst filtern zu lassen. Filtert auf `created_at` (wann poi-watcher das Setup TATSÄCHLICH
+// erkannt/angelegt hat), NICHT auf `fractal_pivot_time` — sonst sieht ein Replay-Snapshot ein
+// Setup, dessen bestätigender OB (und damit die ganze Zeile) erst NACH dem simulierten Zeitpunkt
+// entstanden ist (dieselbe Live-statt-as-of-Bug-Klasse wie applyAsOf/applyAsOfZones oben, hier
+// aber ohne eigene as-of-Spalte in der Tabelle, deshalb der Umweg über created_at statt eines
+// zurückgerechneten touched-Zustands). Ohne replayUntilSec (Live-Fall) zählt einfach das neueste.
+// maxAgeHours bezieht sich dagegen auf fractal_pivot_time (Alter des Musters selbst) — liegt kein
+// Setup einer Richtung im Fenster, liefert diese Richtung null statt eines veralteten Treffers.
+export async function getLatestTradeSetupPerDirection(instrument: string, replayUntilSec?: number, maxAgeHours = 48) {
+  const nowSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
+  const minPivotSec = nowSec - maxAgeHours * 3600;
+  async function latestFor(direction: "long" | "short") {
+    let query = supabase
+      .from("trade_setups")
+      .select("*")
+      .eq("instrument", instrument)
+      .eq("direction", direction)
+      .gte("fractal_pivot_time", new Date(minPivotSec * 1000).toISOString())
+      .order("fractal_pivot_time", { ascending: false })
+      .limit(1);
+    if (replayUntilSec != null) query = query.lte("created_at", new Date(replayUntilSec * 1000).toISOString());
+    const { data, error } = await query.maybeSingle();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+  const [long, short] = await Promise.all([latestFor("long"), latestFor("short")]);
+  return { long, short };
 }
 
 // Trade-Journal: seit 2026-07-31 aufgeteilt in dealing_ranges (die Idee: instrument/direction/

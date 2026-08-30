@@ -36,6 +36,43 @@ const EMA_PERIOD_SLOW = 200;
 // Vorlauf, bis die Wilder-Glättung eingependelt ist, bevor der erste Tagespunkt zurückgegeben wird.
 const RSI_WARMUP_MULTIPLIER = 5;
 
+// Von get_forex_rsi/get_forex_ema UND get_data_snapshot geteilt (DRY innerhalb des Backend-
+// Runtimes, siehe CLAUDE.md) — get_data_snapshot braucht nur den aktuellen Punkt, keine volle
+// Tages-series, deshalb computePoints (voll) von currentPoint (nur der letzte Eintrag) getrennt.
+async function computeRsiPoints(instrument: string, dateStr: string | undefined, replayUntilSec: number | undefined, period: number) {
+  const window = resolveDayWindow(dateStr, replayUntilSec);
+  const candles = await fetchM5WithWarmup(instrument, period * RSI_WARMUP_MULTIPLIER, window);
+  const points = computeRsi(candles, period).filter((p) => isWithinDayWindow(p.time, window));
+  return { window, points };
+}
+function currentRsiPoint(points: ReturnType<typeof computeRsi>) {
+  const current = points[points.length - 1];
+  return current?.rsi != null ? { time: current.time, close: current.close, rsi: current.rsi, zone: rsiZone(current.rsi) } : null;
+}
+export async function computeCurrentRsi(instrument: string, replayUntilSec?: number, period = DEFAULT_RSI_PERIOD) {
+  const { points } = await computeRsiPoints(instrument, undefined, replayUntilSec, period);
+  return currentRsiPoint(points);
+}
+
+async function computeEmaPoints(instrument: string, dateStr: string | undefined, replayUntilSec: number | undefined) {
+  const window = resolveDayWindow(dateStr, replayUntilSec);
+  const candles = await fetchM5WithWarmup(instrument, EMA_WARMUP_CANDLES, window);
+  const ema50 = computeEma(candles, EMA_PERIOD_FAST);
+  const ema200 = computeEma(candles, EMA_PERIOD_SLOW);
+  const points = candles
+    .map((c, i) => ({ time: c.time, close: c.close, ema50: ema50[i].value, ema200: ema200[i].value }))
+    .filter((p) => isWithinDayWindow(p.time, window));
+  return { window, points };
+}
+function currentEmaPoint(points: { time: number; close: number; ema50: number; ema200: number }[]) {
+  const current = points[points.length - 1];
+  return current ? { ...current, trendBias: current.close > current.ema200 ? ("bullish" as const) : ("bearish" as const) } : null;
+}
+export async function computeCurrentEma(instrument: string, replayUntilSec?: number) {
+  const { points } = await computeEmaPoints(instrument, undefined, replayUntilSec);
+  return currentEmaPoint(points);
+}
+
 // Registriert alle Read-Tools am Server. get_data_export zuerst und mit Beschreibung, die Claude
 // aktiv dazu anhält, es zuerst aufzurufen (Philips Punkt: nicht zig einzelne GETs am Gesprächs-
 // anfang) — die granularen Tools danach für alles, was das Bündel nicht abdeckt.
@@ -145,10 +182,19 @@ export function registerReadTools(server: McpServer) {
     "get_trade_setups",
     {
       title: "Trade-Setups",
-      description: "Erkannte Trade-Setups (M5 Sweep + Fraktal + OB) aus der trade_setups-Tabelle.",
-      inputSchema: { instrument: INSTRUMENT },
+      description:
+        "Erkannte Trade-Setups (M5 Sweep + Fraktal + OB) aus der trade_setups-Tabelle. Bug-Report " +
+        "Philip 2026-08-30: ein GBPUSD-Call ohne Eingrenzung lief über das Token-Limit (143k " +
+        "Zeichen/4410 Zeilen) — limit hat deshalb einen Default (50), fromSec zusätzlich für ein " +
+        "explizites Zeitfenster. Für 'nur das aktuellste Setup je Richtung' get_data_snapshot " +
+        "nutzen statt hier selbst zu filtern.",
+      inputSchema: {
+        instrument: INSTRUMENT,
+        fromSec: z.number().optional().describe("Unix-Sekunden, untere Grenze für fractal_pivot_time"),
+        limit: z.number().int().positive().max(500).default(50),
+      },
     },
-    async ({ instrument }) => json(await getTradeSetups(instrument)),
+    async ({ instrument, fromSec, limit }) => json(await getTradeSetups(instrument, fromSec, limit)),
   );
 
   server.registerTool(
@@ -281,17 +327,14 @@ export function registerReadTools(server: McpServer) {
       },
     },
     async ({ instrument, dateStr, replayUntilSec, period }) => {
-      const window = resolveDayWindow(dateStr, replayUntilSec);
-      const candles = await fetchM5WithWarmup(instrument, period * RSI_WARMUP_MULTIPLIER, window);
-      const points = computeRsi(candles, period).filter((p) => isWithinDayWindow(p.time, window));
-      const current = points[points.length - 1];
+      const { window, points } = await computeRsiPoints(instrument, dateStr, replayUntilSec, period);
       return json({
         instrument,
         date: window.effectiveDateStr,
         timezone: "Europe/Berlin",
         replay: replayUntilSec == null ? { active: false } : { active: true, until: replayUntilSec },
         period,
-        current: current?.rsi != null ? { time: current.time, close: current.close, rsi: current.rsi, zone: rsiZone(current.rsi) } : null,
+        current: currentRsiPoint(points),
         series: points,
       });
     },
@@ -320,20 +363,13 @@ export function registerReadTools(server: McpServer) {
       },
     },
     async ({ instrument, dateStr, replayUntilSec }) => {
-      const window = resolveDayWindow(dateStr, replayUntilSec);
-      const candles = await fetchM5WithWarmup(instrument, EMA_WARMUP_CANDLES, window);
-      const ema50 = computeEma(candles, EMA_PERIOD_FAST);
-      const ema200 = computeEma(candles, EMA_PERIOD_SLOW);
-      const points = candles
-        .map((c, i) => ({ time: c.time, close: c.close, ema50: ema50[i].value, ema200: ema200[i].value }))
-        .filter((p) => isWithinDayWindow(p.time, window));
-      const current = points[points.length - 1];
+      const { window, points } = await computeEmaPoints(instrument, dateStr, replayUntilSec);
       return json({
         instrument,
         date: window.effectiveDateStr,
         timezone: "Europe/Berlin",
         replay: replayUntilSec == null ? { active: false } : { active: true, until: replayUntilSec },
-        current: current ? { ...current, trendBias: current.close > current.ema200 ? "bullish" : "bearish" } : null,
+        current: currentEmaPoint(points),
         series: points,
       });
     },
