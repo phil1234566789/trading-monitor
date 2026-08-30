@@ -157,7 +157,17 @@ export function registerTradeTools(server: McpServer) {
         "RSI-Divergenz — bereits passierte Evidenz für die Idee, nicht ein zukünftiges Ziel wie ein " +
         "Target) zu einer dealing_range ('GO für die Idee', level='range', id=dealing_range_id) oder " +
         "einer einzelnen trade_position ('GO für diesen Entry', level='position', id=trade_position_id) " +
-        "hinzu. kind='pivot'/'ob' sind Confirmations (geben tatsächlich das GO), kind='fib'/" +
+        "hinzu. Bei level='range' OHNE id: instrument mitgeben — bootstrapped automatisch (bereits " +
+        "offene Range fürs Instrument wiederverwenden, sonst neu anlegen), genau wie im Chart ein " +
+        "einzelner Klick auf die erste Bestätigung selbst schon eine Range mit anlegt (Dashboard.vue: " +
+        "tscBootstrapArmed) — Philip sieht dort auch keinen separaten 'Range anlegen'-Schritt, dieses " +
+        "Tool muss also ebenfalls keinen brauchen (Bug-Report Philip 2026-08-30). Die Richtung der " +
+        "NEU angelegten Range kommt dabei aus DIESER Bestätigung: bei kind='ob' aus obDirection, bei " +
+        "kind='pivot' aus direction (Sweep eines Tiefs='low' → long, eines Hochs='high' → short) — " +
+        "ein Bootstrap mit kind='fib'/'rsi_divergence' schlägt fehl (keine eindeutige Richtung), dafür " +
+        "explizit create_dealing_range aufrufen. Mit id (bekannt aus get_tsc_range/create_dealing_range) " +
+        "läuft es wie bisher direkt gegen diese bestehende Range/Position — id MUSS dann existieren, " +
+        "sonst Fehler. kind='pivot'/'ob' sind Confirmations (geben tatsächlich das GO), kind='fib'/" +
         "'rsi_divergence' sind Confluences (geben nur zusätzliche Sicherheit, kein GO) — siehe " +
         "trading-Repo trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt " +
         "für die Begriffsdefinition; category ergibt sich standardmäßig automatisch aus kind, NUR bei " +
@@ -202,7 +212,15 @@ export function registerTradeTools(server: McpServer) {
         "nachtragen, wenn der Pin selbst noch nicht 'touched' war).",
       inputSchema: {
         level: z.enum(["range", "position"]),
-        id: z.number().int().describe("dealing_range_id bei level='range', trade_position_id bei level='position'"),
+        id: z
+          .number()
+          .int()
+          .optional()
+          .describe(
+            "dealing_range_id bei level='range' (optional — ohne id UND mit instrument wird die " +
+              "Range bootstrapped, siehe Tool-Beschreibung), trade_position_id bei level='position' " +
+              "(hier weiterhin Pflicht, kein automatisches Anlegen einer Ausführung).",
+          ),
         pinId: z.number().int().optional().describe("Statt kind/price/sourceTime/... manuell: id aus get_pin_context, siehe Tool-Beschreibung."),
         kind: z.enum(["pivot", "ob", "fib", "rsi_divergence"]).optional().describe("Pflicht, außer pinId ist gesetzt (dann daraus abgeleitet)."),
         category: z
@@ -218,7 +236,10 @@ export function registerTradeTools(server: McpServer) {
         rangeLow: z.number().nullable().optional().describe("Bei kind='ob': PFLICHT (untere Zonen-Kante), bei kind='fib' optionale Ankerkante."),
         rangeHigh: z.number().nullable().optional().describe("Bei kind='ob': PFLICHT (obere Zonen-Kante), bei kind='fib' optionale Ankerkante."),
         timeframe: z.string().nullable().optional().describe("Bei kind='ob': Zeitebene der Zone, z.B. '5M'/'1H'/'4H'. Bei kind='pivot': '1H'/'4H', siehe oben."),
-        instrument: INSTRUMENT.optional().describe("Bei kind='pivot' oder kind='ob': siehe Tool-Beschreibung."),
+        instrument: INSTRUMENT.optional().describe(
+          "Bei kind='pivot' oder kind='ob' für die liquidity_level_id/ob_zone_id-Auflösung. Bei " +
+            "level='range' OHNE id zusätzlich PFLICHT fürs Bootstrap (siehe Tool-Beschreibung).",
+        ),
         direction: z.enum(["high", "low"]).optional().describe("Nur bei kind='pivot': siehe Tool-Beschreibung."),
         obDirection: z.enum(["long", "short"]).optional().describe("Nur bei kind='ob': siehe Tool-Beschreibung."),
         divergenceType: z.enum(["bearish", "bullish"]).optional().describe("Nur bei kind='rsi_divergence'."),
@@ -241,7 +262,9 @@ export function registerTradeTools(server: McpServer) {
       description:
         "Fügt einer BEREITS BESTEHENDEN dealing_range ein weiteres Target (TP1/TP2/TP3/...) hinzu — " +
         "für eine initiale Anlage siehe stattdessen `targets` auf create_trade. dealingRangeId ist die " +
-        "id der Idee (siehe get_journal, Feld dealing_ranges.id). sourceTime ist PFLICHT (z.B. Pivot-/" +
+        "id der Idee (siehe get_journal, Feld dealing_ranges.id) — existiert noch keine offene TSC-" +
+        "Idee (get_tsc_range liefert null), ZUERST create_dealing_range aufrufen und dessen id " +
+        "verwenden, kein automatisches Anlegen hier. sourceTime ist PFLICHT (z.B. Pivot-/" +
         "OB-Zeitpunkt) — ohne sourceTime bleibt das Target im Chart unsichtbar, auch wenn die " +
         "DB-Zeile existiert, deshalb erzwingt das Tool das Feld. Für ein reines Pivot-Ziel (kein " +
         "rangeLow/rangeHigh) zusätzlich instrument/direction/timeframe mitgeben, wenn es ein echter " +

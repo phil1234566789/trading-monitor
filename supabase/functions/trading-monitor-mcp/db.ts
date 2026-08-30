@@ -962,7 +962,9 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
 
 export interface AddTradeConfirmationArgs {
   level: "range" | "position";
-  id: number;
+  // Optional bei level='range' (siehe Bootstrap-Logik in addTradeConfirmation unten) — bei
+  // level='position' weiterhin Pflicht, es gibt kein automatisches Anlegen einer Ausführung.
+  id?: number;
   // Task "add_trade_confirmation: pinId-Parameter für Auto-Ableitung aus Pin" (Philip 2026-08-19,
   // umgesetzt 2026-08-29) — wenn gesetzt, werden kind/price/sourceTime/rangeLow/rangeHigh/timeframe/
   // instrument/direction/obDirection/divergenceType/fromPrice/fromRsi/toRsi aus der pin_context-
@@ -1128,6 +1130,19 @@ function deriveConfirmationFromPin(pin: Record<string, any>): Partial<AddTradeCo
   );
 }
 
+// Port derselben Richtungs-Herleitung wie Dashboard.vue: onSelectTarget/onSelectSetupConfirmations
+// (tscBootstrapArmed) — Sweep eines Tiefs (direction='low') = Long-Erwartung, eines Hochs
+// (direction='high') = Short; bei kind='ob' ist obDirection bereits die Long/Short-Richtung selbst.
+function deriveBootstrapDirection(args: { kind?: string; obDirection?: string; direction?: string }): "long" | "short" {
+  if (args.kind === "ob" && (args.obDirection === "long" || args.obDirection === "short")) return args.obDirection;
+  if (args.kind === "pivot" && (args.direction === "high" || args.direction === "low")) return args.direction === "low" ? "long" : "short";
+  throw new Error(
+    "Die erste Bestätigung einer neuen dealing_range muss kind='ob' (mit obDirection) oder " +
+      "kind='pivot' (mit direction='high'/'low') sein — nur die legt die Richtung eindeutig fest " +
+      "(siehe create_dealing_range direkt aufrufen, falls die Richtung schon anderweitig feststeht).",
+  );
+}
+
 export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
   let args = rawArgs;
   if (rawArgs.pinId != null) {
@@ -1148,6 +1163,39 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
   // könnte sie aber trotzdem explizit auf null überschreiben).
   if (args.kind === "ob" && (args.rangeLow == null || args.rangeHigh == null)) {
     throw new Error("rangeLow und rangeHigh sind Pflicht bei kind='ob' (siehe Tool-Beschreibung), sonst bleibt die Box im Chart unsichtbar.");
+  }
+  // Bug-Report Philip 2026-08-30: Lana konnte level='range' keine Confirmation hinzufügen, weil
+  // noch keine dealing_range existierte, und musste dafür bisher SELBST vorher create_dealing_range
+  // aufrufen — ein Extra-Schritt, den Philip im Chart nie sieht (dort legt ein einziger Klick auf
+  // die erste Bestätigung die Range automatisch mit an, siehe Dashboard.vue: tscBootstrapArmed).
+  // Bootstrap hier repliziert exakt dasselbe Verhalten server-seitig: kein id, aber instrument
+  // gegeben -> bereits offene Range wiederverwenden (fetchActiveTscRangeId) oder bei Bedarf neu
+  // anlegen, mit der Richtung aus der ERSTEN Bestätigung selbst (Sweep-Richtung bei kind='pivot',
+  // obDirection bei kind='ob') — dieselbe Einschränkung wie im Chart ("erste Bestätigung muss Sweep
+  // oder OB sein, nur die legt die Richtung eindeutig fest").
+  if (args.level === "range") {
+    if (args.id == null) {
+      if (!args.instrument) {
+        throw new Error("Bei level='range' ohne id: instrument mitgeben, um eine offene Range wiederzuverwenden oder automatisch anzulegen (Bootstrap).");
+      }
+      const existingId = await fetchActiveTscRangeId(args.instrument);
+      if (existingId != null) {
+        args = { ...args, id: existingId };
+      } else {
+        const direction = deriveBootstrapDirection(args);
+        const range = await createDealingRange(args.instrument, direction);
+        args = { ...args, id: range.id };
+      }
+    } else {
+      const { data: range, error: rangeCheckError } = await supabase.from("dealing_ranges").select("id").eq("id", args.id).maybeSingle();
+      if (rangeCheckError) throw new Error(rangeCheckError.message);
+      if (!range) throw new Error(`dealing_range ${args.id} existiert nicht — id weglassen und stattdessen instrument mitgeben, um automatisch eine (wieder-)verwendbare Range zu bekommen.`);
+    }
+  } else {
+    if (args.id == null) throw new Error("Bei level='position' ist id Pflicht — es gibt kein automatisches Anlegen einer Ausführung (siehe create_trade/add_trade_position).");
+    const { data: position, error: positionCheckError } = await supabase.from("trade_positions").select("id").eq("id", args.id).maybeSingle();
+    if (positionCheckError) throw new Error(positionCheckError.message);
+    if (!position) throw new Error(`trade_position ${args.id} existiert nicht — id muss auf eine bereits bestehende Ausführung zeigen (siehe create_trade/add_trade_position/get_journal).`);
   }
   let liquidityLevelId: number | null = null;
   if (args.kind === "pivot" && args.instrument && args.timeframe && args.direction) {
@@ -1267,6 +1315,10 @@ async function resolvePivotLiquidityLevelId(args: { rangeLow?: number | null; ra
 // 20260728140000_trade_targets_kind_and_source.sql) unsichtbar im Chart, auch wenn die DB-Zeile
 // existiert, und das reine Doku-"sollte" reichte nicht zuverlässig (Bug-Report Philip 2026-08-18).
 export async function addTradeTarget(dealingRangeId: number, args: AddTradeTargetArgs) {
+  // Dieselbe klare Fehlermeldung wie bei addTradeConfirmation oben statt einer rohen FK-Verletzung.
+  const { data: range, error: rangeCheckError } = await supabase.from("dealing_ranges").select("id").eq("id", dealingRangeId).maybeSingle();
+  if (rangeCheckError) throw new Error(rangeCheckError.message);
+  if (!range) throw new Error(`dealing_range ${dealingRangeId} existiert nicht — zuerst create_dealing_range aufrufen und dessen id hier als dealingRangeId verwenden (siehe get_tsc_range für eine bereits offene Idee).`);
   const liquidityLevelId = await resolvePivotLiquidityLevelId(args);
   const { data, error } = await supabase
     .from("trade_targets")
