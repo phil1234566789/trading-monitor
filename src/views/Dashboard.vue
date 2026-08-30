@@ -277,8 +277,17 @@ const editingTrade = computed(() => trades.value.find((t) => t.id === editingTra
 function onEditRequest(t) {
   editingTradeId.value = t.id;
 }
-function onTradeDeleted() {
+// Bug-Report Philip 2026-08-30: schließt man das Modal per Klick, OHNE die Maus vorher von der
+// gehoverten Zeile wegzubewegen, feuert nie ein mouseleave (die Komponente wird per v-if komplett
+// entfernt) — hoveredModalEvidenceItem/-TargetItem blieben sonst für immer auf dem letzten Stand
+// hängen, ein Phantom-Highlight im Chart, das sich nie mehr von selbst löst.
+function closeTradeEditModal() {
   editingTradeId.value = null;
+  hoveredModalEvidenceItem.value = null;
+  hoveredModalTargetItem.value = null;
+}
+function onTradeDeleted() {
+  closeTradeEditModal();
   refreshTrades();
 }
 // Ziel hinzufügen (Chat 2026-07-27: "wie wärs, wenn wir ermöglichen, einem Trade ein Target
@@ -908,23 +917,55 @@ const hoveredPinTradeSetupId = computed(() => {
   const e = hoveredPinEntry.value;
   return e?.kind === "trade_setup" && e.tradeSetup?.instrument === currentSymbol.value ? e.tradeSetupId : null;
 });
-const hoveredPinTradeConfirmationId = computed(() =>
-  hoveredPinEntry.value?.kind === "trade_confirmation" ? hoveredPinEntry.value.tradeConfirmationId : null,
+// Chart-Objekt-Highlight bei Hover über eine TSC-/TradeEditModal-Zeile (Feature-Wunsch Philip
+// 2026-08-30: "wenn ich im TSC über eine Bestätigung ... hovere, dass mir das Chart-objekt
+// gehighlighted wird ... du hast diese Funktionalität schon öfter gebaut") — dieselbe Pin-Halo-
+// Infrastruktur wie PinPanel.vue-Zeilen-Hover (isSelectedPin in PriceChart.vue), nur mit einer
+// zweiten Quelle: CrudListSection.vue emittiert das rohe trade_evidence-/trade_targets-Item, TSC
+// und TradeEditModal reichen es 1:1 hier hoch (kein Natural-Key-Umweg nötig — rangeLow/rangeHigh/
+// price/sourceTime/liquidityLevel stehen schon direkt auf jeder Zeile, siehe trades.js:
+// toLiquidityLevel). Zwei getrennte Refs pro Quelle (evidence/target), weil trade_evidence.id und
+// trade_targets.id unabhängige Id-Räume sind — ein gemeinsames Feld würde bei zufällig gleicher Id
+// das falsche Chart-Objekt highlighten.
+const hoveredCockpitEvidenceItem = ref(null);
+const hoveredCockpitTargetItem = ref(null);
+const hoveredModalEvidenceItem = ref(null);
+const hoveredModalTargetItem = ref(null);
+const hoveredPinTradeConfirmationId = computed(
+  () =>
+    (hoveredPinEntry.value?.kind === "trade_confirmation" ? hoveredPinEntry.value.tradeConfirmationId : null) ??
+    hoveredCockpitEvidenceItem.value?.id ??
+    hoveredModalEvidenceItem.value?.id ??
+    null,
 );
+const hoveredTradeTargetId = computed(() => hoveredCockpitTargetItem.value?.id ?? hoveredModalTargetItem.value?.id ?? null);
 // Kaskaden-Regel statt reiner currentBar-Gleichheit (Bug 2026-08-21, siehe pinVisibleOnCurrentTf
 // oben) — ein auf 4H gepinntes Level bekommt jetzt auch auf 1H/M5 einen Halo, nicht nur auf 4H
 // selbst; ein auf M5 gepinntes Level aber weiterhin keinen auf 1H/4H. Läuft seit Nachbesserung
 // 2026-08-26 über pinEntryVisible (siehe dort) statt einem hartcodierten "1H".
 const hoveredPinLiquidityLevelKey = computed(() => {
   const e = hoveredPinEntry.value;
-  if (!e) return null;
-  if (pinEntryVisible(e, "liquidity_level", "liquidityLevel")) {
-    return liquidityLevelEntryNaturalKey(e.liquidityLevel);
+  if (e) {
+    if (pinEntryVisible(e, "liquidity_level", "liquidityLevel")) {
+      return liquidityLevelEntryNaturalKey(e.liquidityLevel);
+    }
+    if (pinEntryVisible(e, "m5_liquidity_level", "m5Liquidity")) {
+      return m5LiquidityEntryNaturalKey(e.m5Liquidity);
+    }
   }
-  if (pinEntryVisible(e, "m5_liquidity_level", "m5Liquidity")) {
-    return m5LiquidityEntryNaturalKey(e.m5Liquidity);
-  }
-  return null;
+  // Eine Bestätigung/ein Target mit kanonischer liquidity_level-Verknüpfung (kind='pivot', siehe
+  // trades.js: toLiquidityLevel) zeichnet KEINE eigene Linie (siehe PriceChart.vue:
+  // refreshTradeConfirmationLinksInternal/-TradeTargetLinksInternal), sondern highlightet das
+  // native LQ-Chartobjekt — derselbe Natural-Key-Formalismus wie beim Pin-Fall oben, nur mit
+  // numerischem dir/pivotTime statt des DB-Zeilen-Formats (liquidityLevelNaturalKey statt
+  // liquidityLevelEntryNaturalKey).
+  const rowLvl =
+    hoveredCockpitEvidenceItem.value?.liquidityLevel ??
+    hoveredCockpitTargetItem.value?.liquidityLevel ??
+    hoveredModalEvidenceItem.value?.liquidityLevel ??
+    hoveredModalTargetItem.value?.liquidityLevel ??
+    null;
+  return rowLvl ? liquidityLevelNaturalKey(rowLvl.dir, rowLvl.pivotTime) : null;
 });
 const hoveredPinRsiDivergenceKey = computed(() => {
   const e = hoveredPinEntry.value;
@@ -1891,7 +1932,7 @@ watch(selectedTradingAccountId, () => {
   <TradeEditModal
     v-if="editingTrade"
     :trade="editingTrade"
-    @close="editingTradeId = null"
+    @close="closeTradeEditModal"
     @saved="refreshTrades"
     @deleted="onTradeDeleted"
     @request-add-target="onAddTargetRequest(editingTrade)"
@@ -1902,6 +1943,8 @@ watch(selectedTradingAccountId, () => {
     @request-add-anti-confluence="onAddAntiConfluenceRequest(editingTrade)"
     @request-add-range-anti-confluence="onAddRangeAntiConfluenceRequest(editingTrade)"
     @request-set-invalidation="onSetInvalidationRequest(editingTrade)"
+    @hover-evidence="hoveredModalEvidenceItem = $event"
+    @hover-target="hoveredModalTargetItem = $event"
   />
 
   <!-- Chart + TSC nebeneinander (Chat 2026-08-28, Philip: "übersichtlicher, wenn der TSC nicht
@@ -1929,6 +1972,7 @@ watch(selectedTradingAccountId, () => {
     :hovered-pin-ob-zone-key="hoveredPinObZoneKey"
     :hovered-pin-trade-setup-id="hoveredPinTradeSetupId"
     :hovered-pin-trade-confirmation-id="hoveredPinTradeConfirmationId"
+    :hovered-trade-target-id="hoveredTradeTargetId"
     :hovered-pin-liquidity-level-key="hoveredPinLiquidityLevelKey"
     :hovered-pin-rsi-divergence-key="hoveredPinRsiDivergenceKey"
     :pinned-ob-zones="pinnedObZones"
@@ -2007,6 +2051,8 @@ watch(selectedTradingAccountId, () => {
       @invalidation-saved="refreshTscRange"
       @reset="onTscReset"
       @open-target-picker="priceChartRef?.openTargetPicker()"
+      @hover-evidence="hoveredCockpitEvidenceItem = $event"
+      @hover-target="hoveredCockpitTargetItem = $event"
     />
   </div>
 

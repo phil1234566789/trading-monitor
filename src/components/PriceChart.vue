@@ -107,6 +107,10 @@ const props = defineProps({
   hoveredPinObZoneKey: { type: String, default: null },
   hoveredPinTradeSetupId: { type: [String, Number], default: null },
   hoveredPinTradeConfirmationId: { type: [String, Number], default: null },
+  // Analog zu hoveredPinTradeConfirmationId, aber für Targets (trade_targets.id) — kein Pin-Panel-
+  // Ursprung (Pin kennt keinen eigenen "trade_target"-kind), nur TSC-/TradeEditModal-Zeilen-Hover
+  // (Chat 2026-08-30, siehe Dashboard.vue: hoveredTradeTargetId).
+  hoveredTradeTargetId: { type: [String, Number], default: null },
   hoveredPinLiquidityLevelKey: { type: String, default: null },
   hoveredPinRsiDivergenceKey: { type: String, default: null },
   // Gepinnte Objekte, direkt aus ihren pin_context-Daten gebaut statt nur als Vergleichsschlüssel
@@ -763,6 +767,11 @@ function refreshTradeTargetLinksInternal() {
     for (const target of t.targets ?? []) {
       if (target.sourceTime == null) continue;
       const label = `🎯 ${targetKindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`;
+      // Auswahl-Halo (Chat 2026-08-30, Feature-Wunsch Philip, analog zu
+      // refreshTradeConfirmationLinksInternal) — EINMAL pro Target berechnet, für beide
+      // Zeichenpfade unten (OB-Box/generische Linie) wiederverwendet. Kein Pin-Panel-Ursprung wie
+      // bei Confirmations (Pin kennt keinen "trade_target"-kind), nur TSC-/Modal-Zeilen-Hover.
+      const isSelectedPin = props.hoveredTradeTargetId != null && props.hoveredTradeTargetId === target.id;
       // OB-Ziele als echte Box statt nur einer Linie an der näheren Kante (Bug-Report Philip
       // 2026-07-31: "es zeichnet sich weder Linie noch Box, nur das Label"). Alt-OB-Targets ohne
       // rangeLow/rangeHigh (vor Migration 20260731170000) fallen zurück auf die bisherige Linie.
@@ -779,6 +788,8 @@ function refreshTradeTargetLinksInternal() {
             borderWidth: lineWidth("tradeTarget"),
             textColor: "rgba(255, 255, 255, 0.9)",
             label,
+            isSelectedPin,
+            hoverColor: cssColor("tradeHover"),
           },
           candles,
         );
@@ -809,6 +820,8 @@ function refreshTradeTargetLinksInternal() {
           // Linie stehen (Long bleibt wie bisher) — analog zur Short/Long-Positionierung bei den
           // Trade-Setup-LS-/Fraktal-Linien weiter oben (renderTradeSetupsInternal).
           labelSide: t.direction === "short" ? "end-below" : "end-above",
+          isSelectedPin,
+          hoverColor: cssColor("tradeHover"),
         },
         candles,
       );
@@ -864,6 +877,13 @@ function refreshTradeConfirmationLinksInternal() {
       // statt der gemeinsamen Confirmation/Confluence-Farbe — Philip: "ich brauch eher ne andere
       // Farbe, ne alarmierende Farbe".
       const colorKey = isAntiConfluence ? "antiConfluence" : "tradeConfirmation";
+      // Auswahl-Halo (Chat 2026-08-30, Feature-Wunsch Philip: TSC-/TradeEditModal-Zeilen-Hover
+      // highlightet das Chart-Objekt) — EINMAL pro Bestätigung berechnet, für alle drei
+      // Zeichenpfade unten (Divergenz-Konnektor/OB-Box/generische Linie) wiederverwendet, statt wie
+      // vorher nur im OB-Zweig. Quelle ist props.hoveredPinTradeConfirmationId, das seit demselben
+      // Task NEBEN dem bisherigen PinPanel-Hover auch TSC-/Modal-Zeilen-Hover einschließt (siehe
+      // Dashboard.vue).
+      const isSelectedPin = props.hoveredPinTradeConfirmationId != null && props.hoveredPinTradeConfirmationId === confirmation.id;
       // RSI-Divergenz-Bestätigungen als echter Zwei-Bein-Konnektor (dieselbe DivergenceLinePrimitive
       // wie die live erkannten Divergenzen, siehe refreshRsiDivergenceInternal) statt nur einer
       // horizontalen Linie — sourceTime/touchedTime tragen bereits fromTime/toTime (siehe
@@ -873,7 +893,7 @@ function refreshTradeConfirmationLinksInternal() {
         const primitive = new DivergenceLinePrimitive(
           { time: confirmation.sourceTime, price: confirmation.fromPrice },
           { time: confirmation.touchedTime, price: confirmation.price },
-          { color: cssColor(colorKey), lineWidth: lineWidth(colorKey), label, ...iconOptions },
+          { color: cssColor(colorKey), lineWidth: lineWidth(colorKey), label, ...iconOptions, isSelectedPin, hoverColor: cssColor("tradeHover") },
           candles,
         );
         candleSeries.attachPrimitive(primitive);
@@ -888,7 +908,6 @@ function refreshTradeConfirmationLinksInternal() {
         // Box, "✔ OB 1,15229 #22", wurde mit der Trade-Setup-Link-Box verwechselt, war bisher
         // komplett unverdrahtet). confirmationId ist bereits die echte trade_evidence.id.
         const inPinContext = props.pinTradeConfirmationIds?.has(confirmation.id) ?? false;
-        const isSelectedPin = props.hoveredPinTradeConfirmationId != null && props.hoveredPinTradeConfirmationId === confirmation.id;
         const primitive = new OrderBlockPrimitive(
           { top: confirmation.rangeHigh, bottom: confirmation.rangeLow, startTime: confirmation.sourceTime, endTime, touched, confirmationId: confirmation.id, instrument: t.instrument },
           {
@@ -926,6 +945,8 @@ function refreshTradeConfirmationLinksInternal() {
           label,
           ...iconOptions,
           labelSide: t.direction === "short" ? "end-below" : "end-above",
+          isSelectedPin,
+          hoverColor: cssColor("tradeHover"),
         },
         candles,
       );
@@ -1897,6 +1918,7 @@ watch(() => props.pinRsiDivergenceKeys, refreshRsiDivergenceInternal);
 watch(() => props.hoveredPinObZoneKey, refreshPoiZonesInternal);
 watch(() => props.hoveredPinTradeSetupId, refreshTradeSetupLinksInternal);
 watch(() => props.hoveredPinTradeConfirmationId, refreshTradeConfirmationLinksInternal);
+watch(() => props.hoveredTradeTargetId, refreshTradeTargetLinksInternal);
 watch(() => props.hoveredPinLiquidityLevelKey, refreshLiquidityInternal);
 watch(() => props.hoveredPinRsiDivergenceKey, refreshRsiDivergenceInternal);
 // Direkt-Rendering gepinnter Objekte (Chat 2026-08-18, Task "Pin-Kontext: gepinnte Objekte direkt

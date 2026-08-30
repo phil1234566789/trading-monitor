@@ -40,6 +40,12 @@ const emit = defineEmits([
   "request-add-anti-confluence",
   "request-add-range-anti-confluence",
   "request-set-invalidation",
+  // Hover über eine Bestätigungs-/Zusatzargument-/Anti-Confluence- ODER Target-Zeile (Chat
+  // 2026-08-30, analog zu TradeSetupCockpit.vue) — highlightet das zugehörige Chart-Objekt, siehe
+  // Dashboard.vue. Range- UND Position-Ebene teilen sich dasselbe Event (der Chart kennt keinen
+  // Unterschied zwischen beiden, nur trade_evidence.id).
+  "hover-evidence",
+  "hover-target",
 ]);
 
 const entryPrice = ref("");
@@ -334,6 +340,7 @@ function confirmationLabel(confirmation) {
         empty-text="Noch keine Bestätigungen."
         @add="emit('request-add-range-confirmation')"
         @remove="onRemoveConfirmation"
+        @hover="(c) => emit('hover-evidence', c)"
       />
 
       <!-- Zusatzargumente (Confluence: gibt mehr Sicherheit, aber kein GO — Fib/RSI-Divergenz),
@@ -349,6 +356,7 @@ function confirmationLabel(confirmation) {
         empty-text="Noch keine Zusatzargumente."
         @add="emit('request-add-range-confluence')"
         @remove="onRemoveConfirmation"
+        @hover="(c) => emit('hover-evidence', c)"
       />
 
       <!-- Anti-Confluence (spricht gegen den Trade), erster Schritt nur klickbare Chart-Objekte
@@ -364,6 +372,7 @@ function confirmationLabel(confirmation) {
         empty-text="Noch keine Anti-Confluences."
         @add="emit('request-add-range-anti-confluence')"
         @remove="onRemoveConfirmation"
+        @hover="(c) => emit('hover-evidence', c)"
       />
 
       <CrudListSection
@@ -376,6 +385,7 @@ function confirmationLabel(confirmation) {
         empty-text="Noch keine Targets."
         @add="emit('request-add-target')"
         @remove="onRemoveTarget"
+        @hover="(t) => emit('hover-target', t)"
       />
     </div>
 
@@ -394,6 +404,7 @@ function confirmationLabel(confirmation) {
         empty-text="Noch keine Bestätigungen."
         @add="emit('request-add-confirmation')"
         @remove="onRemoveConfirmation"
+        @hover="(c) => emit('hover-evidence', c)"
       />
 
       <CrudListSection
@@ -406,6 +417,7 @@ function confirmationLabel(confirmation) {
         empty-text="Noch keine Zusatzargumente."
         @add="emit('request-add-confluence')"
         @remove="onRemoveConfirmation"
+        @hover="(c) => emit('hover-evidence', c)"
       />
 
       <CrudListSection
@@ -418,6 +430,7 @@ function confirmationLabel(confirmation) {
         empty-text="Noch keine Anti-Confluences."
         @add="emit('request-add-anti-confluence')"
         @remove="onRemoveConfirmation"
+        @hover="(c) => emit('hover-evidence', c)"
       />
 
       <section class="tem-section">

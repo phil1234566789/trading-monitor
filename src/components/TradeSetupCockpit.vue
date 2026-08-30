@@ -3,7 +3,7 @@ import { computed, ref, watch } from "vue";
 import { updateDealingRange } from "../tradeIntake.js";
 import { formatEvidenceLabel } from "../tradeEvidence";
 import { formatTargetLabel } from "../tradeTargets";
-import { trendChainLevelDisplay } from "../tradeSetupCockpit";
+import { trendChainLevelDisplay, computeTrendAlignment, trendAlignmentDisplay } from "../tradeSetupCockpit";
 import CrudListSection from "./CrudListSection.vue";
 import InvalidationField from "./InvalidationField.vue";
 
@@ -50,6 +50,12 @@ const emit = defineEmits([
   "invalidation-saved",
   "reset",
   "open-target-picker",
+  // Hover über eine Bestätigungs-/Zusatzargument-/Anti-Confluence- ODER Target-Zeile (Chat
+  // 2026-08-30) — highlightet das zugehörige Chart-Objekt, siehe Dashboard.vue. Zwei separate
+  // Events statt eines gemeinsamen, weil trade_evidence.id und trade_targets.id unabhängige
+  // Id-Räume sind (Kollisionsgefahr bei einem gemeinsamen "hover-item"-Event).
+  "hover-evidence",
+  "hover-target",
 ]);
 
 // category (Confirmation="Bestätigung"/GO-Signal, Confluence="Zusatzargument"/kein GO,
@@ -144,6 +150,10 @@ function targetLabel(t) {
 // aus (tradeSetupCockpit.ts), hier nur noch die Zuordnung Ebene -> Tiefe fürs Label ("Trend"/
 // "Korrektur"/"Gegenkorrektur").
 const trendChainDisplay = computed(() => props.trendChain.map((level, depth) => trendChainLevelDisplay(level, depth)));
+// Trend-Ausrichtung der Dealing Range (Chat 2026-08-30, Philip: "Short mit dem Trend" ✅ /
+// "Long GEGEN den Trend" ⚠️) — siehe computeTrendAlignment für die volle Begründung.
+const trendAlignment = computed(() => computeTrendAlignment(direction.value, props.trendChain));
+const trendAlignmentInfo = computed(() => (direction.value && trendAlignment.value ? trendAlignmentDisplay(direction.value, trendAlignment.value) : null));
 
 const accentStyle = computed(() => {
   if (direction.value === "long") return { "--tsc-accent-bg": "rgba(38, 166, 154, 0.14)", "--tsc-accent-border": "rgba(38, 166, 154, 0.4)" };
@@ -182,6 +192,13 @@ const accentStyle = computed(() => {
       </div>
     </div>
 
+    <!-- Trend-Ausrichtung der Dealing Range (Chat 2026-08-30, Philip: "Long/Short im Trend" ✅ /
+         "Long/Short GEGEN den Trend" ⚠️) — siehe computeTrendAlignment (tradeSetupCockpit.ts). Nur
+         sichtbar, wenn beides feststeht (Richtung UND ein bestätigter äußerer Trend). -->
+    <div v-if="trendAlignmentInfo" class="tsc-trend-alignment" :class="trendAlignment">
+      {{ trendAlignmentInfo.text }} {{ trendAlignmentInfo.icon }}
+    </div>
+
     <CrudListSection
       title="Bestätigungen"
       icon="✔"
@@ -192,6 +209,7 @@ const accentStyle = computed(() => {
       empty-text="Noch keine Bestätigungen."
       @add="emit('add-confirmation')"
       @remove="(c) => emit('remove-confirmation', c)"
+      @hover="(c) => emit('hover-evidence', c)"
     />
 
     <!-- Zusatzargumente (Confluence: gibt mehr Sicherheit, aber kein GO — Fib/RSI-Divergenz, siehe
@@ -209,6 +227,7 @@ const accentStyle = computed(() => {
       empty-text="Noch keine Zusatzargumente."
       @add="emit('add-confluence')"
       @remove="(c) => emit('remove-confluence', c)"
+      @hover="(c) => emit('hover-evidence', c)"
     />
 
     <!-- Anti-Confluence (spricht gegen den Trade, siehe trade-from-poi.md#confirmation-confluence-
@@ -227,6 +246,7 @@ const accentStyle = computed(() => {
       empty-text="Noch keine Anti-Confluences."
       @add="emit('add-anti-confluence')"
       @remove="(c) => emit('remove-anti-confluence', c)"
+      @hover="(c) => emit('hover-evidence', c)"
     />
 
     <CrudListSection
@@ -240,6 +260,7 @@ const accentStyle = computed(() => {
       empty-text="Noch keine Targets."
       @add="emit('add-target')"
       @remove="(t) => emit('remove-target', t)"
+      @hover="(t) => emit('hover-target', t)"
     >
       <template #extra-action>
         <!-- find_targets, erster Baustein (PLAN-find-targets.md, Chat 2026-08-27) — Vorschlagsliste
@@ -380,6 +401,37 @@ const accentStyle = computed(() => {
   margin-bottom: 10px;
   padding-bottom: 10px;
   border-bottom: 1px solid rgba(120, 123, 134, 0.25);
+}
+
+/* Trend-Ausrichtung (Chat 2026-08-30) — volle Kartenbreite statt eines schmalen Chips (Philip:
+   "über die ganze Breite"). with_trend NICHT grün (Bug-Report Philip: "suggeriert irgendwie nen
+   Long", würde mit .tsc-direction.long kollidieren) — stattdessen derselbe Indigo wie
+   tradeConfirmation (src/chartColors.js: Bestätigungs-Linien im Chart), semantisch dieselbe
+   Bedeutung ("das bestätigt etwas Gutes"), aber richtungsneutral. countertrend bleibt Rot (dieselbe
+   Warnsemantik wie überall sonst, candleDown/tradeLoss/NO_GO_COLOR) — dagegen hatte Philip nichts
+   einzuwenden. */
+.tsc-trend-alignment {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.tsc-trend-alignment.with_trend {
+  /* Bug-Report Philip 2026-08-30: erste Version zu unauffällig — kräftigerer Fill + hellerer,
+     stärker gesättigter Indigo-Ton statt des gedeckten Basis-Tons. */
+  background: rgba(92, 107, 192, 0.4);
+  color: #8c9eff;
+}
+
+.tsc-trend-alignment.countertrend {
+  background: rgba(239, 83, 80, 0.18);
+  color: #ef5350;
 }
 
 /* Icon + Chip nebeneinander innerhalb einer Ebene (Philip: "Pfeil links von dem Chip") — die Ebenen

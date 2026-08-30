@@ -19,7 +19,14 @@ defineProps({
   // TradeSetupCockpit.vue) — addTitle dient dann als Begründungs-Tooltip statt Aktions-Hinweis.
   disabled: { type: Boolean, default: false },
 });
-const emit = defineEmits(["add", "remove"]);
+// "hover" (Chat 2026-08-30, Philip: "wenn ich im TSC über eine Bestätigung/ein Zusatzargument/
+// Anti-Confluence/Target hovere, soll mir das Chart-Objekt gehighlighted werden ... du hast diese
+// Funktionalität schon öfter gebaut") — emittiert das rohe item (oder null beim Verlassen), der
+// Parent (TradeSetupCockpit.vue/TradeEditModal.vue) übersetzt das in den passenden Highlight-Key
+// (dieselbe Pin-Halo-Infrastruktur wie PinPanel.vue-Zeilen-Hover, siehe PriceChart.vue:
+// isSelectedPin). Hier bewusst KEINE eigene Übersetzung — diese Komponente kennt wie beim
+// Add/Remove-Muster nur die Liste, nicht WAS ein Eintrag im Chart ist.
+const emit = defineEmits(["add", "remove", "hover"]);
 </script>
 
 <template>
@@ -34,7 +41,13 @@ const emit = defineEmits(["add", "remove"]);
       </div>
     </div>
     <div v-if="items.length === 0" class="cls-muted">{{ emptyText }}</div>
-    <div v-for="item in items" :key="itemKey(item)" class="cls-row">
+    <div
+      v-for="item in items"
+      :key="itemKey(item)"
+      class="cls-row"
+      @mouseenter="emit('hover', item)"
+      @mouseleave="emit('hover', null)"
+    >
       <span>{{ itemLabel(item) }}</span>
       <button class="cls-remove-btn" title="entfernen" @click="emit('remove', item)">×</button>
     </div>
@@ -88,7 +101,15 @@ const emit = defineEmits(["add", "remove"]);
   justify-content: space-between;
   font-size: 13px;
   color: #d1d4dc;
-  padding: 3px 0;
+  padding: 3px 4px;
+  margin: 0 -4px;
+  border-radius: 4px;
+}
+
+/* Spiegelt den Chart-Highlight-Halo (siehe hover-Emit oben) auch hier in der Liste, damit klar
+   ist, welche Zeile gerade "das Chart-Objekt zeigen" auslöst. */
+.cls-row:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* Kleiner "×" statt Text-Button (Chat 2026-07-31: "da reicht auch nur ein kleines x", title=

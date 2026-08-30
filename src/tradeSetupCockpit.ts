@@ -293,3 +293,34 @@ export function trendChainLevelDisplay(level: TrendChainLevel, depth: number): {
   const text = level.ageSeconds != null && level.originTimeSec != null ? formatTrendAge(level.ageSeconds, level.originTimeSec) : "–";
   return { text, icon: TREND_DIRECTION_ICON[level.trend], color, hint: trendChainDepthHint(depth) };
 }
+
+// Feature-Wunsch Philip 2026-08-30: ob die aktuelle Dealing Range MIT oder GEGEN den Trend läuft —
+// als eigener, wiederverwendbarer Parameter statt nur inline-UI-Text, weil die spätere
+// Target-Auswahl davon abhängen soll ("im nächsten Schritt sind die Targets davon abhängig").
+// Nutzt die TIEFSTE (aktuellste) Ebene der Kette, NICHT die äußerste (Korrektur Philip 2026-08-30:
+// "es zählt das aktuelle structure ... wenn es ein outer-structure gibt und ein nested structure,
+// dann zählt nested structure") — gibt es keine Verschachtelung, ist die tiefste Ebene automatisch
+// die einzige/äußerste, deckt also beide Fälle mit derselben Regel ab. null, wenn keine Richtung
+// oder gar kein bestätigter Trend vorliegt (leere trendChain, siehe computeTrendChain — 'unknown'
+// ist dort bereits rausgefiltert).
+// Werte-Namen (Philip 2026-08-30): "countertrend" ist der etablierte Trading-Begriff für einen
+// Trade gegen den Trend, "with_trend" das parallele Pendant dazu (with-trend trade) — bewusst
+// NICHT einfach "trend", das wäre neben RangeTrends "uptrend"/"downtrend" (Richtung des Trends
+// selbst, ein anderes Konzept) leicht verwechselbar.
+export type TrendAlignment = "with_trend" | "countertrend";
+
+export function computeTrendAlignment(direction: "long" | "short" | null, trendChain: TrendChainLevel[]): TrendAlignment | null {
+  const currentTrend = trendChain[trendChain.length - 1]?.trend ?? null;
+  if (!direction || (currentTrend !== "uptrend" && currentTrend !== "downtrend")) return null;
+  const withTrend = (direction === "long" && currentTrend === "uptrend") || (direction === "short" && currentTrend === "downtrend");
+  return withTrend ? "with_trend" : "countertrend";
+}
+
+// "GEGEN" bewusst großgeschrieben (Philip 2026-08-30: "reicht mir Long GEGEN den Trend", Rest
+// klein) — Warnsignal soll optisch auffallen, nicht der ganze Satz.
+export function trendAlignmentDisplay(direction: "long" | "short", alignment: TrendAlignment): { text: string; icon: string } {
+  const directionLabel = direction === "short" ? "Short" : "Long";
+  return alignment === "with_trend"
+    ? { text: `${directionLabel} im Trend`, icon: "✅" }
+    : { text: `${directionLabel} GEGEN den Trend`, icon: "⚠️" };
+}

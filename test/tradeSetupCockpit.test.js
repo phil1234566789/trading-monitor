@@ -3,7 +3,7 @@
 // tradeSetupCockpit.ts) — sessionDanger kommt hier fertig ermittelt rein (siehe currentSessionDanger
 // in sessions.js), nicht selbst berechnet.
 import { describe, expect, it } from "vitest";
-import { computeCockpitState, ANTI_CONFLUENCE_THRESHOLD, computeTrendChain, trendChainLevelDisplay } from "../src/tradeSetupCockpit";
+import { computeCockpitState, ANTI_CONFLUENCE_THRESHOLD, computeTrendChain, trendChainLevelDisplay, computeTrendAlignment } from "../src/tradeSetupCockpit";
 
 describe("computeCockpitState — Anti-Confluences/No-Go", () => {
   it("ist unlocked und ohne Anti-Confluences ohne sessionDanger", () => {
@@ -111,6 +111,41 @@ describe("computeTrendChain", () => {
   it("liefert eine leere Kette, wenn schon der äußerste Trend 'unknown' ist", () => {
     const state = { trend: "unknown", currRange: { high: { pivotTime: 0 }, low: { pivotTime: DAY } }, nestedTrend: null };
     expect(computeTrendChain(state, 1000)).toEqual([]);
+  });
+});
+
+// Feature-Wunsch Philip 2026-08-30: ob die aktuelle Dealing Range mit oder gegen den Trend läuft —
+// Basis für die spätere Target-Auswahl.
+describe("computeTrendAlignment", () => {
+  it("erkennt 'with_trend': Short bei Downtrend, Long bei Uptrend", () => {
+    expect(computeTrendAlignment("short", [{ trend: "downtrend", ageSeconds: null, originTimeSec: null }])).toBe("with_trend");
+    expect(computeTrendAlignment("long", [{ trend: "uptrend", ageSeconds: null, originTimeSec: null }])).toBe("with_trend");
+  });
+
+  it("erkennt 'countertrend': Long bei Downtrend, Short bei Uptrend", () => {
+    expect(computeTrendAlignment("long", [{ trend: "downtrend", ageSeconds: null, originTimeSec: null }])).toBe("countertrend");
+    expect(computeTrendAlignment("short", [{ trend: "uptrend", ageSeconds: null, originTimeSec: null }])).toBe("countertrend");
+  });
+
+  // Korrektur Philip 2026-08-30: "es zählt das aktuelle structure ... wenn es ein outer-structure
+  // gibt und ein nested structure, dann zählt nested structure" — die TIEFSTE Ebene der Kette
+  // entscheidet, nicht die äußerste (erste Version hatte das genau andersrum).
+  it("nutzt die tiefste (aktuellste) Ebene der Kette, nicht die äußerste", () => {
+    const chain = [
+      { trend: "downtrend", ageSeconds: null, originTimeSec: null }, // outer structure
+      { trend: "uptrend", ageSeconds: null, originTimeSec: null }, // nested structure, jetzt maßgeblich
+    ];
+    expect(computeTrendAlignment("short", chain)).toBe("countertrend");
+    expect(computeTrendAlignment("long", chain)).toBe("with_trend");
+  });
+
+  it("fällt ohne Verschachtelung auf die einzige (äußerste) Ebene zurück", () => {
+    expect(computeTrendAlignment("short", [{ trend: "downtrend", ageSeconds: null, originTimeSec: null }])).toBe("with_trend");
+  });
+
+  it("liefert null ohne Richtung oder ohne bestätigten Trend (leere Kette)", () => {
+    expect(computeTrendAlignment(null, [{ trend: "downtrend", ageSeconds: null, originTimeSec: null }])).toBeNull();
+    expect(computeTrendAlignment("short", [])).toBeNull();
   });
 });
 
