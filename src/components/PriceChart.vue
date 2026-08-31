@@ -305,8 +305,12 @@ const emit = defineEmits([
   "select-target",
   "select-setup-confirmations",
   "pin-context-menu",
-  "tsc-add-target-from-picker",
-  "tsc-add-anti-confluence-from-picker",
+  // Generisch seit Chat 2026-08-30 (TradeEditModal.vue bekam dieselben Lupe-Buttons wie die TSC) —
+  // openTargetPicker/openAntiConfluencePicker nehmen jetzt einen expliziten range-Parameter statt
+  // hart props.tscRange zu lesen, das Payload trägt dealingRangeId/isTsc selbst statt dass der
+  // Event-Name (früher "tsc-"-Präfix) die Ziel-Range codiert.
+  "add-target-from-picker",
+  "add-anti-confluence-from-picker",
 ]);
 
 const { markSuccess } = useStatusBar();
@@ -1069,8 +1073,13 @@ const targetPickerLiquidityCandidates = ref([]);
 const targetPickerObCandidates = ref([]);
 const targetPickerHoveredLiquidityKey = ref(null);
 const targetPickerHoveredObKey = ref(null);
-function openTargetPicker() {
-  if (!props.tscRange) return;
+// Wohin eine Picker-Auswahl geschrieben wird (Chat 2026-08-30, TradeEditModal.vue bekam dieselben
+// Lupe-Buttons wie die TSC) — range-Parameter statt hart props.tscRange, isTsc steuert nur noch,
+// ob Dashboard.vue nach dem Insert refreshTscRange() oder refreshTrades() aufruft.
+const targetPickerRangeContext = ref(null);
+function openTargetPicker(range = props.tscRange, isTsc = true) {
+  if (!range) return;
+  targetPickerRangeContext.value = { dealingRangeId: range.id, isTsc };
   // clipReplay() statt rohem allCandles (Bug-Report Philip 2026-08-27, Replay 24.08. 15:35: "die
   // LQs, die ausgewählt werden, stimmen nicht") — allCandles enthält im Replay bewusst ein paar
   // Lookahead-Kerzen über replayUntil hinaus (siehe CLAUDE.md-Gotcha zu REPLAY_LOOKAHEAD_SEC/
@@ -1078,7 +1087,7 @@ function openTargetPicker() {
   // hätte also den Preis EINER Kerze NACH dem Replay-Zeitpunkt genommen statt des tatsächlichen
   // "aktuellen" (Replay-)Preises.
   const currentPrice = currentPriceEstimate(clipReplay(allCandles));
-  const direction = props.tscRange.direction;
+  const direction = range.direction;
   targetPickerCurrentPrice.value = currentPrice;
   // Long-Unterstützung (Chat 2026-08-27, Philip: "jetzt implementier noch die Target-Findung für
   // Long") — findNearestLiquidityTargets/-ObTargets waren von Anfang an direction-generisch gebaut
@@ -1111,7 +1120,8 @@ function onTargetPickerSelect(candidate) {
   refreshPoiZonesInternal();
   if (candidate.kind === "ob") {
     const zone = candidate.item;
-    emit("tsc-add-target-from-picker", {
+    emit("add-target-from-picker", {
+      ...targetPickerRangeContext.value,
       kind: "ob",
       price: zone.targetPrice,
       sourceTime: zone.startTime,
@@ -1123,7 +1133,8 @@ function onTargetPickerSelect(candidate) {
     return;
   }
   const level = candidate.item;
-  emit("tsc-add-target-from-picker", {
+  emit("add-target-from-picker", {
+    ...targetPickerRangeContext.value,
     kind: "pivot",
     price: level.price,
     sourceTime: level.pivotTime,
@@ -1151,10 +1162,13 @@ const antiConfluencePickerDivergenceCandidates = ref([]);
 const antiConfluencePickerInvalidationObCandidates = ref([]);
 const antiConfluencePickerHoveredLiquidityKey = ref(null);
 const antiConfluencePickerHoveredObKey = ref(null);
-function openAntiConfluencePicker() {
-  const targets = props.tscRange?.targets ?? [];
-  if (!props.tscRange || targets.length === 0) return;
-  const direction = props.tscRange.direction;
+// Wohin eine Picker-Auswahl geschrieben wird, analog targetPickerRangeContext oben.
+const antiConfluencePickerRangeContext = ref(null);
+function openAntiConfluencePicker(range = props.tscRange, isTsc = true) {
+  const targets = range?.targets ?? [];
+  if (!range || targets.length === 0) return;
+  antiConfluencePickerRangeContext.value = { dealingRangeId: range.id, isTsc };
+  const direction = range.direction;
   // Ferne Zonen-Kante: tiefstes Short- bzw. höchstes Long-Target (Philip 2026-08-30: "wenn es
   // mehrere short targets gibt, dann ist das tiefste short target die range").
   const zoneBoundPrice = direction === "short" ? Math.min(...targets.map((t) => t.price)) : Math.max(...targets.map((t) => t.price));
@@ -1164,7 +1178,7 @@ function openAntiConfluencePicker() {
     direction,
     zoneBoundPrice,
     currentPrice,
-    invalidation: props.tscRange.invalidation,
+    invalidation: range.invalidation,
     obZones: poiZonesMetadata.value,
     liquidityLevels: getCurrentLiquidityLevels(),
     candles: clipReplay(allCandles),
@@ -1191,7 +1205,8 @@ function onAntiConfluencePickerSelect(candidate) {
   refreshPoiZonesInternal();
   if (candidate.kind === "ob" || candidate.kind === "ob-inv") {
     const zone = candidate.item;
-    emit("tsc-add-anti-confluence-from-picker", {
+    emit("add-anti-confluence-from-picker", {
+      ...antiConfluencePickerRangeContext.value,
       kind: "ob",
       price: zone.edgePrice,
       sourceTime: zone.startTime,
@@ -1208,7 +1223,8 @@ function onAntiConfluencePickerSelect(candidate) {
   }
   if (candidate.kind === "pivot") {
     const level = candidate.item;
-    emit("tsc-add-anti-confluence-from-picker", {
+    emit("add-anti-confluence-from-picker", {
+      ...antiConfluencePickerRangeContext.value,
       kind: "pivot",
       price: level.price,
       sourceTime: level.pivotTime,
@@ -1220,7 +1236,8 @@ function onAntiConfluencePickerSelect(candidate) {
     return;
   }
   const divergence = candidate.item;
-  emit("tsc-add-anti-confluence-from-picker", {
+  emit("add-anti-confluence-from-picker", {
+    ...antiConfluencePickerRangeContext.value,
     kind: "rsi_divergence",
     price: divergence.toPrice,
     sourceTime: divergence.toTime,

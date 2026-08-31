@@ -484,20 +484,38 @@ async function onTscRemoveTarget(t) {
 }
 // Target-Vorschläge (PLAN-find-targets.md, Chat 2026-08-27) — PriceChart.vue: openTargetPicker
 // baut das Pivot-Target bereits fertig (dieselbe Form wie ein Chart-Klick, siehe findClickedTarget),
-// hier nur noch der ganz normale addTargetToTrade-Weg wie bei jedem anderen Target.
-async function onTscAddTargetFromPicker(target) {
-  if (tscRangeId.value == null) return;
-  const ok = await addTargetToTrade(tscRangeId.value, target);
-  if (ok) refreshTscRange();
+// hier nur noch der ganz normale addTargetToTrade-Weg wie bei jedem anderen Target. Generisch seit
+// Chat 2026-08-30 (TradeEditModal.vue bekam dieselben Lupe-Buttons wie die TSC) — dealingRangeId/
+// isTsc kommen jetzt im Payload selbst statt hart tscRangeId zu verwenden, isTsc entscheidet nur
+// noch, welche Liste danach neu geladen wird (analog trade.isTsc in onSelectTarget).
+async function onAddTargetFromPicker({ dealingRangeId, isTsc, ...target }) {
+  const ok = await addTargetToTrade(dealingRangeId, target);
+  if (ok) (isTsc ? refreshTscRange() : refreshTrades());
 }
 // Anti-Confluence-Vorschläge (Chat 2026-08-30) — PriceChart.vue: openAntiConfluencePicker baut das
 // Confirmation-Rohformat bereits fertig (dieselbe Form wie ein Chart-Klick), hier nur noch der ganz
 // normale addRangeConfirmation-Weg mit explizitem category='anti_confluence' wie bei jeder anderen
-// Anti-Confluence.
-async function onTscAddAntiConfluenceFromPicker(confirmation) {
-  if (tscRangeId.value == null) return;
-  const ok = await addRangeConfirmation(tscRangeId.value, confirmation, "anti_confluence");
-  if (ok) refreshTscRange();
+// Anti-Confluence. Generisch seit Chat 2026-08-30, siehe onAddTargetFromPicker oben.
+async function onAddAntiConfluenceFromPicker({ dealingRangeId, isTsc, ...confirmation }) {
+  const ok = await addRangeConfirmation(dealingRangeId, confirmation, "anti_confluence");
+  if (ok) (isTsc ? refreshTscRange() : refreshTrades());
+}
+// Lupe-Buttons im TradeEditModal (Chat 2026-08-30, analog zur TSC) — öffnet denselben Picker wie
+// @open-target-picker/@open-anti-confluence-picker auf der TradeSetupCockpit unten, nur mit der
+// Dealing Range des gerade bearbeiteten Trades statt tscRange, isTsc=false schickt die Picker-
+// Auswahl oben in onAddTargetFromPicker/onAddAntiConfluenceFromPicker über refreshTrades() statt
+// refreshTscRange() zurück. editingTrade trägt direction/targets/invalidation bereits eingebettet
+// (siehe trades.js: fetchTrades).
+function editingTradeAsRange() {
+  const t = editingTrade.value;
+  if (!t) return null;
+  return { id: t.dealingRangeId, direction: t.direction, targets: t.targets, invalidation: t.invalidation };
+}
+function onOpenTradeTargetPicker() {
+  priceChartRef.value?.openTargetPicker(editingTradeAsRange(), false);
+}
+function onOpenTradeAntiConfluencePicker() {
+  priceChartRef.value?.openAntiConfluencePicker(editingTradeAsRange(), false);
 }
 // "In die Trades-Liste überführen" (Chat 2026-08-27) — legt eine leere trade_positions-Zeile für
 // die bestehende TSC-Range an und öffnet sie sofort im Trade-Edit-Modal, damit Philip Entry/
@@ -1938,6 +1956,7 @@ watch(selectedTradingAccountId, () => {
   <TradeEditModal
     v-if="editingTrade"
     :trade="editingTrade"
+    :current-symbol="currentSymbol"
     @close="closeTradeEditModal"
     @saved="refreshTrades"
     @deleted="onTradeDeleted"
@@ -1949,6 +1968,8 @@ watch(selectedTradingAccountId, () => {
     @request-add-anti-confluence="onAddAntiConfluenceRequest(editingTrade)"
     @request-add-range-anti-confluence="onAddRangeAntiConfluenceRequest(editingTrade)"
     @request-set-invalidation="onSetInvalidationRequest(editingTrade)"
+    @open-target-picker="onOpenTradeTargetPicker"
+    @open-anti-confluence-picker="onOpenTradeAntiConfluencePicker"
     @hover-evidence="hoveredModalEvidenceItem = $event"
     @hover-target="hoveredModalTargetItem = $event"
   />
@@ -2036,8 +2057,8 @@ watch(selectedTradingAccountId, () => {
     @select-setup-confirmations="onSelectSetupConfirmations"
     @toggle-trade-mode="tradeModeActive = !tradeModeActive"
     @pin-context-menu="onPinContextMenu"
-    @tsc-add-target-from-picker="onTscAddTargetFromPicker"
-    @tsc-add-anti-confluence-from-picker="onTscAddAntiConfluenceFromPicker"
+    @add-target-from-picker="onAddTargetFromPicker"
+    @add-anti-confluence-from-picker="onAddAntiConfluenceFromPicker"
     />
     <TradeSetupCockpit
       class="chart-tsc-row-tsc"

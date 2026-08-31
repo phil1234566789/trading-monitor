@@ -19,6 +19,12 @@ import InvalidationField from "./InvalidationField.vue";
 // Dashboard.vue live aus der `trades`-Liste nachgereicht wird, nicht als einmalige Kopie.
 const props = defineProps({
   trade: { type: Object, required: true },
+  // Für den Instrument-Mismatch-Guard der Lupe-Buttons unten (Chat 2026-08-30, analog zu
+  // TradeSetupCockpit.vue) — die Picker-Kandidaten kommen aus dem gerade im Chart geladenen
+  // Instrument (PriceChart.vue: poiZonesMetadata/getCurrentLiquidityLevels), nicht aus dem Trade
+  // selbst. Ohne diesen Guard würde ein offenes Modal für ein anderes Instrument als das aktuell
+  // angezeigte Chart-Symbol stillschweigend falsche Preis-Level vorschlagen.
+  currentSymbol: { type: String, required: true },
 });
 // Zwei getrennte "Bestätigung hinzufügen"-Anfragen (Chat 2026-07-31: "wir haben die gesamte Basis
 // um alles per Klick übernehmen zu können" — kurz zuvor per Formular ausprobiert, dann wieder
@@ -46,6 +52,11 @@ const emit = defineEmits([
   // Unterschied zwischen beiden, nur trade_evidence.id).
   "hover-evidence",
   "hover-target",
+  // Target-/Anti-Confluence-Vorschläge (Chat 2026-08-30, analog zu TradeSetupCockpit.vue) — öffnet
+  // denselben Picker wie im TSC, nur für die Dealing Range dieses Trades statt der TSC-Range (siehe
+  // Dashboard.vue: onOpenTradeTargetPicker/onOpenTradeAntiConfluencePicker).
+  "open-target-picker",
+  "open-anti-confluence-picker",
 ]);
 
 const entryPrice = ref("");
@@ -222,6 +233,11 @@ const positionConfirmations = computed(() => (props.trade.confirmations ?? []).f
 const rangeConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "range" && c.category === "confluence"));
 const positionConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "position" && c.category === "confluence"));
 const rangeAntiConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "range" && c.category === "anti_confluence"));
+
+const instrumentMismatch = computed(() => props.trade.instrument !== props.currentSymbol);
+function pickerButtonTitle(baseTitle) {
+  return instrumentMismatch.value ? `Erst zu ${props.trade.instrument} wechseln.` : baseTitle;
+}
 const positionAntiConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "position" && c.category === "anti_confluence"));
 
 async function save() {
@@ -373,7 +389,20 @@ function confirmationLabel(confirmation) {
         @add="emit('request-add-range-anti-confluence')"
         @remove="onRemoveConfirmation"
         @hover="(c) => emit('hover-evidence', c)"
-      />
+      >
+        <template #extra-action>
+          <!-- Anti-Confluence-Vorschläge (analog TradeSetupCockpit.vue) — braucht mind. 1 Target
+               (definiert die ferne Zonen-Kante, siehe findAntiConfluences.js). -->
+          <button
+            class="tem-target-picker-btn"
+            :title="pickerButtonTitle('Anti-Confluence-Vorschläge (gegenläufige OBs/Sweeps/Divergenz in der Ziel-Zone)')"
+            :disabled="(trade.targets ?? []).length < 1 || instrumentMismatch"
+            @click="emit('open-anti-confluence-picker')"
+          >
+            🔎
+          </button>
+        </template>
+      </CrudListSection>
 
       <CrudListSection
         title="Targets"
@@ -386,7 +415,20 @@ function confirmationLabel(confirmation) {
         @add="emit('request-add-target')"
         @remove="onRemoveTarget"
         @hover="(t) => emit('hover-target', t)"
-      />
+      >
+        <template #extra-action>
+          <!-- Target-Vorschläge (analog TradeSetupCockpit.vue), erst ab 2 Range-Bestätigungen
+               sinnvoll (legen Richtung/Kontext fest). -->
+          <button
+            class="tem-target-picker-btn"
+            :title="pickerButtonTitle('Target-Vorschläge (nächste LQ-Level)')"
+            :disabled="rangeConfirmations.length < 2 || instrumentMismatch"
+            @click="emit('open-target-picker')"
+          >
+            🔎
+          </button>
+        </template>
+      </CrudListSection>
     </div>
 
     <!-- Trade Position: diese EINE Ausführung — Entry-Kriterien/Ergebnis können sich von anderen
@@ -572,6 +614,32 @@ function confirmationLabel(confirmation) {
 
 .tem-lesson-remove:hover {
   color: #ef5350;
+}
+
+/* Identisch zu TradeSetupCockpit.vue's .tsc-target-picker-btn (Vue-scoped-CSS lässt sich nicht
+   komponentenübergreifend teilen) — selber Lupe-Button für Target-/Anti-Confluence-Vorschläge. */
+.tem-target-picker-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: transparent;
+  border: 1px solid #2a2e39;
+  color: #9aa0ac;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.tem-target-picker-btn:hover:not(:disabled) {
+  border-color: #2962ff;
+  color: #d1d4dc;
+}
+
+.tem-target-picker-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .tem-lesson-form {
