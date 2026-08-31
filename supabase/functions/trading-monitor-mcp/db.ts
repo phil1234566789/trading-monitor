@@ -205,12 +205,18 @@ export async function getLatestDailyStructureStartTime(instrument: string): Prom
 // letzten 100 setups, die letzten 2 reichen ja" — 50 war schon ein Fix gegen das Token-Limit, aber
 // für den Normalfall (kurzer Blick auf die juengsten Setups) weiterhin deutlich mehr als noetig. Ein
 // expliziter hoeherer limit-Wert bleibt fuer breitere Abfragen moeglich (max. 500), nur der Default sinkt.
+// Sortierung nach `ob_start_time`, NICHT `fractal_pivot_time` (Bug-Report Philip 2026-08-31,
+// GBPUSD-Backtest 28.08.: ein frisches Path-B-Setup, dessen `fractal_pivot_time` = `ls_pivot_time`
+// eines alten Hochs war, fiel aus den "letzten N" raus, obwohl sein bestätigender OB erst Minuten
+// alt war — siehe Path B in tradeSetup.ts: `fractal` wird dort auf `ls` gesetzt, dessen Pivot
+// beliebig alt sein kann). `ob_start_time` markiert dagegen immer den tatsächlichen
+// Bestätigungszeitpunkt des Setups, für Path A wie Path B gleichermaßen.
 export async function getTradeSetups(instrument: string, fromSec?: number, limit = 2, replayUntilSec?: number) {
   let query = supabase
     .from("trade_setups")
     .select("*")
     .eq("instrument", instrument)
-    .order("fractal_pivot_time", { ascending: false })
+    .order("ob_start_time", { ascending: false })
     .limit(limit);
   if (fromSec != null) query = query.gte("fractal_pivot_time", new Date(fromSec * 1000).toISOString());
   if (replayUntilSec != null) query = query.lte("created_at", new Date(replayUntilSec * 1000).toISOString());
@@ -226,19 +232,24 @@ export async function getTradeSetups(instrument: string, fromSec?: number, limit
 // entstanden ist (dieselbe Live-statt-as-of-Bug-Klasse wie applyAsOf/applyAsOfZones oben, hier
 // aber ohne eigene as-of-Spalte in der Tabelle, deshalb der Umweg über created_at statt eines
 // zurückgerechneten touched-Zustands). Ohne replayUntilSec (Live-Fall) zählt einfach das neueste.
-// maxAgeHours bezieht sich dagegen auf fractal_pivot_time (Alter des Musters selbst) — liegt kein
-// Setup einer Richtung im Fenster, liefert diese Richtung null statt eines veralteten Treffers.
+// maxAgeHours UND die Sortierung beziehen sich auf ob_start_time (Bestätigungszeitpunkt des
+// Setups), NICHT auf fractal_pivot_time — bei einem Path-B-Setup (siehe tradeSetup.ts) ist
+// fractal_pivot_time = ls_pivot_time des gesweepten Levels und kann daher beliebig alt sein, obwohl
+// der bestätigende OB gerade erst entstanden ist (Bug-Report Philip 2026-08-31, GBPUSD-Backtest
+// 28.08.: ein frisches Short-Setup direkt nach einem News-Spike-Sweep wurde dadurch von einem
+// älteren, aber "fractal-frischeren" Setup verdeckt). Liegt kein Setup einer Richtung im Fenster,
+// liefert diese Richtung null statt eines veralteten Treffers.
 export async function getLatestTradeSetupPerDirection(instrument: string, replayUntilSec?: number, maxAgeHours = 48) {
   const nowSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
-  const minPivotSec = nowSec - maxAgeHours * 3600;
+  const minObSec = nowSec - maxAgeHours * 3600;
   async function latestFor(direction: "long" | "short") {
     let query = supabase
       .from("trade_setups")
       .select("*")
       .eq("instrument", instrument)
       .eq("direction", direction)
-      .gte("fractal_pivot_time", new Date(minPivotSec * 1000).toISOString())
-      .order("fractal_pivot_time", { ascending: false })
+      .gte("ob_start_time", new Date(minObSec * 1000).toISOString())
+      .order("ob_start_time", { ascending: false })
       .limit(1);
     if (replayUntilSec != null) query = query.lte("created_at", new Date(replayUntilSec * 1000).toISOString());
     const { data, error } = await query.maybeSingle();

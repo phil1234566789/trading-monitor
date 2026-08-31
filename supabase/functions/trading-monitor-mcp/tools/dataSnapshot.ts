@@ -22,13 +22,16 @@ const SNAPSHOT_RECENCY_HOURS = 24;
 const SETUP_MAX_AGE_HOURS = 48;
 
 // Curated Felder statt roher trade_setups-Zeile (notified/notified_at/alert_price/created_at/
-// updated_at raus) — ageHours bezieht sich auf fractal_pivot_time (Alter des Musters selbst, siehe
-// getLatestTradeSetupPerDirection/db.ts), obZoneId bleibt drin, damit Lana per ID gegen eine
-// OB-Zone matchen kann (z.B. für add_trade_confirmation kind='ob'), analog zu m5ObZoneIdByKey in
-// dataExport.ts.
+// updated_at raus) — ageHours bezieht sich auf ob_start_time (Bestätigungszeitpunkt des Setups,
+// siehe getLatestTradeSetupPerDirection/db.ts), NICHT auf fractal_pivot_time: bei einem
+// Path-B-Setup (tradeSetup.ts) ist fractal_pivot_time = ls_pivot_time des gesweepten Levels und
+// kann beliebig alt sein, obwohl der bestätigende OB gerade erst entstanden ist. obZoneId bleibt
+// drin, damit Lana per ID gegen eine OB-Zone matchen kann (z.B. für add_trade_confirmation
+// kind='ob'), analog zu m5ObZoneIdByKey in dataExport.ts.
 function curateTradeSetup(row: Record<string, unknown> | null, asOfSec: number) {
   if (!row) return null;
   const fractalPivotTime = Math.floor(new Date(row.fractal_pivot_time as string).getTime() / 1000);
+  const obStartTime = Math.floor(new Date(row.ob_start_time as string).getTime() / 1000);
   return {
     id: row.id,
     fractalPrice: row.fractal_price,
@@ -38,9 +41,9 @@ function curateTradeSetup(row: Record<string, unknown> | null, asOfSec: number) 
     lsTouchedTime: Math.floor(new Date(row.ls_touched_time as string).getTime() / 1000),
     obTop: row.ob_top,
     obBottom: row.ob_bottom,
-    obStartTime: Math.floor(new Date(row.ob_start_time as string).getTime() / 1000),
+    obStartTime,
     obZoneId: row.ob_zone_id ?? null,
-    ageHours: Math.round(((asOfSec - fractalPivotTime) / 3600) * 100) / 100,
+    ageHours: Math.round(((asOfSec - obStartTime) / 3600) * 100) / 100,
   };
 }
 
