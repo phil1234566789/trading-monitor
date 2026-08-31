@@ -926,6 +926,28 @@ export async function fetchActiveTscRangeId(instrument: string) {
   return (data ?? []).find((r) => (r.trade_positions ?? []).length === 0)?.id ?? null;
 }
 
+// get_validation_evidence (Schritt 6, siehe docs/state-machine.md) — "aktive Gegen-DR" für die
+// Anti-Confluence-Gewichtung (06-dealing-range-validieren.md: "Häufig vorhanden, deshalb aktiv
+// danach suchen ... ist die gegnerische Dealing Range bereits abgeschlossen oder noch offen?").
+// "Offen" hier: entweder noch reine TSC-Idee (keine trade_positions-Zeile, wie fetchActiveTscRangeId
+// oben) ODER eine Ausführung ohne gesetztes outcome (Position noch offen). Bewusst KEIN
+// Preis-/Invalidierungs-Check hier (ob sie bereits erkennbar schwächelt bleibt Lanas eigene
+// Abwägung, siehe Doku-Zitat oben) — nur die Existenz einer nicht abgeschlossenen Gegen-Idee.
+export async function getOpenOppositeDealingRanges(instrument: string, direction: "long" | "short") {
+  const oppositeDirection = direction === "long" ? "short" : "long";
+  const { data, error } = await supabase
+    .from("dealing_ranges")
+    .select("id, direction, invalidation, created_at, trade_positions(outcome)")
+    .eq("instrument", instrument)
+    .eq("direction", oppositeDirection)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (error) throw new Error(error.message);
+  return (data ?? [])
+    .filter((r) => (r.trade_positions ?? []).length === 0 || (r.trade_positions ?? []).every((p: { outcome: string | null }) => p.outcome == null))
+    .map((r) => ({ id: r.id, direction: r.direction as "long" | "short", invalidation: r.invalidation as number | null, createdAt: r.created_at as string }));
+}
+
 function toLiquidityLevel(row: { liquidity_levels?: { price: number; direction: string; timeframe: string; pivot_time: string; touched: boolean; end_time: string | null } | null } | null) {
   if (!row?.liquidity_levels) return null;
   const lvl = row.liquidity_levels;

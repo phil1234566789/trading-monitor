@@ -34,7 +34,23 @@ inkl. Schritt 6. Laufzeit-Ort: neue `trading-monitor`-MCP-Tools, weiterhin von L
 separater Cron-Dienst wie `poi-watcher`).
 
 Was **dauerhaft bei Lana bleibt** (freie Synthese, keine Kandidatenliste zum Wählen):
-- Schritt 3: freie "Kontext-Info"-Synthese (zwei Beobachtungen zu einer Einordnung verknüpfen).
+- Schritt 3: freie "Kontext-Info"-Synthese (zwei Beobachtungen zu einer Einordnung verknüpfen); die
+  Bestimmung des 1H-Trends selbst, sobald `structure1h.trend` unbestätigt (`"unknown"`) zurückkommt
+  — reine manuelle Kraft-Abwägung, siehe [Fall 5](../00-trading-steps/03-htf-bias/03-htf-bias.md#ergebnis).
+  Philip, 31.08.2026: "das mit dem Trend überlassen wir erst mal Lana, das ist etwas seeeehr
+  Schweres, was ich selbst nicht mal gut hinbekomme" — `run_bias_check` liefert in diesem Fall
+  bewusst nur `unresolvedTrend: true`, KEINEN `trading_loop_state`-Write.
+- Schritt 5: die komplette Fall-1/2/3-Einordnung selbst — auch die scheinbar mechanischen Teile
+  ("OB hält" via `touched`/`invalidated`, "valider Sweep" vs. bloßer Strukturbruch). Philip,
+  31.08.2026, zur ersten Version dieser Datei (die genau das automatisch klassifiziert UND bei
+  vermutetem Fall 1 automatisch `add_trade_confirmation`/`add_trade_target`/Pin-Aufräumen ausgelöst
+  hatte): "eig sind alle drei Punkte LLM Sache" (bezogen auf alle drei Situationen unter "Fall 1 —
+  Dealing Range existiert", nicht nur "Markt bewegt sich sauber im Trend"). `run_dealing_range_loop`
+  liefert deshalb nur noch rohe Evidenz (Setups/Sweeps/OB-Reaktionen) + einen reinen
+  Existenz-Flag (`hasReaction`, ohne Bewertung) — NUR Fall 4 (reiner Preisvergleich gegen Target/
+  Invalidierung) wird mechanisch entschieden. Die TSC-Verknüpfung bei einem von Lana erkannten
+  Fall 1 (Bootstrap/Bestätigung/Target/Pin-Aufräumen) läuft weiterhin über Lanas eigene
+  `add_trade_confirmation`/`add_trade_target`/`remove_pin_entry`-Aufrufe, nicht automatisch.
 - Schritt 6: die finale VALIDE/INVALIDE-Abwägung (qualitativ laut Doku, kein Schwellenwert).
 - Kommunikation mit Philip, `CronCreate`/`CronDelete`/`PushNotification` (Claude-Code-Primitive,
   nicht aus einer Edge Function auslösbar).
@@ -144,9 +160,13 @@ an UND ergänzt `dealing_ranges` um eine `reasoning`-Textspalte (analog `trade_p
 siehe [Reporting](#reporting-trading-runsmd-verliert-seinen-zweck) oben) für Lanas Schritt-3/6-
 Freitext-Synthese:
 
-- `instrument`, `date_str`, `status` (`active`/`fall1_handoff`/`fall4_pending_bias`/
-  `stopped_market_close`/`stopped_news_pause`/`superseded`/`completed`), `current_step` (3/4/5),
-  `current_case` (1-4, nullable), `dealing_range_id` (FK, sobald TSC-Bootstrap lief),
+- `instrument`, `date_str`, `direction` (`long`/`short`, aus Schritt 3), `status`
+  (`active`/`fall4_pending_bias`/`stopped_market_close`/`stopped_news_pause`/`superseded`/
+  `completed` — `fall1_handoff` bleibt als Enum-Wert bestehen, wird aber seit der Korrektur
+  31.08.2026 nicht mehr automatisch gesetzt, siehe Tool 4 unten), `current_step` (3/4/5),
+  `current_case` (nur `4`, nullable — Fall 1/2/3 werden nicht mehr mechanisch geschrieben),
+  `dealing_range_id` (FK, aktuell nirgends automatisch gesetzt — Lana verknüpft die TSC-Range
+  weiterhin selbst, Feld bleibt für eine mögliche spätere manuelle/Tool-Verknüpfung reserviert),
   `trend_target`/`countertrend_target`/`intermediate_level` (jsonb: price/kind/refId/timeframe),
   `invalidation`, `watch_level_above`/`watch_level_below` (jsonb), `bias_computed_at`,
   `last_analysis_time_sec`, `replay_until_sec` (null = live), `heartbeat_log` (jsonb-Array,
@@ -213,30 +233,40 @@ wird von Tool 4 bei jedem vollen Durchlauf intern erneut aufgerufen.
 
 ### Tool 4 — `run_dealing_range_loop` (Schritt 5, Kernstück)
 
+**Korrigiert 31.08.2026** (Philip, zur ersten Version dieser Datei, die Fall 1/2/3 automatisch aus
+`touched`/`invalidated`-Flags klassifiziert UND bei vermutetem Fall 1 automatisch TSC-Bootstrap +
+`add_trade_confirmation`/`add_trade_target`/Pin-Aufräumen ausgelöst hatte): "eig sind alle drei
+Punkte LLM Sache" (bezogen auf alle drei Situationen unter "Fall 1 — Dealing Range existiert" in
+05-dealing-range-bestaetigen.md, nicht nur "Markt bewegt sich sauber im Trend") — auch "OB hält"
+(`touched`/`invalidated`) und "valider Sweep vs. bloßer Strukturbruch" sind keine reine Preis-/
+Flag-Ablesung, sondern eine Einordnung, die Lana trifft. Siehe [Was dauerhaft bei Lana
+bleibt](#problem) oben für die volle Begründung.
+
 Neue Pure-Logik-Datei `fallClassifier.ts`:
-- `classifyFall(...)`: Fall 4 (Target/Invalidierung erreicht) hat Priorität, rein mechanischer
-  Preisvergleich. Fall 1 vs. 2 größtenteils aus `dataSnapshot.tradeSetups`/
-  `recentReactions.liquiditySweeps`/`obReactions` ableitbar (vollständiges `trade_setups`-Match oder
-  bereits haltender Sweep = Fall 1; begonnener, nicht abgeschlossener Sweep = Fall 2). Der einzige
-  weiterhin unscharfe Teil ("Markt bewegt sich sauber im Trend") bleibt Heuristik mit
-  `confidence: 'low'` im Response — Signal an Lana, wann sie selbst gegenprüfen sollte.
+- `checkFallFour(...)`: rein mechanischer Preisvergleich (Trend-/Countertrend-Target oder
+  Invalidierung erreicht) — die EINZIGE Fall-Klassifikation, die dieses Tool tatsächlich trifft.
+- `hasReaction(...)`: reine Existenz-Prüfung (liegt IRGENDEIN vollständiges Setup/eine OB-Reaktion/
+  ein Sweep vor?), KEINE Bewertung der Qualität — nur für Benachrichtigungspflicht (Fall 1+2, nicht
+  unterschieden) und Backtest-Abbruchregel.
 - `computeWatchLevels(...)`: der schlanke Loop-Tick-Preisvergleich aus der Doku.
 
 Tool-Handler `tools/dealingRangeLoop.ts`:
 - **Live** (kein `replayUntilSec`): ein Tick. Ruft `check_session_window` + die bestehenden
   `get_data_snapshot`/`get_recent_reactions`-Bausteine **fest verdrahtet statt optional** (genau die
-  beiden Pflicht-Calls, die am 31.08. nach 16:00 nicht mehr liefen). Bei Fall 1: TSC-Bootstrap +
-  Targets anhängen + Pin-Aufräumen (bestehende `db.ts`-Funktionen wiederverwendet),
-  `status='fall1_handoff'`, Response-Flag `mustNotifyPhilip: true` (Lana löst `PushNotification`
-  weiterhin selbst aus — Edge Function kann das nicht). Bei Fall 4: `status='fall4_pending_bias'`,
+  beiden Pflicht-Calls, die am 31.08. nach 16:00 nicht mehr liefen). Response liefert `fallFour`
+  (hit/reason), `hasReaction` (bool), `evidence` (rohes Setup/OB-Reaktionen/Sweeps, ungefiltert nach
+  "Fall") und `mustNotifyPhilip: hasReaction`. Bei `fallFour.hit`: `status='fall4_pending_bias'`,
   KEIN automatischer `run_bias_check` (Bias-Neudurchlauf bleibt Interpretation, Loop stoppt bewusst).
-  Bei Fall 2/3: `status` bleibt `active`, strukturierte "vorhandene/fehlende Bestätigungen"-Liste;
+  Sonst bleibt `status` `active`, nur Watch-Level/Analysezeitpunkt werden fortgeschrieben — KEIN
+  automatisches `add_trade_confirmation`/`add_trade_target`/`remove_pin_entry`, das bleibt Lanas
+  eigener nächster Schritt, sobald SIE aus der Evidenz Fall 1 erkennt.
   `CronCreate`/`CronDelete` bleiben bei Lana (Claude-Code-Primitive).
 - **Backtest** (`replayUntilSec` gesetzt): interner Batch-Fast-Forward-Loop (Kerzen-Batch holen →
-  Watch-Level-Treffer prüfen → bei Treffer voller Refetch + Neuklassifikation → Heartbeat-Eintrag
-  bei JEDEM Batch, egal ob Treffer oder nicht), **als hartes `if`/`break` im Server-Code statt
-  befolgter Anleitung**. Abbruch-Regel (Fall 1/2/4 stoppen, nur Fall 3 automatisch weiter) ist damit
-  strukturell nicht mehr an Lanas Aufmerksamkeit gebunden. `maxBatches` (Default 10) und
+  Watch-Level-Treffer prüfen → bei Treffer voller Refetch + `fallFour`/`hasReaction`-Check →
+  Heartbeat-Eintrag bei JEDEM Batch, egal ob Treffer oder nicht), **als hartes `if`/`break` im
+  Server-Code statt befolgter Anleitung**. Abbruch-Regel (stoppen bei `fallFour.hit` ODER
+  `hasReaction`, nur bei GAR NICHTS gefunden automatisch weiter) ist damit strukturell nicht mehr an
+  Lanas Aufmerksamkeit gebunden. `maxBatches` (Default 10) und
   News-Blackout-Pause (Gate-Check bei jedem Batch-Start) fest im Loop. Das komplette
   `heartbeatLog`-Array kommt in der Response UND liegt in `trading_loop_state.heartbeat_log` — Lana
   kopiert es 1:1 in den Chat statt es selbst pro Tick zu generieren.
@@ -291,8 +321,9 @@ mit bestehender Praxis, nur `marketStructureAnalysis.ts` hat heute Tests):
 - `test/biasEngine.test.js` — insbesondere `findIntermediateLevel` mit Fixtures für den
   25.08.2026-Bug (Asia-High vom Vortag fälschlich als Target) UND den neuen
   gleichgerichtete-OB-Fall vom 31.08.
-- `test/fallClassifier.test.js` — je ein Fixture pro Fall 1-4, inkl. Fixture, das den
-  GBPUSD-28.08.2026-News-Spike nachstellt (muss Fall 4 klassifizieren).
+- `test/fallClassifier.test.js` — `checkFallFour` (inkl. Fixture, das den GBPUSD-28.08.2026-
+  News-Spike nachstellt, muss `hit=true` liefern), `hasReaction` (reine Existenz-Fälle, kein
+  Fall-1/2/3-Case mehr seit der Korrektur 31.08.2026), `computeWatchLevels`.
 - `test/evidenceScoring.test.js` — Confluence/Anti-Confluence-Aggregation, aktive Gegen-DR-Gewichtung.
 
 **Orchestrierungs-Tools (DB-abhängig, kein Unit-Test möglich) — manuelles Verifikationsprotokoll:**

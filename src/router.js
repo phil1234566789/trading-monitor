@@ -10,5 +10,6 @@ export const router = createRouter({
     { path: "/alarme", name: "alarme", component: () => import("./views/Alarme.vue") },
     { path: "/handelszeiten", name: "handelszeiten", component: () => import("./views/Handelszeiten.vue") },
     { path: "/konten", name: "konten", component: () => import("./views/Konten.vue") },
+    { path: "/loop-status", name: "loop-status", component: () => import("./views/LoopStatus.vue") },
   ],
 });

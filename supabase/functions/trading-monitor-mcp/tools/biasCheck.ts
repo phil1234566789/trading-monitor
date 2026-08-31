@@ -1,0 +1,194 @@
+import { z } from "npm:zod@3.24.1";
+import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
+import { berlinDateTimeStrFor, berlinDateStrFor, berlinDayRangeUtcMs } from "../berlinTime.ts";
+import { fetchForexCandles } from "../forexCandles.ts";
+import { startLoopState } from "../loopState.ts";
+import { buildPretradeGates } from "./pretradeGates.ts";
+import { compute1hStructureState } from "./dataExport.ts";
+import { buildCandidatePool, findNearestLiquidityTargets, findNearestObTargets } from "../findTargetCandidates.js";
+import { isSpreadHourPivot, findIntermediateLevel, determineTrendForce, type TrendForceLevelInput, type TrendForceObInput } from "../biasEngine.ts";
+
+function json(data: unknown) {
+  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
+}
+
+export interface BiasCheckArgs {
+  instrument: string;
+  replayUntilSec?: number;
+}
+
+// Deepste bestätigte Trend-Ebene (dropUnknownStructureLevels/summarizeMarketStructureState hat
+// 'unknown' bereits ausgefiltert, siehe dataExport.ts) — 03-htf-bias.md: "die tiefste gelieferte
+// Ebene 1:1 als maßgeblichen 1H-Trend übernehmen", nestedTrend=null ist der Normalfall.
+function deepestTrend<T extends { trend: "uptrend" | "downtrend"; nestedTrend: T | null }>(node: T | null): T | null {
+  if (!node) return null;
+  let cur = node;
+  while (cur.nestedTrend) cur = cur.nestedTrend;
+  return cur;
+}
+
+// Nächstgelegenes HTF-Liquiditätslevel in der gesuchten Richtung, UNABHÄNGIG vom touched-Status
+// (anders als findNearestLiquidityTargets, das nur unberührte Level fürs Ziel sucht) — für
+// Prüfpunkt (4)/determineTrendForce muss auch ein BEREITS geswepptes Level gefunden werden können.
+function nearestHtfLevel(levels: { price: number; direction: "high" | "low"; touched: boolean; timeframe: string; kontext?: string | null }[], direction: "high" | "low", currentPrice: number) {
+  return levels
+    .filter((l) => l.direction === direction && (l.timeframe === "1H" || l.timeframe === "4H"))
+    .slice()
+    .sort((a, b) => Math.abs(a.price - currentPrice) - Math.abs(b.price - currentPrice))[0] ?? null;
+}
+
+export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckArgs) {
+  const currentTimeSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
+  const gates = await buildPretradeGates({ instrument, nowSec: currentTimeSec });
+  if (gates.exclude) {
+    return { instrument, asOf: { sec: currentTimeSec, at: berlinDateTimeStrFor(currentTimeSec) }, gates, blocked: true as const };
+  }
+
+  const dateStr = berlinDateStrFor(currentTimeSec);
+  const { startUtcMs } = berlinDayRangeUtcMs(dateStr);
+  const asiaEndSec = startUtcMs / 1000 + 7 * 3600; // marktsessions.md#asia-session (00:00-07:00 Berlin)
+
+  const [structureResult, candidatePool, priceCandles] = await Promise.all([
+    compute1hStructureState(instrument, currentTimeSec),
+    buildCandidatePool(instrument, currentTimeSec),
+    fetchForexCandles(instrument, "5m", { count: 1, toMs: currentTimeSec * 1000 }),
+  ]);
+  const currentPrice = priceCandles[priceCandles.length - 1]?.close ?? null;
+  const asiaCandles = candidatePool.m5Candles.filter((c) => c.time >= startUtcMs / 1000 && c.time < asiaEndSec);
+  const asiaRange =
+    asiaCandles.length > 0
+      ? { rangeHigh: Math.max(...asiaCandles.map((c) => c.high)), rangeLow: Math.min(...asiaCandles.map((c) => c.low)), today: true }
+      : { rangeHigh: null, rangeLow: null, today: false };
+
+  const deepest = deepestTrend(structureResult.trend);
+  if (!deepest || currentPrice == null) {
+    // Fall 5 (03-htf-bias.md): kein bestätigter 1H-Trend ODER kein aktueller Preis verfügbar —
+    // KEIN trading_loop_state-Write (kein Bias, auf dem ein Loop aufbauen könnte), Lana macht die
+    // manuelle Kraft-Abwägung selbst, siehe Textbaustein "1H-Ebene unbestätigt (Algo)".
+    return {
+      instrument,
+      asOf: { sec: currentTimeSec, at: berlinDateTimeStrFor(currentTimeSec) },
+      gates,
+      blocked: false as const,
+      structure1h: structureResult.trend,
+      structureTrendAge: structureResult.trendAge,
+      unresolvedTrend: true as const,
+      resultText: "1H-Ebene unbestätigt (Algo) ---> manuelle Kraft-Abwägung",
+      kontextInfoSynthesis: null,
+    };
+  }
+
+  const trend = deepest.trend as "uptrend" | "downtrend";
+  const trendDirection: "long" | "short" = trend === "uptrend" ? "long" : "short";
+  const counterDirection: "long" | "short" = trendDirection === "long" ? "short" : "long";
+
+  // findTargetCandidates.js ist unveränderte Plain-JS (siehe docs/state-machine.md "Kritische
+  // Dateien") ohne JSDoc-Typannotationen — TS leitet daraus lockere Typen (string statt
+  // 'high'|'low', number statt 1|-1) her, `as any` hier ist nur ein Grenz-Cast an dieser
+  // JS/TS-Schnittstelle, kein Laufzeit-Risiko (dieselben Objektformen wie überall sonst im Pool).
+  const filteredLiquidity = candidatePool.liquidityLevels.filter((l: any) => l.pivotTime == null || !isSpreadHourPivot(l.pivotTime)) as any[];
+  const filteredObZones = candidatePool.obZones.filter((z: any) => z.startTime == null || !isSpreadHourPivot(z.startTime)) as any[];
+
+  const trendTargetLiquidity = findNearestLiquidityTargets(filteredLiquidity, { direction: trendDirection, currentPrice, limit: 1 })[0] ?? null;
+  const counterTargetOb =
+    (findNearestObTargets(filteredObZones, { direction: counterDirection, currentPrice, timeframe: "1H" as any, limit: 1 })[0] as any) ??
+    (findNearestObTargets(filteredObZones, { direction: counterDirection, currentPrice, timeframe: "4H" as any, limit: 1 })[0] as any) ??
+    (findNearestObTargets(filteredObZones, { direction: counterDirection, currentPrice, limit: 1 })[0] as any) ??
+    null;
+
+  const trendTarget = trendTargetLiquidity
+    ? { price: trendTargetLiquidity.price, kind: "liquidity", refId: trendTargetLiquidity.id ?? null, timeframe: trendTargetLiquidity.timeframe, sourceTimeSec: trendTargetLiquidity.pivotTime }
+    : null;
+  const countertrendTarget = counterTargetOb
+    ? {
+        price: counterTargetOb.targetPrice,
+        kind: "ob",
+        refId: counterTargetOb.id ?? null,
+        timeframe: counterTargetOb.timeframe,
+        rangeLow: counterTargetOb.bottom,
+        rangeHigh: counterTargetOb.top,
+        sourceTimeSec: counterTargetOb.startTime,
+      }
+    : null;
+
+  const intermediateLevel = trendTarget
+    ? findIntermediateLevel({ direction: trendDirection, currentPrice, trendTargetPrice: trendTarget.price, liquidityLevels: filteredLiquidity, obZones: filteredObZones, asiaRange })
+    : null;
+
+  // Trend-Kraft (Prüfpunkt 4) — relevantes gegenläufiges HTF-OB ist i.d.R. das Countertrend-Target
+  // selbst (siehe 03-htf-bias.md), relevantes gegenläufiges HTF-Level das nächstgelegene HTF-Level
+  // in derselben Richtung wie das Countertrend-OB.
+  const obForForce: TrendForceObInput | null = counterTargetOb ? { direction: counterTargetOb.direction, timeframe: counterTargetOb.timeframe, touched: counterTargetOb.touched, invalidated: counterTargetOb.invalidated } : null;
+  const wantedLevelDir = counterDirection === "short" ? "high" : "low";
+  const nearestLevel = nearestHtfLevel(filteredLiquidity, wantedLevelDir, currentPrice);
+  const levelForForce: TrendForceLevelInput | null = nearestLevel ? { direction: nearestLevel.direction, price: nearestLevel.price, timeframe: nearestLevel.timeframe, touched: nearestLevel.touched } : null;
+  const trendForce = determineTrendForce(trend, obForForce, levelForForce, currentPrice);
+
+  const invalidation = countertrendTarget?.price ?? null;
+
+  const loopState = await startLoopState({
+    instrument,
+    dateStr,
+    direction: trendDirection,
+    trendTarget,
+    countertrendTarget,
+    intermediateLevel,
+    invalidation,
+    biasComputedAt: new Date(currentTimeSec * 1000).toISOString(),
+    lastAnalysisTimeSec: currentTimeSec,
+    replayUntilSec: replayUntilSec ?? null,
+  });
+
+  return {
+    instrument,
+    asOf: { sec: currentTimeSec, at: berlinDateTimeStrFor(currentTimeSec) },
+    gates,
+    blocked: false as const,
+    currentPrice,
+    structure1h: structureResult.trend,
+    structureTrendAge: structureResult.trendAge,
+    structureWindow: structureResult.window,
+    trend,
+    trendDirection,
+    trendTarget,
+    countertrendTarget,
+    intermediateLevel,
+    invalidation,
+    trendForce,
+    loopStateId: loopState.id,
+    // Bewusst null — reine LLM-Anteile (siehe docs/state-machine.md, dauerhaft bei Lana):
+    // Kontext-Info-Synthese (zwei Beobachtungen zu einer Einordnung verknüpfen) und der
+    // Pace-Check-Hinweis (Chop-Phase zwischen Sweep/Fraktal und Reaktion). Macht sichtbar, was
+    // mechanisch fertig ist und was Lana selbst beisteuern muss.
+    kontextInfoSynthesis: null,
+    paceCheckNote: null,
+  };
+}
+
+export function registerBiasCheckTool(server: McpServer) {
+  server.registerTool(
+    "run_bias_check",
+    {
+      title: "Schritt 3: HTF-Bias + Targets",
+      description:
+        "Mechanisiert Schritt 3 (HTF-Bias bestimmen) aus 00-trading-steps — ruft check_pretrade_gates " +
+        "intern zuerst auf und bricht bei `blocked=true` sofort ab (kein State-Write). Sonst: " +
+        "1H-Struktur-Trend (`structure1h`, wie get_data_export), Trend-/Countertrend-Target (dieselbe " +
+        "find_targets-Auswahl-Logik, Spread-Hour-Pivots übersprungen), Zwischen-Level-Check " +
+        "(`intermediateLevel`, inkl. heutiger Asia-Range), Trend-Kraft am relevanten gegenläufigen " +
+        "HTF-OB/-Level (`trendForce`) — UND schreibt/erneuert `trading_loop_state` für dieses " +
+        "Instrument (ein bisheriger aktiver Loop wird dabei immer ersetzt, nie nur gepatcht, siehe " +
+        "loopStateId in der Antwort). `kontextInfoSynthesis`/`paceCheckNote` sind bewusst `null` — " +
+        "die beiden echten LLM-only-Anteile dieses Schritts, die DU selbst ergänzen musst (freie " +
+        "Kontext-Info-Synthese aus zwei Beobachtungen, Pace-Check bei einer Chop-Phase vor der " +
+        "Reaktion). `unresolvedTrend=true` heißt: Algo liefert keinen bestätigten 1H-Trend, manuelle " +
+        "Kraft-Abwägung nötig, kein Loop-State-Write. Danach weiter zu check_session_window " +
+        "(Schritt 4), dann run_dealing_range_loop (Schritt 5).",
+      inputSchema: {
+        instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
+        replayUntilSec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
+      },
+    },
+    async (args) => json(await buildBiasCheck(args)),
+  );
+}

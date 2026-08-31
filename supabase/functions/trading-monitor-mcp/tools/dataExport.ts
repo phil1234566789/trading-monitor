@@ -240,7 +240,10 @@ function computeTrendChainAges(
   return chain;
 }
 
-async function compute1hStructureState(instrument: string, currentTimeSec: number, structureConfig: StructureConfig = {}) {
+// Exportiert (statt modul-privat) seit run_bias_check (Schritt 3, siehe tools/biasCheck.ts) —
+// wiederverwendet denselben 1H-Structure-Trend statt ihn ein zweites Mal zu berechnen (DRY, siehe
+// CLAUDE.md).
+export async function compute1hStructureState(instrument: string, currentTimeSec: number, structureConfig: StructureConfig = {}) {
   const {
     periodOuter = STRUCTURE_PERIOD_OUTER,
     periodInner = STRUCTURE_PERIOD_INNER,

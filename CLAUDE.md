@@ -103,9 +103,10 @@ fixed offset.
 Per-instrument trading/alarm windows (which weekdays and hours a trade may open, and separately
 when `poi-watcher` is allowed to actually send a Telegram message) live in the `trading_schedules`
 table, edited via the "Handelszeiten" page — **not** hardcoded constants. `poi-watcher` reads
-`alarm_windows` per instrument each run (`isInWindows()`); `trading_windows` on the same table is
-currently reference/display-only, read by the Handelszeiten page but not yet gating anything in
-code. Per-asset chart sessions (`sessions` table/`src/sessions.js`, edited via the Sessions modal
+`alarm_windows` per instrument each run (`isInWindows()`); `trading_windows` is read by the
+Handelszeiten page AND, since the `check_pretrade_gates` MCP tool (state-machine-v1), by
+`evaluateTradingHoursGate` (`supabase/functions/trading-monitor-mcp/pretradeGates.ts`) as a real
+Schritt-1-Gate — no longer display-only. Per-asset chart sessions (`sessions` table/`src/sessions.js`, edited via the Sessions modal
 on the chart) have an `instrument` column (one session list per asset) plus a `danger` level
 (`normal`/`caution`/`forbidden`) — this is how a sub-window like the GBPUSD/EURUSD "MMM" caution
 session is expressed, rather than a second schedule concept.

@@ -28,6 +28,11 @@ import { registerTscTools } from "./tools/tsc.ts";
 import { registerCalcRrTool } from "./tools/calcRr.ts";
 import { registerDataSnapshotTools } from "./tools/dataSnapshot.ts";
 import { registerRecentReactionsTools } from "./tools/recentReactions.ts";
+import { registerPretradeGatesTool } from "./tools/pretradeGates.ts";
+import { registerSessionWindowTool } from "./tools/sessionWindow.ts";
+import { registerBiasCheckTool } from "./tools/biasCheck.ts";
+import { registerDealingRangeLoopTool } from "./tools/dealingRangeLoop.ts";
+import { registerValidationEvidenceTool } from "./tools/validationEvidence.ts";
 
 const MCP_TOKEN = Deno.env.get("TRADING_MONITOR_MCP_TOKEN");
 
@@ -48,6 +53,11 @@ function buildServer() {
   registerCalcRrTool(server);
   registerDataSnapshotTools(server);
   registerRecentReactionsTools(server);
+  registerPretradeGatesTool(server);
+  registerSessionWindowTool(server);
+  registerBiasCheckTool(server);
+  registerDealingRangeLoopTool(server);
+  registerValidationEvidenceTool(server);
   return server;
 }
 

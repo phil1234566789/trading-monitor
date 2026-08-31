@@ -56,6 +56,7 @@ const lastUpdateText = computed(() =>
         <RouterLink to="/alarme" exact-active-class="active">Alarme</RouterLink>
         <RouterLink to="/handelszeiten" exact-active-class="active">Handelszeiten</RouterLink>
         <RouterLink to="/konten" exact-active-class="active">Konten</RouterLink>
+        <RouterLink to="/loop-status" exact-active-class="active">Loop-Status</RouterLink>
       </nav>
       <span class="last-update">{{ lastUpdateText }}</span>
       <button class="data-export-btn" @click="showDataExport = true">📊 Daten-Export</button>
