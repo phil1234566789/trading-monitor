@@ -11,13 +11,15 @@ function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-// get_recent_sweeps (Pflichtprüfung 00-trading-steps/05-dealing-range-bestaetigen.md, 2026-08-31) —
-// Philip: "die letzten LQ-Sweeps (alle TFs) prüfen, die letzten OBs (alle TFs) prüfen, prüfen ob
+// get_recent_reactions (Pflichtprüfung 00-trading-steps/05-dealing-range-bestaetigen.md, 2026-08-31)
+// — Philip: "die letzten LQ-Sweeps (alle TFs) prüfen, die letzten OBs (alle TFs) prüfen, prüfen ob
 // diese für den Analysezeitpunkt irgendeine Aussage haben (Fall 1/2/3/4)" soll bei JEDEM vollen
 // Schritt-5-Durchlauf laufen, nicht nur bei Verdacht — dafür reicht get_data_snapshot nicht (kein
 // M5) und get_data_export ist zu teuer (voller Tages-Export inkl. 1H-Struktur/Tageskerzen, nur um an
-// m5LiquidityLevels/m5ObZones ranzukommen). Dieses Tool bündelt NUR "was wurde kürzlich gesweept/
-// getestet, alle Timeframes, beide Richtungen" — 1H/4H über die bereits vorhandenen
+// m5LiquidityLevels/m5ObZones ranzukommen). "sweeps" allein wäre als Name schief gewesen (Philip,
+// 2026-08-31) — das Tool liefert auch OB-Reaktionen (Test/Invalidierung), nicht nur Liquiditäts-
+// Sweeps, daher "reactions" als Oberbegriff für beides. Dieses Tool bündelt NUR "was wurde kürzlich
+// gesweept/getestet, alle Timeframes, beide Richtungen" — 1H/4H über die bereits vorhandenen
 // buildNearRelevantLiquidityLevels/buildNearRelevantObZones (schon touched-zeitfenster-basiert,
 // siehe dort), M5 über dieselbe Erkennung wie get_data_export (computeM5LiquidityAndObZones,
 // dataExport.ts) — hier aber ohne Tageskerzen/1H-Struktur-Ballast. "Relevant" heißt hier bewusst nur
@@ -26,13 +28,13 @@ function json(data: unknown) {
 const DEFAULT_LOOKBACK_HOURS = 24;
 const OB_RANGE_PIPS = 40;
 
-export interface RecentSweepsArgs {
+export interface RecentReactionsArgs {
   instrument: string;
   replayUntilSec?: number;
   lookbackHours?: number;
 }
 
-export async function buildRecentSweeps({ instrument, replayUntilSec, lookbackHours = DEFAULT_LOOKBACK_HOURS }: RecentSweepsArgs) {
+export async function buildRecentReactions({ instrument, replayUntilSec, lookbackHours = DEFAULT_LOOKBACK_HOURS }: RecentReactionsArgs) {
   const currentTimeSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
   const fromSec = currentTimeSec - lookbackHours * 3600;
   const m5DetectionCount = Math.ceil((M5_DETECTION_LOOKBACK_HOURS * 3600) / M5_BAR_SECONDS) + M5_DETECTION_CANDLE_BUFFER;
@@ -84,9 +86,9 @@ export async function buildRecentSweeps({ instrument, replayUntilSec, lookbackHo
   };
 }
 
-export function registerRecentSweepsTools(server: McpServer) {
+export function registerRecentReactionsTools(server: McpServer) {
   server.registerTool(
-    "get_recent_sweeps",
+    "get_recent_reactions",
     {
       title: "Kürzliche LQ-Sweeps/OB-Reaktionen (alle Timeframes)",
       description:
@@ -108,6 +110,6 @@ export function registerRecentSweepsTools(server: McpServer) {
         lookbackHours: z.number().positive().optional().describe("Wie weit zurück nach Sweeps/Reaktionen gesucht wird (Default 24h)"),
       },
     },
-    async ({ instrument, replayUntilSec, lookbackHours }) => json(await buildRecentSweeps({ instrument, replayUntilSec, lookbackHours })),
+    async ({ instrument, replayUntilSec, lookbackHours }) => json(await buildRecentReactions({ instrument, replayUntilSec, lookbackHours })),
   );
 }

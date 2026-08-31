@@ -40,7 +40,7 @@ const DAY_SEC = 24 * 3600;
 // Exakt dieselben Werte wie src/dataExport.js (EXPORT_LOOKBACK_HOURS/EXPORT_CANDLE_BUFFER) — Philip
 // 2026-08-02: "lieber konsistent halten wo es geht" statt des ursprünglich kürzeren (~25h) Fensters,
 // das nur an der ohnehin schon geladenen Tages-Kerzenreihe (`raw` unten) mitgeschnitten hatte.
-// export: von recentSweeps.ts wiederverwendet (derselbe M5-Kerzenbedarf für dieselbe Erkennung).
+// export: von recentReactions.ts wiederverwendet (derselbe M5-Kerzenbedarf für dieselbe Erkennung).
 export const M5_DETECTION_LOOKBACK_HOURS = 7 * 24;
 export const M5_DETECTION_CANDLE_BUFFER = 20;
 export const M5_BAR_SECONDS = 300;
@@ -358,11 +358,11 @@ export interface M5DetectionInputs {
   sessionConfigs: Awaited<ReturnType<typeof getSessions>>;
 }
 
-// M5-Sweep/OB-Live-Erkennung, ausgelagert aus buildDataExport (Task "get_recent_sweeps", 2026-08-31)
+// M5-Sweep/OB-Live-Erkennung, ausgelagert aus buildDataExport (Task "get_recent_reactions", 2026-08-31)
 // — dieselbe Erkennung wird jetzt von ZWEI Tools gebraucht (get_data_export UND das neue,
-// schlankere get_recent_sweeps, siehe recentSweeps.ts), DRY statt einer zweiten Kopie. Gibt
+// schlankere get_recent_reactions, siehe recentReactions.ts), DRY statt einer zweiten Kopie. Gibt
 // `m5ObZonesAll` bewusst OHNE den abschließenden Preis-Band-Filter zurück (siehe buildDataExport
-// unten) — get_recent_sweeps filtert stattdessen nach Touch-Rezenz, nicht nach Preisnähe.
+// unten) — get_recent_reactions filtert stattdessen nach Touch-Rezenz, nicht nach Preisnähe.
 export function computeM5LiquidityAndObZones({
   currentTimeSec,
   m5CandlesForDetection,
@@ -489,7 +489,7 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // der "Zukunft" relativ zum Replay-Punkt sehen, derselbe Bug wie bei liquidityLevels/obZones oben.
   const m5CandlesForDetection = m5DetectionRaw.filter((c) => c.time <= currentTimeSec);
   // M5-Sweep/OB-Rohdaten ausgelagert (computeM5LiquidityAndObZones oben) — wiederverwendet von
-  // get_recent_sweeps (recentSweeps.ts), das dieselbe Erkennung braucht, aber ohne den restlichen
+  // get_recent_reactions (recentReactions.ts), das dieselbe Erkennung braucht, aber ohne den restlichen
   // Tages-Export (Tageskerzen/1H-Struktur) — DRY statt einer zweiten M5-Erkennungslogik.
   const { m5LiquidityLevels, m5ObZonesAll, obZonesReferencePrice } = computeM5LiquidityAndObZones({
     currentTimeSec,
@@ -550,7 +550,7 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // ist "vor Tagen getoucht" der Normalfall statt eines bedeutsamen Sweeps (jede Zone wird
   // innerhalb weniger Stunden getoucht), anders als bei den wenigen, bedeutsamen 1H/4H-Zonen, für
   // die der Zeit-Zweig gedacht ist. m5ObZonesAll (aus computeM5LiquidityAndObZones oben) ist bereits
-  // um invalidierte Zonen bereinigt — get_recent_sweeps (recentSweeps.ts) nutzt denselben
+  // um invalidierte Zonen bereinigt — get_recent_reactions (recentReactions.ts) nutzt denselben
   // m5ObZonesAll-Rohsatz, filtert aber nach Touch-Rezenz statt Preis-Band.
   const M5_OB_RANGE_PRICE = M5_OB_RANGE_PIPS * PIP_SIZE;
   const m5ObZones = m5ObZonesAll.filter((z) => {
