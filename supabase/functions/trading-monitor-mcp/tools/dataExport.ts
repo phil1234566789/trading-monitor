@@ -40,9 +40,10 @@ const DAY_SEC = 24 * 3600;
 // Exakt dieselben Werte wie src/dataExport.js (EXPORT_LOOKBACK_HOURS/EXPORT_CANDLE_BUFFER) — Philip
 // 2026-08-02: "lieber konsistent halten wo es geht" statt des ursprünglich kürzeren (~25h) Fensters,
 // das nur an der ohnehin schon geladenen Tages-Kerzenreihe (`raw` unten) mitgeschnitten hatte.
-const M5_DETECTION_LOOKBACK_HOURS = 7 * 24;
-const M5_DETECTION_CANDLE_BUFFER = 20;
-const M5_BAR_SECONDS = 300;
+// export: von recentSweeps.ts wiederverwendet (derselbe M5-Kerzenbedarf für dieselbe Erkennung).
+export const M5_DETECTION_LOOKBACK_HOURS = 7 * 24;
+export const M5_DETECTION_CANDLE_BUFFER = 20;
+export const M5_BAR_SECONDS = 300;
 
 // periodOuter/periodInner sind weiterhin exakt wie im "Daten-Export"-Button (src/dataExport.js).
 // lookbackHours dagegen ist seit Chat 2026-08-09 auf Philips Wunsch bewusst LÄNGER als der Button
@@ -345,6 +346,96 @@ function attachSessionContext<T extends { pivotTimeSec: number; dirNum: 1 | -1; 
   });
 }
 
+export interface M5DetectionInputs {
+  currentTimeSec: number;
+  m5CandlesForDetection: Candle[];
+  // 1H/4H liquidity_levels-Zeilen (für coincidesWithHtf-Dedup — ein M5-Level auf demselben Preis
+  // wie ein HTF-Level ist redundant, siehe coincidesWithHtf oben).
+  htfLiquidityLevels: { price: number; direction: string }[];
+  // Bereits persistierte 5M-ob_zones-Zeilen (für m5ObZoneIdByKey — falls eine live erkannte M5-Box
+  // schon eine echte id hat, siehe Kommentar unten).
+  m5PersistedObZoneRows: { direction: string; start_time: string; id: number }[];
+  sessionConfigs: Awaited<ReturnType<typeof getSessions>>;
+}
+
+// M5-Sweep/OB-Live-Erkennung, ausgelagert aus buildDataExport (Task "get_recent_sweeps", 2026-08-31)
+// — dieselbe Erkennung wird jetzt von ZWEI Tools gebraucht (get_data_export UND das neue,
+// schlankere get_recent_sweeps, siehe recentSweeps.ts), DRY statt einer zweiten Kopie. Gibt
+// `m5ObZonesAll` bewusst OHNE den abschließenden Preis-Band-Filter zurück (siehe buildDataExport
+// unten) — get_recent_sweeps filtert stattdessen nach Touch-Rezenz, nicht nach Preisnähe.
+export function computeM5LiquidityAndObZones({
+  currentTimeSec,
+  m5CandlesForDetection,
+  htfLiquidityLevels,
+  m5PersistedObZoneRows,
+  sessionConfigs,
+}: M5DetectionInputs) {
+  const { highs: m5LiquidityHighs, lows: m5LiquidityLows } = detectLiquidityLevels(m5CandlesForDetection, LIQUIDITY_FRACTAL_PERIOD);
+  const m5LiquidityLevelsRaw = [
+    ...filterRelevantLevels(m5LiquidityHighs, LIQUIDITY_MAX_RELEVANT, true).map((l) => ({
+      direction: "high" as const,
+      dirNum: 1 as const,
+      price: l.price,
+      pivotTimeSec: l.pivotTime,
+      touched: l.touched,
+      touchedTimeSec: l.touchedTime,
+      endTime: l.endTime,
+    })),
+    ...filterRelevantLevels(m5LiquidityLows, LIQUIDITY_MAX_RELEVANT, true).map((l) => ({
+      direction: "low" as const,
+      dirNum: -1 as const,
+      price: l.price,
+      pivotTimeSec: l.pivotTime,
+      touched: l.touched,
+      touchedTimeSec: l.touchedTime,
+      endTime: l.endTime,
+    })),
+  ];
+  // HTF-Level (1H+4H) sind bedeutsamer als ein M5-Level auf demselben Preis — siehe coincidesWithHtf
+  // oben. Filter läuft vor attachSessionContext (dort würden ausgefilterte Level unnötig einen
+  // Session-Context berechnen).
+  const m5LiquidityLevelsDeduped = m5LiquidityLevelsRaw.filter((l) => !coincidesWithHtf(l, htfLiquidityLevels));
+  const m5LiquidityLevels = attachSessionContext(m5LiquidityLevelsDeduped, sessionConfigs, currentTimeSec, m5CandlesForDetection).map(
+    ({ pivotTimeSec, dirNum: _dirNum, touchedTimeSec, ...rest }) => ({
+      ...rest,
+      pivotTime: pivotTimeSec,
+      touchedTime: touchedTimeSec,
+    }),
+  );
+
+  // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 8 — m5ObZones bleibt
+  // Live-Recompute, aber falls eine der live erkannten M5-Boxen bereits als referenzierte Teilmenge
+  // in ob_zones persistiert wurde (Trade-Setup/Pin/Confirmation), bekommt sie hier ihre echte id mit
+  // — damit Lana per ID matchen kann (z.B. gegen trade_setups.ob_zone_id oder pin_context), statt
+  // über Preisnähe zu raten.
+  const m5ObZoneIdByKey = new Map(
+    m5PersistedObZoneRows.map((z) => [`${z.direction}_${Math.floor(new Date(z.start_time).getTime() / 1000)}`, z.id]),
+  );
+  const obZonesReferencePrice = m5CandlesForDetection[m5CandlesForDetection.length - 1]?.close ?? null;
+  const m5ObZonesAll = detectOrderBlocks(m5CandlesForDetection, "5m", true)
+    .filter((z) => !z.invalidated)
+    .map((z) => {
+      const direction = z.dir === 1 ? ("long" as const) : ("short" as const);
+      return {
+        id: m5ObZoneIdByKey.get(`${direction}_${z.startTime}`) ?? null,
+        direction,
+        top: z.top,
+        bottom: z.bottom,
+        weak: z.weak,
+        touched: z.touched,
+        startTime: z.startTime,
+        endTime: z.endTime,
+        // z.endTime ist bei detectOrderBlocks IMMER gesetzt (bei untouched Zonen die letzte
+        // Kerzenzeit statt null, siehe orderBlockDetection.js) — deshalb hier explizit nur bei
+        // touched=true als touchedTimeSec übergeben, sonst fällt formatKontext korrekt auf
+        // currentTimeSec zurück statt fälschlich das "endTime = jetzt"-Artefakt als Touch-Alter zu lesen.
+        kontext: formatKontext(null, z.startTime, z.touched ? z.endTime : null, currentTimeSec),
+      };
+    });
+
+  return { m5LiquidityLevels, m5ObZonesAll, obZonesReferencePrice };
+}
+
 export async function buildDataExport({ instrument, dateStr, replayUntilSec, structureConfig }: DataExportArgs) {
   const effectiveDateStr = dateStr ?? berlinDateStrFor(replayUntilSec ?? Math.floor(Date.now() / 1000));
   const { startUtcMs, endUtcMs } = berlinDayRangeUtcMs(effectiveDateStr);
@@ -397,49 +488,17 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // Nach currentTimeSec gekappt (nicht nur nach Tagesende) — sonst würde Live-Replay Zonen/Level aus
   // der "Zukunft" relativ zum Replay-Punkt sehen, derselbe Bug wie bei liquidityLevels/obZones oben.
   const m5CandlesForDetection = m5DetectionRaw.filter((c) => c.time <= currentTimeSec);
-  const { highs: m5LiquidityHighs, lows: m5LiquidityLows } = detectLiquidityLevels(m5CandlesForDetection, LIQUIDITY_FRACTAL_PERIOD);
-  const m5LiquidityLevelsRaw = [
-    ...filterRelevantLevels(m5LiquidityHighs, LIQUIDITY_MAX_RELEVANT, true).map((l) => ({
-      direction: "high" as const,
-      dirNum: 1 as const,
-      price: l.price,
-      pivotTimeSec: l.pivotTime,
-      touched: l.touched,
-      touchedTimeSec: l.touchedTime,
-      endTime: l.endTime,
-    })),
-    ...filterRelevantLevels(m5LiquidityLows, LIQUIDITY_MAX_RELEVANT, true).map((l) => ({
-      direction: "low" as const,
-      dirNum: -1 as const,
-      price: l.price,
-      pivotTimeSec: l.pivotTime,
-      touched: l.touched,
-      touchedTimeSec: l.touchedTime,
-      endTime: l.endTime,
-    })),
-  ];
-  // HTF-Level (liquidityLevels, 1H+4H) sind bedeutsamer als ein M5-Level auf demselben Preis —
-  // siehe coincidesWithHtf oben. Filter läuft vor attachSessionContext (dort würden ausgefilterte
-  // Level unnötig einen Session-Context berechnen).
-  const m5LiquidityLevelsDeduped = m5LiquidityLevelsRaw.filter((l) => !coincidesWithHtf(l, liquidityLevels));
-  const m5LiquidityLevels = attachSessionContext(m5LiquidityLevelsDeduped, sessionConfigs, currentTimeSec, m5CandlesForDetection).map(
-    ({ pivotTimeSec, dirNum: _dirNum, touchedTimeSec, ...rest }) => ({
-      ...rest,
-      pivotTime: pivotTimeSec,
-      touchedTime: touchedTimeSec,
-    }),
-  );
+  // M5-Sweep/OB-Rohdaten ausgelagert (computeM5LiquidityAndObZones oben) — wiederverwendet von
+  // get_recent_sweeps (recentSweeps.ts), das dieselbe Erkennung braucht, aber ohne den restlichen
+  // Tages-Export (Tageskerzen/1H-Struktur) — DRY statt einer zweiten M5-Erkennungslogik.
+  const { m5LiquidityLevels, m5ObZonesAll, obZonesReferencePrice } = computeM5LiquidityAndObZones({
+    currentTimeSec,
+    m5CandlesForDetection,
+    htfLiquidityLevels: liquidityLevels,
+    m5PersistedObZoneRows: obZonesRaw.filter((z) => z.timeframe === "5M"),
+    sessionConfigs,
+  });
 
-  // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 8 — m5ObZones bleibt
-  // Live-Recompute (siehe Kommentar unten), aber falls eine der live erkannten M5-Boxen bereits als
-  // referenzierte Teilmenge in ob_zones persistiert wurde (Trade-Setup/Pin/Confirmation, siehe
-  // PLAN-chart-objekte-forex.md Abschnitt 5), bekommt sie hier ihre echte id mit — damit Lana per
-  // ID matchen kann (z.B. gegen trade_setups.ob_zone_id oder pin_context), statt über Preisnähe zu
-  // raten. obZonesRaw oben ist bereits ungefiltert nach Timeframe geholt (getObZones ohne timeframe-
-  // Arg), enthält also auch etwaige persistierte 5M-Zeilen mit — kein zweiter DB-Call nötig.
-  const m5ObZoneIdByKey = new Map(
-    obZonesRaw.filter((z) => z.timeframe === "5M").map((z) => [`${z.direction}_${Math.floor(new Date(z.start_time).getTime() / 1000)}`, z.id]),
-  );
   // Preis-/Zeit-gefilterte 1H/4H-Teilmenge (siehe filterRelevantObZoneRows-Import oben) —
   // referencePrice aus derselben m5CandlesForDetection-Reihe wie oben (letzte Kerze <=
   // currentTimeSec), fromSec = dieselbe 7-Tage-Konvention wie der Rest dieses Moduls
@@ -447,7 +506,6 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // filterRelevantObZoneRows braucht 1H UND 4H zusammen, um 4H-vor-1H-Duplikate zu erkennen), erst
   // danach für die Antwort in zwei saubere Felder gesplittet (Philip 2026-08-30: "Orderblöcke
   // sollen sauber aufgeteilt werden in M5, 1h und 4h").
-  const obZonesReferencePrice = m5CandlesForDetection[m5CandlesForDetection.length - 1]?.close ?? null;
   const obZonesRelevant = filterRelevantObZoneRows(
     obZonesRaw.filter((z) => z.timeframe === "1H" || z.timeframe === "4H"),
     { referencePrice: obZonesReferencePrice, fromSec: currentTimeSec - M5_DETECTION_LOOKBACK_HOURS * 3600, toSec: currentTimeSec },
@@ -491,37 +549,16 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // Pips vom Kurs entfernt, weil sie irgendwann in den letzten 7 Tagen getoucht wurden) — bei M5
   // ist "vor Tagen getoucht" der Normalfall statt eines bedeutsamen Sweeps (jede Zone wird
   // innerhalb weniger Stunden getoucht), anders als bei den wenigen, bedeutsamen 1H/4H-Zonen, für
-  // die der Zeit-Zweig gedacht ist. invalidated-Zweig ebenfalls nicht nötig, weil invalidierte
-  // M5-Zonen unten schon vorab rausfallen (.filter(!invalidated), analog zu collectObsZones in
-  // PriceChart.vue — invalidierte Zonen werden im Chart standardmäßig auch nicht mehr angezeigt).
+  // die der Zeit-Zweig gedacht ist. m5ObZonesAll (aus computeM5LiquidityAndObZones oben) ist bereits
+  // um invalidierte Zonen bereinigt — get_recent_sweeps (recentSweeps.ts) nutzt denselben
+  // m5ObZonesAll-Rohsatz, filtert aber nach Touch-Rezenz statt Preis-Band.
   const M5_OB_RANGE_PRICE = M5_OB_RANGE_PIPS * PIP_SIZE;
-  const m5ObZones = detectOrderBlocks(m5CandlesForDetection, "5m", true)
-    .filter((z) => !z.invalidated)
-    .map((z) => {
-      const direction = z.dir === 1 ? ("long" as const) : ("short" as const);
-      return {
-        id: m5ObZoneIdByKey.get(`${direction}_${z.startTime}`) ?? null,
-        direction,
-        top: z.top,
-        bottom: z.bottom,
-        weak: z.weak,
-        touched: z.touched,
-        startTime: z.startTime,
-        endTime: z.endTime,
-        // kontext wie bei obZones1h/4h (siehe curateObZoneRow oben) — ohne bonus-Präfix, dieselbe
-        // Begründung. z.endTime ist bei detectOrderBlocks IMMER gesetzt (bei untouched Zonen die
-        // letzte Kerzenzeit statt null, siehe orderBlockDetection.js) — deshalb hier explizit nur
-        // bei touched=true als touchedTimeSec übergeben, sonst fällt formatKontext korrekt auf
-        // currentTimeSec zurück statt fälschlich das "endTime = jetzt"-Artefakt als Touch-Alter zu lesen.
-        kontext: formatKontext(null, z.startTime, z.touched ? z.endTime : null, currentTimeSec),
-      };
-    })
-    .filter((z) => {
-      if (obZonesReferencePrice == null) return false;
-      const withinBand = Math.min(Math.abs(z.top - obZonesReferencePrice), Math.abs(z.bottom - obZonesReferencePrice)) <= M5_OB_RANGE_PRICE;
-      const priceInsideZone = z.bottom <= obZonesReferencePrice && z.top >= obZonesReferencePrice;
-      return withinBand || priceInsideZone;
-    });
+  const m5ObZones = m5ObZonesAll.filter((z) => {
+    if (obZonesReferencePrice == null) return false;
+    const withinBand = Math.min(Math.abs(z.top - obZonesReferencePrice), Math.abs(z.bottom - obZonesReferencePrice)) <= M5_OB_RANGE_PRICE;
+    const priceInsideZone = z.bottom <= obZonesReferencePrice && z.top >= obZonesReferencePrice;
+    return withinBand || priceInsideZone;
+  });
 
   // Session-Kontext auch für die persistierten 1H/4H-Level (Philip 2026-08-02: "konsistent halten wo
   // es geht" — der Button gibt ihn für 1h UND 5m, nicht nur 5m). pivot_time kommt als ISO-String aus
