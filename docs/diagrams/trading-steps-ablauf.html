@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading-Steps-Ablauf</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #f7f6f3;
+    --surface: #ffffff;
+    --surface-2: #eeece6;
+    --border: #d8d4ca;
+    --ink: #23211d;
+    --ink-dim: #6b675e;
+    --accent: #3454d1;
+    --accent-ink: #1c2e73;
+    --branch: #b5670a;
+    --branch-ink: #7a4707;
+    --loopback: #a13a3a;
+    --wait: #6b675e;
+    --success: #2f7d4f;
+    --tag-bg: #eef0fb;
+    --tag-ink: #2c3e8f;
+    --llm-bg: #fdeee0;
+    --llm-border: #c97a2b;
+    --llm-ink: #6b3d0f;
+    --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
+    --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #17181c;
+      --surface: #1e2025;
+      --surface-2: #25272d;
+      --border: #34363d;
+      --ink: #e9e7e1;
+      --ink-dim: #9b9890;
+      --accent: #7d95ff;
+      --accent-ink: #c3cdff;
+      --branch: #e0a341;
+      --branch-ink: #f2c988;
+      --loopback: #e08080;
+      --wait: #9b9890;
+      --success: #6fc990;
+      --tag-bg: #232849;
+      --tag-ink: #b7c2ff;
+      --llm-bg: #3a2a17;
+      --llm-border: #d99446;
+      --llm-ink: #f0c088;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #17181c;
+    --surface: #1e2025;
+    --surface-2: #25272d;
+    --border: #34363d;
+    --ink: #e9e7e1;
+    --ink-dim: #9b9890;
+    --accent: #7d95ff;
+    --accent-ink: #c3cdff;
+    --branch: #e0a341;
+    --branch-ink: #f2c988;
+    --loopback: #e08080;
+    --wait: #9b9890;
+    --success: #6fc990;
+    --tag-bg: #232849;
+    --tag-ink: #b7c2ff;
+    --llm-bg: #3a2a17;
+    --llm-border: #d99446;
+    --llm-ink: #f0c088;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.55;
+    padding: 40px 24px 64px;
+    margin: 0;
+  }
+
+  main {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  header {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 760px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(28px, 4vw, 38px);
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .lede {
+    color: var(--ink-dim);
+    font-size: 15.5px;
+    max-width: 68ch;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--ink-dim);
+    white-space: nowrap;
+  }
+
+  .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    flex: none;
+  }
+
+  .swatch.step { background: var(--accent); }
+  .swatch.branch { background: var(--branch); }
+  .swatch.loop { background: var(--loopback); border-radius: 50%; }
+  .swatch.tag { background: var(--tag-bg); border: 1.5px solid var(--tag-ink); }
+  .swatch.llm { background: var(--llm-bg); border: 1.5px solid var(--llm-border); }
+
+  .diagram-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    overflow-x: auto;
+  }
+
+  .diagram-card pre.mermaid,
+  .diagram-card .mermaid {
+    min-width: 880px;
+    margin: 0;
+  }
+
+  .callouts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .callout {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .callout.llm {
+    border-color: var(--llm-border);
+    background: var(--llm-bg);
+  }
+
+  .callout h2 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .callout.llm h2 { color: var(--llm-ink); }
+
+  .callout p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--ink-dim);
+  }
+
+  .callout.llm p { color: var(--llm-ink); }
+
+  code, .mono {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+  }
+
+  a { color: var(--accent-ink); }
+
+  footer {
+    font-size: 12.5px;
+    color: var(--ink-dim);
+  }
+
+  footer code { color: var(--ink-dim); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="eyebrow">trading-monitor · 00-trading-steps</span>
+    <h1>Trading-Steps-Ablauf</h1>
+    <p class="lede">
+      Der komplette Schritt-1-8-Zyklus für eine Trading-Tag-Analyse (live oder Backtest), mit den
+      vier Fällen aus Schritt 5 und den MCP-Tool-Aufrufen, die an jeder Stelle heute tatsächlich
+      getriggert werden müssen.
+    </p>
+  </header>
+
+  <div class="legend">
+    <div class="legend-item"><span class="swatch step"></span> Schritt (sequenziell)</div>
+    <div class="legend-item"><span class="swatch branch"></span> Fall-Entscheidung (Schritt 5/6)</div>
+    <div class="legend-item"><span class="swatch loop"></span> Loop-Rücksprung</div>
+    <div class="legend-item"><span class="swatch tag"></span> <span class="mono">mcp_tool_name</span> auf dem Pfeil</div>
+    <div class="legend-item"><span class="swatch llm"></span> bleibt LLM-Sache (Lana)</div>
+    <div class="legend-item"><span class="swatch" style="background:#eef4ee;border:1.5px solid #5c8a63;"></span> heute Lana, später ggf. mechanisierbar</div>
+  </div>
+
+  <div class="diagram-card">
+<pre class="mermaid">
+flowchart TB
+    START((Tag beginnt)) --> S1
+
+    S1["<b>Schritt 1</b><br/>Check Handelszeit"]
+    S1 -->|Zeitpunkt aus Kontext, kein Tool-Call| G1{Außerhalb<br/>Handelszeit?}
+    G1 -- ja --> END1([Kein Trade])
+    G1 -- nein --> S2
+
+    S2["<b>Schritt 2</b><br/>Check News"]
+    S2 -->|get_news_events| G2{News unmittelbar<br/>bevorstehend?}
+    G2 -- ja --> NEWSPAUSE["CronCreate:<br/>einmaliger Wecker,<br/>15-30 Min"]
+    NEWSPAUSE -.->|Wecker feuert ---&gt;<br/>Analyse läuft automatisch weiter| S3
+    G2 -- nein --> S3
+
+    S3["<b>Schritt 3</b><br/>HTF-Bias + Targets"]
+    S3 -->|get_data_export + add_pin_entry| LLM3{{"nur Lana:<br/>Kontext-Info-Synthese"}}
+    LLM3 --> S45
+
+    S45["<b>Schritt 4 ⇄ 5</b><br/>Check Session +<br/>Dealing Range bestätigen<br/><span style='font-size:11px'>— eigenes Diagramm, siehe unten —</span>"]
+    S45 -->|"Fall 1: DR bestätigt<br/>Live: PushNotification"| S6
+    S45 -.->|Fall 4: Target/Invalidierung<br/>gebrochen| S3
+    S45 -.->|"Fall 2/3: Loop läuft weiter<br/>Live: CronCreate 5-Min-Tick"| S45
+
+    S6["<b>Schritt 6</b><br/>Dealing Range validieren"]
+    S6 -->|find_anti_confluences| LLM6A{{"heute Lana:<br/>welche Kandidaten sind<br/>echte Con-/Anti-Confluences?"}}
+    LLM6A -->|add_trade_confirmation| LLM6{{"nur Lana:<br/>VALIDE/INVALIDE-<br/>Abwägung"}}
+    LLM6 -- INVALIDE --> S45
+    LLM6 -- VALIDE --> S7
+
+    S7["<b>Schritt 7</b><br/>Find Entry<br/><span style='font-size:11px'>(manuell, Philip)</span>"]
+    S7 -->|get_journal Abgleich| S8
+
+    S8["<b>Schritt 8</b><br/>Trade-Management"]
+    S8 -->|"add_trade_position<br/>update_trade_position<br/>calc_rr"| END8((Position<br/>geschlossen))
+
+    classDef step fill:transparent,stroke:#3454d1,stroke-width:2px;
+    classDef gate fill:transparent,stroke:#b5670a,stroke-width:2px;
+    classDef llm fill:#fdeee0,stroke:#c97a2b,stroke-width:2px,color:#6b3d0f;
+    classDef future fill:#eef4ee,stroke:#5c8a63,stroke-width:2px,color:#2f5136;
+    classDef term fill:transparent,stroke-width:1.5px;
+    classDef detail fill:transparent,stroke:#3454d1,stroke-width:3px,stroke-dasharray:5 3;
+
+    class S1,S2,S3,S6,S7,S8 step;
+    class G1,G2 gate;
+    class S45 detail;
+    class LLM3,LLM6 llm;
+    class LLM6A future;
+    class END1,START,END8,NEWSPAUSE term;
+</pre>
+  </div>
+
+  <div class="callouts">
+    <div class="callout">
+      <h2>News-Pause löst den Cron nicht ab</h2>
+      <p>Steht eine News unmittelbar bevor, setzt <code>CronCreate</code> einen EINMALIGEN Wecker
+      (15-30 Min). Sobald der feuert, läuft die Analyse automatisch weiter — kein manuelles
+      Anstoßen durch Philip nötig, und kein Hängenbleiben in der Pause.</p>
+    </div>
+    <div class="callout">
+      <h2>Fall 4 → zurück zu Schritt 3</h2>
+      <p>Trend-/Countertrend-Target oder Invalidierung erreicht ---&gt; kompletter Bias-Neudurchlauf,
+      da sich der übergeordnete Trend selbst geändert haben kann.</p>
+    </div>
+    <div class="callout llm">
+      <h2>Zwei dauerhafte LLM-Stellen</h2>
+      <p>Kontext-Info-Synthese (Schritt 3) und die finale VALIDE/INVALIDE-Abwägung (Schritt 6) sind
+      freie Synthese ohne Kandidatenliste — bleiben LLM-Sache. Die Anti-Confluence-Auswahl davor
+      (grün) und die Target-Auswahl in Schritt 4/5 (siehe Detail-Diagramm) sind heute ebenfalls
+      noch Lana, wählen aber nur aus einer vom Tool gelieferten Kandidatenliste — echte Kandidaten
+      für eine spätere Mechanisierung.</p>
+    </div>
+  </div>
+
+  <footer>
+    Stand 31.08.2026 — Schritt 4/5 ist im Detail-Diagramm
+    „<a href="dealing-range-loop.html">Dealing-Range-Loop</a>" ausgelagert (eigener
+    Fall-1/2/3/4-Klassifikationszyklus, inkl. Pin-Aufräum-Pflicht). Basis für
+    <span class="mono">docs/state-machine.md</span>: die 5 neuen Tools
+    <span class="mono">check_pretrade_gates</span>, <span class="mono">run_bias_check</span>,
+    <span class="mono">check_session_window</span>, <span class="mono">run_dealing_range_loop</span>,
+    <span class="mono">get_validation_evidence</span> fassen die hier gezeigten Tool-Cluster zusammen.
+  </footer>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<script>
+  var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "default", securityLevel: "loose" });
+</script>
+</body>
+</html>

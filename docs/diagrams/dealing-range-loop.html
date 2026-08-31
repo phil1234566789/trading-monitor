@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dealing-Range-Loop</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #f7f6f3;
+    --surface: #ffffff;
+    --surface-2: #eeece6;
+    --border: #d8d4ca;
+    --ink: #23211d;
+    --ink-dim: #6b675e;
+    --accent: #3454d1;
+    --accent-ink: #1c2e73;
+    --branch: #b5670a;
+    --branch-ink: #7a4707;
+    --loopback: #a13a3a;
+    --wait: #6b675e;
+    --success: #2f7d4f;
+    --tag-bg: #eef0fb;
+    --tag-ink: #2c3e8f;
+    --llm-bg: #fdeee0;
+    --llm-border: #c97a2b;
+    --llm-ink: #6b3d0f;
+    --future-bg: #eef4ee;
+    --future-border: #5c8a63;
+    --future-ink: #2f5136;
+    --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
+    --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #17181c;
+      --surface: #1e2025;
+      --surface-2: #25272d;
+      --border: #34363d;
+      --ink: #e9e7e1;
+      --ink-dim: #9b9890;
+      --accent: #7d95ff;
+      --accent-ink: #c3cdff;
+      --branch: #e0a341;
+      --branch-ink: #f2c988;
+      --loopback: #e08080;
+      --wait: #9b9890;
+      --success: #6fc990;
+      --tag-bg: #232849;
+      --tag-ink: #b7c2ff;
+      --llm-bg: #3a2a17;
+      --llm-border: #d99446;
+      --llm-ink: #f0c088;
+      --future-bg: #1c2c20;
+      --future-border: #5c9a68;
+      --future-ink: #9fd6ab;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #17181c;
+    --surface: #1e2025;
+    --surface-2: #25272d;
+    --border: #34363d;
+    --ink: #e9e7e1;
+    --ink-dim: #9b9890;
+    --accent: #7d95ff;
+    --accent-ink: #c3cdff;
+    --branch: #e0a341;
+    --branch-ink: #f2c988;
+    --loopback: #e08080;
+    --wait: #9b9890;
+    --success: #6fc990;
+    --tag-bg: #232849;
+    --tag-ink: #b7c2ff;
+    --llm-bg: #3a2a17;
+    --llm-border: #d99446;
+    --llm-ink: #f0c088;
+    --future-bg: #1c2c20;
+    --future-border: #5c9a68;
+    --future-ink: #9fd6ab;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.55;
+    padding: 40px 24px 64px;
+    margin: 0;
+  }
+
+  main {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  header {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 760px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(28px, 4vw, 38px);
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .lede {
+    color: var(--ink-dim);
+    font-size: 15.5px;
+    max-width: 68ch;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--ink-dim);
+    white-space: nowrap;
+  }
+
+  .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    flex: none;
+  }
+
+  .swatch.step { background: transparent; border: 2px solid var(--accent); }
+  .swatch.branch { background: transparent; border: 2px solid var(--branch); }
+  .swatch.pin { background: transparent; border: 2px dashed var(--success); }
+  .swatch.llm { background: var(--llm-bg); border: 1.5px solid var(--llm-border); }
+  .swatch.future { background: var(--future-bg); border: 1.5px solid var(--future-border); }
+
+  .diagram-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    overflow-x: auto;
+  }
+
+  .diagram-card pre.mermaid,
+  .diagram-card .mermaid {
+    min-width: 900px;
+    margin: 0;
+  }
+
+  .callouts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .callout {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .callout.llm { border-color: var(--llm-border); background: var(--llm-bg); }
+  .callout.future { border-color: var(--future-border); background: var(--future-bg); }
+
+  .callout h2 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .callout.llm h2 { color: var(--llm-ink); }
+  .callout.future h2 { color: var(--future-ink); }
+
+  .callout p { margin: 0; font-size: 13.5px; color: var(--ink-dim); }
+  .callout.llm p { color: var(--llm-ink); }
+  .callout.future p { color: var(--future-ink); }
+
+  code, .mono { font-family: var(--font-mono); font-size: 0.92em; }
+
+  a { color: var(--accent-ink); }
+
+  footer { font-size: 12.5px; color: var(--ink-dim); }
+  footer code { color: var(--ink-dim); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="eyebrow">Detail zu Schritt 4 ⇄ 5 · <a href="trading-steps-ablauf.html">trading-steps-ablauf</a></span>
+    <h1>Dealing-Range-Loop</h1>
+    <p class="lede">
+      Der Fall-1/2/3/4-Klassifikationszyklus im Detail: Live-Tick vs. Backtest-Fast-Forward,
+      TSC-Verknüpfung inkl. Pin-Aufräumen, und wo heute noch echtes LLM-Urteilsvermögen steckt
+      statt reiner Mechanik.
+    </p>
+  </header>
+
+  <div class="legend">
+    <div class="legend-item"><span class="swatch step"></span> mechanischer Schritt / Tool-Call</div>
+    <div class="legend-item"><span class="swatch branch"></span> Entscheidung</div>
+    <div class="legend-item"><span class="swatch pin"></span> Pin-Aufräumen (<span class="mono">remove_pin_entry</span>)</div>
+    <div class="legend-item"><span class="swatch llm"></span> nur Lana, bleibt LLM-Sache</div>
+    <div class="legend-item"><span class="swatch future"></span> heute Lana, später ggf. mechanisierbar</div>
+  </div>
+
+  <div class="diagram-card">
+<pre class="mermaid">
+flowchart TB
+    ENTRY(["Eintritt aus Schritt 3<br/>oder Rücksprung aus Schritt 6"]) --> MODE{Live oder<br/>Backtest?}
+
+    MODE -- Live --> LTICK["Watch-Level aus letztem<br/>Durchlauf vs. aktueller Kurs"]
+    MODE -- Backtest --> BBATCH["Kerzen-Batch holen<br/>get_forex_candles (~24 Kerzen)"]
+
+    BBATCH --> NEWSCHK{News-Blackout<br/>aktiv?}
+    NEWSCHK -- ja --> BSKIP["Heartbeat: 'News-Pause,<br/>Auswertung übersprungen'"]
+    BSKIP --> BBATCH
+    NEWSCHK -- nein --> BHIT{Watch-Level<br/>im Batch berührt?}
+    BHIT -- nein --> BHEART["Heartbeat: 'Fall X ---&gt;<br/>nächster Batch'"]
+    BHEART --> BBATCH
+    BHIT -- ja --> REFETCH
+
+    LTICK --> LHIT{Watch-Level<br/>berührt?}
+    LHIT -- nein --> LWAIT(["kein Output —<br/>Cron feuert in 5 Min erneut"])
+    LHIT -- ja --> REFETCH
+
+    REFETCH["Voller Refetch:<br/>get_data_snapshot<br/>get_recent_reactions"] --> FALL{Fall 1, 2,<br/>3 oder 4?}
+
+    FALL -- "Fall 3: keine DR" --> F3["add_pin_entry<br/>(Watch-Level oben/unten)"]
+    F3 --> LOOPBACK3(["zurück zu Schritt 4"])
+
+    FALL -- "Fall 4: Target/Invalidierung<br/>erreicht" --> EXIT4(["zurück zu Schritt 3"])
+
+    FALL -- "Fall 1 oder 2" --> TSCGET["get_tsc_range"]
+
+    subgraph TSCLINK[" TSC-Verknüpfung "]
+      direction TB
+      TSCGET --> TSCEXIST{Aktive Range<br/>vorhanden?}
+      TSCEXIST -- nein --> TSCNEW["add_trade_confirmation<br/>OHNE id, MIT instrument<br/>---&gt; Range wird gebootstrapt"]
+      TSCEXIST -- ja --> TSCADD["add_trade_confirmation<br/>(level='range', id=tscRange.id)"]
+      TSCNEW --> PINCHECK
+      TSCADD --> PINCHECK
+      PINCHECK{"Stand-alone-Pin für dieses<br/>Setup/OB vorhanden?<br/><span style='font-size:11px'>(z.B. aus Schritt 3)</span>"}
+      PINCHECK -- ja --> PINRM["remove_pin_entry"]
+      PINCHECK -- nein --> PINOK[" "]
+    end
+
+    PINRM --> FALLAGAIN{Fall 1<br/>komplett?}
+    PINOK --> FALLAGAIN
+
+    FALLAGAIN -- "nein, Fall 2" --> LOOPBACK2(["zurück zu Schritt 4"])
+    FALLAGAIN -- "ja, Fall 1" --> FT["find_targets(instrument, direction)<br/>liefert Kandidatenliste"]
+
+    FT --> LLMPICK{{"heute Lana:<br/>welche(s) Ziel(e)<br/>aus Kandidaten wählen"}}
+    LLMPICK --> AT["add_trade_target<br/>(gewählter Preis, MUSS<br/>Kandidat aus der Liste sein)"]
+    AT --> PINCHECK2{"Stand-alone-Pin für<br/>dieses Target vorhanden?"}
+    PINCHECK2 -- ja --> PINRM2["remove_pin_entry"]
+    PINCHECK2 -- nein --> PINOK2[" "]
+
+    PINRM2 --> NOTIFY
+    PINOK2 --> NOTIFY
+    NOTIFY["Live: PushNotification<br/>Backtest: Loop stoppt,<br/>Philips Go abwarten"] --> EXIT1(["weiter zu Schritt 6"])
+
+    classDef step fill:transparent,stroke:#3454d1,stroke-width:2px;
+    classDef gate fill:transparent,stroke:#b5670a,stroke-width:2px;
+    classDef pin fill:transparent,stroke:#2f7d4f,stroke-width:2px,stroke-dasharray:3 2;
+    classDef llm fill:#fdeee0,stroke:#c97a2b,stroke-width:2px,color:#6b3d0f;
+    classDef term fill:transparent,stroke-width:1.5px;
+
+    class LTICK,BBATCH,REFETCH,TSCGET,TSCNEW,TSCADD,FT,AT,NOTIFY,F3,BHEART,BSKIP step;
+    class MODE,BHIT,LHIT,FALL,TSCEXIST,PINCHECK,FALLAGAIN,PINCHECK2,NEWSCHK gate;
+    class PINRM,PINRM2 pin;
+    class LLMPICK llm;
+    class ENTRY,LWAIT,LOOPBACK3,LOOPBACK2,EXIT4,EXIT1 term;
+</pre>
+  </div>
+
+  <div class="callouts">
+    <div class="callout future">
+      <h2>Neu ergänzt: Pin-Aufräumen</h2>
+      <p>Jedes Mal, wenn <code>add_trade_confirmation</code> ODER <code>add_trade_target</code>
+      läuft: prüfen, ob für genau dieses Objekt schon ein Stand-alone-Pin existiert (z.B. aus
+      Schritt 3), und diesen per <code>remove_pin_entry</code> aufräumen — die TSC-Verknüpfung
+      macht das Objekt bereits sichtbar, ein zweiter Pin ist doppelte Information.</p>
+    </div>
+    <div class="callout llm">
+      <h2>Target-Auswahl: heute noch Lana</h2>
+      <p><code>find_targets</code> liefert nur eine sortierte Kandidatenliste — WELCHE(S) davon
+      als Target angehängt werden, entscheidet Lana. Kandidat für eine spätere Mechanisierung
+      (siehe <span class="mono">docs/state-machine.md</span>), aber Stand heute nicht automatisch.</p>
+    </div>
+    <div class="callout">
+      <h2>News-Blackout mitten im Loop</h2>
+      <p>Wird eine News-Sperre während des Loops aktiv, pausiert nur die Auswertung — der Cron
+      selbst bleibt bestehen und läuft nach der Sperre automatisch weiter, ohne dass der Loop neu
+      gestartet werden muss.</p>
+    </div>
+  </div>
+
+  <footer>
+    Detail-Diagramm zu <a href="trading-steps-ablauf.html">Trading-Steps-Ablauf</a> (Schritt 4 ⇄ 5).
+    Stand 31.08.2026 — bildet den heutigen Ablauf ab, inkl. der Stellen, die (noch)
+    LLM-Urteilsvermögen brauchen.
+  </footer>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<script>
+  var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "default", securityLevel: "loose" });
+</script>
+</body>
+</html>
