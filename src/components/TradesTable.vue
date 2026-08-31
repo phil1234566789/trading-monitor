@@ -9,7 +9,9 @@ const props = defineProps({
   // die Philip per Rechtsklick dauerhaft "an Lana übergeben" hat, tönt die jeweilige Zeile.
   pinTradeIds: { type: Set, default: () => new Set() },
   // "Isolieren"-Modus (Task trade-journal-dr-im-chart-isolieren-zeilen-button, 2026-08-28):
-  // dealing_ranges.id der aktuell im Chart isolierten Range, nur für den 🔍-Button-Zustand.
+  // dealing_ranges.id der aktuell im Chart isolierten Range — steuert den 🔍-Button-Zustand UND
+  // (Task trade-journal-isolieren-zeile-farblich-hervorheben, 2026-08-31) die Zeilen-Tönung in
+  // rowStyle, weil der Button allein bei vielen Zeilen zu unauffällig war.
   isolatedDealingRangeId: { type: [String, Number], default: null },
 });
 
@@ -28,7 +30,12 @@ const props = defineProps({
 // gemeinsamen Handler nutzen kann.
 const emit = defineEmits(["select", "edit-request", "hover-trade", "pin-context-menu", "isolate-request"]);
 
+// Isolieren-Tönung hat Vorrang vor der Pin-Tönung (derselbe amber-Ton wie .trade-link-btn.active
+// in style.css — bewusst hier hardcodiert statt über chartColors, weil der Button-Ton das auch
+// ist und beide zusammengehören sollen) — der seltene Überschneidungsfall (isolierte UND
+// gepinnte Zeile) soll trotzdem eindeutig als "isoliert" erkennbar bleiben, nicht als Mischfarbe.
 function rowStyle(t) {
+  if (t.dealingRangeId === props.isolatedDealingRangeId) return { backgroundColor: "rgba(240, 185, 11, 0.18)" };
   return props.pinTradeIds.has(t.id) ? { backgroundColor: cssColorScaled("pin", 0.25) } : undefined;
 }
 
