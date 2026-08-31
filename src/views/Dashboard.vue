@@ -41,6 +41,7 @@ import {
   fetchPinContext,
   addPinEntry,
   addPinM5ObEntry,
+  addPinTscSetupEntry,
   addPinM5LiquidityEntry,
   addPinRsiDivergenceEntry,
   removePinEntry,
@@ -794,6 +795,7 @@ function pinCandidateLabel(c) {
   if (c.kind === "ob_zone") return `${c.zone.timeframe} ${c.zone.dir === 1 ? "Bull" : "Bear"}-OB`;
   if (c.kind === "m5_ob") return `M5 ${c.zone.dirNum === 1 ? "Bull" : "Bear"}-OB`;
   if (c.kind === "trade_setup") return `${c.direction === "short" ? "Short" : "Long"}-Setup #${c.tradeSetupId} (${c.instrument})`;
+  if (c.kind === "tsc_setup") return `${c.direction === "short" ? "Short" : "Long"}-Setup (live, ${c.instrument})`;
   if (c.kind === "trade_confirmation") return `✔ Bestätigung #${c.confirmationId} (${c.instrument})`;
   if (c.kind === "liquidity_level") return `${c.level.timeframe} LQ-Level ${c.level.dirNum === 1 ? "Hoch" : "Tief"}`;
   if (c.kind === "m5_liquidity_level") return `${c.level.timeframe} LQ-Level ${c.level.dirNum === 1 ? "Hoch" : "Tief"}`;
@@ -834,6 +836,11 @@ async function onPinAddConfirm(note) {
     // Kein Resolve nötig — trade_setups.id ist schon direkt bekannt (siehe PriceChart.vue:
     // refreshTradeSetupLinksInternal), anders als bei ob_zone.
     await addPinEntry("trade_setup", target.tradeSetupId, note);
+  } else if (target.kind === "tsc_setup") {
+    // Live erkannte Setup-Box OHNE bekannte trade_setups.id (siehe priceChartHitTest.js:
+    // findNearbyPinCandidates) — addPinTscSetupEntry legt die Zeile bei Bedarf per find-or-create
+    // an (analog zu addPinM5ObEntry), landet danach als ganz normaler kind="trade_setup"-Pin.
+    await addPinTscSetupEntry({ instrument: target.instrument, direction: target.direction, setup: target.setup }, note);
   } else if (target.kind === "trade_confirmation") {
     // Kein Resolve nötig — trade_evidence.id ist schon direkt bekannt, analog zu trade_setup.
     await addPinEntry("trade_confirmation", target.confirmationId, note);

@@ -179,6 +179,7 @@ function emptyPrimitives(overrides = {}) {
     tradeSetupLinkPrimitives: [],
     tradeConfirmationLinkPrimitives: [],
     divergencePrimitives: [],
+    tscSetupPrimitives: [],
     ...overrides,
   };
 }
@@ -273,6 +274,22 @@ describe("findNearbyPinCandidates", () => {
       { kind: "trade_setup", tradeSetupId: 7, direction: "long", instrument: "GBPUSD", distance: 5 },
       { kind: "trade_confirmation", confirmationId: 9, instrument: "GBPUSD", distance: 5 },
     ]);
+  });
+
+  // Task "Pin-Kontext: live erkannte Trade-Setup-Box pinnen können" (Bug-Report Philip: "ich kann
+  // keine trade-setups anpinnen") — die laufend gezeichnete TSC-Box (noch ohne trade_setups.id)
+  // trägt instrument/direction/setup auf ihrer Zone statt einer id (siehe
+  // usePriceChartTradeSetupDrawing.js), analog zum instanceof-Guard bei trade_confirmation.
+  it("findet tsc_setup (nur OrderBlockPrimitive-Instanzen, nicht die Fraktal-/LS-Linien)", () => {
+    const setup = { dir: -1, fractal: { pivotTime: 123, price: 1.1 }, obTop: 1.2, obBottom: 1.1, obStartTime: 100 };
+    const primitives = emptyPrimitives({
+      tscSetupPrimitives: [
+        obPrimitiveAt(5, { instrument: "GBPUSD", direction: "long", setup }),
+        { ...primitiveAt(1), notAnOrderBlock: true }, // Fraktal-/LS-Linie -- muss ignoriert werden
+      ],
+    });
+    const result = findNearbyPinCandidates(0, 0, primitives, opts);
+    expect(result).toEqual([{ kind: "tsc_setup", instrument: "GBPUSD", direction: "long", setup, distance: 5 }]);
   });
 
   it("findet rsi_divergence", () => {

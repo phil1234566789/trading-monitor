@@ -17,7 +17,7 @@
 // über dasselbe kind="ob_zone" wie 1H/4H (find-or-create in ob_zones beim Pinnen, siehe
 // addPinM5ObEntry unten) — kein eigener "m5_ob"-Kind mehr.
 import { supabase } from "./supabaseClient.js";
-import { findOrCreateObZoneId } from "./tradeIntake.js";
+import { findOrCreateObZoneId, findOrCreateTradeSetupId } from "./tradeIntake.js";
 
 // kind -> DB-Spalte, gemeinsam für Upsert-onConflict UND das Zusammensetzen der Insert-Zeile.
 // addPinM5ObEntry (unten) löst erst per find-or-create einen ob_zone_id auf und ruft dann ganz
@@ -263,6 +263,19 @@ export async function addPinRsiDivergenceEntry(instrument, divergence, note) {
     return null;
   }
   return toEntry(data);
+}
+
+// Analog zu addPinM5ObEntry, für ein noch nicht von poi-watcher persistiertes Trade-Setup (Task
+// "Pin-Kontext: live erkannte Trade-Setup-Box pinnen können") — die vom TSC live erkannten Setup-
+// Boxen (tradeSetupsMetadata) haben, solange kein Trade daraus geloggt wurde, meist noch keine
+// eigene trade_setups-Zeile; findOrCreateTradeSetupId legt sie bei Bedarf per Natural-Key
+// (instrument, direction, fractal_pivot_time) selbst an, danach ganz normaler kind="trade_setup"-
+// Pin wie bei einem bereits verlinkten Setup. setup = { instrument, direction, setup } aus
+// priceChartHitTest.js' tsc_setup-Kandidat (setup selbst im Rohformat aus tradeSetupsMetadata).
+export async function addPinTscSetupEntry({ instrument, direction, setup }, note) {
+  const tradeSetupId = await findOrCreateTradeSetupId({ instrument, direction, setup });
+  if (tradeSetupId == null) return null;
+  return addPinEntry("trade_setup", tradeSetupId, note);
 }
 
 export async function removePinEntry(id) {

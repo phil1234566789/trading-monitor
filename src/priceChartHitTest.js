@@ -169,12 +169,20 @@ export const PIN_MAX_CANDIDATES = 6;
 // pixelgenau zielen zu müssen.
 //
 // primitives = { tradePrimitives, orderBlockPrimitives, liquidityPrimitives, tradeSetupLinkPrimitives,
-// tradeConfirmationLinkPrimitives, divergencePrimitives } — dieselben Primitive-Arrays, die
-// PriceChart.vue fürs Zeichnen führt, hier nur gelesen (keine chart/candleSeries-Abhängigkeit,
-// jedes Primitive kennt seine eigenen Bildschirm-Koordinaten bereits über distanceTo()).
+// tradeConfirmationLinkPrimitives, divergencePrimitives, tscSetupPrimitives } — dieselben Primitive-
+// Arrays, die PriceChart.vue fürs Zeichnen führt, hier nur gelesen (keine chart/candleSeries-
+// Abhängigkeit, jedes Primitive kennt seine eigenen Bildschirm-Koordinaten bereits über
+// distanceTo()).
 export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }, radius = PIN_SEARCH_RADIUS, maxCandidates = PIN_MAX_CANDIDATES) {
-  const { tradePrimitives, orderBlockPrimitives, liquidityPrimitives, tradeSetupLinkPrimitives, tradeConfirmationLinkPrimitives, divergencePrimitives } =
-    primitives;
+  const {
+    tradePrimitives,
+    orderBlockPrimitives,
+    liquidityPrimitives,
+    tradeSetupLinkPrimitives,
+    tradeConfirmationLinkPrimitives,
+    divergencePrimitives,
+    tscSetupPrimitives,
+  } = primitives;
   const candidates = [];
   for (const p of tradePrimitives) {
     const distance = p.distanceTo(x, y);
@@ -267,6 +275,22 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
       candidates.push({ kind: "trade_confirmation", confirmationId: p.zone.confirmationId, instrument: p.zone.instrument, distance });
     }
   }
+  // Live erkannte Trade-Setup-Box, NOCH OHNE trade_setups.id (Task "Pin-Kontext: live erkannte
+  // Trade-Setup-Box pinnen können", Bug-Report Philip: "ich kann keine trade-setups anpinnen" —
+  // bisher war nur die bereits verlinkte/gepinnte Box (tradeSetupLinkPrimitives, kind="trade_setup"
+  // oben) klickbar, nicht die laufend vom TSC gezeichnete Kandidaten-Box selbst). tscSetupPrimitives
+  // enthält je Setup DREI Primitives (Fraktal-/LS-Linie + OB-Box, siehe
+  // usePriceChartTradeSetupDrawing.js) — nur die OB-Box (OrderBlockPrimitive) trägt das
+  // instrument/direction/setup-Tripel, das findOrCreateTradeSetupId (tradeIntake.js, über
+  // addPinTscSetupEntry in pinContext.js) beim tatsächlichen Pinnen braucht, deshalb derselbe
+  // instanceof-Guard wie bei tradeConfirmationLinkPrimitives oben.
+  for (const p of tscSetupPrimitives) {
+    if (!(p instanceof OrderBlockPrimitive)) continue;
+    const distance = p.distanceTo(x, y);
+    if (distance <= radius) {
+      candidates.push({ kind: "tsc_setup", instrument: p.zone.instrument, direction: p.zone.direction, setup: p.zone.setup, distance });
+    }
+  }
   // RSI-Divergenz-Konnektoren (Chat 2026-08-11, Philip: "ich will DIR paar Stellen zeigen ... wir
   // haben ja die Funktion da") — nur das Preis-Bein (divergencePrimitives), nicht auch das RSI-Bein
   // in der eigenen Pane: dessen priceToCoordinate()-Y ist relativ zur RSI-Pane, nicht zum ganzen
@@ -286,6 +310,7 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
     if (c.kind === "ob_zone") return `ob_zone:${c.zone.timeframe}|${c.zone.dir}|${c.zone.startTime}`;
     if (c.kind === "m5_ob") return `m5_ob:${c.zone.dirNum}|${c.zone.top}|${c.zone.bottom}|${c.zone.startTime}`;
     if (c.kind === "trade_setup") return `trade_setup:${c.tradeSetupId}`;
+    if (c.kind === "tsc_setup") return `tsc_setup:${c.direction}|${c.setup.fractal.pivotTime}`;
     if (c.kind === "liquidity_level") return `liquidity_level:${c.level.dirNum}|${c.level.pivotTime}`;
     if (c.kind === "m5_liquidity_level") return `m5_liquidity_level:${c.level.timeframe}|${c.level.dirNum}|${c.level.pivotTime}`;
     if (c.kind === "rsi_divergence") return `rsi_divergence:${c.divergence.type}|${c.divergence.fromTime}|${c.divergence.toTime}`;
@@ -305,14 +330,22 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
 // Leichtgewichtiger Boolean-Check fürs Cursor-Feedback (jede Mausbewegung) — baut anders als
 // findNearbyPinCandidates() keine Objekte/kein Sortieren, nur "gibt's überhaupt was in der Nähe".
 export function hasNearbyPinCandidate(x, y, primitives, radius = PIN_SEARCH_RADIUS) {
-  const { tradePrimitives, orderBlockPrimitives, liquidityPrimitives, tradeSetupLinkPrimitives, tradeConfirmationLinkPrimitives, divergencePrimitives } =
-    primitives;
+  const {
+    tradePrimitives,
+    orderBlockPrimitives,
+    liquidityPrimitives,
+    tradeSetupLinkPrimitives,
+    tradeConfirmationLinkPrimitives,
+    divergencePrimitives,
+    tscSetupPrimitives,
+  } = primitives;
   return (
     tradePrimitives.some((p) => p.distanceTo(x, y) <= radius) ||
     orderBlockPrimitives.some((p) => p.distanceTo(x, y) <= radius) ||
     tradeSetupLinkPrimitives.some((p) => p.distanceTo(x, y) <= radius) ||
     tradeConfirmationLinkPrimitives.some((p) => p instanceof OrderBlockPrimitive && p.distanceTo(x, y) <= radius) ||
     liquidityPrimitives.some((p) => p.distanceTo(x, y) <= radius) ||
-    divergencePrimitives.some((p) => p.distanceTo(x, y) <= radius)
+    divergencePrimitives.some((p) => p.distanceTo(x, y) <= radius) ||
+    tscSetupPrimitives.some((p) => p instanceof OrderBlockPrimitive && p.distanceTo(x, y) <= radius)
   );
 }

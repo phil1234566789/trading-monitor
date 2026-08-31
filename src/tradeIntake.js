@@ -45,6 +45,50 @@ async function findMatchingTradeSetupId(instrument, direction, fractalPivotTimeS
   return data?.id ?? null;
 }
 
+// Analog zu findOrCreateObZoneId, für ein noch nicht von poi-watcher persistiertes Trade-Setup
+// (Task "Pin-Kontext: live erkannte Trade-Setup-Box pinnen können") — bisher konnte man nur ein
+// bereits verlinktes/gepinntes Setup anpinnen (findMatchingTradeSetupId liefert dann null, poi-
+// watcher hinkt bis zu 5 Minuten hinterher). Legt die trade_setups-Zeile bei Bedarf per Upsert
+// selbst an, exakt dieselben Spalten/derselbe onConflict-Schlüssel wie poi-watcher/index.ts (die
+// Zeile ist danach ununterscheidbar von einer durch poi-watcher persistierten). ob_zone_id läuft
+// über dieselbe findOrCreateObZoneId-Funktion wie poi-watcher (Timeframe immer "5M", siehe
+// detectSetupObs()). setup = ein Eintrag aus tradeSetupsMetadata (usePriceChartTradeSetups.js).
+export async function findOrCreateTradeSetupId({ instrument, direction, setup }) {
+  const obZoneId = await findOrCreateObZoneId({
+    instrument,
+    timeframe: "5M",
+    direction,
+    top: setup.obTop,
+    bottom: setup.obBottom,
+    startTimeSec: setup.obStartTime,
+  });
+  const { data, error } = await supabase
+    .from("trade_setups")
+    .upsert(
+      {
+        instrument,
+        direction,
+        fractal_price: setup.fractal.price,
+        fractal_pivot_time: new Date(setup.fractal.pivotTime * 1000).toISOString(),
+        ls_price: setup.ls.price,
+        ls_pivot_time: new Date(setup.ls.pivotTime * 1000).toISOString(),
+        ls_touched_time: new Date(setup.ls.touchedTime * 1000).toISOString(),
+        ob_top: setup.obTop,
+        ob_bottom: setup.obBottom,
+        ob_start_time: new Date(setup.obStartTime * 1000).toISOString(),
+        ob_zone_id: obZoneId,
+      },
+      { onConflict: "instrument,direction,fractal_pivot_time" },
+    )
+    .select("id")
+    .single();
+  if (error) {
+    console.error("Trade-Setup-Referenz anlegen/finden fehlgeschlagen:", error);
+    return null;
+  }
+  return data.id;
+}
+
 // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren" — findet die ob_zones-Zeile
 // für eine gegebene OB per Natural Key oder legt sie an, falls poi-watcher sie noch nicht erfasst
 // hat (z.B. ein frisch entstandenes M5-OB, dessen Trade-Setup-Zeile noch nicht existiert). Normaler

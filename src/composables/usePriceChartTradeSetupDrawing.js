@@ -104,8 +104,21 @@ export function usePriceChartTradeSetupDrawing() {
       if (showLiquidityDebug) obLabelLines.push(formatPrice(top), formatPrice(bottom));
       const obBox = new OrderBlockPrimitive(
         // touched: true erzwingt die feste Box-Breite, siehe Kommentar bei
-        // refreshTradeSetupLinksInternal (PriceChart.vue).
-        { top, bottom, startTime: setup.obStartTime, endTime: setup.obStartTime + TRADE_SETUP_OB_WIDTH_SEC, touched: true },
+        // refreshTradeSetupLinksInternal (PriceChart.vue). instrument/direction/setup zusätzlich auf
+        // der Zone (nicht fürs Rendering gebraucht) — findNearbyPinCandidates (priceChartHitTest.js)
+        // liest sie für den "tsc_setup"-Pin-Kandidaten (Task "Pin-Kontext: live erkannte Trade-Setup-
+        // Box pinnen können"), da diese Box anders als die Trade-Setup-Link-Box noch keine
+        // trade_setups.id hat (findOrCreateTradeSetupId legt sie erst beim tatsächlichen Pinnen an).
+        {
+          top,
+          bottom,
+          startTime: setup.obStartTime,
+          endTime: setup.obStartTime + TRADE_SETUP_OB_WIDTH_SEC,
+          touched: true,
+          instrument: symbol,
+          direction: setup.dir === 1 ? "short" : "long",
+          setup,
+        },
         {
           fillColor: cssColorScaled(key, TRADE_SETUP_OB_FILL_RATIO),
           borderColor: cssColorScaled(key, TRADE_SETUP_OB_BORDER_RATIO),
@@ -125,5 +138,9 @@ export function usePriceChartTradeSetupDrawing() {
     }
   }
 
-  return { create, dispose, refresh };
+  // tradeSetupPrimitives zusätzlich exponiert (Task "Pin-Kontext: live erkannte Trade-Setup-Box
+  // pinnen können") — analog zu divergencePriceLinePrimitives in usePriceChartRsi.js, wird von
+  // PriceChart.vue (pinPrimitivesBag) für findNearbyPinCandidates gebraucht. Bleibt dieselbe
+  // Array-Referenz über refresh()-Aufrufe hinweg (nur .length=0 + .push, nie neu zugewiesen).
+  return { create, dispose, refresh, tradeSetupPrimitives };
 }

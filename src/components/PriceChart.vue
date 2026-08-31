@@ -354,7 +354,14 @@ const {
 } = usePriceChartMarketStructure();
 // Trade-Setup-Zeichnung (siehe usePriceChartTradeSetupDrawing.js, Phase 6h) — reine Zeichenfunktion,
 // liest tradeSetupsMetadata (oben) als Parameter statt eigenen Zustand zu besitzen.
-const { create: createTradeSetupDrawing, dispose: disposeTradeSetupDrawing, refresh: refreshTradeSetupDrawing } = usePriceChartTradeSetupDrawing();
+// tscSetupPrimitives (Task "Pin-Kontext: live erkannte Trade-Setup-Box pinnen können") — die
+// OB-Box-Primitives der live gezeichneten TSC-Setups, für pinPrimitivesBag() unten gebraucht.
+const {
+  create: createTradeSetupDrawing,
+  dispose: disposeTradeSetupDrawing,
+  refresh: refreshTradeSetupDrawing,
+  tradeSetupPrimitives: tscSetupPrimitives,
+} = usePriceChartTradeSetupDrawing();
 // Liquiditäts-Level-Zeichnung (siehe usePriceChartLiquidity.js, Phase 6i) — analog zu
 // usePriceChartTradeSetupDrawing, aber mit eigenem Zustand (currentLiquidityLevels/
 // liquidityMetadata/liquidityEarliestTime), da hier zusätzlich die Roh-Erkennung + der Klick-
@@ -1899,6 +1906,7 @@ onMounted(() => {
       tradeSetupLinkPrimitives,
       tradeConfirmationLinkPrimitives,
       divergencePrimitives: priceChartRsi.divergencePriceLinePrimitives,
+      tscSetupPrimitives,
     };
   }
   function findNearbyPinCandidates(x, y) {
