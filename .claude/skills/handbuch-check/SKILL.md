@@ -61,6 +61,18 @@ bereits vorliegenden Diff:
    [00-trading-steps.md → Visuelle Antworten](../../../trading/00-trading-steps/00-trading-steps.md#visuelle-antworten-chart-annotationen))
    korrekt referenziert, nicht nur implizit vorausgesetzt?
 
+6. **Kein "Bug-Beispiel DATUM (...)" in unconditional geladenen Dateien.** `00-trading-steps/**`,
+   `glossar.md` und alle anderen bei jedem Schritt automatisch geladenen Handbuch-Dateien bleiben
+   knapp und operativ — nur WAS gilt, nicht WARUM/seit wann/welches Zitat dazu führte (globales
+   CLAUDE.md, Abschnitt "Ladekosten"). Ein neuer Regel-Satz reicht meist mit EINEM knappen Halbsatz
+   ohne Datum/Zitat aus, notfalls „(Bug-Beispiel: ...)" in maximal 1 Zeile — kein mehrzeiliger
+   Absatz mit Datum, Preisen, wörtlichem Zitat und Ableitungs-Historie. Diese Historie gehört
+   stattdessen ins Auto-Memory (`project_*`/`feedback_*`-Eintrag) oder in eine Commit-Message, NICHT
+   in die Datei selbst. Vor dem Schreiben prüfen: „Braucht der Leser das JEDES Mal, wenn er diese
+   Datei lädt, oder nur historisch interessant?" — Zweiteres raus. Philip, 31.08.2026, nachdem an
+   einem Tag mehrere solcher Bug-Beispiel-Absätze in 00-trading-steps/*.md und orderblöcke.md
+   gelandet waren: „lass diese legacy scheiße! ist alles nur Vermüllung unserer docs!"
+
 ## Ergebnis
 
 Kurz im Chat vermerken, was geprüft wurde und was das für die geplante Änderung bedeutet ("Handbuch-
