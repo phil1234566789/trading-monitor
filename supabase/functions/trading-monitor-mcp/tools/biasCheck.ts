@@ -7,6 +7,7 @@ import { buildPretradeGates } from "./pretradeGates.ts";
 import { compute1hStructureState } from "./dataExport.ts";
 import { buildCandidatePool, findNearestLiquidityTargets, findNearestObTargets } from "../findTargetCandidates.js";
 import { isSpreadHourPivot, findIntermediateLevel, determineTrendForce, type TrendForceLevelInput, type TrendForceObInput } from "../biasEngine.ts";
+import { logDecision } from "../stateMachineLog.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -41,6 +42,21 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
   const currentTimeSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
   const gates = await buildPretradeGates({ instrument, nowSec: currentTimeSec });
   if (gates.exclude) {
+    // Genau die Lücke aus dem Auslöser-Vorfall (01.09.2026): ohne diesen Log verschwindet ein
+    // geblockter run_bias_check-Versuch spurlos, weil trading_loop_state hier NICHT geschrieben
+    // wird (kein Loop, den ein späterer Blick auf heartbeat_log finden könnte) — loopStateId bleibt
+    // deshalb null.
+    await logDecision({
+      instrument,
+      dateStr: berlinDateStrFor(currentTimeSec),
+      sec: currentTimeSec,
+      step: 3,
+      tool: "run_bias_check",
+      decision: "blocked_by_gate",
+      result: gates,
+      message: gates.tradingHours.exclude ? gates.tradingHours.resultText : gates.news.textBlocks.join(" | "),
+      loopStateId: null,
+    });
     return { instrument, asOf: { sec: currentTimeSec, at: berlinDateTimeStrFor(currentTimeSec) }, gates, blocked: true as const };
   }
 
@@ -65,6 +81,17 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
     // Fall 5 (03-htf-bias.md): kein bestätigter 1H-Trend ODER kein aktueller Preis verfügbar —
     // KEIN trading_loop_state-Write (kein Bias, auf dem ein Loop aufbauen könnte), Lana macht die
     // manuelle Kraft-Abwägung selbst, siehe Textbaustein "1H-Ebene unbestätigt (Algo)".
+    await logDecision({
+      instrument,
+      dateStr,
+      sec: currentTimeSec,
+      step: 3,
+      tool: "run_bias_check",
+      decision: "unresolved_trend",
+      result: { structure1h: structureResult.trend, structureTrendAge: structureResult.trendAge, currentPrice },
+      message: "1H-Ebene unbestätigt (Algo) ---> manuelle Kraft-Abwägung",
+      loopStateId: null,
+    });
     return {
       instrument,
       asOf: { sec: currentTimeSec, at: berlinDateTimeStrFor(currentTimeSec) },
@@ -138,6 +165,31 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
     lastAnalysisTimeSec: currentTimeSec,
     replayUntilSec: replayUntilSec ?? null,
   });
+
+  await Promise.all([
+    logDecision({
+      instrument,
+      dateStr,
+      sec: currentTimeSec,
+      step: 3,
+      tool: "run_bias_check",
+      decision: "trend_force",
+      result: trendForce,
+      message: [trendForce.ob.text, trendForce.level.text].filter(Boolean).join(" | ") || null,
+      loopStateId: loopState.id,
+    }),
+    logDecision({
+      instrument,
+      dateStr,
+      sec: currentTimeSec,
+      step: 3,
+      tool: "run_bias_check",
+      decision: "intermediate_level",
+      result: { intermediateLevel },
+      message: intermediateLevel ? `Zwischen-Level gefunden: ${intermediateLevel.price} (${intermediateLevel.kind})` : "kein Zwischen-Level gefunden",
+      loopStateId: loopState.id,
+    }),
+  ]);
 
   return {
     instrument,

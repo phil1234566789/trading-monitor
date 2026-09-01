@@ -1,6 +1,6 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
-import { berlinDateTimeStrFor } from "../berlinTime.ts";
+import { berlinDateTimeStrFor, berlinDateStrFor } from "../berlinTime.ts";
 import { fetchForexCandles } from "../forexCandles.ts";
 import { getActiveLoopState, updateLoopState, closeLoopState, appendHeartbeat, type TradingLoopStateRow, type HeartbeatEntry } from "../loopState.ts";
 import { buildPretradeGates } from "./pretradeGates.ts";
@@ -8,6 +8,7 @@ import { buildSessionWindow } from "./sessionWindow.ts";
 import { buildDataSnapshot } from "./dataSnapshot.ts";
 import { buildRecentReactions } from "./recentReactions.ts";
 import { checkFallFour, hasReaction as computeHasReaction, computeWatchLevels, type FallFourResult, type WatchLevel } from "../fallClassifier.ts";
+import { logDecision } from "../stateMachineLog.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -46,7 +47,7 @@ async function performFullTick(loopState: TradingLoopStateRow, instrument: strin
   const wantedSweepDir: "high" | "low" = direction === "long" ? "low" : "high";
 
   const [sessionWindow, snapshot, reactions] = await Promise.all([
-    buildSessionWindow({ instrument, nowSec: atSec }),
+    buildSessionWindow({ instrument, nowSec: atSec, loopStateId: loopState.id }),
     buildDataSnapshot({ instrument, replayUntilSec: atSec }),
     buildRecentReactions({ instrument, replayUntilSec: atSec }),
   ]);
@@ -62,6 +63,34 @@ async function performFullTick(loopState: TradingLoopStateRow, instrument: strin
       : checkFallFour({ direction, currentPrice, trendTarget: loopState.trendTarget, countertrendTarget: loopState.countertrendTarget, invalidation: loopState.invalidation });
 
   const reactionFound = computeHasReaction({ hasCompletedTradeSetup: setup != null, obReactionCount: obReactionsFiltered.length, liquiditySweepCount: liquiditySweeps.length });
+
+  const dateStr = berlinDateStrFor(atSec);
+  await Promise.all([
+    logDecision({
+      instrument,
+      dateStr,
+      sec: atSec,
+      step: 5,
+      tool: "run_dealing_range_loop",
+      decision: "fall_four",
+      result: fallFour,
+      message: fallFour.hit ? fallFour.reason : "nicht erreicht",
+      loopStateId: loopState.id,
+    }),
+    logDecision({
+      instrument,
+      dateStr,
+      sec: atSec,
+      step: 5,
+      tool: "run_dealing_range_loop",
+      decision: "has_reaction",
+      result: { hasCompletedTradeSetup: setup != null, obReactionCount: obReactionsFiltered.length, liquiditySweepCount: liquiditySweeps.length, reactionFound },
+      message: reactionFound
+        ? `Reaktion gefunden (Setup: ${setup != null}, OB-Reaktionen: ${obReactionsFiltered.length}, Sweeps: ${liquiditySweeps.length})`
+        : "keine Reaktion",
+      loopStateId: loopState.id,
+    }),
+  ]);
 
   const candidateLiquidity = [
     ...((snapshot as any).liquidity ?? []),
@@ -115,7 +144,7 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
   if (replayUntilSec == null) {
     // LIVE: ein einzelner Tick bei "jetzt".
     const nowSec = Math.floor(Date.now() / 1000);
-    const gates = await buildPretradeGates({ instrument, nowSec });
+    const gates = await buildPretradeGates({ instrument, nowSec, loopStateId: loopState.id });
     if (gates.exclude) return { instrument, mode: "live" as const, blockedByGate: true, gates };
     const tick = await performFullTick(loopState, instrument, nowSec);
     return { instrument, mode: "live" as const, blockedByGate: false, tick };
@@ -137,7 +166,7 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
   }
 
   for (let i = 0; i < maxBatches && cursorSec < replayUntilSec && currentLoopState; i++) {
-    const gates = await buildPretradeGates({ instrument, nowSec: cursorSec });
+    const gates = await buildPretradeGates({ instrument, nowSec: cursorSec, loopStateId: currentLoopState.id });
     if (gates.exclude) {
       await heartbeat(cursorSec, `News-Blackout ---> Batch pausiert.`, currentLoopState.id);
       cursorSec = Math.min(cursorSec + BATCH_HOURS * 3600, replayUntilSec);

@@ -1,6 +1,6 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
-import { berlinDateTimeStrFor } from "../berlinTime.ts";
+import { berlinDateTimeStrFor, berlinDateStrFor } from "../berlinTime.ts";
 import { fetchForexCandles } from "../forexCandles.ts";
 import { fetchActiveTscRangeId, fetchDealingRangeCockpit, getOpenOppositeDealingRanges } from "../db.ts";
 import { buildCandidatePool } from "../findTargetCandidates.js";
@@ -8,6 +8,7 @@ import { findAntiConfluenceCandidates } from "../findAntiConfluenceCandidates.js
 import { detectRsiDivergenceHistory } from "../rsi.js";
 import { buildRecentReactions } from "./recentReactions.ts";
 import { computeEvidenceScore } from "../evidenceScoring.ts";
+import { logDecision } from "../stateMachineLog.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -61,6 +62,21 @@ export async function buildValidationEvidence({ instrument, dealingRangeId, curr
   const confluenceCount = obConfluences.length + sweepConfluences.length + divergenceConfluences.length;
   const antiConfluenceCount = antiConfluences.obCandidates.length + antiConfluences.sweepCandidates.length + antiConfluences.divergenceCandidates.length + antiConfluences.invalidationObCandidates.length;
   const score = computeEvidenceScore({ confluenceCount, antiConfluenceCount, hasActiveOppositeDealingRange: openOpposite.length > 0 });
+
+  // Kein trading_loop_state-Write in Schritt 6 (siehe Kommentar oben) — dieser Log-Eintrag steht
+  // deshalb bewusst ohne loopStateId, per instrument/date_str/dealingRangeId (im result) trotzdem
+  // auffindbar.
+  await logDecision({
+    instrument,
+    dateStr: berlinDateStrFor(effectiveTimeSec),
+    sec: effectiveTimeSec,
+    step: 6,
+    tool: "get_validation_evidence",
+    decision: "evidence_score",
+    result: { dealingRangeId: rangeId, confluenceCount, antiConfluenceCount, hasActiveOppositeDealingRange: openOpposite.length > 0, score },
+    message: `Score ${score.score} (${score.breakdown.map((b) => b.label).join(", ") || "keine Faktoren"})`,
+    loopStateId: null,
+  });
 
   return {
     instrument,

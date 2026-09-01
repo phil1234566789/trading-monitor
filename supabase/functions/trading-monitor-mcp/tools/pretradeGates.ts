@@ -3,6 +3,7 @@ import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp
 import { getTradingSchedule, getNewsEvents } from "../db.ts";
 import { berlinDayRangeUtcMs, berlinDateStrFor } from "../berlinTime.ts";
 import { evaluateTradingHoursGate, evaluateNewsGate, type TradingWindows, type NewsEventInput } from "../pretradeGates.ts";
+import { logDecision } from "../stateMachineLog.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -18,9 +19,14 @@ const NEWS_FETCH_WINDOW_SEC = 24 * 3600;
 export interface PretradeGatesArgs {
   instrument: string;
   nowSec?: number;
+  // Nur von internen Aufrufern gesetzt (run_bias_check/run_dealing_range_loop), sobald bereits ein
+  // Loop existiert — verknüpft die geloggten Gate-Verdikte mit dem Loop, der sie ausgelöst hat.
+  // Bleibt null, solange (noch) kein Loop existiert (z.B. ein direkter check_pretrade_gates-Aufruf
+  // oder ein Gate-Block VOR dem ersten run_bias_check-Loop-Write).
+  loopStateId?: number | null;
 }
 
-export async function buildPretradeGates({ instrument, nowSec }: PretradeGatesArgs) {
+export async function buildPretradeGates({ instrument, nowSec, loopStateId = null }: PretradeGatesArgs) {
   const effectiveNowSec = nowSec ?? Math.floor(Date.now() / 1000);
   const dateStr = berlinDateStrFor(effectiveNowSec);
   const { startUtcMs, endUtcMs } = berlinDayRangeUtcMs(dateStr);
@@ -40,6 +46,14 @@ export async function buildPretradeGates({ instrument, nowSec }: PretradeGatesAr
 
   const tradingHours = evaluateTradingHoursGate(effectiveNowSec, schedule.trading_windows as TradingWindows);
   const news = evaluateNewsGate(effectiveNowSec, newsInputs, dayEvents.length > 0);
+
+  // Beide Gate-Verdikte werden HIER geloggt, unabhängig davon, ob der aufrufende Tool-Aufruf (Lana)
+  // danach abbricht — genau das schließt die Lücke aus dem Auslöser-Vorfall (ein geblockter
+  // run_bias_check-Versuch verschwand bisher spurlos, siehe Task-Beschreibung).
+  await Promise.all([
+    logDecision({ instrument, dateStr, sec: effectiveNowSec, step: 1, tool: "check_pretrade_gates", decision: "trading_hours_gate", result: tradingHours, message: tradingHours.resultText, loopStateId }),
+    logDecision({ instrument, dateStr, sec: effectiveNowSec, step: 2, tool: "check_pretrade_gates", decision: "news_gate", result: news, message: news.textBlocks.join(" | "), loopStateId }),
+  ]);
 
   return {
     instrument,

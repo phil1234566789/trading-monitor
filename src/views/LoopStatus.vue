@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { LOOP_INSTRUMENTS, fetchActiveLoopStates, fetchLoopStateHistory } from "../loopState.js";
+import { fetchStateMachineLog } from "../stateMachineLog.js";
 
 // state-machine-v1-ui (siehe docs/state-machine.md#reporting-trading-runsmd-verliert-seinen-zweck)
 // — reines Lese-Panel für trading_loop_state, kein neues Dashboard: TSC/Journal haben bereits
@@ -13,16 +14,19 @@ import { LOOP_INSTRUMENTS, fetchActiveLoopStates, fetchLoopStateHistory } from "
 const REFRESH_MS = 8000; // die Loop-Zeilen werden von Lana (separate Claude-Code-Session) geschrieben, kein Push moeglich -> Polling
 
 async function loadAll() {
-  const [active, histories] = await Promise.all([
+  const [active, histories, decisionLogs] = await Promise.all([
     fetchActiveLoopStates(),
     Promise.all(LOOP_INSTRUMENTS.map((instrument) => fetchLoopStateHistory(instrument))),
+    Promise.all(LOOP_INSTRUMENTS.map((instrument) => fetchStateMachineLog(instrument))),
   ]);
   const historyMap = {};
+  const decisionLogMap = {};
   LOOP_INSTRUMENTS.forEach((instrument, i) => {
     // Historie = alles AUSSER der aktuell aktiven Zeile (die steht schon oben in der Karte).
     historyMap[instrument] = histories[i].filter((row) => row.status !== "active");
+    decisionLogMap[instrument] = decisionLogs[i];
   });
-  return { active, historyMap };
+  return { active, historyMap, decisionLogMap };
 }
 
 const errorText = ref("");
@@ -38,7 +42,42 @@ const { data } = usePolledFetch(loadAll, {
 const loading = computed(() => Array.isArray(data.value));
 const activeByInstrument = computed(() => data.value?.active ?? new Map());
 const historyByInstrument = computed(() => data.value?.historyMap ?? {});
+const decisionLogByInstrument = computed(() => data.value?.decisionLogMap ?? {});
 const expandedHistory = ref({});
+
+// state-machine-decision-log (feinere Ebene UNTER dem Heartbeat-Log, siehe docs/state-machine.md)
+// — eigener Ausklapp-Zustand + Tag-Filter (leeres Set = alle Tags sichtbar) pro Instrument.
+const expandedDecisionLog = ref({});
+const decisionTagFilter = ref({});
+
+function toggleDecisionLog(instrument) {
+  expandedDecisionLog.value = { ...expandedDecisionLog.value, [instrument]: !expandedDecisionLog.value[instrument] };
+}
+
+function availableDecisionTags(instrument) {
+  const tags = new Set((decisionLogByInstrument.value[instrument] || []).map((entry) => entry.decision));
+  return [...tags].sort();
+}
+
+function isTagActive(instrument, tag) {
+  const selected = decisionTagFilter.value[instrument];
+  return !selected || selected.size === 0 || selected.has(tag);
+}
+
+function toggleDecisionTag(instrument, tag) {
+  const current = decisionTagFilter.value[instrument] ?? new Set();
+  const next = new Set(current);
+  if (next.has(tag)) next.delete(tag);
+  else next.add(tag);
+  decisionTagFilter.value = { ...decisionTagFilter.value, [instrument]: next };
+}
+
+function filteredDecisionLog(instrument) {
+  const entries = decisionLogByInstrument.value[instrument] || [];
+  const selected = decisionTagFilter.value[instrument];
+  if (!selected || selected.size === 0) return entries;
+  return entries.filter((entry) => selected.has(entry.decision));
+}
 
 const STATUS_LABELS = {
   active: "Aktiv",
@@ -180,6 +219,36 @@ function toggleHistory(instrument) {
               <span class="history-updated">{{ formatBerlin(row.updatedAt) }}</span>
             </li>
           </ul>
+        </div>
+
+        <div class="decision-log-block">
+          <button type="button" class="history-toggle" @click="toggleDecisionLog(instrument)">
+            {{ expandedDecisionLog[instrument] ? "▾" : "▸" }} Entscheidungs-Log ({{ (decisionLogByInstrument[instrument] || []).length }})
+          </button>
+          <template v-if="expandedDecisionLog[instrument]">
+            <div v-if="availableDecisionTags(instrument).length > 0" class="tag-filter">
+              <button
+                v-for="tag in availableDecisionTags(instrument)"
+                :key="tag"
+                type="button"
+                class="tag-chip"
+                :class="{ active: isTagActive(instrument, tag) }"
+                @click="toggleDecisionTag(instrument, tag)"
+              >
+                {{ tag }}
+              </button>
+            </div>
+            <ul v-if="filteredDecisionLog(instrument).length > 0" class="decision-log-list">
+              <li v-for="entry in filteredDecisionLog(instrument)" :key="entry.id" class="decision-log-entry">
+                <span class="decision-log-time">{{ formatBerlin(entry.sec) }}</span>
+                <span class="decision-log-step">S{{ entry.step }}</span>
+                <span class="decision-log-tag">{{ entry.decision }}</span>
+                <span class="decision-log-message">{{ entry.message || "—" }}</span>
+                <span v-if="entry.loopStateId == null" class="decision-log-unassigned">ohne Loop</span>
+              </li>
+            </ul>
+            <span v-else class="heartbeat-empty">Keine Einträge.</span>
+          </template>
         </div>
       </section>
     </div>
@@ -433,5 +502,83 @@ function toggleHistory(instrument) {
   font-size: 12px;
   color: #565a64;
   font-style: italic;
+}
+
+.decision-log-block {
+  margin-top: 12px;
+  border-top: 1px solid #2a2e39;
+  padding-top: 8px;
+}
+
+.tag-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0;
+}
+
+.tag-chip {
+  background: #22262f;
+  border: 1px solid #2a2e39;
+  color: #565a64;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.tag-chip.active {
+  color: #d1d4dc;
+  border-color: #5b8dff;
+  background: rgba(91, 141, 255, 0.12);
+}
+
+.decision-log-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.decision-log-entry {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11.5px;
+  padding: 3px 0;
+  border-bottom: 1px solid #22262f;
+}
+
+.decision-log-time {
+  flex-shrink: 0;
+  color: #565a64;
+  white-space: nowrap;
+}
+
+.decision-log-step {
+  flex-shrink: 0;
+  color: #787b86;
+  font-size: 10px;
+}
+
+.decision-log-tag {
+  flex-shrink: 0;
+  color: #5b8dff;
+  font-size: 10.5px;
+}
+
+.decision-log-message {
+  color: #9aa0ac;
+}
+
+.decision-log-unassigned {
+  margin-left: auto;
+  color: #ff9800;
+  font-size: 10px;
+  flex-shrink: 0;
 }
 </style>

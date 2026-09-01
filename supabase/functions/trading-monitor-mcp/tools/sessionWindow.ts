@@ -1,8 +1,9 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import { getSessions } from "../db.ts";
-import { berlinOffsetMinutes, berlinDateTimeStrFor } from "../berlinTime.ts";
+import { berlinOffsetMinutes, berlinDateTimeStrFor, berlinDateStrFor } from "../berlinTime.ts";
 import { sessionOccurrences } from "../sessionOccurrences.js";
+import { logDecision } from "../stateMachineLog.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -70,16 +71,34 @@ export function evaluateSessionWindows(nowSec: number, sessions: SessionConfigIn
 export interface SessionWindowArgs {
   instrument: string;
   nowSec?: number;
+  // Nur gesetzt, wenn intern von run_dealing_range_loop (Schritt 5) aufgerufen — verknüpft den
+  // geloggten Session-Fakten-Check mit dem laufenden Loop. Bleibt null bei einem direkten
+  // check_session_window-Aufruf (kein Loop-Kontext).
+  loopStateId?: number | null;
 }
 
-export async function buildSessionWindow({ instrument, nowSec }: SessionWindowArgs) {
+export async function buildSessionWindow({ instrument, nowSec, loopStateId = null }: SessionWindowArgs) {
   const effectiveNowSec = nowSec ?? Math.floor(Date.now() / 1000);
   const sessions = await getSessions(instrument);
+  const windows = evaluateSessionWindows(effectiveNowSec, sessions);
+
+  await logDecision({
+    instrument,
+    dateStr: berlinDateStrFor(effectiveNowSec),
+    sec: effectiveNowSec,
+    step: 4,
+    tool: "check_session_window",
+    decision: "session_window",
+    result: { windows },
+    message: windows.length > 0 ? windows.map((w) => `${w.label} (${w.status})`).join(", ") : "keine aktive/bevorstehende Session",
+    loopStateId,
+  });
+
   return {
     instrument,
     nowSec: effectiveNowSec,
     at: berlinDateTimeStrFor(effectiveNowSec),
-    windows: evaluateSessionWindows(effectiveNowSec, sessions),
+    windows,
   };
 }
 
