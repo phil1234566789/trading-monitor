@@ -2451,7 +2451,7 @@ defineExpose({
           title="Kopiert ins Clipboard UND speichert zusätzlich lokal in .debug/metadata.json (nur im Dev-Server) — für sehr lange Daten, die im Chat-Fenster abgeschnitten würden"
           @click="copyJsonAndSaveLocally('debugMetadata', activeMetadataSnapshot)"
         >
-          {{ copiedSection === 'debugMetadata' ? '✓ kopiert + gespeichert' : '📋 kopieren + lokal speichern' }}
+          {{ copiedSection === 'debugMetadata' ? '✓ kopiert + gespeichert' : '📋 kopieren + lokal speichern (localhost only!)' }}
         </button>
       </div>
       <p v-if="!hasActiveMetadata" class="metadata-empty">
