@@ -1,13 +1,11 @@
-// Regressionstest für die DRITTE, unabhängige Kopie von detectOrderBlocks (siehe Kopfkommentar in
-// supabase/functions/trading-monitor-mcp/orderBlockDetection.js und src/orderBlockDetection.js:
-// "ACHTUNG DRITTE KOPIE") — diese Kopie hatte den Wick-Invalidierungs-Fix vom 05.09.2026
-// (test/orderBlocks.test.js) zunächst NICHT mitbekommen, weil dataExport.ts/get_data_snapshot aus
-// dieser MCP-lokalen Datei importieren, nicht aus _shared/orderBlocks.ts. Bewusst dieselben
-// Testfälle wie dort, damit ein künftiges Auseinanderdriften der drei Kopien sofort auffällt.
+// Regressionstest für die typisierte Backend-Kopie von detectOrderBlocks (siehe "ACHTUNG DRITTE
+// KOPIE"-Kopfkommentar in src/orderBlockDetection.js/_shared/orderBlocks.ts) — von poi-watcher/
+// _shared/tradeSetup.ts genutzt. Bewusst dieselben Testfälle wie test/orderBlocks.test.js und
+// test/orderBlockDetectionMcp.test.js, damit ein Auseinanderdriften der drei Kopien sofort auffällt.
 import { describe, expect, it } from "vitest";
-import { detectOrderBlocks } from "../supabase/functions/trading-monitor-mcp/orderBlockDetection.js";
+import { detectOrderBlocks } from "../supabase/functions/_shared/orderBlocks.ts";
 
-describe("detectOrderBlocks (MCP-lokale Kopie) — Invalidierung (Wick genügt, kein Kerzenschluss nötig)", () => {
+describe("detectOrderBlocks (_shared-Kopie) — Invalidierung (Wick genügt, kein Kerzenschluss nötig)", () => {
   it("bullische Zone: ein Low-Wick unter die Zone invalidiert sie, auch wenn die Kerze darüber schließt", () => {
     const candles = [
       { time: 0, open: 1.2999, high: 1.3, low: 1.2998, close: 1.29995 },
@@ -35,9 +33,7 @@ describe("detectOrderBlocks (MCP-lokale Kopie) — Invalidierung (Wick genügt, 
   });
 });
 
-// Feature Philip 05.09.2026 (siehe trading/orderblöcke.md#retest-status) — dieselben Testfälle wie
-// test/orderBlocks.test.js, damit ein Auseinanderdriften der drei Kopien sofort auffällt.
-describe("detectOrderBlocks (MCP-lokale Kopie) — Retest-Status (retested)", () => {
+describe("detectOrderBlocks (_shared-Kopie) — Retest-Status (retested)", () => {
   it("HTF: ein späterer Kerzenschluss außerhalb der Zone bestätigt den Retest", () => {
     const candles = [
       { time: 0, open: 1.30005, high: 1.3003, low: 1.3, close: 1.30005 },

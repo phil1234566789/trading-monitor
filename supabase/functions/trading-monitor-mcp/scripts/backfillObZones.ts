@@ -104,20 +104,23 @@ async function fetchAllCandles(instrument: string, bar: string): Promise<CandleR
 // in detectOrderBlocks/orderBlockDetection.js gilt nur für NEU verarbeitete Kerzen — eine bereits
 // touched=true+invalidated=false gespeicherte Zeile aus einem historischen, VOR dem Fix gelaufenen
 // poi-watcher-Tick bleibt sonst für immer auf dem alten (falschen) Stand stehen (poi-watcher fasst
-// eine bereits touched-Zeile nie wieder an). Deshalb jetzt zwei Korrekturfälle statt einem:
-// touched=false -> touched (wie bisher) UND touched=true+invalidated=false -> invalidated. Zusätzlich
-// jetzt paginiert gelesen (PostgREST deckelt eine einzelne Antwort serverseitig, siehe CLAUDE.md-
-// Gotcha "Supabase/PostgREST caps... ~1000" — die alte Version las die Kandidatenmenge ungepaginiert).
+// eine bereits touched-Zeile nie wieder an). Deshalb jetzt drei Korrekturfälle statt einem:
+// touched=false -> touched (wie bisher), touched=true+invalidated=false -> invalidated, UND
+// retested=false -> retested (Feature 05.09.2026, siehe orderblöcke.md#retest-status — genau wie
+// invalidated etwas, das poi-watcher an einer bereits touched-Zeile später nie mehr nachträgt).
+// Zusätzlich jetzt paginiert gelesen (PostgREST deckelt eine einzelne Antwort serverseitig, siehe
+// CLAUDE.md-Gotcha "Supabase/PostgREST caps... ~1000" — die alte Version las die Kandidatenmenge
+// ungepaginiert).
 async function fetchCorrectionCandidates(instrument: string, dbTimeframe: string) {
-  const rows: { start_time: string; direction: string; touched: boolean; invalidated: boolean }[] = [];
+  const rows: { start_time: string; direction: string; touched: boolean; invalidated: boolean; retested: boolean }[] = [];
   let from = 0;
   for (;;) {
     const { data, error } = await supabase
       .from("ob_zones")
-      .select("start_time, direction, touched, invalidated")
+      .select("start_time, direction, touched, invalidated, retested")
       .eq("instrument", instrument)
       .eq("timeframe", dbTimeframe)
-      .or("touched.eq.false,invalidated.eq.false")
+      .or("touched.eq.false,invalidated.eq.false,retested.eq.false")
       .range(from, from + READ_PAGE_SIZE - 1);
     if (error) throw new Error(`OB-Zonen lesen fehlgeschlagen (${instrument} ${dbTimeframe}): ${error.message}`);
     if (!data || data.length === 0) break;
@@ -150,6 +153,7 @@ async function correctStaleZones(instrument: string, dbTimeframe: string, zones:
       patch.notified = true;
     }
     if (existing.invalidated !== z.invalidated) patch.invalidated = z.invalidated;
+    if (existing.retested !== z.retested) patch.retested = z.retested;
     if (Object.keys(patch).length === 0) continue;
     patch.end_time = new Date(z.endTime * 1000).toISOString();
 
@@ -177,6 +181,7 @@ async function upsertZones(instrument: string, dbTimeframe: string, zones: Retur
       weak: z.weak,
       touched: z.touched,
       invalidated: z.invalidated,
+      retested: z.retested,
       start_time: new Date(z.startTime * 1000).toISOString(),
       end_time: new Date(z.endTime * 1000).toISOString(),
       alert_price: null,

@@ -96,6 +96,8 @@ export function detectOrderBlocks(candles, timeframe, isForex = true) {
         active: true,
         touched: false,
         invalidated: false,
+        retested: false,
+        retestedAt: null,
         startTime: c2.time,
         endTime: cur.time,
       });
@@ -110,6 +112,8 @@ export function detectOrderBlocks(candles, timeframe, isForex = true) {
         active: true,
         touched: false,
         invalidated: false,
+        retested: false,
+        retestedAt: null,
         startTime: c2.time,
         endTime: cur.time,
       });
@@ -139,6 +143,27 @@ export function detectOrderBlocks(candles, timeframe, isForex = true) {
       // Auf genau der Kerze, die den Touch ausloest, soll endTime noch mitwachsen (sonst
       // friert die Box eine Kerze zu frueh ein) — danach (wasTouched war schon true) nicht mehr.
       if (!wasTouched) z.endTime = cur.time;
+    }
+  }
+
+  // "Retest bestätigt" (siehe orderblöcke.md#retest-status, Philip 05.09.2026) — nur für touched &&
+  // !invalidated relevant. Lower-TF (M1/M3/M5): eine gleichgerichtete FVG entsteht NACH dem Touch
+  // (z.endTime, das bei touched-Zonen auf den Touch-Zeitpunkt eingefroren ist) — die Reaktion hat
+  // sich in einem eigenen Impuls entladen. HTF (1H/4H): eine spätere Kerze DERSELBEN Timeframe
+  // schließt komplett außerhalb der Zone — kein FVG-Nachweis nötig/üblich auf HTF, ein sauberer
+  // Kerzenschluss reicht als Beleg für eine abgeschlossene, entschiedene Reaktion.
+  for (const z of zones) {
+    if (!z.touched || z.invalidated) continue;
+    if (isLowerTf) {
+      // zones ist chronologisch (Push-Reihenfolge) — find() liefert damit automatisch die
+      // ZEITLICH ERSTE bestätigende FVG, nicht irgendeine spätere.
+      const confirming = zones.find((other) => other.dir === z.dir && other.startTime > z.endTime);
+      z.retested = confirming != null;
+      z.retestedAt = confirming?.startTime ?? null;
+    } else {
+      const confirming = candles.find((c) => c.time > z.endTime && (c.close < z.bottom || c.close > z.top));
+      z.retested = confirming != null;
+      z.retestedAt = confirming?.time ?? null;
     }
   }
 

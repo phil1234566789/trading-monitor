@@ -505,6 +505,9 @@ Deno.serve(async (req) => {
                 weak: z.weak,
                 touched: z.touched,
                 invalidated: z.invalidated,
+                // Retest bestätigt (Feature Philip 05.09.2026, siehe orderblöcke.md#retest-status)
+                // — für 1H/4H: eine spätere Kerze derselben TF schließt komplett außerhalb der Zone.
+                retested: z.retested,
                 start_time: new Date(z.startTime * 1000).toISOString(),
                 // end_time kommt direkt aus der Zonen-Erkennung: waechst mit jeder Kerze, bis die
                 // Zone touched/invalidated ist, dann friert es automatisch ein (siehe

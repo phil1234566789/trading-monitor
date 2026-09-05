@@ -27,6 +27,12 @@ export interface NearRelevantObZonesArgs {
   fromSec?: number;
   toSec?: number;
   rangePips?: number;
+  // Confluence-Modus (Philip 05.09.2026, siehe orderblöcke.md#retest-status) statt des normalen
+  // Zeitfenster-Modus — siehe filterConfluenceObZoneRows unten für die Begründung. fromSec/toSec
+  // gelten in diesem Modus NUR noch für invalidierte Zonen (weiterhin zeitfenster-basiert); offene
+  // Zonen brauchen ohnehin kein Zeitfenster, retested Zonen bewusst keins mehr.
+  confluenceMode?: boolean;
+  nearestPerDirection?: number;
 }
 
 // 4H gewinnt vor 1H bei (praktisch) identischer Preisspanne — analog zu dropLowerTfDuplicates
@@ -44,6 +50,7 @@ export interface ObZoneRow {
   bottom: number;
   touched: boolean;
   invalidated: boolean;
+  retested: boolean;
   end_time: string | null;
   [key: string]: unknown;
 }
@@ -72,7 +79,64 @@ export function filterRelevantObZoneRows<T extends ObZoneRow>(
   return dropLowerTfDuplicateZones(relevant);
 }
 
-export async function buildNearRelevantObZones({ instrument, fromSec, toSec, rangePips = 40 }: NearRelevantObZonesArgs) {
+const DEFAULT_NEAREST_PER_DIRECTION = 1;
+
+// Confluence-Relevanz (Philip 05.09.2026, siehe orderblöcke.md#retest-status) — für die
+// RETESTED-Zonen bewusst OHNE Zeitfenster: eine bestätigte Confluence (retested=true) verliert
+// durch reines Alter keine Relevanz ("bei OBs spielt das Alter eigentlich keine Rolle"), solange
+// der Preis seitdem nicht auf die Gegenseite gewechselt ist (das heißt bereits invalidated=true).
+// Statt eines Zeitfensters verhindert eine Nächste-N-pro-Richtung-Deckelung (nearestPerDirection,
+// nach Preisnähe) die Uralt-Historie-Flut. Fälle:
+// - invalidated: WEITERHIN zeitfenster-basiert wie filterRelevantObZoneRows — eine Invalidierung
+//   ist ein einmaliges, abgeschlossenes Ereignis und bleibt wertvolle "was ist kürzlich passiert"-
+//   Evidenz (z.B. für Fall-3/4-Klassifikation), das ändert sich durch dieses Feature nicht.
+// - touched && !invalidated && retested: Confluence — nur die nearestPerDirection nächstgelegenen
+//   je Richtung (long/short), gemessen an der jeweils näheren Kante zum Referenzpreis, OHNE
+//   Zeitfenster.
+// - touched && !invalidated && !retested ("Retest läuft"): bewusst NICHT enthalten — Philip
+//   05.09.2026: "schau ma mal, was wir mit denen noch machen", noch keine definierte Behandlung.
+// - offen (untouched): unverändert das bestehende Preis-Band-Kriterium.
+export function filterConfluenceObZoneRows<T extends ObZoneRow & { direction: string }>(
+  rows: T[],
+  {
+    referencePrice,
+    fromSec,
+    toSec,
+    rangePips = 40,
+    nearestPerDirection = DEFAULT_NEAREST_PER_DIRECTION,
+  }: { referencePrice: number | null; fromSec: number; toSec: number; rangePips?: number; nearestPerDirection?: number },
+): T[] {
+  const rangePrice = rangePips * PIP_SIZE;
+  const distanceToPrice = (z: T) => (referencePrice == null ? Infinity : Math.min(Math.abs(z.top - referencePrice), Math.abs(z.bottom - referencePrice)));
+
+  const open = rows.filter((z) => {
+    if (z.touched || z.invalidated || referencePrice == null) return false;
+    const withinBand = distanceToPrice(z) <= rangePrice;
+    const priceInsideZone = z.bottom <= referencePrice && z.top >= referencePrice;
+    return withinBand || priceInsideZone;
+  });
+
+  const invalidated = rows.filter((z) => {
+    if (!z.invalidated) return false;
+    const endSec = z.end_time != null ? Math.floor(new Date(z.end_time).getTime() / 1000) : null;
+    return endSec != null && endSec >= fromSec && endSec <= toSec;
+  });
+
+  const confluenceByDirection = new Map<string, T[]>();
+  for (const z of rows) {
+    if (!z.touched || z.invalidated || !z.retested) continue;
+    const list = confluenceByDirection.get(z.direction) ?? [];
+    list.push(z);
+    confluenceByDirection.set(z.direction, list);
+  }
+  const nearestConfluence = [...confluenceByDirection.values()].flatMap((list) =>
+    list.sort((a, b) => distanceToPrice(a) - distanceToPrice(b)).slice(0, nearestPerDirection),
+  );
+
+  return dropLowerTfDuplicateZones([...open, ...invalidated, ...nearestConfluence]);
+}
+
+export async function buildNearRelevantObZones({ instrument, fromSec, toSec, rangePips = 40, confluenceMode = false, nearestPerDirection }: NearRelevantObZonesArgs) {
   const effectiveToSec = toSec ?? Math.floor(Date.now() / 1000);
   const effectiveFromSec = fromSec ?? effectiveToSec - DEFAULT_LOOKBACK_HOURS * 3600;
 
@@ -87,7 +151,15 @@ export async function buildNearRelevantObZones({ instrument, fromSec, toSec, ran
 
   const referencePrice = priceCandles[priceCandles.length - 1]?.close ?? null;
 
-  const deduped = filterRelevantObZoneRows(rows, { referencePrice, fromSec: effectiveFromSec, toSec: effectiveToSec, rangePips });
+  const deduped = confluenceMode
+    ? filterConfluenceObZoneRows(rows as (typeof rows[number] & { direction: string })[], {
+        referencePrice,
+        fromSec: effectiveFromSec,
+        toSec: effectiveToSec,
+        rangePips,
+        nearestPerDirection,
+      })
+    : filterRelevantObZoneRows(rows, { referencePrice, fromSec: effectiveFromSec, toSec: effectiveToSec, rangePips });
   const range = { fromSec: effectiveFromSec, toSec: effectiveToSec };
 
   const zones = deduped.map((z) => ({
@@ -98,6 +170,7 @@ export async function buildNearRelevantObZones({ instrument, fromSec, toSec, ran
     bottom: z.bottom,
     touched: z.touched,
     invalidated: z.invalidated,
+    retested: z.retested,
     startTime: Math.floor(new Date(z.start_time).getTime() / 1000),
     endTime: z.end_time != null ? Math.floor(new Date(z.end_time).getTime() / 1000) : null,
   }));

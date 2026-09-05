@@ -69,7 +69,7 @@ const STRUCTURE_PIVOTS_MAX_EXPOSED = 8;
 // Preis-Radius für die M5-Variante der obZones/liquidityLevels-Relevanzfilterung — enger als die
 // 40 Pips für 1H/4H (Philip 2026-08-30: "M5 dann 20 Pips nach oben und unten"), weil M5-Zonen viel
 // kleinteiliger/dichter beieinander liegen als HTF-Zonen.
-const M5_OB_RANGE_PIPS = 20;
+export const M5_OB_RANGE_PIPS = 20;
 
 // Chat 2026-08-26, Philip: ein live erkanntes M5-Level auf demselben Preis wie ein 1H/4H-Level
 // ist für Lana redundant — das HTF-Level ist bedeutsamer (Frontend-Pendant: siehe
@@ -426,13 +426,14 @@ export function computeM5LiquidityAndObZones({
         bottom: z.bottom,
         weak: z.weak,
         touched: z.touched,
+        // Bewusst KEIN Alters-Label (kontext) mehr bei OBs — anders als bei Liquidity-Leveln
+        // (Philip 05.09.2026: "bei OBs spielt das Alter eigentlich keine Rolle... sowas wie minor/
+        // medium/major gibt's bei OBs nicht"). Stattdessen `retested`: eine getouchte, nicht
+        // invalidierte OB zählt erst als Confluence, sobald der Retest nachweislich abgeschlossen
+        // ist (siehe orderblöcke.md#retest-status) — unabhängig davon, wie lange das her ist.
+        retested: z.retested,
         startTime: z.startTime,
         endTime: z.endTime,
-        // z.endTime ist bei detectOrderBlocks IMMER gesetzt (bei untouched Zonen die letzte
-        // Kerzenzeit statt null, siehe orderBlockDetection.js) — deshalb hier explizit nur bei
-        // touched=true als touchedTimeSec übergeben, sonst fällt formatKontext korrekt auf
-        // currentTimeSec zurück statt fälschlich das "endTime = jetzt"-Artefakt als Touch-Alter zu lesen.
-        kontext: formatKontext(null, z.startTime, z.touched ? z.endTime : null, currentTimeSec),
       };
     });
 
@@ -518,13 +519,12 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // alert_price ist für Lanas Analyse irrelevant, siehe get_near_relevant_liquidity_levels für
   // dieselbe Begründung) + start_time/end_time als Unix-Sekunden statt ISO-UTC-String (einheitlich
   // mit m5ObZones/m5LiquidityLevels statt einer zweiten Zeit-Repräsentation im selben Response).
-  // kontext (Lana-Review 2026-08-30 am Testoutput, Philip: "mach so bitte"): anders als
-  // liquidityLevels hatten obZones bisher KEIN Alters-Feld — Lana müsste sich "wie alt ist diese
-  // Zone" sonst aus startTime/endTime selbst herleiten, derselbe Fehlerquell wie beim
-  // structurePivots.pivotAt-Bug (siehe compute1hStructureState oben). Ohne bonus-Präfix (`null`
-  // statt eines Session-Labels wie "Asia-High") — bonusLabelForPivot ist auf einen einzelnen
-  // Pivot-Preis zugeschnitten (Session-Extremwert-Abgleich), eine OB-Zone hat keinen einzelnen
-  // Preis, dafür wäre eine eigene Herleitung nötig, die hier bewusst nicht mitgebaut wird.
+  // Bewusst KEIN Alters-Label (kontext) mehr bei OBs (Philip 05.09.2026: "bei OBs spielt das Alter
+  // eigentlich keine Rolle... sowas wie minor/medium/major gibt's bei OBs nicht") — das 2026-08-30
+  // eingeführte kontext-Feld ist damit wieder raus, ersetzt durch `retested`: eine getouchte, nicht
+  // invalidierte OB zählt erst als Confluence, sobald der Retest nachweislich abgeschlossen ist
+  // (späterer Kerzenschluss außerhalb der Zone auf 1H/4H, siehe orderblöcke.md#retest-status) —
+  // unabhängig davon, wie lange das her ist.
   function curateObZoneRow(z: (typeof obZonesRelevant)[number]) {
     const startTime = Math.floor(new Date(z.start_time).getTime() / 1000);
     const endTime = z.end_time != null ? Math.floor(new Date(z.end_time).getTime() / 1000) : null;
@@ -536,9 +536,9 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
       bottom: z.bottom,
       touched: z.touched,
       invalidated: z.invalidated,
+      retested: z.retested,
       startTime,
       endTime,
-      kontext: formatKontext(null, startTime, z.touched || z.invalidated ? endTime : null, currentTimeSec),
     };
   }
   const obZones1h = obZonesRelevant.filter((z) => z.timeframe === "1H").map(curateObZoneRow);

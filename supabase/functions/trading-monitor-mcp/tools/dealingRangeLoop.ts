@@ -32,7 +32,7 @@ export interface TickResult {
   watchLevelBelow: WatchLevel | null;
   evidence: {
     completedTradeSetup: unknown;
-    heldObReactions: unknown[];
+    confluenceObReactions: unknown[];
     invalidatedObReactions: unknown[];
     liquiditySweeps: unknown[];
   };
@@ -53,7 +53,9 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
   const [sessionWindow, snapshot, reactions] = await Promise.all([
     buildSessionWindow({ instrument, nowSec: atSec, loopStateId: loopState.id }),
     buildDataSnapshot({ instrument, replayUntilSec: atSec }),
-    buildRecentReactions({ instrument, replayUntilSec: atSec }),
+    // htfConfluenceLimit: 2 statt Default 1 — Schritt 5 (Dealing Range bestimmen) braucht mehr
+    // Kontext als eine reine Confluence-Abfrage (Philip 05.09.2026, siehe orderblöcke.md#retest-status).
+    buildRecentReactions({ instrument, replayUntilSec: atSec, htfConfluenceLimit: 2 }),
   ]);
 
   const currentPrice: number | null = (snapshot as any).referencePrice ?? null;
@@ -145,7 +147,13 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
     watchLevelBelow: watchLevels.below,
     evidence: {
       completedTradeSetup: setup,
-      heldObReactions: obReactionsFiltered.filter((z) => z.touched && !z.invalidated),
+      // "confluenceObReactions" statt "heldObReactions" (Bug-Report Philip 05.09.2026, GBPUSD-
+      // Retest 28.08.2026): eine getouchte, nicht invalidierte OB zählt erst als Confluence, wenn
+      // der Retest nachweislich abgeschlossen ist (z.retested, siehe orderblöcke.md#retest-status)
+      // — unabhängig vom Alter. Zonen, die zwar getouched aber noch unentschieden sind ("Retest
+      // läuft", touched && !invalidated && !retested), tauchen hier bewusst NICHT auf (Philip: "schau
+      // ma mal, was wir mit denen noch machen" — noch keine definierte Behandlung).
+      confluenceObReactions: obReactionsFiltered.filter((z) => z.touched && !z.invalidated && z.retested),
       invalidatedObReactions: obReactionsFiltered.filter((z) => z.invalidated),
       liquiditySweeps,
     },
@@ -346,9 +354,13 @@ export function registerDealingRangeLoopTool(server: McpServer) {
         "bereits automatisch — bei `fallFour.hit=true` wird automatisch zu Schritt 3 " +
         "zurückgesprungen (KEIN automatischer run_bias_check-Aufruf, ruf ihn selbst wieder auf), bei " +
         "Fall 3 läuft ein Backtest automatisch weiter, ohne dich zu fragen. NUR Fall 1 vs. 2 " +
-        "(`hasReaction=true`) ist bewusst NICHT mechanisch klassifiziert (auch 'OB hält'/'valider " +
-        "Sweep' ist eine Einordnung, die du selbst triffst) — `evidence` liefert dafür nur die rohen " +
-        "Bausteine (vollständiges Trade-Setup, gehaltene/invalidierte OB-Reaktionen, Sweeps). " +
+        "(`hasReaction=true`) ist bewusst NICHT mechanisch klassifiziert (auch 'valider Sweep' ist " +
+        "eine Einordnung, die du selbst triffst) — `evidence` liefert dafür nur die rohen Bausteine " +
+        "(vollständiges Trade-Setup, `confluenceObReactions`/`invalidatedObReactions`, Sweeps). " +
+        "`confluenceObReactions` enthält NUR OBs mit bestätigtem Retest (siehe orderblöcke.md#retest-" +
+        "status) — Alter spielt dabei keine Rolle, eine seit Tagen unangetastete OB zählt genauso " +
+        "als Confluence wie eine von vor 5 Minuten. Getouchte, aber noch unentschiedene OBs " +
+        "('Retest läuft') tauchen hier NICHT auf. " +
         "Erkennst du daraus Fall 1 oder 2: ZUERST `log_fall_classification` aufrufen (schreibt dein " +
         "Urteil in die Maschine), DANN die TSC-Verknüpfung (Bootstrap/Bestätigung/Target/Pin-" +
         "Aufräumen) wie gewohnt über add_trade_confirmation/add_trade_target/remove_pin_entry — " +

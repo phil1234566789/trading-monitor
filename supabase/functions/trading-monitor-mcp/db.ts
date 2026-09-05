@@ -18,18 +18,31 @@ import { inducementAgeRange, type InducementClass } from "../_shared/tradeSetupO
 // Lana 2026-08-02: get_data_export zeigte Zonen mit start_time NACH dem Replay-Cutoff (z.B.
 // 2026-07-31T17:00 bei einem 08:00-Cutoff) — derselbe Live-statt-as-of-Bug wie zuvor bei
 // liquidityLevels.
-function applyAsOfZones<T extends { start_time: string; touched: boolean; invalidated: boolean; end_time: string | null }>(
-  rows: T[],
-  asOfSec: number | undefined,
-): T[] {
+function applyAsOfZones<
+  T extends {
+    start_time: string;
+    touched: boolean;
+    invalidated: boolean;
+    end_time: string | null;
+    retested?: boolean;
+    retested_at?: string | null;
+  },
+>(rows: T[], asOfSec: number | undefined): T[] {
   if (asOfSec == null) return rows;
   return rows
     .filter((r) => new Date(r.start_time).getTime() / 1000 <= asOfSec)
     .map((r) => {
-      if ((r.touched || r.invalidated) && r.end_time != null && new Date(r.end_time).getTime() / 1000 > asOfSec) {
-        return { ...r, touched: false, invalidated: false, end_time: null };
+      let row = r;
+      if ((row.touched || row.invalidated) && row.end_time != null && new Date(row.end_time).getTime() / 1000 > asOfSec) {
+        row = { ...row, touched: false, invalidated: false, end_time: null };
       }
-      return r;
+      // retested_at ist unabhängig von end_time (Retest kann lange NACH dem Touch bestätigt
+      // werden, siehe orderblöcke.md#retest-status) — eigener Replay-Rückrechnungs-Schritt, sonst
+      // dieselbe Bug-Klasse wie oben (Zukunftswissen leaken).
+      if (row.retested && row.retested_at != null && new Date(row.retested_at).getTime() / 1000 > asOfSec) {
+        row = { ...row, retested: false, retested_at: null };
+      }
+      return row;
     });
 }
 
