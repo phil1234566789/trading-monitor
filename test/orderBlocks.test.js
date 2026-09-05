@@ -77,3 +77,35 @@ describe("detectOrderBlocks — Lower-TF (1m/3m/5m, Pip-Schwelle statt Prozent)"
     expect(detectOrderBlocks(candlesWithBullGap(gapAbs), "3m")).toHaveLength(1);
   });
 });
+
+// Bug-Report Philip 2026-09-05 (GBPUSD-Retest 28.08.2026): ein bärisches Trade-Setup-OB wurde
+// trotz eines Wicks über die Zone weiterhin als gültig/gehalten ausgewiesen, weil die Invalidierung
+// bisher einen kompletten Kerzenschluss jenseits der Zone verlangte — nach Philips Handelsregel
+// verliert eine OB bei jeder Preisüberschreitung sofort ihre Relevanz, ein Wick genügt.
+describe("detectOrderBlocks — Invalidierung (Wick genügt, kein Kerzenschluss nötig)", () => {
+  it("bullische Zone: ein Low-Wick unter die Zone invalidiert sie, auch wenn die Kerze darüber schließt", () => {
+    const candles = [
+      { time: 0, open: 1.2999, high: 1.3, low: 1.2998, close: 1.29995 },
+      { time: 300, open: 1.29995, high: 1.3, low: 1.2999, close: 1.3 }, // c1
+      { time: 600, open: 1.3, high: 1.30005, low: 1.29998, close: 1.30002 }, // c2
+      { time: 900, open: 1.30002, high: 1.30158, low: 1.3013, close: 1.30145 }, // cur, Gap ~0,1%
+      { time: 1200, open: 1.3013, high: 1.301, low: 1.2995, close: 1.3005 }, // Wick unter bottom, Close darüber
+    ];
+    const zones = detectOrderBlocks(candles, "1h");
+    expect(zones).toHaveLength(1);
+    expect(zones[0].invalidated).toBe(true);
+  });
+
+  it("bärische Zone: ein High-Wick über die Zone invalidiert sie, auch wenn die Kerze darunter schließt", () => {
+    const candles = [
+      { time: 0, open: 1.30005, high: 1.3003, low: 1.3, close: 1.30005 },
+      { time: 300, open: 1.30005, high: 1.3001, low: 1.3, close: 1.3 }, // c1
+      { time: 600, open: 1.3, high: 1.30002, low: 1.29995, close: 1.29998 }, // c2
+      { time: 900, open: 1.29998, high: 1.2987, low: 1.2984, close: 1.2985 }, // cur, Gap ~0,1%
+      { time: 1200, open: 1.2985, high: 1.3005, low: 1.298, close: 1.299 }, // Wick über top, Close darunter
+    ];
+    const zones = detectOrderBlocks(candles, "1h");
+    expect(zones).toHaveLength(1);
+    expect(zones[0].invalidated).toBe(true);
+  });
+});
