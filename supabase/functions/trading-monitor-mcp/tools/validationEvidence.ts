@@ -9,6 +9,7 @@ import { detectRsiDivergenceHistory } from "../rsi.js";
 import { buildRecentReactions } from "./recentReactions.ts";
 import { computeEvidenceScore } from "../evidenceScoring.ts";
 import { logDecision } from "../stateMachineLog.ts";
+import { safeTransitionChain, loadMachineForInstrument, transition } from "../machineState.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -62,6 +63,13 @@ export async function buildValidationEvidence({ instrument, dealingRangeId, curr
   const confluenceCount = obConfluences.length + sweepConfluences.length + divergenceConfluences.length;
   const antiConfluenceCount = antiConfluences.obCandidates.length + antiConfluences.sweepCandidates.length + antiConfluences.divergenceCandidates.length + antiConfluences.invalidationObCandidates.length;
   const score = computeEvidenceScore({ confluenceCount, antiConfluenceCount, hasActiveOppositeDealingRange: openOpposite.length > 0 });
+
+  // State-Machine-Verdrahtung (Schritt 5 Ende -> Schritt 6 Start, siehe machineState.ts:
+  // safeTransitionChain) — PIN2_CHECKED{false} holt einen übersprungenen "nichts zum Aufräumen"-
+  // Zwischenschritt nach (kein Tool-Call für den negativen Zweig, siehe find_targets-Kommentar),
+  // NOTIFIED repräsentiert die (Claude-Code-seitige) Benachrichtigungspflicht aus 05-dealing-range-
+  // bestaetigen.md, EVIDENCE_GATHERED ist der eigentliche Schritt-6-Einstieg durch DIESEN Aufruf.
+  await safeTransitionChain(instrument, [{ type: "PIN2_CHECKED", found: false }, { type: "NOTIFIED" }, { type: "EVIDENCE_GATHERED" }], effectiveTimeSec);
 
   // Kein trading_loop_state-Write in Schritt 6 (siehe Kommentar oben) — dieser Log-Eintrag steht
   // deshalb bewusst ohne loopStateId, per instrument/date_str/dealingRangeId (im result) trotzdem
@@ -124,5 +132,50 @@ export function registerValidationEvidenceTool(server: McpServer) {
       },
     },
     async (args) => json(await buildValidationEvidence(args)),
+  );
+
+  // Pendant zu log_bias_decision (Schritt 3)/log_fall_classification (Schritt 5) für Schritt 6 —
+  // die finale VALIDE/INVALIDE-Abwägung ist laut docs/state-machine.md dauerhaft Lanas eigene,
+  // qualitative Entscheidung (kein Schwellenwert-Cutoff aus get_validation_evidence.score), hatte
+  // bisher aber kein Tool, das dieses Urteil in die State-Machine einträgt (Task "State-Machine bis
+  // zum letzten Schritt durchziehen", 2026-09-05) — der Graph unter /trading-flow blieb dadurch bei
+  // Schritt 6 für immer stehen. Kein loopStateId-Parameter (anders als log_fall_classification):
+  // get_validation_evidence gibt keinen zurück (Schritt 6 hat laut eigener Doku keinen eigenen
+  // Loop-State-Write), lädt den aktiven Loop stattdessen direkt über instrument.
+  server.registerTool(
+    "log_validation_verdict",
+    {
+      title: "Schritt 6: VALIDE/INVALIDE-Urteil loggen",
+      description:
+        "Trägt Lanas finale VALIDE/INVALIDE-Abwägung aus Schritt 6 (Dealing Range validieren) in die " +
+        "State-Machine ein — NACH get_validation_evidence aufrufen, sobald du aus den Confluences/" +
+        "Anti-Confluences/dem Score eine qualitative Entscheidung getroffen hast (kein Schwellenwert-" +
+        "Cutoff, siehe 06-dealing-range-validieren.md). 'valide' geht weiter zu Schritt 7 (Find " +
+        "Entry), 'invalide' zurück zu Schritt 4/5 (neuer Loop-Durchlauf). Blockt hart, falls der " +
+        "Loop gerade nicht bei s6_validieren.llm6_valideInvalide parkt (z.B. get_validation_evidence " +
+        "noch nicht aufgerufen).",
+      inputSchema: {
+        instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
+        sec: z.number().int().describe("Analysezeitpunkt (Unix-Sekunden)"),
+        verdict: z.enum(["valide", "invalide"]),
+        reasoning: z.string().describe("Kurze Begründung für das Urteil"),
+      },
+    },
+    async ({ instrument, sec, verdict, reasoning }) => {
+      const loaded = await loadMachineForInstrument(instrument);
+      const currentNode = await transition(loaded, instrument, { type: "VALID_INVALID_JUDGED", verdict }, sec);
+      await logDecision({
+        instrument,
+        dateStr: berlinDateStrFor(sec),
+        sec,
+        step: 6,
+        tool: "log_validation_verdict",
+        decision: "verdict",
+        result: { verdict, reasoning },
+        message: `${verdict}: ${reasoning}`,
+        loopStateId: loaded.loopId,
+      });
+      return json({ logged: true as const, verdict, currentNode });
+    },
   );
 }

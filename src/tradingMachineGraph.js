@@ -26,10 +26,12 @@ export const NODES = [
   { id: "s45_refetch", label: "Voller Refetch", statePath: "s45.refetch" },
   { id: "s45_fallClassification", label: "Fall 1/2/3/4?", statePath: "s45.fallClassification", llm: true },
   { id: "s45_fall3Pin", label: "Fall 3: Watch-Level pinnen", statePath: "s45.fall3Pin" },
-  { id: "s45_tscGet", label: "get_tsc_range", statePath: "s45.tscGet" },
-  { id: "s45_tscExists", label: "Aktive Range vorhanden?", statePath: "s45.tscExists", gate: true },
-  { id: "s45_tscBootstrap", label: "Range bootstrappen", statePath: "s45.tscBootstrap" },
-  { id: "s45_tscAdd", label: "Bestätigung anhängen", statePath: "s45.tscAdd" },
+  // get_tsc_range (vormals eigene tscGet/tscExists-Knoten) ist bewusst KEIN Graph-Knoten mehr
+  // (Philip 05.09.2026: "kann aus der State Machine und aus dem Graphen heraus") —
+  // add_trade_confirmation prueft/legt die Range beim Bootstrap-oder-Reuse-Zweig selbst an
+  // (siehe tradingMachine.ts: s45.tscLink), get_tsc_range bleibt als eigenstaendiges Lese-Tool
+  // fuer Lana nutzbar, ohne dass die Maschine einen separaten Aufruf dafuer erzwingt.
+  { id: "s45_tscLink", label: "Bestätigung anhängen (Range anlegen/wiederverwenden)", statePath: "s45.tscLink" },
   { id: "s45_pinCheck", label: "Stand-alone-Pin vorhanden?", statePath: "s45.pinCheck", gate: true },
   { id: "s45_pinRemove", label: "Pin aufräumen", statePath: "s45.pinRemove" },
   { id: "s45_fallAgainCheck", label: "Fall 1 komplett?", statePath: "s45.fallAgainCheck", llm: true },
@@ -69,15 +71,11 @@ export const EDGES = [
   { from: "s45_watchLevelHit", to: "s45_backtestHeartbeat", label: "kein Treffer" },
   { from: "s45_backtestHeartbeat", to: "s45_backtestBatch", label: "nächster Batch" },
   { from: "s45_refetch", to: "s45_fallClassification" },
-  { from: "s45_fallClassification", to: "s45_tscGet", label: "Fall 1/2" },
+  { from: "s45_fallClassification", to: "s45_tscLink", label: "Fall 1/2" },
   { from: "s45_fallClassification", to: "s45_fall3Pin", label: "Fall 3 (auto)" },
   { from: "s45_fallClassification", to: "s3_computing", label: "Fall 4 (auto)" },
   { from: "s45_fall3Pin", to: "s45_entry" },
-  { from: "s45_tscGet", to: "s45_tscExists" },
-  { from: "s45_tscExists", to: "s45_tscAdd", label: "ja" },
-  { from: "s45_tscExists", to: "s45_tscBootstrap", label: "nein" },
-  { from: "s45_tscBootstrap", to: "s45_pinCheck" },
-  { from: "s45_tscAdd", to: "s45_pinCheck" },
+  { from: "s45_tscLink", to: "s45_pinCheck" },
   { from: "s45_pinCheck", to: "s45_pinRemove", label: "ja" },
   { from: "s45_pinCheck", to: "s45_fallAgainCheck", label: "nein" },
   { from: "s45_pinRemove", to: "s45_fallAgainCheck" },

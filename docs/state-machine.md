@@ -27,13 +27,27 @@ Tool-Aufruf wird der Actor aus `trading_loop_state.machine_snapshot` rehydriert
 - `TradingFlow.vue` (Route `/trading-flow`) rendert den kompletten Baum live als Mermaid-Graph
   (`src/tradingMachineGraph.js`, Hand-Duplikat der Knoten/Kanten — keine Shared-Build zwischen
   Frontend/Deno-Edge-Function, siehe "Zwei Runtimes" in CLAUDE.md), aktueller Knoten hervorgehoben.
-- **Bewusst noch nicht verdrahtet:** Schritt 5s TSC-Verknüpfungs-Kette (`tscGet`/`tscExists`/
-  `tscBootstrap`/`tscAdd`/`pinCheck`/`findTargets`/`llmPickTarget`/`addTarget`) sowie Schritt 6-8 —
-  diese States existieren bereits vollständig in der Maschine (siehe `test/tradingMachine.test.js`),
-  sind aber noch nicht an `add_trade_confirmation`/`add_trade_target`/`remove_pin_entry`/
-  `get_validation_evidence` angebunden. Diese Tools werden auch für Trade-Journal-Aktionen abseits
-  des Schritt-5-Loops genutzt — hartes Transition-Blocking dort verdient eigene, sorgfältige
-  Tests, bevor es scharf geschaltet wird.
+- **Schritt 5 Ende + Schritt 6-8 verdrahtet (05.09.2026, Task "State-Machine bis zum letzten
+  Schritt durchziehen"):** `add_trade_confirmation`/`add_trade_target`/`remove_pin_entry`/
+  `add_trade_position`/`update_trade_position`/`get_validation_evidence` treiben die restlichen
+  Knoten jetzt an — aber bewusst NUR über `safeTransitionChain()` (`machineState.ts`), weiche
+  Übergänge statt `sendGuarded`: dieselben Tools laufen auch für Trade-Journal-Aktionen völlig
+  unabhängig vom aktiven Loop (altes Nachpflegen, fremde Dealing Ranges), ein harter Block hätte
+  normales Journalisieren ständig zum Absturz gebracht. Jeder Aufruf versucht mehrere Events am
+  selben Actor nacheinander — nur das am aktuellen Knoten gültige feuert, holt dabei implizit auch
+  übersprungene Zwischenschritte nach (z.B. `PIN_CHECKED{found:false}`, wenn nichts aufzuräumen
+  war — dafür existiert kein eigener Tool-Call). Neues Tool `log_validation_verdict` (Pendant zu
+  `log_fall_classification`) trägt Schritt 6s VALIDE/INVALIDE-Urteil ein, HART wie
+  `log_fall_classification` (dediziertes Urteils-Tool, kein Mehrzweck-Journal-Tool).
+- **`get_tsc_range` bewusst KEIN Graph-Knoten (mehr):** die vormaligen `tscGet`/`tscExists`-States
+  sind aus `tradingMachine.ts`/`tradingMachineGraph.js` entfernt (Philip 05.09.2026: "kann aus der
+  State Machine und aus dem Graphen heraus") — `add_trade_confirmation` prüft/legt die Range beim
+  Bootstrap-oder-Reuse-Zweig ohnehin selbst an (`fetchActiveTscRangeId`), ein separater
+  `get_tsc_range`-Aufruf davor ist nie Voraussetzung dafür. `tscAdd`/`tscBootstrap` sind zu einem
+  einzigen Knoten `tscLink` verschmolzen (zwei Events, `TSC_ADDED`/`TSC_BOOTSTRAPPED`, für lesbare
+  state_machine_log-Einträge, aber ein Ziel). `get_tsc_range` bleibt als eigenständiges Lese-Tool
+  bestehen, für Lana nutzbar wann immer sie den TSC-Stand sehen will, ohne selbst den Loop
+  fortzuschreiben.
 
 ## Diagramme
 

@@ -37,8 +37,6 @@ export type TradingEvent =
   | { type: "REFETCH_DONE" }
   | { type: "FALL_CLASSIFIED"; case: 1 | 2 | 3 | 4 }
   | { type: "PIN_SET" }
-  | { type: "TSC_FETCHED" }
-  | { type: "TSC_EXISTS_CHECKED"; exists: boolean }
   | { type: "TSC_BOOTSTRAPPED" }
   | { type: "TSC_ADDED" }
   | { type: "PIN_CHECKED"; found: boolean }
@@ -143,7 +141,7 @@ export const tradingMachine = createMachine({
         fallClassification: {
           on: {
             FALL_CLASSIFIED: [
-              { guard: ({ event }) => event.case === 1 || event.case === 2, target: "tscGet" },
+              { guard: ({ event }) => event.case === 1 || event.case === 2, target: "tscLink" },
               { guard: ({ event }) => event.case === 3, target: "fall3Pin" },
               // Fall 4: Target/Invalidierung erreicht -> kompletter Bias-Neudurchlauf (Schritt 3).
               { target: "#s3_bias" },
@@ -151,17 +149,19 @@ export const tradingMachine = createMachine({
           },
         },
         fall3Pin: { on: { PIN_SET: "#s45" } },
-        tscGet: { on: { TSC_FETCHED: "tscExists" } },
-        tscExists: {
+        // tscGet/tscExists (get_tsc_range) sind bewusst KEIN eigener Knoten mehr (Philip
+        // 05.09.2026: "kann aus der State Machine und aus dem Graphen heraus") — add_trade_
+        // confirmation prüft/legt die Range beim Bootstrap-oder-Reuse-Zweig ohnehin selbst an
+        // (fetchActiveTscRangeId), get_tsc_range bleibt als eigenständiges Lese-Tool nutzbar, ohne
+        // dass die Maschine einen separaten Aufruf dafür erzwingt. TSC_ADDED (Range existierte
+        // schon) und TSC_BOOTSTRAPPED (neu angelegt) bleiben als zwei Events erhalten (bessere
+        // Lesbarkeit im state_machine_log), laufen aber jetzt auf denselben Knoten zu.
+        tscLink: {
           on: {
-            TSC_EXISTS_CHECKED: [
-              { guard: ({ event }) => event.exists, target: "tscAdd" },
-              { target: "tscBootstrap" },
-            ],
+            TSC_ADDED: "pinCheck",
+            TSC_BOOTSTRAPPED: "pinCheck",
           },
         },
-        tscBootstrap: { on: { TSC_BOOTSTRAPPED: "pinCheck" } },
-        tscAdd: { on: { TSC_ADDED: "pinCheck" } },
         pinCheck: {
           on: {
             PIN_CHECKED: [
@@ -301,10 +301,7 @@ const VALID_NEXT_EVENTS: Record<string, string[]> = {
   "s45.refetch": ["REFETCH_DONE"],
   "s45.fallClassification": ["FALL_CLASSIFIED"],
   "s45.fall3Pin": ["PIN_SET"],
-  "s45.tscGet": ["TSC_FETCHED"],
-  "s45.tscExists": ["TSC_EXISTS_CHECKED"],
-  "s45.tscBootstrap": ["TSC_BOOTSTRAPPED"],
-  "s45.tscAdd": ["TSC_ADDED"],
+  "s45.tscLink": ["TSC_ADDED", "TSC_BOOTSTRAPPED"],
   "s45.pinCheck": ["PIN_CHECKED"],
   "s45.pinRemove": ["PIN_REMOVED"],
   "s45.fallAgainCheck": ["FALL_AGAIN_CHECKED"],

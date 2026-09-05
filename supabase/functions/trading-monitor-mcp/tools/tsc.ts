@@ -5,6 +5,7 @@ import { findTargetCandidates } from "../findTargetCandidates.js";
 import { findAntiConfluenceCandidates } from "../findAntiConfluenceCandidates.js";
 import { logDecision } from "../stateMachineLog.ts";
 import { berlinDateStrFor } from "../berlinTime.ts";
+import { safeTransitionChain } from "../machineState.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -52,6 +53,10 @@ export function registerTscTools(server: McpServer) {
         result,
         message: `direction=${direction}`,
       });
+      // State-Machine-Verdrahtung nur für den expliziten "Richtung steht schon vorher fest"-Weg
+      // (siehe Tool-Beschreibung) — der interne Bootstrap-Zweig in addTradeConfirmation feuert
+      // TSC_BOOTSTRAPPED selbst, NACH der eigentlichen Bestätigung (richtige Reihenfolge im Log).
+      await safeTransitionChain(instrument, [{ type: "TSC_BOOTSTRAPPED" }], sec);
       return json(result);
     },
   );
@@ -87,6 +92,11 @@ export function registerTscTools(server: McpServer) {
         instrument: INSTRUMENT,
       },
     },
+    // Rein lesend, KEIN State-Machine-Übergang mehr (Philip 05.09.2026: "kann aus der State
+    // Machine und aus dem Graphen heraus") — add_trade_confirmation prüft/legt die Range beim
+    // Bootstrap-oder-Reuse-Zweig ohnehin selbst an, dieses Tool bleibt für Lana nutzbar, wann immer
+    // sie den aktuellen TSC-Stand sehen will, ohne dass die Maschine einen separaten Aufruf
+    // erzwingt oder dieser Aufruf selbst etwas am Loop-Fortschritt ändert.
     async ({ instrument }) => {
       const id = await fetchActiveTscRangeId(instrument);
       if (id == null) return json(null);
@@ -113,7 +123,20 @@ export function registerTscTools(server: McpServer) {
         currentTimeSec: z.number().int().optional().describe("Unix-Sekunden, Default: jetzt"),
       },
     },
-    async (args) => json(await findTargetCandidates(args)),
+    async (args) => {
+      const sec = args.currentTimeSec ?? Math.floor(Date.now() / 1000);
+      // "Fall 1 komplett?" (s45.fallAgainCheck) fällt inhaltlich mit der bereits getroffenen
+      // Fall-1-Klassifikation zusammen (siehe 05-dealing-range-bestaetigen.md: "Target(s) anhängen
+      // NUR Fall 1") — kein zweites Lana-Urteil nötig, find_targets aufzurufen IST das Signal.
+      // PIN_CHECKED{found:false} holt einen übersprungenen "nichts zum Aufräumen"-Zwischenschritt
+      // nach (kein Tool-Call existiert für den negativen Pin-Check-Zweig).
+      await safeTransitionChain(
+        args.instrument,
+        [{ type: "PIN_CHECKED", found: false }, { type: "FALL_AGAIN_CHECKED", complete: true }, { type: "TARGETS_FOUND" }],
+        sec,
+      );
+      return json(await findTargetCandidates(args));
+    },
   );
 
   server.registerTool(

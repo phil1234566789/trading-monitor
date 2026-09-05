@@ -3,6 +3,8 @@ import { PIP_SIZE } from "./pipConfig.js";
 import { berlinDayRangeUtcMs, berlinDateStrFor } from "./berlinTime.ts";
 import { logDecision } from "./stateMachineLog.ts";
 import { inducementAgeRange, type InducementClass } from "../_shared/tradeSetupOutcome.ts";
+import { safeTransitionChain } from "./machineState.ts";
+import { closeLoopState } from "./loopState.ts";
 
 // Dünne Supabase-Query-Helfer, von den Tools in ./tools/*.ts genutzt. Tabellenformen siehe
 // supabase/migrations/*.sql (ob_zones, liquidity_levels, trade_setups, dealing_ranges,
@@ -566,6 +568,35 @@ export async function addPinRsiDivergenceEntry(instrument: string, divergence: P
   return data;
 }
 
+// Nur fürs State-Machine-Verdrahten von remove_pin_entry (Schritt 5/6 Pin-Aufräum-Pflicht, siehe
+// tools/pins.ts) gebraucht — MUSS vor dem eigentlichen Löschen aufgerufen werden, sonst ist die
+// Zeile schon weg. Deckt nur die Kinds ab, die tatsächlich ein Instrument tragen (trade_evidence/
+// trade_confirmation haben keins über den Pin selbst ableitbar, sind aber auch nicht Ziel dieser
+// Verdrahtung — ein reiner Journal-Pin ohne Chart-POI-Bezug).
+export async function getPinInstrumentById(id: number): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("pin_context")
+    .select(
+      "kind, m5_liquidity_instrument, rsi_divergence_instrument, " +
+        "ob_zones(instrument), liquidity_levels(instrument), trade_setups(instrument), " +
+        "trade_positions(dealing_ranges(instrument))",
+    )
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const row = data as Record<string, any>;
+  return (
+    row.ob_zones?.instrument ??
+    row.liquidity_levels?.instrument ??
+    row.trade_setups?.instrument ??
+    row.trade_positions?.dealing_ranges?.instrument ??
+    row.m5_liquidity_instrument ??
+    row.rsi_divergence_instrument ??
+    null
+  );
+}
+
 export async function removePinEntry(id: number) {
   const { error } = await supabase.from("pin_context").delete().eq("id", id);
   if (error) throw new Error(error.message);
@@ -747,6 +778,8 @@ export interface TradePositionInput {
 // Order nicht abgeholt wird" — kommt also oft genug vor, um ein eigenes Tool zu rechtfertigen, statt
 // nur über create_trade (das würde fälschlich eine zweite, unabhängige Idee anlegen) zu gehen.
 async function insertTradePosition(dealingRangeId: number, fields: TradePositionInput) {
+  // dealing_ranges(instrument) zusätzlich zu "*" — für die State-Machine-Verdrahtung unten
+  // (ENTRY_FOUND, s7_findEntry -> s8_tradeManagement), ohne einen zweiten Query zu brauchen.
   const { data, error } = await supabase
     .from("trade_positions")
     .insert({
@@ -766,9 +799,19 @@ async function insertTradePosition(dealingRangeId: number, fields: TradePosition
       net_pl: fields.netPl ?? null,
       commission: fields.commission ?? null,
     })
-    .select("*")
+    .select("*, dealing_ranges(instrument)")
     .single();
   if (error) throw new Error(error.message);
+
+  // State-Machine-Verdrahtung (Schritt 7 "Find Entry (Philip)" -> Schritt 8, siehe machineState.ts:
+  // safeTransitionChain) — eine tatsächliche Ausführung (create_trade ODER add_trade_position) IST
+  // der Entry-Fund, egal ob Erstausführung oder Re-Entry. No-op, wenn gerade kein Loop bei
+  // s7_findEntry für dieses Instrument steht (z.B. reines historisches Nachpflegen).
+  const instrument = (data.dealing_ranges as { instrument: string } | null)?.instrument;
+  if (instrument) {
+    const sec = Math.floor(Date.now() / 1000);
+    await safeTransitionChain(instrument, [{ type: "ENTRY_FOUND" }], sec);
+  }
   return data;
 }
 
@@ -894,8 +937,27 @@ export async function updateTradePosition(id: number, fields: UpdateTradePositio
   for (const key of Object.keys(fields) as (keyof UpdateTradePositionArgs)[]) {
     patch[TRADE_POSITION_FIELD_MAP[key]] = fields[key];
   }
-  const { data, error } = await supabase.from("trade_positions").update(patch).eq("id", id).select("*").single();
+  const { data, error } = await supabase.from("trade_positions").update(patch).eq("id", id).select("*, dealing_ranges(instrument)").single();
   if (error) throw new Error(error.message);
+
+  // State-Machine-Verdrahtung (Schritt 8 "Trade-Management" -> Ende, siehe machineState.ts:
+  // safeTransitionChain) — 'win'/'loss' heißt tatsächlich geschlossen, 'open' (oder unverändert)
+  // NICHT (siehe OUTCOME-Enum in tools/trades.ts). Landet der Übergang tatsächlich am Endzustand
+  // (nur der Fall, wenn hier wirklich ein Loop bei s8_tradeManagement für dieses Instrument stand),
+  // wird der zugehörige trading_loop_state-Loop zusätzlich geschlossen ('completed') — sonst würde
+  // der Partial-Unique-Index (nur ein aktiver Loop je Instrument) den nächsten run_bias_check für
+  // eine neue Dealing Range am selben Tag blockieren (siehe docs/state-machine.md "Mehrere Dealing
+  // Ranges pro Tag").
+  if (fields.outcome === "win" || fields.outcome === "loss") {
+    const instrument = (data.dealing_ranges as { instrument: string } | null)?.instrument;
+    if (instrument) {
+      const sec = Math.floor(Date.now() / 1000);
+      const result = await safeTransitionChain(instrument, [{ type: "POSITION_CLOSED" }], sec);
+      if (result?.node === "end_positionGeschlossen") {
+        await closeLoopState(result.loopId, "completed").catch((err) => console.error("closeLoopState nach POSITION_CLOSED fehlgeschlagen:", err));
+      }
+    }
+  }
   return data;
 }
 
@@ -1302,6 +1364,10 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
   // aufgelöst, weil dieselben Range-/Position-Lookups sonst ein zweites Mal gefahren werden müssten
   // (DRY-Regel, siehe CLAUDE.md).
   let resolvedInstrument: string | null = args.instrument ?? null;
+  // Für die State-Machine-Verdrahtung unten (TSC_ADDED vs. TSC_BOOTSTRAPPED, siehe
+  // tradingMachine.ts: s45.tscAdd/tscBootstrap) — nur im id==null-Zweig überhaupt relevant, ein
+  // explizit gegebenes id bedeutet immer "Range existiert schon" (tscAdd).
+  let didBootstrapRange = false;
   if (args.level === "range") {
     if (args.id == null) {
       if (!args.instrument) {
@@ -1314,6 +1380,7 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
         const direction = deriveBootstrapDirection(args);
         const range = await createDealingRange(args.instrument, direction);
         args = { ...args, id: range.id };
+        didBootstrapRange = true;
       }
     } else {
       const { data: range, error: rangeCheckError } = await supabase.from("dealing_ranges").select("id, instrument").eq("id", args.id).maybeSingle();
@@ -1426,6 +1493,20 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
     });
   }
 
+  // State-Machine-Verdrahtung (Task "State-Machine bis zum letzten Schritt durchziehen",
+  // 2026-09-05, siehe machineState.ts: safeTransitionChain) — nur bei level='range', da nur diese
+  // Ebene auf s45/s6_validieren abgebildet ist (eine reine position-Bestätigung hat im Graphen
+  // keinen eigenen Knoten). tscGet/tscExists (get_tsc_range) sind bewusst KEIN eigener Knoten
+  // (Philip 05.09.2026) — dieser Aufruf hier ist selbst schon der Bootstrap-oder-Reuse-Check
+  // (fetchActiveTscRangeId oben), TSC_ADDED/TSC_BOOTSTRAPPED landen direkt am s45.tscLink-Knoten.
+  // Beide Events plus CONFIRMATIONS_ADDED werden versucht, unabhängig davon, welcher Zweig hier
+  // tatsächlich lief (Bootstrap vs. Reuse, Schritt 5 vs. Schritt 6) — nur das am aktuellen Knoten
+  // gültige feuert, der Rest ist ein No-op (siehe safeTransitionChain-Kommentar).
+  if (args.level === "range" && resolvedInstrument) {
+    const sec = Math.floor(Date.now() / 1000);
+    await safeTransitionChain(resolvedInstrument, [didBootstrapRange ? { type: "TSC_BOOTSTRAPPED" } : { type: "TSC_ADDED" }, { type: "CONFIRMATIONS_ADDED" }], sec);
+  }
+
   return data;
 }
 
@@ -1467,7 +1548,8 @@ async function resolvePivotLiquidityLevelId(args: { rangeLow?: number | null; ra
 // existiert, und das reine Doku-"sollte" reichte nicht zuverlässig (Bug-Report Philip 2026-08-18).
 export async function addTradeTarget(dealingRangeId: number, args: AddTradeTargetArgs) {
   // Dieselbe klare Fehlermeldung wie bei addTradeConfirmation oben statt einer rohen FK-Verletzung.
-  const { data: range, error: rangeCheckError } = await supabase.from("dealing_ranges").select("id").eq("id", dealingRangeId).maybeSingle();
+  // instrument zusätzlich zu id (statt nur id) — für die State-Machine-Verdrahtung unten gebraucht.
+  const { data: range, error: rangeCheckError } = await supabase.from("dealing_ranges").select("id, instrument").eq("id", dealingRangeId).maybeSingle();
   if (rangeCheckError) throw new Error(rangeCheckError.message);
   if (!range) throw new Error(`dealing_range ${dealingRangeId} existiert nicht — zuerst create_dealing_range aufrufen und dessen id hier als dealingRangeId verwenden (siehe get_tsc_range für eine bereits offene Idee).`);
   const liquidityLevelId = await resolvePivotLiquidityLevelId(args);
@@ -1487,6 +1569,15 @@ export async function addTradeTarget(dealingRangeId: number, args: AddTradeTarge
     .select("*")
     .single();
   if (error) throw new Error(error.message);
+
+  // State-Machine-Verdrahtung (s45.llmPickTarget -> addTarget -> pinCheck2, siehe machineState.ts:
+  // safeTransitionChain) — TARGET_PICKED ist Lanas eigene Zielwahl aus find_targets' Kandidaten,
+  // hier implizit durch den tatsächlichen Aufruf repräsentiert (kein Bruch, siehe docs/
+  // state-machine.md "Kandidat für spätere Mechanisierung").
+  if (range.instrument) {
+    const sec = Math.floor(Date.now() / 1000);
+    await safeTransitionChain(range.instrument as string, [{ type: "TARGET_PICKED" }, { type: "TARGET_ADDED" }], sec);
+  }
   return data;
 }
 

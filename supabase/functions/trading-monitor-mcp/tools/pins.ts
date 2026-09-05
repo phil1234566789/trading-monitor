@@ -1,8 +1,9 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
-import { getPinContext, addPinEntry, addPinM5ObEntry, addPinM5LiquidityEntry, addPinRsiDivergenceEntry, removePinEntry } from "../db.ts";
+import { getPinContext, addPinEntry, addPinM5ObEntry, addPinM5LiquidityEntry, addPinRsiDivergenceEntry, removePinEntry, getPinInstrumentById } from "../db.ts";
 import { logDecision } from "../stateMachineLog.ts";
 import { berlinDateStrFor } from "../berlinTime.ts";
+import { safeTransitionChain } from "../machineState.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -169,7 +170,25 @@ export function registerPinTools(server: McpServer) {
       inputSchema: { id: z.number() },
     },
     async ({ id }) => {
+      // Instrument VOR dem Löschen auflösen (danach ist die Zeile weg) — für die
+      // State-Machine-Verdrahtung unten (Schritt 5/6 Pin-Aufräum-Pflicht, s45.pinCheck/pinCheck2).
+      const instrument = await getPinInstrumentById(id);
       await removePinEntry(id);
+      if (instrument) {
+        const sec = Math.floor(Date.now() / 1000);
+        // Beide Pin-Check-Stellen (nach TSC-Verknüpfung UND nach Target-Anlegen) versuchen — nur
+        // die am aktuellen Knoten gültige feuert tatsächlich, siehe safeTransitionChain.
+        await safeTransitionChain(
+          instrument,
+          [
+            { type: "PIN_CHECKED", found: true },
+            { type: "PIN_REMOVED" },
+            { type: "PIN2_CHECKED", found: true },
+            { type: "PIN2_REMOVED" },
+          ],
+          sec,
+        );
+      }
       return json({ removed: id });
     },
   );

@@ -55,7 +55,29 @@ export async function loadMachineForInstrumentOrNull(instrument: string): Promis
         `einmalig run_bias_check erneut aufrufen (ersetzt den Loop komplett), dann normal weitermachen.`,
     );
   }
-  const actor = createTradingActor(loopState.machineSnapshot && Object.keys(loopState.machineSnapshot as object).length > 0 ? (loopState.machineSnapshot as any) : undefined);
+  // Ein persistierter Snapshot kann auf einen Knoten zeigen, der in einer SPÄTEREN
+  // tradingMachine.ts-Änderung umbenannt/entfernt wurde (Bug-Vorfall 05.09.2026: die tscGet/
+  // tscExists-Entfernung ließ einen live geparkten Loop mit inkompatiblem Snapshot zurück, dessen
+  // Verhalten je nach Tool-Aufruf unterschiedlich kaputt war — mal ein sofortiger XState-Fehler,
+  // mal ein Actor ohne funktionierendes getSnapshot().can(), mal ein Hänger, der erst nach
+  // mehreren Minuten vom MCP-Client abgebrochen wurde). Statt dieses Risiko bei jeder künftigen
+  // Maschinen-Änderung erneut einzugehen: Actor-Konstruktion UND ein Sanity-Check auf das Ergebnis
+  // hart absichern, damit eine Inkompatibilität IMMER sofort als klarer, fangbarer Fehler auftritt
+  // (den safeTransitionChain bereits abfängt) statt in unvorhersehbares Verhalten zu laufen.
+  const rawSnapshot = loopState.machineSnapshot && Object.keys(loopState.machineSnapshot as object).length > 0 ? (loopState.machineSnapshot as any) : undefined;
+  let actor: TradingActor;
+  try {
+    actor = createTradingActor(rawSnapshot);
+    if (typeof actor.getSnapshot !== "function" || typeof actor.getSnapshot().can !== "function") {
+      throw new Error("Actor nach Rehydrierung ohne funktionsfähiges getSnapshot().can() zurückbekommen.");
+    }
+  } catch (err) {
+    throw new Error(
+      `Der aktive Loop für ${instrument} (id=${loopState.id}) hat einen mit der aktuellen tradingMachine.ts inkompatiblen Maschinen-Snapshot ` +
+        `(vermutlich nach einer Änderung an der Maschinen-Definition) — einmalig run_bias_check erneut aufrufen (ersetzt den Loop komplett), ` +
+        `dann normal weitermachen. Ursprünglicher Fehler: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
   return { loopId: loopState.id, actor };
 }
 
@@ -145,4 +167,33 @@ export async function initMachineAfterBiasComputed(loopId: number, instrument: s
   });
 
   return node;
+}
+
+// Verdrahtung der restlichen TSC-Verknüpfungs-Kette (Schritt 5 Ende) + Schritt 6-8 (Task
+// "State-Machine bis zum letzten Schritt durchziehen", 2026-09-05) — die dafür nötigen Events
+// existieren bereits vollständig in tradingMachine.ts, nur kein Tool-Aufruf schickte sie bisher
+// (siehe docs/state-machine.md: "Bewusst noch nicht verdrahtet"). Diese Tools (add_trade_confirmation/
+// add_trade_target/remove_pin_entry/add_trade_position/update_trade_position) werden AUCH für
+// Trade-Journal-Aktionen weit außerhalb eines aktiven Loops benutzt (freies Nachpflegen alter
+// Trades, kein Instrument mit laufendem Loop) — deshalb ausschließlich weiche Übergänge
+// (transitionIfPossible) UND ein Fehler beim Verdrahten selbst darf NIE den eigentlichen
+// Journal-/TSC-Schreibvorgang zum Scheitern bringen (gleiche Fire-and-forget-Philosophie wie
+// logDecision in stateMachineLog.ts). Mehrere Events werden am SELBEN, einmal geladenen Actor
+// nacheinander versucht (statt pro Event neu zu laden) — nur das jeweils am aktuellen Knoten
+// gültige feuert tatsächlich, der Rest ist ein harmloser No-op (siehe transitionIfPossible), das
+// deckt sowohl "Zwischenschritte nachholen, die kein eigenes Tool ausgelöst hat" (z.B. 'kein
+// Stand-alone-Pin gefunden', PIN_CHECKED{found:false}) als auch "der eigentliche Übergang" in
+// einem einzigen, robusten Aufruf ab.
+export async function safeTransitionChain(instrument: string, events: TradingEvent[], atSec: number): Promise<{ loopId: number; node: string } | null> {
+  try {
+    const loaded = await loadMachineForInstrumentOrNull(instrument);
+    if (!loaded) return null;
+    for (const event of events) {
+      await transitionIfPossible(loaded, instrument, event, atSec);
+    }
+    return { loopId: loaded.loopId, node: currentNodePath(loaded.actor) };
+  } catch (err) {
+    console.error(`safeTransitionChain fehlgeschlagen (${events.map((e) => e.type).join(",")}) für ${instrument}:`, err);
+    return null;
+  }
 }

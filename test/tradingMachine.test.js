@@ -32,11 +32,7 @@ describe("tradingMachine happy path", () => {
     expect(currentNodePath(actor)).toBe("s45.fallClassification");
 
     sendGuarded(actor, { type: "FALL_CLASSIFIED", case: 1 });
-    expect(currentNodePath(actor)).toBe("s45.tscGet");
-
-    sendGuarded(actor, { type: "TSC_FETCHED" });
-    sendGuarded(actor, { type: "TSC_EXISTS_CHECKED", exists: false });
-    expect(currentNodePath(actor)).toBe("s45.tscBootstrap");
+    expect(currentNodePath(actor)).toBe("s45.tscLink");
 
     sendGuarded(actor, { type: "TSC_BOOTSTRAPPED" });
     expect(currentNodePath(actor)).toBe("s45.pinCheck");
@@ -121,8 +117,6 @@ describe("tradingMachine Rückspränge (Loopbacks laut Diagramm)", () => {
   it("Fall 2 (noch nicht komplett) springt nach dem Pin-Aufräumen zurück zu Schritt 4", () => {
     const actor = actorAtFallClassification();
     sendGuarded(actor, { type: "FALL_CLASSIFIED", case: 2 });
-    sendGuarded(actor, { type: "TSC_FETCHED" });
-    sendGuarded(actor, { type: "TSC_EXISTS_CHECKED", exists: true });
     sendGuarded(actor, { type: "TSC_ADDED" });
     sendGuarded(actor, { type: "PIN_CHECKED", found: true });
     sendGuarded(actor, { type: "PIN_REMOVED" });
@@ -134,8 +128,6 @@ describe("tradingMachine Rückspränge (Loopbacks laut Diagramm)", () => {
   it("INVALIDE-Abwägung in Schritt 6 springt zurück zu Schritt 4/5", () => {
     const actor = actorAtFallClassification();
     sendGuarded(actor, { type: "FALL_CLASSIFIED", case: 1 });
-    sendGuarded(actor, { type: "TSC_FETCHED" });
-    sendGuarded(actor, { type: "TSC_EXISTS_CHECKED", exists: true });
     sendGuarded(actor, { type: "TSC_ADDED" });
     sendGuarded(actor, { type: "PIN_CHECKED", found: false });
     sendGuarded(actor, { type: "FALL_AGAIN_CHECKED", complete: true });
