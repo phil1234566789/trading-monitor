@@ -113,7 +113,9 @@ export function buildMermaidSource(currentNode) {
     lines.push(`  ${node.id}${shape}`);
   }
   for (const edge of EDGES) {
-    lines.push(edge.label ? `  ${edge.from} -->|${mermaidEscape(edge.label)}| ${edge.to}` : `  ${edge.from} --> ${edge.to}`);
+    // Labels in Anführungszeichen im Pipe-Syntax (nicht nackt) — sonst brechen Klammern wie in
+    // "Fall 3 (auto)"/"ja (Fall 1)" den Mermaid-Parser (Bug-Report Philip 05.09.2026).
+    lines.push(edge.label ? `  ${edge.from} -->|"${mermaidEscape(edge.label)}"| ${edge.to}` : `  ${edge.from} --> ${edge.to}`);
   }
   lines.push("  classDef llmNode fill:#fdeee0,stroke:#c97a2b,stroke-width:2px,color:#6b3d0f;");
   lines.push("  classDef activeNode fill:#2962ff,stroke:#5b8dff,stroke-width:3px,color:#ffffff;");
