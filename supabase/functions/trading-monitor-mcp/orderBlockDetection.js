@@ -112,12 +112,18 @@ export function detectOrderBlocks(candles, timeframe, isForex = true) {
       if (z.invalidated) continue;
       const wasTouched = z.touched; // vor der Pruefung dieser Kerze festhalten
 
-      if (z.dir === 1 && cur.high < z.bottom) {
+      // Einfache Preisüberschreitung invalidiert (Wick genügt, kein Kerzenschluss nötig) — anders
+      // als bei einem LQ-Sweep, wo ein Wick über/unter das Level plus schnelle Rückkehr GERADE FÜR
+      // den Sweep spricht (Philip 05.09.2026: eine OB verliert bei jeder Überschreitung sämtliche
+      // Relevanz, unabhängig davon ob die Kerze wieder zurückschließt). Dritte Kopie derselben
+      // Funktion (siehe Kopfkommentar) — bei Änderungen IMMER auch src/orderBlockDetection.js UND
+      // _shared/orderBlocks.ts nachziehen.
+      if (z.dir === 1 && cur.low < z.bottom) {
         z.invalidated = true;
         z.endTime = cur.time; // Box soll die invalidierende Kerze noch einschliessen
         continue;
       }
-      if (z.dir === -1 && cur.low > z.top) {
+      if (z.dir === -1 && cur.high > z.top) {
         z.invalidated = true;
         z.endTime = cur.time;
         continue;

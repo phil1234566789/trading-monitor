@@ -4,6 +4,14 @@
 // import.meta.env) mitzuschleppen. Gleicher Schnitt wie bei liquidity.js → liquidityDetection.js
 // (siehe dort/CLAUDE.md "MCP-Server") — orderBlocks.js selbst importiert detectOrderBlocks jetzt
 // von hier und re-exportiert es, damit sich an dessen öffentlicher API nichts ändert.
+//
+// ACHTUNG DRITTE KOPIE (Bug-Report Philip 2026-09-05, beim Fix hier zunächst übersehen): Supabase
+// Edge Functions bündeln nur Dateien innerhalb von supabase/functions/, ein Import von hier aus
+// dem MCP-Server war deshalb nie möglich — es existiert eine physische Kopie in
+// supabase/functions/trading-monitor-mcp/orderBlockDetection.js (von dataExport.ts/
+// findTargetCandidates.js/backfillObZones.ts genutzt) UND die typisierte Variante
+// supabase/functions/_shared/orderBlocks.ts (von poi-watcher/tradeSetup.ts genutzt). Bei
+// Änderungen an der Erkennungslogik selbst IMMER ALLE DREI nachziehen.
 import { PIP_SIZE } from "./pipConfig.js";
 
 const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone angelegt (HTF: 15m/1h/4h/1D)

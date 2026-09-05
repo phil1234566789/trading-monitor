@@ -1,6 +1,13 @@
 // Portiert aus src/orderBlocks.js (detectOrderBlocks) für die Deno-Edge-Function-Laufzeit.
 // Reine Erkennungslogik, keine Chart-/Rendering-Teile — bei Änderungen an der Zonen-
 // Erkennung in src/orderBlocks.js diese Kopie mitziehen.
+//
+// ACHTUNG DRITTE KOPIE (Bug-Report Philip 2026-09-05, beim Fix hier zunächst übersehen): es
+// existiert noch eine unabhängige, untypisierte Kopie in
+// supabase/functions/trading-monitor-mcp/orderBlockDetection.js (von dataExport.ts/
+// findTargetCandidates.js/backfillObZones.ts genutzt, da poi-watcher/tradeSetup.ts hier aus
+// _shared importieren, aber diese Tools nicht). Bei Änderungen an der Erkennungslogik selbst
+// IMMER ALLE DREI Kopien nachziehen (src/orderBlockDetection.js, diese Datei, die MCP-lokale).
 const IRRELEVANT_PCT = 0.05;
 const WEAK_PCT = 0.15;
 
