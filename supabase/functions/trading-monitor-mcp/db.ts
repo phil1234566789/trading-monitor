@@ -213,8 +213,8 @@ export async function getLatestDailyStructureStartTime(instrument: string): Prom
 // nicht replay-aware — Setups, deren `created_at` (poi-watcher-Erkennungszeitpunkt) weit NACH dem
 // Replay-Cutoff lag, kamen trotzdem zurück, weil nur nach `fractal_pivot_time` gefiltert wurde
 // (ein Setup kann live erst Stunden nach seinem Fraktal-Pivot erkannt werden, sobald der
-// bestätigende OB entsteht). Filtert wie getLatestTradeSetupPerDirection auf `created_at`, NICHT
-// auf `fractal_pivot_time` — sonst sähe ein Replay-Snapshot ein Setup, dessen bestätigender OB
+// bestätigende OB entsteht). Filtert auf `created_at`, NICHT auf `fractal_pivot_time` — sonst
+// sähe ein Replay-Snapshot ein Setup, dessen bestätigender OB
 // (und damit die ganze Zeile) erst nach dem simulierten Zeitpunkt entstanden ist.
 // Default 2 (Philip 2026-08-30, Nachbesserung zum obigen Bug-Report): "sie braucht ja nicht die
 // letzten 100 setups, die letzten 2 reichen ja" — 50 war schon ein Fix gegen das Token-Limit, aber
@@ -240,39 +240,23 @@ export async function getTradeSetups(instrument: string, fromSec?: number, limit
   return data ?? [];
 }
 
-// Für get_data_snapshot: das je Richtung aktuellste Trade-Setup, statt Lana die volle Historie
-// selbst filtern zu lassen. Filtert auf `created_at` (wann poi-watcher das Setup TATSÄCHLICH
-// erkannt/angelegt hat), NICHT auf `fractal_pivot_time` — sonst sieht ein Replay-Snapshot ein
-// Setup, dessen bestätigender OB (und damit die ganze Zeile) erst NACH dem simulierten Zeitpunkt
-// entstanden ist (dieselbe Live-statt-as-of-Bug-Klasse wie applyAsOf/applyAsOfZones oben, hier
-// aber ohne eigene as-of-Spalte in der Tabelle, deshalb der Umweg über created_at statt eines
-// zurückgerechneten touched-Zustands). Ohne replayUntilSec (Live-Fall) zählt einfach das neueste.
-// maxAgeHours UND die Sortierung beziehen sich auf ob_start_time (Bestätigungszeitpunkt des
-// Setups), NICHT auf fractal_pivot_time — bei einem Path-B-Setup (siehe tradeSetup.ts) ist
-// fractal_pivot_time = ls_pivot_time des gesweepten Levels und kann daher beliebig alt sein, obwohl
-// der bestätigende OB gerade erst entstanden ist (Bug-Report Philip 2026-08-31, GBPUSD-Backtest
-// 28.08.: ein frisches Short-Setup direkt nach einem News-Spike-Sweep wurde dadurch von einem
-// älteren, aber "fractal-frischeren" Setup verdeckt). Liegt kein Setup einer Richtung im Fenster,
-// liefert diese Richtung null statt eines veralteten Treffers.
-export async function getLatestTradeSetupPerDirection(instrument: string, replayUntilSec?: number, maxAgeHours = 48) {
-  const nowSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
-  const minObSec = nowSec - maxAgeHours * 3600;
-  async function latestFor(direction: "long" | "short") {
-    let query = supabase
-      .from("trade_setups")
-      .select("*")
-      .eq("instrument", instrument)
-      .eq("direction", direction)
-      .gte("ob_start_time", new Date(minObSec * 1000).toISOString())
-      .order("ob_start_time", { ascending: false })
-      .limit(1);
-    if (replayUntilSec != null) query = query.lte("created_at", new Date(replayUntilSec * 1000).toISOString());
-    const { data, error } = await query.maybeSingle();
-    if (error) throw new Error(error.message);
-    return data;
-  }
-  const [long, short] = await Promise.all([latestFor("long"), latestFor("short")]);
-  return { long, short };
+// get_data_snapshot (Task "Live-Trade-Setup-Erkennung serverseitig für Lana", 2026-09-05): seither
+// live neu erkannte Setups (siehe dataSnapshot.ts) bekommen ihre trade_setups.id nur als Komfort-
+// Match, falls poi-watcher dasselbe Setup bereits selbst persistiert hat — Key wie poi-watchers
+// eigener Dedup-Key (direction+fractal_pivot_time). sinceSec/asOfSec grenzen auf created_at ein
+// (nicht fractal_pivot_time, das bei einem Path-B-Setup beliebig alt sein kann) — spart die
+// Pagination, die getObZones/getLiquidityLevels für den vollen Bestand brauchen, weil ein live
+// erkanntes Setup im Snapshot ohnehin nie älter als SETUP_MAX_AGE_HOURS ist; asOfSec verhindert im
+// Replay, dass ein NACH dem simulierten Zeitpunkt persistiertes Setup seine id schon verrät.
+export async function findRecentTradeSetupIdsByKey(instrument: string, sinceSec: number, asOfSec: number) {
+  const { data, error } = await supabase
+    .from("trade_setups")
+    .select("id, direction, fractal_pivot_time")
+    .eq("instrument", instrument)
+    .gte("created_at", new Date(sinceSec * 1000).toISOString())
+    .lte("created_at", new Date(asOfSec * 1000).toISOString());
+  if (error) throw new Error(error.message);
+  return new Map((data ?? []).map((r) => [`${r.direction}_${Math.floor(new Date(r.fractal_pivot_time).getTime() / 1000)}`, r.id as number]));
 }
 
 // get_trade_setup_winrate: historische Winrate über trade_setup_outcomes (milk-city-Task

@@ -45,6 +45,28 @@ export interface TradeSetupParams {
   nowTime: number; // Referenzzeitpunkt für maxLookbackSec (i.d.R. Zeit der letzten M5-Kerze)
 }
 
+// Zentrale Tuning-Konstanten, 1:1 aus tv-indikator/src/inputs.pine übernommen (nicht neu erraten) —
+// vormals in poi-watcher/index.ts dupliziert, jetzt hierher gezogen, weil get_data_snapshot
+// (trading-monitor-mcp) dieselbe Live-Erkennung mit denselben Werten braucht (DRY innerhalb
+// derselben Deno-Runtime, Task "Live-Trade-Setup-Erkennung serverseitig für Lana", 2026-09-05).
+export const TRADE_SETUP_M5_FRACTAL_PERIOD = 5; // liqM5Period
+export const TRADE_SETUP_H1_FRACTAL_PERIOD = 10; // liqH1Period — bewusst ANDERS als LIQUIDITY_FRACTAL_PERIOD (eigene 1H-Notification, andere Abstimmung)
+export const TRADE_SETUP_PIP_SIZE = 0.0001; // gilt für beide FX-Paare (GBPUSD/EURUSD)
+
+export const DEFAULT_TRADE_SETUP_PARAMS: Omit<TradeSetupParams, "nowTime"> = {
+  graceSec: 5 * 60, // eine M5-Kerzenlänge
+  // H1-Sweep liegt typischerweise deutlich länger vor dem Fraktal als ein M5-Sweep, daher eigenes
+  // größeres Fenster (Bug-Report 2026-07-17: ein gemeinsames Fenster war für M5 zu großzügig oder
+  // für H1 zu eng, siehe tv-indikator "fix short setups für 1h LS und M5 LS").
+  lsMaxLeadSecH1: 120 * 60,
+  lsMaxLeadSecM5: 45 * 60,
+  // Preiseinheiten, NICHT Pip — 5 Pips, NUR für M5 (H1 bekommt kein Limit, siehe
+  // tv-indikator "M5 LS auf 5 pips eingrenzen").
+  maxDistanceM5: 5.0 * TRADE_SETUP_PIP_SIZE,
+  maxLookbackSec: 6 * 60 * 60,
+  obMaxDelaySec: 60 * 60,
+};
+
 // Bis Bug-Report Philip 2026-07-29 ("egal welcher M5 OB wo in welcher Code-Stelle von uns, sollten
 // alle dieselbe Erkennungslogik haben") eine EIGENE, von detectOrderBlocks() unabhängige 3-Kerzen-
 // FVG-Existenzprüfung ohne Mindestgröße. Jetzt direkte Wiederverwendung von detectOrderBlocks()
