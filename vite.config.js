@@ -65,4 +65,13 @@ export default defineConfig({
   // /trading-monitor/ ausgehen und 404en. Hash-History (siehe router.js) macht den Rest der
   // SPA-Navigation davon unabhängig.
   base: "/trading-monitor/",
+  resolve: {
+    // tradingMachine.ts (Deno-Edge-Function) importiert xstate per "npm:"-Spezifizierer, wie es dort
+    // schon für zod/das MCP-SDK Konvention ist — Deno löst das zur Laufzeit selbst auf, aber Vitest
+    // läuft unter Node/Vite und kennt das "npm:"-Protokoll nicht. Alias auf das lokal per
+    // package.json installierte xstate, exakt denselben Versionsstring, damit test/tradingMachine.test.js
+    // die Deno-Datei unverändert importieren kann (siehe biasEngine.test.js fürs gleiche Muster ohne
+    // externe Dependency).
+    alias: { "npm:xstate@5.32.6": "xstate" },
+  },
 });

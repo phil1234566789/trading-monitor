@@ -11,5 +11,6 @@ export const router = createRouter({
     { path: "/handelszeiten", name: "handelszeiten", component: () => import("./views/Handelszeiten.vue") },
     { path: "/konten", name: "konten", component: () => import("./views/Konten.vue") },
     { path: "/loop-status", name: "loop-status", component: () => import("./views/LoopStatus.vue") },
+    { path: "/trading-flow", name: "trading-flow", component: () => import("./views/TradingFlow.vue") },
   ],
 });

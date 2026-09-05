@@ -4,6 +4,7 @@ import { getSessions } from "../db.ts";
 import { berlinOffsetMinutes, berlinDateTimeStrFor, berlinDateStrFor } from "../berlinTime.ts";
 import { sessionOccurrences } from "../sessionOccurrences.js";
 import { logDecision } from "../stateMachineLog.ts";
+import { loadMachineForInstrumentOrNull, transitionIfPossible } from "../machineState.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -122,6 +123,18 @@ export function registerSessionWindowTool(server: McpServer) {
         nowSec: z.number().int().optional().describe("Unix-Sekunden, Default: jetzt"),
       },
     },
-    async (args) => json(await buildSessionWindow(args)),
+    async (args) => {
+      const result = await buildSessionWindow(args);
+      // State-Machine V2 (tradingMachine.ts): der EIGENSTÄNDIGE check_session_window-Aufruf treibt
+      // NUR Schritt 3 -> 4 (s45.entry) voran (nicht die interne Wiederverwendung durch
+      // run_dealing_range_loop, die ruft buildSessionWindow() oben direkt auf, ohne die Maschine
+      // anzufassen) — S45_ENTER/MODE_SELECTED übernimmt run_dealing_range_loop selbst, bei JEDEM
+      // Einstieg in Schritt 5 (auch nach einem Loopback), nicht nur beim allerersten Mal.
+      // transitionIfPossible statt sendGuarded: dieses Tool bleibt bewusst auch frei aufrufbar, ohne
+      // bei jedem Aufruf zwingend voranzukommen (z.B. ein reiner Fakten-Check mitten in Schritt 5).
+      const loaded = await loadMachineForInstrumentOrNull(args.instrument);
+      const currentNode = loaded ? await transitionIfPossible(loaded, args.instrument, { type: "CONTEXT_SYNTHESIS_DONE" }, result.nowSec) : null;
+      return json({ ...result, currentNode });
+    },
   );
 }

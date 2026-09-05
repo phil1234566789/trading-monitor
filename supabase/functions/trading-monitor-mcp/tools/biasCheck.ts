@@ -8,6 +8,7 @@ import { compute1hStructureState } from "./dataExport.ts";
 import { buildCandidatePool, findNearestLiquidityTargets, findNearestObTargets } from "../findTargetCandidates.js";
 import { isSpreadHourPivot, findIntermediateLevel, determineTrendForce, buildPendingDecisions, type TrendForceLevelInput, type TrendForceObInput } from "../biasEngine.ts";
 import { logDecision } from "../stateMachineLog.ts";
+import { initMachineAfterBiasComputed } from "../machineState.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -173,6 +174,8 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
     replayUntilSec: replayUntilSec ?? null,
   });
 
+  const currentNode = await initMachineAfterBiasComputed(loopState.id, instrument, currentTimeSec);
+
   await Promise.all([
     logDecision({
       instrument,
@@ -216,6 +219,9 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
     trendForce,
     pendingDecisions,
     loopStateId: loopState.id,
+    // State-Machine V2 (tradingMachine.ts) — steht nach diesem Aufruf bei "s3_bias.llm3_kontextSynthese",
+    // wartet auf check_session_window (Schritt 4), das den Übergang nach s45 auslöst.
+    currentNode,
     // Bewusst null — reine LLM-Anteile (siehe docs/state-machine.md, dauerhaft bei Lana):
     // Kontext-Info-Synthese (zwei Beobachtungen zu einer Einordnung verknüpfen) und der
     // Pace-Check-Hinweis (Chop-Phase zwischen Sweep/Fraktal und Reaktion). Macht sichtbar, was

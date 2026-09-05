@@ -42,7 +42,7 @@ export interface TradingLoopStateRow {
   instrument: string;
   dateStr: string;
   status: LoopStatus;
-  currentStep: 3 | 4 | 5;
+  currentStep: 3 | 4 | 5 | 6 | 7 | 8;
   currentCase: number | null;
   direction: "long" | "short";
   dealingRangeId: number | null;
@@ -56,6 +56,11 @@ export interface TradingLoopStateRow {
   lastAnalysisTimeSec: number | null;
   replayUntilSec: number | null;
   heartbeatLog: HeartbeatEntry[];
+  // State-Machine V2 (siehe tradingMachine.ts/machineState.ts) — machineSnapshot ist die
+  // XState-Rehydrierungsquelle, currentNode der daraus abgeleitete Dot-Pfad (z.B.
+  // "s45.fallClassification") fürs UI-Highlighting ohne Snapshot-Deserialisierung.
+  machineSnapshot: unknown;
+  currentNode: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -80,6 +85,8 @@ function rowToState(row: Record<string, unknown>): TradingLoopStateRow {
     lastAnalysisTimeSec: (row.last_analysis_time_sec as number | null) ?? null,
     replayUntilSec: (row.replay_until_sec as number | null) ?? null,
     heartbeatLog: (row.heartbeat_log as HeartbeatEntry[] | null) ?? [],
+    machineSnapshot: row.machine_snapshot ?? {},
+    currentNode: (row.current_node as string | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };

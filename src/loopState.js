@@ -15,6 +15,9 @@ function rowToLoopState(row) {
     direction: row.direction,
     currentStep: row.current_step,
     currentCase: row.current_case,
+    // State-Machine V2 (siehe tradingMachineGraph.js) — Dot-Pfad des aktuellen Blatt-Knotens, z.B.
+    // "s45.fallClassification", fürs Live-Highlighting im Entscheidungsbaum-Graphen.
+    currentNode: row.current_node,
     dealingRangeId: row.dealing_range_id,
     trendTarget: row.trend_target,
     countertrendTarget: row.countertrend_target,
