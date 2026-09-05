@@ -1,6 +1,7 @@
 import { supabase } from "./supabaseClient.ts";
 import { PIP_SIZE } from "./pipConfig.js";
-import { berlinDayRangeUtcMs } from "./berlinTime.ts";
+import { berlinDayRangeUtcMs, berlinDateStrFor } from "./berlinTime.ts";
+import { logDecision } from "./stateMachineLog.ts";
 
 // Dünne Supabase-Query-Helfer, von den Tools in ./tools/*.ts genutzt. Tabellenformen siehe
 // supabase/migrations/*.sql (ob_zones, liquidity_levels, trade_setups, dealing_ranges,
@@ -1252,6 +1253,10 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
   // anlegen, mit der Richtung aus der ERSTEN Bestätigung selbst (Sweep-Richtung bei kind='pivot',
   // obDirection bei kind='ob') — dieselbe Einschränkung wie im Chart ("erste Bestätigung muss Sweep
   // oder OB sein, nur die legt die Richtung eindeutig fest").
+  // Fürs state_machine_log unten mitgeschleppt (siehe dort) — wird hier statt im trades.ts-Wrapper
+  // aufgelöst, weil dieselben Range-/Position-Lookups sonst ein zweites Mal gefahren werden müssten
+  // (DRY-Regel, siehe CLAUDE.md).
+  let resolvedInstrument: string | null = args.instrument ?? null;
   if (args.level === "range") {
     if (args.id == null) {
       if (!args.instrument) {
@@ -1266,15 +1271,21 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
         args = { ...args, id: range.id };
       }
     } else {
-      const { data: range, error: rangeCheckError } = await supabase.from("dealing_ranges").select("id").eq("id", args.id).maybeSingle();
+      const { data: range, error: rangeCheckError } = await supabase.from("dealing_ranges").select("id, instrument").eq("id", args.id).maybeSingle();
       if (rangeCheckError) throw new Error(rangeCheckError.message);
       if (!range) throw new Error(`dealing_range ${args.id} existiert nicht — id weglassen und stattdessen instrument mitgeben, um automatisch eine (wieder-)verwendbare Range zu bekommen.`);
+      resolvedInstrument = range.instrument as string;
     }
   } else {
     if (args.id == null) throw new Error("Bei level='position' ist id Pflicht — es gibt kein automatisches Anlegen einer Ausführung (siehe create_trade/add_trade_position).");
-    const { data: position, error: positionCheckError } = await supabase.from("trade_positions").select("id").eq("id", args.id).maybeSingle();
+    const { data: position, error: positionCheckError } = await supabase
+      .from("trade_positions")
+      .select("id, dealing_ranges(instrument)")
+      .eq("id", args.id)
+      .maybeSingle();
     if (positionCheckError) throw new Error(positionCheckError.message);
     if (!position) throw new Error(`trade_position ${args.id} existiert nicht — id muss auf eine bereits bestehende Ausführung zeigen (siehe create_trade/add_trade_position/get_journal).`);
+    resolvedInstrument = (position.dealing_ranges as { instrument: string } | null)?.instrument ?? resolvedInstrument;
   }
   let liquidityLevelId: number | null = null;
   if (args.kind === "pivot" && args.instrument && args.timeframe && args.direction) {
@@ -1352,6 +1363,22 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
         if (updateError) throw new Error(updateError.message);
       }
     }
+  }
+
+  // state_machine_log-Eintrag (Philip 05.09.2026) — kein fester Schritt-Bezug (eine Bestätigung
+  // kann bei Schritt 5/6/7 gleichermaßen entstehen), deshalb step=null statt einer geratenen Zahl.
+  if (resolvedInstrument) {
+    const sec = Math.floor(Date.now() / 1000);
+    void logDecision({
+      instrument: resolvedInstrument,
+      dateStr: berlinDateStrFor(sec),
+      sec,
+      step: null,
+      tool: "add_trade_confirmation",
+      decision: `${resolvedCategory}_added`,
+      result: data,
+      message: `kind=${args.kind} level=${args.level} id=${args.id}`,
+    });
   }
 
   return data;

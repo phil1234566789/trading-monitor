@@ -1,6 +1,8 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import { getPinContext, addPinEntry, addPinM5ObEntry, addPinM5LiquidityEntry, addPinRsiDivergenceEntry, removePinEntry } from "../db.ts";
+import { logDecision } from "../stateMachineLog.ts";
+import { berlinDateStrFor } from "../berlinTime.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -64,7 +66,11 @@ export function registerPinTools(server: McpServer) {
         "braucht `m5Liquidity` (Liquiditäts-Level auf einem Nicht-1h-Timeframe, ebenfalls nie " +
         "persistiert); 'rsi_divergence' braucht `instrument` + `divergence` (aus " +
         "get_forex_rsi/detectRsiDivergence). Ein zweiter Aufruf für dieselbe Stelle aktualisiert " +
-        "nur die Notiz (Upsert), legt keinen Zweiteintrag an. Zeitfelder sind Unix-Sekunden.",
+        "nur die Notiz (Upsert), legt keinen Zweiteintrag an. Zeitfelder sind Unix-Sekunden. " +
+        "Landet als Eintrag im state_machine_log (Loop-Status-UI) — bei kind='ob_zone'/'trade_setup'/" +
+        "'liquidity_level' zusätzlich `instrument` mitgeben, sonst kann der Log-Eintrag dafür nicht " +
+        "geschrieben werden (bei den anderen kind-Werten steht das Instrument schon im jeweiligen " +
+        "Objekt).",
       inputSchema: {
         kind: z.enum(["ob_zone", "trade_setup", "liquidity_level", "m5_ob", "m5_liquidity_level", "rsi_divergence"]),
         note: z.string().optional(),
@@ -89,7 +95,14 @@ export function registerPinTools(server: McpServer) {
           })
           .optional()
           .describe("Pflicht bei kind='m5_liquidity_level'."),
-        instrument: z.enum(["GBPUSD", "EURUSD"]).optional().describe("Pflicht (zusammen mit divergence) bei kind='rsi_divergence'."),
+        instrument: z
+          .enum(["GBPUSD", "EURUSD"])
+          .optional()
+          .describe(
+            "Pflicht (zusammen mit divergence) bei kind='rsi_divergence'. Bei kind='ob_zone'|'trade_setup'|" +
+              "'liquidity_level' optional, nur fürs state_machine_log (siehe Tool-Beschreibung) — bei " +
+              "kind='m5_ob'/'m5_liquidity_level' steht es bereits in m5Ob/m5Liquidity, hier nicht nötig.",
+          ),
         divergence: z
           .object({
             type: z.enum(["bearish", "bullish"]),
@@ -105,20 +118,46 @@ export function registerPinTools(server: McpServer) {
       },
     },
     async ({ kind, note, refId, m5Ob, m5Liquidity, instrument, divergence }) => {
+      // Fire-and-forget: fehlt das Instrument (kind='ob_zone'/'trade_setup'/'liquidity_level' ohne
+      // die optionale instrument-Angabe), wird der Log-Eintrag übersprungen statt mit einem
+      // Platzhalter zu erfinden — state_machine_log.instrument ist NOT NULL.
+      const logPin = (pinInstrument: string | undefined, result: unknown) => {
+        if (!pinInstrument) return;
+        const sec = Math.floor(Date.now() / 1000);
+        void logDecision({
+          instrument: pinInstrument,
+          dateStr: berlinDateStrFor(sec),
+          sec,
+          step: null,
+          tool: "add_pin_entry",
+          decision: "pin_added",
+          result,
+          message: `kind='${kind}'${note ? ` — ${note}` : ""}`,
+        });
+      };
+
       if (PIN_KIND_WITH_REF_ID.safeParse(kind).success) {
         if (refId == null) throw new Error(`refId ist Pflicht bei kind='${kind}'.`);
-        return json(await addPinEntry(kind as "ob_zone" | "trade_setup" | "liquidity_level", refId, note));
+        const result = await addPinEntry(kind as "ob_zone" | "trade_setup" | "liquidity_level", refId, note);
+        logPin(instrument, result);
+        return json(result);
       }
       if (kind === "m5_ob") {
         if (!m5Ob) throw new Error("m5Ob ist Pflicht bei kind='m5_ob'.");
-        return json(await addPinM5ObEntry(m5Ob, note));
+        const result = await addPinM5ObEntry(m5Ob, note);
+        logPin(m5Ob.instrument, result);
+        return json(result);
       }
       if (kind === "m5_liquidity_level") {
         if (!m5Liquidity) throw new Error("m5Liquidity ist Pflicht bei kind='m5_liquidity_level'.");
-        return json(await addPinM5LiquidityEntry(m5Liquidity, note));
+        const result = await addPinM5LiquidityEntry(m5Liquidity, note);
+        logPin(m5Liquidity.instrument, result);
+        return json(result);
       }
       if (!instrument || !divergence) throw new Error("instrument und divergence sind Pflicht bei kind='rsi_divergence'.");
-      return json(await addPinRsiDivergenceEntry(instrument, divergence, note));
+      const result = await addPinRsiDivergenceEntry(instrument, divergence, note);
+      logPin(instrument, result);
+      return json(result);
     },
   );
 

@@ -6,7 +6,7 @@ import { startLoopState } from "../loopState.ts";
 import { buildPretradeGates } from "./pretradeGates.ts";
 import { compute1hStructureState } from "./dataExport.ts";
 import { buildCandidatePool, findNearestLiquidityTargets, findNearestObTargets } from "../findTargetCandidates.js";
-import { isSpreadHourPivot, findIntermediateLevel, determineTrendForce, type TrendForceLevelInput, type TrendForceObInput } from "../biasEngine.ts";
+import { isSpreadHourPivot, findIntermediateLevel, determineTrendForce, buildPendingDecisions, type TrendForceLevelInput, type TrendForceObInput } from "../biasEngine.ts";
 import { logDecision } from "../stateMachineLog.ts";
 
 function json(data: unknown) {
@@ -153,6 +153,13 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
 
   const invalidation = countertrendTarget?.price ?? null;
 
+  const pendingDecisions = buildPendingDecisions({
+    trendForce,
+    trendTargetFound: trendTarget != null,
+    countertrendTargetFound: countertrendTarget != null,
+    intermediateLevelFound: intermediateLevel != null,
+  });
+
   const loopState = await startLoopState({
     instrument,
     dateStr,
@@ -207,6 +214,7 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
     intermediateLevel,
     invalidation,
     trendForce,
+    pendingDecisions,
     loopStateId: loopState.id,
     // Bewusst null — reine LLM-Anteile (siehe docs/state-machine.md, dauerhaft bei Lana):
     // Kontext-Info-Synthese (zwei Beobachtungen zu einer Einordnung verknüpfen) und der
@@ -215,6 +223,24 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
     kontextInfoSynthesis: null,
     paceCheckNote: null,
   };
+}
+
+// Pilot Schritt 3 (05.09.2026): loggt eine getroffene Wahl aus pendingDecisions separat von den
+// automatisch geloggten Gate-/Trend-Kraft-Einträgen, weil DIESE Entscheidung erst entsteht, nachdem
+// Lana die Tool-Antwort gelesen und interpretiert hat — kein Wert, den run_bias_check selbst kennt.
+export async function logBiasDecision({ instrument, sec, loopStateId, substep, choice }: { instrument: string; sec: number; loopStateId: number; substep: string; choice: string }) {
+  await logDecision({
+    instrument,
+    dateStr: berlinDateStrFor(sec),
+    sec,
+    step: 3,
+    tool: "run_bias_check",
+    decision: `substep_${substep}`,
+    result: { substep, choice },
+    message: choice,
+    loopStateId,
+  });
+  return { logged: true as const, substep, choice };
 }
 
 export function registerBiasCheckTool(server: McpServer) {
@@ -234,13 +260,39 @@ export function registerBiasCheckTool(server: McpServer) {
         "die beiden echten LLM-only-Anteile dieses Schritts, die DU selbst ergänzen musst (freie " +
         "Kontext-Info-Synthese aus zwei Beobachtungen, Pace-Check bei einer Chop-Phase vor der " +
         "Reaktion). `unresolvedTrend=true` heißt: Algo liefert keinen bestätigten 1H-Trend, manuelle " +
-        "Kraft-Abwägung nötig, kein Loop-State-Write. Danach weiter zu check_session_window " +
-        "(Schritt 4), dann run_dealing_range_loop (Schritt 5).",
+        "Kraft-Abwägung nötig, kein Loop-State-Write. `pendingDecisions` listet explizit, welche der " +
+        "03-htf-bias.md-Teilentscheidungen noch offen ist (Substep 3.1 Trend+Kraft, 3.2 Targets, " +
+        "ggf. 3.2b Zwischen-Level, 3.3 S/R-Zone) — bei `options` triffst DU die Wahl, bei `resolved` " +
+        "steht die Antwort aus den Rohdaten schon fest und muss nur noch als Textbaustein formuliert " +
+        "werden. `pendingDecisions` IMMER vollständig im Chat ausgeben (nicht nur deine eigene " +
+        "Schlussfolgerung), damit Philip jeden Unterschritt einzeln nachvollziehen kann. Sobald du " +
+        "für ein `options`-Feld eine Wahl getroffen hast, `log_bias_decision` aufrufen. Danach weiter " +
+        "zu check_session_window (Schritt 4), dann run_dealing_range_loop (Schritt 5).",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
         replayUntilSec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
       },
     },
     async (args) => json(await buildBiasCheck(args)),
+  );
+
+  server.registerTool(
+    "log_bias_decision",
+    {
+      title: "Schritt 3: Unterschritt-Entscheidung loggen",
+      description:
+        "Loggt eine getroffene Wahl aus run_bias_checks pendingDecisions in state_machine_log (Pilot " +
+        "Schritt 3, 05.09.2026) — NACH der eigentlichen Analyse aufrufen, sobald du für ein " +
+        "`options`-Feld eine Wahl getroffen hast (z.B. Substep 3.1: welcher Struktur-Fall zutrifft). " +
+        "Für `resolved`-Felder (z.B. 3.2 Targets) nicht nötig, die stehen schon aus den Rohdaten fest.",
+      inputSchema: {
+        instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
+        sec: z.number().int().describe("Analysezeitpunkt (Unix-Sekunden), wie bei run_bias_check"),
+        loopStateId: z.number().int().describe("loopStateId aus der run_bias_check-Antwort"),
+        substep: z.string().describe("z.B. '3.1', '3.3'"),
+        choice: z.string().describe("gewählte Option bzw. formulierte Entscheidung"),
+      },
+    },
+    async (args) => json(await logBiasDecision(args)),
   );
 }

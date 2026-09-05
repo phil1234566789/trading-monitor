@@ -56,7 +56,7 @@ export function evaluateTradingHoursGate(nowSec: number, tradingWindows: Trading
 // "kurzfristig"/"unmittelbar bevorstehend"/"bereits eingetreten".
 export const NEWS_IMMINENT_MINUTES = 30; // Ausschlusskriterium: News <30 Min entfernt ---> kein Trade
 export const NEWS_SOON_MINUTES = 120; // Soft: News <2h entfernt ---> Analyse aussetzen empfohlen (kein hartes Ausschlusskriterium)
-export const NEWS_POST_EVENT_PAUSE_MINUTES = 30; // Feste Pause NACH einer bereits eingetretenen News
+export const NEWS_POST_EVENT_PAUSE_MINUTES = 14; // feste Pause 14min. Nach 15min kann man weiter analysieren.
 const NY_SESSION_START_MINUTES = 14 * 60; // marktsessions.md#ny-session
 const NY_SESSION_END_MINUTES = 22 * 60;
 
@@ -102,11 +102,11 @@ export function evaluateNewsGate(nowSec: number, events: NewsEventInput[], hasEv
       textBlock = `${label}\nunmittelbar bevorstehend ---> kein Trade`;
     } else if (minutesUntil < 0 && minutesUntil > -NEWS_POST_EVENT_PAUSE_MINUTES) {
       category = "exclude_post_event_pause";
-      textBlock = `${label}\nbereits eingetreten (vor ${Math.round(-minutesUntil)} Min.) ---> feste Pause 15-30 Min.`;
+      textBlock = `${label}\nbereits eingetreten (vor ${Math.round(-minutesUntil)} Min.) ---> feste Pause ${NEWS_POST_EVENT_PAUSE_MINUTES} Min.`;
     } else if (minutesUntil >= NEWS_IMMINENT_MINUTES && minutesUntil < NEWS_SOON_MINUTES) {
       category = "soon";
       textBlock = `${label}\nunmittelbar bevorstehend ---> Analyse aussetzen bis danach`;
-    } else if (ev.currency === "USD" && (() => {
+    } else if (minutesUntil >= 0 && ev.currency === "USD" && (() => {
       const { minutesOfDay } = berlinWeekdayAndMinutes(ev.eventTimeSec);
       return minutesOfDay >= NY_SESSION_START_MINUTES && minutesOfDay < NY_SESSION_END_MINUTES;
     })()) {

@@ -124,6 +124,21 @@ function formatBerlin(value) {
 function toggleHistory(instrument) {
   expandedHistory.value = { ...expandedHistory.value, [instrument]: !expandedHistory.value[instrument] };
 }
+
+// Entscheidungs-Log-Gewichtung (Philip, 05.09.2026): substep_* (Lanas tatsächliche
+// Bias-Einschätzung/Begründung, Schritt 3.1/3.3 etc.), Pins und Dealing-Range-Verknüpfungen
+// (add_pin_entry/create_dealing_range/add_trade_confirmation) tragen inhaltliches Gewicht und
+// sollen optisch rausstechen; die reinen Gate-/Fakten-Checks (Handelszeit/News aus
+// check_pretrade_gates, Session-Fenster aus Schritt 4) sind Debug-Rauschen darunter und werden
+// entsprechend gedämpft dargestellt.
+const DEBUG_DECISION_TAGS = new Set(["trading_hours_gate", "news_gate", "session_window"]);
+const HIGHLIGHT_DECISION_TAGS = new Set(["pin_added", "dealing_range_created", "confirmation_added", "confluence_added", "anti_confluence_added"]);
+
+function decisionTier(decision) {
+  if (decision?.startsWith("substep_") || HIGHLIGHT_DECISION_TAGS.has(decision)) return "highlight";
+  if (DEBUG_DECISION_TAGS.has(decision)) return "debug";
+  return "normal";
+}
 </script>
 
 <template>
@@ -239,7 +254,12 @@ function toggleHistory(instrument) {
               </button>
             </div>
             <ul v-if="filteredDecisionLog(instrument).length > 0" class="decision-log-list">
-              <li v-for="entry in filteredDecisionLog(instrument)" :key="entry.id" class="decision-log-entry">
+              <li
+                v-for="entry in filteredDecisionLog(instrument)"
+                :key="entry.id"
+                class="decision-log-entry"
+                :class="'tier-' + decisionTier(entry.decision)"
+              >
                 <span class="decision-log-time">{{ formatBerlin(entry.sec) }}</span>
                 <span class="decision-log-step">S{{ entry.step }}</span>
                 <span class="decision-log-tag">{{ entry.decision }}</span>
@@ -288,9 +308,8 @@ function toggleHistory(instrument) {
 
 .instrument-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-  max-width: 1200px;
 }
 
 .instrument-card {
@@ -549,8 +568,29 @@ function toggleHistory(instrument) {
   flex-wrap: wrap;
   gap: 6px;
   font-size: 11.5px;
-  padding: 3px 0;
+  padding: 3px 4px;
   border-bottom: 1px solid #22262f;
+  border-left: 2px solid transparent;
+}
+
+.decision-log-entry.tier-highlight {
+  border-left-color: #5b8dff;
+  background: rgba(91, 141, 255, 0.06);
+}
+.decision-log-entry.tier-highlight .decision-log-tag {
+  color: #5b8dff;
+  font-weight: 700;
+}
+.decision-log-entry.tier-highlight .decision-log-message {
+  color: #d1d4dc;
+}
+
+.decision-log-entry.tier-debug {
+  opacity: 0.55;
+  font-size: 10.5px;
+}
+.decision-log-entry.tier-debug .decision-log-tag {
+  color: #565a64;
 }
 
 .decision-log-time {

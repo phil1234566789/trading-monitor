@@ -3,6 +3,8 @@ import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp
 import { createDealingRange, deleteDealingRange, fetchActiveTscRangeId, fetchDealingRangeCockpit } from "../db.ts";
 import { findTargetCandidates } from "../findTargetCandidates.js";
 import { findAntiConfluenceCandidates } from "../findAntiConfluenceCandidates.js";
+import { logDecision } from "../stateMachineLog.ts";
+import { berlinDateStrFor } from "../berlinTime.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -37,7 +39,21 @@ export function registerTscTools(server: McpServer) {
         direction: DIRECTION,
       },
     },
-    async ({ instrument, direction }) => json(await createDealingRange(instrument, direction)),
+    async ({ instrument, direction }) => {
+      const result = await createDealingRange(instrument, direction);
+      const sec = Math.floor(Date.now() / 1000);
+      void logDecision({
+        instrument,
+        dateStr: berlinDateStrFor(sec),
+        sec,
+        step: 5,
+        tool: "create_dealing_range",
+        decision: "dealing_range_created",
+        result,
+        message: `direction=${direction}`,
+      });
+      return json(result);
+    },
   );
 
   server.registerTool(

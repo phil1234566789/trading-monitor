@@ -145,3 +145,55 @@ export function determineTrendForce(trend: "uptrend" | "downtrend", ob: TrendFor
 
   return { ob: obResult, level: levelResult };
 }
+
+export interface PendingDecision {
+  substep: string;
+  title: string;
+  prompt: string;
+  // Fehlt, wenn die Antwort schon aus den Rohdaten feststeht (siehe `resolved`) statt einer echten
+  // Wahl zu bedürfen — nur bei einer offenen Frage gesetzt.
+  options?: string[];
+  // Gesetzt, wenn das Tool die Antwort bereits deterministisch kennt (Targets sind reine
+  // Preis-Ableitung, keine Lana-Wahl) — dann nur noch als Textbaustein zu formulieren.
+  resolved?: string;
+}
+
+// Pilot für Schritt 3 (state-machine.md, 05.09.2026): macht sichtbar, WELCHE der vier
+// 03-htf-bias.md-Teilentscheidungen gerade offen ist, statt eine Antwort mit vier vermischten
+// Urteilen zurückzugeben — die dort bereits dokumentierte Fall-Taxonomie/Gate-Struktur wird hier
+// nachgebildet, nicht die Entscheidung selbst getroffen.
+export function buildPendingDecisions(input: { trendForce: TrendForceResult; trendTargetFound: boolean; countertrendTargetFound: boolean; intermediateLevelFound: boolean }): PendingDecision[] {
+  const { trendForce, trendTargetFound, countertrendTargetFound, intermediateLevelFound } = input;
+  const decisions: PendingDecision[] = [];
+
+  const forceHints = [trendForce.ob.text, trendForce.level.text].filter(Boolean);
+  decisions.push({
+    substep: "3.1",
+    title: "Trend + Kraft",
+    prompt:
+      forceHints.length > 0
+        ? `Welcher Struktur-Fall trifft zu? Trend-Kraft bereits berechnet: ${forceHints.join(" ")} Zusätzlich Pace-Check: lag zwischen Sweep/Fractal und Reaktion eine Chop-Phase?`
+        : "Welcher Struktur-Fall trifft zu? Trend-Kraft konnte automatisch nicht bewertet werden (relevantes OB/Level noch nicht getestet) — Kursverlauf manuell prüfen. Zusätzlich Pace-Check: lag zwischen Sweep/Fractal und Reaktion eine Chop-Phase?",
+    options: ["1: Trend läuft normal weiter", "2: Trend schwächelt", "3: Frischer Trendwechsel gerade jetzt", "4: Ausgeglichener Kampf, kein Bias"],
+  });
+
+  const targetsResolved = !countertrendTargetFound
+    ? "kein Countertrend-Target: kein passender OB ---> kein Countertrend-Target"
+    : !trendTargetFound
+      ? "kein Trend-Target aktuell ---> wird im Loop weiterverfolgt"
+      : "Standard: Trend-Target und Countertrend-Target als Textbaustein ausgeben";
+  decisions.push({ substep: "3.2", title: "Targets", prompt: "Targets sind bereits berechnet, nur noch als Textbaustein formulieren.", resolved: targetsResolved });
+
+  if (intermediateLevelFound) {
+    decisions.push({ substep: "3.2b", title: "Zwischen-Level", prompt: "Zwischen-Level wurde gefunden, muss vor dem Trend-Target genannt werden.", resolved: "Zwischen-Level: [Preis] ([Kontext]) ---> muss zuerst gesweept werden" });
+  }
+
+  decisions.push({
+    substep: "3.3",
+    title: "Support/Resistance-Zone",
+    prompt: "Gibt es eine OB, an der mehrere Argumente für eine Ablehnung sprechen (nicht nur ein einzelnes Argument)?",
+    options: ["ja, OB benennen + pinnen", "nein, keine S/R-Zone aktuell"],
+  });
+
+  return decisions;
+}

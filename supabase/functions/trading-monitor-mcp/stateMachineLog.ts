@@ -15,7 +15,9 @@ export interface LogDecisionArgs {
   instrument: string;
   dateStr: string;
   sec: number;
-  step: 1 | 2 | 3 | 4 | 5 | 6;
+  // null bei Aktionen ohne festen Schritt-Bezug (z.B. ein Pin, der bei jedem beliebigen Schritt
+  // gesetzt werden kann) — siehe Migration 20260905090000_state_machine_log_nullable_step.
+  step: 1 | 2 | 3 | 4 | 5 | 6 | null;
   tool: string;
   decision: string;
   result?: unknown;

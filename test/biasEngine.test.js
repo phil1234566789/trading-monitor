@@ -2,7 +2,7 @@
 // 03-htf-bias.md) — Fixtures für den 25.08.2026-Bug (Asia-High vom Vortag fälschlich als Target)
 // UND den 31.08.2026-Fall (gleichgerichteter OB zwischen Preis und Trend-Target).
 import { describe, expect, it } from "vitest";
-import { isSpreadHourPivot, findIntermediateLevel, determineTrendForce } from "../supabase/functions/trading-monitor-mcp/biasEngine.ts";
+import { isSpreadHourPivot, findIntermediateLevel, determineTrendForce, buildPendingDecisions } from "../supabase/functions/trading-monitor-mcp/biasEngine.ts";
 
 function utc(h, m = 0, day = 31) {
   return Date.UTC(2026, 7, day, h, m, 0) / 1000; // August 2026, CEST = UTC+2
@@ -110,5 +110,46 @@ describe("determineTrendForce", () => {
   it("gesweeptes gegenläufiges Level, Preis auf Gegenseite -> sauberer Durchbruch", () => {
     const result = determineTrendForce("downtrend", null, { direction: "high", price: 1.365, timeframe: "1H", touched: true, kontext: "Asia-High" }, 1.366);
     expect(result.level.verdict).toBe("broken");
+  });
+});
+
+describe("buildPendingDecisions", () => {
+  const noForce = { ob: { verdict: "none", text: null, confidence: "high" }, level: { verdict: "none", text: null, confidence: "high" } };
+
+  it("3.1 ist immer offen (4 Fall-Optionen), auch ohne Trend-Kraft-Hinweis", () => {
+    const result = buildPendingDecisions({ trendForce: noForce, trendTargetFound: true, countertrendTargetFound: true, intermediateLevelFound: false });
+    const step31 = result.find((d) => d.substep === "3.1");
+    expect(step31.options).toHaveLength(4);
+    expect(step31.resolved).toBeUndefined();
+  });
+
+  it("beide Targets gefunden -> 3.2 resolved 'Standard'", () => {
+    const result = buildPendingDecisions({ trendForce: noForce, trendTargetFound: true, countertrendTargetFound: true, intermediateLevelFound: false });
+    const step32 = result.find((d) => d.substep === "3.2");
+    expect(step32.resolved).toMatch(/^Standard/);
+    expect(step32.options).toBeUndefined();
+  });
+
+  it("kein Countertrend-OB -> 3.2 resolved 'kein Countertrend-Target'", () => {
+    const result = buildPendingDecisions({ trendForce: noForce, trendTargetFound: true, countertrendTargetFound: false, intermediateLevelFound: false });
+    expect(result.find((d) => d.substep === "3.2").resolved).toMatch(/^kein Countertrend-Target/);
+  });
+
+  it("kein Trend-Target -> 3.2 resolved 'kein Trend-Target aktuell'", () => {
+    const result = buildPendingDecisions({ trendForce: noForce, trendTargetFound: false, countertrendTargetFound: true, intermediateLevelFound: false });
+    expect(result.find((d) => d.substep === "3.2").resolved).toMatch(/^kein Trend-Target aktuell/);
+  });
+
+  it("Zwischen-Level gefunden -> zusätzlicher Substep 3.2b", () => {
+    const withLevel = buildPendingDecisions({ trendForce: noForce, trendTargetFound: true, countertrendTargetFound: true, intermediateLevelFound: true });
+    const withoutLevel = buildPendingDecisions({ trendForce: noForce, trendTargetFound: true, countertrendTargetFound: true, intermediateLevelFound: false });
+    expect(withLevel.some((d) => d.substep === "3.2b")).toBe(true);
+    expect(withoutLevel.some((d) => d.substep === "3.2b")).toBe(false);
+  });
+
+  it("3.3 (S/R-Zone) ist immer eine offene ja/nein-Wahl", () => {
+    const result = buildPendingDecisions({ trendForce: noForce, trendTargetFound: true, countertrendTargetFound: true, intermediateLevelFound: false });
+    const step33 = result.find((d) => d.substep === "3.3");
+    expect(step33.options).toHaveLength(2);
   });
 });
