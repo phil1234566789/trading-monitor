@@ -221,6 +221,12 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
     if (gates.exclude) {
       await heartbeat(cursorSec, "News-Blackout ---> erster Tick pausiert.", currentLoopState.id);
     } else {
+      // Actor steht hier bei s45.backtestBatch (nach MODE_SELECTED oben) — die beiden mechanischen
+      // Zwischenknoten (News-Blackout, Watch-Level-Treffer) müssen auch für den Erster-Tick-
+      // Shortcut real durchlaufen werden (kein Watch-Level gesetzt = Treffer trivial wahr), sonst
+      // sitzt performFullTicks REFETCH_DONE am falschen Knoten fest (Bug vom 05.09.2026, Retest).
+      await transition(loaded, instrument, { type: "NEWS_BLACKOUT_CHECKED", active: false }, cursorSec);
+      await transition(loaded, instrument, { type: "BATCH_LEVEL_CHECKED", hit: true }, cursorSec);
       const tick = await performFullTick(loaded, currentLoopState, instrument, cursorSec);
       const stopSummary = tick.fallFour.hit ? `Fall 4 (${tick.fallFour.reason})` : tick.hasReaction ? "Reaktion gefunden (Fall 1/2/3, siehe evidence)" : "keine Reaktion";
       await heartbeat(cursorSec, `Erster Tick (${berlinDateTimeStrFor(cursorSec)}) ---> ${stopSummary}.`, currentLoopState.id);
