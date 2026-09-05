@@ -3,6 +3,38 @@
 Status: Refinement-Phase, Design steht, noch kein Code. milk-city: Feature `state-machine`, Task
 `state-machine-v1`.
 
+## State-Machine V2 (05.09.2026): echter Entscheidungsbaum statt current_step/current_case
+
+Auslöser: `run_dealing_range_loop` mit `replayUntilSec` gleich dem letzten Analysezeitpunkt lief in
+einen stillen No-op statt in die dafür gebaute "erster Tick"-Logik — `current_step`/`current_case`
+kannten keinen echten Zustand, nur eine Zahl. Philip: die Maschine soll exakt den Baum aus beiden
+Diagrammen abbilden (jeder Knoten aus `diagrams/trading-steps-ablauf.html` +
+`diagrams/dealing-range-loop.html` ein echter State), live in der UI sichtbar.
+
+Umgesetzt mit **XState v5** (`supabase/functions/trading-monitor-mcp/tradingMachine.ts`) — pro
+Tool-Aufruf wird der Actor aus `trading_loop_state.machine_snapshot` rehydriert
+(`getPersistedSnapshot()`/`createActor(machine, { snapshot })`, XStates eigenes Muster für
+"State lebt in der DB, nicht im Prozess"), bekommt ein Event, wird sofort wieder persistiert
+(`machineState.ts`). `sendGuarded()` blockt hart bei einem am aktuellen Knoten ungültigen Event
+(sprechende Fehlermeldung statt stillem No-op) — die eigentliche Bug-Behebung.
+
+- `current_step`/`current_case` bleiben bestehen (aus dem Knoten abgeleitet), jetzt bis Schritt 8
+  (`trading_loop_state_current_step_check` entsprechend erweitert), fürs bestehende
+  `LoopStatus.vue`.
+- Fall 3 (`hasReaction=false`) und Fall 4 (Preisvergleich) klassifiziert `run_dealing_range_loop`
+  jetzt automatisch — nur Fall 1 vs. 2 bleibt Lanas Urteil (`log_fall_classification`-Tool, Pendant
+  zu `log_bias_decision`).
+- `TradingFlow.vue` (Route `/trading-flow`) rendert den kompletten Baum live als Mermaid-Graph
+  (`src/tradingMachineGraph.js`, Hand-Duplikat der Knoten/Kanten — keine Shared-Build zwischen
+  Frontend/Deno-Edge-Function, siehe "Zwei Runtimes" in CLAUDE.md), aktueller Knoten hervorgehoben.
+- **Bewusst noch nicht verdrahtet:** Schritt 5s TSC-Verknüpfungs-Kette (`tscGet`/`tscExists`/
+  `tscBootstrap`/`tscAdd`/`pinCheck`/`findTargets`/`llmPickTarget`/`addTarget`) sowie Schritt 6-8 —
+  diese States existieren bereits vollständig in der Maschine (siehe `test/tradingMachine.test.js`),
+  sind aber noch nicht an `add_trade_confirmation`/`add_trade_target`/`remove_pin_entry`/
+  `get_validation_evidence` angebunden. Diese Tools werden auch für Trade-Journal-Aktionen abseits
+  des Schritt-5-Loops genutzt — hartes Transition-Blocking dort verdient eigene, sorgfältige
+  Tests, bevor es scharf geschaltet wird.
+
 ## Diagramme
 
 - [Trading-Steps-Ablauf](diagrams/trading-steps-ablauf.html) — kompletter Schritt-1-8-Zyklus,
