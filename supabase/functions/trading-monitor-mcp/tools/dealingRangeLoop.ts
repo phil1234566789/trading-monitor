@@ -21,6 +21,8 @@ const BATCH_CANDLES = Math.round((BATCH_HOURS * 3600) / 300); // 24 M5-Kerzen
 const DEFAULT_MAX_BATCHES = 10;
 
 export interface TickResult {
+  loopStateId: number;
+  direction: "long" | "short";
   atSec: number;
   at: string;
   currentPrice: number | null;
@@ -133,6 +135,8 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
   }
 
   return {
+    loopStateId: loopState.id,
+    direction,
     atSec,
     at: berlinDateTimeStrFor(atSec),
     currentPrice,
@@ -173,6 +177,22 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
     throw new Error(`Kein aktiver Loop für ${instrument} — zuerst run_bias_check aufrufen (Schritt 3), das den Loop-State anlegt.`);
   }
   const loaded = await loadMachineForInstrument(instrument);
+
+  // Actor parkt bereits bei s45.fallClassification (Lanas Fall-1/2-Urteil steht noch aus) — jeder
+  // erneute Aufruf würde sonst entweder still no-oppen (replayUntilSec bereits erreicht) oder hart
+  // gegen die Guard-Transition laufen (ein neuer Batch/Live-Tick ist an diesem Knoten ungültig).
+  // loopStateId/direction hier zurückgeben, statt sie unauffindbar zu machen — log_fall_classification
+  // braucht loopStateId, die sonst nur aus einem frischen tick-Ergebnis käme.
+  if (currentNodePath(loaded.actor) === "s45.fallClassification") {
+    return {
+      instrument,
+      alreadyParked: true as const,
+      currentNode: "s45.fallClassification",
+      loopStateId: loopState.id,
+      direction: loopState.direction,
+      message: "Wartet bereits auf log_fall_classification (Fall 1 vs. 2) — get_data_snapshot/get_recent_reactions erneut aufrufen für die Evidenz, dann Urteil loggen.",
+    };
+  }
 
   if (replayUntilSec == null) {
     // LIVE: Watch-Level-Vorprüfung, wie im Diagramm (LTICK/LHIT) — nur bei Treffer voller Refetch.
