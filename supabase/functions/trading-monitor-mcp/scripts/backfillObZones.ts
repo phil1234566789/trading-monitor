@@ -99,30 +99,63 @@ async function fetchAllCandles(instrument: string, bar: string): Promise<CandleR
 // jetzt bis zur letzten geladenen Kerze statt bis zu einem gespeicherten end_time-Wert (derselbe
 // Bug-Report), also liest fürs Rendering niemand mehr end_time einer untouched Zeile. Ein
 // Nachziehen hier wäre reine Arbeit ohne Leser.
-async function correctMissedTouches(instrument: string, dbTimeframe: string, zones: ReturnType<typeof detectOrderBlocks>) {
-  const { data: existingRows, error } = await supabase
-    .from("ob_zones")
-    .select("start_time, direction, top, bottom, touched")
-    .eq("instrument", instrument)
-    .eq("timeframe", dbTimeframe)
-    .eq("touched", false);
-  if (error) throw new Error(`OB-Zonen lesen fehlgeschlagen (${instrument} ${dbTimeframe}): ${error.message}`);
-  if (!existingRows || existingRows.length === 0) return 0;
+//
+// Erweitert (Bug-Report Philip 2026-09-05, GBPUSD-Retest 28.08.2026): der Wick-Invalidierungs-Fix
+// in detectOrderBlocks/orderBlockDetection.js gilt nur für NEU verarbeitete Kerzen — eine bereits
+// touched=true+invalidated=false gespeicherte Zeile aus einem historischen, VOR dem Fix gelaufenen
+// poi-watcher-Tick bleibt sonst für immer auf dem alten (falschen) Stand stehen (poi-watcher fasst
+// eine bereits touched-Zeile nie wieder an). Deshalb jetzt zwei Korrekturfälle statt einem:
+// touched=false -> touched (wie bisher) UND touched=true+invalidated=false -> invalidated. Zusätzlich
+// jetzt paginiert gelesen (PostgREST deckelt eine einzelne Antwort serverseitig, siehe CLAUDE.md-
+// Gotcha "Supabase/PostgREST caps... ~1000" — die alte Version las die Kandidatenmenge ungepaginiert).
+async function fetchCorrectionCandidates(instrument: string, dbTimeframe: string) {
+  const rows: { start_time: string; direction: string; touched: boolean; invalidated: boolean }[] = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabase
+      .from("ob_zones")
+      .select("start_time, direction, touched, invalidated")
+      .eq("instrument", instrument)
+      .eq("timeframe", dbTimeframe)
+      .or("touched.eq.false,invalidated.eq.false")
+      .range(from, from + READ_PAGE_SIZE - 1);
+    if (error) throw new Error(`OB-Zonen lesen fehlgeschlagen (${instrument} ${dbTimeframe}): ${error.message}`);
+    if (!data || data.length === 0) break;
+    rows.push(...data);
+    from += data.length; // tatsächlich zurückgegebene Anzahl, nicht READ_PAGE_SIZE (siehe fetchAllCandles oben)
+  }
+  return rows;
+}
 
-  const untouchedKeys = new Set(
-    existingRows.map((r) => `${r.direction}_${Math.floor(new Date(r.start_time).getTime() / 1000)}`),
+async function correctStaleZones(instrument: string, dbTimeframe: string, zones: ReturnType<typeof detectOrderBlocks>) {
+  const existingRows = await fetchCorrectionCandidates(instrument, dbTimeframe);
+  if (existingRows.length === 0) return 0;
+
+  const existingByKey = new Map(
+    existingRows.map((r) => [`${r.direction}_${Math.floor(new Date(r.start_time).getTime() / 1000)}`, r]),
   );
 
   let corrected = 0;
   for (const z of zones) {
-    if (!z.touched) continue;
     const direction = z.dir === 1 ? "long" : "short";
     const key = `${direction}_${z.startTime}`;
-    if (!untouchedKeys.has(key)) continue;
+    const existing = existingByKey.get(key);
+    if (!existing) continue;
+
+    const patch: Record<string, unknown> = {};
+    if (existing.touched !== z.touched) {
+      patch.touched = z.touched;
+      // Wie bisher: ein rückwirkend erkannter Touch soll poi-watcher keinen Live-Alarm mehr
+      // auslösen lassen, wenn es das nächste Mal über diese Zeile stolpert.
+      patch.notified = true;
+    }
+    if (existing.invalidated !== z.invalidated) patch.invalidated = z.invalidated;
+    if (Object.keys(patch).length === 0) continue;
+    patch.end_time = new Date(z.endTime * 1000).toISOString();
 
     const { error: updateError } = await supabase
       .from("ob_zones")
-      .update({ touched: true, invalidated: z.invalidated, end_time: new Date(z.endTime * 1000).toISOString(), notified: true })
+      .update(patch)
       .eq("instrument", instrument)
       .eq("timeframe", dbTimeframe)
       .eq("direction", direction)
@@ -175,10 +208,10 @@ async function backfillOne(instrument: string, bar: string) {
     return;
   }
   const zones = detectOrderBlocks(candles, config.detectParam, true);
-  const corrected = await correctMissedTouches(instrument, config.dbTimeframe, zones);
+  const corrected = await correctStaleZones(instrument, config.dbTimeframe, zones);
   await upsertZones(instrument, config.dbTimeframe, zones);
   console.log(
-    `${instrument} ${bar} (${candles.length} Kerzen): ${zones.length} OB-Zonen erkannt/gesichert, ${corrected} verpasste Touches korrigiert.`,
+    `${instrument} ${bar} (${candles.length} Kerzen): ${zones.length} OB-Zonen erkannt/gesichert, ${corrected} veraltete Zeilen (Touch/Invalidierung) korrigiert.`,
   );
 }
 
