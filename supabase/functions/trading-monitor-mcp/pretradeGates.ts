@@ -1,30 +1,18 @@
 import { berlinDateTimeStrFor, berlinDateStrFor } from "./berlinTime.ts";
+import { berlinWeekdayAndMinutes, isWithinTradingWindows, type WeekdayGroup, type TradingWindows } from "../_shared/tradingHoursGate.ts";
 
 // Pure Logik hinter check_pretrade_gates (Schritt 1+2, siehe docs/state-machine.md) — dependency-frei
 // (nur Intl.DateTimeFormat + berlinTime.ts, kein db.ts/supabaseClient.ts-Import), damit sie
 // unabhängig von den DB-Fetches (trading_schedules/news_events, siehe tools/pretradeGates.ts) per
-// Vitest testbar bleibt.
-
-const BERLIN_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Berlin", weekday: "short" });
-const BERLIN_HM_FORMATTER = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit", hour12: false });
-
-export type WeekdayGroup = "weekday" | "saturday" | "sunday";
-
-// Minuten seit Mitternacht + Wochentags-Gruppe in Europe/Berlin — dieselbe Konvention wie
-// trading_schedules.trading_windows/alarm_windows (siehe Migration 20260725120000_trading_schedules.sql).
-export function berlinWeekdayAndMinutes(unixSec: number): { weekdayGroup: WeekdayGroup; minutesOfDay: number } {
-  const date = new Date(unixSec * 1000);
-  const weekdayShort = BERLIN_WEEKDAY_FORMATTER.format(date); // "Mon".."Sun"
-  const weekdayGroup: WeekdayGroup = weekdayShort === "Sat" ? "saturday" : weekdayShort === "Sun" ? "sunday" : "weekday";
-  const [hh, mm] = BERLIN_HM_FORMATTER.format(date).split(":").map(Number);
-  return { weekdayGroup, minutesOfDay: hh * 60 + mm };
-}
-
-export interface TradingWindows {
-  weekday: [number, number][];
-  saturday: [number, number][];
-  sunday: [number, number][];
-}
+// Vitest testbar bleibt. Der eigentliche Fenster-Check (berlinWeekdayAndMinutes/isWithinTradingWindows)
+// sitzt in _shared/tradingHoursGate.ts, weil trade_setup_outcome.ts (poi-watcher + Backfill-Script,
+// siehe milk-city-Task trade-setup-winrate-outcome-tracking-kriterien-filter) dieselbe Logik braucht
+// und _shared/ die einzige Cross-Function-Importgrenze in diesem Repo ist.
+export type { WeekdayGroup, TradingWindows };
+// Re-export als Value (nicht nur Typ) — biasEngine.ts importiert berlinWeekdayAndMinutes bisher von
+// hier (isSpreadHourPivot), Umstellung auf den direkten _shared/tradingHoursGate.ts-Import ist nicht
+// Teil dieser Änderung.
+export { berlinWeekdayAndMinutes };
 
 export interface TradingHoursGateResult {
   exclude: boolean;
@@ -42,7 +30,7 @@ export interface TradingHoursGateResult {
 export function evaluateTradingHoursGate(nowSec: number, tradingWindows: TradingWindows): TradingHoursGateResult {
   const { weekdayGroup, minutesOfDay } = berlinWeekdayAndMinutes(nowSec);
   const windows = tradingWindows[weekdayGroup] ?? [];
-  const exclude = !windows.some(([from, to]) => minutesOfDay >= from && minutesOfDay < to);
+  const exclude = !isWithinTradingWindows(nowSec, tradingWindows);
   const at = berlinDateTimeStrFor(nowSec);
   const resultText = exclude
     ? `Analysezeitpunkt ${at}, AUSSERHALB der Handelszeit ---> kein Trade.`

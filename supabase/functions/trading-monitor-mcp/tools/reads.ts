@@ -8,6 +8,7 @@ import {
   getTradingSchedule,
   getTradingAccounts,
   getForexCandlesArchive,
+  getTradeSetupWinrate,
 } from "../db.ts";
 import { fetchForexCandles } from "../forexCandles.ts";
 import { buildDataExport } from "./dataExport.ts";
@@ -219,6 +220,40 @@ export function registerReadTools(server: McpServer) {
       },
     },
     async ({ instrument, fromSec, limit, replayUntilSec }) => json(await getTradeSetups(instrument, fromSec, limit, replayUntilSec)),
+  );
+
+  server.registerTool(
+    "get_trade_setup_winrate",
+    {
+      title: "Trade-Setup-Winrate (historisch)",
+      description:
+        "Historische Winrate ALLER erkannten trade_setups (nicht nur journalisierte Trades) aus " +
+        "trade_setup_outcomes — Win-Definition: 2,5 RR erreicht, SL max. 6 Pips (siehe " +
+        "_shared/tradeSetupOutcome.ts), auch wenn die strukturelle Invalidierung weiter weg liegt. " +
+        "Ohne Filter = Basis-Winrate über den gesamten Bestand. Mit withinTradingHours/" +
+        "inducementClass/minSweepAgeHours/maxSweepAgeHours lässt sich schrittweise auf einzelne " +
+        "Kriterien-Kombinationen eingrenzen (Philips 'peu à peu'-Workflow: erst GESAMT, dann " +
+        "+Handelszeiten, dann +Inducement-Klasse, ...) — für einen Vergleich mehrfach mit " +
+        "unterschiedlichen Filtern aufrufen. inducementClass ist die benannte Abkürzung für " +
+        "Philips Minor/Medium/Major-Einteilung nach Sweep-Alter (trading-Repo liquidität.md, " +
+        "<24h/24-120h/≥120h — Näherung, siehe _shared/tradeSetupOutcome.ts: eigentlich " +
+        "kalendertagbasiert und nur für H1/4H-Sweeps definiert, hier bewusst timeframe-unabhängig " +
+        "über die reine Dauer angenähert). Hat Vorrang vor minSweepAgeHours/maxSweepAgeHours, falls " +
+        "beides gesetzt ist. winratePct ist null, wenn weniger als 100 Setups aufgelöst (win+loss) " +
+        "sind — dann IMMER die rohen wins/losses/pending-Zahlen nennen, NIE eine Prozentzahl aus " +
+        "einer kleinen Stichprobe hochrechnen (Philip 2026-09-05). pending = noch offen, weder TP " +
+        "noch SL berührt. Weitere Kriterien (EMA/RSI/Sweep-Anzahl, ...) kommen erst dazu, sobald " +
+        "die jeweilige Spalte existiert.",
+      inputSchema: {
+        instrument: z.enum(["GBPUSD", "EURUSD"]).optional().describe("Ohne Angabe: über beide Instrumente zusammen"),
+        withinTradingHours: z.boolean().optional().describe("true = nur Setups innerhalb trading_schedules.trading_windows"),
+        inducementClass: z.enum(["minor", "medium", "major"]).optional().describe("Minor <24h, Medium 24-120h, Major ≥120h Sweep-Alter (Näherung, siehe Beschreibung) — Vorrang vor min/maxSweepAgeHours"),
+        minSweepAgeHours: z.number().optional().describe("Nur Setups, deren gesweeptes Level mindestens so viele Stunden bestand, bevor es gesweept wurde (ls_pivot_time -> ls_touched_time). Ignoriert, wenn inducementClass gesetzt ist."),
+        maxSweepAgeHours: z.number().optional().describe("Nur Setups, deren gesweeptes Level weniger als so viele Stunden bestand, bevor es gesweept wurde (ls_pivot_time -> ls_touched_time). Ignoriert, wenn inducementClass gesetzt ist."),
+      },
+    },
+    async ({ instrument, withinTradingHours, inducementClass, minSweepAgeHours, maxSweepAgeHours }) =>
+      json(await getTradeSetupWinrate(instrument, { withinTradingHours, inducementClass, minSweepAgeHours, maxSweepAgeHours })),
   );
 
   server.registerTool(

@@ -21,6 +21,14 @@ import { detectLiquidityLevels, type LiquidityLevel } from "../_shared/liquidity
 import { fetchTrendbarsBatch } from "../_shared/ctrader/client.ts";
 import { loadCtraderCreds, type CtraderCreds } from "../_shared/ctraderCreds.ts";
 import { detectSetupObs, detectTradeSetup } from "../_shared/tradeSetup.ts";
+import { isWithinTradingWindows, type TradingWindows } from "../_shared/tradingHoursGate.ts";
+import {
+  deriveEntryInvalidation,
+  computeSlTp,
+  classifyOutcome,
+  computeSweepAgeHours,
+  type OutcomeCandle,
+} from "../_shared/tradeSetupOutcome.ts";
 
 const TIMEFRAMES: { label: "4H" | "1H" }[] = [{ label: "4H" }, { label: "1H" }];
 // 300h (~12,5 Tage) reichten nicht, um lange unberührte 1H-Liquiditäts-Level (und 1H-OB-Zonen, die
@@ -351,10 +359,18 @@ Deno.serve(async (req) => {
     // riskieren, den diese Tabelle gerade beheben soll.
     const { data: scheduleRows, error: scheduleSelectError } = await supabase
       .from("trading_schedules")
-      .select("instrument, alarm_windows");
+      .select("instrument, alarm_windows, trading_windows");
     if (scheduleSelectError) throw scheduleSelectError;
     const alarmWindowsByInstrument = new Map<string, WeekdayWindows>(
       (scheduleRows ?? []).map((r) => [r.instrument, r.alarm_windows as WeekdayWindows]),
+    );
+    // Für trade_setup_outcomes.within_trading_hours (siehe milk-city-Task
+    // trade-setup-winrate-outcome-tracking-kriterien-filter) — bewusst trading_windows, nicht
+    // alarm_windows: das Kriterium fragt "wäre das ein handelbares Setup gewesen", nicht "hätte
+    // poi-watcher dafür alarmiert" (die beiden Fenster unterscheiden sich, siehe Migration
+    // 20260725120000_trading_schedules.sql).
+    const tradingWindowsByInstrument = new Map<string, TradingWindows>(
+      (scheduleRows ?? []).map((r) => [r.instrument, r.trading_windows as TradingWindows]),
     );
 
     // cTrader-Access-/Refresh-Token: `ctrader_oauth_tokens` ist die eigentliche Quelle (siehe
@@ -883,26 +899,56 @@ Deno.serve(async (req) => {
             .single();
           if (obZoneUpsertError) throw obZoneUpsertError;
 
-          const { error: setupUpsertError } = await supabase.from("trade_setups").upsert(
+          const { data: setupRow, error: setupUpsertError } = await supabase
+            .from("trade_setups")
+            .upsert(
+              {
+                instrument: cfg.instrument,
+                direction,
+                fractal_price: setup.fractal.price,
+                fractal_pivot_time: new Date(setup.fractal.pivotTime * 1000).toISOString(),
+                ls_price: setup.ls.price,
+                ls_pivot_time: new Date(setup.ls.pivotTime * 1000).toISOString(),
+                ls_touched_time: new Date(setup.ls.touchedTime! * 1000).toISOString(),
+                ob_top: setup.obTop,
+                ob_bottom: setup.obBottom,
+                ob_start_time: new Date(setup.obStartTime * 1000).toISOString(),
+                ob_zone_id: setupObZone.id,
+                alert_price: currentPrice,
+                notified: shouldAlert,
+                notified_at: shouldAlert ? new Date().toISOString() : null,
+              },
+              { onConflict: "instrument,direction,fractal_pivot_time" },
+            )
+            .select("id")
+            .single();
+          if (setupUpsertError) throw setupUpsertError;
+
+          // trade_setup_outcomes (milk-city-Task trade-setup-winrate-outcome-tracking-kriterien-
+          // filter): Entry/SL/TP + Kriterien-Rohwerte stehen sofort fest (reine Preis-/Zeit-
+          // Rechnung, keine weiteren Kerzen nötig), outcome bleibt 'pending' bis der Resolve-Pass
+          // unten (oder ein künftiger Tick) TP/SL berührt sieht.
+          const { entry, invalidation } = deriveEntryInvalidation(direction, setup.obTop, setup.obBottom);
+          const { slPrice, tpPrice, slPips } = computeSlTp(direction, entry, invalidation);
+          const tradingWindows = tradingWindowsByInstrument.get(cfg.instrument);
+          const { error: outcomeInsertError } = await supabase.from("trade_setup_outcomes").upsert(
             {
+              trade_setup_id: setupRow.id,
               instrument: cfg.instrument,
               direction,
-              fractal_price: setup.fractal.price,
-              fractal_pivot_time: new Date(setup.fractal.pivotTime * 1000).toISOString(),
-              ls_price: setup.ls.price,
-              ls_pivot_time: new Date(setup.ls.pivotTime * 1000).toISOString(),
-              ls_touched_time: new Date(setup.ls.touchedTime! * 1000).toISOString(),
-              ob_top: setup.obTop,
-              ob_bottom: setup.obBottom,
-              ob_start_time: new Date(setup.obStartTime * 1000).toISOString(),
-              ob_zone_id: setupObZone.id,
-              alert_price: currentPrice,
-              notified: shouldAlert,
-              notified_at: shouldAlert ? new Date().toISOString() : null,
+              entry_price: entry,
+              invalidation_price: invalidation,
+              sl_price: slPrice,
+              tp_price: tpPrice,
+              sl_pips: slPips,
+              within_trading_hours: tradingWindows ? isWithinTradingWindows(setup.obStartTime, tradingWindows) : false,
+              sweep_age_hours: computeSweepAgeHours(setup.ls.touchedTime!, setup.ls.pivotTime),
+              outcome: "pending",
+              resolved_at: null,
             },
-            { onConflict: "instrument,direction,fractal_pivot_time" },
+            { onConflict: "trade_setup_id" },
           );
-          if (setupUpsertError) throw setupUpsertError;
+          if (outcomeInsertError) throw outcomeInsertError;
 
           if (shouldAlert) {
             tradeSetupNotifiedCount++;
@@ -917,7 +963,36 @@ Deno.serve(async (req) => {
           }
         }
 
-        instrumentSummary["tradeSetups"] = { detected: detected.length, notified: tradeSetupNotifiedCount };
+        // Offene ("pending") trade_setup_outcomes gegen das gerade geladene M5-Fenster (300 Kerzen,
+        // ~25h) auflösen — läuft bei jedem Tick, damit ein Win/Loss spätestens ein paar Minuten
+        // nach der tatsächlichen TP-/SL-Berührung feststeht, nicht erst beim nächsten manuellen
+        // Backfill-Lauf (siehe backfillTradeSetupOutcomes.ts, der stattdessen das VOLLE Archiv nimmt
+        // und damit auch länger als 25h offene Fälle auflösen kann).
+        const { data: pendingOutcomes, error: pendingSelectError } = await supabase
+          .from("trade_setup_outcomes")
+          .select("trade_setup_id, direction, sl_price, tp_price")
+          .eq("instrument", cfg.instrument)
+          .eq("outcome", "pending");
+        if (pendingSelectError) throw pendingSelectError;
+
+        // entryTimeSec=0 statt des tatsächlichen ob_start_time (nicht mitselektiert) — bewusst, damit
+        // das GESAMTE geladene Fenster geprüft wird; frühere, außerhalb des jeweils damaligen
+        // Fensters liegende Kerzen wurden bereits in früheren Ticks geprüft (rollierendes Fenster,
+        // siehe Kommentar oben), ein erneutes Prüfen bereits bekannter Kerzen ändert am Ergebnis nichts.
+        const outcomeCandles: OutcomeCandle[] = m5Candles.map((c) => ({ time: c.time, high: c.high, low: c.low }));
+        let resolvedCount = 0;
+        for (const pending of pendingOutcomes ?? []) {
+          const { outcome, resolvedAt } = classifyOutcome(outcomeCandles, pending.direction as "short" | "long", 0, pending.sl_price, pending.tp_price);
+          if (outcome === "pending") continue;
+          const { error: resolveError } = await supabase
+            .from("trade_setup_outcomes")
+            .update({ outcome, resolved_at: new Date(resolvedAt! * 1000).toISOString() })
+            .eq("trade_setup_id", pending.trade_setup_id);
+          if (resolveError) throw resolveError;
+          resolvedCount++;
+        }
+
+        instrumentSummary["tradeSetups"] = { detected: detected.length, notified: tradeSetupNotifiedCount, outcomesResolved: resolvedCount };
       }
 
       (summary.instruments as Record<string, unknown>)[cfg.instrument] = { currentPrice, shouldSend, ...instrumentSummary };
