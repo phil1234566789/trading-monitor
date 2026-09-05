@@ -138,3 +138,12 @@ export function detectOrderBlocks(candles: Candle[], timeframe?: string, isForex
 
   return zones;
 }
+
+// Prüft eine BEKANNTE Box (z.B. eine einmalig als Snapshot persistierte trade_setups-Zeile, siehe
+// poi-watcher/index.ts: "touched/invalidated bleiben hier bewusst auf Default false — dieses
+// Referenz-Objekt wird nicht live nachverfolgt") gegen spätere Kerzen auf Invalidierung, ohne
+// Zonen komplett neu aus einer Kerzenreihe zu erkennen — dieselbe Wick-Überschreitungs-Regel wie
+// oben in detectOrderBlocks. `candles` sollte nur Kerzen NACH Boxentstehung enthalten.
+export function isBoxInvalidated(candles: Candle[], box: { top: number; bottom: number }, dir: 1 | -1): boolean {
+  return dir === 1 ? candles.some((c) => c.low < box.bottom) : candles.some((c) => c.high > box.top);
+}

@@ -6,6 +6,7 @@ import { getLatestTradeSetupPerDirection, fetchActiveTscRangeId, fetchDealingRan
 import { buildNearRelevantLiquidityLevels } from "./nearRelevantLiquidityLevels.ts";
 import { buildNearRelevantObZones } from "./nearRelevantObZones.ts";
 import { computeCurrentEma, computeCurrentRsi } from "./reads.ts";
+import { isBoxInvalidated } from "../../_shared/orderBlocks.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -47,6 +48,23 @@ function curateTradeSetup(row: Record<string, unknown> | null, asOfSec: number) 
   };
 }
 
+// Die trade_setups-Zeile ist ein beim Erkennen einmalig persistierter Snapshot (siehe
+// poi-watcher/index.ts: "touched/invalidated bleiben hier bewusst auf Default false — dieses
+// Referenz-Objekt wird nicht live nachverfolgt") — ohne diesen Check würde ein Setup, dessen OB
+// seither per Wick überschritten (siehe isBoxInvalidated/orderBlocks.ts) und damit tot ist, trotzdem
+// weiter als "aktuellstes Setup" ausgegeben (Bug-Report Philip 2026-09-05, GBPUSD-Setup #443: OB
+// 1.35923–1.3595 wurde um 16:00 bis 1.35966 durchstochen, danach als bärische Resistance tot).
+async function isSetupObStillValid(instrument: string, row: Record<string, unknown> | null, asOfSec: number): Promise<boolean> {
+  if (!row) return true;
+  const obStartTime = Math.floor(new Date(row.ob_start_time as string).getTime() / 1000);
+  if (asOfSec <= obStartTime) return true;
+  const count = Math.ceil((asOfSec - obStartTime) / 300) + 2;
+  const candles = await fetchForexCandles(instrument, "5m", { count, toMs: asOfSec * 1000 });
+  const sinceOb = candles.filter((c) => c.time > obStartTime && c.time <= asOfSec);
+  const dir: 1 | -1 = row.direction === "long" ? 1 : -1;
+  return !isBoxInvalidated(sinceOb, { top: row.ob_top as number, bottom: row.ob_bottom as number }, dir);
+}
+
 export interface DataSnapshotArgs {
   instrument: string;
   replayUntilSec?: number;
@@ -66,6 +84,11 @@ export async function buildDataSnapshot({ instrument, replayUntilSec }: DataSnap
     fetchActiveTscRangeId(instrument),
   ]);
 
+  const [longObValid, shortObValid] = await Promise.all([
+    isSetupObStillValid(instrument, setups.long, asOfSec),
+    isSetupObStillValid(instrument, setups.short, asOfSec),
+  ]);
+
   // Nur id+direction, nicht der volle Cockpit (Confirmations/Targets) — das bleibt get_tsc_range
   // vorbehalten, damit dieses Tool schlank bleibt.
   const tscRange = activeTscRangeId == null ? null : await fetchDealingRangeCockpit(activeTscRangeId).then((r) => (r ? { id: r.id, direction: r.direction } : null));
@@ -78,8 +101,8 @@ export async function buildDataSnapshot({ instrument, replayUntilSec }: DataSnap
     replay: replayUntilSec == null ? { active: false } : { active: true, until: replayUntilSec },
     referencePrice,
     tradeSetups: {
-      long: curateTradeSetup(setups.long, asOfSec),
-      short: curateTradeSetup(setups.short, asOfSec),
+      long: longObValid ? curateTradeSetup(setups.long, asOfSec) : null,
+      short: shortObValid ? curateTradeSetup(setups.short, asOfSec) : null,
     },
     // Nur 1H/4H (wie obZones) — buildNearRelevantLiquidityLevels filtert anders als
     // buildNearRelevantObZones NICHT nach Timeframe (get_near_relevant_liquidity_levels liefert
@@ -109,7 +132,8 @@ export function registerDataSnapshotTools(server: McpServer) {
         `häufige Aufrufe pro Tag, deshalb eng gefasst: umliegende Liquidity-Level/OB-Zonen ` +
         `(1H/4H, ${SNAPSHOT_RANGE_PIPS} Pips um den aktuellen Kurs ODER innerhalb der letzten ` +
         `${SNAPSHOT_RECENCY_HOURS}h geswept/invalidiert), je Richtung nur das aktuellste ` +
-        `Trade-Setup (max. ${SETUP_MAX_AGE_HOURS}h alt, sonst null), aktuelle EMA(50/200) und ` +
+        `Trade-Setup (max. ${SETUP_MAX_AGE_HOURS}h alt ODER dessen OB seither per Wick durchstochen, ` +
+        "sonst null), aktuelle EMA(50/200) und " +
         "RSI(14) NUR als Punkt (keine Serie), sowie der Status der offenen TSC-Idee (id+direction " +
         "oder null, siehe get_tsc_range für die volle Cockpit-Ansicht mit Confirmations/Targets). " +
         "Ohne replayUntilSec live 'jetzt', mit replayUntilSec ein Backtest/Replay-Zeitpunkt " +
