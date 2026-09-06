@@ -4,18 +4,20 @@ import { getTradingSchedule, getNewsEvents } from "../db.ts";
 import { berlinDayRangeUtcMs, berlinDateStrFor } from "../berlinTime.ts";
 import { evaluateTradingHoursGate, evaluateNewsGate, type TradingWindows, type NewsEventInput } from "../pretradeGates.ts";
 import { logDecision } from "../stateMachineLog.ts";
-import { loadOrCreateGateActor, transitionIfPossible, touchLastAnalysisTime } from "../machineState.ts";
+import { loadOrCreateMachineForDay, transitionIfPossible } from "../machineState.ts";
 import { currentNodePath } from "../tradingMachine.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-// check_pretrade_gates (Schritt 1+2, siehe docs/state-machine.md) — reine Vorprüfung, kein
-// State-Write (siehe run_bias_check für den Loop-State-Write, der diese Gate-Logik intern zuerst
-// aufruft). Fetcht trading_schedules (Handelszeit) + news_events (News-Fenster ±1 Tag um
-// nowSec, damit sowohl eine bereits eingetretene News von vor bis zu einem Tag als auch eine
-// spätere NY-Zeit-News desselben Tages erfasst wird) und wertet beide Gates rein aus.
+// check_pretrade_gates (Schritt 1+2, siehe docs/state-machine.md) — bei einem direkten (live)
+// Aufruf treibt es den permanenten Pro-Tag-Loop-State durch s1_handelszeit/s2_news (siehe
+// machineState.ts loadOrCreateMachineForDay); run_bias_check/run_dealing_range_loop rufen intern
+// mit persist:false auf und treiben die Maschine über ihre eigenen transition()-Aufrufe selbst.
+// Fetcht trading_schedules (Handelszeit) + news_events (News-Fenster ±1 Tag um nowSec, damit sowohl
+// eine bereits eingetretene News von vor bis zu einem Tag als auch eine spätere NY-Zeit-News
+// desselben Tages erfasst wird) und wertet beide Gates rein aus.
 const NEWS_FETCH_WINDOW_SEC = 24 * 3600;
 
 export interface PretradeGatesArgs {
@@ -39,8 +41,8 @@ export interface PretradeGatesResult {
   tradingHours: ReturnType<typeof evaluateTradingHoursGate>;
   news: ReturnType<typeof evaluateNewsGate>;
   exclude: boolean;
-  // Nur gesetzt, wenn exclude=true UND persist=true (siehe unten) — der Knoten/die Zeile, an der
-  // der Block in trading_loop_state sichtbar gemacht wurde (S1/S2-Sichtbarkeit, 06.09.2026).
+  // Nur gesetzt, wenn persist=true (Backtest-Aufrufe übergeben persist:false, siehe oben) — der
+  // permanente Loop-State für (instrument, Tag), siehe S1/S2-Sichtbarkeit, 06.09.2026.
   currentNode?: string | null;
   loopStateId?: number | null;
 }
@@ -68,33 +70,29 @@ export async function buildPretradeGates({ instrument, nowSec, loopStateId = nul
   const exclude = tradingHours.exclude || news.exclude;
 
   // S1/S2 im Trading-Flow-Graphen sichtbar machen (docs/state-machine.md#s1-s2-sichtbar,
-  // 06.09.2026) — NUR bei einem tatsächlichen Block, live: den Actor durch s1_handelszeit/s2_news
-  // schicken und persistieren, statt wie bisher komplett stateless zu bleiben. Bewusst NUR im
-  // Block-Fall (nicht bei jedem Aufruf) — im Erfolgsfall läuft run_bias_checks bestehender
-  // startLoopState-Pfad unverändert weiter, ein zusätzlicher Gate-Actor würde dort nur sofort wieder
-  // superseded und wäre reiner Zeilen-Churn ohne sichtbaren Nutzen.
+  // 06.09.2026) + permanente Pro-Tag-Identität — bei jedem LIVE-Aufruf (persist=true) den
+  // permanenten Actor für (instrument, Tag) holen/anlegen und durch s1_handelszeit/s2_news
+  // schicken, ob geblockt oder nicht: ein bereits weiter fortgeschrittener Tag (z.B. schon bei
+  // Schritt 5) lässt diese Events einfach ungültig no-oppen (transitionIfPossible), ein noch nicht
+  // initialisierter Tag wird hier zum ersten Mal angelegt. last_analysis_time_sec bewegt sich dabei
+  // NUR, wenn tatsächlich ein Event feuert (siehe persistTransition in machineState.ts) — ein
+  // wiederholter Check, der am selben Knoten parkt, lässt "Stand" bewusst unverändert.
   //
   // ponytail: end_keinTrade ist in tradingMachine.ts ein XState-Endzustand (final) — ein Check VOR
   // Fensteröffnung (z.B. 07:00 bei 08:00-18:00-Fenster) landet dort genauso wie einer NACH
   // Fensterschluss, und der Actor kann von einem "final"-Knoten nicht mehr weg, selbst wenn das
-  // Fenster später am selben Tag noch öffnet. Folge: bis zum nächsten echten run_bias_check-Aufruf
-  // (der die Zeile per startLoopState superseded) zeigt der Graph optisch "Kein Trade", obwohl
-  // Handel im Tagesverlauf noch stattfindet — rein kosmetisch, kein funktionaler Fehler. Upgrade
-  // bei Bedarf: evaluateTradingHoursGate um "vor Fenster" vs. "nach Fenster" erweitern und nur
-  // Letzteres auf end_keinTrade transitionieren.
+  // Fenster später am selben Tag noch öffnet — bis zum nächsten echten run_bias_check-Aufruf zeigt
+  // der Graph dann optisch "Kein Trade", obwohl Handel im Tagesverlauf noch stattfindet. Rein
+  // kosmetisch, kein funktionaler Fehler. Upgrade bei Bedarf: evaluateTradingHoursGate um "vor
+  // Fenster" vs. "nach Fenster" erweitern und nur Letzteres auf end_keinTrade transitionieren.
   let currentNode: string | null = null;
   let gateLoopStateId: number | null = null;
-  if (persist && exclude) {
-    const loaded = await loadOrCreateGateActor(instrument, dateStr, effectiveNowSec);
+  if (persist) {
+    const loaded = await loadOrCreateMachineForDay(instrument, dateStr, effectiveNowSec);
     await transitionIfPossible(loaded, instrument, { type: "HANDELSZEIT_CHECKED", outsideHours: tradingHours.exclude }, effectiveNowSec);
     if (!tradingHours.exclude) {
       await transitionIfPossible(loaded, instrument, { type: "NEWS_CHECKED", imminent: news.exclude }, effectiveNowSec);
     }
-    // Muss AUSSERHALB der obigen transitionIfPossible-Aufrufe passieren, nicht nur implizit über
-    // persistTransition: ein wiederholter Check, der weiter am selben Knoten parkt (kein Event
-    // feuert), würde sonst "Stand" im Graphen (TradingFlow.vue) für immer auf den allerersten
-    // Block-Zeitpunkt einfrieren, statt den Live-Uhr-Vergleich tatsächlich nachzuführen.
-    await touchLastAnalysisTime(loaded.loopId, effectiveNowSec);
     currentNode = currentNodePath(loaded.actor);
     gateLoopStateId = loaded.loopId;
   }
@@ -126,16 +124,18 @@ export function registerPretradeGatesTool(server: McpServer) {
       title: "Schritt 1+2: Handelszeit + News-Gate",
       description:
         "Mechanisiert Schritt 1 (Check Handelszeit) + Schritt 2 (Check News) aus 00-trading-steps — " +
-        "kein Bias, kein State-Write bei freier Bahn (siehe run_bias_check, das dieses Gate intern " +
-        "zuerst aufruft und bei Blockade sofort abbricht). `exclude=true` heißt: kein Trade, Ablauf " +
-        "hier abbrechen — in diesem Fall wird der Block jetzt auch in trading_loop_state persistiert " +
-        "(`currentNode`/`loopStateId` in der Antwort: `end_keinTrade` außerhalb Handelszeit, " +
-        "`newsPause` bei News-Block), damit /trading-flow S1/S2 live anzeigen kann. `tradingHours` " +
-        "prüft gegen trading_schedules.trading_windows (siehe Handelszeiten-Seite im Dashboard) " +
-        "statt eines fest hinterlegten Zeitfensters. `news` liefert vorformulierte Textbausteine je " +
-        "News-Termin (siehe 02-check-news.md) — `hasData=false` heißt 'keine Daten für diesen Tag " +
-        "hinterlegt', NICHT zwingend 'keine News' (die Tabelle wird nur für aktuell gehandelte Tage " +
-        "gepflegt). nowSec optional für einen Backtest/Replay-Zeitpunkt (Default: jetzt).",
+        "kein Bias (das bleibt run_bias_check). Legt/lädt dabei die permanente Loop-State-Zeile für " +
+        "(instrument, heutiges Datum) und treibt sie durch s1_handelszeit/s2_news — die Zeile bleibt " +
+        "IMMER bestehen (auch bei `exclude=true`, auch über den Rest des Tages hinweg), egal welcher " +
+        "Schritt/Fall zuletzt erreicht wurde; sie verschwindet nur durch explizites Löschen. " +
+        "`exclude=true` heißt: kein Trade, Ablauf hier abbrechen — `currentNode`/`loopStateId` in " +
+        "der Antwort zeigen dann auf `end_keinTrade` (außerhalb Handelszeit) oder `newsPause` " +
+        "(News-Block), sichtbar unter /trading-flow. `tradingHours` prüft gegen " +
+        "trading_schedules.trading_windows (siehe Handelszeiten-Seite im Dashboard) statt eines fest " +
+        "hinterlegten Zeitfensters. `news` liefert vorformulierte Textbausteine je News-Termin " +
+        "(siehe 02-check-news.md) — `hasData=false` heißt 'keine Daten für diesen Tag hinterlegt', " +
+        "NICHT zwingend 'keine News' (die Tabelle wird nur für aktuell gehandelte Tage gepflegt). " +
+        "nowSec optional für einen Backtest/Replay-Zeitpunkt (Default: jetzt).",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
         nowSec: z.number().int().optional().describe("Unix-Sekunden, Default: jetzt"),

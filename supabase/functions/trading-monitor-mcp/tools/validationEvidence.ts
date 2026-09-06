@@ -9,7 +9,7 @@ import { detectRsiDivergenceHistory } from "../rsi.js";
 import { buildRecentReactions } from "./recentReactions.ts";
 import { computeEvidenceScore } from "../evidenceScoring.ts";
 import { logDecision } from "../stateMachineLog.ts";
-import { safeTransitionChain, loadMachineForInstrument, transition } from "../machineState.ts";
+import { safeTransitionChain, loadMachineForDay, transition } from "../machineState.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -162,7 +162,7 @@ export function registerValidationEvidenceTool(server: McpServer) {
       },
     },
     async ({ instrument, sec, verdict, reasoning }) => {
-      const loaded = await loadMachineForInstrument(instrument);
+      const loaded = await loadMachineForDay(instrument, berlinDateStrFor(sec));
       const currentNode = await transition(loaded, instrument, { type: "VALID_INVALID_JUDGED", verdict }, sec);
       await logDecision({
         instrument,

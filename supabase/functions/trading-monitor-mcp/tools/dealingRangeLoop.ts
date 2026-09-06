@@ -2,14 +2,14 @@ import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import { berlinDateTimeStrFor, berlinDateStrFor } from "../berlinTime.ts";
 import { fetchForexCandles } from "../forexCandles.ts";
-import { getActiveLoopState, updateLoopState, closeLoopState, type TradingLoopStateRow, type HeartbeatEntry, appendHeartbeat } from "../loopState.ts";
+import { getLoopStateForDay, updateLoopState, closeLoopState, type TradingLoopStateRow, type HeartbeatEntry, appendHeartbeat } from "../loopState.ts";
 import { buildPretradeGates } from "./pretradeGates.ts";
 import { buildSessionWindow } from "./sessionWindow.ts";
 import { buildDataSnapshot } from "./dataSnapshot.ts";
 import { buildRecentReactions } from "./recentReactions.ts";
 import { checkFallFour, hasReaction as computeHasReaction, computeWatchLevels, type FallFourResult, type WatchLevel } from "../fallClassifier.ts";
 import { logDecision } from "../stateMachineLog.ts";
-import { loadMachineForInstrument, transition, transitionIfPossible, type LoadedMachine } from "../machineState.ts";
+import { loadMachineForDay, transition, transitionIfPossible, type LoadedMachine } from "../machineState.ts";
 import { currentNodePath } from "../tradingMachine.ts";
 
 function json(data: unknown) {
@@ -178,21 +178,26 @@ export interface DealingRangeLoopArgs {
 }
 
 export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatches = DEFAULT_MAX_BATCHES }: DealingRangeLoopArgs) {
-  const loopState = await getActiveLoopState(instrument);
+  // dateStr: live = heutiges Berlin-Datum, Backtest = das Replay-Datum — (instrument, dateStr) ist
+  // seit 06.09.2026 die permanente Identität einer Zeile (siehe machineState.ts-Kopfkommentar),
+  // Voraussetzung dafür, dass dieser Aufruf garantiert die richtige Zeile trifft, auch wenn
+  // parallel z.B. ein live-Gate-Check für einen ANDEREN Tag desselben Instruments läuft.
+  const dateStr = berlinDateStrFor(replayUntilSec ?? Math.floor(Date.now() / 1000));
+  const loopState = await getLoopStateForDay(instrument, dateStr);
   if (!loopState) {
-    throw new Error(`Kein aktiver Loop für ${instrument} — zuerst run_bias_check aufrufen (Schritt 3), das den Loop-State anlegt.`);
+    throw new Error(`${instrument}/${dateStr} wurde noch nicht initialisiert — zuerst run_bias_check aufrufen (Schritt 3), das die Zeile anlegt.`);
   }
   if (loopState.direction == null) {
-    // Seit 06.09.2026 (S1/S2-Sichtbarkeit) kann die "aktive" Zeile eines Instruments auch ein reiner
-    // Gate-Block sein (current_step 1/2, siehe machineState.ts loadOrCreateGateActor) — ohne diesen
-    // Check würde performFullTick unten mit direction=null weiterlaufen (falsches wantedSweepDir,
-    // falsche OB-Filterung) statt klar zu sagen, woran es liegt.
+    // Seit 06.09.2026 (S1/S2-Sichtbarkeit) kann die Zeile eines Tages auch ein reiner Gate-Block
+    // sein (current_step 1/2, siehe machineState.ts loadOrCreateMachineForDay) — ohne diesen Check
+    // würde performFullTick unten mit direction=null weiterlaufen (falsches wantedSweepDir, falsche
+    // OB-Filterung) statt klar zu sagen, woran es liegt.
     throw new Error(
-      `Der aktive Loop für ${instrument} (id=${loopState.id}, Schritt ${loopState.currentStep}) hat noch keinen Bias — ` +
+      `${instrument}/${dateStr} (id=${loopState.id}, Schritt ${loopState.currentStep}) hat noch keinen Bias — ` +
         `Handelszeit-/News-Gate ist noch nicht durchlaufen (aktueller Knoten: ${loopState.currentNode}). Zuerst run_bias_check aufrufen (Schritt 3).`,
     );
   }
-  const loaded = await loadMachineForInstrument(instrument);
+  const loaded = await loadMachineForDay(instrument, dateStr);
 
   // Actor parkt bereits bei s45.fallClassification (Lanas Fall-1/2-Urteil steht noch aus) — jeder
   // erneute Aufruf würde sonst entweder still no-oppen (replayUntilSec bereits erreicht) oder hart
@@ -214,7 +219,10 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
     // LIVE: Watch-Level-Vorprüfung, wie im Diagramm (LTICK/LHIT) — nur bei Treffer voller Refetch.
     // Erster Tick dieses Loops (noch kein Watch-Level gesetzt) erzwingt sofort die volle Auswertung.
     const nowSec = Math.floor(Date.now() / 1000);
-    const gates = await buildPretradeGates({ instrument, nowSec, loopStateId: loopState.id });
+    // persist:false — dieser Aufruf treibt die Maschine selbst per eigenen transition()-Calls
+    // unten, kein zusätzlicher S1/S2-Gate-Actor-Umweg nötig (der Actor ist hier ohnehin längst
+    // über s1/s2 hinaus).
+    const gates = await buildPretradeGates({ instrument, nowSec, loopStateId: loopState.id, persist: false });
     if (gates.exclude) return { instrument, mode: "live" as const, blockedByGate: true, gates };
 
     await transitionIfPossible(loaded, instrument, { type: "S45_ENTER" }, nowSec);
@@ -261,7 +269,7 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
   // selben Analysezeitpunkt) lief bisher in einen stillen No-op, weil die Batch-Schleife unten
   // cursorSec < replayUntilSec voraussetzt.
   if (currentLoopState.watchLevelAbove == null && currentLoopState.watchLevelBelow == null) {
-    const gates = await buildPretradeGates({ instrument, nowSec: cursorSec, loopStateId: currentLoopState.id });
+    const gates = await buildPretradeGates({ instrument, nowSec: cursorSec, loopStateId: currentLoopState.id, persist: false });
     if (gates.exclude) {
       await heartbeat(cursorSec, "News-Blackout ---> erster Tick pausiert.", currentLoopState.id);
     } else {
@@ -281,12 +289,12 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
       // Batch-Modus für die weitere Vorwärts-Suche unten.
       await transition(loaded, instrument, { type: "S45_ENTER" }, cursorSec);
       await transition(loaded, instrument, { type: "MODE_SELECTED", mode: "backtest" }, cursorSec);
-      currentLoopState = await getActiveLoopState(instrument);
+      currentLoopState = await getLoopStateForDay(instrument, dateStr);
     }
   }
 
   for (let i = 0; i < maxBatches && cursorSec < replayUntilSec && currentLoopState; i++) {
-    const gates = await buildPretradeGates({ instrument, nowSec: cursorSec, loopStateId: currentLoopState.id });
+    const gates = await buildPretradeGates({ instrument, nowSec: cursorSec, loopStateId: currentLoopState.id, persist: false });
     await transition(loaded, instrument, { type: "NEWS_BLACKOUT_CHECKED", active: gates.exclude }, cursorSec);
     if (gates.exclude) {
       await heartbeat(cursorSec, `News-Blackout ---> Batch pausiert.`, currentLoopState.id);
@@ -327,7 +335,7 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
     // 05-dealing-range-bestaetigen.md: "Nur Fall 3 läuft ohne Rückfrage weiter".
     await transition(loaded, instrument, { type: "S45_ENTER" }, hitTimeSec);
     await transition(loaded, instrument, { type: "MODE_SELECTED", mode: "backtest" }, hitTimeSec);
-    currentLoopState = await getActiveLoopState(instrument);
+    currentLoopState = await getLoopStateForDay(instrument, dateStr);
     cursorSec = hitTimeSec;
   }
 
@@ -355,7 +363,7 @@ export interface LogFallClassificationArgs {
 // Preisvergleich) klassifiziert performFullTick bereits automatisch. NACH run_dealing_range_loop
 // aufrufen, sobald Lana aus `evidence` (hasReaction=true) eine Einordnung getroffen hat.
 export async function logFallClassification({ instrument, loopStateId, sec, case: fallCase, reasoning }: LogFallClassificationArgs) {
-  const loaded = await loadMachineForInstrument(instrument);
+  const loaded = await loadMachineForDay(instrument, berlinDateStrFor(sec));
   const currentNode = await transition(loaded, instrument, { type: "FALL_CLASSIFIED", case: fallCase }, sec);
   await logDecision({
     instrument,

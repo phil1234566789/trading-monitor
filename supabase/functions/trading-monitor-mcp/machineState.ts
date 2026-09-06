@@ -2,7 +2,7 @@ import { supabase } from "./supabaseClient.ts";
 import { createTradingActor, sendGuarded, sendIfPossible, currentNodePath, type TradingActor, type TradingEvent } from "./tradingMachine.ts";
 import { logDecision } from "./stateMachineLog.ts";
 import { berlinDateStrFor } from "./berlinTime.ts";
-import { getActiveLoopState, type TradingLoopStateRow } from "./loopState.ts";
+import { getLoopStateForDay, type TradingLoopStateRow } from "./loopState.ts";
 
 // Persistenz-Glue für tradingMachine.ts (State-Machine V2, docs/state-machine.md#state-machine-v2)
 // — Stil wie loopState.ts. Jeder Tool-Aufruf ist ein eigener Deno-Edge-Function-Request (kein
@@ -10,15 +10,21 @@ import { getActiveLoopState, type TradingLoopStateRow } from "./loopState.ts";
 // machine_snapshot rehydriert, bekommt EIN Event, wird sofort wieder persistiert. Genau das
 // XState-v5-Muster für "State lebt in der DB, nicht im Prozess" (getPersistedSnapshot/
 // createActor(machine, { snapshot })).
+//
+// Permanente Pro-Tag-Identität (Philip, 06.09.2026: "der state soll dauerhaft bleiben ... egal
+// welcher Schritt ... nur wenn ich den state löschen lasse, geht er weg") — (instrument, dateStr)
+// ist seit der Migration 20260906140000_trading_loop_state_permanent_per_day.sql die permanente
+// Identität einer Zeile, nicht mehr status='active'. Jede hier ladende/anlegende Funktion braucht
+// deshalb einen dateStr (live: heutiges Berlin-Datum, Backtest: das Replay-Datum) statt nur das
+// Instrument — sonst würde z.B. ein live durchgeführter Gate-Check die Zeile eines gerade laufenden
+// Backtests für einen anderen Tag treffen.
 
 // Node-Pfad -> current_step/current_case-Ableitung, rein für die bestehende LoopStatus.vue-Anzeige
 // (current_step/current_case bleiben laut Migration 20260905140000 vorerst bestehen, siehe
-// tradingMachine.ts für den vollständigen Knoten-Katalog). s1/s2 erzeugen seit 06.09.2026 bei einem
-// Gate-Block selbst eine Zeile (siehe loadOrCreateGateActor) — davor existierte laut Schema erst ab
-// Schritt 3 überhaupt ein Loop.
+// tradingMachine.ts für den vollständigen Knoten-Katalog).
 function deriveStepAndCase(node: string, fallCase: number | null): { currentStep: TradingLoopStateRow["currentStep"]; currentCase: number | null } {
   // end_keinTrade ist laut tradingMachine.ts nur über s1_handelszeits HANDELSZEIT_CHECKED-Kante
-  // erreichbar, deshalb immer Schritt 1 — siehe bekannte Einschränkung dazu in loadOrCreateGateActor.
+  // erreichbar, deshalb immer Schritt 1 — siehe bekannte Einschränkung dazu in docs/state-machine.md.
   if (node === "s1_handelszeit" || node === "end_keinTrade") return { currentStep: 1, currentCase: null };
   if (node === "s2_news" || node === "newsPause") return { currentStep: 2, currentCase: null };
   if (node.startsWith("s3_bias")) return { currentStep: 3, currentCase: null };
@@ -34,39 +40,23 @@ export interface LoadedMachine {
   actor: TradingActor;
 }
 
-// Lädt den Actor für den aktiven Loop eines Instruments. Wirft, wenn kein aktiver Loop existiert.
-// Ein GEBLOCKTER Gate-Check (Schritt 1/2) legt seit 06.09.2026 selbst eine Zeile an (siehe
-// loadOrCreateGateActor) — diese Funktion hier bleibt für alles ab Schritt 3 (run_bias_check über
-// startLoopState) bzw. für einen bereits vorhandenen Loop jedes Fortschritts.
-export async function loadMachineForInstrument(instrument: string): Promise<LoadedMachine> {
-  const loaded = await loadMachineForInstrumentOrNull(instrument);
-  if (!loaded) {
-    throw new Error(`Kein aktiver Loop für ${instrument} — zuerst run_bias_check aufrufen (Schritt 3), das den Loop-State inkl. Maschinen-Snapshot anlegt.`);
-  }
-  return loaded;
-}
-
-// Rehydrierung mit Kompatibilitäts-Absicherung, geteilt zwischen loadMachineForInstrumentOrNull
-// (ab Schritt 3, wirft bei fehlendem Loop) und loadOrCreateGateActor (S1/S2, legt bei Bedarf selbst
-// eine Zeile an). Ein persistierter Snapshot kann auf einen Knoten zeigen, der in einer SPÄTEREN
-// tradingMachine.ts-Änderung umbenannt/entfernt wurde (Bug-Vorfall 05.09.2026: die tscGet/
-// tscExists-Entfernung ließ einen live geparkten Loop mit inkompatiblem Snapshot zurück, dessen
-// Verhalten je nach Tool-Aufruf unterschiedlich kaputt war — mal ein sofortiger XState-Fehler,
-// mal ein Actor ohne funktionierendes getSnapshot().can(), mal ein Hänger, der erst nach
-// mehreren Minuten vom MCP-Client abgebrochen wurde). Statt dieses Risiko bei jeder künftigen
-// Maschinen-Änderung erneut einzugehen: Actor-Konstruktion UND ein Sanity-Check auf das Ergebnis
-// hart absichern, damit eine Inkompatibilität IMMER sofort als klarer, fangbarer Fehler auftritt
-// (den safeTransitionChain bereits abfängt) statt in unvorhersehbares Verhalten zu laufen.
+// Rehydrierung mit Kompatibilitäts-Absicherung. Ein persistierter Snapshot kann auf einen Knoten
+// zeigen, der in einer SPÄTEREN tradingMachine.ts-Änderung umbenannt/entfernt wurde (Bug-Vorfall
+// 05.09.2026: die tscGet/tscExists-Entfernung ließ einen live geparkten Loop mit inkompatiblem
+// Snapshot zurück, dessen Verhalten je nach Tool-Aufruf unterschiedlich kaputt war — mal ein
+// sofortiger XState-Fehler, mal ein Actor ohne funktionierendes getSnapshot().can(), mal ein
+// Hänger, der erst nach mehreren Minuten vom MCP-Client abgebrochen wurde). Statt dieses Risiko bei
+// jeder künftigen Maschinen-Änderung erneut einzugehen: Actor-Konstruktion UND ein Sanity-Check auf
+// das Ergebnis hart absichern, damit eine Inkompatibilität IMMER sofort als klarer, fangbarer
+// Fehler auftritt (den safeTransitionChain bereits abfängt) statt in unvorhersehbares Verhalten zu
+// laufen. Reparatur seit der permanenten Pro-Tag-Identität (06.09.2026) bewusst NICHT mehr
+// automatisch (kein "startLoopState ersetzt die Zeile" mehr) — Philip löscht die betroffene Zeile
+// selbst, ein frischer loadOrCreateMachineForDay-Aufruf legt sie dann sauber neu an.
 function rehydrateActor(loopState: TradingLoopStateRow, instrument: string): TradingActor {
   if (loopState.currentNode == null) {
-    // Loop wurde VOR State-Machine V2 angelegt (kein machine_snapshot) — ein frischer Actor bei
-    // s1_handelszeit würde hier still am tatsächlichen Fortschritt (z.B. schon in Schritt 5) vorbei
-    // laufen und dann tief in performFullTick mit einer kryptischen sendGuarded-Meldung crashen.
-    // Klarer, direkter Fehler statt dessen: einmalig run_bias_check erneut aufrufen, das ersetzt den
-    // Loop komplett (startLoopState) und legt einen frischen, kompatiblen Snapshot an.
     throw new Error(
-      `Der aktive Loop für ${instrument} (id=${loopState.id}) wurde vor State-Machine V2 angelegt und hat keinen Maschinen-Snapshot — ` +
-        `einmalig run_bias_check erneut aufrufen (ersetzt den Loop komplett), dann normal weitermachen.`,
+      `Die Zeile für ${instrument}/${loopState.dateStr} (id=${loopState.id}) wurde vor State-Machine V2 angelegt und hat keinen ` +
+        `Maschinen-Snapshot — Zeile löschen lassen, dann legt der nächste Aufruf sie sauber neu an.`,
     );
   }
   const rawSnapshot = loopState.machineSnapshot && Object.keys(loopState.machineSnapshot as object).length > 0 ? (loopState.machineSnapshot as any) : undefined;
@@ -78,38 +68,39 @@ function rehydrateActor(loopState: TradingLoopStateRow, instrument: string): Tra
     return actor;
   } catch (err) {
     throw new Error(
-      `Der aktive Loop für ${instrument} (id=${loopState.id}) hat einen mit der aktuellen tradingMachine.ts inkompatiblen Maschinen-Snapshot ` +
-        `(vermutlich nach einer Änderung an der Maschinen-Definition) — einmalig run_bias_check erneut aufrufen (ersetzt den Loop komplett), ` +
-        `dann normal weitermachen. Ursprünglicher Fehler: ${err instanceof Error ? err.message : String(err)}`,
+      `Die Zeile für ${instrument}/${loopState.dateStr} (id=${loopState.id}) hat einen mit der aktuellen tradingMachine.ts inkompatiblen ` +
+        `Maschinen-Snapshot (vermutlich nach einer Änderung an der Maschinen-Definition) — Zeile löschen lassen, dann legt der nächste ` +
+        `Aufruf sie sauber neu an. Ursprünglicher Fehler: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
 }
 
-export async function loadMachineForInstrumentOrNull(instrument: string): Promise<LoadedMachine | null> {
-  const loopState = await getActiveLoopState(instrument);
+// Lädt den Actor für (instrument, dateStr), oder null, wenn dieser Tag+Instrument noch nie
+// initialisiert wurde.
+export async function loadMachineForDayOrNull(instrument: string, dateStr: string): Promise<LoadedMachine | null> {
+  const loopState = await getLoopStateForDay(instrument, dateStr);
   if (!loopState) return null;
   return { loopId: loopState.id, actor: rehydrateActor(loopState, instrument) };
 }
 
-// S1/S2-Sichtbarkeit (docs/state-machine.md#s1-s2-sichtbar, 06.09.2026) — anders als
-// loadMachineForInstrumentOrNull (nur für einen bereits über run_bias_check gestarteten Loop ab
-// Schritt 3) legt diese Variante bei Bedarf selbst eine frische Zeile an, weil check_pretrade_gates
-// (Schritt 1+2) als Allererstes im Tages-Ablauf läuft, BEVOR ein Bias (direction) überhaupt bekannt
-// ist. Nur für check_pretrade_gates' Block-Fall gedacht (siehe tools/pretradeGates.ts) — im
-// Erfolgsfall bleibt run_bias_checks bestehender startLoopState-Pfad unverändert, damit hier kein
-// zusätzlicher Zeilen-Churn pro Aufruf entsteht.
-export async function loadOrCreateGateActor(instrument: string, dateStr: string, atSec: number): Promise<LoadedMachine> {
-  const existing = await getActiveLoopState(instrument);
-  if (existing && existing.dateStr === dateStr) {
-    return { loopId: existing.id, actor: rehydrateActor(existing, instrument) };
+// Wie oben, wirft statt null zurückzugeben — für Tools, bei denen ein noch nicht initialisierter
+// Tag ein echter Bedienfehler ist (Schritt 6+, die zwingend nach Schritt 1-5 kommen).
+export async function loadMachineForDay(instrument: string, dateStr: string): Promise<LoadedMachine> {
+  const loaded = await loadMachineForDayOrNull(instrument, dateStr);
+  if (!loaded) {
+    throw new Error(`${instrument}/${dateStr} wurde noch nicht initialisiert — zuerst check_pretrade_gates/run_bias_check aufrufen (Schritt 1-3).`);
   }
-  // Kein passender Loop für heute (neuer Tag, oder ein gestriger Gate-Block/Loop wurde nie durch
-  // einen echten run_bias_check-Aufruf superseded) — alten aktiven Loop zuerst superseden, sonst
-  // schlägt der Insert am Partial-Unique-Index (ein aktiver Loop pro Instrument) fehl.
-  if (existing) {
-    const { error } = await supabase.from("trading_loop_state").update({ status: "superseded" }).eq("id", existing.id);
-    if (error) throw new Error(error.message);
-  }
+  return loaded;
+}
+
+// Get-or-create für (instrument, dateStr) — legt eine frische Zeile bei s1_handelszeit an, wenn
+// dieser Tag+Instrument noch nie initialisiert wurde, sonst wird die bestehende (permanente, siehe
+// Datei-Kopfkommentar) Zeile rehydriert, egal in welchem Schritt/Fall/Status sie gerade steht. Kein
+// "Supersede" mehr nötig — (instrument, dateStr) ist die Unique-Identität, ein anderer Tag desselben
+// Instruments ist einfach eine andere, koexistierende Zeile.
+export async function loadOrCreateMachineForDay(instrument: string, dateStr: string, atSec: number): Promise<LoadedMachine> {
+  const existing = await loadMachineForDayOrNull(instrument, dateStr);
+  if (existing) return existing;
   const actor = createTradingActor();
   const { data, error } = await supabase
     .from("trading_loop_state")
@@ -131,20 +122,14 @@ export async function loadOrCreateGateActor(instrument: string, dateStr: string,
   return { loopId: data.id as number, actor };
 }
 
-// Reine "zuletzt geprüft"-Zeitstempel-Aktualisierung für eine Gate-Zeile, unabhängig davon, ob sich
-// dabei der Knoten bewegt hat (z.B. ein wiederholter Check, der weiter bei end_keinTrade/newsPause
-// parkt — persistTransition/transitionIfPossible schreiben in diesem Fall nichts, weil kein Event
-// tatsächlich feuert). Bewusst NICHT über loopState.ts' updateLoopState, das current_step hart auf
-// 5 setzt (Schritt-5-Loop-Tick-Annahme, hier falsch: S1/S2-Gate-Zeilen bleiben bei current_step 1/2).
-export async function touchLastAnalysisTime(loopId: number, atSec: number): Promise<void> {
-  const { error } = await supabase.from("trading_loop_state").update({ last_analysis_time_sec: atSec }).eq("id", loopId);
-  if (error) throw new Error(error.message);
-}
-
 // Schickt EIN Event an den Actor (hart geblockt bei ungültigem Übergang, siehe sendGuarded), dann
 // Snapshot + abgeleiteten current_node/current_step/current_case zurückschreiben + die Transition
 // ins bestehende state_machine_log (stateMachineLog.ts) loggen — Wiederverwendung derselben
-// Log-Tabelle/UI-Gewichtung statt einer zweiten Tabelle.
+// Log-Tabelle/UI-Gewichtung statt einer zweiten Tabelle. last_analysis_time_sec wird NUR hier
+// (bei einer tatsächlichen Transition) mitgeschrieben, bewusst NICHT bei jedem bloßen Re-Check ohne
+// Fortschritt (Philip, 06.09.2026: "Stand" soll den Analyse-Fortschritt zeigen, nicht wie oft
+// jemand nachgeschaut hat — sonst wäre "Stand" == "Jetzt" bei jedem Live-Poll, der Vergleich damit
+// witzlos).
 async function persistTransition(loaded: LoadedMachine, instrument: string, fromNode: string, toNode: string, event: TradingEvent, atSec: number): Promise<void> {
   const eventType = event.type;
   const fallCase = event.type === "FALL_CLASSIFIED" ? event.case : null;
@@ -157,6 +142,7 @@ async function persistTransition(loaded: LoadedMachine, instrument: string, from
       current_node: toNode,
       current_step: currentStep,
       current_case: currentCase,
+      last_analysis_time_sec: atSec,
     })
     .eq("id", loaded.loopId);
   if (error) throw new Error(error.message);
@@ -196,39 +182,6 @@ export async function transitionIfPossible(loaded: LoadedMachine, instrument: st
   return toNode;
 }
 
-// Initialisiert den Maschinen-Snapshot einer frisch von startLoopState angelegten Zeile auf den
-// Zustand direkt NACH der Bias-Berechnung (s3_bias.llm3_kontextSynthese) — run_bias_check hat zu
-// diesem Zeitpunkt Schritt 1+2 (Gates) bereits geprüft und Schritt 3 mechanisch berechnet, es fehlt
-// nur noch Lanas freie Kontext-Synthese (siehe tradingMachine.ts). Separat von `transition()`, weil
-// hier noch kein vorheriger Snapshot existiert, aus dem rehydriert werden könnte.
-export async function initMachineAfterBiasComputed(loopId: number, instrument: string, atSec: number): Promise<string> {
-  const actor = createTradingActor();
-  sendGuarded(actor, { type: "HANDELSZEIT_CHECKED", outsideHours: false });
-  sendGuarded(actor, { type: "NEWS_CHECKED", imminent: false });
-  sendGuarded(actor, { type: "BIAS_COMPUTED" });
-  const node = currentNodePath(actor);
-
-  const { error } = await supabase
-    .from("trading_loop_state")
-    .update({ machine_snapshot: actor.getPersistedSnapshot(), current_node: node, current_step: 3, current_case: null })
-    .eq("id", loopId);
-  if (error) throw new Error(error.message);
-
-  await logDecision({
-    instrument,
-    dateStr: berlinDateStrFor(atSec),
-    sec: atSec,
-    step: 3,
-    tool: "tradingMachine",
-    decision: "node_transition",
-    result: { from: "start", to: node, event: "BIAS_COMPUTED" },
-    message: `start --(BIAS_COMPUTED)--> ${node}`,
-    loopStateId: loopId,
-  });
-
-  return node;
-}
-
 // Verdrahtung der restlichen TSC-Verknüpfungs-Kette (Schritt 5 Ende) + Schritt 6-8 (Task
 // "State-Machine bis zum letzten Schritt durchziehen", 2026-09-05) — die dafür nötigen Events
 // existieren bereits vollständig in tradingMachine.ts, nur kein Tool-Aufruf schickte sie bisher
@@ -243,10 +196,13 @@ export async function initMachineAfterBiasComputed(loopId: number, instrument: s
 // gültige feuert tatsächlich, der Rest ist ein harmloser No-op (siehe transitionIfPossible), das
 // deckt sowohl "Zwischenschritte nachholen, die kein eigenes Tool ausgelöst hat" (z.B. 'kein
 // Stand-alone-Pin gefunden', PIN_CHECKED{found:false}) als auch "der eigentliche Übergang" in
-// einem einzigen, robusten Aufruf ab.
+// einem einzigen, robusten Aufruf ab. dateStr wird aus atSec abgeleitet (Berlin-Datum) — bei diesen
+// Aufrufern (Trade-Journal/TSC-Aktionen) ist atSec bereits der semantisch richtige Zeitpunkt
+// (live "jetzt" oder ein expliziter Backtest-Zeitpunkt), keine Signatur-Änderung an den vielen
+// Aufrufstellen in db.ts/tools/pins.ts/tools/tsc.ts nötig.
 export async function safeTransitionChain(instrument: string, events: TradingEvent[], atSec: number): Promise<{ loopId: number; node: string } | null> {
   try {
-    const loaded = await loadMachineForInstrumentOrNull(instrument);
+    const loaded = await loadMachineForDayOrNull(instrument, berlinDateStrFor(atSec));
     if (!loaded) return null;
     for (const event of events) {
       await transitionIfPossible(loaded, instrument, event, atSec);

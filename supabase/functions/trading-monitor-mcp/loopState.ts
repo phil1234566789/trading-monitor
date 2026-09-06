@@ -44,8 +44,8 @@ export interface TradingLoopStateRow {
   status: LoopStatus;
   currentStep: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   currentCase: number | null;
-  // null bis Schritt 3 (run_bias_check) den Trend bestimmt hat — S1/S2-Gate-Zeilen (siehe
-  // machineState.ts loadOrCreateGateActor) kennen noch keine Richtung.
+  // null bis Schritt 3 (run_bias_check) den Trend bestimmt hat — eine frisch bei S1/S2 angelegte
+  // Zeile (siehe machineState.ts loadOrCreateMachineForDay) kennt noch keine Richtung.
   direction: "long" | "short" | null;
   dealingRangeId: number | null;
   trendTarget: LoopLevel | null;
@@ -94,23 +94,18 @@ function rowToState(row: Record<string, unknown>): TradingLoopStateRow {
   };
 }
 
-// Der aktuell offene Loop für ein Instrument (siehe Partial-Unique-Index: höchstens einer je
-// Instrument) — null, wenn gerade keiner läuft (frischer Tag, oder der letzte Loop wurde bereits
-// per closeLoopState beendet).
-export async function getActiveLoopState(instrument: string): Promise<TradingLoopStateRow | null> {
-  const { data, error } = await supabase
-    .from("trading_loop_state")
-    .select("*")
-    .eq("instrument", instrument)
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+// Die permanente Zeile für (instrument, dateStr) — siehe Migration
+// 20260906140000_trading_loop_state_permanent_per_day.sql (Philip, 06.09.2026: "der state soll
+// dauerhaft bleiben ... egal welcher Schritt ... nur wenn ich den state löschen lasse, geht er
+// weg"). null nur, wenn dieser Tag+Instrument noch nie initialisiert wurde (oder die Zeile
+// absichtlich gelöscht wurde) — NICHT mehr, weil ein Fall abgeschlossen/kein Trade ist.
+export async function getLoopStateForDay(instrument: string, dateStr: string): Promise<TradingLoopStateRow | null> {
+  const { data, error } = await supabase.from("trading_loop_state").select("*").eq("instrument", instrument).eq("date_str", dateStr).maybeSingle();
   if (error) throw new Error(error.message);
   return data ? rowToState(data) : null;
 }
 
-export interface StartLoopStateArgs {
+export interface UpsertBiasFieldsArgs {
   instrument: string;
   dateStr: string;
   direction: "long" | "short";
@@ -123,40 +118,35 @@ export interface StartLoopStateArgs {
   replayUntilSec: number | null;
 }
 
-// run_bias_check (Schritt 3) ruft dies bei JEDEM Aufruf auf — ein Bias-Neudurchlauf ersetzt den
-// bisherigen Loop immer komplett (der übergeordnete Trend kann sich geändert haben, siehe Fall 4 in
-// 05-dealing-range-bestaetigen.md), nie nur einzelne Felder patchen. Ein evtl. noch 'active'er
-// Vorgänger-Loop desselben Instruments wird zuerst auf 'superseded' gesetzt (Partial-Unique-Index
-// lässt sonst keinen zweiten aktiven Loop zu).
-export async function startLoopState(args: StartLoopStateArgs): Promise<TradingLoopStateRow> {
-  const { error: supersedeError } = await supabase
-    .from("trading_loop_state")
-    .update({ status: "superseded" })
-    .eq("instrument", args.instrument)
-    .eq("status", "active");
-  if (supersedeError) throw new Error(supersedeError.message);
-
+// run_bias_check (Schritt 3) ruft dies bei JEDEM erfolgreichen Durchlauf auf — schreibt NUR die
+// Bias-/Ziel-Felder, NICHT machine_snapshot/current_node/current_step/current_case (die hat der
+// vorangegangene transition()-Aufruf für BIAS_COMPUTED bereits gesetzt, siehe tools/biasCheck.ts).
+// Upsert statt Insert+Supersede: (instrument, dateStr) ist jetzt die permanente Identität (siehe
+// oben) — ein Fall-4-Neustart oder ein zweiter run_bias_check am selben Tag aktualisiert dieselbe
+// Zeile in place, legt NIE eine zweite an. dealingRangeId/watchLevel* werden bewusst zurückgesetzt
+// (eine neue Bias-Berechnung kennt noch keine neue Dealing Range/Watch-Level).
+export async function upsertBiasFields(args: UpsertBiasFieldsArgs): Promise<TradingLoopStateRow> {
   const { data, error } = await supabase
     .from("trading_loop_state")
-    .insert({
-      instrument: args.instrument,
-      date_str: args.dateStr,
-      status: "active",
-      current_step: 4,
-      current_case: null,
-      direction: args.direction,
-      dealing_range_id: null,
-      trend_target: args.trendTarget,
-      countertrend_target: args.countertrendTarget,
-      intermediate_level: args.intermediateLevel,
-      invalidation: args.invalidation,
-      watch_level_above: null,
-      watch_level_below: null,
-      bias_computed_at: args.biasComputedAt,
-      last_analysis_time_sec: args.lastAnalysisTimeSec,
-      replay_until_sec: args.replayUntilSec,
-      heartbeat_log: [],
-    })
+    .upsert(
+      {
+        instrument: args.instrument,
+        date_str: args.dateStr,
+        status: "active",
+        direction: args.direction,
+        dealing_range_id: null,
+        trend_target: args.trendTarget,
+        countertrend_target: args.countertrendTarget,
+        intermediate_level: args.intermediateLevel,
+        invalidation: args.invalidation,
+        watch_level_above: null,
+        watch_level_below: null,
+        bias_computed_at: args.biasComputedAt,
+        last_analysis_time_sec: args.lastAnalysisTimeSec,
+        replay_until_sec: args.replayUntilSec,
+      },
+      { onConflict: "instrument,date_str" },
+    )
     .select("*")
     .single();
   if (error) throw new Error(error.message);
@@ -206,10 +196,12 @@ export async function appendHeartbeat(id: number, entry: HeartbeatEntry): Promis
   return log;
 }
 
-// Beendet einen Loop (Fall 1 -> 'fall1_handoff', Fall 4 -> 'fall4_pending_bias', Handelsschluss ->
-// 'stopped_market_close', News-Blackout ohne weiteren Fortschritt -> 'stopped_news_pause', normaler
-// Abschluss -> 'completed') — status !='active' gibt das Instrument für den nächsten
-// startLoopState-Aufruf frei (Partial-Unique-Index).
+// Markiert einen Zwischenstand (Fall 1 -> 'fall1_handoff', Fall 4 -> 'fall4_pending_bias',
+// Handelsschluss -> 'stopped_market_close', News-Blackout ohne weiteren Fortschritt ->
+// 'stopped_news_pause', normaler Abschluss -> 'completed') — seit der permanenten Pro-Tag-Identität
+// (06.09.2026, siehe upsertBiasFields) rein informationell, gibt NICHTS mehr frei: die Zeile bleibt
+// so oder so bestehen, ein Fall-4-Neustart überschreibt status beim nächsten run_bias_check ohnehin
+// wieder auf 'active'. 'superseded' (LoopStatus) ist seitdem unbenutztes Altrelikt.
 export async function closeLoopState(id: number, status: Exclude<LoopStatus, "active" | "superseded">, currentCase?: number | null): Promise<TradingLoopStateRow> {
   const patch: Record<string, unknown> = { status };
   if (currentCase !== undefined) patch.current_case = currentCase;

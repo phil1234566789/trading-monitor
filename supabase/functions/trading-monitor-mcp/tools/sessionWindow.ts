@@ -4,7 +4,7 @@ import { getSessions } from "../db.ts";
 import { berlinOffsetMinutes, berlinDateTimeStrFor, berlinDateStrFor } from "../berlinTime.ts";
 import { sessionOccurrences } from "../sessionOccurrences.js";
 import { logDecision } from "../stateMachineLog.ts";
-import { loadMachineForInstrumentOrNull, transitionIfPossible } from "../machineState.ts";
+import { loadMachineForDayOrNull, transitionIfPossible } from "../machineState.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -132,7 +132,7 @@ export function registerSessionWindowTool(server: McpServer) {
       // Einstieg in Schritt 5 (auch nach einem Loopback), nicht nur beim allerersten Mal.
       // transitionIfPossible statt sendGuarded: dieses Tool bleibt bewusst auch frei aufrufbar, ohne
       // bei jedem Aufruf zwingend voranzukommen (z.B. ein reiner Fakten-Check mitten in Schritt 5).
-      const loaded = await loadMachineForInstrumentOrNull(args.instrument);
+      const loaded = await loadMachineForDayOrNull(args.instrument, berlinDateStrFor(result.nowSec));
       const currentNode = loaded ? await transitionIfPossible(loaded, args.instrument, { type: "CONTEXT_SYNTHESIS_DONE" }, result.nowSec) : null;
       return json({ ...result, currentNode });
     },

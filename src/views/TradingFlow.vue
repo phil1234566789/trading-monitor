@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import mermaid from "mermaid";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
-import { LOOP_INSTRUMENTS, fetchActiveLoopStates } from "../loopState.js";
+import { LOOP_INSTRUMENTS, fetchCurrentLoopStates } from "../loopState.js";
 import { buildMermaidSource } from "../tradingMachineGraph.js";
 
 // State-Machine V2 (docs/state-machine.md#state-machine-v2, Philip 05.09.2026: "dieser
@@ -18,7 +18,7 @@ const selectedInstrument = ref(LOOP_INSTRUMENTS[0]);
 const graphContainer = ref(null);
 const renderError = ref("");
 
-const { data } = usePolledFetch(fetchActiveLoopStates, { intervalMs: REFRESH_MS });
+const { data } = usePolledFetch(fetchCurrentLoopStates, { intervalMs: REFRESH_MS });
 const activeByInstrument = computed(() => (data.value instanceof Map ? data.value : new Map()));
 const currentLoop = computed(() => activeByInstrument.value.get(selectedInstrument.value) ?? null);
 const currentNode = computed(() => currentLoop.value?.currentNode ?? null);
@@ -78,9 +78,9 @@ watch([selectedInstrument, currentNode], () => nextTick(renderGraph), { immediat
       </button>
     </div>
 
-    <p v-if="!currentLoop" class="trading-flow-hint no-loop">Kein aktiver Loop für {{ selectedInstrument }}.</p>
+    <p v-if="!currentLoop" class="trading-flow-hint no-loop">Für {{ selectedInstrument }} heute noch nichts initialisiert (check_pretrade_gates/run_bias_check).</p>
     <p v-else-if="!currentNode" class="trading-flow-hint no-loop">
-      Aktiver Loop, aber ohne Maschinen-Snapshot (vor State-Machine V2 angelegt) — einmalig
+      Zeile ohne Maschinen-Snapshot (vor State-Machine V2 angelegt) — einmalig
       run_bias_check erneut aufrufen.
     </p>
     <p v-else class="current-node-line">

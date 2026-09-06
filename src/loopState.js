@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient.js";
+import { berlinDateStrFor } from "./dataExport.js";
 
 // Frontend-Lese-Store für trading_loop_state (state-machine-v1-ui, siehe docs/state-machine.md) —
 // bewusst reines Lesen, kein Schreiben: die Zeilen werden ausschließlich von den
@@ -34,25 +35,25 @@ function rowToLoopState(row) {
   };
 }
 
-// Der aktuell laufende Loop je Instrument (siehe Partial-Unique-Index in der Migration: höchstens
-// einer je Instrument gleichzeitig) — Map instrument -> loopState, fehlt ein Instrument im
-// Ergebnis, läuft dort gerade kein Loop.
-export async function fetchActiveLoopStates() {
-  const { data, error } = await supabase.from("trading_loop_state").select("*").eq("status", "active").order("created_at", { ascending: false });
+// Der permanente State von HEUTE je Instrument (Philip, 06.09.2026: "der state soll dauerhaft
+// bleiben ... egal welcher Schritt ... nur wenn ich den state löschen lasse, geht er weg") — seit
+// der Pro-Tag-Identität (instrument, date_str, siehe Migration
+// 20260906140000_trading_loop_state_permanent_per_day.sql) NICHT mehr über status='active'
+// gefiltert (jeder Status bleibt dauerhaft sichtbar), sondern über das heutige Berlin-Datum. Map
+// instrument -> loopState, fehlt ein Instrument im Ergebnis, wurde heute noch nichts initialisiert.
+export async function fetchCurrentLoopStates() {
+  const today = berlinDateStrFor(Math.floor(Date.now() / 1000));
+  const { data, error } = await supabase.from("trading_loop_state").select("*").eq("date_str", today);
   if (error) throw error;
   const map = new Map();
-  for (const row of data ?? []) {
-    const state = rowToLoopState(row);
-    if (!map.has(state.instrument)) map.set(state.instrument, state); // pro Instrument nur einer moeglich, .find nicht noetig
-  }
+  for (const row of data ?? []) map.set(row.instrument, rowToLoopState(row)); // (instrument, date_str) ist eindeutig, höchstens eine Zeile pro Instrument
   return map;
 }
 
-// Historie (auch abgeschlossene/superseded Loops) für ein Instrument, neueste zuerst — Ersatz
-// fürs Durchklicken von trading-runs/[Instrument]/[Datum]/*.md (siehe docs/state-machine.md
-// "Reporting").
+// Historie für ein Instrument (frühere Tage), neueste zuerst — Ersatz fürs Durchklicken von
+// trading-runs/[Instrument]/[Datum]/*.md (siehe docs/state-machine.md "Reporting").
 export async function fetchLoopStateHistory(instrument, limit = 15) {
-  const { data, error } = await supabase.from("trading_loop_state").select("*").eq("instrument", instrument).order("created_at", { ascending: false }).limit(limit);
+  const { data, error } = await supabase.from("trading_loop_state").select("*").eq("instrument", instrument).order("date_str", { ascending: false }).limit(limit);
   if (error) throw error;
   return (data ?? []).map(rowToLoopState);
 }

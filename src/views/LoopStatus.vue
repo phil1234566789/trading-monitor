@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from "vue";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
-import { LOOP_INSTRUMENTS, fetchActiveLoopStates, fetchLoopStateHistory } from "../loopState.js";
+import { LOOP_INSTRUMENTS, fetchCurrentLoopStates, fetchLoopStateHistory } from "../loopState.js";
 import { fetchStateMachineLog } from "../stateMachineLog.js";
 
 // state-machine-v1-ui (siehe docs/state-machine.md#reporting-trading-runsmd-verliert-seinen-zweck)
@@ -15,15 +15,18 @@ const REFRESH_MS = 8000; // die Loop-Zeilen werden von Lana (separate Claude-Cod
 
 async function loadAll() {
   const [active, histories, decisionLogs] = await Promise.all([
-    fetchActiveLoopStates(),
+    fetchCurrentLoopStates(),
     Promise.all(LOOP_INSTRUMENTS.map((instrument) => fetchLoopStateHistory(instrument))),
     Promise.all(LOOP_INSTRUMENTS.map((instrument) => fetchStateMachineLog(instrument))),
   ]);
   const historyMap = {};
   const decisionLogMap = {};
   LOOP_INSTRUMENTS.forEach((instrument, i) => {
-    // Historie = alles AUSSER der aktuell aktiven Zeile (die steht schon oben in der Karte).
-    historyMap[instrument] = histories[i].filter((row) => row.status !== "active");
+    // Historie = alles AUSSER der heutigen Zeile (die steht schon oben in der Karte) — seit der
+    // permanenten Pro-Tag-Identität (06.09.2026) bedeutet status nicht mehr "ist das die aktuell
+    // gezeigte Zeile", nur noch die Instrument+Datum-Übereinstimmung mit `active` zeigt das an.
+    const todayId = active.get(instrument)?.id;
+    historyMap[instrument] = histories[i].filter((row) => row.id !== todayId);
     decisionLogMap[instrument] = decisionLogs[i];
   });
   return { active, historyMap, decisionLogMap };
@@ -219,7 +222,7 @@ function decisionTier(decision) {
             </div>
           </div>
         </template>
-        <p v-else class="no-loop">Kein aktiver Loop.</p>
+        <p v-else class="no-loop">Heute noch nichts initialisiert.</p>
 
         <div class="history-block">
           <button class="history-toggle" @click="toggleHistory(instrument)">

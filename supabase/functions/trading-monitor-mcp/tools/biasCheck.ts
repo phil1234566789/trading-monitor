@@ -2,13 +2,14 @@ import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import { berlinDateTimeStrFor, berlinDateStrFor, berlinDayRangeUtcMs } from "../berlinTime.ts";
 import { fetchForexCandles } from "../forexCandles.ts";
-import { startLoopState } from "../loopState.ts";
+import { upsertBiasFields } from "../loopState.ts";
 import { buildPretradeGates } from "./pretradeGates.ts";
 import { compute1hStructureState } from "./dataExport.ts";
 import { buildCandidatePool, findNearestLiquidityTargets, findNearestObTargets } from "../findTargetCandidates.js";
 import { isSpreadHourPivot, findIntermediateLevel, determineTrendForce, buildPendingDecisions, type TrendForceLevelInput, type TrendForceObInput } from "../biasEngine.ts";
 import { logDecision } from "../stateMachineLog.ts";
-import { initMachineAfterBiasComputed } from "../machineState.ts";
+import { loadOrCreateMachineForDay, transition, transitionIfPossible } from "../machineState.ts";
+import { currentNodePath } from "../tradingMachine.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -41,36 +42,45 @@ function nearestHtfLevel(levels: { price: number; direction: "high" | "low"; tou
 
 export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckArgs) {
   const currentTimeSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
-  // persist=false im Backtest (replayUntilSec gesetzt) — ein Gate-Check für einen vergangenen
-  // Zeitpunkt darf trading_loop_state nicht anfassen, siehe pretradeGates.ts.
-  const gates = await buildPretradeGates({ instrument, nowSec: currentTimeSec, persist: replayUntilSec == null });
+  const dateStr = berlinDateStrFor(currentTimeSec);
+  // persist:false — dieser Aufruf holt/erzeugt den permanenten Pro-Tag-Actor selbst (unten) und
+  // treibt ihn über seine eigenen transition()-Aufrufe, statt buildPretradeGates das nochmal
+  // separat machen zu lassen (siehe pretradeGates.ts-Kopfkommentar).
+  const gates = await buildPretradeGates({ instrument, nowSec: currentTimeSec, persist: false });
+  // Permanente Zeile für (instrument, dateStr, siehe machineState.ts-Kopfkommentar 06.09.2026) —
+  // existiert sie schon (z.B. ein Fall-4-Neustart, oder ein vorheriger check_pretrade_gates-Aufruf
+  // heute), wird sie weitergeführt statt eine zweite anzulegen; ganz neu am allerersten Aufruf
+  // für diesen Tag+Instrument.
+  const loaded = await loadOrCreateMachineForDay(instrument, dateStr, currentTimeSec);
+  await transitionIfPossible(loaded, instrument, { type: "HANDELSZEIT_CHECKED", outsideHours: gates.tradingHours.exclude }, currentTimeSec);
+  if (!gates.tradingHours.exclude) {
+    await transitionIfPossible(loaded, instrument, { type: "NEWS_CHECKED", imminent: gates.news.exclude }, currentTimeSec);
+  }
+
   if (gates.exclude) {
-    // Seit 06.09.2026 (S1/S2-Sichtbarkeit) legt buildPretradeGates bei einem Live-Block selbst eine
-    // trading_loop_state-Zeile an — gates.loopStateId zeigt darauf, wenn vorhanden (Backtest: immer
-    // null, siehe oben). Vorher verschwand ein geblockter run_bias_check-Versuch spurlos (Auslöser-
-    // Vorfall 01.09.2026), state_machine_log bleibt trotzdem die primäre Quelle fürs Nachschlagen.
+    // Die Zeile bleibt bestehen (S1/S2-Sichtbarkeit, 06.09.2026) — vorher verschwand ein geblockter
+    // run_bias_check-Versuch spurlos (Auslöser-Vorfall 01.09.2026), state_machine_log bleibt
+    // trotzdem die primäre Quelle fürs Nachschlagen.
     await logDecision({
       instrument,
-      dateStr: berlinDateStrFor(currentTimeSec),
+      dateStr,
       sec: currentTimeSec,
       step: 3,
       tool: "run_bias_check",
       decision: "blocked_by_gate",
       result: gates,
       message: gates.tradingHours.exclude ? gates.tradingHours.resultText : gates.news.textBlocks.join(" | "),
-      loopStateId: gates.loopStateId ?? null,
+      loopStateId: loaded.loopId,
     });
     return {
       instrument,
       asOf: { sec: currentTimeSec, at: berlinDateTimeStrFor(currentTimeSec) },
       gates,
       blocked: true as const,
-      loopStateId: gates.loopStateId ?? null,
-      currentNode: gates.currentNode ?? null,
+      loopStateId: loaded.loopId,
+      currentNode: currentNodePath(loaded.actor),
     };
   }
-
-  const dateStr = berlinDateStrFor(currentTimeSec);
   const { startUtcMs } = berlinDayRangeUtcMs(dateStr);
   const asiaEndSec = startUtcMs / 1000 + 7 * 3600; // marktsessions.md#asia-session (00:00-07:00 Berlin)
 
@@ -88,9 +98,11 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
 
   const deepest = deepestTrend(structureResult.trend);
   if (!deepest || currentPrice == null) {
-    // Fall 5 (03-htf-bias.md): kein bestätigter 1H-Trend ODER kein aktueller Preis verfügbar —
-    // KEIN trading_loop_state-Write (kein Bias, auf dem ein Loop aufbauen könnte), Lana macht die
-    // manuelle Kraft-Abwägung selbst, siehe Textbaustein "1H-Ebene unbestätigt (Algo)".
+    // Fall 5 (03-htf-bias.md): kein bestätigter 1H-Trend ODER kein aktueller Preis verfügbar — KEIN
+    // BIAS_COMPUTED (die Zeile bleibt bei s3_bias.computing parken, siehe machineState.ts), Lana
+    // macht die manuelle Kraft-Abwägung selbst, siehe Textbaustein "1H-Ebene unbestätigt (Algo)".
+    // Die Zeile selbst existiert trotzdem schon (S1/S2-Sichtbarkeit, 06.09.2026) — loopStateId ist
+    // deshalb NICHT mehr null wie vor der permanenten Pro-Tag-Identität.
     await logDecision({
       instrument,
       dateStr,
@@ -100,13 +112,15 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
       decision: "unresolved_trend",
       result: { structure1h: structureResult.trend, structureTrendAge: structureResult.trendAge, currentPrice },
       message: "1H-Ebene unbestätigt (Algo) ---> manuelle Kraft-Abwägung",
-      loopStateId: null,
+      loopStateId: loaded.loopId,
     });
     return {
       instrument,
       asOf: { sec: currentTimeSec, at: berlinDateTimeStrFor(currentTimeSec) },
       gates,
       blocked: false as const,
+      loopStateId: loaded.loopId,
+      currentNode: currentNodePath(loaded.actor),
       structure1h: structureResult.trend,
       structureTrendAge: structureResult.trendAge,
       unresolvedTrend: true as const,
@@ -170,7 +184,13 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
     intermediateLevelFound: intermediateLevel != null,
   });
 
-  const loopState = await startLoopState({
+  // Setzt den bereits (oben) durch die Gates geschickten Actor fort — gültig, egal ob er gerade
+  // frisch bei s3_bias.computing steht (erster Aufruf heute) oder dort nach einem Fall-4-Neustart
+  // erneut ankam (tradingMachine.ts: FALL_CLASSIFIED{case:4} zielt auf #s3_bias). Kein
+  // initMachineAfterBiasComputed/startLoopState mehr — die permanente Zeile (siehe
+  // machineState.ts-Kopfkommentar) wird fortgesetzt statt ersetzt.
+  const currentNode = await transition(loaded, instrument, { type: "BIAS_COMPUTED" }, currentTimeSec);
+  await upsertBiasFields({
     instrument,
     dateStr,
     direction: trendDirection,
@@ -183,8 +203,6 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
     replayUntilSec: replayUntilSec ?? null,
   });
 
-  const currentNode = await initMachineAfterBiasComputed(loopState.id, instrument, currentTimeSec);
-
   await Promise.all([
     logDecision({
       instrument,
@@ -195,7 +213,7 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
       decision: "trend_force",
       result: trendForce,
       message: [trendForce.ob.text, trendForce.level.text].filter(Boolean).join(" | ") || null,
-      loopStateId: loopState.id,
+      loopStateId: loaded.loopId,
     }),
     logDecision({
       instrument,
@@ -206,7 +224,7 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
       decision: "intermediate_level",
       result: { intermediateLevel },
       message: intermediateLevel ? `Zwischen-Level gefunden: ${intermediateLevel.price} (${intermediateLevel.kind})` : "kein Zwischen-Level gefunden",
-      loopStateId: loopState.id,
+      loopStateId: loaded.loopId,
     }),
   ]);
 
@@ -227,7 +245,7 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
     invalidation,
     trendForce,
     pendingDecisions,
-    loopStateId: loopState.id,
+    loopStateId: loaded.loopId,
     // State-Machine V2 (tradingMachine.ts) — steht nach diesem Aufruf bei "s3_bias.llm3_kontextSynthese",
     // wartet auf check_session_window (Schritt 4), das den Übergang nach s45 auslöst.
     currentNode,
@@ -264,18 +282,23 @@ export function registerBiasCheckTool(server: McpServer) {
     {
       title: "Schritt 3: HTF-Bias + Targets",
       description:
-        "Mechanisiert Schritt 3 (HTF-Bias bestimmen) aus 00-trading-steps — ruft check_pretrade_gates " +
-        "intern zuerst auf und bricht bei `blocked=true` sofort ab (kein State-Write). Sonst: " +
-        "1H-Struktur-Trend (`structure1h`, wie get_data_export), Trend-/Countertrend-Target (dieselbe " +
-        "find_targets-Auswahl-Logik, Spread-Hour-Pivots übersprungen), Zwischen-Level-Check " +
-        "(`intermediateLevel`, inkl. heutiger Asia-Range), Trend-Kraft am relevanten gegenläufigen " +
-        "HTF-OB/-Level (`trendForce`) — UND schreibt/erneuert `trading_loop_state` für dieses " +
-        "Instrument (ein bisheriger aktiver Loop wird dabei immer ersetzt, nie nur gepatcht, siehe " +
-        "loopStateId in der Antwort). `kontextInfoSynthesis`/`paceCheckNote` sind bewusst `null` — " +
+        "Mechanisiert Schritt 3 (HTF-Bias bestimmen) aus 00-trading-steps — prüft die Gates " +
+        "(Handelszeit/News) selbst zuerst und bricht bei `blocked=true` ab; die permanente " +
+        "Loop-State-Zeile für (instrument, heutiges Datum) existiert dabei so oder so (bleibt IMMER " +
+        "bestehen, egal welcher Schritt/Fall zuletzt erreicht wurde — verschwindet nur durch " +
+        "explizites Löschen), `loopStateId`/`currentNode` in der Antwort zeigen immer darauf, auch " +
+        "im Block-Fall. Sonst: 1H-Struktur-Trend (`structure1h`, wie get_data_export), " +
+        "Trend-/Countertrend-Target (dieselbe find_targets-Auswahl-Logik, Spread-Hour-Pivots " +
+        "übersprungen), Zwischen-Level-Check (`intermediateLevel`, inkl. heutiger Asia-Range), " +
+        "Trend-Kraft am relevanten gegenläufigen HTF-OB/-Level (`trendForce`) — UND schreibt/" +
+        "aktualisiert die Bias-Felder derselben Zeile in place (ein Fall-4-Neustart überschreibt sie " +
+        "am selben Tag, statt eine zweite Zeile anzulegen). `kontextInfoSynthesis`/`paceCheckNote` " +
+        "sind bewusst `null` — " +
         "die beiden echten LLM-only-Anteile dieses Schritts, die DU selbst ergänzen musst (freie " +
         "Kontext-Info-Synthese aus zwei Beobachtungen, Pace-Check bei einer Chop-Phase vor der " +
         "Reaktion). `unresolvedTrend=true` heißt: Algo liefert keinen bestätigten 1H-Trend, manuelle " +
-        "Kraft-Abwägung nötig, kein Loop-State-Write. `pendingDecisions` listet explizit, welche der " +
+        "Kraft-Abwägung nötig (die Zeile bleibt dabei bei Schritt 3 parken, kein BIAS_COMPUTED). " +
+        "`pendingDecisions` listet explizit, welche der " +
         "03-htf-bias.md-Teilentscheidungen noch offen ist (Substep 3.1 Trend+Kraft, 3.2 Targets, " +
         "ggf. 3.2b Zwischen-Level, 3.3 S/R-Zone) — bei `options` triffst DU die Wahl, bei `resolved` " +
         "steht die Antwort aus den Rohdaten schon fest und muss nur noch als Textbaustein formuliert " +
