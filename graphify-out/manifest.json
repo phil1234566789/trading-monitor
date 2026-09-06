@@ -942,9 +942,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/machineState.ts": {
-    "mtime": 1788677888.147435,
-    "seen": 1788679050.8078778,
-    "ast_hash": "a5470914ef838a748ad59edc3662b420",
+    "mtime": 1788681668.4376767,
+    "seen": 1788681727.065829,
+    "ast_hash": "20e977946bb654e0e4c6fd89fae5a90a",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/marketStructureAnalysis.ts": {
@@ -1098,9 +1098,9 @@
     "semantic_hash": "3240fe6d055a67b6a6664e42e0afc08c"
   },
   "supabase/functions/trading-monitor-mcp/tools/pretradeGates.ts": {
-    "mtime": 1788677888.149435,
-    "seen": 1788679050.8128781,
-    "ast_hash": "221d5f5c5c68a1469b73aa4188c1b689",
+    "mtime": 1788681683.4952025,
+    "seen": 1788681727.065829,
+    "ast_hash": "4281befce11dfbd9c5827df443ab86a8",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/reads.ts": {
@@ -2427,6 +2427,12 @@
     "mtime": 1788660535.350563,
     "seen": 1788675137.9022882,
     "ast_hash": "327cb439647f7647731a3b3479f99eb4",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260906120000_trading_loop_state_gate_visibility.sql": {
+    "mtime": 1788677509.9030674,
+    "seen": 1788681727.065829,
+    "ast_hash": "fad10cbf4ec21a305b85af74be8cc5f0",
     "semantic_hash": ""
   }
 }
