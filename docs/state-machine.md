@@ -49,7 +49,7 @@ Tool-Aufruf wird der Actor aus `trading_loop_state.machine_snapshot` rehydriert
   bestehen, für Lana nutzbar wann immer sie den TSC-Stand sehen will, ohne selbst den Loop
   fortzuschreiben.
 
-## S1/S2 sichtbar (06.09.2026)
+## S1/S2 sichtbar + permanenter State pro (Instrument, Tag) (06.09.2026)
 
 Philip: "wenn wir uns in S1 oder S2 befinden, will ich das im Graphen sehen" — vorher lief
 `check_pretrade_gates` (Schritt 1+2) komplett stateless, ein Block (außerhalb Handelszeit / News-
@@ -58,28 +58,61 @@ Pause) zeigte in `/trading-flow` schlicht "Kein aktiver Loop", nicht `s1_handels
 existierten, aber nie erreicht wurden — `trading_loop_state` existierte laut altem Schema erst ab
 Schritt 3).
 
-Jetzt legt `check_pretrade_gates` bei einem tatsächlichen Block (`exclude=true`, live — nicht im
-Backtest) selbst eine Zeile an/wieder verwendet eine bestehende (`machineState.ts`
-`loadOrCreateGateActor`, pro Instrument+Tag) und schickt den Actor durch `HANDELSZEIT_CHECKED`/
-`NEWS_CHECKED`, landet je nach Block bei `end_keinTrade` oder `newsPause`. Bewusst NUR im Block-
-Fall — bei freier Bahn bleibt `run_bias_check`s bestehender `startLoopState`-Pfad unverändert (kein
-zusätzlicher Zeilen-Churn, der sofort wieder superseded würde). `direction` auf
-`trading_loop_state` ist dafür nullable geworden (Migration
-`20260906120000_trading_loop_state_gate_visibility.sql`) — eine Gate-Zeile kennt noch keinen Bias.
-`run_dealing_range_loop` (Schritt 5) wirft jetzt einen klaren Fehler, falls die "aktive" Zeile eines
-Instruments zufällig nur so eine Gate-Zeile ist (kein Bias vorhanden).
+Bei der Umsetzung kam Philips eigentliche Anforderung ans Licht, größer als reine S1/S2-Sichtbarkeit:
+**"der state soll dauerhaft bleiben ... egal welcher Schritt ... nur wenn ich den state löschen
+lasse, geht er weg"** — die Maschine beginnt bei S1, nicht erst bei Schritt 5, und die Zeile für
+einen Tag+Instrument existiert permanent, unabhängig davon, was zuletzt passiert ist (Kein Trade,
+Fall 4, Abschluss, ...). Das kehrt die bisherige Identität um:
+
+- **Vorher:** `status='active'` per Partial-Unique-Index — nur EIN aktiver Loop pro Instrument,
+  ein Fall-4-Trigger/Abschluss beendete ihn (`status` wechselt), ein neuer `run_bias_check`-Aufruf
+  legte immer eine NEUE Zeile an.
+- **Jetzt:** `unique(instrument, date_str)` — eine Zeile pro Tag+Instrument, für immer. Ein
+  Fall-4-Neustart oder ein zweiter `run_bias_check` am selben Tag aktualisiert dieselbe Zeile in
+  place (`loopState.ts` `upsertBiasFields`, Upsert statt Insert+Supersede). `dealing_ranges` bleibt
+  unverändert mehrzeilig pro Tag (die "mehrere DRs pro Tag"-Regel lebt dort weiter) —
+  `trading_loop_state` ist nur noch der *Cursor*, welche Dealing Range gerade aktuell ist
+  (`dealing_range_id` wird bei jeder neuen Bias-Berechnung zurückgesetzt).
+
+`check_pretrade_gates` (live, nicht im Backtest) holt/legt über `machineState.ts`
+`loadOrCreateMachineForDay(instrument, dateStr, atSec)` die permanente Zeile an und schickt den
+Actor durch `HANDELSZEIT_CHECKED`/`NEWS_CHECKED` — bei jedem Aufruf, nicht nur im Block-Fall (kein
+Zeilen-Churn mehr möglich, da nichts mehr superseded wird). `run_bias_check` ruft dasselbe intern
+mit `persist:false` auf (treibt die Maschine über seine eigenen `transition()`-Aufrufe selbst weiter,
+inkl. `BIAS_COMPUTED`) und schreibt danach nur noch die Bias-Felder der SELBEN Zeile. `direction`
+ist dafür nullable (Migrationen `20260906120000_trading_loop_state_gate_visibility.sql` +
+`20260906140000_trading_loop_state_permanent_per_day.sql`) — eine frische Zeile kennt vor Schritt 3
+noch keinen Bias. `run_dealing_range_loop` (Schritt 5) wirft einen klaren Fehler, falls die Zeile
+eines Tages zufällig noch keinen Bias hat.
+
+Live+Backtest können jetzt für **verschiedene Tage desselben Instruments gleichzeitig** existieren
+(z.B. ein Live-Gate-Check für heute UND ein Backtest für einen alten Tag parallel in Laniakea) —
+`getLoopStateForDay`/`loadMachineForDay(OrNull)` lösen deshalb IMMER explizit per
+`(instrument, dateStr)` auf (live: heutiges Berlin-Datum, Backtest: das Replay-Datum), nie über
+"irgendeinen aktiven"/"den zuletzt aktualisierten" Loop — sonst hätte ein Live-Check versehentlich
+den Backtest-Loop treffen können.
 
 `/trading-flow` (`TradingFlow.vue`) zeigt zusätzlich "Stand: HH:MM · Jetzt: HH:MM" (Berlin-Zeit,
 `last_analysis_time_sec` vs. Live-Uhr) — Vergleich der State-Machine-Zeit mit der echten Uhrzeit,
-wie bei einem Timer.
+wie bei einem Timer. **Wichtig:** `last_analysis_time_sec` bewegt sich NUR bei einer tatsächlichen
+Knoten-Transition (`persistTransition` in `machineState.ts`), NICHT bei einem bloßen Re-Check ohne
+Fortschritt (z.B. wiederholtes `check_pretrade_gates`, während der Actor schon bei `end_keinTrade`/
+`newsPause` parkt) — sonst wäre "Stand" bei jedem Live-Poll gleich "Jetzt", der ganze Vergleich
+witzlos. Ein Re-Check, der nichts bewegt, macht dadurch auch KEINEN DB-Write mehr (live verifiziert:
+zwei `check_pretrade_gates`-Aufrufe hintereinander, `updated_at` unverändert).
 
 **Bekannte Einschränkung (ponytail):** `end_keinTrade` ist ein XState-Endzustand — ein Check VOR
 Fensteröffnung landet dort genauso wie einer NACH Fensterschluss, und der Actor kann von dort nicht
 mehr weg, selbst wenn das Fenster am selben Tag später noch öffnet. Bis zum nächsten echten
-`run_bias_check`-Aufruf (der die Zeile superseded) zeigt der Graph dann optisch "Kein Trade", obwohl
-Handel im Tagesverlauf noch stattfindet — rein kosmetisch, kein funktionaler Fehler. Upgrade bei
-Bedarf: `evaluateTradingHoursGate` um "vor Fenster" vs. "nach Fenster" erweitern, nur Letzteres auf
-`end_keinTrade` transitionieren.
+`run_bias_check`-Aufruf (der `BIAS_COMPUTED` auf dieselbe Zeile schickt) zeigt der Graph dann
+optisch "Kein Trade", obwohl Handel im Tagesverlauf noch stattfindet — rein kosmetisch, kein
+funktionaler Fehler. Upgrade bei Bedarf: `evaluateTradingHoursGate` um "vor Fenster" vs. "nach
+Fenster" erweitern, nur Letzteres auf `end_keinTrade` transitionieren.
+
+**Löschen:** kein eigenes Tool dafür gebaut (YAGNI) — eine Zeile per Hand (Supabase-Dashboard oder
+eine einmalige `delete from trading_loop_state where ...`-Migration, siehe die
+`reset_gbpusd_*_test_data_*`-Migrationen als Vorbild) löschen lassen, wenn ein Tag+Instrument
+wirklich neu aufgesetzt werden soll.
 
 ## Diagramme
 
@@ -250,15 +283,18 @@ Freitext-Synthese:
   `trend_target`/`countertrend_target`/`intermediate_level` (jsonb: price/kind/refId/timeframe),
   `invalidation`, `watch_level_above`/`watch_level_below` (jsonb), `bias_computed_at`,
   `last_analysis_time_sec`, `replay_until_sec` (null = live), `heartbeat_log` (jsonb-Array,
-  append-only), Timestamps. Partial-Unique-Index: nur EIN `active`-Loop pro Instrument — ein
-  Fall-1-Abschluss oder Fall-4-Trigger beendet den Loop (`status` wechselt), ein neuer
-  `run_bias_check`-Aufruf legt eine NEUE Zeile an (spiegelt die bestehende "mehrere DRs pro Tag,
-  jede mit eigener Kennung"-Regel).
+  append-only), Timestamps.
+  **Überholt seit 06.09.2026** (siehe [Permanenter State pro Tag](#permanenter-state-pro-instrument-tag-06092026)
+  unten): damals war die Identität "nur EIN `active`-Loop pro Instrument" per Partial-Unique-Index,
+  ein Fall-4-Trigger/Fall-1-Abschluss beendete den Loop und ein neuer `run_bias_check`-Aufruf legte
+  immer eine NEUE Zeile an ("mehrere DRs pro Tag, jede mit eigener Kennung"). Jetzt: unique auf
+  `(instrument, date_str)`, eine Zeile bleibt über den ganzen Tag (und darüber hinaus) bestehen.
 - `heartbeat_log` liegt bewusst SERVERSEITIG in der Tabelle, nicht nur in der Tool-Response — genau
   das schließt die Lücke aus dem Vorfall: selbst wenn Lana eine Antwort nicht vollständig weiterreicht,
   steht das Log fest und ist über einen Folge-Call (auch neue Chat-Session) abrufbar.
 - Neue Datei `loopState.ts` (dünne Query-Helfer, Stil wie `db.ts`): `getActiveLoopState`,
-  `upsertLoopState`, `appendHeartbeat`, `closeLoopState`.
+  `upsertLoopState`, `appendHeartbeat`, `closeLoopState` — seit 06.09.2026
+  `getLoopStateForDay`/`upsertBiasFields`, siehe unten.
 
 ### Tool 1 — `check_pretrade_gates` (Schritt 1+2)
 
