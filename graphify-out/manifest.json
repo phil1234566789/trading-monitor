@@ -756,9 +756,9 @@
     "semantic_hash": "1c0cdebd651c5c29d391db600e8c4a30"
   },
   "src/views/LoopStatus.vue": {
-    "mtime": 1788696280.8740766,
-    "seen": 1788696426.5334628,
-    "ast_hash": "453ff71b5cb8aab071dbe4fc446fb5bf",
+    "mtime": 1788698198.3004563,
+    "seen": 1788699250.6717865,
+    "ast_hash": "aac9bdd95034378e65e4c4d949ac5d11",
     "semantic_hash": ""
   },
   "src/views/Protokoll.vue": {
@@ -924,9 +924,9 @@
     "semantic_hash": "a53f612edcfb1ae627dcd1e0887579d1"
   },
   "supabase/functions/trading-monitor-mcp/index.ts": {
-    "mtime": 1788693633.0339873,
-    "seen": 1788696426.5334628,
-    "ast_hash": "23c1f996ddf9b4fdb942bf1e1c2668d9",
+    "mtime": 1788698944.256416,
+    "seen": 1788699250.6717865,
+    "ast_hash": "48f57b297d64cb70e7273af3f595a89f",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/indicatorWindow.ts": {
@@ -2370,9 +2370,9 @@
     "semantic_hash": "d8b078ea5f6334e16f6dbefa639900d6"
   },
   "docs/state-machine.md": {
-    "mtime": 1788693833.1282005,
-    "seen": 1788696426.5344625,
-    "ast_hash": "69e9fbf17db4365ca50af0614d7cecba",
+    "mtime": 1788699034.8842974,
+    "seen": 1788699250.6717865,
+    "ast_hash": "98f09ab63b1527d29f30221f54145e54",
     "semantic_hash": ""
   },
   "docs/steerabilty-vs-wrong-ai-outputs.md": {
@@ -2463,6 +2463,12 @@
     "mtime": 1788689951.0085537,
     "seen": 1788696426.5334628,
     "ast_hash": "ecdca8cfa7ef687930907b4bf49d136a",
+    "semantic_hash": ""
+  },
+  "supabase/functions/trading-monitor-mcp/tools/getLoopState.ts": {
+    "mtime": 1788698934.413065,
+    "seen": 1788699250.6717865,
+    "ast_hash": "96afafa93d83664d98499fd7483df6d0",
     "semantic_hash": ""
   }
 }
