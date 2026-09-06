@@ -4,6 +4,8 @@ import { getTradingSchedule, getNewsEvents } from "../db.ts";
 import { berlinDayRangeUtcMs, berlinDateStrFor } from "../berlinTime.ts";
 import { evaluateTradingHoursGate, evaluateNewsGate, type TradingWindows, type NewsEventInput } from "../pretradeGates.ts";
 import { logDecision } from "../stateMachineLog.ts";
+import { loadOrCreateGateActor, transitionIfPossible } from "../machineState.ts";
+import { currentNodePath } from "../tradingMachine.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -24,9 +26,26 @@ export interface PretradeGatesArgs {
   // Bleibt null, solange (noch) kein Loop existiert (z.B. ein direkter check_pretrade_gates-Aufruf
   // oder ein Gate-Block VOR dem ersten run_bias_check-Loop-Write).
   loopStateId?: number | null;
+  // false NUR bei einem Backtest-/Replay-Aufruf (siehe run_bias_check: persist = replayUntilSec ==
+  // null) — ein Gate-Check für einen vergangenen Zeitpunkt darf trading_loop_state nicht anfassen,
+  // sonst kollidiert er mit der historischen Zeile desselben Instruments/Tages. Default true (jeder
+  // direkte check_pretrade_gates-Aufruf ist per Definition live).
+  persist?: boolean;
 }
 
-export async function buildPretradeGates({ instrument, nowSec, loopStateId = null }: PretradeGatesArgs) {
+export interface PretradeGatesResult {
+  instrument: string;
+  nowSec: number;
+  tradingHours: ReturnType<typeof evaluateTradingHoursGate>;
+  news: ReturnType<typeof evaluateNewsGate>;
+  exclude: boolean;
+  // Nur gesetzt, wenn exclude=true UND persist=true (siehe unten) — der Knoten/die Zeile, an der
+  // der Block in trading_loop_state sichtbar gemacht wurde (S1/S2-Sichtbarkeit, 06.09.2026).
+  currentNode?: string | null;
+  loopStateId?: number | null;
+}
+
+export async function buildPretradeGates({ instrument, nowSec, loopStateId = null, persist = true }: PretradeGatesArgs): Promise<PretradeGatesResult> {
   const effectiveNowSec = nowSec ?? Math.floor(Date.now() / 1000);
   const dateStr = berlinDateStrFor(effectiveNowSec);
   const { startUtcMs, endUtcMs } = berlinDayRangeUtcMs(dateStr);
@@ -46,13 +65,43 @@ export async function buildPretradeGates({ instrument, nowSec, loopStateId = nul
 
   const tradingHours = evaluateTradingHoursGate(effectiveNowSec, schedule.trading_windows as TradingWindows);
   const news = evaluateNewsGate(effectiveNowSec, newsInputs, dayEvents.length > 0);
+  const exclude = tradingHours.exclude || news.exclude;
+
+  // S1/S2 im Trading-Flow-Graphen sichtbar machen (docs/state-machine.md#s1-s2-sichtbar,
+  // 06.09.2026) — NUR bei einem tatsächlichen Block, live: den Actor durch s1_handelszeit/s2_news
+  // schicken und persistieren, statt wie bisher komplett stateless zu bleiben. Bewusst NUR im
+  // Block-Fall (nicht bei jedem Aufruf) — im Erfolgsfall läuft run_bias_checks bestehender
+  // startLoopState-Pfad unverändert weiter, ein zusätzlicher Gate-Actor würde dort nur sofort wieder
+  // superseded und wäre reiner Zeilen-Churn ohne sichtbaren Nutzen.
+  //
+  // ponytail: end_keinTrade ist in tradingMachine.ts ein XState-Endzustand (final) — ein Check VOR
+  // Fensteröffnung (z.B. 07:00 bei 08:00-18:00-Fenster) landet dort genauso wie einer NACH
+  // Fensterschluss, und der Actor kann von einem "final"-Knoten nicht mehr weg, selbst wenn das
+  // Fenster später am selben Tag noch öffnet. Folge: bis zum nächsten echten run_bias_check-Aufruf
+  // (der die Zeile per startLoopState superseded) zeigt der Graph optisch "Kein Trade", obwohl
+  // Handel im Tagesverlauf noch stattfindet — rein kosmetisch, kein funktionaler Fehler. Upgrade
+  // bei Bedarf: evaluateTradingHoursGate um "vor Fenster" vs. "nach Fenster" erweitern und nur
+  // Letzteres auf end_keinTrade transitionieren.
+  let currentNode: string | null = null;
+  let gateLoopStateId: number | null = null;
+  if (persist && exclude) {
+    const loaded = await loadOrCreateGateActor(instrument, dateStr);
+    await transitionIfPossible(loaded, instrument, { type: "HANDELSZEIT_CHECKED", outsideHours: tradingHours.exclude }, effectiveNowSec);
+    if (!tradingHours.exclude) {
+      await transitionIfPossible(loaded, instrument, { type: "NEWS_CHECKED", imminent: news.exclude }, effectiveNowSec);
+    }
+    currentNode = currentNodePath(loaded.actor);
+    gateLoopStateId = loaded.loopId;
+  }
+
+  const effectiveLoopStateId = gateLoopStateId ?? loopStateId;
 
   // Beide Gate-Verdikte werden HIER geloggt, unabhängig davon, ob der aufrufende Tool-Aufruf (Lana)
   // danach abbricht — genau das schließt die Lücke aus dem Auslöser-Vorfall (ein geblockter
   // run_bias_check-Versuch verschwand bisher spurlos, siehe Task-Beschreibung).
   await Promise.all([
-    logDecision({ instrument, dateStr, sec: effectiveNowSec, step: 1, tool: "check_pretrade_gates", decision: "trading_hours_gate", result: tradingHours, message: tradingHours.resultText, loopStateId }),
-    logDecision({ instrument, dateStr, sec: effectiveNowSec, step: 2, tool: "check_pretrade_gates", decision: "news_gate", result: news, message: news.textBlocks.join(" | "), loopStateId }),
+    logDecision({ instrument, dateStr, sec: effectiveNowSec, step: 1, tool: "check_pretrade_gates", decision: "trading_hours_gate", result: tradingHours, message: tradingHours.resultText, loopStateId: effectiveLoopStateId }),
+    logDecision({ instrument, dateStr, sec: effectiveNowSec, step: 2, tool: "check_pretrade_gates", decision: "news_gate", result: news, message: news.textBlocks.join(" | "), loopStateId: effectiveLoopStateId }),
   ]);
 
   return {
@@ -60,7 +109,8 @@ export async function buildPretradeGates({ instrument, nowSec, loopStateId = nul
     nowSec: effectiveNowSec,
     tradingHours,
     news,
-    exclude: tradingHours.exclude || news.exclude,
+    exclude,
+    ...(currentNode ? { currentNode, loopStateId: gateLoopStateId } : {}),
   };
 }
 
@@ -71,14 +121,16 @@ export function registerPretradeGatesTool(server: McpServer) {
       title: "Schritt 1+2: Handelszeit + News-Gate",
       description:
         "Mechanisiert Schritt 1 (Check Handelszeit) + Schritt 2 (Check News) aus 00-trading-steps — " +
-        "reine Vorprüfung, kein Bias, kein State-Write (siehe run_bias_check, das dieses Gate " +
-        "intern zuerst aufruft und bei Blockade sofort abbricht). `exclude=true` heißt: kein Trade, " +
-        "Ablauf hier abbrechen. `tradingHours` prüft gegen trading_schedules.trading_windows (siehe " +
-        "Handelszeiten-Seite im Dashboard) statt eines fest hinterlegten Zeitfensters. `news` liefert " +
-        "vorformulierte Textbausteine je News-Termin (siehe 02-check-news.md) — `hasData=false` " +
-        "heißt 'keine Daten für diesen Tag hinterlegt', NICHT zwingend 'keine News' (die Tabelle wird " +
-        "nur für aktuell gehandelte Tage gepflegt). nowSec optional für einen Backtest/Replay-" +
-        "Zeitpunkt (Default: jetzt).",
+        "kein Bias, kein State-Write bei freier Bahn (siehe run_bias_check, das dieses Gate intern " +
+        "zuerst aufruft und bei Blockade sofort abbricht). `exclude=true` heißt: kein Trade, Ablauf " +
+        "hier abbrechen — in diesem Fall wird der Block jetzt auch in trading_loop_state persistiert " +
+        "(`currentNode`/`loopStateId` in der Antwort: `end_keinTrade` außerhalb Handelszeit, " +
+        "`newsPause` bei News-Block), damit /trading-flow S1/S2 live anzeigen kann. `tradingHours` " +
+        "prüft gegen trading_schedules.trading_windows (siehe Handelszeiten-Seite im Dashboard) " +
+        "statt eines fest hinterlegten Zeitfensters. `news` liefert vorformulierte Textbausteine je " +
+        "News-Termin (siehe 02-check-news.md) — `hasData=false` heißt 'keine Daten für diesen Tag " +
+        "hinterlegt', NICHT zwingend 'keine News' (die Tabelle wird nur für aktuell gehandelte Tage " +
+        "gepflegt). nowSec optional für einen Backtest/Replay-Zeitpunkt (Default: jetzt).",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
         nowSec: z.number().int().optional().describe("Unix-Sekunden, Default: jetzt"),

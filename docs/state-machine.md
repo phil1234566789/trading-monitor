@@ -49,6 +49,38 @@ Tool-Aufruf wird der Actor aus `trading_loop_state.machine_snapshot` rehydriert
   bestehen, für Lana nutzbar wann immer sie den TSC-Stand sehen will, ohne selbst den Loop
   fortzuschreiben.
 
+## S1/S2 sichtbar (06.09.2026)
+
+Philip: "wenn wir uns in S1 oder S2 befinden, will ich das im Graphen sehen" — vorher lief
+`check_pretrade_gates` (Schritt 1+2) komplett stateless, ein Block (außerhalb Handelszeit / News-
+Pause) zeigte in `/trading-flow` schlicht "Kein aktiver Loop", nicht `s1_handelszeit`/`s2_news`/
+`newsPause` (die als States in `tradingMachine.ts`/Knoten in `tradingMachineGraph.js` bereits
+existierten, aber nie erreicht wurden — `trading_loop_state` existierte laut altem Schema erst ab
+Schritt 3).
+
+Jetzt legt `check_pretrade_gates` bei einem tatsächlichen Block (`exclude=true`, live — nicht im
+Backtest) selbst eine Zeile an/wieder verwendet eine bestehende (`machineState.ts`
+`loadOrCreateGateActor`, pro Instrument+Tag) und schickt den Actor durch `HANDELSZEIT_CHECKED`/
+`NEWS_CHECKED`, landet je nach Block bei `end_keinTrade` oder `newsPause`. Bewusst NUR im Block-
+Fall — bei freier Bahn bleibt `run_bias_check`s bestehender `startLoopState`-Pfad unverändert (kein
+zusätzlicher Zeilen-Churn, der sofort wieder superseded würde). `direction` auf
+`trading_loop_state` ist dafür nullable geworden (Migration
+`20260906120000_trading_loop_state_gate_visibility.sql`) — eine Gate-Zeile kennt noch keinen Bias.
+`run_dealing_range_loop` (Schritt 5) wirft jetzt einen klaren Fehler, falls die "aktive" Zeile eines
+Instruments zufällig nur so eine Gate-Zeile ist (kein Bias vorhanden).
+
+`/trading-flow` (`TradingFlow.vue`) zeigt zusätzlich "Stand: HH:MM · Jetzt: HH:MM" (Berlin-Zeit,
+`last_analysis_time_sec` vs. Live-Uhr) — Vergleich der State-Machine-Zeit mit der echten Uhrzeit,
+wie bei einem Timer.
+
+**Bekannte Einschränkung (ponytail):** `end_keinTrade` ist ein XState-Endzustand — ein Check VOR
+Fensteröffnung landet dort genauso wie einer NACH Fensterschluss, und der Actor kann von dort nicht
+mehr weg, selbst wenn das Fenster am selben Tag später noch öffnet. Bis zum nächsten echten
+`run_bias_check`-Aufruf (der die Zeile superseded) zeigt der Graph dann optisch "Kein Trade", obwohl
+Handel im Tagesverlauf noch stattfindet — rein kosmetisch, kein funktionaler Fehler. Upgrade bei
+Bedarf: `evaluateTradingHoursGate` um "vor Fenster" vs. "nach Fenster" erweitern, nur Letzteres auf
+`end_keinTrade` transitionieren.
+
 ## Diagramme
 
 - [Trading-Steps-Ablauf](diagrams/trading-steps-ablauf.html) — kompletter Schritt-1-8-Zyklus,
@@ -189,7 +221,9 @@ Zod-Schema für 5 strukturell verschiedene Payloads künstlich flach halten, Tes
 Lana könnte nicht mehr gezielt nur "Schritt 4 jetzt" aufrufen (z.B. bei Replay-Einstieg mitten am
 Tag ohne vorherigen Bias-Lauf).
 
-1. **`check_pretrade_gates`** (Schritt 1+2) — Handelszeit + News-Ausschlusskriterium, kein State-Write.
+1. **`check_pretrade_gates`** (Schritt 1+2) — Handelszeit + News-Ausschlusskriterium, kein State-
+   Write bei freier Bahn; bei einem Block seit 06.09.2026 doch (siehe [S1/S2
+   sichtbar](#s1-s2-sichtbar-06092026) oben).
 2. **`run_bias_check`** (Schritt 3) — ruft Tool 1 intern zuerst, schreibt/erneuert `trading_loop_state`.
 3. **`check_session_window`** (Schritt 4) — reine Fakten, kein State-Write, auch intern von Tool 4 genutzt.
 4. **`run_dealing_range_loop`** (Schritt 5, Kernstück) — Fall-1/2/3/4-Klassifikation, TSC-Verknüpfung,

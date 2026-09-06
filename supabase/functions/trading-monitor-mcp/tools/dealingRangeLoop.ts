@@ -50,6 +50,12 @@ export interface TickResult {
 // (Fall 1 oder 2) einträgt.
 async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStateRow, instrument: string, atSec: number): Promise<TickResult> {
   const direction = loopState.direction;
+  if (!direction) {
+    // Sollte laut runDealingRangeLoops eigenem Guard (siehe dort) nie erreicht werden — hier nur
+    // fürs Typsystem (TradingLoopStateRow.direction ist seit S1/S2-Sichtbarkeit nullable) UND als
+    // zweite Absicherung, falls performFullTick je aus einem anderen Aufrufpfad genutzt wird.
+    throw new Error(`Loop ${loopState.id} hat keinen Bias (direction=null) — kein gültiger Zustand für einen Schritt-5-Tick.`);
+  }
   const wantedSweepDir: "high" | "low" = direction === "long" ? "low" : "high";
 
   const [sessionWindow, snapshot, reactions] = await Promise.all([
@@ -175,6 +181,16 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
   const loopState = await getActiveLoopState(instrument);
   if (!loopState) {
     throw new Error(`Kein aktiver Loop für ${instrument} — zuerst run_bias_check aufrufen (Schritt 3), das den Loop-State anlegt.`);
+  }
+  if (loopState.direction == null) {
+    // Seit 06.09.2026 (S1/S2-Sichtbarkeit) kann die "aktive" Zeile eines Instruments auch ein reiner
+    // Gate-Block sein (current_step 1/2, siehe machineState.ts loadOrCreateGateActor) — ohne diesen
+    // Check würde performFullTick unten mit direction=null weiterlaufen (falsches wantedSweepDir,
+    // falsche OB-Filterung) statt klar zu sagen, woran es liegt.
+    throw new Error(
+      `Der aktive Loop für ${instrument} (id=${loopState.id}, Schritt ${loopState.currentStep}) hat noch keinen Bias — ` +
+        `Handelszeit-/News-Gate ist noch nicht durchlaufen (aktueller Knoten: ${loopState.currentNode}). Zuerst run_bias_check aufrufen (Schritt 3).`,
+    );
   }
   const loaded = await loadMachineForInstrument(instrument);
 

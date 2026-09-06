@@ -41,12 +41,14 @@ function nearestHtfLevel(levels: { price: number; direction: "high" | "low"; tou
 
 export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckArgs) {
   const currentTimeSec = replayUntilSec ?? Math.floor(Date.now() / 1000);
-  const gates = await buildPretradeGates({ instrument, nowSec: currentTimeSec });
+  // persist=false im Backtest (replayUntilSec gesetzt) — ein Gate-Check für einen vergangenen
+  // Zeitpunkt darf trading_loop_state nicht anfassen, siehe pretradeGates.ts.
+  const gates = await buildPretradeGates({ instrument, nowSec: currentTimeSec, persist: replayUntilSec == null });
   if (gates.exclude) {
-    // Genau die Lücke aus dem Auslöser-Vorfall (01.09.2026): ohne diesen Log verschwindet ein
-    // geblockter run_bias_check-Versuch spurlos, weil trading_loop_state hier NICHT geschrieben
-    // wird (kein Loop, den ein späterer Blick auf heartbeat_log finden könnte) — loopStateId bleibt
-    // deshalb null.
+    // Seit 06.09.2026 (S1/S2-Sichtbarkeit) legt buildPretradeGates bei einem Live-Block selbst eine
+    // trading_loop_state-Zeile an — gates.loopStateId zeigt darauf, wenn vorhanden (Backtest: immer
+    // null, siehe oben). Vorher verschwand ein geblockter run_bias_check-Versuch spurlos (Auslöser-
+    // Vorfall 01.09.2026), state_machine_log bleibt trotzdem die primäre Quelle fürs Nachschlagen.
     await logDecision({
       instrument,
       dateStr: berlinDateStrFor(currentTimeSec),
@@ -56,9 +58,16 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
       decision: "blocked_by_gate",
       result: gates,
       message: gates.tradingHours.exclude ? gates.tradingHours.resultText : gates.news.textBlocks.join(" | "),
-      loopStateId: null,
+      loopStateId: gates.loopStateId ?? null,
     });
-    return { instrument, asOf: { sec: currentTimeSec, at: berlinDateTimeStrFor(currentTimeSec) }, gates, blocked: true as const };
+    return {
+      instrument,
+      asOf: { sec: currentTimeSec, at: berlinDateTimeStrFor(currentTimeSec) },
+      gates,
+      blocked: true as const,
+      loopStateId: gates.loopStateId ?? null,
+      currentNode: gates.currentNode ?? null,
+    };
   }
 
   const dateStr = berlinDateStrFor(currentTimeSec);

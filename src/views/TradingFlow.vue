@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import mermaid from "mermaid";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { LOOP_INSTRUMENTS, fetchActiveLoopStates } from "../loopState.js";
@@ -22,6 +22,21 @@ const { data } = usePolledFetch(fetchActiveLoopStates, { intervalMs: REFRESH_MS 
 const activeByInstrument = computed(() => (data.value instanceof Map ? data.value : new Map()));
 const currentLoop = computed(() => activeByInstrument.value.get(selectedInstrument.value) ?? null);
 const currentNode = computed(() => currentLoop.value?.currentNode ?? null);
+
+// Live-Uhr (Berlin) zum Vergleich mit last_analysis_time_sec — Philip, 06.09.2026: "im Live Fall
+// kann man jetzt die state-machine zeit ... mit der echten Uhrzeit vergleichen, so wie bei einem
+// Timer". Sekunden-Genauigkeit unnötig fürs bloße Vergleichen, 1x/Minute reicht.
+const berlinTimeFormatter = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" });
+const nowMs = ref(Date.now());
+let nowTimer = null;
+onMounted(() => { nowTimer = setInterval(() => { nowMs.value = Date.now(); }, 60000); });
+onUnmounted(() => { if (nowTimer) clearInterval(nowTimer); });
+
+const nowLabel = computed(() => berlinTimeFormatter.format(nowMs.value));
+const lastAnalysisLabel = computed(() => {
+  const sec = currentLoop.value?.lastAnalysisTimeSec;
+  return sec ? berlinTimeFormatter.format(sec * 1000) : null;
+});
 
 let renderToken = 0;
 async function renderGraph() {
@@ -68,7 +83,12 @@ watch([selectedInstrument, currentNode], () => nextTick(renderGraph), { immediat
       Aktiver Loop, aber ohne Maschinen-Snapshot (vor State-Machine V2 angelegt) — einmalig
       run_bias_check erneut aufrufen.
     </p>
-    <p v-else class="current-node-line">Aktueller Knoten: <code>{{ currentNode }}</code></p>
+    <p v-else class="current-node-line">
+      Aktueller Knoten: <code>{{ currentNode }}</code>
+      <span v-if="lastAnalysisLabel" class="clock-compare">
+        · Stand: <strong>{{ lastAnalysisLabel }}</strong> · Jetzt: <strong>{{ nowLabel }}</strong>
+      </span>
+    </p>
 
     <p v-if="renderError" class="trading-flow-error">{{ renderError }}</p>
     <div ref="graphContainer" class="graph-container"></div>
@@ -133,6 +153,13 @@ watch([selectedInstrument, currentNode], () => nextTick(renderGraph), { immediat
 }
 .current-node-line code {
   color: #5b8dff;
+}
+.clock-compare {
+  color: #787b86;
+}
+.clock-compare strong {
+  color: #d1d4dc;
+  font-weight: 600;
 }
 
 .trading-flow-error {

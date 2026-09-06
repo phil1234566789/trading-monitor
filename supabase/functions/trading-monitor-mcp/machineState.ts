@@ -13,9 +13,14 @@ import { getActiveLoopState, type TradingLoopStateRow } from "./loopState.ts";
 
 // Node-Pfad -> current_step/current_case-Ableitung, rein für die bestehende LoopStatus.vue-Anzeige
 // (current_step/current_case bleiben laut Migration 20260905140000 vorerst bestehen, siehe
-// tradingMachine.ts für den vollständigen Knoten-Katalog). s1/s2 erzeugen bewusst noch keine Zeile
-// (siehe loadOrCreateActor) — ein Loop existiert laut bisherigem Schema erst ab Schritt 3.
+// tradingMachine.ts für den vollständigen Knoten-Katalog). s1/s2 erzeugen seit 06.09.2026 bei einem
+// Gate-Block selbst eine Zeile (siehe loadOrCreateGateActor) — davor existierte laut Schema erst ab
+// Schritt 3 überhaupt ein Loop.
 function deriveStepAndCase(node: string, fallCase: number | null): { currentStep: TradingLoopStateRow["currentStep"]; currentCase: number | null } {
+  // end_keinTrade ist laut tradingMachine.ts nur über s1_handelszeits HANDELSZEIT_CHECKED-Kante
+  // erreichbar, deshalb immer Schritt 1 — siehe bekannte Einschränkung dazu in loadOrCreateGateActor.
+  if (node === "s1_handelszeit" || node === "end_keinTrade") return { currentStep: 1, currentCase: null };
+  if (node === "s2_news" || node === "newsPause") return { currentStep: 2, currentCase: null };
   if (node.startsWith("s3_bias")) return { currentStep: 3, currentCase: null };
   if (node === "s45.entry" || node === "s45.mode") return { currentStep: 4, currentCase: null };
   if (node.startsWith("s45")) return { currentStep: 5, currentCase: fallCase };
@@ -29,10 +34,10 @@ export interface LoadedMachine {
   actor: TradingActor;
 }
 
-// Lädt den Actor für den aktiven Loop eines Instruments. Wirft, wenn kein aktiver Loop existiert —
-// wie bisher legt erst run_bias_check (Schritt 3) über startLoopState einen neuen an; alles davor
-// (Schritt 1/2, check_pretrade_gates) läuft ohne persistenten Loop, siehe stateMachineLog.ts-
-// Kopfkommentar zum geblockten-Gate-ohne-Loop-Fall.
+// Lädt den Actor für den aktiven Loop eines Instruments. Wirft, wenn kein aktiver Loop existiert.
+// Ein GEBLOCKTER Gate-Check (Schritt 1/2) legt seit 06.09.2026 selbst eine Zeile an (siehe
+// loadOrCreateGateActor) — diese Funktion hier bleibt für alles ab Schritt 3 (run_bias_check über
+// startLoopState) bzw. für einen bereits vorhandenen Loop jedes Fortschritts.
 export async function loadMachineForInstrument(instrument: string): Promise<LoadedMachine> {
   const loaded = await loadMachineForInstrumentOrNull(instrument);
   if (!loaded) {
@@ -41,9 +46,18 @@ export async function loadMachineForInstrument(instrument: string): Promise<Load
   return loaded;
 }
 
-export async function loadMachineForInstrumentOrNull(instrument: string): Promise<LoadedMachine | null> {
-  const loopState = await getActiveLoopState(instrument);
-  if (!loopState) return null;
+// Rehydrierung mit Kompatibilitäts-Absicherung, geteilt zwischen loadMachineForInstrumentOrNull
+// (ab Schritt 3, wirft bei fehlendem Loop) und loadOrCreateGateActor (S1/S2, legt bei Bedarf selbst
+// eine Zeile an). Ein persistierter Snapshot kann auf einen Knoten zeigen, der in einer SPÄTEREN
+// tradingMachine.ts-Änderung umbenannt/entfernt wurde (Bug-Vorfall 05.09.2026: die tscGet/
+// tscExists-Entfernung ließ einen live geparkten Loop mit inkompatiblem Snapshot zurück, dessen
+// Verhalten je nach Tool-Aufruf unterschiedlich kaputt war — mal ein sofortiger XState-Fehler,
+// mal ein Actor ohne funktionierendes getSnapshot().can(), mal ein Hänger, der erst nach
+// mehreren Minuten vom MCP-Client abgebrochen wurde). Statt dieses Risiko bei jeder künftigen
+// Maschinen-Änderung erneut einzugehen: Actor-Konstruktion UND ein Sanity-Check auf das Ergebnis
+// hart absichern, damit eine Inkompatibilität IMMER sofort als klarer, fangbarer Fehler auftritt
+// (den safeTransitionChain bereits abfängt) statt in unvorhersehbares Verhalten zu laufen.
+function rehydrateActor(loopState: TradingLoopStateRow, instrument: string): TradingActor {
   if (loopState.currentNode == null) {
     // Loop wurde VOR State-Machine V2 angelegt (kein machine_snapshot) — ein frischer Actor bei
     // s1_handelszeit würde hier still am tatsächlichen Fortschritt (z.B. schon in Schritt 5) vorbei
@@ -55,22 +69,13 @@ export async function loadMachineForInstrumentOrNull(instrument: string): Promis
         `einmalig run_bias_check erneut aufrufen (ersetzt den Loop komplett), dann normal weitermachen.`,
     );
   }
-  // Ein persistierter Snapshot kann auf einen Knoten zeigen, der in einer SPÄTEREN
-  // tradingMachine.ts-Änderung umbenannt/entfernt wurde (Bug-Vorfall 05.09.2026: die tscGet/
-  // tscExists-Entfernung ließ einen live geparkten Loop mit inkompatiblem Snapshot zurück, dessen
-  // Verhalten je nach Tool-Aufruf unterschiedlich kaputt war — mal ein sofortiger XState-Fehler,
-  // mal ein Actor ohne funktionierendes getSnapshot().can(), mal ein Hänger, der erst nach
-  // mehreren Minuten vom MCP-Client abgebrochen wurde). Statt dieses Risiko bei jeder künftigen
-  // Maschinen-Änderung erneut einzugehen: Actor-Konstruktion UND ein Sanity-Check auf das Ergebnis
-  // hart absichern, damit eine Inkompatibilität IMMER sofort als klarer, fangbarer Fehler auftritt
-  // (den safeTransitionChain bereits abfängt) statt in unvorhersehbares Verhalten zu laufen.
   const rawSnapshot = loopState.machineSnapshot && Object.keys(loopState.machineSnapshot as object).length > 0 ? (loopState.machineSnapshot as any) : undefined;
-  let actor: TradingActor;
   try {
-    actor = createTradingActor(rawSnapshot);
+    const actor = createTradingActor(rawSnapshot);
     if (typeof actor.getSnapshot !== "function" || typeof actor.getSnapshot().can !== "function") {
       throw new Error("Actor nach Rehydrierung ohne funktionsfähiges getSnapshot().can() zurückbekommen.");
     }
+    return actor;
   } catch (err) {
     throw new Error(
       `Der aktive Loop für ${instrument} (id=${loopState.id}) hat einen mit der aktuellen tradingMachine.ts inkompatiblen Maschinen-Snapshot ` +
@@ -78,7 +83,51 @@ export async function loadMachineForInstrumentOrNull(instrument: string): Promis
         `dann normal weitermachen. Ursprünglicher Fehler: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
-  return { loopId: loopState.id, actor };
+}
+
+export async function loadMachineForInstrumentOrNull(instrument: string): Promise<LoadedMachine | null> {
+  const loopState = await getActiveLoopState(instrument);
+  if (!loopState) return null;
+  return { loopId: loopState.id, actor: rehydrateActor(loopState, instrument) };
+}
+
+// S1/S2-Sichtbarkeit (docs/state-machine.md#s1-s2-sichtbar, 06.09.2026) — anders als
+// loadMachineForInstrumentOrNull (nur für einen bereits über run_bias_check gestarteten Loop ab
+// Schritt 3) legt diese Variante bei Bedarf selbst eine frische Zeile an, weil check_pretrade_gates
+// (Schritt 1+2) als Allererstes im Tages-Ablauf läuft, BEVOR ein Bias (direction) überhaupt bekannt
+// ist. Nur für check_pretrade_gates' Block-Fall gedacht (siehe tools/pretradeGates.ts) — im
+// Erfolgsfall bleibt run_bias_checks bestehender startLoopState-Pfad unverändert, damit hier kein
+// zusätzlicher Zeilen-Churn pro Aufruf entsteht.
+export async function loadOrCreateGateActor(instrument: string, dateStr: string): Promise<LoadedMachine> {
+  const existing = await getActiveLoopState(instrument);
+  if (existing && existing.dateStr === dateStr) {
+    return { loopId: existing.id, actor: rehydrateActor(existing, instrument) };
+  }
+  // Kein passender Loop für heute (neuer Tag, oder ein gestriger Gate-Block/Loop wurde nie durch
+  // einen echten run_bias_check-Aufruf superseded) — alten aktiven Loop zuerst superseden, sonst
+  // schlägt der Insert am Partial-Unique-Index (ein aktiver Loop pro Instrument) fehl.
+  if (existing) {
+    const { error } = await supabase.from("trading_loop_state").update({ status: "superseded" }).eq("id", existing.id);
+    if (error) throw new Error(error.message);
+  }
+  const actor = createTradingActor();
+  const { data, error } = await supabase
+    .from("trading_loop_state")
+    .insert({
+      instrument,
+      date_str: dateStr,
+      status: "active",
+      current_step: 1,
+      current_case: null,
+      direction: null,
+      heartbeat_log: [],
+      machine_snapshot: actor.getPersistedSnapshot(),
+      current_node: currentNodePath(actor),
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return { loopId: data.id as number, actor };
 }
 
 // Schickt EIN Event an den Actor (hart geblockt bei ungültigem Übergang, siehe sendGuarded), dann

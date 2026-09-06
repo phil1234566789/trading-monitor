@@ -42,9 +42,11 @@ export interface TradingLoopStateRow {
   instrument: string;
   dateStr: string;
   status: LoopStatus;
-  currentStep: 3 | 4 | 5 | 6 | 7 | 8;
+  currentStep: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   currentCase: number | null;
-  direction: "long" | "short";
+  // null bis Schritt 3 (run_bias_check) den Trend bestimmt hat — S1/S2-Gate-Zeilen (siehe
+  // machineState.ts loadOrCreateGateActor) kennen noch keine Richtung.
+  direction: "long" | "short" | null;
   dealingRangeId: number | null;
   trendTarget: LoopLevel | null;
   countertrendTarget: LoopLevel | null;
@@ -71,9 +73,9 @@ function rowToState(row: Record<string, unknown>): TradingLoopStateRow {
     instrument: row.instrument as string,
     dateStr: row.date_str as string,
     status: row.status as LoopStatus,
-    currentStep: row.current_step as 3 | 4 | 5,
+    currentStep: row.current_step as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
     currentCase: (row.current_case as number | null) ?? null,
-    direction: row.direction as "long" | "short",
+    direction: (row.direction as "long" | "short" | null) ?? null,
     dealingRangeId: (row.dealing_range_id as number | null) ?? null,
     trendTarget: (row.trend_target as LoopLevel | null) ?? null,
     countertrendTarget: (row.countertrend_target as LoopLevel | null) ?? null,
