@@ -936,9 +936,9 @@
     "semantic_hash": "528dc407cc77c6eecb74dcd370004472"
   },
   "supabase/functions/trading-monitor-mcp/loopState.ts": {
-    "mtime": 1788688914.5220146,
-    "seen": 1788691074.870884,
-    "ast_hash": "d222873f1d747142e401f177e390731f",
+    "mtime": 1788702065.790909,
+    "seen": 1788702184.9517245,
+    "ast_hash": "0d4348f3d717a75f41b527fd6ab3857f",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/machineState.ts": {
@@ -2238,9 +2238,9 @@
     "semantic_hash": "58b67c341ca0dca5be7145bfaed7fa16"
   },
   ".claude/skills/fachdoku-router/SKILL.md": {
-    "mtime": 1788693846.4901974,
-    "seen": 1788696426.5344625,
-    "ast_hash": "7cbb0825881ad5ce7e5d1bc9231f388f",
+    "mtime": 1788699465.3288877,
+    "seen": 1788702184.9944873,
+    "ast_hash": "81f79995f245e82d122d46a19b0a07ae",
     "semantic_hash": ""
   },
   ".claude/skills/handbuch-check/SKILL.md": {
@@ -2370,9 +2370,9 @@
     "semantic_hash": "d8b078ea5f6334e16f6dbefa639900d6"
   },
   "docs/state-machine.md": {
-    "mtime": 1788699034.8842974,
-    "seen": 1788699250.6717865,
-    "ast_hash": "98f09ab63b1527d29f30221f54145e54",
+    "mtime": 1788699435.9388342,
+    "seen": 1788702184.9984918,
+    "ast_hash": "4adc10df51112786dd875aee9b4800a1",
     "semantic_hash": ""
   },
   "docs/steerabilty-vs-wrong-ai-outputs.md": {
@@ -2469,6 +2469,12 @@
     "mtime": 1788698934.413065,
     "seen": 1788699250.6717865,
     "ast_hash": "96afafa93d83664d98499fd7483df6d0",
+    "semantic_hash": ""
+  },
+  "docs/state-machine-anleitung.md": {
+    "mtime": 1788699417.9242992,
+    "seen": 1788702184.9984918,
+    "ast_hash": "fb353498c5759ed1a2235ff325047968",
     "semantic_hash": ""
   }
 }
