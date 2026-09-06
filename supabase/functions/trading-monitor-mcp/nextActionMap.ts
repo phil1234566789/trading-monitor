@@ -23,12 +23,17 @@ export interface NextActionEntry {
 
 export const NEXT_ACTION_MAP: Record<string, NextActionEntry> = {
   end_keinTrade: { hint: "Kein Trade heute (außerhalb Handelszeit) — nichts zu tun.", tool: null, judgment: false },
-  newsPause: { hint: "News-Pause aktiv — check_pretrade_gates (oder run_bias_check) später erneut aufrufen.", tool: "check_pretrade_gates", judgment: false },
+  newsPause: { hint: "News-Pause aktiv — exakte Freigabe-Zeit steht in news.retryAtSec/retryAt der letzten check_pretrade_gates-Antwort, damit erneut aufrufen (nicht raten/pollen).", tool: "check_pretrade_gates", judgment: false },
   "s3_bias.computing": { hint: "Bias-Berechnung steht noch aus.", tool: "run_bias_check", judgment: false },
   "s3_bias.llm3_kontextSynthese": {
     hint: "Bias steht (Trend/Targets/Invalidierung schon auf der Zeile) — Kontext-Synthese im Chat machen, dann Schritt 4.",
     tool: "check_session_window",
     judgment: true, // Kontext-Synthese selbst ist Lanas freie Einordnung, der Tool-Call danach ist nur der Trigger
+  },
+  "s45.entry": {
+    hint: "Session-Fakten geprüft — Schritt 5 starten/fortsetzen.",
+    tool: "run_dealing_range_loop",
+    judgment: false, // fundstelle: sessionWindow.ts-Kommentar — run_dealing_range_loop übernimmt S45_ENTER/MODE_SELECTED bei jedem Einstieg in Schritt 5
   },
   "s45.liveWait": { hint: "Kein Watch-Level-Treffer (live) — beim nächsten Cron-Tick erneut aufrufen.", tool: "run_dealing_range_loop", judgment: false },
   "s45.backtestBatch": { hint: "Backtest pausiert (maxBatches erreicht) — mit demselben replayUntilSec erneut aufrufen, um weiterzuspulen.", tool: "run_dealing_range_loop", judgment: false },

@@ -44,7 +44,7 @@ export function evaluateTradingHoursGate(nowSec: number, tradingWindows: Trading
 // "kurzfristig"/"unmittelbar bevorstehend"/"bereits eingetreten".
 export const NEWS_IMMINENT_MINUTES = 30; // Ausschlusskriterium: News <30 Min entfernt ---> kein Trade
 export const NEWS_SOON_MINUTES = 120; // Soft: News <2h entfernt ---> Analyse aussetzen empfohlen (kein hartes Ausschlusskriterium)
-export const NEWS_POST_EVENT_PAUSE_MINUTES = 14; // feste Pause 14min. Nach 15min kann man weiter analysieren.
+export const NEWS_POST_EVENT_PAUSE_MINUTES = 15; // feste Pause: 15 Min. nach dem Event geht's weiter.
 const NY_SESSION_START_MINUTES = 14 * 60; // marktsessions.md#ny-session
 const NY_SESSION_END_MINUTES = 22 * 60;
 
@@ -67,6 +67,12 @@ export interface NewsGateResult {
   exclude: boolean;
   events: ClassifiedNewsEvent[];
   textBlocks: string[];
+  // Reiskocher-Prinzip: nicht nur "blockiert", sondern gleich die exakte Freigabe-Zeit mitliefern,
+  // statt Lana zwingen, NEWS_POST_EVENT_PAUSE_MINUTES selbst im Code nachzuschlagen (Vorfall
+  // 06.09.2026 — Lana musste sonst raten/fragen, wann der nächste Poll sinnvoll ist). null = kein
+  // Block aktiv. Bei mehreren gleichzeitig blockierenden Events die späteste Freigabe (max).
+  retryAtSec: number | null;
+  retryAt: string | null;
 }
 
 // events: bereits auf einen sinnvollen Umkreis um nowSec gefiltert (siehe tools/pretradeGates.ts —
@@ -77,7 +83,7 @@ export interface NewsGateResult {
 // hinterlegt" nicht mit "es gibt tatsächlich keine News heute" verwechselt wird.
 export function evaluateNewsGate(nowSec: number, events: NewsEventInput[], hasEventsForDay: boolean): NewsGateResult {
   if (!hasEventsForDay) {
-    return { hasData: false, exclude: false, events: [], textBlocks: [`keine News hinterlegt (${berlinDateStrFor(nowSec)})`] };
+    return { hasData: false, exclude: false, events: [], textBlocks: [`keine News hinterlegt (${berlinDateStrFor(nowSec)})`], retryAtSec: null, retryAt: null };
   }
   const classified: ClassifiedNewsEvent[] = events.map((ev) => {
     const minutesUntil = (ev.eventTimeSec - nowSec) / 60;
@@ -108,5 +114,13 @@ export function evaluateNewsGate(nowSec: number, events: NewsEventInput[], hasEv
   });
   const exclude = classified.some((c) => c.category === "exclude_imminent" || c.category === "exclude_post_event_pause");
   const textBlocks = classified.length > 0 ? classified.map((c) => c.textBlock) : [`keine News hinterlegt (${berlinDateStrFor(nowSec)})`];
-  return { hasData: true, exclude, events: classified, textBlocks };
+  // Beide Block-Kategorien (davor UND danach) räumen erst NEWS_POST_EVENT_PAUSE_MINUTES nach dem
+  // Event-Zeitpunkt frei — dazwischen (Event selbst) gibt es keine Lücke im Ausschluss.
+  const retryAtSec = classified
+    .filter((c) => c.category === "exclude_imminent" || c.category === "exclude_post_event_pause")
+    .reduce<number | null>((latest, c) => {
+      const candidate = c.eventTimeSec + NEWS_POST_EVENT_PAUSE_MINUTES * 60;
+      return latest === null || candidate > latest ? candidate : latest;
+    }, null);
+  return { hasData: true, exclude, events: classified, textBlocks, retryAtSec, retryAt: retryAtSec === null ? null : berlinDateTimeStrFor(retryAtSec) };
 }

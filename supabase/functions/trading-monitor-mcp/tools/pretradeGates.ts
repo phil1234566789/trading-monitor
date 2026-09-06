@@ -135,6 +135,9 @@ export function registerPretradeGatesTool(server: McpServer) {
         "hinterlegten Zeitfensters. `news` liefert vorformulierte Textbausteine je News-Termin " +
         "(siehe 02-check-news.md) — `hasData=false` heißt 'keine Daten für diesen Tag hinterlegt', " +
         "NICHT zwingend 'keine News' (die Tabelle wird nur für aktuell gehandelte Tage gepflegt). " +
+        "Bei News-Block liefert `news.retryAtSec`/`retryAt` die exakte Freigabe-Zeit fertig " +
+        "berechnet mit — NICHT selbst raten/pollen, einfach mit dieser Zeit als nowSec erneut " +
+        "aufrufen. " +
         "nowSec optional für einen Backtest/Replay-Zeitpunkt (Default: jetzt).",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),

@@ -22,15 +22,18 @@ function rowToDecision(row) {
   };
 }
 
-// Neueste zuerst, per Instrument — deckt sowohl Einträge mit als auch ohne loop_state_id ab (kein
-// Filter auf einen einzelnen Loop), damit ein geblockter Gate-Versuch OHNE entstandenen Loop hier
-// trotzdem auftaucht (genau der Auslöser-Fall vom 01.09.2026).
+// Neueste zuerst nach created_at (wann der Eintrag TATSÄCHLICH geschrieben wurde), NICHT nach sec
+// (simulierter Analyse-Zeitpunkt) — im Live-Betrieb praktisch identisch, im Backtest aber nicht:
+// sonst begraben Altlasten mit späterem sec (z.B. Live-Reste von vor Tagen) einen frisch gemachten
+// Backtest-Lauf mit früherem sec unten in der Liste (Vorfall 06.09.2026). Deckt sowohl Einträge mit
+// als auch ohne loop_state_id ab (kein Filter auf einen einzelnen Loop), damit ein geblockter
+// Gate-Versuch OHNE entstandenen Loop hier trotzdem auftaucht (Auslöser-Fall vom 01.09.2026).
 export async function fetchStateMachineLog(instrument, limit = 150) {
   const { data, error } = await supabase
     .from("state_machine_log")
     .select("*")
     .eq("instrument", instrument)
-    .order("sec", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
   return (data ?? []).map(rowToDecision);

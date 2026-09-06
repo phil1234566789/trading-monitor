@@ -64,6 +64,21 @@ describe("evaluateNewsGate", () => {
     expect(result.events[0].category).toBe("exclude_post_event_pause");
   });
 
+  it("Block liefert retryAtSec = eventTimeSec + NEWS_POST_EVENT_PAUSE_MINUTES, nicht nur exclude=true (Reiskocher-Prinzip, 06.09.2026)", () => {
+    const eventTimeSec = nowSec + 10 * 60;
+    const events = [{ eventTimeSec, currency: "GBP", title: "Test-News" }];
+    const result = evaluateNewsGate(nowSec, events, true);
+    expect(result.retryAtSec).toBe(eventTimeSec + NEWS_POST_EVENT_PAUSE_MINUTES * 60);
+    expect(result.retryAt).toBeTruthy();
+  });
+
+  it("kein Block -> retryAtSec/retryAt null", () => {
+    const events = [{ eventTimeSec: nowSec + 200 * 60, currency: "GBP", title: "Test-News" }];
+    const result = evaluateNewsGate(nowSec, events, true);
+    expect(result.retryAtSec).toBeNull();
+    expect(result.retryAt).toBeNull();
+  });
+
   it("News weit entfernt, nicht USD/NY -> keine Konsequenz", () => {
     const events = [{ eventTimeSec: nowSec + 200 * 60, currency: "GBP", title: "Test-News" }];
     const result = evaluateNewsGate(nowSec, events, true);

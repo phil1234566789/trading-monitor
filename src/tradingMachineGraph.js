@@ -19,10 +19,10 @@
 export const NODES = [
   { id: "s1_handelszeit", label: "Schritt 1: Handelszeit" },
   { id: "s2_news", label: "Schritt 2: News" },
-  { id: "newsPause", label: "News-Pause (Wecker)", hint: "News-Pause aktiv — check_pretrade_gates (oder run_bias_check) später erneut aufrufen.", nextTool: "check_pretrade_gates" },
+  { id: "newsPause", label: "News-Pause (Wecker)", hint: "News-Pause aktiv — exakte Freigabe-Zeit steht in news.retryAtSec/retryAt der letzten check_pretrade_gates-Antwort, damit erneut aufrufen (nicht raten/pollen).", nextTool: "check_pretrade_gates" },
   { id: "s3_computing", label: "Schritt 3: Bias berechnen", statePath: "s3_bias.computing", hint: "Bias-Berechnung steht noch aus.", nextTool: "run_bias_check" },
   { id: "s3_llm3", label: "Schritt 3: Kontext-Synthese", statePath: "s3_bias.llm3_kontextSynthese", llm: true, hint: "Bias steht (Trend/Targets/Invalidierung schon auf der Zeile) — Kontext-Synthese im Chat machen, dann Schritt 4.", nextTool: "check_session_window" },
-  { id: "s45_entry", label: "Schritt 4/5: Einstieg", statePath: "s45.entry" },
+  { id: "s45_entry", label: "Schritt 4/5: Einstieg", statePath: "s45.entry", hint: "Session-Fakten geprüft — Schritt 5 starten/fortsetzen.", nextTool: "run_dealing_range_loop" },
   { id: "s45_mode", label: "Live oder Backtest?", statePath: "s45.mode", gate: true },
   { id: "s45_liveTick", label: "Live: Watch-Level vs. Kurs", statePath: "s45.liveTick" },
   { id: "s45_liveWait", label: "Kein Treffer (Cron in 5 Min)", statePath: "s45.liveWait", hint: "Kein Watch-Level-Treffer (live) — beim nächsten Cron-Tick erneut aufrufen.", nextTool: "run_dealing_range_loop" },
