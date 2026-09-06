@@ -114,6 +114,47 @@ eine einmalige `delete from trading_loop_state where ...`-Migration, siehe die
 `reset_gbpusd_*_test_data_*`-Migrationen als Vorbild) löschen lassen, wenn ein Tag+Instrument
 wirklich neu aufgesetzt werden soll.
 
+## Nächster Schritt: `get_next_action` (06.09.2026)
+
+Philip: "Lana kommt sehr stark mit den ganzen Steps durcheinander ... woher weiß Lana, welche
+Tool-Aufrufe sie gerade machen soll?" — `tradingMachine.ts` erzwingt schon, DASS die Reihenfolge
+eingehalten wird (`sendGuarded` blockt falsche Züge hart), beantwortet aber nie die davor liegende
+Frage: welcher Aufruf ist am aktuellen Knoten überhaupt gültig? Diese Übersetzung
+(Knotenname → Klartext-Anweisung, welches Tool als Nächstes dran ist) fehlte komplett — Lana musste
+`current_node` bisher selbst gegen Code/Doku abgleichen.
+
+**`get_next_action(instrument, replayUntilSec?)`** (`tools/nextAction.ts`) — IMMER als Erstes
+aufrufen, wenn (wieder) an einem Instrument weitergemacht wird, egal ob 5 Minuten, 2 Stunden oder
+eine neue Chat-Session dazwischenliegen. Liest die permanente Tages-Zeile (siehe oben), schlägt
+`current_node` in `nextActionMap.ts` nach und antwortet mit `hint` (Klartext) + `tool` (welches
+MCP-Tool als Nächstes gültig ist) + `judgment` (`true` = echtes LLM-Urteil, an dem die Maschine hart
+parkt — `log_fall_classification`, `log_validation_verdict`, Kontext-Synthese, Zielwahl,
+Anti-Confluence-Auswahl, Entry-Timing; `false` = der genannte Tool-Aufruf treibt die Maschine als
+Nebeneffekt seiner eigentlichen Aufgabe voran, z.B. `find_targets` löst gleichzeitig
+`s45.pinCheck`/`s45.fallAgainCheck` mit aus).
+
+**`nextActionMap.ts`** enthält NUR die Knoten, die tatsächlich als Ruhepunkt zwischen zwei
+Tool-Aufrufen beobachtet werden — die meisten `tradingMachine.ts`-Knoten werden innerhalb EINES
+Tool-Aufrufs automatisch durchlaufen (z.B. `s45.entry`/`mode`/`liveTick`, oder `s45.findTargets`
+selbst — `find_targets` schickt `TARGETS_FOUND` als eigenen Nebeneffekt und rutscht im selben Call
+sofort weiter zu `llmPickTarget`) und sind als "was rufe ich als Nächstes" nie relevant. Jede Zeile
+ist gegen die tatsächlichen `safeTransitionChain`-Aufrufe in `db.ts`/`tools/*.ts` verifiziert, nicht
+aus `tradingMachine.ts` geraten (siehe Fundstellen-Kommentare in der Datei selbst).
+
+**Frontend-Pendant:** `src/tradingMachineGraph.js`s `NODES`-Array trägt dieselben `hint`/`nextTool`-
+Texte, `TradingFlow.vue` zeigt sie als eigene Box über dem Graphen — Testkriterium fürs Feature
+selbst (Philip): "wenn ich die State-Machine 'bedienen' kann (der Weg wird mir angezeigt), dann
+wird Lana das auch können." Dieselbe bewusste Zwei-Runtimes-Duplizierung wie
+`orderBlocks.js`/`orderBlocks.ts`.
+
+**Bewusst nicht gebaut (YAGNI, siehe Diskussion vor der Umsetzung):** `get_next_action` liefert
+KEINE vorab geladenen Rohdaten (z.B. die Evidenz für `log_fall_classification` gleich mit) — nur
+den Wegweiser. Für die meisten Knoten wäre das ohnehin nur ein Aufruf derselben, schon vorhandenen
+Kandidatenlisten-Tools (`find_targets`/`find_anti_confluences`, billig); für die zeitkritischen
+Knoten (`fallClassification`) würde es nur einen Tool-Roundtrip sparen, keine Rechenzeit, und bei
+Verzögerung zwischen Abruf und Handeln sogar veraltete Daten riskieren. Bei Bedarf later ergänzbar,
+pro Knoten einzeln entschieden — nicht pauschal.
+
 ## Diagramme
 
 - [Trading-Steps-Ablauf](diagrams/trading-steps-ablauf.html) — kompletter Schritt-1-8-Zyklus,

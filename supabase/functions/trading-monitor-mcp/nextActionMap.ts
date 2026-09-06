@@ -1,0 +1,92 @@
+// Knoten -> Klartext-Wegweiser fürs get_next_action-Tool (docs/state-machine.md#naechster-schritt,
+// Philip 06.09.2026: "Lana kommt mit den Steps durcheinander ... woher weiß Lana, welche Tool-
+// Aufrufe sie machen soll?"). Reine, gepruefte Zuordnung Knoten -> welches Tool als Nächstes ruft —
+// jede Zeile gegen die tatsächlichen safeTransitionChain-Aufrufe in db.ts/tools/*.ts verifiziert
+// (nicht aus tradingMachine.ts abgeleitet/geraten), siehe Kommentare unten für die Fundstelle.
+//
+// Bewusst NUR die tatsächlich als Ruhepunkt beobachtbaren Knoten (der Actor parkt hier zwischen
+// zwei Tool-Aufrufen) — die vielen Zwischenknoten, die innerhalb EINES Tool-Aufrufs automatisch
+// durchlaufen werden (z.B. s45.entry/mode/liveTick, s45.findTargets selbst — find_targets schickt
+// TARGETS_FOUND als eigenen Nebeneffekt und rutscht im selben Call sofort weiter zu llmPickTarget),
+// fehlen hier absichtlich — sie sind für "was rufe ich als Nächstes" nie relevant, der Actor steht
+// nach jedem Tool-Aufruf nie dort.
+//
+// Frontend-Pendant: src/tradingMachineGraph.js (NODES-Array, dieselben hint-Texte) — dieselbe
+// bewusste Zwei-Runtimes-Duplizierung wie orderBlocks.js/orderBlocks.ts (siehe CLAUDE.md).
+export interface NextActionEntry {
+  hint: string;
+  tool: string | null;
+  // true = echtes LLM-Urteil, das die Maschine hart durchsetzt (kein anderer Weg weiter) — false =
+  // der genannte Tool-Aufruf treibt den Actor als Nebeneffekt seiner eigentlichen Aufgabe voran.
+  judgment: boolean;
+}
+
+export const NEXT_ACTION_MAP: Record<string, NextActionEntry> = {
+  end_keinTrade: { hint: "Kein Trade heute (außerhalb Handelszeit) — nichts zu tun.", tool: null, judgment: false },
+  newsPause: { hint: "News-Pause aktiv — check_pretrade_gates (oder run_bias_check) später erneut aufrufen.", tool: "check_pretrade_gates", judgment: false },
+  "s3_bias.computing": { hint: "Bias-Berechnung steht noch aus.", tool: "run_bias_check", judgment: false },
+  "s3_bias.llm3_kontextSynthese": {
+    hint: "Bias steht (Trend/Targets/Invalidierung schon auf der Zeile) — Kontext-Synthese im Chat machen, dann Schritt 4.",
+    tool: "check_session_window",
+    judgment: true, // Kontext-Synthese selbst ist Lanas freie Einordnung, der Tool-Call danach ist nur der Trigger
+  },
+  "s45.liveWait": { hint: "Kein Watch-Level-Treffer (live) — beim nächsten Cron-Tick erneut aufrufen.", tool: "run_dealing_range_loop", judgment: false },
+  "s45.backtestBatch": { hint: "Backtest pausiert (maxBatches erreicht) — mit demselben replayUntilSec erneut aufrufen, um weiterzuspulen.", tool: "run_dealing_range_loop", judgment: false },
+  "s45.fallClassification": {
+    hint: "Evidenz liegt vor (get_data_snapshot/get_recent_reactions bei Bedarf erneut aufrufen) — Fall 1 vs. 2 beurteilen.",
+    tool: "log_fall_classification",
+    judgment: true, // fundstelle: dealingRangeLoop.ts logFallClassification, tradingMachine.ts-Kopfkommentar "dauerhaft bei Lana"
+  },
+  "s45.tscLink": {
+    hint: "Bestätigung/Bootstrap der Dealing Range anhängen (level='range').",
+    tool: "add_trade_confirmation",
+    judgment: false, // fundstelle: db.ts addTradeConfirmation, safeTransitionChain(TSC_ADDED/TSC_BOOTSTRAPPED)
+  },
+  "s45.pinCheck": {
+    hint: "Prüfen, ob ein Stand-alone-Pin aufzuräumen ist (get_pin_context) — falls ja remove_pin_entry, sonst direkt find_targets (räumt automatisch mit auf).",
+    tool: "find_targets",
+    judgment: false, // fundstelle: pins.ts removePinEntry + tools/tsc.ts findTargets (PIN_CHECKED bundled)
+  },
+  "s45.fallAgainCheck": {
+    hint: "Ist Fall 1 komplett (Ziel + ggf. weitere Bestätigung vorhanden)? find_targets liefert die Ziel-Kandidaten und löst diesen Schritt automatisch mit aus.",
+    tool: "find_targets",
+    judgment: false, // fundstelle: tools/tsc.ts findTargets, safeTransitionChain(FALL_AGAIN_CHECKED{complete:true})
+  },
+  "s45.llmPickTarget": {
+    hint: "Ziel aus find_targets' Kandidatenliste wählen und mit add_trade_target anhängen.",
+    tool: "add_trade_target",
+    judgment: true, // Zielwahl selbst ist Lanas Entscheidung, siehe docs/state-machine.md "Kandidat für spätere Mechanisierung"
+  },
+  "s45.pinCheck2": {
+    hint: "Zweiten Stand-alone-Pin (Target) prüfen/aufräumen (remove_pin_entry) — danach automatisch weiter zu Schritt 6.",
+    tool: "remove_pin_entry",
+    judgment: false, // fundstelle: pins.ts removePinEntry (PIN2_CHECKED/PIN2_REMOVED)
+  },
+  "s6_validieren.evidenceGathering": {
+    hint: "Evidenz für Schritt 6 sammeln (Confluences/Anti-Confluences/Score).",
+    tool: "get_validation_evidence",
+    judgment: false, // fundstelle: tools/validationEvidence.ts, safeTransitionChain(PIN2_CHECKED/NOTIFIED/EVIDENCE_GATHERED)
+  },
+  "s6_validieren.llm6a_antiConfluenceAuswahl": {
+    hint: "Welche find_anti_confluences-Kandidaten wirklich als Confluence/Anti-Confluence zählen entscheiden, dann add_trade_confirmation aufrufen.",
+    tool: "add_trade_confirmation",
+    judgment: true, // fundstelle: db.ts addTradeConfirmation, safeTransitionChain(CONFIRMATIONS_ADDED); Auswahl selbst ist Lanas Urteil
+  },
+  "s6_validieren.llm6_valideInvalide": {
+    hint: "Finale VALIDE/INVALIDE-Abwägung (qualitativ, kein Schwellenwert) treffen und eintragen.",
+    tool: "log_validation_verdict",
+    judgment: true,
+  },
+  s7_findEntry: { hint: "Entry-Timing ist deine eigene Verantwortung (siehe CLAUDE.md) — sobald ein Entry feststeht, create_trade/add_trade_position aufrufen.", tool: "add_trade_position", judgment: true },
+  s8_tradeManagement: { hint: "Position läuft — bei Abschluss update_trade_position mit dem Outcome aufrufen.", tool: "update_trade_position", judgment: false },
+  end_positionGeschlossen: { hint: "Trade abgeschlossen.", tool: null, judgment: false },
+};
+
+// Fallback für einen Knoten, der (noch) keinen Eintrag hat — z.B. ein reiner Zwischenknoten, den
+// wir bewusst nicht gemappt haben, weil er nie als Ruhepunkt beobachtet werden sollte. Kein throw:
+// get_next_action soll nie hart crashen, nur ehrlich sagen "kann das gerade nicht einordnen".
+export const NEXT_ACTION_FALLBACK: NextActionEntry = {
+  hint: "Kein bekannter Ruhepunkt für diesen Knoten (sollte laut tradingMachine.ts ein reiner Zwischenschritt sein, der sich beim nächsten passenden Tool-Aufruf von selbst löst) — falls das dauerhaft so bleibt, docs/state-machine.md/nextActionMap.ts prüfen.",
+  tool: null,
+  judgment: false,
+};

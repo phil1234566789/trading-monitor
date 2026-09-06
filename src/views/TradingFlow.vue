@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import mermaid from "mermaid";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { LOOP_INSTRUMENTS, fetchCurrentLoopStates } from "../loopState.js";
-import { buildMermaidSource } from "../tradingMachineGraph.js";
+import { buildMermaidSource, getNextActionHint } from "../tradingMachineGraph.js";
 
 // State-Machine V2 (docs/state-machine.md#state-machine-v2, Philip 05.09.2026: "dieser
 // Entscheidungsbaum soll auch in der UI angezeigt werden") — live gerenderter Mermaid-Graph des
@@ -37,6 +37,12 @@ const lastAnalysisLabel = computed(() => {
   const sec = currentLoop.value?.lastAnalysisTimeSec;
   return sec ? berlinTimeFormatter.format(sec * 1000) : null;
 });
+
+// Wegweiser (06.09.2026, Philip: "wenn ich die State-Machine 'bedienen' kann ... dann wird Lana
+// das wohl auch können") — Backend-Pendant get_next_action-Tool (dieselben hint-Texte, siehe
+// tradingMachineGraph.js-Kopfkommentar). Testkriterium fürs Feature selbst: Philip soll allein aus
+// dieser Anzeige den nächsten MCP-Aufruf ablesen können, ohne Code/Doku nachzuschlagen.
+const nextAction = computed(() => getNextActionHint(currentNode.value));
 
 let renderToken = 0;
 async function renderGraph() {
@@ -89,6 +95,12 @@ watch([selectedInstrument, currentNode], () => nextTick(renderGraph), { immediat
         · Stand: <strong>{{ lastAnalysisLabel }}</strong> · Jetzt: <strong>{{ nowLabel }}</strong>
       </span>
     </p>
+
+    <div v-if="nextAction" class="next-action-box" :class="{ judgment: nextAction.judgment }">
+      <span class="next-action-label">{{ nextAction.judgment ? "Dein Urteil gefragt" : "Nächster Schritt" }}</span>
+      <p class="next-action-hint">{{ nextAction.hint }}</p>
+      <code v-if="nextAction.tool" class="next-action-tool">{{ nextAction.tool }}</code>
+    </div>
 
     <p v-if="renderError" class="trading-flow-error">{{ renderError }}</p>
     <div ref="graphContainer" class="graph-container"></div>
@@ -160,6 +172,45 @@ watch([selectedInstrument, currentNode], () => nextTick(renderGraph), { immediat
 .clock-compare strong {
   color: #d1d4dc;
   font-weight: 600;
+}
+
+.next-action-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 720px;
+  padding: 10px 14px;
+  margin: 0 0 16px;
+  border-radius: 6px;
+  background: rgba(41, 98, 255, 0.08);
+  border: 1px solid rgba(91, 141, 255, 0.35);
+}
+.next-action-box.judgment {
+  background: rgba(201, 122, 43, 0.1);
+  border-color: rgba(201, 122, 43, 0.4);
+}
+.next-action-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5b8dff;
+}
+.next-action-box.judgment .next-action-label {
+  color: #c97a2b;
+}
+.next-action-hint {
+  font-size: 13px;
+  color: #d1d4dc;
+  margin: 0;
+}
+.next-action-tool {
+  align-self: flex-start;
+  font-size: 12px;
+  color: #9aa0ac;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .trading-flow-error {

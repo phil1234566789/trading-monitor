@@ -8,46 +8,54 @@
 // `id` ist die Mermaid-Knoten-ID (keine Punkte erlaubt); `statePath` ist der echte Dot-Pfad aus
 // tradingMachine.ts/currentNodePath() (Default = id, wenn nicht abweichend) — darüber matcht
 // buildMermaidSource() den aktuellen Knoten aus trading_loop_state.current_node.
+//
+// `hint`/`nextTool` (06.09.2026, Philip: "woher weiß Lana, welche Tool-Aufrufe sie gerade machen
+// soll?") — Frontend-Pendant zur Knoten-Zuordnung im Backend
+// (supabase/functions/trading-monitor-mcp/nextActionMap.ts, get_next_action-Tool), dieselbe
+// bewusste Zwei-Runtimes-Duplizierung wie orderBlocks.js/orderBlocks.ts. Nur an den Knoten gesetzt,
+// die tatsächlich als Ruhepunkt zwischen zwei Tool-Aufrufen beobachtet werden — reine
+// Zwischenknoten (innerhalb eines einzigen Tool-Aufrufs automatisch durchlaufen) bleiben ohne
+// hint/nextTool, TradingFlow.vue zeigt dort nichts an.
 export const NODES = [
   { id: "s1_handelszeit", label: "Schritt 1: Handelszeit" },
   { id: "s2_news", label: "Schritt 2: News" },
-  { id: "newsPause", label: "News-Pause (Wecker)" },
-  { id: "s3_computing", label: "Schritt 3: Bias berechnen", statePath: "s3_bias.computing" },
-  { id: "s3_llm3", label: "Schritt 3: Kontext-Synthese", statePath: "s3_bias.llm3_kontextSynthese", llm: true },
+  { id: "newsPause", label: "News-Pause (Wecker)", hint: "News-Pause aktiv — check_pretrade_gates (oder run_bias_check) später erneut aufrufen.", nextTool: "check_pretrade_gates" },
+  { id: "s3_computing", label: "Schritt 3: Bias berechnen", statePath: "s3_bias.computing", hint: "Bias-Berechnung steht noch aus.", nextTool: "run_bias_check" },
+  { id: "s3_llm3", label: "Schritt 3: Kontext-Synthese", statePath: "s3_bias.llm3_kontextSynthese", llm: true, hint: "Bias steht (Trend/Targets/Invalidierung schon auf der Zeile) — Kontext-Synthese im Chat machen, dann Schritt 4.", nextTool: "check_session_window" },
   { id: "s45_entry", label: "Schritt 4/5: Einstieg", statePath: "s45.entry" },
   { id: "s45_mode", label: "Live oder Backtest?", statePath: "s45.mode", gate: true },
   { id: "s45_liveTick", label: "Live: Watch-Level vs. Kurs", statePath: "s45.liveTick" },
-  { id: "s45_liveWait", label: "Kein Treffer (Cron in 5 Min)", statePath: "s45.liveWait" },
-  { id: "s45_backtestBatch", label: "Kerzen-Batch holen", statePath: "s45.backtestBatch" },
+  { id: "s45_liveWait", label: "Kein Treffer (Cron in 5 Min)", statePath: "s45.liveWait", hint: "Kein Watch-Level-Treffer (live) — beim nächsten Cron-Tick erneut aufrufen.", nextTool: "run_dealing_range_loop" },
+  { id: "s45_backtestBatch", label: "Kerzen-Batch holen", statePath: "s45.backtestBatch", hint: "Backtest pausiert (maxBatches erreicht) — mit demselben replayUntilSec erneut aufrufen, um weiterzuspulen.", nextTool: "run_dealing_range_loop" },
   { id: "s45_newsBlackoutCheck", label: "News-Blackout aktiv?", statePath: "s45.backtestBatch", gate: true },
   { id: "s45_backtestSkip", label: "Batch pausiert (News)", statePath: "s45.backtestSkip" },
   { id: "s45_watchLevelHit", label: "Watch-Level im Batch berührt?", statePath: "s45.watchLevelHit", gate: true },
   { id: "s45_backtestHeartbeat", label: "Kein Treffer -> nächster Batch", statePath: "s45.backtestHeartbeat" },
   { id: "s45_refetch", label: "Voller Refetch", statePath: "s45.refetch" },
-  { id: "s45_fallClassification", label: "Fall 1/2/3/4?", statePath: "s45.fallClassification", llm: true },
+  { id: "s45_fallClassification", label: "Fall 1/2/3/4?", statePath: "s45.fallClassification", llm: true, hint: "Evidenz liegt vor (get_data_snapshot/get_recent_reactions bei Bedarf erneut aufrufen) — Fall 1 vs. 2 beurteilen.", nextTool: "log_fall_classification" },
   { id: "s45_fall3Pin", label: "Fall 3: Watch-Level pinnen", statePath: "s45.fall3Pin" },
   // get_tsc_range (vormals eigene tscGet/tscExists-Knoten) ist bewusst KEIN Graph-Knoten mehr
   // (Philip 05.09.2026: "kann aus der State Machine und aus dem Graphen heraus") —
   // add_trade_confirmation prueft/legt die Range beim Bootstrap-oder-Reuse-Zweig selbst an
   // (siehe tradingMachine.ts: s45.tscLink), get_tsc_range bleibt als eigenstaendiges Lese-Tool
   // fuer Lana nutzbar, ohne dass die Maschine einen separaten Aufruf dafuer erzwingt.
-  { id: "s45_tscLink", label: "Bestätigung anhängen (Range anlegen/wiederverwenden)", statePath: "s45.tscLink" },
-  { id: "s45_pinCheck", label: "Stand-alone-Pin vorhanden?", statePath: "s45.pinCheck", gate: true },
+  { id: "s45_tscLink", label: "Bestätigung anhängen (Range anlegen/wiederverwenden)", statePath: "s45.tscLink", hint: "Bestätigung/Bootstrap der Dealing Range anhängen (level='range').", nextTool: "add_trade_confirmation" },
+  { id: "s45_pinCheck", label: "Stand-alone-Pin vorhanden?", statePath: "s45.pinCheck", gate: true, hint: "Prüfen, ob ein Stand-alone-Pin aufzuräumen ist (get_pin_context) — falls ja remove_pin_entry, sonst direkt find_targets (räumt automatisch mit auf).", nextTool: "find_targets" },
   { id: "s45_pinRemove", label: "Pin aufräumen", statePath: "s45.pinRemove" },
-  { id: "s45_fallAgainCheck", label: "Fall 1 komplett?", statePath: "s45.fallAgainCheck", llm: true },
+  { id: "s45_fallAgainCheck", label: "Fall 1 komplett?", statePath: "s45.fallAgainCheck", llm: true, hint: "Ist Fall 1 komplett? find_targets liefert die Ziel-Kandidaten und löst diesen Schritt automatisch mit aus.", nextTool: "find_targets" },
   { id: "s45_findTargets", label: "find_targets", statePath: "s45.findTargets" },
-  { id: "s45_llmPickTarget", label: "Ziel wählen", statePath: "s45.llmPickTarget", llm: true },
+  { id: "s45_llmPickTarget", label: "Ziel wählen", statePath: "s45.llmPickTarget", llm: true, hint: "Ziel aus find_targets' Kandidatenliste wählen und mit add_trade_target anhängen.", nextTool: "add_trade_target" },
   { id: "s45_addTarget", label: "add_trade_target", statePath: "s45.addTarget" },
-  { id: "s45_pinCheck2", label: "Stand-alone-Pin (Target)?", statePath: "s45.pinCheck2", gate: true },
+  { id: "s45_pinCheck2", label: "Stand-alone-Pin (Target)?", statePath: "s45.pinCheck2", gate: true, hint: "Zweiten Stand-alone-Pin (Target) prüfen/aufräumen — danach automatisch weiter zu Schritt 6.", nextTool: "remove_pin_entry" },
   { id: "s45_pinRemove2", label: "Pin aufräumen", statePath: "s45.pinRemove2" },
   { id: "s45_notify", label: "Benachrichtigen", statePath: "s45.notify" },
-  { id: "s6_evidence", label: "Schritt 6: Evidenz sammeln", statePath: "s6_validieren.evidenceGathering" },
-  { id: "s6_llm6a", label: "Anti-Confluence-Auswahl", statePath: "s6_validieren.llm6a_antiConfluenceAuswahl", llm: true },
-  { id: "s6_llm6", label: "VALIDE/INVALIDE?", statePath: "s6_validieren.llm6_valideInvalide", llm: true },
-  { id: "s7_findEntry", label: "Schritt 7: Find Entry (Philip)" },
-  { id: "s8_tradeManagement", label: "Schritt 8: Trade-Management" },
-  { id: "end_keinTrade", label: "Kein Trade", end: true },
-  { id: "end_positionGeschlossen", label: "Position geschlossen", end: true },
+  { id: "s6_evidence", label: "Schritt 6: Evidenz sammeln", statePath: "s6_validieren.evidenceGathering", hint: "Evidenz für Schritt 6 sammeln (Confluences/Anti-Confluences/Score).", nextTool: "get_validation_evidence" },
+  { id: "s6_llm6a", label: "Anti-Confluence-Auswahl", statePath: "s6_validieren.llm6a_antiConfluenceAuswahl", llm: true, hint: "Welche find_anti_confluences-Kandidaten wirklich zählen entscheiden, dann add_trade_confirmation aufrufen.", nextTool: "add_trade_confirmation" },
+  { id: "s6_llm6", label: "VALIDE/INVALIDE?", statePath: "s6_validieren.llm6_valideInvalide", llm: true, hint: "Finale VALIDE/INVALIDE-Abwägung treffen und eintragen.", nextTool: "log_validation_verdict" },
+  { id: "s7_findEntry", label: "Schritt 7: Find Entry (Philip)", llm: true, hint: "Entry-Timing ist deine eigene Verantwortung — sobald ein Entry feststeht, add_trade_position aufrufen.", nextTool: "add_trade_position" },
+  { id: "s8_tradeManagement", label: "Schritt 8: Trade-Management", hint: "Position läuft — bei Abschluss update_trade_position mit dem Outcome aufrufen.", nextTool: "update_trade_position" },
+  { id: "end_keinTrade", label: "Kein Trade", end: true, hint: "Kein Trade heute (außerhalb Handelszeit) — nichts zu tun." },
+  { id: "end_positionGeschlossen", label: "Position geschlossen", end: true, hint: "Trade abgeschlossen." },
 ];
 
 export const EDGES = [
@@ -95,6 +103,15 @@ export const EDGES = [
   { from: "s7_findEntry", to: "s8_tradeManagement" },
   { from: "s8_tradeManagement", to: "end_positionGeschlossen" },
 ];
+
+// Wegweiser fürs aktuelle currentNode (siehe hint/nextTool oben) — null, wenn kein aktiver Loop
+// oder der Knoten ein reiner Zwischenschritt ohne eigenen Ruhepunkt ist (dort wartet nie jemand).
+export function getNextActionHint(currentNode) {
+  if (!currentNode) return null;
+  const node = NODES.find((n) => (n.statePath ?? n.id) === currentNode);
+  if (!node?.hint) return null;
+  return { hint: node.hint, tool: node.nextTool ?? null, judgment: node.llm === true };
+}
 
 function mermaidEscape(text) {
   return text.replace(/"/g, "&quot;");
