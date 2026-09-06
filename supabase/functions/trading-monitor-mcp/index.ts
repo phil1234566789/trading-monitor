@@ -34,6 +34,7 @@ import { registerBiasCheckTool } from "./tools/biasCheck.ts";
 import { registerDealingRangeLoopTool } from "./tools/dealingRangeLoop.ts";
 import { registerValidationEvidenceTool } from "./tools/validationEvidence.ts";
 import { registerNextActionTool } from "./tools/nextAction.ts";
+import { registerGetLoopStateTool } from "./tools/getLoopState.ts";
 
 const MCP_TOKEN = Deno.env.get("TRADING_MONITOR_MCP_TOKEN");
 
@@ -60,6 +61,7 @@ function buildServer() {
   registerDealingRangeLoopTool(server);
   registerValidationEvidenceTool(server);
   registerNextActionTool(server);
+  registerGetLoopStateTool(server);
   return server;
 }
 
