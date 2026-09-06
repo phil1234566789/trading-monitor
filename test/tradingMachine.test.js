@@ -75,12 +75,14 @@ describe("tradingMachine happy path", () => {
     expect(currentNodePath(actor)).toBe("end_keinTrade");
   });
 
-  it("News-Gate: unmittelbar bevorstehend -> newsPause -> Wecker feuert -> Schritt 3", () => {
+  it("News-Gate: unmittelbar bevorstehend -> newsPause -> erneuter Check nicht mehr imminent -> Schritt 3", () => {
     const actor = createTradingActor();
     sendGuarded(actor, { type: "HANDELSZEIT_CHECKED", outsideHours: false });
     sendGuarded(actor, { type: "NEWS_CHECKED", imminent: true });
     expect(currentNodePath(actor)).toBe("newsPause");
-    sendGuarded(actor, { type: "NEWS_PAUSE_FIRED" });
+    sendGuarded(actor, { type: "NEWS_CHECKED", imminent: true });
+    expect(currentNodePath(actor)).toBe("newsPause");
+    sendGuarded(actor, { type: "NEWS_CHECKED", imminent: false });
     expect(currentNodePath(actor)).toBe("s3_bias.computing");
   });
 });

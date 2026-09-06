@@ -35,15 +35,17 @@ function rowToLoopState(row) {
   };
 }
 
-// Der permanente State von HEUTE je Instrument (Philip, 06.09.2026: "der state soll dauerhaft
-// bleiben ... egal welcher Schritt ... nur wenn ich den state löschen lasse, geht er weg") — seit
-// der Pro-Tag-Identität (instrument, date_str, siehe Migration
+// Der permanente State eines Tages (default heute) je Instrument (Philip, 06.09.2026: "der state
+// soll dauerhaft bleiben ... egal welcher Schritt ... nur wenn ich den state löschen lasse, geht er
+// weg") — seit der Pro-Tag-Identität (instrument, date_str, siehe Migration
 // 20260906140000_trading_loop_state_permanent_per_day.sql) NICHT mehr über status='active'
-// gefiltert (jeder Status bleibt dauerhaft sichtbar), sondern über das heutige Berlin-Datum. Map
-// instrument -> loopState, fehlt ein Instrument im Ergebnis, wurde heute noch nichts initialisiert.
-export async function fetchCurrentLoopStates() {
-  const today = berlinDateStrFor(Math.floor(Date.now() / 1000));
-  const { data, error } = await supabase.from("trading_loop_state").select("*").eq("date_str", today);
+// gefiltert (jeder Status bleibt dauerhaft sichtbar), sondern über das gewählte Berlin-Datum. Map
+// instrument -> loopState, fehlt ein Instrument im Ergebnis, wurde an dem Tag noch nichts
+// initialisiert. dateStr optional für einen Backtest/Replay-Tag (TradingFlow.vue-Datumsauswahl,
+// 06.09.2026: "dann muss ich in der UI den Tag einstellen" — ein Replay-Lauf mit replayUntilSec
+// schreibt auf das Replay-Datum, nicht auf heute, und war sonst in der UI unsichtbar).
+export async function fetchLoopStatesForDate(dateStr = berlinDateStrFor(Math.floor(Date.now() / 1000))) {
+  const { data, error } = await supabase.from("trading_loop_state").select("*").eq("date_str", dateStr);
   if (error) throw error;
   const map = new Map();
   for (const row of data ?? []) map.set(row.instrument, rowToLoopState(row)); // (instrument, date_str) ist eindeutig, höchstens eine Zeile pro Instrument

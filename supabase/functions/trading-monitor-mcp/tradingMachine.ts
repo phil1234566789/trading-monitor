@@ -25,7 +25,6 @@ import { createMachine, createActor, type ActorRefFrom, type Snapshot } from "np
 export type TradingEvent =
   | { type: "HANDELSZEIT_CHECKED"; outsideHours: boolean }
   | { type: "NEWS_CHECKED"; imminent: boolean }
-  | { type: "NEWS_PAUSE_FIRED" }
   | { type: "BIAS_COMPUTED" }
   | { type: "CONTEXT_SYNTHESIS_DONE" }
   | { type: "S45_ENTER" }
@@ -78,9 +77,17 @@ export const tradingMachine = createMachine({
         ],
       },
     },
+    // Kein eigener Timer/Wecker — analog zu liveWait/backtestSkip weiter unten parkt dieser Knoten,
+    // bis der nächste check_pretrade_gates/run_bias_check-Aufruf erneut NEWS_CHECKED schickt; der
+    // Guard entscheidet neu, ob die News immer noch imminent ist.
     newsPause: {
       id: "newsPause",
-      on: { NEWS_PAUSE_FIRED: "#s3_bias" },
+      on: {
+        NEWS_CHECKED: [
+          { guard: ({ event }) => event.imminent, target: "newsPause" },
+          { target: "#s3_bias" },
+        ],
+      },
     },
     s3_bias: {
       id: "s3_bias",
@@ -287,7 +294,7 @@ function flattenStateValue(value: unknown): string {
 const VALID_NEXT_EVENTS: Record<string, string[]> = {
   s1_handelszeit: ["HANDELSZEIT_CHECKED"],
   s2_news: ["NEWS_CHECKED"],
-  newsPause: ["NEWS_PAUSE_FIRED"],
+  newsPause: ["NEWS_CHECKED"],
   "s3_bias.computing": ["BIAS_COMPUTED"],
   "s3_bias.llm3_kontextSynthese": ["CONTEXT_SYNTHESIS_DONE"],
   "s45.entry": ["S45_ENTER"],

@@ -2,8 +2,9 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import mermaid from "mermaid";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
-import { LOOP_INSTRUMENTS, fetchCurrentLoopStates } from "../loopState.js";
+import { LOOP_INSTRUMENTS, fetchLoopStatesForDate } from "../loopState.js";
 import { buildMermaidSource, getNextActionHint } from "../tradingMachineGraph.js";
+import { berlinDateStrFor } from "../dataExport.js";
 
 // State-Machine V2 (docs/state-machine.md#state-machine-v2, Philip 05.09.2026: "dieser
 // Entscheidungsbaum soll auch in der UI angezeigt werden") — live gerenderter Mermaid-Graph des
@@ -18,7 +19,16 @@ const selectedInstrument = ref(LOOP_INSTRUMENTS[0]);
 const graphContainer = ref(null);
 const renderError = ref("");
 
-const { data } = usePolledFetch(fetchCurrentLoopStates, { intervalMs: REFRESH_MS });
+// Datumsauswahl (06.09.2026, Philip: "dann muss ich in der UI den Tag einstellen") — ein
+// Replay-/Backtest-Lauf (check_pretrade_gates/run_bias_check mit replayUntilSec) schreibt auf das
+// Replay-Datum, nicht auf heute; ohne Auswahl sieht man diese Zeile hier nie. Polling bleibt auch
+// für vergangene Tage aktiv (einfacher als ein Sonderfall, Kosten sind eine kleine Query alle 8s).
+const todayStr = berlinDateStrFor(Math.floor(Date.now() / 1000));
+const selectedDateStr = ref(todayStr);
+const isToday = computed(() => selectedDateStr.value === todayStr);
+
+const { data, refresh } = usePolledFetch(() => fetchLoopStatesForDate(selectedDateStr.value), { intervalMs: REFRESH_MS });
+watch(selectedDateStr, refresh);
 const activeByInstrument = computed(() => (data.value instanceof Map ? data.value : new Map()));
 const currentLoop = computed(() => activeByInstrument.value.get(selectedInstrument.value) ?? null);
 const currentNode = computed(() => currentLoop.value?.currentNode ?? null);
@@ -82,9 +92,11 @@ watch([selectedInstrument, currentNode], () => nextTick(renderGraph), { immediat
       >
         {{ instrument }}
       </button>
+      <input v-model="selectedDateStr" type="date" class="date-picker" />
+      <button v-if="!isToday" type="button" class="instrument-tab" @click="selectedDateStr = todayStr">Heute</button>
     </div>
 
-    <p v-if="!currentLoop" class="trading-flow-hint no-loop">Für {{ selectedInstrument }} heute noch nichts initialisiert (check_pretrade_gates/run_bias_check).</p>
+    <p v-if="!currentLoop" class="trading-flow-hint no-loop">Für {{ selectedInstrument }} an {{ selectedDateStr }} noch nichts initialisiert (check_pretrade_gates/run_bias_check).</p>
     <p v-else-if="!currentNode" class="trading-flow-hint no-loop">
       Zeile ohne Maschinen-Snapshot (vor State-Machine V2 angelegt) — einmalig
       run_bias_check erneut aufrufen.
@@ -152,6 +164,16 @@ watch([selectedInstrument, currentNode], () => nextTick(renderGraph), { immediat
   color: #d1d4dc;
   border-color: #5b8dff;
   background: rgba(91, 141, 255, 0.12);
+}
+
+.date-picker {
+  background: #1a1e28;
+  border: 1px solid #2a2e39;
+  color: #d1d4dc;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin-left: auto;
 }
 
 .no-loop {

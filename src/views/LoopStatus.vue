@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from "vue";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
-import { LOOP_INSTRUMENTS, fetchCurrentLoopStates, fetchLoopStateHistory } from "../loopState.js";
+import { LOOP_INSTRUMENTS, fetchLoopStatesForDate, fetchLoopStateHistory } from "../loopState.js";
 import { fetchStateMachineLog } from "../stateMachineLog.js";
 
 // state-machine-v1-ui (siehe docs/state-machine.md#reporting-trading-runsmd-verliert-seinen-zweck)
@@ -15,7 +15,7 @@ const REFRESH_MS = 8000; // die Loop-Zeilen werden von Lana (separate Claude-Cod
 
 async function loadAll() {
   const [active, histories, decisionLogs] = await Promise.all([
-    fetchCurrentLoopStates(),
+    fetchLoopStatesForDate(),
     Promise.all(LOOP_INSTRUMENTS.map((instrument) => fetchLoopStateHistory(instrument))),
     Promise.all(LOOP_INSTRUMENTS.map((instrument) => fetchStateMachineLog(instrument))),
   ]);
