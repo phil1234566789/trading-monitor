@@ -1,0 +1,11 @@
+-- Bug-Fix (06.09.2026, live gefunden bei run_bias_check GBPUSD 28.08.2026): upsertBiasFields
+-- (loopState.ts) lässt current_step bewusst aus dem Upsert-Payload weg, damit es bei einem
+-- Konflikt (Zeile existiert schon) unangetastet bleibt (current_step wird stattdessen exklusiv
+-- von persistTransition/machineState.ts gepflegt). Postgres konstruiert für
+-- INSERT ... ON CONFLICT DO UPDATE aber IMMER erst die vollständige Kandidaten-Zeile für den
+-- Insert-Zweig, bevor es den Konflikt prüft — current_step war NOT NULL ohne Default, das schlug
+-- fehl ("null value in column current_step ... violates not-null constraint"), obwohl am Ende nur
+-- ein Update anderer Spalten passiert wäre. Ein Default macht die Tupel-Konstruktion gültig, ohne
+-- das eigentliche Verhalten zu ändern (der DO-UPDATE-Zweig setzt current_step weiterhin nicht,
+-- der Wert bleibt exakt der von persistTransition zuletzt geschriebene).
+alter table trading_loop_state alter column current_step set default 1;

@@ -125,6 +125,14 @@ export interface UpsertBiasFieldsArgs {
 // oben) — ein Fall-4-Neustart oder ein zweiter run_bias_check am selben Tag aktualisiert dieselbe
 // Zeile in place, legt NIE eine zweite an. dealingRangeId/watchLevel* werden bewusst zurückgesetzt
 // (eine neue Bias-Berechnung kennt noch keine neue Dealing Range/Watch-Level).
+//
+// ACHTUNG current_step: bewusst NICHT im Payload (bleibt bei einem Konflikt unangetastet, siehe
+// oben) — current_step braucht dafür zwingend einen DB-Default (Migration
+// 20260906150000_trading_loop_state_current_step_default.sql), sonst schlägt die
+// Tupel-Konstruktion für den INSERT-Zweig von ON CONFLICT DO UPDATE fehl, BEVOR der Konflikt
+// überhaupt geprüft wird ("null value in column current_step ... violates not-null constraint"),
+// live gefunden 06.09.2026 bei run_bias_check GBPUSD 28.08.2026. Gilt für jede NOT-NULL-Spalte
+// ohne Default, die hier künftig aus demselben Grund weggelassen wird.
 export async function upsertBiasFields(args: UpsertBiasFieldsArgs): Promise<TradingLoopStateRow> {
   const { data, error } = await supabase
     .from("trading_loop_state")
