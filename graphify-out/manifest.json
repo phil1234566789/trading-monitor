@@ -12,10 +12,10 @@
     "semantic_hash": "336bb14138e828a7c00cf985fba955d0"
   },
   ".claude/settings.json": {
-    "mtime": 1788660561.619613,
-    "seen": 1788660641.2142766,
-    "ast_hash": "44649c0e42d8cfd8779c668922a2c85c",
-    "semantic_hash": "44649c0e42d8cfd8779c668922a2c85c"
+    "mtime": 1788660964.1736808,
+    "seen": 1788675137.9022882,
+    "ast_hash": "cbb9ce6f81eb577d1ecd285da24965fc",
+    "semantic_hash": ""
   },
   ".mcp.json": {
     "mtime": 1787465334.5955367,
@@ -768,10 +768,10 @@
     "semantic_hash": "102c8225bfa829eaa2163b7b4c1d9e09"
   },
   "src/views/TradingFlow.vue": {
-    "mtime": 1788616572.31698,
-    "seen": 1788660641.2142766,
-    "ast_hash": "df91a4b897610418f1ec365d9e262773",
-    "semantic_hash": "df91a4b897610418f1ec365d9e262773"
+    "mtime": 1788661099.2144175,
+    "seen": 1788675137.9032886,
+    "ast_hash": "da2a4daeffe68a97586823e0d7b331da",
+    "semantic_hash": ""
   },
   "supabase/functions/_shared/ctraderCreds.ts": {
     "mtime": 1788044062.7421105,
@@ -2262,10 +2262,10 @@
     "semantic_hash": "fdff12428b0d610acd59b66090d75c07"
   },
   "CLAUDE.md": {
-    "mtime": 1788659879.3032506,
-    "seen": 1788660641.2142766,
-    "ast_hash": "5e878ce704d252d7f72550133eedd941",
-    "semantic_hash": "5e878ce704d252d7f72550133eedd941"
+    "mtime": 1788660964.1676733,
+    "seen": 1788675137.9032886,
+    "ast_hash": "e35acccd6ce6cf76e4d6668084e4f94e",
+    "semantic_hash": ""
   },
   "PIP-SETTINGS.md": {
     "mtime": 1787856565.2749648,
@@ -2422,5 +2422,11 @@
     "seen": 1788660641.2142766,
     "ast_hash": "6d8b208e0de518d3239c45eeb4ae604d",
     "semantic_hash": "6d8b208e0de518d3239c45eeb4ae604d"
+  },
+  ".claude/hooks/claudemd-bloat-guard.js": {
+    "mtime": 1788660535.350563,
+    "seen": 1788675137.9022882,
+    "ast_hash": "327cb439647f7647731a3b3479f99eb4",
+    "semantic_hash": ""
   }
 }
