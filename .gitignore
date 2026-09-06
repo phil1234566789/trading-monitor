@@ -4,3 +4,7 @@ dist/
 !*.env.example
 .debug/
 .claude/settings.local.json
+.claude/settings.json.graphify-bak
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/cache/
