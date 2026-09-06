@@ -4,7 +4,7 @@ import { getTradingSchedule, getNewsEvents } from "../db.ts";
 import { berlinDayRangeUtcMs, berlinDateStrFor } from "../berlinTime.ts";
 import { evaluateTradingHoursGate, evaluateNewsGate, type TradingWindows, type NewsEventInput } from "../pretradeGates.ts";
 import { logDecision } from "../stateMachineLog.ts";
-import { loadOrCreateGateActor, transitionIfPossible } from "../machineState.ts";
+import { loadOrCreateGateActor, transitionIfPossible, touchLastAnalysisTime } from "../machineState.ts";
 import { currentNodePath } from "../tradingMachine.ts";
 
 function json(data: unknown) {
@@ -85,11 +85,16 @@ export async function buildPretradeGates({ instrument, nowSec, loopStateId = nul
   let currentNode: string | null = null;
   let gateLoopStateId: number | null = null;
   if (persist && exclude) {
-    const loaded = await loadOrCreateGateActor(instrument, dateStr);
+    const loaded = await loadOrCreateGateActor(instrument, dateStr, effectiveNowSec);
     await transitionIfPossible(loaded, instrument, { type: "HANDELSZEIT_CHECKED", outsideHours: tradingHours.exclude }, effectiveNowSec);
     if (!tradingHours.exclude) {
       await transitionIfPossible(loaded, instrument, { type: "NEWS_CHECKED", imminent: news.exclude }, effectiveNowSec);
     }
+    // Muss AUSSERHALB der obigen transitionIfPossible-Aufrufe passieren, nicht nur implizit über
+    // persistTransition: ein wiederholter Check, der weiter am selben Knoten parkt (kein Event
+    // feuert), würde sonst "Stand" im Graphen (TradingFlow.vue) für immer auf den allerersten
+    // Block-Zeitpunkt einfrieren, statt den Live-Uhr-Vergleich tatsächlich nachzuführen.
+    await touchLastAnalysisTime(loaded.loopId, effectiveNowSec);
     currentNode = currentNodePath(loaded.actor);
     gateLoopStateId = loaded.loopId;
   }

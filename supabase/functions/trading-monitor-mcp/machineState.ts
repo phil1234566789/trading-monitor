@@ -98,7 +98,7 @@ export async function loadMachineForInstrumentOrNull(instrument: string): Promis
 // ist. Nur für check_pretrade_gates' Block-Fall gedacht (siehe tools/pretradeGates.ts) — im
 // Erfolgsfall bleibt run_bias_checks bestehender startLoopState-Pfad unverändert, damit hier kein
 // zusätzlicher Zeilen-Churn pro Aufruf entsteht.
-export async function loadOrCreateGateActor(instrument: string, dateStr: string): Promise<LoadedMachine> {
+export async function loadOrCreateGateActor(instrument: string, dateStr: string, atSec: number): Promise<LoadedMachine> {
   const existing = await getActiveLoopState(instrument);
   if (existing && existing.dateStr === dateStr) {
     return { loopId: existing.id, actor: rehydrateActor(existing, instrument) };
@@ -121,6 +121,7 @@ export async function loadOrCreateGateActor(instrument: string, dateStr: string)
       current_case: null,
       direction: null,
       heartbeat_log: [],
+      last_analysis_time_sec: atSec,
       machine_snapshot: actor.getPersistedSnapshot(),
       current_node: currentNodePath(actor),
     })
@@ -128,6 +129,16 @@ export async function loadOrCreateGateActor(instrument: string, dateStr: string)
     .single();
   if (error) throw new Error(error.message);
   return { loopId: data.id as number, actor };
+}
+
+// Reine "zuletzt geprüft"-Zeitstempel-Aktualisierung für eine Gate-Zeile, unabhängig davon, ob sich
+// dabei der Knoten bewegt hat (z.B. ein wiederholter Check, der weiter bei end_keinTrade/newsPause
+// parkt — persistTransition/transitionIfPossible schreiben in diesem Fall nichts, weil kein Event
+// tatsächlich feuert). Bewusst NICHT über loopState.ts' updateLoopState, das current_step hart auf
+// 5 setzt (Schritt-5-Loop-Tick-Annahme, hier falsch: S1/S2-Gate-Zeilen bleiben bei current_step 1/2).
+export async function touchLastAnalysisTime(loopId: number, atSec: number): Promise<void> {
+  const { error } = await supabase.from("trading_loop_state").update({ last_analysis_time_sec: atSec }).eq("id", loopId);
+  if (error) throw new Error(error.message);
 }
 
 // Schickt EIN Event an den Actor (hart geblockt bei ungültigem Übergang, siehe sendGuarded), dann
