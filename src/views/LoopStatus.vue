@@ -1,8 +1,9 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { LOOP_INSTRUMENTS, fetchLoopStatesForDate, fetchLoopStateHistory } from "../loopState.js";
 import { fetchStateMachineLog } from "../stateMachineLog.js";
+import { berlinDateStrFor } from "../dataExport.js";
 
 // state-machine-v1-ui (siehe docs/state-machine.md#reporting-trading-runsmd-verliert-seinen-zweck)
 // — reines Lese-Panel für trading_loop_state, kein neues Dashboard: TSC/Journal haben bereits
@@ -13,32 +14,40 @@ import { fetchStateMachineLog } from "../stateMachineLog.js";
 // Rest des Dashboards.
 const REFRESH_MS = 8000; // die Loop-Zeilen werden von Lana (separate Claude-Code-Session) geschrieben, kein Push moeglich -> Polling
 
+// Datumsauswahl analog zu TradingFlow.vue (Philip, 06.09.2026: "wie kann ich denn den Handelstag
+// in /loop-status einstellen, so wie in /trading-flow") — ein Replay-/Backtest-Lauf schreibt auf
+// das Replay-Datum, nicht auf heute, sonst sieht man die Karte hier nie ohne die Historie aufzuklappen.
+const todayStr = berlinDateStrFor(Math.floor(Date.now() / 1000));
+const selectedDateStr = ref(todayStr);
+const isToday = computed(() => selectedDateStr.value === todayStr);
+
 async function loadAll() {
   const [active, histories, decisionLogs] = await Promise.all([
-    fetchLoopStatesForDate(),
+    fetchLoopStatesForDate(selectedDateStr.value),
     Promise.all(LOOP_INSTRUMENTS.map((instrument) => fetchLoopStateHistory(instrument))),
     Promise.all(LOOP_INSTRUMENTS.map((instrument) => fetchStateMachineLog(instrument))),
   ]);
   const historyMap = {};
   const decisionLogMap = {};
   LOOP_INSTRUMENTS.forEach((instrument, i) => {
-    // Historie = alles AUSSER der heutigen Zeile (die steht schon oben in der Karte) — seit der
-    // permanenten Pro-Tag-Identität (06.09.2026) bedeutet status nicht mehr "ist das die aktuell
-    // gezeigte Zeile", nur noch die Instrument+Datum-Übereinstimmung mit `active` zeigt das an.
-    const todayId = active.get(instrument)?.id;
-    historyMap[instrument] = histories[i].filter((row) => row.id !== todayId);
+    // Historie = alles AUSSER der oben angezeigten Zeile — seit der permanenten Pro-Tag-Identität
+    // (06.09.2026) bedeutet status nicht mehr "ist das die aktuell gezeigte Zeile", nur noch die
+    // Instrument+Datum-Übereinstimmung mit `active` zeigt das an.
+    const shownId = active.get(instrument)?.id;
+    historyMap[instrument] = histories[i].filter((row) => row.id !== shownId);
     decisionLogMap[instrument] = decisionLogs[i];
   });
   return { active, historyMap, decisionLogMap };
 }
 
 const errorText = ref("");
-const { data } = usePolledFetch(loadAll, {
+const { data, refresh } = usePolledFetch(loadAll, {
   intervalMs: REFRESH_MS,
   onError: (err) => {
     errorText.value = "Loop-Status konnte nicht geladen werden: " + err.message;
   },
 });
+watch(selectedDateStr, refresh);
 
 // usePolledFetch initialisiert data mit [] (Array) — nach dem ersten erfolgreichen Load steht dort
 // immer {active, historyMap} (Objekt), Array-Check reicht also als simpler "noch nicht geladen"-Indikator.
@@ -153,6 +162,11 @@ function decisionTier(decision) {
       dieses Dashboard. Aktualisiert alle {{ REFRESH_MS / 1000 }}s automatisch.
     </p>
 
+    <div class="date-row">
+      <input v-model="selectedDateStr" type="date" class="date-picker" />
+      <button v-if="!isToday" type="button" class="history-toggle" @click="selectedDateStr = todayStr">Heute</button>
+    </div>
+
     <p v-if="errorText" class="loop-status-error">{{ errorText }}</p>
     <p v-else-if="loading" class="loop-status-hint">Lade...</p>
 
@@ -222,7 +236,7 @@ function decisionTier(decision) {
             </div>
           </div>
         </template>
-        <p v-else class="no-loop">Heute noch nichts initialisiert.</p>
+        <p v-else class="no-loop">An {{ selectedDateStr }} noch nichts initialisiert.</p>
 
         <div class="history-block">
           <button class="history-toggle" @click="toggleHistory(instrument)">
@@ -307,6 +321,22 @@ function decisionTier(decision) {
 .loop-status-error {
   font-size: 13px;
   color: #ef5350;
+}
+
+.date-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.date-picker {
+  background: #1a1e28;
+  border: 1px solid #2a2e39;
+  color: #d1d4dc;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
 }
 
 .instrument-grid {
