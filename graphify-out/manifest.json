@@ -720,9 +720,9 @@
     "semantic_hash": "52ab228bfa254da8a6527436a64c5c62"
   },
   "src/tradingMachineGraph.js": {
-    "mtime": 1788729074.1080334,
-    "seen": 1788730975.4112473,
-    "ast_hash": "e879d79e9abf768f604b9185ac693072",
+    "mtime": 1788786485.022627,
+    "seen": 1788787480.5083053,
+    "ast_hash": "97bb053d63b0d0af95cccec802e5de5e",
     "semantic_hash": ""
   },
   "src/tradingSchedules.js": {
@@ -768,9 +768,9 @@
     "semantic_hash": "102c8225bfa829eaa2163b7b4c1d9e09"
   },
   "src/views/TradingFlow.vue": {
-    "mtime": 1788696310.0531402,
-    "seen": 1788696426.5334628,
-    "ast_hash": "7485a308ae1b84c53b1941fc3780777a",
+    "mtime": 1788786490.1419585,
+    "seen": 1788787480.5083053,
+    "ast_hash": "0918a4c9a3412db6a9566206e831a4e8",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/ctraderCreds.ts": {
@@ -1074,9 +1074,9 @@
     "semantic_hash": "1113a960053efd89c82f94c3ed7b8337"
   },
   "supabase/functions/trading-monitor-mcp/tools/dealingRangeLoop.ts": {
-    "mtime": 1788688549.5527766,
-    "seen": 1788691074.8739061,
-    "ast_hash": "04c12ebda889bcbb806184f971ac66b9",
+    "mtime": 1788786436.3014393,
+    "seen": 1788787480.5083053,
+    "ast_hash": "1df9a2f6f102e1b81dc76de47f8a46a7",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/nearRelevantLiquidityLevels.ts": {
@@ -1092,9 +1092,9 @@
     "semantic_hash": "1486065a230aeb2918d8eebc5e3a2e94"
   },
   "supabase/functions/trading-monitor-mcp/tools/pins.ts": {
-    "mtime": 1788732199.4771352,
-    "seen": 1788769471.1545925,
-    "ast_hash": "3f9425a66923f768f73fa223c01baa3b",
+    "mtime": 1788786436.3024392,
+    "seen": 1788787480.5083053,
+    "ast_hash": "61b49f28a897e949ff24c67dafb3ff40",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/pretradeGates.ts": {
@@ -1140,9 +1140,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tradingMachine.ts": {
-    "mtime": 1788695924.1024363,
-    "seen": 1788696426.5334628,
-    "ast_hash": "0eee214eade13dd8f0d458314a2f03ef",
+    "mtime": 1788769875.1148703,
+    "seen": 1788787480.5083053,
+    "ast_hash": "2647cfb1c295048eb06f5b3f794876d8",
     "semantic_hash": ""
   },
   "supabase/migrations/20260705120000_ob_zones.sql": {
@@ -2184,9 +2184,9 @@
     "semantic_hash": "2561cd98850a8064e0804d624b5929ed"
   },
   "test/tradingMachine.test.js": {
-    "mtime": 1788695931.4770658,
-    "seen": 1788696426.5344625,
-    "ast_hash": "4effebc01294068aaba0e3e004079a49",
+    "mtime": 1788769962.4905734,
+    "seen": 1788787480.5083053,
+    "ast_hash": "5d09d1bcd35c29bbcba07662404f71e0",
     "semantic_hash": ""
   },
   "test/trendIndicator.gbpusd-downtrend.test.js": {
@@ -2328,9 +2328,9 @@
     "semantic_hash": "75c26df699b3325dc0c41904f36c227b"
   },
   "docs/diagrams/dealing-range-loop.html": {
-    "mtime": 1788765075.5427675,
-    "seen": 1788769471.1906185,
-    "ast_hash": "3c8d49dce8d055fd997d6da6d4b0cfd2",
+    "mtime": 1788769945.1851108,
+    "seen": 1788787480.5083053,
+    "ast_hash": "2004b2dadfa2ce45fe31f94632a8b196",
     "semantic_hash": ""
   },
   "docs/diagrams/trading-steps-ablauf.html": {
@@ -2442,9 +2442,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/nextActionMap.ts": {
-    "mtime": 1788729058.001189,
-    "seen": 1788730975.4182482,
-    "ast_hash": "d35f8755f14082f600cf5d9c698ab4e4",
+    "mtime": 1788786436.3014393,
+    "seen": 1788787480.5083053,
+    "ast_hash": "d42fc0d47845787416153b0fef8b7e5b",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/nextAction.ts": {
@@ -2517,6 +2517,18 @@
     "mtime": 1788729652.690049,
     "seen": 1788769471.177108,
     "ast_hash": "0a4a5d961597d45b0a61bf839d3c970f",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260907070500_delete_duplicate_confirmation_176.sql": {
+    "mtime": 1788764439.2287135,
+    "seen": 1788787480.5083053,
+    "ast_hash": "3b06aa0ec57c4c2e0e08fad1f6e2aa54",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260907073000_inspect_gbpusd_machine_snapshot.sql": {
+    "mtime": 1788769667.7498677,
+    "seen": 1788787480.5083053,
+    "ast_hash": "83b636a7ee566db0d07d075a03d10310",
     "semantic_hash": ""
   }
 }
