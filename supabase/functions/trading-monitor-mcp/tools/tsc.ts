@@ -153,8 +153,11 @@ export function registerTscTools(server: McpServer) {
         "ferne Kante dieser Zone (aus den bereits per add_trade_target gesetzten Targets der Range, " +
         "siehe get_tsc_range: nimm dort das preislich extremste Target). Liefert 4 Kandidatenlisten: " +
         "obCandidates (gegenläufige — bullische bei Short, bärische bei Long — OBs in der Zone, " +
-        "offen ODER bereits berührt-aber-gehalten, siehe held-Flag), sweepCandidates (gegenläufige " +
-        "LQ-Sweeps in der Zone), divergenceCandidates (gegenläufige RSI-Divergenz in der Zone), " +
+        "offen ODER bereits berührt-aber-gehalten, siehe held-Flag — eine gehaltene M5-OB zählt nur, " +
+        "wenn der Touch auf denselben Handelstag fällt wie der Analysezeitpunkt, HTF (1H/4H) bleibt " +
+        "beim 14-Tage-Rolling-Fenster), sweepCandidates (gegenläufige " +
+        "LQ-Sweeps in der Zone), divergenceCandidates (gegenläufige RSI-Divergenz in der Zone — " +
+        "zählt nur, wenn ihr Schwungpunkt auf denselben Handelstag fällt wie der Analysezeitpunkt), " +
         "invalidationObCandidates (unberührte gegenläufige OBs knapp jenseits der Invalidierung, " +
         "max 10 Pips — nur befüllt, wenn invalidation mitgegeben wird). WICHTIG: jede per " +
         "add_trade_confirmation (category='anti_confluence') gespeicherte Anti-Confluence MUSS " +

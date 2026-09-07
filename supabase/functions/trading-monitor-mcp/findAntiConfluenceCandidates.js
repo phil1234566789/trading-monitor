@@ -13,6 +13,7 @@ import { fetchForexCandles } from "./forexCandles.ts";
 import { buildCandidatePool } from "./findTargetCandidates.js";
 import { detectRsiDivergenceHistory } from "./rsi.js";
 import { fromPips } from "./pipConfig.js";
+import { berlinDateStrFor } from "./berlinTime.ts";
 
 // "nicht 100 Jahre alt" (Philip) — noch kein konkreter Wert vorgegeben, 14 Tage als erster
 // Startwert, leicht nachjustierbar sobald echte Kandidatenlisten sichtbar sind.
@@ -36,11 +37,21 @@ function byDistance(getPrice, currentPrice) {
 // gehaltenen) Zonen innerhalb der ganzen Zone, siehe held/MAX_HELD_OB_AGE_DAYS.
 export function findAntiConfluenceObCandidates(zones, { direction, zoneLow, zoneHigh, currentPrice, nowSec }) {
   const wantedDir = direction === "short" ? 1 : -1;
+  // M5-Sonderregel (Philip 07.09.2026, GBPUSD-Backtest 28.08.): eine getouchte M5-OB zählt als
+  // Anti-Confluence nur, wenn der Touch (z.endTime, bei getouchten Zonen darauf eingefroren, siehe
+  // orderBlockDetection.js) auf den GLEICHEN Handelstag fällt wie der Analysezeitpunkt — ein M5-Touch
+  // von vor Tagen ist für den heutigen Tagesablauf kein Gegenargument mehr. HTF (1H/4H) bleibt beim
+  // bisherigen MAX_HELD_OB_AGE_DAYS-Rolling-Fenster (14 Tage) unverändert.
+  const todayStr = berlinDateStrFor(nowSec);
   return (zones ?? [])
     .filter((z) => z.dir === wantedDir && !z.invalidated)
     .map((z) => ({ ...z, edgePrice: direction === "short" ? z.top : z.bottom, held: z.touched }))
     .filter((z) => inBand(z.edgePrice, zoneLow, zoneHigh))
-    .filter((z) => !z.held || (nowSec - z.endTime) / DAY_SECONDS <= MAX_HELD_OB_AGE_DAYS)
+    .filter((z) => {
+      if (!z.held) return true;
+      if (z.timeframe === "5M") return z.endTime != null && berlinDateStrFor(z.endTime) === todayStr;
+      return (nowSec - z.endTime) / DAY_SECONDS <= MAX_HELD_OB_AGE_DAYS;
+    })
     .sort(byDistance((z) => z.edgePrice, currentPrice));
 }
 
@@ -56,13 +67,18 @@ export function findAntiConfluenceSweepCandidates(levels, { direction, zoneLow, 
     .sort(byDistance((l) => l.price, currentPrice));
 }
 
-// divergences: Rohformat wie rsi.js: detectRsiDivergenceHistory ({type, toPrice, ...}) — toPrice
-// ist der geprüfte (jüngere) Divergenz-Schwungpunkt, siehe rsi.js Kopfkommentar.
-export function findAntiConfluenceDivergenceCandidates(divergences, { direction, zoneLow, zoneHigh, currentPrice }) {
+// divergences: Rohformat wie rsi.js: detectRsiDivergenceHistory ({type, toPrice, toTime, ...}) —
+// toPrice/toTime sind der geprüfte (jüngere) Divergenz-Schwungpunkt, siehe rsi.js Kopfkommentar.
+// Gleiche Regel wie bei findAntiConfluenceObCandidates (Philip 07.09.2026): eine Divergenz zählt nur,
+// wenn ihr Schwungpunkt auf denselben Handelstag fällt wie der Analysezeitpunkt — eine alte
+// Divergenz von vor Tagen ist für den heutigen Tagesablauf kein Gegenargument mehr.
+export function findAntiConfluenceDivergenceCandidates(divergences, { direction, zoneLow, zoneHigh, currentPrice, nowSec }) {
   const wantedType = direction === "short" ? "bullish" : "bearish";
+  const todayStr = berlinDateStrFor(nowSec);
   return (divergences ?? [])
     .filter((d) => d.type === wantedType)
     .filter((d) => inBand(d.toPrice, zoneLow, zoneHigh))
+    .filter((d) => berlinDateStrFor(d.toTime) === todayStr)
     .sort(byDistance((d) => d.toPrice, currentPrice));
 }
 
@@ -110,7 +126,7 @@ export async function findAntiConfluenceCandidates({ instrument, direction, zone
     currentPrice,
     obCandidates: findAntiConfluenceObCandidates(obZones, { direction, zoneLow, zoneHigh, currentPrice, nowSec: effectiveTimeSec }),
     sweepCandidates: findAntiConfluenceSweepCandidates(liquidityLevels, { direction, zoneLow, zoneHigh, currentPrice }),
-    divergenceCandidates: findAntiConfluenceDivergenceCandidates(divergences, { direction, zoneLow, zoneHigh, currentPrice }),
+    divergenceCandidates: findAntiConfluenceDivergenceCandidates(divergences, { direction, zoneLow, zoneHigh, currentPrice, nowSec: effectiveTimeSec }),
     invalidationObCandidates: findInvalidationObCandidates(obZones, { direction, invalidation }),
   };
 }
