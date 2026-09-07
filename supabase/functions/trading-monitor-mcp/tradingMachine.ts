@@ -43,6 +43,7 @@ export type TradingEvent =
   | { type: "FALL_AGAIN_CHECKED"; complete: boolean }
   | { type: "TARGETS_FOUND" }
   | { type: "TARGET_PICKED" }
+  | { type: "FALL1_RETRACTED" }
   | { type: "TARGET_ADDED" }
   | { type: "PIN2_CHECKED"; found: boolean }
   | { type: "PIN2_REMOVED" }
@@ -192,7 +193,13 @@ export const tradingMachine = createMachine({
         findTargets: { on: { TARGETS_FOUND: "llmPickTarget" } },
         // Ziel-Auswahl aus find_targets-Kandidatenliste: heute noch Lana (Kandidat für spätere
         // Mechanisierung laut docs/state-machine.md), Maschine parkt bis add_trade_target.
-        llmPickTarget: { on: { TARGET_PICKED: "addTarget" } },
+        // FALL1_RETRACTED (Philip 07.09.2026, Backtest GBPUSD 28.08.: "wir sind doch nicht in Fall 1
+        // sondern Fall 2") — find_targets koppelt "Fall 1 komplett?" fest an sich selbst
+        // (FALL_AGAIN_CHECKED{complete:true} als Nebeneffekt, siehe tools/tsc.ts), es gibt aber
+        // keinen Weg, diese Einordnung rückgängig zu machen, wenn sich beim Blick auf die
+        // Kandidatenliste doch noch Fall 2 herausstellt. retract_fall1_classification (Schritt 5)
+        // nutzt genau diese Kante zurück zu #s45 (= Fall-2-Ziel von FALL_AGAIN_CHECKED oben).
+        llmPickTarget: { on: { TARGET_PICKED: "addTarget", FALL1_RETRACTED: "#s45" } },
         addTarget: { on: { TARGET_ADDED: "pinCheck2" } },
         pinCheck2: {
           on: {
@@ -313,7 +320,7 @@ const VALID_NEXT_EVENTS: Record<string, string[]> = {
   "s45.pinRemove": ["PIN_REMOVED"],
   "s45.fallAgainCheck": ["FALL_AGAIN_CHECKED"],
   "s45.findTargets": ["TARGETS_FOUND"],
-  "s45.llmPickTarget": ["TARGET_PICKED"],
+  "s45.llmPickTarget": ["TARGET_PICKED", "FALL1_RETRACTED"],
   "s45.addTarget": ["TARGET_ADDED"],
   "s45.pinCheck2": ["PIN2_CHECKED"],
   "s45.pinRemove2": ["PIN2_REMOVED"],

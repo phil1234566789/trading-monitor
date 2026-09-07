@@ -379,6 +379,37 @@ export async function logFallClassification({ instrument, loopStateId, sec, case
   return { logged: true as const, case: fallCase, currentNode };
 }
 
+export interface RetractFall1ClassificationArgs {
+  instrument: string;
+  sec: number;
+  reasoning: string;
+}
+
+// Gegenstück zu logFallClassification, für den Fall, dass sich die Fall-1-Einordnung NACH
+// find_targets als falsch herausstellt (Philip 07.09.2026, Backtest GBPUSD 28.08.: "wir sind doch
+// nicht in Fall 1 sondern Fall 2, da es gerade nicht so viel Sinn macht, Targets zu finden, wenn
+// die Bewegung noch im Gange ist"). find_targets koppelt "Fall 1 komplett?" fest an sich selbst
+// (siehe tools/tsc.ts) — ohne dieses Tool gäbe es keinen Weg zurück zu #s45 außer einem
+// manuellen machine_snapshot-Fix. Nur an s45.llmPickTarget gültig (sendGuarded blockt sonst hart)
+// — bewusst NICHT von addTarget/pinCheck2/notify aus erreichbar, ein bereits per add_trade_target
+// geschriebenes Target müsste dafür separat entfernt werden (größerer Scope, YAGNI).
+export async function retractFall1Classification({ instrument, sec, reasoning }: RetractFall1ClassificationArgs) {
+  const loaded = await loadMachineForDay(instrument, berlinDateStrFor(sec));
+  const currentNode = await transition(loaded, instrument, { type: "FALL1_RETRACTED" }, sec);
+  await logDecision({
+    instrument,
+    dateStr: berlinDateStrFor(sec),
+    sec,
+    step: 5,
+    tool: "run_dealing_range_loop",
+    decision: "fall1_retracted",
+    result: { reasoning },
+    message: `Fall-1-Klassifikation zurückgezogen: ${reasoning}`,
+    loopStateId: loaded.loopId,
+  });
+  return { retracted: true as const, currentNode };
+}
+
 export function registerDealingRangeLoopTool(server: McpServer) {
   server.registerTool(
     "run_dealing_range_loop",
@@ -444,5 +475,27 @@ export function registerDealingRangeLoopTool(server: McpServer) {
       },
     },
     async (args) => json(await logFallClassification(args)),
+  );
+
+  server.registerTool(
+    "retract_fall1_classification",
+    {
+      title: "Schritt 5: Fall-1-Urteil zurückziehen",
+      description:
+        "Gegenstück zu log_fall_classification, für den Fall, dass sich die Fall-1-Einordnung NACH " +
+        "find_targets (das 'Fall 1 komplett?' als Nebeneffekt fest mit sich koppelt, siehe " +
+        "find_targets-Tool-Beschreibung) doch als Fall 2 herausstellt — z.B. weil kein Kandidat aus " +
+        "der Liste wirklich passt oder die Bewegung noch im Gange ist. Nur gültig, solange noch KEIN " +
+        "add_trade_target gelaufen ist (blockt hart mit Fehler, falls der Loop nicht mehr bei " +
+        "s45.llmPickTarget parkt) — danach müsste ein bereits gesetztes Target separat entfernt " +
+        "werden, dafür dieses Tool nicht nutzen. Springt zurück zu Schritt 4/5 (#s45) — " +
+        "run_dealing_range_loop danach normal weiter aufrufen.",
+      inputSchema: {
+        instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
+        sec: z.number().int().describe("Analysezeitpunkt (Unix-Sekunden) — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
+        reasoning: z.string().describe("Kurze Begründung, warum es doch Fall 2 ist"),
+      },
+    },
+    async (args) => json(await retractFall1Classification(args)),
   );
 }

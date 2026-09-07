@@ -127,6 +127,18 @@ describe("tradingMachine Rückspränge (Loopbacks laut Diagramm)", () => {
     expect(currentNodePath(actor)).toBe("s45.entry");
   });
 
+  it("FALL1_RETRACTED an s45.llmPickTarget springt zurück zu Schritt 4 (Fall-1-Fehleinschätzung nach find_targets)", () => {
+    const actor = actorAtFallClassification();
+    sendGuarded(actor, { type: "FALL_CLASSIFIED", case: 1 });
+    sendGuarded(actor, { type: "TSC_ADDED" });
+    sendGuarded(actor, { type: "PIN_CHECKED", found: false });
+    sendGuarded(actor, { type: "FALL_AGAIN_CHECKED", complete: true });
+    sendGuarded(actor, { type: "TARGETS_FOUND" });
+    expect(currentNodePath(actor)).toBe("s45.llmPickTarget");
+    sendGuarded(actor, { type: "FALL1_RETRACTED" });
+    expect(currentNodePath(actor)).toBe("s45.entry");
+  });
+
   it("INVALIDE-Abwägung in Schritt 6 springt zurück zu Schritt 4/5", () => {
     const actor = actorAtFallClassification();
     sendGuarded(actor, { type: "FALL_CLASSIFIED", case: 1 });

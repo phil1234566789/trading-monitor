@@ -58,7 +58,7 @@ export const NEXT_ACTION_MAP: Record<string, NextActionEntry> = {
     judgment: false, // fundstelle: tools/tsc.ts findTargets, safeTransitionChain(FALL_AGAIN_CHECKED{complete:true})
   },
   "s45.llmPickTarget": {
-    hint: "Ziel aus find_targets' Kandidatenliste wählen und mit add_trade_target anhängen.",
+    hint: "Ziel aus find_targets' Kandidatenliste wählen und mit add_trade_target anhängen — falls sich beim Blick auf die Kandidaten doch Fall 2 herausstellt (Bewegung noch im Gange, kein passendes Ziel), stattdessen retract_fall1_classification aufrufen.",
     tool: "add_trade_target",
     judgment: true, // Zielwahl selbst ist Lanas Entscheidung, siehe docs/state-machine.md "Kandidat für spätere Mechanisierung"
   },
