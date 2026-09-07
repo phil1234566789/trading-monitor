@@ -34,15 +34,18 @@ export function registerTscTools(server: McpServer) {
         "entscheidet die Richtung, nicht ein bloßer Sweep. Bestätigungen/Targets danach über " +
         "add_trade_confirmation/add_trade_target mit level='range' und der hier zurückgegebenen id " +
         "hinzufügen. Sobald ein echter Entry feststeht, übernimmt add_trade_position diese Range in " +
-        "eine Ausführung — create_dealing_range NICHT ein zweites Mal für dieselbe Idee aufrufen.",
+        "eine Ausführung — create_dealing_range NICHT ein zweites Mal für dieselbe Idee aufrufen. " +
+        "sec optional für einen Backtest/Replay-Zeitpunkt (Default: jetzt) — ohne ihn treibt dieser " +
+        "Aufruf die State-Machine-Zeile des HEUTIGEN Tages an, nicht die eines laufenden Backtests.",
       inputSchema: {
         instrument: INSTRUMENT,
         direction: DIRECTION,
+        sec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
       },
     },
-    async ({ instrument, direction }) => {
+    async ({ instrument, direction, sec: argSec }) => {
       const result = await createDealingRange(instrument, direction);
-      const sec = Math.floor(Date.now() / 1000);
+      const sec = argSec ?? Math.floor(Date.now() / 1000);
       void logDecision({
         instrument,
         dateStr: berlinDateStrFor(sec),

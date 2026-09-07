@@ -15,6 +15,7 @@ const OUTCOME = z.enum(["win", "loss", "open"]);
 // damit beide Tools garantiert dieselben Namen/Beschreibungen haben (siehe db.ts: TradePositionInput,
 // insertTradePosition).
 const TRADE_POSITION_FIELDS = {
+  sec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt fürs ENTRY_FOUND-Event statt live 'jetzt' (siehe db.ts: TradePositionInput)"),
   source: SOURCE,
   entryPrice: z.number().optional().describe("Füllpreis, falls schon bekannt"),
   stopLoss: z.number().optional(),
@@ -101,9 +102,12 @@ export function registerTradeTools(server: McpServer) {
       description:
         "Bearbeitet eine bestehende trade_position (Entry/Stop/Exit/Outcome/R-Multiple/Reasoning/" +
         "Konto) über ihre id (siehe get_journal für die ids). Nur übergebene Felder werden geändert " +
-        "— ein Feld explizit auf null setzen, um es zu leeren.",
+        "— ein Feld explizit auf null setzen, um es zu leeren. sec optional für einen Backtest/" +
+        "Replay-Zeitpunkt (Default: jetzt) — nur relevant bei outcome='win'/'loss' (löst " +
+        "POSITION_CLOSED aus), sonst ohne Wirkung.",
       inputSchema: {
         id: z.number().int(),
+        sec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
         entryPrice: z.number().nullable().optional(),
         stopLoss: z.number().nullable().optional(),
         triggeredAt: z.string().optional(),
@@ -119,7 +123,7 @@ export function registerTradeTools(server: McpServer) {
         commission: z.number().nullable().optional(),
       },
     },
-    async ({ id, ...fields }) => json(await updateTradePosition(id, fields)),
+    async ({ id, sec, ...fields }) => json(await updateTradePosition(id, fields, sec)),
   );
 
   server.registerTool(
@@ -209,9 +213,12 @@ export function registerTradeTools(server: McpServer) {
         "'rsi_divergence'→'rsi_divergence'; 'trade_position'/'trade_setup'/'trade_confirmation' als " +
         "Pin-Quelle werden abgelehnt, keine sinnvolle neue Bestätigung daraus ableitbar). Jedes hier " +
         "trotzdem explizit gesetzte Feld überschreibt den abgeleiteten Wert (z.B. touchedTime " +
-        "nachtragen, wenn der Pin selbst noch nicht 'touched' war).",
+        "nachtragen, wenn der Pin selbst noch nicht 'touched' war). sec optional für einen Backtest/" +
+        "Replay-Zeitpunkt (Default: jetzt) — ohne ihn treibt dieser Aufruf die State-Machine-Zeile " +
+        "des HEUTIGEN Tages an, nicht die eines laufenden Backtests.",
       inputSchema: {
         level: z.enum(["range", "position"]),
+        sec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt' (State-Machine-Übergang, siehe Tool-Beschreibung)"),
         id: z
           .number()
           .int()
@@ -274,9 +281,12 @@ export function registerTradeTools(server: McpServer) {
         "'ob') sollte mitgegeben werden, sonst kann das Chart ein OB-Ziel (rangeLow/rangeHigh gesetzt) " +
         "nicht von einem Pivot-Ziel unterscheiden. touchedTime, falls das Ziel bereits erreicht wurde " +
         "(sonst offen). Jedes Target sollte einer der Kandidaten aus find_targets sein — nicht " +
-        "eigenständig einen Preis außerhalb dieser Liste bestimmen.",
+        "eigenständig einen Preis außerhalb dieser Liste bestimmen. sec optional für einen Backtest/" +
+        "Replay-Zeitpunkt (Default: jetzt) — ohne ihn treibt dieser Aufruf die State-Machine-Zeile " +
+        "des HEUTIGEN Tages an, nicht die eines laufenden Backtests.",
       inputSchema: {
         dealingRangeId: z.number().int(),
+        sec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
         price: z.number(),
         kind: z.enum(["pivot", "ob"]).nullable().optional(),
         rangeLow: z.number().nullable().optional().describe("Für OB-Ziele: Zonen-Unterkante"),

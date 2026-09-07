@@ -754,6 +754,11 @@ export async function getTradingAccounts() {
 
 export interface TradePositionInput {
   source: "backtest" | "paper" | "live";
+  // Backtest/Replay-Zeitpunkt fürs ENTRY_FOUND-Event unten (Default Date.now(), siehe
+  // insertTradePosition) — ohne diesen Wert würde ein Backtest-Aufruf die STATE-MACHINE-ZEILE DES
+  // HEUTIGEN TAGES antreiben statt die des Replay-Tages (Vorfall 06.09.2026, dieselbe Bug-Klasse
+  // wie addTradeConfirmation/addTradeTarget/removePinEntry/createDealingRange).
+  sec?: number | null;
   entryPrice?: number | null;
   stopLoss?: number | null;
   triggeredAt?: string | null;
@@ -809,7 +814,7 @@ async function insertTradePosition(dealingRangeId: number, fields: TradePosition
   // s7_findEntry für dieses Instrument steht (z.B. reines historisches Nachpflegen).
   const instrument = (data.dealing_ranges as { instrument: string } | null)?.instrument;
   if (instrument) {
-    const sec = Math.floor(Date.now() / 1000);
+    const sec = fields.sec ?? Math.floor(Date.now() / 1000);
     await safeTransitionChain(instrument, [{ type: "ENTRY_FOUND" }], sec);
   }
   return data;
@@ -932,7 +937,7 @@ const TRADE_POSITION_FIELD_MAP: Record<keyof UpdateTradePositionArgs, string> = 
 
 // Nur die tatsächlich übergebenen Felder patchen (nicht übergeben != explizit auf null setzen) —
 // deshalb Object.keys(fields) statt eines festen Feld-Sets.
-export async function updateTradePosition(id: number, fields: UpdateTradePositionArgs) {
+export async function updateTradePosition(id: number, fields: UpdateTradePositionArgs, sec?: number) {
   const patch: Record<string, unknown> = {};
   for (const key of Object.keys(fields) as (keyof UpdateTradePositionArgs)[]) {
     patch[TRADE_POSITION_FIELD_MAP[key]] = fields[key];
@@ -951,8 +956,8 @@ export async function updateTradePosition(id: number, fields: UpdateTradePositio
   if (fields.outcome === "win" || fields.outcome === "loss") {
     const instrument = (data.dealing_ranges as { instrument: string } | null)?.instrument;
     if (instrument) {
-      const sec = Math.floor(Date.now() / 1000);
-      const result = await safeTransitionChain(instrument, [{ type: "POSITION_CLOSED" }], sec);
+      const effectiveSec = sec ?? Math.floor(Date.now() / 1000);
+      const result = await safeTransitionChain(instrument, [{ type: "POSITION_CLOSED" }], effectiveSec);
       if (result?.node === "end_positionGeschlossen") {
         await closeLoopState(result.loopId, "completed").catch((err) => console.error("closeLoopState nach POSITION_CLOSED fehlgeschlagen:", err));
       }
@@ -1148,6 +1153,10 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
 }
 
 export interface AddTradeConfirmationArgs {
+  // Backtest/Replay-Zeitpunkt fürs TSC_ADDED/TSC_BOOTSTRAPPED/CONFIRMATIONS_ADDED-Event unten
+  // (Default Date.now()) — ohne diesen Wert treibt ein Backtest-Aufruf die State-Machine-Zeile des
+  // HEUTIGEN Tages an statt die des Replay-Tages (Vorfall 06.09.2026).
+  sec?: number | null;
   level: "range" | "position";
   // Optional bei level='range' (siehe Bootstrap-Logik in addTradeConfirmation unten) — bei
   // level='position' weiterhin Pflicht, es gibt kein automatisches Anlegen einer Ausführung.
@@ -1480,7 +1489,7 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
   // state_machine_log-Eintrag (Philip 05.09.2026) — kein fester Schritt-Bezug (eine Bestätigung
   // kann bei Schritt 5/6/7 gleichermaßen entstehen), deshalb step=null statt einer geratenen Zahl.
   if (resolvedInstrument) {
-    const sec = Math.floor(Date.now() / 1000);
+    const sec = args.sec ?? Math.floor(Date.now() / 1000);
     void logDecision({
       instrument: resolvedInstrument,
       dateStr: berlinDateStrFor(sec),
@@ -1503,7 +1512,7 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
   // tatsächlich lief (Bootstrap vs. Reuse, Schritt 5 vs. Schritt 6) — nur das am aktuellen Knoten
   // gültige feuert, der Rest ist ein No-op (siehe safeTransitionChain-Kommentar).
   if (args.level === "range" && resolvedInstrument) {
-    const sec = Math.floor(Date.now() / 1000);
+    const sec = args.sec ?? Math.floor(Date.now() / 1000);
     await safeTransitionChain(resolvedInstrument, [didBootstrapRange ? { type: "TSC_BOOTSTRAPPED" } : { type: "TSC_ADDED" }, { type: "CONFIRMATIONS_ADDED" }], sec);
   }
 
@@ -1511,6 +1520,9 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
 }
 
 export interface AddTradeTargetArgs {
+  // Backtest/Replay-Zeitpunkt fürs TARGET_PICKED/TARGET_ADDED-Event unten (Default Date.now()) —
+  // dieselbe Bug-Klasse wie addTradeConfirmation/createDealingRange (Vorfall 06.09.2026).
+  sec?: number | null;
   price: number;
   // 'pivot'|'ob' — fehlte hier bisher komplett (nur DB-Default), Port von src/tradeIntake.js:
   // addTargetToTrade. Ohne kind kann PriceChart.vue: refreshTradeTargetLinksInternal ein OB-Target
@@ -1575,7 +1587,7 @@ export async function addTradeTarget(dealingRangeId: number, args: AddTradeTarge
   // hier implizit durch den tatsächlichen Aufruf repräsentiert (kein Bruch, siehe docs/
   // state-machine.md "Kandidat für spätere Mechanisierung").
   if (range.instrument) {
-    const sec = Math.floor(Date.now() / 1000);
+    const sec = args.sec ?? Math.floor(Date.now() / 1000);
     await safeTransitionChain(range.instrument as string, [{ type: "TARGET_PICKED" }, { type: "TARGET_ADDED" }], sec);
   }
   return data;

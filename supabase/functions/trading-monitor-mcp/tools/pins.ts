@@ -166,16 +166,19 @@ export function registerPinTools(server: McpServer) {
     "remove_pin_entry",
     {
       title: "Pin entfernen",
-      description: "Entfernt einen Pin-Kontext-Eintrag wieder (per id aus get_pin_context) — Pendant zum 🗑 im Pin-Panel.",
-      inputSchema: { id: z.number() },
+      description:
+        "Entfernt einen Pin-Kontext-Eintrag wieder (per id aus get_pin_context) — Pendant zum 🗑 im Pin-Panel. " +
+        "sec optional für einen Backtest/Replay-Zeitpunkt (Default: jetzt) — ohne ihn treibt dieser " +
+        "Aufruf die State-Machine-Zeile des HEUTIGEN Tages an, nicht die eines laufenden Backtests.",
+      inputSchema: { id: z.number(), sec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'") },
     },
-    async ({ id }) => {
+    async ({ id, sec: argSec }) => {
       // Instrument VOR dem Löschen auflösen (danach ist die Zeile weg) — für die
       // State-Machine-Verdrahtung unten (Schritt 5/6 Pin-Aufräum-Pflicht, s45.pinCheck/pinCheck2).
       const instrument = await getPinInstrumentById(id);
       await removePinEntry(id);
       if (instrument) {
-        const sec = Math.floor(Date.now() / 1000);
+        const sec = argSec ?? Math.floor(Date.now() / 1000);
         // Beide Pin-Check-Stellen (nach TSC-Verknüpfung UND nach Target-Anlegen) versuchen — nur
         // die am aktuellen Knoten gültige feuert tatsächlich, siehe safeTransitionChain.
         await safeTransitionChain(
