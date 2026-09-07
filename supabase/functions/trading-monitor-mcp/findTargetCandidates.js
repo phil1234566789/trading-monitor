@@ -12,6 +12,7 @@ import { getLiquidityLevels, getObZones } from "./db.ts";
 import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "../_shared/liquidityDetection.ts";
 import { detectOrderBlocks } from "./orderBlockDetection.js";
 import { PIP_SIZE } from "./pipConfig.js";
+import { M5_DETECTION_LOOKBACK_HOURS, M5_DETECTION_CANDLE_BUFFER, M5_BAR_SECONDS } from "./tools/dataExport.ts";
 
 export const DEFAULT_LIQUIDITY_TARGET_LIMIT = 5;
 export const DEFAULT_OB_TARGET_LIMIT = 3;
@@ -49,13 +50,6 @@ export function isTooFarFromPrice(price, currentPrice, maxPips = MAX_TARGET_DIST
   if (currentPrice == null) return false;
   return Math.abs(price - currentPrice) > maxPips * PIP_SIZE;
 }
-
-// Dieselben Werte wie tools/dataExport.ts's M5_DETECTION_LOOKBACK_HOURS/-CANDLE_BUFFER/-BAR_SECONDS
-// (dort dupliziert statt importiert, siehe CLAUDE.md "MCP-Server" — hier aus demselben Grund noch
-// einmal dupliziert statt dataExport.ts anzufassen, das diese Konstanten nicht exportiert).
-const M5_DETECTION_LOOKBACK_HOURS = 7 * 24;
-const M5_DETECTION_CANDLE_BUFFER = 20;
-const M5_BAR_SECONDS = 300;
 
 // Dieselbe Dedupe-Schwelle wie tools/dataExport.ts's SAME_PRICE_EPSILON — ein live erkanntes
 // M5-Level auf demselben Preis wie ein 1H/4H-Level ist redundant, das HTF-Level ist bedeutsamer.

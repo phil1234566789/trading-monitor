@@ -40,8 +40,12 @@ const DAY_SEC = 24 * 3600;
 // Exakt dieselben Werte wie src/dataExport.js (EXPORT_LOOKBACK_HOURS/EXPORT_CANDLE_BUFFER) — Philip
 // 2026-08-02: "lieber konsistent halten wo es geht" statt des ursprünglich kürzeren (~25h) Fensters,
 // das nur an der ohnehin schon geladenen Tages-Kerzenreihe (`raw` unten) mitgeschnitten hatte.
-// export: von recentReactions.ts wiederverwendet (derselbe M5-Kerzenbedarf für dieselbe Erkennung).
-export const M5_DETECTION_LOOKBACK_HOURS = 7 * 24;
+// export: von recentReactions.ts UND findTargetCandidates.js (find_targets/find_anti_confluences)
+// wiederverwendet (derselbe M5-Kerzenbedarf für dieselbe Erkennung).
+// 7d -> 21d, taktisch (kein Pivot-Anker wie bei Structure möglich — M5-Liquidity wird nirgends
+// persistiert, siehe PLAN-notifications.md "M5-Detection-Lookback"): ein untouched Level >21 Tage
+// alt fällt weiterhin durch.
+export const M5_DETECTION_LOOKBACK_HOURS = 21 * 24;
 export const M5_DETECTION_CANDLE_BUFFER = 20;
 export const M5_BAR_SECONDS = 300;
 

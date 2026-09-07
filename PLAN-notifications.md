@@ -542,4 +542,25 @@ und der resultierende Default-Cutoff sind nach dem Deploy noch mit Philip zu ver
 
 ---
 
+## Status: M5-Detection-Lookback 7d→21d (taktisch) — 2026-09-07
+
+Auslöser: Backtest GBPUSD 28.08.2026 — `find_targets` fand mehrere LQ-Level/OBs nicht, die im
+Chart-UI (Target-Vorschläge-Panel) noch sichtbar waren, weil sie 7-8 Tage alt und damit knapp
+außerhalb des `M5_DETECTION_LOOKBACK_HOURS`-Fensters (`tools/dataExport.ts`) lagen.
+
+Anders als beim analogen `structureWindow`-Fall oben (7d→21d, aber mit echtem Pivot-Anker statt
+nur größerer Zahl) gibt's für M5-Liquidity-Level keine Persistierung in einer Tabelle — sie
+existieren ausschließlich als Live-Recompute aus rohen M5-Kerzen (`buildCandidatePool` in
+`findTargetCandidates.js`). Nur an einen `trade_setup` gekoppelte M5-OBs werden von `poi-watcher`
+persistiert (`timeframe: '5M'`), reine M5-Liquidity-Pivots nie. Deshalb hier bewusst nur das
+Zeitfenster vergrößert (`M5_DETECTION_LOOKBACK_HOURS` 7d→21d, `dataExport.ts` + `src/dataExport.js`
+konsistent gehalten, `findTargetCandidates.js` importiert die Konstante jetzt statt sie zu
+duplizieren) — kein struktureller Fix, ein untouched Level >21 Tage alt fällt weiterhin durch.
+
+**Offen (später, größerer Scope):** M5-Liquidity-Level genauso persistieren wie 1H/4H (vermutlich
+`poi-watcher` + neue Migration), dann alterslose Relevanz-Filterung wie bei HTF statt Zeitfenster —
+der zu `daily_structure_pivots`/1D-Pivot-Start oben tatsächlich analoge Fix.
+
+---
+
 **Nächster Schritt:** Phase A — tiefere Kerzenhistorie von OKX holen (Pagination), dann Backtesting-Modul aufsetzen.

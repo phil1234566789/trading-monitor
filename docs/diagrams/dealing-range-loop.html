@@ -266,19 +266,12 @@ flowchart TB
 
     FALL -- "Fall 4: Target/Invalidierung<br/>erreicht" --> EXIT4(["zurück zu Schritt 3"])
 
-    FALL -- "Fall 1 oder 2" --> TSCGET["get_tsc_range"]
+    FALL -- "Fall 1 oder 2" --> TSCLINK["add_trade_confirmation (level='range')<br/><span style='font-size:11px'>Range wird automatisch angelegt (Bootstrap)<br/>oder wiederverwendet — get_tsc_range bleibt<br/>eigenständiges Lese-Tool, kein Pflicht-Zwischenschritt</span>"]
 
-    subgraph TSCLINK[" TSC-Verknüpfung "]
-      direction TB
-      TSCGET --> TSCEXIST{Aktive Range<br/>vorhanden?}
-      TSCEXIST -- nein --> TSCNEW["add_trade_confirmation<br/>OHNE id, MIT instrument<br/>---&gt; Range wird gebootstrapt"]
-      TSCEXIST -- ja --> TSCADD["add_trade_confirmation<br/>(level='range', id=tscRange.id)"]
-      TSCNEW --> PINCHECK
-      TSCADD --> PINCHECK
-      PINCHECK{"Stand-alone-Pin für dieses<br/>Setup/OB vorhanden?<br/><span style='font-size:11px'>(z.B. aus Schritt 3)</span>"}
-      PINCHECK -- ja --> PINRM["remove_pin_entry"]
-      PINCHECK -- nein --> PINOK[" "]
-    end
+    TSCLINK --> PINCHECK
+    PINCHECK{"Stand-alone-Pin für dieses<br/>Setup/OB vorhanden?<br/><span style='font-size:11px'>(z.B. aus Schritt 3)</span>"}
+    PINCHECK -- ja --> PINRM["remove_pin_entry"]
+    PINCHECK -- nein --> PINOK[" "]
 
     PINRM --> FALLAGAIN{Fall 1<br/>komplett?}
     PINOK --> FALLAGAIN
@@ -302,8 +295,8 @@ flowchart TB
     classDef llm fill:#fdeee0,stroke:#c97a2b,stroke-width:2px,color:#6b3d0f;
     classDef term fill:transparent,stroke-width:1.5px;
 
-    class LTICK,BBATCH,REFETCH,TSCGET,TSCNEW,TSCADD,FT,AT,NOTIFY,F3,BHEART,BSKIP step;
-    class MODE,BHIT,LHIT,FALL,TSCEXIST,PINCHECK,FALLAGAIN,PINCHECK2,NEWSCHK gate;
+    class LTICK,BBATCH,REFETCH,TSCLINK,FT,AT,NOTIFY,F3,BHEART,BSKIP step;
+    class MODE,BHIT,LHIT,FALL,PINCHECK,FALLAGAIN,PINCHECK2,NEWSCHK gate;
     class PINRM,PINRM2 pin;
     class LLMPICK llm;
     class ENTRY,LWAIT,LOOPBACK3,LOOPBACK2,EXIT4,EXIT1 term;
@@ -334,8 +327,11 @@ flowchart TB
 
   <footer>
     Detail-Diagramm zu <a href="trading-steps-ablauf.html">Trading-Steps-Ablauf</a> (Schritt 4 ⇄ 5).
-    Stand 31.08.2026 — bildet den heutigen Ablauf ab, inkl. der Stellen, die (noch)
-    LLM-Urteilsvermögen brauchen.
+    Stand 07.09.2026 — bildet den heutigen Ablauf ab, inkl. der Stellen, die (noch)
+    LLM-Urteilsvermögen brauchen. Muss bei jeder Knoten-Änderung an
+    <span class="mono">tradingMachine.ts</span> mitgezogen werden (Quelle der Wahrheit) — Abgleich
+    gegen das Live-Pendant <span class="mono">src/tradingMachineGraph.js</span>, das direkt aus dem
+    Machine-State gerendert wird und deshalb nie driften kann.
   </footer>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>

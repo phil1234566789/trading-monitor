@@ -63,7 +63,8 @@ const STRUCTURE_CANDLE_BUFFER_HOURS = 40;
 // LIQUIDITY_EXPORT_TIMEFRAMES/OB_EXPORT_TIMEFRAMES), nicht an den gerade im Dashboard gewählten
 // Chart-Timeframe gekoppelt — count wird aus Lookback-Stunden + Puffer in Kerzen UMGERECHNET
 // (barSecondsFor), weil "7 Tage" bei M5 eine ganz andere Kerzenzahl ergibt als bei 1H/4H.
-const EXPORT_LOOKBACK_HOURS = 7 * 24;
+// 7d -> 21d, gehalten konsistent mit tools/dataExport.ts's M5_DETECTION_LOOKBACK_HOURS (siehe dort).
+const EXPORT_LOOKBACK_HOURS = 21 * 24;
 const EXPORT_CANDLE_BUFFER = 20; // Bestätigungspuffer, wie RANGES_CANDLE_BUFFER in PriceChart.vue
 const LIQUIDITY_EXPORT_TIMEFRAMES = ["1h", "5m"];
 // Nur 1H+4H (Chat 2026-07-30, Philip: "1h und 4h OBs sind jetzt bereits ganz gut gefiltert ...
