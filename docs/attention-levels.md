@@ -46,26 +46,26 @@ heute zu komplex/teuer — und funktioniert bis dahin ohnehin noch nicht zuverl�
 zu rechtfertigen. **Bewusst nicht jetzt implementieren.** Später soll dieses Level ebenfalls auf
 Lana/State-Machine/Cron/Schedule übertragen werden, mit entsprechend hoher Taktung.
 
-## Bekannter Bug (07.09.2026)
+## Bekannter Bug (07.09.2026, behoben)
 
-Die aktuelle `computeWatchLevels()`-Logik (`supabase/functions/trading-monitor-mcp/fallClassifier.ts`)
-passt nicht zu diesem Bild:
+Die alte `computeWatchLevels()`-Verdrahtung (`performFullTick`, `dealingRangeLoop.ts`) passte nicht
+zu diesem Bild: sie nutzte immer 1H/4H-Liquidity/OB + hart mit `touched:false` reingemischte
+Schritt-3-Bias-Reste (`trendTarget`/`countertrendTarget`/`intermediateLevel`), unabhängig vom Fall
+— das laufende Trade-Setup selbst floss nie ein. Ergebnis im GBP-28.08.-Backtest: `watchLevelAbove`
+zeigte auf den >60 Pips entfernten Schritt-3-Countertrend-Target statt auf den ~30 Pips entfernten,
+tatsächlich laufenden Setup-OB.
 
-- Nutzt 1H-Liquidity/OB-Level statt M5 — für Fall 1/2 (Level b/c) viel zu grob.
-- Mischt `trendTarget`/`countertrendTarget`/`intermediateLevel` (Bias-Werte aus Schritt 3) hart mit
-  `touched: false` in die Kandidatenliste, unabhängig davon, ob dieser Wert inzwischen noch
-  relevant ist.
-- Berücksichtigt das gerade laufende Trade-Setup (dessen OB-Kanten die eigentlich relevante
-  M5-Struktur wären) überhaupt nicht.
-- Kein Mechanismus für "neuer M5-OB entsteht" als eigenes Watch-Level/Ping.
-- Unterscheidet nicht nach Fall — Level a)/b)/c) laufen aktuell alle über dieselbe (1H-lastige)
-  Logik.
+**Fix (07.09.2026):** `performFullTick` verzweigt jetzt nach `reactionFound` — Fall 3
+(`reactionFound=false`) bleibt exakt beim alten 1H/4H+Bias-Reste-Pfad (Tokens sparen), Fall 1/2
+(`reactionFound=true`) nutzt `m5Liquidity`/`m5ObZones` aus `get_recent_reactions`
+(`buildRecentReactions`, dort neu exponiert — kein zweiter Kerzen-Fetch/keine zweite Erkennung
+nötig, `computeM5LiquidityAndObZones` lief für die Reaktionsauswertung ohnehin schon).
 
 ## Offen / TODO
 
-- Fall-abhängige Auswahl der Watch-Level-Granularität (1H für Fall 3, M5 für Fall 1/2) statt einer
-  einzigen `computeWatchLevels()`-Funktion für alle Fälle.
-- M5-Liquidity/OB-Kandidaten für Level b)/c) (aktuell fließt nur `snapshot.liquidity`/`obZones`,
-  beide 1H/4H, in die Kandidatenliste ein).
-- Ping-Mechanismus für "neuer M5-OB entstanden", zusätzlich zu den Preis-Watch-Leveln.
+- **Ping-Mechanismus für "neuer M5-OB entstanden"** (Zusatz aus Level b/c) — noch NICHT
+  implementiert. Würde einen eigenen, von den beiden Preis-Watch-Leveln unabhängigen Trigger
+  brauchen (ein neu geformter M5-OB muss nicht zwingend eines der beiden aktuellen Watch-Level
+  berühren) — vermutlich ein persistierter "zuletzt gesehene M5-OB-Keys"-Abgleich pro Tick, kein
+  kleiner Zusatz. Separates Vorhaben.
 - Level d) bleibt vorerst Philips manuelle Aufgabe, keine Implementierung.

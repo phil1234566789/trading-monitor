@@ -109,6 +109,14 @@ export async function buildRecentReactions({
     referencePrice: liquidity1h4h.referencePrice,
     liquiditySweeps,
     obReactions,
+    // Voller (nicht auf Reaktionen gefilterter) M5-Bestand — computeM5LiquidityAndObZones berechnet
+    // das ohnehin schon fürs Obige, bisher wurde nur der touched/invalidated-Teil zurückgegeben.
+    // Für docs/attention-levels.md Level b/c (Fall 1/2): dealingRangeLoop.ts nutzt genau diese Listen
+    // als M5-Watch-Level-Kandidaten (nächste M5-Liquidity-Linie/M5-OB-Kante), statt die 1H/4H-Level
+    // + Schritt-3-Bias-Reste zu verwenden wie bei Fall 3 (Level a) — kein zweiter Kerzen-Fetch/keine
+    // zweite Erkennung nötig.
+    m5Liquidity: m5LiquidityLevels,
+    m5ObZones: m5ObZonesAll,
   };
 }
 
@@ -135,7 +143,9 @@ export function registerRecentReactionsTools(server: McpServer) {
         "Richtung (Default 1 — für Schritt 5 ruft run_dealing_range_loop intern mit 2, mehr Kontext " +
         "nötig). Noch unentschiedene ('Retest läuft', touched && !invalidated && !retested) sowie " +
         "invalidierte Zonen bleiben weiterhin `lookbackHours`-zeitfenster-basiert (Default 24h) — das " +
-        "ist weiterhin 'was ist kürzlich passiert'.",
+        "ist weiterhin 'was ist kürzlich passiert'. `m5Liquidity`/`m5ObZones` liefern zusätzlich den " +
+        "VOLLEN M5-Bestand (auch ungetouchte/nicht nur Reaktionen) — für 'was liegt als Nächstes in " +
+        "der Nähe', siehe docs/attention-levels.md.",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
         replayUntilSec: z.number().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),

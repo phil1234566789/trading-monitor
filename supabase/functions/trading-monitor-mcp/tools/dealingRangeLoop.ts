@@ -130,14 +130,31 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
     await transition(loaded, instrument, { type: "PIN_SET" }, atSec);
   }
 
-  const candidateLiquidity = [
-    ...((snapshot as any).liquidity ?? []),
-    ...[loopState.trendTarget, loopState.countertrendTarget, loopState.intermediateLevel]
-      .filter((l): l is NonNullable<typeof l> => l != null)
-      .map((l) => ({ price: l.price, touched: false, timeframe: l.timeframe ?? "?", id: l.refId ?? null })),
-  ];
-  const candidateOb = (snapshot as any).obZones ?? [];
-  const watchLevels = currentPrice != null ? computeWatchLevels(currentPrice, candidateLiquidity, candidateOb) : { above: null, below: null };
+  // Aufmerksamkeitslevel (docs/attention-levels.md): Fall 3 (keine Reaktion, "Markt gibt nichts
+  // her") bleibt bei 1H/4H + Schritt-3-Bias-Resten — hier wird bewusst an Tokens/Aufrufen gespart.
+  // Fall 1/2 (reactionFound) braucht M5-Granularität (Philip: Daytrader, M5 ist sein meistgenutztes
+  // TF) statt der teils weit entfernten Bias-Reste, die den tatsächlich nahen, laufenden
+  // Trade-Setup-OB sonst verdecken (Bug-Report 07.09.2026, GBPUSD-Backtest 28.08.: watchLevelAbove
+  // zeigte auf den >60 Pips entfernten Schritt-3-Countertrend-Target statt auf den ~30 Pips
+  // entfernten Setup-OB). m5Liquidity/m5ObZones kommen aus `reactions` (get_recent_reactions) —
+  // schon oben berechnet, kein zweiter Kerzen-Fetch/keine zweite Erkennung nötig.
+  let watchLevels: { above: WatchLevel | null; below: WatchLevel | null };
+  if (currentPrice == null) {
+    watchLevels = { above: null, below: null };
+  } else if (reactionFound) {
+    const m5Liquidity = ((reactions as any).m5Liquidity ?? []).map((l: any) => ({ price: l.price, touched: l.touched, timeframe: "5M", id: l.id ?? null }));
+    const m5ObZones = ((reactions as any).m5ObZones ?? []).map((z: any) => ({ top: z.top, bottom: z.bottom, touched: z.touched, invalidated: false, timeframe: "5M", id: z.id ?? null }));
+    watchLevels = computeWatchLevels(currentPrice, m5Liquidity, m5ObZones);
+  } else {
+    const candidateLiquidity = [
+      ...((snapshot as any).liquidity ?? []),
+      ...[loopState.trendTarget, loopState.countertrendTarget, loopState.intermediateLevel]
+        .filter((l): l is NonNullable<typeof l> => l != null)
+        .map((l) => ({ price: l.price, touched: false, timeframe: l.timeframe ?? "?", id: l.refId ?? null })),
+    ];
+    const candidateOb = (snapshot as any).obZones ?? [];
+    watchLevels = computeWatchLevels(currentPrice, candidateLiquidity, candidateOb);
+  }
 
   if (fallFour.hit) {
     // status muss weg von 'active', sonst verhindert der Partial-Unique-Index (nur ein aktiver Loop
