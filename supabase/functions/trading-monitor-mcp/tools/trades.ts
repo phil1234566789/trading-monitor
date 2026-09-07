@@ -171,7 +171,11 @@ export function registerTradeTools(server: McpServer) {
         "ein Bootstrap mit kind='fib'/'rsi_divergence' schlägt fehl (keine eindeutige Richtung), dafür " +
         "explizit create_dealing_range aufrufen. Mit id (bekannt aus get_tsc_range/create_dealing_range) " +
         "läuft es wie bisher direkt gegen diese bestehende Range/Position — id MUSS dann existieren, " +
-        "sonst Fehler. kind='pivot'/'ob' sind Confirmations (geben tatsächlich das GO), kind='fib'/" +
+        "sonst Fehler. Idempotent bei level='range' + kind='pivot'/'ob': zeigt dieselbe " +
+        "ob_zone_id/liquidity_level_id bereits eine Bestätigung an dieser Range, wird KEINE zweite " +
+        "Zeile angelegt (die bestehende kommt zurück) — der State-Machine-Übergang feuert trotzdem, " +
+        "sicher erneut aufrufbar, wenn der Loop mit unveränderter Evidenz zu s45.tscLink zurückkehrt. " +
+        "kind='pivot'/'ob' sind Confirmations (geben tatsächlich das GO), kind='fib'/" +
         "'rsi_divergence' sind Confluences (geben nur zusätzliche Sicherheit, kein GO) — siehe " +
         "trading-Repo trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt " +
         "für die Begriffsdefinition; category ergibt sich standardmäßig automatisch aus kind, NUR bei " +

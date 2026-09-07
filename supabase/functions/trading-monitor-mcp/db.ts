@@ -1433,30 +1433,50 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
     );
   }
   const resolvedCategory = args.category ?? KIND_TO_CATEGORY[args.kind];
-  const { data, error } = await supabase
-    .from("trade_evidence")
-    .insert({
-      dealing_range_id: args.level === "range" ? args.id : null,
-      trade_position_id: args.level === "position" ? args.id : null,
-      kind: args.kind,
-      category: resolvedCategory,
-      price: args.price,
-      source_time: args.sourceTime,
-      touched_time: args.touchedTime ?? null,
-      range_low: args.rangeLow ?? null,
-      range_high: args.rangeHigh ?? null,
-      timeframe: args.timeframe ?? null,
-      liquidity_level_id: liquidityLevelId,
-      ob_zone_id: obZoneId,
-      divergence_type: args.divergenceType ?? null,
-      from_price: args.fromPrice ?? null,
-      from_rsi: args.fromRsi ?? null,
-      to_rsi: args.toRsi ?? null,
-      bonus: args.bonus ?? null,
-    })
-    .select("*")
-    .single();
-  if (error) throw new Error(error.message);
+
+  // Dedup: dieselbe Bestätigung (gleiche ob_zone_id/liquidity_level_id) NICHT zweimal an dieselbe
+  // Range hängen — passiert im Backtest z.B. nach Fall 4 (Preisvergleich, zurück zu Schritt 3) und
+  // erneuter Fall-1/2-Klassifikation MIT UNVERÄNDERTER Evidenz: s45.tscLink erwartet trotzdem einen
+  // add_trade_confirmation-Aufruf, um weiterzukommen (Bug-Report Philip 07.09.2026, GBPUSD-Backtest
+  // 28.08.). Nur kind='ob'/'pivot' haben eine stabile find-or-create-ID (fib/rsi_divergence bleiben
+  // unverändert — kein Persistenz-Ziel dafür, siehe milk-city-Task "confluence-tracking-bei-
+  // dealing-ranges-add-trade-confirmation-kind-confluence"). Existierende Zeile wiederverwenden,
+  // State-Machine-Transition unten trotzdem auslösen, sonst bleibt der Loop hart geblockt stehen.
+  let data: Record<string, unknown> | null = null;
+  if (args.level === "range" && (obZoneId != null || liquidityLevelId != null)) {
+    let dupQuery = supabase.from("trade_evidence").select("*").eq("dealing_range_id", args.id);
+    dupQuery = obZoneId != null ? dupQuery.eq("ob_zone_id", obZoneId) : dupQuery.eq("liquidity_level_id", liquidityLevelId);
+    const { data: existing, error: dupError } = await dupQuery.maybeSingle();
+    if (dupError) throw new Error(dupError.message);
+    data = existing;
+  }
+  if (!data) {
+    const { data: inserted, error } = await supabase
+      .from("trade_evidence")
+      .insert({
+        dealing_range_id: args.level === "range" ? args.id : null,
+        trade_position_id: args.level === "position" ? args.id : null,
+        kind: args.kind,
+        category: resolvedCategory,
+        price: args.price,
+        source_time: args.sourceTime,
+        touched_time: args.touchedTime ?? null,
+        range_low: args.rangeLow ?? null,
+        range_high: args.rangeHigh ?? null,
+        timeframe: args.timeframe ?? null,
+        liquidity_level_id: liquidityLevelId,
+        ob_zone_id: obZoneId,
+        divergence_type: args.divergenceType ?? null,
+        from_price: args.fromPrice ?? null,
+        from_rsi: args.fromRsi ?? null,
+        to_rsi: args.toRsi ?? null,
+        bonus: args.bonus ?? null,
+      })
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    data = inserted;
+  }
 
   // Port von src/tradeIntake.js: insertConfirmation (dortiger Kommentar für die Herleitung) — nur
   // bei level='range': direction wird IMMER überschrieben (die OB ist das eindeutigere Signal als
