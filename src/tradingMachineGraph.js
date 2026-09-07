@@ -40,9 +40,9 @@ export const NODES = [
   // (siehe tradingMachine.ts: s45.tscLink), get_tsc_range bleibt als eigenstaendiges Lese-Tool
   // fuer Lana nutzbar, ohne dass die Maschine einen separaten Aufruf dafuer erzwingt.
   { id: "s45_tscLink", label: "Bestätigung anhängen (Range anlegen/wiederverwenden)", statePath: "s45.tscLink", hint: "Bestätigung/Bootstrap der Dealing Range anhängen (level='range').", nextTool: "add_trade_confirmation" },
-  { id: "s45_pinCheck", label: "Stand-alone-Pin vorhanden?", statePath: "s45.pinCheck", gate: true, hint: "Prüfen, ob ein Stand-alone-Pin aufzuräumen ist (get_pin_context) — falls ja remove_pin_entry, sonst direkt find_targets (räumt automatisch mit auf).", nextTool: "find_targets" },
+  { id: "s45_pinCheck", label: "Stand-alone-Pin vorhanden?", statePath: "s45.pinCheck", gate: true, hint: "Prüfen, ob ein Stand-alone-Pin aufzuräumen ist (get_pin_context) — falls ja remove_pin_entry(id), sonst remove_pin_entry(instrument, ohne id) zum Bestätigen von 'kein Pin'.", nextTool: "remove_pin_entry" },
   { id: "s45_pinRemove", label: "Pin aufräumen", statePath: "s45.pinRemove" },
-  { id: "s45_fallAgainCheck", label: "Fall 1 komplett?", statePath: "s45.fallAgainCheck", llm: true, hint: "Ist Fall 1 komplett? find_targets liefert die Ziel-Kandidaten und löst diesen Schritt automatisch mit aus.", nextTool: "find_targets" },
+  { id: "s45_fallAgainCheck", label: "Fall 1 komplett?", statePath: "s45.fallAgainCheck", llm: true, hint: "Ist Fall 1 komplett (Ziel-Auswahl macht jetzt Sinn) oder Fall 2 (Bewegung noch im Gange)? log_fall_again_check(complete) eintragen.", nextTool: "log_fall_again_check" },
   { id: "s45_findTargets", label: "find_targets", statePath: "s45.findTargets" },
   { id: "s45_llmPickTarget", label: "Ziel wählen", statePath: "s45.llmPickTarget", llm: true, hint: "Ziel aus find_targets' Kandidatenliste wählen und mit add_trade_target anhängen — falls doch Fall 2, retract_fall1_classification aufrufen.", nextTool: "add_trade_target" },
   { id: "s45_addTarget", label: "add_trade_target", statePath: "s45.addTarget" },
@@ -125,7 +125,12 @@ function mermaidEscape(text) {
 export function buildMermaidSource(currentNode) {
   const lines = ["flowchart TB"];
   for (const node of NODES) {
-    const shape = node.end ? `(["${mermaidEscape(node.label)}"])` : node.gate ? `{"${mermaidEscape(node.label)}"}` : `["${mermaidEscape(node.label)}"]`;
+    // nextTool als zweite Label-Zeile mit ins Node-Label (Philip 07.09.2026: "für die Transparenz
+    // die MCP-Befehle im Graphen abbilden") — kein eigener Knoten, nur sichtbar direkt am Knoten,
+    // dessen Tool-Aufruf ihn verlässt. securityLevel:'loose' (TradingFlow.vue) erlaubt <br/> in
+    // Mermaid-Labels.
+    const label = node.nextTool ? `${mermaidEscape(node.label)}<br/><span class="node-tool">⚙ ${mermaidEscape(node.nextTool)}</span>` : mermaidEscape(node.label);
+    const shape = node.end ? `(["${label}"])` : node.gate ? `{"${label}"}` : `["${label}"]`;
     lines.push(`  ${node.id}${shape}`);
   }
   for (const edge of EDGES) {

@@ -410,6 +410,38 @@ export async function retractFall1Classification({ instrument, sec, reasoning }:
   return { retracted: true as const, currentNode };
 }
 
+export interface LogFallAgainCheckArgs {
+  instrument: string;
+  sec: number;
+  complete: boolean;
+  reasoning: string;
+}
+
+// Lanas Urteil an s45.fallAgainCheck ("Fall 1 komplett?" im Graphen/tradingMachineGraph.js). Die
+// Maschine selbst unterstützt FALL_AGAIN_CHECKED{complete:false} schon lange (tradingMachine.ts) —
+// es fehlte nur ein Tool, das es direkt feuert, ohne den find_targets-Umweg (das complete IMMER
+// auf true zwingt, siehe dessen Beschreibung + retract_fall1_classification-Kommentar). Philip
+// 07.09.2026, Backtest GBPUSD 28.08.: Graph und State-Machine sollen 1:1 dasselbe abbilden — dieser
+// Knoten ist im Graphen ein echter Diamant mit ja/nein, kein an find_targets gekoppelter Nebeneffekt.
+// complete=true -> weiter zu find_targets (Zielauswahl), complete=false -> zurück zu Schritt 4
+// (#s45), run_dealing_range_loop danach normal weiter aufrufen.
+export async function logFallAgainCheck({ instrument, sec, complete, reasoning }: LogFallAgainCheckArgs) {
+  const loaded = await loadMachineForDay(instrument, berlinDateStrFor(sec));
+  const currentNode = await transition(loaded, instrument, { type: "FALL_AGAIN_CHECKED", complete }, sec);
+  await logDecision({
+    instrument,
+    dateStr: berlinDateStrFor(sec),
+    sec,
+    step: 5,
+    tool: "run_dealing_range_loop",
+    decision: "fall_again_check",
+    result: { complete, reasoning },
+    message: `Fall 1 komplett=${complete}: ${reasoning}`,
+    loopStateId: loaded.loopId,
+  });
+  return { logged: true as const, complete, currentNode };
+}
+
 export function registerDealingRangeLoopTool(server: McpServer) {
   server.registerTool(
     "run_dealing_range_loop",
@@ -497,5 +529,27 @@ export function registerDealingRangeLoopTool(server: McpServer) {
       },
     },
     async (args) => json(await retractFall1Classification(args)),
+  );
+
+  server.registerTool(
+    "log_fall_again_check",
+    {
+      title: "Schritt 5: 'Fall 1 komplett?'-Urteil loggen",
+      description:
+        "Beantwortet den 'Fall 1 komplett?'-Diamant (s45.fallAgainCheck im Graphen) direkt, ohne " +
+        "den find_targets-Umweg (das complete IMMER auf true zwingt, siehe dessen Beschreibung). " +
+        "complete=true: Range/Bewegung bereit für die Zielauswahl -> weiter zu find_targets. " +
+        "complete=false: Bewegung noch im Gange, Zielauswahl ergibt noch keinen Sinn -> zurück zu " +
+        "Schritt 4 (#s45), run_dealing_range_loop danach normal weiter aufrufen. Blockt hart, falls " +
+        "der Loop gerade nicht bei s45.fallAgainCheck parkt (z.B. weil noch ein Stand-alone-Pin " +
+        "aufzuräumen ist — erst remove_pin_entry).",
+      inputSchema: {
+        instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
+        sec: z.number().int().describe("Analysezeitpunkt (Unix-Sekunden) — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
+        complete: z.boolean().describe("true = Fall 1 komplett (weiter zur Zielauswahl), false = Fall 2 (noch im Gange, zurück zu Schritt 4)"),
+        reasoning: z.string().describe("Kurze Begründung"),
+      },
+    },
+    async (args) => json(await logFallAgainCheck(args)),
   );
 }

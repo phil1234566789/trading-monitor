@@ -48,14 +48,14 @@ export const NEXT_ACTION_MAP: Record<string, NextActionEntry> = {
     judgment: false, // fundstelle: db.ts addTradeConfirmation, safeTransitionChain(TSC_ADDED/TSC_BOOTSTRAPPED)
   },
   "s45.pinCheck": {
-    hint: "Prüfen, ob ein Stand-alone-Pin aufzuräumen ist (get_pin_context) — falls ja remove_pin_entry, sonst direkt find_targets (räumt automatisch mit auf).",
-    tool: "find_targets",
-    judgment: false, // fundstelle: pins.ts removePinEntry + tools/tsc.ts findTargets (PIN_CHECKED bundled)
+    hint: "Prüfen, ob ein Stand-alone-Pin aufzuräumen ist (get_pin_context) — falls ja remove_pin_entry(id), sonst remove_pin_entry(instrument, ohne id) zum Bestätigen von 'kein Pin'.",
+    tool: "remove_pin_entry",
+    judgment: false, // fundstelle: pins.ts removePinEntry (PIN_CHECKED{true/false} je nach id)
   },
   "s45.fallAgainCheck": {
-    hint: "Ist Fall 1 komplett (Ziel + ggf. weitere Bestätigung vorhanden)? find_targets liefert die Ziel-Kandidaten und löst diesen Schritt automatisch mit aus.",
-    tool: "find_targets",
-    judgment: false, // fundstelle: tools/tsc.ts findTargets, safeTransitionChain(FALL_AGAIN_CHECKED{complete:true})
+    hint: "Ist Fall 1 komplett (Ziel-Auswahl macht jetzt Sinn) oder Fall 2 (Bewegung noch im Gange)? log_fall_again_check(complete) eintragen — bei true geht's weiter zu find_targets, bei false zurück zu Schritt 4.",
+    tool: "log_fall_again_check",
+    judgment: true, // fundstelle: dealingRangeLoop.ts logFallAgainCheck, tradingMachine.ts fallAgainCheck-Diamant
   },
   "s45.llmPickTarget": {
     hint: "Ziel aus find_targets' Kandidatenliste wählen und mit add_trade_target anhängen — falls sich beim Blick auf die Kandidaten doch Fall 2 herausstellt (Bewegung noch im Gange, kein passendes Ziel), stattdessen retract_fall1_classification aufrufen.",

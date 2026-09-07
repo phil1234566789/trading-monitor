@@ -246,4 +246,8 @@ watch([selectedInstrument, currentNode], () => nextTick(renderGraph), { immediat
 .graph-container :deep(svg) {
   max-width: none;
 }
+.graph-container :deep(.node-tool) {
+  font-size: 10px;
+  opacity: 0.65;
+}
 </style>

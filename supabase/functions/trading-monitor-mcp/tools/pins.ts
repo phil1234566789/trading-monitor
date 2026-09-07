@@ -165,20 +165,38 @@ export function registerPinTools(server: McpServer) {
   server.registerTool(
     "remove_pin_entry",
     {
-      title: "Pin entfernen",
+      title: "Pin entfernen / Pin-Check bestätigen",
       description:
-        "Entfernt einen Pin-Kontext-Eintrag wieder (per id aus get_pin_context) — Pendant zum 🗑 im Pin-Panel. " +
-        "sec optional für einen Backtest/Replay-Zeitpunkt (Default: jetzt) — ohne ihn treibt dieser " +
-        "Aufruf die State-Machine-Zeile des HEUTIGEN Tages an, nicht die eines laufenden Backtests.",
-      inputSchema: { id: z.number(), sec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'") },
+        "Mit id: entfernt einen Pin-Kontext-Eintrag wieder (id aus get_pin_context) — Pendant zum 🗑 " +
+        "im Pin-Panel. Ohne id (dafür instrument mitgeben): bestätigt am s45.pinCheck-Knoten " +
+        "('Stand-alone-Pin vorhanden?' im Graphen), dass KEIN Pin aufzuräumen ist — vorher musste " +
+        "dafür find_targets zweckentfremdet werden (das dabei ungefragt auch noch 'Fall 1 komplett' " +
+        "erzwang, siehe find_targets/log_fall_again_check), jetzt bildet dieser Aufruf allein den " +
+        "Graph-Knoten '(nein)' ab. sec optional für einen Backtest/Replay-Zeitpunkt (Default: jetzt) " +
+        "— ohne ihn treibt dieser Aufruf die State-Machine-Zeile des HEUTIGEN Tages an, nicht die " +
+        "eines laufenden Backtests.",
+      inputSchema: {
+        id: z.number().optional().describe("Pin-id aus get_pin_context — weglassen, wenn kein Pin gefunden wurde (dann instrument mitgeben)"),
+        instrument: z.enum(["GBPUSD", "EURUSD"]).optional().describe("Nur ohne id: welches Instrument den 'kein Pin gefunden'-Schritt bestätigt"),
+        sec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
+      },
     },
-    async ({ id, sec: argSec }) => {
+    async ({ id, instrument: argInstrument, sec: argSec }) => {
+      const sec = argSec ?? Math.floor(Date.now() / 1000);
+      if (id == null) {
+        if (!argInstrument) throw new Error("Ohne id: instrument mitgeben, um 'kein Pin gefunden' am s45.pinCheck-Knoten zu bestätigen.");
+        // Nur PIN_CHECKED{false} (Schritt 5, erster Pin) — PIN2_CHECKED{false} (zweiter Pin nach
+        // Target-Anlegen) läuft weiterhin gebündelt über get_validation_evidence, siehe dort
+        // (derselbe Zweckentfremdungs-Kompromiss, hier bewusst nicht mit angefasst, YAGNI: nicht der
+        // Knoten, an dem wir gerade hängen).
+        await safeTransitionChain(argInstrument, [{ type: "PIN_CHECKED", found: false }], sec);
+        return json({ removed: null, confirmedNoPin: true });
+      }
       // Instrument VOR dem Löschen auflösen (danach ist die Zeile weg) — für die
       // State-Machine-Verdrahtung unten (Schritt 5/6 Pin-Aufräum-Pflicht, s45.pinCheck/pinCheck2).
       const instrument = await getPinInstrumentById(id);
       await removePinEntry(id);
       if (instrument) {
-        const sec = argSec ?? Math.floor(Date.now() / 1000);
         // Beide Pin-Check-Stellen (nach TSC-Verknüpfung UND nach Target-Anlegen) versuchen — nur
         // die am aktuellen Knoten gültige feuert tatsächlich, siehe safeTransitionChain.
         await safeTransitionChain(
