@@ -48,7 +48,7 @@ export const NODES = [
   { id: "s45_addTarget", label: "add_trade_target", statePath: "s45.addTarget" },
   { id: "s45_pinCheck2", label: "Stand-alone-Pin (Target)?", statePath: "s45.pinCheck2", gate: true, hint: "Zweiten Stand-alone-Pin (Target) prüfen/aufräumen — danach automatisch weiter zu Schritt 6.", nextTool: "remove_pin_entry" },
   { id: "s45_pinRemove2", label: "Pin aufräumen", statePath: "s45.pinRemove2" },
-  { id: "s45_notify", label: "Benachrichtigen", statePath: "s45.notify" },
+  { id: "s45_notify", label: "Benachrichtigen", statePath: "s45.notify", hint: "Benachrichtigungspflicht (05-dealing-range-bestaetigen.md) — get_validation_evidence aufrufen, das feuert NOTIFIED als Nebeneffekt und startet direkt Schritt 6.", nextTool: "get_validation_evidence" },
   { id: "s6_evidence", label: "Schritt 6: Evidenz sammeln", statePath: "s6_validieren.evidenceGathering", hint: "Evidenz für Schritt 6 sammeln (Confluences/Anti-Confluences/Score).", nextTool: "get_validation_evidence" },
   { id: "s6_llm6a", label: "Anti-Confluence-Auswahl", statePath: "s6_validieren.llm6a_antiConfluenceAuswahl", llm: true, hint: "Welche find_anti_confluences-Kandidaten wirklich zählen entscheiden, dann add_trade_confirmation aufrufen.", nextTool: "add_trade_confirmation" },
   { id: "s6_llm6", label: "VALIDE/INVALIDE?", statePath: "s6_validieren.llm6_valideInvalide", llm: true, hint: "Finale VALIDE/INVALIDE-Abwägung treffen und eintragen.", nextTool: "log_validation_verdict" },

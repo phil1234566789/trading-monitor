@@ -67,6 +67,15 @@ export const NEXT_ACTION_MAP: Record<string, NextActionEntry> = {
     tool: "remove_pin_entry",
     judgment: false, // fundstelle: pins.ts removePinEntry (PIN2_CHECKED/PIN2_REMOVED)
   },
+  // Echter Ruhepunkt (nicht nur Zwischenknoten) — pinNone2s always-Übergang landet synchron hier,
+  // aber NOTIFIED kommt erst von AUSSEN (get_validation_evidence). Fehlte bisher in dieser Map
+  // (Bug-Report Philip 07.09.2026, GBPUSD-Backtest 28.08.: get_next_action zeigte "kein bekannter
+  // Ruhepunkt" statt auf Schritt 6 zu verweisen).
+  "s45.notify": {
+    hint: "Benachrichtigungspflicht (05-dealing-range-bestaetigen.md) — get_validation_evidence aufrufen, das feuert NOTIFIED als Nebeneffekt und startet direkt Schritt 6.",
+    tool: "get_validation_evidence",
+    judgment: false, // fundstelle: tools/validationEvidence.ts, safeTransitionChain(...NOTIFIED...)
+  },
   "s6_validieren.evidenceGathering": {
     hint: "Evidenz für Schritt 6 sammeln (Confluences/Anti-Confluences/Score).",
     tool: "get_validation_evidence",
