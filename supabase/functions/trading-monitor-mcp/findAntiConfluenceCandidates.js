@@ -45,6 +45,11 @@ export function findAntiConfluenceObCandidates(zones, { direction, zoneLow, zone
   const todayStr = berlinDateStrFor(nowSec);
   return (zones ?? [])
     .filter((z) => z.dir === wantedDir && !z.invalidated)
+    // Persistierte 5M-Zonen außerhalb des Live-Detektions-Fensters (kein liveVerified-Flag, siehe
+    // buildCandidatePool) haben ein für immer eingefrorenes touched/invalidated seit Zeilen-Anlage —
+    // nicht verifizierbar heißt hier NICHT "als untouched zählen" (Bug-Report Philip 07.09.2026: drei
+    // uralte "weak"-OBs aus Mai zeigten touched:false, obwohl seit Monaten nie erneut geprüft).
+    .filter((z) => z.timeframe !== "5M" || z.liveVerified)
     .map((z) => ({ ...z, edgePrice: direction === "short" ? z.top : z.bottom, held: z.touched }))
     .filter((z) => inBand(z.edgePrice, zoneLow, zoneHigh))
     .filter((z) => {
@@ -93,6 +98,9 @@ export function findInvalidationObCandidates(zones, { direction, invalidation, m
   const maxDistance = fromPips(maxPips);
   return (zones ?? [])
     .filter((z) => z.dir === wantedDir && !z.touched && !z.invalidated)
+    // Gleiche Verifikations-Regel wie findAntiConfluenceObCandidates oben — eine unverifizierte
+    // (zu alte) 5M-Zone zählt nicht blind als "untouched".
+    .filter((z) => z.timeframe !== "5M" || z.liveVerified)
     .map((z) => ({ ...z, edgePrice: direction === "short" ? z.bottom : z.top }))
     .filter((z) => {
       const distance = direction === "short" ? z.edgePrice - invalidation : invalidation - z.edgePrice;
