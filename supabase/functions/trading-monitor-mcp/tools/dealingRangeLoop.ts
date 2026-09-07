@@ -3,7 +3,7 @@ import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp
 import { berlinDateTimeStrFor, berlinDateStrFor } from "../berlinTime.ts";
 import { fetchForexCandles } from "../forexCandles.ts";
 import { getLoopStateForDay, updateLoopState, closeLoopState, type TradingLoopStateRow, type HeartbeatEntry, appendHeartbeat } from "../loopState.ts";
-import { buildPretradeGates } from "./pretradeGates.ts";
+import { buildPretradeGates, type PretradeGatesResult } from "./pretradeGates.ts";
 import { buildSessionWindow } from "./sessionWindow.ts";
 import { buildDataSnapshot } from "./dataSnapshot.ts";
 import { buildRecentReactions } from "./recentReactions.ts";
@@ -19,6 +19,14 @@ function json(data: unknown) {
 const BATCH_HOURS = 2;
 const BATCH_CANDLES = Math.round((BATCH_HOURS * 3600) / 300); // 24 M5-Kerzen
 const DEFAULT_MAX_BATCHES = 10;
+
+// exclude kombiniert tradingHours- UND news-Gate (siehe buildPretradeGates), die Heartbeats unten
+// nannten bisher IMMER "News-Blackout" — auch wenn tatsächlich die Handelszeit (z.B. Freitag 18 Uhr
+// Fensterschluss) der Grund war (Bug-Report Philip 07.09.2026, GBPUSD-Backtest 28.08.: 3x
+// "News-Blackout" ohne jedes News-Event an dem Tag, tatsächlich schlicht außerhalb 08-18-Uhr-Fenster).
+function gateBlockLabel(gates: PretradeGatesResult): string {
+  return gates.tradingHours.exclude ? "Außerhalb Handelszeit" : "News-Blackout";
+}
 
 export interface TickResult {
   loopStateId: number;
@@ -271,7 +279,7 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
   if (currentLoopState.watchLevelAbove == null && currentLoopState.watchLevelBelow == null) {
     const gates = await buildPretradeGates({ instrument, nowSec: cursorSec, loopStateId: currentLoopState.id, persist: false });
     if (gates.exclude) {
-      await heartbeat(cursorSec, "News-Blackout ---> erster Tick pausiert.", currentLoopState.id);
+      await heartbeat(cursorSec, `${gateBlockLabel(gates)} ---> erster Tick pausiert.`, currentLoopState.id);
     } else {
       // Actor steht hier bei s45.backtestBatch (nach MODE_SELECTED oben) — die beiden mechanischen
       // Zwischenknoten (News-Blackout, Watch-Level-Treffer) müssen auch für den Erster-Tick-
@@ -297,7 +305,7 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
     const gates = await buildPretradeGates({ instrument, nowSec: cursorSec, loopStateId: currentLoopState.id, persist: false });
     await transition(loaded, instrument, { type: "NEWS_BLACKOUT_CHECKED", active: gates.exclude }, cursorSec);
     if (gates.exclude) {
-      await heartbeat(cursorSec, `News-Blackout ---> Batch pausiert.`, currentLoopState.id);
+      await heartbeat(cursorSec, `${gateBlockLabel(gates)} ---> Batch pausiert.`, currentLoopState.id);
       cursorSec = Math.min(cursorSec + BATCH_HOURS * 3600, replayUntilSec);
       await transition(loaded, instrument, { type: "BACKTEST_BATCH_FETCHED" }, cursorSec);
       continue;
