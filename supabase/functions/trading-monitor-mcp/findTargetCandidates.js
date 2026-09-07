@@ -103,18 +103,23 @@ export async function buildCandidatePool(instrument, currentTimeSec) {
     timeframe: l.timeframe,
   }));
 
-  const m5Ob = detectOrderBlocks(m5Candles, "5m", true)
-    .filter((z) => !z.invalidated)
-    .map((z) => ({
-      dir: z.dir,
-      direction: z.dir === 1 ? "long" : "short",
-      top: z.top,
-      bottom: z.bottom,
-      touched: z.touched,
-      invalidated: z.invalidated,
-      startTime: z.startTime,
-      timeframe: "5M",
-    }));
+  // ALLE live erkannten Zonen (auch invalidierte) — der !invalidated-Filter läuft weiter unten NACH
+  // dem Merge, nicht hier, sonst hätte eine seither invalidierte Zone keinen Merge-Partner mehr und
+  // der eingefrorene (falsche) DB-Stand würde unverändert durchrutschen (siehe Kommentar unten).
+  const m5ObAll = detectOrderBlocks(m5Candles, "5m", true).map((z) => ({
+    dir: z.dir,
+    direction: z.dir === 1 ? "long" : "short",
+    top: z.top,
+    bottom: z.bottom,
+    touched: z.touched,
+    invalidated: z.invalidated,
+    startTime: z.startTime,
+    // endTime fehlte hier bisher (anders als dataExport.ts: computeM5LiquidityAndObZones) — bei
+    // touched-Zonen der eingefrorene Touch-Zeitpunkt (siehe orderBlockDetection.js), Pflicht für
+    // findAntiConfluenceObCandidates' Handelstag-Filter (siehe dort).
+    endTime: z.endTime,
+    timeframe: "5M",
+  }));
   const htfOb = obZones.map((z) => ({
     id: z.id,
     dir: z.direction === "long" ? 1 : -1,
@@ -128,17 +133,30 @@ export async function buildCandidatePool(instrument, currentTimeSec) {
   }));
   // getObZones(instrument, undefined, ...) liefert ALLE Timeframes, auch bereits persistierte 5M-
   // Zonen (z.B. über einen Pin/eine Confirmation angelegt, siehe db.ts findOrCreateObZoneId) — ohne
-  // Dedup taucht so eine Zone DOPPELT auf: einmal live neu erkannt (m5Ob, ohne id), einmal aus der
-  // DB (htfOb, MIT id). direction+startTime sind deterministisch aus denselben M5-Kerzen abgeleitet,
-  // deshalb reicht ein exakter Schlüssel (kein Preis-Epsilon nötig wie bei m5Liquidity oben). Bug-
-  // Report Philip 07.09.2026, GBPUSD-Backtest 28.08.: find_anti_confluences' invalidationObCandidates
-  // zeigte dieselbe Zone (1.35993-1.36016) zweimal, einmal ohne referenzierbare id.
-  const htfObM5Keys = new Set(htfOb.filter((z) => z.timeframe === "5M").map((z) => `${z.direction}_${z.startTime}`));
-  const m5ObDeduped = m5Ob.filter((z) => !htfObM5Keys.has(`${z.direction}_${z.startTime}`));
+  // Dedup taucht so eine Zone DOPPELT auf: einmal live neu erkannt (ohne id), einmal aus der DB (MIT
+  // id). direction+startTime sind deterministisch aus denselben M5-Kerzen abgeleitet, deshalb reicht
+  // ein exakter Schlüssel (kein Preis-Epsilon nötig wie bei m5Liquidity oben).
+  //
+  // WICHTIG (Bug-Report Philip 07.09.2026, GBPUSD-Backtest 28.08.): touched/invalidated/endTime einer
+  // persistierten 5M-Zeile werden nach dem Insert NIE aktualisiert (poi-watcher verfolgt M5 nie live
+  // nach, siehe get_pin_context-Tool-Beschreibung "touched/invalidated werden für M5-Zeilen aber nie
+  // live nachverfolgt") — ein erster Dedup-Versuch bevorzugte fälschlich genau diesen eingefrorenen
+  // DB-Stand statt der frischen Live-Erkennung (OB #3134439, seit 22.08. mit touched:false/
+  // invalidated:false eingefroren, obwohl der Kurs am 28.08. klar unter die Zonen-Unterkante
+  // durchgebrochen ist — live also invalidated:true). Deshalb: bei einem Match gewinnt die LIVE-Zone
+  // für top/bottom/touched/invalidated/endTime, nur die referenzierbare id kommt von htfOb dazu.
+  const htfObM5ByKey = new Map(htfOb.filter((z) => z.timeframe === "5M").map((z) => [`${z.direction}_${z.startTime}`, z]));
+  const m5ObMerged = m5ObAll
+    .map((z) => {
+      const persisted = htfObM5ByKey.get(`${z.direction}_${z.startTime}`);
+      return persisted ? { ...z, id: persisted.id } : z;
+    })
+    .filter((z) => !z.invalidated);
+  const htfObDeduped = htfOb.filter((z) => z.timeframe !== "5M" || !m5ObAll.some((m) => m.direction === z.direction && m.startTime === z.startTime));
 
   return {
     liquidityLevels: [...m5Liquidity, ...htfLiquidity],
-    obZones: [...m5ObDeduped, ...htfOb],
+    obZones: [...m5ObMerged, ...htfObDeduped],
     // Zusätzlich zurückgegeben (find_targets selbst braucht es nicht) — findAntiConfluenceCandidates.js
     // will RSI-Divergenzen auf denselben M5-Kerzen erkennen, ohne den identischen Fetch ein zweites
     // Mal auszulösen (DRY, siehe CLAUDE.md).
