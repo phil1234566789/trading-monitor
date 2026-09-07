@@ -648,10 +648,10 @@
     "semantic_hash": "6c5e3fe4d1c7f7364b64ca834b27db72"
   },
   "src/stateMachineLog.js": {
-    "mtime": 1788590820.042802,
-    "seen": 1788660641.2142766,
-    "ast_hash": "3cf12f1f4ddc322c71d425f290a2358a",
-    "semantic_hash": "3cf12f1f4ddc322c71d425f290a2358a"
+    "mtime": 1788730786.6241286,
+    "seen": 1788730975.4102502,
+    "ast_hash": "940006465b798dd986e9f101a20bde53",
+    "semantic_hash": ""
   },
   "src/supabaseClient.js": {
     "mtime": 1783250046.7254794,
@@ -720,9 +720,9 @@
     "semantic_hash": "52ab228bfa254da8a6527436a64c5c62"
   },
   "src/tradingMachineGraph.js": {
-    "mtime": 1788693752.3953445,
-    "seen": 1788696426.5334628,
-    "ast_hash": "11ad90f78bc27542ef51efa50e39c9a4",
+    "mtime": 1788729074.1080334,
+    "seen": 1788730975.4112473,
+    "ast_hash": "e879d79e9abf768f604b9185ac693072",
     "semantic_hash": ""
   },
   "src/tradingSchedules.js": {
@@ -966,10 +966,10 @@
     "semantic_hash": "ff82024b75731e34689725f677d07665"
   },
   "supabase/functions/trading-monitor-mcp/pretradeGates.ts": {
-    "mtime": 1788601719.4157493,
-    "seen": 1788660641.2142766,
-    "ast_hash": "c449010c8f52c03ada0e2c5f84ea35e5",
-    "semantic_hash": "c449010c8f52c03ada0e2c5f84ea35e5"
+    "mtime": 1788729625.0701065,
+    "seen": 1788730975.4192472,
+    "ast_hash": "d9353af0e51a9fdb552d7184744aafd7",
+    "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/rsi.js": {
     "mtime": 1787864943.211153,
@@ -1098,9 +1098,9 @@
     "semantic_hash": "3240fe6d055a67b6a6664e42e0afc08c"
   },
   "supabase/functions/trading-monitor-mcp/tools/pretradeGates.ts": {
-    "mtime": 1788688621.1768801,
-    "seen": 1788691074.874906,
-    "ast_hash": "4c99b5f631d25928a77d74a98dfc4b91",
+    "mtime": 1788729043.25071,
+    "seen": 1788730975.4232469,
+    "ast_hash": "c7caead33765a5b89b4df3602da93220",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/reads.ts": {
@@ -2070,10 +2070,10 @@
     "semantic_hash": "f0652fd0767235e540ccac63fcff3b45"
   },
   "test/pretradeGates.test.js": {
-    "mtime": 1788206677.558955,
-    "seen": 1788660641.2142766,
-    "ast_hash": "2298602a477faa32c83de65179fbc598",
-    "semantic_hash": "2298602a477faa32c83de65179fbc598"
+    "mtime": 1788729100.609832,
+    "seen": 1788730975.451246,
+    "ast_hash": "f676047262d71c2cbb9d17823c39b5a0",
+    "semantic_hash": ""
   },
   "test/priceChartHitTest.test.js": {
     "mtime": 1788190561.8126788,
@@ -2442,9 +2442,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/nextActionMap.ts": {
-    "mtime": 1788693595.0637217,
-    "seen": 1788696426.5334628,
-    "ast_hash": "f715f84f8c5f4778c6d43689abfd4f9d",
+    "mtime": 1788729058.001189,
+    "seen": 1788730975.4182482,
+    "ast_hash": "d35f8755f14082f600cf5d9c698ab4e4",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/nextAction.ts": {
@@ -2475,6 +2475,24 @@
     "mtime": 1788699417.9242992,
     "seen": 1788702184.9984918,
     "ast_hash": "fb353498c5759ed1a2235ff325047968",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260906150500_trading_loop_state_current_step_default.sql": {
+    "mtime": 1788702053.8729897,
+    "seen": 1788730975.4452465,
+    "ast_hash": "1c762067e79c8e09b5fe8669301f06e8",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260906151000_reset_gbpusd_20260828_bug_recovery.sql": {
+    "mtime": 1788702132.2606244,
+    "seen": 1788730975.4452465,
+    "ast_hash": "e1bba5cfe4579234bf3ee2661444f7d6",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260906170000_fix_duplicate_gbpusd_ob_zone_3182140.sql": {
+    "mtime": 1788730323.3210623,
+    "seen": 1788730975.4452465,
+    "ast_hash": "bf1df9cc24e6ea350c148e198ea3b4cf",
     "semantic_hash": ""
   }
 }
