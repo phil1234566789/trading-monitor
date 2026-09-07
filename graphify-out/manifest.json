@@ -420,10 +420,10 @@
     "semantic_hash": "68927759d7e8d5e589d1d4699b4839ec"
   },
   "src/dataExport.js": {
-    "mtime": 1788096761.7449305,
-    "seen": 1788660641.2142766,
-    "ast_hash": "ea2b479658a14c70339e3da0d68060e4",
-    "semantic_hash": "ea2b479658a14c70339e3da0d68060e4"
+    "mtime": 1788769291.033077,
+    "seen": 1788769471.1355932,
+    "ast_hash": "388cd83e28cb07901e9a137f20cfe50b",
+    "semantic_hash": ""
   },
   "src/debugMetadata.js": {
     "mtime": 1787733589.934274,
@@ -882,10 +882,10 @@
     "semantic_hash": "4ce3d42726f8c39c44cdd0e38a331923"
   },
   "supabase/functions/trading-monitor-mcp/db.ts": {
-    "mtime": 1788644782.196952,
-    "seen": 1788660641.2142766,
-    "ast_hash": "e0250c47f9739083bcbbf039a67223c2",
-    "semantic_hash": "e0250c47f9739083bcbbf039a67223c2"
+    "mtime": 1788732184.8252552,
+    "seen": 1788769471.148593,
+    "ast_hash": "15e5540e8527b18de86819ba8333513b",
+    "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/ema.js": {
     "mtime": 1787465334.642287,
@@ -912,10 +912,10 @@
     "semantic_hash": "14fff4d921ef4b14f4c4ead69dcfb6c9"
   },
   "supabase/functions/trading-monitor-mcp/findTargetCandidates.js": {
-    "mtime": 1788124878.7558553,
-    "seen": 1788660641.2142766,
-    "ast_hash": "8f6da8af5550320b695dd4fd0a658d0c",
-    "semantic_hash": "8f6da8af5550320b695dd4fd0a658d0c"
+    "mtime": 1788769303.335728,
+    "seen": 1788769471.148593,
+    "ast_hash": "0ca9c1cd647a20c1106f4d981ed88a09",
+    "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/forexCandles.ts": {
     "mtime": 1787465334.6433365,
@@ -1062,10 +1062,10 @@
     "semantic_hash": "d6891c94a015cc5c518395d715d301ee"
   },
   "supabase/functions/trading-monitor-mcp/tools/dataExport.ts": {
-    "mtime": 1788629068.6598766,
-    "seen": 1788660641.2142766,
-    "ast_hash": "1c3038430c0154611a394ca3a614b40f",
-    "semantic_hash": "1c3038430c0154611a394ca3a614b40f"
+    "mtime": 1788769284.6167338,
+    "seen": 1788769471.1535928,
+    "ast_hash": "beb4c75278696c558f44106865479653",
+    "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/dataSnapshot.ts": {
     "mtime": 1788640294.617895,
@@ -1092,10 +1092,10 @@
     "semantic_hash": "1486065a230aeb2918d8eebc5e3a2e94"
   },
   "supabase/functions/trading-monitor-mcp/tools/pins.ts": {
-    "mtime": 1788642700.6853,
-    "seen": 1788660641.2142766,
-    "ast_hash": "3240fe6d055a67b6a6664e42e0afc08c",
-    "semantic_hash": "3240fe6d055a67b6a6664e42e0afc08c"
+    "mtime": 1788732199.4771352,
+    "seen": 1788769471.1545925,
+    "ast_hash": "3f9425a66923f768f73fa223c01baa3b",
+    "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/pretradeGates.ts": {
     "mtime": 1788729043.25071,
@@ -1122,16 +1122,16 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/trades.ts": {
-    "mtime": 1788106852.0775273,
-    "seen": 1788660641.2142766,
-    "ast_hash": "d99d268a5e62545ecb4080b873ba3d1d",
-    "semantic_hash": "d99d268a5e62545ecb4080b873ba3d1d"
+    "mtime": 1788732283.5193534,
+    "seen": 1788769471.1545925,
+    "ast_hash": "d48e7c4bc75d47ddb66b776d3e1f503d",
+    "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/tsc.ts": {
-    "mtime": 1788645921.9780684,
-    "seen": 1788660641.2142766,
-    "ast_hash": "8fec47e6c3b0beb398bf4bebb62b4f49",
-    "semantic_hash": "8fec47e6c3b0beb398bf4bebb62b4f49"
+    "mtime": 1788732066.9292786,
+    "seen": 1788769471.1545925,
+    "ast_hash": "9fdfb50de23223d0e30b79b6c1f95a09",
+    "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/validationEvidence.ts": {
     "mtime": 1788688467.9804165,
@@ -2292,10 +2292,10 @@
     "semantic_hash": "f64475c03237c3c316e2a75a8c3b44e8"
   },
   "PLAN-notifications.md": {
-    "mtime": 1788044994.0866473,
-    "seen": 1788660641.2142766,
-    "ast_hash": "301ce8af24e111a4d1207da0780b1ba4",
-    "semantic_hash": "301ce8af24e111a4d1207da0780b1ba4"
+    "mtime": 1788769270.6538136,
+    "seen": 1788769471.189618,
+    "ast_hash": "e6475396cee92031cce8ddf149513aa0",
+    "semantic_hash": ""
   },
   "PLAN-trade-confluences.md": {
     "mtime": 1787949437.946143,
@@ -2328,10 +2328,10 @@
     "semantic_hash": "75c26df699b3325dc0c41904f36c227b"
   },
   "docs/diagrams/dealing-range-loop.html": {
-    "mtime": 1788201986.6527638,
-    "seen": 1788660641.2142766,
-    "ast_hash": "7d9c77bf151650c5d6c6b6effafcf4da",
-    "semantic_hash": "7d9c77bf151650c5d6c6b6effafcf4da"
+    "mtime": 1788765075.5427675,
+    "seen": 1788769471.1906185,
+    "ast_hash": "3c8d49dce8d055fd997d6da6d4b0cfd2",
+    "semantic_hash": ""
   },
   "docs/diagrams/trading-steps-ablauf.html": {
     "mtime": 1788201940.104583,
@@ -2493,6 +2493,30 @@
     "mtime": 1788730323.3210623,
     "seen": 1788730975.4452465,
     "ast_hash": "bf1df9cc24e6ea350c148e198ea3b4cf",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260906160000_reset_gbpusd_20260828_restart_1600.sql": {
+    "mtime": 1788727410.4507113,
+    "seen": 1788769471.177108,
+    "ast_hash": "e581d4ed05389f51f540908b06a20830",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260906161500_reset_gbpusd_20260828_retest_retryat.sql": {
+    "mtime": 1788729126.4223237,
+    "seen": 1788769471.177108,
+    "ast_hash": "82fce81bbf501575acbfda318867be4b",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260906163000_reset_gbpusd_20260828_clean_restart.sql": {
+    "mtime": 1788729212.310326,
+    "seen": 1788769471.177108,
+    "ast_hash": "290b5b1e79b9bd249119904743674b20",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260906164500_reset_gbpusd_20260828_15min_fix.sql": {
+    "mtime": 1788729652.690049,
+    "seen": 1788769471.177108,
+    "ast_hash": "0a4a5d961597d45b0a61bf839d3c970f",
     "semantic_hash": ""
   }
 }
