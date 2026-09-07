@@ -223,6 +223,18 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
     };
   }
 
+  if (replayUntilSec != null && loopState.lastAnalysisTimeSec != null && replayUntilSec < loopState.lastAnalysisTimeSec) {
+    // Ohne diesen Guard: die Batch-Schleife unten startet mit cursorSec=lastAnalysisTimeSec, deren
+    // for-Header (cursorSec < replayUntilSec) ist dann von Anfang an false -> stiller No-op mit
+    // IRREFÜHRENDEM "stopped: true, stopReason: replayUntilSec erreicht" (sieht identisch aus wie
+    // "gerade am Ziel angekommen", siehe Bug-Report Philip 07.09.2026, GBPUSD-Backtest 28.08.: ein
+    // replayUntilSec, das schon länger in der Vergangenheit lag, wurde für "Ziel erreicht" gehalten).
+    throw new Error(
+      `replayUntilSec (${berlinDateTimeStrFor(replayUntilSec)}) liegt VOR dem aktuellen Analysestand ` +
+        `(${berlinDateTimeStrFor(loopState.lastAnalysisTimeSec)}) — kein Rücksprung möglich.`,
+    );
+  }
+
   if (replayUntilSec == null) {
     // LIVE: Watch-Level-Vorprüfung, wie im Diagramm (LTICK/LHIT) — nur bei Treffer voller Refetch.
     // Erster Tick dieses Loops (noch kein Watch-Level gesetzt) erzwingt sofort die volle Auswertung.
