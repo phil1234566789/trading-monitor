@@ -1,7 +1,7 @@
 # Graph Report - trading-monitor  (2026-09-07)
 
 ## Corpus Check
-- 420 files · ~431,907 words
+- 420 files · ~432,229 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `58d13ed0`
+- Built from commit: `81591ea2`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -684,7 +684,7 @@ Nodes (3): renderClaudeAnnotations(), usePriceChartClaudeAnnotations(), refresh(
   docs/steerabilty-vs-wrong-ai-outputs.md · relation: references
 
 ## Knowledge Gaps
-- **1059 isolated node(s):** `a) Aufmerksamkeitslevel niedrig — kein DR, Markt gibt nichts her (Fall 3)`, `b) Aufmerksamkeitslevel hoch — Dealing Range bildet sich (Fall 2)`, `c) Aufmerksamkeitslevel hoch — Dealing Range bestätigt (Fall 1)`, `d) Aufmerksamkeitslevel höchste — Dealing Range validiert (Schritt 7, Find Entry)`, `Bekannter Bug (07.09.2026, behoben)` (+1054 more)
+- **1059 isolated node(s):** `NODES`, `EDGES`, `NextActionEntry`, `NEXT_ACTION_MAP`, `NEXT_ACTION_FALLBACK` (+1054 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1268 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **11 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -694,12 +694,12 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `Trading-Steps-Ablauf Diagram` and `calc_rr Tool Idea (Deterministic RR Calc)`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
 - **Why does `trading_schedules Table` connect `Fachdoku-Router Skill` to `tools/pretradeGates.ts`?**
-  _High betweenness centrality (0.338) - this node is a cross-community bridge._
+  _High betweenness centrality (0.322) - this node is a cross-community bridge._
 - **Why does `Trading-Monitor Project Overview (CLAUDE.md)` connect `Trading-Monitor Project Overview (CLAUDE.md)` to `Plan: Forex-Chart-Objekte Datengrundlage`, `tradeSetup.js`, `/task do Mode`, `Fachdoku-Router Skill`, `Plan: Sehr Große Dateien Refactoren (PriceChart.vue)`, `cTrader Open API as Forex Candle Source`, `Plan: POI-Strategie-Findung, Backtesting & Trade-Notifications`?**
-  _High betweenness centrality (0.314) - this node is a cross-community bridge._
+  _High betweenness centrality (0.297) - this node is a cross-community bridge._
 - **Why does `Trading-Hours/Timezone Handling (Europe/Berlin)` connect `Fachdoku-Router Skill` to `Trading-Monitor Project Overview (CLAUDE.md)`?**
-  _High betweenness centrality (0.299) - this node is a cross-community bridge._
-- **What connects `a) Aufmerksamkeitslevel niedrig — kein DR, Markt gibt nichts her (Fall 3)`, `b) Aufmerksamkeitslevel hoch — Dealing Range bildet sich (Fall 2)`, `c) Aufmerksamkeitslevel hoch — Dealing Range bestätigt (Fall 1)` to the rest of the system?**
+  _High betweenness centrality (0.281) - this node is a cross-community bridge._
+- **What connects `NODES`, `EDGES`, `NextActionEntry` to the rest of the system?**
   _1059 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Dashboard.vue` be split into smaller, more focused modules?**
   _Cohesion score 0.016290726817042606 - nodes in this community are weakly interconnected._

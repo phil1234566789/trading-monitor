@@ -19340,7 +19340,7 @@
       "file_type": "code",
       "norm_label": "next_action_fallback",
       "source_file": "supabase/functions/trading-monitor-mcp/nextActionMap.ts",
-      "source_location": "L93"
+      "source_location": "L102"
     },
     {
       "id": "supabase_functions_trading_monitor_mcp_nextactionmap_next_action_map",
@@ -48626,7 +48626,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "supabase/functions/trading-monitor-mcp/tools/pins.ts",
-      "source_location": "L192",
+      "source_location": "L194",
       "weight": 1.0
     },
     {
@@ -48638,7 +48638,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "supabase/functions/trading-monitor-mcp/tools/pins.ts",
-      "source_location": "L197",
+      "source_location": "L199",
       "weight": 1.0
     },
     {
@@ -48650,7 +48650,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "supabase/functions/trading-monitor-mcp/tools/pins.ts",
-      "source_location": "L198",
+      "source_location": "L200",
       "weight": 1.0
     },
     {
@@ -85169,6 +85169,17 @@
     },
     {
       "source": "supabase_functions_trading_monitor_mcp_nextactionmap",
+      "target": "supabase_functions_trading_monitor_mcp_nextactionmap_next_action_fallback",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/functions/trading-monitor-mcp/nextActionMap.ts",
+      "source_location": "L102",
+      "weight": 1.0
+    },
+    {
+      "source": "supabase_functions_trading_monitor_mcp_nextactionmap",
       "target": "supabase_functions_trading_monitor_mcp_nextactionmap_nextactionentry",
       "relation": "contains",
       "_origin": "ast",
@@ -85187,17 +85198,6 @@
       "confidence_score": 1.0,
       "source_file": "supabase/functions/trading-monitor-mcp/nextActionMap.ts",
       "source_location": "L24",
-      "weight": 1.0
-    },
-    {
-      "source": "supabase_functions_trading_monitor_mcp_nextactionmap",
-      "target": "supabase_functions_trading_monitor_mcp_nextactionmap_next_action_fallback",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "supabase/functions/trading-monitor-mcp/nextActionMap.ts",
-      "source_location": "L93",
       "weight": 1.0
     },
     {
@@ -98674,5 +98674,5 @@
       "source_file": "CLAUDE.md"
     }
   ],
-  "built_at_commit": "58d13ed01820a1fcf6e38527f7dcb9bc7788569b"
+  "built_at_commit": "81591ea2a2536ee12e5b68714b904cd596b14ac2"
 }
