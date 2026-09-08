@@ -756,9 +756,9 @@
     "semantic_hash": "1c0cdebd651c5c29d391db600e8c4a30"
   },
   "src/views/LoopStatus.vue": {
-    "mtime": 1788698198.3004563,
-    "seen": 1788699250.6717865,
-    "ast_hash": "aac9bdd95034378e65e4c4d949ac5d11",
+    "mtime": 1788850855.5205667,
+    "seen": 1788850932.3690953,
+    "ast_hash": "f9195ba22414cbfd5cb6b5ea09ca7415",
     "semantic_hash": ""
   },
   "src/views/Protokoll.vue": {
@@ -768,9 +768,9 @@
     "semantic_hash": "102c8225bfa829eaa2163b7b4c1d9e09"
   },
   "src/views/TradingFlow.vue": {
-    "mtime": 1788786490.1419585,
-    "seen": 1788787480.5083053,
-    "ast_hash": "0918a4c9a3412db6a9566206e831a4e8",
+    "mtime": 1788850870.8442552,
+    "seen": 1788850932.3690953,
+    "ast_hash": "90e0578432f4697a483c6b84a0fce874",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/ctraderCreds.ts": {
@@ -2547,6 +2547,12 @@
     "mtime": 1788793988.8899393,
     "seen": 1788797068.704113,
     "ast_hash": "508a0f3cd75a2fb832d504a59d3d7c5a",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260908070000_reset_gbpusd_20260828_final_cleanup.sql": {
+    "mtime": 1788850511.727577,
+    "seen": 1788850932.3690953,
+    "ast_hash": "b5432e4b05f82347c0f08f30f295bc11",
     "semantic_hash": ""
   }
 }
