@@ -2,9 +2,10 @@
 // refactoren" (Phase 3, 2026-08-25) hierher verschoben — die eigentliche Fraktal-/Level-Erkennung
 // lebt weiterhin in liquidity.js, hier nur die Merge-Logik (Pin-Kontext, persistierte HTF-Level),
 // die PriceChart.vue bisher über Closures (props, allCandles) statt über Parameter berechnet hat.
-import { selectRelevantHtfLevels, liquidityLevelNaturalKey } from "./liquidity.js";
+import { selectRelevantHtfLevels, liquidityLevelNaturalKey, LIQUIDITY_FRACTAL_PERIOD } from "./liquidity.js";
 import { LQ_RELEVANCE } from "./liquidityRelevanceConfig.js";
 import { PIP_SIZE } from "./pipConfig.js";
+import { barSecondsForTimeframeCi } from "./timeframes.js";
 
 // Chat 2026-08-26, Philip: zwei Level auf (praktisch) demselben Preis sind redundant, das
 // bedeutsamere gewinnt — einmal zwischen HTF (1H/4H) und live erkanntem M5 (mergeDbLiquidityLevels
@@ -41,8 +42,17 @@ export function mergePinnedLevels(levels, pinnedLevels, candles) {
       extra.push({ ...lvl, endTime: lvl.endTime ?? candles[candles.length - 1]?.time ?? lvl.pivotTime });
       continue;
     }
+    // Bug-Report Philip 2026-09-08 ("NY-High"-Sweep-Linie im TSC lief nach dem Hover-Highlight nur
+    // 2h15m statt der tatsächlichen 13h): ohne Versatz fand dieser Scan schon einen M5-Docht, der
+    // kurz nach dem Pivot zurück an den Preis tickt — noch WÄHREND der eigene Fraktal-Bestätigungs-
+    // zeitraum des Levels läuft (bei einem 1H-Level 5 STUNDEN, nicht 5 M5-Kerzen), also technisch
+    // Teil derselben Kerzenformation, die den Pivot erst entstehen ließ, kein echter Sweep. Exakt
+    // dieselbe Verzögerung wie buildLevel() (liquidityDetection.js: `i = p + period`), nur auf
+    // Sekunden statt Kerzen-Index umgerechnet, da hier immer M5-Kerzen durchsucht werden, auch für
+    // ein 1H/4H-Level.
+    const confirmationOffsetSec = LIQUIDITY_FRACTAL_PERIOD * (barSecondsForTimeframeCi(lvl.timeframe) ?? 0);
     const touchCandle = candles.find(
-      (c) => c.time > lvl.pivotTime && ((lvl.dir === 1 && c.high >= lvl.price) || (lvl.dir === -1 && c.low <= lvl.price)),
+      (c) => c.time > lvl.pivotTime + confirmationOffsetSec && ((lvl.dir === 1 && c.high >= lvl.price) || (lvl.dir === -1 && c.low <= lvl.price)),
     );
     extra.push({ ...lvl, touched: touchCandle != null, endTime: touchCandle?.time ?? candles[candles.length - 1]?.time ?? lvl.pivotTime });
   }
