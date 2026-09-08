@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import mermaid from "mermaid";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
+import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 import { LOOP_INSTRUMENTS, fetchLoopStatesForDate } from "../loopState.js";
 import { buildMermaidSource, getNextActionHint } from "../tradingMachineGraph.js";
 import { berlinDateStrFor } from "../dataExport.js";
@@ -23,8 +24,11 @@ const renderError = ref("");
 // Replay-/Backtest-Lauf (check_pretrade_gates/run_bias_check mit replayUntilSec) schreibt auf das
 // Replay-Datum, nicht auf heute; ohne Auswahl sieht man diese Zeile hier nie. Polling bleibt auch
 // für vergangene Tage aktiv (einfacher als ein Sonderfall, Kosten sind eine kleine Query alle 8s).
+// Geteilter localStorage-Key mit LoopStatus.vue (Philip 08.09.2026: "bei page reload nicht
+// verlieren") — useLocalStorageRef cached pro Key eine gemeinsame reaktive ref, das gewählte Datum
+// bleibt dadurch zwischen beiden Ansichten UND über Reloads hinweg synchron.
 const todayStr = berlinDateStrFor(Math.floor(Date.now() / 1000));
-const selectedDateStr = ref(todayStr);
+const selectedDateStr = useLocalStorageRef("selectedDateStr", todayStr);
 const isToday = computed(() => selectedDateStr.value === todayStr);
 
 const { data, refresh } = usePolledFetch(() => fetchLoopStatesForDate(selectedDateStr.value), { intervalMs: REFRESH_MS });

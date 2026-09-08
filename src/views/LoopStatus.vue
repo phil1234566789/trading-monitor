@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
+import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 import { LOOP_INSTRUMENTS, fetchLoopStatesForDate, fetchLoopStateHistory } from "../loopState.js";
 import { fetchStateMachineLog } from "../stateMachineLog.js";
 import { berlinDateStrFor } from "../dataExport.js";
@@ -17,8 +18,11 @@ const REFRESH_MS = 8000; // die Loop-Zeilen werden von Lana (separate Claude-Cod
 // Datumsauswahl analog zu TradingFlow.vue (Philip, 06.09.2026: "wie kann ich denn den Handelstag
 // in /loop-status einstellen, so wie in /trading-flow") — ein Replay-/Backtest-Lauf schreibt auf
 // das Replay-Datum, nicht auf heute, sonst sieht man die Karte hier nie ohne die Historie aufzuklappen.
+// Geteilter localStorage-Key mit TradingFlow.vue (Philip 08.09.2026: "bei page reload nicht
+// verlieren") — useLocalStorageRef cached pro Key eine gemeinsame reaktive ref, das gewählte Datum
+// bleibt dadurch zwischen beiden Ansichten UND über Reloads hinweg synchron.
 const todayStr = berlinDateStrFor(Math.floor(Date.now() / 1000));
-const selectedDateStr = ref(todayStr);
+const selectedDateStr = useLocalStorageRef("selectedDateStr", todayStr);
 const isToday = computed(() => selectedDateStr.value === todayStr);
 
 async function loadAll() {
