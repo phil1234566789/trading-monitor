@@ -1,7 +1,7 @@
 # Graph Report - trading-monitor  (2026-09-07)
 
 ## Corpus Check
-- 420 files · ~432,510 words
+- 420 files · ~432,871 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6acda419`
+- Built from commit: `5901e541`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -150,8 +150,8 @@
 2. `cssColor()` - 34 edges
 3. `fetchForexCandles()` - 31 edges
 4. `pricePrecisionForInstrument()` - 30 edges
-5. `berlinDateTimeStrFor()` - 28 edges
-6. `fmtPrice()` - 28 edges
+5. `fmtPrice()` - 28 edges
+6. `berlinDateTimeStrFor()` - 28 edges
 7. `clipReplay()` - 27 edges
 8. `logDecision()` - 25 edges
 9. `refreshChart()` - 24 edges
@@ -659,7 +659,7 @@ Nodes (3): NEXT_ACTION_FALLBACK, NEXT_ACTION_MAP, NextActionEntry
   docs/steerabilty-vs-wrong-ai-outputs.md · relation: references
 
 ## Knowledge Gaps
-- **1059 isolated node(s):** `MAX_HELD_OB_AGE_DAYS`, `MAX_INVALIDATION_OB_DISTANCE_PIPS`, `INSTRUMENT`, `DIRECTION`, `CandleRow` (+1054 more)
+- **1059 isolated node(s):** `MAX_HELD_OB_AGE_DAYS`, `MAX_INVALIDATION_OB_DISTANCE_PIPS`, `DEFAULT_LIQUIDITY_TARGET_LIMIT`, `DEFAULT_OB_TARGET_LIMIT`, `MAX_TARGET_DISTANCE_PIPS` (+1054 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1268 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **11 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -669,12 +669,12 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `Trading-Steps-Ablauf Diagram` and `calc_rr Tool Idea (Deterministic RR Calc)`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
 - **Why does `trading_schedules Table` connect `Fachdoku-Router Skill` to `tools/pretradeGates.ts`?**
-  _High betweenness centrality (0.307) - this node is a cross-community bridge._
+  _High betweenness centrality (0.322) - this node is a cross-community bridge._
 - **Why does `Trading-Monitor Project Overview (CLAUDE.md)` connect `Trading-Monitor Project Overview (CLAUDE.md)` to `candleCache.js`, `Plan: Forex-Chart-Objekte Datengrundlage`, `/task do Mode`, `Fachdoku-Router Skill`, `Plan: Sehr Große Dateien Refactoren (PriceChart.vue)`, `liquidity.js`, `Plan: POI-Strategie-Findung, Backtesting & Trade-Notifications`?**
-  _High betweenness centrality (0.287) - this node is a cross-community bridge._
+  _High betweenness centrality (0.300) - this node is a cross-community bridge._
 - **Why does `Trading-Hours/Timezone Handling (Europe/Berlin)` connect `Fachdoku-Router Skill` to `Trading-Monitor Project Overview (CLAUDE.md)`?**
-  _High betweenness centrality (0.271) - this node is a cross-community bridge._
-- **What connects `MAX_HELD_OB_AGE_DAYS`, `MAX_INVALIDATION_OB_DISTANCE_PIPS`, `INSTRUMENT` to the rest of the system?**
+  _High betweenness centrality (0.284) - this node is a cross-community bridge._
+- **What connects `MAX_HELD_OB_AGE_DAYS`, `MAX_INVALIDATION_OB_DISTANCE_PIPS`, `DEFAULT_LIQUIDITY_TARGET_LIMIT` to the rest of the system?**
   _1059 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Dashboard.vue` be split into smaller, more focused modules?**
   _Cohesion score 0.015848191012407465 - nodes in this community are weakly interconnected._
