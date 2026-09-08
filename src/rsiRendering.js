@@ -105,9 +105,13 @@ class DivergenceLinePaneView {
   update() {
     const { _chart, _series, _from, _to } = this._source;
     const timeScale = _chart.timeScale();
+    // Null-Guard vor timeToCoordinate (siehe marketStructureRendering.ts: RangeLinePaneView für
+    // dieselbe Ursache/denselben Crash) — _from/_to.time kann bei einer per Klick/DB verknüpften
+    // Divergenz-Bestätigung fehlen (z.B. touchedTime noch null), draw() (oben) überspringt x:null
+    // bereits sauber.
     this._points = [
-      { x: timeScale.timeToCoordinate(_from.time), y: _series.priceToCoordinate(_from.price) },
-      { x: timeScale.timeToCoordinate(_to.time), y: _series.priceToCoordinate(_to.price) },
+      { x: _from.time != null ? timeScale.timeToCoordinate(_from.time) : null, y: _series.priceToCoordinate(_from.price) },
+      { x: _to.time != null ? timeScale.timeToCoordinate(_to.time) : null, y: _series.priceToCoordinate(_to.price) },
     ];
   }
 

@@ -99,8 +99,10 @@ export function matchOBZone(zones, price, time, symbol) {
 export const FIB_TICK_CLICK_TOLERANCE_PX = 8;
 export function matchFibLevel(currentFibLevels, pointX, pointY, timeToCoordinate, priceToCoordinate, tolerancePx = FIB_TICK_CLICK_TOLERANCE_PX) {
   for (const level of currentFibLevels) {
-    const xa = timeToCoordinate(level.a.pivotTime);
-    const xb = timeToCoordinate(level.b.pivotTime);
+    // Null-Guard vor timeToCoordinate (siehe marketStructureRendering.ts: RangeLinePaneView für
+    // denselben Crash) — Pivot.pivotTime ist optional.
+    const xa = level.a.pivotTime != null ? timeToCoordinate(level.a.pivotTime) : null;
+    const xb = level.b.pivotTime != null ? timeToCoordinate(level.b.pivotTime) : null;
     if (xa == null || xb == null) continue;
     const x = (xa + xb) / 2;
     const y = priceToCoordinate(level.price);

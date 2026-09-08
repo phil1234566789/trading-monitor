@@ -170,8 +170,13 @@ class RangeLinePaneView {
   update() {
     const series = this._source._series;
     const timeScale = this._source._chart.timeScale();
+    // Pivot.pivotTime ist optional (range.type.ts) — ungeguardet crasht lightweight-charts intern
+    // ("Cannot read properties of null (reading 'year')", timeToCoordinate behandelt alles außer
+    // number/string als BusinessDay-Objekt). Gleiches Guard-Muster wie überall sonst im Repo (siehe
+    // z.B. liquidity.js/orderBlocks.js) — draw() (RangeLineRenderer oben) überspringt x:null bereits
+    // sauber.
     this._points = this._source.pivots.map((p) => ({
-      x: timeScale.timeToCoordinate(p.pivotTime),
+      x: p.pivotTime != null ? timeScale.timeToCoordinate(p.pivotTime) : null,
       y: series.priceToCoordinate(p.price),
     }));
   }
@@ -263,8 +268,10 @@ class FibTickPaneView {
     const series = this._source._series;
     const timeScale = this._source._chart.timeScale();
     const level = this._source._level;
-    const xa = timeScale.timeToCoordinate(level.a.pivotTime);
-    const xb = timeScale.timeToCoordinate(level.b.pivotTime);
+    // Gleicher Null-Guard wie in RangeLinePaneView.update() oben, gleicher Grund (Pivot.pivotTime
+    // ist optional).
+    const xa = level.a.pivotTime != null ? timeScale.timeToCoordinate(level.a.pivotTime) : null;
+    const xb = level.b.pivotTime != null ? timeScale.timeToCoordinate(level.b.pivotTime) : null;
     this._point = {
       x: xa != null && xb != null ? (xa + xb) / 2 : null,
       y: series.priceToCoordinate(level.price),
