@@ -53,6 +53,7 @@ export type TradingEvent =
   | { type: "CONFIRMATIONS_ADDED" }
   | { type: "VALID_INVALID_JUDGED"; verdict: "valide" | "invalide" }
   | { type: "ENTRY_FOUND" }
+  | { type: "NO_ENTRY_FOUND" }
   | { type: "POSITION_CLOSED" };
 
 export const tradingMachine = createMachine({
@@ -237,7 +238,11 @@ export const tradingMachine = createMachine({
     },
     s7_findEntry: {
       id: "s7_findEntry",
-      on: { ENTRY_FOUND: "#s8_tradeManagement" },
+      // NO_ENTRY_FOUND (Bug-Vorfall 08.09.2026, EURUSD live: Philip hat die DR im UI geschlossen,
+      // ohne einen Entry gefunden zu haben — dafür gab es weder im Diagramm noch in der Maschine
+      // eine Kante, s7_findEntry akzeptierte nur ENTRY_FOUND, jeder Re-Analyse-Versuch blockte hart)
+      // -> zurück zu Schritt 4/5, DR-Status "VALIDE, kein Trade"/"Entry verpasst" (00-trading-steps.md).
+      on: { ENTRY_FOUND: "#s8_tradeManagement", NO_ENTRY_FOUND: "#s45" },
     },
     s8_tradeManagement: {
       id: "s8_tradeManagement",
@@ -328,7 +333,7 @@ const VALID_NEXT_EVENTS: Record<string, string[]> = {
   "s6_validieren.evidenceGathering": ["EVIDENCE_GATHERED"],
   "s6_validieren.llm6a_antiConfluenceAuswahl": ["CONFIRMATIONS_ADDED"],
   "s6_validieren.llm6_valideInvalide": ["VALID_INVALID_JUDGED"],
-  s7_findEntry: ["ENTRY_FOUND"],
+  s7_findEntry: ["ENTRY_FOUND", "NO_ENTRY_FOUND"],
   s8_tradeManagement: ["POSITION_CLOSED"],
 };
 

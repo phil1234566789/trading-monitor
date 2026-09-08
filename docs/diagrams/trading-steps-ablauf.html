@@ -276,6 +276,7 @@ flowchart TB
 
     S7["<b>Schritt 7</b><br/>Find Entry<br/><span style='font-size:11px'>(manuell, Philip)</span>"]
     S7 -->|get_journal Abgleich| S8
+    S7 -.->|"log_no_entry_found:<br/>kein Entry gefunden"| S45
 
     S8["<b>Schritt 8</b><br/>Trade-Management"]
     S8 -->|"add_trade_position<br/>update_trade_position<br/>calc_rr"| END8((Position<br/>geschlossen))

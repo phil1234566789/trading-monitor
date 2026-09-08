@@ -447,6 +447,36 @@ export async function retractFall1Classification({ instrument, sec, reasoning }:
   return { retracted: true as const, currentNode };
 }
 
+export interface LogNoEntryFoundArgs {
+  instrument: string;
+  sec: number;
+  reasoning: string;
+}
+
+// Schritt 7 (Find Entry) ist rein Philips manuelle Aufgabe — die Maschine kannte bislang aber nur
+// den Erfolgsfall (ENTRY_FOUND). Fand sich in Schritt 6 zwar eine VALIDE Range, aber Philip nimmt
+// den Trade am Ende nicht (DR im UI geschlossen, kein Entry) oder das Fenster läuft ab, gab es
+// keinen Weg zurück zu Schritt 4/5 — jeder weitere run_bias_check/run_dealing_range_loop-Aufruf
+// blockte hart (Bug-Vorfall 08.09.2026, EURUSD live). Bildet DR-Status "VALIDE, kein Trade"/"Entry
+// verpasst" aus 00-trading-steps.md ab — die eigentliche dealing_range bleibt dabei unangetastet
+// (Philip schließt/verwirft sie selbst im UI), dieses Tool synchronisiert nur die Maschine dazu.
+export async function logNoEntryFound({ instrument, sec, reasoning }: LogNoEntryFoundArgs) {
+  const loaded = await loadMachineForDay(instrument, berlinDateStrFor(sec));
+  const currentNode = await transition(loaded, instrument, { type: "NO_ENTRY_FOUND" }, sec);
+  await logDecision({
+    instrument,
+    dateStr: berlinDateStrFor(sec),
+    sec,
+    step: 6, // LogDecisionArgs.step kennt nur 1-6 (siehe stateMachineLog.ts) — wie persistTransition wird Schritt 7 auf 6 geklemmt.
+    tool: "log_no_entry_found",
+    decision: "no_entry_found",
+    result: { reasoning },
+    message: `Kein Entry gefunden: ${reasoning}`,
+    loopStateId: loaded.loopId,
+  });
+  return { logged: true as const, currentNode };
+}
+
 export interface LogFallAgainCheckArgs {
   instrument: string;
   sec: number;
@@ -588,5 +618,27 @@ export function registerDealingRangeLoopTool(server: McpServer) {
       },
     },
     async (args) => json(await logFallAgainCheck(args)),
+  );
+
+  server.registerTool(
+    "log_no_entry_found",
+    {
+      title: "Schritt 7: Kein Entry gefunden",
+      description:
+        "Schritt 7 (Find Entry) ist rein Philips manuelle Aufgabe — findet er dort am Ende KEINEN " +
+        "Entry (DR wird ohne Ausführung geschlossen/verworfen, oder das Zeitfenster läuft ab), gibt " +
+        "es sonst keinen Weg zurück zu Schritt 4/5: s7_findEntry akzeptiert nur ENTRY_FOUND, jeder " +
+        "weitere run_bias_check/run_dealing_range_loop-Aufruf blockt sonst hart (Bug-Vorfall " +
+        "08.09.2026, EURUSD live). Bildet DR-Status 'VALIDE, kein Trade'/'Entry verpasst' aus " +
+        "00-trading-steps.md ab. Rührt die eigentliche dealing_range NICHT an (Philip schließt/" +
+        "verwirft sie selbst im UI) — synchronisiert nur die State-Machine. Nur an s7_findEntry " +
+        "gültig (sendGuarded blockt sonst hart).",
+      inputSchema: {
+        instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
+        sec: z.number().int().describe("Analysezeitpunkt (Unix-Sekunden) — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
+        reasoning: z.string().describe("Kurze Begründung (z.B. 'Philip hat die DR ohne Entry geschlossen')"),
+      },
+    },
+    async (args) => json(await logNoEntryFound(args)),
   );
 }

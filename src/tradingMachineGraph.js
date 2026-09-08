@@ -52,7 +52,7 @@ export const NODES = [
   { id: "s6_evidence", label: "Schritt 6: Evidenz sammeln", statePath: "s6_validieren.evidenceGathering", hint: "Evidenz für Schritt 6 sammeln (Confluences/Anti-Confluences/Score).", nextTool: "get_validation_evidence" },
   { id: "s6_llm6a", label: "Anti-Confluence-Auswahl", statePath: "s6_validieren.llm6a_antiConfluenceAuswahl", llm: true, hint: "Welche find_anti_confluences-Kandidaten wirklich zählen entscheiden, dann add_trade_confirmation aufrufen.", nextTool: "add_trade_confirmation" },
   { id: "s6_llm6", label: "VALIDE/INVALIDE?", statePath: "s6_validieren.llm6_valideInvalide", llm: true, hint: "Finale VALIDE/INVALIDE-Abwägung treffen und eintragen.", nextTool: "log_validation_verdict" },
-  { id: "s7_findEntry", label: "Schritt 7: Find Entry (Philip)", llm: true, hint: "Entry-Timing ist deine eigene Verantwortung — sobald ein Entry feststeht, add_trade_position aufrufen.", nextTool: "add_trade_position" },
+  { id: "s7_findEntry", label: "Schritt 7: Find Entry (Philip)", llm: true, hint: "Entry-Timing ist deine eigene Verantwortung — sobald ein Entry feststeht, add_trade_position aufrufen. Kein Entry gefunden (DR geschlossen/verworfen)? log_no_entry_found aufrufen.", nextTool: "add_trade_position" },
   { id: "s8_tradeManagement", label: "Schritt 8: Trade-Management", hint: "Position läuft — bei Abschluss update_trade_position mit dem Outcome aufrufen.", nextTool: "update_trade_position" },
   { id: "end_keinTrade", label: "Kein Trade", end: true, hint: "Kein Trade heute (außerhalb Handelszeit) — nichts zu tun." },
   { id: "end_positionGeschlossen", label: "Position geschlossen", end: true, hint: "Trade abgeschlossen." },
@@ -101,7 +101,8 @@ export const EDGES = [
   { from: "s6_llm6a", to: "s6_llm6" },
   { from: "s6_llm6", to: "s7_findEntry", label: "VALIDE" },
   { from: "s6_llm6", to: "s45_entry", label: "INVALIDE" },
-  { from: "s7_findEntry", to: "s8_tradeManagement" },
+  { from: "s7_findEntry", to: "s8_tradeManagement", label: "ENTRY_FOUND" },
+  { from: "s7_findEntry", to: "s45_entry", label: "kein Entry (log_no_entry_found)" },
   { from: "s8_tradeManagement", to: "end_positionGeschlossen" },
 ];
 

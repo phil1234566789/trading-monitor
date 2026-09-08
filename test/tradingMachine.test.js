@@ -156,6 +156,25 @@ describe("tradingMachine Rückspränge (Loopbacks laut Diagramm)", () => {
     expect(currentNodePath(actor)).toBe("s45.entry");
   });
 
+  it("NO_ENTRY_FOUND an s7_findEntry springt zurück zu Schritt 4/5 (Schritt 6 VALIDE, aber Philip findet keinen Entry)", () => {
+    const actor = actorAtFallClassification();
+    sendGuarded(actor, { type: "FALL_CLASSIFIED", case: 1 });
+    sendGuarded(actor, { type: "TSC_ADDED" });
+    sendGuarded(actor, { type: "PIN_CHECKED", found: false });
+    sendGuarded(actor, { type: "FALL_AGAIN_CHECKED", complete: true });
+    sendGuarded(actor, { type: "TARGETS_FOUND" });
+    sendGuarded(actor, { type: "TARGET_PICKED" });
+    sendGuarded(actor, { type: "TARGET_ADDED" });
+    sendGuarded(actor, { type: "PIN2_CHECKED", found: false });
+    sendGuarded(actor, { type: "NOTIFIED" });
+    sendGuarded(actor, { type: "EVIDENCE_GATHERED" });
+    sendGuarded(actor, { type: "CONFIRMATIONS_ADDED" });
+    sendGuarded(actor, { type: "VALID_INVALID_JUDGED", verdict: "valide" });
+    expect(currentNodePath(actor)).toBe("s7_findEntry");
+    sendGuarded(actor, { type: "NO_ENTRY_FOUND" });
+    expect(currentNodePath(actor)).toBe("s45.entry");
+  });
+
   it("Live: kein Watch-Level-Treffer -> liveWait, nächster Cron-Tick reentered bei mode", () => {
     const actor = createTradingActor();
     sendGuarded(actor, { type: "HANDELSZEIT_CHECKED", outsideHours: false });
