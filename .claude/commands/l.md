@@ -60,17 +60,6 @@ dieses Repo. Für den Rest dieser Session gilt:
    (`.claude/settings.json` → `handbuch-check-reminder.js`) erinnert automatisch vor jedem
    Edit/Write auf eine `.md`-Datei im `trading`-Repo an den Skill `handbuch-check` — kein manuelles
    Dran-Denken hier nötig, der Hook übernimmt das zuverlässig.
-8. **Links auf `trading-runs/`-Dateien (state.md/`NN-output.md`) relativ zum ECHTEN Workspace-Root
-   setzen, nicht zum `trading`-Repo.** Diese Session läuft mit `trading-monitor` als Primary-
-   Workspace, `trading` liegt nur als zusätzliches (Sibling-)Verzeichnis daneben — der VSCode-Host
-   löst Markdown-Links relativ zu `trading-monitor` auf. Ein Link wie
-   `[...](trading-runs/GBPUSD/28-08-2026/…)` zeigt daher ins Leere und ist für Philip nicht
-   klickbar; korrekt ist `[...](../trading/trading-runs/GBPUSD/28-08-2026/…)` (Präfix `../trading/`
-   für jeden Link auf eine Datei aus dem `trading`-Repo). Philip, 30.08.2026: „ich kann auf deine
-   Links zu den Dateien nicht klicken" — die `claude-project-instructions.md`-Beispiele selbst
-   bleiben ohne dieses Präfix (das Dokument läuft unverändert auch als claude.ai-Project-Wissen
-   ohne Workspace-Root), das Präfixen passiert nur hier in der Claude-Code-Ausgabe.
-
 Frag Philip kurz, welches Instrument (und bei einem Backtest: welches Datum) er analysieren will,
 falls das nicht schon in seiner Nachricht steht.
 

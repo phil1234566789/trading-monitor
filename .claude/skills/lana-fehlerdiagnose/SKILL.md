@@ -32,14 +32,13 @@ Outputs, nicht als Nachbereitung danach.
    suchen, bevor die erste als Diagnose gilt.
 4. **Aus der bestätigten Diagnose den gezielten, STRUKTURELLEN Fix ableiten** — deckt sich mit der
    bestehenden CLAUDE.md-Regel "Korrekturen — Doku/Regel fixen, nicht nur den Output": ein reiner
-   Output-Patch (Chart-Zeichnung, Chat-Antwort, State-Datei) ohne begleitenden Fix gilt NICHT als
-   erledigt.
+   Output-Patch (Chart-Zeichnung, Chat-Antwort) ohne begleitenden Fix gilt NICHT als erledigt.
 
 ## Routing: Diagnose → typischer Fix-Ort
 
 | Diagnose | Typischer Fix |
 |---|---|
-| Working Memory (Fakt da, aber nicht mehr "in der Nähe") | `trading-runs/.../trade-analysis.state.md`-Struktur prüfen/erweitern, fehlenden Checkpoint ergänzen |
+| Working Memory (Fakt da, aber nicht mehr "in der Nähe") | `trading_loop_state`/DB-Tabellen (`get_loop_state`) um fehlenden Checkpoint erweitern statt auf Chat-Kontext zu vertrauen |
 | Steerability, wiederkehrendes Vergessen | Neuer/erweiterter Skill (aktiv geladene Checkliste im richtigen Moment, siehe `dealing-range-anlegen`) statt nur eine Doku-Zeile |
 | Steerability, Regel-Konflikt/zu "leise" | `CLAUDE.md`/`l.md`-Regel schärfen oder Reihenfolge/Gewichtung klarstellen |
 | Next Token Prediction + Knowledge (Halluzination) | Tool mit Source Grounding (MCP-Tool an echte Quelle binden statt Modell-Wissen) |
