@@ -12,7 +12,7 @@ import { supabase } from "./supabaseClient.js";
 export async function fetchObZones() {
   const { data, error } = await supabase
     .from("ob_zones")
-    .select("instrument, timeframe, direction, top, bottom, weak, touched, invalidated, start_time, end_time")
+    .select("instrument, timeframe, direction, top, bottom, touched, invalidated, start_time, end_time")
     .in("timeframe", ["1H", "4H"]);
   if (error) {
     console.error("ob_zones laden fehlgeschlagen:", error);
@@ -27,7 +27,6 @@ export async function fetchObZones() {
     dir: row.direction === "long" ? 1 : -1,
     top: row.top,
     bottom: row.bottom,
-    weak: row.weak,
     touched: row.touched,
     invalidated: row.invalidated,
     startTime: Math.floor(new Date(row.start_time).getTime() / 1000),

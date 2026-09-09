@@ -48,7 +48,7 @@ export function findAntiConfluenceObCandidates(zones, { direction, zoneLow, zone
     // Persistierte 5M-Zonen außerhalb des Live-Detektions-Fensters (kein liveVerified-Flag, siehe
     // buildCandidatePool) haben ein für immer eingefrorenes touched/invalidated seit Zeilen-Anlage —
     // nicht verifizierbar heißt hier NICHT "als untouched zählen" (Bug-Report Philip 07.09.2026: drei
-    // uralte "weak"-OBs aus Mai zeigten touched:false, obwohl seit Monaten nie erneut geprüft).
+    // uralte Mini-OBs aus Mai zeigten touched:false, obwohl seit Monaten nie erneut geprüft).
     .filter((z) => z.timeframe !== "5M" || z.liveVerified)
     .map((z) => ({ ...z, edgePrice: direction === "short" ? z.top : z.bottom, held: z.touched }))
     .filter((z) => inBand(z.edgePrice, zoneLow, zoneHigh))

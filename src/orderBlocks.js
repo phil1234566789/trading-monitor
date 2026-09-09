@@ -2,7 +2,6 @@
 // Vereinfacht für Single-Timeframe/Single-Symbol: nur ein simples Pip-Minimum für Lower-TF statt
 // des vollen Pip-Systems dort (siehe LOWER_TF_MIN_GAP_PIPS in orderBlockDetection.js), keine
 // Session-/Symbol-Filter, keine "nächste 3 zum Preis"-Hervorhebung, keine M1-Entry-Logik.
-// weak-Klassifizierung (Gap-Größe) folgt weiterhin nur dem Pine-HTF-Modus.
 //
 // detectOrderBlocks selbst lebt seit Chat 2026-08-02 in orderBlockDetection.js (dependency-frei,
 // siehe dort — gleicher Schnitt wie liquidity.js → liquidityDetection.js, damit der MCP-Server die
@@ -10,7 +9,7 @@
 // mitzuschleppen); hier nur re-exportiert, damit sich an der öffentlichen API dieses Moduls
 // nichts ändert.
 import { snapToBarTime } from "./chartTimeUtils.js";
-import { cssColor, cssColorScaled } from "./chartColors.js";
+import { cssColor } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
 import { canShowLabels } from "./chartZoom.js";
 import { drawIconLabel } from "./chartIconLabel.js";
@@ -230,15 +229,6 @@ export class OrderBlockPrimitive {
   }
 }
 
-// chartColors[obBull*/obBear*/obInactive*].alpha ist die "normale" Fill-Transparenz — "weak"
-// (kleine FVG) skaliert proportional dazu (Original-Design-Verhältnis), damit EIN Transparenz-
-// Regler pro Farbe reicht statt zwei separate (siehe chartColors.js: cssColorScaled). Gilt für alle
-// drei Timeframes gleichermaßen, nur die Basis-Alpha selbst unterscheidet sich (siehe
-// DEFAULT_CHART_COLORS). Die Umrandung hat seit Chat 2026-07-30 ("diese Boxumrandung stylebar
-// machen") eine EIGENE, unabhängige Farbe/Alpha (obBull*Border/obBear*Border/obInactive*Border),
-// kein Verhältnis zur Füllfarbe mehr — daher hier kein "weak"-Sonderfall für die Umrandung.
-const WEAK_FILL_RATIO = 0.1 / 0.28;
-
 // M5/1H/4H haben seit Chat 2026-07-30 eigene Farb-/Breiten-Keys (Bug-Report Philip: "die ganzen OBs
 // lassen sich schwierig unterscheiden") statt EINES gemeinsamen Satzes mit fest verdrahtetem
 // 1H-Dimm-Faktor — z.timeframe ist immer "1H"/"4H"/"5M" (siehe PriceChart.vue: collectObsZones).
@@ -265,10 +255,9 @@ function zoneOptions(z, inPinContext, isSelectedPin) {
   const keys = OB_ZONE_KEYS[z.timeframe] ?? OB_ZONE_KEYS["1H"];
   const key = inactive ? keys.inactive : z.dir === 1 ? keys.bull : keys.bear;
   const borderKey = inactive ? keys.inactiveBorder : z.dir === 1 ? keys.bullBorder : keys.bearBorder;
-  const fillRatio = !inactive && z.weak ? WEAK_FILL_RATIO : 1;
   const label = z.timeframe ?? "";
   return {
-    fillColor: cssColorScaled(key, fillRatio),
+    fillColor: cssColor(key),
     borderColor: cssColor(borderKey),
     borderWidth: lineWidth(key),
     textColor: "rgba(209, 212, 220, 0.9)",

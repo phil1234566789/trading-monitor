@@ -67,7 +67,7 @@ const TRADE_SETUP_M5_CANDLE_LIMIT = 300; // ~25h M5-Historie, deutlich mehr als 
 // Explizit typisiert statt auf die select-String-Typinferenz von supabase-js zu vertrauen —
 // die kollabiert bei einem untypisierten Client (kein Database-Generic bei createClient) ab
 // einer gewissen Spaltenzahl im select() auf `{}` (siehe Chat 2026-07-23: TS-Fehler beim
-// Erweitern um top/bottom/weak/invalidated).
+// Erweitern um top/bottom/invalidated).
 interface ObZoneRow {
   start_time: string;
   direction: string;
@@ -77,7 +77,6 @@ interface ObZoneRow {
   alert_price: number | null;
   top: number;
   bottom: number;
-  weak: boolean;
   invalidated: boolean;
 }
 
@@ -446,7 +445,7 @@ Deno.serve(async (req) => {
 
         const { data: existingRows, error: selectError } = await supabase
           .from("ob_zones")
-          .select("start_time, direction, touched, notified, notified_at, alert_price, top, bottom, weak, invalidated")
+          .select("start_time, direction, touched, notified, notified_at, alert_price, top, bottom, invalidated")
           .eq("instrument", cfg.instrument)
           .eq("timeframe", tf.label)
           .returns<ObZoneRow[]>();
@@ -495,7 +494,6 @@ Deno.serve(async (req) => {
                 direction,
                 top: z.top,
                 bottom: z.bottom,
-                weak: z.weak,
                 touched: z.touched,
                 invalidated: z.invalidated,
                 // Retest bestätigt (Feature Philip 05.09.2026, siehe orderblöcke.md#retest-status)
@@ -529,7 +527,7 @@ Deno.serve(async (req) => {
               const label = direction === "long" ? "Bullish" : "Bearish";
               await sendTelegram(
                 `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
-                  `Zone: ${fmt(z.bottom, cfg.pricePrecision)} – ${fmt(z.top, cfg.pricePrecision)}${z.weak ? " (schwach)" : ""}\n` +
+                  `Zone: ${fmt(z.bottom, cfg.pricePrecision)} – ${fmt(z.top, cfg.pricePrecision)}\n` +
                   `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
               );
             }
@@ -570,7 +568,7 @@ Deno.serve(async (req) => {
               const label = row.direction === "long" ? "Bullish" : "Bearish";
               await sendTelegram(
                 `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
-                  `Zone: ${fmt(row.bottom, cfg.pricePrecision)} – ${fmt(row.top, cfg.pricePrecision)}${row.weak ? " (schwach)" : ""}\n` +
+                  `Zone: ${fmt(row.bottom, cfg.pricePrecision)} – ${fmt(row.top, cfg.pricePrecision)}\n` +
                   `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
               );
             }
@@ -606,7 +604,7 @@ Deno.serve(async (req) => {
               const label = row.direction === "long" ? "Bullish" : "Bearish";
               await sendTelegram(
                 `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
-                  `Zone: ${fmt(row.bottom, cfg.pricePrecision)} – ${fmt(row.top, cfg.pricePrecision)}${row.weak ? " (schwach)" : ""}\n` +
+                  `Zone: ${fmt(row.bottom, cfg.pricePrecision)} – ${fmt(row.top, cfg.pricePrecision)}\n` +
                   `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
               );
             }

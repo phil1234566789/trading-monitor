@@ -159,7 +159,7 @@ export async function buildCandidatePool(instrument, currentTimeSec) {
   // 21 Tage) haben KEIN Live-Pendant zum Mergen — ihr touched/invalidated bleibt für find_targets als
   // bisheriger Bestwert erhalten (kein Fehler, nur unverifiziert), aber OHNE liveVerified-Flag, damit
   // find_anti_confluences sie NICHT ungeprüft als "untouched" werten kann (Bug-Report Philip
-  // 07.09.2026: drei uralte, "weak"-OBs aus Mai zeigten touched:false seit Zeilen-Anlage 09.08., ohne
+  // 07.09.2026: drei uralte Mini-OBs aus Mai zeigten touched:false seit Zeilen-Anlage 09.08., ohne
   // dass seither je erneut geprüft wurde — nicht verifizierbar heißt nicht "als untouched behandeln").
   const htfObDeduped = htfOb.filter((z) => z.timeframe !== "5M" || !m5ObAll.some((m) => m.direction === z.direction && m.startTime === z.startTime));
 

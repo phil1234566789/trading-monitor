@@ -51,7 +51,7 @@ export async function fetchAlarmLog(instrument) {
       typeLabel: `${z.timeframe} OB`,
       direction: z.direction,
       directionLabel: z.direction === "long" ? "Long" : "Short",
-      detail: `${fmtPrice(z.bottom, precision)} – ${fmtPrice(z.top, precision)}${z.weak ? " (schwach)" : ""}`,
+      detail: `${fmtPrice(z.bottom, precision)} – ${fmtPrice(z.top, precision)}`,
       price: fmtPrice(z.alert_price, precision),
       notifiedAt: z.notified_at,
     })),

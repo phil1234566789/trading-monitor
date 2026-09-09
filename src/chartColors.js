@@ -12,7 +12,7 @@ import { supabase } from "./supabaseClient.js";
 // Jeder Eintrag ist { hex, alpha } statt nur hex (siehe Chat: "bei den Farben fehlt mir noch
 // Transparenz") — <input type="color"> kann selbst kein Alpha, daher getrennt vom StyleModal
 // per eigenem Regler gepflegt. alpha ist die "Haupt"-Transparenz des jeweiligen Konzepts (z.B.
-// die Linie); Konzepte mit mehreren Alpha-Varianten (Order-Block Fill/Weak/Border) skalieren die
+// die Linie); Konzepte mit mehreren Alpha-Varianten (Order-Block Fill/Border) skalieren die
 // übrigen Varianten proportional dazu, siehe cssColorScaled.
 const STORAGE_KEY = "trading-monitor:chartColors";
 
@@ -274,8 +274,8 @@ export function cssColor(key) {
   return hexToRgba(c.hex, c.alpha);
 }
 
-// Für Konzepte mit mehreren Alpha-Varianten derselben Basisfarbe (Order-Block Fill/Weak/Border,
-// Trade-Setup-LS-Linie vs. -OB-Box) — ratio ist das Verhältnis der Ziel-Alpha zur "Haupt"-Alpha
+// Für Konzepte mit mehreren Alpha-Varianten derselben Basisfarbe (Trade-Setup-LS-Linie vs.
+// -OB-Box) — ratio ist das Verhältnis der Ziel-Alpha zur "Haupt"-Alpha
 // im ursprünglichen Default-Design (z.B. Border war immer das 2.5-fache der Fill-Alpha), damit
 // EIN Regler alle zusammengehörigen Varianten proportional mitskaliert statt sie unabhängig
 // einstellbar (und damit potenziell inkonsistent zueinander) zu machen.

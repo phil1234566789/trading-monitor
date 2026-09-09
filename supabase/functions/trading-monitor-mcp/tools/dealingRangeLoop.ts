@@ -20,6 +20,12 @@ const BATCH_HOURS = 2;
 const BATCH_CANDLES = Math.round((BATCH_HOURS * 3600) / 300); // 24 M5-Kerzen
 const DEFAULT_MAX_BATCHES = 10;
 
+// Ab wann ein Setup in GEGENrichtung den Loop anhalten darf. Deutlich enger als dataSnapshots
+// SETUP_MAX_AGE_HOURS (48h): dort geht es um "existiert noch", hier um "ist gerade jetzt handelbar".
+// Ohne diese Grenze würde ein tagealtes Gegen-Setup jeden einzelnen Tick anhalten, da
+// snapshot.tradeSetups je Richtung immer das aktuellste liefert (Fall 3 gäbe es dann nie mehr).
+const OPPOSITE_SETUP_FRESH_HOURS = 2;
+
 // exclude kombiniert tradingHours- UND news-Gate (siehe buildPretradeGates), die Heartbeats unten
 // nannten bisher IMMER "News-Blackout" — auch wenn tatsächlich die Handelszeit (z.B. Freitag 18 Uhr
 // Fensterschluss) der Grund war (Bug-Report Philip 07.09.2026, GBPUSD-Backtest 28.08.: 3x
@@ -42,6 +48,7 @@ export interface TickResult {
   watchLevelBelow: WatchLevel | null;
   evidence: {
     completedTradeSetup: unknown;
+    oppositeSetup: unknown;
     confluenceObReactions: unknown[];
     invalidatedObReactions: unknown[];
     liquiditySweeps: unknown[];
@@ -78,13 +85,23 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
   const liquiditySweeps: any[] = ((reactions as any).liquiditySweeps ?? []).filter((s: any) => s.direction === wantedSweepDir);
   const obReactionsFiltered: any[] = ((reactions as any).obReactions ?? []).filter((z: any) => z.direction === direction);
   const setup = (snapshot as any).tradeSetups?.[direction] ?? null;
+  // buildDataSnapshot berechnet ohnehin beide Richtungen — die Gegenrichtung wurde hier bisher
+  // schlicht weggeworfen, wodurch ein laufendes Gegen-Setup für Lana unsichtbar war (siehe
+  // HasReactionInput.hasFreshOppositeSetup).
+  const oppositeSetupRaw = (snapshot as any).tradeSetups?.[direction === "long" ? "short" : "long"] ?? null;
+  const oppositeSetup = oppositeSetupRaw != null && oppositeSetupRaw.ageHours <= OPPOSITE_SETUP_FRESH_HOURS ? oppositeSetupRaw : null;
 
   const fallFour: FallFourResult =
     currentPrice == null
       ? { hit: false, reason: null }
       : checkFallFour({ direction, currentPrice, trendTarget: loopState.trendTarget, countertrendTarget: loopState.countertrendTarget, invalidation: loopState.invalidation });
 
-  const reactionFound = computeHasReaction({ hasCompletedTradeSetup: setup != null, obReactionCount: obReactionsFiltered.length, liquiditySweepCount: liquiditySweeps.length });
+  const reactionFound = computeHasReaction({
+    hasCompletedTradeSetup: setup != null,
+    obReactionCount: obReactionsFiltered.length,
+    liquiditySweepCount: liquiditySweeps.length,
+    hasFreshOppositeSetup: oppositeSetup != null,
+  });
 
   const dateStr = berlinDateStrFor(atSec);
   await Promise.all([
@@ -106,9 +123,9 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
       step: 5,
       tool: "run_dealing_range_loop",
       decision: "has_reaction",
-      result: { hasCompletedTradeSetup: setup != null, obReactionCount: obReactionsFiltered.length, liquiditySweepCount: liquiditySweeps.length, reactionFound },
+      result: { hasCompletedTradeSetup: setup != null, obReactionCount: obReactionsFiltered.length, liquiditySweepCount: liquiditySweeps.length, hasFreshOppositeSetup: oppositeSetup != null, reactionFound },
       message: reactionFound
-        ? `Reaktion gefunden (Setup: ${setup != null}, OB-Reaktionen: ${obReactionsFiltered.length}, Sweeps: ${liquiditySweeps.length})`
+        ? `Reaktion gefunden (Setup: ${setup != null}, OB-Reaktionen: ${obReactionsFiltered.length}, Sweeps: ${liquiditySweeps.length}, Gegen-Setup: ${oppositeSetup != null})`
         : "keine Reaktion",
       loopStateId: loopState.id,
     }),
@@ -182,6 +199,11 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
     watchLevelBelow: watchLevels.below,
     evidence: {
       completedTradeSetup: setup,
+      // Frisches Setup in Gegenrichtung (null, wenn keins oder älter als OPPOSITE_SETUP_FRESH_HOURS).
+      // Ist es gesetzt, ist die Fall-1/2-Frage richtungsoffen zu stellen — ein valider Sweep in
+      // Gegenrichtung ist Fall 1 für eine NEUE Dealing Range, nicht Fall 2 für die laufende Idee
+      // (05-dealing-range-bestaetigen.md#die-vier-fälle).
+      oppositeSetup,
       // "confluenceObReactions" statt "heldObReactions" (Bug-Report Philip 05.09.2026, GBPUSD-
       // Retest 28.08.2026): eine getouchte, nicht invalidierte OB zählt erst als Confluence, wenn
       // der Retest nachweislich abgeschlossen ist (z.retested, siehe orderblöcke.md#retest-status)
@@ -530,11 +552,16 @@ export function registerDealingRangeLoopTool(server: McpServer) {
         "Fall 3 läuft ein Backtest automatisch weiter, ohne dich zu fragen. NUR Fall 1 vs. 2 " +
         "(`hasReaction=true`) ist bewusst NICHT mechanisch klassifiziert (auch 'valider Sweep' ist " +
         "eine Einordnung, die du selbst triffst) — `evidence` liefert dafür nur die rohen Bausteine " +
-        "(vollständiges Trade-Setup, `confluenceObReactions`/`invalidatedObReactions`, Sweeps). " +
+        "(vollständiges Trade-Setup, `oppositeSetup`, `confluenceObReactions`/`invalidatedObReactions`, Sweeps). " +
         "`confluenceObReactions` enthält NUR OBs mit bestätigtem Retest (siehe orderblöcke.md#retest-" +
         "status) — Alter spielt dabei keine Rolle, eine seit Tagen unangetastete OB zählt genauso " +
         "als Confluence wie eine von vor 5 Minuten. Getouchte, aber noch unentschiedene OBs " +
         "('Retest läuft') tauchen hier NICHT auf. " +
+        "ACHTUNG `oppositeSetup`: alle übrigen evidence-Felder sind nach der Bias-Richtung GEFILTERT — " +
+        "ist `oppositeSetup` gesetzt (frisches Trade-Setup in Gegenrichtung, max. 2h alt), stell die " +
+        "Fall-Frage richtungsoffen: ein valider Sweep in Gegenrichtung ist Fall 1 für eine NEUE Dealing " +
+        "Range in Gegenrichtung, NICHT Fall 2 für die laufende Idee. Nach log_fall_classification dann " +
+        "über einen neuen run_bias_check die Richtung drehen, statt die alte Idee weiterzuführen. " +
         "Erkennst du daraus Fall 1 oder 2: ZUERST `log_fall_classification` aufrufen (schreibt dein " +
         "Urteil in die Maschine), DANN die TSC-Verknüpfung (Bootstrap/Bestätigung/Target/Pin-" +
         "Aufräumen) wie gewohnt über add_trade_confirmation/add_trade_target/remove_pin_entry — " +

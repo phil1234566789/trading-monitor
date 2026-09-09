@@ -236,7 +236,6 @@ function formatObZone(z) {
     direction: z.dir === 1 ? "bull" : "bear",
     top: z.top,
     bottom: z.bottom,
-    weak: z.weak,
     time: formatDatedTime(z.startTime),
   };
 }

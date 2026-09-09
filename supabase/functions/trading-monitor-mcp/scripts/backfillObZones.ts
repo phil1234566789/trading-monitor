@@ -178,7 +178,6 @@ async function upsertZones(instrument: string, dbTimeframe: string, zones: Retur
       direction: z.dir === 1 ? "long" : "short",
       top: z.top,
       bottom: z.bottom,
-      weak: z.weak,
       touched: z.touched,
       invalidated: z.invalidated,
       retested: z.retested,

@@ -428,7 +428,6 @@ export function computeM5LiquidityAndObZones({
         direction,
         top: z.top,
         bottom: z.bottom,
-        weak: z.weak,
         touched: z.touched,
         // Bewusst KEIN Alters-Label (kontext) mehr bei OBs — anders als bei Liquidity-Leveln
         // (Philip 05.09.2026: "bei OBs spielt das Alter eigentlich keine Rolle... sowas wie minor/

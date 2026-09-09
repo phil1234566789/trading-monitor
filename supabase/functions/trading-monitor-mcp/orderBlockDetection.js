@@ -7,7 +7,6 @@
 import { PIP_SIZE } from "./pipConfig.js";
 
 const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone angelegt (HTF: 15m/1h/4h/1D)
-const WEAK_PCT = 0.15; // Gap kleiner als das gilt als "schwach" (blasser dargestellt)
 
 // Lower-TF (M1/M3/M5, siehe tv-indikator/src/calculations.pine: capMode=true) hat im Pine-Original
 // gar KEINE Mindestgröße (jede positive Lücke bildet eine Zone) — Bug-Report Philip 2026-07-26:
@@ -84,7 +83,6 @@ export function detectOrderBlocks(candles, timeframe, isForex = true) {
         top: c1.high,
         bottom,
         dir: 1,
-        weak: bullGapPct < WEAK_PCT,
         active: true,
         touched: false,
         invalidated: false,
@@ -100,7 +98,6 @@ export function detectOrderBlocks(candles, timeframe, isForex = true) {
         top,
         bottom: c1.low,
         dir: -1,
-        weak: bearGapPct < WEAK_PCT,
         active: true,
         touched: false,
         invalidated: false,

@@ -9,7 +9,6 @@
 // _shared importieren, aber diese Tools nicht). Bei Änderungen an der Erkennungslogik selbst
 // IMMER ALLE DREI Kopien nachziehen (src/orderBlockDetection.js, diese Datei, die MCP-lokale).
 const IRRELEVANT_PCT = 0.05;
-const WEAK_PCT = 0.15;
 
 // Lower-TF-Pip-Minimum aus src/orderBlocks.js portiert (Bug-Report Philip 2026-07-29: "egal
 // welcher M5 OB wo in welcher Code-Stelle von uns, sollten alle dieselbe Erkennungslogik haben")
@@ -47,7 +46,6 @@ export interface Zone {
   top: number;
   bottom: number;
   dir: 1 | -1;
-  weak: boolean;
   active: boolean;
   touched: boolean;
   invalidated: boolean;
@@ -104,7 +102,6 @@ export function detectOrderBlocks(candles: Candle[], timeframe?: string, isForex
         top: c1.high,
         bottom,
         dir: 1,
-        weak: bullGapPct < WEAK_PCT,
         active: true,
         touched: false,
         invalidated: false,
@@ -120,7 +117,6 @@ export function detectOrderBlocks(candles: Candle[], timeframe?: string, isForex
         top,
         bottom: c1.low,
         dir: -1,
-        weak: bearGapPct < WEAK_PCT,
         active: true,
         touched: false,
         invalidated: false,

@@ -46,16 +46,21 @@ describe("checkFallFour", () => {
 
 describe("hasReaction", () => {
   it("false, wenn nichts vorliegt", () => {
-    expect(hasReaction({ hasCompletedTradeSetup: false, obReactionCount: 0, liquiditySweepCount: 0 })).toBe(false);
+    expect(hasReaction({ hasCompletedTradeSetup: false, obReactionCount: 0, liquiditySweepCount: 0, hasFreshOppositeSetup: false })).toBe(false);
   });
   it("true bei vollständigem Trade-Setup", () => {
-    expect(hasReaction({ hasCompletedTradeSetup: true, obReactionCount: 0, liquiditySweepCount: 0 })).toBe(true);
+    expect(hasReaction({ hasCompletedTradeSetup: true, obReactionCount: 0, liquiditySweepCount: 0, hasFreshOppositeSetup: false })).toBe(true);
   });
   it("true bei mindestens einer OB-Reaktion", () => {
-    expect(hasReaction({ hasCompletedTradeSetup: false, obReactionCount: 1, liquiditySweepCount: 0 })).toBe(true);
+    expect(hasReaction({ hasCompletedTradeSetup: false, obReactionCount: 1, liquiditySweepCount: 0, hasFreshOppositeSetup: false })).toBe(true);
   });
   it("true bei mindestens einem Sweep", () => {
-    expect(hasReaction({ hasCompletedTradeSetup: false, obReactionCount: 0, liquiditySweepCount: 1 })).toBe(true);
+    expect(hasReaction({ hasCompletedTradeSetup: false, obReactionCount: 0, liquiditySweepCount: 1, hasFreshOppositeSetup: false })).toBe(true);
+  });
+  // Backtest GBPUSD 09.09.2026: alle Felder oben sind nach der Bias-Richtung gefiltert, ein
+  // laufendes Gegen-Setup lief deshalb im Fast-Forward still durch.
+  it("true bei frischem Setup in Gegenrichtung, auch wenn in Bias-Richtung nichts vorliegt", () => {
+    expect(hasReaction({ hasCompletedTradeSetup: false, obReactionCount: 0, liquiditySweepCount: 0, hasFreshOppositeSetup: true })).toBe(true);
   });
 });
 

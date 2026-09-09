@@ -1,0 +1,13 @@
+-- ob_zones.weak entfernen: das Flag war rein kosmetisch (blassere Füllung im Chart, das Wort
+-- "(schwach)" in Telegram/Alarm-Log) und hat nie eine Entscheidung getragen — kein Filter, keine
+-- Gewichtung, kein Gate.
+--
+-- Zwei Gründe, warum es aktiv geschadet hat statt nur unbenutzt zu sein:
+-- 1. weak = FVG-Gap < 0,15 % des Preises, bei GBPUSD ~20 Pips. Die M5-Mindestgröße einer Zone ist
+--    0,5 Pip — auf M5 war weak damit praktisch konstant true, also ohne Informationsgehalt.
+-- 2. findOrCreateObZoneId (db.ts) schrieb weak beim M5-Upsert gar nicht mit, jede so angelegte
+--    Zeile bekam den Default false. Dieselbe Zone konnte dadurch live true und in der DB false
+--    sein.
+-- Beides zusammen führte am 09.09.2026 dazu, dass eine 12 Tage alte, valide Short-OB als
+-- "weak, nur ein schwaches Argument" verworfen wurde.
+alter table ob_zones drop column if exists weak;
