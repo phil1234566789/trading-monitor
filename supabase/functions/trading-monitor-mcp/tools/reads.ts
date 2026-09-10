@@ -247,9 +247,9 @@ export function registerReadTools(server: McpServer) {
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).optional().describe("Ohne Angabe: über beide Instrumente zusammen"),
         withinTradingHours: z.boolean().optional().describe("true = nur Setups innerhalb trading_schedules.trading_windows"),
-        inducementClass: z.enum(["minor", "medium", "major"]).optional().describe("Minor <24h, Medium 24-120h, Major ≥120h Sweep-Alter (Näherung, siehe Beschreibung) — Vorrang vor min/maxSweepAgeHours"),
-        minSweepAgeHours: z.number().optional().describe("Nur Setups, deren gesweeptes Level mindestens so viele Stunden bestand, bevor es gesweept wurde (ls_pivot_time -> ls_touched_time). Ignoriert, wenn inducementClass gesetzt ist."),
-        maxSweepAgeHours: z.number().optional().describe("Nur Setups, deren gesweeptes Level weniger als so viele Stunden bestand, bevor es gesweept wurde (ls_pivot_time -> ls_touched_time). Ignoriert, wenn inducementClass gesetzt ist."),
+        inducementClass: z.enum(["minor", "medium", "major"]).optional().describe("Minor <24h, Medium 24-120h, Major ≥120h Sweep-Alter in HANDELSSTUNDEN (Wochenende rausgerechnet, 120h = 5 Handelstage = eine Kalenderwoche; Näherung, siehe Beschreibung) — Vorrang vor min/maxSweepAgeHours"),
+        minSweepAgeHours: z.number().optional().describe("Nur Setups, deren gesweeptes Level mindestens so viele Handelsstunden (Wochenende zählt nicht) bestand, bevor es gesweept wurde (ls_pivot_time -> ls_touched_time). Ignoriert, wenn inducementClass gesetzt ist."),
+        maxSweepAgeHours: z.number().optional().describe("Nur Setups, deren gesweeptes Level weniger als so viele Handelsstunden (Wochenende zählt nicht) bestand, bevor es gesweept wurde (ls_pivot_time -> ls_touched_time). Ignoriert, wenn inducementClass gesetzt ist."),
       },
     },
     async ({ instrument, withinTradingHours, inducementClass, minSweepAgeHours, maxSweepAgeHours }) =>

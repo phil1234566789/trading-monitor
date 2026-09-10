@@ -3,7 +3,9 @@
 // M5-Kerzen aufgelöst (win/loss/pending). Genutzt von poi-watcher (live, sobald ein neues Setup
 // entsteht + bei jedem Tick zum Auflösen offener "pending"-Zeilen) und vom einmaligen Backfill-Script
 // für den historischen Bestand — deshalb hier in _shared/ statt in einer der beiden Funktionen.
-//
+
+import { businessSecondsBetween } from "./ageTier.ts";
+
 // Win-Definition (Philip 2026-09-05): 2,5 RR erreicht, SL max. 6 Pips — auch wenn die strukturelle
 // Invalidierung (Gegenkante der M5-OB, siehe deriveEntryInvalidation) weiter weg liegt. sl_pips ist
 // deshalb min(strukturelle Distanz, MAX_SL_PIPS), nie die volle OB-Höhe.
@@ -78,33 +80,8 @@ export function classifyOutcome(candles: OutcomeCandle[], direction: SetupDirect
 // über 6h, weil strukturell unmöglich) — ls_pivot_time->ls_touched_time streut dagegen real (Median
 // ~2h, Maximum >100 Tage bei Path B, siehe tradeSetup.ts-Kommentar "ls.pivotTime kann beliebig alt
 // sein"). Rohwert statt festem Schwellwert, siehe Kopfkommentar der Migration.
+// Business-Stunden (Wochenende raus), damit derselbe Sweep im Chart-Label und im Winrate-Filter
+// dieselbe Klasse ergibt — siehe _shared/ageTier.ts.
 export function computeSweepAgeHours(lsTouchedTimeSec: number, lsPivotTimeSec: number): number {
-  return (lsTouchedTimeSec - lsPivotTimeSec) / 3600;
-}
-
-// Inducement-Klassifizierung nach Alter (trading-Repo, liquidität.md#inducement--klassifizierung-
-// nach-alter, Chat 2026-09-05: Philip meinte mit "Sweep-Alter ≥6h" eigentlich diese bestehende
-// Minor/Medium/Major-Einteilung, nicht eine neu erfundene Stundengrenze). Handbuch-Definition ist
-// eigentlich kalendertagbasiert ("Minor: am selben Tag entstanden") und gilt formal nur für H1/4H-
-// Sweeps — bewusste Näherung hier (Philip 2026-09-05, "timeframe-unabhängig als Näherung"):
-// reine Dauer statt Kalendertag-Vergleich (24h/5 Tage), unabhängig davon ob ls von H1 oder M5 kommt
-// (trade_setups speichert das aktuell nicht getrennt). Grenzfälle rund um Mitternacht bleiben damit
-// unscharf — laut Handbuch selbst ("Offener Randfall") ohnehin noch nicht abschließend geklärt.
-export const MINOR_INDUCEMENT_MAX_HOURS = 24;
-export const MAJOR_INDUCEMENT_MIN_HOURS = 5 * 24;
-
-export type InducementClass = "minor" | "medium" | "major";
-
-export function classifyInducementAge(sweepAgeHours: number): InducementClass {
-  if (sweepAgeHours < MINOR_INDUCEMENT_MAX_HOURS) return "minor";
-  if (sweepAgeHours < MAJOR_INDUCEMENT_MIN_HOURS) return "medium";
-  return "major";
-}
-
-// Umkehrung von classifyInducementAge als [min,max)-Stundenbereich — für get_trade_setup_winrate,
-// damit dort "minor"/"medium"/"major" statt roher Stundenwerte übergeben werden kann.
-export function inducementAgeRange(cls: InducementClass): { minHours?: number; maxHours?: number } {
-  if (cls === "minor") return { maxHours: MINOR_INDUCEMENT_MAX_HOURS };
-  if (cls === "medium") return { minHours: MINOR_INDUCEMENT_MAX_HOURS, maxHours: MAJOR_INDUCEMENT_MIN_HOURS };
-  return { minHours: MAJOR_INDUCEMENT_MIN_HOURS };
+  return businessSecondsBetween(lsPivotTimeSec, lsTouchedTimeSec) / 3600;
 }

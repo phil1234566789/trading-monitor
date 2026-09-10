@@ -6,9 +6,9 @@ import {
   computeSlTp,
   classifyOutcome,
   computeSweepAgeHours,
-  classifyInducementAge,
   PIP_SIZE,
 } from "../supabase/functions/_shared/tradeSetupOutcome.ts";
+import { classifyInducementAge } from "../supabase/functions/_shared/ageTier.ts";
 
 describe("deriveEntryInvalidation", () => {
   it("Short: Entry = OB-Unterkante, Invalidation = OB-Oberkante", () => {
@@ -96,6 +96,16 @@ describe("computeSweepAgeHours", () => {
     const lsTouchedTimeSec = lsPivotTimeSec + 6 * 3600;
     expect(computeSweepAgeHours(lsTouchedTimeSec, lsPivotTimeSec)).toBe(6);
   });
+
+  // Regression zum Pin-Fall vom 2026-09-10 (GBPUSD-1H-High 1.35652): 8d 17h Wandzeit, aber nur
+  // 6d 17h Handelszeit — genau dieses Wochenende entschied damals zwischen Major und Medium.
+  it("rechnet das Wochenende raus", () => {
+    const pivot = Date.parse("2026-08-31T14:00:00Z") / 1000;
+    const touched = Date.parse("2026-09-09T07:00:00Z") / 1000;
+    expect((touched - pivot) / 3600).toBe(209);
+    expect(computeSweepAgeHours(touched, pivot)).toBe(161);
+    expect(classifyInducementAge(computeSweepAgeHours(touched, pivot))).toBe("major");
+  });
 });
 
 describe("classifyInducementAge", () => {
@@ -109,7 +119,7 @@ describe("classifyInducementAge", () => {
     expect(classifyInducementAge(119.9)).toBe("medium");
   });
 
-  it("ab 120h (5 Tage) -> major", () => {
+  it("ab 120h (5 Handelstage) -> major", () => {
     expect(classifyInducementAge(120)).toBe("major");
     expect(classifyInducementAge(2660)).toBe("major");
   });

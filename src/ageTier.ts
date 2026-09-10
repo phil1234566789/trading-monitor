@@ -10,11 +10,17 @@
 export type AgeTier = "minor" | "medium" | "major";
 
 const DAY_SECONDS = 24 * 60 * 60;
-const WEEK_SECONDS = 7 * DAY_SECONDS;
 
-// Philips Vorgabe (Chat 2026-07-28): < 1 Tag = minor, 1–7 Tage = medium, > 7 Tage = major.
+// Major-Grenze seit 2026-09-10 bei 5 Handelstagen statt 7 Tagen — mit dem Wochenendabzug oben
+// dieselbe Kalenderwoche, jetzt deckungsgleich mit der Inducement-Definition des Handbuchs
+// (trading-Repo, liquidität.md#inducement--klassifizierung-nach-alter). MUSS mit
+// supabase/functions/_shared/ageTier.ts identisch bleiben, sonst weicht das Chart-Label wieder vom
+// Winrate-Filter ab.
+export const MINOR_MAX_SECONDS = DAY_SECONDS;
+export const MAJOR_MIN_SECONDS = 5 * DAY_SECONDS;
+
 export function classifyAge(businessSeconds: number): AgeTier {
-  if (businessSeconds < DAY_SECONDS) return "minor";
-  if (businessSeconds <= WEEK_SECONDS) return "medium";
+  if (businessSeconds < MINOR_MAX_SECONDS) return "minor";
+  if (businessSeconds < MAJOR_MIN_SECONDS) return "medium";
   return "major";
 }

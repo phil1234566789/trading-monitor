@@ -16,10 +16,10 @@ import {
   computeSlTp,
   classifyOutcome,
   computeSweepAgeHours,
-  classifyInducementAge,
   type SetupDirection,
   type OutcomeCandle,
 } from "../../_shared/tradeSetupOutcome.ts";
+import { classifyInducementAge } from "../../_shared/ageTier.ts";
 
 const INSTRUMENTS = (Deno.env.get("BACKFILL_INSTRUMENTS") ?? "GBPUSD,EURUSD").split(",").map((s) => s.trim());
 const READ_PAGE_SIZE = 5000; // siehe backfillObZones.ts — PostgREST kappt serverseitig ohnehin auf ~1000

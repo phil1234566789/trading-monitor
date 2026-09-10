@@ -2,7 +2,7 @@ import { supabase } from "./supabaseClient.ts";
 import { PIP_SIZE } from "./pipConfig.js";
 import { berlinDayRangeUtcMs, berlinDateStrFor } from "./berlinTime.ts";
 import { logDecision } from "./stateMachineLog.ts";
-import { inducementAgeRange, type InducementClass } from "../_shared/tradeSetupOutcome.ts";
+import { inducementAgeRange, type InducementClass } from "../_shared/ageTier.ts";
 import { safeTransitionChain } from "./machineState.ts";
 import { closeLoopState } from "./loopState.ts";
 
@@ -274,7 +274,8 @@ export interface TradeSetupWinrateFilters {
   withinTradingHours?: boolean;
   // inducementClass ist Vorrang vor minSweepAgeHours/maxSweepAgeHours (siehe registerReadTools) —
   // beide Wege bedienen denselben Rohwert (sweep_age_hours), inducementClass ist nur die benannte
-  // Abkürzung für Philips Minor/Medium/Major-Einteilung (siehe inducementAgeRange).
+  // Abkürzung für Philips Minor/Medium/Major-Einteilung (siehe _shared/ageTier.ts). Der Rohwert
+  // sind Business-Stunden (Wochenende rausgerechnet), nicht Wandzeit.
   inducementClass?: InducementClass;
   minSweepAgeHours?: number;
   maxSweepAgeHours?: number;

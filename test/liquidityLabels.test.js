@@ -16,12 +16,12 @@ describe("formatLsLabel", () => {
     expect(formatLsLabel("1,13545", pivotTime, NOW)).toBe("LS 1,13545 (3h)");
   });
 
-  it("medium (1-7 Geschäftstage): 'Medium '-Präfix", () => {
+  it("medium (1-5 Geschäftstage): 'Medium '-Präfix", () => {
     const pivotTime = Date.UTC(2026, 6, 24, 12, 0, 0) / 1000; // Fr 24.07. 12:00 UTC -> 2 Geschäftstage
     expect(formatLsLabel("1,13545", pivotTime, NOW)).toBe("Medium LS 1,13545 (2d)");
   });
 
-  it("major (> 7 Geschäftstage): 'Major '-Präfix — der eigentliche Bug-Report-Fall (26.06. -> 28.07.)", () => {
+  it("major (ab 5 Geschäftstagen): 'Major '-Präfix — der eigentliche Bug-Report-Fall (26.06. -> 28.07.)", () => {
     const pivotTime = Date.UTC(2026, 5, 22, 12, 0, 0) / 1000; // 26 Geschäftstage alt
     expect(formatLsLabel("1,13545", pivotTime, NOW)).toBe("Major LS 1,13545 (26d)");
   });
