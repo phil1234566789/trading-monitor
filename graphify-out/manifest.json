@@ -882,9 +882,9 @@
     "semantic_hash": "4ce3d42726f8c39c44cdd0e38a331923"
   },
   "supabase/functions/trading-monitor-mcp/db.ts": {
-    "mtime": 1789070304.7940855,
-    "seen": 1789070453.2585194,
-    "ast_hash": "c04611e0c8dbab5e22d9d3c651931ade",
+    "mtime": 1789070645.804983,
+    "seen": 1789071097.9295342,
+    "ast_hash": "f1de5a6ba9bf850bfbb5f6bffe840d81",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/ema.js": {
@@ -918,10 +918,10 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/forexCandles.ts": {
-    "mtime": 1787465334.6433365,
-    "seen": 1788660641.2142766,
-    "ast_hash": "a53f612edcfb1ae627dcd1e0887579d1",
-    "semantic_hash": "a53f612edcfb1ae627dcd1e0887579d1"
+    "mtime": 1789070591.510594,
+    "seen": 1789071097.9300385,
+    "ast_hash": "19cf44b44da554544c159904fc176d18",
+    "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/index.ts": {
     "mtime": 1788698944.256416,
@@ -1074,9 +1074,9 @@
     "semantic_hash": "1113a960053efd89c82f94c3ed7b8337"
   },
   "supabase/functions/trading-monitor-mcp/tools/dealingRangeLoop.ts": {
-    "mtime": 1788990411.0087278,
-    "seen": 1788990751.0319,
-    "ast_hash": "87a2ff763720d401224846b7f49fdec8",
+    "mtime": 1789070992.825343,
+    "seen": 1789071097.9340444,
+    "ast_hash": "234b594f65e87964459baf1169c52a10",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/nearRelevantLiquidityLevels.ts": {
@@ -2538,9 +2538,9 @@
     "semantic_hash": ""
   },
   "docs/attention-levels.md": {
-    "mtime": 1788793956.4504097,
-    "seen": 1788794020.0515342,
-    "ast_hash": "f1bfa72396090c96c13fe81aa09373e5",
+    "mtime": 1789071063.768174,
+    "seen": 1789071097.9475827,
+    "ast_hash": "2b24fa338201c6016b8c060071019301",
     "semantic_hash": ""
   },
   "supabase/migrations/20260907150000_reset_gbpusd_20260828_attention_level_test.sql": {
@@ -2565,6 +2565,36 @@
     "mtime": 1789070357.689805,
     "seen": 1789070453.2655208,
     "ast_hash": "77f99c76049c01e0970d3916fb349dbd",
+    "semantic_hash": ""
+  },
+  "supabase/functions/trading-monitor-mcp/obFormationTrigger.ts": {
+    "mtime": 1789070947.0953605,
+    "seen": 1789071097.931044,
+    "ast_hash": "296de85a3ec04018952812094a33d5a0",
+    "semantic_hash": ""
+  },
+  "supabase/functions/trading-monitor-mcp/replayAsOf.ts": {
+    "mtime": 1789070621.1671205,
+    "seen": 1789071097.931044,
+    "ast_hash": "1e0cdfe22477030f7cdeec6d7c295db5",
+    "semantic_hash": ""
+  },
+  "supabase/functions/trading-monitor-mcp/timeframes.ts": {
+    "mtime": 1789070585.8329544,
+    "seen": 1789071097.9330444,
+    "ast_hash": "bb44fc3eeb7bed7b4e9943bafce525ce",
+    "semantic_hash": ""
+  },
+  "test/obFormationTrigger.test.js": {
+    "mtime": 1789070947.1145062,
+    "seen": 1789071097.941067,
+    "ast_hash": "1edd14df8f20e39a56d4931bfac6ca32",
+    "semantic_hash": ""
+  },
+  "test/replayAsOf.test.js": {
+    "mtime": 1789070670.9010859,
+    "seen": 1789071097.943072,
+    "ast_hash": "778df710d968c7b229dc1a28478436a3",
     "semantic_hash": ""
   }
 }
