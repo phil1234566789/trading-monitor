@@ -2,6 +2,8 @@ import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import { berlinDateTimeStrFor, berlinDateStrFor } from "../berlinTime.ts";
 import { fetchForexCandles } from "../forexCandles.ts";
+import { firstObFormationTimeAfter } from "../obFormationTrigger.ts";
+import { barSecondsFor } from "../timeframes.ts";
 import { getLoopStateForDay, updateLoopState, closeLoopState, type TradingLoopStateRow, type HeartbeatEntry, appendHeartbeat } from "../loopState.ts";
 import { buildPretradeGates, type PretradeGatesResult } from "./pretradeGates.ts";
 import { buildSessionWindow } from "./sessionWindow.ts";
@@ -17,8 +19,27 @@ function json(data: unknown) {
 }
 
 const BATCH_HOURS = 2;
-const BATCH_CANDLES = Math.round((BATCH_HOURS * 3600) / 300); // 24 M5-Kerzen
+const M5_BAR_SECONDS = barSecondsFor("5m");
+const BATCH_CANDLES = Math.round((BATCH_HOURS * 3600) / M5_BAR_SECONDS); // 24 M5-Kerzen
 const DEFAULT_MAX_BATCHES = 10;
+// Vorlauf fuer firstObFormationTimeAfter: eine FVG braucht die 3 Kerzen vor sich, sonst waere eine
+// Zone direkt am Batch-Anfang nicht erkennbar. Beeinflusst den Watch-Level-Vergleich nicht, der
+// laeuft weiter nur auf relevantCandles (> cursorSec).
+const OB_DETECTION_WARMUP_CANDLES = 4;
+
+// Aufmerksamkeitslevel hoch = Fall 1/2, erkennbar an den M5-Watch-Leveln, die performFullTick nur
+// im reactionFound-Zweig setzt (docs/attention-levels.md). Nur dort darf eine neue M5-OB-Zone den
+// Loop wecken — in Fall 3 ("Markt gibt nichts her") entstehen mehrere pro Stunde und wuerden den
+// bewussten Token-Spar-Modus aushebeln.
+function isHighAttention(loopState: TradingLoopStateRow): boolean {
+  return loopState.watchLevelAbove?.timeframe === "5M" || loopState.watchLevelBelow?.timeframe === "5M";
+}
+
+function earliestOf(a: number | null, b: number | null): number | null {
+  if (a == null) return b;
+  if (b == null) return a;
+  return Math.min(a, b);
+}
 
 // Ab wann ein Setup in GEGENrichtung den Loop anhalten darf. Deutlich enger als dataSnapshots
 // SETUP_MAX_AGE_HOURS (48h): dort geht es um "existiert noch", hier um "ist gerade jetzt handelbar".
@@ -294,6 +315,14 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
       const snapshot = await buildDataSnapshot({ instrument });
       const price: number | null = (snapshot as any).referencePrice ?? null;
       hit = price != null && ((above != null && price >= above) || (below != null && price <= below));
+      // Zweiter, gleichberechtigter Trigger (siehe obFormationTrigger.ts): auch ohne Preis-Treffer
+      // aufwachen, wenn seit dem letzten Tick eine neue M5-OB-Zone entstanden ist.
+      if (!hit && isHighAttention(loopState) && loopState.lastAnalysisTimeSec != null) {
+        const sinceSec = loopState.lastAnalysisTimeSec;
+        const count = Math.min(Math.ceil((nowSec - sinceSec) / M5_BAR_SECONDS), BATCH_CANDLES) + OB_DETECTION_WARMUP_CANDLES;
+        const m5Candles = await fetchForexCandles(instrument, "5m", { count, toMs: nowSec * 1000 });
+        hit = firstObFormationTimeAfter(m5Candles, sinceSec, nowSec) != null;
+      }
     }
     await transition(loaded, instrument, { type: "LIVE_LEVEL_CHECKED", hit }, nowSec);
     if (!hit) {
@@ -364,18 +393,23 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
 
     const batchEndSec = Math.min(cursorSec + BATCH_HOURS * 3600, replayUntilSec);
     await heartbeat(cursorSec, `Hole Kerzen ${berlinDateTimeStrFor(cursorSec)}–${berlinDateTimeStrFor(batchEndSec)} Uhr.`, currentLoopState.id);
-    const candles = await fetchForexCandles(instrument, "5m", { count: BATCH_CANDLES, toMs: batchEndSec * 1000 });
+    const candles = await fetchForexCandles(instrument, "5m", { count: BATCH_CANDLES + OB_DETECTION_WARMUP_CANDLES, toMs: batchEndSec * 1000 });
     const relevantCandles = candles.filter((c) => c.time > cursorSec && c.time <= batchEndSec);
 
     const above = currentLoopState.watchLevelAbove?.price ?? null;
     const below = currentLoopState.watchLevelBelow?.price ?? null;
-    const hitCandle = relevantCandles.find((c) => (above != null && c.high >= above) || (below != null && c.low <= below));
-    const hitTimeSec = hitCandle?.time ?? null;
+    const levelHitSec = relevantCandles.find((c) => (above != null && c.high >= above) || (below != null && c.low <= below))?.time ?? null;
+    // Zweiter, gleichberechtigter Trigger neben dem gespeicherten Watch-Level (siehe
+    // obFormationTrigger.ts) — sonst weckt eine neu entstandene Entry-Zone den Loop erst, wenn
+    // zufaellig ein ALTES Level getroffen wird.
+    const newObSec = isHighAttention(currentLoopState) ? firstObFormationTimeAfter(candles, cursorSec, batchEndSec) : null;
+    const hitTimeSec = earliestOf(levelHitSec, newObSec);
+    const triggerLabel = hitTimeSec != null && hitTimeSec === levelHitSec ? "Watch-Level" : "Neuer M5-OB";
 
     await transition(loaded, instrument, { type: "BATCH_LEVEL_CHECKED", hit: hitTimeSec != null }, batchEndSec);
 
     if (hitTimeSec == null) {
-      await heartbeat(batchEndSec, `Kein Watch-Level-Treffer bis ${berlinDateTimeStrFor(batchEndSec)} ---> nächster Batch.`, currentLoopState.id);
+      await heartbeat(batchEndSec, `Kein Watch-Level-Treffer und keine neue M5-OB-Zone bis ${berlinDateTimeStrFor(batchEndSec)} ---> nächster Batch.`, currentLoopState.id);
       currentLoopState = await updateLoopState(currentLoopState.id, { lastAnalysisTimeSec: batchEndSec, replayUntilSec: batchEndSec });
       cursorSec = batchEndSec;
       await transition(loaded, instrument, { type: "BACKTEST_BATCH_FETCHED" }, cursorSec);
@@ -384,7 +418,7 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
 
     const tick = await performFullTick(loaded, currentLoopState, instrument, hitTimeSec);
     const stopSummary = tick.fallFour.hit ? `Fall 4 (${tick.fallFour.reason})` : tick.hasReaction ? "Reaktion gefunden (Fall 1/2/3, siehe evidence)" : "keine Reaktion";
-    await heartbeat(hitTimeSec, `Watch-Level ausgelöst (${berlinDateTimeStrFor(hitTimeSec)}) ---> ${stopSummary}.`, currentLoopState.id);
+    await heartbeat(hitTimeSec, `${triggerLabel} ausgelöst (${berlinDateTimeStrFor(hitTimeSec)}) ---> ${stopSummary}.`, currentLoopState.id);
 
     if (tick.fallFour.hit || tick.hasReaction) {
       return { instrument, mode: "backtest" as const, stopped: true, stopReason: stopSummary, heartbeats, tick };

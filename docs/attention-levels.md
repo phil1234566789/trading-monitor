@@ -61,11 +61,27 @@ tatsächlich laufenden Setup-OB.
 (`buildRecentReactions`, dort neu exponiert — kein zweiter Kerzen-Fetch/keine zweite Erkennung
 nötig, `computeM5LiquidityAndObZones` lief für die Reaktionsauswertung ohnehin schon).
 
+## Ping bei neuem M5-OB (10.09.2026, implementiert)
+
+Der Zusatz aus Level b/c ist jetzt ein eigener, von den beiden Preis-Watch-Leveln unabhängiger
+Trigger: `firstObFormationTimeAfter()` (`obFormationTrigger.ts`) lässt die M5-OB-Erkennung über die
+Batch-Kerzen mitlaufen und liefert den Zeitpunkt, zu dem eine neu entstandene Zone erstmals
+*erkennbar* war (Schluss der bildenden Kerze, nicht ihre `startTime` — sonst derselbe
+Lookahead-Leak wie in `replayAsOf.ts`). `runDealingRangeLoop` nimmt im Backtest-Batch wie im
+Live-Pfad den früheren der beiden Trigger. Kein persistierter "zuletzt gesehene OB-Keys"-Abgleich
+nötig — der letzte Analysezeitpunkt des Loops reicht als Abgrenzung.
+
+Gilt bewusst nur bei hoher Aufmerksamkeit (Fall 1/2, erkennbar an gesetzten M5-Watch-Leveln): in
+Fall 3 entstehen mehrere M5-OBs pro Stunde, der Trigger würde dort den Token-Spar-Modus aushebeln.
+
+Auslöser war der GBPUSD-Backtest 09.09.2026: der 09:20-Tick wartete auf einen 12 Tage alten
+OB-Rand 3,5 Pips über dem Kurs, während zeitgleich die eigentliche Entry-Zone 1.35647–1.3568
+entstand — deren Rand hätte die 09:45-Kerze getroffen. Nächster Tick kam erst um 10:00, der Trade
+(+8,5R) war weg.
+
 ## Offen / TODO
 
-- **Ping-Mechanismus für "neuer M5-OB entstanden"** (Zusatz aus Level b/c) — noch NICHT
-  implementiert. Würde einen eigenen, von den beiden Preis-Watch-Leveln unabhängigen Trigger
-  brauchen (ein neu geformter M5-OB muss nicht zwingend eines der beiden aktuellen Watch-Level
-  berühren) — vermutlich ein persistierter "zuletzt gesehene M5-OB-Keys"-Abgleich pro Tick, kein
-  kleiner Zusatz. Separates Vorhaben.
 - Level d) bleibt vorerst Philips manuelle Aufgabe, keine Implementierung.
+- `computeWatchLevels()` wählt weiterhin rein das preislich nächste Level, unabhängig vom Alter der
+  Zone — eine 12 Tage alte Zone als Watch-Level bleibt ein Warnzeichen für sich. Durch den
+  Formations-Trigger oben nicht mehr akut.
