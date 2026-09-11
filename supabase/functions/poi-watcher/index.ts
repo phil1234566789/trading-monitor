@@ -481,7 +481,12 @@ Deno.serve(async (req) => {
             // die noch offene Kerze dementsprechend noch nicht sieht) — sonst faellt der Wert
             // beim naechsten Run auf false zurueck und der Alarm geht beim echten Kerzenschluss
             // ein zweites Mal raus.
-            if (!z.invalidated && !z.touched && (wasTouchedInDb || (currentPrice <= z.top && currentPrice >= z.bottom))) {
+            // wasTouchedInDb bewusst OHNE !z.invalidated-Guard (Bug-Report Philip: eine
+            // getouchte, danach durchbrochene Zone fiel beim naechsten Refresh-Tick auf
+            // touched=false zurueck — Telegram-Alarm raus, aber im /protokoll unsichtbar, weil
+            // fetchTouchedZones auf touched=true filtert). Nur ein NEUER Live-Preis-Touch setzt
+            // eine bereits invalidierte Zone nicht mehr auf touched.
+            if (!z.touched && (wasTouchedInDb || (!z.invalidated && currentPrice <= z.top && currentPrice >= z.bottom))) {
               z.touched = true;
             }
 
