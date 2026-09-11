@@ -3,6 +3,8 @@ import { PIP_SIZE } from "./pipConfig.js";
 import { berlinDayRangeUtcMs, berlinDateStrFor } from "./berlinTime.ts";
 import { logDecision } from "./stateMachineLog.ts";
 import { inducementAgeRange, type InducementClass } from "../_shared/ageTier.ts";
+import { applyAsOf, applyAsOfZones, earliestAmbiguousEventSec, type ProbeCandle } from "./replayAsOf.ts";
+import { barSecondsFor } from "./timeframes.ts";
 import { safeTransitionChain } from "./machineState.ts";
 import { closeLoopState } from "./loopState.ts";
 
@@ -10,43 +12,6 @@ import { closeLoopState } from "./loopState.ts";
 // supabase/migrations/*.sql (ob_zones, liquidity_levels, trade_setups, dealing_ranges,
 // trade_positions, trade_targets, trade_partial_exits, news_events, trading_schedules,
 // claude_annotations) — alle mit anon-select-RLS, siehe CLAUDE.md "MCP-Server".
-
-// Analog zu applyAsOf unten für liquidity_levels, aber für ob_zones: end_time ist hier der
-// deterministische Zeitpunkt, an dem die Zone entweder touched ODER invalidated wurde (siehe
-// detectOrderBlocks in _shared/orderBlocks.ts — waechst mit jeder Kerze, friert bei einem der
-// beiden Ereignisse ein). Ein Pivot/eine Zone, deren start_time NACH asOfSec liegt, existierte zu
-// diesem Zeitpunkt noch nicht; touched/invalidated werden zurückgesetzt, wenn end_time NACH
-// asOfSec liegt (das Ereignis war aus Sicht des Replay-Zeitpunkts noch nicht passiert). Bug-Report
-// Lana 2026-08-02: get_data_export zeigte Zonen mit start_time NACH dem Replay-Cutoff (z.B.
-// 2026-07-31T17:00 bei einem 08:00-Cutoff) — derselbe Live-statt-as-of-Bug wie zuvor bei
-// liquidityLevels.
-function applyAsOfZones<
-  T extends {
-    start_time: string;
-    touched: boolean;
-    invalidated: boolean;
-    end_time: string | null;
-    retested?: boolean;
-    retested_at?: string | null;
-  },
->(rows: T[], asOfSec: number | undefined): T[] {
-  if (asOfSec == null) return rows;
-  return rows
-    .filter((r) => new Date(r.start_time).getTime() / 1000 <= asOfSec)
-    .map((r) => {
-      let row = r;
-      if ((row.touched || row.invalidated) && row.end_time != null && new Date(row.end_time).getTime() / 1000 > asOfSec) {
-        row = { ...row, touched: false, invalidated: false, end_time: null };
-      }
-      // retested_at ist unabhängig von end_time (Retest kann lange NACH dem Touch bestätigt
-      // werden, siehe orderblöcke.md#retest-status) — eigener Replay-Rückrechnungs-Schritt, sonst
-      // dieselbe Bug-Klasse wie oben (Zukunftswissen leaken).
-      if (row.retested && row.retested_at != null && new Date(row.retested_at).getTime() / 1000 > asOfSec) {
-        row = { ...row, retested: false, retested_at: null };
-      }
-      return row;
-    });
-}
 
 // Bug-Report Philip 2026-08-30: get_ob_zones lieferte für GBPUSD (8397 Zeilen, aufsteigend
 // sortiert) nur noch uralte 2025er-Zonen — derselbe PostgREST-~1000-Zeilen-Cap wie in CLAUDE.md
@@ -69,6 +34,21 @@ async function fetchAllRows<T>(buildQuery: (from: number, to: number) => Promise
   return all;
 }
 
+// M5-Kerzen fuer die Sweep-/Touch-Aufloesung in replayAsOf.ts. Wird NUR geladen, wenn ueberhaupt
+// ein Ereignis in einer noch laufenden Kerze liegt — im Normalfall also gar nicht, und wenn doch,
+// hoechstens eine 4H-Spanne (48 M5-Kerzen) statt eines zweiten vollen Kerzen-Fetches.
+const PROBE_MAX_CANDLES = 64;
+async function asOfProbeCandles(
+  instrument: string,
+  rows: { timeframe: string; touched: boolean; invalidated?: boolean; end_time: string | null }[],
+  asOfSec: number | undefined,
+): Promise<ProbeCandle[]> {
+  const earliest = earliestAmbiguousEventSec(rows, asOfSec);
+  if (earliest == null || asOfSec == null) return [];
+  const count = Math.min(Math.ceil((asOfSec - earliest) / barSecondsFor("5m")) + 4, PROBE_MAX_CANDLES);
+  return (await getForexCandlesArchiveUpTo(instrument, "5m", count, new Date(asOfSec * 1000).toISOString())) ?? [];
+}
+
 export async function getObZones(instrument: string, timeframe?: string, includeAll = false, asOfSec?: number) {
   const data = await fetchAllRows((from, to) => {
     let query = supabase.from("ob_zones").select("*").eq("instrument", instrument).order("start_time", { ascending: true }).range(from, to);
@@ -80,7 +60,7 @@ export async function getObZones(instrument: string, timeframe?: string, include
     if (!includeAll && asOfSec == null) query = query.eq("invalidated", false).eq("touched", false);
     return query;
   });
-  let rows = applyAsOfZones(data, asOfSec);
+  let rows = applyAsOfZones(data, asOfSec, await asOfProbeCandles(instrument, data, asOfSec));
   if (!includeAll && asOfSec != null) rows = rows.filter((r) => !r.invalidated && !r.touched);
   return rows;
 }
@@ -134,30 +114,6 @@ function filterRelevantRows<T extends { touched: boolean; end_time: string | nul
   return result;
 }
 
-// Rekonstruiert den Stand "as of asOfSec" statt des Live-Stands von jetzt: ein Pivot, der erst NACH
-// asOfSec entstanden ist, existierte zu diesem Zeitpunkt noch nicht (raus); ein Level, das laut DB
-// zwar "touched" ist, dessen end_time aber NACH asOfSec liegt, war zu diesem Zeitpunkt noch
-// unberührt (touched/end_time zurück auf false/null) — sonst sieht ein Replay-Snapshot Sweeps, die
-// aus Sicht der simulierten Zeit noch gar nicht passiert sind. Bug-Report Philip 2026-08-02: beim
-// Backtesten von historischen Setups zeigte get_data_export den AKTUELLEN Live-Sweep-Stand
-// (inkl. Sweeps von nach dem Replay-Zeitpunkt) statt des Stands zum Replay-Zeitpunkt — dadurch
-// fielen für den Analysezeitpunkt relevante, damals noch unberührte Level durch den
-// RECENT_SWEEP_COUNT-Filter, weil sie inzwischen (nach dem Replay-Punkt) längst gesweept wurden.
-function applyAsOf<T extends { pivot_time: string; touched: boolean; end_time: string | null }>(
-  rows: T[],
-  asOfSec: number | undefined,
-): T[] {
-  if (asOfSec == null) return rows;
-  return rows
-    .filter((r) => new Date(r.pivot_time).getTime() / 1000 <= asOfSec)
-    .map((r) => {
-      if (r.touched && r.end_time != null && new Date(r.end_time).getTime() / 1000 > asOfSec) {
-        return { ...r, touched: false, end_time: null };
-      }
-      return r;
-    });
-}
-
 // Chat 2026-08-26, Philip: "liegt ein 4H LQ-Level auf demselben Preis wie ein 1H-Level, gewinnt das
 // 4H-Level, das 1H-Level kann raus" — analog zur selben Rangfolge im Frontend
 // (src/priceChartLiquidity.js: computeHtfLiquidityLevels/HTF_TIMEFRAME_PRIORITY), gleiches Epsilon
@@ -181,7 +137,7 @@ export async function getLiquidityLevels(instrument: string, timeframe?: string,
     if (timeframe) query = query.eq("timeframe", timeframe);
     return query;
   });
-  const rows = applyAsOf(data, asOfSec);
+  const rows = applyAsOf(data, asOfSec, await asOfProbeCandles(instrument, data, asOfSec));
   if (includeAll) return rows;
   const highs = dropLowerTfDuplicates(filterRelevantRows(rows.filter((r) => r.direction === "high"), LIQUIDITY_MAX_RELEVANT));
   const lows = dropLowerTfDuplicates(filterRelevantRows(rows.filter((r) => r.direction === "low"), LIQUIDITY_MAX_RELEVANT));

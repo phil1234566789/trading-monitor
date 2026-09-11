@@ -1,5 +1,6 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient.ts";
 import { getForexCandlesArchiveUpTo } from "./db.ts";
+import { barSecondsFor } from "./timeframes.ts";
 
 // Node-Port von src/forexCandles.js — ruft dieselbe `forex-candles` Edge Function auf, mit dem
 // anon-key als Bearer-Token (exakt das Pattern, das pg_cron laut
@@ -85,11 +86,6 @@ export async function fetchLiveForexCandles(symbol: string, bar: string, { count
 // Frische-Check hätte Laniakea an einem Montag nach dem WE für "jetzt" den Freitagsschluss aus dem
 // Archiv bekommen, exakt wie beim Frontend-Chart. Fix: neueste archivierte Kerze gegen toMs prüfen,
 // bei Veraltung (>1,5 Bar-Perioden) IMMER live nachladen statt nur bei zu wenigen Archiv-Zeilen.
-const BAR_SECONDS: Record<string, number> = { "1m": 60, "3m": 180, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400 };
-function barSecondsFor(bar: string): number {
-  return BAR_SECONDS[bar.toLowerCase()] ?? 60;
-}
-
 export async function fetchForexCandles(symbol: string, bar: string, { count, toMs }: { count: number; toMs?: number }): Promise<Candle[]> {
   const now = toMs ?? Date.now();
   const toIso = new Date(now).toISOString();
