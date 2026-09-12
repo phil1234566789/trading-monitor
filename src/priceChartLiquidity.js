@@ -14,6 +14,14 @@ import { barSecondsForTimeframeCi } from "./timeframes.js";
 // Kerzenreihen — 0.05 Pip ist klein genug, um zwei tatsächlich unterschiedliche Level nicht
 // fälschlich zusammenzulegen. Nur gleiche Richtung (high/high bzw. low/low) zählt als Kollision,
 // ein High und ein Low auf demselben Preis sind unabhängige Informationen.
+// Kerzen -> Sekunden ab pivotTime. Zwei Ableitungen aus derselben Fraktal-Periode, deshalb eine
+// gemeinsame Formel: die Touch-Suche setzt bei LIQUIDITY_FRACTAL_PERIOD an (buildLevel scannt ab
+// i = p + period), die EXISTENZ des Levels erst eine Kerze spaeter — bestaetigt ist ein Fraktal
+// erst, wenn die period-te Folgekerze geschlossen hat, und pivotTime ist nur die OEFFNUNG der
+// Pivot-Kerze.
+const barsAfterPivotSec = (timeframe, bars) => bars * (barSecondsForTimeframeCi(timeframe) ?? 0);
+const FRACTAL_CONFIRM_BARS = LIQUIDITY_FRACTAL_PERIOD + 1;
+
 const SAME_PRICE_EPSILON = 0.05 * PIP_SIZE;
 function coincidesWithHtf(level, htfLevels) {
   return htfLevels.some((h) => h.dir === level.dir && Math.abs(h.price - level.price) <= SAME_PRICE_EPSILON);
@@ -50,7 +58,7 @@ export function mergePinnedLevels(levels, pinnedLevels, candles) {
     // dieselbe Verzögerung wie buildLevel() (liquidityDetection.js: `i = p + period`), nur auf
     // Sekunden statt Kerzen-Index umgerechnet, da hier immer M5-Kerzen durchsucht werden, auch für
     // ein 1H/4H-Level.
-    const confirmationOffsetSec = LIQUIDITY_FRACTAL_PERIOD * (barSecondsForTimeframeCi(lvl.timeframe) ?? 0);
+    const confirmationOffsetSec = barsAfterPivotSec(lvl.timeframe, LIQUIDITY_FRACTAL_PERIOD);
     const touchCandle = candles.find(
       (c) => c.time > lvl.pivotTime + confirmationOffsetSec && ((lvl.dir === 1 && c.high >= lvl.price) || (lvl.dir === -1 && c.low <= lvl.price)),
     );
@@ -103,7 +111,9 @@ function applyReplayAsOf(levels, replayUntil) {
 export function computeHtfLiquidityLevels(candles, dbLiquidityLevelsHtf, symbol, replayUntil, price) {
   const byInstrument = dbLiquidityLevelsHtf.filter((l) => l.instrument === symbol);
   const byReplay = applyReplayAsOf(
-    replayUntil == null ? byInstrument : byInstrument.filter((l) => l.pivotTime <= replayUntil),
+    replayUntil == null
+      ? byInstrument
+      : byInstrument.filter((l) => l.pivotTime + barsAfterPivotSec(l.timeframe, FRACTAL_CONFIRM_BARS) <= replayUntil),
     replayUntil,
   );
   const kept = [];

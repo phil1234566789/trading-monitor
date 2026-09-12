@@ -76,6 +76,24 @@ describe("applyAsOf — Sweep in noch laufender Kerze", () => {
     expect(applyAsOf([level({ pivot_time: iso(H0900 + 60) })], H0900, m5)).toHaveLength(0);
   });
 
+  // Regressionsfall GBPUSD 09.09.2026 (Level 315786/317992, beide auf 1.3568 = dem Hoch der
+  // 09:15-Kerze): der Pivot lag zwar auf/vor 09:00, bestaetigt ist ein Fraktal aber erst, wenn 5
+  // Kerzen danach geschlossen sind — das Preisniveau selbst stammte aus noch nicht gelaufener
+  // Kursbewegung.
+  it("zeigt einen 1H-Pivot erst 6 Kerzen spaeter, nicht schon zur Pivot-Kerzen-Oeffnung", () => {
+    const fresh = level({ id: 315786, price: 1.3568, pivot_time: iso(H0900), touched: false, end_time: null });
+    expect(applyAsOf([fresh], H0900, m5)).toHaveLength(0);
+    expect(applyAsOf([fresh], H0900 + 6 * 3600 - 60, m5)).toHaveLength(0); // 14:59
+    expect(applyAsOf([fresh], H0900 + 6 * 3600, m5)).toHaveLength(1); // 15:00
+  });
+
+  it("rechnet die Bestaetigung je Timeframe, ein 4H-Pivot braucht 24h", () => {
+    const fresh = level4h({ id: 317992, price: 1.3568, pivot_time: iso(H0700), touched: false, end_time: null });
+    expect(applyAsOf([fresh], H0900, m5)).toHaveLength(0);
+    expect(applyAsOf([fresh], H0700 + 24 * 3600 - 60, m5)).toHaveLength(0);
+    expect(applyAsOf([fresh], H0700 + 24 * 3600, m5)).toHaveLength(1); // 10.09. 07:00
+  });
+
   it("laesst ohne asOfSec alles unangetastet", () => {
     expect(applyAsOf([level()], undefined, m5)[0].touched).toBe(true);
   });
@@ -116,5 +134,13 @@ describe("applyAsOfZones", () => {
 
   it("filtert Zonen raus, die zum Stichzeitpunkt noch nicht existierten", () => {
     expect(applyAsOfZones([zone({ start_time: iso(H0900 + 60) })], H0900, m5)).toHaveLength(0);
+  });
+
+  // startTime ist die MITTLERE der drei FVG-Kerzen — entdeckt wird die Zone auf der darauffolgenden,
+  // bekannt ist sie erst mit deren Schluss (2 Bars).
+  it("zeigt eine Zone erst, wenn ihre entdeckende Kerze geschlossen hat", () => {
+    const fresh = zone({ start_time: iso(H0900 - 3600) }); // 08:00
+    expect(applyAsOfZones([fresh], H0900, m5)).toHaveLength(0); // 09:00, entdeckende Kerze laeuft
+    expect(applyAsOfZones([fresh], H0900 + 3600, m5)).toHaveLength(1); // 10:00
   });
 });

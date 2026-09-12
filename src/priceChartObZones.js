@@ -7,6 +7,7 @@
 // Variablen kamen.
 import { detectOrderBlocks, obZoneNaturalKey } from "./orderBlocks.js";
 import { PIP_SIZE } from "./pipConfig.js";
+import { barSecondsForTimeframeCi } from "./timeframes.js";
 
 // Bug-Report Philip 2026-07-31 (Debug-Log bewies es: zone.startTime === zone.endTime): ">="
 // ließ die eigene Entstehungs-Kerze des Targets als "Touch" durchgehen, weil deren High/Low die
@@ -77,7 +78,12 @@ export const PIP_RELEVANCE_THRESHOLD = 200 * PIP_SIZE;
 // erst entdeckt wurden — analog zum alten filterBtcObsZones-Muster.
 export function filterDbObZones(dbObZones, symbol, replayUntil, timeframe, price) {
   const byTf = dbObZones.filter((z) => z.instrument === symbol && z.timeframe === timeframe);
-  const byReplay = replayUntil == null ? byTf : byTf.filter((z) => z.startTime <= replayUntil);
+  // startTime ist die MITTLERE der drei FVG-Kerzen, entdeckt wird die Zone erst auf der
+  // darauffolgenden — bekannt also mit deren Schluss, 2 Bars nach startTime (dieselbe Herleitung wie
+  // firstObFormationTimeAfter im Backend). Ohne den Versatz zeigte der Replay-Chart Zonen, deren
+  // eigene Entstehungs-Kerze noch gar nicht gelaufen war.
+  const knownAt = (z) => z.startTime + 2 * (barSecondsForTimeframeCi(timeframe) ?? 0);
+  const byReplay = replayUntil == null ? byTf : byTf.filter((z) => knownAt(z) <= replayUntil);
   if (price == null) return byReplay;
   return byReplay.filter((z) => z.bottom - PIP_RELEVANCE_THRESHOLD <= price && price <= z.top + PIP_RELEVANCE_THRESHOLD);
 }

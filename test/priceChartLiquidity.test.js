@@ -43,16 +43,32 @@ describe("mergePinnedLevels", () => {
 // (1H+4H), unabhängig vom aktuell gewählten Chart-Timeframe.
 describe("computeHtfLiquidityLevels", () => {
   const candles = [candle(100, 1.0, 1.1), candle(200, 1.15, 1.25)];
+  // Ein 1H-Fraktal ist erst bestaetigt, wenn die 5 Folgekerzen geschlossen haben — der Cutoff muss
+  // deshalb 6 Stunden hinter dem Pivot liegen, sonst existiert das Level aus Replay-Sicht noch nicht.
+  const CONFIRM_1H = 6 * 3600;
+  const REPLAY = 300 + CONFIRM_1H;
 
   it("filtert nach Instrument und Replay-Cutoff, endTime wird selbst geheilt", () => {
     const dbLevels = [
       { instrument: "GBPUSD", timeframe: "1H", pivotTime: 50, price: 1.2, dir: 1 },
-      { instrument: "GBPUSD", timeframe: "1H", pivotTime: 400, price: 1.2, dir: 1 }, // nach replayUntil
+      { instrument: "GBPUSD", timeframe: "1H", pivotTime: 400, price: 1.2, dir: 1 }, // Bestaetigung erst nach replayUntil
       { instrument: "EURUSD", timeframe: "1H", pivotTime: 50, price: 1.2, dir: 1 }, // falsches Instrument
     ];
-    const result = computeHtfLiquidityLevels(candles, dbLevels, "GBPUSD", 300, 1.15);
+    const result = computeHtfLiquidityLevels(candles, dbLevels, "GBPUSD", REPLAY, 1.15);
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ pivotTime: 50, endTime: 200 }); // selbst geheilt auf letzte Kerze
+  });
+
+  // Lookahead-Leak (Task 11.09.2026, GBPUSD 09.09.: ein 1H-Level mit 6h, ein 4H-Level mit 22h
+  // Vorsprung): pivotTime ist nur die OEFFNUNG der Pivot-Kerze, das Level EXISTIERT erst, wenn die
+  // 5 Folgekerzen geschlossen sind — sein Preis stammt sonst aus noch nicht gelaufener Bewegung.
+  it("zeigt einen Pivot erst nach seiner Fraktal-Bestaetigung, je Timeframe gerechnet", () => {
+    const h1 = [{ instrument: "GBPUSD", timeframe: "1H", pivotTime: 0, price: 1.2, dir: 1 }];
+    expect(computeHtfLiquidityLevels(candles, h1, "GBPUSD", CONFIRM_1H - 60, 1.15)).toHaveLength(0);
+    expect(computeHtfLiquidityLevels(candles, h1, "GBPUSD", CONFIRM_1H, 1.15)).toHaveLength(1);
+    const h4 = [{ instrument: "GBPUSD", timeframe: "4H", pivotTime: 0, price: 1.2, dir: 1 }];
+    expect(computeHtfLiquidityLevels(candles, h4, "GBPUSD", CONFIRM_1H, 1.15)).toHaveLength(0); // 4H braucht 24h
+    expect(computeHtfLiquidityLevels(candles, h4, "GBPUSD", 24 * 3600, 1.15)).toHaveLength(1);
   });
 
   it("ohne replayUntil (live) zählt kein Zeit-Cutoff", () => {
@@ -95,15 +111,15 @@ describe("computeHtfLiquidityLevels", () => {
   // Touch-Zeitpunkt aus der Zukunft und verdrängte andere, aus Replay-Sicht tatsächlich
   // relevantere Level vom recentSwept-Deckel. Pendant zu applyAsOf (db.ts).
   it("setzt touched zurück, wenn der reale Sweep NACH replayUntil liegt", () => {
-    const dbLevels = [{ instrument: "GBPUSD", timeframe: "1H", pivotTime: 50, price: 1.2, dir: 1, touched: true, touchedTime: 350, endTime: 350 }];
-    const result = computeHtfLiquidityLevels(candles, dbLevels, "GBPUSD", 300, 1.15);
+    const dbLevels = [{ instrument: "GBPUSD", timeframe: "1H", pivotTime: 50, price: 1.2, dir: 1, touched: true, touchedTime: REPLAY + 50, endTime: REPLAY + 50 }];
+    const result = computeHtfLiquidityLevels(candles, dbLevels, "GBPUSD", REPLAY, 1.15);
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ touched: false, touchedTime: null, endTime: 200 }); // endTime selbst geheilt auf letzte Kerze
   });
 
   it("behält touched, wenn der Sweep vor/an replayUntil liegt", () => {
     const dbLevels = [{ instrument: "GBPUSD", timeframe: "1H", pivotTime: 50, price: 1.2, dir: 1, touched: true, touchedTime: 150, endTime: 150 }];
-    const result = computeHtfLiquidityLevels(candles, dbLevels, "GBPUSD", 300, 1.15);
+    const result = computeHtfLiquidityLevels(candles, dbLevels, "GBPUSD", REPLAY, 1.15);
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ touched: true, touchedTime: 150, endTime: 150 });
   });

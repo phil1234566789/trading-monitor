@@ -1,3 +1,4 @@
+import { LIQUIDITY_FRACTAL_PERIOD } from "../_shared/liquidityDetection.ts";
 import { barSecondsFor } from "./timeframes.ts";
 
 // Replay-Rueckrechnung der persistierten Zonen/Level auf den Stand "as of asOfSec", aus db.ts
@@ -5,6 +6,26 @@ import { barSecondsFor } from "./timeframes.ts";
 // importierbar sein).
 
 const M5_SECONDS = barSecondsFor("5m");
+
+// Ab wann ein Level/eine Zone ueberhaupt EXISTIERT — pivot_time/start_time sind nur die OEFFNUNG
+// der jeweiligen Kerze, die Erkennung braucht danach noch Kerzen. Bis 12.09.2026 filterten beide
+// Funktionen unten roh auf <= asOfSec und zeigten damit Niveaus, deren Preis zum Stichzeitpunkt
+// noch gar nicht gelaufen war (GBPUSD 09.09.2026: ein 4H-Level 22h zu frueh, es lenkte Lanas
+// Fall-4-Einordnung auf ein Zukunfts-Level).
+//   Fraktal: bestaetigt, sobald LIQUIDITY_FRACTAL_PERIOD Kerzen NACH dem Pivot geschlossen sind
+//   (isUpFractal prueft candles[p+1..p+5] in _shared/liquidity.ts) -> period + 1 Bars.
+//   OB-Zone: detectOrderBlocks legt sie auf der MITTLEREN der drei FVG-Kerzen an, entdeckt wird sie
+//   auf der darauffolgenden -> bekannt mit deren Schluss, dieselbe Herleitung wie
+//   firstObFormationTimeAfter in obFormationTrigger.ts.
+// Nebeneffekt, bewusst akzeptiert: liquidity_levels enthaelt auch find-or-create-Zeilen der
+// Trade-Tools (findOrCreateLiquidityLevelId in db.ts) ohne Periode-5-Logik — die erscheinen dadurch
+// pauschal 6 Bars zu spaet. Wenige Zeilen, und zu spaet ist die harmlose Fehlerrichtung.
+const FRACTAL_CONFIRM_BARS = LIQUIDITY_FRACTAL_PERIOD + 1;
+const OB_FORMATION_BARS = 2;
+
+function existsAsOf(openSec: number, timeframe: string, bars: number, asOfSec: number): boolean {
+  return openSec + bars * barSecondsFor(timeframe) <= asOfSec;
+}
 
 export interface ProbeCandle {
   time: number;
@@ -80,7 +101,7 @@ export function applyAsOfZones<
 >(rows: T[], asOfSec: number | undefined, probe: ProbeCandle[] = []): T[] {
   if (asOfSec == null) return rows;
   return rows
-    .filter((r) => toSec(r.start_time) <= asOfSec)
+    .filter((r) => existsAsOf(toSec(r.start_time), r.timeframe, OB_FORMATION_BARS, asOfSec))
     .map((r) => {
       let row = r;
       // end_time == null bei touched/invalidated kommt von poi-watcher nie vor (es schreibt beide
@@ -116,7 +137,7 @@ export function applyAsOf<T extends { timeframe: string; direction: string; pric
 ): T[] {
   if (asOfSec == null) return rows;
   return rows
-    .filter((r) => toSec(r.pivot_time) <= asOfSec)
+    .filter((r) => existsAsOf(toSec(r.pivot_time), r.timeframe, FRACTAL_CONFIRM_BARS, asOfSec))
     .map((r) => {
       if (!r.touched || r.end_time == null) return r;
       const eventSec = toSec(r.end_time);

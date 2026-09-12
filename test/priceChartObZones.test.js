@@ -103,9 +103,17 @@ describe("filterDbObZones", () => {
     expect(result).toEqual([dbObZones[0], dbObZones[1], dbObZones[4]]);
   });
 
+  // +2 Bars: startTime ist die MITTLERE FVG-Kerze, entdeckt wird die Zone erst auf der naechsten —
+  // bekannt also mit deren Schluss (Lookahead-Leak-Fix 12.09.2026, Pendant zu applyAsOfZones).
   it("im Replay blendet Zonen aus, die erst NACH replayUntil entstanden sind", () => {
-    const result = filterDbObZones(dbObZones, "GBPUSD", 300, "1H", null);
+    const result = filterDbObZones(dbObZones, "GBPUSD", 300 + 2 * 3600, "1H", null);
     expect(result).toEqual([dbObZones[0], dbObZones[1]]);
+  });
+
+  it("zeigt eine Zone erst, wenn ihre entdeckende Kerze geschlossen hat", () => {
+    const zone = [{ instrument: "GBPUSD", timeframe: "1H", startTime: 0, top: 1.2, bottom: 1.1 }];
+    expect(filterDbObZones(zone, "GBPUSD", 2 * 3600 - 60, "1H", null)).toHaveLength(0);
+    expect(filterDbObZones(zone, "GBPUSD", 2 * 3600, "1H", null)).toHaveLength(1);
   });
 });
 
