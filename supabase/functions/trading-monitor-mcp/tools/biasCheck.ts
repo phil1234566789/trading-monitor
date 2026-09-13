@@ -249,12 +249,10 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
     // State-Machine V2 (tradingMachine.ts) — steht nach diesem Aufruf bei "s3_bias.llm3_kontextSynthese",
     // wartet auf check_session_window (Schritt 4), das den Übergang nach s45 auslöst.
     currentNode,
-    // Bewusst null — reine LLM-Anteile (siehe docs/state-machine.md, dauerhaft bei Lana):
-    // Kontext-Info-Synthese (zwei Beobachtungen zu einer Einordnung verknüpfen) und der
-    // Pace-Check-Hinweis (Chop-Phase zwischen Sweep/Fraktal und Reaktion). Macht sichtbar, was
-    // mechanisch fertig ist und was Lana selbst beisteuern muss.
+    // Bewusst null — reiner LLM-Anteil (siehe docs/state-machine.md, dauerhaft bei Lana):
+    // Kontext-Info-Synthese (zwei Beobachtungen zu einer Einordnung verknüpfen). Macht sichtbar,
+    // was mechanisch fertig ist und was Lana selbst beisteuern muss.
     kontextInfoSynthesis: null,
-    paceCheckNote: null,
   };
 }
 
@@ -292,11 +290,11 @@ export function registerBiasCheckTool(server: McpServer) {
         "übersprungen), Zwischen-Level-Check (`intermediateLevel`, inkl. heutiger Asia-Range), " +
         "Trend-Kraft am relevanten gegenläufigen HTF-OB/-Level (`trendForce`) — UND schreibt/" +
         "aktualisiert die Bias-Felder derselben Zeile in place (ein Fall-4-Neustart überschreibt sie " +
-        "am selben Tag, statt eine zweite Zeile anzulegen). `kontextInfoSynthesis`/`paceCheckNote` " +
-        "sind bewusst `null` — " +
-        "die beiden echten LLM-only-Anteile dieses Schritts, die DU selbst ergänzen musst (freie " +
-        "Kontext-Info-Synthese aus zwei Beobachtungen, Pace-Check bei einer Chop-Phase vor der " +
-        "Reaktion). `unresolvedTrend=true` heißt: Algo liefert keinen bestätigten 1H-Trend, manuelle " +
+        "am selben Tag, statt eine zweite Zeile anzulegen). `kontextInfoSynthesis` " +
+        "ist bewusst `null` — " +
+        "der echte LLM-only-Anteil dieses Schritts, den DU selbst ergänzen musst (freie " +
+        "Kontext-Info-Synthese aus zwei Beobachtungen). " +
+        "`unresolvedTrend=true` heißt: Algo liefert keinen bestätigten 1H-Trend, manuelle " +
         "Kraft-Abwägung nötig (die Zeile bleibt dabei bei Schritt 3 parken, kein BIAS_COMPUTED). " +
         "`pendingDecisions` listet explizit, welche der " +
         "03-htf-bias.md-Teilentscheidungen noch offen ist (Substep 3.1 Trend+Kraft, 3.2 Targets, " +

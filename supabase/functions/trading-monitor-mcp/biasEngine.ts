@@ -172,8 +172,8 @@ export function buildPendingDecisions(input: { trendForce: TrendForceResult; tre
     title: "Trend + Kraft",
     prompt:
       forceHints.length > 0
-        ? `Welcher Struktur-Fall trifft zu? Trend-Kraft bereits berechnet: ${forceHints.join(" ")} Zusätzlich Pace-Check: lag zwischen Sweep/Fractal und Reaktion eine Chop-Phase?`
-        : "Welcher Struktur-Fall trifft zu? Trend-Kraft konnte automatisch nicht bewertet werden (relevantes OB/Level noch nicht getestet) — Kursverlauf manuell prüfen. Zusätzlich Pace-Check: lag zwischen Sweep/Fractal und Reaktion eine Chop-Phase?",
+        ? `Welcher Struktur-Fall trifft zu? Trend-Kraft bereits berechnet: ${forceHints.join(" ")}`
+        : "Welcher Struktur-Fall trifft zu? Trend-Kraft konnte automatisch nicht bewertet werden (relevantes OB/Level noch nicht getestet) — Kursverlauf manuell prüfen.",
     options: ["1: Trend läuft normal weiter", "2: Trend schwächelt", "3: Frischer Trendwechsel gerade jetzt", "4: Ausgeglichener Kampf, kein Bias"],
   });
 

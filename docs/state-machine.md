@@ -382,8 +382,8 @@ Tool-Handler `tools/biasCheck.ts`: ruft Gate-Logik intern zuerst (Pure-Function-
 HTTP-Selbstaufruf), bricht bei Blockade sofort ab. Sonst: `structure1h` (Wiederverwendung der
 `dataExport.ts`-Bausteine), die drei Pure-Functions, schreibt `trading_loop_state`
 (`current_step=4`, Targets, Invalidierung, Zwischen-Level). Response enthält die Textbausteine aus
-`03-htf-bias.md` bereits fertig vorformuliert, PLUS zwei explizit als `null` markierte Felder für
-die zwei tatsächlich LLM-only Anteile (`kontextInfoSynthesis`, `paceCheckNote`) — macht sichtbar,
+`03-htf-bias.md` bereits fertig vorformuliert, PLUS ein explizit als `null` markiertes Feld für
+den tatsächlich LLM-only Anteil (`kontextInfoSynthesis`) — macht sichtbar,
 was mechanisch fertig ist und was Lana beisteuern muss.
 
 ### Tool 3 — `check_session_window` (Schritt 4)
