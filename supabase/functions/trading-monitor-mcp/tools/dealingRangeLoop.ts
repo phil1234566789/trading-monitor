@@ -4,12 +4,21 @@ import { berlinDateTimeStrFor, berlinDateStrFor } from "../berlinTime.ts";
 import { fetchForexCandles } from "../forexCandles.ts";
 import { firstObFormationTimeAfter } from "../obFormationTrigger.ts";
 import { barSecondsFor } from "../timeframes.ts";
-import { getLoopStateForDay, updateLoopState, closeLoopState, type TradingLoopStateRow, type HeartbeatEntry, appendHeartbeat } from "../loopState.ts";
+import { getLoopStateForDay, updateLoopState, closeLoopState, type TradingLoopStateRow, type HeartbeatEntry, type LoopLevel, appendHeartbeat } from "../loopState.ts";
 import { buildPretradeGates, type PretradeGatesResult } from "./pretradeGates.ts";
 import { buildSessionWindow } from "./sessionWindow.ts";
 import { buildDataSnapshot } from "./dataSnapshot.ts";
 import { buildRecentReactions } from "./recentReactions.ts";
-import { checkFallFour, hasReaction as computeHasReaction, computeWatchLevels, type FallFourResult, type WatchLevel } from "../fallClassifier.ts";
+import {
+  checkFallFour,
+  hasReaction as computeHasReaction,
+  computeWatchLevels,
+  computeHtfWatchLevels,
+  assessInducement,
+  type FallFourResult,
+  type WatchLevel,
+  type InducementAssessment,
+} from "../fallClassifier.ts";
 import { logDecision } from "../stateMachineLog.ts";
 import { loadMachineForDay, transition, transitionIfPossible, type LoadedMachine } from "../machineState.ts";
 import { currentNodePath } from "../tradingMachine.ts";
@@ -67,7 +76,10 @@ export interface TickResult {
   mustNotifyPhilip: boolean;
   watchLevelAbove: WatchLevel | null;
   watchLevelBelow: WatchLevel | null;
+  htfWatchLevelAbove: WatchLevel | null;
+  htfWatchLevelBelow: WatchLevel | null;
   evidence: {
+    htfInducementHits: Array<{ level: LoopLevel; assessment: InducementAssessment }>;
     completedTradeSetup: unknown;
     oppositeSetup: unknown;
     confluenceObReactions: unknown[];
@@ -194,13 +206,44 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
     watchLevels = computeWatchLevels(currentPrice, candidateLiquidity, candidateOb);
   }
 
+  // Dritter Kanal, FALL-UNABHÄNGIG (siehe computeHtfWatchLevels): die nächsten ungetouchten
+  // 1H/4H-Liquiditäts-Level. snapshot.liquidity ist bereits auf 1H/4H gefiltert.
+  const htfWatchLevels =
+    currentPrice == null ? { above: null, below: null } : computeHtfWatchLevels(currentPrice, (snapshot as any).liquidity ?? []);
+
+  // Wurde eines der im VORIGEN Tick gemerkten HTF-Level inzwischen angelaufen? Bewusst hier
+  // ausgewertet statt beim Trigger: so greift es unabhängig davon, welcher der drei Trigger den
+  // Tick tatsächlich ausgelöst hat. Die Inducement-Klasse kommt fertig mit, statt sie Lana aus dem
+  // Alter herleiten zu lassen (Philip 13.09.2026).
+  const htfHits: Array<{ level: LoopLevel; assessment: ReturnType<typeof assessInducement> }> = [];
+  if (currentPrice != null) {
+    for (const prev of [loopState.htfWatchLevelAbove, loopState.htfWatchLevelBelow]) {
+      if (prev == null || prev.sourceTimeSec == null) continue;
+      const reached = prev === loopState.htfWatchLevelAbove ? currentPrice >= prev.price : currentPrice <= prev.price;
+      if (!reached) continue;
+      htfHits.push({
+        level: prev,
+        assessment: assessInducement(
+          { price: prev.price, pivotTimeSec: prev.sourceTimeSec, direction: prev === loopState.htfWatchLevelAbove ? "high" : "low" },
+          atSec,
+        ),
+      });
+    }
+  }
+
   if (fallFour.hit) {
     // status muss weg von 'active', sonst verhindert der Partial-Unique-Index (nur ein aktiver Loop
     // je Instrument), dass der nächste run_bias_check (Fall 4 -> Schritt 3) einen neuen anlegen kann
     // — die Maschine selbst regelt nur current_node/current_step, nicht status.
     await closeLoopState(loopState.id, "fall4_pending_bias", 4);
   } else {
-    await updateLoopState(loopState.id, { watchLevelAbove: watchLevels.above, watchLevelBelow: watchLevels.below, lastAnalysisTimeSec: atSec });
+    await updateLoopState(loopState.id, {
+      watchLevelAbove: watchLevels.above,
+      watchLevelBelow: watchLevels.below,
+      htfWatchLevelAbove: htfWatchLevels.above,
+      htfWatchLevelBelow: htfWatchLevels.below,
+      lastAnalysisTimeSec: atSec,
+    });
   }
 
   return {
@@ -218,7 +261,16 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
     mustNotifyPhilip: reactionFound,
     watchLevelAbove: watchLevels.above,
     watchLevelBelow: watchLevels.below,
+    // Fall-unabhängig, damit HTF-Level auch in Fall 1/2 sichtbar bleiben statt vom dichteren
+    // M5-Raster verdeckt zu werden (Philip 13.09.2026, GBPUSD-09.09.: das 4H-Level 1.35652 tauchte
+    // den ganzen Tag in keinem Tick auf).
+    htfWatchLevelAbove: htfWatchLevels.above,
+    htfWatchLevelBelow: htfWatchLevels.below,
     evidence: {
+      // Angelaufene HTF-Level seit dem letzten Tick, mit fertiger Inducement-Klasse. Ein gesweeptes
+      // Hoch ist Kraft nach unten, ein gesweeptes Tief Kraft nach oben (liquidität.md) — steht im
+      // text mit drin, weil genau diese Umkehrung im 09.09.-Backtest verdreht wurde.
+      htfInducementHits: htfHits,
       completedTradeSetup: setup,
       // Frisches Setup in Gegenrichtung (null, wenn keins oder älter als OPPOSITE_SETUP_FRESH_HOURS).
       // Ist es gesetzt, ist die Fall-1/2-Frage richtungsoffen zu stellen — ein valider Sweep in
@@ -237,6 +289,17 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
     },
     currentNode: currentNodePath(loaded.actor),
   };
+}
+
+// Ein Satz, der sagt, warum der Loop hier stehen bleibt — an beiden Stopp-Stellen unten identisch
+// gebraucht (Erster-Tick-Shortcut + Batch-Schleife). Angelaufene HTF-Level werden mit ihrer
+// Inducement-Klasse angehängt, damit sie schon im Heartbeat-Log stehen und nicht erst in der
+// evidence auffindbar sind (Philip 13.09.2026: Sichtbarkeit ist ausdrücklicher Teil des Wunsches).
+function describeTickStop(tick: TickResult): string {
+  const base = tick.fallFour.hit ? `Fall 4 (${tick.fallFour.reason})` : tick.hasReaction ? "Reaktion gefunden (Fall 1/2/3, siehe evidence)" : "keine Reaktion";
+  // Schlusspunkt weg — die Heartbeat-Templates hängen selbst einen an.
+  const htf = tick.evidence.htfInducementHits.map((h) => h.assessment.text.replace(/\.$/, "")).join("; ");
+  return htf ? `${base} | HTF: ${htf}` : base;
 }
 
 export interface DealingRangeLoopArgs {
@@ -283,6 +346,26 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
     };
   }
 
+  // Fast-Forward hart begrenzen statt nur zu dokumentieren (Root Cause GBPUSD-Backtest 09.09.2026):
+  // ein replayUntilSec von Tagesende ließ den Loop nur an Watch-Leveln stoppen — zwischen 09:20 und
+  // 10:00 kam kein einziger Tick, weil der Kurs exakt zwischen den beiden Watch-Leveln blieb. Genau
+  // in diesem Fenster entstand die Short-DR und lief der Entry (+8,5R, verpasst). Die einschränkende
+  // Regel stand bis dahin NUR in get_next_actions Tool-Beschreibung, während diese hier einladend
+  // "Backtest-Zielzeitpunkt, bis zu dem vorgespult wird" sagte — von zwei widersprechenden
+  // Beschreibungen wurde die permissivere befolgt. Deshalb serverseitig erzwungen: im laufenden
+  // Schritt-5-Loop (Fall 2/3) darf ein Aufruf höchstens einen 5-Minuten-Takt weit springen.
+  if (replayUntilSec != null && loopState.lastAnalysisTimeSec != null && loopState.currentStep >= 4) {
+    const maxSec = loopState.lastAnalysisTimeSec + M5_BAR_SECONDS;
+    if (replayUntilSec > maxSec) {
+      throw new Error(
+        `replayUntilSec (${berlinDateTimeStrFor(replayUntilSec)}) springt weiter als einen 5-Minuten-Takt über den letzten Analysestand ` +
+          `(${berlinDateTimeStrFor(loopState.lastAnalysisTimeSec)}) hinaus. Erlaubt ist höchstens ${berlinDateTimeStrFor(maxSec)} — ` +
+          `genau der Wert, den get_next_action als nextReplayUntilSec liefert. Grund: beim Vorspulen stoppt der Loop nur an Watch-Leveln, ` +
+          `eine dazwischen entstehende Dealing Range bleibt unsichtbar (GBPUSD 09.09.2026, verpasster +8,5R-Trade).`,
+      );
+    }
+  }
+
   if (replayUntilSec != null && loopState.lastAnalysisTimeSec != null && replayUntilSec < loopState.lastAnalysisTimeSec) {
     // Ohne diesen Guard: die Batch-Schleife unten startet mit cursorSec=lastAnalysisTimeSec, deren
     // for-Header (cursorSec < replayUntilSec) ist dann von Anfang an false -> stiller No-op mit
@@ -310,11 +393,16 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
 
     const above = loopState.watchLevelAbove?.price ?? null;
     const below = loopState.watchLevelBelow?.price ?? null;
+    // Dritter, gleichberechtigter Trigger — siehe Backtest-Pfad unten.
+    const htfAbove = loopState.htfWatchLevelAbove?.price ?? null;
+    const htfBelow = loopState.htfWatchLevelBelow?.price ?? null;
     let hit = true;
-    if (above != null || below != null) {
+    if (above != null || below != null || htfAbove != null || htfBelow != null) {
       const snapshot = await buildDataSnapshot({ instrument });
       const price: number | null = (snapshot as any).referencePrice ?? null;
-      hit = price != null && ((above != null && price >= above) || (below != null && price <= below));
+      hit =
+        price != null &&
+        ((above != null && price >= above) || (below != null && price <= below) || (htfAbove != null && price >= htfAbove) || (htfBelow != null && price <= htfBelow));
       // Zweiter, gleichberechtigter Trigger (siehe obFormationTrigger.ts): auch ohne Preis-Treffer
       // aufwachen, wenn seit dem letzten Tick eine neue M5-OB-Zone entstanden ist.
       if (!hit && isHighAttention(loopState) && loopState.lastAnalysisTimeSec != null) {
@@ -368,7 +456,7 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
       await transition(loaded, instrument, { type: "NEWS_BLACKOUT_CHECKED", active: false }, cursorSec);
       await transition(loaded, instrument, { type: "BATCH_LEVEL_CHECKED", hit: true }, cursorSec);
       const tick = await performFullTick(loaded, currentLoopState, instrument, cursorSec);
-      const stopSummary = tick.fallFour.hit ? `Fall 4 (${tick.fallFour.reason})` : tick.hasReaction ? "Reaktion gefunden (Fall 1/2/3, siehe evidence)" : "keine Reaktion";
+      const stopSummary = describeTickStop(tick);
       await heartbeat(cursorSec, `Erster Tick (${berlinDateTimeStrFor(cursorSec)}) ---> ${stopSummary}.`, currentLoopState.id);
       if (tick.fallFour.hit || tick.hasReaction) {
         return { instrument, mode: "backtest" as const, stopped: true, stopReason: stopSummary, heartbeats, tick };
@@ -398,7 +486,18 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
 
     const above = currentLoopState.watchLevelAbove?.price ?? null;
     const below = currentLoopState.watchLevelBelow?.price ?? null;
-    const levelHitSec = relevantCandles.find((c) => (above != null && c.high >= above) || (below != null && c.low <= below))?.time ?? null;
+    // Dritter, gleichberechtigter Trigger: die fall-unabhängigen HTF-Level. Ohne ihn bleibt ein
+    // anlaufendes 1H/4H-Level in Fall 1/2 unsichtbar, weil dort nur M5-Watch-Level gesetzt sind.
+    const htfAbove = currentLoopState.htfWatchLevelAbove?.price ?? null;
+    const htfBelow = currentLoopState.htfWatchLevelBelow?.price ?? null;
+    const levelHitSec =
+      relevantCandles.find(
+        (c) =>
+          (above != null && c.high >= above) ||
+          (below != null && c.low <= below) ||
+          (htfAbove != null && c.high >= htfAbove) ||
+          (htfBelow != null && c.low <= htfBelow),
+      )?.time ?? null;
     // Zweiter, gleichberechtigter Trigger neben dem gespeicherten Watch-Level (siehe
     // obFormationTrigger.ts) — sonst weckt eine neu entstandene Entry-Zone den Loop erst, wenn
     // zufaellig ein ALTES Level getroffen wird.
@@ -417,7 +516,7 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
     }
 
     const tick = await performFullTick(loaded, currentLoopState, instrument, hitTimeSec);
-    const stopSummary = tick.fallFour.hit ? `Fall 4 (${tick.fallFour.reason})` : tick.hasReaction ? "Reaktion gefunden (Fall 1/2/3, siehe evidence)" : "keine Reaktion";
+    const stopSummary = describeTickStop(tick);
     await heartbeat(hitTimeSec, `${triggerLabel} ausgelöst (${berlinDateTimeStrFor(hitTimeSec)}) ---> ${stopSummary}.`, currentLoopState.id);
 
     if (tick.fallFour.hit || tick.hasReaction) {
@@ -607,7 +706,15 @@ export function registerDealingRangeLoopTool(server: McpServer) {
         "automatisch weiter, solange gar nichts gefunden wird — bis `maxBatches` (Default 10).",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
-        replayUntilSec: z.number().int().optional().describe("Unix-Sekunden — Backtest-Zielzeitpunkt, bis zu dem vorgespult wird. Weglassen = Live-Tick 'jetzt'."),
+        replayUntilSec: z
+          .number()
+          .int()
+          .optional()
+          .describe(
+            "Unix-Sekunden — nächster Backtest-Analysezeitpunkt. IMMER der nextReplayUntilSec-Wert aus get_next_action, " +
+              "also letzter Analysestand + 5 Minuten. Größere Sprünge werden serverseitig abgelehnt: beim Vorspulen stoppt der " +
+              "Loop nur an Watch-Leveln, eine dazwischen entstehende Dealing Range bleibt unsichtbar. Weglassen = Live-Tick 'jetzt'.",
+          ),
         maxBatches: z.number().int().positive().optional().describe("Nur Backtest — Sicherheits-Cap, Default 10 (~20h Abdeckung)"),
       },
     },

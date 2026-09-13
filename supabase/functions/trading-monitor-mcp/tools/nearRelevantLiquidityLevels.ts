@@ -3,7 +3,7 @@ import { getLiquidityLevels, getSessions } from "../db.ts";
 import { berlinOffsetMinutes } from "../berlinTime.ts";
 import { buildSessionContextLookup, contextForPivot, bonusLabelForPivot } from "../sessionOccurrences.js";
 import { PIP_SIZE } from "../pipConfig.js";
-import { formatKontext } from "./dataExport.ts";
+import { formatKontext } from "../kontextLabel.ts";
 
 // Chat 2026-08-26, Philip: ersetzt das alte get_liquidity_levels — "früher war die Idee, dass Lana
 // alles selbst herausfindet, solange sie ALLE Daten zur Verfügung hat. Die Realität zeigt, dass sie

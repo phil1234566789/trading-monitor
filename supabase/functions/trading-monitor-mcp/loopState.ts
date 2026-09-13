@@ -54,6 +54,11 @@ export interface TradingLoopStateRow {
   invalidation: number | null;
   watchLevelAbove: LoopLevel | null;
   watchLevelBelow: LoopLevel | null;
+  // Dritter, fall-unabhängiger Watch-Kanal (siehe computeHtfWatchLevels): die nächsten ungetouchten
+  // 1H/4H-Liquiditäts-Level. Laufen additiv neben watchLevelAbove/Below, die in Fall 1/2 auf M5
+  // umschalten und HTF sonst komplett verdecken.
+  htfWatchLevelAbove: LoopLevel | null;
+  htfWatchLevelBelow: LoopLevel | null;
   biasComputedAt: string | null;
   lastAnalysisTimeSec: number | null;
   replayUntilSec: number | null;
@@ -83,6 +88,8 @@ function rowToState(row: Record<string, unknown>): TradingLoopStateRow {
     invalidation: (row.invalidation as number | null) ?? null,
     watchLevelAbove: (row.watch_level_above as LoopLevel | null) ?? null,
     watchLevelBelow: (row.watch_level_below as LoopLevel | null) ?? null,
+    htfWatchLevelAbove: (row.htf_watch_level_above as LoopLevel | null) ?? null,
+    htfWatchLevelBelow: (row.htf_watch_level_below as LoopLevel | null) ?? null,
     biasComputedAt: (row.bias_computed_at as string | null) ?? null,
     lastAnalysisTimeSec: (row.last_analysis_time_sec as number | null) ?? null,
     replayUntilSec: (row.replay_until_sec as number | null) ?? null,
@@ -149,6 +156,8 @@ export async function upsertBiasFields(args: UpsertBiasFieldsArgs): Promise<Trad
         invalidation: args.invalidation,
         watch_level_above: null,
         watch_level_below: null,
+        htf_watch_level_above: null,
+        htf_watch_level_below: null,
         bias_computed_at: args.biasComputedAt,
         last_analysis_time_sec: args.lastAnalysisTimeSec,
         replay_until_sec: args.replayUntilSec,
@@ -166,6 +175,8 @@ export interface UpdateLoopStateArgs {
   dealingRangeId?: number | null;
   watchLevelAbove?: LoopLevel | null;
   watchLevelBelow?: LoopLevel | null;
+  htfWatchLevelAbove?: LoopLevel | null;
+  htfWatchLevelBelow?: LoopLevel | null;
   lastAnalysisTimeSec?: number;
   replayUntilSec?: number | null;
 }
@@ -175,6 +186,8 @@ const UPDATE_FIELD_MAP: Record<keyof UpdateLoopStateArgs, string> = {
   dealingRangeId: "dealing_range_id",
   watchLevelAbove: "watch_level_above",
   watchLevelBelow: "watch_level_below",
+  htfWatchLevelAbove: "htf_watch_level_above",
+  htfWatchLevelBelow: "htf_watch_level_below",
   lastAnalysisTimeSec: "last_analysis_time_sec",
   replayUntilSec: "replay_until_sec",
 };

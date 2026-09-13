@@ -49,6 +49,10 @@ export async function buildGetLoopState({ instrument, replayUntilSec }: GetLoopS
     invalidation: loopState.invalidation,
     watchLevelAbove: loopState.watchLevelAbove,
     watchLevelBelow: loopState.watchLevelBelow,
+    // Fall-unabhängiger dritter Kanal — in Fall 1/2 sind watchLevelAbove/Below M5-Level, die
+    // HTF-Level würden hier sonst gar nicht mehr auftauchen (siehe computeHtfWatchLevels).
+    htfWatchLevelAbove: loopState.htfWatchLevelAbove,
+    htfWatchLevelBelow: loopState.htfWatchLevelBelow,
     biasComputedAt: loopState.biasComputedAt,
     lastAnalysisTime: loopState.lastAnalysisTimeSec == null ? null : { sec: loopState.lastAnalysisTimeSec, berlin: berlinDateTimeStrFor(loopState.lastAnalysisTimeSec) },
     replayUntil: loopState.replayUntilSec == null ? null : { sec: loopState.replayUntilSec, berlin: berlinDateTimeStrFor(loopState.replayUntilSec) },

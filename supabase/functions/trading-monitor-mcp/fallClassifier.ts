@@ -1,5 +1,6 @@
 // Pure Logik hinter run_dealing_range_loop (Schritt 5, siehe docs/state-machine.md +
 // 05-dealing-range-bestaetigen.md) — dependency-frei, testbar ohne DB/Deno-Fetches.
+import { businessSecondsBetween, classifyAge, type AgeTier } from "../_shared/ageTier.ts";
 //
 // Nur Fall 4 (Trend-/Countertrend-Target oder Invalidierung erreicht) ist ein reiner
 // Preisvergleich und wird hier mechanisch entschieden. Fall 1/2/3 sind NICHT mechanisch
@@ -84,6 +85,10 @@ export interface WatchLevel {
   refId?: number | null;
   timeframe?: string | null;
   context?: string | null;
+  // Pivot-Zeitpunkt der Quelle — ohne ihn lässt sich beim Treffer die Inducement-Klasse nicht
+  // bestimmen (siehe assessInducement), und LoopLevel.sourceTimeSec bliebe leer.
+  sourceTimeSec?: number | null;
+  direction?: "high" | "low" | null;
 }
 
 export interface WatchLevelInputLiquidity {
@@ -92,6 +97,8 @@ export interface WatchLevelInputLiquidity {
   id?: number | null;
   timeframe: string;
   context?: string | null;
+  pivotTime?: number | null;
+  direction?: "high" | "low" | null;
 }
 
 export interface WatchLevelInputOb {
@@ -111,7 +118,7 @@ export function computeWatchLevels(currentPrice: number, liquidityLevels: WatchL
   const candidates: WatchLevel[] = [];
   for (const l of liquidityLevels) {
     if (l.touched) continue;
-    candidates.push({ price: l.price, kind: "liquidity", refId: l.id ?? null, timeframe: l.timeframe, context: l.context ?? null });
+    candidates.push({ price: l.price, kind: "liquidity", refId: l.id ?? null, timeframe: l.timeframe, context: l.context ?? null, sourceTimeSec: l.pivotTime ?? null, direction: l.direction ?? null });
   }
   for (const z of obZones) {
     if (z.touched || z.invalidated) continue;
@@ -121,4 +128,43 @@ export function computeWatchLevels(currentPrice: number, liquidityLevels: WatchL
   const above = candidates.filter((c) => c.price > currentPrice).sort((a, b) => a.price - b.price)[0] ?? null;
   const below = candidates.filter((c) => c.price < currentPrice).sort((a, b) => b.price - a.price)[0] ?? null;
   return { above, below };
+}
+
+// Dritter, FALL-UNABHÄNGIGER Watch-Kanal (Philip 13.09.2026: "In meiner Strategie dreht sich alles
+// um LQ-Sweeps ... Lana muss auch in der statemachine die aktuellen untouched HTF Levels im Blick
+// haben"). Die beiden Aufmerksamkeitslevel aus docs/attention-levels.md sind exklusiv: sobald eine
+// Reaktion gefunden ist (Fall 1/2), läuft der Loop dauerhaft im M5-Pfad und sieht 1H/4H gar nicht
+// mehr — M5-Level liegen dichter und verdrängen HTF-Level, sobald beide im selben Kandidatentopf
+// landen. Im GBPUSD-Backtest 09.09.2026 war ab dem ersten Tick durchgehend hasReaction=true, das
+// 4H-Level 1.35652 konnte deshalb nie Watch-Level werden, obwohl der Kurs direkt darauf zulief.
+// Inducements sind laut liquidität.md aber per Definition 1H/4H-Sweeps — man braucht sie genau
+// dann, wenn eine Dealing Range in Arbeit ist.
+//
+// Bewusst NUR Liquidity-Level, keine OB-Kanten (Philip, 13.09.2026): ein Inducement ist ein
+// LQ-Sweep, OB-Kanten würden das Signal verwässern.
+export function computeHtfWatchLevels(currentPrice: number, htfLiquidityLevels: WatchLevelInputLiquidity[]): { above: WatchLevel | null; below: WatchLevel | null } {
+  const htfOnly = htfLiquidityLevels.filter((l) => l.timeframe === "1H" || l.timeframe === "4H");
+  return computeWatchLevels(currentPrice, htfOnly, []);
+}
+
+export interface InducementAssessment {
+  class: AgeTier;
+  businessSeconds: number;
+  text: string;
+}
+
+// Die Einstufung, die Lana beim Treffer mitgeliefert bekommt, statt sie selbst aus dem Alter
+// herzuleiten (Philip 13.09.2026, explizit gegen "Klassifikation macht Lana" entschieden — genau
+// die Stelle, an der sie im 09.09.-Backtest gepatzt hat). "Major" löst das Handelsverbot aus
+// liquidität.md#regel--kein-trade-gegen-einen-kraftvollen-major-inducement aus, "Medium" nicht —
+// deshalb kommt die Schwelle aus _shared/ageTier.ts statt aus einer weiteren lokalen Kopie.
+export function assessInducement(level: { price: number; pivotTimeSec: number; direction?: "high" | "low" | null }, atSec: number): InducementAssessment {
+  const businessSeconds = businessSecondsBetween(level.pivotTimeSec, atSec);
+  const cls = classifyAge(businessSeconds);
+  const label = `${cls[0].toUpperCase()}${cls.slice(1)} Inducement`;
+  // Ein gesweeptes Hoch ist Kraft nach unten, ein gesweeptes Tief Kraft nach oben (liquidität.md) —
+  // die Richtung gehört in den Text, weil genau diese Umkehrung im 09.09.-Backtest verdreht wurde.
+  const force = level.direction === "high" ? "Kraft nach unten" : level.direction === "low" ? "Kraft nach oben" : null;
+  const parts = [`${label} ${level.price} angelaufen`, force].filter((p): p is string => p != null);
+  return { class: cls, businessSeconds, text: `${parts.join(" ---> ")}.` };
 }

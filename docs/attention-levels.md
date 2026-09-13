@@ -8,6 +8,11 @@ der Code angepasst wird.
 Kern-Idee: Wie teuer/aufmerksam die Maschine hinschaut, hängt vom Fall ab, in dem sie gerade
 steckt — nicht ein einziges Watch-Level-Schema für alles.
 
+**Ausnahme seit 13.09.2026: der HTF-Kanal läuft fall-unabhängig.** Die Level-Auswahl unten (a–d)
+gilt nur für die beiden fall-abhängigen Watch-Level. Daneben hält die Maschine **immer** die
+nächsten ungetouchten 1H/4H-Liquiditäts-Level über und unter dem Preis — siehe
+[HTF-Watch-Kanal](#htf-watch-kanal-13092026-implementiert).
+
 ## a) Aufmerksamkeitslevel niedrig — kein DR, Markt gibt nichts her (Fall 3)
 
 Warten, bis POIs erreicht werden. Level: 1H/4H-Liquidity + 1H/4H-OBs. Hier werden bewusst
@@ -78,6 +83,38 @@ Auslöser war der GBPUSD-Backtest 09.09.2026: der 09:20-Tick wartete auf einen 1
 OB-Rand 3,5 Pips über dem Kurs, während zeitgleich die eigentliche Entry-Zone 1.35647–1.3568
 entstand — deren Rand hätte die 09:45-Kerze getroffen. Nächster Tick kam erst um 10:00, der Trade
 (+8,5R) war weg.
+
+## HTF-Watch-Kanal (13.09.2026, implementiert)
+
+Dritter Watch-Kanal neben den beiden fall-abhängigen Leveln und dem M5-OB-Formations-Trigger:
+`computeHtfWatchLevels()` (`fallClassifier.ts`) liefert die nächsten **ungetouchten
+1H/4H-Liquiditäts-Level** über und unter dem Preis, persistiert in
+`trading_loop_state.htf_watch_level_above/_below` und ausgegeben in `get_loop_state` wie im Tick.
+
+**Warum fall-unabhängig:** Die Level a–d oben sind exklusiv — sobald `reactionFound` gilt (Fall
+1/2), füttert `performFullTick` nur noch M5-Kandidaten in `computeWatchLevels`. M5-Level liegen
+dichter und verdrängen HTF-Level systematisch, sobald beide im selben Kandidatentopf landen. Im
+GBPUSD-Backtest 09.09.2026 war ab dem ersten Tick um 09:00 durchgehend `hasReaction=true`; das
+4H-Level 1.35652 tauchte deshalb den ganzen Tag in **keinem einzigen Tick** auf, obwohl der Kurs
+direkt darauf zulief und es um 09:10 überschritt. Inducements sind laut `liquidität.md` aber per
+Definition 1H/4H-Sweeps — man braucht sie genau dann, wenn eine Dealing Range in Arbeit ist.
+
+Philip, 13.09.2026: „In meiner Strategie dreht sich alles um LQ-Sweeps! Das ist der HAUPTTEIL
+meines Tradings. Das MUSS zuverlässig funktionieren."
+
+- **Nur Liquidity-Level, keine OB-Kanten** — ein Inducement ist ein LQ-Sweep, OB-Kanten würden das
+  Signal verwässern.
+- **Dritter Trigger:** Live wie Backtest wecken die HTF-Level den Loop gleichberechtigt neben den
+  M5-Watch-Leveln und dem OB-Formations-Trigger.
+- **Treffer liefert die Inducement-Klasse fertig mit** (`assessInducement`, Schwelle aus
+  `_shared/ageTier.ts`): `evidence.htfInducementHits` plus ein Zusatz im Heartbeat. Bewusst
+  mechanisch statt Lanas Herleitung — „Major" löst das Handelsverbot aus
+  `liquidität.md#regel--kein-trade-gegen-einen-kraftvollen-major-inducement` aus, „Medium" nicht,
+  und genau diese Einstufung ging im 09.09.-Durchlauf schief. Die Richtung steht im Text mit drin
+  (gesweeptes Hoch = Kraft nach unten), weil auch die dort verdreht wurde.
+
+**Grenze:** Der Kanal ist nur so gut wie `snapshot.liquidity`, das preislich vorgefiltert ist
+(`SNAPSHOT_RANGE_PIPS`). Liegt kein ungetouchtes HTF-Level in Reichweite, bleibt die Seite `null`.
 
 ## Offen / TODO
 

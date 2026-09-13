@@ -25,6 +25,12 @@ import { PIP_SIZE } from "../pipConfig.js";
 // exakt selbe Problem schon eine geprüfte Lösung hatte — DRY-Fix statt einer zweiten Definition von
 // "relevant".
 import { filterRelevantObZoneRows } from "./nearRelevantObZones.ts";
+// Alters-Einstufung (Minor/Medium/Major) + Wochenend-Regel aus der EINEN Quelle statt einer lokalen
+// Kopie — Cross-Import nach _shared/ funktioniert nachweislich (liquidityDetection.ts oben nimmt
+// denselben Weg). Das kontext-Label selbst liegt seit 2026-09-13 in kontextLabel.ts, damit es aus
+// Vitest erreichbar ist (siehe dortiger Kopfkommentar).
+import { businessSecondsBetween } from "../../_shared/ageTier.ts";
+import { formatKontext } from "../kontextLabel.ts";
 // Session-Kontext ("asia high" etc., siehe src/dataExport.js) — sessionOccurrences.js ist seit
 // Chat 2026-08-02 dependency-frei (aus sessions.js extrahiert, dessen `sessions`-Singleton
 // localStorage anfasst), deshalb direkt cross-directory importierbar wie oben.
@@ -83,62 +89,6 @@ function coincidesWithHtf(level: { price: number; direction: "high" | "low" }, h
   return htfLevels.some((h) => h.direction === level.direction && Math.abs(h.price - level.price) <= SAME_PRICE_EPSILON);
 }
 
-// Chat 2026-08-26, Philip: "kontext"-Feld an jedem LQ-Level für Lana — dieselbe Label-Formel wie am
-// Chart (src/liquidity.js: formatLiquidityLevelLabel), hier dupliziert wie der Rest dieses Moduls
-// (siehe CLAUDE.md "MCP-Server"; businessSecondsBetween/formatAgeShort sind Ports von
-// src/chartTimeUtils.js, die Tier-Grenzen von src/ageTier.ts — nicht cross-importiert, da Deno beim
-// Deploy nur den eigenen Ordner bündelt, ein Import über supabase/functions/trading-monitor-mcp/
-// hinaus würde fehlschlagen, siehe computeRangesPivots oben für den etablierten "lokale Kopie"-Weg).
-const KONTEXT_DAY_SECONDS = 24 * 3600;
-const KONTEXT_WEEK_SECONDS = 7 * KONTEXT_DAY_SECONDS;
-function classifyAgeTier(businessSeconds: number): "minor" | "medium" | "major" {
-  if (businessSeconds < KONTEXT_DAY_SECONDS) return "minor";
-  if (businessSeconds <= KONTEXT_WEEK_SECONDS) return "medium";
-  return "major";
-}
-function businessSecondsBetween(startSec: number, endSec: number): number {
-  if (endSec == null || startSec == null || endSec <= startSec) return 0;
-  const DAY = 86400;
-  let total = 0;
-  let cursor = startSec;
-  while (cursor < endSec) {
-    const dayStart = Math.floor(cursor / DAY) * DAY;
-    const segmentEnd = Math.min(dayStart + DAY, endSec);
-    const isWeekend = [0, 6].includes(new Date(dayStart * 1000).getUTCDay());
-    if (!isWeekend) total += segmentEnd - cursor;
-    cursor = segmentEnd;
-  }
-  return total;
-}
-function formatAgeShort(seconds: number): string | null {
-  if (seconds < 0) return null;
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  if (days > 0) return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
-  if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-  return `${minutes}m`;
-}
-// Bug-Report Philip 2026-08-26, dritte Runde: "Alter bedeutet von Entstehungspunkt bis touched.
-// Falls noch nie touched, dann halt eben bis jetzt. Das gilt überall so." — Port von
-// ageReferenceTime (src/chartTimeUtils.js), hier dupliziert wie der Rest dieses Moduls.
-function ageReferenceTime(touchedTimeSec: number | null, nowSec: number): number {
-  return touchedTimeSec ?? nowSec;
-}
-// Sweep/High/Low-Typtext ist wieder raus (Chat 2026-08-26, zweite Runde: "dann kann das label
-// 'sweep|high|low' ja weg" — dasselbe Pendant zu src/liquidity.js: formatLiquidityLevelLabel, siehe
-// dortige Begründung). Alter als reines "(3h)" statt "(3h alt)" (dritte Runde desselben Chats).
-// touchedTimeSec (vierte Runde) hat Vorrang vor nowSec für Tier UND Alter — ein vor Tagen
-// gesweeptes Level soll nicht scheinbar unbegrenzt "älter" werden, nur weil seither Zeit vergeht.
-export function formatKontext(bonus: string | null, pivotTimeSec: number, touchedTimeSec: number | null, nowSec: number): string {
-  const reference = ageReferenceTime(touchedTimeSec, nowSec);
-  const businessSec = businessSecondsBetween(pivotTimeSec, reference);
-  const tier = classifyAgeTier(businessSec);
-  const tierLabel = tier !== "minor" ? `${tier[0].toUpperCase()}${tier.slice(1)}` : null;
-  const age = formatAgeShort(businessSec);
-  const ageLabel = age ? `(${age})` : null;
-  return [bonus, tierLabel, ageLabel].filter((p): p is string => p != null && p !== "").join(" ");
-}
 
 function rangeStats(rawCandles: Candle[]) {
   if (rawCandles.length === 0) return { rangeHigh: null, rangeLow: null };
