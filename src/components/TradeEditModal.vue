@@ -349,7 +349,7 @@ function confirmationLabel(confirmation) {
       <CrudListSection
         title="Bestätigungen (GO für die Idee)"
         icon="✔"
-        add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
+        add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Divergenz anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
         :items="rangeConfirmations"
         :item-key="(c) => c.id"
         :item-label="confirmationLabel"
@@ -359,13 +359,13 @@ function confirmationLabel(confirmation) {
         @hover="(c) => emit('hover-evidence', c)"
       />
 
-      <!-- Zusatzargumente (Confluence: gibt mehr Sicherheit, aber kein GO — Fib/RSI-Divergenz),
+      <!-- Zusatzargumente (Confluence: gibt mehr Sicherheit, aber kein GO — Fib),
            siehe trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-
            range-go-bekommt. -->
       <CrudListSection
         title="Zusatzargumente (Idee)"
         icon="💡"
-        add-title="Zusatzargument hinzufügen (Trade-Modus, dann Fib/Divergenz anklicken)"
+        add-title="Zusatzargument hinzufügen (Trade-Modus, dann Fib anklicken)"
         :items="rangeConfluences"
         :item-key="(c) => c.id"
         :item-label="confirmationLabel"
@@ -439,7 +439,7 @@ function confirmationLabel(confirmation) {
       <CrudListSection
         title="Bestätigungen (GO für diesen Entry)"
         icon="✔"
-        add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
+        add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Divergenz anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
         :items="positionConfirmations"
         :item-key="(c) => c.id"
         :item-label="confirmationLabel"
@@ -452,7 +452,7 @@ function confirmationLabel(confirmation) {
       <CrudListSection
         title="Zusatzargumente (Entry)"
         icon="💡"
-        add-title="Zusatzargument hinzufügen (Trade-Modus, dann Fib/Divergenz anklicken)"
+        add-title="Zusatzargument hinzufügen (Trade-Modus, dann Fib anklicken)"
         :items="positionConfluences"
         :item-key="(c) => c.id"
         :item-label="confirmationLabel"

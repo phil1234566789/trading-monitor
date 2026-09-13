@@ -1153,8 +1153,7 @@ export interface AddTradeConfirmationArgs {
   // dealing_range fort (Port von src/tradeIntake.js: insertConfirmation, dortiger Kommentar für die
   // "direction immer überschreiben, invalidation nur wenn leer"-Regel).
   obDirection?: "long" | "short";
-  // Nur bei kind='rsi_divergence' sinnvoll (Task "Lana-MCP: Confirmations/Confluences/
-  // Anti-Confluences/Targets vollständig für eine Dealing Range anlegbar") — price/sourceTime/
+  // Nur bei kind='rsi_divergence' sinnvoll — price/sourceTime/
   // touchedTime tragen bereits toPrice/fromTime/toTime (wie bei 'ob' der nahe Zonen-Rand als price
   // dient), diese drei zusätzlichen Felder machen die Divergenz später als vollständigen
   // Zwei-Bein-Konnektor nachzeichenbar (siehe src/tradeEvidence.ts, gleiches Feld-Set wie beim
@@ -1193,7 +1192,7 @@ const KIND_TO_CATEGORY: Record<Exclude<AddTradeConfirmationArgs["kind"], undefin
   pivot: "confirmation",
   ob: "confirmation",
   fib: "confluence",
-  rsi_divergence: "confluence",
+  rsi_divergence: "confirmation",
 };
 
 // Holt eine einzelne pin_context-Zeile für die pinId-Ableitung unten — schmaleres Pendant zu

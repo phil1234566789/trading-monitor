@@ -203,7 +203,7 @@ const accentStyle = computed(() => {
     <CrudListSection
       title="Bestätigungen"
       icon="✔"
-      add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB anklicken) — der erste Klick legt die Richtung fest"
+      add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Divergenz anklicken) — der erste Klick legt die Richtung fest"
       :items="confirmations"
       :item-key="(c) => c.id"
       :item-label="confirmationLabel"
@@ -213,14 +213,14 @@ const accentStyle = computed(() => {
       @hover="(c) => emit('hover-evidence', c)"
     />
 
-    <!-- Zusatzargumente (Confluence: gibt mehr Sicherheit, aber kein GO — Fib/RSI-Divergenz, siehe
+    <!-- Zusatzargumente (Confluence: gibt mehr Sicherheit, aber kein GO — Fib, siehe
          trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt).
          Gesperrt ohne Range (Chat 2026-08-28, analog zu Targets) — ohne Richtung/Idee gibt es noch
          nichts, zu dem ein Zusatzargument gehören könnte. -->
     <CrudListSection
       title="Zusatzargumente"
       icon="💡"
-      :add-title="range ? 'Zusatzargument hinzufügen (Trade-Modus, dann Fib/Divergenz anklicken)' : 'Erst eine Bestätigung (Sweep/OB) hinzufügen — legt die Richtung fest'"
+      :add-title="range ? 'Zusatzargument hinzufügen (Trade-Modus, dann Fib anklicken)' : 'Erst eine Bestätigung (Sweep/OB) hinzufügen — legt die Richtung fest'"
       :disabled="!range"
       :items="confluences"
       :item-key="(c) => c.id"

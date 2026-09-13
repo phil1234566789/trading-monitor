@@ -175,8 +175,8 @@ export function registerTradeTools(server: McpServer) {
         "ob_zone_id/liquidity_level_id bereits eine Bestätigung an dieser Range, wird KEINE zweite " +
         "Zeile angelegt (die bestehende kommt zurück) — der State-Machine-Übergang feuert trotzdem, " +
         "sicher erneut aufrufbar, wenn der Loop mit unveränderter Evidenz zu s45.tscLink zurückkehrt. " +
-        "kind='pivot'/'ob' sind Confirmations (geben tatsächlich das GO), kind='fib'/" +
-        "'rsi_divergence' sind Confluences (geben nur zusätzliche Sicherheit, kein GO) — siehe " +
+        "kind='pivot'/'ob'/'rsi_divergence' sind Confirmations (geben tatsächlich das GO), " +
+        "kind='fib' ist eine Confluence (gibt nur zusätzliche Sicherheit, kein GO) — siehe " +
         "trading-Repo trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt " +
         "für die Begriffsdefinition; category ergibt sich standardmäßig automatisch aus kind, NUR bei " +
         "Anti-Confluence (spricht gegen den Trade, z.B. ein gegenläufiges OB oder eine gegenläufige " +

@@ -3,9 +3,7 @@ import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp
 import { berlinDateTimeStrFor, berlinDateStrFor } from "../berlinTime.ts";
 import { fetchForexCandles } from "../forexCandles.ts";
 import { fetchActiveTscRangeId, fetchDealingRangeCockpit, getOpenOppositeDealingRanges } from "../db.ts";
-import { buildCandidatePool } from "../findTargetCandidates.js";
 import { findAntiConfluenceCandidates } from "../findAntiConfluenceCandidates.js";
-import { detectRsiDivergenceHistory } from "../rsi.js";
 import { buildRecentReactions } from "./recentReactions.ts";
 import { computeEvidenceScore } from "../evidenceScoring.ts";
 import { logDecision } from "../stateMachineLog.ts";
@@ -41,26 +39,21 @@ export async function buildValidationEvidence({ instrument, dealingRangeId, curr
   }
   const zoneBoundPrice = direction === "long" ? Math.max(...targetPrices) : Math.min(...targetPrices);
 
-  const [antiConfluences, reactions, candidatePool, priceCandles, openOpposite] = await Promise.all([
+  const [antiConfluences, reactions, priceCandles, openOpposite] = await Promise.all([
     findAntiConfluenceCandidates({ instrument, direction, zoneBoundPrice, invalidation: invalidation ?? undefined, currentTimeSec: effectiveTimeSec }),
     buildRecentReactions({ instrument, replayUntilSec: effectiveTimeSec }),
-    buildCandidatePool(instrument, effectiveTimeSec),
     fetchForexCandles(instrument, "5m", { count: 1, toMs: effectiveTimeSec * 1000 }),
     getOpenOppositeDealingRanges(instrument, direction),
   ]);
   const currentPrice = priceCandles[priceCandles.length - 1]?.close ?? null;
 
   // Confluences: spiegelbildlich zu findAntiConfluenceCandidates — gleichgerichtete (statt
-  // gegenläufige) gehaltene HTF-OB-Reaktionen/Sweeps (dieselbe get_recent_reactions-Rohquelle) +
-  // gleichgerichtete RSI-Divergenz (dieselben M5-Kerzen wie find_anti_confluences, aus
-  // buildCandidatePool, kein zweiter Fetch).
+  // gegenläufige) gehaltene HTF-OB-Reaktionen/Sweeps. RSI-Divergenzen werden als Bestätigungen
+  // manuell aus dem Chart übernommen und gehören deshalb nicht in diese Zusatzargument-Liste.
   const wantedSweepDir: "high" | "low" = direction === "long" ? "low" : "high";
   const obConfluences = ((reactions as any).obReactions ?? []).filter((z: any) => z.direction === direction && z.touched && !z.invalidated && (z.timeframe === "1H" || z.timeframe === "4H"));
   const sweepConfluences = ((reactions as any).liquiditySweeps ?? []).filter((s: any) => s.direction === wantedSweepDir && (s.timeframe === "1H" || s.timeframe === "4H"));
-  const wantedDivType = direction === "long" ? "bullish" : "bearish";
-  const divergenceConfluences = detectRsiDivergenceHistory(candidatePool.m5Candles).filter((d: any) => d.type === wantedDivType);
-
-  const confluenceCount = obConfluences.length + sweepConfluences.length + divergenceConfluences.length;
+  const confluenceCount = obConfluences.length + sweepConfluences.length;
   const antiConfluenceCount = antiConfluences.obCandidates.length + antiConfluences.sweepCandidates.length + antiConfluences.divergenceCandidates.length + antiConfluences.invalidationObCandidates.length;
   const score = computeEvidenceScore({ confluenceCount, antiConfluenceCount, hasActiveOppositeDealingRange: openOpposite.length > 0 });
 
@@ -94,7 +87,7 @@ export async function buildValidationEvidence({ instrument, dealingRangeId, curr
     zoneBoundPrice,
     currentPrice,
     asOf: { sec: effectiveTimeSec, at: berlinDateTimeStrFor(effectiveTimeSec) },
-    confluences: { obCandidates: obConfluences, sweepCandidates: sweepConfluences, divergenceCandidates: divergenceConfluences },
+    confluences: { obCandidates: obConfluences, sweepCandidates: sweepConfluences },
     antiConfluences,
     openOppositeDealingRanges: openOpposite,
     score,
@@ -112,8 +105,8 @@ export function registerValidationEvidenceTool(server: McpServer) {
       description:
         "Mechanisiert die Kandidaten-Sammlung aus Schritt 6 (Dealing Range validieren) — braucht eine " +
         "bereits bestätigte Dealing Range mit mindestens einem Target (siehe run_dealing_range_loop " +
-        "Fall 1). `confluences` (gleichgerichtete gehaltene HTF-OB-Reaktionen/Sweeps + gleichgerichtete " +
-        "RSI-Divergenz) UND `antiConfluences` (dieselbe Kandidatenliste wie find_anti_confluences — " +
+        "Fall 1). `confluences` (gleichgerichtete gehaltene HTF-OB-Reaktionen/Sweeps; RSI-Divergenzen " +
+        "werden als Bestätigung aus dem Chart übernommen) UND `antiConfluences` (dieselbe Kandidatenliste wie find_anti_confluences — " +
         "gegenläufige OBs/Sweeps/Divergenz zwischen aktuellem Preis und dem preislich extremsten " +
         "Target, plus unberührte gegenläufige OBs nahe der Invalidierung) sind reine Kandidatenlisten " +
         "— jede tatsächlich per add_trade_confirmation gespeicherte Confluence/Anti-Confluence MUSS " +

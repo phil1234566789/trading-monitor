@@ -1,0 +1,3 @@
+[mcp_servers.trading-monitor]
+url = "https://vkphwtqcvqrkphksproj.supabase.co/functions/v1/trading-monitor-mcp"
+bearer_token_env_var = "TRADING_MONITOR_MCP_TOKEN"

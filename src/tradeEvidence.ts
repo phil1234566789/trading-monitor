@@ -1,5 +1,5 @@
-// Gemeinsame Darstellung für Trade-Evidenz — Confirmations (Sweep/OB, geben tatsächlich das GO)
-// UND Confluences (Fib/RSI-Divergenz, geben nur zusätzliche Sicherheit, kein GO), siehe
+// Gemeinsame Darstellung für Trade-Evidenz — Confirmations (Sweep/OB/RSI-Divergenz, geben
+// tatsächlich das GO) UND Confluences (Fib, gibt nur zusätzliche Sicherheit, kein GO), siehe
 // trading-Repo trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-
 // range-go-bekommt für die Begriffsdefinition und PLAN-trade-confluences.md #1 für die
 // Entstehungsgeschichte. Bis 2026-08-28 hieß diese Datei tradeConfirmations.ts und die Tabelle

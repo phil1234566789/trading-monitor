@@ -309,8 +309,8 @@ const confirmationAddTrade = ref(null);
 const rangeConfirmationAddTrade = ref(null);
 // Zusatzargument hinzufügen (Chat 2026-08-28, Confirmation/Confluence-Trennung — siehe
 // trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt)
-// — analog zu confirmationAddTrade/rangeConfirmationAddTrade, aber für Fib/RSI-Divergenz
-// (Confluence: gibt mehr Sicherheit, aber kein GO) statt Sweep/OB (Confirmation). Eigene Arm-
+// — analog zu confirmationAddTrade/rangeConfirmationAddTrade, aber nur für Fib
+// (Confluence: gibt mehr Sicherheit, aber kein GO) statt Sweep/OB/Divergenz (Confirmation). Eigene Arm-
 // Zustände statt die bestehenden zwei mitzubenutzen, damit Chart-Klicks eindeutig bleiben (siehe
 // PriceChart.vue: confluenceModeActive) und "Bestätigung"/"Zusatzargument" zwei getrennte
 // UI-Sektionen bedienen. addConfirmationToTrade/addRangeConfirmation reichen als Insert-Pfad aus
@@ -597,7 +597,7 @@ async function onSelectTarget(target) {
     if (ok) (trade.isTsc ? refreshTscRange() : refreshTrades());
     return;
   }
-  // Zusatzargument (Confluence: Fib/RSI-Divergenz) — derselbe Insert-Pfad wie eine Confirmation,
+  // Zusatzargument (Confluence: Fib) — derselbe Insert-Pfad wie eine Confirmation,
   // category kommt seit der Anti-Confluence-Einführung explizit vom Arm-Zustand statt aus
   // target.kind abgeleitet zu werden (siehe tradeIntake.js: insertConfirmation).
   if (confluenceAddTrade.value) {
@@ -644,7 +644,7 @@ async function onSelectTarget(target) {
     // erstes kommt der LQ-Sweep. Vielleicht bildet sich eine OB danach. Aber nur vielleicht") —
     // beide Kinds tragen inzwischen `direction` (Sweep: siehe PriceChart.vue: findClickedTarget,
     // Sweep eines Tiefs = Long-Erwartung, eines Hochs = Short; OB: siehe findClickedOBZone). Fib/
-    // RSI-Divergenz haben keine so eindeutige Richtungs-Semantik, bleiben deshalb außen vor.
+    // Divergenz haben keine so eindeutige Richtungs-Semantik, bleiben beim Bootstrap außen vor.
     if (target.kind !== "ob" && target.kind !== "pivot") {
       alert("Die erste Bestätigung einer neuen Dealing Range muss ein Sweep (Pivot) oder ein OB sein — die legt die Richtung fest.");
       return;
@@ -1912,10 +1912,10 @@ watch(selectedTradingAccountId, () => {
           🎯 Trade-Modus
         </button>
         <span v-if="targetAddTrade" class="trade-link-armed">🎯 nächster Klick auf Pivot/OB fügt Trade #{{ targetAddTrade.id }} ein Target hinzu</span>
-        <span v-if="confirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB fügt Trade #{{ confirmationAddTrade.id }} eine Bestätigung hinzu</span>
-        <span v-if="rangeConfirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB fügt Dealing Range #{{ rangeConfirmationAddTrade.dealingRangeId }} eine Bestätigung hinzu</span>
-        <span v-if="confluenceAddTrade" class="trade-link-armed">💡 nächster Klick auf Fib/Divergenz fügt Trade #{{ confluenceAddTrade.id }} ein Zusatzargument hinzu</span>
-        <span v-if="rangeConfluenceAddTrade" class="trade-link-armed">💡 nächster Klick auf Fib/Divergenz fügt Dealing Range #{{ rangeConfluenceAddTrade.dealingRangeId }} ein Zusatzargument hinzu</span>
+        <span v-if="confirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB/Divergenz fügt Trade #{{ confirmationAddTrade.id }} eine Bestätigung hinzu</span>
+        <span v-if="rangeConfirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB/Divergenz fügt Dealing Range #{{ rangeConfirmationAddTrade.dealingRangeId }} eine Bestätigung hinzu</span>
+        <span v-if="confluenceAddTrade" class="trade-link-armed">💡 nächster Klick auf Fib fügt Trade #{{ confluenceAddTrade.id }} ein Zusatzargument hinzu</span>
+        <span v-if="rangeConfluenceAddTrade" class="trade-link-armed">💡 nächster Klick auf Fib fügt Dealing Range #{{ rangeConfluenceAddTrade.dealingRangeId }} ein Zusatzargument hinzu</span>
         <span v-if="antiConfluenceAddTrade" class="trade-link-armed">⚠️ nächster Klick auf Sweep/OB/Fib/Divergenz fügt Trade #{{ antiConfluenceAddTrade.id }} eine Anti-Confluence hinzu</span>
         <span v-if="rangeAntiConfluenceAddTrade" class="trade-link-armed">⚠️ nächster Klick auf Sweep/OB/Fib/Divergenz fügt Dealing Range #{{ rangeAntiConfluenceAddTrade.dealingRangeId }} eine Anti-Confluence hinzu</span>
         <span v-if="invalidationAddTrade" class="trade-link-armed">🚫 nächster Klick auf Pivot/OB setzt Invalidierung für Dealing Range #{{ invalidationAddTrade.dealingRangeId }}</span>

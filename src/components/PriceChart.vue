@@ -267,19 +267,16 @@ const props = defineProps({
   // "Trade-Setup-OB anklicken" auf "Pivot/OB als Target anklicken" um (siehe Dashboard.vue: targetAddTrade).
   targetModeActive: { type: Boolean, default: false },
   // Bestätigungs-Modus (Chat 2026-07-30, siehe Dashboard.vue: confirmationAddTrade) — Teilmenge
-  // von targetModeActive (beide setzen tradeModeActive). Nur noch fürs komplette Setup (LS+OB,
-  // siehe findClickedSetup) relevant — Fib/Divergenz-Ticks laufen seit der Confirmation/Confluence-
-  // Trennung (2026-08-28, siehe trade-from-poi.md#confirmation-confluence-und-anti-confluence--
-  // wie-eine-dealing-range-go-bekommt) über den eigenen confluenceModeActive-Modus unten, weil sie
-  // begrifflich kein GO sind wie ein Sweep/OB.
+  // von targetModeActive (beide setzen tradeModeActive). Nimmt ein komplettes Setup (LS+OB,
+  // siehe findClickedSetup) oder eine RSI-Divergenz als GO-Bestätigung an.
   confirmationModeActive: { type: Boolean, default: false },
-  // Zusatzargument-Modus (Chat 2026-08-28) — analog zu confirmationModeActive, aber für Fib/
-  // RSI-Divergenz (Confluence: gibt mehr Sicherheit, aber kein GO) statt Sweep/OB (Confirmation).
+  // Zusatzargument-Modus (Chat 2026-08-28) — analog zu confirmationModeActive, aber ausschließlich
+  // für Fib (Confluence: gibt mehr Sicherheit, aber kein GO) statt Sweep/OB/Divergenz (Confirmation).
   // Eigener Modus statt confirmationModeActive mitzubenutzen, damit "Bestätigung hinzufügen" und
   // "Zusatzargument hinzufügen" in der UI zwei getrennte Buttons/Sektionen bleiben, die jeweils nur
   // ihre eigene Art Chart-Objekt annehmen.
   // Faktisch nicht ganz sauber getrennt: findClickedTarget (Pivot/OB) läuft im Klick-Handler unten
-  // als ungegateter Fallback, sobald Fib/Divergenz nicht treffen — ein Pivot/OB-Klick im
+  // als ungegateter Fallback, sobald Fib nicht trifft — ein Pivot/OB-Klick im
   // Confluence-Modus landet also trotzdem als Confluence, nicht nur im Confirmation-Modus. Laut
   // Philip 2026-08-29 momentan okay, kein Fix nötig.
   confluenceModeActive: { type: Boolean, default: false },
@@ -1860,10 +1857,9 @@ onMounted(() => {
         emit("select-target", fib);
         return;
       }
-      // RSI-Divergenz im Zusatzargument- ODER Anti-Confluence-Modus (siehe findClickedDivergence),
-      // vor findClickedTarget geprüft — sonst würde ein Klick auf den Divergenz-Konnektor evtl.
-      // stattdessen eine darunter liegende Liquiditäts-Linie/OB-Zone treffen.
-      const divergence = (props.confluenceModeActive || props.antiConfluenceModeActive) && findClickedDivergence(param);
+      // RSI-Divergenz als Bestätigung oder Anti-Confluence, vor findClickedTarget geprüft — sonst
+      // würde ein Klick auf den Divergenz-Konnektor evtl. eine darunter liegende LQ-Linie/OB-Zone treffen.
+      const divergence = (props.confirmationModeActive || props.antiConfluenceModeActive) && findClickedDivergence(param);
       if (divergence) {
         emit("select-target", divergence);
         return;
@@ -1943,7 +1939,8 @@ onMounted(() => {
     if (props.tradeModeActive) {
       const point = { point: { x, y } };
       const hit = props.targetModeActive
-        ? ((props.confluenceModeActive || props.antiConfluenceModeActive) && (findClickedFibLevel(point) || findClickedDivergence(point))) ||
+        ? ((props.confluenceModeActive || props.antiConfluenceModeActive) && findClickedFibLevel(point)) ||
+          ((props.confirmationModeActive || props.antiConfluenceModeActive) && findClickedDivergence(point)) ||
           (props.confirmationModeActive && findClickedSetup(point)) ||
           findClickedTarget(point)
         : findClickedSetup(point);

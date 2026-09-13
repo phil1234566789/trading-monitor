@@ -153,7 +153,7 @@ export async function fetchTrades(instrument, accountId = null) {
   // dealing_range_id ODER trade_position_id) — TradeEditModal.vue braucht das, um "GO für die
   // Idee" von "GO für diesen Entry" in der Liste sichtbar zu trennen. category (generierte Spalte,
   // siehe Migration 20260828120000) trennt zusätzlich Confirmation ("Bestätigung", GO-Signal:
-  // pivot/ob) von Confluence ("Zusatzargument", kein GO: fib/rsi_divergence) — TradeSetupCockpit.vue/
+  // pivot/ob/rsi_divergence) von Confluence ("Zusatzargument", kein GO: fib) — TradeSetupCockpit.vue/
   // TradeEditModal.vue filtern beide Ebenen zusätzlich danach in je zwei Sektionen.
   function toConfirmation(c, level) {
     return {
