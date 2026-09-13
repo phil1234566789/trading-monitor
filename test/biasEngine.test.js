@@ -111,6 +111,37 @@ describe("determineTrendForce", () => {
     const result = determineTrendForce("downtrend", null, { direction: "high", price: 1.365, timeframe: "1H", touched: true, kontext: "Asia-High" }, 1.366);
     expect(result.level.verdict).toBe("broken");
   });
+
+  // Die Kraft eines Liquiditäts-Levels kommt aus dem LEVEL, nicht aus dem Trend (liquidität.md):
+  // gesweeptes Hoch = Kraft nach unten, gesweeptes Tief = Kraft nach oben, unabhängig vom Bias.
+  // Bis 13.09.2026 kam das Wort bullisch/bärisch aus dem Trend, wodurch im Uptrend ein gesweeptes
+  // Hoch als "bullische Stärke" gemeldet wurde — der Fall unten, GBPUSD 09.09.2026, Level 1.35593.
+  describe("Kraft-Richtung kommt aus dem Level, nicht aus dem Trend", () => {
+    it("Uptrend, gesweeptes Hoch (Kurs wieder darunter) -> bärische Kraft GEGEN den Trend", () => {
+      const result = determineTrendForce("uptrend", null, { direction: "high", price: 1.35593, timeframe: "1H", touched: true, kontext: "Asia-High Major (5d 13h)" }, 1.35588);
+      expect(result.level.verdict).toBe("swept");
+      expect(result.level.text).toBe("Liquidity Sweep 1.35593 (Asia-High Major (5d 13h)) ---> bärische Kraft, GEGEN den Uptrend.");
+    });
+
+    it("Uptrend, gesweeptes Tief (Kurs wieder darüber) -> bullische Kraft mit dem Trend", () => {
+      const result = determineTrendForce("uptrend", null, { direction: "low", price: 1.35413, timeframe: "1H", touched: true, kontext: "Asia-Mid" }, 1.35588);
+      expect(result.level.verdict).toBe("swept");
+      expect(result.level.text).toBe("Liquidity Sweep 1.35413 (Asia-Mid) ---> bullische Kraft, mit dem Uptrend.");
+    });
+
+    it("Uptrend, Hoch durchbrochen (Kurs bleibt darüber) -> bullische Kraft mit dem Trend", () => {
+      // Kein Sweep, sondern Strukturbruch: "Bewegung in die ursprüngliche Richtung wahrscheinlich".
+      const result = determineTrendForce("uptrend", null, { direction: "high", price: 1.35593, timeframe: "1H", touched: true, kontext: null }, 1.35655);
+      expect(result.level.verdict).toBe("broken");
+      expect(result.level.text).toBe("1.35593 sauber durchbrochen ---> bullische Kraft, mit dem Uptrend.");
+    });
+
+    it("Downtrend, gesweeptes Tief (Kurs wieder darüber) -> bullische Kraft GEGEN den Trend", () => {
+      const result = determineTrendForce("downtrend", null, { direction: "low", price: 1.35, timeframe: "4H", touched: true, kontext: null }, 1.3505);
+      expect(result.level.verdict).toBe("swept");
+      expect(result.level.text).toBe("Liquidity Sweep 1.35 ---> bullische Kraft, GEGEN den Downtrend.");
+    });
+  });
 });
 
 describe("buildPendingDecisions", () => {

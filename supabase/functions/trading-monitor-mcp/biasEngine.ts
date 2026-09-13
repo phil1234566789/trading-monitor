@@ -133,13 +133,29 @@ export function determineTrendForce(trend: "uptrend" | "downtrend", ob: TrendFor
     if (currentPrice == null) {
       levelResult = { verdict: "unclear", text: null, confidence: "low" };
     } else {
-      // "Trend-Seite" des Levels: nach einem Sweep sollte der Kurs für einen Stärke-Beleg auf der
-      // Seite stehen, die den Trend fortsetzt (siehe determineTrendForce-Kommentar oben).
-      const heldTrendSide =
-        trend === "uptrend" ? (level.direction === "low" ? currentPrice > level.price : currentPrice < level.price) : level.direction === "high" ? currentPrice < level.price : currentPrice > level.price;
-      levelResult = heldTrendSide
-        ? { verdict: "swept", text: `Liquidity Sweep ${level.price} (${level.kontext ?? ""}) ---> ${strengthWord} Stärke.`, confidence: "medium" }
-        : { verdict: "broken", text: `${level.price} (${level.kontext ?? ""}) sauber durchbrochen ---> ${strengthWord} Schwäche, möglicher Trendwechsel.`, confidence: "medium" };
+      // Die Kraft eines Liquiditäts-Levels kommt aus dem LEVEL, nicht aus dem Trend: ein gesweeptes
+      // Hoch ist Kraft nach unten, ein gesweeptes Tief Kraft nach oben — unabhängig davon, welche
+      // Richtung der aktuelle Bias hat (liquidität.md#liquiditäts-sweep--mechanismus,
+      // 05-dealing-range-bestaetigen.md#die-vier-fälle).
+      //
+      // Bis 13.09.2026 stand hier stattdessen eine "hält das Level die Trend-Seite?"-Konstruktion,
+      // die das OB-Schema (gehalten/durchbrochen, relativ zum Trend) auf Liquiditäts-Level übertrug.
+      // Dadurch kam das Wort bullisch/bärisch aus dem Trend statt aus dem Level, und für Hochs im
+      // Uptrend war das Vorzeichen verdreht: der Rückfall unter ein gesweeptes Hoch — also gerade
+      // die Bestätigung für Kraft nach unten — wurde als "bullische Stärke" gemeldet. Genau dieser
+      // Satz stand am 09.09.2026 zu 1.35593 im Output und wurde übernommen.
+      const isHigh = level.direction === "high";
+      const backInside = isHigh ? currentPrice < level.price : currentPrice > level.price;
+      // Sweep = Kurs kam über/unter das Level und steht wieder auf der anderen Seite. Bleibt er
+      // jenseits, ist es kein Sweep, sondern ein Strukturbruch in Laufrichtung (liquidität.md:
+      // "Sweep ist bedeutungslos ---> Bewegung in die ursprüngliche Richtung wahrscheinlich").
+      const forceWord = (isHigh ? backInside : !backInside) ? "bärische" : "bullische";
+      const alignsWithTrend = forceWord === (trend === "uptrend" ? "bullische" : "bärische");
+      const trendNote = alignsWithTrend ? `mit dem ${trend === "uptrend" ? "Uptrend" : "Downtrend"}` : `GEGEN den ${trend === "uptrend" ? "Uptrend" : "Downtrend"}`;
+      const kontextPart = level.kontext ? ` (${level.kontext})` : "";
+      levelResult = backInside
+        ? { verdict: "swept", text: `Liquidity Sweep ${level.price}${kontextPart} ---> ${forceWord} Kraft, ${trendNote}.`, confidence: "medium" }
+        : { verdict: "broken", text: `${level.price}${kontextPart} sauber durchbrochen ---> ${forceWord} Kraft, ${trendNote}.`, confidence: "medium" };
     }
   }
 
