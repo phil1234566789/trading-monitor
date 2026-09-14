@@ -1,9 +1,30 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
-import { createTrade, addTradePosition, updateTradePosition, updateDealingRange, addTradeConfirmation, addTradeTarget, updateTradeTarget, deleteTradeTarget } from "../db.ts";
+import { createTrade, addTradePosition, updateTradePosition, updateDealingRange, addTradeConfirmation, addTradeTarget, updateTradeTarget, deleteTradeTarget, getDealingRangeById } from "../db.ts";
+import { findTargetCandidates } from "../findTargetCandidates.js";
+import { flattenTargetCandidates, findUnexplainedNearerTargets, unexplainedNearerTargetsError } from "../targetChoiceGuard.ts";
+import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
+}
+
+// Hier statt in db.ts: addTradeTarget, obwohl es dort für alle Aufrufer gälte — findTargetCandidates.js
+// importiert db.ts, ein Rückimport wäre ein Zirkel. addTradeTarget hat ohnehin nur diesen einen
+// Aufrufer. Warum der Guard überhaupt existiert: siehe targetChoiceGuard.ts.
+async function assertTargetChoiceFromCandidates(args: { dealingRangeId: number; price: number; sec?: number; skippedCandidates?: string[] | null }) {
+  const range = await getDealingRangeById(args.dealingRangeId);
+  // Ohne Instrument/Richtung lassen sich keine Kandidaten holen — dann lieber durchlassen als den
+  // Call an einer Datenlücke scheitern lassen (addTradeTarget wirft für eine fehlende Range selbst).
+  if (!range?.instrument || !range?.direction) return;
+  const result = await findTargetCandidates({ instrument: range.instrument, direction: range.direction, currentTimeSec: args.sec });
+  if (result.currentPrice == null) return;
+  const unexplained = findUnexplainedNearerTargets(flattenTargetCandidates(result), {
+    price: args.price,
+    currentPrice: result.currentPrice,
+    skippedCandidates: args.skippedCandidates,
+  });
+  if (unexplained.length > 0) throw new Error(unexplainedNearerTargetsError(unexplained, result.currentPrice));
 }
 
 const INSTRUMENT = z.enum(["GBPUSD", "EURUSD"]);
@@ -15,7 +36,8 @@ const OUTCOME = z.enum(["win", "loss", "open"]);
 // damit beide Tools garantiert dieselben Namen/Beschreibungen haben (siehe db.ts: TradePositionInput,
 // insertTradePosition).
 const TRADE_POSITION_FIELDS = {
-  sec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt fürs ENTRY_FOUND-Event statt live 'jetzt' (siehe db.ts: TradePositionInput)"),
+  replayUntilSec: REPLAY_UNTIL_SEC,
+  sec: deprecatedTimeParam("sec"),
   source: SOURCE,
   entryPrice: z.number().optional().describe("Füllpreis, falls schon bekannt"),
   stopLoss: z.number().optional(),
@@ -74,7 +96,7 @@ export function registerTradeTools(server: McpServer) {
           .describe("Geplante Ziele (TP1/TP2/...), gehören zur Idee, nicht zur einzelnen Ausführung"),
       },
     },
-    async (args) => json(await createTrade(args)),
+    async ({ replayUntilSec, sec: _sec, ...rest }) => json(await createTrade({ ...rest, sec: replayUntilSec })),
   );
 
   server.registerTool(
@@ -92,7 +114,7 @@ export function registerTradeTools(server: McpServer) {
         ...TRADE_POSITION_FIELDS,
       },
     },
-    async ({ dealingRangeId, ...fields }) => json(await addTradePosition(dealingRangeId, fields)),
+    async ({ dealingRangeId, replayUntilSec, sec: _sec, ...fields }) => json(await addTradePosition(dealingRangeId, { ...fields, sec: replayUntilSec })),
   );
 
   server.registerTool(
@@ -107,7 +129,8 @@ export function registerTradeTools(server: McpServer) {
         "POSITION_CLOSED aus), sonst ohne Wirkung.",
       inputSchema: {
         id: z.number().int(),
-        sec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
+        replayUntilSec: REPLAY_UNTIL_SEC,
+        sec: deprecatedTimeParam("sec"),
         entryPrice: z.number().nullable().optional(),
         stopLoss: z.number().nullable().optional(),
         triggeredAt: z.string().optional(),
@@ -123,7 +146,7 @@ export function registerTradeTools(server: McpServer) {
         commission: z.number().nullable().optional(),
       },
     },
-    async ({ id, sec, ...fields }) => json(await updateTradePosition(id, fields, sec)),
+    async ({ id, replayUntilSec, sec: _sec, ...fields }) => json(await updateTradePosition(id, fields, replayUntilSec)),
   );
 
   server.registerTool(
@@ -222,7 +245,8 @@ export function registerTradeTools(server: McpServer) {
         "des HEUTIGEN Tages an, nicht die eines laufenden Backtests.",
       inputSchema: {
         level: z.enum(["range", "position"]),
-        sec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt' (State-Machine-Übergang, siehe Tool-Beschreibung)"),
+        replayUntilSec: REPLAY_UNTIL_SEC,
+        sec: deprecatedTimeParam("sec"),
         id: z
           .number()
           .int()
@@ -263,7 +287,7 @@ export function registerTradeTools(server: McpServer) {
     // Validierung (kind/price/sourceTime Pflicht, rangeLow/rangeHigh bei kind='ob') sitzt jetzt in
     // addTradeConfirmation selbst, nicht mehr hier — sie muss auch nach einer pinId-Ableitung
     // greifen, die auf dieser Ebene noch nicht aufgelöst ist.
-    async ({ level, id, ...fields }) => json(await addTradeConfirmation({ level, id, ...fields })),
+    async ({ level, id, replayUntilSec, sec: _sec, ...fields }) => json(await addTradeConfirmation({ level, id, ...fields, sec: replayUntilSec })),
   );
 
   server.registerTool(
@@ -284,13 +308,18 @@ export function registerTradeTools(server: McpServer) {
         "speichern. Fehlen sie, bleibt das alte Rohdaten-Verhalten (kein Fehler). kind ('pivot' oder " +
         "'ob') sollte mitgegeben werden, sonst kann das Chart ein OB-Ziel (rangeLow/rangeHigh gesetzt) " +
         "nicht von einem Pivot-Ziel unterscheiden. touchedTime, falls das Ziel bereits erreicht wurde " +
-        "(sonst offen). Jedes Target sollte einer der Kandidaten aus find_targets sein — nicht " +
-        "eigenständig einen Preis außerhalb dieser Liste bestimmen. sec optional für einen Backtest/" +
+        "(sonst offen). AUSWAHLPFLICHT statt Mitgliedschaftsprüfung: find_targets liefert seine " +
+        "Kandidaten nach Abstand zum Kurs SORTIERT — Position 0 ist die Default-Antwort, der Rest ist " +
+        "Sicht aufs Umfeld. Dieses Tool lehnt einen weiter entfernten Preis ab, solange nicht JEDER " +
+        "näher liegende Kandidat in skippedCandidates mit Grund genannt ist (die Fehlermeldung listet " +
+        "die fehlenden auf). Ein vorab gefasstes Ziel gegen die Liste zu halten und abzunicken reicht " +
+        "also nicht mehr — erst die Liste durchgehen, dann wählen. sec optional für einen Backtest/" +
         "Replay-Zeitpunkt (Default: jetzt) — ohne ihn treibt dieser Aufruf die State-Machine-Zeile " +
         "des HEUTIGEN Tages an, nicht die eines laufenden Backtests.",
       inputSchema: {
         dealingRangeId: z.number().int(),
-        sec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
+        replayUntilSec: REPLAY_UNTIL_SEC,
+        sec: deprecatedTimeParam("sec"),
         price: z.number(),
         kind: z.enum(["pivot", "ob"]).nullable().optional(),
         rangeLow: z.number().nullable().optional().describe("Für OB-Ziele: Zonen-Unterkante"),
@@ -300,9 +329,21 @@ export function registerTradeTools(server: McpServer) {
         instrument: INSTRUMENT.optional().describe("Nur bei einem reinen Pivot-Ziel: siehe Tool-Beschreibung."),
         timeframe: z.string().optional().describe("Nur bei einem reinen Pivot-Ziel: '1H' oder '4H'."),
         direction: z.enum(["high", "low"]).optional().describe("Nur bei einem reinen Pivot-Ziel."),
+        skippedCandidates: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Je ein Eintrag mit Preis + Grund für JEDEN find_targets-Kandidaten, der näher am Kurs liegt als `price` " +
+              '(z.B. "1.35528 = Hoch, kein Short-Ziel"). Weglassen/leer ist nur gültig, wenn du den nächstgelegenen ' +
+              "Kandidaten gewählt hast — sonst lehnt das Tool den Call ab und nennt die fehlenden.",
+          ),
       },
     },
-    async ({ dealingRangeId, ...fields }) => json(await addTradeTarget(dealingRangeId, fields)),
+    async ({ dealingRangeId, skippedCandidates, replayUntilSec, sec: _sec, ...rawFields }) => {
+      const fields = { ...rawFields, sec: replayUntilSec };
+      await assertTargetChoiceFromCandidates({ dealingRangeId, price: fields.price, sec: fields.sec, skippedCandidates });
+      return json(await addTradeTarget(dealingRangeId, fields));
+    },
   );
 
   server.registerTool(

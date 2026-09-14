@@ -22,6 +22,7 @@ import {
 import { logDecision } from "../stateMachineLog.ts";
 import { loadMachineForDay, transition, transitionIfPossible, type LoadedMachine } from "../machineState.ts";
 import { currentNodePath } from "../tradingMachine.ts";
+import { REPLAY_UNTIL_SEC, REPLAY_UNTIL_SEC_REQUIRED, deprecatedTimeParam } from "../toolParams.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -784,7 +785,8 @@ export function registerDealingRangeLoopTool(server: McpServer) {
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
         loopStateId: z.number().int().describe("loopStateId aus der run_dealing_range_loop-Antwort"),
-        sec: z.number().int().describe("Analysezeitpunkt (Unix-Sekunden), wie bei run_dealing_range_loop"),
+        replayUntilSec: REPLAY_UNTIL_SEC_REQUIRED,
+        sec: deprecatedTimeParam("sec"),
         case: z.union([z.literal(1), z.literal(2)]).describe("Welcher Fall zutrifft"),
         reasoning: z.string().describe("Kurze Begründung, warum dieser Fall zutrifft"),
         checkedM5ObSetups: z
@@ -803,7 +805,7 @@ export function registerDealingRangeLoopTool(server: McpServer) {
           ),
       },
     },
-    async (args) => json(await logFallClassification(args)),
+    async ({ replayUntilSec, sec: _sec, ...rest }) => json(await logFallClassification({ ...rest, sec: replayUntilSec })),
   );
 
   server.registerTool(
@@ -821,11 +823,12 @@ export function registerDealingRangeLoopTool(server: McpServer) {
         "run_dealing_range_loop danach normal weiter aufrufen.",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
-        sec: z.number().int().describe("Analysezeitpunkt (Unix-Sekunden) — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
+        replayUntilSec: REPLAY_UNTIL_SEC_REQUIRED,
+        sec: deprecatedTimeParam("sec"),
         reasoning: z.string().describe("Kurze Begründung, warum es doch Fall 2 ist"),
       },
     },
-    async (args) => json(await retractFall1Classification(args)),
+    async ({ replayUntilSec, sec: _sec, ...rest }) => json(await retractFall1Classification({ ...rest, sec: replayUntilSec })),
   );
 
   server.registerTool(
@@ -842,12 +845,13 @@ export function registerDealingRangeLoopTool(server: McpServer) {
         "aufzuräumen ist — erst remove_pin_entry).",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
-        sec: z.number().int().describe("Analysezeitpunkt (Unix-Sekunden) — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
+        replayUntilSec: REPLAY_UNTIL_SEC_REQUIRED,
+        sec: deprecatedTimeParam("sec"),
         complete: z.boolean().describe("true = Fall 1 komplett (weiter zur Zielauswahl), false = Fall 2 (noch im Gange, zurück zu Schritt 4)"),
         reasoning: z.string().describe("Kurze Begründung"),
       },
     },
-    async (args) => json(await logFallAgainCheck(args)),
+    async ({ replayUntilSec, sec: _sec, ...rest }) => json(await logFallAgainCheck({ ...rest, sec: replayUntilSec })),
   );
 
   server.registerTool(
@@ -865,10 +869,11 @@ export function registerDealingRangeLoopTool(server: McpServer) {
         "gültig (sendGuarded blockt sonst hart).",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
-        sec: z.number().int().describe("Analysezeitpunkt (Unix-Sekunden) — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
+        replayUntilSec: REPLAY_UNTIL_SEC_REQUIRED,
+        sec: deprecatedTimeParam("sec"),
         reasoning: z.string().describe("Kurze Begründung (z.B. 'Philip hat die DR ohne Entry geschlossen')"),
       },
     },
-    async (args) => json(await logNoEntryFound(args)),
+    async ({ replayUntilSec, sec: _sec, ...rest }) => json(await logNoEntryFound({ ...rest, sec: replayUntilSec })),
   );
 }

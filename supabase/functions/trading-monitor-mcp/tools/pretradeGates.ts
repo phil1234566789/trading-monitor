@@ -6,6 +6,7 @@ import { evaluateTradingHoursGate, evaluateNewsGate, type TradingWindows, type N
 import { logDecision } from "../stateMachineLog.ts";
 import { loadOrCreateMachineForDay, transitionIfPossible } from "../machineState.ts";
 import { currentNodePath } from "../tradingMachine.ts";
+import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -136,14 +137,17 @@ export function registerPretradeGatesTool(server: McpServer) {
         "(siehe 02-check-news.md) — `hasData=false` heißt 'keine Daten für diesen Tag hinterlegt', " +
         "NICHT zwingend 'keine News' (die Tabelle wird nur für aktuell gehandelte Tage gepflegt). " +
         "Bei News-Block liefert `news.retryAtSec`/`retryAt` die exakte Freigabe-Zeit fertig " +
-        "berechnet mit — NICHT selbst raten/pollen, einfach mit dieser Zeit als nowSec erneut " +
-        "aufrufen. " +
-        "nowSec optional für einen Backtest/Replay-Zeitpunkt (Default: jetzt).",
+        "berechnet mit — NICHT selbst raten/pollen, einfach mit dieser Zeit als replayUntilSec " +
+        "erneut aufrufen. " +
+        "replayUntilSec optional für einen Backtest/Replay-Zeitpunkt (weglassen = live 'jetzt'). " +
+        "ACHTUNG: ohne replayUntilSec schreibt dieses Tool den HEUTIGEN Tag — im Backtest also immer " +
+        "mitgeben, sonst landet das Ergebnis auf dem falschen Kalendertag.",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
-        nowSec: z.number().int().optional().describe("Unix-Sekunden, Default: jetzt"),
+        replayUntilSec: REPLAY_UNTIL_SEC,
+        nowSec: deprecatedTimeParam("nowSec"),
       },
     },
-    async (args) => json(await buildPretradeGates(args)),
+    async ({ replayUntilSec, nowSec: _nowSec, ...rest }) => json(await buildPretradeGates({ ...rest, nowSec: replayUntilSec })),
   );
 }

@@ -8,6 +8,7 @@ import { buildRecentReactions } from "./recentReactions.ts";
 import { computeEvidenceScore } from "../evidenceScoring.ts";
 import { logDecision } from "../stateMachineLog.ts";
 import { safeTransitionChain, loadMachineForDay, transition } from "../machineState.ts";
+import { REPLAY_UNTIL_SEC, REPLAY_UNTIL_SEC_REQUIRED, deprecatedTimeParam } from "../toolParams.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -121,10 +122,10 @@ export function registerValidationEvidenceTool(server: McpServer) {
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
         dealingRangeId: z.number().int().optional().describe("Default: aktive TSC-Range des Instruments"),
-        currentTimeSec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
+        replayUntilSec: REPLAY_UNTIL_SEC,
       },
     },
-    async (args) => json(await buildValidationEvidence(args)),
+    async ({ replayUntilSec, ...rest }) => json(await buildValidationEvidence({ ...rest, currentTimeSec: replayUntilSec })),
   );
 
   // Pendant zu log_bias_decision (Schritt 3)/log_fall_classification (Schritt 5) für Schritt 6 —
@@ -149,12 +150,13 @@ export function registerValidationEvidenceTool(server: McpServer) {
         "noch nicht aufgerufen).",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
-        sec: z.number().int().describe("Analysezeitpunkt (Unix-Sekunden)"),
+        replayUntilSec: REPLAY_UNTIL_SEC_REQUIRED,
+        sec: deprecatedTimeParam("sec"),
         verdict: z.enum(["valide", "invalide"]),
         reasoning: z.string().describe("Kurze Begründung für das Urteil"),
       },
     },
-    async ({ instrument, sec, verdict, reasoning }) => {
+    async ({ instrument, replayUntilSec: sec, verdict, reasoning }) => {
       const loaded = await loadMachineForDay(instrument, berlinDateStrFor(sec));
       const currentNode = await transition(loaded, instrument, { type: "VALID_INVALID_JUDGED", verdict }, sec);
       await logDecision({

@@ -6,6 +6,7 @@ import { findAntiConfluenceCandidates } from "../findAntiConfluenceCandidates.js
 import { logDecision } from "../stateMachineLog.ts";
 import { berlinDateStrFor } from "../berlinTime.ts";
 import { safeTransitionChain } from "../machineState.ts";
+import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -35,15 +36,17 @@ export function registerTscTools(server: McpServer) {
         "add_trade_confirmation/add_trade_target mit level='range' und der hier zurückgegebenen id " +
         "hinzufügen. Sobald ein echter Entry feststeht, übernimmt add_trade_position diese Range in " +
         "eine Ausführung — create_dealing_range NICHT ein zweites Mal für dieselbe Idee aufrufen. " +
-        "sec optional für einen Backtest/Replay-Zeitpunkt (Default: jetzt) — ohne ihn treibt dieser " +
-        "Aufruf die State-Machine-Zeile des HEUTIGEN Tages an, nicht die eines laufenden Backtests.",
+        "replayUntilSec optional für einen Backtest/Replay-Zeitpunkt (weglassen = live 'jetzt') — " +
+        "ohne ihn treibt dieser Aufruf die State-Machine-Zeile des HEUTIGEN Tages an, nicht die " +
+        "eines laufenden Backtests.",
       inputSchema: {
         instrument: INSTRUMENT,
         direction: DIRECTION,
-        sec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
+        replayUntilSec: REPLAY_UNTIL_SEC,
+        sec: deprecatedTimeParam("sec"),
       },
     },
-    async ({ instrument, direction, sec: argSec }) => {
+    async ({ instrument, direction, replayUntilSec: argSec }) => {
       const result = await createDealingRange(instrument, direction);
       const sec = argSec ?? Math.floor(Date.now() / 1000);
       void logDecision({
@@ -118,16 +121,18 @@ export function registerTscTools(server: McpServer) {
         "bestimmte Target MUSS einer dieser Kandidaten sein (price bei liquidityCandidates, " +
         "targetPrice bei obCandidates) — nicht eigenständig einen Preis außerhalb dieser Liste " +
         "wählen. tooFar markiert (nicht filtert) Kandidaten über 50 Pips Distanz zum aktuellen " +
-        "Preis — ungewöhnlich, aber sichtbar bleibend. currentTimeSec optional für einen Replay-" +
-        "Zeitpunkt (Default: jetzt, wie get_data_export's replayUntilSec).",
+        "Preis — ungewöhnlich, aber sichtbar bleibend. replayUntilSec optional für einen Replay-" +
+        "Zeitpunkt (weglassen = live 'jetzt').",
       inputSchema: {
         instrument: INSTRUMENT,
         direction: DIRECTION,
-        currentTimeSec: z.number().int().optional().describe("Unix-Sekunden, Default: jetzt"),
+        replayUntilSec: REPLAY_UNTIL_SEC,
+        currentTimeSec: deprecatedTimeParam("currentTimeSec"),
       },
     },
-    async (args) => {
-      const sec = args.currentTimeSec ?? Math.floor(Date.now() / 1000);
+    async ({ replayUntilSec, currentTimeSec: _currentTimeSec, ...rest }) => {
+      const args = { ...rest, currentTimeSec: replayUntilSec };
+      const sec = replayUntilSec ?? Math.floor(Date.now() / 1000);
       // "Fall 1 komplett?" (s45.fallAgainCheck) fällt inhaltlich mit der bereits getroffenen
       // Fall-1-Klassifikation zusammen (siehe 05-dealing-range-bestaetigen.md: "Target(s) anhängen
       // NUR Fall 1") — kein zweites Lana-Urteil nötig, find_targets aufzurufen IST das Signal.
@@ -162,16 +167,15 @@ export function registerTscTools(server: McpServer) {
         "max 10 Pips — nur befüllt, wenn invalidation mitgegeben wird). WICHTIG: jede per " +
         "add_trade_confirmation (category='anti_confluence') gespeicherte Anti-Confluence MUSS " +
         "einer dieser Kandidaten sein, nicht eigenständig einen Preis/ein Objekt außerhalb dieser " +
-        "Listen wählen. currentTimeSec optional für einen Replay-Zeitpunkt (Default: jetzt, wie " +
-        "get_data_export's replayUntilSec).",
+        "Listen wählen. replayUntilSec optional für einen Replay-Zeitpunkt (weglassen = live 'jetzt').",
       inputSchema: {
         instrument: INSTRUMENT,
         direction: DIRECTION,
         zoneBoundPrice: z.number().describe("Ferne Kante der Zone: tiefstes Short-Target bzw. höchstes Long-Target"),
         invalidation: z.number().optional().describe("Für invalidationObCandidates — ohne diesen Parameter bleibt die Liste leer"),
-        currentTimeSec: z.number().int().optional().describe("Unix-Sekunden, Default: jetzt"),
+        replayUntilSec: REPLAY_UNTIL_SEC,
       },
     },
-    async (args) => json(await findAntiConfluenceCandidates(args)),
+    async ({ replayUntilSec, ...rest }) => json(await findAntiConfluenceCandidates({ ...rest, currentTimeSec: replayUntilSec })),
   );
 }

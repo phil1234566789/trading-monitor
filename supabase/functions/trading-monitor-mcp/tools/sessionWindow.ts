@@ -5,6 +5,7 @@ import { berlinOffsetMinutes, berlinDateTimeStrFor, berlinDateStrFor } from "../
 import { sessionOccurrences } from "../sessionOccurrences.js";
 import { logDecision } from "../stateMachineLog.ts";
 import { loadMachineForDayOrNull, transitionIfPossible } from "../machineState.ts";
+import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -116,14 +117,16 @@ export function registerSessionWindowTool(server: McpServer) {
         "anderen konfigurierten Sessions (Asia/MMM/Spread Hour/NY/... siehe Sessions-Modal im " +
         "Dashboard) werden bewusst weggelassen, da 'weder aktiv noch unmittelbar bevorstehend' " +
         "trivial und nicht ausgabewürdig ist (Philip). Kein Werturteil ('Vorsicht' o.ä.) — das " +
-        "zieht Schritt 5 selbst aus diesen Fakten. nowSec optional für einen Backtest/Replay-" +
-        "Zeitpunkt (Default: jetzt).",
+        "zieht Schritt 5 selbst aus diesen Fakten. replayUntilSec optional für einen Backtest/" +
+        "Replay-Zeitpunkt (weglassen = live 'jetzt').",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
-        nowSec: z.number().int().optional().describe("Unix-Sekunden, Default: jetzt"),
+        replayUntilSec: REPLAY_UNTIL_SEC,
+        nowSec: deprecatedTimeParam("nowSec"),
       },
     },
-    async (args) => {
+    async ({ replayUntilSec, nowSec: _nowSec, ...rest }) => {
+      const args = { ...rest, nowSec: replayUntilSec };
       const result = await buildSessionWindow(args);
       // State-Machine V2 (tradingMachine.ts): der EIGENSTÄNDIGE check_session_window-Aufruf treibt
       // NUR Schritt 3 -> 4 (s45.entry) voran (nicht die interne Wiederverwendung durch

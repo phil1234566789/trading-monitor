@@ -10,6 +10,7 @@ import { isSpreadHourPivot, findIntermediateLevel, determineTrendForce, buildPen
 import { logDecision } from "../stateMachineLog.ts";
 import { loadOrCreateMachineForDay, transition, transitionIfPossible } from "../machineState.ts";
 import { currentNodePath } from "../tradingMachine.ts";
+import { REPLAY_UNTIL_SEC_REQUIRED, deprecatedTimeParam } from "../toolParams.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -323,12 +324,13 @@ export function registerBiasCheckTool(server: McpServer) {
         "Für `resolved`-Felder (z.B. 3.2 Targets) nicht nötig, die stehen schon aus den Rohdaten fest.",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
-        sec: z.number().int().describe("Analysezeitpunkt (Unix-Sekunden), wie bei run_bias_check"),
+        replayUntilSec: REPLAY_UNTIL_SEC_REQUIRED,
+        sec: deprecatedTimeParam("sec"),
         loopStateId: z.number().int().describe("loopStateId aus der run_bias_check-Antwort"),
         substep: z.string().describe("z.B. '3.1', '3.3'"),
         choice: z.string().describe("gewählte Option bzw. formulierte Entscheidung"),
       },
     },
-    async (args) => json(await logBiasDecision(args)),
+    async ({ replayUntilSec, sec: _sec, ...rest }) => json(await logBiasDecision({ ...rest, sec: replayUntilSec })),
   );
 }

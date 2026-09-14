@@ -4,6 +4,7 @@ import { getPinContext, addPinEntry, addPinM5ObEntry, addPinM5LiquidityEntry, ad
 import { logDecision } from "../stateMachineLog.ts";
 import { berlinDateStrFor } from "../berlinTime.ts";
 import { safeTransitionChain } from "../machineState.ts";
+import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -179,10 +180,11 @@ export function registerPinTools(server: McpServer) {
       inputSchema: {
         id: z.number().optional().describe("Pin-id aus get_pin_context — weglassen, wenn kein Pin gefunden wurde (dann instrument mitgeben)"),
         instrument: z.enum(["GBPUSD", "EURUSD"]).optional().describe("Nur ohne id: welches Instrument den 'kein Pin gefunden'-Schritt bestätigt"),
-        sec: z.number().int().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),
+        replayUntilSec: REPLAY_UNTIL_SEC,
+        sec: deprecatedTimeParam("sec"),
       },
     },
-    async ({ id, instrument: argInstrument, sec: argSec }) => {
+    async ({ id, instrument: argInstrument, replayUntilSec: argSec }) => {
       const sec = argSec ?? Math.floor(Date.now() / 1000);
       if (id == null) {
         if (!argInstrument) throw new Error("Ohne id: instrument mitgeben, um 'kein Pin gefunden' am s45.pinCheck-Knoten zu bestätigen.");
