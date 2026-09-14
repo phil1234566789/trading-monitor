@@ -32,13 +32,27 @@ Vorfall 06.09.2026, erst durch Abgleich mit `/loop-status` aufgefallen, 2h daneb
 - `hint` — Klartext-Begründung.
 - `initialized=false` — zuerst `check_pretrade_gates` aufrufen.
 
-## `replayUntilSec` (beide Tools)
+## `replayUntilSec` — der EINE Zeit-Parameter (alle Tools)
 
-Unix-Sekunden UTC. Nur das daraus abgeleitete Berlin-*Datum* bestimmt, welche Tageszeile gelesen
-wird — die genaue Uhrzeit ist für `get_next_action`/`get_loop_state` irrelevant. Ausnahme: Tools,
-die die Maschine tatsächlich voranbringen (`run_bias_check`, `run_dealing_range_loop`) übernehmen
-exakt diesen Zeitpunkt als neuen `last_analysis_time_sec` — dort MUSS die Uhrzeit stimmen
-(Backtest-Fortschritt hängt daran).
+Unix-Sekunden UTC. **Weglassen = live „jetzt", angeben = Replay-Zeitpunkt.** Seit 15.09.2026 heißt
+er in JEDEM Tool so — vorher gab es fünf Namen für dieselbe Sache (`sec`, `nowSec`,
+`currentTimeSec`, `toSec`), und ein Aufruf mit dem falschen Namen fiel stillschweigend auf „jetzt"
+zurück, weil zod unbekannte Keys verwirft. So wurde aus einem Backtest-Aufruf für den 09.09. ein
+Live-Schreibzugriff auf den 15.09. Die alten Namen sind weiterhin im Schema, aber so typisiert,
+dass ein Aufruf damit mit einer Meldung abbricht, statt falsch durchzulaufen.
+
+Nur das daraus abgeleitete Berlin-*Datum* bestimmt, welche Tageszeile gelesen wird — die genaue
+Uhrzeit ist für `get_next_action`/`get_loop_state` irrelevant. Ausnahme: Tools, die die Maschine
+tatsächlich voranbringen (`run_bias_check`, `run_dealing_range_loop`) übernehmen exakt diesen
+Zeitpunkt als neuen `last_analysis_time_sec` — dort MUSS die Uhrzeit stimmen (Backtest-Fortschritt
+hängt daran).
+
+**Im Backtest gilt: immer mitgeben.** Tools, die schreiben und ohne den Parameter auf „jetzt"
+zurückfallen (`check_pretrade_gates`, `create_dealing_range`, alle `log_*`, die Trade-Tools),
+treffen sonst den heutigen Kalendertag statt des Replay-Tages.
+
+Nicht betroffen: `fromTime`/`toTime` beim Kerzen-Archiv und bei `get_news_events` — das sind echte
+Zeit*bereiche*, kein „wann ist jetzt".
 
 ## Menschlicher Gegencheck
 
