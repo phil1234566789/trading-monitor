@@ -1074,9 +1074,9 @@
     "semantic_hash": "1113a960053efd89c82f94c3ed7b8337"
   },
   "supabase/functions/trading-monitor-mcp/tools/dealingRangeLoop.ts": {
-    "mtime": 1789332667.7614596,
-    "seen": 1789335879.8123088,
-    "ast_hash": "a0c7666c18740b531115dd2ea96230a3",
+    "mtime": 1789425066.9441695,
+    "seen": 1789425150.2263758,
+    "ast_hash": "1b90737c9b43acc5be109498337bcd70",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/nearRelevantLiquidityLevels.ts": {
@@ -2715,6 +2715,12 @@
     "mtime": 1789332667.764461,
     "seen": 1789335879.8123088,
     "ast_hash": "ace68a54635143ad57938f6b391f7323",
+    "semantic_hash": ""
+  },
+  "test/loopEvidenceFilters.test.js": {
+    "mtime": 1789425089.5411146,
+    "seen": 1789425150.2263758,
+    "ast_hash": "433720f6c6630010d7d6f8ef726a78ef",
     "semantic_hash": ""
   }
 }
