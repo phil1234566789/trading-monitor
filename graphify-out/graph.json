@@ -1242,7 +1242,7 @@
       "file_type": "code",
       "norm_label": "pendingdecision",
       "source_file": "supabase/functions/trading-monitor-mcp/biasEngine.ts",
-      "source_location": "L149"
+      "source_location": "L165"
     },
     {
       "id": "supabase_functions_trading_monitor_mcp_biasengine_trendforceconfidence",
@@ -9798,7 +9798,7 @@
       "file_type": "code",
       "norm_label": "buildpendingdecisions()",
       "source_file": "supabase/functions/trading-monitor-mcp/biasEngine.ts",
-      "source_location": "L165"
+      "source_location": "L181"
     },
     {
       "id": "supabase_functions_trading_monitor_mcp_biasengine_determinetrendforce",
@@ -86811,17 +86811,6 @@
     },
     {
       "source": "supabase_functions_trading_monitor_mcp_biasengine",
-      "target": "supabase_functions_trading_monitor_mcp_biasengine_pendingdecision",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "supabase/functions/trading-monitor-mcp/biasEngine.ts",
-      "source_location": "L149",
-      "weight": 1.0
-    },
-    {
-      "source": "supabase_functions_trading_monitor_mcp_biasengine",
       "target": "supabase_functions_trading_monitor_mcp_biasengine_isspreadhourpivot",
       "relation": "contains",
       "_origin": "ast",
@@ -86833,13 +86822,24 @@
     },
     {
       "source": "supabase_functions_trading_monitor_mcp_biasengine",
-      "target": "supabase_functions_trading_monitor_mcp_biasengine_buildpendingdecisions",
+      "target": "supabase_functions_trading_monitor_mcp_biasengine_pendingdecision",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/functions/trading-monitor-mcp/biasEngine.ts",
       "source_location": "L165",
+      "weight": 1.0
+    },
+    {
+      "source": "supabase_functions_trading_monitor_mcp_biasengine",
+      "target": "supabase_functions_trading_monitor_mcp_biasengine_buildpendingdecisions",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/functions/trading-monitor-mcp/biasEngine.ts",
+      "source_location": "L181",
       "weight": 1.0
     },
     {
@@ -102604,5 +102604,5 @@
       "source_file": "CLAUDE.md"
     }
   ],
-  "built_at_commit": "359a374a93c90039f70015e60917ced4eb53a13d"
+  "built_at_commit": "f1bd9be743cefdc8b326f8d2a1749b59e71b86d3"
 }

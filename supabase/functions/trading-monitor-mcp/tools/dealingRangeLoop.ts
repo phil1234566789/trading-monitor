@@ -56,6 +56,12 @@ function earliestOf(a: number | null, b: number | null): number | null {
 // snapshot.tradeSetups je Richtung immer das aktuellste liefert (Fall 3 gäbe es dann nie mehr).
 const OPPOSITE_SETUP_FRESH_HOURS = 2;
 
+// Wie jung eine M5-OB-Zone sein muss, um als "gerade entstanden" in die Evidenz zu kommen. Gleicher
+// Wert und gleiche Begruendung wie OPPOSITE_SETUP_FRESH_HOURS: es geht um "gerade jetzt relevant",
+// nicht um "existiert noch". Bewusst eine eigene Konstante, weil die beiden Fenster unabhaengig
+// voneinander verstellbar bleiben sollen.
+const FRESH_M5_OB_HOURS = 2;
+
 // exclude kombiniert tradingHours- UND news-Gate (siehe buildPretradeGates), die Heartbeats unten
 // nannten bisher IMMER "News-Blackout" — auch wenn tatsächlich die Handelszeit (z.B. Freitag 18 Uhr
 // Fensterschluss) der Grund war (Bug-Report Philip 07.09.2026, GBPUSD-Backtest 28.08.: 3x
@@ -80,6 +86,8 @@ export interface TickResult {
   htfWatchLevelBelow: WatchLevel | null;
   evidence: {
     htfInducementHits: Array<{ level: LoopLevel; assessment: InducementAssessment }>;
+    allLiquiditySweeps: unknown[];
+    freshM5ObZones: unknown[];
     completedTradeSetup: unknown;
     oppositeSetup: unknown;
     confluenceObReactions: unknown[];
@@ -123,6 +131,17 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
   // HasReactionInput.hasFreshOppositeSetup).
   const oppositeSetupRaw = (snapshot as any).tradeSetups?.[direction === "long" ? "short" : "long"] ?? null;
   const oppositeSetup = oppositeSetupRaw != null && oppositeSetupRaw.ageHours <= OPPOSITE_SETUP_FRESH_HOURS ? oppositeSetupRaw : null;
+
+  // Bias-UNGEFILTERT, beide Richtungen — die beiden Elemente, auf die Philip als Mensch zuerst
+  // schaut (M5-OB-Setups und HTF-LQ-Sweeps), waren bisher in bestimmten Zustaenden komplett
+  // unsichtbar, weil jedes Evidenz-Feld nach der Bias-Richtung gefiltert ist und oppositeSetup als
+  // einziges Fenster zur Gegenrichtung erst existiert, wenn ein VOLLSTAENDIGES Sweep+Fraktal+OB-
+  // Muster fertig ist. Im GBPUSD-Backtest 09.09.2026 klaffte dazwischen ein 40-Minuten-Loch: der
+  // baerische M5-OB 1.35647-1.3568 (die eigentliche Entry-Zone, entstanden 09:20) stand in keinem
+  // einzigen Feld, weil er weder retestet war noch zu einem fertigen Setup gehoerte.
+  // buildRecentReactions liefert beides ohnehin schon ungefiltert — es wurde hier nur weggeworfen.
+  const allLiquiditySweeps: any[] = (reactions as any).liquiditySweeps ?? [];
+  const freshM5ObZones: any[] = ((reactions as any).m5ObZones ?? []).filter((z: any) => z.startTime != null && z.startTime >= atSec - FRESH_M5_OB_HOURS * 3600);
 
   const fallFour: FallFourResult =
     currentPrice == null
@@ -267,10 +286,20 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
     htfWatchLevelAbove: htfWatchLevels.above,
     htfWatchLevelBelow: htfWatchLevels.below,
     evidence: {
+      // Die drei Felder ganz oben sind die bias-UNgefilterten — Reihenfolge steuert Aufmerksamkeit,
+      // und genau diese Elemente waren im 09.09.-Backtest unsichtbar. Alles darunter bleibt nach der
+      // Bias-Richtung gefiltert wie bisher.
+      //
       // Angelaufene HTF-Level seit dem letzten Tick, mit fertiger Inducement-Klasse. Ein gesweeptes
       // Hoch ist Kraft nach unten, ein gesweeptes Tief Kraft nach oben (liquidität.md) — steht im
       // text mit drin, weil genau diese Umkehrung im 09.09.-Backtest verdreht wurde.
       htfInducementHits: htfHits,
+      // ALLE kürzlich gesweepten Level, alle Timeframes, BEIDE Richtungen.
+      allLiquiditySweeps,
+      // M5-OB-Zonen, die in den letzten FRESH_M5_OB_HOURS entstanden sind — BEIDE Richtungen, auch
+      // ohne Retest und ohne vollständiges Setup-Muster. Eine frisch entstandene Entry-Zone ist
+      // genau das, worauf Philip als Mensch schaut, und sie erfüllt keines der Confluence-Kriterien.
+      freshM5ObZones,
       completedTradeSetup: setup,
       // Frisches Setup in Gegenrichtung (null, wenn keins oder älter als OPPOSITE_SETUP_FRESH_HOURS).
       // Ist es gesetzt, ist die Fall-1/2-Frage richtungsoffen zu stellen — ein valider Sweep in
@@ -548,13 +577,29 @@ export interface LogFallClassificationArgs {
   sec: number;
   case: 1 | 2;
   reasoning: string;
+  checkedM5ObSetups: string[];
+  checkedHtfSweeps: string[];
 }
 
 // Pendant zu log_bias_decision (Schritt 3) für Schritt 5: NUR Fall 1 vs. 2 ist wirklich Lanas Urteil
 // (siehe fallClassifier.ts/docs/state-machine.md) — Fall 3 (hasReaction=false) und Fall 4 (reiner
 // Preisvergleich) klassifiziert performFullTick bereits automatisch. NACH run_dealing_range_loop
 // aufrufen, sobald Lana aus `evidence` (hasReaction=true) eine Einordnung getroffen hat.
-export async function logFallClassification({ instrument, loopStateId, sec, case: fallCase, reasoning }: LogFallClassificationArgs) {
+//
+// checkedM5ObSetups/checkedHtfSweeps sind der einzige Teil dieser Kette, der nicht von Lanas
+// Gedächtnis abhängt: verfügbare Daten allein reichen nachweislich nicht. Im GBPUSD-Backtest
+// 09.09.2026 stand das Major Inducement 1.35652 um 09:00 in liquidityLevels1h — es wurde gelesen,
+// falsch eingeordnet und danach nie wieder angeschaut. Deshalb hier als Pflichtangabe: eine LEERE
+// Liste ist eine gültige Antwort ("nichts davon liegt vor"), das Feld WEGLASSEN ist es nicht.
+export async function logFallClassification({ instrument, loopStateId, sec, case: fallCase, reasoning, checkedM5ObSetups, checkedHtfSweeps }: LogFallClassificationArgs) {
+  if (!Array.isArray(checkedM5ObSetups) || !Array.isArray(checkedHtfSweeps)) {
+    throw new Error(
+      "checkedM5ObSetups und checkedHtfSweeps sind Pflichtfelder — beide Richtungen durchgehen, bevor der Fall feststeht. " +
+        "Quelle: evidence.freshM5ObZones (M5-OBs beider Richtungen, auch ohne Retest) und evidence.allLiquiditySweeps " +
+        "(alle Timeframes, beide Richtungen) aus dem letzten run_dealing_range_loop-Tick. " +
+        "Nichts gefunden? Dann eine leere Liste übergeben — aber bewusst, nicht durch Weglassen.",
+    );
+  }
   const loaded = await loadMachineForDay(instrument, berlinDateStrFor(sec));
   const currentNode = await transition(loaded, instrument, { type: "FALL_CLASSIFIED", case: fallCase }, sec);
   await logDecision({
@@ -564,11 +609,11 @@ export async function logFallClassification({ instrument, loopStateId, sec, case
     step: 5,
     tool: "run_dealing_range_loop",
     decision: "substep_fall_classification",
-    result: { case: fallCase, reasoning },
+    result: { case: fallCase, reasoning, checkedM5ObSetups, checkedHtfSweeps },
     message: `Fall ${fallCase}: ${reasoning}`,
     loopStateId,
   });
-  return { logged: true as const, case: fallCase, currentNode };
+  return { logged: true as const, case: fallCase, currentNode, checkedM5ObSetups, checkedHtfSweeps };
 }
 
 export interface RetractFall1ClassificationArgs {
@@ -732,13 +777,30 @@ export function registerDealingRangeLoopTool(server: McpServer) {
         "klassifiziert run_dealing_range_loop schon automatisch, dafür dieses Tool NICHT aufrufen. " +
         "NACH run_dealing_range_loop aufrufen, sobald `hasReaction=true` war und du aus `evidence` " +
         "eine Einordnung getroffen hast — schreibt das Urteil in die State-Machine (blockt hart, " +
-        "falls der Loop gerade nicht bei `s45.fallClassification` parkt) und ins state_machine_log.",
+        "falls der Loop gerade nicht bei `s45.fallClassification` parkt) und ins state_machine_log. " +
+        "checkedM5ObSetups/checkedHtfSweeps sind PFLICHT und beide richtungsoffen: erst auflisten, " +
+        "was tatsächlich vorliegt, dann den Fall bestimmen — nicht umgekehrt. Eine leere Liste ist " +
+        "eine gültige Antwort, das Feld wegzulassen nicht.",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
         loopStateId: z.number().int().describe("loopStateId aus der run_dealing_range_loop-Antwort"),
         sec: z.number().int().describe("Analysezeitpunkt (Unix-Sekunden), wie bei run_dealing_range_loop"),
         case: z.union([z.literal(1), z.literal(2)]).describe("Welcher Fall zutrifft"),
         reasoning: z.string().describe("Kurze Begründung, warum dieser Fall zutrifft"),
+        checkedM5ObSetups: z
+          .array(z.string())
+          .describe(
+            "Welche M5-OB-Zonen/Setups du betrachtet hast, BEIDE Richtungen — je ein kurzer String " +
+              "(z.B. 'bärisch 1.35647-1.35680, 09:20, kein Retest'). Quelle: evidence.freshM5ObZones. " +
+              "Leere Liste = bewusst nichts vorhanden.",
+          ),
+        checkedHtfSweeps: z
+          .array(z.string())
+          .describe(
+            "Welche 1H/4H-Liquiditäts-Level gesweept sind, BEIDE Richtungen, MIT Inducement-Klasse " +
+              "(z.B. '1.35652 4H-Hoch, Major Inducement, Kraft nach unten'). Quelle: " +
+              "evidence.allLiquiditySweeps + evidence.htfInducementHits. Leere Liste = bewusst nichts vorhanden.",
+          ),
       },
     },
     async (args) => json(await logFallClassification(args)),
