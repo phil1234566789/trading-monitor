@@ -1520,6 +1520,14 @@ export interface AddTradeTargetArgs {
   direction?: "high" | "low";
 }
 
+// Instrument + Richtung einer Idee, ohne die ganze TSC-Range zu laden — für den
+// Target-Auswahl-Guard (tools/trades.ts), der beides braucht, um find_targets aufzurufen.
+export async function getDealingRangeById(id: number): Promise<{ instrument: string | null; direction: "long" | "short" | null } | null> {
+  const { data, error } = await supabase.from("dealing_ranges").select("instrument, direction").eq("id", id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as { instrument: string | null; direction: "long" | "short" | null } | null;
+}
+
 async function resolvePivotLiquidityLevelId(args: { rangeLow?: number | null; rangeHigh?: number | null; instrument?: string; timeframe?: string; direction?: "high" | "low"; price: number; sourceTime: string }) {
   if (args.rangeLow != null || args.rangeHigh != null) return null; // OB-Ziel, kein Pivot
   if (!args.instrument || !args.timeframe || !args.direction) return null;
