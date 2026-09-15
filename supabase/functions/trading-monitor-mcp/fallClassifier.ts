@@ -59,15 +59,14 @@ export function checkFallFour(input: CheckFallFourInput): FallFourResult {
 }
 
 export interface HasReactionInput {
-  hasCompletedTradeSetup: boolean;
+  // Richtungsoffen (09.09.2026 GBPUSD-Backtest, seit dem A/B/C-Umbau vollständig behoben statt nur
+  // per oppositeSetup-Sonderfenster geflickt): alle drei Felder zählen BEIDE Richtungen — ein
+  // completed Setup auf irgendeiner Seite, keine getrennte "eigene"/"gegnerische" Zählung mehr. Die
+  // Fall-Frage bleibt trotzdem richtungsoffen zu stellen (05-dealing-range-bestaetigen.md), das
+  // entscheidet weiterhin Lana anhand von evidence.force, nicht dieses Flag.
+  hasAnyCompletedTradeSetup: boolean;
   obReactionCount: number;
   liquiditySweepCount: number;
-  // Frisches Setup in GEGENrichtung zum Bias — alle anderen Felder sind bewusst nach der
-  // Bias-Richtung gefiltert (siehe performFullTick), wodurch eine laufende Gegenbewegung im
-  // Fast-Forward unsichtbar blieb und der Loop über sie hinweglief (Backtest GBPUSD 09.09.2026:
-  // zwei per Telegram alarmierte Short-Setups blieben über den ganzen Vormittag unsichtbar, weil
-  // der Bias auf 'long' stand).
-  hasFreshOppositeSetup: boolean;
 }
 
 // Reine Existenz-Prüfung (keine Bewertung der QUALITÄT der Reaktion, siehe Kommentar oben) — nur
@@ -77,7 +76,7 @@ export interface HasReactionInput {
 // informieren" — ohne die beiden mechanisch zu unterscheiden, gilt "irgendeine Reaktion" als
 // Auslöser für beide).
 export function hasReaction(input: HasReactionInput): boolean {
-  return input.hasCompletedTradeSetup || input.obReactionCount > 0 || input.liquiditySweepCount > 0 || input.hasFreshOppositeSetup;
+  return input.hasAnyCompletedTradeSetup || input.obReactionCount > 0 || input.liquiditySweepCount > 0;
 }
 
 export interface WatchLevel {

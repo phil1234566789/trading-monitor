@@ -46,21 +46,23 @@ describe("checkFallFour", () => {
 
 describe("hasReaction", () => {
   it("false, wenn nichts vorliegt", () => {
-    expect(hasReaction({ hasCompletedTradeSetup: false, obReactionCount: 0, liquiditySweepCount: 0, hasFreshOppositeSetup: false })).toBe(false);
+    expect(hasReaction({ hasAnyCompletedTradeSetup: false, obReactionCount: 0, liquiditySweepCount: 0 })).toBe(false);
   });
   it("true bei vollständigem Trade-Setup", () => {
-    expect(hasReaction({ hasCompletedTradeSetup: true, obReactionCount: 0, liquiditySweepCount: 0, hasFreshOppositeSetup: false })).toBe(true);
+    expect(hasReaction({ hasAnyCompletedTradeSetup: true, obReactionCount: 0, liquiditySweepCount: 0 })).toBe(true);
   });
   it("true bei mindestens einer OB-Reaktion", () => {
-    expect(hasReaction({ hasCompletedTradeSetup: false, obReactionCount: 1, liquiditySweepCount: 0, hasFreshOppositeSetup: false })).toBe(true);
+    expect(hasReaction({ hasAnyCompletedTradeSetup: false, obReactionCount: 1, liquiditySweepCount: 0 })).toBe(true);
   });
   it("true bei mindestens einem Sweep", () => {
-    expect(hasReaction({ hasCompletedTradeSetup: false, obReactionCount: 0, liquiditySweepCount: 1, hasFreshOppositeSetup: false })).toBe(true);
+    expect(hasReaction({ hasAnyCompletedTradeSetup: false, obReactionCount: 0, liquiditySweepCount: 1 })).toBe(true);
   });
-  // Backtest GBPUSD 09.09.2026: alle Felder oben sind nach der Bias-Richtung gefiltert, ein
-  // laufendes Gegen-Setup lief deshalb im Fast-Forward still durch.
-  it("true bei frischem Setup in Gegenrichtung, auch wenn in Bias-Richtung nichts vorliegt", () => {
-    expect(hasReaction({ hasCompletedTradeSetup: false, obReactionCount: 0, liquiditySweepCount: 0, hasFreshOppositeSetup: true })).toBe(true);
+  // Backtest GBPUSD 09.09.2026: hasAnyCompletedTradeSetup zählt beide Richtungen gleichrangig (kein
+  // "eigenes"/"Gegen"-Setup mehr, siehe dealingRangeLoop.ts) — ein Setup in Gegenrichtung zum Bias
+  // löst genauso eine Reaktion aus wie eins in Bias-Richtung, sonst lief es im Fast-Forward
+  // still durch.
+  it("true bei einem Setup in Gegenrichtung zum Bias, unabhängig davon, welche Richtung gemeint ist", () => {
+    expect(hasReaction({ hasAnyCompletedTradeSetup: true, obReactionCount: 0, liquiditySweepCount: 0 })).toBe(true);
   });
 });
 

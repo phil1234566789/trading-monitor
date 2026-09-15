@@ -19,6 +19,7 @@ import {
   type WatchLevel,
   type InducementAssessment,
 } from "../fallClassifier.ts";
+import { assessForce, type ForceAssessment, type ForceLiquidityInput, type ForceObInput } from "../forceAssessment.ts";
 import { logDecision } from "../stateMachineLog.ts";
 import { loadMachineForDay, transition, transitionIfPossible, type LoadedMachine } from "../machineState.ts";
 import { currentNodePath } from "../tradingMachine.ts";
@@ -51,16 +52,13 @@ function earliestOf(a: number | null, b: number | null): number | null {
   return Math.min(a, b);
 }
 
-// Ab wann ein Setup in GEGENrichtung den Loop anhalten darf. Deutlich enger als dataSnapshots
-// SETUP_MAX_AGE_HOURS (48h): dort geht es um "existiert noch", hier um "ist gerade jetzt handelbar".
-// Ohne diese Grenze würde ein tagealtes Gegen-Setup jeden einzelnen Tick anhalten, da
-// snapshot.tradeSetups je Richtung immer das aktuellste liefert (Fall 3 gäbe es dann nie mehr).
-const OPPOSITE_SETUP_FRESH_HOURS = 2;
-
-// Wie jung eine M5-OB-Zone sein muss, um als "gerade entstanden" in die Evidenz zu kommen. Gleicher
-// Wert und gleiche Begruendung wie OPPOSITE_SETUP_FRESH_HOURS: es geht um "gerade jetzt relevant",
-// nicht um "existiert noch". Bewusst eine eigene Konstante, weil die beiden Fenster unabhaengig
-// voneinander verstellbar bleiben sollen.
+// Wie jung eine M5-OB-Zone sein muss, um als "gerade entstanden" in die Evidenz zu kommen — "gerade
+// jetzt relevant", nicht nur "existiert noch" (dataSnapshots SETUP_MAX_AGE_HOURS=48h deckt Letzteres
+// bereits ab). Bis zum A/B/C-Umbau gab es hierfür noch ein zweites, engeres Pendant
+// (OPPOSITE_SETUP_FRESH_HOURS) NUR für ein Setup in Gegenrichtung zum Bias — seit die Kraftabwägung
+// beide Richtungen symmetrisch behandelt (forceAssessment.ts), braucht es keine Richtungs-
+// Sonderbehandlung mehr, ein completed Trade-Setup wird auf beiden Seiten gleich (ungedrosselt)
+// gezählt, genau wie es die "eigene" Richtung vorher schon war.
 const FRESH_M5_OB_HOURS = 2;
 
 // exclude kombiniert tradingHours- UND news-Gate (siehe buildPretradeGates), die Heartbeats unten
@@ -87,13 +85,16 @@ export interface TickResult {
   htfWatchLevelBelow: WatchLevel | null;
   evidence: {
     htfInducementHits: Array<{ level: LoopLevel; assessment: InducementAssessment }>;
+    // Kraftabwägung dieses Ticks, beide Quellen (LQ+OB), beide Richtungen getrennt ausgewiesen —
+    // dieselbe Stelle/Form wie Schritt 3 (forceAssessment.ts).
+    force: ForceAssessment;
     allLiquiditySweeps: unknown[];
     freshM5ObZones: unknown[];
-    completedTradeSetup: unknown;
-    oppositeSetup: unknown;
+    // Beide Richtungen, kein "eigenes"/"gegnerisches" Setup mehr — siehe forceAssessment.ts-
+    // Kopfkommentar.
+    tradeSetups: { long: unknown; short: unknown };
     confluenceObReactions: unknown[];
     invalidatedObReactions: unknown[];
-    liquiditySweeps: unknown[];
   };
   currentNode: string;
 }
@@ -113,7 +114,6 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
     // zweite Absicherung, falls performFullTick je aus einem anderen Aufrufpfad genutzt wird.
     throw new Error(`Loop ${loopState.id} hat keinen Bias (direction=null) — kein gültiger Zustand für einen Schritt-5-Tick.`);
   }
-  const wantedSweepDir: "high" | "low" = direction === "long" ? "low" : "high";
 
   const [sessionWindow, snapshot, reactions] = await Promise.all([
     buildSessionWindow({ instrument, nowSec: atSec, loopStateId: loopState.id }),
@@ -124,25 +124,39 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
   ]);
 
   const currentPrice: number | null = (snapshot as any).referencePrice ?? null;
-  const liquiditySweeps: any[] = ((reactions as any).liquiditySweeps ?? []).filter((s: any) => s.direction === wantedSweepDir);
-  const obReactionsFiltered: any[] = ((reactions as any).obReactions ?? []).filter((z: any) => z.direction === direction);
-  const setup = (snapshot as any).tradeSetups?.[direction] ?? null;
-  // buildDataSnapshot berechnet ohnehin beide Richtungen — die Gegenrichtung wurde hier bisher
-  // schlicht weggeworfen, wodurch ein laufendes Gegen-Setup für Lana unsichtbar war (siehe
-  // HasReactionInput.hasFreshOppositeSetup).
-  const oppositeSetupRaw = (snapshot as any).tradeSetups?.[direction === "long" ? "short" : "long"] ?? null;
-  const oppositeSetup = oppositeSetupRaw != null && oppositeSetupRaw.ageHours <= OPPOSITE_SETUP_FRESH_HOURS ? oppositeSetupRaw : null;
 
-  // Bias-UNGEFILTERT, beide Richtungen — die beiden Elemente, auf die Philip als Mensch zuerst
-  // schaut (M5-OB-Setups und HTF-LQ-Sweeps), waren bisher in bestimmten Zustaenden komplett
-  // unsichtbar, weil jedes Evidenz-Feld nach der Bias-Richtung gefiltert ist und oppositeSetup als
-  // einziges Fenster zur Gegenrichtung erst existiert, wenn ein VOLLSTAENDIGES Sweep+Fraktal+OB-
-  // Muster fertig ist. Im GBPUSD-Backtest 09.09.2026 klaffte dazwischen ein 40-Minuten-Loch: der
-  // baerische M5-OB 1.35647-1.3568 (die eigentliche Entry-Zone, entstanden 09:20) stand in keinem
-  // einzigen Feld, weil er weder retestet war noch zu einem fertigen Setup gehoerte.
-  // buildRecentReactions liefert beides ohnehin schon ungefiltert — es wurde hier nur weggeworfen.
-  const allLiquiditySweeps: any[] = (reactions as any).liquiditySweeps ?? [];
+  // Richtungsoffen (A/B/C-Umbau, siehe milk-city-Task a-b-c-dauerlauf-statt-linearer-trading-
+  // steps-sequenz): buildRecentReactions liefert beide Richtungen bereits ungefiltert — bis hierhin
+  // wurde das hier auf loopState.direction zusammengestutzt, wodurch eine Gegenbewegung unsichtbar
+  // blieb (GBPUSD-Backtest 09.09.2026: zwei alarmierte Short-Setups verschwanden, weil der Bias auf
+  // 'long' stand). Jetzt bleibt ALLES beidseitig — der Bias (loopState.direction) entscheidet
+  // weiterhin Fall 4 (Target-/Invalidierungs-Preisvergleich unten) und die TSC-Default-Richtung,
+  // aber nicht mehr, welche Evidenz Lana überhaupt zu sehen bekommt.
+  const liquiditySweeps: any[] = (reactions as any).liquiditySweeps ?? [];
+  const obReactions: any[] = (reactions as any).obReactions ?? [];
+  const tradeSetups = (snapshot as any).tradeSetups ?? { long: null, short: null };
+  const hasAnyCompletedTradeSetup = tradeSetups.long != null || tradeSetups.short != null;
+
   const freshM5ObZones: any[] = ((reactions as any).m5ObZones ?? []).filter((z: any) => z.startTime != null && z.startTime >= atSec - FRESH_M5_OB_HOURS * 3600);
+
+  // Kraftabwägung (forceAssessment.ts, dieselbe Stelle wie Schritt 3) — beide Quellen, beide
+  // Richtungen, aus genau der Evidenz, die Lana ohnehin schon sieht. Ersetzt keine der obigen Roh-
+  // Listen (die bleiben Pflichtgrundlage für checkedM5ObSetups/checkedHtfSweeps), liefert zusätzlich
+  // die fertige Stärke-Einordnung je Seite, wie sie Philip für die Kraft-Subrechnung explizit will
+  // (13.09.2026: "Klassifikation macht Lana" abgelehnt).
+  const forceLiquidity: ForceLiquidityInput[] = liquiditySweeps
+    .filter((l: any) => l.direction === "high" || l.direction === "low")
+    .map((l: any) => ({ price: l.price, direction: l.direction, pivotTimeSec: l.pivotTime, touched: l.touched, kontext: l.kontext ?? null, timeframe: l.timeframe }));
+  const forceOb: ForceObInput[] = obReactions.map((z: any) => ({
+    direction: z.direction,
+    timeframe: z.timeframe,
+    touched: z.touched,
+    invalidated: z.invalidated,
+    retested: z.retested ?? false,
+    top: z.top,
+    bottom: z.bottom,
+  }));
+  const force: ForceAssessment = assessForce(forceLiquidity, forceOb, atSec);
 
   const fallFour: FallFourResult =
     currentPrice == null
@@ -150,10 +164,9 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
       : checkFallFour({ direction, currentPrice, trendTarget: loopState.trendTarget, countertrendTarget: loopState.countertrendTarget, invalidation: loopState.invalidation });
 
   const reactionFound = computeHasReaction({
-    hasCompletedTradeSetup: setup != null,
-    obReactionCount: obReactionsFiltered.length,
+    hasAnyCompletedTradeSetup,
+    obReactionCount: obReactions.length,
     liquiditySweepCount: liquiditySweeps.length,
-    hasFreshOppositeSetup: oppositeSetup != null,
   });
 
   const dateStr = berlinDateStrFor(atSec);
@@ -176,9 +189,9 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
       step: 5,
       tool: "run_dealing_range_loop",
       decision: "has_reaction",
-      result: { hasCompletedTradeSetup: setup != null, obReactionCount: obReactionsFiltered.length, liquiditySweepCount: liquiditySweeps.length, hasFreshOppositeSetup: oppositeSetup != null, reactionFound },
+      result: { hasAnyCompletedTradeSetup, obReactionCount: obReactions.length, liquiditySweepCount: liquiditySweeps.length, reactionFound },
       message: reactionFound
-        ? `Reaktion gefunden (Setup: ${setup != null}, OB-Reaktionen: ${obReactionsFiltered.length}, Sweeps: ${liquiditySweeps.length}, Gegen-Setup: ${oppositeSetup != null})`
+        ? `Reaktion gefunden (Setup: ${hasAnyCompletedTradeSetup}, OB-Reaktionen: ${obReactions.length}, Sweeps: ${liquiditySweeps.length})`
         : "keine Reaktion",
       loopStateId: loopState.id,
     }),
@@ -287,35 +300,38 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
     htfWatchLevelAbove: htfWatchLevels.above,
     htfWatchLevelBelow: htfWatchLevels.below,
     evidence: {
-      // Die drei Felder ganz oben sind die bias-UNgefilterten — Reihenfolge steuert Aufmerksamkeit,
-      // und genau diese Elemente waren im 09.09.-Backtest unsichtbar. Alles darunter bleibt nach der
-      // Bias-Richtung gefiltert wie bisher.
+      // Ab hier ALLES richtungsoffen (A/B/C-Umbau) — bis dahin waren die vier unteren Felder auf
+      // loopState.direction gefiltert, was eine laufende Gegenbewegung unsichtbar machte (GBPUSD-
+      // Backtest 09.09.2026). Der Bias entscheidet weiterhin Fall 4 (s.o.), aber nicht mehr, welche
+      // Evidenz Lana zu sehen bekommt — die Fall-1/2-Frage selbst bleibt richtungsoffen zu stellen
+      // (05-dealing-range-bestaetigen.md#die-vier-fälle).
       //
+      // Fertige Kraft-Einordnung dieses Ticks, beide Quellen, beide Seiten getrennt (siehe
+      // forceAssessment.ts) — dieselbe Form wie Schritt 3.
+      force,
       // Angelaufene HTF-Level seit dem letzten Tick, mit fertiger Inducement-Klasse. Ein gesweeptes
       // Hoch ist Kraft nach unten, ein gesweeptes Tief Kraft nach oben (liquidität.md) — steht im
       // text mit drin, weil genau diese Umkehrung im 09.09.-Backtest verdreht wurde.
       htfInducementHits: htfHits,
       // ALLE kürzlich gesweepten Level, alle Timeframes, BEIDE Richtungen.
-      allLiquiditySweeps,
+      allLiquiditySweeps: liquiditySweeps,
       // M5-OB-Zonen, die in den letzten FRESH_M5_OB_HOURS entstanden sind — BEIDE Richtungen, auch
       // ohne Retest und ohne vollständiges Setup-Muster. Eine frisch entstandene Entry-Zone ist
       // genau das, worauf Philip als Mensch schaut, und sie erfüllt keines der Confluence-Kriterien.
       freshM5ObZones,
-      completedTradeSetup: setup,
-      // Frisches Setup in Gegenrichtung (null, wenn keins oder älter als OPPOSITE_SETUP_FRESH_HOURS).
-      // Ist es gesetzt, ist die Fall-1/2-Frage richtungsoffen zu stellen — ein valider Sweep in
-      // Gegenrichtung ist Fall 1 für eine NEUE Dealing Range, nicht Fall 2 für die laufende Idee
-      // (05-dealing-range-bestaetigen.md#die-vier-fälle).
-      oppositeSetup,
+      // Beide Richtungen gleichrangig — kein "mein" Setup vs. "Gegen"-Setup mehr. Ist eins auf der
+      // Gegenrichtung zum Bias gesetzt, ist die Fall-1/2-Frage richtungsoffen zu stellen: ein
+      // valider Sweep in Gegenrichtung ist Fall 1 für eine NEUE Dealing Range, nicht Fall 2 für die
+      // laufende Idee (05-dealing-range-bestaetigen.md#die-vier-fälle).
+      tradeSetups,
       // "confluenceObReactions" statt "heldObReactions" (Bug-Report Philip 05.09.2026, GBPUSD-
       // Retest 28.08.2026): eine getouchte, nicht invalidierte OB zählt erst als Confluence, wenn
       // der Retest nachweislich abgeschlossen ist (z.retested, siehe orderblöcke.md#retest-status)
       // — unabhängig vom Alter. Zonen, die zwar getouched aber noch unentschieden sind ("Retest
       // läuft", touched && !invalidated && !retested), tauchen hier bewusst NICHT auf (Philip: "schau
       // ma mal, was wir mit denen noch machen" — noch keine definierte Behandlung).
-      confluenceObReactions: obReactionsFiltered.filter((z) => z.touched && !z.invalidated && z.retested),
-      invalidatedObReactions: obReactionsFiltered.filter((z) => z.invalidated),
-      liquiditySweeps,
+      confluenceObReactions: obReactions.filter((z) => z.touched && !z.invalidated && z.retested),
+      invalidatedObReactions: obReactions.filter((z) => z.invalidated),
     },
     currentNode: currentNodePath(loaded.actor),
   };
@@ -351,8 +367,8 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
   if (loopState.direction == null) {
     // Seit 06.09.2026 (S1/S2-Sichtbarkeit) kann die Zeile eines Tages auch ein reiner Gate-Block
     // sein (current_step 1/2, siehe machineState.ts loadOrCreateMachineForDay) — ohne diesen Check
-    // würde performFullTick unten mit direction=null weiterlaufen (falsches wantedSweepDir, falsche
-    // OB-Filterung) statt klar zu sagen, woran es liegt.
+    // würde performFullTick unten mit direction=null weiterlaufen (Fall 4 nicht auswertbar) statt
+    // klar zu sagen, woran es liegt.
     throw new Error(
       `${instrument}/${dateStr} (id=${loopState.id}, Schritt ${loopState.currentStep}) hat noch keinen Bias — ` +
         `Handelszeit-/News-Gate ist noch nicht durchlaufen (aktueller Knoten: ${loopState.currentNode}). Zuerst run_bias_check aufrufen (Schritt 3).`,
@@ -730,18 +746,21 @@ export function registerDealingRangeLoopTool(server: McpServer) {
         "zurückgesprungen (KEIN automatischer run_bias_check-Aufruf, ruf ihn selbst wieder auf), bei " +
         "Fall 3 läuft ein Backtest automatisch weiter, ohne dich zu fragen. NUR Fall 1 vs. 2 " +
         "(`hasReaction=true`) ist bewusst NICHT mechanisch klassifiziert (auch 'valider Sweep' ist " +
-        "eine Einordnung, die du selbst triffst) — `evidence` liefert dafür nur die rohen Bausteine " +
-        "(vollständiges Trade-Setup, `oppositeSetup`, `confluenceObReactions`/`invalidatedObReactions`, Sweeps). " +
-        "`confluenceObReactions` enthält NUR OBs mit bestätigtem Retest (siehe orderblöcke.md#retest-" +
-        "status) — Alter spielt dabei keine Rolle, eine seit Tagen unangetastete OB zählt genauso " +
-        "als Confluence wie eine von vor 5 Minuten. Getouchte, aber noch unentschiedene OBs " +
-        "('Retest läuft') tauchen hier NICHT auf. " +
-        "ACHTUNG `oppositeSetup`: alle übrigen evidence-Felder sind nach der Bias-Richtung GEFILTERT — " +
-        "ist `oppositeSetup` gesetzt (frisches Trade-Setup in Gegenrichtung, max. 2h alt), stell die " +
-        "Fall-Frage richtungsoffen: ein valider Sweep in Gegenrichtung ist Fall 1 für eine NEUE Dealing " +
-        "Range in Gegenrichtung, NICHT Fall 2 für die laufende Idee. Nach log_fall_classification dann " +
-        "über einen neuen run_bias_check die Richtung drehen, statt die alte Idee weiterzuführen. " +
-        "Erkennst du daraus Fall 1 oder 2: ZUERST `log_fall_classification` aufrufen (schreibt dein " +
+        "eine Einordnung, die du selbst triffst) — `evidence` liefert dafür die rohen Bausteine " +
+        "(`tradeSetups.long`/`.short`, `confluenceObReactions`/`invalidatedObReactions`, Sweeps) PLUS " +
+        "`evidence.force` (fertige Kraft-Einordnung, dieselbe Stelle wie Schritt 3, siehe " +
+        "forceAssessment.ts) — ALLES davon beide Richtungen, ungefiltert. `confluenceObReactions` " +
+        "enthält NUR OBs mit bestätigtem Retest (siehe orderblöcke.md#retest-status) — Alter spielt " +
+        "dabei keine Rolle, eine seit Tagen unangetastete OB zählt genauso als Confluence wie eine " +
+        "von vor 5 Minuten. Getouchte, aber noch unentschiedene OBs ('Retest läuft') tauchen hier " +
+        "NICHT auf. " +
+        "Stell die Fall-Frage IMMER richtungsoffen: ein valider Sweep in Gegenrichtung zum aktuellen " +
+        "Bias ist Fall 1 für eine NEUE Dealing Range in Gegenrichtung, NICHT Fall 2 für die laufende " +
+        "Idee — `evidence.tradeSetups`/`.force` zeigen beide Seiten gleichrangig, kein Sonderfeld " +
+        "mehr nötig, um die Gegenrichtung überhaupt zu sehen. Erkennst du daraus Fall 1 oder 2 in " +
+        "Gegenrichtung: nach log_fall_classification über einen neuen run_bias_check die Richtung " +
+        "drehen, statt die alte Idee weiterzuführen. " +
+        "Erkennst du den Fall: ZUERST `log_fall_classification` aufrufen (schreibt dein " +
         "Urteil in die Maschine), DANN die TSC-Verknüpfung (Bootstrap/Bestätigung/Target/Pin-" +
         "Aufräumen) wie gewohnt über add_trade_confirmation/add_trade_target/remove_pin_entry — " +
         "dieses Tool tut das NICHT automatisch. MIT replayUntilSec: Backtest-Batch-Fast-Forward vom letzten " +
@@ -801,7 +820,8 @@ export function registerDealingRangeLoopTool(server: McpServer) {
           .describe(
             "Welche 1H/4H-Liquiditäts-Level gesweept sind, BEIDE Richtungen, MIT Inducement-Klasse " +
               "(z.B. '1.35652 4H-Hoch, Major Inducement, Kraft nach unten'). Quelle: " +
-              "evidence.allLiquiditySweeps + evidence.htfInducementHits. Leere Liste = bewusst nichts vorhanden.",
+              "evidence.allLiquiditySweeps + evidence.htfInducementHits, fertige Sätze je Seite auch " +
+              "in evidence.force.bullish/.bearish. Leere Liste = bewusst nichts vorhanden.",
           ),
       },
     },
