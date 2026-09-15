@@ -7,10 +7,7 @@ import { logDecision } from "../stateMachineLog.ts";
 import { loadOrCreateMachineForDay, transitionIfPossible } from "../machineState.ts";
 import { currentNodePath } from "../tradingMachine.ts";
 import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";
-
-function json(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
+import { json } from "../jsonResponse.ts";
 
 // check_pretrade_gates (Schritt 1+2, siehe docs/state-machine.md) — bei einem direkten (live)
 // Aufruf treibt es den permanenten Pro-Tag-Loop-State durch s1_handelszeit/s2_news (siehe

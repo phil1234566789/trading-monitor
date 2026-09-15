@@ -7,10 +7,7 @@ import { buildNearRelevantLiquidityLevels } from "./nearRelevantLiquidityLevels.
 import { buildNearRelevantObZones } from "./nearRelevantObZones.ts";
 import { computeM5LiquidityAndObZones, M5_DETECTION_LOOKBACK_HOURS, M5_DETECTION_CANDLE_BUFFER, M5_BAR_SECONDS, M5_OB_RANGE_PIPS } from "./dataExport.ts";
 import { PIP_SIZE } from "../pipConfig.js";
-
-function json(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
+import { json } from "../jsonResponse.ts";
 
 // get_recent_reactions (Pflichtprüfung 00-trading-steps/05-dealing-range-bestaetigen.md, 2026-08-31)
 // — Philip: "die letzten LQ-Sweeps (alle TFs) prüfen, die letzten OBs (alle TFs) prüfen, prüfen ob

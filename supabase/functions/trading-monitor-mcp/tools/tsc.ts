@@ -7,10 +7,7 @@ import { logDecision } from "../stateMachineLog.ts";
 import { berlinDateStrFor } from "../berlinTime.ts";
 import { safeTransitionChain } from "../machineState.ts";
 import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";
-
-function json(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
+import { json } from "../jsonResponse.ts";
 
 const INSTRUMENT = z.enum(["GBPUSD", "EURUSD"]);
 const DIRECTION = z.enum(["long", "short"]);

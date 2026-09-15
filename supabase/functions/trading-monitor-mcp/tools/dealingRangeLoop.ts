@@ -25,10 +25,7 @@ import { logDecision } from "../stateMachineLog.ts";
 import { loadMachineForDay, transition, transitionIfPossible, type LoadedMachine } from "../machineState.ts";
 import { currentNodePath } from "../tradingMachine.ts";
 import { REPLAY_UNTIL_SEC, REPLAY_UNTIL_SEC_REQUIRED, deprecatedTimeParam } from "../toolParams.ts";
-
-function json(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
+import { json } from "../jsonResponse.ts";
 
 const BATCH_HOURS = 2;
 const M5_BAR_SECONDS = barSecondsFor("5m");

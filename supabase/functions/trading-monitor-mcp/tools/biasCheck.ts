@@ -12,10 +12,7 @@ import { logDecision } from "../stateMachineLog.ts";
 import { loadOrCreateMachineForDay, transition, transitionIfPossible } from "../machineState.ts";
 import { currentNodePath } from "../tradingMachine.ts";
 import { REPLAY_UNTIL_SEC_REQUIRED, deprecatedTimeParam } from "../toolParams.ts";
-
-function json(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
+import { json } from "../jsonResponse.ts";
 
 export interface BiasCheckArgs {
   instrument: string;

@@ -5,10 +5,7 @@ import { logDecision } from "../stateMachineLog.ts";
 import { berlinDateStrFor } from "../berlinTime.ts";
 import { safeTransitionChain } from "../machineState.ts";
 import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";
-
-function json(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
+import { json } from "../jsonResponse.ts";
 
 // War bis Chat 2026-08-17 read-only ("Philip entfernt Einträge selbst im Pin-Modal, kein
 // Lösch-/Konsum-Tool von Lana-Seite nötig") — Philip wollte danach explizit, dass Lana relevante

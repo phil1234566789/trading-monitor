@@ -3,6 +3,7 @@ import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp
 import { berlinDateStrFor, berlinDateTimeStrFor } from "../berlinTime.ts";
 import { getLoopStateForDay } from "../loopState.ts";
 import { NEXT_ACTION_MAP, NEXT_ACTION_FALLBACK } from "../nextActionMap.ts";
+import { json } from "../jsonResponse.ts";
 
 // Live tickt der CronCreate-Auto-Loop alle 5 Minuten (05-dealing-range-bestaetigen.md) — im Backtest
 // gibt's keinen Cron, also muss get_next_action selbst den nächsten Analysezeitpunkt vorgeben.
@@ -11,10 +12,6 @@ import { NEXT_ACTION_MAP, NEXT_ACTION_FALLBACK } from "../nextActionMap.ts";
 // Handelsschluss/Wochenende unbemerkt, obwohl die Maschine "Fall 2 = aktiv beobachten" schon lange
 // kennt (tradingMachine.ts), nur nie an Lana kommuniziert hat, WAS "aktiv beobachten" mechanisch heißt.
 const BACKTEST_TICK_SEC = 300;
-
-function json(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
 
 export interface NextActionArgs {
   instrument: string;

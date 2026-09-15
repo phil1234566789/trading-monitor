@@ -6,10 +6,7 @@ import { sessionOccurrences } from "../sessionOccurrences.js";
 import { logDecision } from "../stateMachineLog.ts";
 import { loadMachineForDayOrNull, transitionIfPossible } from "../machineState.ts";
 import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";
-
-function json(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
+import { json } from "../jsonResponse.ts";
 
 // check_session_window (Schritt 4, siehe docs/state-machine.md + 04-check-session.md) — REINE
 // Fakten, keine Interpretation/Auswahl (das bleibt Schritt 5, siehe run_dealing_range_loop, das

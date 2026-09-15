@@ -4,10 +4,7 @@ import { createTrade, addTradePosition, updateTradePosition, updateDealingRange,
 import { findTargetCandidates } from "../findTargetCandidates.js";
 import { flattenTargetCandidates, findUnexplainedNearerTargets, unexplainedNearerTargetsError } from "../targetChoiceGuard.ts";
 import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";
-
-function json(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
+import { json } from "../jsonResponse.ts";
 
 // Hier statt in db.ts: addTradeTarget, obwohl es dort für alle Aufrufer gälte — findTargetCandidates.js
 // importiert db.ts, ein Rückimport wäre ein Zirkel. addTradeTarget hat ohnehin nur diesen einen

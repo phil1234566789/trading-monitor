@@ -21,10 +21,7 @@ import { buildNearRelevantLiquidityLevels, NEAR_RANGE_PIPS } from "./nearRelevan
 import { computeRsi, rsiZone, DEFAULT_RSI_PERIOD } from "../rsi.js";
 import { computeEma } from "../ema.js";
 import { resolveDayWindow, fetchM5WithWarmup, isWithinDayWindow } from "../indicatorWindow.ts";
-
-function json(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
+import { json } from "../jsonResponse.ts";
 
 const INSTRUMENT = z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument");
 

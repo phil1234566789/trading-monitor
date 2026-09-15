@@ -1,12 +1,9 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import { toPips } from "../pipConfig.js";
+import { json } from "../jsonResponse.ts";
 
 const INSTRUMENT = z.enum(["GBPUSD", "EURUSD"]);
-
-function json(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
 
 function round(value: number, decimals: number): number {
   const factor = 10 ** decimals;

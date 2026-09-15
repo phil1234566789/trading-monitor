@@ -16,10 +16,7 @@ import {
   DEFAULT_TRADE_SETUP_PARAMS,
   type DetectedTradeSetup,
 } from "../../_shared/tradeSetup.ts";
-
-function json(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
+import { json } from "../jsonResponse.ts";
 
 // get_data_snapshot (Task "schlankes Schritt-5-Tool"/get-trade-setups-filtern, 2026-08-30) —
 // Philip: Lana braucht ein schlankes "was ist JETZT relevant"-Bündel statt sich das aus
