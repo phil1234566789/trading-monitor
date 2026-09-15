@@ -1,6 +1,7 @@
 // Pure Logik hinter run_dealing_range_loop (Schritt 5, siehe docs/state-machine.md +
 // 05-dealing-range-bestaetigen.md) — dependency-frei, testbar ohne DB/Deno-Fetches.
 import { businessSecondsBetween, classifyAge, type AgeTier } from "../_shared/ageTier.ts";
+import { assessLiquidityForce } from "./forceAssessment.ts";
 //
 // Nur Fall 4 (Trend-/Countertrend-Target oder Invalidierung erreicht) ist ein reiner
 // Preisvergleich und wird hier mechanisch entschieden. Fall 1/2/3 sind NICHT mechanisch
@@ -160,11 +161,12 @@ export interface InducementAssessment {
 // deshalb kommt die Schwelle aus _shared/ageTier.ts statt aus einer weiteren lokalen Kopie.
 export function assessInducement(level: { price: number; pivotTimeSec: number; direction?: "high" | "low" | null }, atSec: number): InducementAssessment {
   const businessSeconds = businessSecondsBetween(level.pivotTimeSec, atSec);
-  const cls = classifyAge(businessSeconds);
-  const label = `${cls[0].toUpperCase()}${cls.slice(1)} Inducement`;
-  // Ein gesweeptes Hoch ist Kraft nach unten, ein gesweeptes Tief Kraft nach oben (liquidität.md) —
-  // die Richtung gehört in den Text, weil genau diese Umkehrung im 09.09.-Backtest verdreht wurde.
-  const force = level.direction === "high" ? "Kraft nach unten" : level.direction === "low" ? "Kraft nach oben" : null;
-  const parts = [`${label} ${level.price} angelaufen`, force].filter((p): p is string => p != null);
-  return { class: cls, businessSeconds, text: `${parts.join(" ---> ")}.` };
+  // Der Text kommt aus forceAssessment.ts — die EINE Kraft-Stelle, die auch Schritt 3 benutzt.
+  // Vorher formulierte jeder Schritt seinen eigenen Kraft-Satz, mit dem Ergebnis, dass Schritt 3
+  // und Schritt 5 am 09.09.2026 dasselbe Level gegensätzlich meldeten.
+  const signal = assessLiquidityForce({ price: level.price, direction: level.direction ?? null, pivotTimeSec: level.pivotTimeSec, touched: true }, atSec);
+  const cls = signal?.inducementClass ?? classifyAge(businessSeconds);
+  // direction=null liefert kein Signal (keine Kraftrichtung bestimmbar) — dann bleibt nur das Label.
+  const text = signal?.text ?? `${cls[0].toUpperCase()}${cls.slice(1)} Inducement ${level.price} angelaufen.`;
+  return { class: cls, businessSeconds, text };
 }

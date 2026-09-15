@@ -6,7 +6,8 @@ import { upsertBiasFields } from "../loopState.ts";
 import { buildPretradeGates } from "./pretradeGates.ts";
 import { compute1hStructureState } from "./dataExport.ts";
 import { buildCandidatePool, findNearestLiquidityTargets, findNearestObTargets } from "../findTargetCandidates.js";
-import { isSpreadHourPivot, findIntermediateLevel, determineTrendForce, buildPendingDecisions, type TrendForceLevelInput, type TrendForceObInput } from "../biasEngine.ts";
+import { isSpreadHourPivot, findIntermediateLevel, buildPendingDecisions } from "../biasEngine.ts";
+import { assessForce, type ForceLiquidityInput, type ForceObInput } from "../forceAssessment.ts";
 import { logDecision } from "../stateMachineLog.ts";
 import { loadOrCreateMachineForDay, transition, transitionIfPossible } from "../machineState.ts";
 import { currentNodePath } from "../tradingMachine.ts";
@@ -29,16 +30,6 @@ function deepestTrend<T extends { trend: "uptrend" | "downtrend"; nestedTrend: T
   let cur = node;
   while (cur.nestedTrend) cur = cur.nestedTrend;
   return cur;
-}
-
-// Nächstgelegenes HTF-Liquiditätslevel in der gesuchten Richtung, UNABHÄNGIG vom touched-Status
-// (anders als findNearestLiquidityTargets, das nur unberührte Level fürs Ziel sucht) — für
-// Prüfpunkt (4)/determineTrendForce muss auch ein BEREITS geswepptes Level gefunden werden können.
-function nearestHtfLevel(levels: { price: number; direction: "high" | "low"; touched: boolean; timeframe: string; kontext?: string | null }[], direction: "high" | "low", currentPrice: number) {
-  return levels
-    .filter((l) => l.direction === direction && (l.timeframe === "1H" || l.timeframe === "4H"))
-    .slice()
-    .sort((a, b) => Math.abs(a.price - currentPrice) - Math.abs(b.price - currentPrice))[0] ?? null;
 }
 
 export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckArgs) {
@@ -167,19 +158,23 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
     ? findIntermediateLevel({ direction: trendDirection, currentPrice, trendTargetPrice: trendTarget.price, liquidityLevels: filteredLiquidity, obZones: filteredObZones, asiaRange })
     : null;
 
-  // Trend-Kraft (Prüfpunkt 4) — relevantes gegenläufiges HTF-OB ist i.d.R. das Countertrend-Target
-  // selbst (siehe 03-htf-bias.md), relevantes gegenläufiges HTF-Level das nächstgelegene HTF-Level
-  // in derselben Richtung wie das Countertrend-OB.
-  const obForForce: TrendForceObInput | null = counterTargetOb ? { direction: counterTargetOb.direction, timeframe: counterTargetOb.timeframe, touched: counterTargetOb.touched, invalidated: counterTargetOb.invalidated } : null;
-  const wantedLevelDir = counterDirection === "short" ? "high" : "low";
-  const nearestLevel = nearestHtfLevel(filteredLiquidity, wantedLevelDir, currentPrice);
-  const levelForForce: TrendForceLevelInput | null = nearestLevel ? { direction: nearestLevel.direction, price: nearestLevel.price, timeframe: nearestLevel.timeframe, touched: nearestLevel.touched } : null;
-  const trendForce = determineTrendForce(trend, obForForce, levelForForce, currentPrice);
+  // Kraftabwägung (Prüfpunkt 4, kontext-analyse.md#kraft--herleitung-im-kontext-der-trade-ableitung):
+  // BEIDE Quellen (LQ-Sweeps + OB-Reaktionen) und BEIDE Richtungen aus dem ohnehin schon preis-/
+  // zeitgefilterten Kandidatenpool. Vorher wurde genau EIN gegenläufiges OB und EIN gegenläufiges
+  // Level bewertet — die Gegenseite war damit unsichtbar, obwohl "kein Trade bei ausgeglichenem
+  // Kampf" (allgemeines.md) sie zwingend braucht.
+  const levelsForForce: ForceLiquidityInput[] = filteredLiquidity
+    .filter((l: any) => (l.timeframe === "1H" || l.timeframe === "4H") && l.pivotTime != null)
+    .map((l: any) => ({ price: l.price, direction: l.direction, pivotTimeSec: l.pivotTime, touched: l.touched, kontext: l.kontext ?? null, timeframe: l.timeframe }));
+  const obsForForce: ForceObInput[] = filteredObZones
+    .filter((z: any) => z.timeframe === "1H" || z.timeframe === "4H")
+    .map((z: any) => ({ direction: z.dir === 1 ? "long" : "short", timeframe: z.timeframe, touched: z.touched, invalidated: z.invalidated, retested: z.retested ?? false, top: z.top, bottom: z.bottom }));
+  const force = assessForce(levelsForForce, obsForForce, currentTimeSec);
 
   const invalidation = countertrendTarget?.price ?? null;
 
   const pendingDecisions = buildPendingDecisions({
-    trendForce,
+    force,
     trendTargetFound: trendTarget != null,
     countertrendTargetFound: countertrendTarget != null,
     intermediateLevelFound: intermediateLevel != null,
@@ -212,8 +207,8 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
       step: 3,
       tool: "run_bias_check",
       decision: "trend_force",
-      result: trendForce,
-      message: [trendForce.ob.text, trendForce.level.text].filter(Boolean).join(" | ") || null,
+      result: force,
+      message: force.signals.map((s) => s.text).join(" | ") || null,
       loopStateId: loaded.loopId,
     }),
     logDecision({
@@ -244,7 +239,7 @@ export async function buildBiasCheck({ instrument, replayUntilSec }: BiasCheckAr
     countertrendTarget,
     intermediateLevel,
     invalidation,
-    trendForce,
+    force,
     pendingDecisions,
     loopStateId: loaded.loopId,
     // State-Machine V2 (tradingMachine.ts) — steht nach diesem Aufruf bei "s3_bias.llm3_kontextSynthese",
@@ -289,7 +284,7 @@ export function registerBiasCheckTool(server: McpServer) {
         "im Block-Fall. Sonst: 1H-Struktur-Trend (`structure1h`, wie get_data_export), " +
         "Trend-/Countertrend-Target (dieselbe find_targets-Auswahl-Logik, Spread-Hour-Pivots " +
         "übersprungen), Zwischen-Level-Check (`intermediateLevel`, inkl. heutiger Asia-Range), " +
-        "Trend-Kraft am relevanten gegenläufigen HTF-OB/-Level (`trendForce`) — UND schreibt/" +
+        "Kraft-Signale beider Seiten aus LQ-Sweeps UND OB-Reaktionen (`force`, je Seite getrennt) — UND schreibt/" +
         "aktualisiert die Bias-Felder derselben Zeile in place (ein Fall-4-Neustart überschreibt sie " +
         "am selben Tag, statt eine zweite Zeile anzulegen). `kontextInfoSynthesis` " +
         "ist bewusst `null` — " +

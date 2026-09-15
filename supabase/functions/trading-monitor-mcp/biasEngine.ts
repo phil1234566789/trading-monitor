@@ -1,4 +1,5 @@
 import { berlinWeekdayAndMinutes } from "./pretradeGates.ts";
+import type { ForceAssessment } from "./forceAssessment.ts";
 
 // Pure Logik hinter run_bias_check (Schritt 3, siehe docs/state-machine.md + 03-htf-bias.md) —
 // dependency-frei (nur pretradeGates.ts, selbst dependency-frei), damit sie ohne DB/Deno-Fetches
@@ -78,90 +79,6 @@ export function findIntermediateLevel(args: FindIntermediateLevelArgs): Intermed
   return candidates[0];
 }
 
-export type TrendForceConfidence = "high" | "medium" | "low";
-
-export interface TrendForceObInput {
-  direction: "long" | "short";
-  timeframe: string;
-  touched: boolean;
-  invalidated: boolean;
-}
-
-export interface TrendForceLevelInput {
-  direction: "high" | "low";
-  price: number;
-  timeframe: string;
-  touched: boolean;
-  kontext?: string | null;
-}
-
-export interface TrendForceVerdict {
-  verdict: "held" | "swept" | "broken" | "none" | "unclear";
-  text: string | null;
-  confidence: TrendForceConfidence;
-}
-
-export interface TrendForceResult {
-  ob: TrendForceVerdict;
-  level: TrendForceVerdict;
-}
-
-// Prüfpunkt (4) aus 03-htf-bias.md — hält das relevante gegenläufige HTF-OB/-Level, oder ist es
-// sauber durchbrochen? ob/level sollten die jeweils relevanten HTF-Objekte sein (i.d.R. das
-// Countertrend-Target-OB bzw. das zuletzt geswepte Asia-/NY-/MMM-Level, siehe tools/biasCheck.ts).
-// OB-Verdikt ist rein DB-Flag-basiert (touched/invalidated, siehe Orderblöcke → Kanten-Regel) —
-// dieselbe Fehlerklasse aus dem Vorfall (OB fälschlich als "bullisch" statt "bärisch" benannt) ist
-// strukturell ausgeschlossen, weil ob.direction direkt aus der DB-Zeile kommt, nie von Lana neu
-// benannt wird. Level-Verdikt braucht zusätzlich currentPrice (welche Seite des Levels hält der
-// Kurs JETZT) — ohne Folge-Kerzen-Analyse eine Preis-Geometrie-Näherung statt einer echten
-// Reversal-Bestätigung, deshalb bewusst nur confidence='medium'.
-export function determineTrendForce(trend: "uptrend" | "downtrend", ob: TrendForceObInput | null, level: TrendForceLevelInput | null, currentPrice: number | null): TrendForceResult {
-  const strengthWord = trend === "uptrend" ? "bullische" : "bärische";
-
-  let obResult: TrendForceVerdict = { verdict: "none", text: null, confidence: "high" };
-  if (ob) {
-    const dirWord = ob.direction === "long" ? "bullischer" : "bärischer";
-    if (ob.invalidated) {
-      obResult = { verdict: "broken", text: `${dirWord} ${ob.timeframe}-OB durchbrochen ---> ${strengthWord} Schwäche, möglicher Trendwechsel.`, confidence: "high" };
-    } else if (ob.touched) {
-      obResult = { verdict: "held", text: `${dirWord} ${ob.timeframe}-OB angetestet und hat gehalten ---> ${strengthWord} Stärke.`, confidence: "high" };
-    }
-  }
-
-  let levelResult: TrendForceVerdict = { verdict: "none", text: null, confidence: "high" };
-  if (level?.touched) {
-    if (currentPrice == null) {
-      levelResult = { verdict: "unclear", text: null, confidence: "low" };
-    } else {
-      // Die Kraft eines Liquiditäts-Levels kommt aus dem LEVEL, nicht aus dem Trend: ein gesweeptes
-      // Hoch ist Kraft nach unten, ein gesweeptes Tief Kraft nach oben — unabhängig davon, welche
-      // Richtung der aktuelle Bias hat (liquidität.md#liquiditäts-sweep--mechanismus,
-      // 05-dealing-range-bestaetigen.md#die-vier-fälle).
-      //
-      // Bis 13.09.2026 stand hier stattdessen eine "hält das Level die Trend-Seite?"-Konstruktion,
-      // die das OB-Schema (gehalten/durchbrochen, relativ zum Trend) auf Liquiditäts-Level übertrug.
-      // Dadurch kam das Wort bullisch/bärisch aus dem Trend statt aus dem Level, und für Hochs im
-      // Uptrend war das Vorzeichen verdreht: der Rückfall unter ein gesweeptes Hoch — also gerade
-      // die Bestätigung für Kraft nach unten — wurde als "bullische Stärke" gemeldet. Genau dieser
-      // Satz stand am 09.09.2026 zu 1.35593 im Output und wurde übernommen.
-      const isHigh = level.direction === "high";
-      const backInside = isHigh ? currentPrice < level.price : currentPrice > level.price;
-      // Sweep = Kurs kam über/unter das Level und steht wieder auf der anderen Seite. Bleibt er
-      // jenseits, ist es kein Sweep, sondern ein Strukturbruch in Laufrichtung (liquidität.md:
-      // "Sweep ist bedeutungslos ---> Bewegung in die ursprüngliche Richtung wahrscheinlich").
-      const forceWord = (isHigh ? backInside : !backInside) ? "bärische" : "bullische";
-      const alignsWithTrend = forceWord === (trend === "uptrend" ? "bullische" : "bärische");
-      const trendNote = alignsWithTrend ? `mit dem ${trend === "uptrend" ? "Uptrend" : "Downtrend"}` : `GEGEN den ${trend === "uptrend" ? "Uptrend" : "Downtrend"}`;
-      const kontextPart = level.kontext ? ` (${level.kontext})` : "";
-      levelResult = backInside
-        ? { verdict: "swept", text: `Liquidity Sweep ${level.price}${kontextPart} ---> ${forceWord} Kraft, ${trendNote}.`, confidence: "medium" }
-        : { verdict: "broken", text: `${level.price}${kontextPart} sauber durchbrochen ---> ${forceWord} Kraft, ${trendNote}.`, confidence: "medium" };
-    }
-  }
-
-  return { ob: obResult, level: levelResult };
-}
-
 export interface PendingDecision {
   substep: string;
   title: string;
@@ -178,18 +95,27 @@ export interface PendingDecision {
 // 03-htf-bias.md-Teilentscheidungen gerade offen ist, statt eine Antwort mit vier vermischten
 // Urteilen zurückzugeben — die dort bereits dokumentierte Fall-Taxonomie/Gate-Struktur wird hier
 // nachgebildet, nicht die Entscheidung selbst getroffen.
-export function buildPendingDecisions(input: { trendForce: TrendForceResult; trendTargetFound: boolean; countertrendTargetFound: boolean; intermediateLevelFound: boolean }): PendingDecision[] {
-  const { trendForce, trendTargetFound, countertrendTargetFound, intermediateLevelFound } = input;
+export function buildPendingDecisions(input: { force: ForceAssessment; trendTargetFound: boolean; countertrendTargetFound: boolean; intermediateLevelFound: boolean }): PendingDecision[] {
+  const { force, trendTargetFound, countertrendTargetFound, intermediateLevelFound } = input;
   const decisions: PendingDecision[] = [];
 
-  const forceHints = [trendForce.ob.text, trendForce.level.text].filter(Boolean);
+  // Beide Seiten getrennt ausweisen statt zu einem Satz zu verschmelzen: "kein Trade bei
+  // ausgeglichenem Kampf" (allgemeines.md) lässt sich nur beurteilen, wenn sichtbar ist, was für
+  // die Gegenseite spricht — vorher lieferte dieser Prompt nur ein einzelnes Kraft-Verdikt.
+  const forceLines: string[] = [];
+  if (force.bullish.length > 0) forceLines.push(`FÜR die Bullen: ${force.bullish.map((s) => s.text).join(" ")}`);
+  if (force.bearish.length > 0) forceLines.push(`FÜR die Bären: ${force.bearish.map((s) => s.text).join(" ")}`);
+  if (force.majorInducementSides.length > 0) {
+    const sides = force.majorInducementSides.map((s) => (s === "bullish" ? "bullisch" : "bärisch")).join(" + ");
+    forceLines.push(`Major Inducement (${sides}) im Spiel ---> Vorrangregel prüfen: erweist er sich als kraftvoll, wird nicht dagegen gehandelt.`);
+  }
   decisions.push({
     substep: "3.1",
     title: "Trend + Kraft",
     prompt:
-      forceHints.length > 0
-        ? `Welcher Struktur-Fall trifft zu? Trend-Kraft bereits berechnet: ${forceHints.join(" ")}`
-        : "Welcher Struktur-Fall trifft zu? Trend-Kraft konnte automatisch nicht bewertet werden (relevantes OB/Level noch nicht getestet) — Kursverlauf manuell prüfen.",
+      forceLines.length > 0
+        ? `Welcher Struktur-Fall trifft zu? Kraft-Signale beider Seiten: ${forceLines.join(" | ")}`
+        : "Welcher Struktur-Fall trifft zu? Keine Kraft-Signale (kein relevantes OB/Level getestet) — Kursverlauf manuell prüfen.",
     options: ["1: Trend läuft normal weiter", "2: Trend schwächelt", "3: Frischer Trendwechsel gerade jetzt", "4: Ausgeglichener Kampf, kein Bias"],
   });
 

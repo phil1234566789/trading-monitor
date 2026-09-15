@@ -137,6 +137,10 @@ export async function buildCandidatePool(instrument, currentTimeSec) {
       bottom: z.bottom,
       touched: z.touched,
       invalidated: z.invalidated,
+      // Für die Kraftabwägung (forceAssessment.ts) nötig: "OB hält" braucht den bestätigten Retest,
+      // nicht nur touched. Für 1H/4H pflegt poi-watcher das Feld beim Upsert mit — für 5M nicht,
+      // deshalb wertet assessForce ausschließlich 1H/4H-Zonen.
+      retested: z.retested ?? false,
       startTime: Math.floor(new Date(z.start_time).getTime() / 1000),
       timeframe: z.timeframe,
     }))
