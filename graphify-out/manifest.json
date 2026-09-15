@@ -2472,9 +2472,9 @@
     "semantic_hash": ""
   },
   "docs/state-machine-anleitung.md": {
-    "mtime": 1788699417.9242992,
-    "seen": 1788702184.9984918,
-    "ast_hash": "fb353498c5759ed1a2235ff325047968",
+    "mtime": 1789428996.651699,
+    "seen": 1789429010.6963272,
+    "ast_hash": "4c035f5cfae2922eac76d955ade2751b",
     "semantic_hash": ""
   },
   "supabase/migrations/20260906150500_trading_loop_state_current_step_default.sql": {
@@ -2751,6 +2751,12 @@
     "mtime": 1789428744.7048979,
     "seen": 1789428772.4131477,
     "ast_hash": "81b833879475b77ea8b124e803672619",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260915014000_reset_gbpusd_20260909_round3.sql": {
+    "mtime": 1789428803.0757048,
+    "seen": 1789429010.695323,
+    "ast_hash": "b5bdf1cd3bd09e3057a47c0357e9635f",
     "semantic_hash": ""
   }
 }

@@ -1,7 +1,7 @@
 # Graph Report - trading-monitor  (2026-09-15)
 
 ## Corpus Check
-- 454 files · ~450,826 words
+- 455 files · ~451,115 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `248b31f5`
+- Built from commit: `de9b2701`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -563,7 +563,7 @@ Nodes (11): Candle, fetchCandles(), FetchCandlesOptions, INTERVAL_MAP, requestTi
 
 ### Community 90 - "Anleitung: State-Machine lesen & bedienen"
 Cohesion: 0.25
-Nodes (7): Ablaufbeispiel, Anleitung: State-Machine lesen & bedienen, Grundprinzip, Maschine bedienen, Menschlicher Gegencheck, `replayUntilSec` (beide Tools), State lesen, ohne die Maschine zu bewegen
+Nodes (7): Ablaufbeispiel, Anleitung: State-Machine lesen & bedienen, Grundprinzip, Maschine bedienen, Menschlicher Gegencheck, `replayUntilSec` — der EINE Zeit-Parameter (alle Tools), State lesen, ohne die Maschine zu bewegen
 
 ### Community 91 - "src/pipConfig.js"
 Cohesion: 0.17
@@ -754,7 +754,7 @@ Nodes (5): cTrader Open API as Forex Candle Source, cTrader Wire Protocol Implem
   docs/steerabilty-vs-wrong-ai-outputs.md · relation: references
 
 ## Knowledge Gaps
-- **1102 isolated node(s):** `BiasCheckArgs`, `M5_BAR_SECONDS`, `BATCH_CANDLES`, `TickResult`, `DealingRangeLoopArgs` (+1097 more)
+- **1102 isolated node(s):** `Grundprinzip`, `State lesen, ohne die Maschine zu bewegen`, `Maschine bedienen`, ``replayUntilSec` — der EINE Zeit-Parameter (alle Tools)`, `Menschlicher Gegencheck` (+1097 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1318 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **11 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -764,12 +764,12 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `Trading-Steps-Ablauf Diagram` and `calc_rr Tool Idea (Deterministic RR Calc)`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
 - **Why does `businessSecondsBetween()` connect `_shared/ageTier.ts` to `dataExport.ts`, `backfillTradeSetupOutcomes.ts`, `fallClassifier.ts`?**
-  _High betweenness centrality (0.094) - this node is a cross-community bridge._
+  _High betweenness centrality (0.101) - this node is a cross-community bridge._
+- **Why does `businessSecondsBetween()` connect `tradeEvidence.ts` to `cssColor`, `chartTimeUtils.js`, `PriceChart.vue`, `trendChainLevelDisplay`, `_shared/ageTier.ts`, `tradeSetupCockpit.ts`, `liquidity.js`?**
+  _High betweenness centrality (0.091) - this node is a cross-community bridge._
 - **Why does `marketStructureAnalysis Developer Notes` connect `Vegapunk Slimming Results (-86%)` to `fachdoku-router/SKILL.md`, `marketStructureAnalysis Rules Overview`?**
-  _High betweenness centrality (0.094) - this node is a cross-community bridge._
-- **Why does `renderMarketStructureAnalysis()` connect `marketStructureRendering.ts` to `cssColor`, `tradeEvidence.ts`, `RangeLinePrimitive`, `usePriceChartMarketStructure.js`, `Pivot`, `Vegapunk Slimming Results (-86%)`, `FibTickPrimitive`?**
-  _High betweenness centrality (0.084) - this node is a cross-community bridge._
-- **What connects `BiasCheckArgs`, `M5_BAR_SECONDS`, `BATCH_CANDLES` to the rest of the system?**
+  _High betweenness centrality (0.067) - this node is a cross-community bridge._
+- **What connects `Grundprinzip`, `State lesen, ohne die Maschine zu bewegen`, `Maschine bedienen` to the rest of the system?**
   _1102 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Dashboard.vue` be split into smaller, more focused modules?**
   _Cohesion score 0.016013071895424835 - nodes in this community are weakly interconnected._
