@@ -44,6 +44,13 @@ bereits vorliegenden Diff:
    ergänzt werden soll, über das ganze Repo laufen lassen — existiert diese Regel/Definition schon an
    anderer Stelle in voller Länge? Dann dort belassen, hier nur kurze Definition + Link setzen, statt
    ein zweites Mal die volle Regel auszuschreiben.
+   - **Bei einem Umbau (Datei kürzen/aufteilen/umbenennen) gilt das für JEDEN Abschnitt, der stehen
+     bleibt oder mitwandert — nicht nur für neu geschriebenen Text.** Dass ein Abschnitt schon vorher
+     da war, heißt nicht, dass er jemals gegen das Repo geprüft wurde; genau die alten Abschnitte
+     sind die Duplikat-Kandidaten. Beim Umbau von `target-findung.md` überlebte so eine zweite Kopie
+     der Kanten-Regel, obwohl `orderblöcke.md` sie längst definiert.
+   - Fundstelle prüfen statt nur zählen: liegt die andere Kopie in einem **Konzeptkapitel**, ist das
+     die maßgebliche Definition, und die hier geplante Fassung fällt weg — nicht umgekehrt.
 
 3. **Glossar-Konsistenz (`glossar.md`).** Wird ein neuer Fachbegriff eingeführt oder eine bestehende
    Definition erweitert: existiert dafür schon eine Zeile? In welcher Tabellensektion würde sie
