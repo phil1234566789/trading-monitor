@@ -37,6 +37,14 @@ mehr für diesen Skill verwenden, auch nicht im Backtest.
      Pin-Zeile holen (`get_pin_context`, Felder `m5_liquidity_pivot_time`/`ob_zones.start_time` —
      Letzteres deckt auch M5-OB-Pins ab, `kind='m5_ob'` liefert seit Punkt 6 der ob_zones-
      Konsolidierung dieselbe ob_zones-Zeile wie `kind='ob_zone'`), nicht erfinden oder weglassen.
+   - **Unix-Sekunden NIE selbst in einen ISO-String umrechnen.** `find_targets`/`get_data_export`/
+     `run_dealing_range_loop`-`evidence` liefern `startTime`/`pivotTime`/`touchedTime` nur als
+     Unix-Sekunden, `sourceTime`/`touchedTime` wollen ISO — diese Umrechnung im Kopf geht schief
+     (Bug 09.09.2026-Backtest: Ziel #114, 1H-OB-Start 1788865200 als `2026-09-08T19:00:00Z` statt
+     `…T11:00:00Z` eingetragen, 8h daneben; im Chart stand dadurch „(12h)" statt „(20h)" und der OB
+     sah aus, als sei er nachts gebildet worden). Gegenrechnen statt rechnen: `get_data_export`s
+     `structure1h`-Pivots liefern `pivotTime` (Sekunden) UND `pivotAt` (Berlin) für dieselbe Stelle
+     — einen davon als Anker nehmen und die Differenz in ganzen Stunden abtragen.
    - `kind="ob"`: `price` = `ob_bottom` bei Short, `ob_top` bei Long; `rangeLow`/`rangeHigh`
      PFLICHT (Zonenkanten); `timeframe` mitgeben (z. B. `"5M"`).
    - `kind="pivot"` bedeutet AUSSCHLIESSLICH Liquiditäts-Sweep, nichts anderes: `price` = der
