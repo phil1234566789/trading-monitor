@@ -12,6 +12,7 @@ import { getLiquidityLevels, getObZones } from "./db.ts";
 import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "../_shared/liquidityDetection.ts";
 import { detectOrderBlocks } from "./orderBlockDetection.js";
 import { PIP_SIZE } from "./pipConfig.js";
+import { verifyLevelTouched, verifyZoneTouched } from "./verifyTouched.js";
 import { M5_DETECTION_LOOKBACK_HOURS, M5_DETECTION_CANDLE_BUFFER, M5_BAR_SECONDS } from "./tools/dataExport.ts";
 
 export const DEFAULT_LIQUIDITY_TARGET_LIMIT = 5;
@@ -93,15 +94,20 @@ export async function buildCandidatePool(instrument, currentTimeSec) {
   const m5Liquidity = m5LiquidityRaw.filter(
     (l) => !liquidityLevels.some((h) => h.direction === l.direction && Math.abs(h.price - l.price) <= SAME_PRICE_EPSILON),
   );
-  const htfLiquidity = liquidityLevels.map((l) => ({
-    id: l.id,
-    direction: l.direction,
-    price: l.price,
-    pivotTime: Math.floor(new Date(l.pivot_time).getTime() / 1000),
-    touched: l.touched,
-    touchedTime: l.touched && l.end_time != null ? Math.floor(new Date(l.end_time).getTime() / 1000) : null,
-    timeframe: l.timeframe,
-  }));
+  // touched gegen die echten M5-Kerzen nachgerechnet statt roh aus der DB übernommen (siehe
+  // verifyTouched.js für den Grund) — sonst rutscht ein längst durchlaufenes Level als frischer
+  // Kandidat durch, während der Chart-Dialog es korrekt aussortiert.
+  const htfLiquidity = liquidityLevels
+    .map((l) => ({
+      id: l.id,
+      direction: l.direction,
+      price: l.price,
+      pivotTime: Math.floor(new Date(l.pivot_time).getTime() / 1000),
+      touched: l.touched,
+      touchedTime: l.touched && l.end_time != null ? Math.floor(new Date(l.end_time).getTime() / 1000) : null,
+      timeframe: l.timeframe,
+    }))
+    .map((l) => verifyLevelTouched(l, m5Candles));
 
   // ALLE live erkannten Zonen (auch invalidierte) — der !invalidated-Filter läuft weiter unten NACH
   // dem Merge, nicht hier, sonst hätte eine seither invalidierte Zone keinen Merge-Partner mehr und
@@ -120,17 +126,21 @@ export async function buildCandidatePool(instrument, currentTimeSec) {
     endTime: z.endTime,
     timeframe: "5M",
   }));
-  const htfOb = obZones.map((z) => ({
-    id: z.id,
-    dir: z.direction === "long" ? 1 : -1,
-    direction: z.direction,
-    top: z.top,
-    bottom: z.bottom,
-    touched: z.touched,
-    invalidated: z.invalidated,
-    startTime: Math.floor(new Date(z.start_time).getTime() / 1000),
-    timeframe: z.timeframe,
-  }));
+  // Wie bei htfLiquidity: touched live gegen die M5-Kerzen, nicht aus der DB — ein erst
+  // nachträglich erkannter 1H/4H-OB bekommt von poi-watcher keine rückwirkende Touch-Prüfung.
+  const htfOb = obZones
+    .map((z) => ({
+      id: z.id,
+      dir: z.direction === "long" ? 1 : -1,
+      direction: z.direction,
+      top: z.top,
+      bottom: z.bottom,
+      touched: z.touched,
+      invalidated: z.invalidated,
+      startTime: Math.floor(new Date(z.start_time).getTime() / 1000),
+      timeframe: z.timeframe,
+    }))
+    .map((z) => (z.timeframe === "5M" ? z : verifyZoneTouched(z, m5Candles)));
   // getObZones(instrument, undefined, ...) liefert ALLE Timeframes, auch bereits persistierte 5M-
   // Zonen (z.B. über einen Pin/eine Confirmation angelegt, siehe db.ts findOrCreateObZoneId) — ohne
   // Dedup taucht so eine Zone DOPPELT auf: einmal live neu erkannt (ohne id), einmal aus der DB (MIT
