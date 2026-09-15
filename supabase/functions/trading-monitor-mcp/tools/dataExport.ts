@@ -277,7 +277,10 @@ export interface DataExportArgs {
 // Session-Extremwert entsprach. Best-effort: deckt m5CandlesForDetection (7-Tage-M5-Lookback, siehe
 // buildDataExport unten) die Occurrence nicht ab (z.B. ein Monate alter, weiterhin unberührter
 // 1H-Pivot), bleibt sessionExtremeSuffix beim alten rein zeitfenster-basierten Fallback.
-function attachSessionContext<T extends { pivotTimeSec: number; dirNum: 1 | -1; touchedTimeSec: number | null; price: number }>(
+// export seit 15.09.2026: findTargetCandidates.buildCandidatePool braucht dieselben context/
+// kontext-Labels (Schritt 3s Kraftabwägung baut sie in ihren Kraft-Satz ein, siehe dort), statt
+// die Session-/Alters-Berechnung ein zweites Mal zu definieren.
+export function attachSessionContext<T extends { pivotTimeSec: number; dirNum: 1 | -1; touchedTimeSec: number | null; price: number }>(
   levels: T[],
   sessionConfigs: Awaited<ReturnType<typeof getSessions>>,
   nowSec: number,

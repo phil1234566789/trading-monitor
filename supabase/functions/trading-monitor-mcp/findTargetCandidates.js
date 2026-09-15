@@ -8,12 +8,12 @@
 // obZones-Bausteine) hier separat gebündelt, ohne den kompletten buildDataExport (Struktur-Trend,
 // Sessions, Asia-Range) mitzuziehen — find_targets braucht nur die Kandidaten + den aktuellen Preis.
 import { fetchForexCandles } from "./forexCandles.ts";
-import { getLiquidityLevels, getObZones } from "./db.ts";
+import { getLiquidityLevels, getObZones, getSessions } from "./db.ts";
 import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "../_shared/liquidityDetection.ts";
 import { detectOrderBlocks } from "./orderBlockDetection.js";
 import { PIP_SIZE } from "./pipConfig.js";
 import { verifyLevelTouched, verifyZoneTouched } from "./verifyTouched.js";
-import { M5_DETECTION_LOOKBACK_HOURS, M5_DETECTION_CANDLE_BUFFER, M5_BAR_SECONDS } from "./tools/dataExport.ts";
+import { M5_DETECTION_LOOKBACK_HOURS, M5_DETECTION_CANDLE_BUFFER, M5_BAR_SECONDS, attachSessionContext } from "./tools/dataExport.ts";
 
 export const DEFAULT_LIQUIDITY_TARGET_LIMIT = 5;
 export const DEFAULT_OB_TARGET_LIMIT = 3;
@@ -63,10 +63,11 @@ const SAME_PRICE_EPSILON = 0.05 * PIP_SIZE;
 // nur mit anderen Filtern als find_targets, kein zweiter DB-Fetch dafür (DRY, siehe CLAUDE.md).
 export async function buildCandidatePool(instrument, currentTimeSec) {
   const m5DetectionCount = Math.ceil((M5_DETECTION_LOOKBACK_HOURS * 3600) / M5_BAR_SECONDS) + M5_DETECTION_CANDLE_BUFFER;
-  const [m5DetectionRaw, liquidityLevels, obZones] = await Promise.all([
+  const [m5DetectionRaw, liquidityLevels, obZones, sessionConfigs] = await Promise.all([
     fetchForexCandles(instrument, "5m", { count: m5DetectionCount, toMs: currentTimeSec * 1000 }),
     getLiquidityLevels(instrument, undefined, false, currentTimeSec),
     getObZones(instrument, undefined, false, currentTimeSec),
+    getSessions(instrument),
   ]);
   // Nach currentTimeSec gekappt (nicht nur nach Tagesende) — sonst würde ein Replay-Zeitpunkt
   // Zonen/Level aus der "Zukunft" relativ zum Replay-Punkt sehen, dieselbe Kappung wie dataExport.ts.
@@ -97,7 +98,7 @@ export async function buildCandidatePool(instrument, currentTimeSec) {
   // touched gegen die echten M5-Kerzen nachgerechnet statt roh aus der DB übernommen (siehe
   // verifyTouched.js für den Grund) — sonst rutscht ein längst durchlaufenes Level als frischer
   // Kandidat durch, während der Chart-Dialog es korrekt aussortiert.
-  const htfLiquidity = liquidityLevels
+  const htfLiquidityVerified = liquidityLevels
     .map((l) => ({
       id: l.id,
       direction: l.direction,
@@ -108,6 +109,19 @@ export async function buildCandidatePool(instrument, currentTimeSec) {
       timeframe: l.timeframe,
     }))
     .map((l) => verifyLevelTouched(l, m5Candles));
+  // context/kontext wie in get_data_export (dieselbe Funktion, keine zweite Definition): die
+  // Kraftabwägung baut das Label in ihren Kraft-Satz ein (forceAssessment.assessLiquidityForce),
+  // bekam es über diesen Pool aber nie geliefert — Schritt 3 meldete deshalb "Major Inducement
+  // 1.35593 angelaufen" OHNE den Beleg, warum das Level Major ist ("Asia-High Major (5d 13h)"), und
+  // Lana leitete Alter/Identität stattdessen aus rohen Zeitstempeln her. Schritt 5 hatte das Label
+  // immer (beide Quellen dort liefern es), nur dieser Pool nicht.
+  // NACH verifyLevelTouched, weil formatKontext das Alter am nachgerechneten touchedTime festmacht.
+  const htfLiquidity = attachSessionContext(
+    htfLiquidityVerified.map((l) => ({ ...l, pivotTimeSec: l.pivotTime, dirNum: l.direction === "high" ? 1 : -1, touchedTimeSec: l.touchedTime })),
+    sessionConfigs,
+    currentTimeSec,
+    m5Candles,
+  ).map(({ pivotTimeSec: _pivotTimeSec, dirNum: _dirNum, touchedTimeSec: _touchedTimeSec, ...l }) => l);
 
   // ALLE live erkannten Zonen (auch invalidierte) — der !invalidated-Filter läuft weiter unten NACH
   // dem Merge, nicht hier, sonst hätte eine seither invalidierte Zone keinen Merge-Partner mehr und
