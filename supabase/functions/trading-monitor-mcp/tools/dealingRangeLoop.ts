@@ -15,6 +15,7 @@ import {
   computeWatchLevels,
   computeHtfWatchLevels,
   assessInducement,
+  isDrTrackingBusy,
   type FallFourResult,
   type WatchLevel,
   type InducementAssessment,
@@ -61,6 +62,14 @@ function earliestOf(a: number | null, b: number | null): number | null {
 // gezählt, genau wie es die "eigene" Richtung vorher schon war.
 const FRESH_M5_OB_HOURS = 2;
 
+// A/B/C-Umbau, Etappe 3: die Knoten, an denen der Actor zwischen zwei run_dealing_range_loop-
+// Aufrufen "normal" steht (der Tick-Zyklus selbst: Mode-Wahl, Watch-Level-Warten, Batch holen,
+// Refetch) — ALLES andere innerhalb von s45.* ist die DR-Kette (fallClassification bis notify), an
+// der ein neuer Tick NICHT die State-Machine antasten darf (siehe computeObservationOnly). Bewusst
+// eine Allow-Liste statt eine Sperrliste der DR-Knoten: ein künftig neu hinzukommender DR-Ketten-
+// Knoten fällt damit automatisch unter "beobachten, nicht anfassen", statt versehentlich wie ein
+// Tick-Zyklus-Knoten behandelt zu werden.
+
 // exclude kombiniert tradingHours- UND news-Gate (siehe buildPretradeGates), die Heartbeats unten
 // nannten bisher IMMER "News-Blackout" — auch wenn tatsächlich die Handelszeit (z.B. Freitag 18 Uhr
 // Fensterschluss) der Grund war (Bug-Report Philip 07.09.2026, GBPUSD-Backtest 28.08.: 3x
@@ -99,19 +108,23 @@ export interface TickResult {
   currentNode: string;
 }
 
-// Ein voller Schritt-5-Durchlauf bei atSec: check_session_window + get_data_snapshot/
-// get_recent_reactions fest verdrahtet (nicht optional, siehe Vorfall in docs/state-machine.md),
-// Fall 4 (Preisvergleich) und Fall 3 (hasReaction=false) mechanisch geprüft, restliche Evidenz nur
-// gesammelt/gefiltert, nicht bewertet. Treibt die State-Machine (tradingMachine.ts) von
-// `s45.refetch` nach `s45.fallClassification` — bei Fall 3/4 automatisch weiter, sonst
-// (hasReaction=true) bleibt der Actor geparkt, bis Lana über log_fall_classification ihr Urteil
-// (Fall 1 oder 2) einträgt.
-async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStateRow, instrument: string, atSec: number): Promise<TickResult> {
+// A/B/C-Umbau, Etappe 3 (milk-city-Task a-b-c-dauerlauf-statt-linearer-trading-steps-sequenz):
+// reine Beobachtungs-Berechnung (Trend/Kraft/Watch-Level + Fall-4/Reaktions-Fakten), OHNE jede
+// State-Machine-Transition oder trading_loop_state-Schreibvorgang. Vorher war das untrennbar mit
+// den transition()-Aufrufen in performFullTick verwoben — deshalb konnte kein Tick mehr berechnet
+// werden, sobald der Actor irgendwo in der DR-Kette (tscLink/pinCheck/fallAgainCheck/...) parkte,
+// weil die Kette REFETCH_DONE an diesen Knoten gar nicht akzeptiert (sendGuarded wirft). Trend/Kraft/
+// Watch-Level sollen aber IMMER weiterlaufen, unabhängig davon, wo die DR-Nebenaufgabe gerade steht
+// (Philip: "Parallel dazu möchte ich noch die dealing range bestätigen ... das ist eine zusätzliche
+// Aufgabe, die nicht zu A/B/C gehört, aber von A/B/C abgeleitet wird"). performFullTick (unten) UND
+// der Beobachtungs-Pfad in runDealingRangeLoop (computeObservationOnly) teilen sich deshalb genau
+// diese eine Funktion, statt die Berechnung zu duplizieren.
+async function computeTickEvidence(loaded: LoadedMachine, loopState: TradingLoopStateRow, instrument: string, atSec: number) {
   const direction = loopState.direction;
   if (!direction) {
     // Sollte laut runDealingRangeLoops eigenem Guard (siehe dort) nie erreicht werden — hier nur
     // fürs Typsystem (TradingLoopStateRow.direction ist seit S1/S2-Sichtbarkeit nullable) UND als
-    // zweite Absicherung, falls performFullTick je aus einem anderen Aufrufpfad genutzt wird.
+    // zweite Absicherung, falls diese Funktion je aus einem anderen Aufrufpfad genutzt wird.
     throw new Error(`Loop ${loopState.id} hat keinen Bias (direction=null) — kein gültiger Zustand für einen Schritt-5-Tick.`);
   }
 
@@ -197,22 +210,6 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
     }),
   ]);
 
-  // State-Machine V2: s45.refetch -> s45.fallClassification. Fall 4 (reiner Preisvergleich) UND
-  // Fall 3 (hasReaction=false, "nichts gefunden") sind automatisch entschieden, siehe
-  // fallClassifier.ts-Kopfkommentar + 05-dealing-range-bestaetigen.md ("nur Fall 3 läuft ohne
-  // Rückfrage weiter") — Fall 1/2 bleiben geparkt für Lanas log_fall_classification-Aufruf, weil nur
-  // DORT wirklich mehrdeutig ist, welcher der beiden zutrifft. Der Watch-Level-Pin bei Fall 3
-  // (F3 im Diagramm) wird hier automatisch mitgeschickt statt über einen echten add_pin_entry-Call —
-  // bewusste Vereinfachung fürs automatische Backtest-Fast-Forward (siehe PIN_SET-Kommentar unten),
-  // in Live nutzt Lana weiterhin add_pin_entry selbst, das denselben PIN_SET-Event sendet.
-  await transition(loaded, instrument, { type: "REFETCH_DONE" }, atSec);
-  if (fallFour.hit) {
-    await transition(loaded, instrument, { type: "FALL_CLASSIFIED", case: 4 }, atSec);
-  } else if (!reactionFound) {
-    await transition(loaded, instrument, { type: "FALL_CLASSIFIED", case: 3 }, atSec);
-    await transition(loaded, instrument, { type: "PIN_SET" }, atSec);
-  }
-
   // Aufmerksamkeitslevel (docs/attention-levels.md): Fall 3 (keine Reaktion, "Markt gibt nichts
   // her") bleibt bei 1H/4H + Schritt-3-Bias-Resten — hier wird bewusst an Tokens/Aufrufen gespart.
   // Fall 1/2 (reactionFound) braucht M5-Granularität (Philip: Daytrader, M5 ist sein meistgenutztes
@@ -264,48 +261,20 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
     }
   }
 
-  if (fallFour.hit) {
-    // status muss weg von 'active', sonst verhindert der Partial-Unique-Index (nur ein aktiver Loop
-    // je Instrument), dass der nächste run_bias_check (Fall 4 -> Schritt 3) einen neuen anlegen kann
-    // — die Maschine selbst regelt nur current_node/current_step, nicht status.
-    await closeLoopState(loopState.id, "fall4_pending_bias", 4);
-  } else {
-    await updateLoopState(loopState.id, {
-      watchLevelAbove: watchLevels.above,
-      watchLevelBelow: watchLevels.below,
-      htfWatchLevelAbove: htfWatchLevels.above,
-      htfWatchLevelBelow: htfWatchLevels.below,
-      lastAnalysisTimeSec: atSec,
-    });
-  }
-
   return {
-    loopStateId: loopState.id,
     direction,
-    atSec,
-    at: berlinDateTimeStrFor(atSec),
     currentPrice,
     sessionWindow,
     fallFour,
-    hasReaction: reactionFound,
-    // Benachrichtigungspflicht gilt für Fall 1 UND Fall 2 (05-dealing-range-bestaetigen.md) — ohne
-    // die beiden mechanisch zu unterscheiden (siehe fallClassifier.ts), gilt "irgendeine Reaktion
-    // gefunden" als Auslöser für beide.
-    mustNotifyPhilip: reactionFound,
-    watchLevelAbove: watchLevels.above,
-    watchLevelBelow: watchLevels.below,
-    // Fall-unabhängig, damit HTF-Level auch in Fall 1/2 sichtbar bleiben statt vom dichteren
-    // M5-Raster verdeckt zu werden (Philip 13.09.2026, GBPUSD-09.09.: das 4H-Level 1.35652 tauchte
-    // den ganzen Tag in keinem Tick auf).
-    htfWatchLevelAbove: htfWatchLevels.above,
-    htfWatchLevelBelow: htfWatchLevels.below,
+    reactionFound,
+    watchLevels,
+    htfWatchLevels,
+    // Ab hier ALLES richtungsoffen (A/B/C-Umbau) — bis dahin waren die vier unteren Felder auf
+    // loopState.direction gefiltert, was eine laufende Gegenbewegung unsichtbar machte (GBPUSD-
+    // Backtest 09.09.2026). Der Bias entscheidet weiterhin Fall 4 (s.o.), aber nicht mehr, welche
+    // Evidenz Lana zu sehen bekommt — die Fall-1/2-Frage selbst bleibt richtungsoffen zu stellen
+    // (05-dealing-range-bestaetigen.md#die-vier-fälle).
     evidence: {
-      // Ab hier ALLES richtungsoffen (A/B/C-Umbau) — bis dahin waren die vier unteren Felder auf
-      // loopState.direction gefiltert, was eine laufende Gegenbewegung unsichtbar machte (GBPUSD-
-      // Backtest 09.09.2026). Der Bias entscheidet weiterhin Fall 4 (s.o.), aber nicht mehr, welche
-      // Evidenz Lana zu sehen bekommt — die Fall-1/2-Frage selbst bleibt richtungsoffen zu stellen
-      // (05-dealing-range-bestaetigen.md#die-vier-fälle).
-      //
       // Fertige Kraft-Einordnung dieses Ticks, beide Quellen, beide Seiten getrennt (siehe
       // forceAssessment.ts) — dieselbe Form wie Schritt 3.
       force,
@@ -333,7 +302,114 @@ async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStat
       confluenceObReactions: obReactions.filter((z) => z.touched && !z.invalidated && z.retested),
       invalidatedObReactions: obReactions.filter((z) => z.invalidated),
     },
+  };
+}
+
+// Ein voller Schritt-5-Durchlauf bei atSec: computeTickEvidence (reine Beobachtung) PLUS die
+// State-Machine-Transitions/Persistenz, die daraus folgen. Treibt die State-Machine (tradingMachine.ts)
+// von `s45.refetch` nach `s45.fallClassification` — bei Fall 3/4 automatisch weiter, sonst
+// (hasReaction=true) bleibt der Actor geparkt, bis Lana über log_fall_classification ihr Urteil
+// (Fall 1 oder 2) einträgt. NUR aufrufen, wenn der Actor tatsächlich an einem Tick-Zyklus-Knoten
+// steht (siehe runDealingRangeLoop/TICK_CYCLE_NODES) — sonst computeObservationOnly benutzen.
+async function performFullTick(loaded: LoadedMachine, loopState: TradingLoopStateRow, instrument: string, atSec: number): Promise<TickResult> {
+  const direction = loopState.direction!; // computeTickEvidence wirft bereits, falls null
+  const ev = await computeTickEvidence(loaded, loopState, instrument, atSec);
+
+  // State-Machine V2: s45.refetch -> s45.fallClassification. Fall 4 (reiner Preisvergleich) UND
+  // Fall 3 (hasReaction=false, "nichts gefunden") sind automatisch entschieden, siehe
+  // fallClassifier.ts-Kopfkommentar + 05-dealing-range-bestaetigen.md ("nur Fall 3 läuft ohne
+  // Rückfrage weiter") — Fall 1/2 bleiben geparkt für Lanas log_fall_classification-Aufruf, weil nur
+  // DORT wirklich mehrdeutig ist, welcher der beiden zutrifft. Der Watch-Level-Pin bei Fall 3
+  // (F3 im Diagramm) wird hier automatisch mitgeschickt statt über einen echten add_pin_entry-Call —
+  // bewusste Vereinfachung fürs automatische Backtest-Fast-Forward (siehe PIN_SET-Kommentar unten),
+  // in Live nutzt Lana weiterhin add_pin_entry selbst, das denselben PIN_SET-Event sendet.
+  await transition(loaded, instrument, { type: "REFETCH_DONE" }, atSec);
+  if (ev.fallFour.hit) {
+    await transition(loaded, instrument, { type: "FALL_CLASSIFIED", case: 4 }, atSec);
+  } else if (!ev.reactionFound) {
+    await transition(loaded, instrument, { type: "FALL_CLASSIFIED", case: 3 }, atSec);
+    await transition(loaded, instrument, { type: "PIN_SET" }, atSec);
+  }
+
+  if (ev.fallFour.hit) {
+    // status muss weg von 'active', sonst verhindert der Partial-Unique-Index (nur ein aktiver Loop
+    // je Instrument), dass der nächste run_bias_check (Fall 4 -> Schritt 3) einen neuen anlegen kann
+    // — die Maschine selbst regelt nur current_node/current_step, nicht status.
+    await closeLoopState(loopState.id, "fall4_pending_bias", 4);
+  } else {
+    await updateLoopState(loopState.id, {
+      watchLevelAbove: ev.watchLevels.above,
+      watchLevelBelow: ev.watchLevels.below,
+      htfWatchLevelAbove: ev.htfWatchLevels.above,
+      htfWatchLevelBelow: ev.htfWatchLevels.below,
+      lastAnalysisTimeSec: atSec,
+    });
+  }
+
+  return {
+    loopStateId: loopState.id,
+    direction,
+    atSec,
+    at: berlinDateTimeStrFor(atSec),
+    currentPrice: ev.currentPrice,
+    sessionWindow: ev.sessionWindow,
+    fallFour: ev.fallFour,
+    hasReaction: ev.reactionFound,
+    // Benachrichtigungspflicht gilt für Fall 1 UND Fall 2 (05-dealing-range-bestaetigen.md) — ohne
+    // die beiden mechanisch zu unterscheiden (siehe fallClassifier.ts), gilt "irgendeine Reaktion
+    // gefunden" als Auslöser für beide.
+    mustNotifyPhilip: ev.reactionFound,
+    watchLevelAbove: ev.watchLevels.above,
+    watchLevelBelow: ev.watchLevels.below,
+    // Fall-unabhängig, damit HTF-Level auch in Fall 1/2 sichtbar bleiben statt vom dichteren
+    // M5-Raster verdeckt zu werden (Philip 13.09.2026, GBPUSD-09.09.: das 4H-Level 1.35652 tauchte
+    // den ganzen Tag in keinem Tick auf).
+    htfWatchLevelAbove: ev.htfWatchLevels.above,
+    htfWatchLevelBelow: ev.htfWatchLevels.below,
+    evidence: ev.evidence,
     currentNode: currentNodePath(loaded.actor),
+  };
+}
+
+// A/B/C-Umbau, Etappe 3: dieselbe Beobachtung wie performFullTick, aber OHNE jede State-Machine-
+// Transition oder trading_loop_state-Schreibvorgang — für den Fall, dass die DR-Kette gerade
+// irgendwo zwischen fallClassification und notify parkt (Lanas Urteil steht noch aus). Ein neuer
+// Tick darf das NICHT unterbrechen/überschreiben (siehe runDealingRangeLoop-Kopfkommentar), liefert
+// aber trotzdem frische Trend-/Kraft-/Watch-Level-Daten statt eines reinen "alreadyParked"-Stubs.
+export interface ObservationOnlyResult {
+  instrument: string;
+  mode: "observation";
+  drTrackingBusy: true;
+  currentNode: string;
+  loopStateId: number;
+  direction: "long" | "short";
+  atSec: number;
+  at: string;
+  currentPrice: number | null;
+  fallFour: FallFourResult;
+  hasReaction: boolean;
+  evidence: TickResult["evidence"];
+  message: string;
+}
+
+async function computeObservationOnly(loaded: LoadedMachine, loopState: TradingLoopStateRow, instrument: string, atSec: number): Promise<ObservationOnlyResult> {
+  const direction = loopState.direction!; // computeTickEvidence wirft bereits, falls null
+  const ev = await computeTickEvidence(loaded, loopState, instrument, atSec);
+  const currentNode = currentNodePath(loaded.actor);
+  return {
+    instrument,
+    mode: "observation",
+    drTrackingBusy: true,
+    currentNode,
+    loopStateId: loopState.id,
+    direction,
+    atSec,
+    at: berlinDateTimeStrFor(atSec),
+    currentPrice: ev.currentPrice,
+    fallFour: ev.fallFour,
+    hasReaction: ev.reactionFound,
+    evidence: ev.evidence,
+    message: `DR-Kette parkt bei '${currentNode}' (Lana-Urteil dort steht noch aus) — Trend/Kraft/Watch-Level trotzdem aktualisiert, State-Machine NICHT angefasst. Urteil zuerst eintragen (siehe currentNode), danach löst sich die Kette von selbst weiter.`,
   };
 }
 
@@ -376,20 +452,18 @@ export async function runDealingRangeLoop({ instrument, replayUntilSec, maxBatch
   }
   const loaded = await loadMachineForDay(instrument, dateStr);
 
-  // Actor parkt bereits bei s45.fallClassification (Lanas Fall-1/2-Urteil steht noch aus) — jeder
-  // erneute Aufruf würde sonst entweder still no-oppen (replayUntilSec bereits erreicht) oder hart
-  // gegen die Guard-Transition laufen (ein neuer Batch/Live-Tick ist an diesem Knoten ungültig).
-  // loopStateId/direction hier zurückgeben, statt sie unauffindbar zu machen — log_fall_classification
-  // braucht loopStateId, die sonst nur aus einem frischen tick-Ergebnis käme.
-  if (currentNodePath(loaded.actor) === "s45.fallClassification") {
-    return {
-      instrument,
-      alreadyParked: true as const,
-      currentNode: "s45.fallClassification",
-      loopStateId: loopState.id,
-      direction: loopState.direction,
-      message: "Wartet bereits auf log_fall_classification (Fall 1 vs. 2) — get_data_snapshot/get_recent_reactions erneut aufrufen für die Evidenz, dann Urteil loggen.",
-    };
+  // A/B/C-Umbau, Etappe 3: der Actor parkt in der DR-Kette (fallClassification/tscLink/pinCheck/
+  // fallAgainCheck/findTargets/llmPickTarget/addTarget/pinCheck2/notify), sobald Lanas Urteil dort
+  // noch aussteht — vorher gab es dafür nur einen Stub ("alreadyParked", ohne jede Beobachtung) bei
+  // GENAU EINEM dieser Knoten (fallClassification); an jedem anderen wäre performFullTick weiter
+  // unten mit einem harten sendGuarded-Fehler abgebrochen (REFETCH_DONE ist z.B. an s45.tscLink kein
+  // gültiges Event). Trend/Kraft/Watch-Level (A/B/C) sollen aber IMMER weiterlaufen, unabhängig
+  // davon, wo die DR-Nebenaufgabe steht — deshalb hier für JEDEN DR-Ketten-Knoten eine echte, frische
+  // Beobachtung (computeObservationOnly) statt eines Stubs, OHNE die State-Machine anzufassen: ein
+  // neuer Tick darf Lanas laufendes Urteil nicht überschreiben/unterbrechen.
+  const currentNode = currentNodePath(loaded.actor);
+  if (isDrTrackingBusy(currentNode)) {
+    return await computeObservationOnly(loaded, loopState, instrument, replayUntilSec ?? Math.floor(Date.now() / 1000));
   }
 
   // Fast-Forward hart begrenzen statt nur zu dokumentieren (Root Cause GBPUSD-Backtest 09.09.2026):
@@ -737,8 +811,12 @@ export function registerDealingRangeLoopTool(server: McpServer) {
         "trading_loop_state anlegt). Treibt die State-Machine (tradingMachine.ts, siehe " +
         "docs/state-machine.md#state-machine-v2) durch den kompletten Schritt-4/5-Entscheidungsbaum " +
         "(Live-Tick/Backtest-Batch, News-Blackout, Watch-Level-Treffer) bis zu `s45.fallClassification` " +
-        "— dort parkt der Actor, ein ungültiger Folgeaufruf wird jetzt hart geblockt statt (wie am " +
-        "05.09.2026 passiert) still nichts zu tun. OHNE replayUntilSec: EIN Live-Tick bei 'jetzt' — " +
+        "— dort parkt der Actor, bis log_fall_classification das Urteil einträgt. Ein Folgeaufruf " +
+        "HIER (oder an jedem anderen Knoten der DR-Kette bis notify) bricht NICHT ab und tastet die " +
+        "State-Machine NICHT an — er liefert stattdessen `drTrackingBusy: true` PLUS eine frische " +
+        "Trend-/Kraft-/Watch-Level-Beobachtung (A/B/C läuft immer weiter, unabhängig davon, wo die " +
+        "DR-Nebenaufgabe steht, siehe isDrTrackingBusy in fallClassifier.ts). OHNE replayUntilSec: " +
+        "EIN Live-Tick bei 'jetzt' — " +
         "ruft check_session_window + get_data_snapshot/get_recent_reactions fest verdrahtet auf " +
         "(nicht optional). `fallFour` (reiner Preisvergleich gegen Trend-/Countertrend-Target/" +
         "Invalidierung) UND Fall 3 (`hasReaction=false`, nichts gefunden) klassifiziert dieses Tool " +

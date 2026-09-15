@@ -6,7 +6,7 @@
 // News-Spike nachstellt (muss Fall 4 klassifizieren, der eigentliche Vorfall, der diese ganze
 // State Machine ausgelöst hat).
 import { describe, expect, it } from "vitest";
-import { checkFallFour, hasReaction, computeWatchLevels } from "../supabase/functions/trading-monitor-mcp/fallClassifier.ts";
+import { checkFallFour, hasReaction, computeWatchLevels, isDrTrackingBusy } from "../supabase/functions/trading-monitor-mcp/fallClassifier.ts";
 
 const baseInput = {
   direction: "long",
@@ -85,5 +85,35 @@ describe("computeWatchLevels", () => {
     const result = computeWatchLevels(1.364, [], []);
     expect(result.above).toBeNull();
     expect(result.below).toBeNull();
+  });
+});
+
+// A/B/C-Umbau, Etappe 3 (milk-city-Task a-b-c-dauerlauf-statt-linearer-trading-steps-sequenz) — die
+// eine Entscheidung, die zwischen "State-Machine antasten" (performFullTick) und "nur beobachten,
+// nichts anfassen" (computeObservationOnly) unterscheidet. Root Cause: vorher gab es dafür nur einen
+// Stub bei GENAU EINEM DR-Ketten-Knoten (s45.fallClassification); an jedem anderen (tscLink/pinCheck/
+// fallAgainCheck/...) wäre ein erneuter Tick mit einem harten sendGuarded-Fehler abgebrochen
+// (REFETCH_DONE ist dort kein gültiges Event).
+describe("isDrTrackingBusy", () => {
+  it("Tick-Zyklus-Knoten (Mode-Wahl/Watch-Level-Warten/Batch/Refetch) sind NICHT busy", () => {
+    for (const node of ["s45.entry", "s45.mode", "s45.liveTick", "s45.liveWait", "s45.backtestBatch", "s45.backtestSkip", "s45.watchLevelHit", "s45.backtestHeartbeat", "s45.refetch"]) {
+      expect(isDrTrackingBusy(node)).toBe(false);
+    }
+  });
+
+  it("jeder Knoten der DR-Kette (fallClassification bis notify) ist busy", () => {
+    for (const node of ["s45.fallClassification", "s45.fall3Pin", "s45.tscLink", "s45.pinCheck", "s45.pinRemove", "s45.fallAgainCheck", "s45.findTargets", "s45.llmPickTarget", "s45.addTarget", "s45.pinCheck2", "s45.pinRemove2", "s45.notify"]) {
+      expect(isDrTrackingBusy(node)).toBe(true);
+    }
+  });
+
+  it("Knoten außerhalb von s45 (Schritt 3/6/7/8/Endzustände) sind nie busy — dort greift ein anderer, bestehender Fehlerpfad", () => {
+    for (const node of ["s1_handelszeit", "s2_news", "newsPause", "s3_bias.computing", "s3_bias.llm3_kontextSynthese", "s6_validieren.evidenceGathering", "s6_validieren.llm6a_antiConfluenceAuswahl", "s6_validieren.llm6_valideInvalide", "s7_findEntry", "s8_tradeManagement", "end_keinTrade", "end_positionGeschlossen"]) {
+      expect(isDrTrackingBusy(node)).toBe(false);
+    }
+  });
+
+  it("ein unbekannter s45.*-Knoten gilt als busy (fail-closed statt fail-open)", () => {
+    expect(isDrTrackingBusy("s45.irgendEinNeuerKnoten")).toBe(true);
   });
 });

@@ -169,3 +169,32 @@ export function assessInducement(level: { price: number; pivotTimeSec: number; d
   const text = signal?.text ?? `${cls[0].toUpperCase()}${cls.slice(1)} Inducement ${level.price} angelaufen.`;
   return { class: cls, businessSeconds, text };
 }
+
+// A/B/C-Umbau, Etappe 3 (milk-city-Task a-b-c-dauerlauf-statt-linearer-trading-steps-sequenz): die
+// Knoten, an denen der Actor zwischen zwei run_dealing_range_loop-Aufrufen "normal" steht (der
+// Tick-Zyklus selbst: Mode-Wahl, Watch-Level-Warten, Batch holen, Refetch) — ALLES andere innerhalb
+// von s45.* ist die DR-Kette (fallClassification bis notify), an der ein neuer Tick NICHT die
+// State-Machine antasten darf (siehe dealingRangeLoop.ts: computeObservationOnly). Vorher gab es
+// dafür nur einen Stub bei GENAU EINEM DR-Ketten-Knoten (s45.fallClassification); an jedem anderen
+// (tscLink/pinCheck/fallAgainCheck/...) wäre ein erneuter Tick mit einem harten sendGuarded-Fehler
+// abgebrochen, weil REFETCH_DONE dort kein gültiges Event ist — Trend/Kraft/Watch-Level sollen aber
+// IMMER weiterlaufen, unabhängig davon, wo die DR-Nebenaufgabe steht.
+//
+// Bewusst eine Allow-Liste statt eine Sperrliste der DR-Knoten: ein künftig neu hinzukommender
+// DR-Ketten-Knoten fällt damit automatisch unter "beobachten, nicht anfassen" (fail-closed), statt
+// versehentlich wie ein Tick-Zyklus-Knoten behandelt zu werden.
+const TICK_CYCLE_NODES = new Set([
+  "s45.entry",
+  "s45.mode",
+  "s45.liveTick",
+  "s45.liveWait",
+  "s45.backtestBatch",
+  "s45.backtestSkip",
+  "s45.watchLevelHit",
+  "s45.backtestHeartbeat",
+  "s45.refetch",
+]);
+
+export function isDrTrackingBusy(currentNode: string): boolean {
+  return currentNode.startsWith("s45.") && !TICK_CYCLE_NODES.has(currentNode);
+}
