@@ -1,0 +1,23 @@
+-- Loop-State GBPUSD 09.09.2026 zuruecksetzen fuer den Testlauf nach Runde 4.
+--
+-- Stand vor diesem Reset: Schritt 5 abgeschlossen (s45.notify) bei 09:00 — Fall 1 fuer eine Short-DR
+-- aus dem Gegen-Setup #554, danach auf Philips Ansage angehalten (Schritt 6 nicht gestartet).
+--
+-- Seit dem letzten Reset gefixt und damit im Testlauf zu pruefen:
+--   1. find_targets rechnet touched fuer persistierte 1H/4H-Objekte live gegen die M5-Kerzen nach
+--      (verifyTouched.js) statt dem DB-Flag zu glauben. poi-watcher prueft die Kerzen VOR dem
+--      Erkennungszeitpunkt nie rueckwirkend — der 1H-OB 1.35225-1.35368 stand deshalb auf
+--      touched=false, obwohl der Kurs ihn am 08.09. zweimal durchlaufen hatte, und wurde in Runde 4
+--      als Target gewaehlt. Er darf jetzt gar nicht mehr als Kandidat auftauchen, ebenso wenig das
+--      1H-Hoch 1.35528.
+--   2. Der dealing-range-anlegen-Skill verbietet, Unix-Sekunden selbst in einen ISO-Zeitstempel
+--      umzurechnen — in Runde 4 landete sourceTime des Ziels dadurch 8h daneben (im Chart "(12h)"
+--      statt "(20h)"). Stattdessen gegen einen Anker aus den Daten rechnen (structure1h-Pivots
+--      liefern pivotTime UND pivotAt fuer dieselbe Stelle).
+--
+-- Wie in den frueheren Resets nur Loop-State/Log loeschen. dealing_ranges bleiben stehen (Journal-
+-- Inhalt, keine Maschinen-Buchhaltung) — die TSC-Range #89 samt ihrer drei Bestaetigungen und zwei
+-- Targets raeumt Philip fuer diesen Testlauf selbst auf, deshalb hier bewusst kein Eingriff in
+-- dealing_ranges/trade_evidence/trade_targets.
+delete from state_machine_log where instrument = 'GBPUSD' and date_str = '2026-09-09';
+delete from trading_loop_state where instrument = 'GBPUSD' and date_str = '2026-09-09';
