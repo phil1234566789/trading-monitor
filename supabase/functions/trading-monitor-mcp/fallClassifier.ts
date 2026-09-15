@@ -1,6 +1,6 @@
 // Pure Logik hinter run_dealing_range_loop (Schritt 5, siehe docs/state-machine.md +
 // 05-dealing-range-bestaetigen.md) — dependency-frei, testbar ohne DB/Deno-Fetches.
-import { businessSecondsBetween, classifyAge, type AgeTier } from "../_shared/ageTier.ts";
+import { businessSecondsBetween, type AgeTier } from "../_shared/ageTier.ts";
 import { assessLiquidityForce } from "./forceAssessment.ts";
 //
 // Nur Fall 4 (Trend-/Countertrend-Target oder Invalidierung erreicht) ist ein reiner
@@ -158,16 +158,24 @@ export interface InducementAssessment {
 // die Stelle, an der sie im 09.09.-Backtest gepatzt hat). "Major" löst das Handelsverbot aus
 // liquidität.md#regel--kein-trade-gegen-einen-kraftvollen-major-inducement aus, "Medium" nicht —
 // deshalb kommt die Schwelle aus _shared/ageTier.ts statt aus einer weiteren lokalen Kopie.
-export function assessInducement(level: { price: number; pivotTimeSec: number; direction?: "high" | "low" | null }, atSec: number): InducementAssessment {
+// direction ist PFLICHT und nicht nullable: ein Inducement ist per Definition ein LQ-Sweep, und
+// liquidity_levels.direction ist NOT NULL mit CHECK auf 'high'/'low'. Es gibt hier also keinen
+// echten Datenfall ohne Richtung — ein fehlendes direction wäre ein Aufbaufehler des Watch-Levels.
+// Vorher war das Feld optional, was die Aufrufstelle dazu einlud, die Richtung aus der Preis-Position
+// des Levels zu raten (above/below) statt sie zu lesen: ein im Sweep-Moment unter den Kurs gerutschtes
+// HOCH wurde dadurch als Tief gewertet und meldete Kraft nach oben statt nach unten.
+export function assessInducement(level: { price: number; pivotTimeSec: number; direction: "high" | "low" }, atSec: number): InducementAssessment {
   const businessSeconds = businessSecondsBetween(level.pivotTimeSec, atSec);
   // Der Text kommt aus forceAssessment.ts — die EINE Kraft-Stelle, die auch Schritt 3 benutzt.
   // Vorher formulierte jeder Schritt seinen eigenen Kraft-Satz, mit dem Ergebnis, dass Schritt 3
   // und Schritt 5 am 09.09.2026 dasselbe Level gegensätzlich meldeten.
-  const signal = assessLiquidityForce({ price: level.price, direction: level.direction ?? null, pivotTimeSec: level.pivotTimeSec, touched: true }, atSec);
-  const cls = signal?.inducementClass ?? classifyAge(businessSeconds);
-  // direction=null liefert kein Signal (keine Kraftrichtung bestimmbar) — dann bleibt nur das Label.
-  const text = signal?.text ?? `${cls[0].toUpperCase()}${cls.slice(1)} Inducement ${level.price} angelaufen.`;
-  return { class: cls, businessSeconds, text };
+  const signal = assessLiquidityForce({ price: level.price, direction: level.direction, pivotTimeSec: level.pivotTimeSec, touched: true }, atSec);
+  // inducementClass ist in ForceSignal optional, weil OB-Signale keine tragen — bei einem
+  // Liquidity-Signal ist sie immer gesetzt. Mitprüfen statt wegcasten.
+  if (signal?.inducementClass == null) {
+    throw new Error(`assessInducement: kein Liquidity-Kraftsignal für ${level.price}/${level.direction} — assessLiquidityForce-Vertrag verletzt.`);
+  }
+  return { class: signal.inducementClass, businessSeconds, text: signal.text };
 }
 
 // A/B/C-Umbau, Etappe 3 (milk-city-Task a-b-c-dauerlauf-statt-linearer-trading-steps-sequenz): die

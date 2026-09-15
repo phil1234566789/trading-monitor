@@ -29,6 +29,11 @@ export interface LoopLevel {
   // Nur bei kind='ob': Zonen-Kanten für die find-or-create-Auflösung in ob_zones.
   rangeLow?: number | null;
   rangeHigh?: number | null;
+  // Nur bei kind='liquidity': Hoch oder Tief. computeWatchLevels schreibt das Feld seit je mit,
+  // im Typ fehlte es aber — wer die Richtung brauchte, fand sie hier nicht und leitete sie aus der
+  // Preis-Position (above/below) ab. Das kippt genau im Sweep-Moment, in dem ein Hoch unter den
+  // Kurs rutscht. OB-Kanten haben bewusst keine: eine Zone ist long/short, nicht high/low.
+  direction?: "high" | "low" | null;
 }
 
 export interface HeartbeatEntry {

@@ -219,7 +219,18 @@ async function computeTickEvidence(loaded: LoadedMachine, loopState: TradingLoop
   if (currentPrice == null) {
     watchLevels = { above: null, below: null };
   } else if (reactionFound) {
-    const m5Liquidity = ((reactions as any).m5Liquidity ?? []).map((l: any) => ({ price: l.price, touched: l.touched, timeframe: "5M", id: l.id ?? null }));
+    // direction/pivotTime/context MÜSSEN mit: ohne sie steht im Watch-Level später direction=null,
+    // und die Kraftrichtung eines M5-Sweeps ist nicht mehr bestimmbar. Der Fall-3-Pfad unten reicht
+    // snapshot.liquidity ungemappt durch und hatte die Felder deshalb schon immer.
+    const m5Liquidity = ((reactions as any).m5Liquidity ?? []).map((l: any) => ({
+      price: l.price,
+      touched: l.touched,
+      timeframe: "5M",
+      id: l.id ?? null,
+      direction: l.direction ?? null,
+      pivotTime: l.pivotTime ?? null,
+      context: l.context ?? null,
+    }));
     const m5ObZones = ((reactions as any).m5ObZones ?? []).map((z: any) => ({ top: z.top, bottom: z.bottom, touched: z.touched, invalidated: false, timeframe: "5M", id: z.id ?? null }));
     watchLevels = computeWatchLevels(currentPrice, m5Liquidity, m5ObZones);
   } else {
@@ -246,12 +257,23 @@ async function computeTickEvidence(loaded: LoadedMachine, loopState: TradingLoop
   if (currentPrice != null) {
     for (const prev of [loopState.htfWatchLevelAbove, loopState.htfWatchLevelBelow]) {
       if (prev == null || prev.sourceTimeSec == null) continue;
+      // HTF-Watch-Level stammen ausschliesslich aus liquidity_levels (computeHtfWatchLevels ruft
+      // computeWatchLevels mit leerem OB-Array auf), und dort ist direction NOT NULL. Fehlt sie
+      // trotzdem, ist die persistierte Zeile kaputt — dann lieber laut abbrechen als eine
+      // Kraftrichtung raten.
+      if (prev.direction == null) {
+        throw new Error(`HTF-Watch-Level ${prev.price} (Loop ${loopState.id}) ohne direction — trading_loop_state-Zeile neu aufbauen.`);
+      }
       const reached = prev === loopState.htfWatchLevelAbove ? currentPrice >= prev.price : currentPrice <= prev.price;
       if (!reached) continue;
       htfHits.push({
         level: prev,
+        // Richtung IMMER aus dem Level selbst, nie aus seiner Position zum Preis: ein Hoch liegt
+        // im Sweep-Moment unterhalb des Kurses (er hat es gerade überschritten) — genau dann kippte
+        // die Positions-Ableitung ein gesweeptes Hoch in ein "Tief" und meldete Kraft nach oben
+        // statt nach unten.
         assessment: assessInducement(
-          { price: prev.price, pivotTimeSec: prev.sourceTimeSec, direction: prev === loopState.htfWatchLevelAbove ? "high" : "low" },
+          { price: prev.price, pivotTimeSec: prev.sourceTimeSec, direction: prev.direction },
           atSec,
         ),
       });
@@ -896,7 +918,12 @@ export function registerDealingRangeLoopTool(server: McpServer) {
             "Welche 1H/4H-Liquiditäts-Level gesweept sind, BEIDE Richtungen, MIT Inducement-Klasse " +
               "(z.B. '1.35652 4H-Hoch, Major Inducement, Kraft nach unten'). Quelle: " +
               "evidence.allLiquiditySweeps + evidence.htfInducementHits, fertige Sätze je Seite auch " +
-              "in evidence.force.bullish/.bearish. Leere Liste = bewusst nichts vorhanden.",
+              "in evidence.force.bullish/.bearish. Leere Liste = bewusst nichts vorhanden. " +
+              "OB ein Sweep BESTÄTIGT ist, steht in keinem dieser Felder — das sagt evidence.tradeSetups: " +
+              "liegt zu einem gesweepten Level ein Setup vor (ls_price = das Level), ist der Sweep " +
+              "bestätigt und die Entry-Suche beginnt; liegt keins vor, ist er es noch nicht. NICHT selbst " +
+              "aus Kerzen/Struktur herleiten (Philip 15.09.2026: der Gegenrichtungs-OB allein ist die " +
+              "Bestätigung, siehe 05-dealing-range-bestaetigen.md Fall 1).",
           ),
       },
     },

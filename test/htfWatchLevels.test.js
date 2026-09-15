@@ -78,3 +78,24 @@ describe("assessInducement", () => {
     expect(result.text).toContain("Minor Inducement");
   });
 });
+
+// Regression: im Sweep-Moment liegt ein Hoch UNTERHALB des Kurses (er hat es gerade
+// überschritten). Wird die Richtung aus dieser Position statt aus dem Level abgeleitet, kippt ein
+// gesweeptes Hoch in ein "Tief" und die Kraftrichtung dreht sich um — 09.09.2026, Major 1.35652.
+describe("Inducement-Richtung kommt aus dem Level, nicht aus seiner Lage zum Preis", () => {
+  it("Hoch unterhalb des aktuellen Kurses bleibt Kraft nach unten", () => {
+    const result = assessInducement(
+      { price: 1.35652, pivotTimeSec: 1788181200, direction: "high" },
+      1788938400,
+    );
+    expect(result.text).toBe("Major Inducement 1.35652 angelaufen ---> Kraft nach unten.");
+  });
+
+  it("gesweeptes Tief unterhalb des Kurses bleibt Kraft nach oben", () => {
+    const result = assessInducement(
+      { price: 1.35290, pivotTimeSec: 1788181200, direction: "low" },
+      1788938400,
+    );
+    expect(result.text).toBe("Major Inducement 1.3529 angelaufen ---> Kraft nach oben.");
+  });
+});
