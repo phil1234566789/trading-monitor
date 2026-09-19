@@ -50,6 +50,7 @@ unbrauchbar.
 | `messeTrendJeDr.py` | holt den 1H-Trend je DR, schreibt `trend-je-dr.json` |
 | `filterTrend.py` | legt die Trendlage über alles Obige, siehe unten |
 | `winrate.py` | Winrate je Ziel-Regel und Qualitätsstufe, siehe unten |
+| `leiterPipsVsR.py` | Wahrscheinlichkeit je Strecke, Pips gegen R, siehe unten |
 | `drMerkmale.py` | gemeinsame Merkmale (Sweep-Herkunft, Alter, Handelsstunde, Trendlage) |
 
 Die `ergebnis-*.txt` sind die abgelegten Ausgaben dieser Läufe.
@@ -240,6 +241,29 @@ der Reihenfolge ihrer Belegstärke, die letzte Spalte ist mit n=30 ein Ausblick,
 rechnet je *Setup-Zeile* gegen ein festes 2,5-RR-Ziel mit bei 6 Pips gedeckeltem Stopp, zählt also
 die Path-A/B-Zwillinge doppelt und benutzt eine andere Erfolgsdefinition. Beide Zahlen stimmen, sie
 beantworten verschiedene Fragen.
+
+## Wahrscheinlichkeit je Strecke — Pips oder R?
+
+Vorarbeit für eine Anzeige in der UI (`leiterPipsVsR.py`, Ausgabe `ergebnis-leiter.txt`): Wie oft
+wurde eine gegebene Strecke erreicht, bevor die DR invalidierte?
+
+| | 1 R | 2 R | 3 R | 4 R | 5 R | 8 R |
+|---|---|---|---|---|---|---|
+| alle 255 DRs | 87 % | 65 % | 48 % | 38 % | 32 % | 16 % |
+
+| | 5 P | 10 P | 15 P | 20 P | 25 P | 30 P | 40 P |
+|---|---|---|---|---|---|---|---|
+| alle 255 DRs | 80 % | 61 % | 46 % | 35 % | 29 % | 24 % | 17 % |
+
+**Die Einheit entscheidet.** Über Risiko-Terzile gerechnet läuft die Pip-Leiter weit auseinander —
+„≥15 Pips" trifft bei den DRs mit kleinem Risiko (Median 2,6 P) nur 27 %, bei denen mit großem
+(7,3 P) aber 61 %. In R ist dieselbe Spreizung deutlich kleiner: mittlere Spannweite 13 Punkte
+gegen 28. Eine **einzelne Pip-Leiter für alle Dealing Ranges wäre also irreführend**, eine R-Leiter
+ist vertretbar.
+
+Nebenbefund, der der Intuition widerspricht: die DRs mit dem kleinsten Risiko erreichen die
+wenigsten Pips, sind aber in R die besten (91/68/49 % bei 1/2/3 R gegen 75/55/44 % bei großem
+Risiko). Eine enge Dealing Range ist das bessere Geschäft, nicht das schlechtere.
 
 ## Trendlage: kein messbarer Unterschied
 
