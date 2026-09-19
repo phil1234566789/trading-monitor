@@ -1,0 +1,62 @@
+Dealing Ranges: 255   Kandidaten insgesamt: 2021   Reichweite-Median 12.5 Pips
+
+ANGEBOT
+  ohne LQ-Kandidat: 0   ohne OB-Kandidat: 0   voellig leer: 0
+  Kandidaten hinter der nahen OB-Kante (als Ziel wertlos): 1 von 2021
+
+TREFFERQUOTE JE RANG (erreicht = Reichweite >= Distanz ab naher OB-Kante)
+              n  Treff   Quote  Dist-Med   RR-Med
+  LQ #1     255    140     55%      10.8     2.41
+  LQ #2     253     98     39%      16.1     3.89
+  LQ #3     251     69     27%      22.1     5.31
+  LQ #4     250     61     24%      28.7     6.61
+  LQ #5     247     48     19%      36.3     8.46
+  OB #1     255    166     65%       8.6     2.10
+  OB #2     255    118     46%      14.4     3.35
+  OB #3     255     92     36%      20.7     4.69
+
+tooFar-FLAG (>50 Pips zum aktuellen Preis)
+  tooFar=False n=1889  erreicht 789 (42%)  Dist-Median 17.2
+  tooFar=True  n= 132  erreicht   3 ( 2%)  Dist-Median 69.8
+
+KANDIDATEN-TIMEFRAME
+  LQ  5M  n= 934  erreicht 331 (35%)  Dist-Median  19.0  RR-Median 4.50
+  LQ  1H  n= 251  erreicht  67 (27%)  Dist-Median  25.5  RR-Median 6.35
+  LQ  4H  n=  71  erreicht  18 (25%)  Dist-Median  38.8  RR-Median 7.53
+  OB  5M  n= 732  erreicht 362 (49%)  Dist-Median  14.2  RR-Median 3.23
+  OB  1H  n=  33  erreicht  14 (42%)  Dist-Median  21.0  RR-Median 4.01
+
+AUSWAHLREGELN -- Quote und EV nur ueber ENTSCHIEDENE DRs (Treffer oder Invalidierung),
+RR bei 10 gedeckelt, damit kein einzelner Ausreisser die Zahl traegt
+  nahster Kandidat (Status quo)      n=255 | Treffer 178  Verlust  76  offen  1 | Quote  70% | Dist   7.0  RR 1.68 | EV +1.05 R
+  nahster LQ-Kandidat                n=255 | Treffer 140  Verlust 112  offen  3 | Quote  56% | Dist  10.8  RR 2.41 | EV +1.02 R
+  nahster OB-Kandidat                n=255 | Treffer 166  Verlust  87  offen  2 | Quote  66% | Dist   8.6  RR 2.10 | EV +1.15 R
+  nahster mit Distanz >= 10 Pips     n=255 | Treffer 124  Verlust 127  offen  4 | Quote  49% | Dist  12.3  RR 2.98 | EV +0.99 R
+  nahster mit Distanz >= 15 Pips     n=248 | Treffer 104  Verlust 139  offen  5 | Quote  43% | Dist  17.7  RR 4.31 | EV +1.18 R
+  nahster mit Distanz >= 20 Pips     n=235 | Treffer  71  Verlust 154  offen 10 | Quote  32% | Dist  23.4  RR 5.52 | EV +0.87 R
+  nahster mit RR >= 2                n=252 | Treffer 130  Verlust 119  offen  3 | Quote  52% | Dist  11.7  RR 2.61 | EV +1.04 R
+  nahster mit RR >= 3                n=244 | Treffer 100  Verlust 138  offen  6 | Quote  42% | Dist  15.5  RR 3.56 | EV +1.05 R
+  weitester ohne tooFar              n=255 | Treffer  49  Verlust 180  offen 26 | Quote  21% | Dist  34.9  RR 7.70 | EV +0.60 R
+
+Gegenprobe mit strikter Reichweite (Invalidierungs-Kerze zaehlt nicht mit, betrifft 6 von 255 DRs):
+  nahster Kandidat                   n=255 | Treffer 176  Verlust  78  offen  1 | Quote  69% | Dist   7.0  RR 1.68 | EV +1.01 R
+  nahster mit Distanz >= 15 Pips     n=248 | Treffer 104  Verlust 139  offen  5 | Quote  43% | Dist  17.7  RR 4.31 | EV +1.18 R
+
+STABILITAET
+  gesamt                 nahster +1.05 (n=254)  >=10P +0.99 (n=251)  >=15P +1.18 (n=243)  >=20P +0.87 (n=225)
+  1. Haelfte bis 2026-08-17 nahster +0.80 (n=126)  >=10P +0.89 (n=124)  >=15P +1.09 (n=123)  >=20P +0.56 (n=115)
+  2. Haelfte ab 2026-08-17 nahster +1.29 (n=128)  >=10P +1.09 (n=127)  >=15P +1.28 (n=120)  >=20P +1.19 (n=110)
+  Gepaarter Bootstrap, 5000 Ziehungen, EV-Differenz zu 'nahster':
+    >=10P  median -0.06 R  95%-Intervall [-0.26, +0.14]  besser in 28% der Ziehungen
+    >=15P  median +0.13 R  95%-Intervall [-0.16, +0.43]  besser in 80% der Ziehungen
+    >=20P  median -0.18 R  95%-Intervall [-0.52, +0.17]  besser in 16% der Ziehungen
+
+HANDELSFENSTER x ZIEL-DISTANZ (Handelsfenster GBPUSD 08:00-18:00 Berlin)
+  im Fenster (n=176, Reichweite-Median 16.4 Pips)
+     nahster    n=175  EV +1.13 R
+     >=15 Pips  n=168  EV +1.32 R
+     >=25 Pips  n=141  EV +1.02 R
+  ausserhalb (n=79, Reichweite-Median 7.1 Pips)
+     nahster    n= 79  EV +0.88 R
+     >=15 Pips  n= 75  EV +0.87 R
+     >=25 Pips  n= 56  EV +0.01 R

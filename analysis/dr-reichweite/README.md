@@ -42,8 +42,17 @@ unbrauchbar.
 | `filterHtfSweep.py` | Filter 1: HTF-Sweep (1H/4H) vs. M5-Sweep |
 | `filterGegenkraft.py` | Filter 2: lebende Gegen-DR, als Paarvergleich nach Sweep-Stärke |
 | `filterAlterUndHandelszeit.py` | Filter 3+4: Inducement-Klasse und Handelszeit/Tageszeit |
+| `messeFindTargets.py` | `find_targets` gegen dieselbe Messung, siehe unten |
 
 Die `ergebnis-*.txt` sind die abgelegten Ausgaben dieser Läufe.
+
+`messeFindTargets.py` ist das einzige Skript, das selbst Daten zieht: es ruft den **echten deployten
+`find_targets`** über den trading-monitor-MCP auf (255 sequentielle Aufrufe, ~7 Minuten, braucht
+`TRADING_MONITOR_MCP_TOKEN`) und legt die Antworten in `find-targets-roh.jsonl.gz` ab. Ohne
+Argument wertet es nur diese Datei aus, mit `sammeln` holt es fehlende Antworten nach. Eine
+Python-Nachbildung des Algorithmus wäre hier wertlos gewesen — sie hätte den Kandidaten-Pool (M5
+live + HTF aus der DB, `touched`-Nachprüfung, Dedup) zwangsläufig anders getroffen als die
+Produktion.
 
 ## Basis
 
@@ -120,6 +129,82 @@ Major und Medium sind **nicht unterscheidbar**. Die nützliche Trennung ist bin�
 die gealterten auf 28,7 bzw. 29,3, die frischen nur auf 17,5. Praktisch selten: 90 % aller Sweeps
 sind jünger als 19 Stunden (Median 1,8 h).
 
+## find_targets: taugen die vorgeschlagenen Ziele?
+
+Zu jeder der 255 DRs wurde `find_targets` zum DR-Startzeitpunkt (`ob_start_time` + 2 M5-Kerzen) mit
+der DR-Richtung aufgerufen und jeder gelieferte Kandidat auf die **nahe OB-Kante** umgerechnet —
+dieselbe Referenz wie die Reichweite. Erreicht heißt: Reichweite ≥ Distanz, also vor der
+Invalidierung berührt.
+
+### Das Angebot stimmt
+
+255 von 255 DRs bekamen eine volle Liste (5 Liquiditäts-Kandidaten + 3 OB-Kanten, 2021 insgesamt).
+Kein einziger leerer Fall, und nur **1 von 2021** Kandidaten lag hinter der nahen OB-Kante und wäre
+als Ziel wertlos gewesen. Die Kandidatensuche selbst ist also nicht das Problem.
+
+### Trefferquote je Rang
+
+| | n | erreicht | Distanz-Median | RR-Median |
+|---|---|---|---|---|
+| OB #1 | 255 | 65 % | 8,6 | 2,10 |
+| LQ #1 | 255 | 55 % | 10,8 | 2,41 |
+| OB #2 | 255 | 46 % | 14,4 | 3,35 |
+| LQ #2 | 253 | 39 % | 16,1 | 3,89 |
+| OB #3 | 255 | 36 % | 20,7 | 4,69 |
+| LQ #3 | 251 | 27 % | 22,1 | 5,31 |
+| LQ #4 | 250 | 24 % | 28,7 | 6,61 |
+| LQ #5 | 247 | 19 % | 36,3 | 8,46 |
+
+Bei **70 %** der DRs wurde mindestens ein angebotener Kandidat erreicht. Weil die Liste nach
+Distanz sortiert ist, ist das gleichzeitig die Trefferquote des nächsten Kandidaten und die
+Obergrenze für jede Auswahlregel.
+
+### Die Auswahl ist erwartungswert-neutral
+
+R-Rechnung der **Idee**, nicht einer Ausführung: Referenz ist die nahe OB-Kante, Risiko der Weg von
+dort zum Extrem-Fraktal, RR bei 10 gedeckelt. Ein nicht erreichtes Ziel zählt nur als −1 R, wenn
+die DR binnen 24 h auch wirklich invalidiert wurde.
+
+| Regel | n | Quote | Distanz-Median | EV |
+|---|---|---|---|---|
+| nächster OB-Kandidat | 255 | 66 % | 8,6 | +1,15 R |
+| nächster Kandidat (Status quo) | 255 | 70 % | 7,0 | +1,05 R |
+| nächster mit ≥ 15 Pips | 248 | 43 % | 17,7 | +1,18 R |
+| nächster mit RR ≥ 2 | 252 | 52 % | 11,7 | +1,04 R |
+| nächster mit ≥ 20 Pips | 235 | 32 % | 23,4 | +0,87 R |
+| weitester ohne `tooFar` | 255 | 21 % | 34,9 | +0,60 R |
+
+Alle brauchbaren Regeln liegen zwischen +0,99 und +1,18 R. Der gepaarte Bootstrap (5000 Ziehungen)
+sagt zur besten davon: +0,13 R gegenüber „nächster", 95 %-Intervall **[−0,16, +0,43]** — der
+Unterschied ist von Rauschen nicht zu trennen. Näher heißt öfter getroffen bei schlechterem RR,
+weiter heißt seltener bei besserem, und beides gleicht sich fast exakt aus.
+
+**Das ist die eigentliche Antwort:** an der Ziel-*auswahl* innerhalb der angebotenen Liste ist kein
+Vorteil zu holen. Nur die Extremvariante (immer das weiteste noch erlaubte Ziel) verliert deutlich.
+
+### Zwei Nebenbefunde
+
+`tooFar` (> 50 Pips zum aktuellen Preis) trennt sauber: 3 von 132 markierten Kandidaten wurden
+erreicht (2 %) gegen 789 von 1889 unmarkierten (42 %). Die Konstante `MAX_TARGET_DISTANCE_PIPS`
+sitzt richtig, an ihr ist nichts zu ändern.
+
+Die Handelszeit wirkt auch hier, und zwar auf die zulässige Ziel-Weite:
+
+| | nächster | ≥ 15 Pips | ≥ 25 Pips |
+|---|---|---|---|
+| im Fenster 08:00–18:00 (n=176) | +1,13 R | +1,32 R | +1,02 R |
+| außerhalb (n=79) | +0,88 R | +0,87 R | +0,01 R |
+
+Außerhalb des Handelsfensters bricht das ambitionierte Ziel zusammen, im Fenster trägt es. Das ist
+derselbe Effekt wie bei Filter 1, hier nur von der Ziel-Seite gesehen.
+
+### Gegenprobe
+
+Die Grundmessung nimmt den Docht der invalidierenden Kerze noch in die Reichweite auf; liegen Ziel
+und Invalidierung in derselben M5-Kerze, gilt das Ziel als erreicht — `trade_setup_outcomes` wertet
+denselben Fall als Verlust. Betroffen sind **6 von 255** DRs, der EV der Status-quo-Regel fällt
+dadurch von +1,05 auf +1,01 R. Der Unterschied trägt keine der Aussagen oben.
+
 ## Was daraus gebaut wurde
 
 `poi-watcher` schreibt die Sweep-Herkunft seit dem 19.09.2026 direkt beim Erkennen mit
@@ -146,3 +231,10 @@ die Töpfe werden sofort zu klein.
 Das 24-Stunden-Fenster untertreibt eher: bei 67 DRs wurde die Invalidierung darin nie getroffen,
 deren Reichweite ist also nach unten begrenzt gemessen. Reichweite wird per Docht gemessen, ein
 Target gilt also als erreicht, sobald es berührt wurde.
+
+Für die find_targets-Auswertung kommen zwei Grenzen dazu. Erstens baut der Kandidaten-Pool auf dem
+**heutigen** Stand von `liquidity_levels`/`ob_zones` auf (as-of auf den DR-Zeitpunkt gefiltert, aber
+seither gelöschte Zeilen fehlen) — dieselbe Einschränkung wie bei Filter 1. Zweitens ist das R die
+R der Idee: Einstieg an der nahen OB-Kante, Stopp am Extrem-Fraktal. Philip führt selbst aus, sein
+realer Entry liegt woanders — die EV-Zahlen vergleichen die Regeln miteinander, sie sagen nicht
+voraus, was ein echter Trade abwirft.
