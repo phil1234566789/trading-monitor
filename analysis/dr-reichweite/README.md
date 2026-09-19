@@ -18,6 +18,10 @@ und müssen auf die tatsächlichen Ablageorte angepasst werden:
 | M5-Kerzen | `get_forex_candles_archive(instrument="GBPUSD", timeframe="5m", fromTime="2026-07-15", toTime="2026-09-19", limit=20000)` |
 | LQ-Level | `get_near_relevant_liquidity_levels(instrument="GBPUSD", fromSec=1784073600, toSec=1789603200)` |
 
+Zwei weitere Eingaben holen sich ihre Skripte selbst über den MCP und legen sie im Ordner ab:
+`find-targets-roh.jsonl.gz` (`messeFindTargets.py sammeln`) und `trend-je-dr.json`
+(`messeTrendJeDr.py`). Beide brauchen `TRADING_MONITOR_MCP_TOKEN` in der Umgebung.
+
 ## Definitionen
 
 Eine **Dealing Range = ein M5-OB.** Path-A- und Path-B-Zeile desselben OB werden zusammengefasst
@@ -43,8 +47,16 @@ unbrauchbar.
 | `filterGegenkraft.py` | Filter 2: lebende Gegen-DR, als Paarvergleich nach Sweep-Stärke |
 | `filterAlterUndHandelszeit.py` | Filter 3+4: Inducement-Klasse und Handelszeit/Tageszeit |
 | `messeFindTargets.py` | `find_targets` gegen dieselbe Messung, siehe unten |
+| `messeTrendJeDr.py` | holt den 1H-Trend je DR, schreibt `trend-je-dr.json` |
+| `filterTrend.py` | legt die Trendlage über alles Obige, siehe unten |
+| `drMerkmale.py` | gemeinsame Merkmale (Sweep-Herkunft, Alter, Handelsstunde, Trendlage) |
 
 Die `ergebnis-*.txt` sind die abgelegten Ausgaben dieser Läufe.
+
+Sweep-Herkunft und Sweep-Alter lagen anfangs in drei Skripten in je eigenen Kopien; seit der
+Trend-Auswertung stehen sie einmal in `drMerkmale.py`, die Filter-Skripte importieren von dort.
+Dass die Extraktion nichts verschoben hat, ist geprüft: alle vier Skripte erzeugen ihre abgelegte
+`ergebnis-*.txt` weiterhin zeichengleich.
 
 `messeFindTargets.py` ist das einzige Skript, das selbst Daten zieht: es ruft den **echten deployten
 `find_targets`** über den trading-monitor-MCP auf (255 sequentielle Aufrufe, ~7 Minuten, braucht
@@ -204,6 +216,48 @@ Die Grundmessung nimmt den Docht der invalidierenden Kerze noch in die Reichweit
 und Invalidierung in derselben M5-Kerze, gilt das Ziel als erreicht — `trade_setup_outcomes` wertet
 denselben Fall als Verlust. Betroffen sind **6 von 255** DRs, der EV der Status-quo-Regel fällt
 dadurch von +1,05 auf +1,01 R. Der Unterschied trägt keine der Aussagen oben.
+
+## Trendlage: kein messbarer Unterschied
+
+Nachgezogen am 19.09.2026, weil die Grundmessung und alle vier Filter den Trend gar nicht kannten
+— ihre Zahlen waren Mittelwerte über eine ungetrennte Mischung. Gemessen wird der **1H-Market-
+Structure-Trend zum DR-Startzeitpunkt** (`get_data_export`, `structure1h.trend`); „mit dem Trend"
+heißt Uptrend + Long bzw. Downtrend + Short.
+
+Möglich wurde das erst durch Commit `740375f`: `get_data_export` starb für jeden Replay-Zeitpunkt,
+der weiter zurück lag als der neueste Daily-Pivot, an `cTrader error INVALID_REQUEST: Count must be
+bigger than ZERO`. Alle 255 Abfragen laufen seitdem fehlerfrei.
+
+| | n | Median | p75 | nie invalidiert | ≥20 P |
+|---|---|---|---|---|---|
+| mit dem Trend | 123 | 12,5 | 28,9 | 30 | 44 |
+| gegen den Trend | 132 | 13,1 | 29,7 | 37 | 46 |
+
+Bootstrap über 5000 Ziehungen: Differenz **0,0 Pips**, 95 %-Intervall [−5,4, +5,7], „mit dem Trend"
+größer in genau 50 % der Ziehungen. Die Hälften des Zeitraums drehen das Vorzeichen (12,7 vs. 11,7
+in der ersten, 12,2 vs. 14,7 in der zweiten). Auch Invalidierungsquote und Zeit bis zur
+Invalidierung (105 gegen 100 Minuten) unterscheiden sich nicht.
+
+Kein Filter wird durch die Trennung schärfer, und bei den find_targets-Regeln liegt jeder
+Unterschied im Rauschen — die auffälligste Zahl (ambitioniertes Ziel ≥25 Pips: +0,95 R gegen den
+Trend, +0,44 R mit ihm) hat ein 95 %-Intervall von [−0,36, +1,32].
+
+Drei Gegenproben, bevor daraus ein Befund wird:
+
+- **Innerer Trend** (`nestedTrend`, wo vorhanden, n=94): 11,2 mit gegen 15,0 gegen — wenn
+  überhaupt, das umgekehrte Vorzeichen.
+- **Längeres Fenster**, falls ein Trade mit dem Trend nur mehr Zeit braucht: bei 72 Stunden und bei
+  7 Tagen steht der Median „mit dem Trend" unverändert bei 12,5.
+- **Richtungs-Bias der Erkennung**: keiner. Im Uptrend entstehen 81 Short- und 76 Long-DRs, im
+  Downtrend 47 zu 51.
+
+**Was das heißt und was nicht.** In diesen Daten trennt der 1H-Strukturtrend gute nicht von
+schlechten Dealing Ranges — anders als Handelszeit, Gegenkraft und Sweep-Herkunft, die alle einen
+Effekt zeigen. Das ist keine Aussage über „Trend" allgemein: gemessen ist **eine bestimmte
+Definition** davon, der 1H-Algo mit Daily-Pivot-Anker, der sich nur alle ein bis drei Wochen
+bewegt. Der M5-Trend (Task `10-10-nur-im-m5-trend`) ist damit nicht gemessen, und eine Dealing
+Range entsteht per Konstruktion nach einem Liquidity Sweep, also häufig gegen die laufende
+Bewegung — die Trendlage beschreibt ihren Kontext vielleicht einfach schlecht.
 
 ## Was daraus gebaut wurde
 

@@ -25,6 +25,7 @@ PIP, ARM, HORIZON = 0.0001, 600, 24 * 3600
 BERLIN = 2 * 3600  # CEST im gesamten Messzeitraum 15.07.-16.09.2026, wie filterAlterUndHandelszeit.py
 
 ts = lambda s: int(datetime.datetime.fromisoformat(s).timestamp())
+utc_dt = lambda sec: datetime.datetime.fromtimestamp(sec, datetime.timezone.utc)
 med = lambda v: statistics.median(v) if v else float("nan")
 
 
@@ -68,7 +69,7 @@ def drs_laden():
             strikt = max(strikt, fav / PIP)
             i += 1
         out.append(dict(x, start=start, ref=ref, reach_strikt=strikt,
-                        stunde=datetime.datetime.utcfromtimestamp(ts(r["ob_start_time"]) + BERLIN).hour))
+                        stunde=utc_dt(ts(r["ob_start_time"]) + BERLIN).hour))
     out.sort(key=lambda d: d["start"])
     return out
 
@@ -88,6 +89,11 @@ def sammeln(drs):
         for i, res in roh.items():
             f.write(json.dumps({"id": i, "res": res}) + "\n")
     return roh
+
+
+def roh_laden():
+    """Die abgelegten find_targets-Antworten, id -> Antwort."""
+    return {json.loads(l)["id"]: json.loads(l)["res"] for l in gzip.open(ROH, "rt")}
 
 
 def kandidaten(d, res):
@@ -142,8 +148,7 @@ def ev(menge, pick):
 
 def main():
     drs = drs_laden()
-    roh = sammeln(drs) if "sammeln" in sys.argv else \
-        {json.loads(l)["id"]: json.loads(l)["res"] for l in gzip.open(ROH, "rt")}
+    roh = sammeln(drs) if "sammeln" in sys.argv else roh_laden()
     for d in drs:
         d["kand"] = kandidaten(d, roh[d["id"]])
     alle = [k for d in drs for k in d["kand"]]

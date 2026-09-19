@@ -1,50 +1,18 @@
 # -*- coding: utf-8 -*-
 # SCHRITT 2, Filter 3+4 -- Inducement-Klasse (Sweep-Alter) und Handelszeit/Tageszeit.
-#
-# Sweep-Alter = ls_pivot_time -> ls_touched_time in HANDELSSTUNDEN (Wochenende raus), wie
-# _shared/ageTier.ts. Klassen laut liquidität.md: Minor <24h, Medium 24-120h, Major >=120h.
-# Handelsfenster GBPUSD aus trading_schedules: weekday 480-1080 Min = 08:00-18:00 Berlin.
-# Der ganze Messzeitraum (15.07.-16.09.2026) liegt in CEST, also UTC+2.
-import json, datetime, statistics, collections
+# Alter, Klasse, Handelsstunde und Sweep-Herkunft kommen aus drMerkmale (dort auch die
+# Begruendungen: ageTier-Klassen, Handelsfenster aus trading_schedules, CEST-Annahme).
+import json, statistics
+from drMerkmale import lade_setups, lade_bekannte_level, merkmale
 
-BASE = r"C:\Users\Philip\.claude\projects\c--Users-Philip-Documents-git-trading-monitor\25cfa4c0-a261-49e1-9482-af67f53adc09\tool-results"
-rows = json.load(open(BASE + r"\mcp-trading-monitor-get_trade_setups-1789808350250.txt"))
-levels = json.load(open(BASE + r"\mcp-trading-monitor-get_near_relevant_liquidity_levels-1789817921915.txt"))["levels"]
 res = json.load(open("punkt1_result.json"))
-ts = lambda s: int(datetime.datetime.fromisoformat(s).timestamp())
-by_id = {r["id"]: r for r in rows}
-known = {(round(l["price"], 5), l["pivotTime"]) for l in levels}
-BERLIN = 2 * 3600            # CEST im gesamten Messzeitraum
-WIN_FROM, WIN_TO = 480, 1080  # Minuten ab Mitternacht Berlin
-
-
-def business_hours(a, b):
-    """Stunden zwischen a und b, Samstag/Sonntag herausgerechnet."""
-    if b <= a:
-        return 0.0
-    sec = 0
-    cur = a
-    while cur < b:
-        nxt = min(b, cur + 3600)
-        if datetime.datetime.utcfromtimestamp(cur).weekday() < 5:
-            sec += nxt - cur
-        cur = nxt
-    return sec / 3600.0
-
+by_id = {r["id"]: r for r in lade_setups()}
+known = lade_bekannte_level()
 
 for x in res:
-    r = by_id[x["id"]]
-    age = business_hours(ts(r["ls_pivot_time"]), ts(r["ls_touched_time"]))
-    x["age_h"] = age
-    x["klasse"] = "Major (>=120h)" if age >= 120 else ("Medium (24-120h)" if age >= 24 else "Minor (<24h)")
-    dist = abs(r["ls_price"] - r["fractal_price"]) / 0.0001
-    ldm = (ts(r["fractal_pivot_time"]) - ts(r["ls_touched_time"])) / 60.0
-    x["htf"] = (((round(r["ls_price"], 5), ts(r["ls_pivot_time"])) in known)
-                or dist > 5.0 or ldm > 45.0 or ts(r["ls_pivot_time"]) % 3600 == 0)
-    bt = datetime.datetime.utcfromtimestamp(ts(r["ob_start_time"]) + BERLIN)
-    x["min_of_day"] = bt.hour * 60 + bt.minute
-    x["stunde"] = bt.hour
-    x["in_fenster"] = bt.weekday() < 5 and WIN_FROM <= x["min_of_day"] < WIN_TO
+    m = merkmale(by_id[x["id"]], known)
+    x.update(age_h=m["age_h"], klasse=m["klasse"], htf=m["htf_broad"],
+             min_of_day=m["min_of_day"], stunde=m["stunde"], in_fenster=m["in_fenster"])
 
 
 def show(g, name):

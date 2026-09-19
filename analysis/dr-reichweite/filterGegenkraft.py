@@ -4,18 +4,14 @@
 # (weder Invalidierung noch Target erreicht). Da das sehr haeufig vorkommt, entscheidet die
 # relative Staerke: "Wir traden nur, wenn die gegnerische Seite viel zu schwach ist" --
 # guter LQ-Sweep gegen "Popel-M5-Sweep".
-import json, datetime, bisect, statistics, collections
+import bisect, statistics, collections
+from drMerkmale import lade_setups, lade_kerzen, lade_bekannte_level, sweep_herkunft, ts, PIP, ARM, HORIZON
 
-BASE = r"C:\Users\Philip\.claude\projects\c--Users-Philip-Documents-git-trading-monitor\25cfa4c0-a261-49e1-9482-af67f53adc09\tool-results"
-rows = json.load(open(BASE + r"\mcp-trading-monitor-get_trade_setups-1789808350250.txt"))
-levels = json.load(open(BASE + r"\mcp-trading-monitor-get_near_relevant_liquidity_levels-1789817921915.txt"))["levels"]
-cnd = json.load(open(BASE + r"\mcp-trading-monitor-get_forex_candles_archive-1789814595814.txt"))
-cnd.sort(key=lambda c: c["time"]); times = [c["time"] for c in cnd]
-PIP = 0.0001; ARM = 600; HORIZON = 24 * 3600
-ts = lambda s: int(datetime.datetime.fromisoformat(s).timestamp())
+rows = lade_setups()
+cnd, times = lade_kerzen()
 for r in rows:
     r["_B"] = (r["fractal_price"] == r["ls_price"] and r["fractal_pivot_time"] == r["ls_pivot_time"])
-known = {(round(l["price"], 5), l["pivotTime"]) for l in levels}
+known = lade_bekannte_level()
 
 groups = collections.defaultdict(list)
 for r in rows:
@@ -54,30 +50,35 @@ def build(tgt_pips):
         reach, t_inv, t_tg = walk(lead, d, ref, inval, start, tgt_pips)
         ends = [t for t in (t_inv, t_tg) if t is not None]
         fertig = start + (min(ends) * 60 if ends else HORIZON)
-        dist = abs(lead["ls_price"] - lead["fractal_price"]) / PIP
-        ldm = (ts(lead["fractal_pivot_time"]) - ts(lead["ls_touched_time"])) / 60.0
-        strict = ((round(lead["ls_price"], 5), ts(lead["ls_pivot_time"])) in known) or dist > 5.0 or ldm > 45.0
+        herkunft = sweep_herkunft(lead, known)
         drs.append(dict(id=lead["id"], d=d, start=start, fertig=fertig, reach=reach,
-                        t_inv=t_inv, strict=strict,
-                        broad=strict or ts(lead["ls_pivot_time"]) % 3600 == 0))
+                        t_inv=t_inv, strict=herkunft == "HTF sicher",
+                        broad=herkunft != "M5 sicher"))
     return drs
+
+
+KONSTELLATIONEN = ["keine Gegen-DR", "ich HTF, Gegner M5", "beide HTF", "beide M5", "ich M5, Gegner HTF"]
+
+
+def konstellation(x, drs, strength):
+    """Welche Gegenkraft-Lage liegt zum Start dieser DR vor? Gefaehrlich ist eine Gegner-DR, die
+    sich VORHER gebildet hat und noch nicht fertig ist -- danach entscheidet die relative Staerke."""
+    opp = [o for o in drs if o["d"] != x["d"] and o["start"] < x["start"] and o["fertig"] > x["start"]]
+    if not opp:
+        return "keine Gegen-DR"
+    me = x[strength]
+    strongest_opp = any(o[strength] for o in opp)
+    if me and not strongest_opp: return "ich HTF, Gegner M5"
+    if me and strongest_opp:     return "beide HTF"
+    if not strongest_opp:        return "beide M5"
+    return "ich M5, Gegner HTF"
 
 
 def analyse(drs, strength, tgt_pips):
     buckets = collections.defaultdict(list)
     for x in drs:
-        opp = [o for o in drs if o["d"] != x["d"] and o["start"] < x["start"] and o["fertig"] > x["start"]]
-        if not opp:
-            k = "keine Gegen-DR"
-        else:
-            me = x[strength]
-            strongest_opp = any(o[strength] for o in opp)
-            if me and not strongest_opp: k = "ich HTF, Gegner M5"
-            elif me and strongest_opp:   k = "beide HTF"
-            elif not me and not strongest_opp: k = "beide M5"
-            else: k = "ich M5, Gegner HTF"
-        buckets[k].append(x)
-    order = ["keine Gegen-DR", "ich HTF, Gegner M5", "beide HTF", "beide M5", "ich M5, Gegner HTF"]
+        buckets[konstellation(x, drs, strength)].append(x)
+    order = KONSTELLATIONEN
     print("--- Staerke-Definition: %s | Target fuer 'fertig': %d Pips ---" % (strength, tgt_pips))
     for k in order:
         g = buckets.get(k, [])
@@ -91,11 +92,13 @@ def analyse(drs, strength, tgt_pips):
     print()
 
 
-for TGT in (20,):
-    drs = build(TGT)
-    print("DRs: %d   davon HTF strict %d / broad %d\n" % (
-        len(drs), sum(1 for x in drs if x["strict"]), sum(1 for x in drs if x["broad"])))
-    analyse(drs, "strict", TGT)
-    analyse(drs, "broad", TGT)
-for TGT in (15, 25):
-    analyse(build(TGT), "broad", TGT)
+# Guard, damit filterTrend.py build() importieren kann, ohne diese Ausgabe auszuloesen.
+if __name__ == "__main__":
+    for TGT in (20,):
+        drs = build(TGT)
+        print("DRs: %d   davon HTF strict %d / broad %d\n" % (
+            len(drs), sum(1 for x in drs if x["strict"]), sum(1 for x in drs if x["broad"])))
+        analyse(drs, "strict", TGT)
+        analyse(drs, "broad", TGT)
+    for TGT in (15, 25):
+        analyse(build(TGT), "broad", TGT)
