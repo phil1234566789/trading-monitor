@@ -900,9 +900,9 @@
     "semantic_hash": "4ff5bd631b6998f71a7fedafcb686a39"
   },
   "supabase/functions/trading-monitor-mcp/fallClassifier.ts": {
-    "mtime": 1789482899.3392508,
-    "seen": 1789482986.1984022,
-    "ast_hash": "1074a792aa003853ad538a44d0228c39",
+    "mtime": 1789505976.3470528,
+    "seen": 1789506017.772896,
+    "ast_hash": "e5fb6b0e6cbeceb9a1139c3da15903b1",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/findAntiConfluenceCandidates.js": {
@@ -936,9 +936,9 @@
     "semantic_hash": "528dc407cc77c6eecb74dcd370004472"
   },
   "supabase/functions/trading-monitor-mcp/loopState.ts": {
-    "mtime": 1789332667.7594604,
-    "seen": 1789335879.8123088,
-    "ast_hash": "1a7ccf8429a12a8ce8b6b7aa6522a762",
+    "mtime": 1789505976.3460515,
+    "seen": 1789506017.772896,
+    "ast_hash": "eeda06087205a7e497bbf9be610a3f95",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/machineState.ts": {
@@ -1074,9 +1074,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/dealingRangeLoop.ts": {
-    "mtime": 1789484624.8135917,
-    "seen": 1789484915.2743976,
-    "ast_hash": "31fa5b8fb68cd1f8dc5e8dc94d3e32a3",
+    "mtime": 1789505635.7200904,
+    "seen": 1789506017.772896,
+    "ast_hash": "026dc1eddfe0076845fec306048704a2",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/nearRelevantLiquidityLevels.ts": {
@@ -2694,9 +2694,9 @@
     "semantic_hash": ""
   },
   "test/htfWatchLevels.test.js": {
-    "mtime": 1789332667.7654598,
-    "seen": 1789335879.8123088,
-    "ast_hash": "1de07bbec2d9723e719d4ed18b0799ce",
+    "mtime": 1789505646.7743604,
+    "seen": 1789506017.772896,
+    "ast_hash": "170c53e15356fab8d4d8bb3c386c5ee3",
     "semantic_hash": ""
   },
   "test/liquidityKontext.test.js": {
@@ -2811,6 +2811,12 @@
     "mtime": 1789484006.4619946,
     "seen": 1789485645.6622722,
     "ast_hash": "51265b9661b9144219a7dc4a4f96729e",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260915190000_reset_gbpusd_20260909_round7.sql": {
+    "mtime": 1789486066.3204067,
+    "seen": 1789506017.772896,
+    "ast_hash": "cef8042830fb4bd3f6a8afcaa41b5b89",
     "semantic_hash": ""
   }
 }
