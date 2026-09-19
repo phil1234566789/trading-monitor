@@ -1,0 +1,36 @@
+FILTER 3 -- Inducement-Klasse (Sweep-Alter in Handelsstunden)
+  Major (>=120h)       n=  8 | Median  29.2 | p75  33.4 | >=15P   6 | >=20P   5 | nie inval.  3
+  Medium (24-120h)     n= 10 | Median  29.3 | p75  32.4 | >=15P   7 | >=20P   7 | nie inval.  3
+  Minor (<24h)         n=237 | Median  11.9 | p75  26.0 | >=15P 104 | >=20P  78 | nie inval. 61
+
+  nur innerhalb der HTF-Gruppe (n=56):
+    Major (>=120h)     n=  7 | Median  28.7 | p75  31.5 | >=15P   5 | >=20P   4 | nie inval.  2
+    Medium (24-120h)   n= 10 | Median  29.3 | p75  32.4 | >=15P   7 | >=20P   7 | nie inval.  3
+    Minor (<24h)       n= 39 | Median  17.5 | p75  34.4 | >=15P  21 | >=20P  17 | nie inval. 11
+
+  Sweep-Alter Verteilung: median 1.8 h, p75 8.4 h, p90 18.8 h, max 1892 h
+
+FILTER 4 -- Handelszeit (GBPUSD 08:00-18:00 Berlin, Mo-Fr)
+  im Fenster           n=176 | Median  16.4 | p75  31.6 | >=15P  92 | >=20P  72 | nie inval. 54
+  ausserhalb           n= 79 | Median   7.1 | p75  19.3 | >=15P  25 | >=20P  18 | nie inval. 13
+
+  nach Stunde (Berlin), OB-Entstehung:
+    03:00  n=  9  Median  15.7  >=20P  3
+    04:00  n= 12  Median   9.5  >=20P  4
+    05:00  n= 10  Median   5.1  >=20P  2
+    06:00  n= 17  Median  10.2  >=20P  5
+    07:00  n= 17  Median   4.9  >=20P  1
+    08:00  n= 22  Median  14.9  >=20P  7
+    09:00  n= 22  Median  18.9  >=20P 10
+    10:00  n= 15  Median  11.5  >=20P  4
+    11:00  n= 17  Median  16.0  >=20P  5
+    12:00  n= 22  Median  10.4  >=20P  9
+    13:00  n= 18  Median   9.7  >=20P  6
+    14:00  n= 16  Median  14.6  >=20P  5
+    15:00  n= 21  Median  23.4  >=20P 14
+    16:00  n= 18  Median  27.2  >=20P 10
+    17:00  n=  5  Median  14.7  >=20P  2
+
+  MMM-Fenster 10:30-13:00 Berlin (laut trading_schedules-Notiz 'nur mit zusaetzlichen Bestaetigungen'):
+  in MMM               n= 46 | Median  13.9 | p75  29.7 | >=15P  21 | >=20P  16 | nie inval. 12
+  Fenster ohne MMM     n=130 | Median  17.8 | p75  32.0 | >=15P  71 | >=20P  56 | nie inval. 42

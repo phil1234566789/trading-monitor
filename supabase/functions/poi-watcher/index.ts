@@ -119,9 +119,12 @@ interface PinTouchHit {
   message: string;
 }
 
+// EURUSD bleibt in der Liste (Erkennung/Persistierung läuft weiter, damit die Historie für eine
+// spätere Auswertung nicht abreißt), schickt aber keine Telegram-Alarme mehr — Philip handelt
+// zurzeit nur GBPUSD. Zum Reaktivieren genügt sendTelegram: true.
 const INSTRUMENTS: InstrumentConfig[] = [
   { instrument: "GBPUSD", sendTelegram: true, pricePrecision: 5 },
-  { instrument: "EURUSD", sendTelegram: true, pricePrecision: 5 },
+  { instrument: "EURUSD", sendTelegram: false, pricePrecision: 5 },
 ];
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -862,6 +865,39 @@ Deno.serve(async (req) => {
           // ob_zones/liquidity_levels-Verhalten beim allerersten Lauf.
           const shouldAlert = hasAnySetupRow[direction] && alarmActive;
 
+          // Herkunft und Alter des Sweeps — beides wird persistiert und geht in den Alarmtext,
+          // weil die Auswertung analysis/dr-reichweite/ (19.09.2026) beide als Qualitätsmerkmale
+          // belegt hat: 1H-Sweep Reichweiten-Median 28,7 vs. 11,3 Pips bei M5, und ein Level, das
+          // vor dem Sweep schon >=24h bestand, kommt auf ~29 statt 11,9. findBestLsMatch gibt das
+          // Array-Element selbst zurück, die Identitätsprüfung ist also exakt, keine Heuristik.
+          const lsFromH1 = h1HighsSetup.includes(setup.ls) || h1LowsSetup.includes(setup.ls);
+          const sweepAgeHours = computeSweepAgeHours(setup.ls.touchedTime!, setup.ls.pivotTime);
+
+          // Läuft gerade eine Dealing Range der Gegenrichtung? Laut derselben Auswertung der
+          // schlechteste Zustand überhaupt — als schwächere Seite gegen eine lebende Gegen-DR
+          // kommt die Reichweite nur auf 7,4 statt 14,8 Pips Median, und 41% aller DRs entstehen
+          // in dieser Lage. "Lebend" heißt: früher entstanden und ihr Extrem-Fraktal seitdem nicht
+          // berührt (Philips Definition: eine Gegen-DR ist gefährlich, solange sie weder
+          // invalidiert noch am Ziel ist). Geprüft gegen die ohnehin geladenen M5-Kerzen.
+          const oppositeDir = direction === "short" ? "long" : "short";
+          const { data: oppRows, error: oppError } = await supabase
+            .from("trade_setups")
+            .select("fractal_price, ob_start_time")
+            .eq("instrument", cfg.instrument)
+            .eq("direction", oppositeDir)
+            .gte("ob_start_time", new Date((setup.obStartTime - 24 * 3600) * 1000).toISOString())
+            .lt("ob_start_time", new Date(setup.obStartTime * 1000).toISOString())
+            .order("ob_start_time", { ascending: false })
+            .limit(20);
+          if (oppError) throw oppError;
+          const liveOpposite = (oppRows ?? []).some((o) => {
+            const fromSec = Math.floor(new Date(o.ob_start_time).getTime() / 1000);
+            const invalidiert = m5Candles.some(
+              (c) => c.time >= fromSec && (oppositeDir === "long" ? c.low <= o.fractal_price : c.high >= o.fractal_price),
+            );
+            return !invalidiert;
+          });
+
           // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren": das M5-OB, das
           // dieses Setup bestätigt, wird jetzt zusätzlich als eigene ob_zones-Zeile referenziert
           // (statt nur ob_top/ob_bottom/ob_start_time als Kopie zu führen) — direction entspricht
@@ -890,6 +926,31 @@ Deno.serve(async (req) => {
             .single();
           if (obZoneUpsertError) throw obZoneUpsertError;
 
+          // Doppelalarm-Sperre: derselbe M5-OB erzeugt regelmäßig ZWEI Setup-Zeilen — Path B
+          // feuert sofort nach dem Sweep, Path A rund 10 Minuten später, sobald das
+          // period-5-Fraktal bestätigt ist. Beide tragen ein anderes fractal_pivot_time, der
+          // Dedupe-Key des Upserts greift also nicht, und es gingen zwei Telegrams für dieselbe
+          // Zone raus (gemessen 19.09.2026: 63 von 71 Path-B-Zeilen haben genau so einen
+          // Zwilling, Abstand Median 10 Minuten). Die zweite Zeile wird weiterhin geschrieben —
+          // sie trägt das korrekte Extrem-Fraktal, das die DR-Auswertung braucht —, nur der
+          // Alarm entfällt. Bewusst KEIN Unique-Index auf ob_zone_id: die 120 bestehenden
+          // Duplikat-Zeilen würden ihn scheitern lassen, und an trade_setups.id hängen vier
+          // Fremdschlüssel, zwei davon mit on delete cascade.
+          // `notified: true` ist Pflicht, nicht Kosmetik: ohne diese Bedingung sperrt eine frühere
+          // Zeile, die selbst NIE alarmiert hat (z.B. außerhalb des Alarmfensters entstanden), den
+          // späteren echten Alarm — die Zone verlöre ihren einzigen. Im Abnahmelauf gegen den
+          // Bestand traf das 5 Zonen (z.B. #175 um 04:50 stumm, #181 um 07:10 der echte Alarm).
+          const { data: sameObRows, error: sameObError } = await supabase
+            .from("trade_setups")
+            .select("id")
+            .eq("instrument", cfg.instrument)
+            .eq("direction", direction)
+            .eq("ob_zone_id", setupObZone.id)
+            .eq("notified", true)
+            .limit(1);
+          if (sameObError) throw sameObError;
+          const alertNow = shouldAlert && (sameObRows ?? []).length === 0;
+
           const { data: setupRow, error: setupUpsertError } = await supabase
             .from("trade_setups")
             .upsert(
@@ -901,13 +962,14 @@ Deno.serve(async (req) => {
                 ls_price: setup.ls.price,
                 ls_pivot_time: new Date(setup.ls.pivotTime * 1000).toISOString(),
                 ls_touched_time: new Date(setup.ls.touchedTime! * 1000).toISOString(),
+                ls_timeframe: lsFromH1 ? "1H" : "5M",
                 ob_top: setup.obTop,
                 ob_bottom: setup.obBottom,
                 ob_start_time: new Date(setup.obStartTime * 1000).toISOString(),
                 ob_zone_id: setupObZone.id,
                 alert_price: currentPrice,
-                notified: shouldAlert,
-                notified_at: shouldAlert ? new Date().toISOString() : null,
+                notified: alertNow,
+                notified_at: alertNow ? new Date().toISOString() : null,
               },
               { onConflict: "instrument,direction,fractal_pivot_time" },
             )
@@ -933,7 +995,7 @@ Deno.serve(async (req) => {
               tp_price: tpPrice,
               sl_pips: slPips,
               within_trading_hours: tradingWindows ? isWithinTradingWindows(setup.obStartTime, tradingWindows) : false,
-              sweep_age_hours: computeSweepAgeHours(setup.ls.touchedTime!, setup.ls.pivotTime),
+              sweep_age_hours: sweepAgeHours,
               outcome: "pending",
               resolved_at: null,
             },
@@ -941,15 +1003,21 @@ Deno.serve(async (req) => {
           );
           if (outcomeInsertError) throw outcomeInsertError;
 
-          if (shouldAlert) {
+          if (alertNow) {
             tradeSetupNotifiedCount++;
             const label = direction === "short" ? "Short (Protected High)" : "Long (Protected Low)";
+            // Alter des Sweep-Levels gerundet: die Auswertung zeigt nur zwischen "<24h" und
+            // ">=24h" einen Unterschied, Major (>=120h) und Medium (24-120h) sind mit 29,2 vs.
+            // 29,3 Pips nicht unterscheidbar — eine feinere Angabe würde Genauigkeit vortäuschen.
+            const ageText = sweepAgeHours >= 24 ? `${Math.round(sweepAgeHours / 24)}d alt` : `${Math.round(sweepAgeHours)}h alt`;
+            const warnung = liveOpposite ? `\n⚠️ Gegenläufige Dealing Range noch aktiv${lsFromH1 ? "" : " — und dieses Setup hat nur einen M5-Sweep"}` : "";
             await sendTelegram(
               `🎯 ${cfg.instrument} Trade-Setup: ${label}\n` +
                 `Protected: ${fmt(setup.fractal.price, cfg.pricePrecision)}\n` +
-                `LS-Sweep: ${fmt(setup.ls.price, cfg.pricePrecision)}\n` +
+                `LS-Sweep: ${fmt(setup.ls.price, cfg.pricePrecision)} (${lsFromH1 ? "1H" : "M5"}, ${ageText})\n` +
                 `M5-OB: ${fmt(setup.obBottom, cfg.pricePrecision)} – ${fmt(setup.obTop, cfg.pricePrecision)}\n` +
-                `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+                `Preis: ${fmt(currentPrice, cfg.pricePrecision)}` +
+                warnung,
             );
           }
         }

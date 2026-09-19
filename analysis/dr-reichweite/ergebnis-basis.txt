@@ -1,0 +1,29 @@
+Setup-Zeilen gesamt      : 336
+Dealing Ranges (je M5-OB): 268   -> 68 Zeilen waren Duplikate
+   davon mit Path-A-Zeile (Extrem-Fraktal bekannt): 260
+   nur Path B (Invalidierung NICHT bestimmbar)    : 8  -> ausgeschlossen
+
+ausgewertet: 255   (Sanity-Ausschluss, Invalidierung auf falscher Seite: 0)
+
+Invalidierung binnen 24h getroffen : 188
+nie invalidiert (24h-Fenster)      : 67
+   Zeit bis Invalidierung: median 102 Min, p25 40, p75 235, max 1415
+
+REICHWEITE ab naher OB-Kante, vor der Invalidierung (alle 255):
+   median 12.5 Pips   p25 6.5   p75 29.6   max 108.0
+
+   Ziel erreichbar gewesen (Reichweite >= X), bevor die DR invalidierte:
+      >=  5 Pips : 204 von 255
+      >= 10 Pips : 155 von 255
+      >= 15 Pips : 117 von 255
+      >= 20 Pips :  90 von 255
+      >= 25 Pips :  73 von 255
+      >= 30 Pips :  61 von 255
+      >= 40 Pips :  43 von 255
+
+Risiko (nahe OB-Kante -> Extrem-Fraktal): median 4.3 Pips, p25 3.0, p75 6.4
+
+   short n=128  Reichweite median 13.5 Pips   nie invalidiert: 36
+   long  n=127  Reichweite median 12.2 Pips   nie invalidiert: 31
+
+-> punkt1_result.json geschrieben (255 Zeilen)
