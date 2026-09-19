@@ -49,6 +49,7 @@ unbrauchbar.
 | `messeFindTargets.py` | `find_targets` gegen dieselbe Messung, siehe unten |
 | `messeTrendJeDr.py` | holt den 1H-Trend je DR, schreibt `trend-je-dr.json` |
 | `filterTrend.py` | legt die Trendlage über alles Obige, siehe unten |
+| `winrate.py` | Winrate je Ziel-Regel und Qualitätsstufe, siehe unten |
 | `drMerkmale.py` | gemeinsame Merkmale (Sweep-Herkunft, Alter, Handelsstunde, Trendlage) |
 
 Die `ergebnis-*.txt` sind die abgelegten Ausgaben dieser Läufe.
@@ -216,6 +217,29 @@ Die Grundmessung nimmt den Docht der invalidierenden Kerze noch in die Reichweit
 und Invalidierung in derselben M5-Kerze, gilt das Ziel als erreicht — `trade_setup_outcomes` wertet
 denselben Fall als Verlust. Betroffen sind **6 von 255** DRs, der EV der Status-quo-Regel fällt
 dadurch von +1,05 auf +1,01 R. Der Unterschied trägt keine der Aussagen oben.
+
+## Winrate
+
+Nach Philips Definition — Target erreicht, bevor der Invalidierungspunkt erreicht wird. Daraus
+folgt sofort: **die** Winrate gibt es nicht, sie hängt am gesetzten Ziel. Deshalb steht hier nie
+eine Quote ohne ihr RR (`winrate.py`, Ausgabe in `ergebnis-winrate.txt`).
+
+| Ziel | alle 255 | im Fenster 08–18 (176) | + keine Gegen-DR (102) | + HTF-Sweep (30) |
+|---|---|---|---|---|
+| nächster Kandidat | 70 % @ RR 1,7 | 74 % @ 1,5 | 74 % @ 1,7 | 70 % @ 1,7 |
+| ≥10 Pips | 49 % @ 3,0 | 55 % @ 2,5 | 57 % @ 2,4 | 60 % @ 2,2 |
+| ≥15 Pips | 43 % @ 4,3 | 49 % @ 3,8 | 51 % @ 3,6 | 60 % @ 3,4 |
+| ≥20 Pips | 32 % @ 5,5 | 38 % @ 4,6 | 38 % @ 4,4 | 47 % @ 4,2 |
+| ≥30 Pips | 23 % @ 8,3 | 28 % @ 6,7 | 26 % @ 6,2 | 16 % @ 7,0 |
+
+Gezählt werden nur **entschiedene** Dealing Ranges (Ziel erreicht oder invalidiert); eine DR, die
+binnen 24 h weder das eine noch das andere getan hat, gehört in keine Quote. Die Filter stapeln in
+der Reihenfolge ihrer Belegstärke, die letzte Spalte ist mit n=30 ein Ausblick, kein Ergebnis.
+
+**Nicht zu verwechseln mit `get_trade_setup_winrate`** (50 %, 167:169 auf 336 Zeilen). Das Tool
+rechnet je *Setup-Zeile* gegen ein festes 2,5-RR-Ziel mit bei 6 Pips gedeckeltem Stopp, zählt also
+die Path-A/B-Zwillinge doppelt und benutzt eine andere Erfolgsdefinition. Beide Zahlen stimmen, sie
+beantworten verschiedene Fragen.
 
 ## Trendlage: kein messbarer Unterschied
 

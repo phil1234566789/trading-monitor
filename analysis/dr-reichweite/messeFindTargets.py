@@ -242,4 +242,7 @@ def main():
             print("     %-10s n=%3d  EV %+.2f R" % (rn, n, e))
 
 
-main()
+# Guard, damit filterTrend.py/winrate.py die Bausteine importieren koennen, ohne den ganzen
+# Bericht auszuloesen.
+if __name__ == "__main__":
+    main()
