@@ -144,18 +144,41 @@ export async function getLiquidityLevels(instrument: string, timeframe?: string,
   return [...highs, ...lows];
 }
 
+// Erkennungs-Verzögerung eines 1D-Periode-4-Pivots: nach dem Pivot-Tag müssen vier weitere
+// D1-Kerzen schließen, erst danach sieht ihn der tägliche Cron (22:15 UTC, Migration
+// 20260830092000). Gemessen an den beiden echt live erkannten GBPUSD-Pivots (01.09./08.09.):
+// 7,05 Tage zwischen pivot_time und created_at, und über alle möglichen Wochentage ist das auch
+// das Maximum. 8 Tage ist damit die sichere Untergrenze für "hätte live schon existieren können".
+const DAILY_PIVOT_DETECTION_LAG_SEC = 8 * 86400;
+
 // Neuester 1D-Periode-4-Pivot mit aufgelöstem structure_start_time (siehe daily-structure-pivots/
 // index.ts) — der Default-Startpunkt für compute1hStructureState (tools/dataExport.ts), statt des
 // bisherigen rollierenden Lookback-Fensters. null, falls noch kein Pivot vorliegt (frisches
 // Instrument, oder der Cron ist noch nicht gelaufen) ODER dessen structure_start_time noch nicht
 // aufgelöst werden konnte (1H-Historie für den Pivot-Tag fehlte zum Erkennungszeitpunkt) — der
 // Aufrufer fällt dann auf das alte Verhalten zurück.
-export async function getLatestDailyStructureStartTime(instrument: string): Promise<number | null> {
+//
+// asOfSec ist Pflicht, nicht optional: die Funktion lieferte bis 19.09.2026 IMMER den neuesten
+// Pivot relativ zu jetzt, auch für einen Replay-Zeitpunkt von vor Wochen. Lag der Anker dadurch
+// chronologisch NACH dem Replay-Zeitpunkt, wurde fetchHours in compute1hStructureState negativ und
+// der ganze Aufruf starb an "cTrader error INVALID_REQUEST: Count must be bigger than ZERO" —
+// jeder Backtest eines älteren Datums war damit unbenutzbar.
+//
+// Der Filter fragt "war diese Zeile zu diesem Zeitpunkt bekannt", nicht bloß "liegt der Pivot in
+// der Vergangenheit": created_at, wo es echt ist, sonst die mechanische Verzögerung oben. Beides
+// wird gebraucht — created_at allein taugt nicht, weil der Altbestand aus einem einmaligen
+// Backfill am 29.08.2026 stammt und damit für jeden Replay davor alle Zeilen ausschlösse; die
+// Verzögerung allein wäre live um bis zu einen Tag hinter dem Stand der Tabelle. Live (asOfSec =
+// jetzt) greift immer der created_at-Zweig, das Verhalten bleibt dort unverändert.
+export async function getLatestDailyStructureStartTime(instrument: string, asOfSec: number): Promise<number | null> {
+  const asOfIso = new Date(asOfSec * 1000).toISOString();
+  const detectableIso = new Date((asOfSec - DAILY_PIVOT_DETECTION_LAG_SEC) * 1000).toISOString();
   const { data, error } = await supabase
     .from("daily_structure_pivots")
     .select("structure_start_time")
     .eq("instrument", instrument)
     .not("structure_start_time", "is", null)
+    .or(`created_at.lte.${asOfIso},pivot_time.lte.${detectableIso}`)
     .order("pivot_time", { ascending: false })
     .limit(1)
     .maybeSingle();

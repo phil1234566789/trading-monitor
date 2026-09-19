@@ -213,7 +213,7 @@ export async function compute1hStructureState(instrument: string, currentTimeSec
     // Kein explizites Override -> letzter 1D-Periode-4-Pivot dieses Instruments als Default
     // (siehe daily-structure-pivots/index.ts), Fallback aufs bisherige rollierende Lookback-
     // Fenster, solange für dieses Instrument noch kein aufgelöster Pivot vorliegt.
-    effectiveFixedStartTime = await getLatestDailyStructureStartTime(instrument);
+    effectiveFixedStartTime = await getLatestDailyStructureStartTime(instrument, currentTimeSec);
     useFixedStart = effectiveFixedStartTime != null;
   } else {
     useFixedStart = fixedStartActive && fixedStartTime != null;
