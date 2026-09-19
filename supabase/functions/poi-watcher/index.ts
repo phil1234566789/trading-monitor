@@ -27,14 +27,7 @@ import {
   TRADE_SETUP_H1_FRACTAL_PERIOD,
   DEFAULT_TRADE_SETUP_PARAMS,
 } from "../_shared/tradeSetup.ts";
-import { isWithinTradingWindows, type TradingWindows } from "../_shared/tradingHoursGate.ts";
-import {
-  deriveEntryInvalidation,
-  computeSlTp,
-  classifyOutcome,
-  computeSweepAgeHours,
-  type OutcomeCandle,
-} from "../_shared/tradeSetupOutcome.ts";
+import { computeSweepAgeHours } from "../_shared/ageTier.ts";
 
 const TIMEFRAMES: { label: "4H" | "1H" }[] = [{ label: "4H" }, { label: "1H" }];
 // 300h (~12,5 Tage) reichten nicht, um lange unberührte 1H-Liquiditäts-Level (und 1H-OB-Zonen, die
@@ -359,15 +352,6 @@ Deno.serve(async (req) => {
     const alarmWindowsByInstrument = new Map<string, WeekdayWindows>(
       (scheduleRows ?? []).map((r) => [r.instrument, r.alarm_windows as WeekdayWindows]),
     );
-    // Für trade_setup_outcomes.within_trading_hours (siehe milk-city-Task
-    // trade-setup-winrate-outcome-tracking-kriterien-filter) — bewusst trading_windows, nicht
-    // alarm_windows: das Kriterium fragt "wäre das ein handelbares Setup gewesen", nicht "hätte
-    // poi-watcher dafür alarmiert" (die beiden Fenster unterscheiden sich, siehe Migration
-    // 20260725120000_trading_schedules.sql).
-    const tradingWindowsByInstrument = new Map<string, TradingWindows>(
-      (scheduleRows ?? []).map((r) => [r.instrument, r.trading_windows as TradingWindows]),
-    );
-
     // cTrader-Access-/Refresh-Token: `ctrader_oauth_tokens` ist die eigentliche Quelle (siehe
     // Migration 20260722120000), die CTRADER_ACCESS_TOKEN/REFRESH_TOKEN-Secrets nur ein
     // Fallback fürs allererste Deployment vor der ersten Zeile — gleiches Muster wie in
@@ -977,32 +961,6 @@ Deno.serve(async (req) => {
             .single();
           if (setupUpsertError) throw setupUpsertError;
 
-          // trade_setup_outcomes (milk-city-Task trade-setup-winrate-outcome-tracking-kriterien-
-          // filter): Entry/SL/TP + Kriterien-Rohwerte stehen sofort fest (reine Preis-/Zeit-
-          // Rechnung, keine weiteren Kerzen nötig), outcome bleibt 'pending' bis der Resolve-Pass
-          // unten (oder ein künftiger Tick) TP/SL berührt sieht.
-          const { entry, invalidation } = deriveEntryInvalidation(direction, setup.obTop, setup.obBottom);
-          const { slPrice, tpPrice, slPips } = computeSlTp(direction, entry, invalidation);
-          const tradingWindows = tradingWindowsByInstrument.get(cfg.instrument);
-          const { error: outcomeInsertError } = await supabase.from("trade_setup_outcomes").upsert(
-            {
-              trade_setup_id: setupRow.id,
-              instrument: cfg.instrument,
-              direction,
-              entry_price: entry,
-              invalidation_price: invalidation,
-              sl_price: slPrice,
-              tp_price: tpPrice,
-              sl_pips: slPips,
-              within_trading_hours: tradingWindows ? isWithinTradingWindows(setup.obStartTime, tradingWindows) : false,
-              sweep_age_hours: sweepAgeHours,
-              outcome: "pending",
-              resolved_at: null,
-            },
-            { onConflict: "trade_setup_id" },
-          );
-          if (outcomeInsertError) throw outcomeInsertError;
-
           if (alertNow) {
             tradeSetupNotifiedCount++;
             const label = direction === "short" ? "Short (Protected High)" : "Long (Protected Low)";
@@ -1022,36 +980,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Offene ("pending") trade_setup_outcomes gegen das gerade geladene M5-Fenster (300 Kerzen,
-        // ~25h) auflösen — läuft bei jedem Tick, damit ein Win/Loss spätestens ein paar Minuten
-        // nach der tatsächlichen TP-/SL-Berührung feststeht, nicht erst beim nächsten manuellen
-        // Backfill-Lauf (siehe backfillTradeSetupOutcomes.ts, der stattdessen das VOLLE Archiv nimmt
-        // und damit auch länger als 25h offene Fälle auflösen kann).
-        const { data: pendingOutcomes, error: pendingSelectError } = await supabase
-          .from("trade_setup_outcomes")
-          .select("trade_setup_id, direction, sl_price, tp_price")
-          .eq("instrument", cfg.instrument)
-          .eq("outcome", "pending");
-        if (pendingSelectError) throw pendingSelectError;
-
-        // entryTimeSec=0 statt des tatsächlichen ob_start_time (nicht mitselektiert) — bewusst, damit
-        // das GESAMTE geladene Fenster geprüft wird; frühere, außerhalb des jeweils damaligen
-        // Fensters liegende Kerzen wurden bereits in früheren Ticks geprüft (rollierendes Fenster,
-        // siehe Kommentar oben), ein erneutes Prüfen bereits bekannter Kerzen ändert am Ergebnis nichts.
-        const outcomeCandles: OutcomeCandle[] = m5Candles.map((c) => ({ time: c.time, high: c.high, low: c.low }));
-        let resolvedCount = 0;
-        for (const pending of pendingOutcomes ?? []) {
-          const { outcome, resolvedAt } = classifyOutcome(outcomeCandles, pending.direction as "short" | "long", 0, pending.sl_price, pending.tp_price);
-          if (outcome === "pending") continue;
-          const { error: resolveError } = await supabase
-            .from("trade_setup_outcomes")
-            .update({ outcome, resolved_at: new Date(resolvedAt! * 1000).toISOString() })
-            .eq("trade_setup_id", pending.trade_setup_id);
-          if (resolveError) throw resolveError;
-          resolvedCount++;
-        }
-
-        instrumentSummary["tradeSetups"] = { detected: detected.length, notified: tradeSetupNotifiedCount, outcomesResolved: resolvedCount };
+        instrumentSummary["tradeSetups"] = { detected: detected.length, notified: tradeSetupNotifiedCount };
       }
 
       (summary.instruments as Record<string, unknown>)[cfg.instrument] = { currentPrice, shouldSend, ...instrumentSummary };

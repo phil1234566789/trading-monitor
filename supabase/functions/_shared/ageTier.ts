@@ -39,21 +39,12 @@ export function classifyAge(businessSeconds: number): AgeTier {
   return "major";
 }
 
-// Ein Inducement ist fachlich genau dieses Alters-Tier des gesweepten Levels (trading-Repo,
-// liquidität.md#inducement--klassifizierung-nach-alter) — eigener Name, aber keine eigene
-// Einstufung. Stunden-Variante, weil trade_setup_outcomes.sweep_age_hours in Stunden liegt.
-// Bewusste Näherung: das Handbuch definiert Inducements nur für H1/4H-Sweeps, hier wird
-// timeframe-unabhängig gerechnet (trade_setups hält nicht fest, ob ls von H1 oder M5 kommt).
-export type InducementClass = AgeTier;
-
-export function classifyInducementAge(sweepAgeBusinessHours: number): InducementClass {
-  return classifyAge(sweepAgeBusinessHours * 3600);
-}
-
-// Umkehrung von classifyInducementAge als [min,max)-Stundenbereich — für get_trade_setup_winrate,
-// damit dort "minor"/"medium"/"major" statt roher Stundenwerte übergeben werden kann.
-export function inducementAgeRange(cls: InducementClass): { minHours?: number; maxHours?: number } {
-  if (cls === "minor") return { maxHours: MINOR_MAX_HOURS };
-  if (cls === "medium") return { minHours: MINOR_MAX_HOURS, maxHours: MAJOR_MIN_HOURS };
-  return { minHours: MAJOR_MIN_HOURS };
+// Wie lange das gesweepte Level (ls_pivot_time) schon bestand, BEVOR es tatsächlich gesweept wurde
+// (ls_touched_time) — ein frisch entstandenes Level, das sofort fällt, gegen ein altes, das erst
+// nach Tagen fällt. NICHT ls_touched_time->ob_start_time: das ist durch obMaxDelaySec
+// (_shared/tradeSetup.ts) algorithmisch auf 60 Minuten gedeckelt und als Merkmal damit wirkungslos.
+// Business-Stunden (Wochenende raus), damit derselbe Sweep im Chart-Label und im Telegram-Alarm
+// dieselbe Klasse ergibt.
+export function computeSweepAgeHours(lsTouchedTimeSec: number, lsPivotTimeSec: number): number {
+  return businessSecondsBetween(lsPivotTimeSec, lsTouchedTimeSec) / 3600;
 }

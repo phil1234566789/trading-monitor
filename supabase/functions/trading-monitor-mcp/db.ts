@@ -2,7 +2,6 @@ import { supabase } from "./supabaseClient.ts";
 import { PIP_SIZE } from "./pipConfig.js";
 import { berlinDayRangeUtcMs, berlinDateStrFor } from "./berlinTime.ts";
 import { logDecision } from "./stateMachineLog.ts";
-import { inducementAgeRange, type InducementClass } from "../_shared/ageTier.ts";
 import { applyAsOf, applyAsOfZones, earliestAmbiguousEventSec, type ProbeCandle } from "./replayAsOf.ts";
 import { barSecondsFor } from "./timeframes.ts";
 import { safeTransitionChain } from "./machineState.ts";
@@ -238,54 +237,6 @@ export async function findRecentTradeSetupIdsByKey(instrument: string, sinceSec:
     .lte("created_at", new Date(asOfSec * 1000).toISOString());
   if (error) throw new Error(error.message);
   return new Map((data ?? []).map((r) => [`${r.direction}_${Math.floor(new Date(r.fractal_pivot_time).getTime() / 1000)}`, r.id as number]));
-}
-
-// get_trade_setup_winrate: historische Winrate über trade_setup_outcomes (milk-city-Task
-// trade-setup-winrate-outcome-tracking-kriterien-filter), gefiltert nach den bisher vorhandenen
-// Kriterien-Rohwerten. Philip 2026-09-05: bei weniger als WINRATE_MIN_SAMPLE aufgelösten
-// (win+loss) Setups keine Prozentzahl ausgeben, nur die rohen Zählwerte — winratePct bleibt dann
-// null, das Anzeigen von wins/losses/pending übernimmt der Aufrufer. Neue Kriterien (EMA/RSI/
-// Sweep-Anzahl, ...) kommen künftig als weitere optionale Filter-Parameter dazu, sobald die
-// jeweilige Spalte auf trade_setup_outcomes existiert.
-export const WINRATE_MIN_SAMPLE = 100;
-
-export interface TradeSetupWinrateFilters {
-  withinTradingHours?: boolean;
-  // inducementClass ist Vorrang vor minSweepAgeHours/maxSweepAgeHours (siehe registerReadTools) —
-  // beide Wege bedienen denselben Rohwert (sweep_age_hours), inducementClass ist nur die benannte
-  // Abkürzung für Philips Minor/Medium/Major-Einteilung (siehe _shared/ageTier.ts). Der Rohwert
-  // sind Business-Stunden (Wochenende rausgerechnet), nicht Wandzeit.
-  inducementClass?: InducementClass;
-  minSweepAgeHours?: number;
-  maxSweepAgeHours?: number;
-}
-
-export async function getTradeSetupWinrate(instrument: string | undefined, filters: TradeSetupWinrateFilters) {
-  const { minHours, maxHours } = filters.inducementClass
-    ? inducementAgeRange(filters.inducementClass)
-    : { minHours: filters.minSweepAgeHours, maxHours: filters.maxSweepAgeHours };
-
-  let query = supabase.from("trade_setup_outcomes").select("outcome");
-  if (instrument) query = query.eq("instrument", instrument);
-  if (filters.withinTradingHours != null) query = query.eq("within_trading_hours", filters.withinTradingHours);
-  if (minHours != null) query = query.gte("sweep_age_hours", minHours);
-  // lt statt lte: dieselbe [min,max)-Grenze wie classifyInducementAge (Minor = "< 24h", nicht "<= 24h").
-  if (maxHours != null) query = query.lt("sweep_age_hours", maxHours);
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  const rows = data ?? [];
-  const wins = rows.filter((r) => r.outcome === "win").length;
-  const losses = rows.filter((r) => r.outcome === "loss").length;
-  const pending = rows.filter((r) => r.outcome === "pending").length;
-  const decided = wins + losses;
-  return {
-    n: rows.length,
-    wins,
-    losses,
-    pending,
-    decided,
-    winratePct: decided >= WINRATE_MIN_SAMPLE ? Math.round((wins / decided) * 100) : null,
-  };
 }
 
 // Trade-Journal: seit 2026-07-31 aufgeteilt in dealing_ranges (die Idee: instrument/direction/

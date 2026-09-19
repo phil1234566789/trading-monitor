@@ -1,0 +1,17 @@
+-- trade_setup_outcomes und das darauf aufsetzende get_trade_setup_winrate entfernt.
+--
+-- Die Tabelle maß Erfolg als "2,5 RR erreicht, Stopp bei 6 Pips gedeckelt" und kam damit auf 50 %
+-- (167 zu 169) — eine Zahl, aus der sich nichts ableiten ließ, weil sie weder Philips eigener
+-- Erfolgsdefinition entsprach (Target erreicht, bevor der Invalidierungspunkt erreicht wird) noch
+-- die Path-A/B-Zwillinge derselben Dealing Range zusammenfasste.
+--
+-- Was die Nachfolge antritt, liegt in analysis/dr-reichweite/: 255 Dealing Ranges mit Reichweite,
+-- Invalidierungszeitpunkt und Risiko, gemessen ab der nahen OB-Kante. Daraus ergibt sich die
+-- Winrate für jedes beliebige Ziel statt für ein einziges festgelegtes -- 70 % bei RR 1,7 für das
+-- nächste Ziel bis 23 % bei RR 8,3 für ein 30-Pip-Ziel.
+--
+-- Mitentfernt: _shared/tradeSetupOutcome.ts, scripts/backfillTradeSetupOutcomes.ts, der
+-- Outcome-Insert und der Resolve-Pass in poi-watcher, inducementAgeRange/classifyInducementAge
+-- in _shared/ageTier.ts. Geblieben ist computeSweepAgeHours (jetzt in ageTier.ts) -- das Sweep-
+-- Alter steht im Telegram-Alarm und in trade_setups.sweep_age_hours.
+drop table if exists trade_setup_outcomes;
