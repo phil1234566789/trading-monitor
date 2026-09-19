@@ -24,18 +24,24 @@ Zwei weitere Eingaben holen sich ihre Skripte selbst über den MCP und legen sie
 
 ## Definitionen
 
-Eine **Dealing Range = ein M5-OB.** Path-A- und Path-B-Zeile desselben OB werden zusammengefasst
-(336 Setup-Zeilen → 268 DRs). Die Invalidierung kommt immer aus der Path-A-Zeile — bei Path B steht
-in `fractal_price` das gesweepte Level statt des Extrem-Fraktals und ist als Invalidierung
-unbrauchbar.
+Eine **Dealing Range = der M5-Orderblock eines erkannten Trade-Setups** (`trade_setups`, also
+LQ-Sweep + Fraktal + bestätigender M5-OB nach `_shared/tradeSetup.ts`) — **nicht** jeder beliebige
+M5-OB, davon gibt es pro Tag ein Vielfaches. Grundlage sind ausschließlich die 336 erkannten
+Setup-Zeilen; Path-A- und Path-B-Zeile desselben OB werden zu einer DR zusammengefasst
+(336 Zeilen → 268 DRs, davon 255 auswertbar). Die Invalidierung kommt immer aus der Path-A-Zeile —
+bei Path B steht in `fractal_price` das gesweepte Level statt des Extrem-Fraktals und ist als
+Invalidierung unbrauchbar.
 
 - **Invalidierung**: Berührung des Extrem-Fraktals (`fractal_price` der Path-A-Zeile). Entscheidung
   Philip, 19.09.2026: gilt für die Dealing Range immer das Extrem-Fraktal, nie die OB-Kante — der
   reale Stop-Loss bei der Ausführung ist davon unabhängig.
 - **Reichweite**: größte Bewegung in Trade-Richtung vor der Invalidierung, gemessen ab der **nahen
   OB-Kante** (`ob_bottom` bei Short, `ob_top` bei Long).
-- **Startzeitpunkt**: `ob_start_time` + 2 M5-Kerzen — vorher ist die FVG nicht bestätigt, die DR
-  existiert also noch nicht.
+- **Startzeitpunkt**: `ob_start_time` + 2 M5-Kerzen (600 Sekunden). `ob_start_time` ist die
+  Impuls-Kerze `c2` (`orderBlocks.ts`), die FVG entsteht aber erst mit der übernächsten Kerze und
+  ist erst mit deren Schluss sichtbar. +2 Kerzen ist also genau der früheste Zeitpunkt, zu dem die
+  DR **live** erkennbar gewesen wäre — vorher zu messen würde Bewegung mitzählen, die noch niemand
+  handeln konnte.
 - **Fenster**: 24 h.
 
 ## Skripte
@@ -51,6 +57,7 @@ unbrauchbar.
 | `filterTrend.py` | legt die Trendlage über alles Obige, siehe unten |
 | `winrate.py` | Winrate je Ziel-Regel und Qualitätsstufe, siehe unten |
 | `leiterPipsVsR.py` | Wahrscheinlichkeit je Strecke, Pips gegen R, siehe unten |
+| `deckelStopp.py` | Risiko-Verteilung und was ein gedeckelter Stopp kostet |
 | `drMerkmale.py` | gemeinsame Merkmale (Sweep-Herkunft, Alter, Handelsstunde, Trendlage) |
 
 Die `ergebnis-*.txt` sind die abgelegten Ausgaben dieser Läufe.
@@ -241,6 +248,45 @@ der Reihenfolge ihrer Belegstärke, die letzte Spalte ist mit n=30 ein Ausblick,
 rechnet je *Setup-Zeile* gegen ein festes 2,5-RR-Ziel mit bei 6 Pips gedeckeltem Stopp, zählt also
 die Path-A/B-Zwillinge doppelt und benutzt eine andere Erfolgsdefinition. Beide Zahlen stimmen, sie
 beantworten verschiedene Fragen.
+
+## Risiko-Verteilung und der gedeckelte Stopp
+
+Wie weit ist es von der nahen OB-Kante bis zum Extrem-Fraktal? (`deckelStopp.py`,
+`ergebnis-deckel.txt`)
+
+| | Anteil | kumuliert |
+|---|---|---|
+| unter 3 Pips | 26 % | 26 % |
+| 3–5 Pips | 35 % | 60 % |
+| 5–7 Pips | 20 % | 81 % |
+| 7–10 Pips | 14 % | 95 % |
+| über 10 Pips | 5 % | 100 % |
+
+Median 4,3 Pips, p75 6,4, p90 8,4, max 26,3. **Über 6 Pips liegen 76 von 255 DRs (30 %), über
+7 Pips 49 (19 %).**
+
+Philips Vorschlag (19.09.2026): den Stopp bei 6–7 Pips deckeln, wenn das Extrem-Fraktal weiter weg
+liegt. Gerechnet als reine Pfad-Frage ohne Entry-Modell — läuft der Preis mehr als *C* Pips über
+die OB-Kante hinaus, bevor das Ziel kommt? Der Entry bleibt fix an der Kante, sonst sind zwei
+Stopp-Platzierungen nicht vergleichbar.
+
+**Nur die betroffene Gruppe** (Risiko > Deckel), Ziel 15 Pips:
+
+| Deckel | betroffen | Wins voll → gedeckelt | gekostet | RR | EV |
+|---|---|---|---|---|---|
+| 8 P | 33 | 20 → 19 | 1 | 1,63 → 1,88 | +0,48 → +0,66 R |
+| 7 P | 49 | 30 → 26 | 4 | 1,79 → 2,14 | +0,61 → +0,67 R |
+| 6 P | 76 | 47 → 41 | 6 | 1,97 → 2,50 | +0,80 → +0,91 R |
+| 5 P | 101 | 61 → 52 | 9 | 2,14 → 3,00 | +0,88 → +1,08 R |
+
+**Der Deckel ist billig.** Bei 6 Pips kostet er 6 von 47 Gewinnern in der betroffenen Gruppe, hebt
+dort aber das RR von 2,0 auf 2,5 — der Erwartungswert steigt trotz der verlorenen Trades. Über alle
+255 DRs gerechnet bleibt der Effekt klein (EV +1,03 → +1,07 bei Ziel 15 Pips), weil der Deckel bei
+70 % der DRs gar nicht greift.
+
+Nebenbei sichtbar: die Gruppe mit dem großen Risiko ist ohnehin die schwächere (EV +0,80 gegen
++1,03 über alle). Trotzdem ist sie mit Deckel klar positiv — **wegwerfen wäre schlechter als
+deckeln**.
 
 ## Wahrscheinlichkeit je Strecke — Pips oder R?
 
