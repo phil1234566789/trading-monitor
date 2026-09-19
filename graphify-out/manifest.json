@@ -882,9 +882,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/db.ts": {
-    "mtime": 1789428744.699898,
-    "seen": 1789428772.4131477,
-    "ast_hash": "2ee27257954e39b06e3bfa819b0c1515",
+    "mtime": 1789845368.8004284,
+    "seen": 1789846301.5920722,
+    "ast_hash": "f7838435510cf4b3ed85975b041aaf54",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/ema.js": {
@@ -1062,9 +1062,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/dataExport.ts": {
-    "mtime": 1789485470.0744534,
-    "seen": 1789485645.6622722,
-    "ast_hash": "3bedda90d5b555aed2b1f963e5db614f",
+    "mtime": 1789845368.80143,
+    "seen": 1789846301.5920722,
+    "ast_hash": "fb5267d005b262fd5afa5070f055be9f",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/dataSnapshot.ts": {
@@ -2820,21 +2820,21 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/filterAlterUndHandelszeit.py": {
-    "mtime": 1789822609.7243302,
-    "seen": 1789841132.4978755,
-    "ast_hash": "a7a21ed777a8611247947a06e89f08a6",
+    "mtime": 1789845596.649176,
+    "seen": 1789846301.591076,
+    "ast_hash": "b61c5c41bce4d69ba62607641e81e28c",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/filterGegenkraft.py": {
-    "mtime": 1789821664.7423375,
-    "seen": 1789841132.4978755,
-    "ast_hash": "fe50349eb86456a60adbf07090845931",
+    "mtime": 1789845822.9646685,
+    "seen": 1789846301.591076,
+    "ast_hash": "d2c90440427b807037ba28f1d665902f",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/filterHtfSweep.py": {
-    "mtime": 1789821664.7133987,
-    "seen": 1789841132.4978755,
-    "ast_hash": "d7fcc1b4961a36169605325c5f0dde52",
+    "mtime": 1789845567.7810383,
+    "seen": 1789846301.591076,
+    "ast_hash": "353dc88305f4289671856bec0fa989cf",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/messeDrReichweite.py": {
@@ -2844,9 +2844,9 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/messeFindTargets.py": {
-    "mtime": 1789841005.7459354,
-    "seen": 1789841132.4978755,
-    "ast_hash": "e4f03097b908717781dc740b96d31b24",
+    "mtime": 1789845781.1223876,
+    "seen": 1789846301.591076,
+    "ast_hash": "8043c759eb2eeb3dc6a4a1e7e91292f0",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/punkt1_result.json": {
@@ -2868,9 +2868,9 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/README.md": {
-    "mtime": 1789841108.9086213,
-    "seen": 1789841132.4998922,
-    "ast_hash": "317eb227ef5458f64aaec69419b6fa9b",
+    "mtime": 1789846261.8435733,
+    "seen": 1789846301.5920722,
+    "ast_hash": "1568437903227565173aead21079d602",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-alter-handelszeit.txt": {
@@ -2901,6 +2901,36 @@
     "mtime": 1789821664.8306382,
     "seen": 1789841132.4998922,
     "ast_hash": "f0d20a751832b4027aa752370dfd191b",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/drMerkmale.py": {
+    "mtime": 1789845699.656797,
+    "seen": 1789846301.591076,
+    "ast_hash": "9cac8f31e5f64f5efa84925f0ffd9ace",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/filterTrend.py": {
+    "mtime": 1789846188.4755383,
+    "seen": 1789846301.591076,
+    "ast_hash": "c5a5a969cdccc2e21fb3ada181e92b9a",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/messeTrendJeDr.py": {
+    "mtime": 1789846096.4936886,
+    "seen": 1789846301.591076,
+    "ast_hash": "b6ace27005ca5965e75af3e0435413d3",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/trend-je-dr.json": {
+    "mtime": 1789846085.5759888,
+    "seen": 1789846301.591076,
+    "ast_hash": "ffae5bcd3e23a90007ec5bf5773e5039",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/ergebnis-trend.txt": {
+    "mtime": 1789846216.9105942,
+    "seen": 1789846301.5920722,
+    "ast_hash": "b530d596258bb605ddc3f78d8c4899c7",
     "semantic_hash": ""
   }
 }
