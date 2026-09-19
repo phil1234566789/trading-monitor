@@ -2868,9 +2868,9 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/README.md": {
-    "mtime": 1789848959.792454,
-    "seen": 1789848968.3915718,
-    "ast_hash": "40f5be8adbdef91d7ef0f60a9aef0957",
+    "mtime": 1789855408.8392766,
+    "seen": 1789855477.195591,
+    "ast_hash": "69db47224d930c3de1adf105538d6f4a",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-alter-handelszeit.txt": {
@@ -2943,6 +2943,30 @@
     "mtime": 1789848926.830307,
     "seen": 1789848968.3915718,
     "ast_hash": "2a6bcaa3acaf5f3a9141a1b445a96d53",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/deckelStopp.py": {
+    "mtime": 1789855362.4510496,
+    "seen": 1789855477.195591,
+    "ast_hash": "ce8d4d84b37e1c5a3502234caf08d966",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/leiterPipsVsR.py": {
+    "mtime": 1789851268.312858,
+    "seen": 1789855477.195591,
+    "ast_hash": "71f8b8503c8472736b0e540da19eb9cf",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/ergebnis-deckel.txt": {
+    "mtime": 1789855368.2958739,
+    "seen": 1789855477.195591,
+    "ast_hash": "96fe4912d3aa4fbd18bd9ee06d0489bc",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/ergebnis-leiter.txt": {
+    "mtime": 1789851273.7370975,
+    "seen": 1789855477.195591,
+    "ast_hash": "5bbad487cba8d044773c4340b7c20b51",
     "semantic_hash": ""
   }
 }
