@@ -2,6 +2,10 @@
 # Eine Tabelle je Merkmal, durchgehend in Philips Leitkennzahl: TREFFERQUOTE bei 10 bis 40 Pips
 # und bei 1 bis 5 R. Loest die Median-Tabellen als Hauptdarstellung ab.
 #
+# Die R-Reihe beginnt bei 2, nicht bei 1. Philip 20.09.2026: "1R macht keinen sinn ich mache
+# keinen Trade um 1R zu gewinnen. 2R ist minimum, aber 3R ist laut strategie eigentlich minimum
+# (in praxis geht das aber nicht immer)."
+#
 # Philip 20.09.2026: "mir ist doch egal wie weit die Pipstrecken gehen, ich will am ende 10-20
 # pips traden und den Gewinn mitnehmen. Ich will ne gute Winrate von Dealing Ranges." Bei ca. 15
 # Pips nimmt er TP1, danach laeuft der Rest -- deshalb die Reihe bis 40.
@@ -11,7 +15,7 @@ import filterGegenkraft as gk
 
 med = lambda v: statistics.median(v) if v else float("nan")
 PIPS = (10, 15, 20, 25, 30, 35, 40)
-RS = (1, 2, 3, 4, 5)
+RS = (2, 3, 4, 5, 6)
 
 res = json.load(open("punkt1_result.json"))
 known = lade_bekannte_level()

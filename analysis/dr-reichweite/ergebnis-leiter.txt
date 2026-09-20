@@ -1,6 +1,6 @@
 UNBEDINGTE LEITER ueber alle 855 DRs
   Pips  5P  91%  10P  76%  15P  61%  20P  49%  25P  41%  30P  36%  40P  29%
-  in R  1R  90%  2R  72%  3R  58%  4R  46%  5R  39%  8R  24%
+  in R  2R  72%  3R  58%  4R  46%  5R  39%  6R  33%
 
 kleines Risiko    n=285  Risiko-Median  3.1 Pips
    Pips  10P  67%  15P  49%  20P  38%  30P  26%

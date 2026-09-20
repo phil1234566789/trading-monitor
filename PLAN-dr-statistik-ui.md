@@ -13,8 +13,10 @@ milk-city-Task: `tsc-historische-dr-statistik-zur-aktuellen-dealing-range-anzeig
 Zu einer **laufenden** Dealing Range: wie sich vergleichbare DRs historisch verhalten haben.
 Philip will **beides** nebeneinander, nicht eins von beidem:
 
-1. **Die R-Leiter** — „wie oft wurde 1 R / 2 R / 3 R erreicht, bevor die DR invalidierte".
-2. **Die Pip-Leiter** — „wie oft wurden 10 / 15 / 20 Pips erreicht".
+1. **Die R-Leiter** — **2 / 3 / 4 / 5 / 6 R**. Beginnt bei 2, nicht bei 1. Philip 20.09.2026:
+   *„1R macht keinen sinn ich mache keinen Trade um 1R zu gewinnen. 2R ist minimum, aber 3R ist
+   laut strategie eigentlich minimum (in praxis geht das aber nicht immer)."*
+2. **Die Pip-Leiter** — **10 / 15 / 20 / 25 / 30 / 35 / 40 Pips**. TP1 liegt bei rund 15.
 
 **Beide gehören nach dem Risiko der DR aufgeteilt.** Auf der ersten, kleinen Stichprobe sah die
 R-Leiter noch so aus, als gälte sie für alle DRs gleich (Terzile 49 / 51 / 44 % bei 3 R) — auf 855
@@ -23,7 +25,7 @@ stimmt das nicht: sie spreizt sogar **stärker** als die Pip-Leiter.
 | Spannweite über die fünf Risiko-Bänder | |
 |---|---|
 | Pip-Leiter (10 / 15 / 20 / 30 Pips) | 23 bis 28 Punkte |
-| R-Leiter (1 / 2 / 3 / 5 R) | **26 bis 36 Punkte** |
+| R-Leiter (2 / 3 / 4 / 5 R) | **33 bis 36 Punkte** |
 
 Bei 2 R stehen 83 % (Risiko unter 3 Pips) gegen 50 % (über 10 Pips). Die Begründung für die
 R-Leiter ist also nicht mehr „sie verallgemeinert" — sondern schlicht, dass R die Einheit ist, in
@@ -43,19 +45,19 @@ Leitern, jede mit ihrer Gruppierung.
 
 ## Die Zahlen (Stand 20.09.2026, n=855)
 
-Die Gesamtzeile als Bezugspunkt: über alle 855 DRs 76 / 61 / 49 / 36 % bei 10 / 15 / 20 / 30 Pips
-und 90 / 72 / 58 / 39 % bei 1 / 2 / 3 / 5 R. Angezeigt wird aber immer die Zeile des Bandes, in das
-die laufende DR fällt:
+Angezeigt wird immer die Zeile des Bandes, in das die laufende DR fällt — die Gesamtzeile steht
+nur als Bezugspunkt dabei:
 
 ### Beide Leitern nach festem Risiko-Band
 
-| Band | n | 10 P | 15 P | 20 P | 25 P | 30 P | 40 P | 1 R | 2 R | 3 R | 5 R |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| unter 3 Pips | 136 | 61 % | 45 % | 33 % | 27 % | 24 % | 21 % | 99 % | 83 % | 74 % | 56 % |
-| 3–5 Pips | 247 | 75 % | 56 % | 44 % | 36 % | 32 % | 25 % | 96 % | 81 % | 65 % | 45 % |
-| 5–7 Pips | 184 | 80 % | 65 % | 54 % | 45 % | 39 % | 31 % | 93 % | 76 % | 58 % | 40 % |
-| 7–10 Pips | 174 | 78 % | 67 % | 55 % | 47 % | 43 % | 32 % | 82 % | 60 % | 47 % | 29 % |
-| über 10 Pips | 114 | 84 % | 73 % | 61 % | 57 % | 46 % | 39 % | 73 % | 50 % | 38 % | 23 % |
+| Band | n | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P | 2 R | 3 R | 4 R | 5 R | 6 R |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| unter 3 Pips | 136 | 61 % | 45 % | 33 % | 27 % | 24 % | 24 % | 21 % | 83 % | 74 % | 62 % | 56 % | 49 % |
+| 3–5 Pips | 247 | 75 % | 56 % | 44 % | 36 % | 32 % | 27 % | 25 % | 81 % | 65 % | 53 % | 45 % | 38 % |
+| 5–7 Pips | 184 | 80 % | 65 % | 54 % | 45 % | 39 % | 34 % | 31 % | 76 % | 58 % | 46 % | 40 % | 34 % |
+| 7–10 Pips | 174 | 78 % | 67 % | 55 % | 47 % | 43 % | 35 % | 32 % | 60 % | 47 % | 37 % | 29 % | 22 % |
+| über 10 Pips | 114 | 84 % | 73 % | 61 % | 57 % | 46 % | 43 % | 39 % | 50 % | 38 % | 29 % | 23 % | 14 % |
+| **alle** | **855** | **76 %** | **61 %** | **49 %** | **41 %** | **36 %** | **32 %** | **29 %** | **72 %** | **58 %** | **46 %** | **39 %** | **33 %** |
 
 Erzeugt von `analysis/dr-reichweite/quotenTabelle.py` und `leiterPipsVsR.py`.
 

@@ -12,7 +12,7 @@ import json, statistics
 res = json.load(open("punkt1_result.json"))
 n = len(res)
 PIPS = (5, 10, 15, 20, 25, 30, 40)
-RS = (1, 2, 3, 4, 5, 8)
+RS = (2, 3, 4, 5, 6)
 
 quote_pips = lambda g, X: 100.0 * sum(1 for x in g if x["reach"] >= X) / len(g)
 quote_r = lambda g, k: 100.0 * sum(1 for x in g if x["reach"] >= k * x["risk"]) / len(g)

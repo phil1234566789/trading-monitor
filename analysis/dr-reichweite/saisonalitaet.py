@@ -20,7 +20,7 @@ med = lambda v: statistics.median(v) if v else float("nan")
 res = json.load(open("punkt1_result.json"))
 monate = sorted({x["day"][:7] for x in res})
 PIPS = (10, 15, 20, 25, 30, 35, 40)
-RS = (1, 2, 3, 4, 5)
+RS = (2, 3, 4, 5, 6)
 
 quote = lambda g, X: 100.0 * sum(1 for x in g if x["reach"] >= X) / len(g)
 quote_r = lambda g, k: 100.0 * sum(1 for x in g if x["reach"] >= k * x["risk"]) / len(g)
