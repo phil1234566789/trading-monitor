@@ -68,6 +68,18 @@ describe("formatLiquidityLevelLabel", () => {
     expect(formatLiquidityLevelLabel(lvl, { nowSec: NOW })).toBe("Medium (2d)");
   });
 
+  // Der Fall aus Philips Beispiel vom 20.09.2026 (DR#93): ein 6 Tage altes NY-High als verknüpfte
+  // LQ-Sweep-Bestätigung. Das Label ist unabhängig vom Timeframe des Levels dasselbe — nur der
+  // Preis kommt im Debug-Modus dazu.
+  it("bonus + Tier + Alter, Preis nur mit Debug", () => {
+    const pivotTime = Date.UTC(2026, 5, 22, 12, 0, 0) / 1000; // 26 Geschäftstage alt -> Major
+    const lvl = { price: 1.2, dir: 1, touched: false, pivotTime };
+    expect(formatLiquidityLevelLabel(lvl, { bonus: "NY-High", nowSec: NOW })).toBe("NY-High Major (26d)");
+    expect(formatLiquidityLevelLabel(lvl, { bonus: "NY-High", nowSec: NOW, formatPrice, includePrice: true })).toBe(
+      "NY-High Major (26d) 1.20000",
+    );
+  });
+
   it("touched/dir beeinflussen den Text nicht mehr (nur noch Farbe/Position am Chart)", () => {
     const lvl = { price: 1.2, dir: 1, touched: true, pivotTime: NOW - 3 * 3600 };
     expect(formatLiquidityLevelLabel(lvl, { nowSec: NOW })).toBe("(3h)");

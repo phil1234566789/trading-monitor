@@ -151,6 +151,11 @@ const props = defineProps({
   // Zeile) UND kind='m5_liquidity_level' (Nicht-1h-Snapshot) ab — Dashboard.vue mischt beide je
   // nach aktuellem Timeframe in dieselbe Menge, da hier immer nur EIN Timeframe sichtbar ist.
   pinLiquidityLevelKeys: { type: Set, default: () => new Set() },
+  // Liquiditäts-Level, die als LQ-Sweep-Bestätigung an einer Dealing Range hängen — dieselben
+  // liquidityLevelNaturalKey-Strings wie oben. Sie tragen ihr Label unabhängig vom Debug-Toggle
+  // (siehe liquidity.js: levelOptions), weil ein als Bestätigung verknüpftes Level sonst
+  // unbeschriftet blieb, sobald es als M5-Zeile in liquidity_levels steht.
+  confirmationLiquidityKeys: { type: Set, default: () => new Set() },
   // Pin-Kontext für RSI-Divergenz-Konnektoren (Chat 2026-08-17) — Set von
   // "type|fromTime|toTime"-Strings (siehe rsi.js: rsiDivergenceEntryNaturalKey in pinContext.js),
   // siehe refreshRsiDivergenceInternal.
@@ -1266,6 +1271,7 @@ function refreshLiquidityInternal() {
     // Target-/Anti-Confluence-Picker-Hover (siehe oben) laufen über denselben Pin-Halo-Highlight-
     // Mechanismus wie ein gehoverter Pin — eigenständige Zeichnung wäre dieselbe Linie ein zweites Mal.
     hoveredPinLiquidityLevelKey: props.hoveredPinLiquidityLevelKey ?? targetPickerHoveredLiquidityKey.value ?? antiConfluencePickerHoveredLiquidityKey.value,
+    confirmationLiquidityKeys: props.confirmationLiquidityKeys,
     showSweptLiquidity: props.showSweptLiquidity,
     dbLiquidityLevelsHtf: props.dbLiquidityLevelsHtf,
     symbol: props.symbol,
@@ -2042,6 +2048,9 @@ watch(() => props.pinObZoneKeys, refreshPoiZonesInternal);
 watch(() => props.pinTradeSetupIds, refreshTradeSetupLinksInternal);
 watch(() => props.pinTradeConfirmationIds, refreshTradeConfirmationLinksInternal);
 watch(() => props.pinLiquidityLevelKeys, refreshLiquidityInternal);
+// Verknüpfen/Lösen einer LQ-Sweep-Bestätigung ändert nur das LABEL des Levels, nicht die
+// Level-Menge selbst — ohne diesen Watch bliebe es bis zum nächsten Refresh unbeschriftet.
+watch(() => props.confirmationLiquidityKeys, refreshLiquidityInternal);
 watch(() => props.pinRsiDivergenceKeys, refreshRsiDivergenceInternal);
 // Pin-Panel-Hover (Chat 2026-08-18) — dieselben Refresh-Funktionen wie die dauerhaften pin*Keys/
 // pin*Ids-Watches oben, nur für die zusätzliche Auswahl-Hervorhebung.

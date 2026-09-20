@@ -362,14 +362,22 @@ function liquidityStyleTimeframe(rawTimeframe) {
 // bei einem Low DARÜBER (Label drunter). Richtet sich nach lvl.dir, nicht nach touched — ein
 // gesweeptes Level bleibt geometrisch derselbe Pivot (nur die Farbe wechselt auf liquiditySweep*,
 // siehe base/key unten; der Labeltext selbst kennt touched seit der zweiten Runde nicht mehr).
-function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin } = {}) {
+// isConfirmation (Philip 2026-09-20): ein Level, das als LQ-Sweep-Bestaetigung an einer Dealing
+// Range haengt, traegt sein Label IMMER -- auch als M5-Zeile. Genau daran haperte es: ein 6 Tage
+// altes NY-High landet als timeframe="5M" in liquidity_levels, wenn es im M5-Chart angeklickt
+// wurde, und fiel damit unter die "M5 nur im Debug"-Regel, obwohl die Qualitaet des Sweeps die
+// wichtigste Information am Setup ist. Der Labeltext ist derselbe wie bei einem HTF-Level --
+// bewusst KEINE eigene Kurzform, damit dasselbe Objekt nicht je nach Timeframe anders aussieht.
+function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin, isConfirmation } = {}) {
   const tfCategory = liquidityStyleTimeframe(lvl.timeframe);
   const isHtf = tfCategory !== "M5";
   const base = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
   const key = LIQUIDITY_STYLE_KEYS[tfCategory][base];
   const color = cssColor(key);
   const label =
-    debugPrices || isHtf ? formatLiquidityLevelLabel(lvl, { bonus: lvl.bonus, nowSec, formatPrice, includePrice: debugPrices }) : null;
+    debugPrices || isHtf || isConfirmation
+      ? formatLiquidityLevelLabel(lvl, { bonus: lvl.bonus, nowSec, formatPrice, includePrice: debugPrices })
+      : null;
   return {
     color,
     lineWidth: lineWidth(key),
@@ -402,7 +410,10 @@ export function liquidityLevelNaturalKey(dir, pivotTime) {
 // (Chat 2026-08-18, optional): EIN liquidityLevelNaturalKey-String, der zusätzlich per
 // Auswahl-Halo hervorgehoben wird (PinPanel.vue-Zeilen-Hover, siehe Dashboard.vue:
 // hoveredPinLiquidityLevelKey).
-export function renderLiquidityLevels(series, levels, existingPrimitives, candles, { debugPrices, formatPrice, nowSec, pinKeys, hoveredKey } = {}) {
+// `confirmationKeys` (Philip 2026-09-20, analog zu pinKeys): liquidityLevelNaturalKey-Strings der
+// Level, die als LQ-Sweep-Bestaetigung an einer Dealing Range haengen -- die bekommen ihr Label
+// unabhaengig vom Debug-Toggle, siehe levelOptions.
+export function renderLiquidityLevels(series, levels, existingPrimitives, candles, { debugPrices, formatPrice, nowSec, pinKeys, hoveredKey, confirmationKeys } = {}) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
@@ -410,7 +421,8 @@ export function renderLiquidityLevels(series, levels, existingPrimitives, candle
     const key = liquidityLevelNaturalKey(lvl.dir, lvl.pivotTime);
     const inPinContext = pinKeys?.has(key) ?? false;
     const isSelectedPin = hoveredKey != null && hoveredKey === key;
-    const primitive = new LiquidityLinePrimitive(lvl, levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin }), candles);
+    const isConfirmation = confirmationKeys?.has(key) ?? false;
+    const primitive = new LiquidityLinePrimitive(lvl, levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin, isConfirmation }), candles);
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }

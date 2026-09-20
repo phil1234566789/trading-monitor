@@ -1048,22 +1048,24 @@ const pinnedObZones = computed(() => {
 // refreshTradeTargetLinksInternal zeichnet ein kind='pivot'-Target/eine Bestätigung MIT
 // liquidity_level_id deshalb nicht mehr selbst, siehe dort). Dedupliziert per Natural Key, falls
 // mehrere Targets/Bestätigungen auf denselben Pivot zeigen.
-const tradeLinkedLiquidityLevels = computed(() => {
-  // Denselben Trades-Toggle respektieren wie PriceChart.vue's Trade-Zeichenpfade (Bug-Report
-  // Philip 2026-08-25: diese Linien blieben beim Ausschalten von "Trades" stehen) — siehe
-  // tradeVisibility.js für die gemeinsame Regel, damit sie nicht ein sechstes Mal separat
-  // nachgebaut wird.
-  // Trades und TSC bewusst UNABHÄNGIG voneinander gated — siehe PriceChart.vue:
-  // tradeLikeEntriesForCandles für die volle Bug-Historie (Philip: "Trades > Trades hab ich
-  // deaktiviert, weil das ja die Zeichnungen von der Trade-Liste sind" / "toggle für die TSC
-  // Visualisierungen sollte Trades > TSC sein" = showTradeSetupCockpit).
-  const rangeLikeEntries = [
+// Denselben Trades-Toggle respektieren wie PriceChart.vue's Trade-Zeichenpfade (Bug-Report
+// Philip 2026-08-25: diese Linien blieben beim Ausschalten von "Trades" stehen) — siehe
+// tradeVisibility.js für die gemeinsame Regel, damit sie nicht ein sechstes Mal separat
+// nachgebaut wird.
+// Trades und TSC bewusst UNABHÄNGIG voneinander gated — siehe PriceChart.vue:
+// tradeLikeEntriesForCandles für die volle Bug-Historie (Philip: "Trades > Trades hab ich
+// deaktiviert, weil das ja die Zeichnungen von der Trade-Liste sind" / "toggle für die TSC
+// Visualisierungen sollte Trades > TSC sein" = showTradeSetupCockpit).
+const rangeLikeEntriesForChart = computed(() =>
+  [
     ...(tradesVisible(showTradeSetups.value, showTrades.value) ? isolatedTrades.value : []),
     ...(showTradeSetupCockpit.value && tscRange.value ? [tscRange.value] : []),
-  ];
+  ].filter((t) => t.instrument === currentSymbol.value),
+);
+
+const tradeLinkedLiquidityLevels = computed(() => {
   const byKey = new Map();
-  for (const t of rangeLikeEntries) {
-    if (t.instrument !== currentSymbol.value) continue;
+  for (const t of rangeLikeEntriesForChart.value) {
     for (const item of [...t.targets, ...t.confirmations]) {
       const lvl = item.liquidityLevel;
       if (!lvl) continue;
@@ -1071,6 +1073,21 @@ const tradeLinkedLiquidityLevels = computed(() => {
     }
   }
   return [...byKey.values()];
+});
+
+// Nur die BESTÄTIGUNGEN, nicht die Targets (Philip 2026-09-20: "bei verknüpften LQ-Sweep
+// Bestätigungen das Label immer angezeigt") — die Güte des Sweeps ist das entscheidende Merkmal
+// am Setup, ein Target ist dagegen nur ein Zielpunkt. Siehe liquidity.js: levelOptions.
+const confirmationLiquidityKeys = computed(() => {
+  const keys = new Set();
+  for (const t of rangeLikeEntriesForChart.value) {
+    for (const c of t.confirmations) {
+      if (c.kind === "pivot" && c.liquidityLevel) {
+        keys.add(liquidityLevelNaturalKey(c.liquidityLevel.dir, c.liquidityLevel.pivotTime));
+      }
+    }
+  }
+  return keys;
 });
 // Kaskaden-Regel statt reiner currentBar-Gleichheit (Bug 2026-08-21, siehe pinVisibleOnCurrentTf
 // oben, Philip 2026-08-18/21: ein gepinntes 1H/4H-Level soll auch auf M5 sichtbar bleiben, siehe
@@ -2035,6 +2052,7 @@ watch(selectedTradingAccountId, () => {
     :show-trade-setups-long="showTradeSetupsLong"
     :show-trade-setups-short="showTradeSetupsShort"
     :show-r-scale="showRScale"
+    :confirmation-liquidity-keys="confirmationLiquidityKeys"
     :ranges-period="rangesPeriod"
     :ranges-lookback-hours="rangesLookbackHours"
     :ranges2-period="ranges2Period"
