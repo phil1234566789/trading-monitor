@@ -1,34 +1,68 @@
-JE MONAT (n=855 Dealing Ranges)
-  Monat      n   Reichweite   Risiko   in R    >=15P   >=3R   nie inval.
-  2026-01   98       18.7      5.4   3.77      66%     59%        24%
-  2026-02   88       27.4      6.2   4.02      68%     61%        32%
-  2026-03   81       30.7      7.4   4.41      75%     64%        26%
-  2026-04   97       23.8      5.6   4.18      65%     58%        28%
-  2026-05   93       19.2      5.5   3.67      62%     55%        29%
-  2026-06  109       18.5      5.2   3.90      61%     64%        28%
-  2026-07  107       16.8      5.4   3.83      54%     58%        30%
-  2026-08  121       14.1      4.1   3.06      45%     50%        29%
-  2026-09   61       16.9      4.4   2.84      52%     48%        23%
+TREFFERQUOTE JE MONAT — Ziel erreicht, bevor die DR invalidierte
+  Monat      n       10P     15P     20P     25P     30P     35P     40P
+  2026-01   98       85%     66%     47%     43%     37%     35%     30%
+  2026-02   88       76%     68%     62%     56%     44%     39%     36%
+  2026-03   81       85%     75%     64%     54%     51%     46%     38%
+  2026-04   97       77%     65%     57%     46%     38%     36%     34%
+  2026-05   93       80%     62%     47%     39%     33%     30%     28%
+  2026-06  109       80%     61%     44%     38%     37%     34%     33%
+  2026-07  107       69%     54%     45%     39%     38%     28%     24%
+  2026-08  121       64%     45%     37%     29%     22%     18%     17%
+  2026-09   61       67%     52%     39%     33%     28%     21%     21%
+  ALLE      855       76%     61%     49%     41%     36%     32%     29%
 
-  Spannweite ueber die Monate:
-    Reichweite in Pips  14.1 bis 30.7   (Faktor 2.2)
-    Risiko in Pips      4.1 bis 7.4   (Faktor 1.8)
-    Reichweite in R     2.84 bis 4.41   (Faktor 1.6)
+DIESELBEN MONATE IN R (Vielfaches des eigenen Risikos)
+  Monat      n         1R       2R       3R       4R       5R
+  2026-01   98        92%      77%      59%      47%      38%
+  2026-02   88        89%      73%      61%      50%      44%
+  2026-03   81        85%      72%      64%      53%      46%
+  2026-04   97        90%      73%      58%      52%      44%
+  2026-05   93        91%      73%      55%      45%      40%
+  2026-06  109        92%      72%      64%      50%      41%
+  2026-07  107        87%      68%      58%      46%      36%
+  2026-08  121        91%      70%      50%      37%      31%
+  2026-09   61        92%      69%      48%      39%      36%
+  ALLE      855        90%      72%      58%      46%      39%
 
-  Je staerker Risiko und Reichweite zusammen wandern, desto mehr ist der Monatsunterschied
-  blosse Volatilitaet und keine bessere Setup-Qualitaet.
+VOLATILITAET ODER SETUP-QUALITAET? Reichweite und Risiko je Monat
+  Monat      n   Reichweite   Risiko   Reichweite in R   nie invalidiert
+  2026-01   98       18.7      5.4            3.77              24%
+  2026-02   88       27.4      6.2            4.02              32%
+  2026-03   81       30.7      7.4            4.41              26%
+  2026-04   97       23.8      5.6            4.18              28%
+  2026-05   93       19.2      5.5            3.67              29%
+  2026-06  109       18.5      5.2            3.90              28%
+  2026-07  107       16.8      5.4            3.83              30%
+  2026-08  121       14.1      4.1            3.06              29%
+  2026-09   61       16.9      4.4            2.84              23%
+  Spannweite: Reichweite Faktor 2.2 | Risiko Faktor 1.8 | in R Faktor 1.6
+  Wandern Reichweite und Risiko zusammen, ist der Monatsunterschied groesstenteils
+  Volatilitaet. Bleibt auch die R-Spalte auseinander, sind es wirklich die Setups.
 
-  Bootstrap bester gegen schlechtesten Monat (2026-03 30.7 gegen 2026-08 14.1):
-    Differenz 16.0 Pips, 95%-Intervall [7.2, 26.4], groesser in 100 % der Ziehungen
-    dieselben zwei Monate in R: Differenz 1.30 R, 95%-Intervall [0.26, 2.73], groesser in 99 %
+HAELT DER UNTERSCHIED? Bootstrap bester gegen schlechtesten Monat, 5000 Ziehungen
+  10 Pips: 2026-03 85% gegen 2026-08 64% | Differenz 22 Punkte, 95%-Intervall [10, 33]
+  15 Pips: 2026-03 75% gegen 2026-08 45% | Differenz 30 Punkte, 95%-Intervall [17, 43]
+  20 Pips: 2026-03 64% gegen 2026-08 37% | Differenz 27 Punkte, 95%-Intervall [13, 40]
+  25 Pips: 2026-02 56% gegen 2026-08 29% | Differenz 27 Punkte, 95%-Intervall [13, 40]
+  30 Pips: 2026-03 51% gegen 2026-08 22% | Differenz 28 Punkte, 95%-Intervall [15, 41]
+  35 Pips: 2026-03 46% gegen 2026-08 18% | Differenz 27 Punkte, 95%-Intervall [15, 41]
+  40 Pips: 2026-03 38% gegen 2026-08 17% | Differenz 22 Punkte, 95%-Intervall [ 9, 35]
 
-WIE VIELE SETUPS JE MONAT (Handelstage schwanken, deshalb auch pro Tag)
-  2026-01   98 Setups an 20 Tagen  = 4.9 pro Tag
-  2026-02   88 Setups an 20 Tagen  = 4.4 pro Tag
-  2026-03   81 Setups an 22 Tagen  = 3.7 pro Tag
-  2026-04   97 Setups an 23 Tagen  = 4.2 pro Tag
-  2026-05   93 Setups an 20 Tagen  = 4.7 pro Tag
-  2026-06  109 Setups an 22 Tagen  = 5.0 pro Tag
-  2026-07  107 Setups an 23 Tagen  = 4.7 pro Tag
-  2026-08  121 Setups an 21 Tagen  = 5.8 pro Tag
-  2026-09   61 Setups an 12 Tagen  = 5.1 pro Tag
+HALBJAHRE DIREKT GEGENEINANDER
+                         n       10P     15P     20P     25P     30P     35P     40P
+  Januar-Juni           566       80%     66%     53%     45%     40%     36%     33%
+  Juli-September        289       66%     50%     40%     34%     29%     22%     20%
+  10 Pips: erstes Halbjahr liegt 14 Punkte vorn, 95%-Intervall [ 8, 21]
+  15 Pips: erstes Halbjahr liegt 16 Punkte vorn, 95%-Intervall [ 9, 23]
+  20 Pips: erstes Halbjahr liegt 12 Punkte vorn, 95%-Intervall [ 6, 20]
+
+SETUPS JE MONAT (Handelstage schwanken, deshalb auch pro Tag)
+  2026-01   98 Setups an 20 Tagen = 4.9 pro Tag
+  2026-02   88 Setups an 20 Tagen = 4.4 pro Tag
+  2026-03   81 Setups an 22 Tagen = 3.7 pro Tag
+  2026-04   97 Setups an 23 Tagen = 4.2 pro Tag
+  2026-05   93 Setups an 20 Tagen = 4.7 pro Tag
+  2026-06  109 Setups an 22 Tagen = 5.0 pro Tag
+  2026-07  107 Setups an 23 Tagen = 4.7 pro Tag
+  2026-08  121 Setups an 21 Tagen = 5.8 pro Tag
+  2026-09   61 Setups an 12 Tagen = 5.1 pro Tag

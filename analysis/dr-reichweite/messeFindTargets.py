@@ -16,12 +16,11 @@
 # OAuth-Token, parallel braeuchte das hier niemand). Dafuer muss TRADING_MONITOR_MCP_TOKEN gesetzt
 # sein, und SETUPS/CANDLES muessen auf die gezogenen MCP-Ergebnisse zeigen (siehe README).
 import json, sys, os, time, gzip, random, bisect, datetime, statistics, urllib.request
+from drMerkmale import lade_setups
 
-SETUPS = r"C:\Users\Philip\.claude\projects\c--Users-Philip-Documents-git-trading-monitor\25cfa4c0-a261-49e1-9482-af67f53adc09\tool-results\mcp-trading-monitor-get_trade_setups-1789808350250.txt"
-CANDLES = r"C:\Users\Philip\.claude\projects\c--Users-Philip-Documents-git-trading-monitor\25cfa4c0-a261-49e1-9482-af67f53adc09\tool-results\mcp-trading-monitor-get_forex_candles_archive-1789814595814.txt"
 ROH = "find-targets-roh.jsonl.gz"
 MCP_URL = "https://vkphwtqcvqrkphksproj.supabase.co/functions/v1/trading-monitor-mcp"
-PIP, ARM, HORIZON = 0.0001, 600, 24 * 3600
+from drMerkmale import lade_kerzen, PIP, ARM, HORIZON
 BERLIN = 2 * 3600  # CEST im gesamten Messzeitraum 15.07.-16.09.2026, wie filterAlterUndHandelszeit.py
 
 ts = lambda s: int(datetime.datetime.fromisoformat(s).timestamp())
@@ -49,9 +48,8 @@ def mcp(name, args, _id=[0]):
 
 def drs_laden():
     """Je gemessener DR: Startzeitpunkt, nahe OB-Kante, Reichweite (normal + strikt), Risiko."""
-    setups = {r["id"]: r for r in json.load(open(SETUPS))}
-    cnd = sorted(json.load(open(CANDLES)), key=lambda c: c["time"])
-    times = [c["time"] for c in cnd]
+    setups = {r["id"]: r for r in lade_setups()}
+    cnd, times = lade_kerzen()
     out = []
     for x in json.load(open("punkt1_result.json")):
         r = setups[x["id"]]
