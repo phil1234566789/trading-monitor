@@ -2934,9 +2934,9 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/leiterPipsVsR.py": {
-    "mtime": 1789851268.312858,
-    "seen": 1789855477.195591,
-    "ast_hash": "71f8b8503c8472736b0e540da19eb9cf",
+    "mtime": 1789903125.8018572,
+    "seen": 1789911646.8323872,
+    "ast_hash": "f639944f69e2edb7511da53df1d9418c",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-deckel.txt": {
@@ -2946,9 +2946,9 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-leiter.txt": {
-    "mtime": 1789896671.7071247,
-    "seen": 1789896744.4648266,
-    "ast_hash": "5aada9310f9673ba46201660b2989b05",
+    "mtime": 1789903126.165831,
+    "seen": 1789911646.8333862,
+    "ast_hash": "b060313f08061593defa51c9b9f392b6",
     "semantic_hash": ""
   },
   "supabase/migrations/20260920100000_drop_trade_setup_outcomes.sql": {
@@ -2964,15 +2964,15 @@
     "semantic_hash": ""
   },
   "PLAN-dr-statistik-ui.md": {
-    "mtime": 1789902943.1670053,
-    "seen": 1789902950.9359949,
-    "ast_hash": "ca0854f816da297d41eb093e1253e40e",
+    "mtime": 1789911642.0427725,
+    "seen": 1789911646.8333862,
+    "ast_hash": "7ba99d75bb48384f9b2c46985b758c5a",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/saisonalitaet.py": {
-    "mtime": 1789898007.716913,
-    "seen": 1789899649.2277548,
-    "ast_hash": "c53dde3f4b86781e78aeec2bfdc22a14",
+    "mtime": 1789903125.8018572,
+    "seen": 1789911646.8323872,
+    "ast_hash": "ec1b972fcfc3c76ace35e70b6fd8b78e",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/zieheDaten.py": {
@@ -2988,21 +2988,21 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-saisonalitaet.txt": {
-    "mtime": 1789898018.314891,
-    "seen": 1789899649.2287514,
-    "ast_hash": "1805091c2106ba64ef19880f69e9ef9b",
+    "mtime": 1789903131.274265,
+    "seen": 1789911646.8333862,
+    "ast_hash": "f952e58c07cb3642428bf20415086e6e",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/quotenTabelle.py": {
-    "mtime": 1789898139.47255,
-    "seen": 1789899649.2277548,
-    "ast_hash": "9a84afb8c34a1512611198670969cdc9",
+    "mtime": 1789903125.8028572,
+    "seen": 1789911646.8323872,
+    "ast_hash": "c42573bcb758b75d27baf283b6ad5435",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-quoten.txt": {
-    "mtime": 1789898146.6710658,
-    "seen": 1789899649.2287514,
-    "ast_hash": "50e357b9cb7f6ef31105c4c365d66991",
+    "mtime": 1789903126.0653343,
+    "seen": 1789911646.8333862,
+    "ast_hash": "18e152fd9305b6fba33cc0bc3ab390eb",
     "semantic_hash": ""
   }
 }
