@@ -68,6 +68,24 @@ Das ist genau die Information, die er für die Einschätzung einer gegnerischen 
 dass irgendetwas klassifiziert oder bewertet werden muss. Die Skala zeigt den Stand, die Abwägung
 macht er.
 
+### Die Falle: Path B hat kein echtes Invalidierungslevel
+
+`detectTradeSetups` (`src/tradeSetup.js`) liefert zwei Sorten Setup, unterscheidbar an `pathType`:
+
+- **Path A** — `fractal` ist das echte Extrem-Fraktal. `|fractal.price − ref|` ist das Risiko. ✅
+- **Path B** — `fractal` ist auf `ls` gesetzt, also auf das **gesweepte Level**, nicht auf das
+  Extrem-Fraktal (siehe `tradeSetup.js:204`). Das ist ein Platzhalter, damit die Zeile vollständig
+  ist. Als Invalidierung ist er **unbrauchbar** — genau deshalb hat die Auswertung alle Path-B-only
+  Dealing Ranges ausgeschlossen (60 von 915).
+
+**Wird das übersehen, zeichnet die Skala bei jedem Path-B-Setup falsche Marken**, weil `risk` aus
+dem falschen Preis kommt. Die Zeichenroutine kennt `pathType` bereits (sie blendet dort schon das
+PP-Label aus, `usePriceChartTradeSetupDrawing.js:67`).
+
+Fürs Erste die einfachste korrekte Lösung: **Skala nur bei `pathType === "A"` zeichnen.** Häufig
+existiert für denselben M5-OB ohnehin eine Path-A-Zeile — sauberer wäre, deren Fraktal zu
+verwenden, aber das ist eine Verfeinerung, kein Muss für den ersten Task.
+
 **Reihenfolge der R-Marken:** 2 / 3 / 4 / 5 / 6 R. Kein 1 R — Philip: *„1R macht keinen sinn ich
 mache keinen Trade um 1R zu gewinnen."* 3 R ist laut Strategie das Minimum, die Marke gehört also
 sichtbar hervorgehoben.
