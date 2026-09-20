@@ -1,81 +1,88 @@
 TRENDLAGE JE DEALING RANGE  (1H-Market-Structure-Trend zum DR-Start)
-  mit dem Trend    n=123
-  gegen den Trend  n=132
-  Trend unklar     n=  0
+  mit dem Trend    n=424
+  gegen den Trend  n=427
+  Trend unklar     n=  4
+  (ohne Trend-Antwort: 4)
 
 BASIS JE TRENDLAGE (Reichweite ab naher OB-Kante, 24h-Fenster)
-  mit dem Trend      n=123 | Median  12.5 | p25   6.2  p75  28.9 | nie inval.  30 | 10P  74  15P  56  20P  44  25P  37  30P  29
-  gegen den Trend    n=132 | Median  13.1 | p25   6.6  p75  29.7 | nie inval.  37 | 10P  81  15P  61  20P  46  25P  36  30P  32
-  Trend unklar       n=  0
-  ALLE               n=255 | Median  12.5 | p25   6.5  p75  29.6 | nie inval.  67 | 10P 155  15P 117  20P  90  25P  73  30P  61
+  mit dem Trend      n=424 | Median  19.6 | p25   9.7  p75  43.4 | nie inval. 106 | 10P 312  15P 255  20P 209  25P 177  30P 153
+  gegen den Trend    n=427 | Median  19.2 | p25  10.4  p75  44.2 | nie inval. 131 | 10P 331  15P 262  20P 207  25P 176  30P 155
+  Trend unklar       n=  4 | Median  15.7 | p25  11.7  p75  49.1 | nie inval.   1 | 10P   4  15P   2  20P   1  25P   1  30P   1
+  ALLE               n=855 | Median  19.5 | p25  10.1  p75  43.9 | nie inval. 238 | 10P 647  15P 519  20P 417  25P 354  30P 309
 
 Zeit bis Invalidierung (nur invalidierte DRs):
-  mit dem Trend      n= 93 | median  105 Min | p25   40  p75  235
-  gegen den Trend    n= 95 | median  100 Min | p25   40  p75  220
+  mit dem Trend      n=318 | median  128 Min | p25   50  p75  275
+  gegen den Trend    n=296 | median  125 Min | p25   50  p75  260
+  Trend unklar       n=  3 | median  130 Min | p25   45  p75  365
 
 FILTER 1 x TRENDLAGE -- Sweep-Herkunft
-  HTF siche / mit dem Tr n=  8 | Median  30.6 | p25  27.1  p75  32.4 | nie inval.   2
-  HTF siche / gegen den  n= 17 | Median  10.6 | p25   9.3  p75  34.4 | nie inval.   7
-  unklar / mit dem Tr n= 17 | Median  19.0 | p25  11.9  p75  28.0 | nie inval.   6
-  unklar / gegen den  n= 14 | Median  13.3 | p25   8.1  p75  24.6 | nie inval.   1
-  M5 sicher / mit dem Tr n= 98 | Median  10.7 | p25   5.4  p75  25.0 | nie inval.  22
-  M5 sicher / gegen den  n=101 | Median  14.1 | p25   6.0  p75  25.0 | nie inval.  29
+  HTF siche / mit dem Tr n= 55 | Median  29.6 | p25  18.2  p75  47.3 | nie inval.  15
+  HTF siche / gegen den  n= 43 | Median  33.6 | p25  15.7  p75  54.6 | nie inval.  19
+  unklar / mit dem Tr n=  0
+  unklar / gegen den  n=  0
+  M5 sicher / mit dem Tr n=369 | Median  17.8 | p25   8.9  p75  42.5 | nie inval.  91
+  M5 sicher / gegen den  n=384 | Median  18.5 | p25  10.2  p75  43.6 | nie inval. 112
 
 FILTER 3 x TRENDLAGE -- Sweep-Alter
-  Major / mit dem Tr n=  3 | Median  29.6 | p25  18.8  p75  31.5 | nie inval.   1
-  Major / gegen den  n=  5 | Median  28.7 | p25  10.6  p75  33.4 | nie inval.   2
-  Medium / mit dem Tr n=  4 | Median  29.6 | p25  27.1  p75  32.4 | nie inval.   0
-  Medium / gegen den  n=  6 | Median  21.1 | p25   9.7  p75  55.0 | nie inval.   3
-  Minor / mit dem Tr n=116 | Median  11.9 | p25   6.1  p75  26.9 | nie inval.  29
-  Minor / gegen den  n=121 | Median  12.0 | p25   6.0  p75  25.0 | nie inval.  32
+  Major / mit dem Tr n= 13 | Median  41.5 | p25  25.7  p75  48.6 | nie inval.   4
+  Major / gegen den  n= 15 | Median  33.4 | p25  22.9  p75  42.4 | nie inval.   5
+  Medium / mit dem Tr n= 29 | Median  25.1 | p25  15.7  p75  41.6 | nie inval.   8
+  Medium / gegen den  n= 16 | Median  46.4 | p25  13.5  p75  76.5 | nie inval.  10
+  Minor / mit dem Tr n=382 | Median  18.7 | p25   9.2  p75  42.5 | nie inval.  94
+  Minor / gegen den  n=396 | Median  18.5 | p25  10.3  p75  43.7 | nie inval. 116
 
 FILTER 4 x TRENDLAGE -- Handelsfenster 08:00-18:00 Berlin
-  im Fenster / mit dem Tr n= 77 | Median  15.4 | p25   7.6  p75  29.6 | nie inval.  21
-  im Fenster / gegen den  n= 99 | Median  16.8 | p25   8.6  p75  34.6 | nie inval.  33
-  ausserhalb / mit dem Tr n= 46 | Median   9.9 | p25   3.6  p75  24.1 | nie inval.   9
-  ausserhalb / gegen den  n= 33 | Median   6.5 | p25   4.0  p75  14.8 | nie inval.   4
+  im Fenster / mit dem Tr n=301 | Median  19.0 | p25   9.0  p75  42.6 | nie inval.  78
+  im Fenster / gegen den  n=325 | Median  20.2 | p25  11.2  p75  44.8 | nie inval. 108
+  ausserhalb / mit dem Tr n=123 | Median  22.7 | p25  11.5  p75  46.2 | nie inval.  28
+  ausserhalb / gegen den  n=102 | Median  17.2 | p25   9.2  p75  38.3 | nie inval.  23
 
 FILTER 2 x TRENDLAGE -- lebende Gegen-DR (Paarvergleich wie filterGegenkraft.py, Target 20 Pips)
-  keine Gegen-DR / mit dem Tr        n= 73 | Median  18.2 | >=20P  30 | nie inval. 22
-  keine Gegen-DR / gegen den         n= 78 | Median  14.5 | >=20P  27 | nie inval. 22
-  ich HTF, Gegner M5 / mit dem Tr    n=  5 | Median  11.9 | >=20P   2 | nie inval.  2
-  ich HTF, Gegner M5 / gegen den     n=  7 | Median  17.5 | >=20P   3 | nie inval.  1
-  beide HTF / mit dem Tr             n=  2 | Median   9.3 | >=20P   0 | nie inval.  0
-  beide HTF / gegen den              n=  5 | Median  12.0 | >=20P   2 | nie inval.  2
-  beide M5 / mit dem Tr              n= 30 | Median  10.0 | >=20P  11 | nie inval.  5
-  beide M5 / gegen den               n= 25 | Median  15.3 | >=20P   9 | nie inval.  9
-  ich M5, Gegner HTF / mit dem Tr    n= 13 | Median   7.1 | >=20P   1 | nie inval.  1
-  ich M5, Gegner HTF / gegen den     n= 17 | Median   7.8 | >=20P   5 | nie inval.  3
+  keine Gegen-DR / mit dem Tr        n=305 | Median  22.9 | >=20P 164 | nie inval. 85
+  keine Gegen-DR / gegen den         n=307 | Median  22.5 | >=20P 163 | nie inval. 102
+  ich HTF, Gegner M5 / mit dem Tr    n=  4 | Median  33.4 | >=20P   3 | nie inval.  2
+  ich HTF, Gegner M5 / gegen den     n=  5 | Median  44.2 | >=20P   3 | nie inval.  3
+  beide HTF / mit dem Tr             n=  0
+  beide HTF / gegen den              n=  0
+  beide M5 / mit dem Tr              n=108 | Median  10.6 | >=20P  40 | nie inval. 18
+  beide M5 / gegen den               n=106 | Median  12.5 | >=20P  37 | nie inval. 24
+  ich M5, Gegner HTF / mit dem Tr    n=  7 | Median  14.8 | >=20P   2 | nie inval.  1
+  ich M5, Gegner HTF / gegen den     n=  9 | Median  16.9 | >=20P   4 | nie inval.  2
 
 FIND_TARGETS x TRENDLAGE -- dieselben Auswahlregeln, je Trendlage
 EV in R der Idee, RR bei 10 gedeckelt, nur entschiedene DRs (Treffer oder Invalidierung)
-  mit dem Trend (n=123 DRs)
-     nahster    n=123  Quote  73%  Dist   6.3  EV +0.97 R
-     >=10 Pips  n=122  Quote  48%  Dist  12.3  EV +0.82 R
-     >=15 Pips  n=115  Quote  43%  Dist  17.7  EV +1.08 R
-     >=25 Pips  n= 84  Quote  23%  Dist  29.4  EV +0.44 R
-  gegen den Trend (n=132 DRs)
-     nahster    n=131  Quote  67%  Dist   7.7  EV +1.13 R
-     >=10 Pips  n=129  Quote  50%  Dist  12.2  EV +1.15 R
-     >=15 Pips  n=128  Quote  42%  Dist  17.6  EV +1.27 R
-     >=25 Pips  n=113  Quote  28%  Dist  28.6  EV +0.95 R
+  mit dem Trend (n=424 DRs)
+     nahster    n=422  Quote  73%  Dist  10.1  EV +1.31 R
+     >=10 Pips  n=422  Quote  59%  Dist  13.3  EV +1.32 R
+     >=15 Pips  n=415  Quote  52%  Dist  17.9  EV +1.43 R
+     >=25 Pips  n=375  Quote  38%  Dist  29.2  EV +1.44 R
+  gegen den Trend (n=427 DRs)
+     nahster    n=425  Quote  72%  Dist  10.5  EV +1.36 R
+     >=10 Pips  n=425  Quote  62%  Dist  13.4  EV +1.43 R
+     >=15 Pips  n=421  Quote  52%  Dist  17.8  EV +1.44 R
+     >=25 Pips  n=404  Quote  39%  Dist  29.0  EV +1.48 R
+  Trend unklar (n=4 DRs)
+     nahster    n=  4  Quote  75%  Dist   5.9  EV +0.43 R
+     >=10 Pips  n=  4  Quote  50%  Dist  11.8  EV +0.53 R
+     >=15 Pips  n=  4  Quote  25%  Dist  18.6  EV +0.08 R
+     >=25 Pips  n=  4  Quote  25%  Dist  31.1  EV +1.40 R
 
 Gegenprobe: dieselbe Trennung ueber den INNEREN Trend (nestedTrend), wo es einen gibt
-  innerer: mit dem Tr n= 48 | Median  11.2 | p25   6.0  p75  37.3 | nie inval.  16
-  innerer: gegen den  n= 46 | Median  15.0 | p25   4.8  p75  35.5 | nie inval.  13
-  (ohne inneren Trend: 161 von 255)
+  innerer: mit dem Tr n=209 | Median  19.2 | p25  11.4  p75  46.8 | nie inval.  65
+  innerer: gegen den  n=198 | Median  23.7 | p25  10.5  p75  48.3 | nie inval.  54
+  (ohne inneren Trend: 448 von 855)
 
 GEGENPROBE LAENGERES FENSTER
-  24h (Grundmessung)   mit d  12.5 (n=123)   gegen  13.1 (n=132)
-  72h                  mit d  12.5 (n=123)   gegen  14.2 (n=132)
-  7 Tage               mit d  12.5 (n=123)   gegen  14.2 (n=132)
+  24h (Grundmessung)   mit d  19.6 (n=424)   gegen  19.2 (n=427)
+  72h                  mit d  19.6 (n=424)   gegen  19.2 (n=427)
+  7 Tage               mit d  19.6 (n=424)   gegen  19.2 (n=427)
 
 STABILITAET des Trend-Effekts
-  gesamt                   mit d  12.5 (n=123)  gegen  13.1 (n=132)
-  1. Haelfte bis 2026-08-17 mit d  12.7 (n= 60)  gegen  11.7 (n= 67)
-  2. Haelfte ab 2026-08-17 mit d  12.2 (n= 63)  gegen  14.7 (n= 65)
-  Bootstrap Reichweiten-Median (mit minus gegen): +0.0 Pips, 95%-Intervall [-5.4, +5.7],
-  mit dem Trend groesser in 50% der Ziehungen
-  EV >=25 Pips  gegen minus mit: +0.48 R, 95%-Intervall [-0.36, +1.32], gegen besser in 87%
-  EV >=15 Pips  gegen minus mit: +0.18 R, 95%-Intervall [-0.55, +0.90], gegen besser in 69%
-  EV nahster    gegen minus mit: +0.16 R, 95%-Intervall [-0.27, +0.59], gegen besser in 77%
+  gesamt                   mit d  19.6 (n=424)  gegen  19.2 (n=427)
+  1. Haelfte bis 2026-05-21 mit d  22.3 (n=230)  gegen  25.8 (n=197)
+  2. Haelfte ab 2026-05-21 mit d  16.7 (n=194)  gegen  16.9 (n=230)
+  Bootstrap Reichweiten-Median (mit minus gegen): +0.5 Pips, 95%-Intervall [-3.3, +4.4],
+  mit dem Trend groesser in 61% der Ziehungen
+  EV >=25 Pips  gegen minus mit: +0.04 R, 95%-Intervall [-0.45, +0.52], gegen besser in 56%
+  EV >=15 Pips  gegen minus mit: +0.01 R, 95%-Intervall [-0.36, +0.38], gegen besser in 52%
+  EV nahster    gegen minus mit: +0.04 R, 95%-Intervall [-0.21, +0.29], gegen besser in 62%

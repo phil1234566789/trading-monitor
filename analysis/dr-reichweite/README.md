@@ -230,6 +230,24 @@ Alle Regeln zwischen +1,20 und +1,45 R; Bootstrap für die beste: +0,10 R, Inter
 kleinen Stichprobe, nur schärfer. Das `tooFar`-Flag trennt weiter (11 % gegen 48 % Trefferquote),
 aber weniger brutal als die 2 gegen 42 % der ersten Fassung.
 
+## Trendlage — kein Unterschied, gesichert
+
+| | n | 10 P | 15 P | 20 P | 30 P | 2 R | 3 R |
+|---|---|---|---|---|---|---|---|
+| mit dem Trend | 424 | 74 % | 60 % | 49 % | 36 % | 68 % | 55 % |
+| gegen den Trend | 427 | 78 % | 61 % | 48 % | 36 % | 76 % | 60 % |
+
+Der 1H-Strukturtrend trennt gute nicht von schlechten Dealing Ranges. Bootstrap: Differenz
+**+0,5 Pips, 95 %-Intervall [−3,3, +4,4]**; jede EV-Differenz der Ziel-Regeln liegt bei null. Die
+Aufteilung ist mit 424 zu 427 nahezu hälftig — die Erkennung hat keinen Richtungs-Bias.
+
+Drei Gegenproben wie schon auf der kleinen Stichprobe: der innere Trend (`nestedTrend`, n=407)
+zeigt eher das umgekehrte Vorzeichen (19,2 mit gegen 23,7 gegen), ein längeres Fenster (72 h,
+7 Tage) ändert exakt nichts, und in den Halbjahren dreht das Vorzeichen.
+
+Gemessen ist **eine** Trend-Definition: der 1H-Algo mit Daily-Pivot-Anker, der sich nur alle ein
+bis drei Wochen bewegt. Der M5-Trend ist damit nicht gemessen.
+
 ## Grenzen
 
 Nur GBPUSD, EURUSD ist ungemessen. Neun Monate **eines** Jahres — dass dieser August schwach war,
