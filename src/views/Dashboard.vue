@@ -31,6 +31,7 @@ import {
   createDealingRange,
   addPositionToDealingRange,
   deleteDealingRange,
+  deriveSetupEntryInvalidation,
 } from "../tradeIntake.js";
 import { fetchObZones } from "../obZones.js";
 import { fetchLiquidityLevelsHtf } from "../liquidityLevels.js";
@@ -694,14 +695,11 @@ async function onSelectSetupConfirmations(setup) {
     timeframe: "5M",
     levelDirection: setup.dir === 1 ? "high" : "low",
   };
-  // Bewusst die ROHEN (nicht ums Fraktal geweiteten) OB-Kanten (setup.obTop/obBottom), NICHT
-  // tradeSetupObBoxBounds() — Bug-Report Philip 2026-07-31, zweite Runde ("OB zeichnet sich durch
+  // Bug-Report Philip 2026-07-31, zweite Runde ("OB zeichnet sich durch
   // bis zum jetzigen Zeitpunkt, sollte nur bis zur berührenden Kerze"): detectSetupObs() ruft
   // laut eigenem Kommentar 1:1 detectOrderBlocks(candles, "5m") auf und übernimmt dessen top/bottom
   // unverändert — mit timeframe:"5M" findet PriceChart.vue: liveObZoneState darüber dieselbe Zone
   // live wieder und zeichnet die Box bis zum ECHTEN Touch, statt bis "jetzt" (kein Touch bekannt).
-  // Die geweitete Box bleibt dem Setup selbst vorbehalten (dort ist die feste Breite/kein Live-
-  // Tracking ohnehin unkritisch, siehe refreshTradeSetupLinksInternal).
   const obConfirmation = {
     kind: "ob",
     price: setup.dir === 1 ? setup.obBottom : setup.obTop,
@@ -732,11 +730,13 @@ async function onSelectSetupConfirmations(setup) {
   await addFn(lsConfirmation);
   await addFn(obConfirmation);
 
-  // pathType "A" = eigenes bestätigtes Protected-Pivot (siehe tradeSetup.js), "B" = fractal===ls,
-  // also KEIN eigenständiger PP — "falls vorhanden" heißt genau das. Nur bei einer echten
-  // Ausführung sinnvoll (trade.id) — bootstrapping/TSC hat noch keine trade_position.
-  if (setup.pathType === "A" && !bootstrapping && !trade?.isTsc) {
-    await updateTrade(trade.id, { stopLoss: setup.fractal.price });
+  // Stop-Loss-Vorschlag = Invalidierung des Setups (ferne OB-Kante, siehe
+  // deriveSetupEntryInvalidation). Bis 2026-09-20 nur bei Path A und aus fractal.price — bei Path B
+  // zeigte das aufs gesweepte Level statt aufs Extrem, deshalb blieb der Vorschlag dort ganz aus.
+  // Nur bei einer echten Ausführung sinnvoll (trade.id) — bootstrapping/TSC hat noch keine
+  // trade_position.
+  if (!bootstrapping && !trade?.isTsc) {
+    await updateTrade(trade.id, { stopLoss: deriveSetupEntryInvalidation(setup).invalidation });
   }
   // Übernimmt auch die Setup-Verknüpfung selbst (trade_setup_id + die davon abgeleitete
   // Invalidierung) — ersetzt die frühere manuelle "🔗 Setup verknüpfen"-Aktion (Chat 2026-07-31,

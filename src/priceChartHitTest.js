@@ -9,24 +9,24 @@
 // brauchen. PriceChart.vue selbst löst die Koordinaten einmalig gegen chart/candleSeries auf und
 // ruft dann diese Funktionen auf — siehe findClickedSetup/-LiquidityLevel/-OBZone/-FibLevel/
 // -Divergence dort.
-import { tradeSetupObBoxBounds } from "./tradeSetup.js";
 import { OrderBlockPrimitive } from "./orderBlocks.js";
 
 // Trade-Modus-Klick-Hittest (Chat 2026-07-27) — testet gegen genau die Box, die
-// renderTradeSetupsInternal (PriceChart.vue) tatsächlich zeichnet (tradeSetupObBoxBounds +
-// obStartTime/-breite), nicht gegen setup.obTop/obBottom direkt (das ist der rohe M5-OB, der für
-// setupEntry/invalidation gebraucht wird, aber optisch eine andere Fläche als die gezeichnete Box
-// sein kann). Respektiert dieselben Sichtbarkeits-Filter wie renderTradeSetupsInternal (Long/
-// Short-Toggle, Replay-Cutoff) — man soll nichts anklicken können, was gerade gar nicht gezeichnet ist.
+// renderTradeSetupsInternal (PriceChart.vue) tatsächlich zeichnet (obTop/obBottom +
+// obStartTime/-breite). Respektiert dieselben Sichtbarkeits-Filter wie renderTradeSetupsInternal
+// (Long/Short-Toggle, Replay-Cutoff) — man soll nichts anklicken können, was gerade gar nicht
+// gezeichnet ist.
 export function matchTradeSetup(currentTradeSetups, price, time, { replayUntil, showTradeSetupsShort, showTradeSetupsLong, obWidthSec }) {
   return (
     currentTradeSetups.find((s) => {
-      if (replayUntil != null && s.fractal.pivotTime > replayUntil) return false;
+      // obStartTime statt fractal.pivotTime als Replay-Cutoff: der bestätigende OB markiert den
+      // Zeitpunkt, an dem das Setup überhaupt existiert — dieselbe Regel wie die Sortierung in
+      // getTradeSetups (db.ts).
+      if (replayUntil != null && s.obStartTime > replayUntil) return false;
       if (s.dir === 1 && !showTradeSetupsShort) return false;
       if (s.dir === -1 && !showTradeSetupsLong) return false;
-      const { top, bottom } = tradeSetupObBoxBounds(s);
       const inTime = time >= s.obStartTime && time <= s.obStartTime + obWidthSec;
-      const inPrice = price <= top && price >= bottom;
+      const inPrice = price <= s.obTop && price >= s.obBottom;
       return inTime && inPrice;
     }) ?? null
   );

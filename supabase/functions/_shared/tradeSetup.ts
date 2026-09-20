@@ -22,10 +22,10 @@ export interface DetectedTradeSetup {
   obTop: number;
   obBottom: number;
   obStartTime: number;
-  // "A" = eigenes bestätigtes Protected-Pivot (fractal !== ls), "B" = fractal === ls (Chat
-  // 2026-07-26: "möchte es visuell unterschieden haben") — reine Anzeige-Info, keine eigene
-  // Erkennungslogik. Aktuell nur von der JS-Kopie (tradeSetup.js/PriceChart.vue-Label/TSC)
-  // konsumiert, hier trotzdem mitgeführt, damit beide Kopien strukturell in Sync bleiben.
+  // "A" = eigenes bestätigtes Protected-Pivot (fractal !== ls), "B" = fractal === ls — reine
+  // Debug-Info, keine eigene Erkennungslogik. Seit 2026-09-20 steuert sie nichts mehr (Philip:
+  // "fachlich gesehen ist mir scheissegal, ob Path A oder B"), bleibt aber mitgeführt, damit beide
+  // Kopien strukturell in Sync bleiben.
   pathType: "A" | "B";
 }
 
@@ -223,16 +223,15 @@ function findImmediateLsSetup(
 // Erweitert die OB-Box um die tatsächliche Kraft-Zone zwischen Sweep und FVG (Chat 2026-07-29:
 // "ich möchte die höheren Preise, die vor der FVG zustande kamen, mit dabei haben" — die
 // FVG-nächstgelegene Kante war bisher exakt eine Kerze breit). Die FVG-anknüpfende Kante bleibt
-// unangetastet (bottom bei Short/top bei Long, siehe tradeSetupObBoxBounds in der JS-Kopie), die
+// unangetastet (bottom bei Short/top bei Long, siehe deriveSetupEntryInvalidation in der JS-Kopie), die
 // GEGENÜBERLIEGENDE Kante wird auf den Extremwert (höchstes High bei Short, tiefstes Low bei Long)
 // aller M5-Kerzen zwischen dem Sweep-Touch (`ls.touchedTime`, inklusive) und der FVG-Impuls-Kerze
 // (`ob.startTime`, inklusive — Philip: "Impulskerze, welche FVG beinhaltet, ist dabei") erweitert.
-// Bewusst KEIN Ersatz für die separate Path-A-Fraktal-Suche oben (Philip: die A/B-Unterscheidung
-// bildet aktuell noch seine eigene visuelle "ist die Price Action choppy?"-Einschätzung ab, nicht
-// nur einen Extremwert) — reiner Box-Zuschnitt, keine neue Erkennungslogik. Idee für später (noch
-// nicht umgesetzt, "choppy PA" ist komplex — bräuchte eine eigene Diskussion zu Kerzentypen):
-// Path A/B könnte eines Tages durch eine echte bärische/bullische Kerzenmuster-Erkennung ersetzt
-// werden (z.B. Hammer-Kerzen), die genau diese Einschätzung nachbildet.
+// Diese erweiterte Kante IST seit 2026-09-20 zugleich die Invalidierung des Setups (trade_setups.
+// invalidation, siehe Migration 20260920140000): über 889 Path-A-Zeilen gemessen stimmt sie in
+// 96 % auf unter 1 Pip mit dem später bestätigten Extrem-Fraktal überein, in 87 % punktgenau — der
+// period-5-Pivot bestätigt also nur einen Preis, der beim Entstehen des OB längst feststeht. Wo
+// beide auseinanderliegen, liegt die Kante in 30 von 33 Fällen WEITER weg, also nie zu eng.
 function widenObForSweep(ob: SetupOb, ls: LiquidityLevel, dir: 1 | -1, m5Candles: Candle[]): SetupOb {
   if (ls.touchedTime == null) return ob;
   const windowCandles = m5Candles.filter((c) => c.time >= ls.touchedTime! && c.time <= ob.startTime);
@@ -250,10 +249,12 @@ function widenObForSweep(ob: SetupOb, ls: LiquidityLevel, dir: 1 | -1, m5Candles
 // Long (Protected Low, braucht bullisches M5-OB). m5Levels ist i.d.R. dieselbe Array-Referenz wie
 // fractalLevels (ein Fraktal kann auch von einem anderen M5-Fraktal geswept werden). Treffen
 // beide Pfade zu, gewinnt das AKTUELLERE (spätere obStartTime) — bei Gleichstand Path A, weil das
-// einen echten Fraktal-Datensatz mitbringt. Fehlt Path A ein eigenes Fraktal (Path-B-Treffer),
-// wird `fractal` auf `ls` gesetzt — dieselbe Semantik wie "der Level, der halten muss", nur ohne
-// separat bestätigten Pivot; hält den Dedupe-Key (`fractal_pivot_time`, siehe poi-watcher) und
-// die DB-NOT-NULL-Spalten ohne Sonderfall funktionsfähig.
+// einen echten Fraktal-Datensatz mitbringt. Genau dieser Gleichstand ist seit 2026-09-20 der
+// Normalfall statt eines Sonderfalls: EIN Setup je bestätigender M5-OB, der Pfad ist nur noch
+// Debug-Info (dieselbe Regel wie die Entduplizierung in der JS-Kopie). Fehlt Path A ein eigenes
+// Fraktal (Path-B-Treffer), wird `fractal` auf `ls` gesetzt — dieselbe Semantik wie "der Level,
+// der halten muss", nur ohne separat bestätigten Pivot; hält die DB-NOT-NULL-Spalten ohne
+// Sonderfall funktionsfähig.
 export function detectTradeSetup(
   dir: 1 | -1,
   fractalLevels: LiquidityLevel[],

@@ -134,31 +134,25 @@ function findImmediateLsSetups(h1Levels, m5Levels, m5Candles, dir, params) {
   return results;
 }
 
-// Eindeutiger Schlüssel für ein (ls, ob)-Paar — verhindert, dass Path A und Path B dasselbe
-// Setup doppelt melden, falls beide für dieselbe LS-Sweep/OB-Kombination zutreffen.
-function setupKey(ls, ob) {
-  return `${ls.pivotTime}_${ob.startTime}`;
-}
-
 // Erweitert die OB-Box um die tatsächliche Kraft-Zone zwischen Sweep und FVG (Chat 2026-07-29:
 // "ich möchte die höheren Preise, die vor der FVG zustande kamen, mit dabei haben" — die
 // FVG-nächstgelegene Kante war bisher exakt eine Kerze breit). Die FVG-anknüpfende Kante bleibt
-// unangetastet (bottom bei Short/top bei Long, siehe tradeSetupObBoxBounds), die GEGENÜBERLIEGENDE
+// unangetastet (bottom bei Short/top bei Long, siehe deriveSetupEntryInvalidation), die GEGENÜBERLIEGENDE
 // Kante wird auf den Extremwert (höchstes High bei Short, tiefstes Low bei Long) aller M5-Kerzen
 // zwischen dem Sweep-Touch (`ls.touchedTime`, inklusive) und der FVG-Impuls-Kerze (`ob.startTime`,
 // inklusive — Philip: "Impulskerze, welche FVG beinhaltet, ist dabei") erweitert.
-// Bewusst KEIN Ersatz für die separate Path-A-Fraktal-Suche oben (Philip: die A/B-Unterscheidung
-// bildet aktuell noch seine eigene visuelle "ist die Price Action choppy?"-Einschätzung ab, nicht
-// nur einen Extremwert) — reiner Box-Zuschnitt, keine neue Erkennungslogik. Idee für später (noch
-// nicht umgesetzt, "choppy PA" ist komplex — bräuchte eine eigene Diskussion zu Kerzentypen):
-// Path A/B könnte eines Tages durch eine echte bärische/bullische Kerzenmuster-Erkennung ersetzt
-// werden (z.B. Hammer-Kerzen), die genau diese Einschätzung nachbildet.
+// Diese erweiterte Kante IST seit 2026-09-20 zugleich die Invalidierung des Setups (siehe
+// deriveSetupEntryInvalidation): über 889 Path-A-Zeilen gemessen stimmt sie in 96 % auf unter
+// 1 Pip mit dem später bestätigten Extrem-Fraktal überein, in 87 % punktgenau — der
+// period-5-Pivot bestätigt also nur einen Preis, der beim Entstehen des OB längst feststeht.
+// Wo beide auseinanderliegen, liegt die Kante in 30 von 33 Fällen WEITER weg, also nie zu eng
+// (die fraktalbildende Kerze liegt immer im Fenster unten).
 function widenObForSweep(ob, ls, dir, m5Candles) {
   if (!m5Candles || ls.touchedTime == null) return ob;
   const windowCandles = m5Candles.filter((c) => c.time >= ls.touchedTime && c.time <= ob.startTime);
   if (windowCandles.length === 0) return ob;
   if (dir === 1) {
-    // Short: FVG-Kante ist bottom (siehe tradeSetupObBoxBounds) — top wird erweitert.
+    // Short: FVG-Kante ist bottom (siehe deriveSetupEntryInvalidation) — top wird erweitert.
     return { ...ob, top: Math.max(ob.top, ...windowCandles.map((c) => c.high)) };
   }
   // Long: FVG-Kante ist top — bottom wird erweitert.
@@ -176,52 +170,39 @@ function widenObForSweep(ob, ls, dir, m5Candles) {
 // (siehe lastTradeSetups im Original). Fehlt Path A ein eigenes Fraktal (Path-B-Treffer), wird
 // `fractal` auf `ls` gesetzt — dieselbe Semantik wie "der Level, der halten muss", nur ohne
 // separat bestätigten Pivot; hält Downstream-Code (Chart-Rendering, poi-watcher-Dedupe) ohne
-// Sonderfall funktionsfähig. `pathType` ("A"/"B", Chat 2026-07-26: "möchte es visuell
-// unterschieden haben") — reine Anzeige-Info für Aufrufer (PriceChart.vue-Label, TSC), keine
-// eigene Erkennungslogik: A = eigenes bestätigtes Protected-Pivot, B = fractal===ls.
+// Sonderfall funktionsfähig.
+//
+// EIN Setup je bestätigender M5-OB (Philip 2026-09-20: "fachlich gesehen ist mir scheissegal, ob
+// Path A oder B ... sobald es erkannt worden ist, gilt es halt einfach als Trade Setup"). Vorher
+// schlüsselte die Entduplizierung auf (ls, ob) — derselbe OB ergab damit zwei Setups, sobald die
+// Pfade auf verschiedene Sweeps liefen, und JEDER Verbraucher musste selbst zusammenfassen.
+// Gewinnt bei Path A das JÜNGSTE Fraktal (deshalb Map-Overwrite statt `seen`-Guard) — dieselbe
+// Wahl wie findProtectedFractal in der Deno-Kopie, die rückwärts sucht; beide Laufzeiten sollen
+// für denselben OB dasselbe Setup melden. Path B füllt nur OBs, die Path A nicht beansprucht.
+// `pathType` ("A"/"B") bleibt als reine Debug-Info erhalten (A = eigenes bestätigtes
+// Protected-Pivot, B = fractal===ls) — seit 2026-09-20 steuert es weder Anzeige noch Auswertung.
 export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupObs, params, m5Candles) {
   const obDir = dir === 1 ? -1 : 1;
-  const setups = [];
-  const seen = new Set();
+  const byObStartTime = new Map();
 
   for (const { fractal, ls } of findAllProtectedFractals(fractalLevels, h1Levels, m5Levels, dir, params)) {
     let ob = findFirstSetupObAfter(setupObs, obDir, fractal.pivotTime, params.obMaxDelaySec);
     if (ob) {
       ob = widenObForSweep(ob, ls, dir, m5Candles);
-      setups.push({ dir, fractal, ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime, pathType: "A" });
-      seen.add(setupKey(ls, ob));
+      byObStartTime.set(ob.startTime, { dir, fractal, ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime, pathType: "A" });
     }
   }
 
   if (m5Candles) {
     for (const ls of findImmediateLsSetups(h1Levels, m5Levels, m5Candles, dir, params)) {
       let ob = findFirstSetupObAfter(setupObs, obDir, ls.touchedTime, params.obMaxDelaySec);
-      if (!ob) continue;
-      const key = setupKey(ls, ob);
-      if (seen.has(key)) continue;
-      seen.add(key);
+      if (!ob || byObStartTime.has(ob.startTime)) continue;
       ob = widenObForSweep(ob, ls, dir, m5Candles);
-      setups.push({ dir, fractal: ls, ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime, pathType: "B" });
+      byObStartTime.set(ob.startTime, { dir, fractal: ls, ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime, pathType: "B" });
     }
   }
 
-  setups.sort((a, b) => a.obStartTime - b.obStartTime);
-  return setups;
-}
-
-// OB (Order Block, siehe orderBlocks.js/detectSetupObs) ≠ FVG — die gezeichnete Setup-Box reicht
-// vom Fraktal bis zur FVG-nächstgelegenen Kante des OB, nicht bis zur FVG selbst (siehe
-// obBoxBounds in tradesetup.pine). Bug-Report Philip 2026-07-29 ("Box Oberkante = OB Oberkante =
-// FVG Unterkante, alles dasselbe"): bull-OB ({top: c1.high, bottom: impulse.low}, siehe
-// orderBlocks.js) und die zugehörige bullische FVG teilen sich GENAU eine Kante — c1.high, also
-// obTop. Long (dir=-1, braucht ein bullisches OB) hatte hier fälschlich obBottom verwendet (die
-// GEGENÜBERLIEGENDE OB-Kante, tief im Docht der Impuls-Kerze, mit der FVG gar nichts zu tun hat) —
-// Short (dir=1, bärisches OB, teilt sich obBottom mit seiner FVG) hatte spiegelbildlich obTop
-// verwendet. Beide vertauscht, seit dem Bug-Report korrigiert.
-export function tradeSetupObBoxBounds(setup) {
-  return setup.dir === 1
-    ? { top: setup.fractal.price, bottom: setup.obBottom }
-    : { top: setup.obTop, bottom: setup.fractal.price };
+  return [...byObStartTime.values()].sort((a, b) => a.obStartTime - b.obStartTime);
 }
 
 // These-Ebene (Soll): "setupEntry ist bärische M5-OB-Unterkante, invalidation ist Oberkante"
@@ -229,6 +210,17 @@ export function tradeSetupObBoxBounds(setup) {
 // Long spiegelbildlich. Stand ursprünglich in tradeIntake.js, seit der R-Skala (rScale.js) hier:
 // beide Aufrufer brauchen nur die Geometrie, rScale.js soll aber nicht über tradeIntake.js den
 // Supabase-Client mitziehen.
+//
+// setupEntry ist die Kante, die sich der OB mit seiner FVG teilt — Bug-Report Philip 2026-07-29
+// ("Box Oberkante = OB Oberkante = FVG Unterkante, alles dasselbe"): ein bull-OB ({top: c1.high,
+// bottom: impulse.low}, siehe orderBlocks.js) teilt sich mit seiner bullischen FVG GENAU eine
+// Kante, c1.high = obTop; Long/Short waren hier damals vertauscht.
+//
+// invalidation ist die gegenüberliegende Kante, also das von widenObForSweep aufgezogene
+// Sweep-Extrem (siehe dort) — seit 2026-09-20 die EINZIGE Invalidierungsquelle, unabhängig vom
+// Pfad. Bis dahin las der Chart dafür `fractal.price`, das bei einem Path-B-Setup auf `ls` und
+// damit auf das gesweepte Level statt aufs Extrem zeigte (Median 1,1 Pip daneben, max 12,4 — bei
+// ~5 Pip typischem Risiko).
 export function deriveSetupEntryInvalidation(setup) {
   return setup.dir === 1
     ? { setupEntry: setup.obBottom, invalidation: setup.obTop }

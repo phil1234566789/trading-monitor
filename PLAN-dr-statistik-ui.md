@@ -68,23 +68,17 @@ Das ist genau die Information, die er für die Einschätzung einer gegnerischen 
 dass irgendetwas klassifiziert oder bewertet werden muss. Die Skala zeigt den Stand, die Abwägung
 macht er.
 
-### Die Falle: Path B hat kein echtes Invalidierungslevel
+### Die Falle: Path B hat kein echtes Invalidierungslevel — ERLEDIGT 20.09.2026
 
-`detectTradeSetups` (`src/tradeSetup.js`) liefert zwei Sorten Setup, unterscheidbar an `pathType`:
+Stand beim Schreiben dieses Plans: `detectTradeSetups` lieferte zwei Sorten Setup; bei Path B war
+`fractal` auf `ls` gesetzt, also aufs **gesweepte Level** statt aufs Extrem-Fraktal. Die Skala
+wurde deshalb zunächst nur bei `pathType === "A"` gezeichnet.
 
-- **Path A** — `fractal` ist das echte Extrem-Fraktal. `|fractal.price − ref|` ist das Risiko. ✅
-- **Path B** — `fractal` ist auf `ls` gesetzt, also auf das **gesweepte Level**, nicht auf das
-  Extrem-Fraktal (siehe `tradeSetup.js:204`). Das ist ein Platzhalter, damit die Zeile vollständig
-  ist. Als Invalidierung ist er **unbrauchbar** — genau deshalb hat die Auswertung alle Path-B-only
-  Dealing Ranges ausgeschlossen (60 von 915).
-
-**Wird das übersehen, zeichnet die Skala bei jedem Path-B-Setup falsche Marken**, weil `risk` aus
-dem falschen Preis kommt. Die Zeichenroutine kennt `pathType` bereits (sie blendet dort schon das
-PP-Label aus, `usePriceChartTradeSetupDrawing.js:67`).
-
-Fürs Erste die einfachste korrekte Lösung: **Skala nur bei `pathType === "A"` zeichnen.** Häufig
-existiert für denselben M5-OB ohnehin eine Path-A-Zeile — sauberer wäre, deren Fraktal zu
-verwenden, aber das ist eine Verfeinerung, kein Muss für den ersten Task.
+Inzwischen aufgelöst (Task "Trade-Setup: Path A und B zu EINEM Setup zusammenführen"): die
+Invalidierung ist pfadunabhängig die **ferne OB-Kante**, also das von `widenObForSweep` beim
+Erkennen aufgezogene Sweep-Extrem — gemessen in 96 % auf unter 1 Pip identisch mit dem später
+bestätigten Extrem-Fraktal, und wo nicht, liegt sie weiter weg statt enger. Die Skala zeichnet
+seitdem an jedem Setup, `pathType` steuert nichts mehr.
 
 **Reihenfolge der R-Marken:** 2 / 3 / 4 / 5 / 6 R. Kein 1 R — Philip: *„1R macht keinen sinn ich
 mache keinen Trade um 1R zu gewinnen."* 3 R ist laut Strategie das Minimum, die Marke gehört also
@@ -240,10 +234,11 @@ wäre durch nichts gedeckt.
 ## Definitionen (nicht neu herleiten)
 
 - **Dealing Range** = der M5-Orderblock eines *erkannten* Trade-Setups, nicht jeder beliebige M5-OB.
-  Path-A- und Path-B-Zeile desselben OB sind eine DR.
+  Seit 20.09.2026 ist das 1:1 eine `trade_setups`-Zeile (Schlüssel `instrument, direction,
+  ob_start_time`) — vorher waren es zwei, eine je Pfad.
 - **Referenz für alles** = nahe OB-Kante (`ob_bottom` bei Short, `ob_top` bei Long).
-- **Risiko / 1 R** = nahe OB-Kante → Extrem-Fraktal (`fractal_price` der Path-A-Zeile).
-- **Invalidierung** = Berührung des Extrem-Fraktals. Nie die OB-Kante.
+- **Risiko / 1 R** = nahe OB-Kante → ferne OB-Kante (`trade_setups.invalidation`).
+- **Invalidierung** = Berührung der fernen OB-Kante (= Sweep-Extrem).
 - **Reichweite** = größte Bewegung in Trade-Richtung vor der Invalidierung. Docht zählt.
 - **Start** = `ob_start_time` + 2 M5-Kerzen (600 s).
 - **Fenster** = 24 h.

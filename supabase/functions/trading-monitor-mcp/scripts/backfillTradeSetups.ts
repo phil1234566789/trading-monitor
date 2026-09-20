@@ -39,7 +39,7 @@
 // die Stichprobe vergrößern -- reicht das; für eine Aussage über einen EINZELNEN historischen
 // Tag wäre es zu ungenau.
 //
-// Idempotent: derselbe onConflict-Schlüssel wie live (instrument,direction,fractal_pivot_time).
+// Idempotent: derselbe onConflict-Schlüssel wie live (instrument,direction,ob_start_time).
 // BACKFILL_DRY_RUN=1 schreibt nichts und meldet nur, was gefunden wurde — damit lässt sich der
 // Lauf gegen einen Zeitraum prüfen, für den es schon Live-Zeilen gibt (siehe README im
 // analysis-Ordner: Abnahme über 16.07.-18.09.).
@@ -234,7 +234,7 @@ for (const instrument of instrumente) {
   for (let i = 0; i < zeilen.length; i += 200) {
     const { error } = await supabase
       .from("trade_setups")
-      .upsert(zeilen.slice(i, i + 200), { onConflict: "instrument,direction,fractal_pivot_time" });
+      .upsert(zeilen.slice(i, i + 200), { onConflict: "instrument,direction,ob_start_time" });
     if (error) throw error;
     console.log(`  geschrieben: ${Math.min(i + 200, zeilen.length)}/${zeilen.length}`);
   }

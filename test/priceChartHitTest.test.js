@@ -18,14 +18,10 @@ import { OrderBlockPrimitive } from "../src/orderBlocks.js";
 // renderTradeSetupsInternal tatsächlich zeichnet, respektiert Long/Short-Toggle + Replay-Cutoff.
 describe("matchTradeSetup", () => {
   const opts = { replayUntil: null, showTradeSetupsShort: true, showTradeSetupsLong: true, obWidthSec: 100 };
-  // tradeSetupObBoxBounds (tradeSetup.js) baut {top,bottom} aus fractal.price + obTop/obBottom, je
-  // nach Richtung (dir=1/Short: top=fractal.price, bottom=obBottom; dir=-1/Long: top=obTop,
-  // bottom=fractal.price) — der Helfer hier baut testweise ein Setup, dessen resultierende Box
-  // exakt [bottom, top] ist, unabhängig von dir.
-  function setup(dir, obStartTime, top, bottom, fractalPivotTime = obStartTime) {
-    return dir === 1
-      ? { dir, obStartTime, obBottom: bottom, fractal: { pivotTime: fractalPivotTime, price: top } }
-      : { dir, obStartTime, obTop: top, fractal: { pivotTime: fractalPivotTime, price: bottom } };
+  // Die gezeichnete Box IST die (von widenObForSweep aufgezogene) OB-Box — [obBottom, obTop],
+  // unabhängig von dir.
+  function setup(dir, obStartTime, top, bottom) {
+    return { dir, obStartTime, obTop: top, obBottom: bottom };
   }
 
   it("findet ein Setup, dessen OB-Box Zeit und Preis trifft", () => {
@@ -48,8 +44,8 @@ describe("matchTradeSetup", () => {
     expect(matchTradeSetup(setups, 1.15, 150, { ...opts, showTradeSetupsShort: false })).toBeNull();
   });
 
-  it("respektiert den Replay-Cutoff (fractal.pivotTime nach replayUntil = unsichtbar)", () => {
-    const setups = [setup(1, 100, 1.2, 1.1, 100)];
+  it("respektiert den Replay-Cutoff (obStartTime nach replayUntil = unsichtbar)", () => {
+    const setups = [setup(1, 100, 1.2, 1.1)];
     expect(matchTradeSetup(setups, 1.15, 150, { ...opts, replayUntil: 50 })).toBeNull();
     expect(matchTradeSetup(setups, 1.15, 150, { ...opts, replayUntil: 150 })).toBe(setups[0]);
   });

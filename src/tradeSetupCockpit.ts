@@ -30,9 +30,6 @@ export interface CockpitState {
   m5Setup: {
     dir: 1 | -1;
     label: string;
-    // "A" = eigenes bestätigtes Protected-Pivot, "B" = fractal===ls (Chat 2026-07-26: "möchte es
-    // visuell unterschieden haben"), siehe pathType in tradeSetup.js.
-    pathType: "A" | "B";
     // 1..n je Richtung, nur bei aktiver Trade-Setups-Historie gesetzt (siehe computeTradeSetups in
     // PriceChart.vue) — sonst null. Als "#x" ans Kartenlabel angehängt, damit sich die Karte
     // eindeutig der passenden OB-Box im Chart zuordnen lässt (Chat 2026-07-27).
@@ -131,7 +128,6 @@ export function computeCockpitState(
     ? {
         dir: last.dir as 1 | -1,
         label: last.label as string,
-        pathType: last.pathType as "A" | "B",
         setupNumber: (last.setupNumber ?? null) as number | null,
         lsPrice: last.ls.price as number,
         lsPivotTime: last.ls.pivotTime as number | undefined,

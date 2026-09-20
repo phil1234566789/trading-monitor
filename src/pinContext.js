@@ -269,7 +269,7 @@ export async function addPinRsiDivergenceEntry(instrument, divergence, note) {
 // "Pin-Kontext: live erkannte Trade-Setup-Box pinnen können") — die vom TSC live erkannten Setup-
 // Boxen (tradeSetupsMetadata) haben, solange kein Trade daraus geloggt wurde, meist noch keine
 // eigene trade_setups-Zeile; findOrCreateTradeSetupId legt sie bei Bedarf per Natural-Key
-// (instrument, direction, fractal_pivot_time) selbst an, danach ganz normaler kind="trade_setup"-
+// (instrument, direction, ob_start_time) selbst an, danach ganz normaler kind="trade_setup"-
 // Pin wie bei einem bereits verlinkten Setup. setup = { instrument, direction, setup } aus
 // priceChartHitTest.js' tsc_setup-Kandidat (setup selbst im Rohformat aus tradeSetupsMetadata).
 export async function addPinTscSetupEntry({ instrument, direction, setup }, note) {

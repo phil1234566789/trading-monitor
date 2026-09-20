@@ -7,7 +7,7 @@
 // 08.07.2026 11:50: ein 1H-LS hält als Setup, obwohl zwischenzeitlich M5-Kerzen dagegen schließen —
 // das funktioniert nur über Path A, weil dort keine closesBeyondLevel-Prüfung läuft).
 import { describe, expect, it } from "vitest";
-import { detectTradeSetups, tradeSetupObBoxBounds } from "../src/tradeSetup.js";
+import { detectTradeSetups } from "../src/tradeSetup.js";
 
 const params = {
   graceSec: 300,
@@ -94,19 +94,41 @@ describe("detectTradeSetups — Path B (sofortige Bestätigung ohne separates Fr
   });
 
   it("meldet dasselbe (ls, ob)-Paar nicht doppelt, wenn Path A UND Path B zutreffen", () => {
-    // fractal ist selbst das LS-Level (touched=false macht es zum gültigen Path-A-Fraktal-
-    // Kandidaten UND Path B würde theoretisch dasselbe ls erneut finden, wenn es in h1/m5Levels
-    // separat als touched-Level vorläge) — hier stattdessen der einfachere Fall: fractal und ls
-    // sind identisch bepreist/zeitlich, sodass beide Pfade denselben setupKey erzeugen.
+    // Path A: shared als Fraktal (touched=false), lsForPathA als LS.
+    // Path B: lsForPathA selbst (touched=true) direkt als LS, mit demselben OB.
     const shared = lowLevel({ price: 1.3, pivotTime: 500, touched: false, touchedTime: 500 });
     const lsForPathA = lowLevel({ price: 1.31, pivotTime: 400, touchedTime: 450 });
     const setupObs = [bullOb({ startTime: 600 })];
     const m5Candles = [];
-    // Path A: shared als Fraktal (touched=false), lsForPathA als LS.
-    // Path B: lsForPathA selbst (touched=true) direkt als LS, mit demselben OB.
     const setups = detectTradeSetups(-1, [shared], [lsForPathA], [shared], setupObs, params, m5Candles);
     expect(setups).toHaveLength(1); // nicht 2 (einmal je Pfad)
     expect(setups[0].fractal).toBe(shared); // Path A gewinnt (bringt den echten Fraktal-Datensatz mit)
+  });
+});
+
+// Philip 2026-09-20: "sobald es erkannt worden ist, gilt es halt einfach als Trade Setup" — ein
+// OB = ein Setup, auch wenn die beiden Pfade auf VERSCHIEDENE Sweeps laufen. Vorher schlüsselte
+// die Entduplizierung auf (ls, ob) und ließ genau diesen Fall als zwei Setups durch (295 solcher
+// Paare im Bestand, 20 davon mit unterschiedlichem ls).
+describe("detectTradeSetups — ein Setup je bestätigender M5-OB", () => {
+  it("meldet denselben OB nur einmal, auch wenn Path A und Path B verschiedene Sweeps gefunden haben", () => {
+    const fractal = lowLevel({ price: 1.3, pivotTime: 500, touched: false });
+    const lsForPathA = lowLevel({ price: 1.305, pivotTime: 400, touchedTime: 450 });
+    const lsForPathB = lowLevel({ price: 1.31, pivotTime: 300, touchedTime: 480 });
+    const setupObs = [bullOb({ startTime: 600 })];
+    const setups = detectTradeSetups(-1, [fractal], [lsForPathA, lsForPathB], [fractal], setupObs, params, []);
+    expect(setups).toHaveLength(1);
+    expect(setups[0].pathType).toBe("A"); // Path A beansprucht den OB, Path B füllt nur freie
+  });
+
+  it("nimmt bei zwei Fraktalen auf denselben OB das jüngere (wie findProtectedFractal in der Deno-Kopie)", () => {
+    const frueh = lowLevel({ price: 1.3, pivotTime: 500, touched: false });
+    const spaet = lowLevel({ price: 1.301, pivotTime: 560, touched: false });
+    const ls = lowLevel({ price: 1.31, pivotTime: 400, touchedTime: 550 });
+    const setupObs = [bullOb({ startTime: 600 })];
+    const setups = detectTradeSetups(-1, [frueh, spaet], [ls], [frueh, spaet], setupObs, params, []);
+    expect(setups).toHaveLength(1);
+    expect(setups[0].fractal).toBe(spaet);
   });
 });
 
@@ -135,23 +157,5 @@ describe("detectTradeSetups — Short (dir=1, spiegelbildlich zu Long)", () => {
     const setupObs = [bearOb({ startTime: 90_300 })];
     const m5Candles = [{ time: 90_100, open: 1.3461, high: 1.3463, low: 1.346, close: 1.3462 }]; // Close > 1.34579
     expect(detectTradeSetups(1, [], [ls], [], setupObs, params, m5Candles)).toEqual([]);
-  });
-});
-
-// Bug-Report Philip 2026-07-29 ("Box Oberkante = OB Oberkante = FVG Unterkante, alles dasselbe"):
-// das bullische OB {top: c1.high, bottom: impulse.low} (siehe orderBlocks.js) teilt sich mit
-// seiner zugehörigen FVG GENAU eine Kante — c1.high, also obTop. tradeSetupObBoxBounds() nutzte
-// für Long fälschlich obBottom (die GEGENÜBERLIEGENDE OB-Kante, tief im Docht der Impuls-Kerze —
-// hat mit der FVG nichts zu tun), für Short spiegelbildlich obTop statt obBottom. Zahlen aus dem
-// echten EURUSD-28.07.-Fall (siehe tradeSetupPipeline.test.js): Fraktal 1,13542, OB 1,13564–1,13578.
-describe("tradeSetupObBoxBounds", () => {
-  it("Long: Box-Oberkante ist obTop (= FVG-Unterkante), nicht obBottom", () => {
-    const setup = { dir: -1, fractal: { price: 1.13542 }, obTop: 1.13578, obBottom: 1.13564 };
-    expect(tradeSetupObBoxBounds(setup)).toEqual({ top: 1.13578, bottom: 1.13542 });
-  });
-
-  it("Short: Box-Unterkante ist obBottom (= FVG-Oberkante), nicht obTop", () => {
-    const setup = { dir: 1, fractal: { price: 1.34633 }, obTop: 1.3462, obBottom: 1.34605 };
-    expect(tradeSetupObBoxBounds(setup)).toEqual({ top: 1.34633, bottom: 1.34605 });
   });
 });

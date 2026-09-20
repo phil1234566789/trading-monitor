@@ -14,15 +14,12 @@ const KEINE_SKALA = Object.freeze({ anchorPrice: null, levels: [] });
 // Liefert anchorPrice (Fußpunkt des Lineals) MIT den Marken, damit die Zeichnung ihn nicht selbst
 // ein zweites Mal herleitet — sonst zeigen Fußpunkt und Marken auf zwei unabhängige Rechnungen.
 //
-// Path B liefert kein echtes Invalidierungslevel: fractal ist dort auf ls gesetzt (siehe
-// tradeSetup.js, detectTradeSetups) — das Risiko käme aus dem falschen Preis, die Skala zeichnete
-// falsche Marken. Deshalb gar nicht erst zeichnen statt sie stillschweigend zu verschieben.
+// Zeichnet seit 2026-09-20 an JEDEM Setup. Davor war Path B ausgenommen, weil dort `fractal` aufs
+// gesweepte Level statt aufs Extrem zeigte und die Marken damit falsch lagen — die Invalidierung
+// kommt jetzt pfadunabhängig aus der fernen OB-Kante (siehe deriveSetupEntryInvalidation).
 export function rScaleLevels(setup) {
-  if (setup.pathType === "B") return KEINE_SKALA;
-  // Bewusst nur setupEntry: das invalidation aus deriveSetupEntryInvalidation ist die ferne
-  // OB-Kante (Journal-Definition), 1 R misst dagegen bis zum Extrem-Fraktal.
-  const { setupEntry } = deriveSetupEntryInvalidation(setup);
-  const risk = Math.abs(setup.fractal.price - setupEntry);
+  const { setupEntry, invalidation } = deriveSetupEntryInvalidation(setup);
+  const risk = Math.abs(invalidation - setupEntry);
   if (!(risk > 0)) return KEINE_SKALA;
   const sign = setup.dir === 1 ? -1 : 1;
   return {

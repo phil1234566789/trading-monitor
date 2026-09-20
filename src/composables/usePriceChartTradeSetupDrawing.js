@@ -8,7 +8,6 @@
 // usePriceChartClaudeAnnotations.js — deshalb hier nur ein Parameter statt zwei).
 import { LiquidityLinePrimitive, bullBearLabelSide, formatLsLabel } from "../liquidity.js";
 import { OrderBlockPrimitive } from "../orderBlocks.js";
-import { tradeSetupObBoxBounds } from "../tradeSetup.js";
 import { rScaleLevels } from "../rScale.js";
 import { RScalePrimitive } from "../rScaleRendering.js";
 import { cssColor, cssColorScaled } from "../chartColors.js";
@@ -47,26 +46,32 @@ export function usePriceChartTradeSetupDrawing() {
     const nowSec = replayUntil ?? Math.floor(Date.now() / 1000);
 
     for (const setup of tradeSetups) {
-      if (replayUntil != null && setup.fractal.pivotTime > replayUntil) continue;
+      // obStartTime statt fractal.pivotTime als Replay-Cutoff: der bestätigende OB markiert den
+      // Zeitpunkt, an dem das Setup überhaupt existiert — dieselbe Regel wie die Sortierung in
+      // getTradeSetups (db.ts).
+      if (replayUntil != null && setup.obStartTime > replayUntil) continue;
       if (setup.dir === 1 && !showTradeSetupsShort) continue;
       if (setup.dir === -1 && !showTradeSetupsLong) continue;
       const key = setup.dir === 1 ? "tradeSetupShort" : "tradeSetupLong";
       const lsColor = cssColor(key);
-      const { top, bottom } = tradeSetupObBoxBounds(setup);
+      // Die gezeichnete Box IST die von widenObForSweep aufgezogene OB-Box (siehe tradeSetup.js) —
+      // ihre ferne Kante ist zugleich die Invalidierung des Setups.
+      const top = setup.obTop;
+      const bottom = setup.obBottom;
 
       const fractalLine = new LiquidityLinePrimitive(
         setup.fractal,
         {
           color: cssColor("tradeSetupProtected"),
           lineWidth: lineWidth("tradeSetupProtected"),
-          // Bei Path B ist fractal === ls (identischer Pivot, siehe pathType in tradeSetup.js) — die
-          // Linie liegt exakt auf der LS-Linie darunter, ein eigenes Preislabel hier wäre nur eine
-          // zweite Kopie desselben Preises an derselben Stelle (Bug-Report Philip 2026-07-27: "Label
-          // des LQ-Sweeps ist immer noch doppelt"). Nur bei Path A anzeigen, wo fractal ein eigener,
-          // vom LS verschiedener Pivot ist.
+          // Ohne eigenes bestätigtes Fraktal fällt `fractal` auf `ls` zurück (siehe tradeSetup.js) —
+          // die Linie liegt dann exakt auf der LS-Linie darunter, ein eigenes Preislabel wäre nur
+          // eine zweite Kopie desselben Preises an derselben Stelle (Bug-Report Philip 2026-07-27:
+          // "Label des LQ-Sweeps ist immer noch doppelt"). Direkt am Objekt geprüft statt über
+          // pathType, das seit 2026-09-20 nichts mehr steuert.
           // "PP "-Präfix + Positionierung wie bei der LS-Linie (Chat 2026-07-27: "genauso behandeln
           // wie die LS") — selbe end-above/end-below-Logik + Präfix-Zahlformat.
-          label: showLiquidityDebug && setup.pathType !== "B" ? `PP ${formatPrice(setup.fractal.price)}` : null,
+          label: showLiquidityDebug && setup.fractal !== setup.ls ? `PP ${formatPrice(setup.fractal.price)}` : null,
           labelSide: bullBearLabelSide(setup.dir === 1),
         },
         candles,
@@ -96,13 +101,12 @@ export function usePriceChartTradeSetupDrawing() {
       // computeTradeSetups in usePriceChartTradeSetups.js) — nur gesetzt, wenn Trade-Setups-Historie
       // aktiv ist (mehrere Boxen je Richtung gleichzeitig sichtbar), sonst überflüssig.
       const numberSuffix = setup.setupNumber != null ? ` #${setup.setupNumber}` : "";
-      // "Long"/"Short" + Pfad-Kürzel + Nummer als erste Zeile (A = eigenes bestätigtes Protected-
-      // Pivot, B = fractal===ls, siehe pathType in tradeSetup.js). Danach je eine Zeile Oberkante/
-      // Unterkante der OB, NUR im Debug-Modus, untereinander statt mit "/" getrennt (Bug-Report
-      // Philip: "dann weiß ich, dass die obere Zahl für die Oberkante ist"). NUR hier angehängt,
-      // NICHT in setup.label — die TSC-Karte baut ihren eigenen "Typ A/B #x"-Text separat aus
-      // pathType/setupNumber.
-      const obLabelLines = [`${setup.label} ${setup.pathType}${numberSuffix}`];
+      // "Long"/"Short" + Nummer als erste Zeile. Das Pfad-Kürzel ("A"/"B") ist hier am 20.09.2026
+      // rausgeflogen — Philip: "fachlich gesehen ist mir scheissegal, ob Path A oder B. Ich brauche
+      // diese Info nicht." Danach je eine Zeile Oberkante/Unterkante der OB, NUR im Debug-Modus,
+      // untereinander statt mit "/" getrennt (Bug-Report Philip: "dann weiß ich, dass die obere
+      // Zahl für die Oberkante ist").
+      const obLabelLines = [`${setup.label}${numberSuffix}`];
       if (showLiquidityDebug) obLabelLines.push(formatPrice(top), formatPrice(bottom));
       const obBox = new OrderBlockPrimitive(
         // touched: true erzwingt die feste Box-Breite, siehe Kommentar bei
@@ -134,7 +138,7 @@ export function usePriceChartTradeSetupDrawing() {
       );
 
       // R-Skala (PLAN-dr-statistik-ui.md, Stufe 1) — Lineal am OB-Startzeitpunkt, siehe
-      // rScaleRendering.js. Ein Primitive für alle Marken zusammen, leere Liste bei Path B.
+      // rScaleRendering.js. Ein Primitive für alle Marken zusammen.
       const { anchorPrice, levels } = showRScale ? rScaleLevels(setup) : { levels: [] };
       const rScale = levels.length
         ? [new RScalePrimitive({ startTime: setup.obStartTime, anchorPrice, levels }, candles)]

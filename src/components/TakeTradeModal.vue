@@ -50,7 +50,7 @@ async function submit() {
   <MetadataPanel title="🎯 Setup als Trade übernehmen" @close="emit('close')">
     <div class="take-trade-summary">
       <span class="take-trade-direction" :class="direction">{{ direction === "short" ? "Short" : "Long" }}</span>
-      <span>{{ setup.label }} Typ {{ setup.pathType }}</span>
+      <span>{{ setup.label }}</span>
     </div>
     <div class="take-trade-levels">
       <div><span class="take-trade-label">Setup-Entry (These)</span> {{ fmtPrice(levels.setupEntry, precision) }}</div>

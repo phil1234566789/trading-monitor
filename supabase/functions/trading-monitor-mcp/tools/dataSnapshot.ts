@@ -43,19 +43,22 @@ const SETUP_H1_CANDLE_COUNT = 100; // ~4 Tage — deutlich mehr als maxLookbackS
 function curateLiveTradeSetup(direction: "long" | "short", setup: DetectedTradeSetup | null, asOfSec: number, persistedIdByKey: Map<string, number>) {
   if (!setup) return null;
   // ageHours bezieht sich auf obStartTime (Bestätigungszeitpunkt des Setups), NICHT auf
-  // fractal.pivotTime: bei einem Path-B-Setup (siehe tradeSetup.ts) ist fractal === ls, dessen
+  // fractal.pivotTime: ohne bestätigtes Fraktal ist fractal === ls (siehe tradeSetup.ts), dessen
   // Pivot beliebig alt sein kann, obwohl der bestätigende OB gerade erst entstanden ist.
   const ageHours = (asOfSec - setup.obStartTime) / 3600;
   if (ageHours > SETUP_MAX_AGE_HOURS) return null;
   return {
-    // id nur gesetzt, wenn poi-watcher dasselbe Setup (Key: direction+fractal_pivot_time, wie
+    // id nur gesetzt, wenn poi-watcher dasselbe Setup (Key: direction+ob_start_time, wie
     // dessen eigener Dedup-Check) bereits selbst persistiert hat — der dokumentierte Weg fürs
     // Verlinken (create_trade/update_dealing_range) bleibt get_trade_setups (siehe trades.ts),
     // hier nur Komfort-Match. Kein obZoneId-Feld (mehr) — add_trade_confirmation(kind='ob')/
     // add_pin_entry(kind='m5_ob') lösen die OB-Zone selbst per Find-or-Create aus obTop/obBottom/
     // obStartTime auf (idempotent), eine ID hier vorab aufzulösen hätte für jeden Snapshot-Call den
     // kompletten 5M-ob_zones-Bestand gebraucht, ohne dass sie irgendwo tatsächlich gebraucht wird.
-    id: persistedIdByKey.get(`${direction}_${setup.fractal.pivotTime}`) ?? null,
+    id: persistedIdByKey.get(`${direction}_${setup.obStartTime}`) ?? null,
+    // Der Preis, der halten muss — ferne OB-Kante, identisch mit der generierten Spalte
+    // trade_setups.invalidation (siehe deriveSetupEntryInvalidation in der JS-Kopie).
+    invalidation: direction === "short" ? setup.obTop : setup.obBottom,
     fractalPrice: setup.fractal.price,
     fractalPivotTime: setup.fractal.pivotTime,
     lsPrice: setup.ls.price,

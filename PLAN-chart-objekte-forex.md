@@ -177,9 +177,11 @@ Noch nicht entschieden, nur skizziert:
      Zeit-Werte.
    - Der eigentliche Grund, `trade_setup_id` zu behalten, ist **nicht** die Sweep-Mehrfachreferenz,
      sondern dass die gezeichnete Setup-Box NICHT die reine OB-Box ist: `tradeSetupObBoxBounds()`
-     (`src/tradeSetup.js:221-225`) mischt die Fraktal-Preis-Kante mit nur EINER OB-Kante. Ohne
-     `trade_setup_id` ließe sich diese exakte Trigger-Box nicht mehr rekonstruieren, nur noch die
-     generische volle OB-Zone.
+     mischte die Fraktal-Preis-Kante mit nur EINER OB-Kante. Ohne `trade_setup_id` ließe sich diese
+     exakte Trigger-Box nicht mehr rekonstruieren, nur noch die generische volle OB-Zone.
+     (Seit 20.09.2026 hinfällig: die Setup-Box IST die von `widenObForSweep` aufgezogene OB-Box,
+     `tradeSetupObBoxBounds()` entfallen. `trade_setup_id` bleibt trotzdem — es hängen Journal und
+     Pins daran.)
    - Philips Bedingung dafür erfüllt: **eine Dealing Range muss trotzdem eine einzelne OB direkt
      verlinken können**, unabhängig vom Trade-Setup — das übernimmt Punkt 3 (`trade_confirmations.
      kind='ob'` → `ob_zone_id`-FK), da `trade_confirmations` laut bestehendem Schema bereits

@@ -1,10 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { rScaleLevels, R_SCALE_STEPS } from "../src/rScale.js";
 
-// Short: nahe OB-Kante = obBottom, Risiko = Abstand zum Fraktal darüber, Marken laufen nach UNTEN.
-const shortSetup = { dir: 1, pathType: "A", obTop: 1.31, obBottom: 1.3, fractal: { price: 1.32 } };
-// Long: nahe OB-Kante = obTop, Marken laufen nach OBEN.
-const longSetup = { dir: -1, pathType: "A", obTop: 1.3, obBottom: 1.29, fractal: { price: 1.28 } };
+// Short: nahe OB-Kante = obBottom, Risiko = Abstand zur Invalidierung (obTop) darüber, Marken
+// laufen nach UNTEN.
+const shortSetup = { dir: 1, obTop: 1.32, obBottom: 1.3 };
+// Long: nahe OB-Kante = obTop, Invalidierung ist obBottom, Marken laufen nach OBEN.
+const longSetup = { dir: -1, obTop: 1.3, obBottom: 1.28 };
 
 describe("rScaleLevels", () => {
   it("misst Short ab der OB-Unterkante nach unten", () => {
@@ -23,13 +24,7 @@ describe("rScaleLevels", () => {
     expect(levels[4].price).toBeCloseTo(1.42, 10);
   });
 
-  // Bei Path B ist fractal auf ls gesetzt (siehe tradeSetup.js) — das Risiko käme aus dem falschen
-  // Preis, die Skala zeichnete falsche Marken.
-  it("zeichnet bei Path B gar nichts", () => {
-    expect(rScaleLevels({ ...shortSetup, pathType: "B" }).levels).toEqual([]);
-  });
-
-  it("zeichnet nichts bei Risiko 0 (Fraktal genau auf der OB-Kante)", () => {
-    expect(rScaleLevels({ ...shortSetup, fractal: { price: shortSetup.obBottom } }).levels).toEqual([]);
+  it("zeichnet nichts bei Risiko 0 (beide OB-Kanten auf demselben Preis)", () => {
+    expect(rScaleLevels({ ...shortSetup, obTop: shortSetup.obBottom }).levels).toEqual([]);
   });
 });

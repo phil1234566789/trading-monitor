@@ -154,8 +154,8 @@ describe("Trade-Setup-Pipeline (echte M5-/H1-Kerzen-Fixtures, wie computeTradeSe
     // fractal === ls (Path B, kein separat bestätigtes Fraktal) vs. fractal !== ls (Path A, echtes
     // Protected-Pivot) — dokumentiert/prüft, über welchen Pfad das Setup gefunden wurde.
     expect(match.fractal === match.ls).toBe(expected.isPathB);
-    // pathType ("A"/"B", Chat 2026-07-26) speist die "Typ A/B"-Beschriftung in TSC/OB-Label —
-    // muss mit derselben fractal===ls-Unterscheidung übereinstimmen.
+    // pathType ("A"/"B") ist seit 20.09.2026 reine Debug-Info und steuert nichts mehr — muss aber
+    // weiterhin mit derselben fractal===ls-Unterscheidung übereinstimmen.
     expect(match.pathType).toBe(expected.isPathB ? "B" : "A");
   });
 });

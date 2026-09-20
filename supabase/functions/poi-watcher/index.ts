@@ -824,30 +824,64 @@ Deno.serve(async (req) => {
           detectTradeSetup(-1, m5Lows, h1LowsSetup, m5Lows, setupObs, tradeSetupParams, m5Candles),
         ].filter((s): s is NonNullable<typeof s> => s !== null);
 
-        const { data: existingSetupRows, error: setupSelectError } = await supabase
-          .from("trade_setups")
-          .select("direction, fractal_pivot_time")
-          .eq("instrument", cfg.instrument);
-        if (setupSelectError) throw setupSelectError;
-
-        const existingSetupKeys = new Set(
-          (existingSetupRows ?? []).map(
-            (r) => `${r.direction}_${Math.floor(new Date(r.fractal_pivot_time).getTime() / 1000)}`,
-          ),
-        );
+        // Schlüssel ist seit 2026-09-20 der bestätigende OB, nicht mehr fractal_pivot_time — ein
+        // Setup ist durch ihn identifiziert, nicht durch den Pfad, über den es gefunden wurde
+        // (siehe detectTradeSetup). Der Unique-Index deckelt Duplikate damit schon in der DB; die
+        // frühere ob_zone_id-Alarmsperre ist dadurch ersatzlos entfallen.
+        //
+        // Gefragt wird NUR nach den gerade erkannten OBs (höchstens zwei), nicht nach dem ganzen
+        // Bestand: PostgREST deckelt eine Antwort server-seitig bei 1000 Zeilen, ohne Fehler (siehe
+        // CLAUDE.md). GBPUSD stand am 20.09. bei 930 Zeilen und wuchs ~4/Tag — ein Voll-Select
+        // hätte ab Anfang Oktober stillschweigend die JÜNGSTEN Zeilen verloren, und genau die
+        // entscheiden hier: fehlt eine, gilt ihr Setup als nie alarmiert und Telegram feuert ein
+        // zweites Mal.
+        const notifiedByKey = new Map<string, boolean>();
         const hasAnySetupRow = { short: false, long: false };
-        for (const r of existingSetupRows ?? []) hasAnySetupRow[r.direction as "short" | "long"] = true;
+        if (detected.length > 0) {
+          const { data: existingSetupRows, error: setupSelectError } = await supabase
+            .from("trade_setups")
+            .select("direction, ob_start_time, notified")
+            .eq("instrument", cfg.instrument)
+            .in("ob_start_time", detected.map((s) => new Date(s.obStartTime * 1000).toISOString()));
+          if (setupSelectError) throw setupSelectError;
+          for (const r of existingSetupRows ?? []) {
+            notifiedByKey.set(`${r.direction}_${Math.floor(new Date(r.ob_start_time).getTime() / 1000)}`, r.notified as boolean);
+          }
+
+          // Existenzfrage je Richtung — fiel früher als Nebenprodukt des Voll-Selects ab, ist aber
+          // eine andere Frage als der Dedupe oben und braucht deshalb eine eigene Abfrage.
+          for (const richtung of ["short", "long"] as const) {
+            const { data: ersteZeile, error: ersteZeileError } = await supabase
+              .from("trade_setups")
+              .select("id")
+              .eq("instrument", cfg.instrument)
+              .eq("direction", richtung)
+              .limit(1);
+            if (ersteZeileError) throw ersteZeileError;
+            hasAnySetupRow[richtung] = (ersteZeile ?? []).length > 0;
+          }
+        }
 
         let tradeSetupNotifiedCount = 0;
         for (const setup of detected) {
           const direction: "short" | "long" = setup.dir === 1 ? "short" : "long";
-          const key = `${direction}_${setup.fractal.pivotTime}`;
-          if (existingSetupKeys.has(key)) continue; // schon erkannt/gespeichert — ein Fraktal bricht nie "zurück"
+          const key = `${direction}_${setup.obStartTime}`;
+          // Schon alarmiert = fertig. Eine vorhandene, aber NIE alarmierte Zeile bleibt dagegen
+          // alarmfähig: entsteht ein Setup außerhalb des Alarmfensters, soll es den Alarm beim
+          // ersten Tick im Fenster noch bekommen (früher kam der übers Path-A-Zwillingsexemplar
+          // ~10min später, das es jetzt nicht mehr gibt — im Abnahmelauf betraf das 5 Zonen, z.B.
+          // #175 um 04:50 stumm, #181 um 07:10 der echte Alarm). maxLookbackSec (6h) deckelt, wie
+          // lange ein Setup so nachalarmieren kann.
+          if (notifiedByKey.get(key) === true) continue;
 
           // Erstes Setup überhaupt für dieses Instrument+Richtung (kein "existing" überhaupt)
           // ist ein Alt-Bestand direkt nach Deploy, kein "gerade eben" — kein Alarm, analog zum
           // ob_zones/liquidity_levels-Verhalten beim allerersten Lauf.
-          const shouldAlert = hasAnySetupRow[direction] && alarmActive;
+          const alertNow = hasAnySetupRow[direction] && alarmActive;
+          // Ferne OB-Kante = das von widenObForSweep aufgezogene Sweep-Extrem (siehe
+          // deriveSetupEntryInvalidation in der JS-Kopie) — in der DB die generierte Spalte
+          // trade_setups.invalidation, hier fürs Telegram nochmal direkt aus dem Setup.
+          const invalidation = direction === "short" ? setup.obTop : setup.obBottom;
 
           // Herkunft und Alter des Sweeps — beides wird persistiert und geht in den Alarmtext,
           // weil die Auswertung analysis/dr-reichweite/ (19.09.2026) beide als Qualitätsmerkmale
@@ -866,7 +900,7 @@ Deno.serve(async (req) => {
           const oppositeDir = direction === "short" ? "long" : "short";
           const { data: oppRows, error: oppError } = await supabase
             .from("trade_setups")
-            .select("fractal_price, ob_start_time")
+            .select("invalidation, ob_start_time")
             .eq("instrument", cfg.instrument)
             .eq("direction", oppositeDir)
             .gte("ob_start_time", new Date((setup.obStartTime - 24 * 3600) * 1000).toISOString())
@@ -877,7 +911,7 @@ Deno.serve(async (req) => {
           const liveOpposite = (oppRows ?? []).some((o) => {
             const fromSec = Math.floor(new Date(o.ob_start_time).getTime() / 1000);
             const invalidiert = m5Candles.some(
-              (c) => c.time >= fromSec && (oppositeDir === "long" ? c.low <= o.fractal_price : c.high >= o.fractal_price),
+              (c) => c.time >= fromSec && (oppositeDir === "long" ? c.low <= o.invalidation : c.high >= o.invalidation),
             );
             return !invalidiert;
           });
@@ -910,31 +944,6 @@ Deno.serve(async (req) => {
             .single();
           if (obZoneUpsertError) throw obZoneUpsertError;
 
-          // Doppelalarm-Sperre: derselbe M5-OB erzeugt regelmäßig ZWEI Setup-Zeilen — Path B
-          // feuert sofort nach dem Sweep, Path A rund 10 Minuten später, sobald das
-          // period-5-Fraktal bestätigt ist. Beide tragen ein anderes fractal_pivot_time, der
-          // Dedupe-Key des Upserts greift also nicht, und es gingen zwei Telegrams für dieselbe
-          // Zone raus (gemessen 19.09.2026: 63 von 71 Path-B-Zeilen haben genau so einen
-          // Zwilling, Abstand Median 10 Minuten). Die zweite Zeile wird weiterhin geschrieben —
-          // sie trägt das korrekte Extrem-Fraktal, das die DR-Auswertung braucht —, nur der
-          // Alarm entfällt. Bewusst KEIN Unique-Index auf ob_zone_id: die 120 bestehenden
-          // Duplikat-Zeilen würden ihn scheitern lassen, und an trade_setups.id hängen vier
-          // Fremdschlüssel, zwei davon mit on delete cascade.
-          // `notified: true` ist Pflicht, nicht Kosmetik: ohne diese Bedingung sperrt eine frühere
-          // Zeile, die selbst NIE alarmiert hat (z.B. außerhalb des Alarmfensters entstanden), den
-          // späteren echten Alarm — die Zone verlöre ihren einzigen. Im Abnahmelauf gegen den
-          // Bestand traf das 5 Zonen (z.B. #175 um 04:50 stumm, #181 um 07:10 der echte Alarm).
-          const { data: sameObRows, error: sameObError } = await supabase
-            .from("trade_setups")
-            .select("id")
-            .eq("instrument", cfg.instrument)
-            .eq("direction", direction)
-            .eq("ob_zone_id", setupObZone.id)
-            .eq("notified", true)
-            .limit(1);
-          if (sameObError) throw sameObError;
-          const alertNow = shouldAlert && (sameObRows ?? []).length === 0;
-
           const { data: setupRow, error: setupUpsertError } = await supabase
             .from("trade_setups")
             .upsert(
@@ -955,7 +964,7 @@ Deno.serve(async (req) => {
                 notified: alertNow,
                 notified_at: alertNow ? new Date().toISOString() : null,
               },
-              { onConflict: "instrument,direction,fractal_pivot_time" },
+              { onConflict: "instrument,direction,ob_start_time" },
             )
             .select("id")
             .single();
@@ -971,7 +980,9 @@ Deno.serve(async (req) => {
             const warnung = liveOpposite ? `\n⚠️ Gegenläufige Dealing Range noch aktiv${lsFromH1 ? "" : " — und dieses Setup hat nur einen M5-Sweep"}` : "";
             await sendTelegram(
               `🎯 ${cfg.instrument} Trade-Setup: ${label}\n` +
-                `Protected: ${fmt(setup.fractal.price, cfg.pricePrecision)}\n` +
+                // Seit 2026-09-20 die Invalidierung (ferne OB-Kante) statt fractal.price: ohne
+                // bestätigtes Protected-Pivot zeigte das aufs gesweepte Level statt aufs Extrem.
+                `Invalidierung: ${fmt(invalidation, cfg.pricePrecision)}\n` +
                 `LS-Sweep: ${fmt(setup.ls.price, cfg.pricePrecision)} (${lsFromH1 ? "1H" : "M5"}, ${ageText})\n` +
                 `M5-OB: ${fmt(setup.obBottom, cfg.pricePrecision)} – ${fmt(setup.obTop, cfg.pricePrecision)}\n` +
                 `Preis: ${fmt(currentPrice, cfg.pricePrecision)}` +

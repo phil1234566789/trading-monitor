@@ -210,7 +210,7 @@ export function registerReadTools(server: McpServer) {
         "gedacht ist, nicht nur für einen Live-Stand.",
       inputSchema: {
         instrument: INSTRUMENT,
-        fromSec: z.number().optional().describe("Unix-Sekunden, untere Grenze für fractal_pivot_time"),
+        fromSec: z.number().optional().describe("Unix-Sekunden, untere Grenze für ob_start_time (Bestätigungszeitpunkt des Setups)"),
         limit: z.number().int().positive().max(500).default(2).describe("Default 2 (die letzten 2 reichen für den Normalfall) — für eine breitere Abfrage explizit höher setzen"),
         replayUntilSec: z.number().optional().describe("Unix-Sekunden — nur Setups, deren created_at (Erkennungszeitpunkt) bis zu diesem Zeitpunkt lag (Replay-Simulation)"),
       },
