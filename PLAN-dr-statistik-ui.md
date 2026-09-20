@@ -14,9 +14,20 @@ Zu einer **laufenden** Dealing Range: wie sich vergleichbare DRs historisch verh
 Philip will **beides** nebeneinander, nicht eins von beidem:
 
 1. **Die R-Leiter** — „wie oft wurde 1 R / 2 R / 3 R erreicht, bevor die DR invalidierte".
-   Gilt für jede DR gleichermaßen, weil sie am eigenen Risiko normiert ist.
-2. **Die Pip-Leiter, aufgeteilt nach dem Risiko der DR** — „wie oft wurden 10 / 15 / 20 Pips
-   erreicht, bei DRs mit ähnlich viel Risiko wie dieser hier".
+2. **Die Pip-Leiter** — „wie oft wurden 10 / 15 / 20 Pips erreicht".
+
+**Beide gehören nach dem Risiko der DR aufgeteilt.** Auf der ersten, kleinen Stichprobe sah die
+R-Leiter noch so aus, als gälte sie für alle DRs gleich (Terzile 49 / 51 / 44 % bei 3 R) — auf 855
+stimmt das nicht: sie spreizt sogar **stärker** als die Pip-Leiter.
+
+| Spannweite über die fünf Risiko-Bänder | |
+|---|---|
+| Pip-Leiter (10 / 15 / 20 / 30 Pips) | 23 bis 28 Punkte |
+| R-Leiter (1 / 2 / 3 / 5 R) | **26 bis 36 Punkte** |
+
+Bei 2 R stehen 83 % (Risiko unter 3 Pips) gegen 50 % (über 10 Pips). Die Begründung für die
+R-Leiter ist also nicht mehr „sie verallgemeinert" — sondern schlicht, dass R die Einheit ist, in
+der eine Position gesized wird. Beide Leitern sind nützlich, beide brauchen die Gruppierung.
 
 Philips Begründung für die zweite: *„a) die DR ist eng, dann sinkt die Wahrscheinlichkeit für ne
 weite Strecke über 15 Pips. b) Weite DR, ok 61 % Chance auf 15 Pips, kann man mal wagen."* Und zur
@@ -24,20 +35,19 @@ Leitkennzahl: *„mir ist doch egal wie weit die Pipstrecken gehen, ich will am 
 und den Gewinn mitnehmen. Ich will ne gute Winrate von Dealing Ranges."* Bei rund 15 Pips nimmt er
 TP1 — deshalb reicht die Reihe von 10 bis 40.
 
-**Warum die Aufteilung zwingend ist:** ungeteilt wäre die Pip-Leiter irreführend. „≥ 15 Pips" liegt
-über alle 855 DRs bei 61 %, bei den engsten aber bei 45 % und bei den weitesten bei 73 %. Der
-Durchschnitt trifft auf keine einzelne DR zu. In R verschwindet die Spreizung nicht, sie **dreht
-sich um** — und genau deshalb braucht es beide Leitern.
+**Warum die Aufteilung zwingend ist:** ungeteilt ist jede der beiden Leitern irreführend.
+„≥ 15 Pips" liegt über alle 855 DRs bei 61 %, bei den engsten aber bei 45 % und bei den weitesten
+bei 73 %. Der Durchschnitt trifft auf keine einzelne DR zu. In R **dreht sich die Reihenfolge um**
+(83 % bei 2 R für die engsten gegen 50 % für die weitesten) — und genau deshalb braucht es beide
+Leitern, jede mit ihrer Gruppierung.
 
 ## Die Zahlen (Stand 20.09.2026, n=855)
 
-### R-Leiter, ungeteilt
+Die Gesamtzeile als Bezugspunkt: über alle 855 DRs 76 / 61 / 49 / 36 % bei 10 / 15 / 20 / 30 Pips
+und 90 / 72 / 58 / 39 % bei 1 / 2 / 3 / 5 R. Angezeigt wird aber immer die Zeile des Bandes, in das
+die laufende DR fällt:
 
-| | 1 R | 2 R | 3 R | 4 R | 5 R |
-|---|---|---|---|---|---|
-| alle 855 | 90 % | 72 % | 58 % | 46 % | 39 % |
-
-### Pip-Leiter nach festem Risiko-Band
+### Beide Leitern nach festem Risiko-Band
 
 | Band | n | 10 P | 15 P | 20 P | 25 P | 30 P | 40 P | 1 R | 2 R | 3 R | 5 R |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -134,9 +144,8 @@ wäre durch nichts gedeckt.
 
 1. Serverseitige Messung: Tabelle, Forward-Walk, Backfill, Fortschreibung in `poi-watcher`.
 2. Aggregations-Endpunkt mit beiden Leitern und `n`.
-3. R-Leiter im TSC — die einfachste Anzeige, keine Gruppierung nötig.
-4. Pip-Leiter je Risiko-Band daneben.
-5. Chart-Ticks und die `find_targets`-Anreicherung.
+3. Beide Leitern im TSC, je nach Risiko-Band der laufenden DR.
+4. Chart-Ticks und die `find_targets`-Anreicherung.
 
 ## Grenzen, die in die Anzeige gehören
 
