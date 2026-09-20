@@ -78,17 +78,61 @@ statt Prozent), damit ein späterer feinerer Schnitt nicht stillschweigend darun
 
 ### Ein zweiter Schnitt ist jetzt auch möglich
 
-| Gruppe | n | 10 P | 15 P | 20 P | 30 P | 2 R |
-|---|---|---|---|---|---|---|
-| 1H-Sweep | 98 | 93 % | 83 % | 70 % | 53 % | 74 % |
-| M5-Sweep, kein lebender Gegner | 525 | 80 % | 64 % | 50 % | 38 % | 74 % |
-| M5-Sweep gegen eine lebende M5-Gegen-DR | 216 | 56 % | 44 % | 36 % | 25 % | 64 % |
+| Gruppe | n | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P | 2 R | 3 R | 4 R | 5 R | 6 R |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1H-Sweep | 98 | 93 % | 83 % | 70 % | 62 % | 53 % | 43 % | 37 % | 74 % | 64 % | 53 % | 43 % | 35 % |
+| M5-Sweep, kein lebender Gegner | 525 | 80 % | 64 % | 50 % | 43 % | 38 % | 34 % | 31 % | 74 % | 59 % | 48 % | 41 % | 35 % |
+| M5-Sweep gegen eine lebende M5-Gegen-DR | 216 | 56 % | 44 % | 36 % | 29 % | 25 % | 22 % | 19 % | 64 % | 51 % | 39 % | 34 % | 27 % |
+| **alle** | **855** | **76 %** | **61 %** | **49 %** | **41 %** | **36 %** | **32 %** | **29 %** | **72 %** | **58 %** | **46 %** | **39 %** | **33 %** |
 
 Diese Dreiteilung ist der informativste verfügbare Schnitt und alle drei Gruppen liegen deutlich
 über 50. Sie kombiniert die zwei Merkmale, die sich als wirksam erwiesen haben. **Nicht** nach
 Trend schneiden — der 1H-Trend trennt nachweislich nicht (424 zu 427, Bootstrap-Intervall über
 null). Sweep-Alter wäre der stärkste Filter überhaupt (Major: 100 % auf 10 Pips), ist aber mit
 n=28 unter der Schwelle und mit 3 % aller DRs zu selten für eine eigene Zeile.
+
+### Erwartungswert je Ziel — und warum die Anzeige nicht empfehlen soll
+
+Dieselben Bänder, aber statt der Trefferquote der Erwartungswert in R (Treffer zählt +RR,
+Invalidierung −1, RR bei 10 gedeckelt):
+
+| Band | n | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P | 2 R | 3 R | 4 R | 5 R | 6 R |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| unter 3 Pips | 136 | 2,28 | **2,29** | 2,08 | 1,89 | 1,59 | 1,59 | 1,28 | 1,49 | 1,94 | 2,12 | 2,35 | **2,45** |
+| 3–5 Pips | 247 | 1,65 | 1,68 | 1,66 | 1,62 | **1,78** | 1,67 | 1,72 | 1,44 | 1,61 | 1,65 | 1,67 | **1,73** |
+| 5–7 Pips | 184 | 1,18 | 1,34 | 1,38 | 1,40 | 1,44 | 1,45 | **1,58** | 1,27 | 1,34 | 1,33 | 1,46 | **1,51** |
+| 7–10 Pips | 174 | 0,71 | 0,88 | 0,87 | 0,91 | **1,03** | 0,94 | 0,97 | 0,81 | 0,93 | **0,94** | 0,91 | 0,71 |
+| über 10 Pips | 114 | 0,51 | 0,58 | 0,57 | 0,72 | 0,64 | 0,70 | **0,72** | 0,60 | 0,67 | **0,70** | 0,66 | 0,30 |
+| **alle** | **855** | 1,31 | **1,39** | 1,36 | 1,35 | 1,38 | 1,34 | 1,34 | 1,18 | 1,35 | 1,41 | **1,47** | 1,45 |
+
+Zwei Dinge, die daraus für die Anzeige folgen:
+
+**Innerhalb einer Zeile ist der Erwartungswert flach.** Bei 3–5 Pips Risiko liegt alles zwischen
+1,65 und 1,78, egal ob 10 oder 40 Pips angepeilt werden. Das Ziel zu optimieren bringt also fast
+nichts — dasselbe Ergebnis wie bei den `find_targets`-Auswahlregeln. Die Anzeige soll deshalb
+**informieren, nicht empfehlen**.
+
+**Zwischen den Zeilen liegt Faktor 3** (2,29 gegen 0,72). Das ist keine Mechanik, sondern eine
+empirische Eigenschaft: von der engsten zur weitesten Gruppe wächst das Risiko um Faktor 5
+(2,4 → 13 Pips), die Trefferquote auf 15 Pips aber nur um Faktor 1,6 (45 → 73 %). **Die Strecke,
+die eine DR läuft, skaliert viel langsamer als ihr Risiko** — ein gutes RR kommt also aus der
+Auswahl der DR, nicht aus der Wahl des Ziels. Genau das sollte die Anzeige sichtbar machen.
+
+### Der gedeckelte Stopp repariert die weiten Bänder
+
+Ziel 20 Pips, Erwartungswert ohne und mit 6-Pip-Deckel:
+
+| Band | Stopp = Invalidierung | mit 6-Pip-Deckel |
+|---|---|---|
+| unter 3 Pips | 33 % · +2,08 R | unberührt |
+| 3–5 Pips | 44 % · +1,66 R | unberührt |
+| 5–7 Pips | 54 % · +1,38 R | 54 % · +1,44 R |
+| 7–10 Pips | 55 % · +0,87 R | 49 % · **+1,14 R** |
+| über 10 Pips | 62 % · +0,55 R | 49 % · **+1,13 R** |
+
+Bei über 10 Pips Risiko verdoppelt der Deckel den Erwartungswert: 13 Punkte Trefferquote weniger,
+dafür ein so viel besseres RR, dass es sich klar lohnt. Falls die Anzeige je einen Hinweis geben
+soll, dann diesen — nicht eine Zielempfehlung.
 
 ### Saisonalität bewusst NICHT einbauen
 
