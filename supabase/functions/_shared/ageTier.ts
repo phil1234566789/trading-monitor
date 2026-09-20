@@ -44,7 +44,7 @@ export function classifyAge(businessSeconds: number): AgeTier {
 // nach Tagen fällt. NICHT ls_touched_time->ob_start_time: das ist durch obMaxDelaySec
 // (_shared/tradeSetup.ts) algorithmisch auf 60 Minuten gedeckelt und als Merkmal damit wirkungslos.
 // Business-Stunden (Wochenende raus), damit derselbe Sweep im Chart-Label und im Telegram-Alarm
-// dieselbe Klasse ergibt.
+// dieselbe Klasse ergibt. Wird nirgends persistiert, nur zur Laufzeit fuer den Alarmtext gerechnet.
 export function computeSweepAgeHours(lsTouchedTimeSec: number, lsPivotTimeSec: number): number {
   return businessSecondsBetween(lsPivotTimeSec, lsTouchedTimeSec) / 3600;
 }

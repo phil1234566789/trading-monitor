@@ -13,5 +13,5 @@
 -- Mitentfernt: _shared/tradeSetupOutcome.ts, scripts/backfillTradeSetupOutcomes.ts, der
 -- Outcome-Insert und der Resolve-Pass in poi-watcher, inducementAgeRange/classifyInducementAge
 -- in _shared/ageTier.ts. Geblieben ist computeSweepAgeHours (jetzt in ageTier.ts) -- das Sweep-
--- Alter steht im Telegram-Alarm und in trade_setups.sweep_age_hours.
+-- Alter geht in den Telegram-Alarmtext, persistiert wird es nicht.
 drop table if exists trade_setup_outcomes;
