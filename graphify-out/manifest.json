@@ -2538,9 +2538,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/_shared/ageTier.ts": {
-    "mtime": 1789857399.1358895,
-    "seen": 1789895510.1401732,
-    "ast_hash": "75b27cf95004c2568d1f00dbcb80d582",
+    "mtime": 1789895895.9159558,
+    "seen": 1789896744.4648266,
+    "ast_hash": "f8bee47c5244a9e3c09adfa5aff6e634",
     "semantic_hash": ""
   },
   "test/ageTier.test.js": {
@@ -2820,9 +2820,9 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/messeDrReichweite.py": {
-    "mtime": 1789817728.896566,
-    "seen": 1789841132.4978755,
-    "ast_hash": "d769f8f6595aa0236ae88454dd96237d",
+    "mtime": 1789896413.7787056,
+    "seen": 1789896744.4648266,
+    "ast_hash": "35aef480e2768526b5a8ce8f04e5c8ab",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/messeFindTargets.py": {
@@ -2832,9 +2832,9 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/punkt1_result.json": {
-    "mtime": 1789817728.8705351,
-    "seen": 1789841132.4978755,
-    "ast_hash": "b210c367ba740a9b9fc280967a1f9c5d",
+    "mtime": 1789896630.8887098,
+    "seen": 1789896744.4648266,
+    "ast_hash": "fa9d91b59d4674cb3215da8ee3309718",
     "semantic_hash": ""
   },
   "supabase/migrations/20260919140000_trade_setups_ls_timeframe.sql": {
@@ -2850,21 +2850,21 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/README.md": {
-    "mtime": 1789855408.8392766,
-    "seen": 1789855477.195591,
-    "ast_hash": "69db47224d930c3de1adf105538d6f4a",
+    "mtime": 1789896739.161208,
+    "seen": 1789896744.4648266,
+    "ast_hash": "de36dfa1e24181b5ab5ef973d5f757bd",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-alter-handelszeit.txt": {
-    "mtime": 1789822609.8184679,
-    "seen": 1789841132.4998922,
-    "ast_hash": "e047f29320d98ee891b10cb9b32fec9f",
+    "mtime": 1789896671.648125,
+    "seen": 1789896744.4648266,
+    "ast_hash": "697e719aa2cf3d92acd1e545753a4f2c",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-basis.txt": {
-    "mtime": 1789821665.108711,
-    "seen": 1789841132.4998922,
-    "ast_hash": "751d5aedb71b750b95938bb81aa49165",
+    "mtime": 1789896630.8947096,
+    "seen": 1789896744.4648266,
+    "ast_hash": "667f9e4681b28f264715e39350bdd3d1",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-find-targets.txt": {
@@ -2874,21 +2874,21 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-gegenkraft.txt": {
-    "mtime": 1789821664.9881444,
-    "seen": 1789841132.4998922,
-    "ast_hash": "5d11b814b47e2f89bd624d7b5f6be5f3",
+    "mtime": 1789896671.5608609,
+    "seen": 1789896744.4648266,
+    "ast_hash": "b177d7e6bf39004ff2186068ac5faa10",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-htf-sweep.txt": {
-    "mtime": 1789821664.8306382,
-    "seen": 1789841132.4998922,
-    "ast_hash": "f0d20a751832b4027aa752370dfd191b",
+    "mtime": 1789896671.2155745,
+    "seen": 1789896744.4648266,
+    "ast_hash": "4d45fd1e1e700e0371cf2b8b8b20bbcf",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/drMerkmale.py": {
-    "mtime": 1789845699.656797,
-    "seen": 1789846301.591076,
-    "ast_hash": "9cac8f31e5f64f5efa84925f0ffd9ace",
+    "mtime": 1789896624.7643607,
+    "seen": 1789896744.4648266,
+    "ast_hash": "4a39d96826a41898376851d5e286cd19",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/filterTrend.py": {
@@ -2940,21 +2940,21 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-deckel.txt": {
-    "mtime": 1789855368.2958739,
-    "seen": 1789855477.195591,
-    "ast_hash": "96fe4912d3aa4fbd18bd9ee06d0489bc",
+    "mtime": 1789896671.9040854,
+    "seen": 1789896744.4648266,
+    "ast_hash": "3ada7554786a971d4f0673acfa242fe7",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-leiter.txt": {
-    "mtime": 1789851273.7370975,
-    "seen": 1789855477.195591,
-    "ast_hash": "5bbad487cba8d044773c4340b7c20b51",
+    "mtime": 1789896671.7071247,
+    "seen": 1789896744.4648266,
+    "ast_hash": "5aada9310f9673ba46201660b2989b05",
     "semantic_hash": ""
   },
   "supabase/migrations/20260920100000_drop_trade_setup_outcomes.sql": {
-    "mtime": 1789857464.3071363,
-    "seen": 1789895510.1401732,
-    "ast_hash": "b3ac45d3ef350bf06fdcafd711d57f54",
+    "mtime": 1789895895.9159558,
+    "seen": 1789896744.4648266,
+    "ast_hash": "e135df15fa9046a1568e509c7bfb1962",
     "semantic_hash": ""
   },
   "test/sweepAge.test.js": {
@@ -2967,6 +2967,36 @@
     "mtime": 1789895494.3119695,
     "seen": 1789895510.1401732,
     "ast_hash": "a88815a5aebcb765d2162ec47abe2916",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/saisonalitaet.py": {
+    "mtime": 1789896704.4172995,
+    "seen": 1789896744.4648266,
+    "ast_hash": "6b4418111b42cb1ba1370586357c3320",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/sim-livezeitraum.json": {
+    "mtime": 1789896543.0429697,
+    "seen": 1789896744.4648266,
+    "ast_hash": "c6e63bd467a58c47fceb4ccc6eb4dbcd",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/zieheDaten.py": {
+    "mtime": 1789896392.1841946,
+    "seen": 1789896744.4648266,
+    "ast_hash": "0950fcd4a14af49f9425635af9cd9034",
+    "semantic_hash": ""
+  },
+  "supabase/functions/trading-monitor-mcp/scripts/backfillTradeSetups.ts": {
+    "mtime": 1789896595.6384985,
+    "seen": 1789896744.4648266,
+    "ast_hash": "2062cee5a44c3a9ac45410fb212b08c2",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/ergebnis-saisonalitaet.txt": {
+    "mtime": 1789896710.2612798,
+    "seen": 1789896744.4648266,
+    "ast_hash": "68547dfc6a68fcc135fa0c73f783d50a",
     "semantic_hash": ""
   }
 }
