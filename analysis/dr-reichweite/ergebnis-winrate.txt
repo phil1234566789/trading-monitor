@@ -1,30 +1,30 @@
-alle DRs  (n=255 Dealing Ranges)
-   nahster Kandidat   entschieden 254 | Winrate  70% | RR-Median 1.68 | EV +1.05 R
-   Ziel >=10 Pips     entschieden 251 | Winrate  49% | RR-Median 2.98 | EV +0.99 R
-   Ziel >=15 Pips     entschieden 243 | Winrate  43% | RR-Median 4.31 | EV +1.18 R
-   Ziel >=20 Pips     entschieden 225 | Winrate  32% | RR-Median 5.52 | EV +0.87 R
-   Ziel >=30 Pips     entschieden 159 | Winrate  23% | RR-Median 8.31 | EV +0.63 R
+alle DRs  (n=855 Dealing Ranges)
+   nahster Kandidat   entschieden 851 | Winrate  73% | RR-Median 1.95 | EV +1.33 R
+   Ziel >=10 Pips     entschieden 851 | Winrate  61% | RR-Median 2.67 | EV +1.37 R
+   Ziel >=15 Pips     entschieden 840 | Winrate  51% | RR-Median 3.51 | EV +1.43 R
+   Ziel >=20 Pips     entschieden 819 | Winrate  43% | RR-Median 4.59 | EV +1.42 R
+   Ziel >=30 Pips     entschieden 716 | Winrate  33% | RR-Median 6.48 | EV +1.33 R
 
-im Handelsfenster 08-18  (n=176 Dealing Ranges)
-   nahster Kandidat   entschieden 175 | Winrate  74% | RR-Median 1.54 | EV +1.13 R
-   Ziel >=10 Pips     entschieden 175 | Winrate  55% | RR-Median 2.46 | EV +1.04 R
-   Ziel >=15 Pips     entschieden 168 | Winrate  49% | RR-Median 3.80 | EV +1.32 R
-   Ziel >=20 Pips     entschieden 157 | Winrate  38% | RR-Median 4.63 | EV +1.11 R
-   Ziel >=30 Pips     entschieden 111 | Winrate  28% | RR-Median 6.65 | EV +0.93 R
+im Handelsfenster 08-18  (n=630 Dealing Ranges)
+   nahster Kandidat   entschieden 627 | Winrate  69% | RR-Median 1.90 | EV +1.18 R
+   Ziel >=10 Pips     entschieden 627 | Winrate  59% | RR-Median 2.42 | EV +1.14 R
+   Ziel >=15 Pips     entschieden 618 | Winrate  51% | RR-Median 3.17 | EV +1.20 R
+   Ziel >=20 Pips     entschieden 605 | Winrate  44% | RR-Median 4.05 | EV +1.26 R
+   Ziel >=30 Pips     entschieden 528 | Winrate  34% | RR-Median 5.62 | EV +1.26 R
 
-+ keine lebende Gegen-DR  (n=102 Dealing Ranges)
-   nahster Kandidat   entschieden 101 | Winrate  74% | RR-Median 1.66 | EV +1.21 R
-   Ziel >=10 Pips     entschieden 101 | Winrate  57% | RR-Median 2.39 | EV +1.10 R
-   Ziel >=15 Pips     entschieden  99 | Winrate  51% | RR-Median 3.61 | EV +1.35 R
-   Ziel >=20 Pips     entschieden  94 | Winrate  38% | RR-Median 4.44 | EV +1.12 R
-   Ziel >=30 Pips     entschieden  66 | Winrate  26% | RR-Median 6.19 | EV +0.68 R
++ keine lebende Gegen-DR  (n=441 Dealing Ranges)
+   nahster Kandidat   entschieden 438 | Winrate  70% | RR-Median 1.97 | EV +1.29 R
+   Ziel >=10 Pips     entschieden 438 | Winrate  62% | RR-Median 2.35 | EV +1.25 R
+   Ziel >=15 Pips     entschieden 436 | Winrate  54% | RR-Median 2.99 | EV +1.26 R
+   Ziel >=20 Pips     entschieden 429 | Winrate  48% | RR-Median 3.79 | EV +1.34 R
+   Ziel >=30 Pips     entschieden 386 | Winrate  37% | RR-Median 5.31 | EV +1.31 R
 
-+ HTF-Sweep  (n=30 Dealing Ranges)
-   nahster Kandidat   entschieden  30 | Winrate  70% | RR-Median 1.69 | EV +1.01 R
-   Ziel >=10 Pips     entschieden  30 | Winrate  60% | RR-Median 2.24 | EV +1.05 R
-   Ziel >=15 Pips     entschieden  30 | Winrate  60% | RR-Median 3.35 | EV +1.62 R
-   Ziel >=20 Pips     entschieden  30 | Winrate  47% | RR-Median 4.18 | EV +1.54 R
-   Ziel >=30 Pips     entschieden  19 | Winrate  16% | RR-Median 6.96 | EV +0.33 R
++ HTF-Sweep  (n=73 Dealing Ranges)
+   nahster Kandidat   entschieden  72 | Winrate  78% | RR-Median 2.10 | EV +1.75 R
+   Ziel >=10 Pips     entschieden  72 | Winrate  72% | RR-Median 2.36 | EV +1.74 R
+   Ziel >=15 Pips     entschieden  72 | Winrate  65% | RR-Median 2.82 | EV +1.77 R
+   Ziel >=20 Pips     entschieden  72 | Winrate  58% | RR-Median 3.54 | EV +1.74 R
+   Ziel >=30 Pips     entschieden  65 | Winrate  42% | RR-Median 5.08 | EV +1.68 R
 
 Die R-Rechnung ist die der IDEE: Einstieg an der nahen OB-Kante, Stopp am Extrem-Fraktal.
 Der reale Entry liegt woanders -- den macht Philip selbst, siehe README-Grenzen.
