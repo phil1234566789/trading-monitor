@@ -2826,9 +2826,9 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/messeFindTargets.py": {
-    "mtime": 1789848904.2274852,
-    "seen": 1789848968.3905718,
-    "ast_hash": "d12e39bd57f0cda057a6893cca1f4221",
+    "mtime": 1789898045.363919,
+    "seen": 1789899649.2277548,
+    "ast_hash": "68ba4f7129a602100199acb206634143",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/punkt1_result.json": {
@@ -2868,9 +2868,9 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-find-targets.txt": {
-    "mtime": 1789841023.564764,
-    "seen": 1789841132.4998922,
-    "ast_hash": "53ca9d50f97c676417efb1ac64c32940",
+    "mtime": 1789899592.3933468,
+    "seen": 1789899649.2287514,
+    "ast_hash": "63e099180e91cc081688bcfe976f765a",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-gegenkraft.txt": {
@@ -2922,9 +2922,9 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-winrate.txt": {
-    "mtime": 1789848926.830307,
-    "seen": 1789848968.3915718,
-    "ast_hash": "2a6bcaa3acaf5f3a9141a1b445a96d53",
+    "mtime": 1789899599.2278624,
+    "seen": 1789899649.2287514,
+    "ast_hash": "09bd22f9dbf17106199e2bbfbe3401cc",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/deckelStopp.py": {
@@ -2970,15 +2970,9 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/saisonalitaet.py": {
-    "mtime": 1789896704.4172995,
-    "seen": 1789896744.4648266,
-    "ast_hash": "6b4418111b42cb1ba1370586357c3320",
-    "semantic_hash": ""
-  },
-  "analysis/dr-reichweite/sim-livezeitraum.json": {
-    "mtime": 1789896543.0429697,
-    "seen": 1789896744.4648266,
-    "ast_hash": "c6e63bd467a58c47fceb4ccc6eb4dbcd",
+    "mtime": 1789898007.716913,
+    "seen": 1789899649.2277548,
+    "ast_hash": "c53dde3f4b86781e78aeec2bfdc22a14",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/zieheDaten.py": {
@@ -2994,9 +2988,21 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-saisonalitaet.txt": {
-    "mtime": 1789896710.2612798,
-    "seen": 1789896744.4648266,
-    "ast_hash": "68547dfc6a68fcc135fa0c73f783d50a",
+    "mtime": 1789898018.314891,
+    "seen": 1789899649.2287514,
+    "ast_hash": "1805091c2106ba64ef19880f69e9ef9b",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/quotenTabelle.py": {
+    "mtime": 1789898139.47255,
+    "seen": 1789899649.2277548,
+    "ast_hash": "9a84afb8c34a1512611198670969cdc9",
+    "semantic_hash": ""
+  },
+  "analysis/dr-reichweite/ergebnis-quoten.txt": {
+    "mtime": 1789898146.6710658,
+    "seen": 1789899649.2287514,
+    "ast_hash": "50e357b9cb7f6ef31105c4c365d66991",
     "semantic_hash": ""
   }
 }
