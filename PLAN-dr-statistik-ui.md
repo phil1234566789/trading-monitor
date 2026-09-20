@@ -137,16 +137,36 @@ statt Prozent), damit ein späterer feinerer Schnitt nicht stillschweigend darun
 
 | Gruppe | n | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P | 2 R | 3 R | 4 R | 5 R | 6 R |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1H-Sweep | 100 | 92 % | 81 % | 69 % | 61 % | 52 % | 42 % | 36 % | 74 % | 61 % | 47 % | 39 % | 32 % |
-| M5-Sweep, kein lebender Gegner | 555 | 79 % | 62 % | 49 % | 42 % | 36 % | 32 % | 30 % | 72 % | 57 % | 46 % | 39 % | 33 % |
-| M5-Sweep gegen eine lebende M5-Gegen-DR | 242 | 56 % | 44 % | 36 % | 29 % | 26 % | 23 % | 20 % | 63 % | 48 % | 38 % | 33 % | 26 % |
+| reifer Sweep (≥ 24 h) | 75 | 91 % | 81 % | 69 % | 61 % | 52 % | 41 % | 37 % | 76 % | 64 % | 49 % | 40 % | 32 % |
+| Minor, kein lebender Gegner | 576 | 79 % | 62 % | 49 % | 42 % | 37 % | 32 % | 30 % | 72 % | 57 % | 46 % | 38 % | 32 % |
+| Minor gegen eine lebende M5-Gegen-DR | 242 | 56 % | 44 % | 36 % | 29 % | 26 % | 23 % | 20 % | 63 % | 48 % | 38 % | 33 % | 26 % |
 | **alle** | **915** | **74 %** | **59 %** | **47 %** | **40 %** | **35 %** | **31 %** | **28 %** | **70 %** | **55 %** | **44 %** | **37 %** | **31 %** |
 
-Diese Dreiteilung ist der informativste verfügbare Schnitt und alle drei Gruppen liegen deutlich
-über 50. Sie kombiniert die zwei Merkmale, die sich als wirksam erwiesen haben. **Nicht** nach
-Trend schneiden — der 1H-Trend trennt nachweislich nicht (453 zu 458, Bootstrap-Intervall über
-null). Sweep-Alter wäre der stärkste Filter überhaupt (Major: 97 % auf 10 Pips), ist aber mit
-n=30 unter der Schwelle und mit 3 % aller DRs zu selten für eine eigene Zeile.
+Diese Dreiteilung ist der informativste verfügbare Schnitt und alle drei Gruppen liegen über 50.
+**Nicht** nach Trend schneiden — der 1H-Trend trennt nachweislich nicht (453 zu 458,
+Bootstrap-Intervall über null).
+
+### Das Kriterium ist das Sweep-ALTER, nicht die Herkunft — korrigiert 20.09.2026
+
+Hier stand bis zum 20.09.2026 die Sweep-*Herkunft* (1H gegen M5). Philip: *„ob ein Liquidity Sweep
+von M5 oder einem Higher Timeframe kommt, ist mir eigentlich egal. Es spielt das Alter eine Rolle:
+Minor, Medium oder Major Inducement."*
+
+Das ändert an den Zahlen wenig, weil beide Merkmale **strukturell fast dasselbe** sind: `poi-watcher`
+lädt 300 M5-Kerzen (~25 h), ein M5-Level kann also gar nicht älter als ~25 h werden. Gemessen über
+915 DRs: von 815 M5-Sweeps sind **0** reif, Alters-Median 1,5 h; von 100 1H-Sweeps sind 75 % reif,
+Median 44,7 h. „M5" impliziert „Minor".
+
+Was die Herkunft trotzdem zusätzlich trüge: 25 DRs mit *frischem* 1H-Sweep kommen auf 80 % bei
+15 Pips, also Major-Niveau. Die fallen unter einer reinen Altersregel durch. n=25 liegt aber unter
+der 50er-Schwelle — deshalb **keine eigene Zeile**, aber `trade_setups.ls_timeframe` behalten,
+damit die Gruppe auswertbar bleibt, sobald sie wächst.
+
+**Medium und Major sind EIN Topf.** Der Unterschied zwischen ihnen ist nicht belegbar: bei 15 Pips
+9 Punkte, 95 %-Intervall [−9, +26] auf n=30 gegen n=45. Für eine Absicherung bräuchte es das
+Vierfache der Daten, also rund drei Jahre. Die belastbare Linie liegt bei **24 Handelsstunden**:
+reif gegen Minor sind +25 Punkte, Intervall [14, 34], und das hält bei 10/20/25/30 Pips genauso.
+Genau so rundet der Telegram-Alarm heute schon („<24h" / „≥24h").
 
 ### Erwartungswert je Ziel — und warum die Anzeige nicht empfehlen soll
 
@@ -198,16 +218,19 @@ aus **einem** Jahr. „Der August ist schwach" wäre aus neun Monaten eine Über
 bräuchte es mehrere Jahre. Und er ist größtenteils Volatilität: in R liegen alle Monate bei 2 R
 zwischen 66 und 74 %. Wer die R-Leiter anzeigt, hat den Effekt implizit schon drin.
 
-## Was serverseitig fehlt
+## Was serverseitig fehlen WÜRDE — zurückgestellt, siehe „Reihenfolge"
 
-Die Messung existiert bisher **nur als Python-Skripte**. Für eine Live-Anzeige braucht es:
+Nicht anfangen, solange die statischen Bänder reichen. Steht hier nur, damit der Weg nicht neu
+hergeleitet werden muss, falls die Anzeige eines Tages je konkret laufender DR rechnen soll:
 
 1. **Eigene Tabelle** (Vorschlag `dr_reach`): je Dealing Range `reach_pips`, `risk_pips`,
    `invalidated_at_sec`, `measured_until_sec`, dazu die Merkmale für den Schnitt (`ls_timeframe`
    liegt schon auf `trade_setups`, die Gegenkraft-Konstellation muss berechnet werden).
    `trade_setup_outcomes` ist am 20.09.2026 gelöscht worden — der Forward-Walk wird neu
    geschrieben, diesmal direkt gegen Philips Erfolgsdefinition. Vorlage:
-   `analysis/dr-reichweite/messeDrReichweite.py`.
+   `analysis/dr-reichweite/messeDrReichweite.py`, die Pfad-Simulation liegt dort schon fertig in
+   `drMerkmale.py: lauf()`. Das Sweep-Alter braucht KEINE eigene Spalte — es ergibt sich aus
+   `ls_pivot_time`/`ls_touched_time`, beide NOT NULL.
 2. **Backfill** über den Bestand (1233 Setup-Zeilen → 915 DRs). Muster:
    `supabase/functions/trading-monitor-mcp/scripts/backfillObZones.ts`.
 3. **Fortschreibung in `poi-watcher`**, nach dem `trade_setups`-Upsert — die M5-Kerzen sind dort
@@ -221,7 +244,7 @@ Die Messung existiert bisher **nur als Python-Skripte**. Für eine Live-Anzeige 
 | Ort | Was |
 |---|---|
 | **TSC** (`TradeSetupCockpit.vue`) | Block an der Dealing Range: beide Leitern untereinander, je Zeile Strecke + Quote |
-| **Chart** | waagrechte Ticks bei `nahe OB-Kante ± k · Risiko`, beschriftet mit der Quote. Muster: `FibTickPrimitive` in `marketStructureRendering.ts`, Farben aus `chartColors.js` |
+| **Chart** | die R-Skala steht seit 20.09.2026 (`rScale.js`/`rScaleRendering.js`); fehlt nur noch die Quote je Marke, aus der Tabelle des passenden Risiko-Bands |
 | **`find_targets`** | je Kandidat „historisch erreicht in N von M vergleichbaren DRs" |
 
 Fallstrick bei `find_targets`: das Tool sortiert nach Distanz zum **aktuellen Preis**, die Statistik
@@ -246,12 +269,36 @@ wäre durch nichts gedeckt.
 
 ## Reihenfolge
 
-1. **R-Skala im Chart** (Stufe 1, siehe oben) — reines Frontend, kein Server. Der erste Task.
-2. Serverseitige Messung: Tabelle, Forward-Walk, Backfill, Fortschreibung in `poi-watcher`.
-3. Aggregations-Endpunkt mit beiden Leitern und `n`.
-4. Quoten an die R-Marken schreiben (Stufe 2) und beide Leitern als Block im TSC.
-5. `find_targets`-Anreicherung.
-6. Gegenkraft — zurückgestellt, siehe oben.
+1. **R-Skala im Chart** (Stufe 1, siehe oben) — reines Frontend, kein Server. **Erledigt
+   20.09.2026**, Task `chart-r-skala-an-der-dealing-range-zeichnen`.
+2. **Quoten an die R-Marken, statisch** — die 25 Zahlen aus Tabelle 1 oben als Konstante im
+   Frontend, erzeugt von `baenderTabellen.py`. Kein Server (Begründung unten).
+3. Beide Leitern plus Vergleichszeilen als Block im TSC.
+4. `find_targets`-Anreicherung.
+5. Gegenkraft — zurückgestellt, siehe oben.
+6. Serverseitige Messung — **nur falls** sich zeigt, dass die statischen Bänder zu grob sind.
+
+### Warum statisch und nicht über eine `dr_reach`-Tabelle — entschieden 20.09.2026
+
+Der ursprüngliche Plan sah zuerst eine serverseitige Messung vor (eigene Tabelle, Forward-Walk,
+Backfill, Fortschreibung in `poi-watcher`, Aggregations-Endpunkt) und erst danach die Anzeige.
+Das ist für den Zweck zu viel Apparat:
+
+- Die Quoten stehen auf 915 DRs aus neun Monaten. Ein weiterer Monat bringt ~100 dazu, also gut
+  10 % — das verschiebt eine Quote um ein bis zwei Punkte. Am 20.09. kamen 60 DRs dazu, und keine
+  Zahl bewegte sich mehr als 3 Punkte.
+- Die Vergleichsgruppe ist ein **festes Risiko-Band**, keine pro-DR gebildete Menge. Eine
+  Nachschlagetabelle reicht dafür per Definition aus.
+- `trade_setup_outcomes` wurde am 20.09.2026 gelöscht, weil genau diese Maschinerie ein
+  Sackgassen-Versuch war. Sie unter neuem Namen sofort wieder aufzubauen, ohne dass ein Verbraucher
+  Live-Aktualität braucht, wäre derselbe Weg nochmal.
+
+**Wann der Server-Weg doch nötig wird:** sobald die Quote nicht mehr je Risiko-Band, sondern je
+konkret laufender DR gebildet werden soll (Gegenkraft-Konstellation, Sweep-Alter und aktueller
+Monat kombiniert). Dann wird die Vergleichsgruppe pro Abfrage neu gebildet und eine Tabelle reicht
+nicht mehr. Das ist aber genau der „zweite Schnitt", den dieser Plan ohnehin zurückstellt.
+
+Das Aktualisieren ist ein Skriptlauf: `baenderTabellen.py` ausführen, die Konstante ersetzen.
 
 ## Grenzen, die in die Anzeige gehören
 

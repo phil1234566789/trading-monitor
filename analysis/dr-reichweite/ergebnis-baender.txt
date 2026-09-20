@@ -7,11 +7,11 @@
   ueber 10 Pips                               134      84%     71%     60%     55%     46%     41%     37%  |    49%     36%     26%     22%     13% 
   alle                                        915      74%     59%     47%     40%     35%     31%     28%  |    70%     55%     44%     37%     31% 
 
-2) ZWEITER SCHNITT: SWEEP-HERKUNFT x GEGENKRAFT
+2) ZWEITER SCHNITT: SWEEP-ALTER x GEGENKRAFT
                                                 n       10P     15P     20P     25P     30P     35P     40P |      2R      3R      4R      5R      6R
-  1H-Sweep                                    100      92%     81%     69%     61%     52%     42%     36%  |    74%     61%     47%     39%     32% 
-  M5-Sweep, kein lebender Gegner              555      79%     62%     49%     42%     36%     32%     30%  |    72%     57%     46%     39%     33% 
-  M5-Sweep gegen lebende M5-Gegen-DR          242      56%     44%     36%     29%     26%     23%     20%  |    63%     48%     38%     33%     26% 
+  reifer Sweep (>= 24h)                        75      91%     81%     69%     61%     52%     41%     37%  |    76%     64%     49%     40%     32% 
+  Minor, kein lebender Gegner                 576      79%     62%     49%     42%     37%     32%     30%  |    72%     57%     46%     38%     32% 
+  Minor gegen lebende M5-Gegen-DR             242      56%     44%     36%     29%     26%     23%     20%  |    63%     48%     38%     33%     26% 
   alle                                        915      74%     59%     47%     40%     35%     31%     28%  |    70%     55%     44%     37%     31% 
 
 3) ERWARTUNGSWERT IN R JE RISIKO-BAND

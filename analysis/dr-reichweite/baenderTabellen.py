@@ -66,16 +66,24 @@ for name, g in baender:
 zeile("alle", res, quote, quote_r, "%6.0f%% ")
 print()
 
-# Der informativste verfuegbare Schnitt: kombiniert die beiden Merkmale, die sich als wirksam
-# erwiesen haben (Sweep-Herkunft und lebende Gegen-DR). NICHT nach Trend schneiden -- der trennt
-# nachweislich nicht. Sweep-Alter waere staerker, ist aber mit ~3 % aller DRs zu selten.
-kopf("2) ZWEITER SCHNITT: SWEEP-HERKUNFT x GEGENKRAFT")
+# Der informativste verfuegbare Schnitt: Sweep-ALTER (Philips Kriterium, 20.09.2026: "ob ein
+# Liquidity Sweep von M5 oder einem Higher Timeframe kommt, ist mir eigentlich egal, es spielt das
+# Alter eine Rolle") kombiniert mit der lebenden Gegen-DR.
+#
+# Die frueher hier stehende Sweep-HERKUNFT ist damit raus -- sie war ohnehin fast dasselbe Merkmal,
+# und zwar strukturell: poi-watcher laedt 300 M5-Kerzen (~25h), ein M5-Level kann also nie aelter
+# als ~25h werden. Gemessen: von 815 M5-Sweeps sind 0 reif, von 100 1H-Sweeps sind 75 % reif.
+#
+# Medium und Major sind EIN Topf. Der Unterschied zwischen ihnen ist auf dieser Stichprobe nicht
+# belegbar (15 Pips: 9 Punkte, 95 %-Intervall [-9, +26] bei n=30 gegen n=45). Die belastbare Linie
+# liegt bei 24 Handelsstunden: reif gegen Minor sind +25 Punkte, Intervall [14, 34].
+kopf("2) ZWEITER SCHNITT: SWEEP-ALTER x GEGENKRAFT")
 schnitte = [
-    ("1H-Sweep", [x for x in res if x["herkunft"] == "HTF sicher"]),
-    ("M5-Sweep, kein lebender Gegner",
-     [x for x in res if x["herkunft"] == "M5 sicher" and x["konstellation"] == "keine Gegen-DR"]),
-    ("M5-Sweep gegen lebende M5-Gegen-DR",
-     [x for x in res if x["herkunft"] == "M5 sicher" and x["konstellation"] == "beide M5"]),
+    ("reifer Sweep (>= 24h)", [x for x in res if x["age_h"] >= 24]),
+    ("Minor, kein lebender Gegner",
+     [x for x in res if x["age_h"] < 24 and x["konstellation"] == "keine Gegen-DR"]),
+    ("Minor gegen lebende M5-Gegen-DR",
+     [x for x in res if x["age_h"] < 24 and x["konstellation"] == "beide M5"]),
 ]
 for name, g in schnitte:
     zeile(name, g, quote, quote_r, "%6.0f%% ")
