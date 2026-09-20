@@ -1,30 +1,30 @@
-DRs: 255   davon HTF strict 25 / broad 56
+DRs: 855   davon HTF strict 98 / broad 98
 
 --- Staerke-Definition: strict | Target fuer 'fertig': 20 Pips ---
-  keine Gegen-DR       n=151 | Reichweite median  14.8 | >=15P  75 | >=20P  57 | nie inval. 44
-  ich HTF, Gegner M5   n=  6 | Reichweite median  45.4 | >=15P   4 | >=20P   4 | nie inval.  4
+  keine Gegen-DR       n=614 | Reichweite median  22.6 | >=15P 408 | >=20P 327 | nie inval. 187
+  ich HTF, Gegner M5   n=  9 | Reichweite median  41.6 | >=15P   7 | >=20P   6 | nie inval.  5
   beide HTF            n=  0
-  beide M5             n= 94 | Reichweite median  10.1 | >=15P  38 | >=20P  29 | nie inval. 19
-  ich M5, Gegner HTF   n=  4 | Reichweite median   9.3 | >=15P   0 | >=20P   0 | nie inval.  0
+  beide M5             n=216 | Reichweite median  11.6 | >=15P  95 | >=20P  78 | nie inval. 43
+  ich M5, Gegner HTF   n= 16 | Reichweite median  16.3 | >=15P   9 | >=20P   6 | nie inval.  3
 
 --- Staerke-Definition: broad | Target fuer 'fertig': 20 Pips ---
-  keine Gegen-DR       n=151 | Reichweite median  14.8 | >=15P  75 | >=20P  57 | nie inval. 44
-  ich HTF, Gegner M5   n= 12 | Reichweite median  16.1 | >=15P   6 | >=20P   5 | nie inval.  3
-  beide HTF            n=  7 | Reichweite median  12.0 | >=15P   3 | >=20P   2 | nie inval.  2
-  beide M5             n= 55 | Reichweite median  10.8 | >=15P  26 | >=20P  20 | nie inval. 14
-  ich M5, Gegner HTF   n= 30 | Reichweite median   7.4 | >=15P   7 | >=20P   6 | nie inval.  4
+  keine Gegen-DR       n=614 | Reichweite median  22.6 | >=15P 408 | >=20P 327 | nie inval. 187
+  ich HTF, Gegner M5   n=  9 | Reichweite median  41.6 | >=15P   7 | >=20P   6 | nie inval.  5
+  beide HTF            n=  0
+  beide M5             n=216 | Reichweite median  11.6 | >=15P  95 | >=20P  78 | nie inval. 43
+  ich M5, Gegner HTF   n= 16 | Reichweite median  16.3 | >=15P   9 | >=20P   6 | nie inval.  3
 
 --- Staerke-Definition: broad | Target fuer 'fertig': 15 Pips ---
-  keine Gegen-DR       n=189 | Reichweite median  14.8 | >=15P  94 | >=20P  71 | nie inval. 51
-  ich HTF, Gegner M5   n=  6 | Reichweite median  13.5 | >=15P   3 | >=20P   2 | nie inval.  2
-  beide HTF            n=  3 | Reichweite median   8.1 | >=15P   1 | >=20P   0 | nie inval.  0
-  beide M5             n= 38 | Reichweite median  10.1 | >=15P  16 | >=20P  14 | nie inval. 12
-  ich M5, Gegner HTF   n= 19 | Reichweite median   7.1 | >=15P   3 | >=20P   3 | nie inval.  2
+  keine Gegen-DR       n=711 | Reichweite median  21.4 | >=15P 460 | >=20P 368 | nie inval. 210
+  ich HTF, Gegner M5   n=  1 | Reichweite median  55.0 | >=15P   1 | >=20P   1 | nie inval.  1
+  beide HTF            n=  0
+  beide M5             n=135 | Reichweite median  10.2 | >=15P  55 | >=20P  45 | nie inval. 26
+  ich M5, Gegner HTF   n=  8 | Reichweite median  14.2 | >=15P   3 | >=20P   3 | nie inval.  1
 
 --- Staerke-Definition: broad | Target fuer 'fertig': 25 Pips ---
-  keine Gegen-DR       n=133 | Reichweite median  14.1 | >=15P  63 | >=20P  47 | nie inval. 34
-  ich HTF, Gegner M5   n= 14 | Reichweite median  20.8 | >=15P   8 | >=20P   7 | nie inval.  5
-  beide HTF            n=  9 | Reichweite median  16.0 | >=15P   5 | >=20P   4 | nie inval.  3
-  beide M5             n= 60 | Reichweite median  10.8 | >=15P  27 | >=20P  21 | nie inval. 17
-  ich M5, Gegner HTF   n= 39 | Reichweite median   8.6 | >=15P  14 | >=20P  11 | nie inval.  8
+  keine Gegen-DR       n=556 | Reichweite median  22.9 | >=15P 375 | >=20P 303 | nie inval. 172
+  ich HTF, Gegner M5   n= 10 | Reichweite median  38.1 | >=15P   8 | >=20P   7 | nie inval.  6
+  beide HTF            n=  0
+  beide M5             n=270 | Reichweite median  13.4 | >=15P 127 | >=20P 101 | nie inval. 57
+  ich M5, Gegner HTF   n= 19 | Reichweite median  14.8 | >=15P   9 | >=20P   6 | nie inval.  3
 

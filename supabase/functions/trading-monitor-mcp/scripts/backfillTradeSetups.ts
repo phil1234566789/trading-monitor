@@ -171,8 +171,10 @@ for (const instrument of instrumente) {
       if (!setup) continue;
       const direction = setup.dir === 1 ? "short" : "long";
       const key = `${direction}_${setup.fractal.pivotTime}`;
-      // Erster Fund gewinnt: der früheste Tick, an dem das Setup erkennbar war, ist der, den der
-      // Live-Cron auch erwischt hätte.
+      // Erster Fund gewinnt — dieselbe Semantik wie live: poi-watcher/index.ts überspringt einen
+      // bereits gespeicherten Schlüssel komplett ("schon erkannt/gespeichert — ein Fraktal bricht
+      // nie zurück"), überschreibt die Zeile also nie. Gegenprobe mit "letzter gewinnt" gerechnet:
+      // der Reichweiten-Median lief noch weiter von den Live-Zeilen weg (16,6 statt 15,2 gegen 12,9).
       if (gefunden.has(key)) continue;
       gefunden.set(key, {
         instrument,

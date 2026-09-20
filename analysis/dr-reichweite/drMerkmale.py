@@ -5,10 +5,28 @@
 # nichts davon nach.
 import json, datetime
 
-BASE = r"C:\Users\Philip\.claude\projects\c--Users-Philip-Documents-git-trading-monitor\25cfa4c0-a261-49e1-9482-af67f53adc09\tool-results"
-SETUPS = BASE + r"\mcp-trading-monitor-get_trade_setups-1789808350250.txt"
-CANDLES = BASE + r"\mcp-trading-monitor-get_forex_candles_archive-1789814595814.txt"
-LEVELS = BASE + r"\mcp-trading-monitor-get_near_relevant_liquidity_levels-1789817921915.txt"
+# Von zieheDaten.py geschrieben, liegen neben diesem Skript. Bis zum 20.09.2026 zeigten diese
+# Pfade auf Tool-Ergebnisdateien einer einzelnen Claude-Session -- nach der Session weg und die
+# Auswertung damit nicht wiederholbar.
+import os
+_HIER = os.path.dirname(os.path.abspath(__file__))
+CANDLES = os.path.join(_HIER, "daten-kerzen.json")
+LEVELS = os.path.join(_HIER, "daten-levels.json")
+
+# Die Auswertung laeuft auf der SIMULATION ueber den ganzen Zeitraum (daten-setups-sim.json,
+# erzeugt von backfillTradeSetups.ts im Trockenlauf), nicht auf der DB-Tabelle.
+#
+# Grund: die Tabelle ist gemischter Herkunft -- bis 15.07.2026 backgefuellt, danach live erkannt.
+# Ueber denselben Zeitraum gerechnet liefern die beiden Verfahren NICHT dasselbe: Live-Zeilen
+# kommen auf einen Reichweiten-Median von 12,9 Pips, simulierte auf 15,2, bei praktisch gleichem
+# Risiko-Median (4,3 gegen 4,6). Die Einzel-Setups stimmen zu 96 % ueberein, aber der Live-Cron
+# verpasst Ticks, und wer ein Setup einen Tick spaeter zuerst sieht, paart es mit einem anderen
+# bestaetigenden OB -- andere OB-Kante, andere gemessene Reichweite.
+#
+# Fuer einen Monatsvergleich waere diese Naht toedlich: der Sprung zwischen Juni und Juli waere
+# zur Haelfte ein Methodenwechsel. Deshalb EIN Verfahren ueber alles. Die DB-Tabelle bleibt
+# unangetastet, sie ist die echte Alarm-Historie; daten-setups.json liegt fuer Gegenproben daneben.
+SETUPS = os.path.join(_HIER, "daten-setups-sim.json")
 
 PIP = 0.0001
 ARM = 600                     # ob_start_time + 2 M5-Kerzen = FVG bestaetigt
@@ -21,7 +39,12 @@ utc_dt = lambda sec: datetime.datetime.fromtimestamp(sec, datetime.timezone.utc)
 
 
 def lade_setups():
-    return json.load(open(SETUPS))
+    """Die simulierten Zeilen tragen keine DB-id -- die Auswertung braucht aber einen stabilen
+    Schluessel je Zeile, also wird der Index vergeben (Reihenfolge ist deterministisch)."""
+    rows = json.load(open(SETUPS))
+    for i, r in enumerate(rows):
+        r.setdefault("id", i + 1)
+    return rows
 
 
 def lade_kerzen():
@@ -30,9 +53,10 @@ def lade_kerzen():
 
 
 def lade_bekannte_level():
-    """Schluessel der in liquidity_levels persistierten Level -- die Tabelle fuehrt nur 1H/4H."""
-    levels = json.load(open(LEVELS))["levels"]
-    return {(round(l["price"], 5), l["pivotTime"]) for l in levels}
+    """Schluessel der in liquidity_levels persistierten Level -- die Tabelle fuehrt nur 1H/4H.
+    Wird seit dem Backfill nur noch fuer die Altzeilen ohne ls_timeframe gebraucht."""
+    levels = json.load(open(LEVELS))
+    return {(round(l["price"], 5), ts(l["pivot_time"])) for l in levels}
 
 
 def lade_trend():
@@ -68,6 +92,13 @@ def sweep_herkunft(r, known):
       unklar     : auf voller Stunde, aber keines der HTF-Merkmale. Enthaelt echte M5-Pivots
                    (rund jeder 12.) und 1H-Level, deren Zeile nicht mehr existiert.
     """
+    # Seit dem Backfill (20.09.2026) steht die Herkunft fuer 895 der 1231 Zeilen EXAKT in
+    # ls_timeframe -- beim Erkennen mitgeschrieben statt hinterher geschaetzt. Die Heuristik
+    # darunter gilt nur noch fuer die Altzeilen von vor dem 19.09.2026.
+    if r.get("ls_timeframe") == "1H":
+        return "HTF sicher"
+    if r.get("ls_timeframe") == "5M":
+        return "M5 sicher"
     dist = abs(r["ls_price"] - r["fractal_price"]) / PIP
     lead = (ts(r["fractal_pivot_time"]) - ts(r["ls_touched_time"])) / 60.0
     if ((round(r["ls_price"], 5), ts(r["ls_pivot_time"])) in known) or dist > 5.0 or lead > 45.0:

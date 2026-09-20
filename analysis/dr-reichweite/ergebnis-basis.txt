@@ -1,29 +1,29 @@
-Setup-Zeilen gesamt      : 336
-Dealing Ranges (je M5-OB): 268   -> 68 Zeilen waren Duplikate
-   davon mit Path-A-Zeile (Extrem-Fraktal bekannt): 260
-   nur Path B (Invalidierung NICHT bestimmbar)    : 8  -> ausgeschlossen
+Setup-Zeilen gesamt      : 1233
+Dealing Ranges (je M5-OB): 915   -> 318 Zeilen waren Duplikate
+   davon mit Path-A-Zeile (Extrem-Fraktal bekannt): 855
+   nur Path B (Invalidierung NICHT bestimmbar)    : 60  -> ausgeschlossen
 
-ausgewertet: 255   (Sanity-Ausschluss, Invalidierung auf falscher Seite: 0)
+ausgewertet: 855   (Sanity-Ausschluss, Invalidierung auf falscher Seite: 0)
 
-Invalidierung binnen 24h getroffen : 188
-nie invalidiert (24h-Fenster)      : 67
-   Zeit bis Invalidierung: median 102 Min, p25 40, p75 235, max 1415
+Invalidierung binnen 24h getroffen : 617
+nie invalidiert (24h-Fenster)      : 238
+   Zeit bis Invalidierung: median 125 Min, p25 50, p75 265, max 1420
 
-REICHWEITE ab naher OB-Kante, vor der Invalidierung (alle 255):
-   median 12.5 Pips   p25 6.5   p75 29.6   max 108.0
+REICHWEITE ab naher OB-Kante, vor der Invalidierung (alle 855):
+   median 19.5 Pips   p25 10.1   p75 43.9   max 241.9
 
    Ziel erreichbar gewesen (Reichweite >= X), bevor die DR invalidierte:
-      >=  5 Pips : 204 von 255
-      >= 10 Pips : 155 von 255
-      >= 15 Pips : 117 von 255
-      >= 20 Pips :  90 von 255
-      >= 25 Pips :  73 von 255
-      >= 30 Pips :  61 von 255
-      >= 40 Pips :  43 von 255
+      >=  5 Pips : 779 von 855
+      >= 10 Pips : 647 von 855
+      >= 15 Pips : 519 von 855
+      >= 20 Pips : 417 von 855
+      >= 25 Pips : 354 von 855
+      >= 30 Pips : 309 von 855
+      >= 40 Pips : 246 von 855
 
-Risiko (nahe OB-Kante -> Extrem-Fraktal): median 4.3 Pips, p25 3.0, p75 6.4
+Risiko (nahe OB-Kante -> Extrem-Fraktal): median 5.4 Pips, p25 3.7, p75 8.1
 
-   short n=128  Reichweite median 13.5 Pips   nie invalidiert: 36
-   long  n=127  Reichweite median 12.2 Pips   nie invalidiert: 31
+   short n=437  Reichweite median 20.3 Pips   nie invalidiert: 127
+   long  n=418  Reichweite median 18.9 Pips   nie invalidiert: 111
 
--> punkt1_result.json geschrieben (255 Zeilen)
+-> punkt1_result.json geschrieben (855 Zeilen)

@@ -1,11 +1,9 @@
-HTF sicher   n= 25 | Reichweite median  28.7  p25   9.8  p75  33.4 | nie inval.   9
-               Ziel erreicht (von 25):  10P  18   15P  16   20P  15   25P  14   30P  11
+HTF sicher   n= 98 | Reichweite median  31.5  p25  16.9  p75  48.6 | nie inval.  34
+               Ziel erreicht (von 98):  10P  91   15P  81   20P  69   25P  61   30P  52
 
-unklar       n= 31 | Reichweite median  17.5  p25   9.6  p75  28.0 | nie inval.   7
-               Ziel erreicht (von 31):  10P  23   15P  17   20P  13   25P   9   30P   7
 
-M5 sicher    n=199 | Reichweite median  11.3  p25   5.8  p75  25.0 | nie inval.  51
-               Ziel erreicht (von 199):  10P 114   15P  84   20P  62   25P  50   30P  43
+M5 sicher    n=757 | Reichweite median  18.4  p25   9.6  p75  43.3 | nie inval. 204
+               Ziel erreicht (von 757):  10P 556   15P 438   20P 348   25P 293   30P 257
 
-ALLE         n=255 | Reichweite median  12.5  p25   6.5  p75  29.6 | nie inval.  67
-               Ziel erreicht (von 255):  10P 155   15P 117   20P  90   25P  73   30P  61
+ALLE         n=855 | Reichweite median  19.5  p25  10.1  p75  43.9 | nie inval. 238
+               Ziel erreicht (von 855):  10P 647   15P 519   20P 417   25P 354   30P 309

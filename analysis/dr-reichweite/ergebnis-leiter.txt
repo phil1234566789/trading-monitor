@@ -1,16 +1,16 @@
-UNBEDINGTE LEITER ueber alle 255 DRs
-  Pips  5P  80%  10P  61%  15P  46%  20P  35%  25P  29%  30P  24%  40P  17%
-  in R  1R  87%  2R  65%  3R  48%  4R  38%  5R  32%  8R  16%
+UNBEDINGTE LEITER ueber alle 855 DRs
+  Pips  5P  91%  10P  76%  15P  61%  20P  49%  25P  41%  30P  36%  40P  29%
+  in R  1R  90%  2R  72%  3R  58%  4R  46%  5R  39%  8R  24%
 
-kleines Risiko    n= 85  Risiko-Median  2.6 Pips
-   Pips  10P  42%  15P  27%  20P  22%  30P  12%
-   in R  1R  91%  2R  68%  3R  49%  5R  35%
-mittleres Risiko  n= 85  Risiko-Median  4.3 Pips
-   Pips  10P  71%  15P  49%  20P  33%  30P  27%
-   in R  1R  95%  2R  72%  3R  51%  5R  34%
-grosses Risiko    n= 85  Risiko-Median  7.3 Pips
-   Pips  10P  69%  15P  61%  20P  51%  30P  33%
-   in R  1R  75%  2R  55%  3R  44%  5R  26%
+kleines Risiko    n=285  Risiko-Median  3.1 Pips
+   Pips  10P  67%  15P  49%  20P  38%  30P  26%
+   in R  1R  97%  2R  82%  3R  70%  5R  50%
+mittleres Risiko  n=285  Risiko-Median  5.4 Pips
+   Pips  10P  80%  15P  63%  20P  51%  30P  38%
+   in R  1R  94%  2R  77%  3R  59%  5R  41%
+grosses Risiko    n=285  Risiko-Median  9.3 Pips
+   Pips  10P  80%  15P  70%  20P  58%  30P  44%
+   in R  1R  78%  2R  56%  3R  44%  5R  27%
 
-Spannweite ueber die Risiko-Terzile, Einheit Pips: 28 34 28 21 Punkte  (Mittel 28)
-Spannweite ueber die Risiko-Terzile, Einheit R   : 20 16  7  9 Punkte  (Mittel 13)
+Spannweite ueber die Risiko-Terzile, Einheit Pips: 13 20 20 18 Punkte  (Mittel 18)
+Spannweite ueber die Risiko-Terzile, Einheit R   : 19 26 27 23 Punkte  (Mittel 24)

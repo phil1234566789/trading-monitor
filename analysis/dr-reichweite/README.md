@@ -1,5 +1,25 @@
 # DR-Reichweite — Grundmessung + Filter-Auswertungen
 
+> **⚠️ Stand 20.09.2026: alle Zahlen im Fließtext unten stammen aus dem ersten Lauf (255 Dealing
+> Ranges, 15.07.–16.09.2026) und sind überholt.** Nach dem Backfill über 2026 (siehe
+> `backfillTradeSetups.ts`) liegt die Messung bei **855 Dealing Ranges über neun Monate**. Die
+> aktuellen Zahlen stehen in den `ergebnis-*.txt`, die Prosa hier ist noch nicht nachgezogen.
+>
+> Was sich dabei geändert hat, ist nicht nur die Stichprobengröße:
+> - Reichweiten-Median **12,5 → 19,5 Pips**, Risiko-Median 4,3 → 5,2
+> - **HTF-Sweep hält und wird belastbar**: 31,5 gegen 18,4 Pips, jetzt n=98 statt n=25
+> - **Handelszeit verschwindet**: 19,5 im Fenster gegen 19,2 außerhalb — der gestern stärkste
+>   Befund (16,4 gegen 7,1) war ein Artefakt der kleinen Stichprobe
+> - **Gegenkraft kippt teilweise**: der schlechte Fall ist jetzt „beide M5" (11,6, n=216), nicht
+>   mehr „ich M5, Gegner HTF" (16,3 bei n=16)
+> - **Neu und belastbar: Saisonalität.** März 30,7 Pips gegen August 14,1 — Bootstrap-Intervall
+>   [7,2; 26,4], und auch in R noch [0,26; 2,73]. Siehe `saisonalitaet.py`.
+>
+> Die Auswertung läuft seit dem 20.09.2026 auf **einem** Verfahren über alle neun Monate
+> (Simulation, `daten-setups-sim.json`) statt auf der gemischten DB-Tabelle — siehe die Begründung
+> im Kopf von `drMerkmale.py`.
+
+
 Einmalige Auswertung vom 19.09.2026, GBPUSD, 15.07.–16.09.2026. Beantwortet die Frage, die vorher
 nicht beantwortbar war: **welche erkannten Setups taugen** — gemessen an Philips eigener
 Erfolgsdefinition („Target erreicht, bevor der Invalidierungspunkt erreicht wird").

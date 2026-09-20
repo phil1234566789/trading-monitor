@@ -9,18 +9,11 @@
 #   invalidiert_nach : Minuten bis eine Kerze das Extrem-Fraktal BERUEHRT (Philips "trifft")
 #   reichweite       : groesste Bewegung in Trade-Richtung VOR der Invalidierung,
 #                      gemessen ab der NAHEN OB-Kante (ob_bottom bei Short, ob_top bei Long)
-import json, datetime, bisect, statistics, collections
+import json, bisect, statistics, collections
+from drMerkmale import lade_setups, lade_kerzen, ts, PIP, ARM, HORIZON
 
-SETUPS = r"C:\Users\Philip\.claude\projects\c--Users-Philip-Documents-git-trading-monitor\25cfa4c0-a261-49e1-9482-af67f53adc09\tool-results\mcp-trading-monitor-get_trade_setups-1789808350250.txt"
-CANDLES = r"C:\Users\Philip\.claude\projects\c--Users-Philip-Documents-git-trading-monitor\25cfa4c0-a261-49e1-9482-af67f53adc09\tool-results\mcp-trading-monitor-get_forex_candles_archive-1789814595814.txt"
-PIP = 0.0001
-ARM = 600
-HORIZON = 24 * 3600
-
-rows = json.load(open(SETUPS))
-cnd = json.load(open(CANDLES)); cnd.sort(key=lambda c: c["time"])
-times = [c["time"] for c in cnd]
-ts = lambda s: int(datetime.datetime.fromisoformat(s).timestamp())
+rows = lade_setups()
+cnd, times = lade_kerzen()
 
 for r in rows:
     r["_B"] = (r["fractal_price"] == r["ls_price"] and r["fractal_pivot_time"] == r["ls_pivot_time"])
