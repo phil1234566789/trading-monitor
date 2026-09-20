@@ -16,7 +16,8 @@ PIPS = (10, 15, 20, 25, 30, 35, 40)
 RS = (2, 3, 4, 5, 6)
 BAENDER = (("unter 3 Pips", 0, 3), ("3-5 Pips", 3, 5), ("5-7 Pips", 5, 7),
            ("7-10 Pips", 7, 10), ("ueber 10 Pips", 10, 1e9))
-DECKEL = 6
+DECKEL = 6          # Philips Stopp-Deckel, seit 20.09.2026 die Konvention (siehe PLAN)
+R_GEDECKELT = tuple(range(2, 11))
 med = lambda v: statistics.median(v) if v else float("nan")
 
 res = json.load(open("punkt1_result.json"))
@@ -119,3 +120,53 @@ for name, g in baender:
     print("  %-42s %4d   %3.0f %% * %+.2f R          %s"
           % (name, len(g), 100.0 * voll.count("win") / max(1, sum(1 for e in voll if e != "offen")),
              ev_voll, rechts))
+
+
+# --- Die Leiter, die der Chart tatsaechlich zeichnet -------------------------------------------
+# Seit 20.09.2026 rechnet die R-Skala gegen den GEDECKELTEN Stopp min(Risiko, 6 Pips), nicht gegen
+# das strukturelle Risiko der Range -- "3 R" soll dasselbe heissen wie in Philips Trade. Oberhalb
+# des Deckels liegen die Marken damit fuer jede DR bei denselben Pip-Abstaenden (12/18/24/...).
+#
+# Das ist eine ANDERE Messung als Tabelle 1 oben, nicht nur eine Umrechnung: dort zaehlt die reine
+# Reichweite bis zur fernen OB-Kante, hier laeuft der Pfad gegen den engeren Stopp, der fallen
+# kann, waehrend die Range strukturell noch lebt. Deshalb aendern sich auch die Baender unter
+# 6 Pips leicht, obwohl der Deckel dort gar nicht greift.
+#
+# Befund zum Mitnehmen: der Deckel FLACHT die Bandunterschiede ab. Bei 3 R spannen die Baender
+# ohne Deckel 32 Punkte auf (72 bis 40), mit Deckel nur noch 20 (72 bis 52), und die oberen drei
+# werden praktisch ununterscheidbar (59/52/53 -- das letzte Paar dreht die Reihenfolge sogar um,
+# bei n=182 gegen n=134 reines Rauschen). Aus 52 gegen 53 also KEINE Aussage bauen.
+def mess_gedeckelt(g, k):
+    """-> (Quote, Treffer, unentschieden). Unentschieden = weder Ziel noch Stopp binnen 24h."""
+    w = l = o = 0
+    for x in g:
+        stop = min(x["risk"], DECKEL)
+        erg = lauf(x, k * stop, stop)
+        if erg == "offen":
+            o += 1
+        elif erg == "win":
+            w += 1
+        else:
+            l += 1
+    return (100.0 * w / (w + l) if w + l else float("nan")), w, o
+
+
+print("5) R-LEITER MIT GEDECKELTEM STOPP (%d Pips) -- das ist die Tabelle fuer die Chart-Skala" % DECKEL)
+print("  %-42s %4s  " % ("", "n") + "".join("%7dR" % k for k in R_GEDECKELT))
+for name, g in baender:
+    print("  %-42s %4d  " % (name, len(g)) + "".join("%6.0f%% " % mess_gedeckelt(g, k)[0] for k in R_GEDECKELT))
+print("  %-42s %4d  " % ("alle", len(res)) + "".join("%6.0f%% " % mess_gedeckelt(res, k)[0] for k in R_GEDECKELT))
+print()
+print("  Marke in Pips, sobald das Risiko ueber dem Deckel liegt:")
+print("    " + "  ".join("%dR=%dP" % (k, k * DECKEL) for k in R_GEDECKELT))
+print("  Unentschieden ueber alle DRs (weder Ziel noch Stopp binnen 24h):")
+print("    " + "  ".join("%dR:%d" % (k, mess_gedeckelt(res, k)[2]) for k in R_GEDECKELT))
+print()
+print("  Erwartungswert -- RR ist bei gedeckeltem Stopp exakt k, also EV = q*k - (1-q):")
+print("  %-42s  " % "" + "".join("%7dR" % k for k in R_GEDECKELT))
+for name, g in baender:
+    print("  %-42s  " % name
+          + "".join("%+7.2f " % (mess_gedeckelt(g, k)[0] / 100 * k - (1 - mess_gedeckelt(g, k)[0] / 100)) for k in R_GEDECKELT))
+print("  %-42s  " % "alle"
+      + "".join("%+7.2f " % (mess_gedeckelt(res, k)[0] / 100 * k - (1 - mess_gedeckelt(res, k)[0] / 100)) for k in R_GEDECKELT))
+print("  Flach ueber die ganze Leiter (1,24 bis 1,57) -- die Anzeige soll informieren, nicht empfehlen.")
