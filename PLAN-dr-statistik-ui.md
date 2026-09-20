@@ -244,7 +244,7 @@ hergeleitet werden muss, falls die Anzeige eines Tages je konkret laufender DR r
 | Ort | Was |
 |---|---|
 | **TSC** (`TradeSetupCockpit.vue`) | Block an der Dealing Range: beide Leitern untereinander, je Zeile Strecke + Quote |
-| **Chart** | die R-Skala steht seit 20.09.2026 (`rScale.js`/`rScaleRendering.js`); fehlt nur noch die Quote je Marke, aus der Tabelle des passenden Risiko-Bands |
+| **Chart** | R-Skala mit Quote je Marke aus dem passenden Risiko-Band (`rScale.js`/`rScaleQuotes.js`/`rScaleRendering.js`) — steht seit 20.09.2026 |
 | **`find_targets`** | je Kandidat „historisch erreicht in N von M vergleichbaren DRs" |
 
 Fallstrick bei `find_targets`: das Tool sortiert nach Distanz zum **aktuellen Preis**, die Statistik
@@ -272,7 +272,8 @@ wäre durch nichts gedeckt.
 1. **R-Skala im Chart** (Stufe 1, siehe oben) — reines Frontend, kein Server. **Erledigt
    20.09.2026**, Task `chart-r-skala-an-der-dealing-range-zeichnen`.
 2. **Quoten an die R-Marken, statisch** — die 25 Zahlen aus Tabelle 1 oben als Konstante im
-   Frontend, erzeugt von `baenderTabellen.py`. Kein Server (Begründung unten).
+   Frontend, erzeugt von `baenderTabellen.py`. Kein Server (Begründung unten). **Erledigt
+   20.09.2026**, Task `chart-quoten-an-die-r-marken-schreiben-statisch` (`src/rScaleQuotes.js`).
 3. Beide Leitern plus Vergleichszeilen als Block im TSC.
 4. `find_targets`-Anreicherung.
 5. Gegenkraft — zurückgestellt, siehe oben.

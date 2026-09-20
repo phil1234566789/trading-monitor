@@ -9,10 +9,12 @@
 import { LiquidityLinePrimitive, bullBearLabelSide, formatLsLabel } from "../liquidity.js";
 import { OrderBlockPrimitive } from "../orderBlocks.js";
 import { rScaleLevels } from "../rScale.js";
+import { rQuote } from "../rScaleQuotes.js";
 import { RScalePrimitive } from "../rScaleRendering.js";
 import { cssColor, cssColorScaled } from "../chartColors.js";
 import { lineWidth } from "../chartLineWidths.js";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
+import { toPips } from "../pipConfig.js";
 import { TRADE_SETUP_OB_WIDTH_SEC, TRADE_SETUP_OB_FILL_RATIO, TRADE_SETUP_OB_BORDER_RATIO } from "../priceChartConstants.js";
 
 export function usePriceChartTradeSetupDrawing() {
@@ -139,9 +141,21 @@ export function usePriceChartTradeSetupDrawing() {
 
       // R-Skala (PLAN-dr-statistik-ui.md, Stufe 1) — Lineal am OB-Startzeitpunkt, siehe
       // rScaleRendering.js. Ein Primitive für alle Marken zusammen.
-      const { anchorPrice, levels } = showRScale ? rScaleLevels(setup) : { levels: [] };
+      // Quote je Marke (Stufe 2): die historische Trefferquote hängt am Risiko-BAND der Range,
+      // nicht an der R-Stufe allein — siehe rScaleQuotes.js (null außerhalb von GBPUSD).
+      const { anchorPrice, levels, risk } = showRScale ? rScaleLevels(setup) : { levels: [] };
+      const riskPips = toPips(risk ?? 0);
       const rScale = levels.length
-        ? [new RScalePrimitive({ startTime: setup.obStartTime, anchorPrice, levels }, candles)]
+        ? [
+            new RScalePrimitive(
+              {
+                startTime: setup.obStartTime,
+                anchorPrice,
+                levels: levels.map((l) => ({ ...l, quote: rQuote(symbol, riskPips, l.r) })),
+              },
+              candles,
+            ),
+          ]
         : [];
 
       for (const primitive of [fractalLine, lsLine, obBox, ...rScale]) {

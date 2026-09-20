@@ -1734,7 +1734,7 @@ watch(selectedTradingAccountId, () => {
           <button :class="{ active: showTradeSetupsShort }" @click="showTradeSetupsShort = !showTradeSetupsShort">
             Short Setups
           </button>
-          <button :class="{ active: showRScale }" @click="showRScale = !showRScale" title="Marken bei 2-6 R ab der nahen OB-Kante">
+          <button :class="{ active: showRScale }" @click="showRScale = !showRScale" title="Marken bei 2-6 R ab der nahen OB-Kante. Prozent = wie oft vergleichbare Dealing Ranges diese Strecke erreicht haben (GBPUSD, 915 Ranges Jan-Sep 2026, Erkennung nur im Alarmfenster) — historische Häufigkeiten, keine Wahrscheinlichkeiten. EURUSD ist ungemessen, dort steht keine Quote.">
             R-Skala
           </button>
           <label class="ranges-lookback-field">

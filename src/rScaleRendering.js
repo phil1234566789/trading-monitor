@@ -21,6 +21,13 @@ function styleKey(r) {
   return r === R_SCALE_MINIMUM ? "rScaleMinimum" : "rScale";
 }
 
+// Zahl ohne "R"-Suffix (Philips Skizze) — die Skala als Ganzes ist durch ihre Form erkennbar,
+// fünf Mal "R" wäre nur Rauschen. Dahinter die historische Trefferquote des Risiko-Bands, sofern
+// für das Instrument gemessen (rScaleQuotes.js) — sonst bleibt es bei der reinen R-Zahl.
+function labelText(r, quote) {
+  return quote == null ? String(r) : `${r} – ${quote} %`;
+}
+
 class RScaleRenderer {
   constructor(point) {
     this._point = point;
@@ -47,7 +54,7 @@ class RScaleRenderer {
       ctx.font = `${Math.round(LABEL_FONT_PX * scope.verticalPixelRatio)}px sans-serif`;
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
-      for (const { r, y } of ticks) {
+      for (const { r, quote, y } of ticks) {
         if (y === null) continue;
         const py = Math.round(y * scope.verticalPixelRatio) + 0.5;
         const color = cssColor(styleKey(r));
@@ -57,10 +64,9 @@ class RScaleRenderer {
         ctx.moveTo(px, py);
         ctx.lineTo(px + TICK_LENGTH_PX * scope.horizontalPixelRatio, py);
         ctx.stroke();
-        // Zahl links der senkrechten Linie, ohne "R"-Suffix (Philips Skizze) — die Skala als
-        // Ganzes ist durch ihre Form erkennbar, fünf Mal "R" wäre nur Rauschen.
+        // Label links der senkrechten Linie, siehe labelText.
         ctx.fillStyle = color;
-        ctx.fillText(String(r), px - LABEL_GAP_PX * scope.horizontalPixelRatio, py);
+        ctx.fillText(labelText(r, quote), px - LABEL_GAP_PX * scope.horizontalPixelRatio, py);
       }
     });
   }
@@ -80,7 +86,7 @@ class RScalePaneView {
     this._point = {
       x: barTime != null ? timeScale.timeToCoordinate(barTime) : null,
       anchorY: series.priceToCoordinate(anchorPrice),
-      ticks: levels.map(({ r, price }) => ({ r, y: series.priceToCoordinate(price) })),
+      ticks: levels.map(({ r, price, quote }) => ({ r, quote, y: series.priceToCoordinate(price) })),
     };
   }
 

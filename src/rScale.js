@@ -9,7 +9,7 @@ export const R_SCALE_STEPS = [2, 3, 4, 5, 6];
 // Laut Strategie das Minimum, deshalb eigener Farb-/Breiten-Key (siehe chartColors.js: rScaleMinimum).
 export const R_SCALE_MINIMUM = 3;
 
-const KEINE_SKALA = Object.freeze({ anchorPrice: null, levels: [] });
+const KEINE_SKALA = Object.freeze({ anchorPrice: null, levels: [], risk: 0 });
 
 // Liefert anchorPrice (Fußpunkt des Lineals) MIT den Marken, damit die Zeichnung ihn nicht selbst
 // ein zweites Mal herleitet — sonst zeigen Fußpunkt und Marken auf zwei unabhängige Rechnungen.
@@ -22,8 +22,11 @@ export function rScaleLevels(setup) {
   const risk = Math.abs(invalidation - setupEntry);
   if (!(risk > 0)) return KEINE_SKALA;
   const sign = setup.dir === 1 ? -1 : 1;
+  // risk wandert mit raus, damit die Quoten-Zuordnung (rScaleQuotes.js) es nicht ein zweites Mal
+  // aus den OB-Kanten herleiten muss.
   return {
     anchorPrice: setupEntry,
+    risk,
     levels: R_SCALE_STEPS.map((r) => ({ r, price: setupEntry + sign * r * risk })),
   };
 }
