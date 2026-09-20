@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Wie weit ist es von der nahen OB-Kante bis zum Extrem-Fraktal -- und was kostet ein Deckel?
+# Wie weit ist es von der nahen zur fernen OB-Kante (= Invalidierung) -- und was kostet ein Deckel?
 #
 # Philips Idee (19.09.2026): "wenn das Risiko ueber 10 Pips gross ist, machts auch keinen Sinn ...
 # ich denke man koennte auf maximal 6-7 pips eingrenzen, falls diese Distanzstrecke drueber ist."
@@ -11,7 +11,7 @@
 #
 # Ziel und Stopp in derselben M5-Kerze zaehlen als Verlust, wie in _shared/tradeSetupOutcome.ts.
 import json, bisect, statistics
-from drMerkmale import lade_setups, lade_kerzen, ts, PIP, ARM, HORIZON
+from drMerkmale import lade_setups, lade_kerzen, ts, lauf, PIP, ARM, HORIZON
 
 med = lambda v: statistics.median(v) if v else float("nan")
 setups = {r["id"]: r for r in lade_setups()}
@@ -20,30 +20,9 @@ res = json.load(open("punkt1_result.json"))
 n = len(res)
 
 
-def lauf(x, ziel_pips, stop_pips):
-    """-> 'win' | 'loss' | 'offen', beides gemessen ab der nahen OB-Kante."""
-    r = setups[x["id"]]
-    d = x["dir"]
-    ref = r["ob_bottom"] if d == "short" else r["ob_top"]
-    start = ts(r["ob_start_time"]) + ARM
-    ziel = ref - ziel_pips * PIP if d == "short" else ref + ziel_pips * PIP
-    stop = ref + stop_pips * PIP if d == "short" else ref - stop_pips * PIP
-    i = bisect.bisect_left(times, start)
-    while i < len(cnd) and cnd[i]["time"] <= start + HORIZON:
-        c = cnd[i]
-        traf_ziel = (c["low"] <= ziel) if d == "short" else (c["high"] >= ziel)
-        traf_stop = (c["high"] >= stop) if d == "short" else (c["low"] <= stop)
-        if traf_ziel and traf_stop:
-            return "loss"
-        if traf_ziel:
-            return "win"
-        if traf_stop:
-            return "loss"
-        i += 1
-    return "offen"
 
 
-print("VERTEILUNG des Risikos (nahe OB-Kante -> Extrem-Fraktal), alle %d DRs" % n)
+print("VERTEILUNG des Risikos (nahe -> ferne OB-Kante), alle %d DRs" % n)
 kum = 0
 for a, b in [(0, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8), (8, 10), (10, 15), (15, 99)]:
     g = [x for x in res if a <= x["risk"] < b]

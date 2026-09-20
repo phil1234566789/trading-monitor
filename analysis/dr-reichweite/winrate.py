@@ -9,7 +9,7 @@
 # Abgrenzung zu get_trade_setup_winrate (trade_setup_outcomes): das Tool rechnet je SETUP-ZEILE
 # gegen ein festes 2,5-RR-Ziel mit bei 6 Pips gedeckeltem Stopp. Hier zaehlt eine DEALING RANGE
 # (Path-A- und Path-B-Zeile desselben M5-OB zusammengefasst) gegen ein Ziel aus find_targets und
-# gegen das Extrem-Fraktal als Invalidierung. Beide Zahlen sind richtig, sie beantworten nur
+# gegen die ferne OB-Kante als Invalidierung. Beide Zahlen sind richtig, sie beantworten nur
 # verschiedene Fragen.
 import statistics
 from drMerkmale import lade_setups, lade_bekannte_level, lade_trend, merkmale
@@ -65,5 +65,5 @@ for gname, f in GRUPPEN:
             print("   %-18s entschieden %3d | Winrate %3.0f%% | RR-Median %4.2f | EV %+.2f R" % (rn, *q))
     print()
 
-print("Die R-Rechnung ist die der IDEE: Einstieg an der nahen OB-Kante, Stopp am Extrem-Fraktal.")
+print("Die R-Rechnung ist die der IDEE: Einstieg an der nahen OB-Kante, Stopp an der fernen.")
 print("Der reale Entry liegt woanders -- den macht Philip selbst, siehe README-Grenzen.")

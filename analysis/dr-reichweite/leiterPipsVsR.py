@@ -6,7 +6,7 @@
 # gebaut wird, muss klar sein, ob EINE Leiter fuer alle DRs ueberhaupt taugt: wenn dieselbe
 # Pip-Strecke je nach Risiko der DR voellig andere Quoten hat, waere eine Pip-Leiter irrefuehrend.
 #
-# Gegenprobe deshalb ueber Risiko-Terzile (Risiko = nahe OB-Kante -> Extrem-Fraktal).
+# Gegenprobe deshalb ueber Risiko-Terzile (Risiko = nahe -> ferne OB-Kante).
 import json, statistics
 
 res = json.load(open("punkt1_result.json"))

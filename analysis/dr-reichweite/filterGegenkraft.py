@@ -39,14 +39,17 @@ def walk(lead, d, ref, inval, start, tgt_pips):
 def build(tgt_pips):
     drs = []
     for key, g in groups.items():
+        # Wie messeDrReichweite.py: Merkmalstraeger ist die Zeile mit eigenem bestaetigtem Fraktal,
+        # die Invalidierung kommt aber seit dem 20.09.2026 pfadunabhaengig aus der fernen OB-Kante.
+        # Vorher fielen die DRs ohne solche Zeile hier ganz raus -- die Gegenkraft-Tabellen standen
+        # dadurch auf 855 DRs, waehrend alles andere schon auf 915 rechnete.
         a = [r for r in g if not r["_B"]]
-        if not a: continue
-        lead = a[0]; d, obst, obtop, obbot = key
+        lead = a[0] if a else g[0]
+        d, obst, obtop, obbot = key
         start = ts(obst) + ARM
         if not (times[0] <= start <= times[-1] - 3600): continue
         ref = obbot if d == "short" else obtop
-        inval = lead["fractal_price"]
-        if (inval <= ref) if d == "short" else (inval >= ref): continue
+        inval = obtop if d == "short" else obbot
         reach, t_inv, t_tg = walk(lead, d, ref, inval, start, tgt_pips)
         ends = [t for t in (t_inv, t_tg) if t is not None]
         fertig = start + (min(ends) * 60 if ends else HORIZON)

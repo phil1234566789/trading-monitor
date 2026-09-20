@@ -1,38 +1,38 @@
 FILTER 3 -- Inducement-Klasse (Sweep-Alter in Handelsstunden)
-  Major (>=120h)       n= 28 | Median  34.0 | p75  48.6 | >=15P  26 | >=20P  23 | nie inval.  9
+  Major (>=120h)       n= 30 | Median  32.1 | p75  47.3 | >=15P  26 | >=20P  23 | nie inval.  9
   Medium (24-120h)     n= 45 | Median  27.1 | p75  60.4 | >=15P  35 | >=20P  29 | nie inval. 18
-  Minor (<24h)         n=782 | Median  18.6 | p75  43.4 | >=15P 458 | >=20P 365 | nie inval. 211
+  Minor (<24h)         n=840 | Median  17.6 | p75  42.5 | >=15P 477 | >=20P 380 | nie inval. 223
 
-  nur innerhalb der HTF-Gruppe (n=98):
-    Major (>=120h)     n= 28 | Median  34.0 | p75  48.6 | >=15P  26 | >=20P  23 | nie inval.  9
+  nur innerhalb der HTF-Gruppe (n=100):
+    Major (>=120h)     n= 30 | Median  32.1 | p75  47.3 | >=15P  26 | >=20P  23 | nie inval.  9
     Medium (24-120h)   n= 45 | Median  27.1 | p75  60.4 | >=15P  35 | >=20P  29 | nie inval. 18
     Minor (<24h)       n= 25 | Median  31.5 | p75  44.2 | >=15P  20 | >=20P  17 | nie inval.  7
 
-  Sweep-Alter Verteilung: median 1.9 h, p75 7.4 h, p90 22.0 h, max 2013 h
+  Sweep-Alter Verteilung: median 1.8 h, p75 7.0 h, p90 21.4 h, max 2013 h
 
 FILTER 4 -- Handelszeit (GBPUSD 08:00-18:00 Berlin, Mo-Fr)
-  im Fenster           n=630 | Median  19.5 | p75  44.2 | >=15P 381 | >=20P 307 | nie inval. 187
-  ausserhalb           n=225 | Median  19.2 | p75  40.6 | >=15P 138 | >=20P 110 | nie inval. 51
+  im Fenster           n=677 | Median  18.5 | p75  43.6 | >=15P 393 | >=20P 317 | nie inval. 195
+  ausserhalb           n=238 | Median  19.0 | p75  40.0 | >=15P 145 | >=20P 115 | nie inval. 55
 
   nach Stunde (Berlin), OB-Entstehung:
     02:00  n= 17  Median  41.4  >=20P 12
-    03:00  n= 30  Median  24.3  >=20P 18
-    04:00  n= 29  Median  17.3  >=20P 14
-    05:00  n= 28  Median  16.3  >=20P 13
-    06:00  n= 46  Median  18.1  >=20P 22
-    07:00  n= 61  Median  13.3  >=20P 22
-    08:00  n= 85  Median  14.9  >=20P 31
-    09:00  n= 89  Median  20.7  >=20P 45
-    10:00  n= 59  Median  15.8  >=20P 27
-    11:00  n= 62  Median  19.3  >=20P 30
-    12:00  n= 61  Median  14.6  >=20P 22
-    13:00  n= 49  Median  19.0  >=20P 23
-    14:00  n= 56  Median  18.8  >=20P 26
-    15:00  n= 70  Median  20.9  >=20P 38
-    16:00  n= 67  Median  28.7  >=20P 46
-    17:00  n= 32  Median  33.8  >=20P 19
-    18:00  n= 11  Median  22.9  >=20P  6
+    03:00  n= 35  Median  23.8  >=20P 20
+    04:00  n= 30  Median  16.9  >=20P 14
+    05:00  n= 30  Median  16.3  >=20P 14
+    06:00  n= 48  Median  16.3  >=20P 22
+    07:00  n= 62  Median  13.8  >=20P 22
+    08:00  n= 91  Median  14.2  >=20P 31
+    09:00  n= 90  Median  20.1  >=20P 45
+    10:00  n= 63  Median  15.7  >=20P 28
+    11:00  n= 63  Median  19.9  >=20P 31
+    12:00  n= 69  Median  12.7  >=20P 22
+    13:00  n= 52  Median  18.5  >=20P 23
+    14:00  n= 66  Median  18.5  >=20P 30
+    15:00  n= 73  Median  20.3  >=20P 38
+    16:00  n= 73  Median  27.4  >=20P 47
+    17:00  n= 37  Median  36.6  >=20P 22
+    18:00  n= 13  Median  23.2  >=20P  8
 
   MMM-Fenster 10:30-13:00 Berlin (laut trading_schedules-Notiz 'nur mit zusaetzlichen Bestaetigungen'):
-  in MMM               n=151 | Median  15.7 | p75  36.7 | >=15P  82 | >=20P  62 | nie inval. 32
-  Fenster ohne MMM     n=479 | Median  20.6 | p75  45.3 | >=15P 299 | >=20P 245 | nie inval. 155
+  in MMM               n=162 | Median  15.3 | p75  35.1 | >=15P  84 | >=20P  63 | nie inval. 32
+  Fenster ohne MMM     n=515 | Median  19.7 | p75  44.2 | >=15P 309 | >=20P 254 | nie inval. 163

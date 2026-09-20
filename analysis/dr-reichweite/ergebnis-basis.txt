@@ -1,29 +1,28 @@
 Setup-Zeilen gesamt      : 1233
 Dealing Ranges (je M5-OB): 915   -> 318 Zeilen waren Duplikate
-   davon mit Path-A-Zeile (Extrem-Fraktal bekannt): 855
-   nur Path B (Invalidierung NICHT bestimmbar)    : 60  -> ausgeschlossen
+   davon ohne bestaetigtes Fraktal: 60  (frueher ausgeschlossen, jetzt ueber die OB-Kante messbar)
 
-ausgewertet: 855   (Sanity-Ausschluss, Invalidierung auf falscher Seite: 0)
+ausgewertet: 915   (Sanity-Ausschluss, Invalidierung auf falscher Seite: 0)
 
-Invalidierung binnen 24h getroffen : 617
-nie invalidiert (24h-Fenster)      : 238
-   Zeit bis Invalidierung: median 125 Min, p25 50, p75 265, max 1420
+Invalidierung binnen 24h getroffen : 665
+nie invalidiert (24h-Fenster)      : 250
+   Zeit bis Invalidierung: median 115 Min, p25 45, p75 250, max 1420
 
-REICHWEITE ab naher OB-Kante, vor der Invalidierung (alle 855):
-   median 19.5 Pips   p25 10.1   p75 43.9   max 241.9
+REICHWEITE ab naher OB-Kante, vor der Invalidierung (alle 915):
+   median 18.6 Pips   p25 9.7   p75 43.2   max 241.9
 
    Ziel erreichbar gewesen (Reichweite >= X), bevor die DR invalidierte:
-      >=  5 Pips : 779 von 855
-      >= 10 Pips : 647 von 855
-      >= 15 Pips : 519 von 855
-      >= 20 Pips : 417 von 855
-      >= 25 Pips : 354 von 855
-      >= 30 Pips : 309 von 855
-      >= 40 Pips : 246 von 855
+      >=  5 Pips : 824 von 915
+      >= 10 Pips : 677 von 915
+      >= 15 Pips : 538 von 915
+      >= 20 Pips : 432 von 915
+      >= 25 Pips : 367 von 915
+      >= 30 Pips : 320 von 915
+      >= 40 Pips : 255 von 915
 
-Risiko (nahe OB-Kante -> Extrem-Fraktal): median 5.4 Pips, p25 3.7, p75 8.1
+Risiko (nahe -> ferne OB-Kante): median 5.4 Pips, p25 3.8, p75 8.2
 
-   short n=437  Reichweite median 20.3 Pips   nie invalidiert: 127
-   long  n=418  Reichweite median 18.9 Pips   nie invalidiert: 111
+   short n=470  Reichweite median 19.3 Pips   nie invalidiert: 133
+   long  n=445  Reichweite median 17.9 Pips   nie invalidiert: 117
 
--> punkt1_result.json geschrieben (855 Zeilen)
+-> punkt1_result.json geschrieben (915 Zeilen)

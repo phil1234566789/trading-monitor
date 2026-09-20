@@ -1,12 +1,20 @@
 # -*- coding: utf-8 -*-
 # PUNKT 1 -- Grundmessung je Dealing Range.
 #
-# Eine DR = ein M5-OB. Path-A- und Path-B-Zeile desselben OB werden zusammengefasst;
-# die Invalidierung kommt aus der Path-A-Zeile (dort steht das Extrem-Fraktal, nicht
-# das gesweepte Level).
+# Eine DR = ein M5-OB. Zeilen desselben OB werden zusammengefasst -- dieselbe Gruppierung, die
+# seit dem 20.09.2026 auch die Tabelle selbst hat (Migration 20260920140000).
+#
+# Invalidierung = FERNE OB-Kante, seit dem 20.09.2026 auch im Produktivcode die einzige Quelle
+# (siehe deriveSetupEntryInvalidation). Vorher stand hier das bestaetigte Extrem-Fraktal aus der
+# Path-A-Zeile. Nachgemessen: ueber die 855 DRs, die BEIDE Fassungen kennen, aendert der Wechsel
+# die Trefferquoten um 0,0 bis 0,1 Punkte -- die beiden Preise sind in 97 % der Faelle identisch.
+# Der eigentliche Gewinn ist die Stichprobe: die alte Fassung musste 60 DRs ohne Path-A-Zeile
+# komplett verwerfen, weil ohne bestaetigtes Fraktal keine Invalidierung bestimmbar war. Die ferne
+# OB-Kante steht dagegen bei JEDER DR fest, also sind es jetzt 915 statt 855. Die 60 Nachzuegler
+# sind unterdurchschnittlich, deshalb sinken die Quoten um 1 bis 3 Punkte.
 #
 # Gemessen ab FVG-Bestaetigung (ob_start + 2 M5-Kerzen), danach:
-#   invalidiert_nach : Minuten bis eine Kerze das Extrem-Fraktal BERUEHRT (Philips "trifft")
+#   invalidiert_nach : Minuten bis eine Kerze die ferne OB-Kante BERUEHRT (Philips "trifft")
 #   reichweite       : groesste Bewegung in Trade-Richtung VOR der Invalidierung,
 #                      gemessen ab der NAHEN OB-Kante (ob_bottom bei Short, ob_top bei Long)
 import json, bisect, statistics, collections
@@ -22,16 +30,19 @@ groups = collections.defaultdict(list)
 for r in rows:
     groups[(r["direction"], r["ob_start_time"], r["ob_top"], r["ob_bottom"])].append(r)
 
-drs, nur_b = [], []
+# Merkmalstraeger der Gruppe ist die Zeile mit einem EIGENEN bestaetigten Fraktal -- dieselbe Wahl
+# wie setup_quelle in der Migration, damit Auswertung und Tabelle dieselbe Zeile meinen.
+drs = []
 for key, g in groups.items():
     a = [r for r in g if not r["_B"]]
-    (drs if a else nur_b).append((key, a[0] if a else g[0], g))
+    drs.append((key, a[0] if a else g[0], g))
+ohne_fraktal = sum(1 for _, lead, _ in drs if lead["_B"])
 
 print("Setup-Zeilen gesamt      : %d" % len(rows))
 print("Dealing Ranges (je M5-OB): %d   -> %d Zeilen waren Duplikate"
       % (len(groups), len(rows) - len(groups)))
-print("   davon mit Path-A-Zeile (Extrem-Fraktal bekannt): %d" % len(drs))
-print("   nur Path B (Invalidierung NICHT bestimmbar)    : %d  -> ausgeschlossen" % len(nur_b))
+print("   davon ohne bestaetigtes Fraktal: %d  (frueher ausgeschlossen, jetzt ueber die OB-Kante messbar)"
+      % ohne_fraktal)
 print()
 
 res, skipped_sanity = [], 0
@@ -40,7 +51,7 @@ for key, lead, g in drs:
     start = ts(obst) + ARM
     if not (times[0] <= start <= times[-1] - 3600):
         continue
-    inval = lead["fractal_price"]
+    inval = obtop if d == "short" else obbot
     ref = obbot if d == "short" else obtop
     # Sanity: Invalidierung muss auf der richtigen Seite der Referenz liegen
     if (inval <= ref) if d == "short" else (inval >= ref):
@@ -86,7 +97,7 @@ for X in (5, 10, 15, 20, 25, 30, 40):
     print("      >= %2d Pips : %3d von %3d" % (X, n, len(res)))
 print()
 rsk = sorted(x["risk"] for x in res)
-print("Risiko (nahe OB-Kante -> Extrem-Fraktal): median %.1f Pips, p25 %.1f, p75 %.1f"
+print("Risiko (nahe -> ferne OB-Kante): median %.1f Pips, p25 %.1f, p75 %.1f"
       % (statistics.median(rsk), rsk[len(rsk)//4], rsk[3*len(rsk)//4]))
 print()
 for d in ("short", "long"):

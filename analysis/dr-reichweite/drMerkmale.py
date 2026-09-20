@@ -138,3 +138,40 @@ def trendlage(dr_richtung, trend):
         return "Trend unklar"
     passt = (trend == "uptrend") == (dr_richtung == "long")
     return "mit dem Trend" if passt else "gegen den Trend"
+
+
+# --- Pfad-Simulation, von deckelStopp.py und baenderTabellen.py gemeinsam genutzt --------------
+import bisect as _bisect
+
+_cache = {}
+
+
+def lauf(x, ziel_pips, stop_pips):
+    """Laeuft die M5-Kerzen ab FVG-Bestaetigung ab -> 'win' | 'loss' | 'offen'.
+
+    Beides gemessen ab der nahen OB-Kante; der Entry bleibt fix dort, nur so sind zwei
+    Stopp-Platzierungen vergleichbar. Ziel und Stopp in DERSELBEN M5-Kerze zaehlen als Verlust,
+    wie in _shared/tradeSetupOutcome.ts."""
+    if not _cache:
+        _cache["setups"] = {r["id"]: r for r in lade_setups()}
+        _cache["cnd"], _cache["times"] = lade_kerzen()
+    setups, cnd, times = _cache["setups"], _cache["cnd"], _cache["times"]
+    r = setups[x["id"]]
+    d = x["dir"]
+    ref = r["ob_bottom"] if d == "short" else r["ob_top"]
+    start = ts(r["ob_start_time"]) + ARM
+    ziel = ref - ziel_pips * PIP if d == "short" else ref + ziel_pips * PIP
+    stop = ref + stop_pips * PIP if d == "short" else ref - stop_pips * PIP
+    i = _bisect.bisect_left(times, start)
+    while i < len(cnd) and cnd[i]["time"] <= start + HORIZON:
+        c = cnd[i]
+        traf_ziel = (c["low"] <= ziel) if d == "short" else (c["high"] >= ziel)
+        traf_stop = (c["high"] >= stop) if d == "short" else (c["low"] <= stop)
+        if traf_ziel and traf_stop:
+            return "loss"
+        if traf_ziel:
+            return "win"
+        if traf_stop:
+            return "loss"
+        i += 1
+    return "offen"
