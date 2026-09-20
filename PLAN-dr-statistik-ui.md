@@ -43,6 +43,50 @@ bei 73 %. Der Durchschnitt trifft auf keine einzelne DR zu. In R **dreht sich di
 (83 % bei 2 R für die engsten gegen 50 % für die weitesten) — und genau deshalb braucht es beide
 Leitern, jede mit ihrer Gruppierung.
 
+## Stufe 1: die R-Skala an der Dealing Range — ohne jede Serverarbeit
+
+**Das ist der erste Task.** Philip 20.09.2026: *„an die Dealing-Range eine Skala zu zeichnen ... dann
+kann man ja sehen, ob eine Dealing-Range bereits eine 3- oder 4- oder 5-R-Strecke hingelegt hat."*
+
+Der Clou: dafür braucht es **nichts** von dem, was weiter unten unter „Was serverseitig fehlt" steht.
+Keine `dr_reach`-Tabelle, keinen Backfill, keinen Aggregations-Endpunkt, keine `poi-watcher`-Änderung.
+Die Skala ist reine Geometrie aus Werten, die der Chart schon in der Hand hält:
+
+```
+ref   = direction === "short" ? setup.obBottom : setup.obTop
+risk  = |setup.fractal.price − ref|
+tick_k = direction === "short" ? ref − k · risk : ref + k · risk      für k = 2, 3, 4, 5, 6
+```
+
+`setup.obTop`, `setup.obBottom` und `setup.fractal.price` stehen bereits in `tradeSetupsMetadata`
+(`usePriceChartTradeSetups.js`), und `usePriceChartTradeSetupDrawing.js` zeichnet daraus heute schon
+Fraktal-Linie und OB-Box. Die Skala ist ein weiteres Primitive an derselben Stelle — Muster:
+`FibTickPrimitive` in `marketStructureRendering.ts`, Farben aus `chartColors.js`.
+
+**Was Philip damit sofort hat:** er sieht an jeder DR im Chart ab, wie weit sie schon gelaufen ist.
+Das ist genau die Information, die er für die Einschätzung einer gegnerischen DR braucht — ohne
+dass irgendetwas klassifiziert oder bewertet werden muss. Die Skala zeigt den Stand, die Abwägung
+macht er.
+
+**Reihenfolge der R-Marken:** 2 / 3 / 4 / 5 / 6 R. Kein 1 R — Philip: *„1R macht keinen sinn ich
+mache keinen Trade um 1R zu gewinnen."* 3 R ist laut Strategie das Minimum, die Marke gehört also
+sichtbar hervorgehoben.
+
+**Stufe 2 wäre dann**, an jede Marke die historische Quote zu schreiben („3 R — 58 %"). Erst dafür
+braucht es die serverseitige Messung. Die Skala allein funktioniert vorher.
+
+## Zurückgestellt: die Gegenkraft
+
+Philip 20.09.2026: *„Gegner ist ja bei mir Anti-Confluence. Das stellen wir nach hinten, weil es
+eine schwierige Kategorie ist. Das erfordert viel Feingefühl und Erfahrung."*
+
+Die Vorarbeit ist trotzdem gemacht und steht weiter unten — inklusive der Erkenntnis, dass die
+Einstufung an einer Definition von „fertig" hängt, die aus Philips Strategie kommen sollte (3 R)
+statt aus einer erfundenen Pip-Zahl. Nicht anfangen, bis Philip darauf zurückkommt.
+
+Die R-Skala aus Stufe 1 deckt einen guten Teil des Bedarfs ohnehin ab: wer sieht, dass die
+gegenläufige DR schon 4 R hinter sich hat, kann selbst abwägen, ohne dass die UI das Urteil fällt.
+
 ## Die Zahlen (Stand 20.09.2026, n=855)
 
 Angezeigt wird immer die Zeile des Bandes, in das die laufende DR fällt — die Gesamtzeile steht
@@ -76,7 +120,7 @@ kleinste feste Band hat 114 DRs. Beide Leitern können also **sofort als Prozent
 Die Anzeige sollte die Regel trotzdem im Code tragen (unter 50 entschiedenen Fällen rohe Zahlen
 statt Prozent), damit ein späterer feinerer Schnitt nicht stillschweigend darunter rutscht.
 
-### Ein zweiter Schnitt ist jetzt auch möglich
+### Ein zweiter Schnitt wäre möglich — aber zurückgestellt (siehe oben)
 
 | Gruppe | n | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P | 2 R | 3 R | 4 R | 5 R | 6 R |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -188,10 +232,12 @@ wäre durch nichts gedeckt.
 
 ## Reihenfolge
 
-1. Serverseitige Messung: Tabelle, Forward-Walk, Backfill, Fortschreibung in `poi-watcher`.
-2. Aggregations-Endpunkt mit beiden Leitern und `n`.
-3. Beide Leitern im TSC, je nach Risiko-Band der laufenden DR.
-4. Chart-Ticks und die `find_targets`-Anreicherung.
+1. **R-Skala im Chart** (Stufe 1, siehe oben) — reines Frontend, kein Server. Der erste Task.
+2. Serverseitige Messung: Tabelle, Forward-Walk, Backfill, Fortschreibung in `poi-watcher`.
+3. Aggregations-Endpunkt mit beiden Leitern und `n`.
+4. Quoten an die R-Marken schreiben (Stufe 2) und beide Leitern als Block im TSC.
+5. `find_targets`-Anreicherung.
+6. Gegenkraft — zurückgestellt, siehe oben.
 
 ## Grenzen, die in die Anzeige gehören
 
