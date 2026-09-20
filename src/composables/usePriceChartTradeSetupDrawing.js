@@ -9,6 +9,8 @@
 import { LiquidityLinePrimitive, bullBearLabelSide, formatLsLabel } from "../liquidity.js";
 import { OrderBlockPrimitive } from "../orderBlocks.js";
 import { tradeSetupObBoxBounds } from "../tradeSetup.js";
+import { rScaleLevels } from "../rScale.js";
+import { RScalePrimitive } from "../rScaleRendering.js";
 import { cssColor, cssColorScaled } from "../chartColors.js";
 import { lineWidth } from "../chartLineWidths.js";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
@@ -28,7 +30,7 @@ export function usePriceChartTradeSetupDrawing() {
   // tradeSetups = tradeSetupsMetadata.value (usePriceChartTradeSetups.js) — enthält IMMER beide
   // Richtungen (siehe dort), showTradeSetupsShort/-Long filtern hier NUR das Zeichnen. candles =
   // bereits clipReplay-gefiltertes allCandles.
-  function refresh(tradeSetups, { candles, showTradeSetups, showTradeSetupsShort, showTradeSetupsLong, showLiquidityDebug, replayUntil, symbol }) {
+  function refresh(tradeSetups, { candles, showTradeSetups, showTradeSetupsShort, showTradeSetupsLong, showRScale, showLiquidityDebug, replayUntil, symbol }) {
     for (const p of tradeSetupPrimitives) candleSeries.detachPrimitive(p);
     tradeSetupPrimitives.length = 0;
     if (!showTradeSetups) return;
@@ -131,7 +133,14 @@ export function usePriceChartTradeSetupDrawing() {
         candles,
       );
 
-      for (const primitive of [fractalLine, lsLine, obBox]) {
+      // R-Skala (PLAN-dr-statistik-ui.md, Stufe 1) — Lineal am OB-Startzeitpunkt, siehe
+      // rScaleRendering.js. Ein Primitive für alle Marken zusammen, leere Liste bei Path B.
+      const { anchorPrice, levels } = showRScale ? rScaleLevels(setup) : { levels: [] };
+      const rScale = levels.length
+        ? [new RScalePrimitive({ startTime: setup.obStartTime, anchorPrice, levels }, candles)]
+        : [];
+
+      for (const primitive of [fractalLine, lsLine, obBox, ...rScale]) {
         candleSeries.attachPrimitive(primitive);
         tradeSetupPrimitives.push(primitive);
       }

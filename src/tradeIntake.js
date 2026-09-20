@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient.js";
+import { deriveSetupEntryInvalidation } from "./tradeSetup.js";
 
 // "Setup als Trade übernehmen" (Chat 2026-07-27, Trade-Modus) — verbindet einen im Chart
 // angeklickten Trade-Setup (dir/label/pathType/obTop/obBottom/ls/fractal, siehe
@@ -12,17 +13,12 @@ export function directionForSetup(setup) {
   return setup.dir === 1 ? "short" : "long";
 }
 
-// These-Ebene (Soll): "setupEntry ist bärische M5-OB-Unterkante, invalidation ist Oberkante"
-// (Chat 2026-07-27, Philips eigene Definition, bewusst nicht die "Standard"-OB-Lesart) — beim
-// Long spiegelbildlich (Oberkante = Entry, Unterkante = Invalidation). Seit dem Idee/Ausführung-
-// Split (2026-07-31) landen die zwei Werte an verschiedenen Stellen: invalidation auf der
-// dealing_range (gilt für die ganze Idee), setupEntry als Bestätigung auf der jeweiligen
-// trade_position (siehe createTradeFromSetup) — die Funktion selbst bleibt unverändert.
-export function deriveSetupEntryInvalidation(setup) {
-  return setup.dir === 1
-    ? { setupEntry: setup.obBottom, invalidation: setup.obTop }
-    : { setupEntry: setup.obTop, invalidation: setup.obBottom };
-}
+// Seit dem Idee/Ausführung-Split (2026-07-31) landen die zwei Werte an verschiedenen Stellen:
+// invalidation auf der dealing_range (gilt für die ganze Idee), setupEntry als Bestätigung auf der
+// jeweiligen trade_position (siehe createTradeFromSetup). Re-Export, damit die bestehenden
+// Importeure (TakeTradeModal.vue) unverändert bleiben — die Geometrie selbst liegt in
+// tradeSetup.js, siehe dort.
+export { deriveSetupEntryInvalidation };
 
 // Verknüpfung zum poi-watcher-persistierten trade_setups-Datensatz über den natürlichen Schlüssel
 // (instrument, direction, fractal_pivot_time) — broker-/datenquellen-unabhängig, weil trade_setups

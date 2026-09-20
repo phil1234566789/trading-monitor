@@ -141,6 +141,9 @@ const tradeSetupHistoryCount = useLocalStorageRef("tradeSetupHistoryCount", 5);
 // dadurch automatisch nur noch das jüngste SICHTBARE Setup).
 const showTradeSetupsLong = useLocalStorageRef("showTradeSetupsLong", true);
 const showTradeSetupsShort = useLocalStorageRef("showTradeSetupsShort", true);
+// R-Skala (2-6 R ab der nahen OB-Kante, siehe rScale.js) — eigener Toggle neben den
+// Richtungs-Schaltern: bei großer Setup-Historie sind das fünf zusätzliche Linien PRO Setup.
+const showRScale = useLocalStorageRef("showRScale", true);
 
 // "Ranges" — erster Baustein des neuen PA-Analyse-Konzepts (siehe Chat 2026-07-18: weg von der
 // verschachtelten Trend-State-Machine, hin zu PA-Analyse/Trendanalyse/Marktstärke als getrennten
@@ -1714,6 +1717,9 @@ watch(selectedTradingAccountId, () => {
           <button :class="{ active: showTradeSetupsShort }" @click="showTradeSetupsShort = !showTradeSetupsShort">
             Short Setups
           </button>
+          <button :class="{ active: showRScale }" @click="showRScale = !showRScale" title="Marken bei 2-6 R ab der nahen OB-Kante">
+            R-Skala
+          </button>
           <label class="ranges-lookback-field">
             Historie
             <input
@@ -2028,6 +2034,7 @@ watch(selectedTradingAccountId, () => {
     :trade-setup-history-count="tradeSetupHistoryCount"
     :show-trade-setups-long="showTradeSetupsLong"
     :show-trade-setups-short="showTradeSetupsShort"
+    :show-r-scale="showRScale"
     :ranges-period="rangesPeriod"
     :ranges-lookback-hours="rangesLookbackHours"
     :ranges2-period="ranges2Period"

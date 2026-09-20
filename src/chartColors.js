@@ -80,6 +80,12 @@ export const DEFAULT_CHART_COLORS = {
   tradeSetupShort: { hex: "#ffd700", alpha: 0.9 },
   tradeSetupLong: { hex: "#2196f3", alpha: 0.9 },
   tradeSetupProtected: { hex: "#ffffff", alpha: 0.95 },
+  // R-Skala an der Dealing Range (siehe rScale.js) — neutraler eigener Ton, weder Long/Short noch
+  // Ziel/Bestätigung: die Marken gehören zu keiner der beiden Richtungen, sondern messen nur die
+  // gelaufene Strecke. 3 R als Strategie-Minimum mit eigenem Key, damit Philip genau diese eine
+  // Marke hervorheben kann, ohne die übrigen mitzuziehen.
+  rScale: { hex: "#90a4ae", alpha: 0.55 },
+  rScaleMinimum: { hex: "#90a4ae", alpha: 0.95 },
   rangeHigh: { hex: "#ef5350", alpha: 0.95 },
   rangeLow: { hex: "#00e676", alpha: 0.95 },
   rangeProtectedLow: { hex: "#ffffff", alpha: 0.95 },

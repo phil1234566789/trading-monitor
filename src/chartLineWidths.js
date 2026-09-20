@@ -43,6 +43,8 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   tradeSetupShort: 2, // LS-Linie + Order-Block-Rand, wenn Short (siehe PriceChart.vue: key=tradeSetupShort/-Long, dieselbe Farbe für beides)
   tradeSetupLong: 2,
   tradeSetupProtected: 2, // Fractal-Linie im Trade-Setup.
+  rScale: 1, // R-Marken an der Dealing Range (siehe rScale.js).
+  rScaleMinimum: 2, // 3-R-Marke, laut Strategie das Minimum — bewusst dicker als die übrigen.
   rangeHigh: 2,
   rangeLow: 2,
   rangeProtectedLow: 2,

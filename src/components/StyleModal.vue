@@ -109,6 +109,8 @@ const GROUPS = [
       { key: "tradeSetupShort", label: "Short" },
       { key: "tradeSetupLong", label: "Long" },
       { key: "tradeSetupProtected", label: "Protected Level" },
+      { key: "rScale", label: "R-Skala" },
+      { key: "rScaleMinimum", label: "R-Skala (3 R)" },
     ],
   },
   {

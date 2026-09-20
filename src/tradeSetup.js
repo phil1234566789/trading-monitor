@@ -223,3 +223,14 @@ export function tradeSetupObBoxBounds(setup) {
     ? { top: setup.fractal.price, bottom: setup.obBottom }
     : { top: setup.obTop, bottom: setup.fractal.price };
 }
+
+// These-Ebene (Soll): "setupEntry ist bärische M5-OB-Unterkante, invalidation ist Oberkante"
+// (Chat 2026-07-27, Philips eigene Definition, bewusst nicht die "Standard"-OB-Lesart) — beim
+// Long spiegelbildlich. Stand ursprünglich in tradeIntake.js, seit der R-Skala (rScale.js) hier:
+// beide Aufrufer brauchen nur die Geometrie, rScale.js soll aber nicht über tradeIntake.js den
+// Supabase-Client mitziehen.
+export function deriveSetupEntryInvalidation(setup) {
+  return setup.dir === 1
+    ? { setupEntry: setup.obBottom, invalidation: setup.obTop }
+    : { setupEntry: setup.obTop, invalidation: setup.obBottom };
+}
