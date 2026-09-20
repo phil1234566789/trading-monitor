@@ -1,408 +1,241 @@
-# DR-Reichweite — Grundmessung + Filter-Auswertungen
+# DR-Reichweite — was taugen die erkannten Setups?
 
-> **⚠️ Stand 20.09.2026: alle Zahlen im Fließtext unten stammen aus dem ersten Lauf (255 Dealing
-> Ranges, 15.07.–16.09.2026) und sind überholt.** Nach dem Backfill über 2026 (siehe
-> `backfillTradeSetups.ts`) liegt die Messung bei **855 Dealing Ranges über neun Monate**. Die
-> aktuellen Zahlen stehen in den `ergebnis-*.txt`, die Prosa hier ist noch nicht nachgezogen.
->
-> Was sich dabei geändert hat, ist nicht nur die Stichprobengröße:
-> - Reichweiten-Median **12,5 → 19,5 Pips**, Risiko-Median 4,3 → 5,2
-> - **HTF-Sweep hält und wird belastbar**: 31,5 gegen 18,4 Pips, jetzt n=98 statt n=25
-> - **Handelszeit verschwindet**: 19,5 im Fenster gegen 19,2 außerhalb — der gestern stärkste
->   Befund (16,4 gegen 7,1) war ein Artefakt der kleinen Stichprobe
-> - **Gegenkraft kippt teilweise**: der schlechte Fall ist jetzt „beide M5" (11,6, n=216), nicht
->   mehr „ich M5, Gegner HTF" (16,3 bei n=16)
-> - **Neu und belastbar: Saisonalität.** März 30,7 Pips gegen August 14,1 — Bootstrap-Intervall
->   [7,2; 26,4], und auch in R noch [0,26; 2,73]. Siehe `saisonalitaet.py`.
->
-> Die Auswertung läuft seit dem 20.09.2026 auf **einem** Verfahren über alle neun Monate
-> (Simulation, `daten-setups-sim.json`) statt auf der gemischten DB-Tabelle — siehe die Begründung
-> im Kopf von `drMerkmale.py`.
+Auswertung vom **20.09.2026**, GBPUSD, **855 Dealing Ranges** über **Januar bis September 2026**.
+Beantwortet die Frage, die vorher nicht beantwortbar war: welche erkannten Setups taugen — gemessen
+an Philips eigener Erfolgsdefinition („Target erreicht, bevor der Invalidierungspunkt erreicht
+wird").
 
+Kein Produktionscode. Python-Skripte, die lokal gegen abgelegte JSON-Dateien laufen.
 
-Einmalige Auswertung vom 19.09.2026, GBPUSD, 15.07.–16.09.2026. Beantwortet die Frage, die vorher
-nicht beantwortbar war: **welche erkannten Setups taugen** — gemessen an Philips eigener
-Erfolgsdefinition („Target erreicht, bevor der Invalidierungspunkt erreicht wird").
+> Die erste Fassung vom 19.09.2026 stand auf 255 DRs aus zwei Monaten (15.07.–16.09.). Diese zwei
+> Monate waren, wie sich jetzt zeigt, die beiden schwächsten des Jahres — und **zwei ihrer vier
+> Befunde haben die größere Stichprobe nicht überlebt**. Was sich geändert hat, steht unten bei
+> jedem Filter.
 
-Kein Produktionscode. Die Skripte laufen lokal mit Python gegen JSON-Dateien, die vorher über die
-`trading-monitor`-MCP-Tools gezogen wurden.
+## Leitkennzahl: Trefferquote, nicht Median
 
-## Datenquellen (vor dem Lauf ziehen)
+Philip, 20.09.2026: *„mir ist doch egal wie weit die Pipstrecken gehen, ich will am ende 10-20 pips
+traden und den Gewinn mitnehmen. Ich will ne gute Winrate von Dealing Ranges."* Ein Median lässt
+sich von wenigen sehr weiten Läufen hochziehen und beschreibt damit etwas, das für die Entscheidung
+„traden oder nicht" keine Rolle spielt. Alle Haupttabellen stehen deshalb als Trefferquote
+(`quotenTabelle.py`), der Reichweiten-Median läuft nur noch als Nebenangabe mit.
 
-Die drei Eingabedateien entstehen aus diesen MCP-Aufrufen; ihre Pfade stehen oben in jedem Skript
-und müssen auf die tatsächlichen Ablageorte angepasst werden:
+| Ziel | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P | 1 R | 2 R | 3 R | 4 R | 5 R |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| alle 855 | 76 % | **61 %** | 49 % | 41 % | 36 % | 32 % | 29 % | 90 % | 72 % | 58 % | 46 % | 39 % |
 
-| Datei | Aufruf |
-|---|---|
-| Setups | `get_trade_setups(instrument="GBPUSD", limit=400)` |
-| M5-Kerzen | `get_forex_candles_archive(instrument="GBPUSD", timeframe="5m", fromTime="2026-07-15", toTime="2026-09-19", limit=20000)` |
-| LQ-Level | `get_near_relevant_liquidity_levels(instrument="GBPUSD", fromSec=1784073600, toSec=1789603200)` |
+Weitere Eckwerte: Reichweiten-Median 19,5 Pips (p25 10,1 / p75 43,9 / max 241,9), Risiko-Median
+5,4 (p25 3,7 / p75 8,1 / p90 10,8 / max 40,1). 617 binnen 24 h invalidiert, 238 nie. Zeit bis zur
+Invalidierung: Median 125 Minuten. Short 437 DRs, Long 418 — kein Richtungs-Unterschied.
 
-Zwei weitere Eingaben holen sich ihre Skripte selbst über den MCP und legen sie im Ordner ab:
-`find-targets-roh.jsonl.gz` (`messeFindTargets.py sammeln`) und `trend-je-dr.json`
-(`messeTrendJeDr.py`). Beide brauchen `TRADING_MONITOR_MCP_TOKEN` in der Umgebung.
+## Woher die 855 kommen
+
+`trade_setups` beginnt erst am 16.07.2026, weil es die Tabelle vorher nicht gab. M5- und 1H-Kerzen
+liegen aber für ganz 2026 lückenlos im Archiv. `backfillTradeSetups.ts` (im MCP-Scripts-Ordner)
+spielt deshalb poi-watchers Live-Tick über das Archiv nach: für jede M5-Kerze denselben Zustand
+herstellen (300 M5-Kerzen, 3000 1H-Kerzen, `nowTime` am Kerzenschluss) und dieselben zwei
+`detectTradeSetup`-Aufrufe absetzen.
+
+Zwei Dinge haben den Lauf sonst verfälscht, beide messbar:
+
+- **poi-watcher läuft nicht rund um die Uhr.** Außerhalb des Alarmfensters steigt der Tick aus,
+  bevor er Kerzen holt. Ohne dieselbe Sperre fand die Simulation in einer August-Woche 60 Setups
+  gegen 36 live, und alle 12 Extras ab 16:00 UTC lagen in Stunden mit null Live-Zeilen.
+- **Die 1H-Level brauchen ihren Touch gegen die M5-Kerzen nachgezogen.** Wartet man auf den
+  1H-Schluss, kommt ein Sweep bis zu 60 Minuten zu spät — bei `lsMaxLeadSecH1` von 120 Minuten
+  fallen dadurch genau die HTF-Setups raus.
+
+Treue gegen drei Wochen mit echten Live-Zeilen: **108 von 112 Setups reproduziert**, 8 % zusätzliche.
+
+### Warum die Auswertung NICHT auf der DB-Tabelle läuft
+
+Die Tabelle ist seit dem Backfill gemischter Herkunft. Über denselben Zeitraum gerechnet liefern
+die beiden Verfahren nicht dasselbe: Live-Zeilen kommen auf einen Reichweiten-Median von 12,9 Pips,
+simulierte auf 15,2, bei praktisch gleichem Risiko. Die Einzel-Setups stimmen zu 96 % überein, aber
+der Live-Cron verpasst Ticks — und wer ein Setup einen Tick später zuerst sieht, paart es mit einem
+anderen bestätigenden OB.
+
+Im Monatsverlauf war diese Naht als Juli-Einbruch sichtbar und hätte fast als Saisonalität
+durchgehen können. Deshalb läuft alles auf **einem** Verfahren über alle neun Monate
+(`daten-setups-sim.json`). Die DB-Tabelle bleibt unangetastet, sie ist die echte Alarm-Historie.
 
 ## Definitionen
 
-Eine **Dealing Range = der M5-Orderblock eines erkannten Trade-Setups** (`trade_setups`, also
-LQ-Sweep + Fraktal + bestätigender M5-OB nach `_shared/tradeSetup.ts`) — **nicht** jeder beliebige
-M5-OB, davon gibt es pro Tag ein Vielfaches. Grundlage sind ausschließlich die 336 erkannten
-Setup-Zeilen; Path-A- und Path-B-Zeile desselben OB werden zu einer DR zusammengefasst
-(336 Zeilen → 268 DRs, davon 255 auswertbar). Die Invalidierung kommt immer aus der Path-A-Zeile —
-bei Path B steht in `fractal_price` das gesweepte Level statt des Extrem-Fraktals und ist als
-Invalidierung unbrauchbar.
-
-- **Invalidierung**: Berührung des Extrem-Fraktals (`fractal_price` der Path-A-Zeile). Entscheidung
-  Philip, 19.09.2026: gilt für die Dealing Range immer das Extrem-Fraktal, nie die OB-Kante — der
-  reale Stop-Loss bei der Ausführung ist davon unabhängig.
-- **Reichweite**: größte Bewegung in Trade-Richtung vor der Invalidierung, gemessen ab der **nahen
-  OB-Kante** (`ob_bottom` bei Short, `ob_top` bei Long).
-- **Startzeitpunkt**: `ob_start_time` + 2 M5-Kerzen (600 Sekunden). `ob_start_time` ist die
-  Impuls-Kerze `c2` (`orderBlocks.ts`), die FVG entsteht aber erst mit der übernächsten Kerze und
-  ist erst mit deren Schluss sichtbar. +2 Kerzen ist also genau der früheste Zeitpunkt, zu dem die
-  DR **live** erkennbar gewesen wäre — vorher zu messen würde Bewegung mitzählen, die noch niemand
-  handeln konnte.
+- **Dealing Range** = der M5-Orderblock eines *erkannten Trade-Setups* (LQ-Sweep + Fraktal +
+  bestätigender M5-OB), **nicht** jeder beliebige M5-OB. Path-A- und Path-B-Zeile desselben OB
+  werden zu einer DR zusammengefasst (1233 Zeilen → 915 DRs, davon 855 auswertbar).
+- **Referenz für alles**: die nahe OB-Kante (`ob_bottom` bei Short, `ob_top` bei Long).
+- **Invalidierung**: Berührung des Extrem-Fraktals. Nie die OB-Kante.
+- **Risiko / 1 R**: nahe OB-Kante → Extrem-Fraktal.
+- **Reichweite**: größte Bewegung in Trade-Richtung vor der Invalidierung. Docht zählt.
+- **Start**: `ob_start_time` + 2 M5-Kerzen (600 s). `ob_start_time` ist die Impuls-Kerze; die FVG
+  ist erst mit dem Schluss der übernächsten Kerze sichtbar — der früheste Zeitpunkt, zu dem die DR
+  live erkennbar war.
 - **Fenster**: 24 h.
 
 ## Skripte
 
 | Datei | Zweck |
 |---|---|
-| `messeDrReichweite.py` | Grundmessung, schreibt `punkt1_result.json` (255 DRs) |
-| `filterHtfSweep.py` | Filter 1: HTF-Sweep (1H/4H) vs. M5-Sweep |
-| `filterGegenkraft.py` | Filter 2: lebende Gegen-DR, als Paarvergleich nach Sweep-Stärke |
-| `filterAlterUndHandelszeit.py` | Filter 3+4: Inducement-Klasse und Handelszeit/Tageszeit |
-| `messeFindTargets.py` | `find_targets` gegen dieselbe Messung, siehe unten |
-| `messeTrendJeDr.py` | holt den 1H-Trend je DR, schreibt `trend-je-dr.json` |
-| `filterTrend.py` | legt die Trendlage über alles Obige, siehe unten |
-| `winrate.py` | Winrate je Ziel-Regel und Qualitätsstufe, siehe unten |
-| `leiterPipsVsR.py` | Wahrscheinlichkeit je Strecke, Pips gegen R, siehe unten |
+| `zieheDaten.py` | holt Setups, Kerzen und LQ-Level aus Supabase in diesen Ordner |
+| `drMerkmale.py` | gemeinsame Merkmale und Datenpfade, alle anderen importieren von hier |
+| `messeDrReichweite.py` | Grundmessung, schreibt `punkt1_result.json` |
+| `quotenTabelle.py` | **Haupttabelle**: Trefferquote je Merkmal, 10–40 Pips und 1–5 R |
+| `saisonalitaet.py` | Monatsvergleich |
+| `filterHtfSweep.py` · `filterGegenkraft.py` · `filterAlterUndHandelszeit.py` | die einzelnen Filter |
+| `leiterPipsVsR.py` | Wahrscheinlichkeit je Strecke, Pips gegen R |
 | `deckelStopp.py` | Risiko-Verteilung und was ein gedeckelter Stopp kostet |
-| `drMerkmale.py` | gemeinsame Merkmale (Sweep-Herkunft, Alter, Handelsstunde, Trendlage) |
+| `messeFindTargets.py` | ruft den echten `find_targets` je DR auf und wertet ihn aus |
+| `messeTrendJeDr.py` · `filterTrend.py` | 1H-Trend je DR und die Auswertung darauf |
+| `winrate.py` | Winrate je Ziel-Regel und Qualitätsstufe |
 
-Die `ergebnis-*.txt` sind die abgelegten Ausgaben dieser Läufe.
+Die `ergebnis-*.txt` sind die abgelegten Ausgaben. Die `daten-*.json` sind Rohdaten und bleiben per
+`.gitignore` draußen — reproduzierbar sind die Skripte, nicht der Datenstand.
 
-Sweep-Herkunft und Sweep-Alter lagen anfangs in drei Skripten in je eigenen Kopien; seit der
-Trend-Auswertung stehen sie einmal in `drMerkmale.py`, die Filter-Skripte importieren von dort.
-Dass die Extraktion nichts verschoben hat, ist geprüft: alle vier Skripte erzeugen ihre abgelegte
-`ergebnis-*.txt` weiterhin zeichengleich.
+## Saisonalität — der bestbelegte Befund
 
-`messeFindTargets.py` ist das einzige Skript, das selbst Daten zieht: es ruft den **echten deployten
-`find_targets`** über den trading-monitor-MCP auf (255 sequentielle Aufrufe, ~7 Minuten, braucht
-`TRADING_MONITOR_MCP_TOKEN`) und legt die Antworten in `find-targets-roh.jsonl.gz` ab. Ohne
-Argument wertet es nur diese Datei aus, mit `sammeln` holt es fehlende Antworten nach. Eine
-Python-Nachbildung des Algorithmus wäre hier wertlos gewesen — sie hätte den Kandidaten-Pool (M5
-live + HTF aus der DB, `touched`-Nachprüfung, Dedup) zwangsläufig anders getroffen als die
-Produktion.
+| Monat | n | 10 P | 15 P | 20 P | 30 P | 40 P | 2 R | 3 R |
+|---|---|---|---|---|---|---|---|---|
+| Januar | 98 | 85 % | 66 % | 47 % | 37 % | 30 % | 77 % | 59 % |
+| Februar | 88 | 76 % | 68 % | 62 % | 44 % | 36 % | 73 % | 61 % |
+| **März** | 81 | **85 %** | **75 %** | **64 %** | 51 % | 38 % | 72 % | 64 % |
+| April | 97 | 77 % | 65 % | 57 % | 38 % | 34 % | 73 % | 58 % |
+| Mai | 93 | 80 % | 62 % | 47 % | 33 % | 28 % | 73 % | 55 % |
+| Juni | 109 | 80 % | 61 % | 44 % | 37 % | 33 % | 72 % | 64 % |
+| Juli | 107 | 69 % | 54 % | 45 % | 38 % | 24 % | 68 % | 58 % |
+| **August** | 121 | **64 %** | **45 %** | **37 %** | 22 % | 17 % | 70 % | 50 % |
+| September | 61 | 67 % | 52 % | 39 % | 28 % | 21 % | 69 % | 48 % |
 
-## Basis
+Halbjahre: Januar–Juni 80 / 66 / 53 % bei 10 / 15 / 20 Pips, Juli–September 66 / 50 / 40 %.
 
-255 Dealing Ranges. Reichweite Median **12,5 Pips** (p25 6,5 / p75 29,6 / max 108). 188 binnen
-24 h invalidiert, 67 nie. Zeit bis Invalidierung Median 102 Min. Abstand nahe OB-Kante →
-Extrem-Fraktal Median 4,3 Pips.
+Bootstrap März gegen August: bei 15 Pips **30 Punkte, 95 %-Intervall [17, 43]**. Bei 10, 20, 25,
+30, 35 und 40 Pips ebenso — **kein einziges Intervall enthält die Null**. Halbjahr gegen Halbjahr:
+16 Punkte bei 15 Pips, Intervall [9, 23].
 
-Damit ist Philips Erfolgsdefinition für jedes Target rückwirkend beantwortbar: ≥10 Pips erreicht
-in 155 von 255 Fällen, ≥15 in 117, ≥20 in 90, ≥30 in 61.
+**Aber es ist zum großen Teil Volatilität.** In R gerechnet liegen alle neun Monate bei 1 R zwischen
+84 und 96 %, bei 2 R zwischen 64 und 77 %. Erst ab 3 R öffnet sich wieder eine Lücke. Das Risiko
+wandert nämlich mit: Median 7,4 Pips im März, 4,1 im August — eine März-DR ist fast doppelt so weit
+aufgespannt.
 
-## Rangfolge der vier Filter
+**Praktisch:** mit festem 15-Pip-Ziel ist der August deutlich schlechter. Skaliert man das Ziel am
+Risiko der jeweiligen DR, ist er fast genauso gut. Das feste Pip-Ziel erzeugt die Saisonalität,
+nicht die Setup-Qualität.
 
-Sortiert nach **Belegstärke**, nicht nach Effektgröße — der größte Median steht auf der kleinsten
-Stichprobe.
+## Die Filter
 
-### 1. Handelszeit — größter Effekt, größte Stichprobe
+### Sweep-Herkunft — der stärkste, und er hält
 
-| | n | Median | ≥20 P |
-|---|---|---|---|
-| im Fenster 08:00–18:00 | 176 | 16,4 | 72 |
-| außerhalb | 79 | 7,1 | 18 |
+| | n | 10 P | 15 P | 20 P | 30 P | 2 R | 3 R |
+|---|---|---|---|---|---|---|---|
+| 1H-Sweep | 98 | 93 % | **83 %** | 70 % | 53 % | 74 % | 64 % |
+| M5-Sweep | 757 | 73 % | 58 % | 46 % | 34 % | 72 % | 57 % |
 
-Beste Stunden (Berlin, OB-Entstehung): 16:00 → 27,2 und 15:00 → 23,4 (NY). Schlechteste: 07:00 →
-4,9 und 05:00 → 5,1. MMM-Fenster 10:30–13:00: 13,9 gegen 17,8 im übrigen Handelsfenster — die
-Notiz „nur mit zusätzlichen Bestätigungen" in `trading_schedules` bestätigt sich, aber schwächer
-als der Handelszeit-Effekt selbst.
+Erste Fassung: n=25 plus eine Restgruppe „unklar", weil die Herkunft nachträglich geschätzt werden
+musste. Jetzt steht sie exakt in `trade_setups.ls_timeframe` — die Gruppe „unklar" gibt es nicht
+mehr. In R sind die beiden Gruppen fast gleich (74 gegen 72 % bei 2 R), der Vorteil ist also auch
+hier zum guten Teil Volatilität.
 
-**Direkt umgesetzt:** 26 Alarme gingen außerhalb des Handelsfensters raus (Median 5,5 Pips, nur 4
-davon erreichten 20 Pips). Ursache: `alarm_windows` begann um 07:00, `trading_windows` erst um
-08:00. Korrigiert in Migration `20260919141000_gbpusd_alarm_window_0800.sql`.
+### Sweep-Alter — der größte Effekt
 
-### 2. Gegenkraft — Paarvergleich nach Sweep-Stärke
+| Klasse | n | 10 P | 15 P | 20 P | 30 P | 2 R | 3 R |
+|---|---|---|---|---|---|---|---|
+| Major (≥ 120 h) | 28 | **100 %** | 93 % | 82 % | 61 % | 89 % | 79 % |
+| Medium (24–120 h) | 45 | 87 % | 78 % | 64 % | 49 % | 69 % | 60 % |
+| Minor (< 24 h) | 782 | 74 % | 59 % | 47 % | 35 % | 71 % | 57 % |
 
-41 % der DRs entstehen gegen eine noch lebende Gegen-DR („lebend" = früher entstanden, weder
-invalidiert noch am Ziel).
+Alle 28 Major-DRs erreichten 10 Pips. Anders als bei der Herkunft hält der Vorsprung **auch in R**
+(89 gegen 71 % bei 2 R) — das ist echte Qualität, keine Volatilität. Nur selten: rund 3 % aller
+Dealing Ranges. In der ersten Fassung stand das auf n=8 und n=10.
 
-| Konstellation | n | Median |
-|---|---|---|
-| keine lebende Gegen-DR | 151 | 14,8 |
-| ich HTF, Gegner M5 | 12 | 16,1 |
-| beide HTF | 7 | 12,0 |
-| beide M5 | 55 | 10,8 |
-| ich M5, Gegner HTF | 30 | 7,4 |
+### Gegenkraft — teilweise gekippt
 
-Die Rangfolge kippt über alle vier gerechneten Varianten (Stärke strikt/breit × „fertig" bei
-15/20/25 Pips) kein einziges Mal. Belastbar ist vor allem der schlechte Fall (n=30 gegen n=151),
-nicht die Spitze (nie mehr als n=14).
+| Konstellation | n | 10 P | 15 P | 20 P | 30 P | 2 R |
+|---|---|---|---|---|---|---|
+| keine lebende Gegen-DR | 614 | 82 % | 66 % | 53 % | 40 % | 75 % |
+| **beide M5** | 216 | **56 %** | **44 %** | 36 % | 25 % | 64 % |
+| ich M5, Gegner HTF | 16 | 88 % | 56 % | 38 % | 25 % | 75 % |
+| ich HTF, Gegner M5 | 9 | 78 % | 78 % | 67 % | 56 % | 67 % |
 
-Nebenbei beantwortet: Zeile 2 und Zeile 5 sind dasselbe Paar aus beiden Blickrichtungen — 16,1
-gegen 7,4. Die stärkere Seite war die richtige Wahl, nicht die zuerst entstandene.
+In der ersten Fassung war „ich M5, Gegner HTF" mit 7,4 Pips Median der klar schlechteste Fall
+(n=30) — **das reproduziert sich nicht**. Belegt ist jetzt stattdessen der Fall **beide M5**: 216
+Ranges, über die ganze Reihe 20 bis 26 Punkte schlechter als ohne Gegner. Die beiden HTF-Zeilen
+sind mit n=9 und n=16 zu dünn für eine Aussage.
 
-### 3. HTF-Sweep
+### Handelszeit — als Fenster tot, als Stunde lebendig
 
-| | n | Median |
-|---|---|---|
-| HTF sicher (1H/4H) | 25 | 28,7 |
-| unklar | 31 | 17,5 |
-| M5 | 199 | 11,3 |
+| | n | 10 P | 15 P | 20 P | 2 R | 3 R |
+|---|---|---|---|---|---|---|
+| im Fenster 08:00–18:00 | 630 | 76 % | 60 % | 49 % | 69 % | 53 % |
+| außerhalb | 225 | 76 % | 61 % | 49 % | 81 % | 69 % |
 
-„Unklar" = `ls_pivot_time` liegt auf einer vollen Stunde, aber keines der HTF-Merkmale greift.
-Enthält echte M5-Pivots (rund jeder zwölfte) und 1H-Level, deren Zeile in `liquidity_levels` nicht
-mehr existiert. Über die Minutenverteilung geschätzt liegt die echte HTF-Zahl bei ~38 von 255.
+Die erste Fassung hatte hier 16,4 gegen 7,1 Pips Median auf 176 zu 79 Ranges — und darauf wurde am
+19.09. das Alarmfenster von 07:00 auf 08:00 gezogen (Migration `20260919141000`). **Mit 855 Ranges
+ist von dem Unterschied nichts übrig.** Die Änderung schadet nicht, ihre Begründung trägt aber
+nicht mehr.
 
-### 4. Sweep-Alter — höchster Median, kleinste Stichprobe
+Nach *Stunde* gibt es den Effekt sehr wohl — nur trennt das Fenster ihn nicht: Reichweiten-Median
+33,8 um 17:00 und 28,7 um 16:00 (NY) gegen 13,3 um 07:00 und 14,6 um 12:00. Das Fenster 08–18
+enthält die besten und die schlechtesten Stunden gleichzeitig.
 
-| | n | Median |
-|---|---|---|
-| Major (≥120 h) | 8 | 29,2 |
-| Medium (24–120 h) | 10 | 29,3 |
-| Minor (<24 h) | 237 | 11,9 |
+## Enge der DR — warum beide Einheiten nötig sind
 
-Major und Medium sind **nicht unterscheidbar**. Die nützliche Trennung ist binär: Sweep-Level
-älter als 24 h — ja/nein. Das Alter wirkt zusätzlich zur Herkunft: innerhalb der HTF-Gruppe kommen
-die gealterten auf 28,7 bzw. 29,3, die frischen nur auf 17,5. Praktisch selten: 90 % aller Sweeps
-sind jünger als 19 Stunden (Median 1,8 h).
+Dieselben 855 Ranges, nach eigenem Risiko in drei gleich große Gruppen geteilt:
 
-## find_targets: taugen die vorgeschlagenen Ziele?
+| Gruppe | n | 10 P | 15 P | 20 P | 30 P | 1 R | 2 R | 3 R | 5 R |
+|---|---|---|---|---|---|---|---|---|---|
+| eng (bis 4,2 P) | 285 | 67 % | 49 % | 38 % | 26 % | **97 %** | **82 %** | **70 %** | **50 %** |
+| mittel (bis 7,0 P) | 285 | 80 % | 63 % | 51 % | 38 % | 94 % | 77 % | 59 % | 41 % |
+| weit (ab 7,0 P) | 285 | **80 %** | **70 %** | **58 %** | **44 %** | 78 % | 56 % | 44 % | 27 % |
 
-Zu jeder der 255 DRs wurde `find_targets` zum DR-Startzeitpunkt (`ob_start_time` + 2 M5-Kerzen) mit
-der DR-Richtung aufgerufen und jeder gelieferte Kandidat auf die **nahe OB-Kante** umgerechnet —
-dieselbe Referenz wie die Reichweite. Erreicht heißt: Reichweite ≥ Distanz, also vor der
-Invalidierung berührt.
-
-### Das Angebot stimmt
-
-255 von 255 DRs bekamen eine volle Liste (5 Liquiditäts-Kandidaten + 3 OB-Kanten, 2021 insgesamt).
-Kein einziger leerer Fall, und nur **1 von 2021** Kandidaten lag hinter der nahen OB-Kante und wäre
-als Ziel wertlos gewesen. Die Kandidatensuche selbst ist also nicht das Problem.
-
-### Trefferquote je Rang
-
-| | n | erreicht | Distanz-Median | RR-Median |
-|---|---|---|---|---|
-| OB #1 | 255 | 65 % | 8,6 | 2,10 |
-| LQ #1 | 255 | 55 % | 10,8 | 2,41 |
-| OB #2 | 255 | 46 % | 14,4 | 3,35 |
-| LQ #2 | 253 | 39 % | 16,1 | 3,89 |
-| OB #3 | 255 | 36 % | 20,7 | 4,69 |
-| LQ #3 | 251 | 27 % | 22,1 | 5,31 |
-| LQ #4 | 250 | 24 % | 28,7 | 6,61 |
-| LQ #5 | 247 | 19 % | 36,3 | 8,46 |
-
-Bei **70 %** der DRs wurde mindestens ein angebotener Kandidat erreicht. Weil die Liste nach
-Distanz sortiert ist, ist das gleichzeitig die Trefferquote des nächsten Kandidaten und die
-Obergrenze für jede Auswahlregel.
-
-### Die Auswahl ist erwartungswert-neutral
-
-R-Rechnung der **Idee**, nicht einer Ausführung: Referenz ist die nahe OB-Kante, Risiko der Weg von
-dort zum Extrem-Fraktal, RR bei 10 gedeckelt. Ein nicht erreichtes Ziel zählt nur als −1 R, wenn
-die DR binnen 24 h auch wirklich invalidiert wurde.
-
-| Regel | n | Quote | Distanz-Median | EV |
-|---|---|---|---|---|
-| nächster OB-Kandidat | 255 | 66 % | 8,6 | +1,15 R |
-| nächster Kandidat (Status quo) | 255 | 70 % | 7,0 | +1,05 R |
-| nächster mit ≥ 15 Pips | 248 | 43 % | 17,7 | +1,18 R |
-| nächster mit RR ≥ 2 | 252 | 52 % | 11,7 | +1,04 R |
-| nächster mit ≥ 20 Pips | 235 | 32 % | 23,4 | +0,87 R |
-| weitester ohne `tooFar` | 255 | 21 % | 34,9 | +0,60 R |
-
-Alle brauchbaren Regeln liegen zwischen +0,99 und +1,18 R. Der gepaarte Bootstrap (5000 Ziehungen)
-sagt zur besten davon: +0,13 R gegenüber „nächster", 95 %-Intervall **[−0,16, +0,43]** — der
-Unterschied ist von Rauschen nicht zu trennen. Näher heißt öfter getroffen bei schlechterem RR,
-weiter heißt seltener bei besserem, und beides gleicht sich fast exakt aus.
-
-**Das ist die eigentliche Antwort:** an der Ziel-*auswahl* innerhalb der angebotenen Liste ist kein
-Vorteil zu holen. Nur die Extremvariante (immer das weiteste noch erlaubte Ziel) verliert deutlich.
-
-### Zwei Nebenbefunde
-
-`tooFar` (> 50 Pips zum aktuellen Preis) trennt sauber: 3 von 132 markierten Kandidaten wurden
-erreicht (2 %) gegen 789 von 1889 unmarkierten (42 %). Die Konstante `MAX_TARGET_DISTANCE_PIPS`
-sitzt richtig, an ihr ist nichts zu ändern.
-
-Die Handelszeit wirkt auch hier, und zwar auf die zulässige Ziel-Weite:
-
-| | nächster | ≥ 15 Pips | ≥ 25 Pips |
-|---|---|---|---|
-| im Fenster 08:00–18:00 (n=176) | +1,13 R | +1,32 R | +1,02 R |
-| außerhalb (n=79) | +0,88 R | +0,87 R | +0,01 R |
-
-Außerhalb des Handelsfensters bricht das ambitionierte Ziel zusammen, im Fenster trägt es. Das ist
-derselbe Effekt wie bei Filter 1, hier nur von der Ziel-Seite gesehen.
-
-### Gegenprobe
-
-Die Grundmessung nimmt den Docht der invalidierenden Kerze noch in die Reichweite auf; liegen Ziel
-und Invalidierung in derselben M5-Kerze, gilt das Ziel als erreicht — `trade_setup_outcomes` wertet
-denselben Fall als Verlust. Betroffen sind **6 von 255** DRs, der EV der Status-quo-Regel fällt
-dadurch von +1,05 auf +1,01 R. Der Unterschied trägt keine der Aussagen oben.
-
-## Winrate
-
-Nach Philips Definition — Target erreicht, bevor der Invalidierungspunkt erreicht wird. Daraus
-folgt sofort: **die** Winrate gibt es nicht, sie hängt am gesetzten Ziel. Deshalb steht hier nie
-eine Quote ohne ihr RR (`winrate.py`, Ausgabe in `ergebnis-winrate.txt`).
-
-| Ziel | alle 255 | im Fenster 08–18 (176) | + keine Gegen-DR (102) | + HTF-Sweep (30) |
-|---|---|---|---|---|
-| nächster Kandidat | 70 % @ RR 1,7 | 74 % @ 1,5 | 74 % @ 1,7 | 70 % @ 1,7 |
-| ≥10 Pips | 49 % @ 3,0 | 55 % @ 2,5 | 57 % @ 2,4 | 60 % @ 2,2 |
-| ≥15 Pips | 43 % @ 4,3 | 49 % @ 3,8 | 51 % @ 3,6 | 60 % @ 3,4 |
-| ≥20 Pips | 32 % @ 5,5 | 38 % @ 4,6 | 38 % @ 4,4 | 47 % @ 4,2 |
-| ≥30 Pips | 23 % @ 8,3 | 28 % @ 6,7 | 26 % @ 6,2 | 16 % @ 7,0 |
-
-Gezählt werden nur **entschiedene** Dealing Ranges (Ziel erreicht oder invalidiert); eine DR, die
-binnen 24 h weder das eine noch das andere getan hat, gehört in keine Quote. Die Filter stapeln in
-der Reihenfolge ihrer Belegstärke, die letzte Spalte ist mit n=30 ein Ausblick, kein Ergebnis.
-
-**Nicht zu verwechseln mit `get_trade_setup_winrate`** (50 %, 167:169 auf 336 Zeilen). Das Tool
-rechnet je *Setup-Zeile* gegen ein festes 2,5-RR-Ziel mit bei 6 Pips gedeckeltem Stopp, zählt also
-die Path-A/B-Zwillinge doppelt und benutzt eine andere Erfolgsdefinition. Beide Zahlen stimmen, sie
-beantworten verschiedene Fragen.
+**Links und rechts drehen die Reihenfolge um, und beides stimmt.** Eine enge Range erreicht selten
+30 Pips, aber fast immer 1 R. Eine weite schafft die Pips leichter, tut sich mit ihrem eigenen
+Vielfachen aber schwer. Eine Anzeige an der laufenden DR braucht deshalb beide Leitern — siehe
+`PLAN-dr-statistik-ui.md` im Repo-Wurzelverzeichnis.
 
 ## Risiko-Verteilung und der gedeckelte Stopp
 
-Wie weit ist es von der nahen OB-Kante bis zum Extrem-Fraktal? (`deckelStopp.py`,
-`ergebnis-deckel.txt`)
+| Risiko | n | Anteil | kumuliert |
+|---|---|---|---|
+| unter 3 Pips | 136 | 15,9 % | 15,9 % |
+| 3–5 Pips | 247 | 28,9 % | 44,8 % |
+| 5–7 Pips | 184 | 21,5 % | 66,3 % |
+| 7–10 Pips | 174 | 20,4 % | 86,7 % |
+| über 10 Pips | 114 | 13,3 % | 100 % |
 
-| | Anteil | kumuliert |
-|---|---|---|
-| unter 3 Pips | 26 % | 26 % |
-| 3–5 Pips | 35 % | 60 % |
-| 5–7 Pips | 20 % | 81 % |
-| 7–10 Pips | 14 % | 95 % |
-| über 10 Pips | 5 % | 100 % |
+**42 % aller Ranges tragen mehr als 6 Pips Risiko.** Philips Vorschlag, den Stopp dort zu deckeln,
+hält — gerechnet als reine Pfadfrage ohne Entry-Modell, Ziel 15 Pips, nur die betroffene Gruppe:
 
-Median 4,3 Pips, p75 6,4, p90 8,4, max 26,3. **Über 6 Pips liegen 76 von 255 DRs (30 %), über
-7 Pips 49 (19 %).**
-
-Philips Vorschlag (19.09.2026): den Stopp bei 6–7 Pips deckeln, wenn das Extrem-Fraktal weiter weg
-liegt. Gerechnet als reine Pfad-Frage ohne Entry-Modell — läuft der Preis mehr als *C* Pips über
-die OB-Kante hinaus, bevor das Ziel kommt? Der Entry bleibt fix an der Kante, sonst sind zwei
-Stopp-Platzierungen nicht vergleichbar.
-
-**Nur die betroffene Gruppe** (Risiko > Deckel), Ziel 15 Pips:
-
-| Deckel | betroffen | Wins voll → gedeckelt | gekostet | RR | EV |
+| Deckel | betroffen | Gewinner vorher → mit Deckel | gekostet | RR | EV |
 |---|---|---|---|---|---|
-| 8 P | 33 | 20 → 19 | 1 | 1,63 → 1,88 | +0,48 → +0,66 R |
-| 7 P | 49 | 30 → 26 | 4 | 1,79 → 2,14 | +0,61 → +0,67 R |
-| 6 P | 76 | 47 → 41 | 6 | 1,97 → 2,50 | +0,80 → +0,91 R |
-| 5 P | 101 | 61 → 52 | 9 | 2,14 → 3,00 | +0,88 → +1,08 R |
+| 6 Pips | 361 | 252 → 232 | 20 | 1,72 → 2,50 | +0,89 → **+1,26 R** |
+| 7 Pips | 288 | 200 → 184 | 16 | 1,61 → 2,14 | +0,76 → +1,01 R |
 
-**Der Deckel ist billig.** Bei 6 Pips kostet er 6 von 47 Gewinnern in der betroffenen Gruppe, hebt
-dort aber das RR von 2,0 auf 2,5 — der Erwartungswert steigt trotz der verlorenen Trades. Über alle
-255 DRs gerechnet bleibt der Effekt klein (EV +1,03 → +1,07 bei Ziel 15 Pips), weil der Deckel bei
-70 % der DRs gar nicht greift.
+Bei 6 Pips kostet der Deckel 8 % der Gewinner und hebt den Erwartungswert deutlich.
 
-Nebenbei sichtbar: die Gruppe mit dem großen Risiko ist ohnehin die schwächere (EV +0,80 gegen
-+1,03 über alle). Trotzdem ist sie mit Deckel klar positiv — **wegwerfen wäre schlechter als
-deckeln**.
+## find_targets
 
-## Wahrscheinlichkeit je Strecke — Pips oder R?
+6810 Kandidaten. Das Angebot stimmt: 855 von 855 DRs bekamen eine volle Liste, genau **einer** von
+6810 Kandidaten lag hinter der nahen OB-Kante.
 
-Vorarbeit für eine Anzeige in der UI (`leiterPipsVsR.py`, Ausgabe `ergebnis-leiter.txt`): Wie oft
-wurde eine gegebene Strecke erreicht, bevor die DR invalidierte?
+| Regel | Quote | Distanz | EV |
+|---|---|---|---|
+| nächster Kandidat | 73 % | 10,4 | +1,33 R |
+| nächster OB-Kandidat | 66 % | 13,5 | +1,40 R |
+| nächster ≥ 15 Pips | 51 % | 17,9 | +1,43 R |
+| nächster mit RR ≥ 3 | 50 % | 20,0 | +1,45 R |
+| weitester ohne `tooFar` | 29 % | 41,1 | +1,20 R |
 
-| | 1 R | 2 R | 3 R | 4 R | 5 R | 8 R |
-|---|---|---|---|---|---|---|
-| alle 255 DRs | 87 % | 65 % | 48 % | 38 % | 32 % | 16 % |
-
-| | 5 P | 10 P | 15 P | 20 P | 25 P | 30 P | 40 P |
-|---|---|---|---|---|---|---|---|
-| alle 255 DRs | 80 % | 61 % | 46 % | 35 % | 29 % | 24 % | 17 % |
-
-**Die Einheit entscheidet.** Über Risiko-Terzile gerechnet läuft die Pip-Leiter weit auseinander —
-„≥15 Pips" trifft bei den DRs mit kleinem Risiko (Median 2,6 P) nur 27 %, bei denen mit großem
-(7,3 P) aber 61 %. In R ist dieselbe Spreizung deutlich kleiner: mittlere Spannweite 13 Punkte
-gegen 28. Eine **einzelne Pip-Leiter für alle Dealing Ranges wäre also irreführend**, eine R-Leiter
-ist vertretbar.
-
-Nebenbefund, der der Intuition widerspricht: die DRs mit dem kleinsten Risiko erreichen die
-wenigsten Pips, sind aber in R die besten (91/68/49 % bei 1/2/3 R gegen 75/55/44 % bei großem
-Risiko). Eine enge Dealing Range ist das bessere Geschäft, nicht das schlechtere.
-
-## Trendlage: kein messbarer Unterschied
-
-Nachgezogen am 19.09.2026, weil die Grundmessung und alle vier Filter den Trend gar nicht kannten
-— ihre Zahlen waren Mittelwerte über eine ungetrennte Mischung. Gemessen wird der **1H-Market-
-Structure-Trend zum DR-Startzeitpunkt** (`get_data_export`, `structure1h.trend`); „mit dem Trend"
-heißt Uptrend + Long bzw. Downtrend + Short.
-
-Möglich wurde das erst durch Commit `740375f`: `get_data_export` starb für jeden Replay-Zeitpunkt,
-der weiter zurück lag als der neueste Daily-Pivot, an `cTrader error INVALID_REQUEST: Count must be
-bigger than ZERO`. Alle 255 Abfragen laufen seitdem fehlerfrei.
-
-| | n | Median | p75 | nie invalidiert | ≥20 P |
-|---|---|---|---|---|---|
-| mit dem Trend | 123 | 12,5 | 28,9 | 30 | 44 |
-| gegen den Trend | 132 | 13,1 | 29,7 | 37 | 46 |
-
-Bootstrap über 5000 Ziehungen: Differenz **0,0 Pips**, 95 %-Intervall [−5,4, +5,7], „mit dem Trend"
-größer in genau 50 % der Ziehungen. Die Hälften des Zeitraums drehen das Vorzeichen (12,7 vs. 11,7
-in der ersten, 12,2 vs. 14,7 in der zweiten). Auch Invalidierungsquote und Zeit bis zur
-Invalidierung (105 gegen 100 Minuten) unterscheiden sich nicht.
-
-Kein Filter wird durch die Trennung schärfer, und bei den find_targets-Regeln liegt jeder
-Unterschied im Rauschen — die auffälligste Zahl (ambitioniertes Ziel ≥25 Pips: +0,95 R gegen den
-Trend, +0,44 R mit ihm) hat ein 95 %-Intervall von [−0,36, +1,32].
-
-Drei Gegenproben, bevor daraus ein Befund wird:
-
-- **Innerer Trend** (`nestedTrend`, wo vorhanden, n=94): 11,2 mit gegen 15,0 gegen — wenn
-  überhaupt, das umgekehrte Vorzeichen.
-- **Längeres Fenster**, falls ein Trade mit dem Trend nur mehr Zeit braucht: bei 72 Stunden und bei
-  7 Tagen steht der Median „mit dem Trend" unverändert bei 12,5.
-- **Richtungs-Bias der Erkennung**: keiner. Im Uptrend entstehen 81 Short- und 76 Long-DRs, im
-  Downtrend 47 zu 51.
-
-**Was das heißt und was nicht.** In diesen Daten trennt der 1H-Strukturtrend gute nicht von
-schlechten Dealing Ranges — anders als Handelszeit, Gegenkraft und Sweep-Herkunft, die alle einen
-Effekt zeigen. Das ist keine Aussage über „Trend" allgemein: gemessen ist **eine bestimmte
-Definition** davon, der 1H-Algo mit Daily-Pivot-Anker, der sich nur alle ein bis drei Wochen
-bewegt. Der M5-Trend (Task `10-10-nur-im-m5-trend`) ist damit nicht gemessen, und eine Dealing
-Range entsteht per Konstruktion nach einem Liquidity Sweep, also häufig gegen die laufende
-Bewegung — die Trendlage beschreibt ihren Kontext vielleicht einfach schlecht.
-
-## Was daraus gebaut wurde
-
-`poi-watcher` schreibt die Sweep-Herkunft seit dem 19.09.2026 direkt beim Erkennen mit
-(`trade_setups.ls_timeframe`, Migration `20260919140000`) — die Rekonstruktion aus
-`liquidity_levels` war nur eine Näherung und fällt damit weg. Herkunft, Alter und eine Warnung bei
-lebender Gegen-DR stehen seitdem im Telegram-Alarmtext.
-
-Bewusst **kein Filter**: bei n=25–56 in den interessanten Gruppen ist Markieren reversibel,
-Wegwerfen nicht.
+Alle Regeln zwischen +1,20 und +1,45 R; Bootstrap für die beste: +0,10 R, Intervall [−0,03, +0,24].
+**An der Zielwahl innerhalb der Liste ist kaum etwas zu holen** — dasselbe Ergebnis wie auf der
+kleinen Stichprobe, nur schärfer. Das `tooFar`-Flag trennt weiter (11 % gegen 48 % Trefferquote),
+aber weniger brutal als die 2 gegen 42 % der ersten Fassung.
 
 ## Grenzen
 
-Nur GBPUSD, zwei Monate. Die HTF-Klassifikation ist eine Untergrenze: `liquidity_levels` führt nur
-1H/4H, aber ältere Zeilen fehlen dort (6 Juli-Fälle nachweislich). Die breite Variante zählt
-zusätzlich jeden `ls_pivot` auf voller Stunde als HTF und labelt damit rund 18 echte M5-Fälle
-falsch — das verwässert das Gefälle, erzeugt es aber nicht. Die gut besetzten Aussagen sind
-belastbar (n=151 bzw. n=30), die Spitzenwerte nicht (nie mehr als n=14).
+Nur GBPUSD, EURUSD ist ungemessen. Neun Monate **eines** Jahres — dass dieser August schwach war,
+heißt nicht, dass jeder August schwach ist. Die Erkennung lief nur im Alarmfenster (07:00–17:45
+Berlin), abends entstehende Setups kommen strukturell nicht vor. 24-Stunden-Fenster, Docht zählt;
+wer kurz vor Handelsschluss entsteht, hat ein kürzeres Fenster. Und: die Quoten sind **historische
+Häufigkeiten, keine Wahrscheinlichkeiten**.
 
-**Die vier Filter wurden nur einzeln ausgewertet, nie kombiniert.** Sie überlappen sich mit
-Sicherheit — HTF-Sweeps sind vermutlich öfter gealtert, NY-Stunden öfter ohne Gegen-DR. Die
-Einzeleffekte stehen, ihre Summe nicht. Eine kombinierte Auswertung scheitert an den Stichproben:
-die Töpfe werden sofort zu klein.
-
-Das 24-Stunden-Fenster untertreibt eher: bei 67 DRs wurde die Invalidierung darin nie getroffen,
-deren Reichweite ist also nach unten begrenzt gemessen. Reichweite wird per Docht gemessen, ein
-Target gilt also als erreicht, sobald es berührt wurde.
-
-Für die find_targets-Auswertung kommen zwei Grenzen dazu. Erstens baut der Kandidaten-Pool auf dem
-**heutigen** Stand von `liquidity_levels`/`ob_zones` auf (as-of auf den DR-Zeitpunkt gefiltert, aber
-seither gelöschte Zeilen fehlen) — dieselbe Einschränkung wie bei Filter 1. Zweitens ist das R die
-R der Idee: Einstieg an der nahen OB-Kante, Stopp am Extrem-Fraktal. Philip führt selbst aus, sein
-realer Entry liegt woanders — die EV-Zahlen vergleichen die Regeln miteinander, sie sagen nicht
-voraus, was ein echter Trade abwirft.
+Eine lesbare Aufbereitung aller Zahlen liegt als Artefakt vor (Link im Chat vom 20.09.2026).

@@ -15,11 +15,9 @@
 import json, os, sys, time, datetime, urllib.request
 
 MCP_URL = "https://vkphwtqcvqrkphksproj.supabase.co/functions/v1/trading-monitor-mcp"
-SETUPS = r"C:\Users\Philip\.claude\projects\c--Users-Philip-Documents-git-trading-monitor\25cfa4c0-a261-49e1-9482-af67f53adc09\tool-results\mcp-trading-monitor-get_trade_setups-1789808350250.txt"
 ZIEL = "trend-je-dr.json"
-ARM = 600  # wie messeDrReichweite.py: ob_start_time + 2 M5-Kerzen = FVG bestaetigt
+from drMerkmale import lade_setups, ts, ARM
 
-ts = lambda s: int(datetime.datetime.fromisoformat(s).timestamp())
 
 
 def mcp(name, args, _id=[0]):
@@ -43,7 +41,7 @@ def mcp(name, args, _id=[0]):
     return json.loads(inhalt)
 
 
-setups = {r["id"]: r for r in json.load(open(SETUPS))}
+setups = {r["id"]: r for r in lade_setups()}
 drs = json.load(open("punkt1_result.json"))
 out = json.load(open(ZIEL)) if os.path.exists(ZIEL) else {}
 
