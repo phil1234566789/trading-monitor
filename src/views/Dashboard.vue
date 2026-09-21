@@ -142,8 +142,8 @@ const tradeSetupHistoryCount = useLocalStorageRef("tradeSetupHistoryCount", 5);
 // dadurch automatisch nur noch das jüngste SICHTBARE Setup).
 const showTradeSetupsLong = useLocalStorageRef("showTradeSetupsLong", true);
 const showTradeSetupsShort = useLocalStorageRef("showTradeSetupsShort", true);
-// R-Skala (2-6 R ab der nahen OB-Kante, siehe rScale.js) — eigener Toggle neben den
-// Richtungs-Schaltern: bei großer Setup-Historie sind das fünf zusätzliche Linien PRO Setup.
+// R-Skala (2-10 R ab der nahen OB-Kante, siehe rScale.js) — eigener Toggle neben den
+// Richtungs-Schaltern: bei großer Setup-Historie sind das neun zusätzliche Marken PRO Setup.
 const showRScale = useLocalStorageRef("showRScale", true);
 
 // "Ranges" — erster Baustein des neuen PA-Analyse-Konzepts (siehe Chat 2026-07-18: weg von der
@@ -1734,7 +1734,7 @@ watch(selectedTradingAccountId, () => {
           <button :class="{ active: showTradeSetupsShort }" @click="showTradeSetupsShort = !showTradeSetupsShort">
             Short Setups
           </button>
-          <button :class="{ active: showRScale }" @click="showRScale = !showRScale" title="Marken bei 2-6 R ab der nahen OB-Kante. Prozent = wie oft vergleichbare Dealing Ranges diese Strecke erreicht haben (GBPUSD, 915 Ranges Jan-Sep 2026, Erkennung nur im Alarmfenster) — historische Häufigkeiten, keine Wahrscheinlichkeiten. EURUSD ist ungemessen, dort steht keine Quote.">
+          <button :class="{ active: showRScale }" @click="showRScale = !showRScale" title="Marken bei 2-10 R ab der nahen OB-Kante, 1 R = Risiko bis zur Invalidierung, gedeckelt auf 6 Pips — wie der Stopp im Trade. Prozent = wie oft vergleichbare Dealing Ranges diese Strecke erreicht haben (GBPUSD, 915 Ranges Jan-Sep 2026, Erkennung nur im Alarmfenster) — historische Häufigkeiten, keine Wahrscheinlichkeiten. EURUSD ist ungemessen, dort steht keine Quote.">
             R-Skala
           </button>
           <label class="ranges-lookback-field">

@@ -13,7 +13,8 @@ milk-city-Task: `tsc-historische-dr-statistik-zur-aktuellen-dealing-range-anzeig
 Zu einer **laufenden** Dealing Range: wie sich vergleichbare DRs historisch verhalten haben.
 Philip will **beides** nebeneinander, nicht eins von beidem:
 
-1. **Die R-Leiter** — **2 / 3 / 4 / 5 / 6 R**. Beginnt bei 2, nicht bei 1. Philip 20.09.2026:
+1. **Die R-Leiter** — **2 bis 10 R**, 1 R gegen den auf 6 Pips gedeckelten Stopp (siehe
+   „Der gedeckelte Stopp" unten). Beginnt bei 2, nicht bei 1. Philip 20.09.2026:
    *„1R macht keinen sinn ich mache keinen Trade um 1R zu gewinnen. 2R ist minimum, aber 3R ist
    laut strategie eigentlich minimum (in praxis geht das aber nicht immer)."*
 2. **Die Pip-Leiter** — **10 / 15 / 20 / 25 / 30 / 35 / 40 Pips**. TP1 liegt bei rund 15.
@@ -54,8 +55,8 @@ Die Skala ist reine Geometrie aus Werten, die der Chart schon in der Hand hält:
 
 ```
 ref   = direction === "short" ? setup.obBottom : setup.obTop
-risk  = |setup.fractal.price − ref|
-tick_k = direction === "short" ? ref − k · risk : ref + k · risk      für k = 2, 3, 4, 5, 6
+risk  = min(|setup.fractal.price − ref|, 6 Pips)
+tick_k = direction === "short" ? ref − k · risk : ref + k · risk      für k = 2 … 10
 ```
 
 `setup.obTop`, `setup.obBottom` und `setup.fractal.price` stehen bereits in `tradeSetupsMetadata`
@@ -80,7 +81,7 @@ Erkennen aufgezogene Sweep-Extrem — gemessen in 96 % auf unter 1 Pip identisch
 bestätigten Extrem-Fraktal, und wo nicht, liegt sie weiter weg statt enger. Die Skala zeichnet
 seitdem an jedem Setup, `pathType` steuert nichts mehr.
 
-**Reihenfolge der R-Marken:** 2 / 3 / 4 / 5 / 6 R. Kein 1 R — Philip: *„1R macht keinen sinn ich
+**Reihenfolge der R-Marken:** 2 bis 10 R. Kein 1 R — Philip: *„1R macht keinen sinn ich
 mache keinen Trade um 1R zu gewinnen."* 3 R ist laut Strategie das Minimum, die Marke gehört also
 sichtbar hervorgehoben.
 
@@ -108,6 +109,10 @@ Angezeigt wird immer die Zeile des Bandes, in das die laufende DR fällt — die
 nur als Bezugspunkt dabei:
 
 ### Beide Leitern nach festem Risiko-Band
+
+> Die R-Spalten hier sind **ungedeckelt** (Stopp = Invalidierung). Die Skala im Chart rechnet
+> seit 20.09.2026 gegen den gedeckelten Stopp, ihre Zahlen stehen unten unter
+> „Der gedeckelte Stopp".
 
 | Band | n | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P | 2 R | 3 R | 4 R | 5 R | 6 R |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -195,7 +200,51 @@ empirische Eigenschaft: von der engsten zur weitesten Gruppe wächst das Risiko 
 die eine DR läuft, skaliert viel langsamer als ihr Risiko** — ein gutes RR kommt also aus der
 Auswahl der DR, nicht aus der Wahl des Ziels. Genau das sollte die Anzeige sichtbar machen.
 
-### Der gedeckelte Stopp repariert die weiten Bänder
+### Der gedeckelte Stopp — durchgängige Konvention seit 20.09.2026
+
+Philip tradet mit gedeckeltem Stopp: *„deckel bitte einbauen, auch in die R-Skala."* **1 R heißt in
+diesem Plan und im Code ab hier: min(strukturelles Risiko, 6 Pips)** (`rScale.js:
+STOPP_DECKEL_PIPS`). Ohne Deckel meinte dieselbe „3 R" am Chart eine andere Pip-Strecke als in
+seiner Position — bei 12,3 Pips Risiko 37 statt 18 Pips.
+
+**Warum 6 und nicht 7:** auf jeder R-Stufe gemessen besser (3 R: 59 % gegen 57 %, EV +1,36 gegen
++1,28 R). **Warum nicht enger:** die Messung kann den Optimalwert gar nicht bestimmen, je enger
+desto besser, monoton ohne Boden (EV bei 3 R: Deckel 4 = +1,63, 5 = +1,46, 6 = +1,36, 7 = +1,30).
+Das ist ein Artefakt — die Rechnung setzt den Entry exakt auf die OB-Kante und kennt weder Spread
+noch Slippage. Die Untergrenze kommt aus der Praxis (Philip: *„maximal 6-7 Pips"*), nicht aus den
+Daten.
+
+**Was der Deckel mit den Bändern macht:** er flacht sie ab. Bei 3 R spannen die fünf Bänder ohne
+Deckel 32 Punkte auf (72 bis 40), mit Deckel nur noch 20 (72 bis 52). Die oberen drei werden
+praktisch ununterscheidbar — 59 / 52 / 53, das letzte Paar dreht die Reihenfolge sogar um, was bei
+n = 182 gegen n = 134 Rauschen ist. **Aus „52 gegen 53" darf keine Aussage gebaut werden.** Die
+Bänder bleiben trotzdem fünf (Philip 20.09.2026: *„die baender koennen bleiben"*), der Nutzer sieht
+ohnehin immer nur eine Zeile.
+
+Die Bandgrenze selbst wird weiter am **strukturellen** Risiko gemessen, nicht am gedeckelten: das
+Band beschreibt, wie weit die Range aufgespannt ist, der Deckel nur, wo der Stopp liegt.
+
+**Die Tabelle der Skala** (Tabelle 5 in `baenderTabellen.py`, Stopp auf 6 Pips gedeckelt, n = 915):
+
+| Band | 2 R | 3 R | 4 R | 5 R | 6 R | 7 R | 8 R | 9 R | 10 R |
+|---|---|---|---|---|---|---|---|---|---|
+| unter 3 Pips | 82 % | 72 % | 61 % | 55 % | 47 % | 38 % | 34 % | 32 % | 28 % |
+| 3–5 Pips | 78 % | 60 % | 49 % | 41 % | 36 % | 33 % | 27 % | 25 % | 23 % |
+| 5–7 Pips | 75 % | 59 % | 47 % | 41 % | 36 % | 32 % | 29 % | 25 % | 22 % |
+| 7–10 Pips | 66 % | 52 % | 44 % | 38 % | 31 % | 29 % | 22 % | 19 % | 16 % |
+| über 10 Pips | 71 % | 53 % | 46 % | 37 % | 32 % | 29 % | 24 % | 22 % | 17 % |
+| **alle** | **75 %** | **59 %** | **49 %** | **42 %** | **36 %** | **32 %** | **27 %** | **24 %** | **22 %** |
+
+Sobald das Risiko über dem Deckel liegt (43 % aller DRs), sitzen die Marken für JEDE DR bei
+denselben Pip-Abständen: 2 R = 12 P bis 10 R = 60 P. Die Geometrie ist dort fix, nur die Quoten
+dahinter unterscheiden sich noch nach Band.
+
+**Grenze der oberen Stufen:** bei 10 R (60 Pips) sind 65 von 915 DRs unentschieden — weder Ziel
+noch Stopp binnen 24 h erreicht — und fallen aus dem Nenner. Bei 2 R sind es 0. Die Basis schrumpft
+also nach oben leicht; 183 Treffer bei 10 R sind aber reichlich.
+
+**EV über die ganze Leiter flach** (+1,24 bei 2 R bis +1,57 bei 7 R, dann wieder +1,37) — keine
+„nimm diese Stufe"-Markierung, auch hier gilt informieren statt empfehlen.
 
 Ziel 20 Pips, Erwartungswert ohne und mit 6-Pip-Deckel:
 
@@ -261,7 +310,9 @@ wäre durch nichts gedeckt.
   Seit 20.09.2026 ist das 1:1 eine `trade_setups`-Zeile (Schlüssel `instrument, direction,
   ob_start_time`) — vorher waren es zwei, eine je Pfad.
 - **Referenz für alles** = nahe OB-Kante (`ob_bottom` bei Short, `ob_top` bei Long).
-- **Risiko / 1 R** = nahe OB-Kante → ferne OB-Kante (`trade_setups.invalidation`).
+- **Risiko / 1 R** = nahe OB-Kante → ferne OB-Kante (`trade_setups.invalidation`), **gedeckelt
+  auf 6 Pips** (`rScale.js: STOPP_DECKEL_PIPS`). Ungedeckelt heißt hier durchgängig
+  **strukturelles Risiko** — das bestimmt nur noch das Quoten-Band.
 - **Invalidierung** = Berührung der fernen OB-Kante (= Sweep-Extrem).
 - **Reichweite** = größte Bewegung in Trade-Richtung vor der Invalidierung. Docht zählt.
 - **Start** = `ob_start_time` + 2 M5-Kerzen (600 s).
@@ -274,6 +325,10 @@ wäre durch nichts gedeckt.
 2. **Quoten an die R-Marken, statisch** — die 25 Zahlen aus Tabelle 1 oben als Konstante im
    Frontend, erzeugt von `baenderTabellen.py`. Kein Server (Begründung unten). **Erledigt
    20.09.2026**, Task `chart-quoten-an-die-r-marken-schreiben-statisch` (`src/rScaleQuotes.js`).
+   Nachgezogen 20.09.2026 auf den gedeckelten Stopp und 2-10 R, Task
+   `r-skala-stopp-auf-6-pips-deckeln-und-bis-10-r-erweitern` — Tabelle 5 statt Tabelle 1. Die
+   ungedeckelten Zahlen oben unter „Die Zahlen" gelten weiter für die Pip-Leiter, NICHT für die
+   R-Skala.
 3. Beide Leitern plus Vergleichszeilen als Block im TSC.
 4. `find_targets`-Anreicherung.
 5. Gegenkraft — zurückgestellt, siehe oben.

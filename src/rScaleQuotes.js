@@ -11,14 +11,19 @@
 // Ohne diesen Guard zeigte der Chart dort Zahlen, die für das Instrument nie gerechnet wurden.
 export const QUOTEN_INSTRUMENT = "GBPUSD";
 
-// Tabelle 1 aus analysis/dr-reichweite/ergebnis-baender.txt, 915 Dealing Ranges Jan-Sep 2026.
+// Tabelle 5 aus analysis/dr-reichweite/ergebnis-baender.txt, 915 Dealing Ranges Jan-Sep 2026:
+// Stopp auf STOPP_DECKEL_PIPS gedeckelt, wie die Skala selbst rechnet. Die ungedeckelte Tabelle 1
+// von vorher war eine ANDERE Messung, keine andere Skalierung — mit Deckel fällt der Stopp, während
+// die Range strukturell noch lebt.
+// riskPips ist das STRUKTURELLE Risiko (rScale.js: bandRisk), nicht das gedeckelte: das Band
+// beschreibt, wie weit die Range aufgespannt ist, der Deckel nur, wo der Stopp liegt.
 // Bandgrenzen exklusiv unten, inklusiv oben (lo < Risiko <= hi), wie in baenderTabellen.py.
 const BAENDER = [
-  { hi: 3, quoten: { 2: 82, 3: 72, 4: 61, 5: 55, 6: 48 } },
-  { hi: 5, quoten: { 2: 78, 3: 60, 4: 49, 5: 41, 6: 35 } },
-  { hi: 7, quoten: { 2: 74, 3: 57, 4: 44, 5: 38, 6: 33 } },
-  { hi: 10, quoten: { 2: 60, 3: 46, 4: 36, 5: 28, 6: 21 } },
-  { hi: Infinity, quoten: { 2: 49, 3: 36, 4: 26, 5: 22, 6: 13 } },
+  { hi: 3, quoten: { 2: 82, 3: 72, 4: 61, 5: 55, 6: 47, 7: 38, 8: 34, 9: 32, 10: 28 } },
+  { hi: 5, quoten: { 2: 78, 3: 60, 4: 49, 5: 41, 6: 36, 7: 33, 8: 27, 9: 25, 10: 23 } },
+  { hi: 7, quoten: { 2: 75, 3: 59, 4: 47, 5: 41, 6: 36, 7: 32, 8: 29, 9: 25, 10: 22 } },
+  { hi: 10, quoten: { 2: 66, 3: 52, 4: 44, 5: 38, 6: 31, 7: 29, 8: 22, 9: 19, 10: 16 } },
+  { hi: Infinity, quoten: { 2: 71, 3: 53, 4: 46, 5: 37, 6: 32, 7: 29, 8: 24, 9: 22, 10: 17 } },
 ];
 
 // Quote in Prozent, oder null wenn nichts Gemessenes passt (anderes Instrument, Risiko <= 0,
