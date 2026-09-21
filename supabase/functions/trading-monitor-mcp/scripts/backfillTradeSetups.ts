@@ -76,6 +76,16 @@ const instrumente = (Deno.env.get("BACKFILL_INSTRUMENTS") ?? "GBPUSD").split(","
 const vonIso = (Deno.env.get("BACKFILL_FROM") ?? "2026-01-05") + "T00:00:00Z";
 const bisIso = (Deno.env.get("BACKFILL_TO") ?? "2026-07-16") + "T00:00:00Z";
 const trockenlauf = Deno.env.get("BACKFILL_DRY_RUN") === "1";
+// Regel 2 aus dem Task "Alarm sobald die FVG steht" (21.09.2026): die Alters-Schwelle des
+// Close-Checks ist ein MESSERGEBNIS, kein geratener Wert -- deshalb hier uebersteuerbar, damit
+// derselbe Zeitraum mit mehreren Schwellen durchgerechnet und verglichen werden kann.
+// "aus" = Check nie, "immer" = Check immer (Verhalten bis 2026-09-21), sonst Stunden als Zahl.
+const schwelleRoh = Deno.env.get("BACKFILL_CLOSE_CHECK_MAX_AGE_H");
+const closeCheckMaxAgeSec = schwelleRoh == null
+  ? DEFAULT_TRADE_SETUP_PARAMS.closeCheckMaxAgeSec
+  : schwelleRoh === "immer"
+  ? Infinity
+  : Number(schwelleRoh) * 3600;
 
 // poi-watcher erkennt NICHT rund um die Uhr: außerhalb des Alarmfensters steigt der Tick mit
 // "outside forex fetch window" aus, bevor überhaupt Kerzen geholt werden. Ohne dieselbe Sperre
@@ -161,7 +171,7 @@ for (const instrument of instrumente) {
 
     const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5Fenster, TRADE_SETUP_M5_FRACTAL_PERIOD);
     const setupObs = detectSetupObs(m5Fenster);
-    const params = { ...DEFAULT_TRADE_SETUP_PARAMS, nowTime: jetzt };
+    const params = { ...DEFAULT_TRADE_SETUP_PARAMS, closeCheckMaxAgeSec, nowTime: jetzt };
 
     for (const [dir, m5Lvl, h1Lvl] of [
       [1, m5Highs, h1Highs] as const,
@@ -170,11 +180,14 @@ for (const instrument of instrumente) {
       const setup = detectTradeSetup(dir, m5Lvl, h1Lvl, m5Lvl, setupObs, params, m5Fenster);
       if (!setup) continue;
       const direction = setup.dir === 1 ? "short" : "long";
-      const key = `${direction}_${setup.fractal.pivotTime}`;
+      const key = `${direction}_${setup.obStartTime}`;
       // Erster Fund gewinnt — dieselbe Semantik wie live: poi-watcher/index.ts überspringt einen
-      // bereits gespeicherten Schlüssel komplett ("schon erkannt/gespeichert — ein Fraktal bricht
-      // nie zurück"), überschreibt die Zeile also nie. Gegenprobe mit "letzter gewinnt" gerechnet:
-      // der Reichweiten-Median lief noch weiter von den Live-Zeilen weg (16,6 statt 15,2 gegen 12,9).
+      // bereits alarmierten Schlüssel komplett, überschreibt die Zeile also nicht mehr. Gegenprobe
+      // mit "letzter gewinnt" gerechnet: der Reichweiten-Median lief noch weiter von den
+      // Live-Zeilen weg (16,6 statt 15,2 gegen 12,9).
+      // Schlüssel ist der bestätigende OB, nicht fractal_pivot_time — derselbe Unique-Key wie live
+      // (instrument,direction,ob_start_time). Mit fractal_pivot_time konnten zwei Ticks dieselbe
+      // ob_start_time unter zwei Schlüsseln ablegen, was der Upsert-Batch nicht überlebt.
       if (gefunden.has(key)) continue;
       gefunden.set(key, {
         instrument,
@@ -197,7 +210,7 @@ for (const instrument of instrumente) {
     if (ticks % 5000 === 0) console.log(`  ${ticks} Ticks, ${gefunden.size} Setups bis ${iso(jetzt).slice(0, 16)}`);
   }
 
-  console.log(`${instrument}: ${ticks} Ticks simuliert, ${gefunden.size} Setups gefunden`);
+  console.log(`${instrument}: ${ticks} Ticks simuliert, ${gefunden.size} Setups gefunden (closeCheckMaxAgeSec=${closeCheckMaxAgeSec})`);
   const zeilen = [...gefunden.values()];
   const htf = zeilen.filter((z) => z.ls_timeframe === "1H").length;
   console.log(`  davon 1H-Sweep: ${htf}, M5-Sweep: ${zeilen.length - htf}`);

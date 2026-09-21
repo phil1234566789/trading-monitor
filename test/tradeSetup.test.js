@@ -16,6 +16,10 @@ const params = {
   maxDistanceM5: 0.0005,
   maxLookbackSec: 6 * 3600,
   obMaxDelaySec: 3600,
+  // Produktions-Default seit 2026-09-21: Check aus (Messergebnis, siehe
+  // analysis/dr-reichweite/ergebnis-close-check.txt). Die Tests zur Regel selbst setzen ihn
+  // explizit hoch — sonst würde die Regel hier gar nicht geprüft.
+  closeCheckMaxAgeSec: 0,
   nowTime: 100_000,
 };
 
@@ -80,11 +84,31 @@ describe("detectTradeSetups — Path B (sofortige Bestätigung ohne separates Fr
     expect(setups[0].obTop).toBe(1.34633);
   });
 
-  it("findet NICHTS, wenn seit dem Sweep eine M5-Kerze unter den LS-Preis geschlossen hat", () => {
-    const ls = lowLevel({ price: 1.34579, pivotTime: 200, touchedTime: 90_000 });
+  // Regel 2 (Philip 2026-09-21): der Close-Check gilt nur noch für JUNGE gesweepte Level. Vorher
+  // galt er unbegrenzt — genau das hat den schnellen Pfad bei jedem Sweep-and-Reclaim ausgeschaltet
+  // und den Alarm 15 Minuten kosten lassen (Setup #1617).
+  describe("Regel 2: Close-Check altersabhängig", () => {
     const setupObs = [bullOb({ startTime: 90_300 })];
-    const m5Candles = [{ time: 90_100, open: 1.3455, high: 1.3456, low: 1.3453, close: 1.3454 }]; // Close < 1.34579
-    expect(detectTradeSetups(-1, [], [ls], [], setupObs, params, m5Candles)).toEqual([]);
+    // Close UNTER dem LS-Preis, nach dem Sweep
+    const m5Candles = [{ time: 90_100, open: 1.3455, high: 1.3456, low: 1.3453, close: 1.3454 }];
+    const mitSchwelle = { ...params, closeCheckMaxAgeSec: 4 * 3600 };
+
+    it("junges Level (Alter unter der Schwelle): der Close disqualifiziert den Sweep", () => {
+      const jung = lowLevel({ price: 1.34579, pivotTime: 86_400, touchedTime: 90_000 }); // 1h alt
+      expect(detectTradeSetups(-1, [], [jung], [], setupObs, mitSchwelle, m5Candles)).toEqual([]);
+    });
+
+    it("altes Level (Alter über der Schwelle): derselbe Close disqualifiziert nicht mehr", () => {
+      const alt = lowLevel({ price: 1.34579, pivotTime: 200, touchedTime: 90_000 }); // ~25h alt
+      const setups = detectTradeSetups(-1, [], [alt], [], setupObs, mitSchwelle, m5Candles);
+      expect(setups).toHaveLength(1);
+      expect(setups[0].ls).toBe(alt);
+    });
+
+    it("mit dem gemessenen Default (Check aus) hält auch das junge Level", () => {
+      const jung = lowLevel({ price: 1.34579, pivotTime: 86_400, touchedTime: 90_000 });
+      expect(detectTradeSetups(-1, [], [jung], [], setupObs, params, m5Candles)).toHaveLength(1);
+    });
   });
 
   it("ignoriert Path B ohne m5Candles-Argument (Rückwärtskompatibilität, kein Crash)", () => {
@@ -132,6 +156,40 @@ describe("detectTradeSetups — ein Setup je bestätigender M5-OB", () => {
   });
 });
 
+// Regel 3 (Philip 2026-09-21): wurden bis zum bestätigenden OB MEHRERE Level gesweept, entscheiden
+// zwei verschiedene davon — das älteste trägt die Qualität (ls_price/ls_timeframe/Alter im Alarm),
+// das früheste den Fenster-Start von widenObForSweep und damit die Invalidierung.
+describe("detectTradeSetups — mehrere Sweeps je OB", () => {
+  // lsAlt wurde früher berührt UND ist älter; das tiefste Low liegt in der Kerze seines Touches,
+  // liegt also nur im Fenster, wenn der FRÜHESTE Touch den Start setzt.
+  const lsAlt = lowLevel({ price: 1.3003, pivotTime: 100, touchedTime: 800 }); // Alter 700
+  const lsJung = lowLevel({ price: 1.3002, pivotTime: 700, touchedTime: 900 }); // Alter 200
+  const setupObs = [bullOb({ startTime: 1100, top: 1.301, bottom: 1.3005 })];
+  const nah = { ...params, nowTime: 1100 }; // Touch-Zeiten liegen hier dicht am Jetzt (maxLookbackSec)
+  const m5Candles = [
+    { time: 800, open: 1.3, high: 1.3005, low: 1.2995, close: 1.3004 },
+    { time: 900, open: 1.3, high: 1.3005, low: 1.2998, close: 1.3004 },
+    { time: 1100, open: 1.3005, high: 1.301, low: 1.3004, close: 1.301 },
+  ];
+
+  it("nimmt den ÄLTESTEN Sweep als ls und den FRÜHESTEN Touch als Fenster-Start", () => {
+    const setups = detectTradeSetups(-1, [], [], [lsAlt, lsJung], setupObs, nah, m5Candles);
+    expect(setups).toHaveLength(1);
+    expect(setups[0].ls).toBe(lsAlt);
+    expect(setups[0].obBottom).toBe(1.2995); // Fenster ab 800, nicht ab 900 (das wäre 1.2998)
+  });
+
+  it("rechnet über Path A dieselben Zahlen aus (ein OB, ein Ergebnis, egal welcher Pfad zuerst war)", () => {
+    const fractal = lowLevel({ price: 1.3, pivotTime: 1000, touched: false });
+    const setups = detectTradeSetups(-1, [fractal], [], [lsAlt, lsJung, fractal], setupObs, nah, m5Candles);
+    expect(setups).toHaveLength(1);
+    expect(setups[0].pathType).toBe("A");
+    expect(setups[0].fractal).toBe(fractal);
+    expect(setups[0].ls).toBe(lsAlt); // nicht der jüngste Sweep, den findBestLsMatch für Path A fand
+    expect(setups[0].obBottom).toBe(1.2995);
+  });
+});
+
 describe("detectTradeSetups — Short (dir=1, spiegelbildlich zu Long)", () => {
   it("Path A: findet ein Short-Setup über ein noch unberührtes Fraktal + passendes LS + OB danach", () => {
     const fractal = highLevel({ price: 1.31, pivotTime: 1000, touched: false });
@@ -152,10 +210,13 @@ describe("detectTradeSetups — Short (dir=1, spiegelbildlich zu Long)", () => {
     expect(setups[0].fractal).toBe(ls); // kein eigenes Fraktal -> fractal fällt auf ls zurück
   });
 
-  it("Path B: findet NICHTS, wenn seit dem Sweep eine M5-Kerze über den LS-Preis geschlossen hat", () => {
-    const ls = highLevel({ price: 1.34579, pivotTime: 200, touchedTime: 90_000 });
+  it("Path B: der Close-Check disqualifiziert auch beim Short nur ein junges Level", () => {
     const setupObs = [bearOb({ startTime: 90_300 })];
     const m5Candles = [{ time: 90_100, open: 1.3461, high: 1.3463, low: 1.346, close: 1.3462 }]; // Close > 1.34579
-    expect(detectTradeSetups(1, [], [ls], [], setupObs, params, m5Candles)).toEqual([]);
+    const mitSchwelle = { ...params, closeCheckMaxAgeSec: 4 * 3600 };
+    const jung = highLevel({ price: 1.34579, pivotTime: 86_400, touchedTime: 90_000 });
+    const alt = highLevel({ price: 1.34579, pivotTime: 200, touchedTime: 90_000 });
+    expect(detectTradeSetups(1, [], [jung], [], setupObs, mitSchwelle, m5Candles)).toEqual([]);
+    expect(detectTradeSetups(1, [], [alt], [], setupObs, mitSchwelle, m5Candles)).toHaveLength(1);
   });
 });

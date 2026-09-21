@@ -167,6 +167,9 @@ print("  %-42s  " % "" + "".join("%7dR" % k for k in R_GEDECKELT))
 for name, g in baender:
     print("  %-42s  " % name
           + "".join("%+7.2f " % (mess_gedeckelt(g, k)[0] / 100 * k - (1 - mess_gedeckelt(g, k)[0] / 100)) for k in R_GEDECKELT))
-print("  %-42s  " % "alle"
-      + "".join("%+7.2f " % (mess_gedeckelt(res, k)[0] / 100 * k - (1 - mess_gedeckelt(res, k)[0] / 100)) for k in R_GEDECKELT))
-print("  Flach ueber die ganze Leiter (1,24 bis 1,57) -- die Anzeige soll informieren, nicht empfehlen.")
+ev_alle = [mess_gedeckelt(res, k)[0] / 100 * k - (1 - mess_gedeckelt(res, k)[0] / 100) for k in R_GEDECKELT]
+print("  %-42s  " % "alle" + "".join("%+7.2f " % e for e in ev_alle))
+# Spannweite gerechnet statt hingeschrieben -- als fester Text stand hier nach dem naechsten
+# Datenstand (21.09.2026) eine Zahl, die es nicht mehr gab.
+print("  Flach ueber die ganze Leiter (%.2f bis %.2f) -- die Anzeige soll informieren, nicht empfehlen."
+      % (min(ev_alle), max(ev_alle)))

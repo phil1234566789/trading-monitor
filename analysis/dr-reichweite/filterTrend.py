@@ -9,7 +9,7 @@
 # "Trend unklar" bleibt eine eigene Gruppe (siehe drMerkmale.trendlage), wird also weder
 # weggeworfen noch einer der beiden Seiten zugeschlagen.
 import bisect, json, random, statistics
-from drMerkmale import lade_setups, lade_kerzen, lade_bekannte_level, lade_trend, merkmale, trendlage, ts, PIP, ARM
+from drMerkmale import lade_setups, lade_kerzen, lade_bekannte_level, lade_trend, merkmale, trendlage, dr_schluessel, ts, PIP, ARM
 import filterGegenkraft as gk
 import messeFindTargets as ft
 
@@ -86,7 +86,7 @@ print()
 print("FILTER 2 x TRENDLAGE -- lebende Gegen-DR (Paarvergleich wie filterGegenkraft.py, Target 20 Pips)")
 gdrs = gk.build(20)
 for x in gdrs:
-    x["lage"] = trendlage(x["d"], trend_map.get(str(x["id"]), {}).get("trend"))
+    x["lage"] = trendlage(x["d"], trend_map.get(dr_schluessel(by_id[x["id"]]), {}).get("trend"))
 for x in gdrs:
     x["konstellation"] = gk.konstellation(x, gdrs, "broad")
 for k in gk.KONSTELLATIONEN:
@@ -107,7 +107,7 @@ ftdrs = ft.drs_laden()
 roh = ft.roh_laden()
 lage_by_id = {x["id"]: x["lage"] for x in res}
 for d in ftdrs:
-    d["kand"] = ft.kandidaten(d, roh[d["id"]])
+    d["kand"] = ft.kandidaten(d, roh[d["key"]])  # key, nicht id: siehe drs_laden in messeFindTargets.py
     d["lage"] = lage_by_id[d["id"]]
 REGELN = [("nahster", ft.nahster), (">=10 Pips", ft.erster_ab(10)),
           (">=15 Pips", ft.erster_ab(15)), (">=25 Pips", ft.erster_ab(25))]

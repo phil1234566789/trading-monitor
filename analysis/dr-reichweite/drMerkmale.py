@@ -59,12 +59,19 @@ def lade_bekannte_level():
     return {(round(l["price"], 5), ts(l["pivot_time"])) for l in levels}
 
 
+def dr_schluessel(r):
+    """Stabile Identitaet einer DR ueber Datenstaende hinweg: Richtung + Impuls-Kerze. Die `id` aus
+    lade_setups() ist der ZEILENINDEX und zeigt nach einem neuen Simulationslauf auf eine andere DR
+    -- eine damit geschluesselte Datei (trend-je-dr.json) waere danach still falsch statt leer."""
+    return "%s|%s" % (r["direction"], r["ob_start_time"])
+
+
 def lade_trend():
-    """id -> {trend, nestedTrend}, geschrieben von messeTrendJeDr.py. Fehlt die Datei, liefert
-    diese Funktion ein leeres dict -- die Auswertung soll dann sagen koennen, dass der Trend fehlt,
-    statt mit einer Ausnahme abzubrechen."""
+    """dr_schluessel -> {trend, nestedTrend}, geschrieben von messeTrendJeDr.py. Fehlt die Datei,
+    liefert diese Funktion ein leeres dict -- die Auswertung soll dann sagen koennen, dass der Trend
+    fehlt, statt mit einer Ausnahme abzubrechen."""
     try:
-        return json.load(open("trend-je-dr.json"))
+        return json.load(open(os.path.join(_HIER, "trend-je-dr.json")))
     except FileNotFoundError:
         return {}
 
@@ -112,7 +119,7 @@ def merkmale(r, known, trend_map=None):
     alter = handelsstunden(ts(r["ls_pivot_time"]), ts(r["ls_touched_time"]))
     bt = utc_dt(ts(r["ob_start_time"]) + BERLIN)
     min_of_day = bt.hour * 60 + bt.minute
-    t = (trend_map or {}).get(str(r["id"]), {})
+    t = (trend_map or {}).get(dr_schluessel(r), {})
     return {
         "herkunft": herkunft,
         # strict = nur die sicheren HTF-Faelle, broad = zusaetzlich die unklaren. Beide Varianten
@@ -175,3 +182,64 @@ def lauf(x, ziel_pips, stop_pips):
             return "loss"
         i += 1
     return "offen"
+
+# --- Grundmessung je Dealing Range -------------------------------------------------------------
+# Von messeDrReichweite.py (Hauptauswertung) und vergleicheCloseCheck.py (Abnahmelauf der
+# Close-Check-Schwelle, 21.09.2026) gemeinsam genutzt. Vorher lag die Messung nur als Rumpf in
+# messeDrReichweite.py -- der Vergleichslauf haette sie kopieren muessen, und genau daran driften
+# zwei Messungen auseinander.
+import collections as _collections
+import bisect as _bis
+
+
+def gruppiere_drs(rows):
+    """Eine DR = ein M5-OB, Zeilen desselben OB werden zusammengefasst. Merkmalstraeger der Gruppe
+    ist die Zeile mit einem EIGENEN bestaetigten Fraktal -- dieselbe Wahl wie setup_quelle in der
+    Migration, damit Auswertung und Tabelle dieselbe Zeile meinen."""
+    for r in rows:
+        r["_B"] = (r["fractal_price"] == r["ls_price"] and r["fractal_pivot_time"] == r["ls_pivot_time"])
+    groups = _collections.defaultdict(list)
+    for r in rows:
+        groups[(r["direction"], r["ob_start_time"], r["ob_top"], r["ob_bottom"])].append(r)
+    return [(key, ([r for r in g if not r["_B"]] or g)[0], g) for key, g in groups.items()]
+
+
+def messe_drs(rows, cnd, times):
+    """Reichweite/Risiko/Invalidierungszeit je DR, gemessen ab FVG-Bestaetigung
+    (ob_start_time + ARM) -> (res, info)."""
+    drs = gruppiere_drs(rows)
+    res, sanity = [], 0
+    for key, lead, g in drs:
+        d, obst, obtop, obbot = key
+        start = ts(obst) + ARM
+        if not (times[0] <= start <= times[-1] - 3600):
+            continue
+        inval = obtop if d == "short" else obbot
+        ref = obbot if d == "short" else obtop
+        # Sanity: Invalidierung muss auf der richtigen Seite der Referenz liegen
+        if (inval <= ref) if d == "short" else (inval >= ref):
+            sanity += 1
+            continue
+        i = _bis.bisect_left(times, start)
+        reach, t_inval = 0.0, None
+        while i < len(cnd) and cnd[i]["time"] <= start + HORIZON:
+            c = cnd[i]
+            fav = (ref - c["low"]) if d == "short" else (c["high"] - ref)
+            reach = max(reach, fav / PIP)
+            if (c["high"] >= inval) if d == "short" else (c["low"] <= inval):
+                t_inval = (c["time"] - start) / 60.0
+                break
+            i += 1
+        res.append(dict(id=lead["id"], dir=d, reach=reach, t_inval=t_inval,
+                        risk=abs(inval - ref) / PIP, day=obst[:10],
+                        ob_key=(d, ts(obst))))
+    return res, dict(zeilen=len(rows), drs=len(drs), sanity=sanity,
+                     ohne_fraktal=sum(1 for _, lead, _ in drs if lead["_B"]))
+
+
+# Leitkennzahl: Trefferquote (siehe quotenTabelle.py) -- hier, damit der Vergleichslauf und die
+# Haupttabellen dieselbe Rechnung benutzen.
+PIPS_REIHE = (10, 15, 20, 25, 30, 35, 40)
+R_REIHE = (2, 3, 4, 5, 6)
+quote = lambda g, X: 100.0 * sum(1 for x in g if x["reach"] >= X) / len(g)
+quote_r = lambda g, k: 100.0 * sum(1 for x in g if x["reach"] >= k * x["risk"]) / len(g)

@@ -25,7 +25,7 @@ by_id = {r["id"]: r for r in lade_setups()}
 gliste = gk.build(20)
 gdrs = {x["id"]: x for x in gliste}
 for d in drs:
-    d["kand"] = ft.kandidaten(d, roh[d["id"]])
+    d["kand"] = ft.kandidaten(d, roh[d["key"]])  # key, nicht id: siehe drs_laden in messeFindTargets.py
     d.update(merkmale(by_id[d["id"]], known, trend))
     g = gdrs.get(d["id"])
     d["konstellation"] = gk.konstellation(g, gliste, "broad") if g else None

@@ -16,7 +16,7 @@
 # OAuth-Token, parallel braeuchte das hier niemand). Dafuer muss TRADING_MONITOR_MCP_TOKEN gesetzt
 # sein, und SETUPS/CANDLES muessen auf die gezogenen MCP-Ergebnisse zeigen (siehe README).
 import json, sys, os, time, gzip, random, bisect, datetime, statistics, urllib.request
-from drMerkmale import lade_setups
+from drMerkmale import lade_setups, dr_schluessel
 
 ROH = "find-targets-roh.jsonl.gz"
 MCP_URL = "https://vkphwtqcvqrkphksproj.supabase.co/functions/v1/trading-monitor-mcp"
@@ -66,7 +66,10 @@ def drs_laden():
             fav = (ref - k["low"]) if x["dir"] == "short" else (k["high"] - ref)
             strikt = max(strikt, fav / PIP)
             i += 1
-        out.append(dict(x, start=start, ref=ref, reach_strikt=strikt,
+        # Schluessel der Rohdatei ist NICHT x["id"] (das ist der Zeilenindex und zeigt nach einem
+        # neuen Simulationslauf auf eine andere DR), sondern die stabile DR-Identitaet -- sonst
+        # paart ein spaeterer Lauf die gecachten Antworten mit den falschen Ranges.
+        out.append(dict(x, start=start, ref=ref, reach_strikt=strikt, key=dr_schluessel(r),
                         stunde=utc_dt(ts(r["ob_start_time"]) + BERLIN).hour))
     out.sort(key=lambda d: d["start"])
     return out
@@ -77,9 +80,9 @@ def sammeln(drs):
     if os.path.exists(ROH):
         roh = {json.loads(l)["id"]: json.loads(l)["res"] for l in gzip.open(ROH, "rt")}
     for n, d in enumerate(drs, 1):
-        if d["id"] not in roh:
-            roh[d["id"]] = mcp("find_targets", {"instrument": "GBPUSD", "direction": d["dir"],
-                                                "replayUntilSec": d["start"]})
+        if d["key"] not in roh:
+            roh[d["key"]] = mcp("find_targets", {"instrument": "GBPUSD", "direction": d["dir"],
+                                                 "replayUntilSec": d["start"]})
             time.sleep(0.2)
         if n % 25 == 0:
             print("%d/%d" % (n, len(drs)), flush=True)
@@ -90,7 +93,7 @@ def sammeln(drs):
 
 
 def roh_laden():
-    """Die abgelegten find_targets-Antworten, id -> Antwort."""
+    """Die abgelegten find_targets-Antworten, dr_schluessel -> Antwort."""
     return {json.loads(l)["id"]: json.loads(l)["res"] for l in gzip.open(ROH, "rt")}
 
 
@@ -148,7 +151,7 @@ def main():
     drs = drs_laden()
     roh = sammeln(drs) if "sammeln" in sys.argv else roh_laden()
     for d in drs:
-        d["kand"] = kandidaten(d, roh[d["id"]])
+        d["kand"] = kandidaten(d, roh[d["key"]])
     alle = [k for d in drs for k in d["kand"]]
     print("Dealing Ranges: %d   Kandidaten insgesamt: %d   Reichweite-Median %.1f Pips\n"
           % (len(drs), len(alle), med([d["reach"] for d in drs])))

@@ -17,63 +17,21 @@
 #   invalidiert_nach : Minuten bis eine Kerze die ferne OB-Kante BERUEHRT (Philips "trifft")
 #   reichweite       : groesste Bewegung in Trade-Richtung VOR der Invalidierung,
 #                      gemessen ab der NAHEN OB-Kante (ob_bottom bei Short, ob_top bei Long)
-import json, bisect, statistics, collections
-from drMerkmale import lade_setups, lade_kerzen, ts, PIP, ARM, HORIZON
+import json, statistics
+from drMerkmale import lade_setups, lade_kerzen, messe_drs
 
 rows = lade_setups()
 cnd, times = lade_kerzen()
+res, info = messe_drs(rows, cnd, times)
 
-for r in rows:
-    r["_B"] = (r["fractal_price"] == r["ls_price"] and r["fractal_pivot_time"] == r["ls_pivot_time"])
-
-groups = collections.defaultdict(list)
-for r in rows:
-    groups[(r["direction"], r["ob_start_time"], r["ob_top"], r["ob_bottom"])].append(r)
-
-# Merkmalstraeger der Gruppe ist die Zeile mit einem EIGENEN bestaetigten Fraktal -- dieselbe Wahl
-# wie setup_quelle in der Migration, damit Auswertung und Tabelle dieselbe Zeile meinen.
-drs = []
-for key, g in groups.items():
-    a = [r for r in g if not r["_B"]]
-    drs.append((key, a[0] if a else g[0], g))
-ohne_fraktal = sum(1 for _, lead, _ in drs if lead["_B"])
-
-print("Setup-Zeilen gesamt      : %d" % len(rows))
+print("Setup-Zeilen gesamt      : %d" % info["zeilen"])
 print("Dealing Ranges (je M5-OB): %d   -> %d Zeilen waren Duplikate"
-      % (len(groups), len(rows) - len(groups)))
+      % (info["drs"], info["zeilen"] - info["drs"]))
 print("   davon ohne bestaetigtes Fraktal: %d  (frueher ausgeschlossen, jetzt ueber die OB-Kante messbar)"
-      % ohne_fraktal)
+      % info["ohne_fraktal"])
 print()
-
-res, skipped_sanity = [], 0
-for key, lead, g in drs:
-    d, obst, obtop, obbot = key
-    start = ts(obst) + ARM
-    if not (times[0] <= start <= times[-1] - 3600):
-        continue
-    inval = obtop if d == "short" else obbot
-    ref = obbot if d == "short" else obtop
-    # Sanity: Invalidierung muss auf der richtigen Seite der Referenz liegen
-    if (inval <= ref) if d == "short" else (inval >= ref):
-        skipped_sanity += 1
-        continue
-    i = bisect.bisect_left(times, start)
-    reach = 0.0
-    t_inval = None
-    while i < len(cnd) and cnd[i]["time"] <= start + HORIZON:
-        c = cnd[i]
-        fav = (ref - c["low"]) if d == "short" else (c["high"] - ref)
-        reach = max(reach, fav / PIP)
-        hit = (c["high"] >= inval) if d == "short" else (c["low"] <= inval)
-        if hit:
-            t_inval = (c["time"] - start) / 60.0
-            break
-        i += 1
-    res.append(dict(id=lead["id"], dir=d, reach=reach, t_inval=t_inval,
-                    risk=abs(inval - ref) / PIP, day=obst[:10]))
-
 print("ausgewertet: %d   (Sanity-Ausschluss, Invalidierung auf falscher Seite: %d)"
-      % (len(res), skipped_sanity))
+      % (len(res), info["sanity"]))
 print()
 
 nie = [x for x in res if x["t_inval"] is None]

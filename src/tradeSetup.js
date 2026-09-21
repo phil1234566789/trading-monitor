@@ -7,6 +7,7 @@
 // an der Setup-Logik im Indikator diese Kopie (und die Deno-Kopie in
 // supabase/functions/_shared/tradeSetup.ts) mitziehen.
 import { detectOrderBlocks } from "./orderBlocks.js";
+import { businessSecondsBetween } from "./chartTimeUtils.js";
 
 // Bis Bug-Report Philip 2026-07-29 ("M5 OBs bei trade-setup passen noch nicht") eine EIGENE, von
 // detectOrderBlocks() unabhängige 3-Kerzen-FVG-Existenzprüfung — bewusst OHNE Mindestgröße (jede
@@ -108,6 +109,50 @@ function closesBeyondLevel(candles, fromTime, toTime, levelPrice, dir) {
   return candles.some((c) => c.time > fromTime && c.time <= toTime && (dir === -1 ? c.close < levelPrice : c.close > levelPrice));
 }
 
+// Wie lange das Level schon stand, BEVOR es gesweept wurde — dasselbe Maß, das die Alters-Labels
+// im Chart und die Qualitätsmerkmale in analysis/dr-reichweite/ benutzen.
+function sweepAgeSec(ls) {
+  return businessSecondsBetween(ls.pivotTime, ls.touchedTime ?? ls.pivotTime);
+}
+
+// Regel 2 (Philip 2026-09-21): der Close-Check disqualifiziert einen Sweep nur noch, solange das
+// gesweepte Level JUNG war. Ein frisches Level, durch das der Preis schließt, IST gebrochen; an
+// einem alten Level ist ein kurzer Close mit Reclaim normales Rauschen. Vorher galt der Check
+// unbegrenzt und hat damit den schnellen Pfad bei jedem Sweep-and-Reclaim ausgeschaltet
+// (Setup #1617, 21.09.2026: Alarm 15 Minuten zu spät, weil erst Path A ihn auffing).
+// params.closeCheckMaxAgeSec: 0 = Check nie, Infinity = Check immer (Verhalten bis 2026-09-21).
+function sweepBrokenByClose(ls, m5Candles, dir, params) {
+  if (sweepAgeSec(ls) >= params.closeCheckMaxAgeSec) return false;
+  return closesBeyondLevel(m5Candles, ls.touchedTime, params.nowTime, ls.price, dir);
+}
+
+// Regel 3 (Philip 2026-09-21), Teil 1: ALLE Sweeps, die zu diesem OB gehören — nicht nur der, über
+// den der Pfad das Setup gefunden hat. Bedingung ist dieselbe Zeitlage wie beim Finden (Touch vor
+// der Impuls-Kerze, höchstens obMaxDelaySec davor); die Seite steckt schon in den übergebenen
+// Arrays (Lows bei Long, Highs bei Short). Der Close-Check läuft hier BEWUSST NICHT mit: er
+// entscheidet, ob der schnelle Pfad ein Setup überhaupt früh melden darf, nicht welche Kerzen zur
+// Kraft-Zone gehören — und über alle Pfade soll für denselben OB dasselbe herauskommen.
+function collectObSweeps(ob, ownLs, h1Levels, m5Levels, params) {
+  const sweeps = [ownLs];
+  for (const lvl of [...h1Levels, ...m5Levels]) {
+    if (lvl === ownLs || !lvl.touched || lvl.touchedTime == null) continue;
+    if (lvl.touchedTime > ob.startTime || ob.startTime - lvl.touchedTime > params.obMaxDelaySec) continue;
+    sweeps.push(lvl);
+  }
+  return sweeps;
+}
+
+// Regel 3, Teil 2: das ÄLTESTE gesweepte Level trägt die Qualität ("Ältester Sweep ist der für die
+// Strategie am entscheidendsten"). Bei gleichem Alter der früher entstandene Pivot, damit beide
+// Laufzeiten bei Gleichstand dasselbe Level wählen.
+function oldestSweep(sweeps) {
+  return sweeps.reduce((best, lvl) => {
+    const a = sweepAgeSec(lvl);
+    const b = sweepAgeSec(best);
+    return a > b || (a === b && lvl.pivotTime < best.pivotTime) ? lvl : best;
+  });
+}
+
 // Path B (Chat 2026-07-26, Bug-Report "M5 OB wird nicht als Trade-Setup erkannt"): laut Philips
 // Strategie reicht es AUCH, wenn sich der bestätigende M5-OB sofort (oder kurz) nach einem LS
 // bildet, ohne dass sich zusätzlich noch ein eigenes, per period-5-Williams-Fraktal bestätigtes
@@ -119,16 +164,16 @@ function closesBeyondLevel(candles, fromTime, toTime, levelPrice, dir) {
 // zählt, siehe gbp_h1_uptrend_LQ_sweep_long_setup Replay-Beispiel 08.07.2026 11:50).
 //
 // Ohne fractal-Kandidat: der LS-Level selbst ist hier der Referenzpunkt. Einzige Bedingung außer
-// dem OB-Timing: seit dem Sweep (ls.touchedTime) darf keine M5-Kerze STRUKTURELL dagegen
-// geschlossen haben (closesBeyondLevel) — das gilt bei Path B (anders als bei Path A) für JEDES
-// LS, ob H1- oder M5-Ursprungs, weil es hier keinen separat bestätigten Fraktal-Puffer gibt, der
-// zwischenzeitliche Gegenbewegungen sonst abfedern würde.
+// dem OB-Timing: sweepBrokenByClose (siehe dort — seit 2026-09-21 altersabhängig statt
+// unbegrenzt, sonst fiel jeder Sweep-and-Reclaim durch und der Alarm kam erst über Path A, also
+// 15 Minuten später). Das ist der Pfad, der den Alarm trägt: er meldet, sobald Sweep und FVG
+// stehen, ohne die 5 Kerzen Fraktal-Bestätigung.
 function findImmediateLsSetups(h1Levels, m5Levels, m5Candles, dir, params) {
   const oldestAllowed = params.nowTime - params.maxLookbackSec;
   const results = [];
   for (const ls of [...h1Levels, ...m5Levels]) {
     if (!ls.touched || ls.touchedTime == null || ls.touchedTime < oldestAllowed) continue;
-    if (closesBeyondLevel(m5Candles, ls.touchedTime, params.nowTime, ls.price, dir)) continue;
+    if (sweepBrokenByClose(ls, m5Candles, dir, params)) continue;
     results.push(ls);
   }
   return results;
@@ -140,16 +185,19 @@ function findImmediateLsSetups(h1Levels, m5Levels, m5Candles, dir, params) {
 // unangetastet (bottom bei Short/top bei Long, siehe deriveSetupEntryInvalidation), die GEGENÜBERLIEGENDE
 // Kante wird auf den Extremwert (höchstes High bei Short, tiefstes Low bei Long) aller M5-Kerzen
 // zwischen dem Sweep-Touch (`ls.touchedTime`, inklusive) und der FVG-Impuls-Kerze (`ob.startTime`,
-// inklusive — Philip: "Impulskerze, welche FVG beinhaltet, ist dabei") erweitert.
+// inklusive — Philip: "Impulskerze, welche FVG beinhaltet, ist dabei") erweitert. Fenster-Start ist
+// seit 2026-09-21 der FRÜHESTE Touch aller Sweeps dieses OB (Regel 3, siehe collectObSweeps): ein
+// früherer Start ist eine Obermenge derselben Kerzen, das Extrem darüber kann nur gleich bleiben
+// oder weiter weg rücken — die Invalidierung wird damit nie zu eng.
 // Diese erweiterte Kante IST seit 2026-09-20 zugleich die Invalidierung des Setups (siehe
 // deriveSetupEntryInvalidation): über 889 Path-A-Zeilen gemessen stimmt sie in 96 % auf unter
 // 1 Pip mit dem später bestätigten Extrem-Fraktal überein, in 87 % punktgenau — der
 // period-5-Pivot bestätigt also nur einen Preis, der beim Entstehen des OB längst feststeht.
 // Wo beide auseinanderliegen, liegt die Kante in 30 von 33 Fällen WEITER weg, also nie zu eng
 // (die fraktalbildende Kerze liegt immer im Fenster unten).
-function widenObForSweep(ob, ls, dir, m5Candles) {
-  if (!m5Candles || ls.touchedTime == null) return ob;
-  const windowCandles = m5Candles.filter((c) => c.time >= ls.touchedTime && c.time <= ob.startTime);
+function widenObForSweep(ob, fensterVonSec, dir, m5Candles) {
+  if (!m5Candles || fensterVonSec == null) return ob;
+  const windowCandles = m5Candles.filter((c) => c.time >= fensterVonSec && c.time <= ob.startTime);
   if (windowCandles.length === 0) return ob;
   if (dir === 1) {
     // Short: FVG-Kante ist bottom (siehe deriveSetupEntryInvalidation) — top wird erweitert.
@@ -185,20 +233,27 @@ export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupO
   const obDir = dir === 1 ? -1 : 1;
   const byObStartTime = new Map();
 
+  // Regel 3+4: die Zahlen eines Setups hängen am OB, nicht am Pfad — deshalb rechnet dieselbe
+  // Funktion sie für beide Pfade aus, und ein späterer Finder desselben OB kann sie nicht mehr
+  // verändern.
+  const baueSetup = (ob, ownLs, fractal, pathType) => {
+    const sweeps = collectObSweeps(ob, ownLs, h1Levels, m5Levels, params);
+    const ls = oldestSweep(sweeps);
+    const fensterVon = Math.min(...sweeps.map((sw) => sw.touchedTime));
+    const widened = widenObForSweep(ob, fensterVon, dir, m5Candles);
+    return { dir, fractal: fractal ?? ls, ls, obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, pathType };
+  };
+
   for (const { fractal, ls } of findAllProtectedFractals(fractalLevels, h1Levels, m5Levels, dir, params)) {
-    let ob = findFirstSetupObAfter(setupObs, obDir, fractal.pivotTime, params.obMaxDelaySec);
-    if (ob) {
-      ob = widenObForSweep(ob, ls, dir, m5Candles);
-      byObStartTime.set(ob.startTime, { dir, fractal, ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime, pathType: "A" });
-    }
+    const ob = findFirstSetupObAfter(setupObs, obDir, fractal.pivotTime, params.obMaxDelaySec);
+    if (ob) byObStartTime.set(ob.startTime, baueSetup(ob, ls, fractal, "A"));
   }
 
   if (m5Candles) {
     for (const ls of findImmediateLsSetups(h1Levels, m5Levels, m5Candles, dir, params)) {
-      let ob = findFirstSetupObAfter(setupObs, obDir, ls.touchedTime, params.obMaxDelaySec);
+      const ob = findFirstSetupObAfter(setupObs, obDir, ls.touchedTime, params.obMaxDelaySec);
       if (!ob || byObStartTime.has(ob.startTime)) continue;
-      ob = widenObForSweep(ob, ls, dir, m5Candles);
-      byObStartTime.set(ob.startTime, { dir, fractal: ls, ls, obTop: ob.top, obBottom: ob.bottom, obStartTime: ob.startTime, pathType: "B" });
+      byObStartTime.set(ob.startTime, baueSetup(ob, ls, null, "B"));
     }
   }
 

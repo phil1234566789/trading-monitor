@@ -45,6 +45,11 @@ export const TRADE_SETUP_LS_MAX_LEAD_SEC_M5 = 45 * 60; // lsMaxLeadMinutesM5
 export const TRADE_SETUP_LS_MAX_DISTANCE_M5 = 5.0 * PIP_SIZE; // lsMaxDistancePipsM5=5, nur für M5-LS
 export const TRADE_SETUP_OB_MAX_DELAY_SEC = 60 * 60; // obMaxDelayMinutes
 export const TRADE_SETUP_LOOKBACK_SEC = 6 * 60 * 60; // protectedHighLookbackHours
+// Regel 2 (Philip 2026-09-21): bis zu diesem Sweep-Level-Alter disqualifiziert ein Close gegen das
+// gesweepte Level den schnellen Pfad, darüber nicht mehr. 0 = aus, als Messergebnis (Begründung an
+// closeCheckMaxAgeSec in supabase/functions/_shared/tradeSetup.ts). MUSS mit dem Wert dort
+// identisch bleiben, sonst zeichnet der Chart andere Setups als der Telegram-Alarm meldet.
+export const TRADE_SETUP_CLOSE_CHECK_MAX_AGE_SEC = 0;
 export const TRADE_SETUP_OB_WIDTH_SEC = 10 * TRADE_SETUP_GRACE_SEC; // obBoxWidthM5Candles=10, rein optisch
 // Linienstärke konfigurierbar seit Chat 2026-07-25 (Style-Modal) — siehe chartLineWidths.js, EIN
 // Wert pro Farb-Key (tradeSetupProtected/tradeSetupShort/tradeSetupLong). Kein Modul-Konstante

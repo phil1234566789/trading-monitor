@@ -16,7 +16,7 @@ import json, os, sys, time, datetime, urllib.request
 
 MCP_URL = "https://vkphwtqcvqrkphksproj.supabase.co/functions/v1/trading-monitor-mcp"
 ZIEL = "trend-je-dr.json"
-from drMerkmale import lade_setups, ts, ARM
+from drMerkmale import lade_setups, dr_schluessel, ts, ARM
 
 
 
@@ -46,7 +46,8 @@ drs = json.load(open("punkt1_result.json"))
 out = json.load(open(ZIEL)) if os.path.exists(ZIEL) else {}
 
 for n, x in enumerate(drs, 1):
-    if str(x["id"]) in out:
+    schluessel = dr_schluessel(setups[x["id"]])
+    if schluessel in out:
         continue
     start = ts(setups[x["id"]]["ob_start_time"]) + ARM
     try:
@@ -55,7 +56,7 @@ for n, x in enumerate(drs, 1):
         # nestedTrend ist im Export das ganze verschachtelte Struktur-Objekt; hier interessiert nur
         # sein Trend -- sonst ist die Datei das Hundertfache gross.
         nested = s.get("nestedTrend")
-        out[str(x["id"])] = {
+        out[schluessel] = {
             "trend": s.get("trend"),
             "nestedTrend": nested.get("trend") if isinstance(nested, dict) else nested,
             # Range-Grenzen mitgenommen, damit sich spaeter auch "wo in der Range entsteht die DR"
@@ -64,7 +65,7 @@ for n, x in enumerate(drs, 1):
             "rangeLow": (rng.get("low") or {}).get("price"),
         }
     except Exception as e:
-        out[str(x["id"])] = {"fehler": str(e)[:160]}
+        out[schluessel] = {"fehler": str(e)[:160]}
     if n % 25 == 0:
         json.dump(out, open(ZIEL, "w"))
         print("%d/%d" % (n, len(drs)), flush=True)

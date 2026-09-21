@@ -1,0 +1,39 @@
+ALLE DEALING RANGES JE SCHWELLE
+                                     n      10P    15P    20P    25P    30P    35P    40P  |     2R     3R     4R     5R     6R   Median P / Risiko
+  Check immer an (Stand 20.09.)    930      74%    59%    48%    40%    35%    31%    28%  |    70%    55%    44%    37%    31%    18.9 /  5.4
+  nur < 24h                        935      74%    59%    47%    40%    35%    31%    28%  |    70%    55%    44%    37%    31%    18.8 /  5.4
+  nur < 8h                         993      73%    58%    47%    40%    35%    30%    28%  |    69%    54%    43%    36%    30%    18.5 /  5.4
+  nur < 4h                        1040      72%    57%    46%    39%    34%    29%    27%  |    68%    54%    43%    36%    30%    18.2 /  5.4
+  nur < 2h                        1117      72%    57%    45%    38%    34%    29%    27%  |    68%    53%    42%    35%    29%    17.6 /  5.4
+  Check aus                       1314      71%    56%    46%    39%    34%    29%    27%  |    67%    53%    42%    34%    29%    17.5 /  5.4
+
+NUR DIE ZUSAETZLICH GEFUNDENEN (gegen 'Check immer an')
+                                     n      10P    15P    20P    25P    30P    35P    40P  |     2R     3R     4R     5R     6R   Median P / Risiko
+  nur < 24h                          5      80%    40%    40%     0%     0%     0%     0%  |    40%    40%    40%    40%    20%    10.3 /  5.6
+  nur < 8h                          63      57%    44%    40%    33%    27%    21%    21%  |    52%    40%    30%    25%    21%    11.9 /  5.8
+  nur < 4h                         110      55%    42%    36%    31%    26%    18%    18%  |    55%    42%    32%    25%    20%    11.5 /  5.0
+  nur < 2h                         188      62%    47%    36%    30%    27%    22%    21%  |    60%    44%    34%    27%    21%    13.1 /  5.3
+  Check aus                        396      62%    51%    41%    35%    31%    26%    23%  |    62%    49%    37%    29%    23%    15.3 /  5.4
+
+ZEILEN/DR-ZAHLEN
+  Check immer an (Stand 20.09.)  Zeilen   930   DRs   930   ausgewertet   930   davon neu    0 (+0 %)
+  nur < 24h                      Zeilen   935   DRs   935   ausgewertet   935   davon neu    5 (+1 %)
+  nur < 8h                       Zeilen   993   DRs   993   ausgewertet   993   davon neu   63 (+7 %)
+  nur < 4h                       Zeilen  1040   DRs  1040   ausgewertet  1040   davon neu  110 (+12 %)
+  nur < 2h                       Zeilen  1117   DRs  1117   ausgewertet  1117   davon neu  188 (+20 %)
+  Check aus                      Zeilen  1314   DRs  1314   ausgewertet  1314   davon neu  396 (+43 %)
+
+RANDBAENDER -- was jede Lockerung EINZELN dazuholt
+                                     n      10P    15P    20P    25P    30P    35P    40P  |     2R     3R     4R     5R     6R   Median P / Risiko
+  nur < 24h                          5      80%    40%    40%     0%     0%     0%     0%  |    40%    40%    40%    40%    20%    10.3 /  5.6
+  nur < 8h                          58      55%    45%    40%    36%    29%    22%    22%  |    53%    40%    29%    24%    21%    12.1 /  6.0
+  nur < 4h                          47      53%    38%    32%    28%    26%    15%    15%  |    57%    45%    34%    23%    19%    11.4 /  4.1
+  nur < 2h                          81      70%    53%    35%    28%    26%    26%    25%  |    67%    47%    36%    30%    22%    15.2 /  5.4
+  Check aus                        232      59%    50%    42%    35%    31%    26%    22%  |    62%    50%    38%    29%    24%    15.0 /  5.2
+  Basis: Check immer an            930      74%    59%    48%    40%    35%    31%    28%  |    70%    55%    44%    37%    31%    18.9 /  5.4
+
+ZUSAETZLICHE DRs, aufgeteilt nach Reclaim (statt nach Alter)
+                                     n      10P    15P    20P    25P    30P    35P    40P  |     2R     3R     4R     5R     6R   Median P / Risiko
+  Level zurueckerobert             259      62%    51%    42%    38%    34%    30%    27%  |    59%    46%    37%    29%    24%    15.2 /  5.6
+  bei der Impulskerze noch gebrochen   135      64%    52%    41%    30%    26%    18%    16%  |    68%    54%    37%    28%    22%    15.6 /  4.9
+  Basis: Check immer an            930      74%    59%    48%    40%    35%    31%    28%  |    70%    55%    44%    37%    31%    18.9 /  5.4

@@ -30,6 +30,7 @@ import {
   TRADE_SETUP_LS_MAX_DISTANCE_M5,
   TRADE_SETUP_OB_MAX_DELAY_SEC,
   TRADE_SETUP_LOOKBACK_SEC,
+  TRADE_SETUP_CLOSE_CHECK_MAX_AGE_SEC,
   TREND_ANALYSIS_CANDLE_COUNT,
 } from "../priceChartConstants.js";
 import { fetchInitialCandles as fetchInitialForexCandles, fetchOlderCandles as fetchOlderForexCandles } from "../forexCandles.js";
@@ -74,6 +75,7 @@ export function usePriceChartTradeSetups() {
       maxDistanceM5: TRADE_SETUP_LS_MAX_DISTANCE_M5,
       maxLookbackSec: TRADE_SETUP_LOOKBACK_SEC,
       obMaxDelaySec: TRADE_SETUP_OB_MAX_DELAY_SEC,
+      closeCheckMaxAgeSec: TRADE_SETUP_CLOSE_CHECK_MAX_AGE_SEC,
       nowTime: candles[candles.length - 1].time,
     };
     // n zählt die GESAMTE Anzahl gezeigter Setups je Richtung (kein separates "Live"-Setup, siehe

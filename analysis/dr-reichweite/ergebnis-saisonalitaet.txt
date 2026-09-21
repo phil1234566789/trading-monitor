@@ -1,68 +1,68 @@
 TREFFERQUOTE JE MONAT — Ziel erreicht, bevor die DR invalidierte
   Monat      n       10P     15P     20P     25P     30P     35P     40P
-  2026-01  106       82%     65%     46%     42%     36%     34%     29%
-  2026-02   95       73%     64%     59%     53%     41%     36%     34%
-  2026-03   91       85%     71%     62%     53%     49%     45%     38%
-  2026-04  104       74%     61%     53%     43%     36%     34%     32%
-  2026-05   99       77%     60%     45%     37%     32%     29%     26%
-  2026-06  112       80%     62%     44%     38%     37%     34%     33%
-  2026-07  118       66%     52%     42%     37%     36%     25%     22%
-  2026-08  126       63%     45%     37%     28%     21%     17%     16%
-  2026-09   64       67%     53%     41%     34%     30%     23%     23%
-  ALLE      915       74%     59%     47%     40%     35%     31%     28%
+  2026-01  150       80%     67%     51%     43%     38%     35%     31%
+  2026-02  135       66%     59%     52%     45%     36%     32%     30%
+  2026-03  165       81%     67%     59%     52%     47%     42%     37%
+  2026-04  158       72%     58%     46%     37%     30%     27%     25%
+  2026-05  151       70%     54%     42%     36%     31%     27%     24%
+  2026-06  156       73%     56%     42%     35%     34%     31%     28%
+  2026-07  167       65%     51%     41%     36%     34%     26%     23%
+  2026-08  149       60%     42%     35%     28%     22%     17%     16%
+  2026-09   83       63%     51%     40%     34%     28%     23%     23%
+  ALLE     1314       71%     56%     46%     39%     34%     29%     27%
 
 DIESELBEN MONATE IN R (Vielfaches des eigenen Risikos)
   Monat      n         2R       3R       4R       5R       6R
-  2026-01  106        74%      57%      44%      36%      28%
-  2026-02   95        68%      57%      44%      39%      34%
-  2026-03   91        68%      60%      49%      42%      33%
-  2026-04  104        70%      54%      48%      41%      34%
-  2026-05   99        72%      53%      43%      38%      33%
-  2026-06  112        73%      63%      48%      41%      34%
-  2026-07  118        66%      54%      43%      35%      31%
-  2026-08  126        69%      48%      36%      29%      23%
-  2026-09   64        69%      47%      39%      33%      28%
-  ALLE      915        70%      55%      44%      37%      31%
+  2026-01  150        74%      59%      47%      40%      32%
+  2026-02  135        64%      53%      39%      33%      28%
+  2026-03  165        66%      56%      44%      33%      27%
+  2026-04  158        66%      51%      44%      36%      28%
+  2026-05  151        66%      48%      37%      33%      28%
+  2026-06  156        70%      60%      47%      38%      32%
+  2026-07  167        63%      52%      41%      35%      30%
+  2026-08  149        71%      48%      35%      28%      21%
+  2026-09   83        66%      47%      40%      34%      30%
+  ALLE     1314        67%      53%      42%      34%      29%
 
 VOLATILITAET ODER SETUP-QUALITAET? Reichweite und Risiko je Monat
   Monat      n   Reichweite   Risiko   Reichweite in R   nie invalidiert
-  2026-01  106       18.2      5.5            3.67              25%
-  2026-02   95       25.8      6.2            3.59              31%
-  2026-03   91       27.3      7.9            3.87              25%
-  2026-04  104       21.1      5.6            3.54              26%
-  2026-05   99       17.6      5.5            3.29              27%
-  2026-06  112       18.4      5.2            3.83              28%
-  2026-07  118       15.9      5.3            3.41              28%
-  2026-08  126       14.0      4.2            2.90              29%
-  2026-09   64       17.5      4.9            2.86              27%
-  Spannweite: Reichweite Faktor 2.0 | Risiko Faktor 1.9 | in R Faktor 1.4
+  2026-01  150       20.3      5.5            3.70              26%
+  2026-02  135       20.3      6.0            3.06              27%
+  2026-03  165       26.5      8.1            3.64              23%
+  2026-04  158       17.9      5.4            3.04              20%
+  2026-05  151       15.8      5.6            2.82              25%
+  2026-06  156       16.7      4.9            3.60              26%
+  2026-07  167       15.5      5.3            3.09              27%
+  2026-08  149       12.2      4.2            2.89              28%
+  2026-09   83       15.7      4.3            2.88              25%
+  Spannweite: Reichweite Faktor 2.2 | Risiko Faktor 1.9 | in R Faktor 1.3
   Wandern Reichweite und Risiko zusammen, ist der Monatsunterschied groesstenteils
   Volatilitaet. Bleibt auch die R-Spalte auseinander, sind es wirklich die Setups.
 
 HAELT DER UNTERSCHIED? Bootstrap bester gegen schlechtesten Monat, 5000 Ziehungen
-  10 Pips: 2026-03 85% gegen 2026-08 63% | Differenz 21 Punkte, 95%-Intervall [10, 32]
-  15 Pips: 2026-03 71% gegen 2026-08 45% | Differenz 26 Punkte, 95%-Intervall [13, 39]
-  20 Pips: 2026-03 62% gegen 2026-08 37% | Differenz 25 Punkte, 95%-Intervall [12, 38]
-  25 Pips: 2026-03 53% gegen 2026-08 28% | Differenz 25 Punkte, 95%-Intervall [12, 38]
-  30 Pips: 2026-03 49% gegen 2026-08 21% | Differenz 28 Punkte, 95%-Intervall [16, 40]
-  35 Pips: 2026-03 45% gegen 2026-08 17% | Differenz 28 Punkte, 95%-Intervall [15, 40]
-  40 Pips: 2026-03 38% gegen 2026-08 16% | Differenz 23 Punkte, 95%-Intervall [11, 35]
+  10 Pips: 2026-03 81% gegen 2026-08 60% | Differenz 21 Punkte, 95%-Intervall [11, 30]
+  15 Pips: 2026-03 67% gegen 2026-08 42% | Differenz 25 Punkte, 95%-Intervall [14, 36]
+  20 Pips: 2026-03 59% gegen 2026-08 35% | Differenz 24 Punkte, 95%-Intervall [13, 35]
+  25 Pips: 2026-03 52% gegen 2026-08 28% | Differenz 24 Punkte, 95%-Intervall [14, 34]
+  30 Pips: 2026-03 47% gegen 2026-08 22% | Differenz 25 Punkte, 95%-Intervall [15, 35]
+  35 Pips: 2026-03 42% gegen 2026-08 17% | Differenz 24 Punkte, 95%-Intervall [15, 34]
+  40 Pips: 2026-03 37% gegen 2026-08 16% | Differenz 21 Punkte, 95%-Intervall [11, 30]
 
 HALBJAHRE DIREKT GEGENEINANDER
                          n       10P     15P     20P     25P     30P     35P     40P
-  Januar-Juni           607       78%     64%     51%     44%     38%     35%     32%
-  Juli-September        308       65%     49%     40%     33%     29%     22%     20%
-  10 Pips: erstes Halbjahr liegt 13 Punkte vorn, 95%-Intervall [ 7, 19]
-  15 Pips: erstes Halbjahr liegt 14 Punkte vorn, 95%-Intervall [ 8, 21]
-  20 Pips: erstes Halbjahr liegt 12 Punkte vorn, 95%-Intervall [ 5, 18]
+  Januar-Juni           915       74%     60%     49%     41%     36%     32%     29%
+  Juli-September        399       63%     48%     38%     32%     28%     22%     21%
+  10 Pips: erstes Halbjahr liegt 11 Punkte vorn, 95%-Intervall [ 6, 17]
+  15 Pips: erstes Halbjahr liegt 12 Punkte vorn, 95%-Intervall [ 6, 18]
+  20 Pips: erstes Halbjahr liegt 10 Punkte vorn, 95%-Intervall [ 5, 16]
 
 SETUPS JE MONAT (Handelstage schwanken, deshalb auch pro Tag)
-  2026-01  106 Setups an 20 Tagen = 5.3 pro Tag
-  2026-02   95 Setups an 20 Tagen = 4.8 pro Tag
-  2026-03   91 Setups an 22 Tagen = 4.1 pro Tag
-  2026-04  104 Setups an 23 Tagen = 4.5 pro Tag
-  2026-05   99 Setups an 21 Tagen = 4.7 pro Tag
-  2026-06  112 Setups an 22 Tagen = 5.1 pro Tag
-  2026-07  118 Setups an 23 Tagen = 5.1 pro Tag
-  2026-08  126 Setups an 21 Tagen = 6.0 pro Tag
-  2026-09   64 Setups an 12 Tagen = 5.3 pro Tag
+  2026-01  150 Setups an 20 Tagen = 7.5 pro Tag
+  2026-02  135 Setups an 20 Tagen = 6.8 pro Tag
+  2026-03  165 Setups an 22 Tagen = 7.5 pro Tag
+  2026-04  158 Setups an 23 Tagen = 6.9 pro Tag
+  2026-05  151 Setups an 21 Tagen = 7.2 pro Tag
+  2026-06  156 Setups an 22 Tagen = 7.1 pro Tag
+  2026-07  167 Setups an 23 Tagen = 7.3 pro Tag
+  2026-08  149 Setups an 21 Tagen = 7.1 pro Tag
+  2026-09   83 Setups an 12 Tagen = 6.9 pro Tag

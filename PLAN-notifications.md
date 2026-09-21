@@ -561,6 +561,43 @@ duplizieren) — kein struktureller Fix, ein untouched Level >21 Tage alt fällt
 `poi-watcher` + neue Migration), dann alterslose Relevanz-Filterung wie bei HTF statt Zeitfenster —
 der zu `daily_structure_pivots`/1D-Pivot-Start oben tatsächlich analoge Fix.
 
+## Status: Alarm sobald die FVG steht (Erkennungs-Latenz) — 2026-09-21
+
+Auslöser: Setup #1617 (GBPUSD Long, 21.09.2026). Die FVG stand um 09:25 Berlin, der Telegram-Alarm
+kam um 09:40. Philip: *„Ich brauche auf jeden Fall den Alarm, sobald die Fair Value Gap bestätigt
+ist."*
+
+Zwei Pfade haben gebremst: der schnelle (`findImmediateLsSetup`) wurde von `closesBeyondLevel`
+disqualifiziert, weil der Preis nach dem Sweep einmal unter dem gesweepten Level schloss und ihn
+dann zurückeroberte — ein klassischer Sweep-and-Reclaim fiel damit *immer* durch. Übrig blieb Path
+A, und der braucht ein bestätigtes period-5-Fraktal, also 5 M5-Kerzen Wartezeit.
+
+Drei Änderungen in `_shared/tradeSetup.ts` + `src/tradeSetup.js` (beide Laufzeiten, siehe CLAUDE.md
+„Two runtimes"):
+
+1. **Close-Check altersabhängig** (`closeCheckMaxAgeSec`) statt unbegrenzt. Philips Regel war „bei
+   einem sehr jungen LQ-Level (1-4h) sollte es besser nicht unter dem Sweep-Level closen".
+2. **Mehrere Sweeps je OB** (`collectObSweeps`): das *älteste* gesweepte Level trägt die Qualität
+   (`ls_*`-Spalten, Alter im Alarmtext), der *früheste* Touch den Fenster-Start von
+   `widenObForSweep` und damit die Invalidierung — die kann dadurch nie zu eng werden.
+3. **Beide Pfade rechnen dasselbe** für denselben OB (`baueSetup`). Wer zuerst kommt, legt die Zahlen
+   fest; ein späterer Finder kann sie nicht mehr verändern.
+
+Die Alters-Schwelle ist **gemessen** worden, nicht geschätzt (`analysis/dr-reichweite/
+vergleicheCloseCheck.py`, 6 Trockenläufe über Jan–Sep 2026): das Alter trennt die zusätzlich
+gefundenen Dealing Ranges **nicht** — das älteste Randband ist bei 15 Pips das schlechteste, ein
+Reclaim-Kriterium trennt genauso wenig. Der Check kostet 43 % der Setups (930 → 1314) und bringt
+dafür 3 Punkte Trefferquote. Deshalb steht `closeCheckMaxAgeSec` auf **0** (aus); die Stellschraube
+bleibt, auf `Infinity` ist das alte Verhalten zurück.
+
+Folgearbeit im selben Durchgang, weil die Erkennung die Grundgesamtheit der Statistik IST: alle
+Skripte in `analysis/dr-reichweite/` neu gelaufen, README-Tabellen und `src/rScaleQuotes.js`
+(R-Skala im Chart) auf die 1314 DRs nachgezogen.
+
+**Bekannte Nebenwirkung:** 16 von 930 Setups tragen jetzt „M5" statt „1H" als Sweep-Herkunft — ein
+H1-Pivot braucht 10 H1-Kerzen Bestätigung, wer 15 Minuten früher zugreift, kennt ihn noch nicht. Die
+Invalidierung ist bei allen 918 gemeinsamen DRs identisch geblieben.
+
 ---
 
 **Nächster Schritt:** Phase A — tiefere Kerzenhistorie von OKX holen (Pagination), dann Backtesting-Modul aufsetzen.

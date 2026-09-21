@@ -1,12 +1,15 @@
 # PLAN: DR-Statistik in der UI anzeigen
 
 Status: Konzept steht, kein Code. Umsetzung in einer eigenen Session.
-Datenbasis: `analysis/dr-reichweite/` — **915 Dealing Ranges, Januar bis September 2026, GBPUSD**.
+Datenbasis: `analysis/dr-reichweite/` — **1314 Dealing Ranges, Januar bis September 2026, GBPUSD**.
 milk-city-Task: `tsc-historische-dr-statistik-zur-aktuellen-dealing-range-anzeigen`.
 
 > Stand 20.09.2026, nach dem Backfill. Die erste Fassung dieses Plans rechnete mit 255 DRs und war
-> an der 100-Fälle-Regel blockiert. **Beides ist erledigt**: die Stichprobe ist 3,4-mal so groß,
+> an der 100-Fälle-Regel blockiert. **Beides ist erledigt**: die Stichprobe ist 5,2-mal so groß,
 > und Philip hat die Schwelle auf 50 gesenkt. Jede geplante Gruppe liegt jetzt weit darüber.
+>
+> Zahlen am 21.09.2026 nachgezogen: die Erkennung wartet nicht mehr auf die Fraktal-Bestätigung
+> (Task „Alarm sobald die FVG steht"), dieselben neun Monate liefern 1314 statt 915 DRs.
 
 ## Was angezeigt werden soll
 
@@ -20,15 +23,16 @@ Philip will **beides** nebeneinander, nicht eins von beidem:
 2. **Die Pip-Leiter** — **10 / 15 / 20 / 25 / 30 / 35 / 40 Pips**. TP1 liegt bei rund 15.
 
 **Beide gehören nach dem Risiko der DR aufgeteilt.** Auf der ersten, kleinen Stichprobe sah die
-R-Leiter noch so aus, als gälte sie für alle DRs gleich (Terzile 49 / 51 / 44 % bei 3 R) — auf 915
-stimmt das nicht: sie spreizt sogar **stärker** als die Pip-Leiter.
+R-Leiter noch so aus, als gälte sie für alle DRs gleich (Terzile 49 / 51 / 44 % bei 3 R) — das
+stimmt nicht, sie spreizt genauso deutlich. Nur die Richtung der Spreizung ist eine andere: über die
+Pip-Leiter steigt die Quote mit dem Risiko, über die R-Leiter fällt sie.
 
 | Spannweite über die fünf Risiko-Bänder | |
 |---|---|
-| Pip-Leiter (10 / 15 / 20 / 30 Pips) | 22 bis 28 Punkte |
-| R-Leiter (2 / 3 / 4 / 5 R) | **33 bis 36 Punkte** |
+| Pip-Leiter (10 / 15 / 20 / 30 Pips) | 28 bis 39 Punkte |
+| R-Leiter (2 / 3 / 4 / 5 R) | 23 bis 25 Punkte |
 
-Bei 2 R stehen 82 % (Risiko unter 3 Pips) gegen 49 % (über 10 Pips). Die Begründung für die
+Bei 2 R stehen 75 % (Risiko unter 3 Pips) gegen 52 % (über 10 Pips). Die Begründung für die
 R-Leiter ist also nicht mehr „sie verallgemeinert" — sondern schlicht, dass R die Einheit ist, in
 der eine Position gesized wird. Beide Leitern sind nützlich, beide brauchen die Gruppierung.
 
@@ -39,9 +43,9 @@ und den Gewinn mitnehmen. Ich will ne gute Winrate von Dealing Ranges."* Bei run
 TP1 — deshalb reicht die Reihe von 10 bis 40.
 
 **Warum die Aufteilung zwingend ist:** ungeteilt ist jede der beiden Leitern irreführend.
-„≥ 15 Pips" liegt über alle 915 DRs bei 59 %, bei den engsten aber bei 43 % und bei den weitesten
-bei 71 %. Der Durchschnitt trifft auf keine einzelne DR zu. In R **dreht sich die Reihenfolge um**
-(82 % bei 2 R für die engsten gegen 49 % für die weitesten) — und genau deshalb braucht es beide
+„≥ 15 Pips" liegt über alle 1314 DRs bei 56 %, bei den engsten aber bei 41 % und bei den weitesten
+bei 68 %. Der Durchschnitt trifft auf keine einzelne DR zu. In R **dreht sich die Reihenfolge um**
+(74 % bei 2 R für die engsten gegen 55 % für die weitesten) — und genau deshalb braucht es beide
 Leitern, jede mit ihrer Gruppierung.
 
 ## Stufe 1: die R-Skala an der Dealing Range — ohne jede Serverarbeit
@@ -100,7 +104,7 @@ statt aus einer erfundenen Pip-Zahl. Nicht anfangen, bis Philip darauf zurückko
 Die R-Skala aus Stufe 1 deckt einen guten Teil des Bedarfs ohnehin ab: wer sieht, dass die
 gegenläufige DR schon 4 R hinter sich hat, kann selbst abwägen, ohne dass die UI das Urteil fällt.
 
-## Die Zahlen (Stand 20.09.2026, n=915)
+## Die Zahlen (Stand 21.09.2026, n=1314)
 
 Alle vier Tabellen erzeugt `analysis/dr-reichweite/baenderTabellen.py`, Rohausgabe in
 `ergebnis-baender.txt`.
@@ -116,12 +120,12 @@ nur als Bezugspunkt dabei:
 
 | Band | n | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P | 2 R | 3 R | 4 R | 5 R | 6 R |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| unter 3 Pips | 136 | 59 % | 43 % | 32 % | 27 % | 24 % | 24 % | 21 % | 82 % | 72 % | 61 % | 55 % | 48 % |
-| 3–5 Pips | 269 | 71 % | 52 % | 41 % | 33 % | 29 % | 25 % | 23 % | 78 % | 60 % | 49 % | 41 % | 35 % |
-| 5–7 Pips | 194 | 79 % | 64 % | 52 % | 43 % | 38 % | 33 % | 30 % | 74 % | 57 % | 44 % | 38 % | 33 % |
-| 7–10 Pips | 182 | 77 % | 66 % | 53 % | 46 % | 42 % | 35 % | 32 % | 60 % | 46 % | 36 % | 28 % | 21 % |
-| über 10 Pips | 134 | 84 % | 71 % | 60 % | 55 % | 46 % | 41 % | 37 % | 49 % | 36 % | 26 % | 22 % | 13 % |
-| **alle** | **915** | **74 %** | **59 %** | **47 %** | **40 %** | **35 %** | **31 %** | **28 %** | **70 %** | **55 %** | **44 %** | **37 %** | **31 %** |
+| unter 3 Pips | 198 | 47 % | 36 % | 28 % | 23 % | 20 % | 20 % | 18 % | 75 % | 63 % | 50 % | 44 % | 38 % |
+| 3–5 Pips | 385 | 66 % | 49 % | 38 % | 31 % | 27 % | 23 % | 21 % | 74 % | 57 % | 47 % | 39 % | 33 % |
+| 5–7 Pips | 288 | 76 % | 62 % | 51 % | 42 % | 36 % | 31 % | 28 % | 72 % | 56 % | 44 % | 36 % | 31 % |
+| 7–10 Pips | 247 | 77 % | 64 % | 52 % | 45 % | 41 % | 35 % | 32 % | 58 % | 46 % | 36 % | 29 % | 23 % |
+| über 10 Pips | 196 | 86 % | 73 % | 62 % | 55 % | 48 % | 42 % | 37 % | 52 % | 38 % | 27 % | 20 % | 14 % |
+| **alle** | **1314** | **71 %** | **56 %** | **46 %** | **39 %** | **34 %** | **29 %** | **27 %** | **67 %** | **53 %** | **42 %** | **34 %** | **29 %** |
 
 ## Entschiedene Design-Fragen
 
@@ -134,7 +138,7 @@ eine DR würde nach dem nächsten Backfill andere Zahlen zeigen als heute. **Fes
 ### Die 50er-Schwelle ist erfüllt — kein Blocker mehr
 
 Philip, 20.09.2026: *„es müssen nicht 100 sein, glaub 50 reichen mir für ne Prozentanzahl."* Das
-kleinste feste Band hat 134 DRs. Beide Leitern können also **sofort als Prozent** angezeigt werden.
+kleinste feste Band hat 196 DRs. Beide Leitern können also **sofort als Prozent** angezeigt werden.
 Die Anzeige sollte die Regel trotzdem im Code tragen (unter 50 entschiedenen Fällen rohe Zahlen
 statt Prozent), damit ein späterer feinerer Schnitt nicht stillschweigend darunter rutscht.
 
@@ -142,10 +146,10 @@ statt Prozent), damit ein späterer feinerer Schnitt nicht stillschweigend darun
 
 | Gruppe | n | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P | 2 R | 3 R | 4 R | 5 R | 6 R |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| reifer Sweep (≥ 24 h) | 75 | 91 % | 81 % | 69 % | 61 % | 52 % | 41 % | 37 % | 76 % | 64 % | 49 % | 40 % | 32 % |
-| Minor, kein lebender Gegner | 576 | 79 % | 62 % | 49 % | 42 % | 37 % | 32 % | 30 % | 72 % | 57 % | 46 % | 38 % | 32 % |
-| Minor gegen eine lebende M5-Gegen-DR | 242 | 56 % | 44 % | 36 % | 29 % | 26 % | 23 % | 20 % | 63 % | 48 % | 38 % | 33 % | 26 % |
-| **alle** | **915** | **74 %** | **59 %** | **47 %** | **40 %** | **35 %** | **31 %** | **28 %** | **70 %** | **55 %** | **44 %** | **37 %** | **31 %** |
+| reifer Sweep (≥ 24 h) | 70 | 91 % | 81 % | 69 % | 59 % | 49 % | 36 % | 31 % | 74 % | 63 % | 47 % | 36 % | 27 % |
+| Minor, kein lebender Gegner | 848 | 74 % | 59 % | 48 % | 41 % | 36 % | 31 % | 29 % | 68 % | 53 % | 42 % | 35 % | 29 % |
+| Minor gegen eine lebende M5-Gegen-DR | 379 | 58 % | 45 % | 36 % | 30 % | 26 % | 23 % | 21 % | 64 % | 50 % | 38 % | 33 % | 27 % |
+| **alle** | **1314** | **71 %** | **56 %** | **46 %** | **39 %** | **34 %** | **29 %** | **27 %** | **67 %** | **53 %** | **42 %** | **34 %** | **29 %** |
 
 Diese Dreiteilung ist der informativste verfügbare Schnitt und alle drei Gruppen liegen über 50.
 **Nicht** nach Trend schneiden — der 1H-Trend trennt nachweislich nicht (453 zu 458,
@@ -159,11 +163,11 @@ Minor, Medium oder Major Inducement."*
 
 Das ändert an den Zahlen wenig, weil beide Merkmale **strukturell fast dasselbe** sind: `poi-watcher`
 lädt 300 M5-Kerzen (~25 h), ein M5-Level kann also gar nicht älter als ~25 h werden. Gemessen über
-915 DRs: von 815 M5-Sweeps sind **0** reif, Alters-Median 1,5 h; von 100 1H-Sweeps sind 75 % reif,
-Median 44,7 h. „M5" impliziert „Minor".
+1314 DRs: von 1236 M5-Sweeps sind **0** reif, Alters-Median 1,6 h; von 78 1H-Sweeps sind 90 % reif,
+Median 79,2 h. „M5" impliziert „Minor".
 
-Was die Herkunft trotzdem zusätzlich trüge: 25 DRs mit *frischem* 1H-Sweep kommen auf 80 % bei
-15 Pips, also Major-Niveau. Die fallen unter einer reinen Altersregel durch. n=25 liegt aber unter
+Was die Herkunft trotzdem zusätzlich trüge: 8 DRs mit *frischem* 1H-Sweep kommen auf 88 % bei
+15 Pips, also Major-Niveau. Die fallen unter einer reinen Altersregel durch. n=8 liegt aber unter
 der 50er-Schwelle — deshalb **keine eigene Zeile**, aber `trade_setups.ls_timeframe` behalten,
 damit die Gruppe auswertbar bleibt, sobald sie wächst.
 
@@ -180,12 +184,12 @@ Invalidierung −1, RR bei 10 gedeckelt):
 
 | Band | n | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P | 2 R | 3 R | 4 R | 5 R | 6 R |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| unter 3 Pips | 136 | 2,10 | **2,18** | 2,01 | 1,73 | 1,43 | 1,43 | 1,20 | 1,45 | 1,88 | 2,05 | **2,31** | 2,29 |
-| 3–5 Pips | 269 | **1,50** | 1,49 | 1,46 | 1,44 | **1,50** | 1,39 | 1,44 | 1,34 | 1,41 | 1,45 | 1,48 | **1,50** |
-| 5–7 Pips | 194 | 1,14 | 1,29 | 1,30 | 1,32 | 1,40 | 1,42 | **1,56** | 1,23 | 1,30 | 1,26 | 1,35 | **1,45** |
-| 7–10 Pips | 182 | 0,72 | 0,85 | 0,82 | 0,86 | **0,98** | 0,91 | 0,97 | 0,80 | 0,89 | **0,91** | 0,85 | 0,69 |
-| über 10 Pips | 134 | 0,51 | 0,52 | 0,52 | **0,63** | 0,59 | 0,59 | 0,59 | 0,54 | **0,59** | 0,54 | 0,57 | 0,24 |
-| **alle** | **915** | 1,21 | **1,28** | 1,25 | 1,23 | 1,24 | 1,20 | 1,22 | 1,11 | 1,24 | 1,28 | **1,35** | 1,31 |
+| unter 3 Pips | 198 | 1,47 | **1,59** | 1,55 | 1,30 | 1,12 | 1,08 | 0,92 | 1,24 | 1,51 | 1,50 | 1,64 | **1,65** |
+| 3–5 Pips | 385 | **1,35** | 1,34 | 1,32 | 1,28 | 1,31 | 1,23 | 1,22 | 1,21 | 1,30 | 1,34 | 1,34 | **1,35** |
+| 5–7 Pips | 288 | 1,09 | 1,24 | 1,26 | 1,27 | 1,31 | 1,29 | **1,41** | 1,17 | **1,27** | 1,23 | 1,25 | 1,26 |
+| 7–10 Pips | 247 | 0,69 | 0,77 | 0,76 | 0,83 | **0,93** | 0,86 | 0,95 | 0,74 | 0,88 | **0,89** | 0,89 | 0,75 |
+| über 10 Pips | 196 | 0,54 | 0,58 | 0,55 | 0,62 | **0,64** | 0,62 | 0,58 | 0,61 | **0,64** | 0,53 | 0,43 | 0,23 |
+| **alle** | **1314** | 1,07 | **1,14** | 1,12 | 1,10 | 1,11 | 1,06 | 1,07 | 1,03 | 1,15 | 1,15 | **1,16** | 1,13 |
 
 Zwei Dinge, die daraus für die Anzeige folgen:
 
@@ -224,48 +228,48 @@ ohnehin immer nur eine Zeile.
 Die Bandgrenze selbst wird weiter am **strukturellen** Risiko gemessen, nicht am gedeckelten: das
 Band beschreibt, wie weit die Range aufgespannt ist, der Deckel nur, wo der Stopp liegt.
 
-**Die Tabelle der Skala** (Tabelle 5 in `baenderTabellen.py`, Stopp auf 6 Pips gedeckelt, n = 915):
+**Die Tabelle der Skala** (Tabelle 5 in `baenderTabellen.py`, Stopp auf 6 Pips gedeckelt, n = 1314):
 
 | Band | 2 R | 3 R | 4 R | 5 R | 6 R | 7 R | 8 R | 9 R | 10 R |
 |---|---|---|---|---|---|---|---|---|---|
-| unter 3 Pips | 82 % | 72 % | 61 % | 55 % | 47 % | 38 % | 34 % | 32 % | 28 % |
-| 3–5 Pips | 78 % | 60 % | 49 % | 41 % | 36 % | 33 % | 27 % | 25 % | 23 % |
-| 5–7 Pips | 75 % | 59 % | 47 % | 41 % | 36 % | 32 % | 29 % | 25 % | 22 % |
-| 7–10 Pips | 66 % | 52 % | 44 % | 38 % | 31 % | 29 % | 22 % | 19 % | 16 % |
-| über 10 Pips | 71 % | 53 % | 46 % | 37 % | 32 % | 29 % | 24 % | 22 % | 17 % |
-| **alle** | **75 %** | **59 %** | **49 %** | **42 %** | **36 %** | **32 %** | **27 %** | **24 %** | **22 %** |
+| unter 3 Pips | 75 % | 63 % | 50 % | 44 % | 38 % | 31 % | 28 % | 26 % | 23 % |
+| 3–5 Pips | 74 % | 57 % | 47 % | 39 % | 34 % | 30 % | 25 % | 22 % | 21 % |
+| 5–7 Pips | 73 % | 58 % | 46 % | 39 % | 33 % | 30 % | 26 % | 24 % | 21 % |
+| 7–10 Pips | 66 % | 50 % | 43 % | 37 % | 31 % | 29 % | 23 % | 21 % | 18 % |
+| über 10 Pips | 72 % | 56 % | 47 % | 39 % | 33 % | 28 % | 25 % | 23 % | 17 % |
+| **alle** | **72 %** | **57 %** | **47 %** | **39 %** | **33 %** | **30 %** | **25 %** | **23 %** | **20 %** |
 
-Sobald das Risiko über dem Deckel liegt (43 % aller DRs), sitzen die Marken für JEDE DR bei
+Sobald das Risiko über dem Deckel liegt (42 % aller DRs), sitzen die Marken für JEDE DR bei
 denselben Pip-Abständen: 2 R = 12 P bis 10 R = 60 P. Die Geometrie ist dort fix, nur die Quoten
 dahinter unterscheiden sich noch nach Band.
 
-**Grenze der oberen Stufen:** bei 10 R (60 Pips) sind 65 von 915 DRs unentschieden — weder Ziel
+**Grenze der oberen Stufen:** bei 10 R (60 Pips) sind 84 von 1314 DRs unentschieden — weder Ziel
 noch Stopp binnen 24 h erreicht — und fallen aus dem Nenner. Bei 2 R sind es 0. Die Basis schrumpft
-also nach oben leicht; 183 Treffer bei 10 R sind aber reichlich.
+also nach oben leicht; 246 Treffer bei 10 R sind aber reichlich.
 
-**EV über die ganze Leiter flach** (+1,24 bei 2 R bis +1,57 bei 7 R, dann wieder +1,37) — keine
+**EV über die ganze Leiter flach** (+1,16 bei 2 R bis +1,38 bei 7 R, dann wieder +1,22) — keine
 „nimm diese Stufe"-Markierung, auch hier gilt informieren statt empfehlen.
 
 Ziel 20 Pips, Erwartungswert ohne und mit 6-Pip-Deckel:
 
 | Band | Stopp = Invalidierung | mit 6-Pip-Deckel |
 |---|---|---|
-| unter 3 Pips | 32 % · +2,01 R | unberührt |
-| 3–5 Pips | 41 % · +1,46 R | unberührt |
-| 5–7 Pips | 52 % · +1,30 R | 52 % · +1,36 R |
-| 7–10 Pips | 54 % · +0,82 R | 48 % · **+1,10 R** |
-| über 10 Pips | 61 % · +0,52 R | 49 % · **+1,13 R** |
+| unter 3 Pips | 28 % · +1,55 R | unberührt |
+| 3–5 Pips | 38 % · +1,32 R | unberührt |
+| 5–7 Pips | 51 % · +1,26 R | 51 % · +1,31 R |
+| 7–10 Pips | 52 % · +0,76 R | 47 % · **+1,05 R** |
+| über 10 Pips | 62 % · +0,55 R | 52 % · **+1,23 R** |
 
-Bei über 10 Pips Risiko verdoppelt der Deckel den Erwartungswert: 12 Punkte Trefferquote weniger,
+Bei über 10 Pips Risiko verdoppelt der Deckel den Erwartungswert: 10 Punkte Trefferquote weniger,
 dafür ein so viel besseres RR, dass es sich klar lohnt. Falls die Anzeige je einen Hinweis geben
 soll, dann diesen — nicht eine Zielempfehlung.
 
 ### Saisonalität bewusst NICHT einbauen
 
-Der Monatsunterschied ist real und groß (März 71 % gegen August 45 % bei 15 Pips), aber er stammt
+Der Monatsunterschied ist real und groß (März 67 % gegen August 42 % bei 15 Pips), aber er stammt
 aus **einem** Jahr. „Der August ist schwach" wäre aus neun Monaten eine Überanpassung — dafür
 bräuchte es mehrere Jahre. Und er ist größtenteils Volatilität: in R liegen alle Monate bei 2 R
-zwischen 66 und 74 %. Wer die R-Leiter anzeigt, hat den Effekt implizit schon drin.
+zwischen 63 und 74 %. Wer die R-Leiter anzeigt, hat den Effekt implizit schon drin.
 
 ## Was serverseitig fehlen WÜRDE — zurückgestellt, siehe „Reihenfolge"
 
@@ -280,7 +284,7 @@ hergeleitet werden muss, falls die Anzeige eines Tages je konkret laufender DR r
    `analysis/dr-reichweite/messeDrReichweite.py`, die Pfad-Simulation liegt dort schon fertig in
    `drMerkmale.py: lauf()`. Das Sweep-Alter braucht KEINE eigene Spalte — es ergibt sich aus
    `ls_pivot_time`/`ls_touched_time`, beide NOT NULL.
-2. **Backfill** über den Bestand (1233 Setup-Zeilen → 915 DRs). Muster:
+2. **Backfill** über den Bestand (seit 21.09.2026 eine Zeile je OB, 1314 Zeilen → 1314 DRs). Muster:
    `supabase/functions/trading-monitor-mcp/scripts/backfillObZones.ts`.
 3. **Fortschreibung in `poi-watcher`**, nach dem `trade_setups`-Upsert — die M5-Kerzen sind dort
    ohnehin geladen. Eine DR ist erst „entschieden", wenn sie invalidiert wurde oder das
@@ -340,9 +344,9 @@ Der ursprüngliche Plan sah zuerst eine serverseitige Messung vor (eigene Tabell
 Backfill, Fortschreibung in `poi-watcher`, Aggregations-Endpunkt) und erst danach die Anzeige.
 Das ist für den Zweck zu viel Apparat:
 
-- Die Quoten stehen auf 915 DRs aus neun Monaten. Ein weiterer Monat bringt ~100 dazu, also gut
-  10 % — das verschiebt eine Quote um ein bis zwei Punkte. Am 20.09. kamen 60 DRs dazu, und keine
-  Zahl bewegte sich mehr als 3 Punkte.
+- Die Quoten stehen auf 1314 DRs aus neun Monaten. Ein weiterer Monat bringt ~145 dazu, also gut
+  10 % — das verschiebt eine Quote um ein bis zwei Punkte. Selbst die 399 DRs, die die schnellere
+  Erkennung am 21.09. dazubrachte, bewegten keine Zahl um mehr als 3 Punkte.
 - Die Vergleichsgruppe ist ein **festes Risiko-Band**, keine pro-DR gebildete Menge. Eine
   Nachschlagetabelle reicht dafür per Definition aus.
 - `trade_setup_outcomes` wurde am 20.09.2026 gelöscht, weil genau diese Maschinerie ein
@@ -377,7 +381,7 @@ und ab welcher Differenz überhaupt ein Trend vorliegt statt einer Range.
 > Messlauf sollte gegen diesen Vorlauf geprüft werden, bevor viel Arbeit hineingeht.
 
 **2) Bei Minor-Inducements nur mit dem M5-Trend traden.** Philip: *„bei minor inducements kann man
-nur in die selbe Richtung traden wie der M5 Trend."* Das beträfe die große Mehrheit — 840 von 915
+nur in die selbe Richtung traden wie der M5 Trend."* Das beträfe die große Mehrheit — 1244 von 1314
 DRs sind Minor. Wäre die Regel wirksam, wäre sie damit der reichweitenstärkste Filter, den wir
 bisher hätten.
 
@@ -388,9 +392,9 @@ weil das Inducement ja ein hohes Alter hat. Dort müssen wir wahrscheinlich die 
 beobachten."*
 
 Das ist der interessanteste Teil, weil er **prüfbar** ist und der bisherige Nullbefund ihn nicht
-ausschließt: der 1H-Strukturtrend wurde über **alle** 915 DRs gemessen (453 zu 458, Intervall über
+ausschließt: der 1H-Strukturtrend wurde über **alle** 1314 DRs gemessen (633 zu 673, Intervall über
 null) — **nie getrennt nach Sweep-Alter**. Philips Vermutung ist genau, dass er nur bei den reifen
-Sweeps etwas sagt. Diese 75 DRs sind in der Gesamtzahl vollständig untergegangen.
+Sweeps etwas sagt. Diese 70 DRs sind in der Gesamtzahl vollständig untergegangen.
 
 ### Was als Erstes zu messen wäre
 

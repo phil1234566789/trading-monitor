@@ -26,6 +26,7 @@ const TRADE_SETUP_PIP_SIZE = 0.0001;
 const TRADE_SETUP_LS_MAX_DISTANCE_M5 = 5.0 * TRADE_SETUP_PIP_SIZE;
 const TRADE_SETUP_OB_MAX_DELAY_SEC = 60 * 60;
 const TRADE_SETUP_LOOKBACK_SEC = 6 * 60 * 60;
+const TRADE_SETUP_CLOSE_CHECK_MAX_AGE_SEC = 0; // Check aus, Messergebnis vom 21.09.2026
 
 const SCENARIOS = [
   {
@@ -133,6 +134,7 @@ describe("Trade-Setup-Pipeline (echte M5-/H1-Kerzen-Fixtures, wie computeTradeSe
       lsMaxLeadSecM5: TRADE_SETUP_LS_MAX_LEAD_SEC_M5,
       maxDistanceM5: TRADE_SETUP_LS_MAX_DISTANCE_M5,
       maxLookbackSec: TRADE_SETUP_LOOKBACK_SEC,
+      closeCheckMaxAgeSec: TRADE_SETUP_CLOSE_CHECK_MAX_AGE_SEC,
       obMaxDelaySec: TRADE_SETUP_OB_MAX_DELAY_SEC,
       nowTime: fixture[fixture.length - 1].time,
     };
@@ -195,6 +197,7 @@ describe("Trade-Setup-Pipeline mit marketStructureState-H1-Leveln (collectH1LqLe
       lsMaxLeadSecM5: TRADE_SETUP_LS_MAX_LEAD_SEC_M5,
       maxDistanceM5: TRADE_SETUP_LS_MAX_DISTANCE_M5,
       maxLookbackSec: TRADE_SETUP_LOOKBACK_SEC,
+      closeCheckMaxAgeSec: TRADE_SETUP_CLOSE_CHECK_MAX_AGE_SEC,
       obMaxDelaySec: TRADE_SETUP_OB_MAX_DELAY_SEC,
       nowTime: eurusdM5LongSetup0728[eurusdM5LongSetup0728.length - 1].time,
     };
