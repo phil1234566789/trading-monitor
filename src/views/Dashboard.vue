@@ -1210,7 +1210,11 @@ function onSelectPin(entry) {
 }
 
 // Pin-Modal (Chat 2026-08-01) — "genau wie bei Metadaten" (Philip), analog persistiert.
+// Bewusst getrennt von showPinHighlights: die Chart-Visualisierung soll auch ohne offenes Modal
+// laufen (Bug-Report Philip, vorher hing beides an diesem einen Flag).
 const showPinPanel = useLocalStorageRef("showPinPanel", false);
+const showPinHighlights = useLocalStorageRef("showPinHighlights", false);
+const pinMenuOpen = ref(false);
 
 // Debug-Metadaten-Sammel-Panel (siehe Chat 2026-07-20: "damit ich dir nicht ständig die Daten von
 // dem was ich in TradingView sehe hier schreiben muss") — Unterpunkt bei "Debug", analog zu
@@ -1362,6 +1366,7 @@ function closeMenusOutside(e) {
     rangesMenuOpen.value = false;
     tradeSetupsMenuOpen.value = false;
     debugMenuOpen.value = false;
+    pinMenuOpen.value = false;
     indikatorenMenuOpen.value = false;
   }
 }
@@ -1403,10 +1408,10 @@ function onIsolateTrade(t) {
 // Quelle war.
 const { data: pinContextEntries, refresh: refreshPinContext } = usePolledFetch(() => fetchPinContext(), { intervalMs: 60_000 });
 // Bug-Report Philip: Pin-Visualisierung (Halos + direkt gerenderte Pin-Objekte) blieb im Chart/in
-// der Trades-Tabelle stehen, egal ob der "📌 Pins"-Button (showPinPanel) an oder aus war — analog
+// der Trades-Tabelle stehen, egal ob der "📌 Pins"-Button an oder aus war — analog
 // zum bereits gefixten Trades-Toggle-Bug 2026-08-25 (siehe tradeLinkedLiquidityLevels oben). Eine
-// gemeinsame Quelle statt showPinPanel in jedem der ~10 abgeleiteten Computeds einzeln zu prüfen.
-const visiblePinContextEntries = computed(() => (showPinPanel.value ? pinContextEntries.value : []));
+// gemeinsame Quelle statt den Toggle in jedem der ~10 abgeleiteten Computeds einzeln zu prüfen.
+const visiblePinContextEntries = computed(() => (showPinHighlights.value ? pinContextEntries.value : []));
 // 1H/4H-OB-Zonen (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 7) —
 // anders als trades/pinContextEntries oben ändert sich das hier NICHT nur durch explizite
 // Browser-Aktionen, sondern im Hintergrund durch poi-watcher (Cron alle 5min) — deshalb, anders als
@@ -1944,9 +1949,24 @@ watch(selectedTradingAccountId, () => {
         <span v-if="invalidationAddTrade" class="trade-link-armed">🚫 nächster Klick auf Pivot/OB setzt Invalidierung für Dealing Range #{{ invalidationAddTrade.dealingRangeId }}</span>
       </div>
 
-      <button :class="{ active: showPinPanel }" title="Angepinnte Stellen im Chart" @click="showPinPanel = !showPinPanel">
-        📌 Pins
-      </button>
+      <div class="toggle-group">
+        <button :class="{ active: showPinHighlights }" title="Angepinnte Stellen im Chart hervorheben" @click="showPinHighlights = !showPinHighlights">
+          📌 Pins
+        </button>
+        <button
+          class="toggle-caret"
+          :class="{ open: pinMenuOpen }"
+          title="Untermenü"
+          @click="pinMenuOpen = !pinMenuOpen"
+        >
+          ▾
+        </button>
+        <div v-if="pinMenuOpen" class="toggle-dropdown">
+          <button :class="{ active: showPinPanel }" @click="showPinPanel = !showPinPanel">
+            📋 Pin-Liste
+          </button>
+        </div>
+      </div>
 
       <div class="toggle-group">
         <button :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
