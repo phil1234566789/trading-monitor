@@ -20,6 +20,7 @@ import { ref } from "vue";
 import { detectLiquidityLevels } from "../liquidity.js";
 import { collectH1LqLevels } from "../marketStructureRendering";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
+import { mergeDbTradeSetups } from "../tradeSetups.js";
 import { sessions, isForbiddenAt } from "../sessions.js";
 import {
   TRADE_SETUP_M5_FRACTAL_PERIOD,
@@ -56,7 +57,7 @@ export function usePriceChartTradeSetups() {
   // Refreshs hinweg stehen, nur die Zeichnung (renderTradeSetupsInternal) läuft bei jedem Chart-
   // Refresh neu. Zeigt die letzten `tradeSetupHistoryCount` Setups JE Richtung, nicht nur das
   // aktive. candles = bereits clipReplay-gefiltertes m5Candles (siehe getM5Candles).
-  function computeTradeSetups({ candles, marketStructureState, symbol, tradeSetupHistoryCount }) {
+  function computeTradeSetups({ candles, marketStructureState, symbol, tradeSetupHistoryCount, dbTradeSetups = [] }) {
     if (candles.length === 0) {
       tradeSetupsMetadata.value = [];
       return;
@@ -94,8 +95,14 @@ export function usePriceChartTradeSetups() {
     // IMMER beide Richtungen berechnen (unabhängig von showTradeSetupsLong/-Short, siehe Chat
     // 2026-07-19: "TSC soll den aktuellsten und wahren Stand anzeigen") — die Long/Short-Toggles
     // filtern erst beim ZEICHNEN (renderTradeSetupsInternal in PriceChart.vue).
-    const shorts = takeLast(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, candles).filter(notForbidden));
-    const longs = takeLast(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, candles).filter(notForbidden));
+    // Die persistierten Setups (Task "Chart zeichnet die persistierten Trade-Setups", siehe
+    // tradeSetups.js) dazu, BEVOR notForbidden/takeLast greifen — sonst käme genau das zurück, was
+    // der Chart absichtlich versteckt (Forbidden-Sessions), und die Historie-Begrenzung wäre
+    // wirkungslos. Symbol-Filter, weil der Poll nach einem Symbolwechsel kurz noch die Setups des
+    // vorherigen Instruments hält (gleicher Grund wie filterDbObZones).
+    const dbFor = (dir) => dbTradeSetups.filter((s) => s.instrument === symbol && s.dir === dir);
+    const shorts = takeLast(mergeDbTradeSetups(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, candles), dbFor(1)).filter(notForbidden));
+    const longs = takeLast(mergeDbTradeSetups(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, candles), dbFor(-1)).filter(notForbidden));
     tradeSetupsMetadata.value = [
       ...shorts.map((s, i) => ({ ...s, label: "Short", setupNumber: n > 1 ? i + 1 : null })),
       ...longs.map((s, i) => ({ ...s, label: "Long", setupNumber: n > 1 ? i + 1 : null })),

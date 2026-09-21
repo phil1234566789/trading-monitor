@@ -1,5 +1,6 @@
 import { supabase } from "./supabaseClient.js";
 import { deriveSetupEntryInvalidation } from "./tradeSetup.js";
+import { tradeSetupFromRow } from "./tradeSetups.js";
 
 // "Setup als Trade übernehmen" (Chat 2026-07-27, Trade-Modus) — verbindet einen im Chart
 // angeklickten Trade-Setup (dir/label/obTop/obBottom/ls/fractal, siehe
@@ -114,8 +115,8 @@ export async function findOrCreateObZoneId({ instrument, timeframe, direction, t
 // Für den Klick auf eine Zeile in TradesTable.vue (Chat 2026-07-27: TSC-Fokus auch für einen
 // bereits geloggten Trade, nicht nur für einen frisch im Trade-Modus angeklickten Live-Setup) —
 // baut aus dem persistierten trade_setups-Datensatz dasselbe Format, das computeCockpitState von
-// einem Live-Setup erwartet (siehe CockpitState.m5Setup in tradeSetupCockpit.ts).
-// setupNumber bleibt null — die Historie-Nummerierung existiert nur für die Live-Erkennung.
+// einem Live-Setup erwartet — dieselbe Umformung wie für die im Chart gemischten DB-Setups,
+// deshalb gemeinsam in tradeSetups.js (tradeSetupFromRow).
 export async function fetchTradeSetupForCockpit(tradeSetupId) {
   const { data, error } = await supabase.from("trade_setups").select("*").eq("id", tradeSetupId).maybeSingle();
   if (error) {
@@ -123,19 +124,7 @@ export async function fetchTradeSetupForCockpit(tradeSetupId) {
     return null;
   }
   if (!data) return null;
-  return {
-    dir: data.direction === "short" ? 1 : -1,
-    label: data.direction === "short" ? "Short" : "Long",
-    setupNumber: null,
-    ls: {
-      price: data.ls_price,
-      pivotTime: Math.floor(new Date(data.ls_pivot_time).getTime() / 1000),
-      touchedTime: Math.floor(new Date(data.ls_touched_time).getTime() / 1000),
-    },
-    obTop: data.ob_top,
-    obBottom: data.ob_bottom,
-    tradeSetupId: data.id,
-  };
+  return tradeSetupFromRow(data);
 }
 
 // entryPrice/stopLoss optional (Chat 2026-07-27: "kann sein, dass mein Trade nicht abgeholt wird

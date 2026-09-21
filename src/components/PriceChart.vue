@@ -129,6 +129,12 @@ const props = defineProps({
   // Instrument-/Replay-Filterung. Ersetzt dort den bisherigen Live-Recompute, der auf ein fest
   // begrenztes Kerzenfenster begrenzt war und ältere Zonen strukturell nie fand.
   dbObZones: { type: Array, default: () => [] },
+  // Task "Chart zeichnet die persistierten Trade-Setups" — die von poi-watcher persistierten
+  // trade_setups (src/tradeSetups.js: fetchTradeSetups, in Dashboard.vue je Instrument + Replay-
+  // Stand gepollt), gemischt mit der Live-Erkennung statt sie zu ersetzen (siehe
+  // computeTradeSetups). Grund: Alarm und Chart laufen auf zwei getrennt portierten Kopien, nichts
+  // prüft sie gegeneinander — so zeigt der Chart per Konstruktion, was alarmiert hat.
+  dbTradeSetups: { type: Array, default: () => [] },
   pinnedLiquidityLevels: { type: Array, default: () => [] },
   pinnedTradeSetups: { type: Array, default: () => [] },
   pinnedRsiDivergences: { type: Array, default: () => [] },
@@ -1444,6 +1450,7 @@ function computeTradeSetupsInternal() {
     marketStructureState: marketStructureState.value,
     symbol: props.symbol,
     tradeSetupHistoryCount: props.tradeSetupHistoryCount,
+    dbTradeSetups: props.dbTradeSetups,
   });
 }
 
@@ -2100,6 +2107,12 @@ watch(() => props.showTradeSetups, () => {
   refreshInvalidationLinesInternal();
 });
 watch(() => props.tradeSetupHistoryCount, () => {
+  computeTradeSetupsInternal();
+  renderTradeSetupsInternal();
+});
+// Neuer DB-Poll-Stand geht in die Erkennung ein (Mischen, siehe computeTradeSetups) — deshalb
+// anders als bei dbObZones nicht nur ein Neuzeichnen.
+watch(() => props.dbTradeSetups, () => {
   computeTradeSetupsInternal();
   renderTradeSetupsInternal();
 });

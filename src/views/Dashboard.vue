@@ -34,6 +34,7 @@ import {
   deriveSetupEntryInvalidation,
 } from "../tradeIntake.js";
 import { fetchObZones } from "../obZones.js";
+import { fetchTradeSetups } from "../tradeSetups.js";
 import { fetchLiquidityLevelsHtf } from "../liquidityLevels.js";
 import { fetchDailyStructurePivots } from "../dailyPivots.js";
 import { liquidityLevelNaturalKey } from "../liquidity.js";
@@ -1418,6 +1419,14 @@ const visiblePinContextEntries = computed(() => (showPinHighlights.value ? pinCo
 // die beiden Fälle oben, MIT intervalMs. 60s reicht: schneller als jede sinnvolle manuelle
 // Beobachtung, ohne unnötig oft zu pollen.
 const { data: dbObZones } = usePolledFetch(() => fetchObZones(), { intervalMs: 60_000 });
+// Von poi-watcher persistierte Trade-Setups (Task "Chart zeichnet die persistierten Trade-Setups")
+// — gleicher Cron-im-Hintergrund-Grund fürs intervalMs wie dbObZones. Anders als dort NICHT über
+// alle Instrumente: trade_setups liegt je Instrument schon nahe am PostgREST-Zeilendeckel (siehe
+// fetchTradeSetups), deshalb je Symbol + Replay-Stand geladen und bei deren Wechsel sofort neu
+// (Watcher unten), statt bis zum nächsten Poll den alten Stand über dem Chart hängen zu lassen.
+const { data: dbTradeSetups, refresh: refreshDbTradeSetups } = usePolledFetch(() => fetchTradeSetups(currentSymbol.value, replayUntil.value), {
+  intervalMs: 60_000,
+});
 // HTF-Liquidity-Level, 1H+4H (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren",
 // Punkt 12, seit 2026-08-23 auch 4H) — analog zu dbObZones oben, gleicher Grund für intervalMs
 // (poi-watcher-Cron im Hintergrund).
@@ -1535,8 +1544,10 @@ const pinRsiDivergenceKeys = computed(() => {
 // 2026-07-30) refresht aus demselben Grund sofort statt bis zum nächsten Poll.
 watch(currentSymbol, () => {
   refreshTrades();
+  refreshDbTradeSetups();
   isolatedDealingRangeId.value = null;
 });
+watch(replayUntil, refreshDbTradeSetups);
 watch(selectedTradingAccountId, () => {
   refreshTrades();
   isolatedDealingRangeId.value = null;
@@ -2054,6 +2065,7 @@ watch(selectedTradingAccountId, () => {
     :hovered-pin-rsi-divergence-key="hoveredPinRsiDivergenceKey"
     :pinned-ob-zones="pinnedObZones"
     :db-ob-zones="dbObZones"
+    :db-trade-setups="dbTradeSetups"
     :db-liquidity-levels-htf="dbLiquidityLevelsHtf"
     :db-daily-pivots="dbDailyPivots"
     :pinned-liquidity-levels="pinnedLiquidityLevels"
