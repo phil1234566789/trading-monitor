@@ -228,9 +228,9 @@
     "semantic_hash": "c3ad7c0cd6dffdd06191cc2effdb5056"
   },
   "src/components/PriceChart.vue": {
-    "mtime": 1789933867.3907983,
-    "seen": 1789937856.3356798,
-    "ast_hash": "226d71cd6dc1d9ccff6e46cc5eec267d",
+    "mtime": 1790015146.9062626,
+    "seen": 1790015278.326081,
+    "ast_hash": "d0f87baf3bc28b2e3580b568811b2ac4",
     "semantic_hash": ""
   },
   "src/components/ProtokollTable.vue": {
@@ -378,9 +378,9 @@
     "semantic_hash": ""
   },
   "src/composables/usePriceChartTradeSetups.js": {
-    "mtime": 1790000534.753129,
-    "seen": 1790001911.5455558,
-    "ast_hash": "3f667f09ba7f2784892c258e925cbb31",
+    "mtime": 1790015116.0896025,
+    "seen": 1790015278.3300817,
+    "ast_hash": "5ec72907866e6d797608c1ff1711eece",
     "semantic_hash": ""
   },
   "src/composables/useSessionStorageRef.js": {
@@ -672,9 +672,9 @@
     "semantic_hash": ""
   },
   "src/tradeIntake.js": {
-    "mtime": 1789917974.82401,
-    "seen": 1789918123.5512772,
-    "ast_hash": "cdbdb6908ce7c8356409f21c20744912",
+    "mtime": 1790015131.2551973,
+    "seen": 1790015278.3380816,
+    "ast_hash": "da76c44e9d26031616cbc0f73525849d",
     "semantic_hash": ""
   },
   "src/tradeMarkers.js": {
@@ -738,9 +738,9 @@
     "semantic_hash": "6b9f6b695137489adb5694c1b45deb74"
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1789975687.2135987,
-    "seen": 1790001911.557575,
-    "ast_hash": "9571c3b7624fd77068289730aaae4b78",
+    "mtime": 1790015173.4975424,
+    "seen": 1790015278.3400817,
+    "ast_hash": "c82b86e689262dc72af58f07da65963b",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -3063,6 +3063,18 @@
     "mtime": 1790001733.1853454,
     "seen": 1790001911.586695,
     "ast_hash": "3a2648aed2507b4a151a2284d1ccf331",
+    "semantic_hash": ""
+  },
+  "src/tradeSetups.js": {
+    "mtime": 1790015100.2172732,
+    "seen": 1790015278.3390818,
+    "ast_hash": "0ff7ad970029b9cbb3b7768060c35fe5",
+    "semantic_hash": ""
+  },
+  "test/tradeSetups.test.js": {
+    "mtime": 1790015190.1852837,
+    "seen": 1790015278.3640816,
+    "ast_hash": "a9b965c9b9a10a97e182a6732dd898dc",
     "semantic_hash": ""
   }
 }
