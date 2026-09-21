@@ -47,12 +47,14 @@ import { supabase } from "../supabaseClient.ts";
 import { readForexCandlesArchiveFrom } from "../../_shared/forexCandlesArchive.ts";
 import { detectLiquidityLevels, type LiquidityLevel } from "../../_shared/liquidityDetection.ts";
 import { isWithinTradingWindows, type TradingWindows } from "../../_shared/tradingHoursGate.ts";
+import { persistTradeSetupSweeps } from "../../_shared/tradeSetupSweeps.ts";
 import {
   detectSetupObs,
   detectTradeSetup,
   DEFAULT_TRADE_SETUP_PARAMS,
   TRADE_SETUP_M5_FRACTAL_PERIOD,
   TRADE_SETUP_H1_FRACTAL_PERIOD,
+  type SetupSweep,
 } from "../../_shared/tradeSetup.ts";
 
 // 1:1 aus poi-watcher/index.ts — die Fenstergrößen bestimmen mit, welche Setups überhaupt
@@ -197,7 +199,10 @@ for (const instrument of instrumente) {
         ls_price: setup.ls.price,
         ls_pivot_time: iso(setup.ls.pivotTime),
         ls_touched_time: iso(setup.ls.touchedTime!),
-        ls_timeframe: h1Lvl.includes(setup.ls) ? "1H" : "5M",
+        ls_timeframe: setup.sweeps[0].timeframe,
+        // Keine DB-Spalte, sondern die Kindtabellen-Zeilen dieses Setups — unten vor dem Upsert
+        // abgetrennt und danach über die zurückgegebene id geschrieben.
+        sweeps: setup.sweeps,
         ob_top: setup.obTop,
         ob_bottom: setup.obBottom,
         ob_start_time: iso(setup.obStartTime),
@@ -214,6 +219,14 @@ for (const instrument of instrumente) {
   const zeilen = [...gefunden.values()];
   const htf = zeilen.filter((z) => z.ls_timeframe === "1H").length;
   console.log(`  davon 1H-Sweep: ${htf}, M5-Sweep: ${zeilen.length - htf}`);
+  const verteilung = new Map<number, number>();
+  for (const z of zeilen) {
+    const n = (z.sweeps as unknown[]).length;
+    verteilung.set(n, (verteilung.get(n) ?? 0) + 1);
+  }
+  const mehrfach = zeilen.filter((z) => (z.sweeps as unknown[]).length > 1).length;
+  console.log(`  Sweeps je OB: ${[...verteilung.entries()].sort((a, b) => a[0] - b[0]).map(([n, c]) => `${n}x:${c}`).join(" ")}`);
+  console.log(`  mit mehr als einem Sweep: ${mehrfach} (${Math.round((mehrfach / zeilen.length) * 100)} %)`);
   if (trockenlauf) {
     console.log("  TROCKENLAUF — nichts geschrieben.");
     const ziel = Deno.env.get("BACKFILL_DUMP");
@@ -244,11 +257,23 @@ for (const instrument of instrumente) {
     if (zoneError) throw zoneError;
     z.ob_zone_id = zone.id;
   }
+  const schluessel = (direction: unknown, obStartTime: unknown) =>
+    `${direction}_${Math.floor(new Date(obStartTime as string).getTime() / 1000)}`;
   for (let i = 0; i < zeilen.length; i += 200) {
-    const { error } = await supabase
+    const teil = zeilen.slice(i, i + 200);
+    // `sweeps` ist keine Spalte von trade_setups — abtrennen, sonst kippt der Upsert. Die ids
+    // kommen zurück, weil die Kindtabelle sie braucht (dieselbe Reihenfolge ist nicht garantiert,
+    // deshalb über den natürlichen Schlüssel zugeordnet statt über den Index).
+    const { data: geschrieben, error } = await supabase
       .from("trade_setups")
-      .upsert(zeilen.slice(i, i + 200), { onConflict: "instrument,direction,ob_start_time" });
+      .upsert(teil.map(({ sweeps: _sweeps, ...zeile }) => zeile), { onConflict: "instrument,direction,ob_start_time" })
+      .select("id, direction, ob_start_time");
     if (error) throw error;
+    const idJeSchluessel = new Map((geschrieben ?? []).map((r) => [schluessel(r.direction, r.ob_start_time), r.id as number]));
+    for (const z of teil) {
+      const id = idJeSchluessel.get(schluessel(z.direction, z.ob_start_time));
+      if (id != null) await persistTradeSetupSweeps(supabase, id, z.sweeps as SetupSweep[]);
+    }
     console.log(`  geschrieben: ${Math.min(i + 200, zeilen.length)}/${zeilen.length}`);
   }
 }

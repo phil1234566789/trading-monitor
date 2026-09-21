@@ -28,6 +28,7 @@ import {
   DEFAULT_TRADE_SETUP_PARAMS,
 } from "../_shared/tradeSetup.ts";
 import { computeSweepAgeHours } from "../_shared/ageTier.ts";
+import { persistTradeSetupSweeps } from "../_shared/tradeSetupSweeps.ts";
 
 const TIMEFRAMES: { label: "4H" | "1H" }[] = [{ label: "4H" }, { label: "1H" }];
 // 300h (~12,5 Tage) reichten nicht, um lange unberührte 1H-Liquiditäts-Level (und 1H-OB-Zonen, die
@@ -886,9 +887,10 @@ Deno.serve(async (req) => {
           // Herkunft und Alter des Sweeps — beides wird persistiert und geht in den Alarmtext,
           // weil die Auswertung analysis/dr-reichweite/ (19.09.2026) beide als Qualitätsmerkmale
           // belegt hat: 1H-Sweep Reichweiten-Median 28,7 vs. 11,3 Pips bei M5, und ein Level, das
-          // vor dem Sweep schon >=24h bestand, kommt auf ~29 statt 11,9. findBestLsMatch gibt das
-          // Array-Element selbst zurück, die Identitätsprüfung ist also exakt, keine Heuristik.
-          const lsFromH1 = h1HighsSetup.includes(setup.ls) || h1LowsSetup.includes(setup.ls);
+          // vor dem Sweep schon >=24h bestand, kommt auf ~29 statt 11,9. Den Timeframe vergibt
+          // seit dem Sammeln ALLER Sweeps die Erkennung selbst (SetupSweep, _shared/tradeSetup.ts)
+          // statt hier per includes() — dieselbe Zuordnung, nur nicht mehr je Schreiber nachgebaut.
+          const lsFromH1 = setup.sweeps[0].timeframe === "1H";
           const sweepAgeHours = computeSweepAgeHours(setup.ls.touchedTime!, setup.ls.pivotTime);
 
           // Läuft gerade eine Dealing Range der Gegenrichtung? Laut derselben Auswertung der
@@ -970,6 +972,11 @@ Deno.serve(async (req) => {
             .single();
           if (setupUpsertError) throw setupUpsertError;
 
+          // ALLE abgeräumten Level, nicht nur das entscheidende (Philip 21.09.2026: "Je mehr
+          // Bestätigungs-LQ-Sweeps desto besser") — 44 % der Setups haben mehr als eins, siehe
+          // Migration 20260921210000. Der entscheidende steht zusätzlich weiterhin in ls_*.
+          await persistTradeSetupSweeps(supabase, setupRow.id as number, setup.sweeps);
+
           if (alertNow) {
             tradeSetupNotifiedCount++;
             const label = direction === "short" ? "Short (Protected High)" : "Long (Protected Low)";
@@ -977,13 +984,16 @@ Deno.serve(async (req) => {
             // ">=24h" einen Unterschied, Major (>=120h) und Medium (24-120h) sind mit 29,2 vs.
             // 29,3 Pips nicht unterscheidbar — eine feinere Angabe würde Genauigkeit vortäuschen.
             const ageText = sweepAgeHours >= 24 ? `${Math.round(sweepAgeHours / 24)}d alt` : `${Math.round(sweepAgeHours)}h alt`;
+            // Mehrere abgeräumte Level sind mehrere Bestätigungen derselben Idee. Die Zahl hängt
+            // am entscheidenden Sweep statt in einer eigenen Zeile — der Text ist schon fünfzeilig.
+            const weitereSweeps = setup.sweeps.length > 1 ? `, +${setup.sweeps.length - 1} weitere` : "";
             const warnung = liveOpposite ? `\n⚠️ Gegenläufige Dealing Range noch aktiv${lsFromH1 ? "" : " — und dieses Setup hat nur einen M5-Sweep"}` : "";
             await sendTelegram(
               `🎯 ${cfg.instrument} Trade-Setup: ${label}\n` +
                 // Seit 2026-09-20 die Invalidierung (ferne OB-Kante) statt fractal.price: ohne
                 // bestätigtes Protected-Pivot zeigte das aufs gesweepte Level statt aufs Extrem.
                 `Invalidierung: ${fmt(invalidation, cfg.pricePrecision)}\n` +
-                `LS-Sweep: ${fmt(setup.ls.price, cfg.pricePrecision)} (${lsFromH1 ? "1H" : "M5"}, ${ageText})\n` +
+                `LS-Sweep: ${fmt(setup.ls.price, cfg.pricePrecision)} (${lsFromH1 ? "1H" : "M5"}, ${ageText}${weitereSweeps})\n` +
                 `M5-OB: ${fmt(setup.obBottom, cfg.pricePrecision)} – ${fmt(setup.obTop, cfg.pricePrecision)}\n` +
                 `Preis: ${fmt(currentPrice, cfg.pricePrecision)}` +
                 warnung,

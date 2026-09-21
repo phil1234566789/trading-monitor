@@ -16,10 +16,19 @@ export interface SetupOb {
   startTime: number; // Zeitpunkt der mittleren Impuls-Kerze, siehe detectSetupObs
 }
 
+// Ein abgeräumtes Level samt seiner Herkunft. Den Timeframe vergibt die Erkennung selbst, weil
+// nur sie weiß, aus welchem Array das Level kam — vorher hat ihn jeder Aufrufer per
+// `h1Levels.includes(...)` nachgebaut (poi-watcher und backfillTradeSetups je einmal).
+export interface SetupSweep {
+  level: LiquidityLevel;
+  timeframe: "1H" | "5M";
+}
+
 export interface DetectedTradeSetup {
   dir: 1 | -1; // 1 = Short (Protected High), -1 = Long (Protected Low)
   fractal: LiquidityLevel; // M5-Fraktal ("Protected High/Low")
   ls: LiquidityLevel; // sweependes LQ-Level (H1 oder M5) — das "Liquidity Sweep"
+  sweeps: SetupSweep[]; // ALLE Level, die dieser OB abgeräumt hat, ältester zuerst — sweeps[0].level === ls
   obTop: number;
   obBottom: number;
   obStartTime: number;
@@ -223,26 +232,19 @@ function collectObSweeps(
   h1Levels: LiquidityLevel[],
   m5Levels: LiquidityLevel[],
   params: TradeSetupParams,
-): LiquidityLevel[] {
-  const sweeps = [ownLs];
-  for (const lvl of [...h1Levels, ...m5Levels]) {
-    if (lvl === ownLs || !lvl.touched || lvl.touchedTime == null) continue;
-    if (lvl.touchedTime > ob.startTime || ob.startTime - lvl.touchedTime > params.obMaxDelaySec) continue;
-    sweeps.push(lvl);
+): SetupSweep[] {
+  const sweeps: SetupSweep[] = [{ level: ownLs, timeframe: h1Levels.includes(ownLs) ? "1H" : "5M" }];
+  for (const [levels, timeframe] of [[h1Levels, "1H"], [m5Levels, "5M"]] as const) {
+    for (const lvl of levels) {
+      if (lvl === ownLs || !lvl.touched || lvl.touchedTime == null) continue;
+      if (lvl.touchedTime > ob.startTime || ob.startTime - lvl.touchedTime > params.obMaxDelaySec) continue;
+      sweeps.push({ level: lvl, timeframe });
+    }
   }
-  return sweeps;
-}
-
-// Regel 3, Teil 2: das ÄLTESTE gesweepte Level trägt die Qualität ("Ältester Sweep ist der für die
-// Strategie am entscheidendsten") und füllt damit ls_price/ls_pivot_time/ls_touched_time/
-// ls_timeframe. Bei gleichem Alter der früher entstandene Pivot, damit beide Laufzeiten bei
-// Gleichstand dasselbe Level wählen.
-function oldestSweep(sweeps: LiquidityLevel[]): LiquidityLevel {
-  return sweeps.reduce((best, lvl) => {
-    const a = sweepAgeSec(lvl);
-    const b = sweepAgeSec(best);
-    return a > b || (a === b && lvl.pivotTime < best.pivotTime) ? lvl : best;
-  });
+  // Regel 3, Teil 2: ÄLTESTER zuerst ("Ältester Sweep ist der für die Strategie am
+  // entscheidendsten") — sweeps[0] füllt ls_price/ls_pivot_time/ls_touched_time/ls_timeframe. Bei
+  // gleichem Alter der früher entstandene Pivot, damit beide Laufzeiten dasselbe Level wählen.
+  return sweeps.sort((a, b) => sweepAgeSec(b.level) - sweepAgeSec(a.level) || a.level.pivotTime - b.level.pivotTime);
 }
 
 // Path B (Chat 2026-07-26, Bug-Report "M5 OB wird nicht als Trade-Setup erkannt"): laut Philips
@@ -333,10 +335,10 @@ export function detectTradeSetup(
   // verändern (Philip: "die erste, die schnellste, trifft das Trade-Setup").
   const baueSetup = (ob: SetupOb, ownLs: LiquidityLevel, fractal: LiquidityLevel | null, pathType: "A" | "B"): DetectedTradeSetup => {
     const sweeps = collectObSweeps(ob, ownLs, h1Levels, m5Levels, params);
-    const ls = oldestSweep(sweeps);
-    const fensterVon = Math.min(...sweeps.map((sw) => sw.touchedTime!));
+    const ls = sweeps[0].level;
+    const fensterVon = Math.min(...sweeps.map((sw) => sw.level.touchedTime!));
     const widened = widenObForSweep(ob, fensterVon, dir, m5Candles);
-    return { dir, fractal: fractal ?? ls, ls, obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, pathType };
+    return { dir, fractal: fractal ?? ls, ls, sweeps, obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, pathType };
   };
 
   let pathA: DetectedTradeSetup | null = null;

@@ -17,6 +17,9 @@ import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import { toPips } from "../pipConfig.js";
 import { TRADE_SETUP_OB_WIDTH_SEC, TRADE_SETUP_OB_FILL_RATIO, TRADE_SETUP_OB_BORDER_RATIO } from "../priceChartConstants.js";
 
+// Deckkraft der Nebensweep-Linien, relativ zur LS-Linie desselben Setups.
+const NEBEN_SWEEP_ALPHA_RATIO = 0.55;
+
 export function usePriceChartTradeSetupDrawing() {
   let candleSeries = null;
   let tradeSetupPrimitives = [];
@@ -99,6 +102,23 @@ export function usePriceChartTradeSetupDrawing() {
         },
         candles,
       );
+      // Die übrigen abgeräumten Level desselben OB (Philip 21.09.2026: "Je mehr Bestätigungs-
+      // LQ-Sweeps desto besser") — dünner, blasser und stumm, weil nur der älteste die Qualität
+      // trägt und 5-9 volle LS-Labels je Setup den Chart zustellen würden.
+      const nebenSweepLines = (setup.sweeps ?? []).slice(1).map(
+        (sw) =>
+          new LiquidityLinePrimitive(
+            sw.level,
+            {
+              color: cssColorScaled(key, NEBEN_SWEEP_ALPHA_RATIO),
+              lineWidth: Math.max(1, lineWidth(key) - 1),
+              label: null,
+              labelSide: bullBearLabelSide(setup.dir === 1),
+            },
+            candles,
+          ),
+      );
+
       // Nummer-Suffix (Chat 2026-07-27: "damit ich die Nummer sofort zuordnen kann", siehe
       // computeTradeSetups in usePriceChartTradeSetups.js) — nur gesetzt, wenn Trade-Setups-Historie
       // aktiv ist (mehrere Boxen je Richtung gleichzeitig sichtbar), sonst überflüssig.
@@ -159,7 +179,7 @@ export function usePriceChartTradeSetupDrawing() {
           ]
         : [];
 
-      for (const primitive of [fractalLine, lsLine, obBox, ...rScale]) {
+      for (const primitive of [fractalLine, lsLine, ...nebenSweepLines, obBox, ...rScale]) {
         candleSeries.attachPrimitive(primitive);
         tradeSetupPrimitives.push(primitive);
       }

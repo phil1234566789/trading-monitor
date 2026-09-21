@@ -683,19 +683,25 @@ async function onSelectSetupConfirmations(setup) {
   rangeConfirmationAddTrade.value = null;
   tscBootstrapArmed.value = false;
 
-  const lsConfirmation = {
+  // JEDER abgeräumte Level wird eine eigene Bestätigung, nicht nur der entscheidende (Philip
+  // 21.09.2026: "Je mehr Bestätigungs-LQ-Sweeps desto besser") — sweeps ist nach Alter sortiert,
+  // der erste ist der, der auch in trade_setups.ls_* steht. Ältere Setup-Objekte ohne sweeps
+  // (DB-Zeilen von vor dem 21.09.2026) fallen auf den einen LS zurück.
+  const sweeps = setup.sweeps ?? [{ level: setup.ls, timeframe: "5M" }];
+  const sweepConfirmations = sweeps.map((sw) => ({
     kind: "pivot",
-    price: setup.ls.price,
-    sourceTime: setup.ls.pivotTime,
-    touchedTime: setup.ls.touchedTime ?? null,
-    // Für die liquidity_level_id-Verknüpfung (siehe PriceChart.vue: findClickedTarget) — ein
-    // Trade-Setup-LS ist immer M5, unabhängig vom gerade angezeigten Chart-Timeframe. setup.dir
+    price: sw.level.price,
+    sourceTime: sw.level.pivotTime,
+    touchedTime: sw.level.touchedTime ?? null,
+    // Für die liquidity_level_id-Verknüpfung (siehe PriceChart.vue: findClickedTarget) — die
+    // Zeitebene des LEVELS (1H oder 5M), nicht die des gerade angezeigten Charts. Stand bis
+    // 21.09.2026 fest auf "5M" und verlinkte einen H1-Sweep damit auf eine 5M-Zeile. setup.dir
     // folgt derselben 1=high/-1=low-Konvention wie ein Liquiditäts-Level (directionForSetup:
     // dir===1 -> Short, also Sweep eines Hochs).
     instrument: currentSymbol.value,
-    timeframe: "5M",
+    timeframe: sw.timeframe,
     levelDirection: setup.dir === 1 ? "high" : "low",
-  };
+  }));
   // Bug-Report Philip 2026-07-31, zweite Runde ("OB zeichnet sich durch
   // bis zum jetzigen Zeitpunkt, sollte nur bis zur berührenden Kerze"): detectSetupObs() ruft
   // laut eigenem Kommentar 1:1 detectOrderBlocks(candles, "5m") auf und übernimmt dessen top/bottom
@@ -728,7 +734,7 @@ async function onSelectSetupConfirmations(setup) {
   // Ein ganzes Trade-Setup (LS+OB) ist immer eine echte Confirmation (GO), nie ein
   // Anti-Confluence-Klick — dafür gibt es die eigenen Arm-Zustände oben.
   const addFn = isRangeLevel ? (c) => addRangeConfirmation(dealingRangeId, c, "confirmation") : (c) => addConfirmationToTrade(trade.id, c, "confirmation");
-  await addFn(lsConfirmation);
+  for (const sweepConfirmation of sweepConfirmations) await addFn(sweepConfirmation);
   await addFn(obConfirmation);
 
   // Stop-Loss-Vorschlag = Invalidierung des Setups (ferne OB-Kante, siehe

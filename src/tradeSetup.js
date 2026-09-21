@@ -132,25 +132,21 @@ function sweepBrokenByClose(ls, m5Candles, dir, params) {
 // Arrays (Lows bei Long, Highs bei Short). Der Close-Check läuft hier BEWUSST NICHT mit: er
 // entscheidet, ob der schnelle Pfad ein Setup überhaupt früh melden darf, nicht welche Kerzen zur
 // Kraft-Zone gehören — und über alle Pfade soll für denselben OB dasselbe herauskommen.
+// Jeder Sweep als { level, timeframe } — den Timeframe vergibt die Erkennung selbst, weil nur sie
+// weiß, aus welchem Array das Level kam (die Deno-Kopie nennt das SetupSweep).
 function collectObSweeps(ob, ownLs, h1Levels, m5Levels, params) {
-  const sweeps = [ownLs];
-  for (const lvl of [...h1Levels, ...m5Levels]) {
-    if (lvl === ownLs || !lvl.touched || lvl.touchedTime == null) continue;
-    if (lvl.touchedTime > ob.startTime || ob.startTime - lvl.touchedTime > params.obMaxDelaySec) continue;
-    sweeps.push(lvl);
+  const sweeps = [{ level: ownLs, timeframe: h1Levels.includes(ownLs) ? "1H" : "5M" }];
+  for (const [levels, timeframe] of [[h1Levels, "1H"], [m5Levels, "5M"]]) {
+    for (const lvl of levels) {
+      if (lvl === ownLs || !lvl.touched || lvl.touchedTime == null) continue;
+      if (lvl.touchedTime > ob.startTime || ob.startTime - lvl.touchedTime > params.obMaxDelaySec) continue;
+      sweeps.push({ level: lvl, timeframe });
+    }
   }
-  return sweeps;
-}
-
-// Regel 3, Teil 2: das ÄLTESTE gesweepte Level trägt die Qualität ("Ältester Sweep ist der für die
-// Strategie am entscheidendsten"). Bei gleichem Alter der früher entstandene Pivot, damit beide
-// Laufzeiten bei Gleichstand dasselbe Level wählen.
-function oldestSweep(sweeps) {
-  return sweeps.reduce((best, lvl) => {
-    const a = sweepAgeSec(lvl);
-    const b = sweepAgeSec(best);
-    return a > b || (a === b && lvl.pivotTime < best.pivotTime) ? lvl : best;
-  });
+  // Regel 3, Teil 2: ÄLTESTER zuerst ("Ältester Sweep ist der für die Strategie am
+  // entscheidendsten") — sweeps[0] ist der, der die Qualität trägt. Bei gleichem Alter der früher
+  // entstandene Pivot, damit beide Laufzeiten dasselbe Level wählen.
+  return sweeps.sort((a, b) => sweepAgeSec(b.level) - sweepAgeSec(a.level) || a.level.pivotTime - b.level.pivotTime);
 }
 
 // Path B (Chat 2026-07-26, Bug-Report "M5 OB wird nicht als Trade-Setup erkannt"): laut Philips
@@ -238,10 +234,10 @@ export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupO
   // verändern.
   const baueSetup = (ob, ownLs, fractal, pathType) => {
     const sweeps = collectObSweeps(ob, ownLs, h1Levels, m5Levels, params);
-    const ls = oldestSweep(sweeps);
-    const fensterVon = Math.min(...sweeps.map((sw) => sw.touchedTime));
+    const ls = sweeps[0].level;
+    const fensterVon = Math.min(...sweeps.map((sw) => sw.level.touchedTime));
     const widened = widenObForSweep(ob, fensterVon, dir, m5Candles);
-    return { dir, fractal: fractal ?? ls, ls, obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, pathType };
+    return { dir, fractal: fractal ?? ls, ls, sweeps, obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, pathType };
   };
 
   for (const { fractal, ls } of findAllProtectedFractals(fractalLevels, h1Levels, m5Levels, dir, params)) {

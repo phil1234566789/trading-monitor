@@ -19,7 +19,12 @@ const MAX_ROWS = 200;
 export async function fetchTradeSetups(instrument, replayUntilSec = null) {
   let query = supabase
     .from("trade_setups")
-    .select("id, instrument, direction, fractal_price, fractal_pivot_time, ls_price, ls_pivot_time, ls_touched_time, ob_top, ob_bottom, ob_start_time")
+    .select(
+      "id, instrument, direction, fractal_price, fractal_pivot_time, ls_price, ls_pivot_time, ls_touched_time, ls_timeframe, " +
+        // Kindtabelle mit ALLEN abgeräumten Leveln (Migration 20260921210000) — eingebettet statt
+        // zweiter Abfrage. 200 Setups x im Schnitt <2 Sweeps bleibt weit unter der ~1000er-Deckelung.
+        "ob_top, ob_bottom, ob_start_time, trade_setup_sweeps(price, pivot_time, touched_time, timeframe, is_primary)",
+    )
     .eq("instrument", instrument)
     .order("ob_start_time", { ascending: false })
     .limit(MAX_ROWS);
@@ -38,19 +43,28 @@ export async function fetchTradeSetups(instrument, replayUntilSec = null) {
 
 const toSec = (iso) => Math.floor(new Date(iso).getTime() / 1000);
 
+// Ein gesweeptes Level in der Form, die die Live-Erkennung liefert — sowohl für ls als auch für die
+// Kind-Zeilen, damit die Zeichnung DB- und Live-Setups nicht unterscheiden muss.
+function sweepLevel(price, pivotTimeIso, touchedTimeIso, dir) {
+  const touchedTime = toSec(touchedTimeIso);
+  return { price, dir, pivotTime: toSec(pivotTimeIso), touched: true, touchedTime, endTime: touchedTime };
+}
+
 // Zurück in dieselbe Form, die detectTradeSetups() (tradeSetup.js) liefert — Zeichnung, Hittest und
 // TSC erwarten ein Setup einheitlich so, egal ob live erkannt oder aus der DB gelesen. Exportiert,
 // weil fetchTradeSetupForCockpit (tradeIntake.js) dieselbe Umformung braucht.
 export function tradeSetupFromRow(row) {
   const dir = row.direction === "short" ? 1 : -1;
-  const ls = {
-    price: row.ls_price,
-    dir,
-    pivotTime: toSec(row.ls_pivot_time),
-    touched: true,
-    touchedTime: toSec(row.ls_touched_time),
-    endTime: toSec(row.ls_touched_time),
-  };
+  const ls = sweepLevel(row.ls_price, row.ls_pivot_time, row.ls_touched_time, dir);
+  // sweeps[0] ist per Vertrag der entscheidende (älteste) Sweep — der steht autoritativ in ls_*,
+  // die Kindtabelle liefert nur die übrigen dazu. Zeilen von vor dem 21.09.2026 haben gar keine
+  // Kind-Zeilen, dort bleibt der eine Sweep die ganze Liste.
+  const sweeps = [
+    { level: ls, timeframe: row.ls_timeframe ?? "5M" },
+    ...(row.trade_setup_sweeps ?? [])
+      .filter((sw) => !sw.is_primary)
+      .map((sw) => ({ level: sweepLevel(sw.price, sw.pivot_time, sw.touched_time, dir), timeframe: sw.timeframe })),
+  ];
   // Ohne eigenes bestätigtes Fraktal steht in beiden Spalten dasselbe (Path B, siehe
   // detectTradeSetups: `fractal: fractal ?? ls`) — dann dieselbe OBJEKTREFERENZ statt nur derselbe
   // Preis: die Zeichnung entscheidet genau an `fractal !== ls`, ob sie ein zweites "PP"-Label an
@@ -76,6 +90,7 @@ export function tradeSetupFromRow(row) {
         }
       : ls,
     ls,
+    sweeps,
     obTop: row.ob_top,
     obBottom: row.ob_bottom,
     obStartTime: toSec(row.ob_start_time),

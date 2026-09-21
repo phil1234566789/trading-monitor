@@ -179,6 +179,20 @@ describe("detectTradeSetups — mehrere Sweeps je OB", () => {
     expect(setups[0].obBottom).toBe(1.2995); // Fenster ab 800, nicht ab 900 (das wäre 1.2998)
   });
 
+  it("gibt ALLE Sweeps mit, ältester zuerst und je mit seiner Zeitebene", () => {
+    const lsH1 = lowLevel({ price: 1.3004, pivotTime: 50, touchedTime: 850 }); // Alter 800, der älteste
+    const setups = detectTradeSetups(-1, [], [lsH1], [lsAlt, lsJung], setupObs, nah, m5Candles);
+    expect(setups).toHaveLength(1);
+    expect(setups[0].ls).toBe(lsH1);
+    // Reihenfolge und Zeitebene sind das, was die Kindtabelle trade_setup_sweeps speichert
+    // (Migration 20260921210000) — sweeps[0] ist der, der in trade_setups.ls_* landet.
+    expect(setups[0].sweeps.map((sw) => [sw.level.price, sw.timeframe])).toEqual([
+      [1.3004, "1H"],
+      [1.3003, "5M"],
+      [1.3002, "5M"],
+    ]);
+  });
+
   it("rechnet über Path A dieselben Zahlen aus (ein OB, ein Ergebnis, egal welcher Pfad zuerst war)", () => {
     const fractal = lowLevel({ price: 1.3, pivotTime: 1000, touched: false });
     const setups = detectTradeSetups(-1, [fractal], [], [lsAlt, lsJung, fractal], setupObs, nah, m5Candles);
