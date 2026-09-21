@@ -356,6 +356,59 @@ nicht mehr. Das ist aber genau der „zweite Schnitt", den dieser Plan ohnehin z
 
 Das Aktualisieren ist ein Skriptlauf: `baenderTabellen.py` ausführen, die Konstante ersetzen.
 
+## Idee: wie wir den Trend doch noch dazubekommen
+
+Philips Skizze vom 21.09.2026, **noch nichts davon gemessen oder entschieden**. Festgehalten, weil
+sie den Trend-Nullbefund weiter unten nicht widerlegt, sondern präzisiert: gemessen wurde **eine**
+Trend-Definition über **alle** Dealing Ranges. Beides greift die Idee an.
+
+**1) Einen M5-Trend bauen — über Kerzenstärke statt Pivots.** Philip: *„wir könnten die Stärken der
+M5-Kerzen messen. Also akkumuliert man alle (in irgendeiner Range) bullischen Kerzen und alle
+bärischen Kerzen, dann erhält man eine Differenz. Daran kann man den Trend gut ableiten, ohne
+Pivots. Aber vielleicht machen wir es auch mit Pivots. Mal sehen."*
+
+Offen ist alles Konkrete: welches Fenster, ob Körper oder ganze Spanne, ob nach Größe gewichtet,
+und ab welcher Differenz überhaupt ein Trend vorliegt statt einer Range.
+
+> **Vorerfahrung, die dazugehört:** am 09.08.2026 wurde ein verwandter Ansatz auf **M1** probiert
+> (Kerzen bullisch/bärisch plus FVG-Vergleich) und mangels klarem Signal eingemottet; die
+> Rohdaten liegen in `trading/archiv/candle-snapshots/`. Das ist kein Gegenbeweis — M5 ist nicht
+> M1, und eine akkumulierte Differenz ist etwas anderes als ein Auszählen —, aber der erste
+> Messlauf sollte gegen diesen Vorlauf geprüft werden, bevor viel Arbeit hineingeht.
+
+**2) Bei Minor-Inducements nur mit dem M5-Trend traden.** Philip: *„bei minor inducements kann man
+nur in die selbe Richtung traden wie der M5 Trend."* Das beträfe die große Mehrheit — 840 von 915
+DRs sind Minor. Wäre die Regel wirksam, wäre sie damit der reichweitenstärkste Filter, den wir
+bisher hätten.
+
+**3) Bei Medium/Major ist der M5-Trend strukturell die falsche Frage.** Philip: *„bei medium/major
+inducements kommt der Kurs ja in jedem Fall von der anderen Richtung, und der M5-Trend dreht dann
+am Inducement-Level zwangsläufig (bei nem erfolgreichen Alarm/Signal). Es geht ja gar nicht anders,
+weil das Inducement ja ein hohes Alter hat. Dort müssen wir wahrscheinlich die 1H-Market-Structure
+beobachten."*
+
+Das ist der interessanteste Teil, weil er **prüfbar** ist und der bisherige Nullbefund ihn nicht
+ausschließt: der 1H-Strukturtrend wurde über **alle** 915 DRs gemessen (453 zu 458, Intervall über
+null) — **nie getrennt nach Sweep-Alter**. Philips Vermutung ist genau, dass er nur bei den reifen
+Sweeps etwas sagt. Diese 75 DRs sind in der Gesamtzahl vollständig untergegangen.
+
+### Was als Erstes zu messen wäre
+
+Drei Schritte, jeder für sich aussagekräftig, aufsteigend nach Aufwand:
+
+1. **Den bestehenden 1H-Trend nach Sweep-Alter aufteilen.** Kostet fast nichts — `trend-je-dr.json`
+   und die Altersklasse liegen beide vor, das ist ein Schnitt in `filterTrend.py`. Beantwortet
+   Punkt 3 direkt. Erwartungsdämpfer vorab: 75 reife DRs auf mit/gegen aufgeteilt sind rund 37 je
+   Seite, also unter der 50er-Schwelle — ein deutlicher Unterschied wäre sichtbar, ein kleiner
+   nicht. Das ist trotzdem der erste Lauf, weil er praktisch umsonst ist.
+2. **Einen M5-Trend nach Punkt 1 definieren und je DR bestimmen**, analog zu `messeTrendJeDr.py`.
+   Danach dieselbe Auswertung wie beim 1H-Trend, aber auf die 840 Minor-DRs gerichtet.
+3. **Beides kreuzen** — M5-Trend bei Minor, 1H-Struktur bei reif — und gegen die heutige Quote
+   halten.
+
+Reihenfolge nicht umdrehen: erst Schritt 1, denn wenn der 1H-Trend auch bei reifen Sweeps nichts
+sagt, ist Punkt 3 der Idee erledigt, bevor überhaupt ein M5-Trend gebaut wird.
+
 ## Grenzen, die in die Anzeige gehören
 
 Nur GBPUSD (EURUSD bleibt bewusst ungemessen, Entscheidung Philip 20.09.2026). Neun Monate eines
