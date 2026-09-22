@@ -72,10 +72,11 @@ for X in PIPS:
 print()
 
 print("HALBJAHRE DIREKT GEGENEINANDER")
-h1 = [x for x in res if x["day"][:7] <= "2026-06"]
-h2 = [x for x in res if x["day"][:7] >= "2026-07"]
+# Mehrere Jahre: ein Datum vor Juli 2026 ist nicht automatisch ein erstes Halbjahr.
+h1 = [x for x in res if int(x["day"][5:7]) <= 6]
+h2 = [x for x in res if int(x["day"][5:7]) >= 7]
 print("  %-22s n  " % "" + "".join("%7dP" % X for X in PIPS))
-for name, g in (("Januar-Juni", h1), ("Juli-September", h2)):
+for name, g in (("Januar-Juni", h1), ("Juli-Dezember", h2)):
     print("  %-20s %4d  " % (name, len(g)) + "".join("%7.0f%%" % quote(g, X) for X in PIPS))
 for X in (10, 15, 20):
     a = [1 if x["reach"] >= X else 0 for x in h1]

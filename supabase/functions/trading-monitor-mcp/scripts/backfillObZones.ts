@@ -48,6 +48,8 @@ const BARS = (Deno.env.get("BACKFILL_BARS") ?? "5m,1h,4h").split(",").map((s) =>
 
 const READ_PAGE_SIZE = 5000; // Supabase-Read-Pagination — M5 übers ganze Jahr sind >70k Zeilen, weit über dem PostgREST-Default-Limit
 const UPSERT_BATCH_SIZE = 500;
+// Archiv-Erweiterungen dürfen bestehende, genauer live verfolgte Zonen nicht überschreiben.
+const INSERT_ONLY = Deno.env.get("BACKFILL_INSERT_ONLY") === "1";
 
 interface CandleRow {
   time: number;
@@ -187,7 +189,7 @@ async function upsertZones(instrument: string, dbTimeframe: string, zones: Retur
       // Wie poi-watcher/index.ts's !existing-Zweig: schon beim ersten Erkennen touched -> als
       // "notified" markieren, damit poi-watcher hier später keinen rückwirkenden Alarm feuert,
       // aber notified_at bleibt null (kein echter Versand fand je statt).
-      notified: z.touched,
+      notified: INSERT_ONLY || z.touched,
       notified_at: null,
     }));
     // ignoreDuplicates statt Update: eine bereits vorhandene Zeile kann von poi-watchers Live-Lauf
@@ -212,7 +214,7 @@ async function backfillOne(instrument: string, bar: string) {
     return;
   }
   const zones = detectOrderBlocks(candles, config.detectParam, true);
-  const corrected = await correctStaleZones(instrument, config.dbTimeframe, zones);
+  const corrected = INSERT_ONLY ? 0 : await correctStaleZones(instrument, config.dbTimeframe, zones);
   await upsertZones(instrument, config.dbTimeframe, zones);
   console.log(
     `${instrument} ${bar} (${candles.length} Kerzen): ${zones.length} OB-Zonen erkannt/gesichert, ${corrected} veraltete Zeilen (Touch/Invalidierung) korrigiert.`,

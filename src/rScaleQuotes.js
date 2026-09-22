@@ -11,17 +11,17 @@
 // Ohne diesen Guard zeigte der Chart dort Zahlen, die für das Instrument nie gerechnet wurden.
 export const QUOTEN_INSTRUMENT = "GBPUSD";
 
-// Tabelle 5 aus ergebnis-baender.txt: 1361 FXCM-Dealing-Ranges, Jan–Sep 2026.
+// Tabelle 5 aus ergebnis-baender.txt: 3282 FXCM-Dealing-Ranges, Januar 2025 bis September 2026.
 // Stopp auf 6 Pips gedeckelt; neu gerechnet nach dem Quellenwechsel.
 // riskPips ist das STRUKTURELLE Risiko (rScale.js: bandRisk), nicht das gedeckelte: das Band
 // beschreibt, wie weit die Range aufgespannt ist, der Deckel nur, wo der Stopp liegt.
 // Bandgrenzen exklusiv unten, inklusiv oben (lo < Risiko <= hi), wie in baenderTabellen.py.
 const BAENDER = [
-  { hi: 3, quoten: { 2: 77, 3: 64, 4: 52, 5: 44, 6: 38, 7: 34, 8: 29, 9: 26, 10: 24 } },
-  { hi: 5, quoten: { 2: 74, 3: 59, 4: 50, 5: 43, 6: 37, 7: 31, 8: 25, 9: 23, 10: 22 } },
-  { hi: 7, quoten: { 2: 70, 3: 55, 4: 45, 5: 38, 6: 31, 7: 27, 8: 24, 9: 21, 10: 19 } },
-  { hi: 10, quoten: { 2: 65, 3: 47, 4: 39, 5: 36, 6: 28, 7: 26, 8: 21, 9: 18, 10: 15 } },
-  { hi: Infinity, quoten: { 2: 74, 3: 56, 4: 45, 5: 39, 6: 33, 7: 28, 8: 24, 9: 22, 10: 19 } },
+  { hi: 3, quoten: { 2: 77, 3: 66, 4: 54, 5: 48, 6: 42, 7: 38, 8: 33, 9: 30, 10: 28 } },
+  { hi: 5, quoten: { 2: 73, 3: 57, 4: 47, 5: 40, 6: 34, 7: 30, 8: 26, 9: 23, 10: 21 } },
+  { hi: 7, quoten: { 2: 68, 3: 54, 4: 43, 5: 36, 6: 30, 7: 26, 8: 23, 9: 21, 10: 19 } },
+  { hi: 10, quoten: { 2: 66, 3: 49, 4: 40, 5: 35, 6: 29, 7: 25, 8: 22, 9: 20, 10: 17 } },
+  { hi: Infinity, quoten: { 2: 70, 3: 55, 4: 45, 5: 38, 6: 32, 7: 27, 8: 23, 9: 20, 10: 18 } },
 ];
 
 // Quote in Prozent, oder null wenn nichts Gemessenes passt (anderes Instrument, Risiko <= 0,

@@ -1,0 +1,23 @@
+{
+  "source": "FXCM native Bid",
+  "instrument": "GBPUSD",
+  "simulation_2025": {
+    "from": "2025-01-08",
+    "to_exclusive": "2026-01-01",
+    "setups": 1921,
+    "dry_run": true
+  },
+  "simulation_2026": {
+    "from": "2026-01-05",
+    "through": "2026-09-21",
+    "setups": 1361
+  },
+  "total_setups": 3282,
+  "context_recomputed_after_htf_backfill": true,
+  "raw_sha256": {
+    "daten-setups-sim.json": "dfbdb9d1c7a93e48133c924e135bf4fdd4b63f6b44c1096ff18ad0127224feb0",
+    "daten-kerzen.json": "630094b11d648bd729042bc38a1119f090f464c69cc08a163a381efd59891ca1",
+    "trend-je-dr.json": "19b69214b992ba844918800005e96d7121c8542c2dbd9b25e6714047e540ab23",
+    "find-targets-roh.jsonl.gz": "fe533c607e1f77abf8a3c711351bfd61d82b60c5023f00606747a3c381c72f92"
+  }
+}

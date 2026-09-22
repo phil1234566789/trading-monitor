@@ -73,11 +73,14 @@ print()
 #
 # Die frueher hier stehende Sweep-HERKUNFT ist damit raus -- sie war ohnehin fast dasselbe Merkmal,
 # und zwar strukturell: poi-watcher laedt 300 M5-Kerzen (~25h), ein M5-Level kann also nie aelter
-# als ~25h werden. Gemessen: von 815 M5-Sweeps sind 0 reif, von 100 1H-Sweeps sind 75 % reif.
+# als ~25h werden. Gemessen ueber 3282 DRs: von 3050 M5-Sweeps ist genau einer reif.
 #
-# Medium und Major sind EIN Topf. Der Unterschied zwischen ihnen ist auf dieser Stichprobe nicht
-# belegbar (15 Pips: 9 Punkte, 95 %-Intervall [-9, +26] bei n=30 gegen n=45). Die belastbare Linie
-# liegt bei 24 Handelsstunden: reif gegen Minor sind +25 Punkte, Intervall [14, 34].
+# ACHTUNG, der Alters-Effekt ist nach dem 2025-Backfill deutlich kleiner (22.09.2026): "reif gegen
+# Minor" faellt bei 15 Pips von +25 Punkten [14, 34] auf +10 [3, 17], obwohl die reife Gruppe von
+# n=70 auf n=188 gewachsen ist. Medium ist von Minor nicht mehr zu trennen (Median 17,6 gegen 17,6),
+# nur Major >=120h steht heraus (29,4, n=72). Die Gegenkraft ist inzwischen das staerkere Merkmal:
+# +15 Punkte [11, 19]. Wer hier eine Alters-Zeile baut, darf sie nicht als den grossen Hebel
+# verkaufen -- Begruendung und Zahlen in PLAN-dr-statistik-ui.md.
 kopf("2) ZWEITER SCHNITT: SWEEP-ALTER x GEGENKRAFT")
 schnitte = [
     ("reifer Sweep (>= 24h)", [x for x in res if x["age_h"] >= 24]),

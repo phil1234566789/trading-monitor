@@ -1,30 +1,30 @@
-FXCM Bid | 1361 GBPUSD-Setups | 05.01.–21.09.2026 | neu berechnet 22.09.2026
+FXCM Bid | 3282 GBPUSD-Setups | 2025 und 2026 | neu berechnet 22.09.2026
 
-Setup-Zeilen gesamt      : 1361
-Dealing Ranges (je M5-OB): 1361   -> 0 Zeilen waren Duplikate
-   davon ohne bestaetigtes Fraktal: 939  (frueher ausgeschlossen, jetzt ueber die OB-Kante messbar)
+Setup-Zeilen gesamt      : 3282
+Dealing Ranges (je M5-OB): 3282   -> 0 Zeilen waren Duplikate
+   davon ohne bestaetigtes Fraktal: 2271  (frueher ausgeschlossen, jetzt ueber die OB-Kante messbar)
 
-ausgewertet: 1361   (Sanity-Ausschluss, Invalidierung auf falscher Seite: 0)
+ausgewertet: 3282   (Sanity-Ausschluss, Invalidierung auf falscher Seite: 0)
 
-Invalidierung binnen 24h getroffen : 1046
-nie invalidiert (24h-Fenster)      : 315
-   Zeit bis Invalidierung: median 98 Min, p25 35, p75 240, max 1440
+Invalidierung binnen 24h getroffen : 2562
+nie invalidiert (24h-Fenster)      : 720
+   Zeit bis Invalidierung: median 85 Min, p25 30, p75 225, max 1440
 
-REICHWEITE ab naher OB-Kante, vor der Invalidierung (alle 1361):
-   median 17.1 Pips   p25 8.6   p75 40.5   max 239.5
+REICHWEITE ab naher OB-Kante, vor der Invalidierung (alle 3282):
+   median 17.8 Pips   p25 8.8   p75 40.8   max 269.4
 
    Ziel erreichbar gewesen (Reichweite >= X), bevor die DR invalidierte:
-      >=  5 Pips : 1209 von 1361
-      >= 10 Pips : 954 von 1361
-      >= 15 Pips : 755 von 1361
-      >= 20 Pips : 617 von 1361
-      >= 25 Pips : 516 von 1361
-      >= 30 Pips : 453 von 1361
-      >= 40 Pips : 345 von 1361
+      >=  5 Pips : 2928 von 3282
+      >= 10 Pips : 2324 von 3282
+      >= 15 Pips : 1861 von 3282
+      >= 20 Pips : 1530 von 3282
+      >= 25 Pips : 1282 von 3282
+      >= 30 Pips : 1108 von 3282
+      >= 40 Pips : 839 von 3282
 
-Risiko (nahe -> ferne OB-Kante): median 5.4 Pips, p25 3.6, p75 8.1
+Risiko (nahe -> ferne OB-Kante): median 5.7 Pips, p25 3.9, p75 8.6
 
-   short n=697  Reichweite median 16.9 Pips   nie invalidiert: 167
-   long  n=664  Reichweite median 17.5 Pips   nie invalidiert: 148
+   short n=1682  Reichweite median 17.1 Pips   nie invalidiert: 358
+   long  n=1600  Reichweite median 18.6 Pips   nie invalidiert: 362
 
--> punkt1_result.json geschrieben (1361 Zeilen)
+-> punkt1_result.json geschrieben (3282 Zeilen)

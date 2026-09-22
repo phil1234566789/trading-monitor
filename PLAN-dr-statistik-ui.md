@@ -1,7 +1,7 @@
 # PLAN: DR-Statistik in der UI anzeigen
 
 > Historischer Konzeptstand mit cTrader-Zahlen. Seit dem FXCM-Wechsel gelten für die
-> produktive R-Leiter die neu berechneten 1361 FXCM-Setups aus
+> R-Leiter die neu berechneten 3282 FXCM-Setups aus 2025/2026 aus
 > [ergebnis-baender.txt](analysis/dr-reichweite/ergebnis-baender.txt); Betrieb und Abnahme siehe
 > [FXCM-Feed](docs/fxcm-feed.md). Die Zahlen in den folgenden Konzepttabellen sind historisch.
 
@@ -125,12 +125,12 @@ nur als Bezugspunkt dabei:
 
 | Band | n | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P | 2 R | 3 R | 4 R | 5 R | 6 R |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| unter 3 Pips | 198 | 47 % | 36 % | 28 % | 23 % | 20 % | 20 % | 18 % | 75 % | 63 % | 50 % | 44 % | 38 % |
-| 3–5 Pips | 385 | 66 % | 49 % | 38 % | 31 % | 27 % | 23 % | 21 % | 74 % | 57 % | 47 % | 39 % | 33 % |
-| 5–7 Pips | 288 | 76 % | 62 % | 51 % | 42 % | 36 % | 31 % | 28 % | 72 % | 56 % | 44 % | 36 % | 31 % |
-| 7–10 Pips | 247 | 77 % | 64 % | 52 % | 45 % | 41 % | 35 % | 32 % | 58 % | 46 % | 36 % | 29 % | 23 % |
-| über 10 Pips | 196 | 86 % | 73 % | 62 % | 55 % | 48 % | 42 % | 37 % | 52 % | 38 % | 27 % | 20 % | 14 % |
-| **alle** | **1314** | **71 %** | **56 %** | **46 %** | **39 %** | **34 %** | **29 %** | **27 %** | **67 %** | **53 %** | **42 %** | **34 %** | **29 %** |
+| unter 3 Pips | 447 | 53 % | 38 % | 30 % | 26 % | 22 % | 20 % | 17 % | 77 % | 66 % | 55 % | 49 % | 43 % |
+| 3–5 Pips | 906 | 64 % | 49 % | 40 % | 33 % | 27 % | 24 % | 21 % | 73 % | 58 % | 48 % | 40 % | 34 % |
+| 5–7 Pips | 716 | 74 % | 60 % | 49 % | 40 % | 34 % | 29 % | 25 % | 68 % | 53 % | 43 % | 34 % | 28 % |
+| 7–10 Pips | 652 | 76 % | 63 % | 50 % | 43 % | 38 % | 33 % | 29 % | 58 % | 44 % | 33 % | 28 % | 22 % |
+| über 10 Pips | 561 | 85 % | 73 % | 64 % | 54 % | 47 % | 42 % | 36 % | 50 % | 33 % | 23 % | 17 % | 13 % |
+| **alle** | **3282** | **71 %** | **57 %** | **47 %** | **39 %** | **34 %** | **29 %** | **26 %** | **65 %** | **51 %** | **40 %** | **34 %** | **28 %** |
 
 ## Entschiedene Design-Fragen
 
@@ -138,12 +138,12 @@ nur als Bezugspunkt dabei:
 
 Terzile sind immer gleich besetzt, verschieben aber ihre Grenzen, sobald die Stichprobe wächst;
 eine DR würde nach dem nächsten Backfill andere Zahlen zeigen als heute. **Feste Bänder** (< 3 /
-3–5 / 5–7 / 7–10 / > 10 Pips) sind stabil und mit n = 134 bis 269 alle gut besetzt.
+3–5 / 5–7 / 7–10 / > 10 Pips) sind stabil und mit n = 447 bis 906 alle gut besetzt.
 
 ### Die 50er-Schwelle ist erfüllt — kein Blocker mehr
 
 Philip, 20.09.2026: *„es müssen nicht 100 sein, glaub 50 reichen mir für ne Prozentanzahl."* Das
-kleinste feste Band hat 196 DRs. Beide Leitern können also **sofort als Prozent** angezeigt werden.
+kleinste feste Band hat 447 DRs. Beide Leitern können also **sofort als Prozent** angezeigt werden.
 Die Anzeige sollte die Regel trotzdem im Code tragen (unter 50 entschiedenen Fällen rohe Zahlen
 statt Prozent), damit ein späterer feinerer Schnitt nicht stillschweigend darunter rutscht.
 
@@ -151,10 +151,10 @@ statt Prozent), damit ein späterer feinerer Schnitt nicht stillschweigend darun
 
 | Gruppe | n | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P | 2 R | 3 R | 4 R | 5 R | 6 R |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| reifer Sweep (≥ 24 h) | 70 | 91 % | 81 % | 69 % | 59 % | 49 % | 36 % | 31 % | 74 % | 63 % | 47 % | 36 % | 27 % |
-| Minor, kein lebender Gegner | 848 | 74 % | 59 % | 48 % | 41 % | 36 % | 31 % | 29 % | 68 % | 53 % | 42 % | 35 % | 29 % |
-| Minor gegen eine lebende M5-Gegen-DR | 379 | 58 % | 45 % | 36 % | 30 % | 26 % | 23 % | 21 % | 64 % | 50 % | 38 % | 33 % | 27 % |
-| **alle** | **1314** | **71 %** | **56 %** | **46 %** | **39 %** | **34 %** | **29 %** | **27 %** | **67 %** | **53 %** | **42 %** | **34 %** | **29 %** |
+| reifer Sweep (≥ 24 h) | 188 | 78 % | 66 % | 55 % | 46 % | 41 % | 31 % | 27 % | 58 % | 44 % | 33 % | 27 % | 19 % |
+| Minor, kein lebender Gegner | 2210 | 75 % | 60 % | 50 % | 42 % | 37 % | 33 % | 28 % | 67 % | 53 % | 42 % | 34 % | 29 % |
+| Minor gegen eine lebende M5-Gegen-DR | 847 | 59 % | 45 % | 35 % | 29 % | 24 % | 21 % | 19 % | 63 % | 47 % | 39 % | 32 % | 27 % |
+| **alle** | **3282** | **71 %** | **57 %** | **47 %** | **39 %** | **34 %** | **29 %** | **26 %** | **65 %** | **51 %** | **40 %** | **34 %** | **28 %** |
 
 Diese Dreiteilung ist der informativste verfügbare Schnitt und alle drei Gruppen liegen über 50.
 **Nicht** nach Trend schneiden — der 1H-Trend trennt nachweislich nicht (453 zu 458,
@@ -168,19 +168,31 @@ Minor, Medium oder Major Inducement."*
 
 Das ändert an den Zahlen wenig, weil beide Merkmale **strukturell fast dasselbe** sind: `poi-watcher`
 lädt 300 M5-Kerzen (~25 h), ein M5-Level kann also gar nicht älter als ~25 h werden. Gemessen über
-1314 DRs: von 1236 M5-Sweeps sind **0** reif, Alters-Median 1,6 h; von 78 1H-Sweeps sind 90 % reif,
-Median 79,2 h. „M5" impliziert „Minor".
+3282 DRs: von 3050 M5-Sweeps ist **genau einer** reif; 187 der 188 reifen Sweeps stammen aus der
+HTF-Gruppe (n=232). Alters-Median über alle 1,9 h, p90 18,0 h. „M5" impliziert „Minor".
 
-Was die Herkunft trotzdem zusätzlich trüge: 8 DRs mit *frischem* 1H-Sweep kommen auf 88 % bei
-15 Pips, also Major-Niveau. Die fallen unter einer reinen Altersregel durch. n=8 liegt aber unter
-der 50er-Schwelle — deshalb **keine eigene Zeile**, aber `trade_setups.ls_timeframe` behalten,
-damit die Gruppe auswertbar bleibt, sobald sie wächst.
+Was die Herkunft trotzdem zusätzlich trüge: 45 DRs mit *frischem* 1H/4H-Sweep kommen auf 69 % bei
+15 Pips und einen Reichweiten-Median von 23,6 Pips — näher an Major (76 %) als an Minor. Die fallen
+unter einer reinen Altersregel durch. Mit n=45 immer noch knapp unter der 50er-Schwelle, deshalb
+weiter **keine eigene Zeile**, aber `trade_setups.ls_timeframe` behalten: die Gruppe ist seit dem
+2025-Backfill von 8 auf 45 gewachsen und reißt die Schwelle demnächst.
 
-**Medium und Major sind EIN Topf.** Der Unterschied zwischen ihnen ist nicht belegbar: bei 15 Pips
-9 Punkte, 95 %-Intervall [−9, +26] auf n=30 gegen n=45. Für eine Absicherung bräuchte es das
-Vierfache der Daten, also rund drei Jahre. Die belastbare Linie liegt bei **24 Handelsstunden**:
-reif gegen Minor sind +25 Punkte, Intervall [14, 34], und das hält bei 10/20/25/30 Pips genauso.
-Genau so rundet der Telegram-Alarm heute schon („<24h" / „≥24h").
+**Der Alters-Effekt ist kleiner, als er auf 1361 DRs aussah — korrigiert 22.09.2026.** Nach dem
+Backfill über 2025 (3282 DRs, die reife Gruppe von n=70 auf n=188 gewachsen) schrumpft „reif gegen
+Minor" bei 15 Pips von **+25 Punkten, Intervall [14, 34]** auf **+10 Punkte, Intervall [3, 17]**.
+Die alte Schätzung lag also am oberen Rand dessen, was das neue Intervall noch zulässt — der Effekt
+ist weiter positiv, aber weniger als halb so groß. Feiner aufgelöst liegt die Linie eher bei
+**120 h** als bei 24: Medium (n=116, Reichweiten-Median 17,6 Pips) ist von Minor (n=3094, 17,6)
+nicht mehr zu unterscheiden, nur Major ≥ 120 h (n=72, 29,4) steht heraus.
+
+**Die Gegenkraft ist jetzt das stärkere Merkmal.** Eine lebende M5-Gegen-DR kostet bei 15 Pips
+**15 Punkte, Intervall [11, 19]** (60 % → 45 %) — größerer Effekt und engeres Intervall als das
+Sweep-Alter. Das deckt sich mit Philips eigener Regel („wir traden nur, wenn die gegnerische Seite
+viel zu schwach ist") und war vorher die zurückgestellte Kategorie.
+
+Für eine Anzeige heißt das: die Alters-Vergleichszeile bleibt vertretbar, darf aber nicht mehr als
+der große Hebel verkauft werden. Der Telegram-Alarm rundet weiterhin auf „<24h" / „≥24h" — das
+bleibt als Anzeige richtig, trägt nur weniger Aussage als gedacht.
 
 ### Erwartungswert je Ziel — und warum die Anzeige nicht empfehlen soll
 
@@ -189,12 +201,12 @@ Invalidierung −1, RR bei 10 gedeckelt):
 
 | Band | n | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P | 2 R | 3 R | 4 R | 5 R | 6 R |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| unter 3 Pips | 198 | 1,47 | **1,59** | 1,55 | 1,30 | 1,12 | 1,08 | 0,92 | 1,24 | 1,51 | 1,50 | 1,64 | **1,65** |
-| 3–5 Pips | 385 | **1,35** | 1,34 | 1,32 | 1,28 | 1,31 | 1,23 | 1,22 | 1,21 | 1,30 | 1,34 | 1,34 | **1,35** |
-| 5–7 Pips | 288 | 1,09 | 1,24 | 1,26 | 1,27 | 1,31 | 1,29 | **1,41** | 1,17 | **1,27** | 1,23 | 1,25 | 1,26 |
-| 7–10 Pips | 247 | 0,69 | 0,77 | 0,76 | 0,83 | **0,93** | 0,86 | 0,95 | 0,74 | 0,88 | **0,89** | 0,89 | 0,75 |
-| über 10 Pips | 196 | 0,54 | 0,58 | 0,55 | 0,62 | **0,64** | 0,62 | 0,58 | 0,61 | **0,64** | 0,53 | 0,43 | 0,23 |
-| **alle** | **1314** | 1,07 | **1,14** | 1,12 | 1,10 | 1,11 | 1,06 | 1,07 | 1,03 | 1,15 | 1,15 | **1,16** | 1,13 |
+| unter 3 Pips | 447 | **1,87** | 1,84 | 1,75 | 1,63 | 1,37 | 1,10 | 0,79 | 1,32 | 1,62 | 1,72 | 1,89 | **1,93** |
+| 3–5 Pips | 906 | 1,23 | 1,31 | **1,38** | 1,33 | 1,31 | 1,25 | 1,18 | 1,18 | 1,27 | 1,36 | 1,39 | **1,40** |
+| 5–7 Pips | 716 | 0,99 | 1,10 | **1,13** | 1,10 | 1,11 | 1,02 | 1,04 | 1,02 | 1,12 | **1,13** | 1,04 | 1,01 |
+| 7–10 Pips | 652 | 0,68 | 0,76 | 0,71 | 0,72 | **0,76** | 0,73 | 0,73 | 0,73 | **0,77** | 0,68 | 0,72 | 0,65 |
+| über 10 Pips | 561 | 0,48 | 0,53 | **0,57** | 0,54 | 0,57 | 0,54 | 0,46 | **0,56** | 0,47 | 0,34 | 0,23 | 0,12 |
+| **alle** | **3282** | 1,03 | **1,10** | 1,10 | 1,07 | 1,04 | 0,96 | 0,89 | 0,97 | 1,06 | 1,07 | **1,08** | 1,06 |
 
 Zwei Dinge, die daraus für die Anzeige folgen:
 

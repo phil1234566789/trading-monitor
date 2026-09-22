@@ -1,7 +1,47 @@
 # DR-Reichweite — was taugen die erkannten Setups?
 
-**FXCM-Wechsel 22.09.2026:** Die aktuellen Ergebnisdateien und die Chart-Quoten wurden auf 1361
-FXCM-Setups neu berechnet. Die nachfolgenden ausformulierten Befunde dokumentieren den früheren
+## Aktueller FXCM-Stand: 2025 und 2026
+
+Die Auswertung umfasst **3282 GBPUSD-Setups**: 1921 vom 08.01.–31.12.2025 und 1361 vom
+05.01.–21.09.2026. Ausschließlich native FXCM-Bid-Kerzen, gleicher Erkennungsalgorithmus.
+Die ersten sieben Kalendertage 2025 sind M5-Warmup; H1/H4 reichen bis Juni 2024 zurück.
+Die Simulation lief mit `BACKFILL_DRY_RUN=1`: keine simulierten Setups und keine Trades ins
+Produktivjournal geschrieben. Historische H1-/H4-Zonen wurden ergänzend eingefügt, vorhandene
+Zonen dabei nicht geändert und historische Benachrichtigungen unterdrückt.
+
+- Archiv 2025: **74998 GBPUSD- und 75193 EURUSD-M5-Kerzen**, alle zwölf Monate vorhanden.
+  Jede vorhandene H1-Stunde enthält M5-Daten; das ist kein Nachweis für jeden einzelnen
+  theoretischen Fünf-Minuten-Slot. Details: [Abdeckungsprüfung](fxcm-abdeckung-2025.json).
+- Reichweite vor Invalidierung: 10 Pips **71 %**, 15 Pips **57 %**, 20 Pips **47 %**.
+  Median 17,8 Pips; strukturelles Risiko im Median 5,7 Pips.
+- R-Leiter mit auf 6 Pips gedeckeltem Stopp: gesamte Stichprobe bei 2R **70 %**, 3R **55 %**,
+  4R **46 %**. Die Chart-Anzeige verwendet die fünf Risiko-Bänder aus Tabelle 5 in
+  [ergebnis-baender.txt](ergebnis-baender.txt), nicht diesen Gesamtdurchschnitt.
+- 72 Major- und 116 Medium-Sweeps (zusammen 188 ab 24 Handelsstunden). Kleine, abhängige Untergruppen:
+  daraus folgt weiterhin keine belastbare allgemeine Überlegenheit von Major gegenüber Medium.
+- Die 24-Stunden-Messung beschreibt historische Kurswege, keine realisierten Trades.
+  Spread, Slippage und Gebühren sind nicht abgezogen. 2026 endet im September; Halbjahre
+  sind daher unterschiedlich vollständig. Monatliche Unterschiede beweisen keine Saisonalität.
+
+[Visuelle Übersicht](auswertung.html) · [Quoten](ergebnis-quoten.txt) ·
+[Monate](ergebnis-saisonalitaet.txt) · [FXCM-Betrieb](../../docs/fxcm-feed.md).
+
+Reproduktion: `backfillTradeSetups.ts` mit `BACKFILL_FROM=2025-01-08`,
+`BACKFILL_TO=2026-01-01`, `BACKFILL_INSTRUMENTS=GBPUSD`, `BACKFILL_DRY_RUN=1` und
+`BACKFILL_DUMP` ausführen; mit dem 2026-Dump nach Instrument/Richtung/OB-Start deduplizieren.
+Die bestehenden OB-/LQ-Backfill-Skripte unterstützen `BACKFILL_INSERT_ONLY=1` für ergänzende
+Archivläufe ohne Korrektur bestehender Zeilen. Nach einer Archiv-Erweiterung
+`messeFxcmKontext.ts` vollständig neu ausführen; `FXCM_CONTEXT_RESUME=1` nur für die Fortsetzung
+bei unverändertem Archiv und Algorithmus verwenden. Danach die Ergebnis-Skripte und
+`erstelleUebersicht.py` ausführen. Rohdaten bleiben lokal; abgeleitete Ergebnisse sind versioniert.
+Die verwendeten Eingabestände sind über [Prüfsummen und Zeitraum](fxcm-analyse-2025-2026.json)
+identifizierbar. Der Target-Lauf lieferte 26056 Kandidaten; drei Setups hatten keine Kandidaten.
+149 Setups haben keinen bestimmten H1-Trend und bleiben in der eigenen Gruppe „Trend unklar“;
+sie werden weder ausgeschlossen noch einer Richtung zugerechnet.
+
+## Historische Befunde vor dem FXCM-Wechsel
+
+Die nachfolgenden ausformulierten Befunde dokumentieren den früheren
 cTrader-Stand vom 21.09.; sie sind keine aktuellen FXCM-Ergebnisse. Die historische Close-Check-Schwellenstudie bleibt ausdrücklich auf dem alten Feed. Datenfluss und Vergleich:
 [FXCM-Feed](../../docs/fxcm-feed.md).
 

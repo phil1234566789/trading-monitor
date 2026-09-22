@@ -58,6 +58,8 @@ const BARS = (Deno.env.get("BACKFILL_BARS") ?? "1h,4h").split(",").map((s) => s.
 
 const READ_PAGE_SIZE = 5000; // Supabase-Read-Pagination — siehe backfillObZones.ts
 const UPSERT_BATCH_SIZE = 500;
+// Archiv-Erweiterungen dürfen bestehende, genauer live verfolgte Level nicht überschreiben.
+const INSERT_ONLY = Deno.env.get("BACKFILL_INSERT_ONLY") === "1";
 
 interface CandleRow {
   time: number;
@@ -158,7 +160,7 @@ async function upsertLevels(instrument: string, dbTimeframe: string, levels: (Le
       touched: l.touched,
       end_time: l.touched && l.endTime != null ? new Date(l.endTime * 1000).toISOString() : null,
       alert_price: null,
-      notified: l.touched,
+      notified: INSERT_ONLY || l.touched,
       notified_at: null,
     }));
     const { error } = await supabase
@@ -182,7 +184,7 @@ async function backfillOne(instrument: string, bar: string) {
     ...highs.map((l) => ({ ...l, direction: "high" as const })),
     ...lows.map((l) => ({ ...l, direction: "low" as const })),
   ];
-  const corrected = await correctMissedTouches(instrument, config.dbTimeframe, levels);
+  const corrected = INSERT_ONLY ? 0 : await correctMissedTouches(instrument, config.dbTimeframe, levels);
   await upsertLevels(instrument, config.dbTimeframe, levels);
   console.log(
     `${instrument} ${bar} (${candles.length} Kerzen): ${levels.length} Liquiditäts-Level erkannt/gesichert, ${corrected} verpasste Touches korrigiert.`,

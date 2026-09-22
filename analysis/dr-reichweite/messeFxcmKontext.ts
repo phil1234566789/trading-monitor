@@ -1,16 +1,22 @@
 // Derselbe Produktivcode für Trend und Targets, mit Supabase-Lesezugriff statt separatem MCP-Token.
-import { compute1hStructureState } from '../../supabase/functions/trading-monitor-mcp/tools/dataExport.ts';
-import { findTargetCandidates } from '../../supabase/functions/trading-monitor-mcp/findTargetCandidates.js';
+import { createAnalysisSnapshotFetch } from './analysisSnapshotFetch.js';
 import { fileURLToPath } from 'node:url';
+globalThis.fetch = createAnalysisSnapshotFetch(globalThis.fetch.bind(globalThis));
+// Erst nach dem Analyse-Snapshot initialisieren, damit Supabase denselben Fetch verwendet.
+const { compute1hStructureState } = await import('../../supabase/functions/trading-monitor-mcp/tools/dataExport.ts');
+const { findTargetCandidates } = await import('../../supabase/functions/trading-monitor-mcp/findTargetCandidates.js');
 const root = fileURLToPath(new URL('.', import.meta.url));
 const rows = JSON.parse(await Deno.readTextFile(root+'daten-setups-sim.json'));
-const trends: Record<string,unknown> = {};
-const targets: Record<string,unknown> = {};
+// Explizite Wiederaufnahme nur bei unverändertem Algorithmus und derselben Kerzenquelle.
+const resume = Deno.env.get('FXCM_CONTEXT_RESUME') === '1';
+const trends: Record<string,unknown> = resume ? JSON.parse(await Deno.readTextFile(root+'trend-je-dr.json')) : {};
+const targets: Record<string,unknown> = resume ? JSON.parse(await Deno.readTextFile(root+'daten-targets-fxcm.json')) : {};
 let index = 0, done = 0;
 async function worker() {
  while (index < rows.length) {
   const r = rows[index++];
   const key = `${r.direction}|${r.ob_start_time}`;
+  if (resume && trends[key] && targets[key]) { done++; continue; }
   const currentTimeSec = Date.parse(r.ob_start_time)/1000 + 600;
   for(let attempt=0;attempt<3;attempt++) {
    try {
@@ -32,7 +38,7 @@ async function worker() {
   }
  }
 }
-await Promise.all(Array.from({length:4},worker));
+await Promise.all(Array.from({length:8},worker));
 await Deno.writeTextFile(root+'trend-je-dr.json',JSON.stringify(trends));
 await Deno.writeTextFile(root+'daten-targets-fxcm.json',JSON.stringify(targets));
 console.log('FXCM trend and targets complete');

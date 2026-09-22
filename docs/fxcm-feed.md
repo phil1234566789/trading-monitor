@@ -12,7 +12,8 @@ GBPUSD/EURUSD verwenden geschlossene native **FXCM-Bid-Kerzen**. Der ForexConnec
 - M1/M3/M5/M15/H1/H4/D1 werden nativ abgerufen, nicht aus anderen Zeitrahmen zusammengesetzt.
 - Abfrage kurz nach Minutenschluss mit zehn Sekunden Abschlussabstand. Offene Kerzen werden sowohl im Collector als auch im Ingest abgewiesen.
 - Neue Datensätze sind unveränderlich; Schlüssel: Instrument, Zeitrahmen und Startzeit. Fehlgeschlagene Uploads bleiben im lokalen Puffer und werden erneut versucht.
-- M1/M3/M5/M15 ab Januar 2026; H1/H4 ab Juni 2025; D1 ab Oktober 2022. Laufende Erweiterung für beide Instrumente.
+- M5 ab Januar 2025; M1/M3/M15 ab Januar 2026; H1/H4 ab Juni 2024; D1 ab Oktober 2022. Laufende Erweiterung für beide Instrumente.
+- Der 2025-Backfill ist geprüft: 74998 GBPUSD- und 75193 EURUSD-M5-Kerzen, alle zwölf Monate vorhanden. Abdeckung und Auswertung: [DR-Reichweite](../analysis/dr-reichweite/README.md#aktueller-fxcm-stand-2025-und-2026).
 - H4/D1 folgen den nativen FXCM-Handelstagsgrenzen. Keine festen Berlin- oder UTC-H4-Buckets konstruieren.
 - `poi-watcher` liest M5/H1/H4 pro Auswertung aus dem Archiv. Er läuft alle fünf Minuten eine Minute nach der M5-Grenze. M5 älter als 15 Minuten führt zum Fehler statt zu einer Auswertung mit veralteten Kursen.
 - H1/H4 werden nur bei einer neuen archivierten Schlusskerze neu ausgewertet; `forex_h1_cache` hält den erfolgreich verarbeiteten Stand. M5-Touch-Prüfungen laufen immer. Schreibzugriffe werden gebündelt, bestehende Objekte vollständig paginiert.
