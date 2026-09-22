@@ -24,9 +24,23 @@ import { supabase } from "./supabaseClient.js";
 const MAX_BERUEHRTE = 500;
 const SPALTEN = "instrument, timeframe, direction, top, bottom, touched, invalidated, start_time, end_time";
 
+async function fetchUntouchedZones() {
+  const rows = [];
+  // Auch invalidierte Zonen können touched=false sein: nach dem FXCM-Backfill waren
+  // es 1250 Zeilen. Nur eine leere Seite beendet den Abruf, nicht ein kurzer Server-Batch.
+  for (;;) {
+    const { data, error } = await supabase.from("ob_zones").select(SPALTEN)
+      .in("timeframe", ["1H", "4H"]).eq("touched", false)
+      .order("id", { ascending: true }).range(rows.length, rows.length + 999);
+    if (error) return { data: null, error };
+    if (!data?.length) return { data: rows, error: null };
+    rows.push(...data);
+  }
+}
+
 export async function fetchObZones() {
   const [unberuehrt, beruehrt] = await Promise.all([
-    supabase.from("ob_zones").select(SPALTEN).in("timeframe", ["1H", "4H"]).eq("touched", false),
+    fetchUntouchedZones(),
     supabase.from("ob_zones").select(SPALTEN).in("timeframe", ["1H", "4H"]).eq("touched", true)
       .order("start_time", { ascending: false }).limit(MAX_BERUEHRTE),
   ]);
