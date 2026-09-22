@@ -1,0 +1,15 @@
+{
+  "ctrader": 1331,
+  "fxcm": 1361,
+  "same_ob_and_direction": 1114,
+  "only_ctrader": 217,
+  "only_fxcm": 247,
+  "overlap_pct_of_ctrader": 83.7,
+  "source": "FXCM Bid",
+  "instrument": "GBPUSD",
+  "from_date": "2026-01-05",
+  "through_date": "2026-09-21",
+  "identity": "instrument,direction,ob_start_time",
+  "coverage_check": "53 month/instrument/timeframe comparisons in Jan-Sep 2026 through the common feed endpoint: FXCM >= cTrader throughout",
+  "note": "See fxcm-monatsabdeckung.json; both feeds are capped at the earlier last candle for each instrument/timeframe."
+}

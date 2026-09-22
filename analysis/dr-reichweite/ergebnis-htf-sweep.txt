@@ -1,9 +1,11 @@
-HTF sicher   n= 78 | Reichweite median  30.8  p25  17.6  p75  48.4 | nie inval.  25
-               Ziel erreicht (von 78):  10P  71   15P  64   20P  55   25P  48   30P  41
+FXCM Bid | 1361 GBPUSD-Setups | 05.01.–21.09.2026 | neu berechnet 22.09.2026
+
+HTF sicher   n= 88 | Reichweite median  28.5  p25  14.9  p75  45.2 | nie inval.  25
+               Ziel erreicht (von 88):  10P  74   15P  64   20P  56   25P  48   30P  43
 
 
-M5 sicher    n=1236 | Reichweite median  16.8  p25   8.4  p75  41.6 | nie inval. 304
-               Ziel erreicht (von 1236):  10P 857   15P 677   20P 543   25P 458   30P 403
+M5 sicher    n=1273 | Reichweite median  16.7  p25   8.3  p75  40.3 | nie inval. 290
+               Ziel erreicht (von 1273):  10P 880   15P 691   20P 561   25P 468   30P 410
 
-ALLE         n=1314 | Reichweite median  17.5  p25   8.8  p75  42.1 | nie inval. 329
-               Ziel erreicht (von 1314):  10P 928   15P 741   20P 598   25P 506   30P 444
+ALLE         n=1361 | Reichweite median  17.1  p25   8.6  p75  40.5 | nie inval. 315
+               Ziel erreicht (von 1361):  10P 954   15P 755   20P 617   25P 516   30P 453

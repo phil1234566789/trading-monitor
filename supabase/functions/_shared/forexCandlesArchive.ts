@@ -4,7 +4,7 @@
 // einer dritten Kopie. Nur `period`-Werte im `bar`-CHECK-Constraint werden persistiert — seit
 // dieser Migration zusätzlich '1D' (siehe 20260830090000_forex_candles_allow_1d.sql), vorher nur
 // '5m'/'1h'/'4h'.
-import type { createClient } from "npm:@supabase/supabase-js@2";
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 export interface ArchivableCandle {
   time: number;
@@ -18,7 +18,7 @@ export interface ArchivableCandle {
 const UPSERT_CHUNK_SIZE = 1000;
 
 export async function persistClosedCandles(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   instrument: string,
   bar: string,
   candles: ArchivableCandle[],
@@ -53,18 +53,19 @@ export async function persistClosedCandles(
 const DB_READ_PAGE_SIZE = 1000;
 
 export async function readForexCandlesArchiveFrom(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   instrument: string,
   bar: string,
   fromIso: string,
   toIso?: string, // exklusive Obergrenze — ohne Angabe bis ans Archiv-Ende
+  table: 'forex_candles' | 'fxcm_candles' = 'forex_candles',
 ): Promise<ArchivableCandle[]> {
   const rows: { time: string; open: number; high: number; low: number; close: number; volume: number }[] = [];
   let boundary = fromIso;
   let inclusive = true;
   while (true) {
     let query = supabase
-      .from("forex_candles")
+      .from(table)
       .select("time, open, high, low, close, volume")
       .eq("instrument", instrument)
       .eq("bar", bar)
@@ -76,7 +77,6 @@ export async function readForexCandlesArchiveFrom(
     if (error) throw error;
     if (!data || data.length === 0) break;
     rows.push(...data);
-    if (data.length < DB_READ_PAGE_SIZE) break;
     boundary = data[data.length - 1].time;
     inclusive = false;
   }

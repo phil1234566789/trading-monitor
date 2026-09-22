@@ -4,6 +4,7 @@
 # waere daraus eine vierte geworden. Die Auswertungs-Skripte importieren hier, rechnen selbst
 # nichts davon nach.
 import json, datetime
+from zoneinfo import ZoneInfo
 
 # Von zieheDaten.py geschrieben, liegen neben diesem Skript. Bis zum 20.09.2026 zeigten diese
 # Pfade auf Tool-Ergebnisdateien einer einzelnen Claude-Session -- nach der Session weg und die
@@ -31,11 +32,12 @@ SETUPS = os.path.join(_HIER, "daten-setups-sim.json")
 PIP = 0.0001
 ARM = 600                     # ob_start_time + 2 M5-Kerzen = FVG bestaetigt
 HORIZON = 24 * 3600
-BERLIN = 2 * 3600             # CEST im gesamten Messzeitraum 15.07.-16.09.2026
+BERLIN = ZoneInfo('Europe/Berlin')  # Die Jahresauswertung enthält CET und CEST.
 WIN_FROM, WIN_TO = 480, 1080  # GBPUSD-Handelsfenster aus trading_schedules, Minuten ab Mitternacht
 
 ts = lambda s: int(datetime.datetime.fromisoformat(s).timestamp())
 utc_dt = lambda sec: datetime.datetime.fromtimestamp(sec, datetime.timezone.utc)
+berlin_dt = lambda sec: utc_dt(sec).astimezone(BERLIN)
 
 
 def lade_setups():
@@ -117,7 +119,7 @@ def merkmale(r, known, trend_map=None):
     """Alle Nicht-Preis-Merkmale einer DR aus ihrer Setup-Zeile."""
     herkunft = sweep_herkunft(r, known)
     alter = handelsstunden(ts(r["ls_pivot_time"]), ts(r["ls_touched_time"]))
-    bt = utc_dt(ts(r["ob_start_time"]) + BERLIN)
+    bt = berlin_dt(ts(r["ob_start_time"]))
     min_of_day = bt.hour * 60 + bt.minute
     t = (trend_map or {}).get(dr_schluessel(r), {})
     return {

@@ -2,11 +2,11 @@
 // Leveln, die ein Setup abgeräumt hat. poi-watcher und backfillTradeSetups schreiben dieselbe
 // Form; eigene Datei statt einer Kopie je Schreiber (CLAUDE.md "DRY within a single runtime") und
 // statt eines Anbaus an tradeSetup.ts, das bewusst reine Erkennungslogik ohne DB-Zugriff bleibt.
-import type { createClient } from "npm:@supabase/supabase-js@2";
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { SetupSweep } from "./tradeSetup.ts";
 
 export async function persistTradeSetupSweeps(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   tradeSetupId: number,
   sweeps: SetupSweep[],
 ) {

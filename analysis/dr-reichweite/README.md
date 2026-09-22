@@ -1,5 +1,10 @@
 # DR-Reichweite — was taugen die erkannten Setups?
 
+**FXCM-Wechsel 22.09.2026:** Die aktuellen Ergebnisdateien und die Chart-Quoten wurden auf 1361
+FXCM-Setups neu berechnet. Die nachfolgenden ausformulierten Befunde dokumentieren den früheren
+cTrader-Stand vom 21.09.; sie sind keine aktuellen FXCM-Ergebnisse. Die historische Close-Check-Schwellenstudie bleibt ausdrücklich auf dem alten Feed. Datenfluss und Vergleich:
+[FXCM-Feed](../../docs/fxcm-feed.md).
+
 Auswertung vom **21.09.2026**, GBPUSD, **1314 Dealing Ranges** über **Januar bis September 2026**.
 Beantwortet die Frage, die vorher nicht beantwortbar war: welche erkannten Setups taugen — gemessen
 an Philips eigener Erfolgsdefinition („Target erreicht, bevor der Invalidierungspunkt erreicht
