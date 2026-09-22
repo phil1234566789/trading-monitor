@@ -19,6 +19,7 @@ import { forbiddenSessionAt, type SessionDangerConfig } from "../_shared/forbidd
 import {
   findLevelTouch,
   findZoneTouch,
+  LIVE_TOUCH_WINDOW_SEC,
   levelTouchPrice,
   recentCandles,
   zoneTouchPrice,
@@ -129,7 +130,10 @@ async function fetchForexBatch(
   const results = await Promise.all(specs.map(s => readFxcmCandles(db, symbol, s.period, s.count)));
   if (results.some(rows => !rows.length)) throw new Error(`FXCM history missing: ${symbol}`);
   const latest = results[0][results[0].length - 1];
-  if (Date.now() / 1000 - latest.time > 900) throw new Error(`FXCM M5 feed stale: ${symbol}`);
+  // An LIVE_TOUCH_WINDOW_SEC gekoppelt, nicht zufaellig gleich: haengt der Feed weiter zurueck als
+  // das Touch-Fenster reicht, faellt jede geladene Kerze aus dem Fenster und recentCandles liefert
+  // leer — der Lauf pruefte dann still ueberhaupt keinen Touch mehr. Lieber laut abbrechen.
+  if (Date.now() / 1000 - latest.time > LIVE_TOUCH_WINDOW_SEC) throw new Error(`FXCM M5 feed stale: ${symbol}`);
   return { currentPrice: latest.close, candlesByTf: new Map(specs.map((s, i) => [s.key, results[i]])) };
 }
 

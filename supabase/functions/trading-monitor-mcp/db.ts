@@ -587,7 +587,7 @@ export async function getForexCandlesArchiveUpTo(instrument: string, bar: string
     query = inclusive ? query.lte("time", boundary) : query.lt("time", boundary);
     const { data, error } = await query;
     if (error) {
-      console.error("Kerzen-Archiv lesen fehlgeschlagen, falle auf Live-cTrader zurück:", error.message);
+      console.error("Kerzen-Archiv lesen fehlgeschlagen, falle auf den Live-Abruf zurück:", error.message);
       break;
     }
     if (!data || data.length === 0) break;
