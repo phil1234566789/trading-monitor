@@ -380,19 +380,24 @@ function liquidityStyleTimeframe(rawTimeframe) {
 // wurde, und fiel damit unter die "M5 nur im Debug"-Regel, obwohl die Qualitaet des Sweeps die
 // wichtigste Information am Setup ist. Der Labeltext ist derselbe wie bei einem HTF-Level --
 // bewusst KEINE eigene Kurzform, damit dasselbe Objekt nicht je nach Timeframe anders aussieht.
-function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin, isConfirmation } = {}) {
+function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin, isConfirmation, isInvalidation } = {}) {
   const tfCategory = liquidityStyleTimeframe(lvl.timeframe);
   const isHtf = tfCategory !== "M5";
   const base = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
   const key = LIQUIDITY_STYLE_KEYS[tfCategory][base];
-  const color = cssColor(key);
-  const label =
-    debugPrices || isHtf || isConfirmation
+  // Das Level, an dem die Dealing-Range-Idee stirbt, trägt Farbe und 🚫 der Invalidierung statt
+  // seiner normalen LQ-Farbe (Philip 22.09.2026) — sonst wäre am Chart nicht zu sehen, WELCHES der
+  // sichtbaren Level die Invalidierung ist. Gleiches Präfix wie die Invalidierungs-Linie an einem
+  // geloggten Trade (PriceChart.vue: refreshInvalidationLinesInternal).
+  const color = cssColor(isInvalidation ? "tradeInvalidation" : key);
+  const baseLabel =
+    debugPrices || isHtf || isConfirmation || isInvalidation
       ? formatLiquidityLevelLabel(lvl, { bonus: lvl.bonus, nowSec, formatPrice, includePrice: debugPrices })
       : null;
+  const label = isInvalidation ? `🚫 ${baseLabel ?? ""}`.trim() : baseLabel;
   return {
     color,
-    lineWidth: lineWidth(key),
+    lineWidth: lineWidth(isInvalidation ? "tradeInvalidation" : key),
     label,
     labelSide: bullBearLabelSide(lvl.dir === 1),
     lenientLabels: isHtf,
@@ -425,7 +430,15 @@ export function liquidityLevelNaturalKey(dir, pivotTime) {
 // `confirmationKeys` (Philip 2026-09-20, analog zu pinKeys): liquidityLevelNaturalKey-Strings der
 // Level, die als LQ-Sweep-Bestaetigung an einer Dealing Range haengen -- die bekommen ihr Label
 // unabhaengig vom Debug-Toggle, siehe levelOptions.
-export function renderLiquidityLevels(series, levels, existingPrimitives, candles, { debugPrices, formatPrice, nowSec, pinKeys, hoveredKey, confirmationKeys } = {}) {
+// `invalidationKeys` (Philip 22.09.2026, analog dazu): die Level, die die Invalidierung einer
+// Dealing Range SIND -- Label immer sichtbar, plus 🚫 und Invalidierungsfarbe, siehe levelOptions.
+export function renderLiquidityLevels(
+  series,
+  levels,
+  existingPrimitives,
+  candles,
+  { debugPrices, formatPrice, nowSec, pinKeys, hoveredKey, confirmationKeys, invalidationKeys } = {},
+) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
@@ -434,7 +447,12 @@ export function renderLiquidityLevels(series, levels, existingPrimitives, candle
     const inPinContext = pinKeys?.has(key) ?? false;
     const isSelectedPin = hoveredKey != null && hoveredKey === key;
     const isConfirmation = confirmationKeys?.has(key) ?? false;
-    const primitive = new LiquidityLinePrimitive(lvl, levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin, isConfirmation }), candles);
+    const isInvalidation = invalidationKeys?.has(key) ?? false;
+    const primitive = new LiquidityLinePrimitive(
+      lvl,
+      levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin, isConfirmation, isInvalidation }),
+      candles,
+    );
     series.attachPrimitive(primitive);
     existingPrimitives.push(primitive);
   }

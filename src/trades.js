@@ -15,6 +15,78 @@ export function computeTradeStats(trades) {
 // Gruppiert Zeilen nach einer FK-Spalte (trade_targets/trade_evidence -> dealing_range_id,
 // trade_partial_exits/trade_evidence -> trade_position_id — seit 2026-07-31 aufgeteilt, siehe
 // CLAUDE.md: Trade-Journal-Umbau).
+// Bringt eine per liquidity_level_id eingebettete liquidity_levels-Zeile (Task "1H-Struktur-Pivots
+// auf kanonische liquidity_levels-ID konsolidieren", 2026-08-24/25) in genau die Form, die
+// Dashboard.vue für pinnedLiquidityLevels/renderLiquidityLevels erwartet (dir als 1/-1 statt
+// "high"/"low", Unix-Sekunden statt ISO) — so kann ein Target/eine Bestätigung/eine Invalidierung
+// mit liquidity_level_id im Chart über denselben nativen Pin-Highlight-Mechanismus gerendert werden
+// statt über einen eigenen Zeichenpfad (siehe PriceChart.vue: refreshTradeTargetLinksInternal).
+// Stand bis 22.09.2026 als zwei wortgleiche lokale Kopien in fetchTrades/fetchDealingRangeCockpit.
+function toLiquidityLevel(row) {
+  if (!row?.liquidity_levels) return null;
+  const lvl = row.liquidity_levels;
+  return {
+    price: lvl.price,
+    dir: lvl.direction === "high" ? 1 : -1,
+    pivotTime: Math.floor(new Date(lvl.pivot_time).getTime() / 1000),
+    // Bug-Report Philip 2026-08-27: eine per TSC-Klick verknüpfte LQ-Linie zeichnete sich durch bis
+    // "jetzt", statt am Touch zu enden — touched=false/end_time=null aus der DB kann entweder
+    // "poi-watcher hat live bestätigt: noch unberührt" ODER "diese Zeile kam gerade erst per
+    // findOrCreateLiquidityLevelId rein, poi-watcher hat sie nie gesehen" bedeuten, beides sieht in
+    // der DB identisch aus. null (statt false) triggert denselben Self-Heal-gegen-geladene-Kerzen-
+    // Pfad wie bei einem reinen m5_liquidity_level-Snapshot (priceChartLiquidity.js:
+    // mergePinnedLevels) — bei echtem "noch unberührt" findet der Self-Heal ohnehin keine
+    // Touch-Kerze, nur im Bug-Fall wird der tatsächliche Touch jetzt gefunden statt ignoriert.
+    touched: lvl.touched === true ? true : lvl.end_time != null ? false : null,
+    endTime: lvl.end_time ? Math.floor(new Date(lvl.end_time).getTime() / 1000) : null,
+    timeframe: lvl.timeframe,
+  };
+}
+
+// Die Invalidierung einer Range in derselben Item-Form wie eine Bestätigung/ein Target
+// (kind/price/sourceTime/rangeLow/rangeHigh/timeframe/liquidityLevel) — Philip 22.09.2026: das
+// Chart-Objekt selbst soll übernommen und hervorgehoben werden, nicht nur der Preis. Die gleiche
+// Form heißt: jeder bestehende Chart-Pfad (Objekt einblenden, Halo, Label) nimmt sie ohne
+// Sonderfall entgegen. null, solange nur eine Zahl ohne Objekt gesetzt ist (Handeingabe,
+// abgeleitete Invalidierung aus einem Setup) — dann gibt es schlicht nichts hervorzuheben.
+export function toInvalidationItem(range) {
+  const level = range.invalidation_liquidity_level;
+  const zone = range.invalidation_ob_zone;
+  if (!level && !zone) return null;
+  // category/dealingRangeId gehören mit ins Item: der Chart leitet daraus Icon+Farbe ab
+  // (priceChartConstants.js: CATEGORY_ICON) und der Zeilen-Hover findet darüber die Range, deren
+  // Invalidierung gerade hervorgehoben werden soll (Dashboard.vue: hoveredInvalidationRangeId).
+  const common = { category: "invalidation", dealingRangeId: range.id, price: range.invalidation };
+  if (level) {
+    return {
+      ...common,
+      kind: "pivot",
+      sourceTime: Math.floor(new Date(level.pivot_time).getTime() / 1000),
+      touchedTime: level.end_time ? Math.floor(new Date(level.end_time).getTime() / 1000) : null,
+      rangeLow: null,
+      rangeHigh: null,
+      timeframe: level.timeframe,
+      liquidityLevel: toLiquidityLevel({ liquidity_levels: level }),
+    };
+  }
+  return {
+    ...common,
+    kind: "ob",
+    sourceTime: Math.floor(new Date(zone.start_time).getTime() / 1000),
+    touchedTime: null,
+    rangeLow: zone.bottom,
+    rangeHigh: zone.top,
+    timeframe: zone.timeframe,
+    liquidityLevel: null,
+  };
+}
+
+// Embed beider Invalidierungs-Objekte (Migration 20260922183000) — benannte Embeds, weil die FK-
+// Spalte sonst nicht eindeutig ist.
+const INVALIDATION_OBJECT_EMBED =
+  "invalidation_liquidity_level:liquidity_levels!invalidation_liquidity_level_id(price, direction, timeframe, pivot_time, touched, end_time), " +
+  "invalidation_ob_zone:ob_zones!invalidation_ob_zone_id(timeframe, direction, top, bottom, start_time)";
+
 function groupBy(rows, key) {
   const result = {};
   for (const row of rows) {
@@ -47,7 +119,9 @@ export async function fetchTrades(instrument, accountId = null) {
   while (true) {
     let query = supabase
       .from("trade_positions")
-      .select("*, dealing_ranges!inner(id, instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, trade_setups(ob_start_time, ob_top, ob_bottom))")
+      .select(
+        `*, dealing_ranges!inner(id, instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, ${INVALIDATION_OBJECT_EMBED}, trade_setups(ob_start_time, ob_top, ob_bottom))`,
+      )
       .eq("dealing_ranges.instrument", instrument);
     if (accountId != null && accountId !== ALL_ACCOUNTS_ID) query = query.eq("trading_account_id", accountId);
     const { data: page, error } = await query
@@ -121,33 +195,6 @@ export async function fetchTrades(instrument, accountId = null) {
     "dealing_range_id",
   );
 
-  // Bringt eine per liquidity_level_id eingebettete liquidity_levels-Zeile (Task
-  // "1H-Struktur-Pivots auf kanonische liquidity_levels-ID konsolidieren", 2026-08-24/25) in genau
-  // die Form, die Dashboard.vue für pinnedLiquidityLevels/renderLiquidityLevels erwartet (dir als
-  // 1/-1 statt "high"/"low", Unix-Sekunden statt ISO) — so kann ein Target/eine Bestätigung mit
-  // liquidity_level_id im Chart über denselben nativen Pin-Highlight-Mechanismus gerendert werden
-  // statt über einen eigenen Zeichenpfad (siehe PriceChart.vue: refreshTradeTargetLinksInternal).
-  function toLiquidityLevel(row) {
-    if (!row?.liquidity_levels) return null;
-    const lvl = row.liquidity_levels;
-    return {
-      price: lvl.price,
-      dir: lvl.direction === "high" ? 1 : -1,
-      pivotTime: Math.floor(new Date(lvl.pivot_time).getTime() / 1000),
-      // Bug-Report Philip 2026-08-27: eine per TSC-Klick verknüpfte LQ-Linie zeichnete sich
-      // durch bis "jetzt", statt am Touch zu enden — touched=false/end_time=null aus der DB kann
-      // entweder "poi-watcher hat live bestätigt: noch unberührt" ODER "diese Zeile kam gerade erst
-      // per findOrCreateLiquidityLevelId rein, poi-watcher hat sie nie gesehen/aktualisiert"
-      // bedeuten, beides sieht in der DB identisch aus. null (statt false) triggert denselben
-      // Self-Heal-gegen-geladene-Kerzen-Pfad wie bei einem reinen m5_liquidity_level-Snapshot
-      // (siehe priceChartLiquidity.js: mergePinnedLevels) — bei einem echten "noch unberührt"
-      // findet der Self-Heal ohnehin keine Touch-Kerze, das Ergebnis ist identisch; nur im
-      // Bug-Fall wird der tatsächliche Touch jetzt korrekt gefunden statt ignoriert.
-      touched: lvl.touched === true ? true : lvl.end_time != null ? false : null,
-      endTime: lvl.end_time ? Math.floor(new Date(lvl.end_time).getTime() / 1000) : null,
-      timeframe: lvl.timeframe,
-    };
-  }
 
   // level unterscheidet die zwei Ebenen aus trade_evidence (siehe Migration 20260731120000:
   // dealing_range_id ODER trade_position_id) — TradeEditModal.vue braucht das, um "GO für die
@@ -194,6 +241,7 @@ export async function fetchTrades(instrument, accountId = null) {
       entryPrice: row.entry_price,
       stopLoss: row.stop_loss,
       invalidation: range.invalidation,
+      invalidationItem: toInvalidationItem(range),
       tradeSetupId: range.trade_setup_id,
       tradeSetupObStartTime: range.trade_setups?.ob_start_time ? Math.floor(new Date(range.trade_setups.ob_start_time).getTime() / 1000) : null,
       // ex setupEntry+invalidation-Rekonstruktion (Math.max/min je Richtung) — seit setup_entry
@@ -292,7 +340,7 @@ export async function fetchActiveTscRangeId(instrument) {
 export async function fetchDealingRangeCockpit(dealingRangeId) {
   const { data: range, error: rangeError } = await supabase
     .from("dealing_ranges")
-    .select("id, instrument, direction, invalidation")
+    .select(`id, instrument, direction, invalidation, ${INVALIDATION_OBJECT_EMBED}`)
     .eq("id", dealingRangeId)
     .maybeSingle();
   if (rangeError) throw rangeError;
@@ -317,31 +365,6 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
   if (confirmationsError) throw confirmationsError;
   if (targetsError) throw targetsError;
 
-  // Identisch zu fetchTrades' gleichnamiger lokaler Funktion (siehe dort für die Begründung der
-  // Felder) — hier nicht geteilt, weil fetchTrades' Version ein Zeilen-Objekt mit dealing_range_id
-  // erwartet (Gruppierungs-Kontext), das es für diesen Einzel-Range-Fetch nicht braucht.
-  function toLiquidityLevel(row) {
-    if (!row?.liquidity_levels) return null;
-    const lvl = row.liquidity_levels;
-    return {
-      price: lvl.price,
-      dir: lvl.direction === "high" ? 1 : -1,
-      pivotTime: Math.floor(new Date(lvl.pivot_time).getTime() / 1000),
-      // Bug-Report Philip 2026-08-27: eine per TSC-Klick verknüpfte LQ-Linie zeichnete sich
-      // durch bis "jetzt", statt am Touch zu enden — touched=false/end_time=null aus der DB kann
-      // entweder "poi-watcher hat live bestätigt: noch unberührt" ODER "diese Zeile kam gerade erst
-      // per findOrCreateLiquidityLevelId rein, poi-watcher hat sie nie gesehen/aktualisiert"
-      // bedeuten, beides sieht in der DB identisch aus. null (statt false) triggert denselben
-      // Self-Heal-gegen-geladene-Kerzen-Pfad wie bei einem reinen m5_liquidity_level-Snapshot
-      // (siehe priceChartLiquidity.js: mergePinnedLevels) — bei einem echten "noch unberührt"
-      // findet der Self-Heal ohnehin keine Touch-Kerze, das Ergebnis ist identisch; nur im
-      // Bug-Fall wird der tatsächliche Touch jetzt korrekt gefunden statt ignoriert.
-      touched: lvl.touched === true ? true : lvl.end_time != null ? false : null,
-      endTime: lvl.end_time ? Math.floor(new Date(lvl.end_time).getTime() / 1000) : null,
-      timeframe: lvl.timeframe,
-    };
-  }
-
   return {
     id: range.id,
     instrument: range.instrument,
@@ -350,6 +373,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
     // die TSC-Karte bekam eine per Code abgeleitete Invalidierung (z.B. aus einer OB-Bestätigung,
     // siehe tradeIntake.js: insertConfirmation) dadurch nie zu sehen, obwohl sie in der DB stand.
     invalidation: range.invalidation ?? null,
+    invalidationItem: toInvalidationItem(range),
     confirmations: (confirmations ?? []).map((c) => ({
       id: c.id,
       level: "range",

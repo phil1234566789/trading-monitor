@@ -53,6 +53,8 @@ import {
   COPIED_FEEDBACK_MS,
   DEBUG_AUTOSAVE_INTERVAL_MS,
   TARGET_TIER_WIDTH_RATIO,
+  CATEGORY_ICON,
+  CATEGORY_COLOR_KEY,
   POLL_RETRY_DELAY_MS,
   POLL_MAX_RETRIES,
   REPLAY_FETCH_DEBOUNCE_MS,
@@ -164,6 +166,12 @@ const props = defineProps({
   // (siehe liquidity.js: levelOptions), weil ein als Bestätigung verknüpftes Level sonst
   // unbeschriftet blieb, sobald es als M5-Zeile in liquidity_levels steht.
   confirmationLiquidityKeys: { type: Set, default: () => new Set() },
+  // Die Level, die die Invalidierung einer Dealing Range SIND (Philip 22.09.2026) — dieselben
+  // liquidityLevelNaturalKey-Strings, tragen im Chart 🚫 + Invalidierungsfarbe, siehe liquidity.js.
+  invalidationLiquidityKeys: { type: Set, default: () => new Set() },
+  // Die dealing_ranges-Id, deren Invalidierungs-Zeile im TSC/Modal gerade gehovert wird (Philip
+  // 22.09.2026) — Halo-Gegenstück zu hoveredPinTradeConfirmationId für ein Objekt ohne eigene Id.
+  hoveredInvalidationRangeId: { type: Number, default: null },
   // Pin-Kontext für RSI-Divergenz-Konnektoren (Chat 2026-08-17) — Set von
   // "type|fromTime|toTime"-Strings (siehe rsi.js: rsiDivergenceEntryNaturalKey in pinContext.js),
   // siehe refreshRsiDivergenceInternal.
@@ -882,23 +890,27 @@ function refreshTradeConfirmationLinksInternal() {
   const nowSec = props.replayUntil ?? Math.floor(Date.now() / 1000);
   const precision = pricePrecisionForInstrument(props.symbol);
   for (const t of tradeLikeEntriesForCandles(candles)) {
-    for (const confirmation of t.confirmations ?? []) {
+    // Die Invalidierung läuft durch denselben Zeichenpfad wie eine Bestätigung (Philip 22.09.2026:
+    // "so wie bei den anderen Feldern ... dass das Chart-Objekt übernommen wird") — trades.js:
+    // toInvalidationItem liefert sie in exakt derselben Item-Form, sie unterscheidet sich hier nur
+    // über category in Icon/Farbe. Kein Item, solange nur eine Zahl ohne Chart-Objekt gesetzt ist.
+    const rangeItems = [...(t.confirmations ?? []), ...(t.invalidationItem ? [t.invalidationItem] : [])];
+    for (const confirmation of rangeItems) {
       if (confirmation.sourceTime == null) continue;
-      // Confirmation (GO-Signal), Confluence (Zusatzargument, kein GO) und Anti-Confluence (spricht
-      // gegen den Trade) — siehe trade-from-poi.md#confirmation-confluence-und-anti-confluence--
-      // wie-eine-dealing-range-go-bekommt — bekommen unterschiedliche Präfixe, damit im Chart auf
-      // einen Blick erkennbar ist, was tatsächlich das GO gab, was nur zusätzliche Sicherheit ist
-      // und was dagegen spricht. 💀 statt ⚠️ (Bug-Report Philip 2026-08-28: der ⚠️-Glyph ist ein
-      // Farb-Emoji mit fest goldener Eigenfarbe, canvas fillStyle kann das nicht überschreiben —
-      // 💀 ist neutraler und kollidiert nicht mit der jetzt roten antiConfluence-Box-/Linienfarbe
-      // unten). Die eigentliche "alarmierende Farbe", die Philip wollte, kommt aus colorKey.
+      // Eigenes Präfix/eigene Farbe je Kategorie (CATEGORY_ICON/CATEGORY_COLOR_KEY in
+      // priceChartConstants.js), damit im Chart auf einen Blick erkennbar ist, was das GO gab, was
+      // nur zusätzliche Sicherheit ist, was dagegen spricht und wo die Idee stirbt — siehe
+      // trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt.
       const isAntiConfluence = confirmation.category === "anti_confluence";
-      const icon = confirmation.category === "confluence" ? "💡" : isAntiConfluence ? "💀" : "✔";
+      const icon = CATEGORY_ICON[confirmation.category] ?? CATEGORY_ICON.confirmation;
       // bonus (nur kind='pivot', z.B. "Asia-Mid") — Bug-Report Philip 2026-08-29: ging bisher
       // komplett verloren, das Chart-Label zeigte nur generisch "Sweep ...". Gleiches Muster wie
       // tradeEvidence.ts: formatEvidenceLabel.
       const bonusHint = confirmation.bonus ? ` ${confirmation.bonus}` : "";
-      const kindPriceId = `${confirmationKindLabel(confirmation.kind)}${bonusHint} ${fmtPrice(confirmation.price, precision)} #${confirmation.id}`;
+      // Die Invalidierung hat keine trade_evidence-Id (sie steht auf der dealing_ranges-Zeile) —
+      // ohne den Guard stünde "#undefined" am Chart-Objekt.
+      const idHint = confirmation.id != null ? ` #${confirmation.id}` : "";
+      const kindPriceId = `${confirmationKindLabel(confirmation.kind)}${bonusHint} ${fmtPrice(confirmation.price, precision)}${idHint}`;
       // Anti-Confluence zeichnet das Icon getrennt und größer statt es wie bei Confirmation/
       // Confluence einfach vor den Text zu schreiben (Philip, Chat 2026-08-28: erst "Label 2x
       // größer" gewünscht, dann korrigiert auf "nur der Totenkopf 1,5x größer, Rest der Schrift
@@ -909,14 +921,21 @@ function refreshTradeConfirmationLinksInternal() {
       // Anti-Confluences bekommen die eigene, alarmierende Rot-Farbe (chartColors.js: antiConfluence)
       // statt der gemeinsamen Confirmation/Confluence-Farbe — Philip: "ich brauch eher ne andere
       // Farbe, ne alarmierende Farbe".
-      const colorKey = isAntiConfluence ? "antiConfluence" : "tradeConfirmation";
+      const colorKey = CATEGORY_COLOR_KEY[confirmation.category] ?? CATEGORY_COLOR_KEY.confirmation;
       // Auswahl-Halo (Chat 2026-08-30, Feature-Wunsch Philip: TSC-/TradeEditModal-Zeilen-Hover
       // highlightet das Chart-Objekt) — EINMAL pro Bestätigung berechnet, für alle drei
       // Zeichenpfade unten (Divergenz-Konnektor/OB-Box/generische Linie) wiederverwendet, statt wie
       // vorher nur im OB-Zweig. Quelle ist props.hoveredPinTradeConfirmationId, das seit demselben
       // Task NEBEN dem bisherigen PinPanel-Hover auch TSC-/Modal-Zeilen-Hover einschließt (siehe
       // Dashboard.vue).
-      const isSelectedPin = props.hoveredPinTradeConfirmationId != null && props.hoveredPinTradeConfirmationId === confirmation.id;
+      // Die Invalidierung hat keine trade_evidence-Id, über die der Halo sonst läuft — für sie
+      // entscheidet die Range-Id, damit ein Hover über ihre TSC-/Modal-Zeile dasselbe tut wie bei
+      // einer Bestätigung. Der Pivot-Fall braucht das nicht (er highlightet über das native
+      // LQ-Level, siehe Dashboard.vue: hoveredPinLiquidityLevelKey).
+      const isSelectedPin =
+        confirmation.category === "invalidation"
+          ? props.hoveredInvalidationRangeId != null && props.hoveredInvalidationRangeId === confirmation.dealingRangeId
+          : props.hoveredPinTradeConfirmationId != null && props.hoveredPinTradeConfirmationId === confirmation.id;
       // RSI-Divergenz-Bestätigungen als echter Zwei-Bein-Konnektor (dieselbe DivergenceLinePrimitive
       // wie die live erkannten Divergenzen, siehe refreshRsiDivergenceInternal) statt nur einer
       // horizontalen Linie — sourceTime/touchedTime tragen bereits fromTime/toTime (siehe
@@ -1286,6 +1305,7 @@ function refreshLiquidityInternal() {
     // Mechanismus wie ein gehoverter Pin — eigenständige Zeichnung wäre dieselbe Linie ein zweites Mal.
     hoveredPinLiquidityLevelKey: props.hoveredPinLiquidityLevelKey ?? targetPickerHoveredLiquidityKey.value ?? antiConfluencePickerHoveredLiquidityKey.value,
     confirmationLiquidityKeys: props.confirmationLiquidityKeys,
+    invalidationLiquidityKeys: props.invalidationLiquidityKeys,
     showSweptLiquidity: props.showSweptLiquidity,
     dbLiquidityLevelsHtf: props.dbLiquidityLevelsHtf,
     symbol: props.symbol,
@@ -2057,6 +2077,7 @@ watch(() => props.pinLiquidityLevelKeys, refreshLiquidityInternal);
 // Verknüpfen/Lösen einer LQ-Sweep-Bestätigung ändert nur das LABEL des Levels, nicht die
 // Level-Menge selbst — ohne diesen Watch bliebe es bis zum nächsten Refresh unbeschriftet.
 watch(() => props.confirmationLiquidityKeys, refreshLiquidityInternal);
+watch(() => props.invalidationLiquidityKeys, refreshLiquidityInternal);
 watch(() => props.pinRsiDivergenceKeys, refreshRsiDivergenceInternal);
 // Pin-Panel-Hover (Chat 2026-08-18) — dieselben Refresh-Funktionen wie die dauerhaften pin*Keys/
 // pin*Ids-Watches oben, nur für die zusätzliche Auswahl-Hervorhebung.

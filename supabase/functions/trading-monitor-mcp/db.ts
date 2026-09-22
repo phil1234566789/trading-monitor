@@ -905,6 +905,14 @@ export async function updateDealingRange(id: number, fields: UpdateDealingRangeA
   for (const key of Object.keys(fields) as (keyof UpdateDealingRangeArgs)[]) {
     patch[DEALING_RANGE_FIELD_MAP[key]] = fields[key];
   }
+  // Das verknüpfte Chart-Objekt gehört immer zu dem Preis, der gerade geschrieben wird — ein neuer
+  // Wert über dieses generische Update kommt ohne Objekt, also muss die alte Verknüpfung weg, sonst
+  // hebt das Chart ein Objekt hervor, das diesen Wert nicht gesetzt hat. Gleiche Regel wie im
+  // Frontend (src/tradeIntake.js: updateDealingRange), bewusst in beiden Runtimes.
+  if ("invalidation" in fields) {
+    patch.invalidation_liquidity_level_id = null;
+    patch.invalidation_ob_zone_id = null;
+  }
   const { data, error } = await supabase.from("dealing_ranges").update(patch).eq("id", id).select("*").single();
   if (error) throw new Error(error.message);
   return data;
@@ -1407,7 +1415,13 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
     if (range) {
       const updates: Record<string, unknown> = {};
       if (range.direction !== args.obDirection) updates.direction = args.obDirection;
-      if (range.invalidation == null) updates.invalidation = args.obDirection === "long" ? args.rangeLow : args.rangeHigh;
+      if (range.invalidation == null) {
+        updates.invalidation = args.obDirection === "long" ? args.rangeLow : args.rangeHigh;
+        // Die OB, aus der die Invalidierung stammt, ist hier schon als Zeile aufgelöst — als FK
+        // mitgeschrieben hebt der Chart genau diese Zone als Invalidierung hervor, statt nur eine
+        // Zahl ohne erkennbare Herkunft zu zeigen (Philip 22.09.2026).
+        if (obZoneId != null) updates.invalidation_ob_zone_id = obZoneId;
+      }
       if (Object.keys(updates).length > 0) {
         const { error: updateError } = await supabase.from("dealing_ranges").update(updates).eq("id", args.id);
         if (updateError) throw new Error(updateError.message);

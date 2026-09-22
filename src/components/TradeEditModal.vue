@@ -1,13 +1,12 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { updateTrade, updateDealingRange, deleteTrade, removeTargetFromTrade, removeConfirmationFromTrade } from "../tradeIntake.js";
-import { fmtDateTime } from "../format.js";
+import { fmtDateTime, fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import { formatTargetLabel } from "../tradeTargets";
 import { formatEvidenceLabel } from "../tradeEvidence";
 import { accounts } from "../tradingAccounts.js";
 import MetadataPanel from "./MetadataPanel.vue";
 import CrudListSection from "./CrudListSection.vue";
-import InvalidationField from "./InvalidationField.vue";
 
 // Ersetzt die vorherigen Inline-Buttons in TradesTable.vue (🔗 verknüpfen, + Ziel, × Ziel
 // entfernen) — Chat 2026-07-27/28: "das war jetzt bissl too much, was ist wenn man versehentlich
@@ -46,6 +45,7 @@ const emit = defineEmits([
   "request-add-anti-confluence",
   "request-add-range-anti-confluence",
   "request-set-invalidation",
+  "remove-invalidation",
   // Hover über eine Bestätigungs-/Zusatzargument-/Anti-Confluence- ODER Target-Zeile (Chat
   // 2026-08-30, analog zu TradeSetupCockpit.vue) — highlightet das zugehörige Chart-Objekt, siehe
   // Dashboard.vue. Range- UND Position-Ebene teilen sich dasselbe Event (der Chart kennt keinen
@@ -72,8 +72,6 @@ const netPl = ref("");
 const commission = ref("");
 const saving = ref(false);
 
-const invalidation = ref("");
-const savingRange = ref(false);
 
 // "Lesson"-Verknüpfung (Chat 2026-07-31, vierte Runde): "GBP Short#23 war ein dummer Fehler,
 // Long#24 wäre die Lesson daraus" — kann auch eine falsch bestimmte dealing range sein, nicht nur
@@ -147,21 +145,6 @@ async function toggleFavorite() {
 }
 // Sichtbares Feedback fürs Invalidierungs-Feld (Chat 2026-07-31, dritte Runde: "ich sehe nicht, ob
 // das erfolgreich übernommen worden ist") — gilt für BEIDE Wege, den Preis zu setzen: das Formular
-// hier UND den Chart-Klick (Dashboard.vue: onSelectTarget schreibt direkt in die DB, das Modal
-// selbst weiß davon nichts außer über den watch unten, der jede externe Änderung am aktuellen
-// Trade abgleicht). Gleiches "kurz aufblitzen, dann zurücksetzen"-Muster wie die "✓ kopiert"-
-// Buttons im Debug-Metadaten-Panel (PriceChart.vue: copiedSection).
-const FEEDBACK_MS = 1200;
-const invalidationJustSaved = ref(false);
-let invalidationFeedbackTimeout = null;
-function flashInvalidationSaved() {
-  invalidationJustSaved.value = true;
-  clearTimeout(invalidationFeedbackTimeout);
-  invalidationFeedbackTimeout = setTimeout(() => {
-    invalidationJustSaved.value = false;
-  }, FEEDBACK_MS);
-}
-
 // <input type="datetime-local"> Roundtrip wie in NewsModal.vue/Dashboard.vue (replayInputValue) —
 // Browser-Lokalzeit, kein eigenes Zeitzonen-Handling nötig.
 function toDatetimeLocal(unixSeconds) {
@@ -209,15 +192,9 @@ watch(
     syncIfUntouched(outcome, sameTrade, oldT?.outcome ?? "", t.outcome ?? "");
     syncIfUntouched(reasoning, sameTrade, oldT?.reasoning ?? "", t.reasoning ?? "");
     syncIfUntouched(tradingAccountId, sameTrade, oldT?.tradingAccountId ?? null, t.tradingAccountId ?? null);
-    syncIfUntouched(invalidation, sameTrade, oldT?.invalidation ?? "", t.invalidation ?? "");
     syncIfUntouched(size, sameTrade, oldT?.size ?? "", t.size ?? "");
     syncIfUntouched(netPl, sameTrade, oldT?.netPl ?? "", t.netPl ?? "");
     syncIfUntouched(commission, sameTrade, oldT?.commission ?? "", t.commission ?? "");
-    // Nur bei derselben Dealing Range flashen — sonst würde ein simples "anderen Trade öffnen"
-    // (andere invalidation, weil andere Idee) fälschlich als "gerade gespeichert" aufblitzen.
-    if (sameTrade && oldT.dealingRangeId === t.dealingRangeId && oldT.invalidation !== t.invalidation) {
-      flashInvalidationSaved();
-    }
   },
   { immediate: true },
 );
@@ -265,19 +242,15 @@ async function onDelete() {
   if (ok) emit("deleted");
 }
 
-async function saveInvalidation() {
-  savingRange.value = true;
-  const ok = await updateDealingRange(props.trade.dealingRangeId, {
-    invalidation: invalidation.value === "" ? null : Number(invalidation.value),
-  });
-  savingRange.value = false;
-  if (ok) {
-    emit("saved");
-    // Sofort hier flashen statt nur auf den watch zu warten (Chart-Klick-Weg) — der wartet auf
-    // Dashboard.vue's refreshTrades()-Roundtrip, für den Formular-Submit-Klick soll's aber
-    // spürbar sofort sein.
-    flashInvalidationSaved();
-  }
+// Invalidierung als Liste mit höchstens einem Eintrag, identisch zu TradeSetupCockpit.vue — die
+// Range-Invalidierung gilt für alle Ausführungen darunter, nicht nur für diese eine.
+const invalidationItems = computed(() => {
+  const t = props.trade;
+  if (t?.invalidation == null) return [];
+  return [t.invalidationItem ?? { kind: null, price: t.invalidation, sourceTime: null, touchedTime: null }];
+});
+function invalidationLabel(item) {
+  return item.kind ? confirmationLabel(item) : fmtPrice(item.price, pricePrecisionForInstrument(props.trade.instrument));
 }
 
 async function onRemoveTarget(target) {
@@ -337,12 +310,19 @@ function confirmationLabel(confirmation) {
         </button>
       </h3>
 
-      <InvalidationField
-        v-model="invalidation"
-        :saving="savingRange"
-        :just-saved="invalidationJustSaved"
-        @save="saveInvalidation"
-        @request-chart-click="emit('request-set-invalidation')"
+      <!-- Invalidierung: dieselbe Liste mit höchstens einem Eintrag wie im TSC (Philip 22.09.2026,
+           beide Stellen bewusst identisch) — der Eintrag ist das angeklickte Chart-Objekt. -->
+      <CrudListSection
+        title="Invalidierung"
+        icon="🚫"
+        add-title="Invalidierung im Chart anklicken (Trade-Modus, dann Sweep/OB anklicken)"
+        :items="invalidationItems"
+        :item-key="() => 'invalidation'"
+        :item-label="invalidationLabel"
+        empty-text="Noch keine Invalidierung."
+        @add="emit('request-set-invalidation')"
+        @remove="emit('remove-invalidation')"
+        @hover="(item) => emit('hover-evidence', item)"
       />
 
       <!-- PLAN-trade-confluences.md #1: von welchem Sweep/OB kam die Kraft für die Bewegung? -->
@@ -760,8 +740,7 @@ function confirmationLabel(confirmation) {
   margin-bottom: 0;
 }
 
-/* Bestätigungen/Targets/Invalidierung sind seit Chat 2026-08-26/27 in CrudListSection.vue bzw.
-   InvalidationField.vue ausgelagert (eigene Klassen-Präfixe dort). */
+/* Bestätigungen/Targets/Invalidierung liegen alle in CrudListSection.vue (eigene Klassen-Präfixe dort). */
 .tem-section-title {
   margin: 0 0 8px;
   font-size: 11px;

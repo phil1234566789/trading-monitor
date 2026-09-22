@@ -28,6 +28,7 @@ import {
   removeConfirmationFromTrade,
   updateTrade,
   updateDealingRange,
+  setDealingRangeInvalidation,
   createDealingRange,
   addPositionToDealingRange,
   deleteDealingRange,
@@ -463,12 +464,18 @@ function onTscAddAntiConfluenceRequest() {
   if (tscRangeId.value == null) return;
   onAddRangeAntiConfluenceRequest({ dealingRangeId: tscRangeId.value, isTsc: true });
 }
-// 🚫-Icon in InvalidationField.vue (Chat 2026-08-27) — derselbe Chart-Klick-Arm-Mechanismus wie
-// im Trade-Edit-Modal (onSetInvalidationRequest), nur mit dem synthetischen TSC-Objekt statt eines
-// echten Trades. Ohne Range ergibt Invalidierung keinen Sinn, siehe InvalidationField v-if="range".
+// 🚫-Icon an der Invalidierungs-Sektion des TSC — derselbe Chart-Klick-Arm-Mechanismus wie im
+// Trade-Edit-Modal (onSetInvalidationRequest), nur mit dem synthetischen TSC-Objekt statt eines
+// echten Trades. Ohne Range ergibt Invalidierung keinen Sinn, die Sektion ist dann ausgeblendet.
 function onTscSetInvalidationRequest() {
   if (tscRangeId.value == null) return;
   onSetInvalidationRequest({ dealingRangeId: tscRangeId.value, isTsc: true });
+}
+// Invalidierung entfernen — räumt Preis UND Objekt-Verknüpfung ab (siehe tradeIntake.js:
+// updateDealingRange), damit im Chart nichts mehr als Invalidierung hervorgehoben bleibt.
+async function removeInvalidation(dealingRangeId, isTsc) {
+  const ok = await updateDealingRange(dealingRangeId, { invalidation: null });
+  if (ok) (isTsc ? refreshTscRange() : refreshTrades());
 }
 async function onTscRemoveConfirmation(c) {
   const ok = await removeConfirmationFromTrade(c.id);
@@ -636,10 +643,13 @@ async function onSelectTarget(target) {
     if (ok) (trade.isTsc ? refreshTscRange() : refreshTrades());
     return;
   }
+  // Invalidierung — schreibt seit 22.09.2026 nicht mehr nur target.price, sondern das angeklickte
+  // Chart-Objekt mit (tradeIntake.js: setDealingRangeInvalidation), damit es im Chart hervorgehoben
+  // werden kann wie eine Bestätigung/ein Target.
   if (invalidationAddTrade.value) {
     const trade = invalidationAddTrade.value;
     invalidationAddTrade.value = null;
-    const ok = await updateDealingRange(trade.dealingRangeId, { invalidation: target.price });
+    const ok = await setDealingRangeInvalidation(trade.dealingRangeId, target);
     if (ok) (trade.isTsc ? refreshTscRange() : refreshTrades());
     return;
   }
@@ -983,6 +993,12 @@ const hoveredPinTradeConfirmationId = computed(
     null,
 );
 const hoveredTradeTargetId = computed(() => hoveredCockpitTargetItem.value?.id ?? hoveredModalTargetItem.value?.id ?? null);
+// Gehoverte Invalidierungs-Zeile (TSC oder Modal) — läuft über dieselben hovered*EvidenceItem-Refs
+// wie eine Bestätigung, nur identifiziert über category+dealingRangeId statt einer Evidenz-Id.
+const hoveredInvalidationRangeId = computed(() => {
+  const item = hoveredCockpitEvidenceItem.value ?? hoveredModalEvidenceItem.value;
+  return item?.category === "invalidation" ? (item.dealingRangeId ?? null) : null;
+});
 // Kaskaden-Regel statt reiner currentBar-Gleichheit (Bug 2026-08-21, siehe pinVisibleOnCurrentTf
 // oben) — ein auf 4H gepinntes Level bekommt jetzt auch auf 1H/M5 einen Halo, nicht nur auf 4H
 // selbst; ein auf M5 gepinntes Level aber weiterhin keinen auf 1H/4H. Läuft seit Nachbesserung
@@ -1070,10 +1086,16 @@ const rangeLikeEntriesForChart = computed(() =>
   ].filter((t) => t.instrument === currentSymbol.value),
 );
 
+// Die Invalidierung zählt hier wie ein Target/eine Bestätigung mit (Philip 22.09.2026) — ihr
+// verknüpftes Chart-Objekt soll im Chart genauso auftauchen und hervorgehoben werden.
+function rangeLinkedItems(t) {
+  return [...t.targets, ...t.confirmations, ...(t.invalidationItem ? [t.invalidationItem] : [])];
+}
+
 const tradeLinkedLiquidityLevels = computed(() => {
   const byKey = new Map();
   for (const t of rangeLikeEntriesForChart.value) {
-    for (const item of [...t.targets, ...t.confirmations]) {
+    for (const item of rangeLinkedItems(t)) {
       const lvl = item.liquidityLevel;
       if (!lvl) continue;
       byKey.set(liquidityLevelNaturalKey(lvl.dir, lvl.pivotTime), lvl);
@@ -1092,6 +1114,18 @@ const confirmationLiquidityKeys = computed(() => {
       if (c.kind === "pivot" && c.liquidityLevel) {
         keys.add(liquidityLevelNaturalKey(c.liquidityLevel.dir, c.liquidityLevel.pivotTime));
       }
+    }
+  }
+  return keys;
+});
+// Analog dazu die Level, die die Invalidierung einer Range SIND — sie tragen im Chart 🚫 und die
+// Invalidierungsfarbe statt ihrer normalen LQ-Farbe (siehe liquidity.js: levelOptions).
+const invalidationLiquidityKeys = computed(() => {
+  const keys = new Set();
+  for (const t of rangeLikeEntriesForChart.value) {
+    const item = t.invalidationItem;
+    if (item?.kind === "pivot" && item.liquidityLevel) {
+      keys.add(liquidityLevelNaturalKey(item.liquidityLevel.dir, item.liquidityLevel.pivotTime));
     }
   }
   return keys;
@@ -2035,6 +2069,7 @@ watch(selectedTradingAccountId, () => {
     @request-add-anti-confluence="onAddAntiConfluenceRequest(editingTrade)"
     @request-add-range-anti-confluence="onAddRangeAntiConfluenceRequest(editingTrade)"
     @request-set-invalidation="onSetInvalidationRequest(editingTrade)"
+    @remove-invalidation="removeInvalidation(editingTrade.dealingRangeId, false)"
     @open-target-picker="onOpenTradeTargetPicker"
     @open-anti-confluence-picker="onOpenTradeAntiConfluencePicker"
     @hover-evidence="hoveredModalEvidenceItem = $event"
@@ -2091,6 +2126,8 @@ watch(selectedTradingAccountId, () => {
     :show-trade-setups-short="showTradeSetupsShort"
     :show-r-scale="showRScale"
     :confirmation-liquidity-keys="confirmationLiquidityKeys"
+    :invalidation-liquidity-keys="invalidationLiquidityKeys"
+    :hovered-invalidation-range-id="hoveredInvalidationRangeId"
     :ranges-period="rangesPeriod"
     :ranges-lookback-hours="rangesLookbackHours"
     :ranges2-period="ranges2Period"
@@ -2146,7 +2183,7 @@ watch(selectedTradingAccountId, () => {
       @remove-anti-confluence="onTscRemoveAntiConfluence"
       @transfer-to-trades="onTscTransferToTrades"
       @request-set-invalidation="onTscSetInvalidationRequest"
-      @invalidation-saved="refreshTscRange"
+      @remove-invalidation="tscRangeId != null && removeInvalidation(tscRangeId, true)"
       @reset="onTscReset"
       @open-target-picker="priceChartRef?.openTargetPicker()"
       @open-anti-confluence-picker="priceChartRef?.openAntiConfluencePicker()"

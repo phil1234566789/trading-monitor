@@ -326,6 +326,32 @@ async function resolvePivotLiquidityLevelId(target) {
   });
 }
 
+// Gegenstück für kind='ob' — Natural-Key-Lookup/-Anlage der referenzierten ob_zones-Zeile, damit
+// ein Chart-Objekt per FK statt nur per Preis-Snapshot verknüpft ist (Task "Chart-Objekte: OBs auf
+// kanonische ob_zones-ID konsolidieren"). Stand bis 22.09.2026 inline in insertConfirmation und
+// war damit für jeden anderen Verknüpfungs-Weg (z.B. die Invalidierung) nicht nutzbar.
+async function resolveObZoneId(target) {
+  if (
+    target.kind !== "ob" ||
+    target.instrument == null ||
+    target.direction == null ||
+    target.timeframe == null ||
+    target.rangeLow == null ||
+    target.rangeHigh == null ||
+    target.sourceTime == null
+  ) {
+    return null;
+  }
+  return findOrCreateObZoneId({
+    instrument: target.instrument,
+    timeframe: target.timeframe,
+    direction: target.direction,
+    top: target.rangeHigh,
+    bottom: target.rangeLow,
+    startTimeSec: target.sourceTime,
+  });
+}
+
 // Target hinzufügen (Chat 2026-07-27/28: "einem Trade ein Target hinzuzufügen ... ein Pivot
 // targetiere ich oder einen OB") — ein Target gilt für die ganze dealing_range (Chat 2026-07-31:
 // "gehört auch alles zu derselben dealing range"), also 1:n zu dealing_ranges statt zur einzelnen
@@ -424,7 +450,15 @@ export async function deleteTrade(positionId) {
 // Dashboard.vue: onSetInvalidationRequest/onSelectTarget), beides läuft über dieselbe Funktion hier.
 export async function updateDealingRange(dealingRangeId, fields) {
   const payload = {};
-  if ("invalidation" in fields) payload.invalidation = fields.invalidation;
+  if ("invalidation" in fields) {
+    payload.invalidation = fields.invalidation;
+    // Das verknüpfte Chart-Objekt gehört IMMER zum Preis, der gerade geschrieben wird: ein neuer
+    // Wert ohne mitgeliefertes Objekt räumt die alte Verknüpfung ab, statt das Chart weiter ein
+    // Objekt hervorheben zu lassen, das diesen Wert gar nicht gesetzt hat. Deshalb hier gemeinsam
+    // statt als zwei unabhängige `in fields`-Zweige (siehe setDealingRangeInvalidation).
+    payload.invalidation_liquidity_level_id = fields.invalidationLiquidityLevelId ?? null;
+    payload.invalidation_ob_zone_id = fields.invalidationObZoneId ?? null;
+  }
   // "Lesson"-Verknüpfung (Chat 2026-07-31, vierte Runde): "GBP Short#23 war ein dummer Fehler,
   // Long#24 wäre die Lesson daraus" — self-referencing FK auf eine ANDERE dealing_range, siehe
   // Migration 20260731230000_dealing_ranges_lesson_link.sql. null = Verknüpfung entfernen.
@@ -441,6 +475,23 @@ export async function updateDealingRange(dealingRangeId, fields) {
   return true;
 }
 
+// Invalidierung aus einem angeklickten Chart-Objekt setzen (Philip 22.09.2026: "ich hätte lieber,
+// so wie bei den anderen Feldern ... dass das Chart-Objekt übernommen wird"). Nimmt dieselbe
+// Rohform wie addTargetToTrade/addRangeConfirmation (kind/price/sourceTime/rangeLow/rangeHigh/...)
+// aus PriceChart.vue: findClickedTarget, schreibt aber auf die dealing_ranges-Zeile selbst statt
+// eine eigene Zeile anzulegen — eine Range hat genau EINE Invalidierung.
+export async function setDealingRangeInvalidation(dealingRangeId, target) {
+  const [invalidationLiquidityLevelId, invalidationObZoneId] = await Promise.all([
+    resolvePivotLiquidityLevelId(target),
+    resolveObZoneId(target),
+  ]);
+  return updateDealingRange(dealingRangeId, {
+    invalidation: target.price,
+    invalidationLiquidityLevelId,
+    invalidationObZoneId,
+  });
+}
+
 // Bestätigung/Zusatzargument hinzufügen (PLAN-trade-confluences.md #1: "von welchen Sweeps kam die
 // Kraft ... auch OBs") — gleiches Rohformat wie addTargetToTrade (kind/price/sourceTime/touchedTime
 // aus PriceChart.vue: findClickedTarget), eigene Tabelle (trade_evidence), weil eine Bestätigung/
@@ -455,26 +506,8 @@ export async function updateDealingRange(dealingRangeId, fields) {
 // Re-Entries unterscheiden) oder an der dealing_range (für die ganze Idee) — genau eine der beiden
 // IDs wird gesetzt, der Rest bleibt null (DB-CHECK erzwingt das).
 async function insertConfirmation({ tradePositionId = null, dealingRangeId = null, category, confirmation }) {
-  // Nur bei kind='ob' gesetzt (siehe findClickedOBZone) — Natural-Key-Lookup/-Anlage der
-  // referenzierten ob_zones-Zeile, damit die Bestätigung per FK statt nur per Preis-Snapshot auf
-  // die OB verweist (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren").
-  const obZoneId =
-    confirmation.kind === "ob" &&
-    confirmation.instrument != null &&
-    confirmation.direction != null &&
-    confirmation.timeframe != null &&
-    confirmation.rangeLow != null &&
-    confirmation.rangeHigh != null &&
-    confirmation.sourceTime != null
-      ? await findOrCreateObZoneId({
-          instrument: confirmation.instrument,
-          timeframe: confirmation.timeframe,
-          direction: confirmation.direction,
-          top: confirmation.rangeHigh,
-          bottom: confirmation.rangeLow,
-          startTimeSec: confirmation.sourceTime,
-        })
-      : null;
+  // Nur bei kind='ob' bzw. kind='pivot' gesetzt, siehe die beiden resolve*-Funktionen oben.
+  const obZoneId = await resolveObZoneId(confirmation);
   const liquidityLevelId = await resolvePivotLiquidityLevelId(confirmation);
 
   const { error } = await supabase.from("trade_evidence").insert({

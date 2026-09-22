@@ -1,11 +1,10 @@
 <script setup>
-import { computed, ref, watch } from "vue";
-import { updateDealingRange } from "../tradeIntake.js";
+import { computed } from "vue";
+import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import { formatEvidenceLabel } from "../tradeEvidence";
 import { formatTargetLabel } from "../tradeTargets";
 import { trendChainLevelDisplay, computeTrendAlignment, trendAlignmentDisplay } from "../tradeSetupCockpit";
 import CrudListSection from "./CrudListSection.vue";
-import InvalidationField from "./InvalidationField.vue";
 
 // Trade-Setup-Cockpit (Chat 2026-08-26: "TSC clear, fangen wir von vorne an") — Neuaufbau Schritt
 // 1: Bestätigungen + Targets, "erst mal alles manuell" (Philip) heißt hier: keine automatische
@@ -47,7 +46,7 @@ const emit = defineEmits([
   "remove-anti-confluence",
   "transfer-to-trades",
   "request-set-invalidation",
-  "invalidation-saved",
+  "remove-invalidation",
   "reset",
   "open-target-picker",
   "open-anti-confluence-picker",
@@ -73,8 +72,7 @@ const direction = computed(() => props.range?.direction ?? null);
 
 // Mindestqualität, bevor aus der Idee eine Ausführung werden darf (Chat 2026-08-27, Philip: "bitte
 // dealing range anlegen nur enablen wenn: mind. 2 Bestätigung, mind. 1 Target, required
-// Invalidierung") — prüft den GESPEICHERTEN Stand (props.range.invalidation), nicht das gerade
-// eingetippte, noch nicht per "Speichern" bestätigte Invalidierungsfeld.
+// Invalidierung").
 const transferBlockReason = computed(() => {
   const missing = [];
   if (confirmations.value.length < 2) missing.push("mind. 2 Bestätigungen");
@@ -84,47 +82,17 @@ const transferBlockReason = computed(() => {
 });
 const canTransfer = computed(() => transferBlockReason.value === "");
 
-// Invalidierung — 1:1 wie TradeEditModal.vue (Philip: "genau wie im trade-edit-modal, am besten
-// reused Code"), über dieselbe InvalidationField.vue. Der Formular-Weg (Zahl eintippen) schreibt
-// direkt (wie im Modal, nicht per Emit — das Modal macht dasselbe), der Chart-Klick-Weg (🚫-Icon)
-// geht über Dashboard.vue (dort lebt der Trade-Modus-Klick-Arm-Mechanismus, siehe
-// onTscSetInvalidationRequest). syncIfUntouched wie im Modal, damit ein externes Update (z.B. über
-// den Chart-Klick-Weg) laufendes Tippen hier nicht überschreibt.
-const invalidation = ref("");
-const savingInvalidation = ref(false);
-const invalidationJustSaved = ref(false);
-const FEEDBACK_MS = 1200;
-let invalidationFeedbackTimeout = null;
-function flashInvalidationSaved() {
-  invalidationJustSaved.value = true;
-  clearTimeout(invalidationFeedbackTimeout);
-  invalidationFeedbackTimeout = setTimeout(() => {
-    invalidationJustSaved.value = false;
-  }, FEEDBACK_MS);
-}
-function syncIfUntouched(target, sameRange, oldValue, newValue) {
-  if (sameRange && target.value !== oldValue) return;
-  target.value = newValue;
-}
-watch(
-  () => props.range,
-  (r, oldR) => {
-    const sameRange = oldR != null && r != null && oldR.id === r.id;
-    syncIfUntouched(invalidation, sameRange, oldR?.invalidation ?? "", r?.invalidation ?? "");
-    if (sameRange && oldR.invalidation !== r.invalidation) flashInvalidationSaved();
-  },
-  { immediate: true },
-);
-async function saveInvalidation() {
-  if (!props.range) return;
-  savingInvalidation.value = true;
-  const ok = await updateDealingRange(props.range.id, { invalidation: invalidation.value === "" ? null : Number(invalidation.value) });
-  savingInvalidation.value = false;
-  if (ok) {
-    flashInvalidationSaved();
-    emit("invalidation-saved");
-  }
-}
+// Invalidierung — seit 22.09.2026 dieselbe CrudListSection wie die vier anderen Felder statt eines
+// eigenen Zahlen-Formulars (Philip: "das ist ziemlich uncool ... ich hätte lieber, dass das
+// Chart-Objekt übernommen wird"). Höchstens ein Eintrag, deshalb eine Liste aus 0 oder 1 Items;
+// das Item liefert trades.js: toInvalidationItem in genau der Evidenz-Form, die confirmationLabel
+// ohnehin formatiert. Nur solange ein Chart-Objekt verknüpft ist — eine per Code abgeleitete
+// Invalidierung (nur Zahl) hat keins und zeigt deshalb den Preis als Label.
+const invalidationItems = computed(() => {
+  const range = props.range;
+  if (range?.invalidation == null) return [];
+  return [range.invalidationItem ?? { kind: null, price: range.invalidation, sourceTime: null, touchedTime: null }];
+});
 
 const nowSecResolved = computed(() => props.nowSec ?? Math.floor(Date.now() / 1000));
 // Tag-Label im Header (Chat 2026-08-28, Philip: "damit man weiß für welchen Tag das Setup im TSC
@@ -141,6 +109,11 @@ function confirmationLabel(c) {
 }
 function targetLabel(t) {
   return formatTargetLabel(t, props.instrument, nowSecResolved.value);
+}
+// Ohne verknüpftes Chart-Objekt (alte Zeilen, per Code abgeleitete Invalidierung) gibt es nur den
+// Preis zu zeigen — formatEvidenceLabel bräuchte dafür ein kind, das es hier nicht gibt.
+function invalidationLabel(item) {
+  return item.kind ? confirmationLabel(item) : fmtPrice(item.price, pricePrecisionForInstrument(props.instrument));
 }
 
 // Färbt Rahmen/Header je nach Richtung (Philip: "sobald ich eine OB als confirmation auswähle,
@@ -291,13 +264,21 @@ const accentStyle = computed(() => {
       </template>
     </CrudListSection>
 
-    <InvalidationField
+    <!-- Invalidierung: dieselbe Liste wie die vier Felder darüber, nur mit höchstens einem Eintrag
+         (Philip 22.09.2026) — ein zweiter Klick ersetzt den bestehenden Wert, deshalb kein
+         disabled-Zustand am Add-Button. -->
+    <CrudListSection
       v-if="range"
-      v-model="invalidation"
-      :saving="savingInvalidation"
-      :just-saved="invalidationJustSaved"
-      @save="saveInvalidation"
-      @request-chart-click="emit('request-set-invalidation')"
+      title="Invalidierung"
+      icon="🚫"
+      add-title="Invalidierung im Chart anklicken (Trade-Modus, dann Sweep/OB anklicken)"
+      :items="invalidationItems"
+      :item-key="() => 'invalidation'"
+      :item-label="invalidationLabel"
+      empty-text="Noch keine Invalidierung."
+      @add="emit('request-set-invalidation')"
+      @remove="emit('remove-invalidation')"
+      @hover="(item) => emit('hover-evidence', item)"
     />
 
     <!-- Überführt die Range als leere Ausführung in die Trades-Liste (Chat 2026-08-27, Philip:

@@ -91,6 +91,20 @@ export const CALLOUT_STACK_GAP_PX = 10;
 // refreshTradeTargetLinksInternal/-TradeConfirmationLinksInternal (PriceChart.vue).
 export const TARGET_TIER_WIDTH_RATIO = { minor: 1, medium: 1.6, major: 2.2 };
 
+// Chart-Darstellung je Kategorie eines an einer Dealing Range hängenden Objekts (siehe
+// refreshTradeConfirmationLinksInternal in PriceChart.vue). 'invalidation' ist keine
+// trade_evidence-Kategorie, sondern die Invalidierung der Range selbst — sie wird über denselben
+// Zeichenpfad dargestellt (Philip 22.09.2026), deshalb steht sie hier gleichberechtigt daneben.
+// 💀 statt ⚠️ bei anti_confluence: der ⚠️-Glyph ist ein Farb-Emoji mit fester Eigenfarbe, die
+// canvas fillStyle nicht überschreiben kann.
+export const CATEGORY_ICON = { confirmation: "✔", confluence: "💡", anti_confluence: "💀", invalidation: "🚫" };
+export const CATEGORY_COLOR_KEY = {
+  confirmation: "tradeConfirmation",
+  confluence: "tradeConfirmation",
+  anti_confluence: "antiConfluence",
+  invalidation: "tradeInvalidation",
+};
+
 export const POLL_RETRY_DELAY_MS = 15_000;
 export const POLL_MAX_RETRIES = 8; // ~2min zusätzlicher Puffer, bevor der reguläre Kerzenschluss-Poll übernimmt
 

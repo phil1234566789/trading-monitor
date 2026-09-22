@@ -17,7 +17,10 @@ export type TradeEvidenceKind = "pivot" | "ob" | "fib" | "rsi_divergence";
 export type TradeEvidenceCategory = "confirmation" | "confluence" | "anti_confluence";
 
 export interface TradeEvidence {
-  id: number;
+  // Optional, weil die Invalidierung einer Dealing Range dieselbe Item-Form nutzt (trades.js:
+  // toInvalidationItem), aber keine eigene trade_evidence-Zeile ist — sie steht als Preis + FK auf
+  // dealing_ranges selbst. Jede echte Evidenz-Zeile trägt weiterhin eine Id.
+  id?: number;
   price: number;
   kind: TradeEvidenceKind;
   // Bis Migration 20260828130000 eine generierte Spalte (1:1 aus kind abgeleitet) — seit
@@ -89,9 +92,14 @@ export function formatEvidenceLabel(evidence: TradeEvidence, instrument: string,
       : evidence.kind === "rsi_divergence" && evidence.fromPrice != null
         ? ` (${evidence.divergenceType === "bearish" ? "▽" : "△"} ${fmtPrice(evidence.fromPrice, precision)}→${price})`
         : "";
+  // Die Invalidierung einer Range läuft durch dieselbe Formatierung, hat aber keine
+  // trade_evidence-Id (sie steht auf der dealing_ranges-Zeile) — ohne den Guard stünde
+  // "#undefined" in der Zeile. Gleicher Guard wie im Chart-Label (PriceChart.vue:
+  // refreshTradeConfirmationLinksInternal), damit beide weiterhin 1:1 zueinander passen.
+  const idHint = evidence.id != null ? ` #${evidence.id}` : "";
   const seconds = evidenceAgeSeconds(evidence, nowSec);
-  if (seconds == null) return `${kind}${bonusHint} ${price}${rangeHint} #${evidence.id}`;
+  if (seconds == null) return `${kind}${bonusHint} ${price}${rangeHint}${idHint}`;
   const tier = classifyAge(seconds);
   const age = formatAge(seconds);
-  return `${kind}${bonusHint} ${price}${rangeHint} · ${tier}${age ? ` (${age})` : ""} #${evidence.id}`;
+  return `${kind}${bonusHint} ${price}${rangeHint} · ${tier}${age ? ` (${age})` : ""}${idHint}`;
 }
