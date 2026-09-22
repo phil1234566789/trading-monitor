@@ -1,5 +1,6 @@
 import { reactive } from "vue";
 import { supabase } from "./supabaseClient.js";
+import { fetchAllRows } from "./dbReadPaging.js";
 
 // Wirtschafts-News als No-Go fürs Trade-Setup-Cockpit (Chat 2026-07-26) — normalerweise trägt
 // Claude die Termine per Daten-Migration ein (siehe supabase/migrations/20260726120000_news_events.sql),
@@ -34,7 +35,11 @@ async function syncNewsEvents() {
     // (rückblickend nachvollziehen, ob ein Preis-Sprung mit einer News zusammenhing), nicht nur der
     // No-Go-Check braucht die Daten. Die Tabelle bleibt klein genug (ein paar Termine/Woche, von
     // Philip per Screenshot eingetragen), dass "alles laden" unproblematisch ist.
-    const { data, error } = await supabase.from("news_events").select("id, event_time, currency, title").order("event_time");
+    // Paginiert, weil hier absichtlich ALLES geholt wird: ein paar Termine pro Woche erreichen den
+    // PostgREST-Deckel von ~1000 Zeilen in gut zwei Jahren, und dann fehlten ohne Fehlermeldung
+    // die jüngsten — also genau die, die der No-Go-Check braucht.
+    const { data, error } = await fetchAllRows((from, to) => supabase
+      .from("news_events").select("id, event_time, currency, title").order("event_time").range(from, to));
     if (error) throw error;
     newsEvents.splice(
       0,

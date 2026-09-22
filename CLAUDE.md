@@ -170,6 +170,10 @@ applies when explicitly invoked, not to every session in this repo.
   `get_forex_candles_archive`'s `getForexCandlesArchive` — assume any new one needs the same fix.
   A code fix alone doesn't clear an already-poisoned `candleCache.js` IndexedDB entry cached as
   "complete" from before the fix — bump `DB_VERSION` alongside a fix here.
+  `test/supabaseRowCapGuard.test.js` scans the sources and fails on any uncapped
+  `.from().select()` chain — a new unbounded read either gets a `.limit()`/pagination
+  (`src/dbReadPaging.js` frontend, `_shared/fetchAllRows.ts` backend) or an allowlist entry with a
+  reason.
 - **`REPLAY_LOOKAHEAD_SEC` (`timeframes.js`) is a fixed *seconds* value calibrated for M5** — for a
   finer timeframe (M1) the same seconds value scales into far more lookahead bars than intended,
   which can blow through what the live edge function returns in one request and silently show

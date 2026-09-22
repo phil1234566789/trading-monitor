@@ -5,6 +5,7 @@
 // dieser Migration zusätzlich '1D' (siehe 20260830090000_forex_candles_allow_1d.sql), vorher nur
 // '5m'/'1h'/'4h'.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { DB_READ_PAGE_SIZE } from "./fetchAllRows.ts";
 
 export interface ArchivableCandle {
   time: number;
@@ -50,7 +51,6 @@ export async function persistClosedCandles(
 // Seite bedeutet "fertig"). Anders als db.ts' getForexCandlesArchiveUpTo (rückwärts ab einem
 // Cutoff, "neueste N bis zu einem Punkt") hier bewusst vorwärts ohne Zeilen-Obergrenze, weil der
 // Aufrufer die GESAMTE Historie ab einem Startpunkt braucht, nicht "die letzten N".
-const DB_READ_PAGE_SIZE = 1000;
 
 export async function readForexCandlesArchiveFrom(
   supabase: SupabaseClient,

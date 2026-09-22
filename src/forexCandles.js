@@ -6,6 +6,7 @@
 // geändert. Antwortform {time,open,high,low,close,volume}, oldest-first.
 import { supabase } from "./supabaseClient.js";
 import { barSecondsFor } from "./timeframes.js";
+import { DB_READ_PAGE_SIZE } from "./dbReadPaging.js";
 
 const FOREX_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/forex-candles`;
 // Die Edge Function baut pro Request eine frische cTrader-TLS-Verbindung inkl. Auth-Handshake auf
@@ -146,14 +147,12 @@ function mapArchivedRows(rows) {
     .reverse(); // Rows kommen "neueste zuerst" (fürs LIMIT auf den jüngsten Teil), Rest der App erwartet oldest-first
 }
 
-// Supabase/PostgREST deckelt eine einzelne Response serverseitig bei diesem Wert (empirisch
-// bestätigt) — UNABHÄNGIG davon, wie groß .limit()/.range() angefragt wird, kein Fehler, einfach
-// weniger Zeilen als erbeten. Bug-Report Philip 2026-08-09: ein Replay-Sprung auf GBPUSD M5
-// (INITIAL_CANDLE_COUNT 1000 + REPLAY_LOOKAHEAD_SEC-Kerzen, macht zusammen 3500) zeigte fast gar
-// keine Kerzen — fetchArchivedPage unten fragte 3500 an, bekam still 1000 zurück (aus einem
-// Zeitfenster WEIT NACH dem eigentlichen Replay-Punkt, weil "neueste zuerst" ja beim Lookahead-
-// Ende ansetzt), der komplette eigentlich sichtbare Bereich fehlte. Per Pagination gefixt.
-const DB_READ_PAGE_SIZE = 1000;
+// DB_READ_PAGE_SIZE kommt aus dbReadPaging.js (dort die Begründung). Bug-Report Philip
+// 2026-08-09: ein Replay-Sprung auf GBPUSD M5 (INITIAL_CANDLE_COUNT 1000 +
+// REPLAY_LOOKAHEAD_SEC-Kerzen, macht zusammen 3500) zeigte fast gar keine Kerzen —
+// fetchArchivedPage unten fragte 3500 an, bekam still 1000 zurück (aus einem Zeitfenster WEIT
+// NACH dem eigentlichen Replay-Punkt, weil "neueste zuerst" ja beim Lookahead-Ende ansetzt), der
+// komplette eigentlich sichtbare Bereich fehlte. Per Pagination gefixt.
 
 // Liest bis zu `count` archivierte Kerzen absteigend ab einer Zeitgrenze — entweder `ltIso`
 // (exklusiv, für Scroll-Back: strikt VOR einer schon geladenen Kerze) oder `lteIso` (inklusiv,

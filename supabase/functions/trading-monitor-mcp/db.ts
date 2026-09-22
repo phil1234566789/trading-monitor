@@ -12,7 +12,7 @@ import { closeLoopState } from "./loopState.ts";
 // trade_positions, trade_targets, trade_partial_exits, news_events, trading_schedules,
 // claude_annotations) — alle mit anon-select-RLS, siehe CLAUDE.md "MCP-Server".
 
-import { fetchAllRows } from "../_shared/fetchAllRows.ts";
+import { fetchAllRows, DB_READ_PAGE_SIZE } from "../_shared/fetchAllRows.ts";
 
 // M5-Kerzen fuer die Sweep-/Touch-Aufloesung in replayAsOf.ts. Wird NUR geladen, wenn ueberhaupt
 // ein Ereignis in einer noch laufenden Kerze liegt — im Normalfall also gar nicht, und wenn doch,
@@ -515,12 +515,6 @@ export async function removePinEntry(id: number) {
   if (error) throw new Error(error.message);
 }
 
-// Supabase/PostgREST deckelt eine einzelne Response serverseitig bei diesem Wert (empirisch
-// bestätigt beim Bau von backfillObZones.ts UND src/forexCandles.js) — unabhängig davon, wie groß
-// .limit() angefragt wird. Ein `limit` über 1000 hier würde sonst still nur die ersten 1000 Zeilen
-// liefern statt eines Fehlers.
-const DB_READ_PAGE_SIZE = 1000;
-
 // Liest aus der forex_candles-Tabelle (Backfill 2026-08-09, siehe Migration
 // 20260809120000_forex_candles.sql + scripts/backfillForexCandles.ts) statt einem
 // Live-cTrader-Request — kein Timeout-Risiko, aber nur für den tatsächlich befüllten Bereich
@@ -607,13 +601,16 @@ export async function getForexCandlesArchiveUpTo(instrument: string, bar: string
   }));
 }
 
+// Paginiert, weil die Aufrufer den Zeitraum offen lassen duerfen: ein paar Termine pro Woche
+// reissen den stillen PostgREST-Deckel von ~1000 Zeilen in gut zwei Jahren, und verloren gingen
+// dann ausgerechnet die juengsten.
 export async function getNewsEvents(fromTime?: string, toTime?: string) {
-  let query = supabase.from("news_events").select("*").order("event_time", { ascending: true });
-  if (fromTime) query = query.gte("event_time", fromTime);
-  if (toTime) query = query.lte("event_time", toTime);
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  return await fetchAllRows((from, to) => {
+    let query = supabase.from("news_events").select("*").order("event_time", { ascending: true });
+    if (fromTime) query = query.gte("event_time", fromTime);
+    if (toTime) query = query.lte("event_time", toTime);
+    return query.range(from, to);
+  });
 }
 
 // Nur für den Session-Kontext an LQ-Leveln in get_data_export (siehe tools/dataExport.ts,

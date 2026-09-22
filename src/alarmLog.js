@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient.js";
-import { fetchTouchedZones } from "./poiZones.js";
+import { fetchTouchedZones, MAX_PROTOKOLL_ZEILEN } from "./poiZones.js";
 import { fmtPrice, pricePrecisionForInstrument } from "./format.js";
 
 // Rohe (nicht auf Chart-Primitives gemappte) Zeilen fürs Protokoll — analog zu
@@ -10,7 +10,8 @@ async function fetchTouchedLiquidityLevels(instrument) {
     .select("*")
     .eq("instrument", instrument)
     .eq("touched", true)
-    .order("end_time", { ascending: false });
+    .order("end_time", { ascending: false })
+    .limit(MAX_PROTOKOLL_ZEILEN);
 
   if (error) throw error;
   return data;
@@ -23,7 +24,8 @@ async function fetchTradeSetups(instrument) {
     .from("trade_setups")
     .select("*")
     .eq("instrument", instrument)
-    .order("ls_touched_time", { ascending: false });
+    .order("ls_touched_time", { ascending: false })
+    .limit(MAX_PROTOKOLL_ZEILEN);
 
   if (error) throw error;
   return data;

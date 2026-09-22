@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient.js";
+import { fetchAllRows } from "./dbReadPaging.js";
 
 // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 7
 // (PLAN-chart-objekte-forex.md Abschnitt 4a) — 1H/4H-Indikator-Overlay liest jetzt aus der von
@@ -24,18 +25,11 @@ import { supabase } from "./supabaseClient.js";
 const MAX_BERUEHRTE = 500;
 const SPALTEN = "instrument, timeframe, direction, top, bottom, touched, invalidated, start_time, end_time";
 
-async function fetchUntouchedZones() {
-  const rows = [];
-  // Auch invalidierte Zonen können touched=false sein: nach dem FXCM-Backfill waren
-  // es 1250 Zeilen. Nur eine leere Seite beendet den Abruf, nicht ein kurzer Server-Batch.
-  for (;;) {
-    const { data, error } = await supabase.from("ob_zones").select(SPALTEN)
-      .in("timeframe", ["1H", "4H"]).eq("touched", false)
-      .order("id", { ascending: true }).range(rows.length, rows.length + 999);
-    if (error) return { data: null, error };
-    if (!data?.length) return { data: rows, error: null };
-    rows.push(...data);
-  }
+// Auch invalidierte Zonen können touched=false sein: nach dem FXCM-Backfill waren es 1250 Zeilen.
+function fetchUntouchedZones() {
+  return fetchAllRows((from, to) => supabase.from("ob_zones").select(SPALTEN)
+    .in("timeframe", ["1H", "4H"]).eq("touched", false)
+    .order("id", { ascending: true }).range(from, to));
 }
 
 export async function fetchObZones() {

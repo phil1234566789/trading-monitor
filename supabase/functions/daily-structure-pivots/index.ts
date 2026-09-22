@@ -50,10 +50,21 @@ Deno.serve(async (req) => {
       // 4. Nur neue Pivots (noch nicht in daily_structure_pivots) verarbeiten — bereits
       // gespeicherte Pivots ändern sich nie wieder (Preis/Zeit eines Fraktal-Pivots stehen mit
       // seiner Bestätigung fest, siehe _shared/liquidityDetection.ts).
+      //
+      // Nur ab dem ÄLTESTEN gerade erkannten Pivot gefragt, nicht der ganze Bestand: PostgREST
+      // deckelt eine Antwort bei ~1000 Zeilen, ohne Fehler (CLAUDE.md). Die Tabelle wächst ~2
+      // Zeilen/Tag/Instrument — ein Voll-Select hätte nach gut einem Jahr still Schlüssel verloren
+      // und dieselben Pivots endlos neu verarbeitet.
+      if (detectedPivots.length === 0) {
+        summary[instrument] = { newPivots: 0 };
+        continue;
+      }
+      const aeltesterErkannter = Math.min(...detectedPivots.map((p) => p.pivotTime));
       const { data: existingRows, error: existingError } = await supabase
         .from("daily_structure_pivots")
         .select("instrument, direction, pivot_time")
         .eq("instrument", instrument)
+        .gte("pivot_time", new Date(aeltesterErkannter * 1000).toISOString())
         .returns<ExistingPivotRow[]>();
       if (existingError) throw existingError;
       const existingKeys = new Set(

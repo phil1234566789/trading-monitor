@@ -42,6 +42,7 @@
 //     [BACKFILL_BARS=1h,4h] deno run --allow-net --allow-env \
 //     supabase/functions/trading-monitor-mcp/scripts/backfillLiquidityLevels.ts
 import { supabase } from "../supabaseClient.ts";
+import { fetchAllRows } from "../../_shared/fetchAllRows.ts";
 import { detectLiquidityLevels, LIQUIDITY_FRACTAL_PERIOD } from "../../_shared/liquidityDetection.ts";
 
 // forex_candles.bar ("1h"/"4h", unsere eigene Konvention, siehe backfillForexCandles.ts) auf den
@@ -105,14 +106,23 @@ type Level = ReturnType<typeof detectLiquidityLevels>["highs"][number];
 // nie selbst korrigieren" — alert_price/notified_at bleiben null (kein echter Live-Preis bekannt,
 // analog zum Verhalten bei einem beim Backfill schon "touched" vorgefundenen neuen Level).
 async function correctMissedTouches(instrument: string, dbTimeframe: string, levels: (Level & { direction: "high" | "low" })[]) {
-  const { data: existingRows, error } = await supabase
-    .from("liquidity_levels")
-    .select("pivot_time, direction, price, touched")
-    .eq("instrument", instrument)
-    .eq("timeframe", dbTimeframe)
-    .eq("touched", false);
-  if (error) throw new Error(`Liquiditäts-Level lesen fehlgeschlagen (${instrument} ${dbTimeframe}): ${error.message}`);
-  if (!existingRows || existingRows.length === 0) return 0;
+  // Paginiert: hier müssen ALLE unberührten Level kommen, und liquidity_levels liegt über dem
+  // stillen PostgREST-Deckel von ~1000 Zeilen (CLAUDE.md) — ein Teilergebnis würde hier keine
+  // Fehlermeldung erzeugen, sondern einfach ein paar verpasste Touches nicht korrigieren.
+  let existingRows: { pivot_time: string; direction: string; price: number; touched: boolean }[];
+  try {
+    existingRows = await fetchAllRows((from, to) => supabase
+      .from("liquidity_levels")
+      .select("pivot_time, direction, price, touched")
+      .eq("instrument", instrument)
+      .eq("timeframe", dbTimeframe)
+      .eq("touched", false)
+      .order("id", { ascending: true })
+      .range(from, to));
+  } catch (err) {
+    throw new Error(`Liquiditäts-Level lesen fehlgeschlagen (${instrument} ${dbTimeframe}): ${(err as Error).message}`);
+  }
+  if (existingRows.length === 0) return 0;
 
   const untouchedKeys = new Set(
     existingRows.map((r) => `${r.direction}_${Math.floor(new Date(r.pivot_time).getTime() / 1000)}`),
