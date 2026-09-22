@@ -18,6 +18,20 @@ const BOUNDED = /\.\s*(limit|range|single|maybeSingle)\s*\(|head\s*:\s*true/;
 // Schreibketten haben kein Cap-Problem — die Zeilenzahl kommt aus dem Aufruf, nicht aus der Tabelle.
 const WRITE = /\.\s*(insert|update|upsert|delete)\s*\(/;
 
+// Ein Deckel ÜBER der Serverschwelle deckelt nichts: PostgREST kappt bei max_rows (supabase/
+// config.toml: 1000), egal was die Kette anfragt — .limit(5000) sieht gedeckelt aus und wird
+// trotzdem still abgeschnitten. Nur LITERALE prüfen; .range(from, from + DB_READ_PAGE_SIZE - 1)
+// aus den Paginierern ist gewollt und gar nicht auswertbar.
+const MAX_ROWS = 1000;
+function overCap(chain) {
+  const lim = /\.\s*limit\s*\(\s*(\d+)\s*\)/.exec(chain);
+  if (lim && +lim[1] > MAX_ROWS) return `limit(${lim[1]}) liegt über max_rows ${MAX_ROWS}`;
+  const rng = /\.\s*range\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/.exec(chain);
+  const span = rng && +rng[2] - +rng[1] + 1;
+  if (span && span > MAX_ROWS) return `range spannt ${span} Zeilen, über max_rows ${MAX_ROWS}`;
+  return null;
+}
+
 // Bewusst unbegrenzte Lesezugriffe. Diese Liste IST die Dokumentation, warum eine Abfrage ohne
 // Deckel auskommt — ein neuer Eintrag ist eine Entscheidung, kein Durchwinken. Wächst eine dieser
 // Tabellen doch in Richtung 1000 Zeilen, gehört sie hier raus und die Abfrage paginiert.
@@ -98,7 +112,13 @@ function findUnbounded() {
       const src = blankComments(readFileSync(file, 'utf8'));
       for (const m of src.matchAll(/\.from\(\s*["'`]([\w]+)["'`]\s*\)/g)) {
         const chain = readChain(src, m.index);
-        if (!chain.includes('.select(') || WRITE.test(chain) || BOUNDED.test(chain)) continue;
+        if (!chain.includes('.select(') || WRITE.test(chain)) continue;
+        const zeile = src.slice(0, m.index).split('\n').length;
+        // Vor der Allowlist: die begründet, warum eine Abfrage OHNE Deckel auskommt — ein Deckel
+        // über max_rows ist davon unabhängig immer falsch und darf nicht mit weggewunken werden.
+        const zuGross = overCap(chain);
+        if (zuGross) { hits.push(`${rel}:${m[1]}  (Zeile ${zeile})  ${zuGross}`); continue; }
+        if (BOUNDED.test(chain)) continue;
         // Über eine Variable gebaute Ketten (let query = supabase.from(...); query = query.eq(...))
         // enden hier vor ihrem Abschluss — deshalb die Variable im Rest der Datei nachverfolgen.
         const varName = /(?:^|[;{}\n])\s*(?:let|var|const)?\s*([A-Za-z_$][\w$]*)\s*=\s*[^=;]*$/
@@ -109,7 +129,7 @@ function findUnbounded() {
         if (varName && new RegExp(String.raw`\b${varName}\b[\s\S]{0,300}?\.\s*(limit|range|single|maybeSingle)\s*\(`).test(src)) continue;
         const key = `${rel}:${m[1]}`;
         if (ALLOWLIST.has(key)) continue;
-        hits.push(`${key}  (Zeile ${src.slice(0, m.index).split('\n').length})  ${chain.replace(/\s+/g, ' ').slice(0, 110)}`);
+        hits.push(`${key}  (Zeile ${zeile})  ohne limit/range/single  ${chain.replace(/\s+/g, ' ').slice(0, 90)}`);
       }
     }
   }
