@@ -49,6 +49,10 @@ export function usePriceChartTradeSetupDrawing() {
     // identischem Pivot exakt denselben Label-Text zeigen (siehe collectH1LqLevels: oft derselbe
     // Pivot).
     const nowSec = replayUntil ?? Math.floor(Date.now() / 1000);
+    // Ein Formatter für ALLE Sweep-Linien eines Setups (entscheidender + Nebensweeps): bei
+    // "Minor" nur "LS <Preis> (<Alter>)", darüber mit Tier-Präfix — überlappende Linien sollen
+    // denselben String zeigen statt zweier leicht verschiedener Varianten.
+    const lsLabel = (level) => formatLsLabel(formatPrice(level.price), level.pivotTime, nowSec, level.touchedTime);
 
     for (const setup of tradeSetups) {
       // obStartTime statt fractal.pivotTime als Replay-Cutoff: der bestätigende OB markiert den
@@ -92,7 +96,10 @@ export function usePriceChartTradeSetupDrawing() {
           // (formatLsLabel, liquidity.js) — identisches Format wie die "1h LQ-Sweep"-Linie in
           // marketStructureAnalysis.ts, damit beide beim Überlappen (oft derselbe Pivot, siehe
           // collectH1LqLevels) lesbar bleiben statt zwei leicht unterschiedliche Strings übereinander.
-          label: showLiquidityDebug ? formatLsLabel(formatPrice(setup.ls.price), setup.ls.pivotTime, nowSec, setup.ls.touchedTime) : null,
+          // NICHT debug-gated (Bug-Report Philip 2026-09-21: "sehe kein Label LS über dem Sweep"):
+          // die LQ-Sweep-Linie hat ihr Label seit Chat 2026-07-28 immer, diese Seite hat die
+          // Umstellung damals nicht mitbekommen — und "1:1 überlappen" hieß nie "nur im Debug".
+          label: lsLabel(setup.ls),
           // "end-above"/"end-below" statt Default "start" (Chat 2026-07-27: "muss ständig sau weit
           // nach links scrollen") — der M5-LQ-Sweep-Pivot liegt oft weit links vom aktuellen
           // Kerzenrand, das Preislabel soll trotzdem am rechten (aktuellen) Ende der Linie stehen.
@@ -103,8 +110,9 @@ export function usePriceChartTradeSetupDrawing() {
         candles,
       );
       // Die übrigen abgeräumten Level desselben OB (Philip 21.09.2026: "Je mehr Bestätigungs-
-      // LQ-Sweeps desto besser") — dünner, blasser und stumm, weil nur der älteste die Qualität
-      // trägt und 5-9 volle LS-Labels je Setup den Chart zustellen würden.
+      // LQ-Sweeps desto besser") — dünner und blasser, weil nur der älteste die Qualität trägt,
+      // aber mit demselben Label wie er (zweite Runde desselben Tages: "ich hätte gern LS für
+      // normale Sweeps ... dasselbe für kleinere Sweeps halt auch").
       const nebenSweepLines = (setup.sweeps ?? []).slice(1).map(
         (sw) =>
           new LiquidityLinePrimitive(
@@ -112,7 +120,7 @@ export function usePriceChartTradeSetupDrawing() {
             {
               color: cssColorScaled(key, NEBEN_SWEEP_ALPHA_RATIO),
               lineWidth: Math.max(1, lineWidth(key) - 1),
-              label: null,
+              label: lsLabel(sw.level),
               labelSide: bullBearLabelSide(setup.dir === 1),
             },
             candles,
