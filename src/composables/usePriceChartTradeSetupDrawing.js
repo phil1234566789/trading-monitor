@@ -12,6 +12,7 @@ import { rScaleLevels } from "../rScale.js";
 import { rQuote } from "../rScaleQuotes.js";
 import { RScalePrimitive } from "../rScaleRendering.js";
 import { cssColor, cssColorScaled } from "../chartColors.js";
+import { createSessionBonusResolver } from "../sessionBonus.js";
 import { lineWidth } from "../chartLineWidths.js";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import { toPips } from "../pipConfig.js";
@@ -51,8 +52,12 @@ export function usePriceChartTradeSetupDrawing() {
     const nowSec = replayUntil ?? Math.floor(Date.now() / 1000);
     // Ein Formatter für ALLE Sweep-Linien eines Setups (entscheidender + Nebensweeps): bei
     // "Minor" nur "LS <Preis> (<Alter>)", darüber mit Tier-Präfix — überlappende Linien sollen
-    // denselben String zeigen statt zweier leicht verschiedener Varianten.
-    const lsLabel = (level) => formatLsLabel(formatPrice(level.price), level.pivotTime, nowSec, level.touchedTime);
+    // denselben String zeigen statt zweier leicht verschiedener Varianten. Der Session-Kontext
+    // davor ("Asia-High LS ...") kommt aus demselben Auflöser wie bei den LQ-Level-Linien, siehe
+    // sessionBonus.js. level.dir folgt der 1=High/-1=Low-Konvention.
+    const bonusFor = createSessionBonusResolver(candles, symbol);
+    const lsLabel = (level) =>
+      formatLsLabel(formatPrice(level.price), level.pivotTime, nowSec, level.touchedTime, bonusFor(level.pivotTime, level.dir, level.price));
 
     for (const setup of tradeSetups) {
       // obStartTime statt fractal.pivotTime als Replay-Cutoff: der bestätigende OB markiert den

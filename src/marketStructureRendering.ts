@@ -519,7 +519,7 @@ function renderNestedLevel(
   nested: MarketStructureState,
   candles: Candle[],
   existingPrimitives: any[],
-  lqSweepLabel: (price: number, pivotTime: number | undefined, touchedTime: number | undefined) => string,
+  lqSweepLabel: (price: number, pivotTime: number | undefined, touchedTime: number | undefined, dir: 1 | -1) => string,
 ) {
   const isDown = nested.trend === "downtrend";
   const protectedType: "protected-high" | "protected-low" = isDown ? "protected-high" : "protected-low";
@@ -560,7 +560,7 @@ function renderNestedLevel(
       {
         color: lqColor,
         lineWidth: lineWidth("rangeLqSweep"),
-        label: lqSweepLabel(lqSweep.price, lqSweep.pivotTime, lqSweep.touched ? lqSweep.touched.touchedTime : undefined),
+        label: lqSweepLabel(lqSweep.price, lqSweep.pivotTime, lqSweep.touched ? lqSweep.touched.touchedTime : undefined, isDown ? 1 : -1),
         labelSide: bullBearLabelSide(isDown),
       },
       candles,
@@ -619,7 +619,18 @@ export function renderMarketStructureAnalysis(
   state: MarketStructureState | null,
   existingPrimitives: any[],
   candles: Candle[],
-  { nowSec, formatPrice }: { nowSec?: number; formatPrice?: (price: number) => string } = {},
+  {
+    nowSec,
+    formatPrice,
+    bonusFor,
+  }: {
+    nowSec?: number;
+    formatPrice?: (price: number) => string;
+    // Session-Kontext ("Asia-High") — siehe sessionBonus.js. Muss dieselbe Quelle sein wie bei der
+    // Trade-Setup-LS-Linie, sonst zeigen die beiden übereinanderliegenden Linien wieder zwei
+    // verschiedene Strings (genau dafür gibt es formatLsLabel gemeinsam).
+    bonusFor?: (pivotTime: number, dir: 1 | -1, price: number) => string | null;
+  } = {},
 ) {
   // "Major LS 1,13545 (22d 19h alt)" statt "1h LQ-Sweep (22d 19h alt)" (Chat 2026-07-28: "damit sie
   // sich mit der Trade-Setup-LS-Linie 1:1 überlappen") — der Preis ist jetzt fester Bestandteil des
@@ -628,8 +639,16 @@ export function renderMarketStructureAnalysis(
   // touchedTime optional (Bug-Report Philip 2026-08-26: "Alter bedeutet von Entstehungspunkt bis
   // touched, falls nie touched bis jetzt — gilt überall so") — hat Vorrang vor nowSec, siehe
   // formatLsLabel/ageReferenceTime.
-  const lqSweepLabel = (price: number, pivotTime: number | undefined, touchedTime: number | undefined) =>
-    formatLsLabel(formatPrice ? formatPrice(price) : String(price), pivotTime, nowSec, touchedTime);
+  // dir: im Abwärtstrend ist der gesweepte Level ein HOCH (1), sonst ein TIEF (-1) — dieselbe
+  // Zuordnung, die bullBearLabelSide(isDowntrend) an den Linien unten schon trifft.
+  const lqSweepLabel = (price: number, pivotTime: number | undefined, touchedTime: number | undefined, dir: 1 | -1) =>
+    formatLsLabel(
+      formatPrice ? formatPrice(price) : String(price),
+      pivotTime,
+      nowSec,
+      touchedTime,
+      bonusFor && pivotTime != null ? bonusFor(pivotTime, dir, price) : null,
+    );
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
   if (!state || candles.length === 0) return;
@@ -709,7 +728,7 @@ export function renderMarketStructureAnalysis(
       {
         color: lqColor,
         lineWidth: lineWidth("rangeLqSweep"),
-        label: lqSweepLabel(lqSweep.price, lqSweep.pivotTime, lqSweep.touched ? lqSweep.touched.touchedTime : undefined),
+        label: lqSweepLabel(lqSweep.price, lqSweep.pivotTime, lqSweep.touched ? lqSweep.touched.touchedTime : undefined, isDowntrend ? 1 : -1),
         labelSide: bullBearLabelSide(isDowntrend),
       },
       candles,

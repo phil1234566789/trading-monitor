@@ -26,6 +26,15 @@ describe("formatLsLabel", () => {
     expect(formatLsLabel("1,13545", pivotTime, NOW)).toBe("Major LS 1,13545 (26d)");
   });
 
+  it("Session-Kontext steht ganz vorne, vor dem Tier (Philip 2026-09-21)", () => {
+    const pivotTime = Date.UTC(2026, 5, 22, 12, 0, 0) / 1000;
+    expect(formatLsLabel("1,13545", pivotTime, NOW, null, "Asia-High")).toBe("Asia-High Major LS 1,13545 (26d)");
+  });
+
+  it("Session-Kontext auch ohne Tier (minor) — dann nur '<Bonus> LS ...'", () => {
+    expect(formatLsLabel("1,13545", NOW - 3 * 3600, NOW, null, "NY-Low")).toBe("NY-Low LS 1,13545 (3h)");
+  });
+
   it("ohne pivotTime/nowSec: nur 'LS {price}', kein Tier/Alter", () => {
     expect(formatLsLabel("1,13545", undefined, NOW)).toBe("LS 1,13545");
     expect(formatLsLabel("1,13545", NOW, undefined)).toBe("LS 1,13545");

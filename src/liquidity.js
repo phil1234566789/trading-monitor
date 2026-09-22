@@ -280,12 +280,24 @@ function ageSuffix(pivotTime, nowSec, touchedTime = null) {
  * @param {number | undefined} nowSec
  * @param {number | null | undefined} [touchedTime]
  */
-export function formatLsLabel(formattedPrice, pivotTime, nowSec, touchedTime = null) {
-  if (pivotTime == null || nowSec == null) return `LS ${formattedPrice}`;
+// bonus: optionaler Session-Kontext ("Asia-High", siehe sessionBonus.js) — Philip 2026-09-21:
+// "wenn ein Liquidity Sweep gleichzeitig ein Asia High ist, dann schon bitte dazuschreiben".
+// Steht wie bei formatLiquidityLevelLabel GANZ vorne, vor dem Tier, damit beide Label-Arten
+// dieselbe Lesereihenfolge haben.
+/**
+ * Die beiden Parameter mit `null`-Default brauchen die Annotation, sonst leitet TS aus dem
+ * Default den Typ `null` ab und lehnt jeden echten Wert ab (marketStructureRendering.ts ruft
+ * als einziger Aufrufer typisiert auf).
+ * @param {number|null} [touchedTime]
+ * @param {string|null} [bonus]
+ */
+export function formatLsLabel(formattedPrice, pivotTime, nowSec, touchedTime = null, bonus = null) {
+  const bonusPrefix = bonus ? `${bonus} ` : "";
+  if (pivotTime == null || nowSec == null) return `${bonusPrefix}LS ${formattedPrice}`;
   const reference = ageReferenceTime(touchedTime, nowSec);
   const tier = classifyAge(businessSecondsBetween(pivotTime, reference));
   const prefix = tier === "minor" ? "" : `${tier[0].toUpperCase()}${tier.slice(1)} `;
-  return `${prefix}LS ${formattedPrice}${ageSuffix(pivotTime, nowSec, touchedTime)}`;
+  return `${bonusPrefix}${prefix}LS ${formattedPrice}${ageSuffix(pivotTime, nowSec, touchedTime)}`;
 }
 
 // Bullische Sweep-/Setup-Linien beschriften sich rechtsbündig UNTER, bärische DARÜBER — reine

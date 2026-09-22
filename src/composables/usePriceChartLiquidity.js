@@ -20,8 +20,7 @@ import { mergePinnedLevels, computeHtfLiquidityLevels, mergeDbLiquidityLevels } 
 import { currentPriceEstimate } from "../priceChartObZones.js";
 import { pivotForDisplay } from "../marketStructureAnalysis";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
-import { sessions } from "../sessions.js";
-import { buildSessionContextLookup, bonusLabelForPivot } from "../sessionOccurrences.js";
+import { createSessionBonusResolver } from "../sessionBonus.js";
 import { ref } from "vue";
 
 export function usePriceChartLiquidity() {
@@ -46,21 +45,13 @@ export function usePriceChartLiquidity() {
     candleSeries = null;
   }
 
-  // Chat 2026-08-26, Philip: "<bonus>" fürs Label — Session-Kontext (z.B. "Asia-High"), siehe
-  // sessionOccurrences.js: bonusLabelForPivot. tzOffsetMinutes exakt wie bei den Sessions-Bändern
-  // selbst (usePriceChartSessionsAndNews.js: refreshSessions) — Browser-Lokalzeit statt eines
-  // fest verdrahteten Berlin-Intl-Offsets, damit ein Bonus-Label niemals von den Session-Bändern
-  // abweicht, die Philip auf demselben Chart ohnehin schon sieht.
+  // Chat 2026-08-26, Philip: "<bonus>" fürs Label — Session-Kontext (z.B. "Asia-High"). Der
+  // Lookup-Aufbau steckt seit 2026-09-21 in sessionBonus.js, weil die Sweep-Linien denselben
+  // brauchen und beide dasselbe Label zeigen müssen (siehe dort).
   function attachBonus(levels, candles, symbol) {
     if (levels.length === 0) return levels;
-    const sessionContextLookup = buildSessionContextLookup(
-      sessions.filter((s) => s.instrument === symbol),
-      candles[0]?.time ?? 0,
-      (candles[candles.length - 1]?.time ?? 0) + 1,
-      (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset(),
-      candles,
-    );
-    return levels.map((lvl) => ({ ...lvl, bonus: bonusLabelForPivot(lvl.pivotTime, lvl.dir, lvl.price, sessionContextLookup) }));
+    const bonusFor = createSessionBonusResolver(candles, symbol);
+    return levels.map((lvl) => ({ ...lvl, bonus: bonusFor(lvl.pivotTime, lvl.dir, lvl.price) }));
   }
 
   // Liquiditäts-Level (Fractal-Pivots, siehe tv-indikator/src/liquidity.pine) gibt es bisher nicht

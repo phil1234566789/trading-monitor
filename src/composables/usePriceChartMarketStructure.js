@@ -27,6 +27,7 @@ import { renderMarketStructureAnalysis, collectFibLevels } from "../marketStruct
 import { renderPivotMarkers } from "../pivotMarkers";
 import { cssColor } from "../chartColors.js";
 import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
+import { createSessionBonusResolver } from "../sessionBonus.js";
 import { fetchInitialCandles as fetchInitialForexCandles } from "../forexCandles.js";
 import { fetchCandlesCached } from "../candleCache.js";
 import { RANGES_CANDLE_BUFFER } from "../priceChartConstants.js";
@@ -137,6 +138,10 @@ export function usePriceChartMarketStructure() {
       // Preis ist seit Chat 2026-07-28 fester Bestandteil des LQ-Sweep-Labels ("Major LS 1,13545
       // ..." statt "1h LQ-Sweep ..."), nicht mehr debug-gated — siehe formatLsLabel (liquidity.js).
       formatPrice: (price) => fmtPrice(price, precision),
+      // Session-Kontext am LQ-Sweep-Label ("Asia-High Major LS ...", Philip 2026-09-21) — derselbe
+      // Auflöser wie an der Trade-Setup-LS-Linie, damit die beiden beim Überlappen weiterhin
+      // denselben String zeigen.
+      bonusFor: createSessionBonusResolver(candles, symbol),
     });
   }
 
