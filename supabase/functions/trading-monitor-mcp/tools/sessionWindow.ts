@@ -1,8 +1,8 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import { getSessions } from "../db.ts";
-import { berlinOffsetMinutes, berlinDateTimeStrFor, berlinDateStrFor } from "../berlinTime.ts";
-import { sessionOccurrences } from "../sessionOccurrences.js";
+import { berlinOffsetMinutes, berlinDateTimeStrFor, berlinDateStrFor } from "../../_shared/berlinTime.ts";
+import { sessionOccurrences } from "../../_shared/sessionOccurrences.js";
 import { logDecision } from "../stateMachineLog.ts";
 import { loadMachineForDayOrNull, transitionIfPossible } from "../machineState.ts";
 import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";

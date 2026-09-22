@@ -1,5 +1,5 @@
 import { fetchForexCandles, type Candle } from "../forexCandles.ts";
-import { berlinDayRangeUtcMs, berlinDateStrFor, berlinDateTimeStrFor, berlinOffsetMinutes } from "../berlinTime.ts";
+import { berlinDayRangeUtcMs, berlinDateStrFor, berlinDateTimeStrFor, berlinOffsetMinutes } from "../../_shared/berlinTime.ts";
 import { getObZones, getLiquidityLevels, getSessions, getLatestDailyStructureStartTime } from "../db.ts";
 // Reine Trend-Mathematik (siehe CLAUDE.md "MCP-Server") — seit dem Split von marketStructureAnalysis.ts
 // (Chat 2026-07-31, Rendering lebt jetzt separat in marketStructureRendering.ts) frei von Browser-
@@ -17,7 +17,7 @@ import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructur
 // extrahiert (aus orderBlocks.js, das über chartColors.js/chartZoom.js Browser-Only-Imports zieht).
 import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "../../_shared/liquidityDetection.ts";
 import { detectOrderBlocks } from "../orderBlockDetection.js";
-import { PIP_SIZE } from "../pipConfig.js";
+import { PIP_SIZE } from "../../_shared/pipConfig.js";
 // Dieselbe Preis-/Zeit-Relevanzlogik wie get_near_relevant_liquidity_levels/get_near_relevant_ob_zones
 // (siehe filterRelevantObZoneRows dort) — Bug-Report Philip 2026-08-30: get_data_export gab obZones
 // bisher als ROHEN, ungefilterten getObZones-Rückgabewert weiter (216 Zonen über den gesamten
@@ -34,7 +34,7 @@ import { formatKontext } from "../kontextLabel.ts";
 // Session-Kontext ("asia high" etc., siehe src/dataExport.js) — sessionOccurrences.js ist seit
 // Chat 2026-08-02 dependency-frei (aus sessions.js extrahiert, dessen `sessions`-Singleton
 // localStorage anfasst), deshalb direkt cross-directory importierbar wie oben.
-import { buildSessionContextLookup, contextForPivot, bonusLabelForPivot } from "../sessionOccurrences.js";
+import { buildSessionContextLookup, contextForPivot, bonusLabelForPivot } from "../../_shared/sessionOccurrences.js";
 
 // Asia-Session laut Philip: 00:00-07:00 Europe/Berlin, separat ausgewertet — siehe
 // src/dataExport.js ASIA_SESSION_END_HOUR (dieselbe Konvention, hier dupliziert statt importiert,

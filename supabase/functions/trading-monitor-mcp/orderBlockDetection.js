@@ -4,7 +4,7 @@
 // import.meta.env) mitzuschleppen. Gleicher Schnitt wie bei liquidity.js → liquidityDetection.js
 // (siehe dort/CLAUDE.md "MCP-Server") — orderBlocks.js selbst importiert detectOrderBlocks jetzt
 // von hier und re-exportiert es, damit sich an dessen öffentlicher API nichts ändert.
-import { PIP_SIZE } from "./pipConfig.js";
+import { PIP_SIZE } from "../_shared/pipConfig.js";
 
 const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone angelegt (HTF: 15m/1h/4h/1D)
 

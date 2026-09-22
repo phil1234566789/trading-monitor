@@ -1,6 +1,6 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
-import { toPips } from "../pipConfig.js";
+import { toPips } from "../../_shared/pipConfig.js";
 import { json } from "../jsonResponse.ts";
 
 const INSTRUMENT = z.enum(["GBPUSD", "EURUSD"]);

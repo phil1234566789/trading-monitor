@@ -11,7 +11,7 @@ import { fetchForexCandles } from "./forexCandles.ts";
 import { getLiquidityLevels, getObZones, getSessions } from "./db.ts";
 import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "../_shared/liquidityDetection.ts";
 import { detectOrderBlocks } from "./orderBlockDetection.js";
-import { PIP_SIZE } from "./pipConfig.js";
+import { PIP_SIZE } from "../_shared/pipConfig.js";
 import { verifyLevelTouched, verifyZoneTouched } from "./verifyTouched.js";
 import { M5_DETECTION_LOOKBACK_HOURS, M5_DETECTION_CANDLE_BUFFER, M5_BAR_SECONDS, attachSessionContext } from "./tools/dataExport.ts";
 

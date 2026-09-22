@@ -12,7 +12,7 @@
 // checkedM5ObSetups/checkedHtfSweeps-Pflichtfelder von log_fall_classification: das Überspringen
 // bleibt erlaubt, es wird nur nicht mehr still.
 
-import { PIP_SIZE } from "./pipConfig.js";
+import { PIP_SIZE } from "../_shared/pipConfig.js";
 
 // Dieselbe Schwelle wie findTargetCandidates.js' SAME_PRICE_EPSILON — der gewählte Preis selbst
 // darf nicht als "näherer, übersprungener Kandidat" gegen sich selbst zählen.

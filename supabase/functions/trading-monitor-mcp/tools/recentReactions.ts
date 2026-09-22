@@ -1,12 +1,12 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
-import { berlinDateTimeStrFor } from "../berlinTime.ts";
+import { berlinDateTimeStrFor } from "../../_shared/berlinTime.ts";
 import { fetchForexCandles } from "../forexCandles.ts";
 import { getLiquidityLevels, getObZones, getSessions } from "../db.ts";
 import { buildNearRelevantLiquidityLevels } from "./nearRelevantLiquidityLevels.ts";
 import { buildNearRelevantObZones } from "./nearRelevantObZones.ts";
 import { computeM5LiquidityAndObZones, M5_DETECTION_LOOKBACK_HOURS, M5_DETECTION_CANDLE_BUFFER, M5_BAR_SECONDS, M5_OB_RANGE_PIPS } from "./dataExport.ts";
-import { PIP_SIZE } from "../pipConfig.js";
+import { PIP_SIZE } from "../../_shared/pipConfig.js";
 import { json } from "../jsonResponse.ts";
 
 // get_recent_reactions (Pflichtprüfung 00-trading-steps/05-dealing-range-bestaetigen.md, 2026-08-31)

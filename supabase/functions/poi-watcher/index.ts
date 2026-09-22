@@ -29,6 +29,7 @@ import {
 } from "../_shared/tradeSetup.ts";
 import { computeSweepAgeHours } from "../_shared/ageTier.ts";
 import { persistTradeSetupSweeps } from "../_shared/tradeSetupSweeps.ts";
+import { forbiddenSessionAt, type SessionDangerConfig } from "../_shared/forbiddenSession.ts";
 
 const TIMEFRAMES: { label: "4H" | "1H" }[] = [{ label: "4H" }, { label: "1H" }];
 // 300h (~12,5 Tage) reichten nicht, um lange unberührte 1H-Liquiditäts-Level (und 1H-OB-Zonen, die
@@ -353,6 +354,26 @@ Deno.serve(async (req) => {
     const alarmWindowsByInstrument = new Map<string, WeekdayWindows>(
       (scheduleRows ?? []).map((r) => [r.instrument, r.alarm_windows as WeekdayWindows]),
     );
+    // Chart-Sessions (Sessions-Modal), nur fürs Trade-Setup-Alarm-Gating unten gebraucht: der
+    // Chart versteckt Setups, deren M5-OB in einer 'forbidden'-Session entstanden ist, poi-watcher
+    // alarmierte sie bis 09/2026 trotzdem. Ein Select für alle Instrumente, wie bei den Schedules.
+    const { data: sessionRows, error: sessionSelectError } = await supabase
+      .from("sessions")
+      .select("instrument, label, from_minutes, to_minutes, danger, days")
+      .eq("danger", "forbidden");
+    if (sessionSelectError) throw sessionSelectError;
+    const forbiddenSessionsByInstrument = new Map<string, SessionDangerConfig[]>();
+    for (const r of sessionRows ?? []) {
+      const list = forbiddenSessionsByInstrument.get(r.instrument as string) ?? [];
+      list.push({
+        label: r.label as string | null,
+        fromMinutes: r.from_minutes as number,
+        toMinutes: r.to_minutes as number,
+        danger: r.danger as string | null,
+        days: r.days as number[] | null,
+      });
+      forbiddenSessionsByInstrument.set(r.instrument as string, list);
+    }
     // cTrader-Access-/Refresh-Token: `ctrader_oauth_tokens` ist die eigentliche Quelle (siehe
     // Migration 20260722120000), die CTRADER_ACCESS_TOKEN/REFRESH_TOKEN-Secrets nur ein
     // Fallback fürs allererste Deployment vor der ersten Zeile — gleiches Muster wie in
@@ -864,6 +885,8 @@ Deno.serve(async (req) => {
         }
 
         let tradeSetupNotifiedCount = 0;
+        let tradeSetupForbiddenCount = 0;
+        const forbiddenSessions = forbiddenSessionsByInstrument.get(cfg.instrument) ?? [];
         for (const setup of detected) {
           const direction: "short" | "long" = setup.dir === 1 ? "short" : "long";
           const key = `${direction}_${setup.obStartTime}`;
@@ -878,7 +901,16 @@ Deno.serve(async (req) => {
           // Erstes Setup überhaupt für dieses Instrument+Richtung (kein "existing" überhaupt)
           // ist ein Alt-Bestand direkt nach Deploy, kein "gerade eben" — kein Alarm, analog zum
           // ob_zones/liquidity_levels-Verhalten beim allerersten Lauf.
-          const alertNow = hasAnySetupRow[direction] && alarmActive;
+          // Entstand der bestätigende M5-OB in einer 'forbidden'-Session (Asia/Spread Hour), zeigt
+          // der Chart das Setup gar nicht erst an — dann auch kein Telegram, sonst alarmiert
+          // poi-watcher auf etwas, das Philip nirgends nachschauen kann. obStartTime statt
+          // fractal.pivotTime, exakt wie notForbidden in usePriceChartTradeSetups.js (der OB ist
+          // der früheste plausible Entry-Zeitpunkt), sonst entsteht nur ein neues Gefälle.
+          // Die ZEILE entsteht trotzdem: analysis/dr-reichweite/ wertet den Bestand aus, ein
+          // stilles Loch darin wäre schlimmer als ein stiller Alarm.
+          const forbiddenLabel = forbiddenSessionAt(forbiddenSessions, setup.obStartTime);
+          if (forbiddenLabel) tradeSetupForbiddenCount++;
+          const alertNow = hasAnySetupRow[direction] && alarmActive && !forbiddenLabel;
           // Ferne OB-Kante = das von widenObForSweep aufgezogene Sweep-Extrem (siehe
           // deriveSetupEntryInvalidation in der JS-Kopie) — in der DB die generierte Spalte
           // trade_setups.invalidation, hier fürs Telegram nochmal direkt aus dem Setup.
@@ -1001,7 +1033,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        instrumentSummary["tradeSetups"] = { detected: detected.length, notified: tradeSetupNotifiedCount };
+        instrumentSummary["tradeSetups"] = { detected: detected.length, notified: tradeSetupNotifiedCount, forbiddenSession: tradeSetupForbiddenCount };
       }
 
       (summary.instruments as Record<string, unknown>)[cfg.instrument] = { currentPrice, shouldSend, ...instrumentSummary };

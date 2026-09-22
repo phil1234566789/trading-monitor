@@ -12,8 +12,8 @@
 import { fetchForexCandles } from "./forexCandles.ts";
 import { buildCandidatePool } from "./findTargetCandidates.js";
 import { detectRsiDivergenceHistory } from "./rsi.js";
-import { fromPips } from "./pipConfig.js";
-import { berlinDateStrFor } from "./berlinTime.ts";
+import { fromPips } from "../_shared/pipConfig.js";
+import { berlinDateStrFor } from "../_shared/berlinTime.ts";
 
 // "nicht 100 Jahre alt" (Philip) — noch kein konkreter Wert vorgegeben, 14 Tage als erster
 // Startwert, leicht nachjustierbar sobald echte Kandidatenlisten sichtbar sind.

@@ -31,10 +31,10 @@
 // durch die lokalen, bereits vorhandenen Kopien (../rsi.js, ../rsiDivergenceOutcome.js,
 // ../sessionOccurrences.js), sonst unverändert.
 import { supabase } from "../supabaseClient.ts";
-import { berlinOffsetMinutes, berlinDateStrFor, berlinDateTimeStrFor } from "../berlinTime.ts";
+import { berlinOffsetMinutes, berlinDateStrFor, berlinDateTimeStrFor } from "../../_shared/berlinTime.ts";
 import { detectRsiDivergenceHistory, DEFAULT_DIVERGENCE_LOOKBACK_BARS } from "../rsi.js";
 import { classifyDivergenceOutcome, DEFAULT_DIVERGENCE_OUTCOME_LOOKFORWARD_BARS } from "../rsiDivergenceOutcome.js";
-import { sessionOccurrences } from "../sessionOccurrences.js";
+import { sessionOccurrences } from "../../_shared/sessionOccurrences.js";
 
 interface CandleRow {
   time: number;

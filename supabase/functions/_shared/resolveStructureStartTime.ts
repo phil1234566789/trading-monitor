@@ -5,13 +5,11 @@
 // pivot.pivotTime + 86400) ist per Konstruktion genau der Zeitraum, aus dem die 1D-Kerze ihr
 // High/Low gebildet hat (kein zusätzliches Berlin-Kalendertag-Mapping nötig).
 import type { Candle } from "./orderBlocks.ts";
+import { PIP_SIZE } from "./pipConfig.js";
 
 const DAY_SECONDS = 86400;
 // Analog SAME_PRICE_EPSILON (src/priceChartLiquidity.js / trading-monitor-mcp/tools/dataExport.ts)
-// — Toleranz gegen Float-Rundung beim Preisvergleich, nicht exaktes `===`. Lokal statt aus
-// pipConfig.js importiert (das lebt nur in trading-monitor-mcp, kein Cross-Function-Import über
-// eine andere Funktion hinaus möglich, siehe CLAUDE.md "MCP-Server").
-const PIP_SIZE = 0.0001;
+// — Toleranz gegen Float-Rundung beim Preisvergleich, nicht exaktes `===`.
 const SAME_PRICE_EPSILON = 0.05 * PIP_SIZE;
 
 export interface DailyPivotLike {

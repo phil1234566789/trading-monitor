@@ -24,6 +24,7 @@ const TRADE_SETUP_LS_MAX_LEAD_SEC_H1 = 120 * 60;
 const TRADE_SETUP_LS_MAX_LEAD_SEC_M5 = 45 * 60;
 const TRADE_SETUP_PIP_SIZE = 0.0001;
 const TRADE_SETUP_LS_MAX_DISTANCE_M5 = 5.0 * TRADE_SETUP_PIP_SIZE;
+const TRADE_SETUP_MAX_SWEEP_DISTANCE = 10.0 * TRADE_SETUP_PIP_SIZE;
 const TRADE_SETUP_OB_MAX_DELAY_SEC = 60 * 60;
 const TRADE_SETUP_LOOKBACK_SEC = 6 * 60 * 60;
 const TRADE_SETUP_CLOSE_CHECK_MAX_AGE_SEC = 0; // Check aus, Messergebnis vom 21.09.2026
@@ -133,6 +134,7 @@ describe("Trade-Setup-Pipeline (echte M5-/H1-Kerzen-Fixtures, wie computeTradeSe
       lsMaxLeadSecH1: TRADE_SETUP_LS_MAX_LEAD_SEC_H1,
       lsMaxLeadSecM5: TRADE_SETUP_LS_MAX_LEAD_SEC_M5,
       maxDistanceM5: TRADE_SETUP_LS_MAX_DISTANCE_M5,
+      maxSweepDistance: TRADE_SETUP_MAX_SWEEP_DISTANCE,
       maxLookbackSec: TRADE_SETUP_LOOKBACK_SEC,
       closeCheckMaxAgeSec: TRADE_SETUP_CLOSE_CHECK_MAX_AGE_SEC,
       obMaxDelaySec: TRADE_SETUP_OB_MAX_DELAY_SEC,
@@ -196,6 +198,7 @@ describe("Trade-Setup-Pipeline mit marketStructureState-H1-Leveln (collectH1LqLe
       lsMaxLeadSecH1: TRADE_SETUP_LS_MAX_LEAD_SEC_H1,
       lsMaxLeadSecM5: TRADE_SETUP_LS_MAX_LEAD_SEC_M5,
       maxDistanceM5: TRADE_SETUP_LS_MAX_DISTANCE_M5,
+      maxSweepDistance: TRADE_SETUP_MAX_SWEEP_DISTANCE,
       maxLookbackSec: TRADE_SETUP_LOOKBACK_SEC,
       closeCheckMaxAgeSec: TRADE_SETUP_CLOSE_CHECK_MAX_AGE_SEC,
       obMaxDelaySec: TRADE_SETUP_OB_MAX_DELAY_SEC,

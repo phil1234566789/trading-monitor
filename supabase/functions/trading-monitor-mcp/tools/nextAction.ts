@@ -1,6 +1,6 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
-import { berlinDateStrFor, berlinDateTimeStrFor } from "../berlinTime.ts";
+import { berlinDateStrFor, berlinDateTimeStrFor } from "../../_shared/berlinTime.ts";
 import { getLoopStateForDay } from "../loopState.ts";
 import { NEXT_ACTION_MAP, NEXT_ACTION_FALLBACK } from "../nextActionMap.ts";
 import { json } from "../jsonResponse.ts";

@@ -14,6 +14,7 @@ const params = {
   lsMaxLeadSecH1: 7200,
   lsMaxLeadSecM5: 2700,
   maxDistanceM5: 0.0005,
+  maxSweepDistance: 0.0010, // 10 Pip, wie der Produktions-Default
   maxLookbackSec: 6 * 3600,
   obMaxDelaySec: 3600,
   // Produktions-Default seit 2026-09-21: Check aus (Messergebnis, siehe
@@ -191,6 +192,25 @@ describe("detectTradeSetups — mehrere Sweeps je OB", () => {
       [1.3003, "5M"],
       [1.3002, "5M"],
     ]);
+  });
+
+  it("sammelt kein Level ein, das weiter als maxSweepDistance weg liegt", () => {
+    // 25 Pip unter dem gefundenen Level — zeitlich im Fenster, preislich ein anderes Ereignis.
+    // Genau der Fall aus GBPUSD-Setup #1139 (17.04.2026), nur kleiner.
+    const lsFern = lowLevel({ price: 1.2978, pivotTime: 100, touchedTime: 850 });
+    const setups = detectTradeSetups(-1, [], [], [lsAlt, lsJung, lsFern], setupObs, nah, m5Candles);
+    expect(setups).toHaveLength(1);
+    expect(setups[0].sweeps.map((sw) => sw.level.price)).toEqual([1.3003, 1.3002]);
+  });
+
+  it("filtert gegen das vom Pfad gefundene Level, nicht gegen den ältesten — sonst kippt die Regel", () => {
+    // lsFern ist mit Abstand das ÄLTESTE (Alter 750) und läge damit als Anker vorne. Gefiltert
+    // wird trotzdem gegen lsJung, über das Path B hier hereinkommt, also bleibt lsAlt drin und
+    // lsFern fliegt raus — andersherum wäre lsAlt das Opfer gewesen.
+    const lsFern = lowLevel({ price: 1.2978, pivotTime: 100, touchedTime: 850 });
+    const setups = detectTradeSetups(-1, [], [], [lsJung, lsAlt, lsFern], setupObs, nah, m5Candles);
+    expect(setups[0].sweeps.map((sw) => sw.level.price)).toEqual([1.3003, 1.3002]);
+    expect(setups[0].ls.price).toBe(1.3003);
   });
 
   it("rechnet über Path A dieselben Zahlen aus (ein OB, ein Ergebnis, egal welcher Pfad zuerst war)", () => {

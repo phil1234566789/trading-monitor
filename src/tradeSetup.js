@@ -140,6 +140,10 @@ function collectObSweeps(ob, ownLs, h1Levels, m5Levels, params) {
     for (const lvl of levels) {
       if (lvl === ownLs || !lvl.touched || lvl.touchedTime == null) continue;
       if (lvl.touchedTime > ob.startTime || ob.startTime - lvl.touchedTime > params.obMaxDelaySec) continue;
+      // Abstand zu ownLs, NICHT zum ältesten: der wird erst unten aus genau diesem Topf gekürt —
+      // gegen ihn zu filtern hieße, ein weit entferntes Level erst zum Anker zu machen und dann
+      // alles Richtige wegzuwerfen. ownLs hat maxDistanceM5 & Co. schon passiert.
+      if (Math.abs(lvl.price - ownLs.price) > params.maxSweepDistance) continue;
       sweeps.push({ level: lvl, timeframe });
     }
   }

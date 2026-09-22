@@ -1,8 +1,8 @@
 import { fetchForexCandles } from "../forexCandles.ts";
 import { getLiquidityLevels, getSessions } from "../db.ts";
-import { berlinOffsetMinutes } from "../berlinTime.ts";
-import { buildSessionContextLookup, contextForPivot, bonusLabelForPivot } from "../sessionOccurrences.js";
-import { PIP_SIZE } from "../pipConfig.js";
+import { berlinOffsetMinutes } from "../../_shared/berlinTime.ts";
+import { buildSessionContextLookup, contextForPivot, bonusLabelForPivot } from "../../_shared/sessionOccurrences.js";
+import { PIP_SIZE } from "../../_shared/pipConfig.js";
 import { formatKontext } from "../kontextLabel.ts";
 
 // Chat 2026-08-26, Philip: ersetzt das alte get_liquidity_levels — "früher war die Idee, dass Lana

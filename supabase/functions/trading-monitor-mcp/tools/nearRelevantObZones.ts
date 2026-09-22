@@ -1,6 +1,6 @@
 import { fetchForexCandles } from "../forexCandles.ts";
 import { getObZones } from "../db.ts";
-import { PIP_SIZE } from "../pipConfig.js";
+import { PIP_SIZE } from "../../_shared/pipConfig.js";
 
 // Pendant zu nearRelevantLiquidityLevels.ts, nur für OB-Zonen (Task "schlankes Schritt-5-Tool",
 // 2026-08-30) — get_ob_zones hat anders als get_near_relevant_liquidity_levels bisher KEINE

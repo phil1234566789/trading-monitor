@@ -6,7 +6,7 @@
 // Fehler. Eine Handumrechnung liegt deshalb nicht gelegentlich, sondern systematisch 1-2h daneben.
 // tools/getLoopState.ts setzt diese Regel seit 06.09. für sein eigenes Tool um; hier gilt sie für
 // alle, auch für künftig neu dazukommende.
-import { berlinDateTimeStrFor } from "./berlinTime.ts";
+import { berlinDateTimeStrFor } from "../_shared/berlinTime.ts";
 
 // Trennt echte Zeitstempel von Dauer-Werten in derselben Sekunden-Einheit (businessSeconds & Co.,
 // um Größenordnungen kleiner) — ohne diese Schranke bekäme eine Dauer einen Datums-Zwilling aus
