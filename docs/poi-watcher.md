@@ -13,14 +13,19 @@ naiv alles neu bei jedem Lauf:
 - Forex-Fetching passiert nur innerhalb eines Fetch-Fensters um die konfigurierte Trading-Session
   (`isForexFetchWindow`) — außerhalb werden GBPUSD/EURUSD komplett übersprungen.
 - 4H-Kerzen werden nur einmal pro 4H-Grenze neu geholt (`isH4RefreshTick`); dazwischen werden nur
-  die bereits erkannten Zonen in `ob_zones` gegen den Live-Preis geprüft (kein Re-Fetch, keine
+  die bereits erkannten Zonen in `ob_zones` gegen die M5-Kerzen geprüft (kein Re-Fetch, keine
   Neu-Erkennung).
 - 1H-Kerzen werden nur einmal pro Stunde neu geholt (`isH1RefreshTick`); dazwischen laufen die
   1H-OB-Zonen-/Liquidity-Level-Checks genauso DB-only wie bei 4H, und die Trade-Setup-Logik
   (braucht eine 1H-Serie bei jedem 5-Minuten-Lauf, anders als die Zonen-Checks) liest eine
   gecachte Kopie aus der `forex_h1_cache`-Tabelle statt neu zu holen.
 - M5 wird bei jedem Lauf geholt (Trade-Setups brauchen es frisch) und liefert auch den "aktuellen
-  Preis" für Live-Touch-Checks — kein separater M1-Ticker-Call.
+  Preis" — kein separater M1-Ticker-Call.
+- Der Touch-Check der 1H/4H-Objekte läuft gegen die jüngsten dieser M5-Kerzen, nicht gegen den
+  Preis im Moment des Ticks (`liveTouch.ts`): ein Docht, der zwischen zwei Cron-Läufen in eine
+  Zone hinein- und wieder herauslief, blieb sonst bis zum Schluss der vollen 1H/4H-Kerze
+  unerkannt. Nur das jüngste Kerzenfenster (`LIVE_TOUCH_WINDOW_SEC`), sonst löst der erste Lauf
+  nach einem Deploy eine Alarmsalve über die ganze geladene M5-Historie aus.
 
 Bei einem neuen Feature in `poi-watcher` überlegen, zu welcher dieser drei Throttling-Stufen es
 gehört, bevor ein neuer Per-Run-Fetch eingebaut wird.
