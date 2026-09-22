@@ -60,10 +60,15 @@ Bedarf nachfragen statt raten.
 `db.ts` liest stattdessen die bereits von `poi-watcher` persistierten
 `ob_zones`/`liquidity_levels`-Tabellen statt aus Kerzen neu zu detektieren (kein dritter Port der
 Detection-Algorithmen). Kleine, stabile, dependency-freie Stücke sind hier in Deno-sicherer Form
-dupliziert: `berlinTime.ts` (Berlin-Zeitzonen-Datumsmathe aus `dataExport.js`),
+dupliziert: `_shared/berlinTime.ts` (Berlin-Zeitzonen-Datumsmathe aus `dataExport.js`),
 `db.ts`s `filterRelevantRows` (aus `liquidity.js`s `filterRelevantLevels`), `tools/annotations.ts`s
 `validateAnnotations` (aus `claudeAnnotations.js`s `validateAnnotationList`). Wird eines der
 Originale geändert, prüfen ob der Port hier denselben Fix braucht.
+
+`berlinTime.ts`/`sessionOccurrences.js`/`pipConfig.js` lagen bis 09/2026 direkt in diesem Ordner
+und liegen seitdem in `_shared/` — `poi-watcher` braucht dieselben Bausteine für sein
+Forbidden-Session-Gate, und `_shared/` ist die einzige Cross-Function-Grenze im Repo (eine dritte
+Kopie wäre die Alternative gewesen).
 
 ## Trade-Journal-Write-Tools (`tools/trades.ts`)
 
