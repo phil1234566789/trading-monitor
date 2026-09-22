@@ -154,6 +154,34 @@ def mess_gedeckelt(g, k):
     return (100.0 * w / (w + l) if w + l else float("nan")), w, o
 
 
+# Die Pip-Leiter gehoert neben die R-Leiter ins TSC und muss deshalb GEGEN DENSELBEN STOPP messen:
+# min(strukturelles Risiko, Deckel) -- nicht pauschal 6 Pips, bei einer engen DR ist der Stopp
+# enger. Tabelle 1 oben misst die Pip-Ziele noch gegen die Invalidierung; beide Leitern
+# nebeneinander duerfen aber nicht zwei verschiedene Fragen beantworten ("bevor mein Stopp fiel"
+# gegen "bevor die Range strukturell starb"). Nenner wie in Tabelle 5 die ENTSCHIEDENEN Faelle.
+def mess_pips_gedeckelt(g, X):
+    """-> (Quote, Treffer, unentschieden) fuer ein festes Pip-Ziel gegen den gedeckelten Stopp."""
+    w = l = o = 0
+    for x in g:
+        erg = lauf(x, X, min(x["risk"], DECKEL))
+        if erg == "offen":
+            o += 1
+        elif erg == "win":
+            w += 1
+        else:
+            l += 1
+    return (100.0 * w / (w + l) if w + l else float("nan")), w, o
+
+
+print("6) PIP-LEITER MIT GEDECKELTEM STOPP (%d Pips) -- Gegenstueck zu Tabelle 5 fuers TSC" % DECKEL)
+print("  %-42s %4s  " % ("", "n") + "".join("%7dP" % X for X in PIPS))
+for name, g in baender:
+    print("  %-42s %4d  " % (name, len(g)) + "".join("%6.0f%% " % mess_pips_gedeckelt(g, X)[0] for X in PIPS))
+print("  %-42s %4d  " % ("alle", len(res)) + "".join("%6.0f%% " % mess_pips_gedeckelt(res, X)[0] for X in PIPS))
+print("  Unentschieden ueber alle DRs (weder Ziel noch gedeckelter Stopp binnen 24h):")
+print("    " + "  ".join("%dP:%d" % (X, mess_pips_gedeckelt(res, X)[2]) for X in PIPS))
+print()
+
 print("5) R-LEITER MIT GEDECKELTEM STOPP (%d Pips) -- das ist die Tabelle fuer die Chart-Skala" % DECKEL)
 print("  %-42s %4s  " % ("", "n") + "".join("%7dR" % k for k in R_GEDECKELT))
 for name, g in baender:

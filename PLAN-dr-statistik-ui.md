@@ -250,6 +250,30 @@ bleiben"*), der Nutzer sieht ohnehin immer nur eine Zeile.
 Die Bandgrenze selbst wird weiter am **strukturellen** Risiko gemessen, nicht am gedeckelten: das
 Band beschreibt, wie weit die Range aufgespannt ist, der Deckel nur, wo der Stopp liegt.
 
+### Die Pip-Leiter — gegen denselben gedeckelten Stopp
+
+Tabelle 6 in `baenderTabellen.py`, ergänzt 22.09.2026. Der Stopp ist **min(strukturelles Risiko,
+6 Pips)**, nicht pauschal 6 — bei einer engen DR ist er enger (Philip: *„6 Pips maximal, und wenn
+es weniger geht, dann weniger"*). Nenner wie in Tabelle 5 die entschiedenen Fälle.
+
+| Band | n | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P |
+|---|---|---|---|---|---|---|---|---|
+| unter 3 Pips | 447 | 53 % | 38 % | 30 % | 25 % | 22 % | 19 % | 16 % |
+| 3–5 Pips | 906 | 64 % | 49 % | 40 % | 33 % | 28 % | 24 % | 21 % |
+| 5–7 Pips | 716 | 74 % | 59 % | 49 % | 40 % | 35 % | 29 % | 26 % |
+| 7–10 Pips | 652 | 72 % | 58 % | 46 % | 39 % | 35 % | 30 % | 27 % |
+| über 10 Pips | 561 | 77 % | 61 % | 52 % | 44 % | 38 % | 33 % | 29 % |
+| **alle** | **3282** | **68 %** | **54 %** | **44 %** | **36 %** | **32 %** | **27 %** | **24 %** |
+
+Der Deckel kostet vor allem die weiten Bänder: „über 10 Pips" fällt bei 15 Pips von 73 % (Tabelle 1,
+Stopp = Invalidierung) auf 61 %, „unter 3 Pips" bleibt bei 38 % unberührt, weil der Deckel dort gar
+nicht greift. Die Spannweite über die Bänder schrumpft von 35 auf 23 Punkte — dieselbe Abflachung
+wie bei der R-Leiter, nur schwächer. Und anders als dort bleibt die Reihenfolge nahezu monoton:
+mehr Risiko heißt weiterhin mehr Pips, nur nicht mehr so viel mehr.
+
+Unentschieden (weder Ziel noch Stopp binnen 24 h) sind bei 10 Pips 0 von 3282, bei 40 Pips 61 — die
+Basis schrumpft nach oben also deutlich weniger als bei der R-Leiter (dort 128 bei 10 R).
+
 **Die Tabelle der Skala** (Tabelle 5 in `baenderTabellen.py`, Stopp auf 6 Pips gedeckelt, n = 3282)
 — genau diese Zahlen stehen in `src/rScaleQuotes.js`:
 
@@ -355,9 +379,12 @@ wäre durch nichts gedeckt.
    Frontend, erzeugt von `baenderTabellen.py`. Kein Server (Begründung unten). **Erledigt
    20.09.2026**, Task `chart-quoten-an-die-r-marken-schreiben-statisch` (`src/rScaleQuotes.js`).
    Nachgezogen 20.09.2026 auf den gedeckelten Stopp und 2-10 R, Task
-   `r-skala-stopp-auf-6-pips-deckeln-und-bis-10-r-erweitern` — Tabelle 5 statt Tabelle 1. Die
-   ungedeckelten Zahlen oben unter „Die Zahlen" gelten weiter für die Pip-Leiter, NICHT für die
-   R-Skala.
+   `r-skala-stopp-auf-6-pips-deckeln-und-bis-10-r-erweitern` — Tabelle 5 statt Tabelle 1.
+   **Korrigiert 22.09.2026:** hier stand, die ungedeckelten Zahlen gälten weiter für die
+   Pip-Leiter. Das war falsch — beide Leitern stehen im TSC nebeneinander und dürfen nicht zwei
+   verschiedene Fragen beantworten. Die Pip-Leiter misst jetzt gegen denselben Stopp,
+   Tabelle 6 (siehe „Die Pip-Leiter" unten). Tabelle 1 bleibt als Referenz für die
+   Reichweite gegen die strukturelle Invalidierung stehen.
 3. Beide Leitern plus Vergleichszeilen als Block im TSC.
 4. `find_targets`-Anreicherung.
 5. Gegenkraft — zurückgestellt, siehe oben.
