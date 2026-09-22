@@ -101,20 +101,58 @@ const HTF_TIMEFRAME_PRIORITY = ["4H", "1H"];
 // dadurch knapp andere, aus Replay-Sicht tatsächlich relevantere Level vom recentSwept-Deckel.
 // Exaktes Pendant zu applyAsOf (supabase/functions/trading-monitor-mcp/db.ts), hier nur fürs
 // Frontend nachgezogen — dieselbe Bug-Klasse wie [[project_liquidity_levels_history_gap]].
-function applyReplayAsOf(levels, replayUntil) {
-  if (replayUntil == null) return levels;
-  return levels.map((l) =>
-    l.touched && l.touchedTime != null && l.touchedTime > replayUntil ? { ...l, touched: false, touchedTime: null, endTime: null } : l,
-  );
+// touchedTime ist die OEFFNUNG der Kerze, auf der poi-watcher den Sweep erkannt hat — bei einem
+// 4H-Level also bis zu 4h vor dem echten Ereignis. Der rohe Vergleich touchedTime > replayUntil
+// hielt ein 4H-Level deshalb schon fuer gesweept, waehrend der Sweep erst spaeter in derselben
+// Kerze lief, und der untouched-Filter in findTargets.js warf es aus den Target-Vorschlaegen
+// (Bug-Report Philip 22.09.2026, GBPUSD-Replay 16.09.: 4H-Low 1,34635, Sweep-Kerze ab 09:00 UTC,
+// echter Bruch erst ab 11:00). Laeuft die Ereigniskerze zum Stichzeitpunkt noch, entscheiden
+// deshalb die feineren Chart-Kerzen — nur abgeschlossene, sonst leakt die laufende Kerze dieselbe
+// Zukunft eine Ebene tiefer. Portierung von resolveEventSec (supabase/functions/
+// trading-monitor-mcp/replayAsOf.ts), wo das Backend seit 12.09.2026 genauso rechnet.
+function resolveTouchSec(lvl, replayUntil, candles, barSec) {
+  const eventSec = lvl.touchedTime;
+  if (eventSec > replayUntil) return null;
+  if (eventSec + barSecondsForTimeframeCi(lvl.timeframe) <= replayUntil) return eventSec;
+  // Ohne Kerzen-Abdeckung des Zweifelsfensters bleibt es beim bisherigen Verhalten (Ereigniszeit
+  // gilt) — lieber die alte Ungenauigkeit als ein neuer blinder Fleck.
+  if (!barSec || !candles.some((c) => c.time + barSec >= eventSec && c.time <= replayUntil)) return eventSec;
+  const breached = (c) => (lvl.dir === 1 ? c.high >= lvl.price : c.low <= lvl.price);
+  const hit = candles.find((c) => c.time >= eventSec && c.time + barSec <= replayUntil && breached(c));
+  return hit ? hit.time : null;
 }
 
-export function computeHtfLiquidityLevels(candles, dbLiquidityLevelsHtf, symbol, replayUntil, price) {
+// Bug-Report Philip 2026-08-26: ein 1H-Level, dessen realer Sweep NACH dem Replay-Zeitpunkt liegt,
+// zeigte sich auf M5 nicht (aber auf dem 1h-Chart schon, über dessen eigene replay-geclippte
+// Live-Neuerkennung, siehe usePriceChartLiquidity.js: candles = clipReplay(allCandles)). Ursache:
+// fetchLiquidityLevelsHtf() liefert immer den LIVE-Stand von touched/touchedTime (kein asOfSec-
+// Parameter, alle 60s gepollt) — der Zeilenfilter unten (byReplay) filtert bisher nur nach
+// pivotTime, ein Level, das erst NACH replayUntil real gesweept wurde, blieb touched=true mit
+// einem Touch-Zeitpunkt aus der "Zukunft". selectRelevantHtfLevels zählt es dadurch als kürzlich
+// gesweept (mit einem uneinholbar aktuellen touchedTime) statt als weiterhin unberührt — verdrängt
+// dadurch knapp andere, aus Replay-Sicht tatsächlich relevantere Level vom recentSwept-Deckel.
+// Exaktes Pendant zu applyAsOf (supabase/functions/trading-monitor-mcp/db.ts), hier nur fürs
+// Frontend nachgezogen — dieselbe Bug-Klasse wie [[project_liquidity_levels_history_gap]].
+function applyReplayAsOf(levels, replayUntil, candles, barSec) {
+  if (replayUntil == null) return levels;
+  return levels.map((l) => {
+    if (!l.touched || l.touchedTime == null) return l;
+    const resolved = resolveTouchSec(l, replayUntil, candles, barSec);
+    if (resolved == null) return { ...l, touched: false, touchedTime: null, endTime: null };
+    return resolved === l.touchedTime ? l : { ...l, touchedTime: resolved, endTime: resolved };
+  });
+}
+
+// candleTimeframe = der Timeframe der uebergebenen candles (Chart-Timeframe), nicht der des Levels.
+export function computeHtfLiquidityLevels(candles, dbLiquidityLevelsHtf, symbol, replayUntil, price, candleTimeframe) {
   const byInstrument = dbLiquidityLevelsHtf.filter((l) => l.instrument === symbol);
   const byReplay = applyReplayAsOf(
     replayUntil == null
       ? byInstrument
       : byInstrument.filter((l) => l.pivotTime + barsAfterPivotSec(l.timeframe, FRACTAL_CONFIRM_BARS) <= replayUntil),
     replayUntil,
+    candles,
+    barSecondsForTimeframeCi(candleTimeframe),
   );
   const kept = [];
   for (const timeframe of HTF_TIMEFRAME_PRIORITY) {

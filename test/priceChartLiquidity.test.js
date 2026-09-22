@@ -123,6 +123,38 @@ describe("computeHtfLiquidityLevels", () => {
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ touched: true, touchedTime: 150, endTime: 150 });
   });
+
+  // Bug-Report Philip 22.09.2026 (GBPUSD-Replay 16.09., 4H-Low 1,34635 fehlte in den
+  // Target-Vorschlaegen): touchedTime ist die OEFFNUNG der 4H-Sweep-Kerze (09:00 UTC), der echte
+  // Bruch kam erst zwei Stunden spaeter — der rohe touchedTime-Vergleich zaehlte das Level
+  // deshalb schon als gesweept und findNearestLiquidityTargets warf es raus.
+  describe("Sweep-Kerze laeuft zum Replay-Zeitpunkt noch", () => {
+    const REPLAY_4H = 200000;
+    const TOUCH_OPEN = REPLAY_4H - 3600; // 4H-Kerze offen, Ende erst bei TOUCH_OPEN + 14400
+    const level = (extra) => [
+      { instrument: "GBPUSD", timeframe: "4H", pivotTime: 100000, price: 1.34635, dir: -1, touched: true, touchedTime: TOUCH_OPEN, endTime: TOUCH_OPEN, ...extra },
+    ];
+    const m5 = (low) => Array.from({ length: 12 }, (_, i) => candle(TOUCH_OPEN + i * 300, low, 1.347));
+
+    it("nimmt touched zurück, wenn keine abgeschlossene M5-Kerze das Level bricht", () => {
+      const result = computeHtfLiquidityLevels(m5(1.34652), level(), "GBPUSD", REPLAY_4H, 1.3466, "5m");
+      expect(result[0]).toMatchObject({ touched: false, touchedTime: null });
+    });
+
+    it("hält touched fest und zieht touchedTime auf die M5-Kerze, die wirklich bricht", () => {
+      const candlesM5 = m5(1.34652);
+      candlesM5[3] = candle(TOUCH_OPEN + 900, 1.346, 1.347);
+      const result = computeHtfLiquidityLevels(candlesM5, level(), "GBPUSD", REPLAY_4H, 1.3466, "5m");
+      expect(result[0]).toMatchObject({ touched: true, touchedTime: TOUCH_OPEN + 900 });
+    });
+
+    it("lässt die laufende M5-Kerze nicht durch", () => {
+      const candlesM5 = m5(1.34652);
+      candlesM5.push(candle(REPLAY_4H, 1.346, 1.347)); // noch nicht geschlossen
+      const result = computeHtfLiquidityLevels(candlesM5, level(), "GBPUSD", REPLAY_4H, 1.3466, "5m");
+      expect(result[0]).toMatchObject({ touched: false, touchedTime: null });
+    });
+  });
 });
 
 // Bug-Report Philip 2026-08-23: die DB-Version (poi-watcher) gewinnt IMMER bei einer Überschneidung

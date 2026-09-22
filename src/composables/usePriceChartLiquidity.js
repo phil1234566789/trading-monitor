@@ -99,7 +99,7 @@ export function usePriceChartLiquidity() {
     const liveRelevant = showSweptLiquidity
       ? [...highs, ...lows]
       : [...filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true), ...filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true)];
-    const htfLevels = computeHtfLiquidityLevels(candles, dbLiquidityLevelsHtf, symbol, replayUntil, currentPriceEstimate(allCandles));
+    const htfLevels = computeHtfLiquidityLevels(candles, dbLiquidityLevelsHtf, symbol, replayUntil, currentPriceEstimate(allCandles), currentBar);
     const relevant = mergeDbLiquidityLevels(liveRelevant, htfLevels);
     const precision = pricePrecisionForInstrument(symbol);
     // Bug-Report Philip 2026-08-29: eine per Chart-Klick hinzugefügte Sweep-Bestätigung verlor den
