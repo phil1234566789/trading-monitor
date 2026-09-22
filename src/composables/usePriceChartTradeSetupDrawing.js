@@ -114,10 +114,10 @@ export function usePriceChartTradeSetupDrawing() {
         },
         candles,
       );
-      // Die übrigen abgeräumten Level desselben OB (Philip 21.09.2026: "Je mehr Bestätigungs-
-      // LQ-Sweeps desto besser") — dünner und blasser, weil nur der älteste die Qualität trägt,
-      // aber mit demselben Label wie er (zweite Runde desselben Tages: "ich hätte gern LS für
-      // normale Sweeps ... dasselbe für kleinere Sweeps halt auch").
+      // Die übrigen abgeräumten Level desselben OB — dünn, blass und OHNE Label: die Qualität
+      // trägt allein der älteste, und nur an dem soll der Text stehen. Einmal mit Label
+      // durchprobiert und wieder verworfen, drei gleich aussehende Strings übereinander lesen
+      // sich schlechter als einer an der Linie, auf die es ankommt.
       const nebenSweepLines = (setup.sweeps ?? []).slice(1).map(
         (sw) =>
           new LiquidityLinePrimitive(
@@ -125,7 +125,7 @@ export function usePriceChartTradeSetupDrawing() {
             {
               color: cssColorScaled(key, NEBEN_SWEEP_ALPHA_RATIO),
               lineWidth: Math.max(1, lineWidth(key) - 1),
-              label: lsLabel(sw.level),
+              label: null,
               labelSide: bullBearLabelSide(setup.dir === 1),
             },
             candles,
