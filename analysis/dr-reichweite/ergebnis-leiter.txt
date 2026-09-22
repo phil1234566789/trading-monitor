@@ -1,16 +1,18 @@
-UNBEDINGTE LEITER ueber alle 1314 DRs
-  Pips  5P  88%  10P  71%  15P  56%  20P  46%  25P  39%  30P  34%  40P  27%
-  in R  2R  67%  3R  53%  4R  42%  5R  34%  6R  29%
+FXCM Bid | 1361 GBPUSD-Setups | 05.01.–21.09.2026 | neu berechnet 22.09.2026
 
-kleines Risiko    n=438  Risiko-Median  3.2 Pips
-   Pips  10P  56%  15P  41%  20P  31%  30P  22%
-   in R  1R  93%  2R  74%  3R  59%  5R  40%
-mittleres Risiko  n=438  Risiko-Median  5.4 Pips
-   Pips  10P  75%  15P  60%  20P  49%  30P  35%
-   in R  1R  92%  2R  73%  3R  57%  5R  37%
-grosses Risiko    n=438  Risiko-Median  9.6 Pips
-   Pips  10P  81%  15P  68%  20P  57%  30P  45%
-   in R  1R  78%  2R  55%  3R  43%  5R  25%
+UNBEDINGTE LEITER ueber alle 1361 DRs
+  Pips  5P  89%  10P  70%  15P  55%  20P  45%  25P  38%  30P  33%  40P  25%
+  in R  2R  67%  3R  53%  4R  42%  5R  35%  6R  29%
 
-Spannweite ueber die Risiko-Terzile, Einheit Pips: 25 28 25 23 Punkte  (Mittel 25)
-Spannweite ueber die Risiko-Terzile, Einheit R   : 16 19 17 15 Punkte  (Mittel 17)
+kleines Risiko    n=453  Risiko-Median  3.0 Pips
+   Pips  10P  56%  15P  40%  20P  32%  30P  20%
+   in R  1R  93%  2R  76%  3R  62%  5R  42%
+mittleres Risiko  n=453  Risiko-Median  5.4 Pips
+   Pips  10P  74%  15P  59%  20P  49%  30P  36%
+   in R  1R  92%  2R  71%  3R  57%  5R  39%
+grosses Risiko    n=455  Risiko-Median  9.6 Pips
+   Pips  10P  80%  15P  67%  20P  55%  30P  44%
+   in R  1R  77%  2R  53%  3R  41%  5R  24%
+
+Spannweite ueber die Risiko-Terzile, Einheit Pips: 24 26 23 23 Punkte  (Mittel 24)
+Spannweite ueber die Risiko-Terzile, Einheit R   : 16 23 21 18 Punkte  (Mittel 19)

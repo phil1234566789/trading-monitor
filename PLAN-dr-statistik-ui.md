@@ -1,5 +1,10 @@
 # PLAN: DR-Statistik in der UI anzeigen
 
+> Historischer Konzeptstand mit cTrader-Zahlen. Seit dem FXCM-Wechsel gelten für die
+> produktive R-Leiter die neu berechneten 1361 FXCM-Setups aus
+> [ergebnis-baender.txt](analysis/dr-reichweite/ergebnis-baender.txt); Betrieb und Abnahme siehe
+> [FXCM-Feed](docs/fxcm-feed.md). Die Zahlen in den folgenden Konzepttabellen sind historisch.
+
 Status: Konzept steht, kein Code. Umsetzung in einer eigenen Session.
 Datenbasis: `analysis/dr-reichweite/` — **1314 Dealing Ranges, Januar bis September 2026, GBPUSD**.
 milk-city-Task: `tsc-historische-dr-statistik-zur-aktuellen-dealing-range-anzeigen`.

@@ -277,18 +277,10 @@ export function registerReadTools(server: McpServer) {
     {
       title: "Forex-Kerzen",
       description:
-        "Rohkerzen für GBPUSD/EURUSD, automatisch archive-first: liegt der angefragte Bereich im " +
-        "persistierten Kerzen-Archiv (aktuell: GBPUSD, 5m/1h/4h, ab 2026-01-01), kommt die Antwort " +
-        "von dort — kein cTrader-Call, kein Timeout-Risiko. Nur außerhalb davon (EURUSD, andere " +
-        "Timeframes wie z.B. 1m — die liegen NIE im Archiv, siehe get_forex_candles_archive, das nur " +
-        "5m/1h/4h führt —, oder der kleine Rest seit dem letzten Backfill-Lauf bis 'jetzt') geht es " +
-        "live über die forex-candles Edge Function gegen cTrader (eigener OAuth-Handshake pro Call, " +
-        "daher dort gelegentlich träge/timeout-anfällig, ggf. selbst 1-2x wiederholen) — schlägt " +
-        "dieser Live-Rest fehl, kommt trotzdem der archivierte Teil zurück statt eines Fehlers. " +
-        "Optional `replayUntilSec`: liefert die neuesten `count` Kerzen bis zu diesem Zeitpunkt statt bis " +
-        "jetzt — damit auch ein historischer Ausschnitt auf NICHT archivierten Timeframes (v.a. M1) " +
-        "möglich, ohne extra Skript. get_forex_candles_archive direkt nutzen, wenn ein expliziter " +
-        "fromTime/toTime-Bereich gebraucht wird statt 'neueste N bis zu einem Zeitpunkt'.",
+        "Geschlossene native FXCM-Bid-Kerzen für GBPUSD/EURUSD aus dem laufend gepflegten Archiv. " +
+        "M1/M3/M5/M15/H1/H4/D1; ab Januar 2026, H1/H4 zusätzlich ab Juni 2025. " +
+        "Keine laufende Kerze. Optional replayUntilSec liefert die neuesten count Kerzen bis " +
+        "zu diesem Zeitpunkt. Für einen Start-Ende-Bereich get_forex_candles_archive nutzen.",
       inputSchema: {
         instrument: INSTRUMENT,
         timeframe: z.enum(["1m", "3m", "5m", "15m", "1h", "4h", "1D"]),
@@ -305,22 +297,13 @@ export function registerReadTools(server: McpServer) {
     {
       title: "Forex-Kerzen-Archiv (persistiert)",
       description:
-        "Kerzen aus der forex_candles-Tabelle, per Backfill-Script befüllt (siehe " +
-        "scripts/backfillForexCandles.ts) — kein OAuth-Handshake, kein Timeout-" +
-        "Risiko, beliebig oft wiederholbar. get_forex_candles nutzt intern automatisch dasselbe " +
-        "Archiv (archive-first mit Live-Fallback) — DIESES Tool hier nur direkt aufrufen, wenn ein " +
-        "EXPLIZITER fromTime/toTime-Bereich gebraucht wird (get_forex_candles kennt nur 'neueste N " +
-        "Kerzen bis zu einem Zeitpunkt', keinen Start+Ende-Bereich). Aktuell befüllt: Instrument " +
-        "GBPUSD, Timeframes 5m/1h/4h, ab 2026-01-01 (Europe/Berlin) bis zum letzten Backfill-Lauf. " +
-        "Für EURUSD, andere Timeframes oder Zeiträume davor liefert dieses Tool ein leeres Array — " +
-        "get_forex_candles fängt das für den 'neueste N'-Fall selbst per Live-Fallback ab, hier " +
-        "musst du das selbst tun. fromTime/toTime als ISO-Zeitstempel (inklusive Grenzen); ohne " +
-        "Angabe die ältesten verfügbaren Kerzen bis zum limit. Praktisch v.a. für historische " +
-        "Analysen über mehrere Tage/Wochen (z.B. 'zeig mir alle Order-Blocks der letzten 3 " +
-        "Wochen') statt vieler einzelner get_forex_candles-Calls.",
+        "Geschlossene FXCM-Bid-Kerzen aus dem Archiv für GBPUSD/EURUSD. " +
+        "M1/M3/M5/M15 ab Januar 2026, H1/H4 ab Juni 2025, D1 ab Oktober 2022. " +
+        "fromTime/toTime sind ISO-Zeitstempel mit inklusiven Grenzen. Ohne Grenzen kommen " +
+        "die ältesten verfügbaren Kerzen bis zum limit; für neueste N get_forex_candles nutzen.",
       inputSchema: {
         instrument: INSTRUMENT,
-        timeframe: z.enum(["5m", "1h", "4h"]).describe("Nur diese drei sind aktuell befüllt"),
+        timeframe: z.enum(["1m", "3m", "5m", "15m", "1h", "4h", "1D"]),
         fromTime: z.string().optional().describe("ISO-Zeitstempel, untere Grenze (inklusiv)"),
         toTime: z.string().optional().describe("ISO-Zeitstempel, obere Grenze (inklusiv)"),
         limit: z.number().int().positive().max(20000).default(5000),

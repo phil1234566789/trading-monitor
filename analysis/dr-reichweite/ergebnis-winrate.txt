@@ -1,30 +1,32 @@
-alle DRs  (n=1314 Dealing Ranges)
-   nahster Kandidat   entschieden 1305 | Winrate  67% | RR-Median 1.98 | EV +1.12 R
-   Ziel >=10 Pips     entschieden 1305 | Winrate  55% | RR-Median 2.69 | EV +1.12 R
-   Ziel >=15 Pips     entschieden 1292 | Winrate  47% | RR-Median 3.53 | EV +1.16 R
-   Ziel >=20 Pips     entschieden 1262 | Winrate  40% | RR-Median 4.60 | EV +1.14 R
-   Ziel >=30 Pips     entschieden 1123 | Winrate  30% | RR-Median 6.47 | EV +1.04 R
+FXCM Bid | 1361 GBPUSD-Setups | 05.01.–21.09.2026 | neu berechnet 22.09.2026
 
-im Handelsfenster 08-18  (n=962 Dealing Ranges)
-   nahster Kandidat   entschieden 955 | Winrate  65% | RR-Median 1.95 | EV +1.06 R
-   Ziel >=10 Pips     entschieden 955 | Winrate  56% | RR-Median 2.47 | EV +1.02 R
-   Ziel >=15 Pips     entschieden 946 | Winrate  48% | RR-Median 3.20 | EV +1.09 R
-   Ziel >=20 Pips     entschieden 927 | Winrate  42% | RR-Median 4.02 | EV +1.11 R
-   Ziel >=30 Pips     entschieden 830 | Winrate  32% | RR-Median 5.66 | EV +1.06 R
+alle DRs  (n=1361 Dealing Ranges)
+   nahster Kandidat   entschieden 1351 | Winrate  65% | RR-Median 2.08 | EV +1.14 R
+   Ziel >=10 Pips     entschieden 1351 | Winrate  56% | RR-Median 2.70 | EV +1.16 R
+   Ziel >=15 Pips     entschieden 1350 | Winrate  46% | RR-Median 3.55 | EV +1.12 R
+   Ziel >=20 Pips     entschieden 1335 | Winrate  38% | RR-Median 4.66 | EV +1.11 R
+   Ziel >=30 Pips     entschieden 1225 | Winrate  29% | RR-Median 6.55 | EV +0.99 R
 
-+ keine lebende Gegen-DR  (n=655 Dealing Ranges)
-   nahster Kandidat   entschieden 648 | Winrate  67% | RR-Median 2.00 | EV +1.17 R
-   Ziel >=10 Pips     entschieden 648 | Winrate  60% | RR-Median 2.37 | EV +1.16 R
-   Ziel >=15 Pips     entschieden 646 | Winrate  52% | RR-Median 2.98 | EV +1.17 R
-   Ziel >=20 Pips     entschieden 638 | Winrate  45% | RR-Median 3.72 | EV +1.16 R
-   Ziel >=30 Pips     entschieden 586 | Winrate  35% | RR-Median 5.19 | EV +1.10 R
+im Handelsfenster 08-18  (n=972 Dealing Ranges)
+   nahster Kandidat   entschieden 962 | Winrate  63% | RR-Median 2.07 | EV +1.10 R
+   Ziel >=10 Pips     entschieden 962 | Winrate  57% | RR-Median 2.45 | EV +1.06 R
+   Ziel >=15 Pips     entschieden 961 | Winrate  48% | RR-Median 3.11 | EV +1.06 R
+   Ziel >=20 Pips     entschieden 955 | Winrate  41% | RR-Median 3.91 | EV +1.06 R
+   Ziel >=30 Pips     entschieden 881 | Winrate  31% | RR-Median 5.65 | EV +0.99 R
 
-+ HTF-Sweep  (n=57 Dealing Ranges)
-   nahster Kandidat   entschieden  56 | Winrate  77% | RR-Median 1.93 | EV +1.62 R
-   Ziel >=10 Pips     entschieden  56 | Winrate  71% | RR-Median 2.10 | EV +1.62 R
-   Ziel >=15 Pips     entschieden  56 | Winrate  66% | RR-Median 2.67 | EV +1.67 R
-   Ziel >=20 Pips     entschieden  56 | Winrate  59% | RR-Median 3.53 | EV +1.60 R
-   Ziel >=30 Pips     entschieden  49 | Winrate  41% | RR-Median 4.86 | EV +1.50 R
++ keine lebende Gegen-DR  (n=677 Dealing Ranges)
+   nahster Kandidat   entschieden 667 | Winrate  64% | RR-Median 2.06 | EV +1.16 R
+   Ziel >=10 Pips     entschieden 667 | Winrate  60% | RR-Median 2.35 | EV +1.15 R
+   Ziel >=15 Pips     entschieden 666 | Winrate  51% | RR-Median 2.87 | EV +1.14 R
+   Ziel >=20 Pips     entschieden 663 | Winrate  45% | RR-Median 3.55 | EV +1.17 R
+   Ziel >=30 Pips     entschieden 620 | Winrate  35% | RR-Median 5.00 | EV +1.11 R
+
++ HTF-Sweep  (n=68 Dealing Ranges)
+   nahster Kandidat   entschieden  66 | Winrate  68% | RR-Median 1.87 | EV +1.29 R
+   Ziel >=10 Pips     entschieden  66 | Winrate  65% | RR-Median 2.01 | EV +1.32 R
+   Ziel >=15 Pips     entschieden  66 | Winrate  61% | RR-Median 2.44 | EV +1.36 R
+   Ziel >=20 Pips     entschieden  66 | Winrate  53% | RR-Median 3.10 | EV +1.28 R
+   Ziel >=30 Pips     entschieden  61 | Winrate  34% | RR-Median 4.53 | EV +0.98 R
 
 Die R-Rechnung ist die der IDEE: Einstieg an der nahen OB-Kante, Stopp an der fernen.
 Der reale Entry liegt woanders -- den macht Philip selbst, siehe README-Grenzen.

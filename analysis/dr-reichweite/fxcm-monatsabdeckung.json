@@ -1,0 +1,373 @@
+[
+  {
+    "bar": "1h",
+    "ctrader": 504,
+    "fxcm": 512,
+    "instrument": "EURUSD",
+    "month": "2026-01"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 480,
+    "fxcm": 493,
+    "instrument": "EURUSD",
+    "month": "2026-02"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 529,
+    "fxcm": 545,
+    "instrument": "EURUSD",
+    "month": "2026-03"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 528,
+    "fxcm": 536,
+    "instrument": "EURUSD",
+    "month": "2026-04"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 504,
+    "fxcm": 514,
+    "instrument": "EURUSD",
+    "month": "2026-05"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 528,
+    "fxcm": 534,
+    "instrument": "EURUSD",
+    "month": "2026-06"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 551,
+    "fxcm": 559,
+    "instrument": "EURUSD",
+    "month": "2026-07"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 505,
+    "fxcm": 515,
+    "instrument": "EURUSD",
+    "month": "2026-08"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 257,
+    "fxcm": 261,
+    "instrument": "EURUSD",
+    "month": "2026-09"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 126,
+    "fxcm": 128,
+    "instrument": "EURUSD",
+    "month": "2026-01"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 120,
+    "fxcm": 124,
+    "instrument": "EURUSD",
+    "month": "2026-02"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 133,
+    "fxcm": 138,
+    "instrument": "EURUSD",
+    "month": "2026-03"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 132,
+    "fxcm": 136,
+    "instrument": "EURUSD",
+    "month": "2026-04"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 126,
+    "fxcm": 131,
+    "instrument": "EURUSD",
+    "month": "2026-05"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 132,
+    "fxcm": 136,
+    "instrument": "EURUSD",
+    "month": "2026-06"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 137,
+    "fxcm": 141,
+    "instrument": "EURUSD",
+    "month": "2026-07"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 120,
+    "fxcm": 124,
+    "instrument": "EURUSD",
+    "month": "2026-08"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 6044,
+    "fxcm": 6078,
+    "instrument": "EURUSD",
+    "month": "2026-01"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 5756,
+    "fxcm": 5841,
+    "instrument": "EURUSD",
+    "month": "2026-02"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 6343,
+    "fxcm": 6514,
+    "instrument": "EURUSD",
+    "month": "2026-03"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 6331,
+    "fxcm": 6413,
+    "instrument": "EURUSD",
+    "month": "2026-04"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 6043,
+    "fxcm": 6121,
+    "instrument": "EURUSD",
+    "month": "2026-05"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 6330,
+    "fxcm": 6368,
+    "instrument": "EURUSD",
+    "month": "2026-06"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 6607,
+    "fxcm": 6681,
+    "instrument": "EURUSD",
+    "month": "2026-07"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 6056,
+    "fxcm": 6151,
+    "instrument": "EURUSD",
+    "month": "2026-08"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 3090,
+    "fxcm": 3116,
+    "instrument": "EURUSD",
+    "month": "2026-09"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 504,
+    "fxcm": 512,
+    "instrument": "GBPUSD",
+    "month": "2026-01"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 480,
+    "fxcm": 491,
+    "instrument": "GBPUSD",
+    "month": "2026-02"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 529,
+    "fxcm": 544,
+    "instrument": "GBPUSD",
+    "month": "2026-03"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 528,
+    "fxcm": 536,
+    "instrument": "GBPUSD",
+    "month": "2026-04"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 504,
+    "fxcm": 514,
+    "instrument": "GBPUSD",
+    "month": "2026-05"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 528,
+    "fxcm": 534,
+    "instrument": "GBPUSD",
+    "month": "2026-06"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 551,
+    "fxcm": 559,
+    "instrument": "GBPUSD",
+    "month": "2026-07"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 505,
+    "fxcm": 513,
+    "instrument": "GBPUSD",
+    "month": "2026-08"
+  },
+  {
+    "bar": "1h",
+    "ctrader": 370,
+    "fxcm": 376,
+    "instrument": "GBPUSD",
+    "month": "2026-09"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 126,
+    "fxcm": 128,
+    "instrument": "GBPUSD",
+    "month": "2026-01"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 120,
+    "fxcm": 123,
+    "instrument": "GBPUSD",
+    "month": "2026-02"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 133,
+    "fxcm": 138,
+    "instrument": "GBPUSD",
+    "month": "2026-03"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 132,
+    "fxcm": 136,
+    "instrument": "GBPUSD",
+    "month": "2026-04"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 126,
+    "fxcm": 131,
+    "instrument": "GBPUSD",
+    "month": "2026-05"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 132,
+    "fxcm": 135,
+    "instrument": "GBPUSD",
+    "month": "2026-06"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 137,
+    "fxcm": 141,
+    "instrument": "GBPUSD",
+    "month": "2026-07"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 127,
+    "fxcm": 132,
+    "instrument": "GBPUSD",
+    "month": "2026-08"
+  },
+  {
+    "bar": "4h",
+    "ctrader": 91,
+    "fxcm": 94,
+    "instrument": "GBPUSD",
+    "month": "2026-09"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 6043,
+    "fxcm": 6055,
+    "instrument": "GBPUSD",
+    "month": "2026-01"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 5758,
+    "fxcm": 5816,
+    "instrument": "GBPUSD",
+    "month": "2026-02"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 6336,
+    "fxcm": 6475,
+    "instrument": "GBPUSD",
+    "month": "2026-03"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 6328,
+    "fxcm": 6403,
+    "instrument": "GBPUSD",
+    "month": "2026-04"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 6040,
+    "fxcm": 6123,
+    "instrument": "GBPUSD",
+    "month": "2026-05"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 6318,
+    "fxcm": 6387,
+    "instrument": "GBPUSD",
+    "month": "2026-06"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 6579,
+    "fxcm": 6629,
+    "instrument": "GBPUSD",
+    "month": "2026-07"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 6047,
+    "fxcm": 6113,
+    "instrument": "GBPUSD",
+    "month": "2026-08"
+  },
+  {
+    "bar": "5m",
+    "ctrader": 4442,
+    "fxcm": 4497,
+    "instrument": "GBPUSD",
+    "month": "2026-09"
+  }
+]

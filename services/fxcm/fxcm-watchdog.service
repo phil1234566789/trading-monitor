@@ -1,0 +1,7 @@
+[Unit]
+Description=Restart an unresponsive FXCM collector
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'if [ "$(docker inspect -f "{{.State.Health.Status}}" fxcm-collector)" = unhealthy ]; then docker restart fxcm-collector; fi'

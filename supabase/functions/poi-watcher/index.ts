@@ -1,25 +1,11 @@
-// D2 (vereinfacht): 4H+1H-Zonen-Wächter für die Forex-Instrumente (GBPUSD/EURUSD via cTrader
-// Open API). Erkennt Order-Block-Zonen, persistiert sie in `ob_zones` und schickt eine
-// Telegram-Nachricht, sobald eine Zone zum ersten Mal vom Preis berührt wird — aber nur für
-// Instrumente mit `sendTelegram: true` (siehe INSTRUMENTS unten). Kein M1/Claude-Entry-Check
-// (D3) — das kommt erst, wenn die Strategie ein Regelwerk für Claude hat.
-//
-// (BTC-USDT lief hier bis 2026-08-21 über OKX mit; Philip tradet BTC mit der aktuellen Strategie
-// nicht mehr, der OKX-Zweig ist komplett raus — bereits erkannte BTC-Zonen bleiben unangetastet
-// in der DB, nur die Erkennung/der Alarm-Pfad läuft nicht mehr.)
-//
-// Zurück von Twelve Data zu cTrader (2026-08-03, siehe PLAN-notifications.md "Status: cTrader
-// Open API"): Twelve Data ist ein 60+-Liquiditätsprovider-Aggregat, dessen Preisglättung die
-// Docht-Extreme kappt, auf denen FVG/OB-Erkennung aufbaut (Bug-Report 2026-07-27, Setups auf
-// FOREXCOM sichtbar, auf Twelve Data nicht) — strukturelles Problem, kein Bug in
-// orderBlocks.ts/liquidity.ts. Neu diesmal: ein reguläres Pepperstone-Razor-Demokonto statt
-// einer Prop-Firm-Challenge (die beiden vorherigen cTrader-Ausfälle waren beide ein
-// deaktiviertes Challenge-Konto, kein Spotware/cTrader-Problem selbst).
-import { createClient } from "npm:@supabase/supabase-js@2";
+// 4H/1H-Zonen und M5-Setups aus geschlossenen FXCM-Bid-Kerzen.
+// Alarmfenster und Telegram-Schalter bleiben in der Datenbank konfiguriert.
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { detectOrderBlocks, type Candle } from "../_shared/orderBlocks.ts";
 import { detectLiquidityLevels, type LiquidityLevel } from "../_shared/liquidity.ts";
-import { fetchTrendbarsBatch } from "../_shared/ctrader/client.ts";
-import { loadCtraderCreds, type CtraderCreds } from "../_shared/ctraderCreds.ts";
+import { unprocessedTimeframes } from "./fxcmRefresh.js";
+import { fetchAllRows } from "../_shared/fetchAllRows.ts";
+import { readFxcmCandles } from "../_shared/fxcmCandles.ts";
 import {
   detectSetupObs,
   detectTradeSetup,
@@ -30,6 +16,13 @@ import {
 import { computeSweepAgeHours } from "../_shared/ageTier.ts";
 import { persistTradeSetupSweeps } from "../_shared/tradeSetupSweeps.ts";
 import { forbiddenSessionAt, type SessionDangerConfig } from "../_shared/forbiddenSession.ts";
+import {
+  findLevelTouch,
+  findZoneTouch,
+  levelTouchPrice,
+  recentCandles,
+  zoneTouchPrice,
+} from "./liveTouch.ts";
 
 const TIMEFRAMES: { label: "4H" | "1H" }[] = [{ label: "4H" }, { label: "1H" }];
 // 300h (~12,5 Tage) reichten nicht, um lange unberührte 1H-Liquiditäts-Level (und 1H-OB-Zonen, die
@@ -37,18 +30,14 @@ const TIMEFRAMES: { label: "4H" | "1H" }[] = [{ label: "4H" }, { label: "1H" }];
 // braucht dafür ein paar unberührte Level ober-/unterhalb des Kurses, auch wenn die schon
 // Wochen/Monate alt sind. Bug-Report 2026-08-02: ein 45 Tage alter, nie erneut erkannter Pivot
 // (1,15297, 18.06.) fehlte deshalb komplett in liquidity_levels. 3000h (~125 Tage) statt 300h —
-// cTraders Hard-Limit ist 14000 Bars/Request (siehe fetchOneTrendbar in _shared/ctrader/client.ts),
-// 3000 ist also unproblematisch. Weiterhin nur EIN Fetch pro Stunde (Konsistenz mit dem
-// bestehenden Cache-Verhalten, nicht mehr aus Rate-Limit-Gründen wie bei Twelve Data) — der
-// nächste isH1RefreshTick-Lauf erkennt/backfillt fehlende ältere Level automatisch.
 const FOREX_H1_LOOKBACK_CANDLES = 3000;
 // Bug-Report Philip 2026-08-23: eine 4H-OB-Zone vom 12.05. (start_time außerhalb des alten
 // CANDLE_LIMIT=300-Fensters, ~50 Tage) wurde real getouched+invalidated (Kerzen-Vollarchiv-
 // Neuberechnung bestätigt: 19.08. ~13:00 UTC), blieb in der DB aber für immer touched=false —
 // derselbe Fensterblindfleck wie oben bei FOREX_H1_LOOKBACK_CANDLES, nur diesmal beim 4H-Fetch, der
 // bis dahin bei den alten 300 Kerzen (~50 Tage) belassen wurde. Auf dieselbe Größenordnung wie 1H
-// angehoben (3000 4H-Kerzen = ~500 Tage) — läuft nur an isH4RefreshTick-Ticks (alle 4h), also kein
-// zusätzlicher API-Druck.
+// angehoben (3000 4H-Kerzen = ~500 Tage) — das Archiv liefert die geschlossenen Kerzen ohne
+// zusätzlichen Broker-Abruf.
 const FOREX_H4_LOOKBACK_CANDLES = 3000;
 const LIQUIDITY_FRACTAL_PERIOD = 5; // siehe LIQUIDITY_FRACTAL_PERIOD in PriceChart.vue
 
@@ -127,58 +116,21 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const TELEGRAM_CHAT_ID = Deno.env.get("TELEGRAM_CHAT_ID")!;
 const DRY_RUN = (Deno.env.get("DRY_RUN") ?? "false").toLowerCase() === "true";
-const CTRADER_CLIENT_ID = Deno.env.get("CTRADER_CLIENT_ID")!;
-const CTRADER_CLIENT_SECRET = Deno.env.get("CTRADER_CLIENT_SECRET")!;
-// Fallback fürs allererste Deployment vor der ersten `ctrader_oauth_tokens`-Zeile — siehe
-// selbes Muster in forex-candles/index.ts.
-const CTRADER_ACCESS_TOKEN_FALLBACK = Deno.env.get("CTRADER_ACCESS_TOKEN") ?? "";
-const CTRADER_REFRESH_TOKEN_FALLBACK = Deno.env.get("CTRADER_REFRESH_TOKEN") ?? "";
-
-// Nur beim ersten Lauf nach einem Kerzenschluss neu holen (Chat 2026-07-23: "da ändert sich
-// doch in 4h/1h nichts") — zwischen zwei Kerzenschlüssen liefert die Datenquelle (nur
-// geschlossene Kerzen, empirisch verifiziert für Twelve Data UND cTrader) exakt dieselbe
-// Kerzenreihe, ein Refetch alle 5min war reine Verschwendung. UTC statt Europe/Berlin, weil
-// sich sowohl der pg_cron-Tick als auch die Kerzen-Bucket-Grenzen an UTC ausrichten.
-// isH4RefreshTick-Ticks sind automatisch eine Teilmenge von isH1RefreshTick-Ticks (jede
-// 4H-Grenze ist auch eine 1H-Grenze).
-function isH1RefreshTick(date: Date): boolean {
-  return date.getUTCMinutes() === 0;
-}
-function isH4RefreshTick(date: Date): boolean {
-  return date.getUTCHours() % 4 === 0 && date.getUTCMinutes() === 0;
-}
-
-// Ein Connect/Auth-Handshake pro Forex-Instrument für alle benötigten Timeframes in einem
-// Rutsch (fetchTrendbarsBatch, siehe _shared/ctrader/client.ts) — anders als beim
-// zwischenzeitlichen Twelve-Data-Umweg, der das mangels Batch-API in parallele Einzel-REST-
-// Calls aufteilen musste. Kein eigener M1-Preis-Call (Chat 2026-07-23, gilt weiterhin) — der
-// Close der letzten M5-Kerze reicht für den Live-Touch-Check. 1H fehlt in candlesByTf, wenn
-// includeH1=false — der Aufrufer muss dann auf den forex_h1_cache-Stand zurückfallen (siehe
-// Deno.serve unten), fürs Trade-Setup UND die 1H-Zonen/Liquidity-Level.
+// FXCM-H4 folgt dem New-York-Handelstag. Archiv-Lesen pro Tick vermeidet
+// starre UTC-Grenzen und verpasst auch verspätet eingetroffene Kerzen nicht.
 async function fetchForexBatch(
-  symbol: string,
-  includeH1: boolean,
-  includeH4: boolean,
-  creds: CtraderCreds,
+  db: SupabaseClient, symbol: string,
 ): Promise<{ currentPrice: number; candlesByTf: Map<string, Candle[]> }> {
-  const requestSpecs: { key: string; period: string; count: number }[] = [
-    { key: "M5", period: "M5", count: TRADE_SETUP_M5_CANDLE_LIMIT },
+  const specs = [
+    { key: "M5", period: "5m", count: TRADE_SETUP_M5_CANDLE_LIMIT },
+    { key: "1H", period: "1h", count: FOREX_H1_LOOKBACK_CANDLES },
+    { key: "4H", period: "4h", count: FOREX_H4_LOOKBACK_CANDLES },
   ];
-  if (includeH1) requestSpecs.push({ key: "1H", period: "H1", count: FOREX_H1_LOOKBACK_CANDLES });
-  if (includeH4) requestSpecs.push({ key: "4H", period: "H4", count: FOREX_H4_LOOKBACK_CANDLES });
-
-  const results = await fetchTrendbarsBatch({
-    clientId: CTRADER_CLIENT_ID,
-    clientSecret: CTRADER_CLIENT_SECRET,
-    accessToken: creds.accessToken,
-    refreshToken: creds.refreshToken,
-    onTokenRefresh: creds.onTokenRefresh,
-    requests: requestSpecs.map(({ period, count }) => ({ symbolName: symbol, period, count })),
-  });
-
-  const candlesByTf = new Map(requestSpecs.map((spec, i) => [spec.key, results[i]]));
-  const m5Candles = candlesByTf.get("M5")!;
-  return { currentPrice: m5Candles[m5Candles.length - 1].close, candlesByTf };
+  const results = await Promise.all(specs.map(s => readFxcmCandles(db, symbol, s.period, s.count)));
+  if (results.some(rows => !rows.length)) throw new Error(`FXCM history missing: ${symbol}`);
+  const latest = results[0][results[0].length - 1];
+  if (Date.now() / 1000 - latest.time > 900) throw new Error(`FXCM M5 feed stale: ${symbol}`);
+  return { currentPrice: latest.close, candlesByTf: new Map(specs.map((s, i) => [s.key, results[i]])) };
 }
 
 async function sendTelegram(text: string) {
@@ -305,7 +257,7 @@ function isInWindows(date: Date, windows: WeekdayWindows | undefined, startBuffe
 
 // Nachts/am Wochenende (außerhalb des Alarmfensters) werden fürs Forex-Zonen-Fetching keine
 // Requests gebraucht (Philip schläft bzw. tradet nicht, kein Alarm bringt was) — spart unnötige
-// cTrader-Connects (ursprünglich gegen Twelve Datas Free-Tier-Rate-Limit gedacht, 800/Tag,
+// Archiv-Abfragen (ursprünglich gegen Twelve Datas Free-Tier-Rate-Limit gedacht, 800/Tag,
 // 8/Min; bleibt aber auch ohne dieses Limit sinnvoll, um außerhalb der Handelszeiten keine
 // Zonen-Erkennung/DB-Schreibvorgänge zu verursachen, die eh niemand ansieht). FETCH_START_BUFFER_MIN
 // Minuten VOR Fensterstart schon wieder
@@ -320,11 +272,7 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-    // Manueller Override für den regulären isH1RefreshTick-Gate (nur volle UTC-Stunde) — der
-    // 5min-Cron schickt immer `{}` (siehe poi_watcher_cron_5min-Migration), also bleibt das
-    // reguläre Throttling für den Cron unverändert; nur ein gezielter manueller Aufruf mit
-    // {"forceH1Refresh": true} im Body erzwingt einen sofortigen H1-Refetch (z.B. um nach der
-    // FOREX_H1_LOOKBACK_CANDLES-Erhöhung 2026-08-02 nicht bis zur nächsten vollen Stunde zu warten).
+    // Wartungsaufruf darf auch außerhalb des normalen Auswertungsfensters laufen.
     let forceH1Refresh = false;
     try {
       const body = await req.json();
@@ -374,20 +322,7 @@ Deno.serve(async (req) => {
       });
       forbiddenSessionsByInstrument.set(r.instrument as string, list);
     }
-    // cTrader-Access-/Refresh-Token: `ctrader_oauth_tokens` ist die eigentliche Quelle (siehe
-    // Migration 20260722120000), die CTRADER_ACCESS_TOKEN/REFRESH_TOKEN-Secrets nur ein
-    // Fallback fürs allererste Deployment vor der ersten Zeile — gleiches Muster wie in
-    // forex-candles/index.ts (beide seit 2026-08-30 über _shared/ctraderCreds.ts). onTokenRefresh
-    // schreibt ein automatisch refreshtes Token zurück, damit der nächste Cron-Tick (und
-    // forex-candles) das frische Token sieht.
-    const ctraderCreds: CtraderCreds = await loadCtraderCreds(
-      supabase,
-      { accessToken: CTRADER_ACCESS_TOKEN_FALLBACK, refreshToken: CTRADER_REFRESH_TOKEN_FALLBACK },
-      "poi-watcher",
-    );
-
     const now = new Date();
-    const h4RefreshTick = isH4RefreshTick(now);
     const summary: Record<string, unknown> = { dryRun: DRY_RUN, instruments: {} };
     // Für den Pin-Touch-Alarm-Durchlauf ganz unten (nach diesem Loop) — der braucht pro Instrument
     // den aktuellen Preis UND das Alarm-Gating, hat aber selbst keinen eigenen Fetch (reine
@@ -406,38 +341,23 @@ Deno.serve(async (req) => {
         (summary.instruments as Record<string, unknown>)[cfg.instrument] = { skipped: "outside forex fetch window" };
         continue;
       }
-      // 1H fürs Trade-Setup (candles1hForSetup unten) braucht IMMER eine Kerzenreihe, egal ob
-      // dieser Lauf frisch fetcht oder nicht — anders als die 1H-OB-Zonen/Liquidity-Level unten,
-      // die bei einem Skip-Tick bewusst NUR den DB-Stand fürs Touch-Update anfassen (kein Sinn
-      // in einem eigenen "Fraktal touched"-Konzept). Deshalb hier der forex_h1_cache-Fallback,
-      // nicht direkt candlesByTf — sonst würde jeder Skip-Tick trotzdem wieder volle Arbeit
-      // machen und der Cache brächte nichts.
-      let h1RefreshTick = isH1RefreshTick(now) || forceH1Refresh;
-      let h1CandlesForSetup: Candle[] | undefined;
-      if (!h1RefreshTick) {
-        const { data: h1CacheRow, error: h1CacheError } = await supabase
-          .from("forex_h1_cache")
-          .select("candles")
-          .eq("instrument", cfg.instrument)
-          .maybeSingle();
-        if (h1CacheError) throw h1CacheError;
-        if (h1CacheRow) {
-          h1CandlesForSetup = h1CacheRow.candles as Candle[];
-        } else {
-          h1RefreshTick = true; // Bootstrap: noch kein Cache-Eintrag, erzwungener Fetch
-        }
-      }
-
-      const forexBatch = await fetchForexBatch(cfg.instrument, h1RefreshTick, h4RefreshTick, ctraderCreds);
-      const freshH1Candles = forexBatch.candlesByTf.get("1H");
-      if (freshH1Candles) {
-        h1CandlesForSetup = freshH1Candles;
-        const { error: h1CacheWriteError } = await supabase
-          .from("forex_h1_cache")
-          .upsert({ instrument: cfg.instrument, candles: freshH1Candles });
-        if (h1CacheWriteError) throw h1CacheWriteError;
-      }
+      const forexBatch = await fetchForexBatch(supabase, cfg.instrument);
+      const h1CandlesForSetup = forexBatch.candlesByTf.get("1H")!;
+      const h4LastTime = forexBatch.candlesByTf.get("4H")!.at(-1)!.time;
+      const { data: checkpoint, error: checkpointError } = await supabase.from("forex_h1_cache")
+        .select("candles,h4_last_time").eq("instrument", cfg.instrument).maybeSingle();
+      if (checkpointError) throw checkpointError;
+      forexBatch.candlesByTf = unprocessedTimeframes(forexBatch.candlesByTf, {
+        "1H": (checkpoint?.candles as Candle[] | undefined)?.at(-1)?.time,
+        "4H": checkpoint?.h4_last_time,
+      });
       const currentPrice = forexBatch.currentPrice;
+      // Touch-Fenster für die 1H/4H-Objekte weiter unten (siehe liveTouch.ts): dieselben
+      // M5-Kerzen, die ohnehin für die Trade-Setup-Erkennung geladen werden.
+      const recentM5 = recentCandles(
+        forexBatch.candlesByTf.get("M5")!,
+        Math.floor(now.getTime() / 1000),
+      );
       // Zonen werden für jedes Instrument immer erkannt/gespeichert (Dashboard-Charts brauchen
       // das weiterhin) — `shouldSend` entscheidet nur, ob dafür auch wirklich eine
       // Telegram-Nachricht rausgeht (nur innerhalb des Alarmfensters aus trading_schedules,
@@ -452,21 +372,19 @@ Deno.serve(async (req) => {
         const alarmActive = shouldSend && isAlarmOn(`ob_zone_${tf.label.toLowerCase()}`);
         const candles = forexBatch.candlesByTf.get(tf.label);
 
-        const { data: existingRows, error: selectError } = await supabase
+        const existingRows = await fetchAllRows<ObZoneRow>((from, to) => supabase
           .from("ob_zones")
           .select("start_time, direction, touched, notified, notified_at, alert_price, top, bottom, invalidated")
           .eq("instrument", cfg.instrument)
           .eq("timeframe", tf.label)
-          .returns<ObZoneRow[]>();
-        if (selectError) throw selectError;
+          .order("id").range(from, to).returns<ObZoneRow[]>());
 
         let notifiedCount = 0;
 
         if (candles) {
           // Voller Durchlauf: Zonen frisch aus den Kerzen erkennen (structural touched/
           // invalidated ändert sich nur, wenn neue Kerzen dazukommen) und mit dem DB-Stand
-          // mergen. Läuft bei 1H jeden Tick, bei 4H nur an isH4RefreshTick-Ticks (siehe
-          // fetchForexBatch).
+          // mergen. Beide Timeframes werden aus dem aktuellen FXCM-Archiv gelesen.
           // tf.label ("4H"/"1H") explizit mitgeben statt implizit undefined (Chat 2026-07-29) —
           // beides bleibt HTF-Verhalten (nur "1m"/"3m"/"5m" gelten als Lower-TF), aber so ist
           // derselbe Aufrufer-Stil wie bei detectSetupObs (immer explizites Timeframe-Label).
@@ -478,30 +396,34 @@ Deno.serve(async (req) => {
             ]),
           );
 
+          const pendingRows: Record<string, unknown>[] = [];
+          const pendingAlerts: string[] = [];
           for (const z of zones) {
             const direction = z.dir === 1 ? "long" : "short";
             const existing = existingMap.get(`${direction}_${z.startTime}`);
             const wasTouchedInDb = existing?.touched ?? false;
 
-            // Live-Preis-Touch: sowohl Twelve Data als auch cTrader liefern nur geschlossene
-            // Kerzen, d.h. ohne das hier wuerde ein Touch erst erkannt, wenn die volle 1H/4H-
-            // Kerze schliesst (bis zu 59min
-            // Verzoegerung). Einmal getouched bleibt getouched (auch wenn detectOrderBlocks()
-            // die noch offene Kerze dementsprechend noch nicht sieht) — sonst faellt der Wert
-            // beim naechsten Run auf false zurueck und der Alarm geht beim echten Kerzenschluss
-            // ein zweites Mal raus.
+            // Live-Touch aus den M5-Kerzen: FXCM liefert nur geschlossene Kerzen, ohne das
+            // hier wuerde ein Touch erst beim Schluss der vollen 1H/4H-Kerze erkannt (bis zu
+            // 59min Verzoegerung). Gegen die Kerzen statt gegen den Tick-Preis, weil ein Docht
+            // zwischen zwei Ticks sonst komplett durchrutscht (siehe liveTouch.ts).
+            // Einmal getouched bleibt getouched (auch wenn detectOrderBlocks() die noch offene
+            // Kerze dementsprechend noch nicht sieht) — sonst faellt der Wert beim naechsten Run
+            // auf false zurueck und der Alarm geht beim echten Kerzenschluss ein zweites Mal raus.
             // wasTouchedInDb bewusst OHNE !z.invalidated-Guard (Bug-Report Philip: eine
             // getouchte, danach durchbrochene Zone fiel beim naechsten Refresh-Tick auf
             // touched=false zurueck — Telegram-Alarm raus, aber im /protokoll unsichtbar, weil
-            // fetchTouchedZones auf touched=true filtert). Nur ein NEUER Live-Preis-Touch setzt
+            // fetchTouchedZones auf touched=true filtert). Nur ein NEUER Live-Touch setzt
             // eine bereits invalidierte Zone nicht mehr auf touched.
-            if (!z.touched && (wasTouchedInDb || (!z.invalidated && currentPrice <= z.top && currentPrice >= z.bottom))) {
+            const liveHit = z.touched || z.invalidated ? null : findZoneTouch(recentM5, z.top, z.bottom);
+            if (!z.touched && (wasTouchedInDb || liveHit)) {
               z.touched = true;
             }
 
             const justTouched = z.touched && !wasTouchedInDb;
+            const alertPrice = liveHit ? zoneTouchPrice(liveHit, z.top, z.bottom) : currentPrice;
 
-            const { error: upsertError } = await supabase.from("ob_zones").upsert(
+            pendingRows.push(
               {
                 instrument: cfg.instrument,
                 timeframe: tf.label,
@@ -522,7 +444,7 @@ Deno.serve(async (req) => {
                 // alert_price: der Preis im Moment des Touches, einmal eingefroren (wie
                 // end_time) — unabhaengig davon, ob dafuer auch wirklich eine TG-Nachricht
                 // rausging (alarmActive/Session steuern nur notified_at, nicht diesen Wert).
-                alert_price: justTouched ? currentPrice : existing?.alert_price ?? null,
+                alert_price: justTouched ? alertPrice : existing?.alert_price ?? null,
                 notified: existing ? existing.notified || justTouched : z.touched,
                 // notified_at nur bei einem echten Versand setzen (existing muss vorhanden sein,
                 // sonst ist es ein historischer Alt-Touch ohne echten Alarm) — sonst würde ein
@@ -530,45 +452,52 @@ Deno.serve(async (req) => {
                 // als "gerade eben benachrichtigt" zeigen.
                 notified_at: justTouched && existing && alarmActive ? new Date().toISOString() : existing?.notified_at ?? null,
               },
-              { onConflict: "instrument,timeframe,start_time,direction" },
             );
-            if (upsertError) throw upsertError;
 
             // Bei brandneuen Zonen (kein `existing`), die schon beim ersten Erkennen touched
             // sind, nicht alarmieren — das waere ein historischer Alt-Touch, kein "jetzt gerade".
             if (justTouched && existing && alarmActive) {
               notifiedCount++;
               const label = direction === "long" ? "Bullish" : "Bearish";
-              await sendTelegram(
+              pendingAlerts.push(
                 `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
                   `Zone: ${fmt(z.bottom, cfg.pricePrecision)} – ${fmt(z.top, cfg.pricePrecision)}\n` +
-                  `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+                  `Preis: ${fmt(alertPrice, cfg.pricePrecision)}`,
               );
             }
           }
 
+          // Ein gemeinsamer Schreibzugriff statt hunderter HTTP-Roundtrips pro Zeitrahmen.
+          // Nachrichten erst nach erfolgreicher Speicherung senden.
+          if (pendingRows.length) {
+            const { error } = await supabase.from("ob_zones").upsert(pendingRows, { onConflict: "instrument,timeframe,start_time,direction" });
+            if (error) throw error;
+          }
+          for (const message of pendingAlerts) await sendTelegram(message);
+
           // Bug-Report Philip 2026-08-23 (analog zum liquidity_levels-Fix weiter unten): eine Zone,
           // deren start_time außerhalb des gerade geholten Kerzenfensters liegt, taucht in `zones`
           // gar nicht erst auf und wurde vom Loop oben nie wieder angefasst — für immer eingefroren,
-          // selbst wenn der Preis sie inzwischen längst berührt hat. Dasselbe simple Live-Preis-
-          // Sicherheitsnetz wie im "else"-Zweig unten, hier zusätzlich auch an einem Refresh-Tick,
-          // nicht nur an einem Skip-Tick. Kein Ersatz für die volle Kerzenhistorie (ein Spike, der
-          // sich vor dem nächsten poi-watcher-Lauf schon wieder zurückzieht, rutscht weiterhin durch
-          // — dafür braucht es die einmalige Archiv-Korrektur, siehe backfillObZones.ts), aber besser
-          // als "nie wieder geprüft".
+          // selbst wenn der Preis sie inzwischen längst berührt hat. Dasselbe M5-Kerzen-Sicherheitsnetz
+          // wie im "else"-Zweig unten, hier zusätzlich auch an einem Refresh-Tick, nicht nur an einem
+          // Skip-Tick. Kein Ersatz für die volle Kerzenhistorie (ein Touch, der länger als
+          // LIVE_TOUCH_WINDOW_SEC zurückliegt, braucht weiterhin die einmalige Archiv-Korrektur,
+          // siehe backfillObZones.ts), aber besser als "nie wieder geprüft".
           const zoneKeysInWindow = new Set(zones.map((z) => `${z.dir === 1 ? "long" : "short"}_${z.startTime}`));
           for (const row of existingRows ?? []) {
             if (row.invalidated || row.touched) continue;
             const rowStartSec = Math.floor(new Date(row.start_time).getTime() / 1000);
             if (zoneKeysInWindow.has(`${row.direction}_${rowStartSec}`)) continue;
-            if (currentPrice > row.top || currentPrice < row.bottom) continue;
+            const hit = findZoneTouch(recentM5, row.top, row.bottom);
+            if (!hit) continue;
+            const alertPrice = zoneTouchPrice(hit, row.top, row.bottom);
 
             const { error: updateOffWindowError } = await supabase
               .from("ob_zones")
               .update({
                 touched: true,
                 notified: true,
-                alert_price: currentPrice,
+                alert_price: alertPrice,
                 notified_at: alarmActive ? new Date().toISOString() : row.notified_at ?? null,
               })
               .eq("instrument", cfg.instrument)
@@ -583,28 +512,31 @@ Deno.serve(async (req) => {
               await sendTelegram(
                 `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
                   `Zone: ${fmt(row.bottom, cfg.pricePrecision)} – ${fmt(row.top, cfg.pricePrecision)}\n` +
-                  `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+                  `Preis: ${fmt(alertPrice, cfg.pricePrecision)}`,
               );
             }
           }
 
           instrumentSummary[tf.label] = { zonesSeen: zones.length, notified: notifiedCount };
         } else {
-          // 4H außerhalb eines isH4RefreshTick-Ticks: keine frischen Kerzen (siehe
-          // fetchForexBatch/isH4RefreshTick) — zwischen zwei 4H-Kerzenschlüssen kann sich die
+          // 4H außerhalb eines neuen H4-Kerzen: keine frischen Kerzen (siehe
+          // unprocessedTimeframes) — zwischen zwei 4H-Kerzenschlüssen kann sich die
           // ZONENLISTE selbst nicht ändern, nur ob der Preis inzwischen eine schon bekannte
-          // Zone berührt hat. Dafür reicht der DB-Stand als Zonenliste, kein detectOrderBlocks
-          // nötig — nur ein leichtes UPDATE statt des vollen Upserts oben.
+          // Zone berührt hat (dafür die jüngsten M5-Kerzen, siehe liveTouch.ts). Der DB-Stand
+          // reicht als Zonenliste, kein detectOrderBlocks nötig — nur ein leichtes UPDATE statt
+          // des vollen Upserts oben.
           for (const row of existingRows ?? []) {
             if (row.invalidated || row.touched) continue;
-            if (currentPrice > row.top || currentPrice < row.bottom) continue;
+            const hit = findZoneTouch(recentM5, row.top, row.bottom);
+            if (!hit) continue;
+            const alertPrice = zoneTouchPrice(hit, row.top, row.bottom);
 
             const { error: updateError } = await supabase
               .from("ob_zones")
               .update({
                 touched: true,
                 notified: true,
-                alert_price: currentPrice,
+                alert_price: alertPrice,
                 notified_at: alarmActive ? new Date().toISOString() : row.notified_at ?? null,
               })
               .eq("instrument", cfg.instrument)
@@ -619,7 +551,7 @@ Deno.serve(async (req) => {
               await sendTelegram(
                 `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
                   `Zone: ${fmt(row.bottom, cfg.pricePrecision)} – ${fmt(row.top, cfg.pricePrecision)}\n` +
-                  `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+                  `Preis: ${fmt(alertPrice, cfg.pricePrecision)}`,
               );
             }
           }
@@ -632,21 +564,21 @@ Deno.serve(async (req) => {
       // "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Nachbesserung 2026-08-23,
       // Philip: Preisnahe relevante 4H-Level zusätzlich zu 1H). Läuft über dieselbe TIMEFRAMES-
       // Schleife wie die OB-Zonen oben und nutzt dieselben schon geholten `candlesByTf`-Kerzen —
-      // kein zusätzlicher Fetch, 4H bleibt automatisch an isH4RefreshTick gekoppelt (siehe
-      // fetchForexBatch), genau wie bei den OB-Zonen. Gleiches Live-Preis-Sofort-Touch-Muster wie
+      // kein zusätzlicher Fetch, 4H bleibt automatisch an unprocessedTimeframes gekoppelt (siehe
+      // fetchForexBatch), genau wie bei den OB-Zonen. Gleiches M5-Kerzen-Sofort-Touch-Muster wie
       // oben bei den OB-Zonen (die Datenquelle liefert nur geschlossene Kerzen, sonst bis zu 59min
-      // Verzoegerung bis zum Alarm).
+      // Verzoegerung bis zum Alarm; gegen die Kerzen statt gegen den Tick-Preis, siehe
+      // liveTouch.ts).
       for (const tf of TIMEFRAMES) {
         const alarmActive = shouldSend && isAlarmOn(`liquidity_${tf.label.toLowerCase()}`);
         const candlesForTf = forexBatch.candlesByTf.get(tf.label);
 
-        const { data: existingLiqRows, error: liqSelectError } = await supabase
+        const existingLiqRows = await fetchAllRows<LiquidityLevelRow>((from, to) => supabase
           .from("liquidity_levels")
           .select("pivot_time, direction, price, touched, notified, notified_at, end_time, alert_price")
           .eq("instrument", cfg.instrument)
           .eq("timeframe", tf.label)
-          .returns<LiquidityLevelRow[]>();
-        if (liqSelectError) throw liqSelectError;
+          .order("id").range(from, to).returns<LiquidityLevelRow[]>());
 
         let liqNotifiedCount = 0;
 
@@ -664,36 +596,39 @@ Deno.serve(async (req) => {
             ]),
           );
 
+          const pendingRows: Record<string, unknown>[] = [];
+          const pendingAlerts: string[] = [];
           for (const lvl of levels) {
             const existing = existingLiqMap.get(`${lvl.direction}_${lvl.pivotTime}`);
             const wasTouchedInDb = existing?.touched ?? false;
 
-            if (
-              !lvl.touched &&
-              (wasTouchedInDb || (lvl.direction === "high" ? currentPrice >= lvl.price : currentPrice <= lvl.price))
-            ) {
+            const liveHit = lvl.touched ? null : findLevelTouch(recentM5, lvl.price, lvl.direction);
+            if (!lvl.touched && (wasTouchedInDb || liveHit)) {
               lvl.touched = true;
             }
 
             const justTouched = lvl.touched && !wasTouchedInDb;
+            const alertPrice = liveHit ? levelTouchPrice(liveHit, lvl.direction) : currentPrice;
 
             // end_time: bevorzugt der aus der Kerzenhistorie abgeleitete Zeitpunkt (deterministisch,
-            // siehe buildLevel in _shared/liquidity.ts). lvl.touchedTime ist nur dann null, wenn
-            // touched hier gerade erst per Live-Preis (vor Kerzenschluss) oder ueber
-            // wasTouchedInDb gesetzt wurde: bei einem brandneuen Touch (justTouched) ist "jetzt"
-            // korrekt, bei einem laengst bekannten Touch, der nur aus dem geladenen
-            // Kerzenfenster gefallen ist, bleibt der bestehende end_time-Wert stehen (sonst
-            // wuerde er bei jedem Cron-Lauf erneut auf "jetzt" springen — derselbe Bug, den
-            // end_time hier ueberhaupt erst ersetzen soll).
+            // siehe buildLevel in _shared/liquidity.ts), danach die M5-Kerze, die den Touch
+            // gebracht hat. lvl.touchedTime ist nur dann null, wenn touched hier gerade erst vor
+            // dem HTF-Kerzenschluss oder ueber wasTouchedInDb gesetzt wurde: bei einem brandneuen
+            // Touch (justTouched) ist "jetzt" korrekt, bei einem laengst bekannten Touch, der nur
+            // aus dem geladenen Kerzenfenster gefallen ist, bleibt der bestehende end_time-Wert
+            // stehen (sonst wuerde er bei jedem Cron-Lauf erneut auf "jetzt" springen — derselbe
+            // Bug, den end_time hier ueberhaupt erst ersetzen soll).
             const endTimeIso = !lvl.touched
               ? null
               : lvl.touchedTime != null
                 ? new Date(lvl.touchedTime * 1000).toISOString()
-                : justTouched
-                  ? new Date().toISOString()
-                  : existing?.end_time ?? new Date().toISOString();
+                : liveHit
+                  ? new Date(liveHit.time * 1000).toISOString()
+                  : justTouched
+                    ? new Date().toISOString()
+                    : existing?.end_time ?? new Date().toISOString();
 
-            const { error: upsertLiqError } = await supabase.from("liquidity_levels").upsert(
+            pendingRows.push(
               {
                 instrument: cfg.instrument,
                 timeframe: tf.label,
@@ -702,30 +637,36 @@ Deno.serve(async (req) => {
                 pivot_time: new Date(lvl.pivotTime * 1000).toISOString(),
                 touched: lvl.touched,
                 end_time: endTimeIso,
-                alert_price: justTouched ? currentPrice : existing?.alert_price ?? null,
+                alert_price: justTouched ? alertPrice : existing?.alert_price ?? null,
                 notified: existing ? existing.notified || justTouched : lvl.touched,
                 notified_at: justTouched && existing && alarmActive ? new Date().toISOString() : existing?.notified_at ?? null,
               },
-              { onConflict: "instrument,timeframe,direction,pivot_time" },
             );
-            if (upsertLiqError) throw upsertLiqError;
 
             // Neue Level, die schon beim ersten Erkennen touched sind, waeren ein
             // historischer Alt-Touch (z.B. direkt nach Deploy) — kein "jetzt gerade".
             if (justTouched && existing && alarmActive) {
               liqNotifiedCount++;
               const label = lvl.direction === "high" ? "Hoch" : "Tief";
-              await sendTelegram(
+              pendingAlerts.push(
                 `💧 ${cfg.instrument} ${tf.label} Liquiditäts-Level (${label}) angetestet\n` +
                   `Level: ${fmt(lvl.price, cfg.pricePrecision)}\n` +
-                  `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+                  `Preis: ${fmt(alertPrice, cfg.pricePrecision)}`,
               );
             }
           }
 
+          // Ein gemeinsamer Schreibzugriff statt hunderter HTTP-Roundtrips pro Zeitrahmen.
+          // Nachrichten erst nach erfolgreicher Speicherung senden.
+          if (pendingRows.length) {
+            const { error } = await supabase.from("liquidity_levels").upsert(pendingRows, { onConflict: "instrument,timeframe,direction,pivot_time" });
+            if (error) throw error;
+          }
+          for (const message of pendingAlerts) await sendTelegram(message);
+
           // Bug-Report Philip 2026-08-23: ein Feb-Pivot (weit außerhalb des rollierenden
           // FOREX_H1_LOOKBACK_CANDLES-Fensters) wurde am 21.08. um 09:00 UTC (Stundenkerze, also
-          // exakt der isH1RefreshTick-Zeitpunkt) tatsächlich vom Preis erreicht, blieb aber für
+          // exakt der nächste Auswertungslauf) tatsächlich vom Preis erreicht, blieb aber für
           // immer touched=false. Ursache: dieser "if"-Zweig prüft nur `levels` (frisch aus dem
           // AKTUELL geladenen Fenster erkannt) gegen currentPrice — ein Level, dessen Pivot
           // außerhalb dieses Fensters liegt, taucht in `levels` nie wieder auf und wird hier nie
@@ -740,16 +681,17 @@ Deno.serve(async (req) => {
             const rowPivotSec = Math.floor(new Date(row.pivot_time).getTime() / 1000);
             if (levelsKeySet.has(`${row.direction}_${rowPivotSec}`)) continue;
             if (row.touched) continue;
-            const touchedNow = row.direction === "high" ? currentPrice >= row.price : currentPrice <= row.price;
-            if (!touchedNow) continue;
+            const hit = findLevelTouch(recentM5, row.price, row.direction as "high" | "low");
+            if (!hit) continue;
+            const alertPrice = levelTouchPrice(hit, row.direction as "high" | "low");
 
             const { error: updateOffWindowLiqError } = await supabase
               .from("liquidity_levels")
               .update({
                 touched: true,
                 notified: true,
-                alert_price: currentPrice,
-                end_time: new Date().toISOString(),
+                alert_price: alertPrice,
+                end_time: new Date(hit.time * 1000).toISOString(),
                 notified_at: alarmActive ? new Date().toISOString() : row.notified_at ?? null,
               })
               .eq("instrument", cfg.instrument)
@@ -764,28 +706,29 @@ Deno.serve(async (req) => {
               await sendTelegram(
                 `💧 ${cfg.instrument} ${tf.label} Liquiditäts-Level (${label}) angetestet\n` +
                   `Level: ${fmt(row.price, cfg.pricePrecision)}\n` +
-                  `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+                  `Preis: ${fmt(alertPrice, cfg.pricePrecision)}`,
               );
             }
           }
 
           instrumentSummary[`${tf.label}_liquidity`] = { levelsSeen: levels.length, notified: liqNotifiedCount };
         } else {
-          // Skip-Tick (siehe isH1RefreshTick/isH4RefreshTick oben): keine frischen Kerzen für
-          // diesen Timeframe, also auch keine neuen Fraktale möglich — nur den DB-Stand gegen den
-          // aktuellen Preis pruefen, gleiches Muster wie beim OB-Zonen-Skip-Pfad.
+          // Skip-Tick (siehe unprocessedTimeframes/unprocessedTimeframes oben): keine frischen Kerzen für
+          // diesen Timeframe, also auch keine neuen Fraktale möglich — nur den DB-Stand gegen die
+          // jüngsten M5-Kerzen pruefen, gleiches Muster wie beim OB-Zonen-Skip-Pfad.
           for (const row of existingLiqRows ?? []) {
             if (row.touched) continue;
-            const touchedNow = row.direction === "high" ? currentPrice >= row.price : currentPrice <= row.price;
-            if (!touchedNow) continue;
+            const hit = findLevelTouch(recentM5, row.price, row.direction as "high" | "low");
+            if (!hit) continue;
+            const alertPrice = levelTouchPrice(hit, row.direction as "high" | "low");
 
             const { error: updateLiqError } = await supabase
               .from("liquidity_levels")
               .update({
                 touched: true,
                 notified: true,
-                alert_price: currentPrice,
-                end_time: new Date().toISOString(),
+                alert_price: alertPrice,
+                end_time: new Date(hit.time * 1000).toISOString(),
                 notified_at: alarmActive ? new Date().toISOString() : row.notified_at ?? null,
               })
               .eq("instrument", cfg.instrument)
@@ -800,7 +743,7 @@ Deno.serve(async (req) => {
               await sendTelegram(
                 `💧 ${cfg.instrument} ${tf.label} Liquiditäts-Level (${label}) angetestet\n` +
                   `Level: ${fmt(row.price, cfg.pricePrecision)}\n` +
-                  `Preis: ${fmt(currentPrice, cfg.pricePrecision)}`,
+                  `Preis: ${fmt(alertPrice, cfg.pricePrecision)}`,
               );
             }
           }
@@ -1036,6 +979,13 @@ Deno.serve(async (req) => {
         instrumentSummary["tradeSetups"] = { detected: detected.length, notified: tradeSetupNotifiedCount, forbiddenSession: tradeSetupForbiddenCount };
       }
 
+      // Erst nach einem vollständigen Lauf markieren; ein Fehler muss erneut versucht werden.
+      if (forexBatch.candlesByTf.has("1H") || forexBatch.candlesByTf.has("4H")) {
+        const { error } = await supabase.from("forex_h1_cache").upsert({
+          instrument: cfg.instrument, candles: h1CandlesForSetup, h4_last_time: h4LastTime,
+        });
+        if (error) throw error;
+      }
       (summary.instruments as Record<string, unknown>)[cfg.instrument] = { currentPrice, shouldSend, ...instrumentSummary };
     }
 

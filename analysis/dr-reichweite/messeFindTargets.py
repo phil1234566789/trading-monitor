@@ -16,12 +16,11 @@
 # OAuth-Token, parallel braeuchte das hier niemand). Dafuer muss TRADING_MONITOR_MCP_TOKEN gesetzt
 # sein, und SETUPS/CANDLES muessen auf die gezogenen MCP-Ergebnisse zeigen (siehe README).
 import json, sys, os, time, gzip, random, bisect, datetime, statistics, urllib.request
-from drMerkmale import lade_setups, dr_schluessel
+from drMerkmale import lade_setups, dr_schluessel, berlin_dt, berlin_dt
 
 ROH = "find-targets-roh.jsonl.gz"
 MCP_URL = "https://vkphwtqcvqrkphksproj.supabase.co/functions/v1/trading-monitor-mcp"
 from drMerkmale import lade_kerzen, PIP, ARM, HORIZON
-BERLIN = 2 * 3600  # CEST im gesamten Messzeitraum 15.07.-16.09.2026, wie filterAlterUndHandelszeit.py
 
 ts = lambda s: int(datetime.datetime.fromisoformat(s).timestamp())
 utc_dt = lambda sec: datetime.datetime.fromtimestamp(sec, datetime.timezone.utc)
@@ -70,7 +69,7 @@ def drs_laden():
         # neuen Simulationslauf auf eine andere DR), sondern die stabile DR-Identitaet -- sonst
         # paart ein spaeterer Lauf die gecachten Antworten mit den falschen Ranges.
         out.append(dict(x, start=start, ref=ref, reach_strikt=strikt, key=dr_schluessel(r),
-                        stunde=utc_dt(ts(r["ob_start_time"]) + BERLIN).hour))
+                        stunde=berlin_dt(ts(r["ob_start_time"])).hour))
     out.sort(key=lambda d: d["start"])
     return out
 

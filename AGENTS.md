@@ -5,8 +5,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 ## What this is
 
 A personal Forex trading dashboard for Philip. Vue 3 SPA (deployed to GitHub Pages) +
-Supabase (Postgres + Edge Functions) backend. Live price charts (GBPUSD/EURUSD via cTrader Open
-API) with order-block/liquidity/trade-setup detection, a cron-driven alert watcher that posts to
+Supabase (Postgres + Edge Functions) backend. Price charts (GBPUSD/EURUSD via FXCM ForexConnect) with order-block/liquidity/trade-setup detection, a cron-driven alert watcher that posts to
 Telegram, and a trade journal ("Protokoll"). BTC-USDT/OKX support was removed entirely (frontend
 chart branch, `poi-watcher`'s OKX fetch, the `okx-market` MCP server) — existing BTC rows in
 `ob_zones`/`trade_positions`/etc. are untouched, just no longer written to or read from by live
@@ -60,24 +59,13 @@ Pine Script source of truth for the trade-setup tuning constants lives in a sibl
 `tv-indikator` project (`tv-indikator/src/inputs.pine`), referenced in comments but not in this
 repo.
 
-### Forex candle data: cTrader Open API, not Twelve Data
+### Forex candle data: FXCM ForexConnect
 
-GBPUSD/EURUSD candles come from the cTrader Open API (`supabase/functions/_shared/ctrader/client.ts`,
-`ctrader_oauth_tokens` table for the OAuth token pair), proxied through the `forex-candles` edge
-function so the frontend never holds credentials directly. `src/forexCandles.js` is the frontend
-fetch wrapper — response shape `{time,open,high,low,close,volume}`, oldest-first. Currently on a
-regular Pepperstone Razor demo account (not a prop-firm challenge account — chosen to avoid
-challenge-account deactivation).
-
-The Twelve Data client (`_shared/twelvedata/client.ts`) is left in place but unwired — don't
-assume it's live without checking `poi-watcher`'s `INSTRUMENTS` config first (everything fetches
-via cTrader now). **Don't switch OB/FVG detection back to Twelve Data**: its 60+
-liquidity-provider aggregation smooths away the exact wick extremes the detection depends on — a
-structural mismatch, not a bug in `orderBlocks.ts`/`liquidity.ts`.
-
-**cTrader's hard limit is 14000 bars/request** (see `fetchOneTrendbar` in `_shared/ctrader/client.ts`).
-`poi-watcher`'s throttling below is not about surviving a rate limit; it's for cache consistency
-and to avoid hammering the OAuth-token-backed connection unnecessarily.
+GBPUSD/EURUSD use closed native FXCM Bid candles. The VPS collector in `services/fxcm/`
+feeds `fxcm-ingest` and `fxcm_candles`; `forex_candles` is its read-only compatibility view.
+Chart, MCP and poi-watcher read the same feed. Do not write into the view or re-enable
+cTrader/Twelve Data for detection. Native H4/D1 boundaries follow FXCM's trading day.
+Operational details, coverage and rollback: `docs/fxcm-feed.md`.
 
 ### Frontend data flow (`PriceChart.vue`)
 
@@ -176,16 +164,8 @@ applies when explicitly invoked, not to every session in this repo.
   candles from the wrong window. `candleCache.js`'s `MAX_LOOKAHEAD_BARS` caps how many lookahead
   bars any timeframe can request, with the time-window derived from the *capped* bar count (not
   the raw seconds value) so count and window stay consistent.
-- **`poi-watcher`'s refresh-tick boundaries (`isH1RefreshTick`/`isH4RefreshTick`) use raw UTC
-  hours, not Berlin time** — the one deliberate exception to the Berlin-timezone convention above,
-  since they must align with the UTC-based `pg_cron` schedule. Don't "fix" this to Berlin time.
-- **cTrader `ACCESS_DENIED` lockout, no automatic recovery** (`cTrader error ACCESS_DENIED: ...` in
-  logs/Telegram — happened 2026-08-08 and 2026-08-23) — Spotware's refresh token is single-use; if
-  persisting a just-rotated token ever fails, the old one in `ctrader_oauth_tokens` is already
-  burned and every future auto-refresh fails with this same error forever. Fix: run
-  `node scripts/ctrader-reauth.mjs` (see its header comment for the full walkthrough — opens a
-  login URL, exchanges the code for fresh tokens, prints the SQL to reseed the table).
-
+- **FXCM collection and evaluation are separate:** the collector polls after candle close;
+  poi-watcher runs one minute after each M5 boundary and reads all three timeframes from the archive.
 ## Conventions
 
 - Comments are in German, and are written to explain **why** (a past bug, a non-obvious

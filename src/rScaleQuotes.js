@@ -11,21 +11,17 @@
 // Ohne diesen Guard zeigte der Chart dort Zahlen, die für das Instrument nie gerechnet wurden.
 export const QUOTEN_INSTRUMENT = "GBPUSD";
 
-// Tabelle 5 aus analysis/dr-reichweite/ergebnis-baender.txt, 1314 Dealing Ranges Jan-Sep 2026
-// (921 mehr als in der Fassung vom 20.09., weil die Erkennung seit dem 21.09. nicht mehr auf die
-// Fraktal-Bestätigung wartet — dieselbe Stichprobe, nur früher erkannt und dadurch größer):
-// Stopp auf STOPP_DECKEL_PIPS gedeckelt, wie die Skala selbst rechnet. Die ungedeckelte Tabelle 1
-// von vorher war eine ANDERE Messung, keine andere Skalierung — mit Deckel fällt der Stopp, während
-// die Range strukturell noch lebt.
+// Tabelle 5 aus ergebnis-baender.txt: 1361 FXCM-Dealing-Ranges, Jan–Sep 2026.
+// Stopp auf 6 Pips gedeckelt; neu gerechnet nach dem Quellenwechsel.
 // riskPips ist das STRUKTURELLE Risiko (rScale.js: bandRisk), nicht das gedeckelte: das Band
 // beschreibt, wie weit die Range aufgespannt ist, der Deckel nur, wo der Stopp liegt.
 // Bandgrenzen exklusiv unten, inklusiv oben (lo < Risiko <= hi), wie in baenderTabellen.py.
 const BAENDER = [
-  { hi: 3, quoten: { 2: 75, 3: 63, 4: 50, 5: 44, 6: 38, 7: 31, 8: 28, 9: 26, 10: 23 } },
-  { hi: 5, quoten: { 2: 74, 3: 57, 4: 47, 5: 39, 6: 34, 7: 30, 8: 25, 9: 22, 10: 21 } },
-  { hi: 7, quoten: { 2: 73, 3: 58, 4: 46, 5: 39, 6: 33, 7: 30, 8: 26, 9: 24, 10: 21 } },
-  { hi: 10, quoten: { 2: 66, 3: 50, 4: 43, 5: 37, 6: 31, 7: 29, 8: 23, 9: 21, 10: 18 } },
-  { hi: Infinity, quoten: { 2: 72, 3: 56, 4: 47, 5: 39, 6: 33, 7: 28, 8: 25, 9: 23, 10: 17 } },
+  { hi: 3, quoten: { 2: 77, 3: 64, 4: 52, 5: 44, 6: 38, 7: 34, 8: 29, 9: 26, 10: 24 } },
+  { hi: 5, quoten: { 2: 74, 3: 59, 4: 50, 5: 43, 6: 37, 7: 31, 8: 25, 9: 23, 10: 22 } },
+  { hi: 7, quoten: { 2: 70, 3: 55, 4: 45, 5: 38, 6: 31, 7: 27, 8: 24, 9: 21, 10: 19 } },
+  { hi: 10, quoten: { 2: 65, 3: 47, 4: 39, 5: 36, 6: 28, 7: 26, 8: 21, 9: 18, 10: 15 } },
+  { hi: Infinity, quoten: { 2: 74, 3: 56, 4: 45, 5: 39, 6: 33, 7: 28, 8: 24, 9: 22, 10: 19 } },
 ];
 
 // Quote in Prozent, oder null wenn nichts Gemessenes passt (anderes Instrument, Risiko <= 0,

@@ -78,6 +78,8 @@ const instrumente = (Deno.env.get("BACKFILL_INSTRUMENTS") ?? "GBPUSD").split(","
 const vonIso = (Deno.env.get("BACKFILL_FROM") ?? "2026-01-05") + "T00:00:00Z";
 const bisIso = (Deno.env.get("BACKFILL_TO") ?? "2026-07-16") + "T00:00:00Z";
 const trockenlauf = Deno.env.get("BACKFILL_DRY_RUN") === "1";
+const candleTable = Deno.env.get('BACKFILL_SOURCE') === 'fxcm' ? 'fxcm_candles' : 'forex_candles';
+if (candleTable === 'fxcm_candles' && !trockenlauf) throw new Error('FXCM source comparison requires BACKFILL_DRY_RUN=1');
 // Regel 2 aus dem Task "Alarm sobald die FVG steht" (21.09.2026): die Alters-Schwelle des
 // Close-Checks ist ein MESSERGEBNIS, kein geratener Wert -- deshalb hier uebersteuerbar, damit
 // derselbe Zeitraum mit mehreren Schwellen durchgerechnet und verglichen werden kann.
@@ -122,7 +124,7 @@ function verfeinereTouch(levels: LiquidityLevel[], richtung: "high" | "low", m5:
 }
 
 async function ladeKerzen(instrument: string, bar: string, vonSec: number, bisSec: number): Promise<Candle[]> {
-  const rows = await readForexCandlesArchiveFrom(supabase, instrument, bar, iso(vonSec), iso(bisSec));
+  const rows = await readForexCandlesArchiveFrom(supabase, instrument, bar, iso(vonSec), iso(bisSec), candleTable);
   return rows.map((r) => ({
     time: typeof r.time === "number" ? r.time : Math.floor(new Date(r.time as string).getTime() / 1000),
     open: r.open, high: r.high, low: r.low, close: r.close, volume: r.volume ?? 0,
