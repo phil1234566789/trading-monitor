@@ -41588,7 +41588,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L113",
+      "source_location": "L121",
       "weight": 1.0
     },
     {
@@ -41600,7 +41600,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L133",
+      "source_location": "L141",
       "weight": 1.0
     },
     {
@@ -41612,7 +41612,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L167",
+      "source_location": "L175",
       "weight": 1.0
     },
     {
@@ -41624,7 +41624,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L168",
+      "source_location": "L176",
       "weight": 1.0
     },
     {
@@ -41636,7 +41636,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L171",
+      "source_location": "L179",
       "weight": 1.0
     },
     {
@@ -41648,7 +41648,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L175",
+      "source_location": "L183",
       "weight": 1.0
     },
     {
@@ -41677,6 +41677,18 @@
     },
     {
       "source": "src_composables_usepricecharttradesetupdrawing_usepricecharttradesetupdrawing_refresh",
+      "target": "src_liquidity_formatlslabel",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
+      "source_location": "L55",
+      "weight": 1.0
+    },
+    {
+      "source": "src_composables_usepricecharttradesetupdrawing_usepricecharttradesetupdrawing_refresh",
       "target": "src_chartcolors_csscolor",
       "relation": "calls",
       "_origin": "ast",
@@ -41684,7 +41696,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L61",
+      "source_location": "L65",
       "weight": 1.0
     },
     {
@@ -41696,7 +41708,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L67",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -41708,7 +41720,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L71",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -41720,19 +41732,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L80",
-      "weight": 1.0
-    },
-    {
-      "source": "src_composables_usepricecharttradesetupdrawing_usepricecharttradesetupdrawing_refresh",
-      "target": "src_liquidity_formatlslabel",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L95",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -106076,7 +106076,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L193",
+      "source_location": "L201",
       "weight": 1.0
     },
     {
@@ -106088,7 +106088,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L193",
+      "source_location": "L201",
       "weight": 1.0
     },
     {
@@ -106100,7 +106100,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L193",
+      "source_location": "L201",
       "weight": 1.0
     },
     {
@@ -110167,5 +110167,5 @@
       "source_file": "CLAUDE.md"
     }
   ],
-  "built_at_commit": "53eb1c2d1cf241ff87ed87106c6eca0c0e31ca36"
+  "built_at_commit": "9df150902b4650eace574500bc609e7fc5d0ed8d"
 }
