@@ -23,7 +23,7 @@ function styleKey(r) {
 
 // Zahl ohne "R"-Suffix (Philips Skizze) — die Skala als Ganzes ist durch ihre Form erkennbar,
 // neun Mal "R" wäre nur Rauschen. Dahinter die historische Trefferquote des Risiko-Bands, sofern
-// für das Instrument gemessen (rScaleQuotes.js) — sonst bleibt es bei der reinen R-Zahl.
+// für das Instrument gemessen (drQuoten.js) — sonst bleibt es bei der reinen R-Zahl.
 function labelText(r, quote) {
   return quote == null ? String(r) : `${r} – ${quote} %`;
 }

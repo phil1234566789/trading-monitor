@@ -40,6 +40,7 @@ import { fetchLiquidityLevelsHtf } from "../liquidityLevels.js";
 import { fetchDailyStructurePivots } from "../dailyPivots.js";
 import { liquidityLevelNaturalKey } from "../liquidity.js";
 import { tradesVisible } from "../tradeVisibility.js";
+import { QUOTEN_HERKUNFT } from "../drQuoten.js";
 import {
   fetchPinContext,
   addPinEntry,
@@ -147,6 +148,12 @@ const showTradeSetupsShort = useLocalStorageRef("showTradeSetupsShort", true);
 // R-Skala (2-10 R ab der nahen OB-Kante, siehe rScale.js) — eigener Toggle neben den
 // Richtungs-Schaltern: bei großer Setup-Historie sind das neun zusätzliche Marken PRO Setup.
 const showRScale = useLocalStorageRef("showRScale", true);
+// Die Einordnung der Quoten kommt aus drQuoten.js, wo auch die Zahlen selbst stehen — hier nur der
+// R-Skala-eigene Teil davor. Getrennt gehalten war der Tooltip schon einmal veraltet (er nannte
+// noch 915 Ranges, als die Tabellen längst auf 3282 standen).
+const rScaleHint =
+  "Marken bei 2-10 R ab der nahen OB-Kante, 1 R = Risiko bis zur Invalidierung, gedeckelt auf 6 Pips — wie der Stopp im " +
+  `Trade. Prozent = wie oft vergleichbare Dealing Ranges diese Strecke erreicht haben. ${QUOTEN_HERKUNFT}`;
 
 // "Ranges" — erster Baustein des neuen PA-Analyse-Konzepts (siehe Chat 2026-07-18: weg von der
 // verschachtelten Trend-State-Machine, hin zu PA-Analyse/Trendanalyse/Marktstärke als getrennten
@@ -1796,7 +1803,7 @@ watch(selectedTradingAccountId, () => {
           <button :class="{ active: showTradeSetupsShort }" @click="showTradeSetupsShort = !showTradeSetupsShort">
             Short Setups
           </button>
-          <button :class="{ active: showRScale }" @click="showRScale = !showRScale" title="Marken bei 2-10 R ab der nahen OB-Kante, 1 R = Risiko bis zur Invalidierung, gedeckelt auf 6 Pips — wie der Stopp im Trade. Prozent = wie oft vergleichbare Dealing Ranges diese Strecke erreicht haben (GBPUSD, 915 Ranges Jan-Sep 2026, Erkennung nur im Alarmfenster) — historische Häufigkeiten, keine Wahrscheinlichkeiten. EURUSD ist ungemessen, dort steht keine Quote.">
+          <button :class="{ active: showRScale }" :title="rScaleHint" @click="showRScale = !showRScale">
             R-Skala
           </button>
           <label class="ranges-lookback-field">

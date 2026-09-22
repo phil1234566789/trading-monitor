@@ -30,7 +30,7 @@ export function rScaleLevels(setup) {
   if (!(bandRisk > 0)) return KEINE_SKALA;
   const risk = Math.min(bandRisk, fromPips(STOPP_DECKEL_PIPS));
   const sign = setup.dir === 1 ? -1 : 1;
-  // Beide Risiken wandern mit raus, damit die Quoten-Zuordnung (rScaleQuotes.js) nichts ein zweites
+  // Beide Risiken wandern mit raus, damit die Quoten-Zuordnung (drQuoten.js) nichts ein zweites
   // Mal aus den OB-Kanten herleitet: risk (gedeckelt) trägt die Geometrie, bandRisk (strukturell)
   // das Quoten-Band — der Deckel verschiebt nur den Stopp, nicht, wie weit die Range aufspannt.
   return {

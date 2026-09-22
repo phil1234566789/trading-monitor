@@ -275,7 +275,7 @@ Unentschieden (weder Ziel noch Stopp binnen 24 h) sind bei 10 Pips 0 von 3282, b
 Basis schrumpft nach oben also deutlich weniger als bei der R-Leiter (dort 128 bei 10 R).
 
 **Die Tabelle der Skala** (Tabelle 5 in `baenderTabellen.py`, Stopp auf 6 Pips gedeckelt, n = 3282)
-— genau diese Zahlen stehen in `src/rScaleQuotes.js`:
+— genau diese Zahlen stehen in `src/drQuoten.js`:
 
 | Band | n | 2 R | 3 R | 4 R | 5 R | 6 R | 7 R | 8 R | 9 R | 10 R |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -345,8 +345,8 @@ hergeleitet werden muss, falls die Anzeige eines Tages je konkret laufender DR r
 
 | Ort | Was |
 |---|---|
-| **TSC** (`TradeSetupCockpit.vue`) | Block an der Dealing Range: beide Leitern untereinander, je Zeile Strecke + Quote |
-| **Chart** | R-Skala mit Quote je Marke aus dem passenden Risiko-Band (`rScale.js`/`rScaleQuotes.js`/`rScaleRendering.js`) — steht seit 20.09.2026 |
+| **TSC** (`TradeSetupCockpit.vue`) | Block an der Dealing Range: beide Leitern untereinander, je Zeile Strecke + Quote — steht seit 22.09.2026 |
+| **Chart** | R-Skala mit Quote je Marke aus dem passenden Risiko-Band (`rScale.js`/`drQuoten.js`/`rScaleRendering.js`) — steht seit 20.09.2026 |
 | **`find_targets`** | je Kandidat „historisch erreicht in N von M vergleichbaren DRs" |
 
 Fallstrick bei `find_targets`: das Tool sortiert nach Distanz zum **aktuellen Preis**, die Statistik
@@ -377,7 +377,7 @@ wäre durch nichts gedeckt.
    20.09.2026**, Task `chart-r-skala-an-der-dealing-range-zeichnen`.
 2. **Quoten an die R-Marken, statisch** — die 25 Zahlen aus Tabelle 1 oben als Konstante im
    Frontend, erzeugt von `baenderTabellen.py`. Kein Server (Begründung unten). **Erledigt
-   20.09.2026**, Task `chart-quoten-an-die-r-marken-schreiben-statisch` (`src/rScaleQuotes.js`).
+   20.09.2026**, Task `chart-quoten-an-die-r-marken-schreiben-statisch` (`src/drQuoten.js`).
    Nachgezogen 20.09.2026 auf den gedeckelten Stopp und 2-10 R, Task
    `r-skala-stopp-auf-6-pips-deckeln-und-bis-10-r-erweitern` — Tabelle 5 statt Tabelle 1.
    **Korrigiert 22.09.2026:** hier stand, die ungedeckelten Zahlen gälten weiter für die
@@ -385,7 +385,11 @@ wäre durch nichts gedeckt.
    verschiedene Fragen beantworten. Die Pip-Leiter misst jetzt gegen denselben Stopp,
    Tabelle 6 (siehe „Die Pip-Leiter" unten). Tabelle 1 bleibt als Referenz für die
    Reichweite gegen die strukturelle Invalidierung stehen.
-3. Beide Leitern plus Vergleichszeilen als Block im TSC.
+3. Beide Leitern plus Vergleichszeile als Block im TSC. **Erledigt 22.09.2026**, Task
+   `tsc-beide-leitern-vergleichszeile-zur-laufenden-dealing-range` — `src/rScaleQuotes.js` heißt
+   seitdem `src/drQuoten.js` (trägt jetzt beide Leitern plus die Vergleichsgruppen). Das Risiko-Band
+   kommt aus der OB-Bestätigung der TSC-Range, das Sweep-Alter aus deren erster Sweep-Bestätigung;
+   ohne OB-Bestätigung entfällt der Block wie auf EURUSD. Die Gegenkraft-Zeile fehlt bewusst (Stufe 5).
 4. `find_targets`-Anreicherung.
 5. Gegenkraft — zurückgestellt, siehe oben.
 6. Serverseitige Messung — **nur falls** sich zeigt, dass die statischen Bänder zu grob sind.

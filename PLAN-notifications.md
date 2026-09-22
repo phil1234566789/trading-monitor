@@ -591,7 +591,7 @@ dafür 3 Punkte Trefferquote. Deshalb steht `closeCheckMaxAgeSec` auf **0** (aus
 bleibt, auf `Infinity` ist das alte Verhalten zurück.
 
 Folgearbeit im selben Durchgang, weil die Erkennung die Grundgesamtheit der Statistik IST: alle
-Skripte in `analysis/dr-reichweite/` neu gelaufen, README-Tabellen und `src/rScaleQuotes.js`
+Skripte in `analysis/dr-reichweite/` neu gelaufen, README-Tabellen und `src/drQuoten.js`
 (R-Skala im Chart) auf die 1314 DRs nachgezogen.
 
 **Bekannte Nebenwirkung:** 16 von 930 Setups tragen jetzt „M5" statt „1H" als Sweep-Herkunft — ein

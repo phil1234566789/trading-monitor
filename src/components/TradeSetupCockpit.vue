@@ -1,9 +1,11 @@
 <script setup>
 import { computed } from "vue";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
-import { formatEvidenceLabel } from "../tradeEvidence";
+import { formatEvidenceLabel, evidenceAgeTier } from "../tradeEvidence";
 import { formatTargetLabel } from "../tradeTargets";
 import { trendChainLevelDisplay, computeTrendAlignment, trendAlignmentDisplay } from "../tradeSetupCockpit";
+import { toPips } from "../pipConfig.js";
+import { drQuotenBlock, QUOTEN_HERKUNFT } from "../drQuoten.js";
 import CrudListSection from "./CrudListSection.vue";
 
 // Trade-Setup-Cockpit (Chat 2026-08-26: "TSC clear, fangen wir von vorne an") — Neuaufbau Schritt
@@ -129,6 +131,30 @@ const trendChainDisplay = computed(() => props.trendChain.map((level, depth) => 
 const trendAlignment = computed(() => computeTrendAlignment(direction.value, props.trendChain));
 const trendAlignmentInfo = computed(() => (direction.value && trendAlignment.value ? trendAlignmentDisplay(direction.value, trendAlignment.value) : null));
 
+// Strukturelles Risiko = Höhe der OB-Bestätigung (nahe bis ferne Kante) — genau die Strecke, aus
+// der tradeIntake.js: insertConfirmation auch die Invalidierung ableitet, und genau die, über die
+// die Bänder gemessen wurden. Ohne OB-Bestätigung gibt es keine Kanten und damit kein Band; der
+// Block entfällt dann (drQuotenBlock liefert null, wie auch auf EURUSD).
+const rangeOb = computed(() => confirmations.value.find((c) => c.kind === "ob" && c.rangeLow != null && c.rangeHigh != null) ?? null);
+const riskPips = computed(() => (rangeOb.value ? toPips(rangeOb.value.rangeHigh - rangeOb.value.rangeLow) : 0));
+// Sweep-Alter der Range = das der ERSTEN Sweep-Bestätigung (die, mit der die Idee angefangen hat,
+// siehe Dashboard.vue: tscBootstrapArmed) — dieselbe Einstufung wie ihr eigenes Zeilen-Label,
+// nicht neu gerechnet (tradeEvidence.ts: evidenceAgeTier).
+const sweepTier = computed(() => {
+  const sweep = confirmations.value.find((c) => c.kind === "pivot");
+  return sweep ? evidenceAgeTier(sweep, nowSecResolved.value) : null;
+});
+const drQuoten = computed(() => drQuotenBlock(props.instrument, riskPips.value, sweepTier.value));
+// "Risiko 4,3 P · Minor-Sweep" — fmtPrice auf eine Nachkommastelle, damit die Pip-Zahl dasselbe
+// de-DE-Komma trägt wie jede andere Zahl in der Karte.
+const riskLine = computed(() => {
+  const risiko = `Risiko ${fmtPrice(riskPips.value, 1)} P`;
+  return sweepTier.value ? `${risiko} · ${sweepTier.value[0].toUpperCase()}${sweepTier.value.slice(1)}-Sweep` : risiko;
+});
+const quotenHint =
+  "Wie oft vergleichbare Dealing Ranges diese Strecke erreicht haben. Band = strukturelles Risiko (nahe bis ferne " +
+  `OB-Kante), Stopp wie im Trade auf 6 Pips gedeckelt. ${QUOTEN_HERKUNFT}`;
+
 const accentStyle = computed(() => {
   if (direction.value === "long") return { "--tsc-accent-bg": "rgba(38, 166, 154, 0.14)", "--tsc-accent-border": "rgba(38, 166, 154, 0.4)" };
   if (direction.value === "short") return { "--tsc-accent-bg": "rgba(255, 152, 0, 0.14)", "--tsc-accent-border": "rgba(255, 152, 0, 0.4)" };
@@ -171,6 +197,32 @@ const accentStyle = computed(() => {
          sichtbar, wenn beides feststeht (Richtung UND ein bestätigter äußerer Trend). -->
     <div v-if="trendAlignmentInfo" class="tsc-trend-alignment" :class="trendAlignment">
       {{ trendAlignmentInfo.text }} {{ trendAlignmentInfo.icon }}
+    </div>
+
+    <!-- Historische Reichweite der laufenden Dealing Range (PLAN-dr-statistik-ui.md, Stufe 3) —
+         beide Leitern für ihr Risiko-Band, jede Quote mit ihrem Ziel direkt daneben (eine nackte
+         Prozentzahl ohne Zielangabe ist wertlos). Nüchtern und ohne Markierung/Warnfarbe: die
+         Anzeige soll informieren, nicht empfehlen, und auch die Vergleichszeile ist nach dem
+         2025-Backfill nur noch ein kleiner Effekt (+10 Punkte bei 15 Pips). -->
+    <div v-if="drQuoten" class="tsc-dr-quoten" :title="quotenHint">
+      <div class="tsc-dr-quoten-head">
+        <span>Deine Dealing Range</span>
+        <span class="tsc-dr-quoten-risk">{{ riskLine }}</span>
+      </div>
+      <div class="tsc-dr-quoten-row">
+        <span class="tsc-dr-quoten-label">Pip-Ziel</span>
+        <span v-for="s in drQuoten.pipLeiter" :key="s.ziel" class="tsc-dr-quoten-cell">{{ s.ziel }} {{ s.einheit }} <b>{{ s.quote }} %</b></span>
+      </div>
+      <div class="tsc-dr-quoten-row">
+        <span class="tsc-dr-quoten-label">R-Ziel</span>
+        <span v-for="s in drQuoten.rLeiter" :key="s.ziel" class="tsc-dr-quoten-cell">{{ s.ziel }} {{ s.einheit }} <b>{{ s.quote }} %</b></span>
+      </div>
+      <div v-if="drQuoten.vergleich" class="tsc-dr-quoten-vergleich">
+        <span class="tsc-dr-quoten-label">{{ drQuoten.vergleich.label }}</span>
+        <span v-for="s in drQuoten.vergleich.stufen" :key="s.einheit" class="tsc-dr-quoten-cell"
+          >{{ s.ziel }} {{ s.einheit }} <b>{{ s.quote }} %</b></span
+        >
+      </div>
     </div>
 
     <CrudListSection
@@ -454,6 +506,66 @@ const accentStyle = computed(() => {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--level-color, rgba(120, 123, 134, 0.4));
   color: var(--level-color, #9aa0ac);
+}
+
+/* Quoten-Block (PLAN-dr-statistik-ui.md, Stufe 3) — eigener abgetrennter Abschnitt wie die
+   Trend-Kette darüber, aber ohne jede Statusfarbe: die Zahlen sollen weder grün noch rot werten,
+   nur dastehen. Feste Label-Spalte + gleich breite Zellen, damit "10 P" und "2 R" der beiden
+   Leitern exakt untereinander stehen und sich als Leiter lesen. */
+.tsc-dr-quoten {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(120, 123, 134, 0.25);
+}
+
+.tsc-dr-quoten-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #d1d4dc;
+  margin-bottom: 4px;
+}
+
+.tsc-dr-quoten-risk {
+  font-weight: 600;
+  color: #9aa0ac;
+  white-space: nowrap;
+}
+
+.tsc-dr-quoten-row {
+  display: grid;
+  grid-template-columns: 52px repeat(4, 1fr);
+  gap: 2px 4px;
+  align-items: baseline;
+}
+
+/* Die Vergleichszeile hat nur je ein Ziel und dafür ein langes Label — eigene Spaltenaufteilung
+   statt der 4er-Leiter oben, sonst stünden zwei Zellen im Nichts. */
+.tsc-dr-quoten-vergleich {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 2px 8px;
+  align-items: baseline;
+  margin-top: 4px;
+}
+
+.tsc-dr-quoten-label {
+  font-size: 11px;
+  color: #9aa0ac;
+}
+
+.tsc-dr-quoten-cell {
+  font-size: 11px;
+  color: #9aa0ac;
+  white-space: nowrap;
+}
+
+.tsc-dr-quoten-cell b {
+  color: #d1d4dc;
+  font-weight: 600;
 }
 
 .tsc-transfer-btn {

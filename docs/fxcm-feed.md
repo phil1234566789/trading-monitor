@@ -39,7 +39,7 @@ Am 22.09.2026 wurde nach Philips Freigabe der alte Forex-Bestand ersetzt. Vorher
 
 Die Tabelle zum Neueintragen liegt unter [GBP-Tage und Richtung](../backups/gbpusd-tage-vor-fxcm.html). Das aktive Forex-Journal ist leer; BTC-Altbestand blieb bestehen. OBs, Liquiditätslevel, Setups und Daily-Pivots wurden auf FXCM neu aufgebaut. Historische Setups gelten als bereits behandelt, `notified_at` bleibt leer: kein nachträglicher Alarmversand.
 
-Die zwölf Ergebnisberichte in `analysis/dr-reichweite/` und `src/rScaleQuotes.js` wurden mit FXCM neu berechnet. `messeFxcmKontext.ts` verwendet dafür direkt die produktiven Trend-/Target-Funktionen; die Python-Berichte laufen danach auf den gespeicherten Antworten. Die alte Close-Check-Schwellenstudie bleibt als historische cTrader-Studie gekennzeichnet.
+Die zwölf Ergebnisberichte in `analysis/dr-reichweite/` und `src/drQuoten.js` wurden mit FXCM neu berechnet. `messeFxcmKontext.ts` verwendet dafür direkt die produktiven Trend-/Target-Funktionen; die Python-Berichte laufen danach auf den gespeicherten Antworten. Die alte Close-Check-Schwellenstudie bleibt als historische cTrader-Studie gekennzeichnet.
 
 Der Browser-Cache wurde auf Version 10 angehoben. Nach Veröffentlichung die Seite neu laden.
 

@@ -9,7 +9,7 @@
 import { LiquidityLinePrimitive, bullBearLabelSide, formatLsLabel } from "../liquidity.js";
 import { OrderBlockPrimitive } from "../orderBlocks.js";
 import { rScaleLevels } from "../rScale.js";
-import { rQuote } from "../rScaleQuotes.js";
+import { rQuote } from "../drQuoten.js";
 import { RScalePrimitive } from "../rScaleRendering.js";
 import { cssColor, cssColorScaled } from "../chartColors.js";
 import { createSessionBonusResolver } from "../sessionBonus.js";
@@ -175,7 +175,7 @@ export function usePriceChartTradeSetupDrawing() {
       // R-Skala (PLAN-dr-statistik-ui.md, Stufe 1) — Lineal am OB-Startzeitpunkt, siehe
       // rScaleRendering.js. Ein Primitive für alle Marken zusammen.
       // Quote je Marke (Stufe 2): die historische Trefferquote hängt am Risiko-BAND der Range,
-      // nicht an der R-Stufe allein — siehe rScaleQuotes.js (null außerhalb von GBPUSD). Dafür
+      // nicht an der R-Stufe allein — siehe drQuoten.js (null außerhalb von GBPUSD). Dafür
       // zählt bandRisk (strukturell), nicht das auf STOPP_DECKEL_PIPS gedeckelte risk der Marken.
       const { anchorPrice, levels, bandRisk } = showRScale ? rScaleLevels(setup) : { levels: [] };
       const riskPips = toPips(bandRisk ?? 0);
