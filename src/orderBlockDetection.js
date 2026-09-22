@@ -35,7 +35,11 @@ const LOWER_TF_MIN_GAP_PIPS = { "1m": 1, "3m": 1, "5m": 0.5 };
 // explizit statt aus der Timeframe abgeleitet, da eine zukünftige Nicht-Forex-Instrument-Zone sonst
 // stillschweigend ein für sie bedeutungsloses Pip-Minimum bekäme).
 const HTF_FOREX_LABELS = new Set(["1H", "4H"]);
-const HTF_FOREX_MIN_GAP_PIPS = { "1H": 1.5, "4H": 8 }; // 1H von 4 auf 1.5 gesenkt (Bug-Report Philip 2026-08-11: eine 1,5-Pip-1H-FVG bei GBPUSD am 10.08. 07:00 wurde vom alten 4-Pip-Minimum verschluckt)
+// 1H von 4 auf 1.5 gesenkt (Bug-Report Philip 2026-08-11: eine 1,5-Pip-1H-FVG bei GBPUSD am 10.08.
+// 07:00 wurde vom alten 4-Pip-Minimum verschluckt). 4H von 8 auf 4 gesenkt: 8 Pip lag sogar ueber
+// der abgeloesten Prozentschwelle (0,05% sind bei EURUSD ~5,7 Pip) und verschluckte tradebare
+// 4H-Zonen, zuletzt eine 6,1-Pip-FVG bei EURUSD.
+const HTF_FOREX_MIN_GAP_PIPS = { "1H": 1.5, "4H": 4 };
 
 // Bug-Report Philip 2026-08-11, direkt im Anschluss an die 1,5-Pip-Absenkung oben: genau die Zone,
 // die die Absenkung freischalten sollte, blieb trotzdem verschluckt — ihre Gap ist real EXAKT 1,5

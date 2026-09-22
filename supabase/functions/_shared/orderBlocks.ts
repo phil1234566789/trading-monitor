@@ -27,7 +27,7 @@ const PIP_SIZE = 0.0001; // gilt für beide unterstützten FX-Paare (GBPUSD/EURU
 // Flag (Default true, da index.ts inzwischen ausschließlich Forex-Instrumente verarbeitet). Siehe
 // src/orderBlocks.js.
 const HTF_FOREX_LABELS = new Set(["1H", "4H"]);
-const HTF_FOREX_MIN_GAP_PIPS: Record<string, number> = { "1H": 1.5, "4H": 8 }; // 1H von 4 auf 1.5 gesenkt, siehe src/orderBlockDetection.js
+const HTF_FOREX_MIN_GAP_PIPS: Record<string, number> = { "1H": 1.5, "4H": 4 }; // 1H von 4 auf 1.5, 4H von 8 auf 4 gesenkt, siehe src/orderBlockDetection.js
 
 // Float-Rundungs-Epsilon (Bug-Report Philip 2026-08-11), siehe src/orderBlockDetection.js für die
 // volle Herleitung: eine Gap, die real exakt der Pip-Schwelle entspricht, kann durch IEEE-754-
