@@ -71,8 +71,9 @@ export function registerTscTools(server: McpServer) {
       description:
         "Löscht eine dealing_range wieder (TSC-Reset, z.B. wenn eine Analyse verworfen wird) — " +
         "trade_evidence/trade_targets hängen per on-delete-cascade mit dran, werden also " +
-        "automatisch mitgelöscht. Nur sinnvoll, solange die Range noch keine trade_positions-Zeile " +
-        "hat (siehe get_tsc_range) — eine bereits ausgeführte Idee NICHT über dieses Tool löschen.",
+        "automatisch mitgelöscht. Eine Range MIT trade_positions-Zeile lehnt das Tool seit dem " +
+        "22.09.2026 ab, statt die journalierten Trades stillschweigend mitzulöschen (dieselbe " +
+        "Kaskade) — dafür erst die Positionen einzeln entfernen.",
       inputSchema: {
         id: z.number().int(),
       },

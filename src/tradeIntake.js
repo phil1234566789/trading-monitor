@@ -212,9 +212,26 @@ export async function createDealingRange({ instrument, direction }) {
 // TSC-Reset (Chat 2026-08-27, Philip: "jetzt einen reset button im TSC hinzufügen") — löscht die
 // komplette Idee wieder, wenn eine Analyse verworfen wird. trade_evidence/trade_targets
 // hängen mit `on delete cascade` an dealing_ranges (Migration 20260731120000), ein einziges
-// DELETE hier reicht also. Nur sinnvoll, solange die Range noch keine trade_positions-Zeile hat —
-// die TSC zeigt eine Range mit Ausführung ohnehin nicht mehr an (siehe fetchActiveTscRangeId).
+// DELETE hier reicht also.
+//
+// trade_positions hängt mit DERSELBEN Kaskade dran — ein Reset auf eine bereits ausgeführte Range
+// löscht also stillschweigend journalierte Trades mit. Hier stand früher, das könne nicht
+// passieren, weil die TSC eine Range mit Ausführung nicht mehr anzeigt. Das stimmte nur bis zum
+// nächsten Reload: onTscTransferToTrades legt die Position an, ohne tscRangeId zu leeren, der
+// Reset-Knopf zeigte danach weiter auf dieselbe Range. Hat am 22.09.2026 eine Range samt zwei
+// Positionen gekostet. Deshalb hier der Riegel statt nur der Annahme.
 export async function deleteDealingRange(dealingRangeId) {
+  const { data: positionen, error: leseFehler } = await supabase
+    .from("trade_positions").select("id").eq("dealing_range_id", dealingRangeId).limit(1);
+  if (leseFehler) {
+    console.error("Dealing-Range löschen fehlgeschlagen:", leseFehler);
+    return false;
+  }
+  if (positionen?.length) {
+    globalThis.alert?.("Diese Dealing Range hat schon Ausführungen im Journal — sie wird nicht gelöscht.\n\n"
+      + "Einzelne Trades löschst du im Trade-Modal.");
+    return false;
+  }
   const { error } = await supabase.from("dealing_ranges").delete().eq("id", dealingRangeId);
   if (error) {
     console.error("Dealing-Range löschen fehlgeschlagen:", error);

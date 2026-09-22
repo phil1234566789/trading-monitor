@@ -932,9 +932,23 @@ export async function createDealingRange(instrument: string, direction: "long" |
 
 // TSC-Reset — Port von src/tradeIntake.js: deleteDealingRange. trade_evidence/trade_targets
 // hängen mit `on delete cascade` an dealing_ranges (Migration 20260731120000), ein einziges DELETE
-// hier reicht also. Nur sinnvoll, solange die Range noch keine trade_positions-Zeile hat (siehe
-// fetchActiveTscRangeId) — kein serverseitiger Schutz davor, dieselbe Vorsicht wie im Frontend.
+// hier reicht also.
+//
+// trade_positions hängt an DERSELBEN Kaskade: ohne den Riegel unten löscht ein Reset stillschweigend
+// journalierte Trades mit. Hier stand früher "kein serverseitiger Schutz davor, dieselbe Vorsicht
+// wie im Frontend" — die Vorsicht allein hat am 22.09.2026 eine Range samt zwei Positionen
+// gekostet. Ein Aufrufer, der eine ausgeführte Idee wirklich loswerden will, löscht erst die
+// Positionen einzeln; dieser Weg bleibt bewusst zu.
 export async function deleteDealingRange(id: number) {
+  const { data: positionen, error: leseFehler } = await supabase
+    .from("trade_positions").select("id").eq("dealing_range_id", id).limit(1);
+  if (leseFehler) throw new Error(leseFehler.message);
+  if (positionen?.length) {
+    throw new Error(
+      `Dealing Range ${id} hat bereits Ausführungen (trade_positions) und wird nicht gelöscht — ` +
+        `sie würden per on-delete-cascade mitgelöscht. Erst die Positionen einzeln entfernen.`,
+    );
+  }
   const { error } = await supabase.from("dealing_ranges").delete().eq("id", id);
   if (error) throw new Error(error.message);
   return { deleted: true, id };

@@ -569,6 +569,12 @@ async function onTscTransferToTrades() {
   if (!position) return;
   await refreshTrades();
   editingTradeId.value = position.id;
+  // Die Idee IST jetzt ein Trade und gehört nicht mehr ins Cockpit — genau das meint
+  // fetchActiveTscRangeId mit "noch keine trade_positions-Zeile". Ohne dieses Leeren blieb die
+  // Range sichtbar, der Reset-Knopf zeigte weiter auf sie, und weil trade_positions per
+  // `on delete cascade` dranhängt, nahm ein Reset den frisch journalierten Trade mit.
+  tscRangeId.value = null;
+  tscRange.value = null;
 }
 // Reset (Chat 2026-08-27, Philip: "jetzt einen reset button im TSC hinzufügen") — verwirft die
 // komplette Idee, nicht nur die Anzeige (sonst würde fetchActiveTscRangeId dieselbe Range nach
@@ -576,7 +582,7 @@ async function onTscTransferToTrades() {
 // destruktiven Aktionen (TradeEditModal.vue: onDelete).
 async function onTscReset() {
   if (tscRangeId.value == null) return;
-  if (!confirm("TSC wirklich zurücksetzen? Löscht die Dealing Range inkl. aller Bestätigungen/Targets.")) return;
+  if (!confirm("TSC wirklich zurücksetzen? Löscht die Dealing Range inkl. aller Bestätigungen, Targets und — falls schon vorhanden — der Ausführungen im Journal.")) return;
   const ok = await deleteDealingRange(tscRangeId.value);
   if (!ok) return;
   tscRangeId.value = null;
