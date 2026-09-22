@@ -36,5 +36,17 @@ Zusätzlich, unabhängig von der Ziel-Zone: unberührte gegenläufige OBs knapp 
 Invalidierung (max. `MAX_INVALIDATION_OB_DISTANCE_PIPS` = 10 Pips) — ein solches unfertiges,
 gegenläufiges "Geschäft" wirkt als Preis-Magnet über die Invalidierung hinaus.
 
+Ebenfalls unabhängig von der Ziel-Zone (`isFreshCounterInducement`, seit 22.09.2026): ein
+gegenläufiger **Major- oder Medium-Inducement** — ein 1H/4H-LQ-Sweep, dessen Level beim Sweep
+mindestens einen Handelstag alt war (`classifyAge`, Inducement-Klassifikation aus `liquidität.md`
+im `trading`-Repo) und dessen Sweep auf denselben Europe/Berlin-Handelstag fällt wie der
+Analysezeitpunkt. Grund: die Zonen-Regel stammt von `find_targets` und
+fragt "was liegt noch *vor* mir" — ein Inducement ist aber ein bereits *gelaufener* Sweep und liegt
+damit am Extrem der bisherigen Bewegung, also jenseits des eigenen Ziels, sobald der Preis dort
+schon war. Diese Fallklasse konnte die Zonen-Regel strukturell nie finden (Auslöser: EURUSD-Short
+22.09.2026, gesweeptes 1H-Low 1,14339 gegen eine Zone, die erst bei 1,14378 begann). Minor bleibt
+bewusst zonengebunden, sonst zählt jedes heute entstandene und gleich wieder abgeräumte Level als
+Gegenargument.
+
 Genaue Konstanten/Grenzwerte: `findAntiConfluenceCandidates.js` ist die Quelle der Wahrheit,
 nicht diese Doku-Zeilen.

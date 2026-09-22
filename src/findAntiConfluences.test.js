@@ -4,10 +4,14 @@ import {
   findAntiConfluenceSweepCandidates,
   findAntiConfluenceDivergenceCandidates,
   findInvalidationObCandidates,
+  isFreshCounterInducement,
   MAX_HELD_OB_AGE_DAYS,
 } from "./findAntiConfluences.js";
 
 const DAY_SEC = 86400;
+const NOW_SEC = 1_790_091_102; // 22.09.2026 17:31 Europe/Berlin
+const SWEPT_TODAY = 1_790_064_000; // 22.09.2026 10:00 Europe/Berlin
+const PIVOT_MAJOR = 1_785_394_800; // 30.07.2026 09:00 Europe/Berlin
 
 describe("findAntiConfluenceObCandidates", () => {
   const currentPrice = 1.365;
@@ -85,6 +89,43 @@ describe("findAntiConfluenceSweepCandidates", () => {
     const levels = [{ price: 1.34, dir: -1, touched: true }];
     const result = findAntiConfluenceSweepCandidates(levels, { direction: "short", zoneLow, zoneHigh, currentPrice });
     expect(result).toEqual([]);
+  });
+
+  // Der reale Auslöser (EURUSD 22.09.2026): das 1H-Low 1,14339 lag 4 Pips UNTER der Zonenuntergrenze,
+  // weil der Preis am selben Tag schon tiefer war als das eigene Ziel.
+  it("includes a same-day major inducement even outside the zone", () => {
+    const levels = [{ price: 1.34, dir: -1, touched: true, timeframe: "1H", pivotTime: PIVOT_MAJOR, touchedTime: SWEPT_TODAY }];
+    const result = findAntiConfluenceSweepCandidates(levels, { direction: "short", zoneLow, zoneHigh, currentPrice, nowSec: NOW_SEC });
+    expect(result.map((l) => l.price)).toEqual([1.34]);
+  });
+});
+
+// Zonenfreie Inducement-Regel. NOW_SEC/SWEPT_TODAY sind der echte Fall vom 22.09.2026 (Dienstag,
+// Sweep 10:00 Berlin), damit die Handelstags- und Wochenend-Arithmetik an echten Daten hängt.
+describe("isFreshCounterInducement", () => {
+  it("accepts a major inducement swept today on 1H", () => {
+    expect(isFreshCounterInducement({ timeframe: "1H", pivotTime: PIVOT_MAJOR, touchedTime: SWEPT_TODAY }, NOW_SEC)).toBe(true);
+  });
+
+  it("accepts a medium inducement (level older than one trading day at sweep time)", () => {
+    // Pivot am Sonntag davor — nur Montag + Dienstagmorgen zählen als Handelszeit, also medium.
+    expect(isFreshCounterInducement({ timeframe: "4H", pivotTime: SWEPT_TODAY - 2 * DAY_SEC, touchedTime: SWEPT_TODAY }, NOW_SEC)).toBe(true);
+  });
+
+  it("rejects a minor inducement (level younger than one trading day)", () => {
+    expect(isFreshCounterInducement({ timeframe: "1H", pivotTime: SWEPT_TODAY - 3 * 3600, touchedTime: SWEPT_TODAY }, NOW_SEC)).toBe(false);
+  });
+
+  it("rejects a sweep from an earlier trading day", () => {
+    expect(isFreshCounterInducement({ timeframe: "1H", pivotTime: PIVOT_MAJOR, touchedTime: SWEPT_TODAY - DAY_SEC }, NOW_SEC)).toBe(false);
+  });
+
+  it("rejects an M5 sweep — an inducement is a 1H/4H event", () => {
+    expect(isFreshCounterInducement({ timeframe: "5M", pivotTime: PIVOT_MAJOR, touchedTime: SWEPT_TODAY }, NOW_SEC)).toBe(false);
+  });
+
+  it("rejects a level that was never swept", () => {
+    expect(isFreshCounterInducement({ timeframe: "1H", pivotTime: PIVOT_MAJOR, touchedTime: null }, NOW_SEC)).toBe(false);
   });
 });
 

@@ -8,12 +8,14 @@
 // Regel (Short-Fall, Long spiegelt): Zone = [tiefstes Short-Target, aktueller Preis]. Anti-
 // Confluence = alles BULLISCHE in dieser Zone (offene ODER gehaltene bullische OBs, bullische
 // LQ-Sweeps, bullische RSI-Divergenz) + zusätzlich unberührte bärische OBs knapp ÜBER der
-// Invalidierung (eigene, von der Ziel-Zone unabhängige Regel).
+// Invalidierung sowie bullische Major/Medium-Inducements von heute (zwei eigene, von der Ziel-Zone
+// unabhängige Regeln, siehe findInvalidationObCandidates/isFreshCounterInducement).
 import { fetchForexCandles } from "./forexCandles.ts";
 import { buildCandidatePool } from "./findTargetCandidates.js";
 import { detectRsiDivergenceHistory } from "./rsi.js";
 import { fromPips } from "../_shared/pipConfig.js";
 import { berlinDateStrFor } from "../_shared/berlinTime.ts";
+import { businessSecondsBetween, classifyAge } from "../_shared/ageTier.ts";
 
 // "nicht 100 Jahre alt" (Philip) — noch kein konkreter Wert vorgegeben, 14 Tage als erster
 // Startwert, leicht nachjustierbar sobald echte Kandidatenlisten sichtbar sind.
@@ -21,6 +23,8 @@ export const MAX_HELD_OB_AGE_DAYS = 14;
 // Von Philip vorgegeben (Chat 2026-08-30): "aber nicht zu weit entfernt, sagen wir max 10 pips".
 export const MAX_INVALIDATION_OB_DISTANCE_PIPS = 10;
 const DAY_SECONDS = 86400;
+// Ein Inducement ist laut Handbuch ein LQ-Sweep auf 1H/4H (trading-Repo liquidität.md), M5 zählt nicht.
+const INDUCEMENT_TIMEFRAMES = new Set(["1H", "4H"]);
 
 function inBand(price, low, high) {
   return price >= low && price <= high;
@@ -64,12 +68,27 @@ export function findAntiConfluenceObCandidates(zones, { direction, zoneLow, zone
 // touchedTime/timeframe). Ein bullischer Sweep ist ein bereits berührtes LOW (Sellside-Liquidität
 // gegrabbt, Reversal-Erwartung nach oben) — gegenläufig zu einem Short, siehe rsi.js/
 // liquidityDetection.ts für dieselbe dir/direction-Konvention.
-export function findAntiConfluenceSweepCandidates(levels, { direction, zoneLow, zoneHigh, currentPrice }) {
+export function findAntiConfluenceSweepCandidates(levels, { direction, zoneLow, zoneHigh, currentPrice, nowSec }) {
   const wantedLevelDir = direction === "short" ? "low" : "high";
   return (levels ?? [])
     .filter((l) => l.direction === wantedLevelDir && l.touched)
-    .filter((l) => inBand(l.price, zoneLow, zoneHigh))
+    .filter((l) => inBand(l.price, zoneLow, zoneHigh) || isFreshCounterInducement(l, nowSec))
     .sort(byDistance((l) => l.price, currentPrice));
+}
+
+// Zonenfreie Zusatzregel (Philip 22.09.2026, EURUSD-Short: das gesweepte 1H-Low 1,14339 fehlte in
+// der Kandidatenliste, weil die Zone erst bei 1,14378 begann). Die Zonen-Regel stammt von
+// find_targets und fragt "was liegt noch VOR mir" — ein Inducement ist dagegen ein bereits
+// gelaufener Sweep und liegt damit am Extrem der bisherigen Bewegung, also jenseits des eigenen
+// Ziels, sobald der Preis dort schon war. Diese Fallklasse konnte die Zonen-Regel strukturell nie
+// finden, und liquidität.md#regel--kein-trade-gegen-einen-kraftvollen-major-inducement fragt selbst
+// nirgends nach der Ziel-Zone. Minor bleibt zonengebunden — sonst zählt jedes heute entstandene und
+// gleich wieder abgeräumte Level als Gegenargument.
+export function isFreshCounterInducement(level, nowSec) {
+  if (nowSec == null || level.touchedTime == null || level.pivotTime == null) return false;
+  if (!INDUCEMENT_TIMEFRAMES.has(level.timeframe?.toUpperCase())) return false;
+  if (berlinDateStrFor(level.touchedTime) !== berlinDateStrFor(nowSec)) return false;
+  return classifyAge(businessSecondsBetween(level.pivotTime, level.touchedTime)) !== "minor";
 }
 
 // divergences: Rohformat wie rsi.js: detectRsiDivergenceHistory ({type, toPrice, toTime, ...}) —
@@ -133,7 +152,7 @@ export async function findAntiConfluenceCandidates({ instrument, direction, zone
     direction,
     currentPrice,
     obCandidates: findAntiConfluenceObCandidates(obZones, { direction, zoneLow, zoneHigh, currentPrice, nowSec: effectiveTimeSec }),
-    sweepCandidates: findAntiConfluenceSweepCandidates(liquidityLevels, { direction, zoneLow, zoneHigh, currentPrice }),
+    sweepCandidates: findAntiConfluenceSweepCandidates(liquidityLevels, { direction, zoneLow, zoneHigh, currentPrice, nowSec: effectiveTimeSec }),
     divergenceCandidates: findAntiConfluenceDivergenceCandidates(divergences, { direction, zoneLow, zoneHigh, currentPrice, nowSec: effectiveTimeSec }),
     invalidationObCandidates: findInvalidationObCandidates(obZones, { direction, invalidation }),
   };

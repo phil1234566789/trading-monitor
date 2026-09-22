@@ -158,7 +158,11 @@ export function registerTscTools(server: McpServer) {
         "offen ODER bereits berührt-aber-gehalten, siehe held-Flag — eine gehaltene M5-OB zählt nur, " +
         "wenn der Touch auf denselben Handelstag fällt wie der Analysezeitpunkt, HTF (1H/4H) bleibt " +
         "beim 14-Tage-Rolling-Fenster), sweepCandidates (gegenläufige " +
-        "LQ-Sweeps in der Zone), divergenceCandidates (gegenläufige RSI-Divergenz in der Zone — " +
+        "LQ-Sweeps in der Zone — PLUS, als einzige zonenfreie Level-Regel, gegenläufige " +
+        "Major/Medium-Inducements: ein 1H/4H-Sweep, dessen Level beim Sweep mindestens einen " +
+        "Handelstag alt war und der auf denselben Handelstag fällt wie der Analysezeitpunkt, zählt " +
+        "unabhängig davon, ob er in der Zone liegt — ein bereits gelaufener Sweep liegt am Extrem " +
+        "der Bewegung und damit oft jenseits des eigenen Ziels), divergenceCandidates (gegenläufige RSI-Divergenz in der Zone — " +
         "zählt nur, wenn ihr Schwungpunkt auf denselben Handelstag fällt wie der Analysezeitpunkt), " +
         "invalidationObCandidates (unberührte gegenläufige OBs knapp jenseits der Invalidierung, " +
         "max 10 Pips — nur befüllt, wenn invalidation mitgegeben wird). WICHTIG: jede per " +
