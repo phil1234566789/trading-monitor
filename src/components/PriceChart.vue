@@ -1,5 +1,8 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { nextCandlePollDelay } from "../candlePolling.js";
+import { useM5CandleClock } from "../composables/useM5CandleClock.js";
+import M5CandleClock from "./M5CandleClock.vue";
 import { createChart, CandlestickSeries, TickMarkType, CrosshairMode } from "lightweight-charts";
 import { renderPersistedZones, OrderBlockPrimitive, obZoneNaturalKey } from "../orderBlocks.js";
 import {
@@ -38,7 +41,6 @@ import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
 import {
   RECENT_PAGE_SIZE,
-  CLOSE_POLL_BUFFER_MS,
   FOREX_HISTORY_PAGE_SIZE,
   JUMP_TARGET_BUFFER_BARS,
   MAX_JUMP_FETCH_PAGES,
@@ -475,6 +477,12 @@ let invalidationLinePrimitives = [];
 // tradeSetupPrimitives lebt seit Phase 6h in usePriceChartTradeSetupDrawing.js.
 // claudeAnnotationPrimitives/-PriceLines leben seit Phase 6d in usePriceChartClaudeAnnotations.js.
 let allCandles = [];
+const m5ClockEnabled = () => props.currentBar === "5m" && props.replayUntil == null;
+const { state: m5Clock, retry: retryM5Clock } = useM5CandleClock({
+  enabled: m5ClockEnabled,
+  getLatestTime: () => allCandles.at(-1)?.time,
+  reload: () => pollRecent(),
+});
 // tradeSetupM5Candles/trendAnalysisM5Candles/currentTradeSetups leben seit Phase 6f in
 // usePriceChartTradeSetups.js (getM5Candles()/getTrendAnalysisM5Candles()/tradeSetupsMetadata-Ref).
 // TSC-Fokus (Chat 2026-07-27: "TSC soll das anzeigen, was ich grad im Fokus hab") — überschreibt,
@@ -1416,8 +1424,7 @@ function rangesNeedsData() {
 // ändern sich nur stündlich, ein häufigerer Poll bringt nichts außer zusätzlichen Requests.
 function scheduleNextRangesPoll() {
   clearTimeout(rangesPollTimer);
-  const barMs = barSecondsFor("1h") * 1000;
-  const delay = barMs - (Date.now() % barMs) + CLOSE_POLL_BUFFER_MS;
+  const delay = nextCandlePollDelay("1h");
   rangesPollTimer = setTimeout(async () => {
     // Im Replay-Modus bringt der echte Kerzenschluss nichts (siehe pollRecent) — Timer läuft
     // trotzdem weiter, damit Live-Updates beim Verlassen des Replays automatisch wieder anspringen.
@@ -1669,8 +1676,7 @@ async function confirmLoadLiveHistory() {
 
 function scheduleNextTradeSetupM5Poll() {
   clearTimeout(tradeSetupM5PollTimer);
-  const barMs = barSecondsFor("5m") * 1000;
-  const delay = barMs - (Date.now() % barMs) + CLOSE_POLL_BUFFER_MS;
+  const delay = nextCandlePollDelay("5m");
   tradeSetupM5PollTimer = setTimeout(async () => {
     // Siehe scheduleNextRangesPoll — im Replay bringt der echte Kerzenschluss nichts.
     await withPollRetries(loadTradeSetupM5);
@@ -1788,20 +1794,13 @@ async function withPollRetries(loadFn) {
   }
 }
 
-// Plant den nächsten pollRecent()-Aufruf CLOSE_POLL_BUFFER_MS NACH dem nächsten erwarteten
-// Kerzenschluss des aktuellen Timeframes (siehe CLOSE_POLL_BUFFER_MS) statt fest alle POLL_MS —
-// dadurch wird die noch offene Kerze zwischen zwei Schlüssen gar nicht mehr angefasst (kein
-// Wackeln) und die frisch geschlossene erscheint kurz NACH ihrem echten Schluss, nicht irgendwann
-// im nächsten Intervall-Tick. Kerzen sind (bei allen hier genutzten Timeframes) auf UTC-Epoch
-// ausgerichtet, daher reicht Date.now() % barMs zur Bestimmung von "wie weit sind wir in die
-// aktuelle Kerze rein".
+// Das Archiv enthält nur geschlossene Kerzen. Regelmäßiges Nachlesen holt verspätete
+// Uploads nach und funktioniert auch bei nativen FXCM-H4/D1-Grenzen.
 function scheduleNextPoll() {
   clearTimeout(pollTimer);
-  const barMs = barSecondsFor(props.currentBar) * 1000;
-  const msIntoBar = Date.now() % barMs;
-  const delay = barMs - msIntoBar + CLOSE_POLL_BUFFER_MS;
+  const delay = nextCandlePollDelay(props.currentBar);
   pollTimer = setTimeout(async () => {
-    await withPollRetries(pollRecent);
+    if (!m5ClockEnabled()) await withPollRetries(pollRecent);
     if (chart) scheduleNextPoll(); // Komponente könnte während des awaits unmounted worden sein
   }, delay);
 }
@@ -2376,6 +2375,7 @@ defineExpose({
 <template>
   <div class="chart-wrapper" :style="{ height: chartWrapperHeight + 'px' }">
     <div ref="chartContainerRef" class="chart-container"></div>
+    <M5CandleClock v-if="m5ClockEnabled()" :state="m5Clock" @retry="retryM5Clock" />
     <div v-if="rangesLoading" class="ranges-loading">
       <span class="ranges-spinner"></span>
       Ranges laden…

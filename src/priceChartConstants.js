@@ -8,10 +8,6 @@ import { PIP_SIZE } from "./pipConfig.js";
 // verpassten Poll (z.B. Tab im Hintergrund gedrosselt) — pro cTrader-Connect trotzdem deutlich
 // weniger Daten als ein voller Seiten-Fetch (siehe Chat 2026-07-20: "unnötige cTrader Aufrufe").
 export const RECENT_PAGE_SIZE = 10;
-// Puffer nach der erwarteten Schlusszeit, bis die frisch geschlossene Kerze beim Broker/Backend
-// ankommt — lieber knapp nach dem Schluss pollen als knapp davor (siehe scheduleNextPoll in
-// PriceChart.vue für die volle Kerzenschluss-Ausrichtungs-Begründung).
-export const CLOSE_POLL_BUFFER_MS = 2_000;
 // Scroll-Back: ein größerer count fürs DB-Archiv (forexCandles.js: fetchOlderCandles versucht das
 // zuerst) ist praktisch kostenlos und deckt mehrere Handelstage pro Schritt ab statt 100er-Häppchen.
 // Für den Live-cTrader-Fallback ohne Bedeutung — die Edge Function kappt dort ohnehin serverseitig
