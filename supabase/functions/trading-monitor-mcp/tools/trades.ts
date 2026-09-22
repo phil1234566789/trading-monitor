@@ -4,6 +4,7 @@ import { createTrade, addTradePosition, updateTradePosition, updateDealingRange,
 import { findTargetCandidates } from "../findTargetCandidates.js";
 import { flattenTargetCandidates, findUnexplainedNearerTargets, unexplainedNearerTargetsError } from "../targetChoiceGuard.ts";
 import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";
+import { hasExplicitOffset, missingOffsetError } from "../isoOffsetGuard.ts";
 import { json } from "../jsonResponse.ts";
 
 // Hier statt in db.ts: addTradeTarget, obwohl es dort für alle Aufrufer gälte — findTargetCandidates.js
@@ -29,6 +30,10 @@ const DIRECTION = z.enum(["long", "short"]);
 const SOURCE = z.enum(["backtest", "paper", "live"]);
 const OUTCOME = z.enum(["win", "loss", "open"]);
 
+// Siehe isoOffsetGuard.ts: ein Zeitstempel ohne Offset ist mehrdeutig und wird deshalb abgelehnt,
+// statt still als UTC in die Spalte zu wandern.
+const ISO_WITH_OFFSET = z.string().refine(hasExplicitOffset, (value) => ({ message: missingOffsetError(value) }));
+
 // Gemeinsame Felder einer Ausführung (trade_positions) — für create_trade UND add_trade_position,
 // damit beide Tools garantiert dieselben Namen/Beschreibungen haben (siehe db.ts: TradePositionInput,
 // insertTradePosition).
@@ -38,13 +43,15 @@ const TRADE_POSITION_FIELDS = {
   source: SOURCE,
   entryPrice: z.number().optional().describe("Füllpreis, falls schon bekannt"),
   stopLoss: z.number().optional(),
-  triggeredAt: z.string().optional().describe("ISO-Zeitstempel des Einstiegs, Default: jetzt"),
+  triggeredAt: ISO_WITH_OFFSET.optional().describe("ISO-Zeitstempel des Einstiegs MIT Zeitzone (Z oder ±HH:MM), Default: jetzt"),
   reasoning: z.string().optional(),
   outcome: OUTCOME.optional().describe("Default (nicht gesetzt): offen/unbekannt"),
   rMultiple: z.number().optional(),
   exitPrice: z.number().optional(),
-  exitTime: z.string().optional().describe("ISO-Zeitstempel"),
-  tradingAccountId: z.number().int().optional().describe("siehe get_trading_accounts"),
+  exitTime: ISO_WITH_OFFSET.optional().describe("ISO-Zeitstempel MIT Zeitzone (Z oder ±HH:MM)"),
+  // Pflicht, obwohl die Spalte nullable ist: eine trade_positions-Zeile ohne Konto rendert weder im
+  // Journal noch im Chart — der Call meldete bisher Erfolg und der Trade blieb trotzdem unsichtbar.
+  tradingAccountId: z.number().int().describe("Pflicht — ohne Konto ist die Position in Journal/Chart unsichtbar. Siehe get_trading_accounts"),
   zoneId: z.number().int().optional().describe("Link zu einer ob_zones-Zeile, falls der Trade aus einer Zone kam"),
   // Broker-Ausführungsdetails (Chat 2026-07-31) — eigene Felder statt sie wie bisher in reasoning
   // hineinzuschreiben ("Menge 0,5, Netto P/L $27.00").
@@ -130,12 +137,12 @@ export function registerTradeTools(server: McpServer) {
         sec: deprecatedTimeParam("sec"),
         entryPrice: z.number().nullable().optional(),
         stopLoss: z.number().nullable().optional(),
-        triggeredAt: z.string().optional(),
+        triggeredAt: ISO_WITH_OFFSET.optional(),
         reasoning: z.string().nullable().optional(),
         outcome: OUTCOME.nullable().optional(),
         rMultiple: z.number().nullable().optional(),
         exitPrice: z.number().nullable().optional(),
-        exitTime: z.string().nullable().optional(),
+        exitTime: ISO_WITH_OFFSET.nullable().optional(),
         tradingAccountId: z.number().int().nullable().optional(),
         zoneId: z.number().int().nullable().optional(),
         size: z.number().nullable().optional(),
