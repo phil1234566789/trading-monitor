@@ -14,6 +14,7 @@ export interface SetupOb {
   top: number;
   bottom: number;
   startTime: number; // Zeitpunkt der mittleren Impuls-Kerze, siehe detectSetupObs
+  gap: number; // Groesse der FVG in Preiseinheiten, siehe Zone.gap
 }
 
 // Ein abgeräumtes Level samt seiner Herkunft. Den Timeframe vergibt die Erkennung selbst, weil
@@ -32,6 +33,7 @@ export interface DetectedTradeSetup {
   obTop: number;
   obBottom: number;
   obStartTime: number;
+  obGap: number; // Groesse der bestaetigenden FVG in Preiseinheiten, siehe SetupOb.gap
   // "A" = eigenes bestätigtes Protected-Pivot (fractal !== ls), "B" = fractal === ls — reine
   // Debug-Info, keine eigene Erkennungslogik. Seit 2026-09-20 steuert sie nichts mehr (Philip:
   // "fachlich gesehen ist mir scheissegal, ob Path A oder B"), bleibt aber mitgeführt, damit beide
@@ -104,7 +106,7 @@ export const DEFAULT_TRADE_SETUP_PARAMS: Omit<TradeSetupParams, "nowTime"> = {
 // aus demselben Grund: alle M5-OB-Erkennungen (Chart-Overlay, Trade-Setup-Frontend,
 // Trade-Setup-Backend/Telegram-Alarme) sollen exakt dieselben Lücken als relevant ansehen.
 export function detectSetupObs(candles: Candle[]): SetupOb[] {
-  return detectOrderBlocks(candles, "5m").map((z) => ({ dir: z.dir, top: z.top, bottom: z.bottom, startTime: z.startTime }));
+  return detectOrderBlocks(candles, "5m").map((z) => ({ dir: z.dir, top: z.top, bottom: z.bottom, startTime: z.startTime, gap: z.gap }));
 }
 
 // Sucht die zeitlich erste FVG einer Richtung, deren Impuls-Kerze auf afterTime folgt, aber
@@ -351,7 +353,7 @@ export function detectTradeSetup(
     const ls = sweeps[0].level;
     const fensterVon = Math.min(...sweeps.map((sw) => sw.level.touchedTime!));
     const widened = widenObForSweep(ob, fensterVon, dir, m5Candles);
-    return { dir, fractal: fractal ?? ls, ls, sweeps, obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, pathType };
+    return { dir, fractal: fractal ?? ls, ls, sweeps, obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, obGap: widened.gap, pathType };
   };
 
   let pathA: DetectedTradeSetup | null = null;

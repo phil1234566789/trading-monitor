@@ -1,0 +1,74 @@
+FVG-GROESSE JE DEALING RANGE -- 3282 GBPUSD-Setups, FXCM Bid, 2025 und 2026
+Stopp durchgehend min(strukturelles Risiko, 6 Pips), Fenster 24h.
+
+1) ABSOLUTE FVG -- VERTEILUNG UND KONTEXT
+                     n  Anteil FVG-Median   Risiko-Med  Vorsprung-Med
+  unter 1 Pip      972   29.6%       0.7 P        4.9 P          2.7 P
+  1-2 Pips         963   29.3%       1.5 P        5.4 P          3.8 P
+  2-3 Pips         539   16.4%       2.5 P        5.8 P          5.1 P
+  3-5 Pips         493   15.0%       3.8 P        7.0 P          7.1 P
+  5-8 Pips         217    6.6%       6.0 P        7.2 P          9.5 P
+  ueber 8 Pips      98    3.0%      10.1 P        8.3 P         18.0 P
+
+  R-LEITER, STANDARD-ENTRY (Vorsprung steckt drin -- NICHT als Qualitaet lesen)
+                     n        2R      3R      4R      5R      6R
+  unter 1 Pip      972      61%     47%     38%     32%     26% 
+  1-2 Pips         963      68%     52%     43%     36%     31% 
+  2-3 Pips         539      72%     57%     47%     40%     34% 
+  3-5 Pips         493      79%     61%     49%     42%     36% 
+  5-8 Pips         217      89%     75%     65%     52%     45% 
+  ueber 8 Pips      98      99%     91%     84%     79%     71% 
+
+  PIP-LEITER, STANDARD-ENTRY (nur Kontext, steigt mit der Volatilitaet)
+                     n       10P     15P     20P     25P     30P     35P     40P
+  unter 1 Pip      972      56%     42%     34%     27%     23%     20%     17% 
+  1-2 Pips         963      65%     50%     39%     33%     28%     25%     22% 
+  2-3 Pips         539      69%     54%     45%     38%     32%     28%     26% 
+  3-5 Pips         493      82%     64%     52%     43%     38%     32%     29% 
+  5-8 Pips         217      92%     75%     67%     56%     46%     40%     34% 
+  ueber 8 Pips      98     100%     96%     90%     79%     73%     65%     58% 
+
+  R-LEITER MIT RETEST-ENTRY -- DIE ENTSCHEIDENDE TABELLE
+                     n        2R      3R      4R      5R      6R   ohne Retest
+  unter 1 Pip      972      40%     30%     23%     19%     16%            5%
+  1-2 Pips         963      34%     26%     21%     18%     15%            9%
+  2-3 Pips         539      36%     28%     22%     18%     14%           11%
+  3-5 Pips         493      33%     23%     17%     13%     11%           15%
+  5-8 Pips         217      41%     28%     22%     17%     12%           19%
+  ueber 8 Pips      98      41%     26%     24%     19%     16%           31%
+
+2) RELATIVE FVG (Luecke / OB-Hoehe) -- VERTEILUNG UND KONTEXT
+                     n  Anteil FVG-Median   Risiko-Med  Vorsprung-Med
+  unter 15 %       702   21.4%      10.4 %        8.9 P          3.7 P
+  15-25 %          654   19.9%      19.8 %        5.7 P          3.6 P
+  25-40 %          685   20.9%      32.0 %        5.7 P          4.3 P
+  40-65 %          614   18.7%      50.0 %        4.9 P          5.1 P
+  ueber 65 %       627   19.1%      92.0 %        4.1 P          6.9 P
+
+  R-LEITER, STANDARD-ENTRY (Vorsprung steckt drin -- NICHT als Qualitaet lesen)
+                     n        2R      3R      4R      5R      6R
+  unter 15 %       702      59%     43%     36%     30%     25% 
+  15-25 %          654      66%     50%     40%     33%     28% 
+  25-40 %          685      67%     52%     41%     34%     28% 
+  40-65 %          614      75%     60%     49%     43%     36% 
+  ueber 65 %       627      88%     74%     64%     56%     49% 
+
+  PIP-LEITER, STANDARD-ENTRY (nur Kontext, steigt mit der Volatilitaet)
+                     n       10P     15P     20P     25P     30P     35P     40P
+  unter 15 %       702      64%     48%     39%     34%     29%     25%     21% 
+  15-25 %          654      65%     51%     41%     33%     29%     24%     21% 
+  25-40 %          685      65%     49%     40%     31%     27%     24%     22% 
+  40-65 %          614      71%     57%     47%     40%     34%     29%     26% 
+  ueber 65 %       627      78%     62%     53%     45%     40%     34%     30% 
+
+  R-LEITER MIT RETEST-ENTRY -- DIE ENTSCHEIDENDE TABELLE
+                     n        2R      3R      4R      5R      6R   ohne Retest
+  unter 15 %       702      37%     26%     20%     16%     13%            7%
+  15-25 %          654      38%     29%     23%     19%     16%            8%
+  25-40 %          685      31%     25%     19%     16%     14%            9%
+  40-65 %          614      38%     28%     22%     18%     15%           10%
+  ueber 65 %       627      40%     29%     24%     20%     15%           18%
+
+3) GEGENPROBE: groesstes gegen kleinstes Band, 3 R, 95%-Bootstrap-Intervall
+  Standard-Entry: ueber 8 Pips gegen unter 1 Pip = +37 bis +50 Punkte
+  Retest-Entry : ueber 8 Pips gegen unter 1 Pip = -13 bis +8 Punkte   <- enthaelt die Null

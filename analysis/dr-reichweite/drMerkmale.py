@@ -155,12 +155,20 @@ import bisect as _bisect
 _cache = {}
 
 
-def lauf(x, ziel_pips, stop_pips):
-    """Laeuft die M5-Kerzen ab FVG-Bestaetigung ab -> 'win' | 'loss' | 'offen'.
+def lauf(x, ziel_pips, stop_pips, retest=False):
+    """Laeuft die M5-Kerzen ab FVG-Bestaetigung ab -> 'win' | 'loss' | 'offen' | 'kein Retest'.
 
     Beides gemessen ab der nahen OB-Kante; der Entry bleibt fix dort, nur so sind zwei
     Stopp-Platzierungen vergleichbar. Ziel und Stopp in DERSELBEN M5-Kerze zaehlen als Verlust,
-    wie in _shared/tradeSetupOutcome.ts."""
+    wie in _shared/tradeSetupOutcome.ts.
+
+    retest=True zaehlt erst ab der Kerze, die die nahe OB-Kante tatsaechlich wieder beruehrt, und
+    liefert 'kein Retest', wenn das binnen HORIZON nie passiert. Das Standardmodell unterstellt
+    einen Entry an der Kante, ohne zu pruefen, ob der Preis je dorthin zurueckkommt -- der Pfad
+    startet damit schon so weit im Plus, wie die FVG gross ist. Fuer die meisten Schnitte ist das
+    egal, fuer einen Schnitt NACH DER FVG-GROESSE ist es genau die gemessene Groesse (siehe
+    fvgBaender.py: im Standardmodell steigt die 3R-Quote von 47 auf 91 %, mit Retest-Entry ist sie
+    flach)."""
     if not _cache:
         _cache["setups"] = {r["id"]: r for r in lade_setups()}
         _cache["cnd"], _cache["times"] = lade_kerzen()
@@ -172,8 +180,14 @@ def lauf(x, ziel_pips, stop_pips):
     ziel = ref - ziel_pips * PIP if d == "short" else ref + ziel_pips * PIP
     stop = ref + stop_pips * PIP if d == "short" else ref - stop_pips * PIP
     i = _bisect.bisect_left(times, start)
+    drin = not retest
     while i < len(cnd) and cnd[i]["time"] <= start + HORIZON:
         c = cnd[i]
+        if not drin:
+            drin = (c["high"] >= ref) if d == "short" else (c["low"] <= ref)
+            if not drin:
+                i += 1
+                continue
         traf_ziel = (c["low"] <= ziel) if d == "short" else (c["high"] >= ziel)
         traf_stop = (c["high"] >= stop) if d == "short" else (c["low"] <= stop)
         if traf_ziel and traf_stop:
@@ -183,7 +197,7 @@ def lauf(x, ziel_pips, stop_pips):
         if traf_stop:
             return "loss"
         i += 1
-    return "offen"
+    return "offen" if drin else "kein Retest"
 
 # --- Grundmessung je Dealing Range -------------------------------------------------------------
 # Von messeDrReichweite.py (Hauptauswertung) und vergleicheCloseCheck.py (Abnahmelauf der
@@ -237,6 +251,46 @@ def messe_drs(rows, cnd, times):
                         ob_key=(d, ts(obst))))
     return res, dict(zeilen=len(rows), drs=len(drs), sanity=sanity,
                      ohne_fraktal=sum(1 for _, lead, _ in drs if lead["_B"]))
+
+
+# --- Leitern gegen den gedeckelten Stopp -------------------------------------------------------
+# Lagen bis 23.09.2026 nur in baenderTabellen.py. Das Skript druckt beim Import seine ganze
+# Auswertung, ein zweiter Nutzer (fvgBaender.py) haette sie also kopieren muessen -- und genau so
+# driften zwei Messungen auseinander.
+DECKEL = 6  # Philips Stopp-Deckel, seit 20.09.2026 die Konvention (siehe PLAN-dr-statistik-ui.md)
+
+
+def mess_gedeckelt(g, k):
+    """-> (Quote, Treffer, unentschieden) fuer ein k-faches des gedeckelten Stopps.
+    Unentschieden = weder Ziel noch Stopp binnen 24h."""
+    w = l = o = 0
+    for x in g:
+        stop = min(x["risk"], DECKEL)
+        erg = lauf(x, k * stop, stop)
+        if erg == "offen":
+            o += 1
+        elif erg == "win":
+            w += 1
+        else:
+            l += 1
+    return (100.0 * w / (w + l) if w + l else float("nan")), w, o
+
+
+# Die Pip-Leiter misst GEGEN DENSELBEN STOPP: min(strukturelles Risiko, Deckel) -- nicht pauschal
+# 6 Pips, bei einer engen DR ist der Stopp enger. Zwei Leitern nebeneinander duerfen nicht zwei
+# verschiedene Fragen beantworten ("bevor mein Stopp fiel" gegen "bevor die Range strukturell starb").
+def mess_pips_gedeckelt(g, X):
+    """-> (Quote, Treffer, unentschieden) fuer ein festes Pip-Ziel gegen den gedeckelten Stopp."""
+    w = l = o = 0
+    for x in g:
+        erg = lauf(x, X, min(x["risk"], DECKEL))
+        if erg == "offen":
+            o += 1
+        elif erg == "win":
+            w += 1
+        else:
+            l += 1
+    return (100.0 * w / (w + l) if w + l else float("nan")), w, o
 
 
 # Leitkennzahl: Trefferquote (siehe quotenTabelle.py) -- hier, damit der Vergleichslauf und die

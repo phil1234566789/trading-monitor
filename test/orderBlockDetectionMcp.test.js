@@ -103,3 +103,33 @@ describe("detectOrderBlocks (MCP-lokale Kopie) — Retest-Status (retested)", ()
     expect(zoneA.retested).toBe(false);
   });
 });
+
+// Die FVG-Groesse wird seit 23.09.2026 auf der Zone mitgefuehrt (Task "FVG-Groesse messen"): aus
+// top/bottom ist sie nicht rekonstruierbar, sobald die Lower-TF-Box die gegenueberliegende Kante
+// aufzieht oder widenObForSweep sie spaeter erweitert.
+describe("detectOrderBlocks — gap (Groesse der FVG selbst)", () => {
+  const bull = (gapAbs) => [
+    { time: 0, open: 1.2999, high: 1.3, low: 1.2998, close: 1.29995 },
+    { time: 300, open: 1.29995, high: 1.3, low: 1.2999, close: 1.3 }, // c1
+    { time: 600, open: 1.3, high: 1.30005, low: 1.29998, close: 1.30002 }, // c2
+    { time: 900, open: 1.30002, high: 1.30008 + gapAbs, low: 1.3 + gapAbs, close: 1.30006 + gapAbs }, // cur
+  ];
+
+  it("bullisch auf 5m: liefert die Luecke, nicht die (breitere) Box-Hoehe", () => {
+    const zones = detectOrderBlocks(bull(0.51 * 0.0001), "5m");
+    expect(zones[0].gap).toBeCloseTo(0.000051, 10);
+    expect(zones[0].top - zones[0].bottom).toBeGreaterThan(zones[0].gap);
+  });
+
+  it("baerisch: liefert c1.low - cur.high", () => {
+    const candles = [
+      { time: 0, open: 1.30005, high: 1.3003, low: 1.3, close: 1.30005 },
+      { time: 300, open: 1.30005, high: 1.3001, low: 1.3, close: 1.3 }, // c1
+      { time: 600, open: 1.3, high: 1.30002, low: 1.29995, close: 1.29998 }, // c2
+      { time: 900, open: 1.29998, high: 1.2987, low: 1.2984, close: 1.2985 }, // cur
+    ];
+    const zones = detectOrderBlocks(candles, "1h");
+    expect(zones[0].dir).toBe(-1);
+    expect(zones[0].gap).toBeCloseTo(0.0013, 10);
+  });
+});

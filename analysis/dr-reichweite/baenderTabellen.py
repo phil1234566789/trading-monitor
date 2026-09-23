@@ -9,14 +9,13 @@
 # dem naechsten Backfill andere Zahlen. Die Baender sind stabil und alle ueber Philips Schwelle
 # ("glaub 50 reichen mir fuer ne Prozentanzahl").
 import json, statistics
-from drMerkmale import lade_setups, lade_bekannte_level, merkmale, lauf
+from drMerkmale import (lade_setups, lade_bekannte_level, merkmale, lauf,
+                       DECKEL, mess_gedeckelt, mess_pips_gedeckelt,
+                       PIPS_REIHE as PIPS, R_REIHE as RS)
 import filterGegenkraft as gk
 
-PIPS = (10, 15, 20, 25, 30, 35, 40)
-RS = (2, 3, 4, 5, 6)
 BAENDER = (("unter 3 Pips", 0, 3), ("3-5 Pips", 3, 5), ("5-7 Pips", 5, 7),
            ("7-10 Pips", 7, 10), ("ueber 10 Pips", 10, 1e9))
-DECKEL = 6          # Philips Stopp-Deckel, seit 20.09.2026 die Konvention (siehe PLAN)
 R_GEDECKELT = tuple(range(2, 11))
 med = lambda v: statistics.median(v) if v else float("nan")
 
@@ -139,40 +138,6 @@ for name, g in baender:
 # ohne Deckel 32 Punkte auf (72 bis 40), mit Deckel nur noch 20 (72 bis 52), und die oberen drei
 # werden praktisch ununterscheidbar (59/52/53 -- das letzte Paar dreht die Reihenfolge sogar um,
 # bei n=182 gegen n=134 reines Rauschen). Aus 52 gegen 53 also KEINE Aussage bauen.
-def mess_gedeckelt(g, k):
-    """-> (Quote, Treffer, unentschieden). Unentschieden = weder Ziel noch Stopp binnen 24h."""
-    w = l = o = 0
-    for x in g:
-        stop = min(x["risk"], DECKEL)
-        erg = lauf(x, k * stop, stop)
-        if erg == "offen":
-            o += 1
-        elif erg == "win":
-            w += 1
-        else:
-            l += 1
-    return (100.0 * w / (w + l) if w + l else float("nan")), w, o
-
-
-# Die Pip-Leiter gehoert neben die R-Leiter ins TSC und muss deshalb GEGEN DENSELBEN STOPP messen:
-# min(strukturelles Risiko, Deckel) -- nicht pauschal 6 Pips, bei einer engen DR ist der Stopp
-# enger. Tabelle 1 oben misst die Pip-Ziele noch gegen die Invalidierung; beide Leitern
-# nebeneinander duerfen aber nicht zwei verschiedene Fragen beantworten ("bevor mein Stopp fiel"
-# gegen "bevor die Range strukturell starb"). Nenner wie in Tabelle 5 die ENTSCHIEDENEN Faelle.
-def mess_pips_gedeckelt(g, X):
-    """-> (Quote, Treffer, unentschieden) fuer ein festes Pip-Ziel gegen den gedeckelten Stopp."""
-    w = l = o = 0
-    for x in g:
-        erg = lauf(x, X, min(x["risk"], DECKEL))
-        if erg == "offen":
-            o += 1
-        elif erg == "win":
-            w += 1
-        else:
-            l += 1
-    return (100.0 * w / (w + l) if w + l else float("nan")), w, o
-
-
 print("6) PIP-LEITER MIT GEDECKELTEM STOPP (%d Pips) -- Gegenstueck zu Tabelle 5 fuers TSC" % DECKEL)
 print("  %-42s %4s  " % ("", "n") + "".join("%7dP" % X for X in PIPS))
 for name, g in baender:

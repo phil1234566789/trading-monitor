@@ -170,6 +170,7 @@ durchgehen können. Deshalb läuft alles auf **einem** Verfahren über alle neun
 | `messeDrReichweite.py` | Grundmessung, schreibt `punkt1_result.json` |
 | `quotenTabelle.py` | **Haupttabelle**: Trefferquote je Merkmal, 10–40 Pips und 2–6 R |
 | `baenderTabellen.py` | die vier Tabellen für die UI-Anzeige (feste Risiko-Bänder, EV, Deckel) |
+| `fvgBaender.py` | FVG-Größe je DR, absolut und relativ zur OB-Höhe, beide Entry-Modelle |
 | `saisonalitaet.py` | Monatsvergleich |
 | `filterHtfSweep.py` · `filterGegenkraft.py` · `filterAlterUndHandelszeit.py` | die einzelnen Filter |
 | `leiterPipsVsR.py` | Wahrscheinlichkeit je Strecke, Pips gegen R |
@@ -342,6 +343,51 @@ zeigt eher das umgekehrte Vorzeichen (19,2 mit gegen 23,7 gegen), ein längeres 
 
 Gemessen ist **eine** Trend-Definition: der 1H-Algo mit Daily-Pivot-Anker, der sich nur alle ein
 bis drei Wochen bewegt. Der M5-Trend ist damit nicht gemessen.
+
+## FVG-Größe — sieht nach dem stärksten Filter aus, ist aber ein Messartefakt
+
+Anlass: Philip, 23.09.2026, zu Setup #2936 — *„die FVG ist 0,5 Pip. viel zu schwach. koennten wir
+ueberlegen sowas rauszufiltern."* Gemessen mit `fvgBaender.py`, volle Tabellen in
+[ergebnis-fvg.txt](ergebnis-fvg.txt).
+
+Die Lücke steht nirgends in den Daten, ist aber exakt rekonstruierbar: die FVG-anknüpfende OB-Kante
+ist C1, und `widenObForSweep` zieht immer nur die gegenüberliegende auf. Gegenprobe: das Minimum
+über alle 3282 Zeilen ist exakt 0,5000 Pip — die Schwelle der Erkennung. Seit dem 23.09.2026 führt
+`detectOrderBlocks` die Lücke zusätzlich als `gap` mit, ein neuer Dump trägt sie als `ob_gap`.
+
+| FVG | n | Anteil | Risiko-Median | Vorsprung-Median | 3 R Standard | 3 R **Retest** | ohne Retest |
+|---|---|---|---|---|---|---|---|
+| unter 1 Pip | 972 | 29,6 % | 4,9 P | 2,7 P | 47 % | 30 % | 5 % |
+| 1–2 Pips | 963 | 29,3 % | 5,4 P | 3,8 P | 52 % | 26 % | 9 % |
+| 2–3 Pips | 539 | 16,4 % | 5,8 P | 5,1 P | 57 % | 28 % | 11 % |
+| 3–5 Pips | 493 | 15,0 % | 7,0 P | 7,1 P | 61 % | 23 % | 15 % |
+| 5–8 Pips | 217 | 6,6 % | 7,2 P | 9,5 P | 75 % | 28 % | 19 % |
+| über 8 Pips | 98 | 3,0 % | 8,3 P | 18,0 P | **91 %** | 26 % | **31 %** |
+
+Die Standard-Spalte steigt von 47 auf 91 % — der sauberste Verlauf im ganzen Datensatz, deutlich
+stärker als Sweep-Alter oder Gegenkraft, und er hält scheinbar auch in R. **Er ist trotzdem kein
+Qualitätsmerkmal.** Der Grund steht in der Spalte daneben: alle bisherigen Tabellen unterstellen
+einen Entry an der nahen OB-Kante ab FVG-Bestätigung, ohne zu prüfen, ob der Preis je dorthin
+zurückkommt. Die FVG **ist** genau der Abstand, den der Preis zu diesem Zeitpunkt schon
+zurückgelegt hat — ein 10-Pip-Setup startet den Pfad 18 Pips im Plus. Ein Schnitt nach FVG-Größe
+misst damit den Vorsprung, nicht das Setup.
+
+Zählt man erst ab der Kerze, die die OB-Kante tatsächlich wieder berührt (`lauf(retest=True)` —
+Philips realer Entry), bleibt **nichts** übrig: 30 / 26 / 28 / 23 / 28 / 26 % bei 3 R, kein Trend.
+Bootstrap für das größte gegen das kleinste Band bei 3 R: Standard-Entry **+37 bis +50 Punkte**,
+Retest-Entry **−13 bis +8** — enthält die Null. Die relative FVG (Lücke / OB-Höhe) trennt genauso
+wenig: 26 / 29 / 25 / 28 / 29 %.
+
+Und die einzige Richtung, in der die große Lücke messbar wirkt, ist die falsche: **je größer die
+FVG, desto öfter kommt der Preis nie zurück** — 5 % ohne Retest unter 1 Pip gegen 31 % über 8 Pips.
+
+**Also kein Filter.** Setup #2936 mit seinen 0,5 Pip ist price-action unschön, aber nicht messbar
+schlechter als eine 8-Pip-Lücke. Eine DB-Spalte auf `trade_setups` und ein Live-Filter bleiben
+damit ungebaut (Task-Schritt 4). Wer die Frage später neu stellt, muss es gegen den Retest-Entry
+messen — nicht gegen das Standardmodell.
+
+> Der Vorsprung-Effekt trifft **nur** Schnitte nach einer Größe, die selbst am Abstand zur Entry-
+> Kante hängt. Risiko-Bänder, Sweep-Alter, Gegenkraft und Monat sind davon nicht betroffen.
 
 ## Grenzen
 
