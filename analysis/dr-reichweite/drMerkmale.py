@@ -155,20 +155,17 @@ import bisect as _bisect
 _cache = {}
 
 
-def lauf(x, ziel_pips, stop_pips, retest=False):
-    """Laeuft die M5-Kerzen ab FVG-Bestaetigung ab -> 'win' | 'loss' | 'offen' | 'kein Retest'.
+def lauf(x, ziel_pips, stop_pips):
+    """Laeuft die M5-Kerzen ab FVG-Bestaetigung ab -> 'win' | 'loss' | 'offen'.
 
     Beides gemessen ab der nahen OB-Kante; der Entry bleibt fix dort, nur so sind zwei
     Stopp-Platzierungen vergleichbar. Ziel und Stopp in DERSELBEN M5-Kerze zaehlen als Verlust,
     wie in _shared/tradeSetupOutcome.ts.
 
-    retest=True zaehlt erst ab der Kerze, die die nahe OB-Kante tatsaechlich wieder beruehrt, und
-    liefert 'kein Retest', wenn das binnen HORIZON nie passiert. Das Standardmodell unterstellt
-    einen Entry an der Kante, ohne zu pruefen, ob der Preis je dorthin zurueckkommt -- der Pfad
-    startet damit schon so weit im Plus, wie die FVG gross ist. Fuer die meisten Schnitte ist das
-    egal, fuer einen Schnitt NACH DER FVG-GROESSE ist es genau die gemessene Groesse (siehe
-    fvgBaender.py: im Standardmodell steigt die 3R-Quote von 47 auf 91 %, mit Retest-Entry ist sie
-    flach)."""
+    Ob der Preis die Kante je wieder beruehrt, ist hier bewusst KEINE Bedingung: gemessen wird die
+    Reichweite der Dealing Range, nicht ein Entry-Modell. Philip sucht den Entry getrennt davon
+    (OB-Retest wenn er kommt, sonst M1 mit eigenen Bestaetigungen). Wer den Retest trotzdem
+    protokollieren will, nimmt kam_retest()."""
     if not _cache:
         _cache["setups"] = {r["id"]: r for r in lade_setups()}
         _cache["cnd"], _cache["times"] = lade_kerzen()
@@ -180,14 +177,8 @@ def lauf(x, ziel_pips, stop_pips, retest=False):
     ziel = ref - ziel_pips * PIP if d == "short" else ref + ziel_pips * PIP
     stop = ref + stop_pips * PIP if d == "short" else ref - stop_pips * PIP
     i = _bisect.bisect_left(times, start)
-    drin = not retest
     while i < len(cnd) and cnd[i]["time"] <= start + HORIZON:
         c = cnd[i]
-        if not drin:
-            drin = (c["high"] >= ref) if d == "short" else (c["low"] <= ref)
-            if not drin:
-                i += 1
-                continue
         traf_ziel = (c["low"] <= ziel) if d == "short" else (c["high"] >= ziel)
         traf_stop = (c["high"] >= stop) if d == "short" else (c["low"] <= stop)
         if traf_ziel and traf_stop:
@@ -197,7 +188,26 @@ def lauf(x, ziel_pips, stop_pips, retest=False):
         if traf_stop:
             return "loss"
         i += 1
-    return "offen" if drin else "kein Retest"
+    return "offen"
+
+
+def kam_retest(x):
+    """Hat der Preis die nahe OB-Kante binnen HORIZON ueberhaupt nochmal beruehrt? Reine
+    Protokollspalte -- sie geht in keine Quote ein (siehe lauf())."""
+    if not _cache:
+        lauf(x, 0, 0)
+    setups, cnd, times = _cache["setups"], _cache["cnd"], _cache["times"]
+    r = setups[x["id"]]
+    d = x["dir"]
+    ref = r["ob_bottom"] if d == "short" else r["ob_top"]
+    start = ts(r["ob_start_time"]) + ARM
+    i = _bisect.bisect_left(times, start)
+    while i < len(cnd) and cnd[i]["time"] <= start + HORIZON:
+        c = cnd[i]
+        if (c["high"] >= ref) if d == "short" else (c["low"] <= ref):
+            return True
+        i += 1
+    return False
 
 # --- Grundmessung je Dealing Range -------------------------------------------------------------
 # Von messeDrReichweite.py (Hauptauswertung) und vergleicheCloseCheck.py (Abnahmelauf der

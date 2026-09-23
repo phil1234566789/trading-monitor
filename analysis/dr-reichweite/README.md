@@ -160,6 +160,12 @@ durchgehen können. Deshalb läuft alles auf **einem** Verfahren über alle neun
   ist erst mit dem Schluss der übernächsten Kerze sichtbar — der früheste Zeitpunkt, zu dem die DR
   live erkennbar war.
 - **Fenster**: 24 h.
+- **Ein neuer Schnitt ändert die GRUPPIERUNG, nie die Messung.** Reichweite ab der nahen
+  OB-Kante, 24-h-Fenster, Stopp `min(Risiko, 6 Pips)` — das steht fest und wird auch dann nicht
+  ersetzt, wenn ein Merkmal mit der gemessenen Strecke zusammenhängt. Ob der Preis die Kante je
+  wieder berührt, ist ausdrücklich keine Bedingung: gemessen wird die Dealing Range, nicht ein
+  Entry-Modell (Philip sucht Entries getrennt davon, notfalls im M1 ohne OB-Retest). Wer eine
+  Zusatzgröße braucht, schreibt sie als eigene Spalte daneben, statt die Leitern umzudefinieren.
 
 ## Skripte
 
@@ -344,7 +350,7 @@ zeigt eher das umgekehrte Vorzeichen (19,2 mit gegen 23,7 gegen), ein längeres 
 Gemessen ist **eine** Trend-Definition: der 1H-Algo mit Daily-Pivot-Anker, der sich nur alle ein
 bis drei Wochen bewegt. Der M5-Trend ist damit nicht gemessen.
 
-## FVG-Größe — sieht nach dem stärksten Filter aus, ist aber ein Messartefakt
+## FVG-Größe — der stärkste Einzelfilter, den wir bisher gemessen haben
 
 Anlass: Philip, 23.09.2026, zu Setup #2936 — *„die FVG ist 0,5 Pip. viel zu schwach. koennten wir
 ueberlegen sowas rauszufiltern."* Gemessen mit `fvgBaender.py`, volle Tabellen in
@@ -355,39 +361,41 @@ ist C1, und `widenObForSweep` zieht immer nur die gegenüberliegende auf. Gegenp
 über alle 3282 Zeilen ist exakt 0,5000 Pip — die Schwelle der Erkennung. Seit dem 23.09.2026 führt
 `detectOrderBlocks` die Lücke zusätzlich als `gap` mit, ein neuer Dump trägt sie als `ob_gap`.
 
-| FVG | n | Anteil | Risiko-Median | Vorsprung-Median | 3 R Standard | 3 R **Retest** | ohne Retest |
-|---|---|---|---|---|---|---|---|
-| unter 1 Pip | 972 | 29,6 % | 4,9 P | 2,7 P | 47 % | 30 % | 5 % |
-| 1–2 Pips | 963 | 29,3 % | 5,4 P | 3,8 P | 52 % | 26 % | 9 % |
-| 2–3 Pips | 539 | 16,4 % | 5,8 P | 5,1 P | 57 % | 28 % | 11 % |
-| 3–5 Pips | 493 | 15,0 % | 7,0 P | 7,1 P | 61 % | 23 % | 15 % |
-| 5–8 Pips | 217 | 6,6 % | 7,2 P | 9,5 P | 75 % | 28 % | 19 % |
-| über 8 Pips | 98 | 3,0 % | 8,3 P | 18,0 P | **91 %** | 26 % | **31 %** |
+| FVG | n | Anteil | Risiko-Median | Reichweite-Median | 15 P | 2 R | 3 R | 4 R | OB-Retest |
+|---|---|---|---|---|---|---|---|---|---|
+| unter 1 Pip | 972 | 29,6 % | 4,9 P | 13,1 P | 42 % | 61 % | **47 %** | 38 % | 95 % |
+| 1–2 Pips | 963 | 29,3 % | 5,4 P | 15,9 P | 50 % | 68 % | 52 % | 43 % | 91 % |
+| 2–3 Pips | 539 | 16,4 % | 5,8 P | 18,7 P | 54 % | 72 % | 57 % | 47 % | 89 % |
+| 3–5 Pips | 493 | 15,0 % | 7,0 P | 22,7 P | 64 % | 79 % | 61 % | 49 % | 85 % |
+| 5–8 Pips | 217 | 6,6 % | 7,2 P | 29,3 P | 75 % | 89 % | 75 % | 65 % | 81 % |
+| über 8 Pips | 98 | 3,0 % | 8,3 P | 46,8 P | 96 % | 99 % | **91 %** | 84 % | 69 % |
 
-Die Standard-Spalte steigt von 47 auf 91 % — der sauberste Verlauf im ganzen Datensatz, deutlich
-stärker als Sweep-Alter oder Gegenkraft, und er hält scheinbar auch in R. **Er ist trotzdem kein
-Qualitätsmerkmal.** Der Grund steht in der Spalte daneben: alle bisherigen Tabellen unterstellen
-einen Entry an der nahen OB-Kante ab FVG-Bestätigung, ohne zu prüfen, ob der Preis je dorthin
-zurückkommt. Die FVG **ist** genau der Abstand, den der Preis zu diesem Zeitpunkt schon
-zurückgelegt hat — ein 10-Pip-Setup startet den Pfad 18 Pips im Plus. Ein Schnitt nach FVG-Größe
-misst damit den Vorsprung, nicht das Setup.
+Monoton über die ganze Reihe, und **er hält in R**: 47 auf 91 % bei 3 R, Bootstrap für das größte
+gegen das kleinste Band **+37 bis +50 Punkte**. Das Risiko wandert nur von 4,9 auf 8,3 Pips mit,
+die Reichweite dagegen von 13,1 auf 46,8 — anders als bei Saisonalität oder Handelszeit ist das
+also nicht bloß Volatilität. Zum Vergleich der bisher stärksten Merkmale bei 3 R: 1H-Sweep 63 %
+(n=78), Major-Sweep ≥ 120 h 73 % (n=30).
 
-Zählt man erst ab der Kerze, die die OB-Kante tatsächlich wieder berührt (`lauf(retest=True)` —
-Philips realer Entry), bleibt **nichts** übrig: 30 / 26 / 28 / 23 / 28 / 26 % bei 3 R, kein Trend.
-Bootstrap für das größte gegen das kleinste Band bei 3 R: Standard-Entry **+37 bis +50 Punkte**,
-Retest-Entry **−13 bis +8** — enthält die Null. Die relative FVG (Lücke / OB-Höhe) trennt genauso
-wenig: 26 / 29 / 25 / 28 / 29 %.
+Die **relative FVG** (Lücke / OB-Höhe) trennt ebenfalls, aber schwächer: 43 / 50 / 52 / 60 / 74 %
+bei 3 R, Bootstrap +26 bis +36. Sie ist der absoluten Lücke damit unterlegen — Philips
+ursprünglicher Verdacht, es gehe um das *Missverhältnis* (0,5 Pip in einem 15,8-Pip-OB), bestätigt
+sich in dieser Form nicht. Die absolute Zahl ist das bessere Kriterium.
 
-Und die einzige Richtung, in der die große Lücke messbar wirkt, ist die falsche: **je größer die
-FVG, desto öfter kommt der Preis nie zurück** — 5 % ohne Retest unter 1 Pip gegen 31 % über 8 Pips.
+Die Spalte **OB-Retest** läuft nur fürs Protokoll mit (`kam_retest()`) und geht in keine Quote ein:
+Philip sucht den Entry unabhängig von der Dealing Range — *„wenn OB Retest, dann super. ansonsten
+kann ich auch im M1 einen entry finden ohne OB Retest."* Bemerkenswert ist sie trotzdem: je größer
+die Lücke, desto seltener kommt der Preis an die Kante zurück (95 % → 69 %).
 
-**Also kein Filter.** Setup #2936 mit seinen 0,5 Pip ist price-action unschön, aber nicht messbar
-schlechter als eine 8-Pip-Lücke. Eine DB-Spalte auf `trade_setups` und ein Live-Filter bleiben
-damit ungebaut (Task-Schritt 4). Wer die Frage später neu stellt, muss es gegen den Retest-Entry
-messen — nicht gegen das Standardmodell.
+**Lesehinweis zu den oberen Bändern:** eine FVG von X Pip ist per Konstruktion bereits Teil der
+gemessenen Strecke — der Preis steht zum Messstart schon so weit von der Kante weg. Bei den
+besetzungsstarken unteren Bändern (Median 0,7 bis 2,5 Pip) fällt das gegen ein 10-Pip-Ziel nicht
+ins Gewicht; im obersten Band (Median 10,1 Pip, 3 % der Ranges) trägt es einen Teil der 91 %.
 
-> Der Vorsprung-Effekt trifft **nur** Schnitte nach einer Größe, die selbst am Abstand zur Entry-
-> Kante hängt. Risiko-Bänder, Sweep-Alter, Gegenkraft und Monat sind davon nicht betroffen.
+**Empfehlung: markieren, nicht wegwerfen.** Dieselbe Vorsicht wie beim Gegenkraft-Filter — die
+FVG-Größe gehört als Merkmal an die Dealing Range (TSC-Anzeige, Alarm-Text), bevor irgendein Alarm
+unterdrückt wird. Betroffen wäre sonst sofort das besetzungsstärkste Band überhaupt: „unter 1 Pip"
+sind 29,6 % aller Ranges. Eine Spalte auf `trade_setups` ist damit begründbar, ein
+Unterdrückungs-Filter noch nicht.
 
 ## Grenzen
 

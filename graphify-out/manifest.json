@@ -2766,9 +2766,9 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/README.md": {
-    "mtime": 1790140478.5338304,
-    "seen": 1790140496.9943523,
-    "ast_hash": "a90d643bc8b5e2bb44434dc182e562b0",
+    "mtime": 1790150176.7846324,
+    "seen": 1790150280.1852467,
+    "ast_hash": "9824abfe69a35937b60a25db859496b5",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-alter-handelszeit.txt": {
@@ -2802,9 +2802,9 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/drMerkmale.py": {
-    "mtime": 1790140446.4362164,
-    "seen": 1790140496.9347239,
-    "ast_hash": "f7d4abc02f5b7b50ddf7d81dff4b3070",
+    "mtime": 1790150092.8985436,
+    "seen": 1790150280.1212194,
+    "ast_hash": "b1c0bf8260bb0aef32808f76403bf157",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/filterTrend.py": {
@@ -3402,15 +3402,15 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/fvgBaender.py": {
-    "mtime": 1790140398.8129742,
-    "seen": 1790140496.9357233,
-    "ast_hash": "804b4a2cf00304fba8f9ee3a047f712d",
+    "mtime": 1790150128.3135061,
+    "seen": 1790150280.1212194,
+    "ast_hash": "1d9cfd93dca62bd7674509bc8e8eaa94",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-fvg.txt": {
-    "mtime": 1790140401.2055314,
-    "seen": 1790140496.995352,
-    "ast_hash": "267d448d8982f94f180c5fb6caf6181a",
+    "mtime": 1790150133.4072213,
+    "seen": 1790150280.1872501,
+    "ast_hash": "002736165985556d7eab5094b219da85",
     "semantic_hash": ""
   },
   "src/components/ui/ActionButton.vue": {
