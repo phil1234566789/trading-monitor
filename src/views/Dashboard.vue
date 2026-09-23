@@ -376,9 +376,6 @@ function clearArmStatesExcept(keep) {
   }
   tscBootstrapArmed.value = false;
 }
-// PriceChart.vue: target-mode-active — irgendein Arm-Zustand "scharf" (egal welcher), schaltet den
-// Chart-Klick-Handler von Pan/Zoom auf "nimmt den nächsten Treffer entgegen" um.
-const anyArmStateActive = computed(() => Object.values(ARM_STATES).some((r) => r.value != null) || tscBootstrapArmed.value);
 // Hinweistext je scharfem Arm-Zustand — eine Tabelle statt acht fast gleicher Spans. Angezeigt
 // wird er in der Kopfleiste (App.vue), weil der Modus-Umschalter dort sitzt; clearArmStatesExcept
 // lässt immer höchstens einen scharf, deshalb reicht der erste Treffer.
@@ -391,13 +388,38 @@ const ARM_HINTS = {
   antiConfluence: (t) => `⚠️ nächster Klick auf Sweep/OB/Fib/Divergenz fügt Trade #${t.id} eine Anti-Confluence hinzu`,
   rangeAntiConfluence: (t) => `⚠️ nächster Klick auf Sweep/OB/Fib/Divergenz fügt Dealing Range #${t.dealingRangeId} eine Anti-Confluence hinzu`,
   invalidation: (t) => `🚫 nächster Klick auf Pivot/OB setzt Invalidierung für Dealing Range #${t.dealingRangeId}`,
+  tscBootstrap: () => "✔ nächster Klick auf ein OB legt die Dealing Range an",
 };
-watchEffect(() => {
-  const armed = Object.entries(ARM_STATES).find(([, r]) => r.value != null);
-  if (armed) chartHint.value = ARM_HINTS[armed[0]](armed[1].value);
-  else if (tscBootstrapArmed.value) chartHint.value = "✔ nächster Klick auf ein OB legt die Dealing Range an";
-  else chartHint.value = null;
+// Der eine scharfe Zustand, aus dem sowohl der Hinweis oben als auch das Button-Highlight unten
+// kommen. payload.isTsc unterscheidet die beiden Anzeigeorte: dieselbe Aktion (z.B.
+// rangeConfirmation) kann aus der TSC oder aus dem Trade-Edit-Modal stammen, nur einer der beiden
+// Knöpfe darf leuchten.
+const armedAction = computed(() => {
+  const found = Object.entries(ARM_STATES).find(([, r]) => r.value != null);
+  if (found) return { key: found[0], payload: found[1].value };
+  if (tscBootstrapArmed.value) return { key: "tscBootstrap", payload: { isTsc: true } };
+  return null;
 });
+watchEffect(() => {
+  chartHint.value = armedAction.value ? ARM_HINTS[armedAction.value.key](armedAction.value.payload) : null;
+});
+// PriceChart.vue: target-mode-active — irgendein Arm-Zustand "scharf" (egal welcher), schaltet den
+// Chart-Klick-Handler von Pan/Zoom auf "nimmt den nächsten Treffer entgegen" um.
+const anyArmStateActive = computed(() => armedAction.value != null);
+// TSC-Sektionsname statt roher Arm-Key — die TSC kennt nur ihre eigenen fünf Sektionen, und der
+// Bootstrap-Fall gehört dort an denselben Knopf wie eine normale Bestätigung.
+const TSC_SECTION_OF_ARM = {
+  tscBootstrap: "confirmation",
+  rangeConfirmation: "confirmation",
+  rangeConfluence: "confluence",
+  rangeAntiConfluence: "antiConfluence",
+  target: "target",
+  invalidation: "invalidation",
+};
+const armedTscSection = computed(() => (armedAction.value?.payload?.isTsc ? (TSC_SECTION_OF_ARM[armedAction.value.key] ?? null) : null));
+// Das Trade-Edit-Modal hat je eine Range- und eine Positions-Sektion pro Art, deckt sich also 1:1
+// mit den Arm-Keys — hier reicht der rohe Key.
+const armedTradeAction = computed(() => (armedAction.value && !armedAction.value.payload?.isTsc ? armedAction.value.key : null));
 // Sonst bliebe der Hinweis in der globalen Kopfleiste stehen, wenn man das Dashboard verlässt.
 onUnmounted(() => (chartHint.value = null));
 function onAddTargetRequest(t) {
@@ -2087,6 +2109,7 @@ watch(selectedTradingAccountId, () => {
   <TradeEditModal
     v-if="editingTrade"
     :trade="editingTrade"
+    :armed-action="armedTradeAction"
     :current-symbol="currentSymbol"
     @close="closeTradeEditModal"
     @saved="refreshTrades"
@@ -2205,6 +2228,7 @@ watch(selectedTradingAccountId, () => {
       :now-sec="replayUntil"
       :range="tscRange"
       :trend-chain="trendChain"
+      :armed-section="armedTscSection"
       @add-confirmation="onTscAddConfirmationRequest"
       @add-target="onTscAddTargetRequest"
       @add-confluence="onTscAddConfluenceRequest"

@@ -24,6 +24,9 @@ const props = defineProps({
   // selbst. Ohne diesen Guard würde ein offenes Modal für ein anderes Instrument als das aktuell
   // angezeigte Chart-Symbol stillschweigend falsche Preis-Level vorschlagen.
   currentSymbol: { type: String, required: true },
+  // Welcher Add-Button gerade den nächsten Chart-Klick scharf hat (Arm-Key aus Dashboard.vue:
+  // armedTradeAction, z.B. "rangeConfirmation"/"target"), sonst null — nur fürs Highlight.
+  armedAction: { type: String, default: null },
 });
 // Zwei getrennte "Bestätigung hinzufügen"-Anfragen (Chat 2026-07-31: "wir haben die gesamte Basis
 // um alles per Klick übernehmen zu können" — kurz zuvor per Formular ausprobiert, dann wieder
@@ -320,6 +323,7 @@ function confirmationLabel(confirmation) {
         :item-key="() => 'invalidation'"
         :item-label="invalidationLabel"
         empty-text="Noch keine Invalidierung."
+        :armed="armedAction === 'invalidation'"
         @add="emit('request-set-invalidation')"
         @remove="emit('remove-invalidation')"
         @hover="(item) => emit('hover-evidence', item)"
@@ -334,6 +338,7 @@ function confirmationLabel(confirmation) {
         :item-key="(c) => c.id"
         :item-label="confirmationLabel"
         empty-text="Noch keine Bestätigungen."
+        :armed="armedAction === 'rangeConfirmation'"
         @add="emit('request-add-range-confirmation')"
         @remove="onRemoveConfirmation"
         @hover="(c) => emit('hover-evidence', c)"
@@ -350,6 +355,7 @@ function confirmationLabel(confirmation) {
         :item-key="(c) => c.id"
         :item-label="confirmationLabel"
         empty-text="Noch keine Zusatzargumente."
+        :armed="armedAction === 'rangeConfluence'"
         @add="emit('request-add-range-confluence')"
         @remove="onRemoveConfirmation"
         @hover="(c) => emit('hover-evidence', c)"
@@ -366,6 +372,7 @@ function confirmationLabel(confirmation) {
         :item-key="(c) => c.id"
         :item-label="confirmationLabel"
         empty-text="Noch keine Anti-Confluences."
+        :armed="armedAction === 'rangeAntiConfluence'"
         @add="emit('request-add-range-anti-confluence')"
         @remove="onRemoveConfirmation"
         @hover="(c) => emit('hover-evidence', c)"
@@ -392,6 +399,7 @@ function confirmationLabel(confirmation) {
         :item-key="(t) => t.id"
         :item-label="targetLabel"
         empty-text="Noch keine Targets."
+        :armed="armedAction === 'target'"
         @add="emit('request-add-target')"
         @remove="onRemoveTarget"
         @hover="(t) => emit('hover-target', t)"
@@ -424,6 +432,7 @@ function confirmationLabel(confirmation) {
         :item-key="(c) => c.id"
         :item-label="confirmationLabel"
         empty-text="Noch keine Bestätigungen."
+        :armed="armedAction === 'confirmation'"
         @add="emit('request-add-confirmation')"
         @remove="onRemoveConfirmation"
         @hover="(c) => emit('hover-evidence', c)"
@@ -437,6 +446,7 @@ function confirmationLabel(confirmation) {
         :item-key="(c) => c.id"
         :item-label="confirmationLabel"
         empty-text="Noch keine Zusatzargumente."
+        :armed="armedAction === 'confluence'"
         @add="emit('request-add-confluence')"
         @remove="onRemoveConfirmation"
         @hover="(c) => emit('hover-evidence', c)"
@@ -450,6 +460,7 @@ function confirmationLabel(confirmation) {
         :item-key="(c) => c.id"
         :item-label="confirmationLabel"
         empty-text="Noch keine Anti-Confluences."
+        :armed="armedAction === 'antiConfluence'"
         @add="emit('request-add-anti-confluence')"
         @remove="onRemoveConfirmation"
         @hover="(c) => emit('hover-evidence', c)"

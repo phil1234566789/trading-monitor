@@ -36,6 +36,10 @@ const props = defineProps({
   // in tradeSetupCockpit.ts für die volle Begründung (KEINE echte 4H/1H/M5-Mehrfach-Timeframe-
   // Berechnung, nur die rekursive Verschachtelungstiefe desselben 1H-States).
   trendChain: { type: Array, default: () => [] },
+  // Welche Sektion gerade den nächsten Chart-Klick scharf hat ("confirmation"/"confluence"/
+  // "antiConfluence"/"target"/"invalidation", sonst null) — Dashboard.vue leitet das aus seinen
+  // Arm-Zuständen ab (armedTscSection), hier nur noch das Highlight am Add-Button.
+  armedSection: { type: String, default: null },
 });
 const emit = defineEmits([
   "add-confirmation",
@@ -233,6 +237,7 @@ const accentStyle = computed(() => {
       :item-key="(c) => c.id"
       :item-label="confirmationLabel"
       empty-text="Noch keine Bestätigungen."
+      :armed="armedSection === 'confirmation'"
       @add="emit('add-confirmation')"
       @remove="(c) => emit('remove-confirmation', c)"
       @hover="(c) => emit('hover-evidence', c)"
@@ -251,6 +256,7 @@ const accentStyle = computed(() => {
       :item-key="(c) => c.id"
       :item-label="confirmationLabel"
       empty-text="Noch keine Zusatzargumente."
+      :armed="armedSection === 'confluence'"
       @add="emit('add-confluence')"
       @remove="(c) => emit('remove-confluence', c)"
       @hover="(c) => emit('hover-evidence', c)"
@@ -270,6 +276,7 @@ const accentStyle = computed(() => {
       :item-key="(c) => c.id"
       :item-label="confirmationLabel"
       empty-text="Noch keine Anti-Confluences."
+      :armed="armedSection === 'antiConfluence'"
       @add="emit('add-anti-confluence')"
       @remove="(c) => emit('remove-anti-confluence', c)"
       @hover="(c) => emit('hover-evidence', c)"
@@ -298,6 +305,7 @@ const accentStyle = computed(() => {
       :item-key="(t) => t.id"
       :item-label="targetLabel"
       empty-text="Noch keine Targets."
+      :armed="armedSection === 'target'"
       @add="emit('add-target')"
       @remove="(t) => emit('remove-target', t)"
       @hover="(t) => emit('hover-target', t)"
@@ -328,6 +336,7 @@ const accentStyle = computed(() => {
       :item-key="() => 'invalidation'"
       :item-label="invalidationLabel"
       empty-text="Noch keine Invalidierung."
+      :armed="armedSection === 'invalidation'"
       @add="emit('request-set-invalidation')"
       @remove="emit('remove-invalidation')"
       @hover="(item) => emit('hover-evidence', item)"

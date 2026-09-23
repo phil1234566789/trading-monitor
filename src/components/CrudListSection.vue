@@ -18,6 +18,11 @@ defineProps({
   // Sperrt den Add-Button (Chat 2026-08-26: TSC-Targets brauchen erst eine Richtung, siehe
   // TradeSetupCockpit.vue) — addTitle dient dann als Begründungs-Tooltip statt Aktions-Hinweis.
   disabled: { type: Boolean, default: false },
+  // Dieser Add-Button hat den nächsten Chart-Klick scharf gemacht (Philip 2026-09-23: "wenn ich
+  // den Button klicke, brauch ich ein Feedback, dass der Modus an ist"). Amber wie der
+  // Modus-Umschalter in der Kopfleiste (App.vue) — überall dieselbe Bedeutung: der nächste Klick
+  // im Chart landet hier.
+  armed: { type: Boolean, default: false },
 });
 // "hover" (Chat 2026-08-30, Philip: "wenn ich im TSC über eine Bestätigung/ein Zusatzargument/
 // Anti-Confluence/Target hovere, soll mir das Chart-Objekt gehighlighted werden ... du hast diese
@@ -37,7 +42,7 @@ const emit = defineEmits(["add", "remove", "hover"]);
         <!-- Optionaler Zweit-Button neben dem Add-Icon (Chat 2026-08-27: TSC-Targets brauchen einen
              eigenen "Vorschläge"-Button, siehe TradeSetupCockpit.vue) — leerer Slot überall sonst. -->
         <slot name="extra-action" />
-        <button class="cls-icon-btn" :title="addTitle" :disabled="disabled" @click="emit('add')">{{ icon }}</button>
+        <button class="cls-icon-btn" :class="{ armed }" :title="addTitle" :disabled="disabled" @click="emit('add')">{{ icon }}</button>
       </div>
     </div>
     <div v-if="items.length === 0" class="cls-muted">{{ emptyText }}</div>
@@ -152,5 +157,14 @@ const emit = defineEmits(["add", "remove", "hover"]);
 .cls-icon-btn:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+/* Gleiches Amber wie .mode-switcher.armed in App.vue — ein scharfer Chart-Klick sieht überall
+   gleich aus, egal ob er oben im Modus-Umschalter oder hier am Add-Button hängt. */
+.cls-icon-btn.armed,
+.cls-icon-btn.armed:hover {
+  background: rgba(255, 179, 0, 0.9);
+  border-color: rgba(255, 179, 0, 0.9);
+  color: #131722;
 }
 </style>
