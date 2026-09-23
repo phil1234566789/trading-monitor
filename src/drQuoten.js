@@ -17,9 +17,9 @@ export const QUOTEN_INSTRUMENT = "GBPUSD";
 // Einordnung für JEDE Anzeige dieser Zahlen (Chart-Toggle in Dashboard.vue, TSC-Block) — steht
 // hier neben den Tabellen, damit sie beim nächsten Messlauf mit ihnen zusammen nachgezogen wird:
 // getrennt gehalten war sie genau das schon einmal nicht (der Chart-Tooltip nannte noch 915 Ranges
-// aus Jan-Sep 2026, als die Tabellen längst auf 3282 aus 2025+2026 standen).
+// aus Jan-Sep 2026, als die Tabellen längst auf 3179 aus 2025+2026 standen).
 export const QUOTEN_HERKUNFT =
-  "Historische Häufigkeiten, keine Wahrscheinlichkeiten: 3282 GBPUSD-Dealing-Ranges, Januar 2025 bis September 2026. " +
+  "Historische Häufigkeiten, keine Wahrscheinlichkeiten: 3179 GBPUSD-Dealing-Ranges, Januar 2025 bis September 2026. " +
   "Die 2026er Hälfte ist live erkannt, die 2025er aus einer Simulation über das Archiv — nicht deckungsgleich erhoben. " +
   "EURUSD ist ungemessen, dort steht keine Quote.";
 
@@ -32,10 +32,10 @@ export const QUOTEN_HERKUNFT =
 // Tabelle 5 aus ergebnis-baender.txt: Stopp auf 6 Pips gedeckelt (rScale.js: STOPP_DECKEL_PIPS).
 const R_BAENDER = [
   { hi: 3, quoten: { 2: 77, 3: 66, 4: 54, 5: 48, 6: 42, 7: 38, 8: 33, 9: 30, 10: 28 } },
-  { hi: 5, quoten: { 2: 73, 3: 57, 4: 47, 5: 40, 6: 34, 7: 30, 8: 26, 9: 23, 10: 21 } },
-  { hi: 7, quoten: { 2: 68, 3: 54, 4: 43, 5: 36, 6: 30, 7: 26, 8: 23, 9: 21, 10: 19 } },
+  { hi: 5, quoten: { 2: 72, 3: 57, 4: 47, 5: 40, 6: 34, 7: 30, 8: 25, 9: 23, 10: 21 } },
+  { hi: 7, quoten: { 2: 68, 3: 54, 4: 43, 5: 36, 6: 29, 7: 26, 8: 23, 9: 21, 10: 19 } },
   { hi: 10, quoten: { 2: 66, 3: 49, 4: 40, 5: 35, 6: 29, 7: 25, 8: 22, 9: 20, 10: 17 } },
-  { hi: Infinity, quoten: { 2: 70, 3: 55, 4: 45, 5: 38, 6: 32, 7: 27, 8: 23, 9: 20, 10: 18 } },
+  { hi: Infinity, quoten: { 2: 69, 3: 53, 4: 43, 5: 36, 6: 32, 7: 26, 8: 23, 9: 19, 10: 17 } },
 ];
 
 // Tabelle 6, ergänzt 22.09.2026 — dasselbe Feld wie Tabelle 5, nur in Pips statt in R gemessen,
@@ -43,14 +43,14 @@ const R_BAENDER = [
 // beide Leitern stehen im TSC nebeneinander und dürfen nicht zwei verschiedene Fragen beantworten.
 const PIP_BAENDER = [
   { hi: 3, quoten: { 10: 53, 15: 38, 20: 30, 25: 25, 30: 22, 35: 19, 40: 16 } },
-  { hi: 5, quoten: { 10: 64, 15: 49, 20: 40, 25: 33, 30: 28, 35: 24, 40: 21 } },
+  { hi: 5, quoten: { 10: 63, 15: 49, 20: 40, 25: 32, 30: 27, 35: 24, 40: 21 } },
   { hi: 7, quoten: { 10: 74, 15: 59, 20: 49, 25: 40, 30: 35, 35: 29, 40: 26 } },
-  { hi: 10, quoten: { 10: 72, 15: 58, 20: 46, 25: 39, 30: 35, 35: 30, 40: 27 } },
-  { hi: Infinity, quoten: { 10: 77, 15: 61, 20: 52, 25: 44, 30: 38, 35: 33, 40: 29 } },
+  { hi: 10, quoten: { 10: 72, 15: 58, 20: 47, 25: 39, 30: 35, 35: 30, 40: 27 } },
+  { hi: Infinity, quoten: { 10: 77, 15: 59, 20: 50, 25: 42, 30: 36, 35: 32, 40: 28 } },
 ];
 
 // --- Zweiter Schnitt: FVG-Groesse (gemessen 23.09.2026, siehe PLAN "Die FVG-Groesse") ----------
-// Dieselben 3282 Ranges, nur anders gruppiert: nach der Luecke, die den bestaetigenden M5-OB
+// Dieselben 3179 Ranges, nur anders gruppiert: nach der Luecke, die den bestaetigenden M5-OB
 // ausgemacht hat. Staerkstes Einzelmerkmal bisher, und es haelt in R (47 auf 91 % bei 3 R,
 // Bootstrap +37 bis +50 Punkte) — anders als Saisonalitaet oder Handelszeit also nicht bloss
 // Volatilitaet. Quelle: analysis/dr-reichweite/ergebnis-fvg.txt, Tabelle 1.
@@ -66,17 +66,64 @@ const PIP_BAENDER = [
 // Das kleinste Band hat n=98, die 50er-Schwelle ist erfuellt; ein feinerer Schnitt muesste sie neu
 // pruefen.
 const FVG_BAENDER = [
-  { hi: 1, r: { 2: 61, 3: 47, 4: 38, 5: 32, 6: 26, 7: 22, 8: 18, 9: 17, 10: 15 }, pip: { 10: 56, 15: 42, 20: 34, 25: 27, 30: 23, 35: 20, 40: 17 } },
+  { hi: 1, r: { 2: 61, 3: 47, 4: 37, 5: 32, 6: 26, 7: 22, 8: 18, 9: 17, 10: 15 }, pip: { 10: 56, 15: 42, 20: 33, 25: 27, 30: 23, 35: 19, 40: 17 } },
   { hi: 2, r: { 2: 68, 3: 52, 4: 43, 5: 36, 6: 31, 7: 28, 8: 25, 9: 22, 10: 20 }, pip: { 10: 65, 15: 50, 20: 39, 25: 33, 30: 28, 35: 25, 40: 22 } },
-  { hi: 3, r: { 2: 72, 3: 57, 4: 47, 5: 40, 6: 34, 7: 30, 8: 27, 9: 24, 10: 22 }, pip: { 10: 69, 15: 54, 20: 45, 25: 38, 30: 32, 35: 28, 40: 26 } },
-  { hi: 5, r: { 2: 79, 3: 61, 4: 49, 5: 42, 6: 36, 7: 30, 8: 28, 9: 25, 10: 21 }, pip: { 10: 82, 15: 64, 20: 52, 25: 43, 30: 38, 35: 32, 40: 29 } },
-  { hi: 8, r: { 2: 89, 3: 75, 4: 65, 5: 52, 6: 45, 7: 39, 8: 35, 9: 32, 10: 29 }, pip: { 10: 92, 15: 75, 20: 67, 25: 56, 30: 46, 35: 40, 40: 34 } },
-  { hi: Infinity, r: { 2: 99, 3: 91, 4: 84, 5: 79, 6: 71, 7: 61, 8: 51, 9: 46, 10: 40 }, pip: { 10: 100, 15: 96, 20: 90, 25: 79, 30: 73, 35: 65, 40: 58 } },
+  { hi: 3, r: { 2: 72, 3: 57, 4: 47, 5: 40, 6: 34, 7: 30, 8: 27, 9: 24, 10: 22 }, pip: { 10: 69, 15: 54, 20: 44, 25: 37, 30: 32, 35: 28, 40: 26 } },
+  { hi: 5, r: { 2: 79, 3: 62, 4: 50, 5: 42, 6: 36, 7: 31, 8: 28, 9: 25, 10: 21 }, pip: { 10: 82, 15: 64, 20: 52, 25: 44, 30: 38, 35: 32, 40: 29 } },
+  { hi: 8, r: { 2: 89, 3: 74, 4: 64, 5: 51, 6: 44, 7: 38, 8: 33, 9: 31, 10: 27 }, pip: { 10: 91, 15: 73, 20: 66, 25: 55, 30: 45, 35: 39, 40: 33 } },
+  { hi: Infinity, r: { 2: 99, 3: 90, 4: 82, 5: 77, 6: 70, 7: 62, 8: 51, 9: 47, 10: 42 }, pip: { 10: 100, 15: 96, 20: 89, 25: 77, 30: 71, 35: 65, 40: 59 } },
 ];
 
 // Besetzung je Band, fuer die Einordnung neben der Quote (ein Band mit n=98 traegt weniger als
 // eines mit n=972). Reihenfolge wie FVG_BAENDER.
-export const FVG_BAND_N = [972, 963, 539, 493, 217, 98];
+export const FVG_BAND_N = [952, 946, 516, 473, 201, 91];
+
+// Beschriftung der Baender, Reihenfolge wie FVG_BAENDER. Steht hier statt im Bauteil, damit die
+// Grenzen an EINER Stelle gepflegt werden: eine verschobene hi-Grenze ohne passendes Label waere
+// eine still falsche Anzeige.
+export const FVG_BAND_LABELS = ["unter 1 P", "1–2 P", "2–3 P", "3–5 P", "5–8 P", "über 8 P"];
+
+// Die sechs Ziele der Bewertungstabelle, in Anzeigereihenfolge. Drei R-Stufen und drei
+// Pip-Stufen nebeneinander (Philip 2026-09-23), weil ein Merkmal je nach Leiter unterschiedlich
+// weit traegt — die FVG verliert mit steigendem Ziel an Vorsprung, das sieht man nur so.
+export const FVG_ZIELE = [
+  { label: "3R", einheit: "R", ziel: 3 },
+  { label: "5R", einheit: "R", ziel: 5 },
+  { label: "8R", einheit: "R", ziel: 8 },
+  { label: "20P", einheit: "P", ziel: 20 },
+  { label: "30P", einheit: "P", ziel: 30 },
+  { label: "40P", einheit: "P", ziel: 40 },
+];
+
+// Referenzzeile "alle Setups" — der mit FVG_BAND_N gewichtete Mittelwert der Baender oben, NICHT
+// eine separat gemessene Zahl: so bleibt sie garantiert aus demselben Messlauf wie die Baender und
+// liegt per Konstruktion in deren Mitte. Eine fremd gemessene Zeile waere nach dem naechsten
+// Backfill still inkonsistent. Reihenfolge wie FVG_ZIELE.
+export const FVG_REFERENZ = [55, 38, 25, 43, 31, 24];
+
+function fvgBandIndex(fvgPips) {
+  const i = FVG_BAENDER.findIndex((b) => fvgPips < b.hi);
+  return i === -1 ? FVG_BAENDER.length - 1 : i;
+}
+
+// Die ganze Tabelle fuer den Bewertungs-Bereich: ALLE Baender (nicht nur das eigene), damit die
+// Einordnung sichtbar ist, und ein Treffer-Flag auf dem Band der laufenden Dealing Range. null,
+// sobald nichts Gemessenes vorliegt (anderes Instrument) — der Aufrufer blendet dann aus, statt
+// leere Zellen zu zeigen. fvgPips darf null sein: dann steht die Tabelle ohne Markierung da.
+export function fvgBewertung(instrument, fvgPips) {
+  if (instrument !== QUOTEN_INSTRUMENT) return null;
+  const treffer = fvgPips > 0 ? fvgBandIndex(fvgPips) : -1;
+  return {
+    ziele: FVG_ZIELE,
+    referenz: FVG_REFERENZ,
+    baender: FVG_BAENDER.map((b, i) => ({
+      label: FVG_BAND_LABELS[i],
+      n: FVG_BAND_N[i],
+      treffer: i === treffer,
+      quoten: FVG_ZIELE.map((z) => (z.einheit === "P" ? b.pip : b.r)[z.ziel] ?? null),
+    })),
+  };
+}
 
 // fvgPips ist die Groesse der bestaetigenden FVG in Pips (trade_setups.ob_fvg / PIP_SIZE).
 // null, sobald nichts Gemessenes passt — der Aufrufer zeigt dann nichts statt einer leeren Zelle.
@@ -111,7 +158,7 @@ export function labelMitQuote(ziel, quote) {
 }
 
 // Vergleichszeilen zur Band-Zeile (Tabelle 2) — bewusst NICHT nach Risiko-Band geschnitten: die
-// Gruppe hat insgesamt n=188, eine Aufteilung nach Band fiele unter die 50er-Schwelle. Als Record
+// Gruppe hat insgesamt n=155, eine Aufteilung nach Band fiele unter die 50er-Schwelle. Als Record
 // je Gruppe statt als eine einzelne "reif"-Funktion, weil die Gegenkraft-Zeile (das stärkere
 // Merkmal, aber mit ungelöster Vorbedingung, siehe PLAN) als zweiter Eintrag danebenpassen soll.
 //
@@ -122,8 +169,8 @@ export function labelMitQuote(ziel, quote) {
 const VERGLEICHSGRUPPEN = {
   reif: {
     label: "Mit reifem Sweep (≥ 24 h)",
-    pip: { 10: 78, 15: 66, 20: 55, 25: 46, 30: 41 },
-    r: { 2: 58, 3: 44, 4: 33, 6: 19 },
+    pip: { 10: 80, 15: 66, 20: 55, 25: 45, 30: 39 },
+    r: { 2: 59, 3: 46, 4: 35, 6: 21 },
   },
 };
 

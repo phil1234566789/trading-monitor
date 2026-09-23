@@ -23,7 +23,9 @@ export async function fetchTradeSetups(instrument, replayUntilSec = null) {
       "id, instrument, direction, fractal_price, fractal_pivot_time, ls_price, ls_pivot_time, ls_touched_time, ls_timeframe, " +
         // Kindtabelle mit ALLEN abgeräumten Leveln (Migration 20260921210000) — eingebettet statt
         // zweiter Abfrage. 200 Setups x im Schnitt <2 Sweeps bleibt weit unter der ~1000er-Deckelung.
-        "ob_top, ob_bottom, ob_start_time, trade_setup_sweeps(price, pivot_time, touched_time, timeframe, is_primary)",
+        // ob_fvg seit 2026-09-23 mit: der Bewertungs-Bereich ordnet die Dealing Range über ihre
+        // FVG-Größe ein, und die steht NUR hier — die OB-Bestätigung im TSC trägt nur ihre Kanten.
+        "ob_top, ob_bottom, ob_start_time, ob_fvg, trade_setup_sweeps(price, pivot_time, touched_time, timeframe, is_primary)",
     )
     .eq("instrument", instrument)
     .order("ob_start_time", { ascending: false })
@@ -94,6 +96,10 @@ export function tradeSetupFromRow(row) {
     obTop: row.ob_top,
     obBottom: row.ob_bottom,
     obStartTime: toSec(row.ob_start_time),
+    // Groesse der bestaetigenden FVG in Preiseinheiten, wie sie detectTradeSetups selbst liefert —
+    // fehlte hier, wodurch ein aus der DB gelesenes Setup als einziges keine FVG trug (Bewertungs-
+    // Bereich, 2026-09-23). Altzeilen von vor der ob_fvg-Migration haben null.
+    obFvg: row.ob_fvg ?? null,
     tradeSetupId: row.id,
     // Nur-DB-Setup = die beiden Erkennungs-Kopien sind auseinandergelaufen. Steht im
     // Debug-Metadaten-Export (debugMetadata.js) und macht den Fall damit nachweisbar, statt ihn

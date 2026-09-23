@@ -22,6 +22,7 @@ const GROUPS = [
     fields: [
       { key: "candleUp", label: "Bullish" },
       { key: "candleDown", label: "Bearish" },
+      { key: "fvgCandle", label: "FVG-Impulskerze" },
     ],
   },
   {

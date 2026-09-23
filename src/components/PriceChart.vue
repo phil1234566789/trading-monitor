@@ -37,6 +37,7 @@ import { DivergenceLinePrimitive } from "../rsiRendering.js";
 import { usePriceChartRsi } from "../composables/usePriceChartRsi.js";
 import { usePriceChartCockpit } from "../composables/usePriceChartCockpit.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
+import { tintFvgCandles } from "../fvgCandleTint.js";
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
 import {
@@ -1630,6 +1631,7 @@ async function loadTradeSetupM5() {
   const { ok, applied } = await fetchTradeSetupM5Candles({ symbol: props.symbol, toMs: replayToMs("5m"), showEma: props.showEma });
   if (ok && applied) {
     computeTradeSetupsInternal();
+    if (chart) applyCandleData(); // neue Setups -> andere FVG-Kerzen, ohne auf den nächsten refreshChart() zu warten
     renderTradeSetupsInternal();
     refreshEmaInternal();
     refreshCockpitInternal(); // sofort weiterreichen statt auf den nächsten refreshChart() zu warten
@@ -1717,12 +1719,19 @@ function scheduleNextTradeSetupM5Poll() {
   }, delay);
 }
 
+// Eigene Funktion statt eines nackten setData, weil die Kerzen an ZWEI Stellen neu gesetzt werden
+// müssen: beim normalen Refresh und immer dann, wenn sich die Trade-Setups geändert haben — die
+// FVG-Einfärbung hängt an ihnen, nicht an den Kerzen (siehe fvgCandleTint.js).
+function applyCandleData() {
+  candleSeries.setData(tintFvgCandles(clipReplay(allCandles), tradeSetupsMetadata.value, props.currentBar, cssColor("fvgCandle")));
+}
+
 function refreshChart() {
   // Async loads (loadInitial/pollRecent/lazy-load) koennen noch laufen, wenn die
   // Komponente schon unmounted wurde (z.B. schnelle Navigation zu /protokoll) — chart
   // ist dann bereits disposed, ohne Guard wirft lightweight-charts "Object is disposed".
   if (!chart) return;
-  candleSeries.setData(clipReplay(allCandles));
+  applyCandleData();
   refreshPoiZonesInternal();
   refreshLiquidityInternal();
   refreshDailyPivotsInternal();

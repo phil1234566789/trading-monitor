@@ -19,6 +19,10 @@ const STORAGE_KEY = "trading-monitor:chartColors";
 export const DEFAULT_CHART_COLORS = {
   candleUp: { hex: "#26a69a", alpha: 1 },
   candleDown: { hex: "#ef5350", alpha: 1 },
+  // Impuls-Kerze der bestätigenden FVG eines Trade-Setups (Test Philip 2026-09-23: "kannst du mal
+  // nur zum test eine m5 fvg candle ... gelb einfärben"). Eigenes Token statt liquiditySweepM5
+  // mitzubenutzen, sonst tragen zwei verschiedene Konzepte dieselbe Farbe.
+  fvgCandle: { hex: "#ffd54f", alpha: 1 },
   emaFast: { hex: "#42a5f5", alpha: 1 },
   emaSlow: { hex: "#ffb74d", alpha: 1 },
   // RSI(14)-Panel (Chat 2026-08-11, siehe rsi.js/PriceChart.vue: refreshRsiInternal) — eigene

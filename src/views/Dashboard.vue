@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
 import PriceChart from "../components/PriceChart.vue";
 import TradeSetupCockpit from "../components/TradeSetupCockpit.vue";
+import TradeSetupBewertung from "../components/TradeSetupBewertung.vue";
 import TradesTable from "../components/TradesTable.vue";
 import TradeStats from "../components/TradeStats.vue";
 import StyleModal from "../components/StyleModal.vue";
@@ -16,6 +17,7 @@ import PinPanel from "../components/PinPanel.vue";
 import ToggleButton from "../components/ui/ToggleButton.vue";
 import { selectedTradingAccountId, writableTradingAccountId } from "../tradingAccounts.js";
 import { TIMEFRAMES, barSecondsForTimeframeCi } from "../timeframes.js";
+import { toPips } from "../pipConfig.js";
 import { fetchTrades, fetchDealingRangeCockpit, fetchActiveTscRangeId } from "../trades.js";
 import {
   fetchTradeSetupForCockpit,
@@ -507,6 +509,20 @@ const tscRange = ref(null);
 async function refreshTscRange() {
   tscRange.value = tscRangeId.value != null ? await fetchDealingRangeCockpit(tscRangeId.value) : null;
 }
+// FVG-Größe der laufenden Dealing Range für den Bewertungs-Bereich. Sie steckt weder in der Range
+// noch in ihrer OB-Bestätigung (die trägt nur ihre Kanten), sondern nur im erkannten Setup.
+// Gesucht wird über den NATÜRLICHEN Schlüssel Richtung + OB-Startzeit — dieselbe Paarung, mit der
+// auch findMatchingTradeSetupId (tradeIntake.js) und mergeDbTradeSetups (tradeSetups.js) arbeiten.
+// Nicht über dealing_ranges.trade_setup_id: die Spalte wird erst beim Überführen in einen Trade
+// geschrieben (linkTradeToSetup), eine reine TSC-Idee hat dort immer null — genau daran ist die
+// erste Fassung gescheitert (Bug-Report Philip 2026-09-23, GBP-Short vom 09.09.).
+const tscFvgPips = computed(() => {
+  const ob = (tscRange.value?.confirmations ?? []).find((c) => c.kind === "ob" && c.sourceTime != null);
+  if (!ob) return null;
+  const dir = tscRange.value.direction === "short" ? 1 : -1;
+  const setup = (dbTradeSetups.value ?? []).find((s) => s.dir === dir && s.obStartTime === ob.sourceTime);
+  return setup?.obFvg > 0 ? toPips(setup.obFvg) : null;
+});
 async function loadActiveTscRange() {
   tscRangeId.value = await fetchActiveTscRangeId(currentSymbol.value);
   await refreshTscRange();
@@ -2267,6 +2283,11 @@ watch(selectedTradingAccountId, () => {
       @open-anti-confluence-picker="priceChartRef?.openAntiConfluencePicker()"
       @hover-evidence="hoveredCockpitEvidenceItem = $event"
       @hover-target="hoveredCockpitTargetItem = $event"
+    />
+
+    <TradeSetupBewertung
+      :instrument="currentSymbol"
+      :fvg-pips="tscFvgPips"
     />
   </div>
 

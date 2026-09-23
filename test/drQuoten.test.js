@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rQuote, pipQuote, drQuotenBlock, fvgQuote, FVG_BAND_N } from "../src/drQuoten.js";
+import { rQuote, pipQuote, drQuotenBlock, fvgQuote, fvgBewertung, FVG_BAND_N } from "../src/drQuoten.js";
 
 // Bandgrenzen sind exklusiv unten, inklusiv oben (lo < Risiko <= hi) — wie in baenderTabellen.py.
 // Die Grenzwerte selbst gehoeren also noch ins UNTERE Band. riskPips ist das strukturelle Risiko,
@@ -10,12 +10,12 @@ describe("rQuote", () => {
     expect(rQuote("GBPUSD", 5.0, 3)).toBe(57);
     expect(rQuote("GBPUSD", 7.0, 3)).toBe(54);
     expect(rQuote("GBPUSD", 10.0, 3)).toBe(49);
-    expect(rQuote("GBPUSD", 10.1, 3)).toBe(55);
+    expect(rQuote("GBPUSD", 10.1, 3)).toBe(53);
   });
 
   it("deckt 2 bis 10 R ab und kennt keine anderen Stufen", () => {
     const leiter = [2, 3, 4, 5, 6, 7, 8, 9, 10].map((r) => rQuote("GBPUSD", 6, r));
-    expect(leiter).toEqual([68, 54, 43, 36, 30, 26, 23, 21, 19]);
+    expect(leiter).toEqual([68, 54, 43, 36, 29, 26, 23, 21, 19]);
     expect(rQuote("GBPUSD", 6, 1)).toBeNull();
     expect(rQuote("GBPUSD", 6, 11)).toBeNull();
   });
@@ -32,12 +32,12 @@ describe("pipQuote", () => {
     expect(pipQuote("GBPUSD", 5.0, 15)).toBe(49);
     expect(pipQuote("GBPUSD", 7.0, 15)).toBe(59);
     expect(pipQuote("GBPUSD", 10.0, 15)).toBe(58);
-    expect(pipQuote("GBPUSD", 10.1, 15)).toBe(61);
+    expect(pipQuote("GBPUSD", 10.1, 15)).toBe(59);
   });
 
   it("deckt 10 bis 40 Pips in 5er-Schritten ab und kennt keine anderen Ziele", () => {
     const leiter = [10, 15, 20, 25, 30, 35, 40].map((p) => pipQuote("GBPUSD", 4, p));
-    expect(leiter).toEqual([64, 49, 40, 33, 28, 24, 21]);
+    expect(leiter).toEqual([63, 49, 40, 32, 27, 24, 21]);
     expect(pipQuote("GBPUSD", 4, 12)).toBeNull();
     expect(pipQuote("GBPUSD", 4, 45)).toBeNull();
   });
@@ -52,18 +52,18 @@ describe("drQuotenBlock", () => {
   it("liefert beide Leitern fuer das Band der Range", () => {
     const block = drQuotenBlock("GBPUSD", 4.3, "minor");
     expect(block.pipLeiter).toEqual([
-      { ziel: 10, einheit: "P", quote: 64 },
+      { ziel: 10, einheit: "P", quote: 63 },
       { ziel: 15, einheit: "P", quote: 49 },
       { ziel: 20, einheit: "P", quote: 40 },
-      { ziel: 30, einheit: "P", quote: 28 },
+      { ziel: 30, einheit: "P", quote: 27 },
     ]);
-    expect(block.rLeiter.map((s) => s.quote)).toEqual([73, 57, 47, 34]);
+    expect(block.rLeiter.map((s) => s.quote)).toEqual([72, 57, 47, 34]);
   });
 
   it("zeigt die Vergleichszeile nur bei Minor-Sweep", () => {
     expect(drQuotenBlock("GBPUSD", 4.3, "minor").vergleich.stufen).toEqual([
       { ziel: 15, einheit: "P", quote: 66 },
-      { ziel: 3, einheit: "R", quote: 44 },
+      { ziel: 3, einheit: "R", quote: 46 },
     ]);
     // Ein reifer Sweep wuerde die Zeile darueber nur wiederholen, ohne Sweep gibt es kein Alter.
     expect(drQuotenBlock("GBPUSD", 4.3, "major").vergleich).toBeNull();
@@ -93,9 +93,9 @@ describe("fvgQuote", () => {
     expect(fvgQuote("GBPUSD", 0.5, 3)).toBe(47);   // Erkennungsschwelle, unterstes Band
     expect(fvgQuote("GBPUSD", 0.99, 3)).toBe(47);
     expect(fvgQuote("GBPUSD", 1, 3)).toBe(52);     // Bandwechsel genau auf der Grenze
-    expect(fvgQuote("GBPUSD", 7.99, 3)).toBe(75);
-    expect(fvgQuote("GBPUSD", 8, 3)).toBe(91);     // oberstes Band, nach oben offen
-    expect(fvgQuote("GBPUSD", 60, 3)).toBe(91);
+    expect(fvgQuote("GBPUSD", 7.99, 3)).toBe(74);
+    expect(fvgQuote("GBPUSD", 8, 3)).toBe(90);     // oberstes Band, nach oben offen
+    expect(fvgQuote("GBPUSD", 60, 3)).toBe(90);
   });
 
   it("kennt beide Einheiten, R als Default", () => {
@@ -118,6 +118,33 @@ describe("fvgQuote", () => {
       for (const p of [10, 15, 20, 25, 30, 35, 40]) expect(fvgQuote("GBPUSD", fvg, p, "P")).toBeGreaterThan(0);
     }
     expect(FVG_BAND_N).toHaveLength(6);
-    expect(FVG_BAND_N.reduce((a, b) => a + b, 0)).toBe(3282);
+    expect(FVG_BAND_N.reduce((a, b) => a + b, 0)).toBe(3179);
+  });
+});
+
+// Der Bewertungs-Bereich zeigt ALLE Baender (nicht nur das eigene) und markiert das der laufenden
+// Dealing Range — die Markierung ist die einzige Stelle, an der die Bandgrenzen zweimal gelesen
+// werden (einmal fuer die Quote, einmal fuer den Treffer), deshalb hier festgenagelt.
+describe("fvgBewertung", () => {
+  it("markiert genau ein Band, und zwar das der uebergebenen FVG", () => {
+    const t = fvgBewertung("GBPUSD", 4.6);
+    expect(t.baender.filter((b) => b.treffer).map((b) => b.label)).toEqual(["3–5 P"]);
+    expect(t.baender).toHaveLength(6);
+    expect(t.baender[0].quoten).toHaveLength(6);
+  });
+
+  it("legt die Bandgrenze ins OBERE Band (lo <= FVG < hi, wie fvgBaender.py)", () => {
+    expect(fvgBewertung("GBPUSD", 3).baender.find((b) => b.treffer).label).toBe("3–5 P");
+    expect(fvgBewertung("GBPUSD", 2.99).baender.find((b) => b.treffer).label).toBe("2–3 P");
+  });
+
+  it("zeigt die Tabelle ohne Markierung, wenn keine FVG verknuepft ist", () => {
+    const t = fvgBewertung("GBPUSD", null);
+    expect(t.baender.some((b) => b.treffer)).toBe(false);
+    expect(t.referenz).toHaveLength(6);
+  });
+
+  it("liefert fuer ungemessene Instrumente nichts", () => {
+    expect(fvgBewertung("EURUSD", 4.6)).toBeNull();
   });
 });
