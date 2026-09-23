@@ -84,10 +84,10 @@
     "semantic_hash": "879a4258d691b43bd21d1d0a43922907"
   },
   "src/App.vue": {
-    "mtime": 1788616547.7354157,
-    "seen": 1788660641.2142766,
-    "ast_hash": "4410254884591fa43b776f7127400ad0",
-    "semantic_hash": "4410254884591fa43b776f7127400ad0"
+    "mtime": 1790134617.8788066,
+    "seen": 1790134906.4803722,
+    "ast_hash": "7e8190fa32d9cc10fe473d3010ab730d",
+    "semantic_hash": ""
   },
   "src/ageTier.ts": {
     "mtime": 1789070304.7590847,
@@ -144,10 +144,10 @@
     "semantic_hash": "c5c6a8a8bf070faf6c1e392a3d13969c"
   },
   "src/claudeAnnotations.js": {
-    "mtime": 1785478404.599108,
-    "seen": 1788660641.2142766,
-    "ast_hash": "d6b58ab55049906cb421eaff337a3b08",
-    "semantic_hash": "d6b58ab55049906cb421eaff337a3b08"
+    "mtime": 1790134720.989974,
+    "seen": 1790134906.4803722,
+    "ast_hash": "b275df671b1743cd222987a1194a5f83",
+    "semantic_hash": ""
   },
   "src/claudeAnnotationsStore.js": {
     "mtime": 1785423450.3336594,
@@ -178,12 +178,6 @@
     "seen": 1788660641.2142766,
     "ast_hash": "2d467c941faebdfc9c52d99f43ded771",
     "semantic_hash": "2d467c941faebdfc9c52d99f43ded771"
-  },
-  "src/components/DataExportModal.vue": {
-    "mtime": 1787465334.6159792,
-    "seen": 1788660641.2142766,
-    "ast_hash": "f537b2315305a7ba49991cb353ef34d7",
-    "semantic_hash": "f537b2315305a7ba49991cb353ef34d7"
   },
   "src/components/HttpErrorBanners.vue": {
     "mtime": 1784496215.3484306,
@@ -222,9 +216,9 @@
     "semantic_hash": "c3ad7c0cd6dffdd06191cc2effdb5056"
   },
   "src/components/PriceChart.vue": {
-    "mtime": 1790101208.2970288,
-    "seen": 1790101222.0683968,
-    "ast_hash": "b47c156bef158f83bfef28ff67f4c1f2",
+    "mtime": 1790134841.951591,
+    "seen": 1790134906.4803722,
+    "ast_hash": "90ae7299c9fe76112b2f366035814c62",
     "semantic_hash": ""
   },
   "src/components/ProtokollTable.vue": {
@@ -294,22 +288,16 @@
     "semantic_hash": "1412ec151cf4b7a56c18adcb6c9d970d"
   },
   "src/composables/useClaudeAnnotations.js": {
-    "mtime": 1785478421.8291452,
-    "seen": 1788660641.2142766,
-    "ast_hash": "86435206ca435f5d12e65c7c28671eb0",
-    "semantic_hash": "86435206ca435f5d12e65c7c28671eb0"
+    "mtime": 1790134817.1786304,
+    "seen": 1790134906.4803722,
+    "ast_hash": "a1c2685c01e85b3f762680e1f815a277",
+    "semantic_hash": ""
   },
   "src/composables/useHttpActivity.js": {
     "mtime": 1787465334.6224377,
     "seen": 1788660641.2142766,
     "ast_hash": "e614b24e41df0d6d8de95472812ed199",
     "semantic_hash": "e614b24e41df0d6d8de95472812ed199"
-  },
-  "src/composables/useLastDataExport.js": {
-    "mtime": 1785478267.971763,
-    "seen": 1788660641.2142766,
-    "ast_hash": "509975c316ad86351f9761b2b855ec20",
-    "semantic_hash": "509975c316ad86351f9761b2b855ec20"
   },
   "src/composables/useLocalStorageRef.js": {
     "mtime": 1785221876.0799398,
@@ -413,17 +401,11 @@
     "ast_hash": "3615220f9de1aa2ba5ea9567ed0ad1ba",
     "semantic_hash": ""
   },
-  "src/dataExport.js": {
-    "mtime": 1788990561.2837243,
-    "seen": 1788990751.0153642,
-    "ast_hash": "360fdc91015f9769fa26dc3002f23036",
-    "semantic_hash": ""
-  },
   "src/debugMetadata.js": {
-    "mtime": 1787733589.934274,
-    "seen": 1788660641.2142766,
-    "ast_hash": "3a2da50ffb78ea50ed8c56fb15837cb6",
-    "semantic_hash": "3a2da50ffb78ea50ed8c56fb15837cb6"
+    "mtime": 1790134752.208918,
+    "seen": 1790134906.4803722,
+    "ast_hash": "1385d3150ed778d176fda5800a4bab7c",
+    "semantic_hash": ""
   },
   "src/ema.js": {
     "mtime": 1784401275.104884,
@@ -432,9 +414,9 @@
     "semantic_hash": "653ebe9e9111f715bfccf3b6855115ad"
   },
   "src/findAntiConfluences.js": {
-    "mtime": 1790092758.228951,
-    "seen": 1790101222.0743964,
-    "ast_hash": "b20bf269bcf5a4ff5de1fc68d5a099b8",
+    "mtime": 1790134720.9937515,
+    "seen": 1790134906.4803722,
+    "ast_hash": "2bc703fd38ec3fc6634637d1fc2618b2",
     "semantic_hash": ""
   },
   "src/findAntiConfluences.test.js": {
@@ -468,16 +450,16 @@
     "semantic_hash": "564a6eb1078bfdf61399edea481cb119"
   },
   "src/liquidity.js": {
-    "mtime": 1790101208.300894,
-    "seen": 1790101222.0753963,
-    "ast_hash": "13b88f66be253fddb2785da2b1c955c5",
+    "mtime": 1790134817.105657,
+    "seen": 1790134906.4803722,
+    "ast_hash": "e5f0c05e05538822a81f410eef96c5da",
     "semantic_hash": ""
   },
   "src/liquidityDetection.js": {
-    "mtime": 1787864554.2505047,
-    "seen": 1788660641.2142766,
-    "ast_hash": "567d427ea442d48b50d20c5a2b5e4c40",
-    "semantic_hash": "567d427ea442d48b50d20c5a2b5e4c40"
+    "mtime": 1790134817.1296597,
+    "seen": 1790134906.4803722,
+    "ast_hash": "77bd7e9799fd4b928e14ceafb4d34a00",
+    "semantic_hash": ""
   },
   "src/liquidityLevels.js": {
     "mtime": 1790075841.5663211,
@@ -492,9 +474,9 @@
     "semantic_hash": "fd49bda528786c8d246522209e40074c"
   },
   "src/loopState.js": {
-    "mtime": 1788696263.185871,
-    "seen": 1788696426.5334628,
-    "ast_hash": "e3404fc07b51d690494e9ab0e6494ea8",
+    "mtime": 1790134720.9947577,
+    "seen": 1790134906.4803722,
+    "ast_hash": "df2555b7a556507cdfe7befadf813270",
     "semantic_hash": ""
   },
   "src/main.js": {
@@ -504,10 +486,10 @@
     "semantic_hash": "de36eb50ae5d8cda0b5f6eef517a6575"
   },
   "src/marketStructureAnalysis.ts": {
-    "mtime": 1787864563.323405,
-    "seen": 1788660641.2142766,
-    "ast_hash": "11fbeed862f8dad0c4b7a6d8b296b8f4",
-    "semantic_hash": "11fbeed862f8dad0c4b7a6d8b296b8f4"
+    "mtime": 1790134817.1536326,
+    "seen": 1790134906.4803722,
+    "ast_hash": "b95eccfb6d42acc2f89f12c251575b1a",
+    "semantic_hash": ""
   },
   "src/marketStructureRendering.ts": {
     "mtime": 1790057596.9333496,
@@ -732,9 +714,9 @@
     "semantic_hash": "6b9f6b695137489adb5694c1b45deb74"
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1790106531.434898,
-    "seen": 1790106705.4205592,
-    "ast_hash": "36218b7d7365b97dba77e0fa23ba242a",
+    "mtime": 1790134841.975595,
+    "seen": 1790134906.4803722,
+    "ast_hash": "ce2453f963a0c2694486484381f6db18",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -750,9 +732,9 @@
     "semantic_hash": "1c0cdebd651c5c29d391db600e8c4a30"
   },
   "src/views/LoopStatus.vue": {
-    "mtime": 1788850855.5205667,
-    "seen": 1788850932.3690953,
-    "ast_hash": "f9195ba22414cbfd5cb6b5ea09ca7415",
+    "mtime": 1790134720.996756,
+    "seen": 1790134906.4803722,
+    "ast_hash": "685d9132c240d4d647bbb4ee9ba8727d",
     "semantic_hash": ""
   },
   "src/views/Protokoll.vue": {
@@ -762,9 +744,9 @@
     "semantic_hash": "102c8225bfa829eaa2163b7b4c1d9e09"
   },
   "src/views/TradingFlow.vue": {
-    "mtime": 1788850870.8442552,
-    "seen": 1788850932.3690953,
-    "ast_hash": "90e0578432f4697a483c6b84a0fce874",
+    "mtime": 1790134720.9977567,
+    "seen": 1790134906.4803722,
+    "ast_hash": "3f151bb3cb5bc9ee36199337d4a4c2e3",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/ctraderCreds.ts": {
@@ -1860,16 +1842,16 @@
     "semantic_hash": "573f3765880e7377c6b0fc00fb1cbdb5"
   },
   "test/claudeAnnotations.test.js": {
-    "mtime": 1785478484.2824812,
-    "seen": 1788660641.2142766,
-    "ast_hash": "481c6931de485b01df47ac1d025bba7a",
-    "semantic_hash": "481c6931de485b01df47ac1d025bba7a"
+    "mtime": 1790134720.9997556,
+    "seen": 1790134906.4803722,
+    "ast_hash": "26048020caa3b7a7715dedd0f854ffb7",
+    "semantic_hash": ""
   },
   "test/debugMetadata.test.js": {
-    "mtime": 1787733666.6260881,
-    "seen": 1788660641.2142766,
-    "ast_hash": "aa726db6e3a523b5e27c9ae4ecef4d61",
-    "semantic_hash": "aa726db6e3a523b5e27c9ae4ecef4d61"
+    "mtime": 1790134773.966036,
+    "seen": 1790134906.4803722,
+    "ast_hash": "9c7d0fac59ff0af86a5052ba4912f5cd",
+    "semantic_hash": ""
   },
   "test/evidenceScoring.test.js": {
     "mtime": 1788206745.014989,
@@ -3375,6 +3357,24 @@
     "mtime": 1790106606.6189215,
     "seen": 1790106705.4386723,
     "ast_hash": "b1b25dd13b682752e117b506bdf525c0",
+    "semantic_hash": ""
+  },
+  "src/berlinTime.js": {
+    "mtime": 1790134695.678611,
+    "seen": 1790134906.4803722,
+    "ast_hash": "93f3e13cc6c81df4d0f007a3523daef1",
+    "semantic_hash": ""
+  },
+  "src/chartMeasure.js": {
+    "mtime": 1790134720.9889717,
+    "seen": 1790134906.4803722,
+    "ast_hash": "dc845a54fb75c110ef7ba8f53a704d96",
+    "semantic_hash": ""
+  },
+  "test/chartMeasure.test.js": {
+    "mtime": 1790133260.8007116,
+    "seen": 1790134906.4803722,
+    "ast_hash": "745087d801975715f9690d1eb129e849",
     "semantic_hash": ""
   }
 }
