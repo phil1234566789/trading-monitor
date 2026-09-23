@@ -39,11 +39,11 @@ export const TRADE_SETUP_LS_MAX_LEAD_SEC_H1 = 120 * 60; // lsMaxLeadMinutesH1 �
 // als M5 (H1-Sweep liegt typischerweise deutlich länger vor dem Fraktal), siehe poi-watcher/index.ts
 export const TRADE_SETUP_LS_MAX_LEAD_SEC_M5 = 45 * 60; // lsMaxLeadMinutesM5
 export const TRADE_SETUP_LS_MAX_DISTANCE_M5 = 5.0 * PIP_SIZE; // lsMaxDistancePipsM5=5, nur für M5-LS
-// Wie weit ein MITGESAMMELTER Sweep vom Level entfernt liegen darf, über das der Pfad das Setup
-// gefunden hat (collectObSweeps, tradeSetup.js). Großzügiger als TRADE_SETUP_LS_MAX_DISTANCE_M5,
-// weil das den Abstand LS<->Fraktal begrenzt, hier aber zwei Level dieselbe Zone abräumen. MUSS
-// mit maxSweepDistance in supabase/functions/_shared/tradeSetup.ts übereinstimmen.
-export const TRADE_SETUP_MAX_SWEEP_DISTANCE = 10.0 * PIP_SIZE;
+// Wie weit JEDER Sweep vom Extrempunkt des Moves entfernt liegen darf (collectObSweeps,
+// tradeSetup.js) — auch der tragende. Bleibt keiner übrig, ist es kein Trade-Setup. Großzügiger
+// als TRADE_SETUP_LS_MAX_DISTANCE_M5, weil das den Abstand LS<->Fraktal begrenzt. MUSS mit
+// maxSweepDistance in supabase/functions/_shared/tradeSetup.ts übereinstimmen.
+export const TRADE_SETUP_MAX_SWEEP_DISTANCE = 20.0 * PIP_SIZE;
 export const TRADE_SETUP_OB_MAX_DELAY_SEC = 60 * 60; // obMaxDelayMinutes
 export const TRADE_SETUP_LOOKBACK_SEC = 6 * 60 * 60; // protectedHighLookbackHours
 // Regel 2 (Philip 2026-09-21): bis zu diesem Sweep-Level-Alter disqualifiziert ein Close gegen das

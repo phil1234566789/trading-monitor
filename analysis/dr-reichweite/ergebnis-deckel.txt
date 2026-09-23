@@ -1,65 +1,65 @@
-FXCM Bid | 3282 GBPUSD-Setups | 2025 und 2026 | neu berechnet 22.09.2026
+FXCM Bid | 3179 GBPUSD-Setups | 2025 und 2026 | neu berechnet 23.09.2026
 
-VERTEILUNG des Risikos (nahe -> ferne OB-Kante), alle 3282 DRs
-   0-2  Pips : 116  ( 3.5 %)   kumuliert 116 (  3.5 %)
-   2-3  Pips : 331  (10.1 %)   kumuliert 447 ( 13.6 %)
-   3-4  Pips : 427  (13.0 %)   kumuliert 874 ( 26.6 %)
-   4-5  Pips : 479  (14.6 %)   kumuliert 1353 ( 41.2 %)
-   5-6  Pips : 409  (12.5 %)   kumuliert 1762 ( 53.7 %)
-   6-7  Pips : 307  ( 9.4 %)   kumuliert 2069 ( 63.0 %)
-   7-8  Pips : 261  ( 8.0 %)   kumuliert 2330 ( 71.0 %)
-   8-10 Pips : 391  (11.9 %)   kumuliert 2721 ( 82.9 %)
-  10-15 Pips : 377  (11.5 %)   kumuliert 3098 ( 94.4 %)
-  15-99 Pips : 184  ( 5.6 %)   kumuliert 3282 (100.0 %)
-  min 0.8 | p25 3.9 | median 5.7 | p75 8.6 | p90 12.0 | max 56.4
+VERTEILUNG des Risikos (nahe -> ferne OB-Kante), alle 3179 DRs
+   0-2  Pips : 116  ( 3.6 %)   kumuliert 116 (  3.6 %)
+   2-3  Pips : 331  (10.4 %)   kumuliert 447 ( 14.1 %)
+   3-4  Pips : 428  (13.5 %)   kumuliert 875 ( 27.5 %)
+   4-5  Pips : 473  (14.9 %)   kumuliert 1348 ( 42.4 %)
+   5-6  Pips : 399  (12.6 %)   kumuliert 1747 ( 55.0 %)
+   6-7  Pips : 296  ( 9.3 %)   kumuliert 2043 ( 64.3 %)
+   7-8  Pips : 251  ( 7.9 %)   kumuliert 2294 ( 72.2 %)
+   8-10 Pips : 378  (11.9 %)   kumuliert 2672 ( 84.1 %)
+  10-15 Pips : 350  (11.0 %)   kumuliert 3022 ( 95.1 %)
+  15-99 Pips : 157  ( 4.9 %)   kumuliert 3179 (100.0 %)
+  min 0.8 | p25 3.9 | median 5.6 | p75 8.4 | p90 11.5 | max 50.6
 
-  ueber  5 Pips: 1929 von 3282 (58.8 %), deren Median 8.0 P
-  ueber  6 Pips: 1520 von 3282 (46.3 %), deren Median 8.9 P
-  ueber  7 Pips: 1213 von 3282 (37.0 %), deren Median 9.7 P
-  ueber  8 Pips: 952 von 3282 (29.0 %), deren Median 10.5 P
-  ueber 10 Pips: 561 von 3282 (17.1 %), deren Median 12.6 P
+  ueber  5 Pips: 1831 von 3179 (57.6 %), deren Median 7.9 P
+  ueber  6 Pips: 1432 von 3179 (45.0 %), deren Median 8.8 P
+  ueber  7 Pips: 1136 von 3179 (35.7 %), deren Median 9.6 P
+  ueber  8 Pips: 885 von 3179 (27.8 %), deren Median 10.4 P
+  ueber 10 Pips: 507 von 3179 (15.9 %), deren Median 12.5 P
 
 WAS KOSTET DER DECKEL -- nur die betroffene Gruppe (Risiko > Deckel),
 bei allen anderen aendert er per Definition nichts.
 
-  Deckel 8 Pips -- betroffen: 952 von 3282 DRs (Risiko-Median dort 10.5 P, max 56.4)
-     Ziel 10P | Wins 791 -> 758 (33 gekostet) | RR 0.95 -> 1.25 | EV +0.57 -> +0.79 R
-     Ziel 15P | Wins 669 -> 617 (52 gekostet) | RR 1.42 -> 1.88 | EV +0.64 -> +0.86 R
-     Ziel 20P | Wins 567 -> 513 (54 gekostet) | RR 1.90 -> 2.50 | EV +0.64 -> +0.89 R
+  Deckel 8 Pips -- betroffen: 885 von 3179 DRs (Risiko-Median dort 10.4 P, max 50.6)
+     Ziel 10P | Wins 732 -> 702 (30 gekostet) | RR 0.96 -> 1.25 | EV +0.58 -> +0.78 R
+     Ziel 15P | Wins 614 -> 563 (51 gekostet) | RR 1.44 -> 1.88 | EV +0.63 -> +0.83 R
+     Ziel 20P | Wins 519 -> 467 (52 gekostet) | RR 1.92 -> 2.50 | EV +0.63 -> +0.85 R
 
-  Deckel 7 Pips -- betroffen: 1213 von 3282 DRs (Risiko-Median dort 9.7 P, max 56.4)
-     Ziel 10P | Wins 975 -> 925 (50 gekostet) | RR 1.03 -> 1.43 | EV +0.59 -> +0.85 R
-     Ziel 15P | Wins 816 -> 739 (77 gekostet) | RR 1.55 -> 2.14 | EV +0.65 -> +0.92 R
-     Ziel 20P | Wins 683 -> 606 (77 gekostet) | RR 2.06 -> 2.86 | EV +0.64 -> +0.93 R
+  Deckel 7 Pips -- betroffen: 1136 von 3179 DRs (Risiko-Median dort 9.6 P, max 50.6)
+     Ziel 10P | Wins 912 -> 865 (47 gekostet) | RR 1.04 -> 1.43 | EV +0.60 -> +0.85 R
+     Ziel 15P | Wins 756 -> 680 (76 gekostet) | RR 1.56 -> 2.14 | EV +0.65 -> +0.88 R
+     Ziel 20P | Wins 632 -> 557 (75 gekostet) | RR 2.08 -> 2.86 | EV +0.64 -> +0.90 R
 
-  Deckel 6 Pips -- betroffen: 1520 von 3282 DRs (Risiko-Median dort 8.9 P, max 56.4)
-     Ziel 10P | Wins 1202 -> 1130 (72 gekostet) | RR 1.12 -> 1.67 | EV +0.65 -> +0.98 R
-     Ziel 15P | Wins 999 -> 903 (96 gekostet) | RR 1.69 -> 2.50 | EV +0.72 -> +1.08 R
-     Ziel 20P | Wins 838 -> 748 (90 gekostet) | RR 2.25 -> 3.33 | EV +0.73 -> +1.13 R
+  Deckel 6 Pips -- betroffen: 1432 von 3179 DRs (Risiko-Median dort 8.8 P, max 50.6)
+     Ziel 10P | Wins 1132 -> 1064 (68 gekostet) | RR 1.14 -> 1.67 | EV +0.66 -> +0.98 R
+     Ziel 15P | Wins 933 -> 839 (94 gekostet) | RR 1.70 -> 2.50 | EV +0.72 -> +1.05 R
+     Ziel 20P | Wins 782 -> 695 (87 gekostet) | RR 2.27 -> 3.33 | EV +0.73 -> +1.10 R
 
-  Deckel 5 Pips -- betroffen: 1929 von 3282 DRs (Risiko-Median dort 8.0 P, max 56.4)
-     Ziel 10P | Wins 1503 -> 1399 (104 gekostet) | RR 1.25 -> 2.00 | EV +0.74 -> +1.18 R
-     Ziel 15P | Wins 1241 -> 1103 (138 gekostet) | RR 1.88 -> 3.00 | EV +0.82 -> +1.29 R
-     Ziel 20P | Wins 1031 -> 902 (129 gekostet) | RR 2.50 -> 4.00 | EV +0.82 -> +1.34 R
+  Deckel 5 Pips -- betroffen: 1831 von 3179 DRs (Risiko-Median dort 7.9 P, max 50.6)
+     Ziel 10P | Wins 1426 -> 1330 (96 gekostet) | RR 1.27 -> 2.00 | EV +0.75 -> +1.18 R
+     Ziel 15P | Wins 1170 -> 1038 (132 gekostet) | RR 1.90 -> 3.00 | EV +0.82 -> +1.27 R
+     Ziel 20P | Wins 970 -> 846 (124 gekostet) | RR 2.53 -> 4.00 | EV +0.83 -> +1.31 R
 
 
-GESAMTBILD ueber alle 3282 DRs (Deckel greift nur, wo das Risiko groesser ist)
+GESAMTBILD ueber alle 3179 DRs (Deckel greift nur, wo das Risiko groesser ist)
   Stopp                      win  loss offen   Quote       EV
   Ziel 10 Pips:
-    Invalidierung (heute)     2316   964     2     71%    +1.03 R
-    gedeckelt auf 8 P         2283   999     0     70%    +1.09 R
-    gedeckelt auf 7 P         2266  1016     0     69%    +1.13 R
-    gedeckelt auf 6 P         2244  1038     0     68%    +1.18 R
-    gedeckelt auf 5 P         2212  1070     0     67%    +1.29 R
+    Invalidierung (heute)     2234   943     2     70%    +1.04 R
+    gedeckelt auf 8 P         2204   975     0     69%    +1.10 R
+    gedeckelt auf 7 P         2187   992     0     69%    +1.13 R
+    gedeckelt auf 6 P         2166  1013     0     68%    +1.19 R
+    gedeckelt auf 5 P         2138  1041     0     67%    +1.29 R
   Ziel 15 Pips:
-    Invalidierung (heute)     1852  1424     6     57%    +1.10 R
-    gedeckelt auf 8 P         1800  1479     3     55%    +1.17 R
-    gedeckelt auf 7 P         1775  1504     3     54%    +1.20 R
-    gedeckelt auf 6 P         1756  1524     2     54%    +1.27 R
-    gedeckelt auf 5 P         1714  1566     2     52%    +1.38 R
+    Invalidierung (heute)     1778  1396     5     56%    +1.11 R
+    gedeckelt auf 8 P         1727  1449     3     54%    +1.17 R
+    gedeckelt auf 7 P         1702  1474     3     54%    +1.20 R
+    gedeckelt auf 6 P         1684  1493     2     53%    +1.26 R
+    gedeckelt auf 5 P         1646  1531     2     52%    +1.37 R
   Ziel 20 Pips:
-    Invalidierung (heute)     1524  1749     9     47%    +1.12 R
-    gedeckelt auf 8 P         1470  1808     4     45%    +1.19 R
-    gedeckelt auf 7 P         1447  1831     4     44%    +1.23 R
-    gedeckelt auf 6 P         1434  1846     2     44%    +1.31 R
-    gedeckelt auf 5 P         1395  1885     2     43%    +1.42 R
+    Invalidierung (heute)     1460  1711     8     46%    +1.13 R
+    gedeckelt auf 8 P         1408  1767     4     44%    +1.19 R
+    gedeckelt auf 7 P         1385  1790     4     44%    +1.22 R
+    gedeckelt auf 6 P         1373  1804     2     43%    +1.30 R
+    gedeckelt auf 5 P         1336  1841     2     42%    +1.41 R

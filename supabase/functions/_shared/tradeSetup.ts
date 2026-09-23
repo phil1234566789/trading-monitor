@@ -52,8 +52,9 @@ export interface TradeSetupParams {
   // Fraktal entfernt liegt, ist fachlich kein Liquidity Sweep mehr, sondern ein gewöhnlicher
   // Strukturbruch (Klärung Philip, 2026-07-17). Gilt bewusst NUR für M5-LS — H1 bekommt (noch)
   // kein Distanzlimit (null), siehe tv-indikator "M5 LS auf 5 pips eingrenzen".
-  maxSweepDistance: number; // Preiseinheiten, NICHT Pip. Wie weit ein MITGESAMMELTER Sweep vom
-  // Level entfernt liegen darf, über das der Pfad das Setup gefunden hat (siehe collectObSweeps).
+  maxSweepDistance: number; // Preiseinheiten, NICHT Pip. Wie weit JEDER Sweep vom Extrempunkt des
+  // Moves entfernt liegen darf — auch der, über den der Pfad das Setup gefunden hat. Bleibt keiner
+  // übrig, ist es kein Trade-Setup (siehe collectObSweeps).
   maxLookbackSec: number; // wie weit rückwärts nach einem gültigen Fraktal gesucht wird
   closeCheckMaxAgeSec: number; // Regel 2 (Philip 2026-09-21): der Close-Check (closesBeyondLevel)
   // gilt nur für Sweep-Level, die beim Sweep JÜNGER als das waren. Ein frisches Level, durch das
@@ -81,13 +82,14 @@ export const DEFAULT_TRADE_SETUP_PARAMS: Omit<TradeSetupParams, "nowTime"> = {
   // Preiseinheiten, NICHT Pip — 5 Pips, NUR für M5 (H1 bekommt kein Limit, siehe
   // tv-indikator "M5 LS auf 5 pips eingrenzen").
   maxDistanceM5: 5.0 * TRADE_SETUP_PIP_SIZE,
-  // 10 Pips (Philip 2026-09-21). Ohne dieses Limit sammelte collectObSweeps jedes Level ein, das
-  // zeitlich ins Fenster fiel — gemessen über 994 Setups lagen 136 der 748 Nebensweeps weiter als
-  // 10 Pip weg, im Extremfall 57,8 (GBPUSD-Setup #1139, 17.04.2026: vier alte M5-Hochs 40-58 Pip
-  // unter dem tragenden 1H-Sweep, schlicht Level, durch die der Preis auf dem Weg nach oben lief).
-  // Bewusst großzügiger als maxDistanceM5 (5 Pip): das dort begrenzt den Abstand LS<->Fraktal, hier
-  // geht es um zwei Level, die zusammen eine Zone abräumen.
-  maxSweepDistance: 10.0 * TRADE_SETUP_PIP_SIZE,
+  // 20 Pips ab dem Extrempunkt (Philip 2026-09-23): "die sweeps, die von extrempunkt aus mehr als
+  // 20 pips entfernt sind sollen nicht mehr als trade-setup gelten". Vorher 10 Pip ab ownLs, was
+  // nur die Beifänge begrenzte und den tragenden Sweep selbst nie prüfte. 20 statt 10, weil ein
+  // 1H-Sweep strukturell weiter vom M5-Extrem weg liegt als ein M5-Sweep (gemessen: Median 8,4
+  // gegen 3,1 Pip) — bei 10 Pip wären 44 % der 1H-Setups weggefallen, und die sind als Gruppe
+  // besser als die bleibenden. Bewusst großzügiger als maxDistanceM5 (5 Pip): das begrenzt den
+  // Abstand LS<->Fraktal, hier geht es um den Abstand zum Extrem des Moves.
+  maxSweepDistance: 20.0 * TRADE_SETUP_PIP_SIZE,
   maxLookbackSec: 6 * 60 * 60,
   obMaxDelaySec: 60 * 60,
   // 0 = Check aus, als Messergebnis (analysis/dr-reichweite/ergebnis-close-check.txt, 21.09.2026):
@@ -243,19 +245,35 @@ function collectObSweeps(
   h1Levels: LiquidityLevel[],
   m5Levels: LiquidityLevel[],
   params: TradeSetupParams,
-): SetupSweep[] {
-  const sweeps: SetupSweep[] = [{ level: ownLs, timeframe: h1Levels.includes(ownLs) ? "1H" : "5M" }];
+  dir: 1 | -1,
+  m5Candles: Candle[],
+): SetupSweep[] | null {
+  // Anker für maxSweepDistance ist der Extrempunkt des Moves, nicht ownLs (Philip 2026-09-23):
+  // ownLs ist eine Zufallsgröße des Suchpfads, das Extrem der Punkt, auf den der Markt reagiert
+  // hat. Das Fenster startet am Touch des GEFUNDENEN Sweeps — der steht fest, bevor irgendetwas
+  // eingesammelt ist, sonst wäre es zirkulär mit dem späteren widenObForSweep. Ein dadurch
+  // dazugekommener älterer Sweep zieht dessen Fenster nur nach vorn, das Extrem kann damit nur
+  // gleich bleiben oder weiter weg rücken (siehe dort).
+  const extremOb = widenObForSweep(ob, ownLs.touchedTime!, dir, m5Candles);
+  const extrem = dir === 1 ? extremOb.top : extremOb.bottom;
+  const imRadius = (preis: number) => Math.abs(preis - extrem) <= params.maxSweepDistance;
+  // ownLs durchläuft denselben Filter wie jeder andere: ein Sweep, der zu weit vom Extrem weg ist,
+  // ist fachlich nicht der Grund für die Umkehr, auch wenn der Suchpfad über ihn gelaufen ist.
+  const sweeps: SetupSweep[] = imRadius(ownLs.price)
+    ? [{ level: ownLs, timeframe: h1Levels.includes(ownLs) ? "1H" : "5M" }]
+    : [];
   for (const [levels, timeframe] of [[h1Levels, "1H"], [m5Levels, "5M"]] as const) {
     for (const lvl of levels) {
       if (lvl === ownLs || !lvl.touched || lvl.touchedTime == null) continue;
       if (lvl.touchedTime > ob.startTime || ob.startTime - lvl.touchedTime > params.obMaxDelaySec) continue;
-      // Abstand zu ownLs, NICHT zum ältesten: der älteste wird erst unten gekürt, und zwar aus
-      // genau diesem Topf — gegen ihn zu filtern hieße, ein weit entferntes Level erst zum Anker
-      // zu machen und dann alles Richtige wegzuwerfen. ownLs hat maxDistanceM5 & Co. schon passiert.
-      if (Math.abs(lvl.price - ownLs.price) > params.maxSweepDistance) continue;
+      // Bewusst nicht gegen den ältesten Sweep: der wird erst unten aus genau diesem Topf gekürt.
+      if (!imRadius(lvl.price)) continue;
       sweeps.push({ level: lvl, timeframe });
     }
   }
+  // Kein Sweep im Radius = kein Trade-Setup. Der Aufrufer verwirft es dann ganz, statt eines mit
+  // einem Sweep zu melden, der den Move nicht erklärt.
+  if (sweeps.length === 0) return null;
   // Regel 3, Teil 2: ÄLTESTER zuerst ("Ältester Sweep ist der für die Strategie am
   // entscheidendsten") — sweeps[0] füllt ls_price/ls_pivot_time/ls_touched_time/ls_timeframe. Bei
   // gleichem Alter der früher entstandene Pivot, damit beide Laufzeiten dasselbe Level wählen.
@@ -348,8 +366,9 @@ export function detectTradeSetup(
   // Regel 3+4: die Zahlen eines Setups hängen am OB, nicht am Pfad — deshalb rechnet dieselbe
   // Funktion sie für beide Pfade aus. Ein späterer Finder desselben OB kann sie damit nicht mehr
   // verändern (Philip: "die erste, die schnellste, trifft das Trade-Setup").
-  const baueSetup = (ob: SetupOb, ownLs: LiquidityLevel, fractal: LiquidityLevel | null, pathType: "A" | "B"): DetectedTradeSetup => {
-    const sweeps = collectObSweeps(ob, ownLs, h1Levels, m5Levels, params);
+  const baueSetup = (ob: SetupOb, ownLs: LiquidityLevel, fractal: LiquidityLevel | null, pathType: "A" | "B"): DetectedTradeSetup | null => {
+    const sweeps = collectObSweeps(ob, ownLs, h1Levels, m5Levels, params, dir, m5Candles);
+    if (!sweeps) return null;
     const ls = sweeps[0].level;
     const fensterVon = Math.min(...sweeps.map((sw) => sw.level.touchedTime!));
     const widened = widenObForSweep(ob, fensterVon, dir, m5Candles);

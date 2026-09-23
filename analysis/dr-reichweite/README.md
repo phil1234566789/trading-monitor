@@ -2,7 +2,7 @@
 
 ## Aktueller FXCM-Stand: 2025 und 2026
 
-Die Auswertung umfasst **3282 GBPUSD-Setups**: 1921 vom 08.01.–31.12.2025 und 1361 vom
+Die Auswertung umfasst **3179 GBPUSD-Setups**: 1856 vom 08.01.–31.12.2025 und 1323 vom
 05.01.–21.09.2026. Ausschließlich native FXCM-Bid-Kerzen, gleicher Erkennungsalgorithmus.
 Die ersten sieben Kalendertage 2025 sind M5-Warmup; H1/H4 reichen bis Juni 2024 zurück.
 Die Simulation lief mit `BACKFILL_DRY_RUN=1`: keine simulierten Setups und keine Trades ins
@@ -12,12 +12,12 @@ Zonen dabei nicht geändert und historische Benachrichtigungen unterdrückt.
 - Archiv 2025: **74998 GBPUSD- und 75193 EURUSD-M5-Kerzen**, alle zwölf Monate vorhanden.
   Jede vorhandene H1-Stunde enthält M5-Daten; das ist kein Nachweis für jeden einzelnen
   theoretischen Fünf-Minuten-Slot. Details: [Abdeckungsprüfung](fxcm-abdeckung-2025.json).
-- Reichweite vor Invalidierung: 10 Pips **71 %**, 15 Pips **57 %**, 20 Pips **47 %**.
-  Median 17,8 Pips; strukturelles Risiko im Median 5,7 Pips.
+- Reichweite vor Invalidierung: 10 Pips **70 %**, 15 Pips **56 %**, 20 Pips **46 %**.
+  Median 17,6 Pips; strukturelles Risiko im Median 5,6 Pips.
 - R-Leiter mit auf 6 Pips gedeckeltem Stopp: gesamte Stichprobe bei 2R **70 %**, 3R **55 %**,
-  4R **46 %**. Die Chart-Anzeige verwendet die fünf Risiko-Bänder aus Tabelle 5 in
+  4R **45 %**. Die Chart-Anzeige verwendet die fünf Risiko-Bänder aus Tabelle 5 in
   [ergebnis-baender.txt](ergebnis-baender.txt), nicht diesen Gesamtdurchschnitt.
-- 72 Major- und 116 Medium-Sweeps (zusammen 188 ab 24 Handelsstunden). Kleine, abhängige Untergruppen:
+- 65 Major- und 90 Medium-Sweeps (zusammen 155 ab 24 Handelsstunden). Kleine, abhängige Untergruppen:
   daraus folgt weiterhin keine belastbare allgemeine Überlegenheit von Major gegenüber Medium.
 - Die 24-Stunden-Messung beschreibt historische Kurswege, keine realisierten Trades.
   Spread, Slippage und Gebühren sind nicht abgezogen. 2026 endet im September; Halbjahre
@@ -29,6 +29,9 @@ Zonen dabei nicht geändert und historische Benachrichtigungen unterdrückt.
 Reproduktion: `backfillTradeSetups.ts` mit `BACKFILL_FROM=2025-01-08`,
 `BACKFILL_TO=2026-01-01`, `BACKFILL_INSTRUMENTS=GBPUSD`, `BACKFILL_DRY_RUN=1` und
 `BACKFILL_DUMP` ausführen; mit dem 2026-Dump nach Instrument/Richtung/OB-Start deduplizieren.
+Stand seit 23.09.2026: ein Sweep muss innerhalb von 20 Pip um den Extrempunkt des Moves liegen,
+sonst gilt das Setup nicht (`maxSweepDistance`, siehe `_shared/tradeSetup.ts`) — das kostet
+gegenüber dem Stand vom 22.09. 103 der vorher 3282 Setups.
 Die bestehenden OB-/LQ-Backfill-Skripte unterstützen `BACKFILL_INSERT_ONLY=1` für ergänzende
 Archivläufe ohne Korrektur bestehender Zeilen. Nach einer Archiv-Erweiterung
 `messeFxcmKontext.ts` vollständig neu ausführen; `FXCM_CONTEXT_RESUME=1` nur für die Fortsetzung
@@ -358,21 +361,21 @@ ueberlegen sowas rauszufiltern."* Gemessen mit `fvgBaender.py`, volle Tabellen i
 
 Die Lücke steht nirgends in den Daten, ist aber exakt rekonstruierbar: die FVG-anknüpfende OB-Kante
 ist C1, und `widenObForSweep` zieht immer nur die gegenüberliegende auf. Gegenprobe: das Minimum
-über alle 3282 Zeilen ist exakt 0,5000 Pip — die Schwelle der Erkennung. Seit dem 23.09.2026 führt
+über alle 3179 Zeilen ist exakt 0,5000 Pip — die Schwelle der Erkennung. Seit dem 23.09.2026 führt
 `detectOrderBlocks` die Lücke zusätzlich als `fvg` mit, ein neuer Dump trägt sie als `ob_fvg`.
 
 | FVG | n | Anteil | Risiko-Median | Reichweite-Median | 15 P | 2 R | 3 R | 4 R | OB-Retest |
 |---|---|---|---|---|---|---|---|---|---|
-| unter 1 Pip | 972 | 29,6 % | 4,9 P | 13,1 P | 42 % | 61 % | **47 %** | 38 % | 95 % |
-| 1–2 Pips | 963 | 29,3 % | 5,4 P | 15,9 P | 50 % | 68 % | 52 % | 43 % | 91 % |
-| 2–3 Pips | 539 | 16,4 % | 5,8 P | 18,7 P | 54 % | 72 % | 57 % | 47 % | 89 % |
-| 3–5 Pips | 493 | 15,0 % | 7,0 P | 22,7 P | 64 % | 79 % | 61 % | 49 % | 85 % |
-| 5–8 Pips | 217 | 6,6 % | 7,2 P | 29,3 P | 75 % | 89 % | 75 % | 65 % | 81 % |
-| über 8 Pips | 98 | 3,0 % | 8,3 P | 46,8 P | 96 % | 99 % | **91 %** | 84 % | 69 % |
+| unter 1 Pip | 952 | 29,9 % | 4,8 P | 13,0 P | 42 % | 61 % | **47 %** | 37 % | 95 % |
+| 1–2 Pips | 946 | 29,8 % | 5,4 P | 15,8 P | 50 % | 68 % | 52 % | 43 % | 92 % |
+| 2–3 Pips | 516 | 16,2 % | 5,7 P | 18,5 P | 54 % | 72 % | 57 % | 47 % | 89 % |
+| 3–5 Pips | 473 | 14,9 % | 6,8 P | 22,7 P | 64 % | 79 % | 62 % | 50 % | 85 % |
+| 5–8 Pips | 201 | 6,3 % | 7,1 P | 29,3 P | 73 % | 89 % | 74 % | 64 % | 81 % |
+| über 8 Pips | 91 | 2,9 % | 8,0 P | 47,5 P | 96 % | 99 % | **90 %** | 82 % | 68 % |
 
-Monoton über die ganze Reihe, und **er hält in R**: 47 auf 91 % bei 3 R, Bootstrap für das größte
-gegen das kleinste Band **+37 bis +50 Punkte**. Das Risiko wandert nur von 4,9 auf 8,3 Pips mit,
-die Reichweite dagegen von 13,1 auf 46,8 — anders als bei Saisonalität oder Handelszeit ist das
+Monoton über die ganze Reihe, und **er hält in R**: 47 auf 90 % bei 3 R, Bootstrap für das größte
+gegen das kleinste Band **+37 bis +50 Punkte**. Das Risiko wandert nur von 4,8 auf 8,0 Pips mit,
+die Reichweite dagegen von 13,0 auf 47,5 — anders als bei Saisonalität oder Handelszeit ist das
 also nicht bloß Volatilität. Zum Vergleich der bisher stärksten Merkmale bei 3 R: 1H-Sweep 63 %
 (n=78), Major-Sweep ≥ 120 h 73 % (n=30).
 

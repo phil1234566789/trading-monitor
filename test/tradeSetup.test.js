@@ -14,7 +14,7 @@ const params = {
   lsMaxLeadSecH1: 7200,
   lsMaxLeadSecM5: 2700,
   maxDistanceM5: 0.0005,
-  maxSweepDistance: 0.0010, // 10 Pip, wie der Produktions-Default
+  maxSweepDistance: 0.0020, // 20 Pip ab dem Extrempunkt, wie der Produktions-Default
   maxLookbackSec: 6 * 3600,
   obMaxDelaySec: 3600,
   // Produktions-Default seit 2026-09-21: Check aus (Messergebnis, siehe
@@ -30,7 +30,7 @@ const params = {
 function lowLevel({ price, pivotTime, touched = true, touchedTime = null }) {
   return { price, dir: -1, pivotTime, touched, touchedTime: touchedTime ?? pivotTime, endTime: touchedTime ?? pivotTime };
 }
-function bullOb({ startTime, top = 1.35, bottom = 1.34 }) {
+function bullOb({ startTime, top = 1.3015, bottom = 1.2995 }) {
   return { dir: 1, top, bottom, startTime };
 }
 
@@ -40,14 +40,14 @@ function bullOb({ startTime, top = 1.35, bottom = 1.34 }) {
 function highLevel({ price, pivotTime, touched = true, touchedTime = null }) {
   return { price, dir: 1, pivotTime, touched, touchedTime: touchedTime ?? pivotTime, endTime: touchedTime ?? pivotTime };
 }
-function bearOb({ startTime, top = 1.35, bottom = 1.34 }) {
+function bearOb({ startTime, top = 1.3015, bottom = 1.2995 }) {
   return { dir: -1, top, bottom, startTime };
 }
 
 describe("detectTradeSetups — Path A (bestätigtes Protected-Pivot, Altverhalten)", () => {
   it("findet ein Setup über ein noch unberührtes Fraktal + passendes LS + OB danach", () => {
     const fractal = lowLevel({ price: 1.3, pivotTime: 1000, touched: false });
-    const ls = lowLevel({ price: 1.31, pivotTime: 500, touchedTime: 900 }); // über dem Fraktal (far side für dir=-1)
+    const ls = lowLevel({ price: 1.301, pivotTime: 500, touchedTime: 900 }); // über dem Fraktal (far side für dir=-1)
     const setupObs = [bullOb({ startTime: 1100 })];
     const setups = detectTradeSetups(-1, [fractal], [ls], [fractal], setupObs, params);
     expect(setups).toHaveLength(1);
@@ -57,18 +57,18 @@ describe("detectTradeSetups — Path A (bestätigtes Protected-Pivot, Altverhalt
 
   it("bleibt gültig, auch wenn zwischenzeitlich eine M5-Kerze gegen das LS geschlossen hat (Replay-Beispiel 08.07. 11:50)", () => {
     const fractal = lowLevel({ price: 1.3, pivotTime: 1000, touched: false });
-    const ls = lowLevel({ price: 1.31, pivotTime: 500, touchedTime: 900 });
+    const ls = lowLevel({ price: 1.301, pivotTime: 500, touchedTime: 900 });
     const setupObs = [bullOb({ startTime: 1100 })];
     // Kerze zwischen Sweep (900) und Fraktal (1000) schließt UNTER dem LS-Preis — für Path A
     // irrelevant, nur Path B prüft closesBeyondLevel.
-    const m5Candles = [{ time: 950, open: 1.305, high: 1.306, low: 1.304, close: 1.305 }];
+    const m5Candles = [{ time: 950, open: 1.3005, high: 1.3006, low: 1.2998, close: 1.3 }];
     const setups = detectTradeSetups(-1, [fractal], [ls], [fractal], setupObs, params, m5Candles);
     expect(setups).toHaveLength(1);
   });
 
   it("findet weiterhin nichts ohne passenden OB nach dem Fraktal (unverändert)", () => {
     const fractal = lowLevel({ price: 1.3, pivotTime: 1000, touched: false });
-    const ls = lowLevel({ price: 1.31, pivotTime: 500, touchedTime: 900 });
+    const ls = lowLevel({ price: 1.301, pivotTime: 500, touchedTime: 900 });
     expect(detectTradeSetups(-1, [fractal], [ls], [fractal], [], params)).toEqual([]);
   });
 });
@@ -89,7 +89,7 @@ describe("detectTradeSetups — Path B (sofortige Bestätigung ohne separates Fr
   // galt er unbegrenzt — genau das hat den schnellen Pfad bei jedem Sweep-and-Reclaim ausgeschaltet
   // und den Alarm 15 Minuten kosten lassen (Setup #1617).
   describe("Regel 2: Close-Check altersabhängig", () => {
-    const setupObs = [bullOb({ startTime: 90_300 })];
+    const setupObs = [bullOb({ startTime: 90_300, top: 1.34633, bottom: 1.34619 })];
     // Close UNTER dem LS-Preis, nach dem Sweep
     const m5Candles = [{ time: 90_100, open: 1.3455, high: 1.3456, low: 1.3453, close: 1.3454 }];
     const mitSchwelle = { ...params, closeCheckMaxAgeSec: 4 * 3600 };
@@ -114,7 +114,7 @@ describe("detectTradeSetups — Path B (sofortige Bestätigung ohne separates Fr
 
   it("ignoriert Path B ohne m5Candles-Argument (Rückwärtskompatibilität, kein Crash)", () => {
     const ls = lowLevel({ price: 1.34579, pivotTime: 200, touchedTime: 90_000 });
-    const setupObs = [bullOb({ startTime: 90_300 })];
+    const setupObs = [bullOb({ startTime: 90_300, top: 1.34633, bottom: 1.34619 })];
     expect(detectTradeSetups(-1, [], [ls], [], setupObs, params)).toEqual([]);
   });
 
@@ -122,7 +122,7 @@ describe("detectTradeSetups — Path B (sofortige Bestätigung ohne separates Fr
     // Path A: shared als Fraktal (touched=false), lsForPathA als LS.
     // Path B: lsForPathA selbst (touched=true) direkt als LS, mit demselben OB.
     const shared = lowLevel({ price: 1.3, pivotTime: 500, touched: false, touchedTime: 500 });
-    const lsForPathA = lowLevel({ price: 1.31, pivotTime: 400, touchedTime: 450 });
+    const lsForPathA = lowLevel({ price: 1.301, pivotTime: 400, touchedTime: 450 });
     const setupObs = [bullOb({ startTime: 600 })];
     const m5Candles = [];
     const setups = detectTradeSetups(-1, [shared], [lsForPathA], [shared], setupObs, params, m5Candles);
@@ -138,8 +138,8 @@ describe("detectTradeSetups — Path B (sofortige Bestätigung ohne separates Fr
 describe("detectTradeSetups — ein Setup je bestätigender M5-OB", () => {
   it("meldet denselben OB nur einmal, auch wenn Path A und Path B verschiedene Sweeps gefunden haben", () => {
     const fractal = lowLevel({ price: 1.3, pivotTime: 500, touched: false });
-    const lsForPathA = lowLevel({ price: 1.305, pivotTime: 400, touchedTime: 450 });
-    const lsForPathB = lowLevel({ price: 1.31, pivotTime: 300, touchedTime: 480 });
+    const lsForPathA = lowLevel({ price: 1.3005, pivotTime: 400, touchedTime: 450 });
+    const lsForPathB = lowLevel({ price: 1.301, pivotTime: 300, touchedTime: 480 });
     const setupObs = [bullOb({ startTime: 600 })];
     const setups = detectTradeSetups(-1, [fractal], [lsForPathA, lsForPathB], [fractal], setupObs, params, []);
     expect(setups).toHaveLength(1);
@@ -148,8 +148,8 @@ describe("detectTradeSetups — ein Setup je bestätigender M5-OB", () => {
 
   it("nimmt bei zwei Fraktalen auf denselben OB das jüngere (wie findProtectedFractal in der Deno-Kopie)", () => {
     const frueh = lowLevel({ price: 1.3, pivotTime: 500, touched: false });
-    const spaet = lowLevel({ price: 1.301, pivotTime: 560, touched: false });
-    const ls = lowLevel({ price: 1.31, pivotTime: 400, touchedTime: 550 });
+    const spaet = lowLevel({ price: 1.3005, pivotTime: 560, touched: false });
+    const ls = lowLevel({ price: 1.301, pivotTime: 400, touchedTime: 550 });
     const setupObs = [bullOb({ startTime: 600 })];
     const setups = detectTradeSetups(-1, [frueh, spaet], [ls], [frueh, spaet], setupObs, params, []);
     expect(setups).toHaveLength(1);
@@ -195,22 +195,61 @@ describe("detectTradeSetups — mehrere Sweeps je OB", () => {
   });
 
   it("sammelt kein Level ein, das weiter als maxSweepDistance weg liegt", () => {
-    // 25 Pip unter dem gefundenen Level — zeitlich im Fenster, preislich ein anderes Ereignis.
+    // 35 Pip unter dem Extremtief (1.2995) — zeitlich im Fenster, preislich ein anderes Ereignis.
     // Genau der Fall aus GBPUSD-Setup #1139 (17.04.2026), nur kleiner.
-    const lsFern = lowLevel({ price: 1.2978, pivotTime: 100, touchedTime: 850 });
+    const lsFern = lowLevel({ price: 1.296, pivotTime: 100, touchedTime: 850 });
     const setups = detectTradeSetups(-1, [], [], [lsAlt, lsJung, lsFern], setupObs, nah, m5Candles);
     expect(setups).toHaveLength(1);
     expect(setups[0].sweeps.map((sw) => sw.level.price)).toEqual([1.3003, 1.3002]);
   });
 
-  it("filtert gegen das vom Pfad gefundene Level, nicht gegen den ältesten — sonst kippt die Regel", () => {
+  it("filtert nicht gegen den ältesten Sweep — der wird erst aus dem gefilterten Topf gekürt", () => {
     // lsFern ist mit Abstand das ÄLTESTE (Alter 750) und läge damit als Anker vorne. Gefiltert
-    // wird trotzdem gegen lsJung, über das Path B hier hereinkommt, also bleibt lsAlt drin und
-    // lsFern fliegt raus — andersherum wäre lsAlt das Opfer gewesen.
-    const lsFern = lowLevel({ price: 1.2978, pivotTime: 100, touchedTime: 850 });
+    // wird trotzdem gegen das Extrem, also bleibt lsAlt drin und lsFern fliegt raus — andersherum
+    // wäre lsAlt das Opfer gewesen.
+    const lsFern = lowLevel({ price: 1.296, pivotTime: 100, touchedTime: 850 });
     const setups = detectTradeSetups(-1, [], [], [lsJung, lsAlt, lsFern], setupObs, nah, m5Candles);
     expect(setups[0].sweeps.map((sw) => sw.level.price)).toEqual([1.3003, 1.3002]);
     expect(setups[0].ls.price).toBe(1.3003);
+  });
+
+  // Eigene Fixture für die Radius-Tests: Extremtief 1.2995 liegt in der Kerze des ersten Touches,
+  // der OB selbst reicht nur bis 1.3005 herunter.
+  const extremObs = [bullOb({ startTime: 1100, top: 1.3015, bottom: 1.3005 })];
+  const extremKerzen = [
+    { time: 800, open: 1.301, high: 1.3012, low: 1.2995, close: 1.3 },
+    { time: 850, open: 1.3, high: 1.3005, low: 1.2998, close: 1.3004 },
+    { time: 1100, open: 1.3005, high: 1.3015, low: 1.3004, close: 1.3015 },
+  ];
+
+  it("misst maxSweepDistance ab dem Extrempunkt, nicht ab dem gefundenen Sweep", () => {
+    // Auslöser GBPUSD-Setup #4678 (23.09.2026): das fachlich tragende Level liegt am Extrem des
+    // Moves. Ab lsPfad gemessen sind es 25 Pip und es flog raus, ab dem Extremtief 1.2995 sind es
+    // 10 Pip und es bleibt — und trägt als das ältere sogar die ls_*-Spalten.
+    const lsPfad = lowLevel({ price: 1.301, pivotTime: 400, touchedTime: 800 });
+    const lsAmExtrem = lowLevel({ price: 1.2985, pivotTime: 100, touchedTime: 850 });
+    const setups = detectTradeSetups(-1, [], [], [lsPfad, lsAmExtrem], extremObs, nah, extremKerzen);
+    expect(setups[0].sweeps.map((sw) => sw.level.price)).toEqual([1.2985, 1.301]);
+  });
+
+  // Philip 2026-09-23: "die sweeps, die von extrempunkt aus mehr als 20 pips entfernt sind sollen
+  // nicht mehr als trade-setup gelten" — der Radius gilt auch für den tragenden Sweep selbst, über
+  // den der Pfad hereinkam. Vorher kam ownLs ungefiltert in die Menge und füllte weiter ls_*.
+  it("verwirft das Setup ganz, wenn auch der gefundene Sweep zu weit vom Extrem liegt", () => {
+    // 35 Pip über dem Extremtief 1.2995 — der Sweep erklärt die Umkehr nicht.
+    const lsZuWeit = lowLevel({ price: 1.303, pivotTime: 400, touchedTime: 800 });
+    expect(detectTradeSetups(-1, [], [], [lsZuWeit], extremObs, nah, extremKerzen)).toEqual([]);
+  });
+
+  it("behält das Setup, wenn neben dem zu weiten Sweep ein gültiger liegt", () => {
+    // Derselbe zu weite Sweep, aber ein zweites Level 5 Pip neben dem Extrem: das Setup bleibt und
+    // wird von diesem getragen, statt mit dem falschen Level gemeldet zu werden.
+    const lsZuWeit = lowLevel({ price: 1.303, pivotTime: 400, touchedTime: 800 });
+    const lsGueltig = lowLevel({ price: 1.299, pivotTime: 300, touchedTime: 850 });
+    const setups = detectTradeSetups(-1, [], [], [lsZuWeit, lsGueltig], extremObs, nah, extremKerzen);
+    expect(setups).toHaveLength(1);
+    expect(setups[0].sweeps.map((sw) => sw.level.price)).toEqual([1.299]);
+    expect(setups[0].ls.price).toBe(1.299);
   });
 
   it("rechnet über Path A dieselben Zahlen aus (ein OB, ein Ergebnis, egal welcher Pfad zuerst war)", () => {
@@ -226,7 +265,7 @@ describe("detectTradeSetups — mehrere Sweeps je OB", () => {
 
 describe("detectTradeSetups — Short (dir=1, spiegelbildlich zu Long)", () => {
   it("Path A: findet ein Short-Setup über ein noch unberührtes Fraktal + passendes LS + OB danach", () => {
-    const fractal = highLevel({ price: 1.31, pivotTime: 1000, touched: false });
+    const fractal = highLevel({ price: 1.301, pivotTime: 1000, touched: false });
     const ls = highLevel({ price: 1.3, pivotTime: 500, touchedTime: 900 }); // unter dem Fraktal (far side für dir=1)
     const setupObs = [bearOb({ startTime: 1100 })];
     const setups = detectTradeSetups(1, [fractal], [ls], [fractal], setupObs, params);
@@ -245,7 +284,7 @@ describe("detectTradeSetups — Short (dir=1, spiegelbildlich zu Long)", () => {
   });
 
   it("Path B: der Close-Check disqualifiziert auch beim Short nur ein junges Level", () => {
-    const setupObs = [bearOb({ startTime: 90_300 })];
+    const setupObs = [bearOb({ startTime: 90_300, top: 1.34633, bottom: 1.34619 })];
     const m5Candles = [{ time: 90_100, open: 1.3461, high: 1.3463, low: 1.346, close: 1.3462 }]; // Close > 1.34579
     const mitSchwelle = { ...params, closeCheckMaxAgeSec: 4 * 3600 };
     const jung = highLevel({ price: 1.34579, pivotTime: 86_400, touchedTime: 90_000 });

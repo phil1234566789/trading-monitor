@@ -134,19 +134,34 @@ function sweepBrokenByClose(ls, m5Candles, dir, params) {
 // Kraft-Zone gehören — und über alle Pfade soll für denselben OB dasselbe herauskommen.
 // Jeder Sweep als { level, timeframe } — den Timeframe vergibt die Erkennung selbst, weil nur sie
 // weiß, aus welchem Array das Level kam (die Deno-Kopie nennt das SetupSweep).
-function collectObSweeps(ob, ownLs, h1Levels, m5Levels, params) {
-  const sweeps = [{ level: ownLs, timeframe: h1Levels.includes(ownLs) ? "1H" : "5M" }];
+// Gibt null zurück, wenn KEIN Sweep im Radius liegt — dann ist es kein Trade-Setup (Philip
+// 2026-09-23: "die sweeps, die von extrempunkt aus mehr als 20 pips entfernt sind sollen nicht
+// mehr als trade-setup gelten").
+function collectObSweeps(ob, ownLs, h1Levels, m5Levels, params, dir, m5Candles) {
+  // Anker für maxSweepDistance ist der Extrempunkt des Moves, nicht ownLs (Philip 2026-09-23):
+  // ownLs ist eine Zufallsgröße des Suchpfads, das Extrem der Punkt, auf den der Markt reagiert
+  // hat. Das Fenster startet am Touch des GEFUNDENEN Sweeps — der steht fest, bevor irgendetwas
+  // eingesammelt ist, sonst wäre es zirkulär mit dem späteren widenObForSweep. Ein dadurch
+  // dazugekommener älterer Sweep zieht dessen Fenster nur nach vorn, das Extrem kann damit nur
+  // gleich bleiben oder weiter weg rücken (siehe dort).
+  const extremOb = widenObForSweep(ob, ownLs.touchedTime, dir, m5Candles);
+  const extrem = dir === 1 ? extremOb.top : extremOb.bottom;
+  const imRadius = (preis) => Math.abs(preis - extrem) <= params.maxSweepDistance;
+  // ownLs durchläuft denselben Filter wie jeder andere: ein Sweep, der zu weit vom Extrem weg ist,
+  // ist fachlich nicht der Grund für die Umkehr, auch wenn der Suchpfad über ihn gelaufen ist.
+  const sweeps = imRadius(ownLs.price)
+    ? [{ level: ownLs, timeframe: h1Levels.includes(ownLs) ? "1H" : "5M" }]
+    : [];
   for (const [levels, timeframe] of [[h1Levels, "1H"], [m5Levels, "5M"]]) {
     for (const lvl of levels) {
       if (lvl === ownLs || !lvl.touched || lvl.touchedTime == null) continue;
       if (lvl.touchedTime > ob.startTime || ob.startTime - lvl.touchedTime > params.obMaxDelaySec) continue;
-      // Abstand zu ownLs, NICHT zum ältesten: der wird erst unten aus genau diesem Topf gekürt —
-      // gegen ihn zu filtern hieße, ein weit entferntes Level erst zum Anker zu machen und dann
-      // alles Richtige wegzuwerfen. ownLs hat maxDistanceM5 & Co. schon passiert.
-      if (Math.abs(lvl.price - ownLs.price) > params.maxSweepDistance) continue;
+      // Bewusst nicht gegen den ältesten Sweep: der wird erst unten aus genau diesem Topf gekürt.
+      if (!imRadius(lvl.price)) continue;
       sweeps.push({ level: lvl, timeframe });
     }
   }
+  if (sweeps.length === 0) return null;
   // Regel 3, Teil 2: ÄLTESTER zuerst ("Ältester Sweep ist der für die Strategie am
   // entscheidendsten") — sweeps[0] ist der, der die Qualität trägt. Bei gleichem Alter der früher
   // entstandene Pivot, damit beide Laufzeiten dasselbe Level wählen.
@@ -237,7 +252,8 @@ export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupO
   // Funktion sie für beide Pfade aus, und ein späterer Finder desselben OB kann sie nicht mehr
   // verändern.
   const baueSetup = (ob, ownLs, fractal, pathType) => {
-    const sweeps = collectObSweeps(ob, ownLs, h1Levels, m5Levels, params);
+    const sweeps = collectObSweeps(ob, ownLs, h1Levels, m5Levels, params, dir, m5Candles);
+    if (!sweeps) return null;
     const ls = sweeps[0].level;
     const fensterVon = Math.min(...sweeps.map((sw) => sw.level.touchedTime));
     const widened = widenObForSweep(ob, fensterVon, dir, m5Candles);
@@ -246,14 +262,17 @@ export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupO
 
   for (const { fractal, ls } of findAllProtectedFractals(fractalLevels, h1Levels, m5Levels, dir, params)) {
     const ob = findFirstSetupObAfter(setupObs, obDir, fractal.pivotTime, params.obMaxDelaySec);
-    if (ob) byObStartTime.set(ob.startTime, baueSetup(ob, ls, fractal, "A"));
+    if (!ob) continue;
+    const setup = baueSetup(ob, ls, fractal, "A");
+    if (setup) byObStartTime.set(ob.startTime, setup);
   }
 
   if (m5Candles) {
     for (const ls of findImmediateLsSetups(h1Levels, m5Levels, m5Candles, dir, params)) {
       const ob = findFirstSetupObAfter(setupObs, obDir, ls.touchedTime, params.obMaxDelaySec);
       if (!ob || byObStartTime.has(ob.startTime)) continue;
-      byObStartTime.set(ob.startTime, baueSetup(ob, ls, null, "B"));
+      const setup = baueSetup(ob, ls, null, "B");
+      if (setup) byObStartTime.set(ob.startTime, setup);
     }
   }
 
