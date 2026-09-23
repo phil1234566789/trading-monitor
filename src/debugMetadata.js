@@ -78,6 +78,11 @@ export function buildActiveMetadataSnapshot(ctx) {
     const candles = ctx.candles.filter((c) => c.time >= since);
     sections.candles = { since, sinceAt: fmtDateTime(since), timeframe: ctx.timeframe, count: candles.length, data: candles };
   }
+  // Claude-Notizen inkl. der eigenen Messungen (Philip 2026-09-23: "damit Vegapunk beim Debuggen
+  // sofort sieht, wo ich was gemessen habe") — ungated, kommt bereits sichtbarkeitsgefiltert rein.
+  if ((ctx.claudeAnnotations ?? []).length > 0) {
+    sections.claudeAnnotations = ctx.claudeAnnotations;
+  }
   // Zuletzt generierter Daten-Export (siehe DataExportModal.vue/useLastDataExport.js, Chat
   // 2026-07-28) — ungated, unabhängig vom Symbol/Timeframe des gerade offenen Charts, da der
   // Export sein eigenes Asset+Datum mitbringt. undefined/null, solange in dieser Session noch

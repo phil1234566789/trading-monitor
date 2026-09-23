@@ -282,6 +282,9 @@ const props = defineProps({
   // leitet das aus dem Replay-Zeitpunkt ab, analog zu DataExportModal.vue).
   claudeAnnotations: { type: Array, default: () => [] },
   claudeAnnotationsDate: { type: String, default: null },
+  // Mess-Modus (Philip 2026-09-23) — eigener Klick-Modus neben dem Trade-Modus, nicht innerhalb:
+  // gemessen wird frei zwischen zwei Punkten, ohne Treffer auf irgendein Chart-Objekt.
+  measureModeActive: { type: Boolean, default: false },
   // Trade-Modus (Chat 2026-07-27: "damit ich nicht versehentlich in den Chart reinklicke") — nur
   // wenn aktiv, wertet der Klick-Handler unten Klicks auf Trade-Setup-OB-Boxen aus. Sonst bleibt
   // ein Klick beim Pan/Zoom-Verhalten von lightweight-charts, wie bisher.
@@ -332,6 +335,10 @@ const emit = defineEmits([
   // Event-Name (früher "tsc-"-Präfix) die Ziel-Range codiert.
   "add-target-from-picker",
   "add-anti-confluence-from-picker",
+  // Mess-Modus: erster Klick meldet nur den Startpunkt (Dashboard.vue zeigt den Hinweis an),
+  // der zweite liefert die fertige Strecke.
+  "measure-start",
+  "measure-done",
 ]);
 
 const { markSuccess } = useStatusBar();
@@ -499,6 +506,9 @@ const { state: m5Clock, retry: retryM5Clock } = useM5CandleClock({
 // verknüpftem trade_setups-Datensatz). null = normales Live-Verhalten. Siehe focusTradeSetup/
 // clearTradeSetupFocus (defineExpose) und den watch auf props.tradeModeActive unten.
 let focusedTradeSetup = null;
+// Startpunkt einer laufenden Messung (erster Klick im Mess-Modus), bis der zweite Klick die
+// Strecke abschließt — siehe measureClick() und den watch auf props.measureModeActive unten.
+let measureStartPoint = null;
 // Out-of-Order-Guards für loadInitial/fetchRangesCandles/loadTradeSetupM5, siehe dort.
 // loadInitialFetchSeq wird zusätzlich von pollRecent() als Bar-Mismatch-Guard gelesen (Bug-Report
 // Philip 2026-07-19: "1h -> M5 -> wieder 1h, Chart zeigt nur noch M5-Kerzen") — jeder echte Neu-Load
@@ -590,6 +600,7 @@ function buildActiveMetadataSnapshotInternal() {
     rangesMetadata2: rangesMetadata2.value,
     candles: clipReplay(allCandles),
     timeframe: props.currentBar,
+    claudeAnnotations: props.claudeAnnotations,
     lastDataExport: lastDataExport.value,
   });
 }
@@ -1878,8 +1889,28 @@ onMounted(() => {
   createLiquidity(candleSeries);
   createDailyPivots(candleSeries);
 
+  // Mess-Modus (Philip 2026-09-23): zwei freie Klicks -> Strecke. param.time fehlt, sobald rechts
+  // neben der letzten Kerze geklickt wird, deshalb der coordinateToTime-Fallback.
+  function measureClick(param) {
+    const price = candleSeries.coordinateToPrice(param.point.y);
+    const time = param.time ?? chart.timeScale().coordinateToTime(param.point.x);
+    if (price == null || time == null) return;
+    if (!measureStartPoint) {
+      measureStartPoint = { time, price };
+      emit("measure-start", measureStartPoint);
+      return;
+    }
+    emit("measure-done", { from: measureStartPoint, to: { time, price } });
+    measureStartPoint = null;
+  }
+
   chart.subscribeClick((param) => {
-    if (!param.point || !props.tradeModeActive) return;
+    if (!param.point) return;
+    if (props.measureModeActive) {
+      measureClick(param);
+      return;
+    }
+    if (!props.tradeModeActive) return;
     // Ziel-Modus (Chat 2026-07-27/28): Klick auf ein Pivot (Linie) oder eine OB-Zone (Box) -> ans
     // Dashboard durchreichen, das den Preis als Target zum gerade "scharfen" Trade hinzufügt.
     // Eigener Modus statt einfach zusätzlich zum Setup-Klick zu testen, damit ein Klick nie
@@ -1972,6 +2003,10 @@ onMounted(() => {
     const rect = chartContainerRef.value.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
+    if (props.measureModeActive) {
+      chartContainerRef.value.style.cursor = "crosshair";
+      return;
+    }
     if (props.tradeModeActive) {
       const point = { point: { x, y } };
       const hit = props.targetModeActive
@@ -2176,6 +2211,17 @@ watch(
         focusedTradeSetup = null;
         refreshCockpitInternal();
       }
+      if (chartContainerRef.value) chartContainerRef.value.style.cursor = "";
+    }
+  },
+);
+// Mess-Modus verlassen verwirft eine halbfertige Messung — sonst würde der erste Klick nach dem
+// nächsten Einschalten unerwartet eine Strecke zum alten Startpunkt ziehen.
+watch(
+  () => props.measureModeActive,
+  (active) => {
+    if (!active) {
+      measureStartPoint = null;
       if (chartContainerRef.value) chartContainerRef.value.style.cursor = "";
     }
   },

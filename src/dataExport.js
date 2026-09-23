@@ -183,7 +183,7 @@ async function compute1hStructureState(asset, currentTimeSec, structureConfig = 
 // "YYYY-MM-DD HH:mm" (Europe/Berlin) — dieselbe Schreibweise, die Claude selbst für datierte
 // Annotationen nutzt (siehe claudeAnnotations.js/trading-ablauf.md), hier nötig, weil der 7-Tage-
 // Lookback fast immer Pivots von VOR dem exportierten Tag enthält (reines "HH:mm" wäre mehrdeutig).
-function formatDatedTime(unixSec) {
+export function formatDatedTime(unixSec) {
   return `${berlinDateStrFor(unixSec)} ${TIME_FORMATTER.format(new Date(unixSec * 1000))}`;
 }
 
