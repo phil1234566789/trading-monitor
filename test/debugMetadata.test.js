@@ -126,14 +126,15 @@ describe("buildActiveMetadataSnapshot", () => {
     expect(result.candles.data.map((c) => c.time)).toEqual([200, 300]);
   });
 
-  it("adds dataExport when lastDataExport is set, regardless of toggles", () => {
-    const result = buildActiveMetadataSnapshot({ ...BASE_CTX, lastDataExport: { instrument: "GBPUSD" } });
-    expect(result.dataExport).toEqual({ instrument: "GBPUSD" });
+  it("adds claudeAnnotations when any are visible, regardless of toggles", () => {
+    const annotation = { type: "line", from: { price: 1.1 }, to: { price: 1.2 }, text: "10,0 Pips" };
+    const result = buildActiveMetadataSnapshot({ ...BASE_CTX, claudeAnnotations: [annotation] });
+    expect(result.claudeAnnotations).toEqual([annotation]);
   });
 
-  it("omits dataExport when lastDataExport is null", () => {
+  it("omits claudeAnnotations when there are none", () => {
     const result = buildActiveMetadataSnapshot(BASE_CTX);
-    expect(result).not.toHaveProperty("dataExport");
+    expect(result).not.toHaveProperty("claudeAnnotations");
   });
 
   it("includes structure.window as fixed only when rangesFixedStartActive AND a start time are both set", () => {
@@ -161,16 +162,12 @@ describe("buildActiveMetadataSnapshot", () => {
 describe("hasActiveMetadata", () => {
   const EMPTY_SNAPSHOT = { context: {}, orderBlocks: [] };
 
-  it("is false when nothing is toggled and there are no orderBlocks/dataExport", () => {
+  it("is false when nothing is toggled and there are no orderBlocks", () => {
     expect(hasActiveMetadata(EMPTY_SNAPSHOT, ALL_OFF)).toBe(false);
   });
 
   it("is true when orderBlocks are present, even with every toggle off (ungated)", () => {
     expect(hasActiveMetadata({ ...EMPTY_SNAPSHOT, orderBlocks: [{ startTime: 1 }] }, ALL_OFF)).toBe(true);
-  });
-
-  it("is true when a dataExport is present, even with every toggle off", () => {
-    expect(hasActiveMetadata({ ...EMPTY_SNAPSHOT, dataExport: { instrument: "GBPUSD" } }, ALL_OFF)).toBe(true);
   });
 
   it.each(["showLiquidity", "showTradeSetups", "showTradeSetupCockpit", "showRanges"])(

@@ -61,8 +61,8 @@ import {
   MAX_PLAUSIBLE_GAP_SEC,
 } from "../priceChartConstants.js";
 import { buildActiveMetadataSnapshot, hasActiveMetadata as hasActiveMetadataFor, saveDebugMetadataSection } from "../debugMetadata.js";
-import { useLastDataExport } from "../composables/useLastDataExport.js";
 import { usePriceChartClaudeAnnotations } from "../composables/usePriceChartClaudeAnnotations.js";
+import { measureDrawing } from "../chartMeasure.js";
 import { usePriceChartTradeSetups } from "../composables/usePriceChartTradeSetups.js";
 import { usePriceChartMarketStructure } from "../composables/usePriceChartMarketStructure.js";
 import { usePriceChartTradeSetupDrawing } from "../composables/usePriceChartTradeSetupDrawing.js";
@@ -279,7 +279,7 @@ const props = defineProps({
   showDebugMetadata: { type: Boolean, default: false },
   // Claude-Antwort-Import (siehe claudeAnnotations.js) — Liste geparster Annotationen +
   // der Berlin-Kalendertag, gegen den ihre "HH:mm"-Zeitangaben aufgelöst werden (Dashboard.vue
-  // leitet das aus dem Replay-Zeitpunkt ab, analog zu DataExportModal.vue).
+  // leitet das aus dem Replay-Zeitpunkt ab).
   claudeAnnotations: { type: Array, default: () => [] },
   claudeAnnotationsDate: { type: String, default: null },
   // Mess-Modus (Philip 2026-09-23) — eigener Klick-Modus neben dem Trade-Modus, nicht innerhalb:
@@ -335,14 +335,12 @@ const emit = defineEmits([
   // Event-Name (früher "tsc-"-Präfix) die Ziel-Range codiert.
   "add-target-from-picker",
   "add-anti-confluence-from-picker",
-  // Mess-Modus: erster Klick meldet nur den Startpunkt (Dashboard.vue zeigt den Hinweis an),
-  // der zweite liefert die fertige Strecke.
-  "measure-start",
+  // Mess-Modus: der zweite Klick liefert die fertige Strecke (bis dahin zeichnet der Chart sie
+  // selbst als Vorschau, siehe measurePreview).
   "measure-done",
 ]);
 
 const { markSuccess } = useStatusBar();
-const { lastDataExport } = useLastDataExport();
 const { refreshSessions, refreshNewsMarkers } = usePriceChartSessionsAndNews();
 // EMA-/RSI-/Divergenz-Series-Lifecycle + Zeichenlogik (siehe usePriceChartRsi.js, Phase 6b) —
 // priceChartRsi.create(chart, candleSeries) wird in onMounted aufgerufen, priceChartRsi.dispose()
@@ -415,7 +413,7 @@ const chartContainerRef = ref(null);
 // Ein einziger Key (nicht pro Symbol) — Philip will EINE konsistente Höhe unabhängig vom Symbol-Tab.
 const chartWrapperHeight = useTabScopedRef("chartWrapperHeight", 675);
 // summarizeMarketStructureState kommt seit Chat 2026-07-27 aus marketStructureAnalysis.ts
-// (Daten-Export braucht dieselbe Aufbereitung, siehe dataExport.js).
+// (das Debug-Metadaten-Panel braucht dieselbe Aufbereitung).
 // marketStructureState kommt seit Phase 6g aus usePriceChartMarketStructure() (oben destructured).
 const marketStructureTree = computed(() => summarizeMarketStructureState(marketStructureState.value));
 // Trend-Kette fürs TSC (Chat 2026-08-29, Philip: "der Trend soll rein") — roh statt über
@@ -508,7 +506,9 @@ const { state: m5Clock, retry: retryM5Clock } = useM5CandleClock({
 let focusedTradeSetup = null;
 // Startpunkt einer laufenden Messung (erster Klick im Mess-Modus), bis der zweite Klick die
 // Strecke abschließt — siehe measureClick() und den watch auf props.measureModeActive unten.
+// measurePreview ist die Strecke zum aktuellen Mauszeiger, die bis dahin live mitgezeichnet wird.
 let measureStartPoint = null;
+let measurePreview = null;
 // Out-of-Order-Guards für loadInitial/fetchRangesCandles/loadTradeSetupM5, siehe dort.
 // loadInitialFetchSeq wird zusätzlich von pollRecent() als Bar-Mismatch-Guard gelesen (Bug-Report
 // Philip 2026-07-19: "1h -> M5 -> wieder 1h, Chart zeigt nur noch M5-Kerzen") — jeder echte Neu-Load
@@ -601,7 +601,6 @@ function buildActiveMetadataSnapshotInternal() {
     candles: clipReplay(allCandles),
     timeframe: props.currentBar,
     claudeAnnotations: props.claudeAnnotations,
-    lastDataExport: lastDataExport.value,
   });
 }
 const hasActiveMetadata = computed(() =>
@@ -1082,7 +1081,10 @@ function refreshInvalidationLinesInternal() {
 // allCandles zusammen (siehe usePriceChartClaudeAnnotations.js für die eigentliche Zeichenlogik).
 function refreshClaudeAnnotationsInternal() {
   refreshClaudeAnnotations({
-    annotations: props.claudeAnnotations,
+    // Die laufende Messung hängt nur zum Zeichnen mit dran (Philip 2026-09-23: "momentan ist es
+    // unmöglich genau 6 Pips zu zeichnen, ich sehe die Pip-Anzahl erst nach dem zweiten Klick") —
+    // dieselbe Darstellung wie die fertige Messung, nur noch nicht gespeichert.
+    annotations: measurePreview ? [...props.claudeAnnotations, measurePreview] : props.claudeAnnotations,
     annotationsDate: props.claudeAnnotationsDate,
     candles: clipReplay(allCandles),
   });
@@ -1889,19 +1891,26 @@ onMounted(() => {
   createLiquidity(candleSeries);
   createDailyPivots(candleSeries);
 
-  // Mess-Modus (Philip 2026-09-23): zwei freie Klicks -> Strecke. param.time fehlt, sobald rechts
-  // neben der letzten Kerze geklickt wird, deshalb der coordinateToTime-Fallback.
+  // Mess-Modus (Philip 2026-09-23): zwei freie Klicks -> Strecke. Klick und Live-Vorschau gehen
+  // durch dieselbe Umrechnung, damit die Vorschau exakt das zeigt, was der Klick dann festhält.
+  function measurePointAt(x, y) {
+    const price = candleSeries.coordinateToPrice(y);
+    const time = chart.timeScale().coordinateToTime(x);
+    return price == null || time == null ? null : { time, price };
+  }
+
   function measureClick(param) {
-    const price = candleSeries.coordinateToPrice(param.point.y);
-    const time = param.time ?? chart.timeScale().coordinateToTime(param.point.x);
-    if (price == null || time == null) return;
+    const point = measurePointAt(param.point.x, param.point.y);
+    if (!point) return;
     if (!measureStartPoint) {
-      measureStartPoint = { time, price };
-      emit("measure-start", measureStartPoint);
+      measureStartPoint = point;
       return;
     }
-    emit("measure-done", { from: measureStartPoint, to: { time, price } });
+    emit("measure-done", { from: measureStartPoint, to: point });
     measureStartPoint = null;
+    // Vorschau sofort weg, statt bis zum Rückkehren der gespeicherten Zeile stehenzubleiben.
+    measurePreview = null;
+    refreshClaudeAnnotationsInternal();
   }
 
   chart.subscribeClick((param) => {
@@ -2005,6 +2014,11 @@ onMounted(() => {
     const y = event.clientY - rect.top;
     if (props.measureModeActive) {
       chartContainerRef.value.style.cursor = "crosshair";
+      if (measureStartPoint) {
+        const point = measurePointAt(x, y);
+        measurePreview = point ? measureDrawing(measureStartPoint, point).annotations[0] : null;
+        refreshClaudeAnnotationsInternal();
+      }
       return;
     }
     if (props.tradeModeActive) {
@@ -2222,6 +2236,8 @@ watch(
   (active) => {
     if (!active) {
       measureStartPoint = null;
+      measurePreview = null;
+      refreshClaudeAnnotationsInternal();
       if (chartContainerRef.value) chartContainerRef.value.style.cursor = "";
     }
   },

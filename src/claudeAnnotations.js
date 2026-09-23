@@ -14,7 +14,7 @@
 // nicht möglich, die kennen sich gegenseitig nicht.
 import { LineStyle } from "lightweight-charts";
 import { snapToBarTime } from "./chartTimeUtils.js";
-import { berlinDayRangeUtcMs } from "./dataExport.js";
+import { berlinDayRangeUtcMs } from "./berlinTime.js";
 
 // Sehr auffällige, sonst im Chart ungenutzte Akzentfarbe (Philip: "in einer sehr auffälligen
 // Farbe dargestellt") — bewusst NICHT über chartColors.js konfigurierbar wie die übrigen

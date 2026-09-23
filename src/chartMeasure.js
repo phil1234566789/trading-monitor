@@ -3,8 +3,9 @@
 // Claude-Notiz-Zeile (claude_annotations, type "line") — die kann schon zwei Punkte + Label,
 // wird gerendert, ist einzeln aus-/einblendbar und löschbar, und landet im Debug-Snapshot,
 // damit beim Debuggen sichtbar ist, wo gemessen wurde.
+import { ref } from "vue";
 import { toPips } from "./pipConfig.js";
-import { formatDatedTime } from "./dataExport.js";
+import { formatDatedTime } from "./berlinTime.js";
 
 // Sonst im Chart ungenutztes Türkis — klar unterscheidbar von ANNOTATION_COLOR (Claudes Pink),
 // damit eine eigene Messung im Chart nicht wie eine Claude-Notiz aussieht.
@@ -33,3 +34,8 @@ export function measureDrawing(from, to) {
     ],
   };
 }
+
+// Modus-Zustand global (Muster wie tradingAccounts.js) — der Umschalter sitzt in der Statusleiste
+// (App.vue, neben "Claude-Notizen"), ausgewertet wird er im Chart (Dashboard.vue -> PriceChart.vue).
+// Bewusst nicht persistiert: ein Reload soll nie mitten im Mess-Modus starten.
+export const measureModeActive = ref(false);

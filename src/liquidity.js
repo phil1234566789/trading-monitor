@@ -11,7 +11,7 @@ import { classifyAge } from "./ageTier";
 import { drawIconLabel } from "./chartIconLabel.js";
 // Reine Fraktal-Erkennung seit Chat 2026-07-31 nach liquidityDetection.js ausgelagert (dort auch
 // die Begründung) — hier nur re-exportiert, damit sich an der öffentlichen API dieser Datei nichts
-// ändert (PriceChart.vue/dataExport.js importieren weiterhin von hier).
+// ändert (PriceChart.vue importiert weiterhin von hier).
 import {
   LIQUIDITY_FRACTAL_PERIOD,
   LIQUIDITY_MAX_RELEVANT,

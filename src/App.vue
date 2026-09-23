@@ -4,10 +4,9 @@ import { useStatusBar } from "./composables/useStatusBar.js";
 import { useHttpActivity } from "./composables/useHttpActivity.js";
 import { useClaudeAnnotations } from "./composables/useClaudeAnnotations.js";
 import HttpErrorBanners from "./components/HttpErrorBanners.vue";
-import DataExportModal from "./components/DataExportModal.vue";
 import ClaudeAnnotationsModal from "./components/ClaudeAnnotationsModal.vue";
+import { measureModeActive } from "./chartMeasure.js";
 
-const showDataExport = ref(false);
 const showClaudeAnnotationsModal = ref(false);
 // Persistiert in Supabase (siehe useClaudeAnnotations.js/claudeAnnotationsStore.js) — hier nur der
 // Sichtbarkeits-Toggle nötig, die Liste selbst verwaltet ClaudeAnnotationsModal.vue direkt über
@@ -60,7 +59,14 @@ const lastUpdateText = computed(() =>
         <RouterLink to="/trading-flow" exact-active-class="active">Ablauf</RouterLink>
       </nav>
       <span class="last-update">{{ lastUpdateText }}</span>
-      <button class="data-export-btn" @click="showDataExport = true">📊 Daten-Export</button>
+      <button
+        class="measure-btn"
+        :class="{ active: measureModeActive }"
+        title="Messen: zwei Punkte im Chart anklicken — die Strecke bleibt mit ihrer Pip-Zahl stehen, während des Ziehens wird sie live mitgerechnet"
+        @click="measureModeActive = !measureModeActive"
+      >
+        📏 Messen
+      </button>
       <div class="toggle-group">
         <button
           class="claude-annotations-btn"
@@ -76,7 +82,6 @@ const lastUpdateText = computed(() =>
       </div>
     </header>
     <HttpErrorBanners />
-    <DataExportModal v-if="showDataExport" @close="showDataExport = false" />
     <ClaudeAnnotationsModal v-if="showClaudeAnnotationsModal" @close="showClaudeAnnotationsModal = false" />
     <RouterView />
   </div>
@@ -126,7 +131,7 @@ const lastUpdateText = computed(() =>
   color: #787b86;
 }
 
-.data-export-btn {
+.measure-btn {
   background: transparent;
   border: 1px solid #2a2e39;
   color: #787b86;
@@ -136,9 +141,15 @@ const lastUpdateText = computed(() =>
   font-size: 12px;
 }
 
-.data-export-btn:hover {
+.measure-btn:hover {
   border-color: #2962ff;
   color: #d1d4dc;
+}
+
+.measure-btn.active {
+  background: #2962ff;
+  border-color: #2962ff;
+  color: #fff;
 }
 
 .toggle-group {

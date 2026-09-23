@@ -36,7 +36,7 @@ export function earliestRelevantTime(toggles, times) {
 }
 
 // Baut den kompletten Snapshot fürs Panel zusammen — Gating über selectActiveMetadataSections/
-// earliestRelevantTime oben, plus die Zusammenstellung von context/structure/candles/dataExport.
+// earliestRelevantTime oben, plus die Zusammenstellung von context/structure/candles.
 // ctx = plain object statt Vue-Refs/Props direkt (siehe PriceChart.vue:
 // buildActiveMetadataSnapshotInternal für die Übersetzung), macht die Funktion hier unabhängig
 // testbar. ctx.candles ist bereits das clipReplay-gefilterte allCandles-Fenster.
@@ -83,37 +83,27 @@ export function buildActiveMetadataSnapshot(ctx) {
   if ((ctx.claudeAnnotations ?? []).length > 0) {
     sections.claudeAnnotations = ctx.claudeAnnotations;
   }
-  // Zuletzt generierter Daten-Export (siehe DataExportModal.vue/useLastDataExport.js, Chat
-  // 2026-07-28) — ungated, unabhängig vom Symbol/Timeframe des gerade offenen Charts, da der
-  // Export sein eigenes Asset+Datum mitbringt. undefined/null, solange in dieser Session noch
-  // keiner generiert wurde.
-  if (ctx.lastDataExport != null) {
-    sections.dataExport = ctx.lastDataExport;
-  }
   return sections;
 }
 
-// Panel-"leer"-Zustand — dieselben Toggles wie oben, plus ob überhaupt schon OB-Zonen (ungated)
-// oder ein Daten-Export vorliegen.
+// Panel-"leer"-Zustand — dieselben Toggles wie oben, plus ob überhaupt schon OB-Zonen vorliegen
+// (ungated).
 export function hasActiveMetadata(snapshot, toggles) {
   return (
     snapshot.orderBlocks.length > 0 ||
     toggles.showLiquidity ||
     toggles.showTradeSetups ||
     toggles.showTradeSetupCockpit ||
-    toggles.showRanges ||
-    snapshot.dataExport != null
+    toggles.showRanges
   );
 }
 
 // Einziger side-effecting Export hier (Rest der Datei bewusst pure Funktionen, siehe oben) — lokal
 // in .debug/metadata.json schreiben (Dev-only, siehe vite.config.js), aber NUR die eigene Sektion.
 // Der Dev-Server merged serverseitig in die bestehende Datei, statt sie komplett zu überschreiben
-// (Chat 2026-07-27) — zwei unabhängige Schreiber (PriceChart.vue: Autosave alle 30s unter "chart",
-// DataExportModal.vue: bei jedem "Generieren" unter "dataExport") sollen sich nicht
-// gegenseitig wegräumen, Philip will beide gleichzeitig zum Vergleichen nachlesen können (Bug-
-// Report: Daten-Export zeigte einen anderen Structure-Trend als der Chart selbst). Schlägt der
-// POST fehl (z.B. Production-Build ohne den Dev-Endpoint), still ignorieren.
+// (Chat 2026-07-27), damit mehrere unabhängige Schreiber sich nicht gegenseitig wegräumen —
+// aktuell nur PriceChart.vue (Autosave alle 30s unter "chart"). Schlägt der POST fehl (z.B.
+// Production-Build ohne den Dev-Endpoint), still ignorieren.
 export async function saveDebugMetadataSection(section, data) {
   try {
     await fetch("/__debug-metadata", {

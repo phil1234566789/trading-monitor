@@ -6,8 +6,8 @@
 
 const RECENT_SWEEP_COUNT = 2; // siehe markTopKRecentTouches in liquidity.pine
 
-// Exportiert (vorher lokale Konstanten in PriceChart.vue) — auch von dataExport.js gebraucht
-// (LQ-Levels im Daten-Export), eine gemeinsame Quelle statt zweier Kopien, die auseinanderlaufen
+// Exportiert (vorher lokale Konstanten in PriceChart.vue) — eine gemeinsame Quelle für alle
+// LQ-Level-Nutzer statt mehrerer Kopien, die auseinanderlaufen
 // könnten.
 export const LIQUIDITY_FRACTAL_PERIOD = 5; // Williams-Fractal-Periode, siehe fractals.pine — NICHT anfassen (LQ-Sweeps), siehe Chat
 export const LIQUIDITY_MAX_RELEVANT = 10; // je Richtung, siehe liqMaxRelevant in inputs.pine

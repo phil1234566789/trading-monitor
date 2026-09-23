@@ -4,7 +4,7 @@
 // alte, flache Format — dann genau eine Gruppe mit title: null).
 import { describe, expect, it } from "vitest";
 import { parseAnnotations, resolveLabelPlacements, annotationAnchorPoint } from "../src/claudeAnnotations.js";
-import { berlinDayRangeUtcMs } from "../src/dataExport.js";
+import { berlinDayRangeUtcMs } from "../src/berlinTime.js";
 
 // Minimal-Fake von chart/series, nur die zwei Methoden, die annotationAnchorPoint braucht — Preis
 // wird 1:1 (*100) auf einen Koordinatenwert abgebildet, Zeit per Identität durchgereicht (die

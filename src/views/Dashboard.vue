@@ -62,7 +62,7 @@ import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
 import { useClaudeAnnotations } from "../composables/useClaudeAnnotations.js";
-import { measureDrawing } from "../chartMeasure.js";
+import { measureDrawing, measureModeActive } from "../chartMeasure.js";
 
 const SYMBOLS = ["GBPUSD", "EURUSD"];
 
@@ -193,8 +193,8 @@ const ranges2LookbackDays = computed({
 // - "pivot": automatisch der letzte persistierte 1D-Periode-4-Struktur-Pivot dieses Instruments
 //   (daily_structure_pivots, siehe latestDailyPivotStructureStartTime weiter unten) — Default.
 // rangesFixedStartActive/-Time bleiben als die EFFEKTIVEN, tatsächlich an PriceChart.vue
-// durchgereichten Werte bestehen (siehe Watcher weiter unten, bei dbDailyPivots) — DataExportModal.vue
-// liest via useLocalStorageRef's Key-Cache dieselbe Instanz und soll denselben effektiven Stand
+// durchgereichten Werte bestehen (siehe Watcher weiter unten, bei dbDailyPivots) — wer sonst noch
+// via useLocalStorageRef.s Key-Cache dieselbe Instanz liest, soll denselben effektiven Stand
 // sehen wie der Chart, nicht nur den "date"-Modus-Rohwert. rangesFixedStartDateInput ist die vom
 // Modus UNABHÄNGIGE, im "Datum"-Modus eingegebene Roh-Zeit, damit ein Moduswechsel den zuletzt
 // eingegebenen Wert nicht überschreibt.
@@ -287,11 +287,6 @@ const showStyleModal = ref(false);
 // Buttons einbauen") — bewusst NICHT persistiert (useLocalStorageRef), ein Reload soll immer im
 // harmlosen Navigieren-Modus starten, nicht mitten im Trade-Modus von der letzten Session.
 const tradeModeActive = ref(false);
-// Mess-Modus (Philip 2026-09-23, erstes Zeichen-Werkzeug) — dritter Zustand des Modus-Umschalters
-// neben Navigieren/Trade-Modus, ebenfalls bewusst nicht persistiert. measurePendingPoint hält den
-// bereits gesetzten Startpunkt, solange der zweite Klick fehlt (nur für den Hinweis in der Leiste).
-const measureModeActive = ref(false);
-const measurePendingPoint = ref(null);
 const selectedSetupForTrade = ref(null);
 // Bearbeiten-Panel (Chat 2026-07-28: "lass die Entity 'trades' CRUD Funktionalität weitermachen",
 // ersetzt die vorherigen Inline-Buttons in TradesTable.vue) — nur die Id gemerkt, nicht der Trade
@@ -435,16 +430,12 @@ watch(tradeModeActive, (active) => {
 
 // Messung (Philip 2026-09-23): zwei Chart-Klicks -> eine persistierte Claude-Notiz-Zeile mit
 // Pip-Label (siehe chartMeasure.js), also automatisch im Chart sichtbar, einzeln aus-/einblendbar
-// und löschbar wie jede andere Notiz — und im Debug-Snapshot nachlesbar.
+// und löschbar wie jede andere Notiz — und im Debug-Snapshot nachlesbar. Der Umschalter selbst
+// sitzt in der Statusleiste (App.vue), deshalb der geteilte Modul-Ref statt eines lokalen.
 watch(measureModeActive, (active) => {
-  measurePendingPoint.value = null;
   if (active) tradeModeActive.value = false;
 });
-function onMeasureStart(point) {
-  measurePendingPoint.value = point;
-}
 async function onMeasureDone({ from, to }) {
-  measurePendingPoint.value = null;
   const { title, annotations } = measureDrawing(from, to);
   await addClaudeAnnotationDrawing(annotations, title);
 }
@@ -2035,16 +2026,7 @@ watch(selectedTradingAccountId, () => {
         <button :class="{ active: tradeModeActive }" title="Auf ein Trade-Setup klicken, um es als Trade zu übernehmen" @click="tradeModeActive = true">
           🎯 Trade-Modus
         </button>
-        <button
-          :class="{ active: measureModeActive }"
-          title="Zwei Punkte im Chart anklicken — die Strecke bleibt mit ihrer Pip-Zahl im Chart stehen (unter 'Claude-Notizen' ein-/ausblendbar und löschbar)"
-          @click="measureModeActive = !measureModeActive"
-        >
-          📏 Messen
-        </button>
-        <span v-if="measureModeActive" class="trade-link-armed">
-          {{ measurePendingPoint ? '📏 Startpunkt gesetzt — jetzt den Endpunkt anklicken' : '📏 ersten Punkt anklicken' }}
-        </span>
+        <span v-if="measureModeActive" class="trade-link-armed">📏 Mess-Modus aktiv (Schalter in der Kopfleiste)</span>
         <span v-if="targetAddTrade" class="trade-link-armed">🎯 nächster Klick auf Pivot/OB fügt Trade #{{ targetAddTrade.id }} ein Target hinzu</span>
         <span v-if="confirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB/Divergenz fügt Trade #{{ confirmationAddTrade.id }} eine Bestätigung hinzu</span>
         <span v-if="rangeConfirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB/Divergenz fügt Dealing Range #{{ rangeConfirmationAddTrade.dealingRangeId }} eine Bestätigung hinzu</span>
