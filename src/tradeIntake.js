@@ -16,8 +16,8 @@ export function directionForSetup(setup) {
 
 // Seit dem Idee/Ausführung-Split (2026-07-31) landen die zwei Werte an verschiedenen Stellen:
 // invalidation auf der dealing_range (gilt für die ganze Idee), setupEntry als Bestätigung auf der
-// jeweiligen trade_position (siehe createTradeFromSetup). Re-Export, damit die bestehenden
-// Importeure (TakeTradeModal.vue) unverändert bleiben — die Geometrie selbst liegt in
+// jeweiligen trade_position. Re-Export, damit die bestehenden
+// Importeure unverändert bleiben — die Geometrie selbst liegt in
 // tradeSetup.js, siehe dort.
 export { deriveSetupEntryInvalidation };
 
@@ -127,76 +127,7 @@ export async function fetchTradeSetupForCockpit(tradeSetupId) {
   return tradeSetupFromRow(data);
 }
 
-// entryPrice/stopLoss optional (Chat 2026-07-27: "kann sein, dass mein Trade nicht abgeholt wird
-// ... es gibt ein setupEntry, aber kein entryPrice") — outcome bleibt dann null (weder offen noch
-// gewonnen/verloren, siehe trade_positions.outcome-Check: NULL ist erlaubt), erst mit echtem
-// entryPrice wird der Trade als 'open' geführt.
-// tradingAccountId (Chat 2026-07-30): das im Trades-Panel gerade ausgewählte Konto — ein neu
-// übernommener Trade landet direkt in dessen Konto, statt erst nachträglich im Bearbeiten-Modal
-// zugeordnet werden zu müssen. Bewusst optional (default null), damit ein Aufruf ohne Konten-
-// Kontext (z.B. vor dem ersten fetchAccounts()) nicht hart fehlschlägt.
-//
-// Legt IMMER beides zusammen an: die dealing_ranges-Idee (instrument/direction/invalidation/
-// trade_setup_id — teilt sich künftige Re-Entries) und ihre erste trade_positions-Ausführung.
-// setupEntry (Entry-Kriterium DIESER Ausführung) landet nicht mehr als eigenes Feld, sondern als
-// ganz normale Bestätigung (kind='ob') auf der neuen Position — Philip 2026-07-31: "die
-// confirmations und das setup für den Entry sind so ziemlich das gleiche".
-export async function createTradeFromSetup({ instrument, setup, entryPrice = null, stopLoss = null, reasoning = null, tradingAccountId = null }) {
-  const direction = directionForSetup(setup);
-  const { setupEntry, invalidation } = deriveSetupEntryInvalidation(setup);
-  const tradeSetupId = await findMatchingTradeSetupId(instrument, direction, setup.obStartTime);
-
-  const { data: range, error: rangeError } = await supabase
-    .from("dealing_ranges")
-    .insert({ instrument, direction, invalidation, trade_setup_id: tradeSetupId })
-    .select()
-    .single();
-  if (rangeError) {
-    console.error("Dealing-Range aus Setup anlegen fehlgeschlagen:", rangeError);
-    return { ok: false, error: rangeError };
-  }
-
-  const { data: position, error } = await supabase
-    .from("trade_positions")
-    .insert({
-      dealing_range_id: range.id,
-      source: "live",
-      triggered_at: new Date().toISOString(),
-      entry_price: entryPrice,
-      stop_loss: stopLoss,
-      outcome: entryPrice != null ? "open" : null,
-      reasoning,
-      trading_account_id: tradingAccountId,
-    })
-    .select()
-    .single();
-  if (error) {
-    console.error("Trade-Ausführung anlegen fehlgeschlagen:", error);
-    return { ok: false, error };
-  }
-
-  if (setupEntry != null) {
-    // Alle Setup-OBs sind laut detectSetupObs() immer Timeframe "5m" -> ob_zones.timeframe '5M'
-    // (dieselbe Konvention wie poi-watcher beim Persistieren neuer Trade-Setups).
-    const obZoneId = await findOrCreateObZoneId({
-      instrument,
-      timeframe: "5M",
-      direction,
-      top: setup.obTop,
-      bottom: setup.obBottom,
-      startTimeSec: setup.obStartTime,
-    });
-    const { error: confirmError } = await supabase
-      .from("trade_evidence")
-      .insert({ trade_position_id: position.id, price: setupEntry, kind: "ob", category: "confirmation", ob_zone_id: obZoneId });
-    if (confirmError) console.error("Entry-Bestätigung anlegen fehlgeschlagen:", confirmError);
-  }
-
-  return { ok: true, dealingRange: range, position };
-}
-
-// Nur die Idee, OHNE gleichzeitig eine trade_positions-Ausführung (anders als createTradeFromSetup
-// oben) — für die TSC (Chat 2026-08-26: "ich nehme oft auch manuell über den TSC Dealing Ranges
+// Nur die Idee, OHNE gleichzeitig eine trade_positions-Ausführung — für die TSC (Chat 2026-08-26: "ich nehme oft auch manuell über den TSC Dealing Ranges
 // an"). direction kommt dort NICHT von einem erkannten Setup, sondern von der ersten OB-Bestätigung,
 // die der Nutzer im Trade-Modus anklickt (Philip: "das entscheidet eine Bestätigung, welche einen
 // OB enthält") — siehe Dashboard.vue: onSelectTarget, tscBootstrapArmed-Zweig.
@@ -240,10 +171,9 @@ export async function deleteDealingRange(dealingRangeId) {
   return true;
 }
 
-// "In die Trades-Liste überführen" (Chat 2026-08-27, TSC) — Gegenstück zu createTradeFromSetup,
-// aber für eine BEREITS bestehende dealing_ranges-Zeile (die TSC hat sie schon vor dem Klick
-// angelegt, siehe createDealingRange oben) statt beides auf einmal anzulegen. Leere Ausführung
-// (entry_price/stop_loss null, outcome null wie bei createTradeFromSetup ohne entryPrice) — Philip
+// "In die Trades-Liste überführen" (Chat 2026-08-27, TSC) — für eine BEREITS bestehende
+// dealing_ranges-Zeile (die TSC hat sie schon vor dem Klick angelegt, siehe createDealingRange
+// oben). Leere Ausführung (entry_price/stop_loss null, outcome null) — Philip
 // füllt Entry/Stop-Loss/etc. danach ganz normal im sich öffnenden Trade-Edit-Modal aus, statt hier
 // ein zweites Formular zu duplizieren. Erlaubt bewusst mehrere Aufrufe für dieselbe Range (Re-Entry,
 // siehe CLAUDE.md: "1-n untergeordnete Ausführungen").

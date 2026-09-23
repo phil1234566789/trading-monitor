@@ -7,7 +7,6 @@ import TradeStats from "../components/TradeStats.vue";
 import StyleModal from "../components/StyleModal.vue";
 import SessionsModal from "../components/SessionsModal.vue";
 import NewsModal from "../components/NewsModal.vue";
-import TakeTradeModal from "../components/TakeTradeModal.vue";
 import TradeEditModal from "../components/TradeEditModal.vue";
 import TradingAccountSwitcher from "../components/TradingAccountSwitcher.vue";
 import MetadataPanel from "../components/MetadataPanel.vue";
@@ -293,7 +292,6 @@ const showStyleModal = ref(false);
 // Buttons einbauen") — bewusst NICHT persistiert (useLocalStorageRef), ein Reload soll immer im
 // harmlosen Navigieren-Modus starten, nicht mitten im Trade-Modus von der letzten Session.
 const tradeModeActive = computed(() => chartMode.value === "trade");
-const selectedSetupForTrade = ref(null);
 // Bearbeiten-Panel (Chat 2026-07-28: "lass die Entity 'trades' CRUD Funktionalität weitermachen",
 // ersetzt die vorherigen Inline-Buttons in TradesTable.vue) — nur die Id gemerkt, nicht der Trade
 // selbst, damit editingTrade unten immer den LIVE-Stand aus der trades-Liste zeigt (z.B. sofort
@@ -413,6 +411,12 @@ watchEffect(() => {
 // PriceChart.vue: target-mode-active — irgendein Arm-Zustand "scharf" (egal welcher), schaltet den
 // Chart-Klick-Handler von Pan/Zoom auf "nimmt den nächsten Treffer entgegen" um.
 const anyArmStateActive = computed(() => armedAction.value != null);
+// Erledigte Aktion (oder abgeräumte) -> zurück auf Navigieren. Seit dem Wegfall des
+// Trade-Modus-Knopfes gibt es in diesem Modus ohne scharfe Aktion nichts mehr zu klicken; vorher
+// blieb der Chart danach still in einem Modus stehen, der nur noch anders aussah.
+watch(armedAction, (armed) => {
+  if (!armed && chartMode.value === "trade") chartMode.value = "navigate";
+});
 // TSC-Sektionsname statt roher Arm-Key — die TSC kennt nur ihre eigenen fünf Sektionen, und der
 // Bootstrap-Fall gehört dort an denselben Knopf wie eine normale Bestätigung.
 const TSC_SECTION_OF_ARM = {
@@ -844,8 +848,7 @@ async function onSelectSetupConfirmations(setup) {
   }
   // Übernimmt auch die Setup-Verknüpfung selbst (trade_setup_id + die davon abgeleitete
   // Invalidierung) — ersetzt die frühere manuelle "🔗 Setup verknüpfen"-Aktion (Chat 2026-07-31,
-  // zweite Runde: "kann weg, da ... die Bestätigungen fügen sich von selbst hinzu"), same Ableitung
-  // wie createTradeFromSetup für einen brandneuen Trade.
+  // zweite Runde: "kann weg, da ... die Bestätigungen fügen sich von selbst hinzu").
   await linkTradeToSetup(dealingRangeId, currentSymbol.value, setup);
 
   if (bootstrapping || trade?.isTsc) {
@@ -854,10 +857,6 @@ async function onSelectSetupConfirmations(setup) {
     refreshTrades();
   }
 }
-async function onSelectSetup(setup) {
-  selectedSetupForTrade.value = setup;
-}
-
 // Klick auf eine Zeile in TradesTable.vue: springt im Chart hin (siehe jumpToTrade, Chat
 // 2026-07-27, erste Runde) UND fokussiert den TSC auf das verknüpfte Trade-Setup, falls
 // vorhanden — kein trade_setup_id (älterer/manueller Trade ohne Verknüpfung) räumt einen evtl.
@@ -2120,13 +2119,6 @@ watch(selectedTradingAccountId, () => {
   <StyleModal v-if="showStyleModal" @close="showStyleModal = false" />
   <SessionsModal v-if="showSessionsModal" :instrument="currentSymbol" @close="showSessionsModal = false" />
   <NewsModal v-if="showNewsModal" @close="showNewsModal = false" />
-  <TakeTradeModal
-    v-if="selectedSetupForTrade"
-    :instrument="currentSymbol"
-    :setup="selectedSetupForTrade"
-    @close="selectedSetupForTrade = null"
-    @saved="refreshTrades"
-  />
   <TradeEditModal
     v-if="editingTrade"
     :trade="editingTrade"
@@ -2235,7 +2227,6 @@ watch(selectedTradingAccountId, () => {
     @close-ranges-metadata="showRangesMetadata = false"
     @close-debug-metadata="showDebugMetadata = false"
     @close-rsi-divergence-stats="showRsiDivergenceStats = false"
-    @select-setup="onSelectSetup"
     @select-target="onSelectTarget"
     @select-setup-confirmations="onSelectSetupConfirmations"
     @measure-start="onMeasureStart"

@@ -139,8 +139,8 @@ GO) from a **Confluence** ("Zusatzargument", adds confidence but isn't a GO on i
 `trading` repo `trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-
 range-go-bekommt` for the full definition). `TradeSetupCockpit.vue` and `TradeEditModal.vue`
 (range- and position-level) render both as separate sections, sharing the same
-click-in-chart-while-in-Trade-Modus mechanism. `createTradeFromSetup` (`src/tradeIntake.js`)
-inserts the M5-OB-derived entry price as a `kind='ob'` confirmation on the new position.
+click-in-chart mechanism: an add button arms the next chart click (`armChartClick` in
+`Dashboard.vue`), and clicking it again disarms.
 
 `src/trades.js`'s `fetchTrades` still returns one flat row per **position** (not per dealing
 range) with the parent range's fields embedded (`instrument`/`direction`/`invalidation`/

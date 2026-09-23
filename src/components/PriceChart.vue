@@ -326,7 +326,6 @@ const emit = defineEmits([
   "close-ranges-metadata",
   "close-debug-metadata",
   "close-rsi-divergence-stats",
-  "select-setup",
   "select-target",
   "select-setup-confirmations",
   "pin-context-menu",
@@ -1034,8 +1033,7 @@ function refreshInvalidationLinesInternal() {
 
   const byRange = new Map();
   for (const t of tradesVisibleForCandles(props.trades, candles)) {
-    // entryPrice == null heißt "nie tatsächlich gefüllt" (siehe tradeIntake.js:
-    // createTradeFromSetup-Kommentar "es gibt ein setupEntry, aber kein entryPrice") — ohne
+    // entryPrice == null heißt "nie tatsächlich gefüllt" (ein Trade, der nicht abgeholt wurde) — ohne
     // echten Entry gibt es auch keinen "ersten Entry", ab dem die Linie laut Konzept oben
     // beginnen soll. Ohne diesen Filter zählte so ein Trade trotzdem als "still open" (kein
     // exitTime) und ließ die Linie bis zur letzten geladenen Kerze wachsen — Bug-Report Philip
@@ -1956,17 +1954,10 @@ onMounted(() => {
       }
       const target = findClickedTarget(param);
       if (target) emit("select-target", target);
-      return;
     }
-    // Trade-Modus (Chat 2026-07-27): Klick auf eine Trade-Setup-OB-Box -> sofort im TSC fokussieren
-    // (unmittelbares Feedback, noch bevor irgendein Formular offen ist) und ans Dashboard
-    // durchreichen, das das Übernahme-Formular öffnet.
-    const setup = findClickedSetup(param);
-    if (setup) {
-      focusedTradeSetup = setup;
-      refreshCockpitInternal();
-      emit("select-setup", setup);
-    }
+    // Ein Trade-Modus OHNE scharfe Aktion gibt es nicht mehr (Dashboard.vue: armChartClick setzt
+    // beides zusammen), deshalb auch kein Zweig mehr dahinter — der frühere "OB-Box anklicken ->
+    // Trade-übernehmen-Dialog" ist am 23.09.2026 entfallen, alles läuft über die TSC.
   });
 
   // Kandidaten-Aufbau/Dedupe + der Boolean-Check leben in priceChartHitTest.js (samt Bug-Historie
@@ -2023,14 +2014,13 @@ onMounted(() => {
       }
       return;
     }
-    if (props.tradeModeActive) {
+    if (props.targetModeActive) {
       const point = { point: { x, y } };
-      const hit = props.targetModeActive
-        ? ((props.confluenceModeActive || props.antiConfluenceModeActive) && findClickedFibLevel(point)) ||
-          ((props.confirmationModeActive || props.antiConfluenceModeActive) && findClickedDivergence(point)) ||
-          (props.confirmationModeActive && findClickedSetup(point)) ||
-          findClickedTarget(point)
-        : findClickedSetup(point);
+      const hit =
+        ((props.confluenceModeActive || props.antiConfluenceModeActive) && findClickedFibLevel(point)) ||
+        ((props.confirmationModeActive || props.antiConfluenceModeActive) && findClickedDivergence(point)) ||
+        (props.confirmationModeActive && findClickedSetup(point)) ||
+        findClickedTarget(point);
       chartContainerRef.value.style.cursor = hit ? "pointer" : "";
       return;
     }
