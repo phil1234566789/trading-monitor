@@ -13,6 +13,7 @@ import MetadataPanel from "../components/MetadataPanel.vue";
 import ContextMenu from "../components/ContextMenu.vue";
 import PinAddPopup from "../components/PinAddPopup.vue";
 import PinPanel from "../components/PinPanel.vue";
+import ToggleButton from "../components/ui/ToggleButton.vue";
 import { selectedTradingAccountId, writableTradingAccountId } from "../tradingAccounts.js";
 import { TIMEFRAMES, barSecondsForTimeframeCi } from "../timeframes.js";
 import { fetchTrades, fetchDealingRangeCockpit, fetchActiveTscRangeId } from "../trades.js";
