@@ -1683,76 +1683,79 @@ watch(selectedTradingAccountId, () => {
 <template>
   <div class="toolbar">
     <div class="symbol-switcher">
-      <button
+      <ToggleButton
         v-for="sym in SYMBOLS"
         :key="sym"
         :class="{ active: sym === currentSymbol }"
         @click="currentSymbol = sym"
       >
         {{ sym }}
-      </button>
+      </ToggleButton>
     </div>
     <div class="timeframe-switcher">
-      <button
+      <ToggleButton
         v-for="tf in TIMEFRAMES"
         :key="tf.label"
         :class="{ active: tf.label === currentBar }"
         @click="currentBar = tf.label"
       >
         {{ tf.label }}
-      </button>
+      </ToggleButton>
     </div>
     <div class="drawing-toggles">
       <div class="toggle-group">
-        <button :class="{ active: indikatorenActive }" @click="toggleIndikatoren">
+        <ToggleButton :class="{ active: indikatorenActive }" @click="toggleIndikatoren">
           Indikatoren
-        </button>
-        <button
-          class="toggle-caret"
+        </ToggleButton>
+        <ToggleButton
+          variant="caret"
           :class="{ open: indikatorenMenuOpen }"
           title="Untermenü"
           @click="indikatorenMenuOpen = !indikatorenMenuOpen"
         >
           ▾
-        </button>
+        </ToggleButton>
         <div v-if="indikatorenMenuOpen" class="toggle-dropdown indikatoren-dropdown">
-          <button
+          <ToggleButton
+            variant="menu"
             :class="{ active: showEma }"
             :disabled="emaDisabled"
             :title="emaDisabled ? 'EMA nur für M5' : ''"
             @click="showEma = !showEma"
           >
             EMA
-          </button>
+          </ToggleButton>
           <div class="toggle-group">
-            <button :class="{ active: showRsi }" @click="showRsi = !showRsi">
+            <ToggleButton variant="menu" :class="{ active: showRsi }" @click="showRsi = !showRsi">
               RSI
-            </button>
-            <button
-              class="toggle-caret"
+            </ToggleButton>
+            <ToggleButton
+              variant="caret"
               :class="{ open: rsiMenuOpen }"
               title="Untermenü"
               @click="rsiMenuOpen = !rsiMenuOpen"
             >
               ▾
-            </button>
+            </ToggleButton>
             <div v-if="rsiMenuOpen" class="toggle-dropdown">
-              <button
+              <ToggleButton
+                variant="menu"
                 :class="{ active: showRsiDivergence }"
                 :disabled="rsiDivergenceDisabled"
                 :title="rsiDivergenceDisabled ? 'Braucht RSI' : ''"
                 @click="showRsiDivergence = !showRsiDivergence"
               >
                 Divergenz
-              </button>
-              <button
+              </ToggleButton>
+              <ToggleButton
+                variant="menu"
                 :class="{ active: showRsiDivergenceHistory }"
                 :disabled="rsiDivergenceDisabled"
                 :title="rsiDivergenceDisabled ? 'Braucht RSI' : ''"
                 @click="showRsiDivergenceHistory = !showRsiDivergenceHistory"
               >
                 Divergenz (Historie)
-              </button>
+              </ToggleButton>
               <label class="ranges-lookback-field">
                 Historie
                 <input
@@ -1767,121 +1770,123 @@ watch(selectedTradingAccountId, () => {
 
               <div class="toggle-dropdown-divider"></div>
 
-              <button
+              <ToggleButton
+                variant="menu"
                 :class="{ active: showRsiDivergenceOutcomeDebug }"
                 :disabled="rsiDivergenceDisabled"
                 :title="rsiDivergenceDisabled ? 'Braucht RSI' : 'Debug: zeichnet fuer jede sichtbare Divergenz die Struktur-Marke (gruen=hit/rot=miss/grau=pending)'"
                 @click="showRsiDivergenceOutcomeDebug = !showRsiDivergenceOutcomeDebug"
               >
                 Outcome-Debug
-              </button>
-              <button
+              </ToggleButton>
+              <ToggleButton
+                variant="menu"
                 :class="{ active: showRsiDivergenceStats }"
                 :disabled="rsiDivergenceDisabled"
                 :title="rsiDivergenceDisabled ? 'Braucht RSI' : 'Liste aller sichtbaren Divergenzen inkl. Statistik'"
                 @click="showRsiDivergenceStats = !showRsiDivergenceStats"
               >
                 Statistik
-              </button>
+              </ToggleButton>
             </div>
           </div>
 
           <div class="toggle-dropdown-divider"></div>
 
           <div class="toggle-group">
-            <button :class="{ active: showLiquidity }" @click="showLiquidity = !showLiquidity">
+            <ToggleButton variant="menu" :class="{ active: showLiquidity }" @click="showLiquidity = !showLiquidity">
               Liquidität
-            </button>
-            <button
-              class="toggle-caret"
+            </ToggleButton>
+            <ToggleButton
+              variant="caret"
               :class="{ open: liquidityMenuOpen }"
               title="Untermenü"
               @click="liquidityMenuOpen = !liquidityMenuOpen"
             >
               ▾
-            </button>
+            </ToggleButton>
             <div v-if="liquidityMenuOpen" class="toggle-dropdown">
-              <button :class="{ active: showSweptLiquidity }" @click="showSweptLiquidity = !showSweptLiquidity">
+              <ToggleButton variant="menu" :class="{ active: showSweptLiquidity }" @click="showSweptLiquidity = !showSweptLiquidity">
                 Liquidity-Sweeps
-              </button>
+              </ToggleButton>
             </div>
           </div>
 
           <div class="toggle-dropdown-divider"></div>
 
           <div class="toggle-group">
-            <button :class="{ active: obsActive }" @click="toggleObs">
+            <ToggleButton variant="menu" :class="{ active: obsActive }" @click="toggleObs">
               OBs
-            </button>
-            <button
-              class="toggle-caret"
+            </ToggleButton>
+            <ToggleButton
+              variant="caret"
               :class="{ open: obsMenuOpen }"
               title="Untermenü"
               @click="obsMenuOpen = !obsMenuOpen"
             >
               ▾
-            </button>
+            </ToggleButton>
             <!-- M5/1H/4H unabhängig an-/ausschaltbar (Chat 2026-07-30, Bug-Report Philip: "wenn ich
                  Indikatoren > OBs im M5 anhabe, werden mir ganz viele M5 OBs angezeigt" — vorher
                  folgten Forex-OBs immer nur dem gerade angezeigten Chart-Timeframe, nie mehrere
                  gleichzeitig, siehe PriceChart.vue: collectObsZones). -->
             <div v-if="obsMenuOpen" class="toggle-dropdown">
-              <button :class="{ active: showObsM5 }" @click="showObsM5 = !showObsM5">
+              <ToggleButton variant="menu" :class="{ active: showObsM5 }" @click="showObsM5 = !showObsM5">
                 M5
-              </button>
-              <button :class="{ active: showObs1h }" @click="showObs1h = !showObs1h">
+              </ToggleButton>
+              <ToggleButton variant="menu" :class="{ active: showObs1h }" @click="showObs1h = !showObs1h">
                 1H
-              </button>
-              <button :class="{ active: showObs4h }" @click="showObs4h = !showObs4h">
+              </ToggleButton>
+              <ToggleButton variant="menu" :class="{ active: showObs4h }" @click="showObs4h = !showObs4h">
                 4H
-              </button>
+              </ToggleButton>
 
               <div class="toggle-dropdown-divider"></div>
 
-              <button :class="{ active: showHistoricalObs }" @click="showHistoricalObs = !showHistoricalObs">
+              <ToggleButton variant="menu" :class="{ active: showHistoricalObs }" @click="showHistoricalObs = !showHistoricalObs">
                 Historische OBs
-              </button>
+              </ToggleButton>
             </div>
           </div>
         </div>
       </div>
 
       <div class="toggle-group">
-        <button :class="{ active: showTradeSetups }" @click="showTradeSetups = !showTradeSetups">
+        <ToggleButton :class="{ active: showTradeSetups }" @click="showTradeSetups = !showTradeSetups">
           Trades
-        </button>
-        <button
-          class="toggle-caret"
+        </ToggleButton>
+        <ToggleButton
+          variant="caret"
           :class="{ open: tradeSetupsMenuOpen }"
           title="Untermenü"
           @click="tradeSetupsMenuOpen = !tradeSetupsMenuOpen"
         >
           ▾
-        </button>
+        </ToggleButton>
         <div v-if="tradeSetupsMenuOpen" class="toggle-dropdown">
           <!-- Untermenü-Feinschalter: braucht den übergeordneten "Trades"-Toggle (showTradeSetups)
                zusätzlich an, um überhaupt was anzuzeigen (Bug-Report Philip 2026-07-28: "der
                übergeordnete Trades-Toggle soll Trades auch ausblenden, TSC ist einzige Ausnahme") —
                siehe PriceChart.vue: refreshTradeMarkersInternal/-TradeSetupLinksInternal/
                -TradeTargetLinksInternal, die auf BEIDE Props prüfen. -->
-          <button :class="{ active: showTrades }" @click="showTrades = !showTrades">
+          <ToggleButton variant="menu" :class="{ active: showTrades }" @click="showTrades = !showTrades">
             Trades
-          </button>
+          </ToggleButton>
 
           <div class="toggle-dropdown-divider"></div>
 
-          <button :class="{ active: showTradeSetupsLong }" @click="showTradeSetupsLong = !showTradeSetupsLong">
+          <ToggleButton variant="menu" :class="{ active: showTradeSetupsLong }" @click="showTradeSetupsLong = !showTradeSetupsLong">
             Long Setups
-          </button>
-          <button :class="{ active: showTradeSetupsShort }" @click="showTradeSetupsShort = !showTradeSetupsShort">
+          </ToggleButton>
+          <ToggleButton variant="menu" :class="{ active: showTradeSetupsShort }" @click="showTradeSetupsShort = !showTradeSetupsShort">
             Short Setups
-          </button>
-          <button :class="{ active: showRScale }" :title="rScaleHint" @click="showRScale = !showRScale">
+          </ToggleButton>
+          <ToggleButton variant="menu" :class="{ active: showRScale }" :title="rScaleHint" @click="showRScale = !showRScale">
             R-Skala
-          </button>
-          <button :class="{ active: showPipScale }" :title="pipScaleHint" @click="showPipScale = !showPipScale">
+          </ToggleButton>
+          <ToggleButton variant="menu" :class="{ active: showPipScale }" :title="pipScaleHint" @click="showPipScale = !showPipScale">
             Pip-Skala
-          </button>
+          </ToggleButton>
           <label class="ranges-lookback-field">
             Historie
             <input
@@ -1896,38 +1901,39 @@ watch(selectedTradingAccountId, () => {
 
           <div class="toggle-dropdown-divider"></div>
 
-          <button :class="{ active: showTradeSetupCockpit }" @click="showTradeSetupCockpit = !showTradeSetupCockpit">
+          <ToggleButton variant="menu" :class="{ active: showTradeSetupCockpit }" @click="showTradeSetupCockpit = !showTradeSetupCockpit">
             TSC
-          </button>
+          </ToggleButton>
         </div>
       </div>
 
       <div class="toggle-group">
-        <button :class="{ active: showRanges }" @click="showRanges = !showRanges">
+        <ToggleButton :class="{ active: showRanges }" @click="showRanges = !showRanges">
           Structure
-        </button>
-        <button
-          class="toggle-caret"
+        </ToggleButton>
+        <ToggleButton
+          variant="caret"
           :class="{ open: rangesMenuOpen }"
           title="Untermenü"
           @click="rangesMenuOpen = !rangesMenuOpen"
         >
           ▾
-        </button>
+        </ToggleButton>
         <div v-if="rangesMenuOpen" class="toggle-dropdown">
-          <button :class="{ active: showRangesMetadata }" @click="showRangesMetadata = !showRangesMetadata">
+          <ToggleButton variant="menu" :class="{ active: showRangesMetadata }" @click="showRangesMetadata = !showRangesMetadata">
             Metadaten
-          </button>
+          </ToggleButton>
 
           <div class="toggle-dropdown-divider"></div>
 
-          <button
+          <ToggleButton
+            variant="menu"
             :class="{ active: rangesStartMode === 'date' }"
             title="Fester, von Hand gewählter Startzeitpunkt — bleibt beim Scrubben im Replay-Modus stabil (gilt für Periode 5 UND die eingebettete Periode 2)"
             @click="rangesStartMode = 'date'"
           >
             Start ab Datum
-          </button>
+          </ToggleButton>
           <input
             v-if="rangesStartMode === 'date'"
             v-model="rangesFixedStartInputValue"
@@ -1935,20 +1941,22 @@ watch(selectedTradingAccountId, () => {
             class="replay-input ranges-fixed-start-input"
             title="Ab diesem Zeitpunkt werden Structure-Pivots gezählt (beide Perioden)"
           />
-          <button
+          <ToggleButton
+            variant="menu"
             :class="{ active: rangesStartMode === 'days' }"
             title="Rollierendes 'letzte X Tage/Stunden'-Fenster ab jetzt (bzw. ab dem Replay-Zeitpunkt)"
             @click="rangesStartMode = 'days'"
           >
             Start ab X Tagen
-          </button>
-          <button
+          </ToggleButton>
+          <ToggleButton
+            variant="menu"
             :class="{ active: rangesStartMode === 'pivot' }"
             title="Automatisch: letzter persistierter 1D-Periode-4-Struktur-Pivot dieses Instruments (Default)"
             @click="rangesStartMode = 'pivot'"
           >
             Start ab 1D-Pivot
-          </button>
+          </ToggleButton>
           <input
             v-if="rangesStartMode === 'pivot'"
             :value="rangesPivotStartDisplay"
@@ -2035,37 +2043,37 @@ watch(selectedTradingAccountId, () => {
            mir Orientierung zur Charthistorie") — bewusst links neben News, nicht im Indikatoren-
            Sammel-Toggle enthalten (siehe INDIKATOREN_REFS oben). -->
       <div class="toggle-group">
-        <button
+        <ToggleButton
           :class="{ active: showSessions }"
           :disabled="sessionsDisabled"
           :title="sessionsDisabled ? 'Sessions nur bis 1h' : ''"
           @click="showSessions = !showSessions"
         >
           Sessions
-        </button>
-        <button class="toggle-caret" title="Sessions verwalten" @click="showSessionsModal = true">
+        </ToggleButton>
+        <ToggleButton variant="caret" title="Sessions verwalten" @click="showSessionsModal = true">
           ⚙
-        </button>
+        </ToggleButton>
       </div>
 
       <div class="toggle-group">
-        <button :class="{ active: showNews }" @click="showNews = !showNews">
+        <ToggleButton :class="{ active: showNews }" @click="showNews = !showNews">
           News
-        </button>
-        <button class="toggle-caret" title="News verwalten" @click="showNewsModal = true">
+        </ToggleButton>
+        <ToggleButton variant="caret" title="News verwalten" @click="showNewsModal = true">
           ⚙
-        </button>
+        </ToggleButton>
       </div>
 
       <div class="toggle-group replay-control" :class="{ active: replayActive }">
-        <button
+        <ToggleButton
           class="replay-toggle-btn"
           :class="{ active: replayActive }"
           title="Replay an/aus — Datum bleibt beim Ausschalten stehen"
           @click="replayActive = !replayActive"
         >
           Replay ⏮
-        </button>
+        </ToggleButton>
         <input v-model="replayInputValue" type="datetime-local" class="replay-input" title="Chart+Indikatoren nur bis zu diesem Zeitpunkt anzeigen" />
         <button class="replay-step-btn" title="+1 Kerze" :disabled="stepReplayInFlight" @click="stepReplayForward">
           {{ stepReplayInFlight ? '…' : '▶|' }}
@@ -2073,46 +2081,46 @@ watch(selectedTradingAccountId, () => {
       </div>
 
       <div class="toggle-group">
-        <button :class="{ active: showPinHighlights }" title="Angepinnte Stellen im Chart hervorheben" @click="showPinHighlights = !showPinHighlights">
+        <ToggleButton :class="{ active: showPinHighlights }" title="Angepinnte Stellen im Chart hervorheben" @click="showPinHighlights = !showPinHighlights">
           📌 Pins
-        </button>
-        <button
-          class="toggle-caret"
+        </ToggleButton>
+        <ToggleButton
+          variant="caret"
           :class="{ open: pinMenuOpen }"
           title="Untermenü"
           @click="pinMenuOpen = !pinMenuOpen"
         >
           ▾
-        </button>
+        </ToggleButton>
         <div v-if="pinMenuOpen" class="toggle-dropdown">
-          <button :class="{ active: showPinPanel }" @click="showPinPanel = !showPinPanel">
+          <ToggleButton variant="menu" :class="{ active: showPinPanel }" @click="showPinPanel = !showPinPanel">
             📋 Pin-Liste
-          </button>
+          </ToggleButton>
         </div>
       </div>
 
       <div class="toggle-group">
-        <button :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
+        <ToggleButton :class="{ active: showLiquidityDebug }" @click="showLiquidityDebug = !showLiquidityDebug">
           Debug
-        </button>
-        <button
-          class="toggle-caret"
+        </ToggleButton>
+        <ToggleButton
+          variant="caret"
           :class="{ open: debugMenuOpen }"
           title="Untermenü"
           @click="debugMenuOpen = !debugMenuOpen"
         >
           ▾
-        </button>
+        </ToggleButton>
         <div v-if="debugMenuOpen" class="toggle-dropdown">
-          <button :class="{ active: showDebugMetadata }" @click="showDebugMetadata = !showDebugMetadata">
+          <ToggleButton variant="menu" :class="{ active: showDebugMetadata }" @click="showDebugMetadata = !showDebugMetadata">
             📋 Metadaten
-          </button>
+          </ToggleButton>
         </div>
       </div>
 
-      <button :class="{ active: showStyleModal }" @click="showStyleModal = !showStyleModal">
+      <ToggleButton :class="{ active: showStyleModal }" @click="showStyleModal = !showStyleModal">
         🎨 Style
-      </button>
+      </ToggleButton>
     </div>
   </div>
 
@@ -2343,68 +2351,10 @@ watch(selectedTradingAccountId, () => {
   font-weight: 600;
 }
 
-.symbol-switcher button,
-.timeframe-switcher button,
-.drawing-toggles button {
-  background: transparent;
-  border: none;
-  color: #787b86;
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.symbol-switcher button:hover,
-.timeframe-switcher button:hover,
-.drawing-toggles button:hover {
-  background: #2a2e39;
-  color: #d1d4dc;
-}
-
-.symbol-switcher button.active,
-.timeframe-switcher button.active,
-.drawing-toggles button.active {
-  background: #2962ff;
-  color: #fff;
-}
-
-.drawing-toggles button:disabled,
-.toggle-dropdown button:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.drawing-toggles button:disabled:hover,
-.toggle-dropdown button:disabled:hover {
-  background: transparent;
-  color: #787b86;
-}
-
 .toggle-group {
   position: relative;
   display: flex;
   gap: 1px;
-}
-
-.toggle-caret {
-  background: transparent;
-  border: none;
-  color: #787b86;
-  padding: 4px 5px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 11px;
-}
-
-.toggle-caret:hover {
-  background: #2a2e39;
-  color: #d1d4dc;
-}
-
-.toggle-caret.open {
-  background: #2a2e39;
-  color: #d1d4dc;
 }
 
 .toggle-dropdown {
@@ -2422,28 +2372,6 @@ watch(selectedTradingAccountId, () => {
   flex-direction: column;
   gap: 2px;
   min-width: max-content;
-}
-
-.toggle-dropdown button {
-  background: transparent;
-  border: none;
-  color: #787b86;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.toggle-dropdown button:hover {
-  background: #2a2e39;
-  color: #d1d4dc;
-}
-
-.toggle-dropdown button.active {
-  background: #2962ff;
-  color: #fff;
 }
 
 .ranges-lookback-field {
@@ -2522,25 +2450,8 @@ watch(selectedTradingAccountId, () => {
   background: rgba(41, 98, 255, 0.12);
 }
 
-.replay-toggle-btn {
-  background: transparent;
-  border: none;
-  color: #787b86;
+.replay-control .replay-toggle-btn {
   padding: 4px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.replay-toggle-btn:hover {
-  background: #2a2e39;
-  color: #d1d4dc;
-}
-
-.replay-toggle-btn.active {
-  background: #2962ff;
-  color: #fff;
 }
 
 .replay-input {

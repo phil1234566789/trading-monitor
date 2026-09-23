@@ -5,6 +5,7 @@ import { useHttpActivity } from "./composables/useHttpActivity.js";
 import { useDrawings } from "./composables/useDrawings.js";
 import HttpErrorBanners from "./components/HttpErrorBanners.vue";
 import DrawingsModal from "./components/DrawingsModal.vue";
+import ToggleButton from "./components/ui/ToggleButton.vue";
 import { CHART_MODES, chartMode, chartHint } from "./chartModes.js";
 
 const showDrawingsModal = ref(false);
@@ -69,28 +70,30 @@ const lastUpdateText = computed(() =>
         <span class="last-update">{{ lastUpdateText }}</span>
         <span v-if="activeHint" class="chart-hint" :title="activeHint">{{ activeHint }}</span>
         <div class="mode-switcher" :class="{ armed: chartMode !== 'navigate' }">
-          <button
+          <ToggleButton
             v-for="mode in CHART_MODES"
             :key="mode.id"
+            variant="bordered"
             :class="{ active: chartMode === mode.id }"
             :title="mode.title"
             @click="chartMode = mode.id"
           >
             {{ mode.label }}
-          </button>
+          </ToggleButton>
         </div>
         <div class="toggle-group">
-          <button
+          <ToggleButton
+            variant="bordered"
             class="drawings-btn"
             :class="{ active: drawingsVisible }"
             title="Zeichnungen im Chart an/aus"
             @click="drawingsVisible = !drawingsVisible"
           >
             🖍 Zeichnungen
-          </button>
-          <button class="drawings-caret-btn" title="Zeichnungen importieren/bearbeiten" @click="showDrawingsModal = true">
+          </ToggleButton>
+          <ToggleButton variant="bordered" class="drawings-caret-btn" title="Zeichnungen importieren/bearbeiten" @click="showDrawingsModal = true">
             ⚙
-          </button>
+          </ToggleButton>
         </div>
       </div>
     </header>
@@ -188,67 +191,19 @@ const lastUpdateText = computed(() =>
   color: #131722;
 }
 
-.mode-switcher button {
-  background: transparent;
-  border: 1px solid #2a2e39;
-  color: #787b86;
-  padding: 3px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.mode-switcher button:hover {
-  border-color: #2962ff;
-  color: #d1d4dc;
-}
-
-.mode-switcher button.active {
-  background: #2962ff;
-  border-color: #2962ff;
-  color: #fff;
-}
-
 .toggle-group {
   display: flex;
 }
 
-.drawings-btn {
-  background: transparent;
-  border: 1px solid #2a2e39;
+/* Die beiden bilden optisch EINEN Schalter (an/aus + Zahnrad), deshalb nur außen gerundet und
+   ohne Trennkante in der Mitte. */
+.bar-right .toggle-group .drawings-btn {
   border-radius: 4px 0 0 4px;
   border-right: none;
-  color: #787b86;
-  padding: 3px 8px;
-  cursor: pointer;
-  font-size: 12px;
 }
 
-.drawings-btn:hover {
-  border-color: #2962ff;
-  color: #d1d4dc;
-}
-
-.drawings-btn.active {
-  background: #2962ff;
-  border-color: #2962ff;
-  color: #fff;
-}
-
-.drawings-caret-btn {
-  background: transparent;
-  border: 1px solid #2a2e39;
+.bar-right .toggle-group .drawings-caret-btn {
   border-radius: 0 4px 4px 0;
-  color: #787b86;
-  padding: 3px 8px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.drawings-caret-btn:hover {
-  border-color: #2962ff;
-  color: #d1d4dc;
 }
 
 .http-activity {

@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import { accounts, accountsLoaded, createAccount, updateAccount, deleteAccount } from "../tradingAccounts.js";
+import ActionButton from "../components/ui/ActionButton.vue";
 
 const newName = ref("");
 const adding = ref(false);
@@ -48,7 +49,7 @@ function onNotesBlur(account, event) {
         class="konten-add-input"
         @keyup.enter="onAdd"
       />
-      <button class="konten-add-btn" :disabled="adding || !newName.trim()" @click="onAdd">+ Konto anlegen</button>
+      <ActionButton class="konten-add-btn" :disabled="adding || !newName.trim()" @click="onAdd">+ Konto anlegen</ActionButton>
     </div>
 
     <p v-if="accountsLoaded && accounts.length === 0" class="konten-empty">Noch keine Konten angelegt.</p>
@@ -67,7 +68,7 @@ function onNotesBlur(account, event) {
         class="konten-notes-input"
         @change="onNotesBlur(account, $event)"
       ></textarea>
-      <button class="konten-delete-btn" title="Konto löschen" @click="onDelete(account)">🗑</button>
+      <ActionButton tone="danger" class="konten-delete-btn" title="Konto löschen" @click="onDelete(account)">🗑</ActionButton>
     </div>
   </div>
 </template>
@@ -112,23 +113,7 @@ function onNotesBlur(account, event) {
 }
 
 .konten-add-btn {
-  background: transparent;
-  border: 1px solid #2962ff;
-  color: #7ea6ff;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
   white-space: nowrap;
-}
-
-.konten-add-btn:hover {
-  background: rgba(41, 98, 255, 0.12);
-}
-
-.konten-add-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 .konten-empty {
@@ -172,18 +157,8 @@ function onNotesBlur(account, event) {
   resize: vertical;
 }
 
-.konten-delete-btn {
+.konten-item .konten-delete-btn {
   flex-shrink: 0;
-  background: transparent;
-  border: 1px solid rgba(239, 83, 80, 0.4);
-  color: #ef5350;
   padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.konten-delete-btn:hover {
-  background: rgba(239, 83, 80, 0.12);
 }
 </style>

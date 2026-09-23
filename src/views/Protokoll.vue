@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch } from "vue";
 import ProtokollTable from "../components/ProtokollTable.vue";
+import ToggleButton from "../components/ui/ToggleButton.vue";
 import { fetchAlarmLog } from "../alarmLog.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 
@@ -20,14 +21,14 @@ watch(currentSymbol, refresh);
     <div class="protokoll-header">
       <h2 class="protokoll-title">Alarm-Protokoll</h2>
       <div class="symbol-switcher">
-        <button
+        <ToggleButton
           v-for="sym in SYMBOLS"
           :key="sym"
           :class="{ active: sym === currentSymbol }"
           @click="currentSymbol = sym"
         >
           {{ sym }}
-        </button>
+        </ToggleButton>
       </div>
     </div>
     <ProtokollTable :rows="rows" />
@@ -62,23 +63,6 @@ watch(currentSymbol, refresh);
 }
 
 .symbol-switcher button {
-  background: transparent;
-  border: none;
-  color: #787b86;
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
   font-weight: 600;
-}
-
-.symbol-switcher button:hover {
-  background: #2a2e39;
-  color: #d1d4dc;
-}
-
-.symbol-switcher button.active {
-  background: #2962ff;
-  color: #fff;
 }
 </style>

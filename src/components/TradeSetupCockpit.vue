@@ -7,6 +7,8 @@ import { trendChainLevelDisplay, computeTrendAlignment, trendAlignmentDisplay } 
 import { toPips } from "../pipConfig.js";
 import { drQuotenBlock, QUOTEN_HERKUNFT } from "../drQuoten.js";
 import CrudListSection from "./CrudListSection.vue";
+import ActionButton from "./ui/ActionButton.vue";
+import IconButton from "./ui/IconButton.vue";
 
 // Trade-Setup-Cockpit (Chat 2026-08-26: "TSC clear, fangen wir von vorne an") — Neuaufbau Schritt
 // 1: Bestätigungen + Targets, "erst mal alles manuell" (Philip) heißt hier: keine automatische
@@ -285,14 +287,13 @@ const accentStyle = computed(() => {
         <!-- find_anti_confluences (Chat 2026-08-30, analog find_targets/PLAN-find-targets.md) —
              Vorschlagsliste statt Chart-Klick, braucht mind. 1 Target (definiert die ferne
              Zonen-Kante, siehe findAntiConfluences.js). -->
-        <button
-          class="tsc-target-picker-btn"
+        <IconButton
           title="Anti-Confluence-Vorschläge (gegenläufige OBs/Sweeps/Divergenz in der Ziel-Zone)"
           :disabled="targets.length < 1"
           @click="emit('open-anti-confluence-picker')"
         >
           🔎
-        </button>
+        </IconButton>
       </template>
     </CrudListSection>
 
@@ -313,14 +314,13 @@ const accentStyle = computed(() => {
       <template #extra-action>
         <!-- find_targets, erster Baustein (PLAN-find-targets.md, Chat 2026-08-27) — Vorschlagsliste
              statt Chart-Klick, erst ab 2 Bestätigungen sinnvoll (die legen Richtung/Kontext fest). -->
-        <button
-          class="tsc-target-picker-btn"
+        <IconButton
           title="Target-Vorschläge (nächste LQ-Level)"
           :disabled="confirmations.length < 2"
           @click="emit('open-target-picker')"
         >
           🔎
-        </button>
+        </IconButton>
       </template>
     </CrudListSection>
 
@@ -346,7 +346,7 @@ const accentStyle = computed(() => {
          "bau jetzt einen Button, wo ich die DR in die trading-liste überführen kann") — Entry-
          Preis/Stop-Loss/etc. füllt das sich öffnende Trade-Edit-Modal aus, kein zweites Formular
          hier. Nur sichtbar, wenn überhaupt schon eine Range existiert. -->
-    <button
+    <ActionButton
       v-if="range"
       class="tsc-transfer-btn"
       :disabled="!canTransfer"
@@ -354,7 +354,7 @@ const accentStyle = computed(() => {
       @click="emit('transfer-to-trades')"
     >
       Dealing Range anlegen
-    </button>
+    </ActionButton>
   </div>
 </template>
 
@@ -577,27 +577,14 @@ const accentStyle = computed(() => {
   font-weight: 600;
 }
 
-.tsc-transfer-btn {
+/* Auffälliger als die kleinen Speichern-Buttons: volle Breite, mehr Luft — er legt die ganze
+   Dealing Range an. */
+.tsc-card .tsc-transfer-btn {
   display: block;
   width: 100%;
   margin-top: 4px;
-  background: transparent;
-  border: 1px solid #2962ff;
-  color: #7ea6ff;
   padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
   font-weight: 600;
-}
-
-.tsc-transfer-btn:hover:not(:disabled) {
-  background: rgba(41, 98, 255, 0.12);
-}
-
-.tsc-transfer-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 
 /* Icon-only, destruktive Farbe wie TradeEditModal.vue: .tem-delete-btn — bewusst klein, weil der
@@ -619,33 +606,5 @@ const accentStyle = computed(() => {
 
 .tsc-reset-icon-btn:hover {
   background: rgba(239, 83, 80, 0.12);
-}
-
-/* Target-Picker-Button (Chat 2026-08-27, PLAN-find-targets.md) — sitzt per CrudListSection.vue:
-   extra-action-Slot direkt neben deren eigenem Add-Icon, deshalb dieselbe 34x34-Optik wie
-   .cls-icon-btn dort (scoped styles greifen komponentenübergreifend nicht, daher hier dupliziert
-   statt importiert). */
-.tsc-target-picker-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  background: transparent;
-  border: 1px solid #2a2e39;
-  color: #9aa0ac;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-.tsc-target-picker-btn:hover:not(:disabled) {
-  border-color: #2962ff;
-  color: #d1d4dc;
-}
-
-.tsc-target-picker-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 </style>

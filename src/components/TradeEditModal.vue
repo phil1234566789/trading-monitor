@@ -7,6 +7,8 @@ import { formatEvidenceLabel } from "../tradeEvidence";
 import { accounts } from "../tradingAccounts.js";
 import MetadataPanel from "./MetadataPanel.vue";
 import CrudListSection from "./CrudListSection.vue";
+import ActionButton from "./ui/ActionButton.vue";
+import IconButton from "./ui/IconButton.vue";
 
 // Ersetzt die vorherigen Inline-Buttons in TradesTable.vue (🔗 verknüpfen, + Ziel, × Ziel
 // entfernen) — Chat 2026-07-27/28: "das war jetzt bissl too much, was ist wenn man versehentlich
@@ -74,7 +76,6 @@ const size = ref("");
 const netPl = ref("");
 const commission = ref("");
 const saving = ref(false);
-
 
 // "Lesson"-Verknüpfung (Chat 2026-07-31, vierte Runde): "GBP Short#23 war ein dummer Fehler,
 // Long#24 wäre die Lesson daraus" — kann auch eine falsch bestimmte dealing range sein, nicht nur
@@ -380,14 +381,13 @@ function confirmationLabel(confirmation) {
         <template #extra-action>
           <!-- Anti-Confluence-Vorschläge (analog TradeSetupCockpit.vue) — braucht mind. 1 Target
                (definiert die ferne Zonen-Kante, siehe findAntiConfluences.js). -->
-          <button
-            class="tem-target-picker-btn"
+          <IconButton
             :title="pickerButtonTitle('Anti-Confluence-Vorschläge (gegenläufige OBs/Sweeps/Divergenz in der Ziel-Zone)')"
             :disabled="(trade.targets ?? []).length < 1 || instrumentMismatch"
             @click="emit('open-anti-confluence-picker')"
           >
             🔎
-          </button>
+          </IconButton>
         </template>
       </CrudListSection>
 
@@ -407,14 +407,13 @@ function confirmationLabel(confirmation) {
         <template #extra-action>
           <!-- Target-Vorschläge (analog TradeSetupCockpit.vue), erst ab 2 Range-Bestätigungen
                sinnvoll (legen Richtung/Kontext fest). -->
-          <button
-            class="tem-target-picker-btn"
+          <IconButton
             :title="pickerButtonTitle('Target-Vorschläge (nächste LQ-Level)')"
             :disabled="rangeConfirmations.length < 2 || instrumentMismatch"
             @click="emit('open-target-picker')"
           >
             🔎
-          </button>
+          </IconButton>
         </template>
       </CrudListSection>
     </div>
@@ -521,11 +520,11 @@ function confirmationLabel(confirmation) {
             Begründung
             <textarea v-model="reasoning" rows="3" autocomplete="off"></textarea>
           </label>
-          <button type="submit" class="tem-save-btn" :disabled="saving">Speichern</button>
+          <ActionButton type="submit" class="tem-save-btn" :disabled="saving">Speichern</ActionButton>
         </form>
       </section>
 
-      <button class="tem-delete-btn" @click="onDelete">🗑 Diese Ausführung löschen</button>
+      <ActionButton tone="danger" class="tem-delete-btn" @click="onDelete">🗑 Diese Ausführung löschen</ActionButton>
     </div>
   </MetadataPanel>
 </template>
@@ -605,32 +604,6 @@ function confirmationLabel(confirmation) {
 
 .tem-lesson-remove:hover {
   color: #ef5350;
-}
-
-/* Identisch zu TradeSetupCockpit.vue's .tsc-target-picker-btn (Vue-scoped-CSS lässt sich nicht
-   komponentenübergreifend teilen) — selber Lupe-Button für Target-/Anti-Confluence-Vorschläge. */
-.tem-target-picker-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  background: transparent;
-  border: 1px solid #2a2e39;
-  color: #9aa0ac;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-.tem-target-picker-btn:hover:not(:disabled) {
-  border-color: #2962ff;
-  color: #d1d4dc;
-}
-
-.tem-target-picker-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 
 .tem-lesson-form {
@@ -789,38 +762,11 @@ function confirmationLabel(confirmation) {
 }
 
 .tem-save-btn {
-  background: transparent;
-  border: 1px solid #2962ff;
-  color: #7ea6ff;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
   margin-top: 4px;
-}
-
-.tem-save-btn:hover {
-  background: rgba(41, 98, 255, 0.12);
-}
-
-.tem-save-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 .tem-delete-btn {
   display: block;
   width: 100%;
-  background: transparent;
-  border: 1px solid rgba(239, 83, 80, 0.4);
-  color: #ef5350;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.tem-delete-btn:hover {
-  background: rgba(239, 83, 80, 0.12);
 }
 </style>
