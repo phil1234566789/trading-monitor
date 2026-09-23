@@ -318,18 +318,43 @@ ueberlegen sowas rauszufiltern."* Gemessen mit `analysis/dr-reichweite/fvgBaende
 in `ergebnis-fvg.txt`, Tabelle als `FVG_BAENDER` in `src/drQuoten.js`.
 
 Dieselben 3282 Ranges, nur nach der Lücke gruppiert, die den bestätigenden M5-OB ausgemacht hat.
-Die R-Spalten hier sind **gedeckelt** (min(Risiko, 6 Pips)), also direkt mit „Der gedeckelte Stopp"
-weiter unten vergleichbar, nicht mit der ungedeckelten Tabelle oben:
+Beide Leitern sind **gedeckelt** (Stopp min(Risiko, 6 Pips)) und damit direkt mit „Der gedeckelte
+Stopp" weiter unten vergleichbar, nicht mit der ungedeckelten Tabelle oben — deshalb auch dieselbe
+Aufteilung dort: erst der Kontext, dann die volle R-Leiter bis 10 R, dann die Pip-Leiter bis 40 P.
 
-| FVG | n | 10 P | 15 P | 20 P | 30 P | 2 R | 3 R | 4 R | 6 R | Reichw.-Median | OB-Retest |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| unter 1 Pip | 972 | 56 % | 42 % | 34 % | 23 % | 61 % | **47 %** | 38 % | 26 % | 13,1 P | 95 % |
-| 1–2 Pips | 963 | 65 % | 50 % | 39 % | 28 % | 68 % | 52 % | 43 % | 31 % | 15,9 P | 91 % |
-| 2–3 Pips | 539 | 69 % | 54 % | 45 % | 32 % | 72 % | 57 % | 47 % | 34 % | 18,7 P | 89 % |
-| 3–5 Pips | 493 | 82 % | 64 % | 52 % | 38 % | 79 % | 61 % | 49 % | 36 % | 22,7 P | 85 % |
-| 5–8 Pips | 217 | 92 % | 75 % | 67 % | 46 % | 89 % | 75 % | 65 % | 45 % | 29,3 P | 81 % |
-| über 8 Pips | 98 | 100 % | 96 % | 90 % | 73 % | 99 % | **91 %** | 84 % | 71 % | 46,8 P | 69 % |
-| **alle** | **3282** | **68 %** | **54 %** | **44 %** | **32 %** | **70 %** | **55 %** | **46 %** | **33 %** | 17,8 P | 90 % |
+| FVG | n | Anteil | FVG-Median | Risiko-Median | Reichweite-Median | OB-Retest |
+|---|---|---|---|---|---|---|
+| unter 1 Pip | 972 | 29,6 % | 0,7 P | 4,9 P | 13,1 P | 95 % |
+| 1–2 Pips | 963 | 29,3 % | 1,5 P | 5,4 P | 15,9 P | 91 % |
+| 2–3 Pips | 539 | 16,4 % | 2,5 P | 5,8 P | 18,7 P | 89 % |
+| 3–5 Pips | 493 | 15,0 % | 3,8 P | 7,0 P | 22,7 P | 85 % |
+| 5–8 Pips | 217 | 6,6 % | 6,0 P | 7,2 P | 29,3 P | 81 % |
+| über 8 Pips | 98 | 3,0 % | 10,1 P | 8,3 P | 46,8 P | 69 % |
+| **alle** | **3282** | **100 %** | **1,7 P** | **5,7 P** | **17,8 P** | **90 %** |
+
+R-Leiter, Stopp min(Risiko, 6 Pips) — dieselbe Rechnung wie die Deckel-Tabelle weiter unten:
+
+| FVG | n | 2 R | 3 R | 4 R | 5 R | 6 R | 7 R | 8 R | 9 R | 10 R |
+|---|---|---|---|---|---|---|---|---|---|---|
+| unter 1 Pip | 972 | 61 % | **47 %** | 38 % | 32 % | 26 % | 22 % | 18 % | 17 % | 15 % |
+| 1–2 Pips | 963 | 68 % | 52 % | 43 % | 36 % | 31 % | 28 % | 25 % | 22 % | 20 % |
+| 2–3 Pips | 539 | 72 % | 57 % | 47 % | 40 % | 34 % | 30 % | 27 % | 24 % | 22 % |
+| 3–5 Pips | 493 | 79 % | 61 % | 49 % | 42 % | 36 % | 30 % | 28 % | 25 % | 21 % |
+| 5–8 Pips | 217 | 89 % | 75 % | 65 % | 52 % | 45 % | 39 % | 35 % | 32 % | 29 % |
+| über 8 Pips | 98 | 99 % | **91 %** | 84 % | 79 % | 71 % | 61 % | 51 % | 46 % | 40 % |
+| **alle** | **3282** | **70 %** | **55 %** | **46 %** | **39 %** | **33 %** | **29 %** | **25 %** | **22 %** | **20 %** |
+
+Pip-Leiter, gegen denselben gedeckelten Stopp:
+
+| FVG | n | 10 P | 15 P | 20 P | 25 P | 30 P | 35 P | 40 P |
+|---|---|---|---|---|---|---|---|---|
+| unter 1 Pip | 972 | 56 % | 42 % | 34 % | 27 % | 23 % | 20 % | 17 % |
+| 1–2 Pips | 963 | 65 % | 50 % | 39 % | 33 % | 28 % | 25 % | 22 % |
+| 2–3 Pips | 539 | 69 % | 54 % | 45 % | 38 % | 32 % | 28 % | 26 % |
+| 3–5 Pips | 493 | 82 % | 64 % | 52 % | 43 % | 38 % | 32 % | 29 % |
+| 5–8 Pips | 217 | 92 % | 75 % | 67 % | 56 % | 46 % | 40 % | 34 % |
+| über 8 Pips | 98 | 100 % | 96 % | 90 % | 79 % | 73 % | 65 % | 58 % |
+| **alle** | **3282** | **68 %** | **54 %** | **44 %** | **36 %** | **32 %** | **27 %** | **24 %** |
 
 Monoton über die ganze Reihe, und **er hält in R** — Bootstrap für das oberste gegen das unterste
 Band +37 bis +50 Punkte bei 3 R (+34/+42 bei 2 R, +38/+54 bei 4 R). Anders als bei Saisonalität und
