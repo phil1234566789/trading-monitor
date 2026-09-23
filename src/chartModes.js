@@ -6,16 +6,15 @@
 // immer im harmlosen Navigieren-Modus.
 import { ref } from "vue";
 
-// hint = was der nächste Chart-Klick tut, direkt neben den Knöpfen sichtbar, solange der Modus
-// läuft (title erscheint nur beim Hovern und reicht dafür nicht).
+// Die umschaltbaren Modi, in der Reihenfolge der Knöpfe. "trade" fehlt hier bewusst: der Modus
+// existiert weiter, hat aber seit dem 23.09.2026 keinen eigenen Knopf mehr (Philip: "über TSC kann
+// man bereits echt gut steuern") — man landet nur noch darin, indem man in der TSC oder im
+// Trade-Edit-Modal einen Klick scharf macht, und kommt über denselben Knopf oder "Navigieren"
+// wieder raus. hint = was der nächste Chart-Klick tut, neben den Knöpfen sichtbar (title erscheint
+// nur beim Hovern und reicht dafür nicht); im Trade-Modus liefert Dashboard.vue ihn über chartHint,
+// weil er dort die Trade-Nummer nennt.
 export const CHART_MODES = [
   { id: "navigate", label: "🖐 Navigieren", title: "Chart normal bedienen (Pan/Zoom)", hint: null },
-  {
-    id: "trade",
-    label: "🎯 Trade-Modus",
-    title: "Auf ein Trade-Setup klicken, um es als Trade zu übernehmen",
-    hint: "🎯 Klick auf eine Setup-OB-Box übernimmt sie als Trade",
-  },
   {
     id: "measure",
     label: "📏 Messen",
