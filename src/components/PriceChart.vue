@@ -675,13 +675,15 @@ function refreshTradeMarkersInternal() {
 // lassen. Bug-Report Philip 2026-07-28: "übergeordneter Trades-Toggle soll Trades auch ausblenden
 // (TSC ist einzige Ausnahme)" — gekoppelt an BEIDE Toggles (showTradeSetups = der übergeordnete,
 // showTrades = das Untermenü) statt nur an showTrades allein, wie ursprünglich am 07-27 gebaut.
+// Das gilt aber NUR für die trade-verknüpften Boxen: der Pin-Loop unten hängt an keinem Toggle,
+// siehe dort.
 function refreshTradeSetupLinksInternal() {
   for (const p of tradeSetupLinkPrimitives) candleSeries.detachPrimitive(p);
   tradeSetupLinkPrimitives.length = 0;
-  if (!tradesVisible(props.showTradeSetups, props.showTrades)) return;
   const candles = clipReplay(allCandles);
   const drawnTradeSetupIds = new Set();
-  for (const t of tradesVisibleForCandles(props.trades, candles)) {
+  const linkedTrades = tradesVisible(props.showTradeSetups, props.showTrades) ? tradesVisibleForCandles(props.trades, candles) : [];
+  for (const t of linkedTrades) {
     if (t.tradeSetupId == null || t.tradeSetupObStartTime == null || t.tradeSetupObTop == null || t.tradeSetupObBottom == null) continue;
     drawnTradeSetupIds.add(t.tradeSetupId);
     const top = t.tradeSetupObTop;
@@ -724,6 +726,13 @@ function refreshTradeSetupLinksInternal() {
   // gefundenes, noch nicht ausgeführtes Setup) hatte dadurch gar keinen Rendering-Pfad.
   // drawnTradeSetupIds dedupliziert gegen die oben schon gezeichneten Setups, damit ein Setup, das
   // ZUSÄTZLICH gepinnt ist, keine doppelte Box bekommt.
+  //
+  // Bewusst NICHT an tradesVisible() gekoppelt (Bug-Report Philip 2026-09-23: gepinntes Short-Setup
+  // wurde beim Hovern erst hervorgehoben, wenn zusätzlich "Trades > Trades" an war): die live
+  // erkannte Setup-Box (usePriceChartTradeSetupDrawing.js) kennt Pins gar nicht, das Highlight
+  // kommt allein von hier. Ein Pin ist eine explizite "zeig mir das"-Anweisung und damit
+  // toggle-unabhängig — dieselbe Regel wie bei pinnedLiquidityLevels (pinnedOnly-Pfad in
+  // usePriceChartLiquidity.js) und pinnedObZones (mergePinnedZones).
   for (const setup of props.pinnedTradeSetups) {
     if (drawnTradeSetupIds.has(setup.tradeSetupId) || setup.instrument !== props.symbol) continue;
     const key = setup.direction === "short" ? "tradeSetupShort" : "tradeSetupLong";
