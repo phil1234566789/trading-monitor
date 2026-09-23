@@ -244,4 +244,27 @@ describe("Trade-Setup-Pipeline mit marketStructureState-H1-Leveln (collectH1LqLe
     expect(collectH1LqLevels(state, 1)).toEqual([{ price: 1.3, dir: 1, pivotTime: 400, touched: true, touchedTime: 500, endTime: 500 }]);
     expect(collectH1LqLevels(null, -1)).toEqual([]);
   });
+
+  // Bug-Report Philip 2026-09-23 (GBPUSD Setup #4986): structurePivots EINER Trend-Ebene enthält
+  // beide Seiten, die Trend-Ebene allein wählt die Seite also nicht aus. Der Test oben deckt das
+  // nicht ab, weil seine Fixture beidseitig 'LQ-sweep' benutzt — der Typ überlebt den Filter per
+  // Definition. Hier deshalb echte Hoch-/Tief-Typen in DERSELBEN Ebene.
+  it("filtert die Gegenseite aus einer Trend-Ebene heraus (ein Tief ist kein Short-LS)", () => {
+    const touched = (price, touchedTime) => ({ price, touchedAt: "y", touchedTime });
+    const state = {
+      trend: "downtrend",
+      structurePivots: [
+        { type: "protected-high", price: 1.35, pivotAt: "x", pivotTime: 100, touched: touched(1.35, 150) },
+        { type: "protected-low", price: 1.33, pivotAt: "x", pivotTime: 200, touched: touched(1.33, 250) },
+        { type: "high", price: 1.34, pivotAt: "x", pivotTime: 300, touched: touched(1.34, 350) },
+        { type: "sweeped-low", price: 1.32, pivotAt: "x", pivotTime: 400, touched: touched(1.32, 450) },
+        // Seitenneutral benannt -> bleibt drin, siehe Kommentar an collectH1LqLevels.
+        { type: "LQ-sweep", price: 1.36, pivotAt: "x", pivotTime: 500, touched: touched(1.36, 550) },
+      ],
+      nestedTrend: null,
+    };
+    expect(collectH1LqLevels(state, 1).map((l) => l.price)).toEqual([1.35, 1.34, 1.36]);
+    // Gespiegelt: dieselbe Ebene als Long-Quelle (uptrend) darf kein Hoch durchlassen.
+    expect(collectH1LqLevels({ ...state, trend: "uptrend" }, -1).map((l) => l.price)).toEqual([1.33, 1.32, 1.36]);
+  });
 });

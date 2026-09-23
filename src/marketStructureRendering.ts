@@ -376,14 +376,27 @@ function toLqLevel(pivot: Pivot, dir: 1 | -1) {
 // Haupttrend=Low-Seite; downtrend gespiegelt) — dieselbe Zuordnung wie isDowntrend in
 // renderMarketStructureAnalysis. Nur touched Pivots sind als LS-Kandidat überhaupt relevant
 // (untouched = noch nichts geswept, das ist die Fraktal-Seite, nicht die LS-Seite).
+//
+// Die Trend-Ebene allein reicht als Seiten-Auswahl NICHT (Bug-Report Philip 2026-09-23, GBPUSD
+// Setup #4986): structurePivots sammelt jeden Pullback-Pivot BEIDER Seiten (siehe
+// applyMarketStructurePivotCore), und findLsInArray prüft für Short nur `lvl.price <
+// fractal.price` — das erfüllt jedes beliebige Tief unter dem Fraktal. So landete ein 1H-Tief
+// 9 Pip UNTER dem Order Block als "Liquidity Sweep" eines Short-Setups, und weil collectObSweeps
+// nach Alter sortiert, verdrängte es auch noch den echten jungen Sweep aus sweeps[0].
+// Gefiltert wird die Gegenseite statt die eigene zu whitelisten: 'LQ-sweep'/'break-of-structure'
+// tragen die Seite nicht im Namen, sind aber innerhalb einer Trend-Ebene fast immer schon die
+// gesuchte (markLqSweeps läuft dort mit derselben Richtung) — und gerade ein LQ-sweep ist der
+// wertvollste LS-Kandidat. Bleibt ein Rest: ein Tief, das in einer früheren uptrend-/unknown-Phase
+// derselben Ebene zu 'LQ-sweep' umgetauft wurde, behält den Namen auch nach dem Trendwechsel.
 export function collectH1LqLevels(state: MarketStructureState | null | undefined, dir: 1 | -1) {
   if (!state) return [];
   const wantTrend = dir === -1 ? "uptrend" : "downtrend";
+  const falscheSeite = dir === 1 ? "low" : "high";
   const pivots: Pivot[] = [];
   for (const level of collectNestedChain(state)) {
     if (level.trend === wantTrend) pivots.push(...level.structurePivots);
   }
-  return pivots.filter((p) => p.touched !== false).map((p) => toLqLevel(p, dir));
+  return pivots.filter((p) => p.touched !== false && !p.type.endsWith(falscheSeite)).map((p) => toLqLevel(p, dir));
 }
 
 // Läuft die Nested-Tracker-Kette ab state selbst ab (state zuerst, dann state.nestedTrend,
