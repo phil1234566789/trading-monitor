@@ -253,10 +253,13 @@ function localMinutesAndWeekday(date: Date): { minutesSinceMidnight: number; gro
   return { minutesSinceMidnight: hour * 60 + minute, group };
 }
 
-function isInWindows(date: Date, windows: WeekdayWindows | undefined, startBufferMin = 0): boolean {
+function isInWindows(
+  date: Date, windows: WeekdayWindows | undefined, startBufferMin = 0, endBufferMin = 0,
+): boolean {
   if (!windows) return false;
   const { minutesSinceMidnight, group } = localMinutesAndWeekday(date);
-  return windows[group].some(([from, to]) => minutesSinceMidnight >= from - startBufferMin && minutesSinceMidnight < to);
+  return windows[group].some(([from, to]) =>
+    minutesSinceMidnight >= from - startBufferMin && minutesSinceMidnight < to + endBufferMin);
 }
 
 // Nachts/am Wochenende (außerhalb des Alarmfensters) werden fürs Forex-Zonen-Fetching keine
@@ -271,6 +274,11 @@ function isInWindows(date: Date, windows: WeekdayWindows | undefined, startBuffe
 // losgeht (gleicher Grund wie beim früheren 24/7-Cron, nur jetzt auf ein kurzes Vorlauf-Fenster
 // verkürzt).
 const FETCH_START_BUFFER_MIN = 10;
+// Gegenstueck am Fensterende: die letzte 1H-Kerze des Fensters SCHLIESST erst zur Fenstergrenze
+// (17:00-Kerze bei Fensterende 18:00) — ohne Nachlauf sah kein Lauf sie je, ihre OB-Zonen tauchten
+// erst am naechsten Morgen auf. Wie der Vorlauf nur fuers Fetchen/Persistieren; shouldSend prueft
+// weiterhin ungepuffert, es geht also kein Telegram nach Fensterende raus.
+const FETCH_END_BUFFER_MIN = 10;
 
 Deno.serve(async (req) => {
   try {
@@ -340,7 +348,7 @@ Deno.serve(async (req) => {
 
     for (const cfg of INSTRUMENTS) {
       const alarmWindows = alarmWindowsByInstrument.get(cfg.instrument);
-      const forexFetchWindow = isInWindows(now, alarmWindows, FETCH_START_BUFFER_MIN);
+      const forexFetchWindow = isInWindows(now, alarmWindows, FETCH_START_BUFFER_MIN, FETCH_END_BUFFER_MIN);
       if (!forexFetchWindow && !forceH1Refresh) {
         (summary.instruments as Record<string, unknown>)[cfg.instrument] = { skipped: "outside forex fetch window" };
         continue;
