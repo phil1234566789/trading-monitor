@@ -12,9 +12,9 @@
     "semantic_hash": "336bb14138e828a7c00cf985fba955d0"
   },
   ".claude/settings.json": {
-    "mtime": 1788660964.1736808,
-    "seen": 1788675137.9022882,
-    "ast_hash": "cbb9ce6f81eb577d1ecd285da24965fc",
+    "mtime": 1790200170.8053834,
+    "seen": 1790200306.873962,
+    "ast_hash": "99f7426035e1ed531050e1afcc51784e",
     "semantic_hash": ""
   },
   ".mcp.json": {
@@ -456,9 +456,9 @@
     "semantic_hash": ""
   },
   "src/marketStructureRendering.ts": {
-    "mtime": 1790057596.9333496,
-    "seen": 1790057686.4784768,
-    "ast_hash": "5e70cb0a9c9659cb6134f445da234163",
+    "mtime": 1790197789.287003,
+    "seen": 1790200306.873962,
+    "ast_hash": "7cae13076fa42f58b9751f599d2a7b9b",
     "semantic_hash": ""
   },
   "src/newsEvents.js": {
@@ -816,8 +816,8 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/ema.js": {
-    "mtime": 1790058909.7965336,
-    "seen": 1790059010.6530623,
+    "mtime": 1790200132.9859753,
+    "seen": 1790200306.873962,
     "ast_hash": "653ebe9e9111f715bfccf3b6855115ad",
     "semantic_hash": ""
   },
@@ -2076,9 +2076,9 @@
     "semantic_hash": "53fa4e246c1ef9d3b7c2c76e4e6c4f60"
   },
   "test/tradeSetupPipeline.test.js": {
-    "mtime": 1790064806.4107876,
-    "seen": 1790064924.0491128,
-    "ast_hash": "c1e8f1dcfe7fe2f4df2b647d8be5f39e",
+    "mtime": 1790197801.8648477,
+    "seen": 1790200306.873962,
+    "ast_hash": "eaa1780711c6f1afaa6c33aaac8cbfa8",
     "semantic_hash": ""
   },
   "test/tradingMachine.test.js": {
@@ -3471,6 +3471,24 @@
     "mtime": 1790192215.2938359,
     "seen": 1790193812.5322123,
     "ast_hash": "027337773f4edea6d2be8c2abb89b836",
+    "semantic_hash": ""
+  },
+  ".claude/hooks/fachdoku-router-reminder.cjs": {
+    "mtime": 1790199970.9631228,
+    "seen": 1790200306.873962,
+    "ast_hash": "9d28cb25c9da755286a1932915f395c4",
+    "semantic_hash": ""
+  },
+  "test/runtimeCopySyncGuard.test.js": {
+    "mtime": 1790200107.2940967,
+    "seen": 1790200306.873962,
+    "ast_hash": "3082abfaec69f9e1434185dcd9c8e2be",
+    "semantic_hash": ""
+  },
+  "PLAN-m5-trend.md": {
+    "mtime": 1790199595.9223695,
+    "seen": 1790200306.873962,
+    "ast_hash": "001572637899af391a510ecd9545fc28",
     "semantic_hash": ""
   }
 }
