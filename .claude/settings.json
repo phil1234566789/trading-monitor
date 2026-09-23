@@ -31,6 +31,15 @@
             "command": "graphify hook-guard read"
           }
         ]
+      },
+      {
+        "matcher": "Read|Write|Edit|Bash|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \".claude/hooks/fachdoku-router-reminder.cjs\""
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
