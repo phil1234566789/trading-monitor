@@ -120,21 +120,31 @@ const DRY_RUN = (Deno.env.get("DRY_RUN") ?? "false").toLowerCase() === "true";
 // FXCM-H4 folgt dem New-York-Handelstag. Archiv-Lesen pro Tick vermeidet
 // starre UTC-Grenzen und verpasst auch verspätet eingetroffene Kerzen nicht.
 async function fetchForexBatch(
-  db: SupabaseClient, symbol: string,
-): Promise<{ currentPrice: number; stale: boolean; candlesByTf: Map<string, Candle[]> }> {
-  const specs = [
-    { key: "M5", period: "5m", count: TRADE_SETUP_M5_CANDLE_LIMIT },
-    { key: "1H", period: "1h", count: FOREX_H1_LOOKBACK_CANDLES },
-    { key: "4H", period: "4h", count: FOREX_H4_LOOKBACK_CANDLES },
-  ];
-  const results = await Promise.all(specs.map(s => readFxcmCandles(db, symbol, s.period, s.count)));
-  if (results.some(rows => !rows.length)) throw new Error(`FXCM history missing: ${symbol}`);
+  db: SupabaseClient, symbol: string, h4LastProcessed: number | null,
+): Promise<{ currentPrice: number; stale: boolean; h4LastTime: number; candlesByTf: Map<string, Candle[]> }> {
+  const [m5, h1, h4Probe] = await Promise.all([
+    readFxcmCandles(db, symbol, "5m", TRADE_SETUP_M5_CANDLE_LIMIT),
+    readFxcmCandles(db, symbol, "1h", FOREX_H1_LOOKBACK_CANDLES),
+    readFxcmCandles(db, symbol, "4h", 1),
+  ]);
+  if (!m5.length || !h1.length || !h4Probe.length) throw new Error(`FXCM history missing: ${symbol}`);
+  // Das volle 4H-Fenster kostet 3 Roundtrips fuer 3000 Zeilen, aendern kann sich daran aber nur
+  // beim Schluss einer neuen 4H-Kerze — also alle 48 Laeufe einmal. Die Probe (1 Zeile) beantwortet
+  // genau das; ohne neue Kerze laeuft 4H in den Skip-Pfad, der ohnehin nur den DB-Stand gegen die
+  // juengsten M5-Kerzen prueft. 1H bleibt jedes Mal noetig (Trade-Setup-Fraktale, candles1hForSetup).
+  const h4LastTime = h4Probe[0].time;
+  const h4 = h4LastTime === h4LastProcessed
+    ? null
+    : await readFxcmCandles(db, symbol, "4h", FOREX_H4_LOOKBACK_CANDLES);
+  const results = [m5, h1];
+  const specs = [{ key: "M5" }, { key: "1H" }];
+  if (h4) { specs.push({ key: "4H" }); results.push(h4); }
   const latest = results[0][results[0].length - 1];
   // An LIVE_TOUCH_WINDOW_SEC gekoppelt, nicht zufaellig gleich: haengt der Feed weiter zurueck als
   // das Touch-Fenster reicht, faellt jede geladene Kerze aus dem Fenster und recentCandles liefert
   // leer — der Lauf pruefte dann still ueberhaupt keinen Touch mehr.
   const stale = Date.now() / 1000 - latest.time > LIVE_TOUCH_WINDOW_SEC;
-  return { currentPrice: latest.close, stale, candlesByTf: new Map(specs.map((s, i) => [s.key, results[i]])) };
+  return { currentPrice: latest.close, stale, h4LastTime, candlesByTf: new Map(specs.map((s, i) => [s.key, results[i]])) };
 }
 
 async function sendTelegram(text: string) {
@@ -325,7 +335,10 @@ Deno.serve(async (req) => {
     for (const cfg of INSTRUMENTS) {
       const alarmWindows = alarmWindowsByInstrument.get(cfg.instrument);
       const imAlarmfenster = isInWindows(now, alarmWindows);
-      const forexBatch = await fetchForexBatch(supabase, cfg.instrument);
+      const { data: checkpoint, error: checkpointError } = await supabase.from("forex_h1_cache")
+        .select("h1_last_time,h4_last_time").eq("instrument", cfg.instrument).maybeSingle();
+      if (checkpointError) throw checkpointError;
+      const forexBatch = await fetchForexBatch(supabase, cfg.instrument, checkpoint?.h4_last_time ?? null);
       // Keine frischen M5-Kerzen ist ausserhalb des Alarmfensters der Normalfall (Wochenende,
       // Feiertag) — still ueberspringen, sonst schlaegt jeder Lauf am Wochenende fehl. Im Fenster
       // ist derselbe Zustand ein echter Feed-Ausfall und muss laut sein, sonst liefen Touch-
@@ -336,13 +349,10 @@ Deno.serve(async (req) => {
         continue;
       }
       const h1CandlesForSetup = forexBatch.candlesByTf.get("1H")!;
-      const h4LastTime = forexBatch.candlesByTf.get("4H")!.at(-1)!.time;
-      const { data: checkpoint, error: checkpointError } = await supabase.from("forex_h1_cache")
-        .select("candles,h4_last_time").eq("instrument", cfg.instrument).maybeSingle();
-      if (checkpointError) throw checkpointError;
+      // Nur noch 1H: ueber 4H hat schon fetchForexBatch entschieden (ohne neue Kerze gar nicht
+      // erst geladen), ein geladenes 4H ist per Definition frisch.
       forexBatch.candlesByTf = unprocessedTimeframes(forexBatch.candlesByTf, {
-        "1H": (checkpoint?.candles as Candle[] | undefined)?.at(-1)?.time,
-        "4H": checkpoint?.h4_last_time,
+        "1H": checkpoint?.h1_last_time,
       });
       const currentPrice = forexBatch.currentPrice;
       // Touch-Fenster für die 1H/4H-Objekte weiter unten (siehe liveTouch.ts): dieselben
@@ -975,7 +985,9 @@ Deno.serve(async (req) => {
       // Erst nach einem vollständigen Lauf markieren; ein Fehler muss erneut versucht werden.
       if (forexBatch.candlesByTf.has("1H") || forexBatch.candlesByTf.has("4H")) {
         const { error } = await supabase.from("forex_h1_cache").upsert({
-          instrument: cfg.instrument, candles: h1CandlesForSetup, h4_last_time: h4LastTime,
+          instrument: cfg.instrument,
+          h1_last_time: h1CandlesForSetup.at(-1)!.time,
+          h4_last_time: forexBatch.h4LastTime,
         });
         if (error) throw error;
       }
