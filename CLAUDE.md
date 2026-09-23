@@ -256,6 +256,10 @@ applies when explicitly invoked, not to every session in this repo.
   after the push succeeds** — never rely on a shared CI/deploy step to bulk-flip `done`→`released`,
   since multiple agents can push different tasks' commits in the same deploy and only the pushing
   agent knows which task it shipped.
+- **Alles, was der ausführende Chat braucht, gehört IN den Task, nicht in die Chat-Antwort.**
+  Werkzeug-Stand, frisch installierte Abhängigkeiten, Vorbild-Funktionen, Stolperfallen,
+  bewusst ausgeklammerter Scope — wer den Task übernimmt, liest nur den Task. Ein Hinweis, der
+  nur im Chat steht, ist für ihn nicht vorhanden.
 - **milk-city: auto-create a task from a confirmed-feasible idea**: when Philip asks a
   "geht das/ist das teuer einzubauen?"-style question about a potential feature and the answer
   confirms it's feasible with a concrete approach (not just "yes in theory"), call `create_task`
