@@ -422,45 +422,50 @@ const armedTscSection = computed(() => (armedAction.value?.payload?.isTsc ? (TSC
 const armedTradeAction = computed(() => (armedAction.value && !armedAction.value.payload?.isTsc ? armedAction.value.key : null));
 // Sonst bliebe der Hinweis in der globalen Kopfleiste stehen, wenn man das Dashboard verlässt.
 onUnmounted(() => (chartHint.value = null));
-function onAddTargetRequest(t) {
-  clearArmStatesExcept("target");
-  targetAddTrade.value = t;
+// Ein Weg, einen Chart-Klick scharf zu machen — vorher stand derselbe Dreizeiler achtmal da.
+// Nochmal auf denselben Knopf verlässt den Modus wieder (Philip 2026-09-23: "wenn ich nochmal auf
+// einen TSC Button klicke, dann kann ich den Modus nicht wieder verlassen, sondern nur über den
+// Header"); der Vergleich läuft über Ziel-Id + Anzeigeort, weil die TSC bei jedem Klick ein frisch
+// gebautes { dealingRangeId, isTsc }-Objekt schickt, also nie dasselbe per Identität.
+function sameArmTarget(a, b) {
+  return (a?.id ?? null) === (b?.id ?? null) && (a?.dealingRangeId ?? null) === (b?.dealingRangeId ?? null) && !!a?.isTsc === !!b?.isTsc;
+}
+function disarmChartClick() {
+  clearArmStatesExcept(null);
+  chartMode.value = "navigate";
+}
+function armChartClick(key, t) {
+  if (armedAction.value?.key === key && sameArmTarget(armedAction.value.payload, t)) {
+    disarmChartClick();
+    return;
+  }
+  clearArmStatesExcept(key);
+  ARM_STATES[key].value = t;
   chartMode.value = "trade";
+}
+function onAddTargetRequest(t) {
+  armChartClick("target", t);
 }
 function onAddConfirmationRequest(t) {
-  clearArmStatesExcept("confirmation");
-  confirmationAddTrade.value = t;
-  chartMode.value = "trade";
+  armChartClick("confirmation", t);
 }
 function onAddRangeConfirmationRequest(t) {
-  clearArmStatesExcept("rangeConfirmation");
-  rangeConfirmationAddTrade.value = t;
-  chartMode.value = "trade";
+  armChartClick("rangeConfirmation", t);
 }
 function onAddConfluenceRequest(t) {
-  clearArmStatesExcept("confluence");
-  confluenceAddTrade.value = t;
-  chartMode.value = "trade";
+  armChartClick("confluence", t);
 }
 function onAddRangeConfluenceRequest(t) {
-  clearArmStatesExcept("rangeConfluence");
-  rangeConfluenceAddTrade.value = t;
-  chartMode.value = "trade";
+  armChartClick("rangeConfluence", t);
 }
 function onAddAntiConfluenceRequest(t) {
-  clearArmStatesExcept("antiConfluence");
-  antiConfluenceAddTrade.value = t;
-  chartMode.value = "trade";
+  armChartClick("antiConfluence", t);
 }
 function onAddRangeAntiConfluenceRequest(t) {
-  clearArmStatesExcept("rangeAntiConfluence");
-  rangeAntiConfluenceAddTrade.value = t;
-  chartMode.value = "trade";
+  armChartClick("rangeAntiConfluence", t);
 }
 function onSetInvalidationRequest(t) {
-  clearArmStatesExcept("invalidation");
-  invalidationAddTrade.value = t;
-  chartMode.value = "trade";
+  armChartClick("invalidation", t);
 }
 // Verlassen des Trade-Modus räumt eine noch "scharfe" Ziel-/Bestätigungs-/Zusatzargument-/
 // Invalidierungs-Anfrage mit ab — sonst würde ein späteres Wieder-Reinklicken in den Trade-Modus
@@ -504,6 +509,12 @@ function onTscAddConfirmationRequest() {
     return;
   }
   // Bootstrap-Fall: noch keine Range, der nächste Klick MUSS ein OB sein (siehe onSelectTarget).
+  // Eigener Zweig statt armChartClick, weil dieser Zustand kein Ziel-Objekt hat — der zweite Klick
+  // auf denselben Knopf verlässt den Modus aber genauso.
+  if (tscBootstrapArmed.value) {
+    disarmChartClick();
+    return;
+  }
   clearArmStatesExcept(null);
   tscBootstrapArmed.value = true;
   chartMode.value = "trade";
