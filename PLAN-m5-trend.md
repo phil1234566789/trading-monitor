@@ -356,3 +356,27 @@ Ebene" als Trend). Die negativen Netto-Pips der UP-Phasen deuten darauf hin, das
 fuer die Phasenbildung fragwuerdig ist — vor einer Entscheidung darauf nachpruefen. Fuer solche
 Laeufe existiert im Repo bereits das Muster `analysis/dr-reichweite/` (Script + Ergebnis-Dateien),
 das ist der richtige Ort, nicht Produktionscode.
+
+## OFFENE FRAGE an Philip: Chart-Darstellung des M5-Trends
+
+Gestellt in der Nacht 23./24.09.2026, Philip antwortet am 24.09. ("muss jetzt schlafen gehen,
+frag mich morgen nochmal"). Bis dahin steht Punkt 5c des Tasks
+`m5-struktur-trend-algo-parametrisieren-anker-chart-tsc-anzeige` bewusst leer.
+
+Der 1h-Structure zeichnet heute: Pfeile an range.high/low, protected-low-Linie, Trend-Label,
+CHoCH-Linie, Fib-Level, ZigZag fuer abgeschlossene Ranges, LQ-Sweep-Label mit Preis+Alter. Bei
+100+ M5-Pivots ist dasselbe Set unlesbar. Drei vorgelegte Varianten:
+
+1. **Nur Trend + letzte Reaktion** (Empfehlung): aktuelle M5-Range als zwei Linien, Trendrichtung
+   als Label, eine Markierung fuer die letzte CHoCH/BOS. Kein Fib, kein ZigZag, keine
+   Pullback-Pivots. ~3 Objekte + 1 Label, skaliert.
+2. **Volle Paritaet zum 1h**, nur eigene Farbe/Transparenz. ~25+ Objekte, vollstaendig aber
+   vermutlich ueberladen — Philip muesste im Test selbst entscheiden, was er wegtoggelt.
+3. **Trendphasen als Hintergrundbaender** ueber die Zeitachse, eines je Phase (rot down / gruen up),
+   mit Dauer. Zeigt Abfolge und Dauer auf einen Blick und passt damit zur impulsiv/korrektiv-Frage,
+   ist aber eine neue Darstellungsform im Chart.
+
+Unabhaengig von der Wahl gesetzt (Philip am 23.09.): ein An/Aus-Toggle unter dem Menuepunkt
+"Structure" (`src/views/Dashboard.vue:1928`) und Chart-Style-Tokens in `src/chartColors.js`
+(Vorbild `rangesMarker`/`rangesMarker2`, :129/:133) — woertlich: "und chartstyle hast du ja
+bisher auch noch nie vergessen."
