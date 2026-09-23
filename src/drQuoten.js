@@ -64,6 +64,12 @@ export function pipQuote(instrument, riskPips, pips) {
   return quoteAusBaendern(PIP_BAENDER, instrument, riskPips, pips);
 }
 
+// Label einer Chart-Marke (rScale.js, pipScale.js): Ziel allein, oder Ziel + Quote. Hier statt in
+// den beiden Leitern, damit sie dieselbe Schreibweise benutzen.
+export function labelMitQuote(ziel, quote) {
+  return quote == null ? ziel : `${ziel} – ${quote} %`;
+}
+
 // Vergleichszeilen zur Band-Zeile (Tabelle 2) — bewusst NICHT nach Risiko-Band geschnitten: die
 // Gruppe hat insgesamt n=188, eine Aufteilung nach Band fiele unter die 50er-Schwelle. Als Record
 // je Gruppe statt als eine einzelne "reif"-Funktion, weil die Gegenkraft-Zeile (das stärkere

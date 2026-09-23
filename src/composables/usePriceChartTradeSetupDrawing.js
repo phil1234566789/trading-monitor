@@ -8,14 +8,13 @@
 // usePriceChartDrawings.js — deshalb hier nur ein Parameter statt zwei).
 import { LiquidityLinePrimitive, bullBearLabelSide, formatLsLabel } from "../liquidity.js";
 import { OrderBlockPrimitive } from "../orderBlocks.js";
-import { rScaleLevels } from "../rScale.js";
-import { rQuote } from "../drQuoten.js";
-import { RScalePrimitive } from "../rScaleRendering.js";
+import { rScaleSpec } from "../rScale.js";
+import { pipScaleSpec } from "../pipScale.js";
+import { ScalePrimitive } from "../scaleRendering.js";
 import { cssColor, cssColorScaled } from "../chartColors.js";
 import { createSessionBonusResolver } from "../sessionBonus.js";
 import { lineWidth } from "../chartLineWidths.js";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
-import { toPips } from "../pipConfig.js";
 import { TRADE_SETUP_OB_WIDTH_SEC, TRADE_SETUP_OB_FILL_RATIO, TRADE_SETUP_OB_BORDER_RATIO } from "../priceChartConstants.js";
 
 // Deckkraft der Nebensweep-Linien, relativ zur LS-Linie desselben Setups.
@@ -35,7 +34,7 @@ export function usePriceChartTradeSetupDrawing() {
   // tradeSetups = tradeSetupsMetadata.value (usePriceChartTradeSetups.js) — enthält IMMER beide
   // Richtungen (siehe dort), showTradeSetupsShort/-Long filtern hier NUR das Zeichnen. candles =
   // bereits clipReplay-gefiltertes allCandles.
-  function refresh(tradeSetups, { candles, showTradeSetups, showTradeSetupsShort, showTradeSetupsLong, showRScale, showLiquidityDebug, replayUntil, symbol }) {
+  function refresh(tradeSetups, { candles, showTradeSetups, showTradeSetupsShort, showTradeSetupsLong, showRScale, showPipScale, showLiquidityDebug, replayUntil, symbol }) {
     for (const p of tradeSetupPrimitives) candleSeries.detachPrimitive(p);
     tradeSetupPrimitives.length = 0;
     if (!showTradeSetups) return;
@@ -172,27 +171,15 @@ export function usePriceChartTradeSetupDrawing() {
         candles,
       );
 
-      // R-Skala (PLAN-dr-statistik-ui.md, Stufe 1) — Lineal am OB-Startzeitpunkt, siehe
-      // rScaleRendering.js. Ein Primitive für alle Marken zusammen.
-      // Quote je Marke (Stufe 2): die historische Trefferquote hängt am Risiko-BAND der Range,
-      // nicht an der R-Stufe allein — siehe drQuoten.js (null außerhalb von GBPUSD). Dafür
-      // zählt bandRisk (strukturell), nicht das auf STOPP_DECKEL_PIPS gedeckelte risk der Marken.
-      const { anchorPrice, levels, bandRisk } = showRScale ? rScaleLevels(setup) : { levels: [] };
-      const riskPips = toPips(bandRisk ?? 0);
-      const rScale = levels.length
-        ? [
-            new RScalePrimitive(
-              {
-                startTime: setup.obStartTime,
-                anchorPrice,
-                levels: levels.map((l) => ({ ...l, quote: rQuote(symbol, riskPips, l.r) })),
-              },
-              candles,
-            ),
-          ]
-        : [];
+      // Skalen an der Dealing Range (PLAN-dr-statistik-ui.md) — je ein Lineal am
+      // OB-Startzeitpunkt, siehe scaleRendering.js. Beide einzeln einblendbar und dann zu
+      // verschiedenen Seiten gezeichnet; die Spec inklusive Labels/Quoten kommt aus der jeweiligen
+      // Leiter (rScale.js, pipScale.js), der Renderer kennt weder R noch Pips.
+      const scales = [showRScale && rScaleSpec(setup, symbol), showPipScale && pipScaleSpec(setup, symbol)]
+        .filter(Boolean)
+        .map((spec) => new ScalePrimitive(spec, candles));
 
-      for (const primitive of [fractalLine, lsLine, ...nebenSweepLines, obBox, ...rScale]) {
+      for (const primitive of [fractalLine, lsLine, ...nebenSweepLines, obBox, ...scales]) {
         candleSeries.attachPrimitive(primitive);
         tradeSetupPrimitives.push(primitive);
       }

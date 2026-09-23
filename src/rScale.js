@@ -1,9 +1,12 @@
 // R-Skala an der Dealing Range (PLAN-dr-statistik-ui.md, Stufe 1) — waagrechte Marken bei 2-10 R
 // ab der nahen OB-Kante, damit am Chart ablesbar ist, wie weit eine Dealing Range schon gelaufen
-// ist. Reine Geometrie aus Werten, die der Chart ohnehin hält (kein Server, keine Statistik — die
-// historischen Quoten je Marke sind Stufe 2).
-import { deriveSetupEntryInvalidation } from "./tradeSetup.js";
-import { fromPips } from "./pipConfig.js";
+// ist. Die Geometrie kommt aus Werten, die der Chart ohnehin hält (kein Server); die Quote je
+// Marke ist eine Nachschlagetabelle (drQuoten.js).
+//
+// Pendant in Pips: pipScale.js. Gezeichnet werden beide von scaleRendering.js.
+import { scaleAnchor } from "./tradeSetup.js";
+import { fromPips, toPips } from "./pipConfig.js";
+import { rQuote, labelMitQuote } from "./drQuoten.js";
 
 // Kein 1 R — Philip 2026-09-20: "1R macht keinen sinn ich mache keinen Trade um 1R zu gewinnen."
 export const R_SCALE_STEPS = [2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -25,18 +28,38 @@ const KEINE_SKALA = Object.freeze({ anchorPrice: null, levels: [], risk: 0, band
 // gesweepte Level statt aufs Extrem zeigte und die Marken damit falsch lagen — die Invalidierung
 // kommt jetzt pfadunabhängig aus der fernen OB-Kante (siehe deriveSetupEntryInvalidation).
 export function rScaleLevels(setup) {
-  const { setupEntry, invalidation } = deriveSetupEntryInvalidation(setup);
-  const bandRisk = Math.abs(invalidation - setupEntry);
+  const { anchorPrice, bandRisk, sign } = scaleAnchor(setup);
   if (!(bandRisk > 0)) return KEINE_SKALA;
   const risk = Math.min(bandRisk, fromPips(STOPP_DECKEL_PIPS));
-  const sign = setup.dir === 1 ? -1 : 1;
   // Beide Risiken wandern mit raus, damit die Quoten-Zuordnung (drQuoten.js) nichts ein zweites
   // Mal aus den OB-Kanten herleitet: risk (gedeckelt) trägt die Geometrie, bandRisk (strukturell)
   // das Quoten-Band — der Deckel verschiebt nur den Stopp, nicht, wie weit die Range aufspannt.
   return {
-    anchorPrice: setupEntry,
+    anchorPrice,
     risk,
     bandRisk,
-    levels: R_SCALE_STEPS.map((r) => ({ r, price: setupEntry + sign * r * risk })),
+    levels: R_SCALE_STEPS.map((r) => ({ r, price: anchorPrice + sign * r * risk })),
+  };
+}
+
+// Fertige Zeichen-Spec für scaleRendering.js (null, wenn nichts zu zeichnen ist). Label und
+// Farb-Key entstehen hier statt im Renderer, weil sich genau darin die beiden Leitern
+// unterscheiden — der Renderer selbst kennt weder R noch Pips.
+export function rScaleSpec(setup, instrument) {
+  const { anchorPrice, levels, bandRisk } = rScaleLevels(setup);
+  if (!levels.length) return null;
+  const riskPips = toPips(bandRisk);
+  return {
+    startTime: setup.obStartTime,
+    anchorPrice,
+    axisStyleKey: "rScale",
+    side: 1,
+    levels: levels.map(({ r, price }) => ({
+      price,
+      styleKey: r === R_SCALE_MINIMUM ? "rScaleMinimum" : "rScale",
+      // Zahl ohne "R"-Suffix (Philips Skizze 2026-09-20) — die Skala als Ganzes ist durch ihre
+      // Form erkennbar, neun Mal "R" wäre nur Rauschen.
+      label: labelMitQuote(String(r), rQuote(instrument, riskPips, r)),
+    })),
   };
 }

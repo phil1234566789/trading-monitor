@@ -1,40 +1,30 @@
-// Zeichnung der R-Skala als Lineal (Philips Skizze 2026-09-20): EINE senkrechte Linie am
-// OB-Startzeitpunkt, von der nahen OB-Kante bis zur letzten R-Marke, mit kurzen waagrechten
-// Strichen nach rechts und der Zahl links daneben. Ersetzt die erste Fassung (fünf durchgezogene
-// Linien bis zum Chart-Rand, je eine LiquidityLinePrimitive) — die war zu unübersichtlich, sobald
-// mehrere Setups gleichzeitig sichtbar waren.
+// Zeichnung einer Skala an der Dealing Range als Lineal (Philips Skizze 2026-09-20): EINE
+// senkrechte Linie am OB-Startzeitpunkt, von der nahen OB-Kante bis zur letzten Marke, mit kurzen
+// waagrechten Strichen zur Seite und der Zahl gegenüber. Ersetzt die erste Fassung (fünf
+// durchgezogene Linien bis zum Chart-Rand, je eine LiquidityLinePrimitive) — die war zu
+// unübersichtlich, sobald mehrere Setups gleichzeitig sichtbar waren.
 //
-// Ein Primitive pro Setup statt eines pro Marke: die Skala ist ein zusammenhängendes Objekt, und
-// die senkrechte Linie braucht ohnehin alle Marken auf einmal.
+// Ein Primitive pro Setup und Leiter statt eines pro Marke: die Skala ist ein zusammenhängendes
+// Objekt, und die senkrechte Linie braucht ohnehin alle Marken auf einmal.
+//
+// Hieß bis 2026-09-23 rScaleRendering.js und leitete Label und Farbe intern aus der R-Stufe ab.
+// Seit der Pip-Leiter (pipScale.js) bringt jede Marke beides fertig mit — der Renderer kennt
+// weder R noch Pips und zeichnet beide Leitern.
 import { snapToBarTime } from "./chartTimeUtils.js";
 import { cssColor } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
-import { R_SCALE_MINIMUM } from "./rScale.js";
 
 const TICK_LENGTH_PX = 28;
 const LABEL_GAP_PX = 5;
 const LABEL_FONT_PX = 11;
 
-// Farb-/Breiten-Key je Marke — 3 R ist laut Strategie das Minimum und deshalb eigenständig
-// einstellbar (siehe chartColors.js).
-function styleKey(r) {
-  return r === R_SCALE_MINIMUM ? "rScaleMinimum" : "rScale";
-}
-
-// Zahl ohne "R"-Suffix (Philips Skizze) — die Skala als Ganzes ist durch ihre Form erkennbar,
-// neun Mal "R" wäre nur Rauschen. Dahinter die historische Trefferquote des Risiko-Bands, sofern
-// für das Instrument gemessen (drQuoten.js) — sonst bleibt es bei der reinen R-Zahl.
-function labelText(r, quote) {
-  return quote == null ? String(r) : `${r} – ${quote} %`;
-}
-
-class RScaleRenderer {
+class ScaleRenderer {
   constructor(point) {
     this._point = point;
   }
 
   draw(target) {
-    const { x, anchorY, ticks } = this._point;
+    const { x, anchorY, ticks, axisStyleKey, side } = this._point;
     if (x === null || anchorY === null || ticks.length === 0) return;
 
     target.useBitmapCoordinateSpace((scope) => {
@@ -44,62 +34,69 @@ class RScaleRenderer {
       if (lastY === null) return;
 
       ctx.setLineDash([]);
-      ctx.strokeStyle = cssColor("rScale");
-      ctx.lineWidth = lineWidth("rScale") * scope.horizontalPixelRatio;
+      ctx.strokeStyle = cssColor(axisStyleKey);
+      ctx.lineWidth = lineWidth(axisStyleKey) * scope.horizontalPixelRatio;
       ctx.beginPath();
       ctx.moveTo(px, anchorY * scope.verticalPixelRatio);
       ctx.lineTo(px, lastY * scope.verticalPixelRatio);
       ctx.stroke();
 
       ctx.font = `${Math.round(LABEL_FONT_PX * scope.verticalPixelRatio)}px sans-serif`;
-      ctx.textAlign = "right";
+      // Label immer gegenüber den Strichen — sonst überschreiben sich bei zwei gleichzeitig
+      // eingeblendeten Leitern (R links, Pips rechts) Striche und Zahlen gegenseitig.
+      ctx.textAlign = side === 1 ? "right" : "left";
       ctx.textBaseline = "middle";
-      for (const { r, quote, y } of ticks) {
+      for (const { label, styleKey, y } of ticks) {
         if (y === null) continue;
         const py = Math.round(y * scope.verticalPixelRatio) + 0.5;
-        const color = cssColor(styleKey(r));
+        const color = cssColor(styleKey);
         ctx.strokeStyle = color;
-        ctx.lineWidth = lineWidth(styleKey(r)) * scope.horizontalPixelRatio;
+        ctx.lineWidth = lineWidth(styleKey) * scope.horizontalPixelRatio;
         ctx.beginPath();
         ctx.moveTo(px, py);
-        ctx.lineTo(px + TICK_LENGTH_PX * scope.horizontalPixelRatio, py);
+        ctx.lineTo(px + side * TICK_LENGTH_PX * scope.horizontalPixelRatio, py);
         ctx.stroke();
-        // Label links der senkrechten Linie, siehe labelText.
         ctx.fillStyle = color;
-        ctx.fillText(labelText(r, quote), px - LABEL_GAP_PX * scope.horizontalPixelRatio, py);
+        ctx.fillText(label, px - side * LABEL_GAP_PX * scope.horizontalPixelRatio, py);
       }
     });
   }
 }
 
-class RScalePaneView {
+class ScalePaneView {
   constructor(source) {
     this._source = source;
-    this._point = { x: null, anchorY: null, ticks: [] };
+    this._point = { x: null, anchorY: null, ticks: [], axisStyleKey: null, side: 1 };
   }
 
   update() {
     const series = this._source._series;
     const timeScale = this._source._chart.timeScale();
-    const { startTime, anchorPrice, levels } = this._source._scale;
+    const { startTime, anchorPrice, levels, axisStyleKey, side } = this._source._scale;
     const barTime = snapToBarTime(this._source._candles, startTime);
     this._point = {
       x: barTime != null ? timeScale.timeToCoordinate(barTime) : null,
       anchorY: series.priceToCoordinate(anchorPrice),
-      ticks: levels.map(({ r, price, quote }) => ({ r, quote, y: series.priceToCoordinate(price) })),
+      axisStyleKey,
+      side,
+      ticks: levels.map(({ price, label, styleKey }) => ({
+        label,
+        styleKey,
+        y: series.priceToCoordinate(price),
+      })),
     };
   }
 
   renderer() {
-    return new RScaleRenderer(this._point);
+    return new ScaleRenderer(this._point);
   }
 }
 
-export class RScalePrimitive {
+export class ScalePrimitive {
   constructor(scale, candles) {
     this._scale = scale;
     this._candles = candles;
-    this._paneViews = [new RScalePaneView(this)];
+    this._paneViews = [new ScalePaneView(this)];
     this._chart = null;
     this._series = null;
   }

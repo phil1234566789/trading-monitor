@@ -111,6 +111,8 @@ const GROUPS = [
       { key: "tradeSetupProtected", label: "Protected Level" },
       { key: "rScale", label: "R-Skala" },
       { key: "rScaleMinimum", label: "R-Skala (3 R)" },
+      { key: "pipScale", label: "Pip-Skala" },
+      { key: "pipScaleHighlight", label: "Pip-Skala (15 P)" },
     ],
   },
   {

@@ -45,6 +45,8 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   tradeSetupProtected: 2, // Fractal-Linie im Trade-Setup.
   rScale: 1, // R-Marken an der Dealing Range (siehe rScale.js).
   rScaleMinimum: 2, // 3-R-Marke, laut Strategie das Minimum — bewusst dicker als die übrigen.
+  pipScale: 1, // Pip-Marken an der Dealing Range (siehe pipScale.js).
+  pipScaleHighlight: 2, // 15-Pip-Marke, dort liegt TP1 — bewusst dicker als die übrigen.
   rangeHigh: 2,
   rangeLow: 2,
   rangeProtectedLow: 2,

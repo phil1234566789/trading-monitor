@@ -86,6 +86,11 @@ export const DEFAULT_CHART_COLORS = {
   // Marke hervorheben kann, ohne die übrigen mitzuziehen.
   rScale: { hex: "#90a4ae", alpha: 0.55 },
   rScaleMinimum: { hex: "#90a4ae", alpha: 0.95 },
+  // Pip-Skala (pipScale.js) — eigener Ton statt derselbe wie die R-Skala: beide Leitern sind
+  // einzeln einblendbar und liegen dann am selben Anker, nur zu verschiedenen Seiten. 15 Pips als
+  // TP1-Marke mit eigenem Key, analog zu rScaleMinimum.
+  pipScale: { hex: "#a1887f", alpha: 0.55 },
+  pipScaleHighlight: { hex: "#a1887f", alpha: 0.95 },
   rangeHigh: { hex: "#ef5350", alpha: 0.95 },
   rangeLow: { hex: "#00e676", alpha: 0.95 },
   rangeProtectedLow: { hex: "#ffffff", alpha: 0.95 },

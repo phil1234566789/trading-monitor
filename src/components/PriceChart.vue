@@ -209,9 +209,11 @@ const props = defineProps({
   // dann gar nicht erst).
   showTradeSetupsLong: { type: Boolean, default: true },
   showTradeSetupsShort: { type: Boolean, default: true },
-  // R-Skala an jeder Setup-Box (siehe rScale.js) — eigener Toggle, weil bei einer
-  // tradeSetupHistoryCount > 1 schnell viele waagrechte Linien gleichzeitig im Chart stehen.
+  // R-/Pip-Skala an jeder Setup-Box (siehe rScale.js, pipScale.js) — je ein eigener Toggle, weil
+  // bei einer tradeSetupHistoryCount > 1 schnell viele waagrechte Linien gleichzeitig im Chart
+  // stehen.
   showRScale: { type: Boolean, default: true },
+  showPipScale: { type: Boolean, default: false },
   rangesPeriod: { type: Number, default: 5 },
   rangesLookbackHours: { type: Number, default: 7 * 24 },
   showRanges: { type: Boolean, default: false },
@@ -1597,6 +1599,7 @@ function renderTradeSetupsInternal() {
     showTradeSetupsShort: props.showTradeSetupsShort,
     showTradeSetupsLong: props.showTradeSetupsLong,
     showRScale: props.showRScale,
+    showPipScale: props.showPipScale,
     showLiquidityDebug: props.showLiquidityDebug,
     replayUntil: props.replayUntil,
     symbol: props.symbol,
@@ -2187,7 +2190,7 @@ watch(() => props.dbTradeSetups, () => {
 // Nur Re-Render, kein computeTradeSetups() — currentTradeSetups bleibt unabhängig von diesem
 // Toggle vollständig (siehe computeTradeSetups), die TSC-Karte bekommt also KEIN eigenes
 // Refresh hier (sie ignoriert diesen Toggle bewusst, siehe Chat 2026-07-19).
-watch([() => props.showTradeSetupsLong, () => props.showTradeSetupsShort, () => props.showRScale], renderTradeSetupsInternal);
+watch([() => props.showTradeSetupsLong, () => props.showTradeSetupsShort, () => props.showRScale, () => props.showPipScale], renderTradeSetupsInternal);
 watch(() => props.showRanges, () => {
   refreshRangesPollingState();
   refreshRangesMarkersInternal(); // sofort reagieren, nicht erst beim nächsten refreshChart()

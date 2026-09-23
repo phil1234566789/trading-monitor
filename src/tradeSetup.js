@@ -281,3 +281,16 @@ export function deriveSetupEntryInvalidation(setup) {
     ? { setupEntry: setup.obBottom, invalidation: setup.obTop }
     : { setupEntry: setup.obTop, invalidation: setup.obBottom };
 }
+
+// Fußpunkt und Richtung eines Lineals an der Dealing Range (rScale.js, pipScale.js) — beide
+// Leitern messen ab derselben nahen OB-Kante in dieselbe Richtung und unterscheiden sich nur in
+// der Schrittweite. bandRisk ist das STRUKTURELLE Risiko (OB-Kante bis Invalidierung), aus dem
+// drQuoten.js sein Risiko-Band zieht.
+export function scaleAnchor(setup) {
+  const { setupEntry, invalidation } = deriveSetupEntryInvalidation(setup);
+  return {
+    anchorPrice: setupEntry,
+    bandRisk: Math.abs(invalidation - setupEntry),
+    sign: setup.dir === 1 ? -1 : 1,
+  };
+}

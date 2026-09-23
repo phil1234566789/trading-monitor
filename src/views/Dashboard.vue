@@ -156,6 +156,13 @@ const showRScale = useLocalStorageRef("showRScale", true);
 const rScaleHint =
   "Marken bei 2-10 R ab der nahen OB-Kante, 1 R = Risiko bis zur Invalidierung, gedeckelt auf 6 Pips — wie der Stopp im " +
   `Trade. Prozent = wie oft vergleichbare Dealing Ranges diese Strecke erreicht haben. ${QUOTEN_HERKUNFT}`;
+// Pip-Skala (10-40 Pips ab derselben Kante, siehe pipScale.js) — zweiter, unabhängiger Toggle
+// statt eines Umschalters: Philip will beide Leitern nebeneinander sehen können (23.09.2026).
+// Default aus, damit der Chart nicht mit zwei Leitern je Setup startet.
+const showPipScale = useLocalStorageRef("showPipScale", false);
+const pipScaleHint =
+  "Marken bei 10-40 Pips ab der nahen OB-Kante — feste Strecke, unabhängig davon wie weit die Range aufgespannt ist. " +
+  `Prozent = wie oft vergleichbare Dealing Ranges diese Strecke erreicht haben. ${QUOTEN_HERKUNFT}`;
 
 // "Ranges" — erster Baustein des neuen PA-Analyse-Konzepts (siehe Chat 2026-07-18: weg von der
 // verschachtelten Trend-State-Machine, hin zu PA-Analyse/Trendanalyse/Marktstärke als getrennten
@@ -1873,6 +1880,9 @@ watch(selectedTradingAccountId, () => {
           <button :class="{ active: showRScale }" :title="rScaleHint" @click="showRScale = !showRScale">
             R-Skala
           </button>
+          <button :class="{ active: showPipScale }" :title="pipScaleHint" @click="showPipScale = !showPipScale">
+            Pip-Skala
+          </button>
           <label class="ranges-lookback-field">
             Historie
             <input
@@ -2189,6 +2199,7 @@ watch(selectedTradingAccountId, () => {
     :show-trade-setups-long="showTradeSetupsLong"
     :show-trade-setups-short="showTradeSetupsShort"
     :show-r-scale="showRScale"
+    :show-pip-scale="showPipScale"
     :confirmation-liquidity-keys="confirmationLiquidityKeys"
     :invalidation-liquidity-keys="invalidationLiquidityKeys"
     :hovered-invalidation-range-id="hoveredInvalidationRangeId"
