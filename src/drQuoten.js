@@ -80,8 +80,9 @@ export const FVG_BAND_N = [972, 963, 539, 493, 217, 98];
 
 // fvgPips ist die Groesse der bestaetigenden FVG in Pips (trade_setups.ob_fvg / PIP_SIZE).
 // null, sobald nichts Gemessenes passt — der Aufrufer zeigt dann nichts statt einer leeren Zelle.
-// Noch nirgends aufgerufen: die TSC-Anzeige ist eine offene Entscheidung (siehe PLAN), die Tabelle
-// steht hier, damit sie beim naechsten Messlauf mit den anderen zusammen nachgezogen wird.
+// Noch nirgends aufgerufen, und das soll vorerst so bleiben: die Zahlen werden ueberarbeitet und
+// sind bis dahin VORLAEUFIG -- keine Anzeige darauf bauen. Der PLAN-Abschnitt listet alle vier
+// Stellen, die beim naechsten Messstand gemeinsam nachzuziehen sind.
 export function fvgQuote(instrument, fvgPips, ziel, einheit = "R") {
   if (instrument !== QUOTEN_INSTRUMENT || !(fvgPips > 0)) return null;
   const band = FVG_BAENDER.find((b) => fvgPips < b.hi);

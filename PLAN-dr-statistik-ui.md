@@ -317,6 +317,24 @@ Anlass war Philips Einwand zu Setup #2936: *„die FVG ist 0,5 Pip. viel zu schw
 ueberlegen sowas rauszufiltern."* Gemessen mit `analysis/dr-reichweite/fvgBaender.py`, Rohausgabe
 in `ergebnis-fvg.txt`, Tabelle als `FVG_BAENDER` in `src/drQuoten.js`.
 
+> **Die Zahlen unten sind vorläufig (Stand 23.09.2026).** Sie werden gerade überarbeitet; bis das
+> abgeschlossen ist, keine davon als gesichert weiterverwenden und keine Anzeige darauf bauen.
+>
+> Sie liegen an **vier** Stellen und müssen gemeinsam nachgezogen werden, sobald der neue Messstand
+> steht — neu erzeugt mit `python fvgBaender.py > ergebnis-fvg.txt` in `analysis/dr-reichweite/`:
+>
+> 1. `FVG_BAENDER` in `src/drQuoten.js`, samt der Erwartungswerte in `test/drQuoten.test.js`
+> 2. dieser Abschnitt (alle drei Tabellen plus die Bootstrap-Intervalle darunter)
+> 3. Kapitel „FVG-Größe" in `analysis/dr-reichweite/README.md`
+> 4. das Artefakt mit den Diagrammen
+>
+> **Nicht** betroffen: `trade_setups.ob_fvg` und der Telegram-Alarmtext. Beide tragen die gemessene
+> Lücke selbst, keine daraus abgeleitete Quote — sie ändern sich mit einem neuen Messstand nicht.
+>
+> Wer die Liste abarbeitet: die vier Stellen sind genau der Grund, warum `fvgBaender.py` die
+> JS-Tabelle irgendwann selbst rausschreiben sollte, statt sie abtippen zu lassen. Beim ersten
+> Durchgang ist genau dabei eine Zahl verrutscht (91 statt 90).
+
 Dieselben 3282 Ranges, nur nach der Lücke gruppiert, die den bestätigenden M5-OB ausgemacht hat.
 Beide Leitern sind **gedeckelt** (Stopp min(Risiko, 6 Pips)) und damit direkt mit „Der gedeckelte
 Stopp" weiter unten vergleichbar, nicht mit der ungedeckelten Tabelle oben — deshalb auch dieselbe
