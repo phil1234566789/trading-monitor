@@ -359,7 +359,7 @@ ueberlegen sowas rauszufiltern."* Gemessen mit `fvgBaender.py`, volle Tabellen i
 Die Lücke steht nirgends in den Daten, ist aber exakt rekonstruierbar: die FVG-anknüpfende OB-Kante
 ist C1, und `widenObForSweep` zieht immer nur die gegenüberliegende auf. Gegenprobe: das Minimum
 über alle 3282 Zeilen ist exakt 0,5000 Pip — die Schwelle der Erkennung. Seit dem 23.09.2026 führt
-`detectOrderBlocks` die Lücke zusätzlich als `gap` mit, ein neuer Dump trägt sie als `ob_gap`.
+`detectOrderBlocks` die Lücke zusätzlich als `fvg` mit, ein neuer Dump trägt sie als `ob_fvg`.
 
 | FVG | n | Anteil | Risiko-Median | Reichweite-Median | 15 P | 2 R | 3 R | 4 R | OB-Retest |
 |---|---|---|---|---|---|---|---|---|---|

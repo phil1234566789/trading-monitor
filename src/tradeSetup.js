@@ -22,7 +22,7 @@ import { businessSecondsBetween } from "./chartTimeUtils.js";
 // Relevanz-Schwelle war unterschiedlich — das übernimmt detectOrderBlocks() jetzt komplett, hier
 // bleibt nur noch die Reduktion aufs von tradeSetup.js erwartete Feld-Subset.
 export function detectSetupObs(candles) {
-  return detectOrderBlocks(candles, "5m").map((z) => ({ dir: z.dir, top: z.top, bottom: z.bottom, startTime: z.startTime, gap: z.gap }));
+  return detectOrderBlocks(candles, "5m").map((z) => ({ dir: z.dir, top: z.top, bottom: z.bottom, startTime: z.startTime, fvg: z.fvg }));
 }
 
 // Sucht die zeitlich erste FVG einer Richtung, deren Impuls-Kerze auf afterTime folgt, aber
@@ -241,7 +241,7 @@ export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupO
     const ls = sweeps[0].level;
     const fensterVon = Math.min(...sweeps.map((sw) => sw.level.touchedTime));
     const widened = widenObForSweep(ob, fensterVon, dir, m5Candles);
-    return { dir, fractal: fractal ?? ls, ls, sweeps, obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, obGap: widened.gap, pathType };
+    return { dir, fractal: fractal ?? ls, ls, sweeps, obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, obFvg: widened.fvg, pathType };
   };
 
   for (const { fractal, ls } of findAllProtectedFractals(fractalLevels, h1Levels, m5Levels, dir, params)) {

@@ -50,7 +50,9 @@ export interface Zone {
   // top/bottom nicht rekonstruierbar, sobald eine Kante erweitert wurde (Lower-TF-Box,
   // widenObForSweep) — Philip 23.09.2026: eine 0,5-Pip-Luecke in einem 15,8-Pip-OB ist ein
   // anderes Setup als eine 5-Pip-Luecke, und das war bis dahin nirgends messbar.
-  gap: number;
+  // Heisst fvg und nicht gap, obwohl die Rechnung darunter bullGap/bearGap sagt: "Gap" meint im
+  // Trading auch das Wochenend-Gap, und persistiert wird das hier als ob_fvg.
+  fvg: number;
   active: boolean;
   touched: boolean;
   invalidated: boolean;
@@ -107,7 +109,7 @@ export function detectOrderBlocks(candles: Candle[], timeframe?: string, isForex
         top: c1.high,
         bottom,
         dir: 1,
-        gap: bullGap,
+        fvg: bullGap,
         active: true,
         touched: false,
         invalidated: false,
@@ -123,7 +125,7 @@ export function detectOrderBlocks(candles: Candle[], timeframe?: string, isForex
         top,
         bottom: c1.low,
         dir: -1,
-        gap: bearGap,
+        fvg: bearGap,
         active: true,
         touched: false,
         invalidated: false,

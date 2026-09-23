@@ -32,13 +32,13 @@ kerze = {c["time"]: c for c in cnd}
 
 for x in res:
     r = by_id[x["id"]]
-    # Die FVG steht nicht im Dump (ob_gap gibt es erst seit 23.09.2026, der 2025/2026-Lauf ist
+    # Die FVG steht nicht im Dump (ob_fvg gibt es erst seit 23.09.2026, der 2025/2026-Lauf ist
     # aelter) -- sie ist aber exakt rekonstruierbar: die FVG-anknuepfende OB-Kante ist c1, und
     # widenObForSweep erweitert immer nur die GEGENUEBERLIEGENDE. Also ob_bottom - high(cur) bei
     # Short, low(cur) - ob_top bei Long, mit cur = die Kerze nach der Impuls-Kerze. Gegenprobe: das
     # Minimum ueber alle 3282 Zeilen ist exakt 0,5000 Pip, die Schwelle der Erkennung.
     cur = kerze[ts(r["ob_start_time"]) + 300]
-    x["fvg"] = r.get("ob_gap", (r["ob_bottom"] - cur["high"]) if r["direction"] == "short"
+    x["fvg"] = r.get("ob_fvg", (r["ob_bottom"] - cur["high"]) if r["direction"] == "short"
                      else (cur["low"] - r["ob_top"])) / PIP
     x["fvg_rel"] = 100.0 * x["fvg"] / x["risk"]
     x["retest"] = kam_retest(x)

@@ -211,7 +211,7 @@ for (const instrument of instrumente) {
         // Keine DB-Spalte (bewusst, solange nur gemessen und nicht gefiltert wird) — nur fuer den
         // BACKFILL_DUMP, aus dem analysis/dr-reichweite/fvgBaender.py rechnet. Vor dem Upsert
         // abgetrennt wie `sweeps`.
-        ob_gap: setup.obGap,
+        ob_fvg: setup.obFvg,
         alert_price: m5Fenster[m5Fenster.length - 1].close,
         notified: false,
         notified_at: null,
@@ -272,7 +272,7 @@ for (const instrument of instrumente) {
     // deshalb über den natürlichen Schlüssel zugeordnet statt über den Index).
     const { data: geschrieben, error } = await supabase
       .from("trade_setups")
-      .upsert(teil.map(({ sweeps: _sweeps, ob_gap: _obGap, ...zeile }) => zeile), { onConflict: "instrument,direction,ob_start_time" })
+      .upsert(teil.map(({ sweeps: _sweeps, ob_fvg: _obFvg, ...zeile }) => zeile), { onConflict: "instrument,direction,ob_start_time" })
       .select("id, direction, ob_start_time");
     if (error) throw error;
     const idJeSchluessel = new Map((geschrieben ?? []).map((r) => [schluessel(r.direction, r.ob_start_time), r.id as number]));
