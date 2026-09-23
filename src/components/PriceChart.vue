@@ -61,7 +61,7 @@ import {
   MAX_PLAUSIBLE_GAP_SEC,
 } from "../priceChartConstants.js";
 import { buildActiveMetadataSnapshot, hasActiveMetadata as hasActiveMetadataFor, saveDebugMetadataSection } from "../debugMetadata.js";
-import { usePriceChartClaudeAnnotations } from "../composables/usePriceChartClaudeAnnotations.js";
+import { usePriceChartDrawings } from "../composables/usePriceChartDrawings.js";
 import { measureDrawing } from "../chartMeasure.js";
 import { usePriceChartTradeSetups } from "../composables/usePriceChartTradeSetups.js";
 import { usePriceChartMarketStructure } from "../composables/usePriceChartMarketStructure.js";
@@ -277,11 +277,11 @@ const props = defineProps({
   // Debug-Metadaten-Sammel-Panel (siehe Chat 2026-07-20: "damit ich dir nicht ständig die Daten
   // von dem was ich in TradingView sehe hier schreiben muss") — Toolbar-Unterpunkt bei "Debug".
   showDebugMetadata: { type: Boolean, default: false },
-  // Claude-Antwort-Import (siehe claudeAnnotations.js) — Liste geparster Annotationen +
+  // Zeichnungen (siehe annotations.js) — Liste geparster Annotationen +
   // der Berlin-Kalendertag, gegen den ihre "HH:mm"-Zeitangaben aufgelöst werden (Dashboard.vue
   // leitet das aus dem Replay-Zeitpunkt ab).
-  claudeAnnotations: { type: Array, default: () => [] },
-  claudeAnnotationsDate: { type: String, default: null },
+  annotations: { type: Array, default: () => [] },
+  annotationsDate: { type: String, default: null },
   // Mess-Modus (Philip 2026-09-23) — eigener Klick-Modus neben dem Trade-Modus, nicht innerhalb:
   // gemessen wird frei zwischen zwei Punkten, ohne Treffer auf irgendein Chart-Objekt.
   measureModeActive: { type: Boolean, default: false },
@@ -325,7 +325,6 @@ const emit = defineEmits([
   "close-debug-metadata",
   "close-rsi-divergence-stats",
   "select-setup",
-  "toggle-trade-mode",
   "select-target",
   "select-setup-confirmations",
   "pin-context-menu",
@@ -350,8 +349,8 @@ const priceChartRsi = usePriceChartRsi();
 // das seit Chat 2026-08-28 (Umzug in eine eigene Dashboard.vue-Sidebar-Spalte) nicht mehr, cockpitState
 // bleibt aber Quelle fürs Debug-Metadaten-Panel (cockpitMetadata unten) — deshalb weiterhin berechnet.
 const { cockpitMetadata, refreshCockpit } = usePriceChartCockpit();
-// Claude-Notizen-Zeichnung (siehe usePriceChartClaudeAnnotations.js, Phase 6d).
-const { refresh: refreshClaudeAnnotations, create: createClaudeAnnotations, dispose: disposeClaudeAnnotations } = usePriceChartClaudeAnnotations();
+// Zeichnungen-Zeichnung (siehe usePriceChartDrawings.js, Phase 6d).
+const { refresh: refreshDrawings, create: createDrawings, dispose: disposeDrawings } = usePriceChartDrawings();
 // Trade-Setup-Erkennung + M5-Polling (siehe usePriceChartTradeSetups.js, Phase 6f) —
 // tradeSetupsMetadata direkt im Template gebunden (Debug-Metadaten-Panel), daher destructured.
 // Ersetzt das bisherige DOPPELTE currentTradeSetups(let)+tradeSetupsMetadata(ref) hier im File.
@@ -488,7 +487,7 @@ let invalidationLinePrimitives = [];
 // divergencePriceLinePrimitives (Preis-Bein der Divergenz-Konnektoren) lebt seit Phase 6b in
 // priceChartRsi (usePriceChartRsi.js) — hier per priceChartRsi.divergencePriceLinePrimitives gelesen.
 // tradeSetupPrimitives lebt seit Phase 6h in usePriceChartTradeSetupDrawing.js.
-// claudeAnnotationPrimitives/-PriceLines leben seit Phase 6d in usePriceChartClaudeAnnotations.js.
+// annotationPrimitives/-PriceLines leben seit Phase 6d in usePriceChartDrawings.js.
 let allCandles = [];
 const m5ClockEnabled = () => props.currentBar === "5m" && props.replayUntil == null;
 const { state: m5Clock, retry: retryM5Clock } = useM5CandleClock({
@@ -600,7 +599,7 @@ function buildActiveMetadataSnapshotInternal() {
     rangesMetadata2: rangesMetadata2.value,
     candles: clipReplay(allCandles),
     timeframe: props.currentBar,
-    claudeAnnotations: props.claudeAnnotations,
+    annotations: props.annotations,
   });
 }
 const hasActiveMetadata = computed(() =>
@@ -1077,15 +1076,15 @@ function refreshInvalidationLinesInternal() {
   }
 }
 
-// Dünner Wrapper um usePriceChartClaudeAnnotations' refresh() — baut die Argumente aus Props/
-// allCandles zusammen (siehe usePriceChartClaudeAnnotations.js für die eigentliche Zeichenlogik).
-function refreshClaudeAnnotationsInternal() {
-  refreshClaudeAnnotations({
+// Dünner Wrapper um usePriceChartDrawings' refresh() — baut die Argumente aus Props/
+// allCandles zusammen (siehe usePriceChartDrawings.js für die eigentliche Zeichenlogik).
+function refreshDrawingsInternal() {
+  refreshDrawings({
     // Die laufende Messung hängt nur zum Zeichnen mit dran (Philip 2026-09-23: "momentan ist es
     // unmöglich genau 6 Pips zu zeichnen, ich sehe die Pip-Anzahl erst nach dem zweiten Klick") —
     // dieselbe Darstellung wie die fertige Messung, nur noch nicht gespeichert.
-    annotations: measurePreview ? [...props.claudeAnnotations, measurePreview] : props.claudeAnnotations,
-    annotationsDate: props.claudeAnnotationsDate,
+    annotations: measurePreview ? [...props.annotations, measurePreview] : props.annotations,
+    annotationsDate: props.annotationsDate,
     candles: clipReplay(allCandles),
   });
 }
@@ -1733,7 +1732,7 @@ function refreshChart() {
   refreshTradeTargetLinksInternal();
   refreshTradeConfirmationLinksInternal();
   refreshInvalidationLinesInternal();
-  refreshClaudeAnnotationsInternal();
+  refreshDrawingsInternal();
   renderTradeSetupsInternal();
   refreshRangesMarkersInternal();
   refreshMarketStructureInternal(); // ruft refreshCockpitInternal() selbst mit auf, siehe dort
@@ -1885,7 +1884,7 @@ onMounted(() => {
   // EMA-Serien + RSI-Panel-Lifecycle leben in usePriceChartRsi.js (Phase 6b) — legt hier die
   // EMA-Serien an (RSI-Series+Pane erst bei Bedarf, siehe refreshRsiInternal/priceChartRsi.refreshRsi).
   priceChartRsi.create(chart, candleSeries);
-  createClaudeAnnotations(chart, candleSeries);
+  createDrawings(chart, candleSeries);
   createMarketStructure(chart, candleSeries);
   createTradeSetupDrawing(candleSeries);
   createLiquidity(candleSeries);
@@ -1910,7 +1909,7 @@ onMounted(() => {
     measureStartPoint = null;
     // Vorschau sofort weg, statt bis zum Rückkehren der gespeicherten Zeile stehenzubleiben.
     measurePreview = null;
-    refreshClaudeAnnotationsInternal();
+    refreshDrawingsInternal();
   }
 
   chart.subscribeClick((param) => {
@@ -2017,7 +2016,7 @@ onMounted(() => {
       if (measureStartPoint) {
         const point = measurePointAt(x, y);
         measurePreview = point ? measureDrawing(measureStartPoint, point).annotations[0] : null;
-        refreshClaudeAnnotationsInternal();
+        refreshDrawingsInternal();
       }
       return;
     }
@@ -2080,7 +2079,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  disposeClaudeAnnotations();
+  disposeDrawings();
   disposeMarketStructure();
   disposeTradeSetupDrawing();
   disposeLiquidity();
@@ -2142,7 +2141,7 @@ watch(() => props.pinnedObZones, refreshPoiZonesInternal);
 watch(() => props.pinnedLiquidityLevels, refreshLiquidityInternal);
 watch(() => props.pinnedTradeSetups, refreshTradeSetupLinksInternal);
 watch(() => props.pinnedRsiDivergences, refreshRsiDivergenceInternal);
-watch(() => props.claudeAnnotations, refreshClaudeAnnotationsInternal);
+watch(() => props.annotations, refreshDrawingsInternal);
 // M5/1H/4H unabhängig an-/ausschaltbar (Chat 2026-07-30) — siehe collectObsZones. Seit Punkt 7 der
 // ob_zones-Konsolidierung (2026-08-22) kommen 1H/4H per DB-Read (dbObZones-Prop, in Dashboard.vue
 // gepollt), brauchen also keine eigene Poll-Pipeline/Kerzen-Abhängigkeit mehr — nur M5 läuft weiter
@@ -2237,7 +2236,7 @@ watch(
     if (!active) {
       measureStartPoint = null;
       measurePreview = null;
-      refreshClaudeAnnotationsInternal();
+      refreshDrawingsInternal();
       if (chartContainerRef.value) chartContainerRef.value.style.cursor = "";
     }
   },

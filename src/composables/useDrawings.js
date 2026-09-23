@@ -2,23 +2,23 @@ import { ref, computed, watch } from "vue";
 import { useLocalStorageRef } from "./useLocalStorageRef.js";
 import { berlinDateStrFor } from "../berlinTime.js";
 import {
-  fetchClaudeAnnotations,
-  addClaudeAnnotationDrawing,
-  removeClaudeAnnotationDrawing,
-  setClaudeAnnotationDrawingVisible,
-} from "../claudeAnnotationsStore.js";
+  fetchDrawings,
+  addDrawing,
+  removeDrawing,
+  updateDrawingVisible,
+} from "../drawingsStore.js";
 
 // Modul-weiter Singleton (wie useStatusBar.js) — geteilt zwischen App.vue (Toggle-Button +
 // Import-Modal, global in der Status-Leiste) und Dashboard.vue/
 // PriceChart.vue (rendert die Annotationen). Seit Chat 2026-07-28 in Supabase persistiert
-// (claude_annotations, siehe claudeAnnotationsStore.js) statt nur In-Memory — vorher ging beim
+// (claude_annotations, siehe drawingsStore.js) statt nur In-Memory — vorher ging beim
 // erneuten Öffnen des Modals die zuletzt gepastete Zeichnung "verloren" (leeres Textfeld), und ein
 // neuer Paste ERSETZTE die vorherige Zeichnung komplett, statt über einen Chat-Verlauf hinweg
 // mehrere Zeichnungen desselben Tages zu akkumulieren.
 //
 // instrument/dateStr sind bewusst hier zentralisiert (nicht mehr separat in Dashboard.vue
 // berechnet) — dieselben Keys/Defaults wie Dashboard.vue (currentSymbol/replayTime/replayActive),
-// damit Store-Fetch, Rendering (claudeAnnotationsDate-Prop) und die Anzeige im Modal garantiert
+// damit Store-Fetch, Rendering (annotationsDate-Prop) und die Anzeige im Modal garantiert
 // denselben Tag/Instrument meinen. "Der aktuelle Chart-Zeitpunkt, oder der Backtest-Tag, falls
 // Replay/Backtest aktiv ist" (Philip 2026-07-28) — exakt dieselbe Herleitung wie
 // der frühere Daten-Export ihn vorbelegte.
@@ -36,7 +36,7 @@ const loading = ref(false);
 async function load() {
   loading.value = true;
   try {
-    drawings.value = await fetchClaudeAnnotations(instrument.value, dateStr.value);
+    drawings.value = await fetchDrawings(instrument.value, dateStr.value);
   } finally {
     loading.value = false;
   }
@@ -48,10 +48,10 @@ watch([instrument, dateStr], load, { immediate: true });
 
 // Jeder Klick auf "Zeichnen" legt eine NEUE Zeile an (fügt hinzu), statt die Liste zu ersetzen.
 // Ein Paste kann mehrere Gruppen enthalten (parseAnnotations gibt seit 2026-07-30 immer eine
-// Liste von Gruppen zurück) — ClaudeAnnotationsModal.vue ruft add() einmal pro Gruppe auf, jede
+// Liste von Gruppen zurück) — DrawingsModal.vue ruft add() einmal pro Gruppe auf, jede
 // wird eine eigene, einzeln aus-/einblendbare Zeile.
 async function add(annotationsList, title) {
-  const row = await addClaudeAnnotationDrawing(instrument.value, dateStr.value, annotationsList, title);
+  const row = await addDrawing(instrument.value, dateStr.value, annotationsList, title);
   if (row) {
     drawings.value.push(row);
     visible.value = true; // frisch gezeichnet -> direkt sichtbar, kein zusätzlicher Klick nötig
@@ -60,15 +60,15 @@ async function add(annotationsList, title) {
 }
 
 async function remove(id) {
-  const ok = await removeClaudeAnnotationDrawing(id);
+  const ok = await removeDrawing(id);
   if (ok) drawings.value = drawings.value.filter((d) => d.id !== id);
   return ok;
 }
 
-// Pro-Zeichnung-Toggle (Checkbox-Liste in ClaudeAnnotationsModal.vue) — unabhängig vom globalen
+// Pro-Zeichnung-Toggle (Checkbox-Liste in DrawingsModal.vue) — unabhängig vom globalen
 // "visible"-Toggle oben, der alle Zeichnungen auf einmal aus-/einblendet.
 async function setDrawingVisible(id, value) {
-  const ok = await setClaudeAnnotationDrawingVisible(id, value);
+  const ok = await updateDrawingVisible(id, value);
   if (ok) {
     const row = drawings.value.find((d) => d.id === id);
     if (row) row.visible = value;
@@ -81,6 +81,6 @@ async function setDrawingVisible(id, value) {
 // (d.visible === false) werden dabei rausgefiltert, zusätzlich zum globalen Toggle.
 const flatAnnotations = computed(() => drawings.value.filter((d) => d.visible).flatMap((d) => d.annotations));
 
-export function useClaudeAnnotations() {
+export function useDrawings() {
   return { instrument, dateStr, drawings, visible, loading, flatAnnotations, load, add, remove, setDrawingVisible };
 }

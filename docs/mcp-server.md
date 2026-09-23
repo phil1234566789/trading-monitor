@@ -62,7 +62,7 @@ Bedarf nachfragen statt raten.
 Detection-Algorithmen). Kleine, stabile, dependency-freie Stücke sind hier in Deno-sicherer Form
 dupliziert: `_shared/berlinTime.ts` (Berlin-Zeitzonen-Datumsmathe aus `dataExport.js`),
 `db.ts`s `filterRelevantRows` (aus `liquidity.js`s `filterRelevantLevels`), `tools/annotations.ts`s
-`validateAnnotations` (aus `claudeAnnotations.js`s `validateAnnotationList`). Wird eines der
+`validateAnnotations` (aus `src/annotations.js`s `validateAnnotationList`). Wird eines der
 Originale geändert, prüfen ob der Port hier denselben Fix braucht.
 
 `berlinTime.ts`/`sessionOccurrences.js`/`pipConfig.js` lagen bis 09/2026 direkt in diesem Ordner

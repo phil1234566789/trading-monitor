@@ -2,16 +2,16 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useStatusBar } from "./composables/useStatusBar.js";
 import { useHttpActivity } from "./composables/useHttpActivity.js";
-import { useClaudeAnnotations } from "./composables/useClaudeAnnotations.js";
+import { useDrawings } from "./composables/useDrawings.js";
 import HttpErrorBanners from "./components/HttpErrorBanners.vue";
-import ClaudeAnnotationsModal from "./components/ClaudeAnnotationsModal.vue";
-import { measureModeActive } from "./chartMeasure.js";
+import DrawingsModal from "./components/DrawingsModal.vue";
+import { CHART_MODES, chartMode } from "./chartModes.js";
 
-const showClaudeAnnotationsModal = ref(false);
-// Persistiert in Supabase (siehe useClaudeAnnotations.js/claudeAnnotationsStore.js) — hier nur der
-// Sichtbarkeits-Toggle nötig, die Liste selbst verwaltet ClaudeAnnotationsModal.vue direkt über
+const showDrawingsModal = ref(false);
+// Persistiert in Supabase (siehe useDrawings.js/drawingsStore.js) — hier nur der
+// Sichtbarkeits-Toggle nötig, die Liste selbst verwaltet DrawingsModal.vue direkt über
 // dieselbe Composable.
-const { visible: claudeAnnotationsVisible } = useClaudeAnnotations();
+const { visible: drawingsVisible } = useDrawings();
 
 const FRESH_MS = 30_000;
 
@@ -41,12 +41,6 @@ const lastUpdateText = computed(() =>
 <template>
   <div class="app-shell">
     <header class="status-bar">
-      <span :class="statusDotClass"></span>
-      <span>{{ statusText }}</span>
-      <span v-if="isActive" class="http-activity" :title="activeLabels.join(', ')">
-        <span class="http-spinner"></span>
-        {{ activeLabels.join(", ") }}
-      </span>
       <nav class="page-nav">
         <!-- exact-active-class statt active-class: "/" ist Praefix jeder Route, mit dem
              normalen (nicht-exakten) active-Matching waere "Dashboard" immer aktiv. -->
@@ -58,31 +52,46 @@ const lastUpdateText = computed(() =>
         <RouterLink to="/loop-status" exact-active-class="active">Loop-Status</RouterLink>
         <RouterLink to="/trading-flow" exact-active-class="active">Ablauf</RouterLink>
       </nav>
-      <span class="last-update">{{ lastUpdateText }}</span>
-      <button
-        class="measure-btn"
-        :class="{ active: measureModeActive }"
-        title="Messen: zwei Punkte im Chart anklicken — die Strecke bleibt mit ihrer Pip-Zahl stehen, während des Ziehens wird sie live mitgerechnet"
-        @click="measureModeActive = !measureModeActive"
-      >
-        📏 Messen
-      </button>
-      <div class="toggle-group">
-        <button
-          class="claude-annotations-btn"
-          :class="{ active: claudeAnnotationsVisible }"
-          title="Claude-Notizen im Chart an/aus"
-          @click="claudeAnnotationsVisible = !claudeAnnotationsVisible"
-        >
-          🖍 Claude-Notizen
-        </button>
-        <button class="claude-annotations-caret-btn" title="Claude-Notizen importieren/bearbeiten" @click="showClaudeAnnotationsModal = true">
-          ⚙
-        </button>
+      <!-- Verbindungsstatus mittig: page-nav und bar-right teilen sich den Rest je zur Hälfte
+           (beide flex:1), damit die Mitte wirklich die Mitte ist und nicht bloß der Rest. -->
+      <div class="bar-center">
+        <span :class="statusDotClass"></span>
+        <span>{{ statusText }}</span>
+        <span v-if="isActive" class="http-activity" :title="activeLabels.join(', ')">
+          <span class="http-spinner"></span>
+          {{ activeLabels.join(", ") }}
+        </span>
+      </div>
+      <div class="bar-right">
+        <span class="last-update">{{ lastUpdateText }}</span>
+        <div class="mode-switcher">
+          <button
+            v-for="mode in CHART_MODES"
+            :key="mode.id"
+            :class="{ active: chartMode === mode.id }"
+            :title="mode.title"
+            @click="chartMode = mode.id"
+          >
+            {{ mode.label }}
+          </button>
+        </div>
+        <div class="toggle-group">
+          <button
+            class="drawings-btn"
+            :class="{ active: drawingsVisible }"
+            title="Zeichnungen im Chart an/aus"
+            @click="drawingsVisible = !drawingsVisible"
+          >
+            🖍 Zeichnungen
+          </button>
+          <button class="drawings-caret-btn" title="Zeichnungen importieren/bearbeiten" @click="showDrawingsModal = true">
+            ⚙
+          </button>
+        </div>
       </div>
     </header>
     <HttpErrorBanners />
-    <ClaudeAnnotationsModal v-if="showClaudeAnnotationsModal" @close="showClaudeAnnotationsModal = false" />
+    <DrawingsModal v-if="showDrawingsModal" @close="showDrawingsModal = false" />
     <RouterView />
   </div>
 </template>
@@ -126,12 +135,30 @@ const lastUpdateText = computed(() =>
   background: #ef5350;
 }
 
+.bar-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bar-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .last-update {
-  margin-left: auto;
   color: #787b86;
 }
 
-.measure-btn {
+.mode-switcher {
+  display: flex;
+  gap: 4px;
+}
+
+.mode-switcher button {
   background: transparent;
   border: 1px solid #2a2e39;
   color: #787b86;
@@ -139,14 +166,15 @@ const lastUpdateText = computed(() =>
   border-radius: 4px;
   cursor: pointer;
   font-size: 12px;
+  white-space: nowrap;
 }
 
-.measure-btn:hover {
+.mode-switcher button:hover {
   border-color: #2962ff;
   color: #d1d4dc;
 }
 
-.measure-btn.active {
+.mode-switcher button.active {
   background: #2962ff;
   border-color: #2962ff;
   color: #fff;
@@ -156,7 +184,7 @@ const lastUpdateText = computed(() =>
   display: flex;
 }
 
-.claude-annotations-btn {
+.drawings-btn {
   background: transparent;
   border: 1px solid #2a2e39;
   border-radius: 4px 0 0 4px;
@@ -167,18 +195,18 @@ const lastUpdateText = computed(() =>
   font-size: 12px;
 }
 
-.claude-annotations-btn:hover {
+.drawings-btn:hover {
   border-color: #2962ff;
   color: #d1d4dc;
 }
 
-.claude-annotations-btn.active {
+.drawings-btn.active {
   background: #2962ff;
   border-color: #2962ff;
   color: #fff;
 }
 
-.claude-annotations-caret-btn {
+.drawings-caret-btn {
   background: transparent;
   border: 1px solid #2a2e39;
   border-radius: 0 4px 4px 0;
@@ -188,7 +216,7 @@ const lastUpdateText = computed(() =>
   font-size: 12px;
 }
 
-.claude-annotations-caret-btn:hover {
+.drawings-caret-btn:hover {
   border-color: #2962ff;
   color: #d1d4dc;
 }
@@ -221,6 +249,7 @@ const lastUpdateText = computed(() =>
 }
 
 .page-nav {
+  flex: 1;
   display: flex;
   gap: 4px;
 }

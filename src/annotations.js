@@ -1,7 +1,8 @@
-// Claude-Antwort-Import (siehe trading/chart-daten.md, trading/trading-ablauf.md):
-// der Claude-Project-Chat kann uns Chart-Annotationen als JSON zurückgeben (Preis+Text, markierte
-// Kerze, Linie, horizontale Linie), die Philip hier reinpastet, damit er visuell nachvollziehen
-// kann, was Claude meint, statt nur Text zu lesen. Rendering-Pattern (Primitive-Klasse + PaneView +
+// Die einzelnen Bausteine einer Zeichnung (Preis+Text, markierte Kerze, Linie, horizontale Linie):
+// Parsen, Geometrie, Rendering. Eine "Zeichnung" (drawingsStore.js/useDrawings.js) ist die
+// gespeicherte Gruppe solcher Annotationen — die kommt entweder von Claude (JSON aus dem Chat bzw.
+// per post_chart_annotations, siehe trading/chart-daten.md) oder aus Philips eigenem Messwerkzeug
+// (chartMeasure.js). Rendering-Pattern (Primitive-Klasse + PaneView +
 // Renderer) 1:1 wie liquidity.js/tradeMarkers.js — hline ist die eine Ausnahme, dafür reicht
 // lightweight-charts' eingebaute Preislinie (braucht keine Zeit-Position).
 //
@@ -48,13 +49,13 @@ function validateAnnotationList(list) {
 }
 
 // Wirft mit einer für Philip verständlichen deutschen Fehlermeldung, statt eine rohe
-// JSON.parse/TypeError-Meldung durchzureichen — landet 1:1 im Import-UI (ClaudeAnnotationsModal.vue).
+// JSON.parse/TypeError-Meldung durchzureichen — landet 1:1 im Import-UI (DrawingsModal.vue).
 //
 // Rückgabe ist immer eine Liste von Gruppen [{ title, annotations }, ...] — auch fürs alte,
 // flache Format (Chat 2026-07-30: mehrere Zeichnungen sollen aus EINEM Paste als eigene,
 // einzeln aus-/einblendbare Zeichnungen gespeichert werden können, statt wie bisher immer genau
 // eine Zeile pro Klick auf "Zeichnen"). title ist null, wenn keins mitgeliefert wurde (flaches
-// Array oder { "annotations": [...] }) — der Aufrufer (ClaudeAnnotationsModal.vue) setzt dafür
+// Array oder { "annotations": [...] }) — der Aufrufer (DrawingsModal.vue) setzt dafür
 // einen Default-Titel mit aktuellem Zeitstempel, weil "jetzt" hier drin nicht sinnvoll wäre (der
 // Titel soll den Import-Zeitpunkt zeigen, nicht den Parse-Zeitpunkt innerhalb desselben Ticks).
 export function parseAnnotations(jsonText) {
@@ -151,7 +152,7 @@ const LONG_LINE_VIEW_RATIO = 0.3;
 const LINE_LABEL_GAP = 6;
 
 // Reine Geometrie-Funktion (kein Canvas-Zugriff) — deshalb einzeln testbar (siehe
-// test/claudeAnnotations.test.js), losgelöst vom Rest des Renderers, der lightweight-charts'
+// test/annotations.test.js), losgelöst vom Rest des Renderers, der lightweight-charts'
 // Bitmap-Coordinate-Space braucht. labels: [{ x1, x2, y }] (x1/x2 = horizontale Textbox-Grenzen,
 // y = ursprünglich gewünschte vertikale Mitte) in Zeichenreihenfolge. Gibt die (ggf. angepassten)
 // y-Werte in derselben Reihenfolge zurück.
@@ -355,7 +356,7 @@ class AnnotationsPrimitive {
 // enthält seit dem Label-Kollisions-Fix höchstens EIN Element (eine gemeinsame AnnotationsPrimitive
 // für alle nicht-hline-Annotationen), bleibt aber ein Array, weil PriceChart.vue es generisch
 // leert/befüllt.
-export function renderClaudeAnnotations(series, annotations, existingPrimitives, existingPriceLines, candles, dateStr) {
+export function renderAnnotations(series, annotations, existingPrimitives, existingPriceLines, candles, dateStr) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
   for (const pl of existingPriceLines) series.removePriceLine(pl);

@@ -1,7 +1,7 @@
 // Pin-Kontext (Chat 2026-08-01, siehe supabase/migrations/20260801120000_laniakea_context.sql,
 // 20260801130000_laniakea_context_ob_zones.sql): Dinge, die Philip per Rechtsklick (Trades-Tabelle/
 // Chart-Marker/OB-Zonen-Box) "an Lana übergeben" hat — schlanker Supabase-Wrapper wie
-// claudeAnnotationsStore.js, kein localStorage-Sync nötig (das hier sind Live-Daten, keine
+// drawingsStore.js, kein localStorage-Sync nötig (das hier sind Live-Daten, keine
 // Einstellung). Reaktives Halten der Liste übernimmt der Aufrufer (Dashboard.vue) via
 // usePolledFetch, wie bei fetchTrades.
 //

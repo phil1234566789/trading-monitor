@@ -641,9 +641,9 @@ export async function getTradingSchedule(instrument: string) {
   return data;
 }
 
-// Insert-Form exakt wie src/claudeAnnotationsStore.js:23-34 (addClaudeAnnotationDrawing) —
+// Insert-Form exakt wie src/drawingsStore.js (addDrawing) —
 // dieselbe Tabelle/Spalten, damit eine per MCP geschriebene Zeichnung sich für den Rest der App
-// (Chart, ClaudeAnnotationsModal) nicht von einer manuell gepasteten unterscheidet.
+// (Chart, DrawingsModal) nicht von einer manuell gepasteten unterscheidet.
 export async function postChartAnnotations(instrument: string, date: string, annotations: unknown[], title?: string) {
   const { data, error } = await supabase
     .from("claude_annotations")

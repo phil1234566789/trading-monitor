@@ -2,8 +2,8 @@ import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import { postChartAnnotations } from "../db.ts";
 
-// Validierung analog validateAnnotationList (src/claudeAnnotations.js:31-48) — hier dupliziert
-// statt importiert, weil claudeAnnotations.js transitiv "lightweight-charts" (Browser-Canvas-Lib)
+// Validierung analog validateAnnotationList (src/annotations.js) — hier dupliziert
+// statt importiert, weil annotations.js transitiv "lightweight-charts" (Browser-Canvas-Lib)
 // mitzieht, siehe CLAUDE.md "MCP-Server". Reiner Format-Check, keine Erkennungslogik — geringes
 // Duplikations-Risiko, der Vertrag (welche Felder ein Annotation-JSON braucht) ist stabil.
 const VALID_TYPES = new Set(["label", "marker", "line", "hline"]);
@@ -45,14 +45,14 @@ const ANNOTATION_SCHEMA = z
   .passthrough();
 
 // Eine benannte Zeichnungs-Gruppe (siehe trading/chart-annotationen.md "Struktur der Antwort") —
-// wird als EIGENE claude_annotations-Zeile gespeichert, damit sie im "Claude-Notizen"-Panel einzeln
-// über ihre eigene Checkbox aus-/einblendbar ist (siehe parseAnnotations in src/claudeAnnotations.js,
+// wird als EIGENE claude_annotations-Zeile gespeichert, damit sie im "Zeichnungen"-Panel einzeln
+// über ihre eigene Checkbox aus-/einblendbar ist (siehe parseAnnotations in src/annotations.js,
 // das genau dasselbe für den manuellen Copy-Paste-Weg tut — dieses Tool spiegelt das jetzt 1:1,
 // siehe Chat 2026-08-09: eine komplette Trading-Tag-Analyse landete fälschlich als EIN flacher
 // annotations-Block/EINE Zeile, weil das Tool-Schema vorher nur den flachen Fall kannte, obwohl die
 // Doku längst das `drawings`-Gruppen-Format als Normalfall beschreibt).
 const DRAWING_GROUP_SCHEMA = z.object({
-  title: z.string().describe("Name dieser Zeichnung — erscheint als eigene Checkbox im 'Claude-Notizen'-Panel, sollte zum zugehörigen Text-Abschnitt passen"),
+  title: z.string().describe("Name dieser Zeichnung — erscheint als eigene Checkbox im 'Zeichnungen'-Panel, sollte zum zugehörigen Text-Abschnitt passen"),
   annotations: z.array(ANNOTATION_SCHEMA).min(1),
 });
 
@@ -79,7 +79,7 @@ export function registerAnnotationTools(server: McpServer) {
         "Dieses Tool bleibt für alles, was kein Pin-kind abdeckt, z.B. eine einzelne Kerze markieren " +
         "oder eine freie Preis-Notiz ohne zugrundeliegendes erkanntes Objekt. " +
         "Schreibt eine oder mehrere Zeichnungen (Preis-Level/Marker/Linien mit Text) direkt in die " +
-        "claude_annotations-Tabelle, sichtbar im Chart unter 'Claude-Notizen' — ersetzt das manuelle " +
+        "claude_annotations-Tabelle, sichtbar im Chart unter 'Zeichnungen' — ersetzt das manuelle " +
         "Copy/Paste ins Import-Modal. ZWEI Formen: (1) `annotations` (flach) + optionales `title` — " +
         "genau EINE Zeichnung/Checkbox, nur für einen wirklich isolierten Einzel-Hinweis außerhalb " +
         "einer vollständigen Analyse. (2) `drawings` — ein Array benannter Gruppen ({title, " +
@@ -97,7 +97,7 @@ export function registerAnnotationTools(server: McpServer) {
           .min(1)
           .optional()
           .describe("Flaches Format für GENAU EINE Zeichnung — nicht für eine vollständige Mehr-Abschnitte-Analyse verwenden, dafür `drawings`. Exklusiv zu `drawings`."),
-        title: z.string().optional().describe('Nur zusammen mit `annotations` (flaches Format). Default: "Claude-Notizen" + Zeitstempel'),
+        title: z.string().optional().describe('Nur zusammen mit `annotations` (flaches Format). Default: "Zeichnung" + Zeitstempel'),
         drawings: z
           .array(DRAWING_GROUP_SCHEMA)
           .min(1)

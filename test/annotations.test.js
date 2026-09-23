@@ -1,9 +1,9 @@
-// Feature-Erweiterung 2026-07-30: Claude-Notizen-Import unterstützt jetzt optionale Farben pro
+// Feature-Erweiterung 2026-07-30: Zeichnungen-Import unterstützt jetzt optionale Farben pro
 // Annotation sowie mehrere Zeichnungs-Gruppen in einem Paste ({"drawings":[{title,annotations}]}).
 // parseAnnotations gibt seit dieser Erweiterung immer eine Liste von Gruppen zurück (auch fürs
 // alte, flache Format — dann genau eine Gruppe mit title: null).
 import { describe, expect, it } from "vitest";
-import { parseAnnotations, resolveLabelPlacements, annotationAnchorPoint } from "../src/claudeAnnotations.js";
+import { parseAnnotations, resolveLabelPlacements, annotationAnchorPoint } from "../src/annotations.js";
 import { berlinDayRangeUtcMs } from "../src/berlinTime.js";
 
 // Minimal-Fake von chart/series, nur die zwei Methoden, die annotationAnchorPoint braucht — Preis
@@ -101,7 +101,7 @@ describe("parseAnnotations", () => {
 
 // Bug-Report Philip 2026-07-30: zwei Annotationen auf demselben Preis-Level (z.B. eine "line" und
 // ein "marker" am selben Sweep-Punkt) zeichneten ihre Labels exakt übereinander. resolveLabelPlacements
-// ist die reine Geometrie-Funktion dahinter (siehe claudeAnnotations.js) — kein Canvas nötig zum Testen.
+// ist die reine Geometrie-Funktion dahinter (siehe annotations.js) — kein Canvas nötig zum Testen.
 describe("resolveLabelPlacements", () => {
   it("lässt nicht überlappende Labels unverändert", () => {
     const labels = [

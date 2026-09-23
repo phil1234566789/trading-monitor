@@ -3,7 +3,6 @@
 // Claude-Notiz-Zeile (claude_annotations, type "line") — die kann schon zwei Punkte + Label,
 // wird gerendert, ist einzeln aus-/einblendbar und löschbar, und landet im Debug-Snapshot,
 // damit beim Debuggen sichtbar ist, wo gemessen wurde.
-import { ref } from "vue";
 import { toPips } from "./pipConfig.js";
 import { formatDatedTime } from "./berlinTime.js";
 
@@ -18,7 +17,7 @@ export function formatPips(priceDiff) {
 
 // from/to = { time: Unix-Sekunden, price } aus den beiden Chart-Klicks. Zeiten als datiertes
 // "YYYY-MM-DD HH:mm" (nicht nur "HH:mm"), damit eine Messung über einen Tageswechsel hinweg
-// nicht auf den Tag der Zeile zurückfällt (siehe resolveTime in claudeAnnotations.js).
+// nicht auf den Tag der Zeile zurückfällt (siehe resolveTime in annotations.js).
 export function measureDrawing(from, to) {
   const text = formatPips(to.price - from.price);
   return {
@@ -34,8 +33,3 @@ export function measureDrawing(from, to) {
     ],
   };
 }
-
-// Modus-Zustand global (Muster wie tradingAccounts.js) — der Umschalter sitzt in der Statusleiste
-// (App.vue, neben "Claude-Notizen"), ausgewertet wird er im Chart (Dashboard.vue -> PriceChart.vue).
-// Bewusst nicht persistiert: ein Reload soll nie mitten im Mess-Modus starten.
-export const measureModeActive = ref(false);

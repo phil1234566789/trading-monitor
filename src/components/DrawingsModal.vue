@@ -1,23 +1,23 @@
 <script setup>
-// Claude-Antwort-Import (siehe claudeAnnotations.js, trading/chart-daten.md) — Philip
+// Claude-Antwort-Import (siehe annotations.js, trading/chart-daten.md) — Philip
 // pastet das JSON, das ihm der Claude-Project-Chat als Antwort auf einen Backtest/Tagesablauf-
 // Review geschickt hat, hier rein, damit er visuell nachvollziehen kann, was gemeint ist, statt
 // nur Text zu lesen. Modal-Look wie NewsModal/SessionsModal (MetadataPanel-Wrapper).
 //
-// Seit Chat 2026-07-28 in Supabase persistiert (siehe useClaudeAnnotations.js/
-// claudeAnnotationsStore.js) — jeder Klick auf "Zeichnen" legt eine NEUE Zeichnung für den
+// Seit Chat 2026-07-28 in Supabase persistiert (siehe useDrawings.js/
+// drawingsStore.js) — jeder Klick auf "Zeichnen" legt eine NEUE Zeichnung für den
 // aktuellen Tag an (akkumuliert über einen Chat-Verlauf hinweg), statt die vorherige zu
 // überschreiben. Liste unten zeigt alle Zeichnungen des aktuellen Tages mit Lösch-Button — kein
 // Editieren (Philip: "brauch ich nicht, da es ja von Claude kommt").
 import { ref } from "vue";
 import MetadataPanel from "./MetadataPanel.vue";
-import { parseAnnotations } from "../claudeAnnotations.js";
-import { useClaudeAnnotations } from "../composables/useClaudeAnnotations.js";
+import { parseAnnotations } from "../annotations.js";
+import { useDrawings } from "../composables/useDrawings.js";
 import { fmtDateTime } from "../format.js";
 
 const emit = defineEmits(["close"]);
 
-const { instrument, dateStr, drawings, loading, add, remove, setDrawingVisible } = useClaudeAnnotations();
+const { instrument, dateStr, drawings, loading, add, remove, setDrawingVisible } = useDrawings();
 
 const text = ref("");
 const error = ref(null);
@@ -39,7 +39,7 @@ async function applyText() {
   }
   error.value = null;
   saving.value = true;
-  const defaultTitle = `Claude-Notizen [${fmtDateTime(Math.floor(Date.now() / 1000))}]`;
+  const defaultTitle = `Zeichnungen [${fmtDateTime(Math.floor(Date.now() / 1000))}]`;
   try {
     let allOk = true;
     for (const group of groups) {
@@ -76,8 +76,8 @@ async function toggleDrawingVisible(d) {
 </script>
 
 <template>
-  <MetadataPanel title="🖍 Claude-Notizen" @close="emit('close')">
-    <p class="claude-annotations-hint">
+  <MetadataPanel title="🖍 Zeichnungen" @close="emit('close')">
+    <p class="drawings-hint">
       {{ instrument }} — {{ dateStr }}. JSON aus dem Claude-Project-Chat hier einfügen (siehe
       trading/chart-daten.md) und "Zeichnen" klicken — jeder Klick fügt eine weitere
       Zeichnung hinzu, ersetzt keine vorherige. Ein Paste mit mehreren
@@ -86,39 +86,39 @@ async function toggleDrawingVisible(d) {
     </p>
     <textarea
       v-model="text"
-      class="claude-annotations-textarea"
+      class="drawings-textarea"
       placeholder='[{"type":"marker","time":"09:15","price":1.33120,"text":"..."}]'
     ></textarea>
-    <div class="claude-annotations-actions">
-      <button class="claude-annotations-btn" :disabled="saving" @click="applyText">
+    <div class="drawings-actions">
+      <button class="drawings-btn" :disabled="saving" @click="applyText">
         {{ saving ? "Speichert…" : "Zeichnen" }}
       </button>
     </div>
-    <p v-if="error" class="claude-annotations-error">{{ error }}</p>
+    <p v-if="error" class="drawings-error">{{ error }}</p>
 
-    <div class="claude-annotations-list-header">
-      <h4 class="claude-annotations-subheading">Zeichnungen dieses Tages</h4>
-      <span v-if="loading" class="claude-annotations-hint-inline">lädt…</span>
+    <div class="drawings-list-header">
+      <h4 class="drawings-subheading">Zeichnungen dieses Tages</h4>
+      <span v-if="loading" class="drawings-hint-inline">lädt…</span>
     </div>
-    <p v-if="!loading && drawings.length === 0" class="claude-annotations-hint-inline">Noch keine.</p>
-    <ul v-else class="claude-annotations-list">
-      <li v-for="d in drawings" :key="d.id" class="claude-annotations-list-item">
-        <label class="claude-annotations-list-toggle" :title="d.visible ? 'Zeichnung ausblenden' : 'Zeichnung einblenden'">
+    <p v-if="!loading && drawings.length === 0" class="drawings-hint-inline">Noch keine.</p>
+    <ul v-else class="drawings-list">
+      <li v-for="d in drawings" :key="d.id" class="drawings-list-item">
+        <label class="drawings-list-toggle" :title="d.visible ? 'Zeichnung ausblenden' : 'Zeichnung einblenden'">
           <input
             type="checkbox"
             :checked="d.visible"
             :disabled="togglingId === d.id"
             @change="toggleDrawingVisible(d)"
           />
-          <span class="claude-annotations-list-meta">
+          <span class="drawings-list-meta">
             {{ d.title }}
-            <span class="claude-annotations-list-submeta">
+            <span class="drawings-list-submeta">
               · {{ fmtDateTime(d.created_at) }} · {{ d.annotations.length }} {{ d.annotations.length === 1 ? "Element" : "Elemente" }}
             </span>
           </span>
         </label>
         <button
-          class="claude-annotations-remove-btn"
+          class="drawings-remove-btn"
           :disabled="removingId === d.id"
           title="Diese Zeichnung löschen"
           @click="removeDrawing(d.id)"
@@ -131,18 +131,18 @@ async function toggleDrawingVisible(d) {
 </template>
 
 <style scoped>
-.claude-annotations-hint {
+.drawings-hint {
   margin: 0 0 8px;
   font-size: 12px;
   color: #787b86;
 }
 
-.claude-annotations-hint-inline {
+.drawings-hint-inline {
   font-size: 12px;
   color: #787b86;
 }
 
-.claude-annotations-textarea {
+.drawings-textarea {
   width: 100%;
   min-height: 140px;
   background: #131722;
@@ -156,14 +156,14 @@ async function toggleDrawingVisible(d) {
   box-sizing: border-box;
 }
 
-.claude-annotations-actions {
+.drawings-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 8px;
 }
 
-.claude-annotations-btn {
+.drawings-btn {
   background: transparent;
   border: 1px solid #2a2e39;
   color: #d1d4dc;
@@ -173,22 +173,22 @@ async function toggleDrawingVisible(d) {
   font-size: 12px;
 }
 
-.claude-annotations-btn:hover:not(:disabled) {
+.drawings-btn:hover:not(:disabled) {
   border-color: #2962ff;
 }
 
-.claude-annotations-btn:disabled {
+.drawings-btn:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
-.claude-annotations-error {
+.drawings-error {
   margin: 8px 0 0;
   font-size: 12px;
   color: #ef5350;
 }
 
-.claude-annotations-list-header {
+.drawings-list-header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -196,7 +196,7 @@ async function toggleDrawingVisible(d) {
   margin: 14px 0 6px;
 }
 
-.claude-annotations-subheading {
+.drawings-subheading {
   margin: 0;
   font-size: 12px;
   font-weight: 700;
@@ -205,7 +205,7 @@ async function toggleDrawingVisible(d) {
   color: #565a64;
 }
 
-.claude-annotations-list {
+.drawings-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -214,7 +214,7 @@ async function toggleDrawingVisible(d) {
   gap: 4px;
 }
 
-.claude-annotations-list-item {
+.drawings-list-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -225,7 +225,7 @@ async function toggleDrawingVisible(d) {
   font-size: 12px;
 }
 
-.claude-annotations-list-toggle {
+.drawings-list-toggle {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -233,23 +233,23 @@ async function toggleDrawingVisible(d) {
   min-width: 0;
 }
 
-.claude-annotations-list-toggle input {
+.drawings-list-toggle input {
   flex: none;
   cursor: pointer;
 }
 
-.claude-annotations-list-meta {
+.drawings-list-meta {
   color: #d1d4dc;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.claude-annotations-list-submeta {
+.drawings-list-submeta {
   color: #787b86;
 }
 
-.claude-annotations-remove-btn {
+.drawings-remove-btn {
   flex: none;
   background: transparent;
   border: 1px solid #2a2e39;
@@ -260,12 +260,12 @@ async function toggleDrawingVisible(d) {
   font-size: 11px;
 }
 
-.claude-annotations-remove-btn:hover:not(:disabled) {
+.drawings-remove-btn:hover:not(:disabled) {
   border-color: #ef5350;
   color: #ef5350;
 }
 
-.claude-annotations-remove-btn:disabled {
+.drawings-remove-btn:disabled {
   opacity: 0.5;
   cursor: default;
 }

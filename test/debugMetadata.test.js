@@ -126,15 +126,15 @@ describe("buildActiveMetadataSnapshot", () => {
     expect(result.candles.data.map((c) => c.time)).toEqual([200, 300]);
   });
 
-  it("adds claudeAnnotations when any are visible, regardless of toggles", () => {
+  it("adds annotations when any are visible, regardless of toggles", () => {
     const annotation = { type: "line", from: { price: 1.1 }, to: { price: 1.2 }, text: "10,0 Pips" };
-    const result = buildActiveMetadataSnapshot({ ...BASE_CTX, claudeAnnotations: [annotation] });
-    expect(result.claudeAnnotations).toEqual([annotation]);
+    const result = buildActiveMetadataSnapshot({ ...BASE_CTX, annotations: [annotation] });
+    expect(result.annotations).toEqual([annotation]);
   });
 
-  it("omits claudeAnnotations when there are none", () => {
+  it("omits annotations when there are none", () => {
     const result = buildActiveMetadataSnapshot(BASE_CTX);
-    expect(result).not.toHaveProperty("claudeAnnotations");
+    expect(result).not.toHaveProperty("annotations");
   });
 
   it("includes structure.window as fixed only when rangesFixedStartActive AND a start time are both set", () => {

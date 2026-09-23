@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { formatPips, measureDrawing, MEASURE_COLOR } from "../src/chartMeasure.js";
 
 // Reales Datum statt selbst geratener CEST/CET-Offsets (gleiches Vorgehen wie
-// claudeAnnotations.test.js) — 30.07.2026 09:00 Europe/Berlin, +45 Minuten.
+// annotations.test.js) — 30.07.2026 09:00 Europe/Berlin, +45 Minuten.
 const START_SEC = 1_785_394_800;
 const END_SEC = START_SEC + 45 * 60;
 

@@ -1,12 +1,15 @@
-// Persistenter Speicher für Claude-Chart-Annotationen (siehe supabase/migrations/
-// 20260728150000_claude_annotations.sql, useClaudeAnnotations.js) — je Insert/Delete direkt
+// Persistenter Speicher für Chart-Zeichnungen (siehe supabase/migrations/
+// 20260728150000_claude_annotations.sql, useDrawings.js) — je Insert/Delete direkt
 // gegen die Tabelle, kein lokales Mutieren + Full-Resync (analog zu newsEvents.js), weil sonst
 // zwei parallel offene Tabs sich beim Speichern gegenseitig überschreiben könnten.
+// Tabelle und MCP-Tool heißen weiterhin claude_annotations/post_chart_annotations: das ist der
+// Draht zu Lana (Tool-Name steht in den Trading-Steps im trading-Repo), der beim Umbenennen des
+// UI-Begriffs "Claude-Notizen" -> "Zeichnungen" am 23.09.2026 bewusst unangetastet blieb.
 import { supabase } from "./supabaseClient.js";
 
 const ROW_COLUMNS = "id, instrument, date, title, annotations, visible, created_at";
 
-export async function fetchClaudeAnnotations(instrument, dateStr) {
+export async function fetchDrawings(instrument, dateStr) {
   const { data, error } = await supabase
     .from("claude_annotations")
     .select(ROW_COLUMNS)
@@ -20,7 +23,7 @@ export async function fetchClaudeAnnotations(instrument, dateStr) {
   return data ?? [];
 }
 
-export async function addClaudeAnnotationDrawing(instrument, dateStr, annotations, title) {
+export async function addDrawing(instrument, dateStr, annotations, title) {
   const { data, error } = await supabase
     .from("claude_annotations")
     .insert({ instrument, date: dateStr, annotations, title })
@@ -33,7 +36,7 @@ export async function addClaudeAnnotationDrawing(instrument, dateStr, annotation
   return data;
 }
 
-export async function removeClaudeAnnotationDrawing(id) {
+export async function removeDrawing(id) {
   const { error } = await supabase.from("claude_annotations").delete().eq("id", id);
   if (error) {
     console.error("Claude-Annotation löschen fehlgeschlagen:", error);
@@ -44,7 +47,7 @@ export async function removeClaudeAnnotationDrawing(id) {
 
 // Pro-Zeichnung-Toggle (Feature 2026-07-30) — zusätzlich zum bestehenden globalen Sichtbarkeits-
 // Toggle in App.vue, der alle Zeichnungen auf einmal aus-/einblendet.
-export async function setClaudeAnnotationDrawingVisible(id, visible) {
+export async function updateDrawingVisible(id, visible) {
   const { error } = await supabase.from("claude_annotations").update({ visible }).eq("id", id);
   if (error) {
     console.error("Claude-Annotation Sichtbarkeit ändern fehlgeschlagen:", error);

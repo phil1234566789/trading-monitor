@@ -26,7 +26,7 @@ export function berlinDateStrFor(unixSec: number): string {
 const TIME_FORMATTER = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Berlin" });
 
 // "YYYY-MM-DD HH:mm" — exakt das Format, das das time-Feld in claude_annotations akzeptiert (siehe
-// DATED_TIME_RE in src/claudeAnnotations.js), damit post_chart_annotations diesen Zeitpunkt direkt
+// DATED_TIME_RE in src/annotations.js), damit post_chart_annotations diesen Zeitpunkt direkt
 // verwenden kann, ohne selbst formatieren zu müssen.
 export function berlinDateTimeStrFor(unixSec: number): string {
   return `${berlinDateStrFor(unixSec)} ${TIME_FORMATTER.format(new Date(unixSec * 1000))}`;

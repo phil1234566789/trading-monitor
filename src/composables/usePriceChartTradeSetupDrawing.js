@@ -5,7 +5,7 @@
 // statt eigenen Zustand zu besitzen, außer den candleSeries-Primitives selbst. Braucht trotzdem ein
 // create(candleSeries)/dispose()-Lifecycle wie die anderen Zeichen-Composables, weil direkt auf
 // candleSeries gezeichnet wird (kein chart-Objekt nötig, anders als z.B.
-// usePriceChartClaudeAnnotations.js — deshalb hier nur ein Parameter statt zwei).
+// usePriceChartDrawings.js — deshalb hier nur ein Parameter statt zwei).
 import { LiquidityLinePrimitive, bullBearLabelSide, formatLsLabel } from "../liquidity.js";
 import { OrderBlockPrimitive } from "../orderBlocks.js";
 import { rScaleLevels } from "../rScale.js";

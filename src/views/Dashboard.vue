@@ -61,8 +61,9 @@ import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
-import { useClaudeAnnotations } from "../composables/useClaudeAnnotations.js";
-import { measureDrawing, measureModeActive } from "../chartMeasure.js";
+import { useDrawings } from "../composables/useDrawings.js";
+import { measureDrawing } from "../chartMeasure.js";
+import { chartMode } from "../chartModes.js";
 
 const SYMBOLS = ["GBPUSD", "EURUSD"];
 
@@ -260,20 +261,18 @@ const showSessionsModal = ref(false);
 // Button in diesen TFs disabled statt anklickbar-aber-nutzlos, analog zu emaDisabled oben (Chat
 // 2026-07-31: "genauso wie bei EMA").
 const sessionsDisabled = computed(() => currentBar.value === "4h" || currentBar.value === "1D");
-// Claude-Antwort-Import (siehe claudeAnnotations.js, trading/chart-daten.md) — Button
-// + Modal leben global in App.vue (neben "Backtest-Daten"), in Supabase persistiert (siehe
-// claudeAnnotationsStore.js). instrument/dateStr werden jetzt zentral in useClaudeAnnotations.js
-// hergeleitet (dieselben Keys wie hier: currentSymbol/replayTime/replayActive), nicht mehr separat
-// hier berechnet — claudeAnnotationsDate bleibt als Alias, weil der Prop-Name an PriceChart schon
-// so heißt. visibleClaudeAnnotations blendet die Liste aus, wenn der Toggle in App.vue aus ist,
-// ohne die geladenen Zeichnungen selbst zu verwerfen.
+// Zeichnungen (siehe annotations.js, trading/chart-daten.md) — Knopf + Modal leben global in der
+// Kopfleiste (App.vue), in Supabase persistiert (siehe drawingsStore.js). instrument/dateStr
+// werden zentral in useDrawings.js hergeleitet (dieselben Keys wie hier: currentSymbol/replayTime/
+// replayActive), nicht mehr separat hier berechnet. visibleAnnotations blendet die Liste aus, wenn
+// der Toggle in App.vue aus ist, ohne die geladenen Zeichnungen selbst zu verwerfen.
 const {
-  flatAnnotations: claudeAnnotations,
-  visible: claudeAnnotationsVisible,
-  dateStr: claudeAnnotationsDate,
-  add: addClaudeAnnotationDrawing,
-} = useClaudeAnnotations();
-const visibleClaudeAnnotations = computed(() => (claudeAnnotationsVisible.value ? claudeAnnotations.value : []));
+  flatAnnotations: annotations,
+  visible: drawingsVisible,
+  dateStr: annotationsDate,
+  add: addDrawing,
+} = useDrawings();
+const visibleAnnotations = computed(() => (drawingsVisible.value ? annotations.value : []));
 // Trade-Setup-Cockpit (siehe Chat 2026-07-19: "wir wollen jetzt step by step alles
 // zusammenstöpseln") — bündelt H1-Range-Analyse + M5-Trade-Setups in einer Karte im Chart. Seit
 // Chat 2026-07-27 eine echte Vue-Komponente mit festem Platz — der frühere "neben der letzten
@@ -286,7 +285,7 @@ const showStyleModal = ref(false);
 // Trade-Modus (Chat 2026-07-27: "damit ich nicht versehentlich in den Chart reinklicke, evtl.
 // Buttons einbauen") — bewusst NICHT persistiert (useLocalStorageRef), ein Reload soll immer im
 // harmlosen Navigieren-Modus starten, nicht mitten im Trade-Modus von der letzten Session.
-const tradeModeActive = ref(false);
+const tradeModeActive = computed(() => chartMode.value === "trade");
 const selectedSetupForTrade = ref(null);
 // Bearbeiten-Panel (Chat 2026-07-28: "lass die Entity 'trades' CRUD Funktionalität weitermachen",
 // ersetzt die vorherigen Inline-Buttons in TradesTable.vue) — nur die Id gemerkt, nicht der Trade
@@ -383,61 +382,56 @@ const anyArmStateActive = computed(() => Object.values(ARM_STATES).some((r) => r
 function onAddTargetRequest(t) {
   clearArmStatesExcept("target");
   targetAddTrade.value = t;
-  tradeModeActive.value = true;
+  chartMode.value = "trade";
 }
 function onAddConfirmationRequest(t) {
   clearArmStatesExcept("confirmation");
   confirmationAddTrade.value = t;
-  tradeModeActive.value = true;
+  chartMode.value = "trade";
 }
 function onAddRangeConfirmationRequest(t) {
   clearArmStatesExcept("rangeConfirmation");
   rangeConfirmationAddTrade.value = t;
-  tradeModeActive.value = true;
+  chartMode.value = "trade";
 }
 function onAddConfluenceRequest(t) {
   clearArmStatesExcept("confluence");
   confluenceAddTrade.value = t;
-  tradeModeActive.value = true;
+  chartMode.value = "trade";
 }
 function onAddRangeConfluenceRequest(t) {
   clearArmStatesExcept("rangeConfluence");
   rangeConfluenceAddTrade.value = t;
-  tradeModeActive.value = true;
+  chartMode.value = "trade";
 }
 function onAddAntiConfluenceRequest(t) {
   clearArmStatesExcept("antiConfluence");
   antiConfluenceAddTrade.value = t;
-  tradeModeActive.value = true;
+  chartMode.value = "trade";
 }
 function onAddRangeAntiConfluenceRequest(t) {
   clearArmStatesExcept("rangeAntiConfluence");
   rangeAntiConfluenceAddTrade.value = t;
-  tradeModeActive.value = true;
+  chartMode.value = "trade";
 }
 function onSetInvalidationRequest(t) {
   clearArmStatesExcept("invalidation");
   invalidationAddTrade.value = t;
-  tradeModeActive.value = true;
+  chartMode.value = "trade";
 }
 // Verlassen des Trade-Modus räumt eine noch "scharfe" Ziel-/Bestätigungs-/Zusatzargument-/
 // Invalidierungs-Anfrage mit ab — sonst würde ein späteres Wieder-Reinklicken in den Trade-Modus
 // (für einen ganz anderen Zweck) unerwartet den alten Trade verändern.
 watch(tradeModeActive, (active) => {
   if (!active) clearArmStatesExcept(null);
-  else measureModeActive.value = false;
 });
 
-// Messung (Philip 2026-09-23): zwei Chart-Klicks -> eine persistierte Claude-Notiz-Zeile mit
-// Pip-Label (siehe chartMeasure.js), also automatisch im Chart sichtbar, einzeln aus-/einblendbar
-// und löschbar wie jede andere Notiz — und im Debug-Snapshot nachlesbar. Der Umschalter selbst
-// sitzt in der Statusleiste (App.vue), deshalb der geteilte Modul-Ref statt eines lokalen.
-watch(measureModeActive, (active) => {
-  if (active) tradeModeActive.value = false;
-});
+// Messung (Philip 2026-09-23): zwei Chart-Klicks -> eine persistierte Zeichnung mit Pip-Label
+// (siehe chartMeasure.js), also automatisch im Chart sichtbar, einzeln aus-/einblendbar und
+// löschbar wie jede andere Zeichnung — und im Debug-Snapshot nachlesbar.
 async function onMeasureDone({ from, to }) {
-  const { title, annotations } = measureDrawing(from, to);
-  await addClaudeAnnotationDrawing(annotations, title);
+  const drawing = measureDrawing(from, to);
+  await addDrawing(drawing.annotations, drawing.title);
 }
 
 // TSC-Dealing-Range (Chat 2026-08-26) — welche dealing_ranges-Zeile "die aktive TSC-Range" für das
@@ -469,7 +463,7 @@ function onTscAddConfirmationRequest() {
   // Bootstrap-Fall: noch keine Range, der nächste Klick MUSS ein OB sein (siehe onSelectTarget).
   clearArmStatesExcept(null);
   tscBootstrapArmed.value = true;
-  tradeModeActive.value = true;
+  chartMode.value = "trade";
 }
 function onTscAddTargetRequest() {
   // 🎯 bleibt in der TSC gesperrt, solange keine Range (= keine Richtung) existiert — siehe
@@ -2015,18 +2009,11 @@ watch(selectedTradingAccountId, () => {
         </button>
       </div>
 
-      <div class="trade-mode-switcher" :class="{ 'trade-mode-active': tradeModeActive || measureModeActive }">
-        <button
-          :class="{ active: !tradeModeActive && !measureModeActive }"
-          title="Chart normal bedienen (Pan/Zoom)"
-          @click="tradeModeActive = false; measureModeActive = false"
-        >
-          🖐 Navigieren
-        </button>
-        <button :class="{ active: tradeModeActive }" title="Auf ein Trade-Setup klicken, um es als Trade zu übernehmen" @click="tradeModeActive = true">
-          🎯 Trade-Modus
-        </button>
-        <span v-if="measureModeActive" class="trade-link-armed">📏 Mess-Modus aktiv (Schalter in der Kopfleiste)</span>
+      <!-- Modus-Umschalter selbst sitzt seit 23.09.2026 in der Kopfleiste (App.vue) — hier bleibt
+           nur der Hinweis, worauf der nächste Klick im Chart wirkt, und nur solange einer wirkt. -->
+      <div v-if="chartMode !== 'navigate'" class="trade-mode-switcher trade-mode-active">
+        <span v-if="chartMode === 'measure'" class="trade-link-armed">📏 Mess-Modus: zwei Punkte im Chart anklicken</span>
+        <span v-else-if="!anyArmStateActive" class="trade-link-armed">🎯 Trade-Modus: Klick auf eine Setup-OB-Box übernimmt sie als Trade</span>
         <span v-if="targetAddTrade" class="trade-link-armed">🎯 nächster Klick auf Pivot/OB fügt Trade #{{ targetAddTrade.id }} ein Target hinzu</span>
         <span v-if="confirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB/Divergenz fügt Trade #{{ confirmationAddTrade.id }} eine Bestätigung hinzu</span>
         <span v-if="rangeConfirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB/Divergenz fügt Dealing Range #{{ rangeConfirmationAddTrade.dealingRangeId }} eine Bestätigung hinzu</span>
@@ -2185,10 +2172,10 @@ watch(selectedTradingAccountId, () => {
     :show-trade-setup-cockpit="showTradeSetupCockpit"
     :replay-until="replayUntil"
     :show-debug-metadata="showDebugMetadata"
-    :claude-annotations="visibleClaudeAnnotations"
-    :claude-annotations-date="claudeAnnotationsDate"
+    :annotations="visibleAnnotations"
+    :annotations-date="annotationsDate"
     :trade-mode-active="tradeModeActive"
-    :measure-mode-active="measureModeActive"
+    :measure-mode-active="chartMode === 'measure'"
     :target-mode-active="anyArmStateActive"
     :confirmation-mode-active="confirmationAddTrade != null || rangeConfirmationAddTrade != null || tscBootstrapArmed"
     :confluence-mode-active="confluenceAddTrade != null || rangeConfluenceAddTrade != null"
@@ -2200,7 +2187,6 @@ watch(selectedTradingAccountId, () => {
     @select-setup="onSelectSetup"
     @select-target="onSelectTarget"
     @select-setup-confirmations="onSelectSetupConfirmations"
-    @toggle-trade-mode="tradeModeActive = !tradeModeActive"
     @measure-start="onMeasureStart"
     @measure-done="onMeasureDone"
     @pin-context-menu="onPinContextMenu"
