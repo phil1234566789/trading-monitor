@@ -6,14 +6,27 @@
 // immer im harmlosen Navigieren-Modus.
 import { ref } from "vue";
 
+// hint = was der nächste Chart-Klick tut, direkt neben den Knöpfen sichtbar, solange der Modus
+// läuft (title erscheint nur beim Hovern und reicht dafür nicht).
 export const CHART_MODES = [
-  { id: "navigate", label: "🖐 Navigieren", title: "Chart normal bedienen (Pan/Zoom)" },
-  { id: "trade", label: "🎯 Trade-Modus", title: "Auf ein Trade-Setup klicken, um es als Trade zu übernehmen" },
+  { id: "navigate", label: "🖐 Navigieren", title: "Chart normal bedienen (Pan/Zoom)", hint: null },
+  {
+    id: "trade",
+    label: "🎯 Trade-Modus",
+    title: "Auf ein Trade-Setup klicken, um es als Trade zu übernehmen",
+    hint: "🎯 Klick auf eine Setup-OB-Box übernimmt sie als Trade",
+  },
   {
     id: "measure",
     label: "📏 Messen",
     title: "Zwei Punkte im Chart anklicken — die Strecke bleibt mit ihrer Pip-Zahl stehen, während des Ziehens wird live mitgerechnet",
+    hint: "📏 Zwei Punkte im Chart anklicken",
   },
 ];
 
 export const chartMode = ref("navigate");
+
+// Überschreibt den hint des Modus, solange Dashboard.vue einen Klick "scharf" gemacht hat (Target/
+// Bestätigung/Invalidierung an einem bestimmten Trade) — der Text kennt die Trade-Nummer, hängt
+// also an Dashboard-Zustand, angezeigt wird er aber oben in der Kopfleiste.
+export const chartHint = ref(null);

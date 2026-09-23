@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
 import PriceChart from "../components/PriceChart.vue";
 import TradeSetupCockpit from "../components/TradeSetupCockpit.vue";
 import TradesTable from "../components/TradesTable.vue";
@@ -63,7 +63,7 @@ import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
 import { useDrawings } from "../composables/useDrawings.js";
 import { measureDrawing } from "../chartMeasure.js";
-import { chartMode } from "../chartModes.js";
+import { chartMode, chartHint } from "../chartModes.js";
 
 const SYMBOLS = ["GBPUSD", "EURUSD"];
 
@@ -379,6 +379,27 @@ function clearArmStatesExcept(keep) {
 // PriceChart.vue: target-mode-active — irgendein Arm-Zustand "scharf" (egal welcher), schaltet den
 // Chart-Klick-Handler von Pan/Zoom auf "nimmt den nächsten Treffer entgegen" um.
 const anyArmStateActive = computed(() => Object.values(ARM_STATES).some((r) => r.value != null) || tscBootstrapArmed.value);
+// Hinweistext je scharfem Arm-Zustand — eine Tabelle statt acht fast gleicher Spans. Angezeigt
+// wird er in der Kopfleiste (App.vue), weil der Modus-Umschalter dort sitzt; clearArmStatesExcept
+// lässt immer höchstens einen scharf, deshalb reicht der erste Treffer.
+const ARM_HINTS = {
+  target: (t) => `🎯 nächster Klick auf Pivot/OB fügt Trade #${t.id} ein Target hinzu`,
+  confirmation: (t) => `✔ nächster Klick auf Sweep/OB/Divergenz fügt Trade #${t.id} eine Bestätigung hinzu`,
+  rangeConfirmation: (t) => `✔ nächster Klick auf Sweep/OB/Divergenz fügt Dealing Range #${t.dealingRangeId} eine Bestätigung hinzu`,
+  confluence: (t) => `💡 nächster Klick auf Fib fügt Trade #${t.id} ein Zusatzargument hinzu`,
+  rangeConfluence: (t) => `💡 nächster Klick auf Fib fügt Dealing Range #${t.dealingRangeId} ein Zusatzargument hinzu`,
+  antiConfluence: (t) => `⚠️ nächster Klick auf Sweep/OB/Fib/Divergenz fügt Trade #${t.id} eine Anti-Confluence hinzu`,
+  rangeAntiConfluence: (t) => `⚠️ nächster Klick auf Sweep/OB/Fib/Divergenz fügt Dealing Range #${t.dealingRangeId} eine Anti-Confluence hinzu`,
+  invalidation: (t) => `🚫 nächster Klick auf Pivot/OB setzt Invalidierung für Dealing Range #${t.dealingRangeId}`,
+};
+watchEffect(() => {
+  const armed = Object.entries(ARM_STATES).find(([, r]) => r.value != null);
+  if (armed) chartHint.value = ARM_HINTS[armed[0]](armed[1].value);
+  else if (tscBootstrapArmed.value) chartHint.value = "✔ nächster Klick auf ein OB legt die Dealing Range an";
+  else chartHint.value = null;
+});
+// Sonst bliebe der Hinweis in der globalen Kopfleiste stehen, wenn man das Dashboard verlässt.
+onUnmounted(() => (chartHint.value = null));
 function onAddTargetRequest(t) {
   clearArmStatesExcept("target");
   targetAddTrade.value = t;
@@ -2009,21 +2030,6 @@ watch(selectedTradingAccountId, () => {
         </button>
       </div>
 
-      <!-- Modus-Umschalter selbst sitzt seit 23.09.2026 in der Kopfleiste (App.vue) — hier bleibt
-           nur der Hinweis, worauf der nächste Klick im Chart wirkt, und nur solange einer wirkt. -->
-      <div v-if="chartMode !== 'navigate'" class="trade-mode-switcher trade-mode-active">
-        <span v-if="chartMode === 'measure'" class="trade-link-armed">📏 Mess-Modus: zwei Punkte im Chart anklicken</span>
-        <span v-else-if="!anyArmStateActive" class="trade-link-armed">🎯 Trade-Modus: Klick auf eine Setup-OB-Box übernimmt sie als Trade</span>
-        <span v-if="targetAddTrade" class="trade-link-armed">🎯 nächster Klick auf Pivot/OB fügt Trade #{{ targetAddTrade.id }} ein Target hinzu</span>
-        <span v-if="confirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB/Divergenz fügt Trade #{{ confirmationAddTrade.id }} eine Bestätigung hinzu</span>
-        <span v-if="rangeConfirmationAddTrade" class="trade-link-armed">✔ nächster Klick auf Sweep/OB/Divergenz fügt Dealing Range #{{ rangeConfirmationAddTrade.dealingRangeId }} eine Bestätigung hinzu</span>
-        <span v-if="confluenceAddTrade" class="trade-link-armed">💡 nächster Klick auf Fib fügt Trade #{{ confluenceAddTrade.id }} ein Zusatzargument hinzu</span>
-        <span v-if="rangeConfluenceAddTrade" class="trade-link-armed">💡 nächster Klick auf Fib fügt Dealing Range #{{ rangeConfluenceAddTrade.dealingRangeId }} ein Zusatzargument hinzu</span>
-        <span v-if="antiConfluenceAddTrade" class="trade-link-armed">⚠️ nächster Klick auf Sweep/OB/Fib/Divergenz fügt Trade #{{ antiConfluenceAddTrade.id }} eine Anti-Confluence hinzu</span>
-        <span v-if="rangeAntiConfluenceAddTrade" class="trade-link-armed">⚠️ nächster Klick auf Sweep/OB/Fib/Divergenz fügt Dealing Range #{{ rangeAntiConfluenceAddTrade.dealingRangeId }} eine Anti-Confluence hinzu</span>
-        <span v-if="invalidationAddTrade" class="trade-link-armed">🚫 nächster Klick auf Pivot/OB setzt Invalidierung für Dealing Range #{{ invalidationAddTrade.dealingRangeId }}</span>
-      </div>
-
       <div class="toggle-group">
         <button :class="{ active: showPinHighlights }" title="Angepinnte Stellen im Chart hervorheben" @click="showPinHighlights = !showPinHighlights">
           📌 Pins
@@ -2284,23 +2290,10 @@ watch(selectedTradingAccountId, () => {
 
 .symbol-switcher,
 .timeframe-switcher,
-.trade-mode-switcher,
 .drawing-toggles {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-}
-
-/* Eigener Rand statt nur "active"-Button-Highlight (Chat 2026-07-27: Trade-Modus ändert, was ein
-   Chart-Klick tut — soll auffallen, nicht nur wie ein normaler Anzeige-Toggle aussehen). */
-.trade-mode-switcher {
-  border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 2px;
-}
-
-.trade-mode-switcher.trade-mode-active {
-  border-color: rgba(255, 179, 0, 0.6);
 }
 
 .drawing-toggles {
@@ -2315,7 +2308,6 @@ watch(selectedTradingAccountId, () => {
 
 .symbol-switcher button,
 .timeframe-switcher button,
-.trade-mode-switcher button,
 .drawing-toggles button {
   background: transparent;
   border: none;
@@ -2328,7 +2320,6 @@ watch(selectedTradingAccountId, () => {
 
 .symbol-switcher button:hover,
 .timeframe-switcher button:hover,
-.trade-mode-switcher button:hover,
 .drawing-toggles button:hover {
   background: #2a2e39;
   color: #d1d4dc;
@@ -2351,25 +2342,6 @@ watch(selectedTradingAccountId, () => {
 .toggle-dropdown button:disabled:hover {
   background: transparent;
   color: #787b86;
-}
-
-.trade-mode-switcher button.active {
-  background: #2962ff;
-  color: #fff;
-}
-
-.trade-mode-switcher.trade-mode-active button.active {
-  background: rgba(255, 179, 0, 0.9);
-  color: #131722;
-}
-
-.trade-link-armed {
-  display: flex;
-  align-items: center;
-  font-size: 12px;
-  color: rgba(255, 179, 0, 0.9);
-  padding: 0 6px;
-  white-space: nowrap;
 }
 
 .toggle-group {

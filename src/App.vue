@@ -5,7 +5,7 @@ import { useHttpActivity } from "./composables/useHttpActivity.js";
 import { useDrawings } from "./composables/useDrawings.js";
 import HttpErrorBanners from "./components/HttpErrorBanners.vue";
 import DrawingsModal from "./components/DrawingsModal.vue";
-import { CHART_MODES, chartMode } from "./chartModes.js";
+import { CHART_MODES, chartMode, chartHint } from "./chartModes.js";
 
 const showDrawingsModal = ref(false);
 // Persistiert in Supabase (siehe useDrawings.js/drawingsStore.js) — hier nur der
@@ -33,6 +33,9 @@ const statusText = computed(() => {
   if (lastSuccessAt.value == null) return "Verbinde...";
   return isFresh.value ? "Live" : "Verbindung tot";
 });
+// Was der nächste Chart-Klick tut: der Hinweis des laufenden Modus, überschrieben von einem
+// scharf gemachten Klick aus dem Dashboard (Target/Bestätigung/… an einem bestimmten Trade).
+const activeHint = computed(() => chartHint.value ?? CHART_MODES.find((m) => m.id === chartMode.value)?.hint ?? null);
 const lastUpdateText = computed(() =>
   lastSuccessAt.value == null ? "" : `Letztes Update: ${new Date(lastSuccessAt.value).toLocaleTimeString("de-DE")}`,
 );
@@ -64,7 +67,8 @@ const lastUpdateText = computed(() =>
       </div>
       <div class="bar-right">
         <span class="last-update">{{ lastUpdateText }}</span>
-        <div class="mode-switcher">
+        <span v-if="activeHint" class="chart-hint" :title="activeHint">{{ activeHint }}</span>
+        <div class="mode-switcher" :class="{ armed: chartMode !== 'navigate' }">
           <button
             v-for="mode in CHART_MODES"
             :key="mode.id"
@@ -153,9 +157,35 @@ const lastUpdateText = computed(() =>
   color: #787b86;
 }
 
+/* Amber wie bisher im Chart-Toolbar-Rahmen: ein aktiver Klick-Modus ändert, was ein Chart-Klick
+   tut, und soll deshalb auffallen statt wie ein normaler Anzeige-Toggle auszusehen. */
+.chart-hint {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: rgba(255, 179, 0, 0.9);
+}
+
 .mode-switcher {
+  flex: none;
   display: flex;
   gap: 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.mode-switcher.armed {
+  border-color: rgba(255, 179, 0, 0.6);
+}
+
+.mode-switcher.armed button.active {
+  background: rgba(255, 179, 0, 0.9);
+  border-color: rgba(255, 179, 0, 0.9);
+  color: #131722;
 }
 
 .mode-switcher button {
