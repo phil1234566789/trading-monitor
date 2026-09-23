@@ -938,6 +938,7 @@ Deno.serve(async (req) => {
                 ls_timeframe: lsFromH1 ? "1H" : "5M",
                 ob_top: setup.obTop,
                 ob_bottom: setup.obBottom,
+                ob_fvg: setup.obFvg,
                 ob_start_time: new Date(setup.obStartTime * 1000).toISOString(),
                 ob_zone_id: setupObZone.id,
                 alert_price: currentPrice,

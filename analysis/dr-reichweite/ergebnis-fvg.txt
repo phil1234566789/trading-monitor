@@ -9,18 +9,19 @@ Strecke ab der nahen OB-Kante, Stopp min(strukturelles Risiko, 6 Pips), Fenster 
   3-5 Pips         493   15.0%        3.8 P       7.0 P      22.7 P        85%
   5-8 Pips         217    6.6%        6.0 P       7.2 P      29.3 P        81%
   ueber 8 Pips      98    3.0%       10.1 P       8.3 P      46.8 P        69%
+  alle            3282  100.0%        1.7 P       5.7 P      17.8 P        90%
   OB-Retest = Anteil, bei dem der Preis die nahe Kante binnen 24h nochmal beruehrt hat.
   Geht in keine Quote ein, steht nur fuers Protokoll.
 
   R-LEITER MIT GEDECKELTEM STOPP (6 Pips) -- am eigenen Risiko normiert
-                     n        2R      3R      4R      5R      6R
-  unter 1 Pip      972      61%     47%     38%     32%     26% 
-  1-2 Pips         963      68%     52%     43%     36%     31% 
-  2-3 Pips         539      72%     57%     47%     40%     34% 
-  3-5 Pips         493      79%     61%     49%     42%     36% 
-  5-8 Pips         217      89%     75%     65%     52%     45% 
-  ueber 8 Pips      98      99%     91%     84%     79%     71% 
-  alle            3282      70%     55%     46%     39%     33% 
+                     n        2R      3R      4R      5R      6R      7R      8R      9R     10R
+  unter 1 Pip      972      61%     47%     38%     32%     26%     22%     18%     17%     15% 
+  1-2 Pips         963      68%     52%     43%     36%     31%     28%     25%     22%     20% 
+  2-3 Pips         539      72%     57%     47%     40%     34%     30%     27%     24%     22% 
+  3-5 Pips         493      79%     61%     49%     42%     36%     30%     28%     25%     21% 
+  5-8 Pips         217      89%     75%     65%     52%     45%     39%     35%     32%     29% 
+  ueber 8 Pips      98      99%     91%     84%     79%     71%     61%     51%     46%     40% 
+  alle            3282      70%     55%     46%     39%     33%     29%     25%     22%     20% 
 
   PIP-LEITER MIT DEMSELBEN STOPP -- Kontext, steigt mit der Volatilitaet
                      n       10P     15P     20P     25P     30P     35P     40P
@@ -39,17 +40,18 @@ Strecke ab der nahen OB-Kante, Stopp min(strukturelles Risiko, 6 Pips), Fenster 
   25-40 %          685   20.9%       32.0 %       5.7 P      15.7 P        91%
   40-65 %          614   18.7%       50.0 %       4.9 P      19.1 P        90%
   ueber 65 %       627   19.1%       92.0 %       4.1 P      22.3 P        82%
+  alle            3282  100.0%       30.7 %       5.7 P      17.8 P        90%
   OB-Retest = Anteil, bei dem der Preis die nahe Kante binnen 24h nochmal beruehrt hat.
   Geht in keine Quote ein, steht nur fuers Protokoll.
 
   R-LEITER MIT GEDECKELTEM STOPP (6 Pips) -- am eigenen Risiko normiert
-                     n        2R      3R      4R      5R      6R
-  unter 15 %       702      59%     43%     36%     30%     25% 
-  15-25 %          654      66%     50%     40%     33%     28% 
-  25-40 %          685      67%     52%     41%     34%     28% 
-  40-65 %          614      75%     60%     49%     43%     36% 
-  ueber 65 %       627      88%     74%     64%     56%     49% 
-  alle            3282      70%     55%     46%     39%     33% 
+                     n        2R      3R      4R      5R      6R      7R      8R      9R     10R
+  unter 15 %       702      59%     43%     36%     30%     25%     20%     18%     16%     14% 
+  15-25 %          654      66%     50%     40%     33%     28%     25%     21%     19%     18% 
+  25-40 %          685      67%     52%     41%     34%     28%     25%     22%     19%     17% 
+  40-65 %          614      75%     60%     49%     43%     36%     32%     29%     25%     23% 
+  ueber 65 %       627      88%     74%     64%     56%     49%     42%     37%     34%     30% 
+  alle            3282      70%     55%     46%     39%     33%     29%     25%     22%     20% 
 
   PIP-LEITER MIT DEMSELBEN STOPP -- Kontext, steigt mit der Volatilitaet
                      n       10P     15P     20P     25P     30P     35P     40P

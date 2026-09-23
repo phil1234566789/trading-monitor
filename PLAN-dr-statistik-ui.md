@@ -311,6 +311,63 @@ Bei über 10 Pips Risiko verdoppelt der Deckel den Erwartungswert: 12 Punkte Tre
 dafür ein so viel besseres RR, dass es sich klar lohnt. Falls die Anzeige je einen Hinweis geben
 soll, dann diesen — nicht eine Zielempfehlung.
 
+### Die FVG-Größe — der stärkste Schnitt, gemessen 23.09.2026
+
+Anlass war Philips Einwand zu Setup #2936: *„die FVG ist 0,5 Pip. viel zu schwach. koennten wir
+ueberlegen sowas rauszufiltern."* Gemessen mit `analysis/dr-reichweite/fvgBaender.py`, Rohausgabe
+in `ergebnis-fvg.txt`, Tabelle als `FVG_BAENDER` in `src/drQuoten.js`.
+
+Dieselben 3282 Ranges, nur nach der Lücke gruppiert, die den bestätigenden M5-OB ausgemacht hat.
+Die R-Spalten hier sind **gedeckelt** (min(Risiko, 6 Pips)), also direkt mit „Der gedeckelte Stopp"
+weiter unten vergleichbar, nicht mit der ungedeckelten Tabelle oben:
+
+| FVG | n | 10 P | 15 P | 20 P | 30 P | 2 R | 3 R | 4 R | 6 R | Reichw.-Median | OB-Retest |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| unter 1 Pip | 972 | 56 % | 42 % | 34 % | 23 % | 61 % | **47 %** | 38 % | 26 % | 13,1 P | 95 % |
+| 1–2 Pips | 963 | 65 % | 50 % | 39 % | 28 % | 68 % | 52 % | 43 % | 31 % | 15,9 P | 91 % |
+| 2–3 Pips | 539 | 69 % | 54 % | 45 % | 32 % | 72 % | 57 % | 47 % | 34 % | 18,7 P | 89 % |
+| 3–5 Pips | 493 | 82 % | 64 % | 52 % | 38 % | 79 % | 61 % | 49 % | 36 % | 22,7 P | 85 % |
+| 5–8 Pips | 217 | 92 % | 75 % | 67 % | 46 % | 89 % | 75 % | 65 % | 45 % | 29,3 P | 81 % |
+| über 8 Pips | 98 | 100 % | 96 % | 90 % | 73 % | 99 % | **91 %** | 84 % | 71 % | 46,8 P | 69 % |
+| **alle** | **3282** | **68 %** | **54 %** | **44 %** | **32 %** | **70 %** | **55 %** | **46 %** | **33 %** | 17,8 P | 90 % |
+
+Monoton über die ganze Reihe, und **er hält in R** — Bootstrap für das oberste gegen das unterste
+Band +37 bis +50 Punkte bei 3 R (+34/+42 bei 2 R, +38/+54 bei 4 R). Anders als bei Saisonalität und
+Handelszeit ist das also nicht überwiegend Volatilität: die Reichweite wandert um Faktor 3,6 mit,
+das Risiko nur um 1,7. Damit ist es der stärkste Einzelschnitt, den dieses Projekt gemessen hat —
+zum Vergleich bei 3 R: reifer Sweep 44 % (ungedeckelt, n=188), 1H-Sweep 63 % (n=78).
+
+Die **relative** FVG (Lücke / OB-Höhe) trennt ebenfalls, aber schwächer: 43 / 50 / 52 / 60 / 74 %
+bei 3 R, Bootstrap +26 bis +36. Philips ursprünglicher Verdacht war ein Missverhältnis (0,5 Pip in
+einem 15,8-Pip-OB) — in dieser Form bestätigt er sich nicht, die absolute Zahl ist das bessere
+Kriterium. Die relative Tabelle ist deshalb bewusst **nicht** in `drQuoten.js` übernommen.
+
+**Kein Unterdrückungs-Filter.** Der Verlauf hat keine Kante, an der sich eine Schwelle begründen
+ließe, und das schwächste Band ist mit 29,6 % zugleich das größte — ein Filter in `poi-watcher`
+würde knapp ein Drittel aller Alarme unsichtbar machen, und zwar unprüfbar: ein unterdrückter Alarm
+lässt sich hinterher nicht mehr nachrechnen. Markieren ist reversibel, wegwerfen nicht (dieselbe
+Entscheidung wie bei der Gegenkraft).
+
+**Zwei Dinge, die beim Anzeigen schiefgehen können:**
+
+1. Das ist ein **zweiter Schnitt derselben Grundgesamtheit**, keine Verfeinerung des Risiko-Bands.
+   „Enge Range UND große FVG" ist ungemessen. Die beiden Quoten dürfen nebeneinander stehen, aber
+   nicht multipliziert oder als Filterkette gelesen werden — dieselbe Falle wie beim zweiten
+   Schnitt weiter oben.
+2. Eine FVG von X Pip ist **per Konstruktion schon Teil der gemessenen Strecke** — der Preis steht
+   bei FVG-Bestätigung bereits so weit von der nahen Kante weg. Bei den besetzungsstarken unteren
+   Bändern (Median 0,7 bis 2,5 Pip) fällt das gegen ein 10-Pip-Ziel nicht ins Gewicht, im obersten
+   Band (Median 10,1 Pip, 3 % der Ranges) trägt es einen Teil der 91 %.
+
+Die Spalte `OB-Retest` läuft nur mit, weil sie eine eigene Warnung enthält: je größer die Lücke,
+desto seltener kommt der Preis an die Kante zurück. Sie geht in keine Quote ein — Philip sucht den
+Entry unabhängig von der Dealing Range, notfalls im M1 ohne OB-Retest.
+
+**Stand der Umsetzung:** `trade_setups.ob_fvg` existiert (Migration `20260923083000`), `poi-watcher`
+schreibt sie live mit, und alle 2691 rückrechenbaren Altzeilen sind gefüllt
+(`scripts/backfillObFvg.ts`). Die Tabelle liegt als `FVG_BAENDER`/`fvgQuote()` in `drQuoten.js`,
+ist aber **noch nirgends aufgerufen** — wo genau sie im TSC auftaucht, ist offen.
+
 ### Saisonalität bewusst NICHT einbauen
 
 Der Monatsunterschied ist real und groß (März 67 % gegen August 42 % bei 15 Pips), aber er stammt

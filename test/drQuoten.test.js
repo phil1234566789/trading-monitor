@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rQuote, pipQuote, drQuotenBlock } from "../src/drQuoten.js";
+import { rQuote, pipQuote, drQuotenBlock, fvgQuote, FVG_BAND_N } from "../src/drQuoten.js";
 
 // Bandgrenzen sind exklusiv unten, inklusiv oben (lo < Risiko <= hi) — wie in baenderTabellen.py.
 // Die Grenzwerte selbst gehoeren also noch ins UNTERE Band. riskPips ist das strukturelle Risiko,
@@ -82,5 +82,42 @@ describe("drQuotenBlock", () => {
       const block = drQuotenBlock("GBPUSD", risiko, "minor");
       expect([...block.pipLeiter, ...block.rLeiter].map((s) => s.quote)).not.toContain(null);
     }
+  });
+});
+
+// Zweiter Schnitt (23.09.2026): die FVG-Baender schneiden dieselbe Grundgesamtheit nach der Luecke
+// statt nach dem Risiko -- und ihre Grenzen liegen andersherum (lo <= FVG < hi), weil die
+// Untergrenze die harte 0,5-Pip-Erkennungsschwelle ist. Genau dort kippt ein Off-by-one still.
+describe("fvgQuote", () => {
+  it("ordnet an den Bandgrenzen inklusiv unten, exklusiv oben zu", () => {
+    expect(fvgQuote("GBPUSD", 0.5, 3)).toBe(47);   // Erkennungsschwelle, unterstes Band
+    expect(fvgQuote("GBPUSD", 0.99, 3)).toBe(47);
+    expect(fvgQuote("GBPUSD", 1, 3)).toBe(52);     // Bandwechsel genau auf der Grenze
+    expect(fvgQuote("GBPUSD", 7.99, 3)).toBe(75);
+    expect(fvgQuote("GBPUSD", 8, 3)).toBe(91);     // oberstes Band, nach oben offen
+    expect(fvgQuote("GBPUSD", 60, 3)).toBe(91);
+  });
+
+  it("kennt beide Einheiten, R als Default", () => {
+    expect(fvgQuote("GBPUSD", 0.7, 3)).toBe(fvgQuote("GBPUSD", 0.7, 3, "R"));
+    expect(fvgQuote("GBPUSD", 0.7, 15, "P")).toBe(42);
+    expect(fvgQuote("GBPUSD", 10, 15, "P")).toBe(96);
+  });
+
+  it("liefert null, wo nichts gemessen wurde", () => {
+    expect(fvgQuote("EURUSD", 2, 3)).toBeNull();
+    expect(fvgQuote("GBPUSD", 0, 3)).toBeNull();
+    expect(fvgQuote("GBPUSD", 2, 99)).toBeNull();  // Ziel ausserhalb der Leiter
+  });
+
+  // Die Baender sind von Hand aus ergebnis-fvg.txt uebertragen -- eine ausgelassene Zelle faellt
+  // sonst erst auf, wenn die Anzeige sie braucht.
+  it("hat in jedem Band jede Stufe beider Leitern", () => {
+    for (const fvg of [0.5, 1.5, 2.5, 4, 6, 20]) {
+      for (const r of [2, 3, 4, 5, 6, 7, 8, 9, 10]) expect(fvgQuote("GBPUSD", fvg, r)).toBeGreaterThan(0);
+      for (const p of [10, 15, 20, 25, 30, 35, 40]) expect(fvgQuote("GBPUSD", fvg, p, "P")).toBeGreaterThan(0);
+    }
+    expect(FVG_BAND_N).toHaveLength(6);
+    expect(FVG_BAND_N.reduce((a, b) => a + b, 0)).toBe(3282);
   });
 });

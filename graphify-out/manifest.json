@@ -798,9 +798,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/poi-watcher/index.ts": {
-    "mtime": 1790136797.4060242,
-    "seen": 1790136901.7018085,
-    "ast_hash": "338fe8aedf8fd5a429b5ca1988ac8b84",
+    "mtime": 1790151561.0570047,
+    "seen": 1790151872.839448,
+    "ast_hash": "6db909e0efd888e0b5e711130816f3a9",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/biasEngine.ts": {
@@ -1057,727 +1057,727 @@
   },
   "supabase/migrations/20260705120000_ob_zones.sql": {
     "mtime": 1783249948.671949,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260705120001_watch_state.sql": {
     "mtime": 1783249953.8186367,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260705120002_signals.sql": {
     "mtime": 1783249961.8878384,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260705140000_signals_exit_fields.sql": {
     "mtime": 1783253767.783422,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260705150000_seed_test_trade.sql": {
     "mtime": 1783253866.8005283,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260705160000_fix_test_trade_exit_time.sql": {
     "mtime": 1783254973.4156997,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260705170000_move_test_trade_entry.sql": {
     "mtime": 1783255851.549231,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260705180000_ob_zones_poi_watcher.sql": {
     "mtime": 1783257943.327943,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260705190000_test_poi_watcher_reset.sql": {
     "mtime": 1783258141.1594768,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260705200000_poi_watcher_cron.sql": {
     "mtime": 1783258836.7994869,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260705220000_fix_notified_at_backlog.sql": {
     "mtime": 1783260895.2860992,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260705230000_ob_zones_touched_invalidated_at.sql": {
     "mtime": 1783261913.5033772,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260705240000_ob_zones_end_time.sql": {
     "mtime": 1783262740.7202106,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260713120000_poi_watcher_cron_5min.sql": {
     "mtime": 1783973222.6444452,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260715120000_liquidity_levels.sql": {
     "mtime": 1784144669.1519177,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260716120000_trade_setups.sql": {
     "mtime": 1784228766.2063565,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260717120000_alarm_settings.sql": {
     "mtime": 1784232928.8092735,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260717130000_liquidity_levels_end_time.sql": {
     "mtime": 1784276747.4143429,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260717140000_alert_price.sql": {
     "mtime": 1784277411.530207,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260717150000_backfill_liquidity_alert_price.sql": {
     "mtime": 1784277569.9782195,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260717160000_backfill_trade_setup_alert_price.sql": {
     "mtime": 1784277752.2733636,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260717170000_poi_watcher_cron_timeout.sql": {
     "mtime": 1784279100.913182,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260718200000_chart_colors.sql": {
     "mtime": 1784405165.6593816,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260722120000_ctrader_oauth_tokens.sql": {
     "mtime": 1784973002.709176,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260723090000_forex_h1_cache.sql": {
     "mtime": 1784973002.7101755,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260723100000_sessions.sql": {
     "mtime": 1784973002.7111745,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260725120000_trading_schedules.sql": {
     "mtime": 1784975380.2963092,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260725121000_sessions_instrument_danger.sql": {
     "mtime": 1784975391.4594347,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260725150000_chart_line_widths.sql": {
     "mtime": 1784987163.8220913,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260726120000_news_events.sql": {
     "mtime": 1785078157.4471467,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260726120100_news_events_seed_2026-07-23.sql": {
     "mtime": 1785078167.0920115,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260726150000_news_events_anon_write.sql": {
     "mtime": 1785080940.7595928,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260726160000_news_events_seed_next_10_weeks.sql": {
     "mtime": 1785083214.3054519,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260726170000_news_events_seed_full_year_2026.sql": {
     "mtime": 1785083730.8266747,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260726180000_sessions_weekday_filter.sql": {
     "mtime": 1785090233.9655077,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260727170000_seed_gbpusd_trade_2026-07-27.sql": {
     "mtime": 1785168898.5345533,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260727180000_trade_thesis_and_partial_exits.sql": {
     "mtime": 1785177268.7239766,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260727190000_trade_mode_setup_intake.sql": {
     "mtime": 1785180573.8490653,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260727200000_link_gbpusd_trades_to_setup.sql": {
     "mtime": 1785181736.1218717,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260727210000_fix_setup_105_ob_bounds.sql": {
     "mtime": 1785184885.161265,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260727220000_trade_targets_anon_insert.sql": {
     "mtime": 1785188612.4678519,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260728120000_trade_targets_anon_delete.sql": {
     "mtime": 1785190071.2459035,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260728130000_signals_anon_delete.sql": {
     "mtime": 1785212985.6802166,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260728140000_trade_targets_kind_and_source.sql": {
     "mtime": 1785214862.0594707,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260728150000_claude_annotations.sql": {
     "mtime": 1785221702.692177,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260728160000_trade_confirmations.sql": {
     "mtime": 1785318541.1605048,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260730120000_seed_eurusd_trade_2026-07-28.sql": {
     "mtime": 1785339216.7185595,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260730130000_trading_accounts.sql": {
     "mtime": 1785398113.2533996,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260730140000_seed_bot_retail_nils_trades.sql": {
     "mtime": 1785400442.5405674,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260730150000_fix_bot_retail_nils_timezone.sql": {
     "mtime": 1785400925.2786584,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260730160000_trade_confirmations_fib.sql": {
     "mtime": 1785408622.7633357,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260730170000_seed_trades_2026-07-30.sql": {
     "mtime": 1785409784.5167506,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260730180000_fix_seed_trades_2026-07-30_account.sql": {
     "mtime": 1785410423.526554,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260730190000_claude_annotations_title_visible_color.sql": {
     "mtime": 1785423382.1719115,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260730200000_ob_colors_per_timeframe.sql": {
     "mtime": 1785432453.0395103,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260730210000_ob_border_colors.sql": {
     "mtime": 1785432799.7774203,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260731120000_dealing_ranges_trade_positions.sql": {
     "mtime": 1785501158.978054,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260731130000_merge_gbpusd_long_2026-07-30_dealing_range.sql": {
     "mtime": 1785502152.377737,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260731170000_trade_targets_range_bounds.sql": {
     "mtime": 1785508301.1971934,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260731171000_fix_target_21_range_bounds.sql": {
     "mtime": 1785508472.7727728,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260731180000_merge_gbpusd_short_11_12_dealing_range.sql": {
     "mtime": 1785510337.0170894,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260731190000_trade_targets_confirmations_timeframe.sql": {
     "mtime": 1785511303.769956,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260731191000_backfill_target_22_timeframe.sql": {
     "mtime": 1785511533.7578177,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260731200000_fix_confirmation_18_touched_time.sql": {
     "mtime": 1785515441.1480355,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260731210000_trade_positions_size_pl_commission.sql": {
     "mtime": 1785516576.7532294,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260731211000_backfill_size_pl_commission_from_reasoning.sql": {
     "mtime": 1785516809.9569266,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260731220000_drop_invalid_outcome.sql": {
     "mtime": 1785521053.5427897,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260731230000_dealing_ranges_lesson_link.sql": {
     "mtime": 1785523721.212272,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260801120000_laniakea_context.sql": {
     "mtime": 1785575707.1152413,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260801130000_laniakea_context_ob_zones.sql": {
     "mtime": 1785577941.6205513,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260801140000_laniakea_context_trade_setups.sql": {
     "mtime": 1785581986.9955542,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260801150000_laniakea_context_trade_confirmations.sql": {
     "mtime": 1785584742.0123115,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260802120000_laniakea_context_liquidity_levels.sql": {
     "mtime": 1785687510.2855291,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260802120100_laniakea_context_m5_obs.sql": {
     "mtime": 1785687528.2891347,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260802130000_laniakea_context_m5_liquidity.sql": {
     "mtime": 1785692928.730652,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260807120000_backfill_range_confirmations_27_28.sql": {
     "mtime": 1786095415.6422613,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260807200000_backfill_target_source_time_range_32.sql": {
     "mtime": 1786135224.885091,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260808100000_merge_eurusd_short_37_38_39_dealing_range.sql": {
     "mtime": 1786183529.065265,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260809120000_forex_candles.sql": {
     "mtime": 1786261869.6177542,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260809130000_ob_zones_allow_5m.sql": {
     "mtime": 1786266521.306008,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260809140000_ob_zones_anon_insert.sql": {
     "mtime": 1786266824.4448633,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260809150000_ob_zones_anon_delete.sql": {
     "mtime": 1786267058.3271787,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260809160000_trade_targets_anon_update.sql": {
     "mtime": 1786281415.7777188,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260811170000_laniakea_context_rsi_divergence.sql": {
     "mtime": 1786429222.0934827,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260813120000_dealing_ranges_setup_type.sql": {
     "mtime": 1786647853.3480992,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260815120000_trade_confirmations_rsi_divergence.sql": {
     "mtime": 1786801438.1767135,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260817120000_rename_laniakea_context_to_pin_context.sql": {
     "mtime": 1787465334.6523325,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260817130000_pin_context_notified.sql": {
     "mtime": 1787465334.6523325,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260822090000_remove_btc_data.sql": {
     "mtime": 1787465334.653474,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260822100000_trade_setups_confirmations_ob_zone_id.sql": {
     "mtime": 1787468807.1036825,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260823120000_pin_context_m5_ob_to_ob_zone_id.sql": {
     "mtime": 1787468807.1036825,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260823130000_liquidity_levels_anon_insert.sql": {
     "mtime": 1787477890.8903284,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260823140000_liquidity_levels_allow_4h.sql": {
     "mtime": 1787480948.5829642,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260823150000_liquidity_levels_fix_untouched_end_time.sql": {
     "mtime": 1787481196.9944034,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260823160000_ctrader_token_reauth.sql": {
     "mtime": 1787513981.0943813,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260823170000_liquidity_levels_anon_update.sql": {
     "mtime": 1787516153.5341475,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260823180000_ob_zones_anon_update.sql": {
     "mtime": 1787519013.3846607,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260825060000_trade_targets_confirmations_liquidity_level_id.sql": {
     "mtime": 1787636974.4977071,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260825060100_backfill_range_45_liquidity_level_ids.sql": {
     "mtime": 1787637035.2666936,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260827120000_liquidity_levels_allow_5m.sql": {
     "mtime": 1787833397.2725866,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260827130000_backfill_pivot_liquidity_level_ids.sql": {
     "mtime": 1787834771.4967687,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260827140000_fix_position_76_triggered_at.sql": {
     "mtime": 1787836735.46583,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260828120000_trade_confirmations_to_trade_evidence.sql": {
     "mtime": 1787948761.9146805,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260828130000_trade_evidence_anti_confluence_category.sql": {
     "mtime": 1787952919.6258843,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260829120000_trade_evidence_bonus.sql": {
     "mtime": 1787996277.8526344,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260830090000_forex_candles_allow_1d.sql": {
     "mtime": 1788044222.9541306,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260830091000_daily_structure_pivots.sql": {
     "mtime": 1788044235.1408083,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260830092000_daily_structure_pivots_cron.sql": {
     "mtime": 1788044389.4453464,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260831140000_trade_setups_anon_insert_update.sql": {
     "mtime": 1788191263.0262423,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260831150000_trading_loop_state.sql": {
     "mtime": 1788203650.8296158,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260901220000_state_machine_log.sql": {
     "mtime": 1788590820.0495784,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260905081500_reset_state_machine_test_data.sql": {
     "mtime": 1788596106.130399,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260905090000_state_machine_log_nullable_step.sql": {
     "mtime": 1788597085.0767424,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260905100000_trade_setup_outcomes.sql": {
     "mtime": 1788601253.5339897,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260905140000_trading_loop_state_machine.sql": {
     "mtime": 1788615679.2422638,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260905150000_reset_gbpusd_20260828_test_data.sql": {
     "mtime": 1788617004.0635574,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260905160000_reset_gbpusd_20260828_test_data_v2.sql": {
     "mtime": 1788621258.8858268,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260905170000_reset_gbpusd_20260828_test_data_v3.sql": {
     "mtime": 1788621658.2445285,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260905180000_ob_zones_retested.sql": {
     "mtime": 1788628140.7587786,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260905190000_reset_gbpusd_20260828_test_data_v4.sql": {
     "mtime": 1788629223.2374022,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260906000000_reset_gbpusd_20260828_test_data_v5.sql": {
     "mtime": 1788646324.8836682,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2329,13 +2329,13 @@
   },
   "supabase/migrations/20260906120000_trading_loop_state_gate_visibility.sql": {
     "mtime": 1788677509.9030674,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260906140000_trading_loop_state_permanent_per_day.sql": {
     "mtime": 1788688330.4038432,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2353,13 +2353,13 @@
   },
   "supabase/migrations/20260906130000_reset_gbpusd_20260828_test_data_v6.sql": {
     "mtime": 1788688222.1933806,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260906150000_reset_gbpusd_20260906_test_data_v7.sql": {
     "mtime": 1788689951.0085537,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2377,61 +2377,61 @@
   },
   "supabase/migrations/20260906150500_trading_loop_state_current_step_default.sql": {
     "mtime": 1788702053.8729897,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260906151000_reset_gbpusd_20260828_bug_recovery.sql": {
     "mtime": 1788702132.2606244,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260906170000_fix_duplicate_gbpusd_ob_zone_3182140.sql": {
     "mtime": 1788730323.3210623,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260906160000_reset_gbpusd_20260828_restart_1600.sql": {
     "mtime": 1788727410.4507113,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260906161500_reset_gbpusd_20260828_retest_retryat.sql": {
     "mtime": 1788729126.4223237,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260906163000_reset_gbpusd_20260828_clean_restart.sql": {
     "mtime": 1788729212.310326,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260906164500_reset_gbpusd_20260828_15min_fix.sql": {
     "mtime": 1788729652.690049,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260907070500_delete_duplicate_confirmation_176.sql": {
     "mtime": 1788764439.2287135,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260907073000_inspect_gbpusd_machine_snapshot.sql": {
     "mtime": 1788769667.7498677,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260907140000_reset_gbpusd_20260828_cursor_1625.sql": {
     "mtime": 1788790215.2018058,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2443,13 +2443,13 @@
   },
   "supabase/migrations/20260907150000_reset_gbpusd_20260828_attention_level_test.sql": {
     "mtime": 1788793988.8899393,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260908070000_reset_gbpusd_20260828_final_cleanup.sql": {
     "mtime": 1788850511.727577,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2497,19 +2497,19 @@
   },
   "supabase/migrations/20260909220000_drop_ob_zones_weak.sql": {
     "mtime": 1788990646.529693,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260910000000_reset_gbpusd_20260909.sql": {
     "mtime": 1788991332.5034053,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260911120000_ob_zones_repair_touched.sql": {
     "mtime": 1789117913.5197766,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2575,13 +2575,13 @@
   },
   "supabase/migrations/20260912210000_reset_gbpusd_20260909_lookahead_fix.sql": {
     "mtime": 1789248472.6468704,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260913120000_reset_gbpusd_20260909_retest.sql": {
     "mtime": 1789318150.066331,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2605,13 +2605,13 @@
   },
   "supabase/migrations/20260913200000_trading_loop_state_htf_watch_levels.sql": {
     "mtime": 1789332667.7634618,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260913210000_reset_gbpusd_20260909_htf_watch.sql": {
     "mtime": 1789332667.764461,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2623,7 +2623,7 @@
   },
   "supabase/migrations/20260915003000_reset_gbpusd_20260909_round2.sql": {
     "mtime": 1789425623.638478,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2641,7 +2641,7 @@
   },
   "supabase/migrations/20260915010000_remove_accidental_live_gate_20260915.sql": {
     "mtime": 1789427523.6199377,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2653,7 +2653,7 @@
   },
   "supabase/migrations/20260915014000_reset_gbpusd_20260909_round3.sql": {
     "mtime": 1789428803.0757048,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2683,7 +2683,7 @@
   },
   "supabase/migrations/20260915120000_reset_gbpusd_20260909_round4.sql": {
     "mtime": 1789467724.6160252,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2701,19 +2701,19 @@
   },
   "supabase/migrations/20260915170000_reset_gbpusd_20260909_for_etappe3.sql": {
     "mtime": 1789481927.464384,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260915180000_reset_gbpusd_20260909_round6.sql": {
     "mtime": 1789484006.4619946,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260915190000_reset_gbpusd_20260909_round7.sql": {
     "mtime": 1789486066.3204067,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2755,13 +2755,13 @@
   },
   "supabase/migrations/20260919140000_trade_setups_ls_timeframe.sql": {
     "mtime": 1789823374.5524101,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260919141000_gbpusd_alarm_window_0800.sql": {
     "mtime": 1789823383.9752917,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2869,7 +2869,7 @@
   },
   "supabase/migrations/20260920100000_drop_trade_setup_outcomes.sql": {
     "mtime": 1789895895.9159558,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2880,9 +2880,9 @@
     "semantic_hash": ""
   },
   "PLAN-dr-statistik-ui.md": {
-    "mtime": 1790106560.1892424,
-    "seen": 1790106705.455681,
-    "ast_hash": "b154de81caf59c8d14886ca56aa87941",
+    "mtime": 1790151856.8280702,
+    "seen": 1790151872.8705723,
+    "ast_hash": "38515c5ca91b56f7a202ae1f3e852e1f",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/saisonalitaet.py": {
@@ -2898,9 +2898,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/scripts/backfillTradeSetups.ts": {
-    "mtime": 1790151345.4872983,
-    "seen": 1790151398.3889248,
-    "ast_hash": "2045382be6d1c8f9445bec4bf3e4ea35",
+    "mtime": 1790151561.0580056,
+    "seen": 1790151872.8450139,
+    "ast_hash": "d989f13f35a1fc62f3171b94d1a1bb15",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-saisonalitaet.txt": {
@@ -2941,7 +2941,7 @@
   },
   "supabase/migrations/20260920140000_trade_setups_merge_paths.sql": {
     "mtime": 1789917854.723407,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -2989,7 +2989,7 @@
   },
   "supabase/migrations/20260921210000_trade_setup_sweeps.sql": {
     "mtime": 1790022105.3778853,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -3073,7 +3073,7 @@
   },
   "supabase/migrations/20260922090000_fxcm_staging.sql": {
     "mtime": 1790065147.1741977,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -3157,31 +3157,31 @@
   },
   "services/fxcm/backup.sql": {
     "mtime": 1790067000.6374698,
-    "seen": 1790150284.6452253,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "services/fxcm/rollback.sql": {
     "mtime": 1790068274.7161922,
-    "seen": 1790150284.6452253,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260922110000_fxcm_cutover.sql": {
     "mtime": 1790067073.3121762,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260922111000_fxcm_cron.sql": {
     "mtime": 1790067769.1396546,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260922112000_fxcm_refresh_checkpoint.sql": {
     "mtime": 1790068270.2541914,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -3283,7 +3283,7 @@
   },
   "supabase/migrations/20260922183000_dealing_ranges_invalidation_object.sql": {
     "mtime": 1790101208.3138957,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -3300,15 +3300,15 @@
     "semantic_hash": ""
   },
   "src/drQuoten.js": {
-    "mtime": 1790137994.6064608,
-    "seen": 1790138096.28402,
-    "ast_hash": "9d9a0505d84a816e9e7ecf871fd921bc",
+    "mtime": 1790151621.4491346,
+    "seen": 1790151872.8239365,
+    "ast_hash": "b54e0c1ca861d2054b9edc00610d8c60",
     "semantic_hash": ""
   },
   "test/drQuoten.test.js": {
-    "mtime": 1790106606.6189215,
-    "seen": 1790106705.4386723,
-    "ast_hash": "b1b25dd13b682752e117b506bdf525c0",
+    "mtime": 1790151657.800782,
+    "seen": 1790151872.8520637,
+    "ast_hash": "2e6e0f0ddc6a401c3408872e0c0196cf",
     "semantic_hash": ""
   },
   "src/berlinTime.js": {
@@ -3385,13 +3385,13 @@
   },
   "supabase/migrations/20260923060000_forex_h1_cache_last_time.sql": {
     "mtime": 1790136773.563557,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
   "supabase/migrations/20260923061000_forex_h1_cache_drop_candles.sql": {
     "mtime": 1790136869.9399512,
-    "seen": 1790150284.645731,
+    "seen": 1790151404.2726855,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -3402,15 +3402,15 @@
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/fvgBaender.py": {
-    "mtime": 1790151345.4902966,
-    "seen": 1790151398.3549058,
-    "ast_hash": "1e1c321f6725e8915b686c3c70625bfc",
+    "mtime": 1790151834.1029727,
+    "seen": 1790151872.8041215,
+    "ast_hash": "3bc02bee88d7c05da4a31326e09de6cf",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-fvg.txt": {
-    "mtime": 1790150133.4072213,
-    "seen": 1790150280.1872501,
-    "ast_hash": "002736165985556d7eab5094b219da85",
+    "mtime": 1790151839.4404862,
+    "seen": 1790151872.8725731,
+    "ast_hash": "c963e0b01f9684961a5610ad0f89c329",
     "semantic_hash": ""
   },
   "src/components/ui/ActionButton.vue": {
@@ -3435,6 +3435,12 @@
     "mtime": 1790150483.6095881,
     "seen": 1790151398.4077752,
     "ast_hash": "10f7bc7805a78e4e871669a2f3d323ab",
+    "semantic_hash": ""
+  },
+  "supabase/functions/trading-monitor-mcp/scripts/backfillObFvg.ts": {
+    "mtime": 1790151715.1730368,
+    "seen": 1790151872.8450139,
+    "ast_hash": "e4e36517bbad414d8b5fbc3afb1a4ddd",
     "semantic_hash": ""
   }
 }

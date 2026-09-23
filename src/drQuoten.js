@@ -49,6 +49,45 @@ const PIP_BAENDER = [
   { hi: Infinity, quoten: { 10: 77, 15: 61, 20: 52, 25: 44, 30: 38, 35: 33, 40: 29 } },
 ];
 
+// --- Zweiter Schnitt: FVG-Groesse (gemessen 23.09.2026, siehe PLAN "Die FVG-Groesse") ----------
+// Dieselben 3282 Ranges, nur anders gruppiert: nach der Luecke, die den bestaetigenden M5-OB
+// ausgemacht hat. Staerkstes Einzelmerkmal bisher, und es haelt in R (47 auf 91 % bei 3 R,
+// Bootstrap +37 bis +50 Punkte) — anders als Saisonalitaet oder Handelszeit also nicht bloss
+// Volatilitaet. Quelle: analysis/dr-reichweite/ergebnis-fvg.txt, Tabelle 1.
+//
+// ACHTUNG BEIM ANZEIGEN: das ist ein ZWEITER Schnitt derselben Grundgesamtheit, keine
+// Verfeinerung des Risiko-Bands. Die beiden Quoten sind nicht kombinierbar ("enge Range UND grosse
+// FVG" ist ungemessen) — sie duerfen nebeneinander stehen, aber nicht multipliziert oder als
+// Filterkette gelesen werden.
+//
+// Bandgrenzen inklusiv unten, exklusiv oben (lo <= FVG < hi), wie in fvgBaender.py -- und damit
+// ANDERS herum als bei den Risiko-Baendern oben, weil die Untergrenze hier die harte
+// Erkennungsschwelle von 0,5 Pip ist und ins erste Band gehoert.
+// Das kleinste Band hat n=98, die 50er-Schwelle ist erfuellt; ein feinerer Schnitt muesste sie neu
+// pruefen.
+const FVG_BAENDER = [
+  { hi: 1, r: { 2: 61, 3: 47, 4: 38, 5: 32, 6: 26, 7: 22, 8: 18, 9: 17, 10: 15 }, pip: { 10: 56, 15: 42, 20: 34, 25: 27, 30: 23, 35: 20, 40: 17 } },
+  { hi: 2, r: { 2: 68, 3: 52, 4: 43, 5: 36, 6: 31, 7: 28, 8: 25, 9: 22, 10: 20 }, pip: { 10: 65, 15: 50, 20: 39, 25: 33, 30: 28, 35: 25, 40: 22 } },
+  { hi: 3, r: { 2: 72, 3: 57, 4: 47, 5: 40, 6: 34, 7: 30, 8: 27, 9: 24, 10: 22 }, pip: { 10: 69, 15: 54, 20: 45, 25: 38, 30: 32, 35: 28, 40: 26 } },
+  { hi: 5, r: { 2: 79, 3: 61, 4: 49, 5: 42, 6: 36, 7: 30, 8: 28, 9: 25, 10: 21 }, pip: { 10: 82, 15: 64, 20: 52, 25: 43, 30: 38, 35: 32, 40: 29 } },
+  { hi: 8, r: { 2: 89, 3: 75, 4: 65, 5: 52, 6: 45, 7: 39, 8: 35, 9: 32, 10: 29 }, pip: { 10: 92, 15: 75, 20: 67, 25: 56, 30: 46, 35: 40, 40: 34 } },
+  { hi: Infinity, r: { 2: 99, 3: 91, 4: 84, 5: 79, 6: 71, 7: 61, 8: 51, 9: 46, 10: 40 }, pip: { 10: 100, 15: 96, 20: 90, 25: 79, 30: 73, 35: 65, 40: 58 } },
+];
+
+// Besetzung je Band, fuer die Einordnung neben der Quote (ein Band mit n=98 traegt weniger als
+// eines mit n=972). Reihenfolge wie FVG_BAENDER.
+export const FVG_BAND_N = [972, 963, 539, 493, 217, 98];
+
+// fvgPips ist die Groesse der bestaetigenden FVG in Pips (trade_setups.ob_fvg / PIP_SIZE).
+// null, sobald nichts Gemessenes passt — der Aufrufer zeigt dann nichts statt einer leeren Zelle.
+// Noch nirgends aufgerufen: die TSC-Anzeige ist eine offene Entscheidung (siehe PLAN), die Tabelle
+// steht hier, damit sie beim naechsten Messlauf mit den anderen zusammen nachgezogen wird.
+export function fvgQuote(instrument, fvgPips, ziel, einheit = "R") {
+  if (instrument !== QUOTEN_INSTRUMENT || !(fvgPips > 0)) return null;
+  const band = FVG_BAENDER.find((b) => fvgPips < b.hi);
+  return (einheit === "P" ? band?.pip : band?.r)?.[ziel] ?? null;
+}
+
 function quoteAusBaendern(baender, instrument, riskPips, ziel) {
   if (instrument !== QUOTEN_INSTRUMENT || !(riskPips > 0)) return null;
   return baender.find((b) => riskPips <= b.hi)?.quoten[ziel] ?? null;

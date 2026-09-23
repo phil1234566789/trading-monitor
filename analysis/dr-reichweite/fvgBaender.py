@@ -14,7 +14,7 @@ import json, random, statistics
 from drMerkmale import (lade_setups, lade_kerzen, ts, PIP, DECKEL, lauf, kam_retest,
                         mess_gedeckelt, mess_pips_gedeckelt, PIPS_REIHE as PIPS)
 
-RS = (2, 3, 4, 5, 6)
+RS = tuple(range(2, 11))  # wie R_GEDECKELT in baenderTabellen.py -- die Tabelle in src/drQuoten.js braucht die ganze Leiter
 # Absolute Luecke in Pips. Untergrenze ist 0,5 (das M5-Minimum in orderBlockDetection.js), oben
 # offen. Besetzung: 972 / 963 / 539 / 493 / 217 / 98.
 BAENDER = (("unter 1 Pip", 0, 1), ("1-2 Pips", 1, 2), ("2-3 Pips", 2, 3),
@@ -53,13 +53,16 @@ def tabellen(titel, baender, feld, einheit):
     print("%s -- VERTEILUNG UND KONTEXT" % titel)
     print("  %-14s %5s %7s %11s %11s %11s %10s"
           % ("", "n", "Anteil", "FVG-Median", "Risiko-Med", "Reichw-Med", "OB-Retest"))
-    for name, g in gruppen:
+    def zeile(name, g):
         print("  %-14s %5d %6.1f%% %10.1f%s %9.1f P %9.1f P %9.0f%%"
               % (name, len(g), 100.0 * len(g) / len(res),
                  statistics.median([x[feld] for x in g]), einheit,
                  statistics.median([x["risk"] for x in g]),
                  statistics.median([x["reach"] for x in g]),
                  100.0 * sum(1 for x in g if x["retest"]) / len(g)))
+    for name, g in gruppen:
+        zeile(name, g)
+    zeile("alle", res)
     print("  OB-Retest = Anteil, bei dem der Preis die nahe Kante binnen 24h nochmal beruehrt hat.")
     print("  Geht in keine Quote ein, steht nur fuers Protokoll.")
     print()
