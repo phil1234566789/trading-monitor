@@ -260,6 +260,10 @@ applies when explicitly invoked, not to every session in this repo.
   Werkzeug-Stand, frisch installierte Abhängigkeiten, Vorbild-Funktionen, Stolperfallen,
   bewusst ausgeklammerter Scope — wer den Task übernimmt, liest nur den Task. Ein Hinweis, der
   nur im Chat steht, ist für ihn nicht vorhanden.
+- **`update_task(description=...)` ersetzt den ganzen Text — vorher immer `get_task` lesen und
+  darauf aufbauen.** Ein Task kann zwischen zwei Chat-Runden von Philip oder einem anderen Agenten
+  umgeschrieben worden sein; blind zu schreiben löscht das unwiederbringlich. Dasselbe gilt für
+  `title`: ein weggelassenes Feld bleibt stehen, ein mitgeschicktes überschreibt.
 - **milk-city: auto-create a task from a confirmed-feasible idea**: when Philip asks a
   "geht das/ist das teuer einzubauen?"-style question about a potential feature and the answer
   confirms it's feasible with a concrete approach (not just "yes in theory"), call `create_task`
