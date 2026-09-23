@@ -121,7 +121,7 @@ const DRY_RUN = (Deno.env.get("DRY_RUN") ?? "false").toLowerCase() === "true";
 // starre UTC-Grenzen und verpasst auch verspätet eingetroffene Kerzen nicht.
 async function fetchForexBatch(
   db: SupabaseClient, symbol: string,
-): Promise<{ currentPrice: number; candlesByTf: Map<string, Candle[]> }> {
+): Promise<{ currentPrice: number; stale: boolean; candlesByTf: Map<string, Candle[]> }> {
   const specs = [
     { key: "M5", period: "5m", count: TRADE_SETUP_M5_CANDLE_LIMIT },
     { key: "1H", period: "1h", count: FOREX_H1_LOOKBACK_CANDLES },
@@ -132,9 +132,9 @@ async function fetchForexBatch(
   const latest = results[0][results[0].length - 1];
   // An LIVE_TOUCH_WINDOW_SEC gekoppelt, nicht zufaellig gleich: haengt der Feed weiter zurueck als
   // das Touch-Fenster reicht, faellt jede geladene Kerze aus dem Fenster und recentCandles liefert
-  // leer — der Lauf pruefte dann still ueberhaupt keinen Touch mehr. Lieber laut abbrechen.
-  if (Date.now() / 1000 - latest.time > LIVE_TOUCH_WINDOW_SEC) throw new Error(`FXCM M5 feed stale: ${symbol}`);
-  return { currentPrice: latest.close, candlesByTf: new Map(specs.map((s, i) => [s.key, results[i]])) };
+  // leer — der Lauf pruefte dann still ueberhaupt keinen Touch mehr.
+  const stale = Date.now() / 1000 - latest.time > LIVE_TOUCH_WINDOW_SEC;
+  return { currentPrice: latest.close, stale, candlesByTf: new Map(specs.map((s, i) => [s.key, results[i]])) };
 }
 
 async function sendTelegram(text: string) {
@@ -253,45 +253,22 @@ function localMinutesAndWeekday(date: Date): { minutesSinceMidnight: number; gro
   return { minutesSinceMidnight: hour * 60 + minute, group };
 }
 
-function isInWindows(
-  date: Date, windows: WeekdayWindows | undefined, startBufferMin = 0, endBufferMin = 0,
-): boolean {
+function isInWindows(date: Date, windows: WeekdayWindows | undefined): boolean {
   if (!windows) return false;
   const { minutesSinceMidnight, group } = localMinutesAndWeekday(date);
-  return windows[group].some(([from, to]) =>
-    minutesSinceMidnight >= from - startBufferMin && minutesSinceMidnight < to + endBufferMin);
+  return windows[group].some(([from, to]) => minutesSinceMidnight >= from && minutesSinceMidnight < to);
 }
 
-// Nachts/am Wochenende (außerhalb des Alarmfensters) werden fürs Forex-Zonen-Fetching keine
-// Requests gebraucht (Philip schläft bzw. tradet nicht, kein Alarm bringt was) — spart unnötige
-// Archiv-Abfragen (ursprünglich gegen Twelve Datas Free-Tier-Rate-Limit gedacht, 800/Tag,
-// 8/Min; bleibt aber auch ohne dieses Limit sinnvoll, um außerhalb der Handelszeiten keine
-// Zonen-Erkennung/DB-Schreibvorgänge zu verursachen, die eh niemand ansieht). FETCH_START_BUFFER_MIN
-// Minuten VOR Fensterstart schon wieder
-// holen (nicht erst exakt zum Fensterbeginn) — ein einziger Lauf davor reicht, um über Nacht
-// liegengebliebene Touches noch außerhalb des Fensters (shouldSend=false) still nachzuholen,
-// damit beim tatsächlichen Fensterstart kein Nachhol-Alarm-Schwall für längst vergangene Touches
-// losgeht (gleicher Grund wie beim früheren 24/7-Cron, nur jetzt auf ein kurzes Vorlauf-Fenster
-// verkürzt).
-const FETCH_START_BUFFER_MIN = 10;
-// Gegenstueck am Fensterende: die letzte 1H-Kerze des Fensters SCHLIESST erst zur Fenstergrenze
-// (17:00-Kerze bei Fensterende 18:00) — ohne Nachlauf sah kein Lauf sie je, ihre OB-Zonen tauchten
-// erst am naechsten Morgen auf. Wie der Vorlauf nur fuers Fetchen/Persistieren; shouldSend prueft
-// weiterhin ungepuffert, es geht also kein Telegram nach Fensterende raus.
-const FETCH_END_BUFFER_MIN = 10;
+// Erkennung/Persistierung (Zonen, Level, Setups) haengt NICHT mehr am Alarmfenster: Chart, MCP und
+// Auswertung lesen den Bestand auch abends/nachts, und eine Zone, die erst am naechsten Morgen
+// entsteht, fehlt genau dann, wenn Philip den Tag nachbereitet. Die Kerzen kommen ohnehin aus dem
+// eigenen Archiv (kein Broker-Rate-Limit mehr), nur der Telegram-Versand bleibt ans Fenster
+// gebunden (shouldSend). Ein Touch ausserhalb des Fensters wird dabei still als gesehen markiert
+// (notified=true, notified_at=null) — kein Nachhol-Alarm-Schwall zum Fensterstart.
 
 Deno.serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-
-    // Wartungsaufruf darf auch außerhalb des normalen Auswertungsfensters laufen.
-    let forceH1Refresh = false;
-    try {
-      const body = await req.json();
-      forceH1Refresh = body?.forceH1Refresh === true;
-    } catch {
-      // Kein/kein valides JSON-Body (regulärer Cron-Aufruf mit leerem Body) — kein Fehler, einfach false.
-    }
 
     // Ein/Aus-Schalter je Alarm-Typ (siehe "Alarme"-Seite im Dashboard) — steuert NUR den
     // Telegram-Versand, nie die Erkennung/Persistierung selbst (siehe Kommentare unten an den
@@ -339,21 +316,25 @@ Deno.serve(async (req) => {
     // Für den Pin-Touch-Alarm-Durchlauf ganz unten (nach diesem Loop) — der braucht pro Instrument
     // den aktuellen Preis UND das Alarm-Gating, hat aber selbst keinen eigenen Fetch (reine
     // Nachlese auf dem, was hier oben ohnehin schon geholt/berechnet wurde). Bleibt für ein
-    // Instrument leer, wenn dieser Tick es übersprungen hat (außerhalb des Forex-Fetch-Fensters,
-    // siehe forexFetchWindow-Check unten) — dann kann für M5-OB/M5-Liquidity-Pins in diesem Lauf
-    // kein frischer Preis-Vergleich stattfinden, der nächste Lauf im Fenster holt das nach
-    // (gleiches Throttling-Prinzip wie der Rest dieser Datei).
+    // Instrument leer, wenn dieser Tick es übersprungen hat (M5-Feed stale, siehe unten) — dann
+    // kann für M5-OB/M5-Liquidity-Pins in diesem Lauf kein frischer Preis-Vergleich stattfinden,
+    // der nächste Lauf mit frischen Kerzen holt das nach.
     const currentPriceByInstrument: Record<string, number> = {};
     const shouldSendByInstrument: Record<string, boolean> = {};
 
     for (const cfg of INSTRUMENTS) {
       const alarmWindows = alarmWindowsByInstrument.get(cfg.instrument);
-      const forexFetchWindow = isInWindows(now, alarmWindows, FETCH_START_BUFFER_MIN, FETCH_END_BUFFER_MIN);
-      if (!forexFetchWindow && !forceH1Refresh) {
-        (summary.instruments as Record<string, unknown>)[cfg.instrument] = { skipped: "outside forex fetch window" };
+      const imAlarmfenster = isInWindows(now, alarmWindows);
+      const forexBatch = await fetchForexBatch(supabase, cfg.instrument);
+      // Keine frischen M5-Kerzen ist ausserhalb des Alarmfensters der Normalfall (Wochenende,
+      // Feiertag) — still ueberspringen, sonst schlaegt jeder Lauf am Wochenende fehl. Im Fenster
+      // ist derselbe Zustand ein echter Feed-Ausfall und muss laut sein, sonst liefen Touch-
+      // Pruefungen still auf veralteten Kursen (siehe fetchForexBatch/LIVE_TOUCH_WINDOW_SEC).
+      if (forexBatch.stale) {
+        if (imAlarmfenster) throw new Error(`FXCM M5 feed stale: ${cfg.instrument}`);
+        (summary.instruments as Record<string, unknown>)[cfg.instrument] = { skipped: "M5 feed stale (Markt zu?)" };
         continue;
       }
-      const forexBatch = await fetchForexBatch(supabase, cfg.instrument);
       const h1CandlesForSetup = forexBatch.candlesByTf.get("1H")!;
       const h4LastTime = forexBatch.candlesByTf.get("4H")!.at(-1)!.time;
       const { data: checkpoint, error: checkpointError } = await supabase.from("forex_h1_cache")
@@ -374,7 +355,7 @@ Deno.serve(async (req) => {
       // das weiterhin) — `shouldSend` entscheidet nur, ob dafür auch wirklich eine
       // Telegram-Nachricht rausgeht (nur innerhalb des Alarmfensters aus trading_schedules,
       // siehe oben).
-      const shouldSend = cfg.sendTelegram && isInWindows(now, alarmWindows);
+      const shouldSend = cfg.sendTelegram && imAlarmfenster;
       currentPriceByInstrument[cfg.instrument] = currentPrice;
       shouldSendByInstrument[cfg.instrument] = shouldSend;
       const instrumentSummary: Record<string, unknown> = {};

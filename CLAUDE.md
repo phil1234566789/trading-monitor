@@ -180,9 +180,6 @@ applies when explicitly invoked, not to every session in this repo.
   candles from the wrong window. `candleCache.js`'s `MAX_LOOKAHEAD_BARS` caps how many lookahead
   bars any timeframe can request, with the time-window derived from the *capped* bar count (not
   the raw seconds value) so count and window stay consistent.
-- **`poi-watcher`'s refresh-tick boundaries (`isH1RefreshTick`/`isH4RefreshTick`) use raw UTC
-  hours, not Berlin time** — the one deliberate exception to the Berlin-timezone convention above,
-  since they must align with the UTC-based `pg_cron` schedule. Don't "fix" this to Berlin time.
 - **cTrader `ACCESS_DENIED` lockout, no automatic recovery** (`cTrader error ACCESS_DENIED: ...` in
   logs/Telegram — happened 2026-08-08 and 2026-08-23) — Spotware's refresh token is single-use; if
   persisting a just-rotated token ever fails, the old one in `ctrader_oauth_tokens` is already
