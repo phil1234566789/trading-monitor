@@ -1,7 +1,7 @@
 # Graph Report - trading-monitor  (2026-09-23)
 
 ## Corpus Check
-- 544 files · ~557,165 words
+- 546 files · ~557,580 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9b6b7597`
+- Built from commit: `834735d1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -171,8 +171,8 @@
 1. `berlinDateStrFor()` - 46 edges
 2. `cssColor()` - 36 edges
 3. `pricePrecisionForInstrument()` - 34 edges
-4. `fmtPrice()` - 33 edges
-5. `berlinDateTimeStrFor()` - 33 edges
+4. `berlinDateTimeStrFor()` - 33 edges
+5. `fmtPrice()` - 33 edges
 6. `fetchForexCandles()` - 31 edges
 7. `json()` - 30 edges
 8. `clipReplay()` - 27 edges
@@ -184,12 +184,12 @@
   .claude/commands/task.md → CLAUDE.md
 - `Laniakea milk-city Task-Status Rule` --semantically_similar_to--> `milk-city Task Status Convention`  [INFERRED] [semantically similar]
   .claude/commands/l.md → CLAUDE.md
-- `Archive-First Auto-Reload Pattern (Tried, Then Reverted)` --semantically_similar_to--> `Persisted Forex Candle Archive (forex_candles Pilot)`  [INFERRED] [semantically similar]
-  PLAN-chart-objekte-forex.md → PLAN-notifications.md
 - `Trading-Monitor Project Overview (CLAUDE.md)` --conceptually_related_to--> `BTC Scope Removal from Chart-Objects Plan`  [INFERRED]
   CLAUDE.md → PLAN-chart-objekte-forex.md
 - `Bestätigungen (Sweeps & OBs) Feature` --semantically_similar_to--> `Confirmation/Confluence/Anti-Confluence Categories`  [INFERRED] [semantically similar]
   PLAN-trade-confluences.md → .claude/skills/dealing-range-anlegen/SKILL.md
+- `Archive-First Auto-Reload Pattern (Tried, Then Reverted)` --semantically_similar_to--> `Persisted Forex Candle Archive (forex_candles Pilot)`  [INFERRED] [semantically similar]
+  PLAN-chart-objekte-forex.md → PLAN-notifications.md
 
 ## Import Cycles
 - None detected.
@@ -757,7 +757,7 @@ Nodes (3): Warum die Auswertung NICHT auf der DB-Tabelle läuft, Warum es 1314 s
   docs/steerabilty-vs-wrong-ai-outputs.md · relation: references
 
 ## Knowledge Gaps
-- **1150 isolated node(s):** `Datenfluss`, `Betrieb`, `Umstellung und Sicherung`, `Zugänge und Zuständigkeiten`, `Wenn keine neuen Kerzen kommen` (+1145 more)
+- **1150 isolated node(s):** `TIMEFRAMES`, `ObZoneRow`, `LiquidityLevelRow`, `InstrumentConfig`, `PinAlarmRow` (+1145 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1412 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -769,10 +769,10 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `businessSecondsBetween()` connect `findAntiConfluenceCandidates.js` to `tradeSetup.ts`, `liquidity.js`, `dataExport.ts`, `dealingRangeLoop.ts`?**
   _High betweenness centrality (0.096) - this node is a cross-community bridge._
 - **Why does `marketStructureAnalysis Developer Notes` connect `Vegapunk Slimming Results (-86%)` to `fachdoku-router/SKILL.md`, `marketStructureAnalysis Rules Overview`?**
-  _High betweenness centrality (0.059) - this node is a cross-community bridge._
-- **Why does `businessSecondsBetween()` connect `liquidity.js` to `PriceChart.vue`, `tradeSetup.js`, `TradeSetupCockpit.vue`, `findAntiConfluences.js`, `chartTimeUtils.test.js`, `priceChartObZones.js`?**
-  _High betweenness centrality (0.059) - this node is a cross-community bridge._
-- **What connects `Datenfluss`, `Betrieb`, `Umstellung und Sicherung` to the rest of the system?**
+  _High betweenness centrality (0.074) - this node is a cross-community bridge._
+- **Why does `renderMarketStructureAnalysis()` connect `marketStructureRendering.ts` to `liquidity.js`, `pricePrecisionForInstrument`, `Vegapunk Slimming Results (-86%)`, `lineWidth`, `LiquidityLinePrimitive`, `cssColor`?**
+  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+- **What connects `TIMEFRAMES`, `ObZoneRow`, `LiquidityLevelRow` to the rest of the system?**
   _1150 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Dashboard.vue` be split into smaller, more focused modules?**
   _Cohesion score 0.015053763440860216 - nodes in this community are weakly interconnected._
