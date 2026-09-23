@@ -4,7 +4,11 @@
 // unter "Warum statisch und nicht über eine dr_reach-Tabelle").
 //
 // Hieß bis 22.09.2026 rScaleQuotes.js, als hier nur die R-Leiter für die Chart-Skala stand — mit
-// der Pip-Leiter und der Vergleichszeile fürs TSC ist "R-Skala" nicht mehr der Rahmen.
+// der Pip-Leiter und der FVG-Tabelle ist "R-Skala" nicht mehr der Rahmen.
+//
+// Die beiden Quoten-Leitern fürs TSC (drQuotenBlock samt Vergleichszeile) standen bis 23.09.2026
+// hier und sind ersatzlos raus (Philip: "das alte zeug zur statistik im TSC muss weg") — die
+// Einordnung macht jetzt fvgBewertung im Bewertungs-Bereich.
 //
 // Eigene Datei neben rScale.js: dort steht reine Geometrie, hier Empirie mit eigenem
 // Aktualisierungszyklus — aktualisieren heißt analysis/dr-reichweite/baenderTabellen.py laufen
@@ -12,7 +16,7 @@
 
 // Gemessen wurde ausschließlich GBPUSD; EURUSD bleibt bewusst ungemessen (Philip 20.09.2026).
 // Ohne diesen Guard zeigte der Chart dort Zahlen, die für das Instrument nie gerechnet wurden.
-export const QUOTEN_INSTRUMENT = "GBPUSD";
+const QUOTEN_INSTRUMENT = "GBPUSD";
 
 // Einordnung für JEDE Anzeige dieser Zahlen (Chart-Toggle in Dashboard.vue, TSC-Block) — steht
 // hier neben den Tabellen, damit sie beim nächsten Messlauf mit ihnen zusammen nachgezogen wird:
@@ -81,12 +85,12 @@ export const FVG_BAND_N = [952, 946, 516, 473, 201, 91];
 // Beschriftung der Baender, Reihenfolge wie FVG_BAENDER. Steht hier statt im Bauteil, damit die
 // Grenzen an EINER Stelle gepflegt werden: eine verschobene hi-Grenze ohne passendes Label waere
 // eine still falsche Anzeige.
-export const FVG_BAND_LABELS = ["unter 1 P", "1–2 P", "2–3 P", "3–5 P", "5–8 P", "über 8 P"];
+const FVG_BAND_LABELS = ["unter 1 P", "1–2 P", "2–3 P", "3–5 P", "5–8 P", "über 8 P"];
 
 // Die sechs Ziele der Bewertungstabelle, in Anzeigereihenfolge. Drei R-Stufen und drei
 // Pip-Stufen nebeneinander (Philip 2026-09-23), weil ein Merkmal je nach Leiter unterschiedlich
 // weit traegt — die FVG verliert mit steigendem Ziel an Vorsprung, das sieht man nur so.
-export const FVG_ZIELE = [
+const FVG_ZIELE = [
   { label: "3R", einheit: "R", ziel: 3 },
   { label: "5R", einheit: "R", ziel: 5 },
   { label: "8R", einheit: "R", ziel: 8 },
@@ -99,7 +103,7 @@ export const FVG_ZIELE = [
 // eine separat gemessene Zahl: so bleibt sie garantiert aus demselben Messlauf wie die Baender und
 // liegt per Konstruktion in deren Mitte. Eine fremd gemessene Zeile waere nach dem naechsten
 // Backfill still inkonsistent. Reihenfolge wie FVG_ZIELE.
-export const FVG_REFERENZ = [55, 38, 25, 43, 31, 24];
+const FVG_REFERENZ = [55, 38, 25, 43, 31, 24];
 
 function fvgBandIndex(fvgPips) {
   const i = FVG_BAENDER.findIndex((b) => fvgPips < b.hi);
@@ -125,16 +129,6 @@ export function fvgBewertung(instrument, fvgPips) {
   };
 }
 
-// fvgPips ist die Groesse der bestaetigenden FVG in Pips (trade_setups.ob_fvg / PIP_SIZE).
-// null, sobald nichts Gemessenes passt — der Aufrufer zeigt dann nichts statt einer leeren Zelle.
-// Noch nirgends aufgerufen, und das soll vorerst so bleiben: die Zahlen werden ueberarbeitet und
-// sind bis dahin VORLAEUFIG -- keine Anzeige darauf bauen. Der PLAN-Abschnitt listet alle vier
-// Stellen, die beim naechsten Messstand gemeinsam nachzuziehen sind.
-export function fvgQuote(instrument, fvgPips, ziel, einheit = "R") {
-  if (instrument !== QUOTEN_INSTRUMENT || !(fvgPips > 0)) return null;
-  const band = FVG_BAENDER.find((b) => fvgPips < b.hi);
-  return (einheit === "P" ? band?.pip : band?.r)?.[ziel] ?? null;
-}
 
 function quoteAusBaendern(baender, instrument, riskPips, ziel) {
   if (instrument !== QUOTEN_INSTRUMENT || !(riskPips > 0)) return null;
@@ -155,60 +149,4 @@ export function pipQuote(instrument, riskPips, pips) {
 // den beiden Leitern, damit sie dieselbe Schreibweise benutzen.
 export function labelMitQuote(ziel, quote) {
   return quote == null ? ziel : `${ziel} – ${quote} %`;
-}
-
-// Vergleichszeilen zur Band-Zeile (Tabelle 2) — bewusst NICHT nach Risiko-Band geschnitten: die
-// Gruppe hat insgesamt n=155, eine Aufteilung nach Band fiele unter die 50er-Schwelle. Als Record
-// je Gruppe statt als eine einzelne "reif"-Funktion, weil die Gegenkraft-Zeile (das stärkere
-// Merkmal, aber mit ungelöster Vorbedingung, siehe PLAN) als zweiter Eintrag danebenpassen soll.
-//
-// ACHTUNG: die R-Spalten von Tabelle 2 sind UNGEDECKELT (Stopp = Invalidierung), die Leitern oben
-// gedeckelt. Die Zeile trägt deshalb eine Richtung, keinen sauberen 1:1-Vergleich — und der
-// Alters-Effekt ist auf der größeren Stichprobe ohnehin geschrumpft (bei 15 Pips von +25 Punkten
-// auf +10, Intervall [3, 17]). Nüchtern darstellen, nicht als der große Hebel.
-const VERGLEICHSGRUPPEN = {
-  reif: {
-    label: "Mit reifem Sweep (≥ 24 h)",
-    pip: { 10: 80, 15: 66, 20: 55, 25: 45, 30: 39 },
-    r: { 2: 59, 3: 46, 4: 35, 6: 21 },
-  },
-};
-
-// Angezeigte Stufen im TSC-Block — vier je Leiter, mehr als das passt nicht in die 360px-Spalte.
-// Die Vergleichszeile zeigt nur je ein Ziel, sonst stünden zwei volle Leitern untereinander und
-// die eigene Zeile ginge optisch unter.
-const PIP_ZIELE = [10, 15, 20, 30];
-const R_ZIELE = [2, 3, 4, 6];
-const VERGLEICH_PIP_ZIEL = 15;
-const VERGLEICH_R_ZIEL = 3;
-
-function leiter(quoteFn, instrument, riskPips, ziele, einheit) {
-  const stufen = ziele.map((ziel) => ({ ziel, einheit, quote: quoteFn(instrument, riskPips, ziel) }));
-  return stufen.some((s) => s.quote == null) ? null : stufen;
-}
-
-// Der fertige Block zur laufenden Dealing Range: beide Leitern für ihr Risiko-Band und — nur bei
-// einem Minor-Sweep — die Vergleichszeile dazu (bei einem schon reifen Sweep wiederholt sie bloß
-// die Leitern darüber). null, sobald für eine der Stufen nichts Gemessenes vorliegt (EURUSD,
-// Risiko <= 0): der Aufrufer blendet dann den ganzen Block aus, statt leere Zellen zu zeigen.
-// sweepTier kommt als AgeTier herein (ageTier.ts), damit hier keine zweite Alters-Einstufung
-// entsteht — die Einstufung der Sweep-Zeile selbst ist die maßgebliche.
-export function drQuotenBlock(instrument, riskPips, sweepTier) {
-  const pipLeiter = leiter(pipQuote, instrument, riskPips, PIP_ZIELE, "P");
-  const rLeiter = leiter(rQuote, instrument, riskPips, R_ZIELE, "R");
-  if (!pipLeiter || !rLeiter) return null;
-  const reif = sweepTier === "minor" ? VERGLEICHSGRUPPEN.reif : null;
-  return {
-    pipLeiter,
-    rLeiter,
-    vergleich: reif
-      ? {
-          label: reif.label,
-          stufen: [
-            { ziel: VERGLEICH_PIP_ZIEL, einheit: "P", quote: reif.pip[VERGLEICH_PIP_ZIEL] },
-            { ziel: VERGLEICH_R_ZIEL, einheit: "R", quote: reif.r[VERGLEICH_R_ZIEL] },
-          ],
-        }
-      : null,
-  };
 }
