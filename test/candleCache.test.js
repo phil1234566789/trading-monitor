@@ -17,6 +17,11 @@ function candle(time) {
 const BAR_SECONDS = 300; // 5m
 
 describe("cachedCandlesUpTo", () => {
+  it("rejects a month-long interior gap even when the newest candle and watermark are current", () => {
+    const cached = [candle(0), candle(3600), candle(32 * 86400), candle(32 * 86400 + 3600)];
+    expect(cachedCandlesUpTo(cached, cached.at(-1).time, cached.at(-1).time, 4)).toBeNull();
+  });
+
   it("returns the cached window when completeUpTo covers effectiveEndSec and depth is sufficient", () => {
     const cached = Array.from({ length: 1000 }, (_, i) => candle(i * BAR_SECONDS));
     const effectiveEndSec = 999 * BAR_SECONDS;

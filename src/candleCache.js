@@ -68,7 +68,8 @@ const DB_NAME = "trading-monitor-candles";
 // auf. Derselbe Poisoning-Mechanismus wie bei Version 3/5/6/7/8: ein VOR diesem Fix geschriebener
 // Cache-Eintrag hat die Lücke bereits fest im Array, ein reiner Code-Fix räumt das nicht auf.
 // Quellenwechsel: cTrader-Kerzen dürfen nicht im FXCM-Cache weiterleben.
-const DB_VERSION = 10;
+// Alte, aus getrennten Ladefenstern zusammengesetzte Bestände können ganze Monate auslassen.
+const DB_VERSION = 11;
 const STORE_NAME = "candles";
 
 // Rein defensiv, KEINE reguläre Obergrenze (siehe oben) — 500k Kerzen sind selbst auf M1 fast ein
@@ -217,10 +218,12 @@ export function cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetC
   const upToEnd = cached.filter((c) => c.time <= effectiveEndSec);
   if (upToEnd.length < targetCount) return null;
   const history = upToEnd.slice(-targetCount);
+  if (hasLargeCandleGap(history)) return null;
   if (lookaheadSec <= 0) return history;
   const lookaheadEnd = Math.min(effectiveEndSec + lookaheadSec, completeUpTo);
   const lookahead = cached.filter((c) => c.time > effectiveEndSec && c.time <= lookaheadEnd);
-  return history.concat(lookahead);
+  const result = history.concat(lookahead);
+  return hasLargeCandleGap(result) ? null : result;
 }
 
 // Ersetzt einen vollen fetchFn(symbol, bar, count, toMs)-Aufruf (siehe forexCandles.js):
@@ -259,7 +262,7 @@ export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs
     if (hit) return hit;
   }
 
-  if (toMs == null && cached.length > 0) {
+  if (toMs == null && cached.length > 0 && !hasLargeCandleGap(cached.slice(-targetCount))) {
     const lastCachedTime = cached[cached.length - 1].time;
     const barSeconds = barSecondsFor(bar);
     const elapsedBars = Math.max(1, Math.ceil((effectiveEndSec - lastCachedTime) / barSeconds));
@@ -329,6 +332,12 @@ export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs
 // Rand-Shortfall. Ein leerer fresh-Response claimt gar keine Vollständigkeit mehr — der nächste
 // Aufruf fetcht dann automatisch neu, statt für immer auf einem falschen Stand hängen zu bleiben.
 const MAX_ACCEPTABLE_GAP_SEC = 4 * 24 * 3600;
+// Ein aktueller letzter Balken beweist keine vollständige Historie. Bei groben Innenlücken
+// erneut aus dem Archiv laden; normale Forex-Wochenenden bleiben Cache-Treffer.
+export function hasLargeCandleGap(candles) {
+  return candles.some((c, i) => i > 0 && c.time - candles[i - 1].time > MAX_ACCEPTABLE_GAP_SEC);
+}
+
 export function safeCompleteUpTo(fresh, fetchEffectiveEndSec) {
   const lastFreshTime = fresh.length > 0 ? fresh[fresh.length - 1].time : null;
   if (lastFreshTime == null) return null;
