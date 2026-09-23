@@ -14,6 +14,7 @@ import {
   DEFAULT_TRADE_SETUP_PARAMS,
 } from "../_shared/tradeSetup.ts";
 import { computeSweepAgeHours } from "../_shared/ageTier.ts";
+import { toPips } from "../_shared/pipConfig.js";
 import { persistTradeSetupSweeps } from "../_shared/tradeSetupSweeps.ts";
 import { forbiddenSessionAt, type SessionDangerConfig } from "../_shared/forbiddenSession.ts";
 import {
@@ -973,7 +974,12 @@ Deno.serve(async (req) => {
                 // bestätigtes Protected-Pivot zeigte das aufs gesweepte Level statt aufs Extrem.
                 `Invalidierung: ${fmt(invalidation, cfg.pricePrecision)}\n` +
                 `LS-Sweep: ${fmt(setup.ls.price, cfg.pricePrecision)} (${lsFromH1 ? "1H" : "M5"}, ${ageText}${weitereSweeps})\n` +
-                `M5-OB: ${fmt(setup.obBottom, cfg.pricePrecision)} – ${fmt(setup.obTop, cfg.pricePrecision)}\n` +
+                // FVG an der OB-Zeile statt in einer eigenen (siehe weitereSweeps oben: der Text ist
+                // schon fuenfzeilig). Gemessen 23.09.2026 ueber 3282 Ranges: die Luecke trennt staerker
+                // als Sweep-Alter und Sweep-Herkunft, siehe PLAN-dr-statistik-ui.md "Die FVG-Groesse".
+                // Bewusst nur die Zahl, keine Trefferquote: die Baender liegen in src/drQuoten.js und
+                // damit in einer anderen Laufzeit — eine zweite Kopie hier wuerde davon wegdriften.
+                `M5-OB: ${fmt(setup.obBottom, cfg.pricePrecision)} – ${fmt(setup.obTop, cfg.pricePrecision)} (FVG ${toPips(setup.obFvg).toFixed(1)} P)\n` +
                 `Preis: ${fmt(currentPrice, cfg.pricePrecision)}` +
                 warnung,
             );
