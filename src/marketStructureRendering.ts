@@ -498,6 +498,14 @@ function firstCloseAbove(candles: Candle[], fromTime: number, price: number, fal
   return fallbackTime;
 }
 
+// Erste Kerze NACH dem Balken des Ankers, die den Level berührt (Docht reicht). Ab Balken-Ende
+// statt ab pivotTime: sonst greift die Anker-Kerze selbst bzw. deren eigener Balken sofort.
+export function firstTouchAfter(candles: Candle[], anchor: Pivot, barSeconds: number, below: boolean): number | null {
+  const from = (anchor.pivotTime ?? 0) + barSeconds;
+  const c = candles.find((k) => k.time >= from && (below ? k.low <= anchor.price : k.high >= anchor.price));
+  return c ? c.time : null;
+}
+
 // Zeichnet EINEN bestätigten Nested-Tracker (CHoCH) — Verbindungslinie, protected-high/-low,
 // LQ-Sweeps, BOS-Linien, CHoCH-Label. Bis Chat 2026-08-09 gab es hierfür zwei fast identische ~80-
 // Zeilen-Blöcke direkt in renderMarketStructureAnalysis (einen für `nestedTrend.trend==='downtrend'`
@@ -525,6 +533,7 @@ function renderNestedLevel(
   lqSweepLabel: (price: number, pivotTime: number | undefined, touchedTime: number | undefined, dir: 1 | -1) => string,
   cssColor: StyleFn<string>,
   lineWidth: StyleFn<number>,
+  barSeconds: number,
 ) {
   const isDown = nested.trend === "downtrend";
   const protectedType: "protected-high" | "protected-low" = isDown ? "protected-high" : "protected-low";
@@ -597,7 +606,13 @@ function renderNestedLevel(
   // damit garantiert Ursprung/wartende Seite), NICHT am aktuellen currRange (das ist der zuletzt
   // brechende Pivot, siehe Bug-Report Philip: "IST 1.34601, SOLL 1.35206").
   const chochAnchor = nested.appliedPivots[1];
-  const chochEndTime = firstClosePast(candles, chochAnchor.pivotTime ?? 0, chochAnchor.price, pivotTimeOf(nested.firstConfirmedAt!));
+  // Bis zur ersten BERÜHRUNG (Philip 24.09.2026), nicht mehr bis zum Kerzenschluss. Der frühere
+  // Grund für den Kerzenschluss (H1-Anker auf Stundenraster, M5-Docht greift sofort) ist durch
+  // "erst nach dem Balken des Ankers suchen" (barSeconds der Struktur) abgedeckt. Richtung NICHT von
+  // firstClosePast übernehmen: das ist die BOS-Seite (bärisch = protected-high nach oben gebrochen),
+  // der CHoCH-Anker eines bärischen Nested ist aber ein Tief, das nach UNTEN gebrochen wird — mit
+  // firstClosePast endete die Linie an der ersten Kerze über dem Tief, also praktisch sofort.
+  const chochEndTime = firstTouchAfter(candles, chochAnchor, barSeconds, isDown) ?? pivotTimeOf(nested.firstConfirmedAt!);
   const chochLevel = { price: chochAnchor.price, pivotTime: chochAnchor.pivotTime ?? 0, endTime: chochEndTime };
   const chochLine = new LiquidityLinePrimitive(
     chochLevel,
@@ -628,12 +643,15 @@ export function renderMarketStructureAnalysis(
     formatPrice,
     bonusFor,
     styleKey = (key) => key,
+    barSeconds = 3600,
   }: {
     nowSec?: number;
     formatPrice?: (price: number) => string;
     // Bildet die 1h-Token-Namen (rangeHigh, ...) auf einen anderen Satz ab — die M5-Struktur zeichnet
     // über denselben Code mit eigenen m5Range*-Farben/-Breiten (chartColors.js), statt ihn zu kopieren.
     styleKey?: (key: string) => string;
+    // Kerzenlänge der Struktur (1h = 3600, M5 = 300) — für das CHoCH-Linienende, siehe renderNestedLevel.
+    barSeconds?: number;
     // Session-Kontext ("Asia-High") — siehe sessionBonus.js. Muss dieselbe Quelle sein wie bei der
     // Trade-Setup-LS-Linie, sonst zeigen die beiden übereinanderliegenden Linien wieder zwei
     // verschiedene Strings (genau dafür gibt es formatLsLabel gemeinsam).
@@ -768,7 +786,8 @@ export function renderMarketStructureAnalysis(
     // reklassifiziert hat (siehe markLqSweeps). Fallback auf die letzte geladene Kerze (altes
     // toLevel-Verhalten), falls diese Kerze im gerade angezeigten (evtl. kürzeren) Fenster fehlt.
     const bosFallback = candles.length > 0 ? candles[candles.length - 1].time : (bos.pivotTime ?? 0);
-    const bosEndTime = firstCloseBelow(candles, bos.pivotTime ?? 0, bos.price, bosFallback);
+    // Im Downtrend ist der BOS ein nach OBEN gebrochenes protected-high (Spiegelbild, siehe renderNestedLevel).
+    const bosEndTime = (isDowntrend ? firstCloseAbove : firstCloseBelow)(candles, bos.pivotTime ?? 0, bos.price, bosFallback);
     const bosLevel = { price: bos.price, pivotTime: bos.pivotTime ?? 0, endTime: bosEndTime };
     const line = new LiquidityLinePrimitive(
       bosLevel,
@@ -828,7 +847,7 @@ export function renderMarketStructureAnalysis(
   // reguläre currRange-Darstellung (inkl. der Live-Verbindungslinie oben) den (jetzt promoteten)
   // neuen Haupttrend, exakt wie vorher.
   for (const nested of collectNestedChain(state).slice(1)) {
-    renderNestedLevel(series, nested, candles, existingPrimitives, lqSweepLabel, cssColor, lineWidth);
+    renderNestedLevel(series, nested, candles, existingPrimitives, lqSweepLabel, cssColor, lineWidth, barSeconds);
   }
 
   // Fib-Level (Chat 2026-07-30, siehe computeFibLevels für die volle Begründung) — EIN Durchlauf

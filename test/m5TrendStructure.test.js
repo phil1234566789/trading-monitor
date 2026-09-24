@@ -6,6 +6,7 @@ import candles from "./fixtures/gbpusd-m5-2026-07-27-m5-trend.json";
 import candles0909 from "./fixtures/gbpusd-m5-2026-09-09-choch.json";
 import { computeRangesPivots, buildMarketStructureState, deriveTrendReaction, collectNestedChain } from "../src/marketStructureAnalysis";
 import { buildStructureWithPhases } from "../src/trendPhases.js";
+import { firstTouchAfter } from "../src/marketStructureRendering";
 
 const CUTOFF_OUTER = 1784138400; // 15.07.2026 20:00 Berlin
 const M5 = 300;
@@ -80,8 +81,8 @@ describe("M5-CHoCH am 09.09.2026 (P2-Tief startet den Kandidaten)", () => {
     expect(chain.some((l) => isChochLow(l.appliedPivots[1]))).toBe(false);
   });
 
-  it("ab 10:20: CHoCH mit Anker 1,35576 (09:30) bestätigt, Band auf Downtrend-Vorstufe", () => {
-    const { state, phases } = run(5, 2, upTo(1788942600), CUTOFF_0909); // bis 10:30, sonst hat die 10:20-Phase noch keine Breite
+  it("Algo bestätigt 10:20, Band (Downtrend-Vorstufe) beginnt rückdatiert an der Berührungs-Kerze 09:50", () => {
+    const { state, phases, events } = run(5, 2, upTo(1788942600), CUTOFF_0909);
     const innermost = collectNestedChain(state).at(-1);
     expect(innermost.trend).toBe("downtrend");
     expect(isChochLow(innermost.appliedPivots[1])).toBe(true);
@@ -89,6 +90,12 @@ describe("M5-CHoCH am 09.09.2026 (P2-Tief startet den Kandidaten)", () => {
     const { reaction } = deriveTrendReaction(state);
     expect(reaction.type).toBe("CHoCH");
     expect(isChochLow(reaction)).toBe(true);
-    expect(phases.at(-1)).toMatchObject({ trend: "downtrend", pre: true, from: 1788942000 });
+    expect(phases.at(-1)).toMatchObject({ trend: "downtrend", pre: true, from: 1788940200 });
+    expect(events.at(-1)).toMatchObject({ reason: "CHoCH", trend: "downtrend", pre: true, at: 1788942000, touchAt: 1788940200 });
+  });
+
+  it("CHoCH-Linie: bärischer Anker (Tief) endet an der ersten Kerze, die es von oben BERÜHRT — 09:50, nicht sofort", () => {
+    const anchor = { price: 1.35576, pivotTime: 1788939000 };
+    expect(firstTouchAfter(candles0909, anchor, M5, true)).toBe(1788940200);
   });
 });

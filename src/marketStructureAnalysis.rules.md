@@ -240,7 +240,7 @@ Rein visuell, keine Zustandslogik — kein Test, nur Code-Kommentare in
   `nestedTrend.currRange.low` — das ist nach der Bestätigung der brechende Pivot, nicht die
   gebrochene Ursprungsstruktur; Bug-Report Philip: "IST 1.34601, SOLL 1.35206") BIS ZU der ERSTEN
   Kerze (aus den angezeigten, meist feineren Candles — z.B. M5 bei H1-Pivots), die tatsächlich
-  unter diesem Level SCHLIESST (`firstCloseBelow`). Kurzzeitig auf reine Docht-Berührung
+  unter diesem Level SCHLIESST (`firstCloseBelow`) — SEIT 24.09.2026 wieder bis zur ersten BERÜHRUNG (`firstTouchAfter`), gesucht erst ab dem Balken-Ende des Ankers (`barSeconds` der Struktur), womit der unten beschriebene Rasterfehler abgedeckt ist; dabei auch die seit 09.08. vertauschte Richtung für bärische Nested-Ebenen behoben (`m5TrendStructure.test.js`: *"CHoCH-Linie: bärischer Anker..."*). Historie: Kurzzeitig auf reine Docht-Berührung
   umgestellt gewesen (Chat: "das reine Zeichnen ist doch nur bis Kerzenberührung, da reicht sogar
   ein Docht"), dann aber zurückgebaut (Bug-Report Philip: "entsteht der choch pivot im
   outer-pivot bereich und direkt paar minuten später berührt ein innerpivot den choch schon") —

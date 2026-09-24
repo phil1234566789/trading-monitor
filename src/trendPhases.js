@@ -3,32 +3,43 @@
 // Protokoll, damit die Merge-Schleife nicht ein zweites Mal nachgebaut wird.
 import { buildMarketStructureState, collectNestedChain } from "./marketStructureAnalysis";
 import { SessionBandPrimitive } from "./sessions.js";
+import { firstTouchAfter } from "./marketStructureRendering";
 
 // Phase = Trend der innersten bestätigten Ebene. pre=true, solange das nur ein Nested-Trend ist
-// (CHoCH bestätigt, Haupttrend noch nicht gekippt) — Philip darf ab dem CHoCH schon traden, das
-// Band zeigt das als Vorstufen-Farbe. Voll wird es erst bei der Promotion (Nested wird Haupttrend).
-// Phasengrenze = Verarbeitungszeitpunkt des Pivots (pivotTime + period * barSeconds), NICHT
-// pivotTime selbst — erst dann "weiß" der Algo vom Trendwechsel. Kein Glätten/keine Mindestbreite:
-// kurze Phasen sind das echte Messergebnis, an dem Philip die Perioden beurteilt.
+// (CHoCH bestätigt, Haupttrend noch nicht gekippt), voll erst bei der Promotion.
+// Phasengrenze = Verarbeitungszeitpunkt des Pivots (pivotTime + period * barSeconds) — außer beim
+// CHoCH: da beginnt das Band schon an der Kerze, die den CHoCH-Level berührt (Philip 24.09.2026).
+// Das ist rückdatiert: live erscheint der Abschnitt erst, wenn der Algo den CHoCH bestätigt hat.
+// events: je Phasenwechsel der auslösende Pivot + was erkannt wurde (Debug-Labels an den Pivots).
 export function buildStructureWithPhases(pivotsOuter, pivotsInner, periodOuter, periodInner, candles, barSeconds) {
-  const steps = [];
+  const phases = [];
+  const events = [];
+  const endTime = candles.length > 0 ? candles[candles.length - 1].time : null;
+  let prevDepth = 0;
   const state = buildMarketStructureState(pivotsOuter, pivotsInner, periodOuter, periodInner, candles, {
     barSeconds,
-    onStep: (at, s) => {
+    onStep: (at, s, pivot) => {
       const chain = collectNestedChain(s);
-      steps.push({ at, trend: chain[chain.length - 1].trend, pre: chain.length > 1 });
+      const inner = chain[chain.length - 1];
+      const depth = chain.length - 1;
+      const pre = depth > 0;
+      const reason = depth > prevDepth ? "CHoCH" : depth < prevDepth ? "Trend gekippt" : "Trendwechsel";
+      prevDepth = depth;
+      const last = phases[phases.length - 1];
+      if (last && last.trend === inner.trend && last.pre === pre) return;
+      let from = at;
+      let touchAt = null;
+      if (reason === "CHoCH" && inner.appliedPivots[1]?.pivotTime != null) {
+        touchAt = firstTouchAfter(candles, inner.appliedPivots[1], barSeconds, inner.trend === "downtrend");
+        if (touchAt != null && touchAt < at) from = Math.max(touchAt, last ? last.from : touchAt);
+      }
+      if (last) last.to = from;
+      phases.push({ trend: inner.trend, pre, from, to: endTime ?? at });
+      if (inner.trend !== "unknown") events.push({ pivot, at, trend: inner.trend, pre, reason, touchAt, level: reason === "CHoCH" ? inner.appliedPivots[1].price : null });
     },
   });
-  const endTime = candles.length > 0 ? candles[candles.length - 1].time : null;
-  const phases = [];
-  for (const { at, trend, pre } of steps) {
-    const last = phases[phases.length - 1];
-    if (last && last.trend === trend && last.pre === pre) continue;
-    if (last) last.to = at;
-    phases.push({ trend, pre, from: at, to: endTime ?? at });
-  }
   // Ein Pivot kann erst nach der letzten geladenen Kerze "verarbeitet" sein (Lookahead im Replay).
-  return { state, phases: phases.filter((p) => p.trend !== "unknown" && p.from < p.to) };
+  return { state, events, phases: phases.filter((p) => p.trend !== "unknown" && p.from < p.to) };
 }
 
 // Volle Panehöhe: SessionBandPrimitive ohne high/low fällt genau darauf zurück (zOrder "bottom").

@@ -27,12 +27,25 @@ import { renderMarketStructureAnalysis, collectFibLevels } from "../marketStruct
 import { renderPivotMarkers } from "../pivotMarkers";
 import { cssColor } from "../chartColors.js";
 import { buildStructureWithPhases, renderTrendPhaseBands } from "../trendPhases.js";
-import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
+import { fmtPrice, fmtDateTime, fmtTime, pricePrecisionForInstrument } from "../format.js";
 import { createSessionBonusResolver } from "../sessionBonus.js";
 import { fetchInitialCandles as fetchInitialForexCandles } from "../forexCandles.js";
 import { fetchCandlesCached } from "../candleCache.js";
 import { RANGES_CANDLE_BUFFER } from "../priceChartConstants.js";
 import { REPLAY_LOOKAHEAD_SEC, barSecondsFor } from "../timeframes.js";
+
+// Debug-Text am Pivot, dessen Verarbeitung die Trendphase gewechselt hat — "was hat der Algo wann
+// erkannt": z.B. "↘ Vorstufe · CHoCH 1,35576 · Algo 10:20 · Band ab 09:50".
+function m5EventLabeler(events, precision) {
+  const byPivot = new Map(events.map((e) => [e.pivot, e]));
+  return (pivot) => {
+    const e = byPivot.get(pivot);
+    if (!e) return null;
+    const parts = [`${e.trend === "uptrend" ? "↗" : "↘"} ${e.pre ? "Vorstufe" : "Trend"}`, e.level != null ? `${e.reason} ${fmtPrice(e.level, precision)}` : e.reason, `Algo ${fmtTime(e.at)}`];
+    if (e.touchAt != null && e.touchAt < e.at) parts.push(`Band ab ${fmtTime(e.touchAt)}`);
+    return parts.join(" · ");
+  };
+}
 
 // 1h-Token -> M5-Token für renderMarketStructureAnalysis(styleKey), siehe chartColors.js.
 const M5_STRUCTURE_STYLE_KEYS = {
@@ -63,7 +76,7 @@ export function usePriceChartMarketStructure() {
   let m5TrendPhasePrimitives = [];
   let outerCutoff = null; // Start des 1h-Outer-Trends = Anker der M5-Struktur, siehe refreshM5Structure
   let m5ComputedKey = null;
-  let m5Computed = { state: null, phases: [], pivotsOuter: null, pivotsInner: null };
+  let m5Computed = { state: null, phases: [], events: [], pivotsOuter: null, pivotsInner: null };
   let m5MarkerPrimitives = [];
 
   const marketStructureState = ref(null);
@@ -197,7 +210,7 @@ export function usePriceChartMarketStructure() {
       };
       m5Trend.value = deriveTrendReaction(m5Computed.state);
     }
-    const { state, phases, pivotsOuter, pivotsInner } = m5Computed;
+    const { state, phases, events, pivotsOuter, pivotsInner } = m5Computed;
     // Roh-Pivots (Periode Outer/Inner) als Debug-Punkte, wie refreshRangesMarkers für 1h — damit
     // Philip die Trendwechsel gegen die Pivots nachvollziehen kann. Dieselben Marker-Farben wie 1h:
     // Herkunft klärt der Toggle (M5-Struktur/-Trendphasen an, 1h-Structure aus).
@@ -213,11 +226,12 @@ export function usePriceChartMarketStructure() {
         : [],
       m5MarkerPrimitives,
       candles,
-      { showLabels: true, formatPrice: (price) => fmtPrice(price, precision) },
+      { showLabels: true, formatPrice: (price) => fmtPrice(price, precision), extraLabel: m5EventLabeler(events, precision) },
     );
     renderMarketStructureAnalysis(candleSeries, showM5Structure ? state : null, m5StructurePrimitives, candles, {
       ...structureRenderOptions(candles, symbol, replayUntil),
       styleKey: (key) => M5_STRUCTURE_STYLE_KEYS[key],
+      barSeconds: barSecondsFor("5m"),
     });
     renderTrendPhaseBands(candleSeries, showM5TrendPhases ? phases : [], m5TrendPhasePrimitives, candles, {
       up: cssColor("m5TrendPhaseUp"),

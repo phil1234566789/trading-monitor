@@ -1047,7 +1047,7 @@ export function buildMarketStructureState(
   periodOuter: number,
   periodInner: number,
   candles: Candle[],
-  { barSeconds = 3600, onStep }: { barSeconds?: number; onStep?: (at: number, state: MarketStructureState) => void } = {},
+  { barSeconds = 3600, onStep }: { barSeconds?: number; onStep?: (at: number, state: MarketStructureState, pivot: Pivot) => void } = {},
 ): MarketStructureState | null {
   if (!pivotsOuter || pivotsOuter.length < 2) return null;
   const originLow = pivotsOuter.find((p) => p.type === "low");
@@ -1082,7 +1082,7 @@ export function buildMarketStructureState(
     state = entry.outer
       ? applyMarketStructurePivot(state, entry.pivot, { candles, direction, asOfTime: entry.at })
       : applyInnerMarketStructurePivot(state, entry.pivot, { candles, direction, asOfTime: entry.at });
-    onStep?.(entry.at, state);
+    onStep?.(entry.at, state, entry.pivot);
   }
   return state;
 }

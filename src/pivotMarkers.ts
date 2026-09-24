@@ -38,6 +38,8 @@ export interface PivotMarkerGroup {
 interface RenderOptions {
   showLabels: boolean;
   formatPrice?: (price: number) => string;
+  // Zusatztext hinter dem Preis, z.B. "was der Algo an diesem Pivot erkannt hat" (M5-Trendphasen).
+  extraLabel?: (p: Pivot) => string | null;
 }
 
 class PivotMarkerRenderer {
@@ -135,7 +137,7 @@ class PivotMarkerPaneView {
     const series = this._source._series;
     const timeScale = this._source._chart.timeScale();
     const candles = this._source._candles;
-    const formatPrice = this._source._options.formatPrice;
+    const { formatPrice, extraLabel } = this._source._options;
 
     this._points = this._source._groups.flatMap((group) =>
       group.points.map((p) => {
@@ -157,7 +159,7 @@ class PivotMarkerPaneView {
         return {
           x: barTime != null ? timeScale.timeToCoordinate(barTime) : null,
           y: series.priceToCoordinate(p.price),
-          label: formatPrice ? formatPrice(p.price) : null,
+          label: [formatPrice ? formatPrice(p.price) : null, extraLabel?.(p) ?? null].filter(Boolean).join(" · ") || null,
           color: group.color,
           dotRadius: group.dotRadius ?? 3,
         };
@@ -215,6 +217,7 @@ export function renderPivotMarkers(
   options: {
     showLabels?: boolean;
     formatPrice?: (price: number) => string;
+    extraLabel?: (p: Pivot) => string | null;
   } = {},
 ) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
@@ -226,7 +229,7 @@ export function renderPivotMarkers(
 
   const primitive = new PivotMarkerPrimitive(
     nonEmptyGroups,
-    { showLabels: options.showLabels ?? false, formatPrice: options.formatPrice },
+    { showLabels: options.showLabels ?? false, formatPrice: options.formatPrice, extraLabel: options.extraLabel },
     candles,
   );
   series.attachPrimitive(primitive);
