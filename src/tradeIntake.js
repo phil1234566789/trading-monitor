@@ -212,10 +212,11 @@ export async function linkTradeToSetup(dealingRangeId, instrument, setup) {
   const direction = directionForSetup(setup);
   const { invalidation } = deriveSetupEntryInvalidation(setup);
   const tradeSetupId = await findMatchingTradeSetupId(instrument, direction, setup.obStartTime);
+  const invalidationFields = await resolveInvalidationFields(setup.invalidationTarget ?? { price: invalidation });
 
   const { error } = await supabase
     .from("dealing_ranges")
-    .update({ trade_setup_id: tradeSetupId, invalidation })
+    .update({ trade_setup_id: tradeSetupId, ...invalidationFields })
     .eq("id", dealingRangeId);
 
   if (error) {
@@ -427,15 +428,24 @@ export async function updateDealingRange(dealingRangeId, fields) {
 // Rohform wie addTargetToTrade/addRangeConfirmation (kind/price/sourceTime/rangeLow/rangeHigh/...)
 // aus PriceChart.vue: findClickedTarget, schreibt aber auf die dealing_ranges-Zeile selbst statt
 // eine eigene Zeile anzulegen — eine Range hat genau EINE Invalidierung.
-export async function setDealingRangeInvalidation(dealingRangeId, target) {
+async function resolveInvalidationFields(target) {
   const [invalidationLiquidityLevelId, invalidationObZoneId] = await Promise.all([
     resolvePivotLiquidityLevelId(target),
     resolveObZoneId(target),
   ]);
-  return updateDealingRange(dealingRangeId, {
+  return {
     invalidation: target.price,
-    invalidationLiquidityLevelId,
-    invalidationObZoneId,
+    invalidation_liquidity_level_id: invalidationLiquidityLevelId,
+    invalidation_ob_zone_id: invalidationObZoneId,
+  };
+}
+
+export async function setDealingRangeInvalidation(dealingRangeId, target) {
+  const fields = await resolveInvalidationFields(target);
+  return updateDealingRange(dealingRangeId, {
+    invalidation: fields.invalidation,
+    invalidationLiquidityLevelId: fields.invalidation_liquidity_level_id,
+    invalidationObZoneId: fields.invalidation_ob_zone_id,
   });
 }
 

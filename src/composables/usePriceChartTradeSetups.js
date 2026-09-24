@@ -21,6 +21,7 @@ import { detectLiquidityLevels } from "../liquidity.js";
 import { collectStructureLqLevels } from "../marketStructureRendering";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { mergeDbTradeSetups } from "../tradeSetups.js";
+import { setupInvalidationTarget } from "../setupInvalidationTarget.js";
 import { sessions, isForbiddenAt } from "../sessions.js";
 import {
   TRADE_SETUP_M5_FRACTAL_PERIOD,
@@ -106,8 +107,8 @@ export function usePriceChartTradeSetups() {
     const shorts = takeLast(mergeDbTradeSetups(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, candles), dbFor(1)).filter(notForbidden));
     const longs = takeLast(mergeDbTradeSetups(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, candles), dbFor(-1)).filter(notForbidden));
     tradeSetupsMetadata.value = [
-      ...shorts.map((s, i) => ({ ...s, label: "Short", setupNumber: n > 1 ? i + 1 : null })),
-      ...longs.map((s, i) => ({ ...s, label: "Long", setupNumber: n > 1 ? i + 1 : null })),
+      ...shorts.map((s, i) => ({ ...s, invalidationTarget: setupInvalidationTarget(s, m5Highs, symbol), label: "Short", setupNumber: n > 1 ? i + 1 : null })),
+      ...longs.map((s, i) => ({ ...s, invalidationTarget: setupInvalidationTarget(s, m5Lows, symbol), label: "Long", setupNumber: n > 1 ? i + 1 : null })),
     ];
   }
 
