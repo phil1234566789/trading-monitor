@@ -465,7 +465,7 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   const m5Derived = deriveTrendReaction(m5StructureState);
   const m5Structure = {
     trend: m5Derived.trend,
-    reaction: m5Derived.reaction ? { type: m5Derived.reaction.type, price: m5Derived.reaction.price, at: berlinDateTimeStrFor(m5Derived.reaction.time) } : null,
+    reaction: m5Derived.reaction ? { type: m5Derived.reaction.type, price: Number(m5Derived.reaction.price.toFixed(5)), at: berlinDateTimeStrFor(m5Derived.reaction.time) } : null,
   };
   const { m5LiquidityLevels, m5ObZonesAll, obZonesReferencePrice } = computeM5LiquidityAndObZones({
     currentTimeSec,
