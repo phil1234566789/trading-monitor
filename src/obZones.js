@@ -47,7 +47,11 @@ export async function fetchObZones() {
   // Zurück in dieselbe Zonen-Form wie detectOrderBlocks() (dir numerisch statt direction-Text, Zeiten
   // in Unix-Sekunden statt ISO) — Rendering/Klick-Erkennung/mergePinnedZones erwarten dieses Format
   // einheitlich, egal ob die Zone live erkannt oder aus der DB gelesen wurde.
-  return data.map((row) => ({
+  return data.map(mapObZone);
+}
+
+export function mapObZone(row) {
+  return {
     instrument: row.instrument,
     timeframe: row.timeframe,
     dir: row.direction === "long" ? 1 : -1,
@@ -57,5 +61,5 @@ export async function fetchObZones() {
     invalidated: row.invalidated,
     startTime: Math.floor(new Date(row.start_time).getTime() / 1000),
     endTime: Math.floor(new Date(row.end_time).getTime() / 1000),
-  }));
+  };
 }

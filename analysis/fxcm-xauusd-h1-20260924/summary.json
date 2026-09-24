@@ -1,0 +1,140 @@
+{
+  "offers": {
+    "XAU/USD": {
+      "digits": 2,
+      "point_size": 0.01,
+      "subscription_status": "T",
+      "instrument_type": 5
+    },
+    "GBP/USD": {
+      "digits": 5,
+      "point_size": 0.0001,
+      "subscription_status": "T",
+      "instrument_type": 1
+    }
+  },
+  "instruments": {
+    "XAU/USD": {
+      "count": 230,
+      "first_berlin": "2026-09-07T00:00:00+02:00",
+      "last_berlin": "2026-09-18T22:00:00+02:00",
+      "invalid_ohlc": [],
+      "unique_timestamps": true,
+      "strictly_sorted": true,
+      "off_hour_timestamps": 0,
+      "outside_range_or_open": 0,
+      "off_precision_grid": 0,
+      "by_berlin_day": {
+        "2026-09-07": 23,
+        "2026-09-08": 23,
+        "2026-09-09": 23,
+        "2026-09-10": 23,
+        "2026-09-11": 23,
+        "2026-09-14": 23,
+        "2026-09-15": 23,
+        "2026-09-16": 23,
+        "2026-09-17": 23,
+        "2026-09-18": 23
+      },
+      "gaps": [
+        {
+          "from_berlin": "2026-09-07T22:00:00+02:00",
+          "to_berlin": "2026-09-08T00:00:00+02:00",
+          "start_distance_hours": 2.0
+        },
+        {
+          "from_berlin": "2026-09-08T22:00:00+02:00",
+          "to_berlin": "2026-09-09T00:00:00+02:00",
+          "start_distance_hours": 2.0
+        },
+        {
+          "from_berlin": "2026-09-09T22:00:00+02:00",
+          "to_berlin": "2026-09-10T00:00:00+02:00",
+          "start_distance_hours": 2.0
+        },
+        {
+          "from_berlin": "2026-09-10T22:00:00+02:00",
+          "to_berlin": "2026-09-11T00:00:00+02:00",
+          "start_distance_hours": 2.0
+        },
+        {
+          "from_berlin": "2026-09-11T22:00:00+02:00",
+          "to_berlin": "2026-09-14T00:00:00+02:00",
+          "start_distance_hours": 50.0
+        },
+        {
+          "from_berlin": "2026-09-14T22:00:00+02:00",
+          "to_berlin": "2026-09-15T00:00:00+02:00",
+          "start_distance_hours": 2.0
+        },
+        {
+          "from_berlin": "2026-09-15T22:00:00+02:00",
+          "to_berlin": "2026-09-16T00:00:00+02:00",
+          "start_distance_hours": 2.0
+        },
+        {
+          "from_berlin": "2026-09-16T22:00:00+02:00",
+          "to_berlin": "2026-09-17T00:00:00+02:00",
+          "start_distance_hours": 2.0
+        },
+        {
+          "from_berlin": "2026-09-17T22:00:00+02:00",
+          "to_berlin": "2026-09-18T00:00:00+02:00",
+          "start_distance_hours": 2.0
+        }
+      ],
+      "median_range": 16.52500000000009,
+      "median_true_range": 16.5,
+      "min_price": 4234.86,
+      "max_price": 4442.9
+    },
+    "GBP/USD": {
+      "count": 244,
+      "first_berlin": "2026-09-07T00:00:00+02:00",
+      "last_berlin": "2026-09-20T23:00:00+02:00",
+      "invalid_ohlc": [],
+      "unique_timestamps": true,
+      "strictly_sorted": true,
+      "off_hour_timestamps": 0,
+      "outside_range_or_open": 0,
+      "off_precision_grid": 0,
+      "by_berlin_day": {
+        "2026-09-07": 24,
+        "2026-09-08": 24,
+        "2026-09-09": 24,
+        "2026-09-10": 24,
+        "2026-09-11": 23,
+        "2026-09-13": 3,
+        "2026-09-14": 24,
+        "2026-09-15": 24,
+        "2026-09-16": 24,
+        "2026-09-17": 24,
+        "2026-09-18": 23,
+        "2026-09-20": 3
+      },
+      "gaps": [
+        {
+          "from_berlin": "2026-09-11T22:00:00+02:00",
+          "to_berlin": "2026-09-13T21:00:00+02:00",
+          "start_distance_hours": 47.0
+        },
+        {
+          "from_berlin": "2026-09-18T22:00:00+02:00",
+          "to_berlin": "2026-09-20T21:00:00+02:00",
+          "start_distance_hours": 47.0
+        }
+      ],
+      "median_range": 0.0009799999999999809,
+      "median_true_range": 0.0009799999999999809,
+      "min_price": 1.33351,
+      "max_price": 1.35675
+    }
+  },
+  "matched_h1_scale": {
+    "bars": 229,
+    "gold_median_tr": 16.5,
+    "gbp_median_tr": 0.0009799999999999809,
+    "price_distance_ratio": 16836.73469387788,
+    "gold_h1_fvg_candidate": 2.5300000000000002
+  }
+}

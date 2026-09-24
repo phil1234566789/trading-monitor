@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
 import PriceChart from "../components/PriceChart.vue";
+import GoldH1Preview from "../components/GoldH1Preview.vue";
 import TradeSetupCockpit from "../components/TradeSetupCockpit.vue";
 import TradeSetupBewertung from "../components/TradeSetupBewertung.vue";
 import TradesTable from "../components/TradesTable.vue";
@@ -69,6 +70,8 @@ import { measureDrawing } from "../chartMeasure.js";
 import { chartMode, chartHint } from "../chartModes.js";
 
 const SYMBOLS = ["GBPUSD", "EURUSD"];
+// Gold nutzt zunächst nur den H1-Testchart; Forex-Auswahl und Journalzustand bleiben erhalten.
+const goldPreview = ref(false);
 
 // Toggle-Zustand persistiert in localStorage (siehe useLocalStorageRef), damit ein Reload nicht
 // jedes Mal auf die Default-Werte zurückspringt — die Defaults hier gelten nur beim allerersten
@@ -1710,13 +1713,14 @@ watch(selectedTradingAccountId, () => {
       <ToggleButton
         v-for="sym in SYMBOLS"
         :key="sym"
-        :class="{ active: sym === currentSymbol }"
-        @click="currentSymbol = sym"
+        :class="{ active: !goldPreview && sym === currentSymbol }"
+        @click="goldPreview = false; currentSymbol = sym"
       >
         {{ sym }}
       </ToggleButton>
+      <ToggleButton :class="{ active: goldPreview }" @click="goldPreview = true">XAUUSD</ToggleButton>
     </div>
-    <div class="timeframe-switcher">
+    <div v-if="!goldPreview" class="timeframe-switcher">
       <ToggleButton
         v-for="tf in TIMEFRAMES"
         :key="tf.label"
@@ -1726,7 +1730,7 @@ watch(selectedTradingAccountId, () => {
         {{ tf.label }}
       </ToggleButton>
     </div>
-    <div class="drawing-toggles">
+    <div v-if="!goldPreview" class="drawing-toggles">
       <div class="toggle-group">
         <ToggleButton :class="{ active: indikatorenActive }" @click="toggleIndikatoren">
           Indikatoren
@@ -2196,7 +2200,8 @@ watch(selectedTradingAccountId, () => {
        Breite soll sich nicht ändern, wenn ich TSC toggle" — die Karte bleibt daher IMMER sichtbar,
        showTradeSetupCockpit steuert seitdem nur noch die TSC-Range-Zeichnung auf dem Candlestick-
        Chart selbst, nicht mehr die Karte). -->
-  <div class="chart-tsc-row">
+  <GoldH1Preview v-if="goldPreview" />
+  <div v-else class="chart-tsc-row">
     <PriceChart
       ref="priceChartRef"
       class="chart-tsc-row-chart"
@@ -2320,7 +2325,7 @@ watch(selectedTradingAccountId, () => {
     />
   </div>
 
-  <aside ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">
+  <aside v-show="!goldPreview" ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">
     <div class="trades-panel-header">
       <h2 class="trades-panel-title">Trades</h2>
       <TradingAccountSwitcher />

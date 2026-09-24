@@ -52,15 +52,16 @@ const GAP_EPSILON = 1e-9;
 // HTF-Prozent-Verhalten zurück (Altverhalten, falls je ohne Timeframe aufgerufen).
 // isForex default true, weil bislang jeder Aufrufer entweder garantiert Forex ist (detectSetupObs,
 // die Frontend-Forex-Zweige) oder das Flag explizit selbst setzt (poi-watcher, s.o.).
-export function detectOrderBlocks(candles, timeframe, isForex = true) {
+export function detectOrderBlocks(candles, timeframe, isForex = true, minGapOverride = null) {
   const zones = [];
   const isLowerTf = LOWER_TF_LABELS.has(timeframe);
   const isHtfForexPip = isForex && HTF_FOREX_LABELS.has(timeframe);
-  const minGapAbs = isLowerTf
+  // Gold-H1-Test: absoluter Preisabstand statt einer impliziten Forex-Pip-Umrechnung.
+  const minGapAbs = minGapOverride ?? (isLowerTf
     ? LOWER_TF_MIN_GAP_PIPS[timeframe] * PIP_SIZE
     : isHtfForexPip
       ? HTF_FOREX_MIN_GAP_PIPS[timeframe] * PIP_SIZE
-      : null;
+      : null);
 
   for (let i = 3; i < candles.length; i++) {
     const c1 = candles[i - 2];

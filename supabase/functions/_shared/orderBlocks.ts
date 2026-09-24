@@ -75,15 +75,16 @@ export interface Zone {
 // Verhalten zurück (Altverhalten für die bestehenden 4H/1H-Aufrufer in poi-watcher/index.ts).
 // isForex default true — jeder Aufrufer (detectSetupObs, index.ts' 1H/4H-Loop) ist inzwischen
 // garantiert Forex-only.
-export function detectOrderBlocks(candles: Candle[], timeframe?: string, isForex = true): Zone[] {
+export function detectOrderBlocks(candles: Candle[], timeframe?: string, isForex = true, minGapOverride: number | null = null): Zone[] {
   const zones: Zone[] = [];
   const isLowerTf = timeframe != null && LOWER_TF_LABELS.has(timeframe);
   const isHtfForexPip = isForex && timeframe != null && HTF_FOREX_LABELS.has(timeframe);
-  const minGapAbs = isLowerTf
+  // Gold-H1-Test: absoluter Preisabstand statt einer impliziten Forex-Pip-Umrechnung.
+  const minGapAbs = minGapOverride ?? (isLowerTf
     ? LOWER_TF_MIN_GAP_PIPS[timeframe!] * PIP_SIZE
     : isHtfForexPip
       ? HTF_FOREX_MIN_GAP_PIPS[timeframe!] * PIP_SIZE
-      : null;
+      : null);
 
   for (let i = 3; i < candles.length; i++) {
     const c1 = candles[i - 2];
