@@ -1,6 +1,16 @@
 import { supabase } from './supabaseClient.js';
 import { fetchAllRows } from './dbReadPaging.js';
 import { mapObZone } from './obZones.js';
+import { firstCandleTouchRange } from './priceChartObZones.js';
+
+// Invalidierung überschreibt das DB-endTime. Historische Boxen enden trotzdem beim
+// ersten Touch; dafür liegen hier alle nativen H1-Kerzen seit der Entstehung vor.
+export function goldH1DisplayZone(zone, candles) {
+  const touch = firstCandleTouchRange(candles, zone.startTime, zone.bottom, zone.top);
+  return touch != null && touch <= zone.endTime
+    ? { ...zone, touched: true, endTime: touch }
+    : zone;
+}
 
 export const GOLD_H1_PREVIEW = {
   start: '2026-09-06T22:00:00Z', end: '2026-09-20T22:00:00Z',

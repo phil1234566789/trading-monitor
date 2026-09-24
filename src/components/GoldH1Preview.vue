@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue';
 import { createChart, CandlestickSeries } from 'lightweight-charts';
 import { cssColor } from '../chartColors.js';
-import { fetchGoldH1Preview, fetchGoldH1PreviewObs, GOLD_H1_PREVIEW } from '../goldH1Preview.js';
+import { fetchGoldH1Preview, fetchGoldH1PreviewObs, goldH1DisplayZone, GOLD_H1_PREVIEW } from '../goldH1Preview.js';
 import { OrderBlockPrimitive } from '../orderBlocks.js';
 import { GOLD_H1_MIN_FVG_USD } from '../goldH1ObConfig.js';
 
@@ -37,10 +37,10 @@ async function load() {
       priceFormat: GOLD_H1_PREVIEW.priceFormat,
     });
     series.setData(candles);
-    // Historischer Test: auch später invalidierte Zonen bis zu ihrem gespeicherten Ende zeigen.
+    // Auch später invalidierte Zonen zeigen, aber nur bis zum ersten Touch ausdehnen.
     for (const zone of zones) {
       const key = zone.dir === 1 ? 'obBull1h' : 'obBear1h';
-      series.attachPrimitive(new OrderBlockPrimitive(zone, {
+      series.attachPrimitive(new OrderBlockPrimitive(goldH1DisplayZone(zone, candles), {
         fillColor: cssColor(key), borderColor: cssColor(zone.dir === 1 ? 'obBull1hBorder' : 'obBear1hBorder'),
         borderWidth: 1, textColor: '#d1d4dc', label: zone.invalidated ? '1H · beendet' : '1H',
       }, candles));
