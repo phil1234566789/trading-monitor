@@ -198,9 +198,9 @@
     "semantic_hash": "c3ad7c0cd6dffdd06191cc2effdb5056"
   },
   "src/components/PriceChart.vue": {
-    "mtime": 1790278381.537515,
-    "seen": 1790278410.4378822,
-    "ast_hash": "1bd4651afbb233369472dacdf66fa98f",
+    "mtime": 1790278831.1480925,
+    "seen": 1790278858.044503,
+    "ast_hash": "903f66d9e0eac6882575e0465f5ecdbd",
     "semantic_hash": ""
   },
   "src/components/ProtokollTable.vue": {
@@ -234,15 +234,15 @@
     "semantic_hash": "d0407ff2caa400184d60a1c418350aeb"
   },
   "src/components/TradeEditModal.vue": {
-    "mtime": 1790140850.849635,
-    "seen": 1790140930.2738714,
-    "ast_hash": "79a631a128c15fc5dfb0c124de7dc6cb",
+    "mtime": 1790278573.2487252,
+    "seen": 1790278684.2162385,
+    "ast_hash": "4429ae144b5aeacf5cc5e3a0f13cc650",
     "semantic_hash": ""
   },
   "src/components/TradeSetupCockpit.vue": {
-    "mtime": 1790227794.0885758,
-    "seen": 1790227835.8260927,
-    "ast_hash": "b942ac8533a7659787233db4ed7a7c10",
+    "mtime": 1790278574.3616147,
+    "seen": 1790278684.2162385,
+    "ast_hash": "82ee1c1ef1dc5c6d83911eda217440d5",
     "semantic_hash": ""
   },
   "src/components/TradeStats.vue": {
@@ -678,9 +678,9 @@
     "semantic_hash": "6b9f6b695137489adb5694c1b45deb74"
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1790278239.740095,
-    "seen": 1790278298.8939984,
-    "ast_hash": "52695abe4907b977cbdc5d0a8590495e",
+    "mtime": 1790278661.1418447,
+    "seen": 1790278684.2327611,
+    "ast_hash": "38c11f9fd4f3ce72b1cf3531d70aa60b",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -3558,9 +3558,45 @@
     "semantic_hash": ""
   },
   "analysis/fxcm-xauusd-h1-20260924/REPORT.md": {
-    "mtime": 1790278354.197297,
-    "seen": 1790278410.4989529,
-    "ast_hash": "c27fa3f762c61b5f5bed8f24f074fad4",
+    "mtime": 1790278799.0294232,
+    "seen": 1790278858.108741,
+    "ast_hash": "04441a8cb0d4c0eef478b5d9f65b1e7d",
+    "semantic_hash": ""
+  },
+  "src/components/GoldH1Preview.vue": {
+    "mtime": 1790278582.0931692,
+    "seen": 1790278684.2132385,
+    "ast_hash": "ae141dcd95fb42dc9b5add0638d8aba9",
+    "semantic_hash": ""
+  },
+  "src/composables/useTscRange.js": {
+    "mtime": 1790278533.9055989,
+    "seen": 1790278684.220238,
+    "ast_hash": "6995074ced6beddedf4293ac99f73d18",
+    "semantic_hash": ""
+  },
+  "src/goldH1Preview.js": {
+    "mtime": 1790278580.9591198,
+    "seen": 1790278684.2232401,
+    "ast_hash": "3b9f3b6fceee5a67bdf08800cd863b63",
+    "semantic_hash": ""
+  },
+  "test/tscJournalMode.test.js": {
+    "mtime": 1790278662.2768548,
+    "seen": 1790278684.2670083,
+    "ast_hash": "d86b7603a4175b3eb5dd0e3f6036e6fc",
+    "semantic_hash": ""
+  },
+  "test/useTscRange.test.js": {
+    "mtime": 1790278618.952743,
+    "seen": 1790278684.2670083,
+    "ast_hash": "36d50e3c84cfc3d0455b97383dabdfde",
+    "semantic_hash": ""
+  },
+  "test/goldH1Preview.test.js": {
+    "mtime": 1790278751.2029033,
+    "seen": 1790278858.0871255,
+    "ast_hash": "8e56c583d6d7cc391e06151a2034a79c",
     "semantic_hash": ""
   }
 }
