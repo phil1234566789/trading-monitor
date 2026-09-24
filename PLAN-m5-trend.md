@@ -357,26 +357,30 @@ fuer die Phasenbildung fragwuerdig ist — vor einer Entscheidung darauf nachpru
 Laeufe existiert im Repo bereits das Muster `analysis/dr-reichweite/` (Script + Ergebnis-Dateien),
 das ist der richtige Ort, nicht Produktionscode.
 
-## OFFENE FRAGE an Philip: Chart-Darstellung des M5-Trends
+## ENTSCHIEDEN: Chart-Darstellung = volle Paritaet zum 1h
 
-Gestellt in der Nacht 23./24.09.2026, Philip antwortet am 24.09. ("muss jetzt schlafen gehen,
-frag mich morgen nochmal"). Bis dahin steht Punkt 5c des Tasks
-`m5-struktur-trend-algo-parametrisieren-anker-chart-tsc-anzeige` bewusst leer.
+Philip am 24.09.2026, aus drei vorgelegten Varianten. Verworfen: die schlanke Variante
+("nur Range + Trend + letzte Reaktion", ~3 Objekte) und Trendphasen-Hintergrundbaender.
+Gewaehlt: **alle Elemente, die der 1h heute zeichnet, auch fuer M5 — nur in eigener Farbe.**
 
-Der 1h-Structure zeichnet heute: Pfeile an range.high/low, protected-low-Linie, Trend-Label,
-CHoCH-Linie, Fib-Level, ZigZag fuer abgeschlossene Ranges, LQ-Sweep-Label mit Preis+Alter. Bei
-100+ M5-Pivots ist dasselbe Set unlesbar. Drei vorgelegte Varianten:
+Er nimmt die hoehere Objektdichte bewusst in Kauf (~98 structurePivots ueber 5 Tage bei P5/P2
+gegen ~8 beim 1h ueber alle Ebenen) und entscheidet beim Testen selbst, was er wegtoggelt.
+Kein vorauseilendes Ausduennen einbauen.
 
-1. **Nur Trend + letzte Reaktion** (Empfehlung): aktuelle M5-Range als zwei Linien, Trendrichtung
-   als Label, eine Markierung fuer die letzte CHoCH/BOS. Kein Fib, kein ZigZag, keine
-   Pullback-Pivots. ~3 Objekte + 1 Label, skaliert.
-2. **Volle Paritaet zum 1h**, nur eigene Farbe/Transparenz. ~25+ Objekte, vollstaendig aber
-   vermutlich ueberladen — Philip muesste im Test selbst entscheiden, was er wegtoggelt.
-3. **Trendphasen als Hintergrundbaender** ueber die Zeitachse, eines je Phase (rot down / gruen up),
-   mit Dauer. Zeigt Abfolge und Dauer auf einen Blick und passt damit zur impulsiv/korrektiv-Frage,
-   ist aber eine neue Darstellungsform im Chart.
+Drei Konsequenzen, die dadurch zwingend werden (Details im Task):
 
-Unabhaengig von der Wahl gesetzt (Philip am 23.09.): ein An/Aus-Toggle unter dem Menuepunkt
-"Structure" (`src/views/Dashboard.vue:1928`) und Chart-Style-Tokens in `src/chartColors.js`
+1. **Label-Texte**: `"1h protected high"/"1h protected low"` ist an zwei Stellen hartcodiert
+   (`marketStructureRendering.ts:539` und `:714`) — mit M5 waeren es vier. Timeframe muss
+   Parameter werden, sonst stehen zwei identisch benannte Objektsaetze im Chart und genau der
+   Zweck der Uebung faellt weg. `formatLsLabel` (`src/liquidity.js:294`) nennt gar keinen
+   Timeframe — dort pruefen, ob M5- und 1h-Sweeps sonst unterscheidbar bleiben.
+2. **`collectH1LqLevels`** (`:391`) ist H1-benannt und haengt am tradeSetup-Pfad.
+   Generalisieren statt zweite Funktion, dann greift die Rename-Consistency-Regel.
+3. **Dateigroesse**: `marketStructureRendering.ts` hat 849 Zeilen, volle Paritaet treibt sie
+   ueber die ~1000er-Grenze. M5-Zeichnung in eine eigene Datei, Gemeinsames parametrisieren,
+   nichts kopieren.
+
+Unabhaengig davon gesetzt (Philip am 23.09.): An/Aus-Toggle unter "Structure"
+(`src/views/Dashboard.vue:1928`) und Chart-Style-Tokens in `src/chartColors.js`
 (Vorbild `rangesMarker`/`rangesMarker2`, :129/:133) — woertlich: "und chartstyle hast du ja
 bisher auch noch nie vergessen."
