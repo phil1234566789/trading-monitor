@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
 import PriceChart from "../components/PriceChart.vue";
-import GoldH1Preview from "../components/GoldH1Preview.vue";
+import GoldPreview from "../components/GoldPreview.vue";
 import TradeSetupCockpit from "../components/TradeSetupCockpit.vue";
 import TradeSetupBewertung from "../components/TradeSetupBewertung.vue";
 import TradesTable from "../components/TradesTable.vue";
@@ -2210,7 +2210,7 @@ watch(selectedTradingAccountId, () => {
        Breite soll sich nicht ändern, wenn ich TSC toggle" — die Karte bleibt daher IMMER sichtbar,
        showTradeSetupCockpit steuert seitdem nur noch die TSC-Range-Zeichnung auf dem Candlestick-
        Chart selbst, nicht mehr die Karte). -->
-  <GoldH1Preview v-if="goldPreview" />
+  <GoldPreview v-if="goldPreview" />
   <div v-else class="chart-tsc-row">
     <PriceChart
       ref="priceChartRef"
