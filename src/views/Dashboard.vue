@@ -227,6 +227,9 @@ const showRangesMetadata = useLocalStorageRef("showRangesMetadata", false);
 // vom 1h-showRanges — Philip blendet zur Herkunftsklärung gezielt eine Ebene aus. Perioden
 // einstellbar, Start mit denselben 5/2 wie die 1h-Struktur.
 const showM5Structure = useLocalStorageRef("showM5Structure", false);
+// Blendet nur die 1h-Struktur aus (Linien + Debug-Punkte), damit die M5-Ebene allein prüfbar ist —
+// "Structure" bleibt der Hauptschalter, PriceChart bekommt das UND beider als showRanges.
+const showH1Structure = useLocalStorageRef("showH1Structure", true);
 const showM5TrendPhases = useLocalStorageRef("showM5TrendPhases", false);
 const m5StructurePeriod = useLocalStorageRef("m5StructurePeriod", 5);
 const m5Structure2Period = useLocalStorageRef("m5Structure2Period", 2);
@@ -1951,6 +1954,9 @@ watch(selectedTradingAccountId, () => {
           <ToggleButton variant="menu" :class="{ active: showRangesMetadata }" @click="showRangesMetadata = !showRangesMetadata">
             Metadaten
           </ToggleButton>
+          <ToggleButton variant="menu" :class="{ active: showH1Structure }" @click="showH1Structure = !showH1Structure">
+            1h-Struktur
+          </ToggleButton>
           <ToggleButton variant="menu" :class="{ active: showM5Structure }" @click="showM5Structure = !showM5Structure">
             M5-Struktur
           </ToggleButton>
@@ -2253,7 +2259,7 @@ watch(selectedTradingAccountId, () => {
     :ranges2-lookback-hours="ranges2LookbackHours"
     :ranges-fixed-start-active="rangesFixedStartActive"
     :ranges-fixed-start-time="rangesFixedStartTime"
-    :show-ranges="showRanges"
+    :show-ranges="showRanges && showH1Structure"
     :show-ranges-metadata="showRangesMetadata"
     :show-m5-structure="showM5Structure"
     :show-m5-trend-phases="showM5TrendPhases"
