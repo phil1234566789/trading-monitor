@@ -137,6 +137,24 @@ const GROUPS = [
     ],
   },
   {
+    title: "M5-Struktur",
+    fields: [
+      { key: "m5RangeHigh", label: "Range-High" },
+      { key: "m5RangeLow", label: "Range-Low" },
+      { key: "m5RangeProtectedLow", label: "Protected Low" },
+      { key: "m5RangeLqSweep", label: "LQ-Sweep" },
+      { key: "m5RangeBreakOfStructure", label: "Break of Structure" },
+      { key: "m5RangeLiveUptrend", label: "Laufende Range (Uptrend)" },
+      { key: "m5RangeLiveDowntrend", label: "Laufende Range (Downtrend)" },
+      { key: "m5RangeClosed", label: "Abgeschlossene Range (Uptrend)" },
+      { key: "m5RangeClosedDowntrend", label: "Abgeschlossene Range (Downtrend)" },
+      { key: "m5RangeChoch", label: "CHoCH" },
+      { key: "m5RangeFib", label: "Fibonacci 50%" },
+      { key: "m5TrendPhaseUp", label: "Trendphase Uptrend (Hintergrund)" },
+      { key: "m5TrendPhaseDown", label: "Trendphase Downtrend (Hintergrund)" },
+    ],
+  },
+  {
     title: "Trade-Marker",
     fields: [
       { key: "tradeWin", label: "Gewinn" },

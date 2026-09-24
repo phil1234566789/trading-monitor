@@ -5,7 +5,7 @@ Ziel: ein eigener M5-Struktur-Trend, analog zum bestehenden 1h-Struktur-Trend
 Voraussetzung für milk-city `10-10-nur-im-m5-trend` ("nur im M5 Trend": Setups filtern,
 Handbuch-Regeln, Anti-Confluence).
 
-Stand: 23.09.2026 — Befundaufnahme abgeschlossen, noch keine Implementierung.
+Stand: 24.09.2026 — umgesetzt (milk-city `m5-struktur-trend-algo-parametrisieren-anker-chart-tsc-anzeige`), siehe "Umsetzung" am Ende.
 
 ## Ziel-Output (Philip, 23.09.2026)
 
@@ -409,3 +409,29 @@ Erwartung fuer die Baender, damit es niemand fuer einen Bug haelt: bei P5/P2 sin
 gruene Striche (UP-Phasen von 12-40 Minuten) zwischen drei breiten roten Flaechen; bei P20/P10 ein
 durchgehend rotes Band. Kein Mindestbreiten-Filter, kein Glaetten — Philip will genau das sehen, um
 die Perioden zu beurteilen.
+
+## Umsetzung (24.09.2026)
+
+- Algo: `buildMarketStructureState(..., { barSeconds, onStep })`, `deriveTrendReaction`,
+  `effectiveTrend`, `collectNestedChain` (aus dem Renderer hierher gezogen) — beide Kopien.
+- Chart: `renderMarketStructureAnalysis(..., { styleKey })` zeichnet die M5-Struktur mit dem
+  `m5Range*`-Tokensatz; Trendphasen-Bänder in `src/trendPhases.js` (nutzt `SessionBandPrimitive`).
+  Toggles "M5-Struktur"/"M5-Trendphasen" + M5-Perioden im Structure-Untermenü.
+- TSC: eigene M5-Zeile (Pfeil + "BOS/CHoCH Wochentag HH:MM" oder "keine Reaktion").
+- `get_data_export`: neues Feld `m5Structure { trend, reaction }`.
+- `collectH1LqLevels` -> `collectStructureLqLevels` (Seitenfilter unverändert, Test unverändert grün).
+
+### Abweichung vom Trockenlauf oben — Phasen mit dem echten Code
+
+Test `test/m5TrendStructure.test.js`, cTrader-M5-Kerzen bis 27.07. 20:10, Anker 15.07. 20:00:
+
+| Perioden | Trend am Ende | letzte Reaktion | DOWN | UP |
+|---|---|---|---|---|
+| P5/P2 | downtrend | BOS 22.07. 15:20 | 14 | 13 |
+| P10/P5 | downtrend | CHoCH 27.07. 09:10 | 11 | 10 |
+| P20/P10 | downtrend | CHoCH 27.07. 16:55 | 7 | 6 |
+
+Die UP-Phasen dauern hier Stunden (P5/P2: 0,7-53,9h), nicht 12-40 Minuten, und bei P20/P10 gibt es
+6 statt 0. Die Korrektur 23.07. -> 27.07. erscheint bei P20/P10 als UP-Phase 24.07. 18:05 ->
+27.07. 17:45 Berlin. Die Trockenlauf-Zahlen stammen aus der nachgebauten Schleife mit /12-Stauchung
+(Rückrechnungsfehler, siehe Stolperfallen im Task) — die Tabelle hier ist der echte Pfad.

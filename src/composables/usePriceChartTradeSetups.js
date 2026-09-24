@@ -18,7 +18,7 @@
 // bleibt aus demselben Grund ebenfalls dort (hängt an withPollRetries + chart-alive-Check).
 import { ref } from "vue";
 import { detectLiquidityLevels } from "../liquidity.js";
-import { collectH1LqLevels } from "../marketStructureRendering";
+import { collectStructureLqLevels } from "../marketStructureRendering";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { mergeDbTradeSetups } from "../tradeSetups.js";
 import { sessions, isForbiddenAt } from "../sessions.js";
@@ -67,8 +67,8 @@ export function usePriceChartTradeSetups() {
     // H1-Level kommen seit Chat 2026-07-28 aus marketStructureState.structurePivots statt einer
     // eigenen H1-Fraktal-Erkennung — kann leer sein, solange marketStructureState noch nicht
     // geladen ist; Path A/B finden dann übergangsweise nur M5-basierte Setups, kein Absturz.
-    const h1Highs = collectH1LqLevels(marketStructureState, 1);
-    const h1Lows = collectH1LqLevels(marketStructureState, -1);
+    const h1Highs = collectStructureLqLevels(marketStructureState, 1);
+    const h1Lows = collectStructureLqLevels(marketStructureState, -1);
     const setupObs = detectSetupObs(candles);
     const params = {
       graceSec: TRADE_SETUP_GRACE_SEC,

@@ -3,7 +3,7 @@ import { computed } from "vue";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import { formatEvidenceLabel, evidenceAgeTier } from "../tradeEvidence";
 import { formatTargetLabel } from "../tradeTargets";
-import { trendChainLevelDisplay, computeTrendAlignment, trendAlignmentDisplay } from "../tradeSetupCockpit";
+import { trendChainLevelDisplay, computeTrendAlignment, trendAlignmentDisplay, m5TrendDisplay } from "../tradeSetupCockpit";
 import { toPips } from "../pipConfig.js";
 import CrudListSection from "./CrudListSection.vue";
 import ActionButton from "./ui/ActionButton.vue";
@@ -37,6 +37,8 @@ const props = defineProps({
   // in tradeSetupCockpit.ts für die volle Begründung (KEINE echte 4H/1H/M5-Mehrfach-Timeframe-
   // Berechnung, nur die rekursive Verschachtelungstiefe desselben 1H-States).
   trendChain: { type: Array, default: () => [] },
+  // { trend, reaction } der M5-Struktur (PriceChart.vue defineExpose m5Trend), null solange nicht berechnet.
+  m5Trend: { type: Object, default: null },
   // Welche Sektion gerade den nächsten Chart-Klick scharf hat ("confirmation"/"confluence"/
   // "antiConfluence"/"target"/"invalidation", sonst null) — Dashboard.vue leitet das aus seinen
   // Arm-Zuständen ab (armedTscSection), hier nur noch das Highlight am Add-Button.
@@ -131,6 +133,7 @@ function invalidationLabel(item) {
 // aus (tradeSetupCockpit.ts), hier nur noch die Zuordnung Ebene -> Tiefe fürs Label ("Trend"/
 // "Korrektur"/"Gegenkorrektur").
 const trendChainDisplay = computed(() => props.trendChain.map((level, depth) => trendChainLevelDisplay(level, depth)));
+const m5TrendInfo = computed(() => (props.m5Trend ? m5TrendDisplay(props.m5Trend) : null));
 // Trend-Ausrichtung der Dealing Range (Chat 2026-08-30, Philip: "Short mit dem Trend" ✅ /
 // "Long GEGEN den Trend" ⚠️) — siehe computeTrendAlignment für die volle Begründung.
 const trendAlignment = computed(() => computeTrendAlignment(direction.value, props.trendChain));
@@ -186,10 +189,14 @@ const accentStyle = computed(() => {
          symbol ist cool! aber lieber links von dem chip anzeigen und bissl größer"). Die Tiefe
          (outer/nested/nested nested, siehe trendChainDepthHint in tradeSetupCockpit.ts) steckt nur
          noch im Hover-Title pro Chip, nicht mehr im Fließtext. -->
-    <div v-if="trendChainDisplay.length" class="tsc-trend-chain">
+    <div v-if="trendChainDisplay.length || m5TrendInfo" class="tsc-trend-chain">
       <div v-for="(d, i) in trendChainDisplay" :key="i" class="tsc-trend-row">
         <span class="tsc-trend-icon" :style="{ color: d.color }">{{ d.icon }}</span>
         <span class="tsc-trend-level" :style="{ '--level-color': d.color }" :title="d.hint">{{ d.text }}</span>
+      </div>
+      <div v-if="m5TrendInfo" class="tsc-trend-row">
+        <span class="tsc-trend-icon" :style="{ color: m5TrendInfo.color }">{{ m5TrendInfo.icon }}</span>
+        <span class="tsc-trend-level" :style="{ '--level-color': m5TrendInfo.color }" :title="m5TrendInfo.hint">{{ m5TrendInfo.text }}</span>
       </div>
     </div>
 

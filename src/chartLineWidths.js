@@ -70,6 +70,18 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   antiConfluence: 2, // gleiches Tier-Skalierungsmuster wie tradeConfirmation.
   tradeInvalidation: 2, // keine Alters-Tier-Skalierung (siehe PriceChart.vue: refreshInvalidationLinesInternal).
   newsEvent: 1, // gestrichelte Termin-Linie, siehe newsMarkers.js.
+  // M5-Struktur: dieselben Startbreiten wie der jeweilige range*-Key (siehe chartColors.js).
+  m5RangeHigh: 2,
+  m5RangeLow: 2,
+  m5RangeProtectedLow: 2,
+  m5RangeLqSweep: 1,
+  m5RangeBreakOfStructure: 2,
+  m5RangeLiveUptrend: 2,
+  m5RangeLiveDowntrend: 1,
+  m5RangeClosed: 2,
+  m5RangeClosedDowntrend: 1,
+  m5RangeChoch: 1,
+  m5RangeFib: 1,
 };
 
 function loadInitial() {

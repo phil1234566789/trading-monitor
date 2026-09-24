@@ -7,7 +7,7 @@ Implementierung: [marketStructureAnalysis.ts](marketStructureAnalysis.ts).
 ## Pipeline (Kerzen -> Pivots -> State)
 
 `computeRangesPivots(candles, period, cutoff, formatTime?)` und
-`buildMarketStructureState(pivotsOuter, pivotsInner, periodOuter, periodInner, candles)` sind seit
+`buildMarketStructureState(pivotsOuter, pivotsInner, periodOuter, periodInner, candles, { barSeconds, onStep })` sind seit
 Chat 2026-07-24 die EINZIGE Quelle für "Kerzen -> Pivots -> State", exportiert aus
 `marketStructureAnalysis.ts`. Vorher lebte diese Logik nur als lokale Funktion in
 `PriceChart.vue` (`computeRangesPivotsFor`/`computeMarketStructureState`) — Tests liefen deshalb
@@ -17,6 +17,14 @@ trotzdem nicht das macht, was die Tests eigentlich sicherstellen sollen?"). `Pri
 delegiert jetzt an diese beiden Funktionen, statt sie zu duplizieren — ein Test, der sie direkt mit
 echten Kerzen aus `.debug/metadata.json` aufruft (`marketStructureAnalysisRealPipeline.test.js`),
 prüft damit 1:1 denselben Pfad wie die Live-App.
+
+Timeframe-agnostisch (M5-Struktur, PLAN-m5-trend.md): die Bestätigungsverzögerung ist
+`pivotTime + period * barSeconds` (Default 3600 = H1, M5 übergibt 300). `onStep(at, state)` ist ein
+reines Protokoll nach jedem verarbeiteten Pivot (Trendphasen-Bänder, `src/trendPhases.js`) und
+ändert das Ergebnis nicht. `deriveTrendReaction(state)` liefert `{trend, reaction}`: Trend der
+innersten bestätigten Ebene, Reaktion = jüngeres Ereignis aus BOS (`break-of-structure`-Pivot über
+alle Ebenen, Zeit = Touch) und CHoCH (innerste Nested-Ebene, Zeit = `firstConfirmedAt`, Preis =
+`appliedPivots[1]`); `reaction=null` ist gültig. Tests: `m5TrendStructure.test.js`.
 
 ## Grundbegriffe
 
@@ -102,7 +110,7 @@ Live beobachtet (GBPUSD 1h, siehe `test/tdd_mit_claude/ranges/gbp_h1_uptrend_upt
 
 **Beliebige Verschachtelungstiefe seit Chat 2026-08-09** ("wie viele Ebenen wie möglich"): `nestedTrend: MarketStructureState | null` (`range.type.ts`) war von Anfang an selbstreferenziell, aber bis dahin künstlich auf genau eine Ebene gedeckelt — ein `nested`-Flag in `applyMarketStructurePivot`/`applyInnerMarketStructurePivot` unterdrückte `advanceNestedTrend`/`-Inner` für den rekursiven Aufruf AUF dem Nested-Tracker selbst. Dieses Flag ist ersatzlos entfernt: die beiden Wrapper rufen `advanceNestedTrend`/`-Inner` jetzt IMMER auf, auch wenn `state` selbst schon ein Nested-Tracker ist — dadurch kann sich innerhalb eines bestätigten Nested-Trackers wieder ein eigener Gegentrend-Kandidat bilden (`nestedTrend.nestedTrend`, "CHoCH vom CHoCH"), und darunter wieder einer, usw. Kein Hardcap, keine Endlos-Rekursions-Gefahr: Ebene N+1 kann per Konstruktion nur entstehen, wenn Ebene N bereits einen bestätigten Trend hat (`advanceNestedTrend` bricht sofort ab, solange `trend === 'unknown'`) — die Tiefe ist also durch die Zahl tatsächlich bestätigter Trendwechsel in den Pivot-Daten begrenzt, nicht durch einen Parameter.
 
-PROMOTION trägt eine tiefere Ebene jetzt mit hoch statt sie zu verwerfen: `invalidateUptrend`/`invalidateDowntrend` setzten die neue `nestedTrend` des übernommenen State bis dahin hart auf `null` — das war vorher folgenlos, weil `nestedTrend` auf der übernommenen Ebene ohnehin immer schon `null` war (die alte Deckelung), ist jetzt aber falsch: eine bereits laufende dritte Ebene (ein Gegentrend-Kandidat INNERHALB des gerade promoteten Nested-Trackers) rutscht bei der Promotion einfach eine Ebene nach oben (`nestedTrend: nested.nestedTrend`), genau wie die Range/structurePivots/appliedPivots der promoteten Ebene selbst übernommen werden. Rendering (`renderNestedLevel` + `collectNestedChain` in `marketStructureRendering.ts`) und die Level-Sammler `collectH1LqLevels`/`collectFibLevels` laufen seitdem über die volle Kette (`state`, `state.nestedTrend`, `state.nestedTrend.nestedTrend`, ...) statt fest über `[state, state.nestedTrend]`.
+PROMOTION trägt eine tiefere Ebene jetzt mit hoch statt sie zu verwerfen: `invalidateUptrend`/`invalidateDowntrend` setzten die neue `nestedTrend` des übernommenen State bis dahin hart auf `null` — das war vorher folgenlos, weil `nestedTrend` auf der übernommenen Ebene ohnehin immer schon `null` war (die alte Deckelung), ist jetzt aber falsch: eine bereits laufende dritte Ebene (ein Gegentrend-Kandidat INNERHALB des gerade promoteten Nested-Trackers) rutscht bei der Promotion einfach eine Ebene nach oben (`nestedTrend: nested.nestedTrend`), genau wie die Range/structurePivots/appliedPivots der promoteten Ebene selbst übernommen werden. Rendering (`renderNestedLevel` in `marketStructureRendering.ts`, `collectNestedChain` seit dem M5-Trend in `marketStructureAnalysis.ts`) und die Level-Sammler `collectStructureLqLevels`/`collectFibLevels` laufen seitdem über die volle Kette (`state`, `state.nestedTrend`, `state.nestedTrend.nestedTrend`, ...) statt fest über `[state, state.nestedTrend]`.
 
 | Regel | Test |
 |---|---|
@@ -180,7 +188,7 @@ Rein visuell, keine Zustandslogik — kein Test, nur Code-Kommentare in
   Linie selbst (inkl. gestrichelt-Logik oben). Der goldene LQ-Sweep-Pfeil (siehe unten) ist davon
   NICHT betroffen und bleibt bestehen.
 - `protected-low`/`protected-high`: genau EINE Linie+Label (der jeweils aktuelle) — `protected-low`
-  im Uptrend ("1h protected low"), `protected-high` im Downtrend ("1h protected high"), gleiche
+  im Uptrend ("protected low"), `protected-high` im Downtrend ("protected high"), gleiche
   Farbe (`rangeProtectedLow`, neutraler weißer "geschützt"-Marker) für beide.
 - `LQ-sweep`: JEDER aktuell so markierte `structurePivot` bekommt eine eigene goldene 1px-Linie
   (im Gegensatz zu protected-low/-high potenziell mehrere gleichzeitig) — der goldene Pfeil zeigt im

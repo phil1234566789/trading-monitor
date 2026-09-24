@@ -219,6 +219,13 @@ const rangesFixedStartDateInput = useLocalStorageRef("rangesFixedStartDateInput"
 // kein zweiter showRangesMetadata2-Toggle, Philip reicht "einmal Metadaten".
 const showRanges = useLocalStorageRef("showRanges", false);
 const showRangesMetadata = useLocalStorageRef("showRangesMetadata", false);
+// M5-Struktur (PLAN-m5-trend.md): Linien und Trendphasen-Hintergrund je eigener Toggle, unabhängig
+// vom 1h-showRanges — Philip blendet zur Herkunftsklärung gezielt eine Ebene aus. Perioden
+// einstellbar, Start mit denselben 5/2 wie die 1h-Struktur.
+const showM5Structure = useLocalStorageRef("showM5Structure", false);
+const showM5TrendPhases = useLocalStorageRef("showM5TrendPhases", false);
+const m5StructurePeriod = useLocalStorageRef("m5StructurePeriod", 5);
+const m5Structure2Period = useLocalStorageRef("m5Structure2Period", 2);
 // EMA 50/200 auf M5 (siehe Chat: "Trend über EMA + Anzahl protected highs/lows") — ein Toggle für
 // beide Linien zusammen, keine separaten Schalter je Periode (nicht verlangt).
 const showEma = useLocalStorageRef("showEma", false);
@@ -1411,6 +1418,7 @@ const priceChartRef = ref(null);
 // (trendChain dort ist selbst ein computed über marketStructureState, siehe dort) statt eines
 // eigenen Emit-Zyklus, analog zu anderem reinen Zustands-Durchreichen aus der Kind-Komponente.
 const trendChain = computed(() => priceChartRef.value?.trendChain ?? []);
+const m5Trend = computed(() => priceChartRef.value?.m5Trend ?? null);
 // nextReplayTime ist seit Chat 2026-07-21 async (kann bei einer Markt-Schließlücke, z.B. Wochenende,
 // selbst nachfetchen, siehe PriceChart.vue) — stepReplayInFlight verhindert überlappende Aufrufe bei
 // mehrfachem schnellen Klicken, während der vorige Aufruf noch fetcht.
@@ -1940,6 +1948,20 @@ watch(selectedTradingAccountId, () => {
           <ToggleButton variant="menu" :class="{ active: showRangesMetadata }" @click="showRangesMetadata = !showRangesMetadata">
             Metadaten
           </ToggleButton>
+          <ToggleButton variant="menu" :class="{ active: showM5Structure }" @click="showM5Structure = !showM5Structure">
+            M5-Struktur
+          </ToggleButton>
+          <ToggleButton variant="menu" :class="{ active: showM5TrendPhases }" @click="showM5TrendPhases = !showM5TrendPhases">
+            M5-Trendphasen
+          </ToggleButton>
+          <label class="ranges-period-field">
+            M5-Periode
+            <input v-model.number="m5StructurePeriod" type="number" min="1" class="ranges-period-input" title="Fraktal-Periode der M5-Struktur (Outer)" />
+          </label>
+          <label class="ranges-period-field">
+            M5-Periode (eingebettet)
+            <input v-model.number="m5Structure2Period" type="number" min="1" class="ranges-period-input" title="Fraktal-Periode der M5-Struktur (eingebettet)" />
+          </label>
 
           <div class="toggle-dropdown-divider"></div>
 
@@ -2228,6 +2250,10 @@ watch(selectedTradingAccountId, () => {
     :ranges-fixed-start-time="rangesFixedStartTime"
     :show-ranges="showRanges"
     :show-ranges-metadata="showRangesMetadata"
+    :show-m5-structure="showM5Structure"
+    :show-m5-trend-phases="showM5TrendPhases"
+    :m5-structure-period="m5StructurePeriod"
+    :m5-structure2-period="m5Structure2Period"
     :show-ema="showEma"
     :show-rsi="showRsi"
     :show-rsi-divergence="showRsiDivergence"
@@ -2266,6 +2292,7 @@ watch(selectedTradingAccountId, () => {
       :now-sec="replayUntil"
       :range="tscRange"
       :trend-chain="trendChain"
+      :m5-trend="m5Trend"
       :armed-section="armedTscSection"
       @add-confirmation="onTscAddConfirmationRequest"
       @add-target="onTscAddTargetRequest"

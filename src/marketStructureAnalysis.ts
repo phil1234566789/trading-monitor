@@ -7,7 +7,7 @@
 // Chart-Primitives, inkl. LiquidityLinePrimitive/cssColor/lineWidth/PIP_SIZE) lebt seitdem separat
 // in marketStructureRendering.ts.
 import { detectLiquidityLevels } from "./liquidityDetection.js";
-import type { Pivot, PivotHigh, PivotLow, MarketStructureState } from "./range.type";
+import type { Pivot, PivotHigh, PivotLow, MarketStructureState, RangeTrend } from "./range.type";
 
 // "up": bestätigt einen Uptrend (bestehendes Verhalten, Default -> ändert nichts an bisherigen
 // Aufrufern/Tests). "down": exakt gespiegelt, für den Nested-Gegentrend-Tracker (CHoCH-Erkennung,
@@ -1049,12 +1049,16 @@ function advanceNestedTrendInner(state: MarketStructureState, innerPivot: Pivot,
 // pivotTime, type 'high'/'low'). Erster gelesener 'low'/'high' bilden die Start-Range (siehe
 // initMarketStructureState), der Rest läuft gemischt nach confirmationTime über
 // applyMarketStructurePivot/applyInnerMarketStructurePivot (siehe dortige Kommentare).
+// barSeconds: Kerzenlänge der Pivot-Serie — die Bestätigungsverzögerung ist "period Kerzen", nicht
+// "period Stunden" (M5-Trend, PLAN-m5-trend.md). onStep: optionales Protokoll nach jedem
+// verarbeiteten Pivot (für die Trendphasen-Bänder), damit niemand die Merge-Schleife nachbaut.
 export function buildMarketStructureState(
   pivotsOuter: Pivot[] | null,
   pivotsInner: Pivot[] | null,
   periodOuter: number,
   periodInner: number,
   candles: Candle[],
+  { barSeconds = 3600, onStep }: { barSeconds?: number; onStep?: (at: number, state: MarketStructureState) => void } = {},
 ): MarketStructureState | null {
   if (!pivotsOuter || pivotsOuter.length < 2) return null;
   const originLow = pivotsOuter.find((p) => p.type === "low");
@@ -1067,10 +1071,10 @@ export function buildMarketStructureState(
   const originCutoff = Math.max(first.pivotTime!, second.pivotTime!);
   const outerRest = pivotsOuter
     .filter((p) => p !== originLow && p !== originHigh)
-    .map((pivot) => ({ pivot, outer: true, at: pivotTimeOf(pivot) + periodOuter * 3600 }));
+    .map((pivot) => ({ pivot, outer: true, at: pivotTimeOf(pivot) + periodOuter * barSeconds }));
   const innerRest = (pivotsInner ?? [])
     .filter((p) => pivotTimeOf(p) > originCutoff)
-    .map((pivot) => ({ pivot, outer: false, at: pivotTimeOf(pivot) + periodInner * 3600 }));
+    .map((pivot) => ({ pivot, outer: false, at: pivotTimeOf(pivot) + periodInner * barSeconds }));
 
   const merged = [...outerRest, ...innerRest].sort((a, b) => a.at - b.at);
   for (const entry of merged) {
@@ -1089,8 +1093,55 @@ export function buildMarketStructureState(
     state = entry.outer
       ? applyMarketStructurePivot(state, entry.pivot, { candles, direction, asOfTime: entry.at })
       : applyInnerMarketStructurePivot(state, entry.pivot, { candles, direction, asOfTime: entry.at });
+    onStep?.(entry.at, state);
   }
   return state;
+}
+
+// Läuft die Nested-Tracker-Kette ab state selbst ab (state, state.nestedTrend, ...) und bricht am
+// ersten `null`/'unknown'-Glied ab — eine tiefere Ebene existiert per Konstruktion nur unter einem
+// bestätigten Parent (advanceNestedTrend). Seit dem M5-Trend hier statt in
+// marketStructureRendering.ts, weil deriveTrendReaction dieselbe Kette braucht.
+export function collectNestedChain(state: MarketStructureState): MarketStructureState[] {
+  const chain: MarketStructureState[] = [state];
+  let level = state.nestedTrend;
+  while (level && level.trend !== "unknown") {
+    chain.push(level);
+    level = level.nestedTrend;
+  }
+  return chain;
+}
+
+// Effektiver Trend = der der innersten bestätigten Ebene (ein bestätigter Nested IST der CHoCH).
+export function effectiveTrend(state: MarketStructureState | null): RangeTrend {
+  if (!state) return "unknown";
+  const chain = collectNestedChain(state);
+  return chain[chain.length - 1].trend;
+}
+
+export type TrendReaction = { type: "CHoCH" | "BOS"; time: number; price: number };
+
+// "State -> {trend, reaktion}" für M5-Trend (TSC + get_data_export). Keine neue Reaktions-
+// Semantik: BOS = jüngster 'break-of-structure'-Pivot über alle Ebenen (Zeit = Bruch-/Touch-
+// Zeitpunkt), CHoCH = die innerste bestätigte Nested-Ebene (Zeit = firstConfirmedAt, Preis = der
+// CHoCH-Level appliedPivots[1], dieselben Anker wie die CHoCH-Linie im Chart). Das jüngere Ereignis
+// gewinnt. reaction=null ist ein gültiges Ergebnis (sauber durchlaufender Trend).
+export function deriveTrendReaction(state: MarketStructureState | null): { trend: RangeTrend; reaction: TrendReaction | null } {
+  if (!state || state.trend === "unknown") return { trend: "unknown", reaction: null };
+  const chain = collectNestedChain(state);
+  const candidates: TrendReaction[] = [];
+  for (const level of chain) {
+    for (const p of level.structurePivots) {
+      if (p.type !== "break-of-structure") continue;
+      candidates.push({ type: "BOS", time: (p.touched ? p.touched.touchedTime : undefined) ?? pivotTimeOf(p), price: p.price });
+    }
+  }
+  const innermost = chain[chain.length - 1];
+  if (chain.length > 1 && innermost.firstConfirmedAt && innermost.appliedPivots[1]) {
+    candidates.push({ type: "CHoCH", time: pivotTimeOf(innermost.firstConfirmedAt), price: innermost.appliedPivots[1].price });
+  }
+  const reaction = candidates.reduce<TrendReaction | null>((best, c) => (!best || c.time > best.time ? c : best), null);
+  return { trend: innermost.trend, reaction };
 }
 
 // --- Darstellung/Export (State -> reines JSON) ---------------------------------------------------

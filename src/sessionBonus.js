@@ -5,7 +5,7 @@
 // will den Kontext jetzt auch an den Sweep-Linien ("wenn ein Liquidity Sweep gleichzeitig ein Asia
 // High ist, dann schon bitte dazuschreiben"), und die hängen an zwei weiteren Stellen: der
 // Trade-Setup-Zeichnung und der 1h-LQ-Sweep-Linie. Die beiden müssen dasselbe Label zeigen, weil
-// sie oft exakt übereinander liegen (siehe collectH1LqLevels) — drei Kopien desselben
+// sie oft exakt übereinander liegen (siehe collectStructureLqLevels) — drei Kopien desselben
 // Lookup-Aufbaus wären genau der Weg, auf dem sie auseinanderlaufen.
 import { sessions } from "./sessions.js";
 import { buildSessionContextLookup, bonusLabelForPivot } from "./sessionOccurrences.js";

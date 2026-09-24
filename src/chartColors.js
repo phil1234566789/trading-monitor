@@ -184,6 +184,24 @@ export const DEFAULT_CHART_COLORS = {
   // diese Marker nicht mitverschiebt.
   dailyPivotHigh: { hex: "#ef5350", alpha: 0.95 },
   dailyPivotLow: { hex: "#00e676", alpha: 0.95 },
+  // M5-Struktur (PLAN-m5-trend.md) — zeichnet über denselben Renderer wie die 1h-Struktur, nur mit
+  // diesem Token-Satz (M5_STRUCTURE_STYLE_KEYS in usePriceChartMarketStructure.js). Gleicher
+  // Farbton wie der jeweilige range*-Key, transparenter (Muster rangesMarker/rangesMarker2).
+  m5RangeHigh: { hex: "#ef5350", alpha: 0.57 },
+  m5RangeLow: { hex: "#00e676", alpha: 0.57 },
+  m5RangeProtectedLow: { hex: "#ffffff", alpha: 0.57 },
+  m5RangeLqSweep: { hex: "#ffd700", alpha: 0.54 },
+  m5RangeBreakOfStructure: { hex: "#ef5350", alpha: 0.57 },
+  m5RangeLiveUptrend: { hex: "#00e676", alpha: 0.3 },
+  m5RangeLiveDowntrend: { hex: "#ff7043", alpha: 0.57 },
+  m5RangeClosed: { hex: "#00e676", alpha: 0.3 },
+  m5RangeClosedDowntrend: { hex: "#ff7043", alpha: 0.57 },
+  m5RangeChoch: { hex: "#ff7043", alpha: 0.57 },
+  m5RangeFib: { hex: "#26c6da", alpha: 0.57 },
+  // M5-Trendphasen-Hintergrund (trendPhases.js) — flächig über die volle Panehöhe, daher sehr
+  // niedrige Alpha, sonst verschwinden die Kerzen dahinter.
+  m5TrendPhaseUp: { hex: "#26a69a", alpha: 0.08 },
+  m5TrendPhaseDown: { hex: "#ef5350", alpha: 0.08 },
 };
 
 function loadInitial() {

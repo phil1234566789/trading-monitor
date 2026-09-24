@@ -31,7 +31,7 @@ export const TRADE_MARKER_BARS = new Set(["1m", "5m", "15m", "1h"]); // 4h/1D w�
 export const TRADE_SETUP_M5_FRACTAL_PERIOD = 5; // liqM5Period
 // H1-Level kamen bis Chat 2026-07-28 aus einer eigenen, nur 300 Kerzen kurzen H1-Fraktal-Erkennung
 // (Bug: ein 32 Tage altes, aber gerade erst geswepptes Level war dadurch unsichtbar) — kommen jetzt
-// aus den längst gefilterten structurePivots des "1h-Range"-Algorithmus (collectH1LqLevels in
+// aus den längst gefilterten structurePivots des "1h-Range"-Algorithmus (collectStructureLqLevels in
 // marketStructureAnalysis.ts, aufgerufen in computeTradeSetups), kein eigenes H1-Fenster mehr nötig.
 export const TRADE_SETUP_M5_CANDLE_COUNT = 2500;
 export const TRADE_SETUP_GRACE_SEC = 5 * 60; // eine M5-Kerzenlänge
@@ -69,7 +69,7 @@ export const TRADE_SETUP_OB_BORDER_RATIO = 0.7 / 0.9;
 export const TREND_ANALYSIS_CANDLE_COUNT = 1000;
 
 // "Ranges" — H1-Fraktale im Lookback-Fenster (props.rangesPeriod/-2), Basis für
-// computeRangesPivotsFor/rangesNeedsData/computeTradeSetups (collectH1LqLevels liest dieselben
+// computeRangesPivotsFor/rangesNeedsData/computeTradeSetups (collectStructureLqLevels liest dieselben
 // Pivots, siehe dort). Puffer vor/nach dem Lookback-Fenster: ein Fraktal braucht period+4 Kerzen
 // davor und period danach, um überhaupt erkannt zu werden (siehe isUpFractal/isDownFractal in
 // liquidity.js) — 20 ist für BEIDE Perioden (5 und 2) großzügig genug.

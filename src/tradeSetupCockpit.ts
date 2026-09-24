@@ -13,6 +13,7 @@
 // bewusst in Kauf genommen ("kann damit leben").
 import type { MarketStructureState, Pivot, RangeTrend } from "./range.type";
 import { cssColor, cssColorScaled } from "./chartColors.js";
+import type { TrendReaction } from "./marketStructureAnalysis";
 import { businessSecondsBetween } from "./chartTimeUtils.js";
 
 // Locker getypt (any) statt einer eigenen TradeSetup-Interface-Kopie — die eigentliche Form kommt
@@ -284,8 +285,12 @@ function formatTrendAge(seconds: number, originTimeSec: number): string {
 // — IST "{Tage} Trend: {Richtung}", SOLL "{Tage}") — Richtung steckt komplett im Pfeil (icon,
 // TREND_DIRECTION_ICON), die Tiefe nur noch im hint (trendChainDepthHint). "–" ohne Alter (praktisch
 // nie der Fall, siehe trendOriginPivotTime — nur wenn currRange gänzlich ohne pivotTime ist).
+function trendColor(trend: RangeTrend): string {
+  return trend === "uptrend" ? cssColor("candleUp") : trend === "downtrend" ? cssColor("candleDown") : TREND_UNKNOWN_COLOR;
+}
+
 export function trendChainLevelDisplay(level: TrendChainLevel, depth: number): { text: string; icon: string; color: string; hint: string } {
-  const color = level.trend === "uptrend" ? cssColor("candleUp") : level.trend === "downtrend" ? cssColor("candleDown") : TREND_UNKNOWN_COLOR;
+  const color = trendColor(level.trend);
   const text = level.ageSeconds != null && level.originTimeSec != null ? formatTrendAge(level.ageSeconds, level.originTimeSec) : "–";
   return { text, icon: TREND_DIRECTION_ICON[level.trend], color, hint: trendChainDepthHint(depth) };
 }
@@ -319,4 +324,19 @@ export function trendAlignmentDisplay(direction: "long" | "short", alignment: Tr
   return alignment === "with_trend"
     ? { text: `${directionLabel} im Trend`, icon: "✅" }
     : { text: `${directionLabel} GEGEN den Trend`, icon: "⚠️" };
+}
+
+const M5_REACTION_TIME_FORMATTER = new Intl.DateTimeFormat("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+
+// M5-Trend-Zeile (PLAN-m5-trend.md): Richtung als Pfeil wie die 1h-Kette, dazu die letzte Reaktion
+// (CHoCH/BOS) aus deriveTrendReaction — oder "keine Reaktion", das ist ein gültiger Zustand.
+export function m5TrendDisplay(m5Trend: { trend: RangeTrend; reaction: TrendReaction | null }): { text: string; icon: string; color: string; hint: string } {
+  const { trend, reaction } = m5Trend;
+  const when = reaction ? M5_REACTION_TIME_FORMATTER.format(new Date(reaction.time * 1000)).replace(".", "") : null;
+  return {
+    icon: TREND_DIRECTION_ICON[trend],
+    color: trendColor(trend),
+    text: reaction ? `M5 · ${reaction.type} ${when}` : "M5 · keine Reaktion",
+    hint: reaction ? `M5-Struktur: ${reaction.type} bei ${reaction.price.toFixed(5)}` : "M5-Struktur: weder CHoCH noch BOS seit Trendbeginn",
+  };
 }

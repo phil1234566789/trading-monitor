@@ -5,12 +5,12 @@
 // alles Chart-bezogene — computeRangesPivots/buildMarketStructureState/summarizeMarketStructureState
 // bleiben in marketStructureAnalysis.ts, hier nur der State -> Chart-Primitives-Teil.
 import { LiquidityLinePrimitive, bullBearLabelSide, formatLsLabel } from "./liquidity.js";
-import { cssColor } from "./chartColors.js";
-import { lineWidth } from "./chartLineWidths.js";
+import { cssColor as baseCssColor } from "./chartColors.js";
+import { lineWidth as baseLineWidth } from "./chartLineWidths.js";
 import { PIP_SIZE } from "./pipConfig.js";
 import type { Pivot, MarketStructureState } from "./range.type";
 import type { Candle } from "./marketStructureAnalysis";
-import { pivotTimeOf } from "./marketStructureAnalysis";
+import { pivotTimeOf, collectNestedChain } from "./marketStructureAnalysis";
 
 // --- Zeichnung ----------------------------------------------------------------------------------
 // Pfeil-Marker (roh: kleines gefülltes Dreieck) für range.high/range.low — sitzt ganz rechts am
@@ -353,7 +353,7 @@ function toTouchedLevel(pivot: Pivot, candles: Candle[]) {
 // war dadurch für Path A/B unsichtbar, obwohl es im Debug-Panel längst als "1h LQ-Sweep"
 // angezeigt wurde ("das allermeiste [an der alten H1-Fraktal-Erkennung] ist nur Datenmüll" —
 // Philip wollte explizit NICHT die Kerzenzahl hochsetzen, sondern die längst gefilterten
-// structurePivots wiederverwenden). dir wird vom Aufrufer mitgegeben, siehe collectH1LqLevels.
+// structurePivots wiederverwenden). dir wird vom Aufrufer mitgegeben, siehe collectStructureLqLevels.
 function toLqLevel(pivot: Pivot, dir: 1 | -1) {
   const touchedTime = pivot.touched ? (pivot.touched.touchedTime ?? null) : null;
   return {
@@ -362,7 +362,7 @@ function toLqLevel(pivot: Pivot, dir: 1 | -1) {
     pivotTime: pivot.pivotTime ?? 0,
     touched: pivot.touched !== false,
     touchedTime,
-    // Nur touched Pivots kommen hier überhaupt an (siehe collectH1LqLevels-Filter), und der
+    // Nur touched Pivots kommen hier überhaupt an (siehe collectStructureLqLevels-Filter), und der
     // Algorithmus setzt touchedTime für echte (nicht synthetische Test-)Pivots immer — der
     // pivotTime-Fallback ist rein defensiv für den in der Praxis nicht vorkommenden Fall.
     endTime: touchedTime ?? (pivot.pivotTime ?? 0),
@@ -388,7 +388,7 @@ function toLqLevel(pivot: Pivot, dir: 1 | -1) {
 // gesuchte (markLqSweeps läuft dort mit derselben Richtung) — und gerade ein LQ-sweep ist der
 // wertvollste LS-Kandidat. Bleibt ein Rest: ein Tief, das in einer früheren uptrend-/unknown-Phase
 // derselben Ebene zu 'LQ-sweep' umgetauft wurde, behält den Namen auch nach dem Trendwechsel.
-export function collectH1LqLevels(state: MarketStructureState | null | undefined, dir: 1 | -1) {
+export function collectStructureLqLevels(state: MarketStructureState | null | undefined, dir: 1 | -1) {
   if (!state) return [];
   const wantTrend = dir === -1 ? "uptrend" : "downtrend";
   const falscheSeite = dir === 1 ? "low" : "high";
@@ -397,24 +397,6 @@ export function collectH1LqLevels(state: MarketStructureState | null | undefined
     if (level.trend === wantTrend) pivots.push(...level.structurePivots);
   }
   return pivots.filter((p) => p.touched !== false && !p.type.endsWith(falscheSeite)).map((p) => toLqLevel(p, dir));
-}
-
-// Läuft die Nested-Tracker-Kette ab state selbst ab (state zuerst, dann state.nestedTrend,
-// state.nestedTrend.nestedTrend, ...) — seit der Rekursions-Freigabe in marketStructureAnalysis.ts
-// (Chat 2026-08-09, "wie viele Ebenen wie möglich") kann state.nestedTrend beliebig tief
-// verschachtelt sein, nicht mehr nur eine Ebene. Bricht am ersten `null` oder unbestätigten
-// ('unknown') Glied ab — eine tiefere Ebene kann per Konstruktion nur existieren, wenn ihr
-// Parent-Trend bereits bestätigt ist (siehe advanceNestedTrend). Ersetzt die vorher an drei Stellen
-// (hier, collectFibLevels, renderMarketStructureAnalysis) fest auf `[state, state.nestedTrend]`
-// gedeckelten Schleifen.
-function collectNestedChain(state: MarketStructureState): MarketStructureState[] {
-  const chain: MarketStructureState[] = [state];
-  let level = state.nestedTrend;
-  while (level && level.trend !== "unknown") {
-    chain.push(level);
-    level = level.nestedTrend;
-  }
-  return chain;
 }
 
 // --- Fibonacci-Level (Chat 2026-07-30) --------------------------------------------------------
@@ -462,7 +444,7 @@ export function computeFibLevels(
 }
 
 // Sammelt alle Fib-Level (Haupttrend + Nested, falls vorhanden) in klickbarer Form — analog zu
-// collectH1LqLevels, aber ohne dir-Parameter (ein Fib ist nicht long/short-spezifisch). Genutzt
+// collectStructureLqLevels, aber ohne dir-Parameter (ein Fib ist nicht long/short-spezifisch). Genutzt
 // von PriceChart.vue für die Trade-Bestätigungs-Klick-Erfassung (kind='fib', siehe
 // tradeEvidence.ts) — dieselbe A/B-Form wie computeFibLevels, keine gesonderte Aufbereitung
 // nötig, weil die Klick-Trefferprüfung dieselbe Pixel-Mittelpunkt-Berechnung braucht wie die
@@ -527,16 +509,25 @@ function firstCloseAbove(candles: Candle[], fromTime: number, price: number, fal
 // bullisch (nested.trend==='uptrend') ist. `isDown` entscheidet dieselben Spiegelungen wie vorher
 // die beiden getrennten Blöcke: protected-Typ, BOS/CHoCH-Labelseite, LQ-Sweep-Pfeilrichtung,
 // welche firstCloseAbove/Below-Variante das CHoCH/BOS-Linienende bestimmt.
+// Ohne Timeframe im Text: 1h- und M5-Struktur zeichnen über dieselben Funktionen, und welche Linie
+// woher kommt, klärt Philip per Toggle (fachlich dasselbe Objekt) — wie formatLsLabel auch.
+function protectedLabel(isDown: boolean): string {
+  return isDown ? "protected high" : "protected low";
+}
+
+type StyleFn<T> = (key: string) => T;
+
 function renderNestedLevel(
   series: any,
   nested: MarketStructureState,
   candles: Candle[],
   existingPrimitives: any[],
   lqSweepLabel: (price: number, pivotTime: number | undefined, touchedTime: number | undefined, dir: 1 | -1) => string,
+  cssColor: StyleFn<string>,
+  lineWidth: StyleFn<number>,
 ) {
   const isDown = nested.trend === "downtrend";
   const protectedType: "protected-high" | "protected-low" = isDown ? "protected-high" : "protected-low";
-  const protectedLabel = isDown ? "1h protected high" : "1h protected low";
   // BOS/CHoCH sitzen im bärischen Fall unterhalb der Linie (spiegelbildlich zum Haupttrend-Block
   // oben, wo BOS im Uptrend oberhalb sitzt), im bullischen Fall oberhalb — siehe die beiden vorher
   // getrennten Blöcke.
@@ -559,7 +550,7 @@ function renderNestedLevel(
   if (protectedPivot) {
     const line = new LiquidityLinePrimitive(
       toLevel(protectedPivot, candles),
-      { color: cssColor("rangeProtectedLow"), lineWidth: lineWidth("rangeProtectedLow"), label: protectedLabel, labelSide: "end" },
+      { color: cssColor("rangeProtectedLow"), lineWidth: lineWidth("rangeProtectedLow"), label: protectedLabel(isDown), labelSide: "end" },
       candles,
     );
     series.attachPrimitive(line);
@@ -636,9 +627,13 @@ export function renderMarketStructureAnalysis(
     nowSec,
     formatPrice,
     bonusFor,
+    styleKey = (key) => key,
   }: {
     nowSec?: number;
     formatPrice?: (price: number) => string;
+    // Bildet die 1h-Token-Namen (rangeHigh, ...) auf einen anderen Satz ab — die M5-Struktur zeichnet
+    // über denselben Code mit eigenen m5Range*-Farben/-Breiten (chartColors.js), statt ihn zu kopieren.
+    styleKey?: (key: string) => string;
     // Session-Kontext ("Asia-High") — siehe sessionBonus.js. Muss dieselbe Quelle sein wie bei der
     // Trade-Setup-LS-Linie, sonst zeigen die beiden übereinanderliegenden Linien wieder zwei
     // verschiedene Strings (genau dafür gibt es formatLsLabel gemeinsam).
@@ -665,6 +660,9 @@ export function renderMarketStructureAnalysis(
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
   if (!state || candles.length === 0) return;
+  // Schatten die Modul-Importe bewusst, damit jede Verwendungsstelle unten automatisch über styleKey läuft.
+  const cssColor: StyleFn<string> = (key) => baseCssColor(styleKey(key));
+  const lineWidth: StyleFn<number> = (key) => baseLineWidth(styleKey(key));
 
   const hasBreakOfStructure = state.structurePivots.some((p) => p.type === "break-of-structure");
   // Seit der Promotion-Funktion (Chat 2026-07-25) kann der HAUPTTREND selbst 'downtrend' sein
@@ -711,7 +709,7 @@ export function renderMarketStructureAnalysis(
       {
         color: cssColor("rangeProtectedLow"),
         lineWidth: lineWidth("rangeProtectedLow"),
-        label: isDowntrend ? "1h protected high" : "1h protected low",
+        label: protectedLabel(isDowntrend),
         labelSide: "end",
       },
       candles,
@@ -830,7 +828,7 @@ export function renderMarketStructureAnalysis(
   // reguläre currRange-Darstellung (inkl. der Live-Verbindungslinie oben) den (jetzt promoteten)
   // neuen Haupttrend, exakt wie vorher.
   for (const nested of collectNestedChain(state).slice(1)) {
-    renderNestedLevel(series, nested, candles, existingPrimitives, lqSweepLabel);
+    renderNestedLevel(series, nested, candles, existingPrimitives, lqSweepLabel, cssColor, lineWidth);
   }
 
   // Fib-Level (Chat 2026-07-30, siehe computeFibLevels für die volle Begründung) — EIN Durchlauf

@@ -222,8 +222,8 @@ const props = defineProps({
   // Zweiter, eingebetteter Fraktal-Lauf mit eigener Periode/Lookback (siehe Chat 2026-07-19:
   // "wir brauchen nen zweiten state ... mit periode 2" — schnellere Uptrend-Erkennung). Läuft auf
   // denselben H1-Kerzen wie die Periode-5-Ranges (siehe loadRangesCandles: EIN Fetch für beide,
-  // kein zweiter cTrader-Connect), aber komplett eigene Pivot-Liste/Cutoff/Debug-Marker — fließt
-  // aktuell NICHT in marketStructureAnalysis.ts/applyMarketStructurePivot ein (nur Rohdaten zum Beobachten/TDD).
+  // kein zweiter cTrader-Connect), aber komplett eigene Pivot-Liste/Cutoff/Debug-Marker — fließt über
+  // applyInnerMarketStructurePivot in buildMarketStructureState mit ein.
   ranges2Period: { type: Number, default: 2 },
   ranges2LookbackHours: { type: Number, default: 7 * 24 },
   // Fixer Startzeitpunkt statt rollierendem "letzte X Stunden"-Fenster (Chat 2026-07-21: "im
@@ -231,6 +231,11 @@ const props = defineProps({
   // fixen Punkt") — gilt für BEIDE Perioden gemeinsam (siehe computeRangesPivotsFor/loadRangesCandles).
   rangesFixedStartActive: { type: Boolean, default: false },
   rangesFixedStartTime: { type: Number, default: null },
+  // M5-Struktur (PLAN-m5-trend.md) — zwei eigene Toggles, unabhängig vom 1h-showRanges.
+  showM5Structure: { type: Boolean, default: false },
+  showM5TrendPhases: { type: Boolean, default: false },
+  m5StructurePeriod: { type: Number, default: 5 },
+  m5Structure2Period: { type: Number, default: 2 },
   showEma: { type: Boolean, default: false },
   // RSI(14)-Panel (Chat 2026-08-11) — anders als EMA (immer M5, siehe refreshEmaInternal) folgt
   // RSI bewusst dem gerade gewählten Chart-Timeframe (allCandles), wie ein klassisches
@@ -368,6 +373,7 @@ const {
 // Composables' ctx gebunden, daher destructured.
 const {
   marketStructureState,
+  m5Trend,
   rangesMetadata,
   rangesMetadata2,
   getRangesH1Candles,
@@ -377,6 +383,7 @@ const {
   computeRangesPivotsAndMetadata,
   refreshRangesMarkers: refreshRangesMarkersPure,
   refreshMarketStructure: refreshMarketStructurePure,
+  refreshM5Structure: refreshM5StructurePure,
   fetchRangesCandles,
 } = usePriceChartMarketStructure();
 // Trade-Setup-Zeichnung (siehe usePriceChartTradeSetupDrawing.js, Phase 6h) — reine Zeichenfunktion,
@@ -1392,7 +1399,7 @@ function refreshRangesInternal() {
 // Dünner Wrapper um usePriceChartMarketStructure' refreshMarketStructure() (siehe dort für die
 // volle Bug-Historie zum "1h-Range"-Trendalgorithmus/der Zeichnung) — stößt danach die Refreshs
 // an, die auf marketStructureState reagieren (Trade-Setups brauchen die H1-Level, siehe
-// collectH1LqLevels in usePriceChartTradeSetups.js; TSC braucht beides).
+// collectStructureLqLevels in usePriceChartTradeSetups.js; TSC braucht beides).
 function refreshMarketStructureInternal() {
   if (!chart) return; // async fetchRangesCandles kann nach unmount noch abschließen, siehe onUnmounted
   refreshMarketStructurePure({
@@ -1404,7 +1411,8 @@ function refreshMarketStructureInternal() {
     rangesPeriod: props.rangesPeriod,
     ranges2Period: props.ranges2Period,
   });
-  // computeTradeSetups() liest marketStructureState.value (siehe collectH1LqLevels, Chat
+  refreshM5StructureInternal(); // hängt am 1h-Outer-Cutoff, siehe refreshM5Structure
+  // computeTradeSetups() liest marketStructureState.value (siehe collectStructureLqLevels, Chat
   // 2026-07-28) — muss also nach JEDEM Recompute hier neu laufen, nicht nur bei neuen M5-Kerzen
   // (siehe loadTradeSetupM5). Reine lokale Berechnung, kein Netzwerk-Call.
   computeTradeSetupsInternal();
@@ -1414,6 +1422,22 @@ function refreshMarketStructureInternal() {
   // ist eine der beiden TSC-Datenquellen (siehe refreshCockpitInternal), die andere ist
   // currentTradeSetups (siehe loadTradeSetupM5 und computeTradeSetups() oben).
   refreshCockpitInternal();
+}
+
+// M5-Struktur/-Trendphasen (siehe usePriceChartMarketStructure.js) — läuft nach jedem 1h-Recompute
+// (Anker) UND nach neuen M5-Kerzen (loadTradeSetupM5).
+function refreshM5StructureInternal() {
+  if (!chart) return;
+  refreshM5StructurePure({
+    candles: clipReplay(allCandles),
+    m5CandlesClipped: clipReplay(getTradeSetupM5Candles()),
+    symbol: props.symbol,
+    replayUntil: props.replayUntil,
+    showM5Structure: props.showM5Structure,
+    showM5TrendPhases: props.showM5TrendPhases,
+    m5Period: props.m5StructurePeriod,
+    m5Period2: props.m5Structure2Period,
+  });
 }
 
 // TSC-Zustandsberechnung lebt seit Phase 6c des Große-Dateien-Refactorings in
@@ -1457,10 +1481,11 @@ async function loadRangesCandles() {
 // dieselben H1-Kerzen/Pivots. showTradeSetupCockpit zählt ebenfalls mit — sonst würde
 // marketStructureState beim Wegtoggeln von Ranges/Metadaten einfrieren statt weiterzulaufen.
 // showTradeSetups ebenso: computeTradeSetups() liest marketStructureState.value für die H1-Level
-// (collectH1LqLevels). showObs1h ebenso: der 1H-OB-Toggle nutzt dieselben Kerzen (collectObsZones).
+// (collectStructureLqLevels). showObs1h ebenso: der 1H-OB-Toggle nutzt dieselben Kerzen (collectObsZones).
 // Laden läuft also, solange MINDESTENS einer der vier an ist.
 function rangesNeedsData() {
-  return props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups;
+  // M5-Struktur ankert am 1h-Outer-Cutoff, braucht also dieselben H1-Kerzen.
+  return props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups || props.showM5Structure || props.showM5TrendPhases;
 }
 // An den H1-Kerzenschluss ausgerichtet statt festem Intervall (Chat 2026-07-20) — H1-Kerzen
 // ändern sich nur stündlich, ein häufigerer Poll bringt nichts außer zusätzlichen Requests.
@@ -1640,6 +1665,7 @@ async function loadTradeSetupM5() {
   const { ok, applied } = await fetchTradeSetupM5Candles({ symbol: props.symbol, toMs: replayToMs("5m"), showEma: props.showEma });
   if (ok && applied) {
     computeTradeSetupsInternal();
+    refreshM5StructureInternal();
     if (chart) applyCandleData(); // neue Setups -> andere FVG-Kerzen, ohne auf den nächsten refreshChart() zu warten
     renderTradeSetupsInternal();
     refreshEmaInternal();
@@ -2175,7 +2201,7 @@ watch(() => props.showLiquidityDebug, () => {
 });
 watch(() => props.showTradeSetups, () => {
   // showTradeSetups zählt seit Chat 2026-07-28 mit in rangesNeedsData() (computeTradeSetups()
-  // braucht marketStructureState.value für die H1-Level, siehe collectH1LqLevels) -> Polling-
+  // braucht marketStructureState.value für die H1-Level, siehe collectStructureLqLevels) -> Polling-
   // Zustand neu bewerten, genau wie beim showTradeSetupCockpit-Watcher unten.
   refreshRangesPollingState();
   renderTradeSetupsInternal();
@@ -2252,6 +2278,11 @@ watch(
     }
   },
 );
+watch([() => props.showM5Structure, () => props.showM5TrendPhases], () => {
+  refreshRangesPollingState();
+  refreshM5StructureInternal();
+});
+watch([() => props.m5StructurePeriod, () => props.m5Structure2Period], refreshM5StructureInternal);
 watch([() => props.rangesPeriod, () => props.ranges2Period], () => {
   if (getRangesH1Candles().length > 0) refreshRangesInternal();
 });
@@ -2414,6 +2445,8 @@ defineExpose({
   // Muster, refs über defineExpose auf den public instance zu legen statt einen eigenen Emit-Zyklus
   // für reine Zustands-Weiterreichung zu bauen.
   trendChain,
+  // M5-Trend + Reaktion (CHoCH/BOS) fürs TSC, gleiches Muster wie trendChain.
+  m5Trend,
 
   async nextReplayTime(after) {
     const barSeconds = barSecondsFor(props.currentBar);

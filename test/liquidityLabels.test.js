@@ -1,5 +1,5 @@
 // Chat 2026-07-28: die Trade-Setup-LS-Linie (PriceChart.vue) und die "1h LQ-Sweep"-Linie
-// (marketStructureAnalysis.ts) zeigen seit collectH1LqLevels oft denselben Pivot zweimal — Philip
+// (marketStructureAnalysis.ts) zeigen seit collectStructureLqLevels oft denselben Pivot zweimal — Philip
 // wollte identischen Label-Text ("Major LS 1,13545 (22d 19h)"), damit sich beide beim
 // Überlappen sauber lesen lassen statt zwei leicht unterschiedliche Strings übereinander.
 import { describe, expect, it } from "vitest";

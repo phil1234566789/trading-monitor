@@ -263,7 +263,7 @@ function ageSuffix(pivotTime, nowSec, touchedTime = null) {
 
 // "Major LS 1,13545 (22d 19h)" — gemeinsames Label-Format für die Trade-Setup-LS-Linie
 // (PriceChart.vue) UND die "1h LQ-Sweep"-Linie (marketStructureAnalysis.ts), Chat 2026-07-28: seit
-// collectH1LqLevels (selber Chat) ist das oft exakt derselbe Pivot, zweimal gezeichnet — mit
+// collectStructureLqLevels (selber Chat) ist das oft exakt derselbe Pivot, zweimal gezeichnet — mit
 // identischem Label-Text überlappen sich beide Linien lesbar statt zwei leicht unterschiedliche
 // Strings übereinander zu zeigen ("1h LQ-Sweep..." vs. "LS..."). Tier-Präfix ("Major "/"Medium ")
 // nur ab medium — "minor" (< 1 Tag) bewusst ohne Präfix ("aus Platzgründen", Chat 2026-07-28).

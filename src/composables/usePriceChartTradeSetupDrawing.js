@@ -46,7 +46,7 @@ export function usePriceChartTradeSetupDrawing() {
     const formatPrice = (price) => fmtPrice(price, precision);
     // Für formatLsLabel (Tier-Präfix + Alter am LS-Label, Chat 2026-07-28) — dieselbe Referenzzeit
     // wie die "1h LQ-Sweep"-Linie (usePriceChartMarketStructure.js), damit LS-Linie und LQ-Sweep bei
-    // identischem Pivot exakt denselben Label-Text zeigen (siehe collectH1LqLevels: oft derselbe
+    // identischem Pivot exakt denselben Label-Text zeigen (siehe collectStructureLqLevels: oft derselbe
     // Pivot).
     const nowSec = replayUntil ?? Math.floor(Date.now() / 1000);
     // Ein Formatter für ALLE Sweep-Linien eines Setups (entscheidender + Nebensweeps): bei
@@ -99,7 +99,7 @@ export function usePriceChartTradeSetupDrawing() {
           // sonst nur eine nackte Zahl. Seit Chat 2026-07-28 zusätzlich Tier-Präfix + Alter
           // (formatLsLabel, liquidity.js) — identisches Format wie die "1h LQ-Sweep"-Linie in
           // marketStructureAnalysis.ts, damit beide beim Überlappen (oft derselbe Pivot, siehe
-          // collectH1LqLevels) lesbar bleiben statt zwei leicht unterschiedliche Strings übereinander.
+          // collectStructureLqLevels) lesbar bleiben statt zwei leicht unterschiedliche Strings übereinander.
           // NICHT debug-gated (Bug-Report Philip 2026-09-21: "sehe kein Label LS über dem Sweep"):
           // die LQ-Sweep-Linie hat ihr Label seit Chat 2026-07-28 immer, diese Seite hat die
           // Umstellung damals nicht mitbekommen — und "1:1 überlappen" hieß nie "nur im Debug".

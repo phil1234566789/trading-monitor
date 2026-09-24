@@ -9,7 +9,7 @@
 import { describe, expect, it } from "vitest";
 import { detectLiquidityLevels } from "../src/liquidity.js";
 import { detectSetupObs, detectTradeSetups } from "../src/tradeSetup.js";
-import { collectH1LqLevels } from "../src/marketStructureRendering";
+import { collectStructureLqLevels } from "../src/marketStructureRendering";
 import gbpusdM5LongSetup from "./fixtures/gbpusd-m5-2026-07-08-long-setup.json";
 import gbpusdH1LongSetup from "./fixtures/gbpusd-h1-2026-07-08-long-setup.json";
 import gbpusdM5LongSetup0720 from "./fixtures/gbpusd-m5-2026-07-20-long-setup.json";
@@ -169,11 +169,11 @@ describe("Trade-Setup-Pipeline (echte M5-/H1-Kerzen-Fixtures, wie computeTradeSe
 // trackt, wurde von Path A nicht gesehen — die ALTE H1-Level-Quelle (detectLiquidityLevels auf
 // einem eigenen 300-Kerzen/≈12,5-Tage-Fenster, siehe Git-History) konnte ein 32 Tage altes Pivot
 // gar nicht erst laden. Fix: H1-Level kommen jetzt aus marketStructureState.structurePivots
-// (collectH1LqLevels in marketStructureAnalysis.ts) statt einer eigenen, unabhängigen
+// (collectStructureLqLevels in marketStructureAnalysis.ts) statt einer eigenen, unabhängigen
 // H1-Fraktal-Erkennung — Philip explizit: "auf keinen Fall die 1h Candles hochsetzen, das
 // allermeiste ist nur Datenmüll". Eigener describe-Block statt SCENARIOS-Eintrag, weil die
-// H1-Level hier anders (collectH1LqLevels statt detectLiquidityLevels) gebaut werden.
-describe("Trade-Setup-Pipeline mit marketStructureState-H1-Leveln (collectH1LqLevels, seit Chat 2026-07-28)", () => {
+// H1-Level hier anders (collectStructureLqLevels statt detectLiquidityLevels) gebaut werden.
+describe("Trade-Setup-Pipeline mit marketStructureState-H1-Leveln (collectStructureLqLevels, seit Chat 2026-07-28)", () => {
   it("EURUSD M5, 28.07.2026: 32 Tage altes 1h-LQ-Sweep-Pivot (1.13545) speist Path A trotz kurzem M5-Fenster", () => {
     // state-Fixture inline statt eigene JSON-Datei — ein einzelnes structurePivots-Element reicht,
     // um den Bug-Report-Fall (Pivot vom 26.06., erst am 28.07. 12:00 geswept) nachzubilden.
@@ -190,7 +190,7 @@ describe("Trade-Setup-Pipeline mit marketStructureState-H1-Leveln (collectH1LqLe
       ],
       nestedTrend: null,
     };
-    const h1Lows = collectH1LqLevels(state, -1);
+    const h1Lows = collectStructureLqLevels(state, -1);
     const { lows: m5Lows } = detectLiquidityLevels(eurusdM5LongSetup0728, TRADE_SETUP_M5_FRACTAL_PERIOD);
     const setupObs = detectSetupObs(eurusdM5LongSetup0728);
     const params = {
@@ -240,9 +240,9 @@ describe("Trade-Setup-Pipeline mit marketStructureState-H1-Leveln (collectH1LqLe
     };
     // Long (dir=-1): Haupttrend uptrend liefert die Low-Seite; der Nested-downtrend-Kandidat ist
     // die High-Seite (für Short, dir=1), zählt hier also NICHT mit.
-    expect(collectH1LqLevels(state, -1)).toEqual([{ price: 1.2, dir: -1, pivotTime: 200, touched: true, touchedTime: 300, endTime: 300 }]);
-    expect(collectH1LqLevels(state, 1)).toEqual([{ price: 1.3, dir: 1, pivotTime: 400, touched: true, touchedTime: 500, endTime: 500 }]);
-    expect(collectH1LqLevels(null, -1)).toEqual([]);
+    expect(collectStructureLqLevels(state, -1)).toEqual([{ price: 1.2, dir: -1, pivotTime: 200, touched: true, touchedTime: 300, endTime: 300 }]);
+    expect(collectStructureLqLevels(state, 1)).toEqual([{ price: 1.3, dir: 1, pivotTime: 400, touched: true, touchedTime: 500, endTime: 500 }]);
+    expect(collectStructureLqLevels(null, -1)).toEqual([]);
   });
 
   // Bug-Report Philip 2026-09-23 (GBPUSD Setup #4986): structurePivots EINER Trend-Ebene enthält
@@ -258,13 +258,13 @@ describe("Trade-Setup-Pipeline mit marketStructureState-H1-Leveln (collectH1LqLe
         { type: "protected-low", price: 1.33, pivotAt: "x", pivotTime: 200, touched: touched(1.33, 250) },
         { type: "high", price: 1.34, pivotAt: "x", pivotTime: 300, touched: touched(1.34, 350) },
         { type: "sweeped-low", price: 1.32, pivotAt: "x", pivotTime: 400, touched: touched(1.32, 450) },
-        // Seitenneutral benannt -> bleibt drin, siehe Kommentar an collectH1LqLevels.
+        // Seitenneutral benannt -> bleibt drin, siehe Kommentar an collectStructureLqLevels.
         { type: "LQ-sweep", price: 1.36, pivotAt: "x", pivotTime: 500, touched: touched(1.36, 550) },
       ],
       nestedTrend: null,
     };
-    expect(collectH1LqLevels(state, 1).map((l) => l.price)).toEqual([1.35, 1.34, 1.36]);
+    expect(collectStructureLqLevels(state, 1).map((l) => l.price)).toEqual([1.35, 1.34, 1.36]);
     // Gespiegelt: dieselbe Ebene als Long-Quelle (uptrend) darf kein Hoch durchlassen.
-    expect(collectH1LqLevels({ ...state, trend: "uptrend" }, -1).map((l) => l.price)).toEqual([1.33, 1.32, 1.36]);
+    expect(collectStructureLqLevels({ ...state, trend: "uptrend" }, -1).map((l) => l.price)).toEqual([1.33, 1.32, 1.36]);
   });
 });

@@ -4,7 +4,7 @@ import { getObZones, getLiquidityLevels, getSessions, getLatestDailyStructureSta
 // Reine Trend-Mathematik (siehe CLAUDE.md "MCP-Server") — seit dem Split von marketStructureAnalysis.ts
 // (Chat 2026-07-31, Rendering lebt jetzt separat in marketStructureRendering.ts) frei von Browser-
 // Abhängigkeiten und direkt aus dem Frontend-Quellbaum importierbar, kein dritter Algorithmus-Port.
-import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructureState } from "../marketStructureAnalysis.ts";
+import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructureState, deriveTrendReaction } from "../marketStructureAnalysis.ts";
 // M5-Liquidity/M5-OB werden von KEINEM Backend persistiert (poi-watcher speichert liquidity_levels
 // nur 1H, ob_zones nur 1H/4H, siehe CLAUDE.md poi-watcher-Throttling) — Lana bekam sie bisher gar
 // nicht (Bug-Report Philip 2026-08-02: "Lana braucht mehr Daten ... M5 LQ-Levels/M5 OBs genau die
@@ -451,6 +451,22 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // M5-Sweep/OB-Rohdaten ausgelagert (computeM5LiquidityAndObZones oben) — wiederverwendet von
   // get_recent_reactions (recentReactions.ts), das dieselbe Erkennung braucht, aber ohne den restlichen
   // Tages-Export (Tageskerzen/1H-Struktur) — DRY statt einer zweiten M5-Erkennungslogik.
+  // M5-Struktur (PLAN-m5-trend.md): derselbe Algo auf M5, verankert am 1h-Outer-Start (cutoffOuter),
+  // dieselben Perioden wie die 1h-Struktur. Nur Trend + letzte Reaktion, kein structurePivots-Export.
+  const { periodOuter, periodInner, cutoffOuter } = structureResult.window;
+  const m5StructureState = buildMarketStructureState(
+    computeRangesPivots(m5CandlesForDetection, periodOuter, cutoffOuter),
+    computeRangesPivots(m5CandlesForDetection, periodInner, cutoffOuter),
+    periodOuter,
+    periodInner,
+    m5CandlesForDetection,
+    { barSeconds: M5_BAR_SECONDS },
+  );
+  const m5Derived = deriveTrendReaction(m5StructureState);
+  const m5Structure = {
+    trend: m5Derived.trend,
+    reaction: m5Derived.reaction ? { type: m5Derived.reaction.type, price: m5Derived.reaction.price, at: berlinDateTimeStrFor(m5Derived.reaction.time) } : null,
+  };
   const { m5LiquidityLevels, m5ObZonesAll, obZonesReferencePrice } = computeM5LiquidityAndObZones({
     currentTimeSec,
     m5CandlesForDetection,
@@ -565,6 +581,8 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
     structureTrendAge: structureResult.trendAge,
     // Siehe compute1hStructureState oben: der tatsächlich verwendete Cutoff (Outer/Inner-Fenster).
     structureWindow: structureResult.window,
+    // M5-Trend + letzte Reaktion (CHoCH/BOS) seit dem 1h-Outer-Start; reaction=null = keine Reaktion.
+    m5Structure,
     liquidityLevels1h,
     liquidityLevels4h,
     obZones1h,
