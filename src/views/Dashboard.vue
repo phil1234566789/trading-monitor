@@ -301,6 +301,7 @@ const visibleAnnotations = computed(() => (drawingsVisible.value ? annotations.v
 // Chat 2026-07-27 eine echte Vue-Komponente mit festem Platz — der frühere "neben der letzten
 // Kerze"-Positionsmodus (und sein Abstands-Regler) ist entfallen, siehe TradeSetupCockpit.vue.
 const showTradeSetupCockpit = useLocalStorageRef("showTradeSetupCockpit", true);
+const showTradeSetupBewertung = useLocalStorageRef("showTradeSetupBewertung", true);
 // Style-Modal (Farben aller Chart-Indikatoren, siehe StyleModal.vue/chartColors.js) — reiner
 // Öffnen/Schließen-Zustand, NICHT in localStorage (die Farben selbst persistieren bereits über
 // den chartColors-Singleton, das Modal muss nicht offen bleiben).
@@ -1935,6 +1936,9 @@ watch(selectedTradingAccountId, () => {
           <ToggleButton variant="menu" :class="{ active: showTradeSetupCockpit }" @click="showTradeSetupCockpit = !showTradeSetupCockpit">
             TSC
           </ToggleButton>
+          <ToggleButton variant="menu" :class="{ active: showTradeSetupBewertung }" title="Trade-Setup-Bewertung" @click="showTradeSetupBewertung = !showTradeSetupBewertung">
+            TSB
+          </ToggleButton>
         </div>
       </div>
 
@@ -2326,6 +2330,7 @@ watch(selectedTradingAccountId, () => {
     />
 
     <TradeSetupBewertung
+      v-if="showTradeSetupBewertung"
       :instrument="currentSymbol"
       :fvg-pips="tscFvgPips"
     />
