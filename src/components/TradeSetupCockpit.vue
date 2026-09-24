@@ -32,6 +32,8 @@ const props = defineProps({
   nowSec: { type: Number, default: undefined },
   instrument: { type: String, required: true },
   range: { type: Object, default: null },
+  fromJournal: { type: Boolean, default: false },
+  loadError: { type: String, default: "" },
   // Trend-Kette aus dem 1h-Structure-Algo (Chat 2026-08-29, Philip: "der Trend soll rein") — kommt
   // reaktiv von PriceChart.vue über Dashboard.vue's trendChain-computed, siehe computeTrendChain
   // in tradeSetupCockpit.ts für die volle Begründung (KEINE echte 4H/1H/M5-Mehrfach-Timeframe-
@@ -83,6 +85,7 @@ const direction = computed(() => props.range?.direction ?? null);
 // dealing range anlegen nur enablen wenn: mind. 2 Bestätigung, mind. 1 Target, required
 // Invalidierung").
 const transferBlockReason = computed(() => {
+  if (props.fromJournal) return "Diese Dealing Range ist bereits im Journal angelegt.";
   const missing = [];
   if (confirmations.value.length < 2) missing.push("mind. 2 Bestätigungen");
   if (targets.value.length < 1) missing.push("mind. 1 Target");
@@ -178,9 +181,12 @@ const accentStyle = computed(() => {
         <!-- Reset (Chat 2026-08-27, Philip: "icon reicht, brauch den Text nicht, außer als
              Hover-Hint ... rechts neben dem Short-Label") — verwirft die ganze Idee (Range +
              Bestätigungen + Targets), nicht nur die Anzeige, siehe Dashboard.vue: onTscReset. -->
-        <button v-if="range" class="tsc-reset-icon-btn" title="Zurücksetzen" @click="emit('reset')">↺</button>
+        <button v-if="range || fromJournal" class="tsc-reset-icon-btn" :title="fromJournal ? 'Journal-Ansicht schließen' : 'Zurücksetzen'" :aria-label="fromJournal ? 'Journal-Ansicht schließen' : 'Zurücksetzen'" @click="emit('reset')">{{ fromJournal ? "×" : "↺" }}</button>
       </div>
     </div>
+
+    <p v-if="fromJournal">Journal · Dealing Range #{{ range?.id }} · Änderungen werden direkt gespeichert.</p>
+    <p v-if="loadError" role="alert">{{ loadError }}</p>
 
     <!-- Trend-Kette (Chat 2026-08-29, Philip: "der Trend soll rein") — Kontext, kein Bestätigungs-
          Objekt (kein Chart-Klick-Mechanismus, anders als die Sektionen unten), deshalb eigene Zeile

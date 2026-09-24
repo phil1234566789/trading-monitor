@@ -18,7 +18,8 @@ import ToggleButton from "../components/ui/ToggleButton.vue";
 import { selectedTradingAccountId, writableTradingAccountId } from "../tradingAccounts.js";
 import { TIMEFRAMES, barSecondsForTimeframeCi } from "../timeframes.js";
 import { toPips } from "../pipConfig.js";
-import { fetchTrades, fetchDealingRangeCockpit, fetchActiveTscRangeId } from "../trades.js";
+import { fetchTrades } from "../trades.js";
+import { useTscRange } from "../composables/useTscRange.js";
 import {
   fetchTradeSetupForCockpit,
   linkTradeToSetup,
@@ -503,18 +504,17 @@ async function onMeasureDone({ from, to }) {
   await addDrawing(drawing.annotations, drawing.title);
 }
 
-// TSC-Dealing-Range (Chat 2026-08-26) — welche dealing_ranges-Zeile "die aktive TSC-Range" für das
-// aktuelle Instrument ist, kommt direkt aus der DB (fetchActiveTscRangeId: die zuletzt angelegte
-// Range ohne trade_positions), kein Client-Zeiger (Philip 2026-08-27: "wieso nicht gleich CRUD auf
-// die DR?" — zu Recht, ein localStorage-Zeiger war der falsche Reflex für etwas, das sich
-// strukturell aus der DB ableiten lässt). Ein Reload/Symbolwechsel findet die Range also von
-// selbst wieder, ohne dass irgendwo eine ID gemerkt werden muss. direction steht erst fest, sobald
-// die erste Bestätigung ein Sweep oder OB ist (siehe onSelectTarget: tscBootstrapArmed) — bis
-// dahin ist tscRangeId null und die TSC zeigt einen leeren, ungefärbten Zustand.
-const tscRangeId = ref(null);
-const tscRange = ref(null);
-async function refreshTscRange() {
-  tscRange.value = tscRangeId.value != null ? await fetchDealingRangeCockpit(tscRangeId.value) : null;
+const {
+  rangeId: tscRangeId, range: tscRange, fromJournal: tscFromJournal,
+  error: tscLoadError, refresh: refreshTscRange, openJournal: openJournalTscRange,
+  closeJournal: closeJournalTscRange,
+} = useTscRange(currentSymbol);
+watch(tscRange, () => { if (tscFromJournal.value) void refreshTrades(); });
+async function onOpenJournalInTsc(trade) {
+  disarmChartClick();
+  await openJournalTscRange(trade.dealingRangeId, trade.instrument);
+  showTradeSetupCockpit.value = true;
+  // Das Modal bleibt offen: ungespeicherte Positionsfelder dürfen beim DR-Wechsel nicht verloren gehen.
 }
 // FVG-Größe der laufenden Dealing Range für den Bewertungs-Bereich. Sie steckt weder in der Range
 // noch in ihrer OB-Bestätigung (die trägt nur ihre Kanten), sondern nur im erkannten Setup.
@@ -530,15 +530,8 @@ const tscFvgPips = computed(() => {
   const setup = (dbTradeSetups.value ?? []).find((s) => s.dir === dir && s.obStartTime === ob.sourceTime);
   return setup?.obFvg > 0 ? toPips(setup.obFvg) : null;
 });
-async function loadActiveTscRange() {
-  tscRangeId.value = await fetchActiveTscRangeId(currentSymbol.value);
-  await refreshTscRange();
-}
-// immediate: true holt beim Mount (Reload) UND bei jedem Symbolwechsel die aktive Range fürs
-// jeweils aktuelle Instrument nach.
-watch(currentSymbol, loadActiveTscRange, { immediate: true });
-
 function onTscAddConfirmationRequest() {
+  if (tscFromJournal.value && tscRangeId.value == null) return;
   if (tscRangeId.value != null) {
     onAddRangeConfirmationRequest({ dealingRangeId: tscRangeId.value, isTsc: true });
     return;
@@ -665,7 +658,7 @@ function confirmationAnchorTime(c) {
   return c?.touchedTime ?? c?.sourceTime ?? null;
 }
 async function onTscTransferToTrades() {
-  if (tscRangeId.value == null) return;
+  if (tscFromJournal.value || tscRangeId.value == null) return;
   const confirmations = tscRange.value?.confirmations ?? [];
   const obConfirmation = confirmations.find((c) => c.kind === "ob" && confirmationAnchorTime(c) != null);
   const earliestConfirmation = confirmations.reduce((earliest, c) => {
@@ -690,6 +683,11 @@ async function onTscTransferToTrades() {
 // einem Reload/Symbolwechsel einfach wiederfinden, siehe dort). Confirm() wie sonst bei
 // destruktiven Aktionen (TradeEditModal.vue: onDelete).
 async function onTscReset() {
+  disarmChartClick();
+  if (tscFromJournal.value) {
+    await closeJournalTscRange();
+    return;
+  }
   if (tscRangeId.value == null) return;
   if (!confirm("TSC wirklich zurücksetzen? Löscht die Dealing Range inkl. aller Bestätigungen, Targets und — falls schon vorhanden — der Ausführungen im Journal.")) return;
   const ok = await deleteDealingRange(tscRangeId.value);
@@ -2174,6 +2172,7 @@ watch(selectedTradingAccountId, () => {
     :current-symbol="currentSymbol"
     @close="closeTradeEditModal"
     @saved="refreshTrades"
+    @open-in-tsc="onOpenJournalInTsc(editingTrade)"
     @deleted="onTradeDeleted"
     @request-add-target="onAddTargetRequest(editingTrade)"
     @request-add-confirmation="onAddConfirmationRequest(editingTrade)"
@@ -2292,6 +2291,8 @@ watch(selectedTradingAccountId, () => {
       :instrument="currentSymbol"
       :now-sec="replayUntil"
       :range="tscRange"
+      :from-journal="tscFromJournal"
+      :load-error="tscLoadError"
       :trend-chain="trendChain"
       :m5-trend="m5Trend"
       :armed-section="armedTscSection"

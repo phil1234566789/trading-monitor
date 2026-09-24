@@ -39,6 +39,7 @@ const props = defineProps({
 // request-link (Setup-Verknüpfung) ist raus: das automatische Setup-Klick-zu-Bestätigungen
 // (siehe Dashboard.vue: onSelectSetupConfirmations) macht die manuelle Verknüpfung überflüssig.
 const emit = defineEmits([
+  "open-in-tsc",
   "close",
   "saved",
   "deleted",
@@ -303,6 +304,7 @@ function confirmationLabel(confirmation) {
     <div class="tem-group tem-group-range">
       <h3 class="tem-group-title">
         📐 Dealing Range #{{ trade.dealingRangeId }}
+        <button type="button" class="tem-favorite-btn" @click="emit('open-in-tsc')">Im TSC öffnen</button>
         <button
           class="tem-favorite-btn"
           :class="{ active: isFavorite }"
