@@ -357,30 +357,55 @@ fuer die Phasenbildung fragwuerdig ist — vor einer Entscheidung darauf nachpru
 Laeufe existiert im Repo bereits das Muster `analysis/dr-reichweite/` (Script + Ergebnis-Dateien),
 das ist der richtige Ort, nicht Produktionscode.
 
-## ENTSCHIEDEN: Chart-Darstellung = volle Paritaet zum 1h
+## ENTSCHIEDEN: Chart-Darstellung = BEIDES, zwei neue Toggles
 
-Philip am 24.09.2026, aus drei vorgelegten Varianten. Verworfen: die schlanke Variante
-("nur Range + Trend + letzte Reaktion", ~3 Objekte) und Trendphasen-Hintergrundbaender.
-Gewaehlt: **alle Elemente, die der 1h heute zeichnet, auch fuer M5 — nur in eigener Farbe.**
+Philip am 24.09.2026, aus drei vorgelegten Varianten — er will zwei davon:
 
-Er nimmt die hoehere Objektdichte bewusst in Kauf (~98 structurePivots ueber 5 Tage bei P5/P2
-gegen ~8 beim 1h ueber alle Ebenen) und entscheidet beim Testen selbst, was er wegtoggelt.
-Kein vorauseilendes Ausduennen einbauen.
+- **(A) M5-Strukturlinien**, volle Paritaet zum 1h-Set, nur eigene Farbe. Die schlanke Variante
+  ("nur Range + Trend + letzte Reaktion", ~3 Objekte) ist verworfen.
+- **(B) M5-Trendphasen-Hintergrund**, rot/gruene Baender: *"das mit dem wechselnden Hintergrund rot
+  und gruen finde ich sehr geil ... Ich wuerde gern beides sehen."*
 
-Drei Konsequenzen, die dadurch zwingend werden (Details im Task):
+Je ein eigener Toggle, beide unabhaengig vom 1h-Toggle. Der Toggle ist fuer Philip keine
+Bequemlichkeit, sondern seine Methode zur Herkunftsklaerung: *"wenn ich wissen will woher die linie
+kommt, nutze ich den toggle, um die eine struktur auszublenden und gucken was uebrig bleibt."*
 
-1. **Label-Texte**: `"1h protected high"/"1h protected low"` ist an zwei Stellen hartcodiert
-   (`marketStructureRendering.ts:539` und `:714`) — mit M5 waeren es vier. Timeframe muss
-   Parameter werden, sonst stehen zwei identisch benannte Objektsaetze im Chart und genau der
-   Zweck der Uebung faellt weg. `formatLsLabel` (`src/liquidity.js:294`) nennt gar keinen
-   Timeframe — dort pruefen, ob M5- und 1h-Sweeps sonst unterscheidbar bleiben.
-2. **`collectH1LqLevels`** (`:391`) ist H1-benannt und haengt am tradeSetup-Pfad.
-   Generalisieren statt zweite Funktion, dann greift die Rename-Consistency-Regel.
-3. **Dateigroesse**: `marketStructureRendering.ts` hat 849 Zeilen, volle Paritaet treibt sie
-   ueber die ~1000er-Grenze. M5-Zeichnung in eine eigene Datei, Gemeinsames parametrisieren,
-   nichts kopieren.
+### Zur Unterscheidbarkeit: bewusst kein Thema
 
-Unabhaengig davon gesetzt (Philip am 23.09.): An/Aus-Toggle unter "Structure"
-(`src/views/Dashboard.vue:1928`) und Chart-Style-Tokens in `src/chartColors.js`
-(Vorbild `rangesMarker`/`rangesMarker2`, :129/:133) — woertlich: "und chartstyle hast du ja
-bisher auch noch nie vergessen."
+M5- und 1h-Objekte muessen im Chart **nicht** textlich unterscheidbar sein. Philip: *"nicht schlimm.
+fachlich ist es dasselbe."* Damit ist die offene Frage zum `formatLsLabel`-Sweep-Label erledigt —
+keine Extraarbeit dafuer. Das hartcodierte `"1h protected low"` muss trotzdem angefasst werden,
+weil das `"1h"` bei einem M5-Objekt einfach falsch waere; einfachste konsistente Loesung ist,
+den Timeframe aus dem Label ganz zu streichen.
+
+### Refactoring ist freigegeben
+
+*"das was du refactoren musst, um 1h + M5 shared code verwenden zu koennen musst du natuerlich
+refactoren."* Betrifft: Label-Text an eine Stelle ziehen (heute an zwei), `collectH1LqLevels`
+generalisieren, Style-Tokens parametrisieren.
+
+### Dateigroesse: frueherer Fehlschluss, zurueckgenommen
+
+Hier stand einmal "M5-Zeichnung in eine EIGENE Datei" neben "nichts kopieren". Philip hat den
+Widerspruch zu Recht angesprochen. Nachgerechnet: die Render-Datei benutzt nur **7 verschiedene
+Style-Tokens an 20 Stellen** (`rangeHigh`, `rangeLow`, `rangeProtectedLow`,
+`rangeLqSweep`, `rangeBreakOfStructure`, `rangeChoch`, `rangeFib`). Werden die
+parametrisiert, ist der M5-Fall ein **zweiter Aufruf derselben Funktion** — grob 30 Zeilen mehr,
+also ~880 von ~1000. Keine neue Datei fuer die Strukturlinien. Waechst die Datei beim Umbau deutlich,
+wurde kopiert statt parametrisiert.
+
+### Die Baender sind der eigentliche Neubau
+
+Zeichnen ist das kleinere Problem: `src/sessions.js` hat die Technik schon
+(`SessionBandRenderer` :219, `SessionBandPaneView` :282, `SessionBandPrimitive` :325).
+
+Der Aufwand liegt in den **Daten**: `buildMarketStructureState` gibt nur den Endzustand zurueck,
+keine Historie der Trendwechsel. Zuerst pruefen, ob `state.closedRanges` reicht (existiert, wird
+aber nur bei Promotion/Invalidierung gefuellt); sonst der Merge-Schleife ein optionales Protokoll
+mitgeben. Die Schleife nachzubauen ist ausgeschlossen — genau das war der Analyse-Wegwerfcode und
+waere eine dritte Kopie der Verarbeitungsreihenfolge.
+
+Erwartung fuer die Baender, damit es niemand fuer einen Bug haelt: bei P5/P2 sind das 14 hauchduenne
+gruene Striche (UP-Phasen von 12-40 Minuten) zwischen drei breiten roten Flaechen; bei P20/P10 ein
+durchgehend rotes Band. Kein Mindestbreiten-Filter, kein Glaetten — Philip will genau das sehen, um
+die Perioden zu beurteilen.
