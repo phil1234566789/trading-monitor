@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "src/priceChartObZones.js": {
-    "mtime": 1789247644.6991735,
-    "seen": 1789247806.7440746,
-    "ast_hash": "68818a8bebf4f127142861bc380cdc31",
+    "mtime": 1790281934.6198773,
+    "seen": 1790281978.327938,
+    "ast_hash": "b8dfb2e2d8b4c7e3931029dca0b2f649",
     "semantic_hash": ""
   },
   "src/range.type.ts": {
@@ -1998,9 +1998,9 @@
     "semantic_hash": ""
   },
   "test/priceChartObZones.test.js": {
-    "mtime": 1789247722.1542785,
-    "seen": 1789247806.7668939,
-    "ast_hash": "a938f1321de4f73470bceb7c7543cfa3",
+    "mtime": 1790281934.6208732,
+    "seen": 1790281978.3719575,
+    "ast_hash": "f882fdad7ba929909a1aca99ac12e1cc",
     "semantic_hash": ""
   },
   "test/resolveStructureStartTime.test.js": {
@@ -3564,9 +3564,9 @@
     "semantic_hash": ""
   },
   "src/components/GoldH1Preview.vue": {
-    "mtime": 1790281434.556836,
-    "seen": 1790281524.2686417,
-    "ast_hash": "1c707dee2effc6a7c2b0a17a1a543218",
+    "mtime": 1790281976.4290712,
+    "seen": 1790281978.3082292,
+    "ast_hash": "0e96783535dcaa35771d2df1788cb899",
     "semantic_hash": ""
   },
   "src/composables/useTscRange.js": {
@@ -3576,9 +3576,9 @@
     "semantic_hash": ""
   },
   "src/goldH1Preview.js": {
-    "mtime": 1790281381.5428226,
-    "seen": 1790281524.2796392,
-    "ast_hash": "6beda4c06d1c81911c870c69bfa957b9",
+    "mtime": 1790281975.0621326,
+    "seen": 1790281978.321735,
+    "ast_hash": "9df2776d6f002ea98fd04780df9db380",
     "semantic_hash": ""
   },
   "test/tscJournalMode.test.js": {
@@ -3594,9 +3594,9 @@
     "semantic_hash": ""
   },
   "test/goldH1Preview.test.js": {
-    "mtime": 1790278751.2029033,
-    "seen": 1790278858.0871255,
-    "ast_hash": "8e56c583d6d7cc391e06151a2034a79c",
+    "mtime": 1790281977.8808641,
+    "seen": 1790281978.3639872,
+    "ast_hash": "e5f3272c907b34f9dc4020ace2f64238",
     "semantic_hash": ""
   },
   "supabase/migrations/20260924214000_fxcm_gold_h1_preview.sql": {
@@ -3639,6 +3639,12 @@
     "mtime": 1790281433.3269477,
     "seen": 1790281524.31475,
     "ast_hash": "bc14140f659cc064cd0e1fa78db7e566",
+    "semantic_hash": ""
+  },
+  "test/journalHtfObHighlight.test.js": {
+    "mtime": 1790281899.0421503,
+    "seen": 1790281978.3639872,
+    "ast_hash": "dae1a77aacb3f1ce7c415812c2919734",
     "semantic_hash": ""
   }
 }
