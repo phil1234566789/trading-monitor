@@ -445,3 +445,14 @@ wurde nicht erkannt: der Nested-Tracker startete nur aus P5-Pullbacks. Entscheid
 - Band wechselt ab Algo-Bestätigung (nicht rückdatiert) auf eine Vorstufen-Farbe
   (`m5TrendPhaseUpPre`/`DownPre`), voll erst bei der Promotion (Haupttrend kippt).
 Ergebnis 09.09.: Anker 1,35576 @ 09:30, bestätigt mit dem 10:10-Pivot, Band hellrot ab 10:20.
+
+## Voll vs. Vorstufe neu definiert (24.09.2026 spät)
+
+"Voll erst bei Promotion" machte bei dreifach verschachtelter M5-Struktur fast alles zur Vorstufe
+(09.09.: 92 % der Zeit). Neue Regel (Philip): voll = Haupttrend ODER ein CHoCH-Trend, der sich
+einmal fortgesetzt hat (tieferes Hoch + Bruch des Tiefs, d.h. protected-Punkt nach der ersten
+Bestätigung). BOS auf diesen protected-Punkt schaltet zurück auf Vorstufe. Der BOS-Zeitpunkt wird
+in trendPhases.js selbst as-of geprüft, weil markLqSweeps bewusst bis zur letzten Kerze schaut
+(Live-Endzustand) und die Phasen-Historie sonst den späteren Bruch vorwegnimmt.
+09.09.: Vorstufe ab 09:50 (CHoCH, Algo 10:20), voll ab 12:10 (LH 1,35481 + LL 1,35298),
+Vorstufe ab 13:40 (BOS). Anteil voll: 24 % statt 8 %.
