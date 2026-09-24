@@ -1063,11 +1063,13 @@ function refreshInvalidationLinesInternal() {
         startTime: t.entryTime,
         endTime: exitOrNow,
         stillOpen: t.exitTime == null,
+        hasInvalidationObject: t.invalidationItem != null,
       });
     } else {
       group.startTime = Math.min(group.startTime, t.entryTime);
       group.endTime = Math.max(group.endTime, exitOrNow);
       if (t.exitTime == null) group.stillOpen = true;
+      if (t.invalidationItem != null) group.hasInvalidationObject = true;
     }
   }
 
@@ -1080,7 +1082,8 @@ function refreshInvalidationLinesInternal() {
       {
         color: cssColor("tradeInvalidation"),
         lineWidth: lineWidth("tradeInvalidation"),
-        label: `🚫 Invalidierung ${fmtPrice(group.invalidation, precision)}`,
+        // Das verknüpfte Chart-Objekt trägt bereits 🚫; nur reine Preis-Invalidierungen brauchen es hier.
+        label: `${group.hasInvalidationObject ? "" : `${CATEGORY_ICON.invalidation} `}Invalidierung ${fmtPrice(group.invalidation, precision)}`,
         labelSide: group.direction === "short" ? "end-below" : "end-above",
       },
       candles,
