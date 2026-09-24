@@ -97,7 +97,7 @@ export const TARGET_TIER_WIDTH_RATIO = { minor: 1, medium: 1.6, major: 2.2 };
 // Zeichenpfad dargestellt (Philip 22.09.2026), deshalb steht sie hier gleichberechtigt daneben.
 // 💀 statt ⚠️ bei anti_confluence: der ⚠️-Glyph ist ein Farb-Emoji mit fester Eigenfarbe, die
 // canvas fillStyle nicht überschreiben kann.
-export const CATEGORY_ICON = { confirmation: "✔", confluence: "💡", anti_confluence: "💀", invalidation: "🚫" };
+export const CATEGORY_ICON = { confirmation: "✔", confluence: "💡", anti_confluence: "💀", target: "🎯", invalidation: "🚫" };
 export const CATEGORY_COLOR_KEY = {
   confirmation: "tradeConfirmation",
   confluence: "tradeConfirmation",

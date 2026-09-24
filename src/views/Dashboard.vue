@@ -1214,19 +1214,20 @@ const tradeLinkedLiquidityLevels = computed(() => {
   return [...byKey.values()];
 });
 
-// Nur die BESTÄTIGUNGEN, nicht die Targets (Philip 2026-09-20: "bei verknüpften LQ-Sweep
-// Bestätigungen das Label immer angezeigt") — die Güte des Sweeps ist das entscheidende Merkmal
-// am Setup, ein Target ist dagegen nur ein Zielpunkt. Siehe liquidity.js: levelOptions.
-const confirmationLiquidityKeys = computed(() => {
-  const keys = new Set();
+// Ein Level kann mehrere Journal-Rollen haben; keine davon darf beim Zusammenführen verschwinden.
+const journalLiquidityCategories = computed(() => {
+  const categories = new Map();
   for (const t of rangeLikeEntriesForChart.value) {
-    for (const c of t.confirmations) {
+    const items = [...t.confirmations, ...t.targets.map((target) => ({ ...target, category: "target" }))];
+    for (const c of items) {
       if (c.kind === "pivot" && c.liquidityLevel) {
-        keys.add(liquidityLevelNaturalKey(c.liquidityLevel.dir, c.liquidityLevel.pivotTime));
+        const key = liquidityLevelNaturalKey(c.liquidityLevel.dir, c.liquidityLevel.pivotTime);
+        if (!categories.has(key)) categories.set(key, new Set());
+        categories.get(key).add(c.category ?? "confirmation");
       }
     }
   }
-  return keys;
+  return categories;
 });
 // Analog dazu die Level, die die Invalidierung einer Range SIND — sie tragen im Chart 🚫 und die
 // Invalidierungsfarbe statt ihrer normalen LQ-Farbe (siehe liquidity.js: levelOptions).
@@ -2239,7 +2240,7 @@ watch(selectedTradingAccountId, () => {
     :show-trade-setups-short="showTradeSetupsShort"
     :show-r-scale="showRScale"
     :show-pip-scale="showPipScale"
-    :confirmation-liquidity-keys="confirmationLiquidityKeys"
+    :journal-liquidity-categories="journalLiquidityCategories"
     :invalidation-liquidity-keys="invalidationLiquidityKeys"
     :hovered-invalidation-range-id="hoveredInvalidationRangeId"
     :ranges-period="rangesPeriod"

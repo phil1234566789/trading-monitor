@@ -71,7 +71,7 @@ export function usePriceChartLiquidity() {
   // candles = bereits clipReplay-gefiltertes allCandles, allCandles = das ungefilterte Original
   // (nur für currentPriceEstimate gebraucht, siehe computeHtfLiquidityLevels).
   function refresh(candles, allCandles, ctx) {
-    const { showLiquidity, pinnedLiquidityLevels, pinLiquidityLevelKeys, hoveredPinLiquidityLevelKey, confirmationLiquidityKeys, invalidationLiquidityKeys, symbol } = ctx;
+    const { showLiquidity, pinnedLiquidityLevels, pinLiquidityLevelKeys, hoveredPinLiquidityLevelKey, journalLiquidityCategories, invalidationLiquidityKeys, symbol } = ctx;
     if (!showLiquidity) {
       // Kein db1h hier (mehr) — die relevanten 1H-Level sind seit 2026-08-23 an showLiquidity
       // gekoppelt (s.u.), bei showLiquidity=false bleiben nur Pins sichtbar, wie vor Punkt 12/13.
@@ -81,7 +81,7 @@ export function usePriceChartLiquidity() {
         nowSec: ctx.replayUntil ?? Math.floor(Date.now() / 1000),
         pinKeys: pinLiquidityLevelKeys,
         hoveredKey: hoveredPinLiquidityLevelKey,
-        confirmationKeys: confirmationLiquidityKeys,
+        journalCategories: journalLiquidityCategories,
         invalidationKeys: invalidationLiquidityKeys,
       });
       liquidityMetadata.value = null;
@@ -119,7 +119,7 @@ export function usePriceChartLiquidity() {
       nowSec,
       pinKeys: pinLiquidityLevelKeys,
       hoveredKey: hoveredPinLiquidityLevelKey,
-      confirmationKeys: confirmationLiquidityKeys,
+      journalCategories: journalLiquidityCategories,
       invalidationKeys: invalidationLiquidityKeys,
     });
     // Chat 2026-08-26, Philip: "kontext"-Feld fürs Debug-Metadaten-Panel (".debug/metadata.json",

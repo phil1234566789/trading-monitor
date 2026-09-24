@@ -9,6 +9,7 @@ import { lineWidth } from "./chartLineWidths.js";
 import { canShowLabels } from "./chartZoom.js";
 import { classifyAge } from "./ageTier";
 import { drawIconLabel } from "./chartIconLabel.js";
+import { CATEGORY_ICON } from "./priceChartConstants.js";
 // Reine Fraktal-Erkennung seit Chat 2026-07-31 nach liquidityDetection.js ausgelagert (dort auch
 // die Begründung) — hier nur re-exportiert, damit sich an der öffentlichen API dieser Datei nichts
 // ändert (PriceChart.vue importiert weiterhin von hier).
@@ -374,13 +375,8 @@ function liquidityStyleTimeframe(rawTimeframe) {
 // bei einem Low DARÜBER (Label drunter). Richtet sich nach lvl.dir, nicht nach touched — ein
 // gesweeptes Level bleibt geometrisch derselbe Pivot (nur die Farbe wechselt auf liquiditySweep*,
 // siehe base/key unten; der Labeltext selbst kennt touched seit der zweiten Runde nicht mehr).
-// isConfirmation (Philip 2026-09-20): ein Level, das als LQ-Sweep-Bestaetigung an einer Dealing
-// Range haengt, traegt sein Label IMMER -- auch als M5-Zeile. Genau daran haperte es: ein 6 Tage
-// altes NY-High landet als timeframe="5M" in liquidity_levels, wenn es im M5-Chart angeklickt
-// wurde, und fiel damit unter die "M5 nur im Debug"-Regel, obwohl die Qualitaet des Sweeps die
-// wichtigste Information am Setup ist. Der Labeltext ist derselbe wie bei einem HTF-Level --
-// bewusst KEINE eigene Kurzform, damit dasselbe Objekt nicht je nach Timeframe anders aussieht.
-function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin, isConfirmation, isInvalidation } = {}) {
+// Journal-Level tragen ihre Rollen auch ohne Debug-Labels; das gilt ebenso für M5.
+function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin, isInvalidation, journalCategories } = {}) {
   const tfCategory = liquidityStyleTimeframe(lvl.timeframe);
   const isHtf = tfCategory !== "M5";
   const base = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
@@ -391,10 +387,15 @@ function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isS
   // geloggten Trade (PriceChart.vue: refreshInvalidationLinesInternal).
   const color = cssColor(isInvalidation ? "tradeInvalidation" : key);
   const baseLabel =
-    debugPrices || isHtf || isConfirmation || isInvalidation
+    debugPrices || isHtf || isInvalidation || journalCategories?.size
       ? formatLiquidityLevelLabel(lvl, { bonus: lvl.bonus, nowSec, formatPrice, includePrice: debugPrices })
       : null;
-  const label = isInvalidation ? `🚫 ${baseLabel ?? ""}`.trim() : baseLabel;
+  // Feste Reihenfolge und ein Symbol je Rolle, auch bei mehreren verknüpften Trades.
+  const icons = Object.entries(CATEGORY_ICON)
+    .filter(([category]) => journalCategories?.has(category) || (category === "invalidation" && isInvalidation))
+    .map(([, icon]) => icon)
+    .join(" ");
+  const label = icons ? `${icons} ${baseLabel ?? ""}`.trim() : baseLabel;
   return {
     color,
     lineWidth: lineWidth(isInvalidation ? "tradeInvalidation" : key),
@@ -427,9 +428,7 @@ export function liquidityLevelNaturalKey(dir, pivotTime) {
 // (Chat 2026-08-18, optional): EIN liquidityLevelNaturalKey-String, der zusätzlich per
 // Auswahl-Halo hervorgehoben wird (PinPanel.vue-Zeilen-Hover, siehe Dashboard.vue:
 // hoveredPinLiquidityLevelKey).
-// `confirmationKeys` (Philip 2026-09-20, analog zu pinKeys): liquidityLevelNaturalKey-Strings der
-// Level, die als LQ-Sweep-Bestaetigung an einer Dealing Range haengen -- die bekommen ihr Label
-// unabhaengig vom Debug-Toggle, siehe levelOptions.
+// `journalCategories` erhält alle Rollen je Natural Key, statt verknüpfte Level doppelt zu zeichnen.
 // `invalidationKeys` (Philip 22.09.2026, analog dazu): die Level, die die Invalidierung einer
 // Dealing Range SIND -- Label immer sichtbar, plus 🚫 und Invalidierungsfarbe, siehe levelOptions.
 export function renderLiquidityLevels(
@@ -437,7 +436,7 @@ export function renderLiquidityLevels(
   levels,
   existingPrimitives,
   candles,
-  { debugPrices, formatPrice, nowSec, pinKeys, hoveredKey, confirmationKeys, invalidationKeys } = {},
+  { debugPrices, formatPrice, nowSec, pinKeys, hoveredKey, invalidationKeys, journalCategories } = {},
 ) {
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
@@ -446,11 +445,10 @@ export function renderLiquidityLevels(
     const key = liquidityLevelNaturalKey(lvl.dir, lvl.pivotTime);
     const inPinContext = pinKeys?.has(key) ?? false;
     const isSelectedPin = hoveredKey != null && hoveredKey === key;
-    const isConfirmation = confirmationKeys?.has(key) ?? false;
     const isInvalidation = invalidationKeys?.has(key) ?? false;
     const primitive = new LiquidityLinePrimitive(
       lvl,
-      levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin, isConfirmation, isInvalidation }),
+      levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isSelectedPin, isInvalidation, journalCategories: journalCategories?.get(key) }),
       candles,
     );
     series.attachPrimitive(primitive);

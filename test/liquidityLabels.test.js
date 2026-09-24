@@ -3,12 +3,25 @@
 // wollte identischen Label-Text ("Major LS 1,13545 (22d 19h)"), damit sich beide beim
 // Überlappen sauber lesen lassen statt zwei leicht unterschiedliche Strings übereinander.
 import { describe, expect, it } from "vitest";
-import { formatLsLabel, bullBearLabelSide, formatLiquidityLevelLabel } from "../src/liquidity.js";
+import { formatLsLabel, bullBearLabelSide, formatLiquidityLevelLabel, renderLiquidityLevels, liquidityLevelNaturalKey } from "../src/liquidity.js";
 
 // Tue 28.07.2026 12:00 UTC als fixer "jetzt"-Anker — Pivot-Zeitpunkte unten bewusst so gewählt,
 // dass keine Wochenend-Arithmetik (businessSecondsBetween lässt Sa/So raus) die erwarteten Werte
 // verkompliziert.
 const NOW = Date.UTC(2026, 6, 28, 12, 0, 0) / 1000;
+
+it("zeichnet alle Journal-Rollen am selben M5-Level auch ohne Debug", () => {
+  const level = { price: 1.2, dir: 1, timeframe: "5M", pivotTime: NOW - 3600, endTime: NOW };
+  const key = liquidityLevelNaturalKey(level.dir, level.pivotTime);
+  const primitives = [];
+  renderLiquidityLevels({ attachPrimitive() {}, detachPrimitive() {} }, [level], primitives, [], {
+    nowSec: NOW,
+    journalCategories: new Map([[key, new Set(["target", "confluence", "confirmation", "anti_confluence"])]]),
+    invalidationKeys: new Set([key]),
+  });
+  expect(primitives).toHaveLength(1);
+  expect(primitives[0]._options.label).toBe("✔ 💡 💀 🎯 🚫 (1h)");
+});
 
 describe("formatLsLabel", () => {
   it("minor (< 1 Geschäftstag): kein Tier-Präfix, aus Platzgründen (Chat 2026-07-28)", () => {

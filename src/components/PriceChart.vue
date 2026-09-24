@@ -162,11 +162,8 @@ const props = defineProps({
   // Zeile) UND kind='m5_liquidity_level' (Nicht-1h-Snapshot) ab — Dashboard.vue mischt beide je
   // nach aktuellem Timeframe in dieselbe Menge, da hier immer nur EIN Timeframe sichtbar ist.
   pinLiquidityLevelKeys: { type: Set, default: () => new Set() },
-  // Liquiditäts-Level, die als LQ-Sweep-Bestätigung an einer Dealing Range hängen — dieselben
-  // liquidityLevelNaturalKey-Strings wie oben. Sie tragen ihr Label unabhängig vom Debug-Toggle
-  // (siehe liquidity.js: levelOptions), weil ein als Bestätigung verknüpftes Level sonst
-  // unbeschriftet blieb, sobald es als M5-Zeile in liquidity_levels steht.
-  confirmationLiquidityKeys: { type: Set, default: () => new Set() },
+  // Journal-Rollen je LQ-Natural-Key: auch M5-Level brauchen ohne Debug ein erkennbares Symbol.
+  journalLiquidityCategories: { type: Map, default: () => new Map() },
   // Die Level, die die Invalidierung einer Dealing Range SIND (Philip 22.09.2026) — dieselben
   // liquidityLevelNaturalKey-Strings, tragen im Chart 🚫 + Invalidierungsfarbe, siehe liquidity.js.
   invalidationLiquidityKeys: { type: Set, default: () => new Set() },
@@ -834,7 +831,7 @@ function refreshTradeTargetLinksInternal() {
   for (const t of tradeLikeEntriesForCandles(candles)) {
     for (const target of t.targets ?? []) {
       if (target.sourceTime == null) continue;
-      const label = `🎯 ${targetKindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`;
+      const label = `${CATEGORY_ICON.target} ${targetKindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`;
       // Auswahl-Halo (Chat 2026-08-30, Feature-Wunsch Philip, analog zu
       // refreshTradeConfirmationLinksInternal) — EINMAL pro Target berechnet, für beide
       // Zeichenpfade unten (OB-Box/generische Linie) wiederverwendet. Kein Pin-Panel-Ursprung wie
@@ -1333,7 +1330,7 @@ function refreshLiquidityInternal() {
     // Target-/Anti-Confluence-Picker-Hover (siehe oben) laufen über denselben Pin-Halo-Highlight-
     // Mechanismus wie ein gehoverter Pin — eigenständige Zeichnung wäre dieselbe Linie ein zweites Mal.
     hoveredPinLiquidityLevelKey: props.hoveredPinLiquidityLevelKey ?? targetPickerHoveredLiquidityKey.value ?? antiConfluencePickerHoveredLiquidityKey.value,
-    confirmationLiquidityKeys: props.confirmationLiquidityKeys,
+    journalLiquidityCategories: props.journalLiquidityCategories,
     invalidationLiquidityKeys: props.invalidationLiquidityKeys,
     showSweptLiquidity: props.showSweptLiquidity,
     dbLiquidityLevelsHtf: props.dbLiquidityLevelsHtf,
@@ -2160,9 +2157,9 @@ watch(() => props.pinObZoneKeys, refreshPoiZonesInternal);
 watch(() => props.pinTradeSetupIds, refreshTradeSetupLinksInternal);
 watch(() => props.pinTradeConfirmationIds, refreshTradeConfirmationLinksInternal);
 watch(() => props.pinLiquidityLevelKeys, refreshLiquidityInternal);
-// Verknüpfen/Lösen einer LQ-Sweep-Bestätigung ändert nur das LABEL des Levels, nicht die
+// Verknüpfen/Lösen einer Journal-Rolle ändert nur das LABEL des Levels, nicht die
 // Level-Menge selbst — ohne diesen Watch bliebe es bis zum nächsten Refresh unbeschriftet.
-watch(() => props.confirmationLiquidityKeys, refreshLiquidityInternal);
+watch(() => props.journalLiquidityCategories, refreshLiquidityInternal);
 watch(() => props.invalidationLiquidityKeys, refreshLiquidityInternal);
 watch(() => props.pinRsiDivergenceKeys, refreshRsiDivergenceInternal);
 // Pin-Panel-Hover (Chat 2026-08-18) — dieselben Refresh-Funktionen wie die dauerhaften pin*Keys/
