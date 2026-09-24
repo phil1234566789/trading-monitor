@@ -63,7 +63,8 @@ export function usePriceChartMarketStructure() {
   let m5TrendPhasePrimitives = [];
   let outerCutoff = null; // Start des 1h-Outer-Trends = Anker der M5-Struktur, siehe refreshM5Structure
   let m5ComputedKey = null;
-  let m5Computed = { state: null, phases: [] };
+  let m5Computed = { state: null, phases: [], pivotsOuter: null, pivotsInner: null };
+  let m5MarkerPrimitives = [];
 
   const marketStructureState = ref(null);
   const rangesMetadata = ref(null); // Liste der erkannten H1-Periode-5-Pivots fürs Ranges-Metadaten-Panel
@@ -180,7 +181,7 @@ export function usePriceChartMarketStructure() {
   // die Pivot-Suche einfach bei der ältesten geladenen Kerze — bewusst KEIN Extra-Fetch (jeder
   // cTrader-Fetch ist ein frischer TLS-Connect). Läuft unabhängig von den Toggles, weil das TSC
   // den Trend immer braucht; die Toggles steuern nur das Zeichnen.
-  function refreshM5Structure({ candles, m5CandlesClipped, symbol, replayUntil, showM5Structure, showM5TrendPhases, m5Period, m5Period2 }) {
+  function refreshM5Structure({ candles, m5CandlesClipped, symbol, replayUntil, showM5Structure, showM5TrendPhases, showLiquidityDebug, m5Period, m5Period2 }) {
     // Memo: bei P5/P2 über ~12 Tage ~150 ms — refreshChart() läuft aber auch bei jedem Style-Regler-
     // Event, dort soll nur neu gezeichnet, nicht neu gerechnet werden.
     const key = `${m5CandlesClipped.length}:${m5CandlesClipped.at(-1)?.time}:${outerCutoff}:${m5Period}:${m5Period2}`;
@@ -189,10 +190,31 @@ export function usePriceChartMarketStructure() {
       const ready = outerCutoff != null && m5CandlesClipped.length > 0;
       const pivotsOuter = ready ? computeRangesPivotsPure(m5CandlesClipped, m5Period, outerCutoff, fmtDateTime) : null;
       const pivotsInner = ready ? computeRangesPivotsPure(m5CandlesClipped, m5Period2, outerCutoff, fmtDateTime) : null;
-      m5Computed = buildStructureWithPhases(pivotsOuter, pivotsInner, m5Period, m5Period2, m5CandlesClipped, barSecondsFor("5m"));
+      m5Computed = {
+        ...buildStructureWithPhases(pivotsOuter, pivotsInner, m5Period, m5Period2, m5CandlesClipped, barSecondsFor("5m")),
+        pivotsOuter,
+        pivotsInner,
+      };
       m5Trend.value = deriveTrendReaction(m5Computed.state);
     }
-    const { state, phases } = m5Computed;
+    const { state, phases, pivotsOuter, pivotsInner } = m5Computed;
+    // Roh-Pivots (Periode Outer/Inner) als Debug-Punkte, wie refreshRangesMarkers für 1h — damit
+    // Philip die Trendwechsel gegen die Pivots nachvollziehen kann. Dieselben Marker-Farben wie 1h:
+    // Herkunft klärt der Toggle (M5-Struktur/-Trendphasen an, 1h-Structure aus).
+    const showMarkers = showLiquidityDebug && (showM5Structure || showM5TrendPhases) && (pivotsOuter || pivotsInner);
+    const precision = pricePrecisionForInstrument(symbol);
+    renderPivotMarkers(
+      candleSeries,
+      showMarkers
+        ? [
+            ...(pivotsOuter ? [{ points: pivotsOuter, color: cssColor("rangesMarker") }] : []),
+            ...(pivotsInner ? [{ points: pivotsInner, color: cssColor("rangesMarker2"), dotRadius: 1.5 }] : []),
+          ]
+        : [],
+      m5MarkerPrimitives,
+      candles,
+      { showLabels: true, formatPrice: (price) => fmtPrice(price, precision) },
+    );
     renderMarketStructureAnalysis(candleSeries, showM5Structure ? state : null, m5StructurePrimitives, candles, {
       ...structureRenderOptions(candles, symbol, replayUntil),
       styleKey: (key) => M5_STRUCTURE_STYLE_KEYS[key],

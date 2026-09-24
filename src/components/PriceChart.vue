@@ -1435,6 +1435,7 @@ function refreshM5StructureInternal() {
     replayUntil: props.replayUntil,
     showM5Structure: props.showM5Structure,
     showM5TrendPhases: props.showM5TrendPhases,
+    showLiquidityDebug: props.showLiquidityDebug,
     m5Period: props.m5StructurePeriod,
     m5Period2: props.m5Structure2Period,
   });
@@ -2196,6 +2197,7 @@ watch(() => props.showSweptLiquidity, refreshLiquidityInternal);
 watch(() => props.showLiquidityDebug, () => {
   refreshLiquidityInternal();
   refreshRangesMarkersInternal();
+  refreshM5StructureInternal();
   renderTradeSetupsInternal();
   refreshTradeMarkersInternal();
 });
