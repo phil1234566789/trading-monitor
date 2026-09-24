@@ -330,14 +330,15 @@ export function bullBearLabelSide(bearish) {
 // nach dem Pivot passierte) — dieselbe Regel wie tradeSetupCockpit.ts seit 2026-07-27, jetzt über
 // ageReferenceTime (chartTimeUtils.js) an EINER Stelle statt zweimal parallel gebaut; ageSuffix/
 // formatLsLabel oben nutzen dieselbe Funktion.
-export function formatLiquidityLevelLabel(lvl, { bonus, nowSec, formatPrice, includePrice } = {}) {
+export function formatLiquidityLevelLabel(lvl, { bonus, nowSec, formatPrice, includePrice, includeAge = true } = {}) {
   const ageEndSec = ageReferenceTime(lvl.touchedTime, nowSec);
   const tier = lvl.pivotTime != null && ageEndSec != null ? classifyAge(businessSecondsBetween(lvl.pivotTime, ageEndSec)) : null;
   const tierLabel = tier && tier !== "minor" ? `${tier[0].toUpperCase()}${tier.slice(1)}` : null;
   const age = lvl.pivotTime != null && ageEndSec != null ? formatAge(businessSecondsBetween(lvl.pivotTime, ageEndSec)) : null;
   const ageLabel = age ? `(${age})` : null;
   const priceLabel = includePrice && formatPrice ? formatPrice(lvl.price) : null;
-  return [bonus, tierLabel, ageLabel, priceLabel].filter(Boolean).join(" ");
+  // Bei Invalidierungen und Targets zählt der Preis, nicht das Alter oder dessen Einstufung.
+  return [bonus, includeAge && tierLabel, includeAge && ageLabel, priceLabel].filter(Boolean).join(" ");
 }
 
 // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Nachbesserung 2026-08-23,
@@ -388,7 +389,7 @@ function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isS
   const color = cssColor(isInvalidation ? "tradeInvalidation" : key);
   const baseLabel =
     debugPrices || isHtf || isInvalidation || journalCategories?.size
-      ? formatLiquidityLevelLabel(lvl, { bonus: lvl.bonus, nowSec, formatPrice, includePrice: debugPrices })
+      ? formatLiquidityLevelLabel(lvl, { bonus: lvl.bonus, nowSec, formatPrice, includePrice: debugPrices, includeAge: !isInvalidation && !journalCategories?.has("target") })
       : null;
   // Feste Reihenfolge und ein Symbol je Rolle, auch bei mehreren verknüpften Trades.
   const icons = Object.entries(CATEGORY_ICON)

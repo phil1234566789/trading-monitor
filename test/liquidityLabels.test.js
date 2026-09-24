@@ -10,17 +10,22 @@ import { formatLsLabel, bullBearLabelSide, formatLiquidityLevelLabel, renderLiqu
 // verkompliziert.
 const NOW = Date.UTC(2026, 6, 28, 12, 0, 0) / 1000;
 
-it("zeichnet alle Journal-Rollen am selben M5-Level auch ohne Debug", () => {
+it.each([
+  [true, true, "✔ 💡 💀 🎯 🚫"],
+  [false, true, "✔ 💡 💀 🎯"],
+  [true, false, "✔ 💡 💀 🚫"],
+  [false, false, "✔ 💡 💀 (1h)"],
+])("zeichnet Journal-Rollen ohne Alter bei Invalidierung=%s oder Target=%s", (isInvalidation, isTarget, label) => {
   const level = { price: 1.2, dir: 1, timeframe: "5M", pivotTime: NOW - 3600, endTime: NOW };
   const key = liquidityLevelNaturalKey(level.dir, level.pivotTime);
   const primitives = [];
   renderLiquidityLevels({ attachPrimitive() {}, detachPrimitive() {} }, [level], primitives, [], {
     nowSec: NOW,
-    journalCategories: new Map([[key, new Set(["target", "confluence", "confirmation", "anti_confluence"])]]),
-    invalidationKeys: new Set([key]),
+    journalCategories: new Map([[key, new Set([...(isTarget ? ["target"] : []), "confluence", "confirmation", "anti_confluence"])]]),
+    invalidationKeys: new Set(isInvalidation ? [key] : []),
   });
   expect(primitives).toHaveLength(1);
-  expect(primitives[0]._options.label).toBe("✔ 💡 💀 🎯 🚫 (1h)");
+  expect(primitives[0]._options.label).toBe(label);
 });
 
 describe("formatLsLabel", () => {
