@@ -678,9 +678,9 @@
     "semantic_hash": "6b9f6b695137489adb5694c1b45deb74"
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1790284964.190837,
-    "seen": 1790284986.3198497,
-    "ast_hash": "3fa3b1215bacf74db2dda6396d855e38",
+    "mtime": 1790285056.8085623,
+    "seen": 1790285374.4653165,
+    "ast_hash": "2198526bbe028a215c553703e5553785",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -3563,22 +3563,10 @@
     "ast_hash": "d47a0a78a8ae096e9884a86804bb61d3",
     "semantic_hash": ""
   },
-  "src/components/GoldH1Preview.vue": {
-    "mtime": 1790281976.4290712,
-    "seen": 1790281978.3082292,
-    "ast_hash": "0e96783535dcaa35771d2df1788cb899",
-    "semantic_hash": ""
-  },
   "src/composables/useTscRange.js": {
     "mtime": 1790278533.9055989,
     "seen": 1790278684.220238,
     "ast_hash": "6995074ced6beddedf4293ac99f73d18",
-    "semantic_hash": ""
-  },
-  "src/goldH1Preview.js": {
-    "mtime": 1790281975.0621326,
-    "seen": 1790281978.321735,
-    "ast_hash": "9df2776d6f002ea98fd04780df9db380",
     "semantic_hash": ""
   },
   "test/tscJournalMode.test.js": {
@@ -3591,12 +3579,6 @@
     "mtime": 1790278618.952743,
     "seen": 1790278684.2670083,
     "ast_hash": "36d50e3c84cfc3d0455b97383dabdfde",
-    "semantic_hash": ""
-  },
-  "test/goldH1Preview.test.js": {
-    "mtime": 1790281977.8808641,
-    "seen": 1790281978.3639872,
-    "ast_hash": "e5f3272c907b34f9dc4020ace2f64238",
     "semantic_hash": ""
   },
   "supabase/migrations/20260924214000_fxcm_gold_h1_preview.sql": {
@@ -3654,15 +3636,87 @@
     "semantic_hash": ""
   },
   "analysis/fxcm-xauusd-h4-20260924/analyze.py": {
-    "mtime": 1790284961.5143785,
-    "seen": 1790284986.2928438,
-    "ast_hash": "1c672d377433eb10359d8f45fa42d6f9",
+    "mtime": 1790284997.0671756,
+    "seen": 1790285374.4388041,
+    "ast_hash": "5080b01180acf6e680bbd353f881e032",
     "semantic_hash": ""
   },
   "analysis/fxcm-xauusd-h4-20260924/probe.py": {
     "mtime": 1790284917.1394079,
     "seen": 1790284986.2928438,
     "ast_hash": "fed978004de1252a46df8ad0f58e64ac",
+    "semantic_hash": ""
+  },
+  "analysis/fxcm-xauusd-h4-20260924/candles.json": {
+    "mtime": 1790284997.9519768,
+    "seen": 1790285374.4388041,
+    "ast_hash": "3b28d5adaf7c68fdd05f3192cbfbdf97",
+    "semantic_hash": ""
+  },
+  "analysis/fxcm-xauusd-h4-20260924/order-blocks.json": {
+    "mtime": 1790285150.176137,
+    "seen": 1790285374.4388041,
+    "ast_hash": "66c188d1950ab403cb92e638402fd2ab",
+    "semantic_hash": ""
+  },
+  "analysis/fxcm-xauusd-h4-20260924/prefill.mjs": {
+    "mtime": 1790285145.0769918,
+    "seen": 1790285374.4388041,
+    "ast_hash": "8388f2dd21c850fd432a18f961b76c9f",
+    "semantic_hash": ""
+  },
+  "analysis/fxcm-xauusd-h4-20260924/summary.json": {
+    "mtime": 1790284997.9820502,
+    "seen": 1790285374.4388041,
+    "ast_hash": "4738fdc12b54877305cecf0c5f6dcd3a",
+    "semantic_hash": ""
+  },
+  "src/components/GoldPreview.vue": {
+    "mtime": 1790285107.5799875,
+    "seen": 1790285374.4448075,
+    "ast_hash": "0a6ce37b0ba94a393f4bf1940bc894d9",
+    "semantic_hash": ""
+  },
+  "src/goldH4ObConfig.js": {
+    "mtime": 1790285053.211085,
+    "seen": 1790285374.4553165,
+    "ast_hash": "981cfb71c439dea24d61ba3ae4f21b27",
+    "semantic_hash": ""
+  },
+  "src/goldPreview.js": {
+    "mtime": 1790285055.591691,
+    "seen": 1790285374.4553165,
+    "ast_hash": "541f49d58511d64209c0e75f3460012a",
+    "semantic_hash": ""
+  },
+  "src/goldPreviewConfig.js": {
+    "mtime": 1790285054.3741672,
+    "seen": 1790285374.4553165,
+    "ast_hash": "831cc7be3cb71596bd4f66e574f58f3b",
+    "semantic_hash": ""
+  },
+  "test/goldH4OrderBlocks.test.js": {
+    "mtime": 1790285204.2388477,
+    "seen": 1790285374.4883163,
+    "ast_hash": "e29905af7e5542f3cf9c1561a7a86f12",
+    "semantic_hash": ""
+  },
+  "test/goldPreview.test.js": {
+    "mtime": 1790285203.0553744,
+    "seen": 1790285374.4883163,
+    "ast_hash": "6a7f4db40da00fe0cc4248134b0c086c",
+    "semantic_hash": ""
+  },
+  "analysis/fxcm-xauusd-h4-20260924/REPORT.md": {
+    "mtime": 1790285355.8935757,
+    "seen": 1790285374.5093167,
+    "ast_hash": "57a876fcbbbb4ad133a20f55860a6728",
+    "semantic_hash": ""
+  },
+  "analysis/fxcm-xauusd-h4-20260924/result.txt": {
+    "mtime": 1790284977.0206027,
+    "seen": 1790285374.5093167,
+    "ast_hash": "7ef4953f5a0515988f846127c2bc08c0",
     "semantic_hash": ""
   }
 }
