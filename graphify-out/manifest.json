@@ -474,15 +474,15 @@
     "semantic_hash": "29571ee3efbf61ed0fbb1fb648586580"
   },
   "src/obZones.js": {
-    "mtime": 1790075841.5673203,
-    "seen": 1790075901.3344774,
-    "ast_hash": "4007c0b8e8a4ccc019a0845ecae4dbde",
+    "mtime": 1790281380.153513,
+    "seen": 1790281524.2816389,
+    "ast_hash": "89d17cdce8a6054e0504fc4c35587742",
     "semantic_hash": ""
   },
   "src/orderBlockDetection.js": {
-    "mtime": 1790151345.4832964,
-    "seen": 1790151398.3734164,
-    "ast_hash": "286385685f097c8a0fdceaaba741f01b",
+    "mtime": 1790281376.3229427,
+    "seen": 1790281524.2816389,
+    "ast_hash": "696319d0245872169deafb0dd7694172",
     "semantic_hash": ""
   },
   "src/orderBlocks.js": {
@@ -750,9 +750,9 @@
     "semantic_hash": "374181aef6b92e869b799319257c3ae1"
   },
   "supabase/functions/_shared/orderBlocks.ts": {
-    "mtime": 1790151345.4852984,
-    "seen": 1790151398.3824158,
-    "ast_hash": "08b6ae3331cba967d411281d873004a9",
+    "mtime": 1790281378.8895848,
+    "seen": 1790281524.2926455,
+    "ast_hash": "542e0af70af2554059dc38dfce3217f4",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/resolveStructureStartTime.ts": {
@@ -882,9 +882,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/orderBlockDetection.js": {
-    "mtime": 1790151345.484298,
-    "seen": 1790151398.3879242,
-    "ast_hash": "0e832300dccbcf05d7e622b9faa696b6",
+    "mtime": 1790281377.613557,
+    "seen": 1790281524.2996466,
+    "ast_hash": "13d16d86d56b002595944d3dcaf3cf60",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/pretradeGates.ts": {
@@ -3558,15 +3558,15 @@
     "semantic_hash": ""
   },
   "analysis/fxcm-xauusd-h1-20260924/REPORT.md": {
-    "mtime": 1790278799.0294232,
-    "seen": 1790278858.108741,
-    "ast_hash": "04441a8cb0d4c0eef478b5d9f65b1e7d",
+    "mtime": 1790281501.5022736,
+    "seen": 1790281524.3367493,
+    "ast_hash": "d47a0a78a8ae096e9884a86804bb61d3",
     "semantic_hash": ""
   },
   "src/components/GoldH1Preview.vue": {
-    "mtime": 1790278582.0931692,
-    "seen": 1790278684.2132385,
-    "ast_hash": "ae141dcd95fb42dc9b5add0638d8aba9",
+    "mtime": 1790281434.556836,
+    "seen": 1790281524.2686417,
+    "ast_hash": "1c707dee2effc6a7c2b0a17a1a543218",
     "semantic_hash": ""
   },
   "src/composables/useTscRange.js": {
@@ -3576,9 +3576,9 @@
     "semantic_hash": ""
   },
   "src/goldH1Preview.js": {
-    "mtime": 1790278580.9591198,
-    "seen": 1790278684.2232401,
-    "ast_hash": "3b9f3b6fceee5a67bdf08800cd863b63",
+    "mtime": 1790281381.5428226,
+    "seen": 1790281524.2796392,
+    "ast_hash": "6beda4c06d1c81911c870c69bfa957b9",
     "semantic_hash": ""
   },
   "test/tscJournalMode.test.js": {
@@ -3615,6 +3615,30 @@
     "mtime": 1790281068.2163732,
     "seen": 1790281104.485705,
     "ast_hash": "2632fe2c22d9f144922d881ef20fb24c",
+    "semantic_hash": ""
+  },
+  "analysis/fxcm-xauusd-h1-20260924/order-blocks.json": {
+    "mtime": 1790281435.4816575,
+    "seen": 1790281524.2626402,
+    "ast_hash": "fa210fd7c90bdbf6639fc98dadd181e8",
+    "semantic_hash": ""
+  },
+  "analysis/fxcm-xauusd-h1-20260924/prefill-obs.mjs": {
+    "mtime": 1790281432.1208951,
+    "seen": 1790281524.2626402,
+    "ast_hash": "71dd6ccbdcd2efb44ae6ec574ec287d8",
+    "semantic_hash": ""
+  },
+  "src/goldH1ObConfig.js": {
+    "mtime": 1790281430.9409864,
+    "seen": 1790281524.2796392,
+    "ast_hash": "63fdd56b5d77e62672068bf5e4cdc9bb",
+    "semantic_hash": ""
+  },
+  "test/goldH1OrderBlocks.test.js": {
+    "mtime": 1790281433.3269477,
+    "seen": 1790281524.31475,
+    "ast_hash": "bc14140f659cc064cd0e1fa78db7e566",
     "semantic_hash": ""
   }
 }
