@@ -3610,5 +3610,11 @@
     "seen": 1790281057.2139513,
     "ast_hash": "8be221666240f944eb606756c549da3c",
     "semantic_hash": ""
+  },
+  "test/setupInvalidationTarget.test.js": {
+    "mtime": 1790281068.2163732,
+    "seen": 1790281104.485705,
+    "ast_hash": "2632fe2c22d9f144922d881ef20fb24c",
+    "semantic_hash": ""
   }
 }
