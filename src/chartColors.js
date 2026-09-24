@@ -202,6 +202,9 @@ export const DEFAULT_CHART_COLORS = {
   // niedrige Alpha, sonst verschwinden die Kerzen dahinter.
   m5TrendPhaseUp: { hex: "#26a69a", alpha: 0.08 },
   m5TrendPhaseDown: { hex: "#ef5350", alpha: 0.08 },
+  // Vorstufe: CHoCH bestätigt, Haupttrend noch nicht gekippt — gleicher Ton, halbe Deckkraft.
+  m5TrendPhaseUpPre: { hex: "#26a69a", alpha: 0.035 },
+  m5TrendPhaseDownPre: { hex: "#ef5350", alpha: 0.035 },
 };
 
 function loadInitial() {

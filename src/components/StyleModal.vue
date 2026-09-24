@@ -152,6 +152,8 @@ const GROUPS = [
       { key: "m5RangeFib", label: "Fibonacci 50%" },
       { key: "m5TrendPhaseUp", label: "Trendphase Uptrend (Hintergrund)" },
       { key: "m5TrendPhaseDown", label: "Trendphase Downtrend (Hintergrund)" },
+      { key: "m5TrendPhaseUpPre", label: "Trendphase Uptrend nach CHoCH (Vorstufe)" },
+      { key: "m5TrendPhaseDownPre", label: "Trendphase Downtrend nach CHoCH (Vorstufe)" },
     ],
   },
   {

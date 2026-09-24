@@ -220,8 +220,10 @@ export function usePriceChartMarketStructure() {
       styleKey: (key) => M5_STRUCTURE_STYLE_KEYS[key],
     });
     renderTrendPhaseBands(candleSeries, showM5TrendPhases ? phases : [], m5TrendPhasePrimitives, candles, {
-      upColor: cssColor("m5TrendPhaseUp"),
-      downColor: cssColor("m5TrendPhaseDown"),
+      up: cssColor("m5TrendPhaseUp"),
+      upPre: cssColor("m5TrendPhaseUpPre"),
+      down: cssColor("m5TrendPhaseDown"),
+      downPre: cssColor("m5TrendPhaseDownPre"),
     });
   }
 

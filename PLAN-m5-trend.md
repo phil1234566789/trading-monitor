@@ -413,7 +413,7 @@ die Perioden zu beurteilen.
 ## Umsetzung (24.09.2026)
 
 - Algo: `buildMarketStructureState(..., { barSeconds, onStep })`, `deriveTrendReaction`,
-  `effectiveTrend`, `collectNestedChain` (aus dem Renderer hierher gezogen) — beide Kopien.
+  `collectNestedChain` (aus dem Renderer hierher gezogen) — beide Kopien.
 - Chart: `renderMarketStructureAnalysis(..., { styleKey })` zeichnet die M5-Struktur mit dem
   `m5Range*`-Tokensatz; Trendphasen-Bänder in `src/trendPhases.js` (nutzt `SessionBandPrimitive`).
   Toggles "M5-Struktur"/"M5-Trendphasen" + M5-Perioden im Structure-Untermenü.
@@ -435,3 +435,13 @@ Die UP-Phasen dauern hier Stunden (P5/P2: 0,7-53,9h), nicht 12-40 Minuten, und b
 6 statt 0. Die Korrektur 23.07. -> 27.07. erscheint bei P20/P10 als UP-Phase 24.07. 18:05 ->
 27.07. 17:45 Berlin. Die Trockenlauf-Zahlen stammen aus der nachgebauten Schleife mit /12-Stauchung
 (Rückrechnungsfehler, siehe Stolperfallen im Task) — die Tabelle hier ist der echte Pfad.
+
+## CHoCH aus P2-Pullbacks + Vorstufen-Band (24.09.2026 abends)
+
+Philips CHoCH am 09.09. (M5, Messlinie 09:30 -> 09:50 bei 1,35576) lag auf einem reinen P2-Tief und
+wurde nicht erkannt: der Nested-Tracker startete nur aus P5-Pullbacks. Entscheidung Philip:
+- P2 darf den CHoCH-Kandidaten starten — M5 UND 1h ("kann sein, dass ich es im 1h später
+  rückgängig machen will").
+- Band wechselt ab Algo-Bestätigung (nicht rückdatiert) auf eine Vorstufen-Farbe
+  (`m5TrendPhaseUpPre`/`DownPre`), voll erst bei der Promotion (Haupttrend kippt).
+Ergebnis 09.09.: Anker 1,35576 @ 09:30, bestätigt mit dem 10:10-Pivot, Band hellrot ab 10:20.

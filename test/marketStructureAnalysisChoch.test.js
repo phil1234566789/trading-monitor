@@ -242,73 +242,46 @@ describe("marketStructureAnalysis: Periode-2-Verfeinerung des Nested-Trackers (a
     expect(state.currRange.low).toEqual({ ...originLow, type: "low" });
   });
 
-  it("ein Periode-2-Pivot invalidiert einen bereits bestätigten Nested-Trend, wenn er dessen Origin-High mit echtem Kerzenschluss bricht", () => {
+  // Seit dem M5-Trend (Philips CHoCH vom 09.09.2026 lag auf einem reinen P2-Tief) läuft P2 durch
+  // dieselbe Seed-/Reseed-Logik wie P5 (advanceNestedTrend inner=true). Die drei Tests hier
+  // ersetzen die alte Regel "P2 verfeinert nur, reseeded nie".
+  it("ein Periode-2-Pivot mit neuem Haupttrend-Hoch verwirft den bestätigten Nested-Trend (Reseed-Regel gilt auch für P2)", () => {
     let state = chochConfirmedState();
     const innerHigh = { type: "high", price: 1.25, pivotAt: "innerHigh", pivotTime: 75, touched: false };
     state = applyInnerMarketStructurePivot(state, innerHigh, { candles: [] });
 
-    expect(state.trend).toBe("uptrend"); // Haupttrend bestätigt unabhängig weiter
-    expect(state.nestedTrend).not.toBeNull();
-    // CHoCH widerlegt (Preis macht ein neues Hoch über dem alten Nested-Origin) -> frischer Start,
-    // KEINE Promotion (ein Nested-Tracker hat selbst keine tiefere Verschachtelung).
-    expect(state.nestedTrend.trend).toBe("unknown");
-    // Bug-Report Philip 2026-07-25 (Ursprung-Bug): der alte pivotD wäre chronologisch VOR
-    // innerHigh, was die bärische "High VOR Low"-Eligibility für immer sperren würde (siehe
-    // Kommentar in applyInnerMarketStructurePivotCore) — stattdessen dient der auslösende Pivot
-    // selbst (als "low" umetikettiert) als selbstkorrigierender Platzhalter.
-    expect(state.nestedTrend.currRange).toEqual({
-      high: { ...innerHigh, type: "high" },
-      low: { ...innerHigh, type: "low" },
-    });
+    expect(state.trend).toBe("uptrend");
+    expect(state.currRange.high).toEqual({ ...innerHigh, type: "high" });
+    expect(state.nestedTrend).toBeNull(); // wartet auf den nächsten Pullback, genau wie bei P5
   });
 
-  it("ein einzelner Periode-2-Pivot repariert den NOCH NICHT eligible Platzhalter (reine Zeit-Reparatur, kein 'Strukturpunkt 3'), aber sobald eligible, bewegt ein WEITERER Periode-2-Pivot die Grenze nicht mehr — nur Outer, und ein Bruch danach kann wieder bestätigen (Regressionstest für den Ursprung-Bug UND für den GBPUSD-Fixture-Bug, siehe marketStructureAnalysisRealPipeline.test.js)", () => {
+  it("nach dem Verwerfen seedet ein P2-Pullback neu, und ein Bruch darunter bestätigt wieder", () => {
     let state = chochConfirmedState();
     const innerHigh = { type: "high", price: 1.25, pivotAt: "innerHigh", pivotTime: 75, touched: false };
     state = applyInnerMarketStructurePivot(state, innerHigh, { candles: [] });
-    expect(state.nestedTrend.trend).toBe("unknown");
-    // Degenerierter Platzhalter (high===low, gleicher Zeitpunkt) -> NICHT eligible.
-    expect(state.nestedTrend.currRange.low.pivotTime).toBe(state.nestedTrend.currRange.high.pivotTime);
 
-    // Der Platzhalter ist noch NICHT eligible -> ein Periode-2-Pivot DARF ihn reparieren (reine
-    // Zeit-Korrektur, kein Strukturpunkt-3-Aufbau, siehe isOriginEligible).
     const innerPullback = { type: "low", price: 1.2, pivotAt: "innerPullback", pivotTime: 80, touched: false };
     state = applyInnerMarketStructurePivot(state, innerPullback, { candles: [] });
     expect(state.nestedTrend.trend).toBe("unknown");
-    expect(state.nestedTrend.currRange.low).toEqual({ ...innerPullback, type: "low" }); // repariert
+    expect(state.nestedTrend.appliedPivots.map((p) => p.pivotAt)).toEqual(["innerHigh", "innerPullback"]);
 
-    // Jetzt ist der Ursprung eligible (lowTime 80 > highTime 75) -> ein WEITERER Periode-2-Pivot
-    // bewegt die Grenze nicht mehr (das wäre jetzt echter "Strukturpunkt 3"-Aufbau).
-    const innerPullback2 = { type: "low", price: 1.15, pivotAt: "innerPullback2", pivotTime: 83, touched: false };
-    state = applyInnerMarketStructurePivot(state, innerPullback2, { candles: [] });
-    expect(state.nestedTrend.currRange.low).toEqual({ ...innerPullback, type: "low" }); // unverändert
-
-    // Ein Outer-Pivot repariert/bewegt die Grenze weiterhin uneingeschränkt.
-    const outerPullback = { type: "low", price: 1.15, pivotAt: "outerPullback", pivotTime: 84, touched: false };
-    state = applyMarketStructurePivot(state, outerPullback, { candles: [] });
-    expect(state.nestedTrend.currRange.low).toEqual({ ...outerPullback, type: "low" });
-    expect(state.nestedTrend.trend).toBe("unknown"); // noch nicht bestätigt, nur bewegt
-
-    // Ein weiterer Pullback-High (bricht das Nested-Origin-High 1.25 NICHT) liefert den
-    // qualifizierenden Kandidaten für 'protected-high' bei der nächsten Bestätigung — MUSS seit
-    // Chat 2026-07-26 ein Outer-Pivot sein, damit er in nested.structurePivots landet (nicht nur
-    // innerStructurePivots) und als Kandidat zählt (siehe tryConfirmTrend).
+    // tieferes Hoch (Outer, damit es als protected-high-Kandidat in structurePivots landet)
     const pullbackHigh = { type: "high", price: 1.22, pivotAt: "pullbackHigh", pivotTime: 85, touched: false };
     state = applyMarketStructurePivot(state, pullbackHigh, { candles: [] });
 
-    // Jetzt bricht ein echter Kerzenschluss unter outerPullback -> sollte wieder bestätigen können
-    // (der bestätigende Bruch selbst darf weiterhin Periode-2 sein).
     const breakLow = { type: "low", price: 1.1, pivotAt: "breakLow", pivotTime: 90, touched: false };
     const candles = [{ time: 87, open: 1.15, high: 1.16, low: 1.09, close: 1.1 }];
     state = applyInnerMarketStructurePivot(state, breakLow, { candles });
     expect(state.nestedTrend.trend).toBe("downtrend");
+    expect(state.nestedTrend.appliedPivots[1].pivotAt).toBe("innerPullback"); // CHoCH-Anker ist das P2-Tief
   });
 
-  it("ohne bereits existierenden Nested-Trend passiert nichts (kein Reseed über Periode-2-Pivots)", () => {
-    let state = confirmedUptrendState(); // kein nestedTrend aufgebaut
-    const innerLow = { type: "low", price: 1.05, pivotAt: "innerLow", pivotTime: 30, touched: false };
+  it("ohne Nested-Trend seedet ein P2-Pullback den Tracker (wie ein P5-Pullback)", () => {
+    let state = confirmedUptrendState();
+    const innerLow = { type: "low", price: 1.05, pivotAt: "innerLow", pivotTime: 45, touched: false };
     state = applyInnerMarketStructurePivot(state, innerLow, { candles: [] });
-    expect(state.nestedTrend).toBeNull();
+    expect(state.nestedTrend.trend).toBe("unknown");
+    expect(state.nestedTrend.appliedPivots[1]).toEqual({ ...innerLow, type: "low" });
   });
 });
 

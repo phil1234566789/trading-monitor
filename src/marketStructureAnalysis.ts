@@ -942,7 +942,7 @@ function applyInnerMarketStructurePivotCore(
 
 // Öffentlicher Einstiegspunkt, analog zu applyMarketStructurePivot: wickelt
 // applyInnerMarketStructurePivotCore ein und stößt danach IMMER auch den Nested-Tracker mit
-// demselben (Periode-2-)Pivot an (advanceNestedTrendInner) — kein `nested`-Flag mehr, siehe
+// demselben (Periode-2-)Pivot an (advanceNestedTrend, inner=true) — kein `nested`-Flag mehr, siehe
 // applyMarketStructurePivot oben für die volle Begründung der Rekursions-Freigabe.
 export function applyInnerMarketStructurePivot(
   state: MarketStructureState,
@@ -950,7 +950,7 @@ export function applyInnerMarketStructurePivot(
   { candles = [], direction = "up", asOfTime }: { candles?: Candle[]; direction?: TrendDirection; asOfTime?: number } = {},
 ): MarketStructureState {
   const result = applyInnerMarketStructurePivotCore(state, pivot, { candles, direction, asOfTime });
-  return advanceNestedTrendInner(result, pivot, candles, asOfTime);
+  return advanceNestedTrend(result, pivot, candles, asOfTime, true);
 }
 
 // --- Pipeline (Kerzen -> Pivots -> State) --------------------------------------------------------
@@ -979,11 +979,9 @@ export function computeRangesPivots(candles: Candle[], period: number, cutoff: n
 
 // CHoCH-Erkennung (Chat 2026-07-25, seit Chat 2026-07-26 in BEIDE Richtungen — "Bescheid :D" auf
 // die Rückfrage, ob der bullische Gegentrend-Tracker innerhalb eines Downtrends auch noch gebaut
-// werden soll): läuft NUR über Outer-(Periode-5-)Pivots — im Live-Beispiel des Nutzers sind
-// 1.35583/1.35206/1.35429/1.34601 alles Periode-5-Pivots, keine Periode-2-Verfeinerung (das wäre
-// ein möglicher späterer Ausbau, analog zur bestehenden innerStructurePivots-Idee, aber bewusst
-// jetzt nicht gebaut). Wird aus buildMarketStructureState direkt nach jedem
-// applyMarketStructurePivot-Aufruf angestoßen, NUR wenn der Haupttrend bereits bestätigt ist —
+// werden soll): läuft über Outer- UND (seit dem M5-Trend, siehe inner unten) Periode-2-Pivots.
+// Wird aus buildMarketStructureState direkt nach jedem
+// applyMarketStructurePivot-/applyInnerMarketStructurePivot-Aufruf angestoßen, NUR wenn der Haupttrend bereits bestätigt ist —
 // ohne bestätigten Haupttrend gibt es nichts, wovon sich ein Gegentrend abheben könnte. Die
 // Nested-Richtung ist IMMER die Gegenrichtung des Haupttrends (`uptrend` -> Nested "down",
 // `downtrend` -> Nested "up", gespiegelt in JEDEM Detail unten: Ursprungsseite (currRange.high vs.
@@ -1003,8 +1001,15 @@ export function computeRangesPivots(candles: Candle[], period: number, cutoff: n
 // gültiger Nested-Tracker für den kompletten Rest der Trend-Laufzeit stehen (nie reseeded, da die
 // Bestätigung selbst das Reseeden bis dahin blockierte), was in echten Daten zu einer über sehr
 // viele Kerzen hinweg gezogenen CHoCH-Linie führte.
-function advanceNestedTrend(state: MarketStructureState, outerPivot: Pivot, candles: Candle[], asOfTime?: number): MarketStructureState {
+//
+// inner=true: derselbe Ablauf für Periode-2-Pivots (seedet UND verfeinert). Seit dem M5-Trend darf
+// auch ein P2-Pullback den Kandidaten starten — Philips CHoCH vom 09.09.2026 (M5, 1,35576) lag auf
+// einem Tief, das nur P2 war, und blieb dadurch unerkannt. Vorher verfeinerte Periode-2 nur einen
+// schon von P5 geseedeten Tracker.
+function advanceNestedTrend(state: MarketStructureState, pivot: Pivot, candles: Candle[], asOfTime?: number, inner = false): MarketStructureState {
   if (state.trend === "unknown") return { ...state, nestedTrend: null };
+  const apply = inner ? applyInnerMarketStructurePivot : applyMarketStructurePivot;
+  const outerPivot = pivot;
 
   const nested = state.nestedTrend;
 
@@ -1016,7 +1021,7 @@ function advanceNestedTrend(state: MarketStructureState, outerPivot: Pivot, cand
       if (outerPivot.type !== "low") return { ...state, nestedTrend: null };
       return { ...state, nestedTrend: initMarketStructureState(originHigh, { ...outerPivot, type: "low" }) };
     }
-    return { ...state, nestedTrend: applyMarketStructurePivot(nested, outerPivot, { candles, direction: "down", asOfTime }) };
+    return { ...state, nestedTrend: apply(nested, outerPivot, { candles, direction: "down", asOfTime }) };
   }
 
   // Gespiegelt (Haupttrend ist 'downtrend'): Ursprung ist currRange.low, wartende Seite ist 'high'.
@@ -1026,23 +1031,7 @@ function advanceNestedTrend(state: MarketStructureState, outerPivot: Pivot, cand
     if (outerPivot.type !== "high") return { ...state, nestedTrend: null };
     return { ...state, nestedTrend: initMarketStructureState(originLow, { ...outerPivot, type: "high" }) };
   }
-  return { ...state, nestedTrend: applyMarketStructurePivot(nested, outerPivot, { candles, direction: "up", asOfTime }) };
-}
-
-// Periode-2-Pendant zu advanceNestedTrend (Chat 2026-07-25, zweite CHoCH-Runde: "range.low vom
-// nestedTrend sollte schon tiefer sein, ein innerPivot hat sich bereits gebildet" — der
-// Nested-Tracker lief bis dahin NUR über Outer-Pivots, wodurch currRange.low sichtbar
-// hinterherhinkte, sobald ein Periode-2-Pivot schon tiefer stand). Reseeded NICHT selbst — das
-// bleibt exklusiv Sache von advanceNestedTrend/Outer-Pivots, weil der Ursprung
-// (appliedPivots[0]) immer ein Outer-Pivot ist — läuft nur, wenn bereits ein Nested-Tracker
-// existiert, und verfeinert ihn genauso, wie Periode-2 den Haupttrend verfeinert.
-function advanceNestedTrendInner(state: MarketStructureState, innerPivot: Pivot, candles: Candle[], asOfTime?: number): MarketStructureState {
-  if (state.trend === "unknown" || !state.nestedTrend) return state;
-  const nestedDirection: TrendDirection = state.trend === "uptrend" ? "down" : "up";
-  return {
-    ...state,
-    nestedTrend: applyInnerMarketStructurePivot(state.nestedTrend, innerPivot, { candles, direction: nestedDirection, asOfTime }),
-  };
+  return { ...state, nestedTrend: apply(nested, outerPivot, { candles, direction: "up", asOfTime }) };
 }
 
 // pivotsOuter/pivotsInner müssen bereits wie computeRangesPivots' Output aussehen (sortiert nach
@@ -1110,13 +1099,6 @@ export function collectNestedChain(state: MarketStructureState): MarketStructure
     level = level.nestedTrend;
   }
   return chain;
-}
-
-// Effektiver Trend = der der innersten bestätigten Ebene (ein bestätigter Nested IST der CHoCH).
-export function effectiveTrend(state: MarketStructureState | null): RangeTrend {
-  if (!state) return "unknown";
-  const chain = collectNestedChain(state);
-  return chain[chain.length - 1].trend;
 }
 
 export type TrendReaction = { type: "CHoCH" | "BOS"; time: number; price: number };
