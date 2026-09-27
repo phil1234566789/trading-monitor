@@ -35,6 +35,7 @@ import { usePriceChartLiquidity } from "../composables/usePriceChartLiquidity.js
 import { usePriceChartDailyPivots } from "../composables/usePriceChartDailyPivots.js";
 import { sessions } from "../sessions.js";
 import { newsEvents } from "../newsEvents.js";
+import { tradingSchedules } from "../tradingSchedules.js";
 import { usePriceChartSessionsAndNews } from "../composables/usePriceChartSessionsAndNews.js";
 import { summarizeMarketStructureState } from "../marketStructureAnalysis";
 import { computeTrendChain } from "../tradeSetupCockpit";
@@ -70,6 +71,7 @@ import { usePriceChartDrawings } from "../composables/usePriceChartDrawings.js";
 import { measureDrawing } from "../chartMeasure.js";
 import { usePriceChartTradeSetups } from "../composables/usePriceChartTradeSetups.js";
 import { usePriceChartMarketStructure } from "../composables/usePriceChartMarketStructure.js";
+import { usePriceChartChecklist } from "../composables/usePriceChartChecklist.js";
 import { usePriceChartTradeSetupDrawing } from "../composables/usePriceChartTradeSetupDrawing.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import { barSecondsFor, REPLAY_LOOKAHEAD_SEC } from "../timeframes.js";
@@ -102,6 +104,7 @@ import TargetPickerModal from "./TargetPickerModal.vue";
 import AntiConfluencePickerModal from "./AntiConfluencePickerModal.vue";
 
 const props = defineProps({
+  showTradeSetupChecklist: { type: Boolean, default: false },
   symbol: { type: String, required: true },
   currentBar: { type: String, required: true },
   trades: { type: Array, default: () => [] },
@@ -331,6 +334,7 @@ const props = defineProps({
   tscRange: { type: Object, default: null },
 });
 const emit = defineEmits([
+  "checklist-state-change",
   "close-ranges-metadata",
   "close-debug-metadata",
   "close-rsi-divergence-stats",
@@ -349,6 +353,7 @@ const emit = defineEmits([
 ]);
 
 const { markSuccess } = useStatusBar();
+const checklist = usePriceChartChecklist(props, sessions, emit, undefined, { tradingSchedules, newsEvents });
 const { refreshSessions, refreshNewsMarkers } = usePriceChartSessionsAndNews();
 // EMA-/RSI-/Divergenz-Series-Lifecycle + Zeichenlogik (siehe usePriceChartRsi.js, Phase 6b) —
 // priceChartRsi.create(chart, candleSeries) wird in onMounted aufgerufen, priceChartRsi.dispose()
@@ -1479,6 +1484,7 @@ function refreshCockpitInternal() {
 // Bug-Historie zum H1-Fetch) — löst nur den Fetch aus, die Refresh-Kaskade danach bleibt hier
 // (Pivots/Trendanalyse neu berechnen + 1H-OB-Zonen, die auf denselben Kerzen mitlaufen).
 async function loadRangesCandles() {
+  const checklistTicket = checklist.begin('h1');
   const { ok, applied } = await fetchRangesCandles({
     symbol: props.symbol,
     toMs: replayToMs("1h"),
@@ -1488,6 +1494,8 @@ async function loadRangesCandles() {
     rangesLookbackHours: props.rangesLookbackHours,
     ranges2LookbackHours: props.ranges2LookbackHours,
   });
+  checklist.finish(checklistTicket, { ok, applied }, getRangesH1Candles());
+  if (!chart) return ok; // Ein ausstehender Fetch darf nach Unmount keine Primitive anfassen.
   if (ok && applied) {
     refreshRangesInternal();
     refreshPoiZonesInternal(); // 1H-OB-Toggle (Chat 2026-07-30) läuft auf denselben Kerzen mit
@@ -1503,7 +1511,7 @@ async function loadRangesCandles() {
 // Laden läuft also, solange MINDESTENS einer der vier an ist.
 function rangesNeedsData() {
   // M5-Struktur ankert am 1h-Outer-Cutoff, braucht also dieselben H1-Kerzen.
-  return props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups || props.showM5Structure || props.showM5TrendPhases;
+  return props.showTradeSetupChecklist || props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups || props.showM5Structure || props.showM5TrendPhases;
 }
 // An den H1-Kerzenschluss ausgerichtet statt festem Intervall (Chat 2026-07-20) — H1-Kerzen
 // ändern sich nur stündlich, ein häufigerer Poll bringt nichts außer zusätzlichen Requests.
@@ -1680,7 +1688,10 @@ function refreshRsiDivergenceInternal() {
 // aktuell gewählten Chart-Timeframe (props.currentBar) — ein Setup basiert immer auf M5-Fraktal +
 // M5-OB, egal ob der Nutzer gerade den 1h- oder den 15m-Chart anschaut.
 async function loadTradeSetupM5() {
+  const checklistTicket = checklist.begin('m5');
   const { ok, applied } = await fetchTradeSetupM5Candles({ symbol: props.symbol, toMs: replayToMs("5m"), showEma: props.showEma });
+  checklist.finish(checklistTicket, { ok, applied }, getTradeSetupM5Candles());
+  if (!chart) return ok;
   if (ok && applied) {
     computeTradeSetupsInternal();
     refreshM5StructureInternal();
@@ -2266,6 +2277,10 @@ watch(() => props.showRanges, () => {
   refreshMarketStructureInternal();
 });
 watch(() => props.showRangesMetadata, refreshRangesPollingState);
+watch(() => props.showTradeSetupChecklist, (on) => {
+  refreshRangesPollingState();
+  if (on) loadTradeSetupM5();
+});
 // Lookback-Änderung braucht mehr/weniger H1-Historie -> neu fetchen, aber nur solange mindestens
 // einer der beiden Ranges-Toggles überhaupt an ist (sonst reicht es, beim nächsten Einschalten
 // frisch zu laden).

@@ -10,7 +10,7 @@ const OFFSET_FORMATTER = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Be
 // "en-CA" liefert direkt das ISO-Format, ohne Teile manuell zusammenzusetzen.
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" });
 
-function berlinOffsetMinutes(utcMs) {
+export function berlinOffsetMinutes(utcMs) {
   const part = OFFSET_FORMATTER.formatToParts(new Date(utcMs)).find((p) => p.type === "timeZoneName")?.value ?? "GMT+0";
   const match = part.match(/GMT([+-]\d+)/);
   return match ? Number(match[1]) * 60 : 0;

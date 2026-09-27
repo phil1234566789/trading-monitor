@@ -1,0 +1,63 @@
+import { describe, expect, it } from "vitest";
+import { createSSRApp } from "vue";
+import { renderToString } from "vue/server-renderer";
+import TradeSetupChecklist from "../src/components/TradeSetupChecklist.vue";
+
+const render = (checklistState = null) => renderToString(createSSRApp(TradeSetupChecklist, {
+  instrument: "GBPUSD", checklistState,
+}));
+
+describe("Trade Setup Checklist presentation", () => {
+  it("shows all nine checks without editable checkboxes or a fabricated result", async () => {
+    const html = await render();
+    expect(html.match(/data-status=/g)).toHaveLength(9);
+    expect(html).toContain("Auswertung ausstehend");
+    expect(html).toContain("Optionale Zusatzargumente");
+    expect(html).toContain("Zurückgestellt · kein aktuelles Freigabekriterium");
+    expect(html).not.toMatch(/<input|data-status="passed"|data-status="blocked"/);
+  });
+
+  it.each([
+    ["loading", "Auswertung lädt"], ["ready", "Daten ausgewertet"],
+    ["missing", "Daten fehlen"], ["stale", "Daten veraltet"], ["error", "Auswertung fehlgeschlagen"],
+  ])("distinguishes %s data from final setup approval", async (status, label) => {
+    const html = await render({ instrument: "GBPUSD", status, checks: {} });
+    expect(html).toContain(label);
+    expect(html).toContain("noch keine endgültige Setup-Freigabe");
+    expect(html).not.toContain('data-status="passed"');
+  });
+
+  it("renders independent outcomes and escapes evaluator text", async () => {
+    const html = await render({
+      instrument: "GBPUSD", status: "ready", checks: {
+        h1Trend: { status: "passed", details: ["Bärisch"] },
+        liquiditySweep: { status: "pending", details: [] },
+        reaction: { status: "unknown", details: [] },
+        time: { status: "blocked", details: ["<b>News-Sperre</b>"] },
+        m1: { status: "deferred", details: [] },
+      },
+    });
+    for (const status of ["passed", "pending", "unknown", "blocked", "deferred"]) {
+      expect(html).toContain(`data-status="${status}"`);
+    }
+    expect(html).toContain("Bärisch");
+    expect(html).toContain("&lt;b&gt;News-Sperre&lt;/b&gt;");
+  });
+
+  it("rejects a late result from another instrument", async () => {
+    const html = await render({ instrument: "EURUSD", status: "ready",
+      checks: { h1Trend: { status: "passed", details: ["Fremdes Ergebnis"] } },
+    });
+    expect(html).toContain("Auswertung ausstehend");
+    expect(html).not.toContain("Fremdes Ergebnis");
+    expect(html).not.toContain('data-status="passed"');
+  });
+
+  it.each([
+    ["2026-09-09T07:20:00Z", "2026-09-09 09:20"],
+    ["2026-01-09T08:20:00Z", "2026-01-09 09:20"],
+  ])("shows the evaluation timestamp in Berlin for %s", async (iso, expected) => {
+    const html = await render({ instrument: "GBPUSD", status: "ready", evaluatedAt: Date.parse(iso) / 1000 });
+    expect(html).toContain(`${expected} Uhr (Europe/Berlin)`);
+  });
+});

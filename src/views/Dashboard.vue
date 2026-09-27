@@ -4,6 +4,7 @@ import PriceChart from "../components/PriceChart.vue";
 import { GOLD_CHART_BARS, goldChartSelection } from "../goldChartPolicy.js";
 import TradeSetupCockpit from "../components/TradeSetupCockpit.vue";
 import TradeSetupBewertung from "../components/TradeSetupBewertung.vue";
+import TradeSetupChecklist from "../components/TradeSetupChecklist.vue";
 import TradesTable from "../components/TradesTable.vue";
 import TradeStats from "../components/TradeStats.vue";
 import StyleModal from "../components/StyleModal.vue";
@@ -301,6 +302,8 @@ const visibleAnnotations = computed(() => (drawingsVisible.value ? annotations.v
 // Kerze"-Positionsmodus (und sein Abstands-Regler) ist entfallen, siehe TradeSetupCockpit.vue.
 const showTradeSetupCockpit = useLocalStorageRef("showTradeSetupCockpit", true);
 const showTradeSetupBewertung = useLocalStorageRef("showTradeSetupBewertung", true);
+const showTradeSetupChecklist = useLocalStorageRef("showTradeSetupChecklist", false);
+const checklistState = ref(null);
 // Style-Modal (Farben aller Chart-Indikatoren, siehe StyleModal.vue/chartColors.js) — reiner
 // Öffnen/Schließen-Zustand, NICHT in localStorage (die Farben selbst persistieren bereits über
 // den chartColors-Singleton, das Modal muss nicht offen bleiben).
@@ -1303,6 +1306,10 @@ const showDebugMetadata = useLocalStorageRef("showDebugMetadata", false);
 const replayTime = useLocalStorageRef("replayTime", 1783011600); // 02.07.2026 19:00 (Berlin)
 const replayActive = useLocalStorageRef("replayActive", false);
 const replayUntil = computed(() => (replayActive.value ? replayTime.value : null));
+// Alte Ergebnisse dürfen beim Kontextwechsel nicht bis zum nächsten Chart-Event stehen bleiben.
+watch([currentSymbol, replayUntil, showTradeSetupChecklist], () => {
+  checklistState.value = null;
+}, { flush: "sync" });
 watch([currentSymbol, currentBar], () => {
   if (currentSymbol.value !== 'XAUUSD') return;
   const selection = goldChartSelection(currentBar.value, replayTime.value);
@@ -1861,10 +1868,13 @@ watch(selectedTradingAccountId, () => {
           <div class="toggle-dropdown-divider"></div>
 
           <ToggleButton variant="menu" :class="{ active: showTradeSetupCockpit }" @click="showTradeSetupCockpit = !showTradeSetupCockpit">
-            TSC
+            Trade Setup Cockpit
           </ToggleButton>
           <ToggleButton variant="menu" :class="{ active: showTradeSetupBewertung }" title="Trade-Setup-Bewertung" @click="showTradeSetupBewertung = !showTradeSetupBewertung">
-            TSB
+            Trade Setup Bewertung
+          </ToggleButton>
+          <ToggleButton variant="menu" :class="{ active: showTradeSetupChecklist }" :aria-pressed="showTradeSetupChecklist" aria-controls="trade-setup-checklist" @click="showTradeSetupChecklist = !showTradeSetupChecklist">
+            Trade Setup Checklist
           </ToggleButton>
         </div>
       </div>
@@ -2208,6 +2218,7 @@ watch(selectedTradingAccountId, () => {
     :show-news="showNews"
     :show-sessions="showSessions"
     :show-trade-setup-cockpit="showTradeSetupCockpit"
+    :show-trade-setup-checklist="showTradeSetupChecklist"
     :replay-until="replayUntil"
     :show-debug-metadata="showDebugMetadata"
     :annotations="visibleAnnotations"
@@ -2220,6 +2231,7 @@ watch(selectedTradingAccountId, () => {
     :anti-confluence-mode-active="antiConfluenceAddTrade != null || rangeAntiConfluenceAddTrade != null"
     :tsc-range="tscRange"
     @close-ranges-metadata="showRangesMetadata = false"
+    @checklist-state-change="checklistState = $event"
     @close-debug-metadata="showDebugMetadata = false"
     @close-rsi-divergence-stats="showRsiDivergenceStats = false"
     @select-target="onSelectTarget"
@@ -2264,6 +2276,14 @@ watch(selectedTradingAccountId, () => {
       :fvg-pips="tscFvgPips"
     />
   </div>
+
+  <TradeSetupChecklist
+    v-if="showTradeSetupChecklist"
+    id="trade-setup-checklist"
+    :instrument="currentSymbol"
+    :checklist-state="checklistState"
+    @close="showTradeSetupChecklist = false"
+  />
 
   <aside ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">
     <div class="trades-panel-header">

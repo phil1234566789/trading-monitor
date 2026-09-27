@@ -1,6 +1,7 @@
 import { reactive } from "vue";
 import { supabase } from "./supabaseClient.js";
 import { fetchAllRows } from "./dbReadPaging.js";
+export { NEWS_NOGO_WINDOW_MINUTES, newsEventsForInstrument, currentNewsNoGo } from "./newsEventRules.js";
 
 // Wirtschafts-News als No-Go fürs Trade-Setup-Cockpit (Chat 2026-07-26) — normalerweise trägt
 // Claude die Termine per Daten-Migration ein (siehe supabase/migrations/20260726120000_news_events.sql),
@@ -11,18 +12,6 @@ import { fetchAllRows } from "./dbReadPaging.js";
 // Browser-Einträge leben nebeneinander in derselben Tabelle, ein Full-Resync würde die per
 // Migration eingetragenen Zeilen beim nächsten Browser-Save zerstören.
 export const newsEvents = reactive([]);
-
-// Nur Instrumente, die der TSC überhaupt bedient (siehe tradeSetupCockpit.ts, "Nur für Forex") —
-// welche Währungen ein Paar betreffen, nicht (auch) welche Instrumente es insgesamt im Repo gibt.
-const INSTRUMENT_CURRENCIES = {
-  EURUSD: ["EUR", "USD"],
-  GBPUSD: ["GBP", "USD"],
-};
-
-// Wie viele Minuten vor/nach einem High-Impact-Termin gilt er als No-Go — eigene Einschätzung
-// (30min vor/nach ist eine gängige Daumenregel gegen News-Spikes), kein von Philip vorgegebener
-// Wert. Bei Bedarf anpassen.
-export const NEWS_NOGO_WINDOW_MINUTES = 30;
 
 // Nur einmal beim Laden synchronisiert, kein periodisches Re-Poll (wie sessions.js/chartColors.js
 // — dort unkritisch, weil der Browser selbst die Quelle für Änderungen ist; hier ist das
@@ -75,21 +64,4 @@ export async function removeNewsEvent(id) {
   }
   await syncNewsEvents();
   return true;
-}
-
-// events: schon von syncNewsEvents geladene Liste. Liefert nur die Termine, deren Währung
-// `instrument` überhaupt betrifft (siehe INSTRUMENT_CURRENCIES) — gemeinsame Basis für den
-// No-Go-Check (currentNewsNoGo) UND die Chart-Marker (siehe newsMarkers.js), damit beide garantiert
-// dieselbe Instrument->Währung-Zuordnung verwenden.
-export function newsEventsForInstrument(events, instrument) {
-  const currencies = INSTRUMENT_CURRENCIES[instrument];
-  if (!currencies) return [];
-  return events.filter((e) => currencies.includes(e.currency));
-}
-
-// Liefert den Termin, der innerhalb von NEWS_NOGO_WINDOW_MINUTES um nowSec liegt — oder null.
-export function currentNewsNoGo(events, instrument, nowSec, windowMinutes = NEWS_NOGO_WINDOW_MINUTES) {
-  const windowSec = windowMinutes * 60;
-  const hit = newsEventsForInstrument(events, instrument).find((e) => Math.abs(e.eventTime - nowSec) <= windowSec);
-  return hit ? { title: hit.title, currency: hit.currency, eventTime: hit.eventTime } : null;
 }
