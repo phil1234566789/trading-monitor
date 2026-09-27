@@ -1,0 +1,41 @@
+{
+  "candleStatus": 200,
+  "candles": [
+    {
+      "rows": 10,
+      "last": 1790368800
+    },
+    {
+      "rows": 10,
+      "last": 1790366400
+    },
+    {
+      "rows": 10,
+      "last": 1790355600
+    },
+    {
+      "rows": 10,
+      "last": 1790283600
+    },
+    {
+      "rows": 10,
+      "last": 1790456400
+    },
+    {
+      "rows": 10,
+      "last": 1790456400
+    }
+  ],
+  "dailyStatus": 200,
+  "daily": {
+    "GBPUSD": {
+      "newPivots": 0
+    },
+    "EURUSD": {
+      "newPivots": 0
+    },
+    "XAUUSD": {
+      "newPivots": 27
+    }
+  }
+}

@@ -11,15 +11,16 @@ import { formatDatedTime } from "./berlinTime.js";
 export const MEASURE_COLOR = "#00d1b2";
 
 // Betrag, nicht vorzeichenbehaftet — die Richtung sieht man an der Strecke selbst.
-export function formatPips(priceDiff) {
+export function formatPips(priceDiff, instrument) {
+  if (instrument === 'XAUUSD') return `${Math.abs(priceDiff).toFixed(2).replace('.', ',')} USD`;
   return `${Math.abs(toPips(priceDiff)).toFixed(1).replace(".", ",")} Pips`;
 }
 
 // from/to = { time: Unix-Sekunden, price } aus den beiden Chart-Klicks. Zeiten als datiertes
 // "YYYY-MM-DD HH:mm" (nicht nur "HH:mm"), damit eine Messung über einen Tageswechsel hinweg
 // nicht auf den Tag der Zeile zurückfällt (siehe resolveTime in annotations.js).
-export function measureDrawing(from, to) {
-  const text = formatPips(to.price - from.price);
+export function measureDrawing(from, to, instrument) {
+  const text = formatPips(to.price - from.price, instrument);
   return {
     title: `📏 ${text} · ${formatDatedTime(from.time)}`,
     annotations: [

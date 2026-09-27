@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import { formatLiquidityLevelLabel } from "../liquidity.js";
-import { isTooFarFromPrice, MAX_TARGET_DISTANCE_PIPS } from "../findTargets.js";
+import { isTooFarFromPrice, MAX_TARGET_DISTANCE_PIPS, targetDistanceLimit } from "../findTargets.js";
 import MetadataPanel from "./MetadataPanel.vue";
 
 // Target-Vorschläge (PLAN-find-targets.md, erster Baustein, Chat 2026-08-27) — Auswahl-Logik
@@ -30,6 +30,8 @@ const props = defineProps({
 const emit = defineEmits(["close", "hover", "select"]);
 
 const precision = computed(() => pricePrecisionForInstrument(props.instrument));
+const distanceLabel = computed(() => props.instrument === 'XAUUSD'
+  ? `${targetDistanceLimit(props.instrument)} USD` : `${MAX_TARGET_DISTANCE_PIPS} Pips`);
 
 // Alle Kandidaten liegen bereits einseitig vom aktuellen Preis (findNearestLiquidityTargets/
 // -ObTargets filtern das schon) — bei Short also alle UNTERHALB, "am nächsten" heißt dort "am
@@ -44,7 +46,7 @@ const mergedCandidates = computed(() => {
     ...props.obCandidates.map((zone) => ({ kind: "ob", item: zone, price: zone.targetPrice })),
   ];
   return items
-    .map((c) => ({ ...c, disabled: isTooFarFromPrice(c.price, props.currentPrice) }))
+    .map((c) => ({ ...c, disabled: isTooFarFromPrice(c.price, props.currentPrice, MAX_TARGET_DISTANCE_PIPS, props.instrument) }))
     .sort((a, b) => (props.direction === "short" ? b.price - a.price : a.price - b.price));
 });
 
@@ -81,7 +83,7 @@ function candidateLabel(candidate) {
         <span class="target-picker-kind" :class="candidate.kind">{{ candidate.kind === "ob" ? "OB" : "LQ" }}</span>
         <span class="target-picker-tf">{{ candidate.item.timeframe?.toUpperCase() }}</span>
         {{ candidateLabel(candidate) }}
-        <span v-if="candidate.disabled" class="target-picker-far-hint" :title="`Mehr als ${MAX_TARGET_DISTANCE_PIPS} Pips entfernt`">&gt;{{ MAX_TARGET_DISTANCE_PIPS }}p</span>
+        <span v-if="candidate.disabled" class="target-picker-far-hint" :title="`Mehr als ${distanceLabel} entfernt`">&gt;{{ distanceLabel }}</span>
       </div>
     </div>
   </MetadataPanel>

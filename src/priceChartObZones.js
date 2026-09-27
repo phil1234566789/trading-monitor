@@ -7,6 +7,20 @@
 // Variablen kamen.
 import { detectOrderBlocks, obZoneNaturalKey } from "./orderBlocks.js";
 import { PIP_SIZE } from "./pipConfig.js";
+import { obMinimum, strategyDistance } from './instrumentConfig.js';
+
+// Historische Gold-Boxen enden beim ersten Touch, auch wenn eine spätere Invalidierung endTime ersetzt.
+export function goldDisplayZone(zone, candles) {
+  const touch = firstCandleTouchRange(candles, zone.startTime, zone.bottom, zone.top);
+  return touch != null && touch <= zone.endTime ? { ...zone, touched: true, endTime: touch } : zone;
+}
+
+export function goldNativeZones(candles, timeframe, replayUntil) {
+  const seconds = barSecondsForTimeframeCi(timeframe);
+  const closed = (candles ?? []).filter(c => replayUntil == null || c.time + seconds <= replayUntil);
+  return detectOrderBlocks(closed, timeframe, false, obMinimum('XAUUSD', timeframe))
+    .map(z => ({ ...goldDisplayZone(z, closed), instrument: 'XAUUSD', timeframe }));
+}
 import { barSecondsForTimeframeCi } from "./timeframes.js";
 
 // Bug-Report Philip 2026-07-31 (Debug-Log bewies es: zone.startTime === zone.endTime): ">="
@@ -85,7 +99,8 @@ export function filterDbObZones(dbObZones, symbol, replayUntil, timeframe, price
   const knownAt = (z) => z.startTime + 2 * (barSecondsForTimeframeCi(timeframe) ?? 0);
   const byReplay = replayUntil == null ? byTf : byTf.filter((z) => knownAt(z) <= replayUntil);
   if (price == null) return byReplay;
-  return byReplay.filter((z) => z.bottom - PIP_RELEVANCE_THRESHOLD <= price && price <= z.top + PIP_RELEVANCE_THRESHOLD);
+  const distance = strategyDistance(PIP_RELEVANCE_THRESHOLD, symbol);
+  return byReplay.filter((z) => z.bottom - distance <= price && price <= z.top + distance);
 }
 
 // Sammelt die Zonen aller AKTIVIERTEN Timeframe-Toggles (Chat 2026-07-30: "Indikatoren > OBs" bekam
@@ -100,7 +115,7 @@ export function collectObsZones({ showObs4h, showObs1h, showObsM5, dbObZones, sy
   if (showObs1h) zones.push(...filterDbObZones(dbObZones, symbol, replayUntil, "1H", price).filter((z) => !z.invalidated));
   if (showObsM5) {
     zones.push(
-      ...detectOrderBlocks(m5Candles, "5m", true)
+      ...detectOrderBlocks(m5Candles, "5m", true, obMinimum(symbol, '5m'))
         .filter((z) => !z.invalidated)
         .map((z) => ({ ...z, timeframe: "5M" })),
     );
@@ -120,7 +135,7 @@ export function collectObsZones({ showObs4h, showObs1h, showObsM5, dbObZones, sy
 // selbst — sonst könnte eine Target-/Confirmation-Box einen anderen touched/endTime-Stand zeigen
 // als die daneben gezeichnete Indikator-Zone.
 export function liveObZonesForTimeframe(timeframe, { m5Candles, dbObZones, symbol, replayUntil, price }) {
-  if (timeframe === "5M") return detectOrderBlocks(m5Candles, "5m", true);
+  if (timeframe === "5M") return detectOrderBlocks(m5Candles, "5m", true, obMinimum(symbol, '5m'));
   return filterDbObZones(dbObZones, symbol, replayUntil, timeframe, price);
 }
 

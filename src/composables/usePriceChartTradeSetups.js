@@ -17,6 +17,7 @@
 // würde zirkuläre Abhängigkeiten zwischen den Composables erzeugen. scheduleNextTradeSetupM5Poll
 // bleibt aus demselben Grund ebenfalls dort (hängt an withPollRetries + chart-alive-Check).
 import { ref } from "vue";
+import { obMinimum, strategyDistance } from '../instrumentConfig.js';
 import { detectLiquidityLevels } from "../liquidity.js";
 import { collectStructureLqLevels } from "../marketStructureRendering";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
@@ -70,13 +71,13 @@ export function usePriceChartTradeSetups() {
     // geladen ist; Path A/B finden dann übergangsweise nur M5-basierte Setups, kein Absturz.
     const h1Highs = collectStructureLqLevels(marketStructureState, 1);
     const h1Lows = collectStructureLqLevels(marketStructureState, -1);
-    const setupObs = detectSetupObs(candles);
+    const setupObs = detectSetupObs(candles, obMinimum(symbol, '5m'));
     const params = {
       graceSec: TRADE_SETUP_GRACE_SEC,
       lsMaxLeadSecH1: TRADE_SETUP_LS_MAX_LEAD_SEC_H1,
       lsMaxLeadSecM5: TRADE_SETUP_LS_MAX_LEAD_SEC_M5,
-      maxDistanceM5: TRADE_SETUP_LS_MAX_DISTANCE_M5,
-      maxSweepDistance: TRADE_SETUP_MAX_SWEEP_DISTANCE,
+      maxDistanceM5: strategyDistance(TRADE_SETUP_LS_MAX_DISTANCE_M5, symbol),
+      maxSweepDistance: strategyDistance(TRADE_SETUP_MAX_SWEEP_DISTANCE, symbol),
       maxLookbackSec: TRADE_SETUP_LOOKBACK_SEC,
       obMaxDelaySec: TRADE_SETUP_OB_MAX_DELAY_SEC,
       closeCheckMaxAgeSec: TRADE_SETUP_CLOSE_CHECK_MAX_AGE_SEC,

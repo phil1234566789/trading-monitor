@@ -15,6 +15,15 @@ vi.mock('../src/supabaseClient.js', () => ({ supabase: {
 import { fetchGoldPreview, fetchGoldPreviewObs, goldDisplayZone } from '../src/goldPreview.js';
 beforeEach(() => { mock.pages = []; mock.calls = []; });
 
+it('reads Gold M5 candles and order blocks from the bounded test archive', async () => {
+  mock.pages = [{data:[],error:null},{data:[],error:null}];
+  await fetchGoldPreview('5m');
+  await fetchGoldPreviewObs('5m');
+  expect(mock.calls[0]).toContainEqual(['eq','bar','5m']);
+  expect(mock.calls[0]).toContainEqual(['lt','time','2026-09-24T21:00:00Z']);
+  expect(mock.calls[1]).toContainEqual(['eq','timeframe','5M']);
+});
+
 it.each([1, -1])('ends historical boxes at the first near-edge touch, not later invalidation (dir %s)', dir => {
   const zone = { dir, top: 4400, bottom: 4390, startTime: 0, endTime: 10800, touched: true, invalidated: true };
   const candles = dir === 1
@@ -71,7 +80,7 @@ it('paginates only Gold H4 order blocks when H4 is selected', async () => {
 });
 
 it('rejects unsupported Gold timeframes before requesting data', async () => {
-  await expect(fetchGoldPreview('5m')).rejects.toThrow('Unsupported');
-  await expect(fetchGoldPreviewObs('5m')).rejects.toThrow('Unsupported');
+  await expect(fetchGoldPreview('1D')).rejects.toThrow('Unsupported');
+  await expect(fetchGoldPreviewObs('1D')).rejects.toThrow('Unsupported');
   expect(mock.calls).toHaveLength(0);
 });

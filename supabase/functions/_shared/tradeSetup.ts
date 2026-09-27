@@ -107,8 +107,8 @@ export const DEFAULT_TRADE_SETUP_PARAMS: Omit<TradeSetupParams, "nowTime"> = {
 // siehe Aufrufer in poi-watcher/index.ts) — dieselbe Änderung wie in der JS-Kopie (tradeSetup.js),
 // aus demselben Grund: alle M5-OB-Erkennungen (Chart-Overlay, Trade-Setup-Frontend,
 // Trade-Setup-Backend/Telegram-Alarme) sollen exakt dieselben Lücken als relevant ansehen.
-export function detectSetupObs(candles: Candle[]): SetupOb[] {
-  return detectOrderBlocks(candles, "5m").map((z) => ({ dir: z.dir, top: z.top, bottom: z.bottom, startTime: z.startTime, fvg: z.fvg }));
+export function detectSetupObs(candles: Candle[], minGapOverride: number | null = null): SetupOb[] {
+  return detectOrderBlocks(candles, "5m", true, minGapOverride).map((z) => ({ dir: z.dir, top: z.top, bottom: z.bottom, startTime: z.startTime, fvg: z.fvg }));
 }
 
 // Sucht die zeitlich erste FVG einer Richtung, deren Impuls-Kerze auf afterTime folgt, aber

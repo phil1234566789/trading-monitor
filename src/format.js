@@ -5,7 +5,7 @@ export function fmtPrice(n, precision = 2) {
 // Forex-Paare (GBPUSD/EURUSD) brauchen 5 Nachkommastellen, BTC-USDT 2 — siehe
 // cfg.pricePrecision in supabase/functions/poi-watcher/index.ts (dieselbe Zuordnung).
 export function pricePrecisionForInstrument(instrument) {
-  return instrument === "BTC-USDT" ? 2 : 5;
+  return instrument === "BTC-USDT" || instrument === "XAUUSD" ? 2 : 5;
 }
 
 // Akzeptiert sowohl Unix-Sekunden (Chart-Zeit) als auch ISO-Strings (direkt aus Supabase).

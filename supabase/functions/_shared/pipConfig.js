@@ -5,10 +5,11 @@
 // aller Pip-/Pixel-Schwellwerte im Repo.
 export const PIP_SIZE = 0.0001; // gilt für beide unterstützten FX-Paare (GBPUSD/EURUSD)
 
-export function toPips(priceDiff) {
-  return priceDiff / PIP_SIZE;
+import { instrumentConfig } from './instrumentConfig.js';
+export function toPips(priceDiff, instrument) {
+  return priceDiff / instrumentConfig(instrument).pip;
 }
 
-export function fromPips(pips) {
-  return pips * PIP_SIZE;
+export function fromPips(pips, instrument) {
+  return pips * instrumentConfig(instrument).pip;
 }

@@ -147,7 +147,7 @@ const trendAlignmentInfo = computed(() => (direction.value && trendAlignment.val
 // die Bänder gemessen wurden. Ohne OB-Bestätigung gibt es keine Kanten und damit kein Risiko; die
 // Zeile entfällt dann.
 const rangeOb = computed(() => confirmations.value.find((c) => c.kind === "ob" && c.rangeLow != null && c.rangeHigh != null) ?? null);
-const riskPips = computed(() => (rangeOb.value ? toPips(rangeOb.value.rangeHigh - rangeOb.value.rangeLow) : 0));
+const riskPips = computed(() => (rangeOb.value ? toPips(rangeOb.value.rangeHigh - rangeOb.value.rangeLow, props.instrument) : 0));
 // Sweep-Alter der Range = das der ERSTEN Sweep-Bestätigung (die, mit der die Idee angefangen hat,
 // siehe Dashboard.vue: tscBootstrapArmed) — dieselbe Einstufung wie ihr eigenes Zeilen-Label,
 // nicht neu gerechnet (tradeEvidence.ts: evidenceAgeTier).

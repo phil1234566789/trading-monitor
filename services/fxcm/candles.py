@@ -18,6 +18,11 @@ def closed_rows(instrument, bar, history, now):
             continue
         values = [float(item[k]) for k in ('BidOpen', 'BidHigh', 'BidLow', 'BidClose', 'Volume')]
         o, h, low, c, volume = values
+        # ForexConnect liefert am Wochenende einen flachen Platzhalter mit altem Schlusskurs.
+        # Nur sicher geschlossene Wochenendzeiten ausschließen, keine regulären Pausen erraten.
+        weekend = start.weekday() == 5 or (start.weekday() == 6 and start.hour < 20)
+        if instrument == 'XAUUSD' and weekend and o == h == low == c:
+            continue
         if not all(math.isfinite(v) for v in values) or low <= 0 or volume < 0 or not low <= min(o, c) <= max(o, c) <= h:
             raise ValueError('Invalid FXCM candle')
         rows[timestamp] = dict(instrument=instrument, bar=bar, time=start.isoformat(),

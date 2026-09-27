@@ -1,4 +1,5 @@
 import { fromPips } from "./pipConfig.js";
+import { strategyDistance } from './instrumentConfig.js';
 import { detectRsiDivergenceHistory } from "./rsi.js";
 import { businessSecondsBetween } from "./chartTimeUtils.js";
 import { classifyAge } from "./ageTier";
@@ -78,10 +79,10 @@ export function findAntiConfluenceDivergenceCandidates(divergences, { direction,
 // Eigene, von der Ziel-Zone unabhängige Regel (Philip 2026-08-30): eine unberührte GEGENLÄUFIGE OB
 // knapp jenseits der Invalidierung — bärisch über der Invalidierung bei Short, bullisch darunter
 // bei Long.
-export function findInvalidationObCandidates(zones, { direction, invalidation, maxPips = MAX_INVALIDATION_OB_DISTANCE_PIPS }) {
+export function findInvalidationObCandidates(zones, { direction, invalidation, maxPips = MAX_INVALIDATION_OB_DISTANCE_PIPS, instrument }) {
   if (invalidation == null) return [];
   const wantedDir = direction === "short" ? -1 : 1;
-  const maxDistance = fromPips(maxPips);
+  const maxDistance = strategyDistance(fromPips(maxPips), instrument);
   return (zones ?? [])
     .filter((z) => z.dir === wantedDir && !z.touched && !z.invalidated)
     .map((z) => ({ ...z, edgePrice: direction === "short" ? z.bottom : z.top }))
@@ -94,7 +95,7 @@ export function findInvalidationObCandidates(zones, { direction, invalidation, m
 
 // Reine Zusammenstellung (kein Fetch, anders als der MCP-Zwilling) — Aufrufer (PriceChart.vue)
 // liefert bereits lokal vorhandene Rohdaten, siehe openAntiConfluencePicker.
-export function findAntiConfluenceCandidates({ direction, zoneBoundPrice, currentPrice, invalidation, obZones, liquidityLevels, candles, nowSec }) {
+export function findAntiConfluenceCandidates({ direction, zoneBoundPrice, currentPrice, invalidation, obZones, liquidityLevels, candles, nowSec, instrument }) {
   const zoneLow = direction === "short" ? zoneBoundPrice : currentPrice;
   const zoneHigh = direction === "short" ? currentPrice : zoneBoundPrice;
   const divergences = detectRsiDivergenceHistory(candles);
@@ -102,6 +103,6 @@ export function findAntiConfluenceCandidates({ direction, zoneBoundPrice, curren
     obCandidates: findAntiConfluenceObCandidates(obZones, { direction, zoneLow, zoneHigh, currentPrice, nowSec }),
     sweepCandidates: findAntiConfluenceSweepCandidates(liquidityLevels, { direction, zoneLow, zoneHigh, currentPrice, nowSec }),
     divergenceCandidates: findAntiConfluenceDivergenceCandidates(divergences, { direction, zoneLow, zoneHigh, currentPrice }),
-    invalidationObCandidates: findInvalidationObCandidates(obZones, { direction, invalidation }),
+    invalidationObCandidates: findInvalidationObCandidates(obZones, { direction, invalidation, instrument }),
   };
 }

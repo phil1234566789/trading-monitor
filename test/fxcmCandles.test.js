@@ -9,6 +9,14 @@ function database(pages) {
 }
 const row = (minute, price = 1) => ({ time: new Date(Date.UTC(2026, 0, 5, 0, minute)).toISOString(), open: price, high: price + 1, low: price - .1, close: price + .2, volume: 10 });
 
+it('accepts native Gold M5 Bid candles without changing their precision', async () => {
+  const db = database([[row(0, 4255.5)]]);
+  const candles = await readFxcmCandles(db, 'XAUUSD', 'M5', 1);
+  expect(candles[0].open).toBe(4255.5);
+  expect(db.query.eq).toHaveBeenCalledWith('instrument', 'XAUUSD');
+  expect(db.query.eq).toHaveBeenCalledWith('bar', '5m');
+});
+
 it('continues across short server pages and returns oldest first', async () => {
   const db = database([[row(4)], [row(3)], [row(2)], []]);
   const candles = await readFxcmCandles(db, 'GBPUSD', 'M1', 4);

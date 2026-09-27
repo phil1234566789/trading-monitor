@@ -8,6 +8,8 @@ import { supabase } from "./supabaseClient.js";
 import { barSecondsFor } from "./timeframes.js";
 import { DB_READ_PAGE_SIZE } from "./dbReadPaging.js";
 import { MAX_PLAUSIBLE_GAP_SEC } from "./priceChartConstants.js";
+import { isGoldInstrument } from './goldChartPolicy.js';
+import { isGoldWeekendPlaceholder } from './fxcmGoldCalendar.js';
 
 const FOREX_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/forex-candles`;
 // Die Edge Function baut pro Request eine frische cTrader-TLS-Verbindung inkl. Auth-Handshake auf
@@ -133,7 +135,7 @@ function fetchCandles(symbol, bar, { count, to } = {}) {
 // Timeframes und nur GBPUSD sind aktuell in forex_candles gefüllt (Migration
 // 20260809120000_forex_candles.sql) — EURUSD oder andere Timeframes liefern hier einfach 0 Zeilen
 // zurück, kein Sonderfall nötig, aber der Set spart pro Miss eine unnötige Supabase-Anfrage.
-const DB_ARCHIVED_BARS = new Set(["5m", "1h", "4h"]);
+const DB_ARCHIVED_BARS = new Set(["5m", "1h", "4h", "1D"]);
 
 function mapArchivedRows(rows) {
   return rows
@@ -151,14 +153,19 @@ function mapArchivedRows(rows) {
 // Aufsteigend + LIMIT 1 findet auch nach dem Wochenende genau die nächste native
 // Kerze, ohne das rückwärts gelesene Initialfenster erneut zu übertragen.
 export async function fetchNextCandle(symbol, bar, afterSec) {
-  if (DB_ARCHIVED_BARS.has(bar) || bar === "1D") {
-    const { data, error } = await supabase.from("forex_candles")
-      .select("time, open, high, low, close, volume")
-      .eq("instrument", symbol).eq("bar", bar)
-      .gt("time", new Date(afterSec * 1000).toISOString())
-      .order("time", { ascending: true }).limit(1);
-    if (error) throw error;
-    return mapArchivedRows(data ?? [])[0] ?? null;
+  if (DB_ARCHIVED_BARS.has(bar)) {
+    let boundary = afterSec;
+    while (true) {
+      const { data, error } = await supabase.from("forex_candles")
+        .select("time, open, high, low, close, volume")
+        .eq("instrument", symbol).eq("bar", bar)
+        .gt("time", new Date(boundary * 1000).toISOString())
+        .order("time", { ascending: true }).limit(1);
+      if (error) throw error;
+      const next = mapArchivedRows(data ?? [])[0] ?? null;
+      if (!next || !isGoldWeekendPlaceholder(symbol, next)) return next;
+      boundary = next.time;
+    }
   }
   // Aggregierte Timeframes werden weiterhin von der Edge Function gebildet.
   const nextCloseMs = (afterSec + 2 * barSecondsFor(bar)) * 1000;
@@ -202,16 +209,16 @@ async function fetchArchivedPage(symbol, bar, count, { ltIso, lteIso }) {
     query = inclusive ? query.lte("time", boundary) : query.lt("time", boundary);
     const { data, error } = await query;
     if (error) {
+      if (isGoldInstrument(symbol)) throw error;
       console.error("Kerzen-Archiv lesen fehlgeschlagen, falle auf Live-cTrader zurück:", error);
       break;
     }
     if (!data || data.length === 0) break;
-    rows.push(...data);
-    if (data.length < pageLimit) break; // ehrlich weniger Historie vorhanden als angefragt, fertig
+    rows.push(...data.filter(row => !isGoldWeekendPlaceholder(symbol, row)));
     boundary = data[data.length - 1].time; // ältestes in dieser Seite (data ist desc sortiert)
     inclusive = false;
   }
-  if (rows.length === 0) return null;
+  if (rows.length === 0) return isGoldInstrument(symbol) ? [] : null;
   return mapArchivedRows(rows);
 }
 
@@ -247,6 +254,7 @@ export async function fetchInitialCandles(symbol, bar, count, toMs) {
   const now = toMs ?? Date.now();
   const toIso = new Date(now).toISOString();
   const archived = await fetchArchivedUpTo(symbol, bar, count, toIso);
+  if (isGoldInstrument(symbol)) return archived ?? [];
   if (!archived) return fetchCandles(symbol, bar, { count, to: toMs });
 
   const lastArchivedMs = archived[archived.length - 1].time * 1000;
@@ -287,6 +295,7 @@ const MAX_ARCHIVE_GAP_SEC = 4 * 24 * 3600;
 async function fetchOlderCandlesFromDb(symbol, bar, oldestLoadedTime, count) {
   const page = await fetchArchivedPage(symbol, bar, count, { ltIso: new Date(oldestLoadedTime * 1000).toISOString() });
   if (!page) return null;
+  if (page.length === 0) return page;
   // Lücken-Check: `forex_candles` wächst nicht automatisch mit (kein laufender Sync, nur ein
   // manueller Backfill-Lauf, siehe CLAUDE.md "Persisted candle archive") — die neueste archivierte
   // Kerze kann dadurch beliebig weit vor oldestLoadedTime liegen, obwohl bei cTrader live
@@ -313,6 +322,7 @@ async function fetchOlderCandlesFromDb(symbol, bar, oldestLoadedTime, count) {
 // Default `true` (unverändertes Verhalten) für alle bestehenden Aufrufer.
 export async function fetchOlderCandles(symbol, bar, oldestLoadedTime, count, { allowLive = true } = {}) {
   const fromDb = await fetchOlderCandlesFromDb(symbol, bar, oldestLoadedTime, count);
+  if (isGoldInstrument(symbol)) return fromDb ?? [];
   if (fromDb) return fromDb;
   if (!allowLive) return null;
   const page = await fetchCandles(symbol, bar, { count, to: oldestLoadedTime * 1000 });

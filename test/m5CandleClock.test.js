@@ -3,6 +3,20 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { m5ClockState, useM5CandleClock } from '../src/composables/useM5CandleClock.js';
 
 let scope;
+it('pauses weekend retries and resumes freshness checks when the pause ends', async () => {
+  vi.useFakeTimers(); vi.setSystemTime(at('16:23:00'));
+  let paused = true;
+  const reload = vi.fn(async () => {});
+  scope = effectScope();
+  const clock = scope.run(() => useM5CandleClock({ enabled: () => true,
+    getLatestTime: () => null, reload, isPaused: () => paused }));
+  await vi.advanceTimersByTimeAsync(120_000);
+  expect(clock.state.value.status).toBe('paused');
+  expect(reload).not.toHaveBeenCalled();
+  paused = false;
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(reload).toHaveBeenCalledTimes(1);
+});
 afterEach(() => { scope?.stop(); vi.useRealTimers(); });
 const at = (time) => Date.parse(`2026-09-22T${time}+02:00`);
 

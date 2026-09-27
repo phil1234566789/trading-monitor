@@ -12,7 +12,7 @@ export function m5ClockState(nowMs, latestTime) {
   };
 }
 
-export function useM5CandleClock({ enabled, getLatestTime, reload }) {
+export function useM5CandleClock({ enabled, getLatestTime, reload, isPaused = () => false }) {
   const state = ref({ remaining: 300, status: 'loading', latest: null });
   let timer, generation = 0, busy = false, lastAttempt = -Infinity, attempts = 0, warned = false;
 
@@ -22,7 +22,7 @@ export function useM5CandleClock({ enabled, getLatestTime, reload }) {
     // bis zum tatsächlichen Eintreffen der erwarteten Schlusskerze bestehen.
     if (!next.missing) warned = false;
     else if (next.sinceClose >= 60 && (attempts >= 2 || busy)) warned = true;
-    const status = !next.missing ? 'current' : warned ? 'stale' : 'loading';
+    const status = isPaused() ? 'paused' : !next.missing ? 'current' : warned ? 'stale' : 'loading';
     state.value = { ...next, status, busy };
     if (!next.missing) attempts = 0;
     return next;
@@ -43,7 +43,7 @@ export function useM5CandleClock({ enabled, getLatestTime, reload }) {
 
   function tick() {
     const next = refresh();
-    if (next.missing && Date.now() - lastAttempt >= 15_000) void retry();
+    if (!isPaused() && next.missing && Date.now() - lastAttempt >= 15_000) void retry();
   }
 
   watch(enabled, (active) => {

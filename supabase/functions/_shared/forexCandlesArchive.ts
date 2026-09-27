@@ -6,6 +6,7 @@
 // '5m'/'1h'/'4h'.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { DB_READ_PAGE_SIZE } from "./fetchAllRows.ts";
+import { isGoldWeekendPlaceholder } from './fxcmGoldCalendar.js';
 
 export interface ArchivableCandle {
   time: number;
@@ -76,7 +77,7 @@ export async function readForexCandlesArchiveFrom(
     const { data, error } = await query;
     if (error) throw error;
     if (!data || data.length === 0) break;
-    rows.push(...data);
+    rows.push(...data.filter(row => !isGoldWeekendPlaceholder(instrument, row)));
     boundary = data[data.length - 1].time;
     inclusive = false;
   }

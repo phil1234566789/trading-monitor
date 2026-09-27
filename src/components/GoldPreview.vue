@@ -11,7 +11,7 @@ const loading = ref(true);
 const error = ref(false);
 const count = ref(0);
 const obCount = ref(0);
-const bar = ref('1h');
+const bar = ref('5m');
 const config = computed(() => GOLD_PREVIEWS[bar.value]);
 let chart;
 let removed = false;
@@ -49,7 +49,7 @@ async function load() {
     series.setData(candles);
     // Auch später invalidierte Zonen zeigen, aber nur bis zum ersten Touch ausdehnen.
     for (const zone of zones) {
-      const key = `${zone.dir === 1 ? 'obBull' : 'obBear'}${bar.value}`;
+      const key = `${zone.dir === 1 ? 'obBull' : 'obBear'}${bar.value === '5m' ? 'M5' : bar.value}`;
       series.attachPrimitive(new OrderBlockPrimitive(goldDisplayZone(zone, candles), {
         fillColor: cssColor(key), borderColor: cssColor(`${key}Border`),
         borderWidth: 1, textColor: '#d1d4dc', label: zone.invalidated ? `${selected.timeframe} · beendet` : selected.timeframe,

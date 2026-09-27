@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
 import PriceChart from "../components/PriceChart.vue";
-import GoldPreview from "../components/GoldPreview.vue";
+import { GOLD_CHART_BARS, goldChartSelection } from "../goldChartPolicy.js";
 import TradeSetupCockpit from "../components/TradeSetupCockpit.vue";
 import TradeSetupBewertung from "../components/TradeSetupBewertung.vue";
 import TradesTable from "../components/TradesTable.vue";
@@ -72,9 +72,7 @@ import { useDrawings } from "../composables/useDrawings.js";
 import { measureDrawing } from "../chartMeasure.js";
 import { chartMode, chartHint } from "../chartModes.js";
 
-const SYMBOLS = ["GBPUSD", "EURUSD"];
-// Gold nutzt zunächst nur den H1-Testchart; Forex-Auswahl und Journalzustand bleiben erhalten.
-const goldPreview = ref(false);
+const SYMBOLS = ["GBPUSD", "EURUSD", "XAUUSD"];
 
 // Toggle-Zustand persistiert in localStorage (siehe useLocalStorageRef), damit ein Reload nicht
 // jedes Mal auf die Default-Werte zurückspringt — die Defaults hier gelten nur beim allerersten
@@ -510,7 +508,7 @@ watch(tradeModeActive, (active) => {
 // (siehe chartMeasure.js), also automatisch im Chart sichtbar, einzeln aus-/einblendbar und
 // löschbar wie jede andere Zeichnung — und im Debug-Snapshot nachlesbar.
 async function onMeasureDone({ from, to }) {
-  const drawing = measureDrawing(from, to);
+  const drawing = measureDrawing(from, to, currentSymbol.value);
   await addDrawing(drawing.annotations, drawing.title);
 }
 
@@ -538,7 +536,7 @@ const tscFvgPips = computed(() => {
   if (!ob) return null;
   const dir = tscRange.value.direction === "short" ? 1 : -1;
   const setup = (dbTradeSetups.value ?? []).find((s) => s.dir === dir && s.obStartTime === ob.sourceTime);
-  return setup?.obFvg > 0 ? toPips(setup.obFvg) : null;
+  return setup?.obFvg > 0 ? toPips(setup.obFvg, currentSymbol.value) : null;
 });
 function onTscAddConfirmationRequest() {
   if (tscFromJournal.value && tscRangeId.value == null) return;
@@ -1398,6 +1396,12 @@ const showDebugMetadata = useLocalStorageRef("showDebugMetadata", false);
 const replayTime = useLocalStorageRef("replayTime", 1783011600); // 02.07.2026 19:00 (Berlin)
 const replayActive = useLocalStorageRef("replayActive", false);
 const replayUntil = computed(() => (replayActive.value ? replayTime.value : null));
+watch([currentSymbol, currentBar], () => {
+  if (currentSymbol.value !== 'XAUUSD') return;
+  const selection = goldChartSelection(currentBar.value, replayTime.value);
+  currentBar.value = selection.bar;
+  replayTime.value = selection.replayTime;
+}, { immediate: true, flush: 'sync' });
 useReplayStructureDefaults(replayActive, {
   startMode: rangesStartMode,
   lookbackHours: rangesLookbackHours,
@@ -1734,16 +1738,15 @@ watch(selectedTradingAccountId, () => {
       <ToggleButton
         v-for="sym in SYMBOLS"
         :key="sym"
-        :class="{ active: !goldPreview && sym === currentSymbol }"
-        @click="goldPreview = false; currentSymbol = sym"
+        :class="{ active: sym === currentSymbol }"
+        @click="currentSymbol = sym"
       >
         {{ sym }}
       </ToggleButton>
-      <ToggleButton :class="{ active: goldPreview }" @click="goldPreview = true">XAUUSD</ToggleButton>
     </div>
-    <div v-if="!goldPreview" class="timeframe-switcher">
+    <div class="timeframe-switcher">
       <ToggleButton
-        v-for="tf in TIMEFRAMES"
+        v-for="tf in TIMEFRAMES.filter(t => currentSymbol !== 'XAUUSD' || GOLD_CHART_BARS.includes(t.label))"
         :key="tf.label"
         :class="{ active: tf.label === currentBar }"
         @click="currentBar = tf.label"
@@ -1751,7 +1754,7 @@ watch(selectedTradingAccountId, () => {
         {{ tf.label }}
       </ToggleButton>
     </div>
-    <div v-if="!goldPreview" class="drawing-toggles">
+    <div class="drawing-toggles">
       <div class="toggle-group">
         <ToggleButton :class="{ active: indikatorenActive }" @click="toggleIndikatoren">
           Indikatoren
@@ -2229,8 +2232,8 @@ watch(selectedTradingAccountId, () => {
        Breite soll sich nicht ändern, wenn ich TSC toggle" — die Karte bleibt daher IMMER sichtbar,
        showTradeSetupCockpit steuert seitdem nur noch die TSC-Range-Zeichnung auf dem Candlestick-
        Chart selbst, nicht mehr die Karte). -->
-  <GoldPreview v-if="goldPreview" />
-  <div v-else class="chart-tsc-row">
+  <p v-if="currentSymbol === 'XAUUSD'" role="status">Gold · FXCM Bid · geschlossene Kerzen · Historie ab Januar 2026. Struktur benötigt Vorlauf; vor dem Archivbeginn ist sie unvollständig.</p>
+  <div class="chart-tsc-row">
     <PriceChart
       ref="priceChartRef"
       class="chart-tsc-row-chart"
@@ -2354,7 +2357,7 @@ watch(selectedTradingAccountId, () => {
     />
   </div>
 
-  <aside v-show="!goldPreview" ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">
+  <aside ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">
     <div class="trades-panel-header">
       <h2 class="trades-panel-title">Trades</h2>
       <TradingAccountSwitcher />

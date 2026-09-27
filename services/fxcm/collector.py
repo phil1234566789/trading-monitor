@@ -45,6 +45,7 @@ def main():
     parser.add_argument('--start', default='2026-01-01')
     parser.add_argument('--end')
     parser.add_argument('--bars', default=','.join(PERIODS))
+    parser.add_argument('--instruments', default='GBPUSD,EURUSD')
     args = parser.parse_args()
     config = read_config(os.environ.get('FXCM_CONFIG', '/run/secrets/fxcm.env'))
     db = sqlite3.connect('/data/candles.sqlite', timeout=60)
@@ -60,7 +61,9 @@ def main():
                  use_table_manager=False)
         while True:
             now = datetime.fromisoformat(args.end).replace(tzinfo=timezone.utc) if args.end else datetime.now(timezone.utc)
-            for instrument in ('GBPUSD', 'EURUSD'):
+            for instrument in args.instruments.split(','):
+                if instrument not in ('GBPUSD', 'EURUSD', 'XAUUSD'):
+                    raise ValueError('Unsupported instrument')
                 for bar, (period, seconds) in PERIODS.items():
                     if bar not in args.bars.split(','):
                         continue

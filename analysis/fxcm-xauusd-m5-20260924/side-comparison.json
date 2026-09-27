@@ -1,0 +1,21 @@
+{
+  "Bid": {
+    "fields": 276,
+    "matching_half_tick": 87,
+    "median_absolute_difference": 0.019999999999527063,
+    "max_absolute_difference": 3.1700000000000728
+  },
+  "Ask": {
+    "fields": 276,
+    "matching_half_tick": 0,
+    "median_absolute_difference": 0.3000000000001819,
+    "max_absolute_difference": 2.869999999999891
+  },
+  "Mid": {
+    "fields": 276,
+    "matching_half_tick": 3,
+    "median_absolute_difference": 0.1499999999996362,
+    "max_absolute_difference": 3.0200000000004366
+  },
+  "note": "Mid = Mittel der Bid-/Ask-OHLC, kein tickweise rekonstruierter Mid-Chart."
+}

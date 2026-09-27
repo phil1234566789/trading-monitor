@@ -1,4 +1,5 @@
 import { PIP_SIZE } from "./pipConfig.js";
+import { strategyDistance } from './instrumentConfig.js';
 
 // find_targets-Algorithmus, erster Baustein (PLAN-find-targets.md) — reine, testbare Auswahl-
 // Logik statt inline im TSC, weil sie laut Plan doppelt genutzt werden soll: hier fürs Chart/TSC,
@@ -15,6 +16,10 @@ import { PIP_SIZE } from "./pipConfig.js";
 export const DEFAULT_LIQUIDITY_TARGET_LIMIT = 5;
 export const DEFAULT_OB_TARGET_LIMIT = 3;
 export const MAX_TARGET_DISTANCE_PIPS = 50;
+
+export function targetDistanceLimit(instrument, maxPips = MAX_TARGET_DISTANCE_PIPS) {
+  return strategyDistance(maxPips * PIP_SIZE, instrument);
+}
 
 // levels: Rohformat wie usePriceChartLiquidity.js: getCurrentLiquidityLevels() liefert (price,
 // dir, pivotTime, touched, timeframe, ...) — dieselben Objekte, aus denen PriceChart.vue:
@@ -65,7 +70,7 @@ export function findNearestObTargets(zones, { direction, currentPrice, limit = D
 // ist, dann disable sie in der Liste") — bewusst NICHT rausgefiltert, sondern nur als "zu weit"
 // markierbar (siehe TargetPickerModal.vue: mergedCandidates), damit Philip auch einen weit
 // entfernten, aber ansonsten passenden Kandidaten noch SIEHT (nur nicht versehentlich auswählt).
-export function isTooFarFromPrice(price, currentPrice, maxPips = MAX_TARGET_DISTANCE_PIPS) {
+export function isTooFarFromPrice(price, currentPrice, maxPips = MAX_TARGET_DISTANCE_PIPS, instrument) {
   if (currentPrice == null) return false;
-  return Math.abs(price - currentPrice) > maxPips * PIP_SIZE;
+  return Math.abs(price - currentPrice) > targetDistanceLimit(instrument, maxPips);
 }

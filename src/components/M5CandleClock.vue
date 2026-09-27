@@ -9,7 +9,8 @@ const latest = computed(() => props.state.latest == null ? 'keine'
 
 <template>
   <div class="m5-clock" :class="{ 'm5-clock-stale': state.status === 'stale' }" data-testid="m5-candle-clock">
-    <div class="m5-clock-countdown">M5 · Kerzenschluss in <strong>{{ countdown }}</strong></div>
+    <div v-if="state.status !== 'paused'" class="m5-clock-countdown">M5 · Kerzenschluss in <strong>{{ countdown }}</strong></div>
+    <div v-if="state.status === 'paused'">M5 · Wochenendpause · Letzte Kerze: {{ latest }}</div>
     <div v-if="state.status === 'loading'" role="status">Kerze wird geladen…</div>
     <div v-else-if="state.status === 'stale'" role="alert">
       <strong>M5-Chart nicht aktuell</strong>
@@ -18,7 +19,7 @@ const latest = computed(() => props.state.latest == null ? 'keine'
       <button :disabled="state.busy" @click="$emit('retry')">{{ state.busy ? 'Lädt…' : 'Jetzt nachladen' }}</button>
       <span> Falls nötig, Seite neu laden.</span>
     </div>
-    <div v-else class="m5-clock-current">Geschlossene Kerzen aktuell</div>
+    <div v-else-if="state.status === 'current'" class="m5-clock-current">Geschlossene Kerzen aktuell</div>
   </div>
 </template>
 

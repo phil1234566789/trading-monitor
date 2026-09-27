@@ -2,6 +2,7 @@
 // Alarmfenster und Telegram-Schalter bleiben in der Datenbank konfiguriert.
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { detectOrderBlocks, type Candle } from "../_shared/orderBlocks.ts";
+import { obMinimum, strategyDistance } from '../_shared/instrumentConfig.js';
 import { detectLiquidityLevels, type LiquidityLevel } from "../_shared/liquidity.ts";
 import { unprocessedTimeframes } from "./fxcmRefresh.js";
 import { fetchAllRows } from "../_shared/fetchAllRows.ts";
@@ -111,6 +112,7 @@ interface PinTouchHit {
 const INSTRUMENTS: InstrumentConfig[] = [
   { instrument: "GBPUSD", sendTelegram: true, pricePrecision: 5 },
   { instrument: "EURUSD", sendTelegram: false, pricePrecision: 5 },
+  { instrument: "XAUUSD", sendTelegram: false, pricePrecision: 2 },
 ];
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -392,7 +394,7 @@ Deno.serve(async (req) => {
           // tf.label ("4H"/"1H") explizit mitgeben statt implizit undefined (Chat 2026-07-29) —
           // beides bleibt HTF-Verhalten (nur "1m"/"3m"/"5m" gelten als Lower-TF), aber so ist
           // derselbe Aufrufer-Stil wie bei detectSetupObs (immer explizites Timeframe-Label).
-          const zones = detectOrderBlocks(candles, tf.label);
+          const zones = detectOrderBlocks(candles, tf.label, true, obMinimum(cfg.instrument, tf.label));
           const existingMap = new Map(
             (existingRows ?? []).map((r) => [
               `${r.direction}_${Math.floor(new Date(r.start_time).getTime() / 1000)}`,
@@ -766,7 +768,7 @@ Deno.serve(async (req) => {
         const candles1hForSetup = h1CandlesForSetup!;
         const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5Candles, TRADE_SETUP_M5_FRACTAL_PERIOD);
         const { highs: h1HighsSetup, lows: h1LowsSetup } = detectLiquidityLevels(candles1hForSetup, TRADE_SETUP_H1_FRACTAL_PERIOD);
-        const setupObs = detectSetupObs(m5Candles);
+        const setupObs = detectSetupObs(m5Candles, obMinimum(cfg.instrument, '5m'));
 
         // Live-Preis-Sofort-Touch, gleiches Muster wie bei den 1H-Liquiditäts-Leveln oben —
         // sonst würde ein Fraktalbruch/Sweep erst beim nächsten Kerzenschluss erkannt (bis zu
@@ -786,7 +788,10 @@ Deno.serve(async (req) => {
         applyLiveTouch(h1HighsSetup, "high");
         applyLiveTouch(h1LowsSetup, "low");
 
-        const tradeSetupParams = { ...DEFAULT_TRADE_SETUP_PARAMS, nowTime: m5Candles[m5Candles.length - 1].time };
+        const tradeSetupParams = { ...DEFAULT_TRADE_SETUP_PARAMS,
+          maxDistanceM5: strategyDistance(DEFAULT_TRADE_SETUP_PARAMS.maxDistanceM5, cfg.instrument),
+          maxSweepDistance: strategyDistance(DEFAULT_TRADE_SETUP_PARAMS.maxSweepDistance, cfg.instrument),
+          nowTime: m5Candles[m5Candles.length - 1].time };
 
         const detected = [
           detectTradeSetup(1, m5Highs, h1HighsSetup, m5Highs, setupObs, tradeSetupParams, m5Candles),

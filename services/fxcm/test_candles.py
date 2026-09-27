@@ -24,6 +24,12 @@ class ClosedCandlesTest(unittest.TestCase):
     def test_sdk_duplicates_are_deduplicated(self):
         self.assertEqual(1, len(closed_rows('GBPUSD', '5m', [self.candle(), self.candle()], 2000000000)))
 
+    def test_gold_closed_weekend_placeholder_is_not_a_market_candle(self):
+        item = dict(Date='2026-09-26T22:00:00', BidOpen=4284.76, BidHigh=4284.76, BidLow=4284.76, BidClose=4284.76, Volume=1)
+        self.assertEqual([], closed_rows('XAUUSD', '5m', [item], 2000000000))
+        item['Date']='2026-09-25T12:00:00'
+        self.assertEqual(1, len(closed_rows('XAUUSD', '5m', [item], 2000000000)))
+
 
 if __name__ == '__main__':
     unittest.main()

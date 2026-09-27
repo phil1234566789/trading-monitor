@@ -22,6 +22,8 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 // Seite gehoert IMMER auch in die andere. Am 23.09.2026 waren alle sieben nach der Normalisierung
 // unten deckungsgleich (0 abweichende Code-Zeilen).
 const VOLL_KOPIEN = [
+  ["src/fxcmGoldCalendar.js", "supabase/functions/_shared/fxcmGoldCalendar.js"],
+  ["src/instrumentConfig.js", "supabase/functions/_shared/instrumentConfig.js"],
   ["src/marketStructureAnalysis.ts", "supabase/functions/trading-monitor-mcp/marketStructureAnalysis.ts"],
   ["src/rsi.js", "supabase/functions/trading-monitor-mcp/rsi.js"],
   ["src/sessionOccurrences.js", "supabase/functions/_shared/sessionOccurrences.js"],

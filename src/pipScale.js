@@ -6,6 +6,7 @@
 // 15 pips, kann man mal wagen." — deshalb hängt die Quote hier am Risiko-Band, die Marke nicht.
 import { scaleAnchor } from "./tradeSetup.js";
 import { fromPips, toPips } from "./pipConfig.js";
+import { strategyDistance } from './instrumentConfig.js';
 import { pipQuote, labelMitQuote } from "./drQuoten.js";
 
 // Deckungsgleich mit den Spalten von Tabelle 6 in drQuoten.js — eine Stufe ohne gemessene Quote
@@ -20,20 +21,20 @@ const KEINE_SKALA = Object.freeze({ anchorPrice: null, levels: [], bandRisk: 0 }
 // Anker und Richtung wie bei der R-Leiter (scaleAnchor), nur ohne Stopp-Deckel: hier skaliert
 // nichts mit dem Risiko, der Deckel hätte also nichts zu deckeln. bandRisk wandert trotzdem mit
 // raus — die Quote je Marke hängt am Risiko-Band der Range.
-export function pipScaleLevels(setup) {
+export function pipScaleLevels(setup, instrument) {
   const { anchorPrice, bandRisk, sign } = scaleAnchor(setup);
   if (!(bandRisk > 0)) return KEINE_SKALA;
   return {
     anchorPrice,
     bandRisk,
-    levels: PIP_SCALE_STEPS.map((pips) => ({ pips, price: anchorPrice + sign * fromPips(pips) })),
+    levels: PIP_SCALE_STEPS.map((pips) => ({ pips, price: anchorPrice + sign * strategyDistance(fromPips(pips), instrument) })),
   };
 }
 
 // Fertige Zeichen-Spec für scaleRendering.js, siehe rScaleSpec. side: -1, damit die Marken bei
 // gleichzeitig eingeblendeter R-Leiter zur anderen Seite zeigen und sich die Labels nicht decken.
 export function pipScaleSpec(setup, instrument) {
-  const { anchorPrice, levels, bandRisk } = pipScaleLevels(setup);
+  const { anchorPrice, levels, bandRisk } = pipScaleLevels(setup, instrument);
   if (!levels.length) return null;
   const riskPips = toPips(bandRisk);
   return {
@@ -46,7 +47,7 @@ export function pipScaleSpec(setup, instrument) {
       styleKey: pips === PIP_SCALE_HIGHLIGHT ? "pipScaleHighlight" : "pipScale",
       // Mit "P"-Suffix, anders als die R-Leiter: beide können gleichzeitig sichtbar sein, und die
       // Zahlenräume überlappen (10 steht in beiden Leitern).
-      label: labelMitQuote(`${pips} P`, pipQuote(instrument, riskPips, pips)),
+      label: instrument === 'XAUUSD' ? `${strategyDistance(fromPips(pips), instrument)} USD` : labelMitQuote(`${pips} P`, pipQuote(instrument, riskPips, pips)),
     })),
   };
 }

@@ -1,17 +1,8 @@
 import { supabase } from './supabaseClient.js';
 import { fetchAllRows } from './dbReadPaging.js';
 import { mapObZone } from './obZones.js';
-import { firstCandleTouchRange } from './priceChartObZones.js';
+export { goldDisplayZone } from './priceChartObZones.js';
 import { goldPreviewConfig } from './goldPreviewConfig.js';
-
-// Invalidierung überschreibt das DB-endTime. Historische Boxen enden trotzdem beim
-// ersten Touch; dafür liegen hier alle nativen Kerzen derselben Zeitebene seit der Entstehung vor.
-export function goldDisplayZone(zone, candles) {
-  const touch = firstCandleTouchRange(candles, zone.startTime, zone.bottom, zone.top);
-  return touch != null && touch <= zone.endTime
-    ? { ...zone, touched: true, endTime: touch }
-    : zone;
-}
 
 // Der Testchart liest nur das freigegebene Archivfenster, ohne Live-Fallback oder Forex-Erkennung.
 export async function fetchGoldPreview(bar = '1h') {

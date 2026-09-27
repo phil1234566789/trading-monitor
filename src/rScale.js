@@ -6,6 +6,7 @@
 // Pendant in Pips: pipScale.js. Gezeichnet werden beide von scaleRendering.js.
 import { scaleAnchor } from "./tradeSetup.js";
 import { fromPips, toPips } from "./pipConfig.js";
+import { strategyDistance } from './instrumentConfig.js';
 import { rQuote, labelMitQuote } from "./drQuoten.js";
 
 // Kein 1 R — Philip 2026-09-20: "1R macht keinen sinn ich mache keinen Trade um 1R zu gewinnen."
@@ -27,10 +28,10 @@ const KEINE_SKALA = Object.freeze({ anchorPrice: null, levels: [], risk: 0, band
 // Zeichnet seit 2026-09-20 an JEDEM Setup. Davor war Path B ausgenommen, weil dort `fractal` aufs
 // gesweepte Level statt aufs Extrem zeigte und die Marken damit falsch lagen — die Invalidierung
 // kommt jetzt pfadunabhängig aus der fernen OB-Kante (siehe deriveSetupEntryInvalidation).
-export function rScaleLevels(setup) {
+export function rScaleLevels(setup, instrument) {
   const { anchorPrice, bandRisk, sign } = scaleAnchor(setup);
   if (!(bandRisk > 0)) return KEINE_SKALA;
-  const risk = Math.min(bandRisk, fromPips(STOPP_DECKEL_PIPS));
+  const risk = Math.min(bandRisk, strategyDistance(fromPips(STOPP_DECKEL_PIPS), instrument));
   // Beide Risiken wandern mit raus, damit die Quoten-Zuordnung (drQuoten.js) nichts ein zweites
   // Mal aus den OB-Kanten herleitet: risk (gedeckelt) trägt die Geometrie, bandRisk (strukturell)
   // das Quoten-Band — der Deckel verschiebt nur den Stopp, nicht, wie weit die Range aufspannt.
@@ -46,7 +47,7 @@ export function rScaleLevels(setup) {
 // Farb-Key entstehen hier statt im Renderer, weil sich genau darin die beiden Leitern
 // unterscheiden — der Renderer selbst kennt weder R noch Pips.
 export function rScaleSpec(setup, instrument) {
-  const { anchorPrice, levels, bandRisk } = rScaleLevels(setup);
+  const { anchorPrice, levels, bandRisk } = rScaleLevels(setup, instrument);
   if (!levels.length) return null;
   const riskPips = toPips(bandRisk);
   return {

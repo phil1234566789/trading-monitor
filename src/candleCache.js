@@ -69,7 +69,8 @@ const DB_NAME = "trading-monitor-candles";
 // Cache-Eintrag hat die Lücke bereits fest im Array, ein reiner Code-Fix räumt das nicht auf.
 // Quellenwechsel: cTrader-Kerzen dürfen nicht im FXCM-Cache weiterleben.
 // Alte, aus getrennten Ladefenstern zusammengesetzte Bestände können ganze Monate auslassen.
-const DB_VERSION = 11;
+// Gold-Testfenster und Wochenend-Platzhalter dürfen nicht im vollständigen Archivcache weiterleben.
+const DB_VERSION = 13;
 const STORE_NAME = "candles";
 
 // Rein defensiv, KEINE reguläre Obergrenze (siehe oben) — 500k Kerzen sind selbst auf M1 fast ein

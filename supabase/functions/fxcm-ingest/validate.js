@@ -8,7 +8,8 @@ export function validateCandles(body, now = Date.now()) {
     const seconds = SECONDS[row?.bar];
     const time = Date.parse(row?.time);
     const { open, high, low, close, volume } = row;
-    if (!['GBPUSD', 'EURUSD'].includes(row.instrument) || !seconds ||
+    if (!['GBPUSD', 'EURUSD', 'XAUUSD'].includes(row.instrument) || !seconds ||
+        (row.instrument === 'XAUUSD' && !['5m', '1h', '4h', '1D'].includes(row.bar)) ||
         typeof row.time !== 'string' || !/(Z|[+]00:00)$/.test(row.time) ||
         !Number.isFinite(time) || time % 1000 !== 0 || time + seconds * 1000 > now ||
         ![open, high, low, close, volume].every((v) => typeof v === 'number' && Number.isFinite(v)) ||

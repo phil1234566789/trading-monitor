@@ -7,7 +7,7 @@ import { resolveStructureStartTime } from "../_shared/resolveStructureStartTime.
 
 // Gleiche Instrumentenliste wie poi-watcher (siehe dortiges INSTRUMENTS) — beide Forex-Paare, die
 // diese App überhaupt trackt.
-const INSTRUMENTS = ["GBPUSD", "EURUSD"];
+const INSTRUMENTS = ["GBPUSD", "EURUSD", "XAUUSD"];
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

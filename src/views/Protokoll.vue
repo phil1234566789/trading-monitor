@@ -6,7 +6,7 @@ import { fetchAlarmLog } from "../alarmLog.js";
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 
 // Gleiche Instrument-Liste wie im Dashboard-Symbol-Switcher.
-const SYMBOLS = ["GBPUSD", "EURUSD"];
+const SYMBOLS = ["GBPUSD", "EURUSD", "XAUUSD"];
 const POLL_MS = 15_000;
 
 const currentSymbol = ref("GBPUSD");

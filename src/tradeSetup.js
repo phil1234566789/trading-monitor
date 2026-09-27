@@ -21,8 +21,8 @@ import { businessSecondsBetween } from "./chartTimeUtils.js";
 // waren bereits identisch mit detectOrderBlocks() (Bug-Report Philip 2026-07-27), nur die
 // Relevanz-Schwelle war unterschiedlich — das übernimmt detectOrderBlocks() jetzt komplett, hier
 // bleibt nur noch die Reduktion aufs von tradeSetup.js erwartete Feld-Subset.
-export function detectSetupObs(candles) {
-  return detectOrderBlocks(candles, "5m").map((z) => ({ dir: z.dir, top: z.top, bottom: z.bottom, startTime: z.startTime, fvg: z.fvg }));
+export function detectSetupObs(candles, minGapOverride = null) {
+  return detectOrderBlocks(candles, "5m", true, minGapOverride).map((z) => ({ dir: z.dir, top: z.top, bottom: z.bottom, startTime: z.startTime, fvg: z.fvg }));
 }
 
 // Sucht die zeitlich erste FVG einer Richtung, deren Impuls-Kerze auf afterTime folgt, aber

@@ -1,9 +1,33 @@
 # FXCM-Kerzenfeed
 
-Zentrale Betriebs- und Notfalldokumentation für trading-monitor. Stand: 22.09.2026.
+Zentrale Betriebs- und Notfalldokumentation für trading-monitor. Stand: 27.09.2026.
 Diese Datei dokumentiert den Betrieb; ihre Bearbeitung ändert keine Server- oder Kontoeinstellungen.
 
 GBPUSD/EURUSD verwenden geschlossene native **FXCM-Bid-Kerzen**. Der ForexConnect-Collector läuft unabhängig vom PC auf dem Netcup-VPS. Er handelt nicht und öffnet keine Orders.
+
+XAUUSD verwendet denselben Zugang mit einem getrennten Gold-Collector. Details und Abnahme:
+[Gold-Rollout](../analysis/fxcm-xauusd-chart-20260927/REPORT.md).
+
+## Gold-Betrieb
+
+- Container `fxcm-gold-collector`, Image `fxcm-gold:20260927b`, Daten unter
+  `/opt/fxcm/gold-data`; Secret-Mount wie beim bestehenden Collector, keine zweite Secret-Kopie.
+- Startargumente `--instruments XAUUSD --bars 5m,1h,4h,1D`; ohne `--instruments`
+  bleiben GBPUSD/EURUSD der Collector-Standard. Keine parallelen Schreiber auf denselben SQLite-Puffer.
+- Watchdog `fxcm-gold-watchdog.timer`/`.service`; 384 MiB RAM, 0,5 CPU, 96 PIDs,
+  keine veröffentlichten Ports, übrige Schutzoptionen wie beim Forex-Collector.
+- Native M5/H1/H4/D1-Historie ab Januar 2026. Chart, Replay und ältere Kerzen lesen das
+  Archiv; vor dessen Beginn gibt es keinen anderen Broker als Ersatz. Struktur braucht Vorlauf.
+- Gold-Sessions wurden aus GBPUSD initialisiert. Das vorhandene Gold-Handelsfenster blieb
+  erhalten. Gold-Telegram bleibt deaktiviert; die Auswertung darf trotzdem Daten berechnen.
+- Flache Gold-Platzhalter am geschlossenen Wochenende werden beim Abruf und beim Lesen
+  ausgefiltert. Drei bereits gespeicherte Platzhalter bleiben unverändert in der Rohdatenbank.
+- Bei Störungen nur den Gold-Watchdog und Gold-Container stoppen. GBP/EUR weiterlaufen lassen.
+  Für einen Gold-Backfill dieselben Gold-Mounts verwenden, vorher Gold pausieren, danach starten.
+  Beispielargumente: `--instruments XAUUSD --backfill --start 2026-01-01 --end 2026-09-27 --bars 5m,1h,4h,1D`.
+- Bei Zugangserneuerung beide Container berücksichtigen: Sie lesen dieselbe Secret-Datei.
+  Bei Sicherungen auch `gold-data` konsistent sichern. Das Demokonto hat weiterhin keine
+  garantierte Laufzeit; derselbe Notfallablauf unten gilt auch für Gold.
 
 ## Datenfluss
 

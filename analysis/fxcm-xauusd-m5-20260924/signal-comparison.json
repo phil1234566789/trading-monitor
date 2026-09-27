@@ -1,0 +1,515 @@
+{
+  "matchedBars": 100,
+  "first": 1790253600,
+  "last": 1790283300,
+  "minFvg": 0.75,
+  "obs": {
+    "sdkCount": 13,
+    "tvCount": 14,
+    "sdkOnly": [],
+    "tvOnly": [
+      "-1:1790270100"
+    ],
+    "changed": [
+      {
+        "key": "1:1790254200",
+        "sdk": {
+          "top": 4274.83,
+          "bottom": 4268.04,
+          "dir": 1,
+          "fvg": 4.220000000000255,
+          "active": false,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790254200,
+          "endTime": 1790257200
+        },
+        "tv": {
+          "top": 4274.83,
+          "bottom": 4268.09,
+          "dir": 1,
+          "fvg": 4.319999999999709,
+          "active": false,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790254200,
+          "endTime": 1790257200
+        }
+      },
+      {
+        "key": "-1:1790257800",
+        "sdk": {
+          "top": 4276.42,
+          "bottom": 4270.25,
+          "dir": -1,
+          "fvg": 1.1199999999998909,
+          "active": false,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790257800,
+          "endTime": 1790266500
+        },
+        "tv": {
+          "top": 4276.34,
+          "bottom": 4270.25,
+          "dir": -1,
+          "fvg": 1.2200000000002547,
+          "active": false,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790257800,
+          "endTime": 1790266500
+        }
+      },
+      {
+        "key": "-1:1790259300",
+        "sdk": {
+          "top": 4273.13,
+          "bottom": 4266.86,
+          "dir": -1,
+          "fvg": 1.7799999999997453,
+          "active": false,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790259300,
+          "endTime": 1790266500
+        },
+        "tv": {
+          "top": 4273.12,
+          "bottom": 4266.87,
+          "dir": -1,
+          "fvg": 1.949999999999818,
+          "active": false,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790259300,
+          "endTime": 1790266500
+        }
+      },
+      {
+        "key": "-1:1790261700",
+        "sdk": {
+          "top": 4262.02,
+          "bottom": 4257.1,
+          "dir": -1,
+          "fvg": 2.990000000000691,
+          "active": false,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790261700,
+          "endTime": 1790266500
+        },
+        "tv": {
+          "top": 4261.92,
+          "bottom": 4257.1,
+          "dir": -1,
+          "fvg": 3.1900000000005093,
+          "active": false,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790261700,
+          "endTime": 1790266500
+        }
+      },
+      {
+        "key": "-1:1790262000",
+        "sdk": {
+          "top": 4262.02,
+          "bottom": 4252.37,
+          "dir": -1,
+          "fvg": 0.9799999999995634,
+          "active": false,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790262000,
+          "endTime": 1790266500
+        },
+        "tv": {
+          "top": 4261.92,
+          "bottom": 4252.49,
+          "dir": -1,
+          "fvg": 1.2199999999993452,
+          "active": false,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790262000,
+          "endTime": 1790266500
+        }
+      },
+      {
+        "key": "1:1790264100",
+        "sdk": {
+          "top": 4250.72,
+          "bottom": 4246.27,
+          "dir": 1,
+          "fvg": 1.4699999999993452,
+          "active": false,
+          "touched": false,
+          "invalidated": false,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790264100,
+          "endTime": 1790283300
+        },
+        "tv": {
+          "top": 4250.72,
+          "bottom": 4246.4,
+          "dir": 1,
+          "fvg": 1.4699999999993452,
+          "active": false,
+          "touched": false,
+          "invalidated": false,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790264100,
+          "endTime": 1790283300
+        }
+      },
+      {
+        "key": "1:1790266500",
+        "sdk": {
+          "top": 4255.5,
+          "bottom": 4252.57,
+          "dir": 1,
+          "fvg": 15.670000000000073,
+          "active": false,
+          "touched": false,
+          "invalidated": false,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790266500,
+          "endTime": 1790283300
+        },
+        "tv": {
+          "top": 4258.67,
+          "bottom": 4252.61,
+          "dir": 1,
+          "fvg": 12.840000000000146,
+          "active": false,
+          "touched": true,
+          "invalidated": false,
+          "retested": true,
+          "retestedAt": 1790273400,
+          "startTime": 1790266500,
+          "endTime": 1790271600
+        }
+      },
+      {
+        "key": "-1:1790271600",
+        "sdk": {
+          "top": 4267.19,
+          "bottom": 4261.46,
+          "dir": -1,
+          "fvg": 0.7600000000002183,
+          "active": false,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790271600,
+          "endTime": 1790273400
+        },
+        "tv": {
+          "top": 4267.14,
+          "bottom": 4261.65,
+          "dir": -1,
+          "fvg": 0.9799999999995634,
+          "active": false,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790271600,
+          "endTime": 1790273400
+        }
+      },
+      {
+        "key": "1:1790273400",
+        "sdk": {
+          "top": 4263.32,
+          "bottom": 4256.15,
+          "dir": 1,
+          "fvg": 4.470000000000255,
+          "active": false,
+          "touched": false,
+          "invalidated": false,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790273400,
+          "endTime": 1790283300
+        },
+        "tv": {
+          "top": 4263.31,
+          "bottom": 4256.21,
+          "dir": 1,
+          "fvg": 4.479999999999563,
+          "active": false,
+          "touched": false,
+          "invalidated": false,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790273400,
+          "endTime": 1790283300
+        }
+      },
+      {
+        "key": "-1:1790276400",
+        "sdk": {
+          "top": 4276.93,
+          "bottom": 4271.29,
+          "dir": -1,
+          "fvg": 0.9399999999995998,
+          "active": false,
+          "touched": true,
+          "invalidated": false,
+          "retested": true,
+          "retestedAt": 1790280900,
+          "startTime": 1790276400,
+          "endTime": 1790277600
+        },
+        "tv": {
+          "top": 4276.81,
+          "bottom": 4271.29,
+          "dir": -1,
+          "fvg": 0.9399999999995998,
+          "active": false,
+          "touched": true,
+          "invalidated": false,
+          "retested": true,
+          "retestedAt": 1790280900,
+          "startTime": 1790276400,
+          "endTime": 1790277600
+        }
+      },
+      {
+        "key": "-1:1790280900",
+        "sdk": {
+          "top": 4272.96,
+          "bottom": 4269.66,
+          "dir": -1,
+          "fvg": 2.7899999999999636,
+          "active": true,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790280900,
+          "endTime": 1790283300
+        },
+        "tv": {
+          "top": 4272.91,
+          "bottom": 4269.7,
+          "dir": -1,
+          "fvg": 2.8299999999999272,
+          "active": true,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790280900,
+          "endTime": 1790283300
+        }
+      },
+      {
+        "key": "1:1790282100",
+        "sdk": {
+          "top": 4267.22,
+          "bottom": 4264.34,
+          "dir": 1,
+          "fvg": 1.4200000000000728,
+          "active": false,
+          "touched": false,
+          "invalidated": false,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790282100,
+          "endTime": 1790283300
+        },
+        "tv": {
+          "top": 4267.21,
+          "bottom": 4264.34,
+          "dir": 1,
+          "fvg": 1.4399999999995998,
+          "active": false,
+          "touched": false,
+          "invalidated": false,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790282100,
+          "endTime": 1790283300
+        }
+      },
+      {
+        "key": "1:1790282400",
+        "sdk": {
+          "top": 4268.81,
+          "bottom": 4265.04,
+          "dir": 1,
+          "fvg": 1.449999999999818,
+          "active": true,
+          "touched": false,
+          "invalidated": false,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790282400,
+          "endTime": 1790283300
+        },
+        "tv": {
+          "top": 4268.8,
+          "bottom": 4265.06,
+          "dir": 1,
+          "fvg": 1.4600000000000364,
+          "active": true,
+          "touched": false,
+          "invalidated": false,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1790282400,
+          "endTime": 1790283300
+        }
+      }
+    ]
+  },
+  "liquidity": {
+    "sdkCount": 7,
+    "tvCount": 7,
+    "sdkOnly": [],
+    "tvOnly": [],
+    "changed": [
+      {
+        "key": "1:1790266500",
+        "sdk": {
+          "price": 4288.2,
+          "dir": 1,
+          "pivotTime": 1790266500,
+          "touched": false,
+          "touchedTime": null,
+          "endTime": 1790283300
+        },
+        "tv": {
+          "price": 4288.01,
+          "dir": 1,
+          "pivotTime": 1790266500,
+          "touched": false,
+          "touchedTime": null,
+          "endTime": 1790283300
+        }
+      },
+      {
+        "key": "1:1790274900",
+        "sdk": {
+          "price": 4281.7,
+          "dir": 1,
+          "pivotTime": 1790274900,
+          "touched": false,
+          "touchedTime": null,
+          "endTime": 1790283300
+        },
+        "tv": {
+          "price": 4281.31,
+          "dir": 1,
+          "pivotTime": 1790274900,
+          "touched": false,
+          "touchedTime": null,
+          "endTime": 1790283300
+        }
+      },
+      {
+        "key": "1:1790279100",
+        "sdk": {
+          "price": 4275.93,
+          "dir": 1,
+          "pivotTime": 1790279100,
+          "touched": false,
+          "touchedTime": null,
+          "endTime": 1790283300
+        },
+        "tv": {
+          "price": 4275.85,
+          "dir": 1,
+          "pivotTime": 1790279100,
+          "touched": false,
+          "touchedTime": null,
+          "endTime": 1790283300
+        }
+      },
+      {
+        "key": "-1:1790262600",
+        "sdk": {
+          "price": 4244.7,
+          "dir": -1,
+          "pivotTime": 1790262600,
+          "touched": false,
+          "touchedTime": null,
+          "endTime": 1790283300
+        },
+        "tv": {
+          "price": 4244.86,
+          "dir": -1,
+          "pivotTime": 1790262600,
+          "touched": false,
+          "touchedTime": null,
+          "endTime": 1790283300
+        }
+      },
+      {
+        "key": "-1:1790272800",
+        "sdk": {
+          "price": 4256.15,
+          "dir": -1,
+          "pivotTime": 1790272800,
+          "touched": false,
+          "touchedTime": null,
+          "endTime": 1790283300
+        },
+        "tv": {
+          "price": 4256.21,
+          "dir": -1,
+          "pivotTime": 1790272800,
+          "touched": false,
+          "touchedTime": null,
+          "endTime": 1790283300
+        }
+      },
+      {
+        "key": "-1:1790276400",
+        "sdk": {
+          "price": 4266.88,
+          "dir": -1,
+          "pivotTime": 1790276400,
+          "touched": true,
+          "touchedTime": 1790280900,
+          "endTime": 1790280900
+        },
+        "tv": {
+          "price": 4266.91,
+          "dir": -1,
+          "pivotTime": 1790276400,
+          "touched": true,
+          "touchedTime": 1790280900,
+          "endTime": 1790280900
+        }
+      }
+    ]
+  }
+}

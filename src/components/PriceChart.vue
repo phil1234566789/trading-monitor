@@ -2,6 +2,10 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { nextCandlePollDelay } from "../candlePolling.js";
 import { useM5CandleClock } from "../composables/useM5CandleClock.js";
+import { isGoldInstrument } from '../goldChartPolicy.js';
+import { goldWeekendClosed } from '../fxcmGoldCalendar.js';
+import { useGoldChartHistory } from '../composables/useGoldChartHistory.js';
+import { goldNativeZones } from '../priceChartObZones.js';
 import M5CandleClock from "./M5CandleClock.vue";
 import { createChart, CandlestickSeries, TickMarkType, CrosshairMode } from "lightweight-charts";
 import { renderPersistedZones, OrderBlockPrimitive, obZoneNaturalKey } from "../orderBlocks.js";
@@ -499,6 +503,7 @@ let candlesReady = false;
 let loadedCandleKey = null;
 const m5ClockEnabled = () => props.currentBar === "5m" && props.replayUntil == null;
 const { state: m5Clock, retry: retryM5Clock } = useM5CandleClock({
+  isPaused: () => isGoldInstrument(props.symbol) && goldWeekendClosed(Date.now()),
   enabled: m5ClockEnabled,
   getLatestTime: () => allCandles.at(-1)?.time,
   reload: () => pollRecent(),
@@ -790,7 +795,7 @@ function refreshTradeSetupLinksInternal() {
 function obZoneCtx() {
   return {
     m5Candles: clipReplay(getTradeSetupM5Candles()),
-    dbObZones: props.dbObZones,
+    dbObZones: isGoldInstrument(props.symbol) ? goldNativeObZones.value : props.dbObZones,
     symbol: props.symbol,
     replayUntil: props.replayUntil,
     price: currentPriceEstimate(allCandles),
@@ -1114,6 +1119,10 @@ function refreshDrawingsInternal() {
 // (2026-08-23 umgekehrt, nach demselben Problem bei Liquidity-Leveln — mehrere sequenzielle
 // Nachlade-Requests widersprechen dem 4D-Prinzip): die Box korrigiert sich von selbst, sobald aus
 // einem anderen Grund (normales Zurückscrollen) genug Kerzen geladen sind.
+const { candles: goldNativeCandles, error: goldHistoryError, load: reloadGoldHistory } = useGoldChartHistory(() => props.symbol, refreshPoiZonesInternal);
+const goldNativeObZones = computed(() => ['1H', '4H'].flatMap(tf =>
+  goldNativeZones(goldNativeCandles.value[tf], tf, props.replayUntil)));
+
 function refreshPoiZonesInternal() {
   const candles = clipReplay(allCandles);
   const zones = collectObsZones({
@@ -1251,6 +1260,7 @@ function openAntiConfluencePicker(range = props.tscRange, isTsc = true) {
   const currentPrice = currentPriceEstimate(clipReplay(allCandles));
   antiConfluencePickerCurrentPrice.value = currentPrice;
   const result = findAntiConfluenceCandidates({
+    instrument: props.symbol,
     direction,
     zoneBoundPrice,
     currentPrice,
@@ -1715,6 +1725,7 @@ async function loadOlderCandlesNow() {
       return;
     }
     if (older.length === 0) reachedHistoryStart = true;
+    if (older.length === 0 && isGoldInstrument(props.symbol)) showLiveHistoryConfirm.value = true;
     else allCandles = mergeCandles(allCandles, older);
     refreshChart();
     updateLoadOlderButtonVisibility();
@@ -1941,7 +1952,7 @@ onMounted(() => {
     wickDownColor: cssColor("candleDown"),
     // Forex-Kurse (GBPUSD z.B. 1.33941) brauchen 5 Nachkommastellen (Pipette) — der Default
     // (precision 2 / minMove 0.01) würde sie auf 1.34 gerundet fast nutzlos machen.
-    priceFormat: { type: "price", precision: 5, minMove: 0.00001 },
+    priceFormat: { type: "price", precision: pricePrecisionForInstrument(props.symbol), minMove: props.symbol === 'XAUUSD' ? 0.01 : 0.00001 },
   });
 
   // EMA-Serien + RSI-Panel-Lifecycle leben in usePriceChartRsi.js (Phase 6b) — legt hier die
@@ -2071,7 +2082,7 @@ onMounted(() => {
       chartContainerRef.value.style.cursor = "crosshair";
       if (measureStartPoint) {
         const point = measurePointAt(x, y);
-        measurePreview = point ? measureDrawing(measureStartPoint, point).annotations[0] : null;
+        measurePreview = point ? measureDrawing(measureStartPoint, point, props.symbol).annotations[0] : null;
         refreshDrawingsInternal();
       }
       return;
@@ -2524,6 +2535,7 @@ defineExpose({
   <div class="chart-wrapper" :style="{ height: chartWrapperHeight + 'px' }">
     <div ref="chartContainerRef" class="chart-container"></div>
     <M5CandleClock v-if="m5ClockEnabled()" :state="m5Clock" @retry="retryM5Clock" />
+    <div v-if="goldHistoryError" class="live-history-confirm" role="alert">Gold-Strukturvorlauf konnte nicht vollständig geladen werden. <button @click="reloadGoldHistory">Erneut laden</button></div>
     <div v-if="rangesLoading" class="ranges-loading">
       <span class="ranges-spinner"></span>
       Ranges laden…
@@ -2539,8 +2551,8 @@ defineExpose({
       {{ loadOlderButtonBusy ? "lädt…" : "⟲ Ältere Kerzen laden" }}
     </button>
     <div v-if="showLiveHistoryConfirm" class="live-history-confirm">
-      <span>Kerzen vor dem archivierten Zeitraum (ab 01.01.2026) — live von cTrader laden? Kann langsam sein.</span>
-      <button :disabled="liveHistoryConfirmBusy" @click="confirmLoadLiveHistory">
+      <span>{{ isGoldInstrument(symbol) ? 'Gold-Archivgrenze erreicht. Ältere Kerzen sind noch nicht importiert; die Struktur vor diesem Zeitpunkt ist unvollständig.' : 'Archivgrenze erreicht — ältere Kerzen erneut abfragen?' }}</span>
+      <button v-if="!isGoldInstrument(symbol)" :disabled="liveHistoryConfirmBusy" @click="confirmLoadLiveHistory">
         <span v-if="liveHistoryConfirmBusy" class="ranges-spinner"></span>
         {{ liveHistoryConfirmBusy ? "lädt…" : "Ja, laden" }}
       </button>
