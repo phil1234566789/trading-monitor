@@ -78,6 +78,12 @@ export function usePriceChartMarketStructure() {
   let m5ComputedKey = null;
   let m5Computed = { state: null, phases: [], events: [], pivotsOuter: null, pivotsInner: null };
   let m5MarkerPrimitives = [];
+  // Ältere M5-Historie, falls der Anker vor der ältesten geladenen M5-Kerze liegt (Trade-Setups laden
+  // fix TRADE_SETUP_M5_CANDLE_COUNT = ~8,7 Handelstage; ohne 1h-Nested fällt der Anker auf den
+  // Outer-Start, der auch 12+ Tage zurückliegen kann). Einmal je Symbol/Anker nachgeladen.
+  let m5Older = { symbol: null, candles: [] };
+  let m5OlderRequested = null;
+  let lastM5Args = null;
 
   const marketStructureState = ref(null);
   const rangesMetadata = ref(null); // Liste der erkannten H1-Periode-5-Pivots fürs Ranges-Metadaten-Panel
@@ -191,12 +197,17 @@ export function usePriceChartMarketStructure() {
 
   // M5-Struktur (PLAN-m5-trend.md): derselbe Algo auf M5-Kerzen, verankert am Start der innersten
   // 1h-Ebene (innermostStructureStart, ohne Nested der 1h-Outer-Start outerCutoff). Reichen die
-  // geladenen M5-Kerzen nicht so weit zurück, beginnt
-  // die Pivot-Suche einfach bei der ältesten geladenen Kerze — bewusst KEIN Extra-Fetch (jeder
-  // cTrader-Fetch ist ein frischer TLS-Connect). Läuft unabhängig von den Toggles, weil das TSC
-  // den Trend immer braucht; die Toggles steuern nur das Zeichnen.
-  function refreshM5Structure({ candles, m5CandlesClipped, symbol, replayUntil, showM5Structure, showM5TrendPhases, showLiquidityDebug, m5Period, m5Period2 }) {
+  // geladenen M5-Kerzen nicht bis zum Anker, lädt loadOlderM5 den Rest einmalig nach (Philip
+  // 27.09.2026: "muss sichergestellt werden, dass genug Candles da sind"). Läuft unabhängig von den
+  // Toggles, weil das TSC den Trend immer braucht; die Toggles steuern nur das Zeichnen.
+  function refreshM5Structure(args) {
+    lastM5Args = args;
+    const { candles, symbol, replayUntil, showM5Structure, showM5TrendPhases, showLiquidityDebug, m5Period, m5Period2 } = args;
     const anchor = innermostStructureStart(marketStructureState.value, outerCutoff);
+    if (m5Older.symbol !== symbol) m5Older = { symbol, candles: [] };
+    const loaded = args.m5CandlesClipped;
+    const m5CandlesClipped = loaded.length > 0 ? [...m5Older.candles.filter((c) => c.time < loaded[0].time), ...loaded] : loaded;
+    if (anchor != null && m5CandlesClipped.length > 0 && anchor < m5CandlesClipped[0].time) loadOlderM5(symbol, anchor, m5CandlesClipped[0].time);
     // Memo: bei P5/P2 über ~12 Tage ~150 ms — refreshChart() läuft aber auch bei jedem Style-Regler-
     // Event, dort soll nur neu gezeichnet, nicht neu gerechnet werden.
     const key = `${m5CandlesClipped.length}:${m5CandlesClipped.at(-1)?.time}:${anchor}:${m5Period}:${m5Period2}`;
@@ -241,6 +252,24 @@ export function usePriceChartMarketStructure() {
       down: cssColor("m5TrendPhaseDown"),
       downPre: cssColor("m5TrendPhaseDownPre"),
     });
+  }
+
+  // Lädt die M5-Kerzen zwischen Anker und ältester geladener Kerze nach und zeichnet danach neu.
+  // count über die Kalenderzeit ist eine Obergrenze (Wochenenden zählen mit), +20 für die
+  // Fraktal-Vorlaufkerzen; gedeckelt auf das cTrader-Limit von 14000 Bars/Request.
+  async function loadOlderM5(symbol, anchor, oldestTime) {
+    const key = `${symbol}:${anchor}:${oldestTime}`;
+    if (m5OlderRequested === key) return;
+    m5OlderRequested = key;
+    try {
+      const count = Math.min(14000, Math.ceil((oldestTime - anchor) / barSecondsFor("5m")) + 20);
+      const older = await fetchInitialForexCandles(symbol, "5m", count, oldestTime * 1000);
+      if (m5Older.symbol !== symbol || older.length === 0) return;
+      m5Older = { symbol, candles: [...older.filter((c) => c.time < oldestTime), ...m5Older.candles.filter((c) => c.time >= oldestTime)] };
+      if (candleSeries && lastM5Args) refreshM5Structure(lastM5Args);
+    } catch (err) {
+      console.error("Ältere M5-Kerzen für die M5-Struktur fehlgeschlagen:", err);
+    }
   }
 
   // Eigener H1-Fetch fürs Ranges-Metadaten-Panel (und seit Chat 2026-07-28 auch für die H1-Level
