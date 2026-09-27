@@ -18,6 +18,7 @@ import {
   collectObsZones,
   mergePinnedZones,
 } from "../priceChartObZones.js";
+import { markIgnored } from "../ignoredCandles.js";
 import {
   matchTradeSetup,
   matchLiquidityLevel,
@@ -794,7 +795,10 @@ function refreshTradeSetupLinksInternal() {
 // gebündelt für refreshTradeTargetLinksInternal/-TradeConfirmationLinksInternal.
 function obZoneCtx() {
   return {
-    m5Candles: clipReplay(getTradeSetupM5Candles()),
+    // Markiert, damit die M5-OB-Erkennung in priceChartObZones.js die Spread-Hour-Fenster
+    // ueberspringt (siehe markIgnoredCandles) — die Markierung sitzt hier statt dort, weil
+    // priceChartObZones.js von Tests ohne Browser-Umgebung importiert wird.
+    m5Candles: markIgnored(clipReplay(getTradeSetupM5Candles()), props.symbol),
     dbObZones: isGoldInstrument(props.symbol) ? goldNativeObZones.value : props.dbObZones,
     symbol: props.symbol,
     replayUntil: props.replayUntil,
@@ -1121,7 +1125,7 @@ function refreshDrawingsInternal() {
 // einem anderen Grund (normales Zurückscrollen) genug Kerzen geladen sind.
 const { candles: goldNativeCandles, error: goldHistoryError, load: reloadGoldHistory } = useGoldChartHistory(() => props.symbol, refreshPoiZonesInternal);
 const goldNativeObZones = computed(() => ['1H', '4H'].flatMap(tf =>
-  goldNativeZones(goldNativeCandles.value[tf], tf, props.replayUntil)));
+  goldNativeZones(markIgnored(goldNativeCandles.value[tf], props.symbol), tf, props.replayUntil)));
 
 function refreshPoiZonesInternal() {
   const candles = clipReplay(allCandles);
@@ -1390,6 +1394,7 @@ function refreshRangesMarkersInternal() {
 // (Zeichnung + Market-Structure-Trendalgorithmus + Debug-Metadaten-Panel).
 function refreshRangesInternal() {
   const { earliestTime } = computeRangesPivotsAndMetadata(clipReplay(getRangesH1Candles()), {
+    symbol: props.symbol,
     rangesPeriod: props.rangesPeriod,
     rangesLookbackHours: props.rangesLookbackHours,
     ranges2Period: props.ranges2Period,

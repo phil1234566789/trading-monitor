@@ -70,6 +70,7 @@ async function saveToRemote() {
     hex: s.hex,
     alpha: s.alpha,
     high_low_relevant: s.highLowRelevant,
+    ignore_liquidity: s.ignoreLiquidity ?? false,
     instrument: s.instrument,
     danger: s.danger,
     days: s.days ?? null,
@@ -94,7 +95,7 @@ async function syncFromRemote() {
   try {
     const { data, error } = await supabase
       .from("sessions")
-      .select("id, label, from_minutes, to_minutes, hex, alpha, high_low_relevant, instrument, danger, days");
+      .select("id, label, from_minutes, to_minutes, hex, alpha, high_low_relevant, instrument, danger, days, ignore_liquidity");
     if (error) throw error;
     if (data && data.length > 0) {
       suppressSave = true;
@@ -109,6 +110,7 @@ async function syncFromRemote() {
           hex: r.hex,
           alpha: r.alpha,
           highLowRelevant: r.high_low_relevant,
+          ignoreLiquidity: r.ignore_liquidity ?? false,
           instrument: r.instrument,
           danger: r.danger,
           days: r.days,
@@ -193,6 +195,8 @@ export function addSession(instrument) {
     // Flag je Session, noch von keinem Algorithmus konsumiert. Default true, weil das bisherige
     // (implizite) Verhalten war, jede Session als Range-relevant zu behandeln.
     highLowRelevant: true,
+    // Spread Hour ist der Fall, fuer den das Flag gebaut wurde — neue Sessions starten ohne.
+    ignoreLiquidity: false,
     instrument,
     danger: "normal",
     // Default "jeden Tag" (siehe daysOrAll) — bewusst kein weekday-Vorurteil hier, Philip muss Sa/So
@@ -379,7 +383,11 @@ export function renderSessions(series, sessionConfigs, existingPrimitives, candl
   for (const session of sessionConfigs) {
     const occurrences = sessionOccurrences(session.fromMinutes, session.toMinutes, rangeStartSec, rangeEndSec, tzOffsetMinutes, session.days);
     for (const { startSec, endSec } of occurrences) {
-      const highLow = session.highLowRelevant ? highLowInWindow(candles, startSec, endSec) : null;
+      // Immer als Box, unabhängig von highLowRelevant (Philip 2026-09-24: "bis heute habe ich nicht
+      // eine einzige session, wo ich den hintergrund von ganz oben bis ganz unten brauche") — sonst
+      // konnte er highLowRelevant nicht ausschalten, ohne die Vollfläche zu bekommen. Das Flag
+      // steuert jetzt nur noch die Kontext-/Bonus-Labels (buildSessionContextLookup).
+      const highLow = highLowInWindow(candles, startSec, endSec);
       const primitive = new SessionBandPrimitive(
         startSec,
         endSec,

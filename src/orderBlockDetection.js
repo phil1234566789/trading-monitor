@@ -75,6 +75,11 @@ export function detectOrderBlocks(candles, timeframe, isForex = true, minGapOver
     const c1 = candles[i - 2];
     const c2 = candles[i - 1];
     const cur = candles[i];
+    // Anders als die Fraktal-Erkennung darf eine `ignored`-Kerze (Spread Hour, siehe
+    // markIgnoredCandles in sessionOccurrences.js) hier NICHT einfach weggelassen werden: dann
+    // rückten ihre Nachbarn zusammen und die Bewegung über die Lücke hinweg käme als FVG heraus,
+    // die es nie gab. Also fällt das ganze Fenster aus, in dem so eine Kerze vorkommt.
+    if (candles[i - 3].ignored || c1.ignored || c2.ignored || cur.ignored) continue;
     const refPrice = c1.close;
 
     const bullGap = cur.low - c1.high;

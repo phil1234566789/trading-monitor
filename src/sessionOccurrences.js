@@ -169,6 +169,25 @@ export function sessionOccurrences(fromMinutes, toMinutes, rangeStartSec, rangeE
   return results;
 }
 
+// Markiert die Kerzen, die in einer "Liquidität ignorieren"-Session liegen, mit `ignored: true` —
+// für die Spread Hour, deren breite Rollover-Dochte auf anderen Feeds gar nicht existieren und
+// deshalb weder ein Level erzeugen noch eines beenden sollen ("als ob die candles nicht da wären").
+// Ein FLAG statt eines gefilterten Arrays, weil die beiden Verbraucher es unterschiedlich brauchen:
+// die Fraktal-Erkennung darf die Kerze einfach weglassen (ein Fraktal ist ein reines
+// High/Low-Muster, eine Lücke stört es nicht), die FVG-Erkennung dagegen NICHT — dort würden sonst
+// die Nachbarn der Lücke zusammenrücken und die Stundenbewegung dazwischen als FVG erfunden.
+// `danger` ist hier bewusst kein Kriterium: Asia ist genauso "forbidden", ihre Level will Philip
+// aber behalten. sessionConfigs: schon auf ein Instrument gefiltert (Aufrufer-Pflicht, wie überall).
+export function markIgnoredCandles(candles, sessionConfigs, tzOffsetMinutesFn) {
+  if (!candles || candles.length === 0) return candles ?? [];
+  const relevant = sessionConfigs.filter((s) => s.ignoreLiquidity);
+  if (relevant.length === 0) return candles;
+  const fenster = relevant.flatMap((s) =>
+    sessionOccurrences(s.fromMinutes, s.toMinutes, candles[0].time, candles[candles.length - 1].time + 1, tzOffsetMinutesFn, s.days),
+  );
+  return candles.map((c) => (fenster.some((o) => c.time >= o.startSec && c.time < o.endSec) ? { ...c, ignored: true } : c));
+}
+
 // Sitzungs-Kontext fürs LQ-Level (Chat 2026-07-30, Philip: "wenn ne Session 'high/low
 // entscheidend' true hat, dann & das LQ-Level gehört zur Session ... context: 'asia high'") — nur
 // Sessions mit highLowRelevant, deren TATSÄCHLICHES Zeitfenster (DST-aware) den Pivot-Zeitpunkt

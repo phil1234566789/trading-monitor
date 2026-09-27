@@ -21,6 +21,7 @@ import { currentPriceEstimate } from "../priceChartObZones.js";
 import { pivotForDisplay } from "../marketStructureAnalysis";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import { createSessionBonusResolver } from "../sessionBonus.js";
+import { markIgnored } from "../ignoredCandles.js";
 import { ref } from "vue";
 
 export function usePriceChartLiquidity() {
@@ -93,7 +94,7 @@ export function usePriceChartLiquidity() {
     // timeframe = der gerade angezeigte Chart-Timeframe (Task "Chart-Objekte..." Nachbesserung
     // 2026-08-23: M5/1H/4H-Chart-Style-Kategorien, siehe liquidity.js: liquidityStyleTimeframe) —
     // live erkannte Level tragen sonst kein eigenes Timeframe-Feld wie die persistierten HTF-Level.
-    const { highs: rawHighs, lows: rawLows } = detectLiquidityLevels(candles, LIQUIDITY_FRACTAL_PERIOD);
+    const { highs: rawHighs, lows: rawLows } = detectLiquidityLevels(markIgnored(candles, symbol), LIQUIDITY_FRACTAL_PERIOD);
     const highs = rawHighs.map((l) => ({ ...l, timeframe: currentBar }));
     const lows = rawLows.map((l) => ({ ...l, timeframe: currentBar }));
     const liveRelevant = showSweptLiquidity

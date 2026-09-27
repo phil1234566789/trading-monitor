@@ -88,6 +88,10 @@ function isDayActive(session, day) {
         <input v-model="session.highLowRelevant" type="checkbox" />
         High/Low entscheidend
       </label>
+      <label class="sessions-highlow-field" title="An: Kerzen dieser Session gelten für Liquidity-Level, Order Blocks und Struktur als nicht vorhanden (z.B. Spread Hour)">
+        <input v-model="session.ignoreLiquidity" type="checkbox" />
+        Liquidität ignorieren
+      </label>
       <label class="sessions-danger-field">
         Gefahr
         <select v-model="session.danger" class="sessions-danger-select">

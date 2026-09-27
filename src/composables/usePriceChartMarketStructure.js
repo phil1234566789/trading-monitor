@@ -29,6 +29,7 @@ import { cssColor } from "../chartColors.js";
 import { buildStructureWithPhases, renderTrendPhaseBands } from "../trendPhases.js";
 import { fmtPrice, fmtDateTime, fmtTime, pricePrecisionForInstrument } from "../format.js";
 import { createSessionBonusResolver } from "../sessionBonus.js";
+import { withoutIgnored } from "../ignoredCandles.js";
 import { fetchInitialCandles as fetchInitialForexCandles } from "../forexCandles.js";
 import { fetchCandlesCached } from "../candleCache.js";
 import { RANGES_CANDLE_BUFFER } from "../priceChartConstants.js";
@@ -125,7 +126,11 @@ export function usePriceChartMarketStructure() {
   // bereits clipReplay-gefiltertes rangesH1Candles (siehe PriceChart.vue: refreshRangesInternal).
   // Rückgabe { earliestTime } fürs Debug-Metadaten-Panel (structureEarliestTime in PriceChart.vue) —
   // der früheste ROHE pivotTime über beide Perioden, null wenn keine Pivots vorliegen.
-  function computeRangesPivotsAndMetadata(candlesClipped, { rangesPeriod, rangesLookbackHours, ranges2Period, ranges2LookbackHours, replayUntil, rangesFixedStartActive, rangesFixedStartTime }) {
+  function computeRangesPivotsAndMetadata(rohKerzen, { symbol, rangesPeriod, rangesLookbackHours, ranges2Period, ranges2LookbackHours, replayUntil, rangesFixedStartActive, rangesFixedStartTime }) {
+    // Spread-Hour-Kerzen ganz weg statt nur markiert (Philip 2026-09-24: "ja"): der Struktur-Algo
+    // kennt keine FVG, ein Fraktal und ein Kerzenschluss-Check sind reine High/Low-Vergleiche —
+    // die Zeitluecke stoert sie nicht, und so braucht marketStructureAnalysis.ts keine Aenderung.
+    const candlesClipped = withoutIgnored(rohKerzen, symbol);
     const rangeCtx = { replayUntil, rangesFixedStartActive, rangesFixedStartTime };
     const outer = candlesClipped.length > 0 ? computeRangesPivotsFor(candlesClipped, rangesPeriod, rangesLookbackHours, rangeCtx) : null;
     rangesPivots = outer?.pivots ?? null;
@@ -172,7 +177,9 @@ export function usePriceChartMarketStructure() {
   // = bereits clipReplay-gefiltertes rangesH1Candles (nicht allCandles) — andere Auflösung je nach
   // gewähltem Chart-Timeframe.
   function refreshMarketStructure({ candles, h1CandlesClipped, symbol, replayUntil, showRanges, rangesPeriod, ranges2Period }) {
-    const state = buildMarketStructureState(rangesPivots, rangesPivots2, rangesPeriod, ranges2Period, h1CandlesClipped);
+    // Dieselbe Filterung wie bei den Pivots (computeRangesPivotsAndMetadata) — die Close-Checks in
+    // buildMarketStructureState duerfen die Spread Hour sonst doch noch als Bruch werten.
+    const state = buildMarketStructureState(rangesPivots, rangesPivots2, rangesPeriod, ranges2Period, withoutIgnored(h1CandlesClipped, symbol));
     marketStructureState.value = state; // fürs Metadaten-Panel + TSC, unabhängig von showRanges (Zeichnen)
     currentFibLevels = collectFibLevels(state); // für den Bestätigungs-Klick-Hittest, siehe findClickedFibLevel (PriceChart.vue)
     renderMarketStructureAnalysis(candleSeries, showRanges ? state : null, marketStructurePrimitives, candles, structureRenderOptions(candles, symbol, replayUntil));
@@ -206,7 +213,7 @@ export function usePriceChartMarketStructure() {
     const anchor = innermostStructureStart(marketStructureState.value, outerCutoff);
     if (m5Older.symbol !== symbol) m5Older = { symbol, candles: [] };
     const loaded = args.m5CandlesClipped;
-    const m5CandlesClipped = loaded.length > 0 ? [...m5Older.candles.filter((c) => c.time < loaded[0].time), ...loaded] : loaded;
+    const m5CandlesClipped = withoutIgnored(loaded.length > 0 ? [...m5Older.candles.filter((c) => c.time < loaded[0].time), ...loaded] : loaded, symbol);
     if (anchor != null && m5CandlesClipped.length > 0 && anchor < m5CandlesClipped[0].time) loadOlderM5(symbol, anchor, m5CandlesClipped[0].time);
     // Memo: bei P5/P2 über ~12 Tage ~150 ms — refreshChart() läuft aber auch bei jedem Style-Regler-
     // Event, dort soll nur neu gezeichnet, nicht neu gerechnet werden.

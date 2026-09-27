@@ -24,6 +24,7 @@ import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
 import { mergeDbTradeSetups } from "../tradeSetups.js";
 import { setupInvalidationTarget } from "../setupInvalidationTarget.js";
 import { sessions, isForbiddenAt } from "../sessions.js";
+import { markIgnored } from "../ignoredCandles.js";
 import {
   TRADE_SETUP_M5_FRACTAL_PERIOD,
   TRADE_SETUP_M5_CANDLE_COUNT,
@@ -65,13 +66,20 @@ export function usePriceChartTradeSetups() {
       tradeSetupsMetadata.value = [];
       return;
     }
-    const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(candles, TRADE_SETUP_M5_FRACTAL_PERIOD);
+    // Einmal markiert fuer Fraktale UND die bestaetigende FVG — die beiden Erkennungen lesen das
+    // Flag unterschiedlich (siehe markIgnoredCandles), brauchen aber denselben Kerzensatz.
+    const kerzen = markIgnored(candles, symbol);
+    const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(kerzen, TRADE_SETUP_M5_FRACTAL_PERIOD);
     // H1-Level kommen seit Chat 2026-07-28 aus marketStructureState.structurePivots statt einer
     // eigenen H1-Fraktal-Erkennung — kann leer sein, solange marketStructureState noch nicht
     // geladen ist; Path A/B finden dann übergangsweise nur M5-basierte Setups, kein Absturz.
     const h1Highs = collectStructureLqLevels(marketStructureState, 1);
     const h1Lows = collectStructureLqLevels(marketStructureState, -1);
-    const setupObs = detectSetupObs(candles, obMinimum(symbol, '5m'));
+    const setupObs = detectSetupObs(kerzen, obMinimum(symbol, '5m'));
+    // Preis-Scans von detectTradeSetups (Sweep-Bruch per Close, Aufweiten der OB-Kante auf das
+    // Extrem) duerfen die Kerze wirklich weglassen — sonst beendet ein Rollover-Docht einen Sweep
+    // oder zieht die Invalidierung auf einen Preis, den es auf anderen Feeds nicht gab.
+    const kerzenOhneIgnorierte = kerzen.filter((c) => !c.ignored);
     const params = {
       graceSec: TRADE_SETUP_GRACE_SEC,
       lsMaxLeadSecH1: TRADE_SETUP_LS_MAX_LEAD_SEC_H1,
@@ -105,8 +113,8 @@ export function usePriceChartTradeSetups() {
     // wirkungslos. Symbol-Filter, weil der Poll nach einem Symbolwechsel kurz noch die Setups des
     // vorherigen Instruments hält (gleicher Grund wie filterDbObZones).
     const dbFor = (dir) => dbTradeSetups.filter((s) => s.instrument === symbol && s.dir === dir);
-    const shorts = takeLast(mergeDbTradeSetups(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, candles), dbFor(1)).filter(notForbidden));
-    const longs = takeLast(mergeDbTradeSetups(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, candles), dbFor(-1)).filter(notForbidden));
+    const shorts = takeLast(mergeDbTradeSetups(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, kerzenOhneIgnorierte), dbFor(1)).filter(notForbidden));
+    const longs = takeLast(mergeDbTradeSetups(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, kerzenOhneIgnorierte), dbFor(-1)).filter(notForbidden));
     tradeSetupsMetadata.value = [
       ...shorts.map((s, i) => ({ ...s, invalidationTarget: setupInvalidationTarget(s, m5Highs, symbol), label: "Short", setupNumber: n > 1 ? i + 1 : null })),
       ...longs.map((s, i) => ({ ...s, invalidationTarget: setupInvalidationTarget(s, m5Lows, symbol), label: "Long", setupNumber: n > 1 ? i + 1 : null })),

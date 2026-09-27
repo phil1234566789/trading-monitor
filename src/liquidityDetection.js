@@ -103,7 +103,12 @@ function buildLevel(candles, p, period, dir) {
 // chronologisch aufsteigend (wie in liquidity.pine, wo neue Level ans Array-Ende
 // gepusht werden) — wichtig für filterRelevantLevels (das "neueste" Level = letztes
 // Element).
-export function detectLiquidityLevels(candles, period) {
+export function detectLiquidityLevels(rohKerzen, period) {
+  // `ignored`-Kerzen (Spread Hour, siehe markIgnoredCandles in sessionOccurrences.js) fallen hier
+  // KOMPLETT weg statt nur beim Touch-Scan: ein Fraktal ist ein reines High/Low-Muster, eine
+  // Zeitlücke stört es nicht — und nur so kann ein Rollover-Docht auch kein Fraktal mehr
+  // verhindern, das ohne ihn dagestanden hätte.
+  const candles = rohKerzen.some((c) => c.ignored) ? rohKerzen.filter((c) => !c.ignored) : rohKerzen;
   const highs = [];
   const lows = [];
   const minIdx = period + 4; // Kaskaden-Logik braucht bis zu period+4 Kerzen davor
