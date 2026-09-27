@@ -456,3 +456,10 @@ in trendPhases.js selbst as-of geprüft, weil markLqSweeps bewusst bis zur letzt
 (Live-Endzustand) und die Phasen-Historie sonst den späteren Bruch vorwegnimmt.
 09.09.: Vorstufe ab 09:50 (CHoCH, Algo 10:20), voll ab 12:10 (LH 1,35481 + LL 1,35298),
 Vorstufe ab 13:40 (BOS). Anteil voll: 24 % statt 8 %.
+
+## M5-Anker = Start der innersten 1h-Ebene (27.09.2026)
+
+Philip nach dem Testen: "Die M5-Struktur reicht ab dem letzten nested Startpunkt." Anker ist jetzt
+`innermostStructureStart` = Ursprung (appliedPivots[0]) der innersten bestätigten 1h-Ebene, ohne
+Nested der 1h-Outer-Start wie bisher. Gilt für Chart/TSC und `get_data_export` (`m5Structure.since`).
+Trendphasen bleiben wie sie sind ("nicht perfekt, reicht für jetzt").

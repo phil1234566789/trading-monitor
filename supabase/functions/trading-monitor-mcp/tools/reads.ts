@@ -124,7 +124,7 @@ export function registerReadTools(server: McpServer) {
         "structureWindow (cutoffOuter/cutoffInner als Unix-Sekunden UND als cutoffOuterAt/" +
         "cutoffInnerAt in 'YYYY-MM-DD HH:mm' Europe/Berlin) sowie m5Structure: M5-Trend " +
         "(uptrend/downtrend/unknown) + letzte Reaktion {type: 'CHoCH'|'BOS', price, at} desselben " +
-        "Structure-Algos auf M5-Kerzen ab cutoffOuter — reaction=null heißt: seit Trendbeginn weder CHoCH noch BOS.",
+        "Structure-Algos auf M5-Kerzen ab dem Start der innersten 1h-Ebene (since) — reaction=null heißt: seit Trendbeginn weder CHoCH noch BOS.",
       inputSchema: {
         instrument: INSTRUMENT,
         dateStr: z.string().optional().describe("YYYY-MM-DD (Europe/Berlin), Default: heute"),

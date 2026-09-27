@@ -4,7 +4,7 @@ import { getObZones, getLiquidityLevels, getSessions, getLatestDailyStructureSta
 // Reine Trend-Mathematik (siehe CLAUDE.md "MCP-Server") — seit dem Split von marketStructureAnalysis.ts
 // (Chat 2026-07-31, Rendering lebt jetzt separat in marketStructureRendering.ts) frei von Browser-
 // Abhängigkeiten und direkt aus dem Frontend-Quellbaum importierbar, kein dritter Algorithmus-Port.
-import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructureState, deriveTrendReaction } from "../marketStructureAnalysis.ts";
+import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructureState, deriveTrendReaction, innermostStructureStart } from "../marketStructureAnalysis.ts";
 // M5-Liquidity/M5-OB werden von KEINEM Backend persistiert (poi-watcher speichert liquidity_levels
 // nur 1H, ob_zones nur 1H/4H, siehe CLAUDE.md poi-watcher-Throttling) — Lana bekam sie bisher gar
 // nicht (Bug-Report Philip 2026-08-02: "Lana braucht mehr Daten ... M5 LQ-Levels/M5 OBs genau die
@@ -240,6 +240,8 @@ export async function compute1hStructureState(instrument: string, currentTimeSec
   return {
     trend: capStructurePivots(dropUnknownStructureLevels(summarizeMarketStructureState(state, { includeAppliedPivots: false }))),
     trendAge: computeTrendChainAges(state, currentTimeSec),
+    // Anker der M5-Struktur, siehe innermostStructureStart (marketStructureAnalysis.ts).
+    m5AnchorTime: innermostStructureStart(state, cutoffOuter)!,
     window: {
       periodOuter,
       periodInner,
@@ -451,12 +453,13 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // M5-Sweep/OB-Rohdaten ausgelagert (computeM5LiquidityAndObZones oben) — wiederverwendet von
   // get_recent_reactions (recentReactions.ts), das dieselbe Erkennung braucht, aber ohne den restlichen
   // Tages-Export (Tageskerzen/1H-Struktur) — DRY statt einer zweiten M5-Erkennungslogik.
-  // M5-Struktur (PLAN-m5-trend.md): derselbe Algo auf M5, verankert am 1h-Outer-Start (cutoffOuter),
-  // dieselben Perioden wie die 1h-Struktur. Nur Trend + letzte Reaktion, kein structurePivots-Export.
-  const { periodOuter, periodInner, cutoffOuter } = structureResult.window;
+  // M5-Struktur (PLAN-m5-trend.md): derselbe Algo auf M5, verankert am Start der innersten 1h-Ebene
+  // (m5AnchorTime), dieselben Perioden wie die 1h-Struktur. Nur Trend + letzte Reaktion.
+  const { periodOuter, periodInner } = structureResult.window;
+  const m5Anchor = structureResult.m5AnchorTime;
   const m5StructureState = buildMarketStructureState(
-    computeRangesPivots(m5CandlesForDetection, periodOuter, cutoffOuter),
-    computeRangesPivots(m5CandlesForDetection, periodInner, cutoffOuter),
+    computeRangesPivots(m5CandlesForDetection, periodOuter, m5Anchor),
+    computeRangesPivots(m5CandlesForDetection, periodInner, m5Anchor),
     periodOuter,
     periodInner,
     m5CandlesForDetection,
@@ -464,6 +467,7 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   );
   const m5Derived = deriveTrendReaction(m5StructureState);
   const m5Structure = {
+    since: berlinDateTimeStrFor(m5Anchor),
     trend: m5Derived.trend,
     reaction: m5Derived.reaction ? { type: m5Derived.reaction.type, price: Number(m5Derived.reaction.price.toFixed(5)), at: berlinDateTimeStrFor(m5Derived.reaction.time) } : null,
   };

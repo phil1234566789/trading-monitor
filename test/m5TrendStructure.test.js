@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import candles from "./fixtures/gbpusd-m5-2026-07-27-m5-trend.json";
 import candles0909 from "./fixtures/gbpusd-m5-2026-09-09-choch.json";
 import candles0909Day from "./fixtures/gbpusd-m5-2026-09-09-full-day.json"; // bis 18:00 Berlin, früherer Start (2600 Kerzen)
-import { computeRangesPivots, buildMarketStructureState, deriveTrendReaction, collectNestedChain } from "../src/marketStructureAnalysis";
+import { computeRangesPivots, buildMarketStructureState, deriveTrendReaction, collectNestedChain, innermostStructureStart } from "../src/marketStructureAnalysis";
 import { buildStructureWithPhases } from "../src/trendPhases.js";
 import { firstTouchAfter } from "../src/marketStructureRendering";
 
@@ -109,5 +109,17 @@ describe("M5-CHoCH am 09.09.2026 (P2-Tief startet den Kandidaten)", () => {
       [t("10:10"), false, "Fortsetzung"],
       [t("11:40"), true, "BOS"],
     ]);
+  });
+});
+
+describe("innermostStructureStart (M5-Anker)", () => {
+  const lvl = (trend, originTime, nestedTrend = null) => ({ trend, appliedPivots: [{ pivotTime: originTime }], nestedTrend });
+  it("nimmt den Ursprung der innersten bestätigten Ebene", () => {
+    expect(innermostStructureStart(lvl("downtrend", 100, lvl("uptrend", 200, lvl("downtrend", 300))), 50)).toBe(300);
+  });
+  it("ignoriert einen unbestätigten Kandidaten und fällt ohne Nested auf den Outer-Start zurück", () => {
+    expect(innermostStructureStart(lvl("downtrend", 100, lvl("uptrend", 200, lvl("unknown", 300))), 50)).toBe(200);
+    expect(innermostStructureStart(lvl("downtrend", 100), 50)).toBe(50);
+    expect(innermostStructureStart(null, 50)).toBe(50);
   });
 });

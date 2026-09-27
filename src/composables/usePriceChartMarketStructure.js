@@ -22,7 +22,7 @@
 // rangesNeedsData/scheduleNextRangesPoll/startRangesPolling/stopRangesPolling bleiben aus
 // demselben Grund ebenfalls in PriceChart.vue (hängen an withPollRetries + mehreren fremden Props).
 import { ref } from "vue";
-import { computeRangesPivots as computeRangesPivotsPure, buildMarketStructureState, pivotForDisplay, deriveTrendReaction } from "../marketStructureAnalysis";
+import { computeRangesPivots as computeRangesPivotsPure, buildMarketStructureState, pivotForDisplay, deriveTrendReaction, innermostStructureStart } from "../marketStructureAnalysis";
 import { renderMarketStructureAnalysis, collectFibLevels } from "../marketStructureRendering";
 import { renderPivotMarkers } from "../pivotMarkers";
 import { cssColor } from "../chartColors.js";
@@ -74,7 +74,7 @@ export function usePriceChartMarketStructure() {
   let marketStructurePrimitives = [];
   let m5StructurePrimitives = [];
   let m5TrendPhasePrimitives = [];
-  let outerCutoff = null; // Start des 1h-Outer-Trends = Anker der M5-Struktur, siehe refreshM5Structure
+  let outerCutoff = null; // Start des 1h-Outer-Trends = M5-Anker-Fallback ohne Nested, siehe refreshM5Structure
   let m5ComputedKey = null;
   let m5Computed = { state: null, phases: [], events: [], pivotsOuter: null, pivotsInner: null };
   let m5MarkerPrimitives = [];
@@ -189,20 +189,22 @@ export function usePriceChartMarketStructure() {
     };
   }
 
-  // M5-Struktur (PLAN-m5-trend.md): derselbe Algo auf M5-Kerzen, verankert am Start des
-  // 1h-Outer-Trends (outerCutoff). Reichen die geladenen M5-Kerzen nicht so weit zurück, beginnt
+  // M5-Struktur (PLAN-m5-trend.md): derselbe Algo auf M5-Kerzen, verankert am Start der innersten
+  // 1h-Ebene (innermostStructureStart, ohne Nested der 1h-Outer-Start outerCutoff). Reichen die
+  // geladenen M5-Kerzen nicht so weit zurück, beginnt
   // die Pivot-Suche einfach bei der ältesten geladenen Kerze — bewusst KEIN Extra-Fetch (jeder
   // cTrader-Fetch ist ein frischer TLS-Connect). Läuft unabhängig von den Toggles, weil das TSC
   // den Trend immer braucht; die Toggles steuern nur das Zeichnen.
   function refreshM5Structure({ candles, m5CandlesClipped, symbol, replayUntil, showM5Structure, showM5TrendPhases, showLiquidityDebug, m5Period, m5Period2 }) {
+    const anchor = innermostStructureStart(marketStructureState.value, outerCutoff);
     // Memo: bei P5/P2 über ~12 Tage ~150 ms — refreshChart() läuft aber auch bei jedem Style-Regler-
     // Event, dort soll nur neu gezeichnet, nicht neu gerechnet werden.
-    const key = `${m5CandlesClipped.length}:${m5CandlesClipped.at(-1)?.time}:${outerCutoff}:${m5Period}:${m5Period2}`;
+    const key = `${m5CandlesClipped.length}:${m5CandlesClipped.at(-1)?.time}:${anchor}:${m5Period}:${m5Period2}`;
     if (key !== m5ComputedKey) {
       m5ComputedKey = key;
-      const ready = outerCutoff != null && m5CandlesClipped.length > 0;
-      const pivotsOuter = ready ? computeRangesPivotsPure(m5CandlesClipped, m5Period, outerCutoff, fmtDateTime) : null;
-      const pivotsInner = ready ? computeRangesPivotsPure(m5CandlesClipped, m5Period2, outerCutoff, fmtDateTime) : null;
+      const ready = anchor != null && m5CandlesClipped.length > 0;
+      const pivotsOuter = ready ? computeRangesPivotsPure(m5CandlesClipped, m5Period, anchor, fmtDateTime) : null;
+      const pivotsInner = ready ? computeRangesPivotsPure(m5CandlesClipped, m5Period2, anchor, fmtDateTime) : null;
       m5Computed = {
         ...buildStructureWithPhases(pivotsOuter, pivotsInner, m5Period, m5Period2, m5CandlesClipped, barSecondsFor("5m")),
         pivotsOuter,

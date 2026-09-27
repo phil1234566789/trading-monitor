@@ -1101,6 +1101,16 @@ export function collectNestedChain(state: MarketStructureState): MarketStructure
   return chain;
 }
 
+// Anker der M5-Struktur: Ursprung der innersten bestätigten 1h-Ebene (Start des jüngsten
+// Nested-Trends, appliedPivots[0]) — Philip 27.09.2026: "ab dem letzten nested Startpunkt reicht".
+// Ohne Nested-Ebene fallback (= 1h-Outer-Start). Enger als der Outer-Start, passt dadurch in die
+// geladenen M5-Kerzen.
+export function innermostStructureStart(state: MarketStructureState | null, fallback: number | null): number | null {
+  if (!state) return fallback;
+  const chain = collectNestedChain(state);
+  return chain.length > 1 ? pivotTimeOf(chain[chain.length - 1].appliedPivots[0]) : fallback;
+}
+
 export type TrendReaction = { type: "CHoCH" | "BOS"; time: number; price: number };
 
 // "State -> {trend, reaktion}" für M5-Trend (TSC + get_data_export). Keine neue Reaktions-
