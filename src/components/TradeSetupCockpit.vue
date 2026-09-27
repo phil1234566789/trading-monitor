@@ -34,6 +34,7 @@ const props = defineProps({
   range: { type: Object, default: null },
   fromJournal: { type: Boolean, default: false },
   loadError: { type: String, default: "" },
+  saving: { type: Boolean, default: false },
   // Trend-Kette aus dem 1h-Structure-Algo (Chat 2026-08-29, Philip: "der Trend soll rein") — kommt
   // reaktiv von PriceChart.vue über Dashboard.vue's trendChain-computed, siehe computeTrendChain
   // in tradeSetupCockpit.ts für die volle Begründung (KEINE echte 4H/1H/M5-Mehrfach-Timeframe-
@@ -170,7 +171,7 @@ const accentStyle = computed(() => {
 </script>
 
 <template>
-  <div class="tsc-card" :style="accentStyle">
+  <div class="tsc-card" :style="accentStyle" :aria-busy="saving">
     <div class="tsc-header">
       <h3 class="tsc-title">Trade-Setup-Cockpit</h3>
       <div class="tsc-header-right">
@@ -181,10 +182,12 @@ const accentStyle = computed(() => {
         <!-- Reset (Chat 2026-08-27, Philip: "icon reicht, brauch den Text nicht, außer als
              Hover-Hint ... rechts neben dem Short-Label") — verwirft die ganze Idee (Range +
              Bestätigungen + Targets), nicht nur die Anzeige, siehe Dashboard.vue: onTscReset. -->
-        <button v-if="range || fromJournal" class="tsc-reset-icon-btn" :title="fromJournal ? 'Journal-Ansicht schließen' : 'Zurücksetzen'" :aria-label="fromJournal ? 'Journal-Ansicht schließen' : 'Zurücksetzen'" @click="emit('reset')">{{ fromJournal ? "×" : "↺" }}</button>
+        <button :disabled="saving" v-if="range || fromJournal" class="tsc-reset-icon-btn" :title="fromJournal ? 'Journal-Ansicht schließen' : 'Zurücksetzen'" :aria-label="fromJournal ? 'Journal-Ansicht schließen' : 'Zurücksetzen'" @click="emit('reset')">{{ fromJournal ? "×" : "↺" }}</button>
       </div>
     </div>
 
+    <p v-if="saving" class="tsc-saving" role="status"><span class="tsc-spinner" aria-hidden="true"></span> Trade-Setup wird übernommen…</p>
+    <div :inert="saving">
     <p v-if="fromJournal">Journal · Dealing Range #{{ range?.id }} · Änderungen werden direkt gespeichert.</p>
     <p v-if="loadError" role="alert">{{ loadError }}</p>
 
@@ -349,10 +352,15 @@ const accentStyle = computed(() => {
     >
       Dealing Range anlegen
     </ActionButton>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.tsc-saving { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+.tsc-spinner { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: tsc-spin 0.8s linear infinite; }
+@keyframes tsc-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .tsc-spinner { animation: none; } }
 /* Bis Chat 2026-08-28 ein position:absolute-Overlay über dem Chart (siehe Git-Historie vor diesem
    Commit für den früheren rechts/vertikal-zentrierten Overlay-Stil) — Philip: "übersichtlicher,
    wenn der TSC nicht mehr über dem Chart liegt", jetzt eine eigene, statische Spalte rechts neben

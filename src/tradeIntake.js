@@ -211,8 +211,10 @@ export async function addPositionToDealingRange(dealingRangeId, { tradingAccount
 export async function linkTradeToSetup(dealingRangeId, instrument, setup) {
   const direction = directionForSetup(setup);
   const { invalidation } = deriveSetupEntryInvalidation(setup);
-  const tradeSetupId = await findMatchingTradeSetupId(instrument, direction, setup.obStartTime);
-  const invalidationFields = await resolveInvalidationFields(setup.invalidationTarget ?? { price: invalidation });
+  const [tradeSetupId, invalidationFields] = await Promise.all([
+    findMatchingTradeSetupId(instrument, direction, setup.obStartTime),
+    resolveInvalidationFields(setup.invalidationTarget ?? { price: invalidation }),
+  ]);
 
   const { error } = await supabase
     .from("dealing_ranges")

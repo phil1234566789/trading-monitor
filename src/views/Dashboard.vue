@@ -22,12 +22,11 @@ import { selectedTradingAccountId, writableTradingAccountId } from "../tradingAc
 import { TIMEFRAMES, barSecondsForTimeframeCi } from "../timeframes.js";
 import { toPips } from "../pipConfig.js";
 import { fetchTrades } from "../trades.js";
+import { useSetupConfirmations } from "../composables/useSetupConfirmations.js";
 import { useTscRange } from "../composables/useTscRange.js";
 import { useReplayStructureDefaults } from "../composables/useReplayStructureDefaults.js";
 import {
   fetchTradeSetupForCockpit,
-  linkTradeToSetup,
-  directionForSetup,
   addTargetToTrade,
   addConfirmationToTrade,
   addRangeConfirmation,
@@ -39,7 +38,6 @@ import {
   createDealingRange,
   addPositionToDealingRange,
   deleteDealingRange,
-  deriveSetupEntryInvalidation,
 } from "../tradeIntake.js";
 import { fetchObZones } from "../obZones.js";
 import { fetchTradeSetups } from "../tradeSetups.js";
@@ -792,101 +790,10 @@ async function onSelectTarget(target) {
     if (ok) refreshTscRange();
   }
 }
-// Ganzes Trade-Setup als Bestätigungen übernehmen (Chat 2026-07-31: "wenn ich ein Trade-Setup
-// anklicke, sollen LS und OB als Bestätigung aufgenommen werden. PP, falls vorhanden, als
-// Stop-Loss der trade_position") — nur im Bestätigungs-Modus erreichbar (PriceChart.vue:
-// subscribeClick), deshalb hier dieselben Arm-Zustände wie onSelectTarget statt eines eigenen.
-// LS/OB gehen an dieselbe Ebene (Range oder Position), die gerade "scharf" ist; der Stop-Loss
-// sitzt IMMER auf der Ausführung (trade_position), unabhängig davon, welche Ebene für die
-// Bestätigungen gerade gewählt ist — dafür braucht es aber überhaupt eine offene Ausführung.
-//
-// TSC-Bootstrap (Chat 2026-08-27, Philip: "ich will auch Orderblöcke — in diesem Fall ein
-// Short-Setup — als Bestätigung verknüpfen können") — ein ganzes Trade-Setup (LS+OB) ist der
-// naheliegendste erste Klick, nicht nur eine einzelne Sweep-Linie/OB-Box: direction kommt hier
-// direkt aus setup.dir (directionForSetup), linkTradeToSetup trägt trade_setup_id+invalidation
-// gleich mit ein — genau das, was die alte, automatische TSC vorher live berechnet hat.
-async function onSelectSetupConfirmations(setup) {
-  const trade = confirmationAddTrade.value ?? rangeConfirmationAddTrade.value;
-  if (!trade && !tscBootstrapArmed.value) return;
-  const bootstrapping = tscBootstrapArmed.value && !trade;
-  const isRangeLevel = bootstrapping || rangeConfirmationAddTrade.value != null;
-  confirmationAddTrade.value = null;
-  rangeConfirmationAddTrade.value = null;
-  tscBootstrapArmed.value = false;
-
-  // JEDER abgeräumte Level wird eine eigene Bestätigung, nicht nur der entscheidende (Philip
-  // 21.09.2026: "Je mehr Bestätigungs-LQ-Sweeps desto besser") — sweeps ist nach Alter sortiert,
-  // der erste ist der, der auch in trade_setups.ls_* steht. Ältere Setup-Objekte ohne sweeps
-  // (DB-Zeilen von vor dem 21.09.2026) fallen auf den einen LS zurück.
-  const sweeps = setup.sweeps ?? [{ level: setup.ls, timeframe: "5M" }];
-  const sweepConfirmations = sweeps.map((sw) => ({
-    kind: "pivot",
-    price: sw.level.price,
-    sourceTime: sw.level.pivotTime,
-    touchedTime: sw.level.touchedTime ?? null,
-    // Für die liquidity_level_id-Verknüpfung (siehe PriceChart.vue: findClickedTarget) — die
-    // Zeitebene des LEVELS (1H oder 5M), nicht die des gerade angezeigten Charts. Stand bis
-    // 21.09.2026 fest auf "5M" und verlinkte einen H1-Sweep damit auf eine 5M-Zeile. setup.dir
-    // folgt derselben 1=high/-1=low-Konvention wie ein Liquiditäts-Level (directionForSetup:
-    // dir===1 -> Short, also Sweep eines Hochs).
-    instrument: currentSymbol.value,
-    timeframe: sw.timeframe,
-    levelDirection: setup.dir === 1 ? "high" : "low",
-  }));
-  // Bug-Report Philip 2026-07-31, zweite Runde ("OB zeichnet sich durch
-  // bis zum jetzigen Zeitpunkt, sollte nur bis zur berührenden Kerze"): detectSetupObs() ruft
-  // laut eigenem Kommentar 1:1 detectOrderBlocks(candles, "5m") auf und übernimmt dessen top/bottom
-  // unverändert — mit timeframe:"5M" findet PriceChart.vue: liveObZoneState darüber dieselbe Zone
-  // live wieder und zeichnet die Box bis zum ECHTEN Touch, statt bis "jetzt" (kein Touch bekannt).
-  const obConfirmation = {
-    kind: "ob",
-    price: setup.dir === 1 ? setup.obBottom : setup.obTop,
-    sourceTime: setup.obStartTime,
-    touchedTime: null,
-    rangeLow: setup.obBottom,
-    rangeHigh: setup.obTop,
-    timeframe: "5M",
-    // ob_zone_id-Auflösung (siehe insertConfirmation/findOrCreateObZoneId) braucht instrument/
-    // direction zusätzlich zu rangeLow/rangeHigh/timeframe/sourceTime.
-    instrument: currentSymbol.value,
-    direction: directionForSetup(setup),
-  };
-
-  let dealingRangeId;
-  if (bootstrapping) {
-    const range = await createDealingRange({ instrument: currentSymbol.value, direction: directionForSetup(setup) });
-    if (!range) return;
-    dealingRangeId = range.id;
-    tscRangeId.value = range.id;
-  } else {
-    dealingRangeId = trade.dealingRangeId;
-  }
-
-  // Ein ganzes Trade-Setup (LS+OB) ist immer eine echte Confirmation (GO), nie ein
-  // Anti-Confluence-Klick — dafür gibt es die eigenen Arm-Zustände oben.
-  const addFn = isRangeLevel ? (c) => addRangeConfirmation(dealingRangeId, c, "confirmation") : (c) => addConfirmationToTrade(trade.id, c, "confirmation");
-  for (const sweepConfirmation of sweepConfirmations) await addFn(sweepConfirmation);
-  await addFn(obConfirmation);
-
-  // Stop-Loss-Vorschlag = Invalidierung des Setups (ferne OB-Kante, siehe
-  // deriveSetupEntryInvalidation). Bis 2026-09-20 nur bei Path A und aus fractal.price — bei Path B
-  // zeigte das aufs gesweepte Level statt aufs Extrem, deshalb blieb der Vorschlag dort ganz aus.
-  // Nur bei einer echten Ausführung sinnvoll (trade.id) — bootstrapping/TSC hat noch keine
-  // trade_position.
-  if (!bootstrapping && !trade?.isTsc) {
-    await updateTrade(trade.id, { stopLoss: deriveSetupEntryInvalidation(setup).invalidation });
-  }
-  // Übernimmt auch die Setup-Verknüpfung selbst (trade_setup_id + die davon abgeleitete
-  // Invalidierung) — ersetzt die frühere manuelle "🔗 Setup verknüpfen"-Aktion (Chat 2026-07-31,
-  // zweite Runde: "kann weg, da ... die Bestätigungen fügen sich von selbst hinzu").
-  await linkTradeToSetup(dealingRangeId, currentSymbol.value, setup);
-
-  if (bootstrapping || trade?.isTsc) {
-    refreshTscRange();
-  } else {
-    refreshTrades();
-  }
-}
+const { saving: setupSaving, error: setupSaveError, save: onSelectSetupConfirmations } = useSetupConfirmations({
+  currentSymbol, confirmationAddTrade, rangeConfirmationAddTrade, tscBootstrapArmed,
+  tscRangeId, refreshTscRange, refreshTrades: () => refreshTrades(),
+});
 // Klick auf eine Zeile in TradesTable.vue: springt im Chart hin (siehe jumpToTrade, Chat
 // 2026-07-27, erste Runde) UND fokussiert den TSC auf das verknüpfte Trade-Setup, falls
 // vorhanden — kein trade_setup_id (älterer/manueller Trade ohne Verknüpfung) räumt einen evtl.
@@ -2328,7 +2235,8 @@ watch(selectedTradingAccountId, () => {
       :now-sec="replayUntil"
       :range="tscRange"
       :from-journal="tscFromJournal"
-      :load-error="tscLoadError"
+      :load-error="tscLoadError || setupSaveError"
+      :saving="setupSaving"
       :trend-chain="trendChain"
       :m5-trend="m5Trend"
       :armed-section="armedTscSection"

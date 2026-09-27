@@ -13,6 +13,14 @@ const range = {
 };
 
 describe("TSC journal mode", () => {
+  it("announces saving and blocks cockpit actions until refresh completes", async () => {
+    const html = await renderToString(createSSRApp(TradeSetupCockpit, { range, instrument: "XAUUSD", saving: true }));
+    expect(html).toContain('aria-busy="true"');
+    expect(html).toContain('role="status"');
+    expect(html).toContain("Trade-Setup wird übernommen…");
+    expect(html).toContain("inert");
+    expect(html).toMatch(/<button[^>]*disabled[^>]*tsc-reset-icon-btn/);
+  });
   it("blocks transfer even for a complete range and replaces destructive reset with close", async () => {
     const html = await renderToString(createSSRApp(TradeSetupCockpit, { range, instrument: "GBPUSD", fromJournal: true }));
     expect(html).toMatch(/<button[^>]*class="[^"]*tsc-transfer-btn[^>]*disabled/);
