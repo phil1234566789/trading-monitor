@@ -43,6 +43,8 @@
 //     supabase/functions/trading-monitor-mcp/scripts/backfillLiquidityLevels.ts
 import { supabase } from "../supabaseClient.ts";
 import { fetchAllRows } from "../../_shared/fetchAllRows.ts";
+import { markIgnored } from "../../_shared/ignoredCandles.ts";
+import { getSessions } from "../db.ts";
 import { detectLiquidityLevels, LIQUIDITY_FRACTAL_PERIOD } from "../../_shared/liquidityDetection.ts";
 
 // forex_candles.bar ("1h"/"4h", unsere eigene Konvention, siehe backfillForexCandles.ts) auf den
@@ -174,11 +176,14 @@ async function backfillOne(instrument: string, bar: string) {
   const config = BAR_CONFIG[bar];
   if (!config) throw new Error(`Unbekannter Timeframe: ${bar} (erlaubt: ${Object.keys(BAR_CONFIG).join(", ")})`);
 
-  const candles = await fetchAllCandles(instrument, bar);
-  if (candles.length === 0) {
+  const rohKerzen = await fetchAllCandles(instrument, bar);
+  if (rohKerzen.length === 0) {
     console.warn(`${instrument} ${bar}: keine archivierten Kerzen gefunden, übersprungen.`);
     return;
   }
+  // Spread-Hour-Kerzen markieren, exakt wie poi-watcher es live tut — sonst laufen Simulation und
+  // Produktion auseinander, und genau darauf beruht die Auswertung in analysis/dr-reichweite/.
+  const candles = markIgnored(rohKerzen, await getSessions(instrument));
   const { highs, lows } = detectLiquidityLevels(candles, LIQUIDITY_FRACTAL_PERIOD);
   const levels = [
     ...highs.map((l) => ({ ...l, direction: "high" as const })),

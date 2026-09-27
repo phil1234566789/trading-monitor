@@ -18,6 +18,7 @@ import { computeSweepAgeHours } from "../_shared/ageTier.ts";
 import { toPips } from "../_shared/pipConfig.js";
 import { persistTradeSetupSweeps } from "../_shared/tradeSetupSweeps.ts";
 import { forbiddenSessionAt, type SessionDangerConfig } from "../_shared/forbiddenSession.ts";
+import { markIgnored, withoutIgnored, fetchIgnoreLiquiditySessions } from "../_shared/ignoredCandles.ts";
 import {
   findLevelTouch,
   findZoneTouch,
@@ -334,6 +335,10 @@ Deno.serve(async (req) => {
     // der nächste Lauf mit frischen Kerzen holt das nach.
     const currentPriceByInstrument: Record<string, number> = {};
     const shouldSendByInstrument: Record<string, boolean> = {};
+    // Eigene Abfrage statt die Forbidden-Session-Query oben zu erweitern: die filtert per
+    // .eq("danger","forbidden") und genau das darf hier NICHT gelten — Asia ist auch forbidden,
+    // ihre Level sollen bleiben. Ein zweites Select auf eine Handvoll Zeilen je Cron-Lauf.
+    const ignoreSessionsByInstrument = await fetchIgnoreLiquiditySessions(supabase);
 
     for (const cfg of INSTRUMENTS) {
       const alarmWindows = alarmWindowsByInstrument.get(cfg.instrument);
@@ -351,6 +356,15 @@ Deno.serve(async (req) => {
         (summary.instruments as Record<string, unknown>)[cfg.instrument] = { skipped: "M5 feed stale (Markt zu?)" };
         continue;
       }
+      // Spread-Hour-Kerzen fuer die gesamte Erkennung markieren, bevor irgendwer sie anfasst
+      // (siehe markIgnoredCandles): die Fraktal-Erkennung laesst sie weg, die FVG-Erkennung
+      // ueberspringt das ganze Fenster. Hier an EINER Stelle statt an jedem Aufrufer.
+      const ignoreSessions = ignoreSessionsByInstrument.get(cfg.instrument) ?? [];
+      if (ignoreSessions.length > 0) {
+        for (const [label, kerzen] of forexBatch.candlesByTf) {
+          forexBatch.candlesByTf.set(label, markIgnored(kerzen, ignoreSessions));
+        }
+      }
       const h1CandlesForSetup = forexBatch.candlesByTf.get("1H")!;
       // Nur noch 1H: ueber 4H hat schon fetchForexBatch entschieden (ohne neue Kerze gar nicht
       // erst geladen), ein geladenes 4H ist per Definition frisch.
@@ -360,8 +374,10 @@ Deno.serve(async (req) => {
       const currentPrice = forexBatch.currentPrice;
       // Touch-Fenster für die 1H/4H-Objekte weiter unten (siehe liveTouch.ts): dieselben
       // M5-Kerzen, die ohnehin für die Trade-Setup-Erkennung geladen werden.
+      // Gefiltert statt markiert: findZoneTouch/findLevelTouch (liveTouch.ts) kennen das Flag
+      // nicht, ein Rollover-Docht wuerde dort sonst weiterhin als Touch durchgehen.
       const recentM5 = recentCandles(
-        forexBatch.candlesByTf.get("M5")!,
+        withoutIgnored(forexBatch.candlesByTf.get("M5")!, ignoreSessions),
         Math.floor(now.getTime() / 1000),
       );
       // Zonen werden für jedes Instrument immer erkannt/gespeichert (Dashboard-Charts brauchen
@@ -769,6 +785,9 @@ Deno.serve(async (req) => {
         const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5Candles, TRADE_SETUP_M5_FRACTAL_PERIOD);
         const { highs: h1HighsSetup, lows: h1LowsSetup } = detectLiquidityLevels(candles1hForSetup, TRADE_SETUP_H1_FRACTAL_PERIOD);
         const setupObs = detectSetupObs(m5Candles, obMinimum(cfg.instrument, '5m'));
+        // Wie im Frontend: die Preis-Scans in detectTradeSetup (Sweep-Bruch per Close, Aufweiten
+        // der OB-Kante aufs Extrem) duerfen die Kerze wirklich weglassen.
+        const m5OhneIgnorierte = withoutIgnored(m5Candles, ignoreSessions);
 
         // Live-Preis-Sofort-Touch, gleiches Muster wie bei den 1H-Liquiditäts-Leveln oben —
         // sonst würde ein Fraktalbruch/Sweep erst beim nächsten Kerzenschluss erkannt (bis zu
@@ -794,8 +813,8 @@ Deno.serve(async (req) => {
           nowTime: m5Candles[m5Candles.length - 1].time };
 
         const detected = [
-          detectTradeSetup(1, m5Highs, h1HighsSetup, m5Highs, setupObs, tradeSetupParams, m5Candles),
-          detectTradeSetup(-1, m5Lows, h1LowsSetup, m5Lows, setupObs, tradeSetupParams, m5Candles),
+          detectTradeSetup(1, m5Highs, h1HighsSetup, m5Highs, setupObs, tradeSetupParams, m5OhneIgnorierte),
+          detectTradeSetup(-1, m5Lows, h1LowsSetup, m5Lows, setupObs, tradeSetupParams, m5OhneIgnorierte),
         ].filter((s): s is NonNullable<typeof s> => s !== null);
 
         // Schlüssel ist seit 2026-09-20 der bestätigende OB, nicht mehr fractal_pivot_time — ein

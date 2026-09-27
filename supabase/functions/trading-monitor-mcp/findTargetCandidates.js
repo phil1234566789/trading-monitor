@@ -10,6 +10,7 @@
 import { fetchForexCandles } from "./forexCandles.ts";
 import { getLiquidityLevels, getObZones, getSessions } from "./db.ts";
 import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "../_shared/liquidityDetection.ts";
+import { markIgnored } from "../_shared/ignoredCandles.ts";
 import { detectOrderBlocks } from "./orderBlockDetection.js";
 import { PIP_SIZE } from "../_shared/pipConfig.js";
 import { verifyLevelTouched, verifyZoneTouched } from "./verifyTouched.js";
@@ -71,7 +72,9 @@ export async function buildCandidatePool(instrument, currentTimeSec) {
   ]);
   // Nach currentTimeSec gekappt (nicht nur nach Tagesende) — sonst würde ein Replay-Zeitpunkt
   // Zonen/Level aus der "Zukunft" relativ zum Replay-Punkt sehen, dieselbe Kappung wie dataExport.ts.
-  const m5Candles = m5DetectionRaw.filter((c) => c.time <= currentTimeSec);
+  // Spread-Hour-Kerzen markieren, damit die Ziel-Kandidaten dieselben Level sehen wie der Chart
+  // (siehe markIgnoredCandles).
+  const m5Candles = markIgnored(m5DetectionRaw.filter((c) => c.time <= currentTimeSec), sessionConfigs);
 
   const { highs, lows } = detectLiquidityLevels(m5Candles, LIQUIDITY_FRACTAL_PERIOD);
   const m5LiquidityRaw = [

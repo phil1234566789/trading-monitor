@@ -2,7 +2,8 @@ import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import { berlinDateTimeStrFor } from "../../_shared/berlinTime.ts";
 import { fetchForexCandles } from "../forexCandles.ts";
-import { fetchActiveTscRangeId, fetchDealingRangeCockpit, findRecentTradeSetupIdsByKey } from "../db.ts";
+import { fetchActiveTscRangeId, fetchDealingRangeCockpit, findRecentTradeSetupIdsByKey, getSessions } from "../db.ts";
+import { markIgnored, withoutIgnored } from "../../_shared/ignoredCandles.ts";
 import { buildNearRelevantLiquidityLevels } from "./nearRelevantLiquidityLevels.ts";
 import { buildNearRelevantObZones } from "./nearRelevantObZones.ts";
 import { computeCurrentEma, computeCurrentRsi } from "./reads.ts";
@@ -105,7 +106,7 @@ export async function buildDataSnapshot({ instrument, replayUntilSec }: DataSnap
   const fromSec = asOfSec - SNAPSHOT_RECENCY_HOURS * 3600;
   const setupIdLookupSinceSec = asOfSec - SETUP_MAX_AGE_HOURS * 3600;
 
-  const [priceCandles, m5CandlesForSetup, h1CandlesForSetup, persistedIdByKey, liquidity, obZones, ema, rsi, activeTscRangeId] = await Promise.all([
+  const [priceCandles, m5CandlesRoh, h1CandlesRoh, persistedIdByKey, liquidity, obZones, ema, rsi, activeTscRangeId, sessionConfigs] = await Promise.all([
     fetchForexCandles(instrument, "5m", { count: 1, toMs: asOfSec * 1000 }),
     fetchForexCandles(instrument, "5m", { count: SETUP_M5_CANDLE_COUNT, toMs: asOfSec * 1000 }),
     fetchForexCandles(instrument, "1h", { count: SETUP_H1_CANDLE_COUNT, toMs: asOfSec * 1000 }),
@@ -115,9 +116,14 @@ export async function buildDataSnapshot({ instrument, replayUntilSec }: DataSnap
     computeCurrentEma(instrument, replayUntilSec),
     computeCurrentRsi(instrument, replayUntilSec),
     fetchActiveTscRangeId(instrument),
+    getSessions(instrument),
   ]);
 
   const referencePrice = priceCandles[priceCandles.length - 1]?.close ?? null;
+  // Spread Hour raus, bevor irgendetwas erkannt wird — sonst meldet das Snapshot Setups, die der
+  // Chart nicht mehr zeigt (siehe markIgnoredCandles).
+  const m5CandlesForSetup = markIgnored(m5CandlesRoh, sessionConfigs);
+  const h1CandlesForSetup = markIgnored(h1CandlesRoh, sessionConfigs);
 
   // Dieselbe Erkennung wie poi-watcher/index.ts (Liquidity Sweep + Protected M5-Fraktal + M5-OB),
   // hier live statt aus dem Cron-Schreibstand — siehe Kommentar bei SETUP_M5_CANDLE_COUNT oben.
@@ -144,8 +150,11 @@ export async function buildDataSnapshot({ instrument, replayUntilSec }: DataSnap
   applyLiveTouch(h1Lows, "low");
 
   const tradeSetupParams = { ...DEFAULT_TRADE_SETUP_PARAMS, nowTime: m5CandlesForSetup[m5CandlesForSetup.length - 1].time };
-  const detectedShort = detectTradeSetup(1, m5Highs, h1Highs, m5Highs, setupObs, tradeSetupParams, m5CandlesForSetup);
-  const detectedLong = detectTradeSetup(-1, m5Lows, h1Lows, m5Lows, setupObs, tradeSetupParams, m5CandlesForSetup);
+  // Preis-Scans in detectTradeSetup (Sweep-Bruch per Close, Aufweiten der OB-Kante aufs Extrem)
+  // duerfen die Kerze wirklich weglassen — gleiche Behandlung wie im Frontend und in poi-watcher.
+  const m5OhneIgnorierte = withoutIgnored(m5CandlesRoh, sessionConfigs);
+  const detectedShort = detectTradeSetup(1, m5Highs, h1Highs, m5Highs, setupObs, tradeSetupParams, m5OhneIgnorierte);
+  const detectedLong = detectTradeSetup(-1, m5Lows, h1Lows, m5Lows, setupObs, tradeSetupParams, m5OhneIgnorierte);
 
   const [longObValid, shortObValid] = await Promise.all([
     detectedLong ? isSetupObStillValid(instrument, detectedLong.obStartTime, detectedLong.obTop, detectedLong.obBottom, "long", asOfSec) : true,

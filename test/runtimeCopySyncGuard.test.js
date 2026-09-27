@@ -40,6 +40,10 @@ const VOLL_KOPIEN = [
 // den Vollstaendigkeits-Test unten scharf, damit eine NEUE, unbemerkte Voll-Kopie auffaellt.
 const TEILPORTS = [
   "ageTier",
+  // Frontend liest den sessions-Singleton und die Browser-Lokalzeit, Backend holt die Zeilen per
+  // Supabase-Client und rechnet fest in Europe/Berlin — dieselbe Aufgabe, zwangslaeufig anderer
+  // Rahmen. Die gemeinsame Logik steckt in markIgnoredCandles (sessionOccurrences, Voll-Kopie).
+  "ignoredCandles",
   "annotations",
   "berlinTime",
   "forexCandles",

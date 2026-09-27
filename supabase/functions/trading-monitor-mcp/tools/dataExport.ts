@@ -16,6 +16,7 @@ import { computeRangesPivots, buildMarketStructureState, summarizeMarketStructur
 // liquidityDetection.js; detectOrderBlocks wurde für diesen Zweck neu nach orderBlockDetection.js
 // extrahiert (aus orderBlocks.js, das über chartColors.js/chartZoom.js Browser-Only-Imports zieht).
 import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "../../_shared/liquidityDetection.ts";
+import { markIgnored, withoutIgnored } from "../../_shared/ignoredCandles.ts";
 import { detectOrderBlocks } from "../orderBlockDetection.js";
 import { PIP_SIZE } from "../../_shared/pipConfig.js";
 // Dieselbe Preis-/Zeit-Relevanzlogik wie get_near_relevant_liquidity_levels/get_near_relevant_ob_zones
@@ -225,7 +226,10 @@ export async function compute1hStructureState(instrument: string, currentTimeSec
   const fetchHours = Math.ceil((currentTimeSec - earliestCutoff) / 3600) + STRUCTURE_CANDLE_BUFFER_HOURS;
 
   const raw = await fetchForexCandles(instrument, "1h", { count: fetchHours, toMs: currentTimeSec * 1000 });
-  const candles = raw.filter((c) => c.time <= currentTimeSec);
+  // Spread-Hour-Kerzen fallen fuer den Struktur-Algo weg (er kennt keine FVG, eine Zeitluecke
+  // stoert Fraktale und Kerzenschluss-Checks nicht) — dieselbe Behandlung wie im Frontend, sonst
+  // meldet Lana einen anderen 1h-Trend als der Chart zeigt.
+  const candles = withoutIgnored(raw.filter((c) => c.time <= currentTimeSec), await getSessions(instrument));
   // berlinDateTimeStrFor als formatTime (Bug-Report Philip 2026-08-30, GBPUSD-Backtest bis 08:45):
   // computeRangesPivots hat einen formatTime-Parameter genau für diesen Zweck, der bisher NICHT
   // übergeben wurde — fiel auf den Default (t) => String(t) zurück, ein roher Unix-Sekunden-STRING
@@ -332,7 +336,11 @@ export function computeM5LiquidityAndObZones({
   m5PersistedObZoneRows,
   sessionConfigs,
 }: M5DetectionInputs) {
-  const { highs: m5LiquidityHighs, lows: m5LiquidityLows } = detectLiquidityLevels(m5CandlesForDetection, LIQUIDITY_FRACTAL_PERIOD);
+  // Spread-Hour-Kerzen markieren, bevor irgendetwas erkannt wird (siehe markIgnoredCandles): die
+  // Fraktal-Erkennung laesst sie weg, die FVG-Erkennung ueberspringt das ganze Fenster. Ohne das
+  // zeigt Lana Level, die der Chart nicht mehr hat.
+  const m5Kerzen = markIgnored(m5CandlesForDetection, sessionConfigs);
+  const { highs: m5LiquidityHighs, lows: m5LiquidityLows } = detectLiquidityLevels(m5Kerzen, LIQUIDITY_FRACTAL_PERIOD);
   const m5LiquidityLevelsRaw = [
     ...filterRelevantLevels(m5LiquidityHighs, LIQUIDITY_MAX_RELEVANT, true).map((l) => ({
       direction: "high" as const,
@@ -374,7 +382,7 @@ export function computeM5LiquidityAndObZones({
     m5PersistedObZoneRows.map((z) => [`${z.direction}_${Math.floor(new Date(z.start_time).getTime() / 1000)}`, z.id]),
   );
   const obZonesReferencePrice = m5CandlesForDetection[m5CandlesForDetection.length - 1]?.close ?? null;
-  const m5ObZonesAll = detectOrderBlocks(m5CandlesForDetection, "5m", true)
+  const m5ObZonesAll = detectOrderBlocks(m5Kerzen, "5m", true)
     .filter((z) => !z.invalidated)
     .map((z) => {
       const direction = z.dir === 1 ? ("long" as const) : ("short" as const);
@@ -457,12 +465,15 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // (m5AnchorTime), dieselben Perioden wie die 1h-Struktur. Nur Trend + letzte Reaktion.
   const { periodOuter, periodInner } = structureResult.window;
   const m5Anchor = structureResult.m5AnchorTime;
+  // Der Struktur-Algo kennt keine FVG, hier duerfen die Spread-Hour-Kerzen also wirklich
+  // wegfallen — genau wie im Frontend (usePriceChartMarketStructure).
+  const m5StrukturKerzen = withoutIgnored(m5CandlesForDetection, sessionConfigs);
   const m5StructureState = buildMarketStructureState(
-    computeRangesPivots(m5CandlesForDetection, periodOuter, m5Anchor),
-    computeRangesPivots(m5CandlesForDetection, periodInner, m5Anchor),
+    computeRangesPivots(m5StrukturKerzen, periodOuter, m5Anchor),
+    computeRangesPivots(m5StrukturKerzen, periodInner, m5Anchor),
     periodOuter,
     periodInner,
-    m5CandlesForDetection,
+    m5StrukturKerzen,
     { barSeconds: M5_BAR_SECONDS },
   );
   const m5Derived = deriveTrendReaction(m5StructureState);

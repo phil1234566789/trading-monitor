@@ -46,6 +46,8 @@
 import { supabase } from "../supabaseClient.ts";
 import { readForexCandlesArchiveFrom } from "../../_shared/forexCandlesArchive.ts";
 import { detectLiquidityLevels, type LiquidityLevel } from "../../_shared/liquidityDetection.ts";
+import { markIgnored } from "../../_shared/ignoredCandles.ts";
+import { getSessions } from "../db.ts";
 import { isWithinTradingWindows, type TradingWindows } from "../../_shared/tradingHoursGate.ts";
 import { persistTradeSetupSweeps } from "../../_shared/tradeSetupSweeps.ts";
 import {
@@ -137,8 +139,11 @@ for (const instrument of instrumente) {
   // Vorlauf, damit der erste simulierte Tick dasselbe Fenster sieht wie ein Live-Tick: 300 M5-Kerzen
   // (~25h) und 3000 1H-Kerzen (~125 Handelstage). 7 Tage M5-Vorlauf, nicht 2 -- faengt der Lauf an
   // einem Montag an, liegt dazwischen ein Wochenende ohne Kerzen, und das Fenster waere zu kurz.
-  const m5Alle = await ladeKerzen(instrument, "5m", startSec - 7 * 86400, endeSec);
-  const h1Alle = await ladeKerzen(instrument, "1h", startSec - 200 * 86400, endeSec);
+  // Einmal markieren statt je Tick — die Fenster unten sind Slices und tragen das Flag mit.
+  // Muss identisch zu poi-watcher sein, sonst laufen Simulation und Produktion auseinander.
+  const ignoreSessions = await getSessions(instrument);
+  const m5Alle = markIgnored(await ladeKerzen(instrument, "5m", startSec - 7 * 86400, endeSec), ignoreSessions);
+  const h1Alle = markIgnored(await ladeKerzen(instrument, "1h", startSec - 200 * 86400, endeSec), ignoreSessions);
   console.log(`${instrument}: ${m5Alle.length} M5-Kerzen, ${h1Alle.length} 1H-Kerzen geladen, Fenster ${fensterVon}-${fensterBis} Min Berlin`);
   if (m5Alle.length === 0) continue;
 
@@ -170,8 +175,11 @@ for (const instrument of instrumente) {
       h1Highs = erkannt.highs;
       h1Lows = erkannt.lows;
     }
-    verfeinereTouch(h1Highs, "high", m5Fenster, jetzt);
-    verfeinereTouch(h1Lows, "low", m5Fenster, jetzt);
+    // verfeinereTouch und die Preis-Scans in detectTradeSetup kennen das Flag nicht — hier die
+    // Kerzen also wirklich weglassen, damit ein Rollover-Docht keinen Touch/Bruch ausloest.
+    const m5FensterOhneIgnorierte = m5Fenster.filter((c) => !c.ignored);
+    verfeinereTouch(h1Highs, "high", m5FensterOhneIgnorierte, jetzt);
+    verfeinereTouch(h1Lows, "low", m5FensterOhneIgnorierte, jetzt);
 
     const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5Fenster, TRADE_SETUP_M5_FRACTAL_PERIOD);
     const setupObs = detectSetupObs(m5Fenster);
@@ -181,7 +189,7 @@ for (const instrument of instrumente) {
       [1, m5Highs, h1Highs] as const,
       [-1, m5Lows, h1Lows] as const,
     ]) {
-      const setup = detectTradeSetup(dir, m5Lvl, h1Lvl, m5Lvl, setupObs, params, m5Fenster);
+      const setup = detectTradeSetup(dir, m5Lvl, h1Lvl, m5Lvl, setupObs, params, m5FensterOhneIgnorierte);
       if (!setup) continue;
       const direction = setup.dir === 1 ? "short" : "long";
       const key = `${direction}_${setup.obStartTime}`;

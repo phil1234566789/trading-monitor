@@ -88,7 +88,12 @@ function buildLevel(candles: Candle[], p: number, period: number, dir: 1 | -1): 
   };
 }
 
-export function detectLiquidityLevels(candles: Candle[], period: number): { highs: LiquidityLevel[]; lows: LiquidityLevel[] } {
+export function detectLiquidityLevels(rohKerzen: Candle[], period: number): { highs: LiquidityLevel[]; lows: LiquidityLevel[] } {
+  // `ignored`-Kerzen (Spread Hour, siehe markIgnoredCandles in _shared/sessionOccurrences.js)
+  // fallen hier KOMPLETT weg statt nur beim Touch-Scan: ein Fraktal ist ein reines
+  // High/Low-Muster, eine Zeitluecke stoert es nicht — und nur so kann ein Rollover-Docht auch
+  // kein Fraktal mehr verhindern, das ohne ihn dagestanden haette. Spiegelt src/liquidityDetection.js.
+  const candles = rohKerzen.some((c) => c.ignored) ? rohKerzen.filter((c) => !c.ignored) : rohKerzen;
   const highs: LiquidityLevel[] = [];
   const lows: LiquidityLevel[] = [];
   const minIdx = period + 4;

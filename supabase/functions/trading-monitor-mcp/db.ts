@@ -623,7 +623,7 @@ export async function getNewsEvents(fromTime?: string, toTime?: string) {
 export async function getSessions(instrument: string) {
   const { data, error } = await supabase
     .from("sessions")
-    .select("label, from_minutes, to_minutes, high_low_relevant, days")
+    .select("label, from_minutes, to_minutes, high_low_relevant, days, ignore_liquidity")
     .eq("instrument", instrument);
   if (error) throw new Error(error.message);
   return (data ?? []).map((r) => ({
@@ -632,6 +632,9 @@ export async function getSessions(instrument: string) {
     toMinutes: r.to_minutes as number,
     highLowRelevant: r.high_low_relevant as boolean,
     days: r.days as number[] | null,
+    // Spread Hour: ihre Kerzen gelten fuer die Erkennung als nicht vorhanden, siehe
+    // _shared/ignoredCandles.ts. `danger` taugt dafuer nicht — Asia ist auch forbidden.
+    ignoreLiquidity: (r.ignore_liquidity as boolean | null) ?? false,
   }));
 }
 
