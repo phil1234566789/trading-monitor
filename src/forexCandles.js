@@ -7,6 +7,7 @@
 import { supabase } from "./supabaseClient.js";
 import { barSecondsFor } from "./timeframes.js";
 import { DB_READ_PAGE_SIZE } from "./dbReadPaging.js";
+import { MAX_PLAUSIBLE_GAP_SEC } from "./priceChartConstants.js";
 
 const FOREX_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/forex-candles`;
 // Die Edge Function baut pro Request eine frische cTrader-TLS-Verbindung inkl. Auth-Handshake auf
@@ -145,6 +146,28 @@ function mapArchivedRows(rows) {
       volume: r.volume,
     }))
     .reverse(); // Rows kommen "neueste zuerst" (fürs LIMIT auf den jüngsten Teil), Rest der App erwartet oldest-first
+}
+
+// Aufsteigend + LIMIT 1 findet auch nach dem Wochenende genau die nächste native
+// Kerze, ohne das rückwärts gelesene Initialfenster erneut zu übertragen.
+export async function fetchNextCandle(symbol, bar, afterSec) {
+  if (DB_ARCHIVED_BARS.has(bar) || bar === "1D") {
+    const { data, error } = await supabase.from("forex_candles")
+      .select("time, open, high, low, close, volume")
+      .eq("instrument", symbol).eq("bar", bar)
+      .gt("time", new Date(afterSec * 1000).toISOString())
+      .order("time", { ascending: true }).limit(1);
+    if (error) throw error;
+    return mapArchivedRows(data ?? [])[0] ?? null;
+  }
+  // Aggregierte Timeframes werden weiterhin von der Edge Function gebildet.
+  const nextCloseMs = (afterSec + 2 * barSecondsFor(bar)) * 1000;
+  const candles = await fetchCandles(symbol, bar, { count: 1, to: nextCloseMs });
+  const next = candles.find((c) => c.time > afterSec);
+  if (next) return next;
+  // Derselbe begrenzte Wochenend-Probezeitraum wie bisher, nur für nicht-native Bars.
+  const probe = await fetchCandles(symbol, bar, { count: 200, to: (afterSec + MAX_PLAUSIBLE_GAP_SEC) * 1000 });
+  return probe.find((c) => c.time > afterSec && c.time - afterSec <= MAX_PLAUSIBLE_GAP_SEC) ?? null;
 }
 
 // DB_READ_PAGE_SIZE kommt aus dbReadPaging.js (dort die Begründung). Bug-Report Philip

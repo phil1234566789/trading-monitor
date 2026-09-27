@@ -28,7 +28,7 @@ export const NEWS_NOGO_WINDOW_MINUTES = 30;
 // — dort unkritisch, weil der Browser selbst die Quelle für Änderungen ist; hier ist das
 // akzeptiert, weil Termine i.d.R. Tage im Voraus eingetragen werden, lange bevor ein offener Tab
 // sie bräuchte. Ein einfacher Reload holt neu eingetragene Termine).
-async function syncNewsEvents() {
+export async function syncNewsEvents() {
   try {
     // KEIN "event_time >= vor kurzem"-Filter (erste Version hatte einen, siehe Git-Historie) — die
     // Chart-Marker (newsMarkers.js) wollen auch länger zurückliegende Termine noch anzeigen können
@@ -46,8 +46,10 @@ async function syncNewsEvents() {
       newsEvents.length,
       ...(data ?? []).map((r) => ({ id: r.id, eventTime: Math.floor(new Date(r.event_time).getTime() / 1000), currency: r.currency, title: r.title })),
     );
+    return true;
   } catch (err) {
     console.error("News-Events aus DB laden fehlgeschlagen:", err);
+    return false;
   }
 }
 syncNewsEvents();

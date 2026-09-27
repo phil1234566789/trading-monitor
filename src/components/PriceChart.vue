@@ -59,7 +59,6 @@ import {
   POLL_RETRY_DELAY_MS,
   POLL_MAX_RETRIES,
   REPLAY_FETCH_DEBOUNCE_MS,
-  MAX_PLAUSIBLE_GAP_SEC,
 } from "../priceChartConstants.js";
 import { buildActiveMetadataSnapshot, hasActiveMetadata as hasActiveMetadataFor, saveDebugMetadataSection } from "../debugMetadata.js";
 import { usePriceChartDrawings } from "../composables/usePriceChartDrawings.js";
@@ -73,15 +72,16 @@ import {
   fetchInitialCandles as fetchInitialForexCandles,
   fetchRecentCandles as fetchRecentForexCandles,
   fetchOlderCandles as fetchOlderForexCandles,
+  fetchNextCandle,
 } from "../forexCandles.js";
-import { fetchCandlesCached } from "../candleCache.js";
+import { fetchCandlesCached, mergeCandles } from "../candleCache.js";
+import { nextReplayCandle, isPreparedReplayStep } from "../replayCandleStep.js";
 import {
   replayFetchToMs,
   businessSecondsBetween,
   mergeRecent,
   isTimeCovered,
   tradesVisibleForCandles,
-  computeNextReplayTime,
 } from "../chartTimeUtils.js";
 import { loadCandlesAroundTrade, computeJumpViewport } from "../priceChartJumpToTime.js";
 import { classifyAge } from "../ageTier";
@@ -495,6 +495,8 @@ let invalidationLinePrimitives = [];
 // tradeSetupPrimitives lebt seit Phase 6h in usePriceChartTradeSetupDrawing.js.
 // annotationPrimitives/-PriceLines leben seit Phase 6d in usePriceChartDrawings.js.
 let allCandles = [];
+let candlesReady = false;
+let loadedCandleKey = null;
 const m5ClockEnabled = () => props.currentBar === "5m" && props.replayUntil == null;
 const { state: m5Clock, retry: retryM5Clock } = useM5CandleClock({
   enabled: m5ClockEnabled,
@@ -1695,15 +1697,17 @@ function updateLoadOlderButtonVisibility(range) {
 // scrollte und den Handler erneut auslöste. Der Button ruft exakt dieselbe Funktion auf, damit sich
 // beide Wege nicht unterscheiden (gleicher loadingOlder-Zustand, gleiche reachedHistoryStart-Logik).
 async function loadOlderCandlesNow() {
-  if (!chart || loadingOlder || allCandles.length === 0) return;
+  if (!chart || !candlesReady || loadingOlder || allCandles.length === 0) return;
   if (reachedHistoryStart) return;
   if (showLiveHistoryConfirm.value) return; // wartet auf confirmLoadLiveHistory/den Banner-Button
 
   loadingOlder = true;
+  const seq = loadInitialFetchSeq;
   try {
     const older = await fetchOlderForexCandles(props.symbol, props.currentBar, allCandles[0].time, FOREX_HISTORY_PAGE_SIZE, {
       allowLive: liveHistoryConfirmed,
     });
+    if (!chart || seq !== loadInitialFetchSeq) return;
     if (older === null) {
       // Archiv erschöpft (vor 2026-01-01) UND noch nicht bestätigt — Banner zeigen statt
       // automatisch live nachzuladen (siehe showLiveHistoryConfirm-Kommentar oben).
@@ -1711,7 +1715,7 @@ async function loadOlderCandlesNow() {
       return;
     }
     if (older.length === 0) reachedHistoryStart = true;
-    else allCandles = older.concat(allCandles);
+    else allCandles = mergeCandles(allCandles, older);
     refreshChart();
     updateLoadOlderButtonVisibility();
   } catch (err) {
@@ -1788,13 +1792,12 @@ function refreshChart() {
   activeMetadataSnapshot.value = buildActiveMetadataSnapshotInternal();
 }
 
-async function loadInitial() {
-  // Out-of-Order-Guard (siehe rangesFetchSeq/loadRangesCandles) — seit Bug-Report Philip
-  // 2026-07-19 ("+1 Kerze"-Button tat nichts) läuft loadInitial() nicht mehr nur einmal bei
-  // Mount/TF-Wechsel, sondern auch gedebounced bei jedem Replay-Schritt (siehe replayUntil-
-  // Watcher unten) — schnell aufeinanderfolgende Schritte können also mehrere echte Fetches
-  // gleichzeitig laufen haben, die out-of-order zurückkommen.
+async function loadInitial({ preserveHistory = false, force = false } = {}) {
+  // Ein späterer Modus-/Timeframe-Wechsel überholt noch laufende Antworten.
   const seq = ++loadInitialFetchSeq;
+  const key = `${props.symbol}:${props.currentBar}`;
+  const keepHistory = preserveHistory && candlesReady && loadedCandleKey === key;
+  if (!keepHistory) candlesReady = false;
   try {
     // Fester count (INITIAL_CANDLE_COUNT) reicht "bis jetzt" gerechnet nicht bei jedem Timeframe
     // gleich weit zurück (1000 M5-Kerzen ~3,5 Tage, 1000 H1-Kerzen ~41 Tage) — ohne replayToMs()
@@ -1802,24 +1805,38 @@ async function loadInitial() {
     // Kerzenbereich laden, der nach clipReplay komplett verschwindet (siehe Chat 2026-07-19: "1h
     // auf M5 gewechselt und sehe keinen Chart").
     const toMs = replayToMs(props.currentBar);
-    const candles = await fetchCandlesCached(
-      fetchInitialForexCandles,
-      props.symbol,
-      props.currentBar,
-      INITIAL_CANDLE_COUNT,
-      toMs,
-      REPLAY_LOOKAHEAD_SEC,
-    );
-    if (seq !== loadInitialFetchSeq) return; // inzwischen überholt, siehe oben
-    allCandles = candles;
-    reachedHistoryStart = false;
-    liveHistoryConfirmed = false; // neues Symbol/Timeframe/Replay-Sprung -> erneut nachfragen, siehe showLiveHistoryConfirm
-    showLiveHistoryConfirm.value = false;
-    showLoadOlderButton.value = false; // frischer Datensatz, Sichtbarkeit racet sonst mit dem nächsten Scroll-Event
+    const candles = force
+      ? await fetchInitialForexCandles(props.symbol, props.currentBar, INITIAL_CANDLE_COUNT, toMs)
+      : await fetchCandlesCached(
+          fetchInitialForexCandles,
+          props.symbol,
+          props.currentBar,
+          INITIAL_CANDLE_COUNT,
+          toMs,
+          REPLAY_LOOKAHEAD_SEC,
+        );
+    if (!chart || seq !== loadInitialFetchSeq) return false;
+    const viewport = keepHistory ? chart.timeScale().getVisibleLogicalRange() : null;
+    const firstTime = allCandles[0]?.time;
+    allCandles = keepHistory ? mergeCandles(allCandles, candles) : candles;
+    loadedCandleKey = key;
+    candlesReady = true;
+    if (!keepHistory) {
+      reachedHistoryStart = false;
+      liveHistoryConfirmed = false;
+      showLiveHistoryConfirm.value = false;
+      showLoadOlderButton.value = false;
+    }
     refreshChart();
+    if (viewport) {
+      const offset = Math.max(0, allCandles.findIndex((c) => c.time === firstTime));
+      chart.timeScale().setVisibleLogicalRange({ from: viewport.from + offset, to: viewport.to + offset });
+    }
     markSuccess();
+    return true;
   } catch (err) {
     console.error("Kerzen-Update fehlgeschlagen:", err);
+    return false;
   }
 }
 
@@ -2345,24 +2362,22 @@ watch(
     activeMetadataSnapshot.value = buildActiveMetadataSnapshotInternal();
   },
 );
-// Hauptkerzen (allCandles) BRAUCHEN hier einen Refetch (Bug-Report Philip 2026-07-19: "+1
-// Kerze"-Button tat einfach nichts) — loadInitial() bindet den Fetch an replayToMs(), allCandles
-// endet also IMMER exakt am zuletzt geladenen Replay-Zeitpunkt, nie später; refreshChart() allein
-// würde nur denselben, schon geclippten Datenstand neu rendern. Trade-Setups/Ranges brauchen aus
-// demselben Grund ebenfalls ein echtes Neu-Fetchen: ihr fester count/Lookback deckt den neuen
-// Replay-Zeitpunkt sonst ggf. nicht mehr ab.
+// Nur ein expliziter Einzelschritt erhält den Bestand. Live↔Replay und Datumssprünge
+// brauchen das Initialfenster; sonst könnte ein alter Live-Bestand als Replay dienen.
 let replayFetchDebounceTimer = null;
-watch(() => props.replayUntil, () => {
+let pendingReplayStep = null;
+watch(() => props.replayUntil, (until, previous) => {
+  const singleStep = isPreparedReplayStep(pendingReplayStep, previous, until);
+  pendingReplayStep = null;
   refreshChart();
-  // Debounced statt bei JEDEM einzelnen "+1 Kerze"-Klick sofort zu fetchen — jeder Fetch ist ein
-  // frischer, spürbar langsamer cTrader-TLS-Connect (siehe loadTradeSetupM5/loadRangesCandles);
-  // schnelles mehrfaches Klicken hat sonst mehrere überlappende Fetches gleichzeitig laufen, die
-  // (ohne die *FetchSeq-Guards dort, inkl. loadInitialFetchSeq) in falscher Reihenfolge
-  // zurückkommen können und den Chart auf einem veralteten Replay-Stand hängen lassen. Bei einem
-  // einzelnen Klick spürt man die 400ms nicht.
+  // Zusätzliche Indikatorfenster nutzen ihren Replay-Cache. Schnelle Klicks bündeln.
   clearTimeout(replayFetchDebounceTimer);
+  if (!singleStep) {
+    ++loadInitialFetchSeq;
+    candlesReady = false;
+  }
   replayFetchDebounceTimer = setTimeout(() => {
-    loadInitial();
+    if (!singleStep) loadInitial();
     loadTradeSetupM5();
     if (rangesNeedsData()) loadRangesCandles();
   }, REPLAY_FETCH_DEBOUNCE_MS);
@@ -2400,13 +2415,6 @@ watch(
   { deep: true },
 );
 
-// Für den "+1 Kerze"-Button in Dashboard.vue: replayUntil lebt dort, daher kein direktes Setzen von
-// hier aus möglich — gibt stattdessen den Zeitpunkt der nächsten Kerze zurück, den Dashboard.vue als
-// neuen replayUntil-Wert übernimmt. Kernlogik + Bug-Historie lebt in computeNextReplayTime
-// (chartTimeUtils.js). WICHTIG: setzt voraus, dass allCandles gerade aus einem vollen Fetch stammt
-// (inkl. REPLAY_LOOKAHEAD_SEC) — ein Cache-HIT muss den gecachten Lookahead mit zurückgeben, sonst
-// sieht's hier nach "keine geladene Kerze mehr" aus, obwohl sie im Cache längst daliegt.
-
 // Aus dem früheren defineExpose-jumpToTrade herausgezogen — das RSI-Divergenz-Statistik-Panel will
 // auf denselben "auf einen Zeitraum springen"-Mechanismus zurückgreifen, ohne sich selbst über die
 // exposeRef aufzurufen. jumpToTrade bleibt als dünner Wrapper für externe Aufrufer bestehen.
@@ -2442,6 +2450,14 @@ function jumpToDivergence(d) {
 }
 
 defineExpose({
+  async refreshData() {
+    const results = await Promise.all([
+      loadInitial({ preserveHistory: true, force: true }),
+      loadTradeSetupM5(),
+      rangesNeedsData() ? loadRangesCandles() : true,
+    ]);
+    return results.every(Boolean);
+  },
   // Für die TSC-Karte in Dashboard.vue (Chat 2026-08-29) — Dashboard.vue liest das reaktiv über
   // einen eigenen computed (priceChartRef.value?.trendChain), analog zum bereits etablierten
   // Muster, refs über defineExpose auf den public instance zu legen statt einen eigenen Emit-Zyklus
@@ -2451,14 +2467,18 @@ defineExpose({
   m5Trend,
 
   async nextReplayTime(after) {
-    const barSeconds = barSecondsFor(props.currentBar);
-    return computeNextReplayTime(
-      allCandles,
-      after,
-      barSeconds,
-      (afterSec) => fetchInitialForexCandles(props.symbol, props.currentBar, 200, (afterSec + MAX_PLAUSIBLE_GAP_SEC) * 1000),
-      MAX_PLAUSIBLE_GAP_SEC,
-    );
+    if (!candlesReady || loadedCandleKey !== `${props.symbol}:${props.currentBar}`) return null;
+    const seq = loadInitialFetchSeq;
+    try {
+      const candle = await nextReplayCandle(allCandles, after, (time) => fetchNextCandle(props.symbol, props.currentBar, time));
+      if (!chart || seq !== loadInitialFetchSeq || !candle) return null;
+      allCandles = mergeCandles(allCandles, [candle]);
+      pendingReplayStep = { from: after, to: candle.time };
+      return candle.time;
+    } catch (error) {
+      console.error("Nächste Replay-Kerze laden fehlgeschlagen:", error);
+      return null;
+    }
   },
 
   // Für den Klick auf eine Zeile in TradesTable.vue (Chat 2026-07-27) — dünner Wrapper, die

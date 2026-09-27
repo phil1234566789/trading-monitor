@@ -23,6 +23,18 @@ beforeEach(() => {
 afterEach(() => scope.stop());
 
 describe("journal range selection", () => {
+  it("reloads an externally created active range while preserving a journal selection", async () => {
+    const { state } = setup();
+    await settle();
+    fetchActiveTscRangeId.mockResolvedValue(20);
+    await state.reload();
+    expect(state.range.value.id).toBe(20);
+    await state.openJournal(42, "GBPUSD");
+    fetchActiveTscRangeId.mockResolvedValue(30);
+    await state.reload();
+    expect(state.range.value.id).toBe(42);
+  });
+
   it("opens the existing range and returns to the original idea without changing either", async () => {
     const { state } = setup();
     await settle();

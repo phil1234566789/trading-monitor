@@ -16,10 +16,12 @@ export function useTscRange(instrument) {
     if (token === request) range.value = loaded;
   }
 
-  async function load() {
+  async function load({ clear = true } = {}) {
     const token = ++request;
-    rangeId.value = null;
-    range.value = null;
+    if (clear) {
+      rangeId.value = null;
+      range.value = null;
+    }
     error.value = "";
     try {
       const id = journalSelection.value?.id ?? await fetchActiveTscRangeId(instrument.value);
@@ -29,8 +31,10 @@ export function useTscRange(instrument) {
       rangeId.value = loaded?.id ?? null;
       range.value = loaded;
       if (id != null && !loaded) error.value = "Dealing Range nicht mehr vorhanden.";
+      return !error.value;
     } catch (cause) {
       if (token === request) error.value = `Dealing Range konnte nicht geladen werden: ${cause.message}`;
+      return false;
     }
   }
 
@@ -50,5 +54,5 @@ export function useTscRange(instrument) {
     await load();
   }
 
-  return { rangeId, range, fromJournal, error, refresh, openJournal, closeJournal };
+  return { rangeId, range, fromJournal, error, refresh, reload: () => load({ clear: false }), openJournal, closeJournal };
 }

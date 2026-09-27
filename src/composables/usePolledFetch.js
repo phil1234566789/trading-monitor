@@ -12,8 +12,10 @@ export function usePolledFetch(fetchFn, { intervalMs, onError = console.error } 
     try {
       data.value = await fetchFn();
       markSuccess();
+      return true;
     } catch (err) {
       onError(err);
+      return false;
     }
   }
 

@@ -16,11 +16,14 @@ import ContextMenu from "../components/ContextMenu.vue";
 import PinAddPopup from "../components/PinAddPopup.vue";
 import PinPanel from "../components/PinPanel.vue";
 import ToggleButton from "../components/ui/ToggleButton.vue";
+import DataRefreshButton from "../components/DataRefreshButton.vue";
+import { syncNewsEvents } from "../newsEvents.js";
 import { selectedTradingAccountId, writableTradingAccountId } from "../tradingAccounts.js";
 import { TIMEFRAMES, barSecondsForTimeframeCi } from "../timeframes.js";
 import { toPips } from "../pipConfig.js";
 import { fetchTrades } from "../trades.js";
 import { useTscRange } from "../composables/useTscRange.js";
+import { useReplayStructureDefaults } from "../composables/useReplayStructureDefaults.js";
 import {
   fetchTradeSetupForCockpit,
   linkTradeToSetup,
@@ -514,7 +517,7 @@ async function onMeasureDone({ from, to }) {
 const {
   rangeId: tscRangeId, range: tscRange, fromJournal: tscFromJournal,
   error: tscLoadError, refresh: refreshTscRange, openJournal: openJournalTscRange,
-  closeJournal: closeJournalTscRange,
+  closeJournal: closeJournalTscRange, reload: reloadTscRange,
 } = useTscRange(currentSymbol);
 watch(tscRange, () => { if (tscFromJournal.value) void refreshTrades(); });
 async function onOpenJournalInTsc(trade) {
@@ -1395,6 +1398,11 @@ const showDebugMetadata = useLocalStorageRef("showDebugMetadata", false);
 const replayTime = useLocalStorageRef("replayTime", 1783011600); // 02.07.2026 19:00 (Berlin)
 const replayActive = useLocalStorageRef("replayActive", false);
 const replayUntil = computed(() => (replayActive.value ? replayTime.value : null));
+useReplayStructureDefaults(replayActive, {
+  startMode: rangesStartMode,
+  lookbackHours: rangesLookbackHours,
+  innerLookbackHours: ranges2LookbackHours,
+});
 function toDatetimeLocal(unixSeconds) {
   const d = new Date(unixSeconds * 1000);
   const pad = (n) => String(n).padStart(2, "0");
@@ -1534,8 +1542,7 @@ onUnmounted(() => window.removeEventListener("click", closeMenusOutside));
 // POLL_MS mit dem alten DB-Stand überschrieben) — Trades ändern sich nur durch explizite Aktionen
 // (Speichern, Symbol-/Kontowechsel, Ziel/Bestätigung im Chart hinzugefügt, siehe die
 // refreshTrades()-Aufrufe unten), kein eigenes intervalMs also kein Hintergrund-Poll (siehe
-// usePolledFetch.js). Eine externe Änderung durch Lana (MCP-Server) erscheint dadurch erst nach
-// einem manuellen Reload/Tab-Wechsel — bewusst in Kauf genommen.
+// usePolledFetch.js). Externe Änderungen lädt der Button „Daten aktualisieren“ gezielt nach.
 const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrades(currentSymbol.value, selectedTradingAccountId.value));
 // "Isolieren"-Modus (Task trade-journal-dr-im-chart-isolieren-zeilen-button, 2026-08-28): Philip
 // tat sich schwer, Journal-Zeilen den richtigen Chart-Objekten zuzuordnen, wenn mehrere Trades im
@@ -1575,7 +1582,7 @@ const visiblePinContextEntries = computed(() => (showPinHighlights.value ? pinCo
 // Browser-Aktionen, sondern im Hintergrund durch poi-watcher (Cron alle 5min) — deshalb, anders als
 // die beiden Fälle oben, MIT intervalMs. 60s reicht: schneller als jede sinnvolle manuelle
 // Beobachtung, ohne unnötig oft zu pollen.
-const { data: dbObZones } = usePolledFetch(() => fetchObZones(), { intervalMs: 60_000 });
+const { data: dbObZones, refresh: refreshDbObZones } = usePolledFetch(() => fetchObZones(), { intervalMs: 60_000 });
 // Von poi-watcher persistierte Trade-Setups (Task "Chart zeichnet die persistierten Trade-Setups")
 // — gleicher Cron-im-Hintergrund-Grund fürs intervalMs wie dbObZones. Anders als dort NICHT über
 // alle Instrumente: trade_setups liegt je Instrument schon nahe am PostgREST-Zeilendeckel (siehe
@@ -1587,12 +1594,21 @@ const { data: dbTradeSetups, refresh: refreshDbTradeSetups } = usePolledFetch(()
 // HTF-Liquidity-Level, 1H+4H (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren",
 // Punkt 12, seit 2026-08-23 auch 4H) — analog zu dbObZones oben, gleicher Grund für intervalMs
 // (poi-watcher-Cron im Hintergrund).
-const { data: dbLiquidityLevelsHtf } = usePolledFetch(() => fetchLiquidityLevelsHtf(), { intervalMs: 60_000 });
+const { data: dbLiquidityLevelsHtf, refresh: refreshDbLiquidityLevelsHtf } = usePolledFetch(() => fetchLiquidityLevelsHtf(), { intervalMs: 60_000 });
 // 1D-Periode-4-Struktur-Pivots (Task "Market-Structure-Startpunkt: 1D-Periode-4-Pivots") — analog
 // zu dbLiquidityLevelsHtf oben, gleicher Grund für intervalMs (die tägliche daily-structure-pivots-
 // Cron-Function läuft im Hintergrund). Feed für die Dreieck-Marker (PriceChart.vue) UND für den
 // "1D-Pivot"-Start-Modus unten.
-const { data: dbDailyPivots } = usePolledFetch(() => fetchDailyStructurePivots(), { intervalMs: 60_000 });
+const { data: dbDailyPivots, refresh: refreshDbDailyPivots } = usePolledFetch(() => fetchDailyStructurePivots(), { intervalMs: 60_000 });
+
+async function refreshDashboardData() {
+  const results = await Promise.allSettled([
+    refreshTrades(), reloadTscRange(), refreshPinContext(), refreshDbObZones(),
+    refreshDbTradeSetups(), refreshDbLiquidityLevelsHtf(), refreshDbDailyPivots(),
+    syncNewsEvents(), priceChartRef.value?.refreshData(),
+  ]);
+  return results.every((result) => result.status === "fulfilled" && result.value !== false);
+}
 // Neuester Pivot mit aufgelöstem structure_start_time für currentSymbol — treibt sowohl den
 // "1D-Pivot"-Modus (Watcher unten) als auch dessen Read-only-Anzeige im Dropdown.
 const latestDailyPivotStructureStartTime = computed(() => {
@@ -1713,6 +1729,7 @@ watch(selectedTradingAccountId, () => {
 
 <template>
   <div class="toolbar">
+    <div class="toolbar-controls">
     <div class="symbol-switcher">
       <ToggleButton
         v-for="sym in SYMBOLS"
@@ -2174,6 +2191,8 @@ watch(selectedTradingAccountId, () => {
         🎨 Style
       </ToggleButton>
     </div>
+    </div>
+    <DataRefreshButton class="toolbar-refresh" :refresh="refreshDashboardData" />
   </div>
 
   <StyleModal v-if="showStyleModal" @close="showStyleModal = false" />
@@ -2295,7 +2314,6 @@ watch(selectedTradingAccountId, () => {
     @close-rsi-divergence-stats="showRsiDivergenceStats = false"
     @select-target="onSelectTarget"
     @select-setup-confirmations="onSelectSetupConfirmations"
-    @measure-start="onMeasureStart"
     @measure-done="onMeasureDone"
     @pin-context-menu="onPinContextMenu"
     @add-target-from-picker="onAddTargetFromPicker"
@@ -2393,11 +2411,25 @@ watch(selectedTradingAccountId, () => {
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px 16px;
   padding: 8px 16px;
   background: #131722;
   border-bottom: 1px solid #2a2e39;
+}
+
+.toolbar-controls {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.toolbar-refresh {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .symbol-switcher,
