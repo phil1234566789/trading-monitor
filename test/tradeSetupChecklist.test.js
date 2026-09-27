@@ -24,15 +24,25 @@ describe('Checklist: geschlossener Wissensstand', () => {
     evaluateTradeSetupChecklist(input);
     expect(evaluateTradeSetupChecklist({ ...historical, h1Candles: candles.filter(c => c.time + 3600 <= at) })).toEqual(full);
   });
-  it('berechnet A aus echten Kerzen und lässt B–I offen, ohne Gesamt-Go', () => {
+  it('berechnet A/B aus echten Kerzen und kennzeichnet unfertige Zuordnungen ohne Gesamt-Go', () => {
     const result = evaluateTradeSetupChecklist(input);
     expect(result.checks.h1Trend.status).toBe('passed');
     expect(['long', 'short']).toContain(result.direction);
     expect(result.status).toBe('ready');
     for (const [id, check] of Object.entries(result.checks)) {
-      if (id !== 'h1Trend') expect(['pending', 'unknown', 'deferred']).toContain(check.status);
+      if (!['h1Trend', 'liquiditySweep'].includes(id)) expect(['pending', 'unknown', 'deferred']).toContain(check.status);
     }
+    expect(result.checks.liquiditySweep.status).toBe('passed');
+    expect(result.setup.primary).toBeTruthy();
+    expect(result.setup.primary.validity.state).toBe('unknown');
+    expect(result.checks.targets.status).toBe('unknown');
+    expect(result.checks.targets.details.join(' ')).toContain('Vorläufige Zielkandidaten');
     expect(result).not.toHaveProperty('go');
+  });
+  it('beschriftet abweichende Strukturperioden nicht als P2/P5-Ziele', () => {
+    const result = evaluateTradeSetupChecklist({ ...input, settings: { ...settings, ranges2Period: 3 } });
+    expect(result.checks.targets.status).toBe('unknown');
+    expect(result.setup.targetPreview).toBeNull();
   });
   it('erfindet weder Trend noch Replay-Zeit', () => {
     expect(evaluateTradeSetupChecklist({ ...input, h1Candles: [] }).checks.h1Trend.status).toBe('unknown');

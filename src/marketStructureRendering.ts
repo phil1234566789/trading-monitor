@@ -11,6 +11,8 @@ import { PIP_SIZE } from "./pipConfig.js";
 import type { Pivot, MarketStructureState } from "./range.type";
 import type { Candle } from "./marketStructureAnalysis";
 import { pivotTimeOf, collectNestedChain } from "./marketStructureAnalysis";
+import { firstTouchAfter } from './structurePivotTime';
+export { firstTouchAfter } from './structurePivotTime';
 
 // --- Zeichnung ----------------------------------------------------------------------------------
 // Pfeil-Marker (roh: kleines gefülltes Dreieck) für range.high/range.low — sitzt ganz rechts am
@@ -496,14 +498,6 @@ function firstCloseAbove(candles: Candle[], fromTime: number, price: number, fal
     if (c.time > fromTime && c.close > price) return c.time;
   }
   return fallbackTime;
-}
-
-// Erste Kerze NACH dem Balken des Ankers, die den Level berührt (Docht reicht). Ab Balken-Ende
-// statt ab pivotTime: sonst greift die Anker-Kerze selbst bzw. deren eigener Balken sofort.
-export function firstTouchAfter(candles: Candle[], anchor: Pivot, barSeconds: number, below: boolean): number | null {
-  const from = (anchor.pivotTime ?? 0) + barSeconds;
-  const c = candles.find((k) => k.time >= from && (below ? k.low <= anchor.price : k.high >= anchor.price));
-  return c ? c.time : null;
 }
 
 // Zeichnet EINEN bestätigten Nested-Tracker (CHoCH) — Verbindungslinie, protected-high/-low,

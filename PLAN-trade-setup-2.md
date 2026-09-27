@@ -376,7 +376,37 @@ Die reinen B/C- und D-Module wurden zur parallelen Umsetzung gestartet; die zent
 
 ### Runde 3 — nach Sweep-Zuordnung und Targets
 
+- E/G-Chat gestartet: `01a0e487-5aa1-7f50-a1b8-6642b75f4f22`. Er setzt die belegbaren Kandidaten und Divergenzberechnung bereits um; ungeklärte Vergleichs-/Zuordnungsregeln bleiben ausdrücklich unbekannt.
+
 - **E/G:** Zuordnung der Gegenargumente und Zusatzargumente wartet auf die tatsächlichen B/C- und D-Ergebnisse. Reine Divergenzberechnung wäre vorziehbar, die fachlich korrekte Zuordnung und Vergleichsregel noch nicht.
 - **H:** eigene spätere Verfeinerung mit Philip. Kann nach geklärten Close-Regeln unabhängig von E/G implementiert werden; finale Zusammenführung folgt anschließend.
 - **I:** zuletzt, wie vereinbart.
 - **Statistik:** nach stabilen Erkennungs-/Ausführungsregeln und korrekter zeitlicher Auswertung. Keine frühzeitigen Winrate-Versprechen aus einem unvollständigen Ablauf.
+
+## Veröffentlichter Stand und verbleibende Grenzen
+
+Erster Release: `1ab1e0b`, GitHub-Pages-Deployment erfolgreich (Run `36347808770`). Enthält Menübezeichnungen, eigenen Checklist-Bereich, automatische Zeit-/Datenbasis, A sowie F. Bestehender TSC bleibt erhalten. Die Oberfläche zeigt neun automatisch befüllte Prüfpunkte ohne manuelle Checkboxänderungen und ohne endgültiges Gesamt-Go.
+
+- Replay bleibt bis zur Entscheidung über die Bedeutung des sichtbaren Kerzenzeitpunkts ausdrücklich unbekannt. Die reinen Module arbeiten bereits mit einem expliziten Bewertungszeitpunkt.
+- Im Live-Modus führt fehlender aktueller Kerzenschluss konservativ zu veralteten Daten; das betrifft auch Marktschließungen. Daraus wird kein aktuelles Handelssignal abgeleitet.
+- Der manuell gepflegte News-Kalender hat weiterhin keinen Abdeckungsnachweis. Bekanntes Sperrereignis blockiert; eine leere Liste bestätigt keinen ereignislosen Tag.
+- B/C und D sind in separaten Modulen implementiert und werden anschließend integriert: älteste Major-/Medium-H1-Sweeps, Reaktionsschnittstelle und P2-/P5-Zielauswahl. Feste historische Target-Auswahl, Invalidierungsbildung und eindeutige Zuordnung zur selben Bewegung sind noch nicht vollständig fachlich festgelegt. Eine aktuelle Target-Vorschau darf kein vergangenes Setup verlängern.
+- H und I bleiben wie vereinbart zurückgestellt. E/G dürfen ohne geklärten Stärkevergleich und Mitigationsbegriff kein endgültiges Go/No-Go erfinden.
+- Ergänzung zum damaligen Spread-Hour-Audit: Backend inzwischen mit `ac59f73` veröffentlicht; die drei betroffenen Funktionen sind deployed. Der Re-Backfill bleibt laut eigenem Task Philip vorbehalten. Keine Rückrechnung oder Journaländerung wird in dieser Checklist-Runde gestartet.
+
+### DR 114: Abgleich mit echten historischen Daten
+
+Das Journal nennt für Position 135 den 09.09.2026 um 09:20 Uhr (Europe/Berlin). Der lesende Abgleich des bis dahin geschlossenen Kerzenpräfixes unterscheidet folgende Quellen:
+
+| Preis | Tatsächliche Herkunft |
+|---|---|
+| 1,35409 | H1-P2 vom 09.09. um 04:00 Uhr; bestätigt um 07:00 Uhr; Asia Mid. |
+| 1,35394 | Gespeichertes erstes Journaltarget (ID 148), eigenes M5-P5-Low vom 09.09. um 01:35 Uhr, Liquiditätslevel 460627. Kein belegter pauschaler Offset von 1,35409. |
+| 1,35300 | Gespeichertes zweites Journaltarget (ID 150), M5-P5-Low vom 08.09. um 18:45 Uhr, Liquiditätslevel 460629. In der H1-Struktur P2, nicht P5. |
+| 1,35211 | Nächstes H1-P5-Ziel der implementierten D-Auswahl bei explizitem Referenzpreis 1,35641 (letzter geschlossener M5-Close); Pivot vom 08.09. um 12:00 Uhr, MMM Low. |
+
+Das tiefere H1-Low um 13:00 Uhr am 08.09. bei 1,35219 liegt im linken P5-Fenster des 18:00-Pivots bei 1,35300 und verhindert dessen P5-Einstufung. Das alte Spread-Hour-Level 1,35294 wird mit der aktuellen Konfiguration ausgeschlossen.
+
+**Konkrete offene Fachentscheidung:** Soll das zweite Ziel ein H1-P5-Pivot oder das markierte M5-P5-/New-York-Sessionlevel sein? Die bisherige Annahme H1-P5 reproduziert das markierte zweite Target nicht. Deshalb keine automatische Regeländerung und keine behauptete vollständige DR-114-Abnahme. Der explizite Auditzeitpunkt entscheidet auch nicht die noch offene Replay-UI-Semantik.
+
+**E/G-Zuordnung:** D sucht unberührte Zielpivots. Ein bereits gesweepter identischer P5-Pivot als Gegenargument passt deshalb nicht ohne Weiteres dazu. Zu klären ist, welcher Ursprung der Gegenreaktion dem Ziel zugeordnet werden soll; eine bloße Preisnähe ersetzt diesen Nachweis nicht.

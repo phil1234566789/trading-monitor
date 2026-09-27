@@ -111,8 +111,12 @@ function closesBeyondLevel(candles, fromTime, toTime, levelPrice, dir) {
 
 // Wie lange das Level schon stand, BEVOR es gesweept wurde — dasselbe Maß, das die Alters-Labels
 // im Chart und die Qualitätsmerkmale in analysis/dr-reichweite/ benutzen.
-function sweepAgeSec(ls) {
+export function sweepAgeSec(ls) {
   return businessSecondsBetween(ls.pivotTime, ls.touchedTime ?? ls.pivotTime);
+}
+
+export function compareSweepAge(a, b) {
+  return sweepAgeSec(b.level) - sweepAgeSec(a.level) || a.level.pivotTime - b.level.pivotTime;
 }
 
 // Regel 2 (Philip 2026-09-21): der Close-Check disqualifiziert einen Sweep nur noch, solange das
@@ -165,7 +169,7 @@ function collectObSweeps(ob, ownLs, h1Levels, m5Levels, params, dir, m5Candles) 
   // Regel 3, Teil 2: ÄLTESTER zuerst ("Ältester Sweep ist der für die Strategie am
   // entscheidendsten") — sweeps[0] ist der, der die Qualität trägt. Bei gleichem Alter der früher
   // entstandene Pivot, damit beide Laufzeiten dasselbe Level wählen.
-  return sweeps.sort((a, b) => sweepAgeSec(b.level) - sweepAgeSec(a.level) || a.level.pivotTime - b.level.pivotTime);
+  return sweeps.sort(compareSweepAge);
 }
 
 // Path B (Chat 2026-07-26, Bug-Report "M5 OB wird nicht als Trade-Setup erkannt"): laut Philips

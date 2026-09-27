@@ -75,7 +75,7 @@ export function pivotTimeOf(pivot: Pivot): number {
 // bei der Trendbestätigung zählt aber nur, ob der Touch VOR oder NACH dem Bestätigungsmoment liegt.
 // Ohne touchedTime (ältere/synthetische Testdaten ohne den optionalen Zeitstempel, siehe
 // range.type.ts) konservativ als "schon getoucht" behandeln, statt fälschlich zu qualifizieren.
-function isUntouchedAsOf(pivot: Pivot, momentTime: number): boolean {
+export function isUntouchedAsOf(pivot: Pivot, momentTime: number): boolean {
   if (!pivot.touched) return true;
   return typeof pivot.touched.touchedTime === "number" && pivot.touched.touchedTime > momentTime;
 }

@@ -56,7 +56,11 @@ export function evaluateChecklistTime({ evaluatedAt, instrument, sessions, tradi
         details.push("Sessionkonfiguration ist ungültig.");
         continue;
       }
-      if (!sessionOccurrences(session.fromMinutes, session.toMinutes, wallTime, wallTime + 1, 0, session.days).length) continue;
+      // Weekend Gap ist gespeichert als Fr 23:00 bis So 23:00 (toMinutes=4260).
+      // Wöchentliche Wiederholung begrenzt den nötigen Rückblick auch bei langen Spannen.
+      const lookback = Math.min(7 * 86400, Math.max(0, session.toMinutes - session.fromMinutes) * 60);
+      if (!sessionOccurrences(session.fromMinutes, session.toMinutes, wallTime - lookback, wallTime + 1, 0, session.days)
+        .some(occurrence => occurrence.startSec <= wallTime && wallTime < occurrence.endSec)) continue;
       activeCount++;
       const label = session.label || "Unbenannte Session";
       if (session.danger === "forbidden") {
@@ -98,7 +102,7 @@ function validWindow(pair) {
 
 function validSession(session) {
   return Number.isInteger(session.fromMinutes) && session.fromMinutes >= 0 && session.fromMinutes < 1440
-    && Number.isInteger(session.toMinutes) && session.toMinutes >= 0 && session.toMinutes <= 1440
+    && Number.isSafeInteger(session.toMinutes) && session.toMinutes >= 0
     && (session.days == null || (Array.isArray(session.days) && session.days.every(day => Number.isInteger(day) && day >= 0 && day <= 6)))
     && (session.danger == null || ["normal", "caution", "forbidden"].includes(session.danger));
 }

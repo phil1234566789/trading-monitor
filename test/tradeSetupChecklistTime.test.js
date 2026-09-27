@@ -10,6 +10,15 @@ const input = (overrides = {}) => ({
 });
 
 describe("evaluateChecklistTime", () => {
+  it('akzeptiert das gespeicherte mehrtägige Weekend-Gap bis Sonntagabend', () => {
+    const args = input({ evaluatedAt: at('2026-09-27T22:00:00+02:00'),
+      sessions: [{ ...london, label: 'Weekend Gap', fromMinutes: 1380, toMinutes: 4260, days: [5] }],
+      tradingWindows: { sunday: [[0, 1440]] } });
+    const result = evaluateChecklistTime(args);
+    expect(result.status).toBe('passed');
+    expect(result.details.join(' ')).toContain('Weekend Gap — OK');
+    expect(evaluateChecklistTime({ ...args, evaluatedAt: at('2026-09-27T23:00:00+02:00') }).details.join(' ')).not.toContain('Weekend Gap — OK');
+  });
   it("zeigt London und bestätigt nur explizit abgedeckte News", () => {
     const result = evaluateChecklistTime(input());
     expect(result.status).toBe("passed");

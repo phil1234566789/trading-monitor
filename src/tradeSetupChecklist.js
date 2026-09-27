@@ -4,6 +4,7 @@ import { berlinOffsetMinutes } from './berlinTime.js';
 import { barSecondsFor } from './timeframes.js';
 import { evaluateChecklistTime } from './tradeSetupChecklistTime.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
+import { evaluateChecklistCandidates } from './tradeSetupChecklistCandidates.js';
 export { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 
 export function checklistEvaluationTime(replayUntil, nowSec, replayMode = null) {
@@ -60,6 +61,9 @@ export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles
   if (result.direction) {
     checks.h1Trend = { status: 'passed', details: [state.trend === 'uptrend' ? 'Bullisch — Hauptcheckliste für Long.' : 'Bärisch — Hauptcheckliste für Short.'] };
   }
+  const setup = evaluateChecklistCandidates(context, sessionConfigs);
+  Object.assign(checks, setup.checks);
+  result.setup = setup;
   return result;
 }
 
@@ -74,6 +78,6 @@ export function buildChecklistMarketContext({ instrument, evaluatedAt, h1Candles
   const outer = computeRangesPivots(structureCandles, rangesPeriod, cutoff(rangesLookbackHours));
   const inner = computeRangesPivots(structureCandles, ranges2Period, cutoff(ranges2LookbackHours));
   const state = buildMarketStructureState(outer, inner, rangesPeriod, ranges2Period, structureCandles);
-  return { instrument, evaluatedAt, h1Candles: h1, m5Candles: m5, h1State: state, h1Pivots: { outer, inner },
+  return { instrument, evaluatedAt, h1Candles: h1, m5Candles: m5, h1State: state, h1Pivots: { outer, inner }, periods: { outer: rangesPeriod, inner: ranges2Period },
     direction: state?.trend === 'uptrend' ? 'long' : state?.trend === 'downtrend' ? 'short' : null };
 }
