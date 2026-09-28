@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { nextCandlePollDelay } from "../candlePolling.js";
+import { usePriceChartM1Structure } from '../composables/usePriceChartM1Structure.js';
+import M1StructureStatus from './M1StructureStatus.vue';
 import { useM5CandleClock } from "../composables/useM5CandleClock.js";
 import { isGoldInstrument } from '../goldChartPolicy.js';
 import { goldWeekendClosed } from '../fxcmGoldCalendar.js';
@@ -240,6 +242,9 @@ const props = defineProps({
   rangesFixedStartTime: { type: Number, default: null },
   // M5-Struktur (PLAN-m5-trend.md) — zwei eigene Toggles, unabhängig vom 1h-showRanges.
   showM5Structure: { type: Boolean, default: false },
+  showM1Structure: { type: Boolean, default: false },
+  m1StructurePeriod: { type: Number, default: 5 },
+  m1Structure2Period: { type: Number, default: 2 },
   showM5TrendPhases: { type: Boolean, default: false },
   m5StructurePeriod: { type: Number, default: 5 },
   m5Structure2Period: { type: Number, default: 2 },
@@ -357,6 +362,8 @@ const emit = defineEmits([
 
 const { markSuccess } = useStatusBar();
 const checklist = usePriceChartChecklist(props, sessions, emit, undefined, { tradingSchedules, newsEvents, newsCalendar }, createChecklistStatisticsStore(supabase));
+const m1Structure = usePriceChartM1Structure(props, checklist.state);
+const m1StructureStatus = m1Structure.status;
 const { refreshSessions, refreshNewsMarkers } = usePriceChartSessionsAndNews();
 // EMA-/RSI-/Divergenz-Series-Lifecycle + Zeichenlogik (siehe usePriceChartRsi.js, Phase 6b) —
 // priceChartRsi.create(chart, candleSeries) wird in onMounted aufgerufen, priceChartRsi.dispose()
@@ -1514,7 +1521,7 @@ async function loadRangesCandles() {
 // Laden läuft also, solange MINDESTENS einer der vier an ist.
 function rangesNeedsData() {
   // M5-Struktur ankert am 1h-Outer-Cutoff, braucht also dieselben H1-Kerzen.
-  return props.showTradeSetupChecklist || props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups || props.showM5Structure || props.showM5TrendPhases;
+  return props.showM1Structure || props.showTradeSetupChecklist || props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups || props.showM5Structure || props.showM5TrendPhases;
 }
 // An den H1-Kerzenschluss ausgerichtet statt festem Intervall (Chat 2026-07-20) — H1-Kerzen
 // ändern sich nur stündlich, ein häufigerer Poll bringt nichts außer zusätzlichen Requests.
@@ -1816,6 +1823,7 @@ function refreshChart() {
   renderTradeSetupsInternal();
   refreshRangesMarkersInternal();
   refreshMarketStructureInternal(); // ruft refreshCockpitInternal() selbst mit auf, siehe dort
+  m1Structure.refresh(clipReplay(allCandles));
   refreshEmaInternal();
   refreshRsiInternal();
   refreshRsiDivergenceInternal();
@@ -1979,6 +1987,7 @@ onMounted(() => {
   priceChartRsi.create(chart, candleSeries);
   createDrawings(chart, candleSeries);
   createMarketStructure(chart, candleSeries);
+  m1Structure.create(candleSeries);
   createTradeSetupDrawing(candleSeries);
   createLiquidity(candleSeries);
   createDailyPivots(candleSeries);
@@ -2337,6 +2346,7 @@ watch([() => props.showM5Structure, () => props.showM5TrendPhases], () => {
   refreshRangesPollingState();
   refreshM5StructureInternal();
 });
+watch(() => props.showM1Structure, refreshRangesPollingState);
 watch([() => props.m5StructurePeriod, () => props.m5Structure2Period], refreshM5StructureInternal);
 watch([() => props.rangesPeriod, () => props.ranges2Period], () => {
   if (getRangesH1Candles().length > 0) refreshRangesInternal();
@@ -2560,6 +2570,7 @@ defineExpose({
   <div class="chart-wrapper" :style="{ height: chartWrapperHeight + 'px' }">
     <div ref="chartContainerRef" class="chart-container"></div>
     <M5CandleClock v-if="m5ClockEnabled()" :state="m5Clock" @retry="retryM5Clock" />
+    <M1StructureStatus v-if="showM1Structure" :status="m1StructureStatus" :symbol="symbol" />
     <div v-if="goldHistoryError" class="live-history-confirm" role="alert">Gold-Strukturvorlauf konnte nicht vollständig geladen werden. <button @click="reloadGoldHistory">Erneut laden</button></div>
     <div v-if="rangesLoading" class="ranges-loading">
       <span class="ranges-spinner"></span>

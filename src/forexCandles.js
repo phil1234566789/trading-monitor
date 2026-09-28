@@ -135,7 +135,7 @@ function fetchCandles(symbol, bar, { count, to } = {}) {
 // Timeframes und nur GBPUSD sind aktuell in forex_candles gefüllt (Migration
 // 20260809120000_forex_candles.sql) — EURUSD oder andere Timeframes liefern hier einfach 0 Zeilen
 // zurück, kein Sonderfall nötig, aber der Set spart pro Miss eine unnötige Supabase-Anfrage.
-const DB_ARCHIVED_BARS = new Set(["5m", "1h", "4h", "1D"]);
+const DB_ARCHIVED_BARS = new Set(["1m", "5m", "1h", "4h", "1D"]);
 
 function mapArchivedRows(rows) {
   return rows
@@ -209,7 +209,7 @@ async function fetchArchivedPage(symbol, bar, count, { ltIso, lteIso }) {
     query = inclusive ? query.lte("time", boundary) : query.lt("time", boundary);
     const { data, error } = await query;
     if (error) {
-      if (isGoldInstrument(symbol)) throw error;
+      if (isGoldInstrument(symbol) || bar === '1m') throw error;
       console.error("Kerzen-Archiv lesen fehlgeschlagen, falle auf Live-cTrader zurück:", error);
       break;
     }
@@ -254,6 +254,9 @@ export async function fetchInitialCandles(symbol, bar, count, toMs) {
   const now = toMs ?? Date.now();
   const toIso = new Date(now).toISOString();
   const archived = await fetchArchivedUpTo(symbol, bar, count, toIso);
+  // M1-Struktur kann mehr als das Edge-Limit benötigen; vollständig paginiertes
+  // natives Archiv verwenden und bei fehlender Historie keinen kürzeren Ersatz liefern.
+  if (bar === '1m') return archived ?? [];
   if (isGoldInstrument(symbol)) return archived ?? [];
   if (!archived) return fetchCandles(symbol, bar, { count, to: toMs });
 

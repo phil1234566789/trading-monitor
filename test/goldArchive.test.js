@@ -11,6 +11,16 @@ import { fetchInitialCandles, fetchOlderCandles, fetchNextCandle } from '../src/
 import { goldChartSelection } from '../src/goldChartPolicy.js';
 const row = day => ({ time:`2026-09-${day}T10:00:00Z`,open:4400,high:4405,low:4390,close:4401,volume:20 });
 beforeEach(() => { mock.pages=[];mock.boundaries=[]; vi.stubGlobal('fetch', vi.fn(() => {throw Error('Unexpected fallback');})); });
+it('reads M1 through short archive pages beyond the edge count cap', async () => {
+  mock.pages=[{data:[row('18')],error:null},{data:[row('17')],error:null},{data:[],error:null}];
+  expect(await fetchInitialCandles('GBPUSD','1m',7000)).toHaveLength(2);
+  expect(mock.boundaries).toContainEqual(['lt',row('18').time]);
+  expect(fetch).not.toHaveBeenCalled();
+});
+it('rejects a partial M1 archive page instead of caching incomplete history', async () => {
+  mock.pages=[{data:[row('18')],error:null},{data:null,error:new Error('offline')}];
+  await expect(fetchInitialCandles('GBPUSD','1m',7000)).rejects.toThrow('offline');
+});
 it('continues short server pages and returns all historical bars chronologically', async () => {
   mock.pages=[{data:[row('18')],error:null},{data:[row('17')],error:null},{data:[],error:null}];
   const result=await fetchInitialCandles('XAUUSD','1h',1500,Date.parse('2026-09-19T00:00:00Z'));

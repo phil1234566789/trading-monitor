@@ -284,7 +284,16 @@ Die 10:20-Kerze liefert später die bestehende Pivotbestätigung des bärischen 
 
 ### I / #9 — M1
 
-Platzhalter für den **1-Minutenchart**. Diesen Punkt erst ganz zum Schluss gemeinsam betrachten und konkretisieren, wenn die vorangehenden Punkte A bis H stehen. Bedingungen, Darstellung und technische Umsetzung sind noch offen; bis dahin keine M1-Regeln vorwegnehmen.
+**Visuelle Struktur umgesetzt; Entry-/GO-Regel weiterhin offen.** Eigener Toggle „M1-Struktur“ im Structure-Menü, mit Outer-/Inner-Periode (Standard 5/2). Debug zeigt die M1-Pivots. Strukturkern, Linien, Marker und M5-Styles werden wiederverwendet.
+
+- **Aktivierung:** Toggle an und A, B, C für das aktuelle Setup am Bewertungszeitpunkt bestätigt. Vorher keine M1-Abrufe für diese Funktion. H/BOS ist kein zusätzliches Gate.
+- **Anker:** der bekannte protected-Pivot der passenden aktuellen M5-Ebene, von dem die BOS-Linie ausgeht; nach BOS dieselbe Pivotidentität. DR114: 1,35554, M5-Pivotkerze 09.09.2026 um 08:45 Berlin. Kein fest codierter Preis und kein beliebiger alter BOS. Fehlt ein eindeutiger bekannter Anker, bleibt M1 ausstehend.
+- **Zeit:** M1-Struktur ab der M5-Pivotzeit mit Fraktal-Vorlauf. Die Pivotzeit ist der Beginn der M5-Kerze, keine erfundene sekundengenaue Extremzeit. Nur geschlossene M1-Kerzen bis zum Checklist-Bewertungsstand im Replay; vorgeholte Cache-Kerzen bleiben ausgefiltert.
+- **Daten:** eigener nativer FXCM-M1-Archivabruf über Pagination und den bestehenden Cache, unabhängig vom sichtbaren Chart-Zeitrahmen. Der bestehende Lookahead-Deckel bleibt erhalten. Live nutzt M1 den vorhandenen Poll-Abstand, ohne dadurch H1/M5 neu zu berechnen. Status im Chart zeigt Anker und tatsächlichen letzten M1-Schluss.
+- **Ladeende:** bestehender Setup-Lifecycle an Invalidierung oder Target 1; Target 2 verlängert den M1-Bezug nicht. Bei Ende/Setupwechsel/Rücksprung verschwinden überholte Zeichnungen, verspätete Antworten werden verworfen. Replay zurück in die aktive Phase kann erneut laden. Andere M1-Verbraucher bleiben unabhängig.
+- **Feedprüfung:** Collector-Uploads am 28.09.2026 um 23:43:12,7 (GBPUSD) und 23:43:14,6 (EURUSD) Berlin nach Minutenschluss beobachtet. Hinzu kommen Chart-Poll und Netzwerk; keine feste Sekunden- oder Minutengarantie. Gold hat derzeit keine native M1-Historie und meldet fehlenden Vorlauf.
+
+Module: `m1Structure.js`, `usePriceChartM1Structure.js`, gemeinsames `structureOverlay.js`. Tests prüfen Anker vor/nach BOS, A/B/C-Gate, geschlossene Kerzen, Vorlauf, Replay, Zeitrahmenwechsel, Debug, Pagination und veraltete Antworten nach Setupende.
 
 ## Technische Machbarkeit — geprüft am 27.09.2026
 
@@ -335,7 +344,7 @@ Damit nicht ein alter Major-Sweep mit einer völlig anderen aktuellen M5-Reaktio
 | F — Uhrzeit | `sessions`, `trading_schedules`, News-Relevanz/Gates | Einheitlich Berlin und 30/15-News-Fenster; Kalenderabdeckung und Grenzfälle behandeln. |
 | G — Zusatzargumente | `detectRsiDivergenceHistory`, OB-Touch/Retest | M5-Divergenz zum damaligen Stand; Mitigation und Zuordnung zur Sweep-Bewegung definieren. |
 | H — M5-Trend | M5-Strukturkern, `trendPhases.js`, `m5CloseReaction.js` | Frühe Close-Auswertung samt Richtung und Erkennungszeit; Regeln und Abnahme in Abschnitt H. |
-| I — M1 | Zurückgestellt | Kein aktuelles Freigabekriterium; bleibt Platzhalter. |
+| I — M1 | Struktur sichtbar | Ab A+B+C mit Toggle; Entry-/GO-Regel weiterhin offen. |
 
 Die Anzeige braucht mehr als einen pauschalen Haken: erfüllt, noch nicht erfüllt, No-Go und Daten unbekannt müssen unterscheidbar sein. Fehlende optionale Zusatzargumente aus G bedeuten nicht automatisch No-Go. Die Verknüpfung zu einem endgültigen Gesamt-Go bleibt bis zur Klärung aller Pflicht-/Zusatzregeln offen.
 

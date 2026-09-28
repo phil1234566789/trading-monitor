@@ -1,9 +1,11 @@
-import { onScopeDispose, watch } from 'vue';
+import { onScopeDispose, shallowRef, watch } from 'vue';
 import { createChecklistDataAdapter } from '../tradeSetupChecklistData.js';
 import { checklistEvaluationTime, evaluateTradeSetupChecklist } from '../tradeSetupChecklist.js';
 
 export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => Date.now() / 1000, timeData = {}, statistics = null) {
   const adapter = createChecklistDataAdapter();
+  const state = shallowRef(null);
+  const enabled = () => props.showTradeSetupChecklist || props.showM1Structure;
   let disposed = false;
   let timeBoundaryTimer;
   let saveQueue = Promise.resolve();
@@ -15,7 +17,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     m5StructurePeriod: props.m5StructurePeriod, m5Structure2Period: props.m5Structure2Period,
   });
   function refresh() {
-    if (disposed || !props.showTradeSetupChecklist) return;
+    if (disposed || !enabled()) { state.value = null; return; }
     const currentRevision = ++revision;
     const data = adapter.snapshot();
     const result = evaluateTradeSetupChecklist({
@@ -27,6 +29,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
       news: timeData.newsEvents,
       newsLoadStatus: timeData.newsCalendar?.status,
     });
+    state.value = result;
     emit('checklist-state-change', result);
     if (statistics && result.status === 'ready') {
       const savedSettings = settings();
@@ -44,7 +47,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   }
   function scheduleTimeBoundary() {
     clearTimeout(timeBoundaryTimer);
-    if (disposed || !props.showTradeSetupChecklist || props.replayUntil != null) return;
+    if (disposed || !enabled() || props.replayUntil != null) return;
     const at = now();
     // Session-/Handelsfenster wechseln an Minuten, News auch an sekundengenauen
     // Sperrgrenzen. Dieser Timer lädt keine Kerzen und ersetzt keinen vorhandenen Poll.
@@ -60,11 +63,12 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     adapter.invalidate('h1');
     refresh();
   }, { flush: 'sync' });
-  watch(() => [props.rangesPeriod, props.ranges2Period, props.m5StructurePeriod, props.m5Structure2Period, props.showTradeSetupChecklist], () => { refresh(); scheduleTimeBoundary(); });
+  watch(() => [props.rangesPeriod, props.ranges2Period, props.m5StructurePeriod, props.m5Structure2Period, props.showTradeSetupChecklist, props.showM1Structure], () => { refresh(); scheduleTimeBoundary(); });
   watch(sessionConfigs, refresh, { deep: true });
   watch(() => [timeData.tradingSchedules, timeData.newsEvents, timeData.newsCalendar?.status], refresh, { deep: true });
   onScopeDispose(() => { disposed = true; clearTimeout(timeBoundaryTimer); adapter.reset(null); });
   return {
+    state,
     begin(tf) { const ticket = adapter.begin(tf); refresh(); return ticket; },
     finish(ticket, response, candles) {
       if (!disposed && adapter.finish(ticket, response, candles)) refresh();

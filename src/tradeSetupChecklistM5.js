@@ -2,6 +2,7 @@ import { computeRangesPivots, innermostStructureStart } from './marketStructureA
 import { buildStructureWithPhases } from './trendPhases.js';
 import { formatDatedTime } from './berlinTime.js';
 import { pricePrecisionForInstrument } from './format.js';
+import { m1AnchorFromM5 } from './m1Structure.js';
 
 export function unknownChecklistM5() {
   return { status: 'unknown', details: ['M5-Trend unbekannt', 'Change of Character', 'BOS'],
@@ -15,10 +16,11 @@ export function evaluateChecklistM5(context, settings = {}) {
   if (anchor == null || !candles.length || candles[0].time > anchor) return result;
   const outerPeriod = settings.m5StructurePeriod ?? 5;
   const innerPeriod = settings.m5Structure2Period ?? 2;
-  const { closeReaction } = buildStructureWithPhases(
+  const { state, closeReaction } = buildStructureWithPhases(
     computeRangesPivots(candles, outerPeriod, anchor), computeRangesPivots(candles, innerPeriod, anchor),
     outerPeriod, innerPeriod, candles, 300, { closeEvaluation: true });
   result.structureReaction = closeReaction;
+  result.m1Anchor = m1AnchorFromM5(state, closeReaction, context.direction, context.evaluatedAt);
   if (closeReaction.trend === 'unknown') return result;
   const direction = context.direction;
   const trendDirection = closeReaction.trend === 'uptrend' ? 'long' : 'short';
