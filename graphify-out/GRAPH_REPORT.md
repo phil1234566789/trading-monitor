@@ -1,7 +1,7 @@
 # Graph Report - trading-monitor  (2026-09-28)
 
 ## Corpus Check
-- 665 files · ~1,132,155 words
+- 665 files · ~1,132,138 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ab55f29d`
+- Built from commit: `4132d395`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -29,7 +29,7 @@
 - poi-watcher/index.ts
 - liquidity.js
 - DR-Reichweite — was taugen die erkannten Setups?
-- trades.js
+- src/marketStructureAnalysis.ts
 - TradeEditModal.vue
 - package.json
 - src/sessionOccurrences.js
@@ -71,7 +71,7 @@
 - gbp_h1_uptrend.ts
 - Trading-Monitor Project Overview (CLAUDE.md)
 - PLAN: DR-Statistik in der UI anzeigen
-- src/marketStructureAnalysis.ts
+- trades.js
 - orderBlocks.js
 - pinEntryVisible
 - chartTimeUtils.js
@@ -106,7 +106,7 @@
 - cssColor
 - twelvedata/client.ts
 - Anleitung: State-Machine lesen & bedienen
-- marketStructureAnalysis.test.js
+- useHttpActivity.js
 - MetadataPanel.vue
 - Trade Setup 2.0 — Trade Setup Checklist
 - MCP-Server: Tiefere Referenz
@@ -137,7 +137,7 @@
 - dataExport.ts
 - .mcp.json
 - fxcm-xauusd-h4-20260924/analyze.py
-- useHttpActivity.js
+- berlinTime.js
 - trading-monitor index.html Entry
 - format.js
 - Handbuch-Check
@@ -183,8 +183,8 @@
 - marketStructureRendering.ts
 - TradeSetupChecklist.vue
 - E / #5 — Anti Confluences
+- marketStructureAnalysis.test.js
 - TradeStats.vue
-- berlinTime.js
 - businessSecondsBetween
 - analyze.py
 - Parallelisierungsplan
@@ -303,9 +303,9 @@ Nodes (30): candidateLabel(), candidatePrice(), emit, mergedCandidates, precisio
 Cohesion: 0.12
 Nodes (16): Aktueller FXCM-Stand: 2025 und 2026, Definitionen, DR-Reichweite — was taugen die erkannten Setups?, Enge der DR — warum beide Einheiten nötig sind, find_targets, FVG-Größe — der stärkste Einzelfilter, den wir bisher gemessen haben, Grenzen, Historische Befunde vor dem FXCM-Wechsel (+8 more)
 
-### Community 14 - "trades.js"
-Cohesion: 0.19
-Nodes (16): useTscRange(), closeJournal(), load(), openJournal(), refresh(), fetchActiveTscRangeId(), fetchDealingRangeCockpit(), fetchTrades() (+8 more)
+### Community 14 - "src/marketStructureAnalysis.ts"
+Cohesion: 0.13
+Nodes (27): advanceNestedTrend(), applyInnerMarketStructurePivot(), applyInnerMarketStructurePivotCore(), applyMarketStructurePivotCore(), closesAboveOldHigh(), closesBelowLevel(), evaluateConfirmingBreak(), invalidateDowntrend() (+19 more)
 
 ### Community 15 - "TradeEditModal.vue"
 Cohesion: 0.05
@@ -471,9 +471,9 @@ Nodes (17): cTrader ACCESS_DENIED Lockout (No Auto-Recovery), cTrader Open API a
 Cohesion: 0.13
 Nodes (15): Beide Leitern nach festem Risiko-Band, Definitionen (nicht neu herleiten), Die Falle: Path B hat kein echtes Invalidierungslevel — ERLEDIGT 20.09.2026, Die Zahlen (Stand 23.09.2026, n=3179), Grenzen, die in die Anzeige gehören, Idee: wie wir den Trend doch noch dazubekommen, PLAN: DR-Statistik in der UI anzeigen, Reihenfolge (+7 more)
 
-### Community 56 - "src/marketStructureAnalysis.ts"
-Cohesion: 0.13
-Nodes (27): advanceNestedTrend(), applyInnerMarketStructurePivot(), applyInnerMarketStructurePivotCore(), applyMarketStructurePivotCore(), closesAboveOldHigh(), closesBelowLevel(), evaluateConfirmingBreak(), invalidateDowntrend() (+19 more)
+### Community 56 - "trades.js"
+Cohesion: 0.19
+Nodes (16): useTscRange(), closeJournal(), load(), openJournal(), refresh(), fetchActiveTscRangeId(), fetchDealingRangeCockpit(), fetchTrades() (+8 more)
 
 ### Community 57 - "orderBlocks.js"
 Cohesion: 0.08
@@ -611,9 +611,9 @@ Nodes (11): Candle, fetchCandles(), FetchCandlesOptions, INTERVAL_MAP, requestTi
 Cohesion: 0.25
 Nodes (7): Ablaufbeispiel, Anleitung: State-Machine lesen & bedienen, Grundprinzip, Maschine bedienen, Menschlicher Gegencheck, `replayUntilSec` — der EINE Zeit-Parameter (alle Tools), State lesen, ohne die Maschine zu bewegen
 
-### Community 91 - "marketStructureAnalysis.test.js"
+### Community 91 - "useHttpActivity.js"
 Cohesion: 0.22
-Nodes (8): pivot1, pivot2, pivot3, pivot4, pivot5, pivot6, pivot7, pivot8
+Nodes (10): copiedId, { errors }, counts, dismissHttpError(), errors, extractErrorMessage(), installHttpActivityTracking(), labelFor() (+2 more)
 
 ### Community 92 - "MetadataPanel.vue"
 Cohesion: 0.24
@@ -723,9 +723,9 @@ Nodes (3): { execFileSync }, path, TRADING_REPO
 Cohesion: 0.06
 Nodes (77): berlinOffsetMinutes(), berlinOffsetFromSec(), IgnoreLiquiditySession, markIgnored(), withoutIgnored(), buildLevel(), detectLiquidityLevels(), filterRelevantLevels() (+69 more)
 
-### Community 122 - "useHttpActivity.js"
-Cohesion: 0.22
-Nodes (10): copiedId, { errors }, counts, dismissHttpError(), errors, extractErrorMessage(), installHttpActivityTracking(), labelFor() (+2 more)
+### Community 122 - "berlinTime.js"
+Cohesion: 0.29
+Nodes (8): DATE_FORMATTER, formatDatedTime(), OFFSET_FORMATTER, TIME_FORMATTER, formatPips(), MEASURE_COLOR, measureDrawing(), onMeasureDone()
 
 ### Community 124 - "format.js"
 Cohesion: 0.12
@@ -867,13 +867,13 @@ Nodes (15): formatAge(), trendChain, checks, dataStates, dataStatus, definitions
 Cohesion: 0.50
 Nodes (4): Darstellung in der Checklist, E / #5 — Anti Confluences, Fachliche Bedingung, Noch zu präzisieren und später auszuwerten
 
-### Community 175 - "TradeStats.vue"
+### Community 175 - "marketStructureAnalysis.test.js"
+Cohesion: 0.22
+Nodes (8): pivot1, pivot2, pivot3, pivot4, pivot5, pivot6, pivot7, pivot8
+
+### Community 176 - "TradeStats.vue"
 Cohesion: 0.33
 Nodes (6): pnlClass, props, stats, winrateClass, fmtR(), computeTradeStats()
-
-### Community 176 - "berlinTime.js"
-Cohesion: 0.29
-Nodes (8): DATE_FORMATTER, formatDatedTime(), OFFSET_FORMATTER, TIME_FORMATTER, formatPips(), MEASURE_COLOR, measureDrawing(), onMeasureDone()
 
 ### Community 177 - "businessSecondsBetween"
 Cohesion: 0.12
@@ -962,11 +962,11 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `Trading-Steps-Ablauf Diagram` and `calc_rr Tool Idea (Deterministic RR Calc)`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
 - **Why does `marketStructureAnalysis Developer Notes` connect `Vegapunk Slimming Results (-86%)` to `fachdoku-router/SKILL.md`, `marketStructureAnalysis Rules Overview`?**
-  _High betweenness centrality (0.076) - this node is a cross-community bridge._
+  _High betweenness centrality (0.068) - this node is a cross-community bridge._
 - **Why does `renderMarketStructureAnalysis()` connect `marketStructureRendering.ts` to `usePriceChartMarketStructure.js`, `cssColor`, `Vegapunk Slimming Results (-86%)`?**
-  _High betweenness centrality (0.057) - this node is a cross-community bridge._
+  _High betweenness centrality (0.050) - this node is a cross-community bridge._
 - **Why does `File Separation: Algorithm vs Rendering` connect `Vegapunk Slimming Results (-86%)` to `marketStructureRendering.ts`?**
-  _High betweenness centrality (0.056) - this node is a cross-community bridge._
+  _High betweenness centrality (0.050) - this node is a cross-community bridge._
 - **What connects `{ readFileSync }`, `{ join }`, `SKILL` to the rest of the system?**
   _1345 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Dashboard.vue` be split into smaller, more focused modules?**
