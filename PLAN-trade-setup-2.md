@@ -123,9 +123,11 @@ Die Reaktionsbewertung kann später um **Wicks (Dochte)** oder **Closes (Schluss
 
 #### Fachliche Beschreibung
 
-Die Ziele für das Setup bestimmen. Im Short-Beispiel ist das zunächst der nächstgelegene Struktur-Pivot **P2 des 1-Stunden-Strukturalgorithmus unterhalb des Preises**: **1,35409 — Asia Mid vom 09.09.2026**, von Philip ausdrücklich zugeordnet. Zusätzlich dient ein **P5-Strukturpunkt** als Target und als Bezug für die Anti-Confluence-Prüfung in Punkt E. Philip hat als neues zweites Target das **New York Low vom 08.09.2026** markiert; im Journal steht dafür jetzt **1,35300** (Target 150).
+Die Ziele werden aus den bestätigten, unberührten M5-Liquiditätspivots der relevanten Sessions bestimmt. Für Short zählt der **tiefste zulässige Pivot je Session**, für Long spiegelbildlich der **höchste**. Die bestehende Pivot-Erkennung und der Filter für ignorierte Sessions bleiben maßgeblich. Rohkerzenextrema, Cluster-Abstände und RSI sind keine zusätzlichen Auswahlkriterien. Die H1-Strukturperioden bestimmen die Targets nicht.
 
-**Anzeige am Prüfbeispiel:** 1h-Struktur-Pivot P2 — Asia Mid vom 09.09. — **1,35409**.
+**Target 1** ist das nächste Session-Pivotextrem in Zielpreisrichtung. **Target 2** stammt aus einer anderen Session und liegt weiter in derselben Zielpreisrichtung; es ist optional. Eine zeitlich vorherige Session kann auf der falschen Preisseite liegen. Keine fest codierten Sessionnamen, Preise oder Datums-Ausnahmen. Bei gleichem Preis innerhalb derselben Session bleibt der ältere Pivot erhalten.
+
+**Bestätigter Beispielabgleich:** Philip akzeptiert vorerst **Target 1 bei 1,35335** und **Target 2 bei 1,35300** nach der Extremregel. Der erste Pivot entstand am 09.09.2026 um 00:00 Uhr und gehört für ihn sinngemäß zur Spread Hour; die bestehende Grenze bleibt dennoch unverändert. Die vorhandene Erkennung und der Produktivchart führen ihn als unberührten M5-Pivot Asia-Low. Die ursprünglichen Pins bei **1,35394** und **1,35300** bleiben als Referenz erhalten. Der separate **TP1 bei 1,35479** ist kein Target-Auswahlkriterium; aus dem Abgleich folgt kein Journal-/Pin-Update und kein TP-Offset.
 
 **Zweites Target korrigiert:** Das bisherige Spread-Hour-Low bei **1,35294** entfällt. Laut Philip ist der betreffende Task abgeschlossen und das neue Target markiert. Der Journal-Abgleich bestätigt den Ersatz durch **1,35300**. Den alten Wert nicht als gültiges Prüfziel übernehmen. Den Backend-/Backfill-Stand gesondert beachten, siehe technische Machbarkeit.
 
@@ -140,7 +142,9 @@ Lesender Abgleich über `get_journal` und `get_data_export`, GBPUSD, Replay am 0
 - Der Export lieferte außerdem einen Struktur-Low-Pivot bei **1,35294**, vom 08.09.2026 um **23:00 Uhr**, zum Prüfzeitpunkt unberührt. Dieser Treffer bestätigt nicht die fachliche Zulässigkeit: Philip hat ihn als zu ignorierendes Spread-Hour-Low identifiziert.
 - **Asia Mid bei 1,35409 ist mit der Label-Regel vereinbar:** `sessionExtremeSuffix` in `src/sessionOccurrences.js` verwendet einen Bereich von ±20 % der Asia-Range um die rechnerische Mitte. Bei High **1,35501** und Low **1,35335** liegt diese bei **1,35418**; der Pivot liegt innerhalb des Mid-Bereichs. Der Begriff bezeichnet hier nicht zwingend den exakten Mittelpunkt.
 
-Die Abweichung zwischen dem ersten gespeicherten Journal-Target **1,35394** und dem gemeinten Ziel-Level **1,35409** bleibt offen. Keine automatische Änderung der Journal-Targets; ein möglicher Abstand ist noch nicht als Regel festgelegt.
+Der erneute Archiv-/Journal-Abgleich hat die Objektquellen geklärt: **1,35394** ist ein eigener M5-P5-Low-Pivot vom 09.09.2026 um **01:35 Uhr** (Target 148, Liquiditätslevel 460627). **1,35300** ist ein M5-P5-Low-Pivot vom 08.09.2026 um **18:45 Uhr** (Target 150, Liquiditätslevel 460629) und das tatsächliche NY-Session-Low. In der H1-Struktur ist das zugehörige Low um 18:00 Uhr nur P2, nicht P5. Der nähere linke H1-Tiefpunkt um 13:00 Uhr bei 1,35219 verhindert dort P5. Das frühere algorithmische zweite Ziel **H1-P5 1,35211 / MMM-Low** entspricht daher nicht der korrigierten Auswahl. Keine Journaländerung und keinen TP-Abstand aus diesen unterschiedlichen Objektquellen ableiten.
+
+Labels und Alter folgen dem tatsächlichen Bewertungszeitpunkt und den vorhandenen Session-/Altersregeln. Das unberührte NY-Low vom 08.09. um 18:45 Uhr ist am 09.09. um **09:20 Uhr 14h 35m**, um **10:30 Uhr 15h 45m** und um **10:35 Uhr 15h 50m** alt. `highLowRelevant` steuert Session-High/Low-Zuordnung, `ignoreLiquidity` den Ausschluss der Kerzen aus der Erkennung. Für die Spread Hour sind aktuell `highLowRelevant=false` und `ignoreLiquidity=true` gesetzt; die zwei bestehenden Konfigurationspfade nicht gleichsetzen.
 
 ### E / #5 — Anti Confluences
 
@@ -403,10 +407,10 @@ Das Journal nennt für Position 135 den 09.09.2026 um 09:20 Uhr (Europe/Berlin).
 | 1,35409 | H1-P2 vom 09.09. um 04:00 Uhr; bestätigt um 07:00 Uhr; Asia Mid. |
 | 1,35394 | Gespeichertes erstes Journaltarget (ID 148), eigenes M5-P5-Low vom 09.09. um 01:35 Uhr, Liquiditätslevel 460627. Kein belegter pauschaler Offset von 1,35409. |
 | 1,35300 | Gespeichertes zweites Journaltarget (ID 150), M5-P5-Low vom 08.09. um 18:45 Uhr, Liquiditätslevel 460629. In der H1-Struktur P2, nicht P5. |
-| 1,35211 | Nächstes H1-P5-Ziel der implementierten D-Auswahl bei explizitem Referenzpreis 1,35641 (letzter geschlossener M5-Close); Pivot vom 08.09. um 12:00 Uhr, MMM Low. |
+| 1,35211 | Ziel der überholten H1-P5-Auswahl; Pivot vom 08.09. um 12:00 Uhr, MMM Low. |
 
 Das tiefere H1-Low um 13:00 Uhr am 08.09. bei 1,35219 liegt im linken P5-Fenster des 18:00-Pivots bei 1,35300 und verhindert dessen P5-Einstufung. Das alte Spread-Hour-Level 1,35294 wird mit der aktuellen Konfiguration ausgeschlossen.
 
-**Konkrete offene Fachentscheidung:** Soll das zweite Ziel ein H1-P5-Pivot oder das markierte M5-P5-/New-York-Sessionlevel sein? Die bisherige Annahme H1-P5 reproduziert das markierte zweite Target nicht. Deshalb keine automatische Regeländerung und keine behauptete vollständige DR-114-Abnahme. Der explizite Auditzeitpunkt bleibt eine separate historische Prüfung; die Replay-UI-Semantik steht im Zeitmodell oben.
+Die Auswahl erfolgt inzwischen nach M5-Sessionpivots. Die bestätigte Auswahl 1,35335 / 1,35300 und der bewusst vorerst akzeptierte Mitternachts-Pivot stehen in [Abschnitt D](#d--4--targets-bestimmen). Der explizite Auditzeitpunkt bleibt eine separate historische Prüfung; die Replay-UI-Semantik steht im Zeitmodell oben.
 
 **E/G-Zuordnung:** D sucht unberührte Zielpivots. Ein bereits gesweepter identischer P5-Pivot als Gegenargument passt deshalb nicht ohne Weiteres dazu. Zu klären ist, welcher Ursprung der Gegenreaktion dem Ziel zugeordnet werden soll; eine bloße Preisnähe ersetzt diesen Nachweis nicht.

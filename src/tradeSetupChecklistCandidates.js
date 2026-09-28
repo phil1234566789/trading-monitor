@@ -14,13 +14,10 @@ export function evaluateChecklistCandidates(context, sessionConfigs = []) {
   let targetPreview = null;
   if (!sweeps.primary) {
     checks.targets = { status: 'pending', details: ['Zielkandidaten folgen, sobald ein Haupt-Sweep bestimmt ist.'] };
-  } else if (context.periods.outer !== 5 || context.periods.inner !== 2) {
-    checks.targets = { status: 'unknown', details: ['P2-/P5-Ziele benötigen die H1-Strukturperioden 5 und 2.'] };
   } else {
-    targetPreview = evaluateChecklistTargets({ state: context.h1State, direction: context.direction,
+    targetPreview = evaluateChecklistTargets({ direction: context.direction,
       referencePrice: context.m5Candles.findLast(c => !c.ignored)?.close, evaluatedAt: context.evaluatedAt,
-      instrument: context.instrument, h1Candles: context.h1Candles, m5Candles: context.m5Candles,
-      sessionConfigs, labelCandles: context.m5Candles, labelBar: '5m' });
+      instrument: context.instrument, m5Candles: context.m5Candles, sessionConfigs });
     checks.targets = { status: 'unknown', details: [
       'Vorläufige Zielkandidaten am Bewertungsstand; Zeitpunkt und Referenz der festen Setup-Zielauswahl sind noch offen.',
       ...targetPreview.details,

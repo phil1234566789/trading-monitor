@@ -48,10 +48,11 @@ describe('Checklist: geschlossener Wissensstand', () => {
     expect(result.checks.targets.details.join(' ')).toContain('Vorläufige Zielkandidaten');
     expect(result).not.toHaveProperty('go');
   });
-  it('beschriftet abweichende Strukturperioden nicht als P2/P5-Ziele', () => {
+  it('berechnet Session-Zielkandidaten unabhängig von H1-Strukturperioden', () => {
     const result = evaluateTradeSetupChecklist({ ...input, settings: { ...settings, ranges2Period: 3 } });
     expect(result.checks.targets.status).toBe('unknown');
-    expect(result.setup.targetPreview).toBeNull();
+    expect(result.setup.targetPreview).toBeTruthy();
+    expect(result.checks.targets.details.join(' ')).not.toContain('H1-Strukturperioden');
   });
   it('erfindet weder Trend noch Replay-Zeit', () => {
     expect(evaluateTradeSetupChecklist({ ...input, h1Candles: [] }).checks.h1Trend.status).toBe('unknown');
