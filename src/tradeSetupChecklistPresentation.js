@@ -6,6 +6,7 @@ import { pricePrecisionForInstrument } from './format.js';
 export function checklistPresentation(state) {
   if (!state) return {};
   const view = {};
+  if (state.checks?.confluences) view.confluences = { explanation: state.checks.confluences.explanation };
   if (state.structure && Number.isFinite(state.evaluatedAt)) {
     const chain = computeTrendChain(state.structure, state.evaluatedAt);
     if (chain.length) view.h1Trend = { details: chain.map((level, depth) => {

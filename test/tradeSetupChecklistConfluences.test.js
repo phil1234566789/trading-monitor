@@ -35,7 +35,9 @@ describe('Checklist E/G', () => {
   it('keeps H1 counter-divergences separate from same-direction M5 evidence', () => {
     const result = evaluateChecklistConfluences({ evaluatedAt: 111600, direction: 'short', h1Candles: divergenceCandles(3600, true), m5Candles: divergenceCandles() });
     expect(result.antiConfluences.divergences.candidates).toMatchObject([{ type: 'bullish', timeframe: '1H' }]);
-    expect(result.confluences.divergences.candidates).toMatchObject([{ type: 'bearish', timeframe: '5m' }]);
+    expect(detectChecklistDivergences({ candles: divergenceCandles(), timeframe: '5m', evaluatedAt: 111600 }).candidates)
+      .toMatchObject([{ type: 'bearish', timeframe: '5m' }]);
+    expect(result.confluences.divergences.status).toBe('unknown');
     expect(result.antiConfluences.status).toBe('unknown');
     expect(result.confluences.status).not.toBe('blocked');
   });

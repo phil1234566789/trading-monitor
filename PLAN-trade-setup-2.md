@@ -215,15 +215,19 @@ Vorhandene Session-, Handelszeiten- und News-Prüfungen wiederverwenden. Handels
 
 Beim Short-Setup prüfen, ob eine **bärische M5-Divergenz** vorliegt. Sie ist das erste zusätzliche Argument zugunsten des Setups in diesem Abschnitt.
 
+Zuordnung: Der zweite Preispunkt der Divergenz ist die M5-Kerze, die das ausgewählte Sweep-Level aus B erstmals berührt. Den tatsächlichen M5-Touch innerhalb des H1-Touchbalkens bestimmen; dessen Balkenbeginn ist nicht der Divergenzzeitpunkt. Bestehenden RSI-Detektor verwenden und erst nach Schluss seiner rechten Bestätigungskerzen anzeigen. Für Long spiegelbildlich.
+
 Zusätzlich oben am **Liquidity Sweep aus Punkt B** (im Beispiel dem Major Inducement) prüfen, ob dieselbe Bewegung einen **darüberliegenden Orderblock berührt und mitigiert** hat. Liegen Touch und Mitigation vor, zählt das laut Philip als **besonders starke zusätzliche Confluence** für das Short-Setup. Gemeint ist der Orderblock am oberen Sweep-Bereich; der bärische M5-Reaktions-Orderblock aus Punkt C wird separat erfasst.
 
 #### Darstellung in der Checklist
 
 - Checklistenpunkt: **G / #7 — Weitere Confluences**.
-- Erste Prüfung: **Bärische M5-Divergenz vorhanden?**
+- Zugeordnete Divergenz knapp als **M5 bärische Divergenz** mit Zeitraum und erfülltem Status anzeigen; Preise, RSI und Erkennungszeit im Tooltip. Keine Liste unzugeordneter historischer Divergenzen. Eine offene OB-Mitigation ändert den unabhängigen Divergenzbeleg nicht; fehlende optionale Divergenz ist kein No-Go.
 - Weitere Prüfung: **Orderblock oberhalb des Sweeps berührt und mitigiert?** Bei Erfüllung als besonders starke zusätzliche Confluence ausweisen.
 
-Weitere Confluences werden schrittweise gemeinsam ergänzt. **EMA** ist als mögliche spätere Ergänzung vorgemerkt; eine konkrete EMA-Bedingung ist noch nicht definiert. Numerische Gewichtung und Einfluss dieser Zusatzargumente auf die Setup-Freigabe bleiben offen. Für den Orderblock am Sweep sind Timeframe und genaue Mitigationsbedingung noch zu präzisieren. Weder die bärische M5-Divergenz noch diese Orderblock-Confluence wurden bei DR 114 bislang geprüft.
+Weitere Confluences werden schrittweise gemeinsam ergänzt. **EMA** ist als mögliche spätere Ergänzung vorgemerkt; eine konkrete EMA-Bedingung ist noch nicht definiert. Numerische Gewichtung und Einfluss dieser Zusatzargumente auf die Setup-Freigabe bleiben offen. Für den Orderblock am Sweep sind Timeframe und genaue Mitigationsbedingung noch zu präzisieren; diese OB-Confluence wurde bei DR 114 noch nicht bestätigt.
+
+Validiert an Pin 377 und den archivierten DR114-M5-Kerzen: 09.09.2026 **07:25 → 09:10 Uhr**, Preis **1,35531 → 1,35651**, RSI **74,4 → 69,7**; der zweite Preispunkt berührt das Major-Level **1,35649**. Erkennbar ab **09:30 Uhr**, beim Replay 10:30/Bewertung 10:35 vorhanden (alle Zeiten Europe/Berlin). Pin-ID und Beispielwerte sind ausschließlich Testreferenz, keine produktive Zuordnungsbedingung.
 
 ### H / #8 — M5 Trend
 

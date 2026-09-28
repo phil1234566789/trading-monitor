@@ -4,6 +4,8 @@ import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { barSecondsForTimeframeCi } from './timeframes.js';
 import { formatDatedTime } from './berlinTime.js';
 import { orderBlockRecognitionTimes } from './orderBlockRecognitionTime.js';
+import { firstTouchAfter } from './structurePivotTime';
+import { pricePrecisionForInstrument } from './format.js';
 
 const unknown = () => ({ status: 'unknown', candidates: [] });
 const evidence = candidates => ({ status: candidates.length ? 'present' : 'absent', candidates });
@@ -56,13 +58,37 @@ function selectDivergences(result, type) {
   return result.status === 'unknown' ? result : evidence(result.candidates.filter(d => d.type === type));
 }
 
+function sweepTouchOnM5(primary, candles) {
+  if (!primary) return null;
+  const { level, timeframe } = primary.sweep;
+  const sourceDuration = barSecondsForTimeframeCi(timeframe);
+  if (!sourceDuration || !Number.isFinite(level.price) || !Number.isFinite(level.pivotTime)) return null;
+  // H1 touchedTime ist der Balkenbeginn, der RSI-Pivot dagegen eine konkrete M5-Kerze.
+  // Den ersten tatsächlichen Touch im Quellbalken suchen, ohne eine Nähe-Toleranz zu erfinden.
+  const window = candles.filter(c => c.time >= level.touchedTime && c.time < level.touchedTime + sourceDuration);
+  const touch = firstTouchAfter(window.filter(c => !c.ignored), level, sourceDuration, level.dir === -1);
+  const beforeTouch = window.filter(c => c.time <= touch);
+  return touch != null && beforeTouch[0]?.time === level.touchedTime
+    && beforeTouch.every((c, i) => Number.isFinite(c.high) && Number.isFinite(c.low) && (!i || c.time === beforeTouch[i - 1].time + 300))
+    ? touch : null;
+}
+
+function assignSweepDivergence(divergences, main, candles) {
+  const touch = sweepTouchOnM5(main, candles);
+  if (divergences.status === 'unknown' || touch == null) return unknown();
+  // Die festgelegte G-Confluence hängt am Sweep-Top/-Bottom, nicht an beliebigen
+  // älteren RSI-Linien. Eine offene, unabhängige OB-Mitigation hebt diesen Beleg nicht auf.
+  return evidence(divergences.candidates.filter(d => d.toTime === touch)
+    .map(d => ({ ...d, association: 'sweep-touch', candidateId: main.id, sweepTouchTime: touch })));
+}
+
 /**
  * primary/opposingCandidates: B/C-Ergebnisse; target2: festgehaltenes P5 aus D.
  * h1Candles/m5Candles: vollständige markierte Rohpräfixe, keine sichtbaren Pickerlisten.
  * Kandidaten ohne gemeinsame Pivotidentität/Bewegungsbeleg bleiben ausdrücklich unzugeordnet.
  * Keine Alters-/Distanzfenster, Stärkeformel oder Mitigationsdefinition hinzufügen.
  */
-export function evaluateChecklistConfluences({ evaluatedAt, direction, primary, opposingCandidates,
+export function evaluateChecklistConfluences({ evaluatedAt, direction, instrument, primary, opposingCandidates,
   target2, h1Candles, m5Candles, minGapByTimeframe = {} } = {}) {
   const antiConfluences = { status: 'unknown', details: [], sweepCandidates: [], obCandidates: [], divergences: unknown() };
   const confluences = { status: 'unknown', details: [], obCandidates: [], divergences: unknown() };
@@ -74,8 +100,10 @@ export function evaluateChecklistConfluences({ evaluatedAt, direction, primary, 
   }
   const short = direction === 'short';
   antiConfluences.divergences = selectDivergences(detectChecklistDivergences({ candles: h1Candles, timeframe: '1H', evaluatedAt }), short ? 'bullish' : 'bearish');
-  confluences.divergences = selectDivergences(detectChecklistDivergences({ candles: m5Candles, timeframe: '5m', evaluatedAt }), short ? 'bearish' : 'bullish');
   const main = knownSnapshot(primary, evaluatedAt) && primary.direction === direction ? primary : null;
+  const m5 = closedChecklistCandles(m5Candles, '5m', evaluatedAt);
+  confluences.divergences = assignSweepDivergence(
+    selectDivergences(detectChecklistDivergences({ candles: m5Candles, timeframe: '5m', evaluatedAt }), short ? 'bearish' : 'bullish'), main, m5);
   const target = knownTarget(target2, evaluatedAt) && target2.dir === (short ? -1 : 1) ? target2 : null;
   const opposing = (opposingCandidates ?? []).filter(c => knownSnapshot(c, evaluatedAt) && c.direction === (short ? 'long' : 'short'));
   antiConfluences.sweepDataStatus = Array.isArray(opposingCandidates) ? 'available' : 'unknown';
@@ -114,8 +142,7 @@ export function evaluateChecklistConfluences({ evaluatedAt, direction, primary, 
   for (const candidate of antiConfluences.sweepCandidates) {
     antiConfluences.details.push(`Sweep bei ${candidate.sweep.level.price}: Levelalter ${(candidate.sweep.ageSeconds / 3600).toFixed(1)} Handelsstunden; älter als B: ${candidate.olderThanPrimary == null ? 'unbekannt' : candidate.olderThanPrimary ? 'ja' : 'nein'}; Stärke unbekannt.`);
   }
-  confluences.details.push(`${confluences.obCandidates.length} OB-Kandidaten jenseits des Sweeps; Timeframe, gemeinsame Bewegung und Mitigationsbedingung offen.`);
-  for (const [check, label] of [[antiConfluences, 'H1-Gegendivergenz'], [confluences, 'M5-Divergenz in Hauptrichtung']]) {
+  for (const [check, label] of [[antiConfluences, 'H1-Gegendivergenz']]) {
     check.details.push(check.divergences.status === 'unknown' ? `${label}: Daten fehlen oder Historie reicht nicht.`
       : `${label}: ${check.divergences.candidates.length} Kandidaten im geschlossenen Präfix; Setup-Zuordnung offen.`);
     for (const d of check.divergences.candidates.slice(-3)) {
@@ -123,6 +150,16 @@ export function evaluateChecklistConfluences({ evaluatedAt, direction, primary, 
     }
     if (obResults.some(r => r.status === 'unknown')) check.details.push('OB-Historie mindestens eines Timeframes fehlt oder reicht nicht.');
   }
-  confluences.details.push('Fehlende optionale Zusatzargumente sind kein No-Go.');
+  const divergence = confluences.divergences.candidates[0];
+  confluences.status = divergence ? 'passed' : confluences.divergences.status === 'unknown' ? 'unknown' : 'pending';
+  if (divergence) {
+    confluences.details = [`M5 ${short ? 'bärische' : 'bullische'} Divergenz`,
+      `${formatDatedTime(divergence.fromTime)} → ${formatDatedTime(divergence.toTime).slice(11)} · Berlin`];
+    const precision = pricePrecisionForInstrument(instrument);
+    confluences.explanation = `Preis ${divergence.fromPrice.toFixed(precision)} → ${divergence.toPrice.toFixed(precision)}; RSI ${divergence.fromRsi.toFixed(1)} → ${divergence.toRsi.toFixed(1)}. Am Sweep aus B; bestätigt ${formatDatedTime(divergence.recognizedAt)} (Europe/Berlin).`;
+  } else {
+    confluences.details = [confluences.status === 'unknown' ? 'M5-Divergenz noch nicht prüfbar.' : 'Keine zusätzliche M5-Divergenz am Sweep.'];
+    confluences.explanation = confluences.status === 'unknown' ? 'Haupt-Sweep oder vollständige M5-Daten für die Zuordnung fehlen.' : 'Optionales Zusatzargument; sein Fehlen ist kein No-Go.';
+  }
   return result;
 }

@@ -7,6 +7,10 @@ const structure = (trend, origin, nestedTrend = null) => ({ trend, nestedTrend, 
 } });
 
 describe('checklist presentation from evaluated data', () => {
+  it('puts optional confluence evidence explanations in the status tooltip', () => {
+    expect(checklistPresentation({ checks: { confluences: { explanation: 'Am Sweep aus B; bestätigt 09:30.' } } }).confluences)
+      .toEqual({ explanation: 'Am Sweep aus B; bestätigt 09:30.' });
+  });
   it('uses the cockpit business-day age and nested trend chain', () => {
     const state = { evaluatedAt: at, structure: structure('downtrend', '2026-08-21T11:00:00+02:00',
       structure('uptrend', '2026-09-02T14:00:00+02:00')) };
