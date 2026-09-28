@@ -7,12 +7,13 @@ import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { evaluateChecklistCandidates } from './tradeSetupChecklistCandidates.js';
 export { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 
-export function checklistEvaluationTime(replayUntil, nowSec, replayMode = null) {
+export function checklistEvaluationTime(replayUntil, nowSec, m5Candles = []) {
   if (replayUntil == null) return nowSec;
-  // Die UI-Semantik bleibt offen, bis Philip eine der beiden Varianten festlegt.
-  if (replayMode === 'strict') return replayUntil;
-  if (replayMode === 'm5-close') return replayUntil + barSecondsFor('5m');
-  return null;
+  // Replay zeigt ganze Kerzen anhand ihrer Open-Time. Nur eine tatsächlich vorhandene,
+  // inzwischen geschlossene M5 darf den Wissensstand bis zu ihrem Schluss erweitern.
+  const latest = closedChecklistCandles(m5Candles, '5m', nowSec)
+    .findLast(c => c.time <= replayUntil);
+  return latest ? latest.time + barSecondsFor('5m') : null;
 }
 
 function openChecks() {
@@ -36,7 +37,7 @@ export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles
   const result = { instrument, evaluatedAt, status: dataStatus, checks, direction: null };
   if (!Number.isFinite(evaluatedAt)) {
     result.status = 'missing';
-    checks.h1Trend.details = ['Replay-Bewertungszeit noch nicht festgelegt.'];
+    checks.h1Trend.details = ['Keine vollständig geschlossene M5-Kerze am Replay-Stand verfügbar.'];
     return result;
   }
   if (dataStatus === 'loading' || dataStatus === 'error') {

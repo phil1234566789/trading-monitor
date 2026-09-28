@@ -67,12 +67,17 @@ describe('Chart-Checklist: asynchrone Integration', () => {
     expect(ctx.events.at(-1).state.status).toBe('loading');
     ctx.scope.stop();
   });
-  it('entfernt Live-Signale im Replay solange dessen Zeitsemantik offen ist', () => {
+  it('entfernt Live-Signale beim Replaywechsel und wertet nach dem Laden den sichtbaren M5-Schluss aus', () => {
     const ctx = setup();
     ctx.fill();
     ctx.props.replayUntil = candles.at(-1).time;
     expect(ctx.events.at(-1).state.evaluatedAt).toBeNull();
     expect(ctx.events.at(-1).state.checks.h1Trend.status).toBe('unknown');
+    ctx.finish('h1', candles);
+    ctx.finish('m5', [{ time: candles.at(-1).time, open: 1, high: 2, low: 0, close: 1 }]);
+    expect(ctx.events.at(-1).state.evaluatedAt).toBe(candles.at(-1).time + 300);
+    expect(ctx.events.at(-1).state.status).toBe('ready');
+    expect(ctx.events.at(-1).state.context.h1Candles.at(-1).time).toBeLessThan(candles.at(-1).time);
     ctx.scope.stop();
   });
   it('wertet Perioden-/Sessionänderungen neu aus und sendet nach Dispose nichts mehr', async () => {

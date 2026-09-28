@@ -49,9 +49,18 @@ describe('Checklist: geschlossener Wissensstand', () => {
     expect(evaluateTradeSetupChecklist({ ...input, evaluatedAt: null }).status).toBe('missing');
     expect(evaluateTradeSetupChecklist({ ...input, h1Candles: [candles.at(-1)] }).checks.h1Trend.status).toBe('unknown');
     expect(checklistEvaluationTime(600, 900)).toBeNull();
-    expect(checklistEvaluationTime(600, 900, 'strict')).toBe(600);
-    expect(checklistEvaluationTime(600, 900, 'm5-close')).toBe(900);
     expect(checklistEvaluationTime(null, 900)).toBe(900);
+  });
+  it('nutzt den Schluss der letzten vorhandenen sichtbaren M5 statt pauschal Replay plus fünf Minuten', () => {
+    const rows = [{ time: 300 }, { time: 600 }, { time: 900 }];
+    expect(checklistEvaluationTime(600, 1800, rows)).toBe(900);
+    expect(checklistEvaluationTime(750, 1800, rows)).toBe(900);
+    expect(checklistEvaluationTime(600, 1800, [{ time: 300 }, { time: 900 }])).toBe(600);
+    expect(checklistEvaluationTime(600, 899, rows)).toBe(600);
+    expect(checklistEvaluationTime(100, 1800, rows)).toBeNull();
+    expect(checklistEvaluationTime(600, 1800, [])).toBeNull();
+    expect(closedChecklistCandles([{ time: 0 }, { time: 3600 }], '1h',
+      checklistEvaluationTime(3600, 7200, [{ time: 3600 }]))).toEqual([{ time: 0 }]);
   });
   it('kennzeichnet einen verspäteten Feed und lädt ihn nach', () => {
     const stale = evaluateTradeSetupChecklist({ ...input, m5Candles: [{ ...input.m5Candles[0], time: evaluatedAt - 600 }] });

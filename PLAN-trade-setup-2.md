@@ -271,11 +271,11 @@ Platzhalter für den **1-Minutenchart**. Diesen Punkt erst ganz zum Schluss geme
 - Rohdaten für die Analyse vollständig laden, auch wenn Liquidität, OBs oder Trendlinien ausgeblendet sind. `getCurrentLiquidityLevels()` ist eine begrenzte Render-/Klickliste und dafür ungeeignet.
 - Ein gemeinsamer Schlüssel aus Instrument, Bewertungszeit und Einstellungen verhindert, dass verspätete Antworten alte Ergebnisse einblenden. Während unvollständiger/alter Daten ausdrücklich „lädt“, „Daten fehlen“ oder „Daten veraltet“ anzeigen.
 
-**Vor Umsetzung festzulegen: Was bedeutet die angezeigte Replay-Zeit?**
+**Replay-Entscheidung: neuester verfügbarer geschlossener M5-Stand**
 
 Aktuell bezeichnet die Kerzenzeit den Beginn der Kerze. `clipReplay` in `PriceChart.vue` nimmt `c.time <= replayUntil`; `replayFetchToMs` lädt die ausgewählte Kerze vollständig. Der H1-Strukturpfad hat keine zusätzliche Schlusszeitgrenze. Bei Replay 09:20 Uhr kann deshalb bereits die vollständige H1-Kerze von 09:00 bis 10:00 Uhr in der Analyse stecken. Für die neue Checklist ist dieser bestehende Chart-State nicht ohne weitere Prüfung verwendbar.
 
-Vorschlag zur bestehenden Bedienung: „Bewertungsstand“ ist der Schluss der letzten im M5-Replay freigegebenen Kerze. Eine angezeigte M5-Kerze mit Beginn 09:20 Uhr steht dann für Wissen bis 09:25 Uhr. Andere Timeframes dürfen nur Kerzen enthalten, die bis dahin ebenfalls geschlossen sind. Alternative: 09:20 Uhr als strikte Wissensgrenze verwenden; dann endet die letzte nutzbare M5-Kerze um 09:20 Uhr. Diese Wahl ist noch nicht von Philip entschieden. In beiden Varianten gelten echte Schluss-/Verfügbarkeitszeiten, auch bei ignorierten Kerzen und Zeitlücken.
+„Bewertungsstand“ ist der Schluss der letzten tatsächlich vorhandenen, im M5-Replay freigegebenen und inzwischen geschlossenen Kerze (Philips Entscheidung vom 28.09.2026). Eine sichtbare M5-Kerze mit Beginn 09:20 Uhr steht für Wissen bis 09:25 Uhr. Ohne diese Kerze darf nicht pauschal fünf Minuten zum Replay-Zeitpunkt addiert werden; dann zählt der letzte vorhandene Schluss, ohne passende M5 bleibt die Datenzeit unbekannt. Andere Timeframes dürfen nur Kerzen enthalten, die bis zum Bewertungsstand ebenfalls geschlossen sind. Live löst der erfolgreiche Abruf neuer geschlossener M5-Kerzen die Auswertung aus; Feed-/Abrufwartezeit und reine Rechenzeit sind getrennt zu betrachten.
 
 ### 2. Liquidity Sweep: Ereignis und Setup-Zuordnung
 
@@ -356,7 +356,7 @@ Gestartete Codex-Chats (zugehörige Milkyland-Tasks auf `work in progress`):
 - Session/News: `01a0e478-4e99-77d1-b180-3148f2dca19a`.
 
 1. **Oberfläche:** Menübezeichnungen UND Checklist-Bereich gemeinsam. Beide ändern `Dashboard.vue`, deshalb ein gemeinsamer Besitzer. Eigene Checklist-Komponente, A–I-Anzeige und Ein-/Ausblenden. Keine fachliche Erkennung erfinden.
-2. **Zeitbasis/Auswertung:** reine Zeit-/Datenbasis, as-of H1-Auswertung für A, Lade-/Fehlerzustände und Anschluss an `PriceChart.vue`. Dieser Chat besitzt `PriceChart.vue` und die neuen Evaluator-/Datenadapterdateien. `Dashboard.vue` bleibt beim UI-Chat. Die Auswahl der Replay-Zeitbedeutung ist separat gefragt; unabhängige Funktionen können mit expliziter Bewertungszeit schon entstehen.
+2. **Zeitbasis/Auswertung:** reine Zeit-/Datenbasis, as-of H1-Auswertung für A, Lade-/Fehlerzustände und Anschluss an `PriceChart.vue`. Dieser Chat besitzt `PriceChart.vue` und die neuen Evaluator-/Datenadapterdateien. `Dashboard.vue` bleibt beim UI-Chat. Die Replay-Zeitbedeutung ist im Zeitmodell oben festgelegt.
 3. **Session/News:** reine F-Auswertung für eine explizit übergebene Bewertungszeit, Session-/Handelsfenster und Kalenderdaten; eigene Datei und Tests. Keine Änderungen an `Dashboard.vue`, `PriceChart.vue` oder am Zeitadapter. Dadurch kann die Logik bereits parallel entstehen; die tatsächliche Anbindung folgt nach der Zeitbasis.
 
 Minimaler Übergabevertrag für diese Runde: UI bekommt einen optionalen `checklistState` mit `instrument`, `evaluatedAt` (Unix-Sekunden), Gesamt-Datenstatus und `checks` nach stabilen Schlüsseln `h1Trend`, `liquiditySweep`, `reaction`, `targets`, `antiConfluences`, `time`, `confluences`, `m5Trend`, `m1`. Ein Prüfergebnis enthält `status` (`passed`, `pending`, `blocked`, `unknown`, `deferred`) und `details` als Textliste. Gesamt-Datenstatus (`loading`, `ready`, `missing`, `stale`, `error`) ist kein Gesamt-Go. Beschriftungen A–I besitzt die UI. F liefert das Ergebnis für `time`. Der Chart übergibt Ergebnisse per `checklist-state-change`; der UI-Chat verdrahtet Event und Panel, der Zeitbasis-Chat erzeugt das Event. Der Panel-Toggle wird als `showTradeSetupChecklist` an den Chart weitergereicht.
@@ -387,7 +387,7 @@ Die reinen B/C- und D-Module wurden zur parallelen Umsetzung gestartet; die zent
 
 Erster Release: `1ab1e0b`, GitHub-Pages-Deployment erfolgreich (Run `36347808770`). Enthält Menübezeichnungen, eigenen Checklist-Bereich, automatische Zeit-/Datenbasis, A sowie F. Bestehender TSC bleibt erhalten. Die Oberfläche zeigt neun automatisch befüllte Prüfpunkte ohne manuelle Checkboxänderungen und ohne endgültiges Gesamt-Go.
 
-- Replay bleibt bis zur Entscheidung über die Bedeutung des sichtbaren Kerzenzeitpunkts ausdrücklich unbekannt. Die reinen Module arbeiten bereits mit einem expliziten Bewertungszeitpunkt.
+- Replay verwendet den im Zeitmodell festgelegten tatsächlichen M5-Schluss. Fehlende Kerzen bleiben ausdrücklich unbekannt.
 - Im Live-Modus führt fehlender aktueller Kerzenschluss konservativ zu veralteten Daten; das betrifft auch Marktschließungen. Daraus wird kein aktuelles Handelssignal abgeleitet.
 - Der manuell gepflegte News-Kalender hat weiterhin keinen Abdeckungsnachweis. Bekanntes Sperrereignis blockiert; eine leere Liste bestätigt keinen ereignislosen Tag.
 - B/C und D sind in separaten Modulen implementiert und werden anschließend integriert: älteste Major-/Medium-H1-Sweeps, Reaktionsschnittstelle und P2-/P5-Zielauswahl. Feste historische Target-Auswahl, Invalidierungsbildung und eindeutige Zuordnung zur selben Bewegung sind noch nicht vollständig fachlich festgelegt. Eine aktuelle Target-Vorschau darf kein vergangenes Setup verlängern.
@@ -407,6 +407,6 @@ Das Journal nennt für Position 135 den 09.09.2026 um 09:20 Uhr (Europe/Berlin).
 
 Das tiefere H1-Low um 13:00 Uhr am 08.09. bei 1,35219 liegt im linken P5-Fenster des 18:00-Pivots bei 1,35300 und verhindert dessen P5-Einstufung. Das alte Spread-Hour-Level 1,35294 wird mit der aktuellen Konfiguration ausgeschlossen.
 
-**Konkrete offene Fachentscheidung:** Soll das zweite Ziel ein H1-P5-Pivot oder das markierte M5-P5-/New-York-Sessionlevel sein? Die bisherige Annahme H1-P5 reproduziert das markierte zweite Target nicht. Deshalb keine automatische Regeländerung und keine behauptete vollständige DR-114-Abnahme. Der explizite Auditzeitpunkt entscheidet auch nicht die noch offene Replay-UI-Semantik.
+**Konkrete offene Fachentscheidung:** Soll das zweite Ziel ein H1-P5-Pivot oder das markierte M5-P5-/New-York-Sessionlevel sein? Die bisherige Annahme H1-P5 reproduziert das markierte zweite Target nicht. Deshalb keine automatische Regeländerung und keine behauptete vollständige DR-114-Abnahme. Der explizite Auditzeitpunkt bleibt eine separate historische Prüfung; die Replay-UI-Semantik steht im Zeitmodell oben.
 
 **E/G-Zuordnung:** D sucht unberührte Zielpivots. Ein bereits gesweepter identischer P5-Pivot als Gegenargument passt deshalb nicht ohne Weiteres dazu. Zu klären ist, welcher Ursprung der Gegenreaktion dem Ziel zugeordnet werden soll; eine bloße Preisnähe ersetzt diesen Nachweis nicht.

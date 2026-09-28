@@ -16,7 +16,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     const data = adapter.snapshot();
     const result = evaluateTradeSetupChecklist({
       instrument: props.symbol,
-      evaluatedAt: checklistEvaluationTime(props.replayUntil, Math.floor(now())),
+      evaluatedAt: checklistEvaluationTime(props.replayUntil, Math.floor(now()), data.m5.candles),
       h1Candles: data.h1.candles, m5Candles: data.m5.candles,
       dataStatus: data.status, settings: settings(), sessionConfigs,
       tradingWindows: timeData.tradingSchedules?.[props.symbol]?.tradingWindows,
