@@ -49,7 +49,7 @@ Weitere offene Milkyland-Arbeitspakete, nach technischer Prüfung angelegt:
 6. H — frühere M5-Drehung: `trade-setup-checklist-h-fr-he-m5-drehung-anhand-von-schlusskursen`.
 7. Späterer Vergleich: `trade-setup-2-0-reproduzierbaren-ergebnisvergleich-vorbereiten`.
 
-Die Tasks enthalten Abhängigkeiten, offene fachliche Entscheidungen und Abnahmekriterien. Die Umsetzung wird in separaten Codex-Chats vergeben, siehe Parallelisierungsplan am Ende. H (frühere M5-Drehung) wird auf Philips Wunsch später verfeinert und blockiert die übrigen Teile nicht; I bleibt zurückgestellt. Eine endgültige Setup-Freigabe setzt die noch offenen Pflichtregeln voraus.
+Die Tasks enthalten Abhängigkeiten, offene fachliche Entscheidungen und Abnahmekriterien. Die Umsetzung wird in separaten Codex-Chats vergeben, siehe Parallelisierungsplan am Ende. H verwendet inzwischen die in Abschnitt H festgelegten frühen Schlusskurssignale; I bleibt zurückgestellt. Eine endgültige Setup-Freigabe setzt die noch offenen Pflichtregeln voraus.
 
 ## Checkliste des ersten Setups
 
@@ -256,20 +256,31 @@ Ein CHoCH kommt laut Philip in den meisten Fällen vor einem BOS. Die Abstufung 
 #### Darstellung in der Checklist
 
 - Checklistenpunkt: **H / #8 — M5 Trend**.
-- Die aktuell zutreffende Ausprägung anzeigen: **Bärisches CHoCH**, **Bärisches BOS** oder **Bärischer Trend**.
+- Drei dauerhafte Details: bestätigter **M5-Trend**, **Change of Character**, **BOS**. Jeder Punkt wird unabhängig in Richtung der H1-Hauptcheckliste geprüft: rotes X vor Nachweis, grüner Haken nach Nachweis, unbekannt bei fehlender Datenbasis. Die Schreibweise lautet BOS.
 - Solange der M5-Trend noch bullisch ist und die erforderliche bärische Drehung fehlt, ist dieser Punkt noch nicht erfüllt.
 
 #### Technischer Ansatz: M5-Struktur und Trendphasen
 
 Auf dem bereits begonnenen **M5-Strukturalgorithmus** und dem vorhandenen **M5-Trendphasenindikator** aufbauen. Beide spielen für diesen Checklistenpunkt eine Rolle; nötige Anpassungen werden separat umgesetzt.
 
-Der **M5-Trendphasenindikator soll früher anschlagen**. Dafür zusätzlich zu den Pivotpunkten die **Candle Closes (Schlusskurse abgeschlossener M5-Kerzen)** berücksichtigen. Die Erkennung soll sich somit nicht ausschließlich auf Pivotpunkte stützen.
+`buildStructureWithPhases` liefert zusätzlich eine frühe Close-Reaktion aus `m5CloseReaction.js`. H verwendet diese Erweiterung des vorhandenen Strukturkerns. Die bisherigen Pivotbestätigungen, rückdatierten Chartbänder und TSC-Regeln bleiben erhalten; der bestätigte Trend wird nicht durch ein frühes CHoCH ersetzt.
 
-Welche Schlusskursbedingungen den früheren Phasenwechsel auslösen, gegen welche Level geprüft wird und wie dies mit CHoCH, BOS und bestätigtem Trend zusammenspielt, ist noch technisch und fachlich zu präzisieren. Hierfür noch keine konkrete Regel oder Schwelle vorwegnehmen.
+Für Short genügt jeweils ein strikter Schluss unter dem bereits bekannten Level: CHoCH unter dem zweiten Ankerpivot des bestehenden Nested-Kandidaten, BOS unter dem geschützten Tief derselben bullischen Strukturebene. Long ist gespiegelt. Dochtberührung oder Gleichheit reichen nicht. Der BOS-Nachweis benötigt keinen vorherigen CHoCH-Haken. Ein vorheriger Docht am geschützten Punkt beseitigt dessen Schutzfunktion nicht, solange kein neuer geschützter Punkt ihn ersetzt.
 
-#### Noch technisch zu präzisieren
+#### Zeitbasis und Abnahme
 
-Vorhandene M5-Strukturerkennung verwenden. Später klären, wann CHoCH, BOS und bärischer Trend jeweils als erkannt gelten und wie gleichzeitig vorhandene Signale dargestellt werden. Die fachliche Rangfolge ist festgelegt; numerische Gewichte wurden nicht definiert. Der konkrete Stand bei DR 114 ist für diesen Checklistenpunkt noch zu prüfen.
+Die Levelzugehörigkeit wird am damaligen geschlossenen Kerzenpräfix mit dem bestehenden Algorithmus überprüft. Ereignisse tragen Richtung, Strukturebene, Ursprung, Pivotlevel, Kerzenzeit und tatsächlichen Erkennungsschluss. Es zählt die aktuelle Strukturbewegung; ein Schluss jenseits ihres Ursprungs widerlegt ihre Signale. Spätere Bestätigungspivots oder rückdatierte Bandanfänge erzeugen keine früheren Checklist-Haken. Unzureichende Historie bis zum M5-Anker bleibt unbekannt. H ist eine Einzelprüfung, keine endgültige Setup-Freigabe.
+
+Geprüft mit geschlossenen FXCM-Bid-Kerzen für GBPUSD am 09.09.2026 (alle Zeiten Europe/Berlin):
+
+| Sichtbare Replay-Kerze | Bewertungsstand | Bestätigter M5-Trend | CHoCH | BOS |
+|---|---|---|---|---|
+| 09:45 | 09:50 | bullisch | X | X |
+| 09:50 | 09:55 | bullisch | Haken, Level 1,35576 | X |
+| 09:55 | 10:00 | bullisch | Haken bleibt | X |
+| 10:00 | 10:05 | bullisch | Haken bleibt | Haken, Level 1,35554 |
+
+Die 10:20-Kerze liefert später die bestehende Pivotbestätigung des bärischen Nested-Trends. Die Tests decken zusätzlich Docht/Close, Gleichheit, Long-Spiegelung, unabhängigen BOS, Invalidierung, ignorierte Kerzen, fehlende Daten und Replay vorwärts/rückwärts ab.
 
 ### I / #9 — M1
 
@@ -323,7 +334,7 @@ Damit nicht ein alter Major-Sweep mit einer völlig anderen aktuellen M5-Reaktio
 | E — Anti Confluences | `findAntiConfluences.js`, RSI- und OB-Erkennung | Ursprung der Gegenreaktion am P5-Target zuordnen; Stärkevergleich und OB-Alternative präzisieren; H1-RSI explizit auf H1 rechnen. |
 | F — Uhrzeit | `sessions`, `trading_schedules`, News-Relevanz/Gates | Einheitlich Berlin und 30/15-News-Fenster; Kalenderabdeckung und Grenzfälle behandeln. |
 | G — Zusatzargumente | `detectRsiDivergenceHistory`, OB-Touch/Retest | M5-Divergenz zum damaligen Stand; Mitigation und Zuordnung zur Sweep-Bewegung definieren. |
-| H — M5-Trend | M5-Strukturkern, `trendPhases.js`, letzte CHoCH/BOS-Reaktion | Echte frühe Close-Auswertung samt Richtung und Erkennungszeit ergänzen. |
+| H — M5-Trend | M5-Strukturkern, `trendPhases.js`, `m5CloseReaction.js` | Frühe Close-Auswertung samt Richtung und Erkennungszeit; Regeln und Abnahme in Abschnitt H. |
 | I — M1 | Zurückgestellt | Kein aktuelles Freigabekriterium; bleibt Platzhalter. |
 
 Die Anzeige braucht mehr als einen pauschalen Haken: erfüllt, noch nicht erfüllt, No-Go und Daten unbekannt müssen unterscheidbar sein. Fehlende optionale Zusatzargumente aus G bedeuten nicht automatisch No-Go. Die Verknüpfung zu einem endgültigen Gesamt-Go bleibt bis zur Klärung aller Pflicht-/Zusatzregeln offen.
@@ -334,9 +345,9 @@ Die Anzeige braucht mehr als einen pauschalen Haken: erfüllt, noch nicht erfül
 
 Zusätzlich kombiniert `deriveTrendReaction` die innerste Trendrichtung mit der jüngsten CHoCH/BOS-Reaktion aus mehreren Ebenen. Ein angezeigtes BOS ist damit nicht automatisch bärisch. Für H muss jedes Signal seine Richtung, Ebene, Referenz und echte Erkennungszeit tragen.
 
-Vorschlag: Eine reine M5-Schlusskursauswertung prüft jede abgeschlossene Kerze gegen bereits bekannte Strukturlevel. Checklist und Trendphasen verwenden dieselbe Ableitung. Vor Umsetzung festlegen: gebrochenes Level für CHoCH/BOS, erforderliche Closes, Ungültigkeit und Übergang zum bestätigten bärischen Trend. Den H1-Algorithmus und bisherige Setup-Regeln dabei erhalten.
+Umgesetzt als zusätzliche Close-Reaktion des bestehenden M5-Struktur-/Phasenbausteins. Die Checklist prüft die aktuellen geschlossenen Kerzen gegen damals bekannte Strukturlevel; die konkreten Regeln stehen in Abschnitt H. H1-Algorithmus und bisherige Setup-Regeln bleiben erhalten.
 
-**Zurückgestellt:** Philip möchte diese Verfeinerung erst bearbeiten, wenn H an der Reihe ist. Die übrigen Checklist-Bausteine können vorher umgesetzt werden. Bis dahin H als ausstehend kennzeichnen; keine vorgetäuschte Erfüllung und kein endgültiges Gesamt-Go daraus ableiten.
+**Kein Gesamt-Go:** Die getrennten H-Details belegen einzelne Strukturmerkmale. Offene Pflicht-/Zusatzregeln werden dadurch nicht ersetzt.
 
 ### 5. Weitere geprüfte Zeit- und Datenfallen
 
@@ -399,7 +410,7 @@ Die reinen B/C- und D-Module wurden zur parallelen Umsetzung gestartet; die zent
 - E/G-Chat gestartet: `01a0e487-5aa1-7f50-a1b8-6642b75f4f22`. Er setzt die belegbaren Kandidaten und Divergenzberechnung bereits um; ungeklärte Vergleichs-/Zuordnungsregeln bleiben ausdrücklich unbekannt.
 
 - **E/G:** Zuordnung der Gegenargumente und Zusatzargumente wartet auf die tatsächlichen B/C- und D-Ergebnisse. Reine Divergenzberechnung wäre vorziehbar, die fachlich korrekte Zuordnung und Vergleichsregel noch nicht.
-- **H:** eigene spätere Verfeinerung mit Philip. Kann nach geklärten Close-Regeln unabhängig von E/G implementiert werden; finale Zusammenführung folgt anschließend.
+- **H:** frühe Close-Regeln und DR-114-Abnahme umgesetzt, siehe Abschnitt H.
 - **I:** zuletzt, wie vereinbart.
 - **Statistik:** nach stabilen Erkennungs-/Ausführungsregeln und korrekter zeitlicher Auswertung. Keine frühzeitigen Winrate-Versprechen aus einem unvollständigen Ablauf.
 
@@ -411,7 +422,7 @@ Erster Release: `1ab1e0b`, GitHub-Pages-Deployment erfolgreich (Run `36347808770
 - Im Live-Modus führt fehlender aktueller Kerzenschluss konservativ zu veralteten Daten; das betrifft auch Marktschließungen. Daraus wird kein aktuelles Handelssignal abgeleitet.
 - F verwendet den maßgeblichen gepflegten Kalender und dessen tatsächlichen Ladezustand gemäß News-Policy oben.
 - B/C und D sind in separaten Modulen implementiert: älteste Major-/Medium-H1-Sweeps, automatische Reaktionszuordnung über identische Sweeps der bestehenden Erkennung und Zielvorschau. Die feste historische Target-Auswahl bleibt offen. Eine aktuelle Target-Vorschau darf kein vergangenes Setup verlängern.
-- H und I bleiben wie vereinbart zurückgestellt. E/G dürfen ohne geklärten Stärkevergleich und Mitigationsbegriff kein endgültiges Go/No-Go erfinden.
+- H ist inzwischen ergänzt, siehe Abschnitt H. I bleibt zurückgestellt. E/G dürfen ohne geklärten Stärkevergleich und Mitigationsbegriff kein endgültiges Go/No-Go erfinden.
 - Ergänzung zum damaligen Spread-Hour-Audit: Backend inzwischen mit `ac59f73` veröffentlicht; die drei betroffenen Funktionen sind deployed. Der Re-Backfill bleibt laut eigenem Task Philip vorbehalten. Keine Rückrechnung oder Journaländerung wird in dieser Checklist-Runde gestartet.
 
 ### DR 114: Abgleich mit echten historischen Daten

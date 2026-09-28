@@ -5,6 +5,7 @@ import { barSecondsFor } from './timeframes.js';
 import { evaluateChecklistTime } from './tradeSetupChecklistTime.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { evaluateChecklistCandidates } from './tradeSetupChecklistCandidates.js';
+import { evaluateChecklistM5, unknownChecklistM5 } from './tradeSetupChecklistM5.js';
 export { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 
 export function checklistEvaluationTime(replayUntil, nowSec, m5Candles = []) {
@@ -24,7 +25,7 @@ function openChecks() {
     antiConfluences: { ...pending },
     time: { status: 'unknown', details: ['Session- und News-Prüfung noch nicht angebunden.'] },
     confluences: { ...pending },
-    m5Trend: { status: 'deferred', details: ['Frühere M5-Drehung wird später präzisiert.'] },
+    m5Trend: unknownChecklistM5(),
     m1: { status: 'deferred', details: ['M1-Regeln sind zurückgestellt.'] },
   };
 }
@@ -66,6 +67,7 @@ export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles
   }
   const setup = evaluateChecklistCandidates(context, sessionConfigs);
   Object.assign(checks, setup.checks);
+  checks.m5Trend = evaluateChecklistM5(context, settings);
   result.setup = setup;
   return result;
 }
@@ -81,6 +83,6 @@ export function buildChecklistMarketContext({ instrument, evaluatedAt, h1Candles
   const outer = computeRangesPivots(structureCandles, rangesPeriod, cutoff(rangesLookbackHours));
   const inner = computeRangesPivots(structureCandles, ranges2Period, cutoff(ranges2LookbackHours));
   const state = buildMarketStructureState(outer, inner, rangesPeriod, ranges2Period, structureCandles);
-  return { instrument, evaluatedAt, h1Candles: h1, m5Candles: m5, h1State: state, h1Pivots: { outer, inner }, periods: { outer: rangesPeriod, inner: ranges2Period },
+  return { instrument, evaluatedAt, h1Candles: h1, m5Candles: m5, h1State: state, h1Cutoff: cutoff(rangesLookbackHours), h1Pivots: { outer, inner }, periods: { outer: rangesPeriod, inner: ranges2Period },
     direction: state?.trend === 'uptrend' ? 'long' : state?.trend === 'downtrend' ? 'short' : null };
 }

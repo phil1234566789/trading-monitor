@@ -4,6 +4,7 @@
 import { buildMarketStructureState, collectNestedChain, pivotTimeOf } from "./marketStructureAnalysis";
 import { SessionBandPrimitive } from "./sessions.js";
 import { firstTouchAfter } from "./marketStructureRendering";
+import { deriveM5CloseReaction } from "./m5CloseReaction.js";
 
 // Phase = Trend der innersten bestätigten Ebene. Voll = Haupttrend ODER ein CHoCH-Trend, der sich
 // schon einmal fortgesetzt hat (tieferes Hoch + Bruch des Tiefs = ein protected-Punkt, der NACH der
@@ -14,7 +15,7 @@ import { firstTouchAfter } from "./marketStructureRendering";
 // CHoCH: da beginnt das Band schon an der Kerze, die den CHoCH-Level berührt (Philip 24.09.2026).
 // Das ist rückdatiert: live erscheint der Abschnitt erst, wenn der Algo den CHoCH bestätigt hat.
 // events: je Phasenwechsel der auslösende Pivot + was erkannt wurde (Debug-Labels an den Pivots).
-export function buildStructureWithPhases(pivotsOuter, pivotsInner, periodOuter, periodInner, candles, barSeconds) {
+export function buildStructureWithPhases(pivotsOuter, pivotsInner, periodOuter, periodInner, candles, barSeconds, { closeEvaluation = false } = {}) {
   const phases = [];
   const events = [];
   const endTime = candles.length > 0 ? candles[candles.length - 1].time : null;
@@ -49,7 +50,8 @@ export function buildStructureWithPhases(pivotsOuter, pivotsInner, periodOuter, 
     },
   });
   // Ein Pivot kann erst nach der letzten geladenen Kerze "verarbeitet" sein (Lookahead im Replay).
-  return { state, events, phases: phases.filter((p) => p.trend !== "unknown" && p.from < p.to) };
+  return { state, events, phases: phases.filter((p) => p.trend !== "unknown" && p.from < p.to),
+    ...(closeEvaluation ? { closeReaction: deriveM5CloseReaction(state, pivotsOuter, pivotsInner, periodOuter, periodInner, candles, barSeconds) } : {}) };
 }
 
 // BOS-Markierung im Algo (markLqSweeps) prüft bewusst bis zur LETZTEN geladenen Kerze — für den

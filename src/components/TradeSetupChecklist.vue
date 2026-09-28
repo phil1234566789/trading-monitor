@@ -4,6 +4,7 @@ import { formatDatedTime } from "../berlinTime.js";
 import ChecklistStatusIcon from "./ChecklistStatusIcon.vue";
 import ChecklistOrderBlock from "./ChecklistOrderBlock.vue";
 import { checklistPresentation } from "../tradeSetupChecklistPresentation.js";
+import { unknownChecklistM5 } from "../tradeSetupChecklistM5.js";
 
 const props = defineProps({
   instrument: { type: String, required: true },
@@ -19,12 +20,13 @@ const definitions = [
   { key: "antiConfluences", label: "Anti Confluences" },
   { key: "time", label: "Uhrzeit" },
   { key: "confluences", label: "Weitere Confluences" },
-  { key: "m5Trend", label: "M5 Trend", fallback: "pending", note: "Frühe M5-Drehung noch zu präzisieren" },
+  { key: "m5Trend", label: "M5 Trend", fallback: "unknown" },
   { key: "m1", label: "M1", fallback: "deferred", note: "Zurückgestellt · kein aktuelles Freigabekriterium" },
 ];
 const statuses = {
   passed: { label: "Erfüllt", symbol: "✓" },
   pending: { label: "Ausstehend", symbol: "…" },
+  unmet: { label: "Noch nicht erfüllt", symbol: "×" },
   blocked: { label: "No-Go", symbol: "×" },
   unknown: { label: "Unbekannt", symbol: "?" },
   deferred: { label: "Zurückgestellt", symbol: "–" },
@@ -47,7 +49,7 @@ const evaluatedAt = computed(() => {
 });
 const presentation = computed(() => checklistPresentation(state.value));
 const checks = computed(() => definitions.map((definition, index) => {
-  const result = state.value?.checks?.[definition.key];
+  const result = state.value?.checks?.[definition.key] ?? (definition.key === 'm5Trend' ? unknownChecklistM5() : null);
   const status = result?.status in statuses ? result.status : definition.fallback ?? "unknown";
   return {
     ...definition,
@@ -112,7 +114,7 @@ h2 span { margin-left: 8px; color: #a5aab5; font-weight: 400; }
 .checklist-header p { margin-top: 4px; }
 .checklist-not-tradeable { color: #ff8a87; font-size: 14px; font-weight: 600; }
 .checklist-detail-status[data-status="passed"] { color: #71c8b3; border: none; }
-.checklist-detail-status[data-status="blocked"] { color: #ff8a87; }
+.checklist-detail-status[data-status="blocked"], .checklist-detail-status[data-status="unmet"] { color: #ff8a87; }
 .checklist-close { flex: none; background: transparent; border: 1px solid #434957; border-radius: 4px; color: #d1d4dc; cursor: pointer; width: 32px; height: 32px; font-size: 20px; }
 .checklist-close:hover { background: #2a2e39; }
 .checklist-close:focus-visible { outline: 2px solid #90b4ff; outline-offset: 2px; }

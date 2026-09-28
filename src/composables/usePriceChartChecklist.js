@@ -12,6 +12,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     rangesPeriod: props.rangesPeriod, ranges2Period: props.ranges2Period,
     rangesLookbackHours: props.rangesLookbackHours, ranges2LookbackHours: props.ranges2LookbackHours,
     rangesFixedStartActive: props.rangesFixedStartActive, rangesFixedStartTime: props.rangesFixedStartTime,
+    m5StructurePeriod: props.m5StructurePeriod, m5Structure2Period: props.m5Structure2Period,
   });
   function refresh() {
     if (disposed || !props.showTradeSetupChecklist) return;
@@ -59,7 +60,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     adapter.invalidate('h1');
     refresh();
   }, { flush: 'sync' });
-  watch(() => [props.rangesPeriod, props.ranges2Period, props.showTradeSetupChecklist], () => { refresh(); scheduleTimeBoundary(); });
+  watch(() => [props.rangesPeriod, props.ranges2Period, props.m5StructurePeriod, props.m5Structure2Period, props.showTradeSetupChecklist], () => { refresh(); scheduleTimeBoundary(); });
   watch(sessionConfigs, refresh, { deep: true });
   watch(() => [timeData.tradingSchedules, timeData.newsEvents, timeData.newsCalendar?.status], refresh, { deep: true });
   onScopeDispose(() => { disposed = true; clearTimeout(timeBoundaryTimer); adapter.reset(null); });

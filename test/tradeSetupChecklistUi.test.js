@@ -46,7 +46,7 @@ describe("Trade Setup Checklist presentation", () => {
     } });
     expect(html).toContain('aria-label="Erfüllt"');
     expect(html).toContain('title="Erfüllt"');
-    expect(html.match(/role="img" tabindex="0"/g)).toHaveLength(10);
+    expect(html.match(/role="img" tabindex="0"/g)).toHaveLength(13);
     expect(html).toContain('tabindex="0" aria-label="Checklist-Prüfungen"');
     expect(html).toContain('class="status-tooltip"');
   });
@@ -59,7 +59,7 @@ describe("Trade Setup Checklist presentation", () => {
 
   it("shows all nine checks without editable checkboxes or a fabricated result", async () => {
     const html = await render();
-    expect(html.match(/data-status=/g)).toHaveLength(9);
+    expect(html.match(/data-status=/g)).toHaveLength(12);
     expect(html).toContain("Auswertung ausstehend");
     expect(html).not.toContain("Optionale Zusatzargumente");
     expect(html).toContain("Zurückgestellt · kein aktuelles Freigabekriterium");
