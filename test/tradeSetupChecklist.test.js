@@ -8,6 +8,15 @@ const evaluatedAt = candles.at(-1).time + 3600;
 const input = { instrument: 'GBPUSD', evaluatedAt, settings, h1Candles: candles, m5Candles: [{ time: evaluatedAt - 300, open: 1, high: 2, low: 0, close: 1 }] };
 
 describe('Checklist: geschlossener Wissensstand', () => {
+  it.each(['ready', 'stale', 'loading', 'error'])('trennt Handelssperre von Datenstatus %s', dataStatus => {
+    const result = evaluateTradeSetupChecklist({ ...input, dataStatus,
+      tradingWindows: { weekday: [], saturday: [], sunday: [] } });
+    expect(result.tradeability).toBe('blocked');
+    expect(result.status).toBe(dataStatus);
+    expect(result.checks.time.status).toBe('blocked');
+    expect(evaluateTradeSetupChecklist({ ...input, dataStatus,
+      tradingWindows: { weekday: [[0, 1440]], saturday: [[0, 1440]], sunday: [[0, 1440]] } }).tradeability).toBe('unknown');
+  });
   it('verwendet echte Schlussgrenzen, auch bei Lücken', () => {
     const rows = [{ time: 0 }, { time: 300 }, { time: 1800 }];
     expect(closedChecklistCandles(rows, '5m', 599)).toEqual([{ time: 0 }]);

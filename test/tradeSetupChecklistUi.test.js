@@ -8,6 +8,12 @@ const render = (checklistState = null) => renderToString(createSSRApp(TradeSetup
 }));
 
 describe("Trade Setup Checklist presentation", () => {
+  it.each(['ready', 'stale'])('shows not tradeable independently of %s candle data', async status => {
+    const html = await render({ instrument: 'GBPUSD', status, tradeability: 'blocked', checks: {} });
+    expect(html).toContain('Nicht tradebar');
+    expect(html).toContain(status === 'ready' ? 'Daten ausgewertet' : 'Daten veraltet');
+    expect(html).not.toContain('noch keine endgültige Setup-Freigabe');
+  });
   it.each([
     [-1, 1.35675, 1.35641, 'bärische M5 OB', '1,35675', '1,35641'],
     [1, 1.12345, 1.12222, 'bullische M5 OB', '1,12345', '1,12222'],

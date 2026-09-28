@@ -10,6 +10,13 @@ const input = (overrides = {}) => ({
 });
 
 describe("evaluateChecklistTime", () => {
+  it.each([["08:59:59", true], ["09:00:00", false], ["17:59:59", false], ["18:00:00", true]])(
+    "meldet nur außerhalb der Handelsfenster eine Sperre (%s)", (clock, outside) => {
+      const result = evaluateChecklistTime(input({ evaluatedAt: at(`2026-09-09T${clock}+02:00`) }));
+      expect(result.outsideTradingHours).toBe(outside);
+      expect(result.details.join(' ')).not.toContain('innerhalb der Handelszeiten');
+      expect(result.details.some(d => d.includes('außerhalb der Handelszeiten'))).toBe(outside);
+    });
   it('akzeptiert das gespeicherte mehrtägige Weekend-Gap bis Sonntagabend', () => {
     const args = input({ evaluatedAt: at('2026-09-27T22:00:00+02:00'),
       sessions: [{ ...london, label: 'Weekend Gap', fromMinutes: 1380, toMinutes: 4260, days: [5] }],

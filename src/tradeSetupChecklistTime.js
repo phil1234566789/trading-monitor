@@ -10,14 +10,15 @@ import { newsEventsForInstrument, newsEventsInWindow, supportsNewsInstrument } f
  * newsCoverage: "confirmed" bestätigt vollständige relevante Termine für dieses Instrument
  * im Ereigniszeitraum (evaluatedAt−15min, evaluatedAt+30min]; alles andere bleibt unbekannt.
  * Leere Arrays bedeuten geladene Daten, fehlende Arrays bedeuten unbekannte Daten.
- * @returns {{status: 'passed'|'pending'|'blocked'|'unknown'|'deferred', details: string[]}}
+ * @returns {{status: 'passed'|'pending'|'blocked'|'unknown'|'deferred', details: string[], outsideTradingHours: boolean}}
  */
 export function evaluateChecklistTime({ evaluatedAt, instrument, sessions, tradingWindows, news, newsCoverage } = {}) {
   if (!Number.isFinite(evaluatedAt) || Math.abs(evaluatedAt) > 8.64e12 || !supportsNewsInstrument(instrument)) {
-    return { status: "unknown", details: ["Bewertungszeitpunkt oder Instrument fehlt oder ist nicht unterstützt."] };
+    return { status: "unknown", details: ["Bewertungszeitpunkt oder Instrument fehlt oder ist nicht unterstützt."], outsideTradingHours: false };
   }
   const details = [];
   let blocked = false;
+  let outsideTradingHours = false;
   let unknown = false;
   const datedTime = formatDatedTime(evaluatedAt);
   const clock = datedTime.slice(11);
@@ -34,9 +35,8 @@ export function evaluateChecklistTime({ evaluatedAt, instrument, sessions, tradi
     details.push("Handelszeiten fehlen oder sind ungültig.");
   } else if (!windows.some(([from, to]) => minute >= from && minute < to)) {
     blocked = true;
+    outsideTradingHours = true;
     details.push(`${clock} — außerhalb der Handelszeiten (${instrument}, Europe/Berlin).`);
-  } else {
-    details.push(`${clock} — innerhalb der Handelszeiten (${instrument}, Europe/Berlin).`);
   }
 
   if (!Array.isArray(sessions)) {
@@ -92,7 +92,7 @@ export function evaluateChecklistTime({ evaluatedAt, instrument, sessions, tradi
   } else if (!hits.length) {
     details.push("Keine News, fertig!");
   }
-  return { status: blocked ? "blocked" : unknown ? "unknown" : "passed", details };
+  return { status: blocked ? "blocked" : unknown ? "unknown" : "passed", details, outsideTradingHours };
 }
 
 function validWindow(pair) {

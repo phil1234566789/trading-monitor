@@ -77,7 +77,8 @@ const checks = computed(() => definitions.map((definition, index) => {
       </div>
       <ChecklistStatusIcon v-bind="dataStatus" />
     </div>
-    <p class="checklist-notice">Die Einzelprüfungen ergeben noch keine endgültige Setup-Freigabe.</p>
+    <p v-if="state?.tradeability === 'blocked'" class="checklist-not-tradeable" role="status">Nicht tradebar</p>
+    <p v-else class="checklist-notice">Die Einzelprüfungen ergeben noch keine endgültige Setup-Freigabe.</p>
     <ol class="checklist-checks">
       <li v-for="check in checks" :key="check.key" :data-status="check.status">
         <div class="checklist-check-heading">
@@ -103,6 +104,7 @@ h2 { font-size: 15px; }
 h2 span { margin-left: 8px; color: #a5aab5; font-weight: 400; }
 .checklist-header p, .checklist-notice, .checklist-note { font-size: 13px; color: #a5aab5; line-height: 1.5; }
 .checklist-header p { margin-top: 4px; }
+.checklist-not-tradeable { color: #ff8a87; font-size: 14px; font-weight: 600; }
 .checklist-close { flex: none; background: transparent; border: 1px solid #434957; border-radius: 4px; color: #d1d4dc; cursor: pointer; width: 32px; height: 32px; font-size: 20px; }
 .checklist-close:hover { background: #2a2e39; }
 .checklist-close:focus-visible { outline: 2px solid #90b4ff; outline-offset: 2px; }

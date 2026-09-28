@@ -34,7 +34,9 @@ function openChecks() {
 export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles = [], m5Candles = [], settings = {}, sessionConfigs = [], dataStatus = 'ready', tradingWindows, news, newsCoverage }) {
   const checks = openChecks();
   checks.time = evaluateChecklistTime({ instrument, evaluatedAt, sessions: sessionConfigs, tradingWindows, news, newsCoverage });
-  const result = { instrument, evaluatedAt, status: dataStatus, checks, direction: null };
+  // Bekannte Handelssperren gelten auch bei fehlenden Kerzen; offene Regeln erlauben noch kein Gesamt-Go.
+  const result = { instrument, evaluatedAt, status: dataStatus, checks, direction: null,
+    tradeability: checks.time.outsideTradingHours ? 'blocked' : 'unknown' };
   if (!Number.isFinite(evaluatedAt)) {
     result.status = 'missing';
     checks.h1Trend.details = ['Keine vollständig geschlossene M5-Kerze am Replay-Stand verfügbar.'];
