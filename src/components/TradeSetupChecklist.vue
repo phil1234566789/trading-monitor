@@ -79,7 +79,7 @@ const checks = computed(() => definitions.map((definition, index) => {
     </div>
     <p v-if="state?.tradeability === 'blocked'" class="checklist-not-tradeable" role="status">Nicht tradebar</p>
     <p v-else class="checklist-notice">Die Einzelprüfungen ergeben noch keine endgültige Setup-Freigabe.</p>
-    <ol class="checklist-checks">
+    <ol class="checklist-checks" tabindex="0" aria-label="Checklist-Prüfungen">
       <li v-for="check in checks" :key="check.key" :data-status="check.status">
         <div class="checklist-check-heading">
           <h3><span class="checklist-letter">{{ check.letter }}</span>{{ check.title }}</h3>
@@ -97,7 +97,8 @@ const checks = computed(() => definitions.map((definition, index) => {
 </template>
 
 <style scoped>
-.trade-setup-checklist { width: 340px; flex: none; align-self: flex-start; padding: 16px; border: 1px solid #2a2e39; border-radius: 8px; background: #131722; color: #d1d4dc; }
+.trade-setup-checklist { width: 340px; flex: none; align-self: flex-start; box-sizing: border-box; display: flex; flex-direction: column; min-height: 0; padding: 16px; border: 1px solid #2a2e39; border-radius: 8px; background: #131722; color: #d1d4dc; }
+.trade-setup-checklist > :not(.checklist-checks) { flex-shrink: 0; }
 .checklist-header, .checklist-check-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 h2, h3, p { margin: 0; }
 h2 { font-size: 15px; }
@@ -112,7 +113,9 @@ h2 span { margin-left: 8px; color: #a5aab5; font-weight: 400; }
 .checklist-timestamp { display: grid; gap: 4px; }
 .checklist-timestamp > span { color: #a5aab5; font-size: 12px; }
 .checklist-timestamp time { font-weight: 600; }
-.checklist-checks { display: grid; gap: 12px; list-style: none; padding: 0; margin: 16px 0 0; }
+/* Nur die Prüfungen scrollen; Charthöhe, Kopf und Bewertungsstand bleiben unabhängig vom Inhalt. */
+.checklist-checks { display: grid; align-content: start; gap: 12px; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; list-style: none; padding: 0; margin: 16px 0 0; }
+.checklist-checks:focus-visible { outline: 2px solid #90b4ff; outline-offset: 2px; }
 .checklist-checks > li { min-width: 0; border-top: 1px solid #2a2e39; padding-top: 12px; overflow-wrap: anywhere; }
 h3 { font-size: 13px; line-height: 1.5; }
 .checklist-letter { display: inline-block; margin-right: 8px; color: #a5aab5; }

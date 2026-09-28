@@ -198,9 +198,9 @@
     "semantic_hash": "c3ad7c0cd6dffdd06191cc2effdb5056"
   },
   "src/components/PriceChart.vue": {
-    "mtime": 1790540150.1052637,
-    "seen": 1790540559.3186474,
-    "ast_hash": "ee0f4de37552a92d459e8953f089fcbb",
+    "mtime": 1790627903.0017877,
+    "seen": 1790627949.3398416,
+    "ast_hash": "34399dbecb57edc4e80e84229f6cdd64",
     "semantic_hash": ""
   },
   "src/components/ProtokollTable.vue": {
@@ -678,9 +678,9 @@
     "semantic_hash": "6b9f6b695137489adb5694c1b45deb74"
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1790623994.5606303,
-    "seen": 1790624109.2759,
-    "ast_hash": "9318887c8f457ba753dd836a77591551",
+    "mtime": 1790627790.3674924,
+    "seen": 1790627949.3618407,
+    "ast_hash": "636ad15224d2eb1d32b2f9075ec7688b",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -3990,9 +3990,9 @@
     "semantic_hash": ""
   },
   "src/components/TradeSetupChecklist.vue": {
-    "mtime": 1790626434.2096486,
-    "seen": 1790626538.0224218,
-    "ast_hash": "14dbf8c713f51954ff1f67b799bea54b",
+    "mtime": 1790627790.9158676,
+    "seen": 1790627949.3418415,
+    "ast_hash": "22f86cfa6b8bda8a9858b5207b2aadc2",
     "semantic_hash": ""
   },
   "src/composables/usePriceChartChecklist.js": {
@@ -4092,9 +4092,9 @@
     "semantic_hash": ""
   },
   "test/tradeSetupChecklistUi.test.js": {
-    "mtime": 1790626402.2584767,
-    "seen": 1790626538.0224218,
-    "ast_hash": "7afb813dc4d55c3073571dc883217c81",
+    "mtime": 1790627841.27057,
+    "seen": 1790627949.3973517,
+    "ast_hash": "69e85aef24250e3e4233e33ad9f27ef0",
     "semantic_hash": ""
   },
   "test/usePriceChartChecklist.test.js": {

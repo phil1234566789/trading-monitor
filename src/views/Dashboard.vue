@@ -304,6 +304,7 @@ const showTradeSetupCockpit = useLocalStorageRef("showTradeSetupCockpit", true);
 const showTradeSetupBewertung = useLocalStorageRef("showTradeSetupBewertung", true);
 const showTradeSetupChecklist = useLocalStorageRef("showTradeSetupChecklist", false);
 const checklistState = ref(null);
+const renderedChartHeight = ref(null);
 // Style-Modal (Farben aller Chart-Indikatoren, siehe StyleModal.vue/chartColors.js) — reiner
 // Öffnen/Schließen-Zustand, NICHT in localStorage (die Farben selbst persistieren bereits über
 // den chartColors-Singleton, das Modal muss nicht offen bleiben).
@@ -2226,6 +2227,7 @@ watch(selectedTradingAccountId, () => {
     :tsc-range="tscRange"
     @close-ranges-metadata="showRangesMetadata = false"
     @checklist-state-change="checklistState = $event"
+    @chart-height-change="renderedChartHeight = $event"
     @close-debug-metadata="showDebugMetadata = false"
     @close-rsi-divergence-stats="showRsiDivergenceStats = false"
     @select-target="onSelectTarget"
@@ -2268,6 +2270,7 @@ watch(selectedTradingAccountId, () => {
     <TradeSetupChecklist
       v-if="showTradeSetupChecklist"
       id="trade-setup-checklist"
+      :style="renderedChartHeight == null ? undefined : { height: renderedChartHeight + 'px' }"
       :instrument="currentSymbol"
       :checklist-state="checklistState"
       @close="showTradeSetupChecklist = false"

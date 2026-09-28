@@ -38,7 +38,8 @@ describe("Trade Setup Checklist presentation", () => {
     } });
     expect(html).toContain('aria-label="Erfüllt"');
     expect(html).toContain('title="Erfüllt"');
-    expect(html.match(/tabindex="0"/g)).toHaveLength(10);
+    expect(html.match(/role="img" tabindex="0"/g)).toHaveLength(10);
+    expect(html).toContain('tabindex="0" aria-label="Checklist-Prüfungen"');
     expect(html).toContain('class="status-tooltip"');
   });
 

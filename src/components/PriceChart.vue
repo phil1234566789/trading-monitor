@@ -335,6 +335,7 @@ const props = defineProps({
 });
 const emit = defineEmits([
   "checklist-state-change",
+  "chart-height-change",
   "close-ranges-metadata",
   "close-debug-metadata",
   "close-rsi-divergence-stats",
@@ -2120,6 +2121,8 @@ onMounted(() => {
   resizeObserver = new ResizeObserver((entries) => {
     if (!chart) return; // Resize-Callback kann nach chart.remove() noch nachfeuern
     const { width, height } = entries[0].contentRect;
+    // Auch bei horizontal verdrängtem Chart bleibt die Checklist an dessen Höhe gebunden.
+    if (height > 0) emit("chart-height-change", height);
     // Bug-Report Philip 2026-07-27: "Preisskala verschwindet regelmäßig beim Verschieben/Ziehen des
     // Browserfensters" — contentRect liefert Sub-Pixel-Floats, lightweight-charts' Preisskala-
     // Layout kollabiert bei bestimmten Zwischenwerten dauerhaft auf 0 Breite. Gerundet auf ganze
