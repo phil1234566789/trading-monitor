@@ -2,6 +2,8 @@
 import { computed } from "vue";
 import { formatDatedTime } from "../berlinTime.js";
 import ChecklistStatusIcon from "./ChecklistStatusIcon.vue";
+import ChecklistOrderBlock from "./ChecklistOrderBlock.vue";
+import { checklistPresentation } from "../tradeSetupChecklistPresentation.js";
 
 const props = defineProps({
   instrument: { type: String, required: true },
@@ -43,6 +45,7 @@ const evaluatedAt = computed(() => {
   const time = state.value?.evaluatedAt;
   return Number.isFinite(time) && Number.isFinite(new Date(time * 1000).getTime()) ? formatDatedTime(time) : null;
 });
+const presentation = computed(() => checklistPresentation(state.value));
 const checks = computed(() => definitions.map((definition, index) => {
   const result = state.value?.checks?.[definition.key];
   const status = result?.status in statuses ? result.status : definition.fallback ?? "unknown";
@@ -53,6 +56,7 @@ const checks = computed(() => definitions.map((definition, index) => {
     ...statuses[status],
     title: definition.label,
     details: Array.isArray(result?.details) ? result.details.filter(detail => typeof detail === "string") : [],
+    ...presentation.value[definition.key],
   };
 }));
 </script>
@@ -78,10 +82,11 @@ const checks = computed(() => definitions.map((definition, index) => {
       <li v-for="check in checks" :key="check.key" :data-status="check.status">
         <div class="checklist-check-heading">
           <h3><span class="checklist-letter">{{ check.letter }}</span>{{ check.title }}</h3>
-          <ChecklistStatusIcon class="checklist-status" :symbol="check.symbol" :label="check.label" />
+          <ChecklistStatusIcon class="checklist-status" :symbol="check.symbol" :label="check.explanation ? `${check.label} — ${check.explanation}` : check.label" />
         </div>
         <p v-if="check.note" class="checklist-note">{{ check.note }}</p>
-        <ul v-if="check.details.length" class="checklist-details">
+        <ChecklistOrderBlock v-if="check.orderBlock" :preview="check.orderBlock" :instrument="instrument" />
+        <ul v-else-if="check.details.length" class="checklist-details">
           <li v-for="(detail, index) in check.details" :key="index">{{ detail }}</li>
         </ul>
         <p v-else class="checklist-note">{{ state ? 'Noch keine Prüfdaten verfügbar.' : 'Wartet auf die automatische Auswertung.' }}</p>

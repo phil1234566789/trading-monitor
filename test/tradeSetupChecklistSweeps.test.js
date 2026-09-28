@@ -38,6 +38,9 @@ describe('checklist sweeps', () => {
     const ctx = { ...context, m5Candles: candles };
     const first = run(levels, { context: ctx });
     expect(first.checks.reaction.status).toBe('unknown');
+    expect(first.primary.reactionOB).toBeNull();
+    expect(first.primary.reactionPreview).toMatchObject({ linked: false, candidateCount: 1,
+      ob: { startTime: t - 600, top: 1.32, bottom: 1.30 } });
     const link = { candidateId: first.candidates[1].id, obStartTime: t - 600, recognizedAt: t };
     const linked = run(levels, { context: ctx, reactionLinks: [link] });
     expect(linked.primary.reactionOB).toBeNull();
@@ -45,6 +48,7 @@ describe('checklist sweeps', () => {
     expect(linked.candidates[1].checks.reaction.status).toBe('unknown');
     const complete = run(levels, { context: ctx, reactionLinks: [{ ...link, invalidation: { price: 1.32, knownAt: t } }] }).candidates[1];
     expect(complete.checks.reaction.status).toBe('passed');
+    expect(complete.reactionPreview.linked).toBe(true);
     expect(complete.checks.reaction.details.join(' ')).toMatch(/Bärischer M5.*FVG.*Risikoband/);
     const premature = { ...link, recognizedAt: t - 300 };
     expect(run(levels, { context: ctx, reactionLinks: [premature, link] }).candidates[1].reactionOB).not.toBeNull();

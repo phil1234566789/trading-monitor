@@ -8,6 +8,24 @@ const render = (checklistState = null) => renderToString(createSSRApp(TradeSetup
 }));
 
 describe("Trade Setup Checklist presentation", () => {
+  it.each([
+    [-1, 1.35675, 1.35641, 'bärische M5 OB', '1,35675', '1,35641'],
+    [1, 1.12345, 1.12222, 'bullische M5 OB', '1,12345', '1,12222'],
+  ])("shows the actual OB bounds for direction %s without confirming its association", async (dir, top, bottom, label, upper, lower) => {
+    const html = await render({ instrument: 'GBPUSD', status: 'ready', checks: {
+      reaction: { status: 'unknown', details: ['Zuordnung noch ungeklärt.'] },
+    }, setup: { primary: { reactionPreview: { linked: false, candidateCount: 3,
+      ob: { dir, top, bottom, startTime: Date.parse('2026-09-09T09:20:00+02:00') / 1000 },
+    } } } });
+    expect(html).toContain(label);
+    expect(html).toContain(upper);
+    expect(html).toContain(lower);
+    expect(html).toContain('Kandidat');
+    expect(html).toContain('2026-09-09 09:20');
+    expect(html).toContain('aria-label="Unbekannt — Zuordnung noch ungeklärt."');
+    expect(html).not.toContain('data-status="passed"');
+  });
+
   it("uses focusable status icons with accessible explanations", async () => {
     const html = await render({ instrument: "GBPUSD", status: "ready", checks: {
       h1Trend: { status: "passed", details: [] },

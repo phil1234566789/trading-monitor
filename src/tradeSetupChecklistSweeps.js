@@ -72,6 +72,11 @@ export function evaluateChecklistSweeps({ context, h1Levels, reactionLinks = [],
         candidate.bandRisk = Math.abs(candidate.invalidation - candidate.entryPrice);
       }
     }
+    // Die erste zeitliche Beobachtung ist nur eine Vorschau, keine neue Zuordnungsregel.
+    // reactionOB bleibt ohne expliziten Link null; Status und Setup-Gültigkeit bleiben unverändert.
+    candidate.reactionPreview = possibleObs.length ? {
+      ob: candidate.reactionOB ?? possibleObs[0], linked: candidate.reactionOB != null, candidateCount: possibleObs.length,
+    } : null;
     candidate.validity = evaluateChecklistCandidateValidity({ candidate, candles, evaluatedAt,
       invalidation: candidate.reactionOB ? link?.invalidation : null, target1: targetsByCandidateId[id] });
     candidate.checks = {
