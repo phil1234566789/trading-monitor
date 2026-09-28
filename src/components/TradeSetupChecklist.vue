@@ -18,7 +18,7 @@ const definitions = [
   { key: "targets", label: "Targets bestimmen" },
   { key: "antiConfluences", label: "Anti Confluences" },
   { key: "time", label: "Uhrzeit" },
-  { key: "confluences", label: "Weitere Confluences", note: "Optionale Zusatzargumente" },
+  { key: "confluences", label: "Weitere Confluences" },
   { key: "m5Trend", label: "M5 Trend", fallback: "pending", note: "Frühe M5-Drehung noch zu präzisieren" },
   { key: "m1", label: "M1", fallback: "deferred", note: "Zurückgestellt · kein aktuelles Freigabekriterium" },
 ];
@@ -56,6 +56,7 @@ const checks = computed(() => definitions.map((definition, index) => {
     ...statuses[status],
     title: definition.label,
     details: Array.isArray(result?.details) ? result.details.filter(detail => typeof detail === "string") : [],
+    detailStatuses: result?.detailStatuses ?? [],
     ...presentation.value[definition.key],
   };
 }));
@@ -88,7 +89,10 @@ const checks = computed(() => definitions.map((definition, index) => {
         <p v-if="check.note" class="checklist-note">{{ check.note }}</p>
         <ChecklistOrderBlock v-if="check.orderBlock" :preview="check.orderBlock" :instrument="instrument" />
         <ul v-else-if="check.details.length" class="checklist-details">
-          <li v-for="(detail, index) in check.details" :key="index">{{ detail }}</li>
+          <li v-for="(detail, index) in check.details" :key="index">{{ detail }}
+            <ChecklistStatusIcon v-if="statuses[check.detailStatuses?.[index]]" class="checklist-detail-status"
+              :data-status="check.detailStatuses[index]" v-bind="statuses[check.detailStatuses[index]]" />
+          </li>
         </ul>
         <p v-else class="checklist-note">{{ state ? 'Noch keine Prüfdaten verfügbar.' : 'Wartet auf die automatische Auswertung.' }}</p>
       </li>
@@ -106,6 +110,8 @@ h2 span { margin-left: 8px; color: #a5aab5; font-weight: 400; }
 .checklist-header p, .checklist-notice, .checklist-note { font-size: 13px; color: #a5aab5; line-height: 1.5; }
 .checklist-header p { margin-top: 4px; }
 .checklist-not-tradeable { color: #ff8a87; font-size: 14px; font-weight: 600; }
+.checklist-detail-status[data-status="passed"] { color: #71c8b3; }
+.checklist-detail-status[data-status="blocked"] { color: #ff8a87; }
 .checklist-close { flex: none; background: transparent; border: 1px solid #434957; border-radius: 4px; color: #d1d4dc; cursor: pointer; width: 32px; height: 32px; font-size: 20px; }
 .checklist-close:hover { background: #2a2e39; }
 .checklist-close:focus-visible { outline: 2px solid #90b4ff; outline-offset: 2px; }

@@ -206,8 +206,8 @@ Zum Bewertungszeitpunkt auch die für das Setup relevanten News prüfen:
 
 - Checklistenpunkt: **F / #6 — Uhrzeit**.
 - Session-Detail im Beispiel: **09:20 Uhr — London — OK**.
-- News-Detail bei bestätigter Abwesenheit relevanter News im Sperrfenster: **Keine News, fertig!**
-- Bei einer News-Sperre: betroffenes Ereignis und Ende der Wartezeit anzeigen. Bei einer gefährlichen oder verbotenen Session: Session und entsprechende Einstufung anzeigen.
+- Der erfolgreich geladene gepflegte Kalender ist maßgeblich. **Keine News** oder nach abgelaufener Wartezeit relevanter News desselben Berliner Kalendertags **News vorbei**, jeweils mit eigenem grünem Haken, unabhängig von MMM.
+- Im 30-Minuten-Vorlauf **News bevorstehend** mit rotem Kreuz; ab Ereignis bis ausschließlich 15 Minuten danach **News – Wartezeit** mit rotem Kreuz und Berliner Warteende. Eine aktive Sperre hat Vorrang vor vergangenen Events; spätere Termine außerhalb des Vorlaufs sperren nicht. Fehlende, laufende oder fehlgeschlagene Kalenderladung bleibt unbekannt. Gefährliche/verbotene Sessions behalten ihre eigene Einstufung.
 
 Die News-Lage für DR 114 wurde noch nicht geprüft; die obige News-Ausgabe beschreibt das gewünschte Anzeigeformat, kein bestätigtes Prüfergebnis.
 
@@ -339,7 +339,7 @@ Vorschlag: Eine reine M5-Schlusskursauswertung prüft jede abgeschlossene Kerze 
 - **Divergenzen:** Der RSI-Detektor braucht standardmäßig drei rechte Bestätigungskerzen. Sein Pivotzeitpunkt ist nicht der Zeitpunkt, ab dem die Divergenz bekannt war. Aus dem jeweiligen Kerzenpräfix rechnen; heutige Ergebnisse nur nach Pivotzeit zu filtern reicht nicht.
 - **Orderblocks:** `touched`, `invalidated`, `retested` und `retestedAt` existieren. M5-Retest verlangt eine spätere gleichgerichtete FVG; HTF-Retest einen späteren Schluss außerhalb der Zone. Ob „mitigiert“ in G genau diesen Retest meint, bleibt fachlich offen. Auch `retestedAt` kann einen früheren OB-Start statt des Bestätigungsschlusses bezeichnen.
 - **News:** Frontend `currentNewsNoGo` sperrt derzeit ±30 Minuten; Backend `evaluateNewsGate` verwendet 30 davor/15 danach, mit abweichender Grenzinklusion bei exakt 30 Minuten davor. Für die Checklist eine reine gemeinsame Auswertung mit den gewünschten Grenzen vorsehen; das bisherige TSC-Verhalten nicht beiläufig umstellen. Keine State-Machine-Tools als vermeintlich lesende Prüfung aufrufen.
-- **Kalenderabdeckung:** News werden manuell gepflegt. Eine leere Antwort bedeutet nicht nachweislich „Keine News“. Ungeprüfte/fehlende Kalenderdaten als unbekannt ausweisen; für bestätigte ereignislose Tage braucht es einen Abdeckungsnachweis.
+- **Kalenderstatus:** Die beschlossene F-Policy oben verwendet den gepflegten Kalender als maßgeblich. Den tatsächlichen Ladezustand aus dem News-Store übernehmen; kein zusätzlicher Abdeckungsnachweis nötig.
 - **Zeitzone:** Einige bestehende Frontend-Aufrufer reichen die Gerätezeitzone weiter. Die Checklist muss Europe/Berlin ausdrücklich verwenden.
 - **Spread Hours:** Frontend-Task ist released; Philip hat sein zweites Target neu markiert. Zum Zeitpunkt dieser Prüfung steht der separate Task `spread-hour-auch-im-backend-ignorieren-poi-watcher-backfill-mcp-exporte` noch auf open. In den geprüften Backend-Aufrufern fehlt die Markierung weiterhin. Vor Backend-Auswertung/Statistik deren tatsächlichen Abschluss und den Bestandsdaten-/Backfill-Stand prüfen; Frontend-Korrektur nicht mit korrigiertem gesamten Datenbestand gleichsetzen. Fraktale/Struktur dürfen ignorierte Kerzen herausfiltern, FVG-Fenster mit ignorierten Kerzen müssen ganz ausfallen, damit keine künstlichen Gaps entstehen.
 
@@ -401,7 +401,7 @@ Erster Release: `1ab1e0b`, GitHub-Pages-Deployment erfolgreich (Run `36347808770
 
 - Replay verwendet den im Zeitmodell festgelegten tatsächlichen M5-Schluss. Fehlende Kerzen bleiben ausdrücklich unbekannt.
 - Im Live-Modus führt fehlender aktueller Kerzenschluss konservativ zu veralteten Daten; das betrifft auch Marktschließungen. Daraus wird kein aktuelles Handelssignal abgeleitet.
-- Der manuell gepflegte News-Kalender hat weiterhin keinen Abdeckungsnachweis. Bekanntes Sperrereignis blockiert; eine leere Liste bestätigt keinen ereignislosen Tag.
+- F verwendet den maßgeblichen gepflegten Kalender und dessen tatsächlichen Ladezustand gemäß News-Policy oben.
 - B/C und D sind in separaten Modulen implementiert: älteste Major-/Medium-H1-Sweeps, automatische Reaktionszuordnung über identische Sweeps der bestehenden Erkennung und Zielvorschau. Die feste historische Target-Auswahl bleibt offen. Eine aktuelle Target-Vorschau darf kein vergangenes Setup verlängern.
 - H und I bleiben wie vereinbart zurückgestellt. E/G dürfen ohne geklärten Stärkevergleich und Mitigationsbegriff kein endgültiges Go/No-Go erfinden.
 - Ergänzung zum damaligen Spread-Hour-Audit: Backend inzwischen mit `ac59f73` veröffentlicht; die drei betroffenen Funktionen sind deployed. Der Re-Backfill bleibt laut eigenem Task Philip vorbehalten. Keine Rückrechnung oder Journaländerung wird in dieser Checklist-Runde gestartet.

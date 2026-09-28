@@ -1,0 +1,22 @@
+import { it, expect, vi } from 'vitest';
+const paging = vi.hoisted(() => ({ read: vi.fn() }));
+vi.mock('../src/dbReadPaging.js', () => ({ fetchAllRows: paging.read }));
+it('tracks initial loading, empty success, failed reload and ignores an older response', async () => {
+  let initial;
+  paging.read.mockImplementationOnce(() => new Promise(resolve => { initial = resolve; }));
+  const { newsCalendar, syncNewsEvents, newsEvents } = await import('../src/newsEvents.js');
+  expect(newsCalendar.status).toBe('loading');
+  paging.read.mockResolvedValueOnce({data:[],error:null});
+  expect(await syncNewsEvents()).toBe(true);
+  expect(newsCalendar.status).toBe('ready');
+  initial({data:[{id:1,event_time:'2026-09-09T12:30:00Z',currency:'USD'}],error:null});
+  await Promise.resolve();
+  expect(newsEvents).toHaveLength(0);
+  let fail;
+  paging.read.mockImplementationOnce(() => new Promise(resolve => { fail = resolve; }));
+  const pending = syncNewsEvents();
+  expect(newsCalendar.status).toBe('loading');
+  fail({data:null,error:new Error('unavailable')});
+  expect(await pending).toBe(false);
+  expect(newsCalendar.status).toBe('error');
+});

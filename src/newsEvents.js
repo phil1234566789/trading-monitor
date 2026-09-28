@@ -12,12 +12,16 @@ export { NEWS_NOGO_WINDOW_MINUTES, newsEventsForInstrument, currentNewsNoGo } fr
 // Browser-Einträge leben nebeneinander in derselben Tabelle, ein Full-Resync würde die per
 // Migration eingetragenen Zeilen beim nächsten Browser-Save zerstören.
 export const newsEvents = reactive([]);
+export const newsCalendar = reactive({ status: 'loading' });
+let loadSequence = 0;
 
 // Nur einmal beim Laden synchronisiert, kein periodisches Re-Poll (wie sessions.js/chartColors.js
 // — dort unkritisch, weil der Browser selbst die Quelle für Änderungen ist; hier ist das
 // akzeptiert, weil Termine i.d.R. Tage im Voraus eingetragen werden, lange bevor ein offener Tab
 // sie bräuchte. Ein einfacher Reload holt neu eingetragene Termine).
 export async function syncNewsEvents() {
+  const sequence = ++loadSequence;
+  newsCalendar.status = 'loading';
   try {
     // KEIN "event_time >= vor kurzem"-Filter (erste Version hatte einen, siehe Git-Historie) — die
     // Chart-Marker (newsMarkers.js) wollen auch länger zurückliegende Termine noch anzeigen können
@@ -30,13 +34,16 @@ export async function syncNewsEvents() {
     const { data, error } = await fetchAllRows((from, to) => supabase
       .from("news_events").select("id, event_time, currency, title").order("event_time").range(from, to));
     if (error) throw error;
+    if (sequence !== loadSequence) return false;
     newsEvents.splice(
       0,
       newsEvents.length,
       ...(data ?? []).map((r) => ({ id: r.id, eventTime: Math.floor(new Date(r.event_time).getTime() / 1000), currency: r.currency, title: r.title })),
     );
+    newsCalendar.status = 'ready';
     return true;
   } catch (err) {
+    if (sequence === loadSequence) newsCalendar.status = 'error';
     console.error("News-Events aus DB laden fehlgeschlagen:", err);
     return false;
   }

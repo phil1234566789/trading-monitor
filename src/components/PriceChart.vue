@@ -34,7 +34,7 @@ import { findAntiConfluenceCandidates } from "../findAntiConfluences.js";
 import { usePriceChartLiquidity } from "../composables/usePriceChartLiquidity.js";
 import { usePriceChartDailyPivots } from "../composables/usePriceChartDailyPivots.js";
 import { sessions } from "../sessions.js";
-import { newsEvents } from "../newsEvents.js";
+import { newsEvents, newsCalendar } from "../newsEvents.js";
 import { tradingSchedules } from "../tradingSchedules.js";
 import { usePriceChartSessionsAndNews } from "../composables/usePriceChartSessionsAndNews.js";
 import { summarizeMarketStructureState } from "../marketStructureAnalysis";
@@ -354,7 +354,7 @@ const emit = defineEmits([
 ]);
 
 const { markSuccess } = useStatusBar();
-const checklist = usePriceChartChecklist(props, sessions, emit, undefined, { tradingSchedules, newsEvents });
+const checklist = usePriceChartChecklist(props, sessions, emit, undefined, { tradingSchedules, newsEvents, newsCalendar });
 const { refreshSessions, refreshNewsMarkers } = usePriceChartSessionsAndNews();
 // EMA-/RSI-/Divergenz-Series-Lifecycle + Zeichenlogik (siehe usePriceChartRsi.js, Phase 6b) —
 // priceChartRsi.create(chart, candleSeries) wird in onMounted aufgerufen, priceChartRsi.dispose()

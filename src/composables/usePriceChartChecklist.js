@@ -21,8 +21,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
       dataStatus: data.status, settings: settings(), sessionConfigs,
       tradingWindows: timeData.tradingSchedules?.[props.symbol]?.tradingWindows,
       news: timeData.newsEvents,
-      // Der manuell gepflegte Kalender besitzt bislang keinen Abdeckungsnachweis.
-      newsCoverage: undefined,
+      newsLoadStatus: timeData.newsCalendar?.status,
     });
     emit('checklist-state-change', result);
     scheduleTimeBoundary();
@@ -33,7 +32,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     const at = now();
     // Session-/Handelsfenster wechseln an Minuten, News auch an sekundengenauen
     // Sperrgrenzen. Dieser Timer lädt keine Kerzen und ersetzt keinen vorhandenen Poll.
-    const boundaries = (timeData.newsEvents ?? []).flatMap(event => [event.eventTime - 1800, event.eventTime + 900]);
+    const boundaries = (timeData.newsEvents ?? []).flatMap(event => [event.eventTime - 1800, event.eventTime, event.eventTime + 900]);
     const next = Math.min(Math.floor(at / 60) * 60 + 60, ...boundaries.filter(t => t > at));
     timeBoundaryTimer = setTimeout(refresh, Math.max(1, (next - at) * 1000));
   }
@@ -47,7 +46,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   }, { flush: 'sync' });
   watch(() => [props.rangesPeriod, props.ranges2Period, props.showTradeSetupChecklist], () => { refresh(); scheduleTimeBoundary(); });
   watch(sessionConfigs, refresh, { deep: true });
-  watch(() => [timeData.tradingSchedules, timeData.newsEvents], refresh, { deep: true });
+  watch(() => [timeData.tradingSchedules, timeData.newsEvents, timeData.newsCalendar?.status], refresh, { deep: true });
   onScopeDispose(() => { disposed = true; clearTimeout(timeBoundaryTimer); adapter.reset(null); });
   return {
     begin(tf) { const ticket = adapter.begin(tf); refresh(); return ticket; },

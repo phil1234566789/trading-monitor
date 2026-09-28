@@ -20,6 +20,23 @@ function setup() {
 }
 
 describe('Chart-Checklist: asynchrone Integration', () => {
+  it('aktualisiert leere Kalender nach tatsächlichem Ladeerfolg und Ladefehler', async () => {
+    const props = reactive({symbol:'GBPUSD',replayUntil:null,showTradeSetupChecklist:true});
+    const timeData = reactive({newsEvents:[],newsCalendar:{status:'loading'}});
+    const events = [];
+    const scope = effectScope();
+    try {
+      scope.run(() => usePriceChartChecklist(props, reactive([]), (_,state) => events.push(state), undefined,timeData));
+      expect(events.at(-1).checks.time.detailStatuses.at(-1)).toBe('unknown');
+      timeData.newsCalendar.status = 'ready';
+      await nextTick();
+      expect(events.at(-1).checks.time.details.at(-1)).toBe('Keine News');
+      expect(events.at(-1).checks.time.detailStatuses.at(-1)).toBe('passed');
+      timeData.newsCalendar.status = 'error';
+      await nextTick();
+      expect(events.at(-1).checks.time.detailStatuses.at(-1)).toBe('unknown');
+    } finally { scope.stop(); }
+  });
   it('aktualisiert F an der News-Grenze ohne Kerzenpoll und beendet Timer im Replay', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-09-09T07:29:59Z'));

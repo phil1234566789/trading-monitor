@@ -31,9 +31,9 @@ function openChecks() {
 
 // Keine sichtbaren Linien oder heutigen DB-Setups: jeder Aufruf rekonstruiert den
 // damaligen Wissensstand aus dem geschlossenen Präfix, einschließlich rechter Pivot-Bestätigung.
-export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles = [], m5Candles = [], settings = {}, sessionConfigs = [], dataStatus = 'ready', tradingWindows, news, newsCoverage }) {
+export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles = [], m5Candles = [], settings = {}, sessionConfigs = [], dataStatus = 'ready', tradingWindows, news, newsLoadStatus }) {
   const checks = openChecks();
-  checks.time = evaluateChecklistTime({ instrument, evaluatedAt, sessions: sessionConfigs, tradingWindows, news, newsCoverage });
+  checks.time = evaluateChecklistTime({ instrument, evaluatedAt, sessions: sessionConfigs, tradingWindows, news, newsLoadStatus });
   // Bekannte Handelssperren gelten auch bei fehlenden Kerzen; offene Regeln erlauben noch kein Gesamt-Go.
   const result = { instrument, evaluatedAt, status: dataStatus, checks, direction: null,
     tradeability: checks.time.outsideTradingHours ? 'blocked' : 'unknown' };

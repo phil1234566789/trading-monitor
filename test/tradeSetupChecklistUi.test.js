@@ -8,6 +8,14 @@ const render = (checklistState = null) => renderToString(createSSRApp(TradeSetup
 }));
 
 describe("Trade Setup Checklist presentation", () => {
+  it('shows a green news check independently of an unknown MMM time gate', async () => {
+    const html = await render({ instrument: 'GBPUSD', status: 'ready', checks: {
+      time: {status: 'unknown', details: ['MMM — Vorsicht', 'Keine News'], detailStatuses: [null, 'passed']},
+    }});
+    expect(html).toContain('Keine News');
+    expect(html).toMatch(/class="[^"]*checklist-detail-status[^"]*"[^>]*data-status="passed"/);
+    expect(html).toContain('aria-label="Unbekannt"');
+  });
   it.each(['ready', 'stale'])('shows not tradeable independently of %s candle data', async status => {
     const html = await render({ instrument: 'GBPUSD', status, tradeability: 'blocked', checks: {} });
     expect(html).toContain('Nicht tradebar');
@@ -53,7 +61,7 @@ describe("Trade Setup Checklist presentation", () => {
     const html = await render();
     expect(html.match(/data-status=/g)).toHaveLength(9);
     expect(html).toContain("Auswertung ausstehend");
-    expect(html).toContain("Optionale Zusatzargumente");
+    expect(html).not.toContain("Optionale Zusatzargumente");
     expect(html).toContain("Zurückgestellt · kein aktuelles Freigabekriterium");
     expect(html).not.toMatch(/<input|data-status="passed"|data-status="blocked"/);
   });

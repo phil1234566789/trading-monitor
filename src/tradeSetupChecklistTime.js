@@ -1,18 +1,17 @@
 import { formatDatedTime } from "./berlinTime.js";
 import { sessionOccurrences } from "./sessionOccurrences.js";
-import { newsEventsForInstrument, newsEventsInWindow, supportsNewsInstrument } from "./newsEventRules.js";
+import { supportsNewsInstrument } from "./newsEventRules.js";
+import { evaluateChecklistNews } from './tradeSetupChecklistNews.js';
 
 /**
  * Reiner F-Prüfkern. evaluatedAt und news[].eventTime sind Unix-Sekunden.
  * sessions: Frontend-Form {instrument,label,fromMinutes,toMinutes,days,danger}.
  * tradingWindows: Fenster des Instruments, {weekday,saturday,sunday}: [von,bis][] in Berlin-Minuten.
  * Handelsende (z.B. 18:00) kommt aus diesen Fenstern; keine Alarmfenster übergeben.
- * newsCoverage: "confirmed" bestätigt vollständige relevante Termine für dieses Instrument
- * im Ereigniszeitraum (evaluatedAt−15min, evaluatedAt+30min]; alles andere bleibt unbekannt.
- * Leere Arrays bedeuten geladene Daten, fehlende Arrays bedeuten unbekannte Daten.
+ * newsLoadStatus: Nur "ready" bestätigt den erfolgreich geladenen maßgeblichen Kalender.
  * @returns {{status: 'passed'|'pending'|'blocked'|'unknown'|'deferred', details: string[], outsideTradingHours: boolean}}
  */
-export function evaluateChecklistTime({ evaluatedAt, instrument, sessions, tradingWindows, news, newsCoverage } = {}) {
+export function evaluateChecklistTime({ evaluatedAt, instrument, sessions, tradingWindows, news, newsLoadStatus } = {}) {
   if (!Number.isFinite(evaluatedAt) || Math.abs(evaluatedAt) > 8.64e12 || !supportsNewsInstrument(instrument)) {
     return { status: "unknown", details: ["Bewertungszeitpunkt oder Instrument fehlt oder ist nicht unterstützt."], outsideTradingHours: false };
   }
@@ -76,23 +75,13 @@ export function evaluateChecklistTime({ evaluatedAt, instrument, sessions, tradi
     if (!activeCount) details.push(`${clock} — keine aktive Session konfiguriert.`);
   }
 
-  const rows = Array.isArray(news) ? news.filter(event => event && typeof event.currency === "string") : [];
-  const validNews = Array.isArray(news) && rows.length === news.length;
-  const relevant = newsEventsForInstrument(rows, instrument);
-  const malformedTime = relevant.some(event => !Number.isFinite(event.eventTime) || Math.abs(event.eventTime) > 8.64e12);
-  const hits = newsEventsInWindow(relevant.filter(event => Number.isFinite(event.eventTime) && Math.abs(event.eventTime) <= 8.64e12), instrument, evaluatedAt,
-    { beforeMinutes: 30, afterMinutes: 15 });
-  for (const event of hits) {
-    blocked = true;
-    details.push(`News: ${event.title || "Unbenannter Termin"} (${event.currency}) — warten bis ${formatDatedTime(event.eventTime + 15 * 60)} (Europe/Berlin).`);
-  }
-  if (!validNews || malformedTime || newsCoverage !== "confirmed") {
-    unknown = true;
-    details.push("News-Abdeckung für Instrument und Bewertungszeitpunkt fehlt oder ist ungeprüft.");
-  } else if (!hits.length) {
-    details.push("Keine News, fertig!");
-  }
-  return { status: blocked ? "blocked" : unknown ? "unknown" : "passed", details, outsideTradingHours };
+  const newsCheck = evaluateChecklistNews({ instrument, evaluatedAt, news, newsLoadStatus });
+  blocked ||= newsCheck.status === 'blocked';
+  unknown ||= newsCheck.status === 'unknown';
+  const detailStatuses = details.map(() => null);
+  details.push([newsCheck.label, ...newsCheck.details].join(' — '));
+  detailStatuses.push(newsCheck.status);
+  return { status: blocked ? "blocked" : unknown ? "unknown" : "passed", details, detailStatuses, outsideTradingHours };
 }
 
 function validWindow(pair) {

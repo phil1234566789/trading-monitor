@@ -6,7 +6,7 @@ const london = { instrument: "GBPUSD", label: "London", fromMinutes: 540, toMinu
 const input = (overrides = {}) => ({
   evaluatedAt: at("2026-09-09T09:20:00+02:00"), instrument: "GBPUSD",
   sessions: [london], tradingWindows: { weekday: [[540, 1080]], saturday: [], sunday: [] },
-  news: [], newsCoverage: "confirmed", ...overrides,
+  news: [], newsLoadStatus: "ready", ...overrides,
 });
 
 describe("evaluateChecklistTime", () => {
@@ -30,13 +30,13 @@ describe("evaluateChecklistTime", () => {
     const result = evaluateChecklistTime(input());
     expect(result.status).toBe("passed");
     expect(result.details.join(" ")).toContain("09:20 — London — OK");
-    expect(result.details).toContain("Keine News, fertig!");
+    expect(result.details).toContain("Keine News");
   });
 
-  it.each([undefined, "unknown", "missing", "error"])("bestätigt keine leeren News bei Abdeckung %s", (newsCoverage) => {
-    const result = evaluateChecklistTime(input({ newsCoverage }));
+  it.each([undefined, "unknown", "missing", "error"])("bestätigt keine leeren News bei Abdeckung %s", (newsLoadStatus) => {
+    const result = evaluateChecklistTime(input({ newsLoadStatus }));
     expect(result.status).toBe("unknown");
-    expect(result.details).not.toContain("Keine News, fertig!");
+    expect(result.details).not.toContain("Keine News");
   });
 
   it.each([[-1801, "passed"], [-1800, "blocked"], [0, "blocked"], [899, "blocked"], [900, "passed"]])(
@@ -54,12 +54,12 @@ describe("evaluateChecklistTime", () => {
     const news = ["EUR", "GBP", "USD"].map(currency => ({ currency, eventTime, title: currency }));
     const result = evaluateChecklistTime(input({ news }));
     expect(result.status).toBe("blocked");
-    expect(result.details.filter(d => d.startsWith("News:")).length).toBe(2);
+    expect(result.details.join(' ')).toContain('News – Wartezeit');
     expect(evaluateChecklistTime(input({ news: [news[0]] })).status).toBe("passed");
   });
 
   it("behält eine bekannte Sperre auch bei unvollständiger Kalenderabdeckung", () => {
-    expect(evaluateChecklistTime(input({ newsCoverage: "unknown",
+    expect(evaluateChecklistTime(input({ newsLoadStatus: "unknown",
       news: [{ eventTime: input().evaluatedAt, currency: "GBP", title: "BoE" }] })).status).toBe("blocked");
   });
 
@@ -67,7 +67,7 @@ describe("evaluateChecklistTime", () => {
     const result = evaluateChecklistTime(input({ news: [null,
       { eventTime: input().evaluatedAt, currency: "GBP", title: "BoE" }] }));
     expect(result.status).toBe("blocked");
-    expect(result.details.join(" ")).toContain("ungeprüft");
+    expect(result.detailStatuses.at(-1)).toBe('blocked');
   });
 
   it.each([["17:59:59", "passed"], ["18:00:00", "blocked"]])("beachtet das konfigurierte Handelsende %s", (clock, status) => {

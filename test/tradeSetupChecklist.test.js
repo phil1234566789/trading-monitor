@@ -81,7 +81,7 @@ describe('Checklist: geschlossener Wissensstand', () => {
     const windows = { weekday: [[0, 1440]], saturday: [[0, 1440]], sunday: [[0, 1440]] };
     const args = { ...input, h1Candles: [], tradingWindows: windows, news: [] };
     expect(evaluateTradeSetupChecklist(args).checks.time.status).toBe('unknown');
-    expect(evaluateTradeSetupChecklist({ ...args, newsCoverage: 'confirmed' }).checks.time.status).toBe('passed');
+    expect(evaluateTradeSetupChecklist({ ...args, newsLoadStatus: 'ready' }).checks.time.status).toBe('passed');
     expect(evaluateTradeSetupChecklist({ ...args, news: [{ currency: 'USD', eventTime: evaluatedAt + 1800, title: 'Test' }] }).checks.time.status).toBe('blocked');
   });
 });
