@@ -3492,9 +3492,9 @@
     "semantic_hash": ""
   },
   "src/trendPhases.js": {
-    "mtime": 1790285537.842889,
-    "seen": 1790285575.8729653,
-    "ast_hash": "fe836840b831ccb10e754e292d40f297",
+    "mtime": 1790629953.800934,
+    "seen": 1790630915.1973863,
+    "ast_hash": "8b3efdb2c8cf401f0aaf5d8b7def1114",
     "semantic_hash": ""
   },
   "test/fixtures/gbpusd-m5-2026-07-27-m5-trend.json": {
@@ -3978,9 +3978,9 @@
     "semantic_hash": ""
   },
   "PLAN-trade-setup-2.md": {
-    "mtime": 1790629188.7091439,
-    "seen": 1790629200.7045,
-    "ast_hash": "338c50ca7fb65c5b64bac2b553433849",
+    "mtime": 1790630671.3245773,
+    "seen": 1790630915.1983871,
+    "ast_hash": "a2443141b935f222f24d7b41548118f1",
     "semantic_hash": ""
   },
   "analysis/ny-opening-second-20260927/result.json": {
@@ -3990,15 +3990,15 @@
     "semantic_hash": ""
   },
   "src/components/TradeSetupChecklist.vue": {
-    "mtime": 1790629447.6086643,
-    "seen": 1790629485.4050772,
-    "ast_hash": "6d75e25b121cb95311369a2330f396d0",
+    "mtime": 1790630398.8755655,
+    "seen": 1790630915.1973863,
+    "ast_hash": "f8adafb2047e43a0477c2d1a1eda43b5",
     "semantic_hash": ""
   },
   "src/composables/usePriceChartChecklist.js": {
-    "mtime": 1790628906.7085252,
-    "seen": 1790629021.0834486,
-    "ast_hash": "81921cc77abb6c44ed7343cbf0c7cd42",
+    "mtime": 1790630118.2963414,
+    "seen": 1790630915.1973863,
+    "ast_hash": "b0dbf42043e4c46f5064068d939f6ea6",
     "semantic_hash": ""
   },
   "src/newsEventRules.js": {
@@ -4014,9 +4014,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupChecklist.js": {
-    "mtime": 1790628906.1493602,
-    "seen": 1790629021.0834486,
-    "ast_hash": "9fc3c5f9124439e69d3910f148d59ff5",
+    "mtime": 1790630117.7277148,
+    "seen": 1790630915.1973863,
+    "ast_hash": "360f669a8059e70dddf9bb099858eebc",
     "semantic_hash": ""
   },
   "src/tradeSetupChecklistData.js": {
@@ -4092,9 +4092,9 @@
     "semantic_hash": ""
   },
   "test/tradeSetupChecklistUi.test.js": {
-    "mtime": 1790628984.5616596,
-    "seen": 1790629021.0844452,
-    "ast_hash": "54a5e549e134dd027ee5c1ff192ea700",
+    "mtime": 1790630226.3487546,
+    "seen": 1790630915.1983871,
+    "ast_hash": "511e378bdd7df5c8f19eae1e30707f97",
     "semantic_hash": ""
   },
   "test/usePriceChartChecklist.test.js": {
@@ -4239,6 +4239,36 @@
     "mtime": 1790628762.2842622,
     "seen": 1790629021.0844452,
     "ast_hash": "cba33eb690a54ec3d45edd12b0aaecbf",
+    "semantic_hash": ""
+  },
+  "src/m5CloseReaction.js": {
+    "mtime": 1790630456.923943,
+    "seen": 1790630915.1973863,
+    "ast_hash": "a494cea9b17b41f7ae431969b859b483",
+    "semantic_hash": ""
+  },
+  "src/tradeSetupChecklistM5.js": {
+    "mtime": 1790630530.2127464,
+    "seen": 1790630915.1973863,
+    "ast_hash": "f127b3c2583f748c0b20829e76ef462d",
+    "semantic_hash": ""
+  },
+  "test/fixtures/gbpusd-m5-dr114-close-reaction.json": {
+    "mtime": 1790630033.2650094,
+    "seen": 1790630915.1973863,
+    "ast_hash": "29304705ddd3f1e74efa708baab5e268",
+    "semantic_hash": ""
+  },
+  "test/m5CloseReaction.test.js": {
+    "mtime": 1790630474.419436,
+    "seen": 1790630915.1983871,
+    "ast_hash": "066c3ff4538e6a18539dcbd178d7a612",
+    "semantic_hash": ""
+  },
+  "test/tradeSetupChecklistM5.test.js": {
+    "mtime": 1790630530.215772,
+    "seen": 1790630915.1983871,
+    "ast_hash": "c378dc66e535087b65376bb2f8d85996",
     "semantic_hash": ""
   }
 }
