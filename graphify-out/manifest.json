@@ -324,9 +324,9 @@
     "semantic_hash": ""
   },
   "src/composables/usePriceChartTradeSetups.js": {
-    "mtime": 1790520327.5104783,
-    "seen": 1790520948.9438565,
-    "ast_hash": "0222d8d88272768258176db572c15679",
+    "mtime": 1790627077.7074025,
+    "seen": 1790627415.8361514,
+    "ast_hash": "730aaa67bddebf38e43593931dfe2941",
     "semantic_hash": ""
   },
   "src/composables/useSessionStorageRef.js": {
@@ -3978,9 +3978,9 @@
     "semantic_hash": ""
   },
   "PLAN-trade-setup-2.md": {
-    "mtime": 1790626694.8986604,
-    "seen": 1790626720.1420047,
-    "ast_hash": "5e975f5d0e54c5e3eceab7c9813c8ef3",
+    "mtime": 1790627267.4681349,
+    "seen": 1790627415.8966582,
+    "ast_hash": "ef74b68e2cb7bed8a0efe3fba80fe380",
     "semantic_hash": ""
   },
   "analysis/ny-opening-second-20260927/result.json": {
@@ -4026,9 +4026,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupChecklistSweeps.js": {
-    "mtime": 1790625402.5126476,
-    "seen": 1790625646.9136364,
-    "ast_hash": "2a20c1fba4d6130f7472cad4da22703b",
+    "mtime": 1790627392.653401,
+    "seen": 1790627415.8501518,
+    "ast_hash": "85fa310c41ed9e6fa9ab3f267d569041",
     "semantic_hash": ""
   },
   "src/tradeSetupChecklistTargets.js": {
@@ -4161,6 +4161,24 @@
     "mtime": 1790626531.2270167,
     "seen": 1790626538.0224218,
     "ast_hash": "f0f132b364c95d7d69399a668e101bc1",
+    "semantic_hash": ""
+  },
+  "src/tradeSetupChecklistReactions.js": {
+    "mtime": 1790627123.4142725,
+    "seen": 1790627415.8501518,
+    "ast_hash": "3e12d38b01aa1db96f2a93271c89bb65",
+    "semantic_hash": ""
+  },
+  "src/tradeSetupParameters.js": {
+    "mtime": 1790627076.9347615,
+    "seen": 1790627415.851152,
+    "ast_hash": "9e704646784f89df42005d591516627b",
+    "semantic_hash": ""
+  },
+  "test/tradeSetupChecklistReactions.test.js": {
+    "mtime": 1790627333.654205,
+    "seen": 1790627415.8886585,
+    "ast_hash": "be2fa6104d8124749f873d197b2a26b0",
     "semantic_hash": ""
   }
 }

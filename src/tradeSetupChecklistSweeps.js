@@ -3,6 +3,9 @@ import { classifyAge } from './ageTier';
 import { compareSweepAge, sweepAgeSec, detectSetupObs, deriveSetupEntryInvalidation } from './tradeSetup.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { orderBlockRecognitionTimes } from './orderBlockRecognitionTime.js';
+import { detectChecklistReactions, sameChecklistSweep } from './tradeSetupChecklistReactions.js';
+import { obMinimum } from './instrumentConfig.js';
+import { toPips } from './pipConfig.js';
 
 const check = (status, ...details) => ({ status, details });
 const knownBound = (bound, at) => Number.isFinite(bound?.price) && Number.isFinite(bound?.knownAt) && bound.knownAt <= at;
@@ -35,13 +38,14 @@ export function evaluateChecklistCandidateValidity({ candidate, candles = [], ev
 
 /** context must be reconstructed as-of evaluatedAt, including H1 pivot confirmation.
  * reactionLinks: [{candidateId, obStartTime, recognizedAt, invalidation?: {price, knownAt}}].
- * A link asserts the same movement; no legacy delay/distance window is silently inherited.
+ * C uses the existing setup detector's sweep membership; explicit links remain supported.
  */
 export function evaluateChecklistSweeps({ context, h1Levels, reactionLinks = [], targetsByCandidateId = {} }) {
   const { instrument, evaluatedAt, direction, h1State } = context;
   const candles = closedChecklistCandles(context.m5Candles, '5m', evaluatedAt);
   const levels = h1Levels ?? [...collectStructureLqLevels(h1State, 1), ...collectStructureLqLevels(h1State, -1)];
-  const obs = detectSetupObs(candles);
+  const obs = detectSetupObs(candles, obMinimum(instrument, '5m'));
+  const reactions = detectChecklistReactions({ candles, levels, obs, instrument, evaluatedAt });
   const confirmationTimes = orderBlockRecognitionTimes(candles, '5m');
   const byId = new Map();
   let hasUnspecifiedAge = false;
@@ -72,20 +76,28 @@ export function evaluateChecklistSweeps({ context, h1Levels, reactionLinks = [],
         candidate.bandRisk = Math.abs(candidate.invalidation - candidate.entryPrice);
       }
     }
+    const automatic = reactions.find(r => sameChecklistSweep(candidate.sweep, r.sweep));
+    if (automatic) {
+      candidate.reactionOB = automatic.ob;
+      candidate.entryPrice = automatic.entryPrice;
+      candidate.invalidation = automatic.invalidation.price;
+      candidate.bandRisk = Math.abs(candidate.invalidation - candidate.entryPrice);
+      candidate.reactionRecognizedAt = automatic.recognizedAt;
+    }
     // Die erste zeitliche Beobachtung ist nur eine Vorschau, keine neue Zuordnungsregel.
-    // reactionOB bleibt ohne expliziten Link null; Status und Setup-Gültigkeit bleiben unverändert.
+    // Ohne belegte Sweep-Mitgliedschaft bleibt die Vorschau unbestätigt.
     candidate.reactionPreview = possibleObs.length ? {
       ob: candidate.reactionOB ?? possibleObs[0], linked: candidate.reactionOB != null, candidateCount: possibleObs.length,
     } : null;
     candidate.validity = evaluateChecklistCandidateValidity({ candidate, candles, evaluatedAt,
-      invalidation: candidate.reactionOB ? link?.invalidation : null, target1: targetsByCandidateId[id] });
+      invalidation: automatic?.invalidation ?? (candidate.reactionOB ? link?.invalidation : null), target1: targetsByCandidateId[id] });
     candidate.checks = {
       liquiditySweep: check('passed', `H1 ${ageTier === 'major' ? 'Major' : 'Medium'} Sweep bei ${level.price}; Levelalter ${(ageSeconds / 3600).toFixed(1)} Handelsstunden.`),
       reaction: candidate.reactionOB
         ? check(candidate.bandRisk > 0 ? 'passed' : 'unknown',
-          `${candidate.direction === 'short' ? 'Bärischer' : 'Bullischer'} M5-Orderblock zugeordnet; FVG-Stärke ${candidate.reactionOB.fvg} Preisabstand.`,
-          candidate.bandRisk > 0 ? `Strukturelles Risikoband ${candidate.bandRisk} Preisabstand; Invalidierung ${candidate.invalidation}.` : 'Strukturelles Risikoband und Fixierung der Invalidierung noch offen.')
-        : possibleObs.length ? check('unknown', 'M5-Orderblock vorhanden; Zuordnung zur selben Sweep-Bewegung noch ungeklärt.')
+          `${candidate.direction === 'short' ? 'Bärischer' : 'Bullischer'} M5-Orderblock zugeordnet; FVG-Stärke ${toPips(candidate.reactionOB.fvg, instrument).toFixed(1)} Pips.`,
+          candidate.bandRisk > 0 ? `Strukturelles Risikoband ${toPips(candidate.bandRisk, instrument).toFixed(1)} Pips; Invalidierung ${candidate.invalidation}.` : 'Strukturelles Risikoband und Fixierung der Invalidierung noch offen.')
+        : possibleObs.length ? check('unknown', 'Kein erkanntes Trade Setup ordnet diesen M5-Orderblock dem ausgewählten Sweep zu.')
           : check('pending', 'Noch kein passender bestätigter M5-Orderblock nach diesem Sweep.'),
     };
     byId.set(id, candidate);

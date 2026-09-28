@@ -17,7 +17,8 @@
 // würde zirkuläre Abhängigkeiten zwischen den Composables erzeugen. scheduleNextTradeSetupM5Poll
 // bleibt aus demselben Grund ebenfalls dort (hängt an withPollRetries + chart-alive-Check).
 import { ref } from "vue";
-import { obMinimum, strategyDistance } from '../instrumentConfig.js';
+import { tradeSetupParameters } from "../tradeSetupParameters.js";
+import { obMinimum } from '../instrumentConfig.js';
 import { detectLiquidityLevels } from "../liquidity.js";
 import { collectStructureLqLevels } from "../marketStructureRendering";
 import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
@@ -28,14 +29,6 @@ import { markIgnored } from "../ignoredCandles.js";
 import {
   TRADE_SETUP_M5_FRACTAL_PERIOD,
   TRADE_SETUP_M5_CANDLE_COUNT,
-  TRADE_SETUP_GRACE_SEC,
-  TRADE_SETUP_LS_MAX_LEAD_SEC_H1,
-  TRADE_SETUP_LS_MAX_LEAD_SEC_M5,
-  TRADE_SETUP_LS_MAX_DISTANCE_M5,
-  TRADE_SETUP_MAX_SWEEP_DISTANCE,
-  TRADE_SETUP_OB_MAX_DELAY_SEC,
-  TRADE_SETUP_LOOKBACK_SEC,
-  TRADE_SETUP_CLOSE_CHECK_MAX_AGE_SEC,
   TREND_ANALYSIS_CANDLE_COUNT,
 } from "../priceChartConstants.js";
 import { fetchInitialCandles as fetchInitialForexCandles, fetchOlderCandles as fetchOlderForexCandles } from "../forexCandles.js";
@@ -80,17 +73,7 @@ export function usePriceChartTradeSetups() {
     // Extrem) duerfen die Kerze wirklich weglassen — sonst beendet ein Rollover-Docht einen Sweep
     // oder zieht die Invalidierung auf einen Preis, den es auf anderen Feeds nicht gab.
     const kerzenOhneIgnorierte = kerzen.filter((c) => !c.ignored);
-    const params = {
-      graceSec: TRADE_SETUP_GRACE_SEC,
-      lsMaxLeadSecH1: TRADE_SETUP_LS_MAX_LEAD_SEC_H1,
-      lsMaxLeadSecM5: TRADE_SETUP_LS_MAX_LEAD_SEC_M5,
-      maxDistanceM5: strategyDistance(TRADE_SETUP_LS_MAX_DISTANCE_M5, symbol),
-      maxSweepDistance: strategyDistance(TRADE_SETUP_MAX_SWEEP_DISTANCE, symbol),
-      maxLookbackSec: TRADE_SETUP_LOOKBACK_SEC,
-      obMaxDelaySec: TRADE_SETUP_OB_MAX_DELAY_SEC,
-      closeCheckMaxAgeSec: TRADE_SETUP_CLOSE_CHECK_MAX_AGE_SEC,
-      nowTime: candles[candles.length - 1].time,
-    };
+    const params = tradeSetupParameters(symbol, candles[candles.length - 1].time);
     // n zählt die GESAMTE Anzahl gezeigter Setups je Richtung (kein separates "Live"-Setup, siehe
     // detectTradeSetups). n=0 zeigt nichts (slice(-0) wäre sonst das GANZE Array, daher der
     // Sonderfall).

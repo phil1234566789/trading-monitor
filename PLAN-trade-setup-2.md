@@ -115,7 +115,7 @@ Konkrete Werte für FVG-Stärke und Risikoband wurden noch nicht angegeben oder 
 
 #### Technischer Anknüpfungspunkt und spätere Erweiterungen
 
-Laut Philip sind der bärische M5-Orderblock und die FVG-Messung bereits vorhanden. Vorhandene Erkennung und Messwerte wiederverwenden; technische Zuordnung zum Sweep sowie Erkennungs-/Bestätigungszeitpunkt später klären.
+Philips Festlegung: C ist erfüllt, wenn die bestehende Trade-Setup-Erkennung einen Sweep samt OB erkennt und der ausgewählte B-Sweep zu dessen zugeordneten Sweeps gehört. Die Identität umfasst Quelle, Richtung, Pivotzeit, Preis und Touchzeit; Preisgleichheit allein reicht nicht. Bei Mehrfach-Sweeps zählt jeder zugeordnete Sweep. B wird nicht ausgetauscht, nur damit C erfüllt ist. OB, FVG und strukturelles Risikoband stammen aus der bestehenden Erkennung; Long gilt spiegelbildlich. Nur geschlossene Präfixe verwenden, keine heutigen persistierten Setups im Replay.
 
 Die Reaktionsbewertung kann später um **Wicks (Dochte)** oder **Closes (Schlusskurse)** erweitert werden. Diese Erweiterungen gehören noch nicht zur ersten Version.
 
@@ -296,7 +296,7 @@ Vorhandene Bausteine:
 
 **Festgelegt:** Unter den zulässigen, noch nicht beendeten Kandidaten zählt der älteste Sweep wie in der vorhandenen Erkennung. Die Invalidierung oder Target 1 beendet das Setup beim Anlaufen; Target 2 ist optional. Gegenläufige Kandidaten bleiben für E erhalten, während die Hauptansicht der 1h-Trendrichtung folgt.
 
-**Noch zu präzisieren:** Sweep-Quellen außerhalb der 1h-Struktur, maximale Verzögerung zwischen Sweep und Reaktion und die konkrete Bildung/Fixierung des Invalidierungslevels sowie von Target 1. Die festgelegte Beendigungsregel selbst ist nicht mehr offen. Alte Parameter wie 60 Minuten OB-Verzögerung, 6 Stunden Suchfenster und Distanzfilter nicht still als zusätzliche 2.0-Verfallsregeln übernehmen. Bei einer Kerze, die Target und Invalidierung beide erreicht, ohne feinere Daten keine Reihenfolge für die spätere Statistik erfinden.
+**Noch zu präzisieren:** Sweep-Quellen außerhalb der 1h-Struktur und die historische Fixierung von Target 1. Für C gelten ausdrücklich die vorhandenen Zuordnungsregeln der Trade-Setup-Erkennung und deren Invalidierung aus der erweiterten OB-Zone (siehe C). Deren Suchfenster sind keine zusätzliche Ablaufzeit der Checklist: Ein einmal belegter Zusammenhang bleibt bis Invalidierung oder Target 1 bestehen. Bei einer Kerze, die Target und Invalidierung beide erreicht, ohne feinere Daten keine Reihenfolge für die spätere Statistik erfinden.
 
 Damit nicht ein alter Major-Sweep mit einer völlig anderen aktuellen M5-Reaktion kombiniert wird, müssen diese Beziehungen explizit sein. Den gesamten geladenen Chart einfach nach beliebigen grünen Einzelmerkmalen abzusuchen reicht nicht.
 
@@ -394,7 +394,7 @@ Erster Release: `1ab1e0b`, GitHub-Pages-Deployment erfolgreich (Run `36347808770
 - Replay verwendet den im Zeitmodell festgelegten tatsächlichen M5-Schluss. Fehlende Kerzen bleiben ausdrücklich unbekannt.
 - Im Live-Modus führt fehlender aktueller Kerzenschluss konservativ zu veralteten Daten; das betrifft auch Marktschließungen. Daraus wird kein aktuelles Handelssignal abgeleitet.
 - Der manuell gepflegte News-Kalender hat weiterhin keinen Abdeckungsnachweis. Bekanntes Sperrereignis blockiert; eine leere Liste bestätigt keinen ereignislosen Tag.
-- B/C und D sind in separaten Modulen implementiert und werden anschließend integriert: älteste Major-/Medium-H1-Sweeps, Reaktionsschnittstelle und P2-/P5-Zielauswahl. Feste historische Target-Auswahl, Invalidierungsbildung und eindeutige Zuordnung zur selben Bewegung sind noch nicht vollständig fachlich festgelegt. Eine aktuelle Target-Vorschau darf kein vergangenes Setup verlängern.
+- B/C und D sind in separaten Modulen implementiert: älteste Major-/Medium-H1-Sweeps, automatische Reaktionszuordnung über identische Sweeps der bestehenden Erkennung und Zielvorschau. Die feste historische Target-Auswahl bleibt offen. Eine aktuelle Target-Vorschau darf kein vergangenes Setup verlängern.
 - H und I bleiben wie vereinbart zurückgestellt. E/G dürfen ohne geklärten Stärkevergleich und Mitigationsbegriff kein endgültiges Go/No-Go erfinden.
 - Ergänzung zum damaligen Spread-Hour-Audit: Backend inzwischen mit `ac59f73` veröffentlicht; die drei betroffenen Funktionen sind deployed. Der Re-Backfill bleibt laut eigenem Task Philip vorbehalten. Keine Rückrechnung oder Journaländerung wird in dieser Checklist-Runde gestartet.
 
