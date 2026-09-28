@@ -8,6 +8,22 @@ const render = (checklistState = null) => renderToString(createSSRApp(TradeSetup
 }));
 
 describe("Trade Setup Checklist presentation", () => {
+  it("uses focusable status icons with accessible explanations", async () => {
+    const html = await render({ instrument: "GBPUSD", status: "ready", checks: {
+      h1Trend: { status: "passed", details: [] },
+    } });
+    expect(html).toContain('aria-label="Erfüllt"');
+    expect(html).toContain('title="Erfüllt"');
+    expect(html.match(/tabindex="0"/g)).toHaveLength(10);
+    expect(html).toContain('class="status-tooltip"');
+  });
+
+  it.each([null, undefined, NaN])("does not invent an evaluation time for %s", async (evaluatedAt) => {
+    const html = await render({ instrument: "GBPUSD", status: "missing", evaluatedAt });
+    expect(html).toContain("Bewertungsstand unbekannt");
+    expect(html).not.toContain("<time");
+  });
+
   it("shows all nine checks without editable checkboxes or a fabricated result", async () => {
     const html = await render();
     expect(html.match(/data-status=/g)).toHaveLength(9);

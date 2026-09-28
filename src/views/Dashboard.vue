@@ -2142,13 +2142,7 @@ watch(selectedTradingAccountId, () => {
     @hover-target="hoveredModalTargetItem = $event"
   />
 
-  <!-- Chart + TSC nebeneinander (Chat 2026-08-28, Philip: "übersichtlicher, wenn der TSC nicht
-       mehr über dem Chart liegt ... RECHTS vom Chart ... als eigenständigen Bereich") — die
-       TSC-Karte war vorher ein position:absolute-Overlay INNERHALB von PriceChart.vue
-       (TradeSetupCockpit.vue), jetzt echte Sidebar-Spalte hier. Breite bewusst FEST (Philip: "Chart-
-       Breite soll sich nicht ändern, wenn ich TSC toggle" — die Karte bleibt daher IMMER sichtbar,
-       showTradeSetupCockpit steuert seitdem nur noch die TSC-Range-Zeichnung auf dem Candlestick-
-       Chart selbst, nicht mehr die Karte). -->
+  <!-- Alle Analysebereiche sind unabhängig schaltbar; die Checklist folgt direkt auf das Cockpit. -->
   <p v-if="currentSymbol === 'XAUUSD'" role="status">Gold · FXCM Bid · geschlossene Kerzen · Historie ab Januar 2026. Struktur benötigt Vorlauf; vor dem Archivbeginn ist sie unvollständig.</p>
   <div class="chart-tsc-row">
     <PriceChart
@@ -2242,6 +2236,7 @@ watch(selectedTradingAccountId, () => {
     @add-anti-confluence-from-picker="onAddAntiConfluenceFromPicker"
     />
     <TradeSetupCockpit
+      v-if="showTradeSetupCockpit"
       class="chart-tsc-row-tsc"
       :instrument="currentSymbol"
       :now-sec="replayUntil"
@@ -2270,20 +2265,20 @@ watch(selectedTradingAccountId, () => {
       @hover-target="hoveredCockpitTargetItem = $event"
     />
 
+    <TradeSetupChecklist
+      v-if="showTradeSetupChecklist"
+      id="trade-setup-checklist"
+      :instrument="currentSymbol"
+      :checklist-state="checklistState"
+      @close="showTradeSetupChecklist = false"
+    />
+
     <TradeSetupBewertung
       v-if="showTradeSetupBewertung"
       :instrument="currentSymbol"
       :fvg-pips="tscFvgPips"
     />
   </div>
-
-  <TradeSetupChecklist
-    v-if="showTradeSetupChecklist"
-    id="trade-setup-checklist"
-    :instrument="currentSymbol"
-    :checklist-state="checklistState"
-    @close="showTradeSetupChecklist = false"
-  />
 
   <aside ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">
     <div class="trades-panel-header">

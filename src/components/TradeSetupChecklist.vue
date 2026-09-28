@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { formatDatedTime } from "../berlinTime.js";
+import ChecklistStatusIcon from "./ChecklistStatusIcon.vue";
 
 const props = defineProps({
   instrument: { type: String, required: true },
@@ -27,17 +28,17 @@ const statuses = {
   deferred: { label: "Zurückgestellt", symbol: "–" },
 };
 const dataStates = {
-  loading: "Auswertung lädt",
-  ready: "Daten ausgewertet",
-  missing: "Daten fehlen",
-  stale: "Daten veraltet",
-  error: "Auswertung fehlgeschlagen",
+  loading: { label: "Auswertung lädt", symbol: "↻" },
+  ready: { label: "Daten ausgewertet", symbol: "✓" },
+  missing: { label: "Daten fehlen", symbol: "?" },
+  stale: { label: "Daten veraltet", symbol: "◷" },
+  error: { label: "Auswertung fehlgeschlagen", symbol: "!" },
 };
 // Ein verspätetes Ergebnis eines anderen Instruments darf keine grünen Prüfpunkte liefern.
 const state = computed(() => props.checklistState?.instrument === props.instrument ? props.checklistState : null);
 const dataStatus = computed(() => state.value
-  ? dataStates[state.value.status] ?? "Datenstatus unbekannt"
-  : "Auswertung ausstehend");
+  ? dataStates[state.value.status] ?? { label: "Datenstatus unbekannt", symbol: "?" }
+  : { label: "Auswertung ausstehend", symbol: "…" });
 const evaluatedAt = computed(() => {
   const time = state.value?.evaluatedAt;
   return Number.isFinite(time) && Number.isFinite(new Date(time * 1000).getTime()) ? formatDatedTime(time) : null;
@@ -61,20 +62,23 @@ const checks = computed(() => definitions.map((definition, index) => {
     <header class="checklist-header">
       <div>
         <h2 id="checklist-title">Trade Setup Checklist <span>{{ instrument }}</span></h2>
-        <p>Automatische Prüfung zum Chart-/Replay-Zeitpunkt</p>
       </div>
       <button type="button" class="checklist-close" aria-label="Trade Setup Checklist schließen" @click="$emit('close')">×</button>
     </header>
     <div class="checklist-evaluation" role="status">
-      <strong>{{ dataStatus }}</strong>
-      <span>Bewertungsstand: {{ evaluatedAt ? `${evaluatedAt} Uhr (Europe/Berlin)` : 'noch nicht verfügbar' }}</span>
+      <div class="checklist-timestamp">
+        <span>Algorithmus-Bewertungsstand</span>
+        <time v-if="evaluatedAt" :datetime="new Date(state.evaluatedAt * 1000).toISOString()">{{ evaluatedAt }} Uhr (Europe/Berlin)</time>
+        <strong v-else>Bewertungsstand unbekannt</strong>
+      </div>
+      <ChecklistStatusIcon v-bind="dataStatus" />
     </div>
     <p class="checklist-notice">Die Einzelprüfungen ergeben noch keine endgültige Setup-Freigabe.</p>
     <ol class="checklist-checks">
       <li v-for="check in checks" :key="check.key" :data-status="check.status">
         <div class="checklist-check-heading">
           <h3><span class="checklist-letter">{{ check.letter }}</span>{{ check.title }}</h3>
-          <span class="checklist-status"><span aria-hidden="true">{{ check.symbol }}</span> {{ check.label }}</span>
+          <ChecklistStatusIcon class="checklist-status" :symbol="check.symbol" :label="check.label" />
         </div>
         <p v-if="check.note" class="checklist-note">{{ check.note }}</p>
         <ul v-if="check.details.length" class="checklist-details">
@@ -87,7 +91,7 @@ const checks = computed(() => definitions.map((definition, index) => {
 </template>
 
 <style scoped>
-.trade-setup-checklist { margin: 12px 0; padding: 16px; border: 1px solid #2a2e39; border-radius: 8px; background: #131722; color: #d1d4dc; }
+.trade-setup-checklist { width: 340px; flex: none; align-self: flex-start; padding: 16px; border: 1px solid #2a2e39; border-radius: 8px; background: #131722; color: #d1d4dc; }
 .checklist-header, .checklist-check-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 h2, h3, p { margin: 0; }
 h2 { font-size: 15px; }
@@ -97,13 +101,15 @@ h2 span { margin-left: 8px; color: #a5aab5; font-weight: 400; }
 .checklist-close { flex: none; background: transparent; border: 1px solid #434957; border-radius: 4px; color: #d1d4dc; cursor: pointer; width: 32px; height: 32px; font-size: 20px; }
 .checklist-close:hover { background: #2a2e39; }
 .checklist-close:focus-visible { outline: 2px solid #90b4ff; outline-offset: 2px; }
-.checklist-evaluation { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 12px 0 4px; font-size: 13px; }
-.checklist-evaluation span { color: #a5aab5; }
-.checklist-checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; list-style: none; padding: 0; margin: 16px 0 0; }
+.checklist-evaluation { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 12px 0 8px; font-size: 13px; }
+.checklist-timestamp { display: grid; gap: 4px; }
+.checklist-timestamp > span { color: #a5aab5; font-size: 12px; }
+.checklist-timestamp time { font-weight: 600; }
+.checklist-checks { display: grid; gap: 12px; list-style: none; padding: 0; margin: 16px 0 0; }
 .checklist-checks > li { min-width: 0; border-top: 1px solid #2a2e39; padding-top: 12px; overflow-wrap: anywhere; }
 h3 { font-size: 13px; line-height: 1.5; }
 .checklist-letter { display: inline-block; margin-right: 8px; color: #a5aab5; }
-.checklist-status { flex: none; font-size: 12px; line-height: 1.5; color: #a5aab5; }
+.checklist-status { color: #a5aab5; }
 [data-status="passed"] .checklist-status { color: #71c8b3; }
 [data-status="blocked"] .checklist-status { color: #ff8a87; }
 .checklist-note { margin-top: 4px; }
