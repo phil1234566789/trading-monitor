@@ -27,41 +27,15 @@ import { renderMarketStructureAnalysis, collectFibLevels } from "../marketStruct
 import { renderPivotMarkers } from "../pivotMarkers";
 import { cssColor } from "../chartColors.js";
 import { buildStructureWithPhases, renderTrendPhaseBands } from "../trendPhases.js";
-import { fmtPrice, fmtDateTime, fmtTime, pricePrecisionForInstrument } from "../format.js";
-import { createSessionBonusResolver } from "../sessionBonus.js";
+import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
+
 import { withoutIgnored } from "../ignoredCandles.js";
 import { fetchInitialCandles as fetchInitialForexCandles } from "../forexCandles.js";
 import { fetchCandlesCached } from "../candleCache.js";
 import { RANGES_CANDLE_BUFFER } from "../priceChartConstants.js";
 import { REPLAY_LOOKAHEAD_SEC, barSecondsFor } from "../timeframes.js";
 
-// Debug-Text am Pivot, dessen Verarbeitung die Trendphase gewechselt hat — "was hat der Algo wann
-// erkannt": z.B. "↘ Vorstufe · CHoCH 1,35576 · Algo 10:20 · Band ab 09:50".
-function m5EventLabeler(events, precision) {
-  const byPivot = new Map(events.map((e) => [e.pivot, e]));
-  return (pivot) => {
-    const e = byPivot.get(pivot);
-    if (!e) return null;
-    const parts = [`${e.trend === "uptrend" ? "↗" : "↘"} ${e.pre ? "Vorstufe" : "Trend"}`, e.level != null ? `${e.reason} ${fmtPrice(e.level, precision)}` : e.reason, `Algo ${fmtTime(e.at)}`];
-    if (e.touchAt != null && e.touchAt < e.at) parts.push(`Band ab ${fmtTime(e.touchAt)}`);
-    return parts.join(" · ");
-  };
-}
-
-// 1h-Token -> M5-Token für renderMarketStructureAnalysis(styleKey), siehe chartColors.js.
-const M5_STRUCTURE_STYLE_KEYS = {
-  rangeHigh: "m5RangeHigh",
-  rangeLow: "m5RangeLow",
-  rangeProtectedLow: "m5RangeProtectedLow",
-  rangeLqSweep: "m5RangeLqSweep",
-  rangeBreakOfStructure: "m5RangeBreakOfStructure",
-  rangeLiveUptrend: "m5RangeLiveUptrend",
-  rangeLiveDowntrend: "m5RangeLiveDowntrend",
-  rangeClosed: "m5RangeClosed",
-  rangeClosedDowntrend: "m5RangeClosedDowntrend",
-  rangeChoch: "m5RangeChoch",
-  rangeFib: "m5RangeFib",
-};
+import { renderLowerStructure, structureRenderOptions } from "../structureOverlay.js";
 
 export function usePriceChartMarketStructure() {
   let chart = null;
@@ -185,23 +159,6 @@ export function usePriceChartMarketStructure() {
     renderMarketStructureAnalysis(candleSeries, showRanges ? state : null, marketStructurePrimitives, candles, structureRenderOptions(candles, symbol, replayUntil));
   }
 
-  // Gemeinsame Render-Optionen für die 1h- UND die M5-Struktur.
-  function structureRenderOptions(candles, symbol, replayUntil) {
-    const precision = pricePrecisionForInstrument(symbol);
-    return {
-      // "Alter"-Anzeige an der LQ-Sweep-Linie (Chat 2026-07-22) — im Replay bezogen auf
-      // replayUntil, nicht die echte Uhrzeit, sonst wäre das Alter beim Testen falsch/inkonsistent.
-      nowSec: replayUntil ?? Math.floor(Date.now() / 1000),
-      // Preis ist seit Chat 2026-07-28 fester Bestandteil des LQ-Sweep-Labels ("Major LS 1,13545
-      // ..." statt "1h LQ-Sweep ..."), nicht mehr debug-gated — siehe formatLsLabel (liquidity.js).
-      formatPrice: (price) => fmtPrice(price, precision),
-      // Session-Kontext am LQ-Sweep-Label ("Asia-High Major LS ...", Philip 2026-09-21) — derselbe
-      // Auflöser wie an der Trade-Setup-LS-Linie, damit die beiden beim Überlappen weiterhin
-      // denselben String zeigen.
-      bonusFor: createSessionBonusResolver(candles, symbol),
-    };
-  }
-
   // M5-Struktur (PLAN-m5-trend.md): derselbe Algo auf M5-Kerzen, verankert am Start der innersten
   // 1h-Ebene (innermostStructureStart, ohne Nested der 1h-Outer-Start outerCutoff). Reichen die
   // geladenen M5-Kerzen nicht bis zum Anker, lädt loadOlderM5 den Rest einmalig nach (Philip
@@ -230,28 +187,10 @@ export function usePriceChartMarketStructure() {
       };
       m5Trend.value = deriveTrendReaction(m5Computed.state);
     }
-    const { state, phases, events, pivotsOuter, pivotsInner } = m5Computed;
-    // Roh-Pivots (Periode Outer/Inner) als Debug-Punkte, wie refreshRangesMarkers für 1h — damit
-    // Philip die Trendwechsel gegen die Pivots nachvollziehen kann. Dieselben Marker-Farben wie 1h:
-    // Herkunft klärt der Toggle (M5-Struktur/-Trendphasen an, 1h-Structure aus).
-    const showMarkers = showLiquidityDebug && (showM5Structure || showM5TrendPhases) && (pivotsOuter || pivotsInner);
-    const precision = pricePrecisionForInstrument(symbol);
-    renderPivotMarkers(
-      candleSeries,
-      showMarkers
-        ? [
-            ...(pivotsOuter ? [{ points: pivotsOuter, color: cssColor("rangesMarker") }] : []),
-            ...(pivotsInner ? [{ points: pivotsInner, color: cssColor("rangesMarker2"), dotRadius: 1.5 }] : []),
-          ]
-        : [],
-      m5MarkerPrimitives,
-      candles,
-      { showLabels: true, formatPrice: (price) => fmtPrice(price, precision), extraLabel: m5EventLabeler(events, precision) },
-    );
-    renderMarketStructureAnalysis(candleSeries, showM5Structure ? state : null, m5StructurePrimitives, candles, {
-      ...structureRenderOptions(candles, symbol, replayUntil),
-      styleKey: (key) => M5_STRUCTURE_STYLE_KEYS[key],
-      barSeconds: barSecondsFor("5m"),
+    const { phases } = m5Computed;
+    renderLowerStructure(candleSeries, m5Computed, m5StructurePrimitives, m5MarkerPrimitives, candles, {
+      symbol, replayUntil, show: showM5Structure,
+      debug: showLiquidityDebug && (showM5Structure || showM5TrendPhases), barSeconds: barSecondsFor("5m"),
     });
     renderTrendPhaseBands(candleSeries, showM5TrendPhases ? phases : [], m5TrendPhasePrimitives, candles, {
       up: cssColor("m5TrendPhaseUp"),
