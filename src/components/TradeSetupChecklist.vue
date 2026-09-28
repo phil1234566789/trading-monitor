@@ -111,7 +111,7 @@ h2 span { margin-left: 8px; color: #a5aab5; font-weight: 400; }
 .checklist-header p, .checklist-notice, .checklist-note { font-size: 13px; color: #a5aab5; line-height: 1.5; }
 .checklist-header p { margin-top: 4px; }
 .checklist-not-tradeable { color: #ff8a87; font-size: 14px; font-weight: 600; }
-.checklist-detail-status[data-status="passed"] { color: #71c8b3; }
+.checklist-detail-status[data-status="passed"] { color: #71c8b3; border: none; }
 .checklist-detail-status[data-status="blocked"] { color: #ff8a87; }
 .checklist-close { flex: none; background: transparent; border: 1px solid #434957; border-radius: 4px; color: #d1d4dc; cursor: pointer; width: 32px; height: 32px; font-size: 20px; }
 .checklist-close:hover { background: #2a2e39; }

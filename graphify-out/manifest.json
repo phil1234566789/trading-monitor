@@ -3990,9 +3990,9 @@
     "semantic_hash": ""
   },
   "src/components/TradeSetupChecklist.vue": {
-    "mtime": 1790628907.8357506,
-    "seen": 1790629021.0834486,
-    "ast_hash": "b379b4c339f8d2af639090c97dbc9379",
+    "mtime": 1790629447.6086643,
+    "seen": 1790629485.4050772,
+    "ast_hash": "6d75e25b121cb95311369a2330f396d0",
     "semantic_hash": ""
   },
   "src/composables/usePriceChartChecklist.js": {
