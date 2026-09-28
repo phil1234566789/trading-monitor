@@ -13,6 +13,7 @@ export function sameChecklistSweep(a, b) {
 export function detectChecklistReactions({ candles, levels, obs, instrument, evaluatedAt }) {
   const confirmations = orderBlockRecognitionTimes(candles, '5m');
   const moments = new Set([evaluatedAt]);
+  for (const level of levels) if (Number.isFinite(level.recognizedAt)) moments.add(level.recognizedAt);
   for (const ob of obs) {
     if (levels.some(l => l.dir === -ob.dir && l.touchedTime <= ob.startTime)) moments.add(confirmations.get(ob.startTime));
   }

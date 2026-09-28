@@ -2,10 +2,12 @@ import { onScopeDispose, watch } from 'vue';
 import { createChecklistDataAdapter } from '../tradeSetupChecklistData.js';
 import { checklistEvaluationTime, evaluateTradeSetupChecklist } from '../tradeSetupChecklist.js';
 
-export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => Date.now() / 1000, timeData = {}) {
+export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => Date.now() / 1000, timeData = {}, statistics = null) {
   const adapter = createChecklistDataAdapter();
   let disposed = false;
   let timeBoundaryTimer;
+  let saveQueue = Promise.resolve();
+  let revision = 0;
   const settings = () => ({
     rangesPeriod: props.rangesPeriod, ranges2Period: props.ranges2Period,
     rangesLookbackHours: props.rangesLookbackHours, ranges2LookbackHours: props.ranges2LookbackHours,
@@ -13,6 +15,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   });
   function refresh() {
     if (disposed || !props.showTradeSetupChecklist) return;
+    const currentRevision = ++revision;
     const data = adapter.snapshot();
     const result = evaluateTradeSetupChecklist({
       instrument: props.symbol,
@@ -24,6 +27,18 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
       newsLoadStatus: timeData.newsCalendar?.status,
     });
     emit('checklist-state-change', result);
+    if (statistics && result.status === 'ready') {
+      const savedSettings = settings();
+      const savedSessions = JSON.parse(JSON.stringify(sessionConfigs));
+      // Schreibantworten dürfen nach Symbol-/Replaywechsel keinen alten UI-Stand publizieren.
+      saveQueue = saveQueue.catch(() => {}).then(() => statistics.save(result, savedSettings, savedSessions))
+        .then(count => {
+          if (!disposed && revision === currentRevision) emit('checklist-state-change', { ...result, statistics: { status: 'saved', count } });
+        }).catch(error => {
+          console.error('Checklist-Statistik konnte nicht gespeichert werden:', error);
+          if (!disposed && revision === currentRevision) emit('checklist-state-change', { ...result, statistics: { status: 'error' } });
+        });
+    }
     scheduleTimeBoundary();
   }
   function scheduleTimeBoundary() {

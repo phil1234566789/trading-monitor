@@ -72,6 +72,8 @@ import { measureDrawing } from "../chartMeasure.js";
 import { usePriceChartTradeSetups } from "../composables/usePriceChartTradeSetups.js";
 import { usePriceChartMarketStructure } from "../composables/usePriceChartMarketStructure.js";
 import { usePriceChartChecklist } from "../composables/usePriceChartChecklist.js";
+import { createChecklistStatisticsStore } from "../tradeSetupChecklistStatistics.js";
+import { supabase } from "../supabaseClient.js";
 import { usePriceChartTradeSetupDrawing } from "../composables/usePriceChartTradeSetupDrawing.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import { barSecondsFor, REPLAY_LOOKAHEAD_SEC } from "../timeframes.js";
@@ -354,7 +356,7 @@ const emit = defineEmits([
 ]);
 
 const { markSuccess } = useStatusBar();
-const checklist = usePriceChartChecklist(props, sessions, emit, undefined, { tradingSchedules, newsEvents, newsCalendar });
+const checklist = usePriceChartChecklist(props, sessions, emit, undefined, { tradingSchedules, newsEvents, newsCalendar }, createChecklistStatisticsStore(supabase));
 const { refreshSessions, refreshNewsMarkers } = usePriceChartSessionsAndNews();
 // EMA-/RSI-/Divergenz-Series-Lifecycle + Zeichenlogik (siehe usePriceChartRsi.js, Phase 6b) —
 // priceChartRsi.create(chart, candleSeries) wird in onMounted aufgerufen, priceChartRsi.dispose()

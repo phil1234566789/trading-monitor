@@ -6,6 +6,7 @@ import { orderBlockRecognitionTimes } from './orderBlockRecognitionTime.js';
 import { detectChecklistReactions, sameChecklistSweep } from './tradeSetupChecklistReactions.js';
 import { obMinimum } from './instrumentConfig.js';
 import { toPips } from './pipConfig.js';
+import { candleTouchesPrice } from './structurePivotTime';
 
 const check = (status, ...details) => ({ status, details });
 const knownBound = (bound, at) => Number.isFinite(bound?.price) && Number.isFinite(bound?.knownAt) && bound.knownAt <= at;
@@ -19,8 +20,8 @@ export function evaluateChecklistCandidateValidity({ candidate, candles = [], ev
   for (const candle of rows) {
     // Rollover-Dochte beenden auch in der bestehenden Setup-Erkennung keine Idee.
     if (candle.ignored || candle.time < candidate.sweep.level.touchedTime) continue;
-    const invalid = hasInvalidation && candle.time >= invalidation.knownAt && (short ? candle.high >= invalidation.price : candle.low <= invalidation.price);
-    const target = hasTarget && candle.time >= target1.knownAt && (short ? candle.low <= target1.price : candle.high >= target1.price);
+    const invalid = hasInvalidation && candle.time >= invalidation.knownAt && candleTouchesPrice(candle, invalidation.price, !short);
+    const target = hasTarget && candle.time >= target1.knownAt && candleTouchesPrice(candle, target1.price, short);
     if (invalid || target) return { state: 'ended', reason: invalid && target ? 'both' : invalid ? 'invalidation' : 'target1', endedAt: candle.time, recognizedAt: candle.time + 300 };
   }
   // Für jedes Level muss auch der Zeitraum vor Bekanntwerden des anderen abgedeckt sein.
@@ -43,7 +44,10 @@ export function evaluateChecklistCandidateValidity({ candidate, candles = [], ev
 export function evaluateChecklistSweeps({ context, h1Levels, reactionLinks = [], targetsByCandidateId = {} }) {
   const { instrument, evaluatedAt, direction, h1State } = context;
   const candles = closedChecklistCandles(context.m5Candles, '5m', evaluatedAt);
-  const levels = h1Levels ?? [...collectStructureLqLevels(h1State, 1), ...collectStructureLqLevels(h1State, -1)];
+  // Die Struktur liest geschlossene H1: deren Touch ist frühestens am H1-Schluss bekannt,
+  // auch wenn der zugehörige M5-OB schon früher bestätigt war.
+  const levels = h1Levels ?? [...collectStructureLqLevels(h1State, 1), ...collectStructureLqLevels(h1State, -1)]
+    .map(level => ({ ...level, recognizedAt: Math.max(level.recognizedAt ?? 0, level.touchedTime + 3600) }));
   const obs = detectSetupObs(candles, obMinimum(instrument, '5m'));
   const reactions = detectChecklistReactions({ candles, levels, obs, instrument, evaluatedAt });
   const confirmationTimes = orderBlockRecognitionTimes(candles, '5m');

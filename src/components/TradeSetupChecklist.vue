@@ -80,6 +80,7 @@ const checks = computed(() => definitions.map((definition, index) => {
     </div>
     <p v-if="state?.tradeability === 'blocked'" class="checklist-not-tradeable" role="status">Nicht tradebar</p>
     <p v-else class="checklist-notice">Die Einzelprüfungen ergeben noch keine endgültige Setup-Freigabe.</p>
+    <p v-if="state?.statistics?.status === 'error'" class="checklist-notice" role="alert">Target-Statistik konnte nicht gespeichert werden. Neuer Versuch bei der nächsten Auswertung.</p>
     <ol class="checklist-checks" tabindex="0" aria-label="Checklist-Prüfungen">
       <li v-for="check in checks" :key="check.key" :data-status="check.status">
         <div class="checklist-check-heading">
