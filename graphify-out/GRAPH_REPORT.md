@@ -1,7 +1,7 @@
 # Graph Report - trading-monitor  (2026-09-28)
 
 ## Corpus Check
-- 689 files · ~1,142,873 words
+- 689 files · ~1,142,886 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b465059c`
+- Built from commit: `c8df48b6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -224,10 +224,10 @@
   .claude/commands/l.md → CLAUDE.md
 - `Bestätigungen (Sweeps & OBs) Feature` --semantically_similar_to--> `Confirmation/Confluence/Anti-Confluence Categories`  [INFERRED] [semantically similar]
   PLAN-trade-confluences.md → .claude/skills/dealing-range-anlegen/SKILL.md
-- `Trading-Monitor Project Overview (CLAUDE.md)` --conceptually_related_to--> `BTC Scope Removal from Chart-Objects Plan`  [INFERRED]
-  CLAUDE.md → PLAN-chart-objekte-forex.md
 - `Archive-First Auto-Reload Pattern (Tried, Then Reverted)` --semantically_similar_to--> `Persisted Forex Candle Archive (forex_candles Pilot)`  [INFERRED] [semantically similar]
   PLAN-chart-objekte-forex.md → PLAN-notifications.md
+- `Trading-Monitor Project Overview (CLAUDE.md)` --conceptually_related_to--> `BTC Scope Removal from Chart-Objects Plan`  [INFERRED]
+  CLAUDE.md → PLAN-chart-objekte-forex.md
 
 ## Import Cycles
 - None detected.
@@ -959,7 +959,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `marketStructureAnalysis Developer Notes` connect `Vegapunk Slimming Results (-86%)` to `fachdoku-router/SKILL.md`, `marketStructureAnalysis Rules Overview`?**
   _High betweenness centrality (0.074) - this node is a cross-community bridge._
 - **Why does `renderMarketStructureAnalysis()` connect `marketStructureRendering.ts` to `cssColor`, `trendPhases.js`, `lineWidth`, `liquidity.js`, `Vegapunk Slimming Results (-86%)`, `pricePrecisionForInstrument`?**
-  _High betweenness centrality (0.057) - this node is a cross-community bridge._
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._
 - **Why does `File Separation: Algorithm vs Rendering` connect `Vegapunk Slimming Results (-86%)` to `marketStructureRendering.ts`?**
   _High betweenness centrality (0.055) - this node is a cross-community bridge._
 - **What connects `{ readFileSync }`, `{ join }`, `SKILL` to the rest of the system?**

@@ -92,7 +92,7 @@ const checks = computed(() => definitions.map((definition, index) => {
         <p v-if="check.note" class="checklist-note">{{ check.note }}</p>
         <ChecklistOrderBlock v-if="check.orderBlock" :preview="check.orderBlock" :instrument="instrument" />
         <ul v-else-if="check.details.length" class="checklist-details">
-          <li v-for="(detail, index) in check.details" :key="index">{{ detail }}
+          <li v-for="(detail, index) in check.details" :key="index" :data-detail-status="check.detailStatuses[index]">{{ detail }}
             <ChecklistStatusIcon v-if="statuses[check.detailStatuses?.[index]]" class="checklist-detail-status"
               :data-status="check.detailStatuses[index]" v-bind="statuses[check.detailStatuses[index]]" />
           </li>
@@ -133,6 +133,7 @@ h3 { font-size: 13px; line-height: 1.5; }
 [data-status="blocked"] .checklist-status { color: #ff8a87; }
 .checklist-note { margin-top: 4px; }
 .checklist-details { padding-left: 16px; margin: 4px 0 0; font-size: 13px; line-height: 1.5; }
+.checklist-details > li[data-detail-status="blocked"], .checklist-details > li[data-detail-status="unmet"] { color: #ff8a87; font-weight: 700; }
 @media (max-width: 480px) {
   .trade-setup-checklist { padding: 12px; }
   .checklist-check-heading { flex-wrap: wrap; gap: 4px; }
