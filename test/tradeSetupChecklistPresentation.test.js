@@ -9,7 +9,16 @@ const structure = (trend, origin, nestedTrend = null) => ({ trend, nestedTrend, 
 describe('checklist presentation from evaluated data', () => {
   it('puts optional confluence evidence explanations in the status tooltip', () => {
     expect(checklistPresentation({ checks: { confluences: { explanation: 'Am Sweep aus B; bestätigt 09:30.' } } }).confluences)
-      .toEqual({ explanation: 'Am Sweep aus B; bestätigt 09:30.' });
+      .toMatchObject({ explanation: 'Am Sweep aus B; bestätigt 09:30.' });
+  });
+  it('shows line icons only from the actual E/G check status', () => {
+    for (const status of ['passed', 'pending', 'unknown']) {
+      const view = checklistPresentation({ checks: {
+        antiConfluences: { status, explanation: 'Nur H1; Sweep/OB zurückgestellt.' }, confluences: { status },
+      } });
+      expect(view.antiConfluences).toEqual({ explanation: 'Nur H1; Sweep/OB zurückgestellt.', detailStatuses: [status] });
+      expect(view.confluences.detailStatuses).toEqual(status === 'passed' ? ['passed'] : []);
+    }
   });
   it('uses the cockpit business-day age and nested trend chain', () => {
     const state = { evaluatedAt: at, structure: structure('downtrend', '2026-08-21T11:00:00+02:00',

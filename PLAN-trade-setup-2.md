@@ -148,7 +148,11 @@ Labels und Alter folgen dem tatsächlichen Bewertungszeitpunkt und den vorhanden
 
 ### E / #5 — Anti Confluences
 
-#### Fachliche Bedingung
+#### Aktueller Umfang
+
+Sweep-/OB-Zuordnung und Stärkevergleich sind zurückgestellt. E bewertet aktuell nur die H1-Gegendivergenz anhand geschlossener Kerzen. Der grüne Haken bestätigt ausschließlich diese Teilprüfung, keine Gesamtfreigabe.
+
+#### Zurückgestellte fachliche Bedingungen
 
 Am **P5-Strukturpunkt des Targets aus D** liegt laut Philip meistens ein **bullischer Liquidity Sweep**. Dieser gegnerische Sweep wird mit dem **bestätigenden Liquidity Sweep aus Punkt B** verglichen.
 
@@ -163,10 +167,10 @@ Zusätzlich prüfen, ob beim **Short-Setup eine bullische 1-Stunden-Divergenz** 
 #### Darstellung in der Checklist
 
 - Checklistenpunkt: **E / #5 — Anti Confluences**.
-- Gegenüberstellung: bullischer Sweep am P5-Target und bestätigender Sweep aus B, jeweils mit Alter und Stärke.
-- Wenn kein bullischer Sweep vorliegt: den gefundenen bullischen Orderblock als Anti-Confluence ausweisen; im Beispiel **bullischer M5-Orderblock**.
-- Zusätzliche Prüfung: **Bullische 1h-Divergenz vorhanden?** Ergebnis als weiteres Gegenargument zum Short-Setup anzeigen.
-- Sind beide Vergleichsbedingungen erfüllt: **No-Go**.
+- Ausreichende H1-Historie, keine Gegendivergenz: **„keine bullische 1H Divergenz vorhanden“** mit grünem Haken hinter der Zeile. Bei Long symmetrisch „bärische“.
+- Erkannte Gegendivergenz konkret als vorhanden anzeigen; Details im Tooltip. Daraus folgt ohne weitere Fachregel kein hartes No-Go.
+- Fehlende oder unzureichende Historie bleibt **unbekannt**, ohne grünen Haken.
+- Zurückgestellte Sweep-/OB-Prüfungen erscheinen nicht im Haupttext; der Tooltip erklärt den begrenzten Umfang.
 
 #### Noch zu präzisieren und später auszuwerten
 
@@ -174,7 +178,7 @@ Zusätzlich prüfen, ob beim **Short-Setup eine bullische 1-Stunden-Divergenz** 
 - Einfluss einer bullischen 1h-Divergenz auf die Freigabe des Short-Setups; ihr Vorliegen bei DR 114 wurde noch nicht geprüft.
 - Verhalten bei Gleichstand oder nur einer erfüllten Vergleichsbedingung. Aus der bislang definierten No-Go-Regel allein folgt in diesen Fällen noch kein automatisches Go.
 - Wie Alter und Stärke eines bullischen Orderblocks mit der Sweep-Bestätigung aus B verglichen werden und wann daraus ein No-Go folgt. Die Sweep-gegen-Sweep-Regel nicht ohne fachliche Präzisierung auf den Orderblock übertragen. Falls weder Sweep noch zugehöriger Orderblock gefunden wird, ist die Gegenreaktion noch ungeklärt.
-- Die Grenze später statistisch prüfen und gegebenenfalls verschieben. Zunächst gilt die oben formulierte Regel; zusätzliche Schwellenwerte sind noch nicht festgelegt.
+- Die Grenze später statistisch prüfen und gegebenenfalls verschieben. Die Sweep-/OB-Regeln werden erst nach fachlicher Präzisierung aktiviert; zusätzliche Schwellenwerte sind noch nicht festgelegt.
 - Konkreten Abgleich an DR 114 mit dem neu markierten Target **New York Low vom 08.09., 1,35300** durchführen. Das verworfene Spread-Hour-Low aus D nicht dafür verwenden.
 
 ### F / #6 — Uhrzeit

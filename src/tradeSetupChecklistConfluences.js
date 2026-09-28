@@ -90,7 +90,8 @@ function assignSweepDivergence(divergences, main, candles) {
  */
 export function evaluateChecklistConfluences({ evaluatedAt, direction, instrument, primary, opposingCandidates,
   target2, h1Candles, m5Candles, minGapByTimeframe = {} } = {}) {
-  const antiConfluences = { status: 'unknown', details: [], sweepCandidates: [], obCandidates: [], divergences: unknown() };
+  const antiConfluences = { status: 'unknown', details: [], sweepCandidates: [], obCandidates: [], divergences: unknown(),
+    deferredChecks: ['sweep', 'orderBlock', 'strength'] };
   const confluences = { status: 'unknown', details: [], obCandidates: [], divergences: unknown() };
   const result = { antiConfluences, confluences };
   if (!Number.isFinite(evaluatedAt) || !['long', 'short'].includes(direction)) {
@@ -135,20 +136,18 @@ export function evaluateChecklistConfluences({ evaluatedAt, direction, instrumen
       .map(ob => ({ ...ob, touchOnSweepCandle: sweepCandle ? sweepCandle.low <= ob.top && sweepCandle.high >= ob.bottom : null,
         sameMovement: 'unknown' }));
   }
-  antiConfluences.details.push(target ? `${antiConfluences.sweepCandidates.length} gegenläufige Sweeps am identischen P5-Pivot.` : 'P5-Target für die Zuordnung fehlt oder ist noch unbekannt.');
-  if (!antiConfluences.sweepCandidates.length) antiConfluences.details.push(`${antiConfluences.obCandidates.length} gegenläufige OB-Kandidaten mit P5-Preisüberlappung; Ursprung der Gegenreaktion ungeklärt.`);
-  antiConfluences.details.push('Stärkevergleich und OB-gegen-Sweep-Wertung sind offen; kein automatisches Go/No-Go.');
-  if (!Array.isArray(opposingCandidates)) antiConfluences.details.push('Gegenläufige Sweep-Daten fehlen.');
-  for (const candidate of antiConfluences.sweepCandidates) {
-    antiConfluences.details.push(`Sweep bei ${candidate.sweep.level.price}: Levelalter ${(candidate.sweep.ageSeconds / 3600).toFixed(1)} Handelsstunden; älter als B: ${candidate.olderThanPrimary == null ? 'unbekannt' : candidate.olderThanPrimary ? 'ja' : 'nein'}; Stärke unbekannt.`);
-  }
-  for (const [check, label] of [[antiConfluences, 'H1-Gegendivergenz']]) {
-    check.details.push(check.divergences.status === 'unknown' ? `${label}: Daten fehlen oder Historie reicht nicht.`
-      : `${label}: ${check.divergences.candidates.length} Kandidaten im geschlossenen Präfix; Setup-Zuordnung offen.`);
-    for (const d of check.divergences.candidates.slice(-3)) {
-      check.details.push(`${label}: ${d.fromPrice} → ${d.toPrice}; RSI ${d.fromRsi.toFixed(1)} → ${d.toRsi.toFixed(1)}; erkannt ${formatDatedTime(d.recognizedAt)} (Europe/Berlin).`);
-    }
-    if (obResults.some(r => r.status === 'unknown')) check.details.push('OB-Historie mindestens eines Timeframes fehlt oder reicht nicht.');
+  // Sweep-/OB-Bewertung ist zurückgestellt: Grün gilt ausschließlich der H1-Prüfung.
+  const counterDivergence = antiConfluences.divergences.candidates.at(-1);
+  antiConfluences.status = antiConfluences.divergences.status === 'unknown' ? 'unknown' : counterDivergence ? 'pending' : 'passed';
+  const counterLabel = `${short ? 'bullische' : 'bärische'} 1H Divergenz vorhanden`;
+  antiConfluences.details = [antiConfluences.status === 'unknown' ? '1H-Gegendivergenz noch nicht prüfbar.'
+    : counterDivergence ? counterLabel : `keine ${counterLabel}`];
+  antiConfluences.explanation = 'Bewertet wird nur die H1-Gegendivergenz im geschlossenen Datenstand. Sweep-/OB-Zuordnung und Stärkevergleich sind zurückgestellt; keine Gesamtfreigabe.';
+  if (counterDivergence) {
+    const d = counterDivergence;
+    antiConfluences.explanation += ` Gegenargument ohne festgelegte No-Go-Regel: ${formatDatedTime(d.fromTime)} → ${formatDatedTime(d.toTime)}; RSI ${d.fromRsi.toFixed(1)} → ${d.toRsi.toFixed(1)}; bestätigt ${formatDatedTime(d.recognizedAt)} (Europe/Berlin).`;
+  } else if (antiConfluences.status === 'unknown') {
+    antiConfluences.explanation += ' H1-Daten fehlen oder die Historie reicht nicht.';
   }
   const divergence = confluences.divergences.candidates[0];
   confluences.status = divergence ? 'passed' : confluences.divergences.status === 'unknown' ? 'unknown' : 'pending';

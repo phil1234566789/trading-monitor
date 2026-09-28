@@ -38,7 +38,9 @@ describe('Checklist E/G', () => {
     expect(detectChecklistDivergences({ candles: divergenceCandles(), timeframe: '5m', evaluatedAt: 111600 }).candidates)
       .toMatchObject([{ type: 'bearish', timeframe: '5m' }]);
     expect(result.confluences.divergences.status).toBe('unknown');
-    expect(result.antiConfluences.status).toBe('unknown');
+    expect(result.antiConfluences.status).toBe('pending');
+    expect(result.antiConfluences.details).toEqual(['bullische 1H Divergenz vorhanden']);
+    expect(result.antiConfluences.explanation).toContain('RSI');
     expect(result.confluences.status).not.toBe('blocked');
   });
   it('matches the actual P5 pivot and exposes age without inventing strength', () => {
@@ -57,7 +59,26 @@ describe('Checklist E/G', () => {
     const result = evaluateChecklistConfluences({ evaluatedAt: 12000, direction: 'short', primary, target2, opposingCandidates: [], h1Candles: [], m5Candles: [] });
     expect(result.confluences.status).toBe('unknown');
     expect(result.go).toBeUndefined();
-    expect(result.antiConfluences.details.join(' ')).toContain('Ursprung');
+    expect(result.antiConfluences.deferredChecks).toEqual(['sweep', 'orderBlock', 'strength']);
+  });
+  it.each([['short', false, 'bullische'], ['long', true, 'bärische']])('marks only the absent H1 counter-divergence green for %s', (direction, bullish, label) => {
+    const result = evaluateChecklistConfluences({ evaluatedAt: 111600, direction, h1Candles: divergenceCandles(3600, bullish) });
+    expect(result.antiConfluences.status).toBe('passed');
+    expect(result.antiConfluences.details).toEqual([`keine ${label} 1H Divergenz vorhanden`]);
+    expect(result.antiConfluences.explanation).toContain('nur die H1-Gegendivergenz');
+    expect(result.antiConfluences.deferredChecks).toEqual(['sweep', 'orderBlock', 'strength']);
+    expect(result.go).toBeUndefined();
+  });
+  it.each([undefined, [], divergenceCandles(3600).slice(0, 20)])('keeps missing or insufficient H1 history unknown', h1Candles => {
+    const check = evaluateChecklistConfluences({ evaluatedAt: 111600, direction: 'short', h1Candles }).antiConfluences;
+    expect(check.status).toBe('unknown');
+    expect(check.details).toEqual(['1H-Gegendivergenz noch nicht prüfbar.']);
+  });
+  it('uses only closed H1 candles for the counter-divergence', () => {
+    const args = { direction: 'short', h1Candles: divergenceCandles(3600, true) };
+    expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 20 * 3600 }).antiConfluences.status).toBe('unknown');
+    expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 111599 }).antiConfluences.status).toBe('passed');
+    expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 111600 }).antiConfluences.status).toBe('pending');
   });
 });
 
