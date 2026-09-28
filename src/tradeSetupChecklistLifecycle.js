@@ -2,7 +2,7 @@ import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { evaluateChecklistTargets } from './tradeSetupChecklistTargets.js';
 import { candleTouchesPrice } from './structurePivotTime';
 
-export const CHECKLIST_RULE_VERSION = 'session-targets-at-c-v1';
+export const CHECKLIST_RULE_VERSION = 'session-targets-at-c-m5-sweep-v2';
 
 export function fixChecklistTargets({ candidate, instrument, candles, sessionConfigs }) {
   const selectedAt = candidate.reactionRecognizedAt;

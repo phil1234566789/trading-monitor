@@ -10,15 +10,15 @@ const row = (time, low = 9, high = 10) => ({ time, low, high, open: 9, close: 9 
 const run = (candles, extra = {}) => evaluateChecklistLifecycle({ selection, invalidation: 12, candles, evaluatedAt: 1500, ...extra });
 
 describe('fixed checklist targets and separate T2 observation', () => {
-  it('fixes real DR114 at the first fully known C state, including the closed H1 sweep', () => {
+  it('fixes real DR114 when M5 confirms the reaction to the previously known H1 level', () => {
     const args = { instrument: 'GBPUSD', h1Candles: h1Fixture.candles, m5Candles: fixture.candles,
       settings: { rangesFixedStartActive: true, rangesFixedStartTime: h1Fixture.cutoff }, sessionConfigs: fixture.sessions };
     const evaluate = time => evaluateTradeSetupChecklist({ ...args, evaluatedAt: Date.parse(`2026-09-09T${time}:00+02:00`) / 1000 });
     const before = evaluate('09:30');
     const known = evaluate('10:00');
     const later = evaluate('10:35');
-    expect(before.setup.candidates.find(c => c.sweep.level.price === 1.35649)).toBeUndefined();
-    expect(known.setup.primary.targetSelection.selectedAt).toBe(Date.parse('2026-09-09T10:00:00+02:00') / 1000);
+    expect(before.setup.primary.targetSelection).toEqual(known.setup.primary.targetSelection);
+    expect(known.setup.primary.targetSelection.selectedAt).toBe(Date.parse('2026-09-09T09:30:00+02:00') / 1000);
     expect(later.setup.primary.targetSelection).toEqual(known.setup.primary.targetSelection);
     expect(evaluate('10:00').setup.primary.targetSelection).toEqual(known.setup.primary.targetSelection);
     expect(later.checks.targets.status).toBe('passed');

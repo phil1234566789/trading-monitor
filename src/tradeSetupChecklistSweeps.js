@@ -1,4 +1,4 @@
-import { collectStructureLqLevels } from './marketStructureRendering';
+import { collectChecklistH1Sweeps } from './tradeSetupChecklistH1Sweeps.js';
 import { classifyAge } from './ageTier';
 import { compareSweepAge, sweepAgeSec, detectSetupObs, deriveSetupEntryInvalidation } from './tradeSetup.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
@@ -42,12 +42,9 @@ export function evaluateChecklistCandidateValidity({ candidate, candles = [], ev
  * C uses the existing setup detector's sweep membership; explicit links remain supported.
  */
 export function evaluateChecklistSweeps({ context, h1Levels, reactionLinks = [], targetsByCandidateId = {} }) {
-  const { instrument, evaluatedAt, direction, h1State } = context;
+  const { instrument, evaluatedAt, direction } = context;
   const candles = closedChecklistCandles(context.m5Candles, '5m', evaluatedAt);
-  // Die Struktur liest geschlossene H1: deren Touch ist frühestens am H1-Schluss bekannt,
-  // auch wenn der zugehörige M5-OB schon früher bestätigt war.
-  const levels = h1Levels ?? [...collectStructureLqLevels(h1State, 1), ...collectStructureLqLevels(h1State, -1)]
-    .map(level => ({ ...level, recognizedAt: Math.max(level.recognizedAt ?? 0, level.touchedTime + 3600) }));
+  const levels = h1Levels ?? collectChecklistH1Sweeps(context);
   const obs = detectSetupObs(candles, obMinimum(instrument, '5m'));
   const reactions = detectChecklistReactions({ candles, levels, obs, instrument, evaluatedAt });
   const confirmationTimes = orderBlockRecognitionTimes(candles, '5m');
