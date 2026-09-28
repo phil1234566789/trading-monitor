@@ -6,16 +6,7 @@ import { evaluateChecklistTime } from './tradeSetupChecklistTime.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { evaluateChecklistCandidates } from './tradeSetupChecklistCandidates.js';
 import { evaluateChecklistM5, unknownChecklistM5 } from './tradeSetupChecklistM5.js';
-export { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
-
-export function checklistEvaluationTime(replayUntil, nowSec, m5Candles = []) {
-  if (replayUntil == null) return nowSec;
-  // Replay zeigt ganze Kerzen anhand ihrer Open-Time. Nur eine tatsächlich vorhandene,
-  // inzwischen geschlossene M5 darf den Wissensstand bis zu ihrem Schluss erweitern.
-  const latest = closedChecklistCandles(m5Candles, '5m', nowSec)
-    .findLast(c => c.time <= replayUntil);
-  return latest ? latest.time + barSecondsFor('5m') : null;
-}
+export { checklistEvaluationTime, closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 
 function openChecks() {
   const pending = { status: 'pending', details: ['Automatische Prüfung folgt in einem weiteren Schritt.'] };

@@ -36,6 +36,7 @@ import { RANGES_CANDLE_BUFFER } from "../priceChartConstants.js";
 import { REPLAY_LOOKAHEAD_SEC, barSecondsFor } from "../timeframes.js";
 
 import { renderLowerStructure, structureRenderOptions } from "../structureOverlay.js";
+import { checklistEvaluationTime, closedChecklistCandles } from "../tradeSetupChecklistTimeBasis.js";
 
 export function usePriceChartMarketStructure() {
   let chart = null;
@@ -170,18 +171,21 @@ export function usePriceChartMarketStructure() {
     const anchor = innermostStructureStart(marketStructureState.value, outerCutoff);
     if (m5Older.symbol !== symbol) m5Older = { symbol, candles: [] };
     const loaded = args.m5CandlesClipped;
-    const m5CandlesClipped = withoutIgnored(loaded.length > 0 ? [...m5Older.candles.filter((c) => c.time < loaded[0].time), ...loaded] : loaded, symbol);
+    const evaluatedAt = checklistEvaluationTime(replayUntil, Math.floor(Date.now() / 1000), loaded);
+    const merged = loaded.length > 0 ? [...m5Older.candles.filter((c) => c.time < loaded[0].time), ...loaded] : loaded;
+    const m5CandlesClipped = withoutIgnored(closedChecklistCandles(merged, '5m', evaluatedAt), symbol);
     if (anchor != null && m5CandlesClipped.length > 0 && anchor < m5CandlesClipped[0].time) loadOlderM5(symbol, anchor, m5CandlesClipped[0].time);
     // Memo: bei P5/P2 über ~12 Tage ~150 ms — refreshChart() läuft aber auch bei jedem Style-Regler-
     // Event, dort soll nur neu gezeichnet, nicht neu gerechnet werden.
-    const key = `${m5CandlesClipped.length}:${m5CandlesClipped.at(-1)?.time}:${anchor}:${m5Period}:${m5Period2}`;
+    const last = m5CandlesClipped.at(-1);
+    const key = `${symbol}:${m5CandlesClipped.length}:${last?.time}:${last?.open}:${last?.high}:${last?.low}:${last?.close}:${anchor}:${m5Period}:${m5Period2}`;
     if (key !== m5ComputedKey) {
       m5ComputedKey = key;
       const ready = anchor != null && m5CandlesClipped.length > 0;
       const pivotsOuter = ready ? computeRangesPivotsPure(m5CandlesClipped, m5Period, anchor, fmtDateTime) : null;
       const pivotsInner = ready ? computeRangesPivotsPure(m5CandlesClipped, m5Period2, anchor, fmtDateTime) : null;
       m5Computed = {
-        ...buildStructureWithPhases(pivotsOuter, pivotsInner, m5Period, m5Period2, m5CandlesClipped, barSecondsFor("5m")),
+        ...buildStructureWithPhases(pivotsOuter, pivotsInner, m5Period, m5Period2, m5CandlesClipped, barSecondsFor("5m"), { closeEvaluation: true }),
         pivotsOuter,
         pivotsInner,
       };

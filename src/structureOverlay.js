@@ -3,6 +3,7 @@ import { renderPivotMarkers } from './pivotMarkers';
 import { cssColor } from './chartColors.js';
 import { fmtPrice, fmtTime, pricePrecisionForInstrument } from './format.js';
 import { createSessionBonusResolver } from './sessionBonus.js';
+import { coversCloseLevel, renderCloseLevels } from './structureCloseLevels.js';
 
 const LOWER_STRUCTURE_STYLE_KEYS = {
   rangeHigh: 'm5RangeHigh', rangeLow: 'm5RangeLow', rangeProtectedLow: 'm5RangeProtectedLow',
@@ -38,6 +39,7 @@ export function renderLowerStructure(series, result, primitives, markers, candle
   { symbol, replayUntil, show, debug, barSeconds }) {
   const precision = pricePrecisionForInstrument(symbol);
   const { state = null, pivotsOuter = [], pivotsInner = [], events = [] } = result ?? {};
+  const closeLevels = result?.closeReaction?.levels ?? [];
   renderPivotMarkers(series, debug ? [
     { points: pivotsOuter ?? [], color: cssColor('rangesMarker') },
     { points: pivotsInner ?? [], color: cssColor('rangesMarker2'), dotRadius: 1.5 },
@@ -46,5 +48,7 @@ export function renderLowerStructure(series, result, primitives, markers, candle
   renderMarketStructureAnalysis(series, show ? state : null, primitives, candles, {
     ...structureRenderOptions(candles, symbol, replayUntil), barSeconds,
     styleKey: key => LOWER_STRUCTURE_STYLE_KEYS[key],
+    hideLevel: (type, pivot) => coversCloseLevel(closeLevels, type, pivot),
   });
+  if (show && state) renderCloseLevels(series, closeLevels, primitives, candles);
 }

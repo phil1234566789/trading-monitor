@@ -265,6 +265,8 @@ Auf dem bereits begonnenen **M5-Strukturalgorithmus** und dem vorhandenen **M5-T
 
 `buildStructureWithPhases` liefert zusätzlich eine frühe Close-Reaktion aus `m5CloseReaction.js`. H verwendet diese Erweiterung des vorhandenen Strukturkerns. Die bisherigen Pivotbestätigungen, rückdatierten Chartbänder und TSC-Regeln bleiben erhalten; der bestätigte Trend wird nicht durch ein frühes CHoCH ersetzt.
 
+Der Toggle „M5-Struktur“ zeichnet dieselben aktuellen CHoCH-/BOS-Level schon vor dem Bruch durchgezogen mit „offen“. Beim ersten bestätigenden M5-Schluss wechselt die Linie sofort auf die bestehende gestrichelte Darstellung und endet an der Signalkerze. Ersetzte oder invalidierte offene Level verschwinden; bestehende historische Strukturlinien bleiben erhalten. Chart und Checklist verwenden dieselbe Schlussgrenze, auch im Replay. H1- und M1-Zeichnung bleiben bei ihren bisherigen Regeln.
+
 Für Short genügt jeweils ein strikter Schluss unter dem bereits bekannten Level: CHoCH unter dem zweiten Ankerpivot des bestehenden Nested-Kandidaten, BOS unter dem geschützten Tief derselben bullischen Strukturebene. Long ist gespiegelt. Dochtberührung oder Gleichheit reichen nicht. Der BOS-Nachweis benötigt keinen vorherigen CHoCH-Haken. Ein vorheriger Docht am geschützten Punkt beseitigt dessen Schutzfunktion nicht, solange kein neuer geschützter Punkt ihn ersetzt.
 
 #### Zeitbasis und Abnahme

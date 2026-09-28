@@ -16,7 +16,7 @@ const event = (type, candle, pivot, direction, depth, originTime, barSeconds) =>
 // mit dem damaligen Kerzenpräfix geprüft; die bestehende Struktur entscheidet über die Level.
 // Nur die aktuelle Nested-Kette zählt, keine beliebige alte CHoCH-/BOS-Reaktion.
 export function deriveM5CloseReaction(state, outer, inner, periodOuter, periodInner, candles, barSeconds) {
-  const empty = { trend: 'unknown', direction: null, choch: null, bos: null };
+  const empty = { trend: 'unknown', direction: null, choch: null, bos: null, levels: [] };
   if (!state || state.trend === 'unknown') return empty;
   const chain = collectNestedChain(state);
   const result = { ...empty, trend: chain.at(-1).trend };
@@ -65,11 +65,19 @@ export function deriveM5CloseReaction(state, outer, inner, periodOuter, periodIn
         && closesPast(c, pivot.price, short) && knownProtected(i, pivot));
       if (index >= 0 && (!bos || candles[index].time < bos.candleTime)) bos = makeEvent('BOS', index, pivot);
     }
-    if (!choch && !bos) continue;
     const startedAt = Math.min(choch?.candleTime ?? Infinity, bos?.candleTime ?? Infinity);
     // Ein Schluss jenseits des Ursprungs widerlegt diese Drehung. Ein späterer
     // Rücklauf unter/über denselben Seed darf den alten Haken nicht wiederbeleben.
     if (candles.some(c => c.time > startedAt && closesPast(c, origin.price, !short))) continue;
+    const pending = (type, pivot) => ({ type, direction, price: pivot.price, pivotTime: pivot.pivotTime,
+      originTime: origin.pivotTime, candleTime: null, recognizedAt: null });
+    if (seed) result.levels.push(choch ?? pending('CHoCH', seed));
+    if (bos) result.levels.push(bos);
+    // Auch nach einem Docht bleibt das bekannte Schutzlevel offen. Ein inzwischen
+    // neu geschützter Pivot ersetzt es; derselbe Schlusskursprüfer entscheidet beides.
+    const protectedPivot = parent.structurePivots.find(p => knownProtected(candles.length, p));
+    if (protectedPivot && protectedPivot.pivotTime !== bos?.pivotTime) result.levels.push(pending('BOS', protectedPivot));
+    if (!choch && !bos) continue;
     const previousStart = Math.min(result.choch?.candleTime ?? Infinity, result.bos?.candleTime ?? Infinity);
     if (result.direction && previousStart >= startedAt) continue;
     result.direction = direction;

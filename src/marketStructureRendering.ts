@@ -390,7 +390,7 @@ function toLqLevel(pivot: Pivot, dir: 1 | -1) {
 // gesuchte (markLqSweeps läuft dort mit derselben Richtung) — und gerade ein LQ-sweep ist der
 // wertvollste LS-Kandidat. Bleibt ein Rest: ein Tief, das in einer früheren uptrend-/unknown-Phase
 // derselben Ebene zu 'LQ-sweep' umgetauft wurde, behält den Namen auch nach dem Trendwechsel.
-export function collectStructureLqLevels(state: MarketStructureState | null | undefined, dir: 1 | -1) {
+export function collectStructureLqLevels(state: MarketStructureState | null | undefined, dir: 1 | -1, includeUntouched = false) {
   if (!state) return [];
   const wantTrend = dir === -1 ? "uptrend" : "downtrend";
   const falscheSeite = dir === 1 ? "low" : "high";
@@ -398,7 +398,7 @@ export function collectStructureLqLevels(state: MarketStructureState | null | un
   for (const level of collectNestedChain(state)) {
     if (level.trend === wantTrend) pivots.push(...level.structurePivots);
   }
-  return pivots.filter((p) => p.touched !== false && !p.type.endsWith(falscheSeite)).map((p) => toLqLevel(p, dir));
+  return pivots.filter((p) => (includeUntouched || p.touched !== false) && !p.type.endsWith(falscheSeite)).map((p) => toLqLevel(p, dir));
 }
 
 // --- Fibonacci-Level (Chat 2026-07-30) --------------------------------------------------------
@@ -528,6 +528,7 @@ function renderNestedLevel(
   cssColor: StyleFn<string>,
   lineWidth: StyleFn<number>,
   barSeconds: number,
+  hideLevel: (type: string, pivot: Pivot) => boolean,
 ) {
   const isDown = nested.trend === "downtrend";
   const protectedType: "protected-high" | "protected-low" = isDown ? "protected-high" : "protected-low";
@@ -550,7 +551,7 @@ function renderNestedLevel(
   const hasNestedBreakOfStructure = nested.structurePivots.some((p) => p.type === "break-of-structure");
 
   const protectedPivot = nested.structurePivots.find((p) => p.type === protectedType);
-  if (protectedPivot) {
+  if (protectedPivot && !hideLevel('BOS', protectedPivot)) {
     const line = new LiquidityLinePrimitive(
       toLevel(protectedPivot, candles),
       { color: cssColor("rangeProtectedLow"), lineWidth: lineWidth("rangeProtectedLow"), label: protectedLabel(isDown), labelSide: "end" },
@@ -582,6 +583,7 @@ function renderNestedLevel(
   }
 
   for (const bos of nested.structurePivots.filter((p) => p.type === "break-of-structure")) {
+    if (hideLevel('BOS', bos)) continue;
     const bosColor = cssColor("rangeBreakOfStructure");
     const bosFallback = candles.length > 0 ? candles[candles.length - 1].time : (bos.pivotTime ?? 0);
     const bosEndTime = firstClosePast(candles, bos.pivotTime ?? 0, bos.price, bosFallback);
@@ -600,6 +602,7 @@ function renderNestedLevel(
   // damit garantiert Ursprung/wartende Seite), NICHT am aktuellen currRange (das ist der zuletzt
   // brechende Pivot, siehe Bug-Report Philip: "IST 1.34601, SOLL 1.35206").
   const chochAnchor = nested.appliedPivots[1];
+  if (hideLevel('CHoCH', chochAnchor)) return;
   // Bis zur ersten BERÜHRUNG (Philip 24.09.2026), nicht mehr bis zum Kerzenschluss. Der frühere
   // Grund für den Kerzenschluss (H1-Anker auf Stundenraster, M5-Docht greift sofort) ist durch
   // "erst nach dem Balken des Ankers suchen" (barSeconds der Struktur) abgedeckt. Richtung NICHT von
@@ -638,6 +641,7 @@ export function renderMarketStructureAnalysis(
     bonusFor,
     styleKey = (key) => key,
     barSeconds = 3600,
+    hideLevel = () => false,
   }: {
     nowSec?: number;
     formatPrice?: (price: number) => string;
@@ -646,6 +650,8 @@ export function renderMarketStructureAnalysis(
     styleKey?: (key: string) => string;
     // Kerzenlänge der Struktur (1h = 3600, M5 = 300) — für das CHoCH-Linienende, siehe renderNestedLevel.
     barSeconds?: number;
+    // M5-Schlusskurslevel ersetzen dieselbe Pivot-Linie schon vor der Fraktalbestätigung.
+    hideLevel?: (type: string, pivot: Pivot) => boolean;
     // Session-Kontext ("Asia-High") — siehe sessionBonus.js. Muss dieselbe Quelle sein wie bei der
     // Trade-Setup-LS-Linie, sonst zeigen die beiden übereinanderliegenden Linien wieder zwei
     // verschiedene Strings (genau dafür gibt es formatLsLabel gemeinsam).
@@ -715,7 +721,7 @@ export function renderMarketStructureAnalysis(
   }
 
   const protectedPivot = state.structurePivots.find((p) => p.type === (isDowntrend ? "protected-high" : "protected-low"));
-  if (protectedPivot) {
+  if (protectedPivot && !hideLevel('BOS', protectedPivot)) {
     const line = new LiquidityLinePrimitive(
       toLevel(protectedPivot, candles),
       {
@@ -772,6 +778,7 @@ export function renderMarketStructureAnalysis(
   // siehe Chat), mittig über der Linie im Uptrend, mittig darunter im Downtrend — spiegelbildlich
   // zur Trendrichtung (labelSide unten liest dafür state.trend, nicht mehr hart 'uptrend').
   for (const bos of state.structurePivots.filter((p) => p.type === "break-of-structure")) {
+    if (hideLevel('BOS', bos)) continue;
     const bosColor = cssColor("rangeBreakOfStructure");
     // Anders als toLevel (das immer bis zur letzten geladenen Kerze zeichnet) endet diese Linie
     // bewusst an der ERSTEN tatsächlich unter bos.price schließenden Kerze (Chat 2026-07-25: "Die
@@ -841,7 +848,7 @@ export function renderMarketStructureAnalysis(
   // reguläre currRange-Darstellung (inkl. der Live-Verbindungslinie oben) den (jetzt promoteten)
   // neuen Haupttrend, exakt wie vorher.
   for (const nested of collectNestedChain(state).slice(1)) {
-    renderNestedLevel(series, nested, candles, existingPrimitives, lqSweepLabel, cssColor, lineWidth, barSeconds);
+    renderNestedLevel(series, nested, candles, existingPrimitives, lqSweepLabel, cssColor, lineWidth, barSeconds, hideLevel);
   }
 
   // Fib-Level (Chat 2026-07-30, siehe computeFibLevels für die volle Begründung) — EIN Durchlauf

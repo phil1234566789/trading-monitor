@@ -13,6 +13,20 @@ function evaluate(clock, rows = candlesArchive) {
 }
 
 describe('M5 close reactions from the existing DR114 structure', () => {
+  it('exposes the current CHoCH and BOS levels before their first closing break', () => {
+    const pending = evaluate('09:45').levels;
+    expect(pending).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'CHoCH', price: expect.closeTo(1.35576, 8), direction: 'short', candleTime: null }),
+      expect.objectContaining({ type: 'BOS', price: 1.35554, direction: 'short', candleTime: null }),
+    ]));
+    expect(evaluate('09:50').levels).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'CHoCH', price: expect.closeTo(1.35576, 8), candleTime: at('09:50') }),
+      expect.objectContaining({ type: 'BOS', price: 1.35554, candleTime: null }),
+    ]));
+    expect(evaluate('10:00').levels).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'BOS', price: 1.35554, candleTime: at('10:00') }),
+    ]));
+  });
   it('recognizes CHoCH and BOS on their closing candles before pivot confirmation', () => {
     expect(evaluate('09:45')).toMatchObject({ trend: 'uptrend', choch: null, bos: null });
     expect(evaluate('09:50')).toMatchObject({ trend: 'uptrend', direction: 'short', bos: null,
@@ -27,10 +41,12 @@ describe('M5 close reactions from the existing DR114 structure', () => {
   it('ignores a wick and equality at the CHoCH level', () => {
     const rows = candlesArchive.map(c => c.time === at('09:50') ? { ...c, close: 1.35576 } : c);
     expect(evaluate('09:50', rows).choch).toBeNull();
+    expect(evaluate('09:50', rows).levels.find(l => l.type === 'CHoCH').candleTime).toBeNull();
   });
   it('ignores a wick at the protected low and remembers the previous CHoCH', () => {
     const rows = candlesArchive.map(c => c.time === at('10:00') ? { ...c, close: 1.3557 } : c);
     expect(evaluate('10:00', rows)).toMatchObject({ bos: null, choch: { recognizedAt: at('09:55') } });
+    expect(evaluate('10:00', rows).levels.find(l => l.type === 'BOS').candleTime).toBeNull();
   });
   it('mirrors both breaks for long', () => {
     const mirrored = candlesArchive.map(c => ({ ...c, open: 3-c.open, close: 3-c.close, high: 3-c.low, low: 3-c.high }));
@@ -48,6 +64,9 @@ describe('M5 close reactions from the existing DR114 structure', () => {
     const rows = candlesArchive.map(c => c.time === at('09:55') ? { ...c, high: 1.3569, close: 1.35685 } : c);
     expect(evaluate('09:55', rows)).toMatchObject({ choch: null, bos: null });
     expect(evaluate('10:00', rows)).toMatchObject({ choch: null, bos: null });
+    expect(evaluate('10:00', rows).levels).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'CHoCH', price: expect.closeTo(1.35576, 8) }),
+    ]));
   });
   it('uses a close after a protected-low wick, retaining the actual CHoCH timestamp', () => {
     const rows = candlesArchive.map(c => c.time === at('09:55') ? { ...c, low: 1.3554 } : c);
