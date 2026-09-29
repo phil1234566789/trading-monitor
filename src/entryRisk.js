@@ -11,7 +11,7 @@ export function entryRiskScale(entry, stop, targets, instrument, direction) {
     return { status: 'unknown', entry, stop, risk: null, riskPips: null, levels: [], targets: [] };
   }
   return { status: 'ready', entry, stop, risk, riskPips: toPips(risk, instrument),
-    levels: [3, 4, 5, 6].map(r => ({ r, price: entry + sign * r * risk })),
+    levels: [3, 6, 10].map(r => ({ r, price: entry + sign * r * risk })),
     targets: targets.map(target => {
       const reward = (target.price - entry) * sign;
       return { ...target, rr: Number.isFinite(reward) && reward > 0 ? reward / risk : null };
