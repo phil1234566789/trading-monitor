@@ -7,6 +7,13 @@ const structure = (trend, origin, nestedTrend = null) => ({ trend, nestedTrend, 
 } });
 
 describe('checklist presentation from evaluated data', () => {
+  it('uses recognition and selection times rather than the OB origin', () => {
+    const primary = { reactionRecognizedAt: at, reactionPreview: { ob: { top: 1.3, bottom: 1.2, startTime: at - 600 } },
+      targetSelection: { selectedAt: at, details: ['Asia-Low: 1.2'] } };
+    const view = checklistPresentation({ setup: { primary } });
+    expect(view.reaction.orderBlock.recognizedAt).toBe(at);
+    expect(view.targets.details).toEqual(['Ziele fixiert um 10:35 Uhr', 'Asia-Low: 1.2']);
+  });
   it('puts optional confluence evidence explanations in the status tooltip', () => {
     expect(checklistPresentation({ checks: { confluences: { explanation: 'Am Sweep aus B; bestätigt 09:30.' } } }).confluences)
       .toMatchObject({ explanation: 'Am Sweep aus B; bestätigt 09:30.' });

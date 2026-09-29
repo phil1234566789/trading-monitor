@@ -2,7 +2,7 @@ import { collectNestedChain } from './marketStructureAnalysis';
 import { deriveM5CloseReaction } from './m5CloseReaction.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { M1_STRUCTURE_PERIOD } from './m1Structure.js';
-import { formatDatedTime } from './berlinTime.js';
+import { formatDatedTime, formatBerlinTime } from './berlinTime.js';
 import { m1RetestAfterReaction } from './m1Retest.js';
 
 const waiting = {
@@ -39,13 +39,13 @@ export function evaluateM1Checklist({ context, structure, candles, evaluatedAt }
   const details = trends.map(({ trend, depth }) => `${depth ? 'Nested '.repeat(depth) : 'M1 '}${trend === 'uptrend' ? 'Uptrend' : 'Downtrend'}`);
   const detailStatuses = trends.map(({ trend }) => (trend === 'downtrend') === short ? 'passed' : 'unmet');
   for (const [label, signal] of [['CHoCH', choch], ['BOS', bos]]) {
-    details.push(signal ? `${adjective} ${label} · Kerze ${formatDatedTime(signal.candleTime)}` : `Kein ${adjective} ${label}`);
+    details.push(signal ? `${adjective} ${label} um ${formatBerlinTime(signal.candleTime)}` : `Kein ${adjective} ${label}`);
     detailStatuses.push(signal ? 'passed' : 'unmet');
   }
   const follow = m1RetestAfterReaction(rows, context.primary, evaluatedAt);
   const labels = [short ? 'Bärischer M5-OB-Retest' : 'Bullischer M5-OB-Retest', short ? 'M1 bärische FVG nach Retest' : 'M1 bullische FVG nach Retest'];
   for (const [index, signal] of [follow.retest, follow.fvg].entries()) {
-    details.push(signal ? `${labels[index]} · Kerze ${formatDatedTime(signal.candleTime)}` : labels[index]);
+    details.push(signal ? (index === 0 ? `${labels[index]} um ${formatBerlinTime(signal.candleTime)}` : `${labels[index]} · Kerze ${formatDatedTime(signal.candleTime)}`) : labels[index]);
     detailStatuses.push(follow.status === 'unknown' ? 'unknown' : signal ? 'passed' : 'unmet');
   }
   return { status: 'pending', details, detailStatuses, evaluatedAt, trends, choch, bos,

@@ -6,6 +6,7 @@ import ChecklistOrderBlock from "./ChecklistOrderBlock.vue";
 import { checklistPresentation } from "../tradeSetupChecklistPresentation.js";
 import { unknownChecklistM5 } from "../tradeSetupChecklistM5.js";
 import { inactiveM1Checklist } from "../m1Checklist.js";
+import { usePreservedScroll } from "../composables/usePreservedScroll.js";
 
 const props = defineProps({
   instrument: { type: String, required: true },
@@ -13,6 +14,7 @@ const props = defineProps({
   m1Check: { type: Object, default: null },
 });
 defineEmits(["close"]);
+const { element: scrollElement, rememberScroll } = usePreservedScroll();
 
 const definitions = [
   { key: "h1Trend", label: "1-Stunden-Trend" },
@@ -79,16 +81,14 @@ const checks = computed(() => definitions.map((definition, index) => {
     </header>
     <div class="checklist-evaluation" role="status">
       <div class="checklist-timestamp">
-        <span>Algorithmus-Bewertungsstand</span>
         <time v-if="evaluatedAt" :datetime="new Date(state.evaluatedAt * 1000).toISOString()">{{ evaluatedAt }} Uhr (Europe/Berlin)</time>
         <strong v-else>Bewertungsstand unbekannt</strong>
       </div>
       <ChecklistStatusIcon v-bind="dataStatus" />
     </div>
     <p v-if="state?.tradeability === 'blocked'" class="checklist-not-tradeable" role="status">Nicht tradebar</p>
-    <p v-else class="checklist-notice">Die Einzelprüfungen ergeben noch keine endgültige Setup-Freigabe.</p>
     <p v-if="state?.statistics?.status === 'error'" class="checklist-notice" role="alert">Target-Statistik konnte nicht gespeichert werden. Neuer Versuch bei der nächsten Auswertung.</p>
-    <ol class="checklist-checks" tabindex="0" aria-label="Checklist-Prüfungen">
+    <ol ref="scrollElement" class="checklist-checks" tabindex="0" aria-label="Checklist-Prüfungen" @scroll="rememberScroll">
       <li v-for="check in checks" :key="check.key" :data-status="check.status">
         <div class="checklist-check-heading">
           <h3><span class="checklist-letter">{{ check.letter }}</span>{{ check.title }}</h3>
@@ -126,7 +126,6 @@ h2 span { margin-left: 8px; color: #a5aab5; font-weight: 400; }
 .checklist-close:focus-visible { outline: 2px solid #90b4ff; outline-offset: 2px; }
 .checklist-evaluation { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 12px 0 8px; font-size: 13px; }
 .checklist-timestamp { display: grid; gap: 4px; }
-.checklist-timestamp > span { color: #a5aab5; font-size: 12px; }
 .checklist-timestamp time { font-weight: 600; }
 /* Nur die Prüfungen scrollen; Charthöhe, Kopf und Bewertungsstand bleiben unabhängig vom Inhalt. */
 .checklist-checks { display: grid; align-content: start; gap: 12px; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; list-style: none; padding: 0; margin: 16px 0 0; }

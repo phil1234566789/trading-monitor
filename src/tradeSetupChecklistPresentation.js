@@ -1,6 +1,7 @@
 import { computeTrendChain, trendChainLevelDisplay } from './tradeSetupCockpit';
 import { formatAge } from './chartTimeUtils.js';
 import { pricePrecisionForInstrument } from './format.js';
+import { formatBerlinTime } from './berlinTime.js';
 
 // Nur Darstellung: Status und Zuordnung stammen weiter aus dem Evaluator.
 export function checklistPresentation(state) {
@@ -31,9 +32,13 @@ export function checklistPresentation(state) {
   }
   const preview = primary?.reactionPreview;
   if (preview?.ob && Number.isFinite(preview.ob.top) && Number.isFinite(preview.ob.bottom)) {
-    view.reaction = { details: [], orderBlock: preview,
+    view.reaction = { details: [], orderBlock: { ...preview, recognizedAt: primary.reactionRecognizedAt },
       explanation: state.checks?.reaction?.details?.join(' '),
     };
+  }
+  const selection = primary?.targetSelection;
+  if (Number.isFinite(selection?.selectedAt)) {
+    view.targets = { details: [`Ziele fixiert um ${formatBerlinTime(selection.selectedAt)} Uhr`, ...selection.details] };
   }
   return view;
 }

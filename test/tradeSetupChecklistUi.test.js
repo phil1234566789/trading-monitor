@@ -28,7 +28,7 @@ describe("Trade Setup Checklist presentation", () => {
   ])("shows the actual OB bounds for direction %s without confirming its association", async (dir, top, bottom, label, upper, lower) => {
     const html = await render({ instrument: 'GBPUSD', status: 'ready', checks: {
       reaction: { status: 'unknown', details: ['Zuordnung noch ungeklärt.'] },
-    }, setup: { primary: { reactionPreview: { linked: false, candidateCount: 3,
+    }, setup: { primary: { reactionRecognizedAt: Date.parse('2026-09-09T09:30:00+02:00') / 1000, reactionPreview: { linked: false, candidateCount: 3,
       ob: { dir, top, bottom, startTime: Date.parse('2026-09-09T09:20:00+02:00') / 1000 },
     } } } });
     expect(html).toContain(label);
@@ -36,6 +36,8 @@ describe("Trade Setup Checklist presentation", () => {
     expect(html).toContain(lower);
     expect(html).toContain('Kandidat');
     expect(html).toContain('2026-09-09 09:20');
+    expect(html).toContain(`${label} (09:30 erkannt)`);
+    expect(html).not.toContain('09:20 erkannt');
     expect(html).toContain('aria-label="Unbekannt — Zuordnung noch ungeklärt."');
     expect(html).not.toContain('data-status="passed"');
   });
@@ -72,7 +74,7 @@ describe("Trade Setup Checklist presentation", () => {
   ])("distinguishes %s data from final setup approval", async (status, label) => {
     const html = await render({ instrument: "GBPUSD", status, checks: {} });
     expect(html).toContain(label);
-    expect(html).toContain("noch keine endgültige Setup-Freigabe");
+    expect(html).not.toContain("noch keine endgültige Setup-Freigabe");
     expect(html).not.toContain('data-status="passed"');
   });
 

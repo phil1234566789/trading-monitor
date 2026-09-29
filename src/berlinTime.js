@@ -36,5 +36,9 @@ export function berlinDateStrFor(unixSec) {
 // "YYYY-MM-DD HH:mm" (Europe/Berlin) — die Schreibweise, die datierte Chart-Annotationen nutzen
 // (siehe annotations.js), also eindeutig auch über einen Tageswechsel hinweg.
 export function formatDatedTime(unixSec) {
-  return `${berlinDateStrFor(unixSec)} ${TIME_FORMATTER.format(new Date(unixSec * 1000))}`;
+  return `${berlinDateStrFor(unixSec)} ${formatBerlinTime(unixSec)}`;
+}
+
+export function formatBerlinTime(unixSec) {
+  return TIME_FORMATTER.format(new Date(unixSec * 1000));
 }
