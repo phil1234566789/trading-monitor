@@ -143,7 +143,7 @@ h2 span { margin-left: 8px; color: #a5aab5; font-weight: 400; }
 h3 { font-size: 13px; line-height: 1.5; }
 .checklist-letter { display: inline-block; margin-right: 8px; color: #a5aab5; }
 .checklist-status { color: #a5aab5; }
-[data-status="passed"] .checklist-status { color: #71c8b3; }
+[data-status="passed"] .checklist-status { color: #131722; background: #71c8b3; border-color: #71c8b3; font-weight: 700; }
 [data-status="blocked"] .checklist-status { color: #ff8a87; }
 .checklist-note { margin-top: 4px; }
 .checklist-details { padding-left: 16px; margin: 4px 0 0; font-size: 13px; line-height: 1.5; }
