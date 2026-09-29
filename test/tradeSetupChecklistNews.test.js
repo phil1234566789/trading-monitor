@@ -20,6 +20,6 @@ describe('Checklist-News', () => {
   it('priorisiert weitere Sperren vor bereits vergangenen News und zeigt Berlin-Warteende', () => {
     const result = evaluateChecklistNews({...input,news:[{...event,eventTime:eventTime-3600},event]});
     expect(result).toMatchObject({status:'blocked',label:'News – Wartezeit'});
-    expect(result.details.join(' ')).toContain('2026-09-09 14:45');
+    expect(result.details).toEqual(['bis 14:45 Uhr']);
   });
 });

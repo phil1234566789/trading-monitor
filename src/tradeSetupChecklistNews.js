@@ -1,4 +1,4 @@
-import { formatDatedTime } from './berlinTime.js';
+import { formatDatedTime, formatBerlinTime } from './berlinTime.js';
 import { newsEventsForInstrument, newsEventsInWindow, supportsNewsInstrument } from './newsEventRules.js';
 
 export function evaluateChecklistNews({ instrument, evaluatedAt, news, newsLoadStatus } = {}) {
@@ -13,7 +13,7 @@ export function evaluateChecklistNews({ instrument, evaluatedAt, news, newsLoadS
     const waiting = hits.some(e => e.eventTime <= evaluatedAt);
     const end = Math.max(...hits.map(e => e.eventTime + 900));
     return { status: 'blocked', label: waiting ? 'News – Wartezeit' : 'News bevorstehend',
-      details: [`bis ${formatDatedTime(end)} Uhr (Europe/Berlin)`] };
+      details: [`bis ${formatBerlinTime(end)} Uhr`] };
   }
   if (newsLoadStatus !== 'ready' || !Array.isArray(news) || rows.length !== news.length || valid.length !== relevant.length) return unknown;
   const day = formatDatedTime(evaluatedAt).slice(0, 10);

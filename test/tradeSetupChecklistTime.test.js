@@ -45,7 +45,7 @@ describe("evaluateChecklistTime", () => {
       const result = evaluateChecklistTime(input({ evaluatedAt: eventTime + offset,
         news: [{ eventTime, currency: "USD", title: "CPI" }] }));
       expect(result.status).toBe(status);
-      if (status === "blocked") expect(result.details.join(" ")).toContain("2026-09-09 14:45");
+      if (status === "blocked") expect(result.details.join(" ")).toContain("bis 14:45 Uhr");
     },
   );
 

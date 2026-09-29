@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from "vue";
-import { formatDatedTime } from "../berlinTime.js";
+import { formatDatedTime, formatBerlinTime } from "../berlinTime.js";
 import ChecklistStatusIcon from "./ChecklistStatusIcon.vue";
 import ChecklistOrderBlock from "./ChecklistOrderBlock.vue";
 import { checklistPresentation } from "../tradeSetupChecklistPresentation.js";
@@ -100,7 +100,7 @@ const checks = computed(() => definitions.map((definition, index) => {
           <ChecklistStatusIcon class="checklist-status" :symbol="check.symbol" :label="check.explanation ? `${check.label} — ${check.explanation}` : check.label" />
         </div>
         <p v-if="check.note" class="checklist-note">{{ check.note }}</p>
-        <p v-if="check.key === 'm1' && Number.isFinite(check.evaluatedAt)" class="checklist-note">M1-Stand {{ formatDatedTime(check.evaluatedAt) }} Uhr (Europe/Berlin)</p>
+        <p v-if="check.key === 'm1' && Number.isFinite(check.evaluatedAt)" class="checklist-note">M1-Stand um {{ formatBerlinTime(check.evaluatedAt) }} Uhr</p>
         <ChecklistOrderBlock v-if="check.orderBlock" :preview="check.orderBlock" :instrument="instrument" />
         <ul v-else-if="check.details.length" class="checklist-details">
           <li v-for="(detail, index) in check.details" :key="index" :data-detail-status="check.detailStatuses[index]">{{ detail }}

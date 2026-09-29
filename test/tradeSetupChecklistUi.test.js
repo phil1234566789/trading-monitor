@@ -113,7 +113,7 @@ describe("Trade Setup Checklist presentation", () => {
     const m1 = { instrument: 'GBPUSD', status: 'pending', evaluatedAt: Date.parse('2026-09-09T09:47:00+02:00') / 1000,
       details: ['M1 Uptrend', 'Nested Downtrend', 'Bärischer M5-OB-Retest'], detailStatuses: ['unmet', 'passed', 'passed'] };
     const html = await render({ instrument: 'GBPUSD', status: 'ready', checks: {} }, m1);
-    expect(html).toContain('M1-Stand 2026-09-09 09:47 Uhr (Europe/Berlin)');
+    expect(html).toContain('M1-Stand um 09:47 Uhr');
     expect(html).toMatch(/data-detail-status="unmet"[^>]*>M1 Uptrend/);
     expect(html).toMatch(/data-detail-status="passed"[^>]*>Nested Downtrend/);
     expect(html).not.toContain('Zurückgestellt');

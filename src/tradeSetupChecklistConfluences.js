@@ -2,7 +2,7 @@ import { detectRsiDivergenceHistory, DEFAULT_DIVERGENCE_FRACTAL_PERIOD, DEFAULT_
 import { detectOrderBlocks, candleTouchesOrderBlock } from './orderBlockDetection.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { barSecondsForTimeframeCi } from './timeframes.js';
-import { formatDatedTime } from './berlinTime.js';
+import { formatDatedTime, formatBerlinTime } from './berlinTime.js';
 import { orderBlockRecognitionTimes } from './orderBlockRecognitionTime.js';
 import { firstTouchAfter } from './structurePivotTime';
 import { pricePrecisionForInstrument } from './format.js';
@@ -153,7 +153,7 @@ export function evaluateChecklistConfluences({ evaluatedAt, direction, instrumen
   confluences.status = divergence ? 'passed' : confluences.divergences.status === 'unknown' ? 'unknown' : 'pending';
   if (divergence) {
     confluences.details = [`M5 ${short ? 'bärische' : 'bullische'} Divergenz`,
-      `${formatDatedTime(divergence.fromTime)} → ${formatDatedTime(divergence.toTime).slice(11)} · Berlin`];
+      `${formatBerlinTime(divergence.fromTime)} → ${formatBerlinTime(divergence.toTime)}`];
     const precision = pricePrecisionForInstrument(instrument);
     confluences.explanation = `Preis ${divergence.fromPrice.toFixed(precision)} → ${divergence.toPrice.toFixed(precision)}; RSI ${divergence.fromRsi.toFixed(1)} → ${divergence.toRsi.toFixed(1)}. Am Sweep aus B; bestätigt ${formatDatedTime(divergence.recognizedAt)} (Europe/Berlin).`;
   } else {

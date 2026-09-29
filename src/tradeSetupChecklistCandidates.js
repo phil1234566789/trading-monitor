@@ -2,7 +2,7 @@ import { evaluateChecklistSweeps } from './tradeSetupChecklistSweeps.js';
 import { evaluateChecklistTargets } from './tradeSetupChecklistTargets.js';
 import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
 import { evaluateChecklistLifecycle, fixChecklistTargets } from './tradeSetupChecklistLifecycle.js';
-import { formatDatedTime } from './berlinTime.js';
+import { formatBerlinTime } from './berlinTime.js';
 
 export function evaluateChecklistCandidates(context, sessionConfigs = []) {
   const sweeps = evaluateChecklistSweeps({ context });
@@ -38,7 +38,7 @@ export function finalizeChecklistCandidates(sweeps, context, sessionConfigs = []
   } else if (sweeps.primary.targetSelection) {
     targetPreview = sweeps.primary.targetSelection;
     checks.targets = { status: targetPreview.status, details: [
-      `Ziele fixiert am ${formatDatedTime(targetPreview.selectedAt)} (Europe/Berlin).`, ...targetPreview.details,
+      `Ziele fixiert um ${formatBerlinTime(targetPreview.selectedAt)} Uhr`, ...targetPreview.details,
     ] };
   } else {
     targetPreview = evaluateChecklistTargets({ direction: context.direction,

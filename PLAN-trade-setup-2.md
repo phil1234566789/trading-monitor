@@ -16,6 +16,15 @@ Im Menü unter **Trades**:
 
 Der Checklist-Toggle blendet einen eigenen Bereich ein beziehungsweise aus, analog zu den vorhandenen Bereichen für Cockpit und Bewertung.
 
+### Zeitangaben in der Checklist
+
+Kalenderdatum und Bewertungszeit stehen im Kopf. Alle sichtbaren Details A–J einschließlich
+M1-Stand zeigen ausschließlich knappe Berlin-Uhrzeiten (`um HH:mm`, Zeitspannen `HH:mm → HH:mm`,
+Wartezeiten `bis HH:mm`), keine wiederholten Kalenderdaten. `formatBerlinTime` aus `berlinTime.js`
+wiederverwenden; die fachliche Wahl zwischen Kerzenzeit und Erkennungszeit bleibt erhalten.
+Preise, Levelalter und Dauern bleiben stehen. Datenmodell und erklärende Tooltips dürfen vollständige
+Zeitstempel enthalten. Neue Detailzeilen müssen die UI-Regressionsprüfung ohne sichtbare Kalenderdaten bestehen.
+
 ## Fachliche Ausrichtung
 
 Das Cockpit wurde ursprünglich dafür aufgebaut, dass Lana es befüllt. Die neue Checklist soll zunächst ohne Lana arbeiten: Ein Algorithmus prüft die Checkpunkte der Reihe nach und hakt sie bei Erfüllung ab.

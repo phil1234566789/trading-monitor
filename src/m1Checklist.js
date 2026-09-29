@@ -2,7 +2,7 @@ import { collectNestedChain } from './marketStructureAnalysis';
 import { deriveM5CloseReaction } from './m5CloseReaction.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { M1_STRUCTURE_PERIOD } from './m1Structure.js';
-import { formatDatedTime, formatBerlinTime } from './berlinTime.js';
+import { formatBerlinTime } from './berlinTime.js';
 import { m1RetestAfterReaction } from './m1Retest.js';
 import { m1EntryFromFvg } from './m1Entry.js';
 import { latestStructureSweeps } from './structureSweeps.js';
@@ -48,7 +48,7 @@ export function evaluateM1Checklist({ context, structure, candles, evaluatedAt }
   const follow = m1RetestAfterReaction(rows, context.primary, evaluatedAt);
   const labels = [short ? 'Bärischer M5-OB-Retest' : 'Bullischer M5-OB-Retest', short ? 'M1 bärische FVG nach Retest' : 'M1 bullische FVG nach Retest'];
   for (const [index, signal] of [follow.retest, follow.fvg].entries()) {
-    details.push(signal ? (index === 0 ? `${labels[index]} um ${formatBerlinTime(signal.candleTime)}` : `${labels[index]} · Kerze ${formatDatedTime(signal.candleTime)}`) : labels[index]);
+    details.push(signal ? `${labels[index]} um ${formatBerlinTime(signal.candleTime)}` : labels[index]);
     detailStatuses.push(follow.status === 'unknown' ? 'unknown' : signal ? 'passed' : 'unmet');
   }
   const internalSweeps = latestStructureSweeps(structure.state, evaluatedAt, 60);
