@@ -74,10 +74,10 @@ describe("Trade Setup Checklist presentation", () => {
     expect(html).not.toMatch(/<input|data-status="passed"|data-status="blocked"/);
   });
   it('shows J Entry 1 only for the current instrument and a confirmed entry', async () => {
-    const entry = { label: 'Entry 1' };
+    const entry = { label: 'Entry 1', recognizedAt: Date.parse('2026-09-09T09:50:00+02:00') / 1000 };
     const html = await render(null, { instrument: 'GBPUSD', entry });
     expect(html).toMatch(/class="checklist-letter"[^>]*>J<\/span>Entry/);
-    expect(html).toContain('Entry 1');
+    expect(html).toContain('Entry 1 um 09:50 Uhr');
     expect(await render(null, { instrument: 'EURUSD', entry })).not.toContain('Entry 1');
     expect(await render(null, { instrument: 'GBPUSD' })).not.toContain('Entry 1');
   });

@@ -1,5 +1,6 @@
 import { barSecondsFor } from './timeframes.js';
 import { entryRiskScale, formatRiskPips } from './entryRisk.js';
+import { formatBerlinTime } from './berlinTime.js';
 
 export function m1EntryFromFvg(context, fvg, candles, evaluatedAt, retest = null) {
   if (!fvg || !context?.setupKey || !Number.isFinite(evaluatedAt)
@@ -35,5 +36,6 @@ export function entryChecklist(m1Check) {
     const scale = entry.scales[key];
     return `${label}: ${formatRiskPips(scale.riskPips)}${scale.status === 'ready' ? ' Pips' : ''}`;
   }) : [];
-  return { status: 'passed', details: [entry.label, ...distances], detailStatuses: ['passed'] };
+  const label = Number.isFinite(entry.recognizedAt) ? `${entry.label} um ${formatBerlinTime(entry.recognizedAt)} Uhr` : entry.label;
+  return { status: 'passed', details: [label, ...distances], detailStatuses: ['passed'] };
 }
