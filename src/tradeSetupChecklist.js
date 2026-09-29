@@ -31,7 +31,7 @@ export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles
     tradeability: checks.time.outsideTradingHours ? 'blocked' : 'unknown' };
   if (!Number.isFinite(evaluatedAt)) {
     result.status = 'missing';
-    checks.h1Trend.details = ['Keine vollständig geschlossene M5-Kerze am Replay-Stand verfügbar.'];
+    checks.h1Trend.details = ['Keine vollständig geschlossene Chartkerze am Replay-Stand verfügbar.'];
     return result;
   }
   if (dataStatus === 'loading' || dataStatus === 'error') {

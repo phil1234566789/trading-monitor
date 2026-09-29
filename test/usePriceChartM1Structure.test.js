@@ -53,8 +53,8 @@ describe('independent M1 structure lifecycle', () => {
     s.state.value = ready(); await nextTick();
     expect(s.fetchCached.mock.calls[0][2]).toBe('1m');
     expect(s.api.status.value.state).toBe('ready');
-    s.props.currentBar = '1h'; await nextTick();
-    expect(s.fetchCached).toHaveBeenCalledTimes(1);
+    s.props.currentBar = '1m'; s.api.refresh(rows); await nextTick();
+    expect(s.fetchCached.mock.calls.every(call => call[2] === '1m')).toBe(true);
     s.props.showLiquidityDebug = true; await nextTick();
     expect(renderLowerStructure.mock.calls.at(-1).at(-1).debug).toBe(true);
     expect(renderLowerStructure.mock.calls.at(-1)[1].pivotsInner).toEqual([]);

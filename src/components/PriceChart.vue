@@ -361,7 +361,9 @@ const emit = defineEmits([
 
 const { markSuccess } = useStatusBar();
 const checklist = usePriceChartChecklist(props, sessions, emit, undefined, { tradingSchedules, newsEvents, newsCalendar }, createChecklistStatisticsStore(supabase));
-const m1Structure = usePriceChartM1Structure(props, checklist.state, { prerequisitesAt: checklist.m1PrerequisitesAt });
+const m1Structure = usePriceChartM1Structure(props, checklist.state, {
+  prerequisitesAt: checklist.m1PrerequisitesAt, evaluationHorizon: checklist.evaluationTime,
+});
 const m1StructureStatus = m1Structure.status;
 watch(m1Structure.check, value => {
   emit('m1-check-change', value);
@@ -1813,6 +1815,7 @@ function refreshChart() {
   // Komponente schon unmounted wurde (z.B. schnelle Navigation zu /protokoll) — chart
   // ist dann bereits disposed, ohne Guard wirft lightweight-charts "Object is disposed".
   if (!chart) return;
+  checklist.setChartCandles(allCandles, candlesReady ? loadedCandleKey : null);
   applyCandleData();
   refreshPoiZonesInternal();
   refreshLiquidityInternal();

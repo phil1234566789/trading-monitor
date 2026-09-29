@@ -5,7 +5,7 @@ import candles from './fixtures/gbpusd-h1-2026-07-23-live-metadata-snapshot.json
 
 function setup() {
   const evaluatedAt = candles.at(-1).time + 3600;
-  const props = reactive({ symbol: 'GBPUSD', replayUntil: null, showTradeSetupChecklist: true,
+  const props = reactive({ symbol: 'GBPUSD', currentBar: '5m', replayUntil: null, showTradeSetupChecklist: true,
     rangesPeriod: 5, ranges2Period: 2, rangesFixedStartActive: true, rangesFixedStartTime: 1783918800 });
   const sessions = reactive([]);
   const events = [];
@@ -92,6 +92,7 @@ describe('Chart-Checklist: asynchrone Integration', () => {
     expect(ctx.events.at(-1).state.checks.h1Trend.status).toBe('unknown');
     ctx.finish('h1', candles);
     ctx.finish('m5', [{ time: candles.at(-1).time, open: 1, high: 2, low: 0, close: 1 }]);
+    ctx.api.setChartCandles([{ time: candles.at(-1).time, open: 1, high: 2, low: 0, close: 1 }], 'GBPUSD:5m');
     expect(ctx.events.at(-1).state.evaluatedAt).toBe(candles.at(-1).time + 300);
     expect(ctx.events.at(-1).state.status).toBe('ready');
     expect(ctx.events.at(-1).state.context.h1Candles.at(-1).time).toBeLessThan(candles.at(-1).time);

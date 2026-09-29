@@ -1,10 +1,12 @@
 import { onScopeDispose, shallowRef, watch } from 'vue';
 import { createChecklistDataAdapter } from '../tradeSetupChecklistData.js';
-import { checklistEvaluationTime, evaluateTradeSetupChecklist } from '../tradeSetupChecklist.js';
+import { evaluateTradeSetupChecklist } from '../tradeSetupChecklist.js';
+import { closedReplayEvaluationTime } from '../tradeSetupChecklistTimeBasis.js';
 
 export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => Date.now() / 1000, timeData = {}, statistics = null) {
   const adapter = createChecklistDataAdapter();
   const state = shallowRef(null);
+  const chartData = shallowRef({ key: null, candles: [] });
   const enabled = () => props.showTradeSetupChecklist || props.showM1Structure;
   let disposed = false;
   let timeBoundaryTimer;
@@ -17,11 +19,16 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     rangesFixedStartActive: props.rangesFixedStartActive, rangesFixedStartTime: props.rangesFixedStartTime,
     m5StructurePeriod: props.m5StructurePeriod, m5Structure2Period: props.m5Structure2Period,
   });
+  function evaluationTime() {
+    const matching = chartData.value.key === `${props.symbol}:${props.currentBar}`;
+    return closedReplayEvaluationTime(props.replayUntil, Math.floor(now()),
+      matching ? chartData.value.candles : [], props.currentBar);
+  }
   function refresh() {
     if (disposed || !enabled()) { state.value = null; return; }
     const currentRevision = ++revision;
     const data = adapter.snapshot();
-    const result = evaluateAt(checklistEvaluationTime(props.replayUntil, Math.floor(now()), data.m5.candles), data);
+    const result = evaluateAt(evaluationTime(), data);
     state.value = result;
     emit('checklist-state-change', result);
     if (statistics && result.status === 'ready') {
@@ -51,8 +58,8 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   }
   function m1PrerequisitesAt(at) {
     const data = adapter.snapshot();
-    // I darf nicht A–H vom späteren Replay-M5-Schluss übernehmen. Die Struktur-
-    // Voraussetzungen ändern sich nur mit neuen M5/H1-Kerzen, nicht mit jedem M1-Poll.
+    // Fehlende M1-Kerzen können I hinter den sichtbaren Chart-Schluss zurücksetzen.
+    // ABC deshalb am tatsächlichen M1-Stand prüfen; der M5-Präfix bleibt pro Intervall gleich.
     const cutoff = Number.isFinite(at) ? Math.floor(at / 300) * 300 : null;
     const key = JSON.stringify([props.symbol, cutoff, data.status, settings(), sessionConfigs]);
     if (m1PrerequisiteCache?.key !== key || m1PrerequisiteCache.h1 !== data.h1.candles || m1PrerequisiteCache.m5 !== data.m5.candles) {
@@ -74,6 +81,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     adapter.reset(JSON.stringify(values));
     refresh();
   }, { immediate: true, flush: 'sync' });
+  watch(evaluationTime, refresh, { flush: 'sync' });
   watch(() => [props.rangesLookbackHours, props.ranges2LookbackHours, props.rangesFixedStartActive, props.rangesFixedStartTime], () => {
     adapter.invalidate('h1');
     refresh();
@@ -84,6 +92,8 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   onScopeDispose(() => { disposed = true; clearTimeout(timeBoundaryTimer); adapter.reset(null); });
   return {
     state,
+    evaluationTime,
+    setChartCandles(candles, key) { chartData.value = { candles, key }; },
     m1PrerequisitesAt,
     begin(tf) { const ticket = adapter.begin(tf); refresh(); return ticket; },
     finish(ticket, response, candles) {

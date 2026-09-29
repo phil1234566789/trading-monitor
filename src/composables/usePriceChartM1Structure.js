@@ -11,11 +11,13 @@ import { closedReplayEvaluationTime, closedChecklistCandles } from '../tradeSetu
 
 export function usePriceChartM1Structure(props, checklistState, {
   fetchCached = fetchCandlesCached, now = () => Date.now(), prerequisitesAt = () => checklistState.value,
+  evaluationHorizon,
 } = {}) {
   let series = null;
   let displayCandles = [];
   let rows = [];
   let context = null;
+  let requestedThrough = null;
   let generation = 0;
   let timer;
   let disposed = false;
@@ -23,12 +25,12 @@ export function usePriceChartM1Structure(props, checklistState, {
   const markers = [];
   const status = shallowRef({ state: 'waiting', anchor: null, lastClosedAt: null });
   const check = shallowRef(inactiveM1Checklist('prerequisites'));
-  // Diese Obergrenze steuert nur den Abruf. Einen M1-Bewertungsstand liefert erst
-  // die tatsächlich vorhandene geschlossene Kerze, auch bei Lücken und Wochenenden.
-  const requestedUntil = () => Math.min(Math.floor(now() / 1000), props.replayUntil == null ? Infinity : props.replayUntil + 60);
+  // Der sichtbare Chart-Schluss gilt für A–I gemeinsam. Ein M5-Replay um 09:25
+  // kennt 09:30; erst tatsächlich vorhandene M1-Kerzen belegen diesen Stand auch für I.
+  const requestedUntil = evaluationHorizon ?? (() => closedReplayEvaluationTime(
+    props.replayUntil, Math.floor(now() / 1000), displayCandles, props.currentBar));
   const evaluationTime = () => {
-    const cutoff = closedReplayEvaluationTime(props.replayUntil, Math.floor(now() / 1000), rows, '1m');
-    return closedChecklistCandles(rows, '1m', cutoff).at(-1)?.time + 60 || null;
+    return closedChecklistCandles(rows, '1m', requestedUntil()).at(-1)?.time + 60 || null;
   };
 
   function render() {
@@ -84,13 +86,15 @@ export function usePriceChartM1Structure(props, checklistState, {
   }
 
   function updateContext() {
-    const next = props.showM1Structure ? activeM1Context(prerequisitesAt(requestedUntil())) : null;
+    const horizon = requestedUntil();
+    const next = props.showM1Structure && Number.isFinite(horizon) ? activeM1Context(prerequisitesAt(horizon)) : null;
     // Unmittelbar auf Symbol-/Replaywechsel löschen, auch bevor die Checklist nachlädt.
     const valid = next?.instrument === props.symbol ? next : null;
     const identity = c => c ? `${c.instrument}:${c.setupKey}:${c.anchor.pivotTime}:${c.anchor.price}` : '';
     const changed = identity(valid) !== identity(context)
-      || (props.replayUntil != null && valid?.evaluatedAt !== context?.evaluatedAt);
+      || (props.replayUntil != null && (valid?.evaluatedAt !== context?.evaluatedAt || horizon !== requestedThrough));
     context = valid;
+    requestedThrough = horizon;
     if (changed || !valid) {
       generation++;
       clearTimeout(timer);
@@ -102,6 +106,7 @@ export function usePriceChartM1Structure(props, checklistState, {
   }
 
   watch([checklistState, () => props.showM1Structure], updateContext, { flush: 'sync' });
+  if (evaluationHorizon) watch(evaluationHorizon, updateContext, { flush: 'sync' });
   watch(() => [props.symbol, props.replayUntil], () => {
     generation++; clearTimeout(timer); context = null; rows = [];
     status.value = { state: 'waiting', anchor: null, lastClosedAt: null }; render();
@@ -112,6 +117,6 @@ export function usePriceChartM1Structure(props, checklistState, {
   onScopeDispose(() => { disposed = true; generation++; clearTimeout(timer); series = null; });
   return { status, check,
     create(value) { series = value; updateContext(); },
-    refresh(candles) { displayCandles = candles; render(); },
+    refresh(candles) { displayCandles = candles; updateContext(); },
   };
 }
