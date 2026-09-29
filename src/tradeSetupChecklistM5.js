@@ -1,11 +1,11 @@
 import { computeRangesPivots, innermostStructureStart } from './marketStructureAnalysis';
 import { buildStructureWithPhases } from './trendPhases.js';
-import { formatDatedTime } from './berlinTime.js';
+import { formatBerlinTime } from './berlinTime.js';
 import { pricePrecisionForInstrument } from './format.js';
 import { m1AnchorFromM5 } from './m1Structure.js';
 
 export function unknownChecklistM5() {
-  return { status: 'unknown', details: ['M5-Trend unbekannt', 'Change of Character', 'BOS'],
+  return { status: 'unknown', details: ['M5-Trend unbekannt', 'CHOCH', 'BOS'],
     detailStatuses: ['unknown', 'unknown', 'unknown'] };
 }
 
@@ -28,8 +28,8 @@ export function evaluateChecklistM5(context, settings = {}) {
   const choch = matchingReaction ? closeReaction.choch : null;
   const bos = matchingReaction ? closeReaction.bos : null;
   const detail = (label, signal) => signal
-    ? `${label} · ${signal.price.toFixed(pricePrecisionForInstrument(context.instrument))} · Kerze ${formatDatedTime(signal.candleTime)}` : label;
-  result.details = [`M5-Trend ${trendDirection === 'long' ? 'bullisch' : 'bärisch'}`, detail('Change of Character', choch), detail('BOS', bos)];
+    ? `${label} ${signal.price.toFixed(pricePrecisionForInstrument(context.instrument))} um ${formatBerlinTime(signal.candleTime)}` : label;
+  result.details = [`M5-Trend ${trendDirection === 'long' ? 'bullisch' : 'bärisch'}`, detail('CHOCH', choch), detail('BOS', bos)];
   if (direction) {
     result.detailStatuses = [trendDirection === direction, !!choch, !!bos].map(passed => passed ? 'passed' : 'unmet');
     // H beschreibt nur den Fortschritt in Checklist-Richtung; daraus folgt kein Gesamt-Go.

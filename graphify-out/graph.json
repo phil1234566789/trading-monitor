@@ -58788,7 +58788,7 @@
     },
     {
       "source": "src_tradesetupchecklistm5_evaluatechecklistm5",
-      "target": "src_berlintime_formatdatedtime",
+      "target": "src_berlintime_formatberlintime",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -78739,7 +78739,7 @@
     },
     {
       "source": "src_tradesetupchecklistm5",
-      "target": "src_berlintime_formatdatedtime",
+      "target": "src_berlintime_formatberlintime",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -142135,5 +142135,5 @@
       "source_file": "CLAUDE.md"
     }
   ],
-  "built_at_commit": "b8bd285cef057a082a1860c95000ae7fe1d92a52"
+  "built_at_commit": "f362589cc7a898bb51dac5e54a08d95a3d0b5656"
 }

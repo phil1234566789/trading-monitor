@@ -32,8 +32,8 @@ describe('Checklist H in the closed M5 replay', () => {
     expect(result.direction).toBe('short');
     expect(result.checks.m5Trend.detailStatuses).toEqual(statuses);
     expect(result.checks.m5Trend.details[0]).toBe('M5-Trend bullisch');
-    expect(result.checks.m5Trend.details[1]).toContain('Change of Character');
-    expect(result.checks.m5Trend.details[2]).toContain('BOS');
+    expect(result.checks.m5Trend.details[1]).toBe(statuses[1] === 'passed' ? 'CHOCH 1.35576 um 09:50' : 'CHOCH');
+    expect(result.checks.m5Trend.details[2]).toBe(statuses[2] === 'passed' ? 'BOS 1.35554 um 10:00' : 'BOS');
     expect(result.tradeability).not.toBe('passed');
   });
   it.each(['loading', 'error', 'stale', 'missing'])('reports %s data honestly', dataStatus => {

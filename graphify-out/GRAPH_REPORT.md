@@ -1,7 +1,7 @@
 # Graph Report - trading-monitor  (2026-09-29)
 
 ## Corpus Check
-- 712 files · ~1,151,185 words
+- 713 files · ~1,151,196 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b8bd285c`
+- Built from commit: `f362589c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
