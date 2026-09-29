@@ -243,8 +243,6 @@ const props = defineProps({
   // M5-Struktur (PLAN-m5-trend.md) — zwei eigene Toggles, unabhängig vom 1h-showRanges.
   showM5Structure: { type: Boolean, default: false },
   showM1Structure: { type: Boolean, default: false },
-  m1StructurePeriod: { type: Number, default: 5 },
-  m1Structure2Period: { type: Number, default: 2 },
   showM5TrendPhases: { type: Boolean, default: false },
   m5StructurePeriod: { type: Number, default: 5 },
   m5Structure2Period: { type: Number, default: 2 },

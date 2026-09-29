@@ -2,6 +2,8 @@ import { collectNestedChain, computeRangesPivots } from './marketStructureAnalys
 import { buildStructureWithPhases } from './trendPhases.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 
+export const M1_STRUCTURE_PERIOD = 5;
+
 export function m1AnchorFromM5(state, reaction, direction, evaluatedAt) {
   if (!state || !direction) return null;
   const short = direction === 'short';
@@ -28,16 +30,18 @@ export function activeM1Context(checklist) {
     setupKey: checklist.setup.primary.id ?? checklist.setup.primary.key } : null;
 }
 
-export function buildM1Structure(rows, anchor, evaluatedAt, outerPeriod = 5, innerPeriod = 2) {
+export function buildM1Structure(rows, anchor, evaluatedAt) {
   const empty = { state: null, pivotsOuter: [], pivotsInner: [], events: [], status: 'waiting' };
   if (!anchor || anchor.recognizedAt > evaluatedAt) return empty;
   const candles = closedChecklistCandles(rows, '1m', evaluatedAt).filter(c => !c.ignored);
   // Vorlauf zählt echte Kerzen, damit ein Wochenende keine Fraktalbestätigung vortäuscht.
-  if (candles.filter(c => c.time < anchor.pivotTime).length < Math.max(outerPeriod, innerPeriod)) {
+  if (candles.filter(c => c.time < anchor.pivotTime).length < M1_STRUCTURE_PERIOD) {
     return { ...empty, status: 'missing' };
   }
-  const pivotsOuter = computeRangesPivots(candles, outerPeriod, anchor.pivotTime);
-  const pivotsInner = computeRangesPivots(candles, innerPeriod, anchor.pivotTime);
-  return { ...buildStructureWithPhases(pivotsOuter, pivotsInner, outerPeriod, innerPeriod, candles, 60),
+  const pivotsOuter = computeRangesPivots(candles, M1_STRUCTURE_PERIOD, anchor.pivotTime);
+  // M1-P2 lieferte Fehlsignale: auch Nested/CHoCH/BOS dürfen nur P5 verarbeiten.
+  // Leere Inner-Liste nutzt den bestehenden Kern ohne doppelte Pivot-Einspeisung.
+  const pivotsInner = [];
+  return { ...buildStructureWithPhases(pivotsOuter, pivotsInner, M1_STRUCTURE_PERIOD, M1_STRUCTURE_PERIOD, candles, 60),
     pivotsOuter, pivotsInner, status: 'ready' };
 }

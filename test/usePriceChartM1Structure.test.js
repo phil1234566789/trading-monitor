@@ -18,7 +18,7 @@ function setup(fetchCached = vi.fn(async () => rows), replayUntil = 1500) {
   scope = effectScope();
   const state = shallowRef(null);
   const props = reactive({ symbol: 'GBPUSD', replayUntil, currentBar: '5m', showM1Structure: true,
-    showLiquidityDebug: false, m1StructurePeriod: 5, m1Structure2Period: 2 });
+    showLiquidityDebug: false });
   const api = scope.run(() => usePriceChartM1Structure(props, state, { fetchCached, now: () => 1800_000 }));
   api.create({}); api.refresh(rows.filter((_, i) => i % 5 === 0));
   return { state, props, api, fetchCached };
@@ -34,6 +34,7 @@ describe('independent M1 structure lifecycle', () => {
     expect(s.fetchCached).toHaveBeenCalledTimes(1);
     s.props.showLiquidityDebug = true; await nextTick();
     expect(renderLowerStructure.mock.calls.at(-1).at(-1).debug).toBe(true);
+    expect(renderLowerStructure.mock.calls.at(-1)[1].pivotsInner).toEqual([]);
     s.props.showM1Structure = false; await nextTick();
     expect(renderLowerStructure.mock.calls.at(-1)[1]).toBeNull();
   });

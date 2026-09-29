@@ -228,8 +228,6 @@ const showRangesMetadata = useLocalStorageRef("showRangesMetadata", false);
 // einstellbar, Start mit denselben 5/2 wie die 1h-Struktur.
 const showM5Structure = useLocalStorageRef("showM5Structure", false);
 const showM1Structure = useLocalStorageRef("showM1Structure", false);
-const m1StructurePeriod = useLocalStorageRef("m1StructurePeriod", 5);
-const m1Structure2Period = useLocalStorageRef("m1Structure2Period", 2);
 // Blendet nur die 1h-Struktur aus (Linien + Debug-Punkte), damit die M5-Ebene allein prüfbar ist —
 // "Structure" bleibt der Hauptschalter, PriceChart bekommt das UND beider als showRanges.
 const showH1Structure = useLocalStorageRef("showH1Structure", true);
@@ -1905,7 +1903,7 @@ watch(selectedTradingAccountId, () => {
           <ToggleButton variant="menu" :class="{ active: showM5Structure }" @click="showM5Structure = !showM5Structure">
             M5-Struktur
           </ToggleButton>
-          <ToggleButton variant="menu" :class="{ active: showM1Structure }" title="M1-Struktur ab bestätigtem A, B und C; Styles wie M5-Struktur" @click="showM1Structure = !showM1Structure">
+          <ToggleButton variant="menu" :class="{ active: showM1Structure }" title="M1-Struktur nur mit Periode-5-Pivots, ab bestätigtem A, B und C; Styles wie M5-Struktur" @click="showM1Structure = !showM1Structure">
             M1-Struktur
           </ToggleButton>
           <ToggleButton variant="menu" :class="{ active: showM5TrendPhases }" @click="showM5TrendPhases = !showM5TrendPhases">
@@ -1918,15 +1916,6 @@ watch(selectedTradingAccountId, () => {
           <label class="ranges-period-field">
             M5-Periode (eingebettet)
             <input v-model.number="m5Structure2Period" type="number" min="1" class="ranges-period-input" title="Fraktal-Periode der M5-Struktur (eingebettet)" />
-          </label>
-
-          <label class="ranges-period-field">
-            M1-Periode
-            <input v-model.number="m1StructurePeriod" type="number" min="1" class="ranges-period-input" title="Fraktal-Periode der M1-Struktur (Outer)" />
-          </label>
-          <label class="ranges-period-field">
-            M1-Periode (eingebettet)
-            <input v-model.number="m1Structure2Period" type="number" min="1" class="ranges-period-input" title="Fraktal-Periode der M1-Struktur (eingebettet)" />
           </label>
 
           <div class="toggle-dropdown-divider"></div>
@@ -2216,8 +2205,6 @@ watch(selectedTradingAccountId, () => {
     :show-ranges-metadata="showRangesMetadata"
     :show-m5-structure="showM5Structure"
     :show-m1-structure="showM1Structure"
-    :m1-structure-period="m1StructurePeriod"
-    :m1-structure2-period="m1Structure2Period"
     :show-m5-trend-phases="showM5TrendPhases"
     :m5-structure-period="m5StructurePeriod"
     :m5-structure2-period="m5Structure2Period"

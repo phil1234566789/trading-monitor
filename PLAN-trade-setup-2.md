@@ -286,7 +286,7 @@ Die 10:20-Kerze liefert später die bestehende Pivotbestätigung des bärischen 
 
 ### I / #9 — M1
 
-**Visuelle Struktur umgesetzt; Entry-/GO-Regel weiterhin offen.** Eigener Toggle „M1-Struktur“ im Structure-Menü, mit Outer-/Inner-Periode (Standard 5/2). Debug zeigt die M1-Pivots. Strukturkern, Linien, Marker und M5-Styles werden wiederverwendet.
+**Visuelle Struktur umgesetzt; Entry-/GO-Regel weiterhin offen.** Eigener Toggle „M1-Struktur“ im Structure-Menü, ausschließlich Periode-5-Pivots. P2 geht weder in CHoCH/BOS/Nested noch in andere M1-Strukturentscheidungen ein; der gemeinsame Kern erhält eine leere Inner-Pivotliste. Debug zeigt dieselben P5-Pivots. Die M1-Periodenregler entfallen; alte gespeicherte Werte werden nicht mehr gelesen. M5/H1 bleiben bei ihren bisherigen Einstellungen und Regeln. Strukturkern, Linien, Marker und M5-Styles werden wiederverwendet.
 
 - **Aktivierung:** Toggle an und A, B, C für das aktuelle Setup am Bewertungszeitpunkt bestätigt. Vorher keine M1-Abrufe für diese Funktion. H/BOS ist kein zusätzliches Gate.
 - **Anker:** der bekannte protected-Pivot der passenden aktuellen M5-Ebene, von dem die BOS-Linie ausgeht; nach BOS dieselbe Pivotidentität. DR114: 1,35554, M5-Pivotkerze 09.09.2026 um 08:45 Berlin. Kein fest codierter Preis und kein beliebiger alter BOS. Fehlt ein eindeutiger bekannter Anker, bleibt M1 ausstehend.

@@ -11,7 +11,7 @@ defineProps({ status: Object, symbol: String });
     <template v-else-if="status.state === 'error'">M1: Kerzen konnten nicht geladen werden</template>
     <template v-else-if="status.state === 'missing'">M1: Kerzenvorlauf fehlt</template>
     <template v-else>
-      M1 · Anker {{ fmtPrice(status.anchor.price, pricePrecisionForInstrument(symbol)) }}
+      M1 · P5 · Anker {{ fmtPrice(status.anchor.price, pricePrecisionForInstrument(symbol)) }}
       · {{ formatDatedTime(status.anchor.pivotTime) }}
       <span v-if="status.lastClosedAt"> · Stand {{ formatDatedTime(status.lastClosedAt) }}</span>
     </template>
