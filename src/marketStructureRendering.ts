@@ -5,6 +5,7 @@
 // alles Chart-bezogene — computeRangesPivots/buildMarketStructureState/summarizeMarketStructureState
 // bleiben in marketStructureAnalysis.ts, hier nur der State -> Chart-Primitives-Teil.
 import { LiquidityLinePrimitive, bullBearLabelSide, formatLsLabel } from "./liquidity.js";
+import { structureSweepPivots } from './structureSweeps.js';
 import { cssColor as baseCssColor } from "./chartColors.js";
 import { lineWidth as baseLineWidth } from "./chartLineWidths.js";
 import { PIP_SIZE } from "./pipConfig.js";
@@ -561,7 +562,7 @@ function renderNestedLevel(
     existingPrimitives.push(line);
   }
 
-  for (const lqSweep of nested.structurePivots.filter((p) => p.type === "LQ-sweep")) {
+  for (const lqSweep of structureSweepPivots(nested)) {
     const lqColor = cssColor("rangeLqSweep");
     const line = new LiquidityLinePrimitive(
       toTouchedLevel(lqSweep, candles),
@@ -747,7 +748,7 @@ export function renderMarketStructureAnalysis(
   // 2026-07-24 nur noch 1px breit (LQ_SWEEP_LINE_WIDTH) und OHNE Pfeil, sobald ein Break of
   // Structure existiert — der Long-/Short-Gedanke dahinter gilt dann nicht mehr, die Linie bleibt
   // aber als reine Information stehen.
-  for (const lqSweep of state.structurePivots.filter((p) => p.type === "LQ-sweep")) {
+  for (const lqSweep of structureSweepPivots(state)) {
     const lqColor = cssColor("rangeLqSweep");
     const line = new LiquidityLinePrimitive(
       toTouchedLevel(lqSweep, candles),
