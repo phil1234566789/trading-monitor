@@ -20,6 +20,30 @@ function setup() {
 }
 
 describe('Chart-Checklist: asynchrone Integration', () => {
+  it('publiziert Busy vor der Browser-Berechnung und verwirft überholte Frames', () => {
+    const ctx = setup();
+    ctx.fill();
+    vi.useFakeTimers();
+    const frames = [];
+    vi.stubGlobal('requestAnimationFrame', callback => { frames.push(callback); return frames.length; });
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    try {
+      ctx.api.refresh();
+      expect(ctx.api.state.value.updating).toBe(true);
+      expect(ctx.api.m1PrerequisitesAt(123).updating).toBe(true);
+      frames.at(-1)();
+      expect(ctx.api.state.value.updating).toBe(true);
+      vi.advanceTimersByTime(0);
+      expect(ctx.api.state.value.status).toBe('ready');
+      expect(ctx.api.state.value.updating).toBe(false);
+      ctx.api.refresh();
+      const obsolete = frames.at(-1);
+      ctx.props.symbol = 'EURUSD';
+      obsolete(); vi.advanceTimersByTime(0);
+      expect(ctx.api.state.value.instrument).toBe('EURUSD');
+      expect(ctx.api.state.value.updating).toBe(true);
+    } finally { ctx.scope.stop(); vi.unstubAllGlobals(); vi.useRealTimers(); }
+  });
   it('aktualisiert leere Kalender nach tatsächlichem Ladeerfolg und Ladefehler', async () => {
     const props = reactive({symbol:'GBPUSD',replayUntil:null,showTradeSetupChecklist:true});
     const timeData = reactive({newsEvents:[],newsCalendar:{status:'loading'}});

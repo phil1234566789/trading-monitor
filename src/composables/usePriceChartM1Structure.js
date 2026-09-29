@@ -9,6 +9,7 @@ import { markIgnored } from '../ignoredCandles.js';
 import { renderLowerStructure } from '../structureOverlay.js';
 import { closedReplayEvaluationTime, closedChecklistCandles } from '../tradeSetupChecklistTimeBasis.js';
 import { renderM1Entry } from '../m1EntryRendering.js';
+import { afterBrowserPaint } from '../afterBrowserPaint.js';
 
 export function usePriceChartM1Structure(props, checklistState, {
   fetchCached = fetchCandlesCached, now = () => Date.now(), prerequisitesAt = () => checklistState.value,
@@ -22,6 +23,7 @@ export function usePriceChartM1Structure(props, checklistState, {
   let generation = 0;
   let timer;
   let disposed = false;
+  let cancelRender = () => {};
   const primitives = [];
   const markers = [];
   const entryPrimitives = [];
@@ -35,14 +37,23 @@ export function usePriceChartM1Structure(props, checklistState, {
     return closedChecklistCandles(rows, '1m', requestedUntil()).at(-1)?.time + 60 || null;
   };
 
+  function markUpdating() {
+    check.value = { ...inactiveM1Checklist('loading'), instrument: props.symbol, updating: true };
+  }
   function render() {
+    cancelRender();
     if (!series) return;
+    markUpdating();
+    cancelRender = afterBrowserPaint(renderNow);
+  }
+  function renderNow() {
+    if (disposed || !series) return;
     const evaluatedAt = evaluationTime();
     const prerequisites = props.showM1Structure ? prerequisitesAt(evaluatedAt ?? requestedUntil()) : null;
     const reason = !props.showM1Structure ? 'disabled' : m1PrerequisiteReason(prerequisites);
     const knownContext = !reason && evaluatedAt != null ? activeM1Context(prerequisites) : null;
     const marked = markIgnored(rows, props.symbol);
-    const result = knownContext && props.showM1Structure
+    const result = knownContext && props.showM1Structure && status.value.state !== 'loading'
       ? buildM1Structure(marked, knownContext.anchor, evaluatedAt) : null;
     const missingClose = evaluatedAt != null && evaluatedAt < Math.floor(requestedUntil() / 60) * 60;
     let currentCheck;
@@ -50,7 +61,8 @@ export function usePriceChartM1Structure(props, checklistState, {
     else if (['loading', 'error'].includes(status.value.state)) currentCheck = inactiveM1Checklist(status.value.state);
     else if (missingClose || !result) currentCheck = inactiveM1Checklist('missing');
     else currentCheck = evaluateM1Checklist({ context: knownContext, structure: result, candles: marked, evaluatedAt });
-    check.value = { ...currentCheck, evaluatedAt, instrument: props.symbol };
+    check.value = { ...currentCheck, evaluatedAt, instrument: props.symbol,
+      updating: !!checklistState.value?.updating || status.value.state === 'loading' };
     renderM1Entry(series, currentCheck.entry, entryPrimitives, displayCandles, props.currentBar);
     renderLowerStructure(series, result, primitives, markers, displayCandles, {
       symbol: props.symbol, replayUntil: evaluationTime(), show: !!result,
@@ -65,6 +77,8 @@ export function usePriceChartM1Structure(props, checklistState, {
     if (disposed || !context) return;
     const ticket = generation;
     const source = context;
+    status.value = { ...status.value, state: 'loading' };
+    markUpdating();
     try {
       // Kalenderdistanz deckt die komplette Strecke ab; zusätzlicher Vorlauf enthält
       // auch vor Wochenend-Ankern genügend tatsächliche Fraktalkerzen.
@@ -120,7 +134,7 @@ export function usePriceChartM1Structure(props, checklistState, {
   }, { flush: 'post' });
   watch(() => props.showLiquidityDebug, render);
   onScopeDispose(() => {
-    disposed = true; generation++; clearTimeout(timer);
+    disposed = true; generation++; clearTimeout(timer); cancelRender();
     if (series) renderM1Entry(series, null, entryPrimitives, [], props.currentBar);
     series = null;
   });

@@ -8,6 +8,7 @@ import { unknownChecklistM5 } from "../tradeSetupChecklistM5.js";
 import { inactiveM1Checklist } from "../m1Checklist.js";
 import { usePreservedScroll } from "../composables/usePreservedScroll.js";
 import { entryChecklist } from "../m1Entry.js";
+import { useChecklistDisplay } from "../composables/useChecklistDisplay.js";
 
 const props = defineProps({
   instrument: { type: String, required: true },
@@ -45,7 +46,7 @@ const dataStates = {
   error: { label: "Auswertung fehlgeschlagen", symbol: "!" },
 };
 // Ein verspätetes Ergebnis eines anderen Instruments darf keine grünen Prüfpunkte liefern.
-const state = computed(() => props.checklistState?.instrument === props.instrument ? props.checklistState : null);
+const { state, busy, retained, m1: displayedM1 } = useChecklistDisplay(props);
 const dataStatus = computed(() => state.value
   ? dataStates[state.value.status] ?? { label: "Datenstatus unbekannt", symbol: "?" }
   : { label: "Auswertung ausstehend", symbol: "…" });
@@ -54,7 +55,7 @@ const evaluatedAt = computed(() => {
   return Number.isFinite(time) && Number.isFinite(new Date(time * 1000).getTime()) ? formatDatedTime(time) : null;
 });
 const presentation = computed(() => checklistPresentation(state.value));
-const m1 = computed(() => props.m1Check?.instrument === props.instrument ? props.m1Check : inactiveM1Checklist('prerequisites'));
+const m1 = computed(() => displayedM1.value ?? inactiveM1Checklist('prerequisites'));
 const checks = computed(() => definitions.map((definition, index) => {
   const result = definition.key === 'entry' ? entryChecklist(m1.value) : definition.key === 'm1'
     ? m1.value
@@ -75,10 +76,11 @@ const checks = computed(() => definitions.map((definition, index) => {
 </script>
 
 <template>
-  <section class="trade-setup-checklist" aria-labelledby="checklist-title" :aria-busy="state?.status === 'loading'">
+  <section class="trade-setup-checklist" aria-labelledby="checklist-title" :aria-busy="!!busy">
     <header class="checklist-header">
       <div>
         <h2 id="checklist-title">Trade Setup Checklist <span>{{ instrument }}</span></h2>
+        <p class="checklist-loading" role="status"><template v-if="busy"><span class="checklist-spinner" aria-hidden="true"></span>{{ retained ? 'Wird aktualisiert… · vorheriger Stand' : 'Wird aktualisiert…' }}</template></p>
       </div>
       <button type="button" class="checklist-close" aria-label="Trade Setup Checklist schließen" @click="$emit('close')">×</button>
     </header>
@@ -87,7 +89,7 @@ const checks = computed(() => definitions.map((definition, index) => {
         <time v-if="evaluatedAt" :datetime="new Date(state.evaluatedAt * 1000).toISOString()">{{ evaluatedAt }} Uhr (Europe/Berlin)</time>
         <strong v-else>Bewertungsstand unbekannt</strong>
       </div>
-      <ChecklistStatusIcon v-bind="dataStatus" />
+      <ChecklistStatusIcon v-if="!busy" v-bind="dataStatus" />
     </div>
     <p v-if="state?.tradeability === 'blocked'" class="checklist-not-tradeable" role="status">Nicht tradebar</p>
     <p v-if="state?.statistics?.status === 'error'" class="checklist-notice" role="alert">Target-Statistik konnte nicht gespeichert werden. Neuer Versuch bei der nächsten Auswertung.</p>
@@ -121,13 +123,17 @@ h2 { font-size: 15px; }
 h2 span { margin-left: 8px; color: #a5aab5; font-weight: 400; }
 .checklist-header p, .checklist-notice, .checklist-note { font-size: 13px; color: #a5aab5; line-height: 1.5; }
 .checklist-header p { margin-top: 4px; }
+.checklist-header .checklist-loading { display: flex; align-items: center; gap: 6px; min-height: 18px; font-size: 11px; }
+.checklist-spinner { width: 11px; height: 11px; flex: none; border: 2px solid rgba(209, 212, 220, 0.3); border-top-color: #d1d4dc; border-radius: 50%; animation: checklist-spin 0.8s linear infinite; }
+@keyframes checklist-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .checklist-spinner { animation: none; } }
 .checklist-not-tradeable { color: #ff8a87; font-size: 14px; font-weight: 600; }
 .checklist-detail-status[data-status="passed"] { color: #71c8b3; border: none; }
 .checklist-detail-status[data-status="blocked"], .checklist-detail-status[data-status="unmet"] { color: #ff8a87; }
 .checklist-close { flex: none; background: transparent; border: 1px solid #434957; border-radius: 4px; color: #d1d4dc; cursor: pointer; width: 32px; height: 32px; font-size: 20px; }
 .checklist-close:hover { background: #2a2e39; }
 .checklist-close:focus-visible { outline: 2px solid #90b4ff; outline-offset: 2px; }
-.checklist-evaluation { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 12px 0 8px; font-size: 13px; }
+.checklist-evaluation { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 26px; margin: 12px 0 8px; font-size: 13px; }
 .checklist-timestamp { display: grid; gap: 4px; }
 .checklist-timestamp time { font-weight: 600; }
 /* Nur die Prüfungen scrollen; Charthöhe, Kopf und Bewertungsstand bleiben unabhängig vom Inhalt. */

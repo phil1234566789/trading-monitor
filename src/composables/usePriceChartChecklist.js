@@ -2,6 +2,7 @@ import { onScopeDispose, shallowRef, watch } from 'vue';
 import { createChecklistDataAdapter } from '../tradeSetupChecklistData.js';
 import { evaluateTradeSetupChecklist } from '../tradeSetupChecklist.js';
 import { closedReplayEvaluationTime } from '../tradeSetupChecklistTimeBasis.js';
+import { afterBrowserPaint } from '../afterBrowserPaint.js';
 
 export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => Date.now() / 1000, timeData = {}, statistics = null) {
   const adapter = createChecklistDataAdapter();
@@ -13,6 +14,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   let saveQueue = Promise.resolve();
   let revision = 0;
   let m1PrerequisiteCache;
+  let cancelEvaluation = () => {};
   const settings = () => ({
     rangesPeriod: props.rangesPeriod, ranges2Period: props.ranges2Period,
     rangesLookbackHours: props.rangesLookbackHours, ranges2LookbackHours: props.ranges2LookbackHours,
@@ -25,10 +27,22 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
       matching ? chartData.value.candles : [], props.currentBar);
   }
   function refresh() {
+    cancelEvaluation();
     if (disposed || !enabled()) { state.value = null; return; }
     const currentRevision = ++revision;
     const data = adapter.snapshot();
+    if (data.status === 'ready') {
+      const loading = { ...evaluateAt(evaluationTime(), { ...data, status: 'loading' }), updating: true };
+      state.value = loading;
+      emit('checklist-state-change', loading);
+      cancelEvaluation = afterBrowserPaint(() => {
+        if (!disposed && currentRevision === revision) publish(data, currentRevision);
+      });
+    } else publish(data, currentRevision);
+  }
+  function publish(data, currentRevision) {
     const result = evaluateAt(evaluationTime(), data);
+    result.updating = data.updating;
     state.value = result;
     emit('checklist-state-change', result);
     if (statistics && result.status === 'ready') {
@@ -57,6 +71,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     });
   }
   function m1PrerequisitesAt(at) {
+    if (state.value?.updating) return state.value;
     const data = adapter.snapshot();
     // Fehlende M1-Kerzen können I hinter den sichtbaren Chart-Schluss zurücksetzen.
     // ABC deshalb am tatsächlichen M1-Stand prüfen; der M5-Präfix bleibt pro Intervall gleich.
@@ -89,7 +104,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   watch(() => [props.rangesPeriod, props.ranges2Period, props.m5StructurePeriod, props.m5Structure2Period, props.showTradeSetupChecklist, props.showM1Structure], () => { refresh(); scheduleTimeBoundary(); });
   watch(sessionConfigs, refresh, { deep: true });
   watch(() => [timeData.tradingSchedules, timeData.newsEvents, timeData.newsCalendar?.status], refresh, { deep: true });
-  onScopeDispose(() => { disposed = true; clearTimeout(timeBoundaryTimer); adapter.reset(null); });
+  onScopeDispose(() => { disposed = true; cancelEvaluation(); clearTimeout(timeBoundaryTimer); adapter.reset(null); });
   return {
     state,
     evaluationTime,

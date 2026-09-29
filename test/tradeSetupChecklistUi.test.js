@@ -8,6 +8,12 @@ const render = (checklistState = null, m1Check = null) => renderToString(createS
 }));
 
 describe("Trade Setup Checklist presentation", () => {
+  it('exposes M1 work as busy without advertising the current data as complete', async () => {
+    const html = await render({ instrument: 'GBPUSD', status: 'ready', checks: {} }, { instrument: 'GBPUSD', reason: 'loading' });
+    expect(html).toContain('aria-busy="true"');
+    expect(html).toContain('Wird aktualisiert…');
+    expect(html).not.toContain('Daten ausgewertet');
+  });
   it('shows a green news check independently of an unknown MMM time gate', async () => {
     const html = await render({ instrument: 'GBPUSD', status: 'ready', checks: {
       time: {status: 'unknown', details: ['MMM — Vorsicht', 'Keine News'], detailStatuses: [null, 'passed']},
@@ -62,7 +68,7 @@ describe("Trade Setup Checklist presentation", () => {
   it("shows all ten checks without editable checkboxes or a fabricated result", async () => {
     const html = await render();
     expect(html.match(/data-status=/g)).toHaveLength(13);
-    expect(html).toContain("Auswertung ausstehend");
+    expect(html).toContain("Wird aktualisiert…");
     expect(html).not.toContain("Optionale Zusatzargumente");
     expect(html).toContain("M1 wartet auf vollständige H1-/M5-Prüfdaten.");
     expect(html).not.toMatch(/<input|data-status="passed"|data-status="blocked"/);
@@ -77,7 +83,7 @@ describe("Trade Setup Checklist presentation", () => {
   });
 
   it.each([
-    ["loading", "Auswertung lädt"], ["ready", "Daten ausgewertet"],
+    ["loading", "Wird aktualisiert…"], ["ready", "Daten ausgewertet"],
     ["missing", "Daten fehlen"], ["stale", "Daten veraltet"], ["error", "Auswertung fehlgeschlagen"],
   ])("distinguishes %s data from final setup approval", async (status, label) => {
     const html = await render({ instrument: "GBPUSD", status, checks: {} });
@@ -118,7 +124,7 @@ describe("Trade Setup Checklist presentation", () => {
     const html = await render({ instrument: "EURUSD", status: "ready",
       checks: { h1Trend: { status: "passed", details: ["Fremdes Ergebnis"] } },
     });
-    expect(html).toContain("Auswertung ausstehend");
+    expect(html).toContain("Wird aktualisiert…");
     expect(html).not.toContain("Fremdes Ergebnis");
     expect(html).not.toContain('data-status="passed"');
   });

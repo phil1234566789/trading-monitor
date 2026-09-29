@@ -87,6 +87,16 @@ describe('Checklist: geschlossener Wissensstand', () => {
 });
 
 describe('Checklist-Datenadapter', () => {
+  it('markiert auch Folgeabrufe und beendet den Ladezustand bei verworfener Antwort', () => {
+    const adapter = createChecklistDataAdapter();
+    for (const tf of ['h1', 'm5']) adapter.finish(adapter.begin(tf), { ok: true, applied: true }, candles);
+    const ticket = adapter.begin('h1');
+    expect(adapter.snapshot().updating).toBe(true);
+    expect(adapter.snapshot().status).toBe('loading');
+    expect(adapter.finish(ticket, { ok: true, applied: false })).toBe(true);
+    expect(adapter.snapshot().updating).toBe(false);
+    expect(adapter.snapshot().h1.candles).toEqual(candles);
+  });
   it('verwirft Antworten nach Instrument-/Zeitwechsel und ältere Antworten desselben Fensters', () => {
     const adapter = createChecklistDataAdapter();
     adapter.reset('GBPUSD:1');

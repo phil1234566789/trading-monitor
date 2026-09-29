@@ -19,20 +19,21 @@ export function createChecklistDataAdapter() {
     },
     begin(tf) {
       const slot = slots[tf];
-      slot.status = slot.candles.length ? 'ready' : 'loading';
+      slot.status = 'loading';
       return { generation, tf, sequence: ++slot.sequence };
     },
     finish(ticket, response, candles = []) {
       const slot = slots[ticket.tf];
       if (ticket.generation !== generation || ticket.sequence !== slot.sequence) return false;
       if (!response.ok) slot.status = 'error';
-      else if (!response.applied) return false;
+      else if (!response.applied) slot.status = slot.candles.length ? 'ready' : 'missing';
       else { slot.candles = candles; slot.status = 'ready'; }
       return true;
     },
     snapshot() {
       const statuses = Object.values(slots).map(s => s.status);
-      return { ...slots, status: statuses.includes('error') ? 'error' : statuses.includes('loading') ? 'loading' : 'ready' };
+      return { ...slots, updating: statuses.includes('loading'),
+        status: ['error', 'loading', 'missing'].find(status => statuses.includes(status)) ?? 'ready' };
     },
   };
 }

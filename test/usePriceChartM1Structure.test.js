@@ -24,6 +24,18 @@ function setup(fetchCached = vi.fn(async () => rows), replayUntil = 1500, now = 
   return { state, props, api, fetchCached };
 }
 describe('independent M1 structure lifecycle', () => {
+  it('marks an independent slow M1 poll busy until its response is evaluated', async () => {
+    vi.useFakeTimers();
+    let resolve;
+    const s = setup(vi.fn().mockResolvedValueOnce(rows).mockImplementation(() => new Promise(done => { resolve = done; })), null);
+    s.state.value = ready(); await nextTick();
+    expect(s.api.check.value.updating).not.toBe(true);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(s.api.check.value.updating).toBe(true);
+    expect(s.api.check.value.reason).toBe('loading');
+    resolve(rows); await nextTick();
+    expect(s.api.check.value.updating).not.toBe(true);
+  });
   it('keeps a failed poll unknown through later chart redraws', async () => {
     vi.useFakeTimers();
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
