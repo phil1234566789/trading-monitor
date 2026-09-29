@@ -21,12 +21,19 @@ export function m1AnchorFromM5(state, reaction, direction, evaluatedAt) {
   return pivot ? { pivotTime: pivot.pivotTime, price: pivot.price, recognizedAt: evaluatedAt } : bos;
 }
 
+export function m1PrerequisiteReason(checklist) {
+  if (!checklist || checklist.status !== 'ready') return 'prerequisites';
+  if (checklist.setup?.primary?.validity?.state === 'ended') return 'ended';
+  if (!checklist.setup?.primary || !['h1Trend', 'liquiditySweep', 'reaction'].every(key => checklist.checks[key]?.status === 'passed')) return 'abc';
+  if (!checklist.checks.m5Trend?.m1Anchor) return 'anchor';
+  return null;
+}
+
 export function activeM1Context(checklist) {
-  if (!checklist || checklist.status !== 'ready' || !checklist.setup?.primary) return null;
-  if (checklist.setup.primary.validity?.state === 'ended') return null;
-  if (!['h1Trend', 'liquiditySweep', 'reaction'].every(key => checklist.checks[key]?.status === 'passed')) return null;
+  if (m1PrerequisiteReason(checklist)) return null;
   const anchor = checklist.checks.m5Trend?.m1Anchor;
   return anchor ? { instrument: checklist.instrument, anchor, evaluatedAt: checklist.evaluatedAt,
+    direction: checklist.setup.primary.direction ?? checklist.direction, primary: checklist.setup.primary,
     setupKey: checklist.setup.primary.id ?? checklist.setup.primary.key } : null;
 }
 

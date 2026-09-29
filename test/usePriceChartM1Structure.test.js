@@ -14,16 +14,39 @@ const rows = Array.from({ length: 50 }, (_, i) => ({ time: i * 60, open: 10, clo
   high: 11 + Math.sin(i), low: 9 + Math.sin(i) }));
 let scope;
 afterEach(() => { scope?.stop(); vi.useRealTimers(); vi.clearAllMocks(); });
-function setup(fetchCached = vi.fn(async () => rows), replayUntil = 1500) {
+function setup(fetchCached = vi.fn(async () => rows), replayUntil = 1500, now = () => 1800_000) {
   scope = effectScope();
   const state = shallowRef(null);
   const props = reactive({ symbol: 'GBPUSD', replayUntil, currentBar: '5m', showM1Structure: true,
     showLiquidityDebug: false });
-  const api = scope.run(() => usePriceChartM1Structure(props, state, { fetchCached, now: () => 1800_000 }));
+  const api = scope.run(() => usePriceChartM1Structure(props, state, { fetchCached, now }));
   api.create({}); api.refresh(rows.filter((_, i) => i % 5 === 0));
   return { state, props, api, fetchCached };
 }
 describe('independent M1 structure lifecycle', () => {
+  it('keeps a failed poll unknown through later chart redraws', async () => {
+    vi.useFakeTimers();
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const s = setup(vi.fn().mockResolvedValueOnce(rows).mockRejectedValue(new Error('network')), null);
+      s.state.value = ready(); await nextTick();
+      await vi.advanceTimersByTimeAsync(60_000);
+      s.api.refresh(rows);
+      expect(s.api.check.value.reason).toBe('error');
+      expect(s.api.status.value.state).toBe('error');
+    } finally { log.mockRestore(); }
+  });
+  it('publishes new closed M1 data between M5 closes without another checklist update', async () => {
+    vi.useFakeTimers();
+    let time = 1810_000;
+    const s = setup(undefined, null, () => time);
+    s.state.value = ready(); await nextTick();
+    expect(s.api.check.value.evaluatedAt).toBe(1800);
+    time = 1870_000;
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(s.api.check.value.evaluatedAt).toBe(1860);
+    expect(s.state.value.evaluatedAt).toBe(1800);
+  });
   it('does not fetch before A/B/C and uses M1 independently of chart timeframe', async () => {
     const s = setup();
     expect(s.fetchCached).not.toHaveBeenCalled();

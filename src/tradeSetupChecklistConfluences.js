@@ -1,5 +1,5 @@
 import { detectRsiDivergenceHistory, DEFAULT_DIVERGENCE_FRACTAL_PERIOD, DEFAULT_RSI_PERIOD } from './rsi.js';
-import { detectOrderBlocks } from './orderBlockDetection.js';
+import { detectOrderBlocks, candleTouchesOrderBlock } from './orderBlockDetection.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { barSecondsForTimeframeCi } from './timeframes.js';
 import { formatDatedTime } from './berlinTime.js';
@@ -133,7 +133,7 @@ export function evaluateChecklistConfluences({ evaluatedAt, direction, instrumen
     confluences.obCandidates = obs.filter(ob => ob.dir === (short ? -1 : 1)
       && (short ? ob.bottom >= sweep.price : ob.top <= sweep.price)
       && ob.recognizedAt <= sweep.touchedTime && !(ob.timeframe === '5m' && ob.startTime === main.reactionOB?.startTime))
-      .map(ob => ({ ...ob, touchOnSweepCandle: sweepCandle ? sweepCandle.low <= ob.top && sweepCandle.high >= ob.bottom : null,
+      .map(ob => ({ ...ob, touchOnSweepCandle: sweepCandle ? candleTouchesOrderBlock(sweepCandle, ob) : null,
         sameMovement: 'unknown' }));
   }
   // Sweep-/OB-Bewertung ist zurückgestellt: Grün gilt ausschließlich der H1-Prüfung.

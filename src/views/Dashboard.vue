@@ -305,6 +305,7 @@ const showTradeSetupCockpit = useLocalStorageRef("showTradeSetupCockpit", true);
 const showTradeSetupBewertung = useLocalStorageRef("showTradeSetupBewertung", true);
 const showTradeSetupChecklist = useLocalStorageRef("showTradeSetupChecklist", false);
 const checklistState = ref(null);
+const m1Check = ref(null);
 const renderedChartHeight = ref(null);
 // Style-Modal (Farben aller Chart-Indikatoren, siehe StyleModal.vue/chartColors.js) — reiner
 // Öffnen/Schließen-Zustand, NICHT in localStorage (die Farben selbst persistieren bereits über
@@ -1311,6 +1312,7 @@ const replayUntil = computed(() => (replayActive.value ? replayTime.value : null
 // Alte Ergebnisse dürfen beim Kontextwechsel nicht bis zum nächsten Chart-Event stehen bleiben.
 watch([currentSymbol, replayUntil, showTradeSetupChecklist], () => {
   checklistState.value = null;
+  m1Check.value = null;
 }, { flush: "sync" });
 watch([currentSymbol, currentBar], () => {
   if (currentSymbol.value !== 'XAUUSD') return;
@@ -2232,6 +2234,7 @@ watch(selectedTradingAccountId, () => {
     :tsc-range="tscRange"
     @close-ranges-metadata="showRangesMetadata = false"
     @checklist-state-change="checklistState = $event"
+    @m1-check-change="m1Check = $event"
     @chart-height-change="renderedChartHeight = $event"
     @close-debug-metadata="showDebugMetadata = false"
     @close-rsi-divergence-stats="showRsiDivergenceStats = false"
@@ -2278,6 +2281,7 @@ watch(selectedTradingAccountId, () => {
       :style="renderedChartHeight == null ? undefined : { height: renderedChartHeight + 'px' }"
       :instrument="currentSymbol"
       :checklist-state="checklistState"
+      :m1-check="m1Check"
       @close="showTradeSetupChecklist = false"
     />
 

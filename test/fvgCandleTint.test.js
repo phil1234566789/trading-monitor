@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tintFvgCandles, fvgCandleTimes } from "../src/fvgCandleTint.js";
+import { tintFvgCandles, fvgCandleTimes, tintM1FvgCandle } from "../src/fvgCandleTint.js";
 
 const kerzen = [
   { time: 100, open: 1, high: 2, low: 0.5, close: 1.5 },
@@ -9,6 +9,12 @@ const kerzen = [
 const GELB = "#ffd54f";
 
 describe("tintFvgCandles", () => {
+  it('colors the confirmed M1 impulse only on M1, without reinterpreting an M5 bar', () => {
+    const signal = { candleTime: 200, recognizedAt: 400 };
+    expect(tintM1FvgCandle(kerzen, signal, '1m', GELB).map(c => c.color)).toEqual([undefined, GELB, undefined]);
+    expect(tintM1FvgCandle(kerzen, signal, '5m', GELB)).toBe(kerzen);
+    expect(tintM1FvgCandle(kerzen, null, '1m', GELB)).toBe(kerzen);
+  });
   it("färbt genau die Impuls-Kerze des Setups", () => {
     const out = tintFvgCandles(kerzen, [{ obStartTime: 200 }], "5m", GELB);
     expect(out.map((c) => c.color)).toEqual([undefined, GELB, undefined]);

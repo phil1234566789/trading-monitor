@@ -6,6 +6,10 @@
 // von hier und re-exportiert es, damit sich an dessen öffentlicher API nichts ändert.
 import { PIP_SIZE } from "../_shared/pipConfig.js";
 
+export function candleTouchesOrderBlock(candle, zone) {
+  return candle.low <= zone.top && candle.high >= zone.bottom;
+}
+
 const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone angelegt (HTF: 15m/1h/4h/1D)
 
 // Lower-TF (M1/M3/M5, siehe tv-indikator/src/calculations.pine: capMode=true) hat im Pine-Original
@@ -142,7 +146,7 @@ export function detectOrderBlocks(candles, timeframe, isForex = true, minGapOver
         continue;
       }
 
-      if (!z.touched && cur.low <= z.top && cur.high >= z.bottom) z.touched = true;
+      if (!z.touched && candleTouchesOrderBlock(cur, z)) z.touched = true;
       // Auf genau der Kerze, die den Touch ausloest, soll endTime noch mitwachsen (sonst
       // friert die Box eine Kerze zu frueh ein) — danach (wasTouched war schon true) nicht mehr.
       if (!wasTouched) z.endTime = cur.time;

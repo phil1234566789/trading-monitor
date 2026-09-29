@@ -5,10 +5,12 @@ import ChecklistStatusIcon from "./ChecklistStatusIcon.vue";
 import ChecklistOrderBlock from "./ChecklistOrderBlock.vue";
 import { checklistPresentation } from "../tradeSetupChecklistPresentation.js";
 import { unknownChecklistM5 } from "../tradeSetupChecklistM5.js";
+import { inactiveM1Checklist } from "../m1Checklist.js";
 
 const props = defineProps({
   instrument: { type: String, required: true },
   checklistState: { type: Object, default: null },
+  m1Check: { type: Object, default: null },
 });
 defineEmits(["close"]);
 
@@ -21,7 +23,7 @@ const definitions = [
   { key: "time", label: "Uhrzeit" },
   { key: "confluences", label: "Weitere Confluences" },
   { key: "m5Trend", label: "M5 Trend", fallback: "unknown" },
-  { key: "m1", label: "M1", fallback: "deferred", note: "Zurückgestellt · kein aktuelles Freigabekriterium" },
+  { key: "m1", label: "M1" },
 ];
 const statuses = {
   passed: { label: "Erfüllt", symbol: "✓" },
@@ -49,7 +51,9 @@ const evaluatedAt = computed(() => {
 });
 const presentation = computed(() => checklistPresentation(state.value));
 const checks = computed(() => definitions.map((definition, index) => {
-  const result = state.value?.checks?.[definition.key] ?? (definition.key === 'm5Trend' ? unknownChecklistM5() : null);
+  const result = definition.key === 'm1'
+    ? (props.m1Check?.instrument === props.instrument ? props.m1Check : inactiveM1Checklist('prerequisites'))
+    : state.value?.checks?.[definition.key] ?? (definition.key === 'm5Trend' ? unknownChecklistM5() : null);
   const status = result?.status in statuses ? result.status : definition.fallback ?? "unknown";
   return {
     ...definition,
@@ -57,6 +61,7 @@ const checks = computed(() => definitions.map((definition, index) => {
     status,
     ...statuses[status],
     title: definition.label,
+    evaluatedAt: result?.evaluatedAt,
     details: Array.isArray(result?.details) ? result.details.filter(detail => typeof detail === "string") : [],
     detailStatuses: result?.detailStatuses ?? [],
     ...presentation.value[definition.key],
@@ -90,6 +95,7 @@ const checks = computed(() => definitions.map((definition, index) => {
           <ChecklistStatusIcon class="checklist-status" :symbol="check.symbol" :label="check.explanation ? `${check.label} — ${check.explanation}` : check.label" />
         </div>
         <p v-if="check.note" class="checklist-note">{{ check.note }}</p>
+        <p v-if="check.key === 'm1' && Number.isFinite(check.evaluatedAt)" class="checklist-note">M1-Stand {{ formatDatedTime(check.evaluatedAt) }} Uhr (Europe/Berlin)</p>
         <ChecklistOrderBlock v-if="check.orderBlock" :preview="check.orderBlock" :instrument="instrument" />
         <ul v-else-if="check.details.length" class="checklist-details">
           <li v-for="(detail, index) in check.details" :key="index" :data-detail-status="check.detailStatuses[index]">{{ detail }}

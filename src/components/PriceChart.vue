@@ -45,7 +45,7 @@ import { DivergenceLinePrimitive } from "../rsiRendering.js";
 import { usePriceChartRsi } from "../composables/usePriceChartRsi.js";
 import { usePriceChartCockpit } from "../composables/usePriceChartCockpit.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
-import { tintFvgCandles } from "../fvgCandleTint.js";
+import { tintFvgCandles, tintM1FvgCandle } from "../fvgCandleTint.js";
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
 import {
@@ -340,6 +340,7 @@ const props = defineProps({
 });
 const emit = defineEmits([
   "checklist-state-change",
+  "m1-check-change",
   "chart-height-change",
   "close-ranges-metadata",
   "close-debug-metadata",
@@ -360,8 +361,12 @@ const emit = defineEmits([
 
 const { markSuccess } = useStatusBar();
 const checklist = usePriceChartChecklist(props, sessions, emit, undefined, { tradingSchedules, newsEvents, newsCalendar }, createChecklistStatisticsStore(supabase));
-const m1Structure = usePriceChartM1Structure(props, checklist.state);
+const m1Structure = usePriceChartM1Structure(props, checklist.state, { prerequisitesAt: checklist.m1PrerequisitesAt });
 const m1StructureStatus = m1Structure.status;
+watch(m1Structure.check, value => {
+  emit('m1-check-change', value);
+  if (candleSeries) applyCandleData();
+});
 const { refreshSessions, refreshNewsMarkers } = usePriceChartSessionsAndNews();
 // EMA-/RSI-/Divergenz-Series-Lifecycle + Zeichenlogik (siehe usePriceChartRsi.js, Phase 6b) —
 // priceChartRsi.create(chart, candleSeries) wird in onMounted aufgerufen, priceChartRsi.dispose()
@@ -1798,7 +1803,9 @@ function scheduleNextTradeSetupM5Poll() {
 // müssen: beim normalen Refresh und immer dann, wenn sich die Trade-Setups geändert haben — die
 // FVG-Einfärbung hängt an ihnen, nicht an den Kerzen (siehe fvgCandleTint.js).
 function applyCandleData() {
-  candleSeries.setData(tintFvgCandles(clipReplay(allCandles), tradeSetupsMetadata.value, props.currentBar, cssColor("fvgCandle")));
+  const color = cssColor("fvgCandle");
+  const candles = tintFvgCandles(clipReplay(allCandles), tradeSetupsMetadata.value, props.currentBar, color);
+  candleSeries.setData(tintM1FvgCandle(candles, m1Structure.check.value.fvg, props.currentBar, color));
 }
 
 function refreshChart() {

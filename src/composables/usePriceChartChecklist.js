@@ -10,6 +10,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   let timeBoundaryTimer;
   let saveQueue = Promise.resolve();
   let revision = 0;
+  let m1PrerequisiteCache;
   const settings = () => ({
     rangesPeriod: props.rangesPeriod, ranges2Period: props.ranges2Period,
     rangesLookbackHours: props.rangesLookbackHours, ranges2LookbackHours: props.ranges2LookbackHours,
@@ -20,15 +21,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     if (disposed || !enabled()) { state.value = null; return; }
     const currentRevision = ++revision;
     const data = adapter.snapshot();
-    const result = evaluateTradeSetupChecklist({
-      instrument: props.symbol,
-      evaluatedAt: checklistEvaluationTime(props.replayUntil, Math.floor(now()), data.m5.candles),
-      h1Candles: data.h1.candles, m5Candles: data.m5.candles,
-      dataStatus: data.status, settings: settings(), sessionConfigs,
-      tradingWindows: timeData.tradingSchedules?.[props.symbol]?.tradingWindows,
-      news: timeData.newsEvents,
-      newsLoadStatus: timeData.newsCalendar?.status,
-    });
+    const result = evaluateAt(checklistEvaluationTime(props.replayUntil, Math.floor(now()), data.m5.candles), data);
     state.value = result;
     emit('checklist-state-change', result);
     if (statistics && result.status === 'ready') {
@@ -44,6 +37,28 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
         });
     }
     scheduleTimeBoundary();
+  }
+  function evaluateAt(evaluatedAt, data) {
+    return evaluateTradeSetupChecklist({
+      instrument: props.symbol,
+      evaluatedAt,
+      h1Candles: data.h1.candles, m5Candles: data.m5.candles,
+      dataStatus: data.status, settings: settings(), sessionConfigs,
+      tradingWindows: timeData.tradingSchedules?.[props.symbol]?.tradingWindows,
+      news: timeData.newsEvents,
+      newsLoadStatus: timeData.newsCalendar?.status,
+    });
+  }
+  function m1PrerequisitesAt(at) {
+    const data = adapter.snapshot();
+    // I darf nicht A–H vom späteren Replay-M5-Schluss übernehmen. Die Struktur-
+    // Voraussetzungen ändern sich nur mit neuen M5/H1-Kerzen, nicht mit jedem M1-Poll.
+    const cutoff = Number.isFinite(at) ? Math.floor(at / 300) * 300 : null;
+    const key = JSON.stringify([props.symbol, cutoff, data.status, settings(), sessionConfigs]);
+    if (m1PrerequisiteCache?.key !== key || m1PrerequisiteCache.h1 !== data.h1.candles || m1PrerequisiteCache.m5 !== data.m5.candles) {
+      m1PrerequisiteCache = { key, h1: data.h1.candles, m5: data.m5.candles, result: evaluateAt(cutoff, data) };
+    }
+    return m1PrerequisiteCache.result;
   }
   function scheduleTimeBoundary() {
     clearTimeout(timeBoundaryTimer);
@@ -69,6 +84,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   onScopeDispose(() => { disposed = true; clearTimeout(timeBoundaryTimer); adapter.reset(null); });
   return {
     state,
+    m1PrerequisitesAt,
     begin(tf) { const ticket = adapter.begin(tf); refresh(); return ticket; },
     finish(ticket, response, candles) {
       if (!disposed && adapter.finish(ticket, response, candles)) refresh();

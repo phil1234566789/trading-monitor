@@ -34,6 +34,10 @@ const HTF_FOREX_MIN_GAP_PIPS: Record<string, number> = { "1H": 1.5, "4H": 4 }; /
 // Rundung hauchdünn drunter landen und faelschlich rausfallen.
 const GAP_EPSILON = 1e-9;
 
+export function candleTouchesOrderBlock(candle: Candle, zone: Zone): boolean {
+  return candle.low <= zone.top && candle.high >= zone.bottom;
+}
+
 export interface Candle {
   time: number;
   open: number;
@@ -164,7 +168,7 @@ export function detectOrderBlocks(candles: Candle[], timeframe?: string, isForex
         continue;
       }
 
-      if (!z.touched && cur.low <= z.top && cur.high >= z.bottom) z.touched = true;
+      if (!z.touched && candleTouchesOrderBlock(cur, z)) z.touched = true;
       // Auf genau der Kerze, die den Touch ausloest, soll endTime noch mitwachsen (sonst
       // friert die Box eine Kerze zu frueh ein) — danach (wasTouched war schon true) nicht mehr.
       if (!wasTouched) z.endTime = cur.time;

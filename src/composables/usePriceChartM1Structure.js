@@ -1,14 +1,16 @@
 import { onScopeDispose, shallowRef, watch } from 'vue';
-import { activeM1Context, buildM1Structure, M1_STRUCTURE_PERIOD } from '../m1Structure.js';
+import { activeM1Context, buildM1Structure, m1PrerequisiteReason, M1_STRUCTURE_PERIOD } from '../m1Structure.js';
+import { evaluateM1Checklist, inactiveM1Checklist } from '../m1Checklist.js';
 import { fetchInitialCandles } from '../forexCandles.js';
 import { fetchCandlesCached } from '../candleCache.js';
 import { nextCandlePollDelay } from '../candlePolling.js';
 import { REPLAY_LOOKAHEAD_SEC } from '../timeframes.js';
 import { markIgnored } from '../ignoredCandles.js';
 import { renderLowerStructure } from '../structureOverlay.js';
+import { closedReplayEvaluationTime, closedChecklistCandles } from '../tradeSetupChecklistTimeBasis.js';
 
 export function usePriceChartM1Structure(props, checklistState, {
-  fetchCached = fetchCandlesCached, now = () => Date.now(),
+  fetchCached = fetchCandlesCached, now = () => Date.now(), prerequisitesAt = () => checklistState.value,
 } = {}) {
   let series = null;
   let displayCandles = [];
@@ -20,18 +22,38 @@ export function usePriceChartM1Structure(props, checklistState, {
   const primitives = [];
   const markers = [];
   const status = shallowRef({ state: 'waiting', anchor: null, lastClosedAt: null });
-  const evaluationTime = () => props.replayUntil == null ? Math.floor(now() / 1000) : context?.evaluatedAt;
+  const check = shallowRef(inactiveM1Checklist('prerequisites'));
+  // Diese Obergrenze steuert nur den Abruf. Einen M1-Bewertungsstand liefert erst
+  // die tatsächlich vorhandene geschlossene Kerze, auch bei Lücken und Wochenenden.
+  const requestedUntil = () => Math.min(Math.floor(now() / 1000), props.replayUntil == null ? Infinity : props.replayUntil + 60);
+  const evaluationTime = () => {
+    const cutoff = closedReplayEvaluationTime(props.replayUntil, Math.floor(now() / 1000), rows, '1m');
+    return closedChecklistCandles(rows, '1m', cutoff).at(-1)?.time + 60 || null;
+  };
 
   function render() {
     if (!series) return;
-    const result = context && props.showM1Structure
-      ? buildM1Structure(markIgnored(rows, context.instrument), context.anchor, evaluationTime()) : null;
+    const evaluatedAt = evaluationTime();
+    const prerequisites = props.showM1Structure ? prerequisitesAt(evaluatedAt ?? requestedUntil()) : null;
+    const reason = !props.showM1Structure ? 'disabled' : m1PrerequisiteReason(prerequisites);
+    const knownContext = !reason && evaluatedAt != null ? activeM1Context(prerequisites) : null;
+    const marked = markIgnored(rows, props.symbol);
+    const result = knownContext && props.showM1Structure
+      ? buildM1Structure(marked, knownContext.anchor, evaluatedAt) : null;
+    const missingClose = evaluatedAt != null && evaluatedAt < Math.floor(requestedUntil() / 60) * 60;
+    let currentCheck;
+    if (reason) currentCheck = inactiveM1Checklist(reason);
+    else if (['loading', 'error'].includes(status.value.state)) currentCheck = inactiveM1Checklist(status.value.state);
+    else if (missingClose || !result) currentCheck = inactiveM1Checklist('missing');
+    else currentCheck = evaluateM1Checklist({ context: knownContext, structure: result, candles: marked, evaluatedAt });
+    check.value = { ...currentCheck, evaluatedAt, instrument: props.symbol };
     renderLowerStructure(series, result, primitives, markers, displayCandles, {
       symbol: props.symbol, replayUntil: evaluationTime(), show: !!result,
       debug: !!result && props.showLiquidityDebug, barSeconds: 60,
     });
-    if (result && status.value.state !== 'loading') status.value = { state: result.status, anchor: context.anchor,
-      lastClosedAt: rows.findLast(c => c.time + 60 <= evaluationTime())?.time + 60 || null };
+    if (result && !['loading', 'error'].includes(status.value.state)) {
+      status.value = { state: result.status, anchor: knownContext.anchor, lastClosedAt: evaluatedAt };
+    }
   }
 
   async function load() {
@@ -41,9 +63,9 @@ export function usePriceChartM1Structure(props, checklistState, {
     try {
       // Kalenderdistanz deckt die komplette Strecke ab; zusätzlicher Vorlauf enthält
       // auch vor Wochenend-Ankern genügend tatsächliche Fraktalkerzen.
-      const count = Math.max(1, Math.ceil((evaluationTime() - source.anchor.pivotTime) / 60)) + M1_STRUCTURE_PERIOD * 2 + 1;
+      const count = Math.max(1, Math.ceil((requestedUntil() - source.anchor.pivotTime) / 60)) + M1_STRUCTURE_PERIOD * 2 + 1;
       const fetched = await fetchCached(fetchInitialCandles, source.instrument, '1m', count,
-        props.replayUntil == null ? undefined : source.evaluatedAt * 1000, REPLAY_LOOKAHEAD_SEC);
+        props.replayUntil == null ? undefined : requestedUntil() * 1000, REPLAY_LOOKAHEAD_SEC);
       if (disposed || ticket !== generation) return;
       rows = fetched;
       status.value = { ...status.value, state: 'loaded' };
@@ -51,6 +73,7 @@ export function usePriceChartM1Structure(props, checklistState, {
     } catch (error) {
       if (disposed || ticket !== generation) return;
       status.value = { state: 'error', anchor: source.anchor, lastClosedAt: status.value.lastClosedAt };
+      render();
       console.error('M1-Struktur konnte nicht geladen werden:', error);
     } finally {
       if (!disposed && ticket === generation && context && props.replayUntil == null) {
@@ -61,7 +84,7 @@ export function usePriceChartM1Structure(props, checklistState, {
   }
 
   function updateContext() {
-    const next = props.showM1Structure ? activeM1Context(checklistState.value) : null;
+    const next = props.showM1Structure ? activeM1Context(prerequisitesAt(requestedUntil())) : null;
     // Unmittelbar auf Symbol-/Replaywechsel löschen, auch bevor die Checklist nachlädt.
     const valid = next?.instrument === props.symbol ? next : null;
     const identity = c => c ? `${c.instrument}:${c.setupKey}:${c.anchor.pivotTime}:${c.anchor.price}` : '';
@@ -87,7 +110,7 @@ export function usePriceChartM1Structure(props, checklistState, {
   }, { flush: 'post' });
   watch(() => props.showLiquidityDebug, render);
   onScopeDispose(() => { disposed = true; generation++; clearTimeout(timer); series = null; });
-  return { status,
+  return { status, check,
     create(value) { series = value; updateContext(); },
     refresh(candles) { displayCandles = candles; render(); },
   };

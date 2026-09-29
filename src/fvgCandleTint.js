@@ -17,7 +17,15 @@ export function fvgCandleTimes(setups) {
 // keine Kerze oder — wenn der Stundenanfang zufällig auf denselben Unix-Wert fällt — die falsche.
 export function tintFvgCandles(candles, setups, bar, farbe) {
   if (bar !== "5m" || !farbe) return candles;
-  const zeiten = fvgCandleTimes(setups);
+  return tintCandleTimes(candles, fvgCandleTimes(setups), farbe);
+}
+
+export function tintM1FvgCandle(candles, fvg, bar, farbe) {
+  if (bar !== '1m' || !fvg || !farbe) return candles;
+  return tintCandleTimes(candles, new Set([fvg.candleTime]), farbe);
+}
+
+function tintCandleTimes(candles, zeiten, farbe) {
   if (zeiten.size === 0) return candles;
   return candles.map((c) => (zeiten.has(c.time) ? { ...c, color: farbe, wickColor: farbe } : c));
 }

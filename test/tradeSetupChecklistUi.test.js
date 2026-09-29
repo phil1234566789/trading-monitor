@@ -3,8 +3,8 @@ import { createSSRApp } from "vue";
 import { renderToString } from "vue/server-renderer";
 import TradeSetupChecklist from "../src/components/TradeSetupChecklist.vue";
 
-const render = (checklistState = null) => renderToString(createSSRApp(TradeSetupChecklist, {
-  instrument: "GBPUSD", checklistState,
+const render = (checklistState = null, m1Check = null) => renderToString(createSSRApp(TradeSetupChecklist, {
+  instrument: "GBPUSD", checklistState, m1Check,
 }));
 
 describe("Trade Setup Checklist presentation", () => {
@@ -62,7 +62,7 @@ describe("Trade Setup Checklist presentation", () => {
     expect(html.match(/data-status=/g)).toHaveLength(12);
     expect(html).toContain("Auswertung ausstehend");
     expect(html).not.toContain("Optionale Zusatzargumente");
-    expect(html).toContain("Zurückgestellt · kein aktuelles Freigabekriterium");
+    expect(html).toContain("M1 wartet auf vollständige H1-/M5-Prüfdaten.");
     expect(html).not.toMatch(/<input|data-status="passed"|data-status="blocked"/);
   });
 
@@ -86,11 +86,22 @@ describe("Trade Setup Checklist presentation", () => {
         m1: { status: "deferred", details: [] },
       },
     });
-    for (const status of ["passed", "pending", "unknown", "blocked", "deferred"]) {
+    for (const status of ["passed", "pending", "unknown", "blocked"]) {
       expect(html).toContain(`data-status="${status}"`);
     }
     expect(html).toContain("Bärisch");
     expect(html).toContain("&lt;b&gt;News-Sperre&lt;/b&gt;");
+  });
+
+  it('shows independent M1 details and its own timestamp, ignoring a late foreign instrument', async () => {
+    const m1 = { instrument: 'GBPUSD', status: 'pending', evaluatedAt: Date.parse('2026-09-09T09:47:00+02:00') / 1000,
+      details: ['M1 Uptrend', 'Nested Downtrend', 'Bärischer M5-OB-Retest'], detailStatuses: ['unmet', 'passed', 'passed'] };
+    const html = await render({ instrument: 'GBPUSD', status: 'ready', checks: {} }, m1);
+    expect(html).toContain('M1-Stand 2026-09-09 09:47 Uhr (Europe/Berlin)');
+    expect(html).toMatch(/data-detail-status="unmet"[^>]*>M1 Uptrend/);
+    expect(html).toMatch(/data-detail-status="passed"[^>]*>Nested Downtrend/);
+    expect(html).not.toContain('Zurückgestellt');
+    expect(await render(null, { ...m1, instrument: 'EURUSD' })).not.toContain('Nested Downtrend');
   });
 
   it("rejects a late result from another instrument", async () => {

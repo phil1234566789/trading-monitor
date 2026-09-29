@@ -17,7 +17,7 @@ function openChecks() {
     time: { status: 'unknown', details: ['Session- und News-Prüfung noch nicht angebunden.'] },
     confluences: { ...pending },
     m5Trend: unknownChecklistM5(),
-    m1: { status: 'deferred', details: ['M1-Regeln sind zurückgestellt.'] },
+    m1: { status: 'unknown', details: ['M1 wird mit eigenem Kerzenstand ausgewertet.'] },
   };
 }
 
