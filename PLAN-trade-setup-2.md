@@ -49,7 +49,7 @@ Weitere offene Milkyland-Arbeitspakete, nach technischer Prüfung angelegt:
 6. H — frühere M5-Drehung: `trade-setup-checklist-h-fr-he-m5-drehung-anhand-von-schlusskursen`.
 7. Späterer Vergleich: `trade-setup-2-0-reproduzierbaren-ergebnisvergleich-vorbereiten`.
 
-Die Tasks enthalten Abhängigkeiten, offene fachliche Entscheidungen und Abnahmekriterien. Die Umsetzung wird in separaten Codex-Chats vergeben, siehe Parallelisierungsplan am Ende. H verwendet inzwischen die in Abschnitt H festgelegten frühen Schlusskurssignale; I bleibt zurückgestellt. Eine endgültige Setup-Freigabe setzt die noch offenen Pflichtregeln voraus.
+Die Tasks enthalten Abhängigkeiten, offene fachliche Entscheidungen und Abnahmekriterien. Die Umsetzung wird in separaten Codex-Chats vergeben, siehe Parallelisierungsplan am Ende. H verwendet die in Abschnitt H festgelegten frühen Schlusskurssignale; I zeigt die Einzelprüfungen aus Abschnitt I. Eine endgültige Setup-Freigabe setzt die noch offenen Pflichtregeln voraus.
 
 ## Checkliste des ersten Setups
 
@@ -315,11 +315,11 @@ Module: `m1Structure.js`, `usePriceChartM1Structure.js`, gemeinsames `structureO
 - Rohdaten für die Analyse vollständig laden, auch wenn Liquidität, OBs oder Trendlinien ausgeblendet sind. `getCurrentLiquidityLevels()` ist eine begrenzte Render-/Klickliste und dafür ungeeignet.
 - Ein gemeinsamer Schlüssel aus Instrument, Bewertungszeit und Einstellungen verhindert, dass verspätete Antworten alte Ergebnisse einblenden. Während unvollständiger/alter Daten ausdrücklich „lädt“, „Daten fehlen“ oder „Daten veraltet“ anzeigen.
 
-**Replay-Entscheidung: neuester verfügbarer geschlossener M5-Stand**
+**Replay-Entscheidung: Schluss der sichtbaren geschlossenen Chartkerze**
 
 Aktuell bezeichnet die Kerzenzeit den Beginn der Kerze. `clipReplay` in `PriceChart.vue` nimmt `c.time <= replayUntil`; `replayFetchToMs` lädt die ausgewählte Kerze vollständig. Der H1-Strukturpfad hat keine zusätzliche Schlusszeitgrenze. Bei Replay 09:20 Uhr kann deshalb bereits die vollständige H1-Kerze von 09:00 bis 10:00 Uhr in der Analyse stecken. Für die neue Checklist ist dieser bestehende Chart-State nicht ohne weitere Prüfung verwendbar.
 
-„Bewertungsstand“ ist der Schluss der letzten tatsächlich vorhandenen, im M5-Replay freigegebenen und inzwischen geschlossenen Kerze (Philips Entscheidung vom 28.09.2026). Eine sichtbare M5-Kerze mit Beginn 09:20 Uhr steht für Wissen bis 09:25 Uhr. Ohne diese Kerze darf nicht pauschal fünf Minuten zum Replay-Zeitpunkt addiert werden; dann zählt der letzte vorhandene Schluss, ohne passende M5 bleibt die Datenzeit unbekannt. Andere Timeframes dürfen nur Kerzen enthalten, die bis zum Bewertungsstand ebenfalls geschlossen sind. Live löst der erfolgreiche Abruf neuer geschlossener M5-Kerzen die Auswertung aus; Feed-/Abrufwartezeit und reine Rechenzeit sind getrennt zu betrachten.
+„Bewertungsstand“ ist für A–I gemeinsam der Schluss der letzten tatsächlich vorhandenen, im sichtbaren Chart-Timeframe durch Replay freigegebenen und inzwischen geschlossenen Kerze. Eine sichtbare M5-Kerze mit Beginn 09:25 Uhr steht für Wissen bis 09:30 Uhr; auf M1 kennt dieselbe Replay-Eingabe erst 09:26 Uhr. Ohne diese Kerze darf ihre Dauer nicht pauschal addiert werden; dann zählt der letzte vorhandene Schluss, ohne passende Chartkerze bleibt die Datenzeit unbekannt. Analysekerzen aus anderen Timeframes müssen bis zu dieser Grenze ebenfalls geschlossen sein. I kann wegen fehlender M1-Kerzen einen älteren tatsächlichen Datenstand haben und prüft seine Voraussetzungen dort erneut, siehe Abschnitt I. Live bleibt die zeitgerechte Aktualisierung über vorhandene Kerzenpolls und Session-/News-Grenzen erhalten.
 
 ### 2. Liquidity Sweep: Ereignis und Setup-Zuordnung
 
@@ -435,7 +435,7 @@ Die reinen B/C- und D-Module wurden zur parallelen Umsetzung gestartet; die zent
 
 Erster Release: `1ab1e0b`, GitHub-Pages-Deployment erfolgreich (Run `36347808770`). Enthält Menübezeichnungen, eigenen Checklist-Bereich, automatische Zeit-/Datenbasis, A sowie F. Bestehender TSC bleibt erhalten. Die Oberfläche zeigt neun automatisch befüllte Prüfpunkte ohne manuelle Checkboxänderungen und ohne endgültiges Gesamt-Go.
 
-- Replay verwendet den im Zeitmodell festgelegten tatsächlichen M5-Schluss. Fehlende Kerzen bleiben ausdrücklich unbekannt.
+- Replay verwendet den im Zeitmodell festgelegten tatsächlichen Chart-Schluss. Fehlende Kerzen bleiben ausdrücklich unbekannt.
 - Im Live-Modus führt fehlender aktueller Kerzenschluss konservativ zu veralteten Daten; das betrifft auch Marktschließungen. Daraus wird kein aktuelles Handelssignal abgeleitet.
 - F verwendet den maßgeblichen gepflegten Kalender und dessen tatsächlichen Ladezustand gemäß News-Policy oben.
 - B/C und D sind in separaten Modulen implementiert: älteste Major-/Medium-H1-Sweeps, automatische Reaktionszuordnung über identische Sweeps der bestehenden Erkennung und Zielvorschau. Die feste historische Target-Auswahl bleibt offen. Eine aktuelle Target-Vorschau darf kein vergangenes Setup verlängern.
