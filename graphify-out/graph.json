@@ -562,7 +562,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "agetier",
       "source_file": "src/ageTier.ts",
@@ -575,7 +575,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "tradeevidence",
       "source_file": "src/tradeEvidence.ts",
@@ -588,7 +588,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "tradeevidencecategory",
       "source_file": "src/tradeEvidence.ts",
@@ -601,7 +601,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "tradeevidencekind",
       "source_file": "src/tradeEvidence.ts",
@@ -614,7 +614,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "tradetarget",
       "source_file": "src/tradeTargets.ts",
@@ -627,7 +627,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "tradetargetkind",
       "source_file": "src/tradeTargets.ts",
@@ -723,19 +723,6 @@
       "norm_label": "saisonalitaettest",
       "source_file": "analysis/dr-reichweite/test_saisonalitaet.py",
       "source_location": "L11"
-    },
-    {
-      "id": "src_liquidity_liquiditylineprimitive",
-      "label": "LiquidityLinePrimitive",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": "liquiditylineprimitive",
-      "source_file": "src/liquidity.js",
-      "source_location": "L202"
     },
     {
       "id": "src_marketstructurerendering_fibtickpaneview",
@@ -1115,13 +1102,26 @@
       "source_location": "L23"
     },
     {
+      "id": "src_liquidity_liquiditylineprimitive",
+      "label": "LiquidityLinePrimitive",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 200,
+      "community_name": "LiquidityLinePrimitive",
+      "file_type": "code",
+      "norm_label": "liquiditylineprimitive",
+      "source_file": "src/liquidity.js",
+      "source_location": "L202"
+    },
+    {
       "id": "src_liquidity_liquiditylinerenderer",
       "label": "LiquidityLineRenderer",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 200,
-      "community_name": "LiquidityLineRenderer",
+      "community_name": "LiquidityLinePrimitive",
       "file_type": "code",
       "norm_label": "liquiditylinerenderer",
       "source_file": "src/liquidity.js",
@@ -1134,7 +1134,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 200,
-      "community_name": "LiquidityLineRenderer",
+      "community_name": "LiquidityLinePrimitive",
       "file_type": "code",
       "norm_label": "liquiditypaneview",
       "source_file": "src/liquidity.js",
@@ -3256,18 +3256,6 @@
       "source_location": "L308"
     },
     {
-      "id": "src_chartcolors_csscolorscaled",
-      "label": "cssColorScaled()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 105,
-      "community_name": "cssColor",
-      "file_type": "code",
-      "norm_label": "csscolorscaled()",
-      "source_file": "src/chartColors.js",
-      "source_location": "L318"
-    },
-    {
       "id": "src_chartcolors_hextorgba",
       "label": "hexToRgba()",
       "_callable": true,
@@ -3376,18 +3364,6 @@
       "source_location": "L130"
     },
     {
-      "id": "src_components_checklistorderblock_price",
-      "label": "price()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 105,
-      "community_name": "cssColor",
-      "file_type": "code",
-      "norm_label": "price()",
-      "source_file": "src/components/ChecklistOrderBlock.vue",
-      "source_location": "L13"
-    },
-    {
       "id": "src_components_stylemodal_loadcollapsedinitial",
       "label": "loadCollapsedInitial()",
       "_callable": true,
@@ -3424,16 +3400,40 @@
       "source_location": "L223"
     },
     {
-      "id": "src_components_tradestable_rowstyle",
-      "label": "rowStyle()",
+      "id": "src_composables_usepricecharttradesetupdrawing_usepricecharttradesetupdrawing",
+      "label": "usePriceChartTradeSetupDrawing()",
       "_callable": true,
       "_origin": "ast",
       "community": 105,
       "community_name": "cssColor",
       "file_type": "code",
-      "norm_label": "rowstyle()",
-      "source_file": "src/components/TradesTable.vue",
-      "source_location": "L37"
+      "norm_label": "usepricecharttradesetupdrawing()",
+      "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
+      "source_location": "L23"
+    },
+    {
+      "id": "src_composables_usepricecharttradesetupdrawing_usepricecharttradesetupdrawing_create",
+      "label": "create()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 105,
+      "community_name": "cssColor",
+      "file_type": "code",
+      "norm_label": "create()",
+      "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
+      "source_location": "L27"
+    },
+    {
+      "id": "src_composables_usepricecharttradesetupdrawing_usepricecharttradesetupdrawing_dispose",
+      "label": "dispose()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 105,
+      "community_name": "cssColor",
+      "file_type": "code",
+      "norm_label": "dispose()",
+      "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
+      "source_location": "L30"
     },
     {
       "id": "src_newsmarkers_extrapolatedx",
@@ -3674,18 +3674,6 @@
       "norm_label": ".draw()",
       "source_file": "src/scaleRendering.js",
       "source_location": "L26"
-    },
-    {
-      "id": "src_tradesetupcockpit_cardaccentcolors",
-      "label": "cardAccentColors()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 105,
-      "community_name": "cssColor",
-      "file_type": "code",
-      "norm_label": "cardaccentcolors()",
-      "source_file": "src/tradeSetupCockpit.ts",
-      "source_location": "L155"
     },
     {
       "id": "test_chartcolors_test_collectsourcefiles",
@@ -4034,18 +4022,6 @@
       "norm_label": "fetchrecentcandles()",
       "source_file": "src/ctraderCandles.js",
       "source_location": "L39"
-    },
-    {
-      "id": "src_components_pricechart_pollrecent",
-      "label": "pollRecent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 116,
-      "community_name": "forexCandles.js",
-      "file_type": "code",
-      "norm_label": "pollrecent()",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L1892"
     },
     {
       "id": "src_composables_usegoldcharthistory_usegoldcharthistory",
@@ -5128,6 +5104,30 @@
       "source_location": "L20"
     },
     {
+      "id": "src_chartcolors_csscolorscaled",
+      "label": "cssColorScaled()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "csscolorscaled()",
+      "source_file": "src/chartColors.js",
+      "source_location": "L318"
+    },
+    {
+      "id": "src_charttimeutils_tradesvisibleforcandles",
+      "label": "tradesVisibleForCandles()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "tradesvisibleforcandles()",
+      "source_file": "src/chartTimeUtils.js",
+      "source_location": "L148"
+    },
+    {
       "id": "src_components_anticonfluencepickermodal_candidatekindlabel",
       "label": "candidateKindLabel()",
       "_callable": true,
@@ -5162,6 +5162,90 @@
       "norm_label": "candidateprice()",
       "source_file": "src/components/AntiConfluencePickerModal.vue",
       "source_location": "L29"
+    },
+    {
+      "id": "src_components_checklistorderblock_price",
+      "label": "price()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "price()",
+      "source_file": "src/components/ChecklistOrderBlock.vue",
+      "source_location": "L13"
+    },
+    {
+      "id": "src_components_pricechart_obzonectx",
+      "label": "obZoneCtx()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "obzonectx()",
+      "source_file": "src/components/PriceChart.vue",
+      "source_location": "L814"
+    },
+    {
+      "id": "src_components_pricechart_refreshinvalidationlinesinternal",
+      "label": "refreshInvalidationLinesInternal()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "refreshinvalidationlinesinternal()",
+      "source_file": "src/components/PriceChart.vue",
+      "source_location": "L1068"
+    },
+    {
+      "id": "src_components_pricechart_refreshtradeconfirmationlinksinternal",
+      "label": "refreshTradeConfirmationLinksInternal()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "refreshtradeconfirmationlinksinternal()",
+      "source_file": "src/components/PriceChart.vue",
+      "source_location": "L936"
+    },
+    {
+      "id": "src_components_pricechart_refreshtradesetuplinksinternal",
+      "label": "refreshTradeSetupLinksInternal()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "refreshtradesetuplinksinternal()",
+      "source_file": "src/components/PriceChart.vue",
+      "source_location": "L710"
+    },
+    {
+      "id": "src_components_pricechart_refreshtradetargetlinksinternal",
+      "label": "refreshTradeTargetLinksInternal()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "refreshtradetargetlinksinternal()",
+      "source_file": "src/components/PriceChart.vue",
+      "source_location": "L847"
+    },
+    {
+      "id": "src_components_pricechart_tradelikeentriesforcandles",
+      "label": "tradeLikeEntriesForCandles()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "tradelikeentriesforcandles()",
+      "source_file": "src/components/PriceChart.vue",
+      "source_location": "L841"
     },
     {
       "id": "src_components_rsidivergencestatspanel_outcomelabel",
@@ -5248,16 +5332,16 @@
       "source_location": "L57"
     },
     {
-      "id": "src_composables_usepricechartmarketstructure_usepricechartmarketstructure_refreshrangesmarkers",
-      "label": "refreshRangesMarkers()",
+      "id": "src_components_tradestable_rowstyle",
+      "label": "rowStyle()",
       "_callable": true,
       "_origin": "ast",
       "community": 122,
       "community_name": "pricePrecisionForInstrument",
       "file_type": "code",
-      "norm_label": "refreshrangesmarkers()",
-      "source_file": "src/composables/usePriceChartMarketStructure.js",
-      "source_location": "L127"
+      "norm_label": "rowstyle()",
+      "source_file": "src/components/TradesTable.vue",
+      "source_location": "L37"
     },
     {
       "id": "src_composables_usepricechartrsi_usepricechartrsi_refreshdivergence",
@@ -5272,6 +5356,18 @@
       "source_location": "L186"
     },
     {
+      "id": "src_composables_usepricecharttradesetupdrawing_usepricecharttradesetupdrawing_refresh",
+      "label": "refresh()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "refresh()",
+      "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
+      "source_location": "L37"
+    },
+    {
       "id": "src_format_fmtdate",
       "label": "fmtDate()",
       "_callable": true,
@@ -5282,18 +5378,6 @@
       "norm_label": "fmtdate()",
       "source_file": "src/format.js",
       "source_location": "L28"
-    },
-    {
-      "id": "src_format_fmtdatetime",
-      "label": "fmtDateTime()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "fmtdatetime()",
-      "source_file": "src/format.js",
-      "source_location": "L12"
     },
     {
       "id": "src_format_fmtmoney",
@@ -5344,124 +5428,16 @@
       "source_location": "L7"
     },
     {
-      "id": "src_pivotmarkers_renderpivotmarkers",
-      "label": "renderPivotMarkers()",
+      "id": "src_tradevisibility_tradesvisible",
+      "label": "tradesVisible()",
       "_callable": true,
       "_origin": "ast",
       "community": 122,
       "community_name": "pricePrecisionForInstrument",
       "file_type": "code",
-      "norm_label": "renderpivotmarkers()",
-      "source_file": "src/pivotMarkers.ts",
-      "source_location": "L212"
-    },
-    {
-      "id": "src_sessionbonus_createsessionbonusresolver",
-      "label": "createSessionBonusResolver()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "createsessionbonusresolver()",
-      "source_file": "src/sessionBonus.js",
-      "source_location": "L16"
-    },
-    {
-      "id": "src_structurecloselevels_coverscloselevel",
-      "label": "coversCloseLevel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "coverscloselevel()",
-      "source_file": "src/structureCloseLevels.js",
-      "source_location": "L5"
-    },
-    {
-      "id": "src_structurecloselevels_rendercloselevels",
-      "label": "renderCloseLevels()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "rendercloselevels()",
-      "source_file": "src/structureCloseLevels.js",
-      "source_location": "L11"
-    },
-    {
-      "id": "src_structureoverlay_eventlabeler",
-      "label": "eventLabeler()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "eventlabeler()",
-      "source_file": "src/structureOverlay.js",
-      "source_location": "L24"
-    },
-    {
-      "id": "src_structureoverlay_renderlowerstructure",
-      "label": "renderLowerStructure()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "renderlowerstructure()",
-      "source_file": "src/structureOverlay.js",
-      "source_location": "L38"
-    },
-    {
-      "id": "src_structureoverlay_structurerenderoptions",
-      "label": "structureRenderOptions()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "structurerenderoptions()",
-      "source_file": "src/structureOverlay.js",
-      "source_location": "L16"
-    },
-    {
-      "id": "test_structurecloselevels_test_at",
-      "label": "at()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "at()",
-      "source_file": "test/structureCloseLevels.test.js",
-      "source_location": "L8"
-    },
-    {
-      "id": "test_structurecloselevels_test_draw",
-      "label": "draw()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "draw()",
-      "source_file": "test/structureCloseLevels.test.js",
-      "source_location": "L9"
-    },
-    {
-      "id": "test_structurecloselevels_test_lines",
-      "label": "lines()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "lines()",
-      "source_file": "test/structureCloseLevels.test.js",
-      "source_location": "L21"
+      "norm_label": "tradesvisible()",
+      "source_file": "src/tradeVisibility.js",
+      "source_location": "L12"
     },
     {
       "id": "supabase_functions_poi_watcher_livetouch_findleveltouch",
@@ -5608,16 +5584,16 @@
       "source_location": "L23"
     },
     {
-      "id": "src_charttimeutils_formatage",
-      "label": "formatAge()",
+      "id": "src_charttimeutils_businesssecondsbetween",
+      "label": "businessSecondsBetween()",
       "_callable": true,
       "_origin": "ast",
       "community": 133,
       "community_name": "liquidity.js",
       "file_type": "code",
-      "norm_label": "formatage()",
+      "norm_label": "businesssecondsbetween()",
       "source_file": "src/chartTimeUtils.js",
-      "source_location": "L98"
+      "source_location": "L55"
     },
     {
       "id": "src_composables_usepricechartliquidity_usepricechartliquidity",
@@ -5702,6 +5678,18 @@
       "norm_label": "formatliquiditylevellabel()",
       "source_file": "src/liquidity.js",
       "source_location": "L333"
+    },
+    {
+      "id": "src_liquidity_formatlslabel",
+      "label": "formatLsLabel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 133,
+      "community_name": "liquidity.js",
+      "file_type": "code",
+      "norm_label": "formatlslabel()",
+      "source_file": "src/liquidity.js",
+      "source_location": "L295"
     },
     {
       "id": "src_liquidity_leveloptions",
@@ -6208,40 +6196,16 @@
       "source_location": "L12"
     },
     {
-      "id": "src_candlepolling_nextcandlepolldelay",
-      "label": "nextCandlePollDelay()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "nextCandlePollDelay",
-      "file_type": "code",
-      "norm_label": "nextcandlepolldelay()",
-      "source_file": "src/candlePolling.js",
-      "source_location": "L5"
-    },
-    {
       "id": "src_components_pricechart_loadrangescandles",
       "label": "loadRangesCandles()",
       "_callable": true,
       "_origin": "ast",
       "community": 14,
-      "community_name": "nextCandlePollDelay",
+      "community_name": "loadRangesCandles",
       "file_type": "code",
       "norm_label": "loadrangescandles()",
       "source_file": "src/components/PriceChart.vue",
       "source_location": "L1499"
-    },
-    {
-      "id": "src_components_pricechart_m5clockenabled",
-      "label": "m5ClockEnabled()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "nextCandlePollDelay",
-      "file_type": "code",
-      "norm_label": "m5clockenabled()",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L523"
     },
     {
       "id": "src_components_pricechart_rangesneedsdata",
@@ -6249,7 +6213,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 14,
-      "community_name": "nextCandlePollDelay",
+      "community_name": "loadRangesCandles",
       "file_type": "code",
       "norm_label": "rangesneedsdata()",
       "source_file": "src/components/PriceChart.vue",
@@ -6261,7 +6225,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 14,
-      "community_name": "nextCandlePollDelay",
+      "community_name": "loadRangesCandles",
       "file_type": "code",
       "norm_label": "refreshdata()",
       "source_file": "src/components/PriceChart.vue",
@@ -6273,7 +6237,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 14,
-      "community_name": "nextCandlePollDelay",
+      "community_name": "loadRangesCandles",
       "file_type": "code",
       "norm_label": "refreshrangespollingstate()",
       "source_file": "src/components/PriceChart.vue",
@@ -6285,23 +6249,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 14,
-      "community_name": "nextCandlePollDelay",
+      "community_name": "loadRangesCandles",
       "file_type": "code",
       "norm_label": "replaytoms()",
       "source_file": "src/components/PriceChart.vue",
       "source_location": "L692"
-    },
-    {
-      "id": "src_components_pricechart_schedulenextpoll",
-      "label": "scheduleNextPoll()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "nextCandlePollDelay",
-      "file_type": "code",
-      "norm_label": "schedulenextpoll()",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L1937"
     },
     {
       "id": "src_components_pricechart_schedulenextrangespoll",
@@ -6309,35 +6261,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 14,
-      "community_name": "nextCandlePollDelay",
+      "community_name": "loadRangesCandles",
       "file_type": "code",
       "norm_label": "schedulenextrangespoll()",
       "source_file": "src/components/PriceChart.vue",
       "source_location": "L1531"
-    },
-    {
-      "id": "src_components_pricechart_schedulenexttradesetupm5poll",
-      "label": "scheduleNextTradeSetupM5Poll()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "nextCandlePollDelay",
-      "file_type": "code",
-      "norm_label": "schedulenexttradesetupm5poll()",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L1792"
-    },
-    {
-      "id": "src_components_pricechart_sleep",
-      "label": "sleep()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "nextCandlePollDelay",
-      "file_type": "code",
-      "norm_label": "sleep()",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L1918"
     },
     {
       "id": "src_components_pricechart_startrangespolling",
@@ -6345,7 +6273,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 14,
-      "community_name": "nextCandlePollDelay",
+      "community_name": "loadRangesCandles",
       "file_type": "code",
       "norm_label": "startrangespolling()",
       "source_file": "src/components/PriceChart.vue",
@@ -6357,23 +6285,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 14,
-      "community_name": "nextCandlePollDelay",
+      "community_name": "loadRangesCandles",
       "file_type": "code",
       "norm_label": "stoprangespolling()",
       "source_file": "src/components/PriceChart.vue",
       "source_location": "L1546"
-    },
-    {
-      "id": "src_components_pricechart_withpollretries",
-      "label": "withPollRetries()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "nextCandlePollDelay",
-      "file_type": "code",
-      "norm_label": "withpollretries()",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L1927"
     },
     {
       "id": "src_composables_usepricechartmarketstructure_usepricechartmarketstructure_fetchrangescandles",
@@ -6381,7 +6297,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 14,
-      "community_name": "nextCandlePollDelay",
+      "community_name": "loadRangesCandles",
       "file_type": "code",
       "norm_label": "fetchrangescandles()",
       "source_file": "src/composables/usePriceChartMarketStructure.js",
@@ -6501,59 +6417,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "classifyage()",
       "source_file": "src/ageTier.ts",
       "source_location": "L22"
     },
     {
-      "id": "src_charttimeutils_businesssecondsbetween",
-      "label": "businessSecondsBetween()",
+      "id": "src_charttimeutils_formatage",
+      "label": "formatAge()",
       "_callable": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
-      "norm_label": "businesssecondsbetween()",
+      "norm_label": "formatage()",
       "source_file": "src/chartTimeUtils.js",
-      "source_location": "L55"
-    },
-    {
-      "id": "src_components_pricechart_obzonectx",
-      "label": "obZoneCtx()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 145,
-      "community_name": "businessSecondsBetween",
-      "file_type": "code",
-      "norm_label": "obzonectx()",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L814"
-    },
-    {
-      "id": "src_components_pricechart_refreshtradeconfirmationlinksinternal",
-      "label": "refreshTradeConfirmationLinksInternal()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 145,
-      "community_name": "businessSecondsBetween",
-      "file_type": "code",
-      "norm_label": "refreshtradeconfirmationlinksinternal()",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L936"
-    },
-    {
-      "id": "src_components_pricechart_refreshtradetargetlinksinternal",
-      "label": "refreshTradeTargetLinksInternal()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 145,
-      "community_name": "businessSecondsBetween",
-      "file_type": "code",
-      "norm_label": "refreshtradetargetlinksinternal()",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L847"
+      "source_location": "L98"
     },
     {
       "id": "src_components_tradesetupcockpit_targetlabel",
@@ -6561,7 +6441,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "targetlabel()",
       "source_file": "src/components/TradeSetupCockpit.vue",
@@ -6573,7 +6453,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "evidenceageseconds()",
       "source_file": "src/tradeEvidence.ts",
@@ -6585,7 +6465,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "evidenceagetier()",
       "source_file": "src/tradeEvidence.ts",
@@ -6597,7 +6477,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "formatevidencelabel()",
       "source_file": "src/tradeEvidence.ts",
@@ -6609,11 +6489,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "kindlabel()",
       "source_file": "src/tradeEvidence.ts",
       "source_location": "L58"
+    },
+    {
+      "id": "src_tradesetupchecklistpresentation_checklistpresentation",
+      "label": "checklistPresentation()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 145,
+      "community_name": "tradeEvidence.ts",
+      "file_type": "code",
+      "norm_label": "checklistpresentation()",
+      "source_file": "src/tradeSetupChecklistPresentation.js",
+      "source_location": "L6"
     },
     {
       "id": "src_tradetargets_formattargetlabel",
@@ -6621,7 +6513,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "formattargetlabel()",
       "source_file": "src/tradeTargets.ts",
@@ -6633,7 +6525,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "istargetreached()",
       "source_file": "src/tradeTargets.ts",
@@ -6645,7 +6537,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "kindlabel()",
       "source_file": "src/tradeTargets.ts",
@@ -6657,7 +6549,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "targetageseconds()",
       "source_file": "src/tradeTargets.ts",
@@ -6669,11 +6561,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "targetagetier()",
       "source_file": "src/tradeTargets.ts",
       "source_location": "L39"
+    },
+    {
+      "id": "test_tradesetupchecklistpresentation_test_structure",
+      "label": "structure()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 145,
+      "community_name": "tradeEvidence.ts",
+      "file_type": "code",
+      "norm_label": "structure()",
+      "source_file": "test/tradeSetupChecklistPresentation.test.js",
+      "source_location": "L5"
     },
     {
       "id": "test_supabaserowcapguard_test_blankcomments",
@@ -9100,54 +9004,6 @@
       "source_location": "L158"
     },
     {
-      "id": "src_charttimeutils_tradesvisibleforcandles",
-      "label": "tradesVisibleForCandles()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": "tradesvisibleforcandles()",
-      "source_file": "src/chartTimeUtils.js",
-      "source_location": "L148"
-    },
-    {
-      "id": "src_components_pricechart_refreshinvalidationlinesinternal",
-      "label": "refreshInvalidationLinesInternal()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": "refreshinvalidationlinesinternal()",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L1068"
-    },
-    {
-      "id": "src_components_pricechart_refreshtradesetuplinksinternal",
-      "label": "refreshTradeSetupLinksInternal()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": "refreshtradesetuplinksinternal()",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L710"
-    },
-    {
-      "id": "src_components_pricechart_tradelikeentriesforcandles",
-      "label": "tradeLikeEntriesForCandles()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": "tradelikeentriesforcandles()",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L841"
-    },
-    {
       "id": "src_composables_usepricechartmarketstructure_usepricechartmarketstructure_refreshmarketstructure",
       "label": "refreshMarketStructure()",
       "_callable": true,
@@ -9160,54 +9016,6 @@
       "source_location": "L154"
     },
     {
-      "id": "src_composables_usepricecharttradesetupdrawing_usepricecharttradesetupdrawing",
-      "label": "usePriceChartTradeSetupDrawing()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": "usepricecharttradesetupdrawing()",
-      "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L23"
-    },
-    {
-      "id": "src_composables_usepricecharttradesetupdrawing_usepricecharttradesetupdrawing_create",
-      "label": "create()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": "create()",
-      "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L27"
-    },
-    {
-      "id": "src_composables_usepricecharttradesetupdrawing_usepricecharttradesetupdrawing_dispose",
-      "label": "dispose()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": "dispose()",
-      "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L30"
-    },
-    {
-      "id": "src_composables_usepricecharttradesetupdrawing_usepricecharttradesetupdrawing_refresh",
-      "label": "refresh()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": "refresh()",
-      "source_file": "src/composables/usePriceChartTradeSetupDrawing.js",
-      "source_location": "L37"
-    },
-    {
       "id": "src_liquidity_bullbearlabelside",
       "label": "bullBearLabelSide()",
       "_callable": true,
@@ -9218,66 +9026,6 @@
       "norm_label": "bullbearlabelside()",
       "source_file": "src/liquidity.js",
       "source_location": "L309"
-    },
-    {
-      "id": "src_liquidity_formatlslabel",
-      "label": "formatLsLabel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": "formatlslabel()",
-      "source_file": "src/liquidity.js",
-      "source_location": "L295"
-    },
-    {
-      "id": "src_liquidity_liquiditylineprimitive_attached",
-      "label": ".attached()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": ".attached()",
-      "source_file": "src/liquidity.js",
-      "source_location": "L212"
-    },
-    {
-      "id": "src_liquidity_liquiditylineprimitive_distanceto",
-      "label": ".distanceTo()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": ".distanceto()",
-      "source_file": "src/liquidity.js",
-      "source_location": "L239"
-    },
-    {
-      "id": "src_liquidity_liquiditylineprimitive_level",
-      "label": ".level()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": ".level()",
-      "source_file": "src/liquidity.js",
-      "source_location": "L230"
-    },
-    {
-      "id": "src_liquidity_liquiditylineprimitive_paneviews",
-      "label": ".paneViews()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": ".paneviews()",
-      "source_file": "src/liquidity.js",
-      "source_location": "L226"
     },
     {
       "id": "src_marketstructurerendering_arrowprimitive_updateallviews",
@@ -9626,18 +9374,6 @@
       "norm_label": "totouchedlevel()",
       "source_file": "src/marketStructureRendering.ts",
       "source_location": "L343"
-    },
-    {
-      "id": "src_tradevisibility_tradesvisible",
-      "label": "tradesVisible()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 172,
-      "community_name": "marketStructureRendering.ts",
-      "file_type": "code",
-      "norm_label": "tradesvisible()",
-      "source_file": "src/tradeVisibility.js",
-      "source_location": "L12"
     },
     {
       "id": "src_structurepivottime_candletouchesprice",
@@ -11584,16 +11320,64 @@
       "source_location": "L11"
     },
     {
+      "id": "src_liquidity_liquiditylineprimitive_attached",
+      "label": ".attached()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 200,
+      "community_name": "LiquidityLinePrimitive",
+      "file_type": "code",
+      "norm_label": ".attached()",
+      "source_file": "src/liquidity.js",
+      "source_location": "L212"
+    },
+    {
       "id": "src_liquidity_liquiditylineprimitive_constructor",
       "label": ".constructor()",
       "_callable": true,
       "_origin": "ast",
       "community": 200,
-      "community_name": "LiquidityLineRenderer",
+      "community_name": "LiquidityLinePrimitive",
       "file_type": "code",
       "norm_label": ".constructor()",
       "source_file": "src/liquidity.js",
       "source_location": "L203"
+    },
+    {
+      "id": "src_liquidity_liquiditylineprimitive_distanceto",
+      "label": ".distanceTo()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 200,
+      "community_name": "LiquidityLinePrimitive",
+      "file_type": "code",
+      "norm_label": ".distanceto()",
+      "source_file": "src/liquidity.js",
+      "source_location": "L239"
+    },
+    {
+      "id": "src_liquidity_liquiditylineprimitive_level",
+      "label": ".level()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 200,
+      "community_name": "LiquidityLinePrimitive",
+      "file_type": "code",
+      "norm_label": ".level()",
+      "source_file": "src/liquidity.js",
+      "source_location": "L230"
+    },
+    {
+      "id": "src_liquidity_liquiditylineprimitive_paneviews",
+      "label": ".paneViews()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 200,
+      "community_name": "LiquidityLinePrimitive",
+      "file_type": "code",
+      "norm_label": ".paneviews()",
+      "source_file": "src/liquidity.js",
+      "source_location": "L226"
     },
     {
       "id": "src_liquidity_liquiditylineprimitive_updateallviews",
@@ -11601,7 +11385,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 200,
-      "community_name": "LiquidityLineRenderer",
+      "community_name": "LiquidityLinePrimitive",
       "file_type": "code",
       "norm_label": ".updateallviews()",
       "source_file": "src/liquidity.js",
@@ -11613,7 +11397,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 200,
-      "community_name": "LiquidityLineRenderer",
+      "community_name": "LiquidityLinePrimitive",
       "file_type": "code",
       "norm_label": ".constructor()",
       "source_file": "src/liquidity.js",
@@ -11625,7 +11409,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 200,
-      "community_name": "LiquidityLineRenderer",
+      "community_name": "LiquidityLinePrimitive",
       "file_type": "code",
       "norm_label": ".p1()",
       "source_file": "src/liquidity.js",
@@ -11637,7 +11421,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 200,
-      "community_name": "LiquidityLineRenderer",
+      "community_name": "LiquidityLinePrimitive",
       "file_type": "code",
       "norm_label": ".p2()",
       "source_file": "src/liquidity.js",
@@ -11649,7 +11433,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 200,
-      "community_name": "LiquidityLineRenderer",
+      "community_name": "LiquidityLinePrimitive",
       "file_type": "code",
       "norm_label": ".constructor()",
       "source_file": "src/liquidity.js",
@@ -11661,7 +11445,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 200,
-      "community_name": "LiquidityLineRenderer",
+      "community_name": "LiquidityLinePrimitive",
       "file_type": "code",
       "norm_label": ".renderer()",
       "source_file": "src/liquidity.js",
@@ -11673,7 +11457,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 200,
-      "community_name": "LiquidityLineRenderer",
+      "community_name": "LiquidityLinePrimitive",
       "file_type": "code",
       "norm_label": ".update()",
       "source_file": "src/liquidity.js",
@@ -13804,6 +13588,18 @@
       "source_location": "L131"
     },
     {
+      "id": "src_candlepolling_nextcandlepolldelay",
+      "label": "nextCandlePollDelay()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "timeframes.js",
+      "file_type": "code",
+      "norm_label": "nextcandlepolldelay()",
+      "source_file": "src/candlePolling.js",
+      "source_location": "L5"
+    },
+    {
       "id": "src_components_pricechart_loadinitial",
       "label": "loadInitial()",
       "_callable": true,
@@ -13948,16 +13744,16 @@
       "source_location": "L128"
     },
     {
-      "id": "src_tradesetupchecklistpresentation_checklistpresentation",
-      "label": "checklistPresentation()",
+      "id": "src_tradesetupcockpit_cardaccentcolors",
+      "label": "cardAccentColors()",
       "_callable": true,
       "_origin": "ast",
       "community": 33,
       "community_name": "TradeSetupCockpit.vue",
       "file_type": "code",
-      "norm_label": "checklistpresentation()",
-      "source_file": "src/tradeSetupChecklistPresentation.js",
-      "source_location": "L6"
+      "norm_label": "cardaccentcolors()",
+      "source_file": "src/tradeSetupCockpit.ts",
+      "source_location": "L155"
     },
     {
       "id": "src_tradesetupcockpit_computeanticonfluences",
@@ -14114,18 +13910,6 @@
       "norm_label": "trendsetupconfirmation()",
       "source_file": "src/tradeSetupCockpit.ts",
       "source_location": "L173"
-    },
-    {
-      "id": "test_tradesetupchecklistpresentation_test_structure",
-      "label": "structure()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "TradeSetupCockpit.vue",
-      "file_type": "code",
-      "norm_label": "structure()",
-      "source_file": "test/tradeSetupChecklistPresentation.test.js",
-      "source_location": "L5"
     },
     {
       "id": "src_tradeintake_fetchtradesetupforcockpit",
@@ -15064,6 +14848,18 @@
       "source_location": "L1738"
     },
     {
+      "id": "src_components_pricechart_m5clockenabled",
+      "label": "m5ClockEnabled()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "PriceChart.vue",
+      "file_type": "code",
+      "norm_label": "m5clockenabled()",
+      "source_file": "src/components/PriceChart.vue",
+      "source_location": "L523"
+    },
+    {
       "id": "src_components_pricechart_pad2",
       "label": "pad2()",
       "_callable": true,
@@ -15088,6 +14884,18 @@
       "source_location": "L2072"
     },
     {
+      "id": "src_components_pricechart_pollrecent",
+      "label": "pollRecent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "PriceChart.vue",
+      "file_type": "code",
+      "norm_label": "pollrecent()",
+      "source_file": "src/components/PriceChart.vue",
+      "source_location": "L1892"
+    },
+    {
       "id": "src_components_pricechart_retryloadoldercandles",
       "label": "retryLoadOlderCandles()",
       "_callable": true,
@@ -15098,6 +14906,42 @@
       "norm_label": "retryloadoldercandles()",
       "source_file": "src/components/PriceChart.vue",
       "source_location": "L1768"
+    },
+    {
+      "id": "src_components_pricechart_schedulenextpoll",
+      "label": "scheduleNextPoll()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "PriceChart.vue",
+      "file_type": "code",
+      "norm_label": "schedulenextpoll()",
+      "source_file": "src/components/PriceChart.vue",
+      "source_location": "L1937"
+    },
+    {
+      "id": "src_components_pricechart_schedulenexttradesetupm5poll",
+      "label": "scheduleNextTradeSetupM5Poll()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "PriceChart.vue",
+      "file_type": "code",
+      "norm_label": "schedulenexttradesetupm5poll()",
+      "source_file": "src/components/PriceChart.vue",
+      "source_location": "L1792"
+    },
+    {
+      "id": "src_components_pricechart_sleep",
+      "label": "sleep()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "PriceChart.vue",
+      "file_type": "code",
+      "norm_label": "sleep()",
+      "source_file": "src/components/PriceChart.vue",
+      "source_location": "L1918"
     },
     {
       "id": "src_components_pricechart_tickmarkformatter",
@@ -15122,6 +14966,18 @@
       "norm_label": "updateloadolderbuttonvisibility()",
       "source_file": "src/components/PriceChart.vue",
       "source_location": "L1726"
+    },
+    {
+      "id": "src_components_pricechart_withpollretries",
+      "label": "withPollRetries()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "PriceChart.vue",
+      "file_type": "code",
+      "norm_label": "withpollretries()",
+      "source_file": "src/components/PriceChart.vue",
+      "source_location": "L1927"
     },
     {
       "id": "src_debugmetadata_savedebugmetadatasection",
@@ -15153,7 +15009,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "usepricechartmarketstructure()",
       "source_file": "src/composables/usePriceChartMarketStructure.js",
@@ -15165,7 +15021,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "computerangespivotsandmetadata()",
       "source_file": "src/composables/usePriceChartMarketStructure.js",
@@ -15177,7 +15033,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "computerangespivotsfor()",
       "source_file": "src/composables/usePriceChartMarketStructure.js",
@@ -15189,7 +15045,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "create()",
       "source_file": "src/composables/usePriceChartMarketStructure.js",
@@ -15201,7 +15057,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "dispose()",
       "source_file": "src/composables/usePriceChartMarketStructure.js",
@@ -15213,7 +15069,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "loadolderm5()",
       "source_file": "src/composables/usePriceChartMarketStructure.js",
@@ -15225,11 +15081,35 @@
       "_callable": true,
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "refreshm5structure()",
       "source_file": "src/composables/usePriceChartMarketStructure.js",
       "source_location": "L168"
+    },
+    {
+      "id": "src_composables_usepricechartmarketstructure_usepricechartmarketstructure_refreshrangesmarkers",
+      "label": "refreshRangesMarkers()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "refreshrangesmarkers()",
+      "source_file": "src/composables/usePriceChartMarketStructure.js",
+      "source_location": "L127"
+    },
+    {
+      "id": "src_format_fmtdatetime",
+      "label": "fmtDateTime()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "fmtdatetime()",
+      "source_file": "src/format.js",
+      "source_location": "L12"
     },
     {
       "id": "src_ignoredcandles_markignored",
@@ -15237,7 +15117,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "markignored()",
       "source_file": "src/ignoredCandles.js",
@@ -15249,7 +15129,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "tzoffsetminutes()",
       "source_file": "src/ignoredCandles.js",
@@ -15261,11 +15141,95 @@
       "_callable": true,
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "withoutignored()",
       "source_file": "src/ignoredCandles.js",
       "source_location": "L19"
+    },
+    {
+      "id": "src_pivotmarkers_renderpivotmarkers",
+      "label": "renderPivotMarkers()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "renderpivotmarkers()",
+      "source_file": "src/pivotMarkers.ts",
+      "source_location": "L212"
+    },
+    {
+      "id": "src_sessionbonus_createsessionbonusresolver",
+      "label": "createSessionBonusResolver()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "createsessionbonusresolver()",
+      "source_file": "src/sessionBonus.js",
+      "source_location": "L16"
+    },
+    {
+      "id": "src_structurecloselevels_coverscloselevel",
+      "label": "coversCloseLevel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "coverscloselevel()",
+      "source_file": "src/structureCloseLevels.js",
+      "source_location": "L5"
+    },
+    {
+      "id": "src_structurecloselevels_rendercloselevels",
+      "label": "renderCloseLevels()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "rendercloselevels()",
+      "source_file": "src/structureCloseLevels.js",
+      "source_location": "L11"
+    },
+    {
+      "id": "src_structureoverlay_eventlabeler",
+      "label": "eventLabeler()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "eventlabeler()",
+      "source_file": "src/structureOverlay.js",
+      "source_location": "L24"
+    },
+    {
+      "id": "src_structureoverlay_renderlowerstructure",
+      "label": "renderLowerStructure()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "renderlowerstructure()",
+      "source_file": "src/structureOverlay.js",
+      "source_location": "L38"
+    },
+    {
+      "id": "src_structureoverlay_structurerenderoptions",
+      "label": "structureRenderOptions()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "structurerenderoptions()",
+      "source_file": "src/structureOverlay.js",
+      "source_location": "L16"
     },
     {
       "id": "src_trendphases_rendertrendphasebands",
@@ -15273,11 +15237,47 @@
       "_callable": true,
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "rendertrendphasebands()",
       "source_file": "src/trendPhases.js",
       "source_location": "L74"
+    },
+    {
+      "id": "test_structurecloselevels_test_at",
+      "label": "at()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "at()",
+      "source_file": "test/structureCloseLevels.test.js",
+      "source_location": "L8"
+    },
+    {
+      "id": "test_structurecloselevels_test_draw",
+      "label": "draw()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "draw()",
+      "source_file": "test/structureCloseLevels.test.js",
+      "source_location": "L9"
+    },
+    {
+      "id": "test_structurecloselevels_test_lines",
+      "label": "lines()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "lines()",
+      "source_file": "test/structureCloseLevels.test.js",
+      "source_location": "L21"
     },
     {
       "id": "src_alarmsettings_fetchalarmsettings",
@@ -23054,72 +23054,6 @@
       "source_location": "L19"
     },
     {
-      "id": "src_components_checklistorderblock",
-      "label": "ChecklistOrderBlock.vue",
-      "_origin": "ast",
-      "community": 105,
-      "community_name": "cssColor",
-      "file_type": "code",
-      "norm_label": "checklistorderblock.vue",
-      "source_file": "src/components/ChecklistOrderBlock.vue",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_components_checklistorderblock_bearish",
-      "label": "bearish",
-      "_origin": "ast",
-      "community": 105,
-      "community_name": "cssColor",
-      "file_type": "code",
-      "norm_label": "bearish",
-      "source_file": "src/components/ChecklistOrderBlock.vue",
-      "source_location": "L11"
-    },
-    {
-      "id": "src_components_checklistorderblock_colors",
-      "label": "colors",
-      "_origin": "ast",
-      "community": 105,
-      "community_name": "cssColor",
-      "file_type": "code",
-      "norm_label": "colors",
-      "source_file": "src/components/ChecklistOrderBlock.vue",
-      "source_location": "L16"
-    },
-    {
-      "id": "src_components_checklistorderblock_hint",
-      "label": "hint",
-      "_origin": "ast",
-      "community": 105,
-      "community_name": "cssColor",
-      "file_type": "code",
-      "norm_label": "hint",
-      "source_file": "src/components/ChecklistOrderBlock.vue",
-      "source_location": "L14"
-    },
-    {
-      "id": "src_components_checklistorderblock_props",
-      "label": "props",
-      "_origin": "ast",
-      "community": 105,
-      "community_name": "cssColor",
-      "file_type": "code",
-      "norm_label": "props",
-      "source_file": "src/components/ChecklistOrderBlock.vue",
-      "source_location": "L7"
-    },
-    {
-      "id": "src_components_checklistorderblock_title",
-      "label": "title",
-      "_origin": "ast",
-      "community": 105,
-      "community_name": "cssColor",
-      "file_type": "code",
-      "norm_label": "title",
-      "source_file": "src/components/ChecklistOrderBlock.vue",
-      "source_location": "L12"
-    },
-    {
       "id": "src_components_stylemodal",
       "label": "StyleModal.vue",
       "_origin": "ast",
@@ -23698,17 +23632,6 @@
       "norm_label": "ping bei neuem m5-ob (10.09.2026, implementiert)",
       "source_file": "docs/attention-levels.md",
       "source_location": "L69"
-    },
-    {
-      "id": "src_components_pricechart_state_m5clock_retry_retrym5clock",
-      "label": "{ state: m5Clock, retry: retryM5Clock }",
-      "_origin": "ast",
-      "community": 116,
-      "community_name": "forexCandles.js",
-      "file_type": "code",
-      "norm_label": "{ state: m5clock, retry: retrym5clock }",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L524"
     },
     {
       "id": "src_composables_usegoldcharthistory",
@@ -24545,6 +24468,72 @@
       "source_location": "L13"
     },
     {
+      "id": "src_components_checklistorderblock",
+      "label": "ChecklistOrderBlock.vue",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "checklistorderblock.vue",
+      "source_file": "src/components/ChecklistOrderBlock.vue",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_components_checklistorderblock_bearish",
+      "label": "bearish",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "bearish",
+      "source_file": "src/components/ChecklistOrderBlock.vue",
+      "source_location": "L11"
+    },
+    {
+      "id": "src_components_checklistorderblock_colors",
+      "label": "colors",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "colors",
+      "source_file": "src/components/ChecklistOrderBlock.vue",
+      "source_location": "L16"
+    },
+    {
+      "id": "src_components_checklistorderblock_hint",
+      "label": "hint",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "hint",
+      "source_file": "src/components/ChecklistOrderBlock.vue",
+      "source_location": "L14"
+    },
+    {
+      "id": "src_components_checklistorderblock_props",
+      "label": "props",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "props",
+      "source_file": "src/components/ChecklistOrderBlock.vue",
+      "source_location": "L7"
+    },
+    {
+      "id": "src_components_checklistorderblock_title",
+      "label": "title",
+      "_origin": "ast",
+      "community": 122,
+      "community_name": "pricePrecisionForInstrument",
+      "file_type": "code",
+      "norm_label": "title",
+      "source_file": "src/components/ChecklistOrderBlock.vue",
+      "source_location": "L12"
+    },
+    {
       "id": "src_components_m1structurestatus",
       "label": "M1StructureStatus.vue",
       "_origin": "ast",
@@ -24553,17 +24542,6 @@
       "file_type": "code",
       "norm_label": "m1structurestatus.vue",
       "source_file": "src/components/M1StructureStatus.vue",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_components_protokolltable",
-      "label": "ProtokollTable.vue",
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "protokolltable.vue",
-      "source_file": "src/components/ProtokollTable.vue",
       "source_location": "L1"
     },
     {
@@ -24699,17 +24677,6 @@
       "source_location": "L88"
     },
     {
-      "id": "src_composables_usepricechartmarketstructure",
-      "label": "usePriceChartMarketStructure.js",
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "usepricechartmarketstructure.js",
-      "source_file": "src/composables/usePriceChartMarketStructure.js",
-      "source_location": "L1"
-    },
-    {
       "id": "src_format",
       "label": "format.js",
       "_origin": "ast",
@@ -24730,50 +24697,6 @@
       "norm_label": "weekday_short_formatter",
       "source_file": "src/format.js",
       "source_location": "L25"
-    },
-    {
-      "id": "src_structurecloselevels",
-      "label": "structureCloseLevels.js",
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "structurecloselevels.js",
-      "source_file": "src/structureCloseLevels.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_structureoverlay",
-      "label": "structureOverlay.js",
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "structureoverlay.js",
-      "source_file": "src/structureOverlay.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_structureoverlay_lower_structure_style_keys",
-      "label": "LOWER_STRUCTURE_STYLE_KEYS",
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "lower_structure_style_keys",
-      "source_file": "src/structureOverlay.js",
-      "source_location": "L8"
-    },
-    {
-      "id": "test_structurecloselevels_test",
-      "label": "structureCloseLevels.test.js",
-      "_origin": "ast",
-      "community": 122,
-      "community_name": "pricePrecisionForInstrument",
-      "file_type": "code",
-      "norm_label": "structurecloselevels.test.js",
-      "source_file": "test/structureCloseLevels.test.js",
-      "source_location": "L1"
     },
     {
       "id": "supabase_functions_poi_watcher_livetouch",
@@ -25817,28 +25740,6 @@
       "source_location": "L1"
     },
     {
-      "id": "src_candlepolling",
-      "label": "candlePolling.js",
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "nextCandlePollDelay",
-      "file_type": "code",
-      "norm_label": "candlepolling.js",
-      "source_file": "src/candlePolling.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "test_candlepolling_test",
-      "label": "candlePolling.test.js",
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "nextCandlePollDelay",
-      "file_type": "code",
-      "norm_label": "candlepolling.test.js",
-      "source_file": "test/candlePolling.test.js",
-      "source_location": "L1"
-    },
-    {
       "id": "codex_hooks_claudemd_bloat_guard",
       "label": ".codex/hooks/claudemd-bloat-guard.js",
       "_origin": "ast",
@@ -25997,18 +25898,29 @@
       "label": "src/ageTier.ts",
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "src/agetier.ts",
       "source_file": "src/ageTier.ts",
       "source_location": "L1"
     },
     {
+      "id": "src_components_tradesetupcockpit_sweeptier",
+      "label": "sweepTier",
+      "_origin": "ast",
+      "community": 145,
+      "community_name": "tradeEvidence.ts",
+      "file_type": "code",
+      "norm_label": "sweeptier",
+      "source_file": "src/components/TradeSetupCockpit.vue",
+      "source_location": "L155"
+    },
+    {
       "id": "src_tradeevidence",
       "label": "tradeEvidence.ts",
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "tradeevidence.ts",
       "source_file": "src/tradeEvidence.ts",
@@ -26019,18 +25931,29 @@
       "label": "KIND_LABEL",
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "kind_label",
       "source_file": "src/tradeEvidence.ts",
       "source_location": "L56"
     },
     {
+      "id": "src_tradesetupchecklistpresentation",
+      "label": "tradeSetupChecklistPresentation.js",
+      "_origin": "ast",
+      "community": 145,
+      "community_name": "tradeEvidence.ts",
+      "file_type": "code",
+      "norm_label": "tradesetupchecklistpresentation.js",
+      "source_file": "src/tradeSetupChecklistPresentation.js",
+      "source_location": "L1"
+    },
+    {
       "id": "src_tradetargets",
       "label": "tradeTargets.ts",
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "tradetargets.ts",
       "source_file": "src/tradeTargets.ts",
@@ -26041,11 +25964,22 @@
       "label": "KIND_LABEL",
       "_origin": "ast",
       "community": 145,
-      "community_name": "businessSecondsBetween",
+      "community_name": "tradeEvidence.ts",
       "file_type": "code",
       "norm_label": "kind_label",
       "source_file": "src/tradeTargets.ts",
       "source_location": "L24"
+    },
+    {
+      "id": "test_tradesetupchecklistpresentation_test",
+      "label": "tradeSetupChecklistPresentation.test.js",
+      "_origin": "ast",
+      "community": 145,
+      "community_name": "tradeEvidence.ts",
+      "file_type": "code",
+      "norm_label": "tradesetupchecklistpresentation.test.js",
+      "source_file": "test/tradeSetupChecklistPresentation.test.js",
+      "source_location": "L1"
     },
     {
       "id": "plan_trade_setup_2_anzeige_am_pr\u00fcfbeispiel",
@@ -32027,6 +31961,17 @@
       "source_location": "L1"
     },
     {
+      "id": "src_candlepolling",
+      "label": "candlePolling.js",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "timeframes.js",
+      "file_type": "code",
+      "norm_label": "candlepolling.js",
+      "source_file": "src/candlePolling.js",
+      "source_location": "L1"
+    },
+    {
       "id": "src_timeframes",
       "label": "timeframes.js",
       "_origin": "ast",
@@ -32101,6 +32046,17 @@
       "file_type": "code",
       "norm_label": "candlecacherecovery.test.js",
       "source_file": "test/candleCacheRecovery.test.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "test_candlepolling_test",
+      "label": "candlePolling.test.js",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "timeframes.js",
+      "file_type": "code",
+      "norm_label": "candlepolling.test.js",
+      "source_file": "test/candlePolling.test.js",
       "source_location": "L1"
     },
     {
@@ -32599,17 +32555,6 @@
       "source_location": "L151"
     },
     {
-      "id": "src_components_tradesetupcockpit_sweeptier",
-      "label": "sweepTier",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "TradeSetupCockpit.vue",
-      "file_type": "code",
-      "norm_label": "sweeptier",
-      "source_file": "src/components/TradeSetupCockpit.vue",
-      "source_location": "L155"
-    },
-    {
       "id": "src_components_tradesetupcockpit_targets",
       "label": "targets",
       "_origin": "ast",
@@ -32674,17 +32619,6 @@
       "norm_label": "tsc_date_formatter",
       "source_file": "src/components/TradeSetupCockpit.vue",
       "source_location": "L118"
-    },
-    {
-      "id": "src_tradesetupchecklistpresentation",
-      "label": "tradeSetupChecklistPresentation.js",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "TradeSetupCockpit.vue",
-      "file_type": "code",
-      "norm_label": "tradesetupchecklistpresentation.js",
-      "source_file": "src/tradeSetupChecklistPresentation.js",
-      "source_location": "L1"
     },
     {
       "id": "src_tradesetupcockpit",
@@ -32773,17 +32707,6 @@
       "norm_label": "trend_direction_icon",
       "source_file": "src/tradeSetupCockpit.ts",
       "source_location": "L252"
-    },
-    {
-      "id": "test_tradesetupchecklistpresentation_test",
-      "label": "tradeSetupChecklistPresentation.test.js",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "TradeSetupCockpit.vue",
-      "file_type": "code",
-      "norm_label": "tradesetupchecklistpresentation.test.js",
-      "source_file": "test/tradeSetupChecklistPresentation.test.js",
-      "source_location": "L1"
     },
     {
       "id": "test_tradesetupcockpit_test",
@@ -33842,6 +33765,17 @@
       "source_location": "L554"
     },
     {
+      "id": "src_components_pricechart_state_m5clock_retry_retrym5clock",
+      "label": "{ state: m5Clock, retry: retryM5Clock }",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "PriceChart.vue",
+      "file_type": "code",
+      "norm_label": "{ state: m5clock, retry: retrym5clock }",
+      "source_file": "src/components/PriceChart.vue",
+      "source_location": "L524"
+    },
+    {
       "id": "src_components_pricechart_structureearliesttime",
       "label": "structureEarliestTime",
       "_origin": "ast",
@@ -34011,21 +33945,87 @@
       "label": "goldNativeObZones",
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "goldnativeobzones",
       "source_file": "src/components/PriceChart.vue",
       "source_location": "L1145"
     },
     {
+      "id": "src_components_protokolltable",
+      "label": "ProtokollTable.vue",
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "protokolltable.vue",
+      "source_file": "src/components/ProtokollTable.vue",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_composables_usepricechartmarketstructure",
+      "label": "usePriceChartMarketStructure.js",
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "usepricechartmarketstructure.js",
+      "source_file": "src/composables/usePriceChartMarketStructure.js",
+      "source_location": "L1"
+    },
+    {
       "id": "src_ignoredcandles",
       "label": "ignoredCandles.js",
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "ignoredcandles.js",
       "source_file": "src/ignoredCandles.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_structurecloselevels",
+      "label": "structureCloseLevels.js",
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "structurecloselevels.js",
+      "source_file": "src/structureCloseLevels.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_structureoverlay",
+      "label": "structureOverlay.js",
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "structureoverlay.js",
+      "source_file": "src/structureOverlay.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_structureoverlay_lower_structure_style_keys",
+      "label": "LOWER_STRUCTURE_STYLE_KEYS",
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "lower_structure_style_keys",
+      "source_file": "src/structureOverlay.js",
+      "source_location": "L8"
+    },
+    {
+      "id": "test_structurecloselevels_test",
+      "label": "structureCloseLevels.test.js",
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "usePriceChartMarketStructure.js",
+      "file_type": "code",
+      "norm_label": "structurecloselevels.test.js",
+      "source_file": "test/structureCloseLevels.test.js",
       "source_location": "L1"
     },
     {
@@ -34033,7 +34033,7 @@
       "label": "usePriceChartMarketStructure.test.js",
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "usepricechartmarketstructure.test.js",
       "source_file": "test/usePriceChartMarketStructure.test.js",
@@ -34044,7 +34044,7 @@
       "label": "BASE_CTX",
       "_origin": "ast",
       "community": 40,
-      "community_name": "usePriceChartMarketStructure",
+      "community_name": "usePriceChartMarketStructure.js",
       "file_type": "code",
       "norm_label": "base_ctx",
       "source_file": "test/usePriceChartMarketStructure.test.js",
@@ -47021,18 +47021,6 @@
     },
     {
       "source": "src_components_pricechart_jumptotimerange",
-      "target": "src_forexcandles_fetcholdercandles",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L2485",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_pricechart_jumptotimerange",
       "target": "src_components_pricechart_refreshchart",
       "relation": "calls",
       "_origin": "ast",
@@ -47093,18 +47081,6 @@
     },
     {
       "source": "src_components_pricechart_loadinitial",
-      "target": "src_forexcandles_fetchinitialcandles",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L1852",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_pricechart_loadinitial",
       "target": "src_candlecache_fetchcandlescached",
       "relation": "calls",
       "_origin": "ast",
@@ -47149,18 +47125,6 @@
       "context": "call",
       "source_file": "src/components/PriceChart.vue",
       "source_location": "L1878",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_pricechart_loadoldercandlesnow",
-      "target": "src_forexcandles_fetcholdercandles",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L1746",
       "weight": 1.0
     },
     {
@@ -47785,18 +47749,6 @@
       "context": "call",
       "source_file": "src/components/PriceChart.vue",
       "source_location": "L1204",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_pricechart_pollrecent",
-      "target": "src_forexcandles_fetchrecentcandles",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L1906",
       "weight": 1.0
     },
     {
@@ -48821,18 +48773,6 @@
     },
     {
       "source": "src_components_pricechart_refreshtradeconfirmationlinksinternal",
-      "target": "src_tradeevidence_kindlabel",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L966",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_pricechart_refreshtradeconfirmationlinksinternal",
       "target": "src_rsirendering_divergencelineprimitive",
       "relation": "calls",
       "_origin": "ast",
@@ -49002,18 +48942,6 @@
     {
       "source": "src_components_pricechart_refreshtradetargetlinksinternal",
       "target": "src_format_fmtprice",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/components/PriceChart.vue",
-      "source_location": "L863",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_pricechart_refreshtradetargetlinksinternal",
-      "target": "src_tradetargets_kindlabel",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -139576,5 +139504,5 @@
       "source_file": "CLAUDE.md"
     }
   ],
-  "built_at_commit": "fae161c67e94729de978f8e5e559cef543d8a17f"
+  "built_at_commit": "8980b01196e36a926f822f59dc0d2811d35475d2"
 }
