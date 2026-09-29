@@ -286,7 +286,7 @@ Die 10:20-Kerze liefert später die bestehende Pivotbestätigung des bärischen 
 
 ### I / #9 — M1
 
-**Struktur und Einzelprüfungen umgesetzt; Entry-/GO-Regel weiterhin offen.** Eigener Toggle „M1-Struktur“ im Structure-Menü, ausschließlich Periode-5-Pivots. P2 geht weder in CHoCH/BOS/Nested noch in andere M1-Strukturentscheidungen ein; der gemeinsame Kern erhält eine leere Inner-Pivotliste. Debug zeigt dieselben P5-Pivots. Die M1-Periodenregler entfallen; alte gespeicherte Werte werden nicht mehr gelesen. M5/H1 bleiben bei ihren bisherigen Einstellungen und Regeln. Strukturkern, Linien, Marker und M5-Styles werden wiederverwendet.
+**Struktur und Einzelprüfungen umgesetzt; Entry 1 siehe J, Gesamtfreigabe weiterhin offen.** Eigener Toggle „M1-Struktur“ im Structure-Menü, ausschließlich Periode-5-Pivots. P2 geht weder in CHoCH/BOS/Nested noch in andere M1-Strukturentscheidungen ein; der gemeinsame Kern erhält eine leere Inner-Pivotliste. Debug zeigt dieselben P5-Pivots. Die M1-Periodenregler entfallen; alte gespeicherte Werte werden nicht mehr gelesen. M5/H1 bleiben bei ihren bisherigen Einstellungen und Regeln. Strukturkern, Linien, Marker und M5-Styles werden wiederverwendet.
 
 - **Aktivierung:** Toggle an und A, B, C für das aktuelle Setup am Bewertungszeitpunkt bestätigt. Vorher keine M1-Abrufe für diese Funktion. H/BOS ist kein zusätzliches Gate.
 - **Anker:** der bekannte protected-Pivot der passenden aktuellen M5-Ebene, von dem die BOS-Linie ausgeht; nach BOS dieselbe Pivotidentität. DR114: 1,35554, M5-Pivotkerze 09.09.2026 um 08:45 Berlin. Kein fest codierter Preis und kein beliebiger alter BOS. Fehlt ein eindeutiger bekannter Anker, bleibt M1 ausstehend.
@@ -302,6 +302,20 @@ Der Retest ist die erste Berührung **des M5-Orderblocks aus C** nach dessen bes
 DR114 am 09.09.2026, alle Zeiten Berlin, auf dem M1-Chart: Replay 09:30 → Stand 09:31, Uptrend, kein bärischer CHoCH/BOS. Replay 09:35 → Stand 09:36, CHoCH/BOS der 09:33-Kerze bestätigt; Nested noch nicht bestätigt. Der P5-Nested-Downtrend ist erst ab Schluss 09:39 bekannt. Replay 09:46 → Stand 09:47, OB-Berührung der 09:46-Kerze, noch keine Folge-FVG. Replay 09:49 → Stand 09:50, FVG bestätigt und Impulskerze 09:48 gold. Auf M5 kennt Replay 09:25 bereits Schluss 09:30: ABC bestätigt und I aktiv. Auf M1 kennt dieselbe Eingabe erst 09:26: C und I warten beide noch.
 
 Module: `m1Structure.js`, `usePriceChartM1Structure.js`, gemeinsames `structureOverlay.js`. Tests prüfen Anker vor/nach BOS, A/B/C-Gate, geschlossene Kerzen, Vorlauf, Replay, Zeitrahmenwechsel, Debug, Pagination und veraltete Antworten nach Setupende.
+
+### J / #10 — Entry
+
+Das erste bestätigte M1-FVG-Ereignis nach dem Retest des C-M5-OB liefert einmal pro Setup **Entry 1**. Es benötigt keine zusätzliche Gesamtfreigabe aller A–I-Punkte. J zeigt „Entry 1“, sobald das Ereignis bekannt ist. Im M1-Chart beginnt eine preisverankerte Linie an der tatsächlichen Bestätigungskerze und führt nach rechts zu einem Kasten „Entry 1“. Linienpreis ist deren Schlusskurs. DR114 am 09.09.2026 Berlin: Impuls 09:48, Bestätigungskerze 09:49, bekannt ab Schluss 09:50, Entry 1,35615.
+
+Zwei nebeneinanderliegende Skalen verwenden denselben Entry und eigene, beim Entry eingefrorene Stopps:
+
+- **Weit:** Oberkante des zu C gehörenden M5-OB für Short, Unterkante für Long; DR114 1,35675.
+- **Eng:** höchstes High aller geschlossenen M1-Kerzen ab erster Berührung dieses OB bis einschließlich FVG-Bestätigungskerze; für Long tiefstes Low. Zwischenextreme zählen mit. DR114 1,35648 aus 09:46. Dafür ist kein P5-Pivotstatus nötig: dessen spätere rechte Bestätigungskerzen wären am Entry noch unbekannt.
+- Beide Skalen zeigen Stopp, 3R/4R/5R/6R und die bestehenden festen T1-/optional T2-Preise mit ihrem jeweiligen RR. J zeigt zusätzlich beide Entry-Stopp-Abstände über den Instrument-Pip-Helper: DR114 „Weiter SL: 6,0 Pips“ / „Enger SL: 3,3 Pips“. Risiko = gerichteter Abstand zwischen Entry und Stopp; RR = gerichteter Zielabstand geteilt durch dieses Risiko. Kein Puffer oder Stoppdeckel. Fehlende/falschseitige Preise liefern kein erfundenes RR. Der Preisbereich wird durch die Skalen nicht automatisch erweitert; die RR-Zusammenfassung bleibt auch für Ziele außerhalb des sichtbaren Ausschnitts lesbar.
+
+Replay vor der Bestätigung zeigt weder Annotation noch Entry 1; danach bleiben Ereignisidentität, Entry, Stopps und Targets für denselben Setup-Präfix stabil. Rücksprünge entfernen das Ereignis und stellen es vorwärts deterministisch wieder her. Die Berechnung bleibt vom sichtbaren Timeframe unabhängig; die Annotation wird zunächst nur auf M1 gezeichnet, ohne auf frühere Aggregatkerzen zurückzuspringen. Toggle, Symbol-/Setupwechsel und bestehender T1-/Invalidierungs-Lifecycle gelten weiter. Weitere Entry-Nummern, Ausführungen, Journalwrites, Positionsgrößen, Kostenannahmen und Winrate-Regeln sind nicht definiert.
+
+Module: `m1Entry.js`, `entryRisk.js`, `m1EntryRendering.js`; gemeinsame Skalenzeichnung aus `scaleRendering.js`. Tests prüfen Bestätigungsgrenze, feste Identität, Retest-Zwischenextreme, Long-Spiegelung, Stopp-/Zielgeometrie und Neuprojektion bei Pan/Zoom.
 
 ## Technische Machbarkeit — geprüft am 27.09.2026
 
@@ -352,7 +366,8 @@ Damit nicht ein alter Major-Sweep mit einer völlig anderen aktuellen M5-Reaktio
 | F — Uhrzeit | `sessions`, `trading_schedules`, News-Relevanz/Gates | Einheitlich Berlin und 30/15-News-Fenster; Kalenderabdeckung und Grenzfälle behandeln. |
 | G — Zusatzargumente | `detectRsiDivergenceHistory`, OB-Touch/Retest | M5-Divergenz zum damaligen Stand; Mitigation und Zuordnung zur Sweep-Bewegung definieren. |
 | H — M5-Trend | M5-Strukturkern, `trendPhases.js`, `m5CloseReaction.js` | Frühe Close-Auswertung samt Richtung und Erkennungszeit; Regeln und Abnahme in Abschnitt H. |
-| I — M1 | Struktur sichtbar | Ab A+B+C mit Toggle; Entry-/GO-Regel weiterhin offen. |
+| I — M1 | Struktur sichtbar | Ab A+B+C mit Toggle; Gesamtfreigabe weiterhin offen. |
+| J — Entry | Entry 1 und zwei Risikoskalen | Erste bestätigte M1-FVG nach C-OB-Retest, feste Entry-/Stopppreise gemäß Abschnitt J. |
 
 Die Anzeige braucht mehr als einen pauschalen Haken: erfüllt, noch nicht erfüllt, No-Go und Daten unbekannt müssen unterscheidbar sein. Fehlende optionale Zusatzargumente aus G bedeuten nicht automatisch No-Go. Die Verknüpfung zu einem endgültigen Gesamt-Go bleibt bis zur Klärung aller Pflicht-/Zusatzregeln offen.
 
@@ -385,7 +400,7 @@ Für die spätere Statistik denselben Evaluator über historische Kerzenpräfixe
 
 Target 2 wird **bis zur Invalidierung** beobachtet: `reached` mit Treffer-/Erkennungszeit bei T2 zuerst, `notReached` bei Invalidierung zuerst, `open` bei noch laufender Beobachtung, `unknown` bei fehlender Historie oder unbelegter Reihenfolge innerhalb derselben Kerze. Ohne zweites Ziel gilt `notApplicable`. Fehlende Historie wird nicht als Fehlschlag gezählt. Bereits beendete Hauptkandidaten werden für T2 weiterhin aus der separaten Ablage gelesen; nur das geschlossene Präfix des aktuellen Bewertungsstands wird neu ausgewertet. Die gespeicherten späteren Ergebnisse fließen nicht in eine frühere Replay-Anzeige ein. Fehlt der vollständige Verlauf in den geladenen Kerzen, bleibt die neue Beobachtung unbekannt; belegte ältere Ergebnisse werden dadurch nicht gelöscht. Bei geschlossener App gibt es keinen neuen Beobachtungslauf.
 
-**Winrate braucht zusätzliche Definitionen:** Entry, Stop, Target-/Teilausstiegsregeln, Re-Entries, Kosten und Auswertungshorizont sind mit der Checklist allein noch nicht vollständig festgelegt; M1 bleibt offen. Alte und neue Setups unter denselben Ausführungsannahmen vergleichen. Vorhandene `analysis/dr-reichweite`-Werkzeuge prüfen, die bisherigen Journal-/TSC-Daten und bisherigen Erkennungsregeln erhalten.
+**Winrate braucht zusätzliche Definitionen:** Das visuelle Entry-1-Signal und zwei Stoppvarianten sind in J festgelegt; Ausführung, Target-/Teilausstiegsregeln, Re-Entries, Kosten und Auswertungshorizont bleiben offen. Alte und neue Setups unter denselben Ausführungsannahmen vergleichen. Vorhandene `analysis/dr-reichweite`-Werkzeuge prüfen, die bisherigen Journal-/TSC-Daten und bisherigen Erkennungsregeln erhalten.
 
 ### 7. Prüfung und spätere Abnahme
 

@@ -48,7 +48,7 @@ describe("Trade Setup Checklist presentation", () => {
     } });
     expect(html).toContain('aria-label="Erfüllt"');
     expect(html).toContain('title="Erfüllt"');
-    expect(html.match(/role="img" tabindex="0"/g)).toHaveLength(13);
+    expect(html.match(/role="img" tabindex="0"/g)).toHaveLength(14);
     expect(html).toContain('tabindex="0" aria-label="Checklist-Prüfungen"');
     expect(html).toContain('class="status-tooltip"');
   });
@@ -59,13 +59,21 @@ describe("Trade Setup Checklist presentation", () => {
     expect(html).not.toContain("<time");
   });
 
-  it("shows all nine checks without editable checkboxes or a fabricated result", async () => {
+  it("shows all ten checks without editable checkboxes or a fabricated result", async () => {
     const html = await render();
-    expect(html.match(/data-status=/g)).toHaveLength(12);
+    expect(html.match(/data-status=/g)).toHaveLength(13);
     expect(html).toContain("Auswertung ausstehend");
     expect(html).not.toContain("Optionale Zusatzargumente");
     expect(html).toContain("M1 wartet auf vollständige H1-/M5-Prüfdaten.");
     expect(html).not.toMatch(/<input|data-status="passed"|data-status="blocked"/);
+  });
+  it('shows J Entry 1 only for the current instrument and a confirmed entry', async () => {
+    const entry = { label: 'Entry 1' };
+    const html = await render(null, { instrument: 'GBPUSD', entry });
+    expect(html).toMatch(/class="checklist-letter"[^>]*>J<\/span>Entry/);
+    expect(html).toContain('Entry 1');
+    expect(await render(null, { instrument: 'EURUSD', entry })).not.toContain('Entry 1');
+    expect(await render(null, { instrument: 'GBPUSD' })).not.toContain('Entry 1');
   });
 
   it.each([

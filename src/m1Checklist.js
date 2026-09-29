@@ -4,6 +4,7 @@ import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { M1_STRUCTURE_PERIOD } from './m1Structure.js';
 import { formatDatedTime, formatBerlinTime } from './berlinTime.js';
 import { m1RetestAfterReaction } from './m1Retest.js';
+import { m1EntryFromFvg } from './m1Entry.js';
 
 const waiting = {
   abc: 'M1-Struktur wartet auf A, B und C.',
@@ -49,5 +50,5 @@ export function evaluateM1Checklist({ context, structure, candles, evaluatedAt }
     detailStatuses.push(follow.status === 'unknown' ? 'unknown' : signal ? 'passed' : 'unmet');
   }
   return { status: 'pending', details, detailStatuses, evaluatedAt, trends, choch, bos,
-    retest: follow.retest, fvg: follow.fvg };
+    retest: follow.retest, fvg: follow.fvg, entry: m1EntryFromFvg(context, follow.fvg, rows, evaluatedAt, follow.retest) };
 }

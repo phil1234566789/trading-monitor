@@ -7,6 +7,7 @@ import { checklistPresentation } from "../tradeSetupChecklistPresentation.js";
 import { unknownChecklistM5 } from "../tradeSetupChecklistM5.js";
 import { inactiveM1Checklist } from "../m1Checklist.js";
 import { usePreservedScroll } from "../composables/usePreservedScroll.js";
+import { entryChecklist } from "../m1Entry.js";
 
 const props = defineProps({
   instrument: { type: String, required: true },
@@ -26,6 +27,7 @@ const definitions = [
   { key: "confluences", label: "Weitere Confluences" },
   { key: "m5Trend", label: "M5 Trend", fallback: "unknown" },
   { key: "m1", label: "M1" },
+  { key: "entry", label: "Entry" },
 ];
 const statuses = {
   passed: { label: "Erfüllt", symbol: "✓" },
@@ -52,9 +54,10 @@ const evaluatedAt = computed(() => {
   return Number.isFinite(time) && Number.isFinite(new Date(time * 1000).getTime()) ? formatDatedTime(time) : null;
 });
 const presentation = computed(() => checklistPresentation(state.value));
+const m1 = computed(() => props.m1Check?.instrument === props.instrument ? props.m1Check : inactiveM1Checklist('prerequisites'));
 const checks = computed(() => definitions.map((definition, index) => {
-  const result = definition.key === 'm1'
-    ? (props.m1Check?.instrument === props.instrument ? props.m1Check : inactiveM1Checklist('prerequisites'))
+  const result = definition.key === 'entry' ? entryChecklist(m1.value) : definition.key === 'm1'
+    ? m1.value
     : state.value?.checks?.[definition.key] ?? (definition.key === 'm5Trend' ? unknownChecklistM5() : null);
   const status = result?.status in statuses ? result.status : definition.fallback ?? "unknown";
   return {
@@ -103,7 +106,7 @@ const checks = computed(() => definitions.map((definition, index) => {
               :data-status="check.detailStatuses[index]" v-bind="statuses[check.detailStatuses[index]]" />
           </li>
         </ul>
-        <p v-else class="checklist-note">{{ state ? 'Noch keine Prüfdaten verfügbar.' : 'Wartet auf die automatische Auswertung.' }}</p>
+        <p v-else-if="check.key !== 'entry'" class="checklist-note">{{ state ? 'Noch keine Prüfdaten verfügbar.' : 'Wartet auf die automatische Auswertung.' }}</p>
       </li>
     </ol>
   </section>

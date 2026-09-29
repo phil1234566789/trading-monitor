@@ -18,27 +18,22 @@ const TICK_LENGTH_PX = 28;
 const LABEL_GAP_PX = 5;
 const LABEL_FONT_PX = 11;
 
-class ScaleRenderer {
-  constructor(point) {
-    this._point = point;
-  }
-
-  draw(target) {
-    const { x, anchorY, ticks, axisStyleKey, side } = this._point;
+export function drawScale(target, point) {
+    const { x, anchorY, ticks, axisStyleKey, side } = point;
     if (x === null || anchorY === null || ticks.length === 0) return;
 
     target.useBitmapCoordinateSpace((scope) => {
       const ctx = scope.context;
       const px = Math.round(x * scope.horizontalPixelRatio) + 0.5; // halber Pixel = scharfe 1px-Linie
-      const lastY = ticks[ticks.length - 1].y;
-      if (lastY === null) return;
+      // Entry-Skalen reichen auf beide Seiten des Ankers (Stopp und Gewinnziele).
+      const ys = [anchorY, ...ticks.map(t => t.y).filter(y => y !== null)];
 
       ctx.setLineDash([]);
       ctx.strokeStyle = cssColor(axisStyleKey);
       ctx.lineWidth = lineWidth(axisStyleKey) * scope.horizontalPixelRatio;
       ctx.beginPath();
-      ctx.moveTo(px, anchorY * scope.verticalPixelRatio);
-      ctx.lineTo(px, lastY * scope.verticalPixelRatio);
+      ctx.moveTo(px, Math.min(...ys) * scope.verticalPixelRatio);
+      ctx.lineTo(px, Math.max(...ys) * scope.verticalPixelRatio);
       ctx.stroke();
 
       ctx.font = `${Math.round(LABEL_FONT_PX * scope.verticalPixelRatio)}px sans-serif`;
@@ -56,11 +51,15 @@ class ScaleRenderer {
         ctx.moveTo(px, py);
         ctx.lineTo(px + side * TICK_LENGTH_PX * scope.horizontalPixelRatio, py);
         ctx.stroke();
-        ctx.fillStyle = color;
+        ctx.fillStyle = point.labelColor ?? color;
         ctx.fillText(label, px - side * LABEL_GAP_PX * scope.horizontalPixelRatio, py);
       }
     });
-  }
+}
+
+class ScaleRenderer {
+  constructor(point) { this._point = point; }
+  draw(target) { drawScale(target, this._point); }
 }
 
 class ScalePaneView {

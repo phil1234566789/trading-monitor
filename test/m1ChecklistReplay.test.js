@@ -22,7 +22,7 @@ async function setup(clock, rows = m1, currentBar = '1m') {
     const checklist = usePriceChartChecklist(props, reactive(m5.sessions), () => {}, () => at('12:00'));
     const structure = usePriceChartM1Structure(props, checklist.state,
       { fetchCached, now: () => at('12:00') * 1000, prerequisitesAt: checklist.m1PrerequisitesAt, evaluationHorizon: checklist.evaluationTime });
-    structure.create({});
+    structure.create({ attachPrimitive: vi.fn(), detachPrimitive: vi.fn() });
     return { checklist, structure };
   });
   const fill = async () => {
@@ -52,6 +52,7 @@ describe('DR114 independent M1 checklist clock', () => {
     expect(!!check.bos).toBe(signals);
     expect(!!check.retest).toBe(retest);
     expect(!!check.fvg).toBe(fvg);
+    expect(!!check.entry).toBe(fvg);
     expect(s.checklist.state.value.evaluatedAt).toBe(at(clock) + 60);
   });
   it('does not show future ABC on an M1 chart', async () => {
@@ -80,7 +81,8 @@ describe('DR114 independent M1 checklist clock', () => {
     s.props.replayUntil = at('09:25'); await nextTick(); await s.fill();
     expect(s.structure.check.value.evaluatedAt).toBe(at('09:30'));
     expect(s.structure.check.value.fvg).toBeNull();
-  });
+  // Mehrere vollständige H1/M5/M1-Neuberechnungen brauchen im parallelen Gesamtlauf mehr als 5 s.
+  }, 15000);
   it('rechecks prerequisites at the real close when the requested M1 candle is absent', async () => {
     const s = await setup('09:30', m1.filter(c => c.time < at('09:29')));
     expect(s.structure.check.value.reason).toBe('abc');
@@ -110,4 +112,20 @@ describe('DR114 independent M1 checklist clock', () => {
     s.props.showM1Structure = false; await nextTick();
     expect(s.structure.check.value.reason).toBe('disabled');
   });
+  it('keeps the entry snapshot through later candles and restores it deterministically after rewind', async () => {
+    const s = await setup('09:49');
+    const entry = s.structure.check.value.entry;
+    expect(entry.candleTime).toBe(at('09:49'));
+    expect(entry.stops.narrow.price).toBe(1.35648);
+    s.props.replayUntil = at('10:10'); await nextTick(); await s.fill();
+    expect(s.structure.check.value.entry).toEqual(entry);
+    s.props.replayUntil = at('09:48'); await nextTick(); await s.fill();
+    expect(s.structure.check.value.entry).toBeNull();
+    s.props.replayUntil = at('09:49'); await nextTick(); await s.fill();
+    expect(s.structure.check.value.entry).toEqual(entry);
+    s.props.currentBar = '5m'; await nextTick(); await s.fill();
+    expect(s.structure.check.value.entry).toEqual(entry);
+    s.props.showM1Structure = false; await nextTick();
+    expect(s.structure.check.value.entry).toBeUndefined();
+  }, 15000);
 });
