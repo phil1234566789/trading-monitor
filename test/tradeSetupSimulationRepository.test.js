@@ -7,9 +7,15 @@ describe('simulation history repository', () => {
       t1Time: 180, t1RecognizedAt: 240, t1PnlUsd: 400, exitTime: 300, exitRecognizedAt: 360,
       pnlUsd: 1200, realizedPnlUsd: 1200, rMultiple: 2.5 };
     expect(simulationAsOf(row, 119)).toBeNull();
-    expect(simulationAsOf(row, 180)).toMatchObject({ status: 'open', t1Time: null, realizedPnlUsd: 0, pnlUsd: null });
+    expect(simulationAsOf(row, 180)).toMatchObject({ status: 'open', t1Time: null, t1PnlUsd: 0, realizedPnlUsd: 0, pnlUsd: null });
     expect(simulationAsOf(row, 240)).toMatchObject({ status: 'open', realizedPnlUsd: 400, pnlUsd: null });
     expect(simulationAsOf(row, 360)).toMatchObject({ status: 'closed', pnlUsd: 1200 });
+  });
+  it('dates ambiguity at its first evidence, independently of the run horizon', () => {
+    const row = { entryTime: 120, evaluatedAt: 600, status: 'ambiguous', reason: 'sameCandle', ambiguityRecognizedAt: 240 };
+    expect(simulationAsOf(row, 239)).toMatchObject({ status: 'open', reason: null, ambiguityRecognizedAt: null });
+    expect(simulationAsOf(row, 240)).toMatchObject({ status: 'ambiguous', reason: 'sameCandle', ambiguityRecognizedAt: 240 });
+    expect(simulationAsOf(row, 300).status).toBe('ambiguous');
   });
   it('continues pagination after a short server-capped page', async () => {
     const offsets = [];

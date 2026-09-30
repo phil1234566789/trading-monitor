@@ -36,8 +36,22 @@ describe('fixed-budget whole-lot simulation', () => {
     expect(run([bar(120, 1.3499, 1.3511)])).toMatchObject({ status: 'ambiguous', reason: 'sameCandle' });
   });
   it('preserves uncertainty across missing minutes', () => {
-    expect(run([bar(180, 1.3501, 1.3521)], { evaluatedAt: 240 })).toMatchObject({ status: 'ambiguous', reason: 'missingHistory' });
+    expect(run([bar(180, 1.3501, 1.3521)], { evaluatedAt: 600 })).toMatchObject({ status: 'ambiguous', reason: 'missingHistory', ambiguityRecognizedAt: 180 });
     expect(run([], { evaluatedAt: 180 })).toMatchObject({ status: 'ambiguous', reason: 'missingHistory' });
+  });
+  it('records when a same-minute conflict actually became known', () => {
+    expect(run([bar(120, 1.3501, 1.3502), bar(180, 1.3493, 1.3511)], { evaluatedAt: 600 }))
+      .toMatchObject({ status: 'ambiguous', ambiguityRecognizedAt: 240, evaluatedAt: 600 });
+  });
+  it('dates missing history after explicitly evidenced closures', () => {
+    const closedIntervals = [{ from: 180, to: 240 }, { from: 240, to: 300 }];
+    const candles = [bar(120, 1.3501, 1.3502), bar(360, 1.3501, 1.3502)];
+    expect(run(candles, { closedIntervals, evaluatedAt: 240 }).status).toBe('open');
+    expect(run(candles, { closedIntervals, evaluatedAt: 359 }).status).toBe('open');
+    expect(run(candles, { closedIntervals, evaluatedAt: 360 }))
+      .toMatchObject({ status: 'ambiguous', ambiguityRecognizedAt: 360 });
+    expect(run(candles, { closedIntervals, evaluatedAt: 600 }))
+      .toMatchObject({ status: 'ambiguous', ambiguityRecognizedAt: 360 });
   });
   it('supports short trades with the same profit logic', () => {
     const short = { ...entry, direction: 'short', stops: { wide: { price: 1.3506 } } };
