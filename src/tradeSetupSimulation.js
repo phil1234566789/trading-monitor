@@ -1,0 +1,68 @@
+import { entryRiskScale } from './entryRisk.js';
+
+export const SIMULATION_VERSION = 'fixed-500-whole-lots-half-t1-be-v1';
+const money = value => Math.round(value * 1e8) / 1e8;
+
+export function sizeSimulation(entry, variant) {
+  const stopPrice = entry.stops?.[variant]?.price;
+  const base = { variant, entryId: entry.id, entryTime: entry.recognizedAt, entryPrice: entry.price,
+    stopPrice, riskBudget: 500, lots: 0, t1Lots: 0, actualRisk: 0 };
+  if (!['GBPUSD', 'EURUSD'].includes(entry.instrument)) return { ...base, status: 'notExecutable', reason: 'unsupportedInstrument' };
+  const scale = entryRiskScale(entry.price, stopPrice, [], entry.instrument, entry.direction);
+  if (scale.status !== 'ready') return { ...base, status: 'notExecutable', reason: 'invalidStop' };
+  // Preisarithmetik kann bei exakt ganzen Lots wenige ULP unter dem Quotienten liegen.
+  const riskPerLot = money(scale.risk * 100000);
+  const lots = Math.floor(500 / riskPerLot + 1e-10);
+  if (!(lots >= 1) || !Number.isFinite(lots)) return { ...base, status: 'notExecutable', reason: 'belowOneLot' };
+  return { ...base, status: 'ready', reason: null, lots, t1Lots: lots / 2, actualRisk: money(lots * riskPerLot) };
+}
+
+export function evaluateSimulation({ entry, variant, candles, evaluatedAt, target1, target2 = null, closedIntervals = [] }) {
+  const sizing = sizeSimulation(entry, variant);
+  const result = { ...sizing, target1Price: target1, target2Price: target2, status: sizing.status === 'ready' ? 'open' : sizing.status,
+    outcome: null, pnlUsd: null, rMultiple: null, realizedPnlUsd: 0, t1PnlUsd: 0, t1Time: null,
+    t1RecognizedAt: null, exitTime: null, exitRecognizedAt: null, exitPrice: null, evaluatedAt };
+  if (result.status === 'notExecutable') return result;
+  const sign = entry.direction === 'long' ? 1 : -1;
+  const validTarget = price => Number.isFinite(price) && (price - entry.price) * sign > 0;
+  if (!validTarget(target1) || (target2 != null && (!validTarget(target2) || (target2 - target1) * sign <= 0))) {
+    return { ...result, status: 'notExecutable', reason: 'invalidTargets' };
+  }
+  const profit = (price, lots) => money((price - entry.price) * sign * 100000 * lots);
+  const finish = (candle, price, outcome, pnl) => ({ ...result, status: 'closed', reason: null, outcome,
+    exitTime: candle.time, exitRecognizedAt: candle.time + 60, exitPrice: price,
+    pnlUsd: money(pnl), realizedPnlUsd: money(pnl), rMultiple: pnl / result.actualRisk });
+  const unknown = reason => ({ ...result, status: 'ambiguous', reason });
+  const coveredClosure = (from, to) => from === to || closedIntervals.some(range => range.from <= from && range.to >= to);
+  const rows = candles.filter(c => c.time >= entry.recognizedAt && c.time + 60 <= evaluatedAt).sort((a, b) => a.time - b.time);
+  let expected = entry.recognizedAt;
+  for (const c of rows) {
+    if (c.time < expected) continue;
+    if (!coveredClosure(expected, c.time) || ![c.low, c.high].every(Number.isFinite) || c.low > c.high) return unknown('missingHistory');
+    expected = c.time + 60;
+    const adverse = price => sign === 1 ? c.low <= price : c.high >= price;
+    const favorable = price => price != null && (sign === 1 ? c.high >= price : c.low <= price);
+    if (result.t1Time == null) {
+      const stop = adverse(result.stopPrice);
+      const t1 = favorable(target1);
+      if (stop && t1) return unknown('sameCandle');
+      if (stop) return finish(c, result.stopPrice, 'slBeforeT1', -result.actualRisk);
+      if (!t1) continue;
+      // Ohne Intrabar-Reihenfolge könnte BE nach dem Teilverkauf bereits ausgelöst sein.
+      result.t1Time = c.time;
+      result.t1RecognizedAt = c.time + 60;
+      result.realizedPnlUsd = profit(target1, result.t1Lots);
+      result.t1PnlUsd = result.realizedPnlUsd;
+      if (adverse(entry.price)) return unknown('sameCandle');
+      if (favorable(target2)) return finish(c, target2, 't2', result.realizedPnlUsd + profit(target2, result.t1Lots));
+    } else {
+      const be = adverse(entry.price);
+      const t2 = favorable(target2);
+      if (be && t2) return unknown('sameCandle');
+      if (be) return finish(c, entry.price, 't1Be', result.realizedPnlUsd);
+      if (t2) return finish(c, target2, 't2', result.realizedPnlUsd + profit(target2, result.t1Lots));
+    }
+  }
+  if (expected + 60 <= evaluatedAt && !coveredClosure(expected, Math.floor(evaluatedAt / 60) * 60)) return unknown('missingHistory');
+  return result;
+}
