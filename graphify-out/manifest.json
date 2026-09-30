@@ -3978,9 +3978,9 @@
     "semantic_hash": ""
   },
   "PLAN-trade-setup-2.md": {
-    "mtime": 1790692531.8585525,
-    "seen": 1790692734.454106,
-    "ast_hash": "09ab6d200d79973ed9bfc5af01a90f8a",
+    "mtime": 1790765721.0284152,
+    "seen": 1790765725.8512542,
+    "ast_hash": "787c65d3b369904e3759eee1c6d77ff4",
     "semantic_hash": ""
   },
   "analysis/ny-opening-second-20260927/result.json": {
@@ -4500,9 +4500,9 @@
     "semantic_hash": ""
   },
   "src/composables/useTradeSetup2History.js": {
-    "mtime": 1790765662.960827,
-    "seen": 1790765683.0765343,
-    "ast_hash": "103a1080545cdb2e90fb83f1792f32ad",
+    "mtime": 1790765683.9084175,
+    "seen": 1790765725.8502562,
+    "ast_hash": "b6b2104147a0dcff4dd024a07017a63c",
     "semantic_hash": ""
   },
   "src/structureLiquidityLevels.ts": {
@@ -4572,9 +4572,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupSimulationStatistics.js": {
-    "mtime": 1790764784.4315143,
-    "seen": 1790764893.0779104,
-    "ast_hash": "e6ed7c2cf0f542dd9a7638ec3727bbcf",
+    "mtime": 1790765694.0250428,
+    "seen": 1790765725.8502562,
+    "ast_hash": "598faed553f1d10d8f60743d8a77fbb9",
     "semantic_hash": ""
   },
   "src/trendPhaseRendering.js": {
@@ -4584,9 +4584,9 @@
     "semantic_hash": ""
   },
   "src/views/Statistik.vue": {
-    "mtime": 1790765206.262267,
-    "seen": 1790765246.8693798,
-    "ast_hash": "6b286e60a64f82edcf963725021214b3",
+    "mtime": 1790765695.6150198,
+    "seen": 1790765725.8502562,
+    "ast_hash": "3e6b3948b7844623ab8c9cf14ade248f",
     "semantic_hash": ""
   },
   "test/SimulationResultsTable.test.js": {
@@ -4656,9 +4656,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationRunStatus.vue": {
-    "mtime": 1790765662.8060825,
-    "seen": 1790765683.0765343,
-    "ast_hash": "b2819b30196ecbb4e1773796ea8ddefe",
+    "mtime": 1790765694.843608,
+    "seen": 1790765725.8502562,
+    "ast_hash": "dfd9bae03d10d8e50f0a9cda4a93f30f",
     "semantic_hash": ""
   },
   "src/components/TradeSetup2Controls.vue": {
@@ -4674,9 +4674,9 @@
     "semantic_hash": ""
   },
   "test/SimulationRunStatus.test.js": {
-    "mtime": 1790765663.5787797,
-    "seen": 1790765683.077548,
-    "ast_hash": "961678c75ad1b312f5a51a6bdf47fa20",
+    "mtime": 1790765696.387673,
+    "seen": 1790765725.8512542,
+    "ast_hash": "93b6dfcb8129281ad1824e4c6ba824d8",
     "semantic_hash": ""
   },
   "test/tradeSetup2Anchors.test.js": {
