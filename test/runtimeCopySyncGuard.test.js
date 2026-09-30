@@ -25,6 +25,7 @@ const VOLL_KOPIEN = [
   ["src/fxcmGoldCalendar.js", "supabase/functions/_shared/fxcmGoldCalendar.js"],
   ["src/instrumentConfig.js", "supabase/functions/_shared/instrumentConfig.js"],
   ["src/marketStructureAnalysis.ts", "supabase/functions/trading-monitor-mcp/marketStructureAnalysis.ts"],
+  ["src/candleCloseWindow.ts", "supabase/functions/trading-monitor-mcp/candleCloseWindow.ts"],
   ["src/rsi.js", "supabase/functions/trading-monitor-mcp/rsi.js"],
   ["src/sessionOccurrences.js", "supabase/functions/_shared/sessionOccurrences.js"],
   ["src/orderBlockDetection.js", "supabase/functions/trading-monitor-mcp/orderBlockDetection.js"],

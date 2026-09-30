@@ -6,6 +6,7 @@
 // Chart-Primitives, inkl. LiquidityLinePrimitive/cssColor/lineWidth/PIP_SIZE) lebt seitdem separat
 // in marketStructureRendering.ts.
 import { detectLiquidityLevels } from "../_shared/liquidityDetection.ts";
+import { closesPastLevel, withCandleCloseWindow } from "./candleCloseWindow.ts";
 import type { Pivot, PivotHigh, PivotLow, MarketStructureState, RangeTrend } from "./range.type";
 
 // "up": bestätigt einen Uptrend (bestehendes Verhalten, Default -> ändert nichts an bisherigen
@@ -612,8 +613,10 @@ export function applyMarketStructurePivot(
   pivot: Pivot,
   { candles = [], direction = "up", asOfTime }: { candles?: Candle[]; direction?: TrendDirection; asOfTime?: number } = {},
 ): MarketStructureState {
-  const result = applyMarketStructurePivotCore(state, pivot, { candles, direction, asOfTime });
-  return advanceNestedTrend(result, pivot, candles, asOfTime);
+  return withCandleCloseWindow(candles, () => {
+    const result = applyMarketStructurePivotCore(state, pivot, { candles, direction, asOfTime });
+    return advanceNestedTrend(result, pivot, candles, asOfTime);
+  });
 }
 
 // Analog zu closesBelowOldLow im alten trendZigzag.ts, nur für die Gegenrichtung: prüft, ob
@@ -623,8 +626,7 @@ export function applyMarketStructurePivot(
 // Philip "potenziell umdrehen" (siehe Chat 2026-07-19). Ohne Kerzendaten konservativ NICHT abwerten
 // — sonst würde ein fehlender Candle-Fetch stillschweigend jeden Bruch zum Sweep degradieren.
 function closesAboveOldHigh(candles: Candle[], fromTime: number, toTime: number, oldHighPrice: number): boolean {
-  if (candles.length === 0) return true;
-  return candles.some((c) => c.time > fromTime && c.time <= toTime && c.close > oldHighPrice);
+  return closesPastLevel(candles, fromTime, toTime, oldHighPrice, true);
 }
 
 // Spiegelbildlich zu closesAboveOldHigh, für structurePivots statt currRange.high: prüft, ob seit
@@ -633,8 +635,7 @@ function closesAboveOldHigh(candles: Candle[], fromTime: number, toTime: number,
 // closesAboveOldHigh — dort ist "echter Bruch" der Default, hier ist "plain low" der Default, siehe
 // markLqSweeps).
 function closesBelowLevel(candles: Candle[], levelTime: number, toTime: number, levelPrice: number): boolean {
-  if (candles.length === 0) return true;
-  return candles.some((c) => c.time > levelTime && c.time <= toTime && c.close < levelPrice);
+  return closesPastLevel(candles, levelTime, toTime, levelPrice, false);
 }
 
 // Spiegelbild von closesBelowLevel für die "down"-Richtung des Nested-Trackers (protected-high
@@ -643,8 +644,7 @@ function closesBelowLevel(candles: Candle[], levelTime: number, toTime: number, 
 // (andere Default-Semantik, anderer Anwendungsfall: dort geht es um den echten Bruch von
 // currRange.high selbst in applyInnerMarketStructurePivot).
 function closesAboveLevel(candles: Candle[], levelTime: number, toTime: number, levelPrice: number): boolean {
-  if (candles.length === 0) return true;
-  return candles.some((c) => c.time > levelTime && c.time <= toTime && c.close > levelPrice);
+  return closesPastLevel(candles, levelTime, toTime, levelPrice, true);
 }
 
 // Ein LOW-structurePivot, der per Docht schon mal angetestet wurde (touched, aus der Fraktal-
@@ -948,8 +948,10 @@ export function applyInnerMarketStructurePivot(
   pivot: Pivot,
   { candles = [], direction = "up", asOfTime }: { candles?: Candle[]; direction?: TrendDirection; asOfTime?: number } = {},
 ): MarketStructureState {
-  const result = applyInnerMarketStructurePivotCore(state, pivot, { candles, direction, asOfTime });
-  return advanceNestedTrend(result, pivot, candles, asOfTime, true);
+  return withCandleCloseWindow(candles, () => {
+    const result = applyInnerMarketStructurePivotCore(state, pivot, { candles, direction, asOfTime });
+    return advanceNestedTrend(result, pivot, candles, asOfTime, true);
+  });
 }
 
 // --- Pipeline (Kerzen -> Pivots -> State) --------------------------------------------------------
