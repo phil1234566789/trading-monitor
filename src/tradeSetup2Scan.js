@@ -39,11 +39,12 @@ export async function scanTradeSetup2Window({ instrument, h1Candles, m5Candles, 
   const steps = m5.map(c => c.time + 300).filter(t => t >= Math.floor(fromTime / 300) * 300 && t <= toTime);
   const snapshots = [], seen = new Set(), seenSetups = new Set();
   const reactionCache = new Map();
+  const closeReactionCache = new Map();
   let h1End = 0, m5End = 0, m1End = 0;
   let effectiveSettings = settings;
   const evaluateAt = evaluatedAt => evaluateTradeSetupChecklist({ instrument, evaluatedAt,
     h1Candles: h1.slice(0, h1End), m5Candles: m5.slice(0, m5End),
-    settings: effectiveSettings, sessionConfigs, tradingWindows, news, newsLoadStatus, reactionCache });
+    settings: effectiveSettings, sessionConfigs, tradingWindows, news, newsLoadStatus, reactionCache, closeReactionCache });
   for (const [index, at] of steps.entries()) {
     signal?.throwIfAborted();
     while (h1End < h1.length && h1[h1End].time + 3600 <= at) h1End++;

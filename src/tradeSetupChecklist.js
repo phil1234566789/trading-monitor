@@ -23,7 +23,7 @@ function openChecks() {
 
 // Keine sichtbaren Linien oder heutigen DB-Setups: jeder Aufruf rekonstruiert den
 // damaligen Wissensstand aus dem geschlossenen Präfix, einschließlich rechter Pivot-Bestätigung.
-export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles = [], m5Candles = [], settings = {}, sessionConfigs = [], dataStatus = 'ready', tradingWindows, news, newsLoadStatus, reactionCache }) {
+export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles = [], m5Candles = [], settings = {}, sessionConfigs = [], dataStatus = 'ready', tradingWindows, news, newsLoadStatus, reactionCache, closeReactionCache }) {
   const checks = openChecks();
   checks.time = evaluateChecklistTime({ instrument, evaluatedAt, sessions: sessionConfigs, tradingWindows, news, newsLoadStatus });
   // Bekannte Handelssperren gelten auch bei fehlenden Kerzen; offene Regeln erlauben noch kein Gesamt-Go.
@@ -48,6 +48,7 @@ export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles
   }
   const context = buildChecklistMarketContext({ instrument, evaluatedAt, h1Candles: h1, m5Candles: m5, settings, sessionConfigs });
   context.reactionCache = reactionCache;
+  context.closeReactionCache = closeReactionCache;
   const state = context.h1State;
   result.context = context;
   // Nur der Haupttrend bestimmt die Richtung. Die verschachtelte Gegenrichtung bleibt

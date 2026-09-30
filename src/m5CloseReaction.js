@@ -15,19 +15,32 @@ const event = (type, candle, pivot, direction, depth, originTime, barSeconds) =>
 // Die heutigen Pivot-Typen enthalten spätere Brüche. Jeder Signalzeitpunkt wird deshalb
 // mit dem damaligen Kerzenpräfix geprüft; die bestehende Struktur entscheidet über die Level.
 // Nur die aktuelle Nested-Kette zählt, keine beliebige alte CHoCH-/BOS-Reaktion.
-export function deriveM5CloseReaction(state, outer, inner, periodOuter, periodInner, candles, barSeconds) {
+export function deriveM5CloseReaction(state, outer, inner, periodOuter, periodInner, candles, barSeconds, historicalCache) {
   const empty = { trend: 'unknown', direction: null, choch: null, bos: null, levels: [] };
   if (!state || state.trend === 'unknown') return empty;
   const chain = collectNestedChain(state);
   const result = { ...empty, trend: chain.at(-1).trend };
   const cache = new Map([[candles.length - 1, state]]);
+  const scope = JSON.stringify([barSeconds, periodOuter, periodInner, candles[0]?.time,
+    outer?.[0]?.pivotTime ?? null, inner?.[0]?.pivotTime ?? null]);
   const stateAt = index => {
     if (!cache.has(index)) {
-      const prefix = candles.slice(0, index + 1);
-      cache.set(index, buildMarketStructureState(
-        computeRangesPivots(prefix, periodOuter, outer?.[0]?.pivotTime ?? Infinity),
-        computeRangesPivots(prefix, periodInner, inner?.[0]?.pivotTime ?? Infinity),
-        periodOuter, periodInner, prefix, { barSeconds }));
+      const key = `${scope}:${index}:${candles[index]?.time}`;
+      if (historicalCache?.has(key)) cache.set(index, historicalCache.get(key));
+      else {
+        const prefix = candles.slice(0, index + 1);
+        const snapshot = buildMarketStructureState(
+          computeRangesPivots(prefix, periodOuter, outer?.[0]?.pivotTime ?? Infinity),
+          computeRangesPivots(prefix, periodInner, inner?.[0]?.pivotTime ?? Infinity),
+          periodOuter, periodInner, prefix, { barSeconds });
+        cache.set(index, snapshot);
+        // Nur über unveränderte Archivkerzen teilen. Perioden/Startpunkte trennen
+        // die Berechnungen; die Begrenzung hält den Jahreslauf speicherschonend.
+        if (historicalCache) {
+          if (historicalCache.size >= 512) historicalCache.delete(historicalCache.keys().next().value);
+          historicalCache.set(key, snapshot);
+        }
+      }
     }
     return cache.get(index);
   };

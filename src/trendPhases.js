@@ -14,7 +14,7 @@ import { deriveM5CloseReaction } from "./m5CloseReaction.js";
 // CHoCH: da beginnt das Band schon an der Kerze, die den CHoCH-Level berührt (Philip 24.09.2026).
 // Das ist rückdatiert: live erscheint der Abschnitt erst, wenn der Algo den CHoCH bestätigt hat.
 // events: je Phasenwechsel der auslösende Pivot + was erkannt wurde (Debug-Labels an den Pivots).
-export function buildStructureWithPhases(pivotsOuter, pivotsInner, periodOuter, periodInner, candles, barSeconds, { closeEvaluation = false } = {}) {
+export function buildStructureWithPhases(pivotsOuter, pivotsInner, periodOuter, periodInner, candles, barSeconds, { closeEvaluation = false, closeReactionCache } = {}) {
   const phases = [];
   const events = [];
   const endTime = candles.length > 0 ? candles[candles.length - 1].time : null;
@@ -50,7 +50,7 @@ export function buildStructureWithPhases(pivotsOuter, pivotsInner, periodOuter, 
   });
   // Ein Pivot kann erst nach der letzten geladenen Kerze "verarbeitet" sein (Lookahead im Replay).
   return { state, events, phases: phases.filter((p) => p.trend !== "unknown" && p.from < p.to),
-    ...(closeEvaluation ? { closeReaction: deriveM5CloseReaction(state, pivotsOuter, pivotsInner, periodOuter, periodInner, candles, barSeconds) } : {}) };
+    ...(closeEvaluation ? { closeReaction: deriveM5CloseReaction(state, pivotsOuter, pivotsInner, periodOuter, periodInner, candles, barSeconds, closeReactionCache) } : {}) };
 }
 
 // BOS-Markierung im Algo (markLqSweeps) prüft bewusst bis zur LETZTEN geladenen Kerze — für den

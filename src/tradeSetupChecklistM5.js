@@ -18,7 +18,7 @@ export function evaluateChecklistM5(context, settings = {}) {
   const innerPeriod = settings.m5Structure2Period ?? 2;
   const { state, closeReaction } = buildStructureWithPhases(
     computeRangesPivots(candles, outerPeriod, anchor), computeRangesPivots(candles, innerPeriod, anchor),
-    outerPeriod, innerPeriod, candles, 300, { closeEvaluation: true });
+    outerPeriod, innerPeriod, candles, 300, { closeEvaluation: true, closeReactionCache: context.closeReactionCache });
   result.structureReaction = closeReaction;
   result.structureState = state;
   result.m1Anchor = m1AnchorFromM5(state, closeReaction, context.direction, context.evaluatedAt);

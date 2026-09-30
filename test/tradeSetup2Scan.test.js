@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { scanTradeSetup2Window, m1ScanPrefix } from '../src/tradeSetup2Scan.js';
 import { buildM1Structure } from '../src/m1Structure.js';
+import * as closeReaction from '../src/m5CloseReaction.js';
 import h1 from './fixtures/gbpusd-h1-dr114-lifecycle.json';
 import m5 from './fixtures/gbpusd-m5-dr114-close-reaction.json';
 import m1 from './fixtures/gbpusd-m1-dr114-p5.json';
@@ -27,6 +28,14 @@ describe('chronological Trade Setup 2.0 scan', () => {
     await expect(scanTradeSetup2Window({ ...input, signal })).rejects.toMatchObject({ name: 'AbortError' });
     await expect(scanTradeSetup2Window({ ...input, fromTime: input.toTime + 1 })).rejects.toThrow();
   });
+  it('keeps every DR114 snapshot field identical without the historical M5 cache', async () => {
+    const cached = await scanTradeSetup2Window(input);
+    const original = closeReaction.deriveM5CloseReaction;
+    const spy = vi.spyOn(closeReaction, 'deriveM5CloseReaction').mockImplementation((...args) => original(...args.slice(0, 7)));
+    try { expect(await scanTradeSetup2Window(input)).toEqual(cached); }
+    finally { spy.mockRestore(); }
+    expect(cached.filter(s => s.entry)).toHaveLength(1);
+  }, 30000);
   it('retains actual P5 warmup across a long ignored session', () => {
     const rows = Array.from({ length: 130 }, (_, i) => ({ time: i * 60, open: 1, close: 1,
       high: 2 + Math.sin(i), low: 0.5, ignored: i >= 30 && i < 90 }));
