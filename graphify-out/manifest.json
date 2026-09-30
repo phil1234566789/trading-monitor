@@ -4662,9 +4662,9 @@
     "semantic_hash": ""
   },
   "src/components/TradeSetup2Controls.vue": {
-    "mtime": 1790774856.0173156,
-    "seen": 1790777907.9505947,
-    "ast_hash": "6a9e8a485bda2fbcec20424bdda7b532",
+    "mtime": 1790780802.7909606,
+    "seen": 1790780887.731446,
+    "ast_hash": "f36697576300714339012d2ab702465a",
     "semantic_hash": ""
   },
   "src/tradeSetup2Anchors.js": {
@@ -4728,15 +4728,15 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2HistoryItems.js": {
-    "mtime": 1790774820.399539,
-    "seen": 1790777907.9994836,
-    "ast_hash": "16d97fc46562024c6293cd68dd69da05",
+    "mtime": 1790780802.0958571,
+    "seen": 1790780887.7649803,
+    "ast_hash": "eaf0ad0905ae4af072d3b47073f94ad2",
     "semantic_hash": ""
   },
   "test/tradeSetup2HistoryItems.test.js": {
-    "mtime": 1790774798.364263,
-    "seen": 1790777908.0941732,
-    "ast_hash": "7202c65d9dc521e49c9d2afee4551bfb",
+    "mtime": 1790780783.2609043,
+    "seen": 1790780887.8305378,
+    "ast_hash": "bfbd5124a2c18c09df6f068298d88c31",
     "semantic_hash": ""
   },
   "src/candleCloseWindow.ts": {
