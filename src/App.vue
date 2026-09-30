@@ -50,6 +50,7 @@ const lastUpdateText = computed(() =>
              normalen (nicht-exakten) active-Matching waere "Dashboard" immer aktiv. -->
         <RouterLink to="/" exact-active-class="active">Dashboard</RouterLink>
         <RouterLink to="/protokoll" exact-active-class="active">Protokoll</RouterLink>
+        <RouterLink to="/statistik" exact-active-class="active">Statistik</RouterLink>
         <RouterLink to="/alarme" exact-active-class="active">Alarme</RouterLink>
         <RouterLink to="/handelszeiten" exact-active-class="active">Handelszeiten</RouterLink>
         <RouterLink to="/konten" exact-active-class="active">Konten</RouterLink>
@@ -118,6 +119,7 @@ const lastUpdateText = computed(() =>
 
 .status-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
@@ -151,6 +153,7 @@ const lastUpdateText = computed(() =>
 .bar-right {
   flex: 1;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
@@ -236,6 +239,7 @@ const lastUpdateText = computed(() =>
 .page-nav {
   flex: 1;
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
 }
 

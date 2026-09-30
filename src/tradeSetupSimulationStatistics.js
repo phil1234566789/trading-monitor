@@ -1,0 +1,51 @@
+import { berlinDayRangeUtcMs } from './berlinTime.js';
+
+export const SIMULATION_OUTCOME_LABELS = {
+  slBeforeT1: 'SL vor T1', t1Be: 'T1 + Break-even', t2: 'T2',
+  open: 'Offen', ambiguous: 'Uneindeutig', notExecutable: 'Nicht ausführbar',
+};
+export const SIMULATION_REASON_LABELS = {
+  missingHistory: 'Historie unvollständig', sameCandle: 'Reihenfolge innerhalb der Kerze unbekannt',
+  unsupportedInstrument: 'Instrument für diese Simulation noch nicht unterstützt',
+  invalidStop: 'Stopp nicht ausführbar', invalidTargets: 'Ziele nicht ausführbar',
+  belowOneLot: '500 USD reichen nicht für ein ganzes Lot',
+};
+
+export function simulationOutcomeKey(row) {
+  return row.status === 'closed' ? row.outcome : row.status;
+}
+
+export function simulationStatistics(rows, variant) {
+  const selected = rows.filter(row => row.variant === variant);
+  const counts = Object.fromEntries(Object.keys(SIMULATION_OUTCOME_LABELS).map(key => [key, 0]));
+  const closed = [];
+  for (const row of selected) {
+    const key = simulationOutcomeKey(row);
+    if (key in counts) counts[key]++;
+    if (row.status === 'closed' && ['slBeforeT1', 't1Be', 't2'].includes(row.outcome)
+      && Number.isFinite(row.pnlUsd) && Number.isFinite(row.rMultiple)) closed.push(row);
+  }
+  const wins = closed.filter(row => row.pnlUsd > 0).length;
+  const losses = closed.filter(row => row.pnlUsd < 0).length;
+  return {
+    total: selected.length, counts, closed: closed.length, wins, losses,
+    // Philip erlaubt Prozentwerte ab 50 entschiedenen Fällen (PLAN-dr-statistik-ui.md).
+    winrate: closed.length >= 50 ? wins / closed.length * 100 : null,
+    pnlUsd: closed.length ? closed.reduce((sum, row) => sum + row.pnlUsd, 0) : null,
+    totalR: closed.length ? closed.reduce((sum, row) => sum + row.rMultiple, 0) : null,
+  };
+}
+
+export function simulationDateFilter(from, to) {
+  if (from && to && from > to) throw new Error('Das Enddatum muss am oder nach dem Startdatum liegen.');
+  // Die nächste Berliner Mitternacht separat bestimmen: DST-Tage haben 23/25 Stunden.
+  const nextDay = to ? new Date(Date.parse(`${to}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10) : null;
+  return {
+    from: from ? berlinDayRangeUtcMs(from).startUtcMs / 1000 : undefined,
+    to: nextDay ? berlinDayRangeUtcMs(nextDay).startUtcMs / 1000 : undefined,
+  };
+}
+
+export function simulationChartLink(row, runId) {
+  return { path: '/', query: { setup2: row.entryId, run: runId, variant: row.variant } };
+}
