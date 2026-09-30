@@ -16,6 +16,16 @@ Im Menü unter **Trades**:
 
 Der Checklist-Toggle blendet einen eigenen Bereich ein beziehungsweise aus, analog zu den vorhandenen Bereichen für Cockpit und Bewertung.
 
+### Gespeicherte Trade Setups 2.0
+
+Ein eigener Toggle **Trade Setups 2.0** zeigt die letzten N simulierten Positionen je Richtung als kompakte Entry→Exit-Linien. Weiter und enger SL sind getrennt auswählbare Alternativen. Ein T1-Teilverkauf darf eine kleine Marke erhalten. Unklare Verläufe erhalten keinen erfundenen Exit; vor ihrem Erkennungsschluss erscheinen weder T1 noch Exit oder Ergebnis im Replay.
+
+Ein Klick auf eine Positionslinie oder die Auswahl lädt genau einen gespeicherten Setup-Stand mit seiner damaligen Checklist A–J und den zugehörigen Preis-/Zeitbelegen. Dieser Stand bleibt nach T1, Neuladen und direkten Replay-Sprüngen abrufbar. Einzelne Indikator-Toggles sind keine Voraussetzung für seine Zeichnungen. Während der Detailansicht ersetzen gespeicherte Struktur-/Zonen-/Levelbelege die überlagernden aktuellen Zeichnungen; „Zur Übersicht“ stellt die vorherigen Toggles wieder her.
+
+Kandidaten werden auch ohne Entry gespeichert. Entry-Snapshots entstehen am tatsächlichen Bestätigungsschluss und enthalten die damaligen Prüfergebnisse, Referenzen, Struktur, Sweep, Reaktions-OB, Targets, zugeordnete Divergenzen, M1-Signale, Retest und FVG. Sie sind serialisierbare Fachobjekte ohne Canvas-Koordinaten und werden nachträglich nicht durch einen späteren Marktstand überschrieben. Auf M5 werden M1-Ereignisse zeitlich innerhalb der vorhandenen Kerze projiziert; RSI-Belege bleiben an ihren Timeframe gebunden.
+
+Simulationen bleiben von echten Journalpositionen getrennt. Festes Modell: 50.000 Dollar Konto, höchstens 500 Dollar Risiko, Startgröße auf ganze Lots abgerundet, Hälfte an T1, Rest mit BE-Stop bis T2 oder BE. Der bestehende Entry-1-Trigger gilt ohne neues Gesamt-GO; das Ende des aktiven Setups an T1/Invalidierung beendet keine bereits simulierte Position. Speichermodell und Jahresauswertung stehen im [Statistikplan](PLAN-trade-setup-2-statistik.md).
+
 ### Zeitangaben in der Checklist
 
 Kalenderdatum und Bewertungszeit stehen im Kopf. Alle sichtbaren Details A–J einschließlich

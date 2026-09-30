@@ -8,7 +8,7 @@
 // reine Erkennung direkt cross-directory importieren kann, ohne die Browser-Imports unten
 // mitzuschleppen); hier nur re-exportiert, damit sich an der öffentlichen API dieses Moduls
 // nichts ändert.
-import { snapToBarTime } from "./chartTimeUtils.js";
+import { chartObjectCoordinate } from './chartEventCoordinate.js';
 import { cssColor } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
 import { canShowLabels } from "./chartZoom.js";
@@ -159,14 +159,12 @@ class ZonePaneView {
     // Ende — sie soll bis zur letzten geladenen Kerze reichen, nicht bis zu einem gespeicherten
     // Zeitpunkt. snapToBarTime klemmt einen zu großen targetTime ohnehin auf die letzte Kerze,
     // Infinity nutzt genau das statt eine eigene "letzte Kerze"-Sonderbehandlung zu brauchen.
-    const startBarTime = snapToBarTime(candles, z.startTime);
-    const endBarTime = snapToBarTime(candles, z.touched || z.invalidated ? z.endTime : Infinity);
     this._p1 = {
-      x: startBarTime != null ? timeScale.timeToCoordinate(startBarTime) : null,
+      x: chartObjectCoordinate(timeScale,candles,z.startTime,this._source._options.eventBarSeconds),
       y: series.priceToCoordinate(z.top),
     };
     this._p2 = {
-      x: endBarTime != null ? timeScale.timeToCoordinate(endBarTime) : null,
+      x: chartObjectCoordinate(timeScale,candles,z.touched || z.invalidated ? z.endTime : Infinity,this._source._options.eventBarSeconds),
       y: series.priceToCoordinate(z.bottom),
     };
   }

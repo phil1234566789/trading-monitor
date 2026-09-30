@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
+import { useRoute } from "vue-router";
 import PriceChart from "../components/PriceChart.vue";
 import { GOLD_CHART_BARS, goldChartSelection } from "../goldChartPolicy.js";
 import TradeSetupCockpit from "../components/TradeSetupCockpit.vue";
@@ -304,7 +305,19 @@ const visibleAnnotations = computed(() => (drawingsVisible.value ? annotations.v
 const showTradeSetupCockpit = useLocalStorageRef("showTradeSetupCockpit", true);
 const showTradeSetupBewertung = useLocalStorageRef("showTradeSetupBewertung", true);
 const showTradeSetupChecklist = useLocalStorageRef("showTradeSetupChecklist", false);
+const showTradeSetup2 = useLocalStorageRef("showTradeSetup2", false);
+const tradeSetup2HistoryCount = useLocalStorageRef("tradeSetup2HistoryCount", 5);
+const tradeSetup2Variant = useLocalStorageRef("tradeSetup2Variant", "wide");
+const route = useRoute();
+const selectedTradeSetup2Id = computed(() => typeof route.query.setup2 === "string" ? route.query.setup2 : null);
+const tradeSetup2RunId = computed(() => typeof route.query.run === "string" ? route.query.run : null);
+watch(() => [selectedTradeSetup2Id.value, route.query.variant], ([id, variant]) => {
+  if (!id) return;
+  showTradeSetup2.value = true;
+  if (variant === "wide" || variant === "narrow") tradeSetup2Variant.value = variant;
+}, { immediate: true });
 const checklistState = ref(null);
+const setup2Detail = ref(null);
 const m1Check = ref(null);
 const renderedChartHeight = ref(null);
 // Style-Modal (Farben aller Chart-Indikatoren, siehe StyleModal.vue/chartColors.js) — reiner
@@ -1880,6 +1893,21 @@ watch(selectedTradingAccountId, () => {
           <ToggleButton variant="menu" :class="{ active: showTradeSetupChecklist }" :aria-pressed="showTradeSetupChecklist" aria-controls="trade-setup-checklist" @click="showTradeSetupChecklist = !showTradeSetupChecklist">
             Trade Setup Checklist
           </ToggleButton>
+          <div class="toggle-dropdown-divider"></div>
+          <ToggleButton variant="menu" :class="{ active: showTradeSetup2 }" :aria-pressed="showTradeSetup2" @click="showTradeSetup2 = !showTradeSetup2">
+            Trade Setups 2.0
+          </ToggleButton>
+          <label class="ranges-lookback-field">
+            Historie 2.0
+            <input v-model.number="tradeSetup2HistoryCount" type="number" min="0" max="50" class="ranges-lookback-input" title="Anzahl vergangener Trade Setups 2.0" />
+          </label>
+          <label class="ranges-lookback-field">
+            Stoppvariante 2.0
+            <select v-model="tradeSetup2Variant" aria-label="Stoppvariante Trade Setups 2.0">
+              <option value="wide">Weiter SL</option>
+              <option value="narrow">Enger SL</option>
+            </select>
+          </label>
         </div>
       </div>
 
@@ -2221,6 +2249,11 @@ watch(selectedTradingAccountId, () => {
     :show-sessions="showSessions"
     :show-trade-setup-cockpit="showTradeSetupCockpit"
     :show-trade-setup-checklist="showTradeSetupChecklist"
+    :show-trade-setup2="showTradeSetup2"
+    :trade-setup2-history-count="tradeSetup2HistoryCount"
+    :trade-setup2-variant="tradeSetup2Variant"
+    :selected-trade-setup2-id="selectedTradeSetup2Id"
+    :trade-setup2-run-id="tradeSetup2RunId"
     :replay-until="replayUntil"
     :show-debug-metadata="showDebugMetadata"
     :annotations="visibleAnnotations"
@@ -2234,6 +2267,7 @@ watch(selectedTradingAccountId, () => {
     :tsc-range="tscRange"
     @close-ranges-metadata="showRangesMetadata = false"
     @checklist-state-change="checklistState = $event"
+    @setup2-detail-change="setup2Detail = $event"
     @m1-check-change="m1Check = $event"
     @chart-height-change="renderedChartHeight = $event"
     @close-debug-metadata="showDebugMetadata = false"
@@ -2276,13 +2310,14 @@ watch(selectedTradingAccountId, () => {
     />
 
     <TradeSetupChecklist
-      v-if="showTradeSetupChecklist"
+      v-if="showTradeSetupChecklist || setup2Detail"
+      :key="setup2Detail?.id ?? 'live-checklist'"
       id="trade-setup-checklist"
       :style="renderedChartHeight == null ? undefined : { height: renderedChartHeight + 'px' }"
       :instrument="currentSymbol"
-      :checklist-state="checklistState"
-      :m1-check="m1Check"
-      @close="showTradeSetupChecklist = false"
+      :checklist-state="setup2Detail?.checklist ?? checklistState"
+      :m1-check="setup2Detail ? setup2Detail.m1Check : m1Check"
+      @close="setup2Detail ? priceChartRef?.clearTradeSetup2Selection() : (showTradeSetupChecklist = false)"
     />
 
     <TradeSetupBewertung

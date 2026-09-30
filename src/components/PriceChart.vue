@@ -2,6 +2,9 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { nextCandlePollDelay } from "../candlePolling.js";
 import { usePriceChartM1Structure } from '../composables/usePriceChartM1Structure.js';
+import { useTradeSetup2History } from '../composables/useTradeSetup2History.js';
+import { createSimulationRepository } from '../tradeSetupSimulationRepository.js';
+import TradeSetup2Controls from './TradeSetup2Controls.vue';
 import M1StructureStatus from './M1StructureStatus.vue';
 import { useM5CandleClock } from "../composables/useM5CandleClock.js";
 import { isGoldInstrument } from '../goldChartPolicy.js';
@@ -108,6 +111,11 @@ import TargetPickerModal from "./TargetPickerModal.vue";
 import AntiConfluencePickerModal from "./AntiConfluencePickerModal.vue";
 
 const props = defineProps({
+  showTradeSetup2: { type: Boolean, default: false },
+  tradeSetup2HistoryCount: { type: Number, default: 5 },
+  tradeSetup2Variant: { type: String, default: 'wide' },
+  selectedTradeSetup2Id: { type: String, default: null },
+  tradeSetup2RunId: { type: String, default: null },
   showTradeSetupChecklist: { type: Boolean, default: false },
   symbol: { type: String, required: true },
   currentBar: { type: String, required: true },
@@ -339,6 +347,7 @@ const props = defineProps({
   tscRange: { type: Object, default: null },
 });
 const emit = defineEmits([
+  'setup2-detail-change',
   "checklist-state-change",
   "m1-check-change",
   "chart-height-change",
@@ -361,8 +370,16 @@ const emit = defineEmits([
 
 const { markSuccess } = useStatusBar();
 const checklist = usePriceChartChecklist(props, sessions, emit, undefined, { tradingSchedules, newsEvents, newsCalendar }, createChecklistStatisticsStore(supabase));
+const setup2 = useTradeSetup2History(props,checklist.state,{
+  repository:createSimulationRepository(supabase),evaluationTime:checklist.evaluationTime,
+  configurationInput:()=>({instrument:props.symbol,settings:checklist.settings(),sessionConfigs:sessions,
+    tradingWindows:tradingSchedules[props.symbol]?.tradingWindows,news:newsEvents,newsLoadStatus:newsCalendar.status}),
+});
+const setup2Positions=setup2.positions,setup2Selected=setup2.selected,setup2Loading=setup2.loading,setup2Status=setup2.status,setup2Error=setup2.error;
+watch(setup2.selected,snapshot=>{emit('setup2-detail-change',snapshot);if(candleSeries)refreshChart();});
 const m1Structure = usePriceChartM1Structure(props, checklist.state, {
   prerequisitesAt: checklist.m1PrerequisitesAt, evaluationHorizon: checklist.evaluationTime,
+  detailSelected: () => !!setup2.selected.value,
 });
 const m1StructureStatus = m1Structure.status;
 watch(m1Structure.check, value => {
@@ -1160,7 +1177,7 @@ function refreshPoiZonesInternal() {
   // unten) laufen über denselben Pin-Halo-Highlight-Mechanismus wie eine gehoverte gepinnte OB-Zone.
   renderPersistedZones(
     candleSeries,
-    visibleZones,
+    setup2.selected.value ? [] : visibleZones,
     orderBlockPrimitives,
     candles,
     props.pinObZoneKeys,
@@ -1363,8 +1380,8 @@ function onAntiConfluencePickerSelect(candidate) {
 // Erkennung/Zeichnung selbst) — übersetzt Props/lokale Refs in dessen ctx-Format.
 function refreshLiquidityInternal() {
   refreshLiquidity(clipReplay(allCandles), allCandles, {
-    showLiquidity: props.showLiquidity,
-    pinnedLiquidityLevels: props.pinnedLiquidityLevels,
+    showLiquidity: props.showLiquidity && !setup2.selected.value,
+    pinnedLiquidityLevels: setup2.selected.value ? [] : props.pinnedLiquidityLevels,
     pinLiquidityLevelKeys: props.pinLiquidityLevelKeys,
     // Target-/Anti-Confluence-Picker-Hover (siehe oben) laufen über denselben Pin-Halo-Highlight-
     // Mechanismus wie ein gehoverter Pin — eigenständige Zeichnung wäre dieselbe Linie ein zweites Mal.
@@ -1404,7 +1421,7 @@ function refreshRangesMarkersInternal() {
   refreshRangesMarkersPure({
     candles: clipReplay(allCandles),
     symbol: props.symbol,
-    showRanges: props.showRanges,
+    showRanges: props.showRanges && !setup2.selected.value,
     showLiquidityDebug: props.showLiquidityDebug,
   });
 }
@@ -1444,7 +1461,7 @@ function refreshMarketStructureInternal() {
     h1CandlesClipped: clipReplay(getRangesH1Candles()),
     symbol: props.symbol,
     replayUntil: props.replayUntil,
-    showRanges: props.showRanges,
+    showRanges: props.showRanges && !setup2.selected.value,
     rangesPeriod: props.rangesPeriod,
     ranges2Period: props.ranges2Period,
   });
@@ -1470,8 +1487,8 @@ function refreshM5StructureInternal() {
     m5CandlesClipped: clipReplay(getTradeSetupM5Candles()),
     symbol: props.symbol,
     replayUntil: props.replayUntil,
-    showM5Structure: props.showM5Structure,
-    showM5TrendPhases: props.showM5TrendPhases,
+    showM5Structure: props.showM5Structure && !setup2.selected.value,
+    showM5TrendPhases: props.showM5TrendPhases && !setup2.selected.value,
     showLiquidityDebug: props.showLiquidityDebug,
     m5Period: props.m5StructurePeriod,
     m5Period2: props.m5Structure2Period,
@@ -1526,7 +1543,7 @@ async function loadRangesCandles() {
 // Laden läuft also, solange MINDESTENS einer der vier an ist.
 function rangesNeedsData() {
   // M5-Struktur ankert am 1h-Outer-Cutoff, braucht also dieselben H1-Kerzen.
-  return props.showM1Structure || props.showTradeSetupChecklist || props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups || props.showM5Structure || props.showM5TrendPhases;
+  return props.showTradeSetup2 || props.showM1Structure || props.showTradeSetupChecklist || props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups || props.showM5Structure || props.showM5TrendPhases;
 }
 // An den H1-Kerzenschluss ausgerichtet statt festem Intervall (Chat 2026-07-20) — H1-Kerzen
 // ändern sich nur stündlich, ein häufigerer Poll bringt nichts außer zusätzlichen Requests.
@@ -1693,7 +1710,10 @@ function refreshRsiInternal() {
 }
 
 function refreshRsiDivergenceInternal() {
-  priceChartRsi.refreshDivergence(clipReplay(allCandles), props.symbol, props, rsiDivergenceStatsData);
+  const drawing = setup2.selected.value
+    ? {...props, showRsiDivergence:false, showRsiDivergenceHistory:false, pinnedRsiDivergences:[]} : props;
+  priceChartRsi.refreshDivergence(clipReplay(allCandles), props.symbol, drawing, rsiDivergenceStatsData);
+  priceChartRsi.refreshSnapshot(setup2.selected.value,clipReplay(allCandles),props.currentBar);
 }
 
 // Dünner Wrapper um usePriceChartTradeSetups' fetchM5Candles() (siehe dort für
@@ -1806,8 +1826,9 @@ function scheduleNextTradeSetupM5Poll() {
 // FVG-Einfärbung hängt an ihnen, nicht an den Kerzen (siehe fvgCandleTint.js).
 function applyCandleData() {
   const color = cssColor("fvgCandle");
-  const candles = tintFvgCandles(clipReplay(allCandles), tradeSetupsMetadata.value, props.currentBar, color);
-  candleSeries.setData(tintM1FvgCandle(candles, m1Structure.check.value.fvg, props.currentBar, color));
+  const snapshot=setup2.selected.value;
+  const candles = tintFvgCandles(clipReplay(allCandles), snapshot ? [] : tradeSetupsMetadata.value, props.currentBar, color);
+  candleSeries.setData(tintM1FvgCandle(candles, snapshot ? snapshot.m1Check?.fvg : m1Structure.check.value.fvg, props.currentBar, color));
 }
 
 function refreshChart() {
@@ -1832,6 +1853,7 @@ function refreshChart() {
   refreshRangesMarkersInternal();
   refreshMarketStructureInternal(); // ruft refreshCockpitInternal() selbst mit auf, siehe dort
   m1Structure.refresh(clipReplay(allCandles));
+  setup2.updateCandles(clipReplay(allCandles));
   refreshEmaInternal();
   refreshRsiInternal();
   refreshRsiDivergenceInternal();
@@ -1996,6 +2018,7 @@ onMounted(() => {
   createDrawings(chart, candleSeries);
   createMarketStructure(chart, candleSeries);
   m1Structure.create(candleSeries);
+  setup2.create(chart,candleSeries);
   createTradeSetupDrawing(candleSeries);
   createLiquidity(candleSeries);
   createDailyPivots(candleSeries);
@@ -2303,6 +2326,7 @@ watch(() => props.showTradeSetupChecklist, (on) => {
   refreshRangesPollingState();
   if (on) loadTradeSetupM5();
 });
+watch(() => props.showTradeSetup2, (on) => {refreshRangesPollingState();if(on)loadTradeSetupM5();});
 // Lookback-Änderung braucht mehr/weniger H1-Historie -> neu fetchen, aber nur solange mindestens
 // einer der beiden Ranges-Toggles überhaupt an ist (sonst reicht es, beim nächsten Einschalten
 // frisch zu laden).
@@ -2571,12 +2595,15 @@ defineExpose({
   // per Ref auf, statt es über den jetzt entfallenen tsc-*-Event-Relay zu bekommen.
   openTargetPicker,
   openAntiConfluencePicker,
+  clearTradeSetup2Selection:()=>setup2.select(null),
 });
 </script>
 
 <template>
   <div class="chart-wrapper" :style="{ height: chartWrapperHeight + 'px' }">
     <div ref="chartContainerRef" class="chart-container"></div>
+    <TradeSetup2Controls v-if="showTradeSetup2" :positions="setup2Positions" :selected="setup2Selected" :loading="setup2Loading"
+      :status="setup2Status" :error="setup2Error" @select="setup2.select" @close="setup2.select(null)" @refresh="setup2.refresh" />
     <M5CandleClock v-if="m5ClockEnabled()" :state="m5Clock" @retry="retryM5Clock" />
     <M1StructureStatus v-if="showM1Structure" :status="m1StructureStatus" :symbol="symbol" />
     <div v-if="goldHistoryError" class="live-history-confirm" role="alert">Gold-Strukturvorlauf konnte nicht vollständig geladen werden. <button @click="reloadGoldHistory">Erneut laden</button></div>

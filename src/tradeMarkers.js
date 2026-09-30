@@ -1,6 +1,7 @@
 // Zeichnet Entry/Exit als exakte Marke + Preis-Strich auf den Kerzen-Chart (nicht nur
 // "Kerze markiert", sondern der tatsächliche Einstiegs-/Austiegspreis als Marke).
 import { snapToBarTime } from "./chartTimeUtils.js";
+import { chartObjectCoordinate } from './chartEventCoordinate.js';
 import { cssColor } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
 
@@ -198,9 +199,8 @@ class TradeMarkerPaneView {
     const t = this._source._trade;
     const candles = this._source._candles;
 
-    const entryBarTime = snapToBarTime(candles, t.entryTime);
     this._entry = {
-      x: entryBarTime != null ? timeScale.timeToCoordinate(entryBarTime) : null,
+      x: chartObjectCoordinate(timeScale,candles,t.entryTime,this._source._options.eventBarSeconds),
       y: series.priceToCoordinate(t.entryPrice),
     };
 
@@ -208,7 +208,7 @@ class TradeMarkerPaneView {
     this._exit =
       exitBarTime != null && t.exitPrice != null
         ? {
-            x: timeScale.timeToCoordinate(exitBarTime),
+            x: chartObjectCoordinate(timeScale,candles,t.exitTime,this._source._options.eventBarSeconds),
             y: series.priceToCoordinate(t.exitPrice),
           }
         : null;
@@ -229,9 +229,10 @@ export class TradeMarkerPrimitive {
     this._series = null;
   }
 
-  attached({ chart, series }) {
+  attached({ chart, series, requestUpdate }) {
     this._chart = chart;
     this._series = series;
+    requestUpdate?.();
   }
 
   updateAllViews() {
@@ -264,6 +265,14 @@ export class TradeMarkerPrimitive {
   get trade() {
     return this._trade;
   }
+
+  lineDistanceTo(x,y) {
+    const {_entry:a,_exit:b}=this._paneViews[0];
+    if (!a || !b || [a.x,a.y,b.x,b.y].some(v=>v==null)) return this.distanceTo(x,y);
+    const dx=b.x-a.x,dy=b.y-a.y,length=dx*dx+dy*dy;
+    const t=length?Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/length)):0;
+    return Math.hypot(x-a.x-t*dx,y-a.y-t*dy);
+  }
 }
 
 // win/loss sind die einzigen Outcomes mit eigener Marker-Farbe — "open" hat in der Praxis nie
@@ -271,7 +280,7 @@ export class TradeMarkerPrimitive {
 // "invalid" gibt's als Outcome seit Chat 2026-07-31 gar nicht mehr (0 Zeilen genutzt, siehe
 // Migration 20260731220000_drop_invalid_outcome.sql). tradeInvalid bleibt als generischer
 // Fallback für den Rest-Fall "Exit-Preis gesetzt, aber noch kein Ergebnis gewählt".
-function tradeOptions(t, showLabels, hovered, inPinContext) {
+export function tradeOptions(t, showLabels, hovered, inPinContext) {
   const outcomeKey = { win: "tradeWin", loss: "tradeLoss" };
   const entryColorKey = t.direction === "short" ? "tradeLoss" : "tradeWin";
   const exitColorKey = outcomeKey[t.outcome] ?? "tradeInvalid";

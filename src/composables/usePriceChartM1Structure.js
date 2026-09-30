@@ -13,7 +13,7 @@ import { afterBrowserPaint } from '../afterBrowserPaint.js';
 
 export function usePriceChartM1Structure(props, checklistState, {
   fetchCached = fetchCandlesCached, now = () => Date.now(), prerequisitesAt = () => checklistState.value,
-  evaluationHorizon,
+  evaluationHorizon, detailSelected = () => false,
 } = {}) {
   let series = null;
   let displayCandles = [];
@@ -63,10 +63,10 @@ export function usePriceChartM1Structure(props, checklistState, {
     else currentCheck = evaluateM1Checklist({ context: knownContext, structure: result, candles: marked, evaluatedAt });
     check.value = { ...currentCheck, evaluatedAt, instrument: props.symbol,
       updating: !!checklistState.value?.updating || status.value.state === 'loading' };
-    renderM1Entry(series, currentCheck.entry, entryPrimitives, displayCandles, props.currentBar);
+    renderM1Entry(series, detailSelected() ? null : currentCheck.entry, entryPrimitives, displayCandles, props.currentBar);
     renderLowerStructure(series, result, primitives, markers, displayCandles, {
-      symbol: props.symbol, replayUntil: evaluationTime(), show: !!result,
-      debug: !!result && props.showLiquidityDebug, barSeconds: 60,
+      symbol: props.symbol, replayUntil: evaluationTime(), show: !!result && !detailSelected(),
+      debug: !!result && props.showLiquidityDebug && !detailSelected(), barSeconds: 60,
     });
     if (result && !['loading', 'error'].includes(status.value.state)) {
       status.value = { state: result.status, anchor: knownContext.anchor, lastClosedAt: evaluatedAt };

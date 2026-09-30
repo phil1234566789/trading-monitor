@@ -3,13 +3,14 @@
 // orderBlocks.js): kein Ringpuffer/Streaming-State pro geschlossener Bar, stattdessen
 // bei jedem Refresh einmal komplett über das geladene `candles`-Array (aktueller
 // Chart-Timeframe) neu berechnet.
-import { snapToBarTime, businessSecondsBetween, formatAge, ageReferenceTime } from "./chartTimeUtils.js";
+import { businessSecondsBetween, formatAge, ageReferenceTime } from "./chartTimeUtils.js";
 import { cssColor } from "./chartColors.js";
 import { lineWidth } from "./chartLineWidths.js";
 import { canShowLabels } from "./chartZoom.js";
 import { classifyAge } from "./ageTier";
 import { drawIconLabel } from "./chartIconLabel.js";
 import { CATEGORY_ICON } from "./priceChartConstants.js";
+import { chartObjectCoordinate } from './chartEventCoordinate.js';
 // Reine Fraktal-Erkennung seit Chat 2026-07-31 nach liquidityDetection.js ausgelagert (dort auch
 // die Begründung) — hier nur re-exportiert, damit sich an der öffentlichen API dieser Datei nichts
 // ändert (PriceChart.vue importiert weiterhin von hier).
@@ -187,11 +188,9 @@ class LiquidityPaneView {
     const lvl = this._source._level;
     const candles = this._source._candles;
 
-    const startBarTime = snapToBarTime(candles, lvl.pivotTime);
-    const endBarTime = snapToBarTime(candles, lvl.endTime);
     const y = series.priceToCoordinate(lvl.price);
-    this._p1 = { x: startBarTime != null ? timeScale.timeToCoordinate(startBarTime) : null, y };
-    this._p2 = { x: endBarTime != null ? timeScale.timeToCoordinate(endBarTime) : null, y };
+    this._p1 = { x: chartObjectCoordinate(timeScale,candles,lvl.pivotTime,this._source._options.eventBarSeconds), y };
+    this._p2 = { x: chartObjectCoordinate(timeScale,candles,lvl.endTime,this._source._options.eventBarSeconds), y };
   }
 
   renderer() {

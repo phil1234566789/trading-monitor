@@ -15,3 +15,11 @@ export function chartEventCoordinate(timeScale, candles, time, barSeconds) {
   const x = timeScale.timeToCoordinate(start);
   return x == null ? null : x + (time - start) / barSeconds * timeScale.options().barSpacing;
 }
+
+// Bestehende Zeichnungen behalten ihr Snapping; gespeicherte M1-Belege können
+// dieselben Primitiven mit expliziter Ereignisprojektion auf M5 verwenden.
+export function chartObjectCoordinate(timeScale, candles, time, eventBarSeconds) {
+  if (eventBarSeconds) return chartEventCoordinate(timeScale,candles,time,eventBarSeconds);
+  const bar=snapToBarTime(candles,time);
+  return bar==null?null:timeScale.timeToCoordinate(bar);
+}

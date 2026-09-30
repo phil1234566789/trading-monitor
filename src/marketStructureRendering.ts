@@ -13,6 +13,8 @@ import type { Pivot, MarketStructureState } from "./range.type";
 import type { Candle } from "./marketStructureAnalysis";
 import { pivotTimeOf, collectNestedChain } from "./marketStructureAnalysis";
 import { firstTouchAfter } from './structurePivotTime';
+import { structureRangePath } from './structureRangePath.js';
+import { chartEventCoordinate } from './chartEventCoordinate.js';
 export { firstTouchAfter } from './structurePivotTime';
 
 // --- Zeichnung ----------------------------------------------------------------------------------
@@ -179,7 +181,9 @@ class RangeLinePaneView {
     // z.B. liquidity.js/orderBlocks.js) — draw() (RangeLineRenderer oben) überspringt x:null bereits
     // sauber.
     this._points = this._source.pivots.map((p) => ({
-      x: p.pivotTime != null ? timeScale.timeToCoordinate(p.pivotTime) : null,
+      x: this._source._options.eventBarSeconds
+        ? chartEventCoordinate(timeScale,this._source._candles,p.pivotTime,this._source._options.eventBarSeconds)
+        : p.pivotTime != null ? timeScale.timeToCoordinate(p.pivotTime) : null,
       y: series.priceToCoordinate(p.price),
     }));
   }
@@ -189,9 +193,10 @@ class RangeLinePaneView {
   }
 }
 
-class RangeLinePrimitive {
+export class RangeLinePrimitive {
   pivots: Pivot[];
-  _options: { color: string; lineWidth?: number; dashed?: boolean };
+  _options: { color: string; lineWidth?: number; dashed?: boolean; eventBarSeconds?: number };
+  _candles: Candle[];
   _paneViews: RangeLinePaneView[];
   _chart: any;
   _series: any;
@@ -199,9 +204,10 @@ class RangeLinePrimitive {
   // pivots: mindestens 2 Punkte, in Zeichenreihenfolge (nicht zwingend chronologisch, siehe
   // ClosedRange: low->middle->high ist bei einem Uptrend-Archiv automatisch auch chronologisch,
   // müsste es aber nicht sein).
-  constructor(pivots: Pivot[], options: { color: string; lineWidth?: number; dashed?: boolean }) {
+  constructor(pivots: Pivot[], options: { color: string; lineWidth?: number; dashed?: boolean; eventBarSeconds?: number }, candles: Candle[] = []) {
     this.pivots = pivots;
     this._options = options;
+    this._candles = candles;
     this._paneViews = [new RangeLinePaneView(this)];
     this._chart = null;
     this._series = null;
@@ -489,7 +495,7 @@ function renderNestedLevel(
   const sweepArrowDirection: "up" | "down" = isDown ? "up" : "down";
   const firstClosePast = isDown ? firstCloseAbove : firstCloseBelow;
 
-  const nestedLine = new RangeLinePrimitive([nested.currRange.low, nested.currRange.high], {
+  const nestedLine = new RangeLinePrimitive(structureRangePath(nested.currRange), {
     color: cssColor("rangeChoch"),
     lineWidth: lineWidth("rangeChoch"),
   });
@@ -761,7 +767,7 @@ export function renderMarketStructureAnalysis(
   // Closed-Linie denselben Farb-Key, jetzt unabhängig einstellbar, siehe chartColors.js).
   if (state.trend !== "unknown") {
     const liveLineKey = state.trend === "uptrend" ? "rangeLiveUptrend" : "rangeLiveDowntrend";
-    const liveLine = new RangeLinePrimitive([state.currRange.low, state.currRange.high], {
+    const liveLine = new RangeLinePrimitive(structureRangePath(state.currRange), {
       color: cssColor(liveLineKey),
       lineWidth: lineWidth(liveLineKey),
     });
@@ -779,7 +785,7 @@ export function renderMarketStructureAnalysis(
   // unabhängig von der Live-Linie UND von der CHoCH-Warnfarbe, siehe chartColors.js.
   for (const closed of state.closedRanges) {
     const closedKey = closed.trend === "uptrend" ? "rangeClosed" : "rangeClosedDowntrend";
-    const points = closed.middle ? [closed.low, closed.middle, closed.high] : [closed.low, closed.high];
+    const points = structureRangePath(closed);
     const line = new RangeLinePrimitive(points, { color: cssColor(closedKey), lineWidth: lineWidth(closedKey) });
     series.attachPrimitive(line);
     existingPrimitives.push(line);

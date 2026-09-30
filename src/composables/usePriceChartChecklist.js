@@ -8,7 +8,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   const adapter = createChecklistDataAdapter();
   const state = shallowRef(null);
   const chartData = shallowRef({ key: null, candles: [] });
-  const enabled = () => props.showTradeSetupChecklist || props.showM1Structure;
+  const enabled = () => props.showTradeSetupChecklist || props.showM1Structure || props.showTradeSetup2;
   let disposed = false;
   let timeBoundaryTimer;
   let saveQueue = Promise.resolve();
@@ -101,11 +101,12 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     adapter.invalidate('h1');
     refresh();
   }, { flush: 'sync' });
-  watch(() => [props.rangesPeriod, props.ranges2Period, props.m5StructurePeriod, props.m5Structure2Period, props.showTradeSetupChecklist, props.showM1Structure], () => { refresh(); scheduleTimeBoundary(); });
+  watch(() => [props.rangesPeriod, props.ranges2Period, props.m5StructurePeriod, props.m5Structure2Period, props.showTradeSetupChecklist, props.showM1Structure, props.showTradeSetup2], () => { refresh(); scheduleTimeBoundary(); });
   watch(sessionConfigs, refresh, { deep: true });
   watch(() => [timeData.tradingSchedules, timeData.newsEvents, timeData.newsCalendar?.status], refresh, { deep: true });
   onScopeDispose(() => { disposed = true; cancelEvaluation(); clearTimeout(timeBoundaryTimer); adapter.reset(null); });
   return {
+    settings,
     state,
     evaluationTime,
     setChartCandles(candles, key) { chartData.value = { candles, key }; },

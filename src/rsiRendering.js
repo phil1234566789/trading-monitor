@@ -14,6 +14,7 @@
 // zwischen "Preis" und "RSI-Wert", solange es der Skala der jeweils angehängten Series entspricht).
 import { canShowLabels } from "./chartZoom.js";
 import { drawIconLabel } from "./chartIconLabel.js";
+import { chartEventCoordinate } from './chartEventCoordinate.js';
 
 const PIN_HALO_EXTRA_WIDTH = 3; // px, zusätzlich zur normalen lineWidth (Chat 2026-08-17)
 // Auswahl-Halo (Chat 2026-08-18, PinPanel.vue-Hover) — analog zu liquidity.js, breiter als der
@@ -105,13 +106,16 @@ class DivergenceLinePaneView {
   update() {
     const { _chart, _series, _from, _to } = this._source;
     const timeScale = _chart.timeScale();
+    const x = time => this._source._options.eventBarSeconds
+      ? chartEventCoordinate(timeScale,this._source._candles,time,this._source._options.eventBarSeconds)
+      : time != null ? timeScale.timeToCoordinate(time) : null;
     // Null-Guard vor timeToCoordinate (siehe marketStructureRendering.ts: RangeLinePaneView für
     // dieselbe Ursache/denselben Crash) — _from/_to.time kann bei einer per Klick/DB verknüpften
     // Divergenz-Bestätigung fehlen (z.B. touchedTime noch null), draw() (oben) überspringt x:null
     // bereits sauber.
     this._points = [
-      { x: _from.time != null ? timeScale.timeToCoordinate(_from.time) : null, y: _series.priceToCoordinate(_from.price) },
-      { x: _to.time != null ? timeScale.timeToCoordinate(_to.time) : null, y: _series.priceToCoordinate(_to.price) },
+      { x: x(_from.time), y: _series.priceToCoordinate(_from.price) },
+      { x: x(_to.time), y: _series.priceToCoordinate(_to.price) },
     ];
   }
 

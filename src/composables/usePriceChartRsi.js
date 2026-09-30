@@ -43,6 +43,7 @@ export function usePriceChartRsi() {
   let ema50Series = null;
   let ema200Series = null;
   let rsiSeries = null;
+  const snapshotRsiPrimitives = [];
   let rsiOverboughtLine = null;
   let rsiOversoldLine = null;
   const divergencePriceLinePrimitives = []; // Preis-Bein der Divergenz-Konnektoren, an candleSeries
@@ -120,6 +121,7 @@ export function usePriceChartRsi() {
     if (!chart) return;
     if (!showRsi) {
       if (rsiSeries) {
+        snapshotRsiPrimitives.length = 0;
         chart.removeSeries(rsiSeries);
         chart.removePane(RSI_PANE_INDEX);
         rsiSeries = null;
@@ -314,6 +316,18 @@ export function usePriceChartRsi() {
   }
 
   return {
+    refreshSnapshot(snapshot, candles, currentBar) {
+      for (const p of snapshotRsiPrimitives) rsiSeries?.detachPrimitive(p);
+      snapshotRsiPrimitives.length = 0;
+      if (!rsiSeries || !snapshot) return;
+      // RSI-Werte gelten ausschließlich im gespeicherten Timeframe.
+      for (const e of snapshot.evidence.filter(e => e.role === 'divergence' && e.timeframe === currentBar)) {
+        if (![e.fromRsi,e.toRsi].every(Number.isFinite)) continue;
+        const p = new DivergenceLinePrimitive({time:e.fromTime,price:e.fromRsi},{time:e.toTime,price:e.toRsi},
+          {color:cssColor(e.styleKey),lineWidth:lineWidth(e.styleKey),label:e.label},candles);
+        rsiSeries.attachPrimitive(p);snapshotRsiPrimitives.push(p);
+      }
+    },
     create,
     dispose,
     refreshEma,

@@ -32,6 +32,7 @@ describe('Trade Setup 2.0 immutable entry snapshot',()=>{
     expect(snapshot).toMatchObject({schemaVersion:1,instrument:'GBPUSD',knownAt:at('09:50'),entry:{price:1.35615}});
     expect(snapshot.entry.stops.wide.price).toBe(1.35675);
     expect(snapshot.entry.stops.narrow.price).toBe(1.35648);
+    expect(snapshot.m1Check.instrument).toBe('GBPUSD');
     expect(snapshot.evidence.map(e=>e.role)).toEqual(expect.arrayContaining(['sweep','reactionOB','target1','target2','retest','fvg']));
     expect(snapshot.evidence.every(e=>e.knownAt<=snapshot.knownAt)).toBe(true);
     expect(snapshot.checklist.context).toBeUndefined();

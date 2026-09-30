@@ -1,4 +1,5 @@
 import { collectNestedChain } from './marketStructureAnalysis';
+import { structureRangePath } from './structureRangePath.js';
 
 // Belege übernehmen nur erkannte Fakten; offene Zuordnungen sind keine Zeichnungsfreigabe.
 export function tradeSetup2Evidence({ checklist, m1Check, m1Structure, m1Candles = [] }) {
@@ -17,13 +18,20 @@ export function tradeSetup2Evidence({ checklist, m1Check, m1Structure, m1Candles
   function structure(state, tf, key) {
     if (!state) return;
     for (const [depth, level] of collectNestedChain(state).entries()) {
-      const points = level.structurePivots ?? [];
-      for (let i = 1; i < points.length; i++) {
+      const paths=[...(level.trend!=='unknown'?[{...level.currRange,trend:level.trend,active:true}]:[]),
+        ...(!depth?level.closedRanges ?? []:[])];
+      for(const range of paths) {
+       const points=structureRangePath(range);
+       const styleBase=range.active ? (depth?'rangeChoch':range.trend==='downtrend'?'rangeLiveDowntrend':'rangeLiveUptrend')
+         :range.trend==='downtrend'?'rangeClosedDowntrend':'rangeClosed';
+       const styleKey=tf==='1h'?styleBase:`m5${styleBase[0].toUpperCase()}${styleBase.slice(1)}`;
+       for (let i = 1; i < points.length; i++) {
         const a = points[i-1], b = points[i];
         if (![a.pivotTime, b.pivotTime, a.price, b.price].every(Number.isFinite)) continue;
         add('structure', key, tf, at, { kind:'segment', fromTime:a.pivotTime, toTime:b.pivotTime,
-          fromPrice:a.price, toPrice:b.price, styleKey:level.trend === 'downtrend' ? 'rangeLiveDowntrend' : 'rangeLiveUptrend',
+          fromPrice:a.price, toPrice:b.price, styleKey,
           label:depth ? `Nested ${tf}` : tf });
+      }
       }
     }
   }
