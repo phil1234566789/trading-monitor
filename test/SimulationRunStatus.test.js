@@ -35,4 +35,9 @@ describe('simulation run coverage', () => {
     const replay = await renderToString(createSSRApp(SimulationRunStatus, { run: { ...run, configuration: { settings: { rangesFixedStartActive: true, rangesFixedStartTime: at('09:00') } } } }));
     expect(replay).toContain('Manuell fixiert: 2026-09-09 09:00 (Replay)');
   });
+  it('identifies a paused checkpoint as interrupted rather than a completed result', async () => {
+    const html = await renderToString(createSSRApp(SimulationRunStatus, { run: { ...run, status: 'failed', progress: { phase: 'paused' } } }));
+    expect(html).toContain('Unterbrochen');
+    expect(html).toContain('nicht vollständig abgeschlossen');
+  });
 });

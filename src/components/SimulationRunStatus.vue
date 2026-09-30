@@ -1,9 +1,9 @@
 <script setup>
 import { computed } from 'vue';
 import { formatDatedTime } from '../berlinTime.js';
+import { simulationRunStatusLabel } from '../tradeSetupSimulationStatistics.js';
 
 const props = defineProps({ run: { type: Object, required: true } });
-const statusLabels = { running: 'Läuft', complete: 'Abgeschlossen', failed: 'Fehlgeschlagen' };
 const phaseLabels = { download: 'Kerzen laden', scan: 'Setups auswerten', publish: 'Ergebnisse speichern', complete: 'Auswertung beendet' };
 const progress = computed(() => props.run.progress ?? {});
 const measurableProgress = computed(() => Number.isFinite(progress.value.completed) && Number.isFinite(progress.value.total) && progress.value.total > 0);
@@ -21,7 +21,7 @@ const h1Start = computed(() => {
 <template>
   <section class="run-status" aria-label="Auswertungslauf">
     <div class="run-summary">
-      <strong>{{ statusLabels[run.status] ?? run.status }}</strong>
+      <strong>{{ simulationRunStatusLabel(run) }}</strong>
       <span>Angeforderter Zeitraum {{ at(run.from) }} – {{ at(run.to) }} (Ende exklusiv)</span>
       <span>Datenstand {{ at(run.evaluatedAt) }} · Europe/Berlin</span>
     </div>

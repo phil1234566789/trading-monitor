@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { supabase } from '../supabaseClient.js';
 import { createSimulationRepository } from '../tradeSetupSimulationRepository.js';
 import { useSimulationStatistics } from '../composables/useSimulationStatistics.js';
-import { SIMULATION_OUTCOME_LABELS, simulationStatistics } from '../tradeSetupSimulationStatistics.js';
+import { SIMULATION_OUTCOME_LABELS, simulationStatistics, simulationRunStatusLabel } from '../tradeSetupSimulationStatistics.js';
 import { formatDatedTime } from '../berlinTime.js';
 import { fmtMoney, fmtR } from '../format.js';
 import ToggleButton from '../components/ui/ToggleButton.vue';
@@ -12,9 +12,8 @@ import SimulationRunStatus from '../components/SimulationRunStatus.vue';
 
 const { runs, runId, selectedRun, instrument, variant, from, to, rows, setups, loading, error, refresh } = useSimulationStatistics(createSimulationRepository(supabase));
 const stats = computed(() => simulationStatistics(rows.value, variant.value));
-const statusLabels = { running: 'Läuft', complete: 'Abgeschlossen', failed: 'Fehlgeschlagen' };
 const at = value => value == null ? '–' : formatDatedTime(value);
-const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${run.version} · ${statusLabels[run.status] ?? run.status} · ${run.id.slice(-8)}`;
+const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${run.version} · ${simulationRunStatusLabel(run)} · ${run.id.slice(-8)}`;
 </script>
 
 <template>

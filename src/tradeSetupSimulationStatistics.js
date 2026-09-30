@@ -15,6 +15,11 @@ export function simulationOutcomeKey(row) {
   return row.status === 'closed' ? row.outcome : row.status;
 }
 
+export function simulationRunStatusLabel(run) {
+  if (run.progress?.phase === 'paused') return 'Unterbrochen';
+  return { running: 'Läuft', complete: 'Abgeschlossen', failed: 'Fehlgeschlagen' }[run.status] ?? run.status;
+}
+
 export function simulationStatistics(rows, variant) {
   const selected = rows.filter(row => row.variant === variant);
   const counts = Object.fromEntries(Object.keys(SIMULATION_OUTCOME_LABELS).map(key => [key, 0]));
