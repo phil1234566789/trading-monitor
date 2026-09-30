@@ -4500,9 +4500,9 @@
     "semantic_hash": ""
   },
   "src/composables/useTradeSetup2History.js": {
-    "mtime": 1790766774.91845,
-    "seen": 1790766971.27349,
-    "ast_hash": "5ba231bbd1172658ad7987ab95959283",
+    "mtime": 1790774854.4848697,
+    "seen": 1790777907.9636157,
+    "ast_hash": "f63e928b323fbdecd379a59e25756f1d",
     "semantic_hash": ""
   },
   "src/structureLiquidityLevels.ts": {
@@ -4530,15 +4530,15 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2Positions.js": {
-    "mtime": 1790765938.6625688,
-    "seen": 1790765980.43556,
-    "ast_hash": "3b7576eb393ca99e6cd3667de4fd34d6",
+    "mtime": 1790774821.1561005,
+    "seen": 1790777907.9994836,
+    "ast_hash": "46872d4747d1debad60581960b70dd42",
     "semantic_hash": ""
   },
   "src/tradeSetup2Rendering.js": {
-    "mtime": 1790766453.0157478,
-    "seen": 1790766971.2940314,
-    "ast_hash": "79d6ede4029e97008163c3bf1d036439",
+    "mtime": 1790774855.1715677,
+    "seen": 1790777907.9994836,
+    "ast_hash": "dfba63412c5c584ba150cb952f6aef0d",
     "semantic_hash": ""
   },
   "src/tradeSetup2Scan.js": {
@@ -4566,9 +4566,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupSimulationRepository.js": {
-    "mtime": 1790765081.0212033,
-    "seen": 1790765087.1578376,
-    "ast_hash": "0e0d41ecdb08da62b57269d3d7476fd0",
+    "mtime": 1790774821.9349425,
+    "seen": 1790777908.0085068,
+    "ast_hash": "7df275fd0cda62db146c77ecaa14d28d",
     "semantic_hash": ""
   },
   "src/tradeSetupSimulationStatistics.js": {
@@ -4626,9 +4626,9 @@
     "semantic_hash": ""
   },
   "test/tradeSetupSimulationRepository.test.js": {
-    "mtime": 1790765081.8332565,
-    "seen": 1790765087.2257133,
-    "ast_hash": "dcd60cc23c3d066bc92b97876a295128",
+    "mtime": 1790777841.4709876,
+    "seen": 1790777908.1011996,
+    "ast_hash": "b12cb56658a98cd9c9d60bceac77d7f8",
     "semantic_hash": ""
   },
   "test/tradeSetupSimulationStatistics.test.js": {
@@ -4644,9 +4644,9 @@
     "semantic_hash": ""
   },
   "PLAN-trade-setup-2-statistik.md": {
-    "mtime": 1790766220.046374,
-    "seen": 1790766407.6605039,
-    "ast_hash": "a658efc64c0b8c52adaddd2dc3adcd44",
+    "mtime": 1790767559.4528644,
+    "seen": 1790777908.1169443,
+    "ast_hash": "b214123f0df19c48e8e9271dad9ac831",
     "semantic_hash": ""
   },
   "scripts/tradeSetup2Publish.mjs": {
@@ -4662,9 +4662,9 @@
     "semantic_hash": ""
   },
   "src/components/TradeSetup2Controls.vue": {
-    "mtime": 1790765393.5409446,
-    "seen": 1790765439.3904948,
-    "ast_hash": "8744efd56298d51a07cb0413ba9c3d72",
+    "mtime": 1790774856.0173156,
+    "seen": 1790777907.9505947,
+    "ast_hash": "6a9e8a485bda2fbcec20424bdda7b532",
     "semantic_hash": ""
   },
   "src/tradeSetup2Anchors.js": {
@@ -4704,9 +4704,9 @@
     "semantic_hash": ""
   },
   "test/useTradeSetup2History.test.js": {
-    "mtime": 1790766752.6046455,
-    "seen": 1790766971.367539,
-    "ast_hash": "b164197ad3c36378922bd72ad35609be",
+    "mtime": 1790774889.5153165,
+    "seen": 1790777908.1057024,
+    "ast_hash": "58019e085d3a9b4cfd4ff644803f908f",
     "semantic_hash": ""
   },
   "src/structureRangePath.js": {
@@ -4716,15 +4716,27 @@
     "semantic_hash": ""
   },
   "test/tradeSetup2Rendering.test.js": {
-    "mtime": 1790766155.3155663,
-    "seen": 1790766407.6389852,
-    "ast_hash": "7b7f053b9b1b9606c5e342ff2dca1b65",
+    "mtime": 1790774876.231873,
+    "seen": 1790777908.0941732,
+    "ast_hash": "95b5006acb41999462416fc17acde360",
     "semantic_hash": ""
   },
   "test/m5CloseReactionCache.test.js": {
     "mtime": 1790766402.0071104,
     "seen": 1790766971.3434556,
     "ast_hash": "d7624f6f4fabd0968c4f48faee8c2290",
+    "semantic_hash": ""
+  },
+  "src/tradeSetup2HistoryItems.js": {
+    "mtime": 1790774820.399539,
+    "seen": 1790777907.9994836,
+    "ast_hash": "16d97fc46562024c6293cd68dd69da05",
+    "semantic_hash": ""
+  },
+  "test/tradeSetup2HistoryItems.test.js": {
+    "mtime": 1790774798.364263,
+    "seen": 1790777908.0941732,
+    "ast_hash": "7202c65d9dc521e49c9d2afee4551bfb",
     "semantic_hash": ""
   }
 }
