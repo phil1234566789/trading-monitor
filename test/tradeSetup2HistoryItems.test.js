@@ -28,3 +28,16 @@ it('labels historical lifecycle without showing future invalidation',()=>{
   expect(tradeSetup2HistoryItems([],[c],options)[0].candidateStatus).toContain('invalidiert');
   expect(tradeSetup2HistoryItems([],[c],{...options,asOf:599})[0].candidateStatus).not.toContain('invalidiert');
 });
+it('labels the saved sweep time separately from snapshot ordering and visibility',()=>{
+  const c=candidate('s',600,{recognizedAt:120,sweep:{level:{price:1.23456}}});
+  const [item]=tradeSetup2HistoryItems([],[c,candidate('older',300,{recognizedAt:240})],{...options,historyCount:1});
+  expect(item).toMatchObject({snapshotId:'s',sortTime:600,labelTime:120,timeLabel:'Sweep',sweepPrice:1.23456});
+  expect(tradeSetup2HistoryItems([],[c],{...options,asOf:599})).toEqual([]);
+  expect(tradeSetup2HistoryItems([entry],[],options)[0]).toMatchObject({labelTime:600,timeLabel:'Entry'});
+});
+it('uses an explicit snapshot label when the sweep recognition time is missing or later than the snapshot',()=>{
+  for(const recognizedAt of [null,undefined,NaN,601]) {
+    const [item]=tradeSetup2HistoryItems([],[candidate('s',600,{recognizedAt})],options);
+    expect(item).toMatchObject({labelTime:600,timeLabel:'Stand'});
+  }
+});
