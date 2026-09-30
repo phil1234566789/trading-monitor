@@ -29,4 +29,10 @@ describe('simulation run coverage', () => {
     expect(html).toContain('noch kein ausgewerteter Datenumfang');
     expect(html).not.toContain('<progress');
   });
+  it('shows the different H1 configuration of replay and historical runs', async () => {
+    const historical = await renderToString(createSSRApp(SimulationRunStatus, { run: { ...run, configuration: { startPolicy: 'historical-d1-p4' } } }));
+    expect(historical).toContain('Jeweils damals bestätigter Tagespivot (D1, Periode 4)');
+    const replay = await renderToString(createSSRApp(SimulationRunStatus, { run: { ...run, configuration: { settings: { rangesFixedStartActive: true, rangesFixedStartTime: at('09:00') } } } }));
+    expect(replay).toContain('Manuell fixiert: 2026-09-09 09:00 (Replay)');
+  });
 });

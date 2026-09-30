@@ -9,6 +9,13 @@ const progress = computed(() => props.run.progress ?? {});
 const measurableProgress = computed(() => Number.isFinite(progress.value.completed) && Number.isFinite(progress.value.total) && progress.value.total > 0);
 const timeframes = computed(() => (props.run.coverage?.instruments ?? []).flatMap(item => Object.entries(item.timeframes ?? {}).map(([bar, coverage]) => ({ instrument: item.instrument, bar, ...coverage }))));
 const at = value => value == null ? '–' : formatDatedTime(value);
+const h1Start = computed(() => {
+  const config = props.run.configuration ?? {};
+  const settings = config.settings ?? config;
+  if (config.startPolicy === 'historical-d1-p4') return 'Jeweils damals bestätigter Tagespivot (D1, Periode 4)';
+  if (settings.rangesFixedStartActive && Number.isFinite(settings.rangesFixedStartTime)) return `Manuell fixiert: ${at(settings.rangesFixedStartTime)} (Replay)`;
+  return 'Im Lauf nicht angegeben';
+});
 </script>
 
 <template>
@@ -18,6 +25,7 @@ const at = value => value == null ? '–' : formatDatedTime(value);
       <span>Angeforderter Zeitraum {{ at(run.from) }} – {{ at(run.to) }} (Ende exklusiv)</span>
       <span>Datenstand {{ at(run.evaluatedAt) }} · Europe/Berlin</span>
     </div>
+    <p>H1-Start: {{ h1Start }}</p>
     <p v-if="run.status === 'running'" role="status" class="progress-label">
       {{ phaseLabels[progress.phase] ?? 'Auswertung läuft' }}<template v-if="progress.instrument"> · {{ progress.instrument }}</template>
       <template v-if="measurableProgress"> · {{ progress.completed }} / {{ progress.total }} {{ progress.phase === 'download' ? 'Instrumente' : 'Schritte' }}</template>
