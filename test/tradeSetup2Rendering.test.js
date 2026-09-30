@@ -4,6 +4,21 @@ import {renderSetup2Detail,renderSetup2Positions} from '../src/tradeSetup2Render
 import {restoreTradeSetup2Snapshot} from '../src/tradeSetup2Snapshot.js';
 import {chartColors} from '../src/chartColors.js';
 
+it('renders clickable candidate bounds without creating a position marker',()=>{
+  const primitives=[],candles=[{time:2700},{time:3000}];
+  const chart={timeScale:()=>({timeToCoordinate:t=>t===2700?100:120,options:()=>({barSpacing:20})})};
+  const series={priceToCoordinate:p=>p*10,detachPrimitive:vi.fn(),
+    attachPrimitive:p=>p.attached({chart,series,requestUpdate:vi.fn()})};
+  const candidate={kind:'candidate',snapshotId:'c',runId:'r',fromTime:2700,toTime:3000,
+    candidateStatus:'ohne Entry · historischer Stand',bounds:[{price:2,label:'Invalidierung',styleKey:'tradeLoss'}]};
+  renderSetup2Positions(series,[candidate],primitives,candles,'5m');
+  expect(primitives).toHaveLength(1);
+  const p=primitives[0];p.updateAllViews();
+  expect(p.trade).toBeUndefined();
+  expect(p.historyItem).toBe(candidate);
+  expect(p.distanceTo(110,20)).toBe(0);
+});
+
 it('renders legacy evidence with real colors and native projection, then clears on rewind',()=>{
   const snapshot=restoreTradeSetup2Snapshot({id:'old',instrument:'GBPUSD',knownAt:3000,entry:null,
     evidence:[

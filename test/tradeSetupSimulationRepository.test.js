@@ -2,6 +2,13 @@ import { describe, it, expect, vi } from 'vitest';
 import { createSimulationRepository, simulationAsOf } from '../src/tradeSetupSimulationRepository.js';
 
 describe('simulation history repository', () => {
+  it('keeps the setup identity when reading entry outcomes for candidate deduplication', async () => {
+    const query={select:()=>query,eq:()=>query,order:()=>query,
+      range:async from=>({data:from?[]:[{id:'entry',setupKey:'candidate',instrument:'GBPUSD',direction:'short',
+        outcomes:[{entryId:'entry',entryTime:300,variant:'wide',status:'open'}]}]})};
+    const rows=await createSimulationRepository({from:()=>query}).listResults({runId:'run'});
+    expect(rows[0]).toMatchObject({snapshotId:'entry',setupKey:'candidate',runId:'run'});
+  });
   it('hides later exit and T1 facts from historical views', () => {
     const row = { entryTime: 120, evaluatedAt: 600, status: 'closed', outcome: 't2',
       t1Time: 180, t1RecognizedAt: 240, t1PnlUsd: 400, exitTime: 300, exitRecognizedAt: 360,

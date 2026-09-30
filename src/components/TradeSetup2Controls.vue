@@ -8,13 +8,13 @@ function choose(event,positions){const p=positions.find(p=>p.id===event.target.v
   <div class="setup2-controls" aria-label="Trade Setups 2.0">
     <strong>Trade Setups 2.0</strong>
     <select aria-label="Trade Setup 2.0 auswählen" @change="choose($event,positions)">
-      <option value="">{{ positions.length ? 'Setup im Chart oder hier auswählen' : 'Noch kein Entry in dieser Ansicht' }}</option>
-      <option v-for="p in positions" :key="p.id" :value="p.id">{{ p.direction==='short'?'Short':'Long' }} · {{ formatDatedTime(p.entryTime) }} · {{ p.status==='ambiguous'?'unklar':p.isOpen?'offen':p.outcome }}</option>
+      <option value="">{{ positions.length ? 'Setup im Chart oder hier auswählen' : 'Noch kein Setup in dieser Ansicht' }}</option>
+      <option v-for="p in positions" :key="p.id" :value="p.id">{{ p.direction==='short'?'Short':'Long' }} · {{ formatDatedTime(p.displayTime) }} · {{ p.kind==='candidate'?p.candidateStatus:p.status==='ambiguous'?'unklar':p.isOpen?'offen':p.outcome }}</option>
     </select>
     <button v-if="selected" @click="emit('close')">Zur Übersicht</button>
     <button v-else :disabled="loading" @click="emit('refresh')">↻</button>
-    <small v-if="selected">Gespeicherter Stand: {{ formatDatedTime(selected.knownAt) }} Uhr</small>
-    <small v-else role="status">{{ loading ? status : status || 'Nur Positionslinien · Details per Klick' }}</small>
+    <small v-if="selected">Gespeicherter Stand: {{ formatDatedTime(selected.knownAt) }} Uhr{{ selected.entry?'':' · ohne Entry · Historie' }}</small>
+    <small v-else role="status">{{ loading ? status : status || 'Gespeicherte Setups · Details per Klick' }}</small>
     <span v-if="error" role="alert">{{ error }}</span>
   </div>
 </template>

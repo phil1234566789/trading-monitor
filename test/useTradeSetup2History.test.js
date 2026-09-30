@@ -21,7 +21,7 @@ it('opens a multi-instrument research snapshot without requiring live checklist 
   const horizon=ref(600),snapshot={id:'entry',instrument:'GBPUSD',knownAt:300,evidence:[],entry:{},m1Check:{evaluatedAt:300}};
   const repository={listRuns:vi.fn(async()=>[{id:'research',configuration:{instruments:['GBPUSD','EURUSD']}}]),
     listResults:vi.fn(async()=>[{entryId:'entry',runId:'research',instrument:'GBPUSD',direction:'short',variant:'wide',entryTime:300,status:'open'}]),
-    getSnapshot:vi.fn(async()=>snapshot),getSetupSnapshot:vi.fn(),saveRun:vi.fn()};
+    listSetups:vi.fn(async()=>[]),getSnapshot:vi.fn(async()=>snapshot),getSetupSnapshot:vi.fn(),saveRun:vi.fn()};
   const scope=effectScope();
   const view=scope.run(()=>useTradeSetup2History(props,ref(null),{repository,configurationInput:()=>({instrument:props.symbol}),evaluationTime:()=>horizon.value}));
   try {
@@ -55,7 +55,7 @@ const stored=(id,variant='wide',status='open')=>({entryId:id,snapshotId:id,runId
   direction:'short',variant,status,entryTime:60,entryPrice:2,evaluatedAt:120});
 const savedSnapshot=id=>({id,instrument:'GBPUSD',direction:'short',knownAt:60,evidence:[],entry:{id,recognizedAt:60,
   scales:{wide:{targets:[{price:1}]},narrow:{targets:[{price:1}]}}}});
-const repositoryFor=runs=>({listRuns:vi.fn(async()=>runs),listResults:vi.fn(async()=>[]),getSnapshot:vi.fn(async(_run,id)=>savedSnapshot(id)),
+const repositoryFor=runs=>({listRuns:vi.fn(async()=>runs),listResults:vi.fn(async()=>[]),listSetups:vi.fn(async()=>[]),getSetupSnapshot:vi.fn(),getSnapshot:vi.fn(async(_run,id)=>savedSnapshot(id)),
   saveRun:vi.fn(async()=>{}),saveEntries:vi.fn(async()=>{}),saveSetups:vi.fn(async()=>{})});
 
 it('continues both variants behind the display limit even when the selected narrow variant has closed',async()=>{
@@ -65,7 +65,7 @@ it('continues both variants behind the display limit even when the selected narr
   });
   const {view,scope}=liveHarness(repository);
   try {
-    await flush();await flush();await flush();
+    await vi.waitFor(()=>expect(view.loading.value).toBe(false));
     expect(repository.listResults).toHaveBeenCalledTimes(12);
     expect(repository.listResults.mock.calls.every(([query])=>query.variant===undefined)).toBe(true);
     const continued=repository.saveEntries.mock.calls.filter(([id])=>id!== 'chart:GBPUSD:day:key');
@@ -116,5 +116,25 @@ it('loads a fully persisted prefix after reload without rescanning it',async()=>
     expect(view.positions.value[0].snapshotId).toBe('saved');
     expect(scanTradeSetup2InWorker).not.toHaveBeenCalled();
     expect(repository.saveRun).not.toHaveBeenCalled();
+  } finally {scope.stop();}
+});
+
+it('loads and selects a saved candidate without a candle scan and hides it on rewind',async()=>{
+  const repository=repositoryFor([{id:'chart:GBPUSD:day:key',configuration:{instrument:'GBPUSD'},from:0,progress:{scanCompletedAt:600}}]);
+  repository.listSetups.mockResolvedValue([{id:'candidate',instrument:'GBPUSD',direction:'short',knownAt:300}]);
+  const snapshot={id:'candidate',knownAt:300,instrument:'GBPUSD',direction:'short',entry:null,evidence:[],
+    checklist:{setup:{primary:{invalidation:2,reactionRecognizedAt:300}}}};
+  repository.getSetupSnapshot.mockResolvedValue(snapshot);
+  const {view,scope,horizon}=liveHarness(repository);
+  try {
+    await flush();
+    expect(view.positions.value[0]).toMatchObject({kind:'candidate',snapshotId:'candidate',bounds:[{price:2}]});
+    await view.select('candidate','chart:GBPUSD:day:key');
+    expect(view.selected.value.entry).toBeNull();
+    expect(repository.getSnapshot).not.toHaveBeenCalled();
+    expect(scanTradeSetup2InWorker).not.toHaveBeenCalled();
+    horizon.value=299;
+    expect(view.positions.value).toEqual([]);
+    expect(view.selected.value).toBeNull();
   } finally {scope.stop();}
 });

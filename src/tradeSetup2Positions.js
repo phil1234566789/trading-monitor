@@ -13,7 +13,7 @@ export function tradeSetup2Positions(results, {instrument,variant,asOf,historyCo
     const last=ambiguous?null:candles.findLast(c=>c.time<checkedThrough && c.time>=r.entryTime);
     const t1Known=Number.isFinite(r.t1RecognizedAt) && r.t1RecognizedAt<=asOf;
     return {id:`setup2:${r.runId}:${r.entryId}:${r.variant}`,snapshotId:r.snapshotId ?? r.entryId,runId:r.runId,
-      instrument:r.instrument,direction:r.direction,entryTime:r.entryTime,entryPrice:r.entryPrice,
+      setupKey:r.setupKey,instrument:r.instrument,direction:r.direction,entryTime:r.entryTime,entryPrice:r.entryPrice,
       exitTime:closed?r.exitTime:last?.time ?? null,exitPrice:closed?r.exitPrice:last?.close ?? null,
       outcome:closed?(r.pnlUsd>0?'win':r.pnlUsd<0?'loss':'open'):'open',
       isOpen:!closed&&!ambiguous,status:closed?r.status:ambiguous?'ambiguous':'open',variant:r.variant,

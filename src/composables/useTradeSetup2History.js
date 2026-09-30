@@ -2,7 +2,7 @@ import {computed,onScopeDispose,ref,shallowRef,watch} from 'vue';
 import {scanTradeSetup2InWorker} from '../tradeSetup2BrowserScan.js';
 import {buildTradeSetup2Configuration,setup2DailyRun} from '../tradeSetup2Configuration.js';
 import {evaluateSimulation} from '../tradeSetupSimulation.js';
-import {tradeSetup2Positions} from '../tradeSetup2Positions.js';
+import {tradeSetup2HistoryItems} from '../tradeSetup2HistoryItems.js';
 import {restoreTradeSetup2Snapshot} from '../tradeSetup2Snapshot.js';
 import {fetchInitialCandles} from '../forexCandles.js';
 import {fetchCandlesCached} from '../candleCache.js';
@@ -10,13 +10,13 @@ import {REPLAY_LOOKAHEAD_SEC} from '../timeframes.js';
 import {renderSetup2Positions,renderSetup2Detail,clearSetup2Primitives} from '../tradeSetup2Rendering.js';
 
 export function useTradeSetup2History(props,checklist,{repository,configurationInput,evaluationTime}) {
-  const results=shallowRef([]),selected=shallowRef(null),status=ref(''),error=ref('');
+  const results=shallowRef([]),candidates=shallowRef([]),selected=shallowRef(null),status=ref(''),error=ref('');
   const loading=ref(false),displayCandles=shallowRef([]);
   let series=null,chart=null,abort=null,revision=0,selectionRevision=0,completedScanKey=null,appliedRouteKey=null;
   let activeInputKey=null,activeAt=null,refreshPending=false;
   const overview=[],details=[],entry=[];
   const snapshots=new Map();
-  const positions=computed(()=>tradeSetup2Positions(results.value,{instrument:props.symbol,variant:props.tradeSetup2Variant,
+  const positions=computed(()=>tradeSetup2HistoryItems(results.value,candidates.value,{instrument:props.symbol,variant:props.tradeSetup2Variant,
     asOf:evaluationTime(),historyCount:props.tradeSetup2HistoryCount,candles:displayCandles.value}));
   const visibleSnapshot=computed(()=>props.showTradeSetup2 && selected.value?.instrument===props.symbol
     && selected.value.knownAt<=evaluationTime()?selected.value:null);
@@ -43,8 +43,9 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
   }
   function click({point}) {
     if(!point || !props.showTradeSetup2)return;
-    const match=overview.filter(p=>p.trade).map(p=>({p,d:p.lineDistanceTo(point.x,point.y)})).filter(x=>x.d<10).sort((a,b)=>a.d-b.d)[0];
-    if(match)void select(match.p.trade.snapshotId,match.p.trade.runId);
+    const match=overview.filter(p=>p.historyItem||p.trade).map(p=>({p,d:p.historyItem?p.distanceTo(point.x,point.y):p.lineDistanceTo(point.x,point.y)})).filter(x=>x.d<10).sort((a,b)=>a.d-b.d)[0];
+    const item=match&&(match.p.historyItem||match.p.trade);
+    if(item)void select(item.snapshotId,item.runId);
   }
   async function selectRoute() {
     const id=props.selectedTradeSetup2Id,run=props.tradeSetup2RunId,key=id&&run?`${run}:${id}`:null;
@@ -79,13 +80,25 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
         : r.configuration?.instrument===props.symbol&&r.from<=at
           &&r.id.startsWith('chart:')&&r.id.endsWith(`:${configurationKey}`))
         .sort((a,b)=>b.from-a.from);
-      const stored=[];
+      const stored=[],storedCandidates=[];
       for(const r of props.tradeSetup2RunId?relevant.filter(r=>r.id===props.tradeSetup2RunId):relevant) {
         stored.push(...await repository.listResults({runId:r.id,instrument:props.symbol,asOf:at}));
         signal.throwIfAborted();
+        storedCandidates.push(...(await repository.listSetups({runId:r.id,instrument:props.symbol}))
+          .filter(c=>c.knownAt<=at).map(c=>({...c,runId:r.id})));
+        signal.throwIfAborted();
       }
       results.value=deduplicate(stored);
-      const storedStatus=`${new Set(stored.map(r=>r.entryId)).size} gespeicherte Entries`;
+      candidates.value=storedCandidates;
+      // Nur die gemeinsam begrenzte Auswahl benötigt volle Zeichnungsdaten.
+      for(const item of positions.value.filter(p=>p.kind==='candidate')) {
+        const key=`${item.runId}:${item.snapshotId}`;
+        const snapshot=snapshots.get(key) ?? restoreTradeSetup2Snapshot(await repository.getSetupSnapshot(item.runId,item.snapshotId));
+        signal.throwIfAborted();
+        if(snapshot?.knownAt<=at)snapshots.set(key,snapshot);
+      }
+      candidates.value=storedCandidates.map(c=>({...c,snapshot:snapshots.get(`${c.runId}:${c.id}`)}));
+      const storedStatus=`${positions.value.length} gespeicherte Setups in dieser Ansicht`;
       await selectRoute();
       signal.throwIfAborted();
       // Ein verlinkter Forschungslauf bleibt unverändert; der Chart darf ihn nicht neu rechnen.
@@ -118,15 +131,19 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
         await repository.saveEntries(previous.runId,[record]);
         signal.throwIfAborted();
         stored.push(...record.outcomes.map(o=>({...o,runId:previous.runId,snapshotId:snapshot.id,
-          instrument:snapshot.instrument,direction:snapshot.direction})));
+          setupKey:snapshot.setupKey,instrument:snapshot.instrument,direction:snapshot.direction})));
       }
       const local=records.flatMap(({snapshot,outcomes})=>{
         snapshots.set(`${run.id}:${snapshot.id}`,snapshot);
-        return outcomes.map(o=>({...o,runId:run.id,snapshotId:snapshot.id,instrument:snapshot.instrument,direction:snapshot.direction}));
+        return outcomes.map(o=>({...o,runId:run.id,snapshotId:snapshot.id,setupKey:snapshot.setupKey,instrument:snapshot.instrument,direction:snapshot.direction}));
       });
       signal.throwIfAborted();
       if(ticket!==revision)return;
       results.value=deduplicate([...local,...stored]);
+      candidates.value=[...candidates.value,...found.filter(s=>!s.entry).map(snapshot=>{
+        snapshots.set(`${run.id}:${snapshot.id}`,snapshot);
+        return {...snapshot,runId:run.id,snapshot};
+      })];
       status.value='Setups speichern…';
       const savedRun={...run,progress:{entries:records.length,setups:found.length-records.length},
         coverage:{m1From:m1Candles[0]?.time ?? null,m1To:m1Candles.at(-1)?.time ?? null}};
@@ -139,14 +156,14 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
       // Erst nach allen Snapshots als vollständig markieren; fehlgeschlagene
       // Teilspeicherungen müssen beim Neuladen erneut berechnet werden.
       await repository.saveRun({...savedRun,progress:{...savedRun.progress,scanCompletedAt:at}});
-      if(ticket===revision){completedScanKey=scanKey;status.value=`${records.length} Entries · gespeichert`;}
+      if(ticket===revision){completedScanKey=scanKey;status.value=`${positions.value.length} Setups in dieser Ansicht · gespeichert`;}
     } catch(e){if(!signal.aborted&&ticket===revision)error.value=e.message ?? 'Setup-Historie konnte nicht geladen werden.';}
     finally {if(ticket===revision){loading.value=false;if(refreshPending){refreshPending=false;void refresh();}}}
   }
   watch([checklist,()=>props.showTradeSetup2,()=>props.symbol,()=>props.tradeSetup2RunId],()=>refresh(),{immediate:true});
   watch(()=>[props.selectedTradeSetup2Id,props.tradeSetup2RunId],selectRoute);
   watch(()=>[props.symbol,props.replayUntil],()=>{abort?.abort();revision++;loading.value=false;});
-  watch(()=>props.symbol,()=>{selectionRevision++;selected.value=null;results.value=[];});
+  watch(()=>props.symbol,()=>{selectionRevision++;selected.value=null;results.value=[];candidates.value=[];});
   watch(()=>props.tradeSetup2HistoryCount,()=>refresh());
   watch([positions,visibleSnapshot,()=>props.showTradeSetup2],render);
   watch(()=>props.tradeSetup2Variant,()=>refresh());

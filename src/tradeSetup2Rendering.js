@@ -17,6 +17,16 @@ export function renderSetup2Positions(series,positions,primitives,candles,curren
   clearSetup2Primitives(series,primitives);
   if(!['1m','5m'].includes(currentBar))return;
   for(const position of positions) {
+    if(position.kind==='candidate') {
+      for(const bound of position.bounds) {
+        const p=new LiquidityLinePrimitive({price:bound.price,pivotTime:position.fromTime,endTime:position.toTime},
+          {color:cssColor(bound.styleKey),lineWidth:position.snapshotId===selectedId?2:1,
+            label:`${bound.label} · ${position.candidateStatus}`,eventBarSeconds:barSecondsFor(currentBar)},candles);
+        p.historyItem=position;
+        series.attachPrimitive(p);primitives.push(p);
+      }
+      continue;
+    }
     const p=new TradeMarkerPrimitive(position,{...tradeOptions(position,false,position.snapshotId===selectedId,false),
       eventBarSeconds:barSecondsFor(currentBar)},candles);
     series.attachPrimitive(p); primitives.push(p);
