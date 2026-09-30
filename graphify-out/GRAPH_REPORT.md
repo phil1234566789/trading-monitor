@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `11764832`
+- Built from commit: `6cab2a65`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -36,7 +36,7 @@
 - LoopStatus.vue
 - Plan: POI-Strategie-Findung, Backtesting & Trade-Notifications
 - Dealing-Range-Anlegen Skill
-- berlinTime.ts
+- timeframes.js
 - newsMarkers.js
 - priceChartObZones.js
 - ctrader/client.ts
@@ -52,7 +52,7 @@
 - tradeSetups.js
 - usePriceChartSessionsAndNews.js
 - tdd_mit_claude.ts
-- timeframes.js
+- berlinTime.ts
 - priceChartHitTest.test.js
 - armChartClick
 - orderBlocks.js
@@ -102,7 +102,7 @@
 - AI Capabilities and Limitations Notes
 - Vegapunk Slimming Results (-86%)
 - useDrawings.js
-- detectLiquidityLevels
+- marketStructureAnalysisNestedNestedChoch.test.js
 - Trade Setups 2.0: historische Positionen und Statistik
 - twelvedata/client.ts
 - Anleitung: State-Machine lesen & bedienen
@@ -134,7 +134,7 @@
 - forexCandles.js
 - vite.config.js
 - lana-git-pull.cjs
-- marketStructureAnalysis.test.js
+- detectLiquidityLevels
 - .mcp.json
 - fxcm-xauusd-h4-20260924/analyze.py
 - runtimeCopySyncGuard.test.js
@@ -162,7 +162,7 @@
 - TradeSetupChecklist.vue
 - F / #6 — Uhrzeit
 - dailyPivotMarkers.js
-- marketStructureAnalysisLqSweep.test.js
+- liveTouch.ts
 - Entschiedene Design-Fragen
 - validate.js
 - sessions.js
@@ -176,9 +176,9 @@
 - messeFxcmKontext.ts
 - PinAddPopup.vue
 - test_saisonalitaet.py
-- marketStructureAnalysisNestedNestedChoch.test.js
+- marketStructureAnalysis.test.js
 - Die Filter
-- marketStructureAnalysisFib.test.js
+- marketStructureAnalysisInnerPivots.test.js
 - fxcm-feed.md
 - marketStructureRendering.ts
 - SimulationRunStatus.vue
@@ -187,16 +187,16 @@
 - priceChartConstants.js
 - newsEvents.js
 - analyze.py
-- marketStructureAnalysisDowntrendChoch.test.js
+- marketStructureAnalysisLqSweep.test.js
 - fachdoku-router-reminder.cjs
 - PinPanel.vue
 - useReplayStructureDefaults.js
 - useHttpActivity.js
-- marketStructureAnalysisInnerPivots.test.js
-- marketStructureAnalysisDowntrend.test.js
+- marketStructureAnalysisFib.test.js
+- marketStructureAnalysisDowntrendChoch.test.js
 - fxcm-xauusd-m5-20260924/analyze.py
 - tradeSetupChecklist.js
-- liveTouch.ts
+- marketStructureAnalysisDowntrend.test.js
 - fxcmRefresh.js
 - usePriceChartChecklist
 - applyCandleData
@@ -331,9 +331,9 @@ Nodes (14): daily_structure_pivots Table, forex_candles Table, get_forex_candles
 Cohesion: 0.18
 Nodes (12): kind=pivot = Liquidity-Sweep-Only Semantics, Dealing-Range-Anlegen Skill, milk-city Task: Confluence-Tracking bei Dealing Ranges, trading/liquidität.md (Liquiditäts-Sweep-Mechanismus), Diagnose-to-Fix Routing Table, Lana-Fehlerdiagnose Skill, docs/steerabilty-vs-wrong-ai-outputs.md, add_trade_confirmation MCP Tool (+4 more)
 
-### Community 21 - "berlinTime.ts"
-Cohesion: 0.18
-Nodes (13): berlinOffsetMinutes(), DATE_FORMATTER, OFFSET_FORMATTER, TIME_FORMATTER, berlinOffsetFromSec(), forbiddenSessionAt(), SessionDangerConfig, berlinOffsetSuffix() (+5 more)
+### Community 21 - "timeframes.js"
+Cohesion: 0.19
+Nodes (12): cachedCandlesUpTo(), cacheKey(), fetchCandlesCached(), getCachedCandles(), hasLargeCandleGap(), openDb(), safeCompleteUpTo(), setCachedCandles() (+4 more)
 
 ### Community 22 - "newsMarkers.js"
 Cohesion: 0.14
@@ -395,9 +395,9 @@ Nodes (8): usePriceChartSessionsAndNews(), refreshNewsMarkers(), refreshSessions
 Cohesion: 0.08
 Nodes (24): nextPivot1, nextPivot10, nextPivot11, nextPivot2, nextPivot3, nextPivot4, nextPivot5, nextPivot6 (+16 more)
 
-### Community 37 - "timeframes.js"
-Cohesion: 0.19
-Nodes (12): cachedCandlesUpTo(), cacheKey(), fetchCandlesCached(), getCachedCandles(), hasLargeCandleGap(), openDb(), safeCompleteUpTo(), setCachedCandles() (+4 more)
+### Community 37 - "berlinTime.ts"
+Cohesion: 0.18
+Nodes (13): berlinOffsetMinutes(), DATE_FORMATTER, OFFSET_FORMATTER, TIME_FORMATTER, berlinOffsetFromSec(), forbiddenSessionAt(), SessionDangerConfig, berlinOffsetSuffix() (+5 more)
 
 ### Community 38 - "priceChartHitTest.test.js"
 Cohesion: 0.11
@@ -595,9 +595,9 @@ Nodes (12): get_data_export Tool, Lana Test Data README, Chronological MCP Tool 
 Cohesion: 0.09
 Nodes (29): berlinDateStrFor(), applyText(), emit, error, { instrument, dateStr, drawings, loading, add, remove, setDrawingVisible }, removeDrawing(), removingId, saving (+21 more)
 
-### Community 87 - "detectLiquidityLevels"
-Cohesion: 0.33
-Nodes (8): signals(), buildLevel(), detectLiquidityLevels(), isDownFractal(), isUpFractal(), LIQUIDITY_MAX_RELEVANT, detectChecklistReactions(), tradeSetupParameters()
+### Community 87 - "marketStructureAnalysisNestedNestedChoch.test.js"
+Cohesion: 0.17
+Nodes (11): confirmBreak, originHigh, originLow, pivotB, pivotC, pivotD, pivotE, pivotF (+3 more)
 
 ### Community 88 - "Trade Setups 2.0: historische Positionen und Statistik"
 Cohesion: 0.18
@@ -719,9 +719,9 @@ Nodes (3): DEBUG_DIR, DEBUG_FILE, __dirname
 Cohesion: 0.50
 Nodes (3): { execFileSync }, path, TRADING_REPO
 
-### Community 119 - "marketStructureAnalysis.test.js"
-Cohesion: 0.22
-Nodes (8): pivot1, pivot2, pivot3, pivot4, pivot5, pivot6, pivot7, pivot8
+### Community 119 - "detectLiquidityLevels"
+Cohesion: 0.33
+Nodes (8): signals(), buildLevel(), detectLiquidityLevels(), isDownFractal(), isUpFractal(), LIQUIDITY_MAX_RELEVANT, detectChecklistReactions(), tradeSetupParameters()
 
 ### Community 122 - "runtimeCopySyncGuard.test.js"
 Cohesion: 0.33
@@ -803,9 +803,9 @@ Nodes (5): Darstellung in der Checklist, F / #6 — Uhrzeit, News, Session und H
 Cohesion: 0.14
 Nodes (7): usePriceChartDailyPivots(), refresh(), DailyPivotMarkerPaneView, DailyPivotMarkerPrimitive, DailyPivotMarkerRenderer, drawTriangle(), renderDailyPivotMarkers()
 
-### Community 154 - "marketStructureAnalysisLqSweep.test.js"
-Cohesion: 0.25
-Nodes (7): baseState(), candles, levelRealBreak, levelSweep, levelUntouched, origin, triggerPivot
+### Community 154 - "liveTouch.ts"
+Cohesion: 0.39
+Nodes (6): findLevelTouch(), findZoneTouch(), levelTouchPrice(), LIVE_TOUCH_WINDOW_SEC, recentCandles(), zoneTouchPrice()
 
 ### Community 155 - "Entschiedene Design-Fragen"
 Cohesion: 0.20
@@ -851,17 +851,17 @@ Nodes (4): createAnalysisSnapshotFetch(), compressed, root, rows
 Cohesion: 0.23
 Nodes (11): clampedX, clampedY, confirm(), emit, note, onKeydown(), onWindowMousedown(), props (+3 more)
 
-### Community 168 - "marketStructureAnalysisNestedNestedChoch.test.js"
-Cohesion: 0.17
-Nodes (11): confirmBreak, originHigh, originLow, pivotB, pivotC, pivotD, pivotE, pivotF (+3 more)
+### Community 168 - "marketStructureAnalysis.test.js"
+Cohesion: 0.22
+Nodes (8): pivot1, pivot2, pivot3, pivot4, pivot5, pivot6, pivot7, pivot8
 
 ### Community 169 - "Die Filter"
 Cohesion: 0.40
 Nodes (5): Die Filter, Gegenkraft — teilweise gekippt, Handelszeit — als Fenster tot, als Stunde lebendig, Sweep-Alter — der größte Effekt, Sweep-Herkunft — der stärkste, und er hält
 
-### Community 170 - "marketStructureAnalysisFib.test.js"
-Cohesion: 0.29
-Nodes (6): RANGE_FIB_MIN_PP_DISTANCE_PIPS, confirmBreak, confirmedUptrendState(), originHigh, originLow, pullback
+### Community 170 - "marketStructureAnalysisInnerPivots.test.js"
+Cohesion: 0.25
+Nodes (7): h1Candles, p2Pivot3, p2Pivot4, p2Pivot5, pivot1, pivot2, pivot3
 
 ### Community 171 - "fxcm-feed.md"
 Cohesion: 0.20
@@ -891,9 +891,9 @@ Nodes (29): CALLOUT_STACK_GAP_PX, CATEGORY_COLOR_KEY, CATEGORY_ICON, COPIED_FEED
 Cohesion: 0.12
 Nodes (19): CURRENCIES, emit, LIST_FORMATTER, newCurrency, newDateTime, newTitle, saving, submit() (+11 more)
 
-### Community 179 - "marketStructureAnalysisDowntrendChoch.test.js"
-Cohesion: 0.33
-Nodes (6): chochConfirmedState(), confirmBreak, confirmedDowntrendState(), originHigh, originLow, pullback
+### Community 179 - "marketStructureAnalysisLqSweep.test.js"
+Cohesion: 0.25
+Nodes (7): baseState(), candles, levelRealBreak, levelSweep, levelUntouched, origin, triggerPivot
 
 ### Community 180 - "fachdoku-router-reminder.cjs"
 Cohesion: 0.40
@@ -907,21 +907,21 @@ Nodes (7): emit, noteSaveTimers, onEntryClick(), onNoteInput(), OUTCOME_LABEL, p
 Cohesion: 0.12
 Nodes (18): ALARM_TYPES, fetchAlarmSettings(), setAlarmEnabled(), copiedId, { errors }, counts, dismissHttpError(), errors (+10 more)
 
-### Community 184 - "marketStructureAnalysisInnerPivots.test.js"
-Cohesion: 0.25
-Nodes (7): h1Candles, p2Pivot3, p2Pivot4, p2Pivot5, pivot1, pivot2, pivot3
+### Community 184 - "marketStructureAnalysisFib.test.js"
+Cohesion: 0.29
+Nodes (6): RANGE_FIB_MIN_PP_DISTANCE_PIPS, confirmBreak, confirmedUptrendState(), originHigh, originLow, pullback
 
-### Community 185 - "marketStructureAnalysisDowntrend.test.js"
-Cohesion: 0.40
-Nodes (4): confirmBreak, originHigh, originLow, pullback
+### Community 185 - "marketStructureAnalysisDowntrendChoch.test.js"
+Cohesion: 0.33
+Nodes (6): chochConfirmedState(), confirmBreak, confirmedDowntrendState(), originHigh, originLow, pullback
 
 ### Community 188 - "tradeSetupChecklist.js"
 Cohesion: 0.21
 Nodes (11): buildChecklistMarketContext(), evaluateTradeSetupChecklist(), openChecks(), evaluateChecklistCandidates(), checklistEvaluationTime(), input, settings, args (+3 more)
 
-### Community 191 - "liveTouch.ts"
-Cohesion: 0.39
-Nodes (6): findLevelTouch(), findZoneTouch(), levelTouchPrice(), LIVE_TOUCH_WINDOW_SEC, recentCandles(), zoneTouchPrice()
+### Community 191 - "marketStructureAnalysisDowntrend.test.js"
+Cohesion: 0.40
+Nodes (4): confirmBreak, originHigh, originLow, pullback
 
 ### Community 193 - "usePriceChartChecklist"
 Cohesion: 0.21
