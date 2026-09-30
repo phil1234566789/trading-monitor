@@ -29,6 +29,8 @@ Erkannte Setups ohne Entry werden mit `saveSetups(runId,snapshots)` beim ersten 
 
 `listResults` akzeptiert zusätzlich `asOf`: T1 und Exit sind erst ab `t1RecognizedAt` beziehungsweise `exitRecognizedAt` sichtbar. `t1Time`/`exitTime` bezeichnen die zugehörige Kerzenöffnung. `t1PnlUsd` hält den gesicherten Teilgewinn, `realizedPnlUsd` den insgesamt bisher realisierten Betrag. Offene Restpositionen zählen nicht zur Winrate. `target1Price`/`target2Price` stehen für kompakte Chartmarkierungen ohne Snapshotabruf bereit.
 
+Unklarheit wird ab `ambiguityRecognizedAt` sichtbar: bei einer widersprüchlichen M1-Kerze ab deren Schluss, bei einer Datenlücke ab dem ersten fehlenden Minutenabschluss. Explizit belegte Schließungsintervalle werden vorher übersprungen. Der spätere Auswertungshorizont datiert diese Ereignisse nicht um.
+
 Ergebnis: `status` (`closed`, `open`, `ambiguous`, `notExecutable`), `reason`, `outcome` (`slBeforeT1`, `t1Be`, `t2` oder null), `variant`, `entryId`, `entryTime`, `entryPrice`, `stopPrice`, `lots`, `t1Lots`, `actualRisk`, `riskBudget`, `pnlUsd`, `rMultiple`, `t1Time`, `exitTime`, `exitPrice`, `evaluatedAt`. Unbekannte oder offene Gesamtergebnisse haben keinen erfundenen PnL.
 
 ## Oberfläche und historische Details
@@ -36,6 +38,16 @@ Ergebnis: `status` (`closed`, `open`, `ambiguous`, `notExecutable`), `reason`, `
 Neue Route `/statistik`: Lauf, Instrument, Entrydatum und genau eine Stopvariante filtern. Konto, Budget, tatsächliches Risiko, Rundung, Bruttoberechnung, Fortschritt und Coverage sind sichtbar. Rohzählungen unterscheiden SL vor T1, T1 plus BE, T2, offen, uneindeutig und nicht ausführbar. Winrate: positive Ergebnisse unter eindeutig geschlossenen ausführbaren Positionen; Nenner immer sichtbar, Prozentanzeige ab 50 Fällen. Kennzahlen gelten für den vollständigen Filterbestand.
 
 Die Chartübersicht zeigt kompakte Entry-Exit-Linien und kleine T1-Marker für eine Variante. Klick lädt genau einen historischen Setup-Snapshot einschließlich Checkliste und Belegen, unabhängig von Indikatortoggles. Offene Linien enden am Auswertungsstand. Linkvertrag: `/?setup2=<snapshot.id>&run=<runId>&variant=wide|narrow`.
+
+## Historischer Runner
+
+Aufruf: `node scripts/tradeSetup2YearRun.mjs --settings=JSON --output=Verzeichnis [--publish=true]`. Der bestätigte Standardmodus `historical-d1-p4` verwendet jeweils damals bestätigte D1-P4-Pivots und die bestehende `resolveStructureStartTime` auf den damals verfügbaren H1-Kerzen. Ein älterer, manuell gewählter H1-Start gehört zur jeweiligen Replay-Konfiguration; daraus folgt kein allgemeines 21-Tage-Fenster. Der Datenvorlauf umfasst mindestens die konfigurierten 30 Kalendertage und sieben Tage vor dem benötigten historischen H1-Anker. Dieser Datenvorlauf ist von der fachlichen Anker-Auswahl getrennt.
+
+Archivabfragen paginieren per Zeitcursor bis zur leeren Seite. Ein unveränderliches Manifest hält Sessions, News, Handelszeiten und Feedgrenzen fest. Lokale Kerzencaches, Downloadzwischenstände und tägliche Scancheckpoints ermöglichen Wiederaufnahme; die Run-ID bindet Quellcode, Konfiguration und Feedstand. Der gemeinsame Scanner prüft M5, anschließend aktive ABC-Kontexte und dort M1. Er speichert Kandidaten auch ohne Entry und Entry-Snapshots beim ersten tatsächlichen Erkennen. Die beiden Positionsergebnisse werden danach getrennt auf M1 bis zum Laufende berechnet.
+
+Grenzen: Aktuelle Sessions werden rückwirkend angewandt; die historische Vollständigkeit des Newsarchivs ist nicht garantiert. Lücken einschließlich unbelegter Marktschließungen bleiben konservativ unklar. Gold ist ohne M1-Archiv ausgeschlossen. Der Archivstand des Pilotlaufs bietet M1 für GBPUSD und EURUSD ab 02.01.2026 um 07:31 Uhr Europe/Berlin, mit vorhandenem D1/H1/M5-Vorlauf; der Jahreslauf muss seine tatsächlich nutzbare Abdeckung gesondert ausweisen.
+
+Referenzprüfung DR 114 mit der damaligen manuell fixierten Replay-H1-Konfiguration (`cutoff=1787302800`): sechs Kandidatensnapshots einschließlich des Entry-Setups, ein Entry am 09.09.2026 um 09:50 Uhr Europe/Berlin bei 1,35615, mit 8 beziehungsweise 15 Lots. Bei identischer Konfiguration ist die Übereinstimmung des gemeinsamen Erkennungskerns bestätigt. Der Standardmodus `historical-d1-p4` wählt einen anderen H1-Anker und liefert zwischen 09:25 und 10:00 Uhr an diesem Tag keinen Entry. Wegen der unterschiedlichen Konfigurationen ist kein identisches Entry-Ergebnis gefordert. Der Pilot bleibt ein separater Replay-Test und liefert keine fertigen Jahreskennzahlen.
 
 ## Zuständigkeit und Reihenfolge
 

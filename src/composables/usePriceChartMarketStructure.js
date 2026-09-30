@@ -26,7 +26,8 @@ import { computeRangesPivots as computeRangesPivotsPure, buildMarketStructureSta
 import { renderMarketStructureAnalysis, collectFibLevels } from "../marketStructureRendering";
 import { renderPivotMarkers } from "../pivotMarkers";
 import { cssColor } from "../chartColors.js";
-import { buildStructureWithPhases, renderTrendPhaseBands } from "../trendPhases.js";
+import { buildStructureWithPhases } from "../trendPhases.js";
+import { renderTrendPhaseBands } from "../trendPhaseRendering.js";
 import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
 
 import { withoutIgnored } from "../ignoredCandles.js";

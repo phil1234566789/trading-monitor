@@ -6,7 +6,7 @@
 // CE10088) — hier nicht nötig, daher eine einzige, dir-parametrisierte Version. Bei Änderungen
 // an der Setup-Logik im Indikator diese Kopie (und die Deno-Kopie in
 // supabase/functions/_shared/tradeSetup.ts) mitziehen.
-import { detectOrderBlocks } from "./orderBlocks.js";
+import { detectOrderBlocks } from "./orderBlockDetection.js";
 import { businessSecondsBetween } from "./chartTimeUtils.js";
 
 // Bis Bug-Report Philip 2026-07-29 ("M5 OBs bei trade-setup passen noch nicht") eine EIGENE, von

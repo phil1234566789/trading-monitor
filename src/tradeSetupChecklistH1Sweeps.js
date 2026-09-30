@@ -1,4 +1,4 @@
-import { collectStructureLqLevels } from './marketStructureRendering';
+import { collectStructureLqLevels } from './structureLiquidityLevels';
 import { firstTouchAfter } from './structurePivotTime';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 
