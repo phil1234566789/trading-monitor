@@ -12,6 +12,12 @@ function harness(initial) {
 }
 const link = { setup2: 'entry', run: 'research', instrument: 'GBPUSD', replay: '1772809740', variant: 'narrow', bar: '1m' };
 
+it('defaults snapshot links to M5', () => {
+  const { state, scope } = harness({ ...link, bar: undefined });
+  expect(state.currentBar.value).toBe('5m');
+  scope.stop();
+});
+
 it('restores a direct link over stale settings on mount and reload', () => {
   for (let i = 0; i < 2; i++) {
     const { state, scope } = harness(link);

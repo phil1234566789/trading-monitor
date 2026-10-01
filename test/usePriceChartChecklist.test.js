@@ -3,6 +3,20 @@ import { effectScope, reactive, nextTick } from 'vue';
 import { usePriceChartChecklist } from '../src/composables/usePriceChartChecklist.js';
 import candles from './fixtures/gbpusd-h1-2026-07-23-live-metadata-snapshot.json';
 
+it('uses the saved checklist without evaluating or saving a new checklist in a snapshot link', () => {
+  const scope=effectScope(),emit=vi.fn(),statistics={save:vi.fn()};
+  const props=reactive({symbol:'GBPUSD',currentBar:'5m',replayUntil:300,showTradeSetupChecklist:true,
+    showM1Structure:true,showTradeSetup2:true,tradeSetup2RunId:'run',selectedTradeSetup2Id:'entry'});
+  try {
+    const api=scope.run(()=>usePriceChartChecklist(props,[],emit,()=>600,{},statistics));
+    api.setChartCandles([{time:300}],'GBPUSD:5m');api.refresh();
+    expect(api.evaluationTime()).toBe(600);
+    expect(api.state.value).toBeNull();
+    expect(api.m1PrerequisitesAt(600)).toBeNull();
+    expect(emit).not.toHaveBeenCalled();expect(statistics.save).not.toHaveBeenCalled();
+  } finally {scope.stop();}
+});
+
 function setup() {
   const evaluatedAt = candles.at(-1).time + 3600;
   const props = reactive({ symbol: 'GBPUSD', currentBar: '5m', replayUntil: null, showTradeSetupChecklist: true,

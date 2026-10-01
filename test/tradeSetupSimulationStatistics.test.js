@@ -30,7 +30,7 @@ describe('simulation statistics', () => {
   it('rejects reversed dates and links the selected scenario to its original run', () => {
     expect(() => simulationDateFilter('2026-09-10', '2026-09-09')).toThrow(/Enddatum/);
     expect(simulationChartLink({ entryId: 'entry:114', variant: 'narrow', instrument: 'GBPUSD', entryTime: 1772809740 }, 'run:2026')).toEqual({
-      path: '/', query: { setup2: 'entry:114', run: 'run:2026', variant: 'narrow', instrument: 'GBPUSD', replay: '1772809740', bar: '1m' },
+      path: '/', query: { setup2: 'entry:114', run: 'run:2026', variant: 'narrow', instrument: 'GBPUSD', replay: '1772809740', bar: '5m' },
     });
   });
   it('uses the persisted snapshot identity and preserves the exact recognition time', () => {

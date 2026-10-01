@@ -2,6 +2,15 @@ import { describe, it, expect, vi } from 'vitest';
 import { createSimulationRepository, simulationAsOf } from '../src/tradeSetupSimulationRepository.js';
 
 describe('simulation history repository', () => {
+  it('reads exactly one linked entry with its uncut outcomes and snapshot', async () => {
+    const query={select:vi.fn(()=>query),eq:vi.fn(()=>query),maybeSingle:vi.fn(async()=>({data:{id:'entry',
+      instrument:'GBPUSD',direction:'short',snapshot:{id:'entry',setupKey:'setup'},
+      outcomes:[{variant:'wide',exitRecognizedAt:600,status:'closed'}]}}))};
+    const result=await createSimulationRepository({from:()=>query}).getEntry('run','entry');
+    expect(query.eq.mock.calls).toEqual([['run_id','run'],['id','entry']]);
+    expect(query.maybeSingle).toHaveBeenCalledTimes(1);
+    expect(result.results[0]).toMatchObject({runId:'run',snapshotId:'entry',setupKey:'setup',status:'closed',exitRecognizedAt:600});
+  });
   it('keeps the setup identity when reading entry outcomes for candidate deduplication', async () => {
     const query={select:()=>query,eq:()=>query,order:()=>query,
       range:async from=>({data:from?[]:[{id:'entry',setupKey:'candidate',instrument:'GBPUSD',direction:'short',

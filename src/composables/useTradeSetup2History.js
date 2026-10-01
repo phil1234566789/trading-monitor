@@ -3,7 +3,9 @@ import {scanTradeSetup2InWorker} from '../tradeSetup2BrowserScan.js';
 import {buildTradeSetup2Configuration,setup2DailyRun} from '../tradeSetup2Configuration.js';
 import {evaluateSimulation} from '../tradeSetupSimulation.js';
 import {tradeSetup2HistoryItems} from '../tradeSetup2HistoryItems.js';
-import {restoreTradeSetup2Snapshot} from '../tradeSetup2Snapshot.js';
+import {restoreTradeSetup2Snapshot,isTradeSetup2SnapshotView} from '../tradeSetup2Snapshot.js';
+import {createLinkedEntryReader} from '../tradeSetup2LinkedEntry.js';
+import {simulationAsOf} from '../tradeSetupSimulationRepository.js';
 import {fetchInitialCandles} from '../forexCandles.js';
 import {fetchCandlesCached} from '../candleCache.js';
 import {REPLAY_LOOKAHEAD_SEC} from '../timeframes.js';
@@ -13,12 +15,13 @@ import {computeJumpViewport} from '../priceChartJumpToTime.js';
 export function useTradeSetup2History(props,checklist,{repository,configurationInput,evaluationTime}) {
   const results=shallowRef([]),candidates=shallowRef([]),selected=shallowRef(null),status=ref(''),error=ref('');
   const loading=ref(false),displayCandles=shallowRef([]);
+  const linkedReady=ref(false),linkedRendered=ref(false),readLinkedEntry=createLinkedEntryReader(repository);
   let series=null,chart=null,abort=null,revision=0,selectionRevision=0,completedScanKey=null,appliedRouteKey=null;
   let activeInputKey=null,activeAt=null,refreshPending=false;
   let displayReady=false,focusedRouteKey=null;
   const overview=[],details=[],entry=[];
   const snapshots=new Map();
-  const positions=computed(()=>tradeSetup2HistoryItems(results.value,candidates.value,{instrument:props.symbol,variant:props.tradeSetup2Variant,
+  const positions=computed(()=>tradeSetup2HistoryItems(results.value.map(row=>simulationAsOf(row,evaluationTime())).filter(Boolean),candidates.value,{instrument:props.symbol,variant:props.tradeSetup2Variant,
     asOf:evaluationTime(),historyCount:props.tradeSetup2HistoryCount,candles:displayCandles.value}));
   const visibleSnapshot=computed(()=>props.showTradeSetup2 && selected.value?.instrument===props.symbol
     && selected.value.knownAt<=evaluationTime()?selected.value:null);
@@ -26,6 +29,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     if(!series)return;
     renderSetup2Positions(series,props.showTradeSetup2?positions.value:[],overview,displayCandles.value,props.currentBar,visibleSnapshot.value?.id);
     renderSetup2Detail(series,visibleSnapshot.value,details,entry,displayCandles.value,props.currentBar,evaluationTime());
+    linkedRendered.value=linkedReady.value&&displayReady;
     const snapshot=visibleSnapshot.value;
     const key=`${props.tradeSetup2RunId}:${snapshot?.id}:${props.currentBar}`;
     if(chart&&displayReady&&snapshot?.id===props.selectedTradeSetup2Id&&props.tradeSetup2RunId&&key!==focusedRouteKey) {
@@ -56,6 +60,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     if(item)void select(item.snapshotId,item.runId);
   }
   async function selectRoute() {
+    if(isTradeSetup2SnapshotView(props))return;
     const id=props.selectedTradeSetup2Id,run=props.tradeSetup2RunId,key=id&&run?`${run}:${id}`:null;
     if(key===appliedRouteKey)return;
     appliedRouteKey=key;
@@ -64,6 +69,19 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
   }
   async function refresh(force=false) {
     if(!props.showTradeSetup2){abort?.abort();revision++;loading.value=false;return;}
+    if(isTradeSetup2SnapshotView(props)) {
+      const ticket=++revision;
+      loading.value=true;error.value='';status.value='Gespeicherten Entry laden…';linkedReady.value=false;
+      try {
+        const record=await readLinkedEntry(props.tradeSetup2RunId,props.selectedTradeSetup2Id,force);
+        if(ticket!==revision)return;
+        selected.value=restoreTradeSetup2Snapshot(record.snapshot);
+        results.value=record.results;candidates.value=[];linkedReady.value=true;
+        status.value='Gespeicherter Entry geladen';render();
+      } catch(e){if(ticket===revision)error.value=e.message;}
+      finally{if(ticket===revision)loading.value=false;}
+      return;
+    }
     const state=checklist.value,at=Math.floor(evaluationTime()/60)*60;
     if(!Number.isFinite(at))return;
     if(!props.tradeSetup2RunId&&(state?.instrument!==props.symbol||state?.status!=='ready'||state.updating||!state.context))return;
@@ -170,17 +188,21 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
   }
   // Erst alte Anfragen entwerten, danach den neuen Kontext laden. Andernfalls
   // bricht ein Instrument-/Replaywechsel seinen gerade gestarteten Request ab.
-  watch(()=>[props.symbol,props.replayUntil],()=>{abort?.abort();revision++;loading.value=false;displayReady=false;},{flush:'sync'});
+  watch(()=>[props.symbol,props.replayUntil],()=>{
+    if(!isTradeSetup2SnapshotView(props)){abort?.abort();revision++;loading.value=false;}
+    displayReady=false;linkedRendered.value=false;
+  },{flush:'sync'});
   watch(()=>props.symbol,()=>{selectionRevision++;selected.value=null;results.value=[];candidates.value=[];appliedRouteKey=null;focusedRouteKey=null;},{flush:'sync'});
-  watch([checklist,()=>props.showTradeSetup2,()=>props.symbol,()=>props.tradeSetup2RunId,()=>props.replayUntil],()=>refresh(),{immediate:true});
+  watch([()=>isTradeSetup2SnapshotView(props)?null:checklist.value,()=>props.showTradeSetup2,()=>props.symbol,
+    ()=>props.tradeSetup2RunId,()=>props.selectedTradeSetup2Id,()=>isTradeSetup2SnapshotView(props)?null:props.replayUntil],()=>refresh(),{immediate:true});
   // Den angefragten Snapshot direkt laden; die übrige Historie darf den Link nicht aufhalten.
   watch(()=>[props.selectedTradeSetup2Id,props.tradeSetup2RunId],selectRoute,{immediate:true});
-  watch(()=>props.tradeSetup2HistoryCount,()=>refresh());
+  watch(()=>props.tradeSetup2HistoryCount,()=>{if(!isTradeSetup2SnapshotView(props))void refresh();});
   watch([positions,visibleSnapshot,()=>props.showTradeSetup2],render);
-  watch(()=>props.tradeSetup2Variant,()=>refresh());
+  watch(()=>props.tradeSetup2Variant,()=>{if(!isTradeSetup2SnapshotView(props))void refresh();});
   onScopeDispose(()=>{abort?.abort();revision++;selectionRevision++;chart?.unsubscribeClick(click);
     if(series)for(const list of [overview,details,entry])clearSetup2Primitives(series,list);series=null;});
-  return {positions,selected:visibleSnapshot,loading,status,error,select,refresh:()=>refresh(true),
+  return {positions,selected:visibleSnapshot,loading,status,error,linkedReady,linkedRendered,select,refresh:()=>refresh(true),
     create(c,s){chart=c;series=s;chart.subscribeClick(click);render();},
     updateCandles(rows,ready=true){displayCandles.value=rows;displayReady=ready;render();}};
 }

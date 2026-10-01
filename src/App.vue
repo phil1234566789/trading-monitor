@@ -1,5 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useRoute } from "vue-router";
+import { isTradeSetup2SnapshotView } from "./tradeSetup2Snapshot.js";
 import { useStatusBar } from "./composables/useStatusBar.js";
 import { useHttpActivity } from "./composables/useHttpActivity.js";
 import { useDrawings } from "./composables/useDrawings.js";
@@ -15,6 +17,10 @@ const showDrawingsModal = ref(false);
 const { visible: drawingsVisible } = useDrawings();
 
 const FRESH_MS = 30_000;
+const route = useRoute();
+const snapshotView = computed(() => route.path === '/' && isTradeSetup2SnapshotView({
+  tradeSetup2RunId: route.query.run, selectedTradeSetup2Id: route.query.setup2,
+}));
 
 const { lastSuccessAt } = useStatusBar();
 const { activeLabels, isActive } = useHttpActivity();
@@ -29,8 +35,10 @@ onMounted(() => {
 onUnmounted(() => clearInterval(timer));
 
 const isFresh = computed(() => lastSuccessAt.value != null && now.value - lastSuccessAt.value < FRESH_MS);
-const statusDotClass = computed(() => (lastSuccessAt.value == null ? "status-dot" : `status-dot ${isFresh.value ? "ok" : "dead"}`));
+const statusDotClass = computed(() => (snapshotView.value || lastSuccessAt.value == null ? "status-dot" : `status-dot ${isFresh.value ? "ok" : "dead"}`));
 const statusText = computed(() => {
+  // Gespeicherte Entries pollen absichtlich nicht; eine Pause ist kein Verbindungsfehler.
+  if (snapshotView.value) return "Gespeicherter Stand";
   if (lastSuccessAt.value == null) return "Verbinde...";
   return isFresh.value ? "Live" : "Verbindung tot";
 });

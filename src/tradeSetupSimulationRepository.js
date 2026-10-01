@@ -25,6 +25,9 @@ export function simulationAsOf(result, asOf) {
 }
 
 export function createSimulationRepository(db) {
+  const results = (row, runId, variant, asOf) => row.outcomes.filter(result => !variant || result.variant === variant)
+    .map(result => simulationAsOf({ ...result, runId, instrument: row.instrument, direction: row.direction,
+      snapshotId: row.id, setupKey: row.setupKey ?? row.snapshot?.setupKey }, asOf)).filter(Boolean);
   const rpc = async (name, args) => { const { error } = await db.rpc(name, args); if (error) throw error; };
   const batches = async (name, runId, records) => {
     for (let i = 0; i < records.length; i += 100) await rpc(name, { run_id: runId, records: records.slice(i, i + 100) });
@@ -35,6 +38,12 @@ export function createSimulationRepository(db) {
     return data?.snapshot ?? null;
   };
   return {
+    getEntry: async (runId, id) => {
+      const { data, error } = await db.from('trade_setup_simulation_entries')
+        .select('id,instrument,direction,outcomes,snapshot').eq('run_id', runId).eq('id', id).maybeSingle();
+      if (error) throw error;
+      return data ? { snapshot: data.snapshot, results: results(data, runId) } : null;
+    },
     saveRun: run => rpc('save_trade_setup_simulation_run', { run }),
     saveEntries: (runId, records) => batches('save_trade_setup_simulation_entries', runId, records),
     saveSetups: (runId, records) => batches('save_trade_setup_simulation_setups', runId, records),
@@ -56,9 +65,7 @@ export function createSimulationRepository(db) {
         if (Number.isFinite(asOf)) q = q.lte('entry_time', asOf);
         return q;
       });
-      return rows.flatMap(row => row.outcomes.filter(result => !variant || result.variant === variant)
-        .map(result => simulationAsOf({ ...result, runId, instrument: row.instrument, direction: row.direction,
-          snapshotId: row.id, setupKey: row.setupKey }, asOf)).filter(Boolean));
+      return rows.flatMap(row => results(row, runId, variant, asOf));
     },
     getSnapshot: (runId, entryId) => snapshot('trade_setup_simulation_entries', runId, entryId),
     getSetupSnapshot: (runId, setupId) => snapshot('trade_setup_simulation_setups', runId, setupId),

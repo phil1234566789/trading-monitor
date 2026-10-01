@@ -23,6 +23,18 @@ beforeEach(() => {
 afterEach(() => scope.stop());
 
 describe("journal range selection", () => {
+  it("skips snapshot views and resumes loading when returning to the dashboard", async () => {
+    const enabled = ref(false);
+    scope = effectScope();
+    const state = scope.run(() => useTscRange(ref('GBPUSD'), { enabled: () => enabled.value }));
+    await state.reload();
+    expect(fetchActiveTscRangeId).not.toHaveBeenCalled();
+    enabled.value = true;
+    await settle();
+    expect(state.rangeId.value).toBe(10);
+    enabled.value = false;
+    expect(state.range.value).toBeNull();
+  });
   it("reloads an externally created active range while preserving a journal selection", async () => {
     const { state } = setup();
     await settle();

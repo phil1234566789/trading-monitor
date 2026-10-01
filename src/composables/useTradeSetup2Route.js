@@ -7,7 +7,7 @@ export function useTradeSetup2Route(query, state, symbols) {
     state.showTradeSetupChecklist.value = true;
     if (q.variant === 'wide' || q.variant === 'narrow') state.tradeSetup2Variant.value = q.variant;
     if (symbols.includes(q.instrument)) state.currentSymbol.value = q.instrument;
-    state.currentBar.value = q.bar === '5m' ? '5m' : '1m';
+    state.currentBar.value = q.bar === '1m' ? '1m' : '5m';
     const time = typeof q.replay === 'string' && q.replay.trim() ? Number(q.replay) : NaN;
     if (Number.isSafeInteger(time) && time > 0) {
       state.replayTime.value = time;

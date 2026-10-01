@@ -1,5 +1,9 @@
 import { tradeSetup2Evidence } from './tradeSetup2Evidence.js';
 
+export function isTradeSetup2SnapshotView(props) {
+  return !!(props.tradeSetup2RunId && props.selectedTradeSetup2Id);
+}
+
 // Bereits gespeicherte v1-Stände enthalten noch zeitlose Farbkeys und M1 ohne
 // Instrument. Die Darstellung ergänzt das, ohne den historischen Datensatz zu ändern.
 export function restoreTradeSetup2Snapshot(snapshot) {

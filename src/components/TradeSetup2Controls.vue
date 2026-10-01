@@ -1,7 +1,7 @@
 <script setup>
 import {formatDatedTime} from '../berlinTime.js';
 import {fmtPrice,pricePrecisionForInstrument} from '../format.js';
-defineProps({positions:Array,selected:Object,loading:Boolean,status:String,error:String});
+defineProps({positions:Array,selected:Object,loading:Boolean,status:String,error:String,snapshotView:Boolean});
 const emit=defineEmits(['select','close','refresh']);
 function choose(event,positions){const p=positions.find(p=>p.id===event.target.value);if(p)emit('select',p.snapshotId,p.runId);}
 </script>
@@ -12,9 +12,11 @@ function choose(event,positions){const p=positions.find(p=>p.id===event.target.v
       <option value="">{{ positions.length ? 'Setup im Chart oder hier auswählen' : 'Noch kein Setup in dieser Ansicht' }}</option>
       <option v-for="p in positions" :key="p.id" :value="p.id">{{ p.direction==='short'?'Short':'Long' }} · {{ p.timeLabel }} {{ formatDatedTime(p.labelTime) }}{{ p.sweepPrice!=null?' · Level '+fmtPrice(p.sweepPrice,pricePrecisionForInstrument(p.instrument)):'' }} · {{ p.kind==='candidate'?p.candidateStatus:p.status==='ambiguous'?'unklar':p.isOpen?'offen':p.outcome }}</option>
     </select>
-    <button v-if="selected" @click="emit('close')">Zur Übersicht</button>
+    <RouterLink v-if="snapshotView" to="/statistik">Zur Statistik</RouterLink>
+    <button v-else-if="selected" @click="emit('close')">Zur Übersicht</button>
     <button v-else :disabled="loading" @click="emit('refresh')">↻</button>
     <small v-if="selected">Gespeicherter Stand: {{ formatDatedTime(selected.knownAt) }} Uhr{{ selected.entry?'':' · ohne Entry · Historie' }}</small>
+    <button v-if="snapshotView" :disabled="loading" @click="emit('refresh')">Ergebnis aktualisieren</button>
     <small v-else role="status">{{ loading ? status : status || 'Gespeicherte Setups · Details per Klick' }}</small>
     <span v-if="error" role="alert">{{ error }}</span>
   </div>

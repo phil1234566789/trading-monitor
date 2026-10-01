@@ -28,6 +28,7 @@ import { useSetupConfirmations } from "../composables/useSetupConfirmations.js";
 import { useTscRange } from "../composables/useTscRange.js";
 import { useReplayStructureDefaults } from "../composables/useReplayStructureDefaults.js";
 import { useTradeSetup2Route } from "../composables/useTradeSetup2Route.js";
+import { isTradeSetup2SnapshotView } from "../tradeSetup2Snapshot.js";
 import {
   fetchTradeSetupForCockpit,
   addTargetToTrade,
@@ -312,6 +313,10 @@ const tradeSetup2Variant = useLocalStorageRef("tradeSetup2Variant", "wide");
 const route = useRoute();
 const selectedTradeSetup2Id = computed(() => typeof route.query.setup2 === "string" ? route.query.setup2 : null);
 const tradeSetup2RunId = computed(() => typeof route.query.run === "string" ? route.query.run : null);
+const snapshotView = computed(() => isTradeSetup2SnapshotView({
+  tradeSetup2RunId: tradeSetup2RunId.value, selectedTradeSetup2Id: selectedTradeSetup2Id.value,
+}));
+const dashboardDataOptions = { enabled: () => !snapshotView.value };
 const checklistState = ref(null);
 const setup2Detail = ref(null);
 const m1Check = ref(null);
@@ -529,7 +534,7 @@ const {
   rangeId: tscRangeId, range: tscRange, fromJournal: tscFromJournal,
   error: tscLoadError, refresh: refreshTscRange, openJournal: openJournalTscRange,
   closeJournal: closeJournalTscRange, reload: reloadTscRange,
-} = useTscRange(currentSymbol);
+} = useTscRange(currentSymbol, dashboardDataOptions);
 watch(tscRange, () => { if (tscFromJournal.value) void refreshTrades(); });
 async function onOpenJournalInTsc(trade) {
   disarmChartClick();
@@ -1478,7 +1483,7 @@ onUnmounted(() => window.removeEventListener("click", closeMenusOutside));
 // (Speichern, Symbol-/Kontowechsel, Ziel/Bestätigung im Chart hinzugefügt, siehe die
 // refreshTrades()-Aufrufe unten), kein eigenes intervalMs also kein Hintergrund-Poll (siehe
 // usePolledFetch.js). Externe Änderungen lädt der Button „Daten aktualisieren“ gezielt nach.
-const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrades(currentSymbol.value, selectedTradingAccountId.value));
+const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrades(currentSymbol.value, selectedTradingAccountId.value), dashboardDataOptions);
 // "Isolieren"-Modus (Task trade-journal-dr-im-chart-isolieren-zeilen-button, 2026-08-28): Philip
 // tat sich schwer, Journal-Zeilen den richtigen Chart-Objekten zuzuordnen, wenn mehrere Trades im
 // selben Zeitfenster liegen. isolatedTrades filtert NUR den Chart-Feed (PriceChart.vue's
@@ -1506,7 +1511,7 @@ function onIsolateTrade(t) {
 // vor dem Pin hängen, sobald es aus computeHtfLiquidityLevels' Top-N-"relevant"-Fenster
 // rausgefallen war (neuere Touches verdrängen ältere) und die Pin-Kopie die einzige verbliebene
 // Quelle war.
-const { data: pinContextEntries, refresh: refreshPinContext } = usePolledFetch(() => fetchPinContext(), { intervalMs: 60_000 });
+const { data: pinContextEntries, refresh: refreshPinContext } = usePolledFetch(() => fetchPinContext(), { ...dashboardDataOptions, intervalMs: 60_000 });
 // Bug-Report Philip: Pin-Visualisierung (Halos + direkt gerenderte Pin-Objekte) blieb im Chart/in
 // der Trades-Tabelle stehen, egal ob der "📌 Pins"-Button an oder aus war — analog
 // zum bereits gefixten Trades-Toggle-Bug 2026-08-25 (siehe tradeLinkedLiquidityLevels oben). Eine
@@ -1517,24 +1522,25 @@ const visiblePinContextEntries = computed(() => (showPinHighlights.value ? pinCo
 // Browser-Aktionen, sondern im Hintergrund durch poi-watcher (Cron alle 5min) — deshalb, anders als
 // die beiden Fälle oben, MIT intervalMs. 60s reicht: schneller als jede sinnvolle manuelle
 // Beobachtung, ohne unnötig oft zu pollen.
-const { data: dbObZones, refresh: refreshDbObZones } = usePolledFetch(() => fetchObZones(), { intervalMs: 60_000 });
+const { data: dbObZones, refresh: refreshDbObZones } = usePolledFetch(() => fetchObZones(), { ...dashboardDataOptions, intervalMs: 60_000 });
 // Von poi-watcher persistierte Trade-Setups (Task "Chart zeichnet die persistierten Trade-Setups")
 // — gleicher Cron-im-Hintergrund-Grund fürs intervalMs wie dbObZones. Anders als dort NICHT über
 // alle Instrumente: trade_setups liegt je Instrument schon nahe am PostgREST-Zeilendeckel (siehe
 // fetchTradeSetups), deshalb je Symbol + Replay-Stand geladen und bei deren Wechsel sofort neu
 // (Watcher unten), statt bis zum nächsten Poll den alten Stand über dem Chart hängen zu lassen.
 const { data: dbTradeSetups, refresh: refreshDbTradeSetups } = usePolledFetch(() => fetchTradeSetups(currentSymbol.value, replayUntil.value), {
+  ...dashboardDataOptions,
   intervalMs: 60_000,
 });
 // HTF-Liquidity-Level, 1H+4H (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren",
 // Punkt 12, seit 2026-08-23 auch 4H) — analog zu dbObZones oben, gleicher Grund für intervalMs
 // (poi-watcher-Cron im Hintergrund).
-const { data: dbLiquidityLevelsHtf, refresh: refreshDbLiquidityLevelsHtf } = usePolledFetch(() => fetchLiquidityLevelsHtf(), { intervalMs: 60_000 });
+const { data: dbLiquidityLevelsHtf, refresh: refreshDbLiquidityLevelsHtf } = usePolledFetch(() => fetchLiquidityLevelsHtf(), { ...dashboardDataOptions, intervalMs: 60_000 });
 // 1D-Periode-4-Struktur-Pivots (Task "Market-Structure-Startpunkt: 1D-Periode-4-Pivots") — analog
 // zu dbLiquidityLevelsHtf oben, gleicher Grund für intervalMs (die tägliche daily-structure-pivots-
 // Cron-Function läuft im Hintergrund). Feed für die Dreieck-Marker (PriceChart.vue) UND für den
 // "1D-Pivot"-Start-Modus unten.
-const { data: dbDailyPivots, refresh: refreshDbDailyPivots } = usePolledFetch(() => fetchDailyStructurePivots(), { intervalMs: 60_000 });
+const { data: dbDailyPivots, refresh: refreshDbDailyPivots } = usePolledFetch(() => fetchDailyStructurePivots(), { ...dashboardDataOptions, intervalMs: 60_000 });
 
 async function refreshDashboardData() {
   const results = await Promise.allSettled([
@@ -2183,7 +2189,7 @@ watch(selectedTradingAccountId, () => {
     <PriceChart
       ref="priceChartRef"
       class="chart-tsc-row-chart"
-      :key="currentSymbol"
+      :key="snapshotView ? `${currentSymbol}:${tradeSetup2RunId}:${selectedTradeSetup2Id}` : currentSymbol"
       :symbol="currentSymbol"
     :current-bar="currentBar"
     :trades="isolatedTrades"
@@ -2280,7 +2286,7 @@ watch(selectedTradingAccountId, () => {
     @add-anti-confluence-from-picker="onAddAntiConfluenceFromPicker"
     />
     <TradeSetupCockpit
-      v-if="showTradeSetupCockpit"
+      v-if="showTradeSetupCockpit && !snapshotView"
       class="chart-tsc-row-tsc"
       :instrument="currentSymbol"
       :now-sec="replayUntil"
@@ -2321,13 +2327,13 @@ watch(selectedTradingAccountId, () => {
     />
 
     <TradeSetupBewertung
-      v-if="showTradeSetupBewertung"
+      v-if="showTradeSetupBewertung && !snapshotView"
       :instrument="currentSymbol"
       :fvg-pips="tscFvgPips"
     />
   </div>
 
-  <aside ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">
+  <aside v-if="!snapshotView" ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">
     <div class="trades-panel-header">
       <h2 class="trades-panel-title">Trades</h2>
       <TradingAccountSwitcher />

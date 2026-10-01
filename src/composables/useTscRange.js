@@ -1,7 +1,7 @@
 import { computed, ref, watch } from "vue";
 import { fetchActiveTscRangeId, fetchDealingRangeCockpit } from "../trades.js";
 
-export function useTscRange(instrument) {
+export function useTscRange(instrument, { enabled = () => true } = {}) {
   const rangeId = ref(null);
   const range = ref(null);
   const journalSelection = ref(null);
@@ -10,6 +10,7 @@ export function useTscRange(instrument) {
   let request = 0;
 
   async function refresh() {
+    if (!enabled()) return;
     const token = ++request;
     const id = rangeId.value;
     const loaded = id == null ? null : await fetchDealingRangeCockpit(id);
@@ -18,6 +19,7 @@ export function useTscRange(instrument) {
 
   async function load({ clear = true } = {}) {
     const token = ++request;
+    if (!enabled()) { rangeId.value = null;range.value = null;return true; }
     if (clear) {
       rangeId.value = null;
       range.value = null;
@@ -38,7 +40,7 @@ export function useTscRange(instrument) {
     }
   }
 
-  watch(instrument, () => {
+  watch([instrument, enabled], () => {
     if (journalSelection.value?.instrument !== instrument.value) journalSelection.value = null;
     void load();
   }, { immediate: true, flush: "sync" });

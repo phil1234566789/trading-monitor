@@ -24,6 +24,14 @@ function setup(fetchCached = vi.fn(async () => rows), replayUntil = 1500, now = 
   return { state, props, api, fetchCached };
 }
 describe('independent M1 structure lifecycle', () => {
+  it('does not load or evaluate live M1 while saved detail is selected', async () => {
+    scope=effectScope();
+    const fetchCached=vi.fn(),prerequisitesAt=vi.fn(()=>ready());
+    const api=scope.run(()=>usePriceChartM1Structure(reactive({symbol:'GBPUSD',currentBar:'5m',replayUntil:1500,showM1Structure:true}),
+      shallowRef(ready()),{fetchCached,prerequisitesAt,evaluationHorizon:()=>1800,detailSelected:()=>true}));
+    api.create({});api.refresh(rows);await nextTick();
+    expect(fetchCached).not.toHaveBeenCalled();expect(prerequisitesAt).not.toHaveBeenCalled();
+  });
   it('marks an independent slow M1 poll busy until its response is evaluated', async () => {
     vi.useFakeTimers();
     let resolve;

@@ -29,6 +29,7 @@ export function usePriceChartM1Structure(props, checklistState, {
   const entryPrimitives = [];
   const status = shallowRef({ state: 'waiting', anchor: null, lastClosedAt: null });
   const check = shallowRef(inactiveM1Checklist('prerequisites'));
+  const enabled = () => props.showM1Structure && !detailSelected();
   // Der sichtbare Chart-Schluss gilt für A–I gemeinsam. Ein M5-Replay um 09:25
   // kennt 09:30; erst tatsächlich vorhandene M1-Kerzen belegen diesen Stand auch für I.
   const requestedUntil = evaluationHorizon ?? (() => closedReplayEvaluationTime(
@@ -49,8 +50,8 @@ export function usePriceChartM1Structure(props, checklistState, {
   function renderNow() {
     if (disposed || !series) return;
     const evaluatedAt = evaluationTime();
-    const prerequisites = props.showM1Structure ? prerequisitesAt(evaluatedAt ?? requestedUntil()) : null;
-    const reason = !props.showM1Structure ? 'disabled' : m1PrerequisiteReason(prerequisites);
+    const prerequisites = enabled() ? prerequisitesAt(evaluatedAt ?? requestedUntil()) : null;
+    const reason = !enabled() ? 'disabled' : m1PrerequisiteReason(prerequisites);
     const knownContext = !reason && evaluatedAt != null ? activeM1Context(prerequisites) : null;
     const marked = markIgnored(rows, props.symbol);
     const result = knownContext && props.showM1Structure && status.value.state !== 'loading'
@@ -106,7 +107,7 @@ export function usePriceChartM1Structure(props, checklistState, {
 
   function updateContext() {
     const horizon = requestedUntil();
-    const next = props.showM1Structure && Number.isFinite(horizon) ? activeM1Context(prerequisitesAt(horizon)) : null;
+    const next = enabled() && Number.isFinite(horizon) ? activeM1Context(prerequisitesAt(horizon)) : null;
     // Unmittelbar auf Symbol-/Replaywechsel löschen, auch bevor die Checklist nachlädt.
     const valid = next?.instrument === props.symbol ? next : null;
     const identity = c => c ? `${c.instrument}:${c.setupKey}:${c.anchor.pivotTime}:${c.anchor.price}` : '';
@@ -124,7 +125,7 @@ export function usePriceChartM1Structure(props, checklistState, {
     } else render();
   }
 
-  watch([checklistState, () => props.showM1Structure], updateContext, { flush: 'sync' });
+  watch([checklistState, enabled], updateContext, { flush: 'sync' });
   if (evaluationHorizon) watch(evaluationHorizon, updateContext, { flush: 'sync' });
   watch(() => [props.symbol, props.replayUntil], () => {
     generation++; clearTimeout(timer); context = null; rows = [];

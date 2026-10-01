@@ -3,12 +3,13 @@ import { createChecklistDataAdapter } from '../tradeSetupChecklistData.js';
 import { evaluateTradeSetupChecklist } from '../tradeSetupChecklist.js';
 import { closedReplayEvaluationTime } from '../tradeSetupChecklistTimeBasis.js';
 import { afterBrowserPaint } from '../afterBrowserPaint.js';
+import { isTradeSetup2SnapshotView } from '../tradeSetup2Snapshot.js';
 
 export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => Date.now() / 1000, timeData = {}, statistics = null) {
   const adapter = createChecklistDataAdapter();
   const state = shallowRef(null);
   const chartData = shallowRef({ key: null, candles: [] });
-  const enabled = () => props.showTradeSetupChecklist || props.showM1Structure || props.showTradeSetup2;
+  const enabled = () => !isTradeSetup2SnapshotView(props) && (props.showTradeSetupChecklist || props.showM1Structure || props.showTradeSetup2);
   let disposed = false;
   let timeBoundaryTimer;
   let saveQueue = Promise.resolve();
@@ -71,6 +72,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     });
   }
   function m1PrerequisitesAt(at) {
+    if (!enabled()) return null;
     if (state.value?.updating) return state.value;
     const data = adapter.snapshot();
     // Fehlende M1-Kerzen können I hinter den sichtbaren Chart-Schluss zurücksetzen.
@@ -101,7 +103,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     adapter.invalidate('h1');
     refresh();
   }, { flush: 'sync' });
-  watch(() => [props.rangesPeriod, props.ranges2Period, props.m5StructurePeriod, props.m5Structure2Period, props.showTradeSetupChecklist, props.showM1Structure, props.showTradeSetup2], () => { refresh(); scheduleTimeBoundary(); });
+  watch(() => [props.rangesPeriod, props.ranges2Period, props.m5StructurePeriod, props.m5Structure2Period, props.showTradeSetupChecklist, props.showM1Structure, props.showTradeSetup2, props.tradeSetup2RunId, props.selectedTradeSetup2Id], () => { refresh(); scheduleTimeBoundary(); });
   watch(sessionConfigs, refresh, { deep: true });
   watch(() => [timeData.tradingSchedules, timeData.newsEvents, timeData.newsCalendar?.status], refresh, { deep: true });
   onScopeDispose(() => { disposed = true; cancelEvaluation(); clearTimeout(timeBoundaryTimer); adapter.reset(null); });

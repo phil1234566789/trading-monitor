@@ -16,6 +16,7 @@ it('loads a linked entry after a simultaneous instrument and replay change, then
     tradeSetup2RunId:null,selectedTradeSetup2Id:null,currentBar:'1h',replayUntil:120});
   const snapshot={id:'entry',instrument:'GBPUSD',knownAt:300,evidence:[],entry:{}};
   const repository={listRuns:vi.fn(async()=>[{id:'research'}]),listResults:vi.fn(async()=>[]),listSetups:vi.fn(async()=>[]),
+    getEntry:vi.fn(async()=>({snapshot,results:[]})),
     getSnapshot:vi.fn(async()=>snapshot),getSetupSnapshot:vi.fn()};
   const scope=effectScope(),chart={subscribeClick:vi.fn(),unsubscribeClick:vi.fn(),
     timeScale:()=>({setVisibleLogicalRange:focus})},focus=vi.fn();
@@ -26,7 +27,8 @@ it('loads a linked entry after a simultaneous instrument and replay change, then
     Object.assign(props,{showTradeSetup2:true,symbol:'GBPUSD',replayUntil:300,currentBar:'1m',
       tradeSetup2RunId:'research',selectedTradeSetup2Id:'entry'});
     await flush();
-    expect(repository.listResults).toHaveBeenCalledWith({runId:'research',instrument:'GBPUSD',asOf:300});
+    expect(repository.getEntry).toHaveBeenCalledWith('research','entry');
+    expect(repository.listResults).not.toHaveBeenCalled();
     expect(view.selected.value?.id).toBe('entry');
     expect(view.loading.value).toBe(false);
     const candles=Array.from({length:6},(_,i)=>({time:i*60}));
@@ -46,19 +48,20 @@ beforeEach(()=>{
   vi.clearAllMocks();scanTradeSetup2InWorker.mockResolvedValue([]);
   fetchCandlesCached.mockResolvedValue([{time:0},{time:540}]);
 });
-it('opens the requested snapshot without waiting for the remaining history',async()=>{
-  let finishRuns;
+it('opens the requested snapshot without loading unrelated history',async()=>{
   const props=reactive({showTradeSetup2:true,symbol:'GBPUSD',tradeSetup2Variant:'wide',tradeSetup2HistoryCount:5,
     tradeSetup2RunId:'research',selectedTradeSetup2Id:'entry',currentBar:'1m',replayUntil:300});
-  const repository={listRuns:()=>new Promise(resolve=>{finishRuns=resolve;}),listResults:async()=>[],listSetups:async()=>[],
-    getSnapshot:vi.fn(async()=>({id:'entry',instrument:'GBPUSD',knownAt:300,evidence:[],entry:{}}))};
+  const repository={listRuns:vi.fn(),listResults:vi.fn(),listSetups:vi.fn(),
+    getEntry:vi.fn(async()=>({snapshot:{id:'entry',instrument:'GBPUSD',knownAt:300,evidence:[],entry:{}},results:[]}))};
   const scope=effectScope();
   const view=scope.run(()=>useTradeSetup2History(props,ref(null),{repository,configurationInput:()=>({}),evaluationTime:()=>300}));
   try {
     await flush();
-    expect(view.loading.value).toBe(true);
+    expect(view.loading.value).toBe(false);
     expect(view.selected.value?.id).toBe('entry');
-    finishRuns([]);await flush();
+    expect(repository.listRuns).not.toHaveBeenCalled();
+    expect(repository.listResults).not.toHaveBeenCalled();
+    expect(repository.listSetups).not.toHaveBeenCalled();
   } finally {scope.stop();}
 });
 it('opens a multi-instrument research snapshot without requiring live checklist data',async()=>{
@@ -66,6 +69,7 @@ it('opens a multi-instrument research snapshot without requiring live checklist 
     tradeSetup2RunId:'research',selectedTradeSetup2Id:'entry',currentBar:'5m'});
   const horizon=ref(600),snapshot={id:'entry',instrument:'GBPUSD',knownAt:300,evidence:[],entry:{},m1Check:{evaluatedAt:300}};
   const repository={listRuns:vi.fn(async()=>[{id:'research',configuration:{instruments:['GBPUSD','EURUSD']}}]),
+    getEntry:vi.fn(async()=>({snapshot,results:[{entryId:'entry',runId:'research',instrument:'GBPUSD',direction:'short',variant:'wide',entryTime:300,status:'open'}]})),
     listResults:vi.fn(async()=>[{entryId:'entry',runId:'research',instrument:'GBPUSD',direction:'short',variant:'wide',entryTime:300,status:'open'}]),
     listSetups:vi.fn(async()=>[]),getSnapshot:vi.fn(async()=>snapshot),getSetupSnapshot:vi.fn(),saveRun:vi.fn()};
   const scope=effectScope();
@@ -82,9 +86,30 @@ it('opens a multi-instrument research snapshot without requiring live checklist 
     horizon.value=600;
     expect(view.selected.value.id).toBe(snapshot.id);
     await view.select(null);await view.refresh();
-    expect(view.selected.value).toBeNull();
+    expect(view.selected.value.id).toBe('entry');
     props.symbol='EURUSD';await flush();
     expect(view.selected.value).toBeNull();
+  } finally {scope.stop();}
+});
+
+it('advances and rewinds raw linked outcomes without any new reads or checklist-triggered requests',async()=>{
+  const props=reactive({showTradeSetup2:true,symbol:'GBPUSD',tradeSetup2Variant:'wide',tradeSetup2HistoryCount:5,
+    tradeSetup2RunId:'run',selectedTradeSetup2Id:'entry',currentBar:'5m',replayUntil:300});
+  const row={entryId:'entry',runId:'run',instrument:'GBPUSD',direction:'short',variant:'wide',entryTime:300,
+    status:'closed',exitTime:540,exitRecognizedAt:600,exitPrice:1,pnlUsd:100,evaluatedAt:900};
+  const repository={getEntry:vi.fn(async()=>({snapshot:{id:'entry',instrument:'GBPUSD',knownAt:300,evidence:[],entry:{}},results:[row]}))};
+  const checklist=ref(null),scope=effectScope();
+  const view=scope.run(()=>useTradeSetup2History(props,checklist,{repository,configurationInput:()=>({}),evaluationTime:()=>props.replayUntil}));
+  try {
+    await flush();expect(view.positions.value[0].isOpen).toBe(true);
+    props.replayUntil=600;checklist.value={status:'loading'};await flush();
+    checklist.value={status:'ready'};await flush();
+    expect(view.positions.value[0]).toMatchObject({isOpen:false,pnlUsd:100});
+    props.replayUntil=300;await flush();
+    expect(view.positions.value[0]).toMatchObject({isOpen:true,pnlUsd:null});
+    expect(repository.getEntry).toHaveBeenCalledTimes(1);
+    expect(scanTradeSetup2InWorker).not.toHaveBeenCalled();
+    await view.refresh();expect(repository.getEntry).toHaveBeenCalledTimes(2);
   } finally {scope.stop();}
 });
 

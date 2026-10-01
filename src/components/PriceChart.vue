@@ -3,6 +3,8 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { nextCandlePollDelay } from "../candlePolling.js";
 import { usePriceChartM1Structure } from '../composables/usePriceChartM1Structure.js';
 import { useTradeSetup2History } from '../composables/useTradeSetup2History.js';
+import { isTradeSetup2SnapshotView } from '../tradeSetup2Snapshot.js';
+import TradeSetup2Loading from './TradeSetup2Loading.vue';
 import { createSimulationRepository } from '../tradeSetupSimulationRepository.js';
 import TradeSetup2Controls from './TradeSetup2Controls.vue';
 import M1StructureStatus from './M1StructureStatus.vue';
@@ -369,6 +371,8 @@ const emit = defineEmits([
 ]);
 
 const { markSuccess } = useStatusBar();
+const snapshotView = computed(() => isTradeSetup2SnapshotView(props));
+const snapshotCandleState = ref('loading'), snapshotCandleError = ref('');
 const checklist = usePriceChartChecklist(props, sessions, emit, undefined, { tradingSchedules, newsEvents, newsCalendar }, createChecklistStatisticsStore(supabase));
 const setup2 = useTradeSetup2History(props,checklist.state,{
   repository:createSimulationRepository(supabase),evaluationTime:checklist.evaluationTime,
@@ -376,10 +380,15 @@ const setup2 = useTradeSetup2History(props,checklist.state,{
     tradingWindows:tradingSchedules[props.symbol]?.tradingWindows,news:newsEvents,newsLoadStatus:newsCalendar.status}),
 });
 const setup2Positions=setup2.positions,setup2Selected=setup2.selected,setup2Loading=setup2.loading,setup2Status=setup2.status,setup2Error=setup2.error;
+const snapshotSteps = computed(() => [
+  { label: 'Gespeicherten Entry und Belege laden', done: setup2.linkedReady.value },
+  { label: 'Chartkerzen laden', done: snapshotCandleState.value === 'ready' },
+  { label: 'Entry und Belege zeichnen', done: setup2.linkedRendered.value },
+]);
 watch(setup2.selected,snapshot=>{emit('setup2-detail-change',snapshot);if(candleSeries)refreshChart();});
 const m1Structure = usePriceChartM1Structure(props, checklist.state, {
   prerequisitesAt: checklist.m1PrerequisitesAt, evaluationHorizon: checklist.evaluationTime,
-  detailSelected: () => !!setup2.selected.value,
+  detailSelected: () => snapshotView.value || !!setup2.selected.value,
 });
 const m1StructureStatus = m1Structure.status;
 watch(m1Structure.check, value => {
@@ -1430,6 +1439,7 @@ function refreshRangesMarkersInternal() {
 // H1-Pivots + Metadaten-Panel-Spiegelung neu und stößt danach die abhängigen Refreshs an
 // (Zeichnung + Market-Structure-Trendalgorithmus + Debug-Metadaten-Panel).
 function refreshRangesInternal() {
+  if (snapshotView.value) return;
   const { earliestTime } = computeRangesPivotsAndMetadata(clipReplay(getRangesH1Candles()), {
     symbol: props.symbol,
     rangesPeriod: props.rangesPeriod,
@@ -1516,6 +1526,7 @@ function refreshCockpitInternal() {
 // Bug-Historie zum H1-Fetch) — löst nur den Fetch aus, die Refresh-Kaskade danach bleibt hier
 // (Pivots/Trendanalyse neu berechnen + 1H-OB-Zonen, die auf denselben Kerzen mitlaufen).
 async function loadRangesCandles() {
+  if (snapshotView.value) return true;
   const checklistTicket = checklist.begin('h1');
   const { ok, applied } = await fetchRangesCandles({
     symbol: props.symbol,
@@ -1542,6 +1553,7 @@ async function loadRangesCandles() {
 // (collectStructureLqLevels). showObs1h ebenso: der 1H-OB-Toggle nutzt dieselben Kerzen (collectObsZones).
 // Laden läuft also, solange MINDESTENS einer der vier an ist.
 function rangesNeedsData() {
+  if (snapshotView.value) return false;
   // M5-Struktur ankert am 1h-Outer-Cutoff, braucht also dieselben H1-Kerzen.
   return props.showTradeSetup2 || props.showM1Structure || props.showTradeSetupChecklist || props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups || props.showM5Structure || props.showM5TrendPhases;
 }
@@ -1577,6 +1589,7 @@ function refreshRangesPollingState() {
 // tradeSetupsMetadata bleibt über Refreshs hinweg stehen, nur renderTradeSetupsInternal()
 // (Positionierung) läuft bei jedem Chart-Refresh neu.
 function computeTradeSetupsInternal() {
+  if (snapshotView.value) return;
   computeTradeSetupsPure({
     candles: clipReplay(getTradeSetupM5Candles()),
     marketStructureState: marketStructureState.value,
@@ -1723,6 +1736,7 @@ function refreshRsiDivergenceInternal() {
 // aktuell gewählten Chart-Timeframe (props.currentBar) — ein Setup basiert immer auf M5-Fraktal +
 // M5-OB, egal ob der Nutzer gerade den 1h- oder den 15m-Chart anschaut.
 async function loadTradeSetupM5() {
+  if (snapshotView.value) return true;
   const checklistTicket = checklist.begin('m5');
   const { ok, applied } = await fetchTradeSetupM5Candles({ symbol: props.symbol, toMs: replayToMs("5m"), showEma: props.showEma });
   checklist.finish(checklistTicket, { ok, applied }, getTradeSetupM5Candles());
@@ -1838,6 +1852,11 @@ function refreshChart() {
   if (!chart) return;
   checklist.setChartCandles(allCandles, candlesReady ? loadedCandleKey : null);
   applyCandleData();
+  if (snapshotView.value) {
+    setup2.updateCandles(clipReplay(allCandles),candlesReady&&loadedCandleKey===`${props.symbol}:${props.currentBar}`);
+    refreshSessionsInternal();
+    return;
+  }
   refreshPoiZonesInternal();
   refreshLiquidityInternal();
   refreshDailyPivotsInternal();
@@ -1863,6 +1882,8 @@ function refreshChart() {
 async function loadInitial({ preserveHistory = false, force = false } = {}) {
   // Ein späterer Modus-/Timeframe-Wechsel überholt noch laufende Antworten.
   const seq = ++loadInitialFetchSeq;
+  snapshotCandleState.value = 'loading';
+  snapshotCandleError.value = '';
   const key = `${props.symbol}:${props.currentBar}`;
   const keepHistory = preserveHistory && candlesReady && loadedCandleKey === key;
   if (!keepHistory) candlesReady = false;
@@ -1881,9 +1902,10 @@ async function loadInitial({ preserveHistory = false, force = false } = {}) {
           props.currentBar,
           INITIAL_CANDLE_COUNT,
           toMs,
-          REPLAY_LOOKAHEAD_SEC,
+          snapshotView.value ? barSecondsFor(props.currentBar) * 20 : REPLAY_LOOKAHEAD_SEC,
         );
     if (!chart || seq !== loadInitialFetchSeq) return false;
+    if (snapshotView.value && !candles.length) throw new Error('Für diesen Zeitraum sind keine Chartkerzen verfügbar.');
     const viewport = keepHistory ? chart.timeScale().getVisibleLogicalRange() : null;
     const firstTime = allCandles[0]?.time;
     allCandles = keepHistory ? mergeCandles(allCandles, candles) : candles;
@@ -1901,8 +1923,10 @@ async function loadInitial({ preserveHistory = false, force = false } = {}) {
       chart.timeScale().setVisibleLogicalRange({ from: viewport.from + offset, to: viewport.to + offset });
     }
     markSuccess();
+    snapshotCandleState.value = 'ready';
     return true;
   } catch (err) {
+    if (seq === loadInitialFetchSeq) { snapshotCandleState.value = 'error';snapshotCandleError.value = err.message; }
     console.error("Kerzen-Update fehlgeschlagen:", err);
     return false;
   }
@@ -2529,6 +2553,10 @@ function jumpToDivergence(d) {
 
 defineExpose({
   async refreshData() {
+    if (snapshotView.value) {
+      const [candlesLoaded] = await Promise.all([loadInitial({ preserveHistory: true, force: true }), setup2.refresh()]);
+      return candlesLoaded && !setup2.error.value;
+    }
     const results = await Promise.all([
       loadInitial({ preserveHistory: true, force: true }),
       loadTradeSetupM5(),
@@ -2602,10 +2630,12 @@ defineExpose({
 <template>
   <div class="chart-wrapper" :style="{ height: chartWrapperHeight + 'px' }">
     <div ref="chartContainerRef" class="chart-container"></div>
+    <TradeSetup2Loading v-if="snapshotView && showTradeSetup2" :steps="snapshotSteps" :error="setup2Error || snapshotCandleError"
+      @retry="setup2.refresh(); loadInitial()" />
     <TradeSetup2Controls v-if="showTradeSetup2" :positions="setup2Positions" :selected="setup2Selected" :loading="setup2Loading"
-      :status="setup2Status" :error="setup2Error" @select="setup2.select" @close="setup2.select(null)" @refresh="setup2.refresh" />
+      :status="setup2Status" :error="setup2Error" :snapshot-view="snapshotView" @select="setup2.select" @close="setup2.select(null)" @refresh="setup2.refresh" />
     <M5CandleClock v-if="m5ClockEnabled()" :state="m5Clock" @retry="retryM5Clock" />
-    <M1StructureStatus v-if="showM1Structure" :status="m1StructureStatus" :symbol="symbol" />
+    <M1StructureStatus v-if="showM1Structure && !snapshotView" :status="m1StructureStatus" :symbol="symbol" />
     <div v-if="goldHistoryError" class="live-history-confirm" role="alert">Gold-Strukturvorlauf konnte nicht vollständig geladen werden. <button @click="reloadGoldHistory">Erneut laden</button></div>
     <div v-if="rangesLoading" class="ranges-loading">
       <span class="ranges-spinner"></span>
