@@ -8,7 +8,7 @@ function choose(event,positions){const p=positions.find(p=>p.id===event.target.v
 <template>
   <div class="setup2-controls" aria-label="Trade Setups 2.0">
     <strong>Trade Setups 2.0</strong>
-    <select aria-label="Trade Setup 2.0 auswählen" @change="choose($event,positions)">
+    <select aria-label="Trade Setup 2.0 auswählen" :value="positions.find(p=>p.snapshotId===selected?.id)?.id ?? ''" @change="choose($event,positions)">
       <option value="">{{ positions.length ? 'Setup im Chart oder hier auswählen' : 'Noch kein Setup in dieser Ansicht' }}</option>
       <option v-for="p in positions" :key="p.id" :value="p.id">{{ p.direction==='short'?'Short':'Long' }} · {{ p.timeLabel }} {{ formatDatedTime(p.labelTime) }}{{ p.sweepPrice!=null?' · Level '+fmtPrice(p.sweepPrice,pricePrecisionForInstrument(p.instrument)):'' }} · {{ p.kind==='candidate'?p.candidateStatus:p.status==='ambiguous'?'unklar':p.isOpen?'offen':p.outcome }}</option>
     </select>

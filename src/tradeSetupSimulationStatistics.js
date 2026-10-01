@@ -52,5 +52,8 @@ export function simulationDateFilter(from, to) {
 }
 
 export function simulationChartLink(row, runId) {
-  return { path: '/', query: { setup2: row.entryId, run: runId, variant: row.variant } };
+  return { path: '/', query: {
+    setup2: row.snapshotId ?? row.entryId, run: runId, variant: row.variant,
+    instrument: row.instrument, replay: String(row.entryTime), bar: '1m',
+  } };
 }

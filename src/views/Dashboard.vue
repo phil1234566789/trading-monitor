@@ -27,6 +27,7 @@ import { fetchTrades } from "../trades.js";
 import { useSetupConfirmations } from "../composables/useSetupConfirmations.js";
 import { useTscRange } from "../composables/useTscRange.js";
 import { useReplayStructureDefaults } from "../composables/useReplayStructureDefaults.js";
+import { useTradeSetup2Route } from "../composables/useTradeSetup2Route.js";
 import {
   fetchTradeSetupForCockpit,
   addTargetToTrade,
@@ -311,11 +312,6 @@ const tradeSetup2Variant = useLocalStorageRef("tradeSetup2Variant", "wide");
 const route = useRoute();
 const selectedTradeSetup2Id = computed(() => typeof route.query.setup2 === "string" ? route.query.setup2 : null);
 const tradeSetup2RunId = computed(() => typeof route.query.run === "string" ? route.query.run : null);
-watch(() => [selectedTradeSetup2Id.value, route.query.variant], ([id, variant]) => {
-  if (!id) return;
-  showTradeSetup2.value = true;
-  if (variant === "wide" || variant === "narrow") tradeSetup2Variant.value = variant;
-}, { immediate: true });
 const checklistState = ref(null);
 const setup2Detail = ref(null);
 const m1Check = ref(null);
@@ -1338,6 +1334,10 @@ useReplayStructureDefaults(replayActive, {
   lookbackHours: rangesLookbackHours,
   innerLookbackHours: ranges2LookbackHours,
 });
+useTradeSetup2Route(() => route.query, {
+  showTradeSetup2, showTradeSetupChecklist, tradeSetup2Variant,
+  currentSymbol, currentBar, replayTime, replayActive,
+}, SYMBOLS);
 function toDatetimeLocal(unixSeconds) {
   const d = new Date(unixSeconds * 1000);
   const pad = (n) => String(n).padStart(2, "0");

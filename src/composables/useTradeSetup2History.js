@@ -8,12 +8,14 @@ import {fetchInitialCandles} from '../forexCandles.js';
 import {fetchCandlesCached} from '../candleCache.js';
 import {REPLAY_LOOKAHEAD_SEC} from '../timeframes.js';
 import {renderSetup2Positions,renderSetup2Detail,clearSetup2Primitives} from '../tradeSetup2Rendering.js';
+import {computeJumpViewport} from '../priceChartJumpToTime.js';
 
 export function useTradeSetup2History(props,checklist,{repository,configurationInput,evaluationTime}) {
   const results=shallowRef([]),candidates=shallowRef([]),selected=shallowRef(null),status=ref(''),error=ref('');
   const loading=ref(false),displayCandles=shallowRef([]);
   let series=null,chart=null,abort=null,revision=0,selectionRevision=0,completedScanKey=null,appliedRouteKey=null;
   let activeInputKey=null,activeAt=null,refreshPending=false;
+  let displayReady=false,focusedRouteKey=null;
   const overview=[],details=[],entry=[];
   const snapshots=new Map();
   const positions=computed(()=>tradeSetup2HistoryItems(results.value,candidates.value,{instrument:props.symbol,variant:props.tradeSetup2Variant,
@@ -24,6 +26,12 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     if(!series)return;
     renderSetup2Positions(series,props.showTradeSetup2?positions.value:[],overview,displayCandles.value,props.currentBar,visibleSnapshot.value?.id);
     renderSetup2Detail(series,visibleSnapshot.value,details,entry,displayCandles.value,props.currentBar,evaluationTime());
+    const snapshot=visibleSnapshot.value;
+    const key=`${props.tradeSetup2RunId}:${snapshot?.id}:${props.currentBar}`;
+    if(chart&&displayReady&&snapshot?.id===props.selectedTradeSetup2Id&&props.tradeSetup2RunId&&key!==focusedRouteKey) {
+      const viewport=computeJumpViewport(displayCandles.value,snapshot.knownAt,null,null);
+      if(viewport){chart.timeScale().setVisibleLogicalRange(viewport);focusedRouteKey=key;}
+    }
   }
   async function select(id,runId) {
     const ticket=++selectionRevision;
@@ -34,7 +42,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
       const snapshot=cached ?? await repository.getSnapshot(runId,id)
         ?? await repository.getSetupSnapshot(runId,id);
       if(ticket!==selectionRevision)return;
-      if(snapshot?.knownAt>evaluationTime()) error.value='Dieses Setup war am Replay-Stand noch nicht bekannt.';
+      if(Number.isFinite(evaluationTime())&&snapshot?.knownAt>evaluationTime()) error.value='Dieses Setup war am Replay-Stand noch nicht bekannt.';
       const restored=cached ?? restoreTradeSetup2Snapshot(snapshot);
       if(restored)snapshots.set(key,restored);
       selected.value=restored;
@@ -160,10 +168,13 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     } catch(e){if(!signal.aborted&&ticket===revision)error.value=e.message ?? 'Setup-Historie konnte nicht geladen werden.';}
     finally {if(ticket===revision){loading.value=false;if(refreshPending){refreshPending=false;void refresh();}}}
   }
-  watch([checklist,()=>props.showTradeSetup2,()=>props.symbol,()=>props.tradeSetup2RunId],()=>refresh(),{immediate:true});
-  watch(()=>[props.selectedTradeSetup2Id,props.tradeSetup2RunId],selectRoute);
-  watch(()=>[props.symbol,props.replayUntil],()=>{abort?.abort();revision++;loading.value=false;});
-  watch(()=>props.symbol,()=>{selectionRevision++;selected.value=null;results.value=[];candidates.value=[];});
+  // Erst alte Anfragen entwerten, danach den neuen Kontext laden. Andernfalls
+  // bricht ein Instrument-/Replaywechsel seinen gerade gestarteten Request ab.
+  watch(()=>[props.symbol,props.replayUntil],()=>{abort?.abort();revision++;loading.value=false;displayReady=false;},{flush:'sync'});
+  watch(()=>props.symbol,()=>{selectionRevision++;selected.value=null;results.value=[];candidates.value=[];appliedRouteKey=null;focusedRouteKey=null;},{flush:'sync'});
+  watch([checklist,()=>props.showTradeSetup2,()=>props.symbol,()=>props.tradeSetup2RunId,()=>props.replayUntil],()=>refresh(),{immediate:true});
+  // Den angefragten Snapshot direkt laden; die übrige Historie darf den Link nicht aufhalten.
+  watch(()=>[props.selectedTradeSetup2Id,props.tradeSetup2RunId],selectRoute,{immediate:true});
   watch(()=>props.tradeSetup2HistoryCount,()=>refresh());
   watch([positions,visibleSnapshot,()=>props.showTradeSetup2],render);
   watch(()=>props.tradeSetup2Variant,()=>refresh());
@@ -171,7 +182,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     if(series)for(const list of [overview,details,entry])clearSetup2Primitives(series,list);series=null;});
   return {positions,selected:visibleSnapshot,loading,status,error,select,refresh:()=>refresh(true),
     create(c,s){chart=c;series=s;chart.subscribeClick(click);render();},
-    updateCandles(rows){displayCandles.value=rows;render();}};
+    updateCandles(rows,ready=true){displayCandles.value=rows;displayReady=ready;render();}};
 }
 
 function deduplicate(rows) {

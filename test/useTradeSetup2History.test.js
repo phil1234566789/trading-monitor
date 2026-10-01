@@ -11,9 +11,55 @@ import {scanTradeSetup2InWorker} from '../src/tradeSetup2BrowserScan.js';
 import {fetchCandlesCached} from '../src/candleCache.js';
 
 const flush=async()=>{for(let i=0;i<15;i++)await Promise.resolve();await nextTick();};
+it('loads a linked entry after a simultaneous instrument and replay change, then focuses only ready candles',async()=>{
+  const props=reactive({showTradeSetup2:false,symbol:'EURUSD',tradeSetup2Variant:'wide',tradeSetup2HistoryCount:5,
+    tradeSetup2RunId:null,selectedTradeSetup2Id:null,currentBar:'1h',replayUntil:120});
+  const snapshot={id:'entry',instrument:'GBPUSD',knownAt:300,evidence:[],entry:{}};
+  const repository={listRuns:vi.fn(async()=>[{id:'research'}]),listResults:vi.fn(async()=>[]),listSetups:vi.fn(async()=>[]),
+    getSnapshot:vi.fn(async()=>snapshot),getSetupSnapshot:vi.fn()};
+  const scope=effectScope(),chart={subscribeClick:vi.fn(),unsubscribeClick:vi.fn(),
+    timeScale:()=>({setVisibleLogicalRange:focus})},focus=vi.fn();
+  const view=scope.run(()=>useTradeSetup2History(props,ref(null),{repository,configurationInput:()=>({instrument:props.symbol}),
+    evaluationTime:()=>props.replayUntil}));
+  try {
+    view.create(chart,{});
+    Object.assign(props,{showTradeSetup2:true,symbol:'GBPUSD',replayUntil:300,currentBar:'1m',
+      tradeSetup2RunId:'research',selectedTradeSetup2Id:'entry'});
+    await flush();
+    expect(repository.listResults).toHaveBeenCalledWith({runId:'research',instrument:'GBPUSD',asOf:300});
+    expect(view.selected.value?.id).toBe('entry');
+    expect(view.loading.value).toBe(false);
+    const candles=Array.from({length:6},(_,i)=>({time:i*60}));
+    view.updateCandles(candles,false);
+    expect(focus).not.toHaveBeenCalled();
+    view.updateCandles(candles,true);
+    expect(focus).toHaveBeenCalledWith({from:-45,to:55});
+    view.updateCandles(candles,true);
+    await view.refresh();
+    expect(focus).toHaveBeenCalledTimes(1);
+    props.replayUntil=240;await flush();
+    expect(view.selected.value).toBeNull();
+    expect(focus).toHaveBeenCalledTimes(1);
+  } finally {scope.stop();}
+});
 beforeEach(()=>{
   vi.clearAllMocks();scanTradeSetup2InWorker.mockResolvedValue([]);
   fetchCandlesCached.mockResolvedValue([{time:0},{time:540}]);
+});
+it('opens the requested snapshot without waiting for the remaining history',async()=>{
+  let finishRuns;
+  const props=reactive({showTradeSetup2:true,symbol:'GBPUSD',tradeSetup2Variant:'wide',tradeSetup2HistoryCount:5,
+    tradeSetup2RunId:'research',selectedTradeSetup2Id:'entry',currentBar:'1m',replayUntil:300});
+  const repository={listRuns:()=>new Promise(resolve=>{finishRuns=resolve;}),listResults:async()=>[],listSetups:async()=>[],
+    getSnapshot:vi.fn(async()=>({id:'entry',instrument:'GBPUSD',knownAt:300,evidence:[],entry:{}}))};
+  const scope=effectScope();
+  const view=scope.run(()=>useTradeSetup2History(props,ref(null),{repository,configurationInput:()=>({}),evaluationTime:()=>300}));
+  try {
+    await flush();
+    expect(view.loading.value).toBe(true);
+    expect(view.selected.value?.id).toBe('entry');
+    finishRuns([]);await flush();
+  } finally {scope.stop();}
 });
 it('opens a multi-instrument research snapshot without requiring live checklist data',async()=>{
   const props=reactive({showTradeSetup2:true,symbol:'GBPUSD',tradeSetup2Variant:'wide',tradeSetup2HistoryCount:5,

@@ -1853,7 +1853,7 @@ function refreshChart() {
   refreshRangesMarkersInternal();
   refreshMarketStructureInternal(); // ruft refreshCockpitInternal() selbst mit auf, siehe dort
   m1Structure.refresh(clipReplay(allCandles));
-  setup2.updateCandles(clipReplay(allCandles));
+  setup2.updateCandles(clipReplay(allCandles),candlesReady&&loadedCandleKey===`${props.symbol}:${props.currentBar}`);
   refreshEmaInternal();
   refreshRsiInternal();
   refreshRsiDivergenceInternal();

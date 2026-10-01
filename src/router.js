@@ -4,6 +4,9 @@ import { createRouter, createWebHashHistory } from "vue-router";
 // serverseitigen Rewrites fuer beliebige SPA-Routen unterstuetzt.
 export const router = createRouter({
   history: createWebHashHistory(),
+  scrollBehavior(to) {
+    if (to.path === '/' && to.query.setup2) return { top: 0, left: 0 };
+  },
   routes: [
     { path: "/", name: "dashboard", component: () => import("./views/Dashboard.vue") },
     { path: "/protokoll", name: "protokoll", component: () => import("./views/Protokoll.vue") },
