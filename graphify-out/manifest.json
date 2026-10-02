@@ -4902,9 +4902,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationSetupsTable.vue": {
-    "mtime": 1790969621.7259793,
-    "seen": 1790969700.2405863,
-    "ast_hash": "50ea4925632fc83d913ca36b303a6e20",
+    "mtime": 1790970936.9063838,
+    "seen": 1790971034.9143384,
+    "ast_hash": "4afb6bc058d286b6069cec99318a0e2a",
     "semantic_hash": ""
   },
   "src/tradeSetup2LinkedSnapshot.js": {
@@ -4914,9 +4914,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2Review.js": {
-    "mtime": 1790963079.499225,
-    "seen": 1790963442.9691215,
-    "ast_hash": "6bc8fee988c2fcae3a2113182e999780",
+    "mtime": 1790970935.0132098,
+    "seen": 1790971034.9423435,
+    "ast_hash": "858508f8cb82f0419f74896f62ffda9a",
     "semantic_hash": ""
   },
   "test/tradeSetup2LinkedSnapshot.test.js": {
@@ -5016,15 +5016,33 @@
     "semantic_hash": ""
   },
   "src/components/FilteredDealingRangeSummary.vue": {
-    "mtime": 1790969621.1202066,
-    "seen": 1790969700.237497,
-    "ast_hash": "93f590f271f54b7534c3bd89c90c91c1",
+    "mtime": 1790970965.1443613,
+    "seen": 1790971034.9113383,
+    "ast_hash": "dfafe5b028414550c5d0ac63f716be5a",
     "semantic_hash": ""
   },
   "test/filteredDealingRangeStatistics.test.js": {
-    "mtime": 1790969658.155511,
-    "seen": 1790969700.305192,
-    "ast_hash": "1f6d7a1c9ce200ab6f163776a784ead4",
+    "mtime": 1790970994.5055206,
+    "seen": 1790971034.9743817,
+    "ast_hash": "1384b571bc16aa5dab0b6ed50c9440b7",
+    "semantic_hash": ""
+  },
+  "src/components/DealingRangeOutcome.vue": {
+    "mtime": 1790970936.272541,
+    "seen": 1790971034.9103365,
+    "ast_hash": "654512bf06ad85ec6766309b980870e9",
+    "semantic_hash": ""
+  },
+  "src/tradeSetup2SavedRangeOutcome.js": {
+    "mtime": 1790970965.7631428,
+    "seen": 1790971034.9423435,
+    "ast_hash": "fe389b2bf4f4ad5e25a93b371a4fba80",
+    "semantic_hash": ""
+  },
+  "test/tradeSetup2SavedRangeOutcome.test.js": {
+    "mtime": 1790970993.8782127,
+    "seen": 1790971034.997901,
+    "ast_hash": "3320392d76bba2e6ad96fa93126cd5f2",
     "semantic_hash": ""
   }
 }
