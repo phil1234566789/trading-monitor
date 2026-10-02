@@ -10,16 +10,12 @@ import { formatDatedTime } from '../berlinTime.js';
 import { isVersionedDealingRangeRun } from '../tradeSetup2DealingRange.js';
 import { fmtMoney, fmtR } from '../format.js';
 import ToggleButton from '../components/ui/ToggleButton.vue';
-import SimulationResultsTable from '../components/SimulationResultsTable.vue';
 import SimulationRunStatus from '../components/SimulationRunStatus.vue';
 import SimulationSetupsTable from '../components/SimulationSetupsTable.vue';
-import SimulationRunsSummary from '../components/SimulationRunsSummary.vue';
 
 const repository = createSimulationRepository(supabase);
 const route = useRoute(), router = useRouter();
-// Philip prüft aktuell August/September; ältere Vergleichsläufe sollen den Einstieg nicht verdecken.
-const defaultRunId = 'setup2-0e5723a18a68e62d6280444f';
-const routeRunId = () => route.query.run === 'all' ? '' : typeof route.query.run === 'string' ? route.query.run : defaultRunId;
+const routeRunId = () => route.query.run === 'all' ? '' : typeof route.query.run === 'string' ? route.query.run : '';
 const setupTable = ref(null);
 const { runs, runId, selectedRun, instrument, variant, from, to, rows, loading, error, refresh } = useSimulationStatistics(repository, routeRunId());
 variant.value = route.query.variant === 'narrow' ? 'narrow' : 'wide';
@@ -37,9 +33,6 @@ watch([runId, variant], ([id, stop]) => {
 function refreshAll() { refresh(); setupTable.value?.refresh(); }
 const basis = ref('net');
 const costRows = computed(() => rows.value.map(applySimulationCommission));
-const selectedRows = computed(() => costRows.value.filter(row => row.variant === variant.value));
-const comparison = computed(() => ['wide', 'narrow'].map(stop => ({ variant: stop,
-  gross: simulationStatistics(costRows.value, stop, 'gross'), net: simulationStatistics(costRows.value, stop, 'net') })));
 const stats = computed(() => simulationStatistics(costRows.value, variant.value, basis.value));
 const basisLabel = computed(() => basis.value === 'net' ? 'Netto' : 'Brutto');
 const at = value => value == null ? '–' : formatDatedTime(value);
@@ -53,19 +46,22 @@ const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${isVersionedDeali
       <ToggleButton variant="bordered" :disabled="loading" @click="refreshAll">{{ loading ? 'Wird geladen…' : 'Aktualisieren' }}</ToggleButton>
     </header>
 
-    <section class="simulation-rules" aria-label="Simulationsannahmen">
+    <details class="simulation-rules"><summary>Simulationsannahmen</summary>
       <strong>50.000 USD Referenzkonto · Basis-Preisrisikobudget 500 USD pro Entry</strong>
       <p>Neue Entries für „DR gegen M5 Trend“: ohne bestätigten gleichgerichteten M5-CHoCH Faktor 0,5 (250 USD), mit Bestätigung Faktor 1 (500 USD). Das Budget wird vor der Lot-Abrundung angepasst. Historische Läufe behalten ihre gespeicherte Größe.</p>
       <p>Anfangsgröße auf ganze Standardlots abgerundet. 50 % an T1 schließen, Reststop auf Entry, übrige Hälfte bis T2 oder Break-even. Kein Compounding.</p>
       <p>5 USD Kommission je Standardlot insgesamt für Entry und Exit, einmal auf das Eröffnungsvolumen. Für die Kostenansicht wird die volle Gebühr ab Entry angesetzt; Teilverkäufe kosten nicht zusätzlich. Kein Spread und keine Slippage berücksichtigt.</p>
       <p>Weiter und enger SL sind alternative Szenarien. Diese Ergebnisse gehören zur Simulation und werden getrennt vom Journal ausgewertet.</p>
-    </section>
+    </details>
 
-    <form class="statistics-filters" @submit.prevent="refresh">
+    <details class="run-comparison"><summary>Optional: einzelnen Lauf vergleichen</summary>
       <label class="run-filter">Regel / Lauf<select v-model="runId" :disabled="!runs.length">
-        <option value="">Alle Läufe</option>
+        <option value="">Alle gespeicherten Läufe</option>
         <option v-for="run in runs" :key="run.id" :value="run.id">{{ runLabel(run) }}</option>
       </select></label>
+    </details>
+    <form class="statistics-filters" @submit.prevent="refresh">
+
       <label>Instrument<select v-model="instrument"><option value="">Alle Instrumente</option><option value="GBPUSD">GBPUSD</option><option value="EURUSD">EURUSD</option><option value="XAUUSD">XAUUSD</option></select></label>
       <label>Stoppvariante<select v-model="variant"><option value="wide">Weiter SL</option><option value="narrow">Enger SL</option></select></label>
       <label v-if="runId">Ergebnis / Winrate<select v-model="basis"><option value="net">Netto nach Kommission</option><option value="gross">Brutto vor Kommission</option></select></label>
@@ -79,7 +75,7 @@ const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${isVersionedDeali
       <p v-if="error" role="alert" class="error">{{ error }} <button type="button" @click="refresh">Erneut versuchen</button></p>
       <p v-else-if="loading" role="status" class="empty">Gespeicherte Ergebnisse werden geladen…</p>
       <p v-else-if="!runs.length" class="empty">Noch keine gespeicherten Simulationsläufe. Sobald ein Lauf Ergebnisse gespeichert hat, erscheinen sie hier.</p>
-      <SimulationRunsSummary v-else-if="!runId" :runs="runs" :rows="costRows" :variant="variant" />
+      <p v-else-if="!runId" class="denominator">Ergebnisse stehen direkt bei den Entries in der DR-Prüftabelle. Alternative Läufe bleiben getrennt.</p>
       <p v-else-if="!selectedRun" role="alert" class="error">Der verlinkte Lauf ist nicht verfügbar. Bitte oben einen gespeicherten Lauf wählen.</p>
       <template v-else>
         <h2>Ergebnisübersicht · Lauf {{ runId.slice(-8) }}</h2>
@@ -93,20 +89,12 @@ const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${isVersionedDeali
           <div><span>{{ basisLabel }} R · abgeschlossen</span><strong>{{ fmtR(stats.totalR) }}</strong></div>
         </section>
         <p v-if="stats.winrate == null" class="winrate-note">Winrate noch nicht ausgewiesen: {{ stats.closed }} von mindestens {{ MIN_SIMULATION_WINRATE_CASES }} eindeutig abgeschlossenen Fällen. PnL und Fallzahlen werden bereits angezeigt.</p>
-        <div class="comparison-scroll" tabindex="0" aria-label="Stopvarianten horizontal scrollen">
-          <table class="variant-comparison"><caption>Beide SL-Varianten · alternative Szenarien für denselben gewählten Lauf</caption>
-            <thead><tr><th scope="col">SL</th><th scope="col">Entries</th><th scope="col">Brutto USD</th><th scope="col">Netto USD</th><th scope="col">Netto R</th><th scope="col">Netto Gewinne / Verluste</th><th scope="col">Offen / Uneindeutig / Nicht ausführbar</th></tr></thead>
-            <tbody><tr v-for="item in comparison" :key="item.variant"><th scope="row">{{ item.variant === 'wide' ? 'Weiter SL' : 'Enger SL' }}</th><td>{{ item.net.total }}</td><td>{{ fmtMoney(item.gross.pnlUsd) }}</td><td>{{ fmtMoney(item.net.pnlUsd) }}</td><td>{{ fmtR(item.net.totalR) }}</td><td>{{ item.net.wins }} / {{ item.net.losses }}</td><td>{{ item.net.counts.open }} / {{ item.net.counts.ambiguous }} / {{ item.net.counts.notExecutable }}</td></tr></tbody>
-          </table>
-        </div>
         <p class="denominator">{{ basisLabel }}-Winrate: positive {{ basisLabel }}-Ergebnisse / eindeutig abgeschlossene, ausführbare Positionen ({{ stats.wins }} / {{ stats.closed }}). Prozent ab 50 abgeschlossenen Fällen. Offene und uneindeutige Fälle zählen nicht zum Nenner. T1 + Break-even ist netto nur dann ein Gewinn, wenn der Teilgewinn die Kommission übersteigt.</p>
         <dl class="outcome-counts"><div v-for="(label, key) in SIMULATION_OUTCOME_LABELS" :key="key"><dt>{{ label }}</dt><dd>{{ stats.counts[key] }}</dd></div></dl>
         <p class="denominator">Brutto- und Netto-R beziehen sich auf das tatsächliche Preisrisiko nach Lotrundung. Die Obergrenze von 500 USD gilt vor Kommission. Bei offenen Positionen ist nur das bereits realisierte Ergebnis abzüglich der vollen Entry-Kommission bekannt.</p>
-        <SimulationResultsTable v-if="selectedRows.length" :rows="selectedRows" :run-id="runId" />
-        <p v-else class="empty">Keine gespeicherten Entries für diese Filterauswahl.</p>
       </template>
     </div>
-    <SimulationSetupsTable ref="setupTable" :repository="repository" :run-id="runId" :runs="runs" :instrument="instrument" :variant="variant" />
+    <SimulationSetupsTable ref="setupTable" :repository="repository" :run-id="runId" :runs="runs" :instrument="instrument" :variant="variant" :results="costRows" :results-loading="loading" :results-error="error" />
   </main>
 </template>
 
@@ -116,19 +104,15 @@ const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${isVersionedDeali
 h1 { margin: 0; font-size: 20px; font-weight: 600; }
 h2 { font-size: 18px; margin: 20px 0 12px; }
 .winrate-note { padding: 14px 16px; border: 1px solid #434651; border-radius: 4px; background: #1e222d; font-size: 13px; line-height: 1.6; }
-.comparison-scroll { overflow-x: auto; margin-top: 16px; }
-.variant-comparison { border-collapse: collapse; width: 100%; text-align: left; font-size: 13px; }
-.variant-comparison caption { text-align: left; color: #a5a9b4; padding-bottom: 10px; }
-.variant-comparison th, .variant-comparison td { padding: 10px; border-bottom: 1px solid #434651; }
 .statistics-header p { margin: 6px 0 0; color: #a5a9b4; font-size: 13px; }
 .simulation-rules { background: #1e222d; border: 1px solid #2a2e39; border-radius: 4px; padding: 16px; font-size: 13px; line-height: 1.6; }
 .simulation-rules p { margin: 5px 0 0; color: #a5a9b4; }
 .statistics-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 20px 0; }
 .statistics-filters label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #a5a9b4; }
+.run-comparison { margin-top: 16px; } summary { cursor: pointer; }
 .run-filter { flex: 1 1 340px; min-width: 0; }
 select, input { box-sizing: border-box; width: 100%; min-height: 36px; border: 1px solid #434651; border-radius: 4px; color: #d1d4dc; background: #1e222d; padding: 7px 10px; color-scheme: dark; }
-select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid #82aaff; outline-offset: 2px; }
-.comparison-scroll:focus-visible, a:focus-visible { outline: 2px solid #82aaff; outline-offset: 2px; }
+select:focus-visible, input:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid #82aaff; outline-offset: 2px; }
 .statistics-summary { display: flex; flex-wrap: wrap; gap: 20px 36px; border-top: 1px solid #2a2e39; padding-top: 20px; }
 .statistics-summary div { display: flex; flex-direction: column; gap: 6px; }
 .statistics-summary span { color: #a5a9b4; font-size: 12px; }

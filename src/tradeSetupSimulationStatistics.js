@@ -48,15 +48,9 @@ export function simulationRunLink(runId, variant = 'wide') {
   return { path: '/statistik', query: { run: runId, variant } };
 }
 
-export function simulationRunStatistics(rows, runs, variant) {
-  const groups = new Map();
-  for (const row of rows) {
-    if (!groups.has(row.runId)) groups.set(row.runId, []);
-    groups.get(row.runId).push(row);
-  }
-  // Gleiche Entries in verschiedenen Forschungsläufen bleiben eigene Alternativszenarien.
-  return runs.map(run => ({ run, gross: simulationStatistics(groups.get(run.id) ?? [], variant, 'gross'),
-    net: simulationStatistics(groups.get(run.id) ?? [], variant, 'net') }));
+export function simulationEntryResult(rows, snapshot, variant) {
+  // Snapshot-IDs können sich in alternativen Läufen wiederholen; beide Identitäten müssen passen.
+  return rows.find(row => row.runId === snapshot.runId && row.snapshotId === snapshot.id && row.variant === variant);
 }
 
 export function simulationDateFilter(from, to) {

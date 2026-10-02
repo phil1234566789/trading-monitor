@@ -6,8 +6,9 @@ import { DEALING_RANGE_LABELS, savedDealingRangeStatus } from '../tradeSetup2Dea
 import { simulationChartLink, simulationDateFilter, simulationRunLink } from '../tradeSetupSimulationStatistics.js';
 import SetupEntryConditions from './SetupEntryConditions.vue';
 import ToggleButton from './ui/ToggleButton.vue';
+import SimulationEntryResult from './SimulationEntryResult.vue';
 
-const props = defineProps({ repository: { type: Object, required: true }, runId: String, runs: Array, instrument: String, variant: String });
+const props = defineProps({ repository: { type: Object, required: true }, runId: String, runs: Array, instrument: String, variant: String, results: { type: Array, default: () => [] }, resultsLoading: Boolean, resultsError: String });
 const snapshots = shallowRef([]), loading = ref(false), error = ref('');
 const filter = ref('all'), from = ref(''), to = ref(''), page = ref(0);
 const drFilter = ref('current');
@@ -66,11 +67,12 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
       <div v-else-if="rows.length" class="table-scroll" tabindex="0" aria-label="Setup-Tabelle horizontal scrollen">
         <table>
           <caption>Gespeicherte Setups · {{ rows.length }} Treffer</caption>
-          <thead><tr><th scope="col">Bewertungsstand</th><th scope="col">Instrument</th><th scope="col">Richtung</th><th scope="col">Status</th><th scope="col">Lauf</th><th scope="col">Entry-Bedingungen</th><th scope="col">Chart</th></tr></thead>
+          <thead><tr><th scope="col">Bewertungsstand</th><th scope="col">Instrument</th><th scope="col">Richtung</th><th scope="col">Status</th><th scope="col">Lauf</th><th scope="col">Entry-Ergebnis · {{ variant === 'narrow' ? 'Enger SL' : 'Weiter SL' }}</th><th scope="col">Entry-Bedingungen</th><th scope="col">Chart</th></tr></thead>
           <tbody><tr v-for="row in visibleRows" :key="row.key">
             <td>{{ formatDatedTime(row.knownAt) }}</td><td>{{ row.instrument }}</td><td>{{ row.direction === 'long' ? 'Long' : 'Short' }}</td>
             <td><strong>{{ DEALING_RANGE_LABELS[savedDealingRangeStatus(row.snapshot)] }}</strong><small>{{ row.entries.length ? 'Mit Entry · Entry-Stand' : 'Ohne Entry · gespeicherter DR-Stand' }}</small><small v-for="detail in row.snapshot.dealingRange?.details" :key="detail">{{ detail }}</small><strong :class="row.review.assessment.status">{{ REVIEW_STATUS_ICONS[row.review.assessment.status] }} {{ row.review.assessment.label }}</strong></td>
             <td :title="row.snapshot.runId"><RouterLink :to="simulationRunLink(row.snapshot.runId, variant)">{{ row.snapshot.runId?.slice(-8) }} · Ergebnisse</RouterLink></td>
+            <td><span v-if="!row.entries.length">Kein Entry</span><span v-else-if="resultsLoading">Ergebnis wird geladen…</span><span v-else-if="resultsError">Ergebnis nicht verfügbar</span><SimulationEntryResult v-else v-for="entry in row.entries" :key="entry.id" :snapshot="entry" :results="results" :variant="variant" /></td>
             <td>
               <ul v-if="row.review.missing.length" class="missing-conditions"><li v-for="condition in row.review.missing" :key="condition.key" class="unmet"><strong>✕ {{ condition.label }}: {{ condition.key === 'time' ? 'Nicht tradebar' : 'Fehlt' }}</strong><div v-for="(detail, index) in condition.details" :key="index">{{ detail }}</div></li></ul>
               <details @toggle="toggle(row.key, $event)"><summary><span class="passed">✓ {{ row.review.counts[0] }} erfüllt</span> · <span class="unmet">✕ {{ row.review.counts[1] }} {{ row.review.counts[1] === 1 ? 'fehlt' : 'fehlen' }}</span> · <span class="unknown">? {{ row.review.counts[2] }} unbekannt</span></summary>
