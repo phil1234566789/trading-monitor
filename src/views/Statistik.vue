@@ -5,7 +5,7 @@ import { applySimulationCommission, SIMULATION_COST_VERSION } from '../tradeSetu
 import { supabase } from '../supabaseClient.js';
 import { createSimulationRepository } from '../tradeSetupSimulationRepository.js';
 import { useSimulationStatistics } from '../composables/useSimulationStatistics.js';
-import { SIMULATION_OUTCOME_LABELS, simulationStatistics, simulationRunStatusLabel, simulationRunLink, MIN_SIMULATION_WINRATE_CASES } from '../tradeSetupSimulationStatistics.js';
+import { SIMULATION_OUTCOME_LABELS, simulationStatistics, simulationRunStatusLabel, MIN_SIMULATION_WINRATE_CASES } from '../tradeSetupSimulationStatistics.js';
 import { formatDatedTime } from '../berlinTime.js';
 import { isVersionedDealingRangeRun } from '../tradeSetup2DealingRange.js';
 import { fmtMoney, fmtR } from '../format.js';
@@ -13,19 +13,25 @@ import ToggleButton from '../components/ui/ToggleButton.vue';
 import SimulationResultsTable from '../components/SimulationResultsTable.vue';
 import SimulationRunStatus from '../components/SimulationRunStatus.vue';
 import SimulationSetupsTable from '../components/SimulationSetupsTable.vue';
+import SimulationRunsSummary from '../components/SimulationRunsSummary.vue';
 
 const repository = createSimulationRepository(supabase);
 const route = useRoute(), router = useRouter();
+// Philip prüft aktuell August/September; ältere Vergleichsläufe sollen den Einstieg nicht verdecken.
+const defaultRunId = 'setup2-0e5723a18a68e62d6280444f';
+const routeRunId = () => route.query.run === 'all' ? '' : typeof route.query.run === 'string' ? route.query.run : defaultRunId;
 const setupTable = ref(null);
-const { runs, runId, selectedRun, instrument, variant, from, to, rows, loading, error, refresh } = useSimulationStatistics(repository, route.query.run);
+const { runs, runId, selectedRun, instrument, variant, from, to, rows, loading, error, refresh } = useSimulationStatistics(repository, routeRunId());
 variant.value = route.query.variant === 'narrow' ? 'narrow' : 'wide';
-watch(() => [route.query.run, route.query.variant], ([id, stop]) => {
-  runId.value = typeof id === 'string' ? id : '';
+watch(() => [routeRunId(), route.query.variant], ([id, stop]) => {
+  if (route.name !== 'statistik') return;
+  runId.value = id;
   variant.value = stop === 'narrow' ? 'narrow' : 'wide';
 });
 watch([runId, variant], ([id, stop]) => {
+  if (route.name !== 'statistik') return;
   const query = { ...route.query, variant: stop };
-  if (id) query.run = id; else delete query.run;
+  query.run = id || 'all';
   router.replace({ path: '/statistik', query });
 });
 function refreshAll() { refresh(); setupTable.value?.refresh(); }
@@ -38,8 +44,6 @@ const stats = computed(() => simulationStatistics(costRows.value, variant.value,
 const basisLabel = computed(() => basis.value === 'net' ? 'Netto' : 'Brutto');
 const at = value => value == null ? '–' : formatDatedTime(value);
 const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${isVersionedDealingRangeRun(run) ? 'DR gegen M5 Trend · neue DR-Stufen' : 'Altstand'} · ${run.version} · ${simulationRunStatusLabel(run)} · ${run.id.slice(-8)}`;
-const latestResearchRun = computed(() => runs.value.find(run => run.id.startsWith('setup2-') && run.status === 'complete' && isVersionedDealingRangeRun(run))
-  ?? runs.value.find(run => run.id.startsWith('setup2-') && run.status === 'complete'));
 </script>
 
 <template>
@@ -75,11 +79,7 @@ const latestResearchRun = computed(() => runs.value.find(run => run.id.startsWit
       <p v-if="error" role="alert" class="error">{{ error }} <button type="button" @click="refresh">Erneut versuchen</button></p>
       <p v-else-if="loading" role="status" class="empty">Gespeicherte Ergebnisse werden geladen…</p>
       <p v-else-if="!runs.length" class="empty">Noch keine gespeicherten Simulationsläufe. Sobald ein Lauf Ergebnisse gespeichert hat, erscheinen sie hier.</p>
-      <section v-else-if="!runId" class="performance-choice" aria-label="Ergebnisübersicht auswählen">
-        <h2>Ergebnisübersicht · Lauf wählen</h2>
-        <p>Jeder Lauf hat eigene Ergebnisse. Wähle oben einen Lauf oder öffne seine „Ergebnisse“ aus der DR-Tabelle.</p>
-        <RouterLink v-if="latestResearchRun" :to="simulationRunLink(latestResearchRun.id, variant)">Neuester Forschungslauf: {{ latestResearchRun.configuration?.label ?? runLabel(latestResearchRun) }} · Ergebnisse ansehen</RouterLink>
-      </section>
+      <SimulationRunsSummary v-else-if="!runId" :runs="runs" :rows="costRows" :variant="variant" />
       <p v-else-if="!selectedRun" role="alert" class="error">Der verlinkte Lauf ist nicht verfügbar. Bitte oben einen gespeicherten Lauf wählen.</p>
       <template v-else>
         <h2>Ergebnisübersicht · Lauf {{ runId.slice(-8) }}</h2>
@@ -115,8 +115,7 @@ const latestResearchRun = computed(() => runs.value.find(run => run.id.startsWit
 .statistics-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
 h1 { margin: 0; font-size: 20px; font-weight: 600; }
 h2 { font-size: 18px; margin: 20px 0 12px; }
-.performance-choice, .winrate-note { padding: 14px 16px; border: 1px solid #434651; border-radius: 4px; background: #1e222d; font-size: 13px; line-height: 1.6; }
-.performance-choice h2 { margin-top: 0; } a { color: #91b8ff; }
+.winrate-note { padding: 14px 16px; border: 1px solid #434651; border-radius: 4px; background: #1e222d; font-size: 13px; line-height: 1.6; }
 .comparison-scroll { overflow-x: auto; margin-top: 16px; }
 .variant-comparison { border-collapse: collapse; width: 100%; text-align: left; font-size: 13px; }
 .variant-comparison caption { text-align: left; color: #a5a9b4; padding-bottom: 10px; }

@@ -1,9 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { simulationStatistics, simulationDateFilter, simulationChartLink, simulationRunLink } from '../src/tradeSetupSimulationStatistics.js';
+import { simulationStatistics, simulationDateFilter, simulationChartLink, simulationRunLink, simulationRunStatistics } from '../src/tradeSetupSimulationStatistics.js';
 
 const result = (overrides = {}) => ({ status: 'closed', outcome: 't1Be', variant: 'wide', pnlUsd: 240, rMultiple: 0.5, ...overrides });
 
 describe('simulation statistics', () => {
+  it('shows every run separately, including zero entries, and never merges duplicated research entries', () => {
+    const rows = [result({ runId: 'old', entryId: 'same', netPnlUsd: 100, netRMultiple: 1 }),
+      result({ runId: 'new', entryId: 'same', pnlUsd: -100, netPnlUsd: -110, netRMultiple: -1.1 }),
+      result({ runId: 'new', variant: 'narrow', netPnlUsd: 220, netRMultiple: 2.2 })];
+    const runs = [{id:'new'},{id:'empty'},{id:'old'}];
+    const wide = simulationRunStatistics(rows,runs,'wide');
+    expect(wide.map(s=>s.run.id)).toEqual(['new','empty','old']);
+    expect(wide[0].net).toMatchObject({total:1,pnlUsd:-110,wins:0,losses:1,winrate:null});
+    expect(wide[1].net).toMatchObject({total:0,pnlUsd:null});
+    expect(wide[2].net).toMatchObject({total:1,pnlUsd:100,wins:1,losses:0,winrate:null});
+    expect(simulationRunStatistics(rows,runs,'narrow')[0].net).toMatchObject({total:1,pnlUsd:220,wins:1,losses:0});
+    const fiftyAcrossRuns = ['new','old'].flatMap(runId=>Array.from({length:25},()=>result({runId,netPnlUsd:100,netRMultiple:1})));
+    expect(simulationRunStatistics(fiftyAcrossRuns,runs,'wide').every(item=>item.net.winrate===null)).toBe(true);
+  });
   it('keeps stop alternatives separate and counts T1 + BE as a win', () => {
     const stats = simulationStatistics([
       result(), result({ outcome: 'slBeforeT1', pnlUsd: -480, rMultiple: -1 }),

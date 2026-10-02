@@ -17,23 +17,26 @@ function start(repository, runId = '') {
 afterEach(() => { lifecycle.unmount?.(); scope?.stop(); vi.useRealTimers(); });
 
 describe('simulation statistics loading', () => {
-  it('defaults to all runs without loading or combining outcomes, and clears single-run results on return', async () => {
+  it('loads all outcomes with their run identity and restores them after leaving a filtered single run', async () => {
     const repository = { listRuns: vi.fn().mockResolvedValue([{ id: 'run', status: 'complete' }]),
-      listResults: vi.fn().mockResolvedValue([{ entryId: 'entry' }]) };
+      listResults: vi.fn().mockResolvedValue([{ entryId: 'entry', runId: 'run' }]) };
     const state = start(repository);
     await flush();
     expect(state.runId.value).toBe('');
-    expect(repository.listResults).not.toHaveBeenCalled();
+    expect(repository.listResults).toHaveBeenLastCalledWith({ runId: undefined, instrument: undefined });
+    expect(state.rows.value).toHaveLength(1);
     state.runId.value = 'run';
     await flush();
     expect(state.rows.value).toHaveLength(1);
+    state.from.value = '2026-09-09';
+    await flush();
     state.runId.value = '';
     await flush();
-    expect(state.rows.value).toEqual([]);
+    expect(state.rows.value).toHaveLength(1);
     expect(state.selectedRun.value).toBeNull();
-    expect(repository.listResults).toHaveBeenCalledTimes(1);
+    expect(repository.listResults).toHaveBeenLastCalledWith({ runId: undefined, instrument: undefined });
   });
-  it('loads the selected real run, passes variant and Berlin date filters', async () => {
+  it('loads both alternatives for the selected run with instrument and Berlin date filters', async () => {
     const repository = { listSetups: vi.fn().mockResolvedValue([]), listRuns: vi.fn().mockResolvedValue([{ id: '2026', status: 'complete' }]), listResults: vi.fn().mockResolvedValue([{ entryId: 'one' }]) };
     const state = start(repository, '2026');
     await flush();
@@ -43,16 +46,16 @@ describe('simulation statistics loading', () => {
     state.instrument.value = 'GBPUSD';
     state.from.value = state.to.value = '2026-10-25';
     await flush();
-    expect(repository.listResults).toHaveBeenLastCalledWith({ runId: '2026', variant: 'narrow', instrument: 'GBPUSD',
+    expect(repository.listResults).toHaveBeenLastCalledWith({ runId: '2026', instrument: 'GBPUSD',
       from: Date.parse('2026-10-25T00:00:00+02:00') / 1000, to: Date.parse('2026-10-26T00:00:00+01:00') / 1000 });
     expect(repository.listSetups).not.toHaveBeenCalled();
   });
-  it('rejects an old response after the user switches stop variants', async () => {
+  it('rejects an old response after the user switches instruments', async () => {
     const old = pending();
     const repository = { listSetups: vi.fn().mockResolvedValue([]), listRuns: vi.fn().mockResolvedValue([{ id: 'run' }]), listResults: vi.fn().mockReturnValueOnce(old.promise).mockResolvedValue([{ variant: 'narrow' }]) };
     const state = start(repository, 'run');
     await flush();
-    state.variant.value = 'narrow';
+    state.instrument.value = 'GBPUSD';
     await flush();
     old.resolve([{ variant: 'wide' }]);
     await flush();

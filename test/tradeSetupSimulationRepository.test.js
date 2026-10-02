@@ -2,6 +2,16 @@ import { describe, it, expect, vi } from 'vitest';
 import { createSimulationRepository, simulationAsOf } from '../src/tradeSetupSimulationRepository.js';
 
 describe('simulation history repository', () => {
+  it('loads all outcome pages without a run filter and preserves identical entry IDs from separate runs', async () => {
+    const filters = [], offsets = [];
+    const data = ['first', 'second'].map(run_id => ({ id: 'same-entry', run_id, instrument: 'GBPUSD', direction: 'short', outcomes: [{ variant: 'wide', entryTime: 300 }] }));
+    const query = { select: () => query, order: () => query, eq: (k,v) => { filters.push([k,v]); return query; },
+      range: async offset => { offsets.push(offset); return { data: offset < data.length ? [data[offset]] : [] }; } };
+    const rows = await createSimulationRepository({ from: () => query }).listResults({ instrument: 'GBPUSD' });
+    expect(rows.map(row => row.runId)).toEqual(['first', 'second']);
+    expect(offsets).toEqual([0,1,2]);
+    expect(filters).toEqual([['instrument','GBPUSD'],['instrument','GBPUSD'],['instrument','GBPUSD']]);
+  });
   it('reads all runs when the review filter is empty and retains their origin', async () => {
     const eq = vi.fn();
     const db = { from: table => {

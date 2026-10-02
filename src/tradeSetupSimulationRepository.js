@@ -87,14 +87,15 @@ export function createSimulationRepository(db) {
     },
     listResults: async ({ runId, instrument, variant, from, to, asOf } = {}) => {
       const rows = await pages((pageFrom, pageTo) => {
-        let q = db.from('trade_setup_simulation_entries').select('id,instrument,direction,outcomes,setupKey:snapshot->>setupKey').eq('run_id', runId).order('id').range(pageFrom, pageTo);
+        let q = db.from('trade_setup_simulation_entries').select('id,run_id,instrument,direction,outcomes,setupKey:snapshot->>setupKey').order('run_id').order('id');
+        if (runId) q = q.eq('run_id', runId);
         if (instrument) q = q.eq('instrument', instrument);
         if (Number.isFinite(from)) q = q.gte('entry_time', from);
         if (Number.isFinite(to)) q = q.lt('entry_time', to);
         if (Number.isFinite(asOf)) q = q.lte('entry_time', asOf);
-        return q;
+        return q.range(pageFrom, pageTo);
       });
-      return rows.flatMap(row => results(row, runId, variant, asOf));
+      return rows.flatMap(row => results(row, row.run_id ?? runId, variant, asOf));
     },
     getSnapshot: (runId, entryId) => snapshot('trade_setup_simulation_entries', runId, entryId),
     getSetupSnapshot: (runId, setupId) => snapshot('trade_setup_simulation_setups', runId, setupId),

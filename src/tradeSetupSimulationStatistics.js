@@ -48,6 +48,17 @@ export function simulationRunLink(runId, variant = 'wide') {
   return { path: '/statistik', query: { run: runId, variant } };
 }
 
+export function simulationRunStatistics(rows, runs, variant) {
+  const groups = new Map();
+  for (const row of rows) {
+    if (!groups.has(row.runId)) groups.set(row.runId, []);
+    groups.get(row.runId).push(row);
+  }
+  // Gleiche Entries in verschiedenen Forschungsläufen bleiben eigene Alternativszenarien.
+  return runs.map(run => ({ run, gross: simulationStatistics(groups.get(run.id) ?? [], variant, 'gross'),
+    net: simulationStatistics(groups.get(run.id) ?? [], variant, 'net') }));
+}
+
 export function simulationDateFilter(from, to) {
   if (from && to && from > to) throw new Error('Das Enddatum muss am oder nach dem Startdatum liegen.');
   // Die nächste Berliner Mitternacht separat bestimmen: DST-Tage haben 23/25 Stunden.

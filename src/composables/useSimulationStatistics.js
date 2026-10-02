@@ -27,11 +27,11 @@ export function useSimulationStatistics(repository, initialRunId = '') {
       if (ticket !== revision) return;
       markSuccess();
       runs.value = available.toSorted((a, b) => (b.evaluatedAt ?? 0) - (a.evaluatedAt ?? 0) || a.id.localeCompare(b.id));
-      // Verschiedene Regelversionen/Startpunkte ergeben keine gemeinsame Winrate.
       const id = runId.value;
-      if (!id) return;
-      const bounds = simulationDateFilter(from.value, to.value);
-      const results = await repository.listResults({ runId: id, instrument: instrument.value || undefined, ...bounds });
+      if (!runs.value.length) return;
+      // Datumsfilter sind nur im Einzellauf sichtbar; sie dürfen „Alle Läufe“ nicht einschränken.
+      const bounds = id ? simulationDateFilter(from.value, to.value) : {};
+      const results = await repository.listResults({ runId: id || undefined, instrument: instrument.value || undefined, ...bounds });
       if (ticket === revision) {
         rows.value = results.toSorted((a, b) => b.entryTime - a.entryTime || a.entryId.localeCompare(b.entryId));
       }
