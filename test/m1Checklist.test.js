@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildM1Structure } from '../src/m1Structure.js';
 import { evaluateM1Checklist, inactiveM1Checklist } from '../src/m1Checklist.js';
 import candles from './fixtures/gbpusd-m1-dr114-p5.json';
+import { createCloseReactionCache } from '../src/m5CloseReactionHistory.js';
 
 const at = clock => Date.parse(`2026-09-09T${clock}:00+02:00`) / 1000;
 const context = { instrument: 'GBPUSD', direction: 'short',
@@ -14,6 +15,15 @@ const evaluate = clock => {
 };
 
 describe('M1 checklist structure', () => {
+  it('keeps every field causal and identical with the bounded archive cache, including backward replay', () => {
+    const cache = createCloseReactionCache(100000);
+    for (const clock of ['09:31', '09:40', '09:47', '09:50', '09:55', '09:40', '09:50']) {
+      const evaluatedAt = at(clock);
+      const args = { context, evaluatedAt, candles, structure: buildM1Structure(candles, context.anchor, evaluatedAt) };
+      expect(evaluateM1Checklist({ ...args, closeReactionCache: cache })).toEqual(evaluateM1Checklist(args));
+    }
+    expect(cache.size).toBeGreaterThan(0);
+  });
   it('uses the active confirmed nested direction and retains outer as context', () => {
     const early = evaluate('09:31');
     expect(early.trends).toEqual([{ trend: 'uptrend', depth: 0 }]);

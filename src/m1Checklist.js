@@ -28,14 +28,14 @@ export function inactiveM1Checklist(reason) {
     reason, details: [waiting[reason] ?? waiting.prerequisites], detailStatuses: [], evaluatedAt: null };
 }
 
-export function evaluateM1Checklist({ context, structure, candles, evaluatedAt }) {
+export function evaluateM1Checklist({ context, structure, candles, evaluatedAt, closeReactionCache }) {
   const unavailable = reason => ({ ...inactiveM1Checklist(reason), evaluatedAt });
   if (structure?.status !== 'ready') return unavailable(structure?.status === 'missing' ? 'missing' : 'loading');
   if (!structure.state || structure.state.trend === 'unknown') return unavailable('structure');
   const rows = closedChecklistCandles(candles, '1m', evaluatedAt);
   const trends = collectNestedChain(structure.state).map((level, depth) => ({ trend: level.trend, depth }));
   const reaction = deriveM5CloseReaction(structure.state, structure.pivotsOuter, [],
-    M1_STRUCTURE_PERIOD, M1_STRUCTURE_PERIOD, rows.filter(c => !c.ignored), 60);
+    M1_STRUCTURE_PERIOD, M1_STRUCTURE_PERIOD, rows.filter(c => !c.ignored), 60, closeReactionCache);
   // Die Gegenreaktion einer tieferen Ebene ersetzt nicht die gültigen Signale des Parents.
   const signals = reaction.levels.filter(level => level.direction === context.direction && level.recognizedAt != null);
   const choch = signals.find(level => level.type === 'CHoCH') ?? null;

@@ -43,6 +43,7 @@ export async function scanTradeSetup2Window({ instrument, h1Candles, m5Candles, 
   const snapshots = [], seen = new Set(), seenSetups = new Map();
   const reactionCache = new Map();
   const closeReactionCache = createCloseReactionCache();
+  const m1CloseReactionCache = createCloseReactionCache();
   let h1End = 0, m5End = 0, m1End = 0;
   let effectiveSettings = settings;
   const evaluateAt = evaluatedAt => evaluateTradeSetupChecklist({ instrument, evaluatedAt,
@@ -80,7 +81,8 @@ export async function scanTradeSetup2Window({ instrument, h1Candles, m5Candles, 
       const anchorTime = Math.min(context.anchor.pivotTime, context.primary.reactionRecognizedAt ?? context.anchor.pivotTime);
       const rows = m1ScanPrefix(m1, anchorTime, m1End);
       const m1Structure = buildM1Structure(rows, context.anchor, knownAt);
-      const m1Check = evaluateM1Checklist({ context, structure: m1Structure, candles: rows, evaluatedAt: knownAt });
+      const m1Check = evaluateM1Checklist({ context, structure: m1Structure, candles: rows, evaluatedAt: knownAt,
+        closeReactionCache: m1CloseReactionCache });
       if (m1Check.entry?.recognizedAt !== knownAt) continue;
       const snapshot = buildTradeSetup2Snapshot({ checklist: evaluateAt(knownAt), m1Check, m1Structure, m1Candles: rows });
       if (!snapshot) continue;
