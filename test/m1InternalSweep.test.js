@@ -1,3 +1,5 @@
+import { assumeFixtureH1Direction } from './helpers/fixtureH1Direction.js';
+assumeFixtureH1Direction();
 import { describe, expect, it } from 'vitest';
 import { buildM1Structure, activeM1Context } from '../src/m1Structure.js';
 import { evaluateM1Checklist } from '../src/m1Checklist.js';

@@ -5,6 +5,7 @@ import { groupSetupSnapshots } from '../src/tradeSetup2Review.js';
 import { DEALING_RANGE_VERSION } from '../src/tradeSetup2DealingRange.js';
 import { savedRangeOutcome } from '../src/tradeSetup2SavedRangeOutcome.js';
 import DealingRangeOutcome from '../src/components/DealingRangeOutcome.vue';
+import { completeSavedRangeCourses } from '../src/tradeSetup2RangeCourse.js';
 
 const snapshot = (at, main, overrides={}) => ({id:`stand:${at}`,setupKey:'range',runId:'run',instrument:'GBPUSD',direction:'long',knownAt:at,entry:null,
   dealingRange:{version:DEALING_RANGE_VERSION,status:'validated'},checklist:{setup:{primary:{direction:'long',invalidation:1.30,
@@ -13,6 +14,30 @@ const first = () => snapshot(600,{state:'active'});
 const group = (main, at=1800) => groupSetupSnapshots([snapshot(at,main),first()])[0];
 
 describe('saved DR course after first causal validation', () => {
+  it('evaluates the whole saved window from first validation without rewriting the checklist or using future bars', () => {
+    const start = first();
+    const before = JSON.stringify(start);
+    const rows = [
+      { time: 300, high: 1.4, low: 1.29 },
+      { time: 600, high: 1.315, low: 1.305 },
+      { time: 900, high: 1.32, low: 1.305 },
+      { time: 1200, high: 1.4, low: 1.29 },
+    ];
+    const completed = completeSavedRangeCourses([start], rows, 1200);
+    expect(JSON.stringify(start)).toBe(before);
+    expect(completed[0].checklist).toEqual(start.checklist);
+    const result = savedRangeOutcome(groupSetupSnapshots(completed)[0]);
+    expect(result).toMatchObject({ status: 'target1', from: 600, through: 1200, recognizedAt: 1200 });
+    expect(result).not.toHaveProperty('pnlUsd');
+    completed[0].rangeCourse.target1 = 1.33;
+    expect(savedRangeOutcome(groupSetupSnapshots(completed)[0]).status).toBe('unknown');
+  });
+  it('preserves genuine gaps and skips executions in complete course evaluation', () => {
+    const start = first();
+    const completed = completeSavedRangeCourses([start], [{ time: 900, high: 1.32, low: 1.305 }], 1200);
+    expect(savedRangeOutcome(groupSetupSnapshots(completed)[0])).toMatchObject({ status: 'unknown', reason: expect.stringContaining('unvollständig') });
+    expect(completeSavedRangeCourses([start, { ...snapshot(900, {}), id: 'entry', entry: {} }], [], 1200)[0]).not.toHaveProperty('rangeCourse');
+  });
   it.each([['target1','target1'],['invalidation','invalidation'],['both','ambiguous']])('reuses stored lifecycle %s without creating a trade outcome', (reason,status) => {
     const result=savedRangeOutcome(group({state:'ended',reason,endedAt:900,recognizedAt:1200}));
     expect(result).toMatchObject({status,from:600,target1:1.32,invalidation:1.30,recognizedAt:1200});

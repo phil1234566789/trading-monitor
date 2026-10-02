@@ -1,3 +1,5 @@
+import { assumeFixtureH1Direction } from './helpers/fixtureH1Direction.js';
+assumeFixtureH1Direction();
 import { describe, it, expect } from 'vitest';
 import { createSSRApp } from 'vue';
 import { renderToString } from 'vue/server-renderer';

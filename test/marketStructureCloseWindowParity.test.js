@@ -1,3 +1,5 @@
+import { assumeFixtureH1Direction } from './helpers/fixtureH1Direction.js';
+assumeFixtureH1Direction();
 import { expect, it, vi } from 'vitest';
 import * as queries from '../src/candleCloseWindow';
 import { buildMarketStructureState, computeRangesPivots } from '../src/marketStructureAnalysis';

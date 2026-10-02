@@ -10,18 +10,20 @@ const row = (time, low = 9, high = 10) => ({ time, low, high, open: 9, close: 9 
 const run = (candles, extra = {}) => evaluateChecklistLifecycle({ selection, invalidation: 12, candles, evaluatedAt: 1500, ...extra });
 
 describe('fixed checklist targets and separate T2 observation', () => {
-  it('fixes real DR114 when M5 confirms the reaction to the previously known H1 level', () => {
+  it('keeps DR114 target selection fixed even when active H1 selects the opposing direction', () => {
     const args = { instrument: 'GBPUSD', h1Candles: h1Fixture.candles, m5Candles: fixture.candles,
       settings: { rangesFixedStartActive: true, rangesFixedStartTime: h1Fixture.cutoff }, sessionConfigs: fixture.sessions };
     const evaluate = time => evaluateTradeSetupChecklist({ ...args, evaluatedAt: Date.parse(`2026-09-09T${time}:00+02:00`) / 1000 });
     const before = evaluate('09:30');
     const known = evaluate('10:00');
     const later = evaluate('10:35');
-    expect(before.setup.primary.targetSelection).toEqual(known.setup.primary.targetSelection);
-    expect(known.setup.primary.targetSelection.selectedAt).toBe(Date.parse('2026-09-09T09:30:00+02:00') / 1000);
-    expect(later.setup.primary.targetSelection).toEqual(known.setup.primary.targetSelection);
-    expect(evaluate('10:00').setup.primary.targetSelection).toEqual(known.setup.primary.targetSelection);
-    expect(later.checks.targets.status).toBe('passed');
+    const targets = state => state.setup.candidates.find(c => c.direction === 'short' && c.targetSelection?.target1?.price === 1.35335)?.targetSelection;
+    expect(before.direction).toBe('long');
+    expect(before.setup.primary).toBeNull();
+    expect(targets(before)).toEqual(targets(known));
+    expect(targets(known).selectedAt).toBe(Date.parse('2026-09-09T09:30:00+02:00') / 1000);
+    expect(targets(later)).toEqual(targets(known));
+    expect(targets(evaluate('10:00'))).toEqual(targets(known));
   });
   it('ends the setup at T1 and keeps observing T2', () => {
     const candles = [row(600, 8), row(900), row(1200, 6)];

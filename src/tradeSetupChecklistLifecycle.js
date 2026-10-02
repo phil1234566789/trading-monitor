@@ -16,17 +16,18 @@ export function fixChecklistTargets({ candidate, instrument, candles, sessionCon
 }
 
 /** T1 beendet das Hauptsetup; T2 wird unabhängig davon bis zur Invalidierung beobachtet. */
-export function evaluateChecklistLifecycle({ selection, invalidation, candles, evaluatedAt }) {
+export function evaluateChecklistLifecycle({ selection, invalidation, candles, evaluatedAt, fromTime = selection?.selectedAt }) {
   let main = { state: 'unknown', reason: 'missingSelection', endedAt: null, recognizedAt: null };
   let target2 = { status: selection?.target2 ? 'unknown' : 'notApplicable', reason: 'missingSelection', hitAt: null, endedAt: null, recognizedAt: null };
   const result = () => ({ main, target2, evaluatedAt });
   if (selection?.status !== 'passed' || !selection.target1 || !Number.isFinite(invalidation)
-    || !Number.isFinite(evaluatedAt) || evaluatedAt < selection.selectedAt) return result();
+    || !Number.isFinite(evaluatedAt) || !Number.isFinite(fromTime)
+    || fromTime < selection.selectedAt || evaluatedAt < fromTime) return result();
   main = { ...main, state: 'active', reason: null };
   target2 = { ...target2, status: selection.target2 ? 'open' : 'notApplicable', reason: null };
   const short = selection.direction === 'short';
-  const rows = closedChecklistCandles(candles, '5m', evaluatedAt).filter(c => c.time >= selection.selectedAt);
-  let next = selection.selectedAt;
+  const rows = closedChecklistCandles(candles, '5m', evaluatedAt).filter(c => c.time >= fromTime);
+  let next = fromTime;
   const missing = () => {
     if (main.state === 'active') main = { ...main, state: 'unknown', reason: 'missingHistory' };
     if (target2.status === 'open') target2 = { ...target2, status: 'unknown', reason: 'missingHistory' };

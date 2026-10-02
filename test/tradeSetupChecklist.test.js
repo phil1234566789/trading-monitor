@@ -38,8 +38,10 @@ describe('Checklist: geschlossener Wissensstand', () => {
     expect(result.checks.h1Trend.status).toBe('passed');
     expect(['long', 'short']).toContain(result.direction);
     expect(result.status).toBe('ready');
+    expect(result.direction).toBe('short');
+    expect(result.checks.antiConfluences).toMatchObject({ status: 'passed', divergences: { status: 'absent' } });
     for (const [id, check] of Object.entries(result.checks)) {
-      if (!['h1Trend', 'liquiditySweep'].includes(id)) expect(['pending', 'unknown', 'deferred']).toContain(check.status);
+      if (!['h1Trend', 'liquiditySweep', 'antiConfluences'].includes(id)) expect(['pending', 'unknown', 'deferred']).toContain(check.status);
     }
     expect(result.checks.liquiditySweep.status).toBe('passed');
     expect(result.setup.primary).toBeTruthy();

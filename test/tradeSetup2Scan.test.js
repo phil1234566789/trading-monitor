@@ -6,6 +6,7 @@ import h1 from './fixtures/gbpusd-h1-dr114-lifecycle.json';
 import m5 from './fixtures/gbpusd-m5-dr114-close-reaction.json';
 import m1 from './fixtures/gbpusd-m1-dr114-p5.json';
 import config from './fixtures/gbpusd-m5-dr114-session-targets.json';
+import { evaluateTradeSetupChecklist } from '../src/tradeSetupChecklist.js';
 
 const at = clock => Date.parse(`2026-09-09T${clock}:00+02:00`) / 1000;
 const input = { instrument: 'GBPUSD', h1Candles: h1.candles, m5Candles: m5, m1Candles: m1,
@@ -13,14 +14,14 @@ const input = { instrument: 'GBPUSD', h1Candles: h1.candles, m5Candles: m5, m1Ca
   fromTime: at('09:25'), toTime: at('09:55') };
 
 describe('chronological Trade Setup 2.0 scan', () => {
-  it('finds DR114 exactly once at its first knowable entry, independent of future candles', async () => {
+  it('rejects the old DR114 short fixture under active bullish H1, independent of future candles', async () => {
     const full = await scanTradeSetup2Window(input);
     const entries = full.filter(s => s.entry);
     expect(full.every(s => s.dealingRange.status !== 'unconfirmed')).toBe(true);
     expect(full.filter(s => !s.entry).every(s => ['h1Trend', 'liquiditySweep', 'reaction']
       .every(key => s.checklist.checks[key].status === 'passed'))).toBe(true);
-    expect(entries).toHaveLength(1);
-    expect(entries[0]).toMatchObject({ knownAt: at('09:50'), entry: { price: 1.35615 } });
+    expect(evaluateTradeSetupChecklist({ ...input, evaluatedAt: at('09:50') }).direction).toBe('long');
+    expect(entries).toHaveLength(0);
     const prefix = await scanTradeSetup2Window({ ...input, toTime: at('09:50'),
       m1Candles: m1.filter(c => c.time + 60 <= at('09:50')) });
     expect(prefix.filter(s => s.entry)).toEqual(entries);
@@ -31,13 +32,13 @@ describe('chronological Trade Setup 2.0 scan', () => {
     await expect(scanTradeSetup2Window({ ...input, signal })).rejects.toMatchObject({ name: 'AbortError' });
     await expect(scanTradeSetup2Window({ ...input, fromTime: input.toTime + 1 })).rejects.toThrow();
   });
-  it('keeps every DR114 snapshot field identical without the historical M5 cache', async () => {
+  it('keeps the rejected historical fixture identical without the historical M5 cache', async () => {
     const cached = await scanTradeSetup2Window(input);
     const original = closeReaction.deriveM5CloseReaction;
     const spy = vi.spyOn(closeReaction, 'deriveM5CloseReaction').mockImplementation((...args) => original(...args.slice(0, 7)));
     try { expect(await scanTradeSetup2Window(input)).toEqual(cached); }
     finally { spy.mockRestore(); }
-    expect(cached.filter(s => s.entry)).toHaveLength(1);
+    expect(cached.filter(s => s.entry)).toHaveLength(0);
   }, 30000);
   it('retains actual P5 warmup across a long ignored session', () => {
     const rows = Array.from({ length: 130 }, (_, i) => ({ time: i * 60, open: 1, close: 1,

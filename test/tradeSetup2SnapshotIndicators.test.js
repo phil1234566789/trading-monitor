@@ -3,7 +3,7 @@ import { computed, effectScope, reactive, ref, nextTick } from 'vue';
 vi.mock('../src/supabaseClient.js', () => ({ supabase: {} }));
 import { createSnapshotM1Reader, snapshotEvidenceVisible } from '../src/tradeSetup2SnapshotIndicators.js';
 import { useSnapshotM1 } from '../src/composables/useSnapshotM1.js';
-import { SETUP2_VERSION } from '../src/tradeSetup2Configuration.js';
+import { SETUP2_VERSION, supportsSnapshotIndicators } from '../src/tradeSetup2Configuration.js';
 import { buildM1Structure } from '../src/m1Structure.js';
 
 const candles = Array.from({ length: 60 }, (_, i) => ({ time: i * 60,
@@ -15,6 +15,14 @@ const snapshot = () => ({ id: 'entry', instrument: 'GBPUSD', knownAt: 1800, entr
 const configuration = () => ({ instrument: 'GBPUSD', setupVersion: SETUP2_VERSION, m1Period: 5, sessions: [] });
 const repository = configuration => ({ getRun: vi.fn(async () => ({ configuration })) });
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); await nextTick(); };
+
+it('preserves archive indicator reconstruction for both sides of the H1 rule comparison', async () => {
+  expect(supportsSnapshotIndicators(SETUP2_VERSION)).toBe(true);
+  expect(supportsSnapshotIndicators('entry-snapshot-p5-time-abc-v2')).toBe(true);
+  expect(supportsSnapshotIndicators('legacy')).toBe(false);
+  const old = { ...configuration(), setupVersion: 'entry-snapshot-p5-time-abc-v2' };
+  expect((await createSnapshotM1Reader(repository(old), async () => candles)('old', snapshot())).result).not.toBeNull();
+});
 
 it('shares a bounded read and fixes all reconstructed pivots to knownAt without changing the snapshot', async () => {
   const source = snapshot(), before = JSON.stringify(source), db = repository({ instruments: [configuration()] });

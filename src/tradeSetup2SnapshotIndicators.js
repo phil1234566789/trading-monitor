@@ -1,5 +1,5 @@
 import { activeM1Context, buildM1Structure, M1_STRUCTURE_PERIOD } from './m1Structure.js';
-import { SETUP2_VERSION } from './tradeSetup2Configuration.js';
+import { supportsSnapshotIndicators } from './tradeSetup2Configuration.js';
 import { markIgnoredCandles } from './sessionOccurrences.js';
 import { berlinOffsetMinutes } from './berlinTime.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
@@ -72,7 +72,7 @@ export function createSnapshotM1Reader(repository, fetchCandles) {
     }
     const run = await repository.getRun(runId);
     const config = run?.configuration?.instruments?.find(c => c.instrument === snapshot.instrument) ?? run?.configuration;
-    if (config?.instrument !== snapshot.instrument || config.setupVersion !== SETUP2_VERSION
+    if (config?.instrument !== snapshot.instrument || !supportsSnapshotIndicators(config.setupVersion)
       || config.m1Period !== M1_STRUCTURE_PERIOD || !Array.isArray(config.sessions)) {
       return unavailable('M1-Ergänzung nicht verfügbar: passende Algorithmusversion oder gespeicherte Sessions fehlen.');
     }

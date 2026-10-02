@@ -1,4 +1,4 @@
-import { computeRangesPivots, buildMarketStructureState } from './marketStructureAnalysis';
+import { computeRangesPivots, buildMarketStructureState, deriveTrendReaction } from './marketStructureAnalysis';
 import { markIgnoredCandles } from './sessionOccurrences.js';
 import { berlinOffsetMinutes } from './berlinTime.js';
 import { barSecondsFor } from './timeframes.js';
@@ -53,12 +53,12 @@ export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles
   context.closeReactionCache = closeReactionCache;
   const state = context.h1State;
   result.context = context;
-  // Nur der Haupttrend bestimmt die Richtung. Die verschachtelte Gegenrichtung bleibt
-  // im vollständigen Strukturbaum für spätere Sweep-/Anti-Confluence-Auswertung erhalten.
+  // Dieselbe bestätigte Kette wie im Chart; Parent-Ebenen bleiben als Kontext erhalten.
   result.structure = state;
   result.direction = context.direction;
   if (result.direction) {
-    checks.h1Trend = { status: 'passed', details: [state.trend === 'uptrend' ? 'Bullisch — Hauptcheckliste für Long.' : 'Bärisch — Hauptcheckliste für Short.'] };
+    checks.h1Trend = { status: 'passed', source: 'active-confirmed-h1', trend: context.h1Trend,
+      details: [result.direction === 'long' ? 'Aktuelle H1-Richtung bullisch — Checkliste für Long.' : 'Aktuelle H1-Richtung bärisch — Checkliste für Short.'] };
   }
   if (entryGates && !result.direction) return result;
   const setup = evaluateChecklistCandidates(context, sessionConfigs, { entryGates });
@@ -82,6 +82,7 @@ export function buildChecklistMarketContext({ instrument, evaluatedAt, h1Candles
   const outer = computeRangesPivots(structureCandles, rangesPeriod, cutoff(rangesLookbackHours));
   const inner = computeRangesPivots(structureCandles, ranges2Period, cutoff(ranges2LookbackHours));
   const state = buildMarketStructureState(outer, inner, rangesPeriod, ranges2Period, structureCandles);
+  const h1Trend = deriveTrendReaction(state).trend;
   return { instrument, evaluatedAt, h1Candles: h1, m5Candles: m5, h1State: state, h1Cutoff: cutoff(rangesLookbackHours), h1Pivots: { outer, inner }, periods: { outer: rangesPeriod, inner: ranges2Period },
-    direction: state?.trend === 'uptrend' ? 'long' : state?.trend === 'downtrend' ? 'short' : null };
+    h1Trend, direction: h1Trend === 'uptrend' ? 'long' : h1Trend === 'downtrend' ? 'short' : null };
 }

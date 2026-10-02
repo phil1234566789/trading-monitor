@@ -1,3 +1,5 @@
+import { assumeFixtureH1Direction } from './helpers/fixtureH1Direction.js';
+assumeFixtureH1Direction();
 import { it, expect } from 'vitest';
 import { buildChecklistMarketContext, evaluateTradeSetupChecklist } from '../src/tradeSetupChecklist.js';
 import { collectNestedChain } from '../src/marketStructureAnalysis';

@@ -40,6 +40,15 @@ describe('checklist presentation from evaluated data', () => {
     state.setup.primary.sweep.ageSeconds = 162 * 3600;
     expect(checklistPresentation(state).liquiditySweep.details[0]).toContain('(6d 18h)');
   });
+  it('shows active H1 first, parents as context, while old snapshots keep their old order', () => {
+    const state = { evaluatedAt: at, structure: structure('downtrend', '2026-08-21T11:00:00+02:00',
+      structure('uptrend', '2026-09-02T14:00:00+02:00')), checks: { h1Trend: { source: 'active-confirmed-h1', status: 'passed' } } };
+    expect(checklistPresentation(state).h1Trend).toEqual({
+      details: ['Aktuelle H1-Richtung: 4 Tage Uptrend', 'Outer Kontext: 12 Tage Downtrend'],
+      detailStatuses: ['passed', 'context'] });
+    delete state.checks;
+    expect(checklistPresentation(state).h1Trend.details[0]).toBe('12 Tage Downtrend');
+  });
   it('does not invent observations when their data is missing', () => {
     expect(checklistPresentation(null)).toEqual({});
     expect(checklistPresentation({ instrument: 'EURUSD', evaluatedAt: null })).toEqual({});

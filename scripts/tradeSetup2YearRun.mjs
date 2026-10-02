@@ -28,7 +28,7 @@ async function loadCore() {
   const entry = path.join(directory, 'core-entry.mjs');
   const source = file => path.join(root, 'src', file).replaceAll('\\', '/');
   await import('node:fs/promises').then(fs => fs.writeFile(entry,
-    ['tradeSetup2Scan.js', 'tradeSetupSimulation.js', 'tradeSetup2Anchors.js', 'tradeSetup2Configuration.js']
+    ['tradeSetup2Scan.js', 'tradeSetupSimulation.js', 'tradeSetup2Anchors.js', 'tradeSetup2Configuration.js', 'tradeSetup2RangeCourse.js']
       .map(file => `export * from ${JSON.stringify(source(file))};`).join('\n')));
   const bundle = await rolldown({ input: entry, platform: 'node' });
   const file = path.join(directory, 'core.mjs');
@@ -67,6 +67,7 @@ if (!options.settings) throw new Error('Provide --settings=FILE with the explici
 const configuration = await readJson(path.resolve(root, options.settings));
 if (!configuration.settings || !Number.isFinite(configuration.warmupDays) || configuration.warmupDays < 14) throw new Error('Settings and warmupDays >= 14 required');
 const { core, sourceHash } = await loadCore();
+configuration.rangeCourseVersion = core.RANGE_COURSE_VERSION;
 const sessionConfigs = manifest.sessions.map(r => ({ id: r.id, label: r.label, instrument: r.instrument,
   fromMinutes: r.from_minutes, toMinutes: r.to_minutes, highLowRelevant: r.high_low_relevant,
   ignoreLiquidity: r.ignore_liquidity ?? false, danger: r.danger, days: r.days }));
@@ -116,7 +117,7 @@ try {
     const rows = {};
     for (const bar of configuration.startPolicy === 'historical-d1-p4' ? ['1D', '1h', '5m', '1m'] : ['1h', '5m', '1m']) {
       rows[bar] = await client.candles({ instrument, bar, from: start, to,
-        cacheDirectory: path.join(directory, 'cache'), onPage: async count => {
+        cacheDirectory: options.cache ? path.resolve(root, options.cache) : path.join(directory, 'cache'), onPage: async count => {
           controller.signal.throwIfAborted();
           run.progress = { phase: 'download', instrument, bar, loadedRows: count, completed: instrumentIndex, total: instruments.length };
           await saveProgress();
@@ -155,11 +156,12 @@ try {
       }
       console.log(JSON.stringify({ instrument, day, snapshots: allSnapshots.size, rssMB: Math.round(process.memoryUsage().rss / 1048576) }));
     }
-    const records = outcomeRecords([...allSnapshots.values()], rows['1m'], to);
+    const completedSnapshots = core.completeSavedRangeCourses([...allSnapshots.values()], rows['5m'], to, sessionConfigs);
+    const records = outcomeRecords(completedSnapshots, rows['1m'], to);
     await writeJson(path.join(directory, `${instrument}-entries.json`), records);
-    await writeJson(path.join(directory, `${instrument}-setups.json`), [...allSnapshots.values()].filter(s => !s.entry));
+    await writeJson(path.join(directory, `${instrument}-setups.json`), completedSnapshots.filter(s => !s.entry));
     if (repository) {
-      await repository.saveSetups(run.id, [...allSnapshots.values()].filter(s => !s.entry));
+      await repository.saveSetups(run.id, completedSnapshots.filter(s => !s.entry));
       await repository.saveEntries(run.id, records);
     }
   }

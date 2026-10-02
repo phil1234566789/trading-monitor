@@ -38,7 +38,7 @@ const costRows = computed(() => rows.value.map(applySimulationCommission));
 const stats = computed(() => simulationStatistics(costRows.value, variant.value, basis.value));
 const basisLabel = computed(() => basis.value === 'net' ? 'Netto' : 'Brutto');
 const at = value => value == null ? '–' : formatDatedTime(value);
-const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${isVersionedDealingRangeRun(run) ? 'DR gegen M5 Trend · neue DR-Stufen' : 'Altstand'} · ${run.version} · ${simulationRunStatusLabel(run)} · ${run.id.slice(-8)}`;
+const runLabel = run => `${run.configuration?.label ?? `${at(run.from)} – ${at(run.to)}`} · ${isVersionedDealingRangeRun(run) ? 'DR gegen M5 Trend' : 'Altstand'} · ${simulationRunStatusLabel(run)} · ${run.id.slice(-8)}`;
 </script>
 
 <template>

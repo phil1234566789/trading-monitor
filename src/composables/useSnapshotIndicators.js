@@ -8,7 +8,7 @@ import { collectObsZones, filterHistorical } from '../priceChartObZones.js';
 import { computeRangesPivots } from '../marketStructureAnalysis';
 import { detectOrderBlocks } from '../orderBlocks.js';
 import { obMinimum } from '../instrumentConfig.js';
-import { SETUP2_VERSION } from '../tradeSetup2Configuration.js';
+import { supportsSnapshotIndicators } from '../tradeSetup2Configuration.js';
 import { barSecondsFor } from '../timeframes.js';
 
 export function useSnapshotIndicators(props, snapshot, repository, fetchCandles = (symbol, bar, at) =>
@@ -36,7 +36,7 @@ export function useSnapshotIndicators(props, snapshot, repository, fetchCandles 
       const run = await cached(props.tradeSetup2RunId, () => repository.getRun(props.tradeSetup2RunId));
       if (ticket !== revision) return;
       const config = run?.configuration?.instruments?.find(c => c.instrument === source.instrument) ?? run?.configuration;
-      if (config?.instrument !== source.instrument || config.setupVersion !== SETUP2_VERSION || !Array.isArray(config.sessions)) {
+      if (config?.instrument !== source.instrument || !supportsSnapshotIndicators(config.setupVersion) || !Array.isArray(config.sessions)) {
         throw new Error('Gespeicherte Algorithmusversion oder Sessions fehlen.');
       }
       const frames = Object.fromEntries(await Promise.all(bars.map(async bar => {

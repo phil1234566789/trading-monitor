@@ -10,11 +10,12 @@ import m5 from './fixtures/gbpusd-m5-dr114-close-reaction.json';
 import m1 from './fixtures/gbpusd-m1-dr114-p5.json';
 import config from './fixtures/gbpusd-m5-dr114-session-targets.json';
 import { activeM1Context, m1PrerequisiteReason } from '../src/m1Structure.js';
+import { assumeFixtureH1Direction } from './helpers/fixtureH1Direction.js';
 const at = clock => Date.parse(`2026-09-09T${clock}:00+02:00`) / 1000;
 const input = { instrument: 'GBPUSD', h1Candles: h1.candles, m5Candles: m5, m1Candles: m1,
   settings: { rangesFixedStartActive: true, rangesFixedStartTime: h1.cutoff }, sessionConfigs: config.sessions,
   fromTime: at('09:25'), toTime: at('09:55'), evaluatedAt: at('09:50'), entryGates: true };
-afterEach(() => vi.restoreAllMocks());
+assumeFixtureH1Direction();
 
 it('applies the same known time prohibition to chart M1 prerequisites', () => {
   const checklist = evaluateTradeSetupChecklist({ ...input, entryGates: false,
@@ -25,6 +26,7 @@ it('applies the same known time prohibition to chart M1 prerequisites', () => {
 
 it('retains blocked-period candidates and resumes within an M5 interval when the session opens', async () => {
   const baseline = await scanTradeSetup2Window(input);
+  expect(baseline.filter(s => s.entry)).toHaveLength(1);
   const session = { instrument: 'GBPUSD', label: 'Test', fromMinutes: 0, toMinutes: 587, days: [3], danger: 'forbidden' };
   const reopened = await scanTradeSetup2Window({ ...input, sessionConfigs: [...config.sessions, session] });
   expect(reopened.filter(s => s.entry).map(s => s.entry)).toEqual(baseline.filter(s => s.entry).map(s => s.entry));

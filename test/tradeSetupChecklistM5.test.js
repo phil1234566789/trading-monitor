@@ -1,3 +1,5 @@
+import { assumeFixtureH1Direction } from './helpers/fixtureH1Direction.js';
+assumeFixtureH1Direction();
 import { describe, expect, it } from 'vitest';
 import { evaluateTradeSetupChecklist, checklistEvaluationTime } from '../src/tradeSetupChecklist.js';
 import m5Candles from './fixtures/gbpusd-m5-dr114-close-reaction.json';

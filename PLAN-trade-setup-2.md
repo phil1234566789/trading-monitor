@@ -43,7 +43,7 @@ Die konkreten Bedingungen, Reihenfolge und Bedeutung der Checkpunkte folgen von 
 
 Die Checkliste ist **automatisch und nicht manuell editierbar**. Ihr Ergebnis richtet sich nach dem betrachteten Chart-/Replay-Zeitpunkt. Ein Zeitwechsel berechnet die Punkte neu; es wird keine manuell festgehaltene TSC-Idee übernommen. Im Live-Betrieb aktualisiert eine neu verfügbare, abgeschlossene M5-Kerze die Marktanalyse. Session-/News-Grenzen werden zusätzlich zeitgerecht geprüft. Technische Machbarkeit und offene Definitionen stehen am Ende dieses Plans.
 
-**Festgelegte Auswahl und Gültigkeit:** Es zählt der **älteste zulässige Sweep**, mit derselben Alterspriorität wie in der bestehenden Trade-Setup-Erkennung (Alter des Levels bis zu seinem Sweep, nicht die am längsten zurückliegende Berührung). Das Setup endet, sobald das **Invalidierungslevel oder das erste Target angelaufen** wird. Das zweite Target ist optional und verlängert die Gültigkeit nicht. Bullische und bärische Setups können gleichzeitig bestehen. Die Hauptcheckliste betrachtet nur die zum übergeordneten 1h-Trend passende Richtung; das gegenläufige Setup beziehungsweise dessen Sweep fließt in **E — Anti Confluences** ein. Keine pauschale gegenseitige Löschung der beiden Richtungen.
+**Festgelegte Auswahl und Gültigkeit:** Es zählt der **älteste zulässige Sweep**, mit derselben Alterspriorität wie in der bestehenden Trade-Setup-Erkennung (Alter des Levels bis zu seinem Sweep, nicht die am längsten zurückliegende Berührung). Das Setup endet, sobald das **Invalidierungslevel oder das erste Target angelaufen** wird. Das zweite Target ist optional und verlängert die Gültigkeit nicht. Bullische und bärische Setups können gleichzeitig bestehen. Die Hauptcheckliste betrachtet nur die zur aktuellen bestätigten H1-Richtung aus A passende Richtung; das gegenläufige Setup beziehungsweise dessen Sweep fließt in **E — Anti Confluences** ein. Keine pauschale gegenseitige Löschung der beiden Richtungen.
 
 ## Prüfbeispiel
 
@@ -74,11 +74,11 @@ Die Tasks enthalten Abhängigkeiten, offene fachliche Entscheidungen und Abnahme
 
 ### A / #1 — 1-Stunden-Trend
 
-Als Erstes den **übergeordneten 1-Stunden-Struktur-Trend** prüfen. Für das hier beschriebene Short-Setup muss er **bärisch** sein. Er ist die Grundlage dieser Checklist-Logik und steht vor der Sweep-Bestätigung.
+Als Erstes die **aktuelle bestätigte 1-Stunden-Strukturrichtung** prüfen. Sie bestimmt die Richtung der Checkliste und steht vor der Sweep-Bestätigung.
 
-**Anzeige am Prüfbeispiel:** 1-Stunden-Trend — **Bärisch**.
+Maßgeblich ist die **tiefste aktuell bestätigte Ebene** der aktiven Kette Outer → Nested → Nested … aus der vorhandenen H1-Strukturerkennung, analog M1. Unbestätigte (`unknown`) Kandidaten und archivierte Ebenen zählen nicht. Ohne bestätigte Nested-Ebene gilt der Outer-Trend. Bei der Übernahme einer Nested-Ebene zum Outer bleibt die Richtung gleich; äußere Ebenen werden als Kontext angezeigt.
 
-Maßgeblich ist der übergeordnete Struktur-Trend; der Nested-Trend kann gleichzeitig bullisch sein. Die vorhandene 1h-Strukturerkennung verwenden.
+Für Short muss diese aktuelle Richtung bärisch sein, für Long bullisch. Gespeicherte Läufe mit der früheren Outer-Regel bleiben unverändert zum Vergleich erhalten; die neue Regel erhält eine eigene Laufversion.
 
 Philip möchte grundsätzlich mit dem 1-Stunden-Trend handeln. Trades gegen diesen Trend sollen höchstens sehr selten vorkommen, möglichst gar nicht. Für diese Checkliste ist keine Gegentrend-Ausnahme definiert. Der Punkt wird anhand des erkannten Trends geprüft, nicht pauschal als erfüllt markiert.
 
@@ -88,9 +88,9 @@ Philip möchte grundsätzlich mit dem 1-Stunden-Trend handeln. Trades gegen dies
 
 #### Fachliche Bedingung
 
-Ein Inducement (hier gleichbedeutend mit Liquidity Sweep) in Richtung des übergeordneten **1-Stunden-Struktur-Trends** bildet nach der Trendprüfung aus Punkt A die Sweep-Bestätigung. Maßgeblich ist dieser Struktur-Trend; der kurzfristige Nested-Struktur-Trend kann als Gegentrend zum gesweepten Level führen.
+Ein Inducement (hier gleichbedeutend mit Liquidity Sweep) in der **aktuellen bestätigten H1-Richtung aus A** bildet die Sweep-Bestätigung. Die Level-Erkennung nutzt weiterhin den vollständigen bestätigten Strukturbaum.
 
-Im Beispiel DR 114:
+Historische Einordnung von DR 114 unter der früheren Outer-Regel (keine Ausnahme für den neuen Lauf):
 
 - 1-Stunden-Struktur-Trend: **Downtrend**.
 - Nested-Struktur-Trend: **Uptrend**.
@@ -379,7 +379,7 @@ Damit nicht ein alter Major-Sweep mit einer völlig anderen aktuellen M5-Reaktio
 
 | Punkt | Vorhandene Basis | Ergänzung oder Entscheidung |
 |---|---|---|
-| A — 1h-Trend | `buildMarketStructureState`, `computeTrendChain` | Haupttrend aus zeitlich korrekt begrenzten H1-Daten prüfen; unbekannt nicht als bärisch behandeln. |
+| A — 1h-Trend | `buildMarketStructureState`, `deriveTrendReaction`, `computeTrendChain` | Tiefste aktive bestätigte Ebene aus geschlossenen H1-Daten bestimmt die Richtung; Parent-Ebenen bleiben Kontext. |
 | B — Sweep | Strukturpunkte, Touchzeiten, Altersklassen, Mehrfach-Sweeps | Kandidat vor OB-Bestätigung; ältester zulässiger Sweep bis Invalidierung/Target 1. Gegenrichtung für E erhalten. |
 | C — Reaktion | `detectOrderBlocks` / `detectSetupObs`, `obFvg`, `scaleAnchor` / strukturelles `bandRisk` | Reaktion mit B verknüpfen; FVG erst bei ihrer tatsächlichen Bestätigung. FVG-Bänder aus `drQuoten.js` sind vorhandene historische Bewertungen, keine neue 2.0-Winrate. |
 | D — Targets | `findTargets.js`, äußere/innere Strukturpunkte, Session-Labels | P2/P5 gezielt statt allgemeiner sichtbarer LQ-Liste auswählen; Pivot-Level und verschobenen Journal-TP auseinanderhalten. |

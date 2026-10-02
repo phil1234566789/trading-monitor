@@ -13,7 +13,12 @@ export function checklistPresentation(state) {
   }
   if (state.structure && Number.isFinite(state.evaluatedAt)) {
     const chain = computeTrendChain(state.structure, state.evaluatedAt);
-    if (chain.length) view.h1Trend = { details: chain.map((level, depth) => {
+    if (chain.length && state.checks?.h1Trend?.source === 'active-confirmed-h1') {
+      const label = (level, depth) => `${trendChainLevelDisplay(level, depth).text} ${level.trend === 'downtrend' ? 'Downtrend' : 'Uptrend'}`;
+      view.h1Trend = { details: [`Aktuelle H1-Richtung: ${label(chain.at(-1), chain.length - 1)}`,
+        ...chain.slice(0, -1).map((level, depth) => `${depth ? 'Nested '.repeat(depth) : 'Outer '}Kontext: ${label(level, depth)}`)],
+        detailStatuses: [state.checks.h1Trend.status, ...chain.slice(0, -1).map(() => 'context')] };
+    } else if (chain.length) view.h1Trend = { details: chain.map((level, depth) => {
       const age = trendChainLevelDisplay(level, depth).text;
       const nested = 'Nested '.repeat(depth);
       return `${age} ${nested}${level.trend === 'downtrend' ? 'Downtrend' : 'Uptrend'}`;

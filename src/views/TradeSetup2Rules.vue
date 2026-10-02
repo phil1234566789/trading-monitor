@@ -45,7 +45,7 @@
       <p>Das aktuelle ABC-Inducement-Setup heißt <strong>DR gegen M5 Trend</strong>. Der Name bezeichnet dieses Setupmodell; „bestätigt“ und „validiert“ bleiben die allgemeinen Statusstufen.</p>
       <p>Das unten beschriebene Entry-Pattern mit seinen zwei Größenvarianten gilt ausschließlich für <strong>DR gegen M5 Trend</strong>.</p>
       <dl class="criteria">
-        <div><dt>A · H1-Richtung</dt><dd>Der H1-Haupttrend stimmt mit der Handelsrichtung des Inducements überein.</dd></div>
+        <div><dt>A · H1-Richtung</dt><dd>Die tiefste aktuell bestätigte H1-Strukturebene bestimmt die Handelsrichtung. Unbestätigte Nested-Kandidaten zählen nicht. Ohne bestätigte Nested-Ebene gilt der Outer-Trend; äußere Ebenen bleiben Kontext. Die Übernahme zum Outer ändert die Richtung nicht.</dd></div>
         <div><dt>B · Inducement</dt><dd>Aktuell werden Major- und Medium-H1-Inducements berücksichtigt. Kleinere LS erhalten später eigene Regeln.</dd></div>
         <div><dt>C · Reaktion</dt><dd>Das Inducement aus B zeigt eine akzeptable Reaktion. Aktuell bestätigt ein diesem Sweep zugeordneter M5-Orderblock die Reaktion; andere Reaktionsmodelle können später ergänzt werden.</dd></div>
       </dl>
