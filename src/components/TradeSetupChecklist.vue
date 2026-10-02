@@ -9,6 +9,7 @@ import { inactiveM1Checklist } from "../m1Checklist.js";
 import { usePreservedScroll } from "../composables/usePreservedScroll.js";
 import { entryChecklist } from "../m1Entry.js";
 import { useChecklistDisplay } from "../composables/useChecklistDisplay.js";
+import { DEALING_RANGE_LABELS } from "../tradeSetup2DealingRange.js";
 
 const props = defineProps({
   instrument: { type: String, required: true },
@@ -91,6 +92,7 @@ const checks = computed(() => definitions.map((definition, index) => {
       </div>
       <ChecklistStatusIcon v-if="!busy" v-bind="dataStatus" />
     </div>
+    <p v-if="state?.dealingRange" class="checklist-notice"><strong>{{ DEALING_RANGE_LABELS[state.dealingRange.status] }}</strong><br />{{ state.dealingRange.details?.join(' ') }}</p>
     <p v-if="state?.tradeability === 'blocked'" class="checklist-not-tradeable" role="status">Nicht tradebar</p>
     <p v-if="state?.statistics?.status === 'error'" class="checklist-notice" role="alert">Target-Statistik konnte nicht gespeichert werden. Neuer Versuch bei der nächsten Auswertung.</p>
     <ol ref="scrollElement" class="checklist-checks" tabindex="0" aria-label="Checklist-Prüfungen" @scroll="rememberScroll">

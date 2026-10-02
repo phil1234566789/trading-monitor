@@ -29,7 +29,7 @@ describe('Trade Setup 2.0 immutable entry snapshot',()=>{
   });
   it('captures DR114 at recognition with evidence and no candle archive',()=>{
     const source=input(), snapshot=buildTradeSetup2Snapshot(source);
-    expect(snapshot).toMatchObject({schemaVersion:2,instrument:'GBPUSD',knownAt:at('09:50'),entry:{price:1.35615}});
+    expect(snapshot).toMatchObject({schemaVersion:3,instrument:'GBPUSD',knownAt:at('09:50'),entry:{price:1.35615}});
     expect(snapshot.entry.stops.wide.price).toBe(1.35675);
     expect(snapshot.entry.stops.narrow.price).toBe(1.35648);
     expect(snapshot.m1Check.instrument).toBe('GBPUSD');

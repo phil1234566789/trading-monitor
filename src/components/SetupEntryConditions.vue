@@ -9,7 +9,7 @@ const review = computed(() => setupEntryConditions(props.snapshot));
   <div class="entry-conditions">
     <h3>Entry 1 · {{ snapshot.entry ? 'Entry-Stand' : 'Kandidatenstand' }} {{ formatDatedTime(snapshot.knownAt) }} Uhr</h3>
     <p :class="review.assessment.status"><strong>{{ REVIEW_STATUS_ICONS[review.assessment.status] }} {{ review.assessment.label }}</strong></p>
-    <p v-if="!snapshot.entry">Erster gespeicherter Kandidatenstand, keine Entry-Freigabe. Der Scan speichert Kandidaten auch außerhalb der Handelszeiten. Spätere Prüfstände sind hier nicht gespeichert; dieser Stand beschreibt nicht den gesamten Lauf. Eine Zeitsperre gilt für den Bewertungszeitpunkt und macht die Idee nicht automatisch dauerhaft ungültig.</p>
+    <p v-if="!snapshot.entry">Gespeicherter DR-Stand ohne Entry-Freigabe. Ranges werden auch außerhalb der Handelszeiten erfasst. Dieser Stand beschreibt keine vollständige spätere Entry-Prüfung. Eine Zeitsperre gilt für den Bewertungszeitpunkt.</p>
     <p v-if="review.prerequisiteNote">{{ review.prerequisiteNote }}</p>
     <ol>
       <li v-for="condition in review.rows" :key="condition.key">
@@ -20,6 +20,10 @@ const review = computed(() => setupEntryConditions(props.snapshot));
     </ol>
     <h4>Zusätzliche Strukturmerkmale · keine zwingenden Entry-1-Bedingungen</h4>
     <p v-for="item in review.observations" :key="item.label"><strong>{{ item.label }}:</strong> {{ item.text }}</p>
+    <template v-if="snapshot.dealingRange">
+      <h4>E/G · gespeicherte Beobachtungen ohne Sperrwirkung</h4>
+      <p v-for="key in ['antiConfluences', 'confluences']" :key="key"><strong>{{ key === 'antiConfluences' ? 'E · Anti-Confluences' : 'G · Confluences' }}:</strong> {{ snapshot.checklist?.checks?.[key]?.details?.join(' ') || 'Nicht prüfbar / nicht gespeichert.' }} {{ snapshot.checklist?.checks?.[key]?.explanation }}</p>
+    </template>
     <p>Die M1-Trendrichtung, CHoCH und BOS werden angezeigt, sind aber keine eigenen Pflichtsignale für Entry 1. Der Auslöser ist die bestätigte gleichgerichtete FVG nach dem OB-Retest im auswertbaren M1-Kontext. Ziele und Stopps stehen beim Entry in der Checklist bzw. im Chart.</p>
   </div>
 </template>

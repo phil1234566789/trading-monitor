@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
-import { setupEntryConditions, groupSetupSnapshots } from '../src/tradeSetup2Review.js';
+import { setupEntryConditions, groupSetupSnapshots, filterDealingRanges } from '../src/tradeSetup2Review.js';
+import { DEALING_RANGE_VERSION } from '../src/tradeSetup2DealingRange.js';
 import { simulationChartLink } from '../src/tradeSetupSimulationStatistics.js';
 
 const snapshot = () => ({ id: 'entry', setupKey: 'setup', instrument: 'GBPUSD', knownAt: 600,
@@ -26,6 +27,20 @@ it('never merges the same setup or entry across different runs or rule versions'
   const groups = groupSetupSnapshots([{ ...entry, runId: 'old' }, { ...entry, runId: 'new' }]);
   expect(groups).toHaveLength(2);
   expect(groups.map(group => group.snapshot.runId).sort()).toEqual(['new', 'old']);
+});
+it('filters saved DR stages without inferring ABC for old runs and groups a later validation only once', () => {
+  const legacy = snapshot();
+  const stage = status => ({ version: DEALING_RANGE_VERSION, status, details: ['D geprüft'], evaluatedAt: 600 });
+  const first = { ...legacy, id: 'range', entry: null, runId: 'new', knownAt: 300, dealingRange: stage('confirmed') };
+  const next = { ...first, id: 'range:validation:600', knownAt: 600, dealingRange: stage('invalidated') };
+  const groups = groupSetupSnapshots([legacy, first, next]);
+  expect(groups).toHaveLength(2);
+  expect(filterDealingRanges(groups)).toHaveLength(1);
+  expect(filterDealingRanges(groups, 'invalidated')[0].snapshot).toBe(next);
+  expect(filterDealingRanges(groups, 'invalidated')[0].candidate).toBe(first);
+  expect(filterDealingRanges(groups, 'legacy')[0].snapshot).toBe(legacy);
+  expect(filterDealingRanges(groups, 'validated')).toEqual([]);
+  expect(setupEntryConditions(next).missing.some(row => row.key === 'validation')).toBe(true);
 });
 it('shows saved positive evidence and times without inventing CHoCH/BOS gates or a known time clearance', () => {
   const review = setupEntryConditions(snapshot());

@@ -7,7 +7,10 @@ import { buildTradeSetup2Configuration } from '../src/tradeSetup2Configuration.j
 const entryAt = direction => ({ id: 'entry', setupKey: 'setup', instrument: 'GBPUSD', direction,
   recognizedAt: 600, price: 1.35, stops: { wide: { price: direction === 'long' ? 1.34967 : 1.35033 } } });
 const checklistAt = (direction, recognizedAt) => ({ status: 'ready', instrument: 'GBPUSD', evaluatedAt: 600,
-  setup: { primary: { id: 'setup', direction } }, checks: { time: { status: 'passed' },
+  direction, setup: { primary: { id: 'setup', direction, reactionRecognizedAt: 300,
+    checks: { liquiditySweep: { status: 'passed' }, reaction: { status: 'passed' } },
+    targetSelection: { status: 'passed', selectedAt: 300, target1: { price: 1.36 } } } },
+  checks: { h1Trend: { status: 'passed' }, time: { status: 'passed' },
     m5Trend: { structureReaction: { direction, choch: recognizedAt == null ? null : { type: 'CHoCH', direction, recognizedAt, candleTime: recognizedAt - 300 } } } } });
 
 describe.each(['long', 'short'])('M5-CHoCH sizing for %s', direction => {
@@ -25,7 +28,7 @@ describe.each(['long', 'short'])('M5-CHoCH sizing for %s', direction => {
   it('freezes factor and causal evidence in both entry representations without changing the source', () => {
     const entry = entryAt(direction), checklist = checklistAt(direction, 600);
     const snapshot = buildTradeSetup2Snapshot({ checklist, m1Check: { entry, evaluatedAt: 600 } });
-    expect(snapshot.schemaVersion).toBe(2);
+    expect(snapshot.schemaVersion).toBe(3);
     expect(snapshot.entry.sizing).toMatchObject({ version: ENTRY_SIZING_VERSION, factor: 1, evaluatedAt: 600, reason: 'm5ChochConfirmed' });
     expect(snapshot.m1Check.entry.sizing).toEqual(snapshot.entry.sizing);
     expect(entry.sizing).toBeUndefined();

@@ -48,9 +48,10 @@ export function createSimulationRepository(db) {
     listReviewSnapshots: async (runId) => {
       // Nur Prüfbelege laden: Strukturbaum und Chartgeometrie sind für die Tabelle unnötig.
       const fields = ['id,run_id,instrument,direction', 'knownAt:snapshot->knownAt', 'setupKey:snapshot->>setupKey',
+        'dealingRange:snapshot->dealingRange',
         'entry:snapshot->entry', 'm1Check:snapshot->m1Check', 'primary:snapshot->checklist->setup->primary',
         'checklistStatus:snapshot->checklist->>status', 'evaluatedAt:snapshot->checklist->evaluatedAt',
-        ...['h1Trend', 'liquiditySweep', 'reaction', 'time'].map(key => `${key}:snapshot->checklist->checks->${key}`),
+        ...['h1Trend', 'liquiditySweep', 'reaction', 'targets', 'antiConfluences', 'confluences', 'time'].map(key => `${key}:snapshot->checklist->checks->${key}`),
         'm1Anchor:snapshot->checklist->checks->m5Trend->m1Anchor'];
       const groups = await Promise.all(['trade_setup_simulation_setups', 'trade_setup_simulation_entries'].map(table =>
         pages((from, to) => {
@@ -59,9 +60,10 @@ export function createSimulationRepository(db) {
           return query.range(from, to);
         })));
       return groups.flat().map(row => ({ id: row.id, runId: row.run_id, instrument: row.instrument, direction: row.direction,
-        knownAt: row.knownAt, setupKey: row.setupKey, entry: row.entry, m1Check: row.m1Check,
+        knownAt: row.knownAt, setupKey: row.setupKey, entry: row.entry, m1Check: row.m1Check, dealingRange: row.dealingRange,
         checklist: { status: row.checklistStatus, evaluatedAt: row.evaluatedAt, setup: { primary: row.primary },
           checks: { h1Trend: row.h1Trend, liquiditySweep: row.liquiditySweep, reaction: row.reaction,
+            targets: row.targets, antiConfluences: row.antiConfluences, confluences: row.confluences,
             time: row.time, m5Trend: { m1Anchor: row.m1Anchor } } } }));
     },
     getEntry: async (runId, id) => {
@@ -76,11 +78,12 @@ export function createSimulationRepository(db) {
     listRuns: async () => (await pages((from, to) => db.from('trade_setup_simulation_runs').select('run').order('id').range(from, to))).map(row => row.run),
     listSetups: async ({ runId, instrument } = {}) => {
       const rows = await pages((from, to) => {
-        let q = db.from('trade_setup_simulation_setups').select('id,instrument,known_at,direction').eq('run_id', runId).order('id').range(from, to);
+        let q = db.from('trade_setup_simulation_setups').select('id,instrument,known_at,direction,setupKey:snapshot->>setupKey,dealingRange:snapshot->dealingRange').eq('run_id', runId).order('id').range(from, to);
         if (instrument) q = q.eq('instrument', instrument);
         return q;
       });
-      return rows.map(row => ({ id: row.id, instrument: row.instrument, knownAt: row.known_at, direction: row.direction }));
+      return rows.map(row => ({ id: row.id, instrument: row.instrument, knownAt: row.known_at, direction: row.direction,
+        setupKey: row.setupKey, dealingRange: row.dealingRange }));
     },
     listResults: async ({ runId, instrument, variant, from, to, asOf } = {}) => {
       const rows = await pages((pageFrom, pageTo) => {

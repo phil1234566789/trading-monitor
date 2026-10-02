@@ -2,6 +2,7 @@ import { evaluateTradeSetupChecklist } from './tradeSetupChecklist.js';
 import { activeM1Context, buildM1Structure, M1_STRUCTURE_PERIOD } from './m1Structure.js';
 import { evaluateM1Checklist } from './m1Checklist.js';
 import { buildTradeSetup2Snapshot, buildTradeSetup2CandidateSnapshot } from './tradeSetup2Snapshot.js';
+import { evaluateDealingRange } from './tradeSetup2DealingRange.js';
 import { markIgnoredCandles } from './sessionOccurrences.js';
 import { berlinOffsetMinutes } from './berlinTime.js';
 import { historicalSettingsAt } from './tradeSetup2Anchors.js';
@@ -39,7 +40,7 @@ export async function scanTradeSetup2Window({ instrument, h1Candles, m5Candles, 
   const m1 = markIgnoredCandles(sorted(m1Candles), sessionConfigs.filter(s => s.instrument === instrument),
     sec => berlinOffsetMinutes(sec * 1000));
   const steps = m5.map(c => c.time + 300).filter(t => t >= Math.floor(fromTime / 300) * 300 && t <= toTime);
-  const snapshots = [], seen = new Set(), seenSetups = new Set();
+  const snapshots = [], seen = new Set(), seenSetups = new Map();
   const reactionCache = new Map();
   const closeReactionCache = createCloseReactionCache();
   let h1End = 0, m5End = 0, m1End = 0;
@@ -55,10 +56,12 @@ export async function scanTradeSetup2Window({ instrument, h1Candles, m5Candles, 
     if (!effectiveSettings) continue;
     const checklist = evaluateAt(at);
     for (const candidate of checklist.setup?.candidates ?? []) {
-      if (at < fromTime || seenSetups.has(candidate.id)) continue;
+      if (at < fromTime) continue;
+      const stage = evaluateDealingRange(checklist, candidate).status;
+      if (stage === 'unconfirmed' || seenSetups.get(candidate.id) === stage) continue;
       const snapshot = buildTradeSetup2CandidateSnapshot({ checklist, candidate });
       if (!snapshot) continue;
-      seenSetups.add(candidate.id);
+      seenSetups.set(candidate.id, stage);
       snapshots.push(snapshot);
       await onSnapshot?.(snapshot);
     }

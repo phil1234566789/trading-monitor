@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref, shallowRef, watch, onScopeDispose } from 'vue';
 import { formatDatedTime } from '../berlinTime.js';
-import { groupSetupSnapshots, setupEntryConditions, REVIEW_STATUS_ICONS } from '../tradeSetup2Review.js';
+import { groupSetupSnapshots, filterDealingRanges, setupEntryConditions, REVIEW_STATUS_ICONS } from '../tradeSetup2Review.js';
+import { DEALING_RANGE_LABELS, savedDealingRangeStatus } from '../tradeSetup2DealingRange.js';
 import { simulationChartLink, simulationDateFilter } from '../tradeSetupSimulationStatistics.js';
 import SetupEntryConditions from './SetupEntryConditions.vue';
 import ToggleButton from './ui/ToggleButton.vue';
@@ -9,6 +10,7 @@ import ToggleButton from './ui/ToggleButton.vue';
 const props = defineProps({ repository: { type: Object, required: true }, runId: String, runs: Array, instrument: String, variant: String });
 const snapshots = shallowRef([]), loading = ref(false), error = ref('');
 const filter = ref('all'), from = ref(''), to = ref(''), page = ref(0);
+const drFilter = ref('current');
 const expanded = ref(new Set());
 function toggle(key, event) { event.target.open ? expanded.value.add(key) : expanded.value.delete(key); }
 const pageSize = 25;
@@ -25,7 +27,9 @@ async function refresh() {
 watch(() => props.runId, refresh, { immediate: true });
 onScopeDispose(() => { revision++; });
 defineExpose({ refresh });
-const groups = computed(() => groupSetupSnapshots(snapshots.value).filter(row => !props.instrument || row.instrument === props.instrument));
+const allGroups = computed(() => groupSetupSnapshots(snapshots.value).filter(row => !props.instrument || row.instrument === props.instrument));
+const groups = computed(() => filterDealingRanges(allGroups.value, drFilter.value));
+const legacyCount = computed(() => filterDealingRanges(allGroups.value, 'legacy').length);
 const withEntry = computed(() => groups.value.filter(row => row.entries.length).length);
 const dateError = computed(() => from.value && to.value && from.value > to.value ? 'Das Enddatum liegt vor dem Startdatum.' : '');
 const rows = computed(() => {
@@ -44,14 +48,16 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
 </script>
 <template>
   <section class="setup-review" aria-label="Gespeicherte Setups und Entry-Bedingungen" :aria-busy="loading">
-    <h2>Setups prüfen · Entry 1</h2>
+    <h2>Dealing Ranges prüfen · Entry 1</h2>
     <p>Eine Zeile je Lauf und Setup. Kandidat und zugehöriger Entry werden innerhalb desselben Laufs zusammengeführt. Stände aus unterschiedlichen Läufen bleiben wegen möglicher anderer Regeln oder Startpunkte getrennt. Alle Zeiten: Europe/Berlin.</p>
-    <p>Bei einem Entry zeigen die Bedingungen den gespeicherten Entry-Stand, sonst den ersten Kandidatenstand.</p>
+    <p>Die neue Version zählt vollständig bestätigte ABC-Ranges, auch ohne Entry und bei gescheiterter Validierung. Bei einem Entry zeigen die Bedingungen den Entry-Stand, sonst den zuletzt gespeicherten DR-Stand.</p>
     <p v-if="loading" role="status">Gespeicherte Setup-Belege werden geladen…</p>
     <p v-else-if="error" role="alert">{{ error }} <button @click="refresh">Erneut versuchen</button></p>
     <template v-else>
       <p class="counts">{{ groups.length }} {{ runId ? 'Setups' : 'Setup-Stände über alle Läufe' }} · {{ withEntry }} mit Entry · {{ groups.length - withEntry }} ohne Entry</p>
+      <p v-if="legacyCount">{{ legacyCount }} Altstände enthalten keine gespeicherte DR-Stufe. Über „Altstände“ bleiben sie mit ihren ursprünglichen Belegen zugänglich.</p>
       <div class="filters">
+        <label>DR-Stufe<select v-model="drFilter"><option value="current">Alle bestätigten Ranges · neue Version</option><option value="validated">Validierte Dealing Ranges</option><option value="invalidated">Invalidierte Dealing Ranges</option><option value="confirmed">Bestätigt · Validierung offen</option><option value="legacy">Altstände · ursprüngliche Kandidaten</option></select></label>
         <label>Setup-Filter<select v-model="filter"><option value="all">Alle</option><option value="with">Mit Entry</option><option value="without">Ohne Entry</option></select></label>
         <label>Bewertungsstand ab<input v-model="from" type="date" /></label>
         <label>Bewertungsstand bis einschließlich<input v-model="to" type="date" /></label>
@@ -63,7 +69,7 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
           <thead><tr><th scope="col">Bewertungsstand</th><th scope="col">Instrument</th><th scope="col">Richtung</th><th scope="col">Status</th><th scope="col">Lauf</th><th scope="col">Entry-Bedingungen</th><th scope="col">Chart</th></tr></thead>
           <tbody><tr v-for="row in visibleRows" :key="row.key">
             <td>{{ formatDatedTime(row.knownAt) }}</td><td>{{ row.instrument }}</td><td>{{ row.direction === 'long' ? 'Long' : 'Short' }}</td>
-            <td>{{ row.entries.length ? 'Mit Entry' : 'Ohne Entry' }}<small>{{ row.entries.length ? 'Entry-Stand' : 'Erster Kandidatenstand' }}</small><strong :class="row.review.assessment.status">{{ REVIEW_STATUS_ICONS[row.review.assessment.status] }} {{ row.review.assessment.label }}</strong></td>
+            <td><strong>{{ DEALING_RANGE_LABELS[savedDealingRangeStatus(row.snapshot)] }}</strong><small>{{ row.entries.length ? 'Mit Entry · Entry-Stand' : 'Ohne Entry · gespeicherter DR-Stand' }}</small><small v-for="detail in row.snapshot.dealingRange?.details" :key="detail">{{ detail }}</small><strong :class="row.review.assessment.status">{{ REVIEW_STATUS_ICONS[row.review.assessment.status] }} {{ row.review.assessment.label }}</strong></td>
             <td :title="row.snapshot.runId">{{ row.snapshot.runId?.slice(-8) }}</td>
             <td>
               <ul v-if="row.review.missing.length" class="missing-conditions"><li v-for="condition in row.review.missing" :key="condition.key" class="unmet"><strong>✕ {{ condition.label }}: {{ condition.key === 'time' ? 'Nicht tradebar' : 'Fehlt' }}</strong><div v-for="(detail, index) in condition.details" :key="index">{{ detail }}</div></li></ul>
@@ -76,7 +82,7 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
                 <p v-if="row.entries.length && row.candidate">Erster Kandidatenstand: {{ formatDatedTime(row.candidate.knownAt) }} Uhr · <RouterLink :to="chartLink(row.candidate)">Kandidatenstand im Chart</RouterLink></p>
               </template>
             </details>
-              <small v-if="!row.entries.length">Nur erster Kandidatenstand; spätere Prüfstände fehlen.</small>
+              <small v-if="!row.entries.length">Gespeicherter DR-Stand; keine vollständige spätere Entry-Prüfung.</small>
             </td>
             <td><RouterLink :to="chartLink(row.snapshot)" :aria-label="`Setup-Stand ${row.instrument} ${formatDatedTime(row.knownAt)} im Chart öffnen`">Im Chart</RouterLink></td>
           </tr></tbody>

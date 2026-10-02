@@ -6,6 +6,7 @@ import { fmtPrice, pricePrecisionForInstrument } from './format.js';
 import { toPips } from './pipConfig.js';
 import { formatRiskPips } from './entryRisk.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
+import { savedDealingRangeStatus } from './tradeSetup2DealingRange.js';
 
 export const REVIEW_STATUS_LABELS = { passed: 'Erfüllt', unmet: 'Fehlt am gespeicherten Stand', unknown: 'Unbekannt / unbewertet' };
 export const REVIEW_STATUS_ICONS = { passed: '✓', unmet: '✕', unknown: '?' };
@@ -14,21 +15,31 @@ export function groupSetupSnapshots(snapshots) {
   const groups = new Map();
   for (const snapshot of snapshots) {
     const key = `${snapshot.runId ?? ''}:${snapshot.instrument}:${snapshot.setupKey ?? snapshot.entry?.setupKey ?? snapshot.id}`;
-    if (!groups.has(key)) groups.set(key, { key, candidate: null, entries: [] });
+    if (!groups.has(key)) groups.set(key, { key, candidate: null, latestCandidate: null, entries: [] });
     const group = groups.get(key);
     if (snapshot.entry) {
       if (!group.entries.some(entry => entry.id === snapshot.id)) group.entries.push(snapshot);
-    } else if (!group.candidate || snapshot.knownAt < group.candidate.knownAt) group.candidate = snapshot;
+    } else {
+      if (!group.candidate || snapshot.knownAt < group.candidate.knownAt) group.candidate = snapshot;
+      if (!group.latestCandidate || snapshot.knownAt > group.latestCandidate.knownAt) group.latestCandidate = snapshot;
+    }
   }
   return [...groups.values()].map(group => {
     group.entries.sort((a, b) => a.knownAt - b.knownAt);
-    const snapshot = group.entries[0] ?? group.candidate;
+    const snapshot = group.entries[0] ?? (savedDealingRangeStatus(group.latestCandidate) === 'legacy' ? group.candidate : group.latestCandidate);
     return { ...group, snapshot, instrument: snapshot.instrument, direction: snapshot.direction, knownAt: snapshot.knownAt };
   }).sort((a, b) => b.knownAt - a.knownAt || a.key.localeCompare(b.key));
 }
 
+export function filterDealingRanges(groups, filter = 'current') {
+  return groups.filter(group => {
+    const status = savedDealingRangeStatus(group.snapshot);
+    return filter === 'current' ? ['confirmed', 'validated', 'invalidated'].includes(status) : status === filter;
+  });
+}
+
 // Die Tabelle erklärt gespeicherte Prüfungen, sie führt keinen neuen Scan aus.
-// Kandidaten enthalten nur ihren Erststand: fehlendes M1 ist kein negativer Jahresbefund.
+// Ohne Entry fehlt eine vollständige M1-Prüfung; das ist kein negativer Jahresbefund.
 export function setupEntryConditions(snapshot) {
   const at = snapshot.knownAt;
   const known = time => Number.isFinite(time) && Number.isFinite(at) && time <= at;
@@ -52,6 +63,9 @@ export function setupEntryConditions(snapshot) {
     add(key, label, future ? 'unknown' : normal(check?.status), future ? ['Beleg liegt nach dem gespeicherten Stand.']
       : check?.details ?? ['Keine Prüfung gespeichert.'], time ?? at);
   }
+  const dr = snapshot.dealingRange;
+  if (savedDealingRangeStatus(snapshot) !== 'legacy') add('validation', 'D · DR-Validierung / Targets',
+    dr.status === 'validated' ? 'passed' : dr.status === 'invalidated' ? 'unmet' : 'unknown', dr.details, dr.evaluatedAt);
   const timeCheck = checks.time;
   add('time', 'Handelszeit / Session / News',
     timeCheck?.status === 'blocked' ? 'unmet' : timeCheck?.status === 'passed' ? 'passed' : 'unknown',

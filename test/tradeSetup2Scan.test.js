@@ -16,6 +16,9 @@ describe('chronological Trade Setup 2.0 scan', () => {
   it('finds DR114 exactly once at its first knowable entry, independent of future candles', async () => {
     const full = await scanTradeSetup2Window(input);
     const entries = full.filter(s => s.entry);
+    expect(full.every(s => s.dealingRange.status !== 'unconfirmed')).toBe(true);
+    expect(full.filter(s => !s.entry).every(s => ['h1Trend', 'liquiditySweep', 'reaction']
+      .every(key => s.checklist.checks[key].status === 'passed'))).toBe(true);
     expect(entries).toHaveLength(1);
     expect(entries[0]).toMatchObject({ knownAt: at('09:50'), entry: { price: 1.35615 } });
     const prefix = await scanTradeSetup2Window({ ...input, toTime: at('09:50'),

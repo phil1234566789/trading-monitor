@@ -1,4 +1,5 @@
 import {tradeSetup2Positions} from './tradeSetup2Positions.js';
+import {DEALING_RANGE_LABELS,savedDealingRangeStatus} from './tradeSetup2DealingRange.js';
 
 // Kandidaten und Ausführungen teilen sich die Anzeigegrenze. Ein späterer Entry
 // ersetzt die Idee erst ab seiner Erkennung, auch beim Zurückspulen.
@@ -28,7 +29,7 @@ export function tradeSetup2HistoryItems(results,candidates,options) {
       instrument:c.instrument,direction:c.direction,kind:'candidate',sortTime:c.knownAt,
       labelTime:sweepKnown?primary.recognizedAt:c.knownAt,timeLabel:sweepKnown?'Sweep':'Stand',
       sweepPrice:Number.isFinite(primary?.sweep?.level?.price)?primary.sweep.level.price:null,
-      isOpen:false,candidateStatus:`ohne Entry · ${ended?reason:'historischer Stand'}`,bounds,
+      isOpen:false,candidateStatus:`ohne Entry · ${DEALING_RANGE_LABELS[savedDealingRangeStatus(c.snapshot ?? c)]}${ended?' · Marktidee '+reason:''}`,bounds,
       fromTime:c.knownAt-60,toTime:Math.min(c.knownAt+1800,options.asOf-60)});
   }
   for(const entry of entries) {

@@ -22,7 +22,7 @@
 
     <section id="stufen" aria-labelledby="stufen-title">
       <h2 id="stufen-title">Die Stufen im Überblick</h2>
-      <p class="section-note">Fachliche Festlegung · die neue Stufeneinteilung ist noch nicht vollständig als umgesetzt verifiziert.</p>
+      <p class="section-note">Fachliche Festlegung · neue Läufe speichern die DR-Stufe mit eigener Regelversion.</p>
       <div class="table-scroll" tabindex="0" aria-label="Stufenübersicht horizontal scrollen">
         <table>
           <caption>Bestätigung, Validierung und Entry-Freigabe werden getrennt geprüft.</caption>
@@ -35,7 +35,7 @@
           </tbody>
         </table>
       </div>
-      <p><strong>Ungeprüft bleibt offen.</strong> Noch nicht geprüfte Validierungsbedingungen sind kein bestätigtes Scheitern. Die verbindlichen E-Showstopper sind noch zu definieren.</p>
+      <p><strong>Ungeprüft bleibt offen.</strong> Noch nicht geprüfte Validierungsbedingungen sind kein bestätigtes Scheitern. Aktuell gibt es unter E ausdrücklich keine Showstopper.</p>
       <p>„Invalidiert“ bezeichnet hier das Ergebnis der Validierung. Ein späteres Ende der Marktidee durch T1 oder Preisinvalidierung wird separat betrachtet.</p>
     </section>
 
@@ -51,7 +51,7 @@
       </dl>
       <p><strong>Alle drei Bedingungen müssen erfüllt sein.</strong> Damit ist das Setup erkannt und soll auch ohne Entry in die Statistik aufgenommen werden. Fehlt eine Bedingung oder ist sie unbekannt, bricht die weitere Entry-Prüfung ab.</p>
       <p>Der M5-Trend kann beim Retracement gegenläufig sein. Eine spätere Drehung in Traderichtung nimmt die A/B-Bestätigung nicht zurück. Eine zwingende Gegenläufigkeit ist kein zusätzlich beschlossenes Gate.</p>
-      <aside class="implementation"><h3>Implementierungsstand</h3><p>Major/Medium-Filter, H1-Richtungszuordnung und ABC-Entry-Sperre sind vorhanden. Die neue statistische Stufe und ihre Bezeichnung sind noch nicht als umgesetzt verifiziert.</p></aside>
+      <aside class="implementation"><h3>Implementierungsstand</h3><p>Neue Läufe speichern nur vollständig bestätigte ABC-Ranges als Trade Setup 2.0. Die Statistik bietet Filter für validierte, invalidierte und bestätigte Ranges mit offener Validierung. Altstände bleiben mit ihren ursprünglichen Belegen separat zugänglich.</p></aside>
     </section>
 
     <section id="validierung" aria-labelledby="validierung-title">
@@ -61,7 +61,7 @@
       <p><strong>Exakte Validierungsregel:</strong> Bestätigte Dealing Range (ABC erfüllt) + D erfüllt (Targets vorhanden) + keine Showstopper in E = valide Dealing Range. Weitere Checklistpunkte sind keine zusätzlichen Bedingungen dieser Validierungsstufe.</p>
       <p>Fehlende Targets müssen an der bestätigten Dealing Range sichtbar bleiben, einschließlich des Grunds. So lassen sich mögliche Algorithmusfehler prüfen.</p>
       <p>Erfüllt eine bestätigte Range die Validierungsbedingungen nicht, ist sie invalidiert und erhält keine Entry-Freigabe. Sie bleibt für Diagnose und Statistik sichtbar.</p>
-      <aside class="implementation"><h3>Implementierungsstand</h3><p>Die Targetermittlung ist vorhanden. Die neue Validierungsstufe und verbindliche E-Showstopper sind noch offen.</p></aside>
+      <aside class="implementation"><h3>Implementierungsstand</h3><p>D entscheidet in der neuen Version über die Validierung. Ein gefundenes T1 genügt; T2 bleibt optional. Eine erfolgte Zielsuche ohne zulässiges Target invalidiert die Range mit Diagnosegrund. Fehlende Prüfdaten lassen die Validierung offen. Neue Entries setzen eine validierte Range voraus.</p></aside>
     </section>
 
     <section id="anti-confluences" aria-labelledby="anti-title">
@@ -72,7 +72,7 @@
         <li><strong>Gegenläufige Inducements am exakten T2-Pivot.</strong> Pivotzuordnung und Altersvergleich sind vorhanden; der Stärkevergleich ist offen.</li>
         <li><strong>Gegenläufige H1-/M5-Orderblocks mit Preisüberlappung am T2.</strong> Sie werden berücksichtigt, wenn kein passendes Gegeninducement gefunden wurde. Die Ursächlichkeit der Gegenreaktion ist nicht bestätigt.</li>
       </ul>
-      <aside class="open-decision"><h3>Offene Entscheidung · verbindliche Showstopper</h3><p>Noch keines dieser Merkmale ist eine verbindliche automatische Entry-Sperre. Welche Merkmale künftig Showstopper sind, ist noch festzulegen.</p><p><strong>Grün unter E bedeutet bisher nur:</strong> Es wurde keine H1-Gegendivergenz gefunden. Daraus folgt keine umfassende Freigabe.</p></aside>
+      <aside class="implementation"><h3>Aktuelle Festlegung · keine Showstopper</h3><p>E-Merkmale werden für die spätere statistische Auswertung gespeichert. Sie sperren aktuell weder die Validierung noch den Entry. Erst nach Auswertung der Gesamtstatistik wird entschieden, ob daraus Showstopper werden.</p><p><strong>Grün unter E bedeutet nur:</strong> Es wurde keine H1-Gegendivergenz gefunden.</p></aside>
     </section>
 
     <section id="entry" aria-labelledby="entry-title">
@@ -84,6 +84,7 @@
         <div><dt>Volle Entry-Größe</dt><dd>Ein bestätigter M5-CHoCH in Traderichtung ist vorhanden.</dd></div>
       </dl>
       <p><strong>M5-BOS ist keine zusätzlich festgelegte Pflicht.</strong> Für beide Größenvarianten gelten die übrigen Entry-Bedingungen einschließlich der globalen Uhrzeitregel unter F.</p>
+      <p><strong>M1 zeigt die aktuell aktive bestätigte Strukturrichtung.</strong> Ein aktiver Nested-Trend ersetzt die äußere Richtung. Bei der Übernahme zum Outer-Trend bleibt die Richtung konsistent. Äußere Ebenen werden als neutraler Kontext angezeigt. Die M1-Richtung ist kein zusätzliches Entry-Gate.</p>
       <details><summary>Einordnung des besprochenen Short-Beispiels</summary><p>Der Screenshot zeigt einen bullischen M5-Trend und unbestätigten M5-CHoCH/BOS. Diese Variante erhält halbe Größe. Sichtbar sind außerdem ein M1 Nested Downtrend, bärischer M1-CHoCH/BOS, ein M5-OB-Retest und eine nachfolgende bärische FVG.</p><p>Aus diesen sichtbaren M1-Merkmalen werden ohne weitere Festlegung keine zusätzlichen Pflichtbedingungen abgeleitet.</p></details>
       <aside class="implementation"><h3>Implementierungsstand</h3><p>Für neue gespeicherte Entries wird der M5-CHoCH am Entry-Zeitpunkt geprüft und die Größe eingefroren. Halbe Größe bedeutet 250 USD, volle Größe 500 USD Preisrisikobudget vor Lot-Abrundung. Kommission und Ergebnisse folgen dem tatsächlichen Volumen. Bestehende Ergebnisläufe bleiben unverändert.</p></aside>
     </section>
@@ -105,7 +106,7 @@
 
     <section id="offen" class="decisions" aria-labelledby="offen-title">
       <h2 id="offen-title">Noch gemeinsam festzulegen</h2>
-      <ol><li>Konkrete Showstopper unter E.</li><li>Weitere Bedingungen zwischen validierter Dealing Range und Entry-Freigabe.</li><li>Umgang mit unbekannten F-Ergebnissen, insbesondere unbekannter News-Abdeckung.</li><li>Eigene Regeln für kleinere LS.</li></ol>
+      <ol><li>Nach Auswertung der Gesamtstatistik: mögliche künftige Showstopper unter E.</li><li>Weitere Entry-Modelle und ihre Bedingungen.</li><li>Umgang mit unbekannten F-Ergebnissen, insbesondere unbekannter News-Abdeckung.</li><li>Eigene Regeln für kleinere LS.</li></ol>
       <p>Die gemeinsame Prüfung und Absegnung dieses Entwurfs steht aus.</p>
     </section>
     <footer>Bestehende Jahresläufe werden durch diese Diskussion nicht verändert. Diese Seite dokumentiert den Regelstand; sie ändert keine Scannerregeln und startet keinen neuen Scan.</footer>

@@ -6,6 +6,7 @@ import { createSimulationRepository } from '../tradeSetupSimulationRepository.js
 import { useSimulationStatistics } from '../composables/useSimulationStatistics.js';
 import { SIMULATION_OUTCOME_LABELS, simulationStatistics, simulationRunStatusLabel } from '../tradeSetupSimulationStatistics.js';
 import { formatDatedTime } from '../berlinTime.js';
+import { isVersionedDealingRangeRun } from '../tradeSetup2DealingRange.js';
 import { fmtMoney, fmtR } from '../format.js';
 import ToggleButton from '../components/ui/ToggleButton.vue';
 import SimulationResultsTable from '../components/SimulationResultsTable.vue';
@@ -21,7 +22,7 @@ const costRows = computed(() => rows.value.map(applySimulationCommission));
 const stats = computed(() => simulationStatistics(costRows.value, variant.value, basis.value));
 const basisLabel = computed(() => basis.value === 'net' ? 'Netto' : 'Brutto');
 const at = value => value == null ? '–' : formatDatedTime(value);
-const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${run.version} · ${simulationRunStatusLabel(run)} · ${run.id.slice(-8)}`;
+const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${isVersionedDealingRangeRun(run) ? 'DR gegen M5 Trend · neue DR-Stufen' : 'Altstand'} · ${run.version} · ${simulationRunStatusLabel(run)} · ${run.id.slice(-8)}`;
 </script>
 
 <template>
@@ -60,6 +61,7 @@ const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${run.version} · 
       <p v-else-if="!runs.length" class="empty">Noch keine gespeicherten Simulationsläufe. Sobald ein Lauf Ergebnisse gespeichert hat, erscheinen sie hier.</p>
       <p v-else-if="!runId" class="denominator">Für Ergebnisstatistik und Winrate bitte einen einzelnen Lauf wählen. „Alle Läufe“ enthält auch wiederholte Setups aus Tests und unterschiedlichen Regelversionen; daraus wird keine gemeinsame Winrate berechnet.</p>
       <template v-else>
+        <p v-if="!isVersionedDealingRangeRun(selectedRun)" class="denominator">Altstand: Die Ergebnisstatistik verwendet die ursprünglichen gespeicherten Entries dieses Laufs. Seine Kandidaten wurden nicht nach den neuen DR-Stufen klassifiziert.</p>
         <p class="denominator">Kostenansicht {{ SIMULATION_COST_VERSION }}: aus gespeicherten Bruttoergebnissen berechnet. Ältere Bruttoläufe werden nachträglich umgerechnet; ihre gespeicherten Originalergebnisse bleiben unverändert.</p>
         <section class="statistics-summary" aria-label="Statistik der gewählten Variante">
           <div><span>Entry-Signale</span><strong>{{ stats.total }}</strong></div>

@@ -7,6 +7,7 @@ import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { evaluateChecklistCandidates } from './tradeSetupChecklistCandidates.js';
 import { evaluateChecklistM5, unknownChecklistM5 } from './tradeSetupChecklistM5.js';
 import { hasConfirmedChecklistAbc } from './tradeSetupChecklistGates.js';
+import { evaluateDealingRange } from './tradeSetup2DealingRange.js';
 export { checklistEvaluationTime, closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 
 function openChecks() {
@@ -60,12 +61,13 @@ export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles
     checks.h1Trend = { status: 'passed', details: [state.trend === 'uptrend' ? 'Bullisch — Hauptcheckliste für Long.' : 'Bärisch — Hauptcheckliste für Short.'] };
   }
   if (entryGates && !result.direction) return result;
-  const setup = evaluateChecklistCandidates(context, sessionConfigs, { entryGates, timeBlocked: checks.time.status === 'blocked' });
+  const setup = evaluateChecklistCandidates(context, sessionConfigs, { entryGates });
   Object.assign(checks, setup.checks);
   if (!entryGates || (checks.time.status !== 'blocked' && hasConfirmedChecklistAbc(checks))) {
     checks.m5Trend = evaluateChecklistM5(context, settings);
   }
   result.setup = setup;
+  result.dealingRange = evaluateDealingRange(result);
   return result;
 }
 

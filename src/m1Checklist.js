@@ -11,6 +11,7 @@ import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 
 const waiting = {
   abc: 'M1-Struktur wartet auf A, B und C.',
+  validation: 'Entry-Prüfung wartet auf eine validierte Dealing Range mit bestimmbaren Targets.',
   time: 'M1-Auswertung pausiert: Handelszeit, Session oder News sperren neue Entries.',
   anchor: 'M1-Struktur wartet auf einen eindeutigen M5-Anker.',
   loading: 'M1-Kerzen werden geladen.',

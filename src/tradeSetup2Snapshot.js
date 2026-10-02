@@ -1,6 +1,8 @@
 import { tradeSetup2Evidence } from './tradeSetup2Evidence.js';
 import { entrySizingAt } from './tradeSetup2EntrySizing.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
+import { evaluateDealingRange } from './tradeSetup2DealingRange.js';
+import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
 
 export function isTradeSetup2SnapshotView(props) {
   return !!(props.tradeSetup2RunId && props.selectedTradeSetup2Id);
@@ -24,14 +26,22 @@ export function restoreTradeSetup2Snapshot(snapshot) {
 export function buildTradeSetup2CandidateSnapshot({checklist,candidate}) {
   if (checklist?.status!=='ready' || !candidate?.id || !Number.isFinite(candidate.knownAsOf)
     || candidate.knownAsOf!==checklist.evaluatedAt) return null;
+  const dealingRange = evaluateDealingRange(checklist, candidate);
+  if (dealingRange.status === 'unconfirmed') return null;
   const state={...checklist,setup:{primary:candidate}};
   delete state.context;
-  // Bei Gegenkandidaten gehören H/G nicht zu dieser Idee. Nur belegte B/C/D übernehmen.
-  if (candidate.id!==checklist.setup?.primary?.id) state.checks={...candidate.checks,
-    targets:{status:candidate.targetSelection?.status ?? 'unknown',details:candidate.targetSelection?.details ?? []}};
-  return restoreTradeSetup2Snapshot(JSON.parse(JSON.stringify({schemaVersion:1,id:candidate.id,instrument:checklist.instrument,
+  // Weitere bestätigte Sweeps in derselben H1-Richtung erhalten eigene E/G-Belege.
+  if (candidate.id!==checklist.setup?.primary?.id) state.checks={h1Trend:checklist.checks.h1Trend,
+    time:checklist.checks.time,...candidate.checks,
+    targets:{status:candidate.targetSelection?.status ?? 'unknown',details:candidate.targetSelection?.details ?? []},
+    ...evaluateChecklistConfluences({...checklist.context,primary:candidate,
+      opposingCandidates:checklist.setup.opposingCandidates,target2:candidate.targetSelection?.target2})};
+  state.dealingRange = dealingRange;
+  // Tagesfenster können denselben Sweep erneut finden. Die Zeit in der Snapshot-ID
+  // schützt seinen früheren Wissensstand; setupKey hält die gemeinsame Range zusammen.
+  return restoreTradeSetup2Snapshot(JSON.parse(JSON.stringify({schemaVersion:3,id:`${candidate.id}:stand:${candidate.knownAsOf}`,instrument:checklist.instrument,
     setupKey:candidate.id,direction:candidate.direction,knownAt:candidate.knownAsOf,entry:null,
-    checklist:state,m1Check:null,evidence:tradeSetup2Evidence({checklist:state})})));
+    dealingRange,checklist:state,m1Check:null,evidence:tradeSetup2Evidence({checklist:state})})));
 }
 
 export function buildTradeSetup2Snapshot(input) {
@@ -42,11 +52,13 @@ export function buildTradeSetup2Snapshot(input) {
   if (!entry || checklist?.status!=='ready' || checklist.evaluatedAt!==entry.recognizedAt
     || checklist.checks?.time?.status==='blocked'
     || m1Check.evaluatedAt!==entry.recognizedAt || !checklist.setup?.primary
-    || checklist.setup.primary.id!==entry.setupKey) return null;
+    || checklist.setup.primary.id!==entry.setupKey || checklist.setup.primary.direction!==entry.direction) return null;
+  const dealingRange = evaluateDealingRange(checklist);
+  if (dealingRange.status !== 'validated') return null;
   const { instrument, evaluatedAt, status, checks, structure, tradeability }=checklist;
   const sizedEntry = { ...entry, sizing: entrySizingAt(checklist, entry) };
-  return restoreTradeSetup2Snapshot(JSON.parse(JSON.stringify({schemaVersion:2,id:entry.id,instrument,setupKey:entry.setupKey,
+  return restoreTradeSetup2Snapshot(JSON.parse(JSON.stringify({schemaVersion:3,id:entry.id,instrument,setupKey:entry.setupKey,
     direction:entry.direction,knownAt:entry.recognizedAt,entry:sizedEntry,
-    checklist:{instrument,evaluatedAt,status,checks,structure,tradeability,setup:{primary:checklist.setup.primary}},
+    dealingRange,checklist:{instrument,evaluatedAt,status,checks,structure,tradeability,dealingRange,setup:{primary:checklist.setup.primary}},
     m1Check:{...m1Check,entry:sizedEntry},evidence:tradeSetup2Evidence(input)})));
 }
