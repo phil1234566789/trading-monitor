@@ -1,0 +1,203 @@
+{
+  "runId": "setup2-0ed661646de17694a23337ad",
+  "provenance": {
+    "source": "FXCM Bid · DR114 Referenz 09.09.2026",
+    "sourceHash": "b3685d2e5b68748ebf88ebb6173f58fead6632fbc2f00cb1a2a267cdffe23708",
+    "snapshotAt": 1790765137,
+    "limitations": [
+      "Manueller Replay-H1-Anker; kein historischer D1-P4-Jahreslauf.",
+      "5 USD Roundturn-Kommission je eröffnetem Standardlot; kein Spread und keine Slippage.",
+      "Unklare Intrabar-Reihenfolgen und Historienlücken bleiben unklar."
+    ],
+    "configurationHash": "5f7678296a6dbbe57a082a0f92dbde7f7643c642a64cccdc5679600b6fa021d7",
+    "referenceRunId": "setup2-f22b002ff966041d47187326",
+    "outcomeArchiveRunId": "setup2-2b8c44314659f7fe8b63a34b",
+    "validationStatus": "validation-fixture",
+    "validationNote": "Separater Replay-Referenzfall mit H1-Start 21.08.2026 11:00 Europe/Berlin; Entryfenster 09.09.2026 09:25–10:00, Exitverfolgung aus geschlossenem M1-Archiv."
+  },
+  "entry": {
+    "id": "GBPUSD:GBPUSD:1H:short:1788184800:1.35649:1788937200:entry-1",
+    "label": "Entry 1",
+    "instrument": "GBPUSD",
+    "setupKey": "GBPUSD:1H:short:1788184800:1.35649:1788937200",
+    "direction": "short",
+    "candleTime": 1788940140,
+    "recognizedAt": 1788940200,
+    "price": 1.35615,
+    "stops": {
+      "wide": {
+        "price": 1.35675,
+        "sourceTime": 1788938400
+      },
+      "narrow": {
+        "price": 1.35648,
+        "sourceTime": 1788939960
+      }
+    },
+    "scales": {
+      "wide": {
+        "status": "ready",
+        "entry": 1.35615,
+        "stop": 1.35675,
+        "risk": 0.0005999999999999339,
+        "riskPips": 5.999999999999339,
+        "levels": [
+          {
+            "r": 3,
+            "price": 1.3543500000000002
+          },
+          {
+            "r": 6,
+            "price": 1.3525500000000004
+          },
+          {
+            "r": 10,
+            "price": 1.3501500000000006
+          }
+        ],
+        "targets": [
+          {
+            "label": "T1",
+            "price": 1.35335,
+            "rr": 4.6666666666670364
+          },
+          {
+            "label": "T2",
+            "price": 1.353,
+            "rr": 5.250000000000555
+          }
+        ]
+      },
+      "narrow": {
+        "status": "ready",
+        "entry": 1.35615,
+        "stop": 1.35648,
+        "risk": 0.00032999999999994145,
+        "riskPips": 3.2999999999994145,
+        "levels": [
+          {
+            "r": 3,
+            "price": 1.3551600000000001
+          },
+          {
+            "r": 6,
+            "price": 1.3541700000000003
+          },
+          {
+            "r": 10,
+            "price": 1.3528500000000006
+          }
+        ],
+        "targets": [
+          {
+            "label": "T1",
+            "price": 1.35335,
+            "rr": 8.484848484849728
+          },
+          {
+            "label": "T2",
+            "price": 1.353,
+            "rr": 9.545454545456197
+          }
+        ]
+      }
+    }
+  },
+  "outcomes": [
+    {
+      "variant": "wide",
+      "entryId": "GBPUSD:GBPUSD:1H:short:1788184800:1.35649:1788937200:entry-1",
+      "entryTime": 1788940200,
+      "entryPrice": 1.35615,
+      "stopPrice": 1.35675,
+      "riskBudget": 500,
+      "lots": 8,
+      "t1Lots": 4,
+      "actualRisk": 480,
+      "status": "closed",
+      "reason": null,
+      "target1Price": 1.35335,
+      "target2Price": 1.353,
+      "outcome": "t2",
+      "pnlUsd": 2380,
+      "rMultiple": 4.958333333333333,
+      "realizedPnlUsd": 2380,
+      "t1PnlUsd": 1120,
+      "t1Time": 1788947760,
+      "t1RecognizedAt": 1788947820,
+      "exitTime": 1788948120,
+      "exitRecognizedAt": 1788948180,
+      "exitPrice": 1.353,
+      "ambiguityRecognizedAt": null,
+      "evaluatedAt": 1790765132,
+      "costVersion": "usd5-roundturn-opening-volume-v1",
+      "commissionUsd": 40,
+      "netPnlUsd": 2340,
+      "netRMultiple": 4.875,
+      "realizedNetPnlUsd": 2340
+    },
+    {
+      "variant": "narrow",
+      "entryId": "GBPUSD:GBPUSD:1H:short:1788184800:1.35649:1788937200:entry-1",
+      "entryTime": 1788940200,
+      "entryPrice": 1.35615,
+      "stopPrice": 1.35648,
+      "riskBudget": 500,
+      "lots": 15,
+      "t1Lots": 7.5,
+      "actualRisk": 495,
+      "status": "closed",
+      "reason": null,
+      "target1Price": 1.35335,
+      "target2Price": 1.353,
+      "outcome": "t2",
+      "pnlUsd": 4462.5,
+      "rMultiple": 9.015151515151516,
+      "realizedPnlUsd": 4462.5,
+      "t1PnlUsd": 2100,
+      "t1Time": 1788947760,
+      "t1RecognizedAt": 1788947820,
+      "exitTime": 1788948120,
+      "exitRecognizedAt": 1788948180,
+      "exitPrice": 1.353,
+      "ambiguityRecognizedAt": null,
+      "evaluatedAt": 1790765132,
+      "costVersion": "usd5-roundturn-opening-volume-v1",
+      "commissionUsd": 75,
+      "netPnlUsd": 4387.5,
+      "netRMultiple": 8.863636363636363,
+      "realizedNetPnlUsd": 4387.5
+    }
+  ],
+  "scanSeconds": 2.3266360999999995,
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/save_trade_setup_simulation_run",
+      "status": 204,
+      "milliseconds": 500.7923999999998,
+      "requestBytes": 25738
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/save_trade_setup_simulation_setups",
+      "status": 204,
+      "milliseconds": 491.5765000000001,
+      "requestBytes": 128611
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/rpc/save_trade_setup_simulation_entries",
+      "status": 204,
+      "milliseconds": 253.3431999999998,
+      "requestBytes": 94939
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trade_setup_simulation_entries",
+      "status": 200,
+      "milliseconds": 247.51770000000033,
+      "requestBytes": 0
+    }
+  ]
+}
