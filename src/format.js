@@ -50,3 +50,7 @@ export function fmtMoney(n) {
   const sign = n < 0 ? "-" : "";
   return `${sign}$${Math.abs(n).toFixed(2)}`;
 }
+
+export function pnlClass(value) {
+  return value > 0 ? 'positive' : value < 0 ? 'negative' : '';
+}

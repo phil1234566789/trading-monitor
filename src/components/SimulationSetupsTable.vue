@@ -7,6 +7,7 @@ import { simulationChartLink, simulationDateFilter, simulationRunLink } from '..
 import SetupEntryConditions from './SetupEntryConditions.vue';
 import ToggleButton from './ui/ToggleButton.vue';
 import SimulationEntryResult from './SimulationEntryResult.vue';
+import FilteredDealingRangeSummary from './FilteredDealingRangeSummary.vue';
 
 const props = defineProps({ repository: { type: Object, required: true }, runId: String, runs: Array, instrument: String, variant: String, results: { type: Array, default: () => [] }, resultsLoading: Boolean, resultsError: String });
 const snapshots = shallowRef([]), loading = ref(false), error = ref('');
@@ -64,7 +65,9 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
         <label>Bewertungsstand bis einschließlich<input v-model="to" type="date" /></label>
       </div>
       <p v-if="dateError" role="alert">{{ dateError }}</p>
-      <div v-else-if="rows.length" class="table-scroll" tabindex="0" aria-label="Setup-Tabelle horizontal scrollen">
+      <FilteredDealingRangeSummary v-if="!dateError && !resultsLoading && !resultsError" :groups="rows" :results="results" :variant="variant" />
+      <p v-else-if="!dateError">{{ resultsLoading ? 'Kennzahlen werden geladen…' : 'Kennzahlen nicht verfügbar.' }}</p>
+      <div v-if="!dateError && rows.length" class="table-scroll" tabindex="0" aria-label="Setup-Tabelle horizontal scrollen">
         <table>
           <caption>Gespeicherte Setups · {{ rows.length }} Treffer</caption>
           <thead><tr><th scope="col">Bewertungsstand</th><th scope="col">Instrument</th><th scope="col">Richtung</th><th scope="col">Status</th><th scope="col">Lauf</th><th scope="col">Entry-Ergebnis · {{ variant === 'narrow' ? 'Enger SL' : 'Weiter SL' }}</th><th scope="col">Entry-Bedingungen</th><th scope="col">Chart</th></tr></thead>
@@ -90,7 +93,7 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
           </tr></tbody>
         </table>
       </div>
-      <p v-else>Keine Setups für diese Filterauswahl.</p>
+      <p v-else-if="!dateError">Keine Setups für diese Filterauswahl.</p>
       <div class="pagination"><span>{{ rows.length }} Setups · Seite {{ page + 1 }} von {{ pages }}</span>
         <ToggleButton variant="bordered" :disabled="page === 0" @click="page--">Vorherige Setups</ToggleButton>
         <ToggleButton variant="bordered" :disabled="page + 1 >= pages" @click="page++">Weitere Setups</ToggleButton>

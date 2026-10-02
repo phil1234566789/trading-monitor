@@ -21,7 +21,7 @@ export function simulationRunStatusLabel(run) {
   return { running: 'Läuft', complete: 'Abgeschlossen', failed: 'Fehlgeschlagen' }[run.status] ?? run.status;
 }
 
-export function simulationStatistics(rows, variant, basis = 'gross') {
+export function simulationStatistics(rows, variant, basis = 'gross', minWinrateCases = MIN_SIMULATION_WINRATE_CASES) {
   const pnlField = basis === 'net' ? 'netPnlUsd' : 'pnlUsd';
   const rField = basis === 'net' ? 'netRMultiple' : 'rMultiple';
   const selected = rows.filter(row => row.variant === variant);
@@ -37,8 +37,8 @@ export function simulationStatistics(rows, variant, basis = 'gross') {
   const losses = closed.filter(row => row[pnlField] < 0).length;
   return {
     total: selected.length, counts, closed: closed.length, wins, losses,
-    // Philip erlaubt Prozentwerte ab 50 entschiedenen Fällen (PLAN-dr-statistik-ui.md).
-    winrate: closed.length >= MIN_SIMULATION_WINRATE_CASES ? wins / closed.length * 100 : null,
+    // Die gefilterte DR-Prüfung zeigt auch kleine Stichproben ausdrücklich als vorläufig.
+    winrate: closed.length > 0 && closed.length >= minWinrateCases ? wins / closed.length * 100 : null,
     pnlUsd: closed.length ? closed.reduce((sum, row) => sum + row[pnlField], 0) : null,
     totalR: closed.length ? closed.reduce((sum, row) => sum + row[rField], 0) : null,
   };
@@ -51,6 +51,29 @@ export function simulationRunLink(runId, variant = 'wide') {
 export function simulationEntryResult(rows, snapshot, variant) {
   // Snapshot-IDs können sich in alternativen Läufen wiederholen; beide Identitäten müssen passen.
   return rows.find(row => row.runId === snapshot.runId && row.snapshotId === snapshot.id && row.variant === variant);
+}
+
+export function filteredDealingRangeStatistics(groups, results, variant) {
+  const runs = new Map();
+  for (const group of groups) {
+    const runId = group.snapshot.runId;
+    if (!runs.has(runId)) runs.set(runId, { runId, ranges: 0, withoutEntry: 0, results: [], missingResults: 0 });
+    const run = runs.get(runId);
+    run.ranges++;
+    if (!group.entries.length) run.withoutEntry++;
+    for (const entry of group.entries) {
+      const result = simulationEntryResult(results, entry, variant);
+      if (result) run.results.push(result); else run.missingResults++;
+    }
+  }
+  // Alternative Laufstände sind keine zusätzlichen unabhängigen Trades; keine gemeinsame Winrate.
+  return [...runs.values()].map(({ results: rows, ...run }) => {
+    const open = rows.filter(row => row.status === 'open');
+    const knownRealized = open.filter(row => Number.isFinite(row.realizedNetPnlUsd));
+    return { ...run, ...simulationStatistics(rows, variant, 'net', 1),
+      openRealizedNetPnlUsd: knownRealized.length ? knownRealized.reduce((sum, row) => sum + row.realizedNetPnlUsd, 0) : null,
+      openRealizedUnknown: open.length - knownRealized.length };
+  });
 }
 
 export function simulationDateFilter(from, to) {
