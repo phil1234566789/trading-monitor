@@ -59,6 +59,7 @@ const lastUpdateText = computed(() =>
         <RouterLink to="/" exact-active-class="active">Dashboard</RouterLink>
         <RouterLink to="/protokoll" exact-active-class="active">Protokoll</RouterLink>
         <RouterLink to="/statistik" exact-active-class="active">Statistik</RouterLink>
+        <RouterLink to="/setup-regeln" exact-active-class="active">Setup-Regeln</RouterLink>
         <RouterLink to="/alarme" exact-active-class="active">Alarme</RouterLink>
         <RouterLink to="/handelszeiten" exact-active-class="active">Handelszeiten</RouterLink>
         <RouterLink to="/konten" exact-active-class="active">Konten</RouterLink>
