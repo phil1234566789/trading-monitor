@@ -85,7 +85,7 @@
       </dl>
       <p><strong>M5-BOS ist keine zusätzlich festgelegte Pflicht.</strong> Für beide Größenvarianten gelten die übrigen Entry-Bedingungen einschließlich der globalen Uhrzeitregel unter F.</p>
       <details><summary>Einordnung des besprochenen Short-Beispiels</summary><p>Der Screenshot zeigt einen bullischen M5-Trend und unbestätigten M5-CHoCH/BOS. Diese Variante erhält halbe Größe. Sichtbar sind außerdem ein M1 Nested Downtrend, bärischer M1-CHoCH/BOS, ein M5-OB-Retest und eine nachfolgende bärische FVG.</p><p>Aus diesen sichtbaren M1-Merkmalen werden ohne weitere Festlegung keine zusätzlichen Pflichtbedingungen abgeleitet.</p></details>
-      <aside class="implementation"><h3>Implementierungsstand</h3><p>Die technische Umsetzung der Größenvarianten ist noch nicht verifiziert. Bestehende Ergebnisläufe bleiben unverändert.</p></aside>
+      <aside class="implementation"><h3>Implementierungsstand</h3><p>Für neue gespeicherte Entries wird der M5-CHoCH am Entry-Zeitpunkt geprüft und die Größe eingefroren. Halbe Größe bedeutet 250 USD, volle Größe 500 USD Preisrisikobudget vor Lot-Abrundung. Kommission und Ergebnisse folgen dem tatsächlichen Volumen. Bestehende Ergebnisläufe bleiben unverändert.</p></aside>
     </section>
 
     <section id="zeit" aria-labelledby="zeit-title">

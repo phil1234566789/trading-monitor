@@ -40,4 +40,11 @@ describe('simulation results table', () => {
     expect(html).toContain('Uneindeutig');
     expect(html).toContain('Reihenfolge innerhalb der Kerze unbekannt');
   });
+  it('shows the saved sizing factor, reason and budget while labeling legacy rows', async () => {
+    const html = await render([{ ...row, entrySizing: { factor: 0.5 }, riskBudget: 250 }, { ...row, entryId: 'legacy' }]);
+    expect(html).toContain('Faktor 0,5');
+    expect(html).toContain('kein bestätigter M5-CHoCH in Traderichtung');
+    expect(html).toContain('$250.00');
+    expect(html).toContain('Historischer Stand · bisherige Größe unverändert');
+  });
 });

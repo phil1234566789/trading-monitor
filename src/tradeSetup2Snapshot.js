@@ -1,4 +1,5 @@
 import { tradeSetup2Evidence } from './tradeSetup2Evidence.js';
+import { entrySizingAt } from './tradeSetup2EntrySizing.js';
 
 export function isTradeSetup2SnapshotView(props) {
   return !!(props.tradeSetup2RunId && props.selectedTradeSetup2Id);
@@ -37,11 +38,13 @@ export function buildTradeSetup2Snapshot(input) {
   // Ein späterer UI-Stand ist kein damaliger Entry-Stand. Der Scanner muss dafür
   // denselben Evaluator am geschlossenen Entry-Präfix aufrufen.
   if (!entry || checklist?.status!=='ready' || checklist.evaluatedAt!==entry.recognizedAt
+    || checklist.checks?.time?.status==='blocked'
     || m1Check.evaluatedAt!==entry.recognizedAt || !checklist.setup?.primary
     || checklist.setup.primary.id!==entry.setupKey) return null;
   const { instrument, evaluatedAt, status, checks, structure, tradeability }=checklist;
-  return restoreTradeSetup2Snapshot(JSON.parse(JSON.stringify({schemaVersion:1,id:entry.id,instrument,setupKey:entry.setupKey,
-    direction:entry.direction,knownAt:entry.recognizedAt,entry,
+  const sizedEntry = { ...entry, sizing: entrySizingAt(checklist, entry) };
+  return restoreTradeSetup2Snapshot(JSON.parse(JSON.stringify({schemaVersion:2,id:entry.id,instrument,setupKey:entry.setupKey,
+    direction:entry.direction,knownAt:entry.recognizedAt,entry:sizedEntry,
     checklist:{instrument,evaluatedAt,status,checks,structure,tradeability,setup:{primary:checklist.setup.primary}},
-    m1Check,evidence:tradeSetup2Evidence(input)})));
+    m1Check:{...m1Check,entry:sizedEntry},evidence:tradeSetup2Evidence(input)})));
 }

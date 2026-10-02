@@ -1,12 +1,13 @@
 import { checklistStatisticsConfiguration, checklistConfigurationKey } from './tradeSetupChecklistStatistics.js';
 import { SIMULATION_VERSION } from './tradeSetupSimulation.js';
 import { SIMULATION_COST_VERSION } from './tradeSetupSimulationCosts.js';
+import { ENTRY_SIZING_VERSION } from './tradeSetup2EntrySizing.js';
 import { berlinDateStrFor, berlinDayRangeUtcMs } from './berlinTime.js';
 
 export const SETUP2_VERSION='entry-snapshot-p5-time-abc-v2';
 export function buildTradeSetup2Configuration({instrument,settings={},sessionConfigs=[],tradingWindows,news=[],newsLoadStatus}) {
   return {...checklistStatisticsConfiguration(settings,sessionConfigs,instrument),instrument,
-    setupVersion:SETUP2_VERSION,simulationVersion:SIMULATION_VERSION,costVersion:SIMULATION_COST_VERSION,m1Period:5,
+    setupVersion:SETUP2_VERSION,simulationVersion:SIMULATION_VERSION,entrySizingVersion:ENTRY_SIZING_VERSION,costVersion:SIMULATION_COST_VERSION,m1Period:5,
     m5StructurePeriod:settings.m5StructurePeriod ?? 5,m5Structure2Period:settings.m5Structure2Period ?? 2,
     sessions:sessionConfigs.filter(s=>s.instrument===instrument).map(s=>({...s})),
     tradingWindows:tradingWindows ?? null,news,newsLoadStatus:newsLoadStatus ?? 'unknown'};

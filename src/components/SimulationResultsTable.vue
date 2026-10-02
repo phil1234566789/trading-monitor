@@ -4,6 +4,7 @@ import { formatDatedTime } from '../berlinTime.js';
 import { fmtMoney, fmtR } from '../format.js';
 import { SIMULATION_OUTCOME_LABELS, SIMULATION_REASON_LABELS, simulationOutcomeKey, simulationChartLink } from '../tradeSetupSimulationStatistics.js';
 import ToggleButton from './ui/ToggleButton.vue';
+import { entrySizingLabel } from '../tradeSetup2EntrySizing.js';
 
 const props = defineProps({ rows: { type: Array, required: true }, runId: { type: String, required: true } });
 const page = ref(0);
@@ -21,12 +22,13 @@ const lots = value => value == null ? '–' : value.toLocaleString('de-DE', { ma
         <caption>Simulierte Positionen · Zeiten in Europe/Berlin · Brutto und Netto getrennt</caption>
         <thead><tr>
           <th scope="col">Entry</th><th scope="col">Instrument</th><th scope="col">Richtung</th>
-          <th scope="col">Lots</th><th scope="col" title="Geplanter Teilausstieg: exakt 50 % des Anfangsvolumens">T1-Anteil Lots</th><th scope="col">Risiko USD</th>
+          <th scope="col">Entry-Größe / Grund</th><th scope="col">Lots</th><th scope="col" title="Geplanter Teilausstieg: exakt 50 % des Anfangsvolumens">T1-Anteil Lots</th><th scope="col">Risiko USD</th>
           <th scope="col">Ergebnis</th><th scope="col">Brutto R</th><th scope="col">Brutto USD</th><th scope="col">Kommission USD</th><th scope="col">Netto R</th><th scope="col">Netto USD</th><th scope="col">Realisiert brutto USD</th><th scope="col">Realisiert netto USD</th><th scope="col">Setup</th>
         </tr></thead>
         <tbody><tr v-for="row in visibleRows" :key="`${row.entryId}:${row.variant}`">
           <td>{{ row.entryTime == null ? '–' : formatDatedTime(row.entryTime) }}</td>
           <td>{{ row.instrument }}</td><td>{{ row.direction === 'long' ? 'Long' : row.direction === 'short' ? 'Short' : '–' }}</td>
+          <td class="entry-sizing">{{ entrySizingLabel(row.entrySizing) }}<small v-if="row.riskBudget != null">Preisrisikobudget {{ fmtMoney(row.riskBudget) }}</small></td>
           <td class="number">{{ lots(row.lots) }}</td><td class="number">{{ lots(row.t1Lots) }}</td>
           <td class="number">{{ fmtMoney(row.actualRisk) }}</td>
           <td><span>{{ SIMULATION_OUTCOME_LABELS[simulationOutcomeKey(row)] ?? 'Unbekannt' }}</span><small v-if="row.reason">{{ SIMULATION_REASON_LABELS[row.reason] ?? 'Ergebnis nicht abschließend bestimmbar' }}</small></td>
@@ -58,6 +60,7 @@ th, td { padding: 10px 12px; border-bottom: 1px solid #2a2e39; }
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: #1e222d; }
 .number { font-variant-numeric: tabular-nums; text-align: right; }
+.entry-sizing { min-width: 200px; max-width: 280px; white-space: normal; }
 .positive { color: #71c8b3; } .negative { color: #ef5350; }
 a { color: #82aaff; } small { display: block; color: #a5a9b4; margin-top: 4px; }
 .pagination { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 12px; margin-top: 12px; color: #a5a9b4; font-size: 12px; }

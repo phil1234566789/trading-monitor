@@ -1,19 +1,27 @@
 import { entryRiskScale } from './entryRisk.js';
 import { applySimulationCommission } from './tradeSetupSimulationCosts.js';
+import { ENTRY_SIZING_VERSION, ENTRY_RISK_BUDGET } from './tradeSetup2EntrySizing.js';
 
-export const SIMULATION_VERSION = 'fixed-500-whole-lots-half-t1-be-commission-v2';
+export const SIMULATION_VERSION = 'm5-choch-250-500-whole-lots-half-t1-be-commission-v3';
 const money = value => Math.round(value * 1e8) / 1e8;
 
 export function sizeSimulation(entry, variant) {
   const stopPrice = entry.stops?.[variant]?.price;
+  // Ohne neue Provenienz behalten alte Snapshots ihr damaliges 500-USD-Modell.
+  const sizing = entry.sizing;
+  const riskBudget = ENTRY_RISK_BUDGET * (sizing?.factor ?? 1);
   const base = { variant, entryId: entry.id, entryTime: entry.recognizedAt, entryPrice: entry.price,
-    stopPrice, riskBudget: 500, lots: 0, t1Lots: 0, actualRisk: 0 };
+    stopPrice, riskBudget, entrySizing: sizing ?? null, lots: 0, t1Lots: 0, actualRisk: 0 };
+  if (sizing && (sizing.version !== ENTRY_SIZING_VERSION || sizing.model !== 'dr-against-m5-trend'
+    || ![0.5, 1].includes(sizing.factor) || sizing.evaluatedAt !== entry.recognizedAt)) {
+    return { ...base, status: 'notExecutable', reason: 'invalidSizing' };
+  }
   if (!['GBPUSD', 'EURUSD'].includes(entry.instrument)) return { ...base, status: 'notExecutable', reason: 'unsupportedInstrument' };
   const scale = entryRiskScale(entry.price, stopPrice, [], entry.instrument, entry.direction);
   if (scale.status !== 'ready') return { ...base, status: 'notExecutable', reason: 'invalidStop' };
   // Preisarithmetik kann bei exakt ganzen Lots wenige ULP unter dem Quotienten liegen.
   const riskPerLot = money(scale.risk * 100000);
-  const lots = Math.floor(500 / riskPerLot + 1e-10);
+  const lots = Math.floor(riskBudget / riskPerLot + 1e-10);
   if (!(lots >= 1) || !Number.isFinite(lots)) return { ...base, status: 'notExecutable', reason: 'belowOneLot' };
   return { ...base, status: 'ready', reason: null, lots, t1Lots: lots / 2, actualRisk: money(lots * riskPerLot) };
 }

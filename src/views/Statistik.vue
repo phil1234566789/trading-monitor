@@ -32,7 +32,8 @@ const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${run.version} · 
     </header>
 
     <section class="simulation-rules" aria-label="Simulationsannahmen">
-      <strong>50.000 USD Referenzkonto · festes Risikobudget 500 USD pro Entry</strong>
+      <strong>50.000 USD Referenzkonto · Basis-Preisrisikobudget 500 USD pro Entry</strong>
+      <p>Neue Entries für „DR gegen M5 Trend“: ohne bestätigten gleichgerichteten M5-CHoCH Faktor 0,5 (250 USD), mit Bestätigung Faktor 1 (500 USD). Das Budget wird vor der Lot-Abrundung angepasst. Historische Läufe behalten ihre gespeicherte Größe.</p>
       <p>Anfangsgröße auf ganze Standardlots abgerundet. 50 % an T1 schließen, Reststop auf Entry, übrige Hälfte bis T2 oder Break-even. Kein Compounding.</p>
       <p>5 USD Kommission je Standardlot insgesamt für Entry und Exit, einmal auf das Eröffnungsvolumen. Für die Kostenansicht wird die volle Gebühr ab Entry angesetzt; Teilverkäufe kosten nicht zusätzlich. Kein Spread und keine Slippage berücksichtigt.</p>
       <p>Weiter und enger SL sind alternative Szenarien. Diese Ergebnisse gehören zur Simulation und werden getrennt vom Journal ausgewertet.</p>

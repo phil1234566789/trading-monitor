@@ -8,7 +8,7 @@ export const SIMULATION_REASON_LABELS = {
   missingHistory: 'Historie unvollständig', sameCandle: 'Reihenfolge innerhalb der Kerze unbekannt',
   unsupportedInstrument: 'Instrument für diese Simulation noch nicht unterstützt',
   invalidStop: 'Stopp nicht ausführbar', invalidTargets: 'Ziele nicht ausführbar',
-  belowOneLot: '500 USD reichen nicht für ein ganzes Lot',
+  belowOneLot: 'Risikobudget reicht nicht für ein ganzes Lot', invalidSizing: 'Größenregel nicht gültig belegt',
 };
 
 export function simulationOutcomeKey(row) {
