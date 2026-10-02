@@ -54,7 +54,9 @@ export function renderSetup2Detail(series,snapshot,primitives,entryPrimitives,ca
   const visible=['1m','5m'].includes(currentBar)&&snapshot?.knownAt<=asOf?snapshot:null;
   renderM1Entry(series,visible?.entry,entryPrimitives,candles,currentBar);
   if(!visible)return;
-  for(const e of [...visible.evidence,...snapshotStructureLevels(visible)]) {
+  const extraLevels=snapshotStructureLevels(visible).filter(level=>!visible.evidence.some(e=>e.kind==='line'
+    &&e.timeframe===level.timeframe&&e.price===level.price&&e.fromTime===level.fromTime));
+  for(const e of [...visible.evidence,...extraLevels]) {
     if(e.knownAt>asOf || !snapshotEvidenceVisible(e,indicators))continue;
     // Ein H1-Level kann vor dem geladenen M1-Fenster beginnen. Nur horizontale
     // Belege am Fensterrand abschneiden; schräge Strukturpfade nicht extrapolieren.
