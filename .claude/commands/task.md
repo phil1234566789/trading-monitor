@@ -1,5 +1,5 @@
 ---
-description: "Nur milk-city Task/Feature/Project-Datenpflege (list/get/create/update/set_status) -- KEIN Code schreiben, ausser bei explizitem '/task do <task>'-Praefix (dann: referenzierten Task tatsaechlich umsetzen). '/task new <text>' legt sofort einen neuen Task an, ohne dass Philip das erst ausformulieren muss. '/task refine <task-oder-idee>' plant erst gemeinsam im Chat, bevor Task-Daten angelegt/geaendert werden -- fuer den Fall, dass Philip selbst noch nicht weiss, wie etwas umgesetzt werden soll."
+description: "Nur Task-Datenpflege im digi-brain (list/get/create/update/set_status) -- KEIN Code schreiben, ausser bei explizitem '/task do <task>'-Praefix (dann: referenzierten Task tatsaechlich umsetzen). '/task new <text>' legt sofort einen neuen Task an, ohne dass Philip das erst ausformulieren muss. '/task refine <task-oder-idee>' plant erst gemeinsam im Chat, bevor Task-Daten angelegt/geaendert werden -- fuer den Fall, dass Philip selbst noch nicht weiss, wie etwas umgesetzt werden soll."
 ---
 
 ## Modus "/task new <text>": Sofort einen neuen Task anlegen
@@ -16,7 +16,7 @@ Rohbeschreibung des gewünschten Tasks, nicht eine Frage oder ein anderer Befehl
    da wie im `refine`-Modus unten gemeinsam klären, bis ein konkreter Ansatz steht. Erst dann mit
    Schritt 2 weiter.
 2. `projectId`: Standardmäßig das Repo, in dem diese Session gerade läuft (cwd) — außer der Text
-   nennt explizit ein anderes Projekt (z.B. "unter milk-city", "in trading"). Bei Unklarheit lieber
+   nennt explizit ein anderes Projekt (z.B. "unter digi-brain", "in trading"). Bei Unklarheit lieber
    kurz auf Deutsch nachfragen als raten.
 3. Titel und Beschreibung nach den selben Regeln formulieren wie im Rest dieses Dokuments (nicht
    1:1 übernehmen, umformulieren, KI-optimiert, vorher `list_tasks` auf Stil/Länge prüfen) — dieser
@@ -54,7 +54,7 @@ expliziter `/task do <task>`-Aufruf danach, nicht Teil von `refine` selbst.
      1:1-Übernahme von Philips Formulierung).
    - Neue Idee → `create_task` (Status bleibt `open`; `work in progress` NICHT setzen, selbst wenn
      Philip direkt loslegen will — das läuft dann über `/task do`, s.o.).
-4. Solange der Ansatz noch nicht steht: keine Tool-Aufrufe, die Task/Feature-Daten verändern
+4. Solange der Ansatz noch nicht steht: keine Tool-Aufrufe, die Task-Daten verändern
    (`create_task`/`update_task`/`set_task_status`) — dieser Modus lebt vom Gespräch, nicht vom
    frühzeitigen Festschreiben einer halbfertigen Beschreibung.
 
@@ -79,33 +79,19 @@ NICHT die "keine Implementierung"-Regel weiter unten — stattdessen:
    Bestätigung `done`; nach einem eigenen `git push` für diesen Task selbst `released` setzen.
 
 Ist Philips Anfrage weder mit `new `, `refine ` noch mit `do ` eingeleitet, gilt ab hier ausschliesslich die
-Datenpflege-Beschreibung im Rest dieses Dokuments — dann will Philip ausschliesslich milk-city-**Tasks**, -**Features** (die
-übergeordnete Gruppierung mehrerer Tasks, ein "Raum" im MC-Raster) oder -**Projects** über die
-MCP-Tools (`list_tasks`, `get_task`, `create_task`, `update_task`, `set_task_status`,
-`list_features`, `get_feature`, `create_feature`, `update_feature`) lesen oder ändern — **keine
-Code-Implementierung**, auch wenn die Anfrage inhaltlich nach einer Feature-*Beschreibung* (im
-Sinne von "neue Funktionalität") klingt oder zufällig zu einem offenen Task passt. Achtung
-Begriffs-Kollision: "Feature anlegen" heisst hier IMMER die milk-city-Entity per `create_feature`
-anlegen, nie eine echte Funktionalität im Ziel-Repo bauen.
+Datenpflege-Beschreibung im Rest dieses Dokuments — dann will Philip ausschliesslich **Tasks** im `digi-brain`-MCP-Server über die Tools
+(`list_tasks`, `get_task`, `create_task`, `update_task`, `set_task_status`) lesen oder ändern —
+**keine Code-Implementierung**, auch wenn die Anfrage inhaltlich nach einer Feature-Beschreibung
+klingt oder zufällig zu einem offenen Task passt. Features gibt es nicht; die
+Zugehörigkeit eines Tasks läuft nur über `projectId`.
 
 Konkret:
-- Führe nur die Tool-Aufrufe aus, die nötig sind, um Titel/Beschreibung/Projekt-Zuordnung (bei
-  Tasks zusätzlich Status) zu lesen oder zu ändern, oder um einen neuen Task/ein neues Feature
-  anzulegen — passend zu dem, was Philip in dieser Nachricht sagt.
-- Ein Feature hat keinen `status` (nur Tasks haben work in progress/review/done/released) und
-  keine MC-Raster-Zellen über MCP — die Zellzuordnung (welche Rasterzellen zum "Raum" gehören)
-  läuft ausschliesslich per Drag-Painting im Feature-Editor im Browser, nicht per Tool-Aufruf.
-  Ein neu angelegtes Feature erscheint zunächst ohne Zellen und mit zufälliger Farbe; das ist
-  erwartetes Verhalten, kein fehlender Schritt.
-- Falls Philip ein Feature einem Task zuordnen will ("Task X gehört zu Feature Y"): das läuft
-  laut Migration `20260814230000_tasks_add_feature_id.sql` automatisch übers Draggen eines
-  Task-Blocks auf die Feature-Zellen im MC-Raster, es gibt bewusst kein manuelles Zuordnungs-Tool
-  über MCP — wenn danach gefragt wird, das erklären statt zu versuchen, `feature_id` irgendwie
-  selbst zu setzen.
+- Führe nur die Tool-Aufrufe aus, die nötig sind, um Titel/Beschreibung/Projekt-Zuordnung/Prio/Status
+  zu lesen oder zu ändern, oder um einen neuen Task anzulegen — passend zu dem, was Philip in dieser Nachricht sagt.
 - Keine Datei-Edits, kein Bash zum Bauen/Testen, keine Implementierung. Das gilt auch dann, wenn
-  CLAUDE.mds übliche Regel ("passt eindeutig zu einem offenen Task -> sofort `carried` setzen und
+  CLAUDE.mds übliche Regel ("passt eindeutig zu einem offenen Task -> sofort `work in progress` setzen und
   loslegen") das sonst nahelegen würde — dieser Command überschreibt das für die aktuelle Anfrage.
-  Status bleibt entsprechend unangetastet (kein `carried`), es sei denn Philip sagt explizit, dass
+  Status bleibt entsprechend unangetastet (kein `work in progress`), es sei denn Philip sagt explizit, dass
   jetzt losgelegt werden soll.
 - Wenn unklar ist, welcher Task oder welches Projekt gemeint ist, oder wenn Philips Anfrage
   inhaltlich mehrdeutig ist (mehrere plausible Lesarten, fehlende Angabe die für eine spätere
@@ -125,7 +111,7 @@ Konkret:
   dieser Regel, trotz drei Teilpunkten). Stil: kein ganzer Satz, im Stil der bestehenden Tasks
   (z.B. "Tile-Editor: Undo (Strg+Z)", "RSI-Divergenz fertigstellen", "Task-UI: Rechtsklick-Modal
   statt Canvas-Hover") — Bereich/Komponente knapp benennen, kein Nachplappern von Philips
-  Wortlaut. Vorher kurz mit `list_tasks` (bzw. `list_features` bei einem neuen Feature) auf
+  Wortlaut. Vorher kurz mit `list_tasks` auf
   ähnliche/vorhandene Titel schauen, damit Stil, Schreibweise UND Längen-Kalibrierung konsistent
   bleiben.
 - Beschreibung: KI-optimiert für spätere direkte Implementierung durch einen Coding-Agenten ohne

@@ -6,13 +6,6 @@
       "headers": {
         "Authorization": "Bearer ${TRADING_MONITOR_MCP_TOKEN}"
       }
-    },
-    "milk-city": {
-      "type": "http",
-      "url": "https://lpivzczsvuszblodeaxf.supabase.co/functions/v1/mcp",
-      "headers": {
-        "Authorization": "Bearer ${MILK_CITY_MCP_TOKEN}"
-      }
     }
   }
 }

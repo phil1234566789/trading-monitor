@@ -221,8 +221,8 @@ applies when explicitly invoked, not to every session in this repo.
   debug-metadata section keys, and comments that reference the old name. Do the full rename in
   the same change (`git mv` for files, update every import), and verify with a repo-wide grep for
   the old name afterward, not just the one call site that was pointed at.
-- **milk-city task status**: at the start of any task, check whether it clearly matches an open
-  task in the `milk-city` MCP server (`list_tasks`). If it clearly matches, call
+- **Task status**: at the start of any task, check whether it clearly matches an open
+  task in the `digi-brain` MCP server (`list_tasks`). If it clearly matches, call
   `set_task_status(id, "work in progress")` immediately and start working, no confirmation
   needed. If it's unclear whether/which task applies, ask Philip before starting the actual work.
   **On finishing, do NOT set `status="done"` directly — set `status="review"` yourself, the
@@ -235,7 +235,7 @@ applies when explicitly invoked, not to every session in this repo.
   after the push succeeds** — never rely on a shared CI/deploy step to bulk-flip `done`→`released`,
   since multiple agents can push different tasks' commits in the same deploy and only the pushing
   agent knows which task it shipped.
-- **milk-city: auto-create a task from a confirmed-feasible idea**: when Philip asks a
+- **Auto-create a task from a confirmed-feasible idea**: when Philip asks a
   "geht das/ist das teuer einzubauen?"-style question about a potential feature and the answer
   confirms it's feasible with a concrete approach (not just "yes in theory"), call `create_task`
   for it immediately (`projectId` = whichever repo it belongs to, `description` = the concrete
