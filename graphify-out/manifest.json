@@ -4014,8 +4014,8 @@
     "semantic_hash": ""
   },
   "src/tradeSetupChecklist.js": {
-    "mtime": 1790973741.3040106,
-    "seen": 1790974023.7817454,
+    "mtime": 1790974461.8662488,
+    "seen": 1790974553.0194514,
     "ast_hash": "459b49774139d79a47b959fcff3ee3c1",
     "semantic_hash": ""
   },
@@ -4584,9 +4584,9 @@
     "semantic_hash": ""
   },
   "src/views/Statistik.vue": {
-    "mtime": 1790973871.9674091,
-    "seen": 1790974023.7887504,
-    "ast_hash": "c916aced3e3e79a80bea9b46bc2f0436",
+    "mtime": 1790974261.0410645,
+    "seen": 1790974553.0194514,
+    "ast_hash": "c462e369df59dbaba4c19062efbdd8bb",
     "semantic_hash": ""
   },
   "test/SimulationResultsTable.test.js": {
@@ -4644,9 +4644,9 @@
     "semantic_hash": ""
   },
   "PLAN-trade-setup-2-statistik.md": {
-    "mtime": 1790924451.7763762,
-    "seen": 1790924566.0226457,
-    "ast_hash": "19e8487a2436d511c9183412cbece176",
+    "mtime": 1790974539.3364432,
+    "seen": 1790974553.0204506,
+    "ast_hash": "cda5f828d5174090551af534acd2e4ff",
     "semantic_hash": ""
   },
   "scripts/tradeSetup2Publish.mjs": {
@@ -4842,9 +4842,9 @@
     "semantic_hash": ""
   },
   "test/tradeSetup2EntryGates.test.js": {
-    "mtime": 1790974046.7745593,
-    "seen": 1790974252.198422,
-    "ast_hash": "8cacd94ced895ab9009fd5917aa89568",
+    "mtime": 1790974323.9574995,
+    "seen": 1790974553.0204506,
+    "ast_hash": "a74a66aa5677c9291e9d9dafe626ee52",
     "semantic_hash": ""
   },
   "test/tradeSetupSimulationCosts.test.js": {

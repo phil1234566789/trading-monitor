@@ -1,7 +1,7 @@
 # Graph Report - trading-monitor  (2026-10-02)
 
 ## Corpus Check
-- 816 files · ~1,210,287 words
+- 816 files · ~1,210,386 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b35a782f`
+- Built from commit: `e524b2d9`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -235,8 +235,8 @@
 5. `closedChecklistCandles()` - 35 edges
 6. `berlinDateTimeStrFor()` - 34 edges
 7. `lineWidth()` - 32 edges
-8. `fetchForexCandles()` - 31 edges
-9. `barSecondsFor()` - 31 edges
+8. `barSecondsFor()` - 31 edges
+9. `fetchForexCandles()` - 31 edges
 10. `json()` - 30 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -1037,7 +1037,7 @@ Nodes (4): confirmBreak, originHigh, originLow, pullback
   docs/steerabilty-vs-wrong-ai-outputs.md · relation: references
 
 ## Knowledge Gaps
-- **1475 isolated node(s):** `CandleRow`, `ClassifiedDivergence`, `SessionOcc`, `SessionRow`, `InstrumentConfig` (+1470 more)
+- **1475 isolated node(s):** `Ziel und Grenzen`, `Kommission`, `Gemeinsamer Datenvertrag`, `Oberfläche und historische Details`, `Historischer Runner` (+1470 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1846 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **19 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -1047,12 +1047,12 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `Trading-Steps-Ablauf Diagram` and `calc_rr Tool Idea (Deterministic RR Calc)`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
 - **Why does `marketStructureAnalysis Developer Notes` connect `Vegapunk Slimming Results (-86%)` to `fachdoku-router/SKILL.md`, `marketStructureAnalysis Rules Overview`?**
-  _High betweenness centrality (0.088) - this node is a cross-community bridge._
+  _High betweenness centrality (0.046) - this node is a cross-community bridge._
 - **Why does `renderMarketStructureAnalysis()` connect `marketStructureRendering.ts` to `m1Checklist.js`, `cssColor`, `usePriceChartMarketStructure.js`, `Vegapunk Slimming Results (-86%)`, `chartTimeUtils.js`?**
-  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
 - **Why does `File Separation: Algorithm vs Rendering` connect `Vegapunk Slimming Results (-86%)` to `marketStructureRendering.ts`?**
-  _High betweenness centrality (0.067) - this node is a cross-community bridge._
-- **What connects `CandleRow`, `ClassifiedDivergence`, `SessionOcc` to the rest of the system?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+- **What connects `Ziel und Grenzen`, `Kommission`, `Gemeinsamer Datenvertrag` to the rest of the system?**
   _1475 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Dashboard.vue` be split into smaller, more focused modules?**
   _Cohesion score 0.013112491373360938 - nodes in this community are weakly interconnected._
