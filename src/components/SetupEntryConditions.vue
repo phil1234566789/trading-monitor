@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { setupEntryConditions, REVIEW_STATUS_LABELS } from '../tradeSetup2Review.js';
+import { setupEntryConditions, REVIEW_STATUS_LABELS, REVIEW_STATUS_ICONS } from '../tradeSetup2Review.js';
 import { formatDatedTime } from '../berlinTime.js';
 const props = defineProps({ snapshot: { type: Object, required: true } });
 const review = computed(() => setupEntryConditions(props.snapshot));
@@ -8,11 +8,12 @@ const review = computed(() => setupEntryConditions(props.snapshot));
 <template>
   <div class="entry-conditions">
     <h3>Entry 1 · {{ snapshot.entry ? 'Entry-Stand' : 'Kandidatenstand' }} {{ formatDatedTime(snapshot.knownAt) }} Uhr</h3>
-    <p v-if="!snapshot.entry">Dies ist der erste gespeicherte Kandidatenstand. Spätere M1-Prüfungen sind hier nicht gespeichert; unbekannt bedeutet nicht, dass die Bedingung im gesamten Lauf nie erfüllt war.</p>
+    <p :class="review.assessment.status"><strong>{{ REVIEW_STATUS_ICONS[review.assessment.status] }} {{ review.assessment.label }}</strong></p>
+    <p v-if="!snapshot.entry">Erster gespeicherter Kandidatenstand, keine Entry-Freigabe. Der Scan speichert Kandidaten auch außerhalb der Handelszeiten. Spätere Prüfstände sind hier nicht gespeichert; dieser Stand beschreibt nicht den gesamten Lauf. Eine Zeitsperre gilt für den Bewertungszeitpunkt und macht die Idee nicht automatisch dauerhaft ungültig.</p>
     <p v-if="review.prerequisiteNote">{{ review.prerequisiteNote }}</p>
     <ol>
       <li v-for="condition in review.rows" :key="condition.key">
-        <strong>{{ condition.label }}</strong> <span :class="condition.status">{{ REVIEW_STATUS_LABELS[condition.status] }}</span>
+        <strong :class="condition.status">{{ condition.label }}</strong> <span :class="condition.status">{{ REVIEW_STATUS_ICONS[condition.status] }} {{ condition.key === 'time' && condition.status === 'unmet' ? 'Nicht tradebar' : REVIEW_STATUS_LABELS[condition.status] }}</span>
         <small v-if="condition.time != null">Belegt / geprüft am {{ formatDatedTime(condition.time) }} Uhr</small>
         <ul><li v-for="(detail, index) in condition.details" :key="index">{{ detail }}</li></ul>
       </li>
@@ -27,5 +28,5 @@ const review = computed(() => setupEntryConditions(props.snapshot));
 h3 { margin: 0 0 8px; font-size: 14px; } h4 { margin-bottom: 6px; }
 p, small { color: #b1b7c5; } small { display: block; }
 ol { padding-left: 22px; } ol>li { margin-bottom: 12px; } ul { padding-left: 18px; }
-span { display: inline-block; margin-left: 8px; } .passed { color: #71c8b3; } .unmet { color: #ffb77c; } .unknown { color: #b1b7c5; }
+span { display: inline-block; margin-left: 8px; } .passed { color: #81d993; } .unmet { color: #ff8b91; } .unknown { color: #b1b7c5; }
 </style>

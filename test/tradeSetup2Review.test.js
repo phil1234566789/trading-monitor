@@ -62,3 +62,13 @@ it('links a candidate to its stored time and instrument without fabricating an e
   expect(simulationChartLink({ id: 'candidate', instrument: 'GBPUSD', knownAt: 600 }, 'run').query)
     .toMatchObject({ setup2: 'candidate', run: 'run', replay: '600', instrument: 'GBPUSD', bar: '5m' });
 });
+it('names a blocked candidate condition without declaring the idea permanently invalid', () => {
+  const s = snapshot(); s.entry = null; s.m1Check = null;
+  s.checklist.checks.time = { status: 'blocked', details: ['00:00 — außerhalb der Handelszeiten.', 'Asia: verboten.'] };
+  const review = setupEntryConditions(s);
+  expect(review.counts).toEqual([5, 1, 4]);
+  expect(review.missing).toEqual([expect.objectContaining({ key: 'time', label: 'Handelszeit / Session / News', details: expect.arrayContaining(['Asia: verboten.']) })]);
+  expect(review.assessment).toEqual({ status: 'unmet', label: 'Nicht tradebar am Bewertungsstand' });
+  s.checklist.checks.time.status = 'passed';
+  expect(setupEntryConditions(s).assessment).toEqual({ status: 'unknown', label: 'Handelbarkeit nicht vollständig belegt' });
+});

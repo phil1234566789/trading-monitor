@@ -7,6 +7,7 @@ import { toPips } from './pipConfig.js';
 import { formatRiskPips } from './entryRisk.js';
 
 export const REVIEW_STATUS_LABELS = { passed: 'Erfüllt', unmet: 'Fehlt am gespeicherten Stand', unknown: 'Unbekannt / unbewertet' };
+export const REVIEW_STATUS_ICONS = { passed: '✓', unmet: '✕', unknown: '?' };
 
 export function groupSetupSnapshots(snapshots) {
   const groups = new Map();
@@ -50,7 +51,7 @@ export function setupEntryConditions(snapshot) {
       : check?.details ?? ['Keine Prüfung gespeichert.'], time ?? at);
   }
   const timeCheck = checks.time;
-  add('time', 'Keine bekannte Handelszeit-, Session- oder News-Sperre',
+  add('time', 'Handelszeit / Session / News',
     timeCheck?.status === 'blocked' ? 'unmet' : timeCheck?.status === 'passed' ? 'passed' : 'unknown',
     [...timeCheck?.details ?? ['Zeitprüfung nicht gespeichert.'],
       'Entry 1 wird nur durch eine bekannte Sperre blockiert. Unbekannte Angaben gelten nicht als bestätigte Freigabe.']);
@@ -85,5 +86,9 @@ export function setupEntryConditions(snapshot) {
       : m1?.trends && !signal ? 'Am Stand nicht vorhanden.' : 'Unbekannt / nicht zeitlich belegt.' };
   });
   const reason = m1PrerequisiteReason(checklist);
-  return { rows, observations, prerequisiteNote: reason ? inactiveM1Checklist(reason).details[0] : null };
+  const missing = rows.filter(row => row.status === 'unmet');
+  const counts = ['passed', 'unmet', 'unknown'].map(status => rows.filter(row => row.status === status).length);
+  const assessment = missing.length ? { status: 'unmet', label: 'Nicht tradebar am Bewertungsstand' }
+    : { status: 'unknown', label: entry ? 'Entry gespeichert · siehe Einzelbedingungen' : 'Handelbarkeit nicht vollständig belegt' };
+  return { rows, missing, counts, assessment, observations, prerequisiteNote: reason ? inactiveM1Checklist(reason).details[0] : null };
 }

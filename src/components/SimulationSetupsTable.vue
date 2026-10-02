@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, shallowRef, watch, onScopeDispose } from 'vue';
 import { formatDatedTime } from '../berlinTime.js';
-import { groupSetupSnapshots, setupEntryConditions } from '../tradeSetup2Review.js';
+import { groupSetupSnapshots, setupEntryConditions, REVIEW_STATUS_ICONS } from '../tradeSetup2Review.js';
 import { simulationChartLink, simulationDateFilter } from '../tradeSetupSimulationStatistics.js';
 import SetupEntryConditions from './SetupEntryConditions.vue';
 import ToggleButton from './ui/ToggleButton.vue';
@@ -36,8 +36,7 @@ const rows = computed(() => {
 });
 const pages = computed(() => Math.max(1, Math.ceil(rows.value.length / pageSize)));
 const visibleRows = computed(() => rows.value.slice(page.value * pageSize, (page.value + 1) * pageSize).map(row => {
-  const conditions = setupEntryConditions(row.snapshot).rows;
-  return { ...row, summary: ['passed', 'unmet', 'unknown'].map(status => conditions.filter(c => c.status === status).length) };
+  return { ...row, review: setupEntryConditions(row.snapshot) };
 }));
 watch(rows, () => { page.value = 0; });
 const chartLink = snapshot => simulationChartLink({ ...snapshot, variant: props.variant }, snapshot.runId);
@@ -64,9 +63,11 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
           <thead><tr><th scope="col">Bewertungsstand</th><th scope="col">Instrument</th><th scope="col">Richtung</th><th scope="col">Status</th><th scope="col">Lauf</th><th scope="col">Entry-Bedingungen</th><th scope="col">Chart</th></tr></thead>
           <tbody><tr v-for="row in visibleRows" :key="row.key">
             <td>{{ formatDatedTime(row.knownAt) }}</td><td>{{ row.instrument }}</td><td>{{ row.direction === 'long' ? 'Long' : 'Short' }}</td>
-            <td>{{ row.entries.length ? 'Mit Entry' : 'Ohne Entry' }}<small>{{ row.entries.length ? 'Entry-Stand' : 'Erster Kandidatenstand' }}</small></td>
+            <td>{{ row.entries.length ? 'Mit Entry' : 'Ohne Entry' }}<small>{{ row.entries.length ? 'Entry-Stand' : 'Erster Kandidatenstand' }}</small><strong :class="row.review.assessment.status">{{ REVIEW_STATUS_ICONS[row.review.assessment.status] }} {{ row.review.assessment.label }}</strong></td>
             <td :title="row.snapshot.runId">{{ row.snapshot.runId?.slice(-8) }}</td>
-            <td><details @toggle="toggle(row.key, $event)"><summary>{{ row.summary[0] }} erfüllt · {{ row.summary[1] }} fehlen · {{ row.summary[2] }} unbekannt</summary>
+            <td>
+              <ul v-if="row.review.missing.length" class="missing-conditions"><li v-for="condition in row.review.missing" :key="condition.key" class="unmet"><strong>✕ {{ condition.label }}: {{ condition.key === 'time' ? 'Nicht tradebar' : 'Fehlt' }}</strong><div v-for="(detail, index) in condition.details" :key="index">{{ detail }}</div></li></ul>
+              <details @toggle="toggle(row.key, $event)"><summary><span class="passed">✓ {{ row.review.counts[0] }} erfüllt</span> · <span class="unmet">✕ {{ row.review.counts[1] }} {{ row.review.counts[1] === 1 ? 'fehlt' : 'fehlen' }}</span> · <span class="unknown">? {{ row.review.counts[2] }} unbekannt</span></summary>
               <template v-if="expanded.has(row.key)">
                 <p class="origin">Lauf: {{ row.snapshot.runId }}<br />Regel: {{ origin(row.snapshot)?.version ?? 'nicht gespeichert' }}<br />
                   <template v-if="origin(row.snapshot)?.from != null">Zeitraum: {{ formatDatedTime(origin(row.snapshot).from) }} – {{ formatDatedTime(origin(row.snapshot).to) }}</template>
@@ -74,7 +75,9 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
                 <SetupEntryConditions v-for="snapshot in row.entries.length ? row.entries : [row.snapshot]" :key="snapshot.id" :snapshot="snapshot" />
                 <p v-if="row.entries.length && row.candidate">Erster Kandidatenstand: {{ formatDatedTime(row.candidate.knownAt) }} Uhr · <RouterLink :to="chartLink(row.candidate)">Kandidatenstand im Chart</RouterLink></p>
               </template>
-            </details></td>
+            </details>
+              <small v-if="!row.entries.length">Nur erster Kandidatenstand; spätere Prüfstände fehlen.</small>
+            </td>
             <td><RouterLink :to="chartLink(row.snapshot)" :aria-label="`Setup-Stand ${row.instrument} ${formatDatedTime(row.knownAt)} im Chart öffnen`">Im Chart</RouterLink></td>
           </tr></tbody>
         </table>
@@ -89,6 +92,7 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
 </template>
 <style scoped>
 .setup-review { margin: 24px 0; padding: 20px; border: 1px solid #434651; border-radius: 6px; background: #171c28; font-size: 13px; line-height: 1.6; }
+.passed { color: #81d993; } .unmet { color: #ff8b91; } .unknown { color: #b1b7c5; } .missing-conditions { padding-left: 18px; margin: 8px 0; }
 h2 { font-size: 18px; margin: 0; } p, small { color: #b1b7c5; } .counts { font-weight: 600; color: #edf2ff; }
 .filters { display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0; } label { display: flex; flex-direction: column; gap: 4px; }
 select, input, button { color: #d1d4dc; background: #1e222d; border: 1px solid #626b7f; border-radius: 4px; padding: 7px; color-scheme: dark; }
