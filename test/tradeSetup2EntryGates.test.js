@@ -1,4 +1,4 @@
-import { afterEach, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { scanTradeSetup2Window } from '../src/tradeSetup2Scan.js';
 import { evaluateTradeSetupChecklist } from '../src/tradeSetupChecklist.js';
 import * as m5Checks from '../src/tradeSetupChecklistM5.js';

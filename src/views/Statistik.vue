@@ -16,10 +16,12 @@ import SimulationSetupsTable from '../components/SimulationSetupsTable.vue';
 const repository = createSimulationRepository(supabase);
 const route = useRoute(), router = useRouter();
 // Alte „all“-Links dürfen die freigegebene Prüfansicht nicht mit Chart-Testläufen vermischen.
-const currentReviewRun = 'setup2-0e5723a18a68e62d6280444f';
+const currentReviewRun = 'setup2-de2b15d6fc462009e91ed4f4';
+const previousReviewRun = 'setup2-0e5723a18a68e62d6280444f';
 const routeRunId = () => typeof route.query.run === 'string' && route.query.run !== 'all' ? route.query.run : currentReviewRun;
 const setupTable = ref(null);
 const { runs, runId, selectedRun, instrument, variant, from, to, rows, loading, error, refresh } = useSimulationStatistics(repository, routeRunId());
+const comparisonRuns = computed(() => runs.value.filter(run => [currentReviewRun, previousReviewRun].includes(run.id)));
 variant.value = route.query.variant === 'narrow' ? 'narrow' : 'wide';
 watch(() => [routeRunId(), route.query.variant], ([id, stop]) => {
   if (route.name !== 'statistik') return;
@@ -38,7 +40,7 @@ const costRows = computed(() => rows.value.map(applySimulationCommission));
 const stats = computed(() => simulationStatistics(costRows.value, variant.value, basis.value));
 const basisLabel = computed(() => basis.value === 'net' ? 'Netto' : 'Brutto');
 const at = value => value == null ? '–' : formatDatedTime(value);
-const runLabel = run => `${run.configuration?.label ?? `${at(run.from)} – ${at(run.to)}`} · ${isVersionedDealingRangeRun(run) ? 'DR gegen M5 Trend' : 'Altstand'} · ${simulationRunStatusLabel(run)} · ${run.id.slice(-8)}`;
+const runLabel = run => `${run.id === previousReviewRun ? 'Bisherige H1-Outer-Regel · ' : ''}${run.configuration?.label ?? `${at(run.from)} – ${at(run.to)}`} · ${isVersionedDealingRangeRun(run) ? 'DR gegen M5 Trend' : 'Altstand'} · ${simulationRunStatusLabel(run)} · ${run.id.slice(-8)}`;
 </script>
 
 <template>
@@ -58,7 +60,7 @@ const runLabel = run => `${run.configuration?.label ?? `${at(run.from)} – ${at
 
     <details class="run-comparison"><summary>Optional: einzelnen Lauf vergleichen</summary>
       <label class="run-filter">Regel / Lauf<select v-model="runId" :disabled="!runs.length">
-        <option v-for="run in runs" :key="run.id" :value="run.id">{{ runLabel(run) }}</option>
+        <option v-for="run in comparisonRuns" :key="run.id" :value="run.id">{{ runLabel(run) }}</option>
       </select></label>
     </details>
     <form class="statistics-filters" @submit.prevent="refresh">
