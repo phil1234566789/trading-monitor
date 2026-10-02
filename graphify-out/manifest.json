@@ -408,9 +408,9 @@
     "semantic_hash": ""
   },
   "src/format.js": {
-    "mtime": 1790496955.8201416,
-    "seen": 1790498526.43376,
-    "ast_hash": "efcacb0cfb90b2a584313c2b066e564e",
+    "mtime": 1790969597.4330847,
+    "seen": 1790969700.2529354,
+    "ast_hash": "1a5d291e3356ee82c12856b95a1473cb",
     "semantic_hash": ""
   },
   "src/liquidity.js": {
@@ -4572,9 +4572,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupSimulationStatistics.js": {
-    "mtime": 1790968872.4147394,
-    "seen": 1790968921.1484928,
-    "ast_hash": "f17109f4d69380fd080fdacec0bcac4e",
+    "mtime": 1790969596.8273723,
+    "seen": 1790969700.2769387,
+    "ast_hash": "afd9e2a52b7c569475c8462e83b02139",
     "semantic_hash": ""
   },
   "src/trendPhaseRendering.js": {
@@ -4902,9 +4902,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationSetupsTable.vue": {
-    "mtime": 1790968844.0124588,
-    "seen": 1790968921.118533,
-    "ast_hash": "79f664587670f39e7b3049d5cc34753a",
+    "mtime": 1790969621.7259793,
+    "seen": 1790969700.2405863,
+    "ast_hash": "50ea4925632fc83d913ca36b303a6e20",
     "semantic_hash": ""
   },
   "src/tradeSetup2LinkedSnapshot.js": {
@@ -5004,15 +5004,27 @@
     "semantic_hash": ""
   },
   "src/components/SimulationEntryResult.vue": {
-    "mtime": 1790968930.7435067,
-    "seen": 1790969001.9602342,
-    "ast_hash": "706b37734fa2cae447562b7efe758e24",
+    "mtime": 1790969598.062645,
+    "seen": 1790969700.2405863,
+    "ast_hash": "9e3d2b17f76fe3150fddb7ea2bd9bace",
     "semantic_hash": ""
   },
   "test/simulationEntryResult.test.js": {
-    "mtime": 1790968948.1573682,
-    "seen": 1790969002.0414994,
-    "ast_hash": "77309878390de4118f7a988b4156728b",
+    "mtime": 1790969632.379847,
+    "seen": 1790969700.3242002,
+    "ast_hash": "e8a8c506ec10076dc5167e62b897bbc5",
+    "semantic_hash": ""
+  },
+  "src/components/FilteredDealingRangeSummary.vue": {
+    "mtime": 1790969621.1202066,
+    "seen": 1790969700.237497,
+    "ast_hash": "93f590f271f54b7534c3bd89c90c91c1",
+    "semantic_hash": ""
+  },
+  "test/filteredDealingRangeStatistics.test.js": {
+    "mtime": 1790969658.155511,
+    "seen": 1790969700.305192,
+    "ast_hash": "1f6d7a1c9ce200ab6f163776a784ead4",
     "semantic_hash": ""
   }
 }
