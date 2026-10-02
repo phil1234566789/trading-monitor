@@ -18,11 +18,11 @@ const lots = value => value == null ? '–' : value.toLocaleString('de-DE', { ma
   <section aria-label="Simulationsergebnisse">
     <div class="table-scroll" tabindex="0" aria-label="Ergebnistabelle horizontal scrollen">
       <table>
-        <caption>Simulierte Positionen · Zeiten in Europe/Berlin · Ergebnisse brutto</caption>
+        <caption>Simulierte Positionen · Zeiten in Europe/Berlin · Brutto und Netto getrennt</caption>
         <thead><tr>
           <th scope="col">Entry</th><th scope="col">Instrument</th><th scope="col">Richtung</th>
           <th scope="col">Lots</th><th scope="col" title="Geplanter Teilausstieg: exakt 50 % des Anfangsvolumens">T1-Anteil Lots</th><th scope="col">Risiko USD</th>
-          <th scope="col">Ergebnis</th><th scope="col">R</th><th scope="col">USD gesamt</th><th scope="col">Bereits realisiert USD</th><th scope="col">Setup</th>
+          <th scope="col">Ergebnis</th><th scope="col">Brutto R</th><th scope="col">Brutto USD</th><th scope="col">Kommission USD</th><th scope="col">Netto R</th><th scope="col">Netto USD</th><th scope="col">Realisiert brutto USD</th><th scope="col">Realisiert netto USD</th><th scope="col">Setup</th>
         </tr></thead>
         <tbody><tr v-for="row in visibleRows" :key="`${row.entryId}:${row.variant}`">
           <td>{{ row.entryTime == null ? '–' : formatDatedTime(row.entryTime) }}</td>
@@ -32,7 +32,11 @@ const lots = value => value == null ? '–' : value.toLocaleString('de-DE', { ma
           <td><span>{{ SIMULATION_OUTCOME_LABELS[simulationOutcomeKey(row)] ?? 'Unbekannt' }}</span><small v-if="row.reason">{{ SIMULATION_REASON_LABELS[row.reason] ?? 'Ergebnis nicht abschließend bestimmbar' }}</small></td>
           <td class="number" :class="{ positive: row.pnlUsd > 0, negative: row.pnlUsd < 0 }">{{ fmtR(row.rMultiple) }}</td>
           <td class="number" :class="{ positive: row.pnlUsd > 0, negative: row.pnlUsd < 0 }">{{ fmtMoney(row.pnlUsd) }}</td>
+          <td class="number">{{ fmtMoney(row.commissionUsd) }}</td>
+          <td class="number">{{ fmtR(row.netRMultiple) }}</td>
+          <td class="number" :class="{ positive: row.netPnlUsd > 0, negative: row.netPnlUsd < 0 }">{{ fmtMoney(row.netPnlUsd) }}</td>
           <td class="number">{{ fmtMoney(row.realizedPnlUsd) }}</td>
+          <td class="number">{{ fmtMoney(row.realizedNetPnlUsd) }}</td>
           <td><RouterLink :to="simulationChartLink(row, runId)" :aria-label="`Setup ${row.instrument} ${formatDatedTime(row.entryTime)} im Chart öffnen`">Im Chart</RouterLink></td>
         </tr></tbody>
       </table>

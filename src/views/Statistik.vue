@@ -1,5 +1,6 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import { applySimulationCommission, SIMULATION_COST_VERSION } from '../tradeSetupSimulationCosts.js';
 import { supabase } from '../supabaseClient.js';
 import { createSimulationRepository } from '../tradeSetupSimulationRepository.js';
 import { useSimulationStatistics } from '../composables/useSimulationStatistics.js';
@@ -11,7 +12,10 @@ import SimulationResultsTable from '../components/SimulationResultsTable.vue';
 import SimulationRunStatus from '../components/SimulationRunStatus.vue';
 
 const { runs, runId, selectedRun, instrument, variant, from, to, rows, setups, loading, error, refresh } = useSimulationStatistics(createSimulationRepository(supabase));
-const stats = computed(() => simulationStatistics(rows.value, variant.value));
+const basis = ref('net');
+const costRows = computed(() => rows.value.map(applySimulationCommission));
+const stats = computed(() => simulationStatistics(costRows.value, variant.value, basis.value));
+const basisLabel = computed(() => basis.value === 'net' ? 'Netto' : 'Brutto');
 const at = value => value == null ? '–' : formatDatedTime(value);
 const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${run.version} · ${simulationRunStatusLabel(run)} · ${run.id.slice(-8)}`;
 </script>
@@ -26,7 +30,8 @@ const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${run.version} · 
     <section class="simulation-rules" aria-label="Simulationsannahmen">
       <strong>50.000 USD Referenzkonto · festes Risikobudget 500 USD pro Entry</strong>
       <p>Anfangsgröße auf ganze Standardlots abgerundet. 50 % an T1 schließen, Reststop auf Entry, übrige Hälfte bis T2 oder Break-even. Kein Compounding.</p>
-      <p>Brutto ohne Kosten. Weiter und enger SL sind alternative Szenarien. Diese Ergebnisse gehören zur Simulation und werden getrennt vom Journal ausgewertet.</p>
+      <p>5 USD Kommission je Standardlot insgesamt für Entry und Exit, einmal auf das Eröffnungsvolumen. Für die Kostenansicht wird die volle Gebühr ab Entry angesetzt; Teilverkäufe kosten nicht zusätzlich. Kein Spread und keine Slippage berücksichtigt.</p>
+      <p>Weiter und enger SL sind alternative Szenarien. Diese Ergebnisse gehören zur Simulation und werden getrennt vom Journal ausgewertet.</p>
     </section>
 
     <form class="statistics-filters" @submit.prevent="refresh">
@@ -36,6 +41,7 @@ const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${run.version} · 
       </select></label>
       <label>Instrument<select v-model="instrument"><option value="">Alle Instrumente</option><option value="GBPUSD">GBPUSD</option><option value="EURUSD">EURUSD</option><option value="XAUUSD">XAUUSD</option></select></label>
       <label>Stoppvariante<select v-model="variant"><option value="wide">Weiter SL</option><option value="narrow">Enger SL</option></select></label>
+      <label>Ergebnis / Winrate<select v-model="basis"><option value="net">Netto nach Kommission</option><option value="gross">Brutto vor Kommission</option></select></label>
       <label>Entry ab<input v-model="from" type="date" /></label>
       <label>Entry bis einschließlich<input v-model="to" type="date" /></label>
     </form>
@@ -48,17 +54,18 @@ const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${run.version} · 
       <p v-else-if="!runs.length" class="empty">Noch keine gespeicherten Simulationsläufe. Sobald ein Lauf Ergebnisse gespeichert hat, erscheinen sie hier.</p>
       <template v-else>
         <p class="denominator">Gesamter Lauf{{ instrument ? ` · ${instrument}` : '' }}: {{ setups.length }} erkannte Setups. Diese Setupzählung gilt unabhängig vom Entry-Datumsfilter.</p>
+        <p class="denominator">Kostenansicht {{ SIMULATION_COST_VERSION }}: aus gespeicherten Bruttoergebnissen berechnet. Ältere Bruttoläufe werden nachträglich umgerechnet; ihre gespeicherten Originalergebnisse bleiben unverändert.</p>
         <section class="statistics-summary" aria-label="Statistik der gewählten Variante">
           <div><span>Entry-Signale</span><strong>{{ stats.total }}</strong></div>
-          <div><span>Gewinne / Verluste</span><strong>{{ stats.wins }} / {{ stats.losses }}</strong></div>
-          <div><span>Winrate · n = {{ stats.closed }}</span><strong>{{ stats.winrate == null ? '–' : `${stats.winrate.toFixed(1)} %` }}</strong></div>
-          <div><span>Ergebnis USD · abgeschlossen</span><strong :class="{ positive: stats.pnlUsd > 0, negative: stats.pnlUsd < 0 }">{{ fmtMoney(stats.pnlUsd) }}</strong></div>
-          <div><span>Summe R · abgeschlossen</span><strong>{{ fmtR(stats.totalR) }}</strong></div>
+          <div><span>{{ basisLabel }} Gewinne / Verluste</span><strong>{{ stats.wins }} / {{ stats.losses }}</strong></div>
+          <div><span>{{ basisLabel }} Winrate · n = {{ stats.closed }}</span><strong>{{ stats.winrate == null ? '–' : `${stats.winrate.toFixed(1)} %` }}</strong></div>
+          <div><span>{{ basisLabel }} USD · abgeschlossen</span><strong :class="{ positive: stats.pnlUsd > 0, negative: stats.pnlUsd < 0 }">{{ fmtMoney(stats.pnlUsd) }}</strong></div>
+          <div><span>{{ basisLabel }} R · abgeschlossen</span><strong>{{ fmtR(stats.totalR) }}</strong></div>
         </section>
-        <p class="denominator">Winrate: profitable / eindeutig abgeschlossene, ausführbare Positionen ({{ stats.wins }} / {{ stats.closed }}). Prozent ab 50 abgeschlossenen Fällen. Offene und uneindeutige Fälle zählen nicht zum Nenner. T1 + Break-even zählt als Gewinn.</p>
+        <p class="denominator">{{ basisLabel }}-Winrate: positive {{ basisLabel }}-Ergebnisse / eindeutig abgeschlossene, ausführbare Positionen ({{ stats.wins }} / {{ stats.closed }}). Prozent ab 50 abgeschlossenen Fällen. Offene und uneindeutige Fälle zählen nicht zum Nenner. T1 + Break-even ist netto nur dann ein Gewinn, wenn der Teilgewinn die Kommission übersteigt.</p>
         <dl class="outcome-counts"><div v-for="(label, key) in SIMULATION_OUTCOME_LABELS" :key="key"><dt>{{ label }}</dt><dd>{{ stats.counts[key] }}</dd></div></dl>
-        <p class="denominator">R bezieht sich auf das tatsächliche Anfangsrisiko nach Lotrundung. 500 USD bleiben die Obergrenze; das tatsächliche Risiko steht je Position in der Tabelle.</p>
-        <SimulationResultsTable v-if="rows.length" :rows="rows" :run-id="runId" />
+        <p class="denominator">Brutto- und Netto-R beziehen sich auf das tatsächliche Preisrisiko nach Lotrundung. Die Obergrenze von 500 USD gilt vor Kommission. Bei offenen Positionen ist nur das bereits realisierte Ergebnis abzüglich der vollen Entry-Kommission bekannt.</p>
+        <SimulationResultsTable v-if="rows.length" :rows="costRows" :run-id="runId" />
         <p v-else class="empty">Keine gespeicherten Entries für diese Filterauswahl.</p>
       </template>
     </div>

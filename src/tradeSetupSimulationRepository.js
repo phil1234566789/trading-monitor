@@ -1,3 +1,5 @@
+import { applySimulationCommission, SIMULATION_COST_VERSION } from './tradeSetupSimulationCosts.js';
+
 const PAGE_SIZE = 500;
 
 async function pages(query) {
@@ -21,7 +23,7 @@ export function simulationAsOf(result, asOf) {
       exitPrice: null, pnlUsd: null, rMultiple: null, ambiguityRecognizedAt: null,
       realizedPnlUsd: row.t1Time == null ? 0 : result.t1PnlUsd ?? 0 });
   }
-  return row;
+  return row.costVersion === SIMULATION_COST_VERSION ? applySimulationCommission(row) : row;
 }
 
 export function createSimulationRepository(db) {

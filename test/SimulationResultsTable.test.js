@@ -3,6 +3,7 @@ import { createSSRApp } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { renderToString } from 'vue/server-renderer';
 import SimulationResultsTable from '../src/components/SimulationResultsTable.vue';
+import { applySimulationCommission } from '../src/tradeSetupSimulationCosts.js';
 
 async function render(rows) {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: { template: '<div />' } }] });
@@ -16,14 +17,18 @@ const row = { entryId: 'entry:114', instrument: 'GBPUSD', direction: 'short', va
 
 describe('simulation results table', () => {
   it('shows fractional half lots and realized gains without pretending an open position has finished', async () => {
-    const html = await render([row]);
+    const html = await render([applySimulationCommission(row)]);
     expect(html).toContain('7,5');
     expect(html).toContain('$495.00');
     expect(html).toContain('$375.00');
+    expect(html).toContain('$75.00');
+    expect(html).toContain('$300.00');
+    expect(html).toContain('Kommission USD');
+    expect(html).toContain('Netto USD');
     expect(html).toContain('Offen');
     expect(html).toContain('2026-09-09 09:50');
     expect(html).toContain('setup2=entry:114&amp;run=real-run&amp;variant=narrow');
-    expect(html.match(/>–</g)).toHaveLength(2);
+    expect(html.match(/>–</g)).toHaveLength(4);
   });
   it('limits rendered rows while reporting the full result count', async () => {
     const html = await render(Array.from({ length: 51 }, (_, i) => ({ ...row, entryId: `entry:${i}` })));

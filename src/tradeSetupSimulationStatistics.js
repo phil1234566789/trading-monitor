@@ -20,7 +20,9 @@ export function simulationRunStatusLabel(run) {
   return { running: 'Läuft', complete: 'Abgeschlossen', failed: 'Fehlgeschlagen' }[run.status] ?? run.status;
 }
 
-export function simulationStatistics(rows, variant) {
+export function simulationStatistics(rows, variant, basis = 'gross') {
+  const pnlField = basis === 'net' ? 'netPnlUsd' : 'pnlUsd';
+  const rField = basis === 'net' ? 'netRMultiple' : 'rMultiple';
   const selected = rows.filter(row => row.variant === variant);
   const counts = Object.fromEntries(Object.keys(SIMULATION_OUTCOME_LABELS).map(key => [key, 0]));
   const closed = [];
@@ -28,16 +30,16 @@ export function simulationStatistics(rows, variant) {
     const key = simulationOutcomeKey(row);
     if (key in counts) counts[key]++;
     if (row.status === 'closed' && ['slBeforeT1', 't1Be', 't2'].includes(row.outcome)
-      && Number.isFinite(row.pnlUsd) && Number.isFinite(row.rMultiple)) closed.push(row);
+      && Number.isFinite(row[pnlField]) && Number.isFinite(row[rField])) closed.push(row);
   }
-  const wins = closed.filter(row => row.pnlUsd > 0).length;
-  const losses = closed.filter(row => row.pnlUsd < 0).length;
+  const wins = closed.filter(row => row[pnlField] > 0).length;
+  const losses = closed.filter(row => row[pnlField] < 0).length;
   return {
     total: selected.length, counts, closed: closed.length, wins, losses,
     // Philip erlaubt Prozentwerte ab 50 entschiedenen Fällen (PLAN-dr-statistik-ui.md).
     winrate: closed.length >= 50 ? wins / closed.length * 100 : null,
-    pnlUsd: closed.length ? closed.reduce((sum, row) => sum + row.pnlUsd, 0) : null,
-    totalR: closed.length ? closed.reduce((sum, row) => sum + row.rMultiple, 0) : null,
+    pnlUsd: closed.length ? closed.reduce((sum, row) => sum + row[pnlField], 0) : null,
+    totalR: closed.length ? closed.reduce((sum, row) => sum + row[rField], 0) : null,
   };
 }
 

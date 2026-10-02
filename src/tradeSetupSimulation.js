@@ -1,6 +1,7 @@
 import { entryRiskScale } from './entryRisk.js';
+import { applySimulationCommission } from './tradeSetupSimulationCosts.js';
 
-export const SIMULATION_VERSION = 'fixed-500-whole-lots-half-t1-be-v1';
+export const SIMULATION_VERSION = 'fixed-500-whole-lots-half-t1-be-commission-v2';
 const money = value => Math.round(value * 1e8) / 1e8;
 
 export function sizeSimulation(entry, variant) {
@@ -17,7 +18,11 @@ export function sizeSimulation(entry, variant) {
   return { ...base, status: 'ready', reason: null, lots, t1Lots: lots / 2, actualRisk: money(lots * riskPerLot) };
 }
 
-export function evaluateSimulation({ entry, variant, candles, evaluatedAt, target1, target2 = null, closedIntervals = [] }) {
+export function evaluateSimulation(input) {
+  return applySimulationCommission(evaluateGrossSimulation(input));
+}
+
+function evaluateGrossSimulation({ entry, variant, candles, evaluatedAt, target1, target2 = null, closedIntervals = [] }) {
   const sizing = sizeSimulation(entry, variant);
   const result = { ...sizing, target1Price: target1, target2Price: target2, status: sizing.status === 'ready' ? 'open' : sizing.status,
     outcome: null, pnlUsd: null, rMultiple: null, realizedPnlUsd: 0, t1PnlUsd: 0, t1Time: null,
