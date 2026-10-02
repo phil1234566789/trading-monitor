@@ -11,6 +11,27 @@ import {scanTradeSetup2InWorker} from '../src/tradeSetup2BrowserScan.js';
 import {fetchCandlesCached} from '../src/candleCache.js';
 
 const flush=async()=>{for(let i=0;i<15;i++)await Promise.resolve();await nextTick();};
+it('opens a candidate without an entry, exposes its checklist and focuses matching candles without scanning',async()=>{
+  const props=reactive({showTradeSetup2:true,symbol:'GBPUSD',tradeSetup2Variant:'wide',tradeSetup2HistoryCount:5,
+    tradeSetup2RunId:'run',selectedTradeSetup2Id:'candidate',currentBar:'5m',replayUntil:600});
+  const snapshot={id:'candidate',setupKey:'candidate',instrument:'GBPUSD',direction:'short',knownAt:600,entry:null,evidence:[],
+    checklist:{setup:{primary:{id:'candidate',recognizedAt:300}}}};
+  const repository={getEntry:vi.fn(async()=>null),getSetupSnapshot:vi.fn(async()=>snapshot),listRuns:vi.fn()};
+  const scope=effectScope(),focus=vi.fn();
+  const view=scope.run(()=>useTradeSetup2History(props,ref(null),{repository,configurationInput:()=>({}),evaluationTime:()=>props.replayUntil}));
+  try {
+    view.create({subscribeClick:vi.fn(),unsubscribeClick:vi.fn(),timeScale:()=>({setVisibleLogicalRange:focus})},{});
+    await flush();view.updateCandles([{time:0},{time:300},{time:600}],true);
+    expect(view.selected.value.checklist).toEqual(snapshot.checklist);
+    expect(view.positions.value[0]).toMatchObject({kind:'candidate',snapshotId:'candidate'});
+    expect(view.linkedRendered.value).toBe(true);
+    expect(focus).toHaveBeenCalledOnce();
+    expect(repository.listRuns).not.toHaveBeenCalled();
+    expect(scanTradeSetup2InWorker).not.toHaveBeenCalled();
+    props.replayUntil=900;await flush();
+    expect(repository.getSetupSnapshot).toHaveBeenCalledTimes(1);
+  } finally {scope.stop();}
+});
 it('loads a linked entry after a simultaneous instrument and replay change, then focuses only ready candles',async()=>{
   const props=reactive({showTradeSetup2:false,symbol:'EURUSD',tradeSetup2Variant:'wide',tradeSetup2HistoryCount:5,
     tradeSetup2RunId:null,selectedTradeSetup2Id:null,currentBar:'1h',replayUntil:120});

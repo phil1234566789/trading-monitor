@@ -2,6 +2,32 @@ import { describe, it, expect, vi } from 'vitest';
 import { createSimulationRepository, simulationAsOf } from '../src/tradeSetupSimulationRepository.js';
 
 describe('simulation history repository', () => {
+  it('reads all runs when the review filter is empty and retains their origin', async () => {
+    const eq = vi.fn();
+    const db = { from: table => {
+      const query = { select: () => query, order: () => query, eq,
+        range: async offset => ({ data: offset ? [] : [{ id: 'same', run_id: table }] }) };
+      return query;
+    } };
+    const rows = await createSimulationRepository(db).listReviewSnapshots('');
+    expect(eq).not.toHaveBeenCalled();
+    expect(new Set(rows.map(row => row.runId)).size).toBe(2);
+  });
+  it('paginates candidate and entry review evidence in the chosen run without loading chart trees', async () => {
+    const calls = [];
+    const db = { from: table => {
+      const query = { select: fields => { expect(fields).not.toContain('structure'); return query; },
+        eq: (key, value) => { expect([key, value]).toEqual(['run_id', 'selected']); return query; }, order: () => query,
+        range: async offset => { calls.push([table, offset]); return { data: offset < 2 ? [{ id: `${table}:${offset}`, knownAt: 300,
+          checklistStatus: 'ready', evaluatedAt: 300, reaction: { status: 'pending' } }] : [] }; } };
+      return query;
+    } };
+    const rows = await createSimulationRepository(db).listReviewSnapshots('selected');
+    expect(rows).toHaveLength(4);
+    expect(rows[0].checklist.checks.reaction.status).toBe('pending');
+    for (const table of ['trade_setup_simulation_setups', 'trade_setup_simulation_entries'])
+      expect(calls.filter(call => call[0] === table).map(call => call[1])).toEqual([0, 1, 2]);
+  });
   it('reads exactly one linked entry with its uncut outcomes and snapshot', async () => {
     const query={select:vi.fn(()=>query),eq:vi.fn(()=>query),maybeSingle:vi.fn(async()=>({data:{id:'entry',
       instrument:'GBPUSD',direction:'short',snapshot:{id:'entry',setupKey:'setup'},

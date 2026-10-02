@@ -4,7 +4,7 @@ import {buildTradeSetup2Configuration,setup2DailyRun} from '../tradeSetup2Config
 import {evaluateSimulation} from '../tradeSetupSimulation.js';
 import {tradeSetup2HistoryItems} from '../tradeSetup2HistoryItems.js';
 import {restoreTradeSetup2Snapshot,isTradeSetup2SnapshotView} from '../tradeSetup2Snapshot.js';
-import {createLinkedEntryReader} from '../tradeSetup2LinkedEntry.js';
+import {createLinkedSnapshotReader} from '../tradeSetup2LinkedSnapshot.js';
 import {simulationAsOf} from '../tradeSetupSimulationRepository.js';
 import {fetchInitialCandles} from '../forexCandles.js';
 import {fetchCandlesCached} from '../candleCache.js';
@@ -15,7 +15,7 @@ import {computeJumpViewport} from '../priceChartJumpToTime.js';
 export function useTradeSetup2History(props,checklist,{repository,configurationInput,evaluationTime}) {
   const results=shallowRef([]),candidates=shallowRef([]),selected=shallowRef(null),status=ref(''),error=ref('');
   const loading=ref(false),displayCandles=shallowRef([]);
-  const linkedReady=ref(false),linkedRendered=ref(false),readLinkedEntry=createLinkedEntryReader(repository);
+  const linkedReady=ref(false),linkedRendered=ref(false),readLinkedSnapshot=createLinkedSnapshotReader(repository);
   let series=null,chart=null,abort=null,revision=0,selectionRevision=0,completedScanKey=null,appliedRouteKey=null;
   let activeInputKey=null,activeAt=null,refreshPending=false;
   let displayReady=false,focusedRouteKey=null;
@@ -71,13 +71,14 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     if(!props.showTradeSetup2){abort?.abort();revision++;loading.value=false;return;}
     if(isTradeSetup2SnapshotView(props)) {
       const ticket=++revision;
-      loading.value=true;error.value='';status.value='Gespeicherten Entry laden…';linkedReady.value=false;
+      loading.value=true;error.value='';status.value='Gespeichertes Setup laden…';linkedReady.value=false;
       try {
-        const record=await readLinkedEntry(props.tradeSetup2RunId,props.selectedTradeSetup2Id,force);
+        const record=await readLinkedSnapshot(props.tradeSetup2RunId,props.selectedTradeSetup2Id,force);
         if(ticket!==revision)return;
         selected.value=restoreTradeSetup2Snapshot(record.snapshot);
-        results.value=record.results;candidates.value=[];linkedReady.value=true;
-        status.value='Gespeicherter Entry geladen';render();
+        results.value=record.results;
+        candidates.value=record.snapshot.entry?[]:[{...selected.value,runId:props.tradeSetup2RunId,snapshot:selected.value}];
+        linkedReady.value=true;status.value='Gespeichertes Setup geladen';render();
       } catch(e){if(ticket===revision)error.value=e.message;}
       finally{if(ticket===revision)loading.value=false;}
       return;

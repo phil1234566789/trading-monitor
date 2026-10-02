@@ -10,8 +10,12 @@ import { fmtMoney, fmtR } from '../format.js';
 import ToggleButton from '../components/ui/ToggleButton.vue';
 import SimulationResultsTable from '../components/SimulationResultsTable.vue';
 import SimulationRunStatus from '../components/SimulationRunStatus.vue';
+import SimulationSetupsTable from '../components/SimulationSetupsTable.vue';
 
-const { runs, runId, selectedRun, instrument, variant, from, to, rows, setups, loading, error, refresh } = useSimulationStatistics(createSimulationRepository(supabase));
+const repository = createSimulationRepository(supabase);
+const setupTable = ref(null);
+const { runs, runId, selectedRun, instrument, variant, from, to, rows, loading, error, refresh } = useSimulationStatistics(repository);
+function refreshAll() { refresh(); setupTable.value?.refresh(); }
 const basis = ref('net');
 const costRows = computed(() => rows.value.map(applySimulationCommission));
 const stats = computed(() => simulationStatistics(costRows.value, variant.value, basis.value));
@@ -24,7 +28,7 @@ const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${run.version} · 
   <main class="statistics-page">
     <header class="statistics-header">
       <div><h1>Statistik</h1><p>Trade Setups 2.0 · automatisch simulierte Positionen</p></div>
-      <ToggleButton variant="bordered" :disabled="loading" @click="refresh">{{ loading ? 'Wird geladen…' : 'Aktualisieren' }}</ToggleButton>
+      <ToggleButton variant="bordered" :disabled="loading" @click="refreshAll">{{ loading ? 'Wird geladen…' : 'Aktualisieren' }}</ToggleButton>
     </header>
 
     <section class="simulation-rules" aria-label="Simulationsannahmen">
@@ -36,24 +40,25 @@ const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${run.version} · 
 
     <form class="statistics-filters" @submit.prevent="refresh">
       <label class="run-filter">Regel / Lauf<select v-model="runId" :disabled="!runs.length">
-        <option v-if="!runs.length" value="">Noch kein Lauf</option>
+        <option value="">Alle Läufe</option>
         <option v-for="run in runs" :key="run.id" :value="run.id">{{ runLabel(run) }}</option>
       </select></label>
       <label>Instrument<select v-model="instrument"><option value="">Alle Instrumente</option><option value="GBPUSD">GBPUSD</option><option value="EURUSD">EURUSD</option><option value="XAUUSD">XAUUSD</option></select></label>
       <label>Stoppvariante<select v-model="variant"><option value="wide">Weiter SL</option><option value="narrow">Enger SL</option></select></label>
-      <label>Ergebnis / Winrate<select v-model="basis"><option value="net">Netto nach Kommission</option><option value="gross">Brutto vor Kommission</option></select></label>
-      <label>Entry ab<input v-model="from" type="date" /></label>
-      <label>Entry bis einschließlich<input v-model="to" type="date" /></label>
+      <label v-if="runId">Ergebnis / Winrate<select v-model="basis"><option value="net">Netto nach Kommission</option><option value="gross">Brutto vor Kommission</option></select></label>
+      <label v-if="runId">Entry ab<input v-model="from" type="date" /></label>
+      <label v-if="runId">Entry bis einschließlich<input v-model="to" type="date" /></label>
     </form>
 
     <SimulationRunStatus v-if="selectedRun" :run="selectedRun" />
+    <SimulationSetupsTable ref="setupTable" :repository="repository" :run-id="runId" :runs="runs" :instrument="instrument" :variant="variant" />
 
     <div :aria-busy="loading">
       <p v-if="error" role="alert" class="error">{{ error }} <button type="button" @click="refresh">Erneut versuchen</button></p>
       <p v-else-if="loading" role="status" class="empty">Gespeicherte Ergebnisse werden geladen…</p>
       <p v-else-if="!runs.length" class="empty">Noch keine gespeicherten Simulationsläufe. Sobald ein Lauf Ergebnisse gespeichert hat, erscheinen sie hier.</p>
+      <p v-else-if="!runId" class="denominator">Für Ergebnisstatistik und Winrate bitte einen einzelnen Lauf wählen. „Alle Läufe“ enthält auch wiederholte Setups aus Tests und unterschiedlichen Regelversionen; daraus wird keine gemeinsame Winrate berechnet.</p>
       <template v-else>
-        <p class="denominator">Gesamter Lauf{{ instrument ? ` · ${instrument}` : '' }}: {{ setups.length }} erkannte Setups. Diese Setupzählung gilt unabhängig vom Entry-Datumsfilter.</p>
         <p class="denominator">Kostenansicht {{ SIMULATION_COST_VERSION }}: aus gespeicherten Bruttoergebnissen berechnet. Ältere Bruttoläufe werden nachträglich umgerechnet; ihre gespeicherten Originalergebnisse bleiben unverändert.</p>
         <section class="statistics-summary" aria-label="Statistik der gewählten Variante">
           <div><span>Entry-Signale</span><strong>{{ stats.total }}</strong></div>

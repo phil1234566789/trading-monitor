@@ -381,9 +381,9 @@ const setup2 = useTradeSetup2History(props,checklist.state,{
 });
 const setup2Positions=setup2.positions,setup2Selected=setup2.selected,setup2Loading=setup2.loading,setup2Status=setup2.status,setup2Error=setup2.error;
 const snapshotSteps = computed(() => [
-  { label: 'Gespeicherten Entry und Belege laden', done: setup2.linkedReady.value },
+  { label: 'Gespeichertes Setup und Belege laden', done: setup2.linkedReady.value },
   { label: 'Chartkerzen laden', done: snapshotCandleState.value === 'ready' },
-  { label: 'Entry und Belege zeichnen', done: setup2.linkedRendered.value },
+  { label: 'Setup und Belege zeichnen', done: setup2.linkedRendered.value },
 ]);
 watch(setup2.selected,snapshot=>{emit('setup2-detail-change',snapshot);if(candleSeries)refreshChart();});
 const m1Structure = usePriceChartM1Structure(props, checklist.state, {

@@ -40,6 +40,25 @@ export function createSimulationRepository(db) {
     return data?.snapshot ?? null;
   };
   return {
+    listReviewSnapshots: async (runId) => {
+      // Nur Prüfbelege laden: Strukturbaum und Chartgeometrie sind für die Tabelle unnötig.
+      const fields = ['id,run_id,instrument,direction', 'knownAt:snapshot->knownAt', 'setupKey:snapshot->>setupKey',
+        'entry:snapshot->entry', 'm1Check:snapshot->m1Check', 'primary:snapshot->checklist->setup->primary',
+        'checklistStatus:snapshot->checklist->>status', 'evaluatedAt:snapshot->checklist->evaluatedAt',
+        ...['h1Trend', 'liquiditySweep', 'reaction', 'time'].map(key => `${key}:snapshot->checklist->checks->${key}`),
+        'm1Anchor:snapshot->checklist->checks->m5Trend->m1Anchor'];
+      const groups = await Promise.all(['trade_setup_simulation_setups', 'trade_setup_simulation_entries'].map(table =>
+        pages((from, to) => {
+          let query = db.from(table).select(fields.join(',')).order('run_id').order('id');
+          if (runId) query = query.eq('run_id', runId);
+          return query.range(from, to);
+        })));
+      return groups.flat().map(row => ({ id: row.id, runId: row.run_id, instrument: row.instrument, direction: row.direction,
+        knownAt: row.knownAt, setupKey: row.setupKey, entry: row.entry, m1Check: row.m1Check,
+        checklist: { status: row.checklistStatus, evaluatedAt: row.evaluatedAt, setup: { primary: row.primary },
+          checks: { h1Trend: row.h1Trend, liquiditySweep: row.liquiditySweep, reaction: row.reaction,
+            time: row.time, m5Trend: { m1Anchor: row.m1Anchor } } } }));
+    },
     getEntry: async (runId, id) => {
       const { data, error } = await db.from('trade_setup_simulation_entries')
         .select('id,instrument,direction,outcomes,snapshot').eq('run_id', runId).eq('id', id).maybeSingle();
