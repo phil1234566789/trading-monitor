@@ -48,7 +48,7 @@ export function createSimulationRepository(db) {
     listReviewSnapshots: async (runId) => {
       // Nur Prüfbelege laden: Strukturbaum und Chartgeometrie sind für die Tabelle unnötig.
       const fields = ['id,run_id,instrument,direction', 'knownAt:snapshot->knownAt', 'setupKey:snapshot->>setupKey',
-        'dealingRange:snapshot->dealingRange',
+        'dealingRange:snapshot->dealingRange', 'rangeCourse:snapshot->rangeCourse',
         'entry:snapshot->entry', 'm1Check:snapshot->m1Check', 'primary:snapshot->checklist->setup->primary',
         'checklistStatus:snapshot->checklist->>status', 'evaluatedAt:snapshot->checklist->evaluatedAt',
         ...['h1Trend', 'liquiditySweep', 'reaction', 'targets', 'antiConfluences', 'confluences', 'time'].map(key => `${key}:snapshot->checklist->checks->${key}`),
@@ -60,7 +60,7 @@ export function createSimulationRepository(db) {
           return query.range(from, to);
         })));
       return groups.flat().map(row => ({ id: row.id, runId: row.run_id, instrument: row.instrument, direction: row.direction,
-        knownAt: row.knownAt, setupKey: row.setupKey, entry: row.entry, m1Check: row.m1Check, dealingRange: row.dealingRange,
+        knownAt: row.knownAt, setupKey: row.setupKey, entry: row.entry, m1Check: row.m1Check, dealingRange: row.dealingRange, rangeCourse: row.rangeCourse,
         checklist: { status: row.checklistStatus, evaluatedAt: row.evaluatedAt, setup: { primary: row.primary },
           checks: { h1Trend: row.h1Trend, liquiditySweep: row.liquiditySweep, reaction: row.reaction,
             targets: row.targets, antiConfluences: row.antiConfluences, confluences: row.confluences,
