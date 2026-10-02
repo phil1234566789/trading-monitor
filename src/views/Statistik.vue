@@ -16,7 +16,7 @@ import SimulationSetupsTable from '../components/SimulationSetupsTable.vue';
 const repository = createSimulationRepository(supabase);
 const route = useRoute(), router = useRouter();
 // Alte „all“-Links dürfen die freigegebene Prüfansicht nicht mit Chart-Testläufen vermischen.
-const currentReviewRun = 'setup2-de2b15d6fc462009e91ed4f4';
+const currentReviewRun = 'setup2-5fc3c1ccba03c75107e75994';
 const previousReviewRun = 'setup2-0e5723a18a68e62d6280444f';
 const routeRunId = () => typeof route.query.run === 'string' && route.query.run !== 'all' ? route.query.run : currentReviewRun;
 const setupTable = ref(null);
