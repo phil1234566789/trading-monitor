@@ -4572,9 +4572,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupSimulationStatistics.js": {
-    "mtime": 1790968010.1159282,
-    "seen": 1790968337.338595,
-    "ast_hash": "002db54efda8f9423025562bc1301cad",
+    "mtime": 1790968872.4147394,
+    "seen": 1790968921.1484928,
+    "ast_hash": "f17109f4d69380fd080fdacec0bcac4e",
     "semantic_hash": ""
   },
   "src/trendPhaseRendering.js": {
@@ -4584,9 +4584,9 @@
     "semantic_hash": ""
   },
   "src/views/Statistik.vue": {
-    "mtime": 1790968307.8663042,
-    "seen": 1790968337.3415964,
-    "ast_hash": "8d4afb5e16fa40199e327a5937e04a50",
+    "mtime": 1790968976.7146938,
+    "seen": 1790969001.9984996,
+    "ast_hash": "c902c91674fe9bfbea7b335731c58fc9",
     "semantic_hash": ""
   },
   "test/SimulationResultsTable.test.js": {
@@ -4632,9 +4632,9 @@
     "semantic_hash": ""
   },
   "test/tradeSetupSimulationStatistics.test.js": {
-    "mtime": 1790968052.0500937,
-    "seen": 1790968337.3970387,
-    "ast_hash": "5d2903009ed29ae93b1cfc7db5a994d5",
+    "mtime": 1790968874.0889893,
+    "seen": 1790968921.1994996,
+    "ast_hash": "d16cdfcde714db4d07b357a5666828f0",
     "semantic_hash": ""
   },
   "test/useSimulationStatistics.test.js": {
@@ -4902,9 +4902,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationSetupsTable.vue": {
-    "mtime": 1790964908.6068542,
-    "seen": 1790965274.1274126,
-    "ast_hash": "5580d96d2b40bf450bfda368df41e835",
+    "mtime": 1790968844.0124588,
+    "seen": 1790968921.118533,
+    "ast_hash": "79f664587670f39e7b3049d5cc34753a",
     "semantic_hash": ""
   },
   "src/tradeSetup2LinkedSnapshot.js": {
@@ -5003,10 +5003,16 @@
     "ast_hash": "",
     "semantic_hash": ""
   },
-  "src/components/SimulationRunsSummary.vue": {
-    "mtime": 1790968010.7661324,
-    "seen": 1790968337.3029964,
-    "ast_hash": "6744869c135019ccfe6658bb13642ae6",
+  "src/components/SimulationEntryResult.vue": {
+    "mtime": 1790968930.7435067,
+    "seen": 1790969001.9602342,
+    "ast_hash": "706b37734fa2cae447562b7efe758e24",
+    "semantic_hash": ""
+  },
+  "test/simulationEntryResult.test.js": {
+    "mtime": 1790968948.1573682,
+    "seen": 1790969002.0414994,
+    "ast_hash": "77309878390de4118f7a988b4156728b",
     "semantic_hash": ""
   }
 }
