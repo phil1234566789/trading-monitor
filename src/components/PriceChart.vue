@@ -4,6 +4,7 @@ import { nextCandlePollDelay } from "../candlePolling.js";
 import { usePriceChartM1Structure } from '../composables/usePriceChartM1Structure.js';
 import { useTradeSetup2History } from '../composables/useTradeSetup2History.js';
 import { isTradeSetup2SnapshotView } from '../tradeSetup2Snapshot.js';
+import { snapshotChartCandleCount } from '../tradeSetup2SnapshotIndicators.js';
 import TradeSetup2Loading from './TradeSetup2Loading.vue';
 import { createSimulationRepository } from '../tradeSetupSimulationRepository.js';
 import TradeSetup2Controls from './TradeSetup2Controls.vue';
@@ -1897,13 +1898,14 @@ async function loadInitial({ preserveHistory = false, force = false } = {}) {
     // Kerzenbereich laden, der nach clipReplay komplett verschwindet (siehe Chat 2026-07-19: "1h
     // auf M5 gewechselt und sehe keinen Chart").
     const toMs = replayToMs(props.currentBar);
+    const count = snapshotView.value ? snapshotChartCandleCount(setup2.selected.value, props.currentBar, INITIAL_CANDLE_COUNT) : INITIAL_CANDLE_COUNT;
     const candles = force
-      ? await fetchInitialForexCandles(props.symbol, props.currentBar, INITIAL_CANDLE_COUNT, toMs)
+      ? await fetchInitialForexCandles(props.symbol, props.currentBar, count, toMs)
       : await fetchCandlesCached(
           fetchInitialForexCandles,
           props.symbol,
           props.currentBar,
-          INITIAL_CANDLE_COUNT,
+          count,
           toMs,
           snapshotView.value ? barSecondsFor(props.currentBar) * 20 : REPLAY_LOOKAHEAD_SEC,
         );
@@ -2272,6 +2274,11 @@ watch([() => props.trades, () => props.showTrades, () => props.tscRange], () => 
 // Confirmation-Links und Invalidation-Linien jedes Mal mit neu berechnen.
 watch(() => props.hoveredTradeId, refreshTradeMarkersInternal);
 watch(() => props.pinTradeIds, refreshTradeMarkersInternal);
+watch(setup2.selected, snapshot => {
+  if (snapshotView.value && snapshot && snapshotChartCandleCount(snapshot, props.currentBar, INITIAL_CANDLE_COUNT) > allCandles.length) {
+    void loadInitial({ preserveHistory: true });
+  }
+});
 watch(() => props.pinObZoneKeys, refreshPoiZonesInternal);
 watch(() => props.pinTradeSetupIds, refreshTradeSetupLinksInternal);
 watch(() => props.pinTradeConfirmationIds, refreshTradeConfirmationLinksInternal);
@@ -2636,7 +2643,7 @@ defineExpose({
     <TradeSetup2Loading v-if="snapshotView && showTradeSetup2" :steps="snapshotSteps" :error="setup2Error || snapshotCandleError"
       @retry="setup2.refresh(); loadInitial()" />
     <TradeSetup2Controls v-if="showTradeSetup2" :positions="setup2Positions" :selected="setup2Selected" :loading="setup2Loading"
-      :status="setup2Status" :error="setup2Error" :snapshot-view="snapshotView" :m1-status="setup2.snapshotM1.value.message" @select="setup2.select" @close="setup2.select(null)" @refresh="setup2.refresh" />
+      :status="setup2Status" :error="setup2Error" :snapshot-view="snapshotView" :m1-status="setup2.snapshotM1.value.message" :indicator-status="setup2.snapshotIndicators.value.message" @select="setup2.select" @close="setup2.select(null)" @refresh="setup2.refresh" />
     <M5CandleClock v-if="m5ClockEnabled()" :state="m5Clock" @retry="retryM5Clock" />
     <M1StructureStatus v-if="showM1Structure && !snapshotView" :status="m1StructureStatus" :symbol="symbol" />
     <div v-if="goldHistoryError" class="live-history-confirm" role="alert">Gold-Strukturvorlauf konnte nicht vollständig geladen werden. <button @click="reloadGoldHistory">Erneut laden</button></div>

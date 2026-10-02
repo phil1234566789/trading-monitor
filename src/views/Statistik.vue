@@ -15,7 +15,9 @@ import SimulationSetupsTable from '../components/SimulationSetupsTable.vue';
 
 const repository = createSimulationRepository(supabase);
 const route = useRoute(), router = useRouter();
-const routeRunId = () => route.query.run === 'all' ? '' : typeof route.query.run === 'string' ? route.query.run : '';
+// Alte „all“-Links dürfen die freigegebene Prüfansicht nicht mit Chart-Testläufen vermischen.
+const currentReviewRun = 'setup2-0e5723a18a68e62d6280444f';
+const routeRunId = () => typeof route.query.run === 'string' && route.query.run !== 'all' ? route.query.run : currentReviewRun;
 const setupTable = ref(null);
 const { runs, runId, selectedRun, instrument, variant, from, to, rows, loading, error, refresh } = useSimulationStatistics(repository, routeRunId());
 variant.value = route.query.variant === 'narrow' ? 'narrow' : 'wide';
@@ -56,7 +58,6 @@ const runLabel = run => `${at(run.from)} – ${at(run.to)} · ${isVersionedDeali
 
     <details class="run-comparison"><summary>Optional: einzelnen Lauf vergleichen</summary>
       <label class="run-filter">Regel / Lauf<select v-model="runId" :disabled="!runs.length">
-        <option value="">Alle gespeicherten Läufe</option>
         <option v-for="run in runs" :key="run.id" :value="run.id">{{ runLabel(run) }}</option>
       </select></label>
     </details>

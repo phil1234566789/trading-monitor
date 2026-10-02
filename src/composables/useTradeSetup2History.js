@@ -14,6 +14,8 @@ import {computeJumpViewport} from '../priceChartJumpToTime.js';
 import {useSnapshotM1} from './useSnapshotM1.js';
 import {SNAPSHOT_INDICATOR_PROPS} from '../tradeSetup2SnapshotIndicators.js';
 import {renderStructurePivots} from '../structureOverlay.js';
+import {useSnapshotIndicators} from './useSnapshotIndicators.js';
+import {renderPersistedZones} from '../orderBlocks.js';
 
 export function useTradeSetup2History(props,checklist,{repository,configurationInput,evaluationTime}) {
   const results=shallowRef([]),candidates=shallowRef([]),selected=shallowRef(null),status=ref(''),error=ref('');
@@ -22,13 +24,14 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
   let series=null,chart=null,abort=null,revision=0,selectionRevision=0,completedScanKey=null,appliedRouteKey=null;
   let activeInputKey=null,activeAt=null,refreshPending=false;
   let displayReady=false,focusedRouteKey=null;
-  const overview=[],details=[],entry=[],m1Markers=[];
+  const overview=[],details=[],entry=[],m1Markers=[],h1Markers=[],m5Markers=[],obPrimitives=[];
   const snapshots=new Map();
   const positions=computed(()=>tradeSetup2HistoryItems(results.value.map(row=>simulationAsOf(row,evaluationTime())).filter(Boolean),candidates.value,{instrument:props.symbol,variant:props.tradeSetup2Variant,
     asOf:evaluationTime(),historyCount:props.tradeSetup2HistoryCount,candles:displayCandles.value}));
   const visibleSnapshot=computed(()=>props.showTradeSetup2 && selected.value?.instrument===props.symbol
     && selected.value.knownAt<=evaluationTime()?selected.value:null);
   const snapshotM1=useSnapshotM1(props,visibleSnapshot,repository);
+  const snapshotIndicators=useSnapshotIndicators(props,visibleSnapshot,repository);
   function render() {
     if(!series)return;
     renderSetup2Positions(series,props.showTradeSetup2?positions.value:[],overview,displayCandles.value,props.currentBar,visibleSnapshot.value?.id);
@@ -38,6 +41,13 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     // ergänzen; der Live-Levelrenderer würde Endpunkte aus Chartkerzen neu bestimmen.
     renderStructurePivots(series,reconstructed?snapshotM1.value.result:null,m1Markers,displayCandles.value,
       {symbol:props.symbol,debug:reconstructed&&props.showLiquidityDebug});
+    for(const [bar,markers,show] of [['1h',h1Markers,props.showRanges],['5m',m5Markers,props.showM5Structure]]) {
+      renderStructurePivots(series,snapshotIndicators.value.pivots[bar],markers,displayCandles.value,
+        {symbol:props.symbol,debug:!!visibleSnapshot.value&&show&&props.showLiquidityDebug});
+    }
+    const reaction=visibleSnapshot.value?.checklist?.setup?.primary?.reactionOB;
+    renderPersistedZones(series,snapshotIndicators.value.zones.filter(z=>!(z.timeframe==='5M'&&z.startTime===reaction?.startTime
+      &&z.top===reaction.top&&z.bottom===reaction.bottom)),obPrimitives,displayCandles.value);
     linkedRendered.value=linkedReady.value&&displayReady;
     const snapshot=visibleSnapshot.value;
     const key=`${props.tradeSetup2RunId}:${snapshot?.id}:${props.currentBar}`;
@@ -208,12 +218,12 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
   // Den angefragten Snapshot direkt laden; die übrige Historie darf den Link nicht aufhalten.
   watch(()=>[props.selectedTradeSetup2Id,props.tradeSetup2RunId],selectRoute,{immediate:true});
   watch(()=>props.tradeSetup2HistoryCount,()=>{if(!isTradeSetup2SnapshotView(props))void refresh();});
-  watch([positions,visibleSnapshot,snapshotM1,()=>props.showTradeSetup2,()=>props.showLiquidityDebug,
+  watch([positions,visibleSnapshot,snapshotM1,snapshotIndicators,()=>props.showTradeSetup2,()=>props.showLiquidityDebug,
     ...SNAPSHOT_INDICATOR_PROPS.map(key=>()=>props[key])],render);
   watch(()=>props.tradeSetup2Variant,()=>{if(!isTradeSetup2SnapshotView(props))void refresh();});
   onScopeDispose(()=>{abort?.abort();revision++;selectionRevision++;chart?.unsubscribeClick(click);
-    if(series)for(const list of [overview,details,entry,m1Markers])clearSetup2Primitives(series,list);series=null;});
-  return {positions,selected:visibleSnapshot,snapshotM1,loading,status,error,linkedReady,linkedRendered,select,refresh:()=>refresh(true),
+    if(series)for(const list of [overview,details,entry,m1Markers,h1Markers,m5Markers,obPrimitives])clearSetup2Primitives(series,list);series=null;});
+  return {positions,selected:visibleSnapshot,snapshotM1,snapshotIndicators,loading,status,error,linkedReady,linkedRendered,select,refresh:()=>refresh(true),
     create(c,s){chart=c;series=s;chart.subscribeClick(click);render();},
     updateCandles(rows,ready=true){displayCandles.value=rows;displayReady=ready;render();}};
 }

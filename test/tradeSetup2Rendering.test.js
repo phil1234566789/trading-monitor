@@ -49,6 +49,8 @@ it('renders legacy evidence with real colors and native projection, then clears 
   expect(primitives).toHaveLength(3);
   for(const p of primitives)p.updateAllViews();
   expect(primitives[0].paneViews()[0]._p1.x).toBe(112);
+  expect(primitives[0]._options).toMatchObject({labelSide:'end-above',lenientLabels:true});
+  expect(primitives[0]._options.label).toBe('1H LS 2 (1m)');
   expect(primitives[2].paneViews()[0]._points.map(p=>p.x)).toEqual([112,116]);
   renderSetup2Detail(series,snapshot,primitives,entries,candles,'5m',2940);
   expect(primitives).toHaveLength(0);
@@ -62,4 +64,17 @@ it('allows selecting the middle of a compact native position line',()=>{
   p.updateAllViews();
   expect(p.lineDistanceTo(110,15)).toBe(0);
   expect(p.lineDistanceTo(110,40)).toBeGreaterThan(10);
+});
+
+it('draws a native H1 sweep anchored before the first M5 bar after the weekend',()=>{
+  const snapshot={instrument:'GBPUSD',knownAt:1800,evidence:[{kind:'line',role:'sweep',timeframe:'1h',knownAt:1800,
+    price:1.3502,fromTime:600,toTime:1500,styleKey:'liquiditySweep1h'}]};
+  const candles=[{time:0},{time:900},{time:1200},{time:1500}],primitives=[];
+  const scale={timeToCoordinate:t=>candles.findIndex(c=>c.time===t)*10,options:()=>({barSpacing:10})};
+  const series={priceToCoordinate:p=>p,detachPrimitive:vi.fn(),attachPrimitive:p=>p.attached({chart:{timeScale:()=>scale},series,requestUpdate:vi.fn()})};
+  renderSetup2Detail(series,snapshot,primitives,[],candles,'5m',1800);
+  primitives[0].updateAllViews();
+  expect(primitives[0].paneViews()[0]._p1.x).toBe(10);
+  expect(primitives[0].paneViews()[0]._p2.x).toBe(30);
+  expect(snapshot.evidence[0].fromTime).toBe(600);
 });

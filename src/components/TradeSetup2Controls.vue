@@ -2,7 +2,7 @@
 import {formatDatedTime} from '../berlinTime.js';
 import {fmtPrice,pricePrecisionForInstrument} from '../format.js';
 import {DEALING_RANGE_LABELS,savedDealingRangeStatus} from '../tradeSetup2DealingRange.js';
-defineProps({positions:Array,selected:Object,loading:Boolean,status:String,error:String,snapshotView:Boolean,m1Status:String});
+defineProps({positions:Array,selected:Object,loading:Boolean,status:String,error:String,snapshotView:Boolean,m1Status:String,indicatorStatus:String});
 const emit=defineEmits(['select','close','refresh']);
 function choose(event,positions){const p=positions.find(p=>p.id===event.target.value);if(p)emit('select',p.snapshotId,p.runId);}
 </script>
@@ -22,6 +22,7 @@ function choose(event,positions){const p=positions.find(p=>p.id===event.target.v
     <small v-else role="status">{{ loading ? status : status || 'Gespeicherte Setups · Details per Klick' }}</small>
     <span v-if="error" role="alert">{{ error }}</span>
     <small v-if="m1Status" role="status">{{ m1Status }}</small>
+    <small v-if="indicatorStatus" role="status">{{ indicatorStatus }}</small>
   </div>
 </template>
 <style scoped>

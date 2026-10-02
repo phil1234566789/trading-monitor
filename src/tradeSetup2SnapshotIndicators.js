@@ -3,9 +3,42 @@ import { SETUP2_VERSION } from './tradeSetup2Configuration.js';
 import { markIgnoredCandles } from './sessionOccurrences.js';
 import { berlinOffsetMinutes } from './berlinTime.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
+import { collectNestedChain } from './marketStructureAnalysis';
 
 export const SNAPSHOT_INDICATOR_PROPS = ['showRanges', 'showM5Structure', 'showM1Structure',
-  'showLiquidity', 'showObsM5', 'showRsiDivergence', 'showRsiDivergenceHistory'];
+  'showLiquidity', 'showObsM5', 'showObs1h', 'showObs4h', 'showHistoricalObs', 'showRsiDivergence', 'showRsiDivergenceHistory'];
+
+export function snapshotChartCandleCount(snapshot, bar, minimum) {
+  const anchors = (snapshot?.evidence ?? []).filter(e => e.role === 'structure' && /Live|Choch/.test(e.styleKey))
+    .flatMap(e => [e.fromTime, e.toTime]).filter(Number.isFinite);
+  if (!anchors.length) return minimum;
+  const seconds = { '1m': 60, '5m': 300 }[bar];
+  if (!seconds) return minimum;
+  // Beide echten Endpunkte laden; Preisanker am Rand zu verschieben verfälscht die Diagonale.
+  return Math.min(50000, Math.max(minimum, Math.ceil((snapshot.knownAt - Math.min(...anchors)) / seconds) + 20));
+}
+
+export function snapshotStructureLevels(snapshot) {
+  const result = [], at = snapshot.knownAt;
+  for (const [tf, state] of [['1h', snapshot.checklist?.structure], ['5m', snapshot.checklist?.checks?.m5Trend?.structureState]]) {
+    if (!state) continue;
+    for (const level of collectNestedChain(state)) {
+      const bounds = [level.currRange?.high, level.currRange?.low].filter(Boolean);
+      const pivots = [...bounds, ...(level.structurePivots ?? []).filter(p =>
+        ['protected-high', 'protected-low', 'LQ-sweep', 'break-of-structure'].includes(p.type))];
+      for (const p of pivots) {
+        if (!Number.isFinite(p.pivotTime) || !Number.isFinite(p.price)) continue;
+        const base = bounds.includes(p) ? (p === level.currRange.high ? 'rangeHigh' : 'rangeLow')
+          : p.type.startsWith('protected') ? 'rangeProtectedLow' : p.type === 'LQ-sweep' ? 'rangeLqSweep' : 'rangeBreakOfStructure';
+        const touchedEnd = ['LQ-sweep', 'break-of-structure'].includes(p.type) && p.touched?.touchedTime;
+        result.push({ kind: 'line', role: 'structureLevel', timeframe: tf, knownAt: at, price: p.price,
+          fromTime: p.pivotTime, toTime: touchedEnd || at - 60,
+          styleKey: tf === '1h' ? base : `m5${base[0].toUpperCase()}${base.slice(1)}`, label: `${tf} ${p.type}` });
+      }
+    }
+  }
+  return result;
+}
 
 export function snapshotEvidenceVisible(e, props = {}) {
   if (e.role === 'divergence') return props.showRsiDivergence !== false || props.showRsiDivergenceHistory === true;
