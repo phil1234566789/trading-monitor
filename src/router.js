@@ -6,6 +6,7 @@ export const router = createRouter({
   history: createWebHashHistory(),
   scrollBehavior(to) {
     if (to.name === 'setup-regeln') return to.hash ? { el: to.hash } : { top: 0, left: 0 };
+    if (to.name === 'statistik' && to.query.run) return { top: 0, left: 0 };
     if (to.path === '/' && to.query.setup2) return { top: 0, left: 0 };
   },
   routes: [

@@ -1,4 +1,5 @@
 import { berlinDayRangeUtcMs } from './berlinTime.js';
+export const MIN_SIMULATION_WINRATE_CASES = 50;
 
 export const SIMULATION_OUTCOME_LABELS = {
   slBeforeT1: 'SL vor T1', t1Be: 'T1 + Break-even', t2: 'T2',
@@ -37,10 +38,14 @@ export function simulationStatistics(rows, variant, basis = 'gross') {
   return {
     total: selected.length, counts, closed: closed.length, wins, losses,
     // Philip erlaubt Prozentwerte ab 50 entschiedenen Fällen (PLAN-dr-statistik-ui.md).
-    winrate: closed.length >= 50 ? wins / closed.length * 100 : null,
+    winrate: closed.length >= MIN_SIMULATION_WINRATE_CASES ? wins / closed.length * 100 : null,
     pnlUsd: closed.length ? closed.reduce((sum, row) => sum + row[pnlField], 0) : null,
     totalR: closed.length ? closed.reduce((sum, row) => sum + row[rField], 0) : null,
   };
+}
+
+export function simulationRunLink(runId, variant = 'wide') {
+  return { path: '/statistik', query: { run: runId, variant } };
 }
 
 export function simulationDateFilter(from, to) {

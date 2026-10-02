@@ -3,7 +3,7 @@ import { computed, ref, shallowRef, watch, onScopeDispose } from 'vue';
 import { formatDatedTime } from '../berlinTime.js';
 import { groupSetupSnapshots, filterDealingRanges, setupEntryConditions, REVIEW_STATUS_ICONS } from '../tradeSetup2Review.js';
 import { DEALING_RANGE_LABELS, savedDealingRangeStatus } from '../tradeSetup2DealingRange.js';
-import { simulationChartLink, simulationDateFilter } from '../tradeSetupSimulationStatistics.js';
+import { simulationChartLink, simulationDateFilter, simulationRunLink } from '../tradeSetupSimulationStatistics.js';
 import SetupEntryConditions from './SetupEntryConditions.vue';
 import ToggleButton from './ui/ToggleButton.vue';
 
@@ -70,7 +70,7 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
           <tbody><tr v-for="row in visibleRows" :key="row.key">
             <td>{{ formatDatedTime(row.knownAt) }}</td><td>{{ row.instrument }}</td><td>{{ row.direction === 'long' ? 'Long' : 'Short' }}</td>
             <td><strong>{{ DEALING_RANGE_LABELS[savedDealingRangeStatus(row.snapshot)] }}</strong><small>{{ row.entries.length ? 'Mit Entry · Entry-Stand' : 'Ohne Entry · gespeicherter DR-Stand' }}</small><small v-for="detail in row.snapshot.dealingRange?.details" :key="detail">{{ detail }}</small><strong :class="row.review.assessment.status">{{ REVIEW_STATUS_ICONS[row.review.assessment.status] }} {{ row.review.assessment.label }}</strong></td>
-            <td :title="row.snapshot.runId">{{ row.snapshot.runId?.slice(-8) }}</td>
+            <td :title="row.snapshot.runId"><RouterLink :to="simulationRunLink(row.snapshot.runId, variant)">{{ row.snapshot.runId?.slice(-8) }} · Ergebnisse</RouterLink></td>
             <td>
               <ul v-if="row.review.missing.length" class="missing-conditions"><li v-for="condition in row.review.missing" :key="condition.key" class="unmet"><strong>✕ {{ condition.label }}: {{ condition.key === 'time' ? 'Nicht tradebar' : 'Fehlt' }}</strong><div v-for="(detail, index) in condition.details" :key="index">{{ detail }}</div></li></ul>
               <details @toggle="toggle(row.key, $event)"><summary><span class="passed">✓ {{ row.review.counts[0] }} erfüllt</span> · <span class="unmet">✕ {{ row.review.counts[1] }} {{ row.review.counts[1] === 1 ? 'fehlt' : 'fehlen' }}</span> · <span class="unknown">? {{ row.review.counts[2] }} unbekannt</span></summary>

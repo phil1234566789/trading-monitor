@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { simulationStatistics, simulationDateFilter, simulationChartLink } from '../src/tradeSetupSimulationStatistics.js';
+import { simulationStatistics, simulationDateFilter, simulationChartLink, simulationRunLink } from '../src/tradeSetupSimulationStatistics.js';
 
 const result = (overrides = {}) => ({ status: 'closed', outcome: 't1Be', variant: 'wide', pnlUsd: 240, rMultiple: 0.5, ...overrides });
 
@@ -22,6 +22,16 @@ describe('simulation statistics', () => {
   });
   it('does not invent a zero result when there are no completed trades', () => {
     expect(simulationStatistics([], 'wide')).toMatchObject({ closed: 0, pnlUsd: null, totalR: null });
+  });
+  it('keeps gross/net PnL visible below the percentage threshold and separates both alternatives', () => {
+    const rows = [result({ pnlUsd: 292.5, netPnlUsd: 277.5, netRMultiple: 1.36 }),
+      result({ outcome: 'slBeforeT1', pnlUsd: -180, netPnlUsd: -190, netRMultiple: -1.05 }),
+      result({ status: 'ambiguous', outcome: null, pnlUsd: null, netPnlUsd: null }),
+      ...[-248, -234, -264].map(netPnlUsd => result({ variant: 'narrow', outcome: 'slBeforeT1', netPnlUsd, netRMultiple: -1.1 }))];
+    expect(simulationStatistics(rows, 'wide', 'gross')).toMatchObject({ pnlUsd: 112.5, closed: 2, winrate: null });
+    expect(simulationStatistics(rows, 'wide', 'net')).toMatchObject({ pnlUsd: 87.5, wins: 1, losses: 1, closed: 2, winrate: null });
+    expect(simulationStatistics(rows, 'narrow', 'net')).toMatchObject({ pnlUsd: -746, total: 3, losses: 3, closed: 3, winrate: null });
+    expect(simulationRunLink('setup2-current', 'narrow')).toEqual({ path: '/statistik', query: { run: 'setup2-current', variant: 'narrow' } });
   });
   it.each([['2026-03-29', 23], ['2026-10-25', 25]])('uses both Berlin midnights on %s', (day, hours) => {
     const bounds = simulationDateFilter(day, day);

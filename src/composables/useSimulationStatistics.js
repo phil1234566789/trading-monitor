@@ -2,10 +2,10 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { simulationDateFilter } from '../tradeSetupSimulationStatistics.js';
 import { useStatusBar } from './useStatusBar.js';
 
-export function useSimulationStatistics(repository) {
+export function useSimulationStatistics(repository, initialRunId = '') {
   const { markSuccess } = useStatusBar();
   const runs = ref([]);
-  const runId = ref('');
+  const runId = ref(typeof initialRunId === 'string' ? initialRunId : '');
   const instrument = ref('');
   const variant = ref('wide');
   const from = ref('');
@@ -31,7 +31,7 @@ export function useSimulationStatistics(repository) {
       const id = runId.value;
       if (!id) return;
       const bounds = simulationDateFilter(from.value, to.value);
-      const results = await repository.listResults({ runId: id, instrument: instrument.value || undefined, variant: variant.value, ...bounds });
+      const results = await repository.listResults({ runId: id, instrument: instrument.value || undefined, ...bounds });
       if (ticket === revision) {
         rows.value = results.toSorted((a, b) => b.entryTime - a.entryTime || a.entryId.localeCompare(b.entryId));
       }
@@ -44,7 +44,7 @@ export function useSimulationStatistics(repository) {
     }
   }
 
-  watch([runId, instrument, variant, from, to], refresh);
+  watch([runId, instrument, from, to], refresh);
   onMounted(() => {
     refresh();
     timer = setInterval(() => {
