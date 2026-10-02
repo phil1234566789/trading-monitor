@@ -14,6 +14,8 @@
       <RouterLink to="/setup-regeln#abc">A–C · Bestätigung</RouterLink>
       <RouterLink to="/setup-regeln#validierung">D–E · Validierung</RouterLink>
       <RouterLink to="/setup-regeln#anti-confluences">E · Anti-Confluences</RouterLink>
+      <RouterLink to="/setup-regeln#entry">Entry · Größenvarianten</RouterLink>
+      <RouterLink to="/setup-regeln#zeit">F · Uhrzeit für alle Entries</RouterLink>
       <RouterLink to="/setup-regeln#confluences">G · Statistik</RouterLink>
       <RouterLink to="/setup-regeln#offen">Offene Entscheidungen</RouterLink>
     </nav>
@@ -41,7 +43,7 @@
       <h2 id="abc-title">A–C · Bestätigte Dealing Ranges</h2>
       <p class="section-note">Fachregel</p>
       <p>Das aktuelle ABC-Inducement-Setup heißt <strong>DR gegen M5 Trend</strong>. Der Name bezeichnet dieses Setupmodell; „bestätigt“ und „validiert“ bleiben die allgemeinen Statusstufen.</p>
-      <p>Das noch vorzugebende Entry-Pattern gilt ausschließlich für <strong>DR gegen M5 Trend</strong>. Seine Regeln sind noch zu erfassen.</p>
+      <p>Das unten beschriebene Entry-Pattern mit seinen zwei Größenvarianten gilt ausschließlich für <strong>DR gegen M5 Trend</strong>.</p>
       <dl class="criteria">
         <div><dt>A · H1-Richtung</dt><dd>Der H1-Haupttrend stimmt mit der Handelsrichtung des Inducements überein.</dd></div>
         <div><dt>B · Inducement</dt><dd>Aktuell werden Major- und Medium-H1-Inducements berücksichtigt. Kleinere LS erhalten später eigene Regeln.</dd></div>
@@ -73,6 +75,28 @@
       <aside class="open-decision"><h3>Offene Entscheidung · verbindliche Showstopper</h3><p>Noch keines dieser Merkmale ist eine verbindliche automatische Entry-Sperre. Welche Merkmale künftig Showstopper sind, ist noch festzulegen.</p><p><strong>Grün unter E bedeutet bisher nur:</strong> Es wurde keine H1-Gegendivergenz gefunden. Daraus folgt keine umfassende Freigabe.</p></aside>
     </section>
 
+    <section id="entry" aria-labelledby="entry-title">
+      <h2 id="entry-title">Entry für DR gegen M5 Trend</h2>
+      <p class="section-note">Fachregel · zwei Größenvarianten für dieses Modell</p>
+      <p>Philip ordnet das vorhandene Entry-Pattern anhand der Checklist-Ansicht dem Modell <strong>DR gegen M5 Trend</strong> zu. Der bestätigte M5-CHoCH in Traderichtung bestimmt die Entry-Größe:</p>
+      <dl class="criteria">
+        <div><dt>Halbe Entry-Größe</dt><dd>Noch kein bestätigter M5-CHoCH in Traderichtung. Diese Variante gilt als riskanter.</dd></div>
+        <div><dt>Volle Entry-Größe</dt><dd>Ein bestätigter M5-CHoCH in Traderichtung ist vorhanden.</dd></div>
+      </dl>
+      <p><strong>M5-BOS ist keine zusätzlich festgelegte Pflicht.</strong> Für beide Größenvarianten gelten die übrigen Entry-Bedingungen einschließlich der globalen Uhrzeitregel unter F.</p>
+      <details><summary>Einordnung des besprochenen Short-Beispiels</summary><p>Der Screenshot zeigt einen bullischen M5-Trend und unbestätigten M5-CHoCH/BOS. Diese Variante erhält halbe Größe. Sichtbar sind außerdem ein M1 Nested Downtrend, bärischer M1-CHoCH/BOS, ein M5-OB-Retest und eine nachfolgende bärische FVG.</p><p>Aus diesen sichtbaren M1-Merkmalen werden ohne weitere Festlegung keine zusätzlichen Pflichtbedingungen abgeleitet.</p></details>
+      <aside class="implementation"><h3>Implementierungsstand</h3><p>Die technische Umsetzung der Größenvarianten ist noch nicht verifiziert. Bestehende Ergebnisläufe bleiben unverändert.</p></aside>
+    </section>
+
+    <section id="zeit" aria-labelledby="zeit-title">
+      <h2 id="zeit-title">F · Uhrzeit als Pflicht für alle Entries</h2>
+      <p class="section-note">Fachregel · gilt für jedes Entry-Modell</p>
+      <p><strong>Ist die Uhrzeit nach den bestehenden F-Checklistregeln nicht erlaubt, gibt es keinen Entry.</strong></p>
+      <p>Das ist eine Entry-Sperre. Sie ist kein zusätzliches Gate der DR-Validierung und keine dauerhafte Invalidierung der Marktidee.</p>
+      <aside class="implementation"><h3>Implementierungsstand</h3><p>Die Uhrzeitregeln unter F sind bereits implementiert. Bekannte Zeit-/News-Sperren blockieren im aktuellen Code. Unbekannte News-Abdeckung wird aktuell nicht automatisch gesperrt.</p></aside>
+      <aside class="open-decision"><h3>Offene Entscheidung · unbekannte F-Ergebnisse</h3><p>Wie unbekannte F-Ergebnisse künftig behandelt werden, ist noch ausdrücklich zu klären.</p></aside>
+    </section>
+
     <section id="confluences" aria-labelledby="confluences-title">
       <h2 id="confluences-title">G · Zusätzliche Confluences</h2>
       <p class="section-note">Fachregel · ausschließlich Statistik</p>
@@ -81,7 +105,7 @@
 
     <section id="offen" class="decisions" aria-labelledby="offen-title">
       <h2 id="offen-title">Noch gemeinsam festzulegen</h2>
-      <ol><li>Konkrete Showstopper unter E.</li><li>Weitere Bedingungen zwischen validierter Dealing Range und Entry-Freigabe.</li><li>Eigene Regeln für kleinere LS.</li></ol>
+      <ol><li>Konkrete Showstopper unter E.</li><li>Weitere Bedingungen zwischen validierter Dealing Range und Entry-Freigabe.</li><li>Umgang mit unbekannten F-Ergebnissen, insbesondere unbekannter News-Abdeckung.</li><li>Eigene Regeln für kleinere LS.</li></ol>
       <p>Die gemeinsame Prüfung und Absegnung dieses Entwurfs steht aus.</p>
     </section>
     <footer>Bestehende Jahresläufe werden durch diese Diskussion nicht verändert. Diese Seite dokumentiert den Regelstand; sie ändert keine Scannerregeln und startet keinen neuen Scan.</footer>
@@ -94,7 +118,7 @@ h1 { margin: 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.2; } h2 { marg
 p { margin: 12px 0; } .eyebrow, .section-note, footer { color: var(--rule-muted); font-size: 14px; } .lead { font-size: 19px; }
 .review-state { padding: 16px; border-left: 3px solid #e7bc77; background: #24232a; } .review-state strong { color: #f0ce94; }
 .contents { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 20px 0; border-bottom: 1px solid var(--rule-border); }
-a { color: var(--rule-link); text-underline-offset: 3px; } :is(a,.table-scroll):focus-visible { outline: 2px solid var(--rule-link); outline-offset: 4px; }
+a { color: var(--rule-link); text-underline-offset: 3px; } summary { cursor: pointer; color: var(--rule-link); } :is(a,summary,.table-scroll):focus-visible { outline: 2px solid var(--rule-link); outline-offset: 4px; }
 section { padding: 28px 0; border-bottom: 1px solid var(--rule-border); scroll-margin-top: 20px; }
 .table-scroll { overflow-x: auto; } table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 14px; text-align: left; } caption { text-align: left; padding-bottom: 12px; color: var(--rule-muted); }
 th, td { padding: 14px 12px; vertical-align: top; border: 1px solid var(--rule-border); } thead { background: #222a3a; } tbody th { min-width: 160px; } tbody tr:nth-child(even) { background: #1a202d; }
