@@ -198,9 +198,9 @@
     "semantic_hash": "c3ad7c0cd6dffdd06191cc2effdb5056"
   },
   "src/components/PriceChart.vue": {
-    "mtime": 1790953826.8743615,
-    "seen": 1790954312.5020225,
-    "ast_hash": "b00c5c54bc68006cacfc9557012b1abc",
+    "mtime": 1790957582.2211134,
+    "seen": 1790957903.981009,
+    "ast_hash": "88b4176a4ff1f7ac238ddea2284e2766",
     "semantic_hash": ""
   },
   "src/components/ProtokollTable.vue": {
@@ -2292,8 +2292,8 @@
     "semantic_hash": ""
   },
   "index.html": {
-    "mtime": 1790891248.765897,
-    "seen": 1790891287.545512,
+    "mtime": 1790957841.53158,
+    "seen": 1790957904.0720434,
     "ast_hash": "220f4bc5637bda0843b4a684e52a2ab2",
     "semantic_hash": ""
   },
@@ -4290,9 +4290,9 @@
     "semantic_hash": ""
   },
   "src/structureOverlay.js": {
-    "mtime": 1790632663.0086563,
-    "seen": 1790633057.3331165,
-    "ast_hash": "74b67ae473cca0d582452ee87bad7060",
+    "mtime": 1790957379.5471773,
+    "seen": 1790957904.001009,
+    "ast_hash": "0dec9605a560c3a7a708d75d84c64d04",
     "semantic_hash": ""
   },
   "test/m1Structure.test.js": {
@@ -4500,9 +4500,9 @@
     "semantic_hash": ""
   },
   "src/composables/useTradeSetup2History.js": {
-    "mtime": 1790953826.2781222,
-    "seen": 1790954312.5100224,
-    "ast_hash": "a164df9eecab7b02eff1d103cfc17a8d",
+    "mtime": 1790957842.9885435,
+    "seen": 1790957903.9880085,
+    "ast_hash": "22a175345ab29e77afa32ff0cb3ecfd2",
     "semantic_hash": ""
   },
   "src/structureLiquidityLevels.ts": {
@@ -4536,9 +4536,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2Rendering.js": {
-    "mtime": 1790774855.1715677,
-    "seen": 1790777907.9994836,
-    "ast_hash": "dfba63412c5c584ba150cb952f6aef0d",
+    "mtime": 1790957380.7774012,
+    "seen": 1790957904.0040088,
+    "ast_hash": "97e9c68c111939e1d4b06727178e3232",
     "semantic_hash": ""
   },
   "src/tradeSetup2Scan.js": {
@@ -4566,9 +4566,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupSimulationRepository.js": {
-    "mtime": 1790954457.833602,
-    "seen": 1790954602.492476,
-    "ast_hash": "234f900df41ee9504cd2ef1b60eb8b5c",
+    "mtime": 1790957180.6614363,
+    "seen": 1790957904.008009,
+    "ast_hash": "8f004dfb40daaee72e9880ae9206840a",
     "semantic_hash": ""
   },
   "src/tradeSetupSimulationStatistics.js": {
@@ -4662,9 +4662,9 @@
     "semantic_hash": ""
   },
   "src/components/TradeSetup2Controls.vue": {
-    "mtime": 1790890772.7290719,
-    "seen": 1790891287.3964806,
-    "ast_hash": "9bb3324f9b951b17563a927bb0278e49",
+    "mtime": 1790957182.6845927,
+    "seen": 1790957903.9820085,
+    "ast_hash": "1b84aca4d900d88bcaa38270dd0c6e15",
     "semantic_hash": ""
   },
   "src/tradeSetup2Anchors.js": {
@@ -4716,9 +4716,9 @@
     "semantic_hash": ""
   },
   "test/tradeSetup2Rendering.test.js": {
-    "mtime": 1790774876.231873,
-    "seen": 1790777908.0941732,
-    "ast_hash": "95b5006acb41999462416fc17acde360",
+    "mtime": 1790957809.387146,
+    "seen": 1790957904.0500124,
+    "ast_hash": "4936bb05cbd3b2fd0a97e55aaf805497",
     "semantic_hash": ""
   },
   "test/m5CloseReactionCache.test.js": {
@@ -4902,9 +4902,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationSetupsTable.vue": {
-    "mtime": 1790956740.6084707,
-    "seen": 1790956790.40429,
-    "ast_hash": "a2334e74e53f2129137d50ac10d9b3ae",
+    "mtime": 1790956821.2009265,
+    "seen": 1790957903.9820085,
+    "ast_hash": "8ca40ddbed51461b933082dde6ea2bbf",
     "semantic_hash": ""
   },
   "src/tradeSetup2LinkedSnapshot.js": {
@@ -4929,6 +4929,24 @@
     "mtime": 1790956741.2311962,
     "seen": 1790956790.4768975,
     "ast_hash": "eb23ab2d61c88798e3baa523fe082b5d",
+    "semantic_hash": ""
+  },
+  "src/composables/useSnapshotM1.js": {
+    "mtime": 1790957513.6744618,
+    "seen": 1790957903.9880085,
+    "ast_hash": "983dd780a68af52d41f7a7ee645cd3a2",
+    "semantic_hash": ""
+  },
+  "src/tradeSetup2SnapshotIndicators.js": {
+    "mtime": 1790957808.1527717,
+    "seen": 1790957904.0050087,
+    "ast_hash": "e52e31fab762bde01bd14ebf07bd2167",
+    "semantic_hash": ""
+  },
+  "test/tradeSetup2SnapshotIndicators.test.js": {
+    "mtime": 1790957808.7830808,
+    "seen": 1790957904.051012,
+    "ast_hash": "495789f9a885cce24be235e69fc37691",
     "semantic_hash": ""
   }
 }
