@@ -35,16 +35,21 @@ function eventLabeler(events, precision) {
 }
 
 // Beide kleinen Zeitrahmen verwenden die vorhandenen M5-Styles und dieselbe Zeichnung.
-export function renderLowerStructure(series, result, primitives, markers, candles,
-  { symbol, replayUntil, show, debug, barSeconds }) {
+export function renderStructurePivots(series, result, markers, candles, { symbol, debug }) {
   const precision = pricePrecisionForInstrument(symbol);
-  const { state = null, pivotsOuter = [], pivotsInner = [], events = [] } = result ?? {};
-  const closeLevels = result?.closeReaction?.levels ?? [];
+  const { pivotsOuter = [], pivotsInner = [], events = [] } = result ?? {};
   renderPivotMarkers(series, debug ? [
     { points: pivotsOuter ?? [], color: cssColor('rangesMarker') },
     { points: pivotsInner ?? [], color: cssColor('rangesMarker2'), dotRadius: 1.5 },
   ] : [], markers, candles, { showLabels: true, formatPrice: price => fmtPrice(price, precision),
     extraLabel: eventLabeler(events, precision) });
+}
+
+export function renderLowerStructure(series, result, primitives, markers, candles,
+  { symbol, replayUntil, show, debug, barSeconds }) {
+  const state = result?.state ?? null;
+  const closeLevels = result?.closeReaction?.levels ?? [];
+  renderStructurePivots(series, result, markers, candles, { symbol, debug });
   renderMarketStructureAnalysis(series, show ? state : null, primitives, candles, {
     ...structureRenderOptions(candles, symbol, replayUntil), barSeconds,
     styleKey: key => LOWER_STRUCTURE_STYLE_KEYS[key],

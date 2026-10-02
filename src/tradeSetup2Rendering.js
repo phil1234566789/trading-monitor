@@ -7,6 +7,7 @@ import {renderM1Entry} from './m1EntryRendering.js';
 import {cssColor,cssColorScaled} from './chartColors.js';
 import {lineWidth} from './chartLineWidths.js';
 import {barSecondsFor} from './timeframes.js';
+import {snapshotEvidenceVisible} from './tradeSetup2SnapshotIndicators.js';
 
 export function clearSetup2Primitives(series,primitives) {
   for(const p of primitives) series.detachPrimitive(p);
@@ -38,13 +39,13 @@ export function renderSetup2Positions(series,positions,primitives,candles,curren
   }
 }
 
-export function renderSetup2Detail(series,snapshot,primitives,entryPrimitives,candles,currentBar,asOf) {
+export function renderSetup2Detail(series,snapshot,primitives,entryPrimitives,candles,currentBar,asOf,indicators) {
   clearSetup2Primitives(series,primitives);
   const visible=['1m','5m'].includes(currentBar)&&snapshot?.knownAt<=asOf?snapshot:null;
   renderM1Entry(series,visible?.entry,entryPrimitives,candles,currentBar);
   if(!visible)return;
   for(const e of visible.evidence) {
-    if(e.knownAt>asOf)continue;
+    if(e.knownAt>asOf || !snapshotEvidenceVisible(e,indicators))continue;
     // Ein H1-Level kann vor dem geladenen M1-Fenster beginnen. Nur horizontale
     // Belege am Fensterrand abschneiden; schräge Strukturpfade nicht extrapolieren.
     const fromTime=e.kind==='segment'?e.fromTime:Math.max(e.fromTime,candles[0]?.time ?? e.fromTime);

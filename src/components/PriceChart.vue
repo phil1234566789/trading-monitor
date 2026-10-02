@@ -602,7 +602,7 @@ const rsiDivergenceStatsData = ref(null);
 // eines simplen DB-Reads, kann spürbar dauern und lief bisher komplett unsichtbar. rangesMetadata
 // bleibt null bis zum ersten erfolgreichen Fetch, danach nie wieder — genau das späte
 // "leer -> gefüllt" ist der Moment, der ohne Feedback wie ein Hänger wirkt.
-const rangesLoading = computed(() => (props.showRanges || props.showRangesMetadata) && rangesMetadata.value === null);
+const rangesLoading = computed(() => !snapshotView.value && (props.showRanges || props.showRangesMetadata) && rangesMetadata.value === null);
 
 // Fürs Debug-Metadaten-Sammel-Panel (buildActiveMetadataSnapshot unten) — dieselben Werte, die auch
 // fürs Zeichnen berechnet werden, hier zusätzlich in Refs gespiegelt statt aus den Primitives
@@ -1715,7 +1715,7 @@ function renderTradeSetupsInternal() {
 // Style-Watcher-Zeilen weiter unten) — hier nur noch dünne Wrapper, damit alle bestehenden
 // Call-Sites (refreshChart(), watch(...) unten) unverändert bleiben.
 function refreshEmaInternal() {
-  priceChartRsi.refreshEma(clipReplay(getTrendAnalysisM5Candles()), { showEma: props.showEma, currentBar: props.currentBar });
+  priceChartRsi.refreshEma(clipReplay(snapshotView.value ? allCandles : getTrendAnalysisM5Candles()), { showEma: props.showEma, currentBar: props.currentBar });
 }
 
 function refreshRsiInternal() {
@@ -1724,9 +1724,9 @@ function refreshRsiInternal() {
 
 function refreshRsiDivergenceInternal() {
   const drawing = setup2.selected.value
-    ? {...props, showRsiDivergence:false, showRsiDivergenceHistory:false, pinnedRsiDivergences:[]} : props;
+    ? {...props, showRsiDivergence:false, showRsiDivergenceHistory:false, showRsiDivergenceStats:false, pinnedRsiDivergences:[]} : props;
   priceChartRsi.refreshDivergence(clipReplay(allCandles), props.symbol, drawing, rsiDivergenceStatsData);
-  priceChartRsi.refreshSnapshot(setup2.selected.value,clipReplay(allCandles),props.currentBar);
+  priceChartRsi.refreshSnapshot(props.showRsiDivergence || props.showRsiDivergenceHistory ? setup2.selected.value : null,clipReplay(allCandles),props.currentBar);
 }
 
 // Dünner Wrapper um usePriceChartTradeSetups' fetchM5Candles() (siehe dort für
@@ -1842,7 +1842,7 @@ function applyCandleData() {
   const color = cssColor("fvgCandle");
   const snapshot=setup2.selected.value;
   const candles = tintFvgCandles(clipReplay(allCandles), snapshot ? [] : tradeSetupsMetadata.value, props.currentBar, color);
-  candleSeries.setData(tintM1FvgCandle(candles, snapshot ? snapshot.m1Check?.fvg : m1Structure.check.value.fvg, props.currentBar, color));
+  candleSeries.setData(tintM1FvgCandle(candles, snapshot ? (props.showM1Structure ? snapshot.m1Check?.fvg : null) : m1Structure.check.value.fvg, props.currentBar, color));
 }
 
 function refreshChart() {
@@ -1855,6 +1855,9 @@ function refreshChart() {
   if (snapshotView.value) {
     setup2.updateCandles(clipReplay(allCandles),candlesReady&&loadedCandleKey===`${props.symbol}:${props.currentBar}`);
     refreshSessionsInternal();
+    refreshEmaInternal();
+    refreshRsiInternal();
+    refreshRsiDivergenceInternal();
     return;
   }
   refreshPoiZonesInternal();
@@ -2411,7 +2414,7 @@ watch([() => props.rangesPeriod, () => props.ranges2Period], () => {
 // dann einmal nachladen; beim Ausschalten reicht refreshEmaInternal (blendet aus, kein Neu-Fetch
 // nötig). Nur der M5-Poller, H1 hat mit EMA nichts zu tun.
 watch(() => props.showEma, (on) => {
-  if (on && getTrendAnalysisM5Candles().length === 0) loadTradeSetupM5();
+  if (on && !snapshotView.value && getTrendAnalysisM5Candles().length === 0) loadTradeSetupM5();
   else refreshEmaInternal();
 });
 // RSI braucht keinen Nachlade-Zweig wie EMA oben — läuft auf allCandles, das für den Chart selbst
@@ -2633,7 +2636,7 @@ defineExpose({
     <TradeSetup2Loading v-if="snapshotView && showTradeSetup2" :steps="snapshotSteps" :error="setup2Error || snapshotCandleError"
       @retry="setup2.refresh(); loadInitial()" />
     <TradeSetup2Controls v-if="showTradeSetup2" :positions="setup2Positions" :selected="setup2Selected" :loading="setup2Loading"
-      :status="setup2Status" :error="setup2Error" :snapshot-view="snapshotView" @select="setup2.select" @close="setup2.select(null)" @refresh="setup2.refresh" />
+      :status="setup2Status" :error="setup2Error" :snapshot-view="snapshotView" :m1-status="setup2.snapshotM1.value.message" @select="setup2.select" @close="setup2.select(null)" @refresh="setup2.refresh" />
     <M5CandleClock v-if="m5ClockEnabled()" :state="m5Clock" @retry="retryM5Clock" />
     <M1StructureStatus v-if="showM1Structure && !snapshotView" :status="m1StructureStatus" :symbol="symbol" />
     <div v-if="goldHistoryError" class="live-history-confirm" role="alert">Gold-Strukturvorlauf konnte nicht vollständig geladen werden. <button @click="reloadGoldHistory">Erneut laden</button></div>

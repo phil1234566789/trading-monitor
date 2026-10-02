@@ -3,6 +3,20 @@ vi.mock('../src/supabaseClient.js',()=>({supabase:{from:()=>({select:async()=>({
 import {renderSetup2Detail,renderSetup2Positions} from '../src/tradeSetup2Rendering.js';
 import {restoreTradeSetup2Snapshot} from '../src/tradeSetup2Snapshot.js';
 import {chartColors} from '../src/chartColors.js';
+import {renderStructurePivots} from '../src/structureOverlay.js';
+
+it('projects reconstructed pivots without deriving new levels from later chart candles',()=>{
+  const pivot={pivotTime:2880,price:2,type:'high'},result={pivotsOuter:[pivot],events:[]};
+  const markers=[],series={attachPrimitive:vi.fn(),detachPrimitive:vi.fn()};
+  const before=JSON.stringify(result);
+  renderStructurePivots(series,result,markers,[{time:2700,high:3},{time:3000,high:999}],{symbol:'GBPUSD',debug:true});
+  expect(markers).toHaveLength(1);
+  expect(markers[0]._groups[0].points).toEqual([pivot]);
+  expect(JSON.stringify(result)).toBe(before);
+  renderStructurePivots(series,result,markers,[],{symbol:'GBPUSD',debug:false});
+  expect(markers).toHaveLength(0);
+  expect(series.detachPrimitive).toHaveBeenCalledTimes(1);
+});
 
 it('renders clickable candidate bounds without creating a position marker',()=>{
   const primitives=[],candles=[{time:2700},{time:3000}];

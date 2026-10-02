@@ -11,6 +11,9 @@ import {fetchCandlesCached} from '../candleCache.js';
 import {REPLAY_LOOKAHEAD_SEC} from '../timeframes.js';
 import {renderSetup2Positions,renderSetup2Detail,clearSetup2Primitives} from '../tradeSetup2Rendering.js';
 import {computeJumpViewport} from '../priceChartJumpToTime.js';
+import {useSnapshotM1} from './useSnapshotM1.js';
+import {SNAPSHOT_INDICATOR_PROPS} from '../tradeSetup2SnapshotIndicators.js';
+import {renderStructurePivots} from '../structureOverlay.js';
 
 export function useTradeSetup2History(props,checklist,{repository,configurationInput,evaluationTime}) {
   const results=shallowRef([]),candidates=shallowRef([]),selected=shallowRef(null),status=ref(''),error=ref('');
@@ -19,16 +22,22 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
   let series=null,chart=null,abort=null,revision=0,selectionRevision=0,completedScanKey=null,appliedRouteKey=null;
   let activeInputKey=null,activeAt=null,refreshPending=false;
   let displayReady=false,focusedRouteKey=null;
-  const overview=[],details=[],entry=[];
+  const overview=[],details=[],entry=[],m1Markers=[];
   const snapshots=new Map();
   const positions=computed(()=>tradeSetup2HistoryItems(results.value.map(row=>simulationAsOf(row,evaluationTime())).filter(Boolean),candidates.value,{instrument:props.symbol,variant:props.tradeSetup2Variant,
     asOf:evaluationTime(),historyCount:props.tradeSetup2HistoryCount,candles:displayCandles.value}));
   const visibleSnapshot=computed(()=>props.showTradeSetup2 && selected.value?.instrument===props.symbol
     && selected.value.knownAt<=evaluationTime()?selected.value:null);
+  const snapshotM1=useSnapshotM1(props,visibleSnapshot,repository);
   function render() {
     if(!series)return;
     renderSetup2Positions(series,props.showTradeSetup2?positions.value:[],overview,displayCandles.value,props.currentBar,visibleSnapshot.value?.id);
-    renderSetup2Detail(series,visibleSnapshot.value,details,entry,displayCandles.value,props.currentBar,evaluationTime());
+    const reconstructed=!!snapshotM1.value.result && !!visibleSnapshot.value && props.showM1Structure && ['1m','5m'].includes(props.currentBar);
+    renderSetup2Detail(series,visibleSnapshot.value,details,entry,displayCandles.value,props.currentBar,evaluationTime(),props);
+    // Gespeicherte Strukturlinien bleiben die Belege. Nur fehlende Debug-Pivots
+    // ergänzen; der Live-Levelrenderer würde Endpunkte aus Chartkerzen neu bestimmen.
+    renderStructurePivots(series,reconstructed?snapshotM1.value.result:null,m1Markers,displayCandles.value,
+      {symbol:props.symbol,debug:reconstructed&&props.showLiquidityDebug});
     linkedRendered.value=linkedReady.value&&displayReady;
     const snapshot=visibleSnapshot.value;
     const key=`${props.tradeSetup2RunId}:${snapshot?.id}:${props.currentBar}`;
@@ -199,11 +208,12 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
   // Den angefragten Snapshot direkt laden; die übrige Historie darf den Link nicht aufhalten.
   watch(()=>[props.selectedTradeSetup2Id,props.tradeSetup2RunId],selectRoute,{immediate:true});
   watch(()=>props.tradeSetup2HistoryCount,()=>{if(!isTradeSetup2SnapshotView(props))void refresh();});
-  watch([positions,visibleSnapshot,()=>props.showTradeSetup2],render);
+  watch([positions,visibleSnapshot,snapshotM1,()=>props.showTradeSetup2,()=>props.showLiquidityDebug,
+    ...SNAPSHOT_INDICATOR_PROPS.map(key=>()=>props[key])],render);
   watch(()=>props.tradeSetup2Variant,()=>{if(!isTradeSetup2SnapshotView(props))void refresh();});
   onScopeDispose(()=>{abort?.abort();revision++;selectionRevision++;chart?.unsubscribeClick(click);
-    if(series)for(const list of [overview,details,entry])clearSetup2Primitives(series,list);series=null;});
-  return {positions,selected:visibleSnapshot,loading,status,error,linkedReady,linkedRendered,select,refresh:()=>refresh(true),
+    if(series)for(const list of [overview,details,entry,m1Markers])clearSetup2Primitives(series,list);series=null;});
+  return {positions,selected:visibleSnapshot,snapshotM1,loading,status,error,linkedReady,linkedRendered,select,refresh:()=>refresh(true),
     create(c,s){chart=c;series=s;chart.subscribeClick(click);render();},
     updateCandles(rows,ready=true){displayCandles.value=rows;displayReady=ready;render();}};
 }

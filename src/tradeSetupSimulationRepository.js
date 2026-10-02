@@ -40,6 +40,11 @@ export function createSimulationRepository(db) {
     return data?.snapshot ?? null;
   };
   return {
+    getRun: async (runId) => {
+      const { data, error } = await db.from('trade_setup_simulation_runs').select('run').eq('id', runId).maybeSingle();
+      if (error) throw error;
+      return data?.run ?? null;
+    },
     listReviewSnapshots: async (runId) => {
       // Nur Prüfbelege laden: Strukturbaum und Chartgeometrie sind für die Tabelle unnötig.
       const fields = ['id,run_id,instrument,direction', 'knownAt:snapshot->knownAt', 'setupKey:snapshot->>setupKey',
