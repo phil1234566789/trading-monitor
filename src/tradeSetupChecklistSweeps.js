@@ -10,6 +10,10 @@ import { candleTouchesPrice } from './structurePivotTime';
 
 const check = (status, ...details) => ({ status, details });
 const knownBound = (bound, at) => Number.isFinite(bound?.price) && Number.isFinite(bound?.knownAt) && bound.knownAt <= at;
+const knownSweep = (level, at) => [1, -1].includes(level.dir) && Number.isFinite(level.price)
+  && Number.isFinite(level.pivotTime) && level.touched && Number.isFinite(level.touchedTime)
+  && level.touchedTime + 300 <= at && level.pivotTime < level.touchedTime
+  && (!Number.isFinite(level.recognizedAt) || level.recognizedAt <= at);
 
 /** Bounds are {price, knownAt}; candles use open timestamps. Target 2 never extends life. */
 export function evaluateChecklistCandidateValidity({ candidate, candles = [], evaluatedAt, invalidation, target1 }) {
@@ -41,18 +45,18 @@ export function evaluateChecklistCandidateValidity({ candidate, candles = [], ev
  * reactionLinks: [{candidateId, obStartTime, recognizedAt, invalidation?: {price, knownAt}}].
  * C uses the existing setup detector's sweep membership; explicit links remain supported.
  */
-export function evaluateChecklistSweeps({ context, h1Levels, reactionLinks = [], targetsByCandidateId = {} }) {
+export function evaluateChecklistSweeps({ context, h1Levels, reactionLinks = [], targetsByCandidateId = {}, entryGates = false }) {
   const { instrument, evaluatedAt, direction } = context;
   const candles = closedChecklistCandles(context.m5Candles, '5m', evaluatedAt);
   const levels = h1Levels ?? collectChecklistH1Sweeps(context);
-  const obs = detectSetupObs(candles, obMinimum(instrument, '5m'));
-  const reactions = detectChecklistReactions({ candles, levels, obs, instrument, evaluatedAt, reactionCache: context.reactionCache });
-  const confirmationTimes = orderBlockRecognitionTimes(candles, '5m');
+  const needsReaction = !entryGates || levels.some(level => knownSweep(level, evaluatedAt) && classifyAge(sweepAgeSec(level)) !== 'minor');
+  const obs = needsReaction ? detectSetupObs(candles, obMinimum(instrument, '5m')) : [];
+  const reactions = needsReaction ? detectChecklistReactions({ candles, levels, obs, instrument, evaluatedAt, reactionCache: context.reactionCache }) : [];
+  const confirmationTimes = needsReaction ? orderBlockRecognitionTimes(candles, '5m') : new Map();
   const byId = new Map();
   let hasUnspecifiedAge = false;
   for (const level of levels) {
-    if (![1, -1].includes(level.dir) || !Number.isFinite(level.price) || !Number.isFinite(level.pivotTime) || !level.touched || !Number.isFinite(level.touchedTime) || level.touchedTime + 300 > evaluatedAt || level.pivotTime >= level.touchedTime) continue;
-    if (Number.isFinite(level.recognizedAt) && level.recognizedAt > evaluatedAt) continue;
+    if (!knownSweep(level, evaluatedAt)) continue;
     const ageSeconds = sweepAgeSec(level);
     const ageTier = classifyAge(ageSeconds);
     if (ageTier === 'minor') { hasUnspecifiedAge = true; continue; }

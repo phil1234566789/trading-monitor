@@ -1,0 +1,384 @@
+{
+  "referenceRunId": "setup2-2b8c44314659f7fe8b63a34b",
+  "referenceSourceHash": "8934b6701993d166938d19def6c135ba8f9bd0064fa174eab67ce745843c79f5",
+  "frozenArchiveFrom": 1767222000,
+  "frozenArchiveTo": 1790765132,
+  "cacheOnly": {
+    "referenceRunId": "setup2-2b8c44314659f7fe8b63a34b",
+    "sourceHash": "5e73b825a5d491c040df435d56cc080682fe4cc5339784cb6ec22ced830fc874",
+    "setupVersion": "entry-snapshot-p5-time-abc-v2",
+    "outcomeVersion": "fixed-500-whole-lots-half-t1-be-v1",
+    "reports": [
+      {
+        "date": "2026-03-06",
+        "from": 1772751600,
+        "to": 1772837999,
+        "wallSeconds": 25.9533165,
+        "steps": 277,
+        "firstStepMs": 1061.5881000000002,
+        "averageStepMs": 93.62305992779783,
+        "maxStepMs": 1061.5881000000002,
+        "processPeakRssMB": 382.8671875,
+        "snapshots": 4,
+        "entries": 1
+      },
+      {
+        "date": "2026-04-01",
+        "from": 1774998000,
+        "to": 1775084399,
+        "wallSeconds": 37.0341814,
+        "steps": 288,
+        "firstStepMs": 4345.919599999997,
+        "averageStepMs": 128.42312881944446,
+        "maxStepMs": 4345.919599999997,
+        "processPeakRssMB": 385.73046875,
+        "snapshots": 3,
+        "entries": 1
+      },
+      {
+        "date": "2026-04-02",
+        "from": 1775084400,
+        "to": 1775170799,
+        "wallSeconds": 53.179483999999995,
+        "steps": 285,
+        "firstStepMs": 9974.533599999995,
+        "averageStepMs": 186.59431614035086,
+        "maxStepMs": 9974.533599999995,
+        "processPeakRssMB": 385.73046875,
+        "snapshots": 2,
+        "entries": 0
+      },
+      {
+        "date": "2026-04-03",
+        "from": 1775170800,
+        "to": 1775257199,
+        "wallSeconds": 64.3611465,
+        "steps": 264,
+        "firstStepMs": 17114.183500000014,
+        "averageStepMs": 243.79178446969695,
+        "maxStepMs": 17114.183500000014,
+        "processPeakRssMB": 385.73046875,
+        "snapshots": 2,
+        "entries": 0
+      },
+      {
+        "date": "2026-04-05",
+        "from": 1775343600,
+        "to": 1775429999,
+        "wallSeconds": 33.41627069999999,
+        "steps": 38,
+        "firstStepMs": 15.95360000000801,
+        "averageStepMs": 879.3744894736844,
+        "maxStepMs": 27078.754199999996,
+        "processPeakRssMB": 385.73046875,
+        "snapshots": 2,
+        "entries": 0
+      },
+      {
+        "date": "2026-04-06",
+        "from": 1775430000,
+        "to": 1775516399,
+        "wallSeconds": 24.60402250000002,
+        "steps": 288,
+        "firstStepMs": 4154.986200000014,
+        "averageStepMs": 85.42718090277786,
+        "maxStepMs": 4154.986200000014,
+        "processPeakRssMB": 385.73046875,
+        "snapshots": 0,
+        "entries": 0
+      }
+    ]
+  },
+  "gated": {
+    "referenceRunId": "setup2-2b8c44314659f7fe8b63a34b",
+    "sourceHash": "b3685d2e5b68748ebf88ebb6173f58fead6632fbc2f00cb1a2a267cdffe23708",
+    "setupVersion": "entry-snapshot-p5-time-abc-v2",
+    "outcomeVersion": "fixed-500-whole-lots-half-t1-be-commission-v2",
+    "reports": [
+      {
+        "date": "2026-03-06",
+        "from": 1772751600,
+        "to": 1772837999,
+        "wallSeconds": 13.313086199999999,
+        "steps": 277,
+        "firstStepMs": 865.5776000000001,
+        "averageStepMs": 48.007131768953066,
+        "maxStepMs": 865.5776000000001,
+        "processPeakRssMB": 382.96875,
+        "snapshots": 4,
+        "entries": 1
+      },
+      {
+        "date": "2026-04-01",
+        "from": 1774998000,
+        "to": 1775084399,
+        "wallSeconds": 15.402489500000001,
+        "steps": 288,
+        "firstStepMs": 10.530399999999645,
+        "averageStepMs": 53.317079166666666,
+        "maxStepMs": 4543.182699999999,
+        "processPeakRssMB": 385.9453125,
+        "snapshots": 3,
+        "entries": 1
+      },
+      {
+        "date": "2026-04-02",
+        "from": 1775084400,
+        "to": 1775170799,
+        "wallSeconds": 11.100175299999998,
+        "steps": 285,
+        "firstStepMs": 677.581000000002,
+        "averageStepMs": 38.94784807017543,
+        "maxStepMs": 677.581000000002,
+        "processPeakRssMB": 385.9453125,
+        "snapshots": 2,
+        "entries": 0
+      },
+      {
+        "date": "2026-04-03",
+        "from": 1775170800,
+        "to": 1775257199,
+        "wallSeconds": 9.9093433,
+        "steps": 264,
+        "firstStepMs": 603.8952999999965,
+        "averageStepMs": 37.53526818181818,
+        "maxStepMs": 603.8952999999965,
+        "processPeakRssMB": 385.9453125,
+        "snapshots": 2,
+        "entries": 0
+      },
+      {
+        "date": "2026-04-05",
+        "from": 1775343600,
+        "to": 1775429999,
+        "wallSeconds": 0.8352188999999999,
+        "steps": 38,
+        "firstStepMs": 8.422700000002806,
+        "averageStepMs": 21.978584210526222,
+        "maxStepMs": 562.5021000000052,
+        "processPeakRssMB": 385.9453125,
+        "snapshots": 2,
+        "entries": 0
+      },
+      {
+        "date": "2026-04-06",
+        "from": 1775430000,
+        "to": 1775516399,
+        "wallSeconds": 0.4839448000000048,
+        "steps": 288,
+        "firstStepMs": 18.26310000000376,
+        "averageStepMs": 1.672047916666669,
+        "maxStepMs": 18.26310000000376,
+        "processPeakRssMB": 385.9453125,
+        "snapshots": 0,
+        "entries": 0
+      }
+    ]
+  },
+  "gatedRepeat": {
+    "referenceRunId": "setup2-2b8c44314659f7fe8b63a34b",
+    "sourceHash": "b3685d2e5b68748ebf88ebb6173f58fead6632fbc2f00cb1a2a267cdffe23708",
+    "setupVersion": "entry-snapshot-p5-time-abc-v2",
+    "outcomeVersion": "fixed-500-whole-lots-half-t1-be-commission-v2",
+    "reports": [
+      {
+        "date": "2026-03-06",
+        "from": 1772751600,
+        "to": 1772837999,
+        "wallSeconds": 12.801189400000002,
+        "steps": 277,
+        "firstStepMs": 817.9259999999999,
+        "averageStepMs": 46.12734765342961,
+        "maxStepMs": 817.9259999999999,
+        "processPeakRssMB": 330.80859375,
+        "snapshots": 4,
+        "entries": 1
+      },
+      {
+        "date": "2026-04-01",
+        "from": 1774998000,
+        "to": 1775084399,
+        "wallSeconds": 16.7833789,
+        "steps": 288,
+        "firstStepMs": 12.254100000000108,
+        "averageStepMs": 58.13554861111111,
+        "maxStepMs": 5818.809800000001,
+        "processPeakRssMB": 410.4609375,
+        "snapshots": 3,
+        "entries": 1
+      },
+      {
+        "date": "2026-04-02",
+        "from": 1775084400,
+        "to": 1775170799,
+        "wallSeconds": 9.552144999999998,
+        "steps": 285,
+        "firstStepMs": 611.963200000002,
+        "averageStepMs": 33.51618350877193,
+        "maxStepMs": 611.963200000002,
+        "processPeakRssMB": 410.4609375,
+        "snapshots": 2,
+        "entries": 0
+      },
+      {
+        "date": "2026-04-03",
+        "from": 1775170800,
+        "to": 1775257199,
+        "wallSeconds": 9.107667500000003,
+        "steps": 264,
+        "firstStepMs": 720.4235000000044,
+        "averageStepMs": 34.498621212121236,
+        "maxStepMs": 720.4235000000044,
+        "processPeakRssMB": 410.4609375,
+        "snapshots": 2,
+        "entries": 0
+      },
+      {
+        "date": "2026-04-05",
+        "from": 1775343600,
+        "to": 1775429999,
+        "wallSeconds": 0.9370397999999986,
+        "steps": 38,
+        "firstStepMs": 7.877500000002328,
+        "averageStepMs": 24.658099999999983,
+        "maxStepMs": 682.1489999999976,
+        "processPeakRssMB": 410.4609375,
+        "snapshots": 2,
+        "entries": 0
+      },
+      {
+        "date": "2026-04-06",
+        "from": 1775430000,
+        "to": 1775516399,
+        "wallSeconds": 0.7640985,
+        "steps": 288,
+        "firstStepMs": 20.342799999998533,
+        "averageStepMs": 2.6096020833333315,
+        "maxStepMs": 20.342799999998533,
+        "processPeakRssMB": 410.4609375,
+        "snapshots": 0,
+        "entries": 0
+      }
+    ]
+  },
+  "originalBenchmark": [
+    {
+      "tag": "baseline",
+      "date": "2026-04-03",
+      "wallSeconds": 4099.2536362,
+      "steps": 264,
+      "firstStepMs": 12910.9426,
+      "averageStepMs": 15527.47536780303,
+      "maxStepMs": 25867.785399999935,
+      "peakRssMB": 695.93359375,
+      "snapshots": 2,
+      "entries": 0
+    },
+    {
+      "tag": "baseline",
+      "date": "2026-04-05",
+      "wallSeconds": 199.53235430000024,
+      "steps": 38,
+      "firstStepMs": 8.84210000000894,
+      "averageStepMs": 5250.848928947357,
+      "maxStepMs": 17722.54349999968,
+      "peakRssMB": 643.2421875,
+      "snapshots": 2,
+      "entries": 0
+    },
+    {
+      "tag": "baseline",
+      "date": "2026-04-06",
+      "wallSeconds": 1094.7554281999999,
+      "steps": 288,
+      "firstStepMs": 2519.842100000009,
+      "averageStepMs": 3801.2247819444456,
+      "maxStepMs": 5116.7750000003725,
+      "peakRssMB": 643.75,
+      "snapshots": 0,
+      "entries": 0
+    }
+  ],
+  "parity": [
+    {
+      "date": "2026-03-06",
+      "reference": "completed original run checkpoint",
+      "snapshots": 4,
+      "entries": 1,
+      "fullCacheSnapshotParity": true,
+      "fullCacheOutcomeParity": true,
+      "gatedEntrySnapshotParity": true,
+      "repeatParity": true
+    },
+    {
+      "date": "2026-04-01",
+      "reference": "completed original run checkpoint",
+      "snapshots": 3,
+      "entries": 1,
+      "fullCacheSnapshotParity": true,
+      "fullCacheOutcomeParity": true,
+      "gatedEntrySnapshotParity": true,
+      "repeatParity": true
+    },
+    {
+      "date": "2026-04-02",
+      "reference": "completed original run checkpoint",
+      "snapshots": 2,
+      "entries": 0,
+      "fullCacheSnapshotParity": true,
+      "fullCacheOutcomeParity": true,
+      "gatedEntrySnapshotParity": true,
+      "repeatParity": true
+    },
+    {
+      "date": "2026-04-03",
+      "reference": "complete original-core benchmark",
+      "snapshots": 2,
+      "entries": 0,
+      "fullCacheSnapshotParity": true,
+      "fullCacheOutcomeParity": true,
+      "gatedEntrySnapshotParity": true,
+      "repeatParity": true
+    },
+    {
+      "date": "2026-04-05",
+      "reference": "complete original-core benchmark",
+      "snapshots": 2,
+      "entries": 0,
+      "fullCacheSnapshotParity": true,
+      "fullCacheOutcomeParity": true,
+      "gatedEntrySnapshotParity": true,
+      "repeatParity": true
+    },
+    {
+      "date": "2026-04-06",
+      "reference": "complete original-core benchmark",
+      "snapshots": 0,
+      "entries": 0,
+      "fullCacheSnapshotParity": true,
+      "fullCacheOutcomeParity": true,
+      "gatedEntrySnapshotParity": true,
+      "repeatParity": true
+    }
+  ],
+  "measurementNotes": [
+    "All benchmark runs are local; no database publication.",
+    "Original reference and optimized probes ran concurrently on separate Node processes; timings are not isolated machine medians.",
+    "Final benchmarks use a 768 MiB V8 heap limit and report cumulative OS maximum RSS.",
+    "Every daily scan starts with a cold historical cache; subsequent steps reuse it.",
+    "Cache-only control disables the new gates and uses the original outcome version.",
+    "Gated candidate snapshots may omit unexecuted downstream checks; entry parity is checked separately."
+  ],
+  "cacheBound": {
+    "maxRetainedLevelAndPivotRecords": 100000,
+    "representation": "Detached seed identities and protected-level lookup records; duplicate timestamp lookup order retained."
+  },
+  "validation": {
+    "vitestPassed": 2561,
+    "vitestTodo": 10,
+    "typecheck": "passed (configured files only)",
+    "build": "passed",
+    "independentReview": "passed"
+  },
+  "restartPolicy": "Keep the 92-day original run unchanged. Gates and commissions require a new run identity and output directory; do not reuse its day checkpoints. Year scan remains paused pending coordinator clearance."
+}

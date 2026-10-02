@@ -1,4 +1,5 @@
 import { buildMarketStructureState, collectNestedChain, computeRangesPivots } from './marketStructureAnalysis';
+import { closeReactionHistory } from './m5CloseReactionHistory.js';
 
 const candidateKey = level => {
   const seeds = level.nestedTrend?.appliedPivots;
@@ -20,7 +21,7 @@ export function deriveM5CloseReaction(state, outer, inner, periodOuter, periodIn
   if (!state || state.trend === 'unknown') return empty;
   const chain = collectNestedChain(state);
   const result = { ...empty, trend: chain.at(-1).trend };
-  const cache = new Map([[candles.length - 1, state]]);
+  const cache = new Map([[candles.length - 1, chain]]);
   const scope = JSON.stringify([barSeconds, periodOuter, periodInner, candles[0]?.time,
     outer?.[0]?.pivotTime ?? null, inner?.[0]?.pivotTime ?? null]);
   const stateAt = index => {
@@ -33,21 +34,16 @@ export function deriveM5CloseReaction(state, outer, inner, periodOuter, periodIn
           computeRangesPivots(prefix, periodOuter, outer?.[0]?.pivotTime ?? Infinity),
           computeRangesPivots(prefix, periodInner, inner?.[0]?.pivotTime ?? Infinity),
           periodOuter, periodInner, prefix, { barSeconds });
-        cache.set(index, snapshot);
-        // Nur über unveränderte Archivkerzen teilen. Perioden/Startpunkte trennen
-        // die Berechnungen; die Begrenzung hält den Jahreslauf speicherschonend.
-        if (historicalCache) {
-          if (historicalCache.size >= 512) historicalCache.delete(historicalCache.keys().next().value);
-          historicalCache.set(key, snapshot);
-        }
+        const history = closeReactionHistory(snapshot);
+        cache.set(index, history);
+        // Nur innerhalb unveränderter Archivdaten teilen; Perioden und Startpunkte
+        // trennen die Zustände. Der aufrufende Scan begrenzt den Speicher.
+        historicalCache?.set(key, history);
       }
     }
     return cache.get(index);
   };
-  const chainAt = index => {
-    const snapshot = stateAt(index);
-    return snapshot ? collectNestedChain(snapshot) : [];
-  };
+  const chainAt = stateAt;
   for (const parent of chain) {
     const key = candidateKey(parent);
     const origin = originOf(parent);

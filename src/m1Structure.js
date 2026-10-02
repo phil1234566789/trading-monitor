@@ -1,6 +1,7 @@
 import { collectNestedChain, computeRangesPivots } from './marketStructureAnalysis';
 import { buildStructureWithPhases } from './trendPhases.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
+import { hasConfirmedChecklistAbc } from './tradeSetupChecklistGates.js';
 
 export const M1_STRUCTURE_PERIOD = 5;
 
@@ -23,8 +24,9 @@ export function m1AnchorFromM5(state, reaction, direction, evaluatedAt) {
 
 export function m1PrerequisiteReason(checklist) {
   if (!checklist || checklist.status !== 'ready') return 'prerequisites';
+  if (checklist.checks?.time?.status === 'blocked') return 'time';
   if (checklist.setup?.primary?.validity?.state === 'ended') return 'ended';
-  if (!checklist.setup?.primary || !['h1Trend', 'liquiditySweep', 'reaction'].every(key => checklist.checks[key]?.status === 'passed')) return 'abc';
+  if (!checklist.setup?.primary || !hasConfirmedChecklistAbc(checklist.checks)) return 'abc';
   if (!checklist.checks.m5Trend?.m1Anchor) return 'anchor';
   return null;
 }

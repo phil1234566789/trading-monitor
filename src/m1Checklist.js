@@ -10,6 +10,7 @@ import { pricePrecisionForInstrument } from './format.js';
 
 const waiting = {
   abc: 'M1-Struktur wartet auf A, B und C.',
+  time: 'M1-Auswertung pausiert: Handelszeit, Session oder News sperren neue Entries.',
   anchor: 'M1-Struktur wartet auf einen eindeutigen M5-Anker.',
   loading: 'M1-Kerzen werden geladen.',
   missing: 'M1-Kerzendaten fehlen am Bewertungsstand.',
@@ -21,7 +22,7 @@ const waiting = {
 };
 
 export function inactiveM1Checklist(reason) {
-  return { status: ['abc', 'disabled', 'ended'].includes(reason) ? 'pending' : 'unknown',
+  return { status: ['abc', 'disabled', 'ended', 'time'].includes(reason) ? 'pending' : 'unknown',
     reason, details: [waiting[reason] ?? waiting.prerequisites], detailStatuses: [], evaluatedAt: null };
 }
 

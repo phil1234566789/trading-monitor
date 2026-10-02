@@ -3,9 +3,16 @@ import { evaluateChecklistTargets } from './tradeSetupChecklistTargets.js';
 import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
 import { evaluateChecklistLifecycle, fixChecklistTargets } from './tradeSetupChecklistLifecycle.js';
 import { formatBerlinTime } from './berlinTime.js';
+import { hasConfirmedChecklistAbc } from './tradeSetupChecklistGates.js';
 
-export function evaluateChecklistCandidates(context, sessionConfigs = []) {
-  const sweeps = evaluateChecklistSweeps({ context });
+export function evaluateChecklistCandidates(context, sessionConfigs = [], { entryGates = false, timeBlocked = false } = {}) {
+  const sweeps = evaluateChecklistSweeps({ context, entryGates });
+  // Sweep/OB bleiben auch während einer Sperre rekonstruierbar. Erst der teure
+  // Rest benötigt bestätigtes ABC; unknown und caution sind keine Zeitsperre.
+  if (entryGates && (timeBlocked || !hasConfirmedChecklistAbc({
+    h1Trend: { status: context.direction ? 'passed' : 'unknown' }, ...sweeps.checks,
+  }))) return { ...sweeps, checks: { ...sweeps.checks,
+    targets: { status: 'pending', details: ['Zielprüfung wartet auf bestätigtes ABC und eine Zeit ohne bekannte Sperre.'] } }, targetPreview: null };
   return finalizeChecklistCandidates(sweeps, context, sessionConfigs);
 }
 

@@ -5,6 +5,8 @@ import { buildTradeSetup2Snapshot, buildTradeSetup2CandidateSnapshot } from './t
 import { markIgnoredCandles } from './sessionOccurrences.js';
 import { berlinOffsetMinutes } from './berlinTime.js';
 import { historicalSettingsAt } from './tradeSetup2Anchors.js';
+import { createCloseReactionCache } from './m5CloseReactionHistory.js';
+import { evaluateChecklistTime } from './tradeSetupChecklistTime.js';
 
 const pause = () => new Promise(resolve => setTimeout(resolve, 0));
 
@@ -39,12 +41,12 @@ export async function scanTradeSetup2Window({ instrument, h1Candles, m5Candles, 
   const steps = m5.map(c => c.time + 300).filter(t => t >= Math.floor(fromTime / 300) * 300 && t <= toTime);
   const snapshots = [], seen = new Set(), seenSetups = new Set();
   const reactionCache = new Map();
-  const closeReactionCache = new Map();
+  const closeReactionCache = createCloseReactionCache();
   let h1End = 0, m5End = 0, m1End = 0;
   let effectiveSettings = settings;
   const evaluateAt = evaluatedAt => evaluateTradeSetupChecklist({ instrument, evaluatedAt,
     h1Candles: h1.slice(0, h1End), m5Candles: m5.slice(0, m5End),
-    settings: effectiveSettings, sessionConfigs, tradingWindows, news, newsLoadStatus, reactionCache, closeReactionCache });
+    settings: effectiveSettings, sessionConfigs, tradingWindows, news, newsLoadStatus, reactionCache, closeReactionCache, entryGates: true });
   for (const [index, at] of steps.entries()) {
     signal?.throwIfAborted();
     while (h1End < h1.length && h1[h1End].time + 3600 <= at) h1End++;
@@ -60,13 +62,19 @@ export async function scanTradeSetup2Window({ instrument, h1Candles, m5Candles, 
       snapshots.push(snapshot);
       await onSnapshot?.(snapshot);
     }
-    const context = activeM1Context(checklist);
-    const anchorTime = context && Math.min(context.anchor.pivotTime, context.primary.reactionRecognizedAt ?? context.anchor.pivotTime);
+    let context = activeM1Context(checklist);
+    let wasBlocked = checklist.checks.time.status === 'blocked';
     const end = Math.min(at + 299, toTime);
     while (m1End < m1.length && m1[m1End].time + 60 < at) m1End++;
     while (m1End < m1.length && m1[m1End].time + 60 <= end) {
       const knownAt = m1[m1End++].time + 60;
+      if (evaluateChecklistTime({ instrument, evaluatedAt: knownAt, sessions: sessionConfigs,
+        tradingWindows, news, newsLoadStatus }).status === 'blocked') { wasBlocked = true; continue; }
+      // Eine News-/Sessiongrenze kann zwischen zwei M5-Schlüssen liegen.
+      // Bei Freigabe den geschlossenen M5-Kontext sofort wiederherstellen.
+      if (wasBlocked) { context = activeM1Context(evaluateAt(knownAt)); wasBlocked = false; }
       if (!context || knownAt < fromTime || seen.has(`${instrument}:${context.setupKey}`)) continue;
+      const anchorTime = Math.min(context.anchor.pivotTime, context.primary.reactionRecognizedAt ?? context.anchor.pivotTime);
       const rows = m1ScanPrefix(m1, anchorTime, m1End);
       const m1Structure = buildM1Structure(rows, context.anchor, knownAt);
       const m1Check = evaluateM1Checklist({ context, structure: m1Structure, candles: rows, evaluatedAt: knownAt });

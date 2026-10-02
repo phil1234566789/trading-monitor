@@ -3,7 +3,7 @@ import { SIMULATION_VERSION } from './tradeSetupSimulation.js';
 import { SIMULATION_COST_VERSION } from './tradeSetupSimulationCosts.js';
 import { berlinDateStrFor, berlinDayRangeUtcMs } from './berlinTime.js';
 
-export const SETUP2_VERSION='entry-snapshot-p5-v1';
+export const SETUP2_VERSION='entry-snapshot-p5-time-abc-v2';
 export function buildTradeSetup2Configuration({instrument,settings={},sessionConfigs=[],tradingWindows,news=[],newsLoadStatus}) {
   return {...checklistStatisticsConfiguration(settings,sessionConfigs,instrument),instrument,
     setupVersion:SETUP2_VERSION,simulationVersion:SIMULATION_VERSION,costVersion:SIMULATION_COST_VERSION,m1Period:5,

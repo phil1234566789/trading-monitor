@@ -6,6 +6,7 @@ import { evaluateChecklistTime } from './tradeSetupChecklistTime.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { evaluateChecklistCandidates } from './tradeSetupChecklistCandidates.js';
 import { evaluateChecklistM5, unknownChecklistM5 } from './tradeSetupChecklistM5.js';
+import { hasConfirmedChecklistAbc } from './tradeSetupChecklistGates.js';
 export { checklistEvaluationTime, closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 
 function openChecks() {
@@ -23,7 +24,7 @@ function openChecks() {
 
 // Keine sichtbaren Linien oder heutigen DB-Setups: jeder Aufruf rekonstruiert den
 // damaligen Wissensstand aus dem geschlossenen Präfix, einschließlich rechter Pivot-Bestätigung.
-export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles = [], m5Candles = [], settings = {}, sessionConfigs = [], dataStatus = 'ready', tradingWindows, news, newsLoadStatus, reactionCache, closeReactionCache }) {
+export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles = [], m5Candles = [], settings = {}, sessionConfigs = [], dataStatus = 'ready', tradingWindows, news, newsLoadStatus, reactionCache, closeReactionCache, entryGates = false }) {
   const checks = openChecks();
   checks.time = evaluateChecklistTime({ instrument, evaluatedAt, sessions: sessionConfigs, tradingWindows, news, newsLoadStatus });
   // Bekannte Handelssperren gelten auch bei fehlenden Kerzen; offene Regeln erlauben noch kein Gesamt-Go.
@@ -58,9 +59,12 @@ export function evaluateTradeSetupChecklist({ instrument, evaluatedAt, h1Candles
   if (result.direction) {
     checks.h1Trend = { status: 'passed', details: [state.trend === 'uptrend' ? 'Bullisch — Hauptcheckliste für Long.' : 'Bärisch — Hauptcheckliste für Short.'] };
   }
-  const setup = evaluateChecklistCandidates(context, sessionConfigs);
+  if (entryGates && !result.direction) return result;
+  const setup = evaluateChecklistCandidates(context, sessionConfigs, { entryGates, timeBlocked: checks.time.status === 'blocked' });
   Object.assign(checks, setup.checks);
-  checks.m5Trend = evaluateChecklistM5(context, settings);
+  if (!entryGates || (checks.time.status !== 'blocked' && hasConfirmedChecklistAbc(checks))) {
+    checks.m5Trend = evaluateChecklistM5(context, settings);
+  }
   result.setup = setup;
   return result;
 }

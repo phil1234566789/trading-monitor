@@ -6,6 +6,7 @@ import { rolldown } from 'rolldown';
 import { archiveClient, candleCoverage, writeJson } from './tradeSetup2Archive.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { createSimulationRepository } from '../src/tradeSetupSimulationRepository.js';
+import { scanWindowCandles } from './tradeSetup2ScanWindow.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const options = Object.fromEntries(process.argv.slice(2).map(arg => arg.replace(/^--/, '').split(/=(.*)/s).slice(0, 2)));
@@ -19,6 +20,8 @@ const readJson = file => readFile(file, 'utf8').then(JSON.parse);
 const sec = value => Date.parse(value) / 1000;
 const hash = data => createHash('sha256').update(JSON.stringify(data)).digest('hex');
 await mkdir(directory, { recursive: true });
+let previousRun;
+try { previousRun = await readJson(path.join(directory, 'run.json')); } catch (error) { if (error.code !== 'ENOENT') throw error; }
 
 // Der gebündelte Kern ist derselbe Browsercode; keine zweite Erkennungsimplementierung.
 async function loadCore() {
@@ -29,9 +32,15 @@ async function loadCore() {
       .map(file => `export * from ${JSON.stringify(source(file))};`).join('\n')));
   const bundle = await rolldown({ input: entry, platform: 'node' });
   const file = path.join(directory, 'core.mjs');
-  await bundle.write({ file, format: 'esm' });
+  const output = await bundle.generate({ format: 'esm' });
   await bundle.close();
-  return { core: await import(pathToFileURL(file)), sourceHash: hash(await readFile(file, 'utf8')) };
+  const code = output.output.find(item => item.type === 'chunk').code;
+  const sourceHash = hash(code);
+  // Ein neuer Kern darf weder alte Tages-Checkpoints übernehmen noch das eingefrorene
+  // Referenzbundle überschreiben. Dafür ist ein eigener Laufordner erforderlich.
+  if (previousRun && previousRun.provenance?.sourceHash !== sourceHash) throw new Error('Scanner source changed; choose a new --output directory. Existing run preserved.');
+  await import('node:fs/promises').then(fs => fs.writeFile(file, code));
+  return { core: await import(pathToFileURL(file)), sourceHash };
 }
 
 const instruments = (options.instruments ?? 'GBPUSD,EURUSD').split(',');
@@ -75,8 +84,9 @@ const run = { id: `setup2-${hash({ configuration, manifest, sourceHash }).slice(
       : 'Historischer D1-P4-Standard bestätigt; noch kein abgeschlossener Jahresvergleich.',
     limitations: ['Aktuelle Sessionkonfiguration rückwirkend angewendet.', 'Newsbestand ohne historische Vollständigkeitsgarantie.',
       'Archivlücken einschließlich Marktschließungen werden konservativ als fehlende Historie behandelt.',
-      'Bid-OHLC brutto ohne Spread, Gebühren, Slippage.'], configurationHash: hash({ configuration, sessionConfigs }) } };
+      'Bid-OHLC mit 5 USD Roundturn-Kommission je eröffnetem Standardlot, ohne Spread und Slippage.'], configurationHash: hash({ configuration, sessionConfigs }) } };
 const runFile = path.join(directory, 'run.json');
+if (previousRun && previousRun.id !== run.id) throw new Error('Run configuration changed; choose a new --output directory. Existing run preserved.');
 const repository = options.publish === 'true' ? createSimulationRepository(createClient(process.env.VITE_SUPABASE_URL,
   process.env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })) : null;
 let publishedAt = 0;
@@ -125,12 +135,7 @@ try {
       let snapshots;
       try { snapshots = await readJson(checkpoint); } catch (e) { if (e.code !== 'ENOENT') throw e; }
       if (!snapshots) {
-        const anchorsInWindow = dailyAnchors ? [dailyAnchors.findLast(p => p.knownAt <= day),
-          ...dailyAnchors.filter(p => p.knownAt > day && p.knownAt < end)].filter(Boolean) : [];
-        const warmupStart = Math.min(day - configuration.warmupDays * 86400,
-          ...anchorsInWindow.map(p => p.structureStartTime - 7 * 86400));
-        const prefix = bar => rows[bar].filter(c => c.time >= warmupStart && c.time < end);
-        snapshots = await core.scanTradeSetup2Window({ instrument, h1Candles: prefix('1h'), m5Candles: prefix('5m'), m1Candles: prefix('1m'),
+        snapshots = await core.scanTradeSetup2Window({ instrument, ...scanWindowCandles(rows, dailyAnchors, day, end, configuration.warmupDays),
           fromTime: day, toTime: end - 1, settings: configuration.settings, sessionConfigs, dailyAnchors,
           tradingWindows: manifest.schedules.find(s => s.instrument === instrument)?.trading_windows,
           news: manifest.news.map(n => ({ ...n, eventTime: sec(n.event_time) })), newsLoadStatus: 'unknown',
