@@ -14,13 +14,15 @@ const evaluate = clock => {
 };
 
 describe('M1 checklist structure', () => {
-  it('keeps the main uptrend separate from the confirmed nested downtrend', () => {
+  it('uses the active confirmed nested direction and retains outer as context', () => {
     const early = evaluate('09:31');
     expect(early.trends).toEqual([{ trend: 'uptrend', depth: 0 }]);
     expect(early.detailStatuses.slice(0, 3)).toEqual(['unmet', 'unmet', 'unmet']);
     const later = evaluate('09:40');
     expect(later.trends).toEqual([{ trend: 'uptrend', depth: 0 }, { trend: 'downtrend', depth: 1 }]);
-    expect(later.detailStatuses.slice(0, 4)).toEqual(['unmet', 'passed', 'passed', 'passed']);
+    expect(later.currentTrend).toEqual({ trend: 'downtrend', depth: 1 });
+    expect(later.details[0]).toBe('Aktuelle M1-Richtung: Downtrend');
+    expect(later.detailStatuses.slice(0, 4)).toEqual(['passed', 'context', 'passed', 'passed']);
   });
   it('keeps current bearish parent signals even when the nested structure reacts bullishly', () => {
     const result = evaluate('09:47');

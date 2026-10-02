@@ -5,6 +5,7 @@ import { formatDatedTime } from './berlinTime.js';
 import { fmtPrice, pricePrecisionForInstrument } from './format.js';
 import { toPips } from './pipConfig.js';
 import { formatRiskPips } from './entryRisk.js';
+import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 
 export const REVIEW_STATUS_LABELS = { passed: 'Erfüllt', unmet: 'Fehlt am gespeicherten Stand', unknown: 'Unbekannt / unbewertet' };
 export const REVIEW_STATUS_ICONS = { passed: '✓', unmet: '✕', unknown: '?' };
@@ -33,7 +34,8 @@ export function setupEntryConditions(snapshot) {
   const known = time => Number.isFinite(time) && Number.isFinite(at) && time <= at;
   const checklist = snapshot.checklist?.status === 'ready' && known(snapshot.checklist.evaluatedAt) ? snapshot.checklist : null;
   const checks = checklist?.checks ?? {}, primary = checklist?.setup?.primary;
-  const m1 = known(snapshot.m1Check?.evaluatedAt) ? snapshot.m1Check : null;
+  const m1 = known(snapshot.m1Check?.evaluatedAt)
+    ? normalizeM1ChecklistPresentation(snapshot.m1Check, snapshot.direction, at) : null;
   const entry = known(snapshot.entry?.recognizedAt) ? snapshot.entry : null;
   const price = value => Number.isFinite(value) ? fmtPrice(value, pricePrecisionForInstrument(snapshot.instrument)) : 'unbekannt';
   const date = time => known(time) ? `${formatDatedTime(time)} Uhr` : 'nicht gespeichert';
@@ -64,9 +66,9 @@ export function setupEntryConditions(snapshot) {
   const anchor = checks.m5Trend?.m1Anchor;
   add('anchor', 'Eindeutiger M5-Anker für die M1-P5-Struktur', known(anchor?.recognizedAt) ? 'passed' : 'unknown',
     known(anchor?.recognizedAt) ? [`Pivot ${date(anchor.pivotTime)} · ${price(anchor.price)}`] : ['Kein zeitlich belegter Anker gespeichert.'], anchor?.recognizedAt);
-  add('structure', 'M1-P5-Struktur auswertbar', m1?.trends?.length ? 'passed' : 'unknown',
-    m1?.trends?.length ? m1.trends.map(t => `${t.depth ? `Ebene ${t.depth}` : 'M1'}: ${t.trend === 'uptrend' ? 'Uptrend' : 'Downtrend'}`)
-      : m1?.details ?? ['Keine M1-Auswertung gespeichert.']);
+  add('structure', 'M1-P5-Struktur auswertbar', m1?.currentTrend ? 'passed' : 'unknown',
+    m1?.currentTrend ? m1.details.slice(0, m1.trends.length)
+      : Array.isArray(m1?.details) ? m1.details : ['Keine M1-Auswertung gespeichert.']);
   for (const [key, label, offset] of [['retest', 'M5-OB-Retest nach bestätigter Reaktion', 2], ['fvg', 'Erste gleichgerichtete M1-FVG nach Retest', 3]]) {
     const signal = m1?.[key];
     // evaluateM1Checklist speichert nach den Trendzeilen CHoCH, BOS, Retest, FVG.

@@ -7,6 +7,7 @@ import { m1RetestAfterReaction } from './m1Retest.js';
 import { m1EntryFromFvg } from './m1Entry.js';
 import { latestStructureSweeps } from './structureSweeps.js';
 import { pricePrecisionForInstrument } from './format.js';
+import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 
 const waiting = {
   abc: 'M1-Struktur wartet auf A, B und C.',
@@ -40,8 +41,8 @@ export function evaluateM1Checklist({ context, structure, candles, evaluatedAt }
   const bos = signals.find(level => level.type === 'BOS') ?? null;
   const short = context.direction === 'short';
   const adjective = short ? 'bärischer' : 'bullischer';
-  const details = trends.map(({ trend, depth }) => `${depth ? 'Nested '.repeat(depth) : 'M1 '}${trend === 'uptrend' ? 'Uptrend' : 'Downtrend'}`);
-  const detailStatuses = trends.map(({ trend }) => (trend === 'downtrend') === short ? 'passed' : 'unmet');
+  const details = trends.map(() => '');
+  const detailStatuses = trends.map(() => 'context');
   for (const [label, signal] of [['CHoCH', choch], ['BOS', bos]]) {
     details.push(signal ? `${adjective} ${label} um ${formatBerlinTime(signal.candleTime)}` : `Kein ${adjective} ${label}`);
     detailStatuses.push(signal ? 'passed' : 'unmet');
@@ -57,6 +58,6 @@ export function evaluateM1Checklist({ context, structure, candles, evaluatedAt }
     details.push(`M1 interner LQ Sweep ${sweep.price.toFixed(pricePrecisionForInstrument(context.instrument))} um ${formatBerlinTime(sweep.candleTime)}`);
     detailStatuses.push('passed');
   }
-  return { status: 'pending', details, detailStatuses, evaluatedAt, trends, choch, bos, internalSweeps,
-    retest: follow.retest, fvg: follow.fvg, entry: m1EntryFromFvg(context, follow.fvg, rows, evaluatedAt, follow.retest) };
+  return normalizeM1ChecklistPresentation({ status: 'pending', details, detailStatuses, evaluatedAt, trends, choch, bos, internalSweeps,
+    retest: follow.retest, fvg: follow.fvg, entry: m1EntryFromFvg(context, follow.fvg, rows, evaluatedAt, follow.retest) }, context.direction);
 }

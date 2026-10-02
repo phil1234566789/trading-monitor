@@ -1,5 +1,6 @@
 import { tradeSetup2Evidence } from './tradeSetup2Evidence.js';
 import { entrySizingAt } from './tradeSetup2EntrySizing.js';
+import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 
 export function isTradeSetup2SnapshotView(props) {
   return !!(props.tradeSetup2RunId && props.selectedTradeSetup2Id);
@@ -9,7 +10,8 @@ export function isTradeSetup2SnapshotView(props) {
 // Instrument. Die Darstellung ergänzt das, ohne den historischen Datensatz zu ändern.
 export function restoreTradeSetup2Snapshot(snapshot) {
   if (!snapshot) return null;
-  return {...snapshot,m1Check:snapshot.m1Check?{...snapshot.m1Check,instrument:snapshot.instrument}:null,
+  return {...snapshot,m1Check:snapshot.m1Check?{
+    ...normalizeM1ChecklistPresentation(snapshot.m1Check,snapshot.direction,snapshot.knownAt),instrument:snapshot.instrument}:null,
     evidence:(snapshot.evidence ?? []).map(e=>{
       const suffix=e.timeframe==='1h'?'1h':e.timeframe==='4h'?'4h':'M5';
       const aliases={liquidityLow:`liquidityLow${suffix}`,liquidityHigh:`liquidityHigh${suffix}`,
