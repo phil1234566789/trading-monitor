@@ -50,5 +50,7 @@ describe('filtered DR statistics', () => {
     expect(html).toContain('$100.00');
     expect(html).toContain('-$105.00');
     expect(html).not.toContain('-$5.00');
+    expect((html.match(/data-summary-run=/g) ?? [])).toHaveLength(2);
+    expect(html).toContain('<table');
   });
 });

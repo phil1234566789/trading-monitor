@@ -8,6 +8,7 @@ import SetupEntryConditions from './SetupEntryConditions.vue';
 import ToggleButton from './ui/ToggleButton.vue';
 import SimulationEntryResult from './SimulationEntryResult.vue';
 import FilteredDealingRangeSummary from './FilteredDealingRangeSummary.vue';
+import DealingRangeOutcome from './DealingRangeOutcome.vue';
 
 const props = defineProps({ repository: { type: Object, required: true }, runId: String, runs: Array, instrument: String, variant: String, results: { type: Array, default: () => [] }, resultsLoading: Boolean, resultsError: String });
 const snapshots = shallowRef([]), loading = ref(false), error = ref('');
@@ -53,6 +54,7 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
     <h2>Dealing Ranges prüfen · Entry 1</h2>
     <p>Eine Zeile je Lauf und Setup. Kandidat und zugehöriger Entry werden innerhalb desselben Laufs zusammengeführt. Stände aus unterschiedlichen Läufen bleiben wegen möglicher anderer Regeln oder Startpunkte getrennt. Alle Zeiten: Europe/Berlin.</p>
     <p>Die neue Version zählt vollständig bestätigte ABC-Ranges, auch ohne Entry und bei gescheiterter Validierung. Bei einem Entry zeigen die Bedingungen den Entry-Stand, sonst den zuletzt gespeicherten DR-Stand.</p>
+    <p>Validierte DRs ohne Entry zeigen den gespeicherten Verlauf ab erster Validierung bis T1 oder Invalidierung. Das ist kein Trade-Ergebnis und zählt nicht zu PnL oder Winrate.</p>
     <p v-if="loading" role="status">Gespeicherte Setup-Belege werden geladen…</p>
     <p v-else-if="error" role="alert">{{ error }} <button @click="refresh">Erneut versuchen</button></p>
     <template v-else>
@@ -75,7 +77,7 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
             <td>{{ formatDatedTime(row.knownAt) }}</td><td>{{ row.instrument }}</td><td>{{ row.direction === 'long' ? 'Long' : 'Short' }}</td>
             <td><strong>{{ DEALING_RANGE_LABELS[savedDealingRangeStatus(row.snapshot)] }}</strong><small>{{ row.entries.length ? 'Mit Entry · Entry-Stand' : 'Ohne Entry · gespeicherter DR-Stand' }}</small><small v-for="detail in row.snapshot.dealingRange?.details" :key="detail">{{ detail }}</small><strong :class="row.review.assessment.status">{{ REVIEW_STATUS_ICONS[row.review.assessment.status] }} {{ row.review.assessment.label }}</strong></td>
             <td :title="row.snapshot.runId"><RouterLink :to="simulationRunLink(row.snapshot.runId, variant)">{{ row.snapshot.runId?.slice(-8) }} · Ergebnisse</RouterLink></td>
-            <td><span v-if="!row.entries.length">Kein Entry</span><span v-else-if="resultsLoading">Ergebnis wird geladen…</span><span v-else-if="resultsError">Ergebnis nicht verfügbar</span><SimulationEntryResult v-else v-for="entry in row.entries" :key="entry.id" :snapshot="entry" :results="results" :variant="variant" /></td>
+            <td><template v-if="!row.entries.length">Kein Entry<DealingRangeOutcome :group="row" /></template><span v-else-if="resultsLoading">Ergebnis wird geladen…</span><span v-else-if="resultsError">Ergebnis nicht verfügbar</span><SimulationEntryResult v-else v-for="entry in row.entries" :key="entry.id" :snapshot="entry" :results="results" :variant="variant" /></td>
             <td>
               <ul v-if="row.review.missing.length" class="missing-conditions"><li v-for="condition in row.review.missing" :key="condition.key" class="unmet"><strong>✕ {{ condition.label }}: {{ condition.key === 'time' ? 'Nicht tradebar' : 'Fehlt' }}</strong><div v-for="(detail, index) in condition.details" :key="index">{{ detail }}</div></li></ul>
               <details @toggle="toggle(row.key, $event)"><summary><span class="passed">✓ {{ row.review.counts[0] }} erfüllt</span> · <span class="unmet">✕ {{ row.review.counts[1] }} {{ row.review.counts[1] === 1 ? 'fehlt' : 'fehlen' }}</span> · <span class="unknown">? {{ row.review.counts[2] }} unbekannt</span></summary>

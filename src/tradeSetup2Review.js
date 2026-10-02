@@ -15,8 +15,9 @@ export function groupSetupSnapshots(snapshots) {
   const groups = new Map();
   for (const snapshot of snapshots) {
     const key = `${snapshot.runId ?? ''}:${snapshot.instrument}:${snapshot.setupKey ?? snapshot.entry?.setupKey ?? snapshot.id}`;
-    if (!groups.has(key)) groups.set(key, { key, candidate: null, latestCandidate: null, entries: [] });
+    if (!groups.has(key)) groups.set(key, { key, candidate: null, latestCandidate: null, firstValidated: null, entries: [] });
     const group = groups.get(key);
+    if (savedDealingRangeStatus(snapshot) === 'validated' && (!group.firstValidated || snapshot.knownAt < group.firstValidated.knownAt)) group.firstValidated = snapshot;
     if (snapshot.entry) {
       if (!group.entries.some(entry => entry.id === snapshot.id)) group.entries.push(snapshot);
     } else {
