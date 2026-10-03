@@ -11,6 +11,8 @@ export function completeSavedRangeCourses(snapshots, candles, evaluatedAt, sessi
   const updates = new Map();
   for (const group of groupSetupSnapshots(snapshots)) {
     if (group.entries.length || !group.firstValidated || !group.latestCandidate) continue;
+    // Der neue Scanner speichert Ereignisse und Entry-Ausgänge selbst; Altverläufe bleiben M5-only.
+    if (group.latestCandidate.rangeCourse?.version==='countertrend-validation-t1-be-t2-v2') continue;
     const first = group.firstValidated, primary = first.checklist?.setup?.primary;
     const selection = primary?.targetSelection;
     if (selection?.status !== 'passed' || !Number.isFinite(selection.selectedAt)

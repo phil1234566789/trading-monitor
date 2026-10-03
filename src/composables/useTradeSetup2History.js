@@ -163,13 +163,28 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
         .map(r=>[`${r.runId}:${r.snapshotId}`,r])).values()];
       const start=Math.min(state.context.m5Candles[0]?.time ?? Infinity,...continuing.map(r=>r.entryTime));
       if(!Number.isFinite(start))return;
-      const m1Candles=await fetchCandlesCached(fetchInitialCandles,props.symbol,'1m',Math.ceil((at-start)/60)+11,at*1000,REPLAY_LOOKAHEAD_SEC);
+      let m1Candles=[];
+      const loadM1Candles=async ({fromTime,structureFromTime=fromTime})=>{
+        // Erst validierte DRs lösen den Abruf aus; P5 benötigt zusätzlich seinen bestehenden Vorlauf.
+        fromTime=Math.min(fromTime,structureFromTime,...continuing.map(r=>r.entryTime));
+        m1Candles=await fetchCandlesCached(fetchInitialCandles,props.symbol,'1m',Math.ceil((at-fromTime)/60)+11,at*1000,REPLAY_LOOKAHEAD_SEC);
+        return m1Candles;
+      };
+      if(state.model!=='countertrend' || continuing.length) await loadM1Candles({fromTime:state.model==='countertrend'
+        ? Math.min(...continuing.map(r=>r.entryTime)) : start});
       signal.throwIfAborted();
+      const existingEntries=[];
+      if(state.model==='countertrend') for(const previous of continuing) {
+        const snapshot=await repository.getSnapshot(previous.runId,previous.snapshotId);
+        signal.throwIfAborted();
+        if(snapshot?.entry)existingEntries.push(snapshot);
+      }
       const found=await scanTradeSetup2InWorker({...input,h1Candles:state.context.h1Candles,m5Candles:state.context.m5Candles,m1Candles,
         ...(state.model==='countertrend'?{tradeSetups:props.dbTradeSetups ?? [],dailyAnchors:state.context.dailyAnchors ?? []}:{}),
-        fromTime:run.from,toTime:at},{signal,
+        fromTime:run.from,toTime:at,existingEntries,lazyM1:state.model==='countertrend'},{signal,loadM1Candles,
         onProgress:p=>{if(ticket===revision)status.value=`Setups auswerten: ${p.completed}/${p.total}`;}});
       signal.throwIfAborted();
+      const courses=new Map(found.filter(s=>s.rangeCourse).map(s=>[s.setupKey,s.rangeCourse]));
       const evaluateSnapshot=snapshot=>({snapshot,outcomes:['wide','narrow'].map(variant=>
         evaluateSimulation({entry:snapshot.entry,variant,candles:m1Candles,evaluatedAt:at,
           target1:snapshot.entry.scales[variant].targets[0]?.price,target2:snapshot.entry.scales[variant].targets[1]?.price ?? null}))});
@@ -177,10 +192,11 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
       // Der Tageswechsel beendet keine Position. Bereits gespeicherte Entries
       // behalten ihren Ursprungslauf und werden unabhängig vom Setup-Lifecycle fortgeführt.
       for(const previous of continuing) {
-        const snapshot=await repository.getSnapshot(previous.runId,previous.snapshotId);
+        const snapshot=existingEntries.find(s=>s.id===previous.snapshotId) ?? await repository.getSnapshot(previous.runId,previous.snapshotId);
         signal.throwIfAborted();
         if(!snapshot?.entry)continue;
-        const record=evaluateSnapshot(snapshot);
+        const record=evaluateSnapshot(courses.has(snapshot.setupKey)
+          ? {...snapshot,rangeCourse:courses.get(snapshot.setupKey)} : snapshot);
         await repository.saveEntries(previous.runId,[record]);
         signal.throwIfAborted();
         stored.push(...record.outcomes.map(o=>({...o,runId:previous.runId,snapshotId:snapshot.id,

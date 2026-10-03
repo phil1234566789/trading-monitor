@@ -1,6 +1,7 @@
+import { m1ScanPrefix } from './m1ScanPrefix.js';
+import { scanCountertrendWindow } from './countertrendScan.js';
 import { evaluateTradeSetupChecklist } from './tradeSetupChecklist.js';
-import { evaluateCountertrendChecklist } from './countertrendChecklist.js';
-import { activeM1Context, buildM1Structure, M1_STRUCTURE_PERIOD } from './m1Structure.js';
+import { activeM1Context, buildM1Structure } from './m1Structure.js';
 import { evaluateM1Checklist } from './m1Checklist.js';
 import { buildTradeSetup2Snapshot, buildTradeSetup2CandidateSnapshot } from './tradeSetup2Snapshot.js';
 import { evaluateDealingRange } from './tradeSetup2DealingRange.js';
@@ -12,30 +13,17 @@ import { evaluateChecklistTime, evaluateTradingHours, validTradingWindows } from
 
 const pause = () => new Promise(resolve => setTimeout(resolve, 0));
 
-export function m1ScanPrefix(candles, anchorTime, end) {
-  let lower = 0, upper = candles.length;
-  while (lower < upper) {
-    const mid = (lower + upper) >>> 1;
-    if (candles[mid].time < anchorTime) lower = mid + 1; else upper = mid;
-  }
-  // Spread-Hour-Kerzen zählen nicht zum P5-Vorlauf. Im Präfix bleiben sie
-  // trotzdem enthalten, weil Retest/FVG ihren eigenen Umgang damit haben.
-  let usable = 0;
-  while (lower > 0 && usable < M1_STRUCTURE_PERIOD * 2 + 1) {
-    lower--;
-    if (!candles[lower].ignored) usable++;
-  }
-  return candles.slice(lower, end);
-}
+export { m1ScanPrefix } from './m1ScanPrefix.js';
 
 // M5 bestimmt ABC/Anker; nur innerhalb eines aktiven ABC-Fensters wird M1 geprüft.
 // Jeder Aufruf erhält ausschließlich seinen geschlossenen Präfix. Der Snapshot wird
 // am ersten Entry-Schluss neu ausgewertet, nie aus einem späteren Endzustand datiert.
 export async function scanTradeSetup2Window({ instrument, h1Candles, m5Candles, m1Candles,
   fromTime, toTime, settings = {}, sessionConfigs = [], tradingWindows, news, newsLoadStatus,
-  signal, onProgress, onSnapshot, dailyAnchors = null, tradeSetups = null, yieldEvery = 32, yieldControl = pause }) {
+  signal, onProgress, onSnapshot, dailyAnchors = null, tradeSetups = null, loadM1Candles, existingEntries = [], yieldEvery = 32, yieldControl = pause }) {
   signal?.throwIfAborted();
   if (!Number.isFinite(fromTime) || !Number.isFinite(toTime) || fromTime > toTime) throw new Error('Invalid scan window');
+  if (tradeSetups !== null) return scanCountertrendWindow({instrument,h1Candles,m5Candles,m1Candles,fromTime,toTime,settings,sessionConfigs,tradingWindows,news,newsLoadStatus,signal,onProgress,onSnapshot,dailyAnchors,tradeSetups,loadM1Candles,existingEntries,yieldEvery,yieldControl});
   if (!validTradingWindows(tradingWindows)) throw new Error(`Missing or invalid historical trading_windows: ${instrument}`);
   const allowedAt = evaluatedAt => evaluateTradingHours({ instrument, evaluatedAt, tradingWindows }).status === 'passed';
   const sorted = rows => rows.slice().sort((a, b) => a.time - b.time);
@@ -51,7 +39,7 @@ export async function scanTradeSetup2Window({ instrument, h1Candles, m5Candles, 
   let h1End = 0, m5End = 0, m1End = 0;
   let effectiveSettings = settings;
   // Der alte Countertrend-Scanner bleibt für seine gespeicherten Regeln erhalten.
-  const evaluateChecklist = tradeSetups === null ? evaluateTradeSetupChecklist : evaluateCountertrendChecklist;
+  const evaluateChecklist = evaluateTradeSetupChecklist;
   const evaluateAt = evaluatedAt => evaluateChecklist({ instrument, evaluatedAt, tradeSetups, dailyAnchors,
     setupClassificationCache,
     h1Candles: h1.slice(0, h1End), m5Candles: m5.slice(0, m5End),

@@ -1,10 +1,11 @@
+import { setup1RecognitionTime } from './setup1RecognitionTime.js';
+import { evaluateCountertrendLifecycle } from './countertrendLifecycle.js';
 import { evaluateChecklistM5, evaluateChecklistOuterM5, unknownChecklistM5 } from './tradeSetupChecklistM5.js';
-import { evaluateChecklistTime } from './tradeSetupChecklistTime.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { markIgnoredCandles } from './sessionOccurrences.js';
 import { berlinOffsetMinutes } from './berlinTime.js';
 import { evaluateDealingRange, COUNTERTREND_STAGE_VERSION } from './tradeSetup2DealingRange.js';
-import { fixChecklistTargets, evaluateChecklistLifecycle } from './tradeSetupChecklistLifecycle.js';
+import { fixChecklistTargets } from './tradeSetupChecklistLifecycle.js';
 import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
 import { deriveSetupEntryInvalidation, sweepAgeSec } from './tradeSetup.js';
 
@@ -23,15 +24,14 @@ export function classifyM5SetupType(direction, currentTrend, outerTrend) {
 
 export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candles = [], h1Candles = [],
   tradeSetups = [], dailyAnchors = [], settings = {}, sessionConfigs = [], dataStatus = 'ready',
-  tradingWindows, news, newsLoadStatus, closeReactionCache, setupClassificationCache } = {}) {
+  tradingWindows, news, newsLoadStatus, closeReactionCache, setupClassificationCache, entryOutcomes = new Map() } = {}) {
   const pending = () => ({ status: 'pending', details: ['Wartet auf ein bekanntes Setup 1.0.'] });
   const checks = { liquiditySweep: pending(), reaction: pending(), m5Trend: unknownChecklistM5(),
     outerM5Trend: { status: 'unknown', required: true, trend: 'unknown', details: ['Äußerster M5-Trend unbekannt.'] },
-    targets: pending(), antiConfluences: pending(), confluences: pending(),
-    time: evaluateChecklistTime({ instrument, evaluatedAt, sessions: sessionConfigs, tradingWindows, news, newsLoadStatus }) };
+    targets: pending(), antiConfluences: pending(), confluences: pending() };
   const result = { model: 'countertrend', ruleVersion: COUNTERTREND_STAGE_VERSION, instrument, evaluatedAt,
     status: dataStatus, checks, direction: null, setupType: 'unclear', confirmed: false, abortReason: null,
-    tradeability: checks.time.outsideTradingHours ? 'blocked' : 'unknown',
+    tradeability: 'unknown',
     setup: { candidates: [], primary: null, opposingCandidates: [], classifications: [] } };
   if (!Number.isFinite(evaluatedAt)) result.status = 'missing';
   const configs = sessionConfigs.filter(s => s.instrument === instrument);
@@ -42,14 +42,15 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
   if (result.status === 'ready' && !m5.length) result.status = 'missing';
   if (result.status === 'ready' && m5.at(-1).time + 300 < Math.floor(evaluatedAt / 300) * 300) result.status = 'stale';
   if (result.status !== 'ready') { result.dealingRange = evaluateDealingRange(result); return result; }
+  for (const source of tradeSetups.filter(s=>s.instrument===instrument)) setup1RecognitionTime(source);
   const known = tradeSetups.filter(s => s.instrument === instrument && Number.isFinite(s.createdAt)
     && [1, -1].includes(s.dir) && [s.obTop, s.obBottom, s.obStartTime, s.ls?.price, s.ls?.pivotTime, s.ls?.touchedTime].every(Number.isFinite)
-    && s.obTop > s.obBottom && s.createdAt <= evaluatedAt && s.createdAt >= s.obStartTime + 300
-    && s.ls.pivotTime < s.ls.touchedTime && s.ls.touchedTime + 300 <= s.createdAt)
-    .sort((a, b) => b.createdAt - a.createdAt);
+    && s.obTop > s.obBottom && setup1RecognitionTime(s) <= evaluatedAt
+    && s.ls.pivotTime < s.ls.touchedTime && s.ls.touchedTime + 300 <= setup1RecognitionTime(s))
+    .sort((a, b) => setup1RecognitionTime(b) - setup1RecognitionTime(a));
   const candidates = known.map(source => {
     const direction = source.dir === 1 ? 'short' : 'long';
-    const recognizedAt = source.createdAt;
+    const recognizedAt = setup1RecognitionTime(source);
     const anchor = dailyAnchors.filter(a => a.instrument == null || a.instrument === instrument)
       .filter(a => a.knownAt <= recognizedAt && Number.isFinite(a.structureStartTime))
       .sort((a, b) => b.pivotTime - a.pivotTime)[0];
@@ -106,11 +107,12 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     candidate.targetSelection = fixChecklistTargets({candidate,instrument,candles:m5,sessionConfigs,recognitionWithinBar:true});
     candidate.checks.targets = candidate.targetSelection ?? {status:'unknown',details:['Zielprüfung offen.']};
     if (candidate.targetSelection?.status === 'passed') {
-      candidate.lifecycle = evaluateChecklistLifecycle({selection:candidate.targetSelection,invalidation:candidate.invalidation,
-        candles:m5,evaluatedAt});
+      candidate.lifecycle = evaluateCountertrendLifecycle({selection:candidate.targetSelection,invalidation:candidate.invalidation,
+        candles:m5,evaluatedAt,entries:entryOutcomes.get(candidate.id) ?? []});
       candidate.validity = candidate.lifecycle.main;
-      Object.assign(candidate.checks,evaluateChecklistConfluences({...result.context,direction:candidate.direction,
-        primary:candidate,opposingCandidates:[],target2:candidate.targetSelection.target2}));
+      Object.assign(candidate.checks,evaluateChecklistConfluences({...result.context,evaluatedAt:candidate.recognizedAt,
+        m5Candles:mark(m5Candles,'5m',candidate.recognizedAt),h1Candles:mark(h1Candles,'1h',candidate.recognizedAt),direction:candidate.direction,
+        primary:{...candidate,knownAsOf:candidate.recognizedAt},opposingCandidates:[],target2:candidate.targetSelection.target2}));
     }
   }
   const selected = accepted[0] ?? candidates[0];

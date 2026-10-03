@@ -34,7 +34,7 @@ export function evaluateTradingHours({ evaluatedAt, instrument, tradingWindows }
  * newsLoadStatus: Nur "ready" bestätigt den erfolgreich geladenen maßgeblichen Kalender.
  * @returns {{status: 'passed'|'pending'|'blocked'|'unknown'|'deferred', details: string[], outsideTradingHours: boolean}}
  */
-export function evaluateChecklistTime({ evaluatedAt, instrument, sessions, tradingWindows, news, newsLoadStatus } = {}) {
+export function evaluateChecklistTime({ evaluatedAt, instrument, sessions, tradingWindows, news, newsLoadStatus, hours: suppliedHours } = {}) {
   if (!Number.isFinite(evaluatedAt) || Math.abs(evaluatedAt) > 8.64e12 || !supportsNewsInstrument(instrument)) {
     return { status: "unknown", details: ["Bewertungszeitpunkt oder Instrument fehlt oder ist nicht unterstützt."], outsideTradingHours: false };
   }
@@ -47,7 +47,7 @@ export function evaluateChecklistTime({ evaluatedAt, instrument, sessions, tradi
   // Auf der lokalen Kalenderachse wiederverwenden: reale Sekunden seit Mitternacht verschieben
   // Sessiongrenzen am DST-Wechseltag. News-Abstände bleiben dagegen auf der echten Zeitachse.
   const wallTime = berlinWallTime(evaluatedAt);
-  const hours = evaluateTradingHours({ evaluatedAt, instrument, tradingWindows });
+  const hours = suppliedHours ?? evaluateTradingHours({ evaluatedAt, instrument, tradingWindows });
   unknown = hours.status === 'unknown';
   blocked = outsideTradingHours = hours.status === 'blocked';
   details.push(...hours.details);

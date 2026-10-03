@@ -5,9 +5,9 @@ import { ENTRY_SIZING_VERSION } from './tradeSetup2EntrySizing.js';
 import { COUNTERTREND_STAGE_VERSION } from './tradeSetup2DealingRange.js';
 import { berlinDateStrFor, berlinDayRangeUtcMs } from './berlinTime.js';
 
-export const SETUP2_VERSION='countertrend-abcdef-v7';
+export const SETUP2_VERSION='countertrend-lifecycle-v8';
 // Neue Scanner-Gates ändern keine Pivots oder OBs der gespeicherten Archivdarstellung.
-export const supportsSnapshotIndicators = version => [SETUP2_VERSION, 'countertrend-abcd-v6', 'entry-snapshot-causal-c-m5-choch-v5', 'entry-snapshot-active-h1-trading-hours-v4', 'entry-snapshot-active-h1-p5-time-abc-v3', 'entry-snapshot-p5-time-abc-v2'].includes(version);
+export const supportsSnapshotIndicators = version => [SETUP2_VERSION, 'countertrend-abcdef-v7', 'countertrend-abcd-v6', 'entry-snapshot-causal-c-m5-choch-v5', 'entry-snapshot-active-h1-trading-hours-v4', 'entry-snapshot-active-h1-p5-time-abc-v3', 'entry-snapshot-p5-time-abc-v2'].includes(version);
 export function buildTradeSetup2Configuration({instrument,settings={},sessionConfigs=[],tradingWindows,news=[],newsLoadStatus}) {
   return {...checklistStatisticsConfiguration(settings,sessionConfigs,instrument),instrument,
     setupVersion:SETUP2_VERSION,dealingRangeVersion:COUNTERTREND_STAGE_VERSION,setupModel:'countertrend',outerM5Required:true,simulationVersion:SIMULATION_VERSION,entrySizingVersion:ENTRY_SIZING_VERSION,costVersion:SIMULATION_COST_VERSION,m1Period:5,

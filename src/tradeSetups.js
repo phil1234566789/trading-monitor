@@ -101,7 +101,7 @@ export function tradeSetupFromRow(row) {
     // Bereich, 2026-09-23). Altzeilen von vor der ob_fvg-Migration haben null.
     obFvg: row.ob_fvg ?? null,
     tradeSetupId: row.id,
-    // C/D werden am tatsächlichen Bekannt-Zeitpunkt eingefroren, nicht am OB-Pivot.
+    // Rohzeit beibehalten; setup1RecognitionTime berücksichtigt zusätzlich den FVG-Schluss.
     createdAt: row.created_at ? new Date(row.created_at).getTime() / 1000 : null,
     invalidation: row.invalidation ?? null,
     // Nur-DB-Setup = die beiden Erkennungs-Kopien sind auseinandergelaufen. Steht im

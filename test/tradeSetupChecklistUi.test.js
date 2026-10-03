@@ -19,6 +19,8 @@ describe("Trade Setup Checklist presentation", () => {
     expect(html).toContain('Setup-Typ: Countertrend');
     expect(html).not.toContain('1-Stunden-Trend');
     expect(html).not.toContain('Inducement');
+    expect(html).not.toContain('Uhrzeit');
+    expect(html).toMatch(/>H<\/span>Entry/);
   });
   it('exposes M1 work as busy without advertising the current data as complete', async () => {
     const html = await render({ instrument: 'GBPUSD', status: 'ready', checks: {} }, { instrument: 'GBPUSD', reason: 'loading' });

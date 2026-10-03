@@ -3,6 +3,7 @@ import { entrySizingAt, entryAgainstM5Allowed } from './tradeSetup2EntrySizing.j
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { evaluateDealingRange } from './tradeSetup2DealingRange.js';
 import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
+import { countertrendRangeCourse } from './countertrendLifecycle.js';
 
 export function isTradeSetup2SnapshotView(props) {
   return !!(props.tradeSetup2RunId && props.selectedTradeSetup2Id);
@@ -45,7 +46,8 @@ export function buildTradeSetup2CandidateSnapshot({checklist,candidate}) {
   // schützt seinen früheren Wissensstand; setupKey hält die gemeinsame Range zusammen.
   return restoreTradeSetup2Snapshot(JSON.parse(JSON.stringify({schemaVersion:3,id:`${candidate.id}:stand:${candidate.knownAsOf}`,instrument:checklist.instrument,
     setupKey:candidate.id,direction:candidate.direction,knownAt:candidate.knownAsOf,entry:null,
-    dealingRange,checklist:state,m1Check:null,evidence:tradeSetup2Evidence({checklist:state})})));
+    dealingRange,...(checklist.model==='countertrend' && dealingRange.status==='validated'
+      ? {rangeCourse:countertrendRangeCourse(candidate)} : {}),checklist:state,m1Check:null,evidence:tradeSetup2Evidence({checklist:state})})));
 }
 
 export function buildTradeSetup2Snapshot(input) {

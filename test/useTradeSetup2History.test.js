@@ -134,10 +134,10 @@ it('advances and rewinds raw linked outcomes without any new reads or checklist-
   } finally {scope.stop();}
 });
 
-function liveHarness(repository, replayUntil=600) {
+function liveHarness(repository, replayUntil=600, model=null) {
   const props=reactive({showTradeSetup2:true,symbol:'GBPUSD',tradeSetup2Variant:'narrow',tradeSetup2HistoryCount:1,
     tradeSetup2RunId:null,selectedTradeSetup2Id:null,currentBar:'1m',replayUntil});
-  const horizon=ref(600),checklist=ref({instrument:'GBPUSD',status:'ready',context:{h1Candles:[],m5Candles:[{time:0}]}});
+  const horizon=ref(600),checklist=ref({instrument:'GBPUSD',status:'ready',...(model?{model}:{}),context:{h1Candles:[],m5Candles:[{time:0}]}});
   const scope=effectScope();
   const view=scope.run(()=>useTradeSetup2History(props,checklist,{repository,configurationInput:()=>({instrument:props.symbol}),evaluationTime:()=>horizon.value}));
   return {props,horizon,checklist,scope,view};
@@ -149,6 +149,31 @@ const savedSnapshot=id=>({id,instrument:'GBPUSD',direction:'short',knownAt:60,ev
   scales:{wide:{targets:[{price:1}]},narrow:{targets:[{price:1}]}}}});
 const repositoryFor=runs=>({listRuns:vi.fn(async()=>runs),listResults:vi.fn(async()=>[]),listSetups:vi.fn(async()=>[]),getSetupSnapshot:vi.fn(),getSnapshot:vi.fn(async(_run,id)=>savedSnapshot(id)),
   saveRun:vi.fn(async()=>{}),saveEntries:vi.fn(async()=>{}),saveSetups:vi.fn(async()=>{})});
+
+it('der neue Countertrend lädt ohne M1-Anforderung des Workers keine M1-Historie',async()=>{
+ const repository=repositoryFor([]),{view,scope}=liveHarness(repository,600,'countertrend');
+ try {
+  await vi.waitFor(()=>expect(view.loading.value).toBe(false));
+  expect(fetchCandlesCached).not.toHaveBeenCalled();
+  expect(scanTradeSetup2InWorker.mock.calls[0][0].lazyM1).toBe(true);
+ }finally {scope.stop();}
+});
+it('führt bestehende Entries und ihren DR-Verlauf über den Tageswechsel weiter',async()=>{
+ const repository=repositoryFor([oldRun('old')]);
+ repository.listResults.mockResolvedValue([stored('old')]);
+ repository.getSnapshot.mockResolvedValue({...savedSnapshot('old'),setupKey:'old'});
+ const rangeCourse={version:'countertrend-validation-t1-be-t2-v2',lifecycle:{main:{state:'ended',reason:'entriesClosed'}}};
+ scanTradeSetup2InWorker.mockResolvedValue([{id:'course',setupKey:'old',instrument:'GBPUSD',direction:'short',knownAt:600,
+  entry:null,rangeCourse,dealingRange:{version:'countertrend-abcdef-v1',status:'validated'},
+  checklist:{setup:{primary:{invalidation:2,reactionRecognizedAt:60}}},evidence:[]}]);
+ const {view,scope}=liveHarness(repository,600,'countertrend');
+ try {
+  await vi.waitFor(()=>expect(view.loading.value).toBe(false));
+  expect(scanTradeSetup2InWorker.mock.calls[0][0].existingEntries).toHaveLength(1);
+  const continued=repository.saveEntries.mock.calls.find(([run])=>run===oldRun('old').id);
+  expect(continued[1][0].snapshot.rangeCourse).toEqual(rangeCourse);
+ }finally {scope.stop();}
+});
 
 it('continues both variants behind the display limit even when the selected narrow variant has closed',async()=>{
   const runs=Array.from({length:12},(_,i)=>oldRun(String(i))),repository=repositoryFor(runs);

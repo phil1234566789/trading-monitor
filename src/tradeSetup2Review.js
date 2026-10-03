@@ -76,16 +76,16 @@ export function setupEntryConditions(snapshot) {
   const dr = snapshot.dealingRange;
   if (savedDealingRangeStatus(snapshot) !== 'legacy') add('validation', checklist?.model === 'countertrend' ? 'DR-Stufe nach E/F' : 'D · DR-Validierung / Targets',
     dr.status === 'validated' ? 'passed' : dr.status === 'invalidated' ? 'unmet' : 'unknown', dr.details, dr.evaluatedAt);
-  const timeCheck = checks.time;
+  const timeCheck = snapshot.entryEligibility ?? checks.time;
   add('time', 'Handelszeit / Session / News',
     timeCheck?.status === 'blocked' ? 'unmet' : timeCheck?.status === 'passed' ? 'passed' : 'unknown',
     [...timeCheck?.details ?? ['Zeitprüfung nicht gespeichert.'],
       'Entry 1 wird nur durch eine bekannte Sperre blockiert. Unbekannte Angaben gelten nicht als bestätigte Freigabe.']);
   const validity = primary?.validity;
-  add('active', 'Setup noch nicht durch T1 oder Invalidierung beendet',
+  add('active', checklist?.model==='countertrend' ? 'DR aktiv / Entry-Suche vor T1' : 'Setup noch nicht durch T1 oder Invalidierung beendet',
     validity?.state === 'active' ? 'passed' : validity?.state === 'ended' && known(validity.recognizedAt) ? 'unmet' : 'unknown',
     [validity?.state === 'active' ? 'Am Bewertungsstand aktiv.' : validity?.state === 'ended' && known(validity.recognizedAt)
-      ? `Beendet: ${ { target1: 'T1 erreicht', invalidation: 'invalidiert', both: 'T1 und Invalidierung' }[validity.reason] ?? 'Grund unbekannt' }.`
+      ? `Beendet: ${ { target1: 'T1 erreicht', target2:'T2 erreicht', entriesClosed:'alle Entries geschlossen', invalidation: 'invalidiert', both: 'T1 und Invalidierung' }[validity.reason] ?? 'Grund unbekannt' }.`
       : 'Gültigkeit nicht abschließend gespeichert. Nur ein bestätigtes Ende sperrt die M1-Auswertung.']);
   const anchor = checks.m5Trend?.m1Anchor;
   add('anchor', 'Eindeutiger M5-Anker für die M1-P5-Struktur', known(anchor?.recognizedAt) ? 'passed' : 'unknown',

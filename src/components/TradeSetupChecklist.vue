@@ -37,7 +37,7 @@ const countertrendAbcdDefinitions = [
   { key: 'reaction', label: 'Reaktion' },
   { key: 'outerM5Trend', label: 'M5-Trend (äußerster)', fallback: 'unknown' },
   { key: 'm5Trend', label: 'M5-Trend (aktuell)', fallback: 'unknown' },
-  ...['targets', 'antiConfluences', 'confluences', 'time', 'm1', 'entry'].map(key=>countertrendDefinitions.find(d=>d.key===key)),
+  ...['targets', 'antiConfluences', 'confluences', 'entry'].map(key=>countertrendDefinitions.find(d=>d.key===key)),
 ];
 const statuses = {
   passed: { label: "Erfüllt", symbol: "✓" },
@@ -66,9 +66,11 @@ const evaluatedAt = computed(() => {
 });
 const presentation = computed(() => checklistPresentation(state.value));
 const m1 = computed(() => displayedM1.value ?? inactiveM1Checklist('prerequisites'));
-const definitions = computed(() => state.value?.checks?.h1Trend ? countertrendDefinitions : countertrendAbcdDefinitions);
+const definitions = computed(() => state.value?.model==='countertrend' && !state.value.checks?.time ? countertrendAbcdDefinitions
+  : state.value?.checks?.h1Trend ? countertrendDefinitions
+  : [...countertrendAbcdDefinitions.slice(0,7),...['time','m1','entry'].map(key=>countertrendDefinitions.find(d=>d.key===key))]);
 const checks = computed(() => definitions.value.map((definition, index) => {
-  const result = definition.key === 'entry' ? entryChecklist(m1.value) : definition.key === 'm1'
+  const result = definition.key === 'entry' ? {...entryChecklist(m1.value),...(state.value?.model==='countertrend' ? {details:m1.value.details,detailStatuses:m1.value.detailStatuses,evaluatedAt:m1.value.evaluatedAt} : {})} : definition.key === 'm1'
     ? m1.value
     : state.value?.checks?.[definition.key] ?? (definition.key === 'm5Trend' ? unknownChecklistM5() : null);
   const status = result?.status in statuses ? result.status : definition.fallback ?? "unknown";
@@ -104,6 +106,7 @@ const checks = computed(() => definitions.value.map((definition, index) => {
     </div>
     <p v-if="state?.dealingRange" class="checklist-notice"><strong>{{ DEALING_RANGE_LABELS[state.dealingRange.status] }}</strong><br />{{ state.dealingRange.details?.join(' ') }}</p>
     <p v-if="state?.model === 'countertrend'" class="checklist-notice"><strong>Setup-Typ: {{ SETUP_TYPE_LABELS[state.setupType] }}</strong><br />{{ state.abortReason || 'C ist Pflicht · D bestimmt den Setup-Typ' }}</p>
+    <p v-if="state?.error" class="checklist-notice" role="alert">{{ state.error }}</p>
     <p v-if="state?.tradeability === 'blocked'" class="checklist-not-tradeable" role="status">Nicht tradebar</p>
     <p v-if="state?.statistics?.status === 'error'" class="checklist-notice" role="alert">Target-Statistik konnte nicht gespeichert werden. Neuer Versuch bei der nächsten Auswertung.</p>
     <ol ref="scrollElement" class="checklist-checks" tabindex="0" aria-label="Checklist-Prüfungen" @scroll="rememberScroll">
@@ -113,7 +116,7 @@ const checks = computed(() => definitions.value.map((definition, index) => {
           <ChecklistStatusIcon class="checklist-status" :symbol="check.symbol" :label="check.explanation ? `${check.label} — ${check.explanation}` : check.label" />
         </div>
         <p v-if="check.note" class="checklist-note">{{ check.note }}</p>
-        <p v-if="check.key === 'm1' && Number.isFinite(check.evaluatedAt)" class="checklist-note">M1-Stand um {{ formatBerlinTime(check.evaluatedAt) }} Uhr</p>
+        <p v-if="(check.key === 'm1' || state?.model === 'countertrend' && check.key === 'entry') && Number.isFinite(check.evaluatedAt)" class="checklist-note">M1-Stand um {{ formatBerlinTime(check.evaluatedAt) }} Uhr</p>
         <ChecklistOrderBlock v-if="check.orderBlock" :preview="check.orderBlock" :instrument="instrument" />
         <ul v-else-if="check.details.length" class="checklist-details">
           <li v-for="(detail, index) in check.details" :key="index" :data-detail-status="check.detailStatuses[index]">{{ detail }}

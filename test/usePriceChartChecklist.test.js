@@ -65,17 +65,16 @@ describe('Chart-Checklist: asynchrone Integration', () => {
     const scope = effectScope();
     try {
       scope.run(() => usePriceChartChecklist(props, reactive([]), (_,state) => events.push(state), undefined,timeData));
-      expect(events.at(-1).checks.time.detailStatuses.at(-1)).toBe('unknown');
+      expect(events.at(-1).checks.time).toBeUndefined();
       timeData.newsCalendar.status = 'ready';
       await nextTick();
-      expect(events.at(-1).checks.time.details.at(-1)).toBe('Keine News');
-      expect(events.at(-1).checks.time.detailStatuses.at(-1)).toBe('passed');
+      expect(events.at(-1).checks.time).toBeUndefined();
       timeData.newsCalendar.status = 'error';
       await nextTick();
-      expect(events.at(-1).checks.time.detailStatuses.at(-1)).toBe('unknown');
+      expect(events.at(-1).checks.time).toBeUndefined();
     } finally { scope.stop(); }
   });
-  it('aktualisiert F an der News-Grenze ohne Kerzenpoll und beendet Timer im Replay', async () => {
+  it('hält News-Grenzen aus A–G heraus und beendet Timer im Replay', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-09-09T07:29:59Z'));
     const props = reactive({ symbol: 'GBPUSD', replayUntil: null, showTradeSetupChecklist: true });
@@ -85,14 +84,14 @@ describe('Chart-Checklist: asynchrone Integration', () => {
     const scope = effectScope();
     try {
       scope.run(() => usePriceChartChecklist(props, reactive([]), (name, state) => events.push(state), undefined, timeData));
-      expect(events.at(-1).checks.time.status).toBe('unknown');
+      expect(events.at(-1).checks.time).toBeUndefined();
       await vi.advanceTimersByTimeAsync(1000);
-      expect(events.at(-1).checks.time.status).toBe('blocked');
+      expect(events.at(-1).checks.time).toBeUndefined();
       props.replayUntil = 123;
       const count = events.length;
       await vi.advanceTimersByTimeAsync(120000);
       expect(events).toHaveLength(count);
-      expect(events.at(-1).checks.time.status).toBe('unknown');
+      expect(events.at(-1).checks.time).toBeUndefined();
     } finally { scope.stop(); vi.useRealTimers(); }
   });
   it('publiziert A unabhängig von Zeichen- und Chart-Timeframe-Toggles', async () => {

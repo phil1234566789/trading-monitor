@@ -24,8 +24,8 @@ export function m1AnchorFromM5(state, reaction, direction, evaluatedAt) {
 
 export function m1PrerequisiteReason(checklist) {
   if (!checklist || checklist.status !== 'ready') return 'prerequisites';
-  if (checklist.checks?.time?.status === 'blocked') return 'time';
-  if (checklist.setup?.primary?.validity?.state === 'ended') return 'ended';
+  if (checklist.model !== 'countertrend' && checklist.checks?.time?.status === 'blocked') return 'time';
+  if (checklist.setup?.primary?.lifecycle?.entrySearchAllowed === false || checklist.setup?.primary?.validity?.state === 'ended') return 'ended';
   if (!checklist.setup?.primary || !hasConfirmedChecklistAbc(checklist.checks)) return 'abc';
   if (checklist.dealingRange && checklist.dealingRange.status !== 'validated') return 'validation';
   if (!checklist.checks.m5Trend?.m1Anchor) return 'anchor';

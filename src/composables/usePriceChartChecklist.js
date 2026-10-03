@@ -68,7 +68,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   }
   function evaluateAt(evaluatedAt, data) {
     const dailyAnchors = buildHistoricalDailyAnchors(daily?.candles.value ?? [], data.h1.candles);
-    return evaluateCountertrendChecklist({
+    const input={
       instrument: props.symbol,
       evaluatedAt,
       h1Candles: data.h1.candles, m5Candles: data.m5.candles,
@@ -79,7 +79,12 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
       tradingWindows: timeData.tradingSchedules?.[props.symbol]?.tradingWindows,
       news: timeData.newsEvents,
       newsLoadStatus: timeData.newsCalendar?.status,
-    });
+    };
+    try { return evaluateCountertrendChecklist(input); }
+    catch(error) {
+      const result=evaluateCountertrendChecklist({...input,dataStatus:'error'});
+      return {...result,error:error.message,abortReason:error.message};
+    }
   }
   daily = useChecklistDailyAnchors(props, enabled, evaluationTime, refresh);
   function m1PrerequisitesAt(at) {

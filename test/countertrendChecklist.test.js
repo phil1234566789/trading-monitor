@@ -1,3 +1,4 @@
+import { setup1RecognitionTime } from '../src/setup1RecognitionTime.js';
 import { describe, expect, it, vi } from 'vitest';
 import { classifyM5SetupType, evaluateCountertrendChecklist } from '../src/countertrendChecklist.js';
 import { buildHistoricalDailyAnchors } from '../src/tradeSetup2Anchors.js';
@@ -13,8 +14,8 @@ const dailyAnchors = buildHistoricalDailyAnchors(fixture.dailyCandles, fixture.h
 describe('Countertrend: C/D und Setup-1.0-Quelle', () => {
  it.each([null,{trend:'unknown',appliedPivots:[]}])('ohne bestätigten Nested gilt D = C (%j)',nestedTrend=>{
   const setup=fixture.setups[0];
-  const context={instrument:'GBPUSD',direction:'short',evaluatedAt:setup.createdAt,
-   m5Candles:fixture.m5Candles.filter(c=>c.time+300<=setup.createdAt)};
+  const context={instrument:'GBPUSD',direction:'short',evaluatedAt:setup1RecognitionTime(setup),
+   m5Candles:fixture.m5Candles.filter(c=>c.time+300<=setup1RecognitionTime(setup))};
   const outer=m5.evaluateChecklistOuterM5(context,{},1788937200);
   const prepared={...outer,state:{...outer.state,nestedTrend}};
   const current=m5.evaluateChecklistM5(context,{},1788937200,prepared);
@@ -44,7 +45,7 @@ describe('Countertrend: C/D und Setup-1.0-Quelle', () => {
  });
  it.each(fixture.setups)('prüft E/F für den realen Countertrend Setup $tradeSetupId', setup => {
   const spy=vi.spyOn(targets,'evaluateChecklistTargets');
-  const input={instrument:'GBPUSD',evaluatedAt:setup.createdAt,tradeSetups:[setup],dailyAnchors,setupClassificationCache:new Map(),
+  const input={instrument:'GBPUSD',evaluatedAt:setup1RecognitionTime(setup),tradeSetups:[setup],dailyAnchors,setupClassificationCache:new Map(),
    m5Candles:fixture.m5Candles,h1Candles:fixture.h1Candles,sessionConfigs:sessions.sessions};
   try {
    const result=evaluateCountertrendChecklist(input);
@@ -67,19 +68,19 @@ describe('Countertrend: C/D und Setup-1.0-Quelle', () => {
    expect(spy).toHaveBeenCalled();
    expect(result.context.h1State).toBeUndefined();
    // Vollarchiv und geschlossenes Präfix liefern denselben eingefrorenen C/D-Stand.
-   const prefix={...input,m5Candles:fixture.m5Candles.filter(c=>c.time+300<=setup.createdAt)};
+   const prefix={...input,m5Candles:fixture.m5Candles.filter(c=>c.time+300<=setup1RecognitionTime(setup))};
    expect(evaluateCountertrendChecklist(prefix).checks.m5Trend).toEqual(result.checks.m5Trend);
-   expect(evaluateCountertrendChecklist({...prefix,h1Candles:fixture.h1Candles.filter(c=>c.time+3600<=setup.createdAt)}).dealingRange)
+   expect(evaluateCountertrendChecklist({...prefix,h1Candles:fixture.h1Candles.filter(c=>c.time+3600<=setup1RecognitionTime(setup))}).dealingRange)
     .toEqual(result.dealingRange);
    expect(evaluateCountertrendChecklist(prefix).setup.primary.targetSelection).toEqual(result.setup.primary.targetSelection);
-   expect(evaluateCountertrendChecklist({...input,evaluatedAt:setup.createdAt+300}).checks.m5Trend)
+   expect(evaluateCountertrendChecklist({...input,evaluatedAt:setup1RecognitionTime(setup)+300}).checks.m5Trend)
     .toEqual(result.checks.m5Trend);
-   expect(evaluateCountertrendChecklist({...input,evaluatedAt:setup.createdAt-1}).setup.candidates).toEqual([]);
+   expect(evaluateCountertrendChecklist({...input,evaluatedAt:setup1RecognitionTime(setup)-1}).setup.candidates).toEqual([]);
   } finally {spy.mockRestore();}
  }, 15000);
  it('fehlender bekannter D1-Anker lässt C unbekannt und gibt keine DR frei',()=>{
   const setup=fixture.setups[0];
-  const result=evaluateCountertrendChecklist({instrument:'GBPUSD',evaluatedAt:setup.createdAt,
+  const result=evaluateCountertrendChecklist({instrument:'GBPUSD',evaluatedAt:setup1RecognitionTime(setup),
    tradeSetups:[setup],dailyAnchors:[],m5Candles:fixture.m5Candles});
   expect(result.checks.outerM5Trend.status).toBe('unknown');
   expect(result.checks.m5Trend.status).toBe('pending');
@@ -91,10 +92,10 @@ describe('Countertrend: C/D und Setup-1.0-Quelle', () => {
   const outer=vi.spyOn(m5,'evaluateChecklistOuterM5').mockReturnValue({state:{trend:'downtrend'}});
   const current=vi.spyOn(m5,'evaluateChecklistM5').mockReturnValue({status:'pending',
    structureReaction:{trend:'uptrend',choch:null,bos:null},structureState:{trend:'downtrend'}});
-  const target=vi.spyOn(targets,'evaluateChecklistTargets').mockReturnValue({status:'passed',selectedAt:setup.createdAt,
-   direction:'short',target1:{price:1,knownAt:setup.createdAt},details:['Testziel']});
+  const target=vi.spyOn(targets,'evaluateChecklistTargets').mockReturnValue({status:'passed',selectedAt:setup1RecognitionTime(setup),
+   direction:'short',target1:{price:1,knownAt:setup1RecognitionTime(setup)},details:['Testziel']});
   try {
-   const result=evaluateCountertrendChecklist({instrument:'GBPUSD',evaluatedAt:setup.createdAt,
+   const result=evaluateCountertrendChecklist({instrument:'GBPUSD',evaluatedAt:setup1RecognitionTime(setup),
     tradeSetups:[setup],dailyAnchors,m5Candles:fixture.m5Candles});
    expect(result.confirmed).toBe(true);
    expect(result.checks.m5Trend).toMatchObject({status:'passed',detailStatuses:['passed']});
@@ -109,9 +110,9 @@ describe('Countertrend: C/D und Setup-1.0-Quelle', () => {
    structureState:{trend:'downtrend',currRange:{high:{price:2},low:{price:1}}},
   });
   try {
-   const result=evaluateCountertrendChecklist({instrument:'GBPUSD',evaluatedAt:setup.createdAt,
+   const result=evaluateCountertrendChecklist({instrument:'GBPUSD',evaluatedAt:setup1RecognitionTime(setup),
     tradeSetups:[setup],dailyAnchors,m5Candles:fixture.m5Candles,
-    settings:{rangesFixedStartTime:setup.createdAt-300}});
+    settings:{rangesFixedStartTime:setup1RecognitionTime(setup)-300}});
    expect(spy.mock.calls[0][2]).toBe(1788937200);
    expect(result.setupType).toBe('trendContinuation');
    expect(hasConfirmedChecklistAbc(result.checks)).toBe(true);
@@ -126,7 +127,7 @@ describe('Countertrend: C/D und Setup-1.0-Quelle', () => {
   const outer=vi.spyOn(m5,'evaluateChecklistOuterM5').mockReturnValue({state:{trend}});
   const current=vi.spyOn(m5,'evaluateChecklistM5');
   try {
-   const result=evaluateCountertrendChecklist({instrument:'GBPUSD',evaluatedAt:setup.createdAt,
+   const result=evaluateCountertrendChecklist({instrument:'GBPUSD',evaluatedAt:setup1RecognitionTime(setup),
     tradeSetups:[setup],dailyAnchors,m5Candles:fixture.m5Candles});
    expect(current).not.toHaveBeenCalled();
    expect(result.checks.m5Trend.status).toBe('pending');
