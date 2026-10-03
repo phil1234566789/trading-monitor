@@ -5046,15 +5046,15 @@
     "semantic_hash": ""
   },
   "src/composables/useSnapshotIndicators.js": {
-    "mtime": 1791022538.563645,
-    "seen": 1791022566.4668746,
-    "ast_hash": "2f2adf896db2a01fdacb046eb0512bf4",
+    "mtime": 1791059756.0421517,
+    "seen": 1791059834.986968,
+    "ast_hash": "8c5445c5b242eb540c35e197eb25ffb4",
     "semantic_hash": ""
   },
   "test/useSnapshotIndicators.test.js": {
-    "mtime": 1791021373.3385465,
-    "seen": 1791021686.329665,
-    "ast_hash": "7feb2d7e266598c34b5048a2b1ab26ca",
+    "mtime": 1791059772.2811503,
+    "seen": 1791059835.0860436,
+    "ast_hash": "bd00b583141f384ac34738b4ef63a77b",
     "semantic_hash": ""
   },
   "src/tradeSetup2RangeCourse.js": {
@@ -5313,6 +5313,30 @@
     "mtime": 1791053165.1811967,
     "seen": 1791058886.732794,
     "ast_hash": "",
+    "semantic_hash": ""
+  },
+  "src/snapshotIndicatorBrowser.js": {
+    "mtime": 1791059756.6723986,
+    "seen": 1791059835.0079706,
+    "ast_hash": "43bf8b5a8b894e4fb94c60a91164f2a1",
+    "semantic_hash": ""
+  },
+  "src/snapshotIndicatorCalculation.js": {
+    "mtime": 1791059808.9057393,
+    "seen": 1791059835.0079706,
+    "ast_hash": "2a1bc78b735d7147deadb395676b604d",
+    "semantic_hash": ""
+  },
+  "src/snapshotIndicatorWorker.js": {
+    "mtime": 1791059757.2990243,
+    "seen": 1791059835.0079706,
+    "ast_hash": "77d24770f85f0682f8e3883efb9a3891",
+    "semantic_hash": ""
+  },
+  "test/snapshotIndicatorBrowser.test.js": {
+    "mtime": 1791059772.8841684,
+    "seen": 1791059835.0708864,
+    "ast_hash": "ad20de6577d6c35339179bb01d7d1d96",
     "semantic_hash": ""
   }
 }
