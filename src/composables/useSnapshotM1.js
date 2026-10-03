@@ -1,20 +1,20 @@
 import { onScopeDispose, shallowRef, watch } from 'vue';
-import { createSnapshotM1Reader } from '../tradeSetup2SnapshotIndicators.js';
+import { createSnapshotM1Reader, snapshotOverlayTime } from '../tradeSetup2SnapshotIndicators.js';
 import { fetchCandlesCached } from '../candleCache.js';
 import { fetchInitialCandles } from '../forexCandles.js';
 
 export function useSnapshotM1(props, snapshot, repository, fetchCandles = (symbol, count, at) =>
-  fetchCandlesCached(fetchInitialCandles, symbol, '1m', count, (at - 60) * 1000, 0)) {
+  fetchCandlesCached(fetchInitialCandles, symbol, '1m', count, (at - 60) * 1000, 0), evaluationTime = () => props.replayUntil) {
   const state = shallowRef({ result: null, message: '' });
   const read = createSnapshotM1Reader(repository, fetchCandles);
   let revision = 0;
-  watch(() => [snapshot.value, props.showM1Structure, props.showLiquidityDebug, props.tradeSetup2RunId, props.currentBar], async () => {
+  watch(() => [snapshot.value, evaluationTime(), props.showM1Structure, props.tradeSetup2RunId, props.currentBar], async () => {
     const ticket = ++revision, source = snapshot.value;
     state.value = { result: null, message: '' };
-    if (!source || !props.showM1Structure || !props.showLiquidityDebug || !props.tradeSetup2RunId || !['1m', '5m'].includes(props.currentBar)) return;
+    if (!source || !props.showM1Structure || !props.tradeSetup2RunId || !['1m', '5m'].includes(props.currentBar)) return;
     state.value = { result: null, message: 'M1-Ergänzung aus Archiv laden…' };
     try {
-      const loaded = await read(props.tradeSetup2RunId, source);
+      const loaded = await read(props.tradeSetup2RunId, source, snapshotOverlayTime(source, evaluationTime()));
       if (ticket === revision) state.value = loaded;
     } catch (error) {
       if (ticket === revision) state.value = { result: null, message: `M1-Ergänzung konnte nicht geladen werden: ${error.message}` };

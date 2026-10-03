@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { entrySizingAt, ENTRY_SIZING_VERSION, entrySizingLabel } from '../src/tradeSetup2EntrySizing.js';
+import { entrySizingAt, ENTRY_SIZING_VERSION, entrySizingLabel, entryAgainstM5Allowed } from '../src/tradeSetup2EntrySizing.js';
 import { sizeSimulation, evaluateSimulation } from '../src/tradeSetupSimulation.js';
 import { buildTradeSetup2Snapshot, restoreTradeSetup2Snapshot } from '../src/tradeSetup2Snapshot.js';
 import { buildTradeSetup2Configuration } from '../src/tradeSetup2Configuration.js';
@@ -14,6 +14,21 @@ const checklistAt = (direction, recognizedAt) => ({ status: 'ready', instrument:
     m5Trend: { structureReaction: { direction, choch: recognizedAt == null ? null : { type: 'CHoCH', direction, recognizedAt, candleTime: recognizedAt - 300 } } } } });
 
 describe.each(['long', 'short'])('M5-CHoCH sizing for %s', direction => {
+  it('blocks countertrend entry without a closed same-direction CHoCH, preserving aligned entries', () => {
+    const entry=entryAt(direction), checklist=checklistAt(direction,null);
+    const reaction=checklist.checks.m5Trend.structureReaction;
+    reaction.trend=direction==='long'?'downtrend':'uptrend';
+    expect(entryAgainstM5Allowed(checklist,entry)).toBe(false);
+    expect(buildTradeSetup2Snapshot({checklist,m1Check:{entry,evaluatedAt:600}})).toBeNull();
+    reaction.choch={type:'BOS',direction,recognizedAt:600};
+    expect(entryAgainstM5Allowed(checklist,entry)).toBe(false);
+    reaction.choch={type:'CHoCH',direction,recognizedAt:601};
+    expect(entryAgainstM5Allowed(checklist,entry)).toBe(false);
+    reaction.choch.recognizedAt=600;
+    expect(entryAgainstM5Allowed(checklist,entry)).toBe(true);
+    reaction.choch=null; reaction.trend=direction==='long'?'uptrend':'downtrend';
+    expect(entryAgainstM5Allowed(checklist,entry)).toBe(true);
+  });
   it('uses only a same-direction CHoCH known at the entry close, never BOS or later evidence', () => {
     const entry = entryAt(direction);
     expect(entrySizingAt(checklistAt(direction, 600), entry).factor).toBe(1);

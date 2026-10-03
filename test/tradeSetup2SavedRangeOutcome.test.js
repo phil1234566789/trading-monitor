@@ -14,6 +14,18 @@ const first = () => snapshot(600,{state:'active'});
 const group = (main, at=1800) => groupSetupSnapshots([snapshot(at,main),first()])[0];
 
 describe('saved DR course after first causal validation', () => {
+  it('renders the user review badge only for validated no-entry invalidation first', async () => {
+    for(const reason of ['invalidation','target1','both','missingHistory']) {
+      const row=group({state:reason==='missingHistory'?'unknown':'ended',reason,endedAt:900,recognizedAt:1200});
+      const html=await renderToString(createSSRApp(DealingRangeOutcome,{group:row}));
+      expect(html.includes('👍 Loss verhindert')).toBe(reason==='invalidation');
+      if(reason==='invalidation')expect(html).toContain('Kein simuliertes Trade-Ergebnis');
+      row.entries=[{entry:{}}];
+      expect(await renderToString(createSSRApp(DealingRangeOutcome,{group:row}))).not.toContain('Loss verhindert');
+      row.entries=[]; row.snapshot.dealingRange.status='invalidated';
+      expect(await renderToString(createSSRApp(DealingRangeOutcome,{group:row}))).not.toContain('Loss verhindert');
+    }
+  });
   it('tracks overnight T1 and invalidation separately from the last permitted review stand', () => {
     const startAt=Date.parse('2026-09-09T23:55:00+02:00')/1000;
     for(const [high,low,reason] of [[1.32,1.305,'target1'],[1.315,1.30,'invalidation']]) {

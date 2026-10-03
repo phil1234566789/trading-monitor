@@ -36,7 +36,7 @@ export function checklistPresentation(state) {
   }
   const preview = primary?.reactionPreview;
   if (preview?.ob && Number.isFinite(preview.ob.top) && Number.isFinite(preview.ob.bottom)) {
-    view.reaction = { details: [], orderBlock: { ...preview, recognizedAt: primary.reactionRecognizedAt },
+    view.reaction = { details: [], orderBlock: { ...preview, assignedAt: primary.reactionRecognizedAt },
       explanation: state.checks?.reaction?.details?.join(' '),
     };
   }

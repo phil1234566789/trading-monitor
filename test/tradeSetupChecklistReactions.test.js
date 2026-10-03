@@ -17,6 +17,15 @@ function evaluate(time, levels = [sweep], rows = candles, direction = 'short') {
 }
 
 describe('existing setup reaction for the same checklist sweep', () => {
+  it.each([false,true])('rejects pre-sweep FVG formation even when assigned later, mirrored=%s', mirror => {
+    const rows=mirror?candles.map(c=>({...c,open:3-c.open,close:3-c.close,high:3-c.low,low:3-c.high})):candles;
+    const level={...sweep,dir:mirror?-1:1,price:mirror?3-sweep.price:sweep.price};
+    const before=evaluate('2026-09-09T09:30:00+02:00',[level],rows,mirror?'long':'short').primary;
+    expect(before.reactionPreview.recognizedAt).toBe(at('2026-09-09T09:30:00+02:00'));
+    level.fineTouchedTime=at('2026-09-09T09:25:00+02:00'); level.recognizedAt=at('2026-09-09T09:30:00+02:00');
+    const after=evaluate('2026-09-09T09:35:00+02:00',[level],rows,mirror?'long':'short').primary;
+    expect(after.reactionOB).toBeNull();
+  });
   it('confirms DR114 at 10:30 and 10:35 Berlin with the widened OB geometry', () => {
     for (const time of ['2026-09-09T10:30:00+02:00', '2026-09-09T10:35:00+02:00']) {
       const result = evaluate(time);

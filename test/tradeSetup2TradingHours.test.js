@@ -9,7 +9,7 @@ import m5 from './fixtures/gbpusd-m5-dr114-close-reaction.json';
 import m1 from './fixtures/gbpusd-m1-dr114-p5.json';
 import config from './fixtures/gbpusd-m5-dr114-session-targets.json';
 
-assumeFixtureH1Direction();
+assumeFixtureH1Direction('downtrend', true);
 afterEach(() => vi.restoreAllMocks());
 const at = clock => Date.parse(`2026-09-09T${clock}:00+02:00`) / 1000;
 const windows = { weekday: [[587, 593]], saturday: [], sunday: [] };

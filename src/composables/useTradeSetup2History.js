@@ -8,12 +8,12 @@ import {createLinkedSnapshotReader} from '../tradeSetup2LinkedSnapshot.js';
 import {simulationAsOf} from '../tradeSetupSimulationRepository.js';
 import {fetchInitialCandles} from '../forexCandles.js';
 import {fetchCandlesCached} from '../candleCache.js';
-import {REPLAY_LOOKAHEAD_SEC} from '../timeframes.js';
+import {REPLAY_LOOKAHEAD_SEC,barSecondsFor} from '../timeframes.js';
 import {renderSetup2Positions,renderSetup2Detail,clearSetup2Primitives} from '../tradeSetup2Rendering.js';
 import {computeJumpViewport} from '../priceChartJumpToTime.js';
 import {useSnapshotM1} from './useSnapshotM1.js';
 import {SNAPSHOT_INDICATOR_PROPS} from '../tradeSetup2SnapshotIndicators.js';
-import {renderStructurePivots} from '../structureOverlay.js';
+import {renderStructurePivots,renderLowerStructure} from '../structureOverlay.js';
 import {useSnapshotIndicators} from './useSnapshotIndicators.js';
 import {renderPersistedZones} from '../orderBlocks.js';
 
@@ -24,24 +24,30 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
   let series=null,chart=null,abort=null,revision=0,selectionRevision=0,completedScanKey=null,appliedRouteKey=null;
   let activeInputKey=null,activeAt=null,refreshPending=false;
   let displayReady=false,focusedRouteKey=null;
-  const overview=[],details=[],entry=[],m1Markers=[],h1Markers=[],m5Markers=[],obPrimitives=[];
+  const overview=[],details=[],entry=[],m1Markers=[],h1Markers=[],m5Markers=[],obPrimitives=[],m1Lines=[],m5Lines=[];
   const snapshots=new Map();
   const positions=computed(()=>tradeSetup2HistoryItems(results.value.map(row=>simulationAsOf(row,evaluationTime())).filter(Boolean),candidates.value,{instrument:props.symbol,variant:props.tradeSetup2Variant,
     asOf:evaluationTime(),historyCount:props.tradeSetup2HistoryCount,candles:displayCandles.value}));
   const visibleSnapshot=computed(()=>props.showTradeSetup2 && selected.value?.instrument===props.symbol
     && selected.value.knownAt<=evaluationTime()?selected.value:null);
-  const snapshotM1=useSnapshotM1(props,visibleSnapshot,repository);
-  const snapshotIndicators=useSnapshotIndicators(props,visibleSnapshot,repository);
+  const snapshotM1=useSnapshotM1(props,visibleSnapshot,repository,undefined,evaluationTime);
+  const snapshotIndicators=useSnapshotIndicators(props,visibleSnapshot,repository,undefined,evaluationTime);
   function render() {
     if(!series)return;
     renderSetup2Positions(series,props.showTradeSetup2?positions.value:[],overview,displayCandles.value,props.currentBar,visibleSnapshot.value?.id);
     const reconstructed=!!snapshotM1.value.result && !!visibleSnapshot.value && props.showM1Structure && ['1m','5m'].includes(props.currentBar);
-    renderSetup2Detail(series,visibleSnapshot.value,details,entry,displayCandles.value,props.currentBar,evaluationTime(),props);
-    // Gespeicherte Strukturlinien bleiben die Belege. Nur fehlende Debug-Pivots
-    // ergänzen; der Live-Levelrenderer würde Endpunkte aus Chartkerzen neu bestimmen.
-    renderStructurePivots(series,reconstructed?snapshotM1.value.result:null,m1Markers,displayCandles.value,
-      {symbol:props.symbol,debug:reconstructed&&props.showLiquidityDebug,timeframe:'1m'});
+    const m5Result=snapshotIndicators.value.m5;
+    renderSetup2Detail(series,visibleSnapshot.value,details,entry,displayCandles.value,props.currentBar,evaluationTime(),
+      {...props,dynamicStructure:[...(reconstructed?['1m']:[]),...(m5Result?['5m']:[])]});
+    // Die Struktur folgt dem Replay; die gespeicherte Checkliste bleibt der Beleg.
+    for(const [timeframe,result,lines,markers,show] of [['1m',reconstructed?snapshotM1.value.result:null,m1Lines,m1Markers,props.showM1Structure],
+      ['5m',m5Result,m5Lines,m5Markers,props.showM5Structure]]) {
+      const closedDisplay=displayCandles.value.filter(c=>c.time+barSecondsFor(props.currentBar)<=evaluationTime());
+      renderLowerStructure(series,result,lines,markers,closedDisplay,{symbol:props.symbol,replayUntil:evaluationTime(),
+        show:!!visibleSnapshot.value&&show,debug:!!visibleSnapshot.value&&show&&props.showLiquidityDebug,barSeconds:barSecondsFor(timeframe),timeframe});
+    }
     for(const [bar,markers,show] of [['1h',h1Markers,props.showRanges],['5m',m5Markers,props.showM5Structure]]) {
+      if(bar==='5m'&&m5Result)continue;
       renderStructurePivots(series,snapshotIndicators.value.pivots[bar],markers,displayCandles.value,
         {symbol:props.symbol,debug:!!visibleSnapshot.value&&show&&props.showLiquidityDebug});
     }
@@ -222,7 +228,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     ...SNAPSHOT_INDICATOR_PROPS.map(key=>()=>props[key])],render);
   watch(()=>props.tradeSetup2Variant,()=>{if(!isTradeSetup2SnapshotView(props))void refresh();});
   onScopeDispose(()=>{abort?.abort();revision++;selectionRevision++;chart?.unsubscribeClick(click);
-    if(series)for(const list of [overview,details,entry,m1Markers,h1Markers,m5Markers,obPrimitives])clearSetup2Primitives(series,list);series=null;});
+    if(series)for(const list of [overview,details,entry,m1Markers,h1Markers,m5Markers,obPrimitives,m1Lines,m5Lines])clearSetup2Primitives(series,list);series=null;});
   return {positions,selected:visibleSnapshot,snapshotM1,snapshotIndicators,loading,status,error,linkedReady,linkedRendered,select,refresh:()=>refresh(true),
     create(c,s){chart=c;series=s;chart.subscribeClick(click);render();},
     updateCandles(rows,ready=true){displayCandles.value=rows;displayReady=ready;render();}};

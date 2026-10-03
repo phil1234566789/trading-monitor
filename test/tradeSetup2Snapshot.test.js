@@ -1,5 +1,5 @@
 import { assumeFixtureH1Direction } from './helpers/fixtureH1Direction.js';
-assumeFixtureH1Direction();
+assumeFixtureH1Direction('downtrend', true);
 import { describe, expect, it } from 'vitest';
 import { buildTradeSetup2Snapshot, buildTradeSetup2CandidateSnapshot } from '../src/tradeSetup2Snapshot.js';
 import { evaluateTradeSetupChecklist } from '../src/tradeSetupChecklist.js';

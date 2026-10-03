@@ -8,6 +8,7 @@ import { m1EntryFromFvg } from './m1Entry.js';
 import { latestStructureSweeps } from './structureSweeps.js';
 import { pricePrecisionForInstrument } from './format.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
+import { entryAgainstM5Allowed } from './tradeSetup2EntrySizing.js';
 
 const waiting = {
   abc: 'M1-Struktur wartet auf A, B und C.',
@@ -59,6 +60,9 @@ export function evaluateM1Checklist({ context, structure, candles, evaluatedAt, 
     details.push(`M1 interner LQ Sweep ${sweep.price.toFixed(pricePrecisionForInstrument(context.instrument))} um ${formatBerlinTime(sweep.candleTime)}`);
     detailStatuses.push('passed');
   }
+  const candidate = m1EntryFromFvg(context, follow.fvg, rows, evaluatedAt, follow.retest);
+  const blocked = candidate && !entryAgainstM5Allowed({ evaluatedAt: candidate.recognizedAt, checks: { m5Trend: context.m5Trend } }, candidate);
   return normalizeM1ChecklistPresentation({ status: 'pending', details, detailStatuses, evaluatedAt, trends, choch, bos, internalSweeps,
-    retest: follow.retest, fvg: follow.fvg, entry: m1EntryFromFvg(context, follow.fvg, rows, evaluatedAt, follow.retest) }, context.direction);
+    retest: follow.retest, fvg: follow.fvg, entry: blocked ? null : candidate,
+    entryBlockedReason: blocked ? 'Gegen den M5-Trend: bestätigter M5-CHoCH in Traderichtung fehlt.' : null }, context.direction);
 }

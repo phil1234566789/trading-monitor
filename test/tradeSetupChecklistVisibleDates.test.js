@@ -50,10 +50,11 @@ describe('Checklist calendar dates belong only in the evaluation header', () => 
         return;
       }
       for (const text of ['M1-Stand um 10:05 Uhr',
-        'M1 bärische FVG nach Retest um 09:48', 'Entry 1 um 09:50 Uhr']) expect(details).toContain(text);
+        'M1 bärische FVG nach Retest um 09:48', 'Gegen den M5-Trend: bestätigter M5-CHoCH in Traderichtung fehlt.']) expect(details).toContain(text);
       expect(html).toContain('Ursprung: 2026-09-09 09:20');
       expect(check.fvg.candleTime).toBe(at('09:48'));
-      expect(check.entry.recognizedAt).toBe(at('09:50'));
+      // Der später bestätigte CHoCH darf den früheren Entry nicht rückwirkend freigeben.
+      expect(check.entry).toBeNull();
     }
   });
 });

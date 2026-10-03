@@ -4,6 +4,28 @@ import { markIgnoredCandles } from './sessionOccurrences.js';
 import { berlinOffsetMinutes } from './berlinTime.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { collectNestedChain } from './marketStructureAnalysis';
+import { computeRangesPivots } from './marketStructureAnalysis';
+import { buildStructureWithPhases } from './trendPhases.js';
+import { formatDatedTime } from './berlinTime.js';
+
+export function snapshotOverlayTime(snapshot, replayUntil) {
+  return Number.isFinite(replayUntil) ? Math.floor(replayUntil / 60) * 60 : snapshot.knownAt;
+}
+
+export function snapshotM5Anchor(snapshot) {
+  const saved = snapshot.checklist?.checks?.m5Trend;
+  const pivot = saved?.structureState?.appliedPivots?.[0];
+  return saved?.structureStart ?? pivot?.pivotTime ?? pivot?.time;
+}
+
+export function buildSnapshotM5(candles, snapshot, config, at) {
+  const anchor = snapshotM5Anchor(snapshot);
+  if (!Number.isFinite(anchor) || candles[0]?.time > anchor) return null;
+  const outer = config.m5StructurePeriod ?? 5, inner = config.m5Structure2Period ?? 2;
+  const rows = closedChecklistCandles(candles, '5m', at).filter(c => !c.ignored);
+  const pivotsOuter = computeRangesPivots(rows, outer, anchor), pivotsInner = computeRangesPivots(rows, inner, anchor);
+  return { ...buildStructureWithPhases(pivotsOuter, pivotsInner, outer, inner, rows, 300, { closeEvaluation: true }), pivotsOuter, pivotsInner };
+}
 
 export const SNAPSHOT_INDICATOR_PROPS = ['showRanges', 'showM5Structure', 'showM1Structure',
   'showLiquidity', 'showObsM5', 'showObs1h', 'showObs4h', 'showHistoricalObs', 'showRsiDivergence', 'showRsiDivergenceHistory'];
@@ -41,6 +63,7 @@ export function snapshotStructureLevels(snapshot) {
 }
 
 export function snapshotEvidenceVisible(e, props = {}) {
+  if (props.dynamicStructure?.includes(e.timeframe) && ['structure','structureLevel','CHoCH','BOS','internalSweep'].includes(e.role)) return false;
   if (e.role === 'divergence') return props.showRsiDivergence !== false || props.showRsiDivergenceHistory === true;
   if (e.role === 'reactionOB') return props.showObsM5 !== false;
   if (['sweep', 'target1', 'target2'].includes(e.role)) return props.showLiquidity !== false;
@@ -53,16 +76,16 @@ export function snapshotEvidenceVisible(e, props = {}) {
 const MAX_M1_CANDLES = 5000;
 export function createSnapshotM1Reader(repository, fetchCandles) {
   const pending = new Map();
-  return (runId, snapshot) => {
-    const key = `${runId}:${snapshot.id}:${snapshot.knownAt}`;
+  return (runId, snapshot, at = snapshot.knownAt) => {
+    const key = `${runId}:${snapshot.id}:${at}`;
     if (!pending.has(key)) {
-      const request = load(runId, snapshot).catch(error => { pending.delete(key); throw error; });
+      const request = load(runId, snapshot, at).catch(error => { pending.delete(key); throw error; });
       pending.set(key, request);
       if (pending.size > 8) pending.delete(pending.keys().next().value);
     }
     return pending.get(key);
   };
-  async function load(runId, snapshot) {
+  async function load(runId, snapshot, at) {
     const unavailable = message => ({ result: null, message });
     const context = activeM1Context(snapshot.checklist);
     if (!context || context.instrument !== snapshot.instrument
@@ -76,7 +99,6 @@ export function createSnapshotM1Reader(repository, fetchCandles) {
       || config.m1Period !== M1_STRUCTURE_PERIOD || !Array.isArray(config.sessions)) {
       return unavailable('M1-Ergänzung nicht verfügbar: passende Algorithmusversion oder gespeicherte Sessions fehlen.');
     }
-    const at = snapshot.knownAt;
     // Zusätzlicher Vorlauf überbrückt ignorierte Spread-Hour-Kerzen. Reicht er
     // nicht, bleibt der gespeicherte Beleg sichtbar statt eine Teilstruktur zu behaupten.
     const leadIn = M1_STRUCTURE_PERIOD * 2 + 1 + 120;
@@ -95,6 +117,6 @@ export function createSnapshotM1Reader(repository, fetchCandles) {
     if (result.status !== 'ready' || rows.at(-1)?.time + 60 !== at) {
       return unavailable('M1-Ergänzung nicht verfügbar: Archiv oder Fraktalvorlauf unvollständig.');
     }
-    return { result, message: `M1-Pivots aus Archiv ergänzt · P5 · ${result.pivotsOuter.length} Pivots · bis zum gespeicherten Stand · sichtbar mit Debug` };
+    return { result, message: `M1-Struktur · P5 · ${result.pivotsOuter.length} Pivots · Replay ${formatDatedTime(at)} · Checklist ${formatDatedTime(snapshot.knownAt)}` };
   }
 }

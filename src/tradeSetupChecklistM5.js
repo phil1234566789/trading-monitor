@@ -20,6 +20,7 @@ export function evaluateChecklistM5(context, settings = {}) {
     computeRangesPivots(candles, outerPeriod, anchor), computeRangesPivots(candles, innerPeriod, anchor),
     outerPeriod, innerPeriod, candles, 300, { closeEvaluation: true, closeReactionCache: context.closeReactionCache });
   result.structureReaction = closeReaction;
+  result.structureStart = anchor;
   result.structureState = state;
   result.m1Anchor = m1AnchorFromM5(state, closeReaction, context.direction, context.evaluatedAt);
   if (closeReaction.trend === 'unknown') return result;

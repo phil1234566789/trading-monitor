@@ -17,7 +17,7 @@ const input = { instrument: 'GBPUSD', h1Candles: h1.candles, m5Candles: m5, m1Ca
   settings: { rangesFixedStartActive: true, rangesFixedStartTime: h1.cutoff }, sessionConfigs: config.sessions,
   fromTime: at('09:25'), toTime: at('09:55'), evaluatedAt: at('09:50'), entryGates: true,
   tradingWindows:{weekday:[[0,1440]],saturday:[],sunday:[]} };
-assumeFixtureH1Direction();
+assumeFixtureH1Direction('downtrend', true);
 
 it('keeps complete entry snapshots identical with and without the M1 archive cache', async () => {
   const cached = await scanTradeSetup2Window(input);

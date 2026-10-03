@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { assumeFixtureH1Direction } from './helpers/fixtureH1Direction.js';
+assumeFixtureH1Direction('downtrend', true);
 import { effectScope, nextTick, reactive } from 'vue';
 vi.mock('../src/forexCandles.js', () => ({ fetchInitialCandles: vi.fn() }));
 vi.mock('../src/ignoredCandles.js', () => ({ markIgnored: rows => rows }));

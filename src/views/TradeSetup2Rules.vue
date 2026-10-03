@@ -81,17 +81,17 @@
       <p>Entry 1 benötigt eine validierte, noch aktive DR, keine bekannte F-Sperre, einen eindeutigen M5-Anker und eine bestimmbare M1-P5-Struktur mit geschlossenen Kerzen.</p>
       <p>Danach gilt: <strong>Retest desselben C-M5-Orderblocks → erste bestätigte gleichgerichtete M1-FVG nach der Retestkerze → Entry am Schluss der FVG-Bestätigungskerze.</strong> Setupidentität, Richtung, DR-Validierung und F werden am Entry-Zeitpunkt erneut geprüft.</p>
       <p><strong>M1-Richtung, M1-CHoCH und M1-BOS sind aktuell keine Pflichtgates.</strong> Ihre Checklist-Haken zeigen Merkmale. Eine bestimmbare M1-Struktur ist erforderlich, ihre Richtung muss nicht gleichgerichtet sein. M5-BOS ist ebenfalls kein Pflichtgate.</p>
-      <p>Der bestätigte M5-CHoCH in Traderichtung bestimmt im aktuellen Code nur die Größe:</p>
+      <p>Gegen den M5-Trend ist ein bestätigter M5-CHoCH in Traderichtung Pflicht. Bei erlaubten Entries bestimmt er zusätzlich die Größe:</p>
       <dl class="criteria">
-        <div><dt>Halbe Entry-Größe</dt><dd>Noch kein bestätigter M5-CHoCH in Traderichtung. Diese Variante gilt als riskanter.</dd></div>
+        <div><dt>Halbe Entry-Größe</dt><dd>M5 bereits gleichgerichtet, aber noch kein bestätigter M5-CHoCH in Traderichtung.</dd></div>
         <div><dt>Volle Entry-Größe</dt><dd>Ein bestätigter M5-CHoCH in Traderichtung ist vorhanden.</dd></div>
       </dl>
       <p><strong>M5-BOS ist keine zusätzlich festgelegte Pflicht.</strong> Für beide Größenvarianten gelten die übrigen Entry-Bedingungen einschließlich der globalen Uhrzeitregel unter F.</p>
       <p><strong>M1 zeigt die aktuell aktive bestätigte Strukturrichtung.</strong> Ein aktiver Nested-Trend ersetzt die äußere Richtung. Bei der Übernahme zum Outer-Trend bleibt die Richtung konsistent. Äußere Ebenen werden als neutraler Kontext angezeigt. Die M1-Richtung ist kein zusätzliches Entry-Gate.</p>
-      <details><summary>Einordnung des besprochenen Short-Beispiels</summary><p>Der Screenshot zeigt einen bullischen M5-Trend und unbestätigten M5-CHoCH/BOS. Diese Variante erhält halbe Größe. Sichtbar sind außerdem ein M1 Nested Downtrend, bärischer M1-CHoCH/BOS, ein M5-OB-Retest und eine nachfolgende bärische FVG.</p><p>Aus diesen sichtbaren M1-Merkmalen werden ohne weitere Festlegung keine zusätzlichen Pflichtbedingungen abgeleitet.</p></details>
-      <aside class="implementation"><h3>Implementierungsstand</h3><p>Für neue gespeicherte Entries wird der M5-CHoCH am Entry-Zeitpunkt geprüft und die Größe eingefroren. Halbe Größe bedeutet 250 USD, volle Größe 500 USD Preisrisikobudget vor Lot-Abrundung. Kommission und Ergebnisse folgen dem tatsächlichen Volumen. Bestehende Ergebnisläufe bleiben unverändert.</p></aside>
-      <aside class="open-decision"><h3>Beschlossen · noch nicht implementiert</h3><p><strong>Bei einem Entry gegen den M5-Trend muss ein bestätigter M5-CHoCH in Traderichtung vorhanden sein. Fehlt er, gibt es keinen Entry.</strong> Long und Short werden spiegelbildlich behandelt. Für diesen Fall ersetzt die neue Pflicht die bisherige halbe Größe ohne CHoCH. Der bereits gleichgerichtete M5-Fall erhält dadurch keine neue Regel.</p></aside>
-      <aside class="open-decision"><h3>Offene C-Bugfixes</h3><p>OB-eigene erstmalige Erkennungszeit und spätere Sweep-Zuordnung müssen getrennt werden. C soll nur einen OB mit einer nach dem konkreten B-Sweep entstandenen FVG als kausale Reaktion akzeptieren. Diese Korrekturen stehen noch aus.</p></aside>
+      <details><summary>Einordnung des besprochenen Short-Beispiels</summary><p>Der Screenshot zeigt einen bullischen M5-Trend und unbestätigten M5-CHoCH/BOS. Nach der aktuellen Regel erhält dieser gegenläufige Fall ohne bestätigten M5-CHoCH keinen Entry. Sichtbar sind außerdem ein M1 Nested Downtrend, bärischer M1-CHoCH/BOS, ein M5-OB-Retest und eine nachfolgende bärische FVG.</p><p>Aus diesen sichtbaren M1-Merkmalen werden ohne weitere Festlegung keine zusätzlichen Pflichtbedingungen abgeleitet.</p></details>
+      <aside class="implementation"><h3>Implementierungsstand</h3><p>Für neue gespeicherte Entries wird der M5-CHoCH am Entry-Zeitpunkt geprüft und die Größe eingefroren. Halbe Größe bedeutet 250 USD, volle Größe 500 USD Preisrisikobudget vor Lot-Abrundung. Kommission und Ergebnisse folgen dem tatsächlichen Volumen. Der Septemberlauf verwendet diese Regeln.</p></aside>
+      <aside class="open-decision"><h3>Implementiert · M5-Gegenrichtung</h3><p><strong>Bei einem Entry gegen den M5-Trend muss ein bestätigter M5-CHoCH in Traderichtung vorhanden sein. Fehlt er, gibt es keinen Entry.</strong> Long und Short werden spiegelbildlich behandelt. Für diesen Fall ersetzt die neue Pflicht die bisherige halbe Größe ohne CHoCH. Der bereits gleichgerichtete M5-Fall erhält dadurch keine neue Regel.</p></aside>
+      <aside class="open-decision"><h3>Implementiert · kausale C-Reaktion</h3><p>Die erstmalige OB-Erkennung am Schluss der FVG-Bestätigungskerze wird getrennt von der späteren Sweep-Zuordnung angezeigt. Die FVG-Bildungskerze muss strikt nach dem konkreten M5-Sweep-Touch aus B liegen; die Impulskerze und der Bestätigungsschluss bleiben eigene Zeitpunkte.</p></aside>
     </section>
 
     <section id="zeit" aria-labelledby="zeit-title">
@@ -115,7 +115,7 @@
       <ol><li>Nach Auswertung der Gesamtstatistik: mögliche künftige Showstopper unter E.</li><li>Weitere Entry-Modelle und ihre Bedingungen.</li><li>Umgang mit unbekannten F-Ergebnissen, insbesondere unbekannter News-Abdeckung.</li><li>Eigene Regeln für kleinere LS.</li></ol>
       <p>Die gemeinsame Prüfung und Absegnung dieses Entwurfs steht aus.</p>
     </section>
-    <footer>Bestehende Läufe bleiben historische Ergebnisse ihrer jeweiligen Regeln. Kein neuer Statistiklauf bis zum ausdrücklich beauftragten gemeinsamen Lauf nach Abschluss der Bug-Sammlung. Diese Seite startet keinen Scan.</footer>
+    <footer>Bestehende Läufe bleiben historische Ergebnisse ihrer jeweiligen Regeln. Der neue Septemberlauf verwendet die gemeinsam beauftragten Regeln. Diese Seite startet keinen Scan.</footer>
   </main>
 </template>
 

@@ -49,6 +49,12 @@ describe('checklist sweeps', () => {
     const complete = run(levels, { context: ctx, reactionLinks: [{ ...link, invalidation: { price: 1.32, knownAt: t } }] }).candidates[1];
     expect(complete.checks.reaction.status).toBe('passed');
     expect(complete.reactionPreview.linked).toBe(true);
+    expect(complete.reactionPreview.recognizedAt).toBe(t);
+    expect(complete.reactionPreview.assignedAt).toBe(t);
+    for(const fineTouchedTime of [t-300,t]) {
+      const delayed=levels.map(l=>({...l,fineTouchedTime,recognizedAt:fineTouchedTime+300}));
+      expect(run(delayed,{context:ctx,reactionLinks:[link]}).candidates[1]?.reactionOB ?? null).toBeNull();
+    }
     expect(complete.checks.reaction.details.join(' ')).toMatch(/Bärischer M5.*FVG.*Risikoband/);
     const premature = { ...link, recognizedAt: t - 300 };
     expect(run(levels, { context: ctx, reactionLinks: [premature, link] }).candidates[1].reactionOB).not.toBeNull();

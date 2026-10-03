@@ -1,6 +1,12 @@
 export const ENTRY_SIZING_VERSION = 'dr-against-m5-trend-choch-v1';
 export const ENTRY_RISK_BUDGET = 500;
 
+export function entryAgainstM5Allowed(checklist, entry) {
+  const trend = checklist.checks?.m5Trend?.structureReaction?.trend;
+  const opposite = entry.direction === 'long' ? 'downtrend' : 'uptrend';
+  return trend !== opposite || entrySizingAt(checklist, entry).reason === 'm5ChochConfirmed';
+}
+
 export function entrySizingAt(checklist, entry) {
   const reaction = checklist.checks?.m5Trend?.structureReaction;
   const choch = reaction?.choch;

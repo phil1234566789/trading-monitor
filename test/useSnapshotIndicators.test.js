@@ -4,7 +4,27 @@ vi.mock('../src/supabaseClient.js', () => ({ supabase: {} }));
 import { useSnapshotIndicators } from '../src/composables/useSnapshotIndicators.js';
 import { SETUP2_VERSION } from '../src/tradeSetup2Configuration.js';
 import { snapshotChartCandleCount, snapshotStructureLevels } from '../src/tradeSetup2SnapshotIndicators.js';
+import { buildSnapshotM5 } from '../src/tradeSetup2SnapshotIndicators.js';
 const flush = async () => { for (let i = 0; i < 12; i++) await nextTick(); };
+
+it('advances M5 structure and confirmed debug pivots through closed replay prefixes, then rewinds',async()=>{
+  const candles=Array.from({length:60},(_,i)=>({time:i*300,open:10,close:10+Math.sin(i/2),high:11+Math.sin(i/2),low:9+Math.sin(i/2)}));
+  const stored={instrument:'GBPUSD',knownAt:6000,checklist:{checks:{m5Trend:{structureStart:1200}}}};
+  const before=JSON.stringify(stored), source=shallowRef(stored);
+  const config={instrument:'GBPUSD',setupVersion:SETUP2_VERSION,sessions:[],m5StructurePeriod:5,m5Structure2Period:2};
+  const props=reactive({tradeSetup2RunId:'r',currentBar:'5m',showM5Structure:true,replayUntil:6000});
+  const fetch=vi.fn(async()=>candles), scope=effectScope();
+  const state=scope.run(()=>useSnapshotIndicators(props,source,{getRun:async()=>({configuration:config})},fetch));
+  try {
+    await flush(); const early=state.value.m5;
+    props.replayUntil=12000; await flush();
+    expect(state.value.m5).toEqual(buildSnapshotM5(candles,stored,config,12000));
+    expect(state.value.m5.pivotsOuter.length).toBeGreaterThan(early.pivotsOuter.length);
+    expect(state.value.message).toContain('Replay');expect(state.value.message).toContain('Checklist');
+    props.replayUntil=6000; await flush();expect(state.value.m5).toEqual(early);
+    expect(fetch).toHaveBeenCalledTimes(2);expect(JSON.stringify(stored)).toBe(before);
+  }finally{scope.stop();}
+});
 
 it('restores OBs and raw pivots only from closed archive candles, sharing requests across switches', async () => {
   const at = 1790338500, source = shallowRef({ instrument: 'GBPUSD', knownAt: at });
@@ -19,7 +39,7 @@ it('restores OBs and raw pivots only from closed archive candles, sharing reques
   const scope = effectScope(), state = scope.run(() => useSnapshotIndicators(props, source, repository, fetch));
   try {
     await flush();
-    expect(fetch).toHaveBeenCalledWith('GBPUSD', '5m', at);
+    expect(fetch).toHaveBeenCalledWith('GBPUSD', '5m', at, 1000);
     expect(state.value.pivots['5m'].pivotsOuter).toContainEqual(expect.objectContaining({ price: 1.302 }));
     expect(state.value.zones).toEqual([]); // Die noch offene Zukunftskerze darf keinen OB erzeugen.
     props.showObsM5 = props.showM5Structure = false; await flush();

@@ -1,5 +1,5 @@
 import { assumeFixtureH1Direction } from './helpers/fixtureH1Direction.js';
-assumeFixtureH1Direction();
+assumeFixtureH1Direction('downtrend', true);
 import { expect, it, vi } from 'vitest';
 import * as queries from '../src/candleCloseWindow';
 import { buildMarketStructureState, computeRangesPivots } from '../src/marketStructureAnalysis';

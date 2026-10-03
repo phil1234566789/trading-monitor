@@ -1,5 +1,5 @@
 import { tradeSetup2Evidence } from './tradeSetup2Evidence.js';
-import { entrySizingAt } from './tradeSetup2EntrySizing.js';
+import { entrySizingAt, entryAgainstM5Allowed } from './tradeSetup2EntrySizing.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { evaluateDealingRange } from './tradeSetup2DealingRange.js';
 import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
@@ -55,6 +55,7 @@ export function buildTradeSetup2Snapshot(input) {
     || checklist.setup.primary.id!==entry.setupKey || checklist.setup.primary.direction!==entry.direction) return null;
   const dealingRange = evaluateDealingRange(checklist);
   if (dealingRange.status !== 'validated') return null;
+  if (!entryAgainstM5Allowed(checklist, entry)) return null;
   const { instrument, evaluatedAt, status, checks, structure, tradeability }=checklist;
   const sizedEntry = { ...entry, sizing: entrySizingAt(checklist, entry) };
   return restoreTradeSetup2Snapshot(JSON.parse(JSON.stringify({schemaVersion:3,id:entry.id,instrument,setupKey:entry.setupKey,

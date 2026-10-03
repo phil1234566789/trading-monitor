@@ -34,7 +34,7 @@ describe("Trade Setup Checklist presentation", () => {
   ])("shows the actual OB bounds for direction %s without confirming its association", async (dir, top, bottom, label, upper, lower) => {
     const html = await render({ instrument: 'GBPUSD', status: 'ready', checks: {
       reaction: { status: 'unknown', details: ['Zuordnung noch ungeklärt.'] },
-    }, setup: { primary: { reactionRecognizedAt: Date.parse('2026-09-09T09:30:00+02:00') / 1000, reactionPreview: { linked: false, candidateCount: 3,
+    }, setup: { primary: { reactionRecognizedAt: Date.parse('2026-09-09T09:35:00+02:00') / 1000, reactionPreview: { linked: false, candidateCount: 3, recognizedAt: Date.parse('2026-09-09T09:30:00+02:00') / 1000,
       ob: { dir, top, bottom, startTime: Date.parse('2026-09-09T09:20:00+02:00') / 1000 },
     } } } });
     expect(html).toContain(label);

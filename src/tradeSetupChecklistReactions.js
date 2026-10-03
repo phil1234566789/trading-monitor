@@ -2,7 +2,7 @@ import { detectLiquidityLevels } from './liquidityDetection.js';
 import { detectTradeSetups, deriveSetupEntryInvalidation } from './tradeSetup.js';
 import { tradeSetupParameters } from './tradeSetupParameters.js';
 import { TRADE_SETUP_M5_FRACTAL_PERIOD } from './priceChartConstants.js';
-import { orderBlockRecognitionTimes } from './orderBlockRecognitionTime.js';
+import { orderBlockRecognitionTimes, orderBlockFollowsSweep } from './orderBlockRecognitionTime.js';
 
 export function sameChecklistSweep(a, b) {
   return a.timeframe === b.timeframe && ['dir', 'pivotTime', 'price', 'touchedTime'].every(key => a.level[key] === b.level[key]);
@@ -15,7 +15,7 @@ export function detectChecklistReactions({ candles, levels, obs, instrument, eva
   const moments = new Set([evaluatedAt]);
   for (const level of levels) if (Number.isFinite(level.recognizedAt)) moments.add(level.recognizedAt);
   for (const ob of obs) {
-    if (levels.some(l => l.dir === -ob.dir && l.touchedTime <= ob.startTime)) moments.add(confirmations.get(ob.startTime));
+    if (levels.some(l => l.dir === -ob.dir && orderBlockFollowsSweep(ob, l, confirmations.get(ob.startTime)))) moments.add(confirmations.get(ob.startTime));
   }
   const matches = new Map();
   for (const at of [...moments].filter(t => Number.isFinite(t) && t <= evaluatedAt).sort((a, b) => a - b)) {
@@ -43,6 +43,7 @@ export function detectChecklistReactions({ candles, levels, obs, instrument, eva
       for (const setup of setups) {
         for (const sweep of setup.sweeps) {
           if (sweep.timeframe !== '1H') continue;
+          if (!orderBlockFollowsSweep({ startTime: setup.obStartTime }, sweep.level, confirmations.get(setup.obStartTime))) continue;
           const key = [dir, sweep.level.pivotTime, sweep.level.price, sweep.level.touchedTime].join(':');
           if (atMatches.has(key)) continue;
           const { setupEntry, invalidation } = deriveSetupEntryInvalidation(setup);

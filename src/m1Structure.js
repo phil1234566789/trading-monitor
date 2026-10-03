@@ -36,6 +36,7 @@ export function activeM1Context(checklist) {
   if (m1PrerequisiteReason(checklist)) return null;
   const anchor = checklist.checks.m5Trend?.m1Anchor;
   return anchor ? { instrument: checklist.instrument, anchor, evaluatedAt: checklist.evaluatedAt,
+    m5Trend: checklist.checks.m5Trend,
     direction: checklist.setup.primary.direction ?? checklist.direction, primary: checklist.setup.primary,
     setupKey: checklist.setup.primary.id ?? checklist.setup.primary.key } : null;
 }

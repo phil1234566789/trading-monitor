@@ -72,7 +72,7 @@ it('loads only on demand, discards late replay/selection results and reuses the 
   try {
     await flush(); expect(fetch).not.toHaveBeenCalled();
     props.showM1Structure = true; await flush();
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(1);
     props.showLiquidityDebug = true; await flush();
     horizon.value = 1799; await flush(); release(candles); await flush();
     expect(state.value.result).toBeNull(); expect(state.value.message).toBe('');
@@ -95,4 +95,14 @@ it('filters only the relevant stored evidence without replacing saved structure'
   expect(snapshotEvidenceVisible({ role: 'divergence' }, { showRsiDivergence: false, showRsiDivergenceHistory: false })).toBe(false);
   expect(snapshotEvidenceVisible({ role: 'structure', timeframe: '1m' }, {})).toBe(true);
   expect(snapshotEvidenceVisible({ role: 'fvg', timeframe: '1m' }, {})).toBe(true);
+});
+
+it('advances confirmed M1 pivots with replay while preserving the saved checklist and rewinding causally', async () => {
+  const source=snapshot(), before=JSON.stringify(source), read=createSnapshotM1Reader(repository(configuration()),async()=>candles);
+  const early=await read('r',source,1800), later=await read('r',source,2400);
+  expect(later.result).toEqual(buildM1Structure(candles,anchor,2400));
+  expect(later.result.pivotsOuter.length).toBeGreaterThan(early.result.pivotsOuter.length);
+  expect(await read('r',source,1800)).toBe(early);
+  expect(later.message).toContain('Replay'); expect(later.message).toContain('Checklist');
+  expect(JSON.stringify(source)).toBe(before);
 });

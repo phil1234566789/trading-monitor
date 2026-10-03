@@ -11,7 +11,7 @@ const props = defineProps({
 const bearish = computed(() => props.preview.ob.dir === -1);
 const title = computed(() => `${bearish.value ? 'bärische' : 'bullische'} M5 OB${Number.isFinite(props.preview.recognizedAt) ? ` (${formatBerlinTime(props.preview.recognizedAt)} erkannt)` : ''}`);
 const price = value => fmtPrice(value, pricePrecisionForInstrument(props.instrument));
-const hint = computed(() => props.preview.linked ? 'Dem Sweep zugeordnet.'
+const hint = computed(() => props.preview.linked ? `Dem Sweep zugeordnet${Number.isFinite(props.preview.assignedAt) ? ` um ${formatBerlinTime(props.preview.assignedAt)}` : ''}.`
   : `Erster von ${props.preview.candidateCount} zeitlich folgenden M5-OB-Kandidaten. Zuordnung zur Sweep-Bewegung ungeklärt.`);
 const colors = computed(() => {
   const token = bearish.value ? 'obBearM5' : 'obBullM5';

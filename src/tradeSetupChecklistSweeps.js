@@ -2,7 +2,7 @@ import { collectChecklistH1Sweeps } from './tradeSetupChecklistH1Sweeps.js';
 import { classifyAge } from './ageTier';
 import { compareSweepAge, sweepAgeSec, detectSetupObs, deriveSetupEntryInvalidation } from './tradeSetup.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
-import { orderBlockRecognitionTimes } from './orderBlockRecognitionTime.js';
+import { orderBlockRecognitionTimes, orderBlockFollowsSweep } from './orderBlockRecognitionTime.js';
 import { detectChecklistReactions, sameChecklistSweep } from './tradeSetupChecklistReactions.js';
 import { obMinimum } from './instrumentConfig.js';
 import { toPips } from './pipConfig.js';
@@ -67,7 +67,7 @@ export function evaluateChecklistSweeps({ context, h1Levels, reactionLinks = [],
       // statt die historische Touchzeit fälschlich als damaligen Wissensstand auszugeben.
       recognizedAt: level.recognizedAt ?? null, knownAsOf: evaluatedAt,
       reactionOB: null, entryPrice: null, invalidation: null, bandRisk: null, reactionRecognizedAt: null };
-    const possibleObs = obs.filter(ob => ob.dir === -level.dir && ob.startTime >= level.touchedTime);
+    const possibleObs = obs.filter(ob => ob.dir === -level.dir && orderBlockFollowsSweep(ob, level, confirmationTimes.get(ob.startTime)));
     const link = reactionLinks.filter(l => l.candidateId === id && Number.isFinite(l.recognizedAt) && l.recognizedAt <= evaluatedAt)
       .sort((a, b) => a.recognizedAt - b.recognizedAt)
       .find(l => possibleObs.some(ob => ob.startTime === l.obStartTime) && l.recognizedAt >= confirmationTimes.get(l.obStartTime));
@@ -93,6 +93,8 @@ export function evaluateChecklistSweeps({ context, h1Levels, reactionLinks = [],
     // Ohne belegte Sweep-Mitgliedschaft bleibt die Vorschau unbestätigt.
     candidate.reactionPreview = possibleObs.length ? {
       ob: candidate.reactionOB ?? possibleObs[0], linked: candidate.reactionOB != null, candidateCount: possibleObs.length,
+      recognizedAt: confirmationTimes.get((candidate.reactionOB ?? possibleObs[0]).startTime),
+      assignedAt: candidate.reactionRecognizedAt,
     } : null;
     candidate.validity = evaluateChecklistCandidateValidity({ candidate, candles, evaluatedAt,
       invalidation: automatic?.invalidation ?? (candidate.reactionOB ? link?.invalidation : null), target1: targetsByCandidateId[id] });

@@ -32,7 +32,7 @@ export function m1EntryFromFvg(context, fvg, candles, evaluatedAt, retest = null
 
 export function entryChecklist(m1Check) {
   const entry = m1Check?.entry;
-  if (!entry) return { status: 'pending', details: [], detailStatuses: [] };
+  if (!entry) return { status: 'pending', details: m1Check?.entryBlockedReason ? [m1Check.entryBlockedReason] : [], detailStatuses: m1Check?.entryBlockedReason ? ['unmet'] : [] };
   const distances = entry.scales ? [['wide', 'Weiter SL'], ['narrow', 'Enger SL']].map(([key, label]) => {
     const scale = entry.scales[key];
     return `${label}: ${formatRiskPips(scale.riskPips)}${scale.status === 'ready' ? ' Pips' : ''}`;
