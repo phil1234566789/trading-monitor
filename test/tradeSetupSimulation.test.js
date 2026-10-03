@@ -8,6 +8,14 @@ const run = (candles, extra = {}) => evaluateSimulation({ entry, variant: 'wide'
   target2: 1.352, candles, evaluatedAt: 120 + candles.filter(c => c.time >= 120).length * 60, ...extra });
 
 describe('fixed-budget whole-lot simulation', () => {
+  it('keeps a midnight exit separate from the earlier permitted entry timestamp', () => {
+    const entryAt=Date.parse('2026-09-09T23:59:00+02:00')/1000;
+    const saved={...entry,recognizedAt:entryAt},before=JSON.stringify(saved);
+    const result=evaluateSimulation({entry:saved,variant:'wide',target1:1.351,target2:1.352,
+      candles:[bar(entryAt,1.3501,1.3502),bar(entryAt+60,1.3493,1.3502)],evaluatedAt:entryAt+120});
+    expect(result).toMatchObject({status:'closed',outcome:'slBeforeT1',exitTime:entryAt+60,exitRecognizedAt:entryAt+120});
+    expect(JSON.stringify(saved)).toBe(before);
+  });
   it('floors initial lots and halves the actual volume', () => {
     expect(sizeSimulation(entry, 'wide')).toMatchObject({ lots: 8, t1Lots: 4, actualRisk: 480, riskBudget: 500 });
     expect(sizeSimulation(entry, 'narrow')).toMatchObject({ lots: 15, t1Lots: 7.5, actualRisk: 495 });

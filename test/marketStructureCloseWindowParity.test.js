@@ -37,7 +37,7 @@ it('preserves complete states and every intermediate nested state in both price 
 it('preserves complete DR114 snapshots including its entry and evidence', async () => {
   const input = { instrument: 'GBPUSD', h1Candles: h1.candles, m5Candles: m5, m1Candles: m1,
     settings: { rangesFixedStartActive: true, rangesFixedStartTime: h1.cutoff }, sessionConfigs: config.sessions,
-    fromTime: at('09:25'), toTime: at('09:55') };
+    fromTime: at('09:25'), toTime: at('09:55'), tradingWindows:{weekday:[[0,1440]],saturday:[],sunday:[]} };
   const bounded = await scanTradeSetup2Window(input);
   const spy = vi.spyOn(queries, 'closesPastLevel').mockImplementation(linear);
   try { expect(await scanTradeSetup2Window(input)).toEqual(bounded); } finally { spy.mockRestore(); }

@@ -11,7 +11,7 @@ import { evaluateTradeSetupChecklist } from '../src/tradeSetupChecklist.js';
 const at = clock => Date.parse(`2026-09-09T${clock}:00+02:00`) / 1000;
 const input = { instrument: 'GBPUSD', h1Candles: h1.candles, m5Candles: m5, m1Candles: m1,
   settings: { rangesFixedStartActive: true, rangesFixedStartTime: h1.cutoff }, sessionConfigs: config.sessions,
-  fromTime: at('09:25'), toTime: at('09:55') };
+  fromTime: at('09:25'), toTime: at('09:55'), tradingWindows:{weekday:[[0,1440]],saturday:[],sunday:[]} };
 
 describe('chronological Trade Setup 2.0 scan', () => {
   it('rejects the old DR114 short fixture under active bullish H1, independent of future candles', async () => {

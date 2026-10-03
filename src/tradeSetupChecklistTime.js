@@ -3,6 +3,29 @@ import { sessionOccurrences } from "./sessionOccurrences.js";
 import { supportsNewsInstrument } from "./newsEventRules.js";
 import { evaluateChecklistNews } from './tradeSetupChecklistNews.js';
 
+function berlinWallTime(evaluatedAt) {
+  return Date.parse(`${formatDatedTime(evaluatedAt).replace(' ', 'T')}:00Z`) / 1000;
+}
+
+export function validTradingWindows(windows) {
+  return ['weekday', 'saturday', 'sunday'].every(group => Array.isArray(windows?.[group])
+    && windows[group].every(validWindow));
+}
+
+export function evaluateTradingHours({ evaluatedAt, instrument, tradingWindows }) {
+  if (!Number.isFinite(evaluatedAt) || Math.abs(evaluatedAt) > 8.64e12 || !supportsNewsInstrument(instrument))
+    return { status: 'unknown', details: ['Bewertungszeitpunkt oder Instrument fehlt oder ist nicht unterstützt.'] };
+  const localDate = new Date(berlinWallTime(evaluatedAt) * 1000);
+  const minute = localDate.getUTCHours() * 60 + localDate.getUTCMinutes();
+  const weekday = localDate.getUTCDay();
+  const windows = tradingWindows?.[weekday === 0 ? 'sunday' : weekday === 6 ? 'saturday' : 'weekday'];
+  if (!Array.isArray(windows) || windows.some(pair => !validWindow(pair)))
+    return { status: 'unknown', details: ['Handelszeiten fehlen oder sind ungültig.'] };
+  return windows.some(([from, to]) => minute >= from && minute < to)
+    ? { status: 'passed', details: [] }
+    : { status: 'blocked', details: [`${formatDatedTime(evaluatedAt).slice(11)} — außerhalb der Handelszeiten (${instrument}, Europe/Berlin).`] };
+}
+
 /**
  * Reiner F-Prüfkern. evaluatedAt und news[].eventTime sind Unix-Sekunden.
  * sessions: Frontend-Form {instrument,label,fromMinutes,toMinutes,days,danger}.
@@ -23,20 +46,11 @@ export function evaluateChecklistTime({ evaluatedAt, instrument, sessions, tradi
   const clock = datedTime.slice(11);
   // Auf der lokalen Kalenderachse wiederverwenden: reale Sekunden seit Mitternacht verschieben
   // Sessiongrenzen am DST-Wechseltag. News-Abstände bleiben dagegen auf der echten Zeitachse.
-  const wallTime = Date.parse(`${datedTime.replace(" ", "T")}:00Z`) / 1000;
-  const localDate = new Date(wallTime * 1000);
-  const minute = localDate.getUTCHours() * 60 + localDate.getUTCMinutes();
-  const weekday = localDate.getUTCDay();
-  const group = weekday === 0 ? "sunday" : weekday === 6 ? "saturday" : "weekday";
-  const windows = tradingWindows?.[group];
-  if (!Array.isArray(windows) || windows.some(pair => !validWindow(pair))) {
-    unknown = true;
-    details.push("Handelszeiten fehlen oder sind ungültig.");
-  } else if (!windows.some(([from, to]) => minute >= from && minute < to)) {
-    blocked = true;
-    outsideTradingHours = true;
-    details.push(`${clock} — außerhalb der Handelszeiten (${instrument}, Europe/Berlin).`);
-  }
+  const wallTime = berlinWallTime(evaluatedAt);
+  const hours = evaluateTradingHours({ evaluatedAt, instrument, tradingWindows });
+  unknown = hours.status === 'unknown';
+  blocked = outsideTradingHours = hours.status === 'blocked';
+  details.push(...hours.details);
 
   if (!Array.isArray(sessions)) {
     unknown = true;

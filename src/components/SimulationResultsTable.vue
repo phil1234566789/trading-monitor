@@ -39,7 +39,7 @@ const lots = value => value == null ? '–' : value.toLocaleString('de-DE', { ma
           <td class="number" :class="{ positive: row.netPnlUsd > 0, negative: row.netPnlUsd < 0 }">{{ fmtMoney(row.netPnlUsd) }}</td>
           <td class="number">{{ fmtMoney(row.realizedPnlUsd) }}</td>
           <td class="number">{{ fmtMoney(row.realizedNetPnlUsd) }}</td>
-          <td><RouterLink :to="simulationChartLink(row, runId)" :aria-label="`Setup ${row.instrument} ${formatDatedTime(row.entryTime)} im Chart öffnen`">Im Chart</RouterLink></td>
+          <td><RouterLink :to="simulationChartLink(row, runId)" target="_blank" rel="noopener noreferrer" :aria-label="`Setup ${row.instrument} ${formatDatedTime(row.entryTime)} im Chart öffnen`">Im Chart</RouterLink></td>
         </tr></tbody>
       </table>
     </div>

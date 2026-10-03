@@ -14,6 +14,24 @@ const first = () => snapshot(600,{state:'active'});
 const group = (main, at=1800) => groupSetupSnapshots([snapshot(at,main),first()])[0];
 
 describe('saved DR course after first causal validation', () => {
+  it('tracks overnight T1 and invalidation separately from the last permitted review stand', () => {
+    const startAt=Date.parse('2026-09-09T23:55:00+02:00')/1000;
+    for(const [high,low,reason] of [[1.32,1.305,'target1'],[1.315,1.30,'invalidation']]) {
+      const start=snapshot(startAt,{state:'active'});
+      start.checklist.setup.primary.targetSelection.selectedAt=startAt;
+      start.checklist.setup.primary.targetSelection.target1.knownAt=startAt;
+      const before=JSON.stringify(start);
+      const completed=completeSavedRangeCourses([start],[{time:startAt,high:1.315,low:1.305},
+        {time:startAt+300,high,low}],startAt+600);
+      expect(completed).toHaveLength(1);
+      expect(completed[0].knownAt).toBe(startAt);
+      expect(completed[0].checklist).toEqual(start.checklist);
+      expect(completed[0].rangeCourse.lifecycle.main).toMatchObject({state:'ended',reason,
+        endedAt:startAt+300,recognizedAt:startAt+600});
+      expect(groupSetupSnapshots(completed)[0].snapshot.knownAt).toBe(startAt);
+      expect(JSON.stringify(start)).toBe(before);
+    }
+  });
   it('evaluates the whole saved window from first validation without rewriting the checklist or using future bars', () => {
     const start = first();
     const before = JSON.stringify(start);

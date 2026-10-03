@@ -4,7 +4,7 @@
       <p class="eyebrow">Milky Way · Regelprüfung</p>
       <h1>Trade Setup 2.0</h1>
       <p class="lead">Von der bestätigten Dealing Range zur Entry-Freigabe.</p>
-      <p class="review-state"><strong>Entwurf · gemeinsame Absegnung offen</strong><br />Diskussionsstand vom <time datetime="2026-10-02">02.10.2026</time>. Von Philip festgelegt, zur gemeinsamen Prüfung mit seinem Trading-Partner.</p>
+      <p class="review-state"><strong>Entwurf · gemeinsame Absegnung offen</strong><br />Diskussionsstand vom <time datetime="2026-10-03">03.10.2026</time>. Von Philip festgelegt, zur gemeinsamen Prüfung mit seinem Trading-Partner.</p>
       <p>Die <strong>Fachregeln</strong> beschreiben die Festlegungen. Der <strong>Implementierungsstand</strong> zeigt den technischen Stand laut Regelentwurf. <strong>Offene Entscheidungen</strong> sind noch gemeinsam festzulegen.</p>
       <p><RouterLink to="/setup-regeln">Direktlink zu dieser Regelübersicht</RouterLink> · Diesen Seitenlink könnt ihr für eure gemeinsame Prüfung teilen.</p>
     </header>
@@ -77,8 +77,11 @@
 
     <section id="entry" aria-labelledby="entry-title">
       <h2 id="entry-title">Entry für DR gegen M5 Trend</h2>
-      <p class="section-note">Fachregel · zwei Größenvarianten für dieses Modell</p>
-      <p>Philip ordnet das vorhandene Entry-Pattern anhand der Checklist-Ansicht dem Modell <strong>DR gegen M5 Trend</strong> zu. Der bestätigte M5-CHoCH in Traderichtung bestimmt die Entry-Größe:</p>
+      <p class="section-note">Implementierter Iststand · Entry 1</p>
+      <p>Entry 1 benötigt eine validierte, noch aktive DR, keine bekannte F-Sperre, einen eindeutigen M5-Anker und eine bestimmbare M1-P5-Struktur mit geschlossenen Kerzen.</p>
+      <p>Danach gilt: <strong>Retest desselben C-M5-Orderblocks → erste bestätigte gleichgerichtete M1-FVG nach der Retestkerze → Entry am Schluss der FVG-Bestätigungskerze.</strong> Setupidentität, Richtung, DR-Validierung und F werden am Entry-Zeitpunkt erneut geprüft.</p>
+      <p><strong>M1-Richtung, M1-CHoCH und M1-BOS sind aktuell keine Pflichtgates.</strong> Ihre Checklist-Haken zeigen Merkmale. Eine bestimmbare M1-Struktur ist erforderlich, ihre Richtung muss nicht gleichgerichtet sein. M5-BOS ist ebenfalls kein Pflichtgate.</p>
+      <p>Der bestätigte M5-CHoCH in Traderichtung bestimmt im aktuellen Code nur die Größe:</p>
       <dl class="criteria">
         <div><dt>Halbe Entry-Größe</dt><dd>Noch kein bestätigter M5-CHoCH in Traderichtung. Diese Variante gilt als riskanter.</dd></div>
         <div><dt>Volle Entry-Größe</dt><dd>Ein bestätigter M5-CHoCH in Traderichtung ist vorhanden.</dd></div>
@@ -87,6 +90,8 @@
       <p><strong>M1 zeigt die aktuell aktive bestätigte Strukturrichtung.</strong> Ein aktiver Nested-Trend ersetzt die äußere Richtung. Bei der Übernahme zum Outer-Trend bleibt die Richtung konsistent. Äußere Ebenen werden als neutraler Kontext angezeigt. Die M1-Richtung ist kein zusätzliches Entry-Gate.</p>
       <details><summary>Einordnung des besprochenen Short-Beispiels</summary><p>Der Screenshot zeigt einen bullischen M5-Trend und unbestätigten M5-CHoCH/BOS. Diese Variante erhält halbe Größe. Sichtbar sind außerdem ein M1 Nested Downtrend, bärischer M1-CHoCH/BOS, ein M5-OB-Retest und eine nachfolgende bärische FVG.</p><p>Aus diesen sichtbaren M1-Merkmalen werden ohne weitere Festlegung keine zusätzlichen Pflichtbedingungen abgeleitet.</p></details>
       <aside class="implementation"><h3>Implementierungsstand</h3><p>Für neue gespeicherte Entries wird der M5-CHoCH am Entry-Zeitpunkt geprüft und die Größe eingefroren. Halbe Größe bedeutet 250 USD, volle Größe 500 USD Preisrisikobudget vor Lot-Abrundung. Kommission und Ergebnisse folgen dem tatsächlichen Volumen. Bestehende Ergebnisläufe bleiben unverändert.</p></aside>
+      <aside class="open-decision"><h3>Beschlossen · noch nicht implementiert</h3><p><strong>Bei einem Entry gegen den M5-Trend muss ein bestätigter M5-CHoCH in Traderichtung vorhanden sein. Fehlt er, gibt es keinen Entry.</strong> Long und Short werden spiegelbildlich behandelt. Für diesen Fall ersetzt die neue Pflicht die bisherige halbe Größe ohne CHoCH. Der bereits gleichgerichtete M5-Fall erhält dadurch keine neue Regel.</p></aside>
+      <aside class="open-decision"><h3>Offene C-Bugfixes</h3><p>OB-eigene erstmalige Erkennungszeit und spätere Sweep-Zuordnung müssen getrennt werden. C soll nur einen OB mit einer nach dem konkreten B-Sweep entstandenen FVG als kausale Reaktion akzeptieren. Diese Korrekturen stehen noch aus.</p></aside>
     </section>
 
     <section id="zeit" aria-labelledby="zeit-title">
@@ -95,6 +100,7 @@
       <p><strong>Ist die Uhrzeit nach den bestehenden F-Checklistregeln nicht erlaubt, gibt es keinen Entry.</strong></p>
       <p>Das ist eine Entry-Sperre. Sie ist kein zusätzliches Gate der DR-Validierung und keine dauerhafte Invalidierung der Marktidee.</p>
       <aside class="implementation"><h3>Implementierungsstand</h3><p>Die Uhrzeitregeln unter F sind bereits implementiert. Bekannte Zeit-/News-Sperren blockieren im aktuellen Code. Unbekannte News-Abdeckung wird aktuell nicht automatisch gesperrt.</p></aside>
+      <aside class="implementation"><h3>Handelszeiten vor der Scannerbewertung</h3><p>Neue Scannerläufe prüfen die gespeicherten Handelsfenster des Instruments in Europe/Berlin vor der H1-/M5-/M1-Setup-Suche. Außerhalb entstehen keine neuen Bewertungsstände. Die vollständige Kerzenhistorie bleibt für die nächste erlaubte Bewertung erhalten. Fehlende oder ungültige historische Handelsfenster führen zu einer Konfigurationsdiagnose.</p><p>Verläufe bereits gespeicherter DRs und Entries werden weiterhin über das gesamte Auswertungsfenster verfolgt. Ein Target-, Invalidierungs- oder Exit-Ereignis außerhalb der Handelszeiten erhält seinen echten Ereigniszeitpunkt und ersetzt keinen erlaubten Checklist-Bewertungsstand.</p></aside>
       <aside class="open-decision"><h3>Offene Entscheidung · unbekannte F-Ergebnisse</h3><p>Wie unbekannte F-Ergebnisse künftig behandelt werden, ist noch ausdrücklich zu klären.</p></aside>
     </section>
 
@@ -109,7 +115,7 @@
       <ol><li>Nach Auswertung der Gesamtstatistik: mögliche künftige Showstopper unter E.</li><li>Weitere Entry-Modelle und ihre Bedingungen.</li><li>Umgang mit unbekannten F-Ergebnissen, insbesondere unbekannter News-Abdeckung.</li><li>Eigene Regeln für kleinere LS.</li></ol>
       <p>Die gemeinsame Prüfung und Absegnung dieses Entwurfs steht aus.</p>
     </section>
-    <footer>Bestehende Jahresläufe werden durch diese Diskussion nicht verändert. Diese Seite dokumentiert den Regelstand; sie ändert keine Scannerregeln und startet keinen neuen Scan.</footer>
+    <footer>Bestehende Läufe bleiben historische Ergebnisse ihrer jeweiligen Regeln. Kein neuer Statistiklauf bis zum ausdrücklich beauftragten gemeinsamen Lauf nach Abschluss der Bug-Sammlung. Diese Seite startet keinen Scan.</footer>
   </main>
 </template>
 

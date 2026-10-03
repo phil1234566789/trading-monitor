@@ -86,12 +86,12 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
                   <template v-if="origin(row.snapshot)?.from != null">Zeitraum: {{ formatDatedTime(origin(row.snapshot).from) }} – {{ formatDatedTime(origin(row.snapshot).to) }}</template>
                 </p>
                 <SetupEntryConditions v-for="snapshot in row.entries.length ? row.entries : [row.snapshot]" :key="snapshot.id" :snapshot="snapshot" />
-                <p v-if="row.entries.length && row.candidate">Erster Kandidatenstand: {{ formatDatedTime(row.candidate.knownAt) }} Uhr · <RouterLink :to="chartLink(row.candidate)">Kandidatenstand im Chart</RouterLink></p>
+                <p v-if="row.entries.length && row.candidate">Erster Kandidatenstand: {{ formatDatedTime(row.candidate.knownAt) }} Uhr · <RouterLink :to="chartLink(row.candidate)" target="_blank" rel="noopener noreferrer">Kandidatenstand im Chart</RouterLink></p>
               </template>
             </details>
               <small v-if="!row.entries.length">Gespeicherter DR-Stand; keine vollständige spätere Entry-Prüfung.</small>
             </td>
-            <td><RouterLink :to="chartLink(row.snapshot)" :aria-label="`Setup-Stand ${row.instrument} ${formatDatedTime(row.knownAt)} im Chart öffnen`">Im Chart</RouterLink></td>
+            <td><RouterLink :to="chartLink(row.snapshot)" target="_blank" rel="noopener noreferrer" :aria-label="`Setup-Stand ${row.instrument} ${formatDatedTime(row.knownAt)} im Chart öffnen`">Im Chart</RouterLink></td>
           </tr></tbody>
         </table>
       </div>
