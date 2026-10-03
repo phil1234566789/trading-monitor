@@ -1,11 +1,37 @@
 import { expect, it, vi } from 'vitest';
 import { effectScope, reactive, shallowRef, nextTick } from 'vue';
 vi.mock('../src/supabaseClient.js', () => ({ supabase: {} }));
+vi.mock('../src/snapshotIndicatorBrowser.js', async () => {
+  const { calculateSnapshotIndicators } = await import('../src/snapshotIndicatorCalculation.js');
+  return { calculateSnapshotIndicatorsInWorker: vi.fn(async input => calculateSnapshotIndicators(input)) };
+});
 import { useSnapshotIndicators } from '../src/composables/useSnapshotIndicators.js';
 import { SETUP2_VERSION } from '../src/tradeSetup2Configuration.js';
 import { snapshotChartCandleCount, snapshotStructureLevels } from '../src/tradeSetup2SnapshotIndicators.js';
 import { buildSnapshotM5 } from '../src/tradeSetup2SnapshotIndicators.js';
+import { calculateSnapshotIndicatorsInWorker } from '../src/snapshotIndicatorBrowser.js';
 const flush = async () => { for (let i = 0; i < 12; i++) await nextTick(); };
+
+it('cancels the pending overlay on deselection and discards its late answer', async () => {
+  let resolve;
+  calculateSnapshotIndicatorsInWorker.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+  const source = shallowRef({ instrument: 'GBPUSD', knownAt: 1200 });
+  const props = reactive({ tradeSetup2RunId: 'r', currentBar: '5m', showObsM5: true });
+  const scope = effectScope();
+  const state = scope.run(() => useSnapshotIndicators(props, source, { getRun: async () => ({ configuration: {
+    instrument: 'GBPUSD', setupVersion: SETUP2_VERSION, sessions: [] } }) },
+  async () => [{ time: 900, high: 1, low: 1, open: 1, close: 1 }]));
+  try {
+    await flush();
+    const { signal } = calculateSnapshotIndicatorsInWorker.mock.calls.at(-1)[1];
+    expect(signal.aborted).toBe(false);
+    source.value = null;
+    expect(signal.aborted).toBe(true);
+    resolve({ zones: ['stale'], pivots: {}, m5: null });
+    await flush();
+    expect(state.value).toEqual({ zones: [], pivots: {}, message: '' });
+  } finally { scope.stop(); }
+});
 
 it('advances M5 structure and confirmed debug pivots through closed replay prefixes, then rewinds',async()=>{
   const candles=Array.from({length:60},(_,i)=>({time:i*300,open:10,close:10+Math.sin(i/2),high:11+Math.sin(i/2),low:9+Math.sin(i/2)}));
