@@ -117,6 +117,6 @@ export function createSnapshotM1Reader(repository, fetchCandles) {
     if (result.status !== 'ready' || rows.at(-1)?.time + 60 !== at) {
       return unavailable('M1-Ergänzung nicht verfügbar: Archiv oder Fraktalvorlauf unvollständig.');
     }
-    return { result, message: `M1-Struktur · P5 · ${result.pivotsOuter.length} Pivots · Replay ${formatDatedTime(at)} · Checklist ${formatDatedTime(snapshot.knownAt)}` };
+    return { result, message: `M1-Struktur und Debug-Pivots aus historischen Kerzen berechnet · P5 · ${result.pivotsOuter.length} Pivots · bis zum Replay-Stand ${formatDatedTime(at)} · Checklist ${formatDatedTime(snapshot.knownAt)}` };
   }
 }

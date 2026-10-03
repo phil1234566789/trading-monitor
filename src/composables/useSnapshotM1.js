@@ -12,7 +12,7 @@ export function useSnapshotM1(props, snapshot, repository, fetchCandles = (symbo
     const ticket = ++revision, source = snapshot.value;
     state.value = { result: null, message: '' };
     if (!source || !props.showM1Structure || !props.tradeSetup2RunId || !['1m', '5m'].includes(props.currentBar)) return;
-    state.value = { result: null, message: 'M1-Ergänzung aus Archiv laden…' };
+    state.value = { result: null, message: 'Historische M1-Kerzen laden und Struktur sowie Debug-Pivots berechnen …' };
     try {
       const loaded = await read(props.tradeSetup2RunId, source, snapshotOverlayTime(source, evaluationTime()));
       if (ticket === revision) state.value = loaded;

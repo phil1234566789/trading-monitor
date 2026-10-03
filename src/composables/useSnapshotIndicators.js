@@ -27,7 +27,7 @@ export function useSnapshotIndicators(props, snapshot, repository, fetchCandles 
     const bars = ['5m', '1h', '4h'].filter(bar => ({ '5m': props.showObsM5 || props.showM5Structure,
       '1h': props.showObs1h || props.showRanges && props.showLiquidityDebug, '4h': props.showObs4h })[bar]);
     if (!bars.length) return;
-    state.value = { zones: [], pivots: {}, message: 'OBs und Debug-Pivots aus Archiv laden…' };
+    state.value = { zones: [], pivots: {}, message: 'Historische Kerzen laden und OBs sowie Debug-Pivots berechnen …' };
     const cached = (key, load) => {
       if (!requests.has(key)) {
         requests.set(key, load().catch(error => { requests.delete(key); throw error; }));
@@ -68,7 +68,7 @@ export function useSnapshotIndicators(props, snapshot, repository, fetchCandles 
           pivotsInner: computeRangesPivots(candles, inner ?? 2, -Infinity) };
       }
       const m5 = frames['5m'] ? buildSnapshotM5(frames['5m'], source, config, at) : null;
-      state.value = { zones, pivots, m5, message: `Archiv-Indikatoren · Replay ${formatDatedTime(at)} · Checklist ${formatDatedTime(source.knownAt)}${props.showM5Structure && !m5 ? ' · M5-Anker/Vorlauf fehlen' : ''}` };
+      state.value = { zones, pivots, m5, message: `OBs und Debug-Pivots aus historischen Kerzen berechnet · bis zum Replay-Stand ${formatDatedTime(at)} · Checklist ${formatDatedTime(source.knownAt)}${props.showM5Structure && !m5 ? ' · M5-Anker/Vorlauf fehlen' : ''}` };
     } catch (error) {
       if (ticket === revision) state.value = { zones: [], pivots: {}, message: `Indikator-Ergänzung nicht verfügbar: ${error.message}` };
     }
