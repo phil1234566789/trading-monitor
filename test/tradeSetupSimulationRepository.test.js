@@ -120,4 +120,12 @@ describe('simulation history repository', () => {
     expect(rpc.mock.calls[0][1].records[0]).toBe(source);
     expect(rpc.mock.calls[1][1].records[0].snapshot).toBe(source);
   });
+  it('loads all historical review evidence when large JSON pages exceed the server time budget',async()=>{
+    const data=Array.from({length:13},(_,id)=>({id:`setup:${id}`,knownAt:id}));
+    const db={from:()=>{const query={select:()=>query,eq:()=>query,order:()=>query,range:async(from,to)=>
+      to-from+1>10?{error:new Error('canceling statement due to statement timeout')}:{data:data.slice(from,Math.min(to+1,from+3))}};return query;}};
+    const rows=await createSimulationRepository(db).listReviewSnapshots('historical');
+    expect(rows).toHaveLength(26);
+    expect(rows.slice(0,13).map(row=>row.id)).toEqual(data.map(row=>row.id));
+  });
 });

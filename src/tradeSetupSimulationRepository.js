@@ -4,10 +4,10 @@ import { encodeSnapshotStructures,decodeSnapshotStructures } from './tradeSetupS
 
 const PAGE_SIZE = 500;
 
-async function pages(query) {
+async function pages(query,pageSize=PAGE_SIZE) {
   const rows = [];
   for (;;) {
-    const { data, error } = await query(rows.length, rows.length + PAGE_SIZE - 1);
+    const { data, error } = await query(rows.length, rows.length + pageSize - 1);
     if (error) throw error;
     if (!data?.length) return rows;
     rows.push(...data);
@@ -60,7 +60,8 @@ export function createSimulationRepository(db,{compactStructures=false}={}) {
           let query = db.from(table).select(fields.join(',')).order('run_id').order('id');
           if (runId) query = query.eq('run_id', runId);
           return query.range(from, to);
-        })));
+        // Historische JSON-Belege erreichen das SQL-Zeitlimit vor dem Zeilenlimit.
+        },10)));
       return groups.flat().map(row => decodeSnapshotStructures({ id: row.id, runId: row.run_id, instrument: row.instrument, direction: row.direction,
         ...(row.structureStorage?{structureStorage:row.structureStorage}:{}),
         knownAt: row.knownAt, setupKey: row.setupKey, entry: row.entry, m1Check: row.m1Check, dealingRange: row.dealingRange, rangeCourse: row.rangeCourse,
