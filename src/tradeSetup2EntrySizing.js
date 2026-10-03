@@ -1,14 +1,19 @@
+import { ENTRY_MODEL_1_VERSION, entryModel1ConditionsReady } from './entryModel1Conditions.js';
+
 export const ENTRY_SIZING_VERSION = 'dr-against-m5-trend-choch-v1';
 export const ENTRY_RISK_BUDGET = 500;
 
 export function entryAgainstM5Allowed(checklist, entry) {
+  if (entry.entryModel === ENTRY_MODEL_1_VERSION) return entry.conditions?.fvg?.recognizedAt === entry.recognizedAt
+    && entryModel1ConditionsReady(entry.conditions,entry.direction,entry.recognizedAt);
   const trend = checklist.checks?.m5Trend?.structureReaction?.trend;
   const opposite = entry.direction === 'long' ? 'downtrend' : 'uptrend';
   return trend !== opposite || entrySizingAt(checklist, entry).reason === 'm5ChochConfirmed';
 }
 
 export function entrySizingAt(checklist, entry) {
-  const reaction = checklist.checks?.m5Trend?.structureReaction;
+  const reaction = entry.entryModel === ENTRY_MODEL_1_VERSION
+    ? {direction:entry.direction,choch:entry.conditions?.m5Choch} : checklist.checks?.m5Trend?.structureReaction;
   const choch = reaction?.choch;
   const confirmed = checklist.evaluatedAt === entry.recognizedAt && reaction?.direction === entry.direction
     && choch?.direction === entry.direction && choch.type === 'CHoCH'

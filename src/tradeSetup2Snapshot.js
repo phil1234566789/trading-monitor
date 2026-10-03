@@ -69,10 +69,12 @@ export function buildTradeSetup2Snapshot(input) {
   const dealingRange = evaluateDealingRange(checklist);
   if (dealingRange.status !== 'validated') return null;
   if (!entryAgainstM5Allowed(checklist, entry)) return null;
-  const { instrument, evaluatedAt, status, checks, structure, tradeability, model, ruleVersion }=checklist;
+  const { instrument, evaluatedAt, status, checks, structure, tradeability, model, ruleVersion,entryModel }=checklist;
   const sizedEntry = { ...entry, sizing: entrySizingAt(checklist, entry) };
+  const entryChecks=entry.entryModel ? {...checks,entry:{status:'passed',entryModel:entry.entryModel,
+    entries:[sizedEntry],conditions:entry.conditions,evaluatedAt}} : checks;
   return restoreTradeSetup2Snapshot(JSON.parse(JSON.stringify({schemaVersion:3,id:entry.id,instrument,setupKey:entry.setupKey,
     direction:entry.direction,knownAt:entry.recognizedAt,entry:sizedEntry,
-    dealingRange,checklist:{instrument,evaluatedAt,status,checks,structure,tradeability,model,ruleVersion,dealingRange,setup:{primary:checklist.setup.primary}},
+    dealingRange,checklist:{instrument,evaluatedAt,status,checks:entryChecks,structure,tradeability,model,ruleVersion,entryModel,dealingRange,setup:{primary:checklist.setup.primary}},
     m1Check:{...m1Check,entry:sizedEntry},evidence:tradeSetup2Evidence(input)})));
 }

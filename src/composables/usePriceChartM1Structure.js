@@ -10,6 +10,8 @@ import { renderLowerStructure } from '../structureOverlay.js';
 import { closedReplayEvaluationTime, closedChecklistCandles } from '../tradeSetupChecklistTimeBasis.js';
 import { renderM1Entry } from '../m1EntryRendering.js';
 import { afterBrowserPaint } from '../afterBrowserPaint.js';
+import { createSetup2Entry } from '../tradeSetup2EntryGate.js';
+import { ENTRY_MODEL_1_VERSION } from '../entryModel1Conditions.js';
 
 export function usePriceChartM1Structure(props, checklistState, {
   fetchCached = fetchCandlesCached, now = () => Date.now(), prerequisitesAt = () => checklistState.value,
@@ -62,6 +64,12 @@ export function usePriceChartM1Structure(props, checklistState, {
     else if (['loading', 'error'].includes(status.value.state)) currentCheck = inactiveM1Checklist(status.value.state);
     else if (missingClose || !result) currentCheck = inactiveM1Checklist('missing');
     else currentCheck = evaluateM1Checklist({ context: knownContext, structure: result, candles: marked, evaluatedAt });
+    if (currentCheck.entry?.entryModel === ENTRY_MODEL_1_VERSION) {
+      const entry=currentCheck.entry;
+      currentCheck={...currentCheck,entry:createSetup2Entry({...prerequisites.context,
+        instrument:props.symbol,evaluatedAt:entry.recognizedAt},()=>entry)};
+      if (!currentCheck.entry) currentCheck.entryBlockedReason='Handelszeiten, Session oder News sperren diesen Entry.';
+    }
     check.value = { ...currentCheck, evaluatedAt, instrument: props.symbol,
       updating: !!checklistState.value?.updating || status.value.state === 'loading' };
     renderM1Entry(series, detailSelected() ? null : currentCheck.entry, entryPrimitives, displayCandles, props.currentBar);

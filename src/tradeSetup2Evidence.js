@@ -64,12 +64,17 @@ export function tradeSetup2Evidence({ checklist, m1Check, m1Structure, m1Candles
     }
   }
   const signals=[...(checklist.checks.m5Trend?.structureReaction?.levels ?? []).map(s=>({...s,timeframe:'5m',key:'m5Trend'})),
+    ...[m1Check.m5Choch].filter(Boolean).map(s=>({...s,timeframe:'5m',key:'entry'})),
     ...[m1Check.choch,m1Check.bos].filter(Boolean).map(s=>({...s,timeframe:'1m',key:'m1'}))];
   for (const s of signals) line(s.type,s.key,s.timeframe,s.recognizedAt,s.price,s.pivotTime,s.candleTime,
     s.type==='CHoCH'?'m5RangeChoch':'m5RangeBreakOfStructure',`${s.timeframe} ${s.type}`);
   for (const s of m1Check.internalSweeps ?? []) line('internalSweep','m1','1m',s.candleTime+60,s.price,
     s.pivotTime,s.candleTime,'m5RangeLqSweep','M1 LS');
   const retest=m1Check.retest, touch=m1Candles.find(c=>c.time===retest?.candleTime);
+  const retestedOB=retest?.orderBlock;
+  if (retestedOB) add('entryOrderBlock','entry','5m',retest.recognizedAt,{kind:'zone',fromTime:retestedOB.startTime,
+    toTime:retest.candleTime,top:retestedOB.top,bottom:retestedOB.bottom,
+    styleKey:retestedOB.dir===1?'obBull':'obBear',label:'H · geretesteter M5-OB'});
   if (touch) line('retest','m1','1m',retest.recognizedAt,primary.direction==='short'?touch.high:touch.low,
     touch.time,touch.time+60,'confirmation','Retest');
   const fvg=m1Check.fvg, confirmation=m1Candles.find(c=>c.time+60===fvg?.recognizedAt);

@@ -51,7 +51,7 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
 </script>
 <template>
   <section class="setup-review" aria-label="Gespeicherte Setups und Entry-Bedingungen" :aria-busy="loading">
-    <h2>Dealing Ranges prüfen · Entry 1</h2>
+    <h2>Dealing Ranges und Entries prüfen</h2>
     <p>Eine Zeile je Lauf und Setup. Kandidat und zugehöriger Entry werden innerhalb desselben Laufs zusammengeführt. Stände aus unterschiedlichen Läufen bleiben wegen möglicher anderer Regeln oder Startpunkte getrennt. Alle Zeiten: Europe/Berlin.</p>
     <p>Die neue Countertrend-Version zeigt alle DR-Stufen: A bis E bestätigt, F validiert oder invalidiert. Bei einem Entry zeigen die Bedingungen den Entry-Stand, sonst den zuletzt gespeicherten DR-Stand.</p>
     <p>Validierte DRs ohne Entry zeigen den gespeicherten Verlauf ab erster Validierung bis T1 oder Invalidierung. Das ist kein Trade-Ergebnis und zählt nicht zu PnL oder Winrate.</p>

@@ -8,6 +8,7 @@ import { formatRiskPips } from './entryRisk.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { savedDealingRangeStatus } from './tradeSetup2DealingRange.js';
 import { antiConfluenceStatus, checklistObservationRules, observationRuleDetails } from './checklistObservationRules.js';
+import { ENTRY_MODEL_1_VERSION } from './entryModel1Conditions.js';
 
 export const REVIEW_STATUS_LABELS = { passed: 'Erfüllt', unmet: 'Fehlt am gespeicherten Stand', unknown: 'Unbekannt / unbewertet' };
 export const REVIEW_STATUS_ICONS = { passed: '✓', unmet: '✕', unknown: '?' };
@@ -51,6 +52,7 @@ export function setupEntryConditions(snapshot) {
   const m1 = known(snapshot.m1Check?.evaluatedAt)
     ? normalizeM1ChecklistPresentation(snapshot.m1Check, snapshot.direction, at) : null;
   const entry = known(snapshot.entry?.recognizedAt) ? snapshot.entry : null;
+  const model1=(entry?.entryModel ?? m1?.entryModel ?? checklist?.entryModel)===ENTRY_MODEL_1_VERSION;
   const price = value => Number.isFinite(value) ? fmtPrice(value, pricePrecisionForInstrument(snapshot.instrument)) : 'unbekannt';
   const date = time => known(time) ? `${formatDatedTime(time)} Uhr` : 'nicht gespeichert';
   const normal = status => status === 'passed' ? 'passed' : ['unmet', 'pending', 'blocked'].includes(status) ? 'unmet' : 'unknown';
@@ -84,11 +86,13 @@ export function setupEntryConditions(snapshot) {
   add('time', 'Handelszeit / Session / News',
     timeCheck?.status === 'blocked' ? 'unmet' : timeCheck?.status === 'passed' ? 'passed' : 'unknown',
     [...timeCheck?.details ?? ['Zeitprüfung nicht gespeichert.'],
-      'Entry 1 wird nur durch eine bekannte Sperre blockiert. Unbekannte Angaben gelten nicht als bestätigte Freigabe.']);
+      model1 ? 'Das zentrale Entry-Gate prüft Handelszeiten, Sessions und News unmittelbar vor dem Entry.'
+        : 'Entry 1 wird nur durch eine bekannte Sperre blockiert. Unbekannte Angaben gelten nicht als bestätigte Freigabe.']);
   const validity = primary?.validity;
+  const searchEnded=primary?.lifecycle?.entrySearchAllowed===false;
   add('active', checklist?.model==='countertrend' ? 'DR aktiv / Entry-Suche vor T1' : 'Setup noch nicht durch T1 oder Invalidierung beendet',
-    validity?.state === 'active' ? 'passed' : validity?.state === 'ended' && known(validity.recognizedAt) ? 'unmet' : 'unknown',
-    [validity?.state === 'active' ? 'Am Bewertungsstand aktiv.' : validity?.state === 'ended' && known(validity.recognizedAt)
+    searchEnded ? 'unmet' : validity?.state === 'active' ? 'passed' : validity?.state === 'ended' && known(validity.recognizedAt) ? 'unmet' : 'unknown',
+    [searchEnded ? 'Entry-Suche nach T1 oder Lifecycle-Ende beendet.' : validity?.state === 'active' ? 'Am Bewertungsstand aktiv.' : validity?.state === 'ended' && known(validity.recognizedAt)
       ? `Beendet: ${ { target1: 'T1 erreicht', target2:'T2 erreicht', entriesClosed:'alle Entries geschlossen', invalidation: 'invalidiert', both: 'T1 und Invalidierung' }[validity.reason] ?? 'Grund unbekannt' }.`
       : 'Gültigkeit nicht abschließend gespeichert. Nur ein bestätigtes Ende sperrt die M1-Auswertung.']);
   const anchor = checks.m5Trend?.m1Anchor;
@@ -97,19 +101,25 @@ export function setupEntryConditions(snapshot) {
   add('structure', 'M1-P5-Struktur auswertbar', m1?.currentTrend ? 'passed' : 'unknown',
     m1?.currentTrend ? m1.details.slice(0, m1.trends.length)
       : Array.isArray(m1?.details) ? m1.details : ['Keine M1-Auswertung gespeichert.']);
-  for (const [key, label, offset] of [['retest', 'M5-OB-Retest nach bestätigter Reaktion', 2], ['fvg', 'Erste gleichgerichtete M1-FVG nach Retest', 3]]) {
+  if (model1) for (const [key,label] of [['m5Choch','M5-CHoCH in Setup-Richtung'],['m1Bos','M1-BOS in Setup-Richtung']]) {
+    const signal=entry?.conditions?.[key] ?? m1?.conditions?.[key];
+    add(key,label,known(signal?.recognizedAt) && signal.direction===snapshot.direction ? 'passed' : m1?.conditions || entry?.conditions ? 'unmet' : 'unknown',
+      known(signal?.recognizedAt) ? [`Erkannt ${date(signal.recognizedAt)}`] : ['Pflichtsignal fehlt.'],signal?.recognizedAt);
+  }
+  for (const [key, label, offset] of [['retest', model1 ? 'Retest eines passenden M5-OB' : 'M5-OB-Retest nach bestätigter Reaktion', 2], ['fvg', model1 ? 'Gleichgerichtete M1-FVG nach Retest' : 'Erste gleichgerichtete M1-FVG nach Retest', 3]]) {
     const signal = m1?.[key];
     // evaluateM1Checklist speichert nach den Trendzeilen CHoCH, BOS, Retest, FVG.
     const savedStatus = m1?.trends && m1.detailStatuses?.[m1.trends.length + offset];
     const status = known(signal?.recognizedAt) ? 'passed' : signal ? 'unknown' : normal(savedStatus);
     add(key, label, status, known(signal?.recognizedAt)
-      ? [`Kerze ${date(signal.candleTime)} · erkannt ${date(signal.recognizedAt)}${key === 'fvg' ? ` · FVG-Größe ${formatRiskPips(toPips(signal.gap, snapshot.instrument))} Pips` : ''}`]
+      ? [`Kerze ${date(signal.candleTime)} · erkannt ${date(signal.recognizedAt)}${key === 'fvg' ? ` · FVG-Größe ${formatRiskPips(toPips(signal.gap, snapshot.instrument))} Pips` : ''}`,
+        ...(signal.orderBlock ? [`M5-OB ${date(signal.orderBlock.startTime)} · erkannt ${date(signal.orderBlock.recognizedAt)} · ${price(signal.orderBlock.bottom)}–${price(signal.orderBlock.top)} · ${signal.orderBlock.inclusionRule==='setup1OrderBlockIncluded' ? 'Startregel: Setup-1.0-OB' : 'ab DR-Bestätigung entstanden'}`] : [])]
       : [status === 'unmet' ? 'In der gespeicherten M1-Prüfung noch nicht erfüllt.' : 'Kein kausaler M1-Beleg gespeichert.'], signal?.recognizedAt ?? at);
   }
-  add('entry', 'Schluss der FVG-Bestätigungskerze / Entry 1', entry ? 'passed' : 'unknown',
+  add('entry', `Schluss der FVG-Bestätigungskerze / ${model1 ? 'Entry Modell 1' : 'Entry 1'}`, entry ? 'passed' : 'unknown',
     entry ? [...entryChecklist({ entry }).details, `Entry-Preis ${price(entry.price)} · Kerze ${date(entry.candleTime)}`]
       : ['Kein Entry in diesem Snapshot. Daraus folgt keine vollständige spätere M1-Prüfung.'], entry?.recognizedAt ?? at);
-  const observations = ['choch', 'bos'].map(key => {
+  const observations = (model1 ? ['choch'] : ['choch', 'bos']).map(key => {
     const signal = m1?.[key];
     return { label: key === 'choch' ? 'M1 CHoCH' : 'M1 BOS', text: known(signal?.recognizedAt)
       ? `${date(signal.candleTime)} · erkannt ${date(signal.recognizedAt)} · ${price(signal.price)}`
@@ -120,5 +130,5 @@ export function setupEntryConditions(snapshot) {
   const counts = ['passed', 'unmet', 'unknown'].map(status => rows.filter(row => row.status === status).length);
   const assessment = missing.length ? { status: 'unmet', label: 'Nicht tradebar am Bewertungsstand' }
     : { status: 'unknown', label: entry ? 'Entry gespeichert · siehe Einzelbedingungen' : 'Handelbarkeit nicht vollständig belegt' };
-  return { rows, missing, counts, assessment, observations, prerequisiteNote: reason ? inactiveM1Checklist(reason).details[0] : null };
+  return { model1,rows, missing, counts, assessment, observations, prerequisiteNote: reason ? inactiveM1Checklist(reason).details[0] : null };
 }

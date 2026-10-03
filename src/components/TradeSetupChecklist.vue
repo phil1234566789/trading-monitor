@@ -37,7 +37,8 @@ const countertrendAbcdDefinitions = [
   { key: 'reaction', label: 'Reaktion' },
   { key: 'outerM5Trend', label: 'M5-Trend (äußerster)', fallback: 'unknown' },
   { key: 'm5Trend', label: 'M5-Trend (aktuell)', fallback: 'unknown' },
-  ...['targets', 'antiConfluences', 'confluences', 'entry'].map(key=>countertrendDefinitions.find(d=>d.key===key)),
+  ...['targets', 'antiConfluences', 'confluences'].map(key=>countertrendDefinitions.find(d=>d.key===key)),
+  {key:'entry',label:'Entry finden'},
 ];
 const statuses = {
   found: { label: "Gegenargument gefunden", symbol: "×" },
@@ -72,7 +73,10 @@ const definitions = computed(() => state.value?.model==='countertrend' && !state
   : state.value?.checks?.h1Trend ? countertrendDefinitions
   : [...countertrendAbcdDefinitions.slice(0,7),...['time','m1','entry'].map(key=>countertrendDefinitions.find(d=>d.key===key))]);
 const checks = computed(() => definitions.value.map((definition, index) => {
-  const result = definition.key === 'entry' ? {...entryChecklist(m1.value),...(state.value?.model==='countertrend' ? {details:m1.value.details,detailStatuses:m1.value.detailStatuses,evaluatedAt:m1.value.evaluatedAt} : {})} : definition.key === 'm1'
+  const entryDetails=entryChecklist(m1.value);
+  const result = definition.key === 'entry' ? {...entryDetails,...(state.value?.model==='countertrend' ? {
+    details:[...m1.value.details ?? [],...entryDetails.details],
+    detailStatuses:[...m1.value.detailStatuses ?? [],...entryDetails.detailStatuses],evaluatedAt:m1.value.evaluatedAt} : {})} : definition.key === 'm1'
     ? m1.value
     : state.value?.checks?.[definition.key] ?? (definition.key === 'm5Trend' ? unknownChecklistM5() : null);
   const status = result?.status in statuses ? result.status : definition.fallback ?? "unknown";

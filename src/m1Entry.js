@@ -2,6 +2,7 @@ import { barSecondsFor } from './timeframes.js';
 import { entryRiskScale, formatRiskPips } from './entryRisk.js';
 import { formatBerlinTime } from './berlinTime.js';
 import { entrySizingLabel } from './tradeSetup2EntrySizing.js';
+import { ENTRY_MODEL_1_VERSION } from './entryModel1Conditions.js';
 
 export function m1EntryFromFvg(context, fvg, candles, evaluatedAt, retest = null) {
   if (!fvg || !context?.setupKey || !Number.isFinite(evaluatedAt)
@@ -25,7 +26,9 @@ export function m1EntryFromFvg(context, fvg, candles, evaluatedAt, retest = null
     ? ['target1', 'target2'].flatMap((key, i) => selection[key] ? [{ label: `T${i + 1}`, price: selection[key].price }] : []) : [];
   const scales = Object.fromEntries(Object.entries(stops).map(([key, stop]) =>
     [key, entryRiskScale(candle.close, stop.price, targets, context.instrument, context.direction)]));
-  return { id: `${context.instrument}:${context.setupKey}:entry-1`, label: 'Entry 1',
+  const model1=context.entryModel === ENTRY_MODEL_1_VERSION;
+  return { id: model1 ? `${context.instrument}:${context.setupKey}:${ENTRY_MODEL_1_VERSION}:${fvg.recognizedAt}`
+      : `${context.instrument}:${context.setupKey}:entry-1`, label: model1 ? 'Entry Modell 1' : 'Entry 1',
     instrument: context.instrument, setupKey: context.setupKey, direction: context.direction,
     candleTime: candle.time, recognizedAt: fvg.recognizedAt, price: candle.close, stops, scales };
 }

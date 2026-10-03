@@ -9,6 +9,10 @@ import continuation105 from './fixtures/gbpusd-m5-105-lifecycle.json';
 import sessions from './fixtures/gbpusd-m5-dr114-session-targets.json';
 import { setup1RecognitionTime } from '../src/setup1RecognitionTime.js';
 import * as m1 from '../src/m1Checklist.js';
+import { ENTRY_MODEL_1_VERSION } from '../src/entryModel1Conditions.js';
+import * as gate from '../src/tradeSetup2EntryGate.js';
+import { groupSetupSnapshots } from '../src/tradeSetup2Review.js';
+import { evaluateSimulation } from '../src/tradeSetupSimulation.js';
 
 const windows={weekday:[],saturday:[],sunday:[]};
 const anchors=buildHistoricalDailyAnchors(fixture.dailyCandles,fixture.h1Candles);
@@ -16,6 +20,38 @@ const input=setup=>({instrument:'GBPUSD',tradeSetups:[setup],dailyAnchors:anchor
  m5Candles:fixture.m5Candles,h1Candles:fixture.h1Candles,m1Candles:[],sessionConfigs:sessions.sessions,
  fromTime:setup1RecognitionTime(setup)-300,toTime:setup1RecognitionTime(setup)+1800,tradingWindows:windows});
 describe('Countertrend-Scanner Start und Last',()=>{
+ it('speichert mehrere Entries getrennt über das zentrale Gate und beendet die Suche bei T1',async()=>{
+  const setup=fixture.setups[0],at=setup1RecognitionTime(setup),key=`GBPUSD:setup1:${setup.tradeSetupId}`;
+  const outer=vi.spyOn(m5,'evaluateChecklistOuterM5').mockReturnValue({state:{trend:'downtrend'}});
+  const current=vi.spyOn(m5,'evaluateChecklistM5').mockReturnValue({structureReaction:{trend:'uptrend'},
+   m1Anchor:{pivotTime:at-300,price:1.35,recognizedAt:at}});
+  const target=vi.spyOn(targets,'evaluateChecklistTargets').mockReturnValue({status:'passed',direction:'short',selectedAt:at,
+   target1:{price:1.2,knownAt:at},target2:{price:1.1,knownAt:at}});
+  const anti=vi.spyOn(confluences,'evaluateChecklistConfluences').mockReturnValue({antiConfluences:{status:'clear',rules:[]}});
+  const entryGate=vi.spyOn(gate,'createSetup2Entry');
+  const model=vi.spyOn(m1,'evaluateM1Checklist').mockImplementation(({evaluatedAt})=>{
+   const retest={candleTime:at,recognizedAt:at+60,orderBlock:{dir:-1,startTime:setup.obStartTime,top:1.31,bottom:1.305,recognizedAt:at}};
+   const conditions={m5Choch:{type:'CHoCH',direction:'short',recognizedAt:at},m1Bos:{type:'BOS',direction:'short',recognizedAt:at},
+    retest,fvg:{direction:'short',recognizedAt:evaluatedAt,candleTime:evaluatedAt-120}};
+   const entry=[at+120,at+180,at+300].includes(evaluatedAt)?{id:`entry:${evaluatedAt}`,entryModel:ENTRY_MODEL_1_VERSION,conditions,
+    instrument:'GBPUSD',setupKey:key,direction:'short',recognizedAt:evaluatedAt,candleTime:evaluatedAt-60,price:1.3,
+    stops:{wide:{price:1.31},narrow:{price:1.305}},scales:{wide:{targets:[{price:1.2},{price:1.1}]},narrow:{targets:[{price:1.2},{price:1.1}]}}}:null;
+   return {entry,evaluatedAt,entryModel:ENTRY_MODEL_1_VERSION,conditions,retest,fvg:conditions.fvg};
+  });
+  try {
+   const m1Candles=Array.from({length:42},(_,i)=>({time:at+(i-11)*60,open:1.3,high:1.301,low:i===14?1.19:1.299,close:1.3}));
+   const snapshots=await scanTradeSetup2Window({...input(setup),m1Candles,tradingWindows:{weekday:[[0,1440]],saturday:[],sunday:[]}});
+   const entries=snapshots.filter(s=>s.entry);
+   expect(entries.map(s=>s.entry.recognizedAt)).toEqual([at+120,at+180]);
+   expect(entryGate).toHaveBeenCalledTimes(2);
+   expect(entries.every(s=>s.entry.sizing.factor===1 && s.checklist.checks.entry.entries[0].id===s.entry.id)).toBe(true);
+   expect(groupSetupSnapshots(snapshots)[0].entries).toHaveLength(2);
+   expect(snapshots.at(-1).rangeCourse.lifecycle.entrySearchAllowed).toBe(false);
+   const outcomes=entries.map(s=>evaluateSimulation({entry:s.entry,variant:'wide',candles:m1Candles,evaluatedAt:at+600,target1:1.2,target2:1.1}));
+   expect(new Set(outcomes.map(o=>o.entryId)).size).toBe(2);
+   expect(outcomes.every(o=>o.riskBudget===500)).toBe(true);
+  }finally {outer.mockRestore();current.mockRestore();target.mockRestore();anti.mockRestore();model.mockRestore();entryGate.mockRestore();}
+ });
  it('105 ohne T2 beendet seine entrylose DR am realen T1',async()=>{
   const setup=fixture.setups[1];
   const rows=[...new Map([...fixture.m5Candles,...continuation105].map(c=>[c.time,c])).values()];

@@ -9,6 +9,7 @@ import { fixChecklistTargets } from './tradeSetupChecklistLifecycle.js';
 import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
 import { deriveSetupEntryInvalidation, sweepAgeSec } from './tradeSetup.js';
 import { divergenceObservationRule, H1_COUNTER_DIVERGENCE_RULE, OBSERVATION_RULE_VERSION } from './checklistObservationRules.js';
+import { ENTRY_MODEL_1_VERSION } from './entryModel1Conditions.js';
 
 export { COUNTERTREND_STAGE_VERSION } from './tradeSetup2DealingRange.js';
 export const SETUP_TYPE_LABELS = { trendContinuation: 'Trendfortführung', countertrend: 'Countertrend', unclear: 'Unklar' };
@@ -31,7 +32,7 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     outerM5Trend: { status: 'unknown', required: true, trend: 'unknown', details: ['Äußerster M5-Trend unbekannt.'] },
     targets: pending(), antiConfluences: {status:'unknown',details:['Wartet auf ein bekanntes Setup 1.0.'],
       ruleVersion:OBSERVATION_RULE_VERSION,rules:[divergenceObservationRule({...H1_COUNTER_DIVERGENCE_RULE,divergences:{status:'unknown'}})]}, confluences: pending() };
-  const result = { model: 'countertrend', ruleVersion: COUNTERTREND_STAGE_VERSION, instrument, evaluatedAt,
+  const result = { model: 'countertrend', entryModel:ENTRY_MODEL_1_VERSION,ruleVersion: COUNTERTREND_STAGE_VERSION, instrument, evaluatedAt,
     status: dataStatus, checks, direction: null, setupType: 'unclear', confirmed: false, abortReason: null,
     tradeability: 'unknown',
     setup: { candidates: [], primary: null, opposingCandidates: [], classifications: [] } };
@@ -40,7 +41,8 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
   const mark = (rows, bar, at) => markIgnoredCandles(closedChecklistCandles(rows, bar, at), configs,
     sec => berlinOffsetMinutes(sec * 1000));
   const m5 = mark(m5Candles, '5m', evaluatedAt);
-  result.context = { instrument, evaluatedAt, m5Candles: m5, h1Candles: mark(h1Candles, '1h', evaluatedAt), dailyAnchors };
+  result.context = { instrument, evaluatedAt, m5Candles: m5, h1Candles: mark(h1Candles, '1h', evaluatedAt), dailyAnchors,
+    settings,tradingWindows,news,newsLoadStatus,sessionConfigs };
   if (result.status === 'ready' && !m5.length) result.status = 'missing';
   if (result.status === 'ready' && m5.at(-1).time + 300 < Math.floor(evaluatedAt / 300) * 300) result.status = 'stale';
   if (result.status !== 'ready') { result.dealingRange = evaluateDealingRange(result); return result; }
@@ -128,6 +130,8 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     result.setup.primary = selected;
   }
   result.setup.candidates = accepted;
+  for (const candidate of accepted) if (evaluateDealingRange(result,candidate).status === 'validated')
+    candidate.validatedAt=Math.max(candidate.recognizedAt,candidate.targetSelection.selectedAt);
   result.dealingRange = evaluateDealingRange(result);
   result.confirmed = ['confirmed','validated','invalidated'].includes(result.dealingRange.status);
   return result;

@@ -2,6 +2,17 @@ import { expect, it } from 'vitest';
 import { setupEntryConditions, groupSetupSnapshots, filterDealingRanges } from '../src/tradeSetup2Review.js';
 import { DEALING_RANGE_VERSION } from '../src/tradeSetup2DealingRange.js';
 import { simulationChartLink } from '../src/tradeSetupSimulationStatistics.js';
+import { ENTRY_MODEL_1_VERSION } from '../src/entryModel1Conditions.js';
+
+it('reviews model 1 BOS and M5 CHoCH as required, preserving legacy observations',()=>{
+ const saved=snapshot();saved.entry.entryModel=ENTRY_MODEL_1_VERSION;
+ saved.entry.conditions={m5Choch:{direction:'short',recognizedAt:300},m1Bos:null};saved.direction='short';
+ const review=setupEntryConditions(saved);
+ expect(review.rows.find(row=>row.key==='m5Choch').status).toBe('passed');
+ expect(review.rows.find(row=>row.key==='m1Bos').status).toBe('unmet');
+ expect(review.observations.map(row=>row.label)).toEqual(['M1 CHoCH']);
+ expect(setupEntryConditions(snapshot()).observations.map(row=>row.label)).toEqual(['M1 CHoCH','M1 BOS']);
+});
 
 it('zeigt alle gespeicherten DR-Stufen und leeren Bestand ohne erfundene Entries',()=>{
  const snapshots=['unconfirmed','confirmed','validated','invalidated'].map((status,i)=>({

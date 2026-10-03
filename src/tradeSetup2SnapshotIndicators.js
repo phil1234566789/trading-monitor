@@ -65,7 +65,7 @@ export function snapshotStructureLevels(snapshot) {
 export function snapshotEvidenceVisible(e, props = {}) {
   if (props.dynamicStructure?.includes(e.timeframe) && ['structure','structureLevel','CHoCH','BOS','internalSweep'].includes(e.role)) return false;
   if (e.role === 'divergence') return props.showRsiDivergence !== false || props.showRsiDivergenceHistory === true;
-  if (e.role === 'reactionOB') return props.showObsM5 !== false;
+  if (['reactionOB','entryOrderBlock'].includes(e.role)) return props.showObsM5 !== false;
   if (['sweep', 'target1', 'target2'].includes(e.role)) return props.showLiquidity !== false;
   const key = { '1h': 'showRanges', '5m': 'showM5Structure', '1m': 'showM1Structure' }[e.timeframe];
   if (key && props[key] === false) return false;

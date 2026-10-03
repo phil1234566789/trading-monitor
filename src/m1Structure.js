@@ -2,6 +2,8 @@ import { collectNestedChain, computeRangesPivots } from './marketStructureAnalys
 import { buildStructureWithPhases } from './trendPhases.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { hasConfirmedChecklistAbc } from './tradeSetupChecklistGates.js';
+import { dealingRangeConfirmedAt } from './dealingRangeConfirmationTime.js';
+import { ENTRY_MODEL_1_VERSION } from './entryModel1Conditions.js';
 
 export const M1_STRUCTURE_PERIOD = 5;
 
@@ -36,6 +38,12 @@ export function activeM1Context(checklist) {
   if (m1PrerequisiteReason(checklist)) return null;
   const anchor = checklist.checks.m5Trend?.m1Anchor;
   return anchor ? { instrument: checklist.instrument, anchor, evaluatedAt: checklist.evaluatedAt,
+    ...(checklist.model === 'countertrend' && checklist.entryModel === ENTRY_MODEL_1_VERSION ? {
+      entryModel:ENTRY_MODEL_1_VERSION,confirmedAt:dealingRangeConfirmedAt(checklist),
+      validatedAt:checklist.setup.primary.validatedAt ?? checklist.dealingRange?.evaluatedAt,
+      m5Candles:checklist.context?.m5Candles ?? [],settings:checklist.context?.settings ?? {},
+      structureStart:checklist.checks.outerM5Trend?.structureStart ?? checklist.checks.m5Trend?.structureStart,
+    } : {}),
     m5Trend: checklist.checks.m5Trend,
     direction: checklist.setup.primary.direction ?? checklist.direction, primary: checklist.setup.primary,
     setupKey: checklist.setup.primary.id ?? checklist.setup.primary.key } : null;

@@ -25,7 +25,7 @@ export async function scanCountertrendWindow(input) {
     sec=>berlinOffsetMinutes(sec*1000));
   const m5=marked(input.m5Candles),h1=ordered(input.h1Candles);
   let m1=marked(input.m1Candles),loadedFrom=Infinity;
-  const snapshots=[],entries=[...(input.existingEntries ?? [])],saved=new Map(),seen=new Set(entries.map(s=>s.setupKey));
+  const snapshots=[],entries=[...(input.existingEntries ?? [])],saved=new Map(),seen=new Set(entries.map(s=>s.entry.id));
   const classificationCache=new Map(),closeReactionCache=createCloseReactionCache(),m1Cache=createCloseReactionCache();
   const recognized=new Map();
   let evaluations=0;
@@ -57,7 +57,7 @@ export async function scanCountertrendWindow(input) {
     });
     const primary=candidates[0] ?? base.setup.primary;
     const result={...base,evaluatedAt:at,checks:primary?.checks ?? base.checks,
-      setup:{...base.setup,primary,candidates},context:{...base.context,evaluatedAt:at}};
+      setup:{...base.setup,primary,candidates},context:{...base.context,evaluatedAt:at,m5Candles:m5.filter(c=>c.time+300<=at)}};
     result.dealingRange=evaluateDealingRange(result);
     return result;
   };
@@ -83,7 +83,7 @@ export async function scanCountertrendWindow(input) {
       const single={...checklist,checks:{...checklist.checks,...candidate.checks},direction:candidate.direction,
         setup:{...checklist.setup,primary:candidate},dealingRange:evaluateDealingRange(checklist,candidate)};
       const context=activeM1Context(single);
-      if (!context || seen.has(candidate.id)) continue;
+      if (!context) continue;
       if (loadM1Candles && candidate.recognizedAt<loadedFrom) {
         const rows=await loadM1Candles({fromTime:candidate.recognizedAt,
           structureFromTime:Math.min(context.anchor.pivotTime,candidate.recognizedAt),toTime,instrument});
@@ -100,11 +100,11 @@ export async function scanCountertrendWindow(input) {
         const rows=m1ScanPrefix(m1,Math.min(active.anchor.pivotTime,candidate.recognizedAt),m1.findIndex(c=>c.time===candle.time)+1);
         const structure=buildM1Structure(rows,active.anchor,knownAt);
         const check=evaluateM1Checklist({context:active,structure,candles:rows,evaluatedAt:knownAt,closeReactionCache:m1Cache});
-        if (check.entry?.recognizedAt!==knownAt) continue;
+        if (check.entry?.recognizedAt!==knownAt || seen.has(check.entry.id) || knownAt<fromTime) continue;
         const snapshot=createSetup2Entry({instrument,evaluatedAt:knownAt,tradingWindows:input.tradingWindows,sessionConfigs:input.sessionConfigs,news:input.news,newsLoadStatus:input.newsLoadStatus},
           ()=>buildTradeSetup2Snapshot({checklist:current,m1Check:check,m1Structure:structure,m1Candles:rows}));
         if (!snapshot) continue;
-        seen.add(candidate.id);entries.push(snapshot);snapshots.push(snapshot);await onSnapshot?.(snapshot);break;
+        seen.add(snapshot.entry.id);entries.push(snapshot);snapshots.push(snapshot);await onSnapshot?.(snapshot);
       }
     }
     await onProgress?.({phase:'scan',completed:index+1,total:steps.length,evaluatedAt:at,
