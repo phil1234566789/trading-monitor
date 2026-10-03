@@ -2,8 +2,31 @@ import {expect,it,vi} from 'vitest';
 vi.mock('../src/supabaseClient.js',()=>({supabase:{from:()=>({select:async()=>({data:[]})})}}));
 import {renderSetup2Detail,renderSetup2Positions} from '../src/tradeSetup2Rendering.js';
 import {restoreTradeSetup2Snapshot} from '../src/tradeSetup2Snapshot.js';
-import {chartColors} from '../src/chartColors.js';
-import {renderStructurePivots} from '../src/structureOverlay.js';
+import {chartColors,cssColor} from '../src/chartColors.js';
+import {renderStructurePivots,renderLowerStructure} from '../src/structureOverlay.js';
+
+it('uses independent M1 colors in live and legacy snapshot drawing without changing evidence',()=>{
+  const saved={...chartColors.m1RangeBreakOfStructure},marker={...chartColors.m1RangesMarker};
+  try {
+    chartColors.m1RangeBreakOfStructure={hex:'#123456',alpha:0.8};
+    chartColors.m1RangesMarker={hex:'#abcdef',alpha:0.7};
+    const series={attachPrimitive:vi.fn(),detachPrimitive:vi.fn()},candles=[{time:2700},{time:3000}];
+    const result={state:{trend:'uptrend',currRange:{high:{pivotTime:2700,price:3,type:'high'},low:{pivotTime:2700,price:1,type:'low'}},structurePivots:[],closedRanges:[]},pivotsOuter:[{pivotTime:2700,price:2,type:'high'}],
+      closeReaction:{levels:[{type:'BOS',direction:'long',price:2,pivotTime:2700,candleTime:3000}]}};
+    const live=[],markers=[];
+    renderLowerStructure(series,result,live,markers,candles,{symbol:'GBPUSD',show:true,debug:true,barSeconds:60,timeframe:'1m'});
+    expect(live.at(-1)._options.color).toBe(cssColor('m1RangeBreakOfStructure'));
+    expect(markers[0]._groups[0].color).toBe(cssColor('m1RangesMarker'));
+    const evidence=['1m','5m'].map(timeframe=>({kind:'line',role:'BOS',timeframe,knownAt:3000,
+      price:2,fromTime:2700,toTime:3000,styleKey:'m5RangeBreakOfStructure'}));
+    const snapshot={instrument:'GBPUSD',knownAt:3000,evidence},before=JSON.stringify(snapshot),primitives=[];
+    renderSetup2Detail(series,snapshot,primitives,[],candles,'5m',3000);
+    expect(primitives.map(p=>p._options.color)).toEqual([cssColor('m1RangeBreakOfStructure'),cssColor('m5RangeBreakOfStructure')]);
+    expect(JSON.stringify(snapshot)).toBe(before);
+  } finally {
+    chartColors.m1RangeBreakOfStructure=saved;chartColors.m1RangesMarker=marker;
+  }
+});
 
 it('projects reconstructed pivots without deriving new levels from later chart candles',()=>{
   const pivot={pivotTime:2880,price:2,type:'high'},result={pivotsOuter:[pivot],events:[]};

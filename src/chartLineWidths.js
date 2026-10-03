@@ -84,6 +84,10 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   m5RangeFib: 1,
 };
 
+for (const key of Object.keys(DEFAULT_CHART_LINE_WIDTHS).filter(key => key.startsWith('m5Range'))) {
+  DEFAULT_CHART_LINE_WIDTHS[key.replace(/^m5/, 'm1')] = DEFAULT_CHART_LINE_WIDTHS[key];
+}
+
 function loadInitial() {
   let saved = {};
   try {

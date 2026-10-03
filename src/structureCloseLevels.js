@@ -8,11 +8,11 @@ export function coversCloseLevel(levels, type, pivot) {
 
 // Offene Level reichen bis zur letzten sichtbaren Kerze. Der bestätigte Bruch endet
 // an der M5-Signalkerze, unabhängig von Dochten oder dem gewählten Chart-Zeitrahmen.
-export function renderCloseLevels(series, levels, primitives, candles) {
+export function renderCloseLevels(series, levels, primitives, candles, styleKey = key => key) {
   if (!candles.length) return;
   for (const level of levels) {
     const confirmed = level.candleTime != null;
-    const key = level.type === 'CHoCH' ? 'm5RangeChoch' : 'm5RangeBreakOfStructure';
+    const key = styleKey(level.type === 'CHoCH' ? 'm5RangeChoch' : 'm5RangeBreakOfStructure');
     const above = (level.direction === 'short') === (level.type === 'BOS');
     const line = new LiquidityLinePrimitive({ price: level.price, pivotTime: level.pivotTime,
       endTime: level.candleTime ?? candles.at(-1).time }, {

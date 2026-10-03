@@ -207,6 +207,13 @@ export const DEFAULT_CHART_COLORS = {
   m5TrendPhaseDownPre: { hex: "#ef5350", alpha: 0.035 },
 };
 
+// Eigene Kopien verhindern, dass M1-Farben beim Anpassen M5 oder H1 mitändern.
+for (const key of Object.keys(DEFAULT_CHART_COLORS).filter(key => key.startsWith('m5Range'))) {
+  DEFAULT_CHART_COLORS[key.replace(/^m5/, 'm1')] = { ...DEFAULT_CHART_COLORS[key] };
+}
+DEFAULT_CHART_COLORS.m1RangesMarker = { ...DEFAULT_CHART_COLORS.rangesMarker };
+DEFAULT_CHART_COLORS.m1RangesMarker2 = { ...DEFAULT_CHART_COLORS.rangesMarker2 };
+
 function loadInitial() {
   let saved = {};
   try {

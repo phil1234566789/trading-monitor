@@ -12,6 +12,19 @@ const LOWER_STRUCTURE_STYLE_KEYS = {
   rangeClosed: 'm5RangeClosed', rangeClosedDowntrend: 'm5RangeClosedDowntrend',
   rangeChoch: 'm5RangeChoch', rangeFib: 'm5RangeFib',
 };
+const M1_STYLE_KEYS = {
+  m5RangeHigh: 'm1RangeHigh', m5RangeLow: 'm1RangeLow', m5RangeProtectedLow: 'm1RangeProtectedLow',
+  m5RangeLqSweep: 'm1RangeLqSweep', m5RangeBreakOfStructure: 'm1RangeBreakOfStructure',
+  m5RangeLiveUptrend: 'm1RangeLiveUptrend', m5RangeLiveDowntrend: 'm1RangeLiveDowntrend',
+  m5RangeClosed: 'm1RangeClosed', m5RangeClosedDowntrend: 'm1RangeClosedDowntrend',
+  m5RangeChoch: 'm1RangeChoch', m5RangeFib: 'm1RangeFib',
+  rangesMarker: 'm1RangesMarker', rangesMarker2: 'm1RangesMarker2',
+};
+
+export function structureStyleKey(key, timeframe) {
+  if (timeframe !== '1m') return key;
+  return M1_STYLE_KEYS[key] ?? key;
+}
 
 export function structureRenderOptions(candles, symbol, replayUntil) {
   // Replay-Alter bezieht sich auf den damaligen Stand; derselbe Session-Auflöser wie
@@ -34,26 +47,26 @@ function eventLabeler(events, precision) {
   };
 }
 
-// Beide kleinen Zeitrahmen verwenden die vorhandenen M5-Styles und dieselbe Zeichnung.
-export function renderStructurePivots(series, result, markers, candles, { symbol, debug }) {
+export function renderStructurePivots(series, result, markers, candles, { symbol, debug, timeframe }) {
   const precision = pricePrecisionForInstrument(symbol);
   const { pivotsOuter = [], pivotsInner = [], events = [] } = result ?? {};
   renderPivotMarkers(series, debug ? [
-    { points: pivotsOuter ?? [], color: cssColor('rangesMarker') },
-    { points: pivotsInner ?? [], color: cssColor('rangesMarker2'), dotRadius: 1.5 },
+    { points: pivotsOuter ?? [], color: cssColor(structureStyleKey('rangesMarker', timeframe)) },
+    { points: pivotsInner ?? [], color: cssColor(structureStyleKey('rangesMarker2', timeframe)), dotRadius: 1.5 },
   ] : [], markers, candles, { showLabels: true, formatPrice: price => fmtPrice(price, precision),
     extraLabel: eventLabeler(events, precision) });
 }
 
 export function renderLowerStructure(series, result, primitives, markers, candles,
-  { symbol, replayUntil, show, debug, barSeconds }) {
+  { symbol, replayUntil, show, debug, barSeconds, timeframe }) {
   const state = result?.state ?? null;
   const closeLevels = result?.closeReaction?.levels ?? [];
-  renderStructurePivots(series, result, markers, candles, { symbol, debug });
+  renderStructurePivots(series, result, markers, candles, { symbol, debug, timeframe });
   renderMarketStructureAnalysis(series, show ? state : null, primitives, candles, {
     ...structureRenderOptions(candles, symbol, replayUntil), barSeconds,
-    styleKey: key => LOWER_STRUCTURE_STYLE_KEYS[key],
+    styleKey: key => structureStyleKey(LOWER_STRUCTURE_STYLE_KEYS[key], timeframe),
     hideLevel: (type, pivot) => coversCloseLevel(closeLevels, type, pivot),
   });
-  if (show && state) renderCloseLevels(series, closeLevels, primitives, candles);
+  if (show && state) renderCloseLevels(series, closeLevels, primitives, candles,
+    key => structureStyleKey(key, timeframe));
 }

@@ -67,7 +67,7 @@ export function usePriceChartM1Structure(props, checklistState, {
     renderM1Entry(series, detailSelected() ? null : currentCheck.entry, entryPrimitives, displayCandles, props.currentBar);
     renderLowerStructure(series, result, primitives, markers, displayCandles, {
       symbol: props.symbol, replayUntil: evaluationTime(), show: !!result && !detailSelected(),
-      debug: !!result && props.showLiquidityDebug && !detailSelected(), barSeconds: 60,
+      debug: !!result && props.showLiquidityDebug && !detailSelected(), barSeconds: 60, timeframe: '1m',
     });
     if (result && !['loading', 'error'].includes(status.value.state)) {
       status.value = { state: result.status, anchor: knownContext.anchor, lastClosedAt: evaluatedAt };

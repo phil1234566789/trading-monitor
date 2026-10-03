@@ -40,7 +40,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     // Gespeicherte Strukturlinien bleiben die Belege. Nur fehlende Debug-Pivots
     // ergänzen; der Live-Levelrenderer würde Endpunkte aus Chartkerzen neu bestimmen.
     renderStructurePivots(series,reconstructed?snapshotM1.value.result:null,m1Markers,displayCandles.value,
-      {symbol:props.symbol,debug:reconstructed&&props.showLiquidityDebug});
+      {symbol:props.symbol,debug:reconstructed&&props.showLiquidityDebug,timeframe:'1m'});
     for(const [bar,markers,show] of [['1h',h1Markers,props.showRanges],['5m',m5Markers,props.showM5Structure]]) {
       renderStructurePivots(series,snapshotIndicators.value.pivots[bar],markers,displayCandles.value,
         {symbol:props.symbol,debug:!!visibleSnapshot.value&&show&&props.showLiquidityDebug});

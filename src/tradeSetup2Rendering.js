@@ -11,6 +11,7 @@ import {snapshotEvidenceVisible,snapshotStructureLevels} from './tradeSetup2Snap
 import {formatLsLabel} from './liquidity.js';
 import {fmtPrice,pricePrecisionForInstrument} from './format.js';
 import {chartEventBarTime} from './chartEventCoordinate.js';
+import {structureStyleKey} from './structureOverlay.js';
 
 function snapshotAnchorTime(time,e,candles,currentBar) {
   if(e.timeframe==='1m' || !candles.length || time<candles[0].time
@@ -62,7 +63,8 @@ export function renderSetup2Detail(series,snapshot,primitives,entryPrimitives,ca
     // Belege am Fensterrand abschneiden; schräge Strukturpfade nicht extrapolieren.
     const fromTime=snapshotAnchorTime(e.kind==='segment'?e.fromTime:Math.max(e.fromTime,candles[0]?.time ?? e.fromTime),e,candles,currentBar);
     if(e.kind!=='segment'&&fromTime>e.toTime)continue;
-    const options={color:cssColor(e.styleKey),lineWidth:lineWidth(e.styleKey),label:e.label,
+    const styleKey=structureStyleKey(e.styleKey,e.timeframe);
+    const options={color:cssColor(styleKey),lineWidth:lineWidth(styleKey),label:e.label,
       eventBarSeconds:barSecondsFor(currentBar),labelSide:'end-above',lenientLabels:true};
     if(e.role==='sweep') options.label=`${e.timeframe.toUpperCase()} ${formatLsLabel(fmtPrice(e.price,pricePrecisionForInstrument(visible.instrument)),
       e.fromTime,visible.knownAt,e.toTime)}`;

@@ -180,6 +180,25 @@ const GROUPS = [
   },
 ];
 
+GROUPS.splice(GROUPS.findIndex(group => group.title === 'M5-Struktur') + 1, 0, {
+  title: 'M1-Struktur',
+  fields: [
+    { key: 'm1RangeHigh', label: 'Range-High' },
+    { key: 'm1RangeLow', label: 'Range-Low' },
+    { key: 'm1RangeProtectedLow', label: 'Protected Low' },
+    { key: 'm1RangeLqSweep', label: 'LQ-Sweep' },
+    { key: 'm1RangeBreakOfStructure', label: 'Break of Structure' },
+    { key: 'm1RangeLiveUptrend', label: 'Laufende Range (Uptrend)' },
+    { key: 'm1RangeLiveDowntrend', label: 'Laufende Range (Downtrend)' },
+    { key: 'm1RangeClosed', label: 'Abgeschlossene Range (Uptrend)' },
+    { key: 'm1RangeClosedDowntrend', label: 'Abgeschlossene Range (Downtrend)' },
+    { key: 'm1RangeChoch', label: 'CHoCH' },
+    { key: 'm1RangeFib', label: 'Fibonacci 50%' },
+    { key: 'm1RangesMarker', label: 'Debug-Marker (Periode 5)' },
+    { key: 'm1RangesMarker2', label: 'Debug-Marker (Periode 2)' },
+  ],
+});
+
 function resetAll() {
   resetChartColors();
   resetChartLineWidths();
@@ -238,12 +257,12 @@ function toggleGroup(title) {
           <div class="style-field-top">
             <span class="style-field-label">{{ field.label }}</span>
             <span class="style-swatch-wrap">
-              <input v-model="chartColors[field.key].hex" type="color" class="style-swatch" />
+              <input v-model="chartColors[field.key].hex" type="color" class="style-swatch" :aria-label="`${group.title}: ${field.label} Farbe`" />
               <span class="style-hex">{{ chartColors[field.key].hex }}</span>
             </span>
           </div>
           <div class="style-field-alpha">
-            <input v-model.number="chartColors[field.key].alpha" type="range" min="0" max="1" step="0.01" class="style-alpha-slider" />
+            <input v-model.number="chartColors[field.key].alpha" type="range" min="0" max="1" step="0.01" class="style-alpha-slider" :aria-label="`${group.title}: ${field.label} Deckkraft`" />
             <span class="style-alpha-value">{{ Math.round(chartColors[field.key].alpha * 100) }}%</span>
           </div>
           <div v-if="field.key in chartLineWidths" class="style-field-alpha">
