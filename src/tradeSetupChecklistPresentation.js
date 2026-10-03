@@ -1,6 +1,7 @@
 import { computeTrendChain, trendChainLevelDisplay } from './tradeSetupCockpit';
 import { formatAge } from './chartTimeUtils.js';
 import { pricePrecisionForInstrument } from './format.js';
+import { checklistObservationRules, observationRuleDetails } from './checklistObservationRules.js';
 
 // Nur Darstellung: Status und Zuordnung stammen weiter aus dem Evaluator.
 export function checklistPresentation(state) {
@@ -10,6 +11,12 @@ export function checklistPresentation(state) {
     const check = state.checks?.[key];
     if (check) view[key] = { explanation: check.explanation,
       detailStatuses: key === 'antiConfluences' || check.status === 'passed' ? [check.status] : [] };
+    if (check?.rules) {
+      const rules = checklistObservationRules(check, key);
+      view[key] = { explanation: check.explanation, details: observationRuleDetails(rules),
+        detailStatuses: rules.map(r => r.invalidates && r.status === 'found' ? 'blocked'
+          : r.status === 'unknown' ? 'unknown' : r.invalidates ? 'passed' : 'context') };
+    }
   }
   if (state.structure && Number.isFinite(state.evaluatedAt)) {
     const chain = computeTrendChain(state.structure, state.evaluatedAt);

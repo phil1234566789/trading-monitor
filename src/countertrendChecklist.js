@@ -8,6 +8,7 @@ import { evaluateDealingRange, COUNTERTREND_STAGE_VERSION } from './tradeSetup2D
 import { fixChecklistTargets } from './tradeSetupChecklistLifecycle.js';
 import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
 import { deriveSetupEntryInvalidation, sweepAgeSec } from './tradeSetup.js';
+import { divergenceObservationRule, H1_COUNTER_DIVERGENCE_RULE, OBSERVATION_RULE_VERSION } from './checklistObservationRules.js';
 
 export { COUNTERTREND_STAGE_VERSION } from './tradeSetup2DealingRange.js';
 export const SETUP_TYPE_LABELS = { trendContinuation: 'Trendfortführung', countertrend: 'Countertrend', unclear: 'Unklar' };
@@ -28,7 +29,8 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
   const pending = () => ({ status: 'pending', details: ['Wartet auf ein bekanntes Setup 1.0.'] });
   const checks = { liquiditySweep: pending(), reaction: pending(), m5Trend: unknownChecklistM5(),
     outerM5Trend: { status: 'unknown', required: true, trend: 'unknown', details: ['Äußerster M5-Trend unbekannt.'] },
-    targets: pending(), antiConfluences: pending(), confluences: pending() };
+    targets: pending(), antiConfluences: {status:'unknown',details:['Wartet auf ein bekanntes Setup 1.0.'],
+      ruleVersion:OBSERVATION_RULE_VERSION,rules:[divergenceObservationRule({...H1_COUNTER_DIVERGENCE_RULE,divergences:{status:'unknown'}})]}, confluences: pending() };
   const result = { model: 'countertrend', ruleVersion: COUNTERTREND_STAGE_VERSION, instrument, evaluatedAt,
     status: dataStatus, checks, direction: null, setupType: 'unclear', confirmed: false, abortReason: null,
     tradeability: 'unknown',

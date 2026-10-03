@@ -7,6 +7,7 @@ import { toPips } from './pipConfig.js';
 import { formatRiskPips } from './entryRisk.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { savedDealingRangeStatus } from './tradeSetup2DealingRange.js';
+import { antiConfluenceStatus, checklistObservationRules, observationRuleDetails } from './checklistObservationRules.js';
 
 export const REVIEW_STATUS_LABELS = { passed: 'Erfüllt', unmet: 'Fehlt am gespeicherten Stand', unknown: 'Unbekannt / unbewertet' };
 export const REVIEW_STATUS_ICONS = { passed: '✓', unmet: '✕', unknown: '?' };
@@ -61,7 +62,7 @@ export function setupEntryConditions(snapshot) {
     ['outerM5Trend', 'C · Äußerster M5-Trend', at],
     ['m5Trend', 'D · Aktueller M5-Trend / Countertrend', at],
     ['targets', 'E · Targets gefunden', primary?.targetSelection?.selectedAt],
-    ['antiConfluences', 'F · H1-Gegendivergenz prüfen', at],
+    ['antiConfluences', 'F · Anti-Confluences prüfen', at],
   ] : [
     ['h1Trend', 'A · H1-Richtung bestätigt', at],
     ['liquiditySweep', 'B · Liquidity Sweep bestätigt', primary?.recognizedAt],
@@ -70,8 +71,11 @@ export function setupEntryConditions(snapshot) {
   for (const [key, label, time] of checkpoints) {
     const check = checks[key];
     const future = Number.isFinite(time) && !known(time);
-    add(key, label, future ? 'unknown' : normal(check?.status), future ? ['Beleg liegt nach dem gespeicherten Stand.']
-      : check?.details ?? ['Keine Prüfung gespeichert.'], time ?? at);
+    const antiStatus = key === 'antiConfluences' ? antiConfluenceStatus(check, at) : null;
+    const status = antiStatus ? {clear:'passed',found:'unmet',unknown:'unknown'}[antiStatus] : normal(check?.status);
+    const details = antiStatus && check ? observationRuleDetails(checklistObservationRules(check, key)) : check?.details;
+    add(key, label, future ? 'unknown' : status, future ? ['Beleg liegt nach dem gespeicherten Stand.']
+      : details ?? ['Keine Prüfung gespeichert.'], time ?? at);
   }
   const dr = snapshot.dealingRange;
   if (savedDealingRangeStatus(snapshot) !== 'legacy') add('validation', checklist?.model === 'countertrend' ? 'DR-Stufe nach E/F' : 'D · DR-Validierung / Targets',

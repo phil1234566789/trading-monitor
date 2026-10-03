@@ -35,8 +35,10 @@ describe.each(['long', 'short'])('versioned DR stages for %s', direction => {
     const snapshot = buildTradeSetup2CandidateSnapshot({ checklist, candidate: checklist.setup.primary });
     expect(snapshot.dealingRange).toMatchObject({ version: DEALING_RANGE_VERSION, status: 'validated', eShowstoppers: [] });
     expect(snapshot.entry).toBeNull();
-    expect(snapshot.checklist.checks.antiConfluences).toEqual(checklist.checks.antiConfluences);
-    expect(snapshot.checklist.checks.confluences).toEqual(checklist.checks.confluences);
+    expect(snapshot.checklist.checks.antiConfluences).toMatchObject({status:'found',divergences:checklist.checks.antiConfluences.divergences,
+      rules:[{id:'h1CounterDivergence',status:'found',invalidates:true}]});
+    expect(snapshot.checklist.checks.confluences).toMatchObject({...checklist.checks.confluences,
+      rules:[{id:'m5SweepDivergence',status:'unknown',invalidates:false}]});
     expect(activeM1Context({ ...checklist, dealingRange: snapshot.dealingRange })).toBeNull();
   });
   it('retains failed targets with their diagnostic reason while unchecked or missing data stay open', () => {

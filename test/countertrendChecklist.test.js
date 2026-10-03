@@ -55,7 +55,7 @@ describe('Countertrend: C/D und Setup-1.0-Quelle', () => {
    expect(result.checks.m5Trend).toMatchObject({trend:'uptrend',status:'passed'});
    expect(result.checks.outerM5Trend).toMatchObject({trend:'downtrend',required:true,status:'passed'});
    expect(result.checks.targets.status).toBe('passed');
-   expect(result.checks.antiConfluences.status).toBe('passed');
+   expect(result.checks.antiConfluences.status).toBe('clear');
    expect(result.dealingRange.status).toBe('validated');
    expect(result.confirmed).toBe(true);
    expect(result.abortReason).toBeNull();

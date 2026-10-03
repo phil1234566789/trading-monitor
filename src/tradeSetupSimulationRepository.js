@@ -1,4 +1,5 @@
 import { applySimulationCommission, SIMULATION_COST_VERSION } from './tradeSetupSimulationCosts.js';
+import { restoreChecklistObservationChecks } from './checklistObservationRules.js';
 
 const PAGE_SIZE = 500;
 
@@ -62,9 +63,9 @@ export function createSimulationRepository(db) {
       return groups.flat().map(row => ({ id: row.id, runId: row.run_id, instrument: row.instrument, direction: row.direction,
         knownAt: row.knownAt, setupKey: row.setupKey, entry: row.entry, m1Check: row.m1Check, dealingRange: row.dealingRange, rangeCourse: row.rangeCourse,
         checklist: { status: row.checklistStatus, evaluatedAt: row.evaluatedAt, setup: { primary: row.primary },
-          checks: { h1Trend: row.h1Trend, liquiditySweep: row.liquiditySweep, reaction: row.reaction,
+          checks: restoreChecklistObservationChecks({ h1Trend: row.h1Trend, liquiditySweep: row.liquiditySweep, reaction: row.reaction,
             targets: row.targets, antiConfluences: row.antiConfluences, confluences: row.confluences,
-            time: row.time, m5Trend: { m1Anchor: row.m1Anchor } } } }));
+            time: row.time, m5Trend: { m1Anchor: row.m1Anchor } }) } }));
     },
     getEntry: async (runId, id) => {
       const { data, error } = await db.from('trade_setup_simulation_entries')

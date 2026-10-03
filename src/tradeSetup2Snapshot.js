@@ -4,6 +4,7 @@ import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { evaluateDealingRange } from './tradeSetup2DealingRange.js';
 import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
 import { countertrendRangeCourse } from './countertrendLifecycle.js';
+import { restoreChecklistObservationChecks } from './checklistObservationRules.js';
 
 export function isTradeSetup2SnapshotView(props) {
   return !!(props.tradeSetup2RunId && props.selectedTradeSetup2Id);
@@ -13,7 +14,13 @@ export function isTradeSetup2SnapshotView(props) {
 // Instrument. Die Darstellung ergänzt das, ohne den historischen Datensatz zu ändern.
 export function restoreTradeSetup2Snapshot(snapshot) {
   if (!snapshot) return null;
-  return {...snapshot,m1Check:snapshot.m1Check?{
+  const checklist = snapshot.checklist;
+  const primary = checklist?.setup?.primary;
+  const restoredChecklist = checklist ? {...checklist,checks:restoreChecklistObservationChecks(checklist.checks)} : null;
+  if (primary) restoredChecklist.setup = {...checklist.setup,
+    primary:{...primary,checks:restoreChecklistObservationChecks(primary.checks)}};
+  return {...snapshot,...(restoredChecklist ? {checklist:restoredChecklist} : {}),
+    m1Check:snapshot.m1Check?{
     ...normalizeM1ChecklistPresentation(snapshot.m1Check,snapshot.direction,snapshot.knownAt),instrument:snapshot.instrument}:null,
     evidence:(snapshot.evidence ?? []).map(e=>{
       const suffix=e.timeframe==='1h'?'1h':e.timeframe==='4h'?'4h':'M5';
@@ -33,7 +40,7 @@ export function buildTradeSetup2CandidateSnapshot({checklist,candidate}) {
   if (checklist.model==='countertrend') Object.assign(state,{direction:candidate.direction,setupType:candidate.setupType,
     abortReason:candidate.abortReason,confirmed:dealingRange.status!=='unconfirmed',structure:candidate.checks.m5Trend?.structureState ?? null});
   delete state.context;
-  // Weitere bestätigte Sweeps in derselben H1-Richtung erhalten eigene E/G-Belege.
+  // Weitere bestätigte Sweeps erhalten eigene Beobachtungsbelege.
   if (candidate.id!==checklist.setup?.primary?.id && checklist.model==='countertrend') state.checks={...checklist.checks,...candidate.checks};
   else if (candidate.id!==checklist.setup?.primary?.id) state.checks={
     h1Trend:checklist.checks.h1Trend,

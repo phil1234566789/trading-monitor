@@ -25,9 +25,9 @@ const countertrendDefinitions = [
   { key: "liquiditySweep", label: "Liquidity Sweep" },
   { key: "reaction", label: "Reaktion aus Liquidity Sweep" },
   { key: "targets", label: "Targets bestimmen" },
-  { key: "antiConfluences", label: "Anti Confluences" },
+  { key: "antiConfluences", label: "Anti-Confluences" },
   { key: "time", label: "Uhrzeit" },
-  { key: "confluences", label: "Weitere Confluences" },
+  { key: "confluences", label: "Confluences" },
   { key: "m5Trend", label: "M5 Trend", fallback: "unknown" },
   { key: "m1", label: "M1" },
   { key: "entry", label: "Entry" },
@@ -40,6 +40,8 @@ const countertrendAbcdDefinitions = [
   ...['targets', 'antiConfluences', 'confluences', 'entry'].map(key=>countertrendDefinitions.find(d=>d.key===key)),
 ];
 const statuses = {
+  found: { label: "Gegenargument gefunden", symbol: "×" },
+  clear: { label: "Kein Showstopper", symbol: "✓" },
   passed: { label: "Erfüllt", symbol: "✓" },
   pending: { label: "Ausstehend", symbol: "…" },
   unmet: { label: "Noch nicht erfüllt", symbol: "×" },
@@ -161,6 +163,8 @@ h3 { font-size: 13px; line-height: 1.5; }
 .checklist-status { color: #a5aab5; }
 [data-status="passed"] .checklist-status { color: #131722; background: #71c8b3; border-color: #71c8b3; font-weight: 700; }
 [data-status="blocked"] .checklist-status { color: #ff8a87; }
+[data-status="found"] .checklist-status { color: #ff8a87; }
+[data-status="clear"] .checklist-status { color: #71c8b3; }
 .checklist-note { margin-top: 4px; }
 .checklist-details { padding-left: 16px; margin: 4px 0 0; font-size: 13px; line-height: 1.5; }
 .checklist-details > li[data-detail-status="blocked"], .checklist-details > li[data-detail-status="unmet"] { color: #ff8a87; font-weight: 700; }

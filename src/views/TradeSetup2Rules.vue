@@ -17,15 +17,15 @@
         <div><dt>C · M5-Trend (äußerster)</dt><dd>Der äußerste M5-Trend ab dem bekannten D1-Fraktal der Periode 4 ersetzt den H1-Trend. C muss in Setup-Richtung zeigen. Bei Gegenrichtung oder unbekanntem Trend wird abgebrochen, ohne D auszuwerten.</dd></div>
         <div><dt>D · M5-Trend (aktuell)</dt><dd>Die tiefste bestätigte M5-Strukturebene zum Erkennungszeitpunkt bestimmt den aktuellen Trend. Unbestätigte Nested-Kandidaten zählen nicht; ohne bestätigten Nested-Trend gilt der äußere Trend.</dd></div>
         <div><dt>E · Targets</dt><dd>Die bestehende Target-Auswahl bleibt erhalten. Targets gefunden bestätigt die DR; ohne Targets bleibt sie unbestätigt.</dd></div>
-        <div><dt>F · Anti-Confluences</dt><dd>Eine H1-RSI-Gegendivergenz invalidiert die bestätigte DR: bullisch bei Short, bärisch bei Long. Ohne Gegendivergenz ist sie validiert. Bei fehlenden Daten bleibt sie bestätigt mit offener Validierung.</dd></div>
+        <div><dt>F · Anti-Confluences</dt><dd>Jede Regel speichert ihren Fundstatus und ihre Belege. Der Schalter „invalidates“ bestimmt, ob ein Fund die DR invalidiert oder nur beobachtet wird. Zum Start ist ausschließlich die H1-RSI-Gegendivergenz eingeschaltet: bullisch bei Short, bärisch bei Long. Ohne Fund ist die DR validiert; bei fehlenden Daten bleibt die Validierung offen.</dd></div>
         <div><dt>G · Confluences</dt><dd>Beobachtungen für die Statistik; ändern die DR-Stufe nicht.</dd></div>
-        <div><dt>H · Uhrzeit</dt><dd>Noch nicht besprochen; bestehende Zeit- und Entry-Regeln werden hier nicht geändert.</dd></div>
+        <div><dt>H · Entry finden</dt><dd>Die Entry-Suche folgt nach Validierung. Handelszeiten, Session- und News-Sperren werden unmittelbar vor einem neuen Entry geprüft.</dd></div>
       </dl>
       <p><strong>Countertrend:</strong> C zeigt in Setup-Richtung und D dagegen. A bis E erfüllt bestätigt die Dealing Range; F entscheidet validiert oder invalidiert. Ein CHoCH ist dafür keine Bedingung. Die bestehende Preisinvalidierung bleibt wirksam.</p>
       <p><strong>Trendfortführung:</strong> C und D zeigen in Setup-Richtung. Der Typ wird erkannt, der Pfad bricht mit „Typ Trendfortführung, noch nicht umgesetzt“ ab.</p>
       <p><strong>Abbruch:</strong> C zeigt gegen die Setup-Richtung oder ist unbekannt. Grund: „äußerster M5-Trend gegen Setup-Richtung“ beziehungsweise „M5-Trend unbekannt“.</p>
       <p>C und D werden am Bekannt-Zeitpunkt des Setups mit den bis dahin geschlossenen Kerzen ausgewertet. Spätere Replay-Kerzen ändern diese Typ-Prüfung nicht.</p>
-      <aside class="open-decision"><h3>Nächste Festlegungen offen</h3><p>Short 97 und 105 sind Countertrend-Referenzen. Der äußerste M5-Trend ist Pflicht. Die Trendfortführung folgt später.</p><p>Die Target-Auswahl und die Erkennung der H1-Gegendivergenz bleiben unverändert. Der spätere Umbau der Anti-Confluences und weitere Entry-Regeln gehören zu eigenen Aufgaben.</p></aside>
+      <aside class="open-decision"><h3>Nächste Festlegungen offen</h3><p>Short 97 und 105 sind Countertrend-Referenzen. Der äußerste M5-Trend ist Pflicht. Die Trendfortführung folgt später.</p><p>Die Target-Auswahl und die Erkennung der H1-Gegendivergenz bleiben unverändert. Weitere Anti-Confluence-Regeln werden separat festgelegt; die Regelliste ermöglicht zunächst reine Beobachtung.</p></aside>
     </section>
 
     <details class="countertrend-rules">

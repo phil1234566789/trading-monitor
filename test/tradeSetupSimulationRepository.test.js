@@ -29,12 +29,16 @@ describe('simulation history repository', () => {
       const query = { select: fields => { expect(fields).not.toContain('structure'); expect(fields).toContain('rangeCourse:snapshot->rangeCourse'); return query; },
         eq: (key, value) => { expect([key, value]).toEqual(['run_id', 'selected']); return query; }, order: () => query,
         range: async offset => { calls.push([table, offset]); return { data: offset < 2 ? [{ id: `${table}:${offset}`, knownAt: 300,
-          checklistStatus: 'ready', evaluatedAt: 300, reaction: { status: 'pending' }, rangeCourse: { validatedAt: 300, lifecycle: { evaluatedAt: 1800 } } }] : [] }; } };
+          checklistStatus: 'ready', evaluatedAt: 300, reaction: { status: 'pending' }, antiConfluences:{status:'passed'},
+          confluences:{status:'passed',rules:[{id:'observation',status:'found',invalidates:false,evidence:[{recognizedAt:300}]}]},
+          rangeCourse: { validatedAt: 300, lifecycle: { evaluatedAt: 1800 } } }] : [] }; } };
       return query;
     } };
     const rows = await createSimulationRepository(db).listReviewSnapshots('selected');
     expect(rows).toHaveLength(4);
     expect(rows[0].checklist.checks.reaction.status).toBe('pending');
+    expect(rows[0].checklist.checks.antiConfluences).toMatchObject({status:'clear',rules:[{invalidates:true,status:'clear'}]});
+    expect(rows[0].checklist.checks.confluences.rules).toEqual([{id:'observation',status:'found',invalidates:false,evidence:[{recognizedAt:300}]}]);
     expect(rows[0].rangeCourse).toEqual({ validatedAt: 300, lifecycle: { evaluatedAt: 1800 } });
     for (const table of ['trade_setup_simulation_setups', 'trade_setup_simulation_entries'])
       expect(calls.filter(call => call[0] === table).map(call => call[1])).toEqual([0, 1, 2]);

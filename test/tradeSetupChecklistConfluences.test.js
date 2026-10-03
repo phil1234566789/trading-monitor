@@ -38,7 +38,9 @@ describe('Checklist E/G', () => {
     expect(detectChecklistDivergences({ candles: divergenceCandles(), timeframe: '5m', evaluatedAt: 111600 }).candidates)
       .toMatchObject([{ type: 'bearish', timeframe: '5m' }]);
     expect(result.confluences.divergences.status).toBe('unknown');
-    expect(result.antiConfluences.status).toBe('pending');
+    expect(result.antiConfluences.status).toBe('found');
+    expect(result.antiConfluences.rules).toMatchObject([{id:'h1CounterDivergence',status:'found',invalidates:true,
+      evidence:[{type:'bullish',timeframe:'1H',recognizedAt:111600}]}]);
     expect(result.antiConfluences.details).toEqual(['bullische 1H Divergenz vorhanden']);
     expect(result.antiConfluences.explanation).toContain('RSI');
     expect(result.confluences.status).not.toBe('blocked');
@@ -63,7 +65,8 @@ describe('Checklist E/G', () => {
   });
   it.each([['short', false, 'bullische'], ['long', true, 'bärische']])('marks only the absent H1 counter-divergence green for %s', (direction, bullish, label) => {
     const result = evaluateChecklistConfluences({ evaluatedAt: 111600, direction, h1Candles: divergenceCandles(3600, bullish) });
-    expect(result.antiConfluences.status).toBe('passed');
+    expect(result.antiConfluences.status).toBe('clear');
+    expect(result.antiConfluences.rules).toMatchObject([{id:'h1CounterDivergence',status:'clear',invalidates:true,evidence:[]}]);
     expect(result.antiConfluences.details).toEqual([`keine ${label} 1H Divergenz vorhanden`]);
     expect(result.antiConfluences.explanation).toContain('nur die H1-Gegendivergenz');
     expect(result.antiConfluences.deferredChecks).toEqual(['sweep', 'orderBlock', 'strength']);
@@ -77,8 +80,8 @@ describe('Checklist E/G', () => {
   it('uses only closed H1 candles for the counter-divergence', () => {
     const args = { direction: 'short', h1Candles: divergenceCandles(3600, true) };
     expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 20 * 3600 }).antiConfluences.status).toBe('unknown');
-    expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 111599 }).antiConfluences.status).toBe('passed');
-    expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 111600 }).antiConfluences.status).toBe('pending');
+    expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 111599 }).antiConfluences.status).toBe('clear');
+    expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 111600 }).antiConfluences.status).toBe('found');
   });
 });
 

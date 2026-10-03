@@ -1,5 +1,6 @@
 import { collectNestedChain } from './marketStructureAnalysis';
 import { structureRangePath } from './structureRangePath.js';
+import { checklistObservationRules } from './checklistObservationRules.js';
 
 // Belege übernehmen nur erkannte Fakten; offene Zuordnungen sind keine Zeichnungsfreigabe.
 export function tradeSetup2Evidence({ checklist, m1Check, m1Structure, m1Candles = [] }) {
@@ -7,7 +8,7 @@ export function tradeSetup2Evidence({ checklist, m1Check, m1Structure, m1Candles
   const at = m1Check.entry?.recognizedAt ?? checklist.evaluatedAt, primary = checklist.setup.primary, result = [];
   function add(role, checkKey, timeframe, knownAt, drawing) {
     if (!Number.isFinite(knownAt) || knownAt > at) return;
-    const id = [timeframe, role, drawing.fromTime, drawing.toTime, drawing.price ?? drawing.fromPrice ?? drawing.top].join(':');
+    const id = [timeframe, role, drawing.ruleId, drawing.fromTime, drawing.toTime, drawing.price ?? drawing.fromPrice ?? drawing.top].filter(v => v !== undefined).join(':');
     if (result.some(e => e.id === id)) return;
     result.push({ id, sourceRef: `${primary.id}:${id}`, role, checkKey, timeframe, knownAt, ...drawing });
   }
@@ -52,12 +53,14 @@ export function tradeSetup2Evidence({ checklist, m1Check, m1Structure, m1Candles
       target.pivotTime,at-60,target.dir===-1?'liquidityLow':'liquidityHigh',`${name==='target1'?'T1':'T2'} · ${target.sessionLabel ?? target.sessionName ?? ''}`);
   }
   for (const key of ['antiConfluences','confluences']) {
-    const candidates=checklist.checks[key]?.divergences?.candidates ?? [];
-    // E zeigt die jüngste H1-Gegendivergenz, G nur die tatsächlich am Sweep zugeordnete.
-    for (const d of key==='antiConfluences'?candidates.slice(-1):candidates.filter(d=>d.association==='sweep-touch')) {
-      add('divergence',key,d.timeframe,d.recognizedAt,{kind:'segment',fromTime:d.fromTime,toTime:d.toTime,
-        fromPrice:d.fromPrice,toPrice:d.toPrice,fromRsi:d.fromRsi,toRsi:d.toRsi,
-        styleKey:key==='antiConfluences'?'antiConfluence':'confluence',label:`${d.timeframe} RSI-Divergenz`});
+    for (const rule of checklistObservationRules(checklist.checks[key], key)) {
+      // Alle Funde bleiben gespeichert; die bisherige H1-Anzeige zeigt nur den jüngsten.
+      const evidence = rule.chartEvidenceLimit ? rule.evidence.slice(-rule.chartEvidenceLimit) : rule.evidence;
+      for (const d of evidence) {
+        add(d.type === 'bullish' || d.type === 'bearish' ? 'divergence' : 'observation',key,d.timeframe,d.recognizedAt,
+          {...d,ruleId:rule.id,invalidates:rule.invalidates,
+            styleKey:key==='antiConfluences'?'antiConfluence':'confluence',label:rule.label});
+      }
     }
   }
   const signals=[...(checklist.checks.m5Trend?.structureReaction?.levels ?? []).map(s=>({...s,timeframe:'5m',key:'m5Trend'})),

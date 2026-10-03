@@ -2,8 +2,12 @@
 import { computed } from 'vue';
 import { setupEntryConditions, REVIEW_STATUS_LABELS, REVIEW_STATUS_ICONS } from '../tradeSetup2Review.js';
 import { formatDatedTime } from '../berlinTime.js';
+import { checklistObservationRules, observationRuleDetails } from '../checklistObservationRules.js';
 const props = defineProps({ snapshot: { type: Object, required: true } });
 const review = computed(() => setupEntryConditions(props.snapshot));
+const observations = computed(() => ['antiConfluences', 'confluences'].map(key => ({ key,
+  label: key === 'antiConfluences' ? 'F · Anti-Confluences' : 'G · Confluences',
+  details: observationRuleDetails(checklistObservationRules(props.snapshot.checklist?.checks?.[key], key)) })));
 </script>
 <template>
   <div class="entry-conditions">
@@ -21,8 +25,8 @@ const review = computed(() => setupEntryConditions(props.snapshot));
     <h4>Zusätzliche Strukturmerkmale · keine zwingenden Entry-1-Bedingungen</h4>
     <p v-for="item in review.observations" :key="item.label"><strong>{{ item.label }}:</strong> {{ item.text }}</p>
     <template v-if="snapshot.dealingRange">
-      <h4>E/G · gespeicherte Beobachtungen ohne Sperrwirkung</h4>
-      <p v-for="key in ['antiConfluences', 'confluences']" :key="key"><strong>{{ key === 'antiConfluences' ? 'E · Anti-Confluences' : 'G · Confluences' }}:</strong> {{ snapshot.checklist?.checks?.[key]?.details?.join(' ') || 'Nicht prüfbar / nicht gespeichert.' }} {{ snapshot.checklist?.checks?.[key]?.explanation }}</p>
+      <h4>F/G · gespeicherte Regeln und Beobachtungen</h4>
+      <p v-for="item in observations" :key="item.key"><strong>{{ item.label }}:</strong> {{ item.details.join(' ') || 'Nicht prüfbar / nicht gespeichert.' }} {{ snapshot.checklist?.checks?.[item.key]?.explanation }}</p>
     </template>
     <p>Die M1-Trendrichtung, CHoCH und BOS werden angezeigt, sind aber keine eigenen Pflichtsignale für Entry 1. Der Auslöser ist die bestätigte gleichgerichtete FVG nach dem OB-Retest im auswertbaren M1-Kontext. Ziele und Stopps stehen beim Entry in der Checklist bzw. im Chart.</p>
   </div>
