@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createSimulationRepository, simulationAsOf } from '../src/tradeSetupSimulationRepository.js';
+import {encodeSnapshotStructures} from '../src/tradeSetupSnapshotStorage.js';
 
 describe('simulation history repository', () => {
   it('loads all outcome pages without a run filter and preserves identical entry IDs from separate runs', async () => {
@@ -23,10 +24,10 @@ describe('simulation history repository', () => {
     expect(eq).not.toHaveBeenCalled();
     expect(new Set(rows.map(row => row.runId)).size).toBe(2);
   });
-  it('paginates candidate and entry review evidence in the chosen run without loading chart trees', async () => {
+  it('paginates review evidence without directly requesting duplicate chart trees', async () => {
     const calls = [];
     const db = { from: table => {
-      const query = { select: fields => { expect(fields).not.toContain('structure'); expect(fields).toContain('rangeCourse:snapshot->rangeCourse'); return query; },
+      const query = { select: fields => { expect(fields).not.toContain('checklist->structure'); expect(fields).not.toContain('->structureState'); expect(fields).toContain('rangeCourse:snapshot->rangeCourse'); return query; },
         eq: (key, value) => { expect([key, value]).toEqual(['run_id', 'selected']); return query; }, order: () => query,
         range: async offset => { calls.push([table, offset]); return { data: offset < 2 ? [{ id: `${table}:${offset}`, knownAt: 300,
           checklistStatus: 'ready', evaluatedAt: 300, reaction: { status: 'pending' }, antiConfluences:{status:'passed'},
@@ -87,5 +88,36 @@ describe('simulation history repository', () => {
     await expect(createSimulationRepository({ rpc }).saveEntries('run', Array.from({ length: 101 }, () => ({})))).rejects.toThrow('failed');
     expect(rpc.mock.calls[0][1].records).toHaveLength(100);
     expect(rpc.mock.calls[1][1].records).toHaveLength(1);
+  });
+  it('roundtrips compact structures through candidate and entry persistence',async()=>{
+    const state={trend:'uptrend',history:Array.from({length:500},(_,i)=>({time:i,price:1.35}))};
+    const original={id:'entry',checklist:{structure:state,checks:{m5Trend:{structureState:state}}}};
+    let stored;
+    const query={select:()=>query,eq:()=>query,maybeSingle:async()=>({data:{snapshot:stored,outcomes:[],id:'entry'}})};
+    const repository=createSimulationRepository({rpc:async(name,args)=>{stored=args.records[0].snapshot??args.records[0];return {error:null};},from:()=>query},{compactStructures:true});
+    await repository.saveSetups('run',[original]);
+    expect(JSON.stringify(stored).length).toBeLessThan(JSON.stringify(original).length*.6);
+    expect(await repository.getSetupSnapshot('run','entry')).toEqual(original);
+    await repository.saveEntries('run',[{snapshot:original,outcomes:[]}]);
+    expect(await repository.getSnapshot('run','entry')).toEqual(original);
+    expect((await repository.getEntry('run','entry')).snapshot).toEqual(original);
+  });
+  it('restores shared structures in the projected review primary',async()=>{
+    const state={trend:'downtrend',history:Array.from({length:500},(_,i)=>({time:i,price:1.35}))};
+    const source={checklist:{structure:state,setup:{primary:{checks:{m5Trend:{structureState:state}}}}}};
+    const stored=encodeSnapshotStructures(source);
+    const db={from:()=>{const query={select:()=>query,eq:()=>query,order:()=>query,range:async from=>({data:from?[]:[{primary:stored.checklist.setup.primary,structureStorage:stored.structureStorage}]})};return query;}};
+    const rows=await createSimulationRepository(db).listReviewSnapshots('run');
+    expect(rows[0].checklist.setup.primary).toEqual(source.checklist.setup.primary);
+  });
+  it('keeps raw snapshot writes unchanged unless compact storage is explicitly selected',async()=>{
+    const state={history:Array.from({length:500},(_,i)=>({time:i,price:1.35}))};
+    const source={checklist:{structure:state,checks:{m5Trend:{structureState:state}}}};
+    const rpc=vi.fn(async()=>({error:null}));
+    const repository=createSimulationRepository({rpc});
+    await repository.saveSetups('legacy',[source]);
+    await repository.saveEntries('legacy',[{snapshot:source,outcomes:[]}]);
+    expect(rpc.mock.calls[0][1].records[0]).toBe(source);
+    expect(rpc.mock.calls[1][1].records[0].snapshot).toBe(source);
   });
 });

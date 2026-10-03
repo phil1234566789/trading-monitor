@@ -1,5 +1,6 @@
 import { applySimulationCommission, SIMULATION_COST_VERSION } from './tradeSetupSimulationCosts.js';
 import { restoreChecklistObservationChecks } from './checklistObservationRules.js';
+import { encodeSnapshotStructures,decodeSnapshotStructures } from './tradeSetupSnapshotStorage.js';
 
 const PAGE_SIZE = 500;
 
@@ -27,7 +28,7 @@ export function simulationAsOf(result, asOf) {
   return row.costVersion === SIMULATION_COST_VERSION ? applySimulationCommission(row) : row;
 }
 
-export function createSimulationRepository(db) {
+export function createSimulationRepository(db,{compactStructures=false}={}) {
   const results = (row, runId, variant, asOf) => row.outcomes.filter(result => !variant || result.variant === variant)
     .map(result => simulationAsOf({ ...result, runId, instrument: row.instrument, direction: row.direction,
       snapshotId: row.id, setupKey: row.setupKey ?? row.snapshot?.setupKey }, asOf)).filter(Boolean);
@@ -38,7 +39,7 @@ export function createSimulationRepository(db) {
   const snapshot = async (table, runId, id) => {
     const { data, error } = await db.from(table).select('snapshot').eq('run_id', runId).eq('id', id).maybeSingle();
     if (error) throw error;
-    return data?.snapshot ?? null;
+    return decodeSnapshotStructures(data?.snapshot ?? null);
   };
   return {
     getRun: async (runId) => {
@@ -47,9 +48,9 @@ export function createSimulationRepository(db) {
       return data?.run ?? null;
     },
     listReviewSnapshots: async (runId) => {
-      // Nur Prüfbelege laden: Strukturbaum und Chartgeometrie sind für die Tabelle unnötig.
+      // Prüfbelege projizieren; geteilte Strukturen im primary benötigen ihren Speicherpool.
       const fields = ['id,run_id,instrument,direction', 'knownAt:snapshot->knownAt', 'setupKey:snapshot->>setupKey',
-        'dealingRange:snapshot->dealingRange', 'rangeCourse:snapshot->rangeCourse',
+        'dealingRange:snapshot->dealingRange', 'rangeCourse:snapshot->rangeCourse', 'structureStorage:snapshot->structureStorage',
         'entry:snapshot->entry', 'm1Check:snapshot->m1Check', 'primary:snapshot->checklist->setup->primary',
         'checklistStatus:snapshot->checklist->>status', 'evaluatedAt:snapshot->checklist->evaluatedAt',
         ...['h1Trend', 'liquiditySweep', 'reaction', 'targets', 'antiConfluences', 'confluences', 'time'].map(key => `${key}:snapshot->checklist->checks->${key}`),
@@ -60,7 +61,8 @@ export function createSimulationRepository(db) {
           if (runId) query = query.eq('run_id', runId);
           return query.range(from, to);
         })));
-      return groups.flat().map(row => ({ id: row.id, runId: row.run_id, instrument: row.instrument, direction: row.direction,
+      return groups.flat().map(row => decodeSnapshotStructures({ id: row.id, runId: row.run_id, instrument: row.instrument, direction: row.direction,
+        ...(row.structureStorage?{structureStorage:row.structureStorage}:{}),
         knownAt: row.knownAt, setupKey: row.setupKey, entry: row.entry, m1Check: row.m1Check, dealingRange: row.dealingRange, rangeCourse: row.rangeCourse,
         checklist: { status: row.checklistStatus, evaluatedAt: row.evaluatedAt, setup: { primary: row.primary },
           checks: restoreChecklistObservationChecks({ h1Trend: row.h1Trend, liquiditySweep: row.liquiditySweep, reaction: row.reaction,
@@ -71,11 +73,13 @@ export function createSimulationRepository(db) {
       const { data, error } = await db.from('trade_setup_simulation_entries')
         .select('id,instrument,direction,outcomes,snapshot').eq('run_id', runId).eq('id', id).maybeSingle();
       if (error) throw error;
-      return data ? { snapshot: data.snapshot, results: results(data, runId) } : null;
+      return data ? { snapshot: decodeSnapshotStructures(data.snapshot), results: results(data, runId) } : null;
     },
     saveRun: run => rpc('save_trade_setup_simulation_run', { run }),
-    saveEntries: (runId, records) => batches('save_trade_setup_simulation_entries', runId, records),
-    saveSetups: (runId, records) => batches('save_trade_setup_simulation_setups', runId, records),
+    saveEntries: (runId, records) => batches('save_trade_setup_simulation_entries', runId,
+      records.map(record=>compactStructures?{...record,snapshot:encodeSnapshotStructures(record.snapshot)}:record)),
+    // Bestehende rohe Snapshots behalten ihr Speicherformat für die Unveränderlichkeitsprüfung.
+    saveSetups: (runId, records) => batches('save_trade_setup_simulation_setups', runId,compactStructures?records.map(encodeSnapshotStructures):records),
     listRuns: async () => (await pages((from, to) => db.from('trade_setup_simulation_runs').select('run').order('id').range(from, to))).map(row => row.run),
     listSetups: async ({ runId, instrument } = {}) => {
       const rows = await pages((from, to) => {
