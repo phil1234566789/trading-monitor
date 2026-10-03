@@ -1,35 +1,23 @@
-// Dreieck-Marker für die persistierten 1D-Periode-4-Struktur-Pivots (siehe dailyPivots.js/
-// usePriceChartDailyPivots.js) — Task "Market-Structure-Startpunkt: 1D-Periode-4-Pivots". Über
-// alle Timeframes hinweg sichtbar (M5 aufwärts), Positionierung über snapToBarTime (wie HTF-
-// Liquidity-Level, src/liquidity.js) statt pivotMarkers.ts' Drop-wenn-außerhalb-Verhalten — ein
-// Pivot bleibt damit auch bei weggescrolltem Zeitfenster sichtbar (an den Rand geklemmt). Primitive/
-// PaneView/Renderer-Aufbau wie pivotMarkers.ts, Dreieck-Pfad-Geometrie wie tradeMarkers.js'
-// Entry-Dreieck (dort Long/Short, hier High/Low: Spitze hoch = High-Pivot, Spitze runter =
-// Low-Pivot).
+// Kreis-Marker für persistierte 1D-Periode-4-Struktur-Pivots (siehe dailyPivots.js).
+// snapToBarTime hält den Pivot über alle Timeframes (M5 aufwärts) sichtbar und klemmt ihn
+// bei weggescrolltem Zeitfenster an den Rand, wie die HTF-Liquidity-Level.
 import { snapToBarTime } from "./chartTimeUtils.js";
 import { cssColor } from "./chartColors.js";
 
-const TRIANGLE_SIZE = 6; // px, etwas größer als das Trade-Entry-Dreieck (5px) — eigenständiger HTF-Marker
-// Bug-Report Philip 2026-08-30: Dreieck klebte direkt an der Kerze/dem Docht, dessen Preis es
-// markiert — Abstand zwischen Preis-Koordinate und Dreieck-Basis, in dieselbe Richtung wie die
-// Spitze zeigt (High-Pivot nach oben weg vom Preis, Low-Pivot nach unten).
+const CIRCLE_RADIUS = 6; // px, Außenring mit getrenntem Kern unterscheidet sich von einfachen Pivot-/Exit-Punkten.
+// Abstand zum Docht beibehalten (Bug-Report 2026-08-30): High nach oben, Low nach unten.
 const PRICE_GAP = 10;
 
-function drawTriangle(ctx, x, y, size, dir, color) {
+function drawCircle(ctx, x, y, radius, color) {
   ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = radius / 3;
+  ctx.setLineDash([]);
   ctx.beginPath();
-  if (dir === 1) {
-    // High-Pivot: Spitze nach oben.
-    ctx.moveTo(x, y - size);
-    ctx.lineTo(x - size, y + size * 0.6);
-    ctx.lineTo(x + size, y + size * 0.6);
-  } else {
-    // Low-Pivot: Spitze nach unten.
-    ctx.moveTo(x, y + size);
-    ctx.lineTo(x - size, y - size * 0.6);
-    ctx.lineTo(x + size, y - size * 0.6);
-  }
-  ctx.closePath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(x, y, radius / 2, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -46,10 +34,10 @@ class DailyPivotMarkerRenderer {
       const ctx = scope.context;
       const toX = (x) => Math.round(x * scope.horizontalPixelRatio);
       const toY = (y) => Math.round(y * scope.verticalPixelRatio);
-      const size = TRIANGLE_SIZE * scope.horizontalPixelRatio;
+      const radius = CIRCLE_RADIUS * scope.horizontalPixelRatio;
 
       pts.forEach((p) => {
-        drawTriangle(ctx, toX(p.x), toY(p.y), size, p.dir, p.color);
+        drawCircle(ctx, toX(p.x), toY(p.y), radius, p.color);
       });
     });
   }
@@ -67,11 +55,8 @@ class DailyPivotMarkerPaneView {
     const candles = this._source._candles;
 
     this._points = this._source._pivots.map((p) => {
-      // Bug-Report Philip 2026-08-30: Dreieck saß auf p.pivotTime (dem 1D-Kerzen-Open, IMMER
-      // 21:00 UTC/23:00 Berlin, siehe cTraders D1-Rollover) statt auf der tatsächlichen 1H-Kerze,
-      // die den Pivot-Preis gebildet hat (structureStartTime, siehe resolveStructureStartTime.ts)
-      // — genau der Zeitpunkt, den structureStartTime auflösen soll. Fallback auf pivotTime nur
-      // für Alt-Pivots ohne aufgelösten Wert (1H-Archiv deckt ihren Tag noch nicht ab).
+      // Marker auf der preisbildenden 1H-Kerze statt dem D1-Open (Bug-Report 2026-08-30).
+      // Fallback auf pivotTime nur für Alt-Pivots ohne aufgelösten structureStartTime.
       const barTime = snapToBarTime(candles, p.structureStartTime ?? p.pivotTime);
       const priceY = series.priceToCoordinate(p.price);
       return {

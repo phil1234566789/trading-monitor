@@ -458,7 +458,7 @@ const {
   dispose: disposeLiquidity,
   refresh: refreshLiquidity,
 } = usePriceChartLiquidity();
-// 1D-Struktur-Pivot-Dreiecke (Task "Market-Structure-Startpunkt: 1D-Periode-4-Pivots") — dünnste
+// 1D-Struktur-Pivot-Kreise (Task "Market-Structure-Startpunkt: 1D-Periode-4-Pivots") — dünnste
 // Variante des Composable-Musters (wie usePriceChartTradeSetupDrawing), da hier weder Roh-Erkennung
 // noch Klick-Hittest-Zustand dranhängt, nur reines Zeichnen der bereits fertig gelieferten
 // dbDailyPivots-Prop.
@@ -1407,7 +1407,7 @@ function refreshLiquidityInternal() {
   });
 }
 
-// Dünner Wrapper um usePriceChartDailyPivots' refresh() — 1D-Struktur-Pivot-Dreiecke, immer
+// Dünner Wrapper um usePriceChartDailyPivots' refresh() — 1D-Struktur-Pivot-Kreise, immer
 // sichtbar (kein eigener Toggle, siehe dbDailyPivots-Prop-Kommentar).
 function refreshDailyPivotsInternal() {
   refreshDailyPivots(clipReplay(allCandles), { dbDailyPivots: props.dbDailyPivots, symbol: props.symbol });
