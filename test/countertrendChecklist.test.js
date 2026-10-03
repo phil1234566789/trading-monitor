@@ -42,7 +42,7 @@ describe('Countertrend: C/D und Setup-1.0-Quelle', () => {
  ])('klassifiziert %s D=%s C=%s als %s', (direction,current,outer,type) => {
   expect(classifyM5SetupType(direction,current,outer).type).toBe(type);
  });
- it.each(fixture.setups)('erkennt Setup $tradeSetupId als Countertrend und stoppt vor Targets', setup => {
+ it.each(fixture.setups)('prüft E/F für den realen Countertrend Setup $tradeSetupId', setup => {
   const spy=vi.spyOn(targets,'evaluateChecklistTargets');
   const input={instrument:'GBPUSD',evaluatedAt:setup.createdAt,tradeSetups:[setup],dailyAnchors,setupClassificationCache:new Map(),
    m5Candles:fixture.m5Candles,h1Candles:fixture.h1Candles,sessionConfigs:sessions.sessions};
@@ -53,20 +53,25 @@ describe('Countertrend: C/D und Setup-1.0-Quelle', () => {
    expect(result.checks.reaction.status).toBe('passed');
    expect(result.checks.m5Trend).toMatchObject({trend:'uptrend',status:'passed'});
    expect(result.checks.outerM5Trend).toMatchObject({trend:'downtrend',required:true,status:'passed'});
-   expect(result.dealingRange.status).toBe('confirmed');
+   expect(result.checks.targets.status).toBe('passed');
+   expect(result.checks.antiConfluences.status).toBe('passed');
+   expect(result.dealingRange.status).toBe('validated');
    expect(result.confirmed).toBe(true);
    expect(result.abortReason).toBeNull();
    expect(hasConfirmedChecklistAbc(result.checks)).toBe(true);
    const snapshot=buildTradeSetup2CandidateSnapshot({checklist:result,candidate:result.setup.primary});
-   expect(snapshot.dealingRange.status).toBe('confirmed');
+   expect(snapshot.dealingRange.status).toBe('validated');
    expect(snapshot.checklist.checks.m5Trend.trend).toBe('uptrend');
    expect(snapshot.evidence.some(e=>e.checkKey==='h1Trend')).toBe(false);
    if (setup.tradeSetupId===5491) expect(result.setup.primary.sweep.ageSeconds).toBeLessThan(86400);
-   expect(spy).not.toHaveBeenCalled();
+   expect(spy).toHaveBeenCalled();
    expect(result.context.h1State).toBeUndefined();
    // Vollarchiv und geschlossenes Präfix liefern denselben eingefrorenen C/D-Stand.
    const prefix={...input,m5Candles:fixture.m5Candles.filter(c=>c.time+300<=setup.createdAt)};
    expect(evaluateCountertrendChecklist(prefix).checks.m5Trend).toEqual(result.checks.m5Trend);
+   expect(evaluateCountertrendChecklist({...prefix,h1Candles:fixture.h1Candles.filter(c=>c.time+3600<=setup.createdAt)}).dealingRange)
+    .toEqual(result.dealingRange);
+   expect(evaluateCountertrendChecklist(prefix).setup.primary.targetSelection).toEqual(result.setup.primary.targetSelection);
    expect(evaluateCountertrendChecklist({...input,evaluatedAt:setup.createdAt+300}).checks.m5Trend)
     .toEqual(result.checks.m5Trend);
    expect(evaluateCountertrendChecklist({...input,evaluatedAt:setup.createdAt-1}).setup.candidates).toEqual([]);
@@ -81,18 +86,19 @@ describe('Countertrend: C/D und Setup-1.0-Quelle', () => {
   expect(result.abortReason).toBe('M5-Trend unbekannt');
   expect(result.confirmed).toBe(false);
  });
- it('bestätigt Countertrend ohne CHoCH/BOS und ohne Target-Prüfung',()=>{
+ it('bestätigt Countertrend mit Targets auch ohne CHoCH/BOS',()=>{
   const setup=fixture.setups[0];
   const outer=vi.spyOn(m5,'evaluateChecklistOuterM5').mockReturnValue({state:{trend:'downtrend'}});
   const current=vi.spyOn(m5,'evaluateChecklistM5').mockReturnValue({status:'pending',
    structureReaction:{trend:'uptrend',choch:null,bos:null},structureState:{trend:'downtrend'}});
-  const target=vi.spyOn(targets,'evaluateChecklistTargets');
+  const target=vi.spyOn(targets,'evaluateChecklistTargets').mockReturnValue({status:'passed',selectedAt:setup.createdAt,
+   direction:'short',target1:{price:1,knownAt:setup.createdAt},details:['Testziel']});
   try {
    const result=evaluateCountertrendChecklist({instrument:'GBPUSD',evaluatedAt:setup.createdAt,
     tradeSetups:[setup],dailyAnchors,m5Candles:fixture.m5Candles});
    expect(result.confirmed).toBe(true);
    expect(result.checks.m5Trend).toMatchObject({status:'passed',detailStatuses:['passed']});
-   expect(target).not.toHaveBeenCalled();
+   expect(target).toHaveBeenCalled();
   } finally {outer.mockRestore();current.mockRestore();target.mockRestore();}
  });
  it('erkennt Trendfortführung, bricht ab und verwendet keinen H1-Anker',()=>{

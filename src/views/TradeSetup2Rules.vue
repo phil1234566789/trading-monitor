@@ -3,25 +3,29 @@
     <header>
       <p class="eyebrow">Milky Way · Regelprüfung</p>
       <h1>Trade Setup 2.0</h1>
-      <p class="lead">Countertrend · Checkliste A bis D.</p>
+      <p class="lead">Countertrend · Bestätigung nach A bis E, Validierung über F.</p>
       <p class="review-state"><strong>Entwurf · gemeinsame Absegnung offen</strong><br />Diskussionsstand vom <time datetime="2026-10-03">03.10.2026</time>. Von Philip festgelegt, zur gemeinsamen Prüfung mit seinem Trading-Partner.</p>
       <p>Die <strong>Fachregeln</strong> beschreiben die Festlegungen. Der <strong>Implementierungsstand</strong> zeigt den technischen Stand laut Regelentwurf. <strong>Offene Entscheidungen</strong> sind noch gemeinsam festzulegen.</p>
       <p><RouterLink to="/setup-regeln">Direktlink zu dieser Regelübersicht</RouterLink> · Diesen Seitenlink könnt ihr für eure gemeinsame Prüfung teilen.</p>
     </header>
 
     <section id="abcd" aria-labelledby="abcd-title">
-      <h2 id="abcd-title">Countertrend · A bis D</h2>
+      <h2 id="abcd-title">Countertrend · DR-Stufen</h2>
       <dl class="criteria">
         <div><dt>A · Liquidity Sweep</dt><dd>Ein erkanntes Setup 1.0 liegt vor: Sweep, Protected-M5-Fraktal und zugehöriger M5-Orderblock. Kein H1-Alterskriterium.</dd></div>
         <div><dt>B · Reaktion</dt><dd>Vorerst der zugehörige M5-Orderblock aus Setup 1.0. Eine Verbesserung der Reaktionsprüfung folgt erst nach der Jahresstatistik.</dd></div>
         <div><dt>C · M5-Trend (äußerster)</dt><dd>Der äußerste M5-Trend ab dem bekannten D1-Fraktal der Periode 4 ersetzt den H1-Trend. C muss in Setup-Richtung zeigen. Bei Gegenrichtung oder unbekanntem Trend wird abgebrochen, ohne D auszuwerten.</dd></div>
         <div><dt>D · M5-Trend (aktuell)</dt><dd>Die tiefste bestätigte M5-Strukturebene zum Erkennungszeitpunkt bestimmt den aktuellen Trend. Unbestätigte Nested-Kandidaten zählen nicht; ohne bestätigten Nested-Trend gilt der äußere Trend.</dd></div>
+        <div><dt>E · Targets</dt><dd>Die bestehende Target-Auswahl bleibt erhalten. Targets gefunden bestätigt die DR; ohne Targets bleibt sie unbestätigt.</dd></div>
+        <div><dt>F · Anti-Confluences</dt><dd>Eine H1-RSI-Gegendivergenz invalidiert die bestätigte DR: bullisch bei Short, bärisch bei Long. Ohne Gegendivergenz ist sie validiert. Bei fehlenden Daten bleibt sie bestätigt mit offener Validierung.</dd></div>
+        <div><dt>G · Confluences</dt><dd>Beobachtungen für die Statistik; ändern die DR-Stufe nicht.</dd></div>
+        <div><dt>H · Uhrzeit</dt><dd>Noch nicht besprochen; bestehende Zeit- und Entry-Regeln werden hier nicht geändert.</dd></div>
       </dl>
-      <p><strong>Countertrend:</strong> C zeigt in Setup-Richtung und D dagegen. A bis D erfüllt bestätigt die Dealing Range. Ein CHoCH ist dafür keine Bedingung; Validierung und Invalidierung sind noch offen.</p>
+      <p><strong>Countertrend:</strong> C zeigt in Setup-Richtung und D dagegen. A bis E erfüllt bestätigt die Dealing Range; F entscheidet validiert oder invalidiert. Ein CHoCH ist dafür keine Bedingung. Die bestehende Preisinvalidierung bleibt wirksam.</p>
       <p><strong>Trendfortführung:</strong> C und D zeigen in Setup-Richtung. Der Typ wird erkannt, der Pfad bricht mit „Typ Trendfortführung, noch nicht umgesetzt“ ab.</p>
       <p><strong>Abbruch:</strong> C zeigt gegen die Setup-Richtung oder ist unbekannt. Grund: „äußerster M5-Trend gegen Setup-Richtung“ beziehungsweise „M5-Trend unbekannt“.</p>
       <p>C und D werden am Bekannt-Zeitpunkt des Setups mit den bis dahin geschlossenen Kerzen ausgewertet. Spätere Replay-Kerzen ändern diese Typ-Prüfung nicht.</p>
-      <aside class="open-decision"><h3>Nächste Festlegungen offen</h3><p>Short 97 und 105 sind positive Countertrend-Referenzen. Der äußerste M5-Trend ist Pflicht. Die Trendfortführung folgt später.</p><p>Targets, Anti-Confluences, Uhrzeit, Confluences und Entry-Modelle werden hier nicht neu definiert.</p></aside>
+      <aside class="open-decision"><h3>Nächste Festlegungen offen</h3><p>Short 97 und 105 sind Countertrend-Referenzen. Der äußerste M5-Trend ist Pflicht. Die Trendfortführung folgt später.</p><p>Die Target-Auswahl und die Erkennung der H1-Gegendivergenz bleiben unverändert. Der spätere Umbau der Anti-Confluences und weitere Entry-Regeln gehören zu eigenen Aufgaben.</p></aside>
     </section>
 
     <details class="countertrend-rules">
@@ -135,7 +139,7 @@
       <p>Die gemeinsame Prüfung und Absegnung dieses Entwurfs steht aus.</p>
     </section>
     </details>
-    <footer>Bestehende Läufe bleiben historische Ergebnisse ihrer jeweiligen Regeln. Die neue Countertrend-Checkliste bestätigt A bis D; weitere Regeln folgen später. Diese Seite startet keinen Scan.</footer>
+    <footer>Bestehende Läufe behalten ihre gespeicherten Stufen. Die neue Countertrend-Version bestätigt A bis E und validiert über F. Diese Seite startet keinen Scan.</footer>
   </main>
 </template>
 

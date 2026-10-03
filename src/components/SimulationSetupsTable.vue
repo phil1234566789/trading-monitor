@@ -13,7 +13,7 @@ import DealingRangeOutcome from './DealingRangeOutcome.vue';
 const props = defineProps({ repository: { type: Object, required: true }, runId: String, runs: Array, instrument: String, variant: String, results: { type: Array, default: () => [] }, resultsLoading: Boolean, resultsError: String });
 const snapshots = shallowRef([]), loading = ref(false), error = ref('');
 const filter = ref('all'), from = ref(''), to = ref(''), page = ref(0);
-const drFilter = ref('current');
+const drFilter = ref('allStages');
 const expanded = ref(new Set());
 function toggle(key, event) { event.target.open ? expanded.value.add(key) : expanded.value.delete(key); }
 const pageSize = 25;
@@ -53,7 +53,7 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
   <section class="setup-review" aria-label="Gespeicherte Setups und Entry-Bedingungen" :aria-busy="loading">
     <h2>Dealing Ranges prüfen · Entry 1</h2>
     <p>Eine Zeile je Lauf und Setup. Kandidat und zugehöriger Entry werden innerhalb desselben Laufs zusammengeführt. Stände aus unterschiedlichen Läufen bleiben wegen möglicher anderer Regeln oder Startpunkte getrennt. Alle Zeiten: Europe/Berlin.</p>
-    <p>Die neue Version zählt vollständig bestätigte ABC-Ranges, auch ohne Entry und bei gescheiterter Validierung. Bei einem Entry zeigen die Bedingungen den Entry-Stand, sonst den zuletzt gespeicherten DR-Stand.</p>
+    <p>Die neue Countertrend-Version zeigt alle DR-Stufen: A bis E bestätigt, F validiert oder invalidiert. Bei einem Entry zeigen die Bedingungen den Entry-Stand, sonst den zuletzt gespeicherten DR-Stand.</p>
     <p>Validierte DRs ohne Entry zeigen den gespeicherten Verlauf ab erster Validierung bis T1 oder Invalidierung. Das ist kein Trade-Ergebnis und zählt nicht zu PnL oder Winrate.</p>
     <p v-if="loading" role="status">Gespeicherte Setup-Belege werden geladen…</p>
     <p v-else-if="error" role="alert">{{ error }} <button @click="refresh">Erneut versuchen</button></p>
@@ -61,7 +61,7 @@ const origin = snapshot => props.runs?.find(run => run.id === snapshot.runId);
       <p class="counts">{{ groups.length }} {{ runId ? 'Setups' : 'Setup-Stände über alle Läufe' }} · {{ withEntry }} mit Entry · {{ groups.length - withEntry }} ohne Entry</p>
       <p v-if="legacyCount">{{ legacyCount }} Altstände enthalten keine gespeicherte DR-Stufe. Über „Altstände“ bleiben sie mit ihren ursprünglichen Belegen zugänglich.</p>
       <div class="filters">
-        <label>DR-Stufe<select v-model="drFilter"><option value="current">Alle bestätigten Ranges · neue Version</option><option value="validated">Validierte Dealing Ranges</option><option value="invalidated">Invalidierte Dealing Ranges</option><option value="confirmed">Bestätigt · Validierung offen</option><option value="legacy">Altstände · ursprüngliche Kandidaten</option></select></label>
+        <label>DR-Stufe<select v-model="drFilter"><option value="allStages">Alle DR-Stufen</option><option value="unconfirmed">Unbestätigte Dealing Ranges</option><option value="current">Alle bestätigten Ranges · neue Version</option><option value="validated">Validierte Dealing Ranges</option><option value="invalidated">Invalidierte Dealing Ranges</option><option value="confirmed">Bestätigt · Validierung offen</option><option value="legacy">Altstände · ursprüngliche Kandidaten</option></select></label>
         <label>Setup-Filter<select v-model="filter"><option value="all">Alle</option><option value="with">Mit Entry</option><option value="without">Ohne Entry</option></select></label>
         <label>Bewertungsstand ab<input v-model="from" type="date" /></label>
         <label>Bewertungsstand bis einschließlich<input v-model="to" type="date" /></label>

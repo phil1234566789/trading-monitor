@@ -3,6 +3,18 @@ import { setupEntryConditions, groupSetupSnapshots, filterDealingRanges } from '
 import { DEALING_RANGE_VERSION } from '../src/tradeSetup2DealingRange.js';
 import { simulationChartLink } from '../src/tradeSetupSimulationStatistics.js';
 
+it('zeigt alle gespeicherten DR-Stufen und leeren Bestand ohne erfundene Entries',()=>{
+ const snapshots=['unconfirmed','confirmed','validated','invalidated'].map((status,i)=>({
+  id:`range${i}`,setupKey:`range${i}`,instrument:'GBPUSD',knownAt:600,entry:null,
+  dealingRange:{version:'countertrend-abcdef-v1',status}}));
+ const entry={...snapshots[2],id:'entry',entry:{recognizedAt:600}};
+ const groups=groupSetupSnapshots([...snapshots,entry]);
+ expect(filterDealingRanges(groups,'allStages')).toHaveLength(4);
+ for(const status of ['unconfirmed','confirmed','validated','invalidated']) expect(filterDealingRanges(groups,status)).toHaveLength(1);
+ expect(filterDealingRanges(groups,'validated')[0].entries).toHaveLength(1);
+ expect(filterDealingRanges(groupSetupSnapshots([]),'allStages')).toEqual([]);
+});
+
 const snapshot = () => ({ id: 'entry', setupKey: 'setup', instrument: 'GBPUSD', knownAt: 600,
   entry: { recognizedAt: 600, candleTime: 540, price: 1.3, label: 'Entry 1' },
   checklist: { status: 'ready', evaluatedAt: 600, checks: {

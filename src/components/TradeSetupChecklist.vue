@@ -37,7 +37,7 @@ const countertrendAbcdDefinitions = [
   { key: 'reaction', label: 'Reaktion' },
   { key: 'outerM5Trend', label: 'M5-Trend (äußerster)', fallback: 'unknown' },
   { key: 'm5Trend', label: 'M5-Trend (aktuell)', fallback: 'unknown' },
-  ...countertrendDefinitions.filter(d => ['targets', 'antiConfluences', 'time', 'confluences', 'm1', 'entry'].includes(d.key)),
+  ...['targets', 'antiConfluences', 'confluences', 'time', 'm1', 'entry'].map(key=>countertrendDefinitions.find(d=>d.key===key)),
 ];
 const statuses = {
   passed: { label: "Erfüllt", symbol: "✓" },

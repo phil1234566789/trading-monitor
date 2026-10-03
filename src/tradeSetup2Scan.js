@@ -58,9 +58,10 @@ export async function scanTradeSetup2Window({ instrument, h1Candles, m5Candles, 
     settings: effectiveSettings, sessionConfigs, tradingWindows, news, newsLoadStatus, reactionCache, closeReactionCache, entryGates: true });
   async function saveCandidates(checklist) {
     for (const candidate of checklist?.setup?.candidates ?? []) {
-      if (checklist.evaluatedAt < fromTime || candidate.validity?.state === 'ended') continue;
+      if (checklist.evaluatedAt < fromTime || candidate.validity?.state === 'ended'
+        && !(checklist.model==='countertrend' && ['invalidation','both'].includes(candidate.validity.reason))) continue;
       const stage = evaluateDealingRange(checklist, candidate).status;
-      if (stage === 'unconfirmed' || seenSetups.get(candidate.id) === stage) continue;
+      if (stage === 'unconfirmed' && checklist.model!=='countertrend' || seenSetups.get(candidate.id) === stage) continue;
       const snapshot = buildTradeSetup2CandidateSnapshot({ checklist, candidate });
       if (!snapshot) continue;
       seenSetups.set(candidate.id, stage);

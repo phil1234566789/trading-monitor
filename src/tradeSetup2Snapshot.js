@@ -27,13 +27,15 @@ export function buildTradeSetup2CandidateSnapshot({checklist,candidate}) {
   if (checklist?.status!=='ready' || !candidate?.id || !Number.isFinite(candidate.knownAsOf)
     || candidate.knownAsOf!==checklist.evaluatedAt) return null;
   const dealingRange = evaluateDealingRange(checklist, candidate);
-  if (dealingRange.status === 'unconfirmed') return null;
+  if (dealingRange.status === 'unconfirmed' && checklist.model !== 'countertrend') return null;
   const state={...checklist,setup:{primary:candidate}};
+  if (checklist.model==='countertrend') Object.assign(state,{direction:candidate.direction,setupType:candidate.setupType,
+    abortReason:candidate.abortReason,confirmed:dealingRange.status!=='unconfirmed',structure:candidate.checks.m5Trend?.structureState ?? null});
   delete state.context;
   // Weitere bestätigte Sweeps in derselben H1-Richtung erhalten eigene E/G-Belege.
-  if (candidate.id!==checklist.setup?.primary?.id) state.checks={
-    ...(checklist.model==='countertrend'?{m5Trend:candidate.checks.m5Trend,outerM5Trend:candidate.checks.outerM5Trend}
-      :{h1Trend:checklist.checks.h1Trend}),
+  if (candidate.id!==checklist.setup?.primary?.id && checklist.model==='countertrend') state.checks={...checklist.checks,...candidate.checks};
+  else if (candidate.id!==checklist.setup?.primary?.id) state.checks={
+    h1Trend:checklist.checks.h1Trend,
     time:checklist.checks.time,...candidate.checks,
     targets:{status:candidate.targetSelection?.status ?? 'unknown',details:candidate.targetSelection?.details ?? []},
     ...evaluateChecklistConfluences({...checklist.context,primary:candidate,
@@ -58,10 +60,10 @@ export function buildTradeSetup2Snapshot(input) {
   const dealingRange = evaluateDealingRange(checklist);
   if (dealingRange.status !== 'validated') return null;
   if (!entryAgainstM5Allowed(checklist, entry)) return null;
-  const { instrument, evaluatedAt, status, checks, structure, tradeability }=checklist;
+  const { instrument, evaluatedAt, status, checks, structure, tradeability, model, ruleVersion }=checklist;
   const sizedEntry = { ...entry, sizing: entrySizingAt(checklist, entry) };
   return restoreTradeSetup2Snapshot(JSON.parse(JSON.stringify({schemaVersion:3,id:entry.id,instrument,setupKey:entry.setupKey,
     direction:entry.direction,knownAt:entry.recognizedAt,entry:sizedEntry,
-    dealingRange,checklist:{instrument,evaluatedAt,status,checks,structure,tradeability,dealingRange,setup:{primary:checklist.setup.primary}},
+    dealingRange,checklist:{instrument,evaluatedAt,status,checks,structure,tradeability,model,ruleVersion,dealingRange,setup:{primary:checklist.setup.primary}},
     m1Check:{...m1Check,entry:sizedEntry},evidence:tradeSetup2Evidence(input)})));
 }

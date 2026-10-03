@@ -3,10 +3,12 @@ import { evaluateChecklistTime } from './tradeSetupChecklistTime.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { markIgnoredCandles } from './sessionOccurrences.js';
 import { berlinOffsetMinutes } from './berlinTime.js';
-import { evaluateDealingRange, COUNTERTREND_VERSION } from './tradeSetup2DealingRange.js';
+import { evaluateDealingRange, COUNTERTREND_STAGE_VERSION } from './tradeSetup2DealingRange.js';
+import { fixChecklistTargets, evaluateChecklistLifecycle } from './tradeSetupChecklistLifecycle.js';
+import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
 import { deriveSetupEntryInvalidation, sweepAgeSec } from './tradeSetup.js';
 
-export { COUNTERTREND_VERSION } from './tradeSetup2DealingRange.js';
+export { COUNTERTREND_STAGE_VERSION } from './tradeSetup2DealingRange.js';
 export const SETUP_TYPE_LABELS = { trendContinuation: 'Trendfortführung', countertrend: 'Countertrend', unclear: 'Unklar' };
 
 export function classifyM5SetupType(direction, currentTrend, outerTrend) {
@@ -27,7 +29,7 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     outerM5Trend: { status: 'unknown', required: true, trend: 'unknown', details: ['Äußerster M5-Trend unbekannt.'] },
     targets: pending(), antiConfluences: pending(), confluences: pending(),
     time: evaluateChecklistTime({ instrument, evaluatedAt, sessions: sessionConfigs, tradingWindows, news, newsLoadStatus }) };
-  const result = { model: 'countertrend', ruleVersion: COUNTERTREND_VERSION, instrument, evaluatedAt,
+  const result = { model: 'countertrend', ruleVersion: COUNTERTREND_STAGE_VERSION, instrument, evaluatedAt,
     status: dataStatus, checks, direction: null, setupType: 'unclear', confirmed: false, abortReason: null,
     tradeability: checks.time.outsideTradingHours ? 'blocked' : 'unknown',
     setup: { candidates: [], primary: null, opposingCandidates: [], classifications: [] } };
@@ -100,6 +102,17 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
   result.setup.classifications = candidates.map(c => ({ id: c.id, setupType: c.setupType, reason: c.abortReason,
     recognizedAt: c.recognizedAt, currentTrend: c.checks.m5Trend.trend, outerTrend: c.checks.outerM5Trend.trend }));
   const accepted = candidates.filter(c => c.setupType === 'countertrend');
+  for (const candidate of accepted) {
+    candidate.targetSelection = fixChecklistTargets({candidate,instrument,candles:m5,sessionConfigs,recognitionWithinBar:true});
+    candidate.checks.targets = candidate.targetSelection ?? {status:'unknown',details:['Zielprüfung offen.']};
+    if (candidate.targetSelection?.status === 'passed') {
+      candidate.lifecycle = evaluateChecklistLifecycle({selection:candidate.targetSelection,invalidation:candidate.invalidation,
+        candles:m5,evaluatedAt});
+      candidate.validity = candidate.lifecycle.main;
+      Object.assign(candidate.checks,evaluateChecklistConfluences({...result.context,direction:candidate.direction,
+        primary:candidate,opposingCandidates:[],target2:candidate.targetSelection.target2}));
+    }
+  }
   const selected = accepted[0] ?? candidates[0];
   if (selected) {
     result.direction = selected.direction;
@@ -110,9 +123,8 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     result.context.direction = selected.direction;
     result.setup.primary = selected;
   }
-  // E ff. sind noch offen; weder alte Targets noch Entry-Regeln entscheiden die neue DR-Stufe.
   result.setup.candidates = accepted;
   result.dealingRange = evaluateDealingRange(result);
-  result.confirmed = result.dealingRange.status === 'confirmed';
+  result.confirmed = ['confirmed','validated','invalidated'].includes(result.dealingRange.status);
   return result;
 }

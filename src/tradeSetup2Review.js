@@ -35,7 +35,8 @@ export function groupSetupSnapshots(snapshots) {
 export function filterDealingRanges(groups, filter = 'current') {
   return groups.filter(group => {
     const status = savedDealingRangeStatus(group.snapshot);
-    return filter === 'current' ? ['confirmed', 'validated', 'invalidated'].includes(status) : status === filter;
+    return filter === 'allStages' ? status !== 'legacy'
+      : filter === 'current' ? ['confirmed', 'validated', 'invalidated'].includes(status) : status === filter;
   });
 }
 
@@ -54,18 +55,26 @@ export function setupEntryConditions(snapshot) {
   const normal = status => status === 'passed' ? 'passed' : ['unmet', 'pending', 'blocked'].includes(status) ? 'unmet' : 'unknown';
   const rows = [];
   const add = (key, label, status, details, time = at) => rows.push({ key, label, status, details, time: known(time) ? time : null });
-  for (const [key, label, time] of [
+  const checkpoints = checklist?.model === 'countertrend' ? [
+    ['liquiditySweep', 'A · Liquidity Sweep bestätigt', primary?.recognizedAt],
+    ['reaction', 'B · Passender M5-Orderblock bestätigt', primary?.reactionRecognizedAt],
+    ['outerM5Trend', 'C · Äußerster M5-Trend', at],
+    ['m5Trend', 'D · Aktueller M5-Trend / Countertrend', at],
+    ['targets', 'E · Targets gefunden', primary?.targetSelection?.selectedAt],
+    ['antiConfluences', 'F · H1-Gegendivergenz prüfen', at],
+  ] : [
     ['h1Trend', 'A · H1-Richtung bestätigt', at],
     ['liquiditySweep', 'B · Liquidity Sweep bestätigt', primary?.recognizedAt],
     ['reaction', 'C · Passender M5-Orderblock bestätigt', primary?.reactionRecognizedAt],
-  ]) {
+  ];
+  for (const [key, label, time] of checkpoints) {
     const check = checks[key];
     const future = Number.isFinite(time) && !known(time);
     add(key, label, future ? 'unknown' : normal(check?.status), future ? ['Beleg liegt nach dem gespeicherten Stand.']
       : check?.details ?? ['Keine Prüfung gespeichert.'], time ?? at);
   }
   const dr = snapshot.dealingRange;
-  if (savedDealingRangeStatus(snapshot) !== 'legacy') add('validation', 'D · DR-Validierung / Targets',
+  if (savedDealingRangeStatus(snapshot) !== 'legacy') add('validation', checklist?.model === 'countertrend' ? 'DR-Stufe nach E/F' : 'D · DR-Validierung / Targets',
     dr.status === 'validated' ? 'passed' : dr.status === 'invalidated' ? 'unmet' : 'unknown', dr.details, dr.evaluatedAt);
   const timeCheck = checks.time;
   add('time', 'Handelszeit / Session / News',

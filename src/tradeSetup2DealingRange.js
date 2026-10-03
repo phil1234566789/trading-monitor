@@ -1,8 +1,10 @@
 import { hasConfirmedChecklistAbc } from './tradeSetupChecklistGates.js';
+import { evaluateCountertrendDealingRange, COUNTERTREND_STAGE_VERSION } from './countertrendDealingRange.js';
+export { COUNTERTREND_STAGE_VERSION } from './countertrendDealingRange.js';
 
 export const DEALING_RANGE_VERSION = 'abc-d-targets-eg-observations-v1';
 export const COUNTERTREND_VERSION = 'countertrend-abcd-v1';
-const knownVersion = version => [DEALING_RANGE_VERSION, COUNTERTREND_VERSION].includes(version);
+const knownVersion = version => [DEALING_RANGE_VERSION, COUNTERTREND_VERSION, COUNTERTREND_STAGE_VERSION].includes(version);
 export const DEALING_RANGE_LABELS = {
   unconfirmed: 'Unbestätigte Dealing Range', confirmed: 'Bestätigte Dealing Range · Validierung offen',
   validated: 'Validierte Dealing Range', invalidated: 'Invalidierte Dealing Range',
@@ -17,6 +19,7 @@ export function isVersionedDealingRangeRun(run) {
 
 export function evaluateDealingRange(checklist, candidate = checklist?.setup?.primary) {
   if (checklist?.model === 'countertrend') {
+    if (checklist.ruleVersion !== COUNTERTREND_VERSION) return evaluateCountertrendDealingRange(checklist, candidate);
     const confirmed = checklist.status === 'ready' && candidate?.setupType === 'countertrend'
       && hasConfirmedChecklistAbc(candidate.checks) && candidate.checks.m5Trend?.status === 'passed';
     // Validierung/Invalidierung der neuen Strategie sind noch nicht festgelegt.

@@ -4,13 +4,16 @@ import { candleTouchesPrice } from './structurePivotTime';
 
 export const CHECKLIST_RULE_VERSION = 'session-targets-at-c-m5-sweep-v2';
 
-export function fixChecklistTargets({ candidate, instrument, candles, sessionConfigs }) {
+export function fixChecklistTargets({ candidate, instrument, candles, sessionConfigs, recognitionWithinBar = false }) {
   const selectedAt = candidate.reactionRecognizedAt;
   if (candidate.checks.reaction.status !== 'passed' || !Number.isFinite(selectedAt)) return null;
   const prefix = closedChecklistCandles(candles, '5m', selectedAt);
   // Referenz ist der damals geschlossene Kurs; spätere Kurse verschieben keine Auswahl.
   const referencePrice = prefix.findLast(c => !c.ignored)?.close;
-  if (prefix.at(-1)?.time + 300 !== selectedAt) return null;
+  // Persistierte created_at-Zeiten können zwischen M5-Schlüssen liegen (z.B. 105).
+  // Der neue Pfad nutzt dann den letzten geschlossenen Kurs; Altregeln bleiben strikt.
+  const closedAt = recognitionWithinBar ? Math.floor(selectedAt / 300) * 300 : selectedAt;
+  if (prefix.at(-1)?.time + 300 !== closedAt) return null;
   return evaluateChecklistTargets({ instrument, direction: candidate.direction, evaluatedAt: selectedAt,
     referencePrice, m5Candles: prefix, sessionConfigs });
 }
