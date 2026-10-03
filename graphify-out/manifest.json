@@ -2964,9 +2964,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetups.js": {
-    "mtime": 1791047526.704554,
-    "seen": 1791047938.0305612,
-    "ast_hash": "bac48a09548f6a4f7b642c9506f341a5",
+    "mtime": 1791054784.565276,
+    "seen": 1791055323.4803343,
+    "ast_hash": "a84ff09251b51a90c6815ae34481e6ea",
     "semantic_hash": ""
   },
   "test/tradeSetups.test.js": {
@@ -4482,9 +4482,9 @@
     "semantic_hash": ""
   },
   "scripts/tradeSetup2YearRun.mjs": {
-    "mtime": 1790973796.4835992,
-    "seen": 1790974023.7432053,
-    "ast_hash": "3248514a86fe315f2a140487f65315e8",
+    "mtime": 1791055260.4027536,
+    "seen": 1791055323.4165432,
+    "ast_hash": "f059ed6f04b0fcb4da4465e97563b7dc",
     "semantic_hash": ""
   },
   "src/components/SimulationResultsTable.vue": {
@@ -5148,9 +5148,9 @@
     "semantic_hash": ""
   },
   "src/countertrendLifecycle.js": {
-    "mtime": 1791053958.3568714,
-    "seen": 1791053990.3911493,
-    "ast_hash": "c287dee2c2ff3f10e92e51db21bc19cd",
+    "mtime": 1791054827.0941267,
+    "seen": 1791055323.441612,
+    "ast_hash": "f1dcf536c449bc72ce66e5bf411f527d",
     "semantic_hash": ""
   },
   "src/countertrendScan.js": {
@@ -5283,6 +5283,12 @@
     "mtime": 1791053692.3605127,
     "seen": 1791053990.4654763,
     "ast_hash": "442b942f60c3594f0e4d2cc9de609145",
+    "semantic_hash": ""
+  },
+  "src/tradeSetupRow.js": {
+    "mtime": 1791054784.5576982,
+    "seen": 1791055323.4793336,
+    "ast_hash": "1aeb93f99a2623b4a7a6c07cdefa88f0",
     "semantic_hash": ""
   }
 }
