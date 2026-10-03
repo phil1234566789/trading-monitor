@@ -12,6 +12,7 @@ import { renderM1Entry } from '../m1EntryRendering.js';
 import { afterBrowserPaint } from '../afterBrowserPaint.js';
 import { createSetup2Entry } from '../tradeSetup2EntryGate.js';
 import { ENTRY_MODEL_1_VERSION } from '../entryModel1Conditions.js';
+import { createSetup2Memo,isCandleAppend } from '../setup2Memo.js';
 
 export function usePriceChartM1Structure(props, checklistState, {
   fetchCached = fetchCandlesCached, now = () => Date.now(), prerequisitesAt = () => checklistState.value,
@@ -29,6 +30,8 @@ export function usePriceChartM1Structure(props, checklistState, {
   const primitives = [];
   const markers = [];
   const entryPrimitives = [];
+  const entryProgress=createSetup2Memo();
+  let entryRevision;
   const status = shallowRef({ state: 'waiting', anchor: null, lastClosedAt: null });
   const check = shallowRef(inactiveM1Checklist('prerequisites'));
   const enabled = () => props.showM1Structure && !detailSelected();
@@ -55,6 +58,9 @@ export function usePriceChartM1Structure(props, checklistState, {
     const prerequisites = enabled() ? prerequisitesAt(evaluatedAt ?? requestedUntil()) : null;
     const reason = !enabled() ? 'disabled' : m1PrerequisiteReason(prerequisites);
     const knownContext = !reason && evaluatedAt != null ? activeM1Context(prerequisites) : null;
+    const nextRevision=JSON.stringify([prerequisites?.context?.settings,prerequisites?.context?.sessionConfigs,
+      prerequisites?.context?.dataRevision]);
+    if(nextRevision!==entryRevision){entryProgress.clear();entryRevision=nextRevision;}
     const marked = markIgnored(rows, props.symbol);
     const result = knownContext && props.showM1Structure && status.value.state !== 'loading'
       ? buildM1Structure(marked, knownContext.anchor, evaluatedAt) : null;
@@ -63,7 +69,12 @@ export function usePriceChartM1Structure(props, checklistState, {
     if (reason) currentCheck = inactiveM1Checklist(reason);
     else if (['loading', 'error'].includes(status.value.state)) currentCheck = inactiveM1Checklist(status.value.state);
     else if (missingClose || !result) currentCheck = inactiveM1Checklist('missing');
-    else currentCheck = evaluateM1Checklist({ context: knownContext, structure: result, candles: marked, evaluatedAt });
+    else {
+      const key=JSON.stringify([knownContext.setupKey,knownContext.confirmedAt,knownContext.settings,knownContext.direction]);
+      let progress=entryProgress.get(key);
+      if(!progress){progress={};entryProgress.set(key,progress);}
+      currentCheck = evaluateM1Checklist({ context: knownContext, structure: result, candles: marked, evaluatedAt,entryProgress:progress });
+    }
     if (currentCheck.entry?.entryModel === ENTRY_MODEL_1_VERSION) {
       const entry=currentCheck.entry;
       currentCheck={...currentCheck,entry:createSetup2Entry({...prerequisites.context,
@@ -97,6 +108,7 @@ export function usePriceChartM1Structure(props, checklistState, {
       const fetched = await fetchCached(fetchInitialCandles, source.instrument, '1m', count,
         props.replayUntil == null ? undefined : requestedUntil() * 1000, REPLAY_LOOKAHEAD_SEC);
       if (disposed || ticket !== generation) return;
+      if(!isCandleAppend(rows,fetched))entryProgress.clear();
       rows = fetched;
       status.value = { ...status.value, state: 'loaded' };
       render();

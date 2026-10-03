@@ -18,9 +18,9 @@ export function countertrendLifecycleEnd({ invalid, target1, target2, hasTarget2
 }
 
 /** T1 sperrt neue Entries, beendet eine DR mit offenen Restpositionen aber noch nicht. */
-export function evaluateCountertrendLifecycle({ selection, invalidation, candles, evaluatedAt, entries = [], m1Candles = [] }) {
-  const main = { state: 'unknown', reason: 'missingSelection', endedAt: null, recognizedAt: null };
-  const result = { main, target1: { status: 'open', hitAt: null, recognizedAt: null },
+export function evaluateCountertrendLifecycle({ selection, invalidation, candles, evaluatedAt, entries = [], m1Candles = [], progress }) {
+  let main = { state: 'unknown', reason: 'missingSelection', endedAt: null, recognizedAt: null };
+  let result = { main, target1: { status: 'open', hitAt: null, recognizedAt: null },
     target2: { status: selection?.target2 ? 'open' : 'notApplicable', hitAt: null, recognizedAt: null },
     events: [], entrySearchAllowed: false, evaluatedAt };
   if (selection?.status !== 'passed' || !selection.target1 || !Number.isFinite(invalidation)) return result;
@@ -29,16 +29,29 @@ export function evaluateCountertrendLifecycle({ selection, invalidation, candles
   const minuteStart=Math.ceil(selection.selectedAt/60)*60;
   const minutes=closedChecklistCandles(m1Candles,'1m',evaluatedAt).filter(c=>c.time>=minuteStart);
   const duration=minutes[0]?.time===minuteStart ? 60 : 300;
-  let next=Math.ceil(selection.selectedAt/duration)*duration;
+  const key=JSON.stringify([selection,invalidation,duration]);
+  // Nachgelieferte historische Entries können das damalige T1-Ende ändern; dann neu beginnen.
+  const previous=progress?.key===key && progress.at<=evaluatedAt && progress.result
+    && !entries.some(e=>!progress.entryTimes.includes(e.entryTime) && e.entryTime<progress.at) ? progress : null;
+  if(previous){result=structuredClone(previous.result);result.evaluatedAt=evaluatedAt;main=result.main;}
+  let next=previous?.next ?? Math.ceil(selection.selectedAt/duration)*duration;
+  const save=()=>{
+    if(progress){progress.key=key;progress.at=evaluatedAt;progress.next=next;progress.entryTimes=entries.map(e=>e.entryTime);
+      progress.result=main.state==='unknown'?null:structuredClone(result);}
+    return result;
+  };
+  if(main.state==='ended')return save();
   const rows=duration===60 ? minutes : closedChecklistCandles(candles,'5m',evaluatedAt).filter(c=>c.time>=next);
   const short = selection.direction === 'short';
   const touches = (c, price, favorable) => Number.isFinite(price)
     && (favorable === short ? c.low <= price : c.high >= price);
   for (const c of rows) {
+    if(c.time<next)continue;
     if (c.time !== next || ![c.high,c.low].every(Number.isFinite)) {
-      main.state = 'unknown'; main.reason = 'missingHistory'; result.entrySearchAllowed = false; return result;
+      main.state = 'unknown'; main.reason = 'missingHistory'; result.entrySearchAllowed = false; return save();
     }
     next += duration;
+    if(progress)progress.processed=(progress.processed ?? 0)+1;
     if (c.ignored) continue;
     const invalid = touches(c,invalidation,false);
     const t1 = touches(c,selection.target1.price,true);
@@ -56,7 +69,7 @@ export function evaluateCountertrendLifecycle({ selection, invalidation, candles
       const last=reason==='entriesClosed' ? knownEntries.reduce((a,b)=>a.exitRecognizedAt>b.exitRecognizedAt?a:b) : null;
       Object.assign(main,{state:'ended',reason,endedAt:last?.exitTime ?? c.time,recognizedAt:last?.exitRecognizedAt ?? next});
       if (reason==='both') main.ambiguous=true;
-      result.entrySearchAllowed=false; return result;
+      result.entrySearchAllowed=false; return save();
     }
   }
   if (next < Math.floor(evaluatedAt/duration)*duration) { main.state='unknown'; main.reason='missingHistory'; result.entrySearchAllowed=false; }
@@ -73,5 +86,5 @@ export function evaluateCountertrendLifecycle({ selection, invalidation, candles
     const last=entries.reduce((a,b)=>a.exitRecognizedAt>b.exitRecognizedAt?a:b);
     Object.assign(main,{state:'ended',reason:'entriesClosed',endedAt:last.exitTime,recognizedAt:last.exitRecognizedAt});
   }
-  return result;
+  return save();
 }

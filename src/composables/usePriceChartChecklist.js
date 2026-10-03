@@ -7,6 +7,7 @@ import { createCloseReactionCache } from '../m5CloseReactionHistory.js';
 import { closedReplayEvaluationTime } from '../tradeSetupChecklistTimeBasis.js';
 import { afterBrowserPaint } from '../afterBrowserPaint.js';
 import { isTradeSetup2SnapshotView } from '../tradeSetup2Snapshot.js';
+import { createSetup2Memo,isCandleAppend } from '../setup2Memo.js';
 
 export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => Date.now() / 1000, timeData = {}, statistics = null) {
   const adapter = createChecklistDataAdapter();
@@ -21,6 +22,8 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   let cancelEvaluation = () => {};
   const closeReactionCache = createCloseReactionCache();
   const setupClassificationCache = new Map();
+  const setupMemo=createSetup2Memo();
+  let dataRevision=0;
   let daily;
   const settings = () => ({
     rangesPeriod: props.rangesPeriod, ranges2Period: props.ranges2Period,
@@ -74,7 +77,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
       h1Candles: data.h1.candles, m5Candles: data.m5.candles,
       dataStatus: props.dbTradeSetups?.length && daily?.status.value !== 'ready'
         ? daily?.status.value ?? 'loading' : data.status,
-      tradeSetups: props.dbTradeSetups ?? [], dailyAnchors, closeReactionCache, setupClassificationCache,
+      tradeSetups: props.dbTradeSetups ?? [], dailyAnchors, closeReactionCache, setupClassificationCache,setupMemo,dataRevision,
       settings: settings(), sessionConfigs,
       tradingWindows: timeData.tradingSchedules?.[props.symbol]?.tradingWindows,
       news: timeData.newsEvents,
@@ -132,7 +135,13 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     m1PrerequisitesAt,
     begin(tf) { const ticket = adapter.begin(tf); refresh(); return ticket; },
     finish(ticket, response, candles) {
-      if (!disposed && adapter.finish(ticket, response, candles)) refresh();
+      const previous=adapter.snapshot()[ticket.tf].candles;
+      if (!disposed && adapter.finish(ticket, response, candles)) {
+        if(response.applied && !isCandleAppend(previous,candles ?? [])){
+          dataRevision++;setupMemo.clear();setupClassificationCache.clear();m1PrerequisiteCache=null;
+        }
+        refresh();
+      }
     },
     refresh,
   };

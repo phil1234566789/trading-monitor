@@ -6,6 +6,7 @@ import { formatDatedTime, formatBerlinTime } from './berlinTime.js';
 import { orderBlockRecognitionTimes } from './orderBlockRecognitionTime.js';
 import { firstTouchAfter } from './structurePivotTime';
 import { pricePrecisionForInstrument } from './format.js';
+import { finalObservation } from './setup2Memo.js';
 import { divergenceObservationRule, summarizeAntiConfluenceRules, OBSERVATION_RULE_VERSION,
   H1_COUNTER_DIVERGENCE_RULE, M5_SWEEP_DIVERGENCE_RULE } from './checklistObservationRules.js';
 
@@ -91,7 +92,9 @@ function assignSweepDivergence(divergences, main, candles) {
  * Keine Alters-/Distanzfenster, Stärkeformel oder Mitigationsdefinition hinzufügen.
  */
 export function evaluateChecklistConfluences({ evaluatedAt, direction, instrument, primary, opposingCandidates,
-  target2, h1Candles, m5Candles, minGapByTimeframe = {} } = {}) {
+  target2, h1Candles, m5Candles, minGapByTimeframe = {}, frozen = {} } = {}) {
+  const frozenAnti = finalObservation(frozen.antiConfluences, 'antiConfluences');
+  const frozenConfluence = finalObservation(frozen.confluences, 'confluences');
   const antiConfluences = { status: 'unknown', details: [], sweepCandidates: [], obCandidates: [], divergences: unknown(),
     deferredChecks: ['sweep', 'orderBlock', 'strength'] };
   const confluences = { status: 'unknown', details: [], obCandidates: [], divergences: unknown() };
@@ -110,10 +113,11 @@ export function evaluateChecklistConfluences({ evaluatedAt, direction, instrumen
     return result;
   }
   const short = direction === 'short';
-  antiConfluences.divergences = selectDivergences(detectChecklistDivergences({ candles: h1Candles, timeframe: '1H', evaluatedAt }), short ? 'bullish' : 'bearish');
+  antiConfluences.divergences = frozenAnti ? frozen.antiConfluences.divergences
+    : selectDivergences(detectChecklistDivergences({ candles: h1Candles, timeframe: '1H', evaluatedAt }), short ? 'bullish' : 'bearish');
   const main = knownSnapshot(primary, evaluatedAt) && primary.direction === direction ? primary : null;
   const m5 = closedChecklistCandles(m5Candles, '5m', evaluatedAt);
-  confluences.divergences = assignSweepDivergence(
+  confluences.divergences = frozenConfluence ? frozen.confluences.divergences : assignSweepDivergence(
     selectDivergences(detectChecklistDivergences({ candles: m5Candles, timeframe: '5m', evaluatedAt }), short ? 'bearish' : 'bullish'), main, m5);
   const target = knownTarget(target2, evaluatedAt) && target2.dir === (short ? -1 : 1) ? target2 : null;
   const opposing = (opposingCandidates ?? []).filter(c => knownSnapshot(c, evaluatedAt) && c.direction === (short ? 'long' : 'short'));
@@ -170,5 +174,6 @@ export function evaluateChecklistConfluences({ evaluatedAt, direction, instrumen
     confluences.details = [confluences.status === 'unknown' ? 'M5-Divergenz noch nicht prüfbar.' : 'Keine zusätzliche M5-Divergenz am Sweep.'];
     confluences.explanation = confluences.status === 'unknown' ? 'Haupt-Sweep oder vollständige M5-Daten für die Zuordnung fehlen.' : 'Optionales Zusatzargument; sein Fehlen ist kein No-Go.';
   }
-  return result;
+  return { antiConfluences: frozenAnti ? frozen.antiConfluences : antiConfluences,
+    confluences: frozenConfluence ? frozen.confluences : confluences };
 }

@@ -31,7 +31,7 @@ export function inactiveM1Checklist(reason) {
     reason, details: [waiting[reason] ?? waiting.prerequisites], detailStatuses: [], evaluatedAt: null };
 }
 
-export function evaluateM1Checklist({ context, structure, candles, evaluatedAt, closeReactionCache }) {
+export function evaluateM1Checklist({ context, structure, candles, evaluatedAt, closeReactionCache,entryProgress }) {
   const unavailable = reason => ({ ...inactiveM1Checklist(reason), evaluatedAt });
   if (structure?.status !== 'ready') return unavailable(structure?.status === 'missing' ? 'missing' : 'loading');
   if (!structure.state || structure.state.trend === 'unknown') return unavailable('structure');
@@ -44,7 +44,7 @@ export function evaluateM1Checklist({ context, structure, candles, evaluatedAt, 
   const choch = signals.find(level => level.type === 'CHoCH') ?? null;
   const bos = signals.find(level => level.type === 'BOS') ?? null;
   if (context.entryModel === ENTRY_MODEL_1_VERSION) return evaluateCountertrendEntryModel1({context,rows,evaluatedAt,
-    bos,choch,trends,internalSweeps:latestStructureSweeps(structure.state,evaluatedAt,60),closeReactionCache});
+    bos,choch,trends,internalSweeps:latestStructureSweeps(structure.state,evaluatedAt,60),closeReactionCache,entryProgress});
   const short = context.direction === 'short';
   const adjective = short ? 'bärischer' : 'bullischer';
   const details = trends.map(() => '');

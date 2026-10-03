@@ -39,7 +39,7 @@ describe('Countertrend-Scanner Start und Last',()=>{
    return {entry,evaluatedAt,entryModel:ENTRY_MODEL_1_VERSION,conditions,retest,fvg:conditions.fvg};
   });
   try {
-   const m1Candles=Array.from({length:42},(_,i)=>({time:at+(i-11)*60,open:1.3,high:1.301,low:i===14?1.19:1.299,close:1.3}));
+   const m1Candles=Array.from({length:42},(_,i)=>({time:at+(i-11)*60,open:1.3,high:i<=11?1.321:1.301,low:i<=11?1.319:i===14?1.19:1.299,close:1.3}));
    const snapshots=await scanTradeSetup2Window({...input(setup),m1Candles,tradingWindows:{weekday:[[0,1440]],saturday:[],sunday:[]}});
    const entries=snapshots.filter(s=>s.entry);
    expect(entries.map(s=>s.entry.recognizedAt)).toEqual([at+120,at+180]);
@@ -73,7 +73,7 @@ describe('Countertrend-Scanner Start und Last',()=>{
    stops:{wide:{price:1.31},narrow:{price:1.305}},scales:{wide:{targets:[{price:1.2},{price:1.1}]},narrow:{targets:[{price:1.2},{price:1.1}]}}};
   const model=vi.spyOn(m1,'evaluateM1Checklist').mockImplementation(({evaluatedAt})=>({entry,evaluatedAt}));
   try {
-   const m1Candles=Array.from({length:17},(_,i)=>({time:Math.floor(at/60)*60+(i-11)*60,open:1.3,high:1.301,low:1.299,close:1.3}));
+   const m1Candles=Array.from({length:17},(_,i)=>({time:Math.floor(at/60)*60+(i-11)*60,open:1.3,high:i<11?1.321:1.301,low:i<11?1.319:1.299,close:1.3}));
    const found=await scanTradeSetup2Window({...input(setup),m1Candles,
     tradingWindows:allowed?{weekday:[[0,1440]],saturday:[],sunday:[]}:windows});
    expect(found.filter(s=>s.entry)).toHaveLength(allowed?1:0);
@@ -109,7 +109,8 @@ describe('Countertrend-Scanner Start und Last',()=>{
   const anti=vi.spyOn(confluences,'evaluateChecklistConfluences').mockReturnValue({antiConfluences:{status},confluences:{status:'passed'}});
   try {
    await scanTradeSetup2Window({...input(setup),loadM1Candles:load});
-   expect(target).toHaveBeenCalledOnce();expect(anti).toHaveBeenCalledOnce();
+   expect(target).toHaveBeenCalledOnce();
+   if(status==='unknown')expect(anti.mock.calls.length).toBeGreaterThan(1);else expect(anti).toHaveBeenCalledOnce();
    expect(load).toHaveBeenCalledTimes(status==='passed'?1:0);
    if(status==='passed')expect(load).toHaveBeenCalledWith({instrument:'GBPUSD',fromTime:at,structureFromTime:at-300,toTime:at+1800});
   }finally {outer.mockRestore();current.mockRestore();target.mockRestore();anti.mockRestore();}

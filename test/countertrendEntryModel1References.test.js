@@ -13,9 +13,11 @@ describe('real 97/105 entry model 1 replay',()=>{
   const at=setup1RecognitionTime(setup);
   const toTime=Math.floor(at/86400)*86400+22*3600;
   const m5Candles=[...new Map([...fixture.m5Candles,...continuation105].map(c=>[c.time,c])).values()];
-  const snapshots=await scanTradeSetup2Window({instrument:'GBPUSD',tradeSetups:[setup],m5Candles,h1Candles:fixture.h1Candles,m1Candles,
+  const input={instrument:'GBPUSD',tradeSetups:[setup],m5Candles,h1Candles:fixture.h1Candles,m1Candles,
    dailyAnchors:buildHistoricalDailyAnchors(fixture.dailyCandles,fixture.h1Candles),sessionConfigs:sessions.sessions,
-   tradingWindows:{weekday:[[0,1440]],saturday:[],sunday:[]},fromTime:at,toTime});
+   tradingWindows:{weekday:[[0,1440]],saturday:[],sunday:[]},fromTime:at,toTime};
+  const snapshots=await scanTradeSetup2Window(input);
+  expect(snapshots).toEqual(await scanTradeSetup2Window({...input,useMemo:false}));
   const entries=snapshots.filter(s=>s.entry);
   expect(snapshots[0].dealingRange.status).toBe('validated');
   expect(snapshots[0].checklist.setup.primary.setupType).toBe('countertrend');

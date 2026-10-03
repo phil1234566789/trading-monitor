@@ -6,6 +6,7 @@ import { m1EntryFromFvg } from './m1Entry.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { formatDatedTime } from './berlinTime.js';
 import { entryModel1ConditionsReady, ENTRY_MODEL_1_VERSION } from './entryModel1Conditions.js';
+import { advanceEntryModel1Follow } from './entryModel1Progress.js';
 
 // Explizite Startregel: der aus Setup 1.0 übernommene OB zählt auch bei späterem E.
 export function setup1OrderBlockIncluded(primary, direction, evaluatedAt) {
@@ -22,10 +23,11 @@ export function eligibleEntryModel1OrderBlocks(zones, primary, direction, confir
     && ob.startTime !== original?.startTime).map(ob => ({...ob,inclusionRule:'formedSinceDrConfirmation'}))];
 }
 
-export function entryModel1RetestFvg(rows, orderBlocks, confirmedAt, direction, evaluatedAt) {
+export function entryModel1RetestFvg(rows, orderBlocks, confirmedAt, direction, evaluatedAt, progress) {
   rows=closedChecklistCandles(rows,'1m',evaluatedAt);
   const empty={status:'unknown',retest:null,fvg:null};
   if (!Number.isFinite(confirmedAt)) return empty;
+  if(progress)return advanceEntryModel1Follow(rows,orderBlocks,confirmedAt,direction,evaluatedAt,progress);
   const start=Math.ceil(confirmedAt/60)*60, after=rows.filter(c => c.time >= start);
   if (after.some((c,i) => c.time !== start+i*60) || start+after.length*60 < Math.floor(evaluatedAt/60)*60) return empty;
   const retests=orderBlocks.flatMap(ob => {
@@ -43,17 +45,25 @@ export function entryModel1RetestFvg(rows, orderBlocks, confirmedAt, direction, 
   return {...empty,status:'ready',retest:retests.at(-1) ?? null};
 }
 
-export function evaluateCountertrendEntryModel1({context,rows,evaluatedAt,bos,choch,trends,internalSweeps,closeReactionCache}) {
+export function evaluateCountertrendEntryModel1({context,rows,evaluatedAt,bos,choch,trends,internalSweeps,closeReactionCache,entryProgress}) {
   const m5=closedChecklistCandles(context.m5Candles,'5m',evaluatedAt);
-  const current=evaluateChecklistM5({instrument:context.instrument,direction:context.direction,evaluatedAt,
-    m5Candles:m5,closeReactionCache},context.settings,context.structureStart);
-  const reaction=current.structureReaction;
-  const m5Choch=(reaction?.levels ?? []).find(s => s.type === 'CHoCH' && s.direction === context.direction
-    && Number.isFinite(s.recognizedAt) && s.recognizedAt <= evaluatedAt) ?? null;
-  const recognition=orderBlockRecognitionTimes(m5,'5m');
-  const zones=detectOrderBlocks(m5,'5m').map(ob => ({...ob,recognizedAt:recognition.get(ob.startTime)}));
-  const orderBlocks=eligibleEntryModel1OrderBlocks(zones,context.primary,context.direction,context.confirmedAt,evaluatedAt);
-  const follow=entryModel1RetestFvg(rows,orderBlocks,context.confirmedAt,context.direction,evaluatedAt);
+  const key=JSON.stringify([context.instrument,context.direction,context.structureStart,context.settings,
+    context.confirmedAt,context.primary?.reactionOB,m5[0]?.time,m5.at(-1)?.time,m5.length]);
+  let m5Facts=entryProgress?.m5?.key===key ? entryProgress.m5 : null;
+  if(!m5Facts){
+    const current=evaluateChecklistM5({instrument:context.instrument,direction:context.direction,evaluatedAt,
+      m5Candles:m5,closeReactionCache},context.settings,context.structureStart);
+    const reaction=current.structureReaction;
+    const m5Choch=(reaction?.levels ?? []).find(s => s.type === 'CHoCH' && s.direction === context.direction
+      && Number.isFinite(s.recognizedAt) && s.recognizedAt <= evaluatedAt) ?? null;
+    const recognition=orderBlockRecognitionTimes(m5,'5m');
+    const zones=detectOrderBlocks(m5,'5m').map(ob => ({...ob,recognizedAt:recognition.get(ob.startTime)}));
+    const orderBlocks=eligibleEntryModel1OrderBlocks(zones,context.primary,context.direction,context.confirmedAt,evaluatedAt);
+    m5Facts={key,m5Choch,orderBlocks};
+    if(entryProgress)entryProgress.m5=m5Facts;
+  }
+  const {m5Choch,orderBlocks}=m5Facts;
+  const follow=entryModel1RetestFvg(rows,orderBlocks,context.confirmedAt,context.direction,evaluatedAt,entryProgress);
   const conditions={m5Choch,m1Bos:bos,retest:follow.retest,fvg:follow.fvg};
   const candidate=follow.fvg && follow.fvg.recognizedAt >= (context.validatedAt ?? context.confirmedAt)
     && entryModel1ConditionsReady(conditions,context.direction,follow.fvg.recognizedAt)
