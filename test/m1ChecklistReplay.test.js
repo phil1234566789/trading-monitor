@@ -5,6 +5,13 @@ import { effectScope, nextTick, reactive } from 'vue';
 vi.mock('../src/forexCandles.js', () => ({ fetchInitialCandles: vi.fn() }));
 vi.mock('../src/ignoredCandles.js', () => ({ markIgnored: rows => rows }));
 vi.mock('../src/structureOverlay.js', () => ({ renderLowerStructure: vi.fn() }));
+// DR114 prüft den erhaltenen Countertrend-Ablauf und dessen M1-Replay-Uhr.
+// Die neue Strategie hat noch keine beschlossenen Entry-/Validierungsregeln.
+vi.mock('../src/countertrendChecklist.js', async importOriginal => {
+  const actual = await importOriginal();
+  const { evaluateTradeSetupChecklist } = await import('../src/tradeSetupChecklist.js');
+  return { ...actual, evaluateCountertrendChecklist: evaluateTradeSetupChecklist };
+});
 import { usePriceChartChecklist } from '../src/composables/usePriceChartChecklist.js';
 import { usePriceChartM1Structure } from '../src/composables/usePriceChartM1Structure.js';
 import h1 from './fixtures/gbpusd-h1-dr114-lifecycle.json';

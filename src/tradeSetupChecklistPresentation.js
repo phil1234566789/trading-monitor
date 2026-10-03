@@ -30,7 +30,9 @@ export function checklistPresentation(state) {
     const price = sweep.level.price.toFixed(pricePrecisionForInstrument(state.instrument));
     const tier = sweep.ageTier === 'major' ? 'Major' : sweep.ageTier === 'medium' ? 'Medium' : 'Minor';
     view.liquiditySweep = {
-      details: [`${sweep.timeframe} ${tier} Inducement bei ${price} (${formatAge(sweep.ageSeconds)})`],
+      details: [state.model === 'countertrend'
+        ? `${sweep.timeframe} Liquidity Sweep bei ${price} (${formatAge(sweep.ageSeconds)})`
+        : `${sweep.timeframe} ${tier} Inducement bei ${price} (${formatAge(sweep.ageSeconds)})`],
       explanation: state.checks?.liquiditySweep?.details?.slice(1).join(' '),
     };
   }

@@ -35,15 +35,17 @@ export function tradeSetup2Evidence({ checklist, m1Check, m1Structure, m1Candles
       }
     }
   }
-  structure(checklist.structure, '1h', 'h1Trend');
+  if (checklist.model !== 'countertrend') structure(checklist.structure, '1h', 'h1Trend');
   structure(checklist.checks.m5Trend?.structureState, '5m', 'm5Trend');
   structure(m1Structure?.state, '1m', 'm1');
   const sweep = primary.sweep?.level;
-  if (sweep) line('sweep','liquiditySweep','1h',sweep.recognizedAt ?? primary.knownAsOf,sweep.price,
-    sweep.pivotTime,sweep.fineTouchedTime ?? sweep.touchedTime,'liquiditySweep','H1 Sweep');
+  const countertrendAbcd = checklist.model === 'countertrend';
+  const sweepTimeframe = countertrendAbcd ? (primary.sweep?.timeframe ?? '5M').toLowerCase() : '1h';
+  if (sweep) line('sweep','liquiditySweep',sweepTimeframe,sweep.recognizedAt ?? (countertrendAbcd ? primary.recognizedAt : primary.knownAsOf),sweep.price,
+    sweep.pivotTime,sweep.fineTouchedTime ?? sweep.touchedTime,'liquiditySweep',countertrendAbcd ? `${sweepTimeframe.toUpperCase()} Sweep` : 'H1 Sweep');
   const ob = primary.reactionOB;
   if (ob) add('reactionOB','reaction','5m',primary.reactionRecognizedAt,{kind:'zone',fromTime:ob.startTime,
-    toTime:m1Check.retest?.candleTime ?? at-60,top:ob.top,bottom:ob.bottom,styleKey:ob.dir===1?'obBull':'obBear',label:'C · M5 OB'});
+    toTime:m1Check.retest?.candleTime ?? at-60,top:ob.top,bottom:ob.bottom,styleKey:ob.dir===1?'obBull':'obBear',label:checklist.model==='countertrend'?'B · M5 OB':'C · M5 OB'});
   for (const name of ['target1','target2']) {
     const target=primary.targetSelection?.[name];
     if (target) line(name,'targets',target.timeframe,primary.targetSelection.selectedAt,target.price,

@@ -8,6 +8,18 @@ const render = (checklistState = null, m1Check = null) => renderToString(createS
 }));
 
 describe("Trade Setup Checklist presentation", () => {
+  it('zeigt A bis D und den Countertrend-Typ, C ist Pflicht', async () => {
+    const html=await render({instrument:'GBPUSD',status:'ready',model:'countertrend',setupType:'countertrend',abortReason:null,
+      checks:{liquiditySweep:{status:'passed',details:['Liquidity Sweep']},reaction:{status:'passed',details:[]},
+        m5Trend:{status:'passed',details:['M5-Trend bullisch']},outerM5Trend:{status:'passed',details:['Äußerster M5-Trend bärisch'],required:true}}});
+    expect(html).toMatch(/>A<\/span>Liquidity Sweep/);
+    expect(html).toMatch(/>B<\/span>Reaktion/);
+    expect(html).toMatch(/>C<\/span>M5-Trend \(äußerster\)/);
+    expect(html).toMatch(/>D<\/span>M5-Trend \(aktuell\)/);
+    expect(html).toContain('Setup-Typ: Countertrend');
+    expect(html).not.toContain('1-Stunden-Trend');
+    expect(html).not.toContain('Inducement');
+  });
   it('exposes M1 work as busy without advertising the current data as complete', async () => {
     const html = await render({ instrument: 'GBPUSD', status: 'ready', checks: {} }, { instrument: 'GBPUSD', reason: 'loading' });
     expect(html).toContain('aria-busy="true"');

@@ -1,4 +1,5 @@
 import { evaluateTradeSetupChecklist } from './tradeSetupChecklist.js';
+import { evaluateCountertrendChecklist } from './countertrendChecklist.js';
 import { activeM1Context, buildM1Structure, M1_STRUCTURE_PERIOD } from './m1Structure.js';
 import { evaluateM1Checklist } from './m1Checklist.js';
 import { buildTradeSetup2Snapshot, buildTradeSetup2CandidateSnapshot } from './tradeSetup2Snapshot.js';
@@ -32,7 +33,7 @@ export function m1ScanPrefix(candles, anchorTime, end) {
 // am ersten Entry-Schluss neu ausgewertet, nie aus einem späteren Endzustand datiert.
 export async function scanTradeSetup2Window({ instrument, h1Candles, m5Candles, m1Candles,
   fromTime, toTime, settings = {}, sessionConfigs = [], tradingWindows, news, newsLoadStatus,
-  signal, onProgress, onSnapshot, dailyAnchors = null, yieldEvery = 32, yieldControl = pause }) {
+  signal, onProgress, onSnapshot, dailyAnchors = null, tradeSetups = null, yieldEvery = 32, yieldControl = pause }) {
   signal?.throwIfAborted();
   if (!Number.isFinite(fromTime) || !Number.isFinite(toTime) || fromTime > toTime) throw new Error('Invalid scan window');
   if (!validTradingWindows(tradingWindows)) throw new Error(`Missing or invalid historical trading_windows: ${instrument}`);
@@ -45,10 +46,14 @@ export async function scanTradeSetup2Window({ instrument, h1Candles, m5Candles, 
   const snapshots = [], seen = new Set(), seenSetups = new Map();
   const reactionCache = new Map();
   const closeReactionCache = createCloseReactionCache();
+  const setupClassificationCache = new Map();
   const m1CloseReactionCache = createCloseReactionCache();
   let h1End = 0, m5End = 0, m1End = 0;
   let effectiveSettings = settings;
-  const evaluateAt = evaluatedAt => evaluateTradeSetupChecklist({ instrument, evaluatedAt,
+  // Der alte Countertrend-Scanner bleibt für seine gespeicherten Regeln erhalten.
+  const evaluateChecklist = tradeSetups === null ? evaluateTradeSetupChecklist : evaluateCountertrendChecklist;
+  const evaluateAt = evaluatedAt => evaluateChecklist({ instrument, evaluatedAt, tradeSetups, dailyAnchors,
+    setupClassificationCache,
     h1Candles: h1.slice(0, h1End), m5Candles: m5.slice(0, m5End),
     settings: effectiveSettings, sessionConfigs, tradingWindows, news, newsLoadStatus, reactionCache, closeReactionCache, entryGates: true });
   async function saveCandidates(checklist) {

@@ -2,15 +2,15 @@ import { checklistStatisticsConfiguration, checklistConfigurationKey } from './t
 import { SIMULATION_VERSION } from './tradeSetupSimulation.js';
 import { SIMULATION_COST_VERSION } from './tradeSetupSimulationCosts.js';
 import { ENTRY_SIZING_VERSION } from './tradeSetup2EntrySizing.js';
-import { DEALING_RANGE_VERSION } from './tradeSetup2DealingRange.js';
+import { COUNTERTREND_VERSION } from './tradeSetup2DealingRange.js';
 import { berlinDateStrFor, berlinDayRangeUtcMs } from './berlinTime.js';
 
-export const SETUP2_VERSION='entry-snapshot-causal-c-m5-choch-v5';
+export const SETUP2_VERSION='countertrend-abcd-v6';
 // Neue Scanner-Gates ändern keine Pivots oder OBs der gespeicherten Archivdarstellung.
-export const supportsSnapshotIndicators = version => [SETUP2_VERSION, 'entry-snapshot-active-h1-trading-hours-v4', 'entry-snapshot-active-h1-p5-time-abc-v3', 'entry-snapshot-p5-time-abc-v2'].includes(version);
+export const supportsSnapshotIndicators = version => [SETUP2_VERSION, 'entry-snapshot-causal-c-m5-choch-v5', 'entry-snapshot-active-h1-trading-hours-v4', 'entry-snapshot-active-h1-p5-time-abc-v3', 'entry-snapshot-p5-time-abc-v2'].includes(version);
 export function buildTradeSetup2Configuration({instrument,settings={},sessionConfigs=[],tradingWindows,news=[],newsLoadStatus}) {
   return {...checklistStatisticsConfiguration(settings,sessionConfigs,instrument),instrument,
-    setupVersion:SETUP2_VERSION,dealingRangeVersion:DEALING_RANGE_VERSION,simulationVersion:SIMULATION_VERSION,entrySizingVersion:ENTRY_SIZING_VERSION,costVersion:SIMULATION_COST_VERSION,m1Period:5,
+    setupVersion:SETUP2_VERSION,dealingRangeVersion:COUNTERTREND_VERSION,setupModel:'countertrend',outerM5Required:true,simulationVersion:SIMULATION_VERSION,entrySizingVersion:ENTRY_SIZING_VERSION,costVersion:SIMULATION_COST_VERSION,m1Period:5,
     m5StructurePeriod:settings.m5StructurePeriod ?? 5,m5Structure2Period:settings.m5Structure2Period ?? 2,
     sessions:sessionConfigs.filter(s=>s.instrument===instrument).map(s=>({...s})),
     tradingWindows:tradingWindows ?? null,news,newsLoadStatus:newsLoadStatus ?? 'unknown'};

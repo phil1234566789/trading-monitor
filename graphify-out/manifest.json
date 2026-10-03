@@ -2964,15 +2964,15 @@
     "semantic_hash": ""
   },
   "src/tradeSetups.js": {
-    "mtime": 1790192829.5495017,
-    "seen": 1790193812.5312119,
-    "ast_hash": "f802c78723d67d8154ce6d57bfbc15ab",
+    "mtime": 1791035614.397151,
+    "seen": 1791035643.605447,
+    "ast_hash": "c27b1807e3422bce28c3613fee1691b5",
     "semantic_hash": ""
   },
   "test/tradeSetups.test.js": {
-    "mtime": 1790015190.1852837,
-    "seen": 1790015278.3640816,
-    "ast_hash": "a9b965c9b9a10a97e182a6732dd898dc",
+    "mtime": 1791035121.3145604,
+    "seen": 1791035539.2854528,
+    "ast_hash": "b02638ea6de6ab9ce4a0c1f0e4ea38f2",
     "semantic_hash": ""
   },
   "BACKUP-journal-gbpusd.md": {
@@ -3990,15 +3990,15 @@
     "semantic_hash": ""
   },
   "src/components/TradeSetupChecklist.vue": {
-    "mtime": 1790962867.6338556,
-    "seen": 1790963035.271968,
-    "ast_hash": "6b1eee86a07282ad8e20f4781c9b93f8",
+    "mtime": 1791035716.8009408,
+    "seen": 1791035851.8132465,
+    "ast_hash": "6fcd2c9ab4d72853dd95c00c52658ef5",
     "semantic_hash": ""
   },
   "src/composables/usePriceChartChecklist.js": {
-    "mtime": 1790890769.829017,
-    "seen": 1790891287.4014866,
-    "ast_hash": "2517fe3393d30cc90ec21011c455660c",
+    "mtime": 1791035716.7989445,
+    "seen": 1791035851.8162472,
+    "ast_hash": "8e0e43c35cc27402dc8c08cab7680142",
     "semantic_hash": ""
   },
   "src/newsEventRules.js": {
@@ -4092,15 +4092,15 @@
     "semantic_hash": ""
   },
   "test/tradeSetupChecklistUi.test.js": {
-    "mtime": 1791021175.817328,
-    "seen": 1791021686.3246691,
-    "ast_hash": "d25fea60d136d2a39e33adf52c6a421b",
+    "mtime": 1791035746.02016,
+    "seen": 1791035851.894262,
+    "ast_hash": "b006548fe4187315539fdd67fc08e538",
     "semantic_hash": ""
   },
   "test/usePriceChartChecklist.test.js": {
-    "mtime": 1790890913.1216998,
-    "seen": 1790891287.521416,
-    "ast_hash": "d640aa96aaa2cfc959c0c64420d56f68",
+    "mtime": 1791035120.1547658,
+    "seen": 1791035539.286452,
+    "ast_hash": "7be60ceb6cbf13f51ef9bee42670e1c4",
     "semantic_hash": ""
   },
   "analysis/ny-opening-second-20260927/report.html": {
@@ -4146,9 +4146,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupChecklistPresentation.js": {
-    "mtime": 1791020860.216949,
-    "seen": 1791021686.2586668,
-    "ast_hash": "e0eb8f4293ed63f5bcadd3d7451c5b33",
+    "mtime": 1791035716.8069458,
+    "seen": 1791035851.8382516,
+    "ast_hash": "cd21b75f81e552332d6bc02239d4d728",
     "semantic_hash": ""
   },
   "test/tradeSetupChecklistPresentation.test.js": {
@@ -4248,9 +4248,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupChecklistM5.js": {
-    "mtime": 1791020907.831825,
-    "seen": 1791021686.2586668,
-    "ast_hash": "db4e7d5bc73cf8d1856b3e46f7f99aa9",
+    "mtime": 1791035746.589682,
+    "seen": 1791035851.8382516,
+    "ast_hash": "5a23e7a00b1f88714d407390048796ff",
     "semantic_hash": ""
   },
   "test/fixtures/gbpusd-m5-dr114-close-reaction.json": {
@@ -4356,9 +4356,9 @@
     "semantic_hash": ""
   },
   "test/m1ChecklistReplay.test.js": {
-    "mtime": 1791021208.2696936,
-    "seen": 1791021686.307666,
-    "ast_hash": "bc14ff1c0b6bd6c4932120051622ab73",
+    "mtime": 1791035716.8089461,
+    "seen": 1791035851.8742585,
+    "ast_hash": "79391bc3c8fb197e47f688365e06b754",
     "semantic_hash": ""
   },
   "src/composables/usePreservedScroll.js": {
@@ -4500,9 +4500,9 @@
     "semantic_hash": ""
   },
   "src/composables/useTradeSetup2History.js": {
-    "mtime": 1791021624.4866285,
-    "seen": 1791021686.2346668,
-    "ast_hash": "9760a6580908b5e803def19e2b61a51c",
+    "mtime": 1791035716.8019438,
+    "seen": 1791035851.8202481,
+    "ast_hash": "e43b2245e85ae31be87c719b7aaa7d08",
     "semantic_hash": ""
   },
   "src/structureLiquidityLevels.ts": {
@@ -4518,15 +4518,15 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2Configuration.js": {
-    "mtime": 1791020935.202558,
-    "seen": 1791021686.2536664,
-    "ast_hash": "364c7198467aba62c9f36832ce1e18e4",
+    "mtime": 1791035716.802945,
+    "seen": 1791035851.8352535,
+    "ast_hash": "4e026e62268c5043c982ad13b6c81b2a",
     "semantic_hash": ""
   },
   "src/tradeSetup2Evidence.js": {
-    "mtime": 1790766154.6210482,
-    "seen": 1790766407.5573685,
-    "ast_hash": "ea1ee5fee3c40619b4490ec8c9036015",
+    "mtime": 1791035747.2040968,
+    "seen": 1791035851.8352535,
+    "ast_hash": "3e3b05315cdf5ef3f3c06741daff18e1",
     "semantic_hash": ""
   },
   "src/tradeSetup2Positions.js": {
@@ -4542,9 +4542,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2Scan.js": {
-    "mtime": 1791020184.4925683,
-    "seen": 1791020344.8110135,
-    "ast_hash": "af0b893c4a073d6703289bd23bd46d68",
+    "mtime": 1791035716.8049443,
+    "seen": 1791035851.836251,
+    "ast_hash": "37754295c2bfa2ab1a46b8fe8c236687",
     "semantic_hash": ""
   },
   "src/tradeSetup2ScanWorker.js": {
@@ -4554,9 +4554,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2Snapshot.js": {
-    "mtime": 1791020861.9696965,
-    "seen": 1791021686.2566664,
-    "ast_hash": "e6dad35549184c41482297bdad564f7a",
+    "mtime": 1791035716.8059456,
+    "seen": 1791035851.836251,
+    "ast_hash": "85b94b565f71b9fc51a0bd89fc599516",
     "semantic_hash": ""
   },
   "src/tradeSetupSimulation.js": {
@@ -4824,9 +4824,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupChecklistGates.js": {
-    "mtime": 1790924436.767328,
-    "seen": 1790924566.0226457,
-    "ast_hash": "be52ef7bcac1eb328ed63951c349ba9c",
+    "mtime": 1791035432.1301227,
+    "seen": 1791035539.232934,
+    "ast_hash": "28b84b074f6c2003b2c1681b7cdf0ecc",
     "semantic_hash": ""
   },
   "src/tradeSetupSimulationCosts.js": {
@@ -4950,9 +4950,9 @@
     "semantic_hash": ""
   },
   "src/views/TradeSetup2Rules.vue": {
-    "mtime": 1791021725.886263,
-    "seen": 1791021814.6882062,
-    "ast_hash": "9996d480f09ca1878c32a87b52d0eb52",
+    "mtime": 1791035787.882928,
+    "seen": 1791035851.8452535,
+    "ast_hash": "0b19097ceee9accbf5fbd587bef5a191",
     "semantic_hash": ""
   },
   "src/tradeSetup2EntrySizing.js": {
@@ -4986,15 +4986,15 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2DealingRange.js": {
-    "mtime": 1790962976.292817,
-    "seen": 1790963035.293968,
-    "ast_hash": "e90c77bd057408e72f99b41544056652",
+    "mtime": 1791035744.7966142,
+    "seen": 1791035851.8352535,
+    "ast_hash": "906e1e95fb4e5512e9d578b2d5d75e24",
     "semantic_hash": ""
   },
   "test/tradeSetup2DealingRange.test.js": {
-    "mtime": 1790963080.2433143,
-    "seen": 1790963442.9691215,
-    "ast_hash": "459fb09a6b19e811a7dd15ba5626d327",
+    "mtime": 1791035716.8109467,
+    "seen": 1791035851.8872645,
+    "ast_hash": "74deeebebb854aa4546e5347783c34a0",
     "semantic_hash": ""
   },
   "output/setup-review-db.json": {
@@ -5109,6 +5109,30 @@
     "mtime": 1791027794.497923,
     "seen": 1791029555.0713708,
     "ast_hash": "82d7982a36f4e6e83c1dbe6cdc945154",
+    "semantic_hash": ""
+  },
+  "src/composables/useChecklistDailyAnchors.js": {
+    "mtime": 1791034973.239872,
+    "seen": 1791035539.2079206,
+    "ast_hash": "3f298d5a9a88dba5af74c9ca280c2387",
+    "semantic_hash": ""
+  },
+  "test/fixtures/gbpusd-m5-cd-97-105.json": {
+    "mtime": 1791034855.504145,
+    "seen": 1791035539.2614496,
+    "ast_hash": "6ccad97e008a08d658d3b82e56316104",
+    "semantic_hash": ""
+  },
+  "src/countertrendChecklist.js": {
+    "mtime": 1791035773.8090665,
+    "seen": 1791035851.8202481,
+    "ast_hash": "d280b858d8e05651ed5cd19ce1f7fcd7",
+    "semantic_hash": ""
+  },
+  "test/countertrendChecklist.test.js": {
+    "mtime": 1791035804.1437995,
+    "seen": 1791035851.8652577,
+    "ast_hash": "7affa1810cf8ae10a7fd4826a8f46433",
     "semantic_hash": ""
   }
 }

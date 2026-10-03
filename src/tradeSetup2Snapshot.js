@@ -31,7 +31,9 @@ export function buildTradeSetup2CandidateSnapshot({checklist,candidate}) {
   const state={...checklist,setup:{primary:candidate}};
   delete state.context;
   // Weitere bestätigte Sweeps in derselben H1-Richtung erhalten eigene E/G-Belege.
-  if (candidate.id!==checklist.setup?.primary?.id) state.checks={h1Trend:checklist.checks.h1Trend,
+  if (candidate.id!==checklist.setup?.primary?.id) state.checks={
+    ...(checklist.model==='countertrend'?{m5Trend:candidate.checks.m5Trend,outerM5Trend:candidate.checks.outerM5Trend}
+      :{h1Trend:checklist.checks.h1Trend}),
     time:checklist.checks.time,...candidate.checks,
     targets:{status:candidate.targetSelection?.status ?? 'unknown',details:candidate.targetSelection?.details ?? []},
     ...evaluateChecklistConfluences({...checklist.context,primary:candidate,

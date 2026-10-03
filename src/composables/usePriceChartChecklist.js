@@ -1,6 +1,9 @@
 import { onScopeDispose, shallowRef, watch } from 'vue';
 import { createChecklistDataAdapter } from '../tradeSetupChecklistData.js';
-import { evaluateTradeSetupChecklist } from '../tradeSetupChecklist.js';
+import { evaluateCountertrendChecklist } from '../countertrendChecklist.js';
+import { buildHistoricalDailyAnchors } from '../tradeSetup2Anchors.js';
+import { useChecklistDailyAnchors } from './useChecklistDailyAnchors.js';
+import { createCloseReactionCache } from '../m5CloseReactionHistory.js';
 import { closedReplayEvaluationTime } from '../tradeSetupChecklistTimeBasis.js';
 import { afterBrowserPaint } from '../afterBrowserPaint.js';
 import { isTradeSetup2SnapshotView } from '../tradeSetup2Snapshot.js';
@@ -16,6 +19,9 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   let revision = 0;
   let m1PrerequisiteCache;
   let cancelEvaluation = () => {};
+  const closeReactionCache = createCloseReactionCache();
+  const setupClassificationCache = new Map();
+  let daily;
   const settings = () => ({
     rangesPeriod: props.rangesPeriod, ranges2Period: props.ranges2Period,
     rangesLookbackHours: props.rangesLookbackHours, ranges2LookbackHours: props.ranges2LookbackHours,
@@ -61,16 +67,21 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     scheduleTimeBoundary();
   }
   function evaluateAt(evaluatedAt, data) {
-    return evaluateTradeSetupChecklist({
+    const dailyAnchors = buildHistoricalDailyAnchors(daily?.candles.value ?? [], data.h1.candles);
+    return evaluateCountertrendChecklist({
       instrument: props.symbol,
       evaluatedAt,
       h1Candles: data.h1.candles, m5Candles: data.m5.candles,
-      dataStatus: data.status, settings: settings(), sessionConfigs,
+      dataStatus: props.dbTradeSetups?.length && daily?.status.value !== 'ready'
+        ? daily?.status.value ?? 'loading' : data.status,
+      tradeSetups: props.dbTradeSetups ?? [], dailyAnchors, closeReactionCache, setupClassificationCache,
+      settings: settings(), sessionConfigs,
       tradingWindows: timeData.tradingSchedules?.[props.symbol]?.tradingWindows,
       news: timeData.newsEvents,
       newsLoadStatus: timeData.newsCalendar?.status,
     });
   }
+  daily = useChecklistDailyAnchors(props, enabled, evaluationTime, refresh);
   function m1PrerequisitesAt(at) {
     if (!enabled()) return null;
     if (state.value?.updating) return state.value;
@@ -78,7 +89,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     // Fehlende M1-Kerzen können I hinter den sichtbaren Chart-Schluss zurücksetzen.
     // ABC deshalb am tatsächlichen M1-Stand prüfen; der M5-Präfix bleibt pro Intervall gleich.
     const cutoff = Number.isFinite(at) ? Math.floor(at / 300) * 300 : null;
-    const key = JSON.stringify([props.symbol, cutoff, data.status, settings(), sessionConfigs]);
+    const key = JSON.stringify([props.symbol, cutoff, data.status, settings(), sessionConfigs, props.dbTradeSetups, daily.status.value]);
     if (m1PrerequisiteCache?.key !== key || m1PrerequisiteCache.h1 !== data.h1.candles || m1PrerequisiteCache.m5 !== data.m5.candles) {
       m1PrerequisiteCache = { key, h1: data.h1.candles, m5: data.m5.candles, result: evaluateAt(cutoff, data) };
     }
@@ -105,6 +116,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   }, { flush: 'sync' });
   watch(() => [props.rangesPeriod, props.ranges2Period, props.m5StructurePeriod, props.m5Structure2Period, props.showTradeSetupChecklist, props.showM1Structure, props.showTradeSetup2, props.tradeSetup2RunId, props.selectedTradeSetup2Id], () => { refresh(); scheduleTimeBoundary(); });
   watch(sessionConfigs, refresh, { deep: true });
+  watch(() => props.dbTradeSetups, refresh);
   watch(() => [timeData.tradingSchedules, timeData.newsEvents, timeData.newsCalendar?.status], refresh, { deep: true });
   onScopeDispose(() => { disposed = true; cancelEvaluation(); clearTimeout(timeBoundaryTimer); adapter.reset(null); });
   return {

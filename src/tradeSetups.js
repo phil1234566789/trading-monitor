@@ -25,7 +25,7 @@ export async function fetchTradeSetups(instrument, replayUntilSec = null) {
         // zweiter Abfrage. 200 Setups x im Schnitt <2 Sweeps bleibt weit unter der ~1000er-Deckelung.
         // ob_fvg seit 2026-09-23 mit: der Bewertungs-Bereich ordnet die Dealing Range über ihre
         // FVG-Größe ein, und die steht NUR hier — die OB-Bestätigung im TSC trägt nur ihre Kanten.
-        "ob_top, ob_bottom, ob_start_time, ob_fvg, trade_setup_sweeps(price, pivot_time, touched_time, timeframe, is_primary)",
+        "ob_top, ob_bottom, ob_start_time, ob_fvg, created_at, invalidation, trade_setup_sweeps(price, pivot_time, touched_time, timeframe, is_primary)",
     )
     .eq("instrument", instrument)
     .order("ob_start_time", { ascending: false })
@@ -101,6 +101,9 @@ export function tradeSetupFromRow(row) {
     // Bereich, 2026-09-23). Altzeilen von vor der ob_fvg-Migration haben null.
     obFvg: row.ob_fvg ?? null,
     tradeSetupId: row.id,
+    // C/D werden am tatsächlichen Bekannt-Zeitpunkt eingefroren, nicht am OB-Pivot.
+    createdAt: row.created_at ? new Date(row.created_at).getTime() / 1000 : null,
+    invalidation: row.invalidation ?? null,
     // Nur-DB-Setup = die beiden Erkennungs-Kopien sind auseinandergelaufen. Steht im
     // Debug-Metadaten-Export (debugMetadata.js) und macht den Fall damit nachweisbar, statt ihn
     // still zu verschlucken.

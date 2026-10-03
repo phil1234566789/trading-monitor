@@ -166,6 +166,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
       const m1Candles=await fetchCandlesCached(fetchInitialCandles,props.symbol,'1m',Math.ceil((at-start)/60)+11,at*1000,REPLAY_LOOKAHEAD_SEC);
       signal.throwIfAborted();
       const found=await scanTradeSetup2InWorker({...input,h1Candles:state.context.h1Candles,m5Candles:state.context.m5Candles,m1Candles,
+        ...(state.model==='countertrend'?{tradeSetups:props.dbTradeSetups ?? [],dailyAnchors:state.context.dailyAnchors ?? []}:{}),
         fromTime:run.from,toTime:at},{signal,
         onProgress:p=>{if(ticket===revision)status.value=`Setups auswerten: ${p.completed}/${p.total}`;}});
       signal.throwIfAborted();

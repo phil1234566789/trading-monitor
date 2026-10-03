@@ -3,11 +3,30 @@
     <header>
       <p class="eyebrow">Milky Way · Regelprüfung</p>
       <h1>Trade Setup 2.0</h1>
-      <p class="lead">Von der bestätigten Dealing Range zur Entry-Freigabe.</p>
+      <p class="lead">Countertrend · Checkliste A bis D.</p>
       <p class="review-state"><strong>Entwurf · gemeinsame Absegnung offen</strong><br />Diskussionsstand vom <time datetime="2026-10-03">03.10.2026</time>. Von Philip festgelegt, zur gemeinsamen Prüfung mit seinem Trading-Partner.</p>
       <p>Die <strong>Fachregeln</strong> beschreiben die Festlegungen. Der <strong>Implementierungsstand</strong> zeigt den technischen Stand laut Regelentwurf. <strong>Offene Entscheidungen</strong> sind noch gemeinsam festzulegen.</p>
       <p><RouterLink to="/setup-regeln">Direktlink zu dieser Regelübersicht</RouterLink> · Diesen Seitenlink könnt ihr für eure gemeinsame Prüfung teilen.</p>
     </header>
+
+    <section id="abcd" aria-labelledby="abcd-title">
+      <h2 id="abcd-title">Countertrend · A bis D</h2>
+      <dl class="criteria">
+        <div><dt>A · Liquidity Sweep</dt><dd>Ein erkanntes Setup 1.0 liegt vor: Sweep, Protected-M5-Fraktal und zugehöriger M5-Orderblock. Kein H1-Alterskriterium.</dd></div>
+        <div><dt>B · Reaktion</dt><dd>Vorerst der zugehörige M5-Orderblock aus Setup 1.0. Eine Verbesserung der Reaktionsprüfung folgt erst nach der Jahresstatistik.</dd></div>
+        <div><dt>C · M5-Trend (äußerster)</dt><dd>Der äußerste M5-Trend ab dem bekannten D1-Fraktal der Periode 4 ersetzt den H1-Trend. C muss in Setup-Richtung zeigen. Bei Gegenrichtung oder unbekanntem Trend wird abgebrochen, ohne D auszuwerten.</dd></div>
+        <div><dt>D · M5-Trend (aktuell)</dt><dd>Die tiefste bestätigte M5-Strukturebene zum Erkennungszeitpunkt bestimmt den aktuellen Trend. Unbestätigte Nested-Kandidaten zählen nicht; ohne bestätigten Nested-Trend gilt der äußere Trend.</dd></div>
+      </dl>
+      <p><strong>Countertrend:</strong> C zeigt in Setup-Richtung und D dagegen. A bis D erfüllt bestätigt die Dealing Range. Ein CHoCH ist dafür keine Bedingung; Validierung und Invalidierung sind noch offen.</p>
+      <p><strong>Trendfortführung:</strong> C und D zeigen in Setup-Richtung. Der Typ wird erkannt, der Pfad bricht mit „Typ Trendfortführung, noch nicht umgesetzt“ ab.</p>
+      <p><strong>Abbruch:</strong> C zeigt gegen die Setup-Richtung oder ist unbekannt. Grund: „äußerster M5-Trend gegen Setup-Richtung“ beziehungsweise „M5-Trend unbekannt“.</p>
+      <p>C und D werden am Bekannt-Zeitpunkt des Setups mit den bis dahin geschlossenen Kerzen ausgewertet. Spätere Replay-Kerzen ändern diese Typ-Prüfung nicht.</p>
+      <aside class="open-decision"><h3>Nächste Festlegungen offen</h3><p>Short 97 und 105 sind positive Countertrend-Referenzen. Der äußerste M5-Trend ist Pflicht. Die Trendfortführung folgt später.</p><p>Targets, Anti-Confluences, Uhrzeit, Confluences und Entry-Modelle werden hier nicht neu definiert.</p></aside>
+    </section>
+
+    <details class="countertrend-rules">
+      <summary>Countertrend · bisheriger Ablauf und historische Regeln</summary>
+      <p>Der bisherige Ablauf bleibt erhalten. Seine folgende A–G-Zuordnung und Entry-Regeln gehören zum alten Countertrend-Modell, nicht zur neuen A–D-Checkliste.</p>
 
     <nav class="contents" aria-label="Abschnitte der Regelübersicht">
       <RouterLink to="/setup-regeln#stufen">Stufenübersicht</RouterLink>
@@ -115,7 +134,8 @@
       <ol><li>Nach Auswertung der Gesamtstatistik: mögliche künftige Showstopper unter E.</li><li>Weitere Entry-Modelle und ihre Bedingungen.</li><li>Umgang mit unbekannten F-Ergebnissen, insbesondere unbekannter News-Abdeckung.</li><li>Eigene Regeln für kleinere LS.</li></ol>
       <p>Die gemeinsame Prüfung und Absegnung dieses Entwurfs steht aus.</p>
     </section>
-    <footer>Bestehende Läufe bleiben historische Ergebnisse ihrer jeweiligen Regeln. Der neue Septemberlauf verwendet die gemeinsam beauftragten Regeln. Diese Seite startet keinen Scan.</footer>
+    </details>
+    <footer>Bestehende Läufe bleiben historische Ergebnisse ihrer jeweiligen Regeln. Die neue Countertrend-Checkliste bestätigt A bis D; weitere Regeln folgen später. Diese Seite startet keinen Scan.</footer>
   </main>
 </template>
 

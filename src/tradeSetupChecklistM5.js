@@ -1,4 +1,5 @@
-import { computeRangesPivots, innermostStructureStart } from './marketStructureAnalysis';
+import { buildMarketStructureState, computeRangesPivots, innermostStructureStart } from './marketStructureAnalysis';
+import { deriveM5CloseReaction } from './m5CloseReaction.js';
 import { buildStructureWithPhases } from './trendPhases.js';
 import { formatBerlinTime } from './berlinTime.js';
 import { pricePrecisionForInstrument } from './format.js';
@@ -9,17 +10,31 @@ export function unknownChecklistM5() {
     detailStatuses: ['unknown', 'unknown', 'unknown'] };
 }
 
-export function evaluateChecklistM5(context, settings = {}) {
+export function evaluateChecklistOuterM5(context, settings, anchor) {
+  const candles = context.m5Candles.filter(c => !c.ignored);
+  if (anchor == null || !candles.length || candles[0].time > anchor) return null;
+  const outerPeriod = settings.m5StructurePeriod ?? 5, innerPeriod = settings.m5Structure2Period ?? 2;
+  const outer = computeRangesPivots(candles, outerPeriod, anchor), inner = computeRangesPivots(candles, innerPeriod, anchor);
+  const state = buildMarketStructureState(outer, inner, outerPeriod, innerPeriod, candles, { barSeconds: 300 });
+  return { state, outer, inner, outerPeriod, innerPeriod, candles };
+}
+
+export function evaluateChecklistM5(context, settings = {}, structureStart, prepared) {
   const result = unknownChecklistM5();
   const candles = context.m5Candles.filter(c => !c.ignored);
-  const anchor = innermostStructureStart(context.h1State, context.h1Cutoff);
+  // Die neue A–D-Checkliste übergibt den D1-Anker direkt; der alte Countertrend-Pfad
+  // behält seinen bisherigen H1-Nested-Anker.
+  const anchor = structureStart ?? innermostStructureStart(context.h1State, context.h1Cutoff);
   if (anchor == null || !candles.length || candles[0].time > anchor) return result;
   const outerPeriod = settings.m5StructurePeriod ?? 5;
   const innerPeriod = settings.m5Structure2Period ?? 2;
-  const { state, closeReaction } = buildStructureWithPhases(
+  const { state, closeReaction } = prepared ? { state: prepared.state,
+    closeReaction: deriveM5CloseReaction(prepared.state, prepared.outer, prepared.inner, prepared.outerPeriod,
+      prepared.innerPeriod, prepared.candles, 300, context.closeReactionCache) } : buildStructureWithPhases(
     computeRangesPivots(candles, outerPeriod, anchor), computeRangesPivots(candles, innerPeriod, anchor),
     outerPeriod, innerPeriod, candles, 300, { closeEvaluation: true, closeReactionCache: context.closeReactionCache });
   result.structureReaction = closeReaction;
+  result.trend = closeReaction.trend;
   result.structureStart = anchor;
   result.structureState = state;
   result.m1Anchor = m1AnchorFromM5(state, closeReaction, context.direction, context.evaluatedAt);

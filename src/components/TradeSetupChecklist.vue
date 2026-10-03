@@ -10,6 +10,7 @@ import { usePreservedScroll } from "../composables/usePreservedScroll.js";
 import { entryChecklist } from "../m1Entry.js";
 import { useChecklistDisplay } from "../composables/useChecklistDisplay.js";
 import { DEALING_RANGE_LABELS } from "../tradeSetup2DealingRange.js";
+import { SETUP_TYPE_LABELS } from "../countertrendChecklist.js";
 
 const props = defineProps({
   instrument: { type: String, required: true },
@@ -19,7 +20,7 @@ const props = defineProps({
 defineEmits(["close"]);
 const { element: scrollElement, rememberScroll } = usePreservedScroll();
 
-const definitions = [
+const countertrendDefinitions = [
   { key: "h1Trend", label: "1-Stunden-Trend" },
   { key: "liquiditySweep", label: "Liquidity Sweep" },
   { key: "reaction", label: "Reaktion aus Liquidity Sweep" },
@@ -31,6 +32,13 @@ const definitions = [
   { key: "m1", label: "M1" },
   { key: "entry", label: "Entry" },
 ];
+const countertrendAbcdDefinitions = [
+  { key: 'liquiditySweep', label: 'Liquidity Sweep' },
+  { key: 'reaction', label: 'Reaktion' },
+  { key: 'outerM5Trend', label: 'M5-Trend (äußerster)', fallback: 'unknown' },
+  { key: 'm5Trend', label: 'M5-Trend (aktuell)', fallback: 'unknown' },
+  ...countertrendDefinitions.filter(d => ['targets', 'antiConfluences', 'time', 'confluences', 'm1', 'entry'].includes(d.key)),
+];
 const statuses = {
   passed: { label: "Erfüllt", symbol: "✓" },
   pending: { label: "Ausstehend", symbol: "…" },
@@ -38,6 +46,7 @@ const statuses = {
   blocked: { label: "No-Go", symbol: "×" },
   unknown: { label: "Unbekannt", symbol: "?" },
   deferred: { label: "Zurückgestellt", symbol: "–" },
+  context: { label: "Nur Kontext", symbol: "–" },
 };
 const dataStates = {
   loading: { label: "Auswertung lädt", symbol: "↻" },
@@ -57,7 +66,8 @@ const evaluatedAt = computed(() => {
 });
 const presentation = computed(() => checklistPresentation(state.value));
 const m1 = computed(() => displayedM1.value ?? inactiveM1Checklist('prerequisites'));
-const checks = computed(() => definitions.map((definition, index) => {
+const definitions = computed(() => state.value?.checks?.h1Trend ? countertrendDefinitions : countertrendAbcdDefinitions);
+const checks = computed(() => definitions.value.map((definition, index) => {
   const result = definition.key === 'entry' ? entryChecklist(m1.value) : definition.key === 'm1'
     ? m1.value
     : state.value?.checks?.[definition.key] ?? (definition.key === 'm5Trend' ? unknownChecklistM5() : null);
@@ -93,6 +103,7 @@ const checks = computed(() => definitions.map((definition, index) => {
       <ChecklistStatusIcon v-if="!busy" v-bind="dataStatus" />
     </div>
     <p v-if="state?.dealingRange" class="checklist-notice"><strong>{{ DEALING_RANGE_LABELS[state.dealingRange.status] }}</strong><br />{{ state.dealingRange.details?.join(' ') }}</p>
+    <p v-if="state?.model === 'countertrend'" class="checklist-notice"><strong>Setup-Typ: {{ SETUP_TYPE_LABELS[state.setupType] }}</strong><br />{{ state.abortReason || 'C ist Pflicht · D bestimmt den Setup-Typ' }}</p>
     <p v-if="state?.tradeability === 'blocked'" class="checklist-not-tradeable" role="status">Nicht tradebar</p>
     <p v-if="state?.statistics?.status === 'error'" class="checklist-notice" role="alert">Target-Statistik konnte nicht gespeichert werden. Neuer Versuch bei der nächsten Auswertung.</p>
     <ol ref="scrollElement" class="checklist-checks" tabindex="0" aria-label="Checklist-Prüfungen" @scroll="rememberScroll">

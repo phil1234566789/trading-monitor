@@ -100,7 +100,8 @@ describe('Chart-Checklist: asynchrone Integration', () => {
     ctx.fill();
     const before = ctx.events.at(-1);
     expect(before.name).toBe('checklist-state-change');
-    expect(before.state.checks.h1Trend.status).toBe('passed');
+    expect(before.state.checks.liquiditySweep.status).toBe('pending');
+    expect(before.state.checks.h1Trend).toBeUndefined();
     expect(before.state.status).toBe('ready');
     ctx.props.currentBar = '1m';
     ctx.props.showRanges = false;
@@ -116,7 +117,7 @@ describe('Chart-Checklist: asynchrone Integration', () => {
     const old = ctx.api.begin('h1');
     ctx.props.symbol = 'EURUSD';
     expect(ctx.events.at(-1).state.status).toBe('loading');
-    expect(ctx.events.at(-1).state.checks.h1Trend.status).toBe('unknown');
+    expect(ctx.events.at(-1).state.checks.m5Trend.status).toBe('unknown');
     ctx.api.finish(old, { ok: true, applied: true }, candles);
     expect(ctx.events.at(-1).state.instrument).toBe('EURUSD');
     expect(ctx.events.at(-1).state.status).toBe('loading');
@@ -127,7 +128,7 @@ describe('Chart-Checklist: asynchrone Integration', () => {
     ctx.fill();
     ctx.props.replayUntil = candles.at(-1).time;
     expect(ctx.events.at(-1).state.evaluatedAt).toBeNull();
-    expect(ctx.events.at(-1).state.checks.h1Trend.status).toBe('unknown');
+    expect(ctx.events.at(-1).state.checks.m5Trend.status).toBe('unknown');
     ctx.finish('h1', candles);
     ctx.finish('m5', [{ time: candles.at(-1).time, open: 1, high: 2, low: 0, close: 1 }]);
     ctx.api.setChartCandles([{ time: candles.at(-1).time, open: 1, high: 2, low: 0, close: 1 }], 'GBPUSD:5m');
@@ -141,11 +142,11 @@ describe('Chart-Checklist: asynchrone Integration', () => {
     ctx.fill();
     ctx.sessions.push({ instrument: 'GBPUSD', ignoreLiquidity: true, fromMinutes: 0, toMinutes: 1440 });
     await nextTick();
-    expect(ctx.events.at(-1).state.checks.h1Trend.status).toBe('unknown');
+    expect(ctx.events.at(-1).state.checks.m5Trend.status).toBe('unknown');
     ctx.sessions.length = 0;
     ctx.props.rangesPeriod = 9999;
     await nextTick();
-    expect(ctx.events.at(-1).state.checks.h1Trend.status).toBe('unknown');
+    expect(ctx.events.at(-1).state.checks.m5Trend.status).toBe('unknown');
     const ticket = ctx.api.begin('h1');
     ctx.scope.stop();
     const count = ctx.events.length;

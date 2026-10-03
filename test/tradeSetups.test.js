@@ -25,6 +25,11 @@ function row(overrides = {}) {
 }
 
 describe("tradeSetupFromRow", () => {
+  it('übernimmt den exakten Erkennungszeitpunkt und die Invalidierung', () => {
+    const setup=tradeSetupFromRow(row({created_at:'2026-09-24T08:21:02.613371Z',invalidation:1.32556}));
+    expect(setup.createdAt).toBe(Date.parse('2026-09-24T08:21:02.613371Z')/1000);
+    expect(setup.invalidation).toBe(1.32556);
+  });
   it("baut die Live-Setup-Form aus einer DB-Zeile", () => {
     const setup = tradeSetupFromRow(row());
     expect(setup).toMatchObject({
