@@ -38,8 +38,8 @@ describe('Checklist E/G', () => {
     expect(detectChecklistDivergences({ candles: divergenceCandles(), timeframe: '5m', evaluatedAt: 111600 }).candidates)
       .toMatchObject([{ type: 'bearish', timeframe: '5m' }]);
     expect(result.confluences.divergences.status).toBe('unknown');
-    expect(result.antiConfluences.status).toBe('found');
-    expect(result.antiConfluences.rules).toMatchObject([{id:'h1CounterDivergence',status:'found',invalidates:true,
+    expect(result.antiConfluences.status).toBe('clear');
+    expect(result.antiConfluences.rules).toMatchObject([{id:'h1CounterDivergence',status:'found',invalidates:false,
       evidence:[{type:'bullish',timeframe:'1H',recognizedAt:111600}]}]);
     expect(result.antiConfluences.details).toEqual(['bullische 1H Divergenz vorhanden']);
     expect(result.antiConfluences.explanation).toContain('RSI');
@@ -50,7 +50,7 @@ describe('Checklist E/G', () => {
       opposingCandidates: [counter, { ...counter, id: 'same-price-other-pivot', sweep: { ...counter.sweep, level: { ...counter.sweep.level, pivotTime: -200000 } } }] });
     expect(result.antiConfluences.sweepCandidates).toMatchObject([{ id: 'counter', olderThanPrimary: true, strengthComparison: 'unknown' }]);
     expect(result.antiConfluences.sweepCandidates).toHaveLength(1);
-    expect(result.antiConfluences.status).toBe('unknown');
+    expect(result.antiConfluences.status).toBe('clear');
   });
   it('does not use future as-of snapshots or targets', () => {
     const args = { evaluatedAt: 12000, direction: 'short', primary, target2, opposingCandidates: [{ ...counter, knownAsOf: 13000 }] };
@@ -66,7 +66,7 @@ describe('Checklist E/G', () => {
   it.each([['short', false, 'bullische'], ['long', true, 'bärische']])('marks only the absent H1 counter-divergence green for %s', (direction, bullish, label) => {
     const result = evaluateChecklistConfluences({ evaluatedAt: 111600, direction, h1Candles: divergenceCandles(3600, bullish) });
     expect(result.antiConfluences.status).toBe('clear');
-    expect(result.antiConfluences.rules).toMatchObject([{id:'h1CounterDivergence',status:'clear',invalidates:true,evidence:[]}]);
+    expect(result.antiConfluences.rules).toMatchObject([{id:'h1CounterDivergence',status:'clear',invalidates:false,evidence:[]}]);
     expect(result.antiConfluences.details).toEqual([`keine ${label} 1H Divergenz vorhanden`]);
     expect(result.antiConfluences.explanation).toContain('nur die H1-Gegendivergenz');
     expect(result.antiConfluences.deferredChecks).toEqual(['sweep', 'orderBlock', 'strength']);
@@ -74,14 +74,15 @@ describe('Checklist E/G', () => {
   });
   it.each([undefined, [], divergenceCandles(3600).slice(0, 20)])('keeps missing or insufficient H1 history unknown', h1Candles => {
     const check = evaluateChecklistConfluences({ evaluatedAt: 111600, direction: 'short', h1Candles }).antiConfluences;
-    expect(check.status).toBe('unknown');
+    expect(check.status).toBe('clear');
+    expect(check.rules[0].status).toBe('unknown');
     expect(check.details).toEqual(['1H-Gegendivergenz noch nicht prüfbar.']);
   });
   it('uses only closed H1 candles for the counter-divergence', () => {
     const args = { direction: 'short', h1Candles: divergenceCandles(3600, true) };
-    expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 20 * 3600 }).antiConfluences.status).toBe('unknown');
+    expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 20 * 3600 }).antiConfluences.rules[0].status).toBe('unknown');
     expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 111599 }).antiConfluences.status).toBe('clear');
-    expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 111600 }).antiConfluences.status).toBe('found');
+    expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 111600 }).antiConfluences.rules[0].status).toBe('found');
   });
 });
 
@@ -116,7 +117,7 @@ describe('Checklist OB evidence', () => {
     const result = evaluateChecklistConfluences({ evaluatedAt: 1800, direction: 'short', m5Candles: candles, opposingCandidates: [],
       target2: { ...target2, price: 1.3, selectedAt: 0 } });
     expect(result.antiConfluences.obCandidates).toMatchObject([{ dir: 1, targetAssociation: 'price-overlap', originOfCounterReaction: 'unknown' }]);
-    expect(result.antiConfluences.status).toBe('unknown');
+    expect(result.antiConfluences.status).toBe('clear');
   });
   it('can prove a touch on the sweep candle without claiming same movement or mitigation', () => {
     const result = evaluateChecklistConfluences({ evaluatedAt: 1800, direction: 'long', m5Candles: candles,

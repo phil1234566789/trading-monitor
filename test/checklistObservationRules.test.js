@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { summarizeAntiConfluenceRules, checklistObservationRules } from '../src/checklistObservationRules.js';
+import { summarizeAntiConfluenceRules, checklistObservationRules, H1_COUNTER_DIVERGENCE_RULE } from '../src/checklistObservationRules.js';
 import { evaluateChecklistConfluences } from '../src/tradeSetupChecklistConfluences.js';
 import { evaluateDealingRange } from '../src/tradeSetup2DealingRange.js';
 import { buildTradeSetup2CandidateSnapshot, restoreTradeSetup2Snapshot } from '../src/tradeSetup2Snapshot.js';
@@ -21,10 +21,10 @@ describe('anti-confluence rule list', () => {
     [[rule('a','found',false), rule('b','unknown')], 'unknown'],
     [[rule('a','unknown',false)], 'clear'],
   ])('aggregates enabled rules only (%j)', (rules, status) => expect(summarizeAntiConfluenceRules(rules)).toBe(status));
-  it('starts with exactly one enabled H1 rule, including missing data', () => {
+  it('keeps missing H1 data observable without blocking when invalidation is disabled', () => {
     const result = evaluateChecklistConfluences({ evaluatedAt: 600, direction: 'short' });
-    expect(result.antiConfluences).toMatchObject({ status: 'unknown', rules: [
-      { id: 'h1CounterDivergence', invalidates: true, status: 'unknown', evidence: [] },
+    expect(result.antiConfluences).toMatchObject({ status: 'clear', rules: [
+      { id: 'h1CounterDivergence', invalidates: false, status: 'unknown', evidence: [] },
     ] });
     expect(result.antiConfluences.rules).toHaveLength(1);
   });
@@ -32,12 +32,17 @@ describe('anti-confluence rule list', () => {
     expect(checklistObservationRules({ status }, 'antiConfluences')[0].status).toBe(expected);
   });
   it('keeps observation-only hits in snapshots without invalidating the DR', () => {
-    const rules = [rule('observe','found',false), rule('enabled','clear')];
+    const evidence = [{kind:'segment',type:'bullish',timeframe:'1H',fromTime:100,toTime:200,
+      fromPrice:1.2,toPrice:1.1,recognizedAt:300}];
+    const rules = [{...H1_COUNTER_DIVERGENCE_RULE,status:'found',evidence}];
     const state = checklist(rules);
     expect(evaluateDealingRange(state).status).toBe('validated');
     const snapshot = buildTradeSetup2CandidateSnapshot({ checklist: state, candidate: state.setup.primary });
     expect(snapshot.checklist.checks.antiConfluences.rules).toEqual(rules);
     expect(restoreTradeSetup2Snapshot(snapshot).dealingRange.status).toBe('validated');
+    expect(tradeSetup2Evidence({checklist:state}).some(e=>e.checkKey==='antiConfluences')).toBe(true);
+    const enabled = checklist([{...rules[0],invalidates:true}]);
+    expect(evaluateDealingRange(enabled).status).toBe('invalidated');
   });
   it('does not invalidate from future evidence', () => {
     expect(evaluateDealingRange(checklist([rule('future','found',true,[{recognizedAt:601}])])).status).toBe('confirmed');

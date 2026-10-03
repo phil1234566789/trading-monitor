@@ -11,6 +11,9 @@ import { tradeSetupFromRow } from '../src/tradeSetupRow.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const options = Object.fromEntries(process.argv.slice(2).map(arg => arg.replace(/^--/, '').split(/=(.*)/s).slice(0, 2)));
+const setupIds = options.setupIds?.split(',').map(Number);
+if (setupIds?.some(id => !Number.isSafeInteger(id) || id <= 0)) throw new Error('Invalid --setupIds');
+const timings = { archiveAndCacheMs: {}, setupSourcesMs: 0, snapshotWriteMs: 0 };
 const directory = path.resolve(root, options.output ?? '.debug/trade-setup-2');
 const controller = new AbortController();
 process.on('SIGINT', () => controller.abort());
@@ -67,6 +70,7 @@ if (manifest.requestedFrom !== requestedFrom || JSON.stringify(manifest.instrume
 if (options.coverage === 'true') { console.log(JSON.stringify(manifest.coverage)); process.exit(0); }
 if (!options.settings) throw new Error('Provide --settings=FILE with the explicitly selected historical H1 start policy');
 const configuration = await readJson(path.resolve(root, options.settings));
+if (setupIds) configuration.selectedSetupIds = setupIds;
 if (!configuration.settings || !Number.isFinite(configuration.warmupDays) || configuration.warmupDays < 14) throw new Error('Settings and warmupDays >= 14 required');
 const { core, sourceHash } = await loadCore();
 configuration.rangeCourseVersion = core.COUNTERTREND_RANGE_COURSE_VERSION;
@@ -87,6 +91,7 @@ const run = { id: `setup2-${hash({ configuration, manifest, sourceHash }).slice(
   status: 'running', progress: { phase: 'download', completed: 0, total: instruments.length },
   coverage: { archive: manifest.coverage, instruments: [], excluded: [{ instrument: 'XAUUSD', reason: 'noM1Archive' }] },
   provenance: { source: 'FXCM Bid', sourceHash, snapshotAt: manifest.fetchedAt,
+    ...(setupIds ? { selectedSetupIds: setupIds } : {}),
     validationStatus: configuration.validation ? 'validation-fixture' : 'confirmed-policy',
     validationNote: configuration.validation ? 'Referenzfall mit ausdrücklich festgehaltenem Replay-Strukturstart.'
       : 'Historischer D1-P4-Standard bestätigt; noch kein abgeschlossener Jahresvergleich.',
@@ -123,29 +128,41 @@ try {
       : from - configuration.warmupDays * 86400;
     const rows = {};
     for (const bar of configuration.startPolicy === 'historical-d1-p4' ? ['1D', '1h', '5m', '1m'] : ['1h', '5m', '1m']) {
+      const loadStarted = performance.now();
       rows[bar] = await client.candles({ instrument, bar, from: start, to,
         cacheDirectory: options.cache ? path.resolve(root, options.cache) : path.join(directory, 'cache'), onPage: async count => {
           controller.signal.throwIfAborted();
           run.progress = { phase: 'download', instrument, bar, loadedRows: count, completed: instrumentIndex, total: instruments.length };
           await saveProgress();
         } });
+      timings.archiveAndCacheMs[`${instrument}:${bar}`] = performance.now() - loadStarted;
     }
+    const anchorsStarted = performance.now();
     const dailyAnchors = rows['1D'] ? core.buildHistoricalDailyAnchors(rows['1D'], rows['1h']) : null;
+    timings.dailyAnchorsMs = performance.now() - anchorsStarted;
     if (dailyAnchors && !core.historicalSettingsAt(configuration.settings, dailyAnchors, from)) throw new Error(`Missing year-start daily anchor: ${instrument}`);
     run.coverage.instruments.push({ instrument, from, to, timeframes: Object.fromEntries(
       [['1h', 3600], ['5m', 300], ['1m', 60]].map(([bar, duration]) => [bar, candleCoverage(rows[bar], duration)])) });
     const sourceFile=path.join(directory,`${instrument}-sources.json`);
+    const sourcesStarted = performance.now();
     let sourceRows;
     try{sourceRows=await readJson(sourceFile);}catch(error){if(error.code!=='ENOENT')throw error;}
     if(!sourceRows){
       sourceRows=await client.pages('trade_setups',{select:'*,trade_setup_sweeps(*)',instrument:`eq.${instrument}`,
+        ...(setupIds ? { id: `in.(${setupIds.join(',')})` } : {}),
         and:`(created_at.gte.${new Date(from*1000).toISOString()},created_at.lt.${new Date(to*1000).toISOString()})`,
         order:'created_at.asc,id.asc'});
       await writeJson(sourceFile,sourceRows);
     }
+    if (setupIds && (sourceRows.some(row => !setupIds.includes(row.id)) || setupIds.some(id => !sourceRows.some(row => row.id === id))))
+      throw new Error('Selected setup sources missing or source file contains other setups');
     const tradeSetups=sourceRows.map(tradeSetupFromRow);
     // Unableitbare Erkennungszeiten stoppen den Lauf mit ID statt die Quelle zu verschlucken.
     for(const source of tradeSetups)core.setup1RecognitionTime(source);
+    timings.setupSourcesMs += performance.now() - sourcesStarted;
+    run.provenance.phaseTimings = timings;
+    run.progress = { phase: 'scan', instrument, completed: 0, total: 0 };
+    await saveProgress(true);
     run.provenance.setupSourcesHash=hash(sourceRows);
     run.coverage.instruments.at(-1).setup1Sources=tradeSetups.length;
     await writeJson(path.join(directory,'coverage.json'),run.coverage);
@@ -166,9 +183,12 @@ try {
     const elapsedCpu=process.cpuUsage(cpu);
     run.provenance.measurement={wallMs:performance.now()-started,cpuMs:(elapsedCpu.user+elapsedCpu.system)/1000};
     const records=outcomeRecords(snapshots,rows['1m'],to);
+    const writeStarted = performance.now();
     await writeJson(path.join(directory,`${instrument}-entries.json`),records);
     await writeJson(path.join(directory,`${instrument}-setups.json`),snapshots.filter(s=>!s.entry));
     if(repository){await repository.saveSetups(run.id,snapshots.filter(s=>!s.entry));await repository.saveEntries(run.id,records);}
+    timings.snapshotWriteMs += performance.now() - writeStarted;
+    run.provenance.phaseTimings = timings;
   }
   run.status = options.checkCoverage==='true' ? 'coverage' : 'complete'; run.progress = { phase: run.status, completed: instruments.length, total: instruments.length };
 } catch (error) {

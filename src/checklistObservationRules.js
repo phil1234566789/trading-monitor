@@ -1,8 +1,9 @@
 import { formatBerlinTime } from './berlinTime.js';
 
-export const OBSERVATION_RULE_VERSION = 'checklist-observation-rules-v1';
+export const OBSERVATION_RULE_VERSION = 'checklist-observation-rules-v2';
 export const OBSERVATION_STATUS_LABELS = { found: 'Gefunden', clear: 'Nicht gefunden', unknown: 'Nicht prüfbar' };
-export const H1_COUNTER_DIVERGENCE_RULE = { id: 'h1CounterDivergence', label: 'H1-RSI-Gegendivergenz', invalidates: true };
+// Bis die DR-Zuordnung fachlich feststeht, bleibt historische Gegendivergenz ein Beleg ohne Sperrwirkung.
+export const H1_COUNTER_DIVERGENCE_RULE = { id: 'h1CounterDivergence', label: 'H1-RSI-Gegendivergenz', invalidates: false };
 export const M5_SWEEP_DIVERGENCE_RULE = { id: 'm5SweepDivergence', label: 'M5-RSI-Divergenz am Sweep', invalidates: false };
 
 export function divergenceObservationRule({ id, label, invalidates, divergences, latestOnly = false }) {

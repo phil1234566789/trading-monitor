@@ -150,17 +150,17 @@ export function evaluateChecklistConfluences({ evaluatedAt, direction, instrumen
       .map(ob => ({ ...ob, touchOnSweepCandle: sweepCandle ? candleTouchesOrderBlock(sweepCandle, ob) : null,
         sameMovement: 'unknown' }));
   }
-  // Sweep-/OB-Bewertung ist zurückgestellt: Grün gilt ausschließlich der H1-Prüfung.
+  // Freigabe und Beobachtungsdaten trennen: ausgeschaltete Regeln sind auch bei Datenlücken klar.
   const counterDivergence = antiConfluences.divergences.candidates.at(-1);
   updateRules();
   const counterLabel = `${short ? 'bullische' : 'bärische'} 1H Divergenz vorhanden`;
-  antiConfluences.details = [antiConfluences.status === 'unknown' ? '1H-Gegendivergenz noch nicht prüfbar.'
+  antiConfluences.details = [antiConfluences.divergences.status === 'unknown' ? '1H-Gegendivergenz noch nicht prüfbar.'
     : counterDivergence ? counterLabel : `keine ${counterLabel}`];
   antiConfluences.explanation = 'Bewertet wird nur die H1-Gegendivergenz im geschlossenen Datenstand. Sweep-/OB-Zuordnung und Stärkevergleich sind zurückgestellt; keine Gesamtfreigabe.';
   if (counterDivergence) {
     const d = counterDivergence;
-    antiConfluences.explanation += ` Invalidierendes Gegenargument: ${formatDatedTime(d.fromTime)} → ${formatDatedTime(d.toTime)}; RSI ${d.fromRsi.toFixed(1)} → ${d.toRsi.toFixed(1)}; bestätigt ${formatDatedTime(d.recognizedAt)} (Europe/Berlin).`;
-  } else if (antiConfluences.status === 'unknown') {
+    antiConfluences.explanation += ` ${H1_COUNTER_DIVERGENCE_RULE.invalidates ? 'Invalidierendes Gegenargument' : 'Nur Beobachtung'}: ${formatDatedTime(d.fromTime)} → ${formatDatedTime(d.toTime)}; RSI ${d.fromRsi.toFixed(1)} → ${d.toRsi.toFixed(1)}; bestätigt ${formatDatedTime(d.recognizedAt)} (Europe/Berlin).`;
+  } else if (antiConfluences.divergences.status === 'unknown') {
     antiConfluences.explanation += ' H1-Daten fehlen oder die Historie reicht nicht.';
   }
   const divergence = confluences.divergences.candidates[0];
