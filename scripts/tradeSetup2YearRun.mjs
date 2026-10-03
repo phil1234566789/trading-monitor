@@ -6,7 +6,8 @@ import { rolldown } from 'rolldown';
 import { archiveClient, candleCoverage, writeJson } from './tradeSetup2Archive.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { createSimulationRepository } from '../src/tradeSetupSimulationRepository.js';
-import { scanWindowCandles } from './tradeSetup2ScanWindow.mjs';
+
+import { tradeSetupFromRow } from '../src/tradeSetupRow.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const options = Object.fromEntries(process.argv.slice(2).map(arg => arg.replace(/^--/, '').split(/=(.*)/s).slice(0, 2)));
@@ -28,7 +29,8 @@ async function loadCore() {
   const entry = path.join(directory, 'core-entry.mjs');
   const source = file => path.join(root, 'src', file).replaceAll('\\', '/');
   await import('node:fs/promises').then(fs => fs.writeFile(entry,
-    ['tradeSetup2Scan.js', 'tradeSetupSimulation.js', 'tradeSetup2Anchors.js', 'tradeSetup2Configuration.js', 'tradeSetup2RangeCourse.js']
+    ['tradeSetup2Scan.js', 'tradeSetupSimulation.js', 'tradeSetup2Anchors.js', 'tradeSetup2Configuration.js', 'tradeSetup2RangeCourse.js',
+      'setup1RecognitionTime.js','countertrendChecklist.js','countertrendLifecycle.js']
       .map(file => `export * from ${JSON.stringify(source(file))};`).join('\n')));
   const bundle = await rolldown({ input: entry, platform: 'node' });
   const file = path.join(directory, 'core.mjs');
@@ -67,7 +69,11 @@ if (!options.settings) throw new Error('Provide --settings=FILE with the explici
 const configuration = await readJson(path.resolve(root, options.settings));
 if (!configuration.settings || !Number.isFinite(configuration.warmupDays) || configuration.warmupDays < 14) throw new Error('Settings and warmupDays >= 14 required');
 const { core, sourceHash } = await loadCore();
-configuration.rangeCourseVersion = core.RANGE_COURSE_VERSION;
+configuration.rangeCourseVersion = core.COUNTERTREND_RANGE_COURSE_VERSION;
+const modelVersions=core.buildTradeSetup2Configuration({instrument:instruments[0]});
+configuration.setupModel=modelVersions.setupModel;
+configuration.entryModel=modelVersions.entryModel;
+
 const sessionConfigs = manifest.sessions.map(r => ({ id: r.id, label: r.label, instrument: r.instrument,
   fromMinutes: r.from_minutes, toMinutes: r.to_minutes, highLowRelevant: r.high_low_relevant,
   ignoreLiquidity: r.ignore_liquidity ?? false, danger: r.danger, days: r.days }));
@@ -75,7 +81,8 @@ configuration.instruments = instruments.map(instrument => core.buildTradeSetup2C
   settings: configuration.settings, sessionConfigs,
   tradingWindows: manifest.schedules.find(s => s.instrument === instrument)?.trading_windows,
   news: manifest.news.map(n => ({ ...n, eventTime: sec(n.event_time) })), newsLoadStatus: 'unknown' }));
-const run = { id: `setup2-${hash({ configuration, manifest, sourceHash }).slice(0, 24)}`, version: core.SIMULATION_VERSION,
+
+const run = { id: `setup2-${hash({ configuration, manifest, sourceHash }).slice(0, 24)}`, version: core.SETUP2_VERSION,
   configuration, from: requestedFrom, to: manifest.requestedTo, evaluatedAt: manifest.fetchedAt,
   status: 'running', progress: { phase: 'download', completed: 0, total: instruments.length },
   coverage: { archive: manifest.coverage, instruments: [], excluded: [{ instrument: 'XAUUSD', reason: 'noM1Archive' }] },
@@ -127,45 +134,43 @@ try {
     if (dailyAnchors && !core.historicalSettingsAt(configuration.settings, dailyAnchors, from)) throw new Error(`Missing year-start daily anchor: ${instrument}`);
     run.coverage.instruments.push({ instrument, from, to, timeframes: Object.fromEntries(
       [['1h', 3600], ['5m', 300], ['1m', 60]].map(([bar, duration]) => [bar, candleCoverage(rows[bar], duration)])) });
-    const allSnapshots = new Map();
-    // Tagesdateien sind Commitpunkte. Ein Abbruch wiederholt höchstens den laufenden Tag.
-    for (let day = from; day < to; day += 86400) {
-      controller.signal.throwIfAborted();
-      const end = Math.min(day + 86400, to);
-      const checkpoint = path.join(directory, run.id, `${instrument}-${day}.json`);
-      let snapshots;
-      try { snapshots = await readJson(checkpoint); } catch (e) { if (e.code !== 'ENOENT') throw e; }
-      if (!snapshots) {
-        snapshots = await core.scanTradeSetup2Window({ instrument, ...scanWindowCandles(rows, dailyAnchors, day, end, configuration.warmupDays),
-          fromTime: day, toTime: end - 1, settings: configuration.settings, sessionConfigs, dailyAnchors,
-          tradingWindows: manifest.schedules.find(s => s.instrument === instrument)?.trading_windows,
-          news: manifest.news.map(n => ({ ...n, eventTime: sec(n.event_time) })), newsLoadStatus: 'unknown',
-          signal: controller.signal, onProgress: async progress => {
-            if (progress.completed % 24 !== 0 && progress.completed !== progress.total) return;
-            run.progress = { ...progress, instrument, day, phase: 'scan', daysCompleted: Math.floor((day - from) / 86400),
-              daysTotal: Math.ceil((to - from) / 86400) };
-            await saveProgress();
-          } });
-        await writeJson(checkpoint, snapshots);
-      }
-      const added = snapshots.filter(snapshot => !allSnapshots.has(snapshot.id));
-      for (const snapshot of added) allSnapshots.set(snapshot.id, snapshot);
-      if (repository) {
-        await repository.saveSetups(run.id, added.filter(s => !s.entry));
-        await repository.saveEntries(run.id, outcomeRecords(added, rows['1m'], to));
-      }
-      console.log(JSON.stringify({ instrument, day, snapshots: allSnapshots.size, rssMB: Math.round(process.memoryUsage().rss / 1048576) }));
+    const sourceFile=path.join(directory,`${instrument}-sources.json`);
+    let sourceRows;
+    try{sourceRows=await readJson(sourceFile);}catch(error){if(error.code!=='ENOENT')throw error;}
+    if(!sourceRows){
+      sourceRows=await client.pages('trade_setups',{select:'*,trade_setup_sweeps(*)',instrument:`eq.${instrument}`,
+        and:`(created_at.gte.${new Date(from*1000).toISOString()},created_at.lt.${new Date(to*1000).toISOString()})`,
+        order:'created_at.asc,id.asc'});
+      await writeJson(sourceFile,sourceRows);
     }
-    const completedSnapshots = core.completeSavedRangeCourses([...allSnapshots.values()], rows['5m'], to, sessionConfigs);
-    const records = outcomeRecords(completedSnapshots, rows['1m'], to);
-    await writeJson(path.join(directory, `${instrument}-entries.json`), records);
-    await writeJson(path.join(directory, `${instrument}-setups.json`), completedSnapshots.filter(s => !s.entry));
-    if (repository) {
-      await repository.saveSetups(run.id, completedSnapshots.filter(s => !s.entry));
-      await repository.saveEntries(run.id, records);
+    const tradeSetups=sourceRows.map(tradeSetupFromRow);
+    // Unableitbare Erkennungszeiten stoppen den Lauf mit ID statt die Quelle zu verschlucken.
+    for(const source of tradeSetups)core.setup1RecognitionTime(source);
+    run.provenance.setupSourcesHash=hash(sourceRows);
+    run.coverage.instruments.at(-1).setup1Sources=tradeSetups.length;
+    await writeJson(path.join(directory,'coverage.json'),run.coverage);
+    if(options.checkCoverage==='true'){
+      run.status='coverage';await saveProgress(true);
+      console.log(JSON.stringify({coverage:run.coverage.instruments.at(-1)}));continue;
     }
+    const started=performance.now(),cpu=process.cpuUsage();
+    // Ein zusammenhängender Lauf erhält offene DRs/Entries über Monats- und Tagesgrenzen.
+    const snapshots=await core.scanTradeSetup2Window({instrument,h1Candles:rows['1h'],m5Candles:rows['5m'],m1Candles:rows['1m'],
+      tradeSetups,dailyAnchors,fromTime:from,toTime:to-1,settings:configuration.settings,sessionConfigs,
+      tradingWindows:manifest.schedules.find(s=>s.instrument===instrument)?.trading_windows,
+      news:manifest.news.map(n=>({...n,eventTime:sec(n.event_time)})),newsLoadStatus:'unknown',signal:controller.signal,
+      onProgress:async progress=>{
+        if(progress.completed%24!==0 && progress.completed!==progress.total)return;
+        run.progress={...progress,instrument,phase:'scan'};await saveProgress();
+      }});
+    const elapsedCpu=process.cpuUsage(cpu);
+    run.provenance.measurement={wallMs:performance.now()-started,cpuMs:(elapsedCpu.user+elapsedCpu.system)/1000};
+    const records=outcomeRecords(snapshots,rows['1m'],to);
+    await writeJson(path.join(directory,`${instrument}-entries.json`),records);
+    await writeJson(path.join(directory,`${instrument}-setups.json`),snapshots.filter(s=>!s.entry));
+    if(repository){await repository.saveSetups(run.id,snapshots.filter(s=>!s.entry));await repository.saveEntries(run.id,records);}
   }
-  run.status = 'complete'; run.progress = { phase: 'complete', completed: instruments.length, total: instruments.length };
+  run.status = options.checkCoverage==='true' ? 'coverage' : 'complete'; run.progress = { phase: run.status, completed: instruments.length, total: instruments.length };
 } catch (error) {
   run.status = 'failed'; run.progress = { ...run.progress, error: error.message, aborted: controller.signal.aborted };
   throw error;

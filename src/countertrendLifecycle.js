@@ -1,9 +1,10 @@
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
+export const COUNTERTREND_RANGE_COURSE_VERSION='countertrend-validation-t1-be-t2-v2';
 
 export function countertrendRangeCourse(candidate) {
   if (!candidate?.lifecycle || candidate.targetSelection?.status!=='passed') return null;
   const selection=candidate.targetSelection;
-  return {version:'countertrend-validation-t1-be-t2-v2',setupKey:candidate.id,validatedAt:candidate.recognizedAt,
+  return {version:COUNTERTREND_RANGE_COURSE_VERSION,setupKey:candidate.id,validatedAt:candidate.recognizedAt,
     direction:candidate.direction,selectedAt:selection.selectedAt,target1:selection.target1.price,
     target2:selection.target2?.price ?? null,invalidation:candidate.invalidation,source:'FXCM Bid M5/M1',lifecycle:candidate.lifecycle};
 }
