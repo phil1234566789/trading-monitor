@@ -420,9 +420,9 @@
     "semantic_hash": ""
   },
   "src/liquidityDetection.js": {
-    "mtime": 1790520158.4767818,
-    "seen": 1790520948.9514258,
-    "ast_hash": "39a4bdf5506811d4218136204495d4e7",
+    "mtime": 1791120956.7477589,
+    "seen": 1791121941.1840568,
+    "ast_hash": "92d12bf5642e2a355de88527fde01578",
     "semantic_hash": ""
   },
   "src/liquidityLevels.js": {
@@ -450,9 +450,9 @@
     "semantic_hash": "de36eb50ae5d8cda0b5f6eef517a6575"
   },
   "src/marketStructureAnalysis.ts": {
-    "mtime": 1790778114.8945577,
-    "seen": 1790778873.9464803,
-    "ast_hash": "c351fe44dc9d4bc9588f286245cc34d6",
+    "mtime": 1791120465.500712,
+    "seen": 1791121941.1840568,
+    "ast_hash": "67b523657366d9e61d8681d7202c213c",
     "semantic_hash": ""
   },
   "src/marketStructureRendering.ts": {
@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "src/orderBlockDetection.js": {
-    "mtime": 1791117752.1957107,
-    "seen": 1791118030.8554244,
-    "ast_hash": "fb4d9c80bb4ef010173cdf9311cc8e3b",
+    "mtime": 1791118670.7049677,
+    "seen": 1791121941.1840568,
+    "ast_hash": "6825aa0a29458add2e8cbce913a75051",
     "semantic_hash": ""
   },
   "src/orderBlocks.js": {
@@ -876,15 +876,15 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/marketStructureAnalysis.ts": {
-    "mtime": 1790778310.9272926,
-    "seen": 1790778873.9474823,
-    "ast_hash": "450c27f8e760d808d87bdb0a536fd26f",
+    "mtime": 1791120466.1815977,
+    "seen": 1791121941.185056,
+    "ast_hash": "b3ef866356c3a92349797c2857a7fa0f",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/orderBlockDetection.js": {
-    "mtime": 1790679741.0431988,
-    "seen": 1790679789.341162,
-    "ast_hash": "91a3dcf69a428683ce6411d06104e41e",
+    "mtime": 1791118670.7049677,
+    "seen": 1791121941.185056,
+    "ast_hash": "87b345391198ed28fe62bdba0ec07c9b",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/pretradeGates.ts": {
@@ -4242,9 +4242,9 @@
     "semantic_hash": ""
   },
   "src/m5CloseReaction.js": {
-    "mtime": 1790924290.9838138,
-    "seen": 1790924566.0226457,
-    "ast_hash": "5fe4777b2ff994fc3fee4f80dadff107",
+    "mtime": 1791120466.8842652,
+    "seen": 1791121941.1840568,
+    "ast_hash": "082070eebad77f402365dabef99b92a3",
     "semantic_hash": ""
   },
   "src/tradeSetupChecklistM5.js": {
@@ -5208,9 +5208,9 @@
     "semantic_hash": ""
   },
   "src/countertrendEntryModel1.js": {
-    "mtime": 1791117536.1666512,
-    "seen": 1791118030.8554244,
-    "ast_hash": "f18c621586c9dc39321f3dcef7e16e76",
+    "mtime": 1791118671.4229703,
+    "seen": 1791121941.1840568,
+    "ast_hash": "99058e42caea651c6ab3a8fc6a31063b",
     "semantic_hash": ""
   },
   "src/dealingRangeConfirmationTime.js": {
@@ -5484,21 +5484,21 @@
     "semantic_hash": ""
   },
   "scripts/setup2PerformancePrimitives.mjs": {
-    "mtime": 1791117571.471003,
-    "seen": 1791118030.8548906,
-    "ast_hash": "236660e159311364063482afb110b812",
+    "mtime": 1791118674.0407124,
+    "seen": 1791121941.1840568,
+    "ast_hash": "656b82abecb8172cbd659447b561849c",
     "semantic_hash": ""
   },
   "scripts/setup2PerformanceReplay.mjs": {
-    "mtime": 1791117800.4626174,
-    "seen": 1791118030.8548906,
-    "ast_hash": "4288b2f2d665f6c41b0ae0fb235ef22e",
+    "mtime": 1791121008.2701335,
+    "seen": 1791121941.1840568,
+    "ast_hash": "bd8f70f22b294feda46312cd0ae8625d",
     "semantic_hash": ""
   },
   "scripts/setup2Profiling.mjs": {
-    "mtime": 1791117799.7009878,
-    "seen": 1791118030.8548906,
-    "ast_hash": "dacdd5c9623f88c506839d329e1eb888",
+    "mtime": 1791121167.7630887,
+    "seen": 1791121941.1840568,
+    "ast_hash": "ef9c281261ebb8318cc707ae919b4990",
     "semantic_hash": ""
   },
   "src/candleTimeIndex.js": {
@@ -5514,15 +5514,15 @@
     "semantic_hash": ""
   },
   "test/setup2PerformanceEquivalence.test.js": {
-    "mtime": 1791117969.3875072,
-    "seen": 1791118030.8564322,
-    "ast_hash": "27095795b57c9a6f1cf5e9147f5e3e3d",
+    "mtime": 1791118672.7476964,
+    "seen": 1791121941.185056,
+    "ast_hash": "db83f0724f305402afb1b1c9abe0ab46",
     "semantic_hash": ""
   },
   "test/setup2Profiling.test.js": {
-    "mtime": 1791117235.33182,
-    "seen": 1791117340.0977316,
-    "ast_hash": "0cdae4ab5cf891e59b5478eb0ba5e34c",
+    "mtime": 1791120881.9568763,
+    "seen": 1791121941.185056,
+    "ast_hash": "677850b63a950b0cda334667338c9639",
     "semantic_hash": ""
   },
   "src/closedCandlePrefix.js": {
@@ -5532,9 +5532,9 @@
     "semantic_hash": ""
   },
   "scripts/setup2PerformanceCompare.mjs": {
-    "mtime": 1791117728.385678,
-    "seen": 1791118030.8548906,
-    "ast_hash": "05b8103a5082193123833f421991d256",
+    "mtime": 1791118118.3524437,
+    "seen": 1791121941.1840568,
+    "ast_hash": "29bb10d3b0296e15aaab8b067170d2e7",
     "semantic_hash": ""
   },
   "src/candleAppend.js": {
@@ -5544,9 +5544,57 @@
     "semantic_hash": ""
   },
   "test/incrementalOrderBlocks.test.js": {
-    "mtime": 1791117512.335137,
-    "seen": 1791118030.8564322,
-    "ast_hash": "163ad1e497390956800e03577ec26153",
+    "mtime": 1791118672.0743117,
+    "seen": 1791121941.185056,
+    "ast_hash": "a5c649a3c3932c09ec8224e514b83700",
+    "semantic_hash": ""
+  },
+  "src/incrementalLiquidityLevels.js": {
+    "mtime": 1791121559.4721563,
+    "seen": 1791121941.1840568,
+    "ast_hash": "b193f33219779dba25b453af8df5f1c8",
+    "semantic_hash": ""
+  },
+  "src/incrementalOrderBlocks.js": {
+    "mtime": 1791118670.7039683,
+    "seen": 1791121941.1840568,
+    "ast_hash": "6ebc6d23d027085bb6600bb31b1cb2b0",
+    "semantic_hash": ""
+  },
+  "test/fixtures/candleCloseWindowBeforePerformanceRound2.ts": {
+    "mtime": 1791120772.3076434,
+    "seen": 1791121941.185056,
+    "ast_hash": "b2eed60cb1b0c6906fc3bb72f2f346a5",
+    "semantic_hash": ""
+  },
+  "test/fixtures/liquidityDetectionBeforePerformanceRound2.js": {
+    "mtime": 1790520158.4767818,
+    "seen": 1791121941.185056,
+    "ast_hash": "39a4bdf5506811d4218136204495d4e7",
+    "semantic_hash": ""
+  },
+  "test/fixtures/marketStructureAnalysisBeforePerformanceRound2.ts": {
+    "mtime": 1791120772.2687695,
+    "seen": 1791121941.185056,
+    "ast_hash": "7be525d1ae1c9af9313709de3e18d97b",
+    "semantic_hash": ""
+  },
+  "test/incrementalLiquidityLevels.test.js": {
+    "mtime": 1791121560.1645617,
+    "seen": 1791121941.185056,
+    "ast_hash": "2ee942297d34d881845cb3720bf08ddf",
+    "semantic_hash": ""
+  },
+  "test/structureWindowPerformanceEquivalence.test.js": {
+    "mtime": 1791121083.8397422,
+    "seen": 1791121941.185056,
+    "ast_hash": "f17ed44c73fa74cc55d89a956d933d69",
+    "semantic_hash": ""
+  },
+  "docs/performance-h.html": {
+    "mtime": 1791119038.3259017,
+    "seen": 1791121941.185056,
+    "ast_hash": "e0d4154d62ce5c71e669ae7203cf5d5d",
     "semantic_hash": ""
   }
 }
