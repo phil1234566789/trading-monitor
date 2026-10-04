@@ -5388,21 +5388,21 @@
     "semantic_hash": ""
   },
   "src/components/SimulationComparisonMetrics.vue": {
-    "mtime": 1791115349.5654054,
-    "seen": 1791115756.2534304,
-    "ast_hash": "77c3c455bf4a0569c3aa897ba1d1e231",
+    "mtime": 1791115931.0511098,
+    "seen": 1791115946.0557678,
+    "ast_hash": "342427831cf303841074f314631bcff5",
     "semantic_hash": ""
   },
   "src/components/SimulationDrList.vue": {
-    "mtime": 1791110859.3312562,
-    "seen": 1791110887.2942913,
-    "ast_hash": "b65bb7354f0aba3c037697f80403e243",
+    "mtime": 1791115931.0489817,
+    "seen": 1791115946.0557678,
+    "ast_hash": "a5b32f08c1ec805275332c84de68ae74",
     "semantic_hash": ""
   },
   "src/components/SimulationEntryTable.vue": {
-    "mtime": 1791110858.6668122,
-    "seen": 1791110887.2942913,
-    "ast_hash": "491518d34dfe44d331bf6fd75394b611",
+    "mtime": 1791115931.0489817,
+    "seen": 1791115946.0557678,
+    "ast_hash": "1aed204372a38b207568b845fe317824",
     "semantic_hash": ""
   },
   "src/components/SimulationFeatureChips.vue": {
@@ -5412,9 +5412,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationRunQuality.vue": {
-    "mtime": 1791115739.8803759,
-    "seen": 1791115756.2534304,
-    "ast_hash": "0367e0b0eb952868a12d6855b5aedda3",
+    "mtime": 1791115788.0891938,
+    "seen": 1791115946.0557678,
+    "ast_hash": "88c4df94a3d6a5da1187ae2f0f673979",
     "semantic_hash": ""
   },
   "src/composables/useSimulationComparison.js": {
