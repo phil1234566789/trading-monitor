@@ -7,7 +7,8 @@ import {renderM1Entry} from './m1EntryRendering.js';
 import {cssColor,cssColorScaled} from './chartColors.js';
 import {lineWidth} from './chartLineWidths.js';
 import {barSecondsFor} from './timeframes.js';
-import {snapshotEvidenceVisible,snapshotStructureLevels} from './tradeSetup2SnapshotIndicators.js';
+import {snapshotEvidenceVisible} from './tradeSetup2SnapshotIndicators.js';
+import {snapshotDetailEvidence} from './tradeSetup2DetailEvidence.js';
 import {formatLsLabel} from './liquidity.js';
 import {fmtPrice,pricePrecisionForInstrument} from './format.js';
 import {chartEventBarTime} from './chartEventCoordinate.js';
@@ -56,10 +57,7 @@ export function renderSetup2Detail(series,snapshot,primitives,entryPrimitives,ca
   const snapshots=(visible?.entrySnapshots ?? (visible?[visible]:[])).filter(s=>s.knownAt<=asOf);
   renderM1Entry(series,snapshots.map(s=>s.entry).filter(Boolean),entryPrimitives,candles,currentBar,indicators?.tradeSetup2Variant);
   if(!visible)return;
-  const extraLevels=snapshotStructureLevels(visible).filter(level=>!visible.evidence.some(e=>e.kind==='line'
-    &&e.timeframe===level.timeframe&&e.price===level.price&&e.fromTime===level.fromTime));
-  const evidence=[...new Map(snapshots.flatMap(s=>s.evidence).map(e=>[e.id ?? JSON.stringify(e),e])).values()];
-  for(const e of [...evidence,...extraLevels]) {
+  for(const e of snapshotDetailEvidence(visible,asOf)) {
     if(e.knownAt>asOf || !snapshotEvidenceVisible(e,indicators))continue;
     // Ein H1-Level kann vor dem geladenen M1-Fenster beginnen. Nur horizontale
     // Belege am Fensterrand abschneiden; schräge Strukturpfade nicht extrapolieren.

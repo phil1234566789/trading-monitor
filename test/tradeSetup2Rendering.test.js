@@ -4,6 +4,21 @@ import {renderSetup2Detail,renderSetup2Positions} from '../src/tradeSetup2Render
 import {restoreTradeSetup2Snapshot} from '../src/tradeSetup2Snapshot.js';
 import {chartColors,cssColor} from '../src/chartColors.js';
 import {renderStructurePivots,renderLowerStructure} from '../src/structureOverlay.js';
+import {snapshotDetailEvidence} from '../src/tradeSetup2DetailEvidence.js';
+
+it('shows saved DR evidence with every indicator off and deduplicates repeated entry zones',()=>{
+  const zone={kind:'zone',role:'entryOrderBlock',timeframe:'5m',knownAt:300,fromTime:120,toTime:300,top:2,bottom:1,styleKey:'obBearM5'};
+  const snapshot={knownAt:300,instrument:'GBPUSD',evidence:[],entrySnapshots:[
+    {knownAt:300,evidence:[zone],rangeCourse:{validatedAt:300,invalidation:3,lifecycle:{evaluatedAt:900}}},
+    {knownAt:600,evidence:[{...zone,toTime:600},{kind:'segment',role:'divergence',timeframe:'1h',knownAt:600,
+      fromTime:300,toTime:600,fromPrice:1,toPrice:2,styleKey:'antiConfluence'}]}]};
+  expect(snapshotDetailEvidence(snapshot,900)).toHaveLength(3);
+  const primitives=[],series={attachPrimitive:vi.fn(),detachPrimitive:vi.fn()};
+  renderSetup2Detail(series,snapshot,primitives,[],[{time:0},{time:300},{time:600}],'5m',900,
+    {snapshotView:true,showObsM5:false,showLiquidity:false,showRanges:false,showM1Structure:false,showRsiDivergence:false});
+  expect(primitives).toHaveLength(3);
+  expect(primitives.some(p=>p._options?.label==='DR-Invalidierung')).toBe(true);
+});
 
 it('draws both entries and clears the second on rewind, using the selected SL variant',()=>{
   const first={id:'a',candleTime:2700,recognizedAt:2760},second={id:'b',candleTime:3000,recognizedAt:3060};

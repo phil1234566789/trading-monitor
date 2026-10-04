@@ -38,7 +38,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     const reconstructed=!!snapshotM1.value.result && !!visibleSnapshot.value && props.showM1Structure && ['1m','5m'].includes(props.currentBar);
     const m5Result=snapshotIndicators.value.m5;
     renderSetup2Detail(series,visibleSnapshot.value,details,entry,displayCandles.value,props.currentBar,evaluationTime(),
-      {...props,dynamicStructure:[...(reconstructed?['1m']:[]),...(m5Result?['5m']:[])]});
+      {...props,snapshotView:isTradeSetup2SnapshotView(props),dynamicStructure:[...(reconstructed?['1m']:[]),...(m5Result?['5m']:[])]});
     // Die Struktur folgt dem Replay; die gespeicherte Checkliste bleibt der Beleg.
     for(const [timeframe,result,lines,markers,show] of [['1m',reconstructed?snapshotM1.value.result:null,m1Lines,m1Markers,props.showM1Structure],
       ['5m',m5Result,m5Lines,m5Markers,props.showM5Structure]]) {
@@ -51,9 +51,9 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
       renderStructurePivots(series,snapshotIndicators.value.pivots[bar],markers,displayCandles.value,
         {symbol:props.symbol,debug:!!visibleSnapshot.value&&show&&props.showLiquidityDebug});
     }
-    const reaction=visibleSnapshot.value?.checklist?.setup?.primary?.reactionOB;
-    renderPersistedZones(series,snapshotIndicators.value.zones.filter(z=>!(z.timeframe==='5M'&&z.startTime===reaction?.startTime
-      &&z.top===reaction.top&&z.bottom===reaction.bottom)),obPrimitives,displayCandles.value);
+    const savedZones=(visibleSnapshot.value?.entrySnapshots ?? [visibleSnapshot.value]).flatMap(s=>s?.evidence ?? []).filter(e=>e.kind==='zone');
+    renderPersistedZones(series,snapshotIndicators.value.zones.filter(z=>!savedZones.some(e=>e.timeframe.toUpperCase()===z.timeframe
+      &&e.fromTime===z.startTime&&e.top===z.top&&e.bottom===z.bottom)),obPrimitives,displayCandles.value);
     linkedRendered.value=linkedReady.value&&displayReady;
     const snapshot=visibleSnapshot.value;
     const key=`${props.tradeSetup2RunId}:${snapshot?.id}:${props.currentBar}`;
