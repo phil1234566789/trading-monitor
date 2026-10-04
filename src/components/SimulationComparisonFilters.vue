@@ -11,8 +11,8 @@ const label=r=>`${r.configuration?.label ?? `${formatDatedTime(r.from)} – ${fo
 </script>
 <template>
   <form class="statistics-filters" @submit.prevent>
-    <label>Lauf<select :value="modelValue.run" @change="set('run',$event.target.value)"><option value="" disabled>Lauf wählen</option><option v-for="run in runs" :key="run.id" :value="run.id">{{ label(run) }}</option></select></label>
-    <label>Vergleich mit<select :value="modelValue.compare" @change="set('compare',$event.target.value)"><option value="">Kein Vergleich</option><option v-for="run in runs.filter(r=>r.id!==modelValue.run)" :key="run.id" :value="run.id">{{ label(run) }}</option></select></label>
+    <label>Lauf neu<select :value="modelValue.run" @change="set('run',$event.target.value)"><option value="" disabled>Lauf wählen</option><option v-for="run in runs" :key="run.id" :value="run.id">{{ label(run) }}</option></select></label>
+    <label>Vergleich mit Lauf alt<select :value="modelValue.compare" @change="set('compare',$event.target.value)"><option value="">Kein Vergleich</option><option v-for="run in runs.filter(r=>r.id!==modelValue.run)" :key="run.id" :value="run.id">{{ label(run) }}</option></select></label>
     <label>Instrument<select :value="modelValue.instrument" @change="set('instrument',$event.target.value)"><option value="">Alle</option><option v-for="name in ['GBPUSD','EURUSD','XAUUSD']" :key="name">{{ name }}</option></select></label>
     <label>Typ<select :value="modelValue.type" @change="set('type',$event.target.value)"><option value="">Alle</option><option v-for="key in ['countertrend','continuation']" :key="key" :value="key">{{ SETUP_TYPE_LABELS[key] }}</option></select></label>
     <label>Entry ab<input type="date" :value="modelValue.from" @input="set('from',$event.target.value)" /></label>
