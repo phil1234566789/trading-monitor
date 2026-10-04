@@ -9,6 +9,8 @@ import { createClient } from '@supabase/supabase-js';
 import { createSimulationRepository } from '../src/tradeSetupSimulationRepository.js';
 
 import { tradeSetupFromRow } from '../src/tradeSetupRow.js';
+import {simulationRunInputs,runNewsStatus} from '../src/simulationRunInputs.js';
+import {execFileSync} from 'node:child_process';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const options = Object.fromEntries(process.argv.slice(2).map(arg => arg.replace(/^--/, '').split(/=(.*)/s).slice(0, 2)));
@@ -85,7 +87,8 @@ const sessionConfigs = manifest.sessions.map(r => ({ id: r.id, label: r.label, i
 configuration.instruments = instruments.map(instrument => core.buildTradeSetup2Configuration({ instrument,
   settings: configuration.settings, sessionConfigs,
   tradingWindows: manifest.schedules.find(s => s.instrument === instrument)?.trading_windows,
-  news: manifest.news.map(n => ({ ...n, eventTime: sec(n.event_time) })), newsLoadStatus: 'unknown' }));
+  news: manifest.news.map(n => ({ ...n, eventTime: sec(n.event_time) })),
+  newsLoadStatus:runNewsStatus(instrument,manifest.news.map(n=>({...n,eventTime:sec(n.event_time)})),requestedFrom,manifest.requestedTo) }));
 
 const run = { id: `setup2-${hash({ configuration, manifest, sourceHash }).slice(0, 24)}`, version: core.SETUP2_VERSION,
   configuration, from: requestedFrom, to: manifest.requestedTo, evaluatedAt: manifest.fetchedAt,
@@ -100,6 +103,9 @@ const run = { id: `setup2-${hash({ configuration, manifest, sourceHash }).slice(
       'Archivlücken einschließlich Marktschließungen werden konservativ als fehlende Historie behandelt.',
       'Bid-OHLC mit 5 USD Roundturn-Kommission je eröffnetem Standardlot, ohne Spread und Slippage.'], configurationHash: hash({ configuration, sessionConfigs }) } };
 const runFile = path.join(directory, 'run.json');
+run.provenance.inputs=simulationRunInputs({configuration,from:run.from,to:run.to,fetchedAt:manifest.fetchedAt,
+  sourceHash,sourceCommit:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),
+  inputSetId:configuration.inputSetId ?? null,hash});
 if (previousRun && previousRun.id !== run.id) throw new Error('Run configuration changed; choose a new --output directory. Existing run preserved.');
 const repository = options.publish === 'true' ? createSimulationRepository(createClient(process.env.VITE_SUPABASE_URL,
   process.env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })) : null;
@@ -178,7 +184,7 @@ try {
     const snapshots=await core.scanTradeSetup2Window({instrument,h1Candles:rows['1h'],m5Candles:rows['5m'],m1Candles:rows['1m'],
       tradeSetups,dailyAnchors,fromTime:from,toTime:to-1,settings:configuration.settings,sessionConfigs,
       tradingWindows:manifest.schedules.find(s=>s.instrument===instrument)?.trading_windows,
-      news:manifest.news.map(n=>({...n,eventTime:sec(n.event_time)})),newsLoadStatus:'unknown',signal:controller.signal,
+      news:configuration.instruments[instrumentIndex].news,newsLoadStatus:configuration.instruments[instrumentIndex].newsLoadStatus,signal:controller.signal,
       onProgress:async progress=>{
         if(progress.completed%24!==0 && progress.completed!==progress.total)return;
         run.progress={...progress,instrument,phase:'scan'};await saveProgress();

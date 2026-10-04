@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { formatDatedTime } from '../berlinTime.js';
 import { simulationRunStatusLabel } from '../tradeSetupSimulationStatistics.js';
+import { simulationRunInputsLabel } from '../simulationRunInputs.js';
 
 const props = defineProps({ run: { type: Object, required: true } });
 const phaseLabels = { download: 'Kerzen laden', scan: 'Setups auswerten', publish: 'Ergebnisse speichern', complete: 'Auswertung beendet' };
@@ -20,6 +21,7 @@ const h1Start = computed(() => {
 
 <template>
   <section class="run-status" aria-label="Lauf neu">
+    <p>{{ simulationRunInputsLabel(run) }}</p>
     <p v-if="run.status === 'running'" role="status" class="progress-label">
       {{ phaseLabels[progress.phase] ?? 'Auswertung läuft' }}<template v-if="progress.instrument"> · {{ progress.instrument }}</template>
       <template v-if="measurableProgress"> · {{ progress.completed }} / {{ progress.total }} {{ progress.phase === 'download' ? 'Instrumente' : 'Schritte' }}</template>
