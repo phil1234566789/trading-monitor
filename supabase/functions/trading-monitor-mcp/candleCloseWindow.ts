@@ -1,7 +1,7 @@
 type CloseCandle = { time: number; close: number };
 const orderedCalls = new WeakMap<CloseCandle[], boolean>();
 
-// Nur während eines synchronen Pivot-Schritts wiederverwenden: Aufrufer dürfen
+// Nur während eines synchronen Fensters wiederverwenden: Aufrufer dürfen
 // dieselben Candle-Arrays zwischen Schritten verändern (auch über onStep).
 export function withCandleCloseWindow<T>(candles: CloseCandle[], run: () => T): T {
   if (orderedCalls.has(candles)) return run();

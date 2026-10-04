@@ -12,7 +12,7 @@
 // findTargetCandidates.js/backfillObZones.ts genutzt) UND die typisierte Variante
 // supabase/functions/_shared/orderBlocks.ts (von poi-watcher/tradeSetup.ts genutzt). Bei
 // Änderungen an der Erkennungslogik selbst IMMER ALLE DREI nachziehen.
-import { PIP_SIZE } from "./pipConfig.js";
+import { PIP_SIZE } from "../../src/pipConfig.js";
 
 export function candleTouchesOrderBlock(candle, zone) {
   return candle.low <= zone.top && candle.high >= zone.bottom;
@@ -65,12 +65,7 @@ const GAP_EPSILON = 1e-9;
 // isForex default true, weil bislang jeder Aufrufer entweder garantiert Forex ist (detectSetupObs,
 // die Frontend-Forex-Zweige) oder das Flag explizit selbst setzt (poi-watcher, s.o.).
 export function detectOrderBlocks(candles, timeframe, isForex = true, minGapOverride = null) {
-  const state=orderBlockState(timeframe,isForex,minGapOverride);
-  advanceOrderBlocks(candles,state,3);
-  return orderBlockSnapshot(candles,state);
-}
-
-export function orderBlockState(timeframe,isForex,minGapOverride) {
+  const zones = [];
   const isLowerTf = LOWER_TF_LABELS.has(timeframe);
   const isHtfForexPip = isForex && HTF_FOREX_LABELS.has(timeframe);
   // Gold-H1-Test: absoluter Preisabstand statt einer impliziten Forex-Pip-Umrechnung.
@@ -80,12 +75,7 @@ export function orderBlockState(timeframe,isForex,minGapOverride) {
       ? HTF_FOREX_MIN_GAP_PIPS[timeframe] * PIP_SIZE
       : null);
 
-  return {zones:[],isLowerTf,minGapAbs};
-}
-
-export function advanceOrderBlocks(candles,state,from) {
-  const {zones,isLowerTf,minGapAbs}=state;
-  for (let i = Math.max(3,from); i < candles.length; i++) {
+  for (let i = 3; i < candles.length; i++) {
     const c1 = candles[i - 2];
     const c2 = candles[i - 1];
     const cur = candles[i];
@@ -169,10 +159,6 @@ export function advanceOrderBlocks(candles,state,from) {
     }
   }
 
-}
-
-export function orderBlockSnapshot(candles,state) {
-  const {isLowerTf}=state,zones=state.zones.map(z=>({...z}));
   // "Retest bestätigt" (siehe orderblöcke.md#retest-status, Philip 05.09.2026) — nur für touched &&
   // !invalidated relevant. Lower-TF (M1/M3/M5): eine gleichgerichtete FVG entsteht NACH dem Touch
   // (z.endTime, das bei touched-Zonen auf den Touch-Zeitpunkt eingefroren ist) — die Reaktion hat
