@@ -12,7 +12,7 @@ function checklist(rules) {
   checks.antiConfluences = { rules, status: summarizeAntiConfluenceRules(rules) };
   const primary = { id: 'test', setupType: 'countertrend', direction: 'short', knownAsOf: 600,
     reactionRecognizedAt: 300, checks, targetSelection: { status: 'passed', selectedAt: 300, target1: { price: 1 } } };
-  return { instrument: 'GBPUSD', model: 'countertrend', status: 'ready', evaluatedAt: 600, checks, setup: { primary } };
+  return { instrument: 'GBPUSD', model: 'countertrend', ruleVersion:'countertrend-abcdef-v1', status: 'ready', evaluatedAt: 600, checks, setup: { primary } };
 }
 describe('anti-confluence rule list', () => {
   it.each([
@@ -24,7 +24,7 @@ describe('anti-confluence rule list', () => {
   it('keeps missing H1 data observable without blocking when invalidation is disabled', () => {
     const result = evaluateChecklistConfluences({ evaluatedAt: 600, direction: 'short' });
     expect(result.antiConfluences).toMatchObject({ status: 'clear', rules: [
-      { id: 'h1CounterDivergence', invalidates: false, status: 'unknown', evidence: [] },
+      { id: 'h1CounterDivergence', disqualifies: false, status: 'unknown', evidence: [] },
     ] });
     expect(result.antiConfluences.rules).toHaveLength(1);
   });
@@ -41,7 +41,7 @@ describe('anti-confluence rule list', () => {
     expect(snapshot.checklist.checks.antiConfluences.rules).toEqual(rules);
     expect(restoreTradeSetup2Snapshot(snapshot).dealingRange.status).toBe('validated');
     expect(tradeSetup2Evidence({checklist:state}).some(e=>e.checkKey==='antiConfluences')).toBe(true);
-    const enabled = checklist([{...rules[0],invalidates:true}]);
+    const enabled = checklist([{...rules[0],disqualifies:true}]);
     expect(evaluateDealingRange(enabled).status).toBe('invalidated');
   });
   it('does not invalidate from future evidence', () => {

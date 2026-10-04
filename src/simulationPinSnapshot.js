@@ -10,7 +10,8 @@ export function simulationPinSnapshot(target,run,results,pinnedAt=new Date().toI
   const {group,feature,entry,kind,variant='both'}=target,snapshot=group.snapshot;
   const time=sec=>Number.isFinite(sec)?{utc:new Date(sec*1000).toISOString(),berlin:formatDatedTime(sec),unix:sec}:null;
   const config=run?.configuration;
-  return {kind,runId:snapshot.runId,runVersion:run?.version ?? null,ruleVersion:snapshot.checklist?.ruleVersion ?? null,
+  return {contextVersion:'simulation-pin-context-v2',dealingRangeVersion:(group.latestCandidate ?? snapshot).dealingRange?.version ?? null,
+    dealingRangeReason:(group.latestCandidate ?? snapshot).dealingRange?.reason ?? null,kind,runId:snapshot.runId,runVersion:run?.version ?? null,ruleVersion:snapshot.checklist?.ruleVersion ?? null,
     entryModelVersion:entry?.entry?.entryModel ?? config?.entryModel ?? snapshot.checklist?.entryModel ?? null,
     drId:group.key,snapshotId:snapshot.id,setupKey:snapshot.setupKey,setup1Id:snapshot.checklist?.setup?.primary?.tradeSetupId ?? null,
     instrument:group.instrument,direction:group.direction,setupType:group.setupType,stage:group.stage,outcome:group.outcome,

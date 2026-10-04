@@ -1,5 +1,5 @@
 import { setupEntryConditions } from './tradeSetup2Review.js';
-import { checklistObservationRules, observationRuleDetails } from './checklistObservationRules.js';
+import { checklistObservationRules, observationRuleDetails, observationRuleDisqualifies } from './checklistObservationRules.js';
 
 export const FEATURE_VALUES = { met: '✓ Erfüllt', unmet: '✕ Nicht erfüllt', unknown: '? Unbekannt', observed: '~ Nur beobachtet' };
 
@@ -14,7 +14,7 @@ export function simulationReviewFeatures(snapshot) {
     if (!features.some(f => f.key === key)) features.push({ key, group: 'checkpoint', label,
       value: rules.length ? 'observed' : 'unknown', details: [] });
     for (const rule of rules) features.push({ key: `${key}.${rule.id}`, group: key, label: rule.label,
-      value: rule.status === 'unknown' ? 'unknown' : !rule.invalidates ? 'observed' : rule.status === 'found' ? 'unmet' : 'met',
+      value: rule.status === 'unknown' ? 'unknown' : !observationRuleDisqualifies(rule, checks?.[key]?.ruleVersion) ? 'observed' : rule.status === 'found' ? 'unmet' : 'met',
       details: observationRuleDetails([{ ...rule, evidence: rule.evidence ?? [] }]) });
   }
   const entry = features.find(f => f.key === 'entry');

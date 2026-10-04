@@ -8,7 +8,7 @@ import { evaluateDealingRange, COUNTERTREND_STAGE_VERSION } from './tradeSetup2D
 import { fixChecklistTargets,CHECKLIST_RULE_VERSION } from './tradeSetupChecklistLifecycle.js';
 import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
 import { deriveSetupEntryInvalidation, sweepAgeSec } from './tradeSetup.js';
-import { divergenceObservationRule, H1_COUNTER_DIVERGENCE_RULE, OBSERVATION_RULE_VERSION } from './checklistObservationRules.js';
+import { divergenceObservationRule, H1_COUNTER_DIVERGENCE_RULE, M5_SWEEP_DIVERGENCE_RULE, OBSERVATION_RULE_VERSION } from './checklistObservationRules.js';
 import { ENTRY_MODEL_1_VERSION } from './entryModel1Conditions.js';
 import { finalObservation,setupMemoKey } from './setup2Memo.js';
 
@@ -32,7 +32,8 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
   const checks = { liquiditySweep: pending(), reaction: pending(), m5Trend: unknownChecklistM5(),
     outerM5Trend: { status: 'unknown', required: true, trend: 'unknown', details: ['Äußerster M5-Trend unbekannt.'] },
     targets: pending(), antiConfluences: {status:'unknown',details:['Wartet auf ein bekanntes Setup 1.0.'],
-      ruleVersion:OBSERVATION_RULE_VERSION,rules:[divergenceObservationRule({...H1_COUNTER_DIVERGENCE_RULE,divergences:{status:'unknown'}})]}, confluences: pending() };
+      ruleVersion:OBSERVATION_RULE_VERSION,rules:[divergenceObservationRule({...H1_COUNTER_DIVERGENCE_RULE,divergences:{status:'unknown'}})]}, confluences: { ...pending(), ruleVersion:OBSERVATION_RULE_VERSION,
+      rules:[divergenceObservationRule({...M5_SWEEP_DIVERGENCE_RULE,divergences:{status:'unknown'}})] } };
   const result = { model: 'countertrend', entryModel:ENTRY_MODEL_1_VERSION,ruleVersion: COUNTERTREND_STAGE_VERSION, instrument, evaluatedAt,
     status: dataStatus, checks, direction: null, setupType: 'unclear', confirmed: false, abortReason: null,
     tradeability: 'unknown',
@@ -154,6 +155,6 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     if(previous)setupMemo.set(key,{...previous,candidate:{...candidate,checks:{...candidate.checks}}});
   }
   result.dealingRange = evaluateDealingRange(result);
-  result.confirmed = ['confirmed','validated','invalidated'].includes(result.dealingRange.status);
+  result.confirmed = ['confirmed','validated','disqualified'].includes(result.dealingRange.status);
   return result;
 }

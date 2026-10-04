@@ -4,10 +4,10 @@ export { COUNTERTREND_STAGE_VERSION } from './countertrendDealingRange.js';
 
 export const DEALING_RANGE_VERSION = 'abc-d-targets-eg-observations-v1';
 export const COUNTERTREND_VERSION = 'countertrend-abcd-v1';
-const knownVersion = version => [DEALING_RANGE_VERSION, COUNTERTREND_VERSION, COUNTERTREND_STAGE_VERSION].includes(version);
+const knownVersion = version => [DEALING_RANGE_VERSION, COUNTERTREND_VERSION, COUNTERTREND_STAGE_VERSION, 'countertrend-abcdef-v1'].includes(version);
 export const DEALING_RANGE_LABELS = {
   unconfirmed: 'Unbestätigte Dealing Range', confirmed: 'Bestätigte Dealing Range · Validierung offen',
-  validated: 'Validierte Dealing Range', invalidated: 'Disqualifizierte Dealing Range',
+  validated: 'Validierte Dealing Range', disqualified: 'Disqualifizierte Dealing Range', invalidated: 'Historische DR-Entscheidung',
   legacy: 'Altstand · DR-Stufe nicht gespeichert',
 };
 
@@ -62,5 +62,12 @@ export function dealingRangeLabel(snapshot) {
   const status = savedDealingRangeStatus(snapshot);
   if (status === 'invalidated' && snapshot.dealingRange.reason === 'priceInvalidation')
     return 'DR beendet · Invalidierungslevel erreicht';
+  if (isDisqualifiedDealingRange(snapshot)) return DEALING_RANGE_LABELS.disqualified;
+  if (status === 'invalidated') return 'Historische DR-Entscheidung · Grund nicht belegt';
   return DEALING_RANGE_LABELS[status];
+}
+
+export function isDisqualifiedDealingRange(snapshot) {
+  const status = savedDealingRangeStatus(snapshot);
+  return status === 'disqualified' || status === 'invalidated' && ['h1CounterDivergence','antiConfluence','targetsUnavailable'].includes(snapshot.dealingRange.reason);
 }
