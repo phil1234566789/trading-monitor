@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createSimulationRepository } from '../src/tradeSetupSimulationRepository.js';
 
 import { tradeSetupFromRow } from '../src/tradeSetupRow.js';
+import { loadSetupSet, readSetupSetManifest } from './setup1Set.mjs';
 import {simulationRunInputs,runNewsStatus} from '../src/simulationRunInputs.js';
 import {execFileSync} from 'node:child_process';
 
@@ -24,6 +25,7 @@ process.on('SIGTERM', () => controller.abort());
 process.loadEnvFile(path.join(root, '.env'));
 const client = archiveClient({ url: process.env.VITE_SUPABASE_URL, key: process.env.VITE_SUPABASE_ANON_KEY });
 const readJson = file => readFile(file, 'utf8').then(JSON.parse);
+const setupSetManifest = options.setupSet ? await readSetupSetManifest(root, options.setupSet) : null;
 const sec = value => Date.parse(value) / 1000;
 const hash = data => createHash('sha256').update(JSON.stringify(data)).digest('hex');
 await mkdir(directory, { recursive: true });
@@ -51,11 +53,14 @@ async function loadCore() {
   return { core: await import(pathToFileURL(file)), sourceHash };
 }
 
-const instruments = (options.instruments ?? 'GBPUSD,EURUSD').split(',');
+const instruments = (options.instruments ?? setupSetManifest?.instrument ?? 'GBPUSD,EURUSD').split(',');
+if (setupSetManifest && (instruments.length !== 1 || instruments[0] !== setupSetManifest.instrument)) throw new Error('One setup set covers exactly one instrument');
 if (instruments.some(i => !['GBPUSD', 'EURUSD'].includes(i))) throw new Error('Only GBPUSD/EURUSD have the supported M1 contract');
 const requestedFrom = sec(options.from ?? '2026-01-01T00:00:00+01:00');
-const requestedTo = Math.floor(Math.min(options.to ? sec(options.to) : Date.now() / 1000, Date.now() / 1000));
+const requestedTo = Math.floor(Math.min(options.to ? sec(options.to) : setupSetManifest?.to ?? Date.now() / 1000, Date.now() / 1000));
 if (!Number.isFinite(requestedFrom) || !Number.isFinite(requestedTo) || requestedFrom >= requestedTo) throw new Error('Invalid date interval');
+const frozenSetupSet = options.setupSet ? await loadSetupSet(root, options.setupSet, instruments[0], requestedFrom, requestedTo) : null;
+if (previousRun && (previousRun.provenance?.setupSet?.id ?? null) !== (setupSetManifest?.id ?? null)) throw new Error('Setup source changed; choose a new --output directory');
 let manifest;
 try { manifest = await readJson(path.join(directory, 'manifest.json')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
 if (!manifest) {
@@ -90,11 +95,13 @@ configuration.instruments = instruments.map(instrument => core.buildTradeSetup2C
   news: manifest.news.map(n => ({ ...n, eventTime: sec(n.event_time) })),
   newsLoadStatus:runNewsStatus(instrument,manifest.news.map(n=>({...n,eventTime:sec(n.event_time)})),requestedFrom,manifest.requestedTo) }));
 
+if (frozenSetupSet) configuration.inputSetId = frozenSetupSet.manifest.id;
 const run = { id: `setup2-${hash({ configuration, manifest, sourceHash }).slice(0, 24)}`, version: core.SETUP2_VERSION,
   configuration, from: requestedFrom, to: manifest.requestedTo, evaluatedAt: manifest.fetchedAt,
   status: 'running', progress: { phase: 'download', completed: 0, total: instruments.length },
   coverage: { archive: manifest.coverage, instruments: [], excluded: [{ instrument: 'XAUUSD', reason: 'noM1Archive' }] },
   provenance: { source: 'FXCM Bid', sourceHash, snapshotAt: manifest.fetchedAt,
+    ...(frozenSetupSet ? { setupSet: frozenSetupSet.manifest } : {}),
     ...(setupIds ? { selectedSetupIds: setupIds } : {}),
     validationStatus: configuration.validation ? 'validation-fixture' : 'confirmed-policy',
     validationNote: configuration.validation ? 'Referenzfall mit ausdrücklich festgehaltenem Replay-Strukturstart.'
@@ -155,12 +162,14 @@ try {
     let sourceRows;
     try{sourceRows=await readJson(sourceFile);}catch(error){if(error.code!=='ENOENT')throw error;}
     if(!sourceRows){
-      sourceRows=await client.pages('trade_setups',{select:'*,trade_setup_sweeps(*)',instrument:`eq.${instrument}`,
+      sourceRows=frozenSetupSet ? frozenSetupSet.rows.filter(row => !setupIds || setupIds.includes(row.id)) : await client.pages('trade_setups',{select:'*,trade_setup_sweeps(*)',instrument:`eq.${instrument}`,
         ...(setupIds ? { id: `in.(${setupIds.join(',')})` } : {}),
         and:`(created_at.gte.${new Date(from*1000).toISOString()},created_at.lt.${new Date(to*1000).toISOString()})`,
         order:'created_at.asc,id.asc'});
       await writeJson(sourceFile,sourceRows);
     }
+    if (frozenSetupSet && hash(sourceRows) !== hash(frozenSetupSet.rows.filter(row => !setupIds || setupIds.includes(row.id))))
+      throw new Error('Run sources differ from selected setup set');
     if (setupIds && (sourceRows.some(row => !setupIds.includes(row.id)) || setupIds.some(id => !sourceRows.some(row => row.id === id))))
       throw new Error('Selected setup sources missing or source file contains other setups');
     const tradeSetups=sourceRows.map(tradeSetupFromRow);

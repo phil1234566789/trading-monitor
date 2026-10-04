@@ -45,27 +45,17 @@
 // analysis-Ordner: Abnahme über 16.07.-18.09.).
 import { supabase } from "../supabaseClient.ts";
 import { readForexCandlesArchiveFrom } from "../../_shared/forexCandlesArchive.ts";
-import { detectLiquidityLevels, type LiquidityLevel } from "../../_shared/liquidityDetection.ts";
 import { markIgnored } from "../../_shared/ignoredCandles.ts";
 import { getSessions } from "../db.ts";
-import { isWithinTradingWindows, type TradingWindows } from "../../_shared/tradingHoursGate.ts";
+import type { TradingWindows } from "../../_shared/tradingHoursGate.ts";
 import { persistTradeSetupSweeps } from "../../_shared/tradeSetupSweeps.ts";
 import {
-  detectSetupObs,
-  detectTradeSetup,
   DEFAULT_TRADE_SETUP_PARAMS,
-  TRADE_SETUP_M5_FRACTAL_PERIOD,
-  TRADE_SETUP_H1_FRACTAL_PERIOD,
   type SetupSweep,
 } from "../../_shared/tradeSetup.ts";
 
-// 1:1 aus poi-watcher/index.ts — die Fenstergrößen bestimmen mit, welche Setups überhaupt
-// gefunden werden, jede Abweichung würde den Backfill vom Live-Pfad wegdriften lassen.
-const M5_CANDLE_LIMIT = 300;
-const H1_LOOKBACK_CANDLES = 3000;
+import { replaySetup1 } from "./setup1Replay.ts";
 
-const M5_SEC = 300;
-const H1_SEC = 3600;
 
 interface Candle {
   time: number;
@@ -109,21 +99,6 @@ const alarmFenster: TradingWindows = { weekday: [[fensterVon, fensterBis]], satu
 const sek = (iso: string) => Math.floor(new Date(iso).getTime() / 1000);
 const iso = (s: number) => new Date(s * 1000).toISOString();
 
-// Ein 1H-Level gilt als gesweept, sobald eine M5-Kerze es überschreitet — nicht erst mit dem
-// Schluss der 1H-Kerze. Ersetzt poi-watchers applyLiveTouch, das dafür den Live-Preis nimmt.
-function verfeinereTouch(levels: LiquidityLevel[], richtung: "high" | "low", m5: Candle[], bisSec: number) {
-  for (const lvl of levels) {
-    if (lvl.touched && lvl.touchedTime != null && lvl.touchedTime <= bisSec) continue;
-    for (const c of m5) {
-      if (c.time <= lvl.pivotTime || c.time > bisSec) continue;
-      if (richtung === "high" ? c.high >= lvl.price : c.low <= lvl.price) {
-        lvl.touched = true;
-        lvl.touchedTime = c.time;
-        break;
-      }
-    }
-  }
-}
 
 async function ladeKerzen(instrument: string, bar: string, vonSec: number, bisSec: number): Promise<Candle[]> {
   const rows = await readForexCandlesArchiveFrom(supabase, instrument, bar, iso(vonSec), iso(bisSec), candleTable);
@@ -147,87 +122,12 @@ for (const instrument of instrumente) {
   console.log(`${instrument}: ${m5Alle.length} M5-Kerzen, ${h1Alle.length} 1H-Kerzen geladen, Fenster ${fensterVon}-${fensterBis} Min Berlin`);
   if (m5Alle.length === 0) continue;
 
-  const gefunden = new Map<string, Record<string, unknown>>();
-  let ticks = 0;
-  let h1Stunde = -1;
-  let h1Highs: LiquidityLevel[] = [];
-  let h1Lows: LiquidityLevel[] = [];
-
-  for (let i = 0; i < m5Alle.length; i++) {
-    const jetzt = m5Alle[i].time;
-    if (jetzt < startSec || jetzt >= endeSec) continue;
-    if (!isWithinTradingWindows(jetzt, alarmFenster)) continue;
-    const m5Fenster = m5Alle.slice(Math.max(0, i - M5_CANDLE_LIMIT + 1), i + 1);
-    // Volles Fenster verlangen, kein angebrochenes: mit weniger Kerzen sehen die M5-Level weniger
-    // Historie und gelten faelschlich als unberuehrt -- der Lauf fand dadurch am ersten Tag Setups,
-    // die live nie entstanden sind.
-    if (m5Fenster.length < M5_CANDLE_LIMIT) continue;
-    ticks++;
-
-    // 1H-Level nur bei Stundenwechsel neu erkennen — sie können sich innerhalb einer Stunde nicht
-    // ändern, und detectLiquidityLevels über 3000 Kerzen bei jedem 5-Minuten-Tick wäre 12x Arbeit
-    // für dasselbe Ergebnis. Der Touch wird trotzdem jeden Tick nachgezogen (siehe unten).
-    const stunde = Math.floor(jetzt / H1_SEC);
-    if (stunde !== h1Stunde) {
-      h1Stunde = stunde;
-      const h1Fenster = h1Alle.filter((c) => c.time + H1_SEC <= jetzt).slice(-H1_LOOKBACK_CANDLES);
-      const erkannt = detectLiquidityLevels(h1Fenster, TRADE_SETUP_H1_FRACTAL_PERIOD);
-      h1Highs = erkannt.highs;
-      h1Lows = erkannt.lows;
-    }
-    // verfeinereTouch und die Preis-Scans in detectTradeSetup kennen das Flag nicht — hier die
-    // Kerzen also wirklich weglassen, damit ein Rollover-Docht keinen Touch/Bruch ausloest.
-    const m5FensterOhneIgnorierte = m5Fenster.filter((c) => !c.ignored);
-    verfeinereTouch(h1Highs, "high", m5FensterOhneIgnorierte, jetzt);
-    verfeinereTouch(h1Lows, "low", m5FensterOhneIgnorierte, jetzt);
-
-    const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5Fenster, TRADE_SETUP_M5_FRACTAL_PERIOD);
-    const setupObs = detectSetupObs(m5Fenster);
-    const params = { ...DEFAULT_TRADE_SETUP_PARAMS, closeCheckMaxAgeSec, nowTime: jetzt };
-
-    for (const [dir, m5Lvl, h1Lvl] of [
-      [1, m5Highs, h1Highs] as const,
-      [-1, m5Lows, h1Lows] as const,
-    ]) {
-      const setup = detectTradeSetup(dir, m5Lvl, h1Lvl, m5Lvl, setupObs, params, m5FensterOhneIgnorierte);
-      if (!setup) continue;
-      const direction = setup.dir === 1 ? "short" : "long";
-      const key = `${direction}_${setup.obStartTime}`;
-      // Erster Fund gewinnt — dieselbe Semantik wie live: poi-watcher/index.ts überspringt einen
-      // bereits alarmierten Schlüssel komplett, überschreibt die Zeile also nicht mehr. Gegenprobe
-      // mit "letzter gewinnt" gerechnet: der Reichweiten-Median lief noch weiter von den
-      // Live-Zeilen weg (16,6 statt 15,2 gegen 12,9).
-      // Schlüssel ist der bestätigende OB, nicht fractal_pivot_time — derselbe Unique-Key wie live
-      // (instrument,direction,ob_start_time). Mit fractal_pivot_time konnten zwei Ticks dieselbe
-      // ob_start_time unter zwei Schlüsseln ablegen, was der Upsert-Batch nicht überlebt.
-      if (gefunden.has(key)) continue;
-      gefunden.set(key, {
-        instrument,
-        direction,
-        fractal_price: setup.fractal.price,
-        fractal_pivot_time: iso(setup.fractal.pivotTime),
-        ls_price: setup.ls.price,
-        ls_pivot_time: iso(setup.ls.pivotTime),
-        ls_touched_time: iso(setup.ls.touchedTime!),
-        ls_timeframe: setup.sweeps[0].timeframe,
-        // Keine DB-Spalte, sondern die Kindtabellen-Zeilen dieses Setups — unten vor dem Upsert
-        // abgetrennt und danach über die zurückgegebene id geschrieben.
-        sweeps: setup.sweeps,
-        ob_top: setup.obTop,
-        ob_bottom: setup.obBottom,
-        ob_start_time: iso(setup.obStartTime),
-        ob_fvg: setup.obFvg,
-        alert_price: m5Fenster[m5Fenster.length - 1].close,
-        notified: false,
-        notified_at: null,
-        created_at: iso(jetzt),
-      });
-    }
-    if (ticks % 5000 === 0) console.log(`  ${ticks} Ticks, ${gefunden.size} Setups bis ${iso(jetzt).slice(0, 16)}`);
-  }
-
-  console.log(`${instrument}: ${ticks} Ticks simuliert, ${gefunden.size} Setups gefunden (closeCheckMaxAgeSec=${closeCheckMaxAgeSec})`);
-  const zeilen = [...gefunden.values()];
+  const { rows: zeilen, ticks } = replaySetup1({ instrument, m5Alle, h1Alle, startSec, endeSec,
+    configuration: { ...DEFAULT_TRADE_SETUP_PARAMS, closeCheckMaxAgeSec }, alarmFenster,
+    // Bestehende Backfill-Aufrufe behalten ihre bisherige Zeitsemantik.
+    recognitionDelaySec: 0,
+  });
+  console.log(`${instrument}: ${ticks} Ticks simuliert, ${zeilen.length} Setups gefunden (closeCheckMaxAgeSec=${closeCheckMaxAgeSec})`);
   const htf = zeilen.filter((z) => z.ls_timeframe === "1H").length;
   console.log(`  davon 1H-Sweep: ${htf}, M5-Sweep: ${zeilen.length - htf}`);
   const verteilung = new Map<number, number>();
