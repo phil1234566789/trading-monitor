@@ -25,7 +25,7 @@ watch(filters,value=>{const query=Object.fromEntries(Object.entries(value).filte
 const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>d.groups.flatMap(g=>g.features)).map(f=>[f.key,f])).values()]);
 </script>
 <template>
-  <main class="statistics-page" :style="{'--pin-color':cssColor('pin')}">
+  <main class="statistics-page" :style="{'--pin-color':cssColor('pin'),'--positive':cssColor('candleUp'),'--negative':cssColor('candleDown'),'--reference':cssColor('fvgCandle'),'--worse':'#ff7043'}">
     <header><div><h1>Statistik</h1><p>Läufe vergleichen · DR- und Entry-Qualität prüfen</p></div><button type="button" :disabled="loading" @click="refreshAll">{{ loading?'Wird geladen…':'Aktualisieren' }}</button></header>
     <details class="simulation-rules"><summary>Simulationsannahmen</summary>
       <p>50.000 USD Referenzkonto · Basis-Preisrisikobudget 500 USD pro Entry. Die gespeicherte Entry-Modell-Version bestimmt die Größenregel. Ganze Standardlots, 50 % an T1 schließen, Reststop auf Entry, Rest bis T2 oder Break-even. Kein Compounding.</p>
