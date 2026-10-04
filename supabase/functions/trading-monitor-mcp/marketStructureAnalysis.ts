@@ -1067,25 +1067,30 @@ export function buildMarketStructureState(
     .map((pivot) => ({ pivot, outer: false, at: pivotTimeOf(pivot) + periodInner * barSeconds }));
 
   const merged = [...outerRest, ...innerRest].sort((a, b) => a.at - b.at);
-  for (const entry of merged) {
-    // direction (Chat 2026-07-26, "eigenständige Downtrend-Erkennung"): NICHT mehr hart "up" —
-    // sobald der Haupttrend selbst schon 'downtrend' ist (siehe applyMarketStructurePivotCore/
-    // applyInnerMarketStructurePivotCore, direction="down"-Bestätigung aus 'unknown' heraus), muss
-    // jeder weitere Pivot auch über die gespiegelten "down"-Zweige laufen (sonst würde z.B. ein
-    // neuer Höchststand fälschlich als Uptrend-Bestätigungsversuch statt als Downtrend-Invalidierung
-    // behandelt). trend wird dafür nach JEDEM Pivot neu ausgelesen, nicht einmalig vorab bestimmt.
-    const direction: TrendDirection = state.trend === "downtrend" ? "down" : "up";
-    // asOfTime = entry.at (Chat 2026-07-26, "1.32772/1.32934"-Bug): derselbe Anwendungszeitpunkt,
-    // der hier ohnehin schon die Verarbeitungsreihenfolge bestimmt (pivotTime + Bestätigungsverzögerung),
-    // ist auch die korrekte Obergrenze für den Docht-vs-Bruch-Check (siehe evaluateConfirmingBreak) —
-    // bis zu diesem Zeitpunkt sind die Kerzen bereits "bekannt", egal wie lange der Pivot selbst
-    // schon zurückliegt.
-    state = entry.outer
-      ? applyMarketStructurePivot(state, entry.pivot, { candles, direction, asOfTime: entry.at })
-      : applyInnerMarketStructurePivot(state, entry.pivot, { candles, direction, asOfTime: entry.at });
-    onStep?.(entry.at, state, entry.pivot);
-  }
-  return state;
+  const applyPivots = () => {
+    for (const entry of merged) {
+      // direction (Chat 2026-07-26, "eigenständige Downtrend-Erkennung"): NICHT mehr hart "up" —
+      // sobald der Haupttrend selbst schon 'downtrend' ist (siehe applyMarketStructurePivotCore/
+      // applyInnerMarketStructurePivotCore, direction="down"-Bestätigung aus 'unknown' heraus), muss
+      // jeder weitere Pivot auch über die gespiegelten "down"-Zweige laufen (sonst würde z.B. ein
+      // neuer Höchststand fälschlich als Uptrend-Bestätigungsversuch statt als Downtrend-Invalidierung
+      // behandelt). trend wird dafür nach JEDEM Pivot neu ausgelesen, nicht einmalig vorab bestimmt.
+      const direction: TrendDirection = state.trend === "downtrend" ? "down" : "up";
+      // asOfTime = entry.at (Chat 2026-07-26, "1.32772/1.32934"-Bug): derselbe Anwendungszeitpunkt,
+      // der hier ohnehin schon die Verarbeitungsreihenfolge bestimmt (pivotTime + Bestätigungsverzögerung),
+      // ist auch die korrekte Obergrenze für den Docht-vs-Bruch-Check (siehe evaluateConfirmingBreak) —
+      // bis zu diesem Zeitpunkt sind die Kerzen bereits "bekannt", egal wie lange der Pivot selbst
+      // schon zurückliegt.
+      state = entry.outer
+        ? applyMarketStructurePivot(state, entry.pivot, { candles, direction, asOfTime: entry.at })
+        : applyInnerMarketStructurePivot(state, entry.pivot, { candles, direction, asOfTime: entry.at });
+      onStep?.(entry.at, state, entry.pivot);
+    }
+    return state;
+  };
+  // Ohne Callback kann niemand die Kerzen zwischen Pivot-Schritten ändern.
+  // onStep behält dagegen sein eigenes Fenster pro Schritt (auch bei Mutation).
+  return onStep ? applyPivots() : withCandleCloseWindow(candles, applyPivots);
 }
 
 // Läuft die Nested-Tracker-Kette ab state selbst ab (state, state.nestedTrend, ...) und bricht am
