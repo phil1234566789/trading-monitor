@@ -34,14 +34,15 @@ const crossTone=(run,variant,row,column)=>{
     </div>
     <p class="note">* Im gespeicherten Review belegte Ursprungs-Setups. Erkennungen ohne gespeicherten Snapshot sind nicht belegt. Alle Zahlen folgen derselben Filterauswahl.</p>
     <h2>DR gegen Entry</h2><p class="note">Nur validierte DRs. DR-Verlauf unabhängig vom Entry-Ergebnis, Gewinne und Verluste netto. Der gespeicherte Verlauf endet teils bei T1 oder beim Schließen aller Entries: späteres T2 ist dann nicht belegt.</p>
-    <div v-for="run in runs" :key="`${run.label}-cross`"><h3>{{ run.label }}</h3>
-      <div v-for="variant in ['wide','narrow']" :key="variant" class="table-scroll" tabindex="0" :aria-label="`DR gegen Entry · ${variant} horizontal scrollen`">
+    <div v-for="variant in ['wide','narrow']" :key="variant" class="cross-comparison" :class="{'with-comparison':compare}">
+      <div v-for="run in runs" :key="run.label" class="cross-run"><h3>{{ run.label }}</h3><div class="table-scroll" tabindex="0" :aria-label="`DR gegen Entry · ${run.label} · ${variant} horizontal scrollen`">
         <table><caption>{{ variant==='wide'?'Weiter SL':'Enger SL' }}</caption><thead><tr><th scope="col">DR-Verlauf</th><th scope="col">DRs gesamt</th><th scope="col">Ohne Entry</th><th scope="col">Mind. ein Gewinn</th><th scope="col">Nur Verluste</th><th scope="col">Offen / uneindeutig / unvollständig</th></tr></thead><tbody><tr v-for="row in crossTables[run.label][variant]" :key="row.key"><th scope="row">{{ row.label }}</th><td v-for="column in crossColumns" :key="column" :class="crossTone(run,variant,row,column)" :title="crossTone(run,variant,row,column)==='positive'?'Besser als Alt':crossTone(run,variant,row,column)==='worse'?'Schlechter als Alt':undefined">{{ row[column] }}<template v-if="crossTone(run,variant,row,column)==='positive'"> ↑</template><template v-else-if="crossTone(run,variant,row,column)==='worse'"> ↓</template></td></tr></tbody></table>
-      </div>
+      </div></div>
     </div>
   </section>
 </template>
 <style scoped>
+.cross-comparison{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}.cross-comparison.with-comparison{grid-template-columns:repeat(2,minmax(0,1fr))}.cross-run{min-width:0}@media(max-width:900px){.cross-comparison.with-comparison{grid-template-columns:minmax(0,1fr)}}
 .run-quality{margin:24px 0}h2{font-size:18px}h3{font-size:14px}.funnel{display:flex;flex-wrap:wrap;gap:8px}.funnel dl{margin:0;display:flex;flex-direction:column;flex:1 1 110px;padding:12px;border:1px solid #434651;background:#1e222d;border-radius:4px}.funnel .split-node{flex:2 1 220px;flex-direction:row;gap:12px}.split-node>div{flex:1;display:flex;flex-direction:column}.split-node>div+div{border-left:1px solid #434651;padding-left:12px}.funnel dd{order:-1;margin:0;font-size:20px;font-variant-numeric:tabular-nums}.funnel dt{font-size:12px;color:#b1b7c5;margin-top:6px}.outcomes{font-size:12px;display:flex;flex-wrap:wrap;gap:8px 16px}.note{color:#b1b7c5;font-size:12px;line-height:1.6}.table-scroll{overflow-x:auto;max-width:100%;margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:12px}caption{text-align:left;margin-bottom:8px}th,td{padding:8px;border-bottom:1px solid #434651}th{text-align:left;font-weight:400}td{text-align:right;font-variant-numeric:tabular-nums}thead{background:#222a3a}.table-scroll:focus-visible{outline:2px solid #91b8ff}
 </style>
 
