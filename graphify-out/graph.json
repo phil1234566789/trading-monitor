@@ -8335,7 +8335,7 @@
       "file_type": "code",
       "norm_label": "after()",
       "source_file": "scripts/setup2PerformancePrimitives.mjs",
-      "source_location": "L25"
+      "source_location": "L26"
     },
     {
       "id": "scripts_setup2performanceprimitives_before",
@@ -8347,7 +8347,7 @@
       "file_type": "code",
       "norm_label": "before()",
       "source_file": "scripts/setup2PerformancePrimitives.mjs",
-      "source_location": "L21"
+      "source_location": "L22"
     },
     {
       "id": "scripts_setup2performanceprimitives_source",
@@ -12307,7 +12307,7 @@
       "file_type": "code",
       "norm_label": "closedchecklistcandles()",
       "source_file": "src/tradeSetupChecklistTimeBasis.js",
-      "source_location": "L18"
+      "source_location": "L19"
     },
     {
       "id": "src_tradesetupchecklisttimebasis_closedreplayevaluationtime",
@@ -12319,7 +12319,7 @@
       "file_type": "code",
       "norm_label": "closedreplayevaluationtime()",
       "source_file": "src/tradeSetupChecklistTimeBasis.js",
-      "source_location": "L7"
+      "source_location": "L8"
     },
     {
       "id": "test_countertrendentrymodel1_test_at",
@@ -15511,7 +15511,7 @@
       "file_type": "code",
       "norm_label": "checklistevaluationtime()",
       "source_file": "src/tradeSetupChecklistTimeBasis.js",
-      "source_location": "L3"
+      "source_location": "L4"
     },
     {
       "id": "test_helpers_fixtureh1direction_assumefixtureh1direction",
@@ -16435,7 +16435,7 @@
       "file_type": "code",
       "norm_label": "previousclosed()",
       "source_file": "test/setup2PerformanceEquivalence.test.js",
-      "source_location": "L10"
+      "source_location": "L11"
     },
     {
       "id": "test_setup2performanceequivalence_test_randomcandles",
@@ -16447,7 +16447,7 @@
       "file_type": "code",
       "norm_label": "randomcandles()",
       "source_file": "test/setup2PerformanceEquivalence.test.js",
-      "source_location": "L11"
+      "source_location": "L12"
     },
     {
       "id": "test_tradesetup2scan_test_at",
@@ -33205,7 +33205,7 @@
       "file_type": "code",
       "norm_label": "corefile",
       "source_file": "scripts/setup2PerformancePrimitives.mjs",
-      "source_location": "L16"
+      "source_location": "L17"
     },
     {
       "id": "scripts_setup2performanceprimitives_directory",
@@ -33238,7 +33238,7 @@
       "file_type": "code",
       "norm_label": "measurements",
       "source_file": "scripts/setup2PerformancePrimitives.mjs",
-      "source_location": "L28"
+      "source_location": "L39"
     },
     {
       "id": "scripts_setup2performanceprimitives_minutes",
@@ -33249,7 +33249,7 @@
       "file_type": "code",
       "norm_label": "minutes",
       "source_file": "scripts/setup2PerformancePrimitives.mjs",
-      "source_location": "L20"
+      "source_location": "L21"
     },
     {
       "id": "scripts_setup2performanceprimitives_options",
@@ -33271,7 +33271,7 @@
       "file_type": "code",
       "norm_label": "rows",
       "source_file": "scripts/setup2PerformancePrimitives.mjs",
-      "source_location": "L18"
+      "source_location": "L19"
     },
     {
       "id": "analysis_dr_reichweite_test_saisonalitaet",
@@ -71556,7 +71556,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetupChecklistTimeBasis.js",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0
     },
     {
@@ -71568,7 +71568,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetupChecklistTimeBasis.js",
-      "source_location": "L19",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -71580,7 +71580,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetupChecklistTimeBasis.js",
-      "source_location": "L11",
+      "source_location": "L12",
       "weight": 1.0
     },
     {
@@ -71592,7 +71592,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetupChecklistTimeBasis.js",
-      "source_location": "L13",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -133976,7 +133976,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "scripts/setup2PerformancePrimitives.mjs",
-      "source_location": "L16",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -133987,7 +133987,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "scripts/setup2PerformancePrimitives.mjs",
-      "source_location": "L18",
+      "source_location": "L19",
       "weight": 1.0
     },
     {
@@ -133998,7 +133998,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "scripts/setup2PerformancePrimitives.mjs",
-      "source_location": "L20",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -134009,7 +134009,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "scripts/setup2PerformancePrimitives.mjs",
-      "source_location": "L28",
+      "source_location": "L39",
       "weight": 1.0
     },
     {
@@ -148397,7 +148397,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tradeSetupChecklistTimeBasis.js",
-      "source_location": "L18",
+      "source_location": "L19",
       "weight": 1.0
     },
     {
@@ -148408,7 +148408,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tradeSetupChecklistTimeBasis.js",
-      "source_location": "L3",
+      "source_location": "L4",
       "weight": 1.0
     },
     {
@@ -148419,7 +148419,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tradeSetupChecklistTimeBasis.js",
-      "source_location": "L7",
+      "source_location": "L8",
       "weight": 1.0
     },
     {
@@ -161707,7 +161707,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "test/setup2PerformanceEquivalence.test.js",
-      "source_location": "L10",
+      "source_location": "L11",
       "weight": 1.0
     },
     {
@@ -161718,7 +161718,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "test/setup2PerformanceEquivalence.test.js",
-      "source_location": "L11",
+      "source_location": "L12",
       "weight": 1.0
     },
     {
@@ -170130,7 +170130,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "scripts/setup2PerformancePrimitives.mjs",
-      "source_location": "L29",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -170142,7 +170142,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "scripts/setup2PerformancePrimitives.mjs",
-      "source_location": "L29",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -174857,5 +174857,5 @@
       "source_file": "CLAUDE.md"
     }
   ],
-  "built_at_commit": "a994ca7e25560cf781d8415002e81d57b49005ce"
+  "built_at_commit": "acaf56bd76cdd935779d48db320550e924ec4c63"
 }
