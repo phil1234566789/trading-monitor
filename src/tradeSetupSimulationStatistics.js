@@ -1,4 +1,5 @@
 import { berlinDayRangeUtcMs } from './berlinTime.js';
+import { simulationChartReplayTime } from './simulationChartReplayTime.js';
 export const MIN_SIMULATION_WINRATE_CASES = 50;
 
 export const SIMULATION_OUTCOME_LABELS = {
@@ -89,6 +90,6 @@ export function simulationDateFilter(from, to) {
 export function simulationChartLink(row, runId) {
   return { path: '/', query: {
     setup2: row.snapshotId ?? row.entryId ?? row.id, run: runId, variant: row.variant,
-    instrument: row.instrument, replay: String(row.entryTime ?? row.knownAt), bar: '5m',
+    instrument: row.instrument, replay: String(simulationChartReplayTime(row)), bar: '5m',
   } };
 }

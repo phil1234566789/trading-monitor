@@ -19,7 +19,7 @@ const summary=(g,v)=>variantMetrics(groupResults([g],props.results),v).totalR;
       <header tabindex="0" @contextmenu.prevent="emit('pin-menu',{kind:'simulation_dr',group},$event)">
         <div><h3><span v-if="isPinned(group)" class="pin-flag" aria-label="Angepinnt">⚑ </span>{{ group.direction==='long'?'Long':'Short' }} · {{ group.instrument }}</h3><span>{{ formatDatedTime(group.recognizedAt) }}</span></div>
         <span class="chip">{{ SETUP_TYPE_LABELS[group.setupType] ?? group.setupType }}</span><span class="chip">{{ dealingRangeLabel(group.latestCandidate ?? group.snapshot) }}</span><span>{{ group.outcome.label }}</span><span>{{ group.entries.length }} Entries</span><span>Weit <b :class="pnlClass(summary(group,'wide'))">{{ fmtR(summary(group,'wide')) }}</b> · Eng <b :class="pnlClass(summary(group,'narrow'))">{{ fmtR(summary(group,'narrow')) }}</b></span>
-        <RouterLink :to="simulationChartLink({...group.snapshot,variant:'wide'},group.snapshot.runId)" target="_blank" rel="noopener noreferrer">Im Chart</RouterLink>
+        <RouterLink :to="simulationChartLink({...group.snapshot,drReplayTime:group.outcome.replayTime,variant:'wide'},group.snapshot.runId)" target="_blank" rel="noopener noreferrer">Im Chart</RouterLink>
         <button type="button" class="more" :aria-label="`Pin-Menü für ${group.instrument} DR ${formatDatedTime(group.recognizedAt)}`" @click="emit('pin-menu',{kind:'simulation_dr',group},$event)">…</button>
       </header>
       <SimulationFeatureChips :features="group.features" :is-pinned="f=>isPinned(group,f)" @pin-menu="(feature,event)=>emit('pin-menu',{kind:'simulation_checkpoint',group,feature},event)" />

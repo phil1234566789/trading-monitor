@@ -4,6 +4,7 @@ import { savedRangeOutcome } from './tradeSetup2SavedRangeOutcome.js';
 import { simulationDateFilter, simulationEntryResult, simulationStatistics } from './tradeSetupSimulationStatistics.js';
 import { simulationReviewFeatures } from './simulationReviewFeatures.js';
 import { COUNTERTREND_RANGE_COURSE_VERSION } from './countertrendLifecycle.js';
+import { simulationChartReplayTime } from './simulationChartReplayTime.js';
 
 export const DR_OUTCOME_LABELS = { t2: 'T1 vor Invalidation · T2 erreicht', t1Only: 'T1 vor Invalidation · T2 nicht erreicht', invalidation: 'Invalidation vor T1',
   open: 'Noch offen', t1Unknown: 'T1 vor Invalidation · T2 nicht belegt', unknown: 'DR-Ausgang nicht belegt' };
@@ -41,13 +42,14 @@ export function independentRangeOutcome(group) {
     else if (main?.reason === 'invalidation' && known(main.recognizedAt)) status = known(lifecycle.target1?.recognizedAt) ? 't1Only' : 'invalidation';
     else if (main?.reason !== 'both' && known(lifecycle?.target1?.recognizedAt)) status = 't1Unknown';
     else if (main?.state === 'active') status = 'open';
-    return { status, label: DR_OUTCOME_LABELS[status], through: lifecycle?.evaluatedAt, target1: course.target1,
+    return { status, label: DR_OUTCOME_LABELS[status], through: lifecycle?.evaluatedAt,
+      recognizedAt: main?.recognizedAt, replayTime: simulationChartReplayTime({rangeCourse:course}),target1: course.target1,
       target2: course.target2, invalidation: course.invalidation };
   }
   // Der alte Helfer ist auf Entry-lose DRs begrenzt und belegt nie T2.
   const old = savedRangeOutcome({ ...group, entries: [], snapshot: group.latestCandidate ?? group.snapshot });
   const status = { target1: 't1Unknown', invalidation: 'invalidation', open: 'open' }[old?.status] ?? 'unknown';
-  return { ...old, status, label: DR_OUTCOME_LABELS[status] };
+  return { ...old, status, label: DR_OUTCOME_LABELS[status],replayTime:old?.recognizedAt ?? undefined };
 }
 
 export function reviewGroups(snapshots) {
@@ -80,8 +82,10 @@ export function filterReviewGroups(groups, filters, pins = []) {
 export function groupResults(groups, results, filters = {}) {
   const bounds = simulationDateFilter(filters.from, filters.to);
   const keys = new Set(groups.flatMap(g => g.entries.map(e => `${e.runId}:${e.id}`)));
+  const replayTimes=new Map(groups.flatMap(g=>g.entries.map(e=>[`${e.runId}:${e.id}`,g.outcome?.replayTime])));
   return results.filter(r => keys.has(`${r.runId}:${r.snapshotId}`)
-    && (bounds.from == null || r.entryTime >= bounds.from) && (bounds.to == null || r.entryTime < bounds.to));
+    && (bounds.from == null || r.entryTime >= bounds.from) && (bounds.to == null || r.entryTime < bounds.to))
+    .map(r=>({...r,drReplayTime:replayTimes.get(`${r.runId}:${r.snapshotId}`)}));
 }
 export function variantMetrics(results, variant) {
   const net = simulationStatistics(results,variant,'net'), gross = simulationStatistics(results,variant,'gross');
