@@ -1,7 +1,7 @@
 import { markIgnoredCandles } from './sessionOccurrences.js';
 import { berlinOffsetMinutes } from './berlinTime.js';
 import { collectObsZones, filterHistorical } from './priceChartObZones.js';
-import { computeRangesPivots } from './marketStructureAnalysis';
+import { computeRangesPivots,buildMarketStructureState } from './marketStructureAnalysis';
 import { detectOrderBlocks } from './orderBlocks.js';
 import { obMinimum } from './instrumentConfig.js';
 import { buildSnapshotM5 } from './tradeSetup2SnapshotIndicators.js';
@@ -25,5 +25,7 @@ export function calculateSnapshotIndicators({ frames: rawFrames, source, config,
       pivotsInner: computeRangesPivots(candles, inner ?? 2, -Infinity) };
   }
   const m5 = props.showM5Structure && frames['5m'] ? buildSnapshotM5(frames['5m'], source, config, at) : null;
-  return { zones, pivots, m5 };
+  const h1=props.showRanges&&frames['1h']?{state:buildMarketStructureState(pivots['1h'].pivotsOuter,
+    pivots['1h'].pivotsInner,config.rangesPeriod??5,config.ranges2Period??2,frames['1h'].filter(c=>!c.ignored)),...pivots['1h']}:null;
+  return { zones, pivots, m5,h1 };
 }

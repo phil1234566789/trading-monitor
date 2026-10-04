@@ -1898,13 +1898,16 @@ async function loadInitial({ preserveHistory = false, force = false } = {}) {
   const keepHistory = preserveHistory && candlesReady && loadedCandleKey === key;
   if (!keepHistory) candlesReady = false;
   try {
+    const linked=snapshotView.value?await setup2.waitForLinkedSnapshot():null;
+    if(!chart||seq!==loadInitialFetchSeq)return false;
     // Fester count (INITIAL_CANDLE_COUNT) reicht "bis jetzt" gerechnet nicht bei jedem Timeframe
     // gleich weit zurück (1000 M5-Kerzen ~3,5 Tage, 1000 H1-Kerzen ~41 Tage) — ohne replayToMs()
     // würde ein TF-Wechsel während eines weit zurückliegenden Replays (z.B. 1h -> M5) einen leeren
     // Kerzenbereich laden, der nach clipReplay komplett verschwindet (siehe Chat 2026-07-19: "1h
     // auf M5 gewechselt und sehe keinen Chart").
     const toMs = replayToMs(props.currentBar);
-    const count = snapshotView.value ? snapshotChartCandleCount(setup2.selected.value, props.currentBar, INITIAL_CANDLE_COUNT) : INITIAL_CANDLE_COUNT;
+    const count = linked ? snapshotChartCandleCount({...linked.snapshot,entrySnapshots:linked.snapshots}, props.currentBar,
+      INITIAL_CANDLE_COUNT,props.replayUntil ?? linked.snapshot.knownAt) : INITIAL_CANDLE_COUNT;
     const candles = force
       ? await fetchInitialForexCandles(props.symbol, props.currentBar, count, toMs)
       : await fetchCandlesCached(
@@ -2281,7 +2284,7 @@ watch([() => props.trades, () => props.showTrades, () => props.tscRange], () => 
 watch(() => props.hoveredTradeId, refreshTradeMarkersInternal);
 watch(() => props.pinTradeIds, refreshTradeMarkersInternal);
 watch(setup2.selected, snapshot => {
-  if (snapshotView.value && snapshot && snapshotChartCandleCount(snapshot, props.currentBar, INITIAL_CANDLE_COUNT) > allCandles.length) {
+  if (snapshotView.value && snapshot && snapshotCandleState.value!=='loading' && snapshotChartCandleCount(snapshot, props.currentBar, INITIAL_CANDLE_COUNT,checklist.evaluationTime()) > allCandles.length) {
     void loadInitial({ preserveHistory: true });
   }
 });

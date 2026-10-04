@@ -149,7 +149,8 @@ async function syncFromRemote() {
     console.error("Chart-Linienstärken aus DB laden fehlgeschlagen:", err);
   }
 }
-syncFromRemote();
+// Rechenworker importieren Zeichenmodule transitiv, benötigen aber keine UI-Einstellungen.
+if (typeof window !== 'undefined') syncFromRemote();
 
 export function resetChartLineWidths() {
   for (const key of Object.keys(DEFAULT_CHART_LINE_WIDTHS)) {

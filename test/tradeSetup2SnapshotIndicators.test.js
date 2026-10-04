@@ -1,6 +1,10 @@
 import { expect, it, vi } from 'vitest';
 import { computed, effectScope, reactive, ref, nextTick } from 'vue';
 vi.mock('../src/supabaseClient.js', () => ({ supabase: {} }));
+vi.mock('../src/snapshotM1Browser.js',async()=>{
+  const {calculateSnapshotM1}=await import('../src/snapshotM1Calculation.js');
+  return {calculateSnapshotM1InWorker:vi.fn(async(input,{signal}={})=>{signal?.throwIfAborted();return calculateSnapshotM1(input);})};
+});
 import { createSnapshotM1Reader, snapshotEvidenceVisible } from '../src/tradeSetup2SnapshotIndicators.js';
 import { useSnapshotM1 } from '../src/composables/useSnapshotM1.js';
 import { SETUP2_VERSION, supportsSnapshotIndicators } from '../src/tradeSetup2Configuration.js';

@@ -13,7 +13,8 @@ import {renderSetup2Positions,renderSetup2Detail,clearSetup2Primitives} from '..
 import {computeJumpViewport} from '../priceChartJumpToTime.js';
 import {useSnapshotM1} from './useSnapshotM1.js';
 import {SNAPSHOT_INDICATOR_PROPS} from '../tradeSetup2SnapshotIndicators.js';
-import {renderStructurePivots,renderLowerStructure} from '../structureOverlay.js';
+import {renderStructurePivots,renderLowerStructure,structureRenderOptions} from '../structureOverlay.js';
+import {renderMarketStructureAnalysis} from '../marketStructureRendering';
 import {useSnapshotIndicators} from './useSnapshotIndicators.js';
 import {renderPersistedZones} from '../orderBlocks.js';
 
@@ -24,21 +25,29 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
   let series=null,chart=null,abort=null,revision=0,selectionRevision=0,completedScanKey=null,appliedRouteKey=null;
   let activeInputKey=null,activeAt=null,refreshPending=false;
   let displayReady=false,focusedRouteKey=null;
-  const overview=[],details=[],entry=[],m1Markers=[],h1Markers=[],m5Markers=[],obPrimitives=[],m1Lines=[],m5Lines=[];
+  const overview=[],details=[],entry=[],m1Markers=[],h1Markers=[],m5Markers=[],obPrimitives=[],m1Lines=[],m5Lines=[],h1Lines=[];
   const snapshots=new Map();
   const positions=computed(()=>tradeSetup2HistoryItems(results.value.map(row=>simulationAsOf(row,evaluationTime())).filter(Boolean),candidates.value,{instrument:props.symbol,variant:props.tradeSetup2Variant,
     asOf:evaluationTime(),historyCount:props.tradeSetup2HistoryCount,candles:displayCandles.value}));
   const visibleSnapshot=computed(()=>props.showTradeSetup2 && selected.value?.instrument===props.symbol
     && selected.value.knownAt<=evaluationTime()?selected.value:null);
-  const snapshotM1=useSnapshotM1(props,visibleSnapshot,repository,undefined,evaluationTime);
-  const snapshotIndicators=useSnapshotIndicators(props,visibleSnapshot,repository,undefined,evaluationTime);
+  const runs=new Map();
+  const overlayRepository={getRun:run=>{
+    if(!runs.has(run))runs.set(run,repository.getRun(run).catch(e=>{runs.delete(run);throw e;}));
+    return runs.get(run);
+  }};
+  const snapshotM1=useSnapshotM1(props,visibleSnapshot,overlayRepository,undefined,evaluationTime);
+  const snapshotIndicators=useSnapshotIndicators(props,visibleSnapshot,overlayRepository,undefined,evaluationTime);
   function render() {
     if(!series)return;
     renderSetup2Positions(series,props.showTradeSetup2?positions.value:[],overview,displayCandles.value,props.currentBar,visibleSnapshot.value?.id);
     const reconstructed=!!snapshotM1.value.result && !!visibleSnapshot.value && props.showM1Structure && ['1m','5m'].includes(props.currentBar);
     const m5Result=snapshotIndicators.value.m5;
+    const h1Result=snapshotIndicators.value.h1;
     renderSetup2Detail(series,visibleSnapshot.value,details,entry,displayCandles.value,props.currentBar,evaluationTime(),
-      {...props,snapshotView:isTradeSetup2SnapshotView(props),dynamicStructure:[...(reconstructed?['1m']:[]),...(m5Result?['5m']:[])]});
+      {...props,snapshotView:isTradeSetup2SnapshotView(props),dynamicStructure:[...(reconstructed?['1m']:[]),...(m5Result?['5m']:[]),...(h1Result?['1h']:[])]});
+    renderMarketStructureAnalysis(series,visibleSnapshot.value&&props.showRanges?h1Result?.state:null,h1Lines,displayCandles.value,
+      structureRenderOptions(displayCandles.value,props.symbol,evaluationTime()));
     // Die Struktur folgt dem Replay; die gespeicherte Checkliste bleibt der Beleg.
     for(const [timeframe,result,lines,markers,show] of [['1m',reconstructed?snapshotM1.value.result:null,m1Lines,m1Markers,props.showM1Structure],
       ['5m',m5Result,m5Lines,m5Markers,props.showM5Structure]]) {
@@ -58,7 +67,8 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     const snapshot=visibleSnapshot.value;
     const key=`${props.tradeSetup2RunId}:${snapshot?.id}:${props.currentBar}`;
     if(chart&&displayReady&&snapshot?.id===props.selectedTradeSetup2Id&&props.tradeSetup2RunId&&key!==focusedRouteKey) {
-      const viewport=computeJumpViewport(displayCandles.value,snapshot.knownAt,null,null);
+      const firstEntry=Math.min(...(snapshot.entrySnapshots ?? [snapshot]).map(s=>s.entry?.candleTime ?? s.knownAt));
+      const viewport=computeJumpViewport(displayCandles.value,firstEntry,Math.min(evaluationTime(),displayCandles.value.at(-1)?.time ?? evaluationTime()),null);
       if(viewport){chart.timeScale().setVisibleLogicalRange(viewport);focusedRouteKey=key;}
     }
   }
@@ -93,6 +103,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     else await select(null);
   }
   async function refresh(force=false) {
+    if(force)runs.clear();
     if(!props.showTradeSetup2){abort?.abort();revision++;loading.value=false;return;}
     if(isTradeSetup2SnapshotView(props)) {
       const ticket=++revision;
@@ -102,6 +113,8 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
         if(ticket!==revision)return;
         selected.value=restoreTradeSetup2Snapshot(record.snapshot);
         if(record.snapshots)selected.value={...selected.value,entrySnapshots:record.snapshots.map(restoreTradeSetup2Snapshot)};
+        for(const source of selected.value?.entrySnapshots ?? [selected.value])
+          if(source)snapshots.set(`${props.tradeSetup2RunId}:${source.id}`,{...source,entrySnapshots:selected.value.entrySnapshots});
         results.value=record.results;
         candidates.value=record.snapshot.entry?[]:[{...selected.value,runId:props.tradeSetup2RunId,snapshot:selected.value}];
         linkedReady.value=true;status.value='Gespeichertes Setup geladen';render();
@@ -246,8 +259,9 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     ...SNAPSHOT_INDICATOR_PROPS.map(key=>()=>props[key])],render);
   watch(()=>props.tradeSetup2Variant,()=>{if(!isTradeSetup2SnapshotView(props))void refresh();});
   onScopeDispose(()=>{abort?.abort();revision++;selectionRevision++;chart?.unsubscribeClick(click);
-    if(series)for(const list of [overview,details,entry,m1Markers,h1Markers,m5Markers,obPrimitives,m1Lines,m5Lines])clearSetup2Primitives(series,list);series=null;});
+    if(series)for(const list of [overview,details,entry,m1Markers,h1Markers,m5Markers,obPrimitives,m1Lines,m5Lines,h1Lines])clearSetup2Primitives(series,list);series=null;});
   return {positions,selected:visibleSnapshot,snapshotM1,snapshotIndicators,loading,status,error,linkedReady,linkedRendered,select,refresh:()=>refresh(true),
+    waitForLinkedSnapshot:()=>readLinkedSnapshot(props.tradeSetup2RunId,props.selectedTradeSetup2Id),
     create(c,s){chart=c;series=s;chart.subscribeClick(click);render();},
     updateCandles(rows,ready=true){displayCandles.value=rows;displayReady=ready;render();}};
 }

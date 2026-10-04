@@ -1,4 +1,5 @@
-import { onScopeDispose, shallowRef, watch } from 'vue';
+import { shallowRef } from 'vue';
+import {watchSnapshotOverlay} from './watchSnapshotOverlay.js';
 import { createSnapshotM1Reader, snapshotOverlayTime } from '../tradeSetup2SnapshotIndicators.js';
 import { fetchCandlesCached } from '../candleCache.js';
 import { fetchInitialCandles } from '../forexCandles.js';
@@ -7,21 +8,17 @@ export function useSnapshotM1(props, snapshot, repository, fetchCandles = (symbo
   fetchCandlesCached(fetchInitialCandles, symbol, '1m', count, (at - 60) * 1000, 0), evaluationTime = () => props.replayUntil) {
   const state = shallowRef({ result: null, message: '' });
   const read = createSnapshotM1Reader(repository, fetchCandles);
-  let revision = 0;
-  watch(() => [snapshot.value, evaluationTime(), props.showM1Structure, props.tradeSetup2RunId, props.currentBar], async () => {
-    const ticket = ++revision, source = snapshot.value;
-    state.value = { result: null, message: '' };
+  watchSnapshotOverlay(() => [snapshot.value, evaluationTime(), props.showM1Structure, props.tradeSetup2RunId, props.currentBar],
+    ()=>{state.value = { result: null, message: '' };},async signal => {
+    const source = snapshot.value;
     if (!source || !props.showM1Structure || !props.tradeSetup2RunId || !['1m', '5m'].includes(props.currentBar)) return;
     state.value = { result: null, message: 'Historische M1-Kerzen laden und Struktur sowie Debug-Pivots berechnen …' };
     try {
-      const loaded = await read(props.tradeSetup2RunId, source, snapshotOverlayTime(source, evaluationTime()));
-      if (ticket === revision) state.value = loaded;
+      const loaded = await read(props.tradeSetup2RunId, source, snapshotOverlayTime(source, evaluationTime()),{signal});
+      if (!signal.aborted) state.value = loaded;
     } catch (error) {
-      if (ticket === revision) state.value = { result: null, message: `M1-Ergänzung konnte nicht geladen werden: ${error.message}` };
+      if (!signal.aborted) state.value = { result: null, message: `M1-Ergänzung konnte nicht geladen werden: ${error.message}` };
     }
-  }, { immediate: true, flush: 'sync' });
-  // Gemeinsame Cache-Requests dürfen fertig werden; eine alte Auswahl darf jedoch
-  // weder Linien noch Status in die neue Auswahl/den zurückgespulten Stand schreiben.
-  onScopeDispose(() => { revision++; });
+  });
   return state;
 }

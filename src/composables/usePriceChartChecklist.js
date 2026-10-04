@@ -1,4 +1,4 @@
-import { onScopeDispose, shallowRef, watch } from 'vue';
+import { computed,onScopeDispose, shallowRef, watch } from 'vue';
 import { createChecklistDataAdapter } from '../tradeSetupChecklistData.js';
 import { evaluateCountertrendChecklist } from '../countertrendChecklist.js';
 import { buildHistoricalDailyAnchors } from '../tradeSetup2Anchors.js';
@@ -31,10 +31,14 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     rangesFixedStartActive: props.rangesFixedStartActive, rangesFixedStartTime: props.rangesFixedStartTime,
     m5StructurePeriod: props.m5StructurePeriod, m5Structure2Period: props.m5Structure2Period,
   });
-  function evaluationTime() {
+  // Viele Renderer lesen denselben Schlussstand. Das Replay-Präfix nur bei geänderten Daten filtern.
+  const replayEvaluationTime=computed(()=>{
     const matching = chartData.value.key === `${props.symbol}:${props.currentBar}`;
     return closedReplayEvaluationTime(props.replayUntil, Math.floor(now()),
       matching ? chartData.value.candles : [], props.currentBar);
+  });
+  function evaluationTime() {
+    return props.replayUntil==null?Math.floor(now()):replayEvaluationTime.value;
   }
   function refresh() {
     cancelEvaluation();
@@ -131,7 +135,9 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
     settings,
     state,
     evaluationTime,
-    setChartCandles(candles, key) { chartData.value = { candles, key }; },
+    setChartCandles(candles, key) {
+      if(chartData.value.candles!==candles||chartData.value.key!==key)chartData.value = { candles, key };
+    },
     m1PrerequisitesAt,
     begin(tf) { const ticket = adapter.begin(tf); refresh(); return ticket; },
     finish(ticket, response, candles) {

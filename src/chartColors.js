@@ -294,7 +294,8 @@ async function syncFromRemote() {
     console.error("Chart-Farben aus DB laden fehlgeschlagen:", err);
   }
 }
-syncFromRemote();
+// Rechenworker importieren Zeichenmodule transitiv, benötigen aber keine UI-Einstellungen.
+if (typeof window !== 'undefined') syncFromRemote();
 
 export function resetChartColors() {
   for (const key of Object.keys(DEFAULT_CHART_COLORS)) {

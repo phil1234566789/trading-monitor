@@ -12,6 +12,23 @@ import { buildSnapshotM5 } from '../src/tradeSetup2SnapshotIndicators.js';
 import { calculateSnapshotIndicatorsInWorker } from '../src/snapshotIndicatorBrowser.js';
 const flush = async () => { for (let i = 0; i < 12; i++) await nextTick(); };
 
+it('reconstructs H1 structure on demand and removes it immediately when switched off',async()=>{
+  const at=60*3600,source=shallowRef({instrument:'GBPUSD',knownAt:at});
+  const props=reactive({tradeSetup2RunId:'r',currentBar:'5m',showRanges:false});
+  const rows=Array.from({length:60},(_,i)=>({time:i*3600,open:10,close:10,
+    high:11+Math.sin(i/2),low:9+Math.sin(i/2)}));
+  const fetch=vi.fn(async()=>rows),scope=effectScope();
+  const state=scope.run(()=>useSnapshotIndicators(props,source,{getRun:async()=>({configuration:{
+    instrument:'GBPUSD',setupVersion:SETUP2_VERSION,sessions:[],rangesPeriod:5,ranges2Period:2}})},fetch));
+  try {
+    await flush();expect(fetch).not.toHaveBeenCalled();
+    props.showRanges=true;await flush();
+    expect(fetch).toHaveBeenCalledExactlyOnceWith('GBPUSD','1h',at,1000);
+    expect(state.value.h1.state).toBeTruthy();expect(state.value.h1.pivotsOuter.length).toBeGreaterThan(0);
+    props.showRanges=false;expect(state.value.h1).toBeUndefined();
+  }finally{scope.stop();}
+});
+
 it('cancels the pending overlay on deselection and discards its late answer', async () => {
   let resolve;
   calculateSnapshotIndicatorsInWorker.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
@@ -43,11 +60,11 @@ it('advances M5 structure and confirmed debug pivots through closed replay prefi
   const state=scope.run(()=>useSnapshotIndicators(props,source,{getRun:async()=>({configuration:config})},fetch));
   try {
     await flush(); const early=state.value.m5;
-    props.replayUntil=12000; await flush();
+    props.replayUntil=12000; await new Promise(done=>setTimeout(done,180));await flush();
     expect(state.value.m5).toEqual(buildSnapshotM5(candles,stored,config,12000));
     expect(state.value.m5.pivotsOuter.length).toBeGreaterThan(early.pivotsOuter.length);
     expect(state.value.message).toContain('Replay');expect(state.value.message).toContain('Checklist');
-    props.replayUntil=6000; await flush();expect(state.value.m5).toEqual(early);
+    props.replayUntil=6000; await new Promise(done=>setTimeout(done,180));await flush();expect(state.value.m5).toEqual(early);
     expect(fetch).toHaveBeenCalledTimes(2);expect(JSON.stringify(stored)).toBe(before);
   }finally{scope.stop();}
 });

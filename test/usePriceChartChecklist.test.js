@@ -2,6 +2,23 @@ import { describe, expect, it, vi } from 'vitest';
 import { effectScope, reactive, nextTick } from 'vue';
 import { usePriceChartChecklist } from '../src/composables/usePriceChartChecklist.js';
 import candles from './fixtures/gbpusd-h1-2026-07-23-live-metadata-snapshot.json';
+import * as timeBasis from '../src/tradeSetupChecklistTimeBasis.js';
+
+it('shares the replay prefix across renderers and invalidates on replay, instrument, timeframe and candle changes',()=>{
+  const scope=effectScope(),spy=vi.spyOn(timeBasis,'closedReplayEvaluationTime');
+  const props=reactive({symbol:'GBPUSD',currentBar:'5m',replayUntil:300,tradeSetup2RunId:'r',selectedTradeSetup2Id:'s'});
+  try {
+    const api=scope.run(()=>usePriceChartChecklist(props,[],vi.fn(),()=>1200));
+    api.setChartCandles([{time:0},{time:300},{time:600}],'GBPUSD:5m');
+    spy.mockClear();
+    for(let i=0;i<100;i++)expect(api.evaluationTime()).toBe(600);
+    expect(spy).toHaveBeenCalledTimes(0);
+    props.replayUntil=600;expect(api.evaluationTime()).toBe(900);
+    props.currentBar='1m';expect(api.evaluationTime()).toBeNull();
+    api.setChartCandles([{time:600}],'GBPUSD:1m');expect(api.evaluationTime()).toBe(660);
+    props.symbol='EURUSD';expect(api.evaluationTime()).toBeNull();
+  }finally{scope.stop();spy.mockRestore();}
+});
 
 it('uses the saved checklist without evaluating or saving a new checklist in a snapshot link', () => {
   const scope=effectScope(),emit=vi.fn(),statistics={save:vi.fn()};
