@@ -50,7 +50,7 @@ export function createSimulationRepository(db,{compactStructures=false}={}) {
     listReviewSnapshots: async (runId) => {
       // Prüfbelege projizieren; geteilte Strukturen im primary benötigen ihren Speicherpool.
       const fields = ['id,run_id,instrument,direction', 'knownAt:snapshot->knownAt', 'setupKey:snapshot->>setupKey',
-        'dealingRange:snapshot->dealingRange', 'rangeCourse:snapshot->rangeCourse', 'structureStorage:snapshot->structureStorage',
+        'dealingRange:snapshot->dealingRange', 'rangeCourse:snapshot->rangeCourse', 'priceObservation:snapshot->priceObservation', 'structureStorage:snapshot->structureStorage',
         'entry:snapshot->entry', 'm1Check:snapshot->m1Check', 'primary:snapshot->checklist->setup->primary',
         ...['model','entryModel','ruleVersion'].map(key=>`${key}:snapshot->checklist->>${key}`),
         'checklistStatus:snapshot->checklist->>status', 'evaluatedAt:snapshot->checklist->evaluatedAt',
@@ -65,7 +65,7 @@ export function createSimulationRepository(db,{compactStructures=false}={}) {
         },10)));
       return groups.flat().map(row => decodeSnapshotStructures({ id: row.id, runId: row.run_id, instrument: row.instrument, direction: row.direction,
         ...(row.structureStorage?{structureStorage:row.structureStorage}:{}),
-        knownAt: row.knownAt, setupKey: row.setupKey, entry: row.entry, m1Check: row.m1Check, dealingRange: row.dealingRange, rangeCourse: row.rangeCourse,
+        knownAt: row.knownAt, setupKey: row.setupKey, entry: row.entry, m1Check: row.m1Check, dealingRange: row.dealingRange, rangeCourse: row.rangeCourse, priceObservation: row.priceObservation,
         checklist: { status: row.checklistStatus, model:row.model,entryModel:row.entryModel,ruleVersion:row.ruleVersion,
           evaluatedAt: row.evaluatedAt, setup: { primary: row.primary },
           checks: restoreChecklistObservationChecks({ h1Trend: row.h1Trend, liquiditySweep: row.liquiditySweep, reaction: row.reaction,

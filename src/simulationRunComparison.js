@@ -1,13 +1,11 @@
 import { groupSetupSnapshots } from './tradeSetup2Review.js';
 import { savedDealingRangeStatus, isDisqualifiedDealingRange } from './tradeSetup2DealingRange.js';
-import { savedRangeOutcome } from './tradeSetup2SavedRangeOutcome.js';
+import { savedDealingRangePriceOutcome, DR_OUTCOME_LABELS } from './savedDealingRangePriceOutcome.js';
+export { DR_OUTCOME_LABELS } from './savedDealingRangePriceOutcome.js';
 import { simulationDateFilter, simulationEntryResult, simulationStatistics } from './tradeSetupSimulationStatistics.js';
 import { simulationReviewFeatures } from './simulationReviewFeatures.js';
-import { COUNTERTREND_RANGE_COURSE_VERSION } from './countertrendLifecycle.js';
 import { simulationChartReplayTime } from './simulationChartReplayTime.js';
 
-export const DR_OUTCOME_LABELS = { t2: 'T1 vor Invalidation · T2 erreicht', t1Only: 'T1 vor Invalidation · T2 nicht erreicht', invalidation: 'Invalidation vor T1',
-  open: 'Noch offen', t1Unknown: 'T1 vor Invalidation · T2 nicht belegt', unknown: 'DR-Ausgang nicht belegt' };
 export const SETUP_TYPE_LABELS = { countertrend: 'Countertrend', continuation: 'Trendfortführung', unknown: 'Typ nicht belegt' };
 export const FILTER_DEFAULTS = { run: '', compare: '', instrument: '', type: '', from: '', to: '', stage: '', outcome: '', entry: '', pinned: '', feature: '', value: '' };
 export function comparisonFilters(query) {
@@ -22,34 +20,8 @@ export function simulationSetupType(snapshot) {
 }
 
 export function independentRangeOutcome(group) {
-  if (!group.firstValidated) return { status: 'unknown', label: DR_OUTCOME_LABELS.unknown };
-  const courses = [group.latestCandidate, ...group.entries, group.snapshot].map(s => s?.rangeCourse)
-    .filter(c => c?.setupKey === group.snapshot.setupKey).sort((a,b) => (b.lifecycle?.evaluatedAt ?? 0)-(a.lifecycle?.evaluatedAt ?? 0));
-  let course = courses[0];
-  const frozen = group.firstValidated.rangeCourse;
-  const latest = group.latestCandidate?.checklist?.setup?.primary;
-  // Durch Preisende beendete Kandidaten speichern keinen rangeCourse mehr, aber den gleichen Preis-Lifecycle.
-  if ((!course || latest?.lifecycle?.evaluatedAt > course.lifecycle?.evaluatedAt) && frozen?.version === COUNTERTREND_RANGE_COURSE_VERSION && latest?.lifecycle
-    && latest.direction === frozen.direction && latest.invalidation === frozen.invalidation
-    && latest.targetSelection?.selectedAt === frozen.selectedAt && latest.targetSelection?.target1?.price === frozen.target1
-    && (latest.targetSelection?.target2?.price ?? null) === frozen.target2) course = { ...frozen, lifecycle: latest.lifecycle };
-  if (course?.version === COUNTERTREND_RANGE_COURSE_VERSION) {
-    const lifecycle = course.lifecycle, main = lifecycle?.main;
-    const known = time => Number.isFinite(time) && time >= course.validatedAt && time <= lifecycle?.evaluatedAt;
-    let status = 'unknown';
-    // „entriesClosed“ und T1-Ende verkürzen die Messung. Daraus folgt kein „T2 verfehlt“.
-    if (main?.reason !== 'both' && known(lifecycle?.target2?.recognizedAt) && lifecycle.target2.status === 'reached') status = 't2';
-    else if (main?.reason === 'invalidation' && known(main.recognizedAt)) status = known(lifecycle.target1?.recognizedAt) ? 't1Only' : 'invalidation';
-    else if (main?.reason !== 'both' && known(lifecycle?.target1?.recognizedAt)) status = 't1Unknown';
-    else if (main?.state === 'active') status = 'open';
-    return { status, label: DR_OUTCOME_LABELS[status], through: lifecycle?.evaluatedAt,
-      recognizedAt: main?.recognizedAt, replayTime: simulationChartReplayTime({rangeCourse:course}),target1: course.target1,
-      target2: course.target2, invalidation: course.invalidation };
-  }
-  // Der alte Helfer ist auf Entry-lose DRs begrenzt und belegt nie T2.
-  const old = savedRangeOutcome({ ...group, entries: [], snapshot: group.latestCandidate ?? group.snapshot });
-  const status = { target1: 't1Unknown', invalidation: 'invalidation', open: 'open' }[old?.status] ?? 'unknown';
-  return { ...old, status, label: DR_OUTCOME_LABELS[status],replayTime:old?.recognizedAt ?? undefined };
+  const outcome = savedDealingRangePriceOutcome(group);
+  return { ...outcome, replayTime: simulationChartReplayTime({drReplayTime:outcome.endAt ?? outcome.through,knownAt:group.knownAt}) };
 }
 
 export function reviewGroups(snapshots) {
@@ -100,8 +72,10 @@ export function runFunnel(groups, results) {
     disqualified: groups.filter(g => isDisqualifiedDealingRange(g.latestCandidate ?? g.snapshot)).length,
     validated: validated.length,
     invalidationBeforeT1: validated.filter(g => g.outcome.status === 'invalidation').length,
-    target1: validated.filter(g => ['t2','t1Only','t1Unknown'].includes(g.outcome.status)).length,
+    target1: validated.filter(g => g.outcome.stage1 === 'target1' || ['t2','t1Only','t1Open','noTarget2'].includes(g.outcome.status)).length,
     target2: validated.filter(g => g.outcome.status === 't2').length,
+    target2Eligible: validated.filter(g => Number.isFinite(g.outcome.target2)).length,
+    target2Unknown: validated.filter(g => g.outcome.status === 'unknown').length,
     withEntry: groups.filter(g => g.entries.length).length, entries: new Set(results.map(r=>r.snapshotId)).size };
 }
 export function rangeEntryCrossTable(groups, results, variant) {

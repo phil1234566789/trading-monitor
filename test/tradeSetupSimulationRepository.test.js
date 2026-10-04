@@ -36,11 +36,12 @@ describe('simulation history repository', () => {
   it('paginates review evidence without directly requesting duplicate chart trees', async () => {
     const calls = [];
     const db = { from: table => {
-      const query = { select: fields => { expect(fields).not.toContain('checklist->structure'); expect(fields).not.toContain('->structureState'); expect(fields).toContain('rangeCourse:snapshot->rangeCourse'); return query; },
+      const query = { select: fields => { expect(fields).not.toContain('checklist->structure'); expect(fields).not.toContain('->structureState'); expect(fields).toContain('rangeCourse:snapshot->rangeCourse'); expect(fields).toContain('priceObservation:snapshot->priceObservation'); return query; },
         eq: (key, value) => { expect([key, value]).toEqual(['run_id', 'selected']); return query; }, order: () => query,
         range: async offset => { calls.push([table, offset]); return { data: offset < 2 ? [{ id: `${table}:${offset}`, knownAt: 300,
           checklistStatus: 'ready', evaluatedAt: 300, reaction: { status: 'pending' }, antiConfluences:{status:'passed'},
           confluences:{status:'passed',rules:[{id:'observation',status:'found',invalidates:false,evidence:[{recognizedAt:300}]}]},
+          priceObservation: { version:'test',stage1:'target1',stage2:'target2' },
           rangeCourse: { validatedAt: 300, lifecycle: { evaluatedAt: 1800 } } }] : [] }; } };
       return query;
     } };
@@ -49,6 +50,7 @@ describe('simulation history repository', () => {
     expect(rows[0].checklist.checks.reaction.status).toBe('pending');
     expect(rows[0].checklist.checks.antiConfluences).toMatchObject({status:'clear',rules:[{invalidates:true,status:'clear'}]});
     expect(rows[0].checklist.checks.confluences.rules).toEqual([{id:'observation',status:'found',invalidates:false,evidence:[{recognizedAt:300}]}]);
+    expect(rows[0].priceObservation).toEqual({version:'test',stage1:'target1',stage2:'target2'});
     expect(rows[0].rangeCourse).toEqual({ validatedAt: 300, lifecycle: { evaluatedAt: 1800 } });
     for (const table of ['trade_setup_simulation_setups', 'trade_setup_simulation_entries'])
       expect(calls.filter(call => call[0] === table).map(call => call[1])).toEqual([0, 1, 2]);
