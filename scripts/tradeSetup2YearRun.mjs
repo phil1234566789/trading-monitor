@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { rolldown } from 'rolldown';
+import { setup2ProfilingPlugin,createSetup2Profile } from './setup2Profiling.mjs';
 import { archiveClient, candleCoverage, writeJson } from './tradeSetup2Archive.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { createSimulationRepository } from '../src/tradeSetupSimulationRepository.js';
@@ -35,7 +36,7 @@ async function loadCore() {
     ['tradeSetup2Scan.js', 'tradeSetupSimulation.js', 'tradeSetup2Anchors.js', 'tradeSetup2Configuration.js', 'tradeSetup2RangeCourse.js',
       'setup1RecognitionTime.js','countertrendChecklist.js','countertrendLifecycle.js']
       .map(file => `export * from ${JSON.stringify(source(file))};`).join('\n')));
-  const bundle = await rolldown({ input: entry, platform: 'node' });
+  const bundle = await rolldown({ input: entry, platform: 'node', plugins:options.profile==='true'?[setup2ProfilingPlugin()]:[] });
   const file = path.join(directory, 'core.mjs');
   const output = await bundle.generate({ format: 'esm' });
   await bundle.close();
@@ -171,6 +172,8 @@ try {
       console.log(JSON.stringify({coverage:run.coverage.instruments.at(-1)}));continue;
     }
     const started=performance.now(),cpu=process.cpuUsage();
+    const profile=options.profile==='true'?createSetup2Profile():null;
+    globalThis.__setup2Profile=profile;
     // Ein zusammenhängender Lauf erhält offene DRs/Entries über Monats- und Tagesgrenzen.
     const snapshots=await core.scanTradeSetup2Window({instrument,h1Candles:rows['1h'],m5Candles:rows['5m'],m1Candles:rows['1m'],
       tradeSetups,dailyAnchors,fromTime:from,toTime:to-1,settings:configuration.settings,sessionConfigs,
@@ -181,6 +184,8 @@ try {
         run.progress={...progress,instrument,phase:'scan'};await saveProgress();
       }});
     const elapsedCpu=process.cpuUsage(cpu);
+    delete globalThis.__setup2Profile;
+    if(profile)timings.scanProfile={functions:profile.functions,memo:profile.memo};
     run.provenance.measurement={wallMs:performance.now()-started,cpuMs:(elapsedCpu.user+elapsedCpu.system)/1000};
     const records=outcomeRecords(snapshots,rows['1m'],to);
     const writeStarted = performance.now();
