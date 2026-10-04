@@ -5430,9 +5430,9 @@
     "semantic_hash": ""
   },
   "scripts/setup2Profiling.mjs": {
-    "mtime": 1791137036.2065265,
-    "seen": 1791137342.5879996,
-    "ast_hash": "504bb236ee920d0bf743558963a4233c",
+    "mtime": 1791137495.3684683,
+    "seen": 1791137765.3868372,
+    "ast_hash": "5a229e7f62ad26a387d0b5927a071c68",
     "semantic_hash": ""
   },
   "src/candleTimeIndex.js": {
@@ -5472,9 +5472,9 @@
     "semantic_hash": ""
   },
   "src/candleAppend.js": {
-    "mtime": 1791136639.5134115,
-    "seen": 1791137342.5879996,
-    "ast_hash": "1f013bea55f2f3443ba3185220645cf4",
+    "mtime": 1791137588.0874372,
+    "seen": 1791137765.3898377,
+    "ast_hash": "7968373dd4905e6a43ee110a3ce86287",
     "semantic_hash": ""
   },
   "test/incrementalOrderBlocks.test.js": {

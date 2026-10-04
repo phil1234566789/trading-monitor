@@ -13,10 +13,10 @@ export function setup2ProfilingPlugin() {
       if(names.has(name)&&node.body?.type==='BlockStatement'
         && !node.body.body.some(s=>s.type==='VariableDeclaration'&&s.declarations.some(d=>d.id.name==='__h'))){
         const args=node.type==='ArrowFunctionExpression'?'[at,m5]':'arguments';
-        edits.push([node.body.start+1,`const __h=globalThis.__setup2Profile;const __t=__h?.start(${JSON.stringify(name)},${args}${name==='detectIncrementalOrderBlocks'?',__detector':''});try{`]);
+        edits.push([node.body.start+1,`const __h=globalThis.__setup2Profile;const __t=__h?.start(${JSON.stringify(name)},${args}${['detectIncrementalOrderBlocks','detectIncrementalLiquidityLevels'].includes(name)?',__detector':''});try{`]);
         edits.push([node.body.end-1,'}finally{if(__h)__h.end(__t);}']);
       }
-      if(name==='createIncrementalOrderBlockDetector' && !code.slice(node.body.start,node.body.end).includes('const __detector')){
+      if(['createIncrementalOrderBlockDetector','createIncrementalLiquidityDetector'].includes(name) && !code.slice(node.body.start,node.body.end).includes('const __detector')){
         edits.push([node.body.start+1,'const __detector=globalThis.__setup2Profile?.createDetector(arguments);']);
       }
       if(name==='createSetup2Memo' && !code.slice(node.body.start,node.body.end).includes('__profileMemo')){
@@ -79,6 +79,10 @@ export function createSetup2Profile(){
       length=lower;
     }
     const stats=functions[name]??={calls:0,totalMs:0,selfMs:0,prefixTotal:0,prefixMax:0};
+    if(['detectLiquidityLevels','detectIncrementalLiquidityLevels'].includes(name)){
+      const key=JSON.stringify([length,rows?.[0]?.time,rows?.at(-1)?.time,detector?.timeframe??args[1]]);
+      stats.prefixKeys??={};stats.prefixKeys[key]=(stats.prefixKeys[key]??0)+1;
+    }
     if(name==='evaluateChecklistM5'){
       const key=JSON.stringify([length,rows?.[0]?.time,rows?.at(-1)?.time,args[2],
         args[1]?.m5StructurePeriod??5,args[1]?.m5Structure2Period??2]);
