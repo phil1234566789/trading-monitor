@@ -4584,9 +4584,9 @@
     "semantic_hash": ""
   },
   "src/views/Statistik.vue": {
-    "mtime": 1791111174.0219407,
-    "seen": 1791111472.7894702,
-    "ast_hash": "3ea76d3e190023365e0663cc20b6e2b2",
+    "mtime": 1791113187.4703069,
+    "seen": 1791113874.371727,
+    "ast_hash": "5d058cad501574803b2bfbbde8311d07",
     "semantic_hash": ""
   },
   "test/SimulationResultsTable.test.js": {
@@ -4656,9 +4656,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationRunStatus.vue": {
-    "mtime": 1790765694.843608,
-    "seen": 1790765725.8502562,
-    "ast_hash": "dfd9bae03d10d8e50f0a9cda4a93f30f",
+    "mtime": 1791113862.5886424,
+    "seen": 1791113874.370727,
+    "ast_hash": "723c45ef74e44f4f6e77569ce3414e1d",
     "semantic_hash": ""
   },
   "src/components/TradeSetup2Controls.vue": {
