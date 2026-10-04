@@ -161,6 +161,13 @@ export async function fetchSimulationPins(runId) {
   return data.map(toEntry);
 }
 
+export async function removeSimulationPins(runId, ids) {
+  if (!runId || !ids.length) return;
+  const { error } = await supabase.from('pin_context').delete().eq('simulation_run_id', runId)
+    .in('kind', ['simulation_dr', 'simulation_checkpoint', 'simulation_entry']).in('id', ids);
+  if (error) throw error;
+}
+
 export async function addSimulationPin({kind,key,snapshotId,entrySnapshotId,checkpointKey,variant,context},note) {
   if(!['simulation_dr','simulation_checkpoint','simulation_entry'].includes(kind)) throw new Error('Unbekannte Simulations-Pin-Art.');
   // Wiederholtes Pinnen ändert nur das Anliegen; der damalige Analysekontext bleibt eingefroren.

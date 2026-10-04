@@ -1,7 +1,7 @@
 <script setup>
 import { ref,watch,nextTick } from 'vue';
 const props=defineProps({target:Object,saving:Boolean,error:String});
-const emit=defineEmits(['close','save','remove']);
+const emit=defineEmits(['close','save','remove','show-pins']);
 const dialog=ref(null),note=ref(''),edit=ref(false);
 watch(()=>props.target,async target=>{
   if(target){note.value=target.note ?? '';edit.value=false;await nextTick();if(!dialog.value.open)dialog.value.showModal();}
@@ -15,6 +15,7 @@ watch(()=>props.target,async target=>{
     <button type="button" :disabled="saving" @click="edit=!edit">Anliegen eintragen: was soll analysiert werden</button>
     <label v-if="edit">Anliegen (optional)<textarea v-model="note" rows="3" :disabled="saving" /></label>
     <button type="button" :disabled="saving || !target?.existingId" @click="emit('remove')">Pin entfernen</button>
+    <button type="button" :disabled="saving" @click="emit('show-pins')">Alle Pins anschauen</button>
     <p v-if="error" role="alert">{{ error }}</p><p v-if="saving" role="status">Pin wird gespeichert…</p>
     <button type="button" :disabled="saving" @click="emit('close')">Schließen</button>
   </dialog>

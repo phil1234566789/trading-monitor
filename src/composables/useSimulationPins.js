@@ -1,5 +1,5 @@
 import { ref,watch,onScopeDispose } from 'vue';
-import { fetchSimulationPins,addSimulationPin,removePinEntry } from '../pinContext.js';
+import { fetchSimulationPins,addSimulationPin,removePinEntry,removeSimulationPins } from '../pinContext.js';
 import { simulationPinKey,simulationPinSnapshot } from '../simulationPinSnapshot.js';
 
 export function useSimulationPins(filters,run,results) {
@@ -40,5 +40,16 @@ export function useSimulationPins(filters,run,results) {
     }catch(cause){error.value=cause.message;}
     finally{saving.value=false;}
   }
-  return {pins,error,loading,saving,target,refresh,isPinned,open,save,remove};
+  async function removeListed(ids) {
+    if (saving.value) return;
+    const runId = filters.value.run;
+    const selected = pins.value.filter(p => p.simulationRunId === runId && ids.includes(p.id));
+    saving.value = true; error.value = '';
+    try {
+      await removeSimulationPins(runId, selected.map(p => p.id));
+      await refresh();
+    } catch (cause) { error.value = cause.message || 'Pins konnten nicht entfernt werden.'; }
+    finally { saving.value = false; }
+  }
+  return {pins,error,loading,saving,target,refresh,isPinned,open,save,remove,removeListed};
 }

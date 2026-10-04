@@ -11,6 +11,7 @@ import SimulationComparisonMetrics from '../components/SimulationComparisonMetri
 import SimulationRunQuality from '../components/SimulationRunQuality.vue';
 import SimulationDrList from '../components/SimulationDrList.vue';
 import SimulationPinMenu from '../components/SimulationPinMenu.vue';
+import SimulationPinList from '../components/SimulationPinList.vue';
 import { useSimulationPins } from '../composables/useSimulationPins.js';
 import { cssColor } from '../chartColors.js';
 const route=useRoute(),router=useRouter();
@@ -18,6 +19,10 @@ const filters=ref(comparisonFilters(route.query)),pins=ref([]);
 const repository=createSimulationRepository(supabase);
 const {runs,selectedRun,comparisonRun,current,previous,datasets,loading,error,dateError,refresh}=useSimulationComparison(repository,filters,pins);
 const pinState=useSimulationPins(filters,selectedRun,computed(()=>datasets.value.get(filters.value.run)?.results ?? []));
+const pinListOpen=ref(false);
+const listedPins=computed(()=>pinState.pins.value.filter(p=>p.simulationRunId===filters.value.run));
+function showPins(){pinState.target.value=null;pinListOpen.value=true;}
+watch(()=>filters.value.run,()=>{pinListOpen.value=false;});
 watch(pinState.pins,value=>{pins.value=value;},{immediate:true});
 function refreshAll(){refresh();pinState.refresh();}
 watch(()=>route.query,query=>{const next=comparisonFilters(query);if(JSON.stringify(next)!==JSON.stringify(filters.value))filters.value=next;});
@@ -48,10 +53,11 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
         <p v-if="!current.groups.length" role="status" class="empty">Keine DRs für diese Filterauswahl.</p>
         <SimulationComparisonMetrics :current="current.results" :previous="previous.results" :compare="!!filters.compare" />
         <SimulationRunQuality :current="current" :previous="previous" :compare="!!filters.compare" />
-        <SimulationDrList :groups="current.groups" :results="current.results" :is-pinned="pinState.isPinned" @pin-menu="pinState.open" />
+        <SimulationDrList :groups="current.groups" :results="current.results" :is-pinned="pinState.isPinned" :pin-count="listedPins.length" @show-pins="showPins" @pin-menu="pinState.open" />
       </template>
     </div>
-    <SimulationPinMenu :target="pinState.target.value" :saving="pinState.saving.value" :error="pinState.error.value" @close="pinState.target.value=null" @save="pinState.save" @remove="pinState.remove" />
+    <SimulationPinMenu :target="pinState.target.value" :saving="pinState.saving.value" :error="pinState.error.value" @close="pinState.target.value=null" @save="pinState.save" @remove="pinState.remove" @show-pins="showPins" />
+    <SimulationPinList :open="pinListOpen" :pins="listedPins" :loading="pinState.loading.value" :saving="pinState.saving.value" :error="pinState.error.value" @close="pinListOpen=false" @remove="pinState.removeListed" @refresh="pinState.refresh" />
   </main>
 </template>
 <style scoped>
