@@ -1,4 +1,5 @@
 import { checklistObservationRules } from './checklistObservationRules.js';
+export { isCandleAppend } from './candleAppend.js';
 
 export function createSetup2Memo(limit=200) {
   const entries=new Map();
@@ -17,8 +18,4 @@ export function setupMemoKey(source,anchor,settings,sessions,revision=0) {
   return JSON.stringify([instrument,tradeSetupId,createdAt,dir,obTop,obBottom,obStartTime,obFvg,invalidation,
     ls?.price,ls?.dir,ls?.pivotTime,ls?.touchedTime,ls?.touched,source.sweeps?.[0]?.timeframe,
     anchor?.structureStartTime,settings,sessions,revision]);
-}
-
-export function isCandleAppend(previous,next) {
-  return previous.length<=next.length && previous.every((c,i)=>JSON.stringify(c)===JSON.stringify(next[i]));
 }

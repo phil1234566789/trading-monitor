@@ -1,11 +1,12 @@
 import { M1_STRUCTURE_PERIOD } from './m1Structure.js';
+import { candleTimeIndex } from './candleTimeIndex.js';
 
 export function m1ScanPrefix(candles, anchorTime, end) {
-  let lower = 0, upper = candles.length;
-  while (lower < upper) {
-    const mid = (lower + upper) >>> 1;
-    if (candles[mid].time < anchorTime) lower = mid + 1; else upper = mid;
-  }
+  return candles.slice(m1ScanPrefixStart(candles,anchorTime),end);
+}
+
+export function m1ScanPrefixStart(candles,anchorTime) {
+  let lower = candleTimeIndex(candles,anchorTime);
   // Spread-Hour-Kerzen zählen nicht zum P5-Vorlauf. Im Präfix bleiben sie
   // trotzdem enthalten, weil Retest/FVG ihren eigenen Umgang damit haben.
   let usable = 0;
@@ -13,6 +14,6 @@ export function m1ScanPrefix(candles, anchorTime, end) {
     lower--;
     if (!candles[lower].ignored) usable++;
   }
-  return candles.slice(lower, end);
+  return lower;
 }
 

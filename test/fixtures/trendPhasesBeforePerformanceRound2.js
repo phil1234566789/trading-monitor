@@ -1,10 +1,9 @@
 // Trendphasen ("ab wann bis wann welcher Trend") für die M5-Hintergrundbänder (PLAN-m5-trend.md).
 // buildMarketStructureState liefert nur den Endzustand — die Sequenz kommt über dessen onStep-
 // Protokoll, damit die Merge-Schleife nicht ein zweites Mal nachgebaut wird.
-import { buildMarketStructureState, collectNestedChain, pivotTimeOf } from "./marketStructureAnalysis";
-import { firstTouchAfter } from "./structurePivotTime";
-import { deriveM5CloseReaction } from "./m5CloseReaction.js";
-import { withCandleCloseWindow } from "./candleCloseWindow";
+import { buildMarketStructureState, collectNestedChain, pivotTimeOf } from "./marketStructureAnalysisBeforePerformanceRound2";
+import { firstTouchAfter } from "../../src/structurePivotTime";
+import { deriveM5CloseReaction } from "../../src/m5CloseReaction.js";
 
 // Phase = Trend der innersten bestätigten Ebene. Voll = Haupttrend ODER ein CHoCH-Trend, der sich
 // schon einmal fortgesetzt hat (tieferes Hoch + Bruch des Tiefs = ein protected-Punkt, der NACH der
@@ -20,8 +19,7 @@ export function buildStructureWithPhases(pivotsOuter, pivotsInner, periodOuter, 
   const events = [];
   const endTime = candles.length > 0 ? candles[candles.length - 1].time : null;
   let prevDepth = 0;
-  // Unser eigener Callback verändert nur Phasen/Ereignisse, nie die Kerzen.
-  const state = withCandleCloseWindow(candles, () => buildMarketStructureState(pivotsOuter, pivotsInner, periodOuter, periodInner, candles, {
+  const state = buildMarketStructureState(pivotsOuter, pivotsInner, periodOuter, periodInner, candles, {
     barSeconds,
     onStep: (at, s, pivot) => {
       const chain = collectNestedChain(s);
@@ -49,7 +47,7 @@ export function buildStructureWithPhases(pivotsOuter, pivotsInner, periodOuter, 
       phases.push({ trend: inner.trend, pre, from, to: endTime ?? at });
       if (inner.trend !== "unknown") events.push({ pivot, at, trend: inner.trend, pre, reason, touchAt, level: reason === "CHoCH" ? inner.appliedPivots[1].price : null });
     },
-  }));
+  });
   // Ein Pivot kann erst nach der letzten geladenen Kerze "verarbeitet" sein (Lookahead im Replay).
   return { state, events, phases: phases.filter((p) => p.trend !== "unknown" && p.from < p.to),
     ...(closeEvaluation ? { closeReaction: deriveM5CloseReaction(state, pivotsOuter, pivotsInner, periodOuter, periodInner, candles, barSeconds, closeReactionCache) } : {}) };

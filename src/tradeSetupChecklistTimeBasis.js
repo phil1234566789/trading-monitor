@@ -1,4 +1,5 @@
 import { barSecondsFor, barSecondsForTimeframeCi } from './timeframes.js';
+import { closedCandleEnd } from './closedCandlePrefix.js';
 
 export function checklistEvaluationTime(replayUntil, nowSec, m5Candles = []) {
   return closedReplayEvaluationTime(replayUntil, nowSec, m5Candles, '5m');
@@ -18,6 +19,14 @@ export function closedReplayEvaluationTime(replayUntil, nowSec, candles, bar) {
 export function closedChecklistCandles(candles, bar, evaluatedAt) {
   const duration = barSecondsForTimeframeCi(bar);
   if (!Number.isFinite(evaluatedAt) || duration == null) return [];
-  return (candles ?? []).filter(c => Number.isFinite(c.time) && c.time + duration <= evaluatedAt)
+  // Keine dauerhafte Sortiert-Markierung: Chart-Aufrufer dürfen Arrays korrigieren.
+  // Der schnelle Archivpfad gibt weiterhin eine eigene, veränderbare Kopie zurück.
+  const rows=candles??[];
+  let sorted=true;
+  for(let i=0;i<rows.length;i++)if(!Number.isFinite(rows[i]?.time)||(i>0&&rows[i-1].time>rows[i].time)){
+    sorted=false;break;
+  }
+  if(sorted)return rows.slice(0,closedCandleEnd(rows,duration,evaluatedAt));
+  return rows.filter(c => Number.isFinite(c.time) && c.time + duration <= evaluatedAt)
     .slice().sort((a, b) => a.time - b.time);
 }

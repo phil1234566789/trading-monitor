@@ -10,7 +10,9 @@ import { createSetup2Entry } from './tradeSetup2EntryGate.js';
 import { createCloseReactionCache } from './m5CloseReactionHistory.js';
 import { markIgnoredCandles } from './sessionOccurrences.js';
 import { berlinOffsetMinutes } from './berlinTime.js';
-import { m1ScanPrefix } from './m1ScanPrefix.js';
+import { m1ScanPrefixStart } from './m1ScanPrefix.js';
+import { candleTimeIndex } from './candleTimeIndex.js';
+import { createClosedCandlePrefix } from './closedCandlePrefix.js';
 import { createSetup2Memo,finalObservation } from './setup2Memo.js';
 import { entryModel1FvgAt } from './entryModel1Progress.js';
 
@@ -26,6 +28,7 @@ export async function scanCountertrendWindow(input) {
   const marked=rows=>markIgnoredCandles(ordered(rows),input.sessionConfigs?.filter(s=>s.instrument===instrument) ?? [],
     sec=>berlinOffsetMinutes(sec*1000));
   const m5=marked(input.m5Candles),h1=ordered(input.h1Candles);
+  const closedM5At=createClosedCandlePrefix(m5,300);
   let m1=marked(input.m1Candles),loadedFrom=Infinity;
   const snapshots=[],entries=[...(input.existingEntries ?? [])],saved=new Map(),seen=new Set(entries.map(s=>s.entry.id));
   const classificationCache=new Map(),closeReactionCache=createCloseReactionCache(),m1Cache=createCloseReactionCache();
@@ -76,7 +79,7 @@ export async function scanCountertrendWindow(input) {
     });
     const primary=candidates[0] ?? base.setup.primary;
     const result={...base,evaluatedAt:at,checks:primary?.checks ?? base.checks,
-      setup:{...base.setup,primary,candidates},context:{...base.context,evaluatedAt:at,m5Candles:m5.filter(c=>c.time+300<=at)}};
+      setup:{...base.setup,primary,candidates},context:{...base.context,evaluatedAt:at,m5Candles:closedM5At(at)}};
     result.dealingRange=evaluateDealingRange(result);
     return result;
   };
@@ -125,16 +128,20 @@ export async function scanCountertrendWindow(input) {
         loadedFrom=candidate.recognizedAt;
       }
       const end=steps[index+1] ?? at;
-      for (const candle of m1.filter(c=>c.time+60>=at && (c.time+60<end || index===steps.length-1 && c.time+60===end))) {
+      for (let minute=candleTimeIndex(m1,at-60);minute<m1.length;minute++) {
+        const candle=m1[minute];
+        if(!(candle.time+60<end || index===steps.length-1 && candle.time+60===end))break;
         const knownAt=candle.time+60;
         if(useMemo && knownAt<=(searchThrough.get(candidate.id) ?? -Infinity))continue;
         if(useMemo)searchThrough.set(candidate.id,knownAt);
         const current=evaluateAt(knownAt,[sources.find(s=>s.tradeSetupId===candidate.tradeSetupId)]);
         const active=activeM1Context(current);
         if (!active) break;
-        const rows=m1ScanPrefix(m1,Math.min(active.anchor.pivotTime,candidate.recognizedAt),m1.findIndex(c=>c.time===candle.time)+1);
+        const prefixEnd=candleTimeIndex(m1,candle.time)+1;
+        const prefixStart=m1ScanPrefixStart(m1,Math.min(active.anchor.pivotTime,candidate.recognizedAt));
         // Ein Entry entsteht ausschließlich beim FVG-Schluss; andere Minuten brauchen keine M1-Struktur.
-        if(useMemo && !entryModel1FvgAt(rows,active.direction))continue;
+        if(useMemo && !entryModel1FvgAt(m1,active.direction,prefixEnd,prefixStart))continue;
+        const rows=m1.slice(prefixStart,prefixEnd);
         const structure=buildM1Structure(rows,active.anchor,knownAt);
         let follow=entryProgress.get(candidate.id);
         if(!follow){follow={};entryProgress.set(candidate.id,follow);}

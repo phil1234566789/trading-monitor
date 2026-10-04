@@ -1,8 +1,8 @@
 import { candleTouchesOrderBlock } from './orderBlockDetection.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 
-export function orderBlockMitigationFvg(rows,direction) {
-  const window=rows.slice(-4);
+export function orderBlockMitigationFvg(rows,direction,end=rows.length,start=0) {
+  const window=rows.slice(Math.max(start,end-4),end);
   if(window.length!==4 || window.some((c,i)=>c.ignored || (i && c.time!==window[i-1].time+60)))return null;
   const [,first,impulse,last]=window;
   const gap=direction==='short'?first.low-last.high:last.low-first.high;
