@@ -92,8 +92,11 @@ export function runFunnel(groups, results) {
   const validated = groups.filter(g => g.wasValidated ?? g.stage === 'validated');
   return { recognized: new Set(groups.map(g => g.snapshot.checklist?.setup?.primary?.tradeSetupId ?? g.snapshot.setupKey ?? g.key)).size,
     confirmed: groups.filter(g => ['confirmed','validated','invalidated'].includes(g.stage)).length,
-    invalidated: groups.filter(g => g.stage === 'invalidated').length, validated: validated.length,
+    disqualified: groups.filter(g => g.stage === 'invalidated' && ['h1CounterDivergence','antiConfluence','targetsUnavailable'].includes((g.latestCandidate ?? g.snapshot)?.dealingRange?.reason)).length,
+    validated: validated.length,
+    invalidationBeforeT1: validated.filter(g => g.outcome.status === 'invalidation').length,
     target1: validated.filter(g => ['t2','t1Only','t1Unknown'].includes(g.outcome.status)).length,
+    target2: validated.filter(g => g.outcome.status === 't2').length,
     withEntry: groups.filter(g => g.entries.length).length, entries: new Set(results.map(r=>r.snapshotId)).size };
 }
 export function rangeEntryCrossTable(groups, results, variant) {
