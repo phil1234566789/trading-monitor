@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import PriceChart from "../components/PriceChart.vue";
 import { GOLD_CHART_BARS, goldChartSelection } from "../goldChartPolicy.js";
 import TradeSetupCockpit from "../components/TradeSetupCockpit.vue";
@@ -28,6 +28,7 @@ import { useSetupConfirmations } from "../composables/useSetupConfirmations.js";
 import { useTscRange } from "../composables/useTscRange.js";
 import { useReplayStructureDefaults } from "../composables/useReplayStructureDefaults.js";
 import { useTradeSetup2Route } from "../composables/useTradeSetup2Route.js";
+import { useSnapshotVisitToggle } from "../composables/useSnapshotVisitToggle.js";
 import { isTradeSetup2SnapshotView } from "../tradeSetup2Snapshot.js";
 import {
   fetchTradeSetupForCockpit,
@@ -306,16 +307,28 @@ const visibleAnnotations = computed(() => (drawingsVisible.value ? annotations.v
 // Kerze"-Positionsmodus (und sein Abstands-Regler) ist entfallen, siehe TradeSetupCockpit.vue.
 const showTradeSetupCockpit = useLocalStorageRef("showTradeSetupCockpit", true);
 const showTradeSetupBewertung = useLocalStorageRef("showTradeSetupBewertung", true);
-const showTradeSetupChecklist = useLocalStorageRef("showTradeSetupChecklist", false);
-const showTradeSetup2 = useLocalStorageRef("showTradeSetup2", false);
+const savedTradeSetupChecklist = useLocalStorageRef("showTradeSetupChecklist", false);
+const savedTradeSetup2 = useLocalStorageRef("showTradeSetup2", false);
 const tradeSetup2HistoryCount = useLocalStorageRef("tradeSetup2HistoryCount", 5);
 const tradeSetup2Variant = useLocalStorageRef("tradeSetup2Variant", "wide");
 const route = useRoute();
+const router = useRouter();
 const selectedTradeSetup2Id = computed(() => typeof route.query.setup2 === "string" ? route.query.setup2 : null);
 const tradeSetup2RunId = computed(() => typeof route.query.run === "string" ? route.query.run : null);
 const snapshotView = computed(() => isTradeSetup2SnapshotView({
   tradeSetup2RunId: tradeSetup2RunId.value, selectedTradeSetup2Id: selectedTradeSetup2Id.value,
 }));
+const showTradeSetupChecklist = useSnapshotVisitToggle(savedTradeSetupChecklist,snapshotView);
+const showTradeSetup2 = useSnapshotVisitToggle(savedTradeSetup2,snapshotView);
+function closeTradeSetup2Selection() {
+  if(!snapshotView.value){priceChartRef.value?.clearTradeSetup2Selection();return;}
+  const {setup2,run,variant,...query}=route.query;
+  setup2Detail.value=null;
+  void router.replace({query});
+}
+watch(currentSymbol,symbol=>{
+  if(snapshotView.value&&route.query.instrument&&symbol!==route.query.instrument)closeTradeSetup2Selection();
+});
 const dashboardDataOptions = { enabled: () => !snapshotView.value };
 const checklistState = ref(null);
 const setup2Detail = ref(null);
@@ -2274,6 +2287,7 @@ watch(selectedTradingAccountId, () => {
     @close-ranges-metadata="showRangesMetadata = false"
     @checklist-state-change="checklistState = $event"
     @setup2-detail-change="setup2Detail = $event"
+    @setup2-close="closeTradeSetup2Selection"
     @m1-check-change="m1Check = $event"
     @chart-height-change="renderedChartHeight = $event"
     @close-debug-metadata="showDebugMetadata = false"
@@ -2323,7 +2337,7 @@ watch(selectedTradingAccountId, () => {
       :instrument="currentSymbol"
       :checklist-state="setup2Detail?.checklist ?? checklistState"
       :m1-check="setup2Detail ? setup2Detail.m1Check : m1Check"
-      @close="setup2Detail ? priceChartRef?.clearTradeSetup2Selection() : (showTradeSetupChecklist = false)"
+      @close="setup2Detail ? closeTradeSetup2Selection() : (showTradeSetupChecklist = false)"
     />
 
     <TradeSetupBewertung

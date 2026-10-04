@@ -350,6 +350,7 @@ const props = defineProps({
   tscRange: { type: Object, default: null },
 });
 const emit = defineEmits([
+  'setup2-close',
   'setup2-detail-change',
   "checklist-state-change",
   "m1-check-change",
@@ -1846,6 +1847,11 @@ function applyCandleData() {
   candleSeries.setData(tintM1FvgCandle(candles, snapshot ? (props.showM1Structure ? snapshot.m1Check?.fvg : null) : m1Structure.check.value.fvg, props.currentBar, color));
 }
 
+function closeTradeSetup2Selection() {
+  void setup2.select(null);
+  if(snapshotView.value)emit('setup2-close');
+}
+
 function refreshChart() {
   // Async loads (loadInitial/pollRecent/lazy-load) koennen noch laufen, wenn die
   // Komponente schon unmounted wurde (z.B. schnelle Navigation zu /protokoll) — chart
@@ -2633,7 +2639,7 @@ defineExpose({
   // per Ref auf, statt es über den jetzt entfallenen tsc-*-Event-Relay zu bekommen.
   openTargetPicker,
   openAntiConfluencePicker,
-  clearTradeSetup2Selection:()=>setup2.select(null),
+  clearTradeSetup2Selection:closeTradeSetup2Selection,
 });
 </script>
 
@@ -2643,7 +2649,7 @@ defineExpose({
     <TradeSetup2Loading v-if="snapshotView && showTradeSetup2" :steps="snapshotSteps" :error="setup2Error || snapshotCandleError"
       @retry="setup2.refresh(); loadInitial()" />
     <TradeSetup2Controls v-if="showTradeSetup2" :positions="setup2Positions" :selected="setup2Selected" :loading="setup2Loading"
-      :status="setup2Status" :error="setup2Error" :snapshot-view="snapshotView" :m1-status="setup2.snapshotM1.value.message" :indicator-status="setup2.snapshotIndicators.value.message" @select="setup2.select" @close="setup2.select(null)" @refresh="setup2.refresh" />
+      :status="setup2Status" :error="setup2Error" :snapshot-view="snapshotView" :m1-status="setup2.snapshotM1.value.message" :indicator-status="setup2.snapshotIndicators.value.message" @select="setup2.select" @close="closeTradeSetup2Selection" @refresh="setup2.refresh" />
     <M5CandleClock v-if="m5ClockEnabled()" :state="m5Clock" @retry="retryM5Clock" />
     <M1StructureStatus v-if="showM1Structure && !snapshotView" :status="m1StructureStatus" :symbol="symbol" />
     <div v-if="goldHistoryError" class="live-history-confirm" role="alert">Gold-Strukturvorlauf konnte nicht vollständig geladen werden. <button @click="reloadGoldHistory">Erneut laden</button></div>

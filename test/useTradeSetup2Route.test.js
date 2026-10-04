@@ -1,16 +1,33 @@
 import { expect, it } from 'vitest';
-import { effectScope, nextTick, ref } from 'vue';
+import { computed,effectScope, nextTick, ref } from 'vue';
 import { useTradeSetup2Route } from '../src/composables/useTradeSetup2Route.js';
+import { useSnapshotVisitToggle } from '../src/composables/useSnapshotVisitToggle.js';
 
 function harness(initial) {
   const query = ref(initial), scope = effectScope();
   const state = Object.fromEntries(Object.entries({ showTradeSetup2: false, showTradeSetupChecklist: false,
     tradeSetup2Variant: 'wide', currentSymbol: 'EURUSD', currentBar: '1h', replayTime: 123, replayActive: false,
   }).map(([key, value]) => [key, ref(value)]));
-  scope.run(() => useTradeSetup2Route(() => query.value, state, ['GBPUSD', 'EURUSD']));
-  return { query, state, scope };
+  const saved={setup:state.showTradeSetup2,checklist:state.showTradeSetupChecklist};
+  scope.run(() => {
+    const view=computed(()=>!!(query.value.setup2&&query.value.run));
+    state.showTradeSetup2=useSnapshotVisitToggle(saved.setup,view);
+    state.showTradeSetupChecklist=useSnapshotVisitToggle(saved.checklist,view);
+    useTradeSetup2Route(() => query.value, state, ['GBPUSD', 'EURUSD']);
+  });
+  return { query, state, scope,saved };
 }
 const link = { setup2: 'entry', run: 'research', instrument: 'GBPUSD', replay: '1772809740', variant: 'narrow', bar: '1m' };
+it('keeps visit switches editable without persisting them and restores saved settings on close',async()=>{
+  const {state,saved,query,scope}=harness(link);
+  state.showTradeSetup2.value=false;state.showTradeSetupChecklist.value=false;
+  await nextTick();expect(saved.setup.value).toBe(false);expect(saved.checklist.value).toBe(false);
+  state.showTradeSetup2.value=true;
+  query.value={};await nextTick();
+  expect(state.showTradeSetup2.value).toBe(false);
+  state.showTradeSetup2.value=true;await nextTick();expect(saved.setup.value).toBe(true);
+  scope.stop();
+});
 
 it('defaults snapshot links to M5', () => {
   const { state, scope } = harness({ ...link, bar: undefined });

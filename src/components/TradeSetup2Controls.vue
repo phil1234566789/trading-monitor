@@ -14,7 +14,7 @@ function choose(event,positions){const p=positions.find(p=>p.id===event.target.v
       <option v-for="p in positions" :key="p.id" :value="p.id">{{ p.direction==='short'?'Short':'Long' }} · {{ p.timeLabel }} {{ formatDatedTime(p.labelTime) }}{{ p.sweepPrice!=null?' · Level '+fmtPrice(p.sweepPrice,pricePrecisionForInstrument(p.instrument)):'' }} · {{ p.kind==='candidate'?p.candidateStatus:p.status==='ambiguous'?'unklar':p.isOpen?'offen':p.outcome }}</option>
     </select>
     <RouterLink v-if="snapshotView" to="/statistik">Zur Statistik</RouterLink>
-    <button v-else-if="selected" @click="emit('close')">Zur Übersicht</button>
+    <button v-if="selected || snapshotView" @click="emit('close')">Auswahl schließen</button>
     <button v-else :disabled="loading" @click="emit('refresh')">↻</button>
     <small v-if="selected">Gespeicherter Stand: {{ formatDatedTime(selected.knownAt) }} Uhr{{ selected.entry?'':' · ohne Entry · Historie' }}</small>
     <small v-if="selected">{{ dealingRangeLabel(selected) }}</small>
