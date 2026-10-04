@@ -1944,10 +1944,10 @@
     "semantic_hash": "462d24b202a1ea8ee6c2e0e9104a3967"
   },
   "test/newsEvents.test.js": {
-    "mtime": 1787465334.654556,
-    "seen": 1791141733.6767173,
-    "ast_hash": "5a630898a705d56e713edc3034a978cd",
-    "semantic_hash": "5a630898a705d56e713edc3034a978cd"
+    "mtime": 1791142415.0244608,
+    "seen": 1791142509.2532587,
+    "ast_hash": "1896816583ab0dfe4c2272e5d8f11c6b",
+    "semantic_hash": ""
   },
   "test/newsMarkers.test.js": {
     "mtime": 1785363568.5201626,
@@ -2898,9 +2898,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/scripts/backfillTradeSetups.ts": {
-    "mtime": 1790537706.2840602,
-    "seen": 1791141733.6757174,
-    "ast_hash": "2ce198c9235ce23a4dd4f9b148572150",
+    "mtime": 1791142716.0749478,
+    "seen": 1791142825.3417602,
+    "ast_hash": "fc386b62e3458a7600b0f62475d4a54c",
     "semantic_hash": ""
   },
   "analysis/dr-reichweite/ergebnis-saisonalitaet.txt": {
@@ -3990,9 +3990,9 @@
     "semantic_hash": ""
   },
   "src/newsEventRules.js": {
-    "mtime": 1790539772.100075,
-    "seen": 1791141733.6757174,
-    "ast_hash": "19e7a88edbfef96d8eeefd4b4342cd47",
+    "mtime": 1791142390.7944565,
+    "seen": 1791142509.1664073,
+    "ast_hash": "df77de3c9efc16909ad822bbd0569899",
     "semantic_hash": ""
   },
   "src/structurePivotTime.ts": {
@@ -4074,9 +4074,9 @@
     "semantic_hash": ""
   },
   "test/tradeSetupChecklistTime.test.js": {
-    "mtime": 1790692619.9994648,
-    "seen": 1791141733.6767173,
-    "ast_hash": "bcbbc016d734b2f8657392ef79ab0f13",
+    "mtime": 1791142511.705609,
+    "seen": 1791142825.4052713,
+    "ast_hash": "9731f9aa49e80be42d3a3ef7462322da",
     "semantic_hash": ""
   },
   "test/tradeSetupChecklistUi.test.js": {
@@ -4212,9 +4212,9 @@
     "semantic_hash": ""
   },
   "test/tradeSetupChecklistNews.test.js": {
-    "mtime": 1790692574.2465577,
-    "seen": 1791141733.6767173,
-    "ast_hash": "6a5b2b09891721084f5b756604f56e02",
+    "mtime": 1791142454.0661004,
+    "seen": 1791142509.274772,
+    "ast_hash": "96b772eb4b5a2d58300529ff2ea35fd0",
     "semantic_hash": ""
   },
   "test/tradeSetupChecklistStatistics.test.js": {
@@ -4464,9 +4464,9 @@
     "semantic_hash": ""
   },
   "scripts/tradeSetup2YearRun.mjs": {
-    "mtime": 1791131440.9928668,
-    "seen": 1791141733.6757174,
-    "ast_hash": "74c38d489117df23cf12129bd3646c82",
+    "mtime": 1791142934.308115,
+    "seen": 1791143026.012154,
+    "ast_hash": "4d41e3bf568fae01622720724c7eac0a",
     "semantic_hash": ""
   },
   "src/components/SimulationResultsTable.vue": {
@@ -4548,9 +4548,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupSimulationRepository.js": {
-    "mtime": 1791059024.8811812,
-    "seen": 1791141733.6757174,
-    "ast_hash": "b2075a405f2202f85237c23a313159fe",
+    "mtime": 1791142575.200498,
+    "seen": 1791142825.3177607,
+    "ast_hash": "09822bb20d0557f10468f81fe858173b",
     "semantic_hash": ""
   },
   "src/tradeSetupSimulationStatistics.js": {
@@ -4608,9 +4608,9 @@
     "semantic_hash": ""
   },
   "test/tradeSetupSimulationRepository.test.js": {
-    "mtime": 1791059021.814129,
-    "seen": 1791141733.6767173,
-    "ast_hash": "9ce39894ed52a0d517efbe60a304f25d",
+    "mtime": 1791142602.3975925,
+    "seen": 1791142825.4072714,
+    "ast_hash": "67e4ef6f2e86c6dab7a879515f480fe8",
     "semantic_hash": ""
   },
   "test/tradeSetupSimulationStatistics.test.js": {
@@ -4968,9 +4968,9 @@
     "semantic_hash": ""
   },
   "src/components/DealingRangeOutcome.vue": {
-    "mtime": 1791134883.338908,
-    "seen": 1791141733.6757174,
-    "ast_hash": "d4a401eae7f71f97cdbfebd64d6fd0e3",
+    "mtime": 1791142703.3743148,
+    "seen": 1791142825.2568233,
+    "ast_hash": "b0791e9f03eccc7e5a4e7fefd7933902",
     "semantic_hash": ""
   },
   "src/tradeSetup2SavedRangeOutcome.js": {
@@ -4980,9 +4980,9 @@
     "semantic_hash": ""
   },
   "test/tradeSetup2SavedRangeOutcome.test.js": {
-    "mtime": 1791134883.3489084,
-    "seen": 1791141733.6767173,
-    "ast_hash": "dd92fea890e0d3fc4a984e3beda6b4ef",
+    "mtime": 1791142586.3642561,
+    "seen": 1791142825.4007626,
+    "ast_hash": "39dc7640fee365a5c52c76961d76bd80",
     "semantic_hash": ""
   },
   "src/composables/useSnapshotIndicators.js": {
@@ -5076,15 +5076,15 @@
     "semantic_hash": ""
   },
   "src/countertrendLifecycle.js": {
-    "mtime": 1791054827.0941267,
-    "seen": 1791141733.6757174,
-    "ast_hash": "f1dcf536c449bc72ce66e5bf411f527d",
+    "mtime": 1791142410.9470816,
+    "seen": 1791142509.1538947,
+    "ast_hash": "a35c369174778e86043df34257a85a25",
     "semantic_hash": ""
   },
   "src/countertrendScan.js": {
-    "mtime": 1791141578.3080535,
-    "seen": 1791141733.6757174,
-    "ast_hash": "751d567c08fab9c791b883dff1b09d6a",
+    "mtime": 1791142408.7099853,
+    "seen": 1791142509.1538947,
+    "ast_hash": "ff0ae2a5307bab37a1f51aaa90b9ed90",
     "semantic_hash": ""
   },
   "src/m1ScanPrefix.js": {
@@ -5304,15 +5304,15 @@
     "semantic_hash": ""
   },
   "src/simulationRunComparison.js": {
-    "mtime": 1791134884.214504,
-    "seen": 1791141733.6757174,
-    "ast_hash": "66f9775cbf777e52d53e390d5b1e0637",
+    "mtime": 1791142747.2053576,
+    "seen": 1791142825.3022463,
+    "ast_hash": "e96a2e9b30652e480e81fc57a283c33d",
     "semantic_hash": ""
   },
   "test/simulationRunComparison.test.js": {
-    "mtime": 1791116528.7445507,
-    "seen": 1791141733.6767173,
-    "ast_hash": "672548760b83e4fe9c99d6e80e521ffe",
+    "mtime": 1791142523.575797,
+    "seen": 1791142825.3927627,
+    "ast_hash": "de6e0f88e8f9e1a8697999e5e2af4098",
     "semantic_hash": ""
   },
   "src/components/SimulationComparisonFilters.vue": {
@@ -5346,9 +5346,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationRunQuality.vue": {
-    "mtime": 1791134883.3419077,
-    "seen": 1791141733.6757174,
-    "ast_hash": "c81feba95fb1d62518121bdf608c5f69",
+    "mtime": 1791142435.6402154,
+    "seen": 1791142509.1378868,
+    "ast_hash": "01f4e51ef0f3d21c3d7620c82cb2c244",
     "semantic_hash": ""
   },
   "src/composables/useSimulationComparison.js": {
@@ -5526,9 +5526,9 @@
     "semantic_hash": ""
   },
   "docs/performance-h.html": {
-    "mtime": 1791141707.6239765,
-    "seen": 1791141733.6767173,
-    "ast_hash": "e6b0e84d8940bf2ebcaec943a56cf18b",
+    "mtime": 1791141775.1618063,
+    "seen": 1791142509.3017726,
+    "ast_hash": "faf48c698d78b29f9e05be005b3c014f",
     "semantic_hash": ""
   },
   "test/fixtures/trendPhasesBeforePerformanceRound2.js": {
@@ -5538,9 +5538,9 @@
     "semantic_hash": ""
   },
   "src/simulationPinPresentation.js": {
-    "mtime": 1791134884.2125077,
-    "seen": 1791141733.6757174,
-    "ast_hash": "d216062be96f75a335271511c13ed2cf",
+    "mtime": 1791142602.3975925,
+    "seen": 1791142825.3022463,
+    "ast_hash": "99ad9052f714114647d9f64def538b47",
     "semantic_hash": ""
   },
   "test/setup2Terminology.test.js": {
@@ -5829,6 +5829,120 @@
     "mtime": 1790276926.3521118,
     "seen": 1791141733.6767173,
     "ast_hash": "ccb4f092a34fd1d5a27f253c0589b60a",
+    "semantic_hash": ""
+  },
+  "output/chart-replay-final-1.json": {
+    "mtime": 1791141953.3181725,
+    "seen": 1791142509.1118867,
+    "ast_hash": "47f6c180465e7d9a57566ba4d7d50e32",
+    "semantic_hash": ""
+  },
+  "output/chart-replay-final-2.json": {
+    "mtime": 1791141957.1988275,
+    "seen": 1791142509.1118867,
+    "ast_hash": "04c230662eebbbdf7243e0951b84be06",
+    "semantic_hash": ""
+  },
+  "output/chart-replay-final-3.json": {
+    "mtime": 1791141961.1083617,
+    "seen": 1791142509.1118867,
+    "ast_hash": "7fdb89b23fec24140975e2708b8247cb",
+    "semantic_hash": ""
+  },
+  "output/chart-replay-ui.json": {
+    "mtime": 1791142434.4813213,
+    "seen": 1791142509.113886,
+    "ast_hash": "09efe06069031bdc9e633012ff4581d0",
+    "semantic_hash": ""
+  },
+  "output/chart-replay-ui.mjs": {
+    "mtime": 1791142427.541228,
+    "seen": 1791142509.113886,
+    "ast_hash": "dc4d248d66b2dd8ec56fcb84d65cc3df",
+    "semantic_hash": ""
+  },
+  "src/dealingRangePriceObservation.js": {
+    "mtime": 1791142746.5692928,
+    "seen": 1791142825.2812405,
+    "ast_hash": "1197197eee90db78bd91ac0d3d512f35",
+    "semantic_hash": ""
+  },
+  "src/savedDealingRangePriceOutcome.js": {
+    "mtime": 1791142434.3076746,
+    "seen": 1791142509.1734073,
+    "ast_hash": "09146db7d4ed2cf66215091837a27112",
+    "semantic_hash": ""
+  },
+  "output/chart-replay-all-off.png": {
+    "mtime": 1791142429.9224248,
+    "seen": 1791142509.3067725,
+    "ast_hash": "dbc875ca65806c1419b8e05d5fdeeb23",
+    "semantic_hash": ""
+  },
+  "output/chart-replay-final-1.png": {
+    "mtime": 1791141953.3823788,
+    "seen": 1791142509.3077729,
+    "ast_hash": "082c66cdb7be1f94c402411f91456d5b",
+    "semantic_hash": ""
+  },
+  "output/chart-replay-final-2.png": {
+    "mtime": 1791141957.2742608,
+    "seen": 1791142509.3077729,
+    "ast_hash": "0d16a2c8ac1d9051cce1270aa8865ff5",
+    "semantic_hash": ""
+  },
+  "output/chart-replay-final-3.png": {
+    "mtime": 1791141961.1612096,
+    "seen": 1791142509.3077729,
+    "ast_hash": "06863e93e964c3b21e4fae4e7cdb40e8",
+    "semantic_hash": ""
+  },
+  "scripts/setup1BuildSets.mjs": {
+    "mtime": 1791142934.9479835,
+    "seen": 1791143026.0101538,
+    "ast_hash": "25257f8dd68ae2aa13b9a9b534ae820b",
+    "semantic_hash": ""
+  },
+  "scripts/setup1Set.mjs": {
+    "mtime": 1791142933.6622887,
+    "seen": 1791143026.0101538,
+    "ast_hash": "ad37d762d4f1c3d2cc6c7b3150596711",
+    "semantic_hash": ""
+  },
+  "supabase/functions/trading-monitor-mcp/scripts/setup1Replay.ts": {
+    "mtime": 1791142736.9651814,
+    "seen": 1791142825.3417602,
+    "ast_hash": "1f2d85391a9fe4b6d81de4aa0f069618",
+    "semantic_hash": ""
+  },
+  "test/dealingRangePriceObservation.test.js": {
+    "mtime": 1791142490.202119,
+    "seen": 1791142825.3587596,
+    "ast_hash": "672186624081e406b278aec5562e7774",
+    "semantic_hash": ""
+  },
+  "test/dealingRangePriceStatistics.test.js": {
+    "mtime": 1791142704.1158888,
+    "seen": 1791142825.3587596,
+    "ast_hash": "65e399be6dc832674e3cee0ffae72e39",
+    "semantic_hash": ""
+  },
+  "test/setup1Sets.test.js": {
+    "mtime": 1791142782.1928287,
+    "seen": 1791142825.388759,
+    "ast_hash": "1815130d3da260ab075b62b7113d58ff",
+    "semantic_hash": ""
+  },
+  "docs/dr-price-observation.html": {
+    "mtime": 1791143013.2140837,
+    "seen": 1791143026.1455245,
+    "ast_hash": "f5f2cb14a02af31fdb82815fdbd65f7c",
+    "semantic_hash": ""
+  },
+  "docs/setup1-sets.md": {
+    "mtime": 1791142875.5845172,
+    "seen": 1791143026.1465232,
+    "ast_hash": "41f01e17a844179e58db63a14dd78693",
     "semantic_hash": ""
   }
 }
