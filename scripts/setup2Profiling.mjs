@@ -4,7 +4,7 @@ export function setup2ProfilingPlugin() {
     'evaluateCountertrendEntryModel1','detectOrderBlocks','closedChecklistCandles',
     'withCandleCloseWindow','buildLevel','detectLiquidityLevels','evaluateAt','evaluateChecklistM5',
     'advanceOrderBlocks','orderBlockSnapshot','detectIncrementalOrderBlocks','isCandleAppend',
-    'detectIncrementalLiquidityLevels']);
+    'detectIncrementalLiquidityLevels','orderBlockRecognitionTimes']);
   return {name:'setup2-profiling',renderChunk(code){
     const tree=this.parse(code),edits=[];
     function visit(node,parent){
@@ -13,8 +13,11 @@ export function setup2ProfilingPlugin() {
       if(names.has(name)&&node.body?.type==='BlockStatement'
         && !node.body.body.some(s=>s.type==='VariableDeclaration'&&s.declarations.some(d=>d.id.name==='__h'))){
         const args=node.type==='ArrowFunctionExpression'?'[at,m5]':'arguments';
-        edits.push([node.body.start+1,`const __h=globalThis.__setup2Profile;const __t=__h?.start(${JSON.stringify(name)},${args});try{`]);
+        edits.push([node.body.start+1,`const __h=globalThis.__setup2Profile;const __t=__h?.start(${JSON.stringify(name)},${args}${name==='detectIncrementalOrderBlocks'?',__detector':''});try{`]);
         edits.push([node.body.end-1,'}finally{if(__h)__h.end(__t);}']);
+      }
+      if(name==='createIncrementalOrderBlockDetector' && !code.slice(node.body.start,node.body.end).includes('const __detector')){
+        edits.push([node.body.start+1,'const __detector=globalThis.__setup2Profile?.createDetector(arguments);']);
       }
       if(name==='createSetup2Memo' && !code.slice(node.body.start,node.body.end).includes('__profileMemo')){
         edits.push([node.body.start+1,'const __profileMemo=globalThis.__setup2Profile?.createMemo();']);
@@ -43,6 +46,7 @@ export function setup2WithoutProfilingPlugin() {
   return {name:'setup2-without-profiling',renderChunk(code){
     const tree=this.parse(code),edits=[];
     function visit(node){
+      if(node.type==='VariableDeclaration' && node.declarations[0]?.id.name==='__detector')edits.push([node.start,node.end]);
       if(node.type==='BlockStatement' && node.body[0]?.type==='VariableDeclaration'
         && node.body[0].declarations[0]?.id.name==='__h'
         && node.body[1]?.declarations?.[0]?.id.name==='__t'
@@ -62,12 +66,13 @@ export function setup2WithoutProfilingPlugin() {
 }
 
 export function createSetup2Profile(){
-  const functions={},stack=[],memo={hits:0,misses:0},memos=[];
-  return {functions,memo,memos,createMemo(){const stats={id:memos.length,hits:0,misses:0};memos.push(stats);return stats;},
-    memoGet(stats,hit){const key=hit?'hits':'misses';memo[key]++;if(stats)stats[key]++;},start(name,args){
+  const functions={},stack=[],memo={hits:0,misses:0},memos=[],detectors=[];
+  return {functions,memo,memos,detectors,createDetector(args){const stats={id:detectors.length,timeframe:args[0],calls:0,firstPrefix:null,rewinds:0,lastPrefix:0};detectors.push(stats);return stats;},createMemo(){const stats={id:memos.length,hits:0,misses:0};memos.push(stats);return stats;},
+    memoGet(stats,hit){const key=hit?'hits':'misses';memo[key]++;if(stats)stats[key]++;},start(name,args,detector){
     const rows=Array.isArray(args[0])?args[0]:args[0]?.m5Candles??args[0]?.context?.m5Candles
       ??args[0]?.candles??(Array.isArray(args[1])?args[1]:null);
     let length=rows?.length??0;
+    if(detector){detector.calls++;detector.firstPrefix??=length;detector.rewinds+=Number(length<detector.lastPrefix);detector.lastPrefix=length;}
     if(name==='evaluateAt'){
       let lower=0,upper=length;
       while(lower<upper){const mid=(lower+upper)>>>1;if(rows[mid].time+300<=args[0])lower=mid+1;else upper=mid;}

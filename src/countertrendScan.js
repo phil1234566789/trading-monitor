@@ -1,3 +1,4 @@
+import {createSharedOrderBlockDetector} from './sharedOrderBlocks.js';
 import { setup1RecognitionTime } from './setup1RecognitionTime.js';
 import { evaluateCountertrendChecklist } from './countertrendChecklist.js';
 import { evaluateDealingRange } from './tradeSetup2DealingRange.js';
@@ -35,6 +36,12 @@ export async function scanCountertrendWindow(input) {
   const recognized=new Map();
   const setupMemo=useMemo ? createSetup2Memo() : null,lifecycles=createSetup2Memo(),executions=createSetup2Memo();
   const searchThrough=createSetup2Memo(),entryProgress=createSetup2Memo();
+  const orderBlockDetectors=new Map();
+  const detectScanOrderBlocks=(rows,timeframe,isForex=true,minGapOverride=null)=>{
+    const key=JSON.stringify([timeframe,isForex,minGapOverride]);
+    if(!orderBlockDetectors.has(key))orderBlockDetectors.set(key,createSharedOrderBlockDetector(timeframe,isForex,minGapOverride));
+    return orderBlockDetectors.get(key)(rows);
+  };
   let evaluations=0;
   const outcomesAt=(at,sources)=>{
     const outcomes=new Map();
@@ -66,7 +73,7 @@ export async function scanCountertrendWindow(input) {
       evaluations++;
       recognized.set(source.tradeSetupId,evaluateCountertrendChecklist({...input,evaluatedAt:recognitionTime,tradeSetups:[source],
         m5Candles:m5.filter(c=>c.time+300<=recognitionTime),h1Candles:h1.filter(c=>c.time+3600<=recognitionTime),
-        setupClassificationCache:classificationCache,setupMemo,closeReactionCache}));
+        setupClassificationCache:classificationCache,setupMemo,closeReactionCache,detectScanOrderBlocks:useMemo?detectScanOrderBlocks:undefined}));
     }
     const bases=sources.map(source=>recognized.get(source.tradeSetupId)).sort((a,b)=>b.evaluatedAt-a.evaluatedAt);
     const base=bases.find(b=>b.setup.candidates.length) ?? bases[0];
@@ -144,7 +151,7 @@ export async function scanCountertrendWindow(input) {
         const rows=m1.slice(prefixStart,prefixEnd);
         const structure=buildM1Structure(rows,active.anchor,knownAt);
         let follow=entryProgress.get(candidate.id);
-        if(!follow){follow={};entryProgress.set(candidate.id,follow);}
+        if(!follow){follow={detectM5OrderBlocks:rows=>detectScanOrderBlocks(rows,'5m')};entryProgress.set(candidate.id,follow);}
         const check=evaluateM1Checklist({context:active,structure,candles:rows,evaluatedAt:knownAt,closeReactionCache:m1Cache,
           entryProgress:useMemo ? follow : undefined});
         if (check.entry?.recognizedAt!==knownAt || seen.has(check.entry.id) || knownAt<fromTime) continue;

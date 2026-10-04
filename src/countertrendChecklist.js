@@ -27,7 +27,7 @@ export function classifyM5SetupType(direction, currentTrend, outerTrend) {
 
 export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candles = [], h1Candles = [],
   tradeSetups = [], dailyAnchors = [], settings = {}, sessionConfigs = [], dataStatus = 'ready',
-  tradingWindows, news, newsLoadStatus, closeReactionCache, setupClassificationCache, setupMemo, dataRevision=0,entryOutcomes = new Map() } = {}) {
+  tradingWindows, news, newsLoadStatus, closeReactionCache, setupClassificationCache, setupMemo, detectScanOrderBlocks, dataRevision=0,entryOutcomes = new Map() } = {}) {
   const pending = () => ({ status: 'pending', details: ['Wartet auf ein bekanntes Setup 1.0.'] });
   const checks = { liquiditySweep: pending(), reaction: pending(), m5Trend: unknownChecklistM5(),
     outerM5Trend: { status: 'unknown', required: true, trend: 'unknown', details: ['Äußerster M5-Trend unbekannt.'] },
@@ -131,7 +131,7 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
       Object.assign(candidate.checks,evaluateChecklistConfluences({...result.context,evaluatedAt:candidate.recognizedAt,
         m5Candles:mark(m5Candles,'5m',candidate.recognizedAt),h1Candles:mark(h1Candles,'1h',candidate.recognizedAt),direction:candidate.direction,
         primary:{...candidate,knownAsOf:candidate.recognizedAt},opposingCandidates:[],target2:candidate.targetSelection.target2,
-        frozen:candidate.checks}));
+        frozen:candidate.checks,detectScanOrderBlocks}));
     }
   }
   const selected = accepted[0] ?? candidates[0];
