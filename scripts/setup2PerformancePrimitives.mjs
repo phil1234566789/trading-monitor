@@ -27,8 +27,13 @@ let after=()=>minutes.map(c=>core.orderBlockMitigationFvg(rows,'short',
   core.candleTimeIndex(rows,c.time)+1,core.m1ScanPrefixStart(rows,anchor)));
 if(options.case==='C'){
   const m5=JSON.parse(await readFile('.debug/setup2-f-observation-3125-v10b/cache/GBPUSD-5m-1717354800-1789682400.json','utf8'));
-  before=()=>minutes.map(c=>m5.filter(r=>r.time+300<=c.time+60));
-  after=()=>{const prefix=core.createClosedCandlePrefix(m5,300);return minutes.map(c=>prefix(c.time+60));};
+  const facts=prefix=>[prefix.length,prefix[0]?.time,prefix.at(-1)?.time];
+  before=()=>minutes.map(c=>facts(m5.filter(r=>r.time+300<=c.time+60)));
+  after=()=>{const prefix=core.createClosedCandlePrefix(m5,300);return minutes.map(c=>facts(prefix(c.time+60)));};
+}
+if(options.case==='D'){
+  before=()=>minutes.map(c=>rows.filter(r=>Number.isFinite(r.time)&&r.time+60<=c.time+60).slice().sort((a,b)=>a.time-b.time).length);
+  after=()=>minutes.map(c=>core.closedChecklistCandles(rows,'1m',c.time+60).length);
 }
 assert.deepEqual(after(),before());
 const measurements=[];

@@ -50,6 +50,13 @@ describe('Performance H exact prefix equivalence',()=>{
           expect(closedChecklistCandles(rowsVariant,'5m',at)).toEqual(Number.isFinite(at)?previousClosed(rowsVariant,300,at):[]);
     }
   });
+  it('does not retain mutable inputs or expose its output array',()=>{
+    const rows=randomCandles(4,30),at=rows.at(-1).time+300;
+    const first=closedChecklistCandles(rows,'5m',at);first.pop();
+    expect(closedChecklistCandles(rows,'5m',at)).toEqual(previousClosed(rows,300,at));
+    rows[3].time=rows[20].time+1;rows[4].time=NaN;
+    expect(closedChecklistCandles(rows,'5m',at)).toEqual(previousClosed(rows,300,at));
+  });
   it('keeps real OB lists and M5 structure nodes deterministic over growing prefixes',()=>{
     const rows=fixture.m5Candles.slice(-180),anchor=rows[10].time;
     for(let end=20;end<=rows.length;end+=10){
