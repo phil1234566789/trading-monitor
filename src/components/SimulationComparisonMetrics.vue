@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { comparisonTone } from '../simulationComparisonTone.js';
 import { variantMetrics } from '../simulationRunComparison.js';
-import { fmtMoney,fmtR } from '../format.js';
+import { fmtMoney,fmtR,pnlClass } from '../format.js';
 import { MIN_SIMULATION_WINRATE_CASES } from '../tradeSetupSimulationStatistics.js';
 const props=defineProps({current:Array,previous:Array,compare:Boolean});
 const definitions=[['total','Entries','count'],['winrate','Winrate netto','percent'],['pnlUsd','PnL netto · USD','money'],['grossPnlUsd','PnL brutto · USD','money'],['totalR','Summe R netto','r'],['commissionUsd','Kommission · USD','money'],['commissionR','Kommission · R (abgeschlossen)','r']];
@@ -15,11 +15,7 @@ const metricValue=(metrics,key,type)=>{
   return `${metrics.wins}W/${metrics.losses}L${flat?`/${flat}BE`:''}`;
 };
 const delta=(a,b,type)=>a==null||b==null?'–':`${a>b?'↑':a<b?'↓':'→'} ${a-b>=0?'+':'−'}${type==='percent'?`${Math.abs(a-b).toFixed(1)} pp`:type==='count'?Math.abs(a-b):type==='money'?`$${Math.abs(a-b).toFixed(2)}`:`${Math.abs(a-b).toFixed(2)}R`}`;
-const tone=(key,value)=>{
-  if(value==null || value===0)return '';
-  return (key.startsWith('commission')?value<0:value>0)?'positive':'negative';
-};
-const resultTone=(key,value)=>['pnlUsd','grossPnlUsd','totalR'].includes(key)?tone(key,value):'';
+const resultTone=(key,value)=>['pnlUsd','grossPnlUsd','totalR'].includes(key)?pnlClass(value):'';
 </script>
 <template>
   <section class="metric-grid" aria-label="Ergebnis beider SL-Varianten">
@@ -33,7 +29,7 @@ const resultTone=(key,value)=>['pnlUsd','grossPnlUsd','totalR'].includes(key)?to
   </section>
 </template>
 <style scoped>
-.negative{color:var(--negative)}
+
 .metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.metric-card{padding:16px;background:#1e222d;border:1px solid #434651;border-radius:4px;min-width:0}h2{font-size:18px;margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px 4px;border-bottom:1px solid #2a2e39}th{text-align:left;font-weight:400}td{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}p{font-size:12px;color:#b1b7c5;line-height:1.6}@media(max-width:768px){.metric-grid{grid-template-columns:1fr}}@media(max-width:400px){.metric-card{padding:8px}th,td{padding:8px 2px;font-size:11px}}
 </style>
 
