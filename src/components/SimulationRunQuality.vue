@@ -13,6 +13,19 @@ const outcomeHint=(run,variant,key)=>{
   const tone=outcomeTone(run,variant,key);
   return tone==='positive'?'↑ Besser als Alt':tone==='worse'?'↓ Schlechter als Alt':tone==='reference'?'Referenzlauf':'';
 };
+const crossColumns=['total','without','win','loss','pending'];
+const crossTables=computed(()=>Object.fromEntries(runs.value.map(run=>[run.label,Object.fromEntries(['wide','narrow'].map(variant=>[variant,rangeEntryCrossTable(run.data.groups,run.data.results,variant)]))])));
+const crossTone=(run,variant,row,column)=>{
+  if(!props.compare)return '';
+  if(run.label==='Alt')return 'reference';
+  const old=crossTables.value.Alt[variant].find(item=>item.key===row.key);
+  if(column==='total'){
+    if(!['t2','t1Only','t1Unknown','invalidation'].includes(row.key))return '';
+    return comparisonTone(row[column],old?.[column],row.key==='invalidation');
+  }
+  if(column==='without' && !['t2','t1Only','t1Unknown'].includes(row.key))return '';
+  return comparisonTone(row[column],old?.[column],column!=='win');
+};
 </script>
 <template>
   <section class="run-quality"><h2>Entscheidungsbaum</h2>
@@ -23,7 +36,7 @@ const outcomeHint=(run,variant,key)=>{
     <h2>DR gegen Entry</h2><p class="note">Nur validierte DRs. DR-Verlauf unabhängig vom Entry-Ergebnis, Gewinne und Verluste netto. Der gespeicherte Verlauf endet teils bei T1 oder beim Schließen aller Entries: späteres T2 ist dann nicht belegt.</p>
     <div v-for="run in runs" :key="`${run.label}-cross`"><h3>{{ run.label }}</h3>
       <div v-for="variant in ['wide','narrow']" :key="variant" class="table-scroll" tabindex="0" :aria-label="`DR gegen Entry · ${variant} horizontal scrollen`">
-        <table><caption>{{ variant==='wide'?'Weiter SL':'Enger SL' }}</caption><thead><tr><th scope="col">DR-Verlauf</th><th scope="col">DRs gesamt</th><th scope="col">Ohne Entry</th><th scope="col">Mind. ein Gewinn</th><th scope="col">Nur Verluste</th><th scope="col">Offen / uneindeutig / unvollständig</th></tr></thead><tbody><tr v-for="row in rangeEntryCrossTable(run.data.groups,run.data.results,variant)" :key="row.key"><th scope="row">{{ row.label }}</th><td>{{ row.total }}</td><td>{{ row.without }}</td><td>{{ row.win }}</td><td>{{ row.loss }}</td><td>{{ row.pending }}</td></tr></tbody></table>
+        <table><caption>{{ variant==='wide'?'Weiter SL':'Enger SL' }}</caption><thead><tr><th scope="col">DR-Verlauf</th><th scope="col">DRs gesamt</th><th scope="col">Ohne Entry</th><th scope="col">Mind. ein Gewinn</th><th scope="col">Nur Verluste</th><th scope="col">Offen / uneindeutig / unvollständig</th></tr></thead><tbody><tr v-for="row in crossTables[run.label][variant]" :key="row.key"><th scope="row">{{ row.label }}</th><td v-for="column in crossColumns" :key="column" :class="crossTone(run,variant,row,column)" :title="crossTone(run,variant,row,column)==='positive'?'Besser als Alt':crossTone(run,variant,row,column)==='worse'?'Schlechter als Alt':undefined">{{ row[column] }}<template v-if="crossTone(run,variant,row,column)==='positive'"> ↑</template><template v-else-if="crossTone(run,variant,row,column)==='worse'"> ↓</template></td></tr></tbody></table>
       </div>
     </div>
   </section>
