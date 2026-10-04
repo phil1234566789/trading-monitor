@@ -1,7 +1,7 @@
 # Graph Report - trading-monitor  (2026-10-04)
 
 ## Corpus Check
-- 880 files · ~1,226,620 words
+- 880 files · ~1,226,656 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `306dbc22`
+- Built from commit: `834e1297`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -1060,7 +1060,7 @@ Nodes (17): checks, countertrendAbcdDefinitions, countertrendDefinitions, dataSt
   docs/steerabilty-vs-wrong-ai-outputs.md · relation: references
 
 ## Knowledge Gaps
-- **1524 isolated node(s):** `props`, `definitions`, `CandleRow`, `ClassifiedDivergence`, `SessionOcc` (+1519 more)
+- **1524 isolated node(s):** `props`, `stages`, `DR_OUTCOME_LABELS`, `FILTER_DEFAULTS`, `CandleRow` (+1519 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1909 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -1070,12 +1070,12 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `Trading-Steps-Ablauf Diagram` and `calc_rr Tool Idea (Deterministic RR Calc)`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
 - **Why does `marketStructureAnalysis Developer Notes` connect `Vegapunk Slimming Results (-86%)` to `fachdoku-router/SKILL.md`, `marketStructureAnalysis Rules Overview`?**
-  _High betweenness centrality (0.086) - this node is a cross-community bridge._
+  _High betweenness centrality (0.062) - this node is a cross-community bridge._
 - **Why does `renderMarketStructureAnalysis()` connect `marketStructureRendering.ts` to `LiquidityLinePrimitive`, `cssColor`, `useTradeSetup2History.js`, `liquidity.js`, `Vegapunk Slimming Results (-86%)`, `tradeSetup2SnapshotIndicators.js`?**
-  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+  _High betweenness centrality (0.048) - this node is a cross-community bridge._
 - **Why does `File Separation: Algorithm vs Rendering` connect `Vegapunk Slimming Results (-86%)` to `marketStructureRendering.ts`?**
-  _High betweenness centrality (0.067) - this node is a cross-community bridge._
-- **What connects `props`, `definitions`, `CandleRow` to the rest of the system?**
+  _High betweenness centrality (0.047) - this node is a cross-community bridge._
+- **What connects `props`, `stages`, `DR_OUTCOME_LABELS` to the rest of the system?**
   _1524 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Dashboard.vue` be split into smaller, more focused modules?**
   _Cohesion score 0.012997444322745527 - nodes in this community are weakly interconnected._

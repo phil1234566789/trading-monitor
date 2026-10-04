@@ -20047,7 +20047,7 @@
       "file_type": "code",
       "norm_label": "rangeentrycrosstable()",
       "source_file": "src/simulationRunComparison.js",
-      "source_location": "L99"
+      "source_location": "L102"
     },
     {
       "id": "src_simulationruncomparison_runfunnel",
@@ -66664,7 +66664,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/simulationRunComparison.js",
-      "source_location": "L104",
+      "source_location": "L107",
       "weight": 1.0
     },
     {
@@ -144910,6 +144910,17 @@
     },
     {
       "source": "src_simulationruncomparison",
+      "target": "src_simulationruncomparison_rangeentrycrosstable",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/simulationRunComparison.js",
+      "source_location": "L102",
+      "weight": 1.0
+    },
+    {
+      "source": "src_simulationruncomparison",
       "target": "src_simulationruncomparison_filter_defaults",
       "relation": "contains",
       "_origin": "ast",
@@ -145038,17 +145049,6 @@
       "confidence_score": 1.0,
       "source_file": "src/simulationRunComparison.js",
       "source_location": "L91",
-      "weight": 1.0
-    },
-    {
-      "source": "src_simulationruncomparison",
-      "target": "src_simulationruncomparison_rangeentrycrosstable",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/simulationRunComparison.js",
-      "source_location": "L99",
       "weight": 1.0
     },
     {
@@ -173419,5 +173419,5 @@
       "source_file": "CLAUDE.md"
     }
   ],
-  "built_at_commit": "306dbc220605431580ab094189a0779120860fd3"
+  "built_at_commit": "834e1297a31f77e7a7e8bb38ba02e96d7a555a74"
 }
