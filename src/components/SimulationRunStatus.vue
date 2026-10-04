@@ -20,10 +20,6 @@ const h1Start = computed(() => {
 
 <template>
   <section class="run-status" aria-label="Lauf neu">
-    <div class="run-summary">
-      <strong>Lauf neu · {{ simulationRunStatusLabel(run) }}</strong>
-      <span>{{ (run.coverage?.instruments ?? []).map(item => item.instrument).join(', ') || 'Instrument nicht angegeben' }} · {{ at(run.from) }} – {{ at(run.to) }} · Berlin</span>
-    </div>
     <p v-if="run.status === 'running'" role="status" class="progress-label">
       {{ phaseLabels[progress.phase] ?? 'Auswertung läuft' }}<template v-if="progress.instrument"> · {{ progress.instrument }}</template>
       <template v-if="measurableProgress"> · {{ progress.completed }} / {{ progress.total }} {{ progress.phase === 'download' ? 'Instrumente' : 'Schritte' }}</template>
@@ -35,6 +31,7 @@ const h1Start = computed(() => {
     <p v-if="run.status === 'failed'" role="alert" class="failed">Der Lauf wurde nicht vollständig abgeschlossen. Gespeicherte Ergebnisse bilden nur den erreichten Stand ab.</p>
     <details>
       <summary>Datenumfang und Messgrenzen</summary>
+      <p><strong>Lauf neu · {{ simulationRunStatusLabel(run) }}</strong></p>
       <p>Angeforderter Zeitraum {{ at(run.from) }} – {{ at(run.to) }} (Ende exklusiv: der Endzeitpunkt zählt nicht mehr dazu).</p>
       <p>Datenstand {{ at(run.evaluatedAt) }} · Europe/Berlin</p>
       <p>H1-Start: {{ h1Start }}</p>
@@ -56,7 +53,6 @@ const h1Start = computed(() => {
 
 <style scoped>
 .run-status { margin-bottom: 20px; font-size: 12px; line-height: 1.6; color: #a5a9b4; }
-.run-summary { display: flex; flex-wrap: wrap; gap: 8px 20px; }
 strong { color: #d1d4dc; } p { margin: 8px 0; }
 progress { width: min(100%, 360px); accent-color: #71c8b3; }
 .failed { color: #ef5350; }
