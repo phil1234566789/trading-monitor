@@ -9,7 +9,7 @@ import SimulationRunStatus from '../components/SimulationRunStatus.vue';
 import SimulationComparisonFilters from '../components/SimulationComparisonFilters.vue';
 import SimulationComparisonMetrics from '../components/SimulationComparisonMetrics.vue';
 import SimulationRunQuality from '../components/SimulationRunQuality.vue';
-import SimulationSetupsTable from '../components/SimulationSetupsTable.vue';
+import SimulationDrList from '../components/SimulationDrList.vue';
 const route=useRoute(),router=useRouter();
 const filters=ref(comparisonFilters(route.query)),pins=ref([]);
 const repository=createSimulationRepository(supabase);
@@ -40,7 +40,7 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
         <p v-if="!current.groups.length" role="status" class="empty">Keine DRs für diese Filterauswahl.</p>
         <SimulationComparisonMetrics :current="current.results" :previous="previous.results" :compare="!!filters.compare" />
         <SimulationRunQuality :current="current" :previous="previous" :compare="!!filters.compare" />
-        <SimulationSetupsTable :repository="repository" :run-id="filters.run" :runs="runs" :instrument="filters.instrument" variant="wide" :results="current.results" />
+        <SimulationDrList :groups="current.groups" :results="current.results" />
       </template>
     </div>
   </main>
