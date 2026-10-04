@@ -22,6 +22,7 @@ const label=r=>`${r.configuration?.label ?? `${formatDatedTime(r.from)} – ${fo
     <label>Angepinnt<select :value="modelValue.pinned" @change="set('pinned',$event.target.value)"><option value="">Egal</option><option value="with">Nur angepinnt</option><option value="without">Ohne Pin</option></select></label>
     <label>Merkmal<select :value="modelValue.feature" @change="set('feature',$event.target.value)"><option value="">Alle</option><option v-for="f in features" :key="f.key" :value="f.key">{{ f.label }}</option></select></label>
     <label>Merkmalswert<select :value="modelValue.value" :disabled="!modelValue.feature" @change="set('value',$event.target.value)"><option value="">Egal</option><option v-for="(label,key) in FEATURE_VALUES" :key="key" :value="key">{{ label }}</option></select></label>
+    <p v-if="modelValue.stage === 'invalidated'">Historischer Stufenfilter: enthält auch Preisenden. Diese DRs sind nicht disqualifiziert; der gespeicherte Grund steht auf der Karte. Die Trichterzahl zählt nur Disqualifikationen.</p>
   </form>
 </template>
 <style scoped>

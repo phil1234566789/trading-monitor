@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue';
+import { simulationPinOutcomeLabel } from '../simulationPinPresentation.js';
 const props = defineProps({ open:Boolean, pins:Array, loading:Boolean, saving:Boolean, error:String });
 const emit = defineEmits(['close','remove','refresh']);
 const dialog = ref(null), confirmation = ref(null);
@@ -31,7 +32,7 @@ function removeConfirmed() {
       </div>
       <ul><li v-for="pin in pins" :key="pin.id">
         <strong><span class="flag">⚑</span> {{ label(pin) }} · {{ pin.simulationContext?.instrument }}</strong>
-        <p>{{ pin.simulationContext?.direction==='long'?'Long':'Short' }} · {{ pin.simulationContext?.entry?.time?.berlin ?? pin.simulationContext?.recognizedAt?.berlin }} · {{ pin.simulationContext?.outcome?.label }}</p>
+        <p>{{ pin.simulationContext?.direction==='long'?'Long':'Short' }} · {{ pin.simulationContext?.entry?.time?.berlin ?? pin.simulationContext?.recognizedAt?.berlin }} · {{ simulationPinOutcomeLabel(pin.simulationContext) }}</p>
         <p>{{ pin.note || 'Kein Anliegen eingetragen.' }}</p>
         <RouterLink v-if="pin.simulationContext?.chartLink" :to="pin.simulationContext.chartLink" target="_blank" rel="noopener noreferrer">Im Chart</RouterLink>
         <button @click="confirmation=[pin.id]">Pin entfernen</button>

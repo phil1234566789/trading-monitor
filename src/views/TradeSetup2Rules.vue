@@ -17,11 +17,11 @@
         <div><dt>C · M5-Trend (äußerster)</dt><dd>Der äußerste M5-Trend ab dem bekannten D1-Fraktal der Periode 4 ersetzt den H1-Trend. C muss in Setup-Richtung zeigen. Bei Gegenrichtung oder unbekanntem Trend wird abgebrochen, ohne D auszuwerten.</dd></div>
         <div><dt>D · M5-Trend (aktuell)</dt><dd>Die tiefste bestätigte M5-Strukturebene zum Erkennungszeitpunkt bestimmt den aktuellen Trend. Unbestätigte Nested-Kandidaten zählen nicht; ohne bestätigten Nested-Trend gilt der äußere Trend.</dd></div>
         <div><dt>E · Targets</dt><dd>Die bestehende Target-Auswahl bleibt erhalten. Targets gefunden bestätigt die DR; ohne Targets bleibt sie unbestätigt.</dd></div>
-        <div><dt>F · Anti-Confluences</dt><dd>Jede Regel speichert ihren Fundstatus und ihre Belege. Der Schalter „invalidates“ bestimmt, ob ein Fund die DR invalidiert oder nur beobachtet wird. Zum Start ist ausschließlich die H1-RSI-Gegendivergenz eingeschaltet: bullisch bei Short, bärisch bei Long. Ohne Fund ist die DR validiert; bei fehlenden Daten bleibt die Validierung offen.</dd></div>
+        <div><dt>F · Anti-Confluences</dt><dd>Jede Regel speichert ihren Fundstatus und ihre Belege. Der Schalter „invalidates“ bestimmt, ob ein Fund die DR disqualifiziert oder nur beobachtet wird. F und G werden aktuell nur beobachtet und disqualifizieren keine DR. Die H1-RSI-Gegendivergenz wird bullisch bei Short und bärisch bei Long erfasst.</dd></div>
         <div><dt>G · Confluences</dt><dd>Beobachtungen für die Statistik; ändern die DR-Stufe nicht.</dd></div>
         <div><dt>H · Entry finden</dt><dd>Entry-Modell 1 benötigt M5-BOS und M1-CHoCH ab dem Sweep in Setup-Richtung, den Retest eines passenden M5-OB und anschließend eine bestätigte gleichgerichtete M1-FVG. Der Entry liegt am Schluss ihrer Bestätigungskerze. Die Reihenfolge von CHoCH und BOS ist frei. Bullische Untertrends oder eine noch unbekannte M1-Strukturrichtung heben den Short-Verlauf nicht auf. Er endet erst bei einem M1-Schluss über dem Sweep-High (Long spiegelbildlich). Jede positive M1-FVG ist zulässig; pro OB zählt nur die erste nach seinem Retest (OB-Mitigation). Ein weiterer Entry benötigt einen danach neu bestätigten M5-OB mit eigenem Retest und erster M1-FVG. Handelszeiten, Session- und News-Sperren prüft das zentrale Gate unmittelbar vor jedem Entry.</dd></div>
       </dl>
-      <p><strong>Countertrend:</strong> C zeigt in Setup-Richtung und D dagegen. A bis E erfüllt bestätigt die Dealing Range; F entscheidet validiert oder invalidiert. Ein CHoCH ist dafür keine Bedingung. Die bestehende Preisinvalidierung bleibt wirksam.</p>
+      <p><strong>Countertrend:</strong> C zeigt in Setup-Richtung und D dagegen. A bis E erfüllt bestätigt die Dealing Range; F entscheidet validiert oder disqualifiziert. Ein CHoCH ist dafür keine Bedingung. Die bestehende Preisinvalidierung bleibt wirksam.</p>
       <p><strong>Trendfortführung:</strong> C und D zeigen in Setup-Richtung. Der Typ wird erkannt, der Pfad bricht mit „Typ Trendfortführung, noch nicht umgesetzt“ ab.</p>
       <p><strong>Abbruch:</strong> C zeigt gegen die Setup-Richtung oder ist unbekannt. Grund: „äußerster M5-Trend gegen Setup-Richtung“ beziehungsweise „M5-Trend unbekannt“.</p>
       <p>C und D werden am Bekannt-Zeitpunkt des Setups mit den bis dahin geschlossenen Kerzen ausgewertet. Spätere Replay-Kerzen ändern diese Typ-Prüfung nicht.</p>
@@ -56,12 +56,12 @@
             <tr><th scope="row">Unbestätigte Dealing Range</th><td>A, B und C sind nicht vollständig erfüllt; eine Bedingung fehlt oder ist unbekannt.</td><td>Gilt nicht als Trade Setup 2.0. Keine Aufnahme in Setupübersicht oder Setup-2.0-Statistik.</td><td>Weitere Entry-Prüfung bricht ab.</td></tr>
             <tr><th scope="row">Bestätigte Dealing Range</th><td>A, B und C sind erfüllt.</td><td>Als Setup erkannt und in die Statistik aufnehmen, auch ohne Entry.</td><td>Bestätigung allein ist keine Entry-Freigabe.</td></tr>
             <tr><th scope="row">Validierte Dealing Range</th><td>Zusätzlich zu ABC: Targets unter D bestimmbar und keine verbindlichen E-Showstopper.</td><td>Bestätigte Range mit bestandener Validierung.</td><td>Entry-Freigabe folgt als separate Prüfung.</td></tr>
-            <tr><th scope="row">Invalidierte Dealing Range</th><td>Bestätigte Range scheitert an der Validierung: Targets nicht bestimmbar oder ein verbindlich definierter E-Showstopper liegt vor.</td><td>Für Statistik und Diagnose sichtbar lassen, mit dem Grund.</td><td>Keine Entry-Freigabe.</td></tr>
+            <tr><th scope="row">Disqualifizierte Dealing Range</th><td>Bestätigte Range scheitert an der Validierung: Targets nicht bestimmbar oder ein verbindlich definierter E-Showstopper liegt vor.</td><td>Für Statistik und Diagnose sichtbar lassen, mit dem Grund.</td><td>Keine Entry-Freigabe.</td></tr>
           </tbody>
         </table>
       </div>
       <p><strong>Ungeprüft bleibt offen.</strong> Noch nicht geprüfte Validierungsbedingungen sind kein bestätigtes Scheitern. Aktuell gibt es unter E ausdrücklich keine Showstopper.</p>
-      <p>„Invalidiert“ bezeichnet hier das Ergebnis der Validierung. Ein späteres Ende der Marktidee durch T1 oder Preisinvalidierung wird separat betrachtet.</p>
+      <p>„disqualifiziert“ bezeichnet hier das Ergebnis der Validierung. Die DR-Ausgänge heißen „Invalidation vor T1“ und „T1 vor Invalidation“; sie sind keine Stufen. „T1 + BE“ ist ein Entry-Ausgang.</p>
     </section>
 
     <section id="abc" aria-labelledby="abc-title">
@@ -76,7 +76,7 @@
       </dl>
       <p><strong>Alle drei Bedingungen müssen erfüllt sein.</strong> Damit ist das Setup erkannt und soll auch ohne Entry in die Statistik aufgenommen werden. Fehlt eine Bedingung oder ist sie unbekannt, bricht die weitere Entry-Prüfung ab.</p>
       <p>Der M5-Trend kann beim Retracement gegenläufig sein. Eine spätere Drehung in Traderichtung nimmt die A/B-Bestätigung nicht zurück. Eine zwingende Gegenläufigkeit ist kein zusätzlich beschlossenes Gate.</p>
-      <aside class="implementation"><h3>Implementierungsstand</h3><p>Neue Läufe speichern nur vollständig bestätigte ABC-Ranges als Trade Setup 2.0. Die Statistik bietet Filter für validierte, invalidierte und bestätigte Ranges mit offener Validierung. Altstände bleiben mit ihren ursprünglichen Belegen separat zugänglich.</p></aside>
+      <aside class="implementation"><h3>Implementierungsstand</h3><p>Neue Läufe speichern nur vollständig bestätigte ABC-Ranges als Trade Setup 2.0. Die Statistik bietet Filter für validierte, disqualifizierte und bestätigte Ranges mit offener Validierung. Altstände bleiben mit ihren ursprünglichen Belegen separat zugänglich.</p></aside>
     </section>
 
     <section id="validierung" aria-labelledby="validierung-title">
@@ -85,8 +85,8 @@
       <p>Zusätzlich zu ABC müssen die Targets unter <strong>D bestimmbar</strong> sein und unter <strong>E dürfen keine Showstopper</strong> vorliegen. Diese Stufe bleibt von der anschließenden Entry-Freigabe getrennt.</p>
       <p><strong>Exakte Validierungsregel:</strong> Bestätigte Dealing Range (ABC erfüllt) + D erfüllt (Targets vorhanden) + keine Showstopper in E = valide Dealing Range. Weitere Checklistpunkte sind keine zusätzlichen Bedingungen dieser Validierungsstufe.</p>
       <p>Fehlende Targets müssen an der bestätigten Dealing Range sichtbar bleiben, einschließlich des Grunds. So lassen sich mögliche Algorithmusfehler prüfen.</p>
-      <p>Erfüllt eine bestätigte Range die Validierungsbedingungen nicht, ist sie invalidiert und erhält keine Entry-Freigabe. Sie bleibt für Diagnose und Statistik sichtbar.</p>
-      <aside class="implementation"><h3>Implementierungsstand</h3><p>D entscheidet in der neuen Version über die Validierung. Ein gefundenes T1 genügt; T2 bleibt optional. Eine erfolgte Zielsuche ohne zulässiges Target invalidiert die Range mit Diagnosegrund. Fehlende Prüfdaten lassen die Validierung offen. Neue Entries setzen eine validierte Range voraus.</p></aside>
+      <p>Erfüllt eine bestätigte Range die Validierungsbedingungen nicht, ist sie disqualifiziert und erhält keine Entry-Freigabe. Sie bleibt für Diagnose und Statistik sichtbar.</p>
+      <aside class="implementation"><h3>Implementierungsstand</h3><p>D entscheidet in der neuen Version über die Validierung. Ein gefundenes T1 genügt; T2 bleibt optional. Eine erfolgte Zielsuche ohne zulässiges Target disqualifiziert die Range mit Diagnosegrund. Fehlende Prüfdaten lassen die Validierung offen. Neue Entries setzen eine validierte Range voraus.</p></aside>
     </section>
 
     <section id="anti-confluences" aria-labelledby="anti-title">

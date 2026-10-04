@@ -5,8 +5,8 @@ import { simulationDateFilter, simulationEntryResult, simulationStatistics } fro
 import { simulationReviewFeatures } from './simulationReviewFeatures.js';
 import { COUNTERTREND_RANGE_COURSE_VERSION } from './countertrendLifecycle.js';
 
-export const DR_OUTCOME_LABELS = { t2: 'Lief bis T2', t1Only: 'Lief bis T1, nicht T2', invalidation: 'Lief in die Invalidierung',
-  open: 'Noch offen', t1Unknown: 'T1 erreicht · T2 nicht belegt', unknown: 'DR-Ausgang nicht belegt' };
+export const DR_OUTCOME_LABELS = { t2: 'T1 vor Invalidation · T2 erreicht', t1Only: 'T1 vor Invalidation · T2 nicht erreicht', invalidation: 'Invalidation vor T1',
+  open: 'Noch offen', t1Unknown: 'T1 vor Invalidation · T2 nicht belegt', unknown: 'DR-Ausgang nicht belegt' };
 export const SETUP_TYPE_LABELS = { countertrend: 'Countertrend', continuation: 'Trendfortführung', unknown: 'Typ nicht belegt' };
 export const FILTER_DEFAULTS = { run: '', compare: '', instrument: '', type: '', from: '', to: '', stage: '', entry: '', pinned: '', feature: '', value: '' };
 export function comparisonFilters(query) {
@@ -27,7 +27,7 @@ export function independentRangeOutcome(group) {
   let course = courses[0];
   const frozen = group.firstValidated.rangeCourse;
   const latest = group.latestCandidate?.checklist?.setup?.primary;
-  // Invalidierte Kandidaten speichern keinen rangeCourse mehr, aber den gleichen Preis-Lifecycle.
+  // Durch Preisende beendete Kandidaten speichern keinen rangeCourse mehr, aber den gleichen Preis-Lifecycle.
   if ((!course || latest?.lifecycle?.evaluatedAt > course.lifecycle?.evaluatedAt) && frozen?.version === COUNTERTREND_RANGE_COURSE_VERSION && latest?.lifecycle
     && latest.direction === frozen.direction && latest.invalidation === frozen.invalidation
     && latest.targetSelection?.selectedAt === frozen.selectedAt && latest.targetSelection?.target1?.price === frozen.target1

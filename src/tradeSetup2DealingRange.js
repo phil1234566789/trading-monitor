@@ -7,7 +7,7 @@ export const COUNTERTREND_VERSION = 'countertrend-abcd-v1';
 const knownVersion = version => [DEALING_RANGE_VERSION, COUNTERTREND_VERSION, COUNTERTREND_STAGE_VERSION].includes(version);
 export const DEALING_RANGE_LABELS = {
   unconfirmed: 'Unbestätigte Dealing Range', confirmed: 'Bestätigte Dealing Range · Validierung offen',
-  validated: 'Validierte Dealing Range', invalidated: 'Invalidierte Dealing Range',
+  validated: 'Validierte Dealing Range', invalidated: 'Disqualifizierte Dealing Range',
   legacy: 'Altstand · DR-Stufe nicht gespeichert',
 };
 
@@ -22,7 +22,7 @@ export function evaluateDealingRange(checklist, candidate = checklist?.setup?.pr
     if (checklist.ruleVersion !== COUNTERTREND_VERSION) return evaluateCountertrendDealingRange(checklist, candidate);
     const confirmed = checklist.status === 'ready' && candidate?.setupType === 'countertrend'
       && hasConfirmedChecklistAbc(candidate.checks) && candidate.checks.m5Trend?.status === 'passed';
-    // Validierung/Invalidierung der neuen Strategie sind noch nicht festgelegt.
+    // Validierung/Disqualifikation der neuen Strategie sind noch nicht festgelegt.
     // Vorhandene Targets bleiben Beobachtungen und erfinden keine neue DR-Stufe.
     return { version: COUNTERTREND_VERSION, model: 'countertrend', evaluatedAt: checklist.evaluatedAt,
       status: confirmed ? 'confirmed' : 'unconfirmed', reason: confirmed ? 'validationOpen' : candidate?.abortReason ?? 'abcIncomplete',
@@ -55,4 +55,12 @@ export function evaluateDealingRange(checklist, candidate = checklist?.setup?.pr
 // Altstände bleiben unklassifiziert; eine Anzeige darf keinen historischen Lauf umdeuten.
 export function savedDealingRangeStatus(snapshot) {
   return knownVersion(snapshot?.dealingRange?.version) ? snapshot.dealingRange.status : 'legacy';
+}
+
+// Der historische Status mischt Validierungsentscheidungen mit Preisenden; nur die Anzeige trennen.
+export function dealingRangeLabel(snapshot) {
+  const status = savedDealingRangeStatus(snapshot);
+  if (status === 'invalidated' && snapshot.dealingRange.reason === 'priceInvalidation')
+    return 'DR beendet · Invalidierungslevel erreicht';
+  return DEALING_RANGE_LABELS[status];
 }

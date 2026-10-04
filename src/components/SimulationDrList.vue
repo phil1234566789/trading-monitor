@@ -2,7 +2,7 @@
 import { ref,watch } from 'vue';
 import { formatDatedTime } from '../berlinTime.js';
 import { simulationChartLink } from '../tradeSetupSimulationStatistics.js';
-import { DEALING_RANGE_LABELS } from '../tradeSetup2DealingRange.js';
+import { dealingRangeLabel } from '../tradeSetup2DealingRange.js';
 import { SETUP_TYPE_LABELS,groupResults,variantMetrics } from '../simulationRunComparison.js';
 import { fmtR,pnlClass } from '../format.js';
 import SimulationFeatureChips from './SimulationFeatureChips.vue';
@@ -18,7 +18,7 @@ const summary=(g,v)=>variantMetrics(groupResults([g],props.results),v).totalR;
     <article v-for="group in groups.slice(0,limit)" :key="group.key" class="dr-card">
       <header tabindex="0" @contextmenu.prevent="emit('pin-menu',{kind:'simulation_dr',group},$event)">
         <div><h3><span v-if="isPinned(group)" class="pin-flag" aria-label="Angepinnt">⚑ </span>{{ group.direction==='long'?'Long':'Short' }} · {{ group.instrument }}</h3><span>{{ formatDatedTime(group.recognizedAt) }}</span></div>
-        <span class="chip">{{ SETUP_TYPE_LABELS[group.setupType] ?? group.setupType }}</span><span class="chip">{{ DEALING_RANGE_LABELS[group.stage] }}</span><span>{{ group.outcome.label }}</span><span>{{ group.entries.length }} Entries</span><span>Weit <b :class="pnlClass(summary(group,'wide'))">{{ fmtR(summary(group,'wide')) }}</b> · Eng <b :class="pnlClass(summary(group,'narrow'))">{{ fmtR(summary(group,'narrow')) }}</b></span>
+        <span class="chip">{{ SETUP_TYPE_LABELS[group.setupType] ?? group.setupType }}</span><span class="chip">{{ dealingRangeLabel(group.latestCandidate ?? group.snapshot) }}</span><span>{{ group.outcome.label }}</span><span>{{ group.entries.length }} Entries</span><span>Weit <b :class="pnlClass(summary(group,'wide'))">{{ fmtR(summary(group,'wide')) }}</b> · Eng <b :class="pnlClass(summary(group,'narrow'))">{{ fmtR(summary(group,'narrow')) }}</b></span>
         <RouterLink :to="simulationChartLink({...group.snapshot,variant:'wide'},group.snapshot.runId)" target="_blank" rel="noopener noreferrer">Im Chart</RouterLink>
         <button type="button" class="more" :aria-label="`Pin-Menü für ${group.instrument} DR ${formatDatedTime(group.recognizedAt)}`" @click="emit('pin-menu',{kind:'simulation_dr',group},$event)">…</button>
       </header>

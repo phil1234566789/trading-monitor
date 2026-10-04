@@ -18,12 +18,12 @@ describe('saved DR course after first causal validation', () => {
     for(const reason of ['invalidation','target1','both','missingHistory']) {
       const row=group({state:reason==='missingHistory'?'unknown':'ended',reason,endedAt:900,recognizedAt:1200});
       const html=await renderToString(createSSRApp(DealingRangeOutcome,{group:row}));
-      expect(html.includes('👍 Loss verhindert')).toBe(reason==='invalidation');
+      expect(html.includes('Kein Entry gespeichert')).toBe(reason==='invalidation');
       if(reason==='invalidation')expect(html).toContain('Kein simuliertes Trade-Ergebnis');
       row.entries=[{entry:{}}];
-      expect(await renderToString(createSSRApp(DealingRangeOutcome,{group:row}))).not.toContain('Loss verhindert');
+      expect(await renderToString(createSSRApp(DealingRangeOutcome,{group:row}))).not.toContain('Kein Entry gespeichert');
       row.entries=[]; row.snapshot.dealingRange.status='invalidated';
-      expect(await renderToString(createSSRApp(DealingRangeOutcome,{group:row}))).not.toContain('Loss verhindert');
+      expect(await renderToString(createSSRApp(DealingRangeOutcome,{group:row}))).not.toContain('Kein Entry gespeichert');
     }
   });
   it('tracks overnight T1 and invalidation separately from the last permitted review stand', () => {
@@ -107,7 +107,7 @@ describe('saved DR course after first causal validation', () => {
     expect(current.firstValidated.knownAt).toBe(1800);
     expect(savedRangeOutcome(current).status).toBe('unknown');
     const html=await renderToString(createSSRApp(DealingRangeOutcome,{group:group({state:'ended',reason:'target1',endedAt:900,recognizedAt:1200})}));
-    expect(html).toContain('Target T1 zuerst erreicht');
+    expect(html).toContain('T1 vor Invalidation');
     expect(html).toContain('T1 1,32');
     expect(html).toContain('Invalidierung 1,3');
     expect(html).not.toContain('Netto');

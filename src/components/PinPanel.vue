@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from "vue";
+import { simulationPinStageLabel, simulationPinOutcomeLabel } from "../simulationPinPresentation.js";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 
 // Pin-Kontext-Modal (Chat 2026-08-01) — "genau wie bei Metadaten" (Philip), daher derselbe
@@ -64,7 +65,7 @@ function onEntryClick(event, entry) {
         <div class="pin-panel-entry-header">⚑ {{ row.entry.kind === 'simulation_dr' ? 'Simulations-DR' : row.entry.kind === 'simulation_entry' ? 'Simulations-Entry' : 'Simulations-Checkpoint' }} · {{ row.entry.simulationContext?.instrument }}
           <button class="pin-panel-remove" aria-label="Simulations-Pin entfernen" @click="emit('remove',row.entry.id)">🗑</button>
         </div>
-        <div class="pin-panel-entry-prices">Lauf {{ row.entry.simulationRunId }} · {{ row.entry.simulationContext?.stage }} · {{ row.entry.simulationContext?.outcome?.label }}<br />{{ row.entry.simulationContext?.checkpoint?.label }} · {{ row.entry.simulationContext?.snapshotAt?.berlin }}</div>
+        <div class="pin-panel-entry-prices">Lauf {{ row.entry.simulationRunId }} · {{ simulationPinStageLabel(row.entry.simulationContext) }} · {{ simulationPinOutcomeLabel(row.entry.simulationContext) }}<br />{{ row.entry.simulationContext?.checkpoint?.label }} · {{ row.entry.simulationContext?.snapshotAt?.berlin }}</div>
         <RouterLink v-if="row.entry.simulationContext?.chartLink" :to="row.entry.simulationContext.chartLink" @click.stop>Simulationsstand im Chart</RouterLink>
       </template>
       <template v-else-if="row.entry.kind === 'ob_zone'">

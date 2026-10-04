@@ -4,7 +4,7 @@ import { comparisonTone } from '../simulationComparisonTone.js';
 import { runFunnel,rangeEntryCrossTable,variantMetrics } from '../simulationRunComparison.js';
 import { SIMULATION_OUTCOME_LABELS } from '../tradeSetupSimulationStatistics.js';
 const props=defineProps({current:Object,previous:Object,compare:Boolean});
-const stages={recognized:'Setups 1.0 erkannt*',confirmed:'Bestätigt',quality:{validated:'Validiert',disqualified:'Disqualifiziert'},invalidationBeforeT1:'Invalidierung vor T1',target1:'T1 vor Invalidierung',target2:'Davon T2 erreicht',withEntry:'DRs mit Entry',entries:'Entries'};
+const stages={recognized:'Setups 1.0 erkannt*',confirmed:'Bestätigt',quality:{validated:'Validiert',disqualified:'Disqualifiziert'},invalidationBeforeT1:'Invalidation vor T1',target1:'T1 vor Invalidation',target2:'Davon T2 erreicht',withEntry:'DRs mit Entry',entries:'Entries'};
 const runs=computed(()=>[...(props.compare?[{label:'Alt',data:props.previous}]:[]),{label:props.compare?'Neu':'Gewählter Lauf',data:props.current}].map(r=>({...r,funnel:runFunnel(r.data.groups,r.data.results)})));
 const funnelTone=(run,key)=>!props.compare || !['target1','target2'].includes(key)?'':run.label==='Alt'?'reference':comparisonTone(run.funnel[key],runs.value[0].funnel[key]);
 const outcomeCounts=(run,variant)=>variantMetrics(run.data.results,variant).counts;

@@ -1,5 +1,5 @@
 import {tradeSetup2Positions} from './tradeSetup2Positions.js';
-import {DEALING_RANGE_LABELS,savedDealingRangeStatus} from './tradeSetup2DealingRange.js';
+import {dealingRangeLabel} from './tradeSetup2DealingRange.js';
 
 // Kandidaten und Ausführungen teilen sich die Anzeigegrenze. Ein späterer Entry
 // ersetzt die Idee erst ab seiner Erkennung, auch beim Zurückspulen.
@@ -24,12 +24,12 @@ export function tradeSetup2HistoryItems(results,candidates,options) {
         if(Number.isFinite(selection[name]?.price))bounds.push({price:selection[name].price,label,styleKey:'tradeWin'});
     const lifecycle=primary?.lifecycle?.main ?? primary?.validity;
     const ended=lifecycle?.state==='ended'&&lifecycle.recognizedAt<=options.asOf;
-    const reason={invalidation:'invalidiert',target1:'T1 erreicht',both:'beendet, Reihenfolge unklar'}[lifecycle?.reason] ?? 'beendet';
+    const reason={invalidation:'Invalidation vor T1',target1:'T1 vor Invalidation',both:'beendet, Reihenfolge unklar'}[lifecycle?.reason] ?? 'beendet';
     bySetup.set(key,{id:`setup2:${c.runId}:${c.id}:candidate`,snapshotId:c.id,setupKey:key,runId:c.runId,
       instrument:c.instrument,direction:c.direction,kind:'candidate',sortTime:c.knownAt,
       labelTime:sweepKnown?primary.recognizedAt:c.knownAt,timeLabel:sweepKnown?'Sweep':'Stand',
       sweepPrice:Number.isFinite(primary?.sweep?.level?.price)?primary.sweep.level.price:null,
-      isOpen:false,candidateStatus:`ohne Entry · ${DEALING_RANGE_LABELS[savedDealingRangeStatus(c.snapshot ?? c)]}${ended?' · Marktidee '+reason:''}`,bounds,
+      isOpen:false,candidateStatus:`ohne Entry · ${dealingRangeLabel(c.snapshot ?? c)}${ended?' · Marktidee '+reason:''}`,bounds,
       fromTime:c.knownAt-60,toTime:Math.min(c.knownAt+1800,options.asOf-60)});
   }
   for(const entry of entries) {

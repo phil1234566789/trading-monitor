@@ -9,7 +9,7 @@ import { inactiveM1Checklist } from "../m1Checklist.js";
 import { usePreservedScroll } from "../composables/usePreservedScroll.js";
 import { entryChecklist } from "../m1Entry.js";
 import { useChecklistDisplay } from "../composables/useChecklistDisplay.js";
-import { DEALING_RANGE_LABELS } from "../tradeSetup2DealingRange.js";
+import { dealingRangeLabel } from "../tradeSetup2DealingRange.js";
 import { SETUP_TYPE_LABELS } from "../countertrendChecklist.js";
 
 const props = defineProps({
@@ -110,7 +110,7 @@ const checks = computed(() => definitions.value.map((definition, index) => {
       </div>
       <ChecklistStatusIcon v-if="!busy" v-bind="dataStatus" />
     </div>
-    <p v-if="state?.dealingRange" class="checklist-notice"><strong>{{ DEALING_RANGE_LABELS[state.dealingRange.status] }}</strong><br />{{ state.dealingRange.details?.join(' ') }}</p>
+    <p v-if="state?.dealingRange" class="checklist-notice"><strong>{{ dealingRangeLabel({ dealingRange: state.dealingRange }) }}</strong><br />{{ state.dealingRange.details?.join(' ') }}</p>
     <p v-if="state?.model === 'countertrend'" class="checklist-notice"><strong>Setup-Typ: {{ SETUP_TYPE_LABELS[state.setupType] }}</strong><br />{{ state.abortReason || 'C ist Pflicht · D bestimmt den Setup-Typ' }}</p>
     <p v-if="state?.error" class="checklist-notice" role="alert">{{ state.error }}</p>
     <p v-if="state?.tradeability === 'blocked'" class="checklist-not-tradeable" role="status">Nicht tradebar</p>

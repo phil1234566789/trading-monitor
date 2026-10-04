@@ -94,7 +94,7 @@ export function setupEntryConditions(snapshot) {
   add('active', checklist?.model==='countertrend' ? 'DR aktiv / Entry-Suche vor T1' : 'Setup noch nicht durch T1 oder Invalidierung beendet',
     searchEnded ? 'unmet' : validity?.state === 'active' ? 'passed' : validity?.state === 'ended' && known(validity.recognizedAt) ? 'unmet' : 'unknown',
     [searchEnded ? 'Entry-Suche nach T1 oder Lifecycle-Ende beendet.' : validity?.state === 'active' ? 'Am Bewertungsstand aktiv.' : validity?.state === 'ended' && known(validity.recognizedAt)
-      ? `Beendet: ${ { target1: 'T1 erreicht', target2:'T2 erreicht', entriesClosed:'alle Entries geschlossen', invalidation: 'invalidiert', both: 'T1 und Invalidierung' }[validity.reason] ?? 'Grund unbekannt' }.`
+      ? `Beendet: ${ { target1: 'T1 vor Invalidation', target2:'T2 erreicht', entriesClosed:'alle Entries geschlossen', invalidation: 'Invalidation vor T1', both: 'T1 und Invalidierung' }[validity.reason] ?? 'Grund unbekannt' }.`
       : 'Gültigkeit nicht abschließend gespeichert. Nur ein bestätigtes Ende sperrt die M1-Auswertung.']);
   const anchor = checks.m5Trend?.m1Anchor;
   add('anchor', 'Eindeutiger M5-Anker für die M1-P5-Struktur', known(anchor?.recognizedAt) ? 'passed' : 'unknown',

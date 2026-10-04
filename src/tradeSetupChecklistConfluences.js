@@ -159,7 +159,7 @@ export function evaluateChecklistConfluences({ evaluatedAt, direction, instrumen
   antiConfluences.explanation = 'Bewertet wird nur die H1-Gegendivergenz im geschlossenen Datenstand. Sweep-/OB-Zuordnung und Stärkevergleich sind zurückgestellt; keine Gesamtfreigabe.';
   if (counterDivergence) {
     const d = counterDivergence;
-    antiConfluences.explanation += ` ${H1_COUNTER_DIVERGENCE_RULE.invalidates ? 'Invalidierendes Gegenargument' : 'Nur Beobachtung'}: ${formatDatedTime(d.fromTime)} → ${formatDatedTime(d.toTime)}; RSI ${d.fromRsi.toFixed(1)} → ${d.toRsi.toFixed(1)}; bestätigt ${formatDatedTime(d.recognizedAt)} (Europe/Berlin).`;
+    antiConfluences.explanation += ` ${H1_COUNTER_DIVERGENCE_RULE.invalidates ? 'Disqualifizierendes Gegenargument' : 'Nur Beobachtung'}: ${formatDatedTime(d.fromTime)} → ${formatDatedTime(d.toTime)}; RSI ${d.fromRsi.toFixed(1)} → ${d.toRsi.toFixed(1)}; bestätigt ${formatDatedTime(d.recognizedAt)} (Europe/Berlin).`;
   } else if (antiConfluences.divergences.status === 'unknown') {
     antiConfluences.explanation += ' H1-Daten fehlen oder die Historie reicht nicht.';
   }

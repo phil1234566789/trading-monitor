@@ -40,7 +40,7 @@ export function observationRuleDetails(rules) {
   return rules.map(rule => {
     const times = rule.evidence.filter(e => Number.isFinite(e.fromTime) && Number.isFinite(e.toTime))
       .map(e => `${formatBerlinTime(e.fromTime)} → ${formatBerlinTime(e.toTime)}`);
-    return `${rule.label}: ${OBSERVATION_STATUS_LABELS[rule.status] ?? OBSERVATION_STATUS_LABELS.unknown} · ${rule.invalidates ? 'invalidiert bei Fund' : 'nur Beobachtung'}${times.length ? ` · ${times.join('; ')}` : ''}`;
+    return `${rule.label}: ${OBSERVATION_STATUS_LABELS[rule.status] ?? OBSERVATION_STATUS_LABELS.unknown} · ${rule.invalidates ? 'disqualifiziert bei Fund' : 'nur Beobachtung'}${times.length ? ` · ${times.join('; ')}` : ''}`;
   });
 }
 

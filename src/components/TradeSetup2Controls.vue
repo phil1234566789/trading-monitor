@@ -1,7 +1,7 @@
 <script setup>
 import {formatDatedTime} from '../berlinTime.js';
 import {fmtPrice,pricePrecisionForInstrument} from '../format.js';
-import {DEALING_RANGE_LABELS,savedDealingRangeStatus} from '../tradeSetup2DealingRange.js';
+import {dealingRangeLabel} from '../tradeSetup2DealingRange.js';
 defineProps({positions:Array,selected:Object,loading:Boolean,status:String,error:String,snapshotView:Boolean,m1Status:String,indicatorStatus:String});
 const emit=defineEmits(['select','close','refresh']);
 function choose(event,positions){const p=positions.find(p=>p.id===event.target.value);if(p)emit('select',p.snapshotId,p.runId);}
@@ -17,7 +17,7 @@ function choose(event,positions){const p=positions.find(p=>p.id===event.target.v
     <button v-else-if="selected" @click="emit('close')">Zur Übersicht</button>
     <button v-else :disabled="loading" @click="emit('refresh')">↻</button>
     <small v-if="selected">Gespeicherter Stand: {{ formatDatedTime(selected.knownAt) }} Uhr{{ selected.entry?'':' · ohne Entry · Historie' }}</small>
-    <small v-if="selected">{{ DEALING_RANGE_LABELS[savedDealingRangeStatus(selected)] }}</small>
+    <small v-if="selected">{{ dealingRangeLabel(selected) }}</small>
     <button v-if="snapshotView" :disabled="loading" @click="emit('refresh')">Ergebnis aktualisieren</button>
     <small v-else role="status">{{ loading ? status : status || 'Gespeicherte Setups · Details per Klick' }}</small>
     <span v-if="error" role="alert">{{ error }}</span>

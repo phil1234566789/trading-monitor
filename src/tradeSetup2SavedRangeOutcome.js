@@ -29,7 +29,7 @@ export function savedRangeOutcome(group) {
     if (!Number.isFinite(main.endedAt) || !Number.isFinite(main.recognizedAt) || main.recognizedAt > result.through) return result;
     // Vor der ersten gespeicherten Validierung erreichte Levels sind kein weiterer DR-Verlauf.
     if (main.endedAt < result.from) return { ...result, reason: 'Gespeichertes Ereignis liegt vor der Validierung; weiterer Verlauf nicht ausgewertet.' };
-    const label = { target1: 'Target T1 zuerst erreicht', invalidation: 'Invalidierung zuerst erreicht', both: 'Uneindeutig · T1 und Invalidierung in derselben M5-Kerze' }[main.reason];
+    const label = { target1: 'T1 vor Invalidation', invalidation: 'Invalidation vor T1', both: 'Uneindeutig · T1 und Invalidierung in derselben M5-Kerze' }[main.reason];
     return label ? { ...result, status: main.reason === 'both' ? 'ambiguous' : main.reason, label,
       recognizedAt: main.recognizedAt, reason: null } : result;
   }

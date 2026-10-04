@@ -25,8 +25,8 @@ it('applies one shared limit per direction after setup deduplication',()=>{
 });
 it('labels historical lifecycle without showing future invalidation',()=>{
   const c=candidate('s',300,{validity:{state:'ended',reason:'invalidation',recognizedAt:600}});
-  expect(tradeSetup2HistoryItems([],[c],options)[0].candidateStatus).toContain('invalidiert');
-  expect(tradeSetup2HistoryItems([],[c],{...options,asOf:599})[0].candidateStatus).not.toContain('invalidiert');
+  expect(tradeSetup2HistoryItems([],[c],options)[0].candidateStatus).toContain('Invalidation vor T1');
+  expect(tradeSetup2HistoryItems([],[c],{...options,asOf:599})[0].candidateStatus).not.toContain('Invalidation vor T1');
 });
 it('labels the saved sweep time separately from snapshot ordering and visibility',()=>{
   const c=candidate('s',600,{recognizedAt:120,sweep:{level:{price:1.23456}}});
