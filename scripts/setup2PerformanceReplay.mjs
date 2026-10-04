@@ -58,7 +58,7 @@ for(let repeat=0;repeat<Number(options.repeat??3);repeat++){
   const result={snapshots,records},resultHash=hash(result);
   if(repeat===0)await writeFile(path.join(directory,'results.json'),JSON.stringify(result));
   if(results.some(r=>r.hash!==resultHash))throw new Error('Non-deterministic replay');
-  results.push({wallMs,cpuMs:(elapsedCpu.user+elapsedCpu.system)/1000,hash:resultHash,entries:records.map(r=>r.snapshot.knownAt),functions:profile?.functions,memo:profile?.memo,memos:profile?.memos});
+  results.push({wallMs,cpuMs:(elapsedCpu.user+elapsedCpu.system)/1000,hash:resultHash,entries:records.map(r=>r.snapshot.knownAt),functions:profile?.functions,memo:profile?.memo,memos:profile?.memos,detectors:profile?.detectors});
   await writeFile(path.join(directory,'measurements.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results.at(-1)));
 }
 delete globalThis.__setup2Profile;

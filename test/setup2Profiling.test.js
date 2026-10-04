@@ -25,6 +25,7 @@ it('profiles nested functions and memo hits without changing values',async()=>{
     expect(profile.memo).toEqual({hits:1,misses:1});
     expect(profile.functions.closedChecklistCandles.calls).toBe(1);
     expect(profile.functions.detectIncrementalOrderBlocks.calls).toBe(2);
+    expect(profile.detectors).toEqual([{id:0,timeframe:'5m',calls:2,firstPrefix:0,rewinds:0,lastPrefix:0}]);
   }finally{delete globalThis.__setup2Profile;}
 });
 
