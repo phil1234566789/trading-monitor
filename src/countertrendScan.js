@@ -12,6 +12,7 @@ import { markIgnoredCandles } from './sessionOccurrences.js';
 import { berlinOffsetMinutes } from './berlinTime.js';
 import { m1ScanPrefixStart } from './m1ScanPrefix.js';
 import { candleTimeIndex } from './candleTimeIndex.js';
+import { createClosedCandlePrefix } from './closedCandlePrefix.js';
 import { createSetup2Memo,finalObservation } from './setup2Memo.js';
 import { entryModel1FvgAt } from './entryModel1Progress.js';
 
@@ -27,6 +28,7 @@ export async function scanCountertrendWindow(input) {
   const marked=rows=>markIgnoredCandles(ordered(rows),input.sessionConfigs?.filter(s=>s.instrument===instrument) ?? [],
     sec=>berlinOffsetMinutes(sec*1000));
   const m5=marked(input.m5Candles),h1=ordered(input.h1Candles);
+  const closedM5At=createClosedCandlePrefix(m5,300);
   let m1=marked(input.m1Candles),loadedFrom=Infinity;
   const snapshots=[],entries=[...(input.existingEntries ?? [])],saved=new Map(),seen=new Set(entries.map(s=>s.entry.id));
   const classificationCache=new Map(),closeReactionCache=createCloseReactionCache(),m1Cache=createCloseReactionCache();
@@ -77,7 +79,7 @@ export async function scanCountertrendWindow(input) {
     });
     const primary=candidates[0] ?? base.setup.primary;
     const result={...base,evaluatedAt:at,checks:primary?.checks ?? base.checks,
-      setup:{...base.setup,primary,candidates},context:{...base.context,evaluatedAt:at,m5Candles:m5.filter(c=>c.time+300<=at)}};
+      setup:{...base.setup,primary,candidates},context:{...base.context,evaluatedAt:at,m5Candles:closedM5At(at)}};
     result.dealingRange=evaluateDealingRange(result);
     return result;
   };

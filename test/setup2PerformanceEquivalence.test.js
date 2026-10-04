@@ -6,6 +6,7 @@ import {evaluateChecklistM5} from '../src/tradeSetupChecklistM5.js';
 import fixture from './fixtures/gbpusd-m5-cd-97-105.json';
 import {orderBlockMitigationFvg} from '../src/orderBlockMitigation.js';
 import {m1ScanPrefix,m1ScanPrefixStart} from '../src/m1ScanPrefix.js';
+import {createClosedCandlePrefix} from '../src/closedCandlePrefix.js';
 
 const previousClosed=(rows,duration,at)=>rows.filter(c=>Number.isFinite(c.time)&&c.time+duration<=at).slice().sort((a,b)=>a.time-b.time);
 function randomCandles(seed,count){
@@ -18,6 +19,13 @@ function randomCandles(seed,count){
   });
 }
 describe('Performance H exact prefix equivalence',()=>{
+  it('reuses only identical closed prefixes, including rewind and gaps',()=>{
+    const rows=randomCandles(7,80),prefixAt=createClosedCandlePrefix(rows,300);
+    for(const at of [100000,100300,100599,101201,120000,105000,105299]){
+      expect(prefixAt(at)).toEqual(previousClosed(rows,300,at));
+      expect(prefixAt(at+0.01)).toBe(prefixAt(at));
+    }
+  });
   it('indexed FVG prefilter preserves slices, gaps and ignored candles',()=>{
     for(let seed=1;seed<=12;seed++){
       const rows=randomCandles(seed,100).map((c,i)=>({...c,time:100000+i*60}));
