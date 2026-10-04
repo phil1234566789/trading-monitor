@@ -25,11 +25,11 @@ const LOWER_TF_MIN_GAP_PIPS = { "1m": 1, "3m": 1, "5m": 0.5 };
 
 // HTF (1H/4H) Pip-Minimum NUR für Forex (Bug-Report Philip 2026-07-30: eine 4,5-Pip-1H-FVG bei
 // EURUSD wurde von der 0,05%-Prozent-Schwelle verschluckt, ~5,7 Pip bei diesem Kurs nötig) — nicht
-// einfach an die Timeframe gehängt wie bei LOWER_TF_LABELS, sondern über ein explizites isForex-
-// Flag (historisch: musste früher auch für BTCs ganz anderes Kursniveau unterscheidbar bleiben,
-// siehe Git-Historie — heute läuft ausschließlich Forex durch diese Funktion, das Flag bleibt
-// trotzdem explizit statt aus der Timeframe abgeleitet, da eine zukünftige Nicht-Forex-
-// Instrument-Zone sonst stillschweigend ein für sie bedeutungsloses Pip-Minimum bekäme).
+// einfach an die Timeframe gehängt wie bei LOWER_TF_LABELS, sondern über ein explizites isForex-Flag
+// (historisch: musste früher auch für BTCs ganz anderes Kursniveau unterscheidbar bleiben, siehe
+// Git-Historie — heute läuft ausschließlich Forex durch diese Funktion, das Flag bleibt trotzdem
+// explizit statt aus der Timeframe abgeleitet, da eine zukünftige Nicht-Forex-Instrument-Zone sonst
+// stillschweigend ein für sie bedeutungsloses Pip-Minimum bekäme).
 const HTF_FOREX_LABELS = new Set(["1H", "4H"]);
 // 1H von 4 auf 1.5 gesenkt (Bug-Report Philip 2026-08-11: eine 1,5-Pip-1H-FVG bei GBPUSD am 10.08.
 // 07:00 wurde vom alten 4-Pip-Minimum verschluckt). 4H von 8 auf 4 gesenkt: 8 Pip lag sogar ueber
@@ -57,7 +57,12 @@ const GAP_EPSILON = 1e-9;
 // isForex default true, weil bislang jeder Aufrufer entweder garantiert Forex ist (detectSetupObs,
 // die Frontend-Forex-Zweige) oder das Flag explizit selbst setzt (poi-watcher, s.o.).
 export function detectOrderBlocks(candles, timeframe, isForex = true, minGapOverride = null) {
-  const zones = [];
+  const state=orderBlockState(timeframe,isForex,minGapOverride);
+  advanceOrderBlocks(candles,state,3);
+  return orderBlockSnapshot(candles,state);
+}
+
+export function orderBlockState(timeframe,isForex,minGapOverride) {
   const isLowerTf = LOWER_TF_LABELS.has(timeframe);
   const isHtfForexPip = isForex && HTF_FOREX_LABELS.has(timeframe);
   // Gold-H1-Test: absoluter Preisabstand statt einer impliziten Forex-Pip-Umrechnung.
@@ -67,7 +72,12 @@ export function detectOrderBlocks(candles, timeframe, isForex = true, minGapOver
       ? HTF_FOREX_MIN_GAP_PIPS[timeframe] * PIP_SIZE
       : null);
 
-  for (let i = 3; i < candles.length; i++) {
+  return {zones:[],isLowerTf,minGapAbs};
+}
+
+export function advanceOrderBlocks(candles,state,from) {
+  const {zones,isLowerTf,minGapAbs}=state;
+  for (let i = Math.max(3,from); i < candles.length; i++) {
     const c1 = candles[i - 2];
     const c2 = candles[i - 1];
     const cur = candles[i];
@@ -132,9 +142,7 @@ export function detectOrderBlocks(candles, timeframe, isForex = true, minGapOver
       // Einfache Preisüberschreitung invalidiert (Wick genügt, kein Kerzenschluss nötig) — anders
       // als bei einem LQ-Sweep, wo ein Wick über/unter das Level plus schnelle Rückkehr GERADE FÜR
       // den Sweep spricht (Philip 05.09.2026: eine OB verliert bei jeder Überschreitung sämtliche
-      // Relevanz, unabhängig davon ob die Kerze wieder zurückschließt). Dritte Kopie derselben
-      // Funktion (siehe Kopfkommentar) — bei Änderungen IMMER auch src/orderBlockDetection.js UND
-      // _shared/orderBlocks.ts nachziehen.
+      // Relevanz, unabhängig davon ob die Kerze wieder zurückschließt).
       if (z.dir === 1 && cur.low < z.bottom) {
         z.invalidated = true;
         z.endTime = cur.time; // Box soll die invalidierende Kerze noch einschliessen
@@ -153,14 +161,16 @@ export function detectOrderBlocks(candles, timeframe, isForex = true, minGapOver
     }
   }
 
+}
+
+export function orderBlockSnapshot(candles,state) {
+  const {isLowerTf}=state,zones=state.zones.map(z=>({...z}));
   // "Retest bestätigt" (siehe orderblöcke.md#retest-status, Philip 05.09.2026) — nur für touched &&
   // !invalidated relevant. Lower-TF (M1/M3/M5): eine gleichgerichtete FVG entsteht NACH dem Touch
   // (z.endTime, das bei touched-Zonen auf den Touch-Zeitpunkt eingefroren ist) — die Reaktion hat
   // sich in einem eigenen Impuls entladen. HTF (1H/4H): eine spätere Kerze DERSELBEN Timeframe
   // schließt komplett außerhalb der Zone — kein FVG-Nachweis nötig/üblich auf HTF, ein sauberer
-  // Kerzenschluss reicht als Beleg für eine abgeschlossene, entschiedene Reaktion. Dritte Kopie
-  // derselben Funktion (siehe Kopfkommentar) — bei Änderungen IMMER auch src/orderBlockDetection.js
-  // UND _shared/orderBlocks.ts nachziehen.
+  // Kerzenschluss reicht als Beleg für eine abgeschlossene, entschiedene Reaktion.
   for (const z of zones) {
     if (!z.touched || z.invalidated) continue;
     if (isLowerTf) {
@@ -178,3 +188,4 @@ export function detectOrderBlocks(candles, timeframe, isForex = true, minGapOver
 
   return zones;
 }
+

@@ -7,11 +7,11 @@ export function setup2ProfilingPlugin() {
   return {name:'setup2-profiling',renderChunk(code){
     const tree=this.parse(code),edits=[];
     function visit(node,parent){
-      const name=node.type==='FunctionDeclaration'?node.id?.name:
+      const name=['FunctionDeclaration','FunctionExpression'].includes(node.type)?node.id?.name:
         node.type==='ArrowFunctionExpression'&&parent?.type==='VariableDeclarator'?parent.id.name:null;
       if(names.has(name)&&node.body?.type==='BlockStatement'
         && !node.body.body.some(s=>s.type==='VariableDeclaration'&&s.declarations.some(d=>d.id.name==='__h'))){
-        const args=node.type==='FunctionDeclaration'?'arguments': '[at,m5]';
+        const args=node.type==='ArrowFunctionExpression'?'[at,m5]':'arguments';
         edits.push([node.body.start+1,`const __h=globalThis.__setup2Profile;const __t=__h?.start(${JSON.stringify(name)},${args});try{`]);
         edits.push([node.body.end-1,'}finally{if(__h)__h.end(__t);}']);
       }

@@ -1,4 +1,5 @@
-import { detectOrderBlocks,createIncrementalOrderBlockDetector } from './orderBlockDetection.js';
+import { detectOrderBlocks } from './orderBlockDetection.js';
+import { createIncrementalOrderBlockDetector } from './incrementalOrderBlocks.js';
 import { orderBlockRecognitionTimes } from './orderBlockRecognitionTime.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { evaluateChecklistM5 } from './tradeSetupChecklistM5.js';

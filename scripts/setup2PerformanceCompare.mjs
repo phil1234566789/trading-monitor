@@ -2,6 +2,7 @@ import {readFile,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
+import {simulationStatistics} from '../src/tradeSetupSimulationStatistics.js';
 
 const [baseline,replay]=process.argv.slice(2);
 if(!baseline||!replay)throw new Error('Provide baseline and replay directories');
@@ -14,6 +15,15 @@ else{
   assert.deepEqual(after.snapshots.filter(s=>!s.entry),await read(baseline,'GBPUSD-setups.json'));
   assert.equal(after.records.length,before.entries);
   assert.equal(new Set(after.snapshots.map(s=>s.setupKey)).size,before.DRs);
+  const outcomes=after.records.flatMap(r=>r.outcomes),summary={DRs:before.DRs,entries:after.records.length};
+  for(const variant of ['wide','narrow']){
+    summary[variant]={};
+    for(const basis of ['gross','net']){
+      summary[variant][basis]=simulationStatistics(outcomes,variant,basis,1);
+      assert.deepEqual(summary[variant][basis],before[variant][basis]);
+    }
+  }
+  await writeFile(path.join(replay,'summary-comparison.json'),JSON.stringify(summary,null,2));
 }
 const result={identical:true,entries:after.records.length,
   dealingRanges:new Set(after.snapshots.map(s=>s.setupKey)).size,

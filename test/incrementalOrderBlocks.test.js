@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest';
-import {createIncrementalOrderBlockDetector} from '../src/orderBlockDetection.js';
+import {createIncrementalOrderBlockDetector} from '../src/incrementalOrderBlocks.js';
 import {detectOrderBlocks as before} from './fixtures/orderBlockDetectionBeforePerformanceH.js';
 
 function candles(seed){

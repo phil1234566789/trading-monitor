@@ -1,5 +1,8 @@
 import {describe,it,expect} from 'vitest';
-import {detectOrderBlocks,createIncrementalOrderBlockDetector} from '../src/orderBlockDetection.js';
+import {detectOrderBlocks} from '../src/orderBlockDetection.js';
+import {createIncrementalOrderBlockDetector} from '../src/incrementalOrderBlocks.js';
+import {detectOrderBlocks as mcpOrderBlocks} from '../supabase/functions/trading-monitor-mcp/orderBlockDetection.js';
+import {detectOrderBlocks as edgeOrderBlocks} from '../supabase/functions/_shared/orderBlocks.ts';
 import {detectOrderBlocks as previousOrderBlocks} from './fixtures/orderBlockDetectionBeforePerformanceH.js';
 import {closedChecklistCandles} from '../src/tradeSetupChecklistTimeBasis.js';
 import {evaluateChecklistM5} from '../src/tradeSetupChecklistM5.js';
@@ -43,6 +46,8 @@ describe('Performance H exact prefix equivalence',()=>{
       for(let end=0;end<=rows.length;end++){
         const prefix=rows.slice(0,end),at=100000+end*300;
         expect(detectOrderBlocks(prefix,'5m')).toEqual(previousOrderBlocks(prefix,'5m'));
+        expect(mcpOrderBlocks(prefix,'5m')).toEqual(previousOrderBlocks(prefix,'5m'));
+        expect(edgeOrderBlocks(prefix,'5m')).toEqual(previousOrderBlocks(prefix,'5m'));
         expect(closedChecklistCandles(prefix,'5m',at)).toEqual(previousClosed(prefix,300,at));
       }
       for(const rowsVariant of [rows.toReversed(),[...rows,{time:NaN}],[...rows,rows[2]]])

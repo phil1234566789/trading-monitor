@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 
 const options=Object.fromEntries(process.argv.slice(2).map(s=>s.replace(/^--/,'').split(/=(.*)/s).slice(0,2)));
 if(!options.output)throw new Error('Fresh --output required');
+if(options.case&&!['B','C','D','A3'].includes(options.case))throw new Error('Unknown benchmark case');
 const directory=path.resolve(options.output);await mkdir(directory,{recursive:false});
 const input=path.join(directory,'entry.mjs');
 const source=f=>JSON.stringify(path.resolve(f).replaceAll('\\','/'));
@@ -13,6 +14,7 @@ await writeFile(input,[`export * from ${source('src/m1ScanPrefix.js')};`,
   `export * from ${source('src/candleTimeIndex.js')};`,`export * from ${source('src/orderBlockMitigation.js')};`,
   `export * from ${source('src/closedCandlePrefix.js')};`,
   `export * from ${source('src/orderBlockDetection.js')};`,
+  `export * from ${source('src/incrementalOrderBlocks.js')};`,
   `export {detectOrderBlocks as previousOrderBlocks} from ${source('test/fixtures/orderBlockDetectionBeforePerformanceH.js')};`,
   `export * from ${source('src/tradeSetupChecklistTimeBasis.js')};`].join('\n'));
 const bundle=await rolldown({input,platform:'node'}),generated=await bundle.generate({format:'esm'});await bundle.close();
