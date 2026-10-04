@@ -68,6 +68,8 @@ export interface TradeSetupParams {
 // vormals in poi-watcher/index.ts dupliziert, jetzt hierher gezogen, weil get_data_snapshot
 // (trading-monitor-mcp) dieselbe Live-Erkennung mit denselben Werten braucht (DRY innerhalb
 // derselben Deno-Runtime, Task "Live-Trade-Setup-Erkennung serverseitig für Lana", 2026-09-05).
+// Bei Regeländerungen beide Detektorkopien versionieren; Herkunft bleibt beim ersten Insert.
+export const TRADE_SETUP_DETECTOR_VERSION = 'setup1-fxcm-spread-ignore-v1';
 export const TRADE_SETUP_M5_FRACTAL_PERIOD = 5; // liqM5Period
 export const TRADE_SETUP_H1_FRACTAL_PERIOD = 10; // liqH1Period — bewusst ANDERS als LIQUIDITY_FRACTAL_PERIOD (eigene 1H-Notification, andere Abstimmung)
 export const TRADE_SETUP_PIP_SIZE = 0.0001; // gilt für beide FX-Paare (GBPUSD/EURUSD)

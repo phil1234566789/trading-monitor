@@ -2,6 +2,8 @@ import { detectLiquidityLevels, type LiquidityLevel } from "../../_shared/liquid
 import { isWithinTradingWindows, type TradingWindows } from "../../_shared/tradingHoursGate.ts";
 import { detectSetupObs, detectTradeSetup, DEFAULT_TRADE_SETUP_PARAMS, TRADE_SETUP_M5_FRACTAL_PERIOD, TRADE_SETUP_H1_FRACTAL_PERIOD, type TradeSetupParams } from "../../_shared/tradeSetup.ts";
 export { DEFAULT_TRADE_SETUP_PARAMS, TRADE_SETUP_M5_FRACTAL_PERIOD, TRADE_SETUP_H1_FRACTAL_PERIOD };
+export { TRADE_SETUP_DETECTOR_VERSION } from '../../_shared/tradeSetup.ts';
+export { setup1Configuration, tradeSetupProvenance } from '../../_shared/tradeSetupProvenance.js';
 export { markIgnored } from "../../_shared/ignoredCandles.ts";
 export { strategyDistance, obMinimum } from "../../_shared/instrumentConfig.js";
 export const M5_CANDLE_LIMIT = 300;

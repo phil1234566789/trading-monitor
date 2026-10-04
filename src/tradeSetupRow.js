@@ -29,6 +29,10 @@ export function tradeSetupFromRow(row) {
   const eigenesFraktal = row.fractal_price !== row.ls_price || row.fractal_pivot_time !== row.ls_pivot_time;
   return {
     instrument: row.instrument,
+    source: row.source ?? null,
+    detectorVersion: row.detector_version ?? null,
+    configHash: row.config_hash ?? null,
+    inputSetId: row.input_set_id ?? null,
     dir,
     label: dir === 1 ? "Short" : "Long",
     // Die Historie-Nummerierung existiert nur für die Live-Erkennung (siehe computeTradeSetups) —

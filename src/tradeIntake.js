@@ -1,5 +1,6 @@
 import { supabase } from "./supabaseClient.js";
-import { deriveSetupEntryInvalidation } from "./tradeSetup.js";
+import { deriveSetupEntryInvalidation, TRADE_SETUP_DETECTOR_VERSION } from "./tradeSetup.js";
+import { tradeSetupProvenance } from '../supabase/functions/_shared/tradeSetupProvenance.js';
 import { tradeSetupFromRow } from "./tradeSetups.js";
 
 // "Setup als Trade übernehmen" (Chat 2026-07-27, Trade-Modus) — verbindet einen im Chart
@@ -48,8 +49,8 @@ async function findMatchingTradeSetupId(instrument, direction, obStartTimeSec) {
 // (Task "Pin-Kontext: live erkannte Trade-Setup-Box pinnen können") — bisher konnte man nur ein
 // bereits verlinktes/gepinntes Setup anpinnen (findMatchingTradeSetupId liefert dann null, poi-
 // watcher hinkt bis zu 5 Minuten hinterher). Legt die trade_setups-Zeile bei Bedarf per Upsert
-// selbst an, exakt dieselben Spalten/derselbe onConflict-Schlüssel wie poi-watcher/index.ts (die
-// Zeile ist danach ununterscheidbar von einer durch poi-watcher persistierten). ob_zone_id läuft
+// selbst an, mit demselben onConflict-Schlüssel wie poi-watcher/index.ts; source unterscheidet
+// die manuelle Erstanlage. ob_zone_id läuft
 // über dieselbe findOrCreateObZoneId-Funktion wie poi-watcher (Timeframe immer "5M", siehe
 // detectSetupObs()). setup = ein Eintrag aus tradeSetupsMetadata (usePriceChartTradeSetups.js).
 export async function findOrCreateTradeSetupId({ instrument, direction, setup }) {
@@ -65,6 +66,8 @@ export async function findOrCreateTradeSetupId({ instrument, direction, setup })
     .from("trade_setups")
     .upsert(
       {
+        ...(await tradeSetupProvenance({ source: 'manual', detectorVersion: setup.detectorVersion ?? TRADE_SETUP_DETECTOR_VERSION,
+          configuration: setup.detectionConfiguration ?? null })),
         instrument,
         direction,
         fractal_price: setup.fractal.price,

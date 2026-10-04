@@ -21,7 +21,8 @@ import { tradeSetupParameters } from "../tradeSetupParameters.js";
 import { obMinimum } from '../instrumentConfig.js';
 import { detectLiquidityLevels } from "../liquidity.js";
 import { collectStructureLqLevels } from "../marketStructureRendering";
-import { detectSetupObs, detectTradeSetups } from "../tradeSetup.js";
+import { detectSetupObs, detectTradeSetups, TRADE_SETUP_DETECTOR_VERSION } from "../tradeSetup.js";
+import { setup1Configuration } from '../../supabase/functions/_shared/tradeSetupProvenance.js';
 import { mergeDbTradeSetups } from "../tradeSetups.js";
 import { setupInvalidationTarget } from "../setupInvalidationTarget.js";
 import { sessions, isForbiddenAt } from "../sessions.js";
@@ -85,6 +86,12 @@ export function usePriceChartTradeSetups() {
     // Entry-Zeitpunkt ist. VOR takeLast gefiltert, sonst würde ein rausgefiltertes Setup einen
     // History-Platz "verbrauchen".
     const symbolSessions = sessions.filter((s) => s.instrument === symbol);
+    const detectionConfiguration = setup1Configuration({ instrument: symbol, params,
+      minGap: obMinimum(symbol, '5m'), sessions: symbolSessions,
+      m5FractalPeriod: TRADE_SETUP_M5_FRACTAL_PERIOD, m5Window: TRADE_SETUP_M5_CANDLE_COUNT,
+      h1Source: 'marketStructurePivots', forbiddenSessionTimezone: 'browser-local',
+      forbiddenSessions: symbolSessions.filter(s => s.danger === 'forbidden')
+        .map(s => ({ fromMinutes: s.fromMinutes, toMinutes: s.toMinutes, days: s.days })) });
     const tzOffsetMinutes = (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset();
     const notForbidden = (s) => !isForbiddenAt(symbolSessions, s.obStartTime, tzOffsetMinutes);
     // IMMER beide Richtungen berechnen (unabhängig von showTradeSetupsLong/-Short, siehe Chat
@@ -101,7 +108,7 @@ export function usePriceChartTradeSetups() {
     tradeSetupsMetadata.value = [
       ...shorts.map((s, i) => ({ ...s, invalidationTarget: setupInvalidationTarget(s, m5Highs, symbol), label: "Short", setupNumber: n > 1 ? i + 1 : null })),
       ...longs.map((s, i) => ({ ...s, invalidationTarget: setupInvalidationTarget(s, m5Lows, symbol), label: "Long", setupNumber: n > 1 ? i + 1 : null })),
-    ];
+    ].map(s => s.fromDb ? s : { ...s, detectorVersion: TRADE_SETUP_DETECTOR_VERSION, detectionConfiguration });
   }
 
   // TREND_ANALYSIS_CANDLE_COUNT (2000) liegt über dem Edge-Function-Limit pro Request (1000, siehe

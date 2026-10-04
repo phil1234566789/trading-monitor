@@ -51,10 +51,13 @@ import type { TradingWindows } from "../../_shared/tradingHoursGate.ts";
 import { persistTradeSetupSweeps } from "../../_shared/tradeSetupSweeps.ts";
 import {
   DEFAULT_TRADE_SETUP_PARAMS,
+  TRADE_SETUP_DETECTOR_VERSION,
   type SetupSweep,
 } from "../../_shared/tradeSetup.ts";
 
-import { replaySetup1 } from "./setup1Replay.ts";
+import { replaySetup1, M5_CANDLE_LIMIT, H1_LOOKBACK_CANDLES,
+  TRADE_SETUP_M5_FRACTAL_PERIOD, TRADE_SETUP_H1_FRACTAL_PERIOD } from "./setup1Replay.ts";
+import { setup1Configuration, tradeSetupProvenance } from '../../_shared/tradeSetupProvenance.js';
 
 
 interface Candle {
@@ -122,11 +125,18 @@ for (const instrument of instrumente) {
   console.log(`${instrument}: ${m5Alle.length} M5-Kerzen, ${h1Alle.length} 1H-Kerzen geladen, Fenster ${fensterVon}-${fensterBis} Min Berlin`);
   if (m5Alle.length === 0) continue;
 
+  const configuration = { ...DEFAULT_TRADE_SETUP_PARAMS, closeCheckMaxAgeSec };
   const { rows: zeilen, ticks } = replaySetup1({ instrument, m5Alle, h1Alle, startSec, endeSec,
-    configuration: { ...DEFAULT_TRADE_SETUP_PARAMS, closeCheckMaxAgeSec }, alarmFenster,
+    configuration, alarmFenster,
     // Bestehende Backfill-Aufrufe behalten ihre bisherige Zeitsemantik.
     recognitionDelaySec: 0,
   });
+  const setupProvenance = await tradeSetupProvenance({ source: 'backfill', detectorVersion: TRADE_SETUP_DETECTOR_VERSION,
+    configuration: setup1Configuration({ instrument, params: configuration, sessions: ignoreSessions,
+      m5FractalPeriod: TRADE_SETUP_M5_FRACTAL_PERIOD, h1FractalPeriod: TRADE_SETUP_H1_FRACTAL_PERIOD,
+      m5Window: M5_CANDLE_LIMIT, h1Window: H1_LOOKBACK_CANDLES, h1Source: 'h1Fractals',
+      recognitionDelaySec: 0, alarmWindows: alarmFenster }) });
+  for (const row of zeilen) Object.assign(row, setupProvenance);
   console.log(`${instrument}: ${ticks} Ticks simuliert, ${zeilen.length} Setups gefunden (closeCheckMaxAgeSec=${closeCheckMaxAgeSec})`);
   const htf = zeilen.filter((z) => z.ls_timeframe === "1H").length;
   console.log(`  davon 1H-Sweep: ${htf}, M5-Sweep: ${zeilen.length - htf}`);

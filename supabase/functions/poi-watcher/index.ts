@@ -13,7 +13,9 @@ import {
   TRADE_SETUP_M5_FRACTAL_PERIOD,
   TRADE_SETUP_H1_FRACTAL_PERIOD,
   DEFAULT_TRADE_SETUP_PARAMS,
+  TRADE_SETUP_DETECTOR_VERSION,
 } from "../_shared/tradeSetup.ts";
+import { setup1Configuration, tradeSetupProvenance } from '../_shared/tradeSetupProvenance.js';
 import { computeSweepAgeHours } from "../_shared/ageTier.ts";
 import { toPips } from "../_shared/pipConfig.js";
 import { persistTradeSetupSweeps } from "../_shared/tradeSetupSweeps.ts";
@@ -812,6 +814,11 @@ Deno.serve(async (req) => {
           maxSweepDistance: strategyDistance(DEFAULT_TRADE_SETUP_PARAMS.maxSweepDistance, cfg.instrument),
           nowTime: m5Candles[m5Candles.length - 1].time };
 
+        const setupProvenance = await tradeSetupProvenance({ source: 'live', detectorVersion: TRADE_SETUP_DETECTOR_VERSION,
+          configuration: setup1Configuration({ instrument: cfg.instrument, params: tradeSetupParams,
+            minGap: obMinimum(cfg.instrument, '5m'), sessions: ignoreSessions,
+            m5FractalPeriod: TRADE_SETUP_M5_FRACTAL_PERIOD, h1FractalPeriod: TRADE_SETUP_H1_FRACTAL_PERIOD,
+            m5Window: TRADE_SETUP_M5_CANDLE_LIMIT, h1Window: FOREX_H1_LOOKBACK_CANDLES, h1Source: 'h1Fractals' }) });
         const detected = [
           detectTradeSetup(1, m5Highs, h1HighsSetup, m5Highs, setupObs, tradeSetupParams, m5OhneIgnorierte),
           detectTradeSetup(-1, m5Lows, h1LowsSetup, m5Lows, setupObs, tradeSetupParams, m5OhneIgnorierte),
@@ -953,6 +960,7 @@ Deno.serve(async (req) => {
             .from("trade_setups")
             .upsert(
               {
+                ...setupProvenance,
                 instrument: cfg.instrument,
                 direction,
                 fractal_price: setup.fractal.price,

@@ -9,6 +9,9 @@
 import { detectOrderBlocks } from "./orderBlockDetection.js";
 import { businessSecondsBetween } from "./chartTimeUtils.js";
 
+// Bei Regeländerungen beide Detektorkopien versionieren; Herkunft bleibt beim ersten Insert.
+export const TRADE_SETUP_DETECTOR_VERSION = 'setup1-fxcm-spread-ignore-v1';
+
 // Bis Bug-Report Philip 2026-07-29 ("M5 OBs bei trade-setup passen noch nicht") eine EIGENE, von
 // detectOrderBlocks() unabhängige 3-Kerzen-FVG-Existenzprüfung — bewusst OHNE Mindestgröße (jede
 // positive Lücke zählte), während detectOrderBlocks() für M5 längst ein Pip-Minimum hat (siehe

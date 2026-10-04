@@ -30,11 +30,14 @@ if (options.snapshot) {
   await writeFile(path.join(directory, 'recognition.mjs'), code);
   const files = ['supabase/functions/_shared/tradeSetup.ts', 'supabase/functions/_shared/liquidityDetection.ts',
     'supabase/functions/_shared/orderBlocks.ts', 'supabase/functions/_shared/instrumentConfig.js',
+    'supabase/functions/_shared/tradeSetupProvenance.js',
     'supabase/functions/trading-monitor-mcp/scripts/setup1Replay.ts'];
   const detectionFiles = {};
   for (const file of files) detectionFiles[file] = { hash: hash(await readFile(path.join(root, file), 'utf8')),
     lastCommit: execFileSync('git', ['log', '-1', '--format=%H', '--', file], { cwd: root, encoding: 'utf8' }).trim() || null };
-  input = { schemaVersion: 1, from, to, snapshotAt: new Date().toISOString(), source: 'FXCM native Bid archive',
+  const { TRADE_SETUP_DETECTOR_VERSION } = await import(pathToFileURL(path.join(directory, 'recognition.mjs')));
+  input = { schemaVersion: 2, detectorVersion: TRADE_SETUP_DETECTOR_VERSION,
+    from, to, snapshotAt: new Date().toISOString(), source: 'FXCM native Bid archive',
     gitHead: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
     detectionFiles, bundleHash: hash(code), instruments: ['GBPUSD', 'EURUSD', 'XAUUSD'],
     sessions: await client.pages('sessions', { select: '*', order: 'id.asc' }),
@@ -92,9 +95,19 @@ for (const instrument of input.instruments) {
     delete row.sweeps;
     row.invalidation = row.direction === 'short' ? row.ob_top : row.ob_bottom;
   }
+  // Alte Snapshots bleiben bytegleich; ihre ursprüngliche Version wird nicht nachträglich geraten.
+  if (input.schemaVersion >= 2) {
+    const provenance = await core.tradeSetupProvenance({ source: 'rebuild', detectorVersion: input.detectorVersion,
+      configuration: core.setup1Configuration({ instrument, params: configuration, minGap: policy.minimum, sessions,
+        m5FractalPeriod: policy.m5FractalPeriod, h1FractalPeriod: policy.h1FractalPeriod,
+        m5Window: policy.m5Window, h1Window: policy.h1Window, h1Source: 'h1Fractals', recognitionDelaySec: 300 }) });
+    for (const row of rows) Object.assign(row, provenance);
+  }
   const report = compareSet(rows, live.filter(r => Date.parse(r.ob_start_time) / 1000 >= input.from - 86400
     && Date.parse(r.ob_start_time) / 1000 < input.to));
   const id = `setup1-${hash({ instrument, input, policy, rows }).slice(0, 24)}`;
+  // Die Selbstreferenz kann nicht Bestandteil ihres eigenen Identitätshashs sein.
+  if (input.schemaVersion >= 2) for (const row of rows) row.input_set_id = id;
   const target = path.join(root, 'local-data', 'setup1-sets', id);
   await mkdir(target, { recursive: true });
   const firstFullM5 = m5[core.M5_CANDLE_LIMIT - 1]?.time + 300 || null;
