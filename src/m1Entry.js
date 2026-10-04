@@ -17,8 +17,9 @@ export function m1EntryFromFvg(context, fvg, candles, evaluatedAt, retest = null
   // Das Retestextrem ist beim Entry bekannt, auch wenn seine rechten P5-Kerzen
   // noch fehlen. Spätere Hochs/Tiefs dürfen den eingefrorenen Stopp nicht verschieben.
   const extreme = retestRows.reduce((best, c) => !best || (short ? c.high > best.high : c.low < best.low) ? c : best, null);
+  const stopOB=context.entryModel===ENTRY_MODEL_1_VERSION ? retest?.orderBlock : context.primary.reactionOB;
   const stops = {
-    wide: { price: context.primary.reactionOB?.[short ? 'top' : 'bottom'] ?? null, sourceTime: context.primary.reactionOB?.startTime },
+    wide: { price: stopOB?.[short ? 'top' : 'bottom'] ?? null, sourceTime: stopOB?.startTime },
     narrow: { price: extreme?.[priceField] ?? null, sourceTime: extreme?.time ?? null },
   };
   const selection = context.primary.targetSelection;

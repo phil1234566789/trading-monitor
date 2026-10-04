@@ -22,6 +22,11 @@ describe('real 97/105 entry model 1 replay',()=>{
   const snapshots=await scanTradeSetup2Window(input);
   expect(snapshots).toEqual(await scanTradeSetup2Window({...input,useMemo:false}));
   const entries=snapshots.filter(s=>s.entry);
+  expect(entries).toHaveLength(2);
+  expect(new Set(entries.map(s=>s.entry.conditions.retest.orderBlock.startTime)).size).toBe(entries.length);
+  expect(entries.every(s=>s.entry.stops.wide.price===s.entry.conditions.retest.orderBlock.top)).toBe(true);
+  expect(entries[1].entry.conditions.retest.orderBlock.recognizedAt).toBeGreaterThan(entries[0].knownAt);
+  if(setup.tradeSetupId===3125)expect(entries[0].entry.scales.wide.targets[0].rr).toBeCloseTo(3.5208333);
   expect(snapshots[0].dealingRange.status).toBe('validated');
   expect(snapshots[0].checklist.setup.primary.setupType).toBe('countertrend');
   expect(entries.every(s=>s.entry.recognizedAt===s.entry.conditions.fvg.recognizedAt)).toBe(true);

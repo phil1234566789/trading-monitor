@@ -1,4 +1,4 @@
-import { detectOrderBlocks, candleTouchesOrderBlock } from './orderBlockDetection.js';
+import { detectOrderBlocks } from './orderBlockDetection.js';
 import { orderBlockRecognitionTimes } from './orderBlockRecognitionTime.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { evaluateChecklistM5 } from './tradeSetupChecklistM5.js';
@@ -6,7 +6,7 @@ import { m1EntryFromFvg } from './m1Entry.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { formatDatedTime } from './berlinTime.js';
 import { entryModel1ConditionsReady, ENTRY_MODEL_1_VERSION } from './entryModel1Conditions.js';
-import { advanceEntryModel1Follow, entryModel1FvgAt } from './entryModel1Progress.js';
+import { advanceEntryModel1Follow } from './entryModel1Progress.js';
 
 // Explizite Startregel: der aus Setup 1.0 übernommene OB zählt auch bei späterem E.
 export function setup1OrderBlockIncluded(primary, direction, evaluatedAt) {
@@ -27,20 +27,7 @@ export function entryModel1RetestFvg(rows, orderBlocks, confirmedAt, direction, 
   rows=closedChecklistCandles(rows,'1m',evaluatedAt);
   const empty={status:'unknown',retest:null,fvg:null};
   if (!Number.isFinite(confirmedAt)) return empty;
-  if(progress)return advanceEntryModel1Follow(rows,orderBlocks,confirmedAt,direction,evaluatedAt,progress);
-  const start=Math.ceil(confirmedAt/60)*60, after=rows.filter(c => c.time >= start);
-  if (after.some((c,i) => c.time !== start+i*60) || start+after.length*60 < Math.floor(evaluatedAt/60)*60) return empty;
-  const retests=orderBlocks.flatMap(ob => {
-    const touch=after.find(c => !c.ignored && c.time >= ob.recognizedAt && candleTouchesOrderBlock(c,ob));
-    return touch ? [{candleTime:touch.time,recognizedAt:touch.time+60,orderBlock:ob}] : [];
-  }).sort((a,b) => a.recognizedAt-b.recognizedAt || a.orderBlock.startTime-b.orderBlock.startTime);
-  const fvgs=rows.flatMap((_,i)=>entryModel1FvgAt(rows.slice(Math.max(0,i-3),i+1),direction) ?? [])
-    .filter(f => f.recognizedAt <= evaluatedAt).reverse();
-  for (const fvg of fvgs) {
-    const retest=retests.find(r => r.recognizedAt < fvg.recognizedAt);
-    if (retest) return {status:'ready',retest,fvg};
-  }
-  return {...empty,status:'ready',retest:retests.at(-1) ?? null};
+  return advanceEntryModel1Follow(rows,orderBlocks,confirmedAt,direction,evaluatedAt,progress);
 }
 
 export function evaluateCountertrendEntryModel1({context,rows,evaluatedAt,bos,choch,trends,sweepReaction,internalSweeps,closeReactionCache,entryProgress}) {

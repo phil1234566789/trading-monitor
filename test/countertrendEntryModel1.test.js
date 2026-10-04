@@ -44,7 +44,7 @@ describe('Countertrend entry model 1 conditions', () => {
     expect(result.map(z=>z.startTime)).toEqual([0,300,600]);
     expect(result[0].inclusionRule).toBe('setup1OrderBlockIncluded');
     expect(setup1OrderBlockIncluded(primary,'short',1200)).toMatchObject({startTime:0,recognizedAt:600});
-    expect(ENTRY_MODEL_1_VERSION).toBe('countertrend-entry-model-1-v2');
+    expect(ENTRY_MODEL_1_VERSION).toBe('countertrend-entry-model-1-v3');
   });
 });
 
@@ -68,7 +68,7 @@ describe('entry model 1 detection', () => {
     expect(result.entry).toMatchObject({entryModel:ENTRY_MODEL_1_VERSION,recognizedAt:at('09:50'),
       conditions:{m5Bos:{recognizedAt:at('09:49')},m1Choch:{recognizedAt:at('09:34')},
         retest:{candleTime:at('09:46'),orderBlock:{startTime:at('09:35'),recognizedAt:at('09:45')}},fvg:{recognizedAt:at('09:50')}}});
-    expect(result.entry.stops.wide.price).toBe(primary.reactionOB.top);
+    expect(result.entry.stops.wide.price).toBe(second.top);
   }));
   it('does not borrow a CHoCH from a different sweep extreme',()=>mocked(()=>{
     const evaluatedAt=at('09:50');

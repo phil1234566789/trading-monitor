@@ -8,7 +8,7 @@ import { formatRiskPips } from './entryRisk.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { savedDealingRangeStatus } from './tradeSetup2DealingRange.js';
 import { antiConfluenceStatus, checklistObservationRules, observationRuleDetails } from './checklistObservationRules.js';
-import { ENTRY_MODEL_1_VERSION, isEntryModel1 } from './entryModel1Conditions.js';
+import { usesSweepEntryModel1, isEntryModel1 } from './entryModel1Conditions.js';
 
 export const REVIEW_STATUS_LABELS = { passed: 'Erfüllt', unmet: 'Fehlt am gespeicherten Stand', unknown: 'Unbekannt / unbewertet' };
 export const REVIEW_STATUS_ICONS = { passed: '✓', unmet: '✕', unknown: '?' };
@@ -102,7 +102,7 @@ export function setupEntryConditions(snapshot) {
   add('structure', 'M1-P5-Struktur auswertbar', m1?.currentTrend ? 'passed' : 'unknown',
     m1?.currentTrend ? m1.details.slice(0, m1.trends.length)
       : Array.isArray(m1?.details) ? m1.details : ['Keine M1-Auswertung gespeichert.']);
-  if (model1) for (const [key,label] of (version===ENTRY_MODEL_1_VERSION ? [['m5Bos','M5-BOS in Setup-Richtung'],['m1Choch','M1-CHoCH ab Sweep']] : [['m5Choch','M5-CHoCH in Setup-Richtung'],['m1Bos','M1-BOS in Setup-Richtung']])) {
+  if (model1) for (const [key,label] of (usesSweepEntryModel1(version) ? [['m5Bos','M5-BOS in Setup-Richtung'],['m1Choch','M1-CHoCH ab Sweep']] : [['m5Choch','M5-CHoCH in Setup-Richtung'],['m1Bos','M1-BOS in Setup-Richtung']])) {
     const signal=entry?.conditions?.[key] ?? m1?.conditions?.[key];
     add(key,label,known(signal?.recognizedAt) && signal.direction===snapshot.direction ? 'passed' : m1?.conditions || entry?.conditions ? 'unmet' : 'unknown',
       known(signal?.recognizedAt) ? [`Erkannt ${date(signal.recognizedAt)}`] : ['Pflichtsignal fehlt.'],signal?.recognizedAt);
@@ -120,7 +120,7 @@ export function setupEntryConditions(snapshot) {
   add('entry', `Schluss der FVG-Bestätigungskerze / ${model1 ? 'Entry Modell 1' : 'Entry 1'}`, entry ? 'passed' : 'unknown',
     entry ? [...entryChecklist({ entry }).details, `Entry-Preis ${price(entry.price)} · Kerze ${date(entry.candleTime)}`]
       : ['Kein Entry in diesem Snapshot. Daraus folgt keine vollständige spätere M1-Prüfung.'], entry?.recognizedAt ?? at);
-  const observations = (model1 ? [version===ENTRY_MODEL_1_VERSION?'bos':'choch'] : ['choch', 'bos']).map(key => {
+  const observations = (model1 ? [usesSweepEntryModel1(version)?'bos':'choch'] : ['choch', 'bos']).map(key => {
     const signal = m1?.[key];
     return { label: key === 'choch' ? 'M1 CHoCH' : 'M1 BOS', text: known(signal?.recognizedAt)
       ? `${date(signal.candleTime)} · erkannt ${date(signal.recognizedAt)} · ${price(signal.price)}`

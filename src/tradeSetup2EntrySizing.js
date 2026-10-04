@@ -1,4 +1,4 @@
-import { ENTRY_MODEL_1_VERSION, entryModel1ConditionsReady, isEntryModel1 } from './entryModel1Conditions.js';
+import { usesSweepEntryModel1, entryModel1ConditionsReady, isEntryModel1 } from './entryModel1Conditions.js';
 
 export const ENTRY_SIZING_VERSION = 'dr-against-m5-trend-choch-v1';
 export const ENTRY_MODEL_1_SIZING_VERSION = 'countertrend-m5-bos-full-size-v2';
@@ -13,7 +13,7 @@ export function entryAgainstM5Allowed(checklist, entry) {
 }
 
 export function entrySizingAt(checklist, entry) {
-  if (entry.entryModel === ENTRY_MODEL_1_VERSION) {
+  if (usesSweepEntryModel1(entry.entryModel)) {
     const bos=entry.conditions?.m5Bos;
     const confirmed=checklist.evaluatedAt===entry.recognizedAt && bos?.type==='BOS'
       && bos.direction===entry.direction && Number.isFinite(bos.recognizedAt) && bos.recognizedAt<=entry.recognizedAt;

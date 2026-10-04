@@ -1,5 +1,6 @@
-export const ENTRY_MODEL_1_VERSION = 'countertrend-entry-model-1-v2';
-export const isEntryModel1 = version => [ENTRY_MODEL_1_VERSION, 'countertrend-entry-model-1-v1'].includes(version);
+export const ENTRY_MODEL_1_VERSION = 'countertrend-entry-model-1-v3';
+export const isEntryModel1 = version => [ENTRY_MODEL_1_VERSION, 'countertrend-entry-model-1-v2', 'countertrend-entry-model-1-v1'].includes(version);
+export const usesSweepEntryModel1 = version => [ENTRY_MODEL_1_VERSION,'countertrend-entry-model-1-v2'].includes(version);
 
 export function entryModel1ConditionsReady(conditions, direction, entryAt, version = ENTRY_MODEL_1_VERSION) {
   const {retest,fvg}=conditions ?? {};
