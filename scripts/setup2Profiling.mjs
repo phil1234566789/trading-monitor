@@ -3,7 +3,8 @@ export function setup2ProfilingPlugin() {
   const names=new Set(['evaluateCountertrendChecklist','evaluateCountertrendLifecycle',
     'evaluateCountertrendEntryModel1','detectOrderBlocks','closedChecklistCandles',
     'withCandleCloseWindow','buildLevel','detectLiquidityLevels','evaluateAt','evaluateChecklistM5',
-    'advanceOrderBlocks','orderBlockSnapshot','detectIncrementalOrderBlocks','isCandleAppend']);
+    'advanceOrderBlocks','orderBlockSnapshot','detectIncrementalOrderBlocks','isCandleAppend',
+    'detectIncrementalLiquidityLevels']);
   return {name:'setup2-profiling',renderChunk(code){
     const tree=this.parse(code),edits=[];
     function visit(node,parent){
@@ -15,7 +16,7 @@ export function setup2ProfilingPlugin() {
         edits.push([node.body.start+1,`const __h=globalThis.__setup2Profile;const __t=__h?.start(${JSON.stringify(name)},${args});try{`]);
         edits.push([node.body.end-1,'}finally{if(__h)__h.end(__t);}']);
       }
-      if(name==='createSetup2Memo'){
+      if(name==='createSetup2Memo' && !code.slice(node.body.start,node.body.end).includes('__profileMemo')){
         edits.push([node.body.start+1,'const __profileMemo=globalThis.__setup2Profile?.createMemo();']);
         const body=code.slice(node.body.start,node.body.end);
         const getter=/get:\s*\(key\)\s*=>\s*entries\.get\(key\)/.exec(body);
@@ -36,6 +37,30 @@ export function setup2ProfilingPlugin() {
   }};
 }
 
+// Gefrorene Messbundles enthalten Zähler. Kontrollläufe entfernen sie vollständig,
+// damit Millionen kurzer Aufrufe nicht nur den Aufwand des Profilers einsparen.
+export function setup2WithoutProfilingPlugin() {
+  return {name:'setup2-without-profiling',renderChunk(code){
+    const tree=this.parse(code),edits=[];
+    function visit(node){
+      if(node.type==='BlockStatement' && node.body[0]?.type==='VariableDeclaration'
+        && node.body[0].declarations[0]?.id.name==='__h'
+        && node.body[1]?.declarations?.[0]?.id.name==='__t'
+        && node.body[2]?.type==='TryStatement'){
+        const run=node.body[2];
+        edits.push([node.body[0].start,run.block.start+1],[run.block.end-1,run.end]);
+      }
+      for(const value of Object.values(node)){
+        if(Array.isArray(value)){for(const child of value)if(child?.type)visit(child);}
+        else if(value?.type)visit(value);
+      }
+    }
+    visit(tree);
+    for(const [from,to] of edits.sort((a,b)=>b[0]-a[0]))code=code.slice(0,from)+code.slice(to);
+    return {code,map:null};
+  }};
+}
+
 export function createSetup2Profile(){
   const functions={},stack=[],memo={hits:0,misses:0},memos=[];
   return {functions,memo,memos,createMemo(){const stats={id:memos.length,hits:0,misses:0};memos.push(stats);return stats;},
@@ -49,6 +74,11 @@ export function createSetup2Profile(){
       length=lower;
     }
     const stats=functions[name]??={calls:0,totalMs:0,selfMs:0,prefixTotal:0,prefixMax:0};
+    if(name==='evaluateChecklistM5'){
+      const key=JSON.stringify([length,rows?.[0]?.time,rows?.at(-1)?.time,args[2],
+        args[1]?.m5StructurePeriod??5,args[1]?.m5Structure2Period??2]);
+      stats.prefixKeys??={};stats.prefixKeys[key]=(stats.prefixKeys[key]??0)+1;
+    }
     stats.calls++;stats.prefixTotal+=length;stats.prefixMax=Math.max(stats.prefixMax,length);
     const token={stats,at:performance.now(),children:0};stack.push(token);return token;
   },end(token){

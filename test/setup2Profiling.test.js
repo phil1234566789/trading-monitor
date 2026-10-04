@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest';
 import {rolldown} from 'rolldown';
 import path from 'node:path';
-import {setup2ProfilingPlugin,createSetup2Profile} from '../scripts/setup2Profiling.mjs';
+import {setup2ProfilingPlugin,setup2WithoutProfilingPlugin,createSetup2Profile} from '../scripts/setup2Profiling.mjs';
 
 it('profiles nested functions and memo hits without changing values',async()=>{
   const bundle=await rolldown({input:'profile-test',plugins:[{name:'profile-fixture',
@@ -26,4 +26,21 @@ it('profiles nested functions and memo hits without changing values',async()=>{
     expect(profile.functions.closedChecklistCandles.calls).toBe(1);
     expect(profile.functions.detectIncrementalOrderBlocks.calls).toBe(2);
   }finally{delete globalThis.__setup2Profile;}
+});
+
+it('can reprofile frozen bundles or remove function counters for control timings',async()=>{
+  const source='export function detectLiquidityLevels(rows){return rows.length;}';
+  const build=async(code,plugin)=>{
+    const bundle=await rolldown({input:'counter-control',plugins:[{name:'fixture',
+      resolveId:id=>id==='counter-control'?'\0counter-control':null,
+      load:id=>id==='\0counter-control'?code:null},plugin]});
+    const generated=await bundle.generate({format:'esm'});await bundle.close();
+    return generated.output.find(c=>c.type==='chunk').code;
+  };
+  const instrumented=await build(source,setup2ProfilingPlugin());
+  const again=await build(instrumented,setup2ProfilingPlugin());
+  const stripped=await build(again,setup2WithoutProfilingPlugin());
+  expect(stripped).not.toContain('__setup2Profile');
+  const core=await import(`data:text/javascript;base64,${Buffer.from(stripped).toString('base64')}`);
+  expect(core.detectLiquidityLevels([1,2])).toBe(2);
 });

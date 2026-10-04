@@ -82,7 +82,7 @@ function buildLevel(candles, p, period, dir) {
   let touchedTime = null;
   for (let i = p + period; i < candles.length; i++) {
     const c = candles[i];
-    const cross = liquidityTouch(c, price, dir);
+    const cross = dir === 1 ? c.high >= price : c.low <= price;
     if (cross) {
       touched = true;
       touchedTime = c.time;
@@ -99,31 +99,6 @@ function buildLevel(candles, p, period, dir) {
   };
 }
 
-function liquidityTouch(candle, price, dir) {
-  return dir === 1 ? candle.high >= price : candle.low <= price;
-}
-
-const liquidityPivotStart = period => period + 4;
-
-export function confirmedLiquidityLevels(candles, p, period) {
-  if (p < liquidityPivotStart(period)) return { highs: [], lows: [] };
-  return {
-    highs: isUpFractal(candles, p, period) ? [buildLevel(candles, p, period, 1)] : [],
-    lows: isDownFractal(candles, p, period) ? [buildLevel(candles, p, period, -1)] : [],
-  };
-}
-
-export function advanceLiquidityTouches(levels, candle) {
-  for (const level of levels) {
-    if (level.touched) continue;
-    if (liquidityTouch(candle, level.price, level.dir)) {
-      level.touched = true;
-      level.touchedTime = candle.time;
-    }
-    level.endTime = level.touched ? level.touchedTime : candle.time;
-  }
-}
-
 // Erkennt alle Hoch-/Tief-Liquiditäts-Level im geladenen `candles`-Fenster. Rückgabe
 // chronologisch aufsteigend (wie in liquidity.pine, wo neue Level ans Array-Ende
 // gepusht werden) — wichtig für filterRelevantLevels (das "neueste" Level = letztes
@@ -136,7 +111,7 @@ export function detectLiquidityLevels(rohKerzen, period) {
   const candles = rohKerzen.some((c) => c.ignored) ? rohKerzen.filter((c) => !c.ignored) : rohKerzen;
   const highs = [];
   const lows = [];
-  const minIdx = liquidityPivotStart(period); // Kaskaden-Logik braucht bis zu period+4 Kerzen davor
+  const minIdx = period + 4; // Kaskaden-Logik braucht bis zu period+4 Kerzen davor
   const maxIdx = candles.length - 1 - period; // braucht `period` Kerzen danach zur Bestätigung
 
   for (let p = minIdx; p <= maxIdx; p++) {

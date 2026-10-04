@@ -1,5 +1,6 @@
 import { buildMarketStructureState, collectNestedChain, computeRangesPivots } from './marketStructureAnalysis';
 import { closeReactionHistory } from './m5CloseReactionHistory.js';
+import { createIncrementalLiquidityDetector } from './incrementalLiquidityLevels.js';
 
 const candidateKey = level => {
   const seeds = level.nestedTrend?.appliedPivots;
@@ -22,6 +23,8 @@ export function deriveM5CloseReaction(state, outer, inner, periodOuter, periodIn
   const chain = collectNestedChain(state);
   const result = { ...empty, trend: chain.at(-1).trend };
   const cache = new Map([[candles.length - 1, chain]]);
+  const outerLiquidity = createIncrementalLiquidityDetector(periodOuter);
+  const innerLiquidity = createIncrementalLiquidityDetector(periodInner);
   const scope = JSON.stringify([barSeconds, periodOuter, periodInner, candles[0]?.time,
     outer?.[0]?.pivotTime ?? null, inner?.[0]?.pivotTime ?? null]);
   const stateAt = index => {
@@ -31,8 +34,8 @@ export function deriveM5CloseReaction(state, outer, inner, periodOuter, periodIn
       else {
         const prefix = candles.slice(0, index + 1);
         const snapshot = buildMarketStructureState(
-          computeRangesPivots(prefix, periodOuter, outer?.[0]?.pivotTime ?? Infinity),
-          computeRangesPivots(prefix, periodInner, inner?.[0]?.pivotTime ?? Infinity),
+          computeRangesPivots(prefix, periodOuter, outer?.[0]?.pivotTime ?? Infinity, undefined, outerLiquidity),
+          computeRangesPivots(prefix, periodInner, inner?.[0]?.pivotTime ?? Infinity, undefined, innerLiquidity),
           periodOuter, periodInner, prefix, { barSeconds });
         const history = closeReactionHistory(snapshot);
         cache.set(index, history);

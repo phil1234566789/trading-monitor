@@ -962,8 +962,8 @@ export function applyInnerMarketStructurePivot(
 // von Hand nachgebaute Kopie der Pipeline statt gegen exakt den Code, den die App tatsächlich
 // ausführt. Ab jetzt einzige Quelle für beide Seiten (siehe PriceChart.vue: computeRangesPivotsFor/
 // computeMarketStructureState delegieren hierher).
-export function computeRangesPivots(candles: Candle[], period: number, cutoff: number, formatTime: (t: number) => string = (t) => String(t)): Pivot[] {
-  const { highs, lows } = detectLiquidityLevels(candles, period);
+export function computeRangesPivots(candles: Candle[], period: number, cutoff: number, formatTime: (t: number) => string = (t) => String(t), detect = detectLiquidityLevels): Pivot[] {
+  const { highs, lows } = detect(candles, period);
   return [...highs, ...lows]
     .filter((p: any) => p.pivotTime >= cutoff)
     .sort((a: any, b: any) => a.pivotTime - b.pivotTime)
