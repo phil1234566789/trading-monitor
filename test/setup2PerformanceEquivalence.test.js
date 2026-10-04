@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {detectOrderBlocks} from '../src/orderBlockDetection.js';
+import {detectOrderBlocks,createIncrementalOrderBlockDetector} from '../src/orderBlockDetection.js';
 import {detectOrderBlocks as previousOrderBlocks} from './fixtures/orderBlockDetectionBeforePerformanceH.js';
 import {closedChecklistCandles} from '../src/tradeSetupChecklistTimeBasis.js';
 import {evaluateChecklistM5} from '../src/tradeSetupChecklistM5.js';
@@ -54,14 +54,17 @@ describe('Performance H exact prefix equivalence',()=>{
     const rows=randomCandles(4,30),at=rows.at(-1).time+300;
     const first=closedChecklistCandles(rows,'5m',at);first.pop();
     expect(closedChecklistCandles(rows,'5m',at)).toEqual(previousClosed(rows,300,at));
+    delete rows[5];
+    expect(closedChecklistCandles(rows,'5m',at)).toEqual(previousClosed(rows,300,at));
     rows[3].time=rows[20].time+1;rows[4].time=NaN;
     expect(closedChecklistCandles(rows,'5m',at)).toEqual(previousClosed(rows,300,at));
   });
   it('keeps real OB lists and M5 structure nodes deterministic over growing prefixes',()=>{
-    const rows=fixture.m5Candles.slice(-180),anchor=rows[10].time;
+    const rows=fixture.m5Candles.slice(-180),anchor=rows[10].time,incremental=createIncrementalOrderBlockDetector('5m');
     for(let end=20;end<=rows.length;end+=10){
       const prefix=rows.slice(0,end),at=prefix.at(-1).time+300;
       expect(detectOrderBlocks(prefix,'5m')).toEqual(previousOrderBlocks(prefix,'5m'));
+      expect(incremental(prefix)).toEqual(previousOrderBlocks(prefix,'5m'));
       const input={instrument:'GBPUSD',direction:'short',evaluatedAt:at};
       const old=evaluateChecklistM5({...input,m5Candles:previousClosed(prefix,300,at)},{},anchor);
       const current=evaluateChecklistM5({...input,m5Candles:closedChecklistCandles(prefix,'5m',at)},{},anchor);

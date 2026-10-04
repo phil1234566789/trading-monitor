@@ -21,8 +21,12 @@ export function closedChecklistCandles(candles, bar, evaluatedAt) {
   if (!Number.isFinite(evaluatedAt) || duration == null) return [];
   // Keine dauerhafte Sortiert-Markierung: Chart-Aufrufer dürfen Arrays korrigieren.
   // Der schnelle Archivpfad gibt weiterhin eine eigene, veränderbare Kopie zurück.
-  if(candles?.every((c,i)=>Number.isFinite(c.time)&&(i===0||candles[i-1].time<=c.time)))
-    return candles.slice(0,closedCandleEnd(candles,duration,evaluatedAt));
-  return (candles ?? []).filter(c => Number.isFinite(c.time) && c.time + duration <= evaluatedAt)
+  const rows=candles??[];
+  let sorted=true;
+  for(let i=0;i<rows.length;i++)if(!Number.isFinite(rows[i]?.time)||(i>0&&rows[i-1].time>rows[i].time)){
+    sorted=false;break;
+  }
+  if(sorted)return rows.slice(0,closedCandleEnd(rows,duration,evaluatedAt));
+  return rows.filter(c => Number.isFinite(c.time) && c.time + duration <= evaluatedAt)
     .slice().sort((a, b) => a.time - b.time);
 }
