@@ -5388,9 +5388,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationComparisonMetrics.vue": {
-    "mtime": 1791113998.825608,
-    "seen": 1791114012.628402,
-    "ast_hash": "bebbd12d23193cc754034dc9b39aa2e0",
+    "mtime": 1791114254.6550517,
+    "seen": 1791114265.7562091,
+    "ast_hash": "65ab583edfdd5a6fc21fdbfc5359e3fc",
     "semantic_hash": ""
   },
   "src/components/SimulationDrList.vue": {
