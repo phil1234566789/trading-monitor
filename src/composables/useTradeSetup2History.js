@@ -17,6 +17,7 @@ import {renderStructurePivots,renderLowerStructure,structureRenderOptions} from 
 import {renderMarketStructureAnalysis} from '../marketStructureRendering';
 import {useSnapshotIndicators} from './useSnapshotIndicators.js';
 import {renderPersistedZones} from '../orderBlocks.js';
+import {snapshotChecklistAt} from '../checklistReplayView.js';
 
 export function useTradeSetup2History(props,checklist,{repository,configurationInput,evaluationTime}) {
   const results=shallowRef([]),candidates=shallowRef([]),selected=shallowRef(null),status=ref(''),error=ref('');
@@ -30,7 +31,9 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
   const positions=computed(()=>tradeSetup2HistoryItems(results.value.map(row=>simulationAsOf(row,evaluationTime())).filter(Boolean),candidates.value,{instrument:props.symbol,variant:props.tradeSetup2Variant,
     asOf:evaluationTime(),historyCount:props.tradeSetup2HistoryCount,candles:displayCandles.value}));
   const visibleSnapshot=computed(()=>props.showTradeSetup2 && selected.value?.instrument===props.symbol
-    && selected.value.knownAt<=evaluationTime()?selected.value:null);
+    ?snapshotChecklistAt(selected.value,evaluationTime()):null);
+  const detailSnapshot=computed(()=>visibleSnapshot.value ?? (selected.value?.checklistHistory && props.showTradeSetup2
+    ? {...selected.value,checklist:null,m1Check:null,historyEntry:null} : null));
   const runs=new Map();
   const overlayRepository={getRun:run=>{
     if(!runs.has(run))runs.set(run,repository.getRun(run).catch(e=>{runs.delete(run);throw e;}));
@@ -260,7 +263,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
   watch(()=>props.tradeSetup2Variant,()=>{if(!isTradeSetup2SnapshotView(props))void refresh();});
   onScopeDispose(()=>{abort?.abort();revision++;selectionRevision++;chart?.unsubscribeClick(click);
     if(series)for(const list of [overview,details,entry,m1Markers,h1Markers,m5Markers,obPrimitives,m1Lines,m5Lines,h1Lines])clearSetup2Primitives(series,list);series=null;});
-  return {positions,selected:visibleSnapshot,snapshotM1,snapshotIndicators,loading,status,error,linkedReady,linkedRendered,select,refresh:()=>refresh(true),
+  return {positions,selected:visibleSnapshot,detailSnapshot,snapshotM1,snapshotIndicators,loading,status,error,linkedReady,linkedRendered,select,refresh:()=>refresh(true),
     waitForLinkedSnapshot:()=>readLinkedSnapshot(props.tradeSetup2RunId,props.selectedTradeSetup2Id),
     create(c,s){chart=c;series=s;chart.subscribeClick(click);render();},
     updateCandles(rows,ready=true){displayCandles.value=rows;displayReady=ready;render();}};

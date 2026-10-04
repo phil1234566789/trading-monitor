@@ -9,8 +9,20 @@ vi.mock('../src/tradeSetupSimulation.js',()=>({evaluateSimulation:vi.fn(({entry,
 import {useTradeSetup2History} from '../src/composables/useTradeSetup2History.js';
 import {scanTradeSetup2InWorker} from '../src/tradeSetup2BrowserScan.js';
 import {fetchCandlesCached} from '../src/candleCache.js';
+import {CHECKLIST_HISTORY_VERSION} from '../src/tradeSetup2ChecklistHistory.js';
 
 const flush=async()=>{for(let i=0;i<15;i++)await Promise.resolve();await nextTick();};
+it('changes checklist locally on replay without another snapshot request and empties it before recognition',async()=>{
+  const props=reactive({showTradeSetup2:true,symbol:'GBPUSD',tradeSetup2RunId:'run',selectedTradeSetup2Id:'dr',currentBar:'5m',replayUntil:300});
+  const entries=[100,200].map(knownAt=>({knownAt,checklist:{instrument:'GBPUSD',status:'ready',evaluatedAt:knownAt,checks:{},setup:{primary:{}}},dealingRange:{},m1Check:null}));
+  const snapshot={id:'dr',knownAt:300,instrument:'GBPUSD',evidence:[],checklistHistory:{version:CHECKLIST_HISTORY_VERSION,entries},checklist:{}};
+  const repository={getEntry:vi.fn(async()=>null),getSetupSnapshot:vi.fn(async()=>snapshot)};
+  const scope=effectScope();const view=scope.run(()=>useTradeSetup2History(props,ref(null),{repository,configurationInput:()=>({}),evaluationTime:()=>props.replayUntil}));
+  try{await flush();expect(view.selected.value.knownAt).toBe(200);props.replayUntil=150;await flush();expect(view.selected.value.knownAt).toBe(100);
+    props.replayUntil=50;await flush();expect(view.selected.value).toBeNull();expect(view.detailSnapshot.value.checklist).toBeNull();
+    expect(repository.getSetupSnapshot).toHaveBeenCalledTimes(1);
+  }finally{scope.stop();}
+});
 it('opens a candidate without an entry, exposes its checklist and focuses matching candles without scanning',async()=>{
   const props=reactive({showTradeSetup2:true,symbol:'GBPUSD',tradeSetup2Variant:'wide',tradeSetup2HistoryCount:5,
     tradeSetup2RunId:'run',selectedTradeSetup2Id:'candidate',currentBar:'5m',replayUntil:600});

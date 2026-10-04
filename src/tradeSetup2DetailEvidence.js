@@ -1,7 +1,7 @@
 import {snapshotStructureLevels} from './tradeSetup2SnapshotIndicators.js';
 
 export function snapshotDetailEvidence(snapshot, asOf) {
-  const sources=(snapshot.entrySnapshots ?? [snapshot]).filter(s=>s.knownAt<=asOf);
+  const sources=[snapshot,...snapshot.entrySnapshots ?? []].filter(s=>s.knownAt<=asOf);
   const evidence=new Map();
   for(const source of sources) {
     for(const e of [...source.evidence ?? [],...snapshotStructureLevels(source)]) {

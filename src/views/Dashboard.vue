@@ -2337,6 +2337,10 @@ watch(selectedTradingAccountId, () => {
       :instrument="currentSymbol"
       :checklist-state="setup2Detail?.checklist ?? checklistState"
       :m1-check="setup2Detail ? setup2Detail.m1Check : m1Check"
+      :snapshot-view="snapshotView || !!setup2Detail"
+      :snapshot-history="setup2Detail?.checklistHistory"
+      :replay-at="replayUntil ?? Math.floor(Date.now()/1000)"
+      @history-jump="replayTime=$event; replayActive=true"
       @close="setup2Detail ? closeTradeSetup2Selection() : (showTradeSetupChecklist = false)"
     />
 

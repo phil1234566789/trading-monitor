@@ -387,7 +387,7 @@ const snapshotSteps = computed(() => [
   { label: 'Chartkerzen laden', done: snapshotCandleState.value === 'ready' },
   { label: 'Setup und Belege zeichnen', done: setup2.linkedRendered.value },
 ]);
-watch(setup2.selected,snapshot=>{emit('setup2-detail-change',snapshot);if(candleSeries)refreshChart();});
+watch(setup2.detailSnapshot,snapshot=>{emit('setup2-detail-change',snapshot);if(candleSeries)refreshChart();});
 const m1Structure = usePriceChartM1Structure(props, checklist.state, {
   prerequisitesAt: checklist.m1PrerequisitesAt, evaluationHorizon: checklist.evaluationTime,
   detailSelected: () => snapshotView.value || !!setup2.selected.value,

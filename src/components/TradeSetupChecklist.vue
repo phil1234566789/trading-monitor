@@ -11,13 +11,17 @@ import { entryChecklist } from "../m1Entry.js";
 import { useChecklistDisplay } from "../composables/useChecklistDisplay.js";
 import { dealingRangeLabel } from "../tradeSetup2DealingRange.js";
 import { SETUP_TYPE_LABELS } from "../countertrendChecklist.js";
+import ChecklistReplayHistory from './ChecklistReplayHistory.vue';
 
 const props = defineProps({
   instrument: { type: String, required: true },
   checklistState: { type: Object, default: null },
   m1Check: { type: Object, default: null },
+  snapshotHistory: {type:Object,default:null},
+  snapshotView: {type:Boolean,default:false},
+  replayAt: {type:Number,default:null},
 });
-defineEmits(["close"]);
+defineEmits(["close","history-jump"]);
 const { element: scrollElement, rememberScroll } = usePreservedScroll();
 
 const countertrendDefinitions = [
@@ -99,11 +103,13 @@ const checks = computed(() => definitions.value.map((definition, index) => {
     <header class="checklist-header">
       <div>
         <h2 id="checklist-title">Trade Setup Checklist <span>{{ instrument }}</span></h2>
-        <p class="checklist-loading" role="status"><template v-if="busy"><span class="checklist-spinner" aria-hidden="true"></span>{{ retained ? 'Wird aktualisiert… · vorheriger Stand' : 'Wird aktualisiert…' }}</template></p>
+        <p v-if="!snapshotHistory" class="checklist-loading" role="status"><template v-if="busy"><span class="checklist-spinner" aria-hidden="true"></span>{{ retained ? 'Wird aktualisiert… · vorheriger Stand' : 'Wird aktualisiert…' }}</template></p>
       </div>
       <button type="button" class="checklist-close" aria-label="Trade Setup Checklist schließen" @click="$emit('close')">×</button>
     </header>
-    <div class="checklist-evaluation" role="status">
+    <ChecklistReplayHistory v-if="snapshotView" class="checklist-history-panel" :history="snapshotHistory" :as-of="replayAt" @jump="$emit('history-jump',$event)" />
+    <template v-if="!snapshotHistory">
+    <div v-if="!snapshotHistory" class="checklist-evaluation" role="status">
       <div class="checklist-timestamp">
         <time v-if="evaluatedAt" :datetime="new Date(state.evaluatedAt * 1000).toISOString()">{{ evaluatedAt }} Uhr (Europe/Berlin)</time>
         <strong v-else>Bewertungsstand unbekannt</strong>
@@ -133,12 +139,14 @@ const checks = computed(() => definitions.value.map((definition, index) => {
         <p v-else-if="check.key !== 'entry'" class="checklist-note">{{ state ? 'Noch keine Prüfdaten verfügbar.' : 'Wartet auf die automatische Auswertung.' }}</p>
       </li>
     </ol>
+    </template>
   </section>
 </template>
 
 <style scoped>
 .trade-setup-checklist { width: 340px; flex: none; align-self: flex-start; box-sizing: border-box; display: flex; flex-direction: column; min-height: 0; padding: 16px; border: 1px solid #2a2e39; border-radius: 8px; background: #131722; color: #d1d4dc; }
 .trade-setup-checklist > :not(.checklist-checks) { flex-shrink: 0; }
+.trade-setup-checklist > .checklist-history-panel{flex:1;min-height:0;overflow:auto;flex-shrink:1}
 .checklist-header, .checklist-check-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 h2, h3, p { margin: 0; }
 h2 { font-size: 15px; }

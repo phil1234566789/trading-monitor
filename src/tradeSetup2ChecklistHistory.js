@@ -42,7 +42,8 @@ export function createChecklistHistoryRecorder() {
     const before=previous.get(key)?.entry;
     const oldRows=new Map(before?.rows.map(r=>[r.key,r]) ?? []);
     const changes=rows.filter(row=>{const old=oldRows.get(row.key);return JSON.stringify([row.status,row.details])!==JSON.stringify(old && [old.status,old.details]);})
-      .map(row=>({key:row.key,label:row.label,old:oldRows.get(row.key)?.status ?? null,new:row.status,text:row.details?.join(' · ')}));
+      .map(row=>({key:row.key,label:row.label,old:oldRows.has(row.key)?pick(oldRows.get(row.key),['status','details']):null,
+        new:pick(row,['status','details']),text:row.details?.join(' · ')}));
     if(before?.dealingRange.status!==value.dealingRange.status)changes.push({key:'stage',old:before?.dealingRange.status ?? null,new:value.dealingRange.status,text:stage.details?.join(' · ')});
     if(JSON.stringify(before?.lifecycle)!==JSON.stringify(lifecycle))changes.push({key:'lifecycle',old:before?.lifecycle ?? null,new:lifecycle,text:lifecycle?.main?.reason ?? lifecycle?.main?.state});
     const entry={knownAt:at,evaluatedAt:at,source,rows,changes,checklist:state,m1Check:value.m1Check,
