@@ -1,131 +1,50 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { applySimulationCommission, SIMULATION_COST_VERSION } from '../tradeSetupSimulationCosts.js';
 import { supabase } from '../supabaseClient.js';
 import { createSimulationRepository } from '../tradeSetupSimulationRepository.js';
-import { useSimulationStatistics } from '../composables/useSimulationStatistics.js';
-import { SIMULATION_OUTCOME_LABELS, simulationStatistics, simulationRunStatusLabel, MIN_SIMULATION_WINRATE_CASES } from '../tradeSetupSimulationStatistics.js';
-import { formatDatedTime } from '../berlinTime.js';
-import { isVersionedDealingRangeRun } from '../tradeSetup2DealingRange.js';
-import { fmtMoney, fmtR } from '../format.js';
-import ToggleButton from '../components/ui/ToggleButton.vue';
+import { useSimulationComparison } from '../composables/useSimulationComparison.js';
+import { comparisonFilters } from '../simulationRunComparison.js';
 import SimulationRunStatus from '../components/SimulationRunStatus.vue';
+import SimulationComparisonFilters from '../components/SimulationComparisonFilters.vue';
+import SimulationComparisonMetrics from '../components/SimulationComparisonMetrics.vue';
+import SimulationRunQuality from '../components/SimulationRunQuality.vue';
 import SimulationSetupsTable from '../components/SimulationSetupsTable.vue';
-
-const repository = createSimulationRepository(supabase);
-const route = useRoute(), router = useRouter();
-// Alte „all“-Links dürfen die freigegebene Prüfansicht nicht mit Chart-Testläufen vermischen.
-const currentReviewRun = 'setup2-a4bd3c31eae0671f69d0fb03';
-const routeRunId = () => typeof route.query.run === 'string' && route.query.run !== 'all' ? route.query.run : currentReviewRun;
-const setupTable = ref(null);
-const { runs, runId, selectedRun, instrument, variant, from, to, rows, loading, error, refresh } = useSimulationStatistics(repository, routeRunId());
-const comparisonRuns = computed(() => runs.value.filter(run => run.status === 'complete'));
-variant.value = route.query.variant === 'narrow' ? 'narrow' : 'wide';
-watch(() => [routeRunId(), route.query.variant], ([id, stop]) => {
-  if (route.name !== 'statistik') return;
-  runId.value = id;
-  variant.value = stop === 'narrow' ? 'narrow' : 'wide';
-});
-watch([runId, variant], ([id, stop]) => {
-  if (route.name !== 'statistik') return;
-  const query = { ...route.query, variant: stop };
-  query.run = id || 'all';
-  router.replace({ path: '/statistik', query });
-});
-function refreshAll() { refresh(); setupTable.value?.refresh(); }
-const basis = ref('net');
-const costRows = computed(() => rows.value.map(applySimulationCommission));
-const stats = computed(() => simulationStatistics(costRows.value, variant.value, basis.value));
-const basisLabel = computed(() => basis.value === 'net' ? 'Netto' : 'Brutto');
-const at = value => value == null ? '–' : formatDatedTime(value);
-const runLabel = run => `${run.configuration?.label ?? `${at(run.from)} – ${at(run.to)}`} · ${isVersionedDealingRangeRun(run) ? 'DR gegen M5 Trend' : 'Altstand'} · ${simulationRunStatusLabel(run)} · ${run.id.slice(-8)}`;
+const route=useRoute(),router=useRouter();
+const filters=ref(comparisonFilters(route.query)),pins=ref([]);
+const repository=createSimulationRepository(supabase);
+const {runs,selectedRun,comparisonRun,current,previous,datasets,loading,error,dateError,refresh}=useSimulationComparison(repository,filters,pins);
+watch(()=>route.query,query=>{const next=comparisonFilters(query);if(JSON.stringify(next)!==JSON.stringify(filters.value))filters.value=next;});
+watch(filters,value=>{const query=Object.fromEntries(Object.entries(value).filter(([,v])=>v));if(JSON.stringify(comparisonFilters(route.query))!==JSON.stringify(value))router.replace({path:'/statistik',query});},{deep:true});
+const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>d.groups.flatMap(g=>g.features)).map(f=>[f.key,f])).values()]);
 </script>
-
 <template>
   <main class="statistics-page">
-    <header class="statistics-header">
-      <div><h1>Statistik</h1><p>Trade Setups 2.0 · automatisch simulierte Positionen</p></div>
-      <ToggleButton variant="bordered" :disabled="loading" @click="refreshAll">{{ loading ? 'Wird geladen…' : 'Aktualisieren' }}</ToggleButton>
-    </header>
-
+    <header><div><h1>Statistik</h1><p>Läufe vergleichen · DR- und Entry-Qualität prüfen</p></div><button type="button" :disabled="loading" @click="refresh">{{ loading?'Wird geladen…':'Aktualisieren' }}</button></header>
+    <SimulationComparisonFilters v-model="filters" :runs="runs" :features="features" />
     <details class="simulation-rules"><summary>Simulationsannahmen</summary>
-      <strong>50.000 USD Referenzkonto · Basis-Preisrisikobudget 500 USD pro Entry</strong>
-      <p>Gegen den M5-Trend braucht ein Entry einen bestätigten M5-CHoCH in Traderichtung. Ohne ihn gibt es keinen Entry. Bereits gleichgerichtet ohne CHoCH: Faktor 0,5 (250 USD); mit bestätigtem CHoCH: Faktor 1 (500 USD). Das Budget wird vor der Lot-Abrundung angepasst.</p>
-      <p>Anfangsgröße auf ganze Standardlots abgerundet. 50 % an T1 schließen, Reststop auf Entry, übrige Hälfte bis T2 oder Break-even. Kein Compounding.</p>
-      <p>5 USD Kommission je Standardlot insgesamt für Entry und Exit, einmal auf das Eröffnungsvolumen. Für die Kostenansicht wird die volle Gebühr ab Entry angesetzt; Teilverkäufe kosten nicht zusätzlich. Kein Spread und keine Slippage berücksichtigt.</p>
-      <p>Weiter und enger SL sind alternative Szenarien. Diese Ergebnisse gehören zur Simulation und werden getrennt vom Journal ausgewertet.</p>
+      <p>50.000 USD Referenzkonto · Basis-Preisrisikobudget 500 USD pro Entry. Die gespeicherte Entry-Modell-Version bestimmt die Größenregel. Ganze Standardlots, 50 % an T1 schließen, Reststop auf Entry, Rest bis T2 oder Break-even. Kein Compounding.</p>
+      <p>5 USD Kommission je Standardlot für Entry und Exit zusammen, einmal auf das Eröffnungsvolumen. Kein Spread und keine Slippage. Weiter und enger SL sind alternative Szenarien.</p>
+      <p>Netto-Winrate = Netto-Gewinne / eindeutig abgeschlossene, ausführbare Entries. Offen, uneindeutig und nicht ausführbar zählen nicht zum Nenner. Prozent ab 50 Fällen. PnL und R zeigen abgeschlossene Positionen; USD-Kommission wird bereits bei Entry angesetzt.</p>
+      <p>Zeitraum filtert Entry-Zeiten in Europe/Berlin. DRs ohne Entry entfallen bei einem gesetzten Entry-Zeitraum. Ohne Datumsfilter bleiben sie in der DR-Auswertung.</p>
     </details>
-
-    <details class="run-comparison"><summary>Optional: einzelnen Lauf vergleichen</summary>
-      <label class="run-filter">Regel / Lauf<select v-model="runId" :disabled="!runs.length">
-        <option v-for="run in comparisonRuns" :key="run.id" :value="run.id">{{ runLabel(run) }}</option>
-      </select></label>
-    </details>
-    <form class="statistics-filters" @submit.prevent="refresh">
-
-      <label>Instrument<select v-model="instrument"><option value="">Alle Instrumente</option><option value="GBPUSD">GBPUSD</option><option value="EURUSD">EURUSD</option><option value="XAUUSD">XAUUSD</option></select></label>
-      <label>Stoppvariante<select v-model="variant"><option value="wide">Weiter SL</option><option value="narrow">Enger SL</option></select></label>
-      <label v-if="runId">Ergebnis / Winrate<select v-model="basis"><option value="net">Netto nach Kommission</option><option value="gross">Brutto vor Kommission</option></select></label>
-      <label v-if="runId">Entry ab<input v-model="from" type="date" /></label>
-      <label v-if="runId">Entry bis einschließlich<input v-model="to" type="date" /></label>
-    </form>
-
-    <SimulationRunStatus v-if="selectedRun" :run="selectedRun" />
-
     <div :aria-busy="loading">
-      <p v-if="error" role="alert" class="error">{{ error }} <button type="button" @click="refresh">Erneut versuchen</button></p>
-      <p v-else-if="loading" role="status" class="empty">Gespeicherte Ergebnisse werden geladen…</p>
-      <p v-else-if="!runs.length" class="empty">Noch keine gespeicherten Simulationsläufe. Sobald ein Lauf Ergebnisse gespeichert hat, erscheinen sie hier.</p>
-      <p v-else-if="!runId" class="denominator">Ergebnisse stehen direkt bei den Entries in der DR-Prüftabelle. Alternative Läufe bleiben getrennt.</p>
-      <p v-else-if="!selectedRun" role="alert" class="error">Der verlinkte Lauf ist nicht verfügbar. Bitte oben einen gespeicherten Lauf wählen.</p>
+      <p v-if="error || dateError" role="alert" class="error">{{ error || dateError }} <button v-if="error" @click="refresh">Erneut versuchen</button></p>
+      <p v-else-if="loading" role="status" class="empty">Gespeicherte Läufe und Review-Belege werden geladen…</p>
+      <p v-else-if="!runs.length" role="status" class="empty">Noch keine gespeicherten Simulationsläufe.</p>
+      <p v-else-if="!selectedRun" role="alert" class="empty">Kein abgeschlossener Lauf verfügbar oder der verlinkte Lauf fehlt. Bitte einen Lauf wählen.</p>
+      <p v-else-if="filters.compare && !comparisonRun" role="alert">Der Vergleichslauf ist nicht verfügbar. Bitte neu wählen.</p>
       <template v-else>
-        <h2>Ergebnisübersicht · Lauf {{ runId.slice(-8) }}</h2>
-        <p v-if="!isVersionedDealingRangeRun(selectedRun)" class="denominator">Altstand: Die Ergebnisstatistik verwendet die ursprünglichen gespeicherten Entries dieses Laufs. Seine Kandidaten wurden nicht nach den neuen DR-Stufen klassifiziert.</p>
-        <p class="denominator">Kostenansicht {{ SIMULATION_COST_VERSION }}: aus gespeicherten Bruttoergebnissen berechnet. Ältere Bruttoläufe werden nachträglich umgerechnet; ihre gespeicherten Originalergebnisse bleiben unverändert.</p>
-        <section class="statistics-summary" aria-label="Statistik der gewählten Variante">
-          <div><span>Entry-Signale</span><strong>{{ stats.total }}</strong></div>
-          <div><span>{{ basisLabel }} Gewinne / Verluste</span><strong>{{ stats.wins }} / {{ stats.losses }}</strong></div>
-          <div><span>{{ basisLabel }} Winrate · n = {{ stats.closed }}</span><strong>{{ stats.winrate == null ? '–' : `${stats.winrate.toFixed(1)} %` }}</strong></div>
-          <div><span>{{ basisLabel }} USD · abgeschlossen</span><strong :class="{ positive: stats.pnlUsd > 0, negative: stats.pnlUsd < 0 }">{{ fmtMoney(stats.pnlUsd) }}</strong></div>
-          <div><span>{{ basisLabel }} R · abgeschlossen</span><strong>{{ fmtR(stats.totalR) }}</strong></div>
-        </section>
-        <p v-if="stats.winrate == null" class="winrate-note">Winrate noch nicht ausgewiesen: {{ stats.closed }} von mindestens {{ MIN_SIMULATION_WINRATE_CASES }} eindeutig abgeschlossenen Fällen. PnL und Fallzahlen werden bereits angezeigt.</p>
-        <p class="denominator">{{ basisLabel }}-Winrate: positive {{ basisLabel }}-Ergebnisse / eindeutig abgeschlossene, ausführbare Positionen ({{ stats.wins }} / {{ stats.closed }}). Prozent ab 50 abgeschlossenen Fällen. Offene und uneindeutige Fälle zählen nicht zum Nenner. T1 + Break-even ist netto nur dann ein Gewinn, wenn der Teilgewinn die Kommission übersteigt.</p>
-        <dl class="outcome-counts"><div v-for="(label, key) in SIMULATION_OUTCOME_LABELS" :key="key"><dt>{{ label }}</dt><dd>{{ stats.counts[key] }}</dd></div></dl>
-        <p class="denominator">Brutto- und Netto-R beziehen sich auf das tatsächliche Preisrisiko nach Lotrundung. Die Obergrenze von 500 USD gilt vor Kommission. Bei offenen Positionen ist nur das bereits realisierte Ergebnis abzüglich der vollen Entry-Kommission bekannt.</p>
+        <SimulationRunStatus :run="selectedRun" />
+        <p v-if="filters.compare" class="note">Alt: {{ comparisonRun.configuration?.label ?? comparisonRun.id }} · Neu: {{ selectedRun.configuration?.label ?? selectedRun.id }}</p>
+        <p v-if="!current.groups.length" role="status" class="empty">Keine DRs für diese Filterauswahl.</p>
+        <SimulationComparisonMetrics :current="current.results" :previous="previous.results" :compare="!!filters.compare" />
+        <SimulationRunQuality :current="current" :previous="previous" :compare="!!filters.compare" />
+        <SimulationSetupsTable :repository="repository" :run-id="filters.run" :runs="runs" :instrument="filters.instrument" variant="wide" :results="current.results" />
       </template>
     </div>
-    <SimulationSetupsTable ref="setupTable" :repository="repository" :run-id="runId" :runs="runs" :instrument="instrument" :variant="variant" :results="costRows" :results-loading="loading" :results-error="error" />
   </main>
 </template>
-
 <style scoped>
-.statistics-page { padding: 24px; color: #d1d4dc; max-width: 1600px; width: 100%; box-sizing: border-box; margin: 0 auto; }
-.statistics-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
-h1 { margin: 0; font-size: 20px; font-weight: 600; }
-h2 { font-size: 18px; margin: 20px 0 12px; }
-.winrate-note { padding: 14px 16px; border: 1px solid #434651; border-radius: 4px; background: #1e222d; font-size: 13px; line-height: 1.6; }
-.statistics-header p { margin: 6px 0 0; color: #a5a9b4; font-size: 13px; }
-.simulation-rules { background: #1e222d; border: 1px solid #2a2e39; border-radius: 4px; padding: 16px; font-size: 13px; line-height: 1.6; }
-.simulation-rules p { margin: 5px 0 0; color: #a5a9b4; }
-.statistics-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 20px 0; }
-.statistics-filters label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #a5a9b4; }
-.run-comparison { margin-top: 16px; } summary { cursor: pointer; }
-.run-filter { flex: 1 1 340px; min-width: 0; }
-select, input { box-sizing: border-box; width: 100%; min-height: 36px; border: 1px solid #434651; border-radius: 4px; color: #d1d4dc; background: #1e222d; padding: 7px 10px; color-scheme: dark; }
-select:focus-visible, input:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid #82aaff; outline-offset: 2px; }
-.statistics-summary { display: flex; flex-wrap: wrap; gap: 20px 36px; border-top: 1px solid #2a2e39; padding-top: 20px; }
-.statistics-summary div { display: flex; flex-direction: column; gap: 6px; }
-.statistics-summary span { color: #a5a9b4; font-size: 12px; }
-.statistics-summary strong { font-size: 20px; font-variant-numeric: tabular-nums; font-weight: 600; }
-.positive { color: #71c8b3; } .negative, .error { color: #ef5350; }
-.denominator { color: #a5a9b4; font-size: 12px; line-height: 1.6; margin: 16px 0; }
-.outcome-counts { display: flex; flex-wrap: wrap; gap: 12px 28px; padding: 12px 0; border-block: 1px solid #2a2e39; }
-.outcome-counts div { display: flex; gap: 8px; font-size: 12px; }
-.outcome-counts dt { color: #a5a9b4; } .outcome-counts dd { margin: 0; font-weight: 600; }
-.empty { padding: 32px 16px; text-align: center; border: 1px solid #2a2e39; border-radius: 4px; color: #a5a9b4; font-size: 13px; line-height: 1.6; }
-.error { padding: 16px; background: #1e222d; line-height: 1.6; }
-.error button { background: transparent; border: 1px solid #a5a9b4; color: #d1d4dc; border-radius: 4px; cursor: pointer; padding: 6px 10px; margin-left: 8px; }
-@media (max-width: 600px) { .statistics-page { padding: 16px; } .statistics-filters label { flex: 1 1 160px; } .statistics-header { align-items: flex-start; } }
+.statistics-page{padding:24px;color:#d1d4dc;max-width:1600px;width:100%;min-width:0;box-sizing:border-box;margin:auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:20px}h1{margin:0;font-size:20px;font-weight:600}header p,.note{font-size:13px;color:#b1b7c5}button{background:#1e222d;color:#d1d4dc;border:1px solid #434651;padding:8px 12px;border-radius:4px;cursor:pointer}button:disabled{opacity:.6;cursor:wait}.simulation-rules{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:16px;margin-bottom:20px;font-size:13px;line-height:1.6}.simulation-rules p{color:#b1b7c5}summary{cursor:pointer}.empty{padding:24px 12px;border:1px solid #434651;color:#b1b7c5;font-size:13px}.error{color:#ff8b91}:is(button,summary):focus-visible{outline:2px solid #91b8ff;outline-offset:3px}@media(max-width:600px){.statistics-page{padding:12px}header{align-items:flex-start}}
 </style>
