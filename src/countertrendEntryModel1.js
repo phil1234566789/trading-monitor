@@ -1,4 +1,4 @@
-import { detectOrderBlocks } from './orderBlockDetection.js';
+import { detectOrderBlocks,createIncrementalOrderBlockDetector } from './orderBlockDetection.js';
 import { orderBlockRecognitionTimes } from './orderBlockRecognitionTime.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { evaluateChecklistM5 } from './tradeSetupChecklistM5.js';
@@ -42,7 +42,10 @@ export function evaluateCountertrendEntryModel1({context,rows,evaluatedAt,bos,ch
     const m5Bos=(reaction?.levels ?? []).find(s => s.type === 'BOS' && s.direction === context.direction
       && Number.isFinite(s.recognizedAt) && s.recognizedAt <= evaluatedAt) ?? null;
     const recognition=orderBlockRecognitionTimes(m5,'5m');
-    const zones=detectOrderBlocks(m5,'5m').map(ob => ({...ob,recognizedAt:recognition.get(ob.startTime)}));
+    // Der Fortschritt gehört zu diesem Scan/Entry-Kontext, kein globaler Historiencache.
+    if(entryProgress)entryProgress.detectM5OrderBlocks??=createIncrementalOrderBlockDetector('5m');
+    const zones=(entryProgress?entryProgress.detectM5OrderBlocks(m5):detectOrderBlocks(m5,'5m'))
+      .map(ob => ({...ob,recognizedAt:recognition.get(ob.startTime)}));
     const orderBlocks=eligibleEntryModel1OrderBlocks(zones,context.primary,context.direction,context.confirmedAt,evaluatedAt);
     m5Facts={key,m5Bos,orderBlocks};
     if(entryProgress)entryProgress.m5=m5Facts;

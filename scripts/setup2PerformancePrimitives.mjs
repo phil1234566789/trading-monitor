@@ -12,6 +12,8 @@ const source=f=>JSON.stringify(path.resolve(f).replaceAll('\\','/'));
 await writeFile(input,[`export * from ${source('src/m1ScanPrefix.js')};`,
   `export * from ${source('src/candleTimeIndex.js')};`,`export * from ${source('src/orderBlockMitigation.js')};`,
   `export * from ${source('src/closedCandlePrefix.js')};`,
+  `export * from ${source('src/orderBlockDetection.js')};`,
+  `export {detectOrderBlocks as previousOrderBlocks} from ${source('test/fixtures/orderBlockDetectionBeforePerformanceH.js')};`,
   `export * from ${source('src/tradeSetupChecklistTimeBasis.js')};`].join('\n'));
 const bundle=await rolldown({input,platform:'node'}),generated=await bundle.generate({format:'esm'});await bundle.close();
 const coreFile=path.join(directory,'core.mjs');await writeFile(coreFile,generated.output.find(c=>c.type==='chunk').code);
@@ -35,9 +37,15 @@ if(options.case==='D'){
   before=()=>minutes.map(c=>rows.filter(r=>Number.isFinite(r.time)&&r.time+60<=c.time+60).slice().sort((a,b)=>a.time-b.time).length);
   after=()=>minutes.map(c=>core.closedChecklistCandles(rows,'1m',c.time+60).length);
 }
+if(options.case==='A3'){
+  const m5=JSON.parse(await readFile('.debug/setup2-f-observation-3125-v10b/cache/GBPUSD-5m-1717354800-1789682400.json','utf8'));
+  const end=m5.findIndex(c=>c.time>=1789542000),prefixes=[0,10,20].map(i=>m5.slice(0,end+i));
+  before=()=>prefixes.map(prefix=>core.previousOrderBlocks(prefix,'5m'));
+  after=()=>{const detect=core.createIncrementalOrderBlockDetector('5m');return prefixes.map(detect);};
+}
 assert.deepEqual(after(),before());
 const measurements=[];
-for(let i=0;i<7;i++)for(const [name,run] of i%2?[['after',after],['before',before]]:[['before',before],['after',after]]){
+for(let i=0;i<Number(options.repeat??7);i++)for(const [name,run] of i%2?[['after',after],['before',before]]:[['before',before],['after',after]]){
   const cpu=process.cpuUsage(),start=performance.now();run();const elapsed=process.cpuUsage(cpu);
   measurements.push({name,wallMs:performance.now()-start,cpuMs:(elapsed.user+elapsed.system)/1000});
 }

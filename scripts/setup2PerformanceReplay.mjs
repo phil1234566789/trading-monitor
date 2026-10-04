@@ -28,6 +28,9 @@ const code=generated.output.find(f=>f.type==='chunk').code;
 const coreFile=path.join(directory,'core.mjs');await writeFile(coreFile,code);
 const core=await import(pathToFileURL(coreFile));
 const sources=await read(path.join(fixture,'GBPUSD-sources.json'));
+const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
+await writeFile(path.join(directory,'replay.json'),JSON.stringify({fixture,cache,
+  inputHash:hash({manifest,configuration,sources,rows}),sourceHash:hash(code)},null,2));
 const sessions=manifest.sessions.map(r=>({id:r.id,label:r.label,instrument:r.instrument,fromMinutes:r.from_minutes,
   toMinutes:r.to_minutes,highLowRelevant:r.high_low_relevant,ignoreLiquidity:r.ignore_liquidity??false,danger:r.danger,days:r.days}));
 const results=[];
@@ -44,10 +47,10 @@ for(let repeat=0;repeat<Number(options.repeat??3);repeat++){
     core.evaluateSimulation({entry:snapshot.entry,variant,candles:rows['1m'],evaluatedAt:manifest.requestedTo,
       target1:snapshot.checklist.setup.primary.targetSelection?.target1?.price,
       target2:snapshot.checklist.setup.primary.targetSelection?.target2?.price??null}))}));
-  const result={snapshots,records},hash=createHash('sha256').update(JSON.stringify(result)).digest('hex');
+  const result={snapshots,records},resultHash=hash(result);
   if(repeat===0)await writeFile(path.join(directory,'results.json'),JSON.stringify(result));
-  if(results.some(r=>r.hash!==hash))throw new Error('Non-deterministic replay');
-  results.push({wallMs,cpuMs:(elapsedCpu.user+elapsedCpu.system)/1000,hash,entries:records.map(r=>r.snapshot.knownAt),functions:profile?.functions,memo:profile?.memo});
+  if(results.some(r=>r.hash!==resultHash))throw new Error('Non-deterministic replay');
+  results.push({wallMs,cpuMs:(elapsedCpu.user+elapsedCpu.system)/1000,hash:resultHash,entries:records.map(r=>r.snapshot.knownAt),functions:profile?.functions,memo:profile?.memo,memos:profile?.memos});
   await writeFile(path.join(directory,'measurements.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results.at(-1)));
 }
 delete globalThis.__setup2Profile;

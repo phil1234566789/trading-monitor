@@ -185,7 +185,7 @@ try {
       }});
     const elapsedCpu=process.cpuUsage(cpu);
     delete globalThis.__setup2Profile;
-    if(profile)timings.scanProfile={functions:profile.functions,memo:profile.memo};
+    if(profile)timings.scanProfile={functions:profile.functions,memo:profile.memo,memos:profile.memos};
     run.provenance.measurement={wallMs:performance.now()-started,cpuMs:(elapsedCpu.user+elapsedCpu.system)/1000};
     const records=outcomeRecords(snapshots,rows['1m'],to);
     const writeStarted = performance.now();
