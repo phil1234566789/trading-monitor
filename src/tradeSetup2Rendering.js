@@ -53,11 +53,13 @@ export function renderSetup2Positions(series,positions,primitives,candles,curren
 export function renderSetup2Detail(series,snapshot,primitives,entryPrimitives,candles,currentBar,asOf,indicators) {
   clearSetup2Primitives(series,primitives);
   const visible=['1m','5m'].includes(currentBar)&&snapshot?.knownAt<=asOf?snapshot:null;
-  renderM1Entry(series,visible?.entry,entryPrimitives,candles,currentBar);
+  const snapshots=(visible?.entrySnapshots ?? (visible?[visible]:[])).filter(s=>s.knownAt<=asOf);
+  renderM1Entry(series,snapshots.map(s=>s.entry).filter(Boolean),entryPrimitives,candles,currentBar,indicators?.tradeSetup2Variant);
   if(!visible)return;
   const extraLevels=snapshotStructureLevels(visible).filter(level=>!visible.evidence.some(e=>e.kind==='line'
     &&e.timeframe===level.timeframe&&e.price===level.price&&e.fromTime===level.fromTime));
-  for(const e of [...visible.evidence,...extraLevels]) {
+  const evidence=[...new Map(snapshots.flatMap(s=>s.evidence).map(e=>[e.id ?? JSON.stringify(e),e])).values()];
+  for(const e of [...evidence,...extraLevels]) {
     if(e.knownAt>asOf || !snapshotEvidenceVisible(e,indicators))continue;
     // Ein H1-Level kann vor dem geladenen M1-Fenster beginnen. Nur horizontale
     // Belege am Fensterrand abschneiden; schräge Strukturpfade nicht extrapolieren.

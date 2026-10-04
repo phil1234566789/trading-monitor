@@ -7,6 +7,11 @@ const candidate=(id,knownAt=300,primary={})=>({id,runId:'r',instrument:'GBPUSD',
 const entry={entryId:'e',snapshotId:'e',setupKey:'s',runId:'r',instrument:'GBPUSD',direction:'short',
   variant:'wide',entryTime:600,entryPrice:1.8,status:'open'};
 const options={instrument:'GBPUSD',variant:'wide',asOf:900,historyCount:5};
+it('keeps both entries when the history limit admits only their one DR',()=>{
+  const second={...entry,entryId:'second',snapshotId:'second',entryTime:700};
+  const rows=tradeSetup2HistoryItems([entry,second],[candidate('s'),candidate('old',100)],{...options,historyCount:1});
+  expect(rows.map(r=>r.snapshotId)).toEqual(['second','e']);
+});
 it('shows candidates with only confirmed saved bounds and no invented position',()=>{
   const [item]=tradeSetup2HistoryItems([], [candidate('s')],options);
   expect(item).toMatchObject({kind:'candidate',snapshotId:'s',isOpen:false});

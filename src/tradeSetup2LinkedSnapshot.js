@@ -7,7 +7,12 @@ export function createLinkedSnapshotReader(repository) {
     if (force) pending.delete(key);
     if (!pending.has(key)) {
       const request = repository.getEntry(run, id).then(async entry => {
-        const record = entry ?? { snapshot: await repository.getSetupSnapshot(run, id), results: [] };
+        let record = entry ?? { snapshot: await repository.getSetupSnapshot(run, id), results: [] };
+        if (entry?.snapshot?.setupKey) {
+          const siblings = await repository.getRangeEntries(run, entry.snapshot.setupKey);
+          record = { snapshot: entry.snapshot, snapshots: siblings.map(row => row.snapshot),
+            results: siblings.flatMap(row => row.results) };
+        }
         if (!record?.snapshot) throw new Error('Der gespeicherte Setup-Stand fehlt.');
         return record;
       }).catch(error => {

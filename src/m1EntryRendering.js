@@ -65,8 +65,8 @@ class EntryPaneView {
   zOrder() { return 'top'; }
   update() {
     const { chart, series, entry, candles, currentBar, hovered } = this.source;
-    const specs = [entryRiskSpec(entry.scales.wide, 'SL weit', 'rScale', entry.instrument),
-      entryRiskSpec(entry.scales.narrow, 'SL eng', 'pipScale', entry.instrument)];
+    const specs = ['wide','narrow'].filter(v=>!this.source.variant||v===this.source.variant).map(v=>
+      entryRiskSpec(entry.scales[v],v==='wide'?'SL weit':'SL eng',v==='wide'?'rScale':'pipScale',entry.instrument));
     this.point = { entry, hovered, box: this.point.box, x: chartEventCoordinate(chart.timeScale(), candles, entry.candleTime, barSecondsFor(currentBar)), y: series.priceToCoordinate(entry.price),
       scales: specs.map(spec => spec && ({ ...spec, ticks: spec.levels.map(level => ({ ...level, y: series.priceToCoordinate(level.price) })) })) };
   }
@@ -91,24 +91,21 @@ export class M1EntryPrimitive {
   paneViews() { return this.views; }
 }
 
-export function renderM1Entry(series, entry, primitives, candles, currentBar) {
+export function renderM1Entry(series, entry, primitives, candles, currentBar, variant) {
   // Der Evaluator liefert nur bereits bekannte Entries; hier zusätzlich echte
   // Abdeckung prüfen, damit Replay-/Timeframewechsel nichts an den Rand klemmen.
   const seconds = barSecondsFor(currentBar);
-  const visible = ['1m', '5m'].includes(currentBar) && entry
-    && chartEventBarTime(candles, entry.candleTime, seconds) != null ? entry : null;
-  if (visible && primitives[0]?.entry.id === visible.id) {
-    primitives[0].entry = visible;
-    primitives[0].candles = candles;
-    primitives[0].currentBar = currentBar;
-    primitives[0].requestUpdate?.();
-    return;
-  }
-  for (const primitive of primitives) series.detachPrimitive(primitive);
+  const visible = (Array.isArray(entry)?entry:[entry]).filter(e=>['1m','5m'].includes(currentBar)&&e
+    &&chartEventBarTime(candles,e.candleTime,seconds)!=null);
+  const previous=new Map(primitives.map(p=>[p.entry.id,p]));
+  for (const primitive of primitives) if(!visible.some(e=>e.id===primitive.entry.id))series.detachPrimitive(primitive);
   primitives.length = 0;
-  if (visible) {
-    const primitive = new M1EntryPrimitive(visible, candles, currentBar);
-    series.attachPrimitive(primitive);
+  for (const item of visible) {
+    const primitive = previous.get(item.id) ?? new M1EntryPrimitive(item, candles, currentBar);
+    primitive.entry=item;primitive.candles=candles;primitive.currentBar=currentBar;
+    primitive.variant = variant;
+    if(!previous.has(item.id))series.attachPrimitive(primitive);
+    else primitive.requestUpdate?.();
     primitives.push(primitive);
   }
 }

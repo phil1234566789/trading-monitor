@@ -9,7 +9,7 @@ export function tradeSetup2HistoryItems(results,candidates,options) {
   const bySetup=new Map();
   for(const c of candidates) {
     if(c.instrument!==options.instrument||c.knownAt>options.asOf)continue;
-    const key=c.setupKey ?? c.id,previous=bySetup.get(key);
+    const key=`${c.runId}:${c.setupKey ?? c.id}`,previous=bySetup.get(key);
     if(previous&&previous.sortTime>=c.knownAt)continue;
     const primary=c.snapshot?.checklist?.setup?.primary;
     // Der Tageslauf speichert auch ältere Sweeps um Mitternacht. Ihre Anzeigezeit
@@ -33,11 +33,14 @@ export function tradeSetup2HistoryItems(results,candidates,options) {
       fromTime:c.knownAt-60,toTime:Math.min(c.knownAt+1800,options.asOf-60)});
   }
   for(const entry of entries) {
-    const key=entry.setupKey ?? entry.snapshotId,previous=bySetup.get(key);
-    if(previous?.kind==='entry'&&previous.sortTime>=entry.sortTime)continue;
-    bySetup.set(key,entry);
+    const key=`${entry.runId}:${entry.setupKey ?? entry.snapshotId}`;
+    if(bySetup.get(key)?.kind==='candidate')bySetup.delete(key);
+    bySetup.set(`${key}:${entry.snapshotId}`,entry);
   }
   const limit=Math.max(0,Math.floor(options.historyCount ?? 5));
-  return ['long','short'].flatMap(direction=>[...bySetup.values()].filter(p=>p.direction===direction)
-    .sort((a,b)=>b.sortTime-a.sortTime).slice(0,limit));
+  return ['long','short'].flatMap(direction=>{
+    const rows=[...bySetup.values()].filter(p=>p.direction===direction).sort((a,b)=>b.sortTime-a.sortTime);
+    const keys=[...new Set(rows.map(p=>`${p.runId}:${p.setupKey ?? p.snapshotId}`))].slice(0,limit);
+    return rows.filter(p=>keys.includes(`${p.runId}:${p.setupKey ?? p.snapshotId}`));
+  });
 }

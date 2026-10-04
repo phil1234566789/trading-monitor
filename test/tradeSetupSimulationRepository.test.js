@@ -3,6 +3,15 @@ import { createSimulationRepository, simulationAsOf } from '../src/tradeSetupSim
 import {encodeSnapshotStructures} from '../src/tradeSetupSnapshotStorage.js';
 
 describe('simulation history repository', () => {
+  it('reads sibling entries in one bounded request scoped to the run and DR',async()=>{
+    const query={select:()=>query,eq:vi.fn(()=>query),order:vi.fn(()=>query),limit:vi.fn(async()=>({data:[
+      {id:'a',snapshot:{id:'a',setupKey:'dr'},outcomes:[{variant:'wide'}]},
+      {id:'b',snapshot:{id:'b',setupKey:'dr'},outcomes:[{variant:'wide'}]}]}))};
+    const rows=await createSimulationRepository({from:()=>query}).getRangeEntries('r','dr');
+    expect(query.eq.mock.calls).toEqual([['run_id','r'],['snapshot->>setupKey','dr']]);
+    expect(query.limit).toHaveBeenCalledExactlyOnceWith(1000);
+    expect(rows.map(r=>r.snapshot.id)).toEqual(['a','b']);
+  });
   it('loads all outcome pages without a run filter and preserves identical entry IDs from separate runs', async () => {
     const filters = [], offsets = [];
     const data = ['first', 'second'].map(run_id => ({ id: 'same-entry', run_id, instrument: 'GBPUSD', direction: 'short', outcomes: [{ variant: 'wide', entryTime: 300 }] }));

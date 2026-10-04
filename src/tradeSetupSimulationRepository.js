@@ -78,6 +78,15 @@ export function createSimulationRepository(db,{compactStructures=false}={}) {
       if (error) throw error;
       return data ? { snapshot: decodeSnapshotStructures(data.snapshot), results: results(data, runId) } : null;
     },
+    getRangeEntries: async (runId, setupKey) => {
+      // Eine DR hat wenige Re-Entries. Am Serverlimit abbrechen statt still kürzen.
+      const { data, error } = await db.from('trade_setup_simulation_entries')
+        .select('id,instrument,direction,outcomes,snapshot').eq('run_id', runId)
+        .eq('snapshot->>setupKey', setupKey).order('entry_time').limit(1000);
+      if (error) throw error;
+      if (data?.length === 1000) throw new Error('Zu viele Entries für eine einzelne DR.');
+      return (data ?? []).map(row => ({ snapshot: decodeSnapshotStructures(row.snapshot), results: results(row, runId) }));
+    },
     saveRun: run => rpc('save_trade_setup_simulation_run', { run }),
     saveEntries: (runId, records) => batches('save_trade_setup_simulation_entries', runId,
       records.map(record=>compactStructures?{...record,snapshot:encodeSnapshotStructures(record.snapshot)}:record)),

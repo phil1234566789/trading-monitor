@@ -101,6 +101,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
         const record=await readLinkedSnapshot(props.tradeSetup2RunId,props.selectedTradeSetup2Id,force);
         if(ticket!==revision)return;
         selected.value=restoreTradeSetup2Snapshot(record.snapshot);
+        if(record.snapshots)selected.value={...selected.value,entrySnapshots:record.snapshots.map(restoreTradeSetup2Snapshot)};
         results.value=record.results;
         candidates.value=record.snapshot.entry?[]:[{...selected.value,runId:props.tradeSetup2RunId,snapshot:selected.value}];
         linkedReady.value=true;status.value='Gespeichertes Setup geladen';render();

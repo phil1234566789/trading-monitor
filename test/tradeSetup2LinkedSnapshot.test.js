@@ -1,6 +1,16 @@
 import { expect, it, vi } from 'vitest';
 import { createLinkedSnapshotReader } from '../src/tradeSetup2LinkedSnapshot.js';
 
+it('loads all entries of the linked DR in one sibling request and retains both outcomes', async () => {
+  const snapshots=[{id:'first',setupKey:'dr'},{id:'second',setupKey:'dr'}];
+  const records=snapshots.map(snapshot=>({snapshot,results:[{entryId:snapshot.id}]}));
+  const repository={getEntry:vi.fn(async()=>records[0]),getRangeEntries:vi.fn(async()=>records)};
+  const read=createLinkedSnapshotReader(repository);
+  expect(await read('run','first')).toEqual({snapshot:snapshots[0],snapshots,results:[{entryId:'first'},{entryId:'second'}]});
+  await read('run','first');
+  expect(repository.getRangeEntries).toHaveBeenCalledExactlyOnceWith('run','dr');
+});
+
 it('loads and reuses a candidate snapshot without outcomes', async () => {
   const snapshot = { id: 'candidate', entry: null };
   const repository = { getEntry: vi.fn().mockResolvedValue(null), getSetupSnapshot: vi.fn().mockResolvedValue(snapshot) };

@@ -5,6 +5,18 @@ import {restoreTradeSetup2Snapshot} from '../src/tradeSetup2Snapshot.js';
 import {chartColors,cssColor} from '../src/chartColors.js';
 import {renderStructurePivots,renderLowerStructure} from '../src/structureOverlay.js';
 
+it('draws both entries and clears the second on rewind, using the selected SL variant',()=>{
+  const first={id:'a',candleTime:2700,recognizedAt:2760},second={id:'b',candleTime:3000,recognizedAt:3060};
+  const snapshot={knownAt:2760,instrument:'GBPUSD',evidence:[],entrySnapshots:[
+    {knownAt:2760,entry:first,evidence:[]},{knownAt:3060,entry:second,evidence:[]}]};
+  const series={attachPrimitive:vi.fn(),detachPrimitive:vi.fn()},entries=[];
+  renderSetup2Detail(series,snapshot,[],entries,[{time:2700},{time:3000}],'5m',3060,{tradeSetup2Variant:'narrow'});
+  expect(entries.map(p=>p.entry.id)).toEqual(['a','b']);
+  expect(entries.every(p=>p.variant==='narrow')).toBe(true);
+  renderSetup2Detail(series,snapshot,[],entries,[{time:2700},{time:3000}],'5m',3000);
+  expect(entries.map(p=>p.entry.id)).toEqual(['a']);
+});
+
 it('uses independent M1 colors in live and legacy snapshot drawing without changing evidence',()=>{
   const saved={...chartColors.m1RangeBreakOfStructure},marker={...chartColors.m1RangesMarker};
   try {
