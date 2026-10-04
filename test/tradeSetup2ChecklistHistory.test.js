@@ -1,0 +1,21 @@
+import {expect,it} from 'vitest';
+import {createChecklistHistoryRecorder,checklistHistoryAt,CHECKLIST_HISTORY_VERSION} from '../src/tradeSetup2ChecklistHistory.js';
+const candidate={id:'dr',direction:'short',recognizedAt:100,invalidation:1.4,checks:{},lifecycle:{main:{state:'active'}}};
+const state=at=>({instrument:'GBPUSD',status:'ready',model:'countertrend',evaluatedAt:at,checks:{liquiditySweep:{status:'passed',details:['Sweep']}},setup:{primary:candidate}});
+it('records changes only, keeps lightweight evidence and chooses the last causal state',()=>{
+  const recorder=createChecklistHistoryRecorder();
+  recorder.record(state(100),candidate);recorder.record(state(200),candidate);
+  const changed={...candidate,checks:{reaction:{status:'passed',details:['OB']}}};
+  recorder.record(state(300),changed,'M1');
+  const snapshot=recorder.complete([{setupKey:'dr'}])[0];
+  const history=snapshot.checklistHistory;
+  expect(history.version).toBe(CHECKLIST_HISTORY_VERSION);
+  expect(history.entries).toHaveLength(2);
+  expect(history.entries[1].changes.map(c=>c.key)).toEqual(['reaction']);
+  expect(checklistHistoryAt(history,99)).toBeNull();
+  expect(checklistHistoryAt(history,299).knownAt).toBe(100);
+  expect(checklistHistoryAt(history,300).knownAt).toBe(300);
+  expect(checklistHistoryAt(history,999).source).toBe('M1');
+  expect(checklistHistoryAt(null,999)).toBeNull();
+  expect(JSON.stringify(history).length).toBeLessThan(30000);
+});

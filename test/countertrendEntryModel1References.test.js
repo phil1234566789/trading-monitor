@@ -20,7 +20,10 @@ describe('real 97/105 entry model 1 replay',()=>{
    dailyAnchors:buildHistoricalDailyAnchors(fixture.dailyCandles,fixture.h1Candles),sessionConfigs:sessions.sessions,
    tradingWindows:{weekday:[[0,1440]],saturday:[],sunday:[]},fromTime:at,toTime};
   const snapshots=await scanTradeSetup2Window(input);
-  expect(snapshots).toEqual(await scanTradeSetup2Window({...input,useMemo:false}));
+  // Der ungecachte Kontrollscan bewertet zusätzliche M1-Minuten. Nur sein Log
+  // darf abweichen; sämtliche bisherigen Snapshots und Entries bleiben gleich.
+  const withoutHistory=rows=>rows.map(({checklistHistory,...snapshot})=>snapshot);
+  expect(withoutHistory(snapshots)).toEqual(withoutHistory(await scanTradeSetup2Window({...input,useMemo:false})));
   const entries=snapshots.filter(s=>s.entry);
   expect(entries).toHaveLength(2);
   expect(new Set(entries.map(s=>s.entry.conditions.retest.orderBlock.startTime)).size).toBe(entries.length);

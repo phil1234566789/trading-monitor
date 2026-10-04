@@ -7,7 +7,7 @@ export const FEATURE_VALUES = { met: '✓ Erfüllt', unmet: '✕ Nicht erfüllt'
 export function simulationReviewFeatures(snapshot) {
   const review = setupEntryConditions(snapshot);
   const features = review.rows.map(row => ({ key: row.key, group: /^[A-H] · /.test(row.label) || row.key === 'entry' ? 'checkpoint' : row.key === 'validation' ? 'antiConfluences' : 'entry', label: row.label,
-    value: { passed: 'met', unmet: 'unmet', unknown: 'unknown' }[row.status], details: row.details ?? [] }));
+    value: { passed: 'met', unmet: 'unmet', unknown: 'unknown', observed:'observed' }[row.status], details: row.details ?? [] }));
   const checks = snapshot.checklist?.checks;
   for (const [key, label] of [['antiConfluences', 'F · Anti-Confluences'], ['confluences', 'G · Confluences']]) {
     const rules = checklistObservationRules(checks?.[key], key);

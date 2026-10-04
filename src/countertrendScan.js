@@ -17,6 +17,7 @@ import { createClosedCandlePrefix } from './closedCandlePrefix.js';
 import { createSetup2Memo,finalObservation } from './setup2Memo.js';
 import { entryModel1FvgAt } from './entryModel1Progress.js';
 import { completeDealingRangePriceObservations } from './dealingRangePriceObservation.js';
+import { createChecklistHistoryRecorder } from './tradeSetup2ChecklistHistory.js';
 
 export async function scanCountertrendWindow(input) {
   const { instrument,fromTime,toTime,signal,onSnapshot,onProgress,loadM1Candles,
@@ -33,6 +34,7 @@ export async function scanCountertrendWindow(input) {
   const closedM5At=createClosedCandlePrefix(m5,300);
   let m1=marked(input.m1Candles),loadedFrom=Infinity;
   const snapshots=[],entries=[...(input.existingEntries ?? [])],saved=new Map(),seen=new Set(entries.map(s=>s.entry.id));
+  const checklistHistory=createChecklistHistoryRecorder();
   const classificationCache=new Map(),closeReactionCache=createCloseReactionCache(),m1Cache=createCloseReactionCache();
   const recognized=new Map();
   const setupMemo=useMemo ? createSetup2Memo() : null,lifecycles=createSetup2Memo(),executions=createSetup2Memo();
@@ -93,6 +95,7 @@ export async function scanCountertrendWindow(input) {
   };
   const save=async checklist=>{
     for (const candidate of checklist.setup.candidates) {
+      if(checklist.evaluatedAt>=fromTime)checklistHistory.record(checklist,candidate);
       const {evaluatedAt: ignoredAt,...lifecycle}=candidate.lifecycle ?? {};
       const key=JSON.stringify([evaluateDealingRange(checklist,candidate).status,lifecycle]);
       if (checklist.evaluatedAt<fromTime || saved.get(candidate.id)===key) continue;
@@ -144,6 +147,7 @@ export async function scanCountertrendWindow(input) {
         if(useMemo)searchThrough.set(candidate.id,knownAt);
         const current=evaluateAt(knownAt,[sources.find(s=>s.tradeSetupId===candidate.tradeSetupId)]);
         const active=activeM1Context(current);
+        if(knownAt>=fromTime)for(const c of current.setup.candidates)checklistHistory.record(current,c,'M1');
         if (!active) break;
         const prefixEnd=candleTimeIndex(m1,candle.time)+1;
         const prefixStart=m1ScanPrefixStart(m1,Math.min(active.anchor.pivotTime,candidate.recognizedAt));
@@ -155,10 +159,12 @@ export async function scanCountertrendWindow(input) {
         if(!follow){follow={detectM5OrderBlocks:rows=>detectScanOrderBlocks(rows,'5m')};entryProgress.set(candidate.id,follow);}
         const check=evaluateM1Checklist({context:active,structure,candles:rows,evaluatedAt:knownAt,closeReactionCache:m1Cache,
           entryProgress:useMemo ? follow : undefined});
+        if(knownAt>=fromTime)checklistHistory.record(current,current.setup.primary,'M1',check);
         if (check.entry?.recognizedAt!==knownAt || seen.has(check.entry.id) || knownAt<fromTime) continue;
         const snapshot=createSetup2Entry({instrument,evaluatedAt:knownAt,tradingWindows:input.tradingWindows,sessionConfigs:input.sessionConfigs,news:input.news,newsLoadStatus:input.newsLoadStatus},
           ()=>buildTradeSetup2Snapshot({checklist:current,m1Check:check,m1Structure:structure,m1Candles:rows}));
         if (!snapshot) continue;
+        checklistHistory.record(current,current.setup.primary,'M1',check,snapshot.entry);
         seen.add(snapshot.entry.id);entries.push(snapshot);snapshots.push(snapshot);await onSnapshot?.(snapshot);
       }
     }
@@ -167,5 +173,5 @@ export async function scanCountertrendWindow(input) {
     if ((index+1)%yieldEvery===0) await yieldControl();
   }
   const latest=new Map(snapshots.filter(s=>s.rangeCourse).map(s=>[s.setupKey,s.rangeCourse]));
-  return completeDealingRangePriceObservations(snapshots.map(s=>s.entry ? {...s,rangeCourse:latest.get(s.setupKey) ?? null} : s),m5,toTime);
+  return completeDealingRangePriceObservations(checklistHistory.complete(snapshots.map(s=>s.entry ? {...s,rangeCourse:latest.get(s.setupKey) ?? null} : s)),m5,toTime);
 }

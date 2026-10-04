@@ -81,6 +81,11 @@ export function setupEntryConditions(snapshot) {
       : details ?? ['Keine Prüfung gespeichert.'], time ?? at);
   }
   const dr = snapshot.dealingRange;
+  if(checklist?.model==='countertrend') {
+    const check=checks.confluences;
+    add('confluences','G · Confluences beobachten',check ? 'observed' : 'unknown',
+      check ? observationRuleDetails(checklistObservationRules(check,'confluences')) : ['Keine Beobachtung gespeichert.']);
+  }
   if (savedDealingRangeStatus(snapshot) !== 'legacy') add('validation', checklist?.model === 'countertrend' ? 'DR-Stufe nach E/F' : 'D · DR-Validierung / Targets',
     dr.status === 'validated' ? 'passed' : isDisqualifiedDealingRange(snapshot) ? 'unmet' : 'unknown', dr.details, dr.evaluatedAt);
   const timeCheck = snapshot.entryEligibility ?? checks.time;
