@@ -64,7 +64,7 @@ export function tradeSetup2Evidence({ checklist, m1Check, m1Structure, m1Candles
     }
   }
   const signals=[...(checklist.checks.m5Trend?.structureReaction?.levels ?? []).map(s=>({...s,timeframe:'5m',key:'m5Trend'})),
-    ...[m1Check.m5Choch].filter(Boolean).map(s=>({...s,timeframe:'5m',key:'entry'})),
+    ...[m1Check.m5Choch,m1Check.m5Bos].filter(Boolean).map(s=>({...s,timeframe:'5m',key:'entry'})),
     ...[m1Check.choch,m1Check.bos].filter(Boolean).map(s=>({...s,timeframe:'1m',key:'m1'}))];
   for (const s of signals) line(s.type,s.key,s.timeframe,s.recognizedAt,s.price,s.pivotTime,s.candleTime,
     s.type==='CHoCH'?'m5RangeChoch':'m5RangeBreakOfStructure',`${s.timeframe} ${s.type}`);
@@ -82,7 +82,7 @@ export function tradeSetup2Evidence({ checklist, m1Check, m1Structure, m1Candles
     const short=primary.direction==='short';
     const bottom=short?confirmation.high:confirmation.low-fvg.gap;
     add('fvg','m1','1m',fvg.recognizedAt,{kind:'zone',fromTime:fvg.candleTime,toTime:confirmation.time,
-      top:bottom+fvg.gap,bottom,styleKey:'rScale',label:'M1 FVG'});
+      top:bottom+fvg.gap,bottom,styleKey:'fvgCandle',label:'M1 FVG'});
   }
   return result;
 }

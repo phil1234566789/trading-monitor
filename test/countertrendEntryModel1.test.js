@@ -10,8 +10,8 @@ import * as obs from '../src/orderBlockDetection.js';
 import candles from './fixtures/gbpusd-m1-dr114-p5.json';
 const at=clock=>Date.parse(`2026-09-09T${clock}:00+02:00`)/1000;
 
-const conditions = () => ({m5Choch:{type:'CHoCH',direction:'short',recognizedAt:600},
-  m1Bos:{type:'BOS',direction:'short',recognizedAt:660},
+const conditions = () => ({m5Bos:{type:'BOS',direction:'short',recognizedAt:600},
+  m1Choch:{type:'CHoCH',direction:'short',recognizedAt:660},
   retest:{candleTime:660,recognizedAt:720,orderBlock:{dir:-1,startTime:300,recognizedAt:600}},
   fvg:{direction:'short',candleTime:660,recognizedAt:780}});
 describe('Countertrend entry model 1 conditions', () => {
@@ -21,11 +21,11 @@ describe('Countertrend entry model 1 conditions', () => {
     for(const key of Object.keys(facts))expect(entryModel1ConditionsReady({...facts,[key]:null},'short',780)).toBe(false);
   });
   it.each([[600,660],[660,600],[780,780]])('does not impose a CHoCH/BOS ordering (%s,%s)', (choch,bos) => {
-    const facts=conditions();facts.m5Choch.recognizedAt=choch;facts.m1Bos.recognizedAt=bos;
+    const facts=conditions();facts.m5Bos.recognizedAt=choch;facts.m1Choch.recognizedAt=bos;
     expect(entryModel1ConditionsReady(facts,'short',780)).toBe(true);
   });
   it('rejects future or opposing signals and FVG confirmed before the retest', () => {
-    for(const key of ['m5Choch','m1Bos','fvg']) {
+    for(const key of ['m5Bos','m1Choch','fvg']) {
       const facts=conditions();facts[key].recognizedAt=781;expect(entryModel1ConditionsReady(facts,'short',780)).toBe(false);
       facts[key].recognizedAt=780;facts[key].direction='long';expect(entryModel1ConditionsReady(facts,'short',780)).toBe(false);
     }
@@ -33,7 +33,7 @@ describe('Countertrend entry model 1 conditions', () => {
     expect(entryModel1ConditionsReady(facts,'short',780)).toBe(false);
   });
   it('mirrors the same four conditions for long', () => {
-    const facts=conditions();for(const key of ['m5Choch','m1Bos','fvg'])facts[key].direction='long';facts.retest.orderBlock.dir=1;
+    const facts=conditions();for(const key of ['m5Bos','m1Choch','fvg'])facts[key].direction='long';facts.retest.orderBlock.dir=1;
     expect(entryModel1ConditionsReady(facts,'long',780)).toBe(true);
   });
   it('admits newly confirmed OBs and the explicitly included Setup 1.0 OB only', () => {
@@ -44,13 +44,13 @@ describe('Countertrend entry model 1 conditions', () => {
     expect(result.map(z=>z.startTime)).toEqual([0,300,600]);
     expect(result[0].inclusionRule).toBe('setup1OrderBlockIncluded');
     expect(setup1OrderBlockIncluded(primary,'short',1200)).toMatchObject({startTime:0,recognizedAt:600});
-    expect(ENTRY_MODEL_1_VERSION).toBe('countertrend-entry-model-1-v1');
+    expect(ENTRY_MODEL_1_VERSION).toBe('countertrend-entry-model-1-v2');
   });
 });
 
 describe('entry model 1 detection', () => {
   const primary={id:'dr',reactionRecognizedAt:at('09:30'),reactionOB:{dir:-1,startTime:at('09:20'),top:1.36,bottom:1.359},
-    targetSelection:{status:'passed',selectedAt:at('09:30'),target1:{price:1.35335},target2:{price:1.353}}};
+    sweep:{level:{touchedTime:at('09:20')}},invalidation:1.36,targetSelection:{status:'passed',selectedAt:at('09:30'),target1:{price:1.35335},target2:{price:1.353}}};
   const context={entryModel:ENTRY_MODEL_1_VERSION,instrument:'GBPUSD',direction:'short',setupKey:'dr',primary,
     confirmedAt:at('09:30'),structureStart:at('08:00'),settings:{},
     anchor:{pivotTime:at('08:45'),price:1.35554,recognizedAt:at('09:30')},
@@ -59,22 +59,23 @@ describe('entry model 1 detection', () => {
   function mocked(run, changes={}) {
     const original=obs.detectOrderBlocks;
     const ob=vi.spyOn(obs,'detectOrderBlocks').mockImplementation((rows,tf,...rest)=>tf==='5m'?[{...second,...changes}]:original(rows,tf,...rest));
-    const choch=vi.spyOn(m5,'evaluateChecklistM5').mockReturnValue({structureReaction:{levels:[{type:'CHoCH',direction:'short',recognizedAt:at('09:49'),candleTime:at('09:44')}]}});
+    const choch=vi.spyOn(m5,'evaluateChecklistM5').mockReturnValue({structureReaction:{levels:[{type:'BOS',direction:'short',recognizedAt:at('09:49'),candleTime:at('09:44')}]}});
     try{return run();}finally{ob.mockRestore();choch.mockRestore();}
   }
-  it('uses the second newly formed M5 OB and saves all facts, without requiring M1 CHoCH or direction', () => mocked(()=>{
+  it('uses the second newly formed M5 OB and saves all facts, without requiring the innermost M1 direction', () => mocked(()=>{
     const result=evaluateCountertrendEntryModel1({context,rows:candles.filter(c=>c.time+60<=at('09:50')),evaluatedAt:at('09:50'),
-      bos:{type:'BOS',direction:'short',recognizedAt:at('09:34')},choch:null,trends:[{trend:'uptrend',depth:0}],internalSweeps:[]});
+      sweepReaction:{active:true,choch:{type:'CHoCH',direction:'short',recognizedAt:at('09:34')}},bos:null,choch:null,trends:[{trend:'uptrend',depth:0}],internalSweeps:[]});
     expect(result.entry).toMatchObject({entryModel:ENTRY_MODEL_1_VERSION,recognizedAt:at('09:50'),
-      conditions:{m5Choch:{recognizedAt:at('09:49')},m1Bos:{recognizedAt:at('09:34')},
+      conditions:{m5Bos:{recognizedAt:at('09:49')},m1Choch:{recognizedAt:at('09:34')},
         retest:{candleTime:at('09:46'),orderBlock:{startTime:at('09:35'),recognizedAt:at('09:45')}},fvg:{recognizedAt:at('09:50')}}});
     expect(result.entry.stops.wide.price).toBe(primary.reactionOB.top);
   }));
-  it('routes the new model through the existing M1 structure and BOS detector',()=>mocked(()=>{
+  it('does not borrow a CHoCH from a different sweep extreme',()=>mocked(()=>{
     const evaluatedAt=at('09:50');
     const result=evaluateM1Checklist({context,candles,evaluatedAt,structure:buildM1Structure(candles,context.anchor,evaluatedAt)});
-    expect(result.entry.conditions.m1Bos.direction).toBe('short');
-    expect(result.entry.conditions.retest.orderBlock.startTime).toBe(at('09:35'));
+    expect(result.entry).toBeNull();
+    expect(result.conditions.m1Choch).toBeNull();
+    expect(result.entryBlockedReason).toContain('M1-CHoCH ab Sweep');
   }));
   it('unknown history cannot prove a retest, and future FVG candles do not count',()=>{
     const zones=[{...second,recognizedAt:at('09:45')}];

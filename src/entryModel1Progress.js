@@ -1,8 +1,12 @@
-import { detectOrderBlocks,candleTouchesOrderBlock } from './orderBlockDetection.js';
+import { candleTouchesOrderBlock } from './orderBlockDetection.js';
 
 export function entryModel1FvgAt(rows,direction) {
-  const zone=detectOrderBlocks(rows.slice(-4),'1m').find(z=>z.dir===(direction==='short'?-1:1));
-  return zone ? {direction,candleTime:zone.startTime,recognizedAt:rows.at(-1).time+60,gap:zone.fvg} : null;
+  const window=rows.slice(-4);
+  if(window.length!==4 || window.some((c,i)=>c.ignored || (i && c.time!==window[i-1].time+60)))return null;
+  const [,first,impulse,last]=window;
+  const gap=direction==='short'?first.low-last.high:last.low-first.high;
+  // Entry-FVG hat keine Pip-Mindestgröße; der allgemeine OB-Filter bleibt unabhängig.
+  return gap>1e-9 ? {direction,candleTime:impulse.time,recognizedAt:last.time+60,gap} : null;
 }
 
 export function advanceEntryModel1Follow(rows,orderBlocks,confirmedAt,direction,evaluatedAt,progress) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { entrySizingAt, ENTRY_SIZING_VERSION, entrySizingLabel, entryAgainstM5Allowed } from '../src/tradeSetup2EntrySizing.js';
+import { entrySizingAt, ENTRY_SIZING_VERSION, ENTRY_MODEL_1_SIZING_VERSION, entrySizingLabel, entryAgainstM5Allowed } from '../src/tradeSetup2EntrySizing.js';
 import { sizeSimulation, evaluateSimulation } from '../src/tradeSetupSimulation.js';
 import { buildTradeSetup2Snapshot, restoreTradeSetup2Snapshot } from '../src/tradeSetup2Snapshot.js';
 import { buildTradeSetup2Configuration } from '../src/tradeSetup2Configuration.js';
@@ -90,7 +90,7 @@ it('preserves old snapshots and budgets, versions new run configurations and rej
   expect(restored.entry.sizing).toBeUndefined();
   expect(sizeSimulation(restored.entry, 'wide')).toMatchObject({ riskBudget: 500, lots: 15, actualRisk: 495 });
   expect(entrySizingLabel(restored.entry.sizing)).toContain('Historischer Stand');
-  expect(buildTradeSetup2Configuration({ instrument: 'GBPUSD' }).entrySizingVersion).toBe(ENTRY_SIZING_VERSION);
+  expect(buildTradeSetup2Configuration({ instrument: 'GBPUSD' }).entrySizingVersion).toBe(ENTRY_MODEL_1_SIZING_VERSION);
   expect(sizeSimulation({ ...entry, sizing: { factor: .5 } }, 'wide')).toMatchObject({ status: 'notExecutable', reason: 'invalidSizing' });
   const wide = { ...entry, stops: { wide: { price: 1.347 } }, sizing: entrySizingAt(checklistAt('long', null), entry) };
   expect(sizeSimulation(wide, 'wide')).toMatchObject({ riskBudget: 250, status: 'notExecutable', reason: 'belowOneLot' });

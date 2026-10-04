@@ -1,6 +1,6 @@
 import { entryRiskScale } from './entryRisk.js';
 import { applySimulationCommission } from './tradeSetupSimulationCosts.js';
-import { ENTRY_SIZING_VERSION, ENTRY_RISK_BUDGET } from './tradeSetup2EntrySizing.js';
+import { ENTRY_SIZING_VERSION, ENTRY_MODEL_1_SIZING_VERSION, ENTRY_RISK_BUDGET } from './tradeSetup2EntrySizing.js';
 
 export const SIMULATION_VERSION = 'm5-choch-250-500-whole-lots-half-t1-be-commission-v3';
 const money = value => Math.round(value * 1e8) / 1e8;
@@ -12,7 +12,7 @@ export function sizeSimulation(entry, variant) {
   const riskBudget = ENTRY_RISK_BUDGET * (sizing?.factor ?? 1);
   const base = { variant, entryId: entry.id, entryTime: entry.recognizedAt, entryPrice: entry.price,
     stopPrice, riskBudget, entrySizing: sizing ?? null, lots: 0, t1Lots: 0, actualRisk: 0 };
-  if (sizing && (sizing.version !== ENTRY_SIZING_VERSION || sizing.model !== 'dr-against-m5-trend'
+  if (sizing && (![ENTRY_SIZING_VERSION,ENTRY_MODEL_1_SIZING_VERSION].includes(sizing.version) || sizing.model !== 'dr-against-m5-trend'
     || ![0.5, 1].includes(sizing.factor) || sizing.evaluatedAt !== entry.recognizedAt)) {
     return { ...base, status: 'notExecutable', reason: 'invalidSizing' };
   }

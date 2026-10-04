@@ -4,14 +4,23 @@ import { DEALING_RANGE_VERSION } from '../src/tradeSetup2DealingRange.js';
 import { simulationChartLink } from '../src/tradeSetupSimulationStatistics.js';
 import { ENTRY_MODEL_1_VERSION } from '../src/entryModel1Conditions.js';
 
-it('reviews model 1 BOS and M5 CHoCH as required, preserving legacy observations',()=>{
+it('reviews M5 BOS and sweep M1 CHoCH as required, preserving legacy observations',()=>{
  const saved=snapshot();saved.entry.entryModel=ENTRY_MODEL_1_VERSION;
- saved.entry.conditions={m5Choch:{direction:'short',recognizedAt:300},m1Bos:null};saved.direction='short';
+ saved.entry.conditions={m5Bos:{direction:'short',recognizedAt:300},m1Choch:null};saved.direction='short';
+ const review=setupEntryConditions(saved);
+ expect(review.rows.find(row=>row.key==='m5Bos').status).toBe('passed');
+ expect(review.rows.find(row=>row.key==='m1Choch').status).toBe('unmet');
+ expect(review.observations.map(row=>row.label)).toEqual(['M1 BOS']);
+ expect(setupEntryConditions(snapshot()).observations.map(row=>row.label)).toEqual(['M1 CHoCH','M1 BOS']);
+});
+
+it('keeps the original model 1 snapshot labels and requirements',()=>{
+ const saved=snapshot();saved.entry.entryModel='countertrend-entry-model-1-v1';saved.direction='short';
+ saved.entry.conditions={m5Choch:{direction:'short',recognizedAt:300},m1Bos:null};
  const review=setupEntryConditions(saved);
  expect(review.rows.find(row=>row.key==='m5Choch').status).toBe('passed');
  expect(review.rows.find(row=>row.key==='m1Bos').status).toBe('unmet');
  expect(review.observations.map(row=>row.label)).toEqual(['M1 CHoCH']);
- expect(setupEntryConditions(snapshot()).observations.map(row=>row.label)).toEqual(['M1 CHoCH','M1 BOS']);
 });
 
 it('zeigt alle gespeicherten DR-Stufen und leeren Bestand ohne erfundene Entries',()=>{
