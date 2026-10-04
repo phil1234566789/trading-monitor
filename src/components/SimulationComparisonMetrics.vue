@@ -27,7 +27,7 @@ const difference=(now,old)=>now==null || old==null?null:now-old;
 const resultTone=(key,value)=>['pnlUsd','grossPnlUsd','totalR'].includes(key)?tone(key,value):'';
 </script>
 <template>
-  <section class="metric-grid" aria-label="Ergebnis beider SL-Varianten" :style="{'--positive':cssColor('candleUp'),'--negative':cssColor('candleDown'),'--reference':cssColor('fvgCandle'),'--worse':cssColor('liquidityLowM5')}">
+  <section class="metric-grid" aria-label="Ergebnis beider SL-Varianten" :style="{'--positive':cssColor('candleUp'),'--negative':cssColor('candleDown'),'--reference':cssColor('fvgCandle'),'--worse':'#ff7043'}">
     <article v-for="card in cards" :key="card.variant" class="metric-card">
       <h2>{{ card.variant==='wide'?'Weiter SL':'Enger SL' }}</h2>
       <table><thead><tr><th scope="col">50.000 USD Referenz</th><th v-if="compare" scope="col">Alt</th><th scope="col">{{ compare?'Neu':'Wert' }}</th><th v-if="compare" scope="col">Δ</th></tr></thead>
