@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "src/orderBlockDetection.js": {
-    "mtime": 1790679435.2274773,
-    "seen": 1790679789.3191578,
-    "ast_hash": "c7b9dc6b5381645cb60a34e2cdce8556",
+    "mtime": 1791117752.1957107,
+    "seen": 1791118030.8554244,
+    "ast_hash": "fb4d9c80bb4ef010173cdf9311cc8e3b",
     "semantic_hash": ""
   },
   "src/orderBlocks.js": {
@@ -4044,9 +4044,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupChecklistTimeBasis.js": {
-    "mtime": 1791117430.203543,
-    "seen": 1791117520.1604638,
-    "ast_hash": "f86de0d86cabad9016fc75d6959618f5",
+    "mtime": 1791117980.5682058,
+    "seen": 1791118030.8554244,
+    "ast_hash": "316cf83a33cc82f7ec20fe5683b6cfb3",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/ignoredCandles.ts": {
@@ -4482,9 +4482,9 @@
     "semantic_hash": ""
   },
   "scripts/tradeSetup2YearRun.mjs": {
-    "mtime": 1791117143.9901004,
-    "seen": 1791117340.0967317,
-    "ast_hash": "b0afe088eae5178a3eee38a9ef21e287",
+    "mtime": 1791117801.2549381,
+    "seen": 1791118030.8548906,
+    "ast_hash": "9a77e50c7da3c6b77d2ad96d3d9da046",
     "semantic_hash": ""
   },
   "src/components/SimulationResultsTable.vue": {
@@ -5208,9 +5208,9 @@
     "semantic_hash": ""
   },
   "src/countertrendEntryModel1.js": {
-    "mtime": 1791102131.4090228,
-    "seen": 1791102285.4739313,
-    "ast_hash": "2c90777a71de63994ad98a17e943640f",
+    "mtime": 1791117536.1666512,
+    "seen": 1791118030.8554244,
+    "ast_hash": "f18c621586c9dc39321f3dcef7e16e76",
     "semantic_hash": ""
   },
   "src/dealingRangeConfirmationTime.js": {
@@ -5256,9 +5256,9 @@
     "semantic_hash": ""
   },
   "src/setup2Memo.js": {
-    "mtime": 1791053831.00862,
-    "seen": 1791053990.4091504,
-    "ast_hash": "122ad18a0ad83636243bcc807d07a9c6",
+    "mtime": 1791117655.8049562,
+    "seen": 1791118030.8554244,
+    "ast_hash": "6c7b5b7c8229300a654d36945930936e",
     "semantic_hash": ""
   },
   "test/setup2Memo.test.js": {
@@ -5484,21 +5484,21 @@
     "semantic_hash": ""
   },
   "scripts/setup2PerformancePrimitives.mjs": {
-    "mtime": 1791117430.9052513,
-    "seen": 1791117520.1604638,
-    "ast_hash": "08b15598f9d2c4b8ce33208c5f7a1385",
+    "mtime": 1791117571.471003,
+    "seen": 1791118030.8548906,
+    "ast_hash": "236660e159311364063482afb110b812",
     "semantic_hash": ""
   },
   "scripts/setup2PerformanceReplay.mjs": {
-    "mtime": 1791117256.9282408,
-    "seen": 1791117340.0967317,
-    "ast_hash": "195afc89fe6b209b3f44b7fa80c72465",
+    "mtime": 1791117800.4626174,
+    "seen": 1791118030.8548906,
+    "ast_hash": "4288b2f2d665f6c41b0ae0fb235ef22e",
     "semantic_hash": ""
   },
   "scripts/setup2Profiling.mjs": {
-    "mtime": 1791117256.2153742,
-    "seen": 1791117340.0967317,
-    "ast_hash": "f6f7a70bda9ec4d15e330b574692a316",
+    "mtime": 1791117799.7009878,
+    "seen": 1791118030.8548906,
+    "ast_hash": "dacdd5c9623f88c506839d329e1eb888",
     "semantic_hash": ""
   },
   "src/candleTimeIndex.js": {
@@ -5514,9 +5514,9 @@
     "semantic_hash": ""
   },
   "test/setup2PerformanceEquivalence.test.js": {
-    "mtime": 1791117426.3363078,
-    "seen": 1791117520.1614661,
-    "ast_hash": "f9d756cfe4ed19508e9893841d9fa310",
+    "mtime": 1791117969.3875072,
+    "seen": 1791118030.8564322,
+    "ast_hash": "27095795b57c9a6f1cf5e9147f5e3e3d",
     "semantic_hash": ""
   },
   "test/setup2Profiling.test.js": {
@@ -5529,6 +5529,24 @@
     "mtime": 1791117370.3162084,
     "seen": 1791117520.1604638,
     "ast_hash": "ca5b789c7cda242c083d016dc5df08e3",
+    "semantic_hash": ""
+  },
+  "scripts/setup2PerformanceCompare.mjs": {
+    "mtime": 1791117728.385678,
+    "seen": 1791118030.8548906,
+    "ast_hash": "05b8103a5082193123833f421991d256",
+    "semantic_hash": ""
+  },
+  "src/candleAppend.js": {
+    "mtime": 1791117655.8039515,
+    "seen": 1791118030.8548906,
+    "ast_hash": "37ee62359727aed64c5ccb13047b0a32",
+    "semantic_hash": ""
+  },
+  "test/incrementalOrderBlocks.test.js": {
+    "mtime": 1791117512.335137,
+    "seen": 1791118030.8564322,
+    "ast_hash": "163ad1e497390956800e03577ec26153",
     "semantic_hash": ""
   }
 }
