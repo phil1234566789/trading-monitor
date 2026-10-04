@@ -20,13 +20,14 @@ for(const bar of ['1D','1h','5m','1m']){
   rows[bar]=await read(path.join(cache,matches[0]));
 }
 const input=path.join(directory,'entry.mjs');
-await writeFile(input,['tradeSetup2Scan.js','tradeSetup2Anchors.js','tradeSetupSimulation.js']
+await writeFile(input,['tradeSetup2Scan.js','tradeSetup2Anchors.js','tradeSetupSimulation.js','tradeSetup2Configuration.js']
   .map(f=>`export * from ${JSON.stringify(path.resolve('src',f).replaceAll('\\','/'))};`).join('\n'));
 const bundle=await rolldown({input:options.core?path.resolve(options.core):input,platform:'node',plugins:options.profile==='true'?[setup2ProfilingPlugin()]:[setup2WithoutProfilingPlugin()]});
 const generated=await bundle.generate({format:'esm'});await bundle.close();
 const code=generated.output.find(f=>f.type==='chunk').code;
 const coreFile=path.join(directory,'core.mjs');await writeFile(coreFile,code);
 const core=await import(pathToFileURL(coreFile));
+if(options.version && core.SETUP2_VERSION!==options.version)throw new Error('Unexpected setup version');
 const allSources=await read(path.join(fixture,'GBPUSD-sources.json'));
 const setupIds=options.setupIds?.split(',').map(Number);
 const sources=setupIds ? allSources.filter(s=>setupIds.includes(s.id)) : allSources;
@@ -37,7 +38,7 @@ if(fromTime<manifest.requestedFrom || toTime>manifest.requestedTo || !(fromTime<
   throw new Error('Replay window must stay inside the frozen fixture');
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 await writeFile(path.join(directory,'replay.json'),JSON.stringify({fixture,cache,
-  fromTime,toTime,setupIds,inputHash:hash({manifest,configuration,sources,rows,fromTime,toTime}),sourceHash:hash(code)},null,2));
+  fromTime,toTime,setupIds,setupVersion:core.SETUP2_VERSION,inputHash:hash({manifest,configuration,sources,rows,fromTime,toTime}),sourceHash:hash(code)},null,2));
 const sessions=manifest.sessions.map(r=>({id:r.id,label:r.label,instrument:r.instrument,fromMinutes:r.from_minutes,
   toMinutes:r.to_minutes,highLowRelevant:r.high_low_relevant,ignoreLiquidity:r.ignore_liquidity??false,danger:r.danger,days:r.days}));
 const results=[];

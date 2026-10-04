@@ -5424,9 +5424,9 @@
     "semantic_hash": ""
   },
   "scripts/setup2PerformanceReplay.mjs": {
-    "mtime": 1791132694.4105136,
-    "seen": 1791133393.1607866,
-    "ast_hash": "160090af50ceca923fb7bbdd82c075a9",
+    "mtime": 1791134723.0549686,
+    "seen": 1791134823.3597887,
+    "ast_hash": "7256562c39e1f695cbb52107481ed432",
     "semantic_hash": ""
   },
   "scripts/setup2Profiling.mjs": {
@@ -5574,9 +5574,15 @@
     "semantic_hash": ""
   },
   "docs/setup2-stage-versions.html": {
-    "mtime": 1791133431.8023276,
-    "seen": 1791133517.7825465,
-    "ast_hash": "73935f0f7a8945fd1f1716f0b2692c67",
+    "mtime": 1791133548.8414462,
+    "seen": 1791134823.509137,
+    "ast_hash": "6a0683c24cf9fa18821518cf527258d4",
+    "semantic_hash": ""
+  },
+  "scripts/setup2StageVersionCompare.mjs": {
+    "mtime": 1791134766.514557,
+    "seen": 1791134823.3597887,
+    "ast_hash": "8571af5a78982ba7047449eed4cc3b10",
     "semantic_hash": ""
   }
 }
