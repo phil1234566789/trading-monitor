@@ -18,6 +18,7 @@
 // addPinM5ObEntry unten) — kein eigener "m5_ob"-Kind mehr.
 import { supabase } from "./supabaseClient.js";
 import { findOrCreateObZoneId, findOrCreateTradeSetupId } from "./tradeIntake.js";
+import { fetchAllRows } from './dbReadPaging.js';
 
 // kind -> DB-Spalte, gemeinsam für Upsert-onConflict UND das Zusammensetzen der Insert-Zeile.
 // addPinM5ObEntry (unten) löst erst per find-or-create einen ob_zone_id auf und ruft dann ganz
@@ -35,7 +36,7 @@ const ROW_COLUMNS =
   "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
   "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
   "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi, " +
-  "note, created_at, " +
+  "simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, note, created_at, " +
   // end_time (Chat 2026-08-18, siehe Task "Pin-Kontext: gepinnte Objekte direkt rendern") — für die
   // Direkt-Rendering-Fallback-Box/-Linie eines gepinnten ob_zone/liquidity_level (siehe
   // PriceChart.vue: refreshPoiZonesInternal/refreshLiquidityInternal), dieselbe Spalte, die
@@ -52,6 +53,13 @@ function toEntry(row) {
   return {
     id: row.id,
     kind: row.kind,
+    simulationRunId: row.simulation_run_id,
+    simulationSnapshotId: row.simulation_snapshot_id,
+    simulationEntrySnapshotId: row.simulation_entry_snapshot_id,
+    simulationCheckpointKey: row.simulation_checkpoint_key,
+    simulationVariant: row.simulation_variant,
+    simulationPinKey: row.simulation_pin_key,
+    simulationContext: row.simulation_context,
     tradePositionId: row.trade_position_id,
     obZoneId: row.ob_zone_id,
     tradeSetupId: row.trade_setup_id,
@@ -138,12 +146,35 @@ function toEntry(row) {
 }
 
 export async function fetchPinContext() {
-  const { data, error } = await supabase.from("pin_context").select(ROW_COLUMNS).order("created_at", { ascending: true });
+  const { data, error } = await fetchAllRows((from,to)=>supabase.from("pin_context").select(ROW_COLUMNS).order("created_at", { ascending: true }).order('id').range(from,to));
   if (error) {
     console.error("Pin-Kontext laden fehlgeschlagen:", error);
     return [];
   }
   return (data ?? []).map(toEntry);
+}
+
+export async function fetchSimulationPins(runId) {
+  const {data,error}=await fetchAllRows((from,to)=>supabase.from('pin_context').select(ROW_COLUMNS)
+    .eq('simulation_run_id',runId).order('id').range(from,to));
+  if(error) throw error;
+  return data.map(toEntry);
+}
+
+export async function addSimulationPin({kind,key,snapshotId,entrySnapshotId,checkpointKey,variant,context},note) {
+  if(!['simulation_dr','simulation_checkpoint','simulation_entry'].includes(kind)) throw new Error('Unbekannte Simulations-Pin-Art.');
+  // Wiederholtes Pinnen ändert nur das Anliegen; der damalige Analysekontext bleibt eingefroren.
+  const {data:existing,error:readError}=await supabase.from('pin_context').select('id').eq('simulation_pin_key',key).maybeSingle();
+  if(readError) throw readError;
+  if(existing) {
+    if(!await updatePinNote(existing.id,note)) throw new Error('Pin-Notiz konnte nicht gespeichert werden.');
+    return existing.id;
+  }
+  const {error}=await supabase.from('pin_context').upsert({kind,simulation_pin_key:key,simulation_run_id:context.runId,
+    simulation_snapshot_id:snapshotId ?? null,simulation_entry_snapshot_id:entrySnapshotId ?? null,
+    simulation_checkpoint_key:checkpointKey ?? null,simulation_variant:variant ?? null,simulation_context:context,note:note || null},
+    {onConflict:'simulation_pin_key',ignoreDuplicates:true});
+  if(error) throw error;
 }
 
 // Upsert auf trade_position_id/ob_zone_id/trade_setup_id (siehe Unique-Indizes in den Migrationen)

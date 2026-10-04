@@ -24,7 +24,14 @@ export function independentRangeOutcome(group) {
   if (!group.firstValidated) return { status: 'unknown', label: DR_OUTCOME_LABELS.unknown };
   const courses = [group.latestCandidate, ...group.entries, group.snapshot].map(s => s?.rangeCourse)
     .filter(c => c?.setupKey === group.snapshot.setupKey).sort((a,b) => (b.lifecycle?.evaluatedAt ?? 0)-(a.lifecycle?.evaluatedAt ?? 0));
-  const course = courses[0];
+  let course = courses[0];
+  const frozen = group.firstValidated.rangeCourse;
+  const latest = group.latestCandidate?.checklist?.setup?.primary;
+  // Invalidierte Kandidaten speichern keinen rangeCourse mehr, aber den gleichen Preis-Lifecycle.
+  if ((!course || latest?.lifecycle?.evaluatedAt > course.lifecycle?.evaluatedAt) && frozen?.version === COUNTERTREND_RANGE_COURSE_VERSION && latest?.lifecycle
+    && latest.direction === frozen.direction && latest.invalidation === frozen.invalidation
+    && latest.targetSelection?.selectedAt === frozen.selectedAt && latest.targetSelection?.target1?.price === frozen.target1
+    && (latest.targetSelection?.target2?.price ?? null) === frozen.target2) course = { ...frozen, lifecycle: latest.lifecycle };
   if (course?.version === COUNTERTREND_RANGE_COURSE_VERSION) {
     const lifecycle = course.lifecycle, main = lifecycle?.main;
     const known = time => Number.isFinite(time) && time >= course.validatedAt && time <= lifecycle?.evaluatedAt;
@@ -45,7 +52,7 @@ export function independentRangeOutcome(group) {
 
 export function reviewGroups(snapshots) {
   return groupSetupSnapshots(snapshots).map(group => ({ ...group,
-    stage: group.firstValidated ? 'validated' : savedDealingRangeStatus(group.latestCandidate ?? group.snapshot),
+    stage: savedDealingRangeStatus(group.latestCandidate ?? group.snapshot), wasValidated: !!group.firstValidated,
     recognizedAt: group.candidate?.checklist?.setup?.primary?.recognizedAt ?? group.candidate?.knownAt ?? group.knownAt,
     setupType: simulationSetupType(group.snapshot), outcome: independentRangeOutcome(group),
     features: simulationReviewFeatures(group.snapshot) })).sort((a,b) => b.recognizedAt-a.recognizedAt || a.key.localeCompare(b.key));
@@ -57,15 +64,17 @@ export function simulationGroupHasPin(group, pins) {
 }
 export function filterReviewGroups(groups, filters, pins = []) {
   const bounds = simulationDateFilter(filters.from, filters.to);
+  const entryInPeriod = e => {
+    const time = e.entry?.recognizedAt ?? e.knownAt;
+    return (bounds.from == null || time >= bounds.from) && (bounds.to == null || time < bounds.to);
+  };
   return groups.filter(g => (!filters.instrument || g.instrument === filters.instrument)
     && (!filters.type || g.setupType === filters.type) && (!filters.stage || g.stage === filters.stage)
     && (!filters.entry || (filters.entry === 'with') === !!g.entries.length)
     && (!filters.pinned || (filters.pinned === 'with') === simulationGroupHasPin(g,pins))
     && (!filters.feature || g.features.some(f => f.key === filters.feature && (!filters.value || f.value === filters.value)))
-    && (bounds.from == null && bounds.to == null || g.entries.some(e => {
-      const time = e.entry?.recognizedAt ?? e.knownAt;
-      return (bounds.from == null || time >= bounds.from) && (bounds.to == null || time < bounds.to);
-    })));
+    && (bounds.from == null && bounds.to == null || g.entries.some(entryInPeriod)))
+    .map(g => bounds.from == null && bounds.to == null ? g : { ...g, entries: g.entries.filter(entryInPeriod) });
 }
 export function groupResults(groups, results, filters = {}) {
   const bounds = simulationDateFilter(filters.from, filters.to);
@@ -80,7 +89,7 @@ export function variantMetrics(results, variant) {
     commissionR: gross.totalR == null || net.totalR == null ? null : gross.totalR-net.totalR };
 }
 export function runFunnel(groups, results) {
-  const validated = groups.filter(g => g.stage === 'validated');
+  const validated = groups.filter(g => g.wasValidated ?? g.stage === 'validated');
   return { recognized: new Set(groups.map(g => g.snapshot.checklist?.setup?.primary?.tradeSetupId ?? g.snapshot.setupKey ?? g.key)).size,
     confirmed: groups.filter(g => ['confirmed','validated','invalidated'].includes(g.stage)).length,
     invalidated: groups.filter(g => g.stage === 'invalidated').length, validated: validated.length,
@@ -89,7 +98,7 @@ export function runFunnel(groups, results) {
 }
 export function rangeEntryCrossTable(groups, results, variant) {
   const rows = Object.entries(DR_OUTCOME_LABELS).map(([key,label]) => ({ key,label,total:0,without:0,win:0,loss:0,pending:0 }));
-  for (const group of groups.filter(g=>g.stage==='validated')) {
+  for (const group of groups.filter(g=>g.wasValidated ?? g.stage==='validated')) {
     const row = rows.find(r=>r.key===group.outcome.status) ?? rows.at(-1); row.total++;
     if (!group.entries.length) { row.without++; continue; }
     const entries = group.entries.map(e => simulationEntryResult(results,e,variant));

@@ -99,6 +99,16 @@ davon unerwartet ein Bestätigungs-Prompt auf, direkt diese Datei prüfen statt 
 
 ## Pin (`tools/pins.ts`)
 
+Die Statistik-Seite pinnt `simulation_dr`, `simulation_checkpoint` und `simulation_entry`
+browserseitig in dieselbe Tabelle. `get_pin_context` liefert `simulation_context` vollständig:
+eingefrorener Lauf-/Regel-/Entry-Modell-Stand, DR-Ausgang, Registry-Belege, beide SL-Ergebnisse,
+Berlin-/UTC-Zeiten, Chart-Link und Pin-Zeitpunkt. Wiederholtes Pinnen ändert nur die Notiz.
+`add_pin_entry` nimmt diese Arten nicht an; `remove_pin_entry` entfernt sie wie alle Pins per ID.
+Die Referenzspalten, CHECK und der Upsert-Schlüssel stehen in
+`20261004140000_simulation_pin_context.sql`; Registry-Merkmale sind im JSON per SQL abfragbar.
+Chart-Rendering und Touch-Alarme ignorieren diese Arten. Geänderte Tool-Beschreibungen werden
+in bestehenden Chats erst nach einem neuen Sitzungsstart geladen.
+
 Pin/Unpin von Chart-POIs in die `pin_context`-Tabelle — Kinds: `ob_zone`/`liquidity_level`/
 `trade_setup`/`m5_ob`/`m5_liquidity_level`/`rsi_divergence`. Spiegelt Philips Rechtsklick
 "an Lana übergeben" im Browser. `trade_position`/`trade_confirmation` bleiben browser-only (kein

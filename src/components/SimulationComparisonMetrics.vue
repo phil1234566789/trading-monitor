@@ -7,7 +7,7 @@ const props=defineProps({current:Array,previous:Array,compare:Boolean});
 const definitions=[['total','Entries','count'],['winrate','Winrate netto','percent'],['pnlUsd','PnL netto · USD','money'],['grossPnlUsd','PnL brutto · USD','money'],['totalR','Summe R netto','r'],['commissionUsd','Kommission · USD','money'],['commissionR','Kommission · R (abgeschlossen)','r']];
 const cards=computed(()=>['wide','narrow'].map(variant=>({variant,now:variantMetrics(props.current,variant),old:variantMetrics(props.previous,variant)})));
 const format=(n,type)=>n==null?'–':type==='money'?fmtMoney(n):type==='r'?fmtR(n):type==='percent'?`${n.toFixed(1)} %`:n;
-const delta=(a,b,type)=>a==null||b==null?'–':`${a>b?'↑':a<b?'↓':'→'} ${a-b>=0?'+':''}${type==='percent'?`${(a-b).toFixed(1)} pp`:type==='count'?a-b:Math.abs(a-b).toFixed(2)}`;
+const delta=(a,b,type)=>a==null||b==null?'–':`${a>b?'↑':a<b?'↓':'→'} ${a-b>=0?'+':'−'}${type==='percent'?`${Math.abs(a-b).toFixed(1)} pp`:type==='count'?Math.abs(a-b):type==='money'?`$${Math.abs(a-b).toFixed(2)}`:`${Math.abs(a-b).toFixed(2)}R`}`;
 </script>
 <template>
   <section class="metric-grid" aria-label="Ergebnis beider SL-Varianten">

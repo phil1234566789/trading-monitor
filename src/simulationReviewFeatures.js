@@ -6,7 +6,7 @@ export const FEATURE_VALUES = { met: '✓ Erfüllt', unmet: '✕ Nicht erfüllt'
 // Die Registry beschreibt gespeicherte Belege; neue Prüfungen brauchen keine UI-Verzweigung.
 export function simulationReviewFeatures(snapshot) {
   const review = setupEntryConditions(snapshot);
-  const features = review.rows.map(row => ({ key: row.key, group: 'checkpoint', label: row.label,
+  const features = review.rows.map(row => ({ key: row.key, group: /^[A-H] · /.test(row.label) || row.key === 'entry' ? 'checkpoint' : row.key === 'validation' ? 'antiConfluences' : 'entry', label: row.label,
     value: { passed: 'met', unmet: 'unmet', unknown: 'unknown' }[row.status], details: row.details ?? [] }));
   const checks = snapshot.checklist?.checks;
   for (const [key, label] of [['antiConfluences', 'F · Anti-Confluences'], ['confluences', 'G · Confluences']]) {
@@ -19,7 +19,7 @@ export function simulationReviewFeatures(snapshot) {
   }
   const entry = features.find(f => f.key === 'entry');
   if (entry) entry.label = `H · ${entry.label}`;
-  return features;
+  return features.sort((a,b)=>a.group==='checkpoint' && b.group==='checkpoint' ? a.label.localeCompare(b.label) : 0);
 }
 
 export function featureDetails(features, selected) {

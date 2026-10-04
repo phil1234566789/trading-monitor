@@ -21,7 +21,7 @@ export function useSimulationComparison(repository, filters, pins) {
     } catch (cause) { if (ticket === revision) error.value = cause.message || 'Simulationsdaten konnten nicht geladen werden.'; }
     finally { if (ticket === revision) loading.value = false; }
   }
-  watch(()=>[filters.value.run,filters.value.compare],refresh,{immediate:true});
+  watch([()=>filters.value.run,()=>filters.value.compare],refresh,{immediate:true});
   onScopeDispose(()=>{revision++;});
   const dateError = computed(()=>filters.value.from && filters.value.to && filters.value.from>filters.value.to ? 'Das Enddatum liegt vor dem Startdatum.' : '');
   function scoped(id) {

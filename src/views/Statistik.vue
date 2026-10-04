@@ -10,17 +10,23 @@ import SimulationComparisonFilters from '../components/SimulationComparisonFilte
 import SimulationComparisonMetrics from '../components/SimulationComparisonMetrics.vue';
 import SimulationRunQuality from '../components/SimulationRunQuality.vue';
 import SimulationDrList from '../components/SimulationDrList.vue';
+import SimulationPinMenu from '../components/SimulationPinMenu.vue';
+import { useSimulationPins } from '../composables/useSimulationPins.js';
+import { cssColor } from '../chartColors.js';
 const route=useRoute(),router=useRouter();
 const filters=ref(comparisonFilters(route.query)),pins=ref([]);
 const repository=createSimulationRepository(supabase);
 const {runs,selectedRun,comparisonRun,current,previous,datasets,loading,error,dateError,refresh}=useSimulationComparison(repository,filters,pins);
+const pinState=useSimulationPins(filters,selectedRun,computed(()=>datasets.value.get(filters.value.run)?.results ?? []));
+watch(pinState.pins,value=>{pins.value=value;},{immediate:true});
+function refreshAll(){refresh();pinState.refresh();}
 watch(()=>route.query,query=>{const next=comparisonFilters(query);if(JSON.stringify(next)!==JSON.stringify(filters.value))filters.value=next;});
 watch(filters,value=>{const query=Object.fromEntries(Object.entries(value).filter(([,v])=>v));if(JSON.stringify(comparisonFilters(route.query))!==JSON.stringify(value))router.replace({path:'/statistik',query});},{deep:true});
 const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>d.groups.flatMap(g=>g.features)).map(f=>[f.key,f])).values()]);
 </script>
 <template>
-  <main class="statistics-page">
-    <header><div><h1>Statistik</h1><p>Läufe vergleichen · DR- und Entry-Qualität prüfen</p></div><button type="button" :disabled="loading" @click="refresh">{{ loading?'Wird geladen…':'Aktualisieren' }}</button></header>
+  <main class="statistics-page" :style="{'--pin-color':cssColor('pin')}">
+    <header><div><h1>Statistik</h1><p>Läufe vergleichen · DR- und Entry-Qualität prüfen</p></div><button type="button" :disabled="loading" @click="refreshAll">{{ loading?'Wird geladen…':'Aktualisieren' }}</button></header>
     <SimulationComparisonFilters v-model="filters" :runs="runs" :features="features" />
     <details class="simulation-rules"><summary>Simulationsannahmen</summary>
       <p>50.000 USD Referenzkonto · Basis-Preisrisikobudget 500 USD pro Entry. Die gespeicherte Entry-Modell-Version bestimmt die Größenregel. Ganze Standardlots, 50 % an T1 schließen, Reststop auf Entry, Rest bis T2 oder Break-even. Kein Compounding.</p>
@@ -29,6 +35,8 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
       <p>Zeitraum filtert Entry-Zeiten in Europe/Berlin. DRs ohne Entry entfallen bei einem gesetzten Entry-Zeitraum. Ohne Datumsfilter bleiben sie in der DR-Auswertung.</p>
     </details>
     <div :aria-busy="loading">
+      <p v-if="pinState.error.value" role="alert" class="error">{{ pinState.error.value }} <button @click="pinState.refresh">Pins erneut laden</button></p>
+      <p v-else-if="pinState.loading.value" role="status" class="note">Pins werden geladen…</p>
       <p v-if="error || dateError" role="alert" class="error">{{ error || dateError }} <button v-if="error" @click="refresh">Erneut versuchen</button></p>
       <p v-else-if="loading" role="status" class="empty">Gespeicherte Läufe und Review-Belege werden geladen…</p>
       <p v-else-if="!runs.length" role="status" class="empty">Noch keine gespeicherten Simulationsläufe.</p>
@@ -40,9 +48,10 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
         <p v-if="!current.groups.length" role="status" class="empty">Keine DRs für diese Filterauswahl.</p>
         <SimulationComparisonMetrics :current="current.results" :previous="previous.results" :compare="!!filters.compare" />
         <SimulationRunQuality :current="current" :previous="previous" :compare="!!filters.compare" />
-        <SimulationDrList :groups="current.groups" :results="current.results" />
+        <SimulationDrList :groups="current.groups" :results="current.results" :is-pinned="pinState.isPinned" @pin-menu="pinState.open" />
       </template>
     </div>
+    <SimulationPinMenu :target="pinState.target.value" :saving="pinState.saving.value" :error="pinState.error.value" @close="pinState.target.value=null" @save="pinState.save" @remove="pinState.remove" />
   </main>
 </template>
 <style scoped>

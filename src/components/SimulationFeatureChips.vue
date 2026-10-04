@@ -8,7 +8,7 @@ const active=computed(()=>props.features.find(f=>f.key===selected.value));
 </script>
 <template>
   <div class="feature-chips" aria-label="Gespeicherte Checkpoints">
-    <button v-for="f in features.filter(f=>f.group==='checkpoint')" :key="f.key" type="button" :class="f.value" :aria-expanded="selected===f.key" @click="selected=selected===f.key?'':f.key" @contextmenu.prevent="emit('pin-menu',f,$event)">
+    <button v-for="f in features.filter(f=>f.group==='checkpoint').toSorted((a,b)=>a.label.localeCompare(b.label))" :key="f.key" type="button" :class="f.value" :aria-expanded="selected===f.key" @click="selected=selected===f.key?'':f.key" @contextmenu.prevent="emit('pin-menu',f,$event)">
       <span v-if="isPinned(f)" class="pin-flag" aria-label="Angepinnt">⚑</span>{{ FEATURE_VALUES[f.value]?.slice(0,1) ?? '?' }} {{ f.label.split(' · ')[0] }}
       <span class="sr-only"> · {{ FEATURE_VALUES[f.value] }}</span>
     </button>

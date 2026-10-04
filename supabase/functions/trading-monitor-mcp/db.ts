@@ -263,10 +263,10 @@ export async function getJournal(instrument?: string, source?: string, limit = 5
 // trade_partial_exits) für trade_position, volle Zeile für die übrigen drei — damit Lana beim
 // Fetch immer die aktuellen Werte sieht statt eines möglicherweise veralteten Stands.
 export async function getPinContext() {
-  const { data, error } = await supabase
+  return fetchAllRows((from, to) => supabase
     .from("pin_context")
     .select(
-      "id, kind, note, created_at, " +
+      "id, kind, note, created_at, simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, " +
         "trade_positions(*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, trade_targets(id, price)), trade_partial_exits(price, exit_time, portion_pct)), " +
         "ob_zones(*), " +
         "trade_setups(*), " +
@@ -281,9 +281,7 @@ export async function getPinContext() {
         "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
         "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi",
     )
-    .order("created_at", { ascending: true });
-  if (error) throw new Error(error.message);
-  return data ?? [];
+    .order("created_at", { ascending: true }).order('id').range(from, to));
 }
 
 // Schreib-Pendant zu getPinContext (Chat 2026-08-17: Lana darf Chart-POIs jetzt selbst pinnen,

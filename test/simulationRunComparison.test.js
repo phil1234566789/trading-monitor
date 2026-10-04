@@ -29,6 +29,14 @@ describe('run comparison',()=>{
     lifecycle.target2={status:'reached',recognizedAt:180}; expect(independentRangeOutcome(g).status).toBe('t2');
     lifecycle.main.reason='both'; expect(independentRangeOutcome(g).status).toBe('unknown');
   });
+  it('restricts the entry table and cross-table classification to the selected Berlin period',()=>{
+    const inside={...snapshot('inside',{recognizedAt:Date.parse('2026-10-01T12:00:00+02:00')/1000})};
+    const outside={...snapshot('outside',{recognizedAt:Date.parse('2026-09-30T12:00:00+02:00')/1000})};
+    const group={instrument:'GBPUSD',stage:'validated',outcome:{status:'t2'},entries:[inside,outside]};
+    const filtered=filterReviewGroups([group],{from:'2026-10-01',to:'2026-10-01'});
+    expect(filtered[0].entries.map(e=>e.id)).toEqual(['inside']);
+    expect(group.entries).toHaveLength(2);
+  });
   it('keeps stop variants and runs separate with commission and minimum sample size',()=>{
     const rows=[result('wide',100),result('narrow',-100),{...result('wide',999),runId:'old'}];
     const scoped=groupResults([{entries:[snapshot('e',{})]}],rows);
@@ -41,5 +49,13 @@ describe('run comparison',()=>{
     const rows=[result('wide',100),result('narrow',-100)];
     expect(rangeEntryCrossTable([g,{...g,stage:'confirmed'}],rows,'wide')[0]).toMatchObject({total:1,win:1,loss:0});
     expect(rangeEntryCrossTable([g],rows,'narrow')[0]).toMatchObject({total:1,win:0,loss:1});
+  });
+  it('retains the independent lifecycle when a later invalidated snapshot omits rangeCourse',()=>{
+    const frozen={version:COUNTERTREND_RANGE_COURSE_VERSION,setupKey:'dr',validatedAt:100,selectedAt:100,direction:'long',target1:2,target2:3,invalidation:1};
+    const first={...snapshot('first'),rangeCourse:frozen};
+    const last={...snapshot('last'),knownAt:200,dealingRange:{...first.dealingRange,status:'invalidated'},checklist:{setup:{primary:{direction:'long',invalidation:1,targetSelection:{selectedAt:100,target1:{price:2},target2:{price:3}},lifecycle:{evaluatedAt:200,main:{state:'ended',reason:'invalidation',recognizedAt:180}}}}}};
+    const groups=reviewGroups([first,last]);
+    expect(groups[0]).toMatchObject({stage:'invalidated',wasValidated:true,outcome:{status:'invalidation'}});
+    expect(rangeEntryCrossTable(groups,[],'wide').find(r=>r.key==='invalidation')).toMatchObject({total:1,without:1});
   });
 });
