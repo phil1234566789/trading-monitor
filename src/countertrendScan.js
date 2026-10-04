@@ -16,6 +16,7 @@ import { candleTimeIndex } from './candleTimeIndex.js';
 import { createClosedCandlePrefix } from './closedCandlePrefix.js';
 import { createSetup2Memo,finalObservation } from './setup2Memo.js';
 import { entryModel1FvgAt } from './entryModel1Progress.js';
+import { completeDealingRangePriceObservations } from './dealingRangePriceObservation.js';
 
 export async function scanCountertrendWindow(input) {
   const { instrument,fromTime,toTime,signal,onSnapshot,onProgress,loadM1Candles,
@@ -166,5 +167,5 @@ export async function scanCountertrendWindow(input) {
     if ((index+1)%yieldEvery===0) await yieldControl();
   }
   const latest=new Map(snapshots.filter(s=>s.rangeCourse).map(s=>[s.setupKey,s.rangeCourse]));
-  return snapshots.map(s=>s.entry ? {...s,rangeCourse:latest.get(s.setupKey) ?? null} : s);
+  return completeDealingRangePriceObservations(snapshots.map(s=>s.entry ? {...s,rangeCourse:latest.get(s.setupKey) ?? null} : s),m5,toTime);
 }

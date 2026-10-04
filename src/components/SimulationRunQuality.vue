@@ -20,20 +20,21 @@ const crossTone=(run,variant,row,column)=>{
   if(run.label==='Alt')return 'reference';
   const old=crossTables.value.Alt[variant].find(item=>item.key===row.key);
   if(column==='total'){
-    if(!['t2','t1Only','t1Unknown','invalidation'].includes(row.key))return '';
+    if(!['t2','t1Only','t1Open','noTarget2','invalidation'].includes(row.key))return '';
     return comparisonTone(row[column],old?.[column],row.key==='invalidation');
   }
-  if(column==='without' && !['t2','t1Only','t1Unknown'].includes(row.key))return '';
+  if(column==='without' && !['t2','t1Only','t1Open','noTarget2'].includes(row.key))return '';
   return comparisonTone(row[column],old?.[column],column!=='win');
 };
 </script>
 <template>
   <section class="run-quality"><h2>Entscheidungsbaum</h2>
     <div v-for="run in runs" :key="run.label"><h3>{{ run.label }}</h3><div class="funnel"><dl v-for="(label,key) in stages" :key="key" :class="{'split-node':key==='quality'}"><template v-if="key==='quality'"><div v-for="(halfLabel,halfKey) in label" :key="halfKey"><dt>{{ halfLabel }}</dt><dd>{{ run.funnel[halfKey] }}</dd></div></template><template v-else><dt>{{ label }}</dt><dd :class="funnelTone(run,key)">{{ run.funnel[key] }}<small v-if="funnelTone(run,key)==='positive'"> ↑</small><small v-else-if="funnelTone(run,key)==='worse'"> ↓</small></dd></template></dl></div>
+      <p class="note">T2-Quote: {{ run.funnel.target2Eligible ? (100 * run.funnel.target2 / run.funnel.target2Eligible).toFixed(1) + ' %' : 'nicht belegt' }} ({{ run.funnel.target2 }} / {{ run.funnel.target2Eligible }} validierte DRs mit belegtem T2-Ziel). DR-Ausgang nicht belegt: {{ run.funnel.target2Unknown }}.</p>
       <p v-for="variant in ['wide','narrow']" :key="variant" class="outcomes"><strong>Ausgang der Entries · {{ variant==='wide'?'weiter':'enger' }} SL:</strong> <span v-for="(label,key) in SIMULATION_OUTCOME_LABELS" :key="key">{{ label }}: <b :class="outcomeTone(run,variant,key)" :title="outcomeHint(run,variant,key)">{{ outcomeCounts(run,variant)[key] }}<template v-if="outcomeTone(run,variant,key)==='positive'"> ↑</template><template v-else-if="outcomeTone(run,variant,key)==='worse'"> ↓</template></b></span></p>
     </div>
     <p class="note">* Im gespeicherten Review belegte Ursprungs-Setups. Erkennungen ohne gespeicherten Snapshot sind nicht belegt. Alle Zahlen folgen derselben Filterauswahl.</p>
-    <h2>DR gegen Entry</h2><p class="note">Nur validierte DRs. DR-Verlauf unabhängig vom Entry-Ergebnis, Gewinne und Verluste netto. Der gespeicherte Verlauf endet teils bei T1 oder beim Schließen aller Entries: späteres T2 ist dann nicht belegt.</p>
+    <h2>DR gegen Entry</h2><p class="note">Nur validierte DRs. DR-Verlauf unabhängig vom Entry-Ergebnis, Gewinne und Verluste netto. M5-Preisbeobachtung ab Validierung bis T2 oder Rückkehr zur Invalidierung. Alte Läufe ohne Preisbeobachtung bleiben nicht belegt.</p>
     <div v-for="variant in ['wide','narrow']" :key="variant" class="cross-comparison" :class="{'with-comparison':compare}">
       <div v-for="run in runs" :key="run.label" class="cross-run"><h3>{{ run.label }}</h3><div class="table-scroll" tabindex="0" :aria-label="`DR gegen Entry · ${run.label} · ${variant} horizontal scrollen`">
         <table><caption>{{ variant==='wide'?'Weiter SL':'Enger SL' }}</caption><thead><tr><th scope="col">DR-Verlauf</th><th scope="col">DRs gesamt</th><th scope="col">Ohne Entry</th><th scope="col">Mind. ein Gewinn</th><th scope="col">Nur Verluste</th><th scope="col">Offen / uneindeutig / unvollständig</th></tr></thead><tbody><tr v-for="row in crossTables[run.label][variant]" :key="row.key"><th scope="row">{{ row.label }}</th><td v-for="column in crossColumns" :key="column" :class="crossTone(run,variant,row,column)" :title="crossTone(run,variant,row,column)==='positive'?'Besser als Alt':crossTone(run,variant,row,column)==='worse'?'Schlechter als Alt':undefined">{{ row[column] }}<template v-if="crossTone(run,variant,row,column)==='positive'"> ↑</template><template v-else-if="crossTone(run,variant,row,column)==='worse'"> ↓</template></td></tr></tbody></table>

@@ -1,4 +1,5 @@
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
+import { candleTouchesPrice } from './structurePivotTime';
 export const COUNTERTREND_RANGE_COURSE_VERSION='countertrend-validation-t1-be-t2-v2';
 
 export function countertrendRangeCourse(candidate) {
@@ -45,7 +46,7 @@ export function evaluateCountertrendLifecycle({ selection, invalidation, candles
   const rows=duration===60 ? minutes : closedChecklistCandles(candles,'5m',evaluatedAt).filter(c=>c.time>=next);
   const short = selection.direction === 'short';
   const touches = (c, price, favorable) => Number.isFinite(price)
-    && (favorable === short ? c.low <= price : c.high >= price);
+    && candleTouchesPrice(c,price,favorable === short);
   for (const c of rows) {
     if(c.time<next)continue;
     if (c.time !== next || ![c.high,c.low].every(Number.isFinite)) {

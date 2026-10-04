@@ -9,5 +9,6 @@ export function simulationPinStageLabel(context) {
     : DEALING_RANGE_LABELS[context?.stage] ?? 'DR-Stufe nicht gespeichert';
 }
 export function simulationPinOutcomeLabel(context) {
+  if (context?.outcome?.status === 't1Unknown') return 'T1 vor Invalidation · T2 nicht belegt';
   return DR_OUTCOME_LABELS[context?.outcome?.status] ?? context?.outcome?.label ?? 'DR-Ausgang nicht belegt';
 }
