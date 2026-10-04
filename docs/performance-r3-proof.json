@@ -1,0 +1,318 @@
+{
+  "baselineCommit": "a1824306b542de550954bac79a91d25ed10c6cff",
+  "setupVersion": "countertrend-entry-model-1-v13",
+  "retained": [
+    "A: shared order block prefixes",
+    "B: field-based append checks"
+  ],
+  "reverted": [
+    "C: shared liquidity detectors"
+  ],
+  "measurements": {
+    "baseline-97-serial": {
+      "wallMs": [
+        32105.543999999998,
+        31474.7197,
+        31388.003999999994
+      ],
+      "medianMs": 31474.7197,
+      "hash": "614f539ec1927e96c54481ca89ee98dc5b3f892d4199ae19bba04b3a650c238a",
+      "entries": [
+        1789544040,
+        1789547100
+      ]
+    },
+    "baseline-105": {
+      "wallMs": [
+        28944.7645,
+        29711.4382,
+        30555.0852
+      ],
+      "medianMs": 29711.4382,
+      "hash": "b1fe0f59e7673ffb1bee725a4ea5abbc9b7d2a58503d1922d52381aa1f52dc16",
+      "entries": [
+        1790238960,
+        1790240700
+      ]
+    },
+    "baseline-heavy": {
+      "wallMs": [
+        9685.7421,
+        9910.052200000002,
+        9662.4682
+      ],
+      "medianMs": 9685.7421,
+      "hash": "ddb4e4db125a6c2c374063d8a1e2a9a93b84131721a1854cc44af28fea452c75",
+      "entries": []
+    },
+    "a-97": {
+      "wallMs": [
+        30076.2889,
+        30908.4542,
+        30865.24749999999
+      ],
+      "medianMs": 30865.24749999999,
+      "hash": "614f539ec1927e96c54481ca89ee98dc5b3f892d4199ae19bba04b3a650c238a",
+      "entries": [
+        1789544040,
+        1789547100
+      ]
+    },
+    "a-105": {
+      "wallMs": [
+        26137.595,
+        25479.217699999997,
+        25198.958000000006
+      ],
+      "medianMs": 25479.217699999997,
+      "hash": "b1fe0f59e7673ffb1bee725a4ea5abbc9b7d2a58503d1922d52381aa1f52dc16",
+      "entries": [
+        1790238960,
+        1790240700
+      ]
+    },
+    "a-heavy": {
+      "wallMs": [
+        9508.6234,
+        9522.6641,
+        9828.683699999998
+      ],
+      "medianMs": 9522.6641,
+      "hash": "ddb4e4db125a6c2c374063d8a1e2a9a93b84131721a1854cc44af28fea452c75",
+      "entries": []
+    },
+    "b-97": {
+      "wallMs": [
+        22325.657,
+        21966.1705,
+        22249.1204
+      ],
+      "medianMs": 22249.1204,
+      "hash": "614f539ec1927e96c54481ca89ee98dc5b3f892d4199ae19bba04b3a650c238a",
+      "entries": [
+        1789544040,
+        1789547100
+      ]
+    },
+    "b-105": {
+      "wallMs": [
+        21598.0268,
+        20781.438000000002,
+        20800.2186
+      ],
+      "medianMs": 20800.2186,
+      "hash": "b1fe0f59e7673ffb1bee725a4ea5abbc9b7d2a58503d1922d52381aa1f52dc16",
+      "entries": [
+        1790238960,
+        1790240700
+      ]
+    },
+    "b-heavy": {
+      "wallMs": [
+        9283.466400000001,
+        9405.576500000001,
+        9671.327699999998
+      ],
+      "medianMs": 9405.576500000001,
+      "hash": "ddb4e4db125a6c2c374063d8a1e2a9a93b84131721a1854cc44af28fea452c75",
+      "entries": []
+    },
+    "c-97": {
+      "wallMs": [
+        21448.1595,
+        21358.748300000003,
+        21085.568399999996
+      ],
+      "medianMs": 21358.748300000003,
+      "hash": "614f539ec1927e96c54481ca89ee98dc5b3f892d4199ae19bba04b3a650c238a",
+      "entries": [
+        1789544040,
+        1789547100
+      ]
+    },
+    "c-105": {
+      "wallMs": [
+        21009.3026,
+        20810.404,
+        21376.831599999998
+      ],
+      "medianMs": 21009.3026,
+      "hash": "b1fe0f59e7673ffb1bee725a4ea5abbc9b7d2a58503d1922d52381aa1f52dc16",
+      "entries": [
+        1790238960,
+        1790240700
+      ]
+    },
+    "c-heavy": {
+      "wallMs": [
+        9460.3316,
+        9222.580300000001,
+        8975.026600000001
+      ],
+      "medianMs": 9222.580300000001,
+      "hash": "ddb4e4db125a6c2c374063d8a1e2a9a93b84131721a1854cc44af28fea452c75",
+      "entries": []
+    }
+  },
+  "v12Verification": {
+    "branch": "codex/setup2-perf-r3-v12-proof",
+    "commit": "d4eb37e",
+    "base": "fb63b18",
+    "setupVersion": "countertrend-entry-model-1-v12",
+    "dealingRangeVersion": "countertrend-abcdef-v1",
+    "observationRuleVersion": "checklist-observation-rules-v2",
+    "testsPassed": 1808,
+    "buildPassed": true,
+    "reference97Hash": "94e2d31764b9784ee506a223c1219bcba69518bc4fa1b9d56c10c77d103187ae",
+    "reference105Hash": "c63971b6de3b3a5cd0bf210382522b1e30f8fd6637118624a886d3ce4e34a3d6",
+    "fullSeptemberRunStarted": true
+  },
+  "septemberProof": {
+    "proofCommit": "d4eb37e",
+    "setupVersion": "countertrend-entry-model-1-v12",
+    "profiling": false,
+    "repetitions": 1,
+    "process": {
+      "totalMs": 674336.0816,
+      "exitCode": 0
+    },
+    "measurement": {
+      "wallMs": 672484.1024999999,
+      "cpuMs": 722562,
+      "hash": "0270f112f81210283a709cd56348245b49be6d4728d82bd8117786e220d340e4",
+      "entries": [
+        1788509340,
+        1788515520,
+        1789544040,
+        1789547100,
+        1790238960,
+        1790240700
+      ]
+    },
+    "replay": {
+      "fixture": "C:\\Users\\Philip\\Documents\\git\\trading-monitor\\.debug\\setup2-gbpusd-september-2026-mitigation-v12",
+      "cache": "C:\\Users\\Philip\\Documents\\git\\trading-monitor\\.debug\\trade-setup-2-aug-sep-entry-model1-v9\\cache",
+      "fromTime": 1788213600,
+      "toTime": 1790805600,
+      "setupVersion": "countertrend-entry-model-1-v12",
+      "inputHash": "18e7a2cac95bd2e02fcf6fda967271f556c9fd5ab026833dbfe729e4afe65fbd",
+      "sourceHash": "66ffaf95a4c3c96b46d4a09249cd6bcb3879ae99a0b664e11a177bb37543398f"
+    },
+    "equivalence": {
+      "identical": true,
+      "entries": 6,
+      "dealingRanges": 47,
+      "snapshots": 101,
+      "hash": "0270f112f81210283a709cd56348245b49be6d4728d82bd8117786e220d340e4"
+    },
+    "statistics": {
+      "DRs": 47,
+      "entries": 6,
+      "wide": {
+        "gross": {
+          "total": 6,
+          "counts": {
+            "slBeforeT1": 1,
+            "t1Be": 0,
+            "t2": 5,
+            "open": 0,
+            "ambiguous": 0,
+            "notExecutable": 0
+          },
+          "closed": 6,
+          "wins": 5,
+          "losses": 1,
+          "winrate": 83.33333333333334,
+          "pnlUsd": 4034,
+          "totalR": 8.889596724388563
+        },
+        "net": {
+          "total": 6,
+          "counts": {
+            "slBeforeT1": 1,
+            "t1Be": 0,
+            "t2": 5,
+            "open": 0,
+            "ambiguous": 0,
+            "notExecutable": 0
+          },
+          "closed": 6,
+          "wins": 5,
+          "losses": 1,
+          "winrate": 83.33333333333334,
+          "pnlUsd": 3859,
+          "totalR": 8.506854617524148
+        }
+      },
+      "narrow": {
+        "gross": {
+          "total": 6,
+          "counts": {
+            "slBeforeT1": 3,
+            "t1Be": 0,
+            "t2": 3,
+            "open": 0,
+            "ambiguous": 0,
+            "notExecutable": 0
+          },
+          "closed": 6,
+          "wins": 3,
+          "losses": 3,
+          "winrate": 50,
+          "pnlUsd": 5175.5,
+          "totalR": 10.59502199874293
+        },
+        "net": {
+          "total": 6,
+          "counts": {
+            "slBeforeT1": 3,
+            "t1Be": 0,
+            "t2": 3,
+            "open": 0,
+            "ambiguous": 0,
+            "notExecutable": 0
+          },
+          "closed": 6,
+          "wins": 3,
+          "losses": 3,
+          "winrate": 50,
+          "pnlUsd": 4775.5,
+          "totalR": 9.774066920380108
+        }
+      }
+    },
+    "published": false
+  },
+  "mainValidation": {
+    "mergeCommit": "a5fa81f",
+    "baseCommit": "a1824306b542de550954bac79a91d25ed10c6cff",
+    "testFilesPassed": 287,
+    "testsPassed": 2896,
+    "testsSkipped": 1,
+    "testsTodo": 10,
+    "buildPassed": true,
+    "references": {
+      "97": {
+        "setupId": 3125,
+        "setupVersion": "countertrend-entry-model-1-v13",
+        "identical": true,
+        "entries": 2,
+        "dealingRanges": 1,
+        "snapshots": 4,
+        "hash": "614f539ec1927e96c54481ca89ee98dc5b3f892d4199ae19bba04b3a650c238a"
+      },
+      "105": {
+        "setupId": 5491,
+        "setupVersion": "countertrend-entry-model-1-v13",
+        "identical": true,
+        "entries": 2,
+        "dealingRanges": 1,
+        "snapshots": 5,
+        "hash": "b1fe0f59e7673ffb1bee725a4ea5abbc9b7d2a58503d1922d52381aa1f52dc16"
+      }
+    },
+    "migration": false,
+    "edgeDeploy": false,
+    "simulationPublish": false
+  }
+}

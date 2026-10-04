@@ -30,13 +30,13 @@ export function detectChecklistDivergences({ candles, timeframe, evaluatedAt } =
 }
 
 /** OB-Start und retestedAt sind Chartanker, nicht deren Erkennungszeit. */
-export function detectChecklistOrderBlocks({ candles, timeframe, evaluatedAt, minGapOverride } = {}) {
+export function detectChecklistOrderBlocks({ candles, timeframe, evaluatedAt, minGapOverride, detectScanOrderBlocks } = {}) {
   const duration = barSecondsForTimeframeCi(timeframe);
   if (!Array.isArray(candles) || !duration || !Number.isFinite(evaluatedAt)) return unknown();
   const rows = closedChecklistCandles(candles, timeframe, evaluatedAt);
   if (rows.length < 4) return unknown();
   const label = timeframe.toLowerCase() === '1h' ? '1H' : timeframe.toLowerCase() === '4h' ? '4H' : timeframe.toLowerCase();
-  const zones = detectOrderBlocks(rows, label, true, minGapOverride);
+  const zones = (detectScanOrderBlocks ?? detectOrderBlocks)(rows, label, true, minGapOverride);
   const recognitionTimes = orderBlockRecognitionTimes(rows, timeframe);
   const formationAt = start => recognitionTimes.get(start) ?? null;
   return evidence(zones.map(z => ({ ...z, timeframe: label, recognizedAt: formationAt(z.startTime),
@@ -92,7 +92,7 @@ function assignSweepDivergence(divergences, main, candles) {
  * Keine Alters-/Distanzfenster, Stärkeformel oder Mitigationsdefinition hinzufügen.
  */
 export function evaluateChecklistConfluences({ evaluatedAt, direction, instrument, primary, opposingCandidates,
-  target2, h1Candles, m5Candles, minGapByTimeframe = {}, frozen = {} } = {}) {
+  target2, h1Candles, m5Candles, minGapByTimeframe = {}, frozen = {}, detectScanOrderBlocks } = {}) {
   const frozenAnti = finalObservation(frozen.antiConfluences, 'antiConfluences');
   const frozenConfluence = finalObservation(frozen.confluences, 'confluences');
   const antiConfluences = { status: 'unknown', details: [], sweepCandidates: [], obCandidates: [], divergences: unknown(),
@@ -130,8 +130,8 @@ export function evaluateChecklistConfluences({ evaluatedAt, direction, instrumen
         ? c.sweep.ageSeconds > main.sweep.ageSeconds : null, strengthComparison: 'unknown' }));
   }
   const obResults = [
-    detectChecklistOrderBlocks({ candles: h1Candles, timeframe: '1H', evaluatedAt, minGapOverride: minGapByTimeframe['1H'] }),
-    detectChecklistOrderBlocks({ candles: m5Candles, timeframe: '5m', evaluatedAt, minGapOverride: minGapByTimeframe['5m'] }),
+    detectChecklistOrderBlocks({ candles: h1Candles, timeframe: '1H', evaluatedAt, detectScanOrderBlocks, minGapOverride: minGapByTimeframe['1H'] }),
+    detectChecklistOrderBlocks({ candles: m5Candles, timeframe: '5m', evaluatedAt, detectScanOrderBlocks, minGapOverride: minGapByTimeframe['5m'] }),
   ];
   const obs = obResults.flatMap(r => r.candidates).filter(ob => !ob.invalidated);
   const orderBlockData = { '1H': obResults[0].status, '5m': obResults[1].status };
