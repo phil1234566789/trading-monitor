@@ -72,7 +72,7 @@ it('filters saved DR stages without inferring ABC for old runs and groups a late
   expect(filterDealingRanges(groups, 'invalidated')[0].candidate).toBe(first);
   expect(filterDealingRanges(groups, 'legacy')[0].snapshot).toBe(legacy);
   expect(filterDealingRanges(groups, 'validated')).toEqual([]);
-  expect(setupEntryConditions(next).missing.some(row => row.key === 'validation')).toBe(true);
+  expect(setupEntryConditions(next).rows.find(row => row.key === 'validation').status).toBe('unknown');
 });
 it('shows saved positive evidence and times without inventing CHoCH/BOS gates or a known time clearance', () => {
   const review = setupEntryConditions(snapshot());

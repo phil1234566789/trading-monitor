@@ -6,7 +6,7 @@ import { fmtPrice, pricePrecisionForInstrument } from './format.js';
 import { toPips } from './pipConfig.js';
 import { formatRiskPips } from './entryRisk.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
-import { savedDealingRangeStatus } from './tradeSetup2DealingRange.js';
+import { savedDealingRangeStatus, isDisqualifiedDealingRange } from './tradeSetup2DealingRange.js';
 import { antiConfluenceStatus, checklistObservationRules, observationRuleDetails } from './checklistObservationRules.js';
 import { usesSweepEntryModel1, isEntryModel1 } from './entryModel1Conditions.js';
 
@@ -38,7 +38,7 @@ export function filterDealingRanges(groups, filter = 'current') {
   return groups.filter(group => {
     const status = savedDealingRangeStatus(group.snapshot);
     return filter === 'allStages' ? status !== 'legacy'
-      : filter === 'current' ? ['confirmed', 'validated', 'invalidated'].includes(status) : status === filter;
+      : filter === 'current' ? ['confirmed', 'validated', 'disqualified', 'invalidated'].includes(status) : filter === 'disqualified' ? isDisqualifiedDealingRange(group.snapshot) : status === filter;
   });
 }
 
@@ -82,7 +82,7 @@ export function setupEntryConditions(snapshot) {
   }
   const dr = snapshot.dealingRange;
   if (savedDealingRangeStatus(snapshot) !== 'legacy') add('validation', checklist?.model === 'countertrend' ? 'DR-Stufe nach E/F' : 'D · DR-Validierung / Targets',
-    dr.status === 'validated' ? 'passed' : dr.status === 'invalidated' ? 'unmet' : 'unknown', dr.details, dr.evaluatedAt);
+    dr.status === 'validated' ? 'passed' : isDisqualifiedDealingRange(snapshot) ? 'unmet' : 'unknown', dr.details, dr.evaluatedAt);
   const timeCheck = snapshot.entryEligibility ?? checks.time;
   add('time', 'Handelszeit / Session / News',
     timeCheck?.status === 'blocked' ? 'unmet' : timeCheck?.status === 'passed' ? 'passed' : 'unknown',

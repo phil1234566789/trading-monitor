@@ -58,7 +58,7 @@ export function tradeSetup2Evidence({ checklist, m1Check, m1Structure, m1Candles
       const evidence = rule.chartEvidenceLimit ? rule.evidence.slice(-rule.chartEvidenceLimit) : rule.evidence;
       for (const d of evidence) {
         add(d.type === 'bullish' || d.type === 'bearish' ? 'divergence' : 'observation',key,d.timeframe,d.recognizedAt,
-          {...d,ruleId:rule.id,invalidates:rule.invalidates,
+          {...d,ruleId:rule.id,...(Object.hasOwn(rule,'disqualifies') ? {disqualifies:rule.disqualifies} : {invalidates:rule.invalidates}),
             styleKey:key==='antiConfluences'?'antiConfluence':'confluence',label:rule.label});
       }
     }

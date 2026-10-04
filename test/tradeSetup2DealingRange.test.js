@@ -71,7 +71,7 @@ it('versions new run identities without reclassifying or mutating old snapshots'
   expect(savedDealingRangeStatus(restoreTradeSetup2Snapshot(old))).toBe('legacy');
   expect(old.dealingRange).toBeUndefined();
   const configuration = buildTradeSetup2Configuration({ instrument: 'GBPUSD' });
-  expect(configuration.dealingRangeVersion).toBe('countertrend-abcdef-v1');
+  expect(configuration.dealingRangeVersion).toBe('countertrend-abcdef-v2');
   expect(isVersionedDealingRangeRun({ configuration })).toBe(true);
   expect(isVersionedDealingRangeRun({ configuration: { instruments: [configuration] } })).toBe(true);
   expect(isVersionedDealingRangeRun({ configuration: { instruments: [{}] } })).toBe(false);

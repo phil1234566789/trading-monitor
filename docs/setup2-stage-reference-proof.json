@@ -1,0 +1,120 @@
+{
+  "equalEntriesAndOutcomes": true,
+  "onlyApprovedVersionAndStageFields": true,
+  "cases": [
+    {
+      "dr": 97,
+      "setupId": 3125,
+      "setupVersion": "countertrend-entry-model-1-v13",
+      "snapshots": 4,
+      "differences": 102,
+      "financialHash": "6f5de36cc70254a27107e079dbe699275d9c4200fc919f129ca584c0c2447a0d",
+      "inputHash": "5131117c0438dd703161cb75e124f42ce0f317b2a483ce7d7123e3ad918f0399",
+      "resultHash": "614f539ec1927e96c54481ca89ee98dc5b3f892d4199ae19bba04b3a650c238a",
+      "wallMs": 33328.372500000005,
+      "entries": [
+        {
+          "time": "16.09.26, 09:34",
+          "entry": 1.34815,
+          "variants": [
+            {
+              "variant": "wide",
+              "stop": 1.34863,
+              "lots": 10,
+              "outcome": "t2",
+              "grossUsd": 1745,
+              "netUsd": 1695
+            },
+            {
+              "variant": "narrow",
+              "stop": 1.3484,
+              "lots": 20,
+              "outcome": "t2",
+              "grossUsd": 3490,
+              "netUsd": 3390
+            }
+          ]
+        },
+        {
+          "time": "16.09.26, 10:25",
+          "entry": 1.34708,
+          "variants": [
+            {
+              "variant": "wide",
+              "stop": 1.3477599999999998,
+              "lots": 7,
+              "outcome": "t2",
+              "grossUsd": 472.5,
+              "netUsd": 437.5
+            },
+            {
+              "variant": "narrow",
+              "stop": 1.34745,
+              "lots": 13,
+              "outcome": "t2",
+              "grossUsd": 877.5,
+              "netUsd": 812.5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dr": 105,
+      "setupId": 5491,
+      "setupVersion": "countertrend-entry-model-1-v13",
+      "snapshots": 5,
+      "differences": 119,
+      "financialHash": "eeed34bc1dc07c3cc7157010ad1532b623fc9ca0ad37b9178b69e842df8c666d",
+      "inputHash": "f68f1f874975e169ff446e66935601f86b23d953601f26c38adbabfb79ed0d5a",
+      "resultHash": "b1fe0f59e7673ffb1bee725a4ea5abbc9b7d2a58503d1922d52381aa1f52dc16",
+      "wallMs": 32715.4676,
+      "entries": [
+        {
+          "time": "24.09.26, 10:36",
+          "entry": 1.32411,
+          "variants": [
+            {
+              "variant": "wide",
+              "stop": 1.32547,
+              "lots": 3,
+              "outcome": "t2",
+              "grossUsd": 618,
+              "netUsd": 603
+            },
+            {
+              "variant": "narrow",
+              "stop": 1.32454,
+              "lots": 11,
+              "outcome": "t2",
+              "grossUsd": 2266,
+              "netUsd": 2211
+            }
+          ]
+        },
+        {
+          "time": "24.09.26, 11:05",
+          "entry": 1.3236299999999999,
+          "variants": [
+            {
+              "variant": "wide",
+              "stop": 1.32454,
+              "lots": 5,
+              "outcome": "t2",
+              "grossUsd": 790,
+              "netUsd": 765
+            },
+            {
+              "variant": "narrow",
+              "stop": 1.32401,
+              "lots": 13,
+              "outcome": "slBeforeT1",
+              "grossUsd": -494,
+              "netUsd": -559
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

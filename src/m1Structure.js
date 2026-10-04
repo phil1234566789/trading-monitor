@@ -1,3 +1,4 @@
+import { setup2EntrySearchEnded } from './setup2EntrySearch.js';
 import { collectNestedChain, computeRangesPivots } from './marketStructureAnalysis';
 import { buildStructureWithPhases } from './trendPhases.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
@@ -27,7 +28,7 @@ export function m1AnchorFromM5(state, reaction, direction, evaluatedAt) {
 export function m1PrerequisiteReason(checklist) {
   if (!checklist || checklist.status !== 'ready') return 'prerequisites';
   if (checklist.model !== 'countertrend' && checklist.checks?.time?.status === 'blocked') return 'time';
-  if (checklist.setup?.primary?.lifecycle?.entrySearchAllowed === false || checklist.setup?.primary?.validity?.state === 'ended') return 'ended';
+  if (setup2EntrySearchEnded(checklist)) return 'ended';
   if (!checklist.setup?.primary || !hasConfirmedChecklistAbc(checklist.checks)) return 'abc';
   if (checklist.dealingRange && checklist.dealingRange.status !== 'validated') return 'validation';
   if (!checklist.checks.m5Trend?.m1Anchor) return 'anchor';

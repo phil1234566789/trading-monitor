@@ -2,7 +2,7 @@
 import { formatDatedTime } from '../berlinTime.js';
 import { simulationRunStatusLabel } from '../tradeSetupSimulationStatistics.js';
 import { DEALING_RANGE_LABELS } from '../tradeSetup2DealingRange.js';
-import { SETUP_TYPE_LABELS } from '../simulationRunComparison.js';
+import { SETUP_TYPE_LABELS, DR_OUTCOME_LABELS } from '../simulationRunComparison.js';
 import { FEATURE_VALUES } from '../simulationReviewFeatures.js';
 const props=defineProps({modelValue:Object,runs:Array,features:Array});
 const emit=defineEmits(['update:modelValue']);
@@ -17,12 +17,13 @@ const label=r=>`${r.configuration?.label ?? `${formatDatedTime(r.from)} – ${fo
     <label>Typ<select :value="modelValue.type" @change="set('type',$event.target.value)"><option value="">Alle</option><option v-for="key in ['countertrend','continuation']" :key="key" :value="key">{{ SETUP_TYPE_LABELS[key] }}</option></select></label>
     <label>Entry ab<input type="date" :value="modelValue.from" @input="set('from',$event.target.value)" /></label>
     <label>Entry bis einschließlich<input type="date" :value="modelValue.to" @input="set('to',$event.target.value)" /></label>
-    <label>DR-Stufe<select :value="modelValue.stage" @change="set('stage',$event.target.value)"><option value="">Alle inkl. Altstand</option><option v-for="(name,key) in DEALING_RANGE_LABELS" :key="key" :value="key">{{ name }}</option></select></label>
+    <label>DR-Stufe<select :value="modelValue.stage" @change="set('stage',$event.target.value)"><option value="">Alle inkl. Altstand</option><option v-for="(name,key) in Object.fromEntries(Object.entries(DEALING_RANGE_LABELS).filter(([key])=>key!=='invalidated' || modelValue.stage==='invalidated'))" :key="key" :value="key">{{ name }}</option></select></label>
+    <label>DR-Ausgang<select :value="modelValue.outcome" @change="set('outcome',$event.target.value)"><option value="">Alle</option><option v-for="(name,key) in DR_OUTCOME_LABELS" :key="key" :value="key">{{ name }}</option></select></label>
     <label>Entry<select :value="modelValue.entry" @change="set('entry',$event.target.value)"><option value="">Alle</option><option value="with">Mit Entry</option><option value="without">Ohne Entry</option></select></label>
     <label>Angepinnt<select :value="modelValue.pinned" @change="set('pinned',$event.target.value)"><option value="">Egal</option><option value="with">Nur angepinnt</option><option value="without">Ohne Pin</option></select></label>
     <label>Merkmal<select :value="modelValue.feature" @change="set('feature',$event.target.value)"><option value="">Alle</option><option v-for="f in features" :key="f.key" :value="f.key">{{ f.label }}</option></select></label>
     <label>Merkmalswert<select :value="modelValue.value" :disabled="!modelValue.feature" @change="set('value',$event.target.value)"><option value="">Egal</option><option v-for="(label,key) in FEATURE_VALUES" :key="key" :value="key">{{ label }}</option></select></label>
-    <p v-if="modelValue.stage === 'invalidated'">Historischer Stufenfilter: enthält auch Preisenden. Diese DRs sind nicht disqualifiziert; der gespeicherte Grund steht auf der Karte. Die Trichterzahl zählt nur Disqualifikationen.</p>
+    <p v-if="modelValue.stage === 'invalidated'">Historischer Stufenfilter: enthält auch Preisenden. Der gespeicherte Grund trennt Preisenden von Disqualifikationen; der gespeicherte Grund steht auf der Karte. Die Trichterzahl zählt nur Disqualifikationen.</p>
   </form>
 </template>
 <style scoped>

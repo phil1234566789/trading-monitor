@@ -39,7 +39,7 @@ describe('Checklist E/G', () => {
       .toMatchObject([{ type: 'bearish', timeframe: '5m' }]);
     expect(result.confluences.divergences.status).toBe('unknown');
     expect(result.antiConfluences.status).toBe('clear');
-    expect(result.antiConfluences.rules).toMatchObject([{id:'h1CounterDivergence',status:'found',invalidates:false,
+    expect(result.antiConfluences.rules).toMatchObject([{id:'h1CounterDivergence',status:'found',disqualifies:false,
       evidence:[{type:'bullish',timeframe:'1H',recognizedAt:111600}]}]);
     expect(result.antiConfluences.details).toEqual(['bullische 1H Divergenz vorhanden']);
     expect(result.antiConfluences.explanation).toContain('RSI');
@@ -66,7 +66,7 @@ describe('Checklist E/G', () => {
   it.each([['short', false, 'bullische'], ['long', true, 'bärische']])('marks only the absent H1 counter-divergence green for %s', (direction, bullish, label) => {
     const result = evaluateChecklistConfluences({ evaluatedAt: 111600, direction, h1Candles: divergenceCandles(3600, bullish) });
     expect(result.antiConfluences.status).toBe('clear');
-    expect(result.antiConfluences.rules).toMatchObject([{id:'h1CounterDivergence',status:'clear',invalidates:false,evidence:[]}]);
+    expect(result.antiConfluences.rules).toMatchObject([{id:'h1CounterDivergence',status:'clear',disqualifies:false,evidence:[]}]);
     expect(result.antiConfluences.details).toEqual([`keine ${label} 1H Divergenz vorhanden`]);
     expect(result.antiConfluences.explanation).toContain('nur die H1-Gegendivergenz');
     expect(result.antiConfluences.deferredChecks).toEqual(['sweep', 'orderBlock', 'strength']);

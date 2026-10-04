@@ -1,7 +1,8 @@
+import { setup2EntrySearchEnded } from './setup2EntrySearch.js';
 import { tradeSetup2Evidence } from './tradeSetup2Evidence.js';
 import { entrySizingAt, entryAgainstM5Allowed } from './tradeSetup2EntrySizing.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
-import { evaluateDealingRange } from './tradeSetup2DealingRange.js';
+import { evaluateDealingRange, COUNTERTREND_STAGE_VERSION } from './tradeSetup2DealingRange.js';
 import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
 import { countertrendRangeCourse } from './countertrendLifecycle.js';
 import { restoreChecklistObservationChecks } from './checklistObservationRules.js';
@@ -68,6 +69,7 @@ export function buildTradeSetup2Snapshot(input) {
     || checklist.setup.primary.id!==entry.setupKey || checklist.setup.primary.direction!==entry.direction) return null;
   const dealingRange = evaluateDealingRange(checklist);
   if (dealingRange.status !== 'validated') return null;
+  if (dealingRange.version === COUNTERTREND_STAGE_VERSION && setup2EntrySearchEnded(checklist)) return null;
   if (!entryAgainstM5Allowed(checklist, entry)) return null;
   const { instrument, evaluatedAt, status, checks, structure, tradeability, model, ruleVersion,entryModel }=checklist;
   const sizedEntry = { ...entry, sizing: entrySizingAt(checklist, entry) };

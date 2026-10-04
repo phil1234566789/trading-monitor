@@ -1,5 +1,5 @@
 import { groupSetupSnapshots } from './tradeSetup2Review.js';
-import { savedDealingRangeStatus } from './tradeSetup2DealingRange.js';
+import { savedDealingRangeStatus, isDisqualifiedDealingRange } from './tradeSetup2DealingRange.js';
 import { savedRangeOutcome } from './tradeSetup2SavedRangeOutcome.js';
 import { simulationDateFilter, simulationEntryResult, simulationStatistics } from './tradeSetupSimulationStatistics.js';
 import { simulationReviewFeatures } from './simulationReviewFeatures.js';
@@ -8,7 +8,7 @@ import { COUNTERTREND_RANGE_COURSE_VERSION } from './countertrendLifecycle.js';
 export const DR_OUTCOME_LABELS = { t2: 'T1 vor Invalidation · T2 erreicht', t1Only: 'T1 vor Invalidation · T2 nicht erreicht', invalidation: 'Invalidation vor T1',
   open: 'Noch offen', t1Unknown: 'T1 vor Invalidation · T2 nicht belegt', unknown: 'DR-Ausgang nicht belegt' };
 export const SETUP_TYPE_LABELS = { countertrend: 'Countertrend', continuation: 'Trendfortführung', unknown: 'Typ nicht belegt' };
-export const FILTER_DEFAULTS = { run: '', compare: '', instrument: '', type: '', from: '', to: '', stage: '', entry: '', pinned: '', feature: '', value: '' };
+export const FILTER_DEFAULTS = { run: '', compare: '', instrument: '', type: '', from: '', to: '', stage: '', outcome: '', entry: '', pinned: '', feature: '', value: '' };
 export function comparisonFilters(query) {
   return Object.fromEntries(Object.entries(FILTER_DEFAULTS).map(([key, fallback]) => [key, typeof query[key] === 'string' && query[key] !== 'all' ? query[key] : fallback]));
 }
@@ -69,7 +69,8 @@ export function filterReviewGroups(groups, filters, pins = []) {
     return (bounds.from == null || time >= bounds.from) && (bounds.to == null || time < bounds.to);
   };
   return groups.filter(g => (!filters.instrument || g.instrument === filters.instrument)
-    && (!filters.type || g.setupType === filters.type) && (!filters.stage || g.stage === filters.stage)
+    && (!filters.type || g.setupType === filters.type) && (!filters.stage || (filters.stage === 'disqualified' ? isDisqualifiedDealingRange(g.latestCandidate ?? g.snapshot) : g.stage === filters.stage))
+    && (!filters.outcome || g.outcome.status === filters.outcome)
     && (!filters.entry || (filters.entry === 'with') === !!g.entries.length)
     && (!filters.pinned || (filters.pinned === 'with') === simulationGroupHasPin(g,pins))
     && (!filters.feature || g.features.some(f => f.key === filters.feature && (!filters.value || f.value === filters.value)))
@@ -91,8 +92,8 @@ export function variantMetrics(results, variant) {
 export function runFunnel(groups, results) {
   const validated = groups.filter(g => g.wasValidated ?? g.stage === 'validated');
   return { recognized: new Set(groups.map(g => g.snapshot.checklist?.setup?.primary?.tradeSetupId ?? g.snapshot.setupKey ?? g.key)).size,
-    confirmed: groups.filter(g => ['confirmed','validated','invalidated'].includes(g.stage)).length,
-    disqualified: groups.filter(g => g.stage === 'invalidated' && ['h1CounterDivergence','antiConfluence','targetsUnavailable'].includes((g.latestCandidate ?? g.snapshot)?.dealingRange?.reason)).length,
+    confirmed: groups.filter(g => ['confirmed','validated','disqualified','invalidated'].includes(g.stage)).length,
+    disqualified: groups.filter(g => isDisqualifiedDealingRange(g.latestCandidate ?? g.snapshot)).length,
     validated: validated.length,
     invalidationBeforeT1: validated.filter(g => g.outcome.status === 'invalidation').length,
     target1: validated.filter(g => ['t2','t1Only','t1Unknown'].includes(g.outcome.status)).length,
