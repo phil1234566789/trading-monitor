@@ -4224,8 +4224,8 @@
     "semantic_hash": ""
   },
   "src/m5CloseReaction.js": {
-    "mtime": 1791136639.5854576,
-    "seen": 1791137342.5879996,
+    "mtime": 1791138004.4239993,
+    "seen": 1791138440.8699136,
     "ast_hash": "889900e7aacbe7ae982030f5c15d0193",
     "semantic_hash": ""
   },
@@ -4776,8 +4776,8 @@
     "semantic_hash": ""
   },
   "src/m5CloseReactionHistory.js": {
-    "mtime": 1791136639.5864582,
-    "seen": 1791137342.5879996,
+    "mtime": 1791138004.4239993,
+    "seen": 1791138440.8699136,
     "ast_hash": "601e7866adeec69ccfc3756854917c3d",
     "semantic_hash": ""
   },
@@ -5526,9 +5526,9 @@
     "semantic_hash": ""
   },
   "docs/performance-h.html": {
-    "mtime": 1791136639.448316,
-    "seen": 1791137342.5889997,
-    "ast_hash": "0d7805707a98471e2ca1e4f3d88fce83",
+    "mtime": 1791138416.2983775,
+    "seen": 1791138440.9849334,
+    "ast_hash": "0485fff7e970c611715660b39ecebf89",
     "semantic_hash": ""
   },
   "test/fixtures/trendPhasesBeforePerformanceRound2.js": {
@@ -5607,6 +5607,12 @@
     "mtime": 1791136889.5208442,
     "seen": 1791137342.5889997,
     "ast_hash": "2824c0ceb5d4b608fec41126cfc5cdf1",
+    "semantic_hash": ""
+  },
+  "docs/performance-r3-proof.json": {
+    "mtime": 1791138416.297376,
+    "seen": 1791138440.8349102,
+    "ast_hash": "66445deab56c5d8ef8960f45404276a1",
     "semantic_hash": ""
   }
 }
