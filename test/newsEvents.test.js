@@ -4,8 +4,39 @@
 // aus der DB geladene Liste rein (siehe PriceChart.vue).
 import { describe, expect, it } from "vitest";
 import { currentNewsNoGo, newsEventsForInstrument, NEWS_NOGO_WINDOW_MINUTES } from "../src/newsEvents.js";
+import { newsEventsInWindow, supportsNewsInstrument } from "../src/newsEventRules.js";
 
 const NOW = Date.UTC(2026, 6, 23, 12, 15, 0) / 1000; // Do 23.07.2026 12:15 UTC (ECB-Zinsentscheid, siehe Seed-Migration)
+
+describe("XAUUSD news", () => {
+  const usd = { eventTime: NOW, currency: "USD", title: "CPI" };
+  const events = [
+    { ...usd, currency: "EUR" }, { ...usd, currency: "GBP" },
+    { ...usd, currency: "XAU" }, usd,
+  ];
+
+  it("supports gold and selects only the shared USD calendar", () => {
+    expect(supportsNewsInstrument("XAUUSD")).toBe(true);
+    expect(supportsNewsInstrument("UNKNOWN")).toBe(false);
+    expect(newsEventsForInstrument(events, "XAUUSD")).toEqual([usd]);
+    expect(newsEventsForInstrument([], "XAUUSD")).toEqual([]);
+  });
+
+  it.each([-1801, -1800, 0, 1799, 1800, 1801])("keeps inclusive TSC boundaries at %s seconds", offset => {
+    expect(currentNewsNoGo(events, "XAUUSD", NOW + offset))
+      .toEqual(Math.abs(offset) <= NEWS_NOGO_WINDOW_MINUTES * 60 ? usd : null);
+  });
+
+  it.each([[-1801, false], [-1800, true], [0, true], [899, true], [900, false]])
+    ("keeps checklist window boundaries at %s seconds", (offset, blocked) => {
+      expect(newsEventsInWindow(events, "XAUUSD", NOW + offset, { beforeMinutes: 30, afterMinutes: 15 }))
+        .toEqual(blocked ? [usd] : []);
+    });
+
+  it("ignores non-USD news for the gold no-go", () => {
+    expect(currentNewsNoGo(events.slice(0, 3), "XAUUSD", NOW)).toBeNull();
+  });
+});
 
 describe("currentNewsNoGo", () => {
   it("findet ein High-Impact-Event exakt zum Event-Zeitpunkt", () => {
@@ -37,9 +68,9 @@ describe("currentNewsNoGo", () => {
     expect(currentNewsNoGo(events, "GBPUSD", NOW)).toBeNull();
   });
 
-  it("gibt null für ein unbekanntes Instrument zurück (z.B. XAUUSD, TSC läuft dort ohnehin nicht)", () => {
+  it("gibt null für ein unbekanntes Instrument zurück", () => {
     const events = [{ eventTime: NOW, currency: "USD", title: "Fed Rate Decision" }];
-    expect(currentNewsNoGo(events, "XAUUSD", NOW)).toBeNull();
+    expect(currentNewsNoGo(events, "UNKNOWN", NOW)).toBeNull();
   });
 
   it("gibt null bei leerer Event-Liste zurück", () => {
@@ -66,6 +97,6 @@ describe("newsEventsForInstrument", () => {
   });
 
   it("gibt ein leeres Array für ein unbekanntes Instrument zurück", () => {
-    expect(newsEventsForInstrument(events, "XAUUSD")).toEqual([]);
+    expect(newsEventsForInstrument(events, "UNKNOWN")).toEqual([]);
   });
 });

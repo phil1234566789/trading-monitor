@@ -111,7 +111,7 @@ describe("evaluateChecklistTime", () => {
     expect(evaluateChecklistTime(input({ sessions: [session], evaluatedAt: at("2026-09-09T09:21:00+02:00") })).status).toBe("passed");
   });
 
-  it.each([{ evaluatedAt: undefined }, { instrument: "XAUUSD" }, { sessions: undefined }, { sessions: [{ ...london, instrument: undefined }] },
+  it.each([{ evaluatedAt: undefined }, { instrument: "UNKNOWN" }, { sessions: undefined }, { sessions: [{ ...london, instrument: undefined }] },
     { tradingWindows: undefined }, { news: undefined },
     { news: [{ currency: "GBP", eventTime: NaN }] }])("gibt für fehlende oder ungültige Eingaben kein GO (%j)", (overrides) => {
     expect(evaluateChecklistTime(input(overrides)).status).toBe("unknown");

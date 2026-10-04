@@ -2,6 +2,7 @@
 const INSTRUMENT_CURRENCIES = {
   EURUSD: ["EUR", "USD"],
   GBPUSD: ["GBP", "USD"],
+  XAUUSD: ["USD"],
 };
 
 // Historische TSC-Daumenregel gegen News-Spikes; die Checklist hat separat bestätigte Grenzen.
