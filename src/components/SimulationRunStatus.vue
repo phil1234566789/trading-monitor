@@ -19,13 +19,11 @@ const h1Start = computed(() => {
 </script>
 
 <template>
-  <section class="run-status" aria-label="Auswertungslauf">
+  <section class="run-status" aria-label="Lauf neu">
     <div class="run-summary">
-      <strong>{{ simulationRunStatusLabel(run) }}</strong>
-      <span>Angeforderter Zeitraum {{ at(run.from) }} – {{ at(run.to) }} (Ende exklusiv)</span>
-      <span>Datenstand {{ at(run.evaluatedAt) }} · Europe/Berlin</span>
+      <strong>Lauf neu · {{ simulationRunStatusLabel(run) }}</strong>
+      <span>{{ (run.coverage?.instruments ?? []).map(item => item.instrument).join(', ') || 'Instrument nicht angegeben' }} · {{ at(run.from) }} – {{ at(run.to) }} · Berlin</span>
     </div>
-    <p>H1-Start: {{ h1Start }}</p>
     <p v-if="run.status === 'running'" role="status" class="progress-label">
       {{ phaseLabels[progress.phase] ?? 'Auswertung läuft' }}<template v-if="progress.instrument"> · {{ progress.instrument }}</template>
       <template v-if="measurableProgress"> · {{ progress.completed }} / {{ progress.total }} {{ progress.phase === 'download' ? 'Instrumente' : 'Schritte' }}</template>
@@ -35,10 +33,13 @@ const h1Start = computed(() => {
     <progress v-if="run.status === 'running' && measurableProgress" :value="progress.completed" :max="progress.total" aria-label="Fortschritt der aktuellen Phase" />
     <p v-if="run.status === 'running'">Zwischenstand: Ergebnisse und Zählungen enthalten nur bisher gespeicherte Daten.</p>
     <p v-if="run.status === 'failed'" role="alert" class="failed">Der Lauf wurde nicht vollständig abgeschlossen. Gespeicherte Ergebnisse bilden nur den erreichten Stand ab.</p>
-    <p v-if="!run.coverage?.instruments?.length" class="coverage-hint">Für diesen Lauf ist noch kein ausgewerteter Datenumfang angegeben.</p>
-    <p v-for="item in run.coverage?.instruments ?? []" :key="item.instrument" class="coverage-hint">{{ item.instrument }} · {{ run.status === 'complete' ? 'ausgewertetes Fenster' : 'geladenes Datenfenster' }} {{ at(item.from) }} – {{ at(item.to) }} (Ende exklusiv)</p>
     <details>
       <summary>Datenumfang und Messgrenzen</summary>
+      <p>Angeforderter Zeitraum {{ at(run.from) }} – {{ at(run.to) }} (Ende exklusiv: der Endzeitpunkt zählt nicht mehr dazu).</p>
+      <p>Datenstand {{ at(run.evaluatedAt) }} · Europe/Berlin</p>
+      <p>H1-Start: {{ h1Start }}</p>
+      <p v-if="!run.coverage?.instruments?.length" class="coverage-hint">Für diesen Lauf ist noch kein ausgewerteter Datenumfang angegeben.</p>
+      <p v-for="item in run.coverage?.instruments ?? []" :key="item.instrument" class="coverage-hint">{{ item.instrument }} · {{ run.status === 'complete' ? 'ausgewertetes Fenster' : 'geladenes Datenfenster' }} {{ at(item.from) }} – {{ at(item.to) }} (Ende exklusiv)</p>
       <p>Quelle: {{ run.provenance?.source ?? 'Noch nicht angegeben' }} · Regel: {{ run.version }}</p>
       <p v-if="!run.provenance?.limitations?.length">Für diesen Lauf sind noch keine weiteren Messgrenzen hinterlegt.</p>
       <ul v-else><li v-for="limit in run.provenance.limitations" :key="limit">{{ limit }}</li></ul>
