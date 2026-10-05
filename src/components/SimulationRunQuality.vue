@@ -1,6 +1,8 @@
 <script setup>
 import { computed } from 'vue';
 import { comparisonTone } from '../simulationComparisonTone.js';
+// Statusfarben bleiben semantisch stabil, auch bei individuell umgefärbten Chart-Linien.
+import { DEFAULT_CHART_COLORS } from '../chartColors.js';
 import { runFunnel,rangeEntryCrossTable,variantMetrics } from '../simulationRunComparison.js';
 import { SIMULATION_OUTCOME_LABELS } from '../tradeSetupSimulationStatistics.js';
 const props=defineProps({current:Object,previous:Object,compare:Boolean});
@@ -33,7 +35,7 @@ const crossTone=(run,variant,row,column)=>{
       <p class="note">T2-Quote: {{ run.funnel.target2Eligible ? (100 * run.funnel.target2 / run.funnel.target2Eligible).toFixed(1) + ' %' : 'nicht belegt' }} ({{ run.funnel.target2 }} / {{ run.funnel.target2Eligible }} validierte DRs mit belegtem T2-Ziel). DR-Ausgang nicht belegt: {{ run.funnel.target2Unknown }}.</p>
       <h4>Preisverlauf validierter DRs → Entry-Ergebnis</h4>
       <div class="range-branches">
-        <article v-for="row in crossTables[run.label].wide" :key="row.key" class="range-branch" :aria-label="`${run.label} · ${row.label}`">
+        <article v-for="row in crossTables[run.label].wide" :key="row.key" class="range-branch" :class="`outcome-${row.key}`" :aria-label="`${run.label} · ${row.label}`">
           <h5><b :class="crossTone(run,'wide',row,'total')">{{ row.total }}</b>{{ row.label }}</h5>
           <p class="without-entry">Ohne Entry <b :class="crossTone(run,'wide',row,'without')">{{ row.without }}</b></p>
           <div class="stop-branches">
@@ -51,8 +53,12 @@ const crossTone=(run,variant,row,column)=>{
   </section>
 </template>
 <style scoped>
-.range-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px;margin:12px 0 20px}.range-branch{border:1px solid #434651;border-top:3px solid #91b8ff;border-radius:4px;background:#1e222d;padding:12px;min-width:0}h4{font-size:13px;font-weight:400;color:#b1b7c5;margin:20px 0 8px}.range-branch h5{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:400;margin:0;min-height:42px}.range-branch h5 b{font-size:24px;font-variant-numeric:tabular-nums}.without-entry{display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid #434651;padding-bottom:10px}.stop-branches{display:grid;grid-template-columns:1fr 1fr;gap:12px}.stop-branches section+section{border-left:1px solid #434651;padding-left:12px}.stop-branches h6{font-size:12px;margin:0 0 10px}.stop-branches dl{margin:0}.stop-branches dl>div{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:8px 0}.stop-branches dt{font-size:11px;color:#b1b7c5;overflow-wrap:anywhere}.stop-branches dd{margin:0;font-size:14px;font-variant-numeric:tabular-nums}
+.range-branch.outcome-t2{--range-accent:v-bind('DEFAULT_CHART_COLORS.candleUp.hex')}.range-branch.outcome-t1Only{--range-accent:color-mix(in srgb,v-bind('DEFAULT_CHART_COLORS.liquidityLowM5.hex') 40%,v-bind('DEFAULT_CHART_COLORS.candleUp.hex'))}.range-branch.outcome-invalidation{--range-accent:v-bind('DEFAULT_CHART_COLORS.tradeInvalidation.hex')}
+.range-branch:is(.outcome-t2,.outcome-t1Only,.outcome-invalidation){order:0;background:color-mix(in srgb,var(--range-accent) 9%,#1e222d);border-color:color-mix(in srgb,var(--range-accent) 35%,#434651);border-top-color:color-mix(in srgb,var(--range-accent) 55%,#434651)}
+.range-branch:not(.outcome-t2,.outcome-t1Only,.outcome-invalidation){order:1;border-color:#303640;background:#191e28}.range-branch:not(.outcome-t2,.outcome-t1Only,.outcome-invalidation) h5{color:#a6adbc}.range-branch:not(.outcome-t2,.outcome-t1Only,.outcome-invalidation) h5 b{font-size:18px}
+.range-branches{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0 20px}.range-branch{border:1px solid #434651;border-top:3px solid #434651;border-radius:4px;background:#1e222d;padding:12px;min-width:0}h4{font-size:13px;font-weight:400;color:#b1b7c5;margin:20px 0 8px}.range-branch h5{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:400;margin:0;min-height:42px}.range-branch h5 b{font-size:24px;font-variant-numeric:tabular-nums}.without-entry{display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid #434651;padding-bottom:10px}.stop-branches{display:grid;grid-template-columns:1fr 1fr;gap:12px}.stop-branches section+section{border-left:1px solid #434651;padding-left:12px}.stop-branches h6{font-size:12px;margin:0 0 10px}.stop-branches dl{margin:0}.stop-branches dl>div{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:8px 0}.stop-branches dt{font-size:11px;color:#b1b7c5;overflow-wrap:anywhere}.stop-branches dd{margin:0;font-size:14px;font-variant-numeric:tabular-nums}
 .run-quality{margin:24px 0}h2{font-size:18px}h3{font-size:14px}.funnel{display:flex;flex-wrap:wrap;gap:8px}.funnel dl{margin:0;display:flex;flex-direction:column;flex:1 1 110px;padding:12px;border:1px solid #434651;background:#1e222d;border-radius:4px}.funnel .split-node{flex:2 1 220px;flex-direction:row;gap:12px}.split-node>div{flex:1;display:flex;flex-direction:column}.split-node>div+div{border-left:1px solid #434651;padding-left:12px}.funnel dd{order:-1;margin:0;font-size:20px;font-variant-numeric:tabular-nums}.funnel dt{font-size:12px;color:#b1b7c5;margin-top:6px}.outcomes{font-size:12px;display:flex;flex-wrap:wrap;gap:8px 16px}.note{color:#b1b7c5;font-size:12px;line-height:1.6}
+@media(max-width:1000px){.range-branches{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.range-branches{grid-template-columns:minmax(0,1fr)}}
 </style>
 
 <style scoped src="../simulationComparisonColors.css"></style>
