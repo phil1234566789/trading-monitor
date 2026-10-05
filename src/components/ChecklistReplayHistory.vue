@@ -3,6 +3,7 @@ import {computed,ref} from 'vue';
 import {formatBerlinTime,formatDatedTime} from '../berlinTime.js';
 import {checklistHistoryAt,CHECKLIST_HISTORY_VERSION} from '../tradeSetup2ChecklistHistory.js';
 import {checklistHistoryChanges} from '../checklistReplayView.js';
+import {entryPatternText} from '../entryPattern.js';
 const props=defineProps({history:Object,asOf:Number});
 defineEmits(['jump']);
 const checkpoint=ref('');
@@ -16,11 +17,11 @@ const icon=value=>({passed:'✓',unmet:'✕',unknown:'?',observed:'~',validated:
     <p v-if="!supported">kein Verlauf gespeichert</p>
     <template v-else>
       <p class="stand" role="status"><template v-if="active">Stand von {{ formatBerlinTime(active.knownAt) }} · {{ formatDatedTime(active.knownAt).slice(0,10) }} (Europe/Berlin)</template><template v-else>Diese DR war zu diesem Replay-Zeitpunkt noch nicht erkannt.</template></p>
-      <dl v-if="active" class="history-checks"><template v-for="row in active.rows" :key="row.key"><dt>{{ icon(row.status) }} {{ row.label }}</dt><dd><p v-for="(detail,index) in row.details" :key="index">{{ detail }}</p></dd></template></dl>
+      <dl v-if="active" class="history-checks"><template v-for="row in active.rows" :key="row.key"><dt>{{ icon(row.status) }} {{ entryPatternText(row.label) }}</dt><dd><p v-for="(detail,index) in row.details" :key="index">{{ entryPatternText(detail) }}</p></dd></template></dl>
       <details><summary>Checklisten-Verlauf · {{ history.entries.length }} Stände</summary>
         <label>Checkpoint <select v-model="checkpoint"><option value="">Alle</option><option v-for="letter in 'ABCDEFGH'" :key="letter">{{ letter }}</option></select></label>
         <p v-if="!entries.length">Keine Änderungen für diesen Filter.</p>
-        <ol><li v-for="(entry,index) in entries" :key="`${entry.knownAt}:${index}`"><button type="button" :aria-current="entry===active?'true':undefined" @click="$emit('jump',entry.knownAt)"><strong>{{ formatDatedTime(entry.knownAt) }} · {{ entry.source }}</strong><span v-for="change in checklistHistoryChanges(entry,checkpoint)" :key="change.key" :title="change.old?.details?.join(' · ')">{{ change.label ?? change.key }}: {{ change.old==null?'?':icon(change.old) }} → {{ icon(change.new) }} · {{ change.text }}</span></button></li></ol>
+        <ol><li v-for="(entry,index) in entries" :key="`${entry.knownAt}:${index}`"><button type="button" :aria-current="entry===active?'true':undefined" @click="$emit('jump',entry.knownAt)"><strong>{{ formatDatedTime(entry.knownAt) }} · {{ entry.source }}</strong><span v-for="change in checklistHistoryChanges(entry,checkpoint)" :key="change.key" :title="entryPatternText(change.old?.details?.join(' · '))">{{ entryPatternText(change.label) ?? change.key }}: {{ change.old==null?'?':icon(change.old) }} → {{ icon(change.new) }} · {{ entryPatternText(change.text) }}</span></button></li></ol>
       </details>
     </template>
   </section>

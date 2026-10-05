@@ -2,23 +2,23 @@ import { expect, it } from 'vitest';
 import { setupEntryConditions, groupSetupSnapshots, filterDealingRanges } from '../src/tradeSetup2Review.js';
 import { DEALING_RANGE_VERSION } from '../src/tradeSetup2DealingRange.js';
 import { simulationChartLink } from '../src/tradeSetupSimulationStatistics.js';
-import { ENTRY_MODEL_1_VERSION } from '../src/entryModel1Conditions.js';
+import { ENTRY_PATTERN_1_VERSION } from '../src/entryPattern1Conditions.js';
 
 it('reviews M5 BOS and M1 pivot break as required, preserving legacy observations',()=>{
- const saved=snapshot();saved.entry.entryModel=ENTRY_MODEL_1_VERSION;
+ const saved=snapshot();saved.entry.entryPattern=ENTRY_PATTERN_1_VERSION;
  saved.entry.conditions={m5Bos:{direction:'short',recognizedAt:300},m1PivotBreak:null};saved.direction='short';
  const review=setupEntryConditions(saved);
  expect(review.rows.find(row=>row.key==='m5Bos').status).toBe('passed');
  expect(review.rows.find(row=>row.key==='m1PivotBreak').status).toBe('unmet');
  expect(review.observations).toEqual([]);
- saved.entry.entryModel='countertrend-entry-model-1-v3';saved.entry.conditions.m1Choch=null;
+ saved.entry.entryPattern='countertrend-entry-model-1-v3';saved.entry.conditions.m1Choch=null;
  expect(setupEntryConditions(saved).rows.find(row=>row.key==='m1Choch').status).toBe('unmet');
  expect(setupEntryConditions(saved).observations.map(row=>row.label)).toEqual(['M1 BOS']);
  expect(setupEntryConditions(snapshot()).observations.map(row=>row.label)).toEqual(['M1 CHoCH','M1 BOS']);
 });
 
 it('keeps the original model 1 snapshot labels and requirements',()=>{
- const saved=snapshot();saved.entry.entryModel='countertrend-entry-model-1-v1';saved.direction='short';
+ const saved=snapshot();saved.entry.entryPattern='countertrend-entry-model-1-v1';saved.direction='short';
  saved.entry.conditions={m5Choch:{direction:'short',recognizedAt:300},m1Bos:null};
  const review=setupEntryConditions(saved);
  expect(review.rows.find(row=>row.key==='m5Choch').status).toBe('passed');

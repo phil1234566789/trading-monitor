@@ -9,7 +9,7 @@ import { fixChecklistTargets,CHECKLIST_RULE_VERSION } from './tradeSetupChecklis
 import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
 import { deriveSetupEntryInvalidation, sweepAgeSec } from './tradeSetup.js';
 import { divergenceObservationRule, H1_COUNTER_DIVERGENCE_RULE, M5_SWEEP_DIVERGENCE_RULE, OBSERVATION_RULE_VERSION } from './checklistObservationRules.js';
-import { ENTRY_MODEL_1_VERSION } from './entryModel1Conditions.js';
+import { ENTRY_PATTERN_1_VERSION } from './entryPattern1Conditions.js';
 import { finalObservation,setupMemoKey } from './setup2Memo.js';
 
 export { COUNTERTREND_STAGE_VERSION } from './tradeSetup2DealingRange.js';
@@ -34,7 +34,7 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     targets: pending(), antiConfluences: {status:'unknown',details:['Wartet auf ein bekanntes Setup 1.0.'],
       ruleVersion:OBSERVATION_RULE_VERSION,rules:[divergenceObservationRule({...H1_COUNTER_DIVERGENCE_RULE,divergences:{status:'unknown'}})]}, confluences: { ...pending(), ruleVersion:OBSERVATION_RULE_VERSION,
       rules:[divergenceObservationRule({...M5_SWEEP_DIVERGENCE_RULE,divergences:{status:'unknown'}})] } };
-  const result = { model: 'countertrend', entryModel:ENTRY_MODEL_1_VERSION,ruleVersion: COUNTERTREND_STAGE_VERSION, instrument, evaluatedAt,
+  const result = { model: 'countertrend', entryPattern:ENTRY_PATTERN_1_VERSION,ruleVersion: COUNTERTREND_STAGE_VERSION, instrument, evaluatedAt,
     status: dataStatus, checks, direction: null, setupType: 'unclear', confirmed: false, abortReason: null,
     tradeability: 'unknown',
     setup: { candidates: [], primary: null, opposingCandidates: [], classifications: [] } };
@@ -61,7 +61,7 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     const anchor = dailyAnchors.filter(a => a.instrument == null || a.instrument === instrument)
       .filter(a => a.knownAt <= recognizedAt && Number.isFinite(a.structureStartTime))
       .sort((a, b) => b.pivotTime - a.pivotTime)[0];
-    const memoKey=setupMemoKey(source,anchor,[COUNTERTREND_STAGE_VERSION,ENTRY_MODEL_1_VERSION,
+    const memoKey=setupMemoKey(source,anchor,[COUNTERTREND_STAGE_VERSION,ENTRY_PATTERN_1_VERSION,
       CHECKLIST_RULE_VERSION,OBSERVATION_RULE_VERSION,settings],configs,dataRevision);
     memoKeys.set(source.tradeSetupId,memoKey);
     const memo=setupMemo?.get(memoKey);

@@ -1,9 +1,10 @@
 import { setupEntryConditions } from './tradeSetup2Review.js';
 import { evaluateDealingRange } from './tradeSetup2DealingRange.js';
 import { checklistObservationRules } from './checklistObservationRules.js';
+import {entryPatternVersion} from './entryPattern.js';
 
 export const CHECKLIST_HISTORY_VERSION = 'checklist-changes-v1';
-const pick = (value, keys) => value ? Object.fromEntries(keys.filter(k => value[k] !== undefined).map(k => [k,value[k]])) : null;
+const pick = (value, keys) => value ? Object.fromEntries(keys.map(k=>[k,k==='entryPattern'?entryPatternVersion(value):value[k]]).filter(([,v])=>v!==undefined)) : null;
 const signal = value => pick(value,['type','recognizedAt','knownAt','candleTime','pivotTime','price','direction','gap','startTime','top','bottom','fromTime','toTime',
   'originTime','originPrice','pullbackTime','pullbackPrice','pivotRecognizedAt','breachKnownAt']);
 function lightChecks(checks) {
@@ -23,9 +24,9 @@ export function createChecklistHistoryRecorder() {
   const histories=new Map(),previous=new Map(),m1Checks=new Map();
   function record(checklist,candidate,source='M5',m1Check,savedEntry=null) {
     const at=checklist.evaluatedAt,key=candidate.id;
-    if(m1Check)m1Checks.set(key,{...pick(m1Check,['status','details','detailStatuses','trends','currentTrend','entryModel','evaluatedAt']),
+    if(m1Check)m1Checks.set(key,{...pick(m1Check,['status','details','detailStatuses','trends','currentTrend','entryPattern','evaluatedAt']),
       instrument:checklist.instrument,
-      entry:pick(savedEntry,['id','label','entryModel','recognizedAt','candleTime','price','direction','conditions','scales','sizing']),
+      entry:pick(savedEntry,['id','label','entryPattern','recognizedAt','candleTime','price','direction','conditions','scales','sizing']),
       conditions:Object.fromEntries(Object.entries(m1Check.conditions ?? {}).map(([k,v])=>[k,signal(v)])),
       structureStart:pick(m1Check.structureStart,['structureFrom','recognizedAt','sourceTime','sourceTimeframe','price']),
       pivotBreak:signal(m1Check.pivotBreak),
@@ -38,7 +39,7 @@ export function createChecklistHistoryRecorder() {
     const value={checks,primary,dealingRange:pick(stage,['version','model','status','details','reason']),m1Check:m1Checks.get(key) ?? null};
     const signature=JSON.stringify({...value,m1Check:value.m1Check ? {...value.m1Check,evaluatedAt:undefined} : null});
     if(previous.get(key)?.signature===signature)return;
-    const state={...pick(checklist,['instrument','direction','status','model','ruleVersion','entryModel']),direction:candidate.direction,
+    const state={...pick(checklist,['instrument','direction','status','model','ruleVersion','entryPattern']),direction:candidate.direction,
       evaluatedAt:at,checks,setup:{primary},dealingRange:{...value.dealingRange,evaluatedAt:at}};
     const rows=setupEntryConditions({knownAt:at,instrument:checklist.instrument,direction:candidate.direction,
       checklist:state,dealingRange:state.dealingRange,m1Check:value.m1Check,entry:value.m1Check?.entry}).rows;

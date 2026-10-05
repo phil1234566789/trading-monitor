@@ -1,6 +1,6 @@
 import { describe,it,expect } from 'vitest';
 import { buildM1Structure } from '../src/m1Structure.js';
-import { ENTRY_MODEL_1_VERSION } from '../src/entryModel1Conditions.js';
+import { ENTRY_PATTERN_1_VERSION } from '../src/entryPattern1Conditions.js';
 
 const knots=[[0,10],[9,15],[19,5],[29,12],[30,8],[39,9]];
 const rows=Array.from({length:40},(_,i)=>{
@@ -9,7 +9,7 @@ const rows=Array.from({length:40},(_,i)=>{
   return {time:i*60,open:price,close:price,high:price+.1,low:i===30?4:price-.1};
 });
 const primary={direction:'short',sweep:{timeframe:'5M',level:{price:15.1,touchedTime:540}}};
-const anchor={entryModel:ENTRY_MODEL_1_VERSION,primary};
+const anchor={entryPattern:ENTRY_PATTERN_1_VERSION,primary};
 const build=(at,candles=rows,a=anchor)=>buildM1Structure(candles,a,at);
 
 describe('M1 structure from actual sweep',()=>{

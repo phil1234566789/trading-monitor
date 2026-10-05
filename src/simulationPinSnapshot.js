@@ -1,3 +1,4 @@
+import {entryPatternVersion} from './entryPattern.js';
 import { formatDatedTime } from './berlinTime.js';
 import { simulationChartLink,simulationEntryResult } from './tradeSetupSimulationStatistics.js';
 import { featureDetails } from './simulationReviewFeatures.js';
@@ -12,7 +13,7 @@ export function simulationPinSnapshot(target,run,results,pinnedAt=new Date().toI
   const config=run?.configuration;
   return {contextVersion:'simulation-pin-context-v2',dealingRangeVersion:(group.latestCandidate ?? snapshot).dealingRange?.version ?? null,
     dealingRangeReason:(group.latestCandidate ?? snapshot).dealingRange?.reason ?? null,kind,runId:snapshot.runId,runVersion:run?.version ?? null,ruleVersion:snapshot.checklist?.ruleVersion ?? null,
-    entryModelVersion:entry?.entry?.entryModel ?? config?.entryModel ?? snapshot.checklist?.entryModel ?? null,
+    entryPatternVersion:entryPatternVersion(entry?.entry) ?? entryPatternVersion(config) ?? entryPatternVersion(snapshot.checklist) ?? null,
     drId:group.key,snapshotId:snapshot.id,setupKey:snapshot.setupKey,setup1Id:snapshot.checklist?.setup?.primary?.tradeSetupId ?? null,
     instrument:group.instrument,direction:group.direction,setupType:group.setupType,stage:group.stage,outcome:group.outcome,
     recognizedAt:time(group.recognizedAt),snapshotAt:time(snapshot.knownAt),validatedAt:time(group.firstValidated?.knownAt),

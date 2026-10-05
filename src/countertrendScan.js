@@ -17,7 +17,7 @@ import { M1_FRACTAL_SUPPORT } from './m1StructureSettings.js';
 import { candleTimeIndex } from './candleTimeIndex.js';
 import { createClosedCandlePrefix } from './closedCandlePrefix.js';
 import { createSetup2Memo,finalObservation } from './setup2Memo.js';
-import { entryModel1FvgAt } from './entryModel1Progress.js';
+import { entryPattern1FvgAt } from './entryPattern1Progress.js';
 import { completeDealingRangePriceObservations } from './dealingRangePriceObservation.js';
 import { createChecklistHistoryRecorder } from './tradeSetup2ChecklistHistory.js';
 
@@ -155,7 +155,7 @@ export async function scanCountertrendWindow(input) {
         const prefixEnd=candleTimeIndex(m1,candle.time)+1;
         const prefixStart=m1ScanPrefixStart(m1,m1LoadStart(active),M1_FRACTAL_SUPPORT);
         // Ein Entry entsteht ausschließlich beim FVG-Schluss; andere Minuten brauchen keine M1-Struktur.
-        if(useMemo && !entryModel1FvgAt(m1,active.direction,prefixEnd,prefixStart))continue;
+        if(useMemo && !entryPattern1FvgAt(m1,active.direction,prefixEnd,prefixStart))continue;
         const rows=m1.slice(prefixStart,prefixEnd);
         const structure=buildM1Structure(rows,active.anchor,knownAt);
         let follow=entryProgress.get(candidate.id);

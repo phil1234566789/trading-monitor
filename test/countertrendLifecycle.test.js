@@ -50,7 +50,7 @@ describe('Countertrend-Lebenszyklus',()=>{
  it('spätere Entry-Ausgänge ändern keine früheren Stände',()=>{
   expect(run([candle(600,1.19)],[{entryTime:600,status:'closed',exitRecognizedAt:1200}],selection.target2,900).main.state).toBe('active');
  });
- it('beweist bei zwei Entry-Modellen genau einen zentralen Stundencheck je Anlageversuch',()=>{
+ it('beweist bei zwei Entry Patternsn genau einen zentralen Stundencheck je Anlageversuch',()=>{
   const hours=vi.fn(()=>({status:'blocked'})),models=[vi.fn(()=>1),vi.fn(()=>2)];
   for(const model of models) expect(createSetup2Entry({},model,hours)).toBeNull();
   expect(hours).toHaveBeenCalledTimes(2);models.forEach(model=>expect(model).not.toHaveBeenCalled());

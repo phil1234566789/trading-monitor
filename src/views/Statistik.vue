@@ -33,7 +33,7 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
   <main class="statistics-page" :style="{'--pin-color':cssColor('pin'),'--positive':cssColor('candleUp'),'--negative':cssColor('candleDown'),'--reference':cssColor('fvgCandle'),'--worse':'#ff7043'}">
     <header><div><h1>Statistik</h1><p>Läufe vergleichen · DR- und Entry-Qualität prüfen</p></div><button type="button" :disabled="loading" @click="refreshAll">{{ loading?'Wird geladen…':'Aktualisieren' }}</button></header>
     <details class="simulation-rules"><summary>Simulationsannahmen</summary>
-      <p>50.000 USD Referenzkonto · Basis-Preisrisikobudget 500 USD pro Entry. Die gespeicherte Entry-Modell-Version bestimmt die Größenregel. Ganze Standardlots, 50 % an T1 schließen, Reststop auf Entry, Rest bis T2 oder Break-even. Kein Compounding.</p>
+      <p>50.000 USD Referenzkonto · Basis-Preisrisikobudget 500 USD pro Entry. Die gespeicherte Entry Pattern-Version bestimmt die Größenregel. Ganze Standardlots, 50 % an T1 schließen, Reststop auf Entry, Rest bis T2 oder Break-even. Kein Compounding.</p>
       <p>5 USD Kommission je Standardlot für Entry und Exit zusammen, einmal auf das Eröffnungsvolumen. Kein Spread und keine Slippage. Weiter und enger SL sind alternative Szenarien.</p>
       <p>Netto-Winrate = Netto-Gewinne / eindeutig abgeschlossene, ausführbare Entries. Offen, uneindeutig und nicht ausführbar zählen nicht zum Nenner. Prozent ab 50 Fällen. PnL und R zeigen abgeschlossene Positionen; USD-Kommission wird bereits bei Entry angesetzt.</p>
       <p>Zeitraum filtert Entry-Zeiten in Europe/Berlin. DRs ohne Entry entfallen bei einem gesetzten Entry-Zeitraum. Ohne Datumsfilter bleiben sie in der DR-Auswertung.</p>

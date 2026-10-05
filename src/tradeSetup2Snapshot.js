@@ -1,3 +1,4 @@
+import {entryPatternVersion} from './entryPattern.js';
 import { setup2EntrySearchEnded } from './setup2EntrySearch.js';
 import { tradeSetup2Evidence } from './tradeSetup2Evidence.js';
 import { entrySizingAt, entryAgainstM5Allowed } from './tradeSetup2EntrySizing.js';
@@ -71,12 +72,13 @@ export function buildTradeSetup2Snapshot(input) {
   if (dealingRange.status !== 'validated') return null;
   if (dealingRange.version === COUNTERTREND_STAGE_VERSION && setup2EntrySearchEnded(checklist)) return null;
   if (!entryAgainstM5Allowed(checklist, entry)) return null;
-  const { instrument, evaluatedAt, status, checks, structure, tradeability, model, ruleVersion,entryModel }=checklist;
+  const { instrument, evaluatedAt, status, checks, structure, tradeability, model, ruleVersion }=checklist;
+  const entryPattern=entryPatternVersion(checklist);
   const sizedEntry = { ...entry, sizing: entrySizingAt(checklist, entry) };
-  const entryChecks=entry.entryModel ? {...checks,entry:{status:'passed',entryModel:entry.entryModel,
+  const entryChecks=entryPatternVersion(entry) ? {...checks,entry:{status:'passed',entryPattern:entryPatternVersion(entry),
     entries:[sizedEntry],conditions:entry.conditions,evaluatedAt}} : checks;
   return restoreTradeSetup2Snapshot(JSON.parse(JSON.stringify({schemaVersion:3,id:entry.id,instrument,setupKey:entry.setupKey,
     direction:entry.direction,knownAt:entry.recognizedAt,entry:sizedEntry,
-    dealingRange,checklist:{instrument,evaluatedAt,status,checks:entryChecks,structure,tradeability,model,ruleVersion,entryModel,dealingRange,setup:{primary:checklist.setup.primary}},
+    dealingRange,checklist:{instrument,evaluatedAt,status,checks:entryChecks,structure,tradeability,model,ruleVersion,entryPattern,dealingRange,setup:{primary:checklist.setup.primary}},
     m1Check:{...m1Check,entry:sizedEntry},evidence:tradeSetup2Evidence(input)})));
 }

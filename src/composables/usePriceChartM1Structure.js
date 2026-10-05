@@ -1,3 +1,4 @@
+import {entryPatternVersion} from '../entryPattern.js';
 import { onScopeDispose, shallowRef, watch } from 'vue';
 import { activeM1Context, buildM1Structure, m1PrerequisiteReason, M1_STRUCTURE_PERIOD } from '../m1Structure.js';
 import { evaluateM1Checklist, inactiveM1Checklist } from '../m1Checklist.js';
@@ -11,7 +12,7 @@ import { closedReplayEvaluationTime, closedChecklistCandles } from '../tradeSetu
 import { renderM1Entry } from '../m1EntryRendering.js';
 import { afterBrowserPaint } from '../afterBrowserPaint.js';
 import { createSetup2Entry } from '../tradeSetup2EntryGate.js';
-import { ENTRY_MODEL_1_VERSION } from '../entryModel1Conditions.js';
+import { ENTRY_PATTERN_1_VERSION } from '../entryPattern1Conditions.js';
 import { createSetup2Memo,isCandleAppend } from '../setup2Memo.js';
 import { m1LoadStart } from '../m1StructureStart.js';
 import { M1_LOAD_LEAD_IN } from '../m1StructureSettings.js';
@@ -77,7 +78,7 @@ export function usePriceChartM1Structure(props, checklistState, {
       if(!progress){progress={};entryProgress.set(key,progress);}
       currentCheck = evaluateM1Checklist({ context: knownContext, structure: result, candles: marked, evaluatedAt,entryProgress:progress });
     }
-    if (currentCheck.entry?.entryModel === ENTRY_MODEL_1_VERSION) {
+    if (entryPatternVersion(currentCheck.entry) === ENTRY_PATTERN_1_VERSION) {
       const entry=currentCheck.entry;
       currentCheck={...currentCheck,entry:createSetup2Entry({...prerequisites.context,
         instrument:props.symbol,evaluatedAt:entry.recognizedAt},()=>entry)};
@@ -106,7 +107,7 @@ export function usePriceChartM1Structure(props, checklistState, {
       // auch vor Wochenend-Ankern genügend tatsächliche Fraktalkerzen.
       // Ein späterer Strukturanker darf den ersten Retest und Entry nicht abschneiden.
       const start = m1LoadStart(source);
-      const leadIn=source.entryModel===ENTRY_MODEL_1_VERSION ? M1_LOAD_LEAD_IN : M1_STRUCTURE_PERIOD * 2 + 1;
+      const leadIn=entryPatternVersion(source)===ENTRY_PATTERN_1_VERSION ? M1_LOAD_LEAD_IN : M1_STRUCTURE_PERIOD * 2 + 1;
       const count = Math.max(1, Math.ceil((requestedUntil() - start) / 60)) + leadIn;
       const fetched = await fetchCached(fetchInitialCandles, source.instrument, '1m', count,
         props.replayUntil == null ? undefined : requestedUntil() * 1000, REPLAY_LOOKAHEAD_SEC);
@@ -133,7 +134,7 @@ export function usePriceChartM1Structure(props, checklistState, {
     const next = enabled() && Number.isFinite(horizon) ? activeM1Context(prerequisitesAt(horizon)) : null;
     // Unmittelbar auf Symbol-/Replaywechsel löschen, auch bevor die Checklist nachlädt.
     const valid = next?.instrument === props.symbol ? next : null;
-    const identity = c => c ? JSON.stringify([c.instrument,c.setupKey,c.direction,c.entryModel,
+    const identity = c => c ? JSON.stringify([c.instrument,c.setupKey,c.direction,entryPatternVersion(c),
       c.anchor.pivotTime,c.anchor.price,c.anchor.primary?.sweep?.timeframe,c.settings]) : '';
     const changed = identity(valid) !== identity(context)
       || (props.replayUntil != null && (valid?.evaluatedAt !== context?.evaluatedAt || horizon !== requestedThrough));

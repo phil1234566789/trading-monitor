@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest';
 import {evaluateCountertrendLifecycle} from '../src/countertrendLifecycle.js';
 import {evaluateSimulation} from '../src/tradeSetupSimulation.js';
-import {entryModel1RetestFvg} from '../src/countertrendEntryModel1.js';
+import {entryPattern1RetestFvg} from '../src/countertrendEntryPattern1.js';
 
 const selection={status:'passed',selectedAt:0,direction:'short',target1:{price:1.29},target2:{price:1.28}};
 const rows=Array.from({length:12},(_,i)=>({time:i*60,high:1.299,low:i<5?1.295:i<9?1.289:1.279,close:1.29}));
@@ -19,8 +19,8 @@ it('two-day lifecycle, exits and retest/FVG search match the complete oracle wit
   expect(evaluateCountertrendLifecycle({...base,progress:lifecycle})).toEqual(evaluateCountertrendLifecycle(base));
   const execution={entry,variant:'wide',target1:1.29,target2:1.28,candles,evaluatedAt};
   expect(evaluateSimulation({...execution,progress:simulation})).toEqual(evaluateSimulation(execution));
-  expect(entryModel1RetestFvg(m1,obs,0,'short',evaluatedAt,follow))
-   .toEqual(entryModel1RetestFvg(m1,obs,0,'short',evaluatedAt));
+  expect(entryPattern1RetestFvg(m1,obs,0,'short',evaluatedAt,follow))
+   .toEqual(entryPattern1RetestFvg(m1,obs,0,'short',evaluatedAt));
  }
 });
 it('filled history retries from the entry start without rewinding time',()=>{

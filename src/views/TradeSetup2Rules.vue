@@ -19,7 +19,7 @@
         <div><dt>E · Targets</dt><dd>Die bestehende Target-Auswahl bleibt erhalten. Targets gefunden bestätigt die DR; ohne Targets bleibt sie unbestätigt.</dd></div>
         <div><dt>F · Anti-Confluences</dt><dd>Jede Regel speichert ihren Fundstatus und ihre Belege. Der Schalter „invalidates“ bestimmt, ob ein Fund die DR disqualifiziert oder nur beobachtet wird. F und G werden aktuell nur beobachtet und disqualifizieren keine DR. Die H1-RSI-Gegendivergenz wird bullisch bei Short und bärisch bei Long erfasst.</dd></div>
         <div><dt>G · Confluences</dt><dd>Beobachtungen für die Statistik; ändern die DR-Stufe nicht.</dd></div>
-        <div><dt>H · Entry finden</dt><dd>Entry-Modell 1 benötigt M5-BOS und M1-Pivotbruch ab dem tatsächlichen Sweep in Setup-Richtung, den Retest eines passenden M5-OB und anschließend eine bestätigte gleichgerichtete M1-FVG. Short: bestätigtes P5-Hoch, Pivot-Tief und tieferes Hoch; danach strikter Bruch unter das Pivot-Tief. Long: Pivot-Tief, Pivot-Hoch und höheres Tief; danach strikter Bruch über das Pivot-Hoch. Ein Docht genügt. Der Bruch darf vor der P5-Bestätigung des Pullbacks liegen; er zählt erst, wenn beide Fakten bekannt sind. Bis zu neun brauchbare Kerzen vor dem Sweep dienen ausschließlich als linke Fraktalstütze; Strukturpivots beginnen ab dem Sweep. Entries entstehen erst ab DR-Validierung bis Target oder Invalidierung, ohne Rückdatierung. Der Entry liegt am Schluss der FVG-Bestätigungskerze. Die Reihenfolge von M5-BOS und M1-Pivotbruch ist frei. Jede positive M1-FVG ist zulässig; pro OB zählt nur die erste nach seinem Retest (OB-Mitigation). Ein weiterer Entry benötigt einen danach neu bestätigten M5-OB mit eigenem Retest und erster M1-FVG. Handelszeiten, Session- und News-Sperren prüft das zentrale Gate unmittelbar vor jedem Entry.</dd></div>
+        <div><dt>H · Entry finden</dt><dd>Entry Pattern 1 benötigt M5-BOS und M1-Pivotbruch ab dem tatsächlichen Sweep in Setup-Richtung, den Retest eines passenden M5-OB und anschließend eine bestätigte gleichgerichtete M1-FVG. Short: bestätigtes P5-Hoch, Pivot-Tief und tieferes Hoch; danach strikter Bruch unter das Pivot-Tief. Long: Pivot-Tief, Pivot-Hoch und höheres Tief; danach strikter Bruch über das Pivot-Hoch. Ein Docht genügt. Der Bruch darf vor der P5-Bestätigung des Pullbacks liegen; er zählt erst, wenn beide Fakten bekannt sind. Bis zu neun brauchbare Kerzen vor dem Sweep dienen ausschließlich als linke Fraktalstütze; Strukturpivots beginnen ab dem Sweep. Entries entstehen erst ab DR-Validierung bis Target oder Invalidierung, ohne Rückdatierung. Der Entry liegt am Schluss der FVG-Bestätigungskerze. Die Reihenfolge von M5-BOS und M1-Pivotbruch ist frei. Jede positive M1-FVG ist zulässig; pro OB zählt nur die erste nach seinem Retest (OB-Mitigation). Ein weiterer Entry benötigt einen danach neu bestätigten M5-OB mit eigenem Retest und erster M1-FVG. Handelszeiten, Session- und News-Sperren prüft das zentrale Gate unmittelbar vor jedem Entry.</dd></div>
       </dl>
       <p><strong>Countertrend:</strong> C zeigt in Setup-Richtung und D dagegen. A bis E erfüllt bestätigt die Dealing Range; F entscheidet validiert oder disqualifiziert. Ein CHoCH ist dafür keine Bedingung. Die bestehende Preisinvalidierung bleibt wirksam.</p>
       <p><strong>Trendfortführung:</strong> C und D zeigen in Setup-Richtung. Der Typ wird erkannt, der Pfad bricht mit „Typ Trendfortführung, noch nicht umgesetzt“ ab.</p>
@@ -121,7 +121,7 @@
 
     <section id="zeit" aria-labelledby="zeit-title">
       <h2 id="zeit-title">F · Uhrzeit als Pflicht für alle Entries</h2>
-      <p class="section-note">Fachregel · gilt für jedes Entry-Modell</p>
+      <p class="section-note">Fachregel · gilt für jedes Entry Pattern</p>
       <p><strong>Ist die Uhrzeit nach den bestehenden F-Checklistregeln nicht erlaubt, gibt es keinen Entry.</strong></p>
       <p>Das ist eine Entry-Sperre. Sie ist kein zusätzliches Gate der DR-Validierung und keine dauerhafte Invalidierung der Marktidee.</p>
       <aside class="implementation"><h3>Implementierungsstand</h3><p>Die Uhrzeitregeln unter F sind bereits implementiert. Bekannte Zeit-/News-Sperren blockieren im aktuellen Code. Unbekannte News-Abdeckung wird aktuell nicht automatisch gesperrt.</p></aside>
@@ -137,7 +137,7 @@
 
     <section id="offen" class="decisions" aria-labelledby="offen-title">
       <h2 id="offen-title">Noch gemeinsam festzulegen</h2>
-      <ol><li>Nach Auswertung der Gesamtstatistik: mögliche künftige Showstopper unter E.</li><li>Weitere Entry-Modelle und ihre Bedingungen.</li><li>Umgang mit unbekannten F-Ergebnissen, insbesondere unbekannter News-Abdeckung.</li><li>Eigene Regeln für kleinere LS.</li></ol>
+      <ol><li>Nach Auswertung der Gesamtstatistik: mögliche künftige Showstopper unter E.</li><li>Weitere Entry Patterns und ihre Bedingungen.</li><li>Umgang mit unbekannten F-Ergebnissen, insbesondere unbekannter News-Abdeckung.</li><li>Eigene Regeln für kleinere LS.</li></ol>
       <p>Die gemeinsame Prüfung und Absegnung dieses Entwurfs steht aus.</p>
     </section>
     </details>

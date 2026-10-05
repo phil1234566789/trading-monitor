@@ -1,4 +1,5 @@
 import { newsEventsForInstrument, supportsNewsInstrument } from './newsEventRules.js';
+import {entryPatternVersion} from './entryPattern.js';
 
 export const RUN_INPUTS_VERSION='run-inputs-v1';
 export const RUN_NEWS_LABELS={'loaded-incomplete':'Geladen · Vollständigkeit unbelegt',none:'Keine Termine vorhanden',unsupported:'Instrument nicht unterstützt'};
@@ -15,7 +16,7 @@ export function simulationRunInputs({configuration,from,to,fetchedAt,sourceHash,
         news:{status:runNewsStatus(config.instrument,relevant,from,to),count:window.length,from,to,
           first:window.length?Math.min(...window.map(e=>e.eventTime)):null,last:window.length?Math.max(...window.map(e=>e.eventTime)):null,
           windowHash:hash(window),inputHash:hash(config.news ?? [])},
-        configurationHash:hash(config),versions:Object.fromEntries(['setupVersion','entryModel','dealingRangeVersion','costVersion','observationRuleVersion','simulationVersion'].map(key=>[key,config[key] ?? null]))};
+        configurationHash:hash(config),versions:Object.fromEntries(['setupVersion','entryPattern','dealingRangeVersion','costVersion','observationRuleVersion','simulationVersion'].map(key=>[key,(key==='entryPattern'?entryPatternVersion(config):config[key]) ?? null]))};
     })};
 }
 export function simulationRunInputsLabel(run) {

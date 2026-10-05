@@ -1,7 +1,7 @@
 import { evaluateOrderBlockMitigation } from './orderBlockMitigation.js';
-export { orderBlockMitigationFvg as entryModel1FvgAt } from './orderBlockMitigation.js';
+export { orderBlockMitigationFvg as entryPattern1FvgAt } from './orderBlockMitigation.js';
 
-export function advanceEntryModel1Follow(rows,orderBlocks,confirmedAt,direction,evaluatedAt,progress={}) {
+export function advanceEntryPattern1Follow(rows,orderBlocks,confirmedAt,direction,evaluatedAt,progress={}) {
   const states=progress.mitigations ??= new Map();
   const results=orderBlocks.filter(ob=>ob.dir===(direction==='short'?-1:1)).map(orderBlock=>{
     const key=`${orderBlock.dir}:${orderBlock.startTime}`;

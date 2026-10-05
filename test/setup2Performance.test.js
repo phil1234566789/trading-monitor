@@ -3,7 +3,7 @@ import {writeFileSync} from 'node:fs';
 import {scanTradeSetup2Window} from '../src/tradeSetup2Scan.js';
 import {buildHistoricalDailyAnchors} from '../src/tradeSetup2Anchors.js';
 import fixture from './fixtures/gbpusd-m5-cd-97-105.json';
-import m1 from './fixtures/gbpusd-m1-entry-model1-97.json';
+import m1 from './fixtures/gbpusd-m1-entry-pattern1-97.json';
 import sessions from './fixtures/gbpusd-m5-dr114-session-targets.json';
 import * as targets from '../src/tradeSetupChecklistLifecycle.js';
 import * as confluences from '../src/tradeSetupChecklistConfluences.js';

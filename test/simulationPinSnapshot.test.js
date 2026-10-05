@@ -5,8 +5,8 @@ it('freezes the full displayed checkpoint and both entry variants with unambiguo
   const feature={key:'dummy',group:'checkpoint',label:'I',value:'observed',details:['evidence']};
   const group={key:'dr',snapshot,features:[feature],recognizedAt:1790238960,instrument:'GBPUSD',direction:'short',stage:'validated',setupType:'countertrend',outcome:{status:'t1Unknown'}};
   const target={kind:'simulation_checkpoint',group,feature};
-  const frozen=simulationPinSnapshot(target,{version:'v12',configuration:{entryModel:'v3'}},[],'2026-10-04T11:00:00Z');
-  expect(frozen).toMatchObject({runId:'run',runVersion:'v12',entryModelVersion:'v3',setup1Id:42,checkpoint:{key:'dummy',value:'observed'},recognizedAt:{berlin:'2026-09-24 10:36',utc:'2026-09-24T08:36:00.000Z'}});
+  const frozen=simulationPinSnapshot(target,{version:'v12',configuration:{entryPattern:'v3'}},[],'2026-10-04T11:00:00Z');
+  expect(frozen).toMatchObject({runId:'run',runVersion:'v12',entryPatternVersion:'v3',setup1Id:42,checkpoint:{key:'dummy',value:'observed'},recognizedAt:{berlin:'2026-09-24 10:36',utc:'2026-09-24T08:36:00.000Z'}});
   const entry={...snapshot,id:'entry',entry:{id:'entry',recognizedAt:1790238960,price:1.3,stops:{wide:{price:1.4}}}};
   const rows=['wide','narrow'].map(variant=>({snapshotId:'entry',runId:'run',variant,netRMultiple:2}));
   const context=simulationPinSnapshot({kind:'simulation_entry',group,entry},{version:'v12'},rows);

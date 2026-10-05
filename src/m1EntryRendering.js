@@ -7,6 +7,7 @@ import { chartEventBarTime, chartEventCoordinate } from './chartEventCoordinate.
 import { barSecondsFor } from './timeframes.js';
 import { formatDatedTime, formatBerlinTime } from './berlinTime.js';
 import {entryOverlayLayout,reserveEntryOverlaySpace} from './entryOverlayLayout.js';
+import {entryPatternText} from './entryPattern.js';
 
 class EntryRenderer {
   constructor(point) { this.point = point; }
@@ -33,7 +34,7 @@ class EntryRenderer {
       ctx.fillStyle = '#131722'; ctx.fillRect(bx, by, bw, bh);
       ctx.strokeRect(bx, by, bw, bh);
       ctx.fillStyle = '#d1d4dc';
-      drawIconLabel(ctx, { text: entry.label, x: bx + bw / 2, y: (y-6)*vy,
+      drawIconLabel(ctx, { text: entryPatternText(entry.label), x: bx + bw / 2, y: (y-6)*vy,
         align: 'center', baseline: 'middle', fontSizePx: 14 * vy, fontFamily: 'sans-serif' });
       drawIconLabel(ctx, { text: `Entry ${index+1} · ${formatBerlinTime(entry.recognizedAt)}`, x: bx+bw/2, y:(y+9)*vy,
         align:'center',baseline:'middle',fontSizePx:10*vy,fontFamily:'sans-serif' });

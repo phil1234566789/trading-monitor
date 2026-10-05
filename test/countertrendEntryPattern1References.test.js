@@ -4,14 +4,14 @@ import { buildHistoricalDailyAnchors } from '../src/tradeSetup2Anchors.js';
 import { setup1RecognitionTime } from '../src/setup1RecognitionTime.js';
 import fixture from './fixtures/gbpusd-m5-cd-97-105.json';
 import continuation105 from './fixtures/gbpusd-m5-105-lifecycle.json';
-import m1_97 from './fixtures/gbpusd-m1-entry-model1-97.json';
-import m1_105 from './fixtures/gbpusd-m1-entry-model1-105.json';
+import m1_97 from './fixtures/gbpusd-m1-entry-pattern1-97.json';
+import m1_105 from './fixtures/gbpusd-m1-entry-pattern1-105.json';
 import sessions from './fixtures/gbpusd-m5-dr114-session-targets.json';
 import { activeM1Context,buildM1Structure } from '../src/m1Structure.js';
 import { evaluateM1Checklist } from '../src/m1Checklist.js';
 import { sizeSimulation } from '../src/tradeSetupSimulation.js';
 
-describe('real 97/105 entry model 1 replay',()=>{
+describe('real 97/105 entry pattern 1 replay',()=>{
  it.each([[fixture.setups[0],m1_97],[fixture.setups[1],m1_105]])('closed reference $0.tradeSetupId',async(setup,m1Candles)=>{
   const at=setup1RecognitionTime(setup);
   const toTime=Math.floor(at/86400)*86400+22*3600;

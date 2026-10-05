@@ -9,7 +9,7 @@ import continuation105 from './fixtures/gbpusd-m5-105-lifecycle.json';
 import sessions from './fixtures/gbpusd-m5-dr114-session-targets.json';
 import { setup1RecognitionTime } from '../src/setup1RecognitionTime.js';
 import * as m1 from '../src/m1Checklist.js';
-import { ENTRY_MODEL_1_VERSION } from '../src/entryModel1Conditions.js';
+import { ENTRY_PATTERN_1_VERSION } from '../src/entryPattern1Conditions.js';
 import * as gate from '../src/tradeSetup2EntryGate.js';
 import { groupSetupSnapshots } from '../src/tradeSetup2Review.js';
 import { evaluateSimulation } from '../src/tradeSetupSimulation.js';
@@ -33,10 +33,10 @@ describe('Countertrend-Scanner Start und Last',()=>{
    const retest={candleTime:at,recognizedAt:at+60,orderBlock:{dir:-1,startTime:setup.obStartTime,top:1.31,bottom:1.305,recognizedAt:at}};
    const conditions={m5Bos:{type:'BOS',direction:'short',recognizedAt:at},m1PivotBreak:{type:'pivot-break',direction:'short',recognizedAt:at},
     retest,fvg:{direction:'short',recognizedAt:evaluatedAt,candleTime:evaluatedAt-120}};
-   const entry=[at+120,at+180,at+300].includes(evaluatedAt)?{id:`entry:${evaluatedAt}`,entryModel:ENTRY_MODEL_1_VERSION,conditions,
+   const entry=[at+120,at+180,at+300].includes(evaluatedAt)?{id:`entry:${evaluatedAt}`,entryPattern:ENTRY_PATTERN_1_VERSION,conditions,
     instrument:'GBPUSD',setupKey:key,direction:'short',recognizedAt:evaluatedAt,candleTime:evaluatedAt-60,price:1.3,
     stops:{wide:{price:1.31},narrow:{price:1.305}},scales:{wide:{targets:[{price:1.2},{price:1.1}]},narrow:{targets:[{price:1.2},{price:1.1}]}}}:null;
-   return {entry,evaluatedAt,entryModel:ENTRY_MODEL_1_VERSION,conditions,retest,fvg:conditions.fvg};
+   return {entry,evaluatedAt,entryPattern:ENTRY_PATTERN_1_VERSION,conditions,retest,fvg:conditions.fvg};
   });
   try {
    const m1Candles=Array.from({length:42},(_,i)=>({time:at+(i-11)*60,open:1.3,high:i<=11?1.321:1.301,low:i<=11?1.319:i===14?1.19:1.299,close:1.3}));

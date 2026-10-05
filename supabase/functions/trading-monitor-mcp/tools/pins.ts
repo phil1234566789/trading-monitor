@@ -23,7 +23,7 @@ export function registerPinTools(server: McpServer) {
       title: "Pin-Kontext",
       description:
         "Auch Statistik-Pins: kind='simulation_dr', 'simulation_checkpoint', 'simulation_entry'. " +
-        "simulation_context enthält den eingefrorenen Lauf-, Regel- und Entry-Modell-Stand, DR-Verlauf, " +
+        "simulation_context enthält den eingefrorenen Lauf-, Regel- und Entry Pattern-Stand, DR-Verlauf, " +
         "Checkpoint-Werte und Belege oder beide SL-Ergebnisse, Zeiten in Berlin und UTC sowie Chart-Link. " +
         "Wenn Philip sagt 'ich habe etwas angepinnt, schau es dir an', hier den Kontext samt Anliegen lesen. " +
         "Die trade_positions, OB-Zonen, Trade-Setups, Trade-Bestätigungen, Liquiditäts-Level, " +

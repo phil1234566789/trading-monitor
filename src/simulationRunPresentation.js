@@ -1,6 +1,7 @@
 import {formatDatedTime} from './berlinTime.js';
 import {fmtDateTime} from './format.js';
 import {simulationRunStatusLabel} from './tradeSetupSimulationStatistics.js';
+import {entryPatternText} from './entryPattern.js';
 
 export function simulationRunExecution(run) {
   // Eingabe-Snapshot und Datensatz-Erstellung belegen keinen Ausführungszeitpunkt.
@@ -24,5 +25,5 @@ export function simulationRunLabel(run) {
   const execution=simulationRunExecution(run);
   const timestamp=execution?`${execution.label} ${date(execution.time)}`:'Ausführungszeit unbekannt';
   const data=Number.isFinite(run.evaluatedAt)?` · Datenstand ${date(run.evaluatedAt)}`:'';
-  return `${run.configuration?.label??`${formatDatedTime(run.from)} – ${formatDatedTime(run.to)}`} · ${timestamp}${data} · ${simulationRunStatusLabel(run)} · ${run.id.slice(-8)}`;
+  return `${entryPatternText(run.configuration?.label)??`${formatDatedTime(run.from)} – ${formatDatedTime(run.to)}`} · ${timestamp}${data} · ${simulationRunStatusLabel(run)} · ${run.id.slice(-8)}`;
 }

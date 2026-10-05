@@ -86,7 +86,7 @@ const { core, sourceHash } = await loadCore();
 configuration.rangeCourseVersion = core.COUNTERTREND_RANGE_COURSE_VERSION;
 const modelVersions=core.buildTradeSetup2Configuration({instrument:instruments[0]});
 configuration.setupModel=modelVersions.setupModel;
-configuration.entryModel=modelVersions.entryModel;
+configuration.entryPattern=modelVersions.entryPattern;
 
 const sessionConfigs = manifest.sessions.map(r => ({ id: r.id, label: r.label, instrument: r.instrument,
   fromMinutes: r.from_minutes, toMinutes: r.to_minutes, highLowRelevant: r.high_low_relevant,

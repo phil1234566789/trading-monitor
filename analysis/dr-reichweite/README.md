@@ -167,7 +167,7 @@ durchgehen können. Deshalb läuft alles auf **einem** Verfahren über alle neun
   OB-Kante, 24-h-Fenster, Stopp `min(Risiko, 6 Pips)` — das steht fest und wird auch dann nicht
   ersetzt, wenn ein Merkmal mit der gemessenen Strecke zusammenhängt. Ob der Preis die Kante je
   wieder berührt, ist ausdrücklich keine Bedingung: gemessen wird die Dealing Range, nicht ein
-  Entry-Modell (Philip sucht Entries getrennt davon, notfalls im M1 ohne OB-Retest). Wer eine
+  Entry Pattern (Philip sucht Entries getrennt davon, notfalls im M1 ohne OB-Retest). Wer eine
   Zusatzgröße braucht, schreibt sie als eigene Spalte daneben, statt die Leitern umzudefinieren.
 
 ## Skripte
@@ -179,7 +179,7 @@ durchgehen können. Deshalb läuft alles auf **einem** Verfahren über alle neun
 | `messeDrReichweite.py` | Grundmessung, schreibt `punkt1_result.json` |
 | `quotenTabelle.py` | **Haupttabelle**: Trefferquote je Merkmal, 10–40 Pips und 2–6 R |
 | `baenderTabellen.py` | die vier Tabellen für die UI-Anzeige (feste Risiko-Bänder, EV, Deckel) |
-| `fvgBaender.py` | FVG-Größe je DR, absolut und relativ zur OB-Höhe, beide Entry-Modelle |
+| `fvgBaender.py` | FVG-Größe je DR, absolut und relativ zur OB-Höhe, beide Entry Patterns |
 | `saisonalitaet.py` | Monatsvergleich |
 | `filterHtfSweep.py` · `filterGegenkraft.py` · `filterAlterUndHandelszeit.py` | die einzelnen Filter |
 | `leiterPipsVsR.py` | Wahrscheinlichkeit je Strecke, Pips gegen R |
@@ -307,7 +307,7 @@ Gruppierung aus**. Eine Anzeige an der laufenden DR braucht deshalb beide Leiter
 | über 10 Pips | 196 | 14,9 % | 100 % |
 
 **42 % aller Ranges tragen mehr als 6 Pips Risiko.** Philips Vorschlag, den Stopp dort zu deckeln,
-hält — gerechnet als reine Pfadfrage ohne Entry-Modell, Ziel 15 Pips, nur die betroffene Gruppe:
+hält — gerechnet als reine Pfadfrage ohne Entry Pattern, Ziel 15 Pips, nur die betroffene Gruppe:
 
 | Deckel | betroffen | Gewinner vorher → mit Deckel | gekostet | RR | EV |
 |---|---|---|---|---|---|

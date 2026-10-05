@@ -1,3 +1,4 @@
+import {entryPatternVersion} from './entryPattern.js';
 import { fmtPrice, pricePrecisionForInstrument } from './format.js';
 
 const trendLabel = trend => trend === 'uptrend' ? 'Uptrend' : trend === 'downtrend' ? 'Downtrend' : 'Unbekannt';
@@ -29,6 +30,6 @@ export function normalizeM1ChecklistPresentation(check, direction, knownAt = che
     details: [`Aktuelle M1-Richtung: ${trendLabel(currentTrend.trend)}`,
       ...trends.slice(0, -1).map(level => `${level.depth ? `Nested Ebene ${level.depth}` : 'Outer'}: ${trendLabel(level.trend)} (Kontext)`),
       ...(Array.isArray(check.details) ? check.details : []).slice(trends.length)],
-    detailStatuses: [check.entryModel ? 'context' : ['long', 'short'].includes(direction) ? matches ? 'passed' : 'unmet' : 'unknown',
+    detailStatuses: [entryPatternVersion(check) ? 'context' : ['long', 'short'].includes(direction) ? matches ? 'passed' : 'unmet' : 'unknown',
       ...trends.slice(0, -1).map(() => 'context'), ...(Array.isArray(check.detailStatuses) ? check.detailStatuses : []).slice(trends.length)] };
 }

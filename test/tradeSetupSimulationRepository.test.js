@@ -140,11 +140,11 @@ describe('simulation history repository', () => {
     expect(rows.slice(0,13).map(row=>row.id)).toEqual(data.map(row=>row.id));
   });
   it('retains the countertrend model and C/D observations for the review checklist',async()=>{
-    const row={model:'countertrend',entryModel:'countertrend-entry-model-1-v1',ruleVersion:'countertrend-abcdef-v1',
+    const row={model:'countertrend',entryPattern:'countertrend-entry-model-1-v1',ruleVersion:'countertrend-abcdef-v1',
       m5Trend:{status:'passed',trend:'uptrend',m1Anchor:{recognizedAt:300}},outerM5Trend:{status:'passed',trend:'downtrend'}};
     const db={from:()=>{const query={select:()=>query,order:()=>query,eq:()=>query,range:async offset=>({data:offset?[]:[row]})};return query;}};
     const snapshots=await createSimulationRepository(db).listReviewSnapshots('countertrend');
-    expect(snapshots[0].checklist).toMatchObject({model:row.model,entryModel:row.entryModel,ruleVersion:row.ruleVersion,
+    expect(snapshots[0].checklist).toMatchObject({model:row.model,entryPattern:row.entryPattern,ruleVersion:row.ruleVersion,
       checks:{m5Trend:row.m5Trend,outerM5Trend:row.outerM5Trend}});
   });
 });

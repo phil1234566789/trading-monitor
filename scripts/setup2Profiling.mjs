@@ -1,7 +1,7 @@
 // Nur Messbundles instrumentieren: Browsercode und Ergebnisobjekte bleiben unverändert.
 export function setup2ProfilingPlugin() {
   const names=new Set(['evaluateCountertrendChecklist','evaluateCountertrendLifecycle',
-    'evaluateCountertrendEntryModel1','detectOrderBlocks','closedChecklistCandles',
+    'evaluateCountertrendEntryPattern1','detectOrderBlocks','closedChecklistCandles',
     'withCandleCloseWindow','buildLevel','detectLiquidityLevels','evaluateAt','evaluateChecklistM5',
     'advanceOrderBlocks','orderBlockSnapshot','detectIncrementalOrderBlocks','isCandleAppend',
     'detectIncrementalLiquidityLevels','orderBlockRecognitionTimes']);

@@ -101,7 +101,7 @@ davon unerwartet ein Bestätigungs-Prompt auf, direkt diese Datei prüfen statt 
 
 Die Statistik-Seite pinnt `simulation_dr`, `simulation_checkpoint` und `simulation_entry`
 browserseitig in dieselbe Tabelle. `get_pin_context` liefert `simulation_context` vollständig:
-eingefrorener Lauf-/Regel-/Entry-Modell-Stand, DR-Ausgang, Registry-Belege, beide SL-Ergebnisse,
+eingefrorener Lauf-/Regel-/Entry Pattern-Stand, DR-Ausgang, Registry-Belege, beide SL-Ergebnisse,
 Berlin-/UTC-Zeiten, Chart-Link und Pin-Zeitpunkt. Wiederholtes Pinnen ändert nur die Notiz.
 `add_pin_entry` nimmt diese Arten nicht an; `remove_pin_entry` entfernt sie wie alle Pins per ID.
 Die Referenzspalten, CHECK und der Upsert-Schlüssel stehen in
