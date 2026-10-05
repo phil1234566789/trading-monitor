@@ -4464,9 +4464,9 @@
     "semantic_hash": ""
   },
   "scripts/tradeSetup2YearRun.mjs": {
-    "mtime": 1791194576.8779795,
-    "seen": 1791194997.5340924,
-    "ast_hash": "e8b1f3ca138483bddbd8600b86a15c60",
+    "mtime": 1791196045.7301793,
+    "seen": 1791196137.3374832,
+    "ast_hash": "6a7510db0d88615ba31b38cad5022505",
     "semantic_hash": ""
   },
   "src/components/SimulationResultsTable.vue": {
@@ -4482,9 +4482,9 @@
     "semantic_hash": ""
   },
   "src/composables/useTradeSetup2History.js": {
-    "mtime": 1791194694.7948327,
-    "seen": 1791194997.5340924,
-    "ast_hash": "83596a627b9b2e10cd739d880e54b632",
+    "mtime": 1791196046.4177868,
+    "seen": 1791196137.3579805,
+    "ast_hash": "2462f9d770f073209af99f6e14695c72",
     "semantic_hash": ""
   },
   "src/structureLiquidityLevels.ts": {
@@ -4686,9 +4686,9 @@
     "semantic_hash": ""
   },
   "test/useTradeSetup2History.test.js": {
-    "mtime": 1791194576.9382365,
-    "seen": 1791194997.5340924,
-    "ast_hash": "ce78c5fc1c3a882cc2b45505d602a025",
+    "mtime": 1791196069.0137098,
+    "seen": 1791196137.4704154,
+    "ast_hash": "098dd03d23af718cb3957a2134200673",
     "semantic_hash": ""
   },
   "src/structureRangePath.js": {
@@ -5853,6 +5853,18 @@
     "mtime": 1791195555.3977218,
     "seen": 1791195695.580116,
     "ast_hash": "1e3ac037a064c7c58b336208cc814f42",
+    "semantic_hash": ""
+  },
+  "src/simulationRunClock.js": {
+    "mtime": 1791196045.0274844,
+    "seen": 1791196137.3777082,
+    "ast_hash": "8de03e18842c1554778a9001e53f2a43",
+    "semantic_hash": ""
+  },
+  "test/simulationRunClock.test.js": {
+    "mtime": 1791196068.3653271,
+    "seen": 1791196137.4508278,
+    "ast_hash": "b1e754cbfdeb48d457d205ee38c7d2f9",
     "semantic_hash": ""
   }
 }
