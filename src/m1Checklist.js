@@ -11,7 +11,6 @@ import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { entryAgainstM5Allowed } from './tradeSetup2EntrySizing.js';
 import { evaluateCountertrendEntryModel1 } from './countertrendEntryModel1.js';
 import { ENTRY_MODEL_1_VERSION } from './entryModel1Conditions.js';
-import { deriveM1SweepReaction, m1SweepBoundary } from './m1SweepReaction.js';
 
 const waiting = {
   abc: 'M1-Struktur wartet auf A, B und C.',
@@ -35,21 +34,20 @@ export function inactiveM1Checklist(reason) {
 export function evaluateM1Checklist({ context, structure, candles, evaluatedAt, closeReactionCache,entryProgress }) {
   const unavailable = reason => ({ ...inactiveM1Checklist(reason), evaluatedAt });
   if (structure?.status !== 'ready') return unavailable(structure?.status === 'missing' ? 'missing' : 'loading');
-  if (!structure.state || (structure.state.trend === 'unknown' && context.entryModel !== ENTRY_MODEL_1_VERSION)) return unavailable('structure');
+  if ((!structure.state || structure.state.trend === 'unknown') && context.entryModel !== ENTRY_MODEL_1_VERSION) return unavailable('structure');
   const rows = closedChecklistCandles(candles, '1m', evaluatedAt);
-  const trends = collectNestedChain(structure.state).map((level, depth) => ({ trend: level.trend, depth }));
+  const trends = (structure.state ? collectNestedChain(structure.state) : []).map((level, depth) => ({ trend: level.trend, depth }));
+  if (context.entryModel === ENTRY_MODEL_1_VERSION) {
+    return evaluateCountertrendEntryModel1({context,rows,evaluatedAt,trends,
+      pivotBreak:structure.pivotBreak,structureStart:structure.start,
+      internalSweeps:structure.state ? latestStructureSweeps(structure.state,evaluatedAt,60) : [],closeReactionCache,entryProgress});
+  }
   const reaction = deriveM5CloseReaction(structure.state, structure.pivotsOuter, [],
     M1_STRUCTURE_PERIOD, M1_STRUCTURE_PERIOD, rows.filter(c => !c.ignored), 60, closeReactionCache);
   // Die Gegenreaktion einer tieferen Ebene ersetzt nicht die gültigen Signale des Parents.
   const signals = reaction.levels.filter(level => level.direction === context.direction && level.recognizedAt != null);
   const choch = signals.find(level => level.type === 'CHoCH') ?? null;
   const bos = signals.find(level => level.type === 'BOS') ?? null;
-  if (context.entryModel === ENTRY_MODEL_1_VERSION) {
-    const sweepReaction=deriveM1SweepReaction({candles:rows,anchor:context.anchor,direction:context.direction,
-      ...m1SweepBoundary(context.primary,rows),evaluatedAt,cache:closeReactionCache,progress:entryProgress});
-    return evaluateCountertrendEntryModel1({context,rows,evaluatedAt,bos,choch,trends,sweepReaction,
-      internalSweeps:latestStructureSweeps(structure.state,evaluatedAt,60),closeReactionCache,entryProgress});
-  }
   const short = context.direction === 'short';
   const adjective = short ? 'bärischer' : 'bullischer';
   const details = trends.map(() => '');

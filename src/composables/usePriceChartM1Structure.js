@@ -13,6 +13,8 @@ import { afterBrowserPaint } from '../afterBrowserPaint.js';
 import { createSetup2Entry } from '../tradeSetup2EntryGate.js';
 import { ENTRY_MODEL_1_VERSION } from '../entryModel1Conditions.js';
 import { createSetup2Memo,isCandleAppend } from '../setup2Memo.js';
+import { m1LoadStart } from '../m1StructureStart.js';
+import { M1_LOAD_LEAD_IN } from '../m1StructureSettings.js';
 
 export function usePriceChartM1Structure(props, checklistState, {
   fetchCached = fetchCandlesCached, now = () => Date.now(), prerequisitesAt = () => checklistState.value,
@@ -103,8 +105,9 @@ export function usePriceChartM1Structure(props, checklistState, {
       // Kalenderdistanz deckt die komplette Strecke ab; zusätzlicher Vorlauf enthält
       // auch vor Wochenend-Ankern genügend tatsächliche Fraktalkerzen.
       // Ein späterer Strukturanker darf den ersten Retest und Entry nicht abschneiden.
-      const start = Math.min(source.anchor.pivotTime, source.primary.reactionRecognizedAt ?? source.anchor.pivotTime);
-      const count = Math.max(1, Math.ceil((requestedUntil() - start) / 60)) + M1_STRUCTURE_PERIOD * 2 + 1;
+      const start = m1LoadStart(source);
+      const leadIn=source.entryModel===ENTRY_MODEL_1_VERSION ? M1_LOAD_LEAD_IN : M1_STRUCTURE_PERIOD * 2 + 1;
+      const count = Math.max(1, Math.ceil((requestedUntil() - start) / 60)) + leadIn;
       const fetched = await fetchCached(fetchInitialCandles, source.instrument, '1m', count,
         props.replayUntil == null ? undefined : requestedUntil() * 1000, REPLAY_LOOKAHEAD_SEC);
       if (disposed || ticket !== generation) return;
@@ -130,7 +133,8 @@ export function usePriceChartM1Structure(props, checklistState, {
     const next = enabled() && Number.isFinite(horizon) ? activeM1Context(prerequisitesAt(horizon)) : null;
     // Unmittelbar auf Symbol-/Replaywechsel löschen, auch bevor die Checklist nachlädt.
     const valid = next?.instrument === props.symbol ? next : null;
-    const identity = c => c ? `${c.instrument}:${c.setupKey}:${c.anchor.pivotTime}:${c.anchor.price}` : '';
+    const identity = c => c ? JSON.stringify([c.instrument,c.setupKey,c.direction,c.entryModel,
+      c.anchor.pivotTime,c.anchor.price,c.anchor.primary?.sweep?.timeframe,c.settings]) : '';
     const changed = identity(valid) !== identity(context)
       || (props.replayUntil != null && (valid?.evaluatedAt !== context?.evaluatedAt || horizon !== requestedThrough));
     context = valid;

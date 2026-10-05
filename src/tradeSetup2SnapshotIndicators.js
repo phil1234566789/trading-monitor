@@ -6,6 +6,7 @@ import { collectNestedChain } from './marketStructureAnalysis';
 import { computeRangesPivots } from './marketStructureAnalysis';
 import { buildStructureWithPhases } from './trendPhases.js';
 import { formatDatedTime } from './berlinTime.js';
+import { M1_LOAD_LEAD_IN } from './m1StructureSettings.js';
 
 export function snapshotOverlayTime(snapshot, replayUntil) {
   return Number.isFinite(replayUntil) ? Math.floor(replayUntil / 60) * 60 : snapshot.knownAt;
@@ -105,7 +106,7 @@ export function createSnapshotM1Reader(repository, fetchCandles) {
     }
     // Zusätzlicher Vorlauf überbrückt ignorierte Spread-Hour-Kerzen. Reicht er
     // nicht, bleibt der gespeicherte Beleg sichtbar statt eine Teilstruktur zu behaupten.
-    const leadIn = M1_STRUCTURE_PERIOD * 2 + 1 + 120;
+    const leadIn = M1_LOAD_LEAD_IN;
     const count = Math.ceil((at - context.anchor.pivotTime) / 60) + leadIn;
     if (!Number.isFinite(count) || count < leadIn || count > MAX_M1_CANDLES) {
       return unavailable('M1-Ergänzung nicht verfügbar: Anker außerhalb des begrenzten Archivfensters.');

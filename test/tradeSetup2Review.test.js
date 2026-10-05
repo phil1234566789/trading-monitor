@@ -4,13 +4,16 @@ import { DEALING_RANGE_VERSION } from '../src/tradeSetup2DealingRange.js';
 import { simulationChartLink } from '../src/tradeSetupSimulationStatistics.js';
 import { ENTRY_MODEL_1_VERSION } from '../src/entryModel1Conditions.js';
 
-it('reviews M5 BOS and sweep M1 CHoCH as required, preserving legacy observations',()=>{
+it('reviews M5 BOS and M1 pivot break as required, preserving legacy observations',()=>{
  const saved=snapshot();saved.entry.entryModel=ENTRY_MODEL_1_VERSION;
- saved.entry.conditions={m5Bos:{direction:'short',recognizedAt:300},m1Choch:null};saved.direction='short';
+ saved.entry.conditions={m5Bos:{direction:'short',recognizedAt:300},m1PivotBreak:null};saved.direction='short';
  const review=setupEntryConditions(saved);
  expect(review.rows.find(row=>row.key==='m5Bos').status).toBe('passed');
- expect(review.rows.find(row=>row.key==='m1Choch').status).toBe('unmet');
- expect(review.observations.map(row=>row.label)).toEqual(['M1 BOS']);
+ expect(review.rows.find(row=>row.key==='m1PivotBreak').status).toBe('unmet');
+ expect(review.observations).toEqual([]);
+ saved.entry.entryModel='countertrend-entry-model-1-v3';saved.entry.conditions.m1Choch=null;
+ expect(setupEntryConditions(saved).rows.find(row=>row.key==='m1Choch').status).toBe('unmet');
+ expect(setupEntryConditions(saved).observations.map(row=>row.label)).toEqual(['M1 BOS']);
  expect(setupEntryConditions(snapshot()).observations.map(row=>row.label)).toEqual(['M1 CHoCH','M1 BOS']);
 });
 

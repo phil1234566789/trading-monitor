@@ -12,6 +12,8 @@ import { createCloseReactionCache } from './m5CloseReactionHistory.js';
 import { markIgnoredCandles } from './sessionOccurrences.js';
 import { berlinOffsetMinutes } from './berlinTime.js';
 import { m1ScanPrefixStart } from './m1ScanPrefix.js';
+import { m1LoadStart } from './m1StructureStart.js';
+import { M1_FRACTAL_SUPPORT } from './m1StructureSettings.js';
 import { candleTimeIndex } from './candleTimeIndex.js';
 import { createClosedCandlePrefix } from './closedCandlePrefix.js';
 import { createSetup2Memo,finalObservation } from './setup2Memo.js';
@@ -131,12 +133,13 @@ export async function scanCountertrendWindow(input) {
         setup:{...checklist.setup,primary:candidate},dealingRange:evaluateDealingRange(checklist,candidate)};
       const context=activeM1Context(single);
       if (!context) continue;
-      if (loadM1Candles && candidate.recognizedAt<loadedFrom) {
+      const loadStart=m1LoadStart(context);
+      if (loadM1Candles && loadStart<loadedFrom) {
         const rows=await loadM1Candles({fromTime:candidate.recognizedAt,
-          structureFromTime:Math.min(context.anchor.pivotTime,candidate.recognizedAt),toTime,instrument});
+          structureFromTime:loadStart,toTime,instrument});
         signal?.throwIfAborted();
         m1=marked(rows);
-        loadedFrom=candidate.recognizedAt;
+        loadedFrom=loadStart;
       }
       const end=steps[index+1] ?? at;
       for (let minute=candleTimeIndex(m1,at-60);minute<m1.length;minute++) {
@@ -150,7 +153,7 @@ export async function scanCountertrendWindow(input) {
         if(knownAt>=fromTime)for(const c of current.setup.candidates)checklistHistory.record(current,c,'M1');
         if (!active) break;
         const prefixEnd=candleTimeIndex(m1,candle.time)+1;
-        const prefixStart=m1ScanPrefixStart(m1,Math.min(active.anchor.pivotTime,candidate.recognizedAt));
+        const prefixStart=m1ScanPrefixStart(m1,m1LoadStart(active),M1_FRACTAL_SUPPORT);
         // Ein Entry entsteht ausschließlich beim FVG-Schluss; andere Minuten brauchen keine M1-Struktur.
         if(useMemo && !entryModel1FvgAt(m1,active.direction,prefixEnd,prefixStart))continue;
         const rows=m1.slice(prefixStart,prefixEnd);

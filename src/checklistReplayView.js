@@ -13,5 +13,5 @@ export function snapshotChecklistAt(snapshot,at) {
 }
 export function checklistHistoryChanges(entry,checkpoint='') {
   const key={A:'liquiditySweep',B:'reaction',C:'outerM5Trend',D:'m5Trend',E:'targets',F:'antiConfluences',G:'confluences'}[checkpoint];
-  return (entry.changes ?? []).filter(c=>!checkpoint || (key ? c.key===key || c.key.startsWith(`${key}.`) : ['m5Bos','m1Choch','m5Choch','m1Bos','retest','fvg','entry','structure','anchor'].includes(c.key)));
+  return (entry.changes ?? []).filter(c=>!checkpoint || (key ? c.key===key || c.key.startsWith(`${key}.`) : ['m5Bos','m1PivotBreak','m1Choch','m5Choch','m1Bos','retest','fvg','entry','structure','anchor'].includes(c.key)));
 }

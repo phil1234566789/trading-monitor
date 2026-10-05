@@ -2,6 +2,7 @@ import { m1ScanPrefix } from './m1ScanPrefix.js';
 import { scanCountertrendWindow } from './countertrendScan.js';
 import { evaluateTradeSetupChecklist } from './tradeSetupChecklist.js';
 import { activeM1Context, buildM1Structure } from './m1Structure.js';
+import { m1LoadStart } from './m1StructureStart.js';
 import { evaluateM1Checklist } from './m1Checklist.js';
 import { buildTradeSetup2Snapshot, buildTradeSetup2CandidateSnapshot } from './tradeSetup2Snapshot.js';
 import { evaluateDealingRange } from './tradeSetup2DealingRange.js';
@@ -85,7 +86,7 @@ export async function scanTradeSetup2Window({ instrument, h1Candles, m5Candles, 
         wasBlocked = false;
       }
       if (!context || knownAt < fromTime || seen.has(`${instrument}:${context.setupKey}`)) continue;
-      const anchorTime = Math.min(context.anchor.pivotTime, context.primary.reactionRecognizedAt ?? context.anchor.pivotTime);
+      const anchorTime = m1LoadStart(context);
       const rows = m1ScanPrefix(m1, anchorTime, m1End);
       const m1Structure = buildM1Structure(rows, context.anchor, knownAt);
       const m1Check = evaluateM1Checklist({ context, structure: m1Structure, candles: rows, evaluatedAt: knownAt,

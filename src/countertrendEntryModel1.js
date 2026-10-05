@@ -31,7 +31,7 @@ export function entryModel1RetestFvg(rows, orderBlocks, confirmedAt, direction, 
   return advanceEntryModel1Follow(rows,orderBlocks,confirmedAt,direction,evaluatedAt,progress);
 }
 
-export function evaluateCountertrendEntryModel1({context,rows,evaluatedAt,bos,choch,trends,sweepReaction,internalSweeps,closeReactionCache,entryProgress}) {
+export function evaluateCountertrendEntryModel1({context,rows,evaluatedAt,trends,pivotBreak,structureStart,internalSweeps,closeReactionCache,entryProgress}) {
   const m5=closedChecklistCandles(context.m5Candles,'5m',evaluatedAt);
   const key=JSON.stringify([context.instrument,context.direction,context.structureStart,context.settings,
     context.confirmedAt,context.primary?.reactionOB,m5[0]?.time,m5.at(-1)?.time,m5.length]);
@@ -53,15 +53,15 @@ export function evaluateCountertrendEntryModel1({context,rows,evaluatedAt,bos,ch
   }
   const {m5Bos,orderBlocks}=m5Facts;
   const follow=entryModel1RetestFvg(rows,orderBlocks,context.confirmedAt,context.direction,evaluatedAt,entryProgress);
-  const conditions={m5Bos,m1Choch:sweepReaction?.active ? sweepReaction.choch : null,retest:follow.retest,fvg:follow.fvg};
+  const conditions={m5Bos,m1PivotBreak:pivotBreak ?? null,retest:follow.retest,fvg:follow.fvg};
   const candidate=follow.fvg && follow.fvg.recognizedAt >= (context.validatedAt ?? context.confirmedAt)
     && entryModel1ConditionsReady(conditions,context.direction,follow.fvg.recognizedAt)
     ? m1EntryFromFvg(context,follow.fvg,rows,evaluatedAt,follow.retest) : null;
   const entry=candidate ? {...candidate,entryModel:ENTRY_MODEL_1_VERSION,conditions,confirmedAt:context.confirmedAt} : null;
-  const facts=[['M5-BOS in Setup-Richtung',m5Bos],['M1-CHoCH ab Sweep',conditions.m1Choch],
+  const facts=[['M5-BOS in Setup-Richtung',m5Bos],['M1-Pivotbruch ab Sweep',conditions.m1PivotBreak],
     ['M5-OB-Retest',follow.retest],['M1-FVG nach Retest',follow.fvg]];
   return normalizeM1ChecklistPresentation({status:entry?'passed':'pending',entryModel:ENTRY_MODEL_1_VERSION,instrument:context.instrument,evaluatedAt,
-    trends,choch:conditions.m1Choch ?? choch,bos,m5Bos,sweepReaction,internalSweeps,orderBlocks,conditions,retest:follow.retest,fvg:follow.fvg,entry,
+    trends,m5Bos,pivotBreak:conditions.m1PivotBreak,structureStart,internalSweeps,orderBlocks,conditions,retest:follow.retest,fvg:follow.fvg,entry,
     details:[...trends.map(()=>''),...facts.map(([label,fact])=>fact ? `${label}: ${formatDatedTime(fact.recognizedAt)} Uhr${fact.orderBlock
       ? ` · OB ${formatDatedTime(fact.orderBlock.startTime)} Uhr · ${fact.orderBlock.bottom}–${fact.orderBlock.top} · ${fact.orderBlock.inclusionRule==='setup1OrderBlockIncluded' ? 'Startregel: Setup-1.0-OB' : 'ab DR-Bestätigung entstanden'}` : ''}` : `${label} fehlt`)],
     detailStatuses:[...trends.map(()=> 'context'),...facts.map(([,fact])=>fact?'passed':follow.status==='unknown'?'unknown':'unmet')],

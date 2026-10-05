@@ -5,8 +5,10 @@ import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { hasConfirmedChecklistAbc } from './tradeSetupChecklistGates.js';
 import { dealingRangeConfirmedAt } from './dealingRangeConfirmationTime.js';
 import { ENTRY_MODEL_1_VERSION } from './entryModel1Conditions.js';
+import { M1_STRUCTURE_PERIOD } from './m1StructureSettings.js';
+import { buildM1PivotStructure } from './m1PivotStructure.js';
 
-export const M1_STRUCTURE_PERIOD = 5;
+export { M1_STRUCTURE_PERIOD };
 
 export function m1AnchorFromM5(state, reaction, direction, evaluatedAt) {
   if (!state || !direction) return null;
@@ -31,13 +33,18 @@ export function m1PrerequisiteReason(checklist) {
   if (setup2EntrySearchEnded(checklist)) return 'ended';
   if (!checklist.setup?.primary || !hasConfirmedChecklistAbc(checklist.checks)) return 'abc';
   if (checklist.dealingRange && checklist.dealingRange.status !== 'validated') return 'validation';
-  if (!checklist.checks.m5Trend?.m1Anchor) return 'anchor';
+  if (checklist.entryModel===ENTRY_MODEL_1_VERSION) {
+    if(!Number.isFinite(checklist.setup.primary.sweep?.level?.touchedTime))return 'anchor';
+  } else if (!checklist.checks.m5Trend?.m1Anchor) return 'anchor';
   return null;
 }
 
 export function activeM1Context(checklist) {
   if (m1PrerequisiteReason(checklist)) return null;
-  const anchor = checklist.checks.m5Trend?.m1Anchor;
+  const current=checklist.model==='countertrend' && checklist.entryModel===ENTRY_MODEL_1_VERSION;
+  const anchor=current ? {entryModel:ENTRY_MODEL_1_VERSION,primary:checklist.setup.primary,
+    pivotTime:checklist.setup.primary.sweep.level.touchedTime,price:checklist.setup.primary.sweep.level.price,
+    recognizedAt:checklist.setup.primary.recognizedAt} : checklist.checks.m5Trend?.m1Anchor;
   return anchor ? { instrument: checklist.instrument, anchor, evaluatedAt: checklist.evaluatedAt,
     ...(checklist.model === 'countertrend' && checklist.entryModel === ENTRY_MODEL_1_VERSION ? {
       entryModel:ENTRY_MODEL_1_VERSION,confirmedAt:dealingRangeConfirmedAt(checklist),
@@ -51,6 +58,7 @@ export function activeM1Context(checklist) {
 }
 
 export function buildM1Structure(rows, anchor, evaluatedAt) {
+  if(anchor?.entryModel===ENTRY_MODEL_1_VERSION)return buildM1PivotStructure(rows,anchor.primary,evaluatedAt);
   const empty = { state: null, pivotsOuter: [], pivotsInner: [], events: [], status: 'waiting' };
   if (!anchor || anchor.recognizedAt > evaluatedAt) return empty;
   const candles = closedChecklistCandles(rows, '1m', evaluatedAt).filter(c => !c.ignored);

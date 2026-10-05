@@ -65,9 +65,9 @@ export function tradeSetup2Evidence({ checklist, m1Check, m1Structure, m1Candles
   }
   const signals=[...(checklist.checks.m5Trend?.structureReaction?.levels ?? []).map(s=>({...s,timeframe:'5m',key:'m5Trend'})),
     ...[m1Check.m5Choch,m1Check.m5Bos].filter(Boolean).map(s=>({...s,timeframe:'5m',key:'entry'})),
-    ...[m1Check.choch,m1Check.bos].filter(Boolean).map(s=>({...s,timeframe:'1m',key:'m1'}))];
+    ...[m1Check.choch,m1Check.bos,m1Check.pivotBreak].filter(Boolean).map(s=>({...s,timeframe:'1m',key:'m1'}))];
   for (const s of signals) line(s.type,s.key,s.timeframe,s.recognizedAt,s.price,s.pivotTime,s.candleTime,
-    s.type==='CHoCH'?'m5RangeChoch':'m5RangeBreakOfStructure',`${s.timeframe} ${s.type}`);
+    s.type==='CHoCH'?'m5RangeChoch':'m5RangeBreakOfStructure',`${s.timeframe} ${s.type==='pivot-break'?'Pivotbruch':s.type}`);
   for (const s of m1Check.internalSweeps ?? []) line('internalSweep','m1','1m',s.candleTime+60,s.price,
     s.pivotTime,s.candleTime,'m5RangeLqSweep','M1 LS');
   const retest=m1Check.retest, touch=m1Candles.find(c=>c.time===retest?.candleTime);

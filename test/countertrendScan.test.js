@@ -31,7 +31,7 @@ describe('Countertrend-Scanner Start und Last',()=>{
   const entryGate=vi.spyOn(gate,'createSetup2Entry');
   const model=vi.spyOn(m1,'evaluateM1Checklist').mockImplementation(({evaluatedAt})=>{
    const retest={candleTime:at,recognizedAt:at+60,orderBlock:{dir:-1,startTime:setup.obStartTime,top:1.31,bottom:1.305,recognizedAt:at}};
-   const conditions={m5Bos:{type:'BOS',direction:'short',recognizedAt:at},m1Choch:{type:'CHoCH',direction:'short',recognizedAt:at},
+   const conditions={m5Bos:{type:'BOS',direction:'short',recognizedAt:at},m1PivotBreak:{type:'pivot-break',direction:'short',recognizedAt:at},
     retest,fvg:{direction:'short',recognizedAt:evaluatedAt,candleTime:evaluatedAt-120}};
    const entry=[at+120,at+180,at+300].includes(evaluatedAt)?{id:`entry:${evaluatedAt}`,entryModel:ENTRY_MODEL_1_VERSION,conditions,
     instrument:'GBPUSD',setupKey:key,direction:'short',recognizedAt:evaluatedAt,candleTime:evaluatedAt-60,price:1.3,
@@ -112,7 +112,7 @@ describe('Countertrend-Scanner Start und Last',()=>{
    expect(target).toHaveBeenCalledOnce();
    if(status==='unknown')expect(anti.mock.calls.length).toBeGreaterThan(1);else expect(anti).toHaveBeenCalledOnce();
    expect(load).toHaveBeenCalledTimes(status==='passed'?1:0);
-   if(status==='passed')expect(load).toHaveBeenCalledWith({instrument:'GBPUSD',fromTime:at,structureFromTime:at-300,toTime:at+1800});
+   if(status==='passed')expect(load).toHaveBeenCalledWith({instrument:'GBPUSD',fromTime:at,structureFromTime:setup.ls.touchedTime,toTime:at+1800});
   }finally {outer.mockRestore();current.mockRestore();target.mockRestore();anti.mockRestore();}
  });
  it('unbestätigte DR ohne Targets lädt keine M1-Kerzen',async()=>{

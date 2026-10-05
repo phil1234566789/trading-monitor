@@ -4,7 +4,8 @@ import { checklistObservationRules } from './checklistObservationRules.js';
 
 export const CHECKLIST_HISTORY_VERSION = 'checklist-changes-v1';
 const pick = (value, keys) => value ? Object.fromEntries(keys.filter(k => value[k] !== undefined).map(k => [k,value[k]])) : null;
-const signal = value => pick(value,['recognizedAt','knownAt','candleTime','pivotTime','price','direction','gap','startTime','top','bottom','fromTime','toTime']);
+const signal = value => pick(value,['type','recognizedAt','knownAt','candleTime','pivotTime','price','direction','gap','startTime','top','bottom','fromTime','toTime',
+  'originTime','originPrice','pullbackTime','pullbackPrice','pivotRecognizedAt','breachKnownAt']);
 function lightChecks(checks) {
   return Object.fromEntries(Object.entries(checks ?? {}).map(([key,c]) => [key,{
     ...pick(c,['status','details','detailStatuses','explanation','ruleVersion']),
@@ -26,6 +27,8 @@ export function createChecklistHistoryRecorder() {
       instrument:checklist.instrument,
       entry:pick(savedEntry,['id','label','entryModel','recognizedAt','candleTime','price','direction','conditions','scales','sizing']),
       conditions:Object.fromEntries(Object.entries(m1Check.conditions ?? {}).map(([k,v])=>[k,signal(v)])),
+      structureStart:pick(m1Check.structureStart,['structureFrom','recognizedAt','sourceTime','sourceTimeframe','price']),
+      pivotBreak:signal(m1Check.pivotBreak),
       retest:signal(m1Check.retest),fvg:signal(m1Check.fvg),bos:signal(m1Check.bos),choch:signal(m1Check.choch)});
     const lifecycle=lightLifecycle(candidate.lifecycle),stage=evaluateDealingRange(checklist,candidate);
     const primary={...pick(candidate,['id','direction','recognizedAt','reactionRecognizedAt','invalidation','setupType']),

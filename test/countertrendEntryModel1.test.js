@@ -11,7 +11,7 @@ import candles from './fixtures/gbpusd-m1-dr114-p5.json';
 const at=clock=>Date.parse(`2026-09-09T${clock}:00+02:00`)/1000;
 
 const conditions = () => ({m5Bos:{type:'BOS',direction:'short',recognizedAt:600},
-  m1Choch:{type:'CHoCH',direction:'short',recognizedAt:660},
+  m1PivotBreak:{type:'pivot-break',direction:'short',recognizedAt:660},
   retest:{candleTime:660,recognizedAt:720,orderBlock:{dir:-1,startTime:300,recognizedAt:600}},
   fvg:{direction:'short',candleTime:660,recognizedAt:780}});
 describe('Countertrend entry model 1 conditions', () => {
@@ -20,12 +20,12 @@ describe('Countertrend entry model 1 conditions', () => {
     expect(entryModel1ConditionsReady(facts,'short',780)).toBe(true);
     for(const key of Object.keys(facts))expect(entryModel1ConditionsReady({...facts,[key]:null},'short',780)).toBe(false);
   });
-  it.each([[600,660],[660,600],[780,780]])('does not impose a CHoCH/BOS ordering (%s,%s)', (choch,bos) => {
-    const facts=conditions();facts.m5Bos.recognizedAt=choch;facts.m1Choch.recognizedAt=bos;
+  it.each([[600,660],[660,600],[780,780]])('does not impose a pivot-break/BOS ordering (%s,%s)', (choch,bos) => {
+    const facts=conditions();facts.m5Bos.recognizedAt=choch;facts.m1PivotBreak.recognizedAt=bos;
     expect(entryModel1ConditionsReady(facts,'short',780)).toBe(true);
   });
   it('rejects future or opposing signals and FVG confirmed before the retest', () => {
-    for(const key of ['m5Bos','m1Choch','fvg']) {
+    for(const key of ['m5Bos','m1PivotBreak','fvg']) {
       const facts=conditions();facts[key].recognizedAt=781;expect(entryModel1ConditionsReady(facts,'short',780)).toBe(false);
       facts[key].recognizedAt=780;facts[key].direction='long';expect(entryModel1ConditionsReady(facts,'short',780)).toBe(false);
     }
@@ -33,8 +33,15 @@ describe('Countertrend entry model 1 conditions', () => {
     expect(entryModel1ConditionsReady(facts,'short',780)).toBe(false);
   });
   it('mirrors the same four conditions for long', () => {
-    const facts=conditions();for(const key of ['m5Bos','m1Choch','fvg'])facts[key].direction='long';facts.retest.orderBlock.dir=1;
+    const facts=conditions();for(const key of ['m5Bos','m1PivotBreak','fvg'])facts[key].direction='long';facts.retest.orderBlock.dir=1;
     expect(entryModel1ConditionsReady(facts,'long',780)).toBe(true);
+  });
+  it('keeps historical CHoCH conditions and rejects them under the new version',()=>{
+    const facts=conditions(),legacy={...facts,m1Choch:{...facts.m1PivotBreak,type:'CHoCH'}};
+    delete legacy.m1PivotBreak;
+    expect(entryModel1ConditionsReady(legacy,'short',780,'countertrend-entry-model-1-v3')).toBe(true);
+    expect(entryModel1ConditionsReady(legacy,'short',780)).toBe(false);
+    expect(entryModel1ConditionsReady(facts,'short',780,'countertrend-entry-model-1-v3')).toBe(false);
   });
   it('admits newly confirmed OBs and the explicitly included Setup 1.0 OB only', () => {
     const primary={reactionOB:{dir:-1,startTime:0,top:1.4,bottom:1.3},reactionRecognizedAt:600};
@@ -44,7 +51,7 @@ describe('Countertrend entry model 1 conditions', () => {
     expect(result.map(z=>z.startTime)).toEqual([0,300,600]);
     expect(result[0].inclusionRule).toBe('setup1OrderBlockIncluded');
     expect(setup1OrderBlockIncluded(primary,'short',1200)).toMatchObject({startTime:0,recognizedAt:600});
-    expect(ENTRY_MODEL_1_VERSION).toBe('countertrend-entry-model-1-v3');
+    expect(ENTRY_MODEL_1_VERSION).toBe('countertrend-entry-model-1-v4');
   });
 });
 
@@ -64,18 +71,26 @@ describe('entry model 1 detection', () => {
   }
   it('uses the second newly formed M5 OB and saves all facts, without requiring the innermost M1 direction', () => mocked(()=>{
     const result=evaluateCountertrendEntryModel1({context,rows:candles.filter(c=>c.time+60<=at('09:50')),evaluatedAt:at('09:50'),
-      sweepReaction:{active:true,choch:{type:'CHoCH',direction:'short',recognizedAt:at('09:34')}},bos:null,choch:null,trends:[{trend:'uptrend',depth:0}],internalSweeps:[]});
+      pivotBreak:{type:'pivot-break',direction:'short',recognizedAt:at('09:34')},bos:null,choch:null,trends:[{trend:'uptrend',depth:0}],internalSweeps:[]});
     expect(result.entry).toMatchObject({entryModel:ENTRY_MODEL_1_VERSION,recognizedAt:at('09:50'),
-      conditions:{m5Bos:{recognizedAt:at('09:49')},m1Choch:{recognizedAt:at('09:34')},
+      conditions:{m5Bos:{recognizedAt:at('09:49')},m1PivotBreak:{recognizedAt:at('09:34')},
         retest:{candleTime:at('09:46'),orderBlock:{startTime:at('09:35'),recognizedAt:at('09:45')}},fvg:{recognizedAt:at('09:50')}}});
     expect(result.entry.stops.wide.price).toBe(second.top);
   }));
-  it('does not borrow a CHoCH from a different sweep extreme',()=>mocked(()=>{
+  it('does not substitute a classic CHoCH for the missing pivot break',()=>mocked(()=>{
     const evaluatedAt=at('09:50');
     const result=evaluateM1Checklist({context,candles,evaluatedAt,structure:buildM1Structure(candles,context.anchor,evaluatedAt)});
     expect(result.entry).toBeNull();
-    expect(result.conditions.m1Choch).toBeNull();
-    expect(result.entryBlockedReason).toContain('M1-CHoCH ab Sweep');
+    expect(result.conditions.m1PivotBreak).toBeNull();
+    expect(result.entryBlockedReason).toContain('M1-Pivotbruch ab Sweep');
+  }));
+  it('does not backdate an old FVG to a later pivot confirmation or DR validation',()=>mocked(()=>{
+    const evaluate=(recognizedAt,validatedAt)=>evaluateCountertrendEntryModel1({context:{...context,validatedAt},
+      rows:candles,evaluatedAt:at('09:51'),trends:[],internalSweeps:[],
+      pivotBreak:{type:'pivot-break',direction:'short',recognizedAt}});
+    expect(evaluate(at('09:51'),at('09:30')).entry).toBeNull();
+    expect(evaluate(at('09:34'),at('09:51')).entry).toBeNull();
+    expect(evaluate(at('09:50'),at('09:50')).entry?.recognizedAt).toBe(at('09:50'));
   }));
   it('unknown history cannot prove a retest, and future FVG candles do not count',()=>{
     const zones=[{...second,recognizedAt:at('09:45')}];
