@@ -53,7 +53,7 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
         <p v-if="!current.groups.length" role="status" class="empty">Keine DRs für diese Filterauswahl.</p>
         <SimulationComparisonMetrics :current="current.results" :previous="previous.results" :compare="!!filters.compare" />
         <SimulationRunQuality :current="current" :previous="previous" :compare="!!filters.compare" />
-        <SimulationDrList :groups="current.groups" :results="current.results" :is-pinned="pinState.isPinned" :pin-count="listedPins.length" @show-pins="showPins" @pin-menu="pinState.open" />
+        <SimulationDrList :groups="current.groups" :results="current.results" :is-pinned="pinState.isPinned" :pin-note="pinState.pinNote" :pin-count="listedPins.length" @show-pins="showPins" @pin-menu="pinState.open" />
       </template>
     </div>
     <SimulationPinMenu :target="pinState.target.value" :saving="pinState.saving.value" :error="pinState.error.value" @close="pinState.target.value=null" @save="pinState.save" @remove="pinState.remove" @show-pins="showPins" />

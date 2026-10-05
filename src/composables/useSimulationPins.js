@@ -17,7 +17,9 @@ export function useSimulationPins(filters,run,results) {
   watch([()=>filters.value.run,()=>filters.value.compare],refresh,{immediate:true});
   onScopeDispose(()=>{revision++;});
   const find=t=>pins.value.find(p=>p.simulationPinKey===simulationPinKey(t));
-  const isPinned=(group,feature,entry)=>!!find({kind:feature?'simulation_checkpoint':entry?'simulation_entry':'simulation_dr',group,feature,entry});
+  const matchingPin=(group,feature,entry)=>find({kind:feature?'simulation_checkpoint':entry?'simulation_entry':'simulation_dr',group,feature,entry});
+  const isPinned=(...args)=>!!matchingPin(...args);
+  const pinNote=(...args)=>matchingPin(...args)?.note;
   function open(value){error.value='';target.value={...value,note:find(value)?.note ?? '',existingId:find(value)?.id};}
   async function save(note) {
     if(!target.value || saving.value)return;
@@ -51,5 +53,5 @@ export function useSimulationPins(filters,run,results) {
     } catch (cause) { error.value = cause.message || 'Pins konnten nicht entfernt werden.'; }
     finally { saving.value = false; }
   }
-  return {pins,error,loading,saving,target,refresh,isPinned,open,save,remove,removeListed};
+  return {pins,error,loading,saving,target,refresh,isPinned,pinNote,open,save,remove,removeListed};
 }
