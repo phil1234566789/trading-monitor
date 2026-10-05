@@ -257,6 +257,21 @@ it("renders separate new stage and outcome filters while keeping historical link
 	expect(current).not.toContain("value=\"invalidated\"");
 	expect(await render("invalidated")).toContain("value=\"invalidated\"");
 });
+it("labels both run selectors with real Berlin creation times and keeps legacy runs", async () => {
+	const runs = [
+		{id:'summer',status:'complete',configuration:{label:'September'},createdAt:'2026-10-04T12:34:56Z'},
+		{id:'winter',status:'complete',configuration:{label:'September'},created_at:'2026-01-04T12:34:56Z'},
+		{id:'legacy',status:'complete',configuration:{label:'September'},evaluatedAt:1791054736},
+		{id:'invalid',status:'complete',configuration:{label:'September'},createdAt:'invalid'}
+	];
+	const html=await renderToString(createSSRApp(SimulationComparisonFilters,{modelValue:comparisonFilters({}),runs,features:[]}));
+	expect(html.split('erstellt 04.10.2026, 14:34:56')).toHaveLength(3);
+	expect(html.split('erstellt 04.01.2026, 13:34:56')).toHaveLength(3);
+	expect(html).not.toContain('Invalid Date');
+	expect(html.match(/erstellt /g)).toHaveLength(4);
+	expect(html.match(/Datenstand /g)).toHaveLength(2);
+	expect(html).toContain('legacy');
+});
 it("renders valid price-ended cards and history without a disqualified stage", async () => {
 	const snapshot = {
 		id: "s",

@@ -9,7 +9,7 @@ export function pricePrecisionForInstrument(instrument) {
 }
 
 // Akzeptiert sowohl Unix-Sekunden (Chart-Zeit) als auch ISO-Strings (direkt aus Supabase).
-export function fmtDateTime(input) {
+export function fmtDateTime(input, options = {}) {
   if (input == null) return "–";
   const d = typeof input === "number" ? new Date(input * 1000) : new Date(input);
   return d.toLocaleString("de-DE", {
@@ -17,6 +17,7 @@ export function fmtDateTime(input) {
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    ...options,
   });
 }
 
