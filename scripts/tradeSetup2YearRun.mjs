@@ -7,6 +7,7 @@ import { setup2ProfilingPlugin,createSetup2Profile } from './setup2Profiling.mjs
 import { archiveClient, candleCoverage, writeJson } from './tradeSetup2Archive.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { createSimulationRepository } from '../src/tradeSetupSimulationRepository.js';
+import {startSimulationRunExecution,completeSimulationRunExecution} from '../src/simulationRunClock.js';
 
 import { tradeSetupFromRow } from '../src/tradeSetupRow.js';
 import { loadSetupSet, readSetupSetManifest } from './setup1Set.mjs';
@@ -15,6 +16,7 @@ import {execFileSync} from 'node:child_process';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const options = Object.fromEntries(process.argv.slice(2).map(arg => arg.replace(/^--/, '').split(/=(.*)/s).slice(0, 2)));
+const executionStartedAt=Math.floor(Date.now()/1000);
 const setupIds = options.setupIds?.split(',').map(Number);
 if (setupIds?.some(id => !Number.isSafeInteger(id) || id <= 0)) throw new Error('Invalid --setupIds');
 const timings = { archiveAndCacheMs: {}, setupSourcesMs: 0, snapshotWriteMs: 0 };
@@ -96,7 +98,7 @@ configuration.instruments = instruments.map(instrument => core.buildTradeSetup2C
   newsLoadStatus:runNewsStatus(instrument,manifest.news.map(n=>({...n,eventTime:sec(n.event_time)})),requestedFrom,manifest.requestedTo) }));
 
 if (frozenSetupSet) configuration.inputSetId = frozenSetupSet.manifest.id;
-const run = { id: `setup2-${hash({ configuration, manifest, sourceHash }).slice(0, 24)}`, version: core.SETUP2_VERSION,
+const run = startSimulationRunExecution({ id: `setup2-${hash({ configuration, manifest, sourceHash }).slice(0, 24)}`, version: core.SETUP2_VERSION,
   configuration, from: requestedFrom, to: manifest.requestedTo, evaluatedAt: manifest.fetchedAt,
   status: 'running', progress: { phase: 'download', completed: 0, total: instruments.length },
   coverage: { archive: manifest.coverage, instruments: [], excluded: [{ instrument: 'XAUUSD', reason: 'noM1Archive' }] },
@@ -108,7 +110,7 @@ const run = { id: `setup2-${hash({ configuration, manifest, sourceHash }).slice(
       : 'Historischer D1-P4-Standard bestätigt; noch kein abgeschlossener Jahresvergleich.',
     limitations: ['Aktuelle Sessionkonfiguration rückwirkend angewendet.', 'Newsbestand ohne historische Vollständigkeitsgarantie.',
       'Archivlücken einschließlich Marktschließungen werden konservativ als fehlende Historie behandelt.',
-      'Bid-OHLC mit 5 USD Roundturn-Kommission je eröffnetem Standardlot, ohne Spread und Slippage.'], configurationHash: hash({ configuration, sessionConfigs }) } };
+      'Bid-OHLC mit 5 USD Roundturn-Kommission je eröffnetem Standardlot, ohne Spread und Slippage.'], configurationHash: hash({ configuration, sessionConfigs }) } },executionStartedAt);
 const runFile = path.join(directory, 'run.json');
 run.provenance.inputs=simulationRunInputs({configuration,from:run.from,to:run.to,fetchedAt:manifest.fetchedAt,
   sourceHash,sourceCommit:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),
@@ -211,6 +213,7 @@ try {
     run.provenance.phaseTimings = timings;
   }
   run.status = options.checkCoverage==='true' ? 'coverage' : 'complete'; run.progress = { phase: run.status, completed: instruments.length, total: instruments.length };
+  Object.assign(run,completeSimulationRunExecution(run));
 } catch (error) {
   run.status = 'failed'; run.progress = { ...run.progress, error: error.message, aborted: controller.signal.aborted };
   throw error;

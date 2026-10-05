@@ -19,6 +19,7 @@ import {useSnapshotIndicators} from './useSnapshotIndicators.js';
 import {renderPersistedZones} from '../orderBlocks.js';
 import {snapshotChecklistAt} from '../checklistReplayView.js';
 import {reserveEntryOverlaySpace} from '../entryOverlayLayout.js';
+import {startSimulationRunExecution,completeSimulationRunExecution} from '../simulationRunClock.js';
 
 export function useTradeSetup2History(props,checklist,{repository,configurationInput,evaluationTime}) {
   const results=shallowRef([]),candidates=shallowRef([]),selected=shallowRef(null),status=ref(''),error=ref('');
@@ -182,6 +183,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
         .map(r=>[`${r.runId}:${r.snapshotId}`,r])).values()];
       const start=Math.min(state.context.m5Candles[0]?.time ?? Infinity,...continuing.map(r=>r.entryTime));
       if(!Number.isFinite(start))return;
+      const executionRun=startSimulationRunExecution(run);
       let m1Candles=[];
       const loadM1Candles=async ({fromTime,structureFromTime=fromTime})=>{
         // Erst validierte DRs lösen den Abruf aus; P5 benötigt zusätzlich seinen bestehenden Vorlauf.
@@ -233,7 +235,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
         return {...snapshot,runId:run.id,snapshot};
       })];
       status.value='Setups speichern…';
-      const savedRun={...run,progress:{entries:records.length,setups:found.length-records.length},
+      const savedRun={...executionRun,progress:{entries:records.length,setups:found.length-records.length},
         coverage:{m1From:m1Candles[0]?.time ?? null,m1To:m1Candles.at(-1)?.time ?? null}};
       await repository.saveRun(savedRun);
       signal.throwIfAborted();
@@ -243,7 +245,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
       signal.throwIfAborted();
       // Erst nach allen Snapshots als vollständig markieren; fehlgeschlagene
       // Teilspeicherungen müssen beim Neuladen erneut berechnet werden.
-      await repository.saveRun({...savedRun,progress:{...savedRun.progress,scanCompletedAt:at}});
+      await repository.saveRun(completeSimulationRunExecution({...savedRun,progress:{...savedRun.progress,scanCompletedAt:at}}));
       if(ticket===revision){completedScanKey=scanKey;status.value=`${positions.value.length} Setups in dieser Ansicht · gespeichert`;}
     } catch(e){if(!signal.aborted&&ticket===revision)error.value=e.message ?? 'Setup-Historie konnte nicht geladen werden.';}
     finally {if(ticket===revision){loading.value=false;if(refreshPending){refreshPending=false;void refresh();}}}

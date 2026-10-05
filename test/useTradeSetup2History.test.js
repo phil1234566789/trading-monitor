@@ -162,6 +162,31 @@ const savedSnapshot=id=>({id,instrument:'GBPUSD',direction:'short',knownAt:60,ev
 const repositoryFor=runs=>({listRuns:vi.fn(async()=>runs),listResults:vi.fn(async()=>[]),listSetups:vi.fn(async()=>[]),getSetupSnapshot:vi.fn(),getSnapshot:vi.fn(async(_run,id)=>savedSnapshot(id)),
   saveRun:vi.fn(async()=>{}),saveEntries:vi.fn(async()=>{}),saveSetups:vi.fn(async()=>{})});
 
+it('persists actual scan times only after successful snapshot writes',async()=>{
+ const clock=vi.spyOn(Date,'now').mockReturnValue(1800000000000);
+ const repository=repositoryFor([]);
+ repository.saveEntries.mockImplementation(async()=>{clock.mockReturnValue(1800000060000);});
+ const {view,scope}=liveHarness(repository);
+ try {
+  await vi.waitFor(()=>expect(view.loading.value).toBe(false));
+  expect(repository.saveRun.mock.calls[0][0]).toMatchObject({startedAt:1800000000});
+  expect(repository.saveRun.mock.calls[0][0].completedAt).toBeUndefined();
+  expect(repository.saveRun.mock.calls.at(-1)[0]).toMatchObject({startedAt:1800000000,completedAt:1800000060,progress:{scanCompletedAt:600}});
+ }finally{scope.stop();clock.mockRestore();}
+});
+
+it('does not claim completion when saving entries fails',async()=>{
+ const repository=repositoryFor([]);
+ repository.saveEntries.mockRejectedValue(new Error('write failed'));
+ const {view,scope}=liveHarness(repository);
+ try {
+  await vi.waitFor(()=>expect(view.loading.value).toBe(false));
+  expect(view.error.value).toBe('write failed');
+  expect(repository.saveRun).toHaveBeenCalledOnce();
+  expect(repository.saveRun.mock.calls[0][0].completedAt).toBeUndefined();
+ }finally{scope.stop();}
+});
+
 it('der neue Countertrend lädt ohne M1-Anforderung des Workers keine M1-Historie',async()=>{
  const repository=repositoryFor([]),{view,scope}=liveHarness(repository,600,'countertrend');
  try {
