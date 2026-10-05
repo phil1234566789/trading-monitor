@@ -1923,6 +1923,7 @@ watch(selectedTradingAccountId, () => {
           <label class="ranges-lookback-field">
             Stoppvariante 2.0
             <select v-model="tradeSetup2Variant" aria-label="Stoppvariante Trade Setups 2.0">
+              <option value="">Beide SL</option>
               <option value="wide">Weiter SL</option>
               <option value="narrow">Enger SL</option>
             </select>

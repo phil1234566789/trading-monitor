@@ -3,11 +3,33 @@ vi.mock('../src/chartColors.js', () => ({ cssColor: key => key }));
 vi.mock('../src/chartLineWidths.js', () => ({ lineWidth: () => 1 }));
 import { M1EntryPrimitive, renderM1Entry } from '../src/m1EntryRendering.js';
 import { entryRiskScale } from '../src/entryRisk.js';
+import original from './fixtures/gbpusd-short-20260921-narrow-only.json';
 
 const entry = { id: 'GBPUSD:setup:entry-1', label: 'Entry 1', instrument: 'GBPUSD', candleTime: 2940, recognizedAt: 3000, price: 1.35,
   scales: { wide: entryRiskScale(1.35,1.3506,[{ label:'T1', price:1.3472 }],'GBPUSD','short'),
     narrow: entryRiskScale(1.35,1.3503,[{ label:'T1', price:1.3472 }],'GBPUSD','short') } };
 describe('M1 entry annotation', () => {
+  it('draws the original narrow ladder independently from an invalid, null or absent wide scale',()=>{
+    const before=JSON.stringify(original);
+    const chart={timeScale:()=>({timeToCoordinate:()=>300,options:()=>({barSpacing:10})}),subscribeCrosshairMove:vi.fn()};
+    for(const wide of [original.entry.scales.wide,null,undefined]){
+      const saved={...original.entry,scales:{wide,narrow:original.entry.scales.narrow}};
+      const primitive=new M1EntryPrimitive(saved);primitive.variant='';
+      primitive.attached({chart,series:{priceToCoordinate:p=>300-(p-saved.price)*10000},requestUpdate:vi.fn()});
+      primitive.updateAllViews();
+      expect(primitive.views[0].point.scales).toMatchObject([null,{axisStyleKey:'pipScale'}]);
+      const ctx=Object.fromEntries(['setLineDash','beginPath','moveTo','lineTo','stroke','fillRect','strokeRect','fillText'].map(k=>[k,vi.fn()]));
+      primitive.paneViews()[0].renderer().draw({useBitmapCoordinateSpace:cb=>cb({context:ctx,horizontalPixelRatio:1,verticalPixelRatio:1,bitmapSize:{width:1200,height:800}})});
+      expect(ctx.fillText.mock.calls.some(a=>a[0].includes('SL eng 1,33828'))).toBe(true);
+      expect(ctx.fillText.mock.calls.some(a=>a[0].includes('Weit: SL nicht auswertbar'))).toBe(true);
+      for(const variant of ['wide','narrow','']){
+        primitive.variant=variant;primitive.updateAllViews();
+        expect(primitive.views[0].point.scales.length).toBe(variant?1:2);
+        if(variant==='narrow')expect(primitive.views[0].point.scales[0].axisStyleKey).toBe('pipScale');
+      }
+    }
+    expect(JSON.stringify(original)).toBe(before);
+  });
   it('separates two Long or Short annotations from the last candle while keeping historical anchors',()=>{
     for(const direction of ['long','short']){
       const sign=direction==='long'?1:-1;

@@ -19,7 +19,7 @@ export function entryRiskScale(entry, stop, targets, instrument, direction) {
 }
 
 export function entryRiskSpec(scale, label, styleKey, instrument) {
-  if (scale.status !== 'ready') return null;
+  if (scale?.status !== 'ready') return null;
   const price = value => value.toLocaleString('de-DE', { minimumFractionDigits: pricePrecisionForInstrument(instrument), maximumFractionDigits: pricePrecisionForInstrument(instrument) });
   return { anchorPrice: scale.entry, axisStyleKey: styleKey, side: 1,
     summary: scale.targets.map(t => `${t.label} ${t.rr == null ? '?' : `${t.rr.toFixed(2).replace('.', ',')}R`}`).join(' · '),

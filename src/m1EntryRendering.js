@@ -8,12 +8,13 @@ import { barSecondsFor } from './timeframes.js';
 import { formatDatedTime, formatBerlinTime } from './berlinTime.js';
 import {entryOverlayLayout,reserveEntryOverlaySpace} from './entryOverlayLayout.js';
 import {entryPatternText} from './entryPattern.js';
+import {simulationChartVariants} from './simulationChartVariant.js';
 
 class EntryRenderer {
   constructor(point) { this.point = point; }
   draw(target) {
     this.point.box = null;
-    const { x, y, entry, scales, candleRight, index } = this.point;
+    const { x, y, entry, scales, variants, candleRight, index } = this.point;
     if (x == null || y == null) return;
     let columns;
     target.useBitmapCoordinateSpace(scope => {
@@ -40,7 +41,7 @@ class EntryRenderer {
         align:'center',baseline:'middle',fontSizePx:10*vy,fontFamily:'sans-serif' });
       scales.forEach((scale, i) => {
         ctx.fillStyle = '#d1d4dc';
-        const text = scale ? scale.summary : `${i ? 'Eng' : 'Weit'}: Risiko unbekannt`;
+        const text = scale ? scale.summary : `${variants[i]==='narrow'?'Eng':'Weit'}: SL nicht auswertbar`;
         // RR bleibt lesbar, wenn ein Ziel außerhalb des sichtbaren Preisbereichs liegt.
         drawIconLabel(ctx, { text, x: columns[i] * hx, y: (y + 32) * vy,
           align: 'right', baseline: 'middle', fontSizePx: 11 * vy, fontFamily: 'sans-serif' });
@@ -70,9 +71,10 @@ class EntryPaneView {
     const { chart, series, entry, candles, currentBar, hovered } = this.source;
     const timeScale=chart.timeScale();
     const lastX=timeScale.timeToCoordinate(candles.at(-1)?.time);
-    const specs = ['wide','narrow'].filter(v=>!this.source.variant||v===this.source.variant).map(v=>
-      entryRiskSpec(entry.scales[v],v==='wide'?'SL weit':'SL eng',v==='wide'?'rScale':'pipScale',entry.instrument));
-    this.point = { entry, hovered, box: this.point.box, index:this.source.index??0,count:this.source.count??1,
+    const variants=simulationChartVariants(this.source.variant);
+    const specs = variants.map(v=>
+      entryRiskSpec(entry.scales?.[v],v==='wide'?'SL weit':'SL eng',v==='wide'?'rScale':'pipScale',entry.instrument));
+    this.point = { entry, hovered, variants, box: this.point.box, index:this.source.index??0,count:this.source.count??1,
       candleRight:lastX==null?null:lastX+timeScale.options().barSpacing/2,
       x: chartEventCoordinate(timeScale, candles, entry.candleTime, barSecondsFor(currentBar)), y: series.priceToCoordinate(entry.price),
       scales: specs.map(spec => spec && ({ ...spec, ticks: spec.levels.map(level => ({ ...level, y: series.priceToCoordinate(level.price) })) })) };

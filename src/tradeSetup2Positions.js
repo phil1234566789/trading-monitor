@@ -1,11 +1,17 @@
 // Übersicht und Journalrenderer verwenden dasselbe Anzeigeformat. Simulationen
 // bekommen eigene IDs und werden nicht zu Journal-Ausführungen umgedeutet.
+import {simulationChartVariants} from './simulationChartVariant.js';
 export function tradeSetup2Positions(results, {instrument,variant,asOf,historyCount=5,candles=[]}) {
-  const known=results.filter(r=>r.instrument===instrument && r.variant===variant && r.entryTime<=asOf
+  const variants=simulationChartVariants(variant);
+  const known=results.filter(r=>r.instrument===instrument && variants.includes(r.variant) && r.entryTime<=asOf
     && r.status!=='notExecutable');
   const limit=Math.max(0,Math.floor(historyCount));
-  const selected=['long','short'].flatMap(direction=>known.filter(r=>r.direction===direction)
-    .sort((a,b)=>b.entryTime-a.entryTime).slice(0,limit));
+  const entryKey=r=>JSON.stringify([r.runId,r.snapshotId ?? r.entryId]);
+  const selected=['long','short'].flatMap(direction=>{
+    const rows=known.filter(r=>r.direction===direction).sort((a,b)=>b.entryTime-a.entryTime);
+    const keys=new Set([...new Set(rows.map(entryKey))].slice(0,limit));
+    return rows.filter(r=>keys.has(entryKey(r)));
+  });
   return selected.map(r=>{
     const closed=Number.isFinite(r.exitRecognizedAt) && r.exitRecognizedAt<=asOf;
     const ambiguous=r.status==='ambiguous' && Number.isFinite(r.ambiguityRecognizedAt) && r.ambiguityRecognizedAt<=asOf;

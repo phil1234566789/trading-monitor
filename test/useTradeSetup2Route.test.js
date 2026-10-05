@@ -18,6 +18,12 @@ function harness(initial) {
   return { query, state, scope,saved };
 }
 const link = { setup2: 'entry', run: 'research', instrument: 'GBPUSD', replay: '1772809740', variant: 'narrow', bar: '1m' };
+it('opens a DR link with both alternatives while keeping later stop selections editable',async()=>{
+  const {state,scope}=harness({...link,variant:'both'});
+  expect(state.tradeSetup2Variant.value).toBe('');
+  for(const variant of ['wide','narrow','']){state.tradeSetup2Variant.value=variant;await nextTick();expect(state.tradeSetup2Variant.value).toBe(variant);}
+  scope.stop();
+});
 it('keeps visit switches editable without persisting them and restores saved settings on close',async()=>{
   const {state,saved,query,scope}=harness(link);
   state.showTradeSetup2.value=false;state.showTradeSetupChecklist.value=false;

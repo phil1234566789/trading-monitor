@@ -1,0 +1,242 @@
+{
+  "id": "GBPUSD:GBPUSD:setup1:GBPUSD:short:1789943400:countertrend-entry-model-1-v4:1789973700",
+  "setupKey": "GBPUSD:setup1:GBPUSD:short:1789943400",
+  "instrument": "GBPUSD",
+  "direction": "short",
+  "knownAt": 1789973700,
+  "entry": {
+    "id": "GBPUSD:GBPUSD:setup1:GBPUSD:short:1789943400:countertrend-entry-model-1-v4:1789973700",
+    "label": "Entry Modell 1",
+    "instrument": "GBPUSD",
+    "setupKey": "GBPUSD:setup1:GBPUSD:short:1789943400",
+    "direction": "short",
+    "candleTime": 1789973640,
+    "recognizedAt": 1789973700,
+    "price": 1.3379999999999999,
+    "stops": {
+      "wide": {
+        "price": 1.3376599999999998,
+        "sourceTime": 1789970400
+      },
+      "narrow": {
+        "price": 1.33828,
+        "sourceTime": 1789973520
+      }
+    },
+    "scales": {
+      "wide": {
+        "status": "unknown",
+        "entry": 1.3379999999999999,
+        "stop": 1.3376599999999998,
+        "risk": null,
+        "riskPips": null,
+        "levels": [],
+        "targets": []
+      },
+      "narrow": {
+        "status": "ready",
+        "entry": 1.3379999999999999,
+        "stop": 1.33828,
+        "risk": 0.000280000000000058,
+        "riskPips": 2.80000000000058,
+        "levels": [
+          {
+            "r": 3,
+            "price": 1.3371599999999997
+          },
+          {
+            "r": 6,
+            "price": 1.3363199999999995
+          },
+          {
+            "r": 10,
+            "price": 1.3351999999999993
+          }
+        ],
+        "targets": [
+          {
+            "label": "T1",
+            "price": 1.33716,
+            "rr": 2.999999999999207
+          },
+          {
+            "label": "T2",
+            "price": 1.33351,
+            "rr": 16.035714285710547
+          }
+        ]
+      }
+    },
+    "entryModel": "countertrend-entry-model-1-v4",
+    "conditions": {
+      "m5Bos": {
+        "type": "BOS",
+        "direction": "short",
+        "depth": 1,
+        "originTime": 1789759200,
+        "price": 1.33869,
+        "pivotTime": 1789757100,
+        "candleTime": 1789930800,
+        "recognizedAt": 1789931100
+      },
+      "m1PivotBreak": {
+        "type": "pivot-break",
+        "direction": "short",
+        "price": 1.3389,
+        "pivotTime": 1789951740,
+        "originTime": 1789951200,
+        "originPrice": 1.33926,
+        "pullbackTime": 1789951980,
+        "pullbackPrice": 1.33908,
+        "pivotRecognizedAt": 1789952340,
+        "candleTime": 1789952100,
+        "breachKnownAt": 1789952160,
+        "recognizedAt": 1789952340
+      },
+      "retest": {
+        "candleTime": 1789971720,
+        "recognizedAt": 1789971780,
+        "orderBlock": {
+          "top": 1.3376599999999998,
+          "bottom": 1.33748,
+          "dir": -1,
+          "fvg": 0.000140000000000029,
+          "active": true,
+          "touched": true,
+          "invalidated": true,
+          "retested": false,
+          "retestedAt": null,
+          "startTime": 1789970400,
+          "endTime": 1789971900,
+          "recognizedAt": 1789971000,
+          "inclusionRule": "formedSinceDrConfirmation"
+        }
+      },
+      "fvg": {
+        "direction": "short",
+        "candleTime": 1789973580,
+        "recognizedAt": 1789973700,
+        "gap": 7.00000000000145e-05
+      }
+    },
+    "confirmedAt": 1789944000,
+    "sizing": {
+      "version": "countertrend-m5-bos-full-size-v2",
+      "model": "dr-against-m5-trend",
+      "evaluatedAt": 1789973700,
+      "factor": 1,
+      "reason": "m5BosConfirmed",
+      "bos": {
+        "type": "BOS",
+        "direction": "short",
+        "depth": 1,
+        "originTime": 1789759200,
+        "price": 1.33869,
+        "pivotTime": 1789757100,
+        "candleTime": 1789930800,
+        "recognizedAt": 1789931100
+      }
+    }
+  },
+  "runId": "setup2-275842e7b36252c6ca703520",
+  "outcomes": [
+    {
+      "variant": "wide",
+      "entryId": "GBPUSD:GBPUSD:setup1:GBPUSD:short:1789943400:countertrend-entry-model-1-v4:1789973700",
+      "entryTime": 1789973700,
+      "entryPrice": 1.3379999999999999,
+      "stopPrice": 1.3376599999999998,
+      "riskBudget": 500,
+      "entrySizing": {
+        "version": "countertrend-m5-bos-full-size-v2",
+        "model": "dr-against-m5-trend",
+        "evaluatedAt": 1789973700,
+        "factor": 1,
+        "reason": "m5BosConfirmed",
+        "bos": {
+          "type": "BOS",
+          "direction": "short",
+          "depth": 1,
+          "originTime": 1789759200,
+          "price": 1.33869,
+          "pivotTime": 1789757100,
+          "candleTime": 1789930800,
+          "recognizedAt": 1789931100
+        }
+      },
+      "lots": 0,
+      "t1Lots": 0,
+      "actualRisk": 0,
+      "status": "notExecutable",
+      "reason": "invalidStop",
+      "target1Price": 1.33716,
+      "target2Price": 1.33351,
+      "outcome": null,
+      "pnlUsd": null,
+      "rMultiple": null,
+      "realizedPnlUsd": 0,
+      "t1PnlUsd": 0,
+      "t1Time": null,
+      "t1RecognizedAt": null,
+      "exitTime": null,
+      "exitRecognizedAt": null,
+      "exitPrice": null,
+      "ambiguityRecognizedAt": null,
+      "evaluatedAt": 1790805600,
+      "costVersion": "usd5-roundturn-opening-volume-v1",
+      "commissionUsd": 0,
+      "netPnlUsd": null,
+      "netRMultiple": null,
+      "realizedNetPnlUsd": null
+    },
+    {
+      "variant": "narrow",
+      "entryId": "GBPUSD:GBPUSD:setup1:GBPUSD:short:1789943400:countertrend-entry-model-1-v4:1789973700",
+      "entryTime": 1789973700,
+      "entryPrice": 1.3379999999999999,
+      "stopPrice": 1.33828,
+      "riskBudget": 500,
+      "entrySizing": {
+        "version": "countertrend-m5-bos-full-size-v2",
+        "model": "dr-against-m5-trend",
+        "evaluatedAt": 1789973700,
+        "factor": 1,
+        "reason": "m5BosConfirmed",
+        "bos": {
+          "type": "BOS",
+          "direction": "short",
+          "depth": 1,
+          "originTime": 1789759200,
+          "price": 1.33869,
+          "pivotTime": 1789757100,
+          "candleTime": 1789930800,
+          "recognizedAt": 1789931100
+        }
+      },
+      "lots": 17,
+      "t1Lots": 8.5,
+      "actualRisk": 476,
+      "status": "closed",
+      "reason": null,
+      "target1Price": 1.33716,
+      "target2Price": 1.33351,
+      "outcome": "t1Be",
+      "pnlUsd": 714,
+      "rMultiple": 1.5,
+      "realizedPnlUsd": 714,
+      "t1PnlUsd": 714,
+      "t1Time": 1789974060,
+      "t1RecognizedAt": 1789974120,
+      "exitTime": 1789976880,
+      "exitRecognizedAt": 1789976940,
+      "exitPrice": 1.3379999999999999,
+      "ambiguityRecognizedAt": null,
+      "evaluatedAt": 1790805600,
+      "costVersion": "usd5-roundturn-opening-volume-v1",
+      "commissionUsd": 85,
+      "netPnlUsd": 629,
+      "netRMultiple": 1.3214285714285714,
+      "realizedNetPnlUsd": 629
+    }
+  ]
+}

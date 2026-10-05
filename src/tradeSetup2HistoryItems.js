@@ -35,7 +35,7 @@ export function tradeSetup2HistoryItems(results,candidates,options) {
   for(const entry of entries) {
     const key=`${entry.runId}:${entry.setupKey ?? entry.snapshotId}`;
     if(bySetup.get(key)?.kind==='candidate')bySetup.delete(key);
-    bySetup.set(`${key}:${entry.snapshotId}`,entry);
+    bySetup.set(`${key}:${entry.snapshotId}:${entry.variant}`,entry);
   }
   const limit=Math.max(0,Math.floor(options.historyCount ?? 5));
   return ['long','short'].flatMap(direction=>{

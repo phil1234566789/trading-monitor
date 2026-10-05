@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { entryRiskScale, entryRiskSpec } from '../src/entryRisk.js';
 
 describe('entry risk scales', () => {
+  it.each([null,undefined])('does not abort other variants for missing scale %s',scale=>{
+    expect(entryRiskSpec(scale,'SL weit','rScale','GBPUSD')).toBeNull();
+  });
   it.each([null, NaN, 1.35, 1.34])('does not invent short risk for invalid stop %s', stop => {
     expect(entryRiskScale(1.35, stop, [], 'GBPUSD', 'short').status).toBe('unknown');
   });
