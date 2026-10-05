@@ -18,6 +18,7 @@ import {renderMarketStructureAnalysis} from '../marketStructureRendering';
 import {useSnapshotIndicators} from './useSnapshotIndicators.js';
 import {renderPersistedZones} from '../orderBlocks.js';
 import {snapshotChecklistAt} from '../checklistReplayView.js';
+import {reserveEntryOverlaySpace} from '../entryOverlayLayout.js';
 
 export function useTradeSetup2History(props,checklist,{repository,configurationInput,evaluationTime}) {
   const results=shallowRef([]),candidates=shallowRef([]),selected=shallowRef(null),status=ref(''),error=ref('');
@@ -72,7 +73,8 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     if(chart&&displayReady&&snapshot?.id===props.selectedTradeSetup2Id&&props.tradeSetup2RunId&&key!==focusedRouteKey) {
       const firstEntry=Math.min(...(snapshot.entrySnapshots ?? [snapshot]).map(s=>s.entry?.candleTime ?? s.knownAt));
       const viewport=computeJumpViewport(displayCandles.value,firstEntry,Math.min(evaluationTime(),displayCandles.value.at(-1)?.time ?? evaluationTime()),null);
-      if(viewport){chart.timeScale().setVisibleLogicalRange(viewport);focusedRouteKey=key;}
+      if(viewport){chart.timeScale().setVisibleLogicalRange(viewport);
+        reserveEntryOverlaySpace(chart,displayCandles.value,entry.length*(props.tradeSetup2Variant?1:2));focusedRouteKey=key;}
     }
   }
   async function select(id,runId) {

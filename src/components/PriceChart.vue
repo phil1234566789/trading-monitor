@@ -2807,6 +2807,8 @@ defineExpose({
 
 .chart-container {
   flex: 1;
+  /* Die Canvas-Breite darf das Verkleinern neben der Checklist nicht verhindern. */
+  min-width: 0;
   min-height: 0;
 }
 

@@ -8,6 +8,33 @@ const entry = { id: 'GBPUSD:setup:entry-1', label: 'Entry 1', instrument: 'GBPUS
   scales: { wide: entryRiskScale(1.35,1.3506,[{ label:'T1', price:1.3472 }],'GBPUSD','short'),
     narrow: entryRiskScale(1.35,1.3503,[{ label:'T1', price:1.3472 }],'GBPUSD','short') } };
 describe('M1 entry annotation', () => {
+  it('separates two Long or Short annotations from the last candle while keeping historical anchors',()=>{
+    for(const direction of ['long','short']){
+      const sign=direction==='long'?1:-1;
+      const candles=[{time:2940},{time:3000},{time:3600}];
+      const timeToCoordinate=t=>({2940:200,3000:300,3600:550})[t];
+      const chart={timeScale:()=>({timeToCoordinate,options:()=>({barSpacing:10})}),
+        subscribeCrosshairMove:vi.fn(),unsubscribeCrosshairMove:vi.fn()};
+      const series={priceToCoordinate:p=>300-(p-1.35)*10000,detachPrimitive:vi.fn(),
+        attachPrimitive:p=>p.attached({chart,series,requestUpdate:vi.fn()})};
+      const entries=[2940,3000].map((time,i)=>({...entry,id:String(i),candleTime:time,recognizedAt:time+60,
+        scales:{wide:entryRiskScale(1.35,1.35-sign*0.0006,[{label:'T1',price:1.35+sign*0.0028}],'GBPUSD',direction)}}));
+      const primitives=[];renderM1Entry(series,entries,primitives,candles,'1m','wide');
+      const boxes=[];
+      for(const [i,p] of primitives.entries()){
+        p.updateAllViews();
+        const ctx=Object.fromEntries(['setLineDash','beginPath','moveTo','lineTo','stroke','fillRect','strokeRect','fillText'].map(k=>[k,vi.fn()]));
+        p.paneViews()[0].renderer().draw({useBitmapCoordinateSpace:cb=>cb({context:ctx,horizontalPixelRatio:2,verticalPixelRatio:2,bitmapSize:{width:2000,height:1200}})});
+        boxes.push(p.views[0].point.box);
+        expect(boxes[i].left).toBeGreaterThan(555);
+        expect(ctx.moveTo.mock.calls[0][0]).toBe((i?300:200)*2);
+        expect(ctx.lineTo.mock.calls.every(a=>a.every(Number.isFinite))).toBe(true);
+        expect(ctx.fillText.mock.calls.filter(a=>/^3R|^6R|^10R|^SL|^T1/.test(a[0])).every(a=>a[1]>555*2)).toBe(true);
+        expect(ctx.fillText.mock.calls.some(a=>a[0].startsWith(`Entry ${i+1} ·`))).toBe(true);
+      }
+      expect(boxes[1].left).toBeGreaterThan(boxes[0].right);
+    }
+  });
   it('keeps one primitive per event and clears on rewind, hidden M1 or another timeframe', () => {
     const series = { attachPrimitive: vi.fn(), detachPrimitive: vi.fn() };
     const primitives = [], candles = [{ time: 2940 }];
@@ -51,6 +78,11 @@ describe('M1 entry annotation', () => {
     expect(first.fillText.mock.calls.some(args => args[0].includes('T1 4,67R'))).toBe(true);
     timeToCoordinate.mockReturnValue(450);
     expect(draw().moveTo.mock.calls[0][0]).toBe(900);
+    timeToCoordinate.mockReturnValue(900);
+    expect(draw().fillText.mock.calls.some(args=>args[0]==='Entry 1')).toBe(true);
+    expect(primitive.views[0].point.box).toMatchObject({left:925,right:1070});
+    timeToCoordinate.mockReturnValue(450);
+    expect(draw().fillText.mock.calls.some(args=>args[0]==='Entry 1')).toBe(true);
     primitive.candles = [{ time:2700 }]; primitive.currentBar = '5m';
     expect(draw().moveTo.mock.calls[0][0]).toBe(916);
     expect(timeToCoordinate).toHaveBeenLastCalledWith(2700);
