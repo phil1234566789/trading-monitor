@@ -1,9 +1,11 @@
 <script setup>
-import { ref, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { simulationPinOutcomeLabel } from '../simulationPinPresentation.js';
-const props = defineProps({ open:Boolean, pins:Array, loading:Boolean, saving:Boolean, error:String });
+const props = defineProps({ open:Boolean, pins:Array, unmatched:{type:Array,default:()=>[]}, runId:String, loading:Boolean, saving:Boolean, error:String });
 const emit = defineEmits(['close','remove','refresh']);
 const dialog = ref(null), confirmation = ref(null);
+const removable=computed(()=>props.pins.filter(p=>!props.runId || p.simulationRunId===props.runId));
+const sections=computed(()=>[{label:'Zugeordnet',pins:props.pins},{label:'Nicht zugeordnet',pins:props.unmatched}]);
 watch(() => props.open, async open => {
   confirmation.value = null;
   if (open) { await nextTick(); if (!dialog.value.open) dialog.value.showModal(); }
@@ -19,24 +21,31 @@ function removeConfirmed() {
 </script>
 <template>
   <dialog ref="dialog" class="pin-list" aria-labelledby="pin-list-title" @cancel="emit('close')" @close="emit('close')">
-    <header><h2 id="pin-list-title">Alle Pins · Lauf neu ({{ pins.length }})</h2><button :disabled="saving" @click="emit('close')">Schließen</button></header>
-    <p>Alle Pins dieses Laufs, unabhängig von den Seitenfiltern.</p>
+    <header><h2 id="pin-list-title">Alle Pins · Lauf neu ({{ pins.length+unmatched.length }})</h2><button :disabled="saving" @click="emit('close')">Schließen</button></header>
+    <p>Pins dieses und früherer Läufe, unabhängig von den Seitenfiltern. Kommentare und Ursprung bleiben erhalten.</p>
     <p v-if="error" role="alert">{{ error }} <button @click="emit('refresh')">Erneut laden</button></p>
     <p v-if="loading || saving" role="status">{{ saving ? 'Pins werden entfernt…' : 'Pins werden geladen…' }}</p>
     <template v-else>
-      <p v-if="!pins.length" role="status">Keine Pins in diesem Lauf.</p>
-      <button v-else :disabled="!!error" @click="confirmation=pins.map(p=>p.id)">Alle {{ pins.length }} Pins dieses Laufs entfernen</button>
+      <p v-if="!pins.length && !unmatched.length" role="status">Keine Pins vorhanden.</p>
+      <button v-if="removable.length" :disabled="!!error" @click="confirmation=removable.map(p=>p.id)">Alle {{ removable.length }} Pins dieses Laufs entfernen</button>
       <div v-if="confirmation" class="confirmation" role="alert">
         <p>{{ confirmation.length }} {{ confirmation.length===1?'Pin wirklich entfernen?':'Pins wirklich entfernen?' }} Dies lässt sich nicht rückgängig machen.</p>
         <button @click="removeConfirmed">Ja, entfernen</button> <button @click="confirmation=null">Abbrechen</button>
       </div>
-      <ul><li v-for="pin in pins" :key="pin.id">
+      <section v-for="section in sections" :key="section.label">
+      <h3>{{ section.label }} ({{ section.pins.length }})</h3>
+      <p v-if="!section.pins.length">Keine Pins.</p>
+      <ul><li v-for="pin in section.pins" :key="pin.id">
         <strong><span class="flag">⚑</span> {{ label(pin) }} · {{ pin.simulationContext?.instrument }}</strong>
         <p>{{ pin.simulationContext?.direction==='long'?'Long':'Short' }} · {{ pin.simulationContext?.entry?.time?.berlin ?? pin.simulationContext?.recognizedAt?.berlin }} · {{ simulationPinOutcomeLabel(pin.simulationContext) }}</p>
         <p>{{ pin.note || 'Kein Anliegen eingetragen.' }}</p>
-        <RouterLink v-if="pin.simulationContext?.chartLink" :to="pin.simulationContext.chartLink" target="_blank" rel="noopener noreferrer">Im Chart</RouterLink>
-        <button @click="confirmation=[pin.id]">Pin entfernen</button>
+        <p v-if="pin.unmatchedReason">{{ pin.unmatchedReason }}</p>
+        <p v-if="pin.originLabel">Ursprung: {{ pin.originLabel }}</p>
+        <RouterLink v-if="pin.currentChartLink" :to="pin.currentChartLink" target="_blank" rel="noopener noreferrer">Im aktuellen Chart</RouterLink>
+        <RouterLink v-if="pin.simulationContext?.chartLink" :to="pin.simulationContext.chartLink" target="_blank" rel="noopener noreferrer">Ursprünglicher Chart / Snapshot</RouterLink>
+        <button v-if="!runId || pin.simulationRunId===runId" @click="confirmation=[pin.id]">Pin entfernen</button>
       </li></ul>
+      </section>
     </template>
   </dialog>
 </template>

@@ -18,12 +18,12 @@ const route=useRoute(),router=useRouter();
 const filters=ref(comparisonFilters(route.query)),pins=ref([]);
 const repository=createSimulationRepository(supabase);
 const {runs,selectedRun,comparisonRun,current,previous,datasets,loading,error,dateError,refresh}=useSimulationComparison(repository,filters,pins);
-const pinState=useSimulationPins(filters,selectedRun,computed(()=>datasets.value.get(filters.value.run)?.results ?? []));
+const pinState=useSimulationPins(filters,selectedRun,computed(()=>datasets.value.get(filters.value.run)?.results ?? []),{repository,datasets,runs});
 const pinListOpen=ref(false);
-const listedPins=computed(()=>pinState.pins.value.filter(p=>p.simulationRunId===filters.value.run));
+const listedPins=pinState.listedPins;
 function showPins(){pinState.target.value=null;pinListOpen.value=true;}
 watch(()=>filters.value.run,()=>{pinListOpen.value=false;});
-watch(pinState.pins,value=>{pins.value=value;},{immediate:true});
+watch([pinState.pins,pinState.associatedPins],([raw,associated])=>{pins.value=[...raw,...associated];},{immediate:true});
 function refreshAll(){refresh();pinState.refresh();}
 watch(()=>route.query,query=>{const next=comparisonFilters(query);if(JSON.stringify(next)!==JSON.stringify(filters.value))filters.value=next;});
 watch(filters,value=>{const query=Object.fromEntries(Object.entries(value).filter(([,v])=>v));if(JSON.stringify(comparisonFilters(route.query))!==JSON.stringify(value))router.replace({path:'/statistik',query});},{deep:true});
@@ -53,11 +53,11 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
         <p v-if="!current.groups.length" role="status" class="empty">Keine DRs für diese Filterauswahl.</p>
         <SimulationComparisonMetrics :current="current.results" :previous="previous.results" :compare="!!filters.compare" />
         <SimulationRunQuality :current="current" :previous="previous" :compare="!!filters.compare" />
-        <SimulationDrList :groups="current.groups" :results="current.results" :is-pinned="pinState.isPinned" :pin-note="pinState.pinNote" :pin-count="listedPins.length" @show-pins="showPins" @pin-menu="pinState.open" />
+        <SimulationDrList :groups="current.groups" :results="current.results" :is-pinned="pinState.isPinned" :pin-note="pinState.pinNote" :pin-count="listedPins.length+pinState.unmatchedPins.value.length" @show-pins="showPins" @pin-menu="pinState.open" />
       </template>
     </div>
     <SimulationPinMenu :target="pinState.target.value" :saving="pinState.saving.value" :error="pinState.error.value" @close="pinState.target.value=null" @save="pinState.save" @remove="pinState.remove" @show-pins="showPins" />
-    <SimulationPinList :open="pinListOpen" :pins="listedPins" :loading="pinState.loading.value" :saving="pinState.saving.value" :error="pinState.error.value" @close="pinListOpen=false" @remove="pinState.removeListed" @refresh="pinState.refresh" />
+    <SimulationPinList :open="pinListOpen" :pins="listedPins" :unmatched="pinState.unmatchedPins.value" :run-id="filters.run" :loading="pinState.loading.value" :saving="pinState.saving.value" :error="pinState.error.value" @close="pinListOpen=false" @remove="pinState.removeListed" @refresh="pinState.refresh" />
   </main>
 </template>
 <style scoped>

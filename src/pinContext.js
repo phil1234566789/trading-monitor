@@ -155,8 +155,11 @@ export async function fetchPinContext() {
 }
 
 export async function fetchSimulationPins(runId) {
-  const {data,error}=await fetchAllRows((from,to)=>supabase.from('pin_context').select(ROW_COLUMNS)
-    .eq('simulation_run_id',runId).order('id').range(from,to));
+  const {data,error}=await fetchAllRows((from,to)=>{
+    let query=supabase.from('pin_context').select(ROW_COLUMNS).in('kind',['simulation_dr','simulation_checkpoint','simulation_entry']);
+    if(runId)query=query.eq('simulation_run_id',runId);
+    return query.order('id').range(from,to);
+  });
   if(error) throw error;
   return data.map(toEntry);
 }

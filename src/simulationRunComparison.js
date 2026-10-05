@@ -34,7 +34,8 @@ export function reviewGroups(snapshots) {
 }
 export function simulationGroupHasPin(group, pins) {
   const ids = new Set([group.snapshot.id, group.candidate?.id, group.latestCandidate?.id, ...group.entries.map(e => e.id)]);
-  return pins.some(p => p.simulationRunId === group.snapshot.runId && (ids.has(p.simulationSnapshotId) || ids.has(p.simulationEntrySnapshotId)
+  return pins.some(p => p.associatedRunId === group.snapshot.runId && p.associationGroupKey === group.key
+    || p.simulationRunId === group.snapshot.runId && (ids.has(p.simulationSnapshotId) || ids.has(p.simulationEntrySnapshotId)
     || p.simulationContext?.setupKey === group.snapshot.setupKey));
 }
 export function filterReviewGroups(groups, filters, pins = []) {
