@@ -6,7 +6,7 @@ import { detectOrderBlocks } from './orderBlocks.js';
 import { obMinimum } from './instrumentConfig.js';
 import { buildSnapshotM5 } from './tradeSetup2SnapshotIndicators.js';
 
-export function calculateSnapshotIndicators({ frames: rawFrames, source, config, at, props }) {
+export function calculateSnapshotIndicators({ frames: rawFrames, source, config, at, props }, onProgress) {
   const sessions = config.sessions.filter(s => s.instrument === source.instrument);
   const frames = Object.fromEntries(Object.entries(rawFrames).map(([bar, rows]) => [bar,
     markIgnoredCandles(rows, sessions, sec => berlinOffsetMinutes(sec * 1000))]));
@@ -24,6 +24,8 @@ export function calculateSnapshotIndicators({ frames: rawFrames, source, config,
     pivots[bar] = { pivotsOuter: computeRangesPivots(candles, outer ?? 5, -Infinity),
       pivotsInner: computeRangesPivots(candles, inner ?? 2, -Infinity) };
   }
+  // Debug-Pivots brauchen keinen vollständigen historischen Close-BOS-Replay.
+  onProgress?.({ zones, pivots });
   const m5 = props.showM5Structure && frames['5m'] ? buildSnapshotM5(frames['5m'], source, config, at) : null;
   const h1=props.showRanges&&frames['1h']?{state:buildMarketStructureState(pivots['1h'].pivotsOuter,
     pivots['1h'].pivotsInner,config.rangesPeriod??5,config.ranges2Period??2,frames['1h'].filter(c=>!c.ignored)),...pivots['1h']}:null;

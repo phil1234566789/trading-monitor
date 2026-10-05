@@ -38,3 +38,26 @@ it.each(['message', 'runtime', 'clone'])('cleans up on %s errors', async kind =>
   await expect(pending).rejects.toThrow('bad');
   expect(worker.terminate).toHaveBeenCalledOnce();
 });
+
+
+it('publishes debug pivots while the structure calculation is still running', async () => {
+  const worker = workerMock(), onProgress = vi.fn(), controller = new AbortController();
+  const pending = calculateSnapshotIndicatorsInWorker({}, { signal: controller.signal, onProgress });
+  const progress = { zones: [], pivots: { '5m': { pivotsOuter: [{ pivotTime: 600, price: 1.324 }] } } };
+  worker.onmessage({ data: { progress } });
+  expect(onProgress).toHaveBeenCalledWith(progress);
+  expect(worker.terminate).not.toHaveBeenCalled();
+  const final = { ...progress, m5: { state: {} } };
+  worker.onmessage({ data: { result: final } });
+  expect(await pending).toBe(final);
+  expect(worker.terminate).toHaveBeenCalledOnce();
+});
+
+it('ignores late progress after aborting a replay calculation', async () => {
+  const worker = workerMock(), controller = new AbortController(), onProgress = vi.fn();
+  const pending = calculateSnapshotIndicatorsInWorker({}, { signal: controller.signal, onProgress });
+  controller.abort();
+  await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+  worker.onmessage({ data: { progress: { pivots: {} } } });
+  expect(onProgress).not.toHaveBeenCalled();
+});

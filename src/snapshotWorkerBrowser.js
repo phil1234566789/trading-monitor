@@ -1,5 +1,5 @@
 // Abbruch beendet auch die CPU-Arbeit, nicht nur das spätere Zeichnen.
-export function runSnapshotWorker(input, { signal } = {}) {
+export function runSnapshotWorker(input, { signal, onProgress } = {}) {
   return new Promise((resolve, reject) => {
     signal?.throwIfAborted();
     const worker = new Worker(new URL('./snapshotIndicatorWorker.js', import.meta.url), { type: 'module' });
@@ -7,6 +7,7 @@ export function runSnapshotWorker(input, { signal } = {}) {
     const cancel = () => { cleanup(); reject(new DOMException('Aborted', 'AbortError')); };
     signal?.addEventListener('abort', cancel, { once: true });
     worker.onmessage = ({ data }) => {
+      if (data.progress) { if (!signal?.aborted) onProgress?.(data.progress); return; }
       cleanup();
       data.error ? reject(new Error(data.error)) : resolve(data.result);
     };

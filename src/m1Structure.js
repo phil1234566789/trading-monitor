@@ -28,10 +28,10 @@ export function m1AnchorFromM5(state, reaction, direction, evaluatedAt) {
   return pivot ? { pivotTime: pivot.pivotTime, price: pivot.price, recognizedAt: evaluatedAt } : bos;
 }
 
-export function m1PrerequisiteReason(checklist) {
+export function m1PrerequisiteReason(checklist, { allowEnded = false } = {}) {
   if (!checklist || checklist.status !== 'ready') return 'prerequisites';
   if (checklist.model !== 'countertrend' && checklist.checks?.time?.status === 'blocked') return 'time';
-  if (setup2EntrySearchEnded(checklist)) return 'ended';
+  if (!allowEnded && setup2EntrySearchEnded(checklist)) return 'ended';
   if (!checklist.setup?.primary || !hasConfirmedChecklistAbc(checklist.checks)) return 'abc';
   if (checklist.dealingRange && checklist.dealingRange.status !== 'validated') return 'validation';
   if (entryPatternVersion(checklist)===ENTRY_PATTERN_1_VERSION) {
@@ -40,8 +40,8 @@ export function m1PrerequisiteReason(checklist) {
   return null;
 }
 
-export function activeM1Context(checklist) {
-  if (m1PrerequisiteReason(checklist)) return null;
+export function activeM1Context(checklist, options) {
+  if (m1PrerequisiteReason(checklist, options)) return null;
   const current=checklist.model==='countertrend' && entryPatternVersion(checklist)===ENTRY_PATTERN_1_VERSION;
   const anchor=current ? {entryPattern:ENTRY_PATTERN_1_VERSION,primary:checklist.setup.primary,
     pivotTime:checklist.setup.primary.sweep.level.touchedTime,price:checklist.setup.primary.sweep.level.price,

@@ -53,7 +53,9 @@ export function useSnapshotIndicators(props, snapshot, repository, fetchCandles 
       // Nur der Anker wird benötigt; große gespeicherte Strukturbelege bleiben im Hauptthread.
       const input = { frames, config, at, props: flags, source: { instrument: source.instrument,
         checklist: { checks: { m5Trend: { structureStart: snapshotM5Anchor(source) } } } } };
-      const { zones, pivots, m5,h1 } = await calculateSnapshotIndicatorsInWorker(input, { signal });
+      const { zones, pivots, m5,h1 } = await calculateSnapshotIndicatorsInWorker(input, { signal, onProgress: progress => {
+        if (!signal.aborted) state.value = { ...progress, message: 'Debug-Pivots geladen · Struktur wird berechnet …' };
+      } });
       if (signal.aborted) return;
       state.value = { zones, pivots, m5,...(h1?{h1}:{}), message: `OBs und Debug-Pivots aus historischen Kerzen berechnet · bis zum Replay-Stand ${formatDatedTime(at)} · Checklist ${formatDatedTime(source.knownAt)}${props.showM5Structure && !m5 ? ' · M5-Anker/Vorlauf fehlen' : ''}` };
     } catch (error) {

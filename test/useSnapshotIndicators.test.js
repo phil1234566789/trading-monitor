@@ -149,3 +149,27 @@ it('loads both real structure endpoints within a bounded chart window', () => {
   expect(snapshotChartCandleCount(snapshot, '1h', 1000)).toBe(1000);
   expect(snapshotChartCandleCount({ ...snapshot, knownAt: 1e10 }, '1m', 1000)).toBe(50000);
 });
+
+
+it('renders worker progress before BOS completion and clears it on switching off', async () => {
+  let finish;
+  const partial = { zones: [], pivots: { '5m': { pivotsOuter: [{ pivotTime: 600, price: 1.324 }] } } };
+  calculateSnapshotIndicatorsInWorker.mockImplementationOnce(async (_input, { onProgress }) => {
+    onProgress(partial);
+    return new Promise(resolve => { finish = resolve; });
+  });
+  const props = reactive({ tradeSetup2RunId: 't54', currentBar: '5m', showM5Structure: true });
+  const source = shallowRef({ instrument: 'GBPUSD', knownAt: 900 });
+  const scope = effectScope();
+  const state = scope.run(() => useSnapshotIndicators(props, source, { getRun: async () => ({ configuration: {
+    instrument: 'GBPUSD', setupVersion: SETUP2_VERSION, sessions: [] } }) },
+    async () => [{ time: 600, open: 1.324, high: 1.325, low: 1.323, close: 1.324 }]));
+  try {
+    await flush();
+    expect(state.value.pivots).toEqual(partial.pivots);
+    expect(state.value.message).toContain('Struktur wird berechnet');
+    props.showM5Structure = false; await flush();
+    finish({ ...partial, m5: { state: {} } }); await flush();
+    expect(state.value.pivots).toEqual({});
+  } finally { scope.stop(); }
+});

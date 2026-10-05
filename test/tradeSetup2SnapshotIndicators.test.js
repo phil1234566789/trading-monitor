@@ -110,3 +110,17 @@ it('advances confirmed M1 pivots with replay while preserving the saved checklis
   expect(later.message).toContain('Replay'); expect(later.message).toContain('Checklist');
   expect(JSON.stringify(source)).toBe(before);
 });
+
+
+it('keeps the real T54 M1 pivots visible at DR end without reopening entry search', async () => {
+  const { default: fixture } = await import('./fixtures/gbpusd-t54-ended-snapshot.json');
+  const { activeM1Context } = await import('../src/m1Structure.js');
+  const source = fixture.snapshot, before = JSON.stringify(source);
+  expect(activeM1Context(source.checklist)).toBeNull();
+  const loaded = await createSnapshotM1Reader(repository(fixture.configuration), async () => fixture.candles)('t54', source);
+  expect(loaded.result?.status).toBe('ready');
+  expect(loaded.result?.pivotsOuter).toHaveLength(11);
+  expect(loaded.result?.pivotsOuter.every(p => p.pivotTime < source.knownAt)).toBe(true);
+  expect(activeM1Context(source.checklist)).toBeNull();
+  expect(JSON.stringify(source)).toBe(before);
+});

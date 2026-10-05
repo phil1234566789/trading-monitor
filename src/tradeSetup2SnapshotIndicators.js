@@ -91,7 +91,8 @@ export function createSnapshotM1Reader(repository, fetchCandles) {
   };
   async function load(runId, snapshot, at,signal) {
     const unavailable = message => ({ result: null, message });
-    const context = activeM1Context(snapshot.checklist);
+    // Das DR-Ende stoppt neue Entries, nicht die historische Pivot-Anzeige.
+    const context = activeM1Context(snapshot.checklist, { allowEnded: true });
     if (!context || context.instrument !== snapshot.instrument
       || ![snapshot.knownAt, context.anchor.pivotTime, context.anchor.recognizedAt, context.anchor.price].every(Number.isFinite)
       || context.anchor.recognizedAt > snapshot.knownAt) {
