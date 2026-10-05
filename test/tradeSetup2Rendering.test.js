@@ -5,6 +5,25 @@ import {restoreTradeSetup2Snapshot} from '../src/tradeSetup2Snapshot.js';
 import {chartColors,cssColor} from '../src/chartColors.js';
 import {renderStructurePivots,renderLowerStructure} from '../src/structureOverlay.js';
 import {snapshotDetailEvidence} from '../src/tradeSetup2DetailEvidence.js';
+import {findNearbyPinCandidates,hasNearbyPinCandidate} from '../src/priceChartHitTest.js';
+
+it('pins the original saved M5 OB even when its drawing starts at the loaded candle window',()=>{
+  const series={attachPrimitive:vi.fn(),detachPrimitive:vi.fn()},primitives=[];
+  const snapshot={knownAt:300,instrument:'GBPUSD',evidence:[
+    {kind:'zone',role:'reactionOB',timeframe:'5m',knownAt:300,fromTime:120,toTime:600,top:2,bottom:1,styleKey:'obBearM5'},
+    {kind:'zone',role:'fvg',timeframe:'1m',knownAt:300,fromTime:120,toTime:600,top:2,bottom:1,styleKey:'fvgCandle'}]};
+  renderSetup2Detail(series,snapshot,primitives,[],[{time:300},{time:600}],'5m',600,{snapshotView:true});
+  const blocks=primitives.filter(p=>p.pinZone);
+  expect(blocks).toHaveLength(1);
+  expect(blocks[0].zone.startTime).toBe(300);
+  blocks[0].distanceTo=()=>0;
+  const bag={orderBlockPrimitives:blocks,tradePrimitives:[],liquidityPrimitives:[],tradeSetupLinkPrimitives:[],tradeConfirmationLinkPrimitives:[],divergencePrimitives:[],tscSetupPrimitives:[]};
+  expect(hasNearbyPinCandidate(0,0,bag)).toBe(true);
+  expect(findNearbyPinCandidates(0,0,bag,{symbol:'GBPUSD',currentBar:'5m'})).toEqual([
+    {kind:'m5_ob',distance:0,zone:{instrument:'GBPUSD',dirNum:-1,startTime:120,top:2,bottom:1}}]);
+  renderSetup2Detail(series,null,primitives,[],[{time:300}],'5m',600,{snapshotView:true});
+  expect(primitives).toHaveLength(0);
+});
 
 it('shows saved DR evidence with every indicator off and deduplicates repeated entry zones',()=>{
   const zone={kind:'zone',role:'entryOrderBlock',timeframe:'5m',knownAt:300,fromTime:120,toTime:300,top:2,bottom:1,styleKey:'obBearM5'};

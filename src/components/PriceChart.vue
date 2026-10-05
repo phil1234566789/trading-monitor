@@ -2136,7 +2136,7 @@ onMounted(() => {
   function pinPrimitivesBag() {
     return {
       tradePrimitives,
-      orderBlockPrimitives,
+      orderBlockPrimitives:[...orderBlockPrimitives,...setup2.pinOrderBlockPrimitives()],
       liquidityPrimitives,
       tradeSetupLinkPrimitives,
       tradeConfirmationLinkPrimitives,

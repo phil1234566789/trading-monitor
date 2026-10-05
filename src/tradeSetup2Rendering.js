@@ -77,6 +77,11 @@ export function renderSetup2Detail(series,snapshot,primitives,entryPrimitives,ca
     else if(e.kind==='segment')p=new DivergenceLinePrimitive({time:e.fromTime,price:e.fromPrice},{time:e.toTime,price:e.toPrice},
       {...options,label:e.role==='structure'?'':e.label},candles);
     else p=new LiquidityLinePrimitive({price:e.price,pivotTime:fromTime,endTime:e.toTime},options,candles);
+    if(e.kind==='zone' && ['5M','1H','4H'].includes(e.timeframe.toUpperCase()) && /^ob(Bull|Bear)/.test(e.styleKey)) {
+      // Die Zeichnung kann am Kerzenfenster abgeschnitten sein; Pins brauchen den Original-OB.
+      p.pinZone={top:e.top,bottom:e.bottom,startTime:e.fromTime,timeframe:e.timeframe.toUpperCase(),
+        dir:e.styleKey.startsWith('obBull')?1:-1};
+    }
     series.attachPrimitive(p);primitives.push(p);
   }
 }

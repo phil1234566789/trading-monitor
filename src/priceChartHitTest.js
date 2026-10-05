@@ -200,16 +200,17 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
   for (const p of orderBlockPrimitives) {
     const distance = p.distanceTo(x, y);
     if (distance > radius) continue;
-    if (p.zone.timeframe === "5M") {
+    const zone=p.pinZone ?? p.zone;
+    if (zone.timeframe === "5M") {
       candidates.push({
         kind: "m5_ob",
-        zone: { instrument: symbol, dirNum: p.zone.dir, top: p.zone.top, bottom: p.zone.bottom, startTime: p.zone.startTime },
+        zone: { instrument: symbol, dirNum: zone.dir, top: zone.top, bottom: zone.bottom, startTime: zone.startTime },
         distance,
       });
     } else {
       candidates.push({
         kind: "ob_zone",
-        zone: { instrument: symbol, timeframe: p.zone.timeframe, dir: p.zone.dir, startTime: p.zone.startTime },
+        zone: { instrument: symbol, timeframe: zone.timeframe, dir: zone.dir, startTime: zone.startTime },
         distance,
       });
     }
