@@ -5304,21 +5304,21 @@
     "semantic_hash": ""
   },
   "src/simulationRunComparison.js": {
-    "mtime": 1791194576.9002585,
-    "seen": 1791194997.5340924,
-    "ast_hash": "19ae8aef09fc04fbf34f6a173ecae11e",
+    "mtime": 1791195508.4450905,
+    "seen": 1791195695.500816,
+    "ast_hash": "aae62daa2579b5829b881c4810d2010a",
     "semantic_hash": ""
   },
   "test/simulationRunComparison.test.js": {
-    "mtime": 1791194576.927142,
-    "seen": 1791194997.5340924,
-    "ast_hash": "de6e0f88e8f9e1a8697999e5e2af4098",
+    "mtime": 1791195509.1693203,
+    "seen": 1791195695.5660083,
+    "ast_hash": "18272767feab70397e7991bc354fd9b3",
     "semantic_hash": ""
   },
   "src/components/SimulationComparisonFilters.vue": {
-    "mtime": 1791194576.885006,
-    "seen": 1791194997.5340924,
-    "ast_hash": "3c2ca2f8c4bdbadeba0a1a3a0e45a941",
+    "mtime": 1791195506.9736722,
+    "seen": 1791195695.4713366,
+    "ast_hash": "7cf7866baed694eae48468b2de32d73c",
     "semantic_hash": ""
   },
   "src/components/SimulationComparisonMetrics.vue": {
@@ -5352,9 +5352,9 @@
     "semantic_hash": ""
   },
   "src/composables/useSimulationComparison.js": {
-    "mtime": 1791140860.209506,
-    "seen": 1791194997.5340924,
-    "ast_hash": "43d7c5b7f5255c263f85b01788202075",
+    "mtime": 1791195507.7108057,
+    "seen": 1791195695.4813538,
+    "ast_hash": "2e5ea978bede1310abe4040a41c6ec69",
     "semantic_hash": ""
   },
   "test/simulationReviewFeatures.test.js": {
@@ -5568,9 +5568,9 @@
     "semantic_hash": ""
   },
   "test/setup2StageVersions.test.js": {
-    "mtime": 1791194576.9261403,
-    "seen": 1791194997.5340924,
-    "ast_hash": "8f4622ca03e6606d54cbdd01fae01f7c",
+    "mtime": 1791195554.0206594,
+    "seen": 1791195695.5640078,
+    "ast_hash": "2c5f9253be817e470b1da427662ec195",
     "semantic_hash": ""
   },
   "docs/setup2-stage-versions.html": {
@@ -5835,6 +5835,24 @@
     "mtime": 1791194576.9291403,
     "seen": 1791194997.5340924,
     "ast_hash": "e3d4cd75f3bc10cce39394d2195f191d",
+    "semantic_hash": ""
+  },
+  "src/simulationRunPresentation.js": {
+    "mtime": 1791195506.2634435,
+    "seen": 1791195695.500816,
+    "ast_hash": "468c9e706bbd98cd752d56e9cd4449e8",
+    "semantic_hash": ""
+  },
+  "test/simulationRunPresentation.test.js": {
+    "mtime": 1791195554.6923926,
+    "seen": 1791195695.5660083,
+    "ast_hash": "e71dda178c7ea517db34852d5a1306b2",
+    "semantic_hash": ""
+  },
+  "test/useSimulationComparison.test.js": {
+    "mtime": 1791195555.3977218,
+    "seen": 1791195695.580116,
+    "ast_hash": "1e3ac037a064c7c58b336208cc814f42",
     "semantic_hash": ""
   }
 }
