@@ -94,6 +94,20 @@ export function createSimulationRepository(db,{compactStructures=false}={}) {
     // Bestehende rohe Snapshots behalten ihr Speicherformat für die Unveränderlichkeitsprüfung.
     saveSetups: (runId, records) => batches('save_trade_setup_simulation_setups', runId,compactStructures?records.map(encodeSnapshotStructures):records),
     listRuns: async () => (await pages((from, to) => db.from('trade_setup_simulation_runs').select('run').order('id').range(from, to))).map(row => row.run),
+    listRunDrCounts: async runIds => {
+      if(!runIds.length)return new Map();
+      // Mehrere Stände und Re-Entries gehören zu derselben DR; nur ihre kleinen Schlüssel lesen.
+      const rows=await Promise.all(['trade_setup_simulation_setups','trade_setup_simulation_entries'].map(table=>
+        pages((from,to)=>db.from(table).select('run_id,instrument,setupKey:snapshot->>setupKey')
+          .in('run_id',runIds).order('run_id').order('id').range(from,to),10)));
+      const keys=new Map(runIds.map(id=>[id,new Set()])),incomplete=new Set();
+      for(const row of rows.flat()) {
+        if(!keys.has(row.run_id))throw new Error('DR-Zählung enthält keinen bekannten Lauf.');
+        if(!row.instrument || !row.setupKey){incomplete.add(row.run_id);continue;}
+        keys.get(row.run_id).add(JSON.stringify([row.instrument,row.setupKey]));
+      }
+      return new Map([...keys].map(([id,values])=>[id,incomplete.has(id)?null:values.size]));
+    },
     listSetups: async ({ runId, instrument } = {}) => {
       const rows = await pages((from, to) => {
         let q = db.from('trade_setup_simulation_setups').select('id,instrument,known_at,direction,setupKey:snapshot->>setupKey,dealingRange:snapshot->dealingRange').eq('run_id', runId).order('id').range(from, to);

@@ -94,6 +94,22 @@ describe('simulation history repository', () => {
     expect(rows.map(r => r.id)).toEqual([0, 1, 2, 3]);
     expect(offsets).toEqual([0, 2, 4]);
   });
+  it('counts unique stored DR keys across setup stands and entries, with capped-page pagination',async()=>{
+    const selections=[],offsets=[];
+    const datasets={trade_setup_simulation_setups:Array.from({length:119},(_,i)=>({run_id:'run',instrument:'GBPUSD',setupKey:`dr-${i%57}`})),
+      trade_setup_simulation_entries:Array.from({length:24},(_,i)=>({run_id:'run',instrument:'GBPUSD',setupKey:`dr-${i}`}))};
+    datasets.trade_setup_simulation_setups.push({run_id:'incomplete',instrument:'GBPUSD',setupKey:null});
+    const db={from:table=>{
+      const query={select:fields=>{selections.push(fields);return query;},in:()=>query,order:()=>query,
+        range:async start=>{offsets.push([table,start]);return {data:datasets[table].slice(start,start+2),error:null};}};
+      return query;
+    }};
+    const counts=await createSimulationRepository(db).listRunDrCounts(['run','empty','incomplete']);
+    expect(counts.get('run')).toBe(57);expect(counts.get('empty')).toBe(0);expect(counts.get('incomplete')).toBeNull();
+    expect(new Set(selections)).toEqual(new Set(['run_id,instrument,setupKey:snapshot->>setupKey']));
+    expect(offsets).toContainEqual(['trade_setup_simulation_setups',118]);
+    expect(offsets).toContainEqual(['trade_setup_simulation_entries',24]);
+  });
   it('batches writes and propagates a failure', async () => {
     const rpc = vi.fn().mockResolvedValueOnce({ error: null }).mockResolvedValueOnce({ error: new Error('failed') });
     await expect(createSimulationRepository({ rpc }).saveEntries('run', Array.from({ length: 101 }, () => ({})))).rejects.toThrow('failed');

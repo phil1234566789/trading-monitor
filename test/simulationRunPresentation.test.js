@@ -24,3 +24,11 @@ it('keeps indistinguishable September snapshots honest and single-DR labels inta
   }
   expect(simulationRunLabel({id:'single',from:100,to:200,status:'complete',startedAt:300,configuration:{label:'GBPUSD DR105'}})).toContain('GBPUSD DR105 · Gestartet am');
 });
+it('adds the whole-run DR count only when requested, keeping unknown and partial counts honest',()=>{
+  const run={id:'run12345',status:'complete',configuration:{label:'September'},dealingRangeCount:57};
+  expect(simulationRunLabel(run,{showDrCount:true})).toContain('September · 57 DRs');
+  expect(simulationRunLabel(run)).not.toContain('57 DRs');
+  expect(simulationRunLabel({...run,dealingRangeCount:0},{showDrCount:true})).toContain('0 DRs');
+  expect(simulationRunLabel({...run,dealingRangeCount:1,status:'running'},{showDrCount:true})).toContain('1 DR (vorläufig)');
+  for(const count of [undefined,null,-1,NaN,1.5])expect(simulationRunLabel({...run,dealingRangeCount:count},{showDrCount:true})).toContain('DR-Anzahl unbekannt');
+});

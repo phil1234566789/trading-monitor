@@ -13,6 +13,10 @@ export function useSimulationComparison(repository, filters, pins) {
       if (ticket !== revision) return;
       runs.value = sortSimulationRunsByExecution(available);
       if (!filters.value.run) { filters.value = {...filters.value,run:latestCompletedRun(available)}; return; }
+      // Die kleine Zusatzanzeige darf das Öffnen des ausgewählten Laufs nicht verzögern.
+      repository.listRunDrCounts(available.map(r=>r.id)).then(drCounts=>{
+        if(ticket===revision)runs.value=sortSimulationRunsByExecution(available.map(r=>({...r,dealingRangeCount:drCounts.get(r.id)??null})));
+      }).catch(()=>{});
       const ids = [...new Set([filters.value.run, filters.value.compare].filter(Boolean))];
       const data = await Promise.all(ids.map(async id => {
         const [snapshots, results] = await Promise.all([repository.listReviewSnapshots(id), repository.listResults({runId:id})]);

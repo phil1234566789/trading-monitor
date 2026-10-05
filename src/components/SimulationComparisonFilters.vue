@@ -1,10 +1,11 @@
 <script setup>
-import {simulationRunLabel as label} from '../simulationRunPresentation.js';
+import {simulationRunLabel} from '../simulationRunPresentation.js';
 import { DEALING_RANGE_LABELS } from '../tradeSetup2DealingRange.js';
 import { SETUP_TYPE_LABELS, DR_OUTCOME_LABELS } from '../simulationRunComparison.js';
 import { FEATURE_VALUES } from '../simulationReviewFeatures.js';
 const props=defineProps({modelValue:Object,runs:Array,features:Array});
 const emit=defineEmits(['update:modelValue']);
+const label=run=>simulationRunLabel(run,{showDrCount:true});
 const set=(key,value)=>emit('update:modelValue',{...props.modelValue,[key]:value});
 </script>
 <template>

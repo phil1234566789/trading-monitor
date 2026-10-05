@@ -20,10 +20,12 @@ export function sortSimulationRunsByExecution(runs) {
   });
 }
 
-export function simulationRunLabel(run) {
+export function simulationRunLabel(run,{showDrCount=false}={}) {
   const date=value=>fmtDateTime(value,{year:'numeric',second:'2-digit',timeZone:'Europe/Berlin'});
   const execution=simulationRunExecution(run);
   const timestamp=execution?`${execution.label} ${date(execution.time)}`:'Ausführungszeit unbekannt';
   const data=Number.isFinite(run.evaluatedAt)?` · Datenstand ${date(run.evaluatedAt)}`:'';
-  return `${entryPatternText(run.configuration?.label)??`${formatDatedTime(run.from)} – ${formatDatedTime(run.to)}`} · ${timestamp}${data} · ${simulationRunStatusLabel(run)} · ${run.id.slice(-8)}`;
+  const count=run.dealingRangeCount;
+  const drCount=!showDrCount?'':!Number.isInteger(count)||count<0?' · DR-Anzahl unbekannt':` · ${count} ${count===1?'DR':'DRs'}${run.status==='complete'?'':' (vorläufig)'}`;
+  return `${entryPatternText(run.configuration?.label)??`${formatDatedTime(run.from)} – ${formatDatedTime(run.to)}`}${drCount} · ${timestamp}${data} · ${simulationRunStatusLabel(run)} · ${run.id.slice(-8)}`;
 }
