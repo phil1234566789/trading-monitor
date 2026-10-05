@@ -1,6 +1,7 @@
 import { ref, computed, watch, onScopeDispose } from 'vue';
 import { reviewGroups, filterReviewGroups, groupResults, latestCompletedRun } from '../simulationRunComparison.js';
 import { applySimulationCommission } from '../tradeSetupSimulationCosts.js';
+import {sortSimulationRunsByExecution} from '../simulationRunPresentation.js';
 
 export function useSimulationComparison(repository, filters, pins) {
   const runs = ref([]), datasets = ref(new Map()), loading = ref(false), error = ref('');
@@ -10,7 +11,7 @@ export function useSimulationComparison(repository, filters, pins) {
     try {
       const available = await repository.listRuns();
       if (ticket !== revision) return;
-      runs.value = available.toSorted((a,b)=>(b.evaluatedAt ?? 0)-(a.evaluatedAt ?? 0));
+      runs.value = sortSimulationRunsByExecution(available);
       if (!filters.value.run) { filters.value = {...filters.value,run:latestCompletedRun(available)}; return; }
       const ids = [...new Set([filters.value.run, filters.value.compare].filter(Boolean))];
       const data = await Promise.all(ids.map(async id => {

@@ -5,6 +5,7 @@ export { DR_OUTCOME_LABELS } from './savedDealingRangePriceOutcome.js';
 import { simulationDateFilter, simulationEntryResult, simulationStatistics } from './tradeSetupSimulationStatistics.js';
 import { simulationReviewFeatures } from './simulationReviewFeatures.js';
 import { simulationChartReplayTime } from './simulationChartReplayTime.js';
+import {sortSimulationRunsByExecution} from './simulationRunPresentation.js';
 
 export const SETUP_TYPE_LABELS = { countertrend: 'Countertrend', continuation: 'Trendfortführung', unknown: 'Typ nicht belegt' };
 export const FILTER_DEFAULTS = { run: '', compare: '', instrument: '', type: '', from: '', to: '', stage: '', outcome: '', entry: '', pinned: '', feature: '', value: '' };
@@ -12,7 +13,7 @@ export function comparisonFilters(query) {
   return Object.fromEntries(Object.entries(FILTER_DEFAULTS).map(([key, fallback]) => [key, typeof query[key] === 'string' && query[key] !== 'all' ? query[key] : fallback]));
 }
 export function latestCompletedRun(runs) {
-  return runs.filter(r => r.status === 'complete').toSorted((a,b) => (b.evaluatedAt ?? 0)-(a.evaluatedAt ?? 0) || b.id.localeCompare(a.id))[0]?.id ?? '';
+  return sortSimulationRunsByExecution(runs.filter(r => r.status === 'complete'))[0]?.id ?? '';
 }
 export function simulationSetupType(snapshot) {
   return snapshot.checklist?.setup?.primary?.setupType ?? snapshot.checklist?.setupType ?? snapshot.dealingRange?.model

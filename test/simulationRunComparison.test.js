@@ -8,7 +8,7 @@ const snapshot = (id, entry=null) => ({id,runId:'new',instrument:'GBPUSD',direct
 const result = (variant,pnlUsd) => applySimulationCommission({runId:'new',snapshotId:'e',variant,entryTime:100,evaluatedAt:200,status:'closed',outcome:'t2',pnlUsd,rMultiple:pnlUsd/100,actualRisk:100,lots:1});
 describe('run comparison',()=>{
   it('defaults to the latest completed run, excluding a newer running run',()=>{
-    expect(latestCompletedRun([{id:'a',status:'complete',evaluatedAt:1},{id:'b',status:'complete',evaluatedAt:2},{id:'c',status:'running',evaluatedAt:3}])).toBe('b');
+    expect(latestCompletedRun([{id:'a',status:'complete',startedAt:1},{id:'b',status:'complete',startedAt:2},{id:'c',status:'running',startedAt:3}])).toBe('b');
   });
   it('keeps legacy groups usable and recognizes the setup type from primary',()=>{
     const s={...snapshot('a'),dealingRange:null,checklist:{setup:{primary:{setupType:'continuation'}}}};

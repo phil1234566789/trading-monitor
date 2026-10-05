@@ -1,20 +1,11 @@
 <script setup>
-import { formatDatedTime } from '../berlinTime.js';
-import { fmtDateTime } from '../format.js';
-import { simulationRunStatusLabel } from '../tradeSetupSimulationStatistics.js';
+import {simulationRunLabel as label} from '../simulationRunPresentation.js';
 import { DEALING_RANGE_LABELS } from '../tradeSetup2DealingRange.js';
 import { SETUP_TYPE_LABELS, DR_OUTCOME_LABELS } from '../simulationRunComparison.js';
 import { FEATURE_VALUES } from '../simulationReviewFeatures.js';
 const props=defineProps({modelValue:Object,runs:Array,features:Array});
 const emit=defineEmits(['update:modelValue']);
 const set=(key,value)=>emit('update:modelValue',{...props.modelValue,[key]:value});
-const label=r=>{
-  // evaluatedAt ist im Monatslauf der technische Eingabe-Snapshot, nicht das Marktfenster.
-  const created=r.createdAt ?? r.created_at ?? r.evaluatedAt;
-  const timestamp=created!=null && Number.isFinite(typeof created==='number'?created:new Date(created).getTime())
-    ? ` · ${r.createdAt!=null || r.created_at!=null?'erstellt':'Datenstand'} ${fmtDateTime(created,{year:'numeric',second:'2-digit',timeZone:'Europe/Berlin'})}` : '';
-  return `${r.configuration?.label ?? `${formatDatedTime(r.from)} – ${formatDatedTime(r.to)}`}${timestamp} · ${simulationRunStatusLabel(r)} · ${r.id.slice(-8)}`;
-};
 </script>
 <template>
   <form class="statistics-filters" @submit.prevent>
