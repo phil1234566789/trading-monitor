@@ -66356,7 +66356,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/countertrendEntryPattern1.js",
-      "source_location": "L70",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -66368,7 +66368,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/countertrendEntryPattern1.js",
-      "source_location": "L72",
+      "source_location": "L74",
       "weight": 1.0
     },
     {
@@ -191501,5 +191501,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "6864c838840a8e0c4c2d64c13cf7d9b7445521d4"
+  "built_at_commit": "350a2ec1b4e20e554cbe0ac4374e78d93cae0bdf"
 }

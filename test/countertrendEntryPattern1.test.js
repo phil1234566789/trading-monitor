@@ -93,6 +93,17 @@ describe('entry pattern 1 detection', () => {
     expect(evaluate(at('09:34'),at('09:51')).entry).toBeNull();
     expect(evaluate(at('09:50'),at('09:50')).entry?.recognizedAt).toBe(at('09:50'));
   }));
+  it('blocks entries with missing OB history and explains the unknown retest',()=>mocked(()=>{
+    const result=evaluateCountertrendEntryPattern1({context,rows:candles.filter(c=>c.time!==at('09:46')),
+      evaluatedAt:at('09:50'),trends:[],internalSweeps:[],
+      pivotBreak:{type:'pivot-break',direction:'short',recognizedAt:at('09:34')}});
+    expect(result.entry).toBeNull();
+    expect(result.conditions.retest).toBeNull();
+    expect(result.detailStatuses.slice(-2)).toEqual(['unknown','unknown']);
+    expect(result.details.at(-2)).toContain('Konnte nicht ermittelt werden');
+    expect(result.details.at(-2)).toContain('M1-Historie ab OB-Bestätigung fehlt oder ist lückenhaft');
+    expect(result.entryBlockedReason).toContain('Konnte nicht ermittelt werden');
+  }));
   it('unknown history cannot prove a retest, and future FVG candles do not count',()=>{
     const zones=[{...second,recognizedAt:at('09:45')}];
     expect(entryPattern1RetestFvg(candles,zones,at('09:30'),'short',at('09:49')).fvg).toBeNull();

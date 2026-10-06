@@ -61,16 +61,18 @@ export function evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,tren
   const {m5Bos,m5Countertrend,orderBlocks}=m5Facts;
   const follow=entryPattern1RetestFvg(rows,orderBlocks,context.confirmedAt,context.direction,evaluatedAt,entryProgress);
   const conditions={m5Bos,...(usesCountertrendM5BosEntryPattern1(version) ? {m5Countertrend} : {}),m1PivotBreak:pivotBreak ?? null,retest:follow.retest,fvg:follow.fvg};
-  const candidate=follow.fvg && follow.fvg.recognizedAt >= (context.validatedAt ?? context.confirmedAt)
+  const candidate=follow.status==='ready' && follow.fvg && follow.fvg.recognizedAt >= (context.validatedAt ?? context.confirmedAt)
     && entryPattern1ConditionsReady(conditions,context.direction,follow.fvg.recognizedAt,version)
     ? m1EntryFromFvg(context,follow.fvg,rows,evaluatedAt,follow.retest) : null;
   const entry=candidate ? {...candidate,entryPattern:version,conditions,confirmedAt:context.confirmedAt} : null;
   const facts=[['M5-BOS in Setup-Richtung',m5Bos],['M1-Pivotbruch ab Sweep',conditions.m1PivotBreak],
     ['M5-OB-Retest',follow.retest],['M1-FVG nach Retest',follow.fvg]];
+  const missingFact=label=>follow.status==='unknown' && ['M5-OB-Retest','M1-FVG nach Retest'].includes(label)
+    ? `${label}: Konnte nicht ermittelt werden · M1-Historie ab OB-Bestätigung fehlt oder ist lückenhaft.` : `${label} fehlt`;
   return normalizeM1ChecklistPresentation({status:entry?'passed':'pending',entryPattern:version,instrument:context.instrument,evaluatedAt,
     trends,m5Bos,pivotBreak:conditions.m1PivotBreak,structureStart,internalSweeps,orderBlocks,conditions,retest:follow.retest,fvg:follow.fvg,entry,
     details:[...trends.map(()=>''),...facts.map(([label,fact])=>fact ? `${label}: ${formatDatedTime(fact.recognizedAt)} Uhr${fact.orderBlock
-      ? ` · OB ${formatDatedTime(fact.orderBlock.startTime)} Uhr · ${fact.orderBlock.bottom}–${fact.orderBlock.top} · ${fact.orderBlock.inclusionRule==='setup1OrderBlockIncluded' ? 'Startregel: Setup-1.0-OB' : 'ab DR-Bestätigung entstanden'}` : ''}` : `${label} fehlt`)],
+      ? ` · OB ${formatDatedTime(fact.orderBlock.startTime)} Uhr · ${fact.orderBlock.bottom}–${fact.orderBlock.top} · ${fact.orderBlock.inclusionRule==='setup1OrderBlockIncluded' ? 'Startregel: Setup-1.0-OB' : 'ab DR-Bestätigung entstanden'}` : ''}` : missingFact(label))],
     detailStatuses:[...trends.map(()=> 'context'),...facts.map(([,fact])=>fact?'passed':follow.status==='unknown'?'unknown':'unmet')],
-    entryBlockedReason:entry ? null : facts.filter(([,fact])=>!fact).map(([label])=>label).join('; ') || 'Signale erst nach der FVG bekannt.'},context.direction);
+    entryBlockedReason:entry ? null : facts.filter(([,fact])=>!fact).map(([label])=>missingFact(label)).join('; ') || 'Signale erst nach der FVG bekannt.'},context.direction);
 }
