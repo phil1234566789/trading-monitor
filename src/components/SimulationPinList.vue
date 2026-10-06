@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue';
 import { simulationPinOutcomeLabel } from '../simulationPinPresentation.js';
+import { pinTypeLabel } from '../pinType.js';
 const props = defineProps({ open:Boolean, pins:Array, unmatched:{type:Array,default:()=>[]}, runId:String, loading:Boolean, saving:Boolean, error:String });
 const emit = defineEmits(['close','remove','refresh','edit']);
 const dialog = ref(null), confirmation = ref(null);
@@ -39,6 +40,7 @@ function removeConfirmed() {
         <strong><span class="flag">⚑</span> {{ label(pin) }} · {{ pin.simulationContext?.instrument }}</strong>
         <p>{{ pin.simulationContext?.direction==='long'?'Long':'Short' }} · {{ pin.simulationContext?.entry?.time?.berlin ?? pin.simulationContext?.recognizedAt?.berlin }} · {{ simulationPinOutcomeLabel(pin.simulationContext) }}</p>
         <p>{{ pin.note || 'Kein Anliegen eingetragen.' }}</p>
+        <p>Pin-Typ: {{ pinTypeLabel(pin.pinType) }}</p>
         <button @click="emit('edit',pin)">Bearbeiten</button>
         <p v-if="pin.unmatchedReason">{{ pin.unmatchedReason }}</p>
         <p v-if="pin.originLabel">Ursprung: {{ pin.originLabel }}</p>

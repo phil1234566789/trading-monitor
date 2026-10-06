@@ -22,6 +22,7 @@ export function registerPinTools(server: McpServer) {
     {
       title: "Pin-Kontext",
       description:
+        "pin_type ist observation (Beobachtung), bug oder null (Typ fehlt). Beobachtung ist KEIN Fix- oder Änderungsauftrag ohne ausdrücklichen Nutzerauftrag, auch bei möglichen Verbesserungen. Bug bedeutet prüfen und priorisieren, keine bewiesene Ursache; verwandte Fälle bündeln, vorhandene Tasks prüfen, keinen Task automatisch pro Pin erstellen. Alt-Pins ohne Typ nicht anhand Kommentar als Bug erraten. " +
         "Auch Statistik-Pins: kind='simulation_dr', 'simulation_checkpoint', 'simulation_entry'. " +
         "simulation_context enthält den eingefrorenen Lauf-, Regel- und Entry Pattern-Stand, DR-Verlauf, " +
         "Checkpoint-Werte und Belege oder beide SL-Ergebnisse, Zeiten in Berlin und UTC sowie Chart-Link. " +
@@ -77,6 +78,7 @@ export function registerPinTools(server: McpServer) {
       inputSchema: {
         kind: z.enum(["ob_zone", "trade_setup", "liquidity_level", "m5_ob", "m5_liquidity_level", "rsi_divergence"]),
         note: z.string().optional(),
+        pinType: z.enum(["observation","bug"]).nullable().optional().describe("Expliziter Pin-Typ; weggelassen bleibt ein bestehender Typ erhalten, null bedeutet ungeordnet. Beobachtung erteilt keinen Änderungsauftrag."),
         refId: z.number().optional().describe("Pflicht bei kind='ob_zone'|'trade_setup'|'liquidity_level' — die echte DB-id."),
         m5Ob: z
           .object({
@@ -120,7 +122,7 @@ export function registerPinTools(server: McpServer) {
           .describe("Pflicht (zusammen mit instrument) bei kind='rsi_divergence'."),
       },
     },
-    async ({ kind, note, refId, m5Ob, m5Liquidity, instrument, divergence }) => {
+    async ({ kind, note, pinType, refId, m5Ob, m5Liquidity, instrument, divergence }) => {
       // Fire-and-forget: fehlt das Instrument (kind='ob_zone'/'trade_setup'/'liquidity_level' ohne
       // die optionale instrument-Angabe), wird der Log-Eintrag übersprungen statt mit einem
       // Platzhalter zu erfinden — state_machine_log.instrument ist NOT NULL.
@@ -141,24 +143,24 @@ export function registerPinTools(server: McpServer) {
 
       if (PIN_KIND_WITH_REF_ID.safeParse(kind).success) {
         if (refId == null) throw new Error(`refId ist Pflicht bei kind='${kind}'.`);
-        const result = await addPinEntry(kind as "ob_zone" | "trade_setup" | "liquidity_level", refId, note);
+        const result = await addPinEntry(kind as "ob_zone" | "trade_setup" | "liquidity_level", refId, note, pinType);
         logPin(instrument, result);
         return json(result);
       }
       if (kind === "m5_ob") {
         if (!m5Ob) throw new Error("m5Ob ist Pflicht bei kind='m5_ob'.");
-        const result = await addPinM5ObEntry(m5Ob, note);
+        const result = await addPinM5ObEntry(m5Ob, note, pinType);
         logPin(m5Ob.instrument, result);
         return json(result);
       }
       if (kind === "m5_liquidity_level") {
         if (!m5Liquidity) throw new Error("m5Liquidity ist Pflicht bei kind='m5_liquidity_level'.");
-        const result = await addPinM5LiquidityEntry(m5Liquidity, note);
+        const result = await addPinM5LiquidityEntry(m5Liquidity, note, pinType);
         logPin(m5Liquidity.instrument, result);
         return json(result);
       }
       if (!instrument || !divergence) throw new Error("instrument und divergence sind Pflicht bei kind='rsi_divergence'.");
-      const result = await addPinRsiDivergenceEntry(instrument, divergence, note);
+      const result = await addPinRsiDivergenceEntry(instrument, divergence, note, pinType);
       logPin(instrument, result);
       return json(result);
     },

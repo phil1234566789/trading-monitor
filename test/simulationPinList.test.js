@@ -64,7 +64,7 @@ describe('simulation pin list',()=>{
       state.editListed(old);expect(state.target.value).toMatchObject({existingId:81,editOnly:true,note:'Original'});
       state.target.value=null;expect(old.note).toBe('Original');
       state.editListed(old);await state.save('Geändert');
-      expect(api.updatePinNote).toHaveBeenCalledWith(81,'Geändert');
+      expect(api.updatePinNote).toHaveBeenCalledWith(81,'Geändert',undefined);
       expect(api.addSimulationPin).not.toHaveBeenCalled();expect(state.target.value).toBeNull();
     }finally{scope.stop();api.fetchSimulationPins.mockResolvedValue([]);}
   });
@@ -82,7 +82,7 @@ describe('simulation pin list',()=>{
       expect(getSetupSnapshot).toHaveBeenCalledTimes(1);expect(state.listedPins.value).toHaveLength(1);
       expect(state.isPinned(group)).toBe(true);expect(state.pinNote(group)).toBe('Alte Notiz');
       state.open({kind:'simulation_dr',group});await state.save('Neue Notiz');
-      expect(api.updatePinNote).toHaveBeenCalledWith(7,'Neue Notiz');expect(api.addSimulationPin).not.toHaveBeenCalled();
+      expect(api.updatePinNote).toHaveBeenCalledWith(7,'Neue Notiz',undefined);expect(api.addSimulationPin).not.toHaveBeenCalled();
       expect(old).toMatchObject({note:'Alte Notiz',simulationRunId:'old',simulationSnapshotId:'old-s'});
     }finally{scope.stop();api.fetchSimulationPins.mockResolvedValue([]);}
   });

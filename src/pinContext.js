@@ -19,6 +19,7 @@
 import { supabase } from "./supabaseClient.js";
 import { findOrCreateObZoneId, findOrCreateTradeSetupId } from "./tradeIntake.js";
 import { fetchAllRows } from './dbReadPaging.js';
+import { pinTypeFields } from './pinType.js';
 
 // kind -> DB-Spalte, gemeinsam für Upsert-onConflict UND das Zusammensetzen der Insert-Zeile.
 // addPinM5ObEntry (unten) löst erst per find-or-create einen ob_zone_id auf und ruft dann ganz
@@ -36,7 +37,7 @@ const ROW_COLUMNS =
   "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
   "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
   "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi, " +
-  "simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, note, created_at, " +
+  "simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, pin_type, note, created_at, " +
   // end_time (Chat 2026-08-18, siehe Task "Pin-Kontext: gepinnte Objekte direkt rendern") — für die
   // Direkt-Rendering-Fallback-Box/-Linie eines gepinnten ob_zone/liquidity_level (siehe
   // PriceChart.vue: refreshPoiZonesInternal/refreshLiquidityInternal), dieselbe Spalte, die
@@ -53,6 +54,7 @@ function toEntry(row) {
   return {
     id: row.id,
     kind: row.kind,
+    pinType: row.pin_type ?? null,
     simulationRunId: row.simulation_run_id,
     simulationSnapshotId: row.simulation_snapshot_id,
     simulationEntrySnapshotId: row.simulation_entry_snapshot_id,
@@ -171,18 +173,18 @@ export async function removeSimulationPins(runId, ids) {
   if (error) throw error;
 }
 
-export async function addSimulationPin({kind,key,snapshotId,entrySnapshotId,checkpointKey,variant,context},note) {
+export async function addSimulationPin({kind,key,snapshotId,entrySnapshotId,checkpointKey,variant,context},note,pinType) {
   if(!['simulation_dr','simulation_checkpoint','simulation_entry'].includes(kind)) throw new Error('Unbekannte Simulations-Pin-Art.');
   // Wiederholtes Pinnen ändert nur das Anliegen; der damalige Analysekontext bleibt eingefroren.
   const {data:existing,error:readError}=await supabase.from('pin_context').select('id').eq('simulation_pin_key',key).maybeSingle();
   if(readError) throw readError;
   if(existing) {
-    if(!await updatePinNote(existing.id,note)) throw new Error('Pin-Notiz konnte nicht gespeichert werden.');
+    if(!await updatePinNote(existing.id,note,pinType)) throw new Error('Pin-Notiz konnte nicht gespeichert werden.');
     return existing.id;
   }
   const {error}=await supabase.from('pin_context').upsert({kind,simulation_pin_key:key,simulation_run_id:context.runId,
     simulation_snapshot_id:snapshotId ?? null,simulation_entry_snapshot_id:entrySnapshotId ?? null,
-    simulation_checkpoint_key:checkpointKey ?? null,simulation_variant:variant ?? null,simulation_context:context,note:note || null},
+    simulation_checkpoint_key:checkpointKey ?? null,simulation_variant:variant ?? null,simulation_context:context,note:note || null,...pinTypeFields(pinType)},
     {onConflict:'simulation_pin_key',ignoreDuplicates:true});
   if(error) throw error;
 }
@@ -190,7 +192,7 @@ export async function addSimulationPin({kind,key,snapshotId,entrySnapshotId,chec
 // Upsert auf trade_position_id/ob_zone_id/trade_setup_id (siehe Unique-Indizes in den Migrationen)
 // — ein zweiter Rechtsklick auf dasselbe Objekt legt keinen Zweiteintrag an, sondern aktualisiert
 // nur dessen Notiz.
-export async function addPinEntry(kind, refId, note) {
+export async function addPinEntry(kind, refId, note, pinType) {
   const column = REF_COLUMN[kind];
   const { data, error } = await supabase
     .from("pin_context")
@@ -204,6 +206,7 @@ export async function addPinEntry(kind, refId, note) {
         liquidity_level_id: null,
         [column]: refId,
         note: note || null,
+        ...pinTypeFields(pinType),
       },
       { onConflict: column },
     )
@@ -222,7 +225,7 @@ export async function addPinEntry(kind, refId, note) {
 // kind="ob_zone"-Eintrag — kein eigener "m5_ob"-Snapshot-Kind mehr. Name/Signatur bleiben
 // unverändert (zone: { instrument, dirNum: 1|-1, top, bottom, startTime (Unix-Sekunden) }), damit
 // Dashboard.vue/die MCP-Tools nicht angepasst werden müssen.
-export async function addPinM5ObEntry(zone, note) {
+export async function addPinM5ObEntry(zone, note, pinType) {
   const obZoneId = await findOrCreateObZoneId({
     instrument: zone.instrument,
     timeframe: "5M",
@@ -232,14 +235,14 @@ export async function addPinM5ObEntry(zone, note) {
     startTimeSec: zone.startTime,
   });
   if (obZoneId == null) return null;
-  return addPinEntry("ob_zone", obZoneId, note);
+  return addPinEntry("ob_zone", obZoneId, note, pinType);
 }
 
 // Analog zu addPinM5ObEntry, für ein Liquiditäts-Level auf einem Nicht-1h-Chart-Timeframe
 // (siehe 20260802130000_laniakea_context_m5_liquidity.sql — der 1h-Fall läuft weiter über
 // kind='liquidity_level' + resolveLiquidityLevelId, echte FK). level: { instrument, timeframe
 // (props.currentBar, z.B. "5m"), dirNum: 1 (high) | -1 (low), price, pivotTime (Unix-Sekunden) }.
-export async function addPinM5LiquidityEntry(level, note) {
+export async function addPinM5LiquidityEntry(level, note, pinType) {
   const { data, error } = await supabase
     .from("pin_context")
     .upsert(
@@ -256,6 +259,7 @@ export async function addPinM5LiquidityEntry(level, note) {
         m5_liquidity_price: level.price,
         m5_liquidity_pivot_time: new Date(level.pivotTime * 1000).toISOString(),
         note: note || null,
+        ...pinTypeFields(pinType),
       },
       { onConflict: "m5_liquidity_instrument,m5_liquidity_timeframe,m5_liquidity_direction,m5_liquidity_pivot_time" },
     )
@@ -274,7 +278,7 @@ export async function addPinM5LiquidityEntry(level, note) {
 // ein Rohdaten-Snapshot statt einer FK. divergence: das Objekt, wie es rsi.js zurückgibt
 // ({type, fromTime, toTime, fromPrice, toPrice, fromRsi, toRsi}, Zeiten in Unix-Sekunden), plus
 // instrument (props.symbol — steht selbst nicht auf dem Divergenz-Objekt).
-export async function addPinRsiDivergenceEntry(instrument, divergence, note) {
+export async function addPinRsiDivergenceEntry(instrument, divergence, note, pinType) {
   const { data, error } = await supabase
     .from("pin_context")
     .upsert(
@@ -294,6 +298,7 @@ export async function addPinRsiDivergenceEntry(instrument, divergence, note) {
         rsi_divergence_from_rsi: divergence.fromRsi,
         rsi_divergence_to_rsi: divergence.toRsi,
         note: note || null,
+        ...pinTypeFields(pinType),
       },
       { onConflict: "rsi_divergence_instrument,rsi_divergence_type,rsi_divergence_from_time,rsi_divergence_to_time" },
     )
@@ -313,10 +318,10 @@ export async function addPinRsiDivergenceEntry(instrument, divergence, note) {
 // (instrument, direction, ob_start_time) selbst an, danach ganz normaler kind="trade_setup"-
 // Pin wie bei einem bereits verlinkten Setup. setup = { instrument, direction, setup } aus
 // priceChartHitTest.js' tsc_setup-Kandidat (setup selbst im Rohformat aus tradeSetupsMetadata).
-export async function addPinTscSetupEntry({ instrument, direction, setup }, note) {
+export async function addPinTscSetupEntry({ instrument, direction, setup }, note, pinType) {
   const tradeSetupId = await findOrCreateTradeSetupId({ instrument, direction, setup });
   if (tradeSetupId == null) return null;
-  return addPinEntry("trade_setup", tradeSetupId, note);
+  return addPinEntry("trade_setup", tradeSetupId, note, pinType);
 }
 
 export async function removePinEntry(id) {
@@ -328,8 +333,8 @@ export async function removePinEntry(id) {
   return true;
 }
 
-export async function updatePinNote(id, note) {
-  const { error } = await supabase.from("pin_context").update({ note: note || null }).eq("id", id);
+export async function updatePinNote(id, note, pinType) {
+  const { error } = await supabase.from("pin_context").update({ ...(note===undefined?{}:{note:note || null}), ...pinTypeFields(pinType) }).eq("id", id);
   if (error) {
     console.error("Pin-Notiz speichern fehlgeschlagen:", error);
     return false;

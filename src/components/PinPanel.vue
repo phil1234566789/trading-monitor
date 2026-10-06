@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { simulationPinStageLabel, simulationPinOutcomeLabel } from "../simulationPinPresentation.js";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
+import PinTypeChips from './PinTypeChips.vue';
 
 // Pin-Kontext-Modal (Chat 2026-08-01) — "genau wie bei Metadaten" (Philip), daher derselbe
 // MetadataPanel.vue-Rahmen (Drag/Resize/Close) wie beim Debug-Metadaten-Panel. kind="trade_position"
@@ -21,7 +22,7 @@ const props = defineProps({
 // "hover" (Chat 2026-08-18): row.entry oder null bei mouseleave — treibt den Auswahl-Halo im Chart
 // (siehe Dashboard.vue: onPinHover/hoveredPin*-Props an PriceChart.vue). "select": Klick auf eine
 // Zeile (außerhalb von Notiz-Textarea/🗑-Button, siehe onEntryClick) — springt im Chart hin.
-const emit = defineEmits(["remove", "update-note", "hover", "select"]);
+const emit = defineEmits(["remove", "update-note", "update-type", "hover", "select"]);
 
 const OUTCOME_LABEL = { win: "Win", loss: "Loss", open: "Offen" };
 
@@ -170,6 +171,7 @@ function onEntryClick(event, entry) {
         Trade #{{ row.entry.tradePositionId }} (nicht geladen)
         <button class="pin-panel-remove" title="Aus Pin-Kontext entfernen" @click="emit('remove', row.entry.id)">🗑</button>
       </div>
+      <PinTypeChips :model-value="row.entry.pinType" @update:model-value="type=>emit('update-type',row.entry.id,type)" />
       <textarea
         class="pin-panel-note"
         placeholder="Notiz (optional)"

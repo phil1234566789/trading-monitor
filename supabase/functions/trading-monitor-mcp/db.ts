@@ -1,3 +1,4 @@
+import { pinTypeFields, type PinType } from './pinType.ts';
 import { supabase } from "./supabaseClient.ts";
 import { PIP_SIZE } from "../_shared/pipConfig.js";
 import { berlinDayRangeUtcMs, berlinDateStrFor } from "../_shared/berlinTime.ts";
@@ -266,7 +267,7 @@ export async function getPinContext() {
   return fetchAllRows((from, to) => supabase
     .from("pin_context")
     .select(
-      "id, kind, note, created_at, simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, " +
+      "id, kind, pin_type, note, created_at, simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, " +
         "trade_positions(*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, trade_targets(id, price)), trade_partial_exits(price, exit_time, portion_pct)), " +
         "ob_zones(*), " +
         "trade_setups(*), " +
@@ -294,14 +295,14 @@ export async function getPinContext() {
 // Bewusst NUR die Chart-POI-Kinds (ob_zone/liquidity_level/trade_setup/m5_ob/m5_liquidity_level/
 // rsi_divergence) — trade_position/trade_confirmation bleiben Philip-only (Journal-Einträge, kein
 // Chart-Highlight), siehe Task "Pin-Kontext: MCP-Write, fehlende Chart-Highlights, Touch-Alarm".
-const PIN_CONFIRM_COLUMNS = "id, kind, note, created_at";
+const PIN_CONFIRM_COLUMNS = "id, kind, pin_type, note, created_at";
 const PIN_REF_COLUMN: Record<string, string> = {
   ob_zone: "ob_zone_id",
   trade_setup: "trade_setup_id",
   liquidity_level: "liquidity_level_id",
 };
 
-export async function addPinEntry(kind: "ob_zone" | "trade_setup" | "liquidity_level", refId: number, note?: string) {
+export async function addPinEntry(kind: "ob_zone" | "trade_setup" | "liquidity_level", refId: number, note?: string, pinType?: PinType) {
   const column = PIN_REF_COLUMN[kind];
   const { data, error } = await supabase
     .from("pin_context")
@@ -315,6 +316,7 @@ export async function addPinEntry(kind: "ob_zone" | "trade_setup" | "liquidity_l
         liquidity_level_id: null,
         [column]: refId,
         note: note || null,
+        ...pinTypeFields(pinType),
       },
       { onConflict: column },
     )
@@ -401,9 +403,9 @@ async function findOrCreateLiquidityLevelId(instrument: string, timeframe: strin
 // Landet seit Punkt 6 als ganz normaler kind='ob_zone'-Pin (find-or-create in ob_zones, dann
 // addPinEntry) statt eines eigenen m5_ob-Rohdaten-Snapshots — Signatur bleibt unverändert, damit
 // pins.ts (add_pin_entry-Tool, Lanas stabiles Interface) nicht angepasst werden muss.
-export async function addPinM5ObEntry(zone: PinM5Ob, note?: string) {
+export async function addPinM5ObEntry(zone: PinM5Ob, note?: string, pinType?: PinType) {
   const obZoneId = await findOrCreateObZoneId(zone.instrument, "5M", zone.direction, zone.top, zone.bottom, zone.startTimeUnixSec);
-  return addPinEntry("ob_zone", obZoneId, note);
+  return addPinEntry("ob_zone", obZoneId, note, pinType);
 }
 
 export interface PinM5Liquidity {
@@ -414,7 +416,7 @@ export interface PinM5Liquidity {
   pivotTimeUnixSec: number;
 }
 
-export async function addPinM5LiquidityEntry(level: PinM5Liquidity, note?: string) {
+export async function addPinM5LiquidityEntry(level: PinM5Liquidity, note?: string, pinType?: PinType) {
   const { data, error } = await supabase
     .from("pin_context")
     .upsert(
@@ -431,6 +433,7 @@ export async function addPinM5LiquidityEntry(level: PinM5Liquidity, note?: strin
         m5_liquidity_price: level.price,
         m5_liquidity_pivot_time: new Date(level.pivotTimeUnixSec * 1000).toISOString(),
         note: note || null,
+        ...pinTypeFields(pinType),
       },
       { onConflict: "m5_liquidity_instrument,m5_liquidity_timeframe,m5_liquidity_direction,m5_liquidity_pivot_time" },
     )
@@ -450,7 +453,7 @@ export interface PinRsiDivergence {
   toRsi: number;
 }
 
-export async function addPinRsiDivergenceEntry(instrument: string, divergence: PinRsiDivergence, note?: string) {
+export async function addPinRsiDivergenceEntry(instrument: string, divergence: PinRsiDivergence, note?: string, pinType?: PinType) {
   const { data, error } = await supabase
     .from("pin_context")
     .upsert(
@@ -470,6 +473,7 @@ export async function addPinRsiDivergenceEntry(instrument: string, divergence: P
         rsi_divergence_from_rsi: divergence.fromRsi,
         rsi_divergence_to_rsi: divergence.toRsi,
         note: note || null,
+        ...pinTypeFields(pinType),
       },
       { onConflict: "rsi_divergence_instrument,rsi_divergence_type,rsi_divergence_from_time,rsi_divergence_to_time" },
     )

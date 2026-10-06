@@ -40,6 +40,8 @@ const VOLL_KOPIEN = [
 // Diese Liste ist kein Freibrief, sondern die Aussage "hier ist Abweichung erwartet" — sie haelt
 // den Vollstaendigkeits-Test unten scharf, damit eine NEUE, unbemerkte Voll-Kopie auffaellt.
 const TEILPORTS = [
+  // Browser ergänzt Labels/Chips, Deno nur den validierten Pin-Typvertrag; Verhalten geprüft in pinType.test.js.
+  "pinType",
   "ageTier",
   // Frontend liest den sessions-Singleton und die Browser-Lokalzeit, Backend holt die Zeilen per
   // Supabase-Client und rechnet fest in Europe/Berlin — dieselbe Aufgabe, zwangslaeufig anderer

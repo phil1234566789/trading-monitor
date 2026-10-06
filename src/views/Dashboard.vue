@@ -896,7 +896,7 @@ function onPinCandidateSelect(key) {
   pinAddPopupTarget.value = { ...candidate, x: menu.x, y: menu.y };
   pinAddPopupError.value = null;
 }
-async function onPinAddConfirm(note) {
+async function onPinAddConfirm(note, pinType) {
   const target = pinAddPopupTarget.value;
   if (target.kind === "ob_zone") {
     const { instrument, timeframe, dir, startTime } = target.zone;
@@ -907,19 +907,19 @@ async function onPinAddConfirm(note) {
       pinAddPopupError.value = "Diese OB-Zone ist noch nicht gespeichert (poi-watcher braucht bis zu einer Stunde) — bitte gleich nochmal versuchen.";
       return;
     }
-    await addPinEntry("ob_zone", obZoneId, note);
+    await addPinEntry("ob_zone", obZoneId, note, pinType);
   } else if (target.kind === "trade_setup") {
     // Kein Resolve nötig — trade_setups.id ist schon direkt bekannt (siehe PriceChart.vue:
     // refreshTradeSetupLinksInternal), anders als bei ob_zone.
-    await addPinEntry("trade_setup", target.tradeSetupId, note);
+    await addPinEntry("trade_setup", target.tradeSetupId, note, pinType);
   } else if (target.kind === "tsc_setup") {
     // Live erkannte Setup-Box OHNE bekannte trade_setups.id (siehe priceChartHitTest.js:
     // findNearbyPinCandidates) — addPinTscSetupEntry legt die Zeile bei Bedarf per find-or-create
     // an (analog zu addPinM5ObEntry), landet danach als ganz normaler kind="trade_setup"-Pin.
-    await addPinTscSetupEntry({ instrument: target.instrument, direction: target.direction, setup: target.setup }, note);
+    await addPinTscSetupEntry({ instrument: target.instrument, direction: target.direction, setup: target.setup }, note, pinType);
   } else if (target.kind === "trade_confirmation") {
     // Kein Resolve nötig — trade_evidence.id ist schon direkt bekannt, analog zu trade_setup.
-    await addPinEntry("trade_confirmation", target.confirmationId, note);
+    await addPinEntry("trade_confirmation", target.confirmationId, note, pinType);
   } else if (target.kind === "liquidity_level") {
     const { instrument, timeframe, dirNum, pivotTime } = target.level;
     const liquidityLevelId = await resolveLiquidityLevelId(instrument, timeframe, dirNum, pivotTime);
@@ -929,23 +929,23 @@ async function onPinAddConfirm(note) {
       pinAddPopupError.value = "Dieses Liquiditäts-Level ist noch nicht gespeichert (poi-watcher braucht bis zu einer Stunde) — bitte gleich nochmal versuchen.";
       return;
     }
-    await addPinEntry("liquidity_level", liquidityLevelId, note);
+    await addPinEntry("liquidity_level", liquidityLevelId, note, pinType);
   } else if (target.kind === "m5_ob") {
     // "m5_ob" bleibt hier ein rein clientseitiger Kandidaten-Kind (siehe PriceChart.vue:
     // findNearbyPinCandidates) — anders als resolveObZoneId oben (SELECT-only, wartet auf
     // poi-watcher) legt addPinM5ObEntry die ob_zones-Zeile bei Bedarf per find-or-create gleich mit
     // an (Punkt 6), landet danach aber als ganz normaler kind='ob_zone'-Pin.
-    await addPinM5ObEntry(target.zone, note);
+    await addPinM5ObEntry(target.zone, note, pinType);
   } else if (target.kind === "m5_liquidity_level") {
     // Kein Resolve nötig — Liquiditäts-Level auf einem Nicht-1h-Timeframe werden nie persistiert,
     // Rohdaten-Snapshot direkt (siehe addPinM5LiquidityEntry).
-    await addPinM5LiquidityEntry(target.level, note);
+    await addPinM5LiquidityEntry(target.level, note, pinType);
   } else if (target.kind === "rsi_divergence") {
     // Kein Resolve nötig — Divergenzen werden nie persistiert, Rohdaten-Snapshot direkt (siehe
     // addPinRsiDivergenceEntry).
-    await addPinRsiDivergenceEntry(target.instrument, target.divergence, note);
+    await addPinRsiDivergenceEntry(target.instrument, target.divergence, note, pinType);
   } else {
-    await addPinEntry("trade_position", target.trade.id, note);
+    await addPinEntry("trade_position", target.trade.id, note, pinType);
   }
   pinAddPopupTarget.value = null;
   pinAddPopupError.value = null;
@@ -953,6 +953,10 @@ async function onPinAddConfirm(note) {
 }
 async function onPinRemove(entryId) {
   await removePinEntry(entryId);
+  refreshPinContext();
+}
+async function onPinUpdateType(entryId, pinType) {
+  await updatePinNote(entryId, undefined, pinType);
   refreshPinContext();
 }
 async function onPinUpdateNote(entryId, note) {
@@ -2399,6 +2403,7 @@ watch(selectedTradingAccountId, () => {
       :mismatch-hint="pinJumpHint"
       @remove="onPinRemove"
       @update-note="onPinUpdateNote"
+      @update-type="onPinUpdateType"
       @hover="onPinHover"
       @select="onSelectPin"
     />

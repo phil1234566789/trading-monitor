@@ -1,18 +1,20 @@
 <script setup>
 import { ref,watch,nextTick } from 'vue';
+import PinTypeChips from './PinTypeChips.vue';
 const props=defineProps({target:Object,saving:Boolean,error:String});
 const emit=defineEmits(['close','save','remove','show-pins']);
-const dialog=ref(null),note=ref('');
+const dialog=ref(null),note=ref(''),pinType=ref(null);
 watch(()=>props.target,async target=>{
-  if(target){note.value=target.note ?? '';await nextTick();if(!dialog.value.open)dialog.value.showModal();}
+  if(target){note.value=target.note ?? '';pinType.value=target.pinType ?? null;await nextTick();if(!dialog.value.open)dialog.value.showModal();}
   else dialog.value?.close();
 });
 </script>
 <template>
   <dialog ref="dialog" class="pin-menu" aria-labelledby="simulation-pin-title" @cancel="emit('close')" @close="emit('close')">
     <h2 id="simulation-pin-title">{{ target?.existingId?'Pin bearbeiten':target?.kind==='simulation_checkpoint'?`${target.feature.label} anpinnen`:target?.kind==='simulation_entry'?'Entry anpinnen':'DR anpinnen' }}</h2>
+    <PinTypeChips v-model="pinType" :disabled="saving" />
     <label>Kommentar (optional)<textarea v-model="note" rows="3" :disabled="saving" /></label>
-    <button type="button" :disabled="saving" @click="emit('save',note)">Pin speichern</button>
+    <button type="button" :disabled="saving" @click="emit('save',note,pinType)">Pin speichern</button>
     <button v-if="target?.existingId" type="button" :disabled="saving" @click="emit('remove')">Pin entfernen</button>
     <button v-if="!target?.editOnly" type="button" :disabled="saving" @click="emit('show-pins')">Alle Pins anschauen</button>
     <p v-if="error" role="alert">{{ error }}</p><p v-if="saving" role="status">Pin wird gespeichert…</p>

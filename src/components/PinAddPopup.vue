@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from "vue";
 import { cssColor } from "../chartColors.js";
+import PinTypeChips from './PinTypeChips.vue';
 
 // Winziges Popup direkt an der Cursor-Position nach "Anpinnen" im Kontextmenü (Chat
 // 2026-08-01, siehe ContextMenu.vue) — kein Browser-prompt(), damit sich das optionale
@@ -18,6 +19,7 @@ const props = defineProps({
 const emit = defineEmits(["confirm", "cancel"]);
 
 const note = ref("");
+const pinType=ref(undefined);
 const textareaRef = ref(null);
 
 function onWindowMousedown(e) {
@@ -31,7 +33,7 @@ function onKeydown(e) {
   }
 }
 function confirm() {
-  emit("confirm", note.value.trim());
+  emit("confirm", note.value.trim(),pinType.value);
 }
 
 onMounted(() => {
@@ -41,7 +43,7 @@ onMounted(() => {
 onUnmounted(() => window.removeEventListener("mousedown", onWindowMousedown, true));
 
 const ESTIMATED_WIDTH = 260;
-const ESTIMATED_HEIGHT = 140;
+const ESTIMATED_HEIGHT = 190;
 const clampedX = Math.min(props.x, window.innerWidth - ESTIMATED_WIDTH - 8);
 const clampedY = Math.min(props.y, window.innerHeight - ESTIMATED_HEIGHT - 8);
 </script>
@@ -49,6 +51,7 @@ const clampedY = Math.min(props.y, window.innerHeight - ESTIMATED_HEIGHT - 8);
 <template>
   <div class="pin-add-popup" :style="{ top: clampedY + 'px', left: clampedX + 'px' }" @keydown="onKeydown">
     <div class="pin-add-popup-title">📌 Anpinnen{{ label ? ` — ${label}` : "" }}</div>
+    <PinTypeChips v-model="pinType" />
     <textarea ref="textareaRef" v-model="note" class="pin-add-popup-textarea" placeholder="Notiz (optional)" rows="3" />
     <div v-if="error" class="pin-add-popup-error">{{ error }}</div>
     <div class="pin-add-popup-actions">

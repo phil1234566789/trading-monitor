@@ -13,9 +13,9 @@ const match=(p,groups=[group()])=>matchSimulationPins([p],groups,'new',new Map([
   [{id:'old',from:100,to:500,status:'complete',configuration:{label:'Alter Lauf'}}]);
 describe('cross-run simulation pins',()=>{
   it('matches market evidence despite changed IDs, preserving the original pin and note',()=>{
-    const p=pin(),before=JSON.stringify(p),result=match(p);
+    const p={...pin(),pinType:'observation'},before=JSON.stringify(p),result=match(p);
     expect(result.matched).toHaveLength(1);expect(result.unmatched).toHaveLength(0);
-    expect(result.matched[0]).toMatchObject({id:1,note:'Meine Notiz',simulationRunId:'old',associatedRunId:'new'});
+    expect(result.matched[0]).toMatchObject({id:1,note:'Meine Notiz',pinType:'observation',simulationRunId:'old',associatedRunId:'new'});
     expect(result.matched[0].originLabel).toContain('Alter Lauf');
     expect(result.matched[0].currentChartLink.query.run).toBe('new');
     expect(result.matched[0].simulationContext.chartLink.query.run).toBe('old');

@@ -44,21 +44,21 @@ export function useSimulationPins(filters,run,results,{repository,datasets,runs}
     const matches=[...pins.value.filter(p=>p.simulationPinKey===key),...associatedPins.value.filter(p=>p.associationKey===key)];
     return [...new Map(matches.map(p=>[p.id??p.simulationPinKey,p])).values()].map(p=>p.note).filter(Boolean).join('\n\n') || undefined;
   };
-  function open(value){error.value='';target.value={...value,note:find(value)?.note ?? '',existingId:find(value)?.id};}
+  function open(value){error.value='';target.value={...value,note:find(value)?.note ?? '',pinType:find(value)?.pinType ?? null,existingId:find(value)?.id};}
   function editListed(pin) {
     const original=pins.value.find(p=>p.id===pin.id);
-    if(original){error.value='';target.value={note:original.note ?? '',existingId:original.id,editOnly:true};}
+    if(original){error.value='';target.value={note:original.note ?? '',pinType:original.pinType ?? null,existingId:original.id,editOnly:true};}
   }
-  async function save(note) {
+  async function save(note,pinType) {
     if(!target.value || saving.value)return;
     saving.value=true;error.value='';
     try {
       const t=target.value;
       if(t.existingId) {
-        if(!await updatePinNote(t.existingId,note))throw new Error('Pin-Notiz konnte nicht gespeichert werden.');
+        if(!await updatePinNote(t.existingId,note,pinType))throw new Error('Pin-Notiz konnte nicht gespeichert werden.');
       } else await addSimulationPin({kind:t.kind,key:simulationPinKey(t),snapshotId:t.kind==='simulation_entry'?null:t.group.snapshot.id,
         entrySnapshotId:t.entry?.id,checkpointKey:t.feature?.key,variant:t.entry?'both':null,
-        context:simulationPinSnapshot(t,run.value,results.value)},note);
+        context:simulationPinSnapshot(t,run.value,results.value)},note,pinType);
       await refresh();target.value=null;
     } catch(cause){error.value=cause.message || 'Pin konnte nicht gespeichert werden.';}
     finally{saving.value=false;}
