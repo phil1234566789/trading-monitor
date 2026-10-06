@@ -5,7 +5,7 @@ const candles = [[1.301,1.299],[1.311,1.309],[1.307,1.305],[1.301,1.299],
   [1.301,1.299],[1.321,1.316],[1.314,1.312],[1.311,1.309],
   [1.301,1.299],[1.321,1.316],[1.314,1.312],[1.311,1.309]]
   .map(([high,low],i)=>({time:i*60,open:low,close:high,high,low}));
-const first = {dir:-1,startTime:-120,recognizedAt:0,top:1.302,bottom:1.299};
+const first = {dir:-1,startTime:-120,recognizedAt:0,top:1.322,bottom:1.299};
 const older = {dir:-1,startTime:-180,recognizedAt:0,top:1.322,bottom:1.315};
 function scenario(direction) {
   const mirror = c => ({...c,open:3-c.open,close:3-c.close,high:3-c.low,low:3-c.high});

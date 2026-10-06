@@ -6,7 +6,7 @@ import {evaluateOrderBlockMitigation} from '../src/orderBlockMitigation.js';
 
 const rows=Array.from({length:12},(_,i)=>({time:i*60,open:1.3,close:1.3,
  high:i%4===1?1.311:i%4===2?1.307:1.301,low:i%4===1?1.309:i%4===2?1.305:1.299}));
-const ob={dir:-1,startTime:0,recognizedAt:0,top:1.302,bottom:1.299};
+const ob={dir:-1,startTime:0,recognizedAt:0,top:1.312,bottom:1.299};
 it.each(['5m','1h','4h'])('OB timeframe %s does not change the M1 mitigation proof',timeframe=>{
  const orderBlock={...ob,timeframe};
  expect(evaluateOrderBlockMitigation({orderBlock,m1Candles:rows,fromTime:0,evaluatedAt:239}).fvg).toBeNull();
@@ -33,7 +33,7 @@ it('allows another opportunity only through a newly formed OB and its own retest
  const before=entryPattern1RetestFvg(rows,[ob,next],0,'short',360);
  expect(before.fvg.recognizedAt).toBe(240);
  const after=entryPattern1RetestFvg(rows,[ob,next],0,'short',720);
- expect(after.fvg.recognizedAt).toBe(540);
+ expect(after.fvg.recognizedAt).toBe(480);
  expect(after.retest.orderBlock.startTime).toBe(300);
 });
 it('cached jumps and rewind preserve the first FVG and discover a newly supplied OB',()=>{

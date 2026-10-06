@@ -10,6 +10,10 @@ export function candleTouchesOrderBlock(candle, zone) {
   return candle.low <= zone.top && candle.high >= zone.bottom;
 }
 
+export function candleInvalidatesOrderBlock(candle, zone) {
+  return zone.dir === 1 ? candle.low < zone.bottom : candle.high > zone.top;
+}
+
 const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone angelegt (HTF: 15m/1h/4h/1D)
 
 // Lower-TF (M1/M3/M5, siehe tv-indikator/src/calculations.pine: capMode=true) hat im Pine-Original
@@ -143,12 +147,7 @@ export function advanceOrderBlocks(candles,state,from) {
       // als bei einem LQ-Sweep, wo ein Wick über/unter das Level plus schnelle Rückkehr GERADE FÜR
       // den Sweep spricht (Philip 05.09.2026: eine OB verliert bei jeder Überschreitung sämtliche
       // Relevanz, unabhängig davon ob die Kerze wieder zurückschließt).
-      if (z.dir === 1 && cur.low < z.bottom) {
-        z.invalidated = true;
-        z.endTime = cur.time; // Box soll die invalidierende Kerze noch einschliessen
-        continue;
-      }
-      if (z.dir === -1 && cur.high > z.top) {
+      if (candleInvalidatesOrderBlock(cur, z)) {
         z.invalidated = true;
         z.endTime = cur.time;
         continue;

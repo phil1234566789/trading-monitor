@@ -8,7 +8,7 @@ import { evaluateChecklistM5 } from './tradeSetupChecklistM5.js';
 import { m1EntryFromFvg } from './m1Entry.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { formatDatedTime } from './berlinTime.js';
-import { entryPattern1ConditionsReady, ENTRY_PATTERN_1_VERSION } from './entryPattern1Conditions.js';
+import { entryPattern1ConditionsReady, usesCountertrendM5BosEntryPattern1, ENTRY_PATTERN_1_VERSION } from './entryPattern1Conditions.js';
 import { advanceEntryPattern1Follow } from './entryPattern1Progress.js';
 
 // Explizite Startregel: der aus Setup 1.0 übernommene OB zählt auch bei späterem E.
@@ -46,7 +46,7 @@ export function evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,tren
     const reaction=current.structureReaction;
     const m5Countertrend=entryPattern1Countertrend(context.primary,context.direction,evaluatedAt,
       current.structureState,m5.at(-1)?.time+300 || undefined);
-    const m5Bos=version===ENTRY_PATTERN_1_VERSION ? entryPattern1M5Bos(reaction,m5Countertrend,context.direction,evaluatedAt)
+    const m5Bos=usesCountertrendM5BosEntryPattern1(version) ? entryPattern1M5Bos(reaction,m5Countertrend,context.direction,evaluatedAt)
       : (reaction?.levels ?? []).find(s => s.type === 'BOS' && s.direction === context.direction
       && Number.isFinite(s.recognizedAt) && s.recognizedAt <= evaluatedAt) ?? null;
     const recognition=orderBlockRecognitionTimes(m5,'5m');
@@ -60,7 +60,7 @@ export function evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,tren
   }
   const {m5Bos,m5Countertrend,orderBlocks}=m5Facts;
   const follow=entryPattern1RetestFvg(rows,orderBlocks,context.confirmedAt,context.direction,evaluatedAt,entryProgress);
-  const conditions={m5Bos,...(version===ENTRY_PATTERN_1_VERSION ? {m5Countertrend} : {}),m1PivotBreak:pivotBreak ?? null,retest:follow.retest,fvg:follow.fvg};
+  const conditions={m5Bos,...(usesCountertrendM5BosEntryPattern1(version) ? {m5Countertrend} : {}),m1PivotBreak:pivotBreak ?? null,retest:follow.retest,fvg:follow.fvg};
   const candidate=follow.fvg && follow.fvg.recognizedAt >= (context.validatedAt ?? context.confirmedAt)
     && entryPattern1ConditionsReady(conditions,context.direction,follow.fvg.recognizedAt,version)
     ? m1EntryFromFvg(context,follow.fvg,rows,evaluatedAt,follow.retest) : null;

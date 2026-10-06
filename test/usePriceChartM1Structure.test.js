@@ -3,6 +3,8 @@ import { effectScope, nextTick, reactive, shallowRef } from 'vue';
 vi.mock('../src/forexCandles.js', () => ({ fetchInitialCandles: vi.fn() }));
 vi.mock('../src/ignoredCandles.js', () => ({ markIgnored: rows => rows }));
 vi.mock('../src/structureOverlay.js', () => ({ renderLowerStructure: vi.fn() }));
+import { ENTRY_PATTERN_1_VERSION } from '../src/entryPattern1Conditions.js';
+import { M1_LOAD_LEAD_IN } from '../src/m1StructureSettings.js';
 import { renderLowerStructure } from '../src/structureOverlay.js';
 import { usePriceChartM1Structure } from '../src/composables/usePriceChartM1Structure.js';
 
@@ -24,6 +26,14 @@ function setup(fetchCached = vi.fn(async () => rows), replayUntil = 1500, now = 
   return { state, props, api, fetchCached };
 }
 describe('independent M1 structure lifecycle', () => {
+  it.each([ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v5'])('retains the spread-hour warmup for %s',async entryPattern=>{
+    const s=setup(),value=ready();
+    s.state.value={...value,model:'countertrend',entryPattern,
+      setup:{primary:{...value.setup.primary,direction:'short',reactionRecognizedAt:900,
+        reactionOB:{dir:-1,startTime:300,top:11,bottom:9},sweep:{level:{touchedTime:600,price:10}}}}};
+    await nextTick();
+    expect(s.fetchCached.mock.calls[0][3]).toBe(20+M1_LOAD_LEAD_IN);
+  });
   it('does not load or evaluate live M1 while saved detail is selected', async () => {
     scope=effectScope();
     const fetchCached=vi.fn(),prerequisitesAt=vi.fn(()=>ready());

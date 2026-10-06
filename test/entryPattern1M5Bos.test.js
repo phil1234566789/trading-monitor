@@ -15,8 +15,8 @@ const evaluate = (primary, reaction, direction, at, entryProgress, version=ENTRY
 };
 
 describe('M5 BOS identity for Entry Pattern 1', () => {
-  it('rejects DR 9016 parent BOS through the shared entry evaluator', () => {
-    const result=evaluate(fixture.primary,fixture.reaction,'short',fixture.entryAt);
+  it.each([ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v5'])('rejects DR 9016 parent BOS through the shared entry evaluator (%s)', version => {
+    const result=evaluate(fixture.primary,fixture.reaction,'short',fixture.entryAt,undefined,version);
     expect(evaluate(fixture.primary,fixture.reaction,'short',fixture.entryAt,undefined,'countertrend-entry-model-1-v4').m5Bos).toEqual(fixture.originalBos);
     expect(result.m5Bos).toBeNull();
     expect(result.entry).toBeNull();
@@ -75,4 +75,14 @@ describe('M5 BOS identity for Entry Pattern 1', () => {
     expect(entryPattern1ConditionsReady({...conditions,m5Bos:correct,m5Countertrend:null},direction,entryAt)).toBe(false);
     expect(entryPattern1M5Bos(fixture.reaction,null,direction,entryAt)).toBeNull();
   });
+});
+
+it('v5 retains the proven countertrend BOS gate after the mitigation version bump',()=>{
+ const conditions={m5Bos:{type:'BOS',direction:'short',originTime:200,recognizedAt:600},
+  m5Countertrend:{trend:'uptrend',range:{low:{pivotTime:100},high:{pivotTime:300}},recognizedAt:300},
+  m1PivotBreak:{type:'pivot-break',direction:'short',recognizedAt:660},
+  retest:{recognizedAt:720,orderBlock:{dir:-1}},fvg:{direction:'short',recognizedAt:780}};
+ expect(entryPattern1ConditionsReady(conditions,'short',780,'countertrend-entry-model-1-v5')).toBe(false);
+ conditions.m5Bos.originTime=300;
+ expect(entryPattern1ConditionsReady(conditions,'short',780,'countertrend-entry-model-1-v5')).toBe(true);
 });
