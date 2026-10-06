@@ -1,3 +1,4 @@
+import { ENTRY_RISK_REASON_LABELS } from './entryRisk.js';
 import { berlinDayRangeUtcMs } from './berlinTime.js';
 import { simulationChartReplayTime } from './simulationChartReplayTime.js';
 export const MIN_SIMULATION_WINRATE_CASES = 50;
@@ -7,6 +8,7 @@ export const SIMULATION_OUTCOME_LABELS = {
   open: 'Offen', ambiguous: 'Uneindeutig', notExecutable: 'Nicht ausführbar',
 };
 export const SIMULATION_REASON_LABELS = {
+  ...ENTRY_RISK_REASON_LABELS,
   missingHistory: 'Historie unvollständig', sameCandle: 'Reihenfolge innerhalb der Kerze unbekannt',
   unsupportedInstrument: 'Instrument für diese Simulation noch nicht unterstützt',
   invalidStop: 'Stopp nicht ausführbar', invalidTargets: 'Ziele nicht ausführbar',

@@ -1,8 +1,9 @@
+import { entryPatternVersion } from './entryPattern.js';
 import { entryRiskScale } from './entryRisk.js';
 import { applySimulationCommission } from './tradeSetupSimulationCosts.js';
 import { ENTRY_SIZING_VERSION, ENTRY_PATTERN_1_SIZING_VERSION, ENTRY_RISK_BUDGET } from './tradeSetup2EntrySizing.js';
 
-export const SIMULATION_VERSION = 'm5-choch-250-500-whole-lots-half-t1-be-commission-v3';
+export const SIMULATION_VERSION = 'm5-choch-250-500-whole-lots-half-t1-be-commission-wide-stop-6-pips-v4';
 const money = value => Math.round(value * 1e8) / 1e8;
 
 export function sizeSimulation(entry, variant) {
@@ -17,8 +18,8 @@ export function sizeSimulation(entry, variant) {
     return { ...base, status: 'notExecutable', reason: 'invalidSizing' };
   }
   if (!['GBPUSD', 'EURUSD'].includes(entry.instrument)) return { ...base, status: 'notExecutable', reason: 'unsupportedInstrument' };
-  const scale = entryRiskScale(entry.price, stopPrice, [], entry.instrument, entry.direction);
-  if (scale.status !== 'ready') return { ...base, status: 'notExecutable', reason: 'invalidStop' };
+  const scale = entryRiskScale(entry.price, stopPrice, [], entry.instrument, entry.direction, { variant, entryPattern: entryPatternVersion(entry) });
+  if (scale.status !== 'ready') return { ...base, status: 'notExecutable', reason: scale.reason ?? 'invalidStop' };
   // Preisarithmetik kann bei exakt ganzen Lots wenige ULP unter dem Quotienten liegen.
   const riskPerLot = money(scale.risk * 100000);
   const lots = Math.floor(riskBudget / riskPerLot + 1e-10);

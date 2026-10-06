@@ -47,7 +47,7 @@ describe('Entry Pattern 1 target replacement', () => {
       excludedTargets: [levels[1]] })).toEqual([levels[0], levels[2]]);
   });
   it('preserves historical Entry Pattern gates and snapshot readers', () => {
-    for (const version of ['countertrend-entry-model-1-v6', 'countertrend-entry-model-1-v7']) {
+    for (const version of ['countertrend-entry-model-1-v6', 'countertrend-entry-model-1-v7', 'countertrend-entry-model-1-v8']) {
       expect(isEntryPattern1(version)).toBe(true);
       expect(usesCountertrendM5BosEntryPattern1(version)).toBe(true);
       expect(usesPivotBreakEntryPattern1(version)).toBe(true);

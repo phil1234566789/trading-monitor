@@ -2,7 +2,7 @@ import { cssColor } from './chartColors.js';
 import { lineWidth } from './chartLineWidths.js';
 import { drawIconLabel } from './chartIconLabel.js';
 import { drawScale } from './scaleRendering.js';
-import { entryRiskSpec } from './entryRisk.js';
+import { entryRiskSpec, ENTRY_RISK_REASON_LABELS } from './entryRisk.js';
 import { chartEventBarTime, chartEventCoordinate } from './chartEventCoordinate.js';
 import { barSecondsFor } from './timeframes.js';
 import { formatDatedTime, formatBerlinTime } from './berlinTime.js';
@@ -41,7 +41,8 @@ class EntryRenderer {
         align:'center',baseline:'middle',fontSizePx:10*vy,fontFamily:'sans-serif' });
       scales.forEach((scale, i) => {
         ctx.fillStyle = '#d1d4dc';
-        const text = scale ? scale.summary : `${variants[i]==='narrow'?'Eng':'Weit'}: SL nicht auswertbar`;
+        const text = scale ? scale.summary : ENTRY_RISK_REASON_LABELS[entry.scales?.[variants[i]]?.reason]
+          ?? `${variants[i]==='narrow'?'Eng':'Weit'}: SL nicht auswertbar`;
         // RR bleibt lesbar, wenn ein Ziel außerhalb des sichtbaren Preisbereichs liegt.
         drawIconLabel(ctx, { text, x: columns[i] * hx, y: (y + 32) * vy,
           align: 'right', baseline: 'middle', fontSizePx: 11 * vy, fontFamily: 'sans-serif' });

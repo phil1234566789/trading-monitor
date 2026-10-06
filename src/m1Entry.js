@@ -1,6 +1,6 @@
 import {entryPatternVersion,entryPatternText} from './entryPattern.js';
 import { barSecondsFor } from './timeframes.js';
-import { entryRiskScale, formatRiskPips } from './entryRisk.js';
+import { entryRiskScale, formatRiskPips, ENTRY_RISK_REASON_LABELS } from './entryRisk.js';
 import { formatBerlinTime } from './berlinTime.js';
 import { entrySizingLabel } from './tradeSetup2EntrySizing.js';
 import { usesPivotBreakEntryPattern1 } from './entryPattern1Conditions.js';
@@ -27,7 +27,7 @@ export function m1EntryFromFvg(context, fvg, candles, evaluatedAt, retest = null
   const targets = selection?.status === 'passed' && selection.selectedAt <= fvg.recognizedAt
     ? ['target1', 'target2'].flatMap((key, i) => selection[key] ? [{ label: `T${i + 1}`, price: selection[key].price }] : []) : [];
   const scales = Object.fromEntries(Object.entries(stops).map(([key, stop]) =>
-    [key, entryRiskScale(candle.close, stop.price, targets, context.instrument, context.direction)]));
+    [key, entryRiskScale(candle.close, stop.price, targets, context.instrument, context.direction, { variant: key, entryPattern: entryPatternVersion(context) })]));
   const pattern1=usesPivotBreakEntryPattern1(entryPatternVersion(context));
   return { id: pattern1 ? `${context.instrument}:${context.setupKey}:${entryPatternVersion(context)}:${fvg.recognizedAt}`
       : `${context.instrument}:${context.setupKey}:entry-1`, label: pattern1 ? 'Entry Pattern 1' : 'Entry 1',
@@ -40,7 +40,8 @@ export function entryChecklist(m1Check) {
   if (!entry) return { status: 'pending', details: m1Check?.entryBlockedReason ? [m1Check.entryBlockedReason] : [], detailStatuses: m1Check?.entryBlockedReason ? ['unmet'] : [] };
   const distances = entry.scales ? [['wide', 'Weiter SL'], ['narrow', 'Enger SL']].map(([key, label]) => {
     const scale = entry.scales[key];
-    return `${label}: ${formatRiskPips(scale.riskPips)}${scale.status === 'ready' ? ' Pips' : ''}`;
+    const reason = ENTRY_RISK_REASON_LABELS[scale?.reason];
+    return `${label}: ${formatRiskPips(scale?.riskPips)}${Number.isFinite(scale?.riskPips) ? ' Pips' : ''}${reason ? ` · ${reason}` : ''}`;
   }) : [];
   const label = Number.isFinite(entry.recognizedAt) ? `${entryPatternText(entry.label)} um ${formatBerlinTime(entry.recognizedAt)} Uhr` : entryPatternText(entry.label);
   return { status: 'passed', details: [label, ...(entry.sizing ? [entrySizingLabel(entry.sizing)] : []), ...distances], detailStatuses: ['passed'] };

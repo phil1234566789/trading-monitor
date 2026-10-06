@@ -48,7 +48,11 @@ describe('real 97/105 entry pattern 1 replay',()=>{
     expect(snapshot.evidence.some(e=>e.role==='pivot-break' && e.knownAt===fact.recognizedAt)).toBe(true);
    }
    expect(entries[0].entry.sizing.factor).toBe(1);
-   expect(sizeSimulation(entries[0].entry,'wide')).toMatchObject({status:'ready',riskBudget:500});
+   if(setup.tradeSetupId===5491) {
+    expect(entries[0].entry.scales.wide.riskPips).toBeCloseTo(13.6);
+    expect(sizeSimulation(entries[0].entry,'wide')).toMatchObject({status:'notExecutable',reason:'wideStopTooLarge',stopPrice:1.32547});
+    expect(sizeSimulation(entries[0].entry,'narrow')).toMatchObject({status:'ready',stopPrice:1.32454,riskBudget:500});
+   } else expect(sizeSimulation(entries[0].entry,'wide')).toMatchObject({status:'ready',riskBudget:500});
    const context=activeM1Context(entries[0].checklist);
    context.m5Candles=m5Candles;context.settings={};
    const structure=buildM1Structure(m1Candles,context.anchor,entries[0].knownAt);

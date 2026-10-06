@@ -1,6 +1,6 @@
 import { entryPattern1CountertrendState } from './entryPattern1M5Bos.js';
 
-export const usesEntryPattern1TargetReplacement = version => version === 'countertrend-entry-model-1-v7';
+export const usesEntryPattern1TargetReplacement = version => ['countertrend-entry-model-1-v8', 'countertrend-entry-model-1-v7'].includes(version);
 
 export function entryPattern1TargetExclusions(primary, direction, selectedAt) {
   const countertrend = entryPattern1CountertrendState(primary, direction, selectedAt);

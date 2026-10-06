@@ -9,6 +9,25 @@ const entry = { id: 'GBPUSD:setup:entry-1', label: 'Entry 1', instrument: 'GBPUS
   scales: { wide: entryRiskScale(1.35,1.3506,[{ label:'T1', price:1.3472 }],'GBPUSD','short'),
     narrow: entryRiskScale(1.35,1.3503,[{ label:'T1', price:1.3472 }],'GBPUSD','short') } };
 describe('M1 entry annotation', () => {
+  it('draws a blocked wide reason while keeping the narrow ladder and SL switching', () => {
+    const saved = {...entry, scales: {
+      wide: entryRiskScale(1.35,1.3507,[],'GBPUSD','short',{variant:'wide',entryPattern:'countertrend-entry-model-1-v8'}),
+      narrow: entry.scales.narrow,
+    }};
+    const primitive=new M1EntryPrimitive(saved);
+    primitive.attached({chart:{timeScale:()=>({timeToCoordinate:()=>300,options:()=>({barSpacing:10})}),subscribeCrosshairMove:vi.fn()},
+      series:{priceToCoordinate:p=>300-(p-saved.price)*10000},requestUpdate:vi.fn()});
+    for(const variant of ['', 'wide', 'narrow']) {
+      primitive.variant=variant;primitive.updateAllViews();
+      const ctx=Object.fromEntries(['setLineDash','beginPath','moveTo','lineTo','stroke','fillRect','strokeRect','fillText'].map(k=>[k,vi.fn()]));
+      primitive.paneViews()[0].renderer().draw({useBitmapCoordinateSpace:cb=>cb({context:ctx,horizontalPixelRatio:1,verticalPixelRatio:1,bitmapSize:{width:1200,height:800}})});
+      const texts=ctx.fillText.mock.calls.map(c=>c[0]);
+      expect(texts.some(t=>t.includes('Weiter SL über 6 Pips'))).toBe(variant!=='narrow');
+      expect(texts.some(t=>t.includes('SL eng 1,35030'))).toBe(variant!=='wide');
+      expect(texts.some(t=>t.includes('SL weit 1,35070'))).toBe(false);
+    }
+  });
+
   it('draws the original narrow ladder independently from an invalid, null or absent wide scale',()=>{
     const before=JSON.stringify(original);
     const chart={timeScale:()=>({timeToCoordinate:()=>300,options:()=>({barSpacing:10})}),subscribeCrosshairMove:vi.fn()};
