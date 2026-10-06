@@ -13,16 +13,20 @@ export function useSimulationComparison(repository, filters, pins) {
       if (ticket !== revision) return;
       runs.value = sortSimulationRunsByExecution(available);
       if (!filters.value.run) { filters.value = {...filters.value,run:latestCompletedRun(available)}; return; }
-      // Die kleine Zusatzanzeige darf das Öffnen des ausgewählten Laufs nicht verzögern.
+      const ids = [...new Set([filters.value.run, filters.value.compare].filter(Boolean))];
+      const data=[];
+      // Gleichzeitige JSONB-Abfragen konkurrieren um dasselbe knappe SQL-Zeitbudget.
+      for(const id of ids){
+        const snapshots=await repository.listReviewMetadata(id);
+        const results=await repository.listResults({runId:id});
+        data.push([id,{groups:reviewGroups(snapshots),results:results.map(applySimulationCommission)}]);
+      }
+      if(ticket!==revision)return;
+      datasets.value=new Map(data);
+      // Zusatzanzahlen erst nach dem sichtbaren Lauf laden, ohne dessen Anzeige zu verzögern.
       repository.listRunDrCounts(available.map(r=>r.id)).then(drCounts=>{
         if(ticket===revision)runs.value=sortSimulationRunsByExecution(available.map(r=>({...r,dealingRangeCount:drCounts.get(r.id)??null})));
       }).catch(()=>{});
-      const ids = [...new Set([filters.value.run, filters.value.compare].filter(Boolean))];
-      const data = await Promise.all(ids.map(async id => {
-        const [snapshots, results] = await Promise.all([repository.listReviewSnapshots(id), repository.listResults({runId:id})]);
-        return [id,{ groups:reviewGroups(snapshots), results:results.map(applySimulationCommission) }];
-      }));
-      if (ticket === revision) datasets.value = new Map(data);
     } catch (cause) { if (ticket === revision) error.value = cause.message || 'Simulationsdaten konnten nicht geladen werden.'; }
     finally { if (ticket === revision) loading.value = false; }
   }

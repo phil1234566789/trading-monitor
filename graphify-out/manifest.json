@@ -4548,9 +4548,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupSimulationRepository.js": {
-    "mtime": 1791290776.1515832,
-    "seen": 1791320133.4943876,
-    "ast_hash": "fcc89589cbf734c54eb0d7f95ef7214f",
+    "mtime": 1791321416.0656419,
+    "seen": 1791321425.0417037,
+    "ast_hash": "a65fec3b1718104640600bc326948dd5",
     "semantic_hash": ""
   },
   "src/tradeSetupSimulationStatistics.js": {
@@ -4608,9 +4608,9 @@
     "semantic_hash": ""
   },
   "test/tradeSetupSimulationRepository.test.js": {
-    "mtime": 1791319953.0312765,
-    "seen": 1791320133.4943876,
-    "ast_hash": "b978034d590d7aa60302190c953886f0",
+    "mtime": 1791321334.1653495,
+    "seen": 1791321341.369955,
+    "ast_hash": "e311141f4d4f989c0c245dde776f7d4b",
     "semantic_hash": ""
   },
   "test/tradeSetupSimulationStatistics.test.js": {
@@ -5292,9 +5292,9 @@
     "semantic_hash": ""
   },
   "src/composables/useSimulationComparison.js": {
-    "mtime": 1791290776.1218934,
-    "seen": 1791320133.4943876,
-    "ast_hash": "73655f136e5910386218d63fbbe03f44",
+    "mtime": 1791321416.0646431,
+    "seen": 1791321424.981558,
+    "ast_hash": "42365f1f92d8ba691f4218979c5f45a1",
     "semantic_hash": ""
   },
   "test/simulationReviewFeatures.test.js": {
@@ -5790,9 +5790,9 @@
     "semantic_hash": ""
   },
   "test/useSimulationComparison.test.js": {
-    "mtime": 1791290776.190082,
-    "seen": 1791320133.4943876,
-    "ast_hash": "899f61f0ab8f064fd561d474b0a6808e",
+    "mtime": 1791321445.1678874,
+    "seen": 1791321516.5090914,
+    "ast_hash": "930ada20fd33add2a59c6059acd9288b",
     "semantic_hash": ""
   },
   "src/simulationRunClock.js": {
@@ -6039,6 +6039,18 @@
     "mtime": 1791316764.345467,
     "seen": 1791320133.4943876,
     "ast_hash": "0a63c702ddee0dd5eac854eaafafc0d7",
+    "semantic_hash": ""
+  },
+  "src/simulationReviewMetadata.js": {
+    "mtime": 1791321533.9101386,
+    "seen": 1791321611.372054,
+    "ast_hash": "90e9b03678d87d55ef12d2bcf6fa3dcb",
+    "semantic_hash": ""
+  },
+  "test/simulationReviewMetadata.test.js": {
+    "mtime": 1791321549.3705423,
+    "seen": 1791321611.4829984,
+    "ast_hash": "a77f4d4fcc862305e6252fe409318497",
     "semantic_hash": ""
   }
 }

@@ -1,3 +1,4 @@
+import { SIMULATION_REVIEW_METADATA_FIELDS, simulationReviewMetadata } from './simulationReviewMetadata.js';
 import {entryPatternVersion} from './entryPattern.js';
 import { applySimulationCommission, SIMULATION_COST_VERSION } from './tradeSetupSimulationCosts.js';
 import { restoreChecklistObservationChecks } from './checklistObservationRules.js';
@@ -11,6 +12,17 @@ async function pages(query,pageSize=PAGE_SIZE) {
     const { data, error } = await query(rows.length, rows.length + pageSize - 1);
     if (error) throw error;
     if (!data?.length) return rows;
+    rows.push(...data);
+  }
+}
+
+// Cursor statt OFFSET: auch kurze Serverseiten bis zur wirklich leeren Seite lesen.
+async function snapshotMetadataPages(query) {
+  const rows=[];
+  for(;;){
+    const {data,error}=await query(rows.at(-1)).limit(10);
+    if(error)throw error;
+    if(!data?.length)return rows;
     rows.push(...data);
   }
 }
@@ -47,6 +59,17 @@ export function createSimulationRepository(db,{compactStructures=false}={}) {
       const { data, error } = await db.from('trade_setup_simulation_runs').select('run').eq('id', runId).maybeSingle();
       if (error) throw error;
       return data?.run ?? null;
+    },
+    listReviewMetadata: async runId => {
+      if(!runId)throw new Error('Ein Lauf ist für die Statistik-Metadaten erforderlich.');
+      const groups=[];
+      for(const table of ['trade_setup_simulation_setups','trade_setup_simulation_entries'])
+        groups.push(await snapshotMetadataPages(last => {
+          // OFFSET liest die grossen JSONB-Felder auch fuer uebersprungene Zeilen.
+          let query=db.from(table).select(SIMULATION_REVIEW_METADATA_FIELDS).eq('run_id',runId).order('id');
+          return last ? query.gt('id',last.id) : query;
+        }));
+      return groups.flat().map(simulationReviewMetadata);
     },
     listReviewSnapshots: async (runId) => {
       // Prüfbelege projizieren; geteilte Strukturen im primary benötigen ihren Speicherpool.
@@ -97,9 +120,17 @@ export function createSimulationRepository(db,{compactStructures=false}={}) {
     listRunDrCounts: async runIds => {
       if(!runIds.length)return new Map();
       // Mehrere Stände und Re-Entries gehören zu derselben DR; nur ihre kleinen Schlüssel lesen.
-      const rows=await Promise.all(['trade_setup_simulation_setups','trade_setup_simulation_entries'].map(table=>
-        pages((from,to)=>db.from(table).select('run_id,instrument,setupKey:snapshot->>setupKey')
-          .in('run_id',runIds).order('run_id').order('id').range(from,to),10)));
+      const rows=[];
+      for(const table of ['trade_setup_simulation_setups','trade_setup_simulation_entries'])
+        rows.push(await snapshotMetadataPages(last=>{
+          let query=db.from(table).select('id,run_id,instrument,setupKey:snapshot->>setupKey')
+            .in('run_id',runIds).order('run_id').order('id');
+          if(last){
+            const run=JSON.stringify(last.run_id),id=JSON.stringify(last.id);
+            query=query.or(`run_id.gt.${run},and(run_id.eq.${run},id.gt.${id})`);
+          }
+          return query;
+        }));
       const keys=new Map(runIds.map(id=>[id,new Set()])),incomplete=new Set();
       for(const row of rows.flat()) {
         if(!keys.has(row.run_id))throw new Error('DR-Zählung enthält keinen bekannten Lauf.');

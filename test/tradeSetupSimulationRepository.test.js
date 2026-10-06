@@ -96,17 +96,19 @@ describe('simulation history repository', () => {
   });
   it('counts unique stored DR keys across setup stands and entries, with capped-page pagination',async()=>{
     const selections=[],offsets=[];
-    const datasets={trade_setup_simulation_setups:Array.from({length:119},(_,i)=>({run_id:'run',instrument:'GBPUSD',setupKey:`dr-${i%57}`})),
-      trade_setup_simulation_entries:Array.from({length:24},(_,i)=>({run_id:'run',instrument:'GBPUSD',setupKey:`dr-${i}`}))};
-    datasets.trade_setup_simulation_setups.push({run_id:'incomplete',instrument:'GBPUSD',setupKey:null});
+    const datasets={trade_setup_simulation_setups:Array.from({length:119},(_,i)=>({id:`s${i}`,run_id:'run',instrument:'GBPUSD',setupKey:`dr-${i%57}`})),
+      trade_setup_simulation_entries:Array.from({length:24},(_,i)=>({id:`e${i}`,run_id:'run',instrument:'GBPUSD',setupKey:`dr-${i}`}))};
+    datasets.trade_setup_simulation_setups.push({id:'incomplete',run_id:'incomplete',instrument:'GBPUSD',setupKey:null});
+    const positions=new Map(),cursors=[];
     const db={from:table=>{
-      const query={select:fields=>{selections.push(fields);return query;},in:()=>query,order:()=>query,
-        range:async start=>{offsets.push([table,start]);return {data:datasets[table].slice(start,start+2),error:null};}};
+      const query={select:fields=>{selections.push(fields);return query;},in:()=>query,order:()=>query,or:filter=>{cursors.push(filter);return query;},
+        limit:async size=>{expect(size).toBe(10);const start=positions.get(table)??0;positions.set(table,start+2);offsets.push([table,start]);return {data:datasets[table].slice(start,start+2),error:null};}};
       return query;
     }};
     const counts=await createSimulationRepository(db).listRunDrCounts(['run','empty','incomplete']);
     expect(counts.get('run')).toBe(57);expect(counts.get('empty')).toBe(0);expect(counts.get('incomplete')).toBeNull();
-    expect(new Set(selections)).toEqual(new Set(['run_id,instrument,setupKey:snapshot->>setupKey']));
+    expect(new Set(selections)).toEqual(new Set(['id,run_id,instrument,setupKey:snapshot->>setupKey']));
+    expect(cursors).toContain('run_id.gt."run",and(run_id.eq."run",id.gt."s1")');
     expect(offsets).toContainEqual(['trade_setup_simulation_setups',118]);
     expect(offsets).toContainEqual(['trade_setup_simulation_entries',24]);
   });
