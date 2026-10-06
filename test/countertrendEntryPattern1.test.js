@@ -51,7 +51,7 @@ describe('Countertrend entry pattern 1 conditions', () => {
     expect(result.map(z=>z.startTime)).toEqual([0,300,600]);
     expect(result[0].inclusionRule).toBe('setup1OrderBlockIncluded');
     expect(setup1OrderBlockIncluded(primary,'short',1200)).toMatchObject({startTime:0,recognizedAt:600});
-    expect(ENTRY_PATTERN_1_VERSION).toBe('countertrend-entry-model-1-v8');
+    expect(ENTRY_PATTERN_1_VERSION).toBe('countertrend-entry-model-1-v9');
   });
 });
 

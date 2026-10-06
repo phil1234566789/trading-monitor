@@ -44,13 +44,14 @@ it('cached jumps and rewind preserve the first FVG and discover a newly supplied
  expect(entryPattern1RetestFvg(rows,[ob,next],0,'short',720,progress))
   .toEqual(entryPattern1RetestFvg(rows,[ob,next],0,'short',720));
 });
-it.each(['short','long'])('wide stop belongs to the mitigated OB for %s; legacy stop stays frozen',direction=>{
+it.each(['short','long'])('wide stop retains mitigated OB provenance while capped for %s; legacy stop stays frozen',direction=>{
  const context={entryPattern:ENTRY_PATTERN_1_VERSION,instrument:'GBPUSD',setupKey:'test',direction,
   primary:{reactionOB:{top:1.36,bottom:1.25},targetSelection:{status:'passed',selectedAt:0,target1:{price:direction==='short'?1.29:1.32}}}};
  const retest={candleTime:0,recognizedAt:60,orderBlock:ob};
  const fvg={candleTime:120,recognizedAt:240};
  const entry=m1EntryFromFvg(context,fvg,rows,240,retest);
- expect(entry.stops.wide.price).toBe(direction==='short'?ob.top:ob.bottom);
+ expect(entry.stops.wide.structuralPrice).toBe(direction==='short'?ob.top:ob.bottom);
+ expect(entry.stops.wide.price).toBeCloseTo(entry.price+(direction==='short'?1:-1)*.0006,12);
  expect(entry.stops.wide.sourceTime).toBe(ob.startTime);
  const old=m1EntryFromFvg({...context,entryPattern:'countertrend-entry-model-1-v2'},fvg,rows,240,retest);
  expect(old.stops.wide.price).toBe(direction==='short'?1.36:1.25);

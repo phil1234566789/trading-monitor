@@ -1,4 +1,4 @@
-import { toPips } from './pipConfig.js';
+import { toPips, fromPips } from './pipConfig.js';
 import { pricePrecisionForInstrument } from './format.js';
 
 export const MAX_FOREX_WIDE_STOP_PIPS = 6;
@@ -9,9 +9,16 @@ export const formatRiskPips = value => Number.isFinite(value)
 
 export function entryRiskScale(entry, stop, targets, instrument, direction, { variant, entryPattern } = {}) {
   const sign = direction === 'short' ? -1 : direction === 'long' ? 1 : 0;
-  const risk = (entry - stop) * sign;
+  let risk = (entry - stop) * sign;
   if (!sign || !Number.isFinite(entry) || !Number.isFinite(stop) || !(risk > 0)) {
     return { status: 'unknown', entry, stop, risk: null, riskPips: null, levels: [], targets: [] };
+  }
+  // Der neue Deckel verkürzt nur den weiten Forex-Stopp, ohne den Entry abzulehnen.
+  // Historische v8-Snapshots behalten dagegen ihre damalige Ausschlussregel.
+  if (entryPattern === 'countertrend-entry-model-1-v9' && variant === 'wide'
+    && ['GBPUSD', 'EURUSD'].includes(instrument) && risk > fromPips(MAX_FOREX_WIDE_STOP_PIPS, instrument)) {
+    risk = fromPips(MAX_FOREX_WIDE_STOP_PIPS, instrument);
+    stop = entry - sign * risk;
   }
   const riskPips = toPips(risk, instrument);
   // Alte Entry-Versionen behalten ihre Stopps. Die Toleranz fängt nur Rundungsfehler

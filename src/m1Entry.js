@@ -28,6 +28,10 @@ export function m1EntryFromFvg(context, fvg, candles, evaluatedAt, retest = null
     ? ['target1', 'target2'].flatMap((key, i) => selection[key] ? [{ label: `T${i + 1}`, price: selection[key].price }] : []) : [];
   const scales = Object.fromEntries(Object.entries(stops).map(([key, stop]) =>
     [key, entryRiskScale(candle.close, stop.price, targets, context.instrument, context.direction, { variant: key, entryPattern: entryPatternVersion(context) })]));
+  for (const [variant, scale] of Object.entries(scales)) {
+    if (scale.status === 'ready' && stops[variant].price !== scale.stop)
+      stops[variant] = { ...stops[variant], structuralPrice: stops[variant].price, price: scale.stop };
+  }
   const pattern1=usesPivotBreakEntryPattern1(entryPatternVersion(context));
   return { id: pattern1 ? `${context.instrument}:${context.setupKey}:${entryPatternVersion(context)}:${fvg.recognizedAt}`
       : `${context.instrument}:${context.setupKey}:entry-1`, label: pattern1 ? 'Entry Pattern 1' : 'Entry 1',
