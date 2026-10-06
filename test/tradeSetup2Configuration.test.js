@@ -4,7 +4,7 @@ import {OBSERVATION_RULE_VERSION} from '../src/checklistObservationRules.js';
 import {setupMemoKey} from '../src/setup2Memo.js';
 it('versions observation-only F while retaining the old run reader and separating memo keys',()=>{
   const config=buildTradeSetup2Configuration({instrument:'GBPUSD'});
-  expect(config).toMatchObject({setupVersion:'countertrend-entry-model-1-v17',
+  expect(config).toMatchObject({setupVersion:'countertrend-entry-model-1-v18',
     antiConfluenceRules:[{id:'h1CounterDivergence',disqualifies:false}]});
   expect(supportsSnapshotIndicators('countertrend-entry-model-1-v9')).toBe(true);
   const source={instrument:'GBPUSD',tradeSetupId:3125};

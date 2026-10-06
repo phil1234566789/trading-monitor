@@ -33,9 +33,21 @@ export function selectChecklistSessionTargets(levels, { direction, referencePric
   return target2 ? [target1, target2] : [target1];
 }
 
+/** Nur ein tatsächlich gewähltes Drehungslevel ersetzen; eigenständige Sessionziele bleiben unverändert. */
+export function replaceChecklistTargets(levels, { direction, referencePrice, excludedTargets = [] }) {
+  const selected = selectChecklistSessionTargets(levels, { direction, referencePrice });
+  const excluded = p => excludedTargets.some(e => e.pivotTime === p.pivotTime && e.dir === p.dir && e.price === p.price);
+  if (!selected.some(excluded)) return selected;
+  const targets = selected.filter(p => !excluded(p));
+  const replacements = findNearestLiquidityTargets(levels.filter(p => !excluded(p)), {
+    direction, currentPrice: targets.at(-1)?.price ?? referencePrice, limit: Infinity,
+  });
+  return [...targets, ...replacements].slice(0, 2);
+}
+
 /** Geschlossene M5-Pivots, je Session tiefstes (Short) bzw. höchstes (Long) zulässiges Level. */
 export function evaluateChecklistTargets({ direction, referencePrice, evaluatedAt, instrument,
-  m5Candles, sessionConfigs = [] } = {}) {
+  m5Candles, sessionConfigs = [], excludedTargets = [] } = {}) {
   const result = { status: 'unknown', details: [], target1: null, target2: null,
     selectedAt: evaluatedAt, referencePrice, direction, instrument };
   if (!Number.isFinite(evaluatedAt) || !Number.isFinite(referencePrice) || !['long', 'short'].includes(direction)) {
@@ -55,21 +67,20 @@ export function evaluateChecklistTargets({ direction, referencePrice, evaluatedA
   const levels = (direction === 'short' ? pivots.lows : pivots.highs).flatMap(p => {
     const session = lookup.find(s => s.occurrences.some(o => p.pivotTime >= o.startSec && p.pivotTime < o.endSec));
     const occurrence = session?.occurrences.find(o => p.pivotTime >= o.startSec && p.pivotTime < o.endSec);
-    if (!occurrence) return [];
     const knownAt = usable[indices.get(p.pivotTime) + period].time + 300;
-    const sessionKey = [session.label, occurrence.startSec, occurrence.endSec].join(':');
+    const sessionKey = occurrence ? [session.label, occurrence.startSec, occurrence.endSec].join(':') : null;
     const sessionLabel = bonusLabelForPivot(p.pivotTime, p.dir, p.price, lookup);
     const ageSeconds = businessSecondsBetween(p.pivotTime, ageReferenceTime(p.touchedTime, evaluatedAt));
     const ageText = formatAge(ageSeconds);
     return [{ ...p, id: [instrument ?? '', '5m', period, p.pivotTime, p.dir, p.price].join(':'),
-      sourceTime: p.pivotTime, timeframe: '5m', period, source: 'sessionLiquidity', knownAt, selectedAt: evaluatedAt,
-      sessionKey, sessionName: session.label, sessionStart: occurrence.startSec, sessionEnd: occurrence.endSec,
-      sessionLabel, ageSeconds, ageText, label: `${sessionLabel ?? session.label} (${ageText})` }];
+      sourceTime: p.pivotTime, timeframe: '5m', period, source: occurrence ? 'sessionLiquidity' : 'liquidity', knownAt, selectedAt: evaluatedAt,
+      sessionKey, sessionName: session?.label ?? null, sessionStart: occurrence?.startSec ?? null, sessionEnd: occurrence?.endSec ?? null,
+      sessionLabel, ageSeconds, ageText, label: `${sessionLabel ?? session?.label ?? 'M5 Pivot'} (${ageText})` }];
   });
-  [result.target1 = null, result.target2 = null] = selectChecklistSessionTargets(levels, { direction, referencePrice });
+  [result.target1 = null, result.target2 = null] = replaceChecklistTargets(levels, { direction, referencePrice, excludedTargets });
   result.status = result.target1 ? 'passed' : 'pending';
   result.details = [result.target1 ? `${result.target1.label}: ${result.target1.price}` : 'Noch kein unberührtes Session-Pivot auf der Zielseite.',
-    result.target2 ? `${result.target2.label}: ${result.target2.price}` : 'Kein weiterführendes Ziel einer anderen Session; das zweite Ziel ist optional.'];
+    result.target2 ? `${result.target2.label}: ${result.target2.price}` : 'Kein weiterführendes Ziel; das zweite Ziel ist optional.'];
   return result;
 }
 

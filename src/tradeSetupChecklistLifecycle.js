@@ -1,10 +1,11 @@
+import { entryPattern1TargetExclusions, usesEntryPattern1TargetReplacement } from './entryPattern1Targets.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { evaluateChecklistTargets } from './tradeSetupChecklistTargets.js';
 import { candleTouchesPrice } from './structurePivotTime';
 
 export const CHECKLIST_RULE_VERSION = 'session-targets-at-c-m5-sweep-v2';
 
-export function fixChecklistTargets({ candidate, instrument, candles, sessionConfigs, recognitionWithinBar = false }) {
+export function fixChecklistTargets({ candidate, instrument, candles, sessionConfigs, recognitionWithinBar = false, entryPattern }) {
   const selectedAt = candidate.reactionRecognizedAt;
   if (candidate.checks.reaction.status !== 'passed' || !Number.isFinite(selectedAt)) return null;
   const prefix = closedChecklistCandles(candles, '5m', selectedAt);
@@ -15,7 +16,8 @@ export function fixChecklistTargets({ candidate, instrument, candles, sessionCon
   const closedAt = recognitionWithinBar ? Math.floor(selectedAt / 300) * 300 : selectedAt;
   if (prefix.at(-1)?.time + 300 !== closedAt) return null;
   return evaluateChecklistTargets({ instrument, direction: candidate.direction, evaluatedAt: selectedAt,
-    referencePrice, m5Candles: prefix, sessionConfigs });
+    referencePrice, m5Candles: prefix, sessionConfigs, excludedTargets: usesEntryPattern1TargetReplacement(entryPattern)
+      ? entryPattern1TargetExclusions(candidate, candidate.direction, selectedAt) : [] });
 }
 
 /** T1 beendet das Hauptsetup; T2 wird unabhängig davon bis zur Invalidierung beobachtet. */

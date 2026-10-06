@@ -119,7 +119,7 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     recognizedAt: c.recognizedAt, currentTrend: c.checks.m5Trend.trend, outerTrend: c.checks.outerM5Trend.trend }));
   const accepted = candidates.filter(c => c.setupType === 'countertrend');
   for (const candidate of accepted) {
-    if(candidate.targetSelection?.status!=='passed')candidate.targetSelection = fixChecklistTargets({candidate,instrument,candles:m5,sessionConfigs,recognitionWithinBar:true});
+    if(candidate.targetSelection?.status!=='passed')candidate.targetSelection = fixChecklistTargets({candidate,instrument,candles:m5,sessionConfigs,recognitionWithinBar:true,entryPattern:ENTRY_PATTERN_1_VERSION});
     candidate.checks.targets = candidate.targetSelection ?? {status:'unknown',details:['Zielprüfung offen.']};
     if (candidate.targetSelection?.status === 'passed') {
       const memo=setupMemo?.get(memoKeys.get(candidate.tradeSetupId));

@@ -1,6 +1,6 @@
 import { collectNestedChain } from './marketStructureAnalysis';
 
-export function entryPattern1Countertrend(primary, direction, evaluatedAt, state, stateKnownAt) {
+export function entryPattern1CountertrendState(primary, direction, evaluatedAt, state) {
   const check = primary?.checks?.m5Trend;
   if (!check?.structureState || !Number.isFinite(check.evaluatedAt) || check.evaluatedAt > evaluatedAt) return null;
   const current = collectNestedChain(check.structureState).at(-1);
@@ -9,8 +9,13 @@ export function entryPattern1Countertrend(primary, direction, evaluatedAt, state
   if (!Number.isFinite(current.currRange?.[start]?.pivotTime)) return null;
   const relevant = state ? collectNestedChain(state).findLast(level => level.trend === current.trend
     && level.currRange[start].pivotTime === current.currRange[start].pivotTime) : current;
+  return relevant ?? null;
+}
+
+export function entryPattern1Countertrend(primary, direction, evaluatedAt, state, stateKnownAt) {
+  const relevant = entryPattern1CountertrendState(primary, direction, evaluatedAt, state);
   return relevant ? { trend: relevant.trend, range: relevant.currRange,
-    recognizedAt: Math.max(check.evaluatedAt, stateKnownAt ?? check.evaluatedAt) } : null;
+    recognizedAt: Math.max(primary.checks.m5Trend.evaluatedAt, stateKnownAt ?? primary.checks.m5Trend.evaluatedAt) } : null;
 }
 
 export function entryPattern1M5BosMatches(bos, countertrend, direction, evaluatedAt) {

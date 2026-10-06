@@ -1,11 +1,11 @@
 import { entryPattern1M5BosMatches } from './entryPattern1M5Bos.js';
 
-export const ENTRY_PATTERN_1_VERSION = 'countertrend-entry-model-1-v6';
-export const isEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v5', 'countertrend-entry-model-1-v4', 'countertrend-entry-model-1-v3', 'countertrend-entry-model-1-v2', 'countertrend-entry-model-1-v1'].includes(version);
-export const usesM5BosEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v5', 'countertrend-entry-model-1-v4','countertrend-entry-model-1-v3','countertrend-entry-model-1-v2'].includes(version);
-export const usesPivotBreakEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v5','countertrend-entry-model-1-v4'].includes(version);
+export const ENTRY_PATTERN_1_VERSION = 'countertrend-entry-model-1-v7';
+export const isEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v6','countertrend-entry-model-1-v5', 'countertrend-entry-model-1-v4', 'countertrend-entry-model-1-v3', 'countertrend-entry-model-1-v2', 'countertrend-entry-model-1-v1'].includes(version);
+export const usesM5BosEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v6','countertrend-entry-model-1-v5', 'countertrend-entry-model-1-v4','countertrend-entry-model-1-v3','countertrend-entry-model-1-v2'].includes(version);
+export const usesPivotBreakEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v6','countertrend-entry-model-1-v5','countertrend-entry-model-1-v4'].includes(version);
 
-export const usesCountertrendM5BosEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v5'].includes(version);
+export const usesCountertrendM5BosEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v6','countertrend-entry-model-1-v5'].includes(version);
 
 export function entryPattern1ConditionsReady(conditions, direction, entryAt, version = ENTRY_PATTERN_1_VERSION) {
   const {retest,fvg}=conditions ?? {};
