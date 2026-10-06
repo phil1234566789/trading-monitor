@@ -31,7 +31,7 @@ describe('Countertrend-Scanner Start und Last',()=>{
   const entryGate=vi.spyOn(gate,'createSetup2Entry');
   const model=vi.spyOn(m1,'evaluateM1Checklist').mockImplementation(({evaluatedAt})=>{
    const retest={candleTime:at,recognizedAt:at+60,orderBlock:{dir:-1,startTime:setup.obStartTime,top:1.31,bottom:1.305,recognizedAt:at}};
-   const conditions={m5Bos:{type:'BOS',direction:'short',recognizedAt:at},m1PivotBreak:{type:'pivot-break',direction:'short',recognizedAt:at},
+   const conditions={m5Bos:{type:'BOS',direction:'short',originTime:at-300,recognizedAt:at},m5Countertrend:{trend:'uptrend',range:{high:{pivotTime:at-300}},recognizedAt:at},m1PivotBreak:{type:'pivot-break',direction:'short',recognizedAt:at},
     retest,fvg:{direction:'short',recognizedAt:evaluatedAt,candleTime:evaluatedAt-120}};
    const entry=[at+120,at+180,at+300].includes(evaluatedAt)?{id:`entry:${evaluatedAt}`,entryPattern:ENTRY_PATTERN_1_VERSION,conditions,
     instrument:'GBPUSD',setupKey:key,direction:'short',recognizedAt:evaluatedAt,candleTime:evaluatedAt-60,price:1.3,

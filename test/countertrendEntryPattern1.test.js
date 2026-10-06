@@ -10,7 +10,7 @@ import * as obs from '../src/orderBlockDetection.js';
 import candles from './fixtures/gbpusd-m1-dr114-p5.json';
 const at=clock=>Date.parse(`2026-09-09T${clock}:00+02:00`)/1000;
 
-const conditions = () => ({m5Bos:{type:'BOS',direction:'short',recognizedAt:600},
+const conditions = () => ({m5Bos:{type:'BOS',direction:'short',originTime:300,recognizedAt:600},m5Countertrend:{trend:'uptrend',range:{high:{pivotTime:300},low:{pivotTime:100}},recognizedAt:300},
   m1PivotBreak:{type:'pivot-break',direction:'short',recognizedAt:660},
   retest:{candleTime:660,recognizedAt:720,orderBlock:{dir:-1,startTime:300,recognizedAt:600}},
   fvg:{direction:'short',candleTime:660,recognizedAt:780}});
@@ -33,7 +33,7 @@ describe('Countertrend entry pattern 1 conditions', () => {
     expect(entryPattern1ConditionsReady(facts,'short',780)).toBe(false);
   });
   it('mirrors the same four conditions for long', () => {
-    const facts=conditions();for(const key of ['m5Bos','m1PivotBreak','fvg'])facts[key].direction='long';facts.retest.orderBlock.dir=1;
+    const facts=conditions();for(const key of ['m5Bos','m1PivotBreak','fvg'])facts[key].direction='long';facts.m5Countertrend.trend='downtrend';facts.m5Bos.originTime=100;facts.retest.orderBlock.dir=1;
     expect(entryPattern1ConditionsReady(facts,'long',780)).toBe(true);
   });
   it('keeps historical CHoCH conditions and rejects them under the new version',()=>{
@@ -51,12 +51,13 @@ describe('Countertrend entry pattern 1 conditions', () => {
     expect(result.map(z=>z.startTime)).toEqual([0,300,600]);
     expect(result[0].inclusionRule).toBe('setup1OrderBlockIncluded');
     expect(setup1OrderBlockIncluded(primary,'short',1200)).toMatchObject({startTime:0,recognizedAt:600});
-    expect(ENTRY_PATTERN_1_VERSION).toBe('countertrend-entry-model-1-v4');
+    expect(ENTRY_PATTERN_1_VERSION).toBe('countertrend-entry-model-1-v5');
   });
 });
 
 describe('entry pattern 1 detection', () => {
   const primary={id:'dr',reactionRecognizedAt:at('09:30'),reactionOB:{dir:-1,startTime:at('09:20'),top:1.36,bottom:1.359},
+    checks:{m5Trend:{evaluatedAt:at('09:30'),structureState:{trend:'uptrend',currRange:{high:{pivotTime:at('09:20'),price:1.36},low:{pivotTime:at('08:00'),price:1.34}},nestedTrend:null}}},
     sweep:{level:{touchedTime:at('09:20')}},invalidation:1.36,targetSelection:{status:'passed',selectedAt:at('09:30'),target1:{price:1.35335},target2:{price:1.353}}};
   const context={entryPattern:ENTRY_PATTERN_1_VERSION,instrument:'GBPUSD',direction:'short',setupKey:'dr',primary,
     confirmedAt:at('09:30'),structureStart:at('08:00'),settings:{},
@@ -66,7 +67,7 @@ describe('entry pattern 1 detection', () => {
   function mocked(run, changes={}) {
     const original=obs.detectOrderBlocks;
     const ob=vi.spyOn(obs,'detectOrderBlocks').mockImplementation((rows,tf,...rest)=>tf==='5m'?[{...second,...changes}]:original(rows,tf,...rest));
-    const choch=vi.spyOn(m5,'evaluateChecklistM5').mockReturnValue({structureReaction:{levels:[{type:'BOS',direction:'short',recognizedAt:at('09:49'),candleTime:at('09:44')}]}});
+    const choch=vi.spyOn(m5,'evaluateChecklistM5').mockReturnValue({structureReaction:{levels:[{type:'BOS',direction:'short',originTime:at('09:20'),recognizedAt:at('09:49'),candleTime:at('09:44')}]}});
     try{return run();}finally{ob.mockRestore();choch.mockRestore();}
   }
   it('uses the second newly formed M5 OB and saves all facts, without requiring the innermost M1 direction', () => mocked(()=>{

@@ -1,5 +1,6 @@
+import { entryPattern1M5BosMatches } from './entryPattern1M5Bos.js';
 import {entryPatternVersion} from './entryPattern.js';
-import { usesM5BosEntryPattern1, entryPattern1ConditionsReady, isEntryPattern1 } from './entryPattern1Conditions.js';
+import { usesM5BosEntryPattern1, entryPattern1ConditionsReady, isEntryPattern1, ENTRY_PATTERN_1_VERSION } from './entryPattern1Conditions.js';
 
 export const ENTRY_SIZING_VERSION = 'dr-against-m5-trend-choch-v1';
 export const ENTRY_PATTERN_1_SIZING_VERSION = 'countertrend-m5-bos-full-size-v2';
@@ -16,7 +17,9 @@ export function entryAgainstM5Allowed(checklist, entry) {
 export function entrySizingAt(checklist, entry) {
   if (usesM5BosEntryPattern1(entryPatternVersion(entry))) {
     const bos=entry.conditions?.m5Bos;
-    const confirmed=checklist.evaluatedAt===entry.recognizedAt && bos?.type==='BOS'
+    const confirmed=checklist.evaluatedAt===entry.recognizedAt
+      && (entryPatternVersion(entry)!==ENTRY_PATTERN_1_VERSION || entryPattern1M5BosMatches(bos,entry.conditions?.m5Countertrend,entry.direction,entry.recognizedAt))
+      && bos?.type==='BOS'
       && bos.direction===entry.direction && Number.isFinite(bos.recognizedAt) && bos.recognizedAt<=entry.recognizedAt;
     return {version:ENTRY_PATTERN_1_SIZING_VERSION,model:'dr-against-m5-trend',evaluatedAt:entry.recognizedAt,
       factor:confirmed?1:0.5,reason:confirmed?'m5BosConfirmed':'m5BosMissing',bos:confirmed?{...bos}:null};

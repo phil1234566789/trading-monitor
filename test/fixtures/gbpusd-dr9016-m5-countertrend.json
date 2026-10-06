@@ -1,0 +1,177 @@
+{
+  "provenance": {
+    "runId": "setup2-275842e7b36252c6ca703520",
+    "setupId": "GBPUSD:setup1:9016",
+    "entryId": "GBPUSD:GBPUSD:setup1:9016:countertrend-entry-model-1-v4:1790756940"
+  },
+  "primary": {
+    "recognizedAt": 1790753700,
+    "checks": {
+      "m5Trend": {
+        "evaluatedAt": 1790753700,
+        "structureState": {
+          "trend": "downtrend",
+          "currRange": {
+            "high": {
+              "type": "high",
+              "price": 1.35675,
+              "pivotTime": 1788938100,
+              "pivotAt": "1788938100",
+              "touched": false
+            },
+            "low": {
+              "type": "sweeped-low",
+              "price": 1.3203799999999999,
+              "pivotTime": 1790272800,
+              "pivotAt": "1790272800",
+              "touched": {
+                "price": 1.3203799999999999,
+                "touchedAt": "1790695200",
+                "touchedTime": 1790695200
+              }
+            }
+          },
+          "nestedTrend": {
+            "trend": "uptrend",
+            "currRange": {
+              "high": {
+                "type": "high",
+                "price": 1.32798,
+                "pivotTime": 1790612700,
+                "pivotAt": "1790612700",
+                "touched": false
+              },
+              "low": {
+                "type": "sweeped-low",
+                "price": 1.3203799999999999,
+                "pivotTime": 1790272800,
+                "pivotAt": "1790272800",
+                "touched": {
+                  "price": 1.3203799999999999,
+                  "touchedAt": "1790695200",
+                  "touchedTime": 1790695200
+                }
+              }
+            },
+            "nestedTrend": {
+              "trend": "downtrend",
+              "currRange": {
+                "high": {
+                  "type": "high",
+                  "price": 1.32798,
+                  "pivotTime": 1790612700,
+                  "pivotAt": "1790612700",
+                  "touched": false
+                },
+                "low": {
+                  "type": "low",
+                  "price": 1.3201699999999998,
+                  "pivotTime": 1790695500,
+                  "pivotAt": "1790695500",
+                  "touched": false
+                }
+              },
+              "nestedTrend": {
+                "trend": "uptrend",
+                "currRange": {
+                  "high": {
+                    "type": "high",
+                    "price": 1.32778,
+                    "pivotTime": 1790752800,
+                    "pivotAt": "1790752800",
+                    "touched": false
+                  },
+                  "low": {
+                    "type": "low",
+                    "price": 1.3201699999999998,
+                    "pivotTime": 1790695500,
+                    "pivotAt": "1790695500",
+                    "touched": false
+                  }
+                },
+                "nestedTrend": null
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "reaction": {
+    "trend": "uptrend",
+    "direction": "long",
+    "choch": {
+      "type": "CHoCH",
+      "direction": "long",
+      "depth": 2,
+      "originTime": 1790695500,
+      "price": 1.32123,
+      "pivotTime": 1790696100,
+      "candleTime": 1790698800,
+      "recognizedAt": 1790699100
+    },
+    "bos": null,
+    "levels": [
+      {
+        "type": "CHoCH",
+        "direction": "long",
+        "depth": 0,
+        "originTime": 1790272800,
+        "price": 1.3222,
+        "pivotTime": 1790274900,
+        "candleTime": 1790298600,
+        "recognizedAt": 1790298900
+      },
+      {
+        "type": "CHoCH",
+        "direction": "short",
+        "depth": 1,
+        "originTime": 1790612700,
+        "price": 1.3259999999999998,
+        "pivotTime": 1790614200,
+        "candleTime": 1790620200,
+        "recognizedAt": 1790620500
+      },
+      {
+        "type": "BOS",
+        "direction": "short",
+        "depth": 1,
+        "originTime": 1790612700,
+        "price": 1.3239999999999998,
+        "pivotTime": 1790607300,
+        "candleTime": 1790654100,
+        "recognizedAt": 1790654400
+      },
+      {
+        "type": "CHoCH",
+        "direction": "long",
+        "depth": 2,
+        "originTime": 1790695500,
+        "price": 1.32123,
+        "pivotTime": 1790696100,
+        "candleTime": 1790698800,
+        "recognizedAt": 1790699100
+      },
+      {
+        "type": "BOS",
+        "direction": "short",
+        "price": 1.32459,
+        "pivotTime": 1790750100,
+        "originTime": 1790752800,
+        "candleTime": null,
+        "recognizedAt": null
+      }
+    ]
+  },
+  "originalBos": {
+    "type": "BOS",
+    "direction": "short",
+    "depth": 1,
+    "originTime": 1790612700,
+    "price": 1.3239999999999998,
+    "pivotTime": 1790607300,
+    "candleTime": 1790654100,
+    "recognizedAt": 1790654400
+  },
+  "entryAt": 1790756940
+}

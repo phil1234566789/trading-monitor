@@ -3,7 +3,7 @@ import { barSecondsFor } from './timeframes.js';
 import { entryRiskScale, formatRiskPips } from './entryRisk.js';
 import { formatBerlinTime } from './berlinTime.js';
 import { entrySizingLabel } from './tradeSetup2EntrySizing.js';
-import { ENTRY_PATTERN_1_VERSION } from './entryPattern1Conditions.js';
+import { usesPivotBreakEntryPattern1 } from './entryPattern1Conditions.js';
 
 export function m1EntryFromFvg(context, fvg, candles, evaluatedAt, retest = null) {
   if (!fvg || !context?.setupKey || !Number.isFinite(evaluatedAt)
@@ -18,7 +18,7 @@ export function m1EntryFromFvg(context, fvg, candles, evaluatedAt, retest = null
   // Das Retestextrem ist beim Entry bekannt, auch wenn seine rechten P5-Kerzen
   // noch fehlen. Spätere Hochs/Tiefs dürfen den eingefrorenen Stopp nicht verschieben.
   const extreme = retestRows.reduce((best, c) => !best || (short ? c.high > best.high : c.low < best.low) ? c : best, null);
-  const stopOB=entryPatternVersion(context)===ENTRY_PATTERN_1_VERSION ? retest?.orderBlock : context.primary.reactionOB;
+  const stopOB=usesPivotBreakEntryPattern1(entryPatternVersion(context)) ? retest?.orderBlock : context.primary.reactionOB;
   const stops = {
     wide: { price: stopOB?.[short ? 'top' : 'bottom'] ?? null, sourceTime: stopOB?.startTime },
     narrow: { price: extreme?.[priceField] ?? null, sourceTime: extreme?.time ?? null },
@@ -28,8 +28,8 @@ export function m1EntryFromFvg(context, fvg, candles, evaluatedAt, retest = null
     ? ['target1', 'target2'].flatMap((key, i) => selection[key] ? [{ label: `T${i + 1}`, price: selection[key].price }] : []) : [];
   const scales = Object.fromEntries(Object.entries(stops).map(([key, stop]) =>
     [key, entryRiskScale(candle.close, stop.price, targets, context.instrument, context.direction)]));
-  const pattern1=entryPatternVersion(context) === ENTRY_PATTERN_1_VERSION;
-  return { id: pattern1 ? `${context.instrument}:${context.setupKey}:${ENTRY_PATTERN_1_VERSION}:${fvg.recognizedAt}`
+  const pattern1=usesPivotBreakEntryPattern1(entryPatternVersion(context));
+  return { id: pattern1 ? `${context.instrument}:${context.setupKey}:${entryPatternVersion(context)}:${fvg.recognizedAt}`
       : `${context.instrument}:${context.setupKey}:entry-1`, label: pattern1 ? 'Entry Pattern 1' : 'Entry 1',
     instrument: context.instrument, setupKey: context.setupKey, direction: context.direction,
     candleTime: candle.time, recognizedAt: fvg.recognizedAt, price: candle.close, stops, scales };

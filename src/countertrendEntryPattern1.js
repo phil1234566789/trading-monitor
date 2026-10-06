@@ -1,3 +1,5 @@
+import {entryPatternVersion} from './entryPattern.js';
+import { entryPattern1Countertrend, entryPattern1M5Bos } from './entryPattern1M5Bos.js';
 import { detectOrderBlocks } from './orderBlockDetection.js';
 import { createIncrementalOrderBlockDetector } from './incrementalOrderBlocks.js';
 import { orderBlockRecognitionTimes } from './orderBlockRecognitionTime.js';
@@ -32,15 +34,20 @@ export function entryPattern1RetestFvg(rows, orderBlocks, confirmedAt, direction
 }
 
 export function evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,trends,pivotBreak,structureStart,internalSweeps,closeReactionCache,entryProgress}) {
+  const version=entryPatternVersion(context) ?? ENTRY_PATTERN_1_VERSION;
+  const drCountertrend=entryPattern1Countertrend(context.primary,context.direction,evaluatedAt);
   const m5=closedChecklistCandles(context.m5Candles,'5m',evaluatedAt);
-  const key=JSON.stringify([context.instrument,context.direction,context.structureStart,context.settings,
+  const key=JSON.stringify([version,drCountertrend,context.instrument,context.direction,context.structureStart,context.settings,
     context.confirmedAt,context.primary?.reactionOB,m5[0]?.time,m5.at(-1)?.time,m5.length]);
-  let m5Facts=entryProgress?.m5?.key===key ? entryProgress.m5 : null;
+  let m5Facts=entryProgress?.m5?.key===key && entryProgress.m5.evaluatedAt<=evaluatedAt ? entryProgress.m5 : null;
   if(!m5Facts){
     const current=evaluateChecklistM5({instrument:context.instrument,direction:context.direction,evaluatedAt,
       m5Candles:m5,closeReactionCache},context.settings,context.structureStart);
     const reaction=current.structureReaction;
-    const m5Bos=(reaction?.levels ?? []).find(s => s.type === 'BOS' && s.direction === context.direction
+    const m5Countertrend=entryPattern1Countertrend(context.primary,context.direction,evaluatedAt,
+      current.structureState,m5.at(-1)?.time+300 || undefined);
+    const m5Bos=version===ENTRY_PATTERN_1_VERSION ? entryPattern1M5Bos(reaction,m5Countertrend,context.direction,evaluatedAt)
+      : (reaction?.levels ?? []).find(s => s.type === 'BOS' && s.direction === context.direction
       && Number.isFinite(s.recognizedAt) && s.recognizedAt <= evaluatedAt) ?? null;
     const recognition=orderBlockRecognitionTimes(m5,'5m');
     // Der Fortschritt gehört zu diesem Scan/Entry-Kontext, kein globaler Historiencache.
@@ -48,19 +55,19 @@ export function evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,tren
     const zones=(entryProgress?entryProgress.detectM5OrderBlocks(m5):detectOrderBlocks(m5,'5m'))
       .map(ob => ({...ob,recognizedAt:recognition.get(ob.startTime)}));
     const orderBlocks=eligibleEntryPattern1OrderBlocks(zones,context.primary,context.direction,context.confirmedAt,evaluatedAt);
-    m5Facts={key,m5Bos,orderBlocks};
+    m5Facts={key,evaluatedAt,m5Bos,m5Countertrend,orderBlocks};
     if(entryProgress)entryProgress.m5=m5Facts;
   }
-  const {m5Bos,orderBlocks}=m5Facts;
+  const {m5Bos,m5Countertrend,orderBlocks}=m5Facts;
   const follow=entryPattern1RetestFvg(rows,orderBlocks,context.confirmedAt,context.direction,evaluatedAt,entryProgress);
-  const conditions={m5Bos,m1PivotBreak:pivotBreak ?? null,retest:follow.retest,fvg:follow.fvg};
+  const conditions={m5Bos,...(version===ENTRY_PATTERN_1_VERSION ? {m5Countertrend} : {}),m1PivotBreak:pivotBreak ?? null,retest:follow.retest,fvg:follow.fvg};
   const candidate=follow.fvg && follow.fvg.recognizedAt >= (context.validatedAt ?? context.confirmedAt)
-    && entryPattern1ConditionsReady(conditions,context.direction,follow.fvg.recognizedAt)
+    && entryPattern1ConditionsReady(conditions,context.direction,follow.fvg.recognizedAt,version)
     ? m1EntryFromFvg(context,follow.fvg,rows,evaluatedAt,follow.retest) : null;
-  const entry=candidate ? {...candidate,entryPattern:ENTRY_PATTERN_1_VERSION,conditions,confirmedAt:context.confirmedAt} : null;
+  const entry=candidate ? {...candidate,entryPattern:version,conditions,confirmedAt:context.confirmedAt} : null;
   const facts=[['M5-BOS in Setup-Richtung',m5Bos],['M1-Pivotbruch ab Sweep',conditions.m1PivotBreak],
     ['M5-OB-Retest',follow.retest],['M1-FVG nach Retest',follow.fvg]];
-  return normalizeM1ChecklistPresentation({status:entry?'passed':'pending',entryPattern:ENTRY_PATTERN_1_VERSION,instrument:context.instrument,evaluatedAt,
+  return normalizeM1ChecklistPresentation({status:entry?'passed':'pending',entryPattern:version,instrument:context.instrument,evaluatedAt,
     trends,m5Bos,pivotBreak:conditions.m1PivotBreak,structureStart,internalSweeps,orderBlocks,conditions,retest:follow.retest,fvg:follow.fvg,entry,
     details:[...trends.map(()=>''),...facts.map(([label,fact])=>fact ? `${label}: ${formatDatedTime(fact.recognizedAt)} Uhr${fact.orderBlock
       ? ` · OB ${formatDatedTime(fact.orderBlock.startTime)} Uhr · ${fact.orderBlock.bottom}–${fact.orderBlock.top} · ${fact.orderBlock.inclusionRule==='setup1OrderBlockIncluded' ? 'Startregel: Setup-1.0-OB' : 'ab DR-Bestätigung entstanden'}` : ''}` : `${label} fehlt`)],

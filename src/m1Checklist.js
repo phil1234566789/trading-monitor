@@ -11,7 +11,7 @@ import { pricePrecisionForInstrument } from './format.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { entryAgainstM5Allowed } from './tradeSetup2EntrySizing.js';
 import { evaluateCountertrendEntryPattern1 } from './countertrendEntryPattern1.js';
-import { ENTRY_PATTERN_1_VERSION } from './entryPattern1Conditions.js';
+import { usesPivotBreakEntryPattern1 } from './entryPattern1Conditions.js';
 
 const waiting = {
   abc: 'M1-Struktur wartet auf A, B und C.',
@@ -35,10 +35,10 @@ export function inactiveM1Checklist(reason) {
 export function evaluateM1Checklist({ context, structure, candles, evaluatedAt, closeReactionCache,entryProgress }) {
   const unavailable = reason => ({ ...inactiveM1Checklist(reason), evaluatedAt });
   if (structure?.status !== 'ready') return unavailable(structure?.status === 'missing' ? 'missing' : 'loading');
-  if ((!structure.state || structure.state.trend === 'unknown') && entryPatternVersion(context) !== ENTRY_PATTERN_1_VERSION) return unavailable('structure');
+  if ((!structure.state || structure.state.trend === 'unknown') && !usesPivotBreakEntryPattern1(entryPatternVersion(context))) return unavailable('structure');
   const rows = closedChecklistCandles(candles, '1m', evaluatedAt);
   const trends = (structure.state ? collectNestedChain(structure.state) : []).map((level, depth) => ({ trend: level.trend, depth }));
-  if (entryPatternVersion(context) === ENTRY_PATTERN_1_VERSION) {
+  if (usesPivotBreakEntryPattern1(entryPatternVersion(context))) {
     return evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,trends,
       pivotBreak:structure.pivotBreak,structureStart:structure.start,
       internalSweeps:structure.state ? latestStructureSweeps(structure.state,evaluatedAt,60) : [],closeReactionCache,entryProgress});
