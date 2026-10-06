@@ -33,3 +33,23 @@ it('rejects corrupt references and unsupported storage versions instead of guess
  stored.structureStorage.version='future';
  expect(()=>decodeSnapshotStructures(stored)).toThrow(/version/i);
 });
+
+const largeHistory=()=>({...snapshot(),checklistHistory:{version:'checklist-changes-v1',entries:Array.from({length:900},(_,time)=>({time,rows:[{details:['Beleg mit Umlauten äöü '.repeat(40)],structureState:{trend:'downtrend',levels:[1.35,1.34]}}]}))}});
+it('shares complete large checklist histories without changing directly queried metadata',()=>{
+ const original=largeHistory(),before=structuredClone(original),stored=encodeSnapshotStructures(original);
+ expect(stored.structureStorage.version).toBe('deduplicated-values-v2');
+ expect(JSON.stringify(stored).length).toBeLessThan(JSON.stringify(original).length*.3);
+ expect(stored.checklist.setup.primary.targetSelection).toEqual(original.checklist.setup.primary.targetSelection);
+ expect(stored.rangeCourse).toEqual(original.rangeCourse);
+ expect(decodeSnapshotStructures(JSON.parse(JSON.stringify(stored)))).toEqual(original);
+ expect(original).toEqual(before);
+ expect(encodeSnapshotStructures(stored)).toBe(stored);
+});
+it('rejects cyclic, invalid and ambiguous value references',()=>{
+ const stored=encodeSnapshotStructures(largeHistory());
+ stored.structureStorage.structures=[{snapshotStructureRef:0}];stored.checklistHistory={snapshotStructureRef:0};
+ expect(()=>decodeSnapshotStructures(stored)).toThrow(/reference/i);
+ stored.checklistHistory={snapshotStructureRef:-1};expect(()=>decodeSnapshotStructures(stored)).toThrow(/reference/i);
+ const original=largeHistory();original.literal={snapshotStructureRef:0};
+ expect(()=>encodeSnapshotStructures(original)).toThrow(/reserved/i);
+});

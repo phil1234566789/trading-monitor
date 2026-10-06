@@ -164,3 +164,12 @@ describe('simulation history repository', () => {
       checks:{m5Trend:row.m5Trend,outerM5Trend:row.outerM5Trend}});
   });
 });
+
+it('restores recursively shared value blocks in the partial review projection',async()=>{
+ const primary={direction:'short',targetSelection:{target1:{price:1.33}},checks:{m5Trend:{structureState:{snapshotStructureRef:0}}}};
+ const structureStorage={version:'deduplicated-values-v2',structures:[{trend:'downtrend',history:{snapshotStructureRef:1}},[{time:300,price:1.34}]]};
+ const db={from:()=>{const q={select:()=>q,eq:()=>q,order:()=>q,range:async from=>({data:from?[]:[{primary,structureStorage}]})};return q;}};
+ const rows=await createSimulationRepository(db).listReviewSnapshots('run');
+ expect(rows[0].checklist.setup.primary.checks.m5Trend.structureState).toEqual({trend:'downtrend',history:[{time:300,price:1.34}]});
+ expect(rows[0].checklist.setup.primary.targetSelection.target1.price).toBe(1.33);
+});
