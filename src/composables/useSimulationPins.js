@@ -45,6 +45,10 @@ export function useSimulationPins(filters,run,results,{repository,datasets,runs}
     return [...new Map(matches.map(p=>[p.id??p.simulationPinKey,p])).values()].map(p=>p.note).filter(Boolean).join('\n\n') || undefined;
   };
   function open(value){error.value='';target.value={...value,note:find(value)?.note ?? '',existingId:find(value)?.id};}
+  function editListed(pin) {
+    const original=pins.value.find(p=>p.id===pin.id);
+    if(original){error.value='';target.value={note:original.note ?? '',existingId:original.id,editOnly:true};}
+  }
   async function save(note) {
     if(!target.value || saving.value)return;
     saving.value=true;error.value='';
@@ -79,5 +83,5 @@ export function useSimulationPins(filters,run,results,{repository,datasets,runs}
     } catch (cause) { error.value = cause.message || 'Pins konnten nicht entfernt werden.'; }
     finally { saving.value = false; }
   }
-  return {pins,listedPins,unmatchedPins,associatedPins,error,loading,saving,target,refresh,isPinned,pinNote,open,save,remove,removeListed};
+  return {pins,listedPins,unmatchedPins,associatedPins,error,loading,saving,target,refresh,isPinned,pinNote,open,editListed,save,remove,removeListed};
 }

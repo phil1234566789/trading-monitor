@@ -53,6 +53,20 @@ describe('simulation pin list',()=>{
     expect(html).toContain('Nicht zugeordnet (1)');expect(html).toContain('Entry wurde geändert.');
     expect(html).toContain('September · Alter Lauf');expect(html).toContain('Alte Notiz');
     expect(html).toContain('Ursprünglicher Chart / Snapshot');expect(html).not.toContain('Pins dieses Laufs entfernen');
+    expect(html).toContain('Bearbeiten');
+  });
+  it('edits an unmatched original pin from another run and ignores unknown ids',async()=>{
+    const scope=effectScope(),state=scope.run(()=>useSimulationPins(ref({run:'new'}),ref({}),ref([])));
+    const old={id:81,simulationRunId:'old',note:'Original'};
+    api.fetchSimulationPins.mockResolvedValue([old]);
+    try {
+      await state.refresh();state.editListed({id:999});expect(state.target.value).toBeNull();
+      state.editListed(old);expect(state.target.value).toMatchObject({existingId:81,editOnly:true,note:'Original'});
+      state.target.value=null;expect(old.note).toBe('Original');
+      state.editListed(old);await state.save('Geändert');
+      expect(api.updatePinNote).toHaveBeenCalledWith(81,'Geändert');
+      expect(api.addSimulationPin).not.toHaveBeenCalled();expect(state.target.value).toBeNull();
+    }finally{scope.stop();api.fetchSimulationPins.mockResolvedValue([]);}
   });
   it('loads old snapshot evidence once and edits the original note without creating a new pin',async()=>{
     const scope=effectScope();

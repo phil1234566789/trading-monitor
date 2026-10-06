@@ -57,7 +57,7 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
       </template>
     </div>
     <SimulationPinMenu :target="pinState.target.value" :saving="pinState.saving.value" :error="pinState.error.value" @close="pinState.target.value=null" @save="pinState.save" @remove="pinState.remove" @show-pins="showPins" />
-    <SimulationPinList :open="pinListOpen" :pins="listedPins" :unmatched="pinState.unmatchedPins.value" :run-id="filters.run" :loading="pinState.loading.value" :saving="pinState.saving.value" :error="pinState.error.value" @close="pinListOpen=false" @remove="pinState.removeListed" @refresh="pinState.refresh" />
+    <SimulationPinList :open="pinListOpen" :pins="listedPins" :unmatched="pinState.unmatchedPins.value" :run-id="filters.run" :loading="pinState.loading.value" :saving="pinState.saving.value" :error="pinState.error.value" @close="pinListOpen=false" @remove="pinState.removeListed" @refresh="pinState.refresh" @edit="pinState.editListed" />
   </main>
 </template>
 <style scoped>

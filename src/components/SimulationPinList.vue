@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick } from 'vue';
 import { simulationPinOutcomeLabel } from '../simulationPinPresentation.js';
 const props = defineProps({ open:Boolean, pins:Array, unmatched:{type:Array,default:()=>[]}, runId:String, loading:Boolean, saving:Boolean, error:String });
-const emit = defineEmits(['close','remove','refresh']);
+const emit = defineEmits(['close','remove','refresh','edit']);
 const dialog = ref(null), confirmation = ref(null);
 const removable=computed(()=>props.pins.filter(p=>!props.runId || p.simulationRunId===props.runId));
 const sections=computed(()=>[{label:'Zugeordnet',pins:props.pins},{label:'Nicht zugeordnet',pins:props.unmatched}]);
@@ -24,7 +24,7 @@ function removeConfirmed() {
     <header><h2 id="pin-list-title">Alle Pins · Lauf neu ({{ pins.length+unmatched.length }})</h2><button :disabled="saving" @click="emit('close')">Schließen</button></header>
     <p>Pins dieses und früherer Läufe, unabhängig von den Seitenfiltern. Kommentare und Ursprung bleiben erhalten.</p>
     <p v-if="error" role="alert">{{ error }} <button @click="emit('refresh')">Erneut laden</button></p>
-    <p v-if="loading || saving" role="status">{{ saving ? 'Pins werden entfernt…' : 'Pins werden geladen…' }}</p>
+    <p v-if="loading || saving" role="status">{{ saving ? 'Pins werden gespeichert…' : 'Pins werden geladen…' }}</p>
     <template v-else>
       <p v-if="!pins.length && !unmatched.length" role="status">Keine Pins vorhanden.</p>
       <button v-if="removable.length" :disabled="!!error" @click="confirmation=removable.map(p=>p.id)">Alle {{ removable.length }} Pins dieses Laufs entfernen</button>
@@ -39,6 +39,7 @@ function removeConfirmed() {
         <strong><span class="flag">⚑</span> {{ label(pin) }} · {{ pin.simulationContext?.instrument }}</strong>
         <p>{{ pin.simulationContext?.direction==='long'?'Long':'Short' }} · {{ pin.simulationContext?.entry?.time?.berlin ?? pin.simulationContext?.recognizedAt?.berlin }} · {{ simulationPinOutcomeLabel(pin.simulationContext) }}</p>
         <p>{{ pin.note || 'Kein Anliegen eingetragen.' }}</p>
+        <button @click="emit('edit',pin)">Bearbeiten</button>
         <p v-if="pin.unmatchedReason">{{ pin.unmatchedReason }}</p>
         <p v-if="pin.originLabel">Ursprung: {{ pin.originLabel }}</p>
         <RouterLink v-if="pin.currentChartLink" :to="pin.currentChartLink" target="_blank" rel="noopener noreferrer">Im aktuellen Chart</RouterLink>

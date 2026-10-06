@@ -2,22 +2,21 @@
 import { ref,watch,nextTick } from 'vue';
 const props=defineProps({target:Object,saving:Boolean,error:String});
 const emit=defineEmits(['close','save','remove','show-pins']);
-const dialog=ref(null),note=ref(''),edit=ref(false);
+const dialog=ref(null),note=ref('');
 watch(()=>props.target,async target=>{
-  if(target){note.value=target.note ?? '';edit.value=false;await nextTick();if(!dialog.value.open)dialog.value.showModal();}
+  if(target){note.value=target.note ?? '';await nextTick();if(!dialog.value.open)dialog.value.showModal();}
   else dialog.value?.close();
 });
 </script>
 <template>
   <dialog ref="dialog" class="pin-menu" aria-labelledby="simulation-pin-title" @cancel="emit('close')" @close="emit('close')">
-    <h2 id="simulation-pin-title">{{ target?.kind==='simulation_checkpoint'?target.feature.label:target?.kind==='simulation_entry'?'Entry an den Chat übergeben':'DR an den Chat übergeben' }}</h2>
-    <button type="button" :disabled="saving" @click="emit('save',note)">Anpinnen (an den Chat übergeben)</button>
-    <button type="button" :disabled="saving" @click="edit=!edit">Anliegen eintragen: was soll analysiert werden</button>
-    <label v-if="edit">Anliegen (optional)<textarea v-model="note" rows="3" :disabled="saving" /></label>
-    <button type="button" :disabled="saving || !target?.existingId" @click="emit('remove')">Pin entfernen</button>
-    <button type="button" :disabled="saving" @click="emit('show-pins')">Alle Pins anschauen</button>
+    <h2 id="simulation-pin-title">{{ target?.existingId?'Pin bearbeiten':target?.kind==='simulation_checkpoint'?`${target.feature.label} anpinnen`:target?.kind==='simulation_entry'?'Entry anpinnen':'DR anpinnen' }}</h2>
+    <label>Kommentar (optional)<textarea v-model="note" rows="3" :disabled="saving" /></label>
+    <button type="button" :disabled="saving" @click="emit('save',note)">Pin speichern</button>
+    <button v-if="target?.existingId" type="button" :disabled="saving" @click="emit('remove')">Pin entfernen</button>
+    <button v-if="!target?.editOnly" type="button" :disabled="saving" @click="emit('show-pins')">Alle Pins anschauen</button>
     <p v-if="error" role="alert">{{ error }}</p><p v-if="saving" role="status">Pin wird gespeichert…</p>
-    <button type="button" :disabled="saving" @click="emit('close')">Schließen</button>
+    <button type="button" :disabled="saving" @click="emit('close')">Abbrechen</button>
   </dialog>
 </template>
 <style scoped>

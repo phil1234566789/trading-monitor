@@ -30,14 +30,35 @@ describe('cross-run simulation pins',()=>{
     expect(match(pin(),[changed]).unmatched).toHaveLength(1);
     expect(simulationDrIdentity({})).toBeNull();
   });
-  it('requires a unique unchanged entry including both stop variants',()=>{
+  it('keeps a unique entry despite changed parent evidence, price and stops',()=>{
     expect(match(pin('simulation_entry')).matched).toHaveLength(1);
     const changed=group();changed.entries[0].entry={...entry,price:1.31};
-    expect(match(pin('simulation_entry'),[changed]).unmatched[0].unmatchedReason).toContain('Entry fehlt');
+    changed.snapshot.checklist.setup.primary.reactionOB.bottom=1.24;
+    expect(match(pin('simulation_entry'),[changed]).matched).toHaveLength(1);
     changed.entries[0].entry={...entry,stops:{wide:{price:1.2},narrow:{price:1.26}}};
-    expect(match(pin('simulation_entry'),[changed]).unmatched).toHaveLength(1);
+    expect(match(pin('simulation_entry'),[changed]).matched).toHaveLength(1);
     changed.entries=[{...snapshot(),entry},{...snapshot(),id:'duplicate',entry}];
     expect(match(pin('simulation_entry'),[changed]).unmatched[0].unmatchedReason).toContain('Mehrere Entries');
+  });
+  it('matches the reported September short without parent evidence and preserves its original pin',()=>{
+    const time=Date.parse('2026-09-04T11:52:00+02:00')/1000;
+    const p=pin('simulation_entry');p.simulationContext={...p.simulationContext,instrument:'GBPUSD',direction:'short',entry:{time:{unix:time},price:1.35235}};
+    const before=JSON.stringify(p),g=group();g.snapshot.direction='short';g.snapshot.checklist={};
+    g.entries=[{id:'new-entry-2',instrument:'GBPUSD',direction:'short',entry:{recognizedAt:time,price:1.35235,stops:{wide:{price:1.36},narrow:{price:1.353}}}}];
+    expect(matchSimulationPins([p],[g],'new').matched).toHaveLength(1);
+    expect(JSON.stringify(p)).toBe(before);
+    for(const field of ['instrument','direction']) {
+      const other={...g,entries:[{...g.entries[0],[field]:field==='instrument'?'EURUSD':'long'}]};
+      expect(matchSimulationPins([p],[other],'new').unmatched).toHaveLength(1);
+    }
+    g.entries[0].entry.recognizedAt++;
+    expect(matchSimulationPins([p],[g],'new').unmatched).toHaveLength(1);
+  });
+  it('uses price only to resolve multiple entries and refuses unresolved ambiguity',()=>{
+    const p=pin('simulation_entry'),a=group(),b=group();b.entries[0].entry={...entry,price:1.31};
+    expect(match(p,[a,b]).matched).toHaveLength(1);
+    b.entries[0].entry={...entry};
+    expect(match(p,[a,b]).unmatched[0].unmatchedReason).toContain('Mehrere Entries');
   });
   it('requires the saved checkpoint evidence, without transferring a changed finding',()=>{
     expect(match(pin('simulation_checkpoint')).matched).toHaveLength(1);
