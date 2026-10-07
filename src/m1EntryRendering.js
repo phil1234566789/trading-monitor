@@ -8,6 +8,8 @@ import { barSecondsFor } from './timeframes.js';
 import { formatDatedTime, formatBerlinTime } from './berlinTime.js';
 import {entryOverlayLayout,reserveEntryOverlaySpace} from './entryOverlayLayout.js';
 import {entryPatternText} from './entryPattern.js';
+import {entryCategoryOf,entryCategoryLabel} from './entryCategory.js';
+import {entrySizeLabel,entryOptionalConditionLabel} from './entryPresentation.js';
 import {simulationChartVariants} from './simulationChartVariant.js';
 
 class EntryRenderer {
@@ -25,8 +27,9 @@ class EntryRenderer {
       columns=layout.columns;
       const boxX=layout.boxX;
       const px = Math.round(x * hx), py = Math.round(y * vy) + 0.5;
-      const bx = boxX * hx, by = (y - 17) * vy, bw = layout.boxWidth * hx, bh = 34 * vy;
-      this.point.box = { left: boxX, right: boxX + layout.boxWidth, top: y - 17, bottom: y + 17 };
+      const classified=!!entryCategoryOf(entry);
+      const bx = boxX * hx, by = (y - 17) * vy, bw = layout.boxWidth * hx, bh = (classified?47:34) * vy;
+      this.point.box = { left: boxX, right: boxX + layout.boxWidth, top: y - 17, bottom: y + (classified?30:17) };
       const color = cssColor('tradeConfirmation');
       ctx.setLineDash([]);
       ctx.strokeStyle = color;
@@ -35,16 +38,18 @@ class EntryRenderer {
       ctx.fillStyle = '#131722'; ctx.fillRect(bx, by, bw, bh);
       ctx.strokeRect(bx, by, bw, bh);
       ctx.fillStyle = '#d1d4dc';
-      drawIconLabel(ctx, { text: entryPatternText(entry.label), x: bx + bw / 2, y: (y-6)*vy,
+      drawIconLabel(ctx, { text: entryCategoryOf(entry)?entryCategoryLabel(entry):entryPatternText(entry.label), x: bx + bw / 2, y: (y-6)*vy,
         align: 'center', baseline: 'middle', fontSizePx: 14 * vy, fontFamily: 'sans-serif' });
       drawIconLabel(ctx, { text: `Entry ${index+1} · ${formatBerlinTime(entry.recognizedAt)}`, x: bx+bw/2, y:(y+9)*vy,
         align:'center',baseline:'middle',fontSizePx:10*vy,fontFamily:'sans-serif' });
+      if(entryCategoryOf(entry))drawIconLabel(ctx,{text:entrySizeLabel(entry),x:bx+bw/2,y:(y+22)*vy,
+        align:'center',baseline:'middle',fontSizePx:10*vy,fontFamily:'sans-serif'});
       scales.forEach((scale, i) => {
         ctx.fillStyle = '#d1d4dc';
         const text = scale ? scale.summary : ENTRY_RISK_REASON_LABELS[entry.scales?.[variants[i]]?.reason]
           ?? `${variants[i]==='narrow'?'Eng':'Weit'}: SL nicht auswertbar`;
         // RR bleibt lesbar, wenn ein Ziel außerhalb des sichtbaren Preisbereichs liegt.
-        drawIconLabel(ctx, { text, x: columns[i] * hx, y: (y + 32) * vy,
+        drawIconLabel(ctx, { text, x: columns[i] * hx, y: (y + (classified?47:32)) * vy,
           align: 'right', baseline: 'middle', fontSizePx: 11 * vy, fontFamily: 'sans-serif' });
       });
     });
@@ -55,10 +60,12 @@ class EntryRenderer {
     if (this.point.hovered && this.point.box) target.useBitmapCoordinateSpace(scope => {
         const { context: ctx, horizontalPixelRatio: hx, verticalPixelRatio: vy, bitmapSize } = scope;
         const tx = Math.max(8, Math.min(this.point.box.left, bitmapSize.width / hx - 340)), ty = Math.max(8, y - 72);
-        ctx.fillStyle = '#1e222d'; ctx.fillRect(tx * hx, ty * vy, 332 * hx, 44 * vy);
+        const lines=[`M1-Bestätigung: ${formatDatedTime(entry.candleTime)}`,
+          `Bekannt ab ${formatBerlinTime(entry.recognizedAt)} Uhr · Europe/Berlin`,
+          entrySizeLabel(entry),entryOptionalConditionLabel(entry)].filter(Boolean);
+        ctx.fillStyle = '#1e222d'; ctx.fillRect(tx * hx, ty * vy, 332 * hx, (8+lines.length*18) * vy);
         ctx.fillStyle = '#d1d4dc';
-        [`M1-Bestätigung: ${formatDatedTime(entry.candleTime)}`,
-          `Bekannt ab ${formatBerlinTime(entry.recognizedAt)} Uhr · Europe/Berlin`].forEach((text, i) =>
+        lines.forEach((text, i) =>
           drawIconLabel(ctx, { text, x: (tx + 8) * hx, y: (ty + 13 + i * 18) * vy,
             align: 'left', baseline: 'middle', fontSizePx: 11 * vy, fontFamily: 'sans-serif' }));
     });

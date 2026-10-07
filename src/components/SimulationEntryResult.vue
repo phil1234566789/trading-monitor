@@ -3,14 +3,19 @@ import { computed } from 'vue';
 import { formatDatedTime } from '../berlinTime.js';
 import { fmtMoney, fmtR, pnlClass } from '../format.js';
 import { simulationEntryResult, simulationOutcomeKey, SIMULATION_OUTCOME_LABELS, SIMULATION_REASON_LABELS } from '../tradeSetupSimulationStatistics.js';
+import {entryCategorySizeLabel,entryOptionalConditionLabel,entryLotsLabel,entryBudgetLabel} from '../entryPresentation.js';
 const props = defineProps({ snapshot: { type: Object, required: true }, results: { type: Array, required: true }, variant: String });
 const result = computed(() => simulationEntryResult(props.results, props.snapshot, props.variant));
 </script>
 <template>
   <div class="entry-result">
     <small>Entry {{ formatDatedTime(snapshot.entry.recognizedAt) }}</small>
+    <small>{{ entryCategorySizeLabel(snapshot.entry) }}</small>
+    <small v-if="entryOptionalConditionLabel(snapshot.entry)">{{ entryOptionalConditionLabel(snapshot.entry) }}</small>
     <template v-if="result">
       <strong>{{ SIMULATION_OUTCOME_LABELS[simulationOutcomeKey(result)] ?? 'Unbekannt' }}</strong>
+      <small v-if="entryLotsLabel(result)">{{ entryLotsLabel(result) }}</small>
+      <small v-if="entryBudgetLabel(result)">{{ entryBudgetLabel(result) }}</small>
       <small v-if="result.status === 'closed' && result.netPnlUsd != null">{{ result.netPnlUsd > 0 ? 'Gewinn' : result.netPnlUsd < 0 ? 'Verlust' : 'Break-even' }} nach Kommission</small>
       <small v-if="result.reason">{{ SIMULATION_REASON_LABELS[result.reason] ?? 'Ergebnis nicht abschließend bestimmbar' }}</small>
       <div :class="pnlClass(result.netPnlUsd)">Netto USD: {{ fmtMoney(result.netPnlUsd) }}</div>

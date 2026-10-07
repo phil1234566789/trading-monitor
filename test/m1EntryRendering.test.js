@@ -9,6 +9,26 @@ const entry = { id: 'GBPUSD:setup:entry-1', label: 'Entry 1', instrument: 'GBPUS
   scales: { wide: entryRiskScale(1.35,1.3506,[{ label:'T1', price:1.3472 }],'GBPUSD','short'),
     narrow: entryRiskScale(1.35,1.3503,[{ label:'T1', price:1.3472 }],'GBPUSD','short') } };
 describe('M1 entry annotation', () => {
+  it.each(['full','risky',null])('draws explicit category and relative size without reclassifying historic entries (%s)',category=>{
+    const saved={...entry,entryCategory:category,optionalConditionsMissing:category==='risky'?['m5Bos']:[],
+      sizing:{factor:0.5,positionSizeFactor:category==='risky'?0.5:1}};
+    const before=JSON.stringify(saved),primitive=new M1EntryPrimitive(saved);
+    primitive.attached({chart:{timeScale:()=>({timeToCoordinate:()=>300,options:()=>({barSpacing:10})}),subscribeCrosshairMove:vi.fn()},
+      series:{priceToCoordinate:p=>300-(p-saved.price)*10000},requestUpdate:vi.fn()});
+    primitive.hovered=true;primitive.updateAllViews();
+    const ctx=Object.fromEntries(['setLineDash','beginPath','moveTo','lineTo','stroke','fillRect','strokeRect','fillText'].map(k=>[k,vi.fn()]));
+    primitive.paneViews()[0].renderer().draw({useBitmapCoordinateSpace:cb=>cb({context:ctx,horizontalPixelRatio:1,verticalPixelRatio:1,bitmapSize:{width:1200,height:800}})});
+    const texts=ctx.fillText.mock.calls.map(c=>c[0]);
+    if(category) {
+      expect(texts).toContain(category==='risky'?'Risky Entry':'Full Entry');
+      expect(texts).toContain(category==='risky'?'50 % der Full-Größe':'100 % der Full-Größe');
+      expect(texts.includes('Optionaler M5-BOS fehlt')).toBe(category==='risky');
+    }else{
+      expect(texts).toContain('Entry 1');expect(texts).not.toContain('Risky Entry');expect(texts).not.toContain('Full Entry');
+      expect(texts.some(t=>t.startsWith('Historischer Stand'))).toBe(true);
+    }
+    expect(JSON.stringify(saved)).toBe(before);
+  });
   it.each(['countertrend-entry-model-1-v8','countertrend-entry-model-1-v9'])('draws the versioned wide stop and independent narrow ladder (%s)', version => {
     const saved = {...entry, scales: {
       wide: entryRiskScale(1.35,1.3507,[],'GBPUSD','short',{variant:'wide',entryPattern:version}),

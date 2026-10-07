@@ -4,7 +4,7 @@ import { formatDatedTime } from '../berlinTime.js';
 import { fmtMoney, fmtR } from '../format.js';
 import { SIMULATION_OUTCOME_LABELS, SIMULATION_REASON_LABELS, simulationOutcomeKey, simulationChartLink } from '../tradeSetupSimulationStatistics.js';
 import ToggleButton from './ui/ToggleButton.vue';
-import { entrySizingLabel } from '../tradeSetup2EntrySizing.js';
+import {entryCategorySizeLabel,entryOptionalConditionLabel,entryBudgetLabel,entryLotsLabel} from '../entryPresentation.js';
 
 const props = defineProps({ rows: { type: Array, required: true }, runId: { type: String, required: true } });
 const page = ref(0);
@@ -28,7 +28,7 @@ const lots = value => value == null ? '–' : value.toLocaleString('de-DE', { ma
         <tbody><tr v-for="row in visibleRows" :key="`${row.entryId}:${row.variant}`">
           <td>{{ row.entryTime == null ? '–' : formatDatedTime(row.entryTime) }}</td>
           <td>{{ row.instrument }}</td><td>{{ row.direction === 'long' ? 'Long' : row.direction === 'short' ? 'Short' : '–' }}</td>
-          <td class="entry-sizing">{{ entrySizingLabel(row.entrySizing) }}<small v-if="row.riskBudget != null">Preisrisikobudget {{ fmtMoney(row.riskBudget) }}</small></td>
+          <td class="entry-sizing">{{ entryCategorySizeLabel(row) }}<small v-if="entryOptionalConditionLabel(row)">{{ entryOptionalConditionLabel(row) }}</small><small v-if="entryLotsLabel(row)">{{ entryLotsLabel(row) }}</small><small v-if="entryBudgetLabel(row)">{{ entryBudgetLabel(row) }}</small></td>
           <td class="number">{{ lots(row.lots) }}</td><td class="number">{{ lots(row.t1Lots) }}</td>
           <td class="number">{{ fmtMoney(row.actualRisk) }}</td>
           <td><span>{{ SIMULATION_OUTCOME_LABELS[simulationOutcomeKey(row)] ?? 'Unbekannt' }}</span><small v-if="row.reason">{{ SIMULATION_REASON_LABELS[row.reason] ?? 'Ergebnis nicht abschließend bestimmbar' }}</small></td>

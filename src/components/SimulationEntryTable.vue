@@ -5,6 +5,7 @@ import { formatDatedTime } from '../berlinTime.js';
 import { fmtPrice,fmtR,pnlClass,pricePrecisionForInstrument } from '../format.js';
 import { simulationEntryResult,simulationOutcomeKey,SIMULATION_OUTCOME_LABELS } from '../tradeSetupSimulationStatistics.js';
 import { toPips } from '../pipConfig.js';
+import {entryCategorySizeLabel,entryOptionalConditionLabel,entryLotsLabel,entryBudgetLabel} from '../entryPresentation.js';
 const props=defineProps({entries:Array,results:Array,isPinned:{type:Function,default:()=>false},pinNote:{type:Function,default:()=>undefined}});
 const emit=defineEmits(['pin-menu']);
 const rows=computed(()=>props.entries.map(e=>({snapshot:e,variants:['wide','narrow'].map(v=>simulationEntryResult(props.results,e,v))})));
@@ -16,8 +17,8 @@ const commission=r=>r?.commissionUsd!=null && r.actualRisk>0?fmtR(r.commissionUs
   <div v-else class="entry-scroll" tabindex="0" aria-label="Entry-Tabelle horizontal scrollen">
     <table><caption>Entries · Nettoergebnisse nach Kommission</caption><thead><tr><th scope="col" rowspan="2">Entry · Zeit · Preis</th><th scope="colgroup" colspan="4">Weiter SL</th><th scope="colgroup" colspan="4">Enger SL</th></tr><tr><template v-for="variant in ['wide','narrow']" :key="variant"><th scope="col">Ausgang</th><th scope="col">R netto</th><th scope="col">SL · Pips</th><th scope="col">Kommission · R</th></template></tr></thead>
       <tbody><tr v-for="(row,index) in rows" :key="row.snapshot.id" tabindex="0" @contextmenu.prevent="emit('pin-menu',row.snapshot,$event)">
-        <th scope="row"><SimulationPinFlag v-if="isPinned(row.snapshot)" :note="pinNote(row.snapshot)" />#{{ index+1 }} · {{ formatDatedTime(row.snapshot.entry.recognizedAt) }}<small>{{ fmtPrice(row.snapshot.entry.price,pricePrecisionForInstrument(row.snapshot.instrument)) }}</small></th>
-        <template v-for="(result,i) in row.variants" :key="i"><td class="outcome">{{ result?SIMULATION_OUTCOME_LABELS[simulationOutcomeKey(result)] ?? 'Unbekannt':'Nicht gespeichert / außerhalb des Zeitraums' }}</td><td :class="pnlClass(result?.netRMultiple)">{{ fmtR(result?.netRMultiple) }}</td><td>{{ pips(result,row.snapshot) }}</td><td>{{ commission(result) }}</td></template>
+        <th scope="row"><SimulationPinFlag v-if="isPinned(row.snapshot)" :note="pinNote(row.snapshot)" />#{{ index+1 }} · {{ formatDatedTime(row.snapshot.entry.recognizedAt) }}<small>{{ fmtPrice(row.snapshot.entry.price,pricePrecisionForInstrument(row.snapshot.instrument)) }}</small><small>{{ entryCategorySizeLabel(row.snapshot.entry) }}</small><small v-if="entryOptionalConditionLabel(row.snapshot.entry)">{{ entryOptionalConditionLabel(row.snapshot.entry) }}</small></th>
+        <template v-for="(result,i) in row.variants" :key="i"><td class="outcome">{{ result?SIMULATION_OUTCOME_LABELS[simulationOutcomeKey(result)] ?? 'Unbekannt':'Nicht gespeichert / außerhalb des Zeitraums' }}<small v-if="entryLotsLabel(result)">{{ entryLotsLabel(result) }}</small><small v-if="entryBudgetLabel(result)">{{ entryBudgetLabel(result) }}</small></td><td :class="pnlClass(result?.netRMultiple)">{{ fmtR(result?.netRMultiple) }}</td><td>{{ pips(result,row.snapshot) }}</td><td>{{ commission(result) }}</td></template>
       </tr></tbody>
     </table>
   </div>
