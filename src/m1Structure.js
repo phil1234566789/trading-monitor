@@ -50,7 +50,7 @@ export function activeM1Context(checklist, options) {
     ...(checklist.model === 'countertrend' && usesPivotBreakEntryPattern1(entryPatternVersion(checklist)) ? {
       entryPattern:entryPatternVersion(checklist),confirmedAt:dealingRangeConfirmedAt(checklist),
       validatedAt:checklist.setup.primary.validatedAt ?? checklist.dealingRange?.evaluatedAt,
-      m5Candles:checklist.context?.m5Candles ?? [],settings:checklist.context?.settings ?? {},
+      m5Candles:checklist.context?.m5Candles ?? [],settings:checklist.context?.settings ?? {},sessionConfigs:checklist.context?.sessionConfigs ?? [],
       structureStart:checklist.checks.outerM5Trend?.structureStart ?? checklist.checks.m5Trend?.structureStart,
     } : {}),
     m5Trend: checklist.checks.m5Trend,

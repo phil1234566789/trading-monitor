@@ -1,3 +1,4 @@
+import { entryCategoryLabel } from './entryCategory.js';
 import {entryPatternVersion,entryPatternText} from './entryPattern.js';
 import { barSecondsFor } from './timeframes.js';
 import { entryRiskScale, formatRiskPips, ENTRY_RISK_REASON_LABELS } from './entryRisk.js';
@@ -48,5 +49,5 @@ export function entryChecklist(m1Check) {
     return `${label}: ${formatRiskPips(scale?.riskPips)}${Number.isFinite(scale?.riskPips) ? ' Pips' : ''}${reason ? ` · ${reason}` : ''}`;
   }) : [];
   const label = Number.isFinite(entry.recognizedAt) ? `${entryPatternText(entry.label)} um ${formatBerlinTime(entry.recognizedAt)} Uhr` : entryPatternText(entry.label);
-  return { status: 'passed', details: [label, ...(entry.sizing ? [entrySizingLabel(entry.sizing)] : []), ...distances], detailStatuses: ['passed'] };
+  return { status: 'passed', details: [label, entryCategoryLabel(entry), ...(entry.sizing ? [entrySizingLabel(entry.sizing)] : []), ...distances], detailStatuses: ['passed'] };
 }

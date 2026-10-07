@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {minuteAlarmEvents,structureReady,deliveryReason} from '../services/setup2/events.js';
-import {ENTRY_PATTERN_1_VERSION} from '../src/entryPattern1Conditions.js';
+const ENTRY_PATTERN_1_VERSION='countertrend-entry-model-1-v9';
 const at=Date.parse('2026-10-07T10:00:00Z')/1000;
 const windows={weekday:[[0,1440]],saturday:[],sunday:[]};
 const context={instrument:'GBPUSD',direction:'short',setupKey:'GBPUSD:setup1:42',validatedAt:at-600,confirmedAt:at-600};

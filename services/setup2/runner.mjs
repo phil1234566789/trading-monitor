@@ -1,3 +1,5 @@
+import { ENTRY_PATTERN_1_VERSION } from '../../src/entryPattern1Conditions.js';
+import { SETUP2_VERSION } from '../../src/tradeSetup2Configuration.js';
 import {randomUUID} from 'node:crypto';
 import {setTimeout as delay} from 'node:timers/promises';
 import {scanTradeSetup2Window} from '../../src/tradeSetup2Scan.js';
@@ -92,7 +94,7 @@ async function instrumentTick(row,sessions,schedules,news) {
    },onSnapshot:s=>{if(s.entry)entries.set(s.entry.id,{setupKey:s.setupKey,entry:s.entry});else ranges.set(s.setupKey,s);}};
   const rememberStructure=minute=>{
    const {context,check,knownAt}=minute;
-   if(structureReady(check.conditions,context.direction,knownAt) && !cache.structures.has(context.setupKey))cache.structures.set(context.setupKey,knownAt);
+   if(structureReady(check.conditions,context.direction,knownAt,check.entryPattern ?? ENTRY_PATTERN_1_VERSION) && !cache.structures.has(context.setupKey))cache.structures.set(context.setupKey,knownAt);
   };
   // Nach Neustart rekonstruieren wir die Entry-/Lifecycle-Historie mit dem unveränderten Batchpfad.
   const baselineTo=Number.isFinite(lastProcessed)?Math.min(lastProcessed,closedM5):closedM5;
@@ -112,7 +114,7 @@ async function instrumentTick(row,sessions,schedules,news) {
    const {context,check,knownAt}=minute;
    const source=sources.find(s=>`${instrument}:setup1:${s.tradeSetupId}`===context.setupKey);
    cache.ranges.set(context.setupKey,{setupKey:context.setupKey,direction:context.direction,
-    structureReady:structureReady(check.conditions,context.direction,knownAt),lastM1Time:knownAt-60,source});
+    structureReady:structureReady(check.conditions,context.direction,knownAt,check.entryPattern ?? ENTRY_PATTERN_1_VERSION),lastM1Time:knownAt-60,source});
    rememberStructure(minute);
    for(const event of minuteAlarmEvents({...minute,structureFirstKnownAt:cache.structures.get(context.setupKey)},tradingWindows)){
     event.missed_reason=deliveryReason({signalAt:seconds(event.signal_at),lastSuccess:previous.lastSuccessAt,
@@ -148,7 +150,7 @@ async function instrumentTick(row,sessions,schedules,news) {
    lastM1Time:active.length?latestClosed-60:null,evaluatedThrough:currentError?previous.evaluatedThrough ?? null:iso(latestClosed),
    nextExpectedCheck:iso((active.length?Math.floor(success/60)*60+60:Math.floor(success/300)*300+300)+12),
    scanDurationMs:Date.now()-started,lastStep:active.length?'Geschlossene M1-Kerzen und Alarmstufen geprüft':'Geschlossene M5-Kerzen und Setup-1-Quellen geprüft',
-   error:currentError,errorSince:currentError?(previous.error===currentError?previous.errorSince ?? iso(success):iso(success)):null,runtimeVersion:'live-minute-v2',version:'entry-v9/setup-v20',initializedAt:previous.initializedAt ?? iso(success)};
+   error:currentError,errorSince:currentError?(previous.error===currentError?previous.errorSince ?? iso(success):iso(success)):null,runtimeVersion:'live-minute-v2',version:`${ENTRY_PATTERN_1_VERSION}/${SETUP2_VERSION}`,initializedAt:previous.initializedAt ?? iso(success)};
   if(feedError)events.push({id:`feed:${instrument}:${lastM5}`,signal_at:iso(success),stage:0,kind:'problem',payload:{message:feedError,lastSuccessAt:previous.lastSuccessAt}});
   await request('rpc/setup2_checkpoint',{p_instrument:instrument,p_owner:owner,p_state:state,p_events:events});
   cache.entries=state.entries;

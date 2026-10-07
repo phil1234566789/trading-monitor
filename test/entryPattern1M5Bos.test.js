@@ -6,7 +6,7 @@ import { entryPattern1ConditionsReady, ENTRY_PATTERN_1_VERSION } from '../src/en
 import * as m5 from '../src/tradeSetupChecklistM5.js';
 import fixture from './fixtures/gbpusd-dr9016-m5-countertrend.json';
 
-const evaluate = (primary, reaction, direction, at, entryProgress, version=ENTRY_PATTERN_1_VERSION) => {
+const evaluate = (primary, reaction, direction, at, entryProgress, version='countertrend-entry-model-1-v9') => {
   const spy=vi.spyOn(m5,'evaluateChecklistM5').mockReturnValue({structureReaction:reaction});
   try { return evaluateCountertrendEntryPattern1({context:{entryPattern:version,
     instrument:'GBPUSD',primary,direction,m5Candles:[],confirmedAt:100,settings:{}},
@@ -15,7 +15,7 @@ const evaluate = (primary, reaction, direction, at, entryProgress, version=ENTRY
 };
 
 describe('M5 BOS identity for Entry Pattern 1', () => {
-  it.each([ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v5'])('rejects DR 9016 parent BOS through the shared entry evaluator (%s)', version => {
+  it.each(['countertrend-entry-model-1-v9','countertrend-entry-model-1-v5'])('rejects DR 9016 parent BOS through the shared entry evaluator (%s)', version => {
     const result=evaluate(fixture.primary,fixture.reaction,'short',fixture.entryAt,undefined,version);
     expect(evaluate(fixture.primary,fixture.reaction,'short',fixture.entryAt,undefined,'countertrend-entry-model-1-v4').m5Bos).toEqual(fixture.originalBos);
     expect(result.m5Bos).toBeNull();
@@ -64,9 +64,10 @@ describe('M5 BOS identity for Entry Pattern 1', () => {
       m5Countertrend:entryPattern1Countertrend(fixture.primary,direction,entryAt),
       m1PivotBreak:{type:'pivot-break',direction,recognizedAt:entryAt},
       retest:{recognizedAt:entryAt-60,orderBlock:{dir:-1}},fvg:{direction,recognizedAt:entryAt}};
-    expect(entryPattern1ConditionsReady(conditions,direction,entryAt)).toBe(false);
+    expect(entryPattern1ConditionsReady(conditions,direction,entryAt,'countertrend-entry-model-1-v9')).toBe(false);
+    expect(entryPattern1ConditionsReady(conditions,direction,entryAt)).toBe(true);
     const entry={entryPattern:ENTRY_PATTERN_1_VERSION,direction,recognizedAt:entryAt,conditions};
-    expect(entryAgainstM5Allowed({},entry)).toBe(false);
+    expect(entryAgainstM5Allowed({},entry)).toBe(true);
     expect(entrySizingAt({evaluatedAt:entryAt},entry).reason).toBe('m5BosMissing');
     expect(entryPattern1ConditionsReady(conditions,direction,entryAt,'countertrend-entry-model-1-v4')).toBe(true);
     const correct={...fixture.originalBos,originTime:1790752800};

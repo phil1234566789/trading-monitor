@@ -18,14 +18,14 @@ describe('Countertrend entry pattern 1 conditions', () => {
   it('requires every one of the four closed facts', () => {
     const facts=conditions();
     expect(entryPattern1ConditionsReady(facts,'short',780)).toBe(true);
-    for(const key of Object.keys(facts))expect(entryPattern1ConditionsReady({...facts,[key]:null},'short',780)).toBe(false);
+    for(const key of Object.keys(facts))expect(entryPattern1ConditionsReady({...facts,[key]:null},'short',780,'countertrend-entry-model-1-v9')).toBe(false);
   });
   it.each([[600,660],[660,600],[780,780]])('does not impose a pivot-break/BOS ordering (%s,%s)', (choch,bos) => {
     const facts=conditions();facts.m5Bos.recognizedAt=choch;facts.m1PivotBreak.recognizedAt=bos;
     expect(entryPattern1ConditionsReady(facts,'short',780)).toBe(true);
   });
   it('rejects future or opposing signals and FVG confirmed before the retest', () => {
-    for(const key of ['m5Bos','m1PivotBreak','fvg']) {
+    for(const key of ['m1PivotBreak','fvg']) {
       const facts=conditions();facts[key].recognizedAt=781;expect(entryPattern1ConditionsReady(facts,'short',780)).toBe(false);
       facts[key].recognizedAt=780;facts[key].direction='long';expect(entryPattern1ConditionsReady(facts,'short',780)).toBe(false);
     }
@@ -51,7 +51,7 @@ describe('Countertrend entry pattern 1 conditions', () => {
     expect(result.map(z=>z.startTime)).toEqual([0,300,600]);
     expect(result[0].inclusionRule).toBe('setup1OrderBlockIncluded');
     expect(setup1OrderBlockIncluded(primary,'short',1200)).toMatchObject({startTime:0,recognizedAt:600});
-    expect(ENTRY_PATTERN_1_VERSION).toBe('countertrend-entry-model-1-v9');
+    expect(ENTRY_PATTERN_1_VERSION).toBe('countertrend-entry-model-1-v10');
   });
 });
 
@@ -62,12 +62,12 @@ describe('entry pattern 1 detection', () => {
   const context={entryPattern:ENTRY_PATTERN_1_VERSION,instrument:'GBPUSD',direction:'short',setupKey:'dr',primary,
     confirmedAt:at('09:30'),structureStart:at('08:00'),settings:{},
     anchor:{pivotTime:at('08:45'),price:1.35554,recognizedAt:at('09:30')},
-    m5Candles:['09:30','09:35','09:40','09:45'].map(clock=>({time:at(clock),open:1.35,high:1.36,low:1.34,close:1.35}))};
+    m5Candles:Array.from({length:22},(_,i)=>({time:at('08:00')+i*300,open:1.35,high:1.36,low:1.34,close:1.35}))};
   const second={dir:-1,startTime:at('09:35'),top:1.35675,bottom:1.35641};
   function mocked(run, changes={}) {
     const original=obs.detectOrderBlocks;
     const ob=vi.spyOn(obs,'detectOrderBlocks').mockImplementation((rows,tf,...rest)=>tf==='5m'?[{...second,...changes}]:original(rows,tf,...rest));
-    const choch=vi.spyOn(m5,'evaluateChecklistM5').mockReturnValue({structureReaction:{levels:[{type:'BOS',direction:'short',originTime:at('09:20'),recognizedAt:at('09:49'),candleTime:at('09:44')}]}});
+    const choch=vi.spyOn(m5,'evaluateChecklistM5').mockReturnValue({status:'pending',structureState:context.primary.checks.m5Trend.structureState,structureReaction:{levels:[{type:'BOS',direction:'short',originTime:at('09:20'),recognizedAt:at('09:49'),candleTime:at('09:44')}]}});
     try{return run();}finally{ob.mockRestore();choch.mockRestore();}
   }
   it('uses the second newly formed M5 OB and saves all facts, without requiring the innermost M1 direction', () => mocked(()=>{
@@ -103,6 +103,17 @@ describe('entry pattern 1 detection', () => {
     expect(result.details.at(-2)).toContain('Konnte nicht ermittelt werden');
     expect(result.details.at(-2)).toContain('M1-Historie ab OB-Bestätigung fehlt oder ist lückenhaft');
     expect(result.entryBlockedReason).toContain('Konnte nicht ermittelt werden');
+  }));
+  it('never substitutes the frozen DR for an unknown current M5 evaluation or a real native M5 hole',()=>mocked(()=>{
+    const run=value=>evaluateCountertrendEntryPattern1({context:value,rows:candles,evaluatedAt:at('09:50'),trends:[],internalSweeps:[],pivotBreak:{type:'pivot-break',direction:'short',recognizedAt:at('09:34')}});
+    expect(run({...context,m5Candles:context.m5Candles.filter(c=>c.time!==at('09:35'))}).entry).toBeNull();
+    m5.evaluateChecklistM5.mockReturnValue({status:'unknown'});
+    const result=run(context);
+    expect(result.conditions.retest).not.toBeNull();
+    expect(result.conditions.fvg).not.toBeNull();
+    expect(result.conditions.m5Countertrend).toBeNull();
+    expect(result.entry).toBeNull();
+    expect(result.entryBlockedReason).toContain('aktueller kausaler M5-Strukturbeleg fehlt');
   }));
   it('unknown history cannot prove a retest, and future FVG candles do not count',()=>{
     const zones=[{...second,recognizedAt:at('09:45')}];

@@ -1,0 +1,371 @@
+{
+  "provenance": {
+    "run": "setup2-7f45e748f0a43e5ccfaad5c8",
+    "snapshotId": "GBPUSD:setup1:9312:stand:1790772900",
+    "knownAt": 1790772900,
+    "source": "T63 first frozen validated DR snapshot; original A-F checks and minimal causal countertrend chain; T62 native candle fixture and time inputs"
+  },
+  "primary": {
+    "id": "GBPUSD:setup1:9312",
+    "tradeSetupId": 9312,
+    "direction": "short",
+    "setupType": "countertrend",
+    "recognizedAt": 1790772900,
+    "reactionRecognizedAt": 1790772900,
+    "reactionOB": {
+      "dir": -1,
+      "top": 1.3310499999999998,
+      "bottom": 1.3296299999999999,
+      "startTime": 1790772300,
+      "fvg": 5.999999999994898e-05
+    },
+    "sweep": {
+      "level": {
+        "price": 1.33002,
+        "dir": 1,
+        "pivotTime": 1790764500,
+        "touched": true,
+        "touchedTime": 1790771400,
+        "endTime": 1790771400
+      },
+      "timeframe": "5M",
+      "ageSeconds": 6900
+    },
+    "invalidation": 1.3310499999999998,
+    "targetSelection": {
+      "status": "passed",
+      "details": [
+        "MMM (3h 40m): 1.32659",
+        "M5 Pivot (4h 40m): 1.32548"
+      ],
+      "target1": {
+        "price": 1.32659,
+        "dir": -1,
+        "pivotTime": 1790759700,
+        "touched": false,
+        "touchedTime": null,
+        "endTime": 1790772600,
+        "id": "GBPUSD:5m:5:1790759700:-1:1.32659",
+        "sourceTime": 1790759700,
+        "timeframe": "5m",
+        "period": 5,
+        "source": "sessionLiquidity",
+        "knownAt": 1790761500,
+        "selectedAt": 1790772900,
+        "sessionKey": "MMM:1790757000:1790766000",
+        "sessionName": "MMM",
+        "sessionStart": 1790757000,
+        "sessionEnd": 1790766000,
+        "sessionLabel": null,
+        "ageSeconds": 13200,
+        "ageText": "3h 40m",
+        "label": "MMM (3h 40m)"
+      },
+      "target2": {
+        "price": 1.32548,
+        "dir": -1,
+        "pivotTime": 1790756100,
+        "touched": false,
+        "touchedTime": null,
+        "endTime": 1790772600,
+        "id": "GBPUSD:5m:5:1790756100:-1:1.32548",
+        "sourceTime": 1790756100,
+        "timeframe": "5m",
+        "period": 5,
+        "source": "liquidity",
+        "knownAt": 1790757900,
+        "selectedAt": 1790772900,
+        "sessionKey": null,
+        "sessionName": null,
+        "sessionStart": null,
+        "sessionEnd": null,
+        "sessionLabel": null,
+        "ageSeconds": 16800,
+        "ageText": "4h 40m",
+        "label": "M5 Pivot (4h 40m)"
+      },
+      "selectedAt": 1790772900,
+      "referencePrice": 1.3295599999999999,
+      "direction": "short",
+      "instrument": "GBPUSD"
+    },
+    "validatedAt": 1790772900,
+    "checks": {
+      "liquiditySweep": {
+        "status": "passed"
+      },
+      "reaction": {
+        "status": "passed"
+      },
+      "m5Trend": {
+        "status": "passed",
+        "trend": "uptrend",
+        "evaluatedAt": 1790772900,
+        "structureStart": 1788937200,
+        "structureState": {
+          "trend": "downtrend",
+          "currRange": {
+            "high": {
+              "type": "high",
+              "price": 1.35675,
+              "pivotTime": 1788938100,
+              "pivotAt": "1788938100",
+              "touched": false
+            },
+            "low": {
+              "type": "sweeped-low",
+              "price": 1.3203799999999999,
+              "pivotTime": 1790272800,
+              "pivotAt": "1790272800",
+              "touched": {
+                "price": 1.3203799999999999,
+                "touchedAt": "1790695200",
+                "touchedTime": 1790695200
+              }
+            }
+          },
+          "nestedTrend": {
+            "trend": "uptrend",
+            "currRange": {
+              "high": {
+                "type": "high",
+                "price": 1.3310499999999998,
+                "pivotTime": 1790771400,
+                "pivotAt": "1790771400",
+                "touched": false
+              },
+              "low": {
+                "type": "sweeped-low",
+                "price": 1.3203799999999999,
+                "pivotTime": 1790272800,
+                "pivotAt": "1790272800",
+                "touched": {
+                  "price": 1.3203799999999999,
+                  "touchedAt": "1790695200",
+                  "touchedTime": 1790695200
+                }
+              }
+            },
+            "nestedTrend": {
+              "trend": "unknown",
+              "currRange": {
+                "high": {
+                  "type": "high",
+                  "price": 1.3310499999999998,
+                  "pivotTime": 1790771400,
+                  "pivotAt": "1790771400",
+                  "touched": false
+                },
+                "low": {
+                  "type": "low",
+                  "price": 1.3282699999999998,
+                  "pivotTime": 1790770800,
+                  "pivotAt": "1790770800",
+                  "touched": false
+                }
+              },
+              "nestedTrend": null
+            }
+          }
+        }
+      },
+      "outerM5Trend": {
+        "status": "passed",
+        "trend": "downtrend",
+        "evaluatedAt": 1790772900,
+        "structureStart": 1788937200
+      },
+      "targets": {
+        "status": "passed"
+      },
+      "antiConfluences": {
+        "status": "clear",
+        "ruleVersion": "checklist-observation-rules-v3",
+        "rules": [
+          {
+            "id": "h1CounterDivergence",
+            "label": "H1-RSI-Gegendivergenz",
+            "disqualifies": false,
+            "status": "found",
+            "evidence": [
+              {
+                "type": "bullish",
+                "fromTime": 1717959600,
+                "toTime": 1718013600,
+                "fromPrice": 1.27132,
+                "toPrice": 1.26958,
+                "fromRsi": 27.432414646622988,
+                "toRsi": 31.565573018229017,
+                "timeframe": "1H",
+                "recognizedAt": 1718028000,
+                "association": "unknown",
+                "kind": "segment"
+              },
+              {
+                "type": "bullish",
+                "fromTime": 1718370000,
+                "toTime": 1718622000,
+                "fromPrice": 1.2662499999999999,
+                "toPrice": 1.26623,
+                "fromRsi": 16.622984786511196,
+                "toRsi": 31.282189663385807,
+                "timeframe": "1H",
+                "recognizedAt": 1718636400,
+                "association": "unknown",
+                "kind": "segment"
+              },
+              {
+                "type": "bullish",
+                "fromTime": 1734073200,
+                "toTime": 1734123600,
+                "fromPrice": 1.2626,
+                "toPrice": 1.26091,
+                "fromRsi": 20.35791861725295,
+                "toRsi": 31.855672123016916,
+                "timeframe": "1H",
+                "recognizedAt": 1734296400,
+                "association": "unknown",
+                "kind": "segment"
+              },
+              {
+                "type": "bullish",
+                "fromTime": 1738522800,
+                "toTime": 1738555200,
+                "fromPrice": 1.22726,
+                "toPrice": 1.22577,
+                "fromRsi": 23.101235427277643,
+                "toRsi": 27.92796969029915,
+                "timeframe": "1H",
+                "recognizedAt": 1738569600,
+                "association": "unknown",
+                "kind": "segment"
+              },
+              {
+                "type": "bullish",
+                "fromTime": 1758265200,
+                "toTime": 1758506400,
+                "fromPrice": 1.34906,
+                "toPrice": 1.34587,
+                "fromRsi": 21.703253027666307,
+                "toRsi": 31.88670753326582,
+                "timeframe": "1H",
+                "recognizedAt": 1758520800,
+                "association": "unknown",
+                "kind": "segment"
+              },
+              {
+                "type": "bullish",
+                "fromTime": 1767168000,
+                "toTime": 1767582000,
+                "fromPrice": 1.3429,
+                "toPrice": 1.34155,
+                "fromRsi": 22.079144135095945,
+                "toRsi": 34.534762279367484,
+                "timeframe": "1H",
+                "recognizedAt": 1767596400,
+                "association": "unknown",
+                "kind": "segment"
+              },
+              {
+                "type": "bullish",
+                "fromTime": 1772532000,
+                "toTime": 1772546400,
+                "fromPrice": 1.32849,
+                "toPrice": 1.32836,
+                "fromRsi": 25.0755570921919,
+                "toRsi": 31.679306829557248,
+                "timeframe": "1H",
+                "recognizedAt": 1772560800,
+                "association": "unknown",
+                "kind": "segment"
+              },
+              {
+                "type": "bullish",
+                "fromTime": 1773399600,
+                "toTime": 1773414000,
+                "fromPrice": 1.32545,
+                "toPrice": 1.32381,
+                "fromRsi": 20.143943293185927,
+                "toRsi": 25.452588315581053,
+                "timeframe": "1H",
+                "recognizedAt": 1773428400,
+                "association": "unknown",
+                "kind": "segment"
+              },
+              {
+                "type": "bullish",
+                "fromTime": 1778821200,
+                "toTime": 1779069600,
+                "fromPrice": 1.33418,
+                "toPrice": 1.3307799999999999,
+                "fromRsi": 16.416080402802606,
+                "toRsi": 27.295450025044218,
+                "timeframe": "1H",
+                "recognizedAt": 1779084000,
+                "association": "unknown",
+                "kind": "segment"
+              }
+            ],
+            "chartEvidenceLimit": 1
+          }
+        ]
+      },
+      "confluences": {
+        "status": "passed",
+        "ruleVersion": "checklist-observation-rules-v3",
+        "rules": [
+          {
+            "id": "m5SweepDivergence",
+            "label": "M5-RSI-Divergenz am Sweep",
+            "disqualifies": false,
+            "status": "found",
+            "evidence": [
+              {
+                "type": "bearish",
+                "fromTime": 1790748000,
+                "toTime": 1790771400,
+                "fromPrice": 1.32565,
+                "toPrice": 1.33025,
+                "fromRsi": 87.78931878142065,
+                "toRsi": 67.99569972927178,
+                "timeframe": "5m",
+                "recognizedAt": 1790772600,
+                "association": "sweep-touch",
+                "candidateId": "GBPUSD:setup1:9312",
+                "sweepTouchTime": 1790771400,
+                "kind": "segment"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "checklist": {
+    "status": "ready",
+    "model": "countertrend",
+    "ruleVersion": "countertrend-abcdef-v2",
+    "instrument": "GBPUSD"
+  },
+  "tradingWindows": {
+    "sunday": [],
+    "weekday": [
+      [
+        480,
+        1080
+      ]
+    ],
+    "saturday": []
+  },
+  "news": [
+    {
+      "id": "99b7e02d-4641-41ed-ac92-473cd60d53fa",
+      "event_time": "2026-09-30T12:30:00+00:00",
+      "currency": "USD",
+      "title": "Core PCE Price Index q/q & Final GDP q/q",
+      "created_at": "2026-09-28T07:46:21.261322+00:00",
+      "eventTime": 1790771400.0
+    }
+  ],
+  "newsLoadStatus": "ready"
+}

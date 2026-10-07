@@ -1,20 +1,33 @@
+import { usesOptionalM5BosEntryPattern1, entryPattern1CategoryMetadata } from './entryPattern1Conditions.js';
 import { entryPatternVersion } from './entryPattern.js';
 import { entryRiskScale } from './entryRisk.js';
 import { applySimulationCommission } from './tradeSetupSimulationCosts.js';
-import { ENTRY_SIZING_VERSION, ENTRY_PATTERN_1_SIZING_VERSION, ENTRY_RISK_BUDGET } from './tradeSetup2EntrySizing.js';
+import { ENTRY_SIZING_VERSION, ENTRY_PATTERN_1_SIZING_VERSION, LEGACY_ENTRY_PATTERN_1_SIZING_VERSION, ENTRY_RISK_BUDGET } from './tradeSetup2EntrySizing.js';
 
-export const SIMULATION_VERSION = 'm5-choch-250-500-whole-lots-half-t1-be-commission-wide-stop-clamped-6-pips-v5';
+export const SIMULATION_VERSION = 'full-risky-relative-whole-lots-half-t1-be-commission-wide-stop-clamped-6-pips-v6';
 const money = value => Math.round(value * 1e8) / 1e8;
 
 export function sizeSimulation(entry, variant) {
   const stopPrice = entry.stops?.[variant]?.price;
   // Ohne neue Provenienz behalten alte Snapshots ihr damaliges 500-USD-Modell.
   const sizing = entry.sizing;
+  const relative=sizing?.version===ENTRY_PATTERN_1_SIZING_VERSION;
   const riskBudget = ENTRY_RISK_BUDGET * (sizing?.factor ?? 1);
   const base = { variant, entryId: entry.id, entryTime: entry.recognizedAt, entryPrice: entry.price,
     stopPrice, riskBudget, entrySizing: sizing ?? null, lots: 0, t1Lots: 0, actualRisk: 0 };
-  if (sizing && (![ENTRY_SIZING_VERSION,ENTRY_PATTERN_1_SIZING_VERSION].includes(sizing.version) || sizing.model !== 'dr-against-m5-trend'
-    || ![0.5, 1].includes(sizing.factor) || sizing.evaluatedAt !== entry.recognizedAt)) {
+  if (relative) Object.assign(base,{entryCategory:entry.entryCategory,optionalConditionsMissing:entry.optionalConditionsMissing,
+    positionSizeFactor:sizing.positionSizeFactor,fullRiskBudget:ENTRY_RISK_BUDGET*sizing.fullFactor,fullLots:0});
+  const categoryData=entryPattern1CategoryMetadata(entry.entryCategory);
+  const validRelative=relative && sizing.model==='relative-full-entry' && sizing.fullFactor===1
+    && ['full','risky'].includes(entry.entryCategory) && sizing.entryCategory===entry.entryCategory
+    && sizing.positionSizeFactor===categoryData?.positionSizeFactor
+    && sizing.factor===sizing.fullFactor*sizing.positionSizeFactor
+    && Array.isArray(entry.optionalConditionsMissing)
+    && JSON.stringify(entry.optionalConditionsMissing)===JSON.stringify(categoryData?.optionalConditionsMissing);
+  const validLegacy=!relative && [ENTRY_SIZING_VERSION,LEGACY_ENTRY_PATTERN_1_SIZING_VERSION].includes(sizing?.version)
+    && sizing.model==='dr-against-m5-trend' && [0.5,1].includes(sizing.factor);
+  if (usesOptionalM5BosEntryPattern1(entryPatternVersion(entry)) && !validRelative
+    || sizing && (!(validRelative || validLegacy) || sizing.evaluatedAt !== entry.recognizedAt)) {
     return { ...base, status: 'notExecutable', reason: 'invalidSizing' };
   }
   if (!['GBPUSD', 'EURUSD'].includes(entry.instrument)) return { ...base, status: 'notExecutable', reason: 'unsupportedInstrument' };
@@ -23,7 +36,10 @@ export function sizeSimulation(entry, variant) {
   base.stopPrice = scale.stop;
   // Preisarithmetik kann bei exakt ganzen Lots wenige ULP unter dem Quotienten liegen.
   const riskPerLot = money(scale.risk * 100000);
-  const lots = Math.floor(riskBudget / riskPerLot + 1e-10);
+  if(relative)base.fullLots=Math.floor(base.fullRiskBudget / riskPerLot + 1e-10);
+  // Risky halbiert dieselbe bereits auf ganze Lots gerundete Full-Position.
+  const lots = relative ? Math.floor(base.fullLots*sizing.positionSizeFactor+1e-10)
+    : Math.floor(riskBudget / riskPerLot + 1e-10);
   if (!(lots >= 1) || !Number.isFinite(lots)) return { ...base, status: 'notExecutable', reason: 'belowOneLot' };
   return { ...base, status: 'ready', reason: null, lots, t1Lots: lots / 2, actualRisk: money(lots * riskPerLot) };
 }

@@ -27,7 +27,7 @@ export function watcherAction(reason='',source=null) {
 }
 export function notificationText(event) {
   if (event.kind === 'problem') return `🔴 Du bist dran · T68 · ${event.instrument}: ${event.payload?.message ?? 'Algo-Watcher gestört'}\n${watcherAction(event.payload?.message,event.payload?.source)}\nLetzter Erfolg: ${berlinTime(event.payload?.lastSuccessAt)}`;
-  const variants = Object.entries(event.payload?.variants ?? {}).map(([name, value]) => `${value.variant ?? name}: Stop ${value.stopPrice ?? value.stop ?? '–'}, Risiko ${value.riskPips ?? '–'} Pips`).join('\n');
+  const variants = Object.entries(event.payload?.variants ?? {}).map(([name, value]) => `${value.variant ?? name}: Stop ${value.stopPrice ?? value.stop ?? '–'}, Risiko ${value.riskPips ?? '–'} Pips${Number.isFinite(value.lots)?`, ${value.lots} Lots${Number.isFinite(value.fullLots)?` (Full: ${value.fullLots} Lots; ${value.positionSizeFactor===0.5?'50':'100'} %)`:''}`:''}`).join('\n');
   return `${event.instrument} · Stufe ${event.stage} · ${event.direction ?? ''}\nDR ${event.setup_key} · ${berlinTime(event.signal_at)}\n${event.payload?.message ?? ''}\n${variants}`.slice(0, 1000);
 }
 

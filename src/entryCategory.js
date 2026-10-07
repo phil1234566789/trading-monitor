@@ -11,3 +11,8 @@ export function entryCategoryLabel(entryOrRow) {
   return category === 'full' ? 'Full Entry' : category === 'risky' ? 'Risky Entry'
     : 'Historischer Stand · keine Kategorie gespeichert';
 }
+
+export function entryPositionSizeFactor(entryOrRow) {
+  const category=entryCategoryOf(entryOrRow);
+  return category==='full'?1:category==='risky'?0.5:null;
+}

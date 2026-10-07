@@ -18,12 +18,18 @@ export function entryPattern1Countertrend(primary, direction, evaluatedAt, state
     recognizedAt: Math.max(primary.checks.m5Trend.evaluatedAt, stateKnownAt ?? primary.checks.m5Trend.evaluatedAt) } : null;
 }
 
+export function entryPattern1CountertrendKnown(countertrend, direction, evaluatedAt) {
+  const origin = countertrend?.range?.[direction === 'short' ? 'high' : 'low'];
+  return ['short', 'long'].includes(direction) && Number.isFinite(evaluatedAt)
+    && countertrend?.trend === (direction === 'short' ? 'uptrend' : 'downtrend')
+    && Number.isFinite(countertrend?.recognizedAt) && countertrend.recognizedAt <= evaluatedAt
+    && Number.isFinite(origin?.pivotTime) && origin.pivotTime <= evaluatedAt;
+}
+
 export function entryPattern1M5BosMatches(bos, countertrend, direction, evaluatedAt) {
   const origin = countertrend?.range?.[direction === 'short' ? 'high' : 'low'];
-  return ['short', 'long'].includes(direction) && countertrend?.trend === (direction === 'short' ? 'uptrend' : 'downtrend')
-    && Number.isFinite(countertrend?.recognizedAt) && countertrend.recognizedAt <= evaluatedAt
-    && Number.isFinite(origin?.pivotTime) && bos?.originTime === origin.pivotTime
-    && bos.type === 'BOS' && bos.direction === direction
+  return entryPattern1CountertrendKnown(countertrend, direction, evaluatedAt)
+    && bos?.originTime === origin.pivotTime && bos.type === 'BOS' && bos.direction === direction
     && Number.isFinite(bos.recognizedAt) && bos.recognizedAt <= evaluatedAt;
 }
 

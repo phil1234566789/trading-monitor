@@ -9,7 +9,7 @@ import { formatRiskPips } from './entryRisk.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { savedDealingRangeStatus, isDisqualifiedDealingRange } from './tradeSetup2DealingRange.js';
 import { antiConfluenceStatus, checklistObservationRules, observationRuleDetails } from './checklistObservationRules.js';
-import { usesM5BosEntryPattern1, usesPivotBreakEntryPattern1, isEntryPattern1 } from './entryPattern1Conditions.js';
+import { usesM5BosEntryPattern1, usesPivotBreakEntryPattern1, isEntryPattern1, usesOptionalM5BosEntryPattern1 } from './entryPattern1Conditions.js';
 
 export const REVIEW_STATUS_LABELS = { passed: 'Erfüllt', unmet: 'Fehlt am gespeicherten Stand', unknown: 'Unbekannt / unbewertet' };
 export const REVIEW_STATUS_ICONS = { passed: '✓', unmet: '✕', unknown: '?' };
@@ -111,8 +111,9 @@ export function setupEntryConditions(snapshot) {
       : Array.isArray(m1?.details) ? m1.details : ['Keine M1-Auswertung gespeichert.']);
   if (pattern1) for (const [key,label] of (usesM5BosEntryPattern1(version) ? [['m5Bos','M5-BOS in Setup-Richtung'],pivotPattern?['m1PivotBreak','M1-Pivotbruch ab Sweep']:['m1Choch','M1-CHoCH ab Sweep']] : [['m5Choch','M5-CHoCH in Setup-Richtung'],['m1Bos','M1-BOS in Setup-Richtung']])) {
     const signal=entry?.conditions?.[key] ?? m1?.conditions?.[key];
-    add(key,label,known(signal?.recognizedAt) && signal.direction===snapshot.direction ? 'passed' : m1?.conditions || entry?.conditions ? 'unmet' : 'unknown',
-      known(signal?.recognizedAt) ? [`Erkannt ${date(signal.recognizedAt)}`] : ['Pflichtsignal fehlt.'],signal?.recognizedAt);
+    const optional=key==='m5Bos' && usesOptionalM5BosEntryPattern1(version);
+    add(key,optional?`${label} · optional für Full Entry`:label,known(signal?.recognizedAt) && signal.direction===snapshot.direction ? 'passed' : optional?'observed':m1?.conditions || entry?.conditions ? 'unmet' : 'unknown',
+      known(signal?.recognizedAt) ? [`Erkannt ${date(signal.recognizedAt)}`] : [optional?'Optionaler M5-BOS fehlt · Risky Entry bei erfüllten übrigen Pflichtbedingungen.':'Pflichtsignal fehlt.'],signal?.recognizedAt);
   }
   for (const [key, label, offset] of [['retest', pattern1 ? 'Retest eines passenden M5-OB' : 'M5-OB-Retest nach bestätigter Reaktion', 2], ['fvg', pattern1 ? 'Gleichgerichtete M1-FVG nach Retest' : 'Erste gleichgerichtete M1-FVG nach Retest', 3]]) {
     const signal = m1?.[key];

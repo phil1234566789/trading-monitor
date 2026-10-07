@@ -15,7 +15,7 @@ export function entryRiskScale(entry, stop, targets, instrument, direction, { va
   }
   // Der neue Deckel verkürzt nur den weiten Forex-Stopp, ohne den Entry abzulehnen.
   // Historische v8-Snapshots behalten dagegen ihre damalige Ausschlussregel.
-  if (entryPattern === 'countertrend-entry-model-1-v9' && variant === 'wide'
+  if (['countertrend-entry-model-1-v9','countertrend-entry-model-1-v10'].includes(entryPattern) && variant === 'wide'
     && ['GBPUSD', 'EURUSD'].includes(instrument) && risk > fromPips(MAX_FOREX_WIDE_STOP_PIPS, instrument)) {
     risk = fromPips(MAX_FOREX_WIDE_STOP_PIPS, instrument);
     stop = entry - sign * risk;
