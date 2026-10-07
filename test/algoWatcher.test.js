@@ -24,6 +24,10 @@ describe("server-verified Algo Watcher", () => {
     supabase.functions.invoke.mockResolvedValueOnce({ data: null, error: { context: { status: 401 }, message: "unsafe body" } });
     await expect(testPushover("wrong")).rejects.toThrow("Passwort nicht akzeptiert");
   });
+  it("labels safe DR warnings as history with no required user intervention", () => {
+    expect(setup2AlarmRow({id:'warning',stage:0,kind:'problem',setup_key:'DR13590',payload:{category:'range-warning',message:'History unknown; no entry'}}))
+      .toMatchObject({typeLabel:'DR-Warnung',detail:'DR DR13590 · History unknown; no entry',deliveryLabel:'Nur Protokoll · kein Eingreifen erforderlich'});
+  });
   it("keeps missed signal and detection time distinct with DR and reason", () => {
     expect(setup2AlarmRow({ id: "a", stage: 2, setup_key: "3070", signal_at: "s", detected_at: "d", missed_reason: "Runner war offline", kind: "trading", direction: "long" }))
       .toMatchObject({ time: "s", detectedAt: "d", detail: "DR 3070 · Runner war offline", deliveryLabel: "Verpasst · Protokollhinweis" });

@@ -36,10 +36,11 @@ export async function testPushover(password) {
 export function setup2AlarmRow(event) {
   const labels = { 1: "BOS + M1-Pivot", 2: "Neuer OB-Retest", 3: "Entry ausführbar" };
   const payload = event.payload ?? {};
+  const rangeWarning=payload.category==='range-warning';
   return { id: `setup2-${event.id}`, time: event.signal_at, detectedAt: event.detected_at,
-    typeLabel: event.kind === "problem" ? "Algo-Störung" : `Setup 2 · ${labels[event.stage] ?? event.stage}`,
+    typeLabel: rangeWarning ? 'DR-Warnung' : event.kind === "problem" ? "Algo-Störung" : `Setup 2 · ${labels[event.stage] ?? event.stage}`,
     direction: event.direction, directionLabel: event.direction === "long" ? "Long" : event.direction === "short" ? "Short" : "–",
     detail: [`DR ${event.setup_key ?? "–"}`, event.missed_reason || payload.reason || payload.message].filter(Boolean).join(" · "),
     price: payload.entryPrice ?? payload.entry?.price ?? "–", notifiedAt: null,
-    deliveryLabel: event.missed_reason ? "Verpasst · Protokollhinweis" : "Siehe Watcher-Versandstatus" };
+    deliveryLabel: rangeWarning ? 'Nur Protokoll · kein Eingreifen erforderlich' : event.missed_reason ? "Verpasst · Protokollhinweis" : "Siehe Watcher-Versandstatus" };
 }

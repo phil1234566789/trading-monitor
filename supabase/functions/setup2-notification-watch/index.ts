@@ -2,6 +2,8 @@ import { db, env, json, checked, headers } from '../_shared/setup2Http.ts';
 import { healthReport, secretMatches, sendPushover, notificationText, validatePushover } from '../_shared/setup2Notifications.js';
 import { isWithinTradingWindows } from '../_shared/tradingHoursGate.ts';
 
+import {rangeWarningEvent,isRangeWarning} from '../_shared/setup2RangeWarnings.js';
+
 const LOG_URL = 'https://phil1234566789.github.io/trading-monitor/#/protokoll';
 async function telegramHint(event: any, reason: string) {
   if (!env('TELEGRAM_BOT_TOKEN') || !env('TELEGRAM_CHAT_ID')) throw new Error('Telegram secrets missing');
@@ -41,12 +43,16 @@ async function tick(client: any) {
     try { await validatePushover(env); } catch (error) { provider_error = error instanceof Error ? error.message : 'Pushover validation failed'; }
     server = {...server, provider_checked_at: new Date().toISOString(), provider_error};
   }
-  checked(await client.from('pushover_test_limits').update({...server,watch_checked_at: new Date().toISOString()}).eq('id',true));
+  checked(await client.from('pushover_test_limits').update({provider_checked_at:server.provider_checked_at,provider_error:server.provider_error}).eq('id',true));
   const {report, windows, rows} = await readHealth(client);
   if (server.provider_error) checked(await client.rpc('setup2_record_problem', {
     p_id: `provider:${new Date().toISOString().slice(0,10)}:${server.provider_error}`,p_instrument:'GBPUSD',
-    p_payload:{message:server.provider_error,lastSuccessAt:null}
+    p_payload:{source:'provider',message:server.provider_error,lastSuccessAt:null}
   }));
+  // Fallwarnungen bleiben im Protokoll. Direkter Event-Insert legt ausdrücklich keine Versand-Outbox an.
+  for (const row of rows) for (const range of row.state?.suspendedRanges ?? []) {
+    checked(await client.from('setup2_alarm_events').upsert(rangeWarningEvent(row.instrument,range), {onConflict:'id',ignoreDuplicates:true}));
+  }
   for (const instrument of report.instruments) {
     if (instrument.enabled && instrument.error) {
       checked(await client.rpc('setup2_record_problem', {
@@ -69,7 +75,11 @@ async function tick(client: any) {
     const event = checked(await client.from('setup2_alarm_events').select('*').eq('id', item.event_id).single()) as any;
     let status = 'accepted'; let error = null;
     try {
-      if (item.channel === 'telegram') await telegramHint(event, event.missed_reason ?? 'Pushover-Versand gestört');
+      if (isRangeWarning(event)) {
+        status='suppressed';
+        if (event.payload?.category!=='range-warning') checked(await client.from('setup2_alarm_events').update({payload:{...event.payload,category:'range-warning'}}).eq('id',event.id));
+      }
+      else if (item.channel === 'telegram') await telegramHint(event, event.missed_reason ?? 'Pushover-Versand gestört');
       else if (event.kind === 'trading') {
         const schedule = windows.get(event.instrument);
         const signalInside = schedule && isWithinTradingWindows(Date.parse(event.signal_at) / 1000, schedule);
@@ -96,6 +106,8 @@ async function tick(client: any) {
       provider_accepted_at: status === 'accepted' ? new Date().toISOString() : null}).eq('id', item.id));
     results.push({id: item.id, status});
   }
+  // Nur ein vollständig erfolgreicher Watch-Durchlauf darf den unabhängigen Heartbeat verlängern.
+  checked(await client.from('pushover_test_limits').update({watch_checked_at:new Date().toISOString()}).eq('id',true));
   return {processed: results};
 }
 Deno.serve(async request => {

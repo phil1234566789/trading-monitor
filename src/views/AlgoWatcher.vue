@@ -22,6 +22,7 @@ async function sendTest() {
   <main class="watcher-page">
     <h1>Algo Watcher <span class="health" :class="health.state">{{ health.label }}</span></h1>
     <p>{{ health.reason }}</p>
+    <p v-if="report?.actionRequired" role="alert" class="error">🔴 Du bist dran · T68: {{ report.action }}</p>
     <p v-if="error" role="alert" class="error">{{ error }}</p>
     <p>Unabhängige Serverprüfung: {{ watcherTime(report?.checkedAt) }} · gültig bis {{ watcherTime(report?.validUntil) }} (Europe/Berlin)</p>
     <button type="button" @click="refresh">Status aktualisieren</button>
@@ -38,8 +39,9 @@ async function sendTest() {
       </dl>
       <template v-if="item.suspendedRanges?.length">
         <h3>Suspendierte Dealing Ranges ({{ item.suspendedRanges.length }})</h3>
-        <p>Lifecycle konnte wegen fehlender oder lückenhafter Historie nicht ermittelt werden. Keine Entry-Freigabe.</p>
-        <p v-for="range in item.suspendedRanges" :key="range.setupKey">{{ range.setupKey }} · {{ range.direction === 'long' ? 'Long' : 'Short' }}</p>
+        <p>Einzelne DRs sind sicher ausgesetzt. Die übrige Beobachtung läuft weiter; kein Eingreifen erforderlich.</p>
+        <p v-for="range in item.suspendedRanges" :key="range.setupKey">{{ range.setupKey }} · {{ range.direction === 'long' ? 'Long' : 'Short' }} · {{ range.reason }}</p>
+        <RouterLink to="/protokoll">Fallwarnungen im Protokoll</RouterLink>
       </template>
       <h3>Aktive Dealing Ranges ({{ item.activeRanges?.length ?? 0 }})</h3>
       <p v-if="!item.activeRanges?.length">Keine aktive DR. Setup 1.0 wird weiter beobachtet.</p>

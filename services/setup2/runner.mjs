@@ -6,6 +6,7 @@ import {setup1RecognitionTime} from '../../src/setup1RecognitionTime.js';
 import {tradeSetupFromRow} from '../../src/tradeSetupRow.js';
 import {evaluateTradingHours} from '../../src/tradeSetupChecklistTime.js';
 import {minuteAlarmEvents,structureReady,deliveryReason} from './events.js';
+import {RANGE_HISTORY_WARNING} from '../../supabase/functions/_shared/setup2RangeWarnings.js';
 import {archiveClient} from '../../scripts/tradeSetup2Archive.mjs';
 
 const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -38,9 +39,14 @@ async function drain(){
  const response=await fetch(`${url}/functions/v1/setup2-notification-watch`,{method:'POST',headers:{Authorization:`Bearer ${process.env.SETUP2_WATCH_TOKEN}`},signal:AbortSignal.timeout(60000)});
  if(!response.ok)throw new Error(`Notification watch HTTP ${response.status}`);
 }
+function suspendedResumeTime(range) {
+ const saved=seconds(range.evaluatedThrough);
+ // Alte suspendierte Zustände hatten nur einen globalen Stand, der diese DR nicht belegt.
+ return Number.isFinite(saved)?saved:setup1RecognitionTime(range.source)-60;
+}
 async function instrumentTick(row,sessions,schedules,news) {
  const instrument=row.instrument,started=Date.now(),observed=row.state ?? {};
- const acquired=await request('rpc/setup2_acquire_lease',{p_instrument:instrument,p_owner:owner,p_seconds:observed.runtimeVersion==='live-minute-v2'?Math.max(180,Math.ceil((observed.scanDurationMs ?? 0)/1000)*2+60):900});
+ const acquired=await request('rpc/setup2_acquire_lease',{p_instrument:instrument,p_owner:owner,p_seconds:!memory.has(instrument)?900:observed.runtimeVersion==='live-minute-v2'?Math.max(180,Math.ceil((observed.scanDurationMs ?? 0)/1000)*2+60):900});
  if(!acquired)return;
  // Der vorige Job kann zwischen Übersichtsabruf und Lease-Ende checkpointen.
  // Erst unter eigener Lease ist der Watermark für diesen Job verbindlich.
@@ -98,7 +104,9 @@ async function instrumentTick(row,sessions,schedules,news) {
   await updateCandles(cache,instrument,'1m',cache.m1Start ?? closedM5-131*60);
   const latestClosed=cache['1m'].at(-1)?.time+60;
   if(!Number.isFinite(latestClosed))throw new Error('Geschlossene M1-Kerzen fehlen');
-  const processed=Number.isFinite(lastProcessed)?lastProcessed:latestClosed-60;
+  // Erfolgreiche DRs dürfen weiterlaufen; suspendierte DRs behalten ihren eigenen Nachholstand.
+  const resumePoints=[lastProcessed,...(previous.suspendedRanges ?? []).map(suspendedResumeTime)].filter(Number.isFinite);
+  const processed=resumePoints.length?Math.min(...resumePoints):latestClosed-60;
   const fromTime=Math.min(latestClosed,processed+60);
   const onMinuteCheck=minute=>{
    const {context,check,knownAt}=minute;
@@ -117,18 +125,24 @@ async function instrumentTick(row,sessions,schedules,news) {
   for(const [setupKey,snapshot] of ranges){
    if(snapshot.dealingRange?.status!=='validated' || snapshot.rangeCourse?.lifecycle?.main?.state==='ended')continue;
    const source=sources.find(s=>`${instrument}:setup1:${s.tradeSetupId}`===setupKey);
-   if(snapshot.rangeCourse?.lifecycle?.main?.state==='unknown'){suspended.push({setupKey,direction:snapshot.direction,source});continue;}
+   if(snapshot.rangeCourse?.lifecycle?.main?.state==='unknown'){
+    const prior=(previous.suspendedRanges ?? []).find(r=>r.setupKey===setupKey);
+    const resume=prior?suspendedResumeTime(prior):Number.isFinite(lastProcessed)?lastProcessed:suspendedResumeTime({source});
+    suspended.push({setupKey,direction:snapshot.direction,source,reason:RANGE_HISTORY_WARNING,
+     suspendedAt:prior?.suspendedAt ?? iso(now),evaluatedThrough:iso(resume)});continue;
+   }
    const range=cache.ranges.get(setupKey) ?? {setupKey,direction:snapshot.direction,structureReady:false,lastM1Time:null,source};
    if(snapshot.rangeCourse?.lifecycle?.entrySearchAllowed===false)range.structureReady=false;
    active.push(range);
   }
   // Ohne aktive DR genügt ein echter M5-Schritt. Kein identischer Prozess-Heartbeat pro Minute.
-  if(!startup && !events.length && !active.length && previous.lastM5Time===lastM5 && !previous.error && seconds(previous.nextExpectedCheck)>started/1000)return;
+  const suspensionChanged=JSON.stringify(suspended.map(r=>r.setupKey).sort())!==JSON.stringify((previous.suspendedRanges ?? []).map(r=>r.setupKey).sort());
+  if(!startup && !suspensionChanged && !events.length && !active.length && previous.lastM5Time===lastM5 && !previous.error && seconds(previous.nextExpectedCheck)>started/1000)return;
   const success=Date.now()/1000,lag=Math.floor(success/60)*60-latestClosed;
   const feedError=lag>120 && evaluateTradingHours({instrument,evaluatedAt:success,tradingWindows}).status==='passed'
    ? `FXCM-M1-Feed ${lag}s hinter geschlossenem Minutenstand` : null;
-  const evaluationError=suspended.length?`Suspendierte DRs ${suspended.map(r=>r.setupKey).sort().join(', ')}: Lifecycle-Historie konnte nicht ermittelt werden (fehlend oder lückenhaft)` : null;
-  const currentError=evaluationError ?? feedError;
+  // Sicher abgefangene DR-Warnungen sind keine Betriebsstörung und brauchen keinen Nutzereingriff.
+  const currentError=feedError;
   const state={phase:active.length?'Setup 2 · M1 beobachten':'Setup 1 · M5 beobachten',activeRanges:active,suspendedRanges:suspended,
    entries:[...entries.values()],structureKnownAt:Object.fromEntries(cache.structures),lastProcessAt:iso(started/1000),lastSuccessAt:currentError?previous.lastSuccessAt ?? null:iso(success),lastM5Time:lastM5,
    lastM1Time:active.length?latestClosed-60:null,evaluatedThrough:currentError?previous.evaluatedThrough ?? null:iso(latestClosed),
