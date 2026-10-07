@@ -5,11 +5,13 @@ import { isTradeSetup2SnapshotView } from "./tradeSetup2Snapshot.js";
 import { useStatusBar } from "./composables/useStatusBar.js";
 import { useHttpActivity } from "./composables/useHttpActivity.js";
 import { useDrawings } from "./composables/useDrawings.js";
+import { useAlgoWatcher } from "./composables/useAlgoWatcher.js";
 import HttpErrorBanners from "./components/HttpErrorBanners.vue";
 import DrawingsModal from "./components/DrawingsModal.vue";
 import ToggleButton from "./components/ui/ToggleButton.vue";
 import { CHART_MODES, chartMode, chartHint } from "./chartModes.js";
 
+const { health: watcherHealth, tooltip: watcherTooltip } = useAlgoWatcher();
 const showDrawingsModal = ref(false);
 // Persistiert in Supabase (siehe useDrawings.js/drawingsStore.js) — hier nur der
 // Sichtbarkeits-Toggle nötig, die Liste selbst verwaltet DrawingsModal.vue direkt über
@@ -63,6 +65,7 @@ const lastUpdateText = computed(() =>
         <RouterLink to="/alarme" exact-active-class="active">Alarme</RouterLink>
         <RouterLink to="/handelszeiten" exact-active-class="active">Handelszeiten</RouterLink>
         <RouterLink to="/konten" exact-active-class="active">Konten</RouterLink>
+        <RouterLink to="/algo-watcher" exact-active-class="active" :title="watcherTooltip"><span class="watcher-dot" :class="[watcherHealth.state, { pulse: watcherHealth.pulse }]" aria-hidden="true"></span>Algo Watcher <span class="sr-only">{{ watcherHealth.label }}</span></RouterLink>
         <RouterLink to="/loop-status" exact-active-class="active">Loop-Status</RouterLink>
         <RouterLink to="/trading-flow" exact-active-class="active">Ablauf</RouterLink>
       </nav>
@@ -269,4 +272,10 @@ const lastUpdateText = computed(() =>
   background: #2962ff;
   color: #fff;
 }
+.watcher-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: #787b86; }
+.watcher-dot.live { background: #26a69a; } .watcher-dot.waiting { background: #ffb300; } .watcher-dot.error { background: #ef5350; }
+.watcher-dot.pulse { animation: watcher-pulse 1.4s ease-in-out infinite; }
+@keyframes watcher-pulse { 50% { box-shadow: 0 0 0 5px rgba(38, 166, 154, .25); } }
+@media (prefers-reduced-motion: reduce) { .watcher-dot.pulse { animation: none; } }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 </style>

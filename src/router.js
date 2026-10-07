@@ -17,6 +17,7 @@ export const router = createRouter({
     { path: "/alarme", name: "alarme", component: () => import("./views/Alarme.vue") },
     { path: "/handelszeiten", name: "handelszeiten", component: () => import("./views/Handelszeiten.vue") },
     { path: "/konten", name: "konten", component: () => import("./views/Konten.vue") },
+    { path: "/algo-watcher", name: "algo-watcher", component: () => import("./views/AlgoWatcher.vue") },
     { path: "/loop-status", name: "loop-status", component: () => import("./views/LoopStatus.vue") },
     { path: "/trading-flow", name: "trading-flow", component: () => import("./views/TradingFlow.vue") },
   ],

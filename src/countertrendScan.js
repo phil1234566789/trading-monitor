@@ -22,7 +22,7 @@ import { completeDealingRangePriceObservations } from './dealingRangePriceObserv
 import { createChecklistHistoryRecorder } from './tradeSetup2ChecklistHistory.js';
 
 export async function scanCountertrendWindow(input) {
-  const { instrument,fromTime,toTime,signal,onSnapshot,onProgress,loadM1Candles,
+  const { instrument,fromTime,toTime,signal,onSnapshot,onProgress,onMinuteCheck,loadM1Candles,
     useMemo=true,yieldEvery=32,yieldControl=()=>Promise.resolve() }=input;
   const setups=(input.tradeSetups ?? []).filter(s=>s.instrument===instrument)
     .map(s=>({source:s,at:setup1RecognitionTime(s)})).filter(s=>s.at<=toTime).sort((a,b)=>a.at-b.at);
@@ -155,7 +155,7 @@ export async function scanCountertrendWindow(input) {
         const prefixEnd=candleTimeIndex(m1,candle.time)+1;
         const prefixStart=m1ScanPrefixStart(m1,m1LoadStart(active),M1_FRACTAL_SUPPORT);
         // Ein Entry entsteht ausschließlich beim FVG-Schluss; andere Minuten brauchen keine M1-Struktur.
-        if(useMemo && !entryPattern1FvgAt(m1,active.direction,prefixEnd,prefixStart))continue;
+        if(useMemo && !onMinuteCheck && !entryPattern1FvgAt(m1,active.direction,prefixEnd,prefixStart))continue;
         const rows=m1.slice(prefixStart,prefixEnd);
         const structure=buildM1Structure(rows,active.anchor,knownAt);
         let follow=entryProgress.get(candidate.id);
@@ -163,9 +163,11 @@ export async function scanCountertrendWindow(input) {
         const check=evaluateM1Checklist({context:active,structure,candles:rows,evaluatedAt:knownAt,closeReactionCache:m1Cache,
           entryProgress:useMemo ? follow : undefined});
         if(knownAt>=fromTime)checklistHistory.record(current,current.setup.primary,'M1',check);
-        if (check.entry?.recognizedAt!==knownAt || seen.has(check.entry.id) || knownAt<fromTime) continue;
-        const snapshot=createSetup2Entry({instrument,evaluatedAt:knownAt,tradingWindows:input.tradingWindows,sessionConfigs:input.sessionConfigs,news:input.news,newsLoadStatus:input.newsLoadStatus},
+        const newEntry=check.entry?.recognizedAt===knownAt && !seen.has(check.entry.id) && knownAt>=fromTime;
+        const snapshot=newEntry && createSetup2Entry({instrument,evaluatedAt:knownAt,tradingWindows:input.tradingWindows,sessionConfigs:input.sessionConfigs,news:input.news,newsLoadStatus:input.newsLoadStatus},
           ()=>buildTradeSetup2Snapshot({checklist:current,m1Check:check,m1Structure:structure,m1Candles:rows}));
+        // Live-Vorwarnungen brauchen auch Minuten ohne FVG; Batch bleibt unverändert.
+        if(knownAt>=fromTime)await onMinuteCheck?.({checklist:current,context:active,check,knownAt,snapshot:snapshot || null});
         if (!snapshot) continue;
         checklistHistory.record(current,current.setup.primary,'M1',check,snapshot.entry);
         seen.add(snapshot.entry.id);entries.push(snapshot);snapshots.push(snapshot);await onSnapshot?.(snapshot);

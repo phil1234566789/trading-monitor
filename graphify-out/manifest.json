@@ -84,9 +84,9 @@
     "semantic_hash": ""
   },
   "src/App.vue": {
-    "mtime": 1791289143.1803684,
-    "seen": 1791322335.505352,
-    "ast_hash": "462607444179eb4445cad42f63c0f3d3",
+    "mtime": 1791360419.7571766,
+    "seen": 1791368262.4938464,
+    "ast_hash": "b27a5c718f1c2719d0b2705003540cf2",
     "semantic_hash": ""
   },
   "src/ageTier.ts": {
@@ -96,9 +96,9 @@
     "semantic_hash": ""
   },
   "src/alarmLog.js": {
-    "mtime": 1791289143.18154,
-    "seen": 1791322335.505352,
-    "ast_hash": "17a9e8af98e8465354ebb09e922920e9",
+    "mtime": 1791360452.072684,
+    "seen": 1791368262.4948447,
+    "ast_hash": "e290a6dc9abfa568e3d29cb8c746dfe9",
     "semantic_hash": ""
   },
   "src/alarmSettings.js": {
@@ -204,9 +204,9 @@
     "semantic_hash": ""
   },
   "src/components/ProtokollTable.vue": {
-    "mtime": 1791289143.201609,
-    "seen": 1791322335.505352,
-    "ast_hash": "9c4e98eae36e0dd603286c75d64a51d0",
+    "mtime": 1791360452.0736845,
+    "seen": 1791368262.5028465,
+    "ast_hash": "c2a0817544769f4ea078507249f0c81d",
     "semantic_hash": ""
   },
   "src/components/RsiDivergenceStatsPanel.vue": {
@@ -552,9 +552,9 @@
     "semantic_hash": "8b53680163463584f03bbaf1f225f2ca"
   },
   "src/router.js": {
-    "mtime": 1791289143.2783458,
-    "seen": 1791322335.505352,
-    "ast_hash": "90fce92c9c0e3669977e53fe34040315",
+    "mtime": 1791360419.7571766,
+    "seen": 1791368262.5318468,
+    "ast_hash": "342026f3c96c129e7e8bd80f49d95a0a",
     "semantic_hash": ""
   },
   "src/rsi.js": {
@@ -4524,9 +4524,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2Scan.js": {
-    "mtime": 1791289143.3105702,
-    "seen": 1791322335.505352,
-    "ast_hash": "2c31df9386705f2df38aa0c1e6e21d69",
+    "mtime": 1791367719.4475527,
+    "seen": 1791368262.5428464,
+    "ast_hash": "55dd73c21793950aa9df2843d684aacc",
     "semantic_hash": ""
   },
   "src/tradeSetup2ScanWorker.js": {
@@ -5082,9 +5082,9 @@
     "semantic_hash": ""
   },
   "src/countertrendScan.js": {
-    "mtime": 1791289143.2354434,
-    "seen": 1791322335.505352,
-    "ast_hash": "7bd1f9bd80341c35d0671028b6635c68",
+    "mtime": 1791367719.410447,
+    "seen": 1791368262.5168467,
+    "ast_hash": "d109a6159f57850c3b892d9ed5e83538",
     "semantic_hash": ""
   },
   "src/m1ScanPrefix.js": {
@@ -6051,6 +6051,96 @@
     "mtime": 1791322068.812418,
     "seen": 1791322335.5063522,
     "ast_hash": "db0ba0e59ec6a71b69034cc3cb9dbd5e",
+    "semantic_hash": ""
+  },
+  "services/setup2/build.mjs": {
+    "mtime": 1791360510.0934954,
+    "seen": 1791368262.4938464,
+    "ast_hash": "aea288d7aee7adb15479868adcc744cc",
+    "semantic_hash": ""
+  },
+  "services/setup2/events.js": {
+    "mtime": 1791367960.873105,
+    "seen": 1791368262.4938464,
+    "ast_hash": "4c0160b8cbeaca60d392a085ee505005",
+    "semantic_hash": ""
+  },
+  "services/setup2/runner.mjs": {
+    "mtime": 1791368047.25199,
+    "seen": 1791368262.4938464,
+    "ast_hash": "fee6eeaef73a20d081c664784e91b54a",
+    "semantic_hash": ""
+  },
+  "src/algoWatcher.js": {
+    "mtime": 1791368082.9863853,
+    "seen": 1791368262.4948447,
+    "ast_hash": "fd5fc6f35da989422a7a1f9d88d5f1bb",
+    "semantic_hash": ""
+  },
+  "src/composables/useAlgoWatcher.js": {
+    "mtime": 1791360419.7551792,
+    "seen": 1791368262.5078466,
+    "ast_hash": "6cada03da0ff0a3cfd85bb94bc399f37",
+    "semantic_hash": ""
+  },
+  "src/views/AlgoWatcher.vue": {
+    "mtime": 1791360419.7551792,
+    "seen": 1791368262.5498464,
+    "ast_hash": "09818a154167551db30c5d6e9f550dbf",
+    "semantic_hash": ""
+  },
+  "supabase/functions/_shared/setup2Http.ts": {
+    "mtime": 1791360446.2348835,
+    "seen": 1791368262.5548468,
+    "ast_hash": "7c35796637d03e586a209c647fb75ed1",
+    "semantic_hash": ""
+  },
+  "supabase/functions/_shared/setup2Notifications.js": {
+    "mtime": 1791368082.9863853,
+    "seen": 1791368262.5548468,
+    "ast_hash": "0f47a95c09f5ad515670256eb438bafb",
+    "semantic_hash": ""
+  },
+  "supabase/functions/pushover-test/index.ts": {
+    "mtime": 1791368082.9863853,
+    "seen": 1791368262.5578465,
+    "ast_hash": "60ba53760062927dde0850376ad380a1",
+    "semantic_hash": ""
+  },
+  "supabase/functions/setup2-notification-watch/index.ts": {
+    "mtime": 1791368082.9853866,
+    "seen": 1791368262.5578465,
+    "ast_hash": "6bbb414c27c2146d739fef7107bd43df",
+    "semantic_hash": ""
+  },
+  "test/algoWatcher.test.js": {
+    "mtime": 1791360452.0736845,
+    "seen": 1791368262.5698469,
+    "ast_hash": "e0fc0d76556b29751091e6c7105d2637",
+    "semantic_hash": ""
+  },
+  "test/setup2LiveEvents.test.js": {
+    "mtime": 1791367961.450105,
+    "seen": 1791368262.602842,
+    "ast_hash": "89573f50a205039f3d0705b7cbfc93d9",
+    "semantic_hash": ""
+  },
+  "test/setup2LiveRunner.test.js": {
+    "mtime": 1791367826.597668,
+    "seen": 1791368262.602842,
+    "ast_hash": "a48fa8a63a11be39bd200138799eedc8",
+    "semantic_hash": ""
+  },
+  "test/setup2LiveScan.test.js": {
+    "mtime": 1791367961.447105,
+    "seen": 1791368262.602842,
+    "ast_hash": "466bd133f0cac0013d756995da47d1c7",
+    "semantic_hash": ""
+  },
+  "test/setup2Notifications.test.js": {
+    "mtime": 1791368022.7058654,
+    "seen": 1791368262.602842,
+    "ast_hash": "675b5e124a49d43d7867a2dfa37ea9b8",
     "semantic_hash": ""
   }
 }

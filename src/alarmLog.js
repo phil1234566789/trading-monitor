@@ -1,3 +1,4 @@
+import { setup2AlarmRow } from "./algoWatcher.js";
 import { supabase } from "./supabaseClient.js";
 import { fetchTouchedZones, MAX_PROTOKOLL_ZEILEN } from "./poiZones.js";
 import { fmtPrice, pricePrecisionForInstrument } from "./format.js";
@@ -31,15 +32,23 @@ async function fetchTradeSetups(instrument) {
   return data;
 }
 
+async function fetchSetup2Alarms(instrument) {
+  const { data, error } = await supabase.from("setup2_alarm_events").select("*")
+    .eq("instrument", instrument).order("signal_at", { ascending: false }).limit(MAX_PROTOKOLL_ZEILEN);
+  if (error) throw error;
+  return data;
+}
+
 // Vereinheitlicht alle drei Alarm-Typen (siehe alarmSettings.js ALARM_TYPES) in eine
 // gemeinsame, chronologisch sortierte Zeitleiste fürs Protokoll — jeder Typ bringt sein
 // eigenes DB-Schema mit, hier nur auf die fürs Protokoll gemeinsamen Anzeige-Felder gemappt.
 export async function fetchAlarmLog(instrument) {
   const precision = pricePrecisionForInstrument(instrument);
-  const [zones, liquidity, setups] = await Promise.all([
+  const [zones, liquidity, setups, setup2Events] = await Promise.all([
     fetchTouchedZones(instrument),
     fetchTouchedLiquidityLevels(instrument),
     fetchTradeSetups(instrument),
+    fetchSetup2Alarms(instrument),
   ]);
 
   const rows = [
@@ -50,6 +59,7 @@ export async function fetchAlarmLog(instrument) {
     ...zones.map((z) => ({
       id: `ob-${z.id}`,
       time: z.notified_at ?? z.end_time,
+      signalAt: z.end_time,
       typeLabel: `${z.timeframe} OB`,
       direction: z.direction,
       directionLabel: z.direction === "long" ? "Long" : "Short",
@@ -60,6 +70,7 @@ export async function fetchAlarmLog(instrument) {
     ...liquidity.map((l) => ({
       id: `liq-${l.id}`,
       time: l.notified_at ?? l.end_time,
+      signalAt: l.end_time,
       typeLabel: "1H Liquidität",
       direction: l.direction === "high" ? "short" : "long",
       directionLabel: l.direction === "high" ? "Hoch" : "Tief",
@@ -70,6 +81,7 @@ export async function fetchAlarmLog(instrument) {
     ...setups.map((s) => ({
       id: `setup-${s.id}`,
       time: s.notified_at ?? s.ls_touched_time,
+      signalAt: s.ls_touched_time,
       typeLabel: "Trade-Setup",
       direction: s.direction,
       directionLabel: s.direction === "long" ? "Long" : "Short",
@@ -77,6 +89,7 @@ export async function fetchAlarmLog(instrument) {
       price: fmtPrice(s.alert_price, precision),
       notifiedAt: s.notified_at,
     })),
+    ...setup2Events.map(setup2AlarmRow),
   ];
 
   rows.sort((a, b) => new Date(b.time) - new Date(a.time));
