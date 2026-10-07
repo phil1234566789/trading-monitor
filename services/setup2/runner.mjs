@@ -39,9 +39,13 @@ async function drain(){
  if(!response.ok)throw new Error(`Notification watch HTTP ${response.status}`);
 }
 async function instrumentTick(row,sessions,schedules,news) {
- const instrument=row.instrument,started=Date.now(),previous=row.state ?? {};
- const acquired=await request('rpc/setup2_acquire_lease',{p_instrument:instrument,p_owner:owner,p_seconds:previous.runtimeVersion==='live-minute-v2'?Math.max(180,Math.ceil((previous.scanDurationMs ?? 0)/1000)*2+60):900});
+ const instrument=row.instrument,started=Date.now(),observed=row.state ?? {};
+ const acquired=await request('rpc/setup2_acquire_lease',{p_instrument:instrument,p_owner:owner,p_seconds:observed.runtimeVersion==='live-minute-v2'?Math.max(180,Math.ceil((observed.scanDurationMs ?? 0)/1000)*2+60):900});
  if(!acquired)return;
+ // Der vorige Job kann zwischen Übersichtsabruf und Lease-Ende checkpointen.
+ // Erst unter eigener Lease ist der Watermark für diesen Job verbindlich.
+ const current=await client.pages('setup2_live_state',{instrument:`eq.${instrument}`,select:'state'});
+ const previous=current[0]?.state ?? observed;
  let cache=memory.get(instrument),startup=!cache;
  if(!cache){cache={'entries':previous.entries ?? [],ranges:new Map(),scanMemo:{},structures:new Map(Object.entries(previous.structureKnownAt ?? {}))};memory.set(instrument,cache);}
  try {

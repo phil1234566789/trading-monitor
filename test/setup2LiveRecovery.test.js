@@ -14,7 +14,7 @@ it('T68 retains suspended sources across D1 windows and preserves failed evaluat
   else if(table==='setup2_checkpoint'){checkpoints.push(JSON.parse(options.body));body=null;}
   else if(table==='setup2-notification-watch')body={};
   else if(Number(query.get('offset'))>0)body=[];
-  else if(table==='setup2_live_state')body=[{instrument:'GBPUSD',enabled:true,state:{runtimeVersion:'live-minute-v2',evaluatedThrough:watermark,lastSuccessAt:watermark,error:'previous gap',suspendedRanges:[{setupKey:snapshot.setupKey,source:retained}],activeRanges:[]}}];
+  else if(table==='setup2_live_state')body=[{instrument:'GBPUSD',enabled:true,state:{runtimeVersion:'live-minute-v2',evaluatedThrough:query.has('instrument')?watermark:iso(closed-600),lastSuccessAt:watermark,error:'previous gap',suspendedRanges:[{setupKey:snapshot.setupKey,source:retained}],activeRanges:[]}}];
   else if(table==='trading_schedules')body=[{instrument:'GBPUSD',trading_windows:{weekday:[[0,1440]],saturday:[],sunday:[]}}];
   else if(table==='fxcm_candles'){const from=Date.parse(query.get('time').slice(4))/1000;body=rows[query.get('bar').slice(3)].filter(c=>c.time>=from).map(c=>({...c,time:iso(c.time)}));}
   else if(!['sessions','news_events','trade_setups'].includes(table))throw new Error(`Unexpected mock route ${table}`);
