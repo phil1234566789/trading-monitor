@@ -26,7 +26,7 @@ export function useAlgoWatcher() {
   onUnmounted(() => {
     if (--users === 0) { clearInterval(pollTimer); clearInterval(clockTimer); }
   });
-  const health = computed(() => watcherHealth(report.value, now.value));
+  const health = computed(() => error.value && !report.value ? {state:'error',label:'Störung',pulse:false,reason:error.value} : watcherHealth(report.value, now.value));
   const tooltip = computed(() => watcherTooltip(report.value, health.value));
   return { report, error, health, tooltip, refresh };
 }

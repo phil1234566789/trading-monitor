@@ -19,6 +19,11 @@ async function request(path,body,method='POST') {
  if(!response.ok)throw new Error(`Watcher database ${path.split('?')[0]}: HTTP ${response.status}`);
  const text=await response.text();return text?JSON.parse(text):null;
 }
+async function stop(){
+ await request(`setup2_live_state?lease_owner=eq.${owner}`,{lease_owner:null,lease_until:null},'PATCH').catch(()=>{});
+ process.exit(0);
+}
+process.once('SIGTERM',stop);process.once('SIGINT',stop);
 async function candles(instrument,bar,from=0) {
  const rows=await client.pages('fxcm_candles',{instrument:`eq.${instrument}`,bar:`eq.${bar}`,select:'time,open,high,low,close,volume',order:'time.asc',time:`gte.${iso(from)}`});
  return rows.map(c=>({...c,time:seconds(c.time)}));
@@ -35,16 +40,16 @@ async function drain(){
 }
 async function instrumentTick(row,sessions,schedules,news) {
  const instrument=row.instrument,started=Date.now(),previous=row.state ?? {};
- const acquired=await request('rpc/setup2_acquire_lease',{p_instrument:instrument,p_owner:owner,p_seconds:900});
+ const acquired=await request('rpc/setup2_acquire_lease',{p_instrument:instrument,p_owner:owner,p_seconds:previous.runtimeVersion==='live-minute-v2'?Math.max(180,Math.ceil((previous.scanDurationMs ?? 0)/1000)*2+60):900});
  if(!acquired)return;
  let cache=memory.get(instrument),startup=!cache;
- if(!cache){cache={'entries':previous.entries ?? [],ranges:new Map(),structures:new Map(Object.entries(previous.structureKnownAt ?? {}))};memory.set(instrument,cache);}
+ if(!cache){cache={'entries':previous.entries ?? [],ranges:new Map(),scanMemo:{},structures:new Map(Object.entries(previous.structureKnownAt ?? {}))};memory.set(instrument,cache);}
  try {
   const [daily,h1]=await Promise.all([updateCandles(cache,instrument,'1D'),updateCandles(cache,instrument,'1h')]);
   const anchors=buildHistoricalDailyAnchors(daily,h1),now=Date.now()/1000;
   const latest=anchors.findLast(a=>a.knownAt<=now);
   if(!latest)throw new Error('Kein kausal bekannter D1-P4-Strukturanker');
-  const retained=(previous.activeRanges ?? []).map(r=>r.source).filter(Boolean);
+  const retained=[...(previous.activeRanges ?? []),...(previous.suspendedRanges ?? [])].map(r=>r.source).filter(Boolean);
   const raw=await client.pages('trade_setups',{instrument:`eq.${instrument}`,source:'eq.live',created_at:`gte.${iso(latest.structureStartTime)}`,select:'*,trade_setup_sweeps(*)',order:'created_at.asc,id.asc'});
   const sources=[...new Map([...retained,...raw.map(tradeSetupFromRow)].map(s=>[s.tradeSetupId,s])).values()];
   const relevant=anchors.filter(a=>sources.some(s=>a===anchors.findLast(p=>p.knownAt<=setup1RecognitionTime(s))));
@@ -56,9 +61,19 @@ async function instrumentTick(row,sessions,schedules,news) {
   const tradingWindows=schedules.find(s=>s.instrument===instrument)?.trading_windows;
   if(!tradingWindows)throw new Error('Handelszeiten fehlen');
   const lastProcessed=seconds(previous.evaluatedThrough);
+  const configKey=JSON.stringify([sessions,tradingWindows,anchors.map(a=>[a.pivotTime,a.structureStartTime])]);
+  if(cache.configKey!==configKey){cache.scanMemo={};cache.configKey=configKey;}
+  const neededM1=Math.min(...sources.map(s=>Math.min(s.obStartTime,s.ls.touchedTime)))-131*60;
+  if(sources.length){
+   // Legitime Nachlieferungen können eine frühere Lücke schließen; reine Tail-Abfragen sehen sie nie.
+   if(previous.suspendedRanges?.length && (!cache.gapReloadAt || now-cache.gapReloadAt>=300)){delete cache['1m'];cache.gapReloadAt=now;}
+   if(cache.m1Start!=null && neededM1<cache.m1Start)delete cache['1m'];
+   cache.m1Start=Math.min(cache.m1Start ?? Infinity,neededM1);
+   await updateCandles(cache,instrument,'1m',cache.m1Start);
+  }
   const events=[],ranges=new Map(),entries=new Map(cache.entries.map(s=>[s.entry.id,s]));
-  const input={instrument,tradeSetups:sources,m5Candles:m5,h1Candles:h1,dailyAnchors:anchors,sessionConfigs:sessions,tradingWindows,
-   news:news.map(n=>({...n,eventTime:seconds(n.event_time)})),newsLoadStatus:'ready',settings:{},yieldControl:()=>Promise.resolve(),
+  const input={instrument,scanMemo:cache.scanMemo,m1Candles:cache['1m'],tradeSetups:sources,m5Candles:m5,h1Candles:h1,dailyAnchors:anchors,sessionConfigs:sessions,tradingWindows,
+   news:news.map(n=>({...n,eventTime:seconds(n.event_time)})),newsLoadStatus:'ready',settings:{},yieldControl:()=>delay(0),
    loadM1Candles:async({structureFromTime})=>{
     // Scanner bestimmt Sweep-/P5-Vorlauf. Preisvergleich braucht die bestätigte OB-Historie ebenfalls.
     const from=Math.min(structureFromTime,...sources.map(s=>s.obStartTime))-131*60;
@@ -71,7 +86,7 @@ async function instrumentTick(row,sessions,schedules,news) {
   };
   // Nach Neustart rekonstruieren wir die Entry-/Lifecycle-Historie mit dem unveränderten Batchpfad.
   const baselineTo=Number.isFinite(lastProcessed)?Math.min(lastProcessed,closedM5):closedM5;
-  if(startup && !previous.initializedAt && sources.length && Math.min(...sources.map(setup1RecognitionTime))<=baselineTo){
+  if(startup && previous.runtimeVersion!=='live-minute-v2' && sources.length && Math.min(...sources.map(setup1RecognitionTime))<=baselineTo){
    await scanTradeSetup2Window({...input,existingEntries:[],fromTime:Math.min(...sources.map(setup1RecognitionTime)),toTime:baselineTo,onMinuteCheck:rememberStructure});
    cache.entries=[...entries.values()];
   }
@@ -94,11 +109,11 @@ async function instrumentTick(row,sessions,schedules,news) {
    }
   };
   await scanTradeSetup2Window({...input,existingEntries:[...entries.values()],m1Candles:cache['1m'],fromTime,toTime:latestClosed,onMinuteCheck});
-  const active=[];let evaluationError=null;
+  const active=[],suspended=[];
   for(const [setupKey,snapshot] of ranges){
    if(snapshot.dealingRange?.status!=='validated' || snapshot.rangeCourse?.lifecycle?.main?.state==='ended')continue;
-   if(snapshot.rangeCourse?.lifecycle?.main?.state==='unknown'){evaluationError=`DR ${setupKey}: Lifecycle-Historie fehlt oder ist lueckenhaft`;continue;}
    const source=sources.find(s=>`${instrument}:setup1:${s.tradeSetupId}`===setupKey);
+   if(snapshot.rangeCourse?.lifecycle?.main?.state==='unknown'){suspended.push({setupKey,direction:snapshot.direction,source});continue;}
    const range=cache.ranges.get(setupKey) ?? {setupKey,direction:snapshot.direction,structureReady:false,lastM1Time:null,source};
    if(snapshot.rangeCourse?.lifecycle?.entrySearchAllowed===false)range.structureReady=false;
    active.push(range);
@@ -108,12 +123,14 @@ async function instrumentTick(row,sessions,schedules,news) {
   const success=Date.now()/1000,lag=Math.floor(success/60)*60-latestClosed;
   const feedError=lag>120 && evaluateTradingHours({instrument,evaluatedAt:success,tradingWindows}).status==='passed'
    ? `FXCM-M1-Feed ${lag}s hinter geschlossenem Minutenstand` : null;
-  const state={phase:active.length?'Setup 2 · M1 beobachten':'Setup 1 · M5 beobachten',activeRanges:active,
-   entries:[...entries.values()],structureKnownAt:Object.fromEntries(cache.structures),lastProcessAt:iso(started/1000),lastSuccessAt:iso(success),lastM5Time:lastM5,
-   lastM1Time:active.length?latestClosed-60:null,evaluatedThrough:iso(latestClosed),
+  const evaluationError=suspended.length?`Suspendierte DRs ${suspended.map(r=>r.setupKey).sort().join(', ')}: Lifecycle-Historie konnte nicht ermittelt werden (fehlend oder lückenhaft)` : null;
+  const currentError=evaluationError ?? feedError;
+  const state={phase:active.length?'Setup 2 · M1 beobachten':'Setup 1 · M5 beobachten',activeRanges:active,suspendedRanges:suspended,
+   entries:[...entries.values()],structureKnownAt:Object.fromEntries(cache.structures),lastProcessAt:iso(started/1000),lastSuccessAt:currentError?previous.lastSuccessAt ?? null:iso(success),lastM5Time:lastM5,
+   lastM1Time:active.length?latestClosed-60:null,evaluatedThrough:currentError?previous.evaluatedThrough ?? null:iso(latestClosed),
    nextExpectedCheck:iso((active.length?Math.floor(success/60)*60+60:Math.floor(success/300)*300+300)+12),
    scanDurationMs:Date.now()-started,lastStep:active.length?'Geschlossene M1-Kerzen und Alarmstufen geprüft':'Geschlossene M5-Kerzen und Setup-1-Quellen geprüft',
-   error:evaluationError ?? feedError,version:'entry-v9/setup-v20',initializedAt:previous.initializedAt ?? iso(success)};
+   error:currentError,errorSince:currentError?(previous.error===currentError?previous.errorSince ?? iso(success):iso(success)):null,runtimeVersion:'live-minute-v2',version:'entry-v9/setup-v20',initializedAt:previous.initializedAt ?? iso(success)};
   if(feedError)events.push({id:`feed:${instrument}:${lastM5}`,signal_at:iso(success),stage:0,kind:'problem',payload:{message:feedError,lastSuccessAt:previous.lastSuccessAt}});
   await request('rpc/setup2_checkpoint',{p_instrument:instrument,p_owner:owner,p_state:state,p_events:events});
   cache.entries=state.entries;
@@ -125,12 +142,17 @@ async function instrumentTick(row,sessions,schedules,news) {
   console.error(JSON.stringify({instrument,error:message}));
  }
 }
+const jobs=new Map();
 while(true){
  try {
   const [states,sessions,schedules,news]=await Promise.all([client.pages('setup2_live_state',{select:'instrument,enabled,state',order:'instrument.asc'}),
    client.pages('sessions',{select:'*',order:'id.asc'}),client.pages('trading_schedules',{select:'*',order:'instrument.asc'}),
    client.pages('news_events',{select:'id,event_time,currency,title',order:'event_time.asc,id.asc',event_time:`gte.${iso(Date.now()/1000-86400*7)}`})]);
-  for(const row of states.filter(s=>s.enabled))await instrumentTick(row,sessionRows(sessions),schedules,news);
+  for(const row of states.filter(s=>s.enabled))if(!jobs.has(row.instrument)){
+   const job=instrumentTick(row,sessionRows(sessions),schedules,news).catch(error=>console.error(JSON.stringify({instrument:row.instrument,error:error.message}))).finally(()=>jobs.delete(row.instrument));
+   jobs.set(row.instrument,job);
+  }
+  if(process.env.WATCHER_ONCE==='1')await Promise.all(jobs.values());
   await drain();
  } catch(error){console.error(JSON.stringify({error:error instanceof Error?error.message:'Watcher failed'}));}
  if(process.env.WATCHER_ONCE==='1')break;

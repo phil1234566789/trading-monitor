@@ -36,6 +36,11 @@ async function sendTest() {
         <dt>Letzte verarbeitete geschlossene M1-Kerze</dt><dd>{{ watcherTime(item.lastM1Time) }}</dd>
         <dt>Nächste erwartete Prüfung</dt><dd>{{ watcherTime(item.nextExpectedCheck) }}</dd>
       </dl>
+      <template v-if="item.suspendedRanges?.length">
+        <h3>Suspendierte Dealing Ranges ({{ item.suspendedRanges.length }})</h3>
+        <p>Lifecycle konnte wegen fehlender oder lückenhafter Historie nicht ermittelt werden. Keine Entry-Freigabe.</p>
+        <p v-for="range in item.suspendedRanges" :key="range.setupKey">{{ range.setupKey }} · {{ range.direction === 'long' ? 'Long' : 'Short' }}</p>
+      </template>
       <h3>Aktive Dealing Ranges ({{ item.activeRanges?.length ?? 0 }})</h3>
       <p v-if="!item.activeRanges?.length">Keine aktive DR. Setup 1.0 wird weiter beobachtet.</p>
       <div class="range" v-for="range in item.activeRanges ?? []" :key="range.setupKey">

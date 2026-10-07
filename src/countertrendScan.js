@@ -37,9 +37,10 @@ export async function scanCountertrendWindow(input) {
   let m1=marked(input.m1Candles),loadedFrom=Infinity;
   const snapshots=[],entries=[...(input.existingEntries ?? [])],saved=new Map(),seen=new Set(entries.map(s=>s.entry.id));
   const checklistHistory=createChecklistHistoryRecorder();
-  const classificationCache=new Map(),closeReactionCache=createCloseReactionCache(),m1Cache=createCloseReactionCache();
+  const memo=input.scanMemo ?? {};
+  const classificationCache=memo.classificationCache ??= new Map(),closeReactionCache=memo.closeReactionCache ??= createCloseReactionCache(),m1Cache=createCloseReactionCache();
   const recognized=new Map();
-  const setupMemo=useMemo ? createSetup2Memo() : null,lifecycles=createSetup2Memo(),executions=createSetup2Memo();
+  const setupMemo=useMemo ? (memo.setupMemo ??= createSetup2Memo()) : null,lifecycles=createSetup2Memo(),executions=createSetup2Memo();
   const searchThrough=createSetup2Memo(),entryProgress=createSetup2Memo();
   const orderBlockDetectors=new Map();
   const detectScanOrderBlocks=(rows,timeframe,isForex=true,minGapOverride=null)=>{

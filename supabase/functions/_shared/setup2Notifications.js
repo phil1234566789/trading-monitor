@@ -46,7 +46,7 @@ export function healthReport(rows, delivery, now = Date.now(), withinHours = ins
       lastM5Time: value.lastM5Time ?? null, lastM1Time: value.lastM1Time ?? null,
       nextExpectedCheck: value.nextExpectedCheck ?? null, activeRanges: (value.activeRanges ?? []).map(r => ({
         setupKey: r.setupKey, direction: r.direction, structureReady: !!r.structureReady, lastM1Time: r.lastM1Time ?? null
-      })), error, inHours, stale};
+      })), suspendedRanges:(value.suspendedRanges ?? []).map(r=>({setupKey:r.setupKey,direction:r.direction})), error, errorSince:value.errorSince ?? null, inHours, stale};
   });
   const enabled = instruments.filter(r => r.enabled);
   const cronAt = Date.parse(server.watch_checked_at);

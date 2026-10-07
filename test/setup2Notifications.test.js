@@ -19,6 +19,12 @@ describe('T68 server notification boundaries',()=>{
   expect(healthReport(rows,{},now+160000,()=>true,server).state).toBe('error');
   expect(healthReport(rows,{},now,()=>true,{...server,provider_error:'Rejected'}).state).toBe('error');
  });
+ it('suspended DRs stay visible without exposing stored source details or enabling pulse',()=>{
+  const suspended=[{...rows[0],state:{...rows[0].state,error:'Lifecycle unknown',suspendedRanges:[{setupKey:'DR13590',direction:'short',source:{private:'stored input'}}]}}];
+  const report=healthReport(suspended,{},now,()=>true,server);
+  expect(report.state).toBe('error');expect(report.pulse).toBe(false);
+  expect(report.instruments[0].suspendedRanges).toEqual([{setupKey:'DR13590',direction:'short'}]);
+ });
  it('initial scan is waiting and pulse only follows verified structure within trading hours',()=>{
   const initial=[{...rows[0],state:{...rows[0].state,lastSuccessAt:null}}];
   expect(healthReport(initial,{},now,()=>true,server).state).toBe('waiting');

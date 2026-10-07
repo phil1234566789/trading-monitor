@@ -35,6 +35,8 @@ it('T68 restart catches a newly recognized source after persisted watermark with
  const clock=vi.spyOn(Date,'now').mockReturnValue((closed+20)*1000),log=vi.spyOn(console,'log').mockImplementation(()=>{}),error=vi.spyOn(console,'error').mockImplementation(()=>{});
  try {
   await import('../services/setup2/runner.mjs');
+  const firstM1=fetcher.mock.calls.map(([input])=>new URL(input)).find(url=>url.searchParams.get('bar')==='eq.1m');
+  expect(Date.parse(firstM1.searchParams.get('time').slice(4))/1000).toBeLessThanOrEqual(Math.min(source.obStartTime,source.ls.touchedTime)-131*60);
   expect(checkpoints).toHaveLength(1);
   expect(checkpoints[0].p_state.error).toBeNull();
   expect(checkpoints[0].p_state.evaluatedThrough).toBe(iso(closed));

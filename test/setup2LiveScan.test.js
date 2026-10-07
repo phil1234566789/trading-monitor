@@ -13,8 +13,9 @@ it('T68 minute hook observes closed pre-FVG minutes without changing batch entri
  const input={instrument:'GBPUSD',tradeSetups:[setup],m5Candles:[...new Map([...fixture.m5Candles,...continuation].map(c=>[c.time,c])).values()],
   h1Candles:fixture.h1Candles,m1Candles:minutes,dailyAnchors:buildHistoricalDailyAnchors(fixture.dailyCandles,fixture.h1Candles),
   sessionConfigs:sessions.sessions,tradingWindows:windows,fromTime:at,toTime:Math.floor(at/86400)*86400+22*3600,yieldControl:()=>Promise.resolve()};
- const baseline=await scanTradeSetup2Window(input),seen=[],events=[],firstStructure=new Map();
- const live=await scanTradeSetup2Window({...input,onMinuteCheck:minute=>{seen.push(minute); const key=minute.context.setupKey; if(!firstStructure.has(key) && structureReady(minute.check.conditions,minute.context.direction,minute.knownAt))firstStructure.set(key,minute.knownAt); events.push(...minuteAlarmEvents({...minute,structureFirstKnownAt:firstStructure.get(key)},windows));}});
+ const scanMemo={};
+ const baseline=await scanTradeSetup2Window({...input,scanMemo}),seen=[],events=[],firstStructure=new Map();
+ const live=await scanTradeSetup2Window({...input,scanMemo,onMinuteCheck:minute=>{seen.push(minute); const key=minute.context.setupKey; if(!firstStructure.has(key) && structureReady(minute.check.conditions,minute.context.direction,minute.knownAt))firstStructure.set(key,minute.knownAt); events.push(...minuteAlarmEvents({...minute,structureFirstKnownAt:firstStructure.get(key)},windows));}});
  const entrySummary=rows=>rows.filter(s=>s.entry).map(s=>({id:s.entry.id,at:s.entry.recognizedAt,stops:s.entry.stops,sizing:s.entry.sizing}));
  expect(entrySummary(live)).toEqual(entrySummary(baseline));
  expect(entrySummary(live)).toHaveLength(2);

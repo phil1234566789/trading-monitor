@@ -50,7 +50,7 @@ async function tick(client: any) {
   for (const instrument of report.instruments) {
     if (instrument.enabled && instrument.error) {
       checked(await client.rpc('setup2_record_problem', {
-        p_id: `health:${instrument.instrument}:${instrument.lastSuccessAt ?? 'never'}:${instrument.error}`,
+        p_id: `health:${instrument.instrument}:${instrument.errorSince ?? 'initial'}:${instrument.error}`,
         p_instrument: instrument.instrument,
         p_payload: {message: instrument.error, lastSuccessAt: instrument.lastSuccessAt}
       }));
