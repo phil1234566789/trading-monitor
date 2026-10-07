@@ -1,3 +1,4 @@
+import {berlinWallTime} from './tradeSetupChecklistTime.js';
 import {sessionOccurrences} from './sessionOccurrences.js';
 import {berlinOffsetMinutes} from './berlinTime.js';
 
@@ -5,7 +6,7 @@ export function m5EntryHistoryKnown(rows,from,at,sessionConfigs=[],instrument) {
  if(!Number.isFinite(from) || !Number.isFinite(at) || from>at)return false;
  const end=Math.floor(at/300)*300,start=Math.ceil(from/300)*300;
  // Konfigurierte ignorierte Intervalle und lange Wochenendpausen benötigen keine Handelskerzen.
- const wall=sec=>sec+berlinOffsetMinutes(sec*1000)*60;
+ const wall=berlinWallTime;
  const utc=(local,edge)=>{
   const offsets=[...new Set([-86400,0,86400].map(delta=>berlinOffsetMinutes((local+delta)*1000)))];
   const candidates=offsets.map(offset=>local-offset*60).filter(sec=>wall(sec)===local);

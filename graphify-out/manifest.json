@@ -4026,9 +4026,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupChecklistTime.js": {
-    "mtime": 1791289143.3187315,
-    "seen": 1791322335.505352,
-    "ast_hash": "e60f3308bb6594a7d8477bec42f2902e",
+    "mtime": 1791382301.4764526,
+    "seen": 1791382386.6993873,
+    "ast_hash": "e2ba0913cfde5d2186ecbf8925db1bc0",
     "semantic_hash": ""
   },
   "src/tradeSetupChecklistTimeBasis.js": {
@@ -4266,9 +4266,9 @@
     "semantic_hash": ""
   },
   "src/m1Structure.js": {
-    "mtime": 1791289143.259598,
-    "seen": 1791322335.505352,
-    "ast_hash": "e40efa45e396057704d460fc40e84ff6",
+    "mtime": 1791381893.8605056,
+    "seen": 1791382282.720081,
+    "ast_hash": "c88001a02385ecc6d23c9fd613bddc7d",
     "semantic_hash": ""
   },
   "src/structureOverlay.js": {
@@ -4356,21 +4356,21 @@
     "semantic_hash": ""
   },
   "src/entryRisk.js": {
-    "mtime": 1791322145.4175735,
-    "seen": 1791322335.505352,
-    "ast_hash": "b098befc0cf04e3b6ea7f8326c894a53",
+    "mtime": 1791381335.8961136,
+    "seen": 1791382282.7110834,
+    "ast_hash": "5c0195cbd4ef96d4c1b47d234cabf2c4",
     "semantic_hash": ""
   },
   "src/m1Entry.js": {
-    "mtime": 1791322145.4185731,
-    "seen": 1791322335.505352,
-    "ast_hash": "61422d89370ec503c0e2c1402b758be9",
+    "mtime": 1791381335.8971128,
+    "seen": 1791382282.7180812,
+    "ast_hash": "887d208d7eacea576b2b55cda1a80a90",
     "semantic_hash": ""
   },
   "src/m1EntryRendering.js": {
-    "mtime": 1791316126.3758316,
-    "seen": 1791322335.505352,
-    "ast_hash": "94a9ae96a3b47dbfd0b03c5fb9e99b96",
+    "mtime": 1791382199.41904,
+    "seen": 1791382282.7180812,
+    "ast_hash": "9d329d4c66faa3ada1250aec0a37f341",
     "semantic_hash": ""
   },
   "test/entryRisk.test.js": {
@@ -4386,9 +4386,9 @@
     "semantic_hash": ""
   },
   "test/m1EntryRendering.test.js": {
-    "mtime": 1791322177.2564578,
-    "seen": 1791322335.505352,
-    "ast_hash": "40acc286b7208a4ba1d744c292fc6917",
+    "mtime": 1791382199.420041,
+    "seen": 1791382282.8220842,
+    "ast_hash": "d27c27eb13c0c1568968098a952c9042",
     "semantic_hash": ""
   },
   "src/afterBrowserPaint.js": {
@@ -4470,9 +4470,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationResultsTable.vue": {
-    "mtime": 1791289143.2086174,
-    "seen": 1791322335.505352,
-    "ast_hash": "7b367b65d8cbd405043ce7c012d5591c",
+    "mtime": 1791382199.4180403,
+    "seen": 1791382282.6900814,
+    "ast_hash": "d8b3abc013e7c38dfd9af1d3cd30190f",
     "semantic_hash": ""
   },
   "src/composables/useSimulationStatistics.js": {
@@ -4500,9 +4500,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2Configuration.js": {
-    "mtime": 1791322145.4195733,
-    "seen": 1791322335.505352,
-    "ast_hash": "b5d8a7746b2afd66430ad2640b544137",
+    "mtime": 1791381335.8961136,
+    "seen": 1791382282.743087,
+    "ast_hash": "1ff3b8c7a0929bc318f39bbb55e6ccda",
     "semantic_hash": ""
   },
   "src/tradeSetup2Evidence.js": {
@@ -4542,9 +4542,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupSimulation.js": {
-    "mtime": 1791322145.4185731,
-    "seen": 1791322335.505352,
-    "ast_hash": "11f1120e987b2888472c8f1866fdfe53",
+    "mtime": 1791382158.5914514,
+    "seen": 1791382282.753083,
+    "ast_hash": "f174d997653fd70a632d19d8b5d9db17",
     "semantic_hash": ""
   },
   "src/tradeSetupSimulationRepository.js": {
@@ -4680,9 +4680,9 @@
     "semantic_hash": ""
   },
   "test/tradeSetup2Configuration.test.js": {
-    "mtime": 1791322145.420573,
-    "seen": 1791322335.5063522,
-    "ast_hash": "7849b7d26e5a59e0fca66027a5234802",
+    "mtime": 1791381384.453321,
+    "seen": 1791382282.8520808,
+    "ast_hash": "6fd20e8f94a642b31f661ca712b52426",
     "semantic_hash": ""
   },
   "test/useTradeSetup2History.test.js": {
@@ -4866,9 +4866,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2Review.js": {
-    "mtime": 1791289143.3095727,
-    "seen": 1791322335.505352,
-    "ast_hash": "4ad7d7edc830797df028358a67b30f47",
+    "mtime": 1791381335.8971128,
+    "seen": 1791382282.7460814,
+    "ast_hash": "9e9a6c8194dfadd5bc4f46da49c6117d",
     "semantic_hash": ""
   },
   "test/tradeSetup2LinkedSnapshot.test.js": {
@@ -4908,9 +4908,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2EntrySizing.js": {
-    "mtime": 1791289143.305573,
-    "seen": 1791322335.505352,
-    "ast_hash": "1814fd44f3ff55329438207869258d3d",
+    "mtime": 1791382158.5884519,
+    "seen": 1791382282.7440848,
+    "ast_hash": "b056557255f06d351febfb5153fe7d1a",
     "semantic_hash": ""
   },
   "test/tradeSetup2EntrySizing.test.js": {
@@ -4944,9 +4944,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationEntryResult.vue": {
-    "mtime": 1791289143.2066178,
-    "seen": 1791322335.505352,
-    "ast_hash": "af9195e2931352918d545b946398eedf",
+    "mtime": 1791382199.416041,
+    "seen": 1791382282.6880815,
+    "ast_hash": "7d100abbc112728004b1fcdd7ede81c4",
     "semantic_hash": ""
   },
   "test/simulationEntryResult.test.js": {
@@ -5274,9 +5274,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationEntryTable.vue": {
-    "mtime": 1791289143.2066178,
-    "seen": 1791322335.505352,
-    "ast_hash": "d1d372b75327486636f4aa6d912354c7",
+    "mtime": 1791382199.41704,
+    "seen": 1791382282.6880815,
+    "ast_hash": "a7653a0064e647998d11ea87116edcf4",
     "semantic_hash": ""
   },
   "src/components/SimulationFeatureChips.vue": {
@@ -5862,9 +5862,9 @@
     "semantic_hash": ""
   },
   "src/countertrendEntryPattern1.js": {
-    "mtime": 1791289143.2344434,
-    "seen": 1791322335.505352,
-    "ast_hash": "9e24d81ec1534ed81b743026572bb05d",
+    "mtime": 1791382158.587451,
+    "seen": 1791382282.7060816,
+    "ast_hash": "eb8a1128eab5bcb843b052a637b961c1",
     "semantic_hash": ""
   },
   "src/entryPattern.js": {
@@ -5874,9 +5874,9 @@
     "semantic_hash": ""
   },
   "src/entryPattern1Conditions.js": {
-    "mtime": 1791322145.4195733,
-    "seen": 1791322335.505352,
-    "ast_hash": "b138cb0b58cfc4253002a4aaf3a20b9b",
+    "mtime": 1791382158.587451,
+    "seen": 1791382282.7110834,
+    "ast_hash": "baa9389e20c059a7982924ebb47859de",
     "semantic_hash": ""
   },
   "src/entryPattern1Progress.js": {
@@ -5886,9 +5886,9 @@
     "semantic_hash": ""
   },
   "test/countertrendEntryPattern1.test.js": {
-    "mtime": 1791322145.420573,
-    "seen": 1791322335.505352,
-    "ast_hash": "f98d3cacdb010375e90bf187423a46f9",
+    "mtime": 1791381893.8605056,
+    "seen": 1791382282.797082,
+    "ast_hash": "bb866177c0938cf0c6548204695a147e",
     "semantic_hash": ""
   },
   "test/countertrendEntryPattern1References.test.js": {
@@ -5958,15 +5958,15 @@
     "semantic_hash": ""
   },
   "src/entryPattern1M5Bos.js": {
-    "mtime": 1791289664.166052,
-    "seen": 1791322335.505352,
-    "ast_hash": "e29e113559ae4217ff32b2bcc95bcfad",
+    "mtime": 1791381335.8941133,
+    "seen": 1791382282.7110834,
+    "ast_hash": "1c58f784cbb535e0a9115d9e87691957",
     "semantic_hash": ""
   },
   "test/entryPattern1M5Bos.test.js": {
-    "mtime": 1791289143.4755292,
-    "seen": 1791322335.505352,
-    "ast_hash": "08cc60e431e373572ec03e15730e0443",
+    "mtime": 1791381893.861507,
+    "seen": 1791382282.8010805,
+    "ast_hash": "dafd82094df596783378360ec6debdb8",
     "semantic_hash": ""
   },
   "test/fixtures/gbpusd-dr9016-m5-countertrend.json": {
@@ -6012,9 +6012,9 @@
     "semantic_hash": ""
   },
   "src/entryPattern1Targets.js": {
-    "mtime": 1791322145.4195733,
-    "seen": 1791322335.505352,
-    "ast_hash": "513960f0d411139f24cfc907fbfd6fdd",
+    "mtime": 1791381384.4498117,
+    "seen": 1791382282.7110834,
+    "ast_hash": "ae590c008f496972fb132c36002739ef",
     "semantic_hash": ""
   },
   "test/entryPattern1Targets.test.js": {
@@ -6060,15 +6060,15 @@
     "semantic_hash": ""
   },
   "services/setup2/events.js": {
-    "mtime": 1791367960.873105,
-    "seen": 1791368262.4938464,
-    "ast_hash": "4c0160b8cbeaca60d392a085ee505005",
+    "mtime": 1791382158.5894516,
+    "seen": 1791382282.6730819,
+    "ast_hash": "45923ac547043056ee26be27ed4bb807",
     "semantic_hash": ""
   },
   "services/setup2/runner.mjs": {
-    "mtime": 1791373123.2353456,
-    "seen": 1791373169.5984607,
-    "ast_hash": "a0616dbaf764353c91df0c68632e8a8f",
+    "mtime": 1791381384.4508119,
+    "seen": 1791382282.6730819,
+    "ast_hash": "8ffd802c0e07c41261bd62a1a97d8ff8",
     "semantic_hash": ""
   },
   "src/algoWatcher.js": {
@@ -6096,9 +6096,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/_shared/setup2Notifications.js": {
-    "mtime": 1791373343.329346,
-    "seen": 1791373371.5097404,
-    "ast_hash": "ce636364902d409769427a1b4a20f48a",
+    "mtime": 1791381384.4508119,
+    "seen": 1791382282.7660813,
+    "ast_hash": "a349c8452cbef47842b60cdda6685760",
     "semantic_hash": ""
   },
   "supabase/functions/pushover-test/index.ts": {
@@ -6120,9 +6120,9 @@
     "semantic_hash": ""
   },
   "test/setup2LiveEvents.test.js": {
-    "mtime": 1791368367.8477516,
-    "seen": 1791370963.0374312,
-    "ast_hash": "c3e66c803ed891a8279ebb9129eeb9cc",
+    "mtime": 1791381384.4523153,
+    "seen": 1791382282.8370976,
+    "ast_hash": "111f579e05edc2d38e04c16aa3e93709",
     "semantic_hash": ""
   },
   "test/setup2LiveRunner.test.js": {
@@ -6165,6 +6165,54 @@
     "mtime": 1791373181.3256032,
     "seen": 1791373267.9877942,
     "ast_hash": "45f8bf7e42850612a18191c4848c50ea",
+    "semantic_hash": ""
+  },
+  "src/entryCategory.js": {
+    "mtime": 1791382158.586452,
+    "seen": 1791382282.7100868,
+    "ast_hash": "da3014ffeb7ce740c088739736f17c02",
+    "semantic_hash": ""
+  },
+  "src/entryPresentation.js": {
+    "mtime": 1791382199.4180403,
+    "seen": 1791382282.7110834,
+    "ast_hash": "0f6ddb115210af80ee9bb32dd313d2d4",
+    "semantic_hash": ""
+  },
+  "src/m5EntryHistory.js": {
+    "mtime": 1791382301.4764526,
+    "seen": 1791382386.680389,
+    "ast_hash": "8fdd58ea7e8cfe027e89e31947709dd7",
+    "semantic_hash": ""
+  },
+  "test/entryPresentation.test.js": {
+    "mtime": 1791382199.41904,
+    "seen": 1791382282.8010805,
+    "ast_hash": "f343aa7b13da0d2baaecd6cb051dd0e3",
+    "semantic_hash": ""
+  },
+  "test/fixtures/gbpusd-dr9312-t70-checkpoints.json": {
+    "mtime": 1791381582.1911438,
+    "seen": 1791382282.8040807,
+    "ast_hash": "b8b2d6ae432eb5a3773f1f4b0dc743fd",
+    "semantic_hash": ""
+  },
+  "test/m5EntryHistory.test.js": {
+    "mtime": 1791382051.755167,
+    "seen": 1791382282.824081,
+    "ast_hash": "fa97207e098dfcd0c1a249f5b3b0cb85",
+    "semantic_hash": ""
+  },
+  "test/t70OriginalDr9312.test.js": {
+    "mtime": 1791382051.7271698,
+    "seen": 1791382282.8480868,
+    "ast_hash": "39338bc774e24b780dd0be17ee746300",
+    "semantic_hash": ""
+  },
+  "test/t70RiskyEntry.test.js": {
+    "mtime": 1791381489.6517346,
+    "seen": 1791382282.8480868,
+    "ast_hash": "22d6c7c71abdd10c4188b6714e5ff253",
     "semantic_hash": ""
   }
 }

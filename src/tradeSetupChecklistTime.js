@@ -3,7 +3,7 @@ import { sessionOccurrences } from "./sessionOccurrences.js";
 import { supportsNewsInstrument } from "./newsEventRules.js";
 import { evaluateChecklistNews } from './tradeSetupChecklistNews.js';
 
-function berlinWallTime(evaluatedAt) {
+export function berlinWallTime(evaluatedAt) {
   return Date.parse(`${formatDatedTime(evaluatedAt).replace(' ', 'T')}:00Z`) / 1000;
 }
 
