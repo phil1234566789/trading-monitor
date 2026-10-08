@@ -37,10 +37,11 @@ export function setup2AlarmRow(event) {
   const labels = { 1: "BOS + M1-Pivot", 2: "Neuer OB-Retest", 3: "Entry ausführbar" };
   const payload = event.payload ?? {};
   const rangeWarning=payload.category==='range-warning';
+  const recovery=event.kind==='recovery';
   return { id: `setup2-${event.id}`, time: event.signal_at, detectedAt: event.detected_at,
-    typeLabel: rangeWarning ? 'DR-Warnung' : event.kind === "problem" ? "Algo-Störung" : `Setup 2 · ${labels[event.stage] ?? event.stage}`,
+    typeLabel: recovery ? "Algo-Entwarnung" : rangeWarning ? 'DR-Warnung' : event.kind === "problem" ? "Algo-Störung" : `Setup 2 · ${labels[event.stage] ?? event.stage}`,
     direction: event.direction, directionLabel: event.direction === "long" ? "Long" : event.direction === "short" ? "Short" : "–",
-    detail: [`DR ${event.setup_key ?? "–"}`, event.missed_reason || payload.reason || payload.message].filter(Boolean).join(" · "),
-    price: payload.entryPrice ?? payload.entry?.price ?? "–", notifiedAt: null,
-    deliveryLabel: rangeWarning ? 'Nur Protokoll · kein Eingreifen erforderlich' : event.missed_reason ? "Verpasst · Protokollhinweis" : "Siehe Watcher-Versandstatus" };
+    detail: [recovery ? `Incident ${payload.incidentId ?? "–"}` : `DR ${event.setup_key ?? "–"}`, event.missed_reason || payload.reason || payload.message].filter(Boolean).join(" · "),
+    price: payload.entryPrice ?? payload.entry?.price ?? "–", notifiedAt: recovery ? payload.delivery?.acceptedAt ?? null : null,
+    deliveryLabel: recovery ? `Telegram · ${payload.delivery?.status ?? "pending"}${payload.delivery?.error ? ` · ${payload.delivery.error}` : ""}` : rangeWarning ? 'Nur Protokoll · kein Eingreifen erforderlich' : event.missed_reason ? "Verpasst · Protokollhinweis" : "Siehe Watcher-Versandstatus" };
 }

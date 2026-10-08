@@ -10,7 +10,7 @@ it.each([{historyFailure:false,legacyQueued:false},{historyFailure:true,legacyQu
  const legacyEvent={id:'health:GBPUSD:legacy',kind:'problem',instrument:'GBPUSD',payload:{message:'Suspendierte DRs GBPUSD:setup1:13590: Lifecycle-Historie konnte nicht ermittelt werden (fehlend oder lückenhaft)'}};
  const rows=[{instrument:'GBPUSD',enabled:true,state:{lastSuccessAt:new Date(now-20000).toISOString(),nextExpectedCheck:new Date(now+60000).toISOString(),activeRanges:[],suspendedRanges:[{setupKey:'DR13590',direction:'short'}]}}];
  ctx.client={from:table=>{
-  const query={select:()=>query,eq:()=>query,in:()=>query,order:()=>query,limit:()=>query,lt:()=>query,single:()=>query,
+  const query={select:()=>query,eq:()=>query,neq:()=>query,in:()=>query,order:()=>query,limit:()=>query,lt:()=>query,single:()=>query,
    update:value=>{writes.push({table,value,mode:'update'});return query;},
    upsert:value=>{writes.push({table,value,mode:'upsert'});query.failure=historyFailure;return query;},
    then:resolve=>resolve({data:table==='setup2_live_state'?rows:table==='trading_schedules'?[{instrument:'GBPUSD',trading_windows:{weekday:[[0,1440]],saturday:[],sunday:[]}}]:table==='pushover_test_limits'?server:table==='setup2_alarm_events'?legacyEvent:[],error:query.failure?'db failure':null})};

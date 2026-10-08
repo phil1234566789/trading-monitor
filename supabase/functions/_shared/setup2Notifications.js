@@ -68,3 +68,22 @@ export function healthReport(rows, delivery, now = Date.now(), withinHours = ins
     reason: state === 'error' ? operationalReason : state === 'off' ? 'Watcher ausgeschaltet' : state === 'waiting' ? (enabled.some(r=>!r.lastSuccessAt)?'Initialer Abgleich läuft':'Außerhalb der Handelszeiten') : 'Algorithmus verarbeitet geschlossene Kerzen',
     pulse: state === 'live' && enabled.some(r => r.inHours && r.activeRanges.some(dr => dr.structureReady)), instruments, delivery};
 }
+
+export function telegramText(event, reason) {
+ const logUrl = 'https://phil1234566789.github.io/trading-monitor/#/protokoll';
+ if (event.kind === 'recovery') return `T68 · Watcher läuft wieder; kein Eingreifen nötig\nStörung gemeldet: ${berlinTime(event.payload.reportedAt)}\nWiederhergestellt: ${berlinTime(event.payload.recoveredAt)}\nIncident: ${event.payload.incidentId}\n${logUrl}`;
+ return `T68 · Alarm-Protokoll prüfen: ${event.instrument}, Stufe ${event.stage}, DR ${event.setup_key ?? '–'}\n${reason}\n${logUrl}`;
+}
+export async function sendTelegram(event, reason, env, fetcher = fetch) {
+ if (!env('TELEGRAM_BOT_TOKEN') || !env('TELEGRAM_CHAT_ID')) throw new Error('Telegram secrets missing');
+ let response;
+ try {
+  response = await fetcher(`https://api.telegram.org/bot${env('TELEGRAM_BOT_TOKEN')}/sendMessage`, {
+   method:'POST', headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({chat_id:env('TELEGRAM_CHAT_ID'),text:telegramText(event,reason)}),
+   signal:AbortSignal.timeout(15000)
+  });
+ } catch { throw new Error('Telegram transport failed (acceptance unknown)'); }
+ const body = await response.json();
+ if (!response.ok || !body.ok) throw new Error(`Telegram rejected request (HTTP ${response.status})`);
+}

@@ -1,25 +1,15 @@
 import { db, env, json, checked, headers } from '../_shared/setup2Http.ts';
-import { healthReport, secretMatches, sendPushover, notificationText, validatePushover } from '../_shared/setup2Notifications.js';
+import { healthReport, secretMatches, sendPushover, notificationText, validatePushover, sendTelegram } from '../_shared/setup2Notifications.js';
 import { isWithinTradingWindows } from '../_shared/tradingHoursGate.ts';
 
+import {recoveryHealthReady} from '../_shared/setup2Recovery.js';
 import {rangeWarningEvent,isRangeWarning} from '../_shared/setup2RangeWarnings.js';
 
-const LOG_URL = 'https://phil1234566789.github.io/trading-monitor/#/protokoll';
-async function telegramHint(event: any, reason: string) {
-  if (!env('TELEGRAM_BOT_TOKEN') || !env('TELEGRAM_CHAT_ID')) throw new Error('Telegram secrets missing');
-  const response = await fetch(`https://api.telegram.org/bot${env('TELEGRAM_BOT_TOKEN')}/sendMessage`, {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({chat_id: env('TELEGRAM_CHAT_ID'), text: `T68 · Alarm-Protokoll prüfen: ${event.instrument}, Stufe ${event.stage}, DR ${event.setup_key ?? '–'}\n${reason}\n${LOG_URL}`}),
-    signal: AbortSignal.timeout(15000)
-  });
-  const body = await response.json();
-  if (!response.ok || !body.ok) throw new Error(`Telegram rejected request (HTTP ${response.status})`);
-}
 async function readHealth(client: any) {
   const [states, schedules, deliveries, server] = await Promise.all([
     client.from('setup2_live_state').select('instrument,enabled,state').limit(3),
     client.from('trading_schedules').select('instrument,trading_windows').limit(10),
-    client.from('setup2_notification_outbox').select('status,error,provider_accepted_at').in('status',['accepted','failed','uncertain']).order('id', {ascending: false}).limit(1),
+    client.from('setup2_notification_outbox').select('status,error,provider_accepted_at,setup2_alarm_events!inner(kind)').neq('setup2_alarm_events.kind','recovery').in('status',['accepted','failed','uncertain']).order('id', {ascending: false}).limit(1),
     client.from('pushover_test_limits').select('watch_checked_at,provider_checked_at,provider_error').eq('id',true).single()
   ]);
   const rows = checked(states) as any[];
@@ -69,17 +59,26 @@ async function tick(client: any) {
     const event = checked(await client.from('setup2_alarm_events').select('*').eq('id', item.event_id).single()) as any;
     if (item.channel === 'pushover' && event.kind === 'trading') await missed(client, event, 'Versand unterbrochen; Providerannahme unbekannt');
   }
+  checked(await client.rpc('setup2_prepare_recovery', {p_healthy:recoveryHealthReady(report)}));
   const items = checked(await client.rpc('setup2_claim_notifications', {p_limit: 2})) as any[];
   const results = [];
   for (const item of items) {
     const event = checked(await client.from('setup2_alarm_events').select('*').eq('id', item.event_id).single()) as any;
-    let status = 'accepted'; let error = null;
+    let status = 'accepted'; let error = null; let retry_after = null; let deferred = false;
     try {
       if (isRangeWarning(event)) {
         status='suppressed';
         if (event.payload?.category!=='range-warning') checked(await client.from('setup2_alarm_events').update({payload:{...event.payload,category:'range-warning'}}).eq('id',event.id));
       }
-      else if (item.channel === 'telegram') await telegramHint(event, event.missed_reason ?? 'Pushover-Versand gestört');
+      else if (event.kind === 'recovery') {
+        const current = (await readHealth(client)).report;
+        const recovery = checked(await client.rpc('setup2_recovery_status', {p_event_id:event.id}));
+        if (recovery === 'superseded') status='suppressed';
+        else if (recovery !== 'ready' || !recoveryHealthReady(current,event.payload.reportedAt)) {
+          status='pending'; deferred=true; retry_after=new Date(Date.now()+60000).toISOString();
+        } else await sendTelegram(event, null, env);
+      }
+      else if (item.channel === 'telegram') await sendTelegram(event, event.missed_reason ?? 'Pushover-Versand gestört', env);
       else if (event.kind === 'trading') {
         const schedule = windows.get(event.instrument);
         const signalInside = schedule && isWithinTradingWindows(Date.parse(event.signal_at) / 1000, schedule);
@@ -96,13 +95,14 @@ async function tick(client: any) {
       error = failure instanceof Error ? failure.message : 'Notification failed';
       // Netz-Timeout ist absichtlich uncertain: genau-einmal garantiert der Provider nicht.
       status = error.includes('rejected') || error.includes('secrets missing') ? 'failed' : 'uncertain';
+      if (event.kind === 'recovery' && status === 'failed') retry_after=new Date(Date.now()+60000).toISOString();
       if (item.channel === 'pushover') await missed(client, event, `Pushover fehlgeschlagen: ${error}`);
       if (item.channel === 'pushover') checked(await client.rpc('setup2_record_problem', {
         p_id: `delivery:${new Date().toISOString().slice(0,10)}:${status}`, p_instrument: event.instrument,
         p_payload: {message: `Pushover-Versand ${status}: ${error}`, lastSuccessAt: report.instruments.find((r: any) => r.instrument === event.instrument)?.lastSuccessAt}
       }));
     }
-    checked(await client.from('setup2_notification_outbox').update({status, error, claim_until: null,
+    checked(await client.from('setup2_notification_outbox').update({status, error, retry_after, ...(deferred?{attempts:item.attempts-1}:{}), claim_until: null,
       provider_accepted_at: status === 'accepted' ? new Date().toISOString() : null}).eq('id', item.id));
     results.push({id: item.id, status});
   }
