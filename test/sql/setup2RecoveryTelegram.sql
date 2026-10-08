@@ -4,10 +4,12 @@ insert into pushover_test_limits(id,watch_checked_at,provider_checked_at) values
 insert into setup2_alarm_events(id,signal_at,instrument,stage,kind,payload) values
  ('p1',now()-interval '2 minutes','GBPUSD',0,'problem','{"message":"runner timeout"}'),
  ('p2',now()-interval '2 minutes','GBPUSD',0,'problem','{"message":"second timeout"}'),
+ ('health:legacy-warning',now()-interval '2 minutes','GBPUSD',0,'problem','{"message":"DR GBPUSD:setup1:13590: Lifecycle-Historie fehlt oder ist lueckenhaft"}'),
  ('warning',now()-interval '2 minutes','GBPUSD',0,'problem','{"category":"range-warning"}');
 insert into setup2_notification_outbox(event_id,channel,status,provider_accepted_at) values
  ('p1','pushover','accepted',now()-interval '1 minute'),
  ('p2','pushover','failed',null),
+ ('health:legacy-warning','pushover','accepted',now()-interval '1 minute'),
  ('warning','pushover','accepted',now()-interval '1 minute');
 
 do $$ begin
