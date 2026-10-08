@@ -9,6 +9,7 @@ import {tradeSetupFromRow} from '../../src/tradeSetupRow.js';
 import {evaluateTradingHours} from '../../src/tradeSetupChecklistTime.js';
 import {minuteAlarmEvents,structureReady,deliveryReason} from './events.js';
 import {RANGE_HISTORY_WARNING} from '../../supabase/functions/_shared/setup2RangeWarnings.js';
+import {requestJson} from '../../scripts/requestJson.mjs';
 import {archiveClient} from '../../scripts/tradeSetup2Archive.mjs';
 
 const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -17,10 +18,9 @@ const client=archiveClient({url,key}),owner=randomUUID(),memory=new Map();
 const iso=sec=>new Date(sec*1000).toISOString();
 const seconds=value=>typeof value==='number'?value:Date.parse(value)/1000;
 async function request(path,body,method='POST') {
- const response=await fetch(`${url}/rest/v1/${path}`,{method,headers:{apikey:key,Authorization:`Bearer ${key}`,'Content-Type':'application/json'},
-  ...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(60000)});
- if(!response.ok)throw new Error(`Watcher database ${path.split('?')[0]}: HTTP ${response.status}`);
- const text=await response.text();return text?JSON.parse(text):null;
+ const {data}=await requestJson(`${url}/rest/v1/${path}`,{method,headers:{apikey:key,Authorization:`Bearer ${key}`,'Content-Type':'application/json'},
+  ...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(60000)},`Watcher database ${method} ${path.split('?')[0]} instrument=${body?.p_instrument ?? '–'}`);
+ return data;
 }
 async function stop(){
  await request(`setup2_live_state?lease_owner=eq.${owner}`,{lease_owner:null,lease_until:null},'PATCH').catch(()=>{});
@@ -38,8 +38,7 @@ async function updateCandles(cache,instrument,bar,from=0) {
 function sessionRows(rows){return rows.map(r=>({id:r.id,label:r.label,instrument:r.instrument,fromMinutes:r.from_minutes,toMinutes:r.to_minutes,
  highLowRelevant:r.high_low_relevant,ignoreLiquidity:r.ignore_liquidity ?? false,danger:r.danger,days:r.days}));}
 async function drain(){
- const response=await fetch(`${url}/functions/v1/setup2-notification-watch`,{method:'POST',headers:{Authorization:`Bearer ${process.env.SETUP2_WATCH_TOKEN}`},signal:AbortSignal.timeout(60000)});
- if(!response.ok)throw new Error(`Notification watch HTTP ${response.status}`);
+ await requestJson(`${url}/functions/v1/setup2-notification-watch`,{method:'POST',headers:{Authorization:`Bearer ${process.env.SETUP2_WATCH_TOKEN}`},signal:AbortSignal.timeout(60000)},'Notification watch POST');
 }
 function suspendedResumeTime(range) {
  const saved=seconds(range.evaluatedThrough);

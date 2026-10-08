@@ -4458,9 +4458,9 @@
     "semantic_hash": ""
   },
   "scripts/tradeSetup2Archive.mjs": {
-    "mtime": 1791289143.1743677,
-    "seen": 1791322335.505352,
-    "ast_hash": "00b5f367f2924b79efa8c1854a6edaf4",
+    "mtime": 1791438777.7884173,
+    "seen": 1791438870.945037,
+    "ast_hash": "bb68a167982fbdf17315dd5e61498181",
     "semantic_hash": ""
   },
   "scripts/tradeSetup2YearRun.mjs": {
@@ -6066,9 +6066,9 @@
     "semantic_hash": ""
   },
   "services/setup2/runner.mjs": {
-    "mtime": 1791381384.4508119,
-    "seen": 1791382282.6730819,
-    "ast_hash": "8ffd802c0e07c41261bd62a1a97d8ff8",
+    "mtime": 1791438777.7884173,
+    "seen": 1791438870.948037,
+    "ast_hash": "8215fa0d0dbf52c17deba80774f59f3a",
     "semantic_hash": ""
   },
   "src/algoWatcher.js": {
@@ -6225,6 +6225,18 @@
     "mtime": 1791438221.7408566,
     "seen": 1791438391.335337,
     "ast_hash": "84508989aa6cea7a2a62eb2c077174e9",
+    "semantic_hash": ""
+  },
+  "scripts/requestJson.mjs": {
+    "mtime": 1791438775.0587873,
+    "seen": 1791438870.943037,
+    "ast_hash": "510651b25b61fcca5072181f6f2a70f7",
+    "semantic_hash": ""
+  },
+  "test/setup2RequestDiagnostics.test.js": {
+    "mtime": 1791438796.9792755,
+    "seen": 1791438871.096259,
+    "ast_hash": "c6cba0b3e1f965fdee85cd9bdd52571c",
     "semantic_hash": ""
   }
 }

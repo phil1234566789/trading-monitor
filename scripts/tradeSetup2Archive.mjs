@@ -1,3 +1,4 @@
+import {requestJson} from './requestJson.mjs';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -19,10 +20,10 @@ export async function writeJson(file, value) {
 export function archiveClient({ url, key, fetcher = fetch }) {
   const headers = { apikey: key, Authorization: `Bearer ${key}` };
   async function get(table, query, extraHeaders = {}) {
-    const response = await fetcher(`${url}/rest/v1/${table}?${new URLSearchParams(query)}`,
-      { headers: { ...headers, ...extraHeaders }, signal: AbortSignal.timeout(60000) });
-    if (!response.ok) throw new Error(`Archive ${table}: HTTP ${response.status}`);
-    return { rows: await response.json(), count: Number(response.headers.get('content-range')?.split('/')[1]) };
+    const operation = `Archive ${table} instrument=${query.instrument ?? 'all'} bar=${query.bar ?? '–'} offset=${query.offset ?? 0}`;
+    const {response,data} = await requestJson(`${url}/rest/v1/${table}?${new URLSearchParams(query)}`,
+      { headers: { ...headers, ...extraHeaders }, signal: AbortSignal.timeout(60000) },operation,fetcher);
+    return { rows:data, count:Number(response.headers.get('content-range')?.split('/')[1]) };
   }
   async function pages(table, query) {
     const result = [];
