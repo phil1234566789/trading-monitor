@@ -13,10 +13,16 @@ import SimulationDrList from '../components/SimulationDrList.vue';
 import SimulationPinMenu from '../components/SimulationPinMenu.vue';
 import SimulationPinList from '../components/SimulationPinList.vue';
 import { useSimulationPins } from '../composables/useSimulationPins.js';
+import LiveWatcherMonth from '../components/LiveWatcherMonth.vue';
+import {createLiveWatcherRepository,isLiveWatcherMonth,liveMonthOptions,LIVE_MONTH_PREFIX} from '../liveWatcherMonth.js';
 import { cssColor } from '../chartColors.js';
 const route=useRoute(),router=useRouter();
 const filters=ref(comparisonFilters(route.query)),pins=ref([]);
 const repository=createSimulationRepository(supabase);
+const liveRepository=createLiveWatcherRepository(supabase),liveMonths=ref(liveMonthOptions()),liveError=ref(''),liveRefreshKey=ref(0);
+const liveSelected=computed(()=>isLiveWatcherMonth(filters.value.run));
+async function refreshLiveMonths(){try{liveMonths.value=await liveRepository.months();liveError.value='';}catch(e){liveError.value=e.message || 'Live-Monate konnten nicht geladen werden';}}
+refreshLiveMonths();
 const {runs,selectedRun,comparisonRun,current,previous,datasets,loading,error,dateError,refresh}=useSimulationComparison(repository,filters,pins);
 const pinState=useSimulationPins(filters,selectedRun,computed(()=>datasets.value.get(filters.value.run)?.results ?? []),{repository,datasets,runs});
 const pinListOpen=ref(false);
@@ -24,7 +30,7 @@ const listedPins=pinState.listedPins;
 function showPins(){pinState.target.value=null;pinListOpen.value=true;}
 watch(()=>filters.value.run,()=>{pinListOpen.value=false;});
 watch([pinState.pins,pinState.associatedPins],([raw,associated])=>{pins.value=[...raw,...associated];},{immediate:true});
-function refreshAll(){refresh();pinState.refresh();}
+function refreshAll(){refreshLiveMonths();if(liveSelected.value)liveRefreshKey.value++;else{refresh();pinState.refresh();}}
 watch(()=>route.query,query=>{const next=comparisonFilters(query);if(JSON.stringify(next)!==JSON.stringify(filters.value))filters.value=next;});
 watch(filters,value=>{const query=Object.fromEntries(Object.entries(value).filter(([,v])=>v));if(JSON.stringify(comparisonFilters(route.query))!==JSON.stringify(value))router.replace({path:'/statistik',query});},{deep:true});
 const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>d.groups.flatMap(g=>g.features)).map(f=>[f.key,f])).values()]);
@@ -32,15 +38,17 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
 <template>
   <main class="statistics-page" :style="{'--pin-color':cssColor('pin'),'--positive':cssColor('candleUp'),'--negative':cssColor('candleDown'),'--reference':cssColor('fvgCandle'),'--worse':'#ff7043'}">
     <header><div><h1>Statistik</h1><p>Läufe vergleichen · DR- und Entry-Qualität prüfen</p></div><button type="button" :disabled="loading" @click="refreshAll">{{ loading?'Wird geladen…':'Aktualisieren' }}</button></header>
-    <details class="simulation-rules"><summary>Simulationsannahmen</summary>
+    <details v-if="!liveSelected" class="simulation-rules"><summary>Simulationsannahmen</summary>
       <p>50.000 USD Referenzkonto · Basis-Preisrisikobudget 500 USD pro Entry. Die gespeicherte Entry Pattern-Version bestimmt die Größenregel. Ganze Standardlots, 50 % an T1 schließen, Reststop auf Entry, Rest bis T2 oder Break-even. Kein Compounding.</p>
       <p>5 USD Kommission je Standardlot für Entry und Exit zusammen, einmal auf das Eröffnungsvolumen. Kein Spread und keine Slippage. Weiter und enger SL sind alternative Szenarien.</p>
       <p>Netto-Winrate = Netto-Gewinne / eindeutig abgeschlossene, ausführbare Entries. Offen, uneindeutig und nicht ausführbar zählen nicht zum Nenner. Prozent ab 50 Fällen. PnL und R zeigen abgeschlossene Positionen; USD-Kommission wird bereits bei Entry angesetzt.</p>
       <p>Zeitraum filtert Entry-Zeiten in Europe/Berlin. DRs ohne Entry entfallen bei einem gesetzten Entry-Zeitraum. Ohne Datumsfilter bleiben sie in der DR-Auswertung.</p>
     </details>
-    <SimulationRunStatus v-if="selectedRun" :run="selectedRun" />
-    <SimulationComparisonFilters v-model="filters" :runs="runs" :features="features" />
-    <div :aria-busy="loading">
+    <SimulationRunStatus v-if="selectedRun && !liveSelected" :run="selectedRun" />
+    <SimulationComparisonFilters v-model="filters" :runs="runs" :live-months="liveMonths" :features="features" />
+    <p v-if="liveError" role="alert" class="error">{{ liveError }} <button @click="refreshLiveMonths">Live-Monate erneut laden</button></p>
+    <LiveWatcherMonth v-if="liveSelected" :month="filters.run.slice(LIVE_MONTH_PREFIX.length)" :instrument="filters.instrument" :refresh-key="liveRefreshKey" />
+    <div v-else :aria-busy="loading">
       <p v-if="pinState.error.value" role="alert" class="error">{{ pinState.error.value }} <button @click="pinState.refresh">Pins erneut laden</button></p>
       <p v-else-if="pinState.loading.value" role="status" class="note">Pins werden geladen…</p>
       <p v-if="error || dateError" role="alert" class="error">{{ error || dateError }} <button v-if="error" @click="refresh">Erneut versuchen</button></p>
