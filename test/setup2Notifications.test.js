@@ -3,7 +3,7 @@ import {RANGE_HISTORY_WARNING,rangeWarningEvent,isRangeWarning} from '../supabas
 import {secretMatches,sendPushover,validatePushover,healthReport,notificationText} from '../supabase/functions/_shared/setup2Notifications.js';
 const now=Date.parse('2026-10-07T10:00:00Z');
 const server={watch_checked_at:new Date(now-10000).toISOString(),provider_checked_at:new Date(now-60000).toISOString(),provider_error:null};
-const rows=[{instrument:'GBPUSD',enabled:true,state:{lastSuccessAt:new Date(now-20000).toISOString(),nextExpectedCheck:new Date(now+60000).toISOString(),activeRanges:[]}}];
+const rows=[{instrument:'GBPUSD',enabled:true,state:{lastSuccessAt:new Date(now-20000).toISOString(),nextExpectedCheck:new Date(now+60000).toISOString(),activeRanges:[],lastM5Time:now/1000-300,evaluatedThrough:new Date(now-20000).toISOString()}}];
 describe('T68 server notification boundaries',()=>{
  it('checks password without accepting empty or malformed values',async()=>{
   expect(await secretMatches('abc','abc')).toBe(true);expect(await secretMatches('abd','abc')).toBe(false);expect(await secretMatches(null,'abc')).toBe(false);expect(await secretMatches('','')).toBe(false);

@@ -24,6 +24,10 @@ import { createChecklistHistoryRecorder } from './tradeSetup2ChecklistHistory.js
 export async function scanCountertrendWindow(input) {
   const { instrument,fromTime,toTime,signal,onSnapshot,onProgress,onMinuteCheck,loadM1Candles,
     useMemo=true,yieldEvery=32,yieldControl=()=>Promise.resolve() }=input;
+  let yieldedAt=Date.now(),minuteWork=0;
+  const cooperate=async()=>{
+    if(++minuteWork%yieldEvery===0 || Date.now()-yieldedAt>=25){await yieldControl();yieldedAt=Date.now();}
+  };
   const setups=(input.tradeSetups ?? []).filter(s=>s.instrument===instrument)
     .map(s=>({source:s,at:setup1RecognitionTime(s)})).filter(s=>s.at<=toTime).sort((a,b)=>a.at-b.at);
   if (!setups.length) {
@@ -144,6 +148,8 @@ export async function scanCountertrendWindow(input) {
       }
       const end=steps[index+1] ?? at;
       for (let minute=candleTimeIndex(m1,at-60);minute<m1.length;minute++) {
+        // Historische M1-Schleifen müssen auch Netzwerk und andere Instrumentjobs weiterlaufen lassen.
+        await cooperate();signal?.throwIfAborted();
         const candle=m1[minute];
         if(!(candle.time+60<end || index===steps.length-1 && candle.time+60===end))break;
         const knownAt=candle.time+60;

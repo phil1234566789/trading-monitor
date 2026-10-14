@@ -15,8 +15,11 @@ it('T68 minute hook observes closed pre-FVG minutes without changing batch entri
   sessionConfigs:sessions.sessions,tradingWindows:windows,fromTime:at,toTime:Math.floor(at/86400)*86400+22*3600,yieldControl:()=>Promise.resolve()};
  const scanMemo={};
  const baseline=await scanTradeSetup2Window({...input,scanMemo}),seen=[],events=[],firstStructure=new Map();
- const live=await scanTradeSetup2Window({...input,scanMemo,onMinuteCheck:minute=>{seen.push(minute); const key=minute.context.setupKey; if(!firstStructure.has(key) && structureReady(minute.check.conditions,minute.context.direction,minute.knownAt))firstStructure.set(key,minute.knownAt); events.push(...minuteAlarmEvents({...minute,structureFirstKnownAt:firstStructure.get(key)},windows));}});
+ let yieldCount=0,previousMinute=null,innerYield=false;
+ const live=await scanTradeSetup2Window({...input,scanMemo,yieldEvery:1,yieldControl:async()=>{yieldCount++;await new Promise(resolve=>setTimeout(resolve,0));},onMinuteCheck:minute=>{
+  const group=Math.floor((minute.knownAt-1)/300);if(previousMinute?.group===group && yieldCount>previousMinute.yields)innerYield=true;previousMinute={group,yields:yieldCount};seen.push(minute); const key=minute.context.setupKey; if(!firstStructure.has(key) && structureReady(minute.check.conditions,minute.context.direction,minute.knownAt))firstStructure.set(key,minute.knownAt); events.push(...minuteAlarmEvents({...minute,structureFirstKnownAt:firstStructure.get(key)},windows));}});
  const entrySummary=rows=>rows.filter(s=>s.entry).map(s=>({id:s.entry.id,at:s.entry.recognizedAt,stops:s.entry.stops,sizing:s.entry.sizing}));
+ expect(innerYield).toBe(true);
  expect(entrySummary(live)).toEqual(entrySummary(baseline));
  expect(entrySummary(live)).toHaveLength(2);
  expect(events.filter(e=>e.stage===1)).toHaveLength(1); const first=live.find(s=>s.entry).entry.recognizedAt;

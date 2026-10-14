@@ -48,7 +48,7 @@ it.each([
  vi.resetModules();const writes=[],readQueries=[];
  const server={provider_checked_at:at(-30000),watch_checked_at:at(-10000),provider_error:null};
  const rows=[{instrument:'GBPUSD',enabled:true,state:{lastSuccessAt:mode==='process-only'?null:at(-30000),
-  lastProcessAt:at(-1000),nextExpectedCheck:at(60000),error:mode==='unhealthy'?'feed delayed':null}}];
+  lastM5Time:now/1000-300,evaluatedThrough:at(-30000),lastProcessAt:at(-1000),nextExpectedCheck:at(60000),error:mode==='unhealthy'?'feed delayed':null}}];
  ctx.client={from:table=>{
   const query={select:value=>{readQueries.push(value);return query;},eq:()=>query,neq:()=>query,in:()=>query,order:()=>query,
    limit:()=>query,lt:()=>query,single:()=>query,upsert:()=>query,

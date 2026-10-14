@@ -6,6 +6,12 @@ import { sizeSimulation } from '../../src/tradeSetupSimulation.js';
 export function structureReady(conditions,direction,at,version=ENTRY_PATTERN_1_VERSION) {
  return entryPattern1StructureCategory(conditions,direction,at,version)!==null;
 }
+export function rememberStructure(minute,structures) {
+ const {context,check,knownAt}=minute;
+ if(structureReady(check.conditions,context.direction,knownAt,check.entryPattern ?? ENTRY_PATTERN_1_VERSION)
+  && !structures.has(context.setupKey))structures.set(context.setupKey,knownAt);
+ return structures.get(context.setupKey);
+}
 export function minuteAlarmEvents({context,check,knownAt,snapshot,structureFirstKnownAt},tradingWindows) {
  const {instrument,direction,setupKey}=context,conditions=check.conditions;
  if(evaluateTradingHours({instrument,evaluatedAt:knownAt,tradingWindows}).status!=='passed')return [];

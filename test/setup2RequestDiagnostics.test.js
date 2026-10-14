@@ -24,3 +24,10 @@ it('preserves RPC null bodies, JSON responses and actionable HTTP status',async(
  await expect(requestJson('https://local.test',{},'read',async()=>new Response('secret-value',{status:503}))).rejects.toThrow('HTTP 503');
  await expect(requestJson('https://local.test',{},'read',async()=>new Response('secret-value'))).rejects.toThrow('JSON decode, request failed');
 });
+
+it('shows only known RPC failure codes and the constant lease diagnosis',async()=>{
+ await expect(requestJson('https://local.test',{},'checkpoint',async()=>new Response('{"code":"P0001","message":"Watcher lease expired"}',{status:400})))
+  .rejects.toThrow('HTTP 400 (Watcher lease expired)');
+ try {await requestJson('https://local.test',{},'checkpoint',async()=>new Response('{"code":"P0001","message":"private-secret","details":"private-secret"}',{status:400}));}
+ catch(error){expect(error.message).toContain('HTTP 400 (P0001)');expect(error.message).not.toContain('private-secret');}
+});

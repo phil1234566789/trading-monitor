@@ -1,3 +1,4 @@
+import {watcherFreshness} from './setup2Freshness.js';
 import {RANGE_HISTORY_WARNING} from './setup2RangeWarnings.js';
 export async function secretMatches(actual, expected) {
   if (!expected || typeof actual !== 'string') return false;
@@ -42,19 +43,14 @@ export async function validatePushover(env, fetcher = fetch) {
 export function healthReport(rows, delivery, now = Date.now(), withinHours = instrument => true, server = {}) {
   const instruments = rows.map(row => {
     const value = row.state ?? {};
-    const next = Date.parse(value.nextExpectedCheck);
-    // Collector startet nominal bei Sekunde 12; zwei Minuten decken Upload + einen ausstehenden Scan ab.
-    // Gemessene scanDurationMs erweitert die Grenze bei teureren historischen Nachhol-Scans.
-    const grace = Math.max(120000, 2 * Number(value.scanDurationMs || 0));
-    const stale = row.enabled && (!Number.isFinite(next) || now > next + grace);
-    const error = value.error || (stale ? 'Kein erfolgreicher Algorithmusschritt innerhalb der erwarteten Laufzeit' : null);
-    const inHours = withinHours(row.instrument);
+    const inHours=withinHours(row.instrument),freshness=watcherFreshness(value,row.enabled,now,inHours);
+    const stale=freshness.stale,error=value.error || freshness.error;
     return {instrument: row.instrument, enabled: row.enabled, lastStep:value.lastStep ?? null, phase: value.phase ?? 'Setup 1 beobachten',
       lastSuccessAt: value.lastSuccessAt ?? null, lastProcessAt: value.lastProcessAt ?? null,
       lastM5Time: value.lastM5Time ?? null, lastM1Time: value.lastM1Time ?? null,
       nextExpectedCheck: value.nextExpectedCheck ?? null, activeRanges: (value.activeRanges ?? []).map(r => ({
         setupKey: r.setupKey, direction: r.direction, structureReady: !!r.structureReady, lastM1Time: r.lastM1Time ?? null
-      })), suspendedRanges:(value.suspendedRanges ?? []).map(r=>({setupKey:r.setupKey,direction:r.direction,reason:r.reason ?? RANGE_HISTORY_WARNING})), error, errorSince:value.errorSince ?? null, inHours, stale};
+      })), suspendedRanges:(value.suspendedRanges ?? []).map(r=>({setupKey:r.setupKey,direction:r.direction,reason:r.reason ?? RANGE_HISTORY_WARNING})), error, errorSince:value.errorSince ?? null, inHours, stale, evaluatedThrough:value.evaluatedThrough ?? null, marketWatermark:freshness.marketWatermark, marketLagSeconds:freshness.marketLagSeconds};
   });
   const enabled = instruments.filter(r => r.enabled);
   const cronAt = Date.parse(server.watch_checked_at);

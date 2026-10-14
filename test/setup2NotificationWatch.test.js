@@ -8,7 +8,7 @@ it.each([{historyFailure:false,legacyQueued:false},{historyFailure:true,legacyQu
  vi.resetModules();const writes=[],calls=[],net=vi.fn();
  const server={provider_checked_at:new Date(now-30000).toISOString(),watch_checked_at:new Date(now-10000).toISOString(),provider_error:null};
  const legacyEvent={id:'health:GBPUSD:legacy',kind:'problem',instrument:'GBPUSD',payload:{message:'Suspendierte DRs GBPUSD:setup1:13590: Lifecycle-Historie konnte nicht ermittelt werden (fehlend oder lückenhaft)'}};
- const rows=[{instrument:'GBPUSD',enabled:true,state:{lastSuccessAt:new Date(now-20000).toISOString(),nextExpectedCheck:new Date(now+60000).toISOString(),activeRanges:[],suspendedRanges:[{setupKey:'DR13590',direction:'short'}]}}];
+ const rows=[{instrument:'GBPUSD',enabled:true,state:{lastSuccessAt:new Date(now-20000).toISOString(),nextExpectedCheck:new Date(now+60000).toISOString(),activeRanges:[],lastM5Time:now/1000-300,evaluatedThrough:new Date(now-20000).toISOString(),suspendedRanges:[{setupKey:'DR13590',direction:'short'}]}}];
  ctx.client={from:table=>{
   const query={select:()=>query,eq:()=>query,neq:()=>query,in:()=>query,order:()=>query,limit:()=>query,lt:()=>query,single:()=>query,
    update:value=>{writes.push({table,value,mode:'update'});return query;},
