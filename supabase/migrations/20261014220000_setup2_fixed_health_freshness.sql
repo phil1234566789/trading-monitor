@@ -2,8 +2,8 @@
 create or replace function public.setup2_recovery_healthy(p_reported_at timestamptz)
 returns boolean language sql stable security definer set search_path=public as $$
  with clock as (select now() utc,now() at time zone 'Europe/Berlin' local),
- hours as (select utc,extract(hour from local)*60+extract(minute from local) minute,
-  case extract(isodow from local) when 6 then 'saturday' when 7 then 'sunday' else 'weekday' end day from clock)
+ hours as (select utc,extract(hour from local)*60+extract(minute from local) as minute_of_day,
+  case extract(isodow from local) when 6 then 'saturday' when 7 then 'sunday' else 'weekday' end as day_group from clock)
  select exists(select 1 from setup2_live_state where enabled)
  and not exists(
   select 1 from setup2_live_state s cross join hours h left join trading_schedules t on t.instrument=s.instrument
@@ -11,8 +11,8 @@ returns boolean language sql stable security definer set search_path=public as $
    nullif(s.state->>'error','') is not null
    or coalesce((s.state->>'lastSuccessAt')::timestamptz,'-infinity')<=p_reported_at
    or coalesce((s.state->>'nextExpectedCheck')::timestamptz,'-infinity')+interval '120 seconds'<h.utc
-   or (exists(select 1 from jsonb_array_elements(coalesce(t.trading_windows->h.day,'[]'::jsonb)) w
-      where h.minute>=(w->>0)::numeric and h.minute<(w->>1)::numeric)
+   or (exists(select 1 from jsonb_array_elements(coalesce(t.trading_windows->h.day_group,'[]'::jsonb)) w
+      where h.minute_of_day>=(w->>0)::numeric and h.minute_of_day<(w->>1)::numeric)
     and case when jsonb_array_length(coalesce(s.state->'activeRanges','[]'::jsonb))>0
      then coalesce((s.state->>'evaluatedThrough')::timestamptz,'-infinity')+interval '120 seconds'<h.utc
      else coalesce(to_timestamp((s.state->>'lastM5Time')::double precision+300),'-infinity')+interval '420 seconds'<h.utc
