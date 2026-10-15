@@ -1,8 +1,8 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { supabase } from '../supabaseClient.js';
-import { createSimulationRepository } from '../tradeSetupSimulationRepository.js';
+import {createSetup2Repository} from '../setup2Repository.js';
 import { useSimulationComparison } from '../composables/useSimulationComparison.js';
 import { comparisonFilters } from '../simulationRunComparison.js';
 import SimulationRunStatus from '../components/SimulationRunStatus.vue';
@@ -13,16 +13,12 @@ import SimulationDrList from '../components/SimulationDrList.vue';
 import SimulationPinMenu from '../components/SimulationPinMenu.vue';
 import SimulationPinList from '../components/SimulationPinList.vue';
 import { useSimulationPins } from '../composables/useSimulationPins.js';
-import LiveWatcherMonth from '../components/LiveWatcherMonth.vue';
-import {createLiveWatcherRepository,isLiveWatcherMonth,liveMonthOptions,LIVE_MONTH_PREFIX} from '../liveWatcherMonth.js';
+import {isLiveWatcherMonth} from '../liveWatcherMonth.js';
 import { cssColor } from '../chartColors.js';
 const route=useRoute(),router=useRouter();
 const filters=ref(comparisonFilters(route.query)),pins=ref([]);
-const repository=createSimulationRepository(supabase);
-const liveRepository=createLiveWatcherRepository(supabase),liveMonths=ref(liveMonthOptions()),liveError=ref(''),liveRefreshKey=ref(0);
+const repository=createSetup2Repository(supabase);
 const liveSelected=computed(()=>isLiveWatcherMonth(filters.value.run));
-async function refreshLiveMonths(){try{liveMonths.value=await liveRepository.months();liveError.value='';}catch(e){liveError.value=e.message || 'Live-Monate konnten nicht geladen werden';}}
-refreshLiveMonths();
 const {runs,selectedRun,comparisonRun,current,previous,datasets,loading,error,dateError,refresh}=useSimulationComparison(repository,filters,pins);
 const pinState=useSimulationPins(filters,selectedRun,computed(()=>datasets.value.get(filters.value.run)?.results ?? []),{repository,datasets,runs});
 const pinListOpen=ref(false);
@@ -30,9 +26,10 @@ const listedPins=pinState.listedPins;
 function showPins(){pinState.target.value=null;pinListOpen.value=true;}
 watch(()=>filters.value.run,()=>{pinListOpen.value=false;});
 watch([pinState.pins,pinState.associatedPins],([raw,associated])=>{pins.value=[...raw,...associated];},{immediate:true});
-function refreshAll(){refreshLiveMonths();if(liveSelected.value)liveRefreshKey.value++;else{refresh();pinState.refresh();}}
+function refreshAll(){refresh();pinState.refresh();}
 watch(()=>route.query,query=>{const next=comparisonFilters(query);if(JSON.stringify(next)!==JSON.stringify(filters.value))filters.value=next;});
 watch(filters,value=>{const query=Object.fromEntries(Object.entries(value).filter(([,v])=>v));if(JSON.stringify(comparisonFilters(route.query))!==JSON.stringify(value))router.replace({path:'/statistik',query});},{deep:true});
+let liveTimer;onMounted(()=>{liveTimer=setInterval(()=>{if(liveSelected.value && !document.hidden && !loading.value)refresh();},30000);});onUnmounted(()=>clearInterval(liveTimer));
 const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>d.groups.flatMap(g=>g.features)).map(f=>[f.key,f])).values()]);
 </script>
 <template>
@@ -44,11 +41,10 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
       <p>Netto-Winrate = Netto-Gewinne / eindeutig abgeschlossene, ausführbare Entries. Offen, uneindeutig und nicht ausführbar zählen nicht zum Nenner. Prozent ab 50 Fällen. PnL und R zeigen abgeschlossene Positionen; USD-Kommission wird bereits bei Entry angesetzt.</p>
       <p>Zeitraum filtert Entry-Zeiten in Europe/Berlin. DRs ohne Entry entfallen bei einem gesetzten Entry-Zeitraum. Ohne Datumsfilter bleiben sie in der DR-Auswertung.</p>
     </details>
-    <SimulationRunStatus v-if="selectedRun && !liveSelected" :run="selectedRun" />
-    <SimulationComparisonFilters v-model="filters" :runs="runs" :live-months="liveMonths" :features="features" />
-    <p v-if="liveError" role="alert" class="error">{{ liveError }} <button @click="refreshLiveMonths">Live-Monate erneut laden</button></p>
-    <LiveWatcherMonth v-if="liveSelected" :month="filters.run.slice(LIVE_MONTH_PREFIX.length)" :instrument="filters.instrument" :refresh-key="liveRefreshKey" />
-    <div v-else :aria-busy="loading">
+    <SimulationRunStatus v-if="selectedRun" :run="selectedRun" />
+    <SimulationComparisonFilters v-model="filters" :runs="runs" :features="features" />
+    <p v-if="liveSelected" class="note">Gespeicherte Live-Erkennungen · kein nachberechneter Monatslauf. Nur ereignisbelegte DRs. Ergebnisse, vollständige Checklisten und damalige Strukturkonfiguration sind nicht gespeichert.</p>
+    <div :aria-busy="loading">
       <p v-if="pinState.error.value" role="alert" class="error">{{ pinState.error.value }} <button @click="pinState.refresh">Pins erneut laden</button></p>
       <p v-else-if="pinState.loading.value" role="status" class="note">Pins werden geladen…</p>
       <p v-if="error || dateError" role="alert" class="error">{{ error || dateError }} <button v-if="error" @click="refresh">Erneut versuchen</button></p>

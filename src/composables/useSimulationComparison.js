@@ -1,6 +1,5 @@
 import { ref, computed, watch, onScopeDispose } from 'vue';
 import { reviewGroups, filterReviewGroups, groupResults, latestCompletedRun } from '../simulationRunComparison.js';
-import {isLiveWatcherMonth} from '../liveWatcherMonth.js';
 import { applySimulationCommission } from '../tradeSetupSimulationCosts.js';
 import {sortSimulationRunsByExecution} from '../simulationRunPresentation.js';
 
@@ -14,13 +13,13 @@ export function useSimulationComparison(repository, filters, pins) {
       if (ticket !== revision) return;
       runs.value = sortSimulationRunsByExecution(available);
       if (!filters.value.run) { filters.value = {...filters.value,run:latestCompletedRun(available)}; return; }
-      const ids = isLiveWatcherMonth(filters.value.run)?[]:[...new Set([filters.value.run, filters.value.compare].filter(id=>id && !isLiveWatcherMonth(id)))];
+      const ids = [...new Set([filters.value.run, filters.value.compare].filter(Boolean))];
       const data=[];
       // Gleichzeitige JSONB-Abfragen konkurrieren um dasselbe knappe SQL-Zeitbudget.
       for(const id of ids){
         const snapshots=await repository.listReviewMetadata(id);
         const results=await repository.listResults({runId:id});
-        data.push([id,{groups:reviewGroups(snapshots),results:results.map(applySimulationCommission)}]);
+        data.push([id,{groups:reviewGroups(snapshots),results:results.map(row=>row.status==='notStored'?row:applySimulationCommission(row))}]);
       }
       if(ticket!==revision)return;
       datasets.value=new Map(data);

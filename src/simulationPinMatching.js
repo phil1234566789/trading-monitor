@@ -1,3 +1,5 @@
+import {livePinSource} from './simulationPinSource.js';
+import {isLiveWatcherMonth} from './liveWatcherMonth.js';
 import { simulationPinKey } from './simulationPinSnapshot.js';
 import { featureDetails } from './simulationReviewFeatures.js';
 import { simulationChartLink } from './tradeSetupSimulationStatistics.js';
@@ -46,14 +48,15 @@ export function matchSimulationPins(pins,groups,runId,origins=new Map(),runs=[])
   }
   const matched=[],unmatched=[];
   for(const pin of pins) {
+    const live=livePinSource(pin);
     const originRun=runs.find(r=>r.id===pin.simulationRunId);
-    const base={...pin,originLabel:originRun?simulationRunLabel(originRun):`Ursprünglicher Lauf ${pin.simulationRunId}`};
-    const native=pin.simulationRunId===runId;
+    const base={...pin,originLabel:live?'Live-Watcher · Originalereignis':originRun?simulationRunLabel(originRun):`Ursprünglicher Lauf ${pin.simulationRunId}`};
+    const native=pin.simulationRunId===runId || !!live && isLiveWatcherMonth(runId);
     const origin=origins.get(pin.id);
     const key=simulationDrIdentity(origin);
     const reference=pin.simulationSnapshotId ?? pin.simulationEntrySnapshotId;
-    const candidates=native?groups.filter(g=>pin.simulationContext?.setupKey!=null&&g.snapshot.setupKey===pin.simulationContext.setupKey
-      || reference!=null&&[g.snapshot.id,g.candidate?.id,g.latestCandidate?.id,...g.entries.map(e=>e.id)].includes(reference)):
+    const candidates=native?groups.filter(g=>(!live || g.instrument===pin.simulationContext?.instrument && g.direction===pin.simulationContext?.direction) && (pin.simulationContext?.setupKey!=null&&g.snapshot.setupKey===pin.simulationContext.setupKey
+      || reference!=null&&[g.snapshot.id,g.candidate?.id,g.latestCandidate?.id,...g.entries.map(e=>e.id)].includes(reference))):
       key?index.get(key)??[]:[];
     let reason=!native&&origin?.pinReadError?'Der ursprüngliche Snapshot konnte nicht geladen werden. Bitte erneut laden.':
       !native&&!key?'Sweep- oder OB-Merkmale des ursprünglichen Snapshots fehlen.':

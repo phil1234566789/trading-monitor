@@ -6,7 +6,7 @@ import { useTradeSetup2History } from '../composables/useTradeSetup2History.js';
 import { isTradeSetup2SnapshotView } from '../tradeSetup2Snapshot.js';
 import { snapshotChartCandleCount } from '../tradeSetup2SnapshotIndicators.js';
 import TradeSetup2Loading from './TradeSetup2Loading.vue';
-import { createSimulationRepository } from '../tradeSetupSimulationRepository.js';
+import { createSetup2Repository } from '../setup2Repository.js';
 import TradeSetup2Controls from './TradeSetup2Controls.vue';
 import M1StructureStatus from './M1StructureStatus.vue';
 import { useM5CandleClock } from "../composables/useM5CandleClock.js";
@@ -377,7 +377,7 @@ const snapshotView = computed(() => isTradeSetup2SnapshotView(props));
 const snapshotCandleState = ref('loading'), snapshotCandleError = ref('');
 const checklist = usePriceChartChecklist(props, sessions, emit, undefined, { tradingSchedules, newsEvents, newsCalendar }, createChecklistStatisticsStore(supabase));
 const setup2 = useTradeSetup2History(props,checklist.state,{
-  repository:createSimulationRepository(supabase),evaluationTime:checklist.evaluationTime,
+  repository:createSetup2Repository(supabase),evaluationTime:checklist.evaluationTime,
   configurationInput:()=>({instrument:props.symbol,settings:checklist.settings(),sessionConfigs:sessions,
     tradingWindows:tradingSchedules[props.symbol]?.tradingWindows,news:newsEvents,newsLoadStatus:newsCalendar.status}),
 });

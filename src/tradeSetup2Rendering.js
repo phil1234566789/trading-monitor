@@ -30,6 +30,7 @@ export function renderSetup2Positions(series,positions,primitives,candles,curren
   clearSetup2Primitives(series,primitives);
   if(!['1m','5m'].includes(currentBar))return;
   for(const position of positions) {
+    if(position.status==='notStored')continue;
     if(position.kind==='candidate') {
       for(const bound of position.bounds) {
         const p=new LiquidityLinePrimitive({price:bound.price,pivotTime:position.fromTime,endTime:position.toTime},

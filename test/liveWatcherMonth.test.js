@@ -3,18 +3,34 @@ import {ref,effectScope,createSSRApp} from 'vue';
 import {renderToString} from 'vue/server-renderer';
 import SimulationComparisonFilters from '../src/components/SimulationComparisonFilters.vue';
 import {liveMonthBounds,liveMonthOptions,liveMonthGroups,createLiveWatcherRepository,liveEntryLink} from '../src/liveWatcherMonth.js';
-import {liveEntryPriceLevels} from '../src/liveWatcherEntryLevels.js';
+import {liveWatcherRun,liveWatcherSnapshots,liveWatcherEntryResults} from '../src/liveWatcherSnapshots.js';
+import {reviewGroups} from '../src/simulationRunComparison.js';
+import TradeSetupChecklist from '../src/components/TradeSetupChecklist.vue';
+import SimulationDrList from '../src/components/SimulationDrList.vue';
+import {createRouter,createMemoryHistory} from 'vue-router';
 import {useSimulationComparison} from '../src/composables/useSimulationComparison.js';
 const event=(id,stage=3)=>({id:'alarm:'+id,kind:'trading',stage,instrument:'EURUSD',setup_key:'EURUSD:setup1:16107',direction:'short',signal_at:'2026-10-09T07:28:00Z',payload:{entry:{id,recognizedAt:1791530880,entryCategory:'risky',entryPattern:'countertrend-entry-model-1-v10'},variants:[{variant:'wide',lots:4},{variant:'narrow',lots:8}]}});
 describe('persisted live watcher month',()=>{
- it('uses only saved entry, stops and targets for chart lines and scaling',()=>{
-   const entry={price:1.12,stops:{wide:{price:1.13},narrow:{price:1.125}},scales:{wide:{targets:[{label:'T1',price:1.11},{label:'T2',price:1.10}]}}},before=JSON.stringify(entry);
-   expect(liveEntryPriceLevels(entry).map(l=>[l.title,l.price])).toEqual([['Entry',1.12],['Weiter SL',1.13],['Enger SL',1.125],['T1',1.11],['T2',1.1]]);
-   expect(liveEntryPriceLevels({price:1.12})).toHaveLength(1);expect(JSON.stringify(entry)).toBe(before);
+ it('shows missing snapshot checks in the ordinary checklist without promising a new evaluation',async()=>{
+  const html=await renderToString(createSSRApp(TradeSetupChecklist,{instrument:'EURUSD',snapshotView:true,savedEntry:event('one').payload.entry}));
+  expect(html).toContain('Prüfdaten nicht gespeichert');expect(html).toContain('Am gespeicherten Stand nicht belegt');expect(html).not.toContain('Wartet auf die automatische Auswertung');expect(html).not.toContain('checklist-spinner');expect(html).toContain('Risky Entry');
  });
- it('renders the monthly dropdown and disables unavailable simulation filters',async()=>{
-  const html=await renderToString(createSSRApp(SimulationComparisonFilters,{modelValue:{run:'live-watcher:2026-10'},runs:[],features:[],liveMonths:liveMonthOptions(null,Date.parse('2026-10-14'))}));
-  expect(html).toContain('Live-Watcher · Oktober 2026');expect(html).toContain('value="live-watcher:2026-10"');expect(html).toContain('disabled');
+ it('renders the same DR cards, feature chips and entry tables as ordinary runs',async()=>{
+  const runId='live-watcher:2026-10',snapshots=liveWatcherSnapshots([event('one'),event('two')],runId),groups=reviewGroups(snapshots),results=snapshots.flatMap(liveWatcherEntryResults);
+  const router=createRouter({history:createMemoryHistory(),routes:[{path:'/',component:{template:'<div/>'}}]});await router.push('/');
+  const app=createSSRApp(SimulationDrList,{groups,results});app.use(router);
+  const html=await renderToString(app);
+  expect(html).toContain('class="dr-card"');expect(html).toContain('entry-scroll');expect(html).toContain('Nettoergebnisse nach Kommission');
+  expect(html).toContain('Risky Entry');expect(html).toContain('Ergebnis nicht gespeichert');expect(html).toContain('DR-Stufe nicht gespeichert');
+  expect(html).toContain('setup2=one');expect(html).toContain('run=live-watcher');expect(html).not.toContain('/live-watcher-entry');
+  expect(groups[0].outcome.status).toBe('unknown');expect(groups[0].entries).toHaveLength(2);
+  expect(results.every(r=>r.status==='notStored' && r.commissionUsd===null)).toBe(true);
+  expect(snapshots.every(s=>!s.checklist && !s.dealingRange)).toBe(true);
+ });
+ it('keeps all ordinary filters available for live months',async()=>{
+  const run=liveWatcherRun({id:'live-watcher:2026-10',label:'Live-Watcher · Oktober 2026'});
+  const html=await renderToString(createSSRApp(SimulationComparisonFilters,{modelValue:{run:run.id},runs:[run],features:[]}));
+  expect(html).toContain('Live-Watcher · Oktober 2026');expect(html).toContain('DR-Stufe');expect(html).toContain('Entry ab');expect(html).toContain('Angepinnt');
  });
  it('uses Berlin month boundaries across DST and year changes',()=>{
   expect(liveMonthBounds('2026-10')).toEqual({from:'2026-09-30T22:00:00.000Z',to:'2026-10-31T23:00:00.000Z'});
@@ -30,7 +46,7 @@ describe('persisted live watcher month',()=>{
   expect(groups[0].entries[0].payload.variants).toHaveLength(2);
   expect(groups[0].entries[0].payload.variants[0]).not.toHaveProperty('outcome');
   expect(JSON.stringify(rows)).toBe(before);expect(liveMonthGroups(rows,'2026-10','GBPUSD')).toEqual([]);
-  expect(liveEntryLink(rows[0]).query.event).toBe('alarm:original');
+  expect(liveEntryLink(rows[0]).path).toBe('/');expect(liveEntryLink(rows[0]).query.setup2).toBe('original');
  });
  it('continues capped pages to an empty page and propagates read errors',async()=>{
   const calls=[],client={from:vi.fn(()=>{const q={};for(const name of ['select','eq','gt','gte','lt','order'])q[name]=()=>q;q.range=async(a,b)=>{calls.push([a,b]);return {data:a===0?[event('a')]:a===1?[event('b')]:[],error:null};};return q;})};
@@ -39,11 +55,12 @@ describe('persisted live watcher month',()=>{
   client.from=()=>{const q={};for(const name of ['select','eq','gt','gte','lt','order'])q[name]=()=>q;q.range=async()=>({error:new Error('read failed')});return q;};
   await expect(createLiveWatcherRepository(client).events('2026-10')).rejects.toThrow('read failed');
  });
- it('never reads or recalculates a simulation dataset for a live selection',async()=>{
-  const repository={listRuns:vi.fn(async()=>[]),listReviewMetadata:vi.fn(),listResults:vi.fn(),listRunDrCounts:vi.fn(async()=>new Map())},scope=effectScope();
-  const state=scope.run(()=>useSimulationComparison(repository,ref({run:'live-watcher:2026-10',compare:'historical'}),ref([])));
+ it('uses the common dataset path without deriving commission or outcomes',async()=>{
+  const run='live-watcher:2026-10',snapshots=liveWatcherSnapshots([event('original')],run),results=snapshots.flatMap(liveWatcherEntryResults);
+  const repository={listRuns:vi.fn(async()=>[liveWatcherRun({id:run})]),listReviewMetadata:vi.fn(async()=>snapshots),listResults:vi.fn(async()=>results),listRunDrCounts:vi.fn(async()=>new Map())},scope=effectScope();
+  const state=scope.run(()=>useSimulationComparison(repository,ref({run,compare:''}),ref([])));
   await vi.waitFor(()=>expect(state.loading.value).toBe(false));
-  expect(state.error.value).toBe('');expect(repository.listReviewMetadata).not.toHaveBeenCalled();expect(repository.listResults).not.toHaveBeenCalled();scope.stop();
+  expect(state.error.value).toBe('');expect(repository.listReviewMetadata).toHaveBeenCalledWith(run);expect(state.current.value.groups).toHaveLength(1);
+  expect(state.current.value.results[0]).toMatchObject({status:'notStored',commissionUsd:null,netPnlUsd:null});scope.stop();
  });
 });
-

@@ -4,19 +4,21 @@ import { simulationChartLink,simulationEntryResult } from './tradeSetupSimulatio
 import { featureDetails } from './simulationReviewFeatures.js';
 
 export function simulationPinKey({kind,group,feature,entry,variant='both'}) {
+  if(group.snapshot.source==='live-watcher')return JSON.stringify([kind,'live-watcher',group.instrument,group.snapshot.setupKey,feature?.key ?? entry?.id ?? '',kind==='simulation_entry'?variant:'']);
   return JSON.stringify([kind,group.snapshot.runId,group.snapshot.setupKey ?? group.key,
     feature?.key ?? entry?.id ?? '',kind==='simulation_entry'?variant:'']);
 }
 export function simulationPinSnapshot(target,run,results,pinnedAt=new Date().toISOString()) {
   const {group,feature,entry,kind,variant='both'}=target,snapshot=group.snapshot;
   const time=sec=>Number.isFinite(sec)?{utc:new Date(sec*1000).toISOString(),berlin:formatDatedTime(sec),unix:sec}:null;
-  const config=run?.configuration;
-  return {contextVersion:'simulation-pin-context-v2',dealingRangeVersion:(group.latestCandidate ?? snapshot).dealingRange?.version ?? null,
-    dealingRangeReason:(group.latestCandidate ?? snapshot).dealingRange?.reason ?? null,kind,runId:snapshot.runId,runVersion:run?.version ?? null,ruleVersion:snapshot.checklist?.ruleVersion ?? null,
-    entryPatternVersion:entryPatternVersion(entry?.entry) ?? entryPatternVersion(config) ?? entryPatternVersion(snapshot.checklist) ?? null,
-    drId:group.key,snapshotId:snapshot.id,setupKey:snapshot.setupKey,setup1Id:snapshot.checklist?.setup?.primary?.tradeSetupId ?? null,
+  const config=run?.configuration,sourceSnapshot=entry ?? snapshot,live=snapshot.source==='live-watcher';
+  return {contextVersion:live?'simulation-pin-context-v3':'simulation-pin-context-v2',
+    ...(live?{source:{kind:'live-watcher',eventId:sourceSnapshot.liveEventId,viewId:snapshot.runId}}:{}),dealingRangeVersion:(group.latestCandidate ?? snapshot).dealingRange?.version ?? null,
+    dealingRangeReason:(group.latestCandidate ?? snapshot).dealingRange?.reason ?? null,kind,runId:live?null:snapshot.runId,runVersion:run?.version ?? null,ruleVersion:snapshot.checklist?.ruleVersion ?? null,
+    entryPatternVersion:entryPatternVersion(entry?.entry ?? (live?snapshot.entry:null)) ?? entryPatternVersion(config) ?? entryPatternVersion(snapshot.checklist) ?? null,
+    drId:live?JSON.stringify([group.instrument,snapshot.setupKey]):group.key,snapshotId:live?sourceSnapshot.id:snapshot.id,setupKey:snapshot.setupKey,setup1Id:snapshot.checklist?.setup?.primary?.tradeSetupId ?? null,
     instrument:group.instrument,direction:group.direction,setupType:group.setupType,stage:group.stage,outcome:group.outcome,
-    recognizedAt:time(group.recognizedAt),snapshotAt:time(snapshot.knownAt),validatedAt:time(group.firstValidated?.knownAt),
+    recognizedAt:time(group.recognizedAt),snapshotAt:time(live?sourceSnapshot.knownAt:snapshot.knownAt),validatedAt:time(group.firstValidated?.knownAt),
     ...(feature?{checkpoint:{...feature,details:featureDetails(group.features,feature)}}:{}),
     features:group.features,
     ...(entry?{entry:{id:entry.id,entryId:entry.entry.id,time:time(entry.entry.recognizedAt),price:entry.entry.price,

@@ -39,7 +39,7 @@ const h1Start = computed(() => {
       <p>H1-Start: {{ h1Start }}</p>
       <p v-if="!run.coverage?.instruments?.length" class="coverage-hint">Für diesen Lauf ist noch kein ausgewerteter Datenumfang angegeben.</p>
       <p v-for="item in run.coverage?.instruments ?? []" :key="item.instrument" class="coverage-hint">{{ item.instrument }} · {{ run.status === 'complete' ? 'ausgewertetes Fenster' : 'geladenes Datenfenster' }} {{ at(item.from) }} – {{ at(item.to) }} (Ende exklusiv)</p>
-      <p>Quelle: {{ run.provenance?.source ?? 'Noch nicht angegeben' }} · Regel: {{ run.version }}</p>
+      <p>Quelle: {{ run.provenance?.source ?? 'Noch nicht angegeben' }} · Regel: {{ run.version ?? 'nicht gespeichert' }}</p>
       <p v-if="!run.provenance?.limitations?.length">Für diesen Lauf sind noch keine weiteren Messgrenzen hinterlegt.</p>
       <ul v-else><li v-for="limit in run.provenance.limitations" :key="limit">{{ limit }}</li></ul>
       <p v-for="item in run.coverage?.excluded ?? []" :key="item.instrument">{{ item.instrument }} ausgeschlossen: {{ item.reason === 'noM1Archive' ? 'Kein M1-Archiv verfügbar.' : 'Für diesen Lauf nicht auswertbar.' }}</p>

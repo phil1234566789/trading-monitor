@@ -19,6 +19,7 @@
 import { supabase } from "./supabaseClient.js";
 import { findOrCreateObZoneId, findOrCreateTradeSetupId } from "./tradeIntake.js";
 import { fetchAllRows } from './dbReadPaging.js';
+import {scopePinSource} from './simulationPinSource.js';
 import { pinTypeFields } from './pinType.js';
 
 // kind -> DB-Spalte, gemeinsam für Upsert-onConflict UND das Zusammensetzen der Insert-Zeile.
@@ -37,7 +38,7 @@ const ROW_COLUMNS =
   "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
   "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
   "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi, " +
-  "simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, pin_type, note, created_at, " +
+  "live_event_id, simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, pin_type, note, created_at, " +
   // end_time (Chat 2026-08-18, siehe Task "Pin-Kontext: gepinnte Objekte direkt rendern") — für die
   // Direkt-Rendering-Fallback-Box/-Linie eines gepinnten ob_zone/liquidity_level (siehe
   // PriceChart.vue: refreshPoiZonesInternal/refreshLiquidityInternal), dieselbe Spalte, die
@@ -56,6 +57,7 @@ function toEntry(row) {
     kind: row.kind,
     pinType: row.pin_type ?? null,
     simulationRunId: row.simulation_run_id,
+    liveEventId: row.live_event_id,
     simulationSnapshotId: row.simulation_snapshot_id,
     simulationEntrySnapshotId: row.simulation_entry_snapshot_id,
     simulationCheckpointKey: row.simulation_checkpoint_key,
@@ -159,7 +161,7 @@ export async function fetchPinContext() {
 export async function fetchSimulationPins(runId) {
   const {data,error}=await fetchAllRows((from,to)=>{
     let query=supabase.from('pin_context').select(ROW_COLUMNS).in('kind',['simulation_dr','simulation_checkpoint','simulation_entry']);
-    if(runId)query=query.eq('simulation_run_id',runId);
+    if(runId)query=scopePinSource(query,runId);
     return query.order('id').range(from,to);
   });
   if(error) throw error;
@@ -168,7 +170,7 @@ export async function fetchSimulationPins(runId) {
 
 export async function removeSimulationPins(runId, ids) {
   if (!runId || !ids.length) return;
-  const { error } = await supabase.from('pin_context').delete().eq('simulation_run_id', runId)
+  const { error } = await scopePinSource(supabase.from('pin_context').delete(),runId)
     .in('kind', ['simulation_dr', 'simulation_checkpoint', 'simulation_entry']).in('id', ids);
   if (error) throw error;
 }
@@ -183,6 +185,7 @@ export async function addSimulationPin({kind,key,snapshotId,entrySnapshotId,chec
     return existing.id;
   }
   const {error}=await supabase.from('pin_context').upsert({kind,simulation_pin_key:key,simulation_run_id:context.runId,
+    live_event_id:context.source?.kind==='live-watcher'?context.source.eventId:null,
     simulation_snapshot_id:snapshotId ?? null,simulation_entry_snapshot_id:entrySnapshotId ?? null,
     simulation_checkpoint_key:checkpointKey ?? null,simulation_variant:variant ?? null,simulation_context:context,note:note || null,...pinTypeFields(pinType)},
     {onConflict:'simulation_pin_key',ignoreDuplicates:true});

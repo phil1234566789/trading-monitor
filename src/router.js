@@ -17,7 +17,10 @@ export const router = createRouter({
     { path: "/alarme", name: "alarme", component: () => import("./views/Alarme.vue") },
     { path: "/handelszeiten", name: "handelszeiten", component: () => import("./views/Handelszeiten.vue") },
     { path: "/konten", name: "konten", component: () => import("./views/Konten.vue") },
-    { path: "/live-watcher-entry", name: "live-watcher-entry", component: () => import("./views/LiveWatcherEntry.vue") },
+    { path: "/live-watcher-entry", name: "live-watcher-entry", component: () => import("./views/Dashboard.vue"), beforeEnter: async to => {
+      const [{supabase},{createLiveWatcherRepository,liveEntryLink}]=await Promise.all([import('./supabaseClient.js'),import('./liveWatcherMonth.js')]);
+      try{const event=await createLiveWatcherRepository(supabase).event(to.query.event);return event?.payload?.entry?liveEntryLink(event):'/statistik';}catch{return '/statistik';}
+    } },
     { path: "/algo-watcher", name: "algo-watcher", component: () => import("./views/AlgoWatcher.vue") },
     { path: "/loop-status", name: "loop-status", component: () => import("./views/LoopStatus.vue") },
     { path: "/trading-flow", name: "trading-flow", component: () => import("./views/TradingFlow.vue") },

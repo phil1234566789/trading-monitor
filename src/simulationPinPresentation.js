@@ -2,6 +2,7 @@ import { DEALING_RANGE_LABELS, dealingRangeLabel } from './tradeSetup2DealingRan
 import { DR_OUTCOME_LABELS } from './simulationRunComparison.js';
 
 export function simulationPinStageLabel(context) {
+  if(context?.contextVersion==='simulation-pin-context-v3' && context.source?.kind==='live-watcher')return DEALING_RANGE_LABELS.unknown;
   if (context?.contextVersion === 'simulation-pin-context-v2') return dealingRangeLabel({dealingRange:{version:context.dealingRangeVersion,status:context.stage,reason:context.dealingRangeReason}});
   if (context?.contextVersion) return DEALING_RANGE_LABELS.legacy;
   // Alte Pin-Kontexte enthalten keinen DR-Grund: Preisende und Disqualifikation sind nicht trennbar.

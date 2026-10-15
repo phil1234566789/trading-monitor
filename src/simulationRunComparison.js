@@ -22,7 +22,7 @@ export function simulationSetupType(snapshot) {
 
 export function independentRangeOutcome(group) {
   const outcome = savedDealingRangePriceOutcome(group);
-  return { ...outcome, replayTime: simulationChartReplayTime({drReplayTime:outcome.endAt ?? outcome.through,knownAt:group.knownAt}) };
+  return { ...outcome, replayTime: simulationChartReplayTime({drReplayTime:outcome.endAt ?? outcome.through,knownAt:group.knownAt,liveObservedThrough:group.snapshot.liveObservedThrough}) };
 }
 
 export function reviewGroups(snapshots) {

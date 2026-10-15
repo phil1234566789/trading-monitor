@@ -88,7 +88,7 @@ export function setupEntryConditions(snapshot) {
       check ? observationRuleDetails(checklistObservationRules(check,'confluences')) : ['Keine Beobachtung gespeichert.']);
   }
   if (savedDealingRangeStatus(snapshot) !== 'legacy') add('validation', checklist?.model === 'countertrend' ? 'DR-Stufe nach E/F' : 'D · DR-Validierung / Targets',
-    dr.status === 'validated' ? 'passed' : isDisqualifiedDealingRange(snapshot) ? 'unmet' : 'unknown', dr.details, dr.evaluatedAt);
+    dr?.status === 'validated' ? 'passed' : isDisqualifiedDealingRange(snapshot) ? 'unmet' : 'unknown', dr?.details ?? ['DR-Stufenprüfung nicht gespeichert.'], dr?.evaluatedAt ?? at);
   const timeCheck = snapshot.entryEligibility ?? checks.time;
   add('time', 'Handelszeit / Session / News',
     timeCheck?.status === 'blocked' ? 'unmet' : timeCheck?.status === 'passed' ? 'passed' : 'unknown',
@@ -116,7 +116,7 @@ export function setupEntryConditions(snapshot) {
       known(signal?.recognizedAt) ? [`Erkannt ${date(signal.recognizedAt)}`] : [optional?'Optionaler M5-BOS fehlt · Risky Entry bei erfüllten übrigen Pflichtbedingungen.':'Pflichtsignal fehlt.'],signal?.recognizedAt);
   }
   for (const [key, label, offset] of [['retest', pattern1 ? 'Retest eines passenden M5-OB' : 'M5-OB-Retest nach bestätigter Reaktion', 2], ['fvg', pattern1 ? 'Gleichgerichtete M1-FVG nach Retest' : 'Erste gleichgerichtete M1-FVG nach Retest', 3]]) {
-    const signal = m1?.[key];
+    const signal = m1?.[key] ?? entry?.conditions?.[key];
     // evaluateM1Checklist speichert nach den Trendzeilen CHoCH, BOS, Retest, FVG.
     const savedStatus = m1?.trends && m1.detailStatuses?.[m1.trends.length + offset + (m1.sweepPresentation?1:0)];
     const status = known(signal?.recognizedAt) ? 'passed' : signal ? 'unknown' : normal(savedStatus);

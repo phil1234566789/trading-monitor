@@ -1,10 +1,12 @@
 import { ref,computed,watch,onScopeDispose } from 'vue';
 import { fetchSimulationPins,addSimulationPin,removePinEntry,removeSimulationPins,updatePinNote } from '../pinContext.js';
 import { simulationPinKey,simulationPinSnapshot } from '../simulationPinSnapshot.js';
+import {livePinSource,pinBelongsToSource} from '../simulationPinSource.js';
 import { matchSimulationPins } from '../simulationPinMatching.js';
 
 export function useSimulationPins(filters,run,results,{repository,datasets,runs}={}) {
   const pins=ref([]),error=ref(''),loading=ref(false),saving=ref(false),target=ref(null);
+
   const origins=ref(new Map());
   const associations=computed(()=>new Map([filters.value.run,filters.value.compare].filter(Boolean).map(id=>
     [id,matchSimulationPins(pins.value,datasets?.value.get(id)?.groups??[],id,origins.value,runs?.value??[])])));
@@ -23,8 +25,9 @@ export function useSimulationPins(filters,run,results,{repository,datasets,runs}
         for(let offset=0;offset<rows.length;offset+=8)await Promise.all(rows.slice(offset,offset+8).map(async pin=>{
           const entry=pin.kind==='simulation_entry',id=entry?pin.simulationEntrySnapshotId:pin.simulationSnapshotId;
           if(!id)return;
-          const key=JSON.stringify([pin.simulationRunId,entry,id]);
-          if(!snapshotCache.has(key))snapshotCache.set(key,(entry?repository.getSnapshot:repository.getSetupSnapshot)(pin.simulationRunId,id));
+          const live=livePinSource(pin);
+          const key=JSON.stringify([pin.simulationRunId,live?.eventId,entry,id]);
+          if(!snapshotCache.has(key))snapshotCache.set(key,live?repository.getLivePinSnapshot(live.eventId):(entry?repository.getSnapshot:repository.getSetupSnapshot)(pin.simulationRunId,id));
           try{resolved.set(pin.id,await snapshotCache.get(key));}
           catch{snapshotCache.delete(key);resolved.set(pin.id,{pinReadError:true});}
         }));
@@ -75,7 +78,7 @@ export function useSimulationPins(filters,run,results,{repository,datasets,runs}
   async function removeListed(ids) {
     if (saving.value) return;
     const runId = filters.value.run;
-    const selected = pins.value.filter(p => p.simulationRunId === runId && ids.includes(p.id));
+    const selected = pins.value.filter(p => pinBelongsToSource(p,runId) && ids.includes(p.id));
     saving.value = true; error.value = '';
     try {
       await removeSimulationPins(runId, selected.map(p => p.id));

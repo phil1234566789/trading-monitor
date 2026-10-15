@@ -8,6 +8,7 @@ const knownVersion = version => [DEALING_RANGE_VERSION, COUNTERTREND_VERSION, CO
 export const DEALING_RANGE_LABELS = {
   unconfirmed: 'Unbestätigte Dealing Range', confirmed: 'Bestätigte Dealing Range · Validierung offen',
   validated: 'Validierte Dealing Range', disqualified: 'Disqualifizierte Dealing Range', invalidated: 'Historische DR-Entscheidung',
+  unknown: 'DR-Stufe nicht gespeichert',
   legacy: 'Altstand · DR-Stufe nicht gespeichert',
 };
 
@@ -54,7 +55,7 @@ export function evaluateDealingRange(checklist, candidate = checklist?.setup?.pr
 
 // Altstände bleiben unklassifiziert; eine Anzeige darf keinen historischen Lauf umdeuten.
 export function savedDealingRangeStatus(snapshot) {
-  return knownVersion(snapshot?.dealingRange?.version) ? snapshot.dealingRange.status : 'legacy';
+  return knownVersion(snapshot?.dealingRange?.version) ? snapshot.dealingRange.status : snapshot?.observationOnly?'unknown':'legacy';
 }
 
 // Der historische Status mischt Validierungsentscheidungen mit Preisenden; nur die Anzeige trennen.

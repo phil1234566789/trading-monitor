@@ -17,6 +17,7 @@ const props = defineProps({
   instrument: { type: String, required: true },
   checklistState: { type: Object, default: null },
   m1Check: { type: Object, default: null },
+  savedEntry: {type:Object,default:null},
   snapshotHistory: {type:Object,default:null},
   snapshotView: {type:Boolean,default:false},
   replayAt: {type:Number,default:null},
@@ -66,7 +67,7 @@ const dataStates = {
 const { state, busy, retained, m1: displayedM1 } = useChecklistDisplay(props);
 const dataStatus = computed(() => state.value
   ? dataStates[state.value.status] ?? { label: "Datenstatus unbekannt", symbol: "?" }
-  : { label: "Auswertung ausstehend", symbol: "…" });
+  : { label: props.snapshotView?"Prüfdaten nicht gespeichert":"Auswertung ausstehend", symbol: props.snapshotView?"?":"…" });
 const evaluatedAt = computed(() => {
   const time = state.value?.evaluatedAt;
   return Number.isFinite(time) && Number.isFinite(new Date(time * 1000).getTime()) ? formatDatedTime(time) : null;
@@ -77,7 +78,7 @@ const definitions = computed(() => state.value?.model==='countertrend' && !state
   : state.value?.checks?.h1Trend ? countertrendDefinitions
   : [...countertrendAbcdDefinitions.slice(0,7),...['time','m1','entry'].map(key=>countertrendDefinitions.find(d=>d.key===key))]);
 const checks = computed(() => definitions.value.map((definition, index) => {
-  const entryDetails=entryChecklist(m1.value);
+  const entryDetails=entryChecklist(props.savedEntry?{entry:props.savedEntry}:m1.value);
   const result = definition.key === 'entry' ? {...entryDetails,...(state.value?.model==='countertrend' ? {
     details:[...m1.value.details ?? [],...entryDetails.details],
     detailStatuses:[...m1.value.detailStatuses ?? [],...entryDetails.detailStatuses],evaluatedAt:m1.value.evaluatedAt} : {})} : definition.key === 'm1'
@@ -136,7 +137,7 @@ const checks = computed(() => definitions.value.map((definition, index) => {
               :data-status="check.detailStatuses[index]" v-bind="statuses[check.detailStatuses[index]]" />
           </li>
         </ul>
-        <p v-else-if="check.key !== 'entry'" class="checklist-note">{{ state ? 'Noch keine Prüfdaten verfügbar.' : 'Wartet auf die automatische Auswertung.' }}</p>
+        <p v-else-if="check.key !== 'entry'" class="checklist-note">{{ snapshotView ? 'Am gespeicherten Stand nicht belegt.' : state ? 'Noch keine Prüfdaten verfügbar.' : 'Wartet auf die automatische Auswertung.' }}</p>
       </li>
     </ol>
     </template>

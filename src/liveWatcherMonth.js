@@ -1,4 +1,5 @@
 import { berlinDateStrFor, berlinDayRangeUtcMs } from './berlinTime.js';
+import {simulationChartLink} from './tradeSetupSimulationStatistics.js';
 import { fetchAllRows } from './dbReadPaging.js';
 
 export const LIVE_MONTH_PREFIX = 'live-watcher:';
@@ -55,10 +56,10 @@ export function createLiveWatcherRepository(client) {
       return data;
     },
     async event(id) {
-      const {data,error}=await client.from('setup2_alarm_events').select('id,signal_at,detected_at,instrument,stage,setup_key,direction,kind,payload,missed_reason').eq('id',id).eq('kind','trading').eq('stage',3).maybeSingle();
+      const {data,error}=await client.from('setup2_alarm_events').select('id,signal_at,detected_at,instrument,stage,setup_key,direction,kind,payload,missed_reason').eq('id',id).eq('kind','trading').gt('stage',0).maybeSingle();
       if(error)throw error;
       return data;
     }
   };
 }
-export const liveEntryLink = event => ({path:'/live-watcher-entry',query:{event:event.id}});
+export const liveEntryLink = event => simulationChartLink({id:event.payload.entry.id,instrument:event.instrument,knownAt:event.payload.entry.recognizedAt,variant:'both'},LIVE_MONTH_PREFIX+berlinDateStrFor(event.payload.entry.recognizedAt).slice(0,7));

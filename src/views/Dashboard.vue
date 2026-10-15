@@ -2342,6 +2342,7 @@ watch(selectedTradingAccountId, () => {
       :instrument="currentSymbol"
       :checklist-state="setup2Detail?.checklist ?? checklistState"
       :m1-check="setup2Detail ? setup2Detail.m1Check : m1Check"
+      :saved-entry="setup2Detail?.entry"
       :snapshot-view="snapshotView || !!setup2Detail"
       :snapshot-history="setup2Detail?.checklistHistory"
       :replay-at="replayUntil ?? Math.floor(Date.now()/1000)"

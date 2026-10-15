@@ -1,11 +1,13 @@
 <script setup>
+import {isLiveWatcherMonth} from '../liveWatcherMonth.js';
+import {pinBelongsToSource} from '../simulationPinSource.js';
 import { ref, computed, watch, nextTick } from 'vue';
 import { simulationPinOutcomeLabel } from '../simulationPinPresentation.js';
 import { pinTypeLabel } from '../pinType.js';
 const props = defineProps({ open:Boolean, pins:Array, unmatched:{type:Array,default:()=>[]}, runId:String, loading:Boolean, saving:Boolean, error:String });
 const emit = defineEmits(['close','remove','refresh','edit']);
 const dialog = ref(null), confirmation = ref(null);
-const removable=computed(()=>props.pins.filter(p=>!props.runId || p.simulationRunId===props.runId));
+const removable=computed(()=>props.pins.filter(p=>!props.runId || pinBelongsToSource(p,props.runId)));
 const sections=computed(()=>[{label:'Zugeordnet',pins:props.pins},{label:'Nicht zugeordnet',pins:props.unmatched}]);
 watch(() => props.open, async open => {
   confirmation.value = null;
@@ -22,13 +24,13 @@ function removeConfirmed() {
 </script>
 <template>
   <dialog ref="dialog" class="pin-list" aria-labelledby="pin-list-title" @cancel="emit('close')" @close="emit('close')">
-    <header><h2 id="pin-list-title">Alle Pins · Lauf neu ({{ pins.length+unmatched.length }})</h2><button :disabled="saving" @click="emit('close')">Schließen</button></header>
-    <p>Pins dieses und früherer Läufe, unabhängig von den Seitenfiltern. Kommentare und Ursprung bleiben erhalten.</p>
+    <header><h2 id="pin-list-title">Alle Pins · {{ isLiveWatcherMonth(runId)?'Livequelle':'Lauf neu' }} ({{ pins.length+unmatched.length }})</h2><button :disabled="saving" @click="emit('close')">Schließen</button></header>
+    <p>Pins und ihr ursprünglicher Analysekontext, unabhängig von den Seitenfiltern. Kommentare und Ursprung bleiben erhalten.</p>
     <p v-if="error" role="alert">{{ error }} <button @click="emit('refresh')">Erneut laden</button></p>
     <p v-if="loading || saving" role="status">{{ saving ? 'Pins werden gespeichert…' : 'Pins werden geladen…' }}</p>
     <template v-else>
       <p v-if="!pins.length && !unmatched.length" role="status">Keine Pins vorhanden.</p>
-      <button v-if="removable.length" :disabled="!!error" @click="confirmation=removable.map(p=>p.id)">Alle {{ removable.length }} Pins dieses Laufs entfernen</button>
+      <button v-if="removable.length" :disabled="!!error" @click="confirmation=removable.map(p=>p.id)">Alle {{ removable.length }} Pins {{ isLiveWatcherMonth(runId)?'dieser Livequelle':'dieses Laufs' }} entfernen</button>
       <div v-if="confirmation" class="confirmation" role="alert">
         <p>{{ confirmation.length }} {{ confirmation.length===1?'Pin wirklich entfernen?':'Pins wirklich entfernen?' }} Dies lässt sich nicht rückgängig machen.</p>
         <button @click="removeConfirmed">Ja, entfernen</button> <button @click="confirmation=null">Abbrechen</button>
@@ -46,7 +48,7 @@ function removeConfirmed() {
         <p v-if="pin.originLabel">Ursprung: {{ pin.originLabel }}</p>
         <RouterLink v-if="pin.currentChartLink" :to="pin.currentChartLink" target="_blank" rel="noopener noreferrer">Im aktuellen Chart</RouterLink>
         <RouterLink v-if="pin.simulationContext?.chartLink" :to="pin.simulationContext.chartLink" target="_blank" rel="noopener noreferrer">Ursprünglicher Chart / Snapshot</RouterLink>
-        <button v-if="!runId || pin.simulationRunId===runId" @click="confirmation=[pin.id]">Pin entfernen</button>
+        <button v-if="!runId || pinBelongsToSource(pin,runId)" @click="confirmation=[pin.id]">Pin entfernen</button>
       </li></ul>
       </section>
     </template>

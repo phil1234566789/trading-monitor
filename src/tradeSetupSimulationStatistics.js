@@ -5,10 +5,12 @@ export const MIN_SIMULATION_WINRATE_CASES = 50;
 
 export const SIMULATION_OUTCOME_LABELS = {
   slBeforeT1: 'SL vor T1', t1Be: 'T1 + Break-even', t2: 'T2',
+  notStored: 'Ergebnis nicht gespeichert',
   open: 'Offen', ambiguous: 'Uneindeutig', notExecutable: 'Nicht ausführbar',
 };
 export const SIMULATION_REASON_LABELS = {
   ...ENTRY_RISK_REASON_LABELS,
+  resultNotStored: 'Live-Entry gespeichert · SL- und Nettoergebnis nicht gespeichert',
   missingHistory: 'Historie unvollständig', sameCandle: 'Reihenfolge innerhalb der Kerze unbekannt',
   unsupportedInstrument: 'Instrument für diese Simulation noch nicht unterstützt',
   invalidStop: 'Stopp nicht ausführbar', invalidTargets: 'Ziele nicht ausführbar',
@@ -21,14 +23,14 @@ export function simulationOutcomeKey(row) {
 
 export function simulationRunStatusLabel(run) {
   if (run.progress?.phase === 'paused') return 'Unterbrochen';
-  return { running: 'Läuft', complete: 'Abgeschlossen', failed: 'Fehlgeschlagen' }[run.status] ?? run.status;
+  return { live: 'Gespeicherte Live-Erkennungen', running: 'Läuft', complete: 'Abgeschlossen', failed: 'Fehlgeschlagen' }[run.status] ?? run.status;
 }
 
 export function simulationStatistics(rows, variant, basis = 'gross', minWinrateCases = MIN_SIMULATION_WINRATE_CASES) {
   const pnlField = basis === 'net' ? 'netPnlUsd' : 'pnlUsd';
   const rField = basis === 'net' ? 'netRMultiple' : 'rMultiple';
   const selected = rows.filter(row => row.variant === variant);
-  const counts = Object.fromEntries(Object.keys(SIMULATION_OUTCOME_LABELS).map(key => [key, 0]));
+  const counts = Object.fromEntries(Object.keys(SIMULATION_OUTCOME_LABELS).filter(key=>key!=='notStored' || selected.some(row=>row.status==='notStored')).map(key => [key, 0]));
   const closed = [];
   for (const row of selected) {
     const key = simulationOutcomeKey(row);

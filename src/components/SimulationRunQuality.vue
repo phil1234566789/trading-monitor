@@ -46,7 +46,7 @@ const crossTone=(run,variant,row,column)=>{
           </div>
         </article>
       </div>
-      <p v-for="variant in ['wide','narrow']" :key="variant" class="outcomes"><strong>Ausgang der Entries · {{ variant==='wide'?'weiter':'enger' }} SL:</strong> <span v-for="(label,key) in SIMULATION_OUTCOME_LABELS" :key="key">{{ label }}: <b :class="outcomeTone(run,variant,key)" :title="outcomeHint(run,variant,key)">{{ outcomeCounts(run,variant)[key] }}<template v-if="outcomeTone(run,variant,key)==='positive'"> ↑</template><template v-else-if="outcomeTone(run,variant,key)==='worse'"> ↓</template></b></span></p>
+      <p v-for="variant in ['wide','narrow']" :key="variant" class="outcomes"><strong>Ausgang der Entries · {{ variant==='wide'?'weiter':'enger' }} SL:</strong> <span v-for="(label,key) in SIMULATION_OUTCOME_LABELS" :key="key">{{ label }}: <b :class="outcomeTone(run,variant,key)" :title="outcomeHint(run,variant,key)">{{ outcomeCounts(run,variant)[key] ?? 0 }}<template v-if="outcomeTone(run,variant,key)==='positive'"> ↑</template><template v-else-if="outcomeTone(run,variant,key)==='worse'"> ↓</template></b></span></p>
     </div>
     <p class="note">* Im gespeicherten Review belegte Ursprungs-Setups. Erkennungen ohne gespeicherten Snapshot sind nicht belegt. Alle Zahlen folgen derselben Filterauswahl.</p>
     <p class="note">DR-Verlauf unabhängig vom Entry-Ergebnis, Gewinne und Verluste netto. Jeder SL-Zweig teilt die DRs mit Entry auf; „Ohne Entry“ gilt für beide Varianten. M5-Preisbeobachtung ab Validierung bis T2 oder Rückkehr zur Invalidierung. Alte Läufe ohne Preisbeobachtung bleiben nicht belegt.</p>
