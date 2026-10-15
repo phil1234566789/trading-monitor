@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "src/components/PriceChart.vue": {
-    "mtime": 1792007912.9283295,
-    "seen": 1792008608.8146098,
-    "ast_hash": "68f53c1ddf9f4c868d6fe4a2ae0303e8",
+    "mtime": 1792045441.5872114,
+    "seen": 1792046224.6040466,
+    "ast_hash": "8c1d60735f9c34064c1def2063a8c953",
     "semantic_hash": ""
   },
   "src/components/ProtokollTable.vue": {
@@ -492,9 +492,9 @@
     "semantic_hash": ""
   },
   "src/pinContext.js": {
-    "mtime": 1792007913.0156147,
-    "seen": 1792008608.8146098,
-    "ast_hash": "d69a56ce63d2fbf495544247bde0e779",
+    "mtime": 1792046442.7561843,
+    "seen": 1792046899.8829956,
+    "ast_hash": "bedf0a78a44f06e82ce82e517d1a2875",
     "semantic_hash": ""
   },
   "src/pipConfig.js": {
@@ -552,9 +552,9 @@
     "semantic_hash": "8b53680163463584f03bbaf1f225f2ca"
   },
   "src/router.js": {
-    "mtime": 1792008094.5636687,
-    "seen": 1792008608.8146098,
-    "ast_hash": "d31fc88320dfdca9e87ae4efb03a99fd",
+    "mtime": 1792045487.3544624,
+    "seen": 1792046224.6500444,
+    "ast_hash": "26fa1ba09c226eb0206c61dcbb381660",
     "semantic_hash": ""
   },
   "src/rsi.js": {
@@ -678,9 +678,9 @@
     "semantic_hash": ""
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1792007913.0764556,
-    "seen": 1792008608.8146098,
-    "ast_hash": "309ef659962db850a677a5f6a84688f5",
+    "mtime": 1792045782.9598377,
+    "seen": 1792046224.6780484,
+    "ast_hash": "f350e33c036f4c9d00e2950b2f252f54",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -3978,9 +3978,9 @@
     "semantic_hash": ""
   },
   "src/components/TradeSetupChecklist.vue": {
-    "mtime": 1792007912.9458816,
-    "seen": 1792008608.8146098,
-    "ast_hash": "fc24f1b367538c00f955abff0629f7bc",
+    "mtime": 1792045782.9588377,
+    "seen": 1792046224.6090465,
+    "ast_hash": "d3bf8ef7286911be996cf479d8ef8bb1",
     "semantic_hash": ""
   },
   "src/composables/usePriceChartChecklist.js": {
@@ -4398,9 +4398,9 @@
     "semantic_hash": ""
   },
   "src/composables/useChecklistDisplay.js": {
-    "mtime": 1792007912.9523957,
-    "seen": 1792008608.8146098,
-    "ast_hash": "a9a9dc224e7078237c2abacb4eeee53a",
+    "mtime": 1792045782.9578378,
+    "seen": 1792046224.6120489,
+    "ast_hash": "f589166829fee46e3bc4018e3e02d885",
     "semantic_hash": ""
   },
   "test/afterBrowserPaint.test.js": {
@@ -4512,15 +4512,15 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2Positions.js": {
-    "mtime": 1792007913.0525458,
-    "seen": 1792008608.8146098,
-    "ast_hash": "87a64acef521a29d01c1a97bcfa74fae",
+    "mtime": 1792045487.3524573,
+    "seen": 1792046224.6660502,
+    "ast_hash": "fc42ffcb55f1453c9c762111431b576b",
     "semantic_hash": ""
   },
   "src/tradeSetup2Rendering.js": {
-    "mtime": 1792007913.0535495,
-    "seen": 1792008608.8146098,
-    "ast_hash": "bfe7077966b62c89d7b18cdf7444c2f0",
+    "mtime": 1792045487.3534634,
+    "seen": 1792046224.6660502,
+    "ast_hash": "c27b2e85a3d8a0efa2c0c0b0201ab0ed",
     "semantic_hash": ""
   },
   "src/tradeSetup2Scan.js": {
@@ -4554,9 +4554,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetupSimulationStatistics.js": {
-    "mtime": 1792007913.0684264,
-    "seen": 1792008608.8146098,
-    "ast_hash": "65065a6b43d86654d15f87cc8d66c28d",
+    "mtime": 1792045552.2939,
+    "seen": 1792046224.6750467,
+    "ast_hash": "db4950f9eeebc31ad11a5fbf79883779",
     "semantic_hash": ""
   },
   "src/trendPhaseRendering.js": {
@@ -4566,9 +4566,9 @@
     "semantic_hash": ""
   },
   "src/views/Statistik.vue": {
-    "mtime": 1792008385.5408058,
-    "seen": 1792008608.8146098,
-    "ast_hash": "4ea743f185a80223eeaaf8f7ddedbc16",
+    "mtime": 1792046442.7601838,
+    "seen": 1792046899.905996,
+    "ast_hash": "3925c657b9cf95aaa99f319a35fc1007",
     "semantic_hash": ""
   },
   "test/SimulationResultsTable.test.js": {
@@ -4638,15 +4638,15 @@
     "semantic_hash": ""
   },
   "src/components/SimulationRunStatus.vue": {
-    "mtime": 1792007912.9403777,
-    "seen": 1792008608.8146098,
-    "ast_hash": "2c10cc9686a30954b3f5c2e3f4342cc5",
+    "mtime": 1792045942.5926216,
+    "seen": 1792046224.6080437,
+    "ast_hash": "80080f293eaafc22e7ba4697f708dbab",
     "semantic_hash": ""
   },
   "src/components/TradeSetup2Controls.vue": {
-    "mtime": 1792007912.9433773,
-    "seen": 1792008608.8146098,
-    "ast_hash": "9e7958a6e7242916fd3cb8ba9cb857a7",
+    "mtime": 1792045942.5916216,
+    "seen": 1792046224.6090465,
+    "ast_hash": "11582a37ba2fce56fbf386516bb5c2de",
     "semantic_hash": ""
   },
   "src/tradeSetup2Anchors.js": {
@@ -4866,9 +4866,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2Review.js": {
-    "mtime": 1792007913.0535495,
-    "seen": 1792008608.8146098,
-    "ast_hash": "4ab560128cf4684c89fae8467d0e946f",
+    "mtime": 1792045487.3454986,
+    "seen": 1792046224.6660502,
+    "ast_hash": "f9804b3472ef2cb53af65a2c98fa14d5",
     "semantic_hash": ""
   },
   "test/tradeSetup2LinkedSnapshot.test.js": {
@@ -4932,9 +4932,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2DealingRange.js": {
-    "mtime": 1792007913.04955,
-    "seen": 1792008608.8146098,
-    "ast_hash": "480939cbabcdad05e8dce850b163eabb",
+    "mtime": 1792045487.3444984,
+    "seen": 1792046224.6640494,
+    "ast_hash": "c2f9ac563aa99ff45e6ef753cf4e4701",
     "semantic_hash": ""
   },
   "test/tradeSetup2DealingRange.test.js": {
@@ -5244,9 +5244,9 @@
     "semantic_hash": ""
   },
   "src/simulationRunComparison.js": {
-    "mtime": 1792007913.0335183,
-    "seen": 1792008608.8146098,
-    "ast_hash": "f75327bc7efef3d1a08c13d47a3ac6c0",
+    "mtime": 1792045487.3454986,
+    "seen": 1792046224.656044,
+    "ast_hash": "319767d484770d59d454451a7202dec9",
     "semantic_hash": ""
   },
   "test/simulationRunComparison.test.js": {
@@ -5256,9 +5256,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationComparisonFilters.vue": {
-    "mtime": 1792008436.9125605,
-    "seen": 1792008608.8146098,
-    "ast_hash": "884d3f4ee5fde89b08b6d7cb3c1edbc5",
+    "mtime": 1792045441.5892115,
+    "seen": 1792046224.6060438,
+    "ast_hash": "305d4b9e5fa37a6566d9294e22c730e3",
     "semantic_hash": ""
   },
   "src/components/SimulationComparisonMetrics.vue": {
@@ -5274,9 +5274,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationEntryTable.vue": {
-    "mtime": 1792007912.93433,
-    "seen": 1792008608.8146098,
-    "ast_hash": "a7653a0064e647998d11ea87116edcf4",
+    "mtime": 1792045942.5916216,
+    "seen": 1792046224.6070437,
+    "ast_hash": "781344a52c41dacf81d21c78d65fb75e",
     "semantic_hash": ""
   },
   "src/components/SimulationFeatureChips.vue": {
@@ -5286,15 +5286,15 @@
     "semantic_hash": ""
   },
   "src/components/SimulationRunQuality.vue": {
-    "mtime": 1792007912.939377,
-    "seen": 1792008608.8146098,
-    "ast_hash": "8f9db59ec7e1035b8eef138ce67f786b",
+    "mtime": 1792045552.2939,
+    "seen": 1792046224.6080437,
+    "ast_hash": "c11f32e2a8a29cbde433470520ae258b",
     "semantic_hash": ""
   },
   "src/composables/useSimulationComparison.js": {
-    "mtime": 1792008385.5408058,
-    "seen": 1792008608.8146098,
-    "ast_hash": "e23a407b3d28c821255d12ce22f40e6a",
+    "mtime": 1792046181.5988626,
+    "seen": 1792046224.6190474,
+    "ast_hash": "440b9254bec1337676d0e09e313736d4",
     "semantic_hash": ""
   },
   "test/simulationReviewFeatures.test.js": {
@@ -5304,21 +5304,21 @@
     "semantic_hash": ""
   },
   "src/components/SimulationPinMenu.vue": {
-    "mtime": 1792007912.93737,
-    "seen": 1792008608.8146098,
+    "mtime": 1792046442.7601838,
+    "seen": 1792046899.8579953,
     "ast_hash": "616ce928806e70203af4192c9408ff40",
     "semantic_hash": ""
   },
   "src/composables/useSimulationPins.js": {
-    "mtime": 1792007912.9690764,
-    "seen": 1792008608.8146098,
-    "ast_hash": "8c57e4ad28fb146749c965a1f92015cd",
+    "mtime": 1792046442.7581837,
+    "seen": 1792046899.8669963,
+    "ast_hash": "f837f57afe60cdbed3a3b033d4ef3668",
     "semantic_hash": ""
   },
   "src/simulationPinSnapshot.js": {
-    "mtime": 1792007913.032518,
-    "seen": 1792008608.8146098,
-    "ast_hash": "1b48eb36e04fcc8fd5304a811858b205",
+    "mtime": 1792046822.2895405,
+    "seen": 1792046899.8889956,
+    "ast_hash": "353953ac6e2eb001066174761e11d3a1",
     "semantic_hash": ""
   },
   "test/simulationPinSnapshot.test.js": {
@@ -5346,9 +5346,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationPinList.vue": {
-    "mtime": 1792007912.93737,
-    "seen": 1792008608.8146098,
-    "ast_hash": "d5cbce288cf2ef7ca1d0a5225b2c5484",
+    "mtime": 1792046607.9672167,
+    "seen": 1792046899.8579953,
+    "ast_hash": "27a11925e7ab06acbd29bff267c1f633",
     "semantic_hash": ""
   },
   "test/simulationPinList.test.js": {
@@ -5478,9 +5478,9 @@
     "semantic_hash": ""
   },
   "src/simulationPinPresentation.js": {
-    "mtime": 1792007913.0315175,
-    "seen": 1792008608.8146098,
-    "ast_hash": "85b7f2ac6005fb127bae46b93c481ba0",
+    "mtime": 1792046822.2885382,
+    "seen": 1792046899.8889956,
+    "ast_hash": "e0a4769cbe289f7a828abc480f4a9740",
     "semantic_hash": ""
   },
   "test/setup2Terminology.test.js": {
@@ -5568,9 +5568,9 @@
     "semantic_hash": ""
   },
   "src/simulationChartReplayTime.js": {
-    "mtime": 1792007913.0295184,
-    "seen": 1792008608.8146098,
-    "ast_hash": "ecdc32a109a09fe7d79644be7b47f4b9",
+    "mtime": 1792045487.3454986,
+    "seen": 1792046224.6540442,
+    "ast_hash": "784ee45d1083d3b500ccdaa39c4f3866",
     "semantic_hash": ""
   },
   "src/snapshotM1Browser.js": {
@@ -5778,9 +5778,9 @@
     "semantic_hash": ""
   },
   "src/simulationRunPresentation.js": {
-    "mtime": 1792007913.034518,
-    "seen": 1792008608.8146098,
-    "ast_hash": "e919c3a17d5f9e39f271ffd04501a3ee",
+    "mtime": 1792045487.3524573,
+    "seen": 1792046224.6570442,
+    "ast_hash": "2b7299005ce43f42ed21732e08979eeb",
     "semantic_hash": ""
   },
   "test/simulationRunPresentation.test.js": {
@@ -5928,9 +5928,9 @@
     "semantic_hash": ""
   },
   "src/simulationPinMatching.js": {
-    "mtime": 1792007913.0315175,
-    "seen": 1792008608.8146098,
-    "ast_hash": "6de2d6083277c24b0ea73cd06f949d77",
+    "mtime": 1792046503.3762827,
+    "seen": 1792046899.8889956,
+    "ast_hash": "2742aae8dcc3c8de89757cf6314b10e9",
     "semantic_hash": ""
   },
   "test/simulationPinMatching.test.js": {
@@ -6257,34 +6257,64 @@
     "ast_hash": "c357edeb13d6b5dd7284a95cb9fd61f4",
     "semantic_hash": ""
   },
-  "src/components/LiveWatcherMonth.vue": {
-    "mtime": 1792008636.1002164,
-    "seen": 1792008709.728795,
-    "ast_hash": "b84ce1f76819b81dac375f18e347e9d7",
-    "semantic_hash": ""
-  },
-  "src/liveWatcherEntryLevels.js": {
-    "mtime": 1792008470.6743684,
-    "seen": 1792008608.8146098,
-    "ast_hash": "94da6436db1cbb59a5e27912ef79e6e6",
-    "semantic_hash": ""
-  },
   "src/liveWatcherMonth.js": {
-    "mtime": 1792008536.3110178,
-    "seen": 1792008608.8146098,
-    "ast_hash": "88af5ae6215b1d771a993b3a6fd8907d",
-    "semantic_hash": ""
-  },
-  "src/views/LiveWatcherEntry.vue": {
-    "mtime": 1792008470.6743684,
-    "seen": 1792008608.8146098,
-    "ast_hash": "fac5535602285e96f2ca03605d919ad8",
+    "mtime": 1792046442.7581837,
+    "seen": 1792046899.8769956,
+    "ast_hash": "6fd87c75112cd3f33624c053f8f7a655",
     "semantic_hash": ""
   },
   "test/liveWatcherMonth.test.js": {
-    "mtime": 1792008661.5399504,
-    "seen": 1792008709.8227963,
-    "ast_hash": "dfe3eece74312645f72f1a1010ecf7e0",
+    "mtime": 1792045851.3614004,
+    "seen": 1792046224.7470443,
+    "ast_hash": "1f8e92ef18d48d2d0350e5b6503ab2d8",
+    "semantic_hash": ""
+  },
+  "src/liveWatcherSnapshots.js": {
+    "mtime": 1792045942.5906217,
+    "seen": 1792046224.6360443,
+    "ast_hash": "73237c4bd6b7e548e2eb6fac0849dde9",
+    "semantic_hash": ""
+  },
+  "src/setup2Repository.js": {
+    "mtime": 1792046442.7571838,
+    "seen": 1792046899.8879967,
+    "ast_hash": "d5f3a55ce97685668d54ad515e036b9e",
+    "semantic_hash": ""
+  },
+  "test/setup2Repository.test.js": {
+    "mtime": 1792045851.3604004,
+    "seen": 1792046224.7710469,
+    "ast_hash": "25019f71528ef2b47f9882c27eea059a",
+    "semantic_hash": ""
+  },
+  "src/simulationPinSource.js": {
+    "mtime": 1792046442.7551868,
+    "seen": 1792046899.8889956,
+    "ast_hash": "a0956f1aa4cb71e8d0018dade8a4961c",
+    "semantic_hash": ""
+  },
+  "test/helpers/livePinDbFixture.mjs": {
+    "mtime": 1792046682.3947282,
+    "seen": 1792046899.9439955,
+    "ast_hash": "8eb28ec4cd7ec464b64176151d28d3e1",
+    "semantic_hash": ""
+  },
+  "test/livePinMigrationContract.test.js": {
+    "mtime": 1792046744.2108514,
+    "seen": 1792046899.9459958,
+    "ast_hash": "f7bc912d1b61a98ce25247d01b1839c8",
+    "semantic_hash": ""
+  },
+  "test/liveWatcherPins.test.js": {
+    "mtime": 1792046822.2905388,
+    "seen": 1792046899.9459958,
+    "ast_hash": "eff261e39b779ddca17ef43be2a26a9d",
+    "semantic_hash": ""
+  },
+  "test/statistikSourceParity.test.js": {
+    "mtime": 1792046607.9682164,
+    "seen": 1792046899.9639955,
+    "ast_hash": "b11a54def41f21988896e8c5ff41318f",
     "semantic_hash": ""
   }
 }
