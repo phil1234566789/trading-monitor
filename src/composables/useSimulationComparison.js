@@ -1,5 +1,6 @@
 import { ref, computed, watch, onScopeDispose } from 'vue';
 import { reviewGroups, filterReviewGroups, groupResults, latestCompletedRun } from '../simulationRunComparison.js';
+import {isLiveWatcherMonth,liveSourceMonth,liveMonthBounds} from '../liveWatcherMonth.js';
 import { applySimulationCommission } from '../tradeSetupSimulationCosts.js';
 import {sortSimulationRunsByExecution} from '../simulationRunPresentation.js';
 
@@ -19,7 +20,9 @@ export function useSimulationComparison(repository, filters, pins) {
       for(const id of ids){
         const snapshots=await repository.listReviewMetadata(id);
         const results=await repository.listResults({runId:id});
-        data.push([id,{groups:reviewGroups(snapshots),results:results.map(row=>row.status==='notStored'?row:applySimulationCommission(row))}]);
+        let groups=reviewGroups(snapshots);
+        if(isLiveWatcherMonth(id)){const {from,to}=liveMonthBounds(liveSourceMonth(id));groups=groups.map(g=>({...g,entries:g.entries.filter(e=>e.knownAt>=Date.parse(from)/1000&&e.knownAt<Date.parse(to)/1000)}));}
+        data.push([id,{groups,results:results.map(row=>row.status==='notStored'?row:applySimulationCommission(row))}]);
       }
       if(ticket!==revision)return;
       datasets.value=new Map(data);

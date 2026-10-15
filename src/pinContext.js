@@ -38,7 +38,7 @@ const ROW_COLUMNS =
   "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
   "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
   "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi, " +
-  "live_event_id, simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, pin_type, note, created_at, " +
+  "live_snapshot_id, live_event_id, simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, pin_type, note, created_at, " +
   // end_time (Chat 2026-08-18, siehe Task "Pin-Kontext: gepinnte Objekte direkt rendern") — für die
   // Direkt-Rendering-Fallback-Box/-Linie eines gepinnten ob_zone/liquidity_level (siehe
   // PriceChart.vue: refreshPoiZonesInternal/refreshLiquidityInternal), dieselbe Spalte, die
@@ -58,6 +58,7 @@ function toEntry(row) {
     pinType: row.pin_type ?? null,
     simulationRunId: row.simulation_run_id,
     liveEventId: row.live_event_id,
+    liveSnapshotId: row.live_snapshot_id,
     simulationSnapshotId: row.simulation_snapshot_id,
     simulationEntrySnapshotId: row.simulation_entry_snapshot_id,
     simulationCheckpointKey: row.simulation_checkpoint_key,
@@ -185,7 +186,8 @@ export async function addSimulationPin({kind,key,snapshotId,entrySnapshotId,chec
     return existing.id;
   }
   const {error}=await supabase.from('pin_context').upsert({kind,simulation_pin_key:key,simulation_run_id:context.runId,
-    live_event_id:context.source?.kind==='live-watcher'?context.source.eventId:null,
+    live_event_id:context.source?.kind==='live-watcher'?context.source.eventId ?? null:null,
+    live_snapshot_id:context.source?.kind==='live-watcher'?context.source.recordId ?? null:null,
     simulation_snapshot_id:snapshotId ?? null,simulation_entry_snapshot_id:entrySnapshotId ?? null,
     simulation_checkpoint_key:checkpointKey ?? null,simulation_variant:variant ?? null,simulation_context:context,note:note || null,...pinTypeFields(pinType)},
     {onConflict:'simulation_pin_key',ignoreDuplicates:true});

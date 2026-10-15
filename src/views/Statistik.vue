@@ -13,7 +13,7 @@ import SimulationDrList from '../components/SimulationDrList.vue';
 import SimulationPinMenu from '../components/SimulationPinMenu.vue';
 import SimulationPinList from '../components/SimulationPinList.vue';
 import { useSimulationPins } from '../composables/useSimulationPins.js';
-import {isLiveWatcherMonth} from '../liveWatcherMonth.js';
+import {isLiveWatcherMonth,liveSourceMode} from '../liveWatcherMonth.js';
 import { cssColor } from '../chartColors.js';
 const route=useRoute(),router=useRouter();
 const filters=ref(comparisonFilters(route.query)),pins=ref([]);
@@ -30,6 +30,13 @@ function refreshAll(){refresh();pinState.refresh();}
 watch(()=>route.query,query=>{const next=comparisonFilters(query);if(JSON.stringify(next)!==JSON.stringify(filters.value))filters.value=next;});
 watch(filters,value=>{const query=Object.fromEntries(Object.entries(value).filter(([,v])=>v));if(JSON.stringify(comparisonFilters(route.query))!==JSON.stringify(value))router.replace({path:'/statistik',query});},{deep:true});
 let liveTimer;onMounted(()=>{liveTimer=setInterval(()=>{if(liveSelected.value && !document.hidden && !loading.value)refresh();},30000);});onUnmounted(()=>clearInterval(liveTimer));
+const otherSource=ref(null),sourceError=ref('');let sourceRevision=0;
+watch([()=>filters.value.run,loading],async([id,busy])=>{
+  const ticket=++sourceRevision;otherSource.value=null;sourceError.value='';
+  if(busy || !isLiveWatcherMonth(id))return;
+  try{const summary=await repository.sourceSummary(id);if(ticket===sourceRevision)otherSource.value=summary;}
+  catch(cause){if(ticket===sourceRevision)sourceError.value=cause.message || 'Andere Quellen konnten nicht geladen werden.';}
+});
 const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>d.groups.flatMap(g=>g.features)).map(f=>[f.key,f])).values()]);
 </script>
 <template>
@@ -43,7 +50,9 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
     </details>
     <SimulationRunStatus v-if="selectedRun" :run="selectedRun" />
     <SimulationComparisonFilters v-model="filters" :runs="runs" :features="features" />
-    <p v-if="liveSelected" class="note">Gespeicherte Live-Erkennungen · kein nachberechneter Monatslauf. Nur ereignisbelegte DRs. Ergebnisse, vollständige Checklisten und damalige Strukturkonfiguration sind nicht gespeichert.</p>
+    <p v-if="liveSelected" class="note">{{ liveSourceMode(filters.run)==='catchup'?'Nachholerkennung · später erkannte Originalstände, getrennt von Live-Erkennungen.':'Originale Live-Erkennungen · nachträglich erkannte Entries zählen hier nicht mit.' }} Fehlende Originaldaten und Entry-Ergebnisse bleiben unbekannt; kein nachberechneter Monatslauf.</p>
+    <p v-if="otherSource?.drs || otherSource?.entries" class="note">Andere Quelle: {{ otherSource.drs }} DRs · {{ otherSource.entries }} Entries · <RouterLink :to="{path:'/statistik',query:{...route.query,run:otherSource.sourceId,compare:''}}">{{ liveSourceMode(otherSource.sourceId)==='catchup'?'Nachholerkennung öffnen':'Original-Liveansicht öffnen' }}</RouterLink> · <button @click="filters.compare=otherSource.sourceId">Quellen vergleichen</button></p>
+    <p v-if="sourceError" role="alert" class="error">{{ sourceError }}</p>
     <div :aria-busy="loading">
       <p v-if="pinState.error.value" role="alert" class="error">{{ pinState.error.value }} <button @click="pinState.refresh">Pins erneut laden</button></p>
       <p v-else-if="pinState.loading.value" role="status" class="note">Pins werden geladen…</p>

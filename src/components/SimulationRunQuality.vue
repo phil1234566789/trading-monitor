@@ -8,6 +8,7 @@ import { SIMULATION_OUTCOME_LABELS } from '../tradeSetupSimulationStatistics.js'
 const props=defineProps({current:Object,previous:Object,compare:Boolean});
 const stages={recognized:'Setups 1.0 erkannt*',confirmed:'Bestätigt',quality:{validated:'Validiert',disqualified:'Disqualifiziert'},target1:'T1 vor Invalidation',withEntry:'DRs mit Entry',entries:'Entries'};
 const runs=computed(()=>[...(props.compare?[{label:'Alt',data:props.previous}]:[]),{label:props.compare?'Neu':'Gewählter Lauf',data:props.current}].map(r=>({...r,funnel:runFunnel(r.data.groups,r.data.results)})));
+const funnelValue=(run,key)=>run.funnel.unknown[key]>0?`${run.funnel[key]} belegt · ${run.funnel.unknown[key]} unbekannt`:run.funnel[key];
 const funnelTone=(run,key)=>!props.compare || !['target1','target2'].includes(key)?'':run.label==='Alt'?'reference':comparisonTone(run.funnel[key],runs.value[0].funnel[key]);
 const outcomeCounts=(run,variant)=>variantMetrics(run.data.results,variant).counts;
 const outcomeTone=(run,variant,key)=>!props.compare?'':run.label==='Alt'?'reference':comparisonTone(outcomeCounts(run,variant)[key],outcomeCounts(runs.value[0],variant)[key],!['t1Be','t2'].includes(key));
@@ -31,13 +32,14 @@ const crossTone=(run,variant,row,column)=>{
 </script>
 <template>
   <section class="run-quality"><h2>Entscheidungsbaum</h2>
-    <div v-for="run in runs" :key="run.label"><h3>{{ run.label }}</h3><div class="funnel"><dl v-for="(label,key) in stages" :key="key" :class="{'split-node':key==='quality'}"><template v-if="key==='quality'"><div v-for="(halfLabel,halfKey) in label" :key="halfKey"><dt>{{ halfLabel }}</dt><dd>{{ run.funnel[halfKey] }}</dd></div></template><template v-else><dt>{{ label }}</dt><dd :class="funnelTone(run,key)">{{ run.funnel[key] }}<small v-if="funnelTone(run,key)==='positive'"> ↑</small><small v-else-if="funnelTone(run,key)==='worse'"> ↓</small></dd></template></dl></div>
+    <div v-for="run in runs" :key="run.label"><h3>{{ run.label }}</h3><div class="funnel"><dl v-for="(label,key) in stages" :key="key" :class="{'split-node':key==='quality'}"><template v-if="key==='quality'"><div v-for="(halfLabel,halfKey) in label" :key="halfKey"><dt>{{ halfLabel }}</dt><dd>{{ funnelValue(run,halfKey) }}</dd></div></template><template v-else><dt>{{ label }}</dt><dd :class="funnelTone(run,key)">{{ funnelValue(run,key) }}<small v-if="funnelTone(run,key)==='positive'"> ↑</small><small v-else-if="funnelTone(run,key)==='worse'"> ↓</small></dd></template></dl></div>
+      <p v-if="run.funnel.coverage.stageUnknown" class="note">{{ run.funnel.coverage.stageUnknown }} DRs ohne gespeicherte Stufenentscheidung. {{ run.funnel.coverage.confirmationTimes }} DRs mit originalem Bestätigungszeitbeleg; das ersetzt keine vollständige Stufenprüfung.</p>
       <p class="note">T2-Quote: {{ run.funnel.target2Eligible ? (100 * run.funnel.target2 / run.funnel.target2Eligible).toFixed(1) + ' %' : 'nicht belegt' }} ({{ run.funnel.target2 }} / {{ run.funnel.target2Eligible }} validierte DRs mit belegtem T2-Ziel). DR-Ausgang nicht belegt: {{ run.funnel.target2Unknown }}.</p>
-      <h4>Preisverlauf validierter DRs → Entry-Ergebnis</h4>
+      <h4>DR-Stufe und Preisverlauf → Entry-Ergebnis</h4>
       <div class="range-branches">
         <article v-for="row in crossTables[run.label].wide" :key="row.key" class="range-branch" :class="`outcome-${row.key}`" :aria-label="`${run.label} · ${row.label}`">
           <h5><b :class="crossTone(run,'wide',row,'total')">{{ row.total }}</b>{{ row.label }}</h5>
-          <p class="without-entry">Ohne Entry <b :class="crossTone(run,'wide',row,'without')">{{ row.without }}</b></p>
+          <p class="without-entry"><span>{{ row.entries }} gespeicherte Entries · Ohne Entry</span> <b :class="crossTone(run,'wide',row,'without')">{{ row.without }}</b></p>
           <div class="stop-branches">
             <section v-for="(entryRow,variant) in {wide:row,narrow:crossTables[run.label].narrow.find(r=>r.key===row.key)}" :key="variant" :aria-label="variant==='wide'?'Weiter SL':'Enger SL'">
               <h6>{{ variant==='wide'?'Weiter SL':'Enger SL' }}</h6>
@@ -49,7 +51,7 @@ const crossTone=(run,variant,row,column)=>{
       <p v-for="variant in ['wide','narrow']" :key="variant" class="outcomes"><strong>Ausgang der Entries · {{ variant==='wide'?'weiter':'enger' }} SL:</strong> <span v-for="(label,key) in SIMULATION_OUTCOME_LABELS" :key="key">{{ label }}: <b :class="outcomeTone(run,variant,key)" :title="outcomeHint(run,variant,key)">{{ outcomeCounts(run,variant)[key] ?? 0 }}<template v-if="outcomeTone(run,variant,key)==='positive'"> ↑</template><template v-else-if="outcomeTone(run,variant,key)==='worse'"> ↓</template></b></span></p>
     </div>
     <p class="note">* Im gespeicherten Review belegte Ursprungs-Setups. Erkennungen ohne gespeicherten Snapshot sind nicht belegt. Alle Zahlen folgen derselben Filterauswahl.</p>
-    <p class="note">DR-Verlauf unabhängig vom Entry-Ergebnis, Gewinne und Verluste netto. Jeder SL-Zweig teilt die DRs mit Entry auf; „Ohne Entry“ gilt für beide Varianten. M5-Preisbeobachtung ab Validierung bis T2 oder Rückkehr zur Invalidierung. Alte Läufe ohne Preisbeobachtung bleiben nicht belegt.</p>
+    <p class="note">Alle DRs erscheinen entweder in einer belegten Kategorie oder unter „DR-Stufe nicht gespeichert“. Fehlende Entry-Ergebnisse zählen als unvollständig, nicht als belegte offene Position. DR-Verlauf unabhängig vom Entry-Ergebnis, Gewinne und Verluste netto. Jeder SL-Zweig teilt die DRs mit Entry auf; „Ohne Entry“ gilt für beide Varianten. M5-Preisbeobachtung ab Validierung bis T2 oder Rückkehr zur Invalidierung. Alte Läufe ohne Preisbeobachtung bleiben nicht belegt.</p>
   </section>
 </template>
 <style scoped>

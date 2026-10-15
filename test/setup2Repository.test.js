@@ -12,7 +12,7 @@ it('loads the same original entries through the regular linked-snapshot reader w
  expect(record.snapshots.map(s=>s.id)).toEqual(['one','two']);expect(record.results).toHaveLength(4);
  expect(record.snapshot.entry.entryPattern).toBe('countertrend-entry-model-1-v10');expect(record.snapshot.checklist).toBeUndefined();
  expect((await repo.getRun(run)).configuration.setupVersion).toBeUndefined();expect((await repo.getRun(run)).configuration.sessions).toBeUndefined();
- expect(await repo.listRunDrCounts([run])).toEqual(new Map([[run,1]]));expect(reads.every(([table])=>table==='setup2_alarm_events')).toBe(true);
+ expect(await repo.listRunDrCounts([run])).toEqual(new Map([[run,1]]));expect(reads.every(([table])=>['setup2_alarm_events','setup2_live_snapshots'].includes(table))).toBe(true);
  expect(JSON.stringify(events)).toBe(before);expect(db.rpc).not.toHaveBeenCalled();
  const rows=(await repo.listResults({runId:run,asOf:at})).map(r=>simulationAsOf(r,at));expect(rows).toHaveLength(2);
  expect(rows.every(r=>r.status==='notStored' && r.commissionUsd===null && r.netPnlUsd===null)).toBe(true);

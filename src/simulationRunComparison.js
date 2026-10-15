@@ -1,3 +1,4 @@
+import {hasSavedValidation,rangeCategory,rangeCoverage,rangeEntryIds} from './simulationRangeCoverage.js';
 import { groupSetupSnapshots } from './tradeSetup2Review.js';
 import { savedDealingRangeStatus, isDisqualifiedDealingRange } from './tradeSetup2DealingRange.js';
 import { savedDealingRangePriceOutcome, DR_OUTCOME_LABELS } from './savedDealingRangePriceOutcome.js';
@@ -68,8 +69,8 @@ export function variantMetrics(results, variant) {
     commissionR: gross.totalR == null || net.totalR == null ? null : gross.totalR-net.totalR };
 }
 export function runFunnel(groups, results) {
-  const validated = groups.filter(g => g.wasValidated ?? g.stage === 'validated');
-  return { recognized: new Set(groups.map(g => g.snapshot.checklist?.setup?.primary?.tradeSetupId ?? g.snapshot.setupKey ?? g.key)).size,
+  const validated = groups.filter(hasSavedValidation),coverage=rangeCoverage(groups);
+  return { coverage,unknown:{confirmed:coverage.stageUnknown,validated:coverage.stageUnknown,disqualified:coverage.stageUnknown,target1:coverage.stageUnknown+coverage.priceUnknown,target2:coverage.stageUnknown+coverage.priceUnknown},recognized: new Set(groups.map(g => g.snapshot.checklist?.setup?.primary?.tradeSetupId ?? g.snapshot.setupKey ?? g.key)).size,
     confirmed: groups.filter(g => ['confirmed','validated','disqualified','invalidated'].includes(g.stage)).length,
     disqualified: groups.filter(g => isDisqualifiedDealingRange(g.latestCandidate ?? g.snapshot)).length,
     validated: validated.length,
@@ -77,13 +78,13 @@ export function runFunnel(groups, results) {
     target1: validated.filter(g => g.outcome.stage1 === 'target1' || ['t2','t1Only','t1Open','noTarget2'].includes(g.outcome.status)).length,
     target2: validated.filter(g => g.outcome.status === 't2').length,
     target2Eligible: validated.filter(g => Number.isFinite(g.outcome.target2)).length,
-    target2Unknown: validated.filter(g => g.outcome.status === 'unknown').length,
-    withEntry: groups.filter(g => g.entries.length).length, entries: new Set(results.map(r=>r.snapshotId)).size };
+    target2Unknown: groups.filter(g => g.outcome.status === 'unknown').length,
+    withEntry: groups.filter(g => g.entries.length).length, entries: rangeEntryIds(groups).size };
 }
 export function rangeEntryCrossTable(groups, results, variant) {
-  const rows = Object.entries(DR_OUTCOME_LABELS).map(([key,label]) => ({ key,label,total:0,without:0,win:0,loss:0,pending:0 }));
-  for (const group of groups.filter(g=>g.wasValidated ?? g.stage==='validated')) {
-    const row = rows.find(r=>r.key===group.outcome.status) ?? rows.at(-1); row.total++;
+  const rows = Object.entries({...DR_OUTCOME_LABELS,notValidated:'DR-Stufe belegt · nicht validiert',stageUnknown:'DR-Stufe nicht gespeichert'}).map(([key,label]) => ({ key,label,total:0,without:0,win:0,loss:0,pending:0,entries:0 }));
+  for (const group of groups) {
+    const row = rows.find(r=>r.key===rangeCategory(group)) ?? rows.find(r=>r.key==='unknown'); row.total++;row.entries+=rangeEntryIds([group]).size;
     if (!group.entries.length) { row.without++; continue; }
     const entries = group.entries.map(e => simulationEntryResult(results,e,variant));
     if (entries.some(r=>r?.status==='closed' && r.netPnlUsd>0)) row.win++;

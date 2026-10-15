@@ -1,4 +1,5 @@
 <script setup>
+import LiveEvidenceProvenance from './LiveEvidenceProvenance.vue';
 import SimulationPinFlag from './SimulationPinFlag.vue';
 import { ref,watch } from 'vue';
 import { formatDatedTime } from '../berlinTime.js';
@@ -23,6 +24,7 @@ const summary=(g,v)=>variantMetrics(groupResults([g],props.results),v).totalR;
         <RouterLink :to="simulationChartLink({...group.snapshot,drReplayTime:group.outcome.replayTime,variant:'both'},group.snapshot.runId)" target="_blank" rel="noopener noreferrer">Im Chart</RouterLink>
         <button type="button" class="more" :aria-label="`Pin-Menü für ${group.instrument} DR ${formatDatedTime(group.recognizedAt)}`" @click="emit('pin-menu',{kind:'simulation_dr',group},$event)">…</button>
       </header>
+      <LiveEvidenceProvenance :snapshot="group.latestCandidate ?? group.snapshot" />
       <SimulationFeatureChips :features="group.features" :is-pinned="f=>isPinned(group,f)" :pin-note="f=>pinNote(group,f)" @pin-menu="(feature,event)=>emit('pin-menu',{kind:'simulation_checkpoint',group,feature},event)" />
       <SimulationEntryTable :entries="group.entries" :results="results" :is-pinned="entry=>isPinned(group,null,entry)" :pin-note="entry=>pinNote(group,null,entry)" @pin-menu="(entry,event)=>emit('pin-menu',{kind:'simulation_entry',group,entry},event)" />
     </article>

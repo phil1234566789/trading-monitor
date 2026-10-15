@@ -21,7 +21,7 @@ export function sortSimulationRunsByExecution(runs) {
 }
 
 export function simulationRunLabel(run,{showDrCount=false}={}) {
-  if(run.source==='live-watcher')return `${run.configuration.label}${showDrCount && Number.isInteger(run.dealingRangeCount)?` · ${run.dealingRangeCount} ereignisbelegte DRs`:''}`;
+  if(run.source==='live-watcher')return `${run.configuration.label}${showDrCount && Number.isInteger(run.dealingRangeCount)?` · ${run.dealingRangeCount} gespeicherte DRs`:''}`;
   const date=value=>fmtDateTime(value,{year:'numeric',second:'2-digit',timeZone:'Europe/Berlin'});
   const execution=simulationRunExecution(run);
   const timestamp=execution?`${execution.label} ${date(execution.time)}`:'Ausführungszeit unbekannt';

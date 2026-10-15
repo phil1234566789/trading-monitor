@@ -124,3 +124,10 @@ it('keeps the real T54 M1 pivots visible at DR end without reopening entry searc
   expect(activeM1Context(source.checklist)).toBeNull();
   expect(JSON.stringify(source)).toBe(before);
 });
+
+it('resolves each saved configuration independently even when source IDs and replay time coincide',async()=>{
+ const db=repository(configuration()),read=createSnapshotM1Reader(db,async()=>candles),source=snapshot();
+ await read('live-watcher:2026-10',{...source,configurationId:'original-config'});
+ await read('live-watcher:2026-10',{...source,configurationId:'later-config'});
+ expect(db.getRun.mock.calls).toEqual([['live-watcher:2026-10','original-config'],['live-watcher:2026-10','later-config']]);
+});

@@ -3,7 +3,10 @@ import {simulationChartLink} from './tradeSetupSimulationStatistics.js';
 import { fetchAllRows } from './dbReadPaging.js';
 
 export const LIVE_MONTH_PREFIX = 'live-watcher:';
-export const isLiveWatcherMonth = id => /^live-watcher:\d{4}-\d{2}$/.test(id ?? '');
+export const isLiveWatcherMonth = id => /^live-watcher:\d{4}-(0[1-9]|1[0-2])(?::catchup)?$/.test(id ?? '');
+export const liveSourceMonth=id=>id.slice(LIVE_MONTH_PREFIX.length,LIVE_MONTH_PREFIX.length+7);
+export const liveSourceMode=id=>id.endsWith(':catchup')?'catchup':'live';
+export const liveEventMode=event=>event.payload?.provenance?.evaluationMode ?? event.payload?.evaluationMode ?? 'live';
 export function liveMonthBounds(month) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error('Ungültiger Live-Monat');
   const [year, number] = month.split('-').map(Number);
@@ -62,4 +65,4 @@ export function createLiveWatcherRepository(client) {
     }
   };
 }
-export const liveEntryLink = event => simulationChartLink({id:event.payload.entry.id,instrument:event.instrument,knownAt:event.payload.entry.recognizedAt,variant:'both'},LIVE_MONTH_PREFIX+berlinDateStrFor(event.payload.entry.recognizedAt).slice(0,7));
+export const liveEntryLink = event => simulationChartLink({id:event.payload.entry.id,instrument:event.instrument,knownAt:event.payload.entry.recognizedAt,variant:'both'},LIVE_MONTH_PREFIX+berlinDateStrFor(event.payload.entry.recognizedAt).slice(0,7)+(liveEventMode(event)==='catchup'?':catchup':''));

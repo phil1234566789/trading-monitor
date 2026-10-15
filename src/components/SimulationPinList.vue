@@ -1,4 +1,5 @@
 <script setup>
+import LiveEvidenceProvenance from './LiveEvidenceProvenance.vue';
 import {isLiveWatcherMonth} from '../liveWatcherMonth.js';
 import {pinBelongsToSource} from '../simulationPinSource.js';
 import { ref, computed, watch, nextTick } from 'vue';
@@ -45,6 +46,7 @@ function removeConfirmed() {
         <p>Pin-Typ: {{ pinTypeLabel(pin.pinType) }}</p>
         <button @click="emit('edit',pin)">Bearbeiten</button>
         <p v-if="pin.unmatchedReason">{{ pin.unmatchedReason }}</p>
+        <LiveEvidenceProvenance :source="pin.simulationContext?.source" />
         <p v-if="pin.originLabel">Ursprung: {{ pin.originLabel }}</p>
         <RouterLink v-if="pin.currentChartLink" :to="pin.currentChartLink" target="_blank" rel="noopener noreferrer">Im aktuellen Chart</RouterLink>
         <RouterLink v-if="pin.simulationContext?.chartLink" :to="pin.simulationContext.chartLink" target="_blank" rel="noopener noreferrer">Ursprünglicher Chart / Snapshot</RouterLink>

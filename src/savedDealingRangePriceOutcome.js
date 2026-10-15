@@ -8,6 +8,9 @@ export const DR_OUTCOME_LABELS = {
 };
 
 export function savedDealingRangePriceOutcome(group) {
+  const partial=[group.latestCandidate,group.snapshot,...group.entries].find(snapshot=>snapshot?.liveCoverage?.missingBeforeCapture);
+  if(partial)return {status:'unknown',label:DR_OUTCOME_LABELS.unknown,from:partial.liveCoverage.validatedAt,
+    through:partial.liveObservedThrough,reason:'Der Verlauf vor dem ersten gespeicherten Live-Prüfstand fehlt.'};
   const first = group.firstValidated;
   const observation = [group.latestCandidate, group.snapshot, ...group.entries]
     .map(s => s?.priceObservation).find(o => o?.version === DR_PRICE_OBSERVATION_VERSION

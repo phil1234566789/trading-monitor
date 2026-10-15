@@ -32,7 +32,7 @@ export function useSnapshotIndicators(props, snapshot, repository, fetchCandles 
       return requests.get(key);
     };
     try {
-      const run = await cached(props.tradeSetup2RunId, () => repository.getRun(props.tradeSetup2RunId));
+      const run = await cached(`${props.tradeSetup2RunId}:${source.configurationId ?? ''}`, () => source.configurationId?repository.getRun(props.tradeSetup2RunId,source.configurationId):repository.getRun(props.tradeSetup2RunId));
       if (signal.aborted) return;
       const config = run?.configuration?.instruments?.find(c => c.instrument === source.instrument) ?? run?.configuration;
       if (config?.instrument !== source.instrument || !supportsSnapshotIndicators(config.setupVersion) || !Array.isArray(config.sessions)) {
@@ -42,7 +42,7 @@ export function useSnapshotIndicators(props, snapshot, repository, fetchCandles 
         const anchor = snapshotM5Anchor(source);
         const count = bar === '5m' && Number.isFinite(anchor) ? Math.max(1000, Math.ceil((at-anchor)/300)+150) : 1000;
         if(count>50000)throw new Error('M5-Anker außerhalb des begrenzten Archivfensters.');
-        const rows = await cached(`${props.tradeSetup2RunId}:${at}:${bar}:${count}`, () => fetchCandles(source.instrument, bar, at, count));
+        const rows = await cached(`${props.tradeSetup2RunId}:${source.instrument}:${at}:${bar}:${count}`, () => fetchCandles(source.instrument, bar, at, count));
         const closed = closedChecklistCandles(rows, bar, at);
         const lastClose = closed.at(-1)?.time + barSecondsFor(bar);
         if (!closed.length || at - lastClose >= barSecondsFor(bar)) throw new Error(`${bar}: aktuelles geschlossenes Archivfenster fehlt.`);

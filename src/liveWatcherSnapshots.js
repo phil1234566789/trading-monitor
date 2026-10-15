@@ -1,21 +1,21 @@
-import {liveMonthBounds,liveMonthGroups} from './liveWatcherMonth.js';
+import {liveMonthBounds,liveMonthGroups,liveSourceMonth,liveSourceMode,liveEventMode} from './liveWatcherMonth.js';
 
 export function liveWatcherRun(option) {
-  const month=option.id.slice('live-watcher:'.length),{from,to}=liveMonthBounds(month);
+  const month=liveSourceMonth(option.id),{from,to}=liveMonthBounds(month);
   return {id:option.id,source:'live-watcher',status:'live',from:Date.parse(from)/1000,to:Date.parse(to)/1000,
-    configuration:{label:option.label ?? `Live-Watcher · ${new Intl.DateTimeFormat('de-DE',{month:'long',year:'numeric',timeZone:'Europe/Berlin'}).format(new Date(from))}`} ,provenance:{source:'Gespeicherte Live-Watcher-Ereignisse',limitations:[
-      'Nur ereignisbelegte DRs; keine vollständige Historie aller beobachteten DRs.',
-      'Ergebnisse, vollständige Checklisten, Lifecycle und damalige Session-/Strukturkonfiguration sind nicht gespeichert.']}};
+    evaluationMode:liveSourceMode(option.id),configuration:{label:option.label ?? `${liveSourceMode(option.id)==='catchup'?'Nachholerkennung':'Live-Watcher'} · ${new Intl.DateTimeFormat('de-DE',{month:'long',year:'numeric',timeZone:'Europe/Berlin'}).format(new Date(from))}`} ,provenance:{source:liveSourceMode(option.id)==='catchup'?'Gespeicherte Nachholerkennung':'Gespeicherte Live-Watcher-Belege',limitations:[
+      'Originalstände mit Quelle und Speicherzeit; ältere Alarmbelege können unvollständig sein.',
+      'Fehlende Originaldaten und Entry-Ergebnisse bleiben ausdrücklich unbekannt; keine nachträgliche Monatsberechnung.']}};
 }
 export function liveWatcherSnapshots(events,runId) {
-  return liveMonthGroups(events,runId.slice('live-watcher:'.length)).flatMap(group=>{
+  return liveMonthGroups(events.filter(event=>liveEventMode(event)===liveSourceMode(runId)),liveSourceMonth(runId)).flatMap(group=>{
     const through=Math.max(...group.events.map(event=>Date.parse(event.signal_at)/1000));
     const snapshots=group.events.filter(event=>event.stage!==3).concat(group.entries).map(event=>{
       const entry=event.stage===3?event.payload.entry:null;
       return {id:entry?.id ?? event.id,runId,source:'live-watcher',observationOnly:true,
         instrument:group.instrument,direction:group.direction,setupKey:group.setupKey,
         knownAt:entry?.recognizedAt ?? Date.parse(event.signal_at)/1000,entry,
-        liveObservedThrough:through,liveEventId:event.id,liveObservation:event.payload,
+        evaluationMode:liveEventMode(event),liveObservedThrough:through,liveEventId:event.id,liveObservation:event.payload,
         liveDetectedAt:Date.parse(event.detected_at)/1000,liveMissedReason:event.missed_reason ?? null,
         evidence:entry?entryEvidence(entry):[]};
     });
@@ -37,7 +37,7 @@ export function liveWatcherEntryResults(snapshot) {
     // Ausführbare Größe ist kein gespeicherter Exit, Gewinn oder noch offener Trade.
     return {...sizing,runId:snapshot.runId,snapshotId:snapshot.id,setupKey:snapshot.setupKey,
       instrument:snapshot.instrument,direction:snapshot.direction,entryId:snapshot.entry.id,
-      entryTime:snapshot.entry.recognizedAt,entryPrice:snapshot.entry.price,variant,
+      entryTime:snapshot.entry.recognizedAt,entryPrice:snapshot.entry.price,stopPrice:sizing.stopPrice ?? snapshot.entry.stops?.[variant]?.price ?? null,variant,
       evaluatedAt:snapshot.knownAt,status:'notStored',outcome:null,reason:'resultNotStored',
       netPnlUsd:null,pnlUsd:null,rMultiple:null,netRMultiple:null,commissionUsd:null};
   });

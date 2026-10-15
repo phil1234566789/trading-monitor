@@ -26,8 +26,8 @@ export function useSimulationPins(filters,run,results,{repository,datasets,runs}
           const entry=pin.kind==='simulation_entry',id=entry?pin.simulationEntrySnapshotId:pin.simulationSnapshotId;
           if(!id)return;
           const live=livePinSource(pin);
-          const key=JSON.stringify([pin.simulationRunId,live?.eventId,entry,id]);
-          if(!snapshotCache.has(key))snapshotCache.set(key,live?repository.getLivePinSnapshot(live.eventId):(entry?repository.getSnapshot:repository.getSetupSnapshot)(pin.simulationRunId,id));
+          const key=JSON.stringify([pin.simulationRunId,live?.eventId,live?.recordId,entry,id]);
+          if(!snapshotCache.has(key))snapshotCache.set(key,live?(live.recordId?repository.getLiveSnapshotPin(live.recordId):repository.getLivePinSnapshot(live.eventId)):(entry?repository.getSnapshot:repository.getSetupSnapshot)(pin.simulationRunId,id));
           try{resolved.set(pin.id,await snapshotCache.get(key));}
           catch{snapshotCache.delete(key);resolved.set(pin.id,{pinReadError:true});}
         }));
@@ -59,9 +59,11 @@ export function useSimulationPins(filters,run,results,{repository,datasets,runs}
       const t=target.value;
       if(t.existingId) {
         if(!await updatePinNote(t.existingId,note,pinType))throw new Error('Pin-Notiz konnte nicht gespeichert werden.');
-      } else await addSimulationPin({kind:t.kind,key:simulationPinKey(t),snapshotId:t.kind==='simulation_entry'?null:t.group.snapshot.id,
-        entrySnapshotId:t.entry?.id,checkpointKey:t.feature?.key,variant:t.entry?'both':null,
-        context:simulationPinSnapshot(t,run.value,results.value)},note,pinType);
+      } else {
+        const context=simulationPinSnapshot(t,run.value,results.value);
+        await addSimulationPin({kind:t.kind,key:simulationPinKey(t),snapshotId:t.kind==='simulation_entry'?null:context.snapshotId,
+          entrySnapshotId:t.entry?.id,checkpointKey:t.feature?.key,variant:t.entry?'both':null,context},note,pinType);
+      }
       await refresh();target.value=null;
     } catch(cause){error.value=cause.message || 'Pin konnte nicht gespeichert werden.';}
     finally{saving.value=false;}

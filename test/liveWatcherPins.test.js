@@ -24,8 +24,8 @@ it('keeps live identity stable across months, with an optional run and exact eve
  expect(matchSimulationPins([pin],[historical],'historical',new Map([[1,snapshots[0]]])).matched).toHaveLength(1);
 });
 it('scopes NULL-run deletes to explicit live sources, leaving ordinary run filters unchanged',()=>{
- const query={is:vi.fn().mockReturnThis(),not:vi.fn().mockReturnThis(),eq:vi.fn().mockReturnThis()};
- scopePinSource(query,runId);expect(query.is).toHaveBeenCalledWith('simulation_run_id',null);expect(query.not).toHaveBeenCalledWith('live_event_id','is',null);
+ const query={is:vi.fn().mockReturnThis(),or:vi.fn().mockReturnThis(),eq:vi.fn().mockReturnThis()};
+ scopePinSource(query,runId);expect(query.is).toHaveBeenCalledWith('simulation_run_id',null);expect(query.or).toHaveBeenCalledWith('live_event_id.not.is.null,live_snapshot_id.not.is.null');expect(query.eq).toHaveBeenCalledWith('simulation_context->source->>kind','live-watcher');
  scopePinSource(query,'old-run');expect(query.eq).toHaveBeenCalledWith('simulation_run_id','old-run');
 });
 it('saves through the same pin flow without a fake run and retains ordinary note edits',async()=>{
@@ -36,4 +36,19 @@ it('saves through the same pin flow without a fake run and retains ordinary note
 it('bulk-removes only the selected pins belonging to the chosen source',async()=>{
  fetchSimulationPins.mockResolvedValueOnce([{id:1,simulationRunId:null,liveEventId:event.id,simulationContext:{source:{kind:'live-watcher',eventId:event.id}}},{id:2,simulationRunId:'other'}]);
  const scope=effectScope(),state=scope.run(()=>useSimulationPins(ref({run:runId}),ref(run),ref([])));await vi.waitFor(()=>expect(state.pins.value).toHaveLength(2));await state.removeListed([1,2]);expect(removeSimulationPins).toHaveBeenCalledWith(runId,[1]);scope.stop();
+});
+
+it('does not bulk-remove original pins from a catchup view or rewrite their original context',async()=>{
+ const {pinBelongsToSource}=await import('../src/simulationPinSource.js');
+ const original={id:11,simulationRunId:null,liveEventId:event.id,simulationContext:{source:{kind:'live-watcher',eventId:event.id}}};
+ const late={id:12,simulationRunId:null,liveSnapshotId:'archive-sha',simulationContext:{source:{kind:'live-watcher',recordId:'archive-sha',evaluationMode:'catchup'}}};
+ expect(pinBelongsToSource(original,runId+':catchup')).toBe(false);expect(pinBelongsToSource(late,runId)).toBe(false);expect(pinBelongsToSource(late,runId+':catchup')).toBe(true);
+ const scope=effectScope(),state=scope.run(()=>useSimulationPins(ref({run:runId+':catchup'}),ref(run),ref([])));
+ await state.refresh();state.pins.value=[original,late];await state.removeListed([11,12]);expect(removeSimulationPins).toHaveBeenLastCalledWith(runId+':catchup',[12]);scope.stop();
+});
+
+it('rejects contradictory event and snapshot foreign-key origins instead of treating them as a native source',async()=>{
+ const {livePinSource}=await import('../src/simulationPinSource.js');
+ expect(livePinSource({simulationRunId:null,liveEventId:'event',liveSnapshotId:'row',simulationContext:{source:{kind:'live-watcher',recordId:'row'}}})).toBeNull();
+ expect(livePinSource({simulationRunId:null,liveSnapshotId:'row',simulationContext:{source:{kind:'live-watcher',eventId:'event'}}})).toBeNull();
 });

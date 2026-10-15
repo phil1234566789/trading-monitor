@@ -80,7 +80,7 @@ export function createSnapshotM1Reader(repository, fetchCandles) {
   const pending = new Map(),candles = new Map();
   return (runId, snapshot, at = snapshot.knownAt, {signal} = {}) => {
     signal?.throwIfAborted();
-    const key = `${runId}:${snapshot.id}:${at}`;
+    const key = `${runId}:${snapshot.configurationId ?? ""}:${snapshot.id}:${at}`;
     if (!pending.has(key)) {
       const request = load(runId, snapshot, at,signal).catch(error => { if(pending.get(key)===request)pending.delete(key); throw error; });
       pending.set(key, request);
@@ -98,7 +98,7 @@ export function createSnapshotM1Reader(repository, fetchCandles) {
       || context.anchor.recognizedAt > snapshot.knownAt) {
       return unavailable('M1-Ergänzung nicht verfügbar: kein bestätigter gespeicherter Anker.');
     }
-    const run = await repository.getRun(runId);
+    const run = await (snapshot.configurationId?repository.getRun(runId,snapshot.configurationId):repository.getRun(runId));
     signal?.throwIfAborted();
     const config = run?.configuration?.instruments?.find(c => c.instrument === snapshot.instrument) ?? run?.configuration;
     if (config?.instrument !== snapshot.instrument || !supportsSnapshotIndicators(config.setupVersion)

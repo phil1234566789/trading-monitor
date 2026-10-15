@@ -20,6 +20,7 @@ export function simulationRunInputs({configuration,from,to,fetchedAt,sourceHash,
     })};
 }
 export function simulationRunInputsLabel(run) {
+  if(run?.source==='live-watcher')return 'Konfiguration am jeweiligen Originalprüfstand gespeichert; bei alten Alarmbelegen unbekannt.';
   const inputs=run?.provenance?.inputs;
   return inputs?.version===RUN_INPUTS_VERSION ? inputs.instruments.map(i=>`${i.instrument} News: ${RUN_NEWS_LABELS[i.news.status] ?? 'Ladestatus unbekannt'} (${i.news.count})`).join(' · ') : 'Eingaben nicht festgehalten';
 }

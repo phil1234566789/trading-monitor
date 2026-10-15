@@ -37,9 +37,10 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
   const detailSnapshot=computed(()=>visibleSnapshot.value ?? (selected.value?.checklistHistory && props.showTradeSetup2
     ? {...selected.value,checklist:null,m1Check:null,historyEntry:null} : null));
   const runs=new Map();
-  const overlayRepository={getRun:run=>{
-    if(!runs.has(run))runs.set(run,repository.getRun(run).catch(e=>{runs.delete(run);throw e;}));
-    return runs.get(run);
+  const overlayRepository={getRun:(run,configurationId)=>{
+    const key=JSON.stringify([run,configurationId]);
+    if(!runs.has(key))runs.set(key,repository.getRun(run,configurationId).catch(e=>{runs.delete(key);throw e;}));
+    return runs.get(key);
   }};
   const snapshotM1=useSnapshotM1(props,visibleSnapshot,overlayRepository,undefined,evaluationTime);
   const snapshotIndicators=useSnapshotIndicators(props,visibleSnapshot,overlayRepository,undefined,evaluationTime);

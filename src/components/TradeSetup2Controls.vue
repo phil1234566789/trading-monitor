@@ -1,4 +1,5 @@
 <script setup>
+import LiveEvidenceProvenance from './LiveEvidenceProvenance.vue';
 import {formatDatedTime} from '../berlinTime.js';
 import {fmtPrice,pricePrecisionForInstrument} from '../format.js';
 import {dealingRangeLabel} from '../tradeSetup2DealingRange.js';
@@ -18,6 +19,7 @@ function choose(event,positions){const p=positions.find(p=>p.id===event.target.v
     <button v-else :disabled="loading" @click="emit('refresh')">↻</button>
     <small v-if="selected">Gespeicherter Stand: {{ formatDatedTime(selected.knownAt) }} Uhr{{ selected.entry?'':' · ohne Entry · Historie' }}</small>
     <small v-if="selected">{{ dealingRangeLabel(selected) }}</small><small v-if="Number.isFinite(selected?.liveDetectedAt)">Live erkannt: {{ formatDatedTime(selected.liveDetectedAt) }} · {{ selected.liveMissedReason }}</small>
+    <LiveEvidenceProvenance :snapshot="selected" />
     <button v-if="snapshotView" :disabled="loading" @click="emit('refresh')">Ergebnis aktualisieren</button>
     <small v-else role="status">{{ loading ? status : status || 'Gespeicherte Setups · Details per Klick' }}</small>
     <span v-if="error" role="alert">{{ error }}</span>
