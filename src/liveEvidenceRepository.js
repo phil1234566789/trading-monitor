@@ -1,17 +1,21 @@
 import {evidenceReferences,hydrateEvidence} from '../services/setup2/evidencePayload.js';
 import {fetchAllRows} from './dbReadPaging.js';
 import {liveMonthBounds,liveSourceMonth} from './liveWatcherMonth.js';
-import {SIMULATION_REVIEW_METADATA_FIELDS,simulationReviewMetadata} from './simulationReviewMetadata.js';
+import {simulationReviewMetadata,simulationReviewMetadataProjection} from './simulationReviewMetadata.js';
 const ROW_FIELDS='id,snapshot_id,instrument,setup_key,known_at,evaluated_through,captured_at,configuration_id,evaluation_mode';
 const FULL_FIELDS=ROW_FIELDS+',snapshot,observation';
 const M1_FIELDS=['evaluatedAt','instrument','entryPattern','trends','currentTrend','details','detailStatuses','sweepReaction','sweepPresentation','structureStart','conditions','retest','fvg','choch','bos'];
-const M1_ALIAS=SIMULATION_REVIEW_METADATA_FIELDS.match(/(review\d+):snapshot->m1Check(?:,|$)/)[1];
-const META_FIELDS=SIMULATION_REVIEW_METADATA_FIELDS.replace(`${M1_ALIAS}:snapshot->m1Check`,M1_FIELDS.map((key,i)=>`liveM1${i}:snapshot->m1Check->${key}`).join(',')).replace('id,run_id,instrument,direction',ROW_FIELDS+',direction:snapshot->>direction')
-  +',savedRangeCourse:observation->rangeCourse,savedPriceObservation:observation->priceObservation,savedCoverage:observation->coverage,observationVersion:observation->checklistHistory->>version';
+const MANIFEST_PAGE_SIZE=64;
+function project(row){
+ const {snapshot,observation}=row;
+ const m1Check=Object.fromEntries(M1_FIELDS.map(key=>[key,snapshot.m1Check?.[key]]).filter(([,value])=>value!=null));
+ return {...Object.fromEntries(ROW_FIELDS.split(',').map(key=>[key,row[key]])),direction:snapshot.direction,
+  ...simulationReviewMetadataProjection({...snapshot,m1Check}),savedRangeCourse:observation.rangeCourse,
+  savedPriceObservation:observation.priceObservation,savedCoverage:observation.coverage,observationVersion:observation.checklistHistory?.version};
+}
 function metadata(row,runId){
-  row={...row,[M1_ALIAS]:Object.fromEntries(M1_FIELDS.map((key,i)=>[key,row[`liveM1${i}`]]).filter(([,value])=>value!=null))};
-  return {...row,hasHistory:!!row.observationVersion,hasObservation:!!(row.savedRangeCourse || row.savedPriceObservation || row.savedCoverage || row.observationVersion),snapshot:simulationReviewMetadata({...row,id:row.snapshot_id,run_id:runId}),
-    observation:{rangeCourse:row.savedRangeCourse,priceObservation:row.savedPriceObservation,coverage:row.savedCoverage}};
+ return {...row,hasHistory:!!row.observationVersion,hasObservation:!!(row.savedRangeCourse || row.savedPriceObservation || row.savedCoverage || row.observationVersion),snapshot:simulationReviewMetadata({...row,id:row.snapshot_id,run_id:runId}),
+  observation:{rangeCourse:row.savedRangeCourse,priceObservation:row.savedPriceObservation,coverage:row.savedCoverage}};
 }
 export function createLiveEvidenceRepository(db){
  const months=new Map(),full=new Map(),configs=new Map(),payloads=new Map();
@@ -34,19 +38,20 @@ export function createLiveEvidenceRepository(db){
    let cache=months.get(month);if(!cache){cache={rows:new Map(),keys:new Set(),cursor:null,pending:null};months.set(month,cache);}
    if(cache.pending){await cache.pending;return [...cache.rows.values()].map(row=>metadata(row,runId));}
    cache.pending=(async()=>{
+    // Viele JSON-Einzelprojektionen entpacken TOAST je Feld erneut; Manifest einmal lesen und vor der Hydration projizieren.
     const rows=await pages((from,to)=>{
-     let query=db.from('setup2_live_snapshots').select(META_FIELDS).gte('evaluated_through',bounds.from).lt('known_at',bounds.to).order('captured_at').order('id');
+     let query=db.from('setup2_live_snapshots').select(FULL_FIELDS).gte('evaluated_through',bounds.from).lt('known_at',bounds.to).order('captured_at').order('id');
      if(cache.cursor)query=query.or(`captured_at.gt.${cache.cursor.at},and(captured_at.eq.${cache.cursor.at},id.gt.${cache.cursor.id})`);
-     return query.range(from,to);
+     return query.range(from,Math.min(to,from+MANIFEST_PAGE_SIZE-1));
     });
     const newKeys=[...new Set(rows.map(row=>row.setup_key))].filter(key=>!cache.keys.has(key));
     for(let i=0;i<newKeys.length;i+=100){
      const keys=newKeys.slice(i,i+100);
-     const context=await pages((from,to)=>db.from('setup2_live_snapshots').select(META_FIELDS).in('setup_key',keys).lt('known_at',bounds.from).order('captured_at').order('id').range(from,to));
-     for(const row of await hydrate(context))cache.rows.set(row.id,row);
+     const context=await pages((from,to)=>db.from('setup2_live_snapshots').select(FULL_FIELDS).in('setup_key',keys).lt('known_at',bounds.from).order('captured_at').order('id').range(from,Math.min(to,from+MANIFEST_PAGE_SIZE-1)));
+     for(const row of await hydrate(context.map(project)))cache.rows.set(row.id,row);
      keys.forEach(key=>cache.keys.add(key));
     }
-    for(const row of await hydrate(rows))cache.rows.set(row.id,row);
+    for(const row of await hydrate(rows.map(project)))cache.rows.set(row.id,row);
     if(rows.length)cache.cursor={at:rows.at(-1).captured_at,id:rows.at(-1).id};
     return [...cache.rows.values()].map(row=>metadata(row,runId));
    })().finally(()=>{cache.pending=null;});

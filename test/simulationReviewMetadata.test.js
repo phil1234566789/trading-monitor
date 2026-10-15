@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
 import {createSimulationRepository} from '../src/tradeSetupSimulationRepository.js';
-import {SIMULATION_REVIEW_METADATA_FIELDS,simulationReviewMetadata} from '../src/simulationReviewMetadata.js';
+import {SIMULATION_REVIEW_METADATA_FIELDS,simulationReviewMetadata,simulationReviewMetadataProjection} from '../src/simulationReviewMetadata.js';
 import {encodeSnapshotStructures} from '../src/tradeSetupSnapshotStorage.js';
 
 function project(snapshot){
@@ -20,7 +20,10 @@ it('projects decisions without chart pools, trees or history for raw/v1/v2 snaps
  const v2=encodeSnapshotStructures(large);
  expect(legacy.structureStorage.version).toBe('deduplicated-structures-v1');expect(v2.structureStorage.version).toBe('deduplicated-values-v2');
  const expected=simulationReviewMetadata(project(raw));
- for(const stored of [raw,legacy,v2])expect(simulationReviewMetadata(project(stored))).toEqual(expected);
+ for(const stored of [raw,legacy,v2]){
+  expect(simulationReviewMetadata(project(stored))).toEqual(expected);
+  expect(simulationReviewMetadata({id:raw.id,instrument:'GBPUSD',direction:'short',run_id:'run',...simulationReviewMetadataProjection(stored)})).toEqual(expected);
+ }
  expect(expected.checklist.checks.m5Trend).toEqual({status:'passed',details:['D'],m1Anchor:{recognizedAt:240}});
  expect(expected.checklist.setup.primary.reactionOB).toEqual(raw.checklist.setup.primary.reactionOB);expect(expected.checklist.entryPattern).toBe('legacy');expect(expected.checklist.setup.primary.sweep.level.touchedTime).toBe(180);
  for(const omitted of ['structureStorage','structureState','checklistHistory','primary,','obCandidates'])expect(SIMULATION_REVIEW_METADATA_FIELDS).not.toContain(omitted);

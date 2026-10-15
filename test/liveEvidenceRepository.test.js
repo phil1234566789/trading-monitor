@@ -57,3 +57,13 @@ it('offers one month and unites both modes, while resolving original catchup pin
  const linked=await repo.getEntry(run+':catchup','late-entry');expect(linked.snapshot.runId).toBe(run);expect(linked.snapshot.evaluationMode).toBe('catchup');
  const origin=await repo.getLiveSnapshotPin(duplicate.id);expect(origin.evidenceRecordId).toBe(duplicate.id);expect(origin.evaluationMode).toBe('catchup');
 });
+
+it('reads bounded packed manifests without repeated SQL JSON projections and excludes unused evidence before hydration',async()=>{
+ const f=fixture();f.first.snapshot.m1Check.structure={$liveEvidenceRef:'f'.repeat(64)};
+ f.first.observation.checklistHistory={version:'test',stages:{$liveEvidenceRef:'e'.repeat(64)}};
+ const rows=await createLiveEvidenceRepository(f.client).metadata(run);
+ expect(rows).toHaveLength(2);expect(rows[0].hasHistory).toBe(true);
+ const reads=f.requests.filter(r=>r.table==='setup2_live_snapshots');
+ expect(reads.length).toBeGreaterThan(1);expect(reads.every(r=>!r.fields.includes('->')&&r.fields.endsWith(',snapshot,observation')&&r.to-r.from<64)).toBe(true);
+ expect(rows[0].snapshot.m1Check.structure).toBeUndefined();expect(rows[0].observation.checklistHistory).toBeUndefined();
+});

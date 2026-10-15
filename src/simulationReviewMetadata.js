@@ -14,6 +14,10 @@ const paths = [
 export const SIMULATION_REVIEW_METADATA_FIELDS = ['id,run_id,instrument,direction',
   ...paths.map((path,i)=>`review${i}:snapshot->${path.split('.').join('->')}`)].join(',');
 
+export function simulationReviewMetadataProjection(snapshot) {
+  return Object.fromEntries(paths.map((path,i)=>[`review${i}`,path.split('.').reduce((value,key)=>value?.[key],snapshot) ?? null]));
+}
+
 export function simulationReviewMetadata(row) {
   const snapshot={id:row.id,runId:row.run_id,instrument:row.instrument,direction:row.direction};
   paths.forEach((path,i)=>{
