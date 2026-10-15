@@ -38,13 +38,13 @@ it('bulk-removes only the selected pins belonging to the chosen source',async()=
  const scope=effectScope(),state=scope.run(()=>useSimulationPins(ref({run:runId}),ref(run),ref([])));await vi.waitFor(()=>expect(state.pins.value).toHaveLength(2));await state.removeListed([1,2]);expect(removeSimulationPins).toHaveBeenCalledWith(runId,[1]);scope.stop();
 });
 
-it('does not bulk-remove original pins from a catchup view or rewrite their original context',async()=>{
+it('keeps both original pin sources usable in the unified month without rewriting their contexts',async()=>{
  const {pinBelongsToSource}=await import('../src/simulationPinSource.js');
  const original={id:11,simulationRunId:null,liveEventId:event.id,simulationContext:{source:{kind:'live-watcher',eventId:event.id}}};
  const late={id:12,simulationRunId:null,liveSnapshotId:'archive-sha',simulationContext:{source:{kind:'live-watcher',recordId:'archive-sha',evaluationMode:'catchup'}}};
- expect(pinBelongsToSource(original,runId+':catchup')).toBe(false);expect(pinBelongsToSource(late,runId)).toBe(false);expect(pinBelongsToSource(late,runId+':catchup')).toBe(true);
+ expect(pinBelongsToSource(original,runId+':catchup')).toBe(true);expect(pinBelongsToSource(late,runId)).toBe(true);expect(pinBelongsToSource(late,runId+':catchup')).toBe(true);
  const scope=effectScope(),state=scope.run(()=>useSimulationPins(ref({run:runId+':catchup'}),ref(run),ref([])));
- await state.refresh();state.pins.value=[original,late];await state.removeListed([11,12]);expect(removeSimulationPins).toHaveBeenLastCalledWith(runId+':catchup',[12]);scope.stop();
+ await state.refresh();state.pins.value=[original,late];await state.removeListed([11,12]);expect(removeSimulationPins).toHaveBeenLastCalledWith(runId+':catchup',[11,12]);scope.stop();
 });
 
 it('rejects contradictory event and snapshot foreign-key origins instead of treating them as a native source',async()=>{

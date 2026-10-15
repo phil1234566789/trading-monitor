@@ -11,10 +11,10 @@ const event={id:'event',instrument:'EURUSD',direction:'short',setup_key:'dr',kin
 const row=(id='row',mode='live',snapshot={})=>({id,snapshot_id:snapshot.id ?? 'entry',setup_key:'dr',instrument:'EURUSD',configuration_id:'config-original',evaluation_mode:mode,
  known_at:new Date(at*1000).toISOString(),captured_at:new Date((at+60)*1000).toISOString(),evaluated_through:new Date(at*1000).toISOString(),
  snapshot:{id:'entry',setupKey:'dr',instrument:'EURUSD',direction:'short',knownAt:at,entry,...snapshot},observation:{}});
-it('preserves every original event entry and keeps explicitly late detections out of the live source',()=>{
+it('unites live and late entries in one month without replacing original live facts',()=>{
  const catchup=row('late','catchup',{id:'later-entry',entry:{...entry,id:'later-entry',price:1.13}}),live=liveEvidenceView([event],[row(),catchup],run),late=liveEvidenceView([event],[row(),catchup],run+':catchup');
- expect(live.map(s=>s.entry.id)).toEqual(['entry']);expect(live[0].entry).toEqual(entry);expect(live[0].liveEventId).toBe('event');
- expect(late.map(s=>s.entry.id)).toEqual(['later-entry']);expect(late[0].evaluationMode).toBe('catchup');
+ expect(live.map(s=>s.entry.id)).toEqual(['entry','later-entry']);expect(live[0].entry).toEqual(entry);expect(live[0].liveEventId).toBe('event');
+ expect(late).toEqual(live);expect(late.find(s=>s.id==='later-entry').evaluationMode).toBe('catchup');
  const conflicting=row('conflict','live',{entry:{...entry,price:9}});expect(liveEvidenceView([event],[conflicting],run)[0].entry.price).toBe(entry.price);
 });
 it('joins the latest nonempty observation separately, without substituting another original configuration or checklist',()=>{
@@ -61,4 +61,33 @@ it('keeps later outcome provenance separate from the pinned original entry and i
  expect(context.source).toMatchObject({recordId:'row',evaluatedThrough:new Date(at*1000).toISOString()});
  expect(context.observationSource).toMatchObject({recordId:'later-observation',capturedAt:observed.captured_at,evaluatedThrough:observed.evaluated_through});
  expect(snapshot.observationEvaluatedThrough).toBe(observed.evaluated_through);
+});
+
+it('deduplicates the original entry ID across sources and retains late review evidence independently',()=>{
+ const original=row('original','live'),late={...row('late','catchup',{id:'different-snapshot-id',entry:{...entry,price:9},checklist:{status:'ready',model:'countertrend',evaluatedAt:at,checks:{m5Trend:{status:'passed'}},setup:{primary:{}}}}),captured_at:new Date((at+300)*1000).toISOString()};
+ for(const events of [[event],[]]){
+ const snapshots=liveEvidenceView(events,[late,original],run),snapshot=snapshots[0];
+ expect(snapshots).toHaveLength(1);expect(snapshot.entry).toEqual(entry);expect(snapshot.evaluationMode).toBe('live');expect(snapshot.additionalChecks).toHaveLength(1);expect(snapshot.additionalChecks[0]).toMatchObject({evaluationMode:'catchup',entry:{price:9},evidenceRecordId:'late'});
+ expect(runFunnel(reviewGroups(snapshots),liveEvidenceResults(snapshots)).entries).toBe(1);
+ }
+});
+it('prefers actual live archive facts to an earlier late event without relabelling the late event as a live alarm',()=>{
+ const lateEvent={...event,payload:{...event.payload,entry:{...entry,price:9},provenance:{evaluationMode:'catchup'}}};
+ const snapshot=liveEvidenceView([lateEvent],[row('live','live')],run)[0];
+ expect(snapshot.entry.price).toBe(entry.price);expect(snapshot.evaluationMode).toBe('live');expect(snapshot.liveEventId).toBeUndefined();expect(snapshot.additionalChecks.some(s=>s.liveEventId===event.id)).toBe(true);
+});
+
+it('preserves the entire original stop evidence required by pin validation, independently of JSONB key order',()=>{
+ const stops={wide:{price:1.13,sourceTime:at-60,structuralPrice:1.14},narrow:{price:1.125}},original={...event,payload:{...event.payload,entry:{...entry,stops}}};
+ const reordered={narrow:{price:1.125},wide:{structuralPrice:1.14,sourceTime:at-60,price:1.13}},same=row('same','live',{entry:{...entry,stops:reordered}});
+ expect(liveEvidenceView([original],[same],run)[0].evidenceRecordId).toBe('same');
+ const changed=row('changed','live',{entry:{...entry,stops:{...stops,wide:{...stops.wide,sourceTime:at-120}}}}),snapshot=liveEvidenceView([original],[changed],run)[0];
+ expect(snapshot.entry.stops).toEqual(stops);expect(snapshot.evidenceRecordId).toBeUndefined();expect(snapshot.additionalChecks[0].evidenceRecordId).toBe('changed');
+});
+
+it('adds late observations without replacing original live checklist history from the same configuration',()=>{
+ const original=row('original'),own={...row('live-history','live',{id:'live-minute',entry:null,knownAt:at+60}),evaluated_through:new Date((at+60)*1000).toISOString(),observation:{checklistHistory:{version:'saved',entries:['actual live history']}}};
+ const late={...row('late-history','catchup',{id:'late-minute',entry:null,knownAt:at+120}),evaluated_through:new Date((at+120)*1000).toISOString(),observation:{checklistHistory:{version:'saved',entries:['retrospective history']},priceObservation:{stage1:'target1'}}};
+ const snapshot=liveEvidenceView([],[original,late,own],run).find(snapshot=>snapshot.id==='entry');
+ expect(snapshot.checklistHistory.entries).toEqual(['actual live history']);expect(snapshot.checklistHistoryRecordId).toBe('live-history');expect(snapshot.observationRecordId).toBe('late-history');expect(snapshot.observationEvaluationMode).toBe('catchup');
 });

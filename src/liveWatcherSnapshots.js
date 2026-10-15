@@ -1,14 +1,17 @@
-import {liveMonthBounds,liveMonthGroups,liveSourceMonth,liveSourceMode,liveEventMode} from './liveWatcherMonth.js';
+import {liveMonthBounds,liveMonthGroups,liveSourceMonth,liveMonthViewId,liveEventMode} from './liveWatcherMonth.js';
 
 export function liveWatcherRun(option) {
+  option={...option,id:liveMonthViewId(option.id)};
   const month=liveSourceMonth(option.id),{from,to}=liveMonthBounds(month);
   return {id:option.id,source:'live-watcher',status:'live',from:Date.parse(from)/1000,to:Date.parse(to)/1000,
-    evaluationMode:liveSourceMode(option.id),configuration:{label:option.label ?? `${liveSourceMode(option.id)==='catchup'?'Nachholerkennung':'Live-Watcher'} · ${new Intl.DateTimeFormat('de-DE',{month:'long',year:'numeric',timeZone:'Europe/Berlin'}).format(new Date(from))}`} ,provenance:{source:liveSourceMode(option.id)==='catchup'?'Gespeicherte Nachholerkennung':'Gespeicherte Live-Watcher-Belege',limitations:[
+    configuration:{label:option.label ?? `Live-Watcher · ${new Intl.DateTimeFormat('de-DE',{month:'long',year:'numeric',timeZone:'Europe/Berlin'}).format(new Date(from))}`} ,provenance:{source:'Gespeicherte Live-Watcher-Belege einschließlich nachträglicher Erkennungen',limitations:[
       'Originalstände mit Quelle und Speicherzeit; ältere Alarmbelege können unvollständig sein.',
       'Fehlende Originaldaten und Entry-Ergebnisse bleiben ausdrücklich unbekannt; keine nachträgliche Monatsberechnung.']}};
 }
 export function liveWatcherSnapshots(events,runId) {
-  return liveMonthGroups(events.filter(event=>liveEventMode(event)===liveSourceMode(runId)),liveSourceMonth(runId)).flatMap(group=>{
+  runId=liveMonthViewId(runId);
+  const ordered=events.toSorted((a,b)=>Number(liveEventMode(a)==='catchup')-Number(liveEventMode(b)==='catchup'));
+  return liveMonthGroups(ordered,liveSourceMonth(runId)).flatMap(group=>{
     const through=Math.max(...group.events.map(event=>Date.parse(event.signal_at)/1000));
     const snapshots=group.events.filter(event=>event.stage!==3).concat(group.entries).map(event=>{
       const entry=event.stage===3?event.payload.entry:null;

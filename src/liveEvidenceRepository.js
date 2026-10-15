@@ -10,7 +10,7 @@ const META_FIELDS=SIMULATION_REVIEW_METADATA_FIELDS.replace(`${M1_ALIAS}:snapsho
   +',savedRangeCourse:observation->rangeCourse,savedPriceObservation:observation->priceObservation,savedCoverage:observation->coverage,observationVersion:observation->checklistHistory->>version';
 function metadata(row,runId){
   row={...row,[M1_ALIAS]:Object.fromEntries(M1_FIELDS.map((key,i)=>[key,row[`liveM1${i}`]]).filter(([,value])=>value!=null))};
-  return {...row,hasObservation:!!(row.savedRangeCourse || row.savedPriceObservation || row.savedCoverage || row.observationVersion),snapshot:simulationReviewMetadata({...row,id:row.snapshot_id,run_id:runId}),
+  return {...row,hasHistory:!!row.observationVersion,hasObservation:!!(row.savedRangeCourse || row.savedPriceObservation || row.savedCoverage || row.observationVersion),snapshot:simulationReviewMetadata({...row,id:row.snapshot_id,run_id:runId}),
     observation:{rangeCourse:row.savedRangeCourse,priceObservation:row.savedPriceObservation,coverage:row.savedCoverage}};
 }
 export function createLiveEvidenceRepository(db){

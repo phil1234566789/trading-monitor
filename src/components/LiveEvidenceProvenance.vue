@@ -1,6 +1,6 @@
 <script setup>
 import {formatDatedTime} from '../berlinTime.js';
-defineProps({snapshot:Object,source:Object,observation:Object});
+defineProps({snapshot:Object,source:Object,observation:Object,review:Boolean});
 const partial=snapshot=>{
  const observation=snapshot?.priceObservation;
  if(!snapshot?.liveCoverage?.missingBeforeCapture || !observation)return '';
@@ -9,10 +9,10 @@ const partial=snapshot=>{
 const date=value=>Number.isFinite(value)?formatDatedTime(value):formatDatedTime(Date.parse(value)/1000);
 </script>
 <template>
-  <small v-if="source?.recordId || snapshot?.evidenceRecordId" class="evidence-provenance">
-    {{ (source?.evaluationMode ?? snapshot?.evaluationMode)==='catchup'?'Nachholerkennung':'Original-Liveprüfung' }} · gespeichert {{ date(source?.capturedAt ?? snapshot.evidenceCapturedAt) }} · ausgewertet bis {{ date(source?.evaluatedThrough ?? snapshot.evidenceEvaluatedThrough) }} (Europe/Berlin)
-    <span v-if="snapshot?.observationCapturedAt && snapshot.observationCapturedAt!==snapshot.evidenceCapturedAt"> · späterer Verlauf gespeichert {{ date(snapshot.observationCapturedAt) }} · Verlauf bis {{ date(snapshot.observationEvaluatedThrough ?? snapshot.liveObservedThrough) }}</span>
-    <span v-if="observation?.recordId"> · späterer Verlauf gespeichert {{ date(observation.capturedAt) }} · ausgewertet bis {{ date(observation.evaluatedThrough) }}</span>
+  <small v-if="source?.recordId || snapshot?.evidenceRecordId || snapshot?.evaluationMode==='catchup'" class="evidence-provenance">
+    {{ (source?.evaluationMode ?? snapshot?.evaluationMode)==='catchup'?(review?'Nachträglicher Prüfstand':'Nachträglich erkannt'):'Original-Liveprüfung' }}<template v-if="source?.capturedAt || snapshot?.evidenceCapturedAt"> · gespeichert {{ date(source?.capturedAt ?? snapshot.evidenceCapturedAt) }} · ausgewertet bis {{ date(source?.evaluatedThrough ?? snapshot.evidenceEvaluatedThrough) }} (Europe/Berlin)</template>
+    <span v-if="snapshot?.observationCapturedAt && snapshot.observationCapturedAt!==snapshot.evidenceCapturedAt"> · {{ snapshot.observationEvaluationMode==='catchup'?'nachträglicher Verlauf':'späterer Verlauf' }} gespeichert {{ date(snapshot.observationCapturedAt) }} · Verlauf bis {{ date(snapshot.observationEvaluatedThrough ?? snapshot.liveObservedThrough) }}</span>
+    <span v-if="observation?.recordId"> · {{ observation.evaluationMode==='catchup'?'nachträglicher Verlauf':'späterer Verlauf' }} gespeichert {{ date(observation.capturedAt) }} · ausgewertet bis {{ date(observation.evaluatedThrough) }}</span>
     <span v-if="snapshot?.liveCoverage?.missingBeforeCapture || observation?.coverage?.missingBeforeCapture"> · Verlauf vor dem ersten gespeicherten Prüfstand nicht belegt</span>
     <span v-if="partial(snapshot)"> · {{ partial(snapshot) }}</span>
   </small>

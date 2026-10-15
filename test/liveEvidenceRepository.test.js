@@ -46,3 +46,14 @@ it('loads all entries of a selected DR in a single bounded archive batch, withou
  expect(entries.map(row=>row.snapshot.id)).toEqual(['one','two']);expect(entries.every(row=>row.results.every(result=>result.status==='notStored'&&result.netPnlUsd===null))).toBe(true);
  const reads=f.requests.slice(start).filter(r=>r.table==='setup2_live_snapshots');expect(reads).toHaveLength(2);expect(reads[0].fields.endsWith(',snapshot,observation')).toBe(true);expect(reads.map(r=>r.from)).toEqual([0,2]);
 });
+
+it('offers one month and unites both modes, while resolving original catchup pins to their unchanged archive row',async()=>{
+ const f=fixture(),late=f.make('late-entry',at+120);late.evaluation_mode='catchup';
+ const duplicate={...f.first,id:hash('late-copy'),evaluation_mode:'catchup'};
+ f.tables.setup2_live_snapshots.push(duplicate,late);f.tables.setup2_live_payloads=[...f.payloads.values()];
+ const repo=createSetup2Repository(f.client),options=await repo.listRuns();
+ expect(options.filter(option=>option.id==='live-watcher:2026-10')).toHaveLength(1);expect(options.some(option=>option.id.endsWith(':catchup'))).toBe(false);
+ const snapshots=await repo.listReviewMetadata(run);expect(snapshots).toHaveLength(3);expect(snapshots.find(snapshot=>snapshot.id==='one').evaluationMode).toBe('live');
+ const linked=await repo.getEntry(run+':catchup','late-entry');expect(linked.snapshot.runId).toBe(run);expect(linked.snapshot.evaluationMode).toBe('catchup');
+ const origin=await repo.getLiveSnapshotPin(duplicate.id);expect(origin.evidenceRecordId).toBe(duplicate.id);expect(origin.evaluationMode).toBe('catchup');
+});

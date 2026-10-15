@@ -24,6 +24,7 @@ it.each(['ordinary','live','catchup'])('routes %s source through the existing st
  const router=createRouter({history:createMemoryHistory(),routes:[{path:'/statistik',component:Statistik},{path:'/',component:{template:'<div/>'}}]});await router.push({path:'/statistik',query:{run:id}});
  const app=createSSRApp(Statistik);app.use(router);const html=await renderToString(app);
  expect(html).toContain('class="dr-list"');expect(html).toContain('class="dr-card"');expect(html).toContain('class="entry-scroll"');expect(html).toContain('class="metric-grid"');expect(html).toContain('class="statistics-filters"');expect(html).toContain('DR-Ausgang');expect(html).toContain('Ergebnis nicht gespeichert');expect(html).toContain('setup2=original-entry');
- if(source!=='ordinary'){expect(html).toContain(source==='catchup'?'Nachholerkennung':'Originale Live-Erkennungen');expect(html).not.toContain('Nur ereignisbelegte DRs');}
+ if(source!=='ordinary'){expect(html).toContain('Gemeinsame Monatsansicht');expect(html).not.toContain('Nur ereignisbelegte DRs');}
+ if(source==='catchup'){expect(html).toContain('frühere Nachholerkennungs-Link');expect(html).not.toContain('value="live-watcher:2026-10:catchup"');}
  expect(html).not.toContain('class="live-month"');expect(html).not.toContain('/live-watcher-entry');
 });

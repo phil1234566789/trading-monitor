@@ -1,37 +1,55 @@
 import {liveWatcherSnapshots,liveWatcherEntryResults} from './liveWatcherSnapshots.js';
-import {liveSourceMode} from './liveWatcherMonth.js';
+import {liveMonthViewId} from './liveWatcherMonth.js';
 const seconds=value=>Date.parse(value)/1000;
+const identity=snapshot=>snapshot.entry?.id ?? snapshot.id;
 function sourceSnapshot(row,runId){
  return {...row.snapshot,runId,source:'live-watcher',configurationId:row.configuration_id,evidenceRecordId:row.id,
   evaluationMode:row.evaluation_mode,evidenceCapturedAt:row.captured_at,evidenceEvaluatedThrough:row.evaluated_through};
 }
+// JSONB-Schlüsselreihenfolge ist kein anderer gespeicherter Stop.
+const storedSignature=value=>JSON.stringify(value,(_,child)=>child && typeof child==='object' && !Array.isArray(child)?Object.fromEntries(Object.entries(child).sort(([a],[b])=>a.localeCompare(b))):child);
 function sameOriginalEntry(a,b){
  return a.id===b.id && a.recognizedAt===b.recognizedAt && a.price===b.price && a.entryCategory===b.entryCategory
-  && a.stops?.wide?.price===b.stops?.wide?.price && a.stops?.narrow?.price===b.stops?.narrow?.price;
+  && storedSignature(a.stops)===storedSignature(b.stops);
 }
 export function liveEvidenceView(events,rows,runId){
- const mode=liveSourceMode(runId),eventSnapshots=liveWatcherSnapshots(events,runId),byId=new Map(eventSnapshots.map(s=>[s.id,s])),latest=new Map();
- const ordered=rows.filter(row=>row.evaluation_mode===mode).toSorted((a,b)=>seconds(a.captured_at)-seconds(b.captured_at)||a.id.localeCompare(b.id));
- const chosen=new Set();
+ runId=liveMonthViewId(runId);
+ const eventSnapshots=liveWatcherSnapshots(events,runId),byId=new Map(eventSnapshots.map(s=>[identity(s),s])),latest=new Map(),histories=new Map();
+ const ordered=rows.toSorted((a,b)=>Number(a.evaluation_mode==='catchup')-Number(b.evaluation_mode==='catchup')||seconds(a.captured_at)-seconds(b.captured_at)||a.id.localeCompare(b.id));
+ const remember=(map,key,row)=>{
+  const previous=map.get(key);
+  if(!previous || seconds(row.evaluated_through)>seconds(previous.evaluated_through)
+   || seconds(row.evaluated_through)===seconds(previous.evaluated_through)&&seconds(row.captured_at)>seconds(previous.captured_at))map.set(key,row);
+ };
+ const historyKey=snapshot=>JSON.stringify([snapshot.setupKey,snapshot.configurationId,snapshot.evaluationMode]);
+ const chosen=new Set(),additional=new Map();
+ const supplement=(original,snapshot)=>{
+  const key=`${snapshot.evaluationMode}:${snapshot.configurationId}`,checks=additional.get(identity(original)) ?? new Map();
+  const previous=checks.get(key);
+  if(!previous || seconds(snapshot.evidenceEvaluatedThrough)>seconds(previous.evidenceEvaluatedThrough))checks.set(key,snapshot);
+  additional.set(identity(original),checks);
+ };
  for(const row of ordered){
   const snapshot=sourceSnapshot(row,runId),key=snapshot.setupKey;
-  const previousObservation=latest.get(key);
   const hasObservation=row.hasObservation ?? Object.values(row.observation ?? {}).some(value=>value!=null);
-  if(hasObservation && (!previousObservation || seconds(row.evaluated_through)>seconds(previousObservation.evaluated_through)
-    || seconds(row.evaluated_through)===seconds(previousObservation.evaluated_through)&&seconds(row.captured_at)>seconds(previousObservation.captured_at)))latest.set(key,row);
-  if(chosen.has(snapshot.id))continue;chosen.add(snapshot.id);
-  const original=byId.get(snapshot.id);
+  if(hasObservation)remember(latest,key,row);
+  if(row.hasHistory ?? !!row.observation?.checklistHistory)remember(histories,historyKey(snapshot),row);
+  const original=byId.get(identity(snapshot)),replacesLate=original?.evaluationMode==='catchup' && snapshot.evaluationMode==='live';
+  if(chosen.has(identity(snapshot)) || original?.evaluationMode==='live' && snapshot.evaluationMode==='catchup'){if(original)supplement(original,snapshot);continue;}
+  chosen.add(identity(snapshot));
   // Spätere Archivbelege dürfen den ursprünglichen Alarm-Entry nicht umdeuten.
-  if(original?.entry && snapshot.entry && !sameOriginalEntry(original.entry,snapshot.entry))continue;
-  byId.set(snapshot.id,{...snapshot,...(original?{liveEventId:original.liveEventId,liveDetectedAt:original.liveDetectedAt,liveMissedReason:original.liveMissedReason,
+  if(original && !replacesLate && (original.instrument!==snapshot.instrument || original.direction!==snapshot.direction || original.setupKey!==snapshot.setupKey || original.entry && snapshot.entry && !sameOriginalEntry(original.entry,snapshot.entry))){supplement(original,snapshot);continue;}
+  if(replacesLate)supplement(snapshot,original);
+  byId.set(identity(snapshot),{...snapshot,...(original?.evaluationMode===snapshot.evaluationMode?{liveEventId:original.liveEventId,liveDetectedAt:original.liveDetectedAt,liveMissedReason:original.liveMissedReason,
     liveObservation:original.liveObservation,...(original.entry?{entry:original.entry}:{})}:{} )});
  }
- return [...byId.values()].map(snapshot=>{
+ return [...byId.values()].map(original=>{
+  const history=histories.get(historyKey(original));
+  const snapshot={...original,...(history?{checklistHistoryRecordId:history.id,...(history.observation.checklistHistory?{checklistHistory:history.observation.checklistHistory}:{})}:{}),additionalChecks:[...additional.get(identity(original))?.values() ?? []]};
   const row=latest.get(snapshot.setupKey),observation=row?.observation;
   if(!observation)return snapshot;
   return {...snapshot,rangeCourse:observation.rangeCourse ?? snapshot.rangeCourse,priceObservation:observation.priceObservation ?? snapshot.priceObservation,
-    ...(row.configuration_id===snapshot.configurationId && observation.checklistHistory?{checklistHistory:observation.checklistHistory}:{}),
-    liveCoverage:observation.coverage,liveObservedThrough:Math.max(snapshot.knownAt,seconds(row.evaluated_through)),observationCapturedAt:row.captured_at,observationEvaluatedThrough:row.evaluated_through,observationConfigurationId:row.configuration_id,observationRecordId:row.id};
+    liveCoverage:observation.coverage,liveObservedThrough:Math.max(snapshot.knownAt,seconds(row.evaluated_through)),observationCapturedAt:row.captured_at,observationEvaluatedThrough:row.evaluated_through,observationConfigurationId:row.configuration_id,observationEvaluationMode:row.evaluation_mode,observationRecordId:row.id};
  });
 }
 export function liveEvidenceResults(snapshots){

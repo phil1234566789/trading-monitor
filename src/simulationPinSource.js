@@ -1,4 +1,4 @@
-import {isLiveWatcherMonth,liveSourceMode} from './liveWatcherMonth.js';
+import {isLiveWatcherMonth} from './liveWatcherMonth.js';
 export function livePinSource(pin){
  const source=pin.simulationContext?.source;
  if(pin.simulationRunId || source?.kind!=='live-watcher')return null;
@@ -7,7 +7,7 @@ export function livePinSource(pin){
 }
 export function pinBelongsToSource(pin,viewId){
  const source=livePinSource(pin);
- return pin.simulationRunId===viewId || isLiveWatcherMonth(viewId) && !!source && (source.evaluationMode ?? 'live')===liveSourceMode(viewId);
+ return pin.simulationRunId===viewId || isLiveWatcherMonth(viewId) && !!source;
 }
 export function scopePinSource(query,viewId){
  return isLiveWatcherMonth(viewId)?query.is('simulation_run_id',null).or('live_event_id.not.is.null,live_snapshot_id.not.is.null').eq('simulation_context->source->>kind','live-watcher'):query.eq('simulation_run_id',viewId);

@@ -1,5 +1,5 @@
 import {livePinSource} from './simulationPinSource.js';
-import {isLiveWatcherMonth,liveSourceMode} from './liveWatcherMonth.js';
+import {isLiveWatcherMonth} from './liveWatcherMonth.js';
 import { simulationPinKey } from './simulationPinSnapshot.js';
 import { featureDetails } from './simulationReviewFeatures.js';
 import { simulationChartLink } from './tradeSetupSimulationStatistics.js';
@@ -50,8 +50,8 @@ export function matchSimulationPins(pins,groups,runId,origins=new Map(),runs=[])
   for(const pin of pins) {
     const live=livePinSource(pin);
     const originRun=runs.find(r=>r.id===pin.simulationRunId);
-    const base={...pin,originLabel:live?(live.evaluationMode==='catchup'?'Nachholerkennung · später gespeichert':live.recordId?'Live-Watcher · Originalprüfstand':'Live-Watcher · Originalereignis'):originRun?simulationRunLabel(originRun):`Ursprünglicher Lauf ${pin.simulationRunId}`};
-    const native=pin.simulationRunId===runId || !!live && isLiveWatcherMonth(runId) && (live.evaluationMode ?? 'live')===liveSourceMode(runId);
+    const base={...pin,originLabel:live?(live.evaluationMode==='catchup'?'Nachträglich erkannt · Originalquelle':live.recordId?'Live-Watcher · Originalprüfstand':'Live-Watcher · Originalereignis'):originRun?simulationRunLabel(originRun):`Ursprünglicher Lauf ${pin.simulationRunId}`};
+    const native=pin.simulationRunId===runId || !!live && isLiveWatcherMonth(runId);
     const origin=origins.get(pin.id);
     const key=simulationDrIdentity(origin);
     const reference=pin.simulationSnapshotId ?? pin.simulationEntrySnapshotId;

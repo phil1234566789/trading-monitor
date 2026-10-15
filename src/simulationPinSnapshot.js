@@ -19,7 +19,7 @@ export function simulationPinSnapshot(target,run,results,pinnedAt=new Date().toI
     :{kind:'live-watcher',eventId:sourceSnapshot.liveEventId,evaluationMode:sourceSnapshot.evaluationMode ?? 'live',viewId:'live-watcher:'+berlinDateStrFor(sourceSnapshot.knownAt).slice(0,7)};
   return {contextVersion:record?'simulation-pin-context-v4':live?'simulation-pin-context-v3':'simulation-pin-context-v2',
     ...(live?{source}:{}),...(record && sourceSnapshot.observationRecordId?{observationSource:{
-      recordId:sourceSnapshot.observationRecordId,configurationId:sourceSnapshot.observationConfigurationId,
+      recordId:sourceSnapshot.observationRecordId,configurationId:sourceSnapshot.observationConfigurationId,evaluationMode:sourceSnapshot.observationEvaluationMode,
       capturedAt:sourceSnapshot.observationCapturedAt,evaluatedThrough:sourceSnapshot.observationEvaluatedThrough,
       coverage:sourceSnapshot.liveCoverage ?? null}}:{}),dealingRangeVersion:(record?sourceSnapshot:group.latestCandidate ?? snapshot).dealingRange?.version ?? null,
     dealingRangeReason:(record?sourceSnapshot:group.latestCandidate ?? snapshot).dealingRange?.reason ?? null,kind,runId:live?null:snapshot.runId,runVersion:run?.version ?? null,ruleVersion:(live?sourceSnapshot:snapshot).checklist?.ruleVersion ?? null,
