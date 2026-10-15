@@ -5292,9 +5292,9 @@
     "semantic_hash": ""
   },
   "src/composables/useSimulationComparison.js": {
-    "mtime": 1792049269.296117,
-    "seen": 1792050945.111215,
-    "ast_hash": "a1394f5b1a185474bf40c9275c350552",
+    "mtime": 1792064400.7567165,
+    "seen": 1792064839.6983342,
+    "ast_hash": "207c6d7f9f4dd7341a1b9a682b46b9bd",
     "semantic_hash": ""
   },
   "test/simulationReviewFeatures.test.js": {
@@ -6258,9 +6258,9 @@
     "semantic_hash": ""
   },
   "src/liveWatcherMonth.js": {
-    "mtime": 1792055232.9416125,
-    "seen": 1792055575.4714594,
-    "ast_hash": "3884e556afa9b536fbcd9d88ba372bab",
+    "mtime": 1792064158.1338737,
+    "seen": 1792064839.7093377,
+    "ast_hash": "9295a6ab1c0ccfa67fc297f782af0336",
     "semantic_hash": ""
   },
   "test/liveWatcherMonth.test.js": {
@@ -6276,15 +6276,15 @@
     "semantic_hash": ""
   },
   "src/setup2Repository.js": {
-    "mtime": 1792055677.6933303,
-    "seen": 1792055916.5587194,
-    "ast_hash": "fa2d7f2b54b3c09e4df732dd4f0a4636",
+    "mtime": 1792064748.5114958,
+    "seen": 1792064839.7196016,
+    "ast_hash": "b602be69a747ed3380b009d95fb5780c",
     "semantic_hash": ""
   },
   "test/setup2Repository.test.js": {
-    "mtime": 1792049630.117106,
-    "seen": 1792050945.2517364,
-    "ast_hash": "111e20a739ca8e113c7014670dcfed00",
+    "mtime": 1792064258.8161814,
+    "seen": 1792064839.7927058,
+    "ast_hash": "c806faafe6575018e9669dcc662d0e5c",
     "semantic_hash": ""
   },
   "src/simulationPinSource.js": {
@@ -6342,15 +6342,15 @@
     "semantic_hash": ""
   },
   "src/liveEvidenceRepository.js": {
-    "mtime": 1792062190.2847319,
-    "seen": 1792062388.8545542,
-    "ast_hash": "77e5cff8185d23d2964e616f5644e631",
+    "mtime": 1792064280.810357,
+    "seen": 1792064839.7093377,
+    "ast_hash": "ab8ebd43437c9ac2030bda24371bbcee",
     "semantic_hash": ""
   },
   "src/liveEvidenceView.js": {
-    "mtime": 1792055880.6554544,
-    "seen": 1792055916.5482125,
-    "ast_hash": "6d9a52160584e8e1cd8def0e7604293b",
+    "mtime": 1792064236.198289,
+    "seen": 1792064839.7093377,
+    "ast_hash": "2685b7196e8b2c304e79bce3ad90f43e",
     "semantic_hash": ""
   },
   "src/savedLiveEntryFacts.js": {
@@ -6384,9 +6384,9 @@
     "semantic_hash": ""
   },
   "test/liveEvidenceRepository.test.js": {
-    "mtime": 1792062160.1089268,
-    "seen": 1792062388.9328017,
-    "ast_hash": "b177c201ec410bbd1bed1fd7c08900c8",
+    "mtime": 1792064637.7647364,
+    "seen": 1792064839.7777073,
+    "ast_hash": "7c8ec64a05f88d23b1a6bfda1c776ad1",
     "semantic_hash": ""
   },
   "test/liveEvidenceView.test.js": {
@@ -6447,6 +6447,24 @@
     "mtime": 1792055395.348131,
     "seen": 1792055575.5589817,
     "ast_hash": "afcf74c554631e7978dc7823cdf1e598",
+    "semantic_hash": ""
+  },
+  "src/liveEvidenceIndex.js": {
+    "mtime": 1792064708.5085783,
+    "seen": 1792064839.7093377,
+    "ast_hash": "3aab25392a07228ffd964e5a9407dc99",
+    "semantic_hash": ""
+  },
+  "test/helpers/setup2LiveReadIndexDbFixture.mjs": {
+    "mtime": 1792064547.212983,
+    "seen": 1792064839.7747061,
+    "ast_hash": "909f98e9024cffd5e159e78919d17339",
+    "semantic_hash": ""
+  },
+  "test/liveEvidenceIndex.test.js": {
+    "mtime": 1792064318.1616664,
+    "seen": 1792064839.7767098,
+    "ast_hash": "df3863b4a8d0c328bda2e21e7ff755ad",
     "semantic_hash": ""
   }
 }
