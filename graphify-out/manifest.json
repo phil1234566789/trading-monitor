@@ -6126,9 +6126,9 @@
     "semantic_hash": ""
   },
   "test/setup2LiveRunner.test.js": {
-    "mtime": 1792007913.3461723,
-    "seen": 1792008608.8156123,
-    "ast_hash": "8246e12e059518b38701c141e44a94d3",
+    "mtime": 1792051074.7743356,
+    "seen": 1792051153.6191862,
+    "ast_hash": "1158b8b0882346960559c129c59da981",
     "semantic_hash": ""
   },
   "test/setup2LiveScan.test.js": {
@@ -6324,9 +6324,9 @@
     "semantic_hash": ""
   },
   "services/setup2/evidencePayload.js": {
-    "mtime": 1792050848.3174708,
-    "seen": 1792050945.0851843,
-    "ast_hash": "7a6b1451c0f8f5d997298d27fc79a079",
+    "mtime": 1792051030.862542,
+    "seen": 1792051153.5035381,
+    "ast_hash": "f55f17f8343ec4c559f1d1d60d3bdfe2",
     "semantic_hash": ""
   },
   "services/setup2/priceObservations.js": {
@@ -6402,9 +6402,9 @@
     "semantic_hash": ""
   },
   "test/setup2LiveEvidence.test.js": {
-    "mtime": 1792050848.3304698,
-    "seen": 1792050945.248736,
-    "ast_hash": "8a23b5f62218cc43adc075e7635eb52f",
+    "mtime": 1792051030.8655386,
+    "seen": 1792051153.6191862,
+    "ast_hash": "3fa10c06be17fe26bc5771e2f62b8eb5",
     "semantic_hash": ""
   },
   "test/setup2LivePriceProgress.test.js": {
