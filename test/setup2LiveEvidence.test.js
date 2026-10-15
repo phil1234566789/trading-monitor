@@ -43,3 +43,13 @@ it('losslessly shares repeated large pools and refuses missing evidence instead 
  expect(hydrateEvidence(packed,map)).toEqual(original);expect(()=>hydrateEvidence(packed,new Map())).toThrow('Missing');
  expect(JSON.stringify(packed).length+JSON.stringify([...parts.values()]).length).toBeLessThan(JSON.stringify(original).length);
 });
+
+it('keeps coverage and price-outcome scalar metadata directly projectable',()=>{
+ const parts=new Map(),hash=v=>createHash('sha256').update(JSON.stringify(v)).digest('hex');
+ const value={coverage:{originSnapshotId:'x'.repeat(80),validatedAt:123,sourceValidatedAt:1,missingBeforeCapture:true,configurationId:'a'.repeat(64),evaluatedThrough:456},
+  priceObservation:{version:'v'.repeat(80),stage1:'target1',stage2:'target2',validatedAt:123,rawThrough:456},
+  rangeCourse:{version:'v'.repeat(80),lifecycle:{version:'v'.repeat(80),main:{state:'ended',reason:'target1'},entrySearchAllowed:false}}};
+ const packed=packEvidence(value,parts,hash);
+ expect(packed.coverage.missingBeforeCapture).toBe(true);expect(packed.priceObservation.stage1).toBe('target1');
+ expect(packed.rangeCourse.lifecycle.entrySearchAllowed).toBe(false);expect(hydrateEvidence(packed,new Map([...parts].map(([k,v])=>[k,v.payload])))).toEqual(value);
+});

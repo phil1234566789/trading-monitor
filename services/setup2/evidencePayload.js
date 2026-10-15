@@ -9,7 +9,7 @@ export function packEvidence(value,payloads,hash,key='',parentKey='') {
   const ids=[];for(let i=0;i<packed.length;i+=128){const payload=packed.slice(i,i+128),id=hash(payload);payloads.set(id,{id,payload});ids.push(id);}
   return {$liveEvidenceChunks:ids};
  }
- if((Array.isArray(value) || !['','checklist','checks','setup','primary','entry','m1Check','dealingRange'].includes(key) && typeof value.status!=='string' || key==='checks' && parentKey==='primary') && large) {
+ if((Array.isArray(value) || !['','checklist','checks','setup','primary','entry','m1Check','dealingRange','coverage','priceObservation','rangeCourse','lifecycle'].includes(key) && typeof value.status!=='string' || key==='checks' && parentKey==='primary') && large) {
   const id=hash(packed);payloads.set(id,{id,payload:packed});return {$liveEvidenceRef:id};
  }
  return packed;
