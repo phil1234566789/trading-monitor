@@ -11,6 +11,8 @@ import {minuteAlarmEvents,structureReady,deliveryReason,rememberStructure} from 
 import {RANGE_HISTORY_WARNING} from '../../supabase/functions/_shared/setup2RangeWarnings.js';
 import {requestJson} from '../../scripts/requestJson.mjs';
 import {partitionLiveSources,suspendedResumeTime,recoverSuspendedRange,recoveryConfig,refreshRecoveredHistory} from './recovery.js';
+import {mergeCapturedRangeState} from './priceObservations.js';
+import {createLiveEvidence} from './evidence.js';
 import {archiveClient} from '../../scripts/tradeSetup2Archive.mjs';
 
 const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -52,6 +54,8 @@ async function instrumentTick(row,sessions,schedules,news) {
  let cache=memory.get(instrument),startup=!cache;
  if(!cache){cache={'entries':previous.entries ?? [],ranges:new Map(),scanMemo:{},structures:new Map(Object.entries(previous.structureKnownAt ?? {}))};memory.set(instrument,cache);}
  refreshRecoveredHistory(cache,previous);
+ const pendingKeys=new Set((cache.pendingEvidence ?? []).flatMap(b=>b.snapshots.map(s=>s.setup_key)));
+ cache.evidencePriceObservations=mergeCapturedRangeState(previous.evidencePriceObservations,cache.evidencePriceObservations,pendingKeys);
  try {
   const [daily,h1]=await Promise.all([updateCandles(cache,instrument,'1D'),updateCandles(cache,instrument,'1h')]);
   const anchors=buildHistoricalDailyAnchors(daily,h1),now=Date.now()/1000;
@@ -102,7 +106,10 @@ async function instrumentTick(row,sessions,schedules,news) {
   // Alte DR-Wasserstände gehören ausschließlich zum separaten Nachholjob.
   const processed=Number.isFinite(lastProcessed)?lastProcessed:latestClosed-60;
   const fromTime=Math.min(latestClosed,processed+60);
+  const evidence=createLiveEvidence({instrument,version:`${ENTRY_PATTERN_1_VERSION}/${SETUP2_VERSION}`,sessions,tradingWindows,news,settings:{},dailyAnchors:anchors},
+   {fromTime,toTime:latestClosed,startedAt:started/1000});
   const onMinuteCheck=minute=>{
+   evidence.recordMinute(minute);
    const {context,check,knownAt}=minute;
    const source=sources.find(s=>`${instrument}:setup1:${s.tradeSetupId}`===context.setupKey);
    cache.ranges.set(context.setupKey,{setupKey:context.setupKey,direction:context.direction,
@@ -114,7 +121,11 @@ async function instrumentTick(row,sessions,schedules,news) {
     events.push(event);
    }
   };
-  await scanTradeSetup2Window({...input,existingEntries:[...entries.values()],m1Candles:cache['1m'],fromTime,toTime:latestClosed,onMinuteCheck});
+  const finalized=await scanTradeSetup2Window({...input,onSnapshot:s=>{input.onSnapshot(s);evidence.record(s);},existingEntries:[...entries.values()],m1Candles:cache['1m'],fromTime,toTime:latestClosed,onMinuteCheck});
+  const {priceState,...batch}=evidence.complete(finalized,{m5Candles:m5,previous:cache.evidencePriceObservations ?? previous.evidencePriceObservations});
+  cache.evidencePriceObservations={...cache.evidencePriceObservations,...priceState};
+  for(const event of events)if(event.kind==='trading')event.payload={...event.payload,provenance:{evaluationMode:evidence.evaluationMode,configurationId:evidence.configurationId}};
+  cache.pendingEvidence ??= [];if(batch.snapshots.length)cache.pendingEvidence.push(batch);
   const active=[],suspended=[...(previous.suspendedRanges ?? [])];
   for(const [setupKey,snapshot] of ranges){
    if(snapshot.dealingRange?.status!=='validated' || snapshot.rangeCourse?.lifecycle?.main?.state==='ended')continue;
@@ -131,7 +142,7 @@ async function instrumentTick(row,sessions,schedules,news) {
   }
   // Ohne aktive DR genügt ein echter M5-Schritt. Kein identischer Prozess-Heartbeat pro Minute.
   const suspensionChanged=JSON.stringify(suspended.map(r=>r.setupKey).sort())!==JSON.stringify((previous.suspendedRanges ?? []).map(r=>r.setupKey).sort());
-  if(!startup && !suspensionChanged && !events.length && !active.length && previous.lastM5Time===lastM5 && !previous.error && seconds(previous.nextExpectedCheck)>started/1000)return;
+  if(!startup && !suspensionChanged && !cache.pendingEvidence.length && !events.length && !active.length && previous.lastM5Time===lastM5 && !previous.error && seconds(previous.nextExpectedCheck)>started/1000)return;
   const success=Date.now()/1000,lag=Math.floor(success/60)*60-latestClosed;
   const feedError=lag>120 && evaluateTradingHours({instrument,evaluatedAt:success,tradingWindows}).status==='passed'
    ? `FXCM-M1-Feed ${lag}s hinter geschlossenem Minutenstand` : null;
@@ -142,11 +153,13 @@ async function instrumentTick(row,sessions,schedules,news) {
    lastM1Time:active.length?latestClosed-60:null,evaluatedThrough:currentError?previous.evaluatedThrough ?? null:iso(latestClosed),
    nextExpectedCheck:iso((active.length?Math.floor(success/60)*60+60:Math.floor(success/300)*300+300)+12),
    scanDurationMs:Date.now()-started,lastStep:active.length?'Geschlossene M1-Kerzen und Alarmstufen geprüft':'Geschlossene M5-Kerzen und Setup-1-Quellen geprüft',
-   nativeHistoryRevision:previous.nativeHistoryRevision ?? 0,
+   nativeHistoryRevision:previous.nativeHistoryRevision ?? 0,evidencePriceObservations:cache.evidencePriceObservations,
    configFingerprint:recoveryConfig(sessions,tradingWindows,news),
    error:currentError,errorSince:currentError?(previous.error===currentError?previous.errorSince ?? iso(success):iso(success)):null,runtimeVersion:'live-minute-v2',version:`${ENTRY_PATTERN_1_VERSION}/${SETUP2_VERSION}`,initializedAt:previous.initializedAt ?? iso(success)};
   if(feedError)events.push({id:`feed:${instrument}:${lastM5}`,signal_at:iso(success),stage:0,kind:'problem',payload:{message:feedError,lastSuccessAt:previous.lastSuccessAt}});
-  await request('rpc/setup2_checkpoint',{p_instrument:instrument,p_owner:owner,p_state:state,p_events:events});
+  await request(cache.pendingEvidence.length?'rpc/setup2_checkpoint_with_evidence':'rpc/setup2_checkpoint',
+   {p_instrument:instrument,p_owner:owner,p_state:state,p_events:events,...(cache.pendingEvidence.length?{p_evidence:cache.pendingEvidence}:{})});
+  cache.pendingEvidence=[];
   cache.entries=state.entries;cache.liveState=state;cache.anchors=anchors;cache.h1=h1;
   console.log(JSON.stringify({instrument,processed:state.evaluatedThrough,active:active.length,events:events.length,scanDurationMs:state.scanDurationMs,error:state.error}));
  } catch(failure){
@@ -180,7 +193,7 @@ while(true){
     candles,readState:async()=> (await client.pages('setup2_live_state',{instrument:`eq.${row.instrument}`,select:'instrument,enabled,state'}))[0],
     readConfig:async()=>{const [ss,ts,nn]=await Promise.all([client.pages('sessions',{select:'*',order:'id.asc'}),client.pages('trading_schedules',{select:'*',order:'instrument.asc'}),client.pages('news_events',{select:'id,event_time,currency,title',order:'event_time.asc,id.asc',event_time:`gte.${iso(Date.now()/1000-86400*7)}`})]);return recoveryConfig(sessionRows(ss),ts.find(s=>s.instrument===row.instrument)?.trading_windows,nn);},
     acquire:()=>request('rpc/setup2_acquire_lease',{p_instrument:row.instrument,p_owner:recoveryOwner,p_seconds:180}),
-    checkpoint:(state,events)=>request('rpc/setup2_checkpoint',{p_instrument:row.instrument,p_owner:recoveryOwner,p_state:state,p_events:events}),
+    checkpoint:(state,events,evidence=[])=>request(evidence.length?'rpc/setup2_checkpoint_with_evidence':'rpc/setup2_checkpoint',{p_instrument:row.instrument,p_owner:recoveryOwner,p_state:state,p_events:events,...(evidence.length?{p_evidence:evidence}:{})}),
     release:()=>request(`setup2_live_state?instrument=eq.${row.instrument}&lease_owner=eq.${recoveryOwner}`,{lease_owner:null,lease_until:null},'PATCH')
    }).catch(error=>console.error(JSON.stringify({instrument:row.instrument,source:'range-recovery',error:error.message})))
     .finally(()=>recoveryJobs.delete(row.instrument));recoveryJobs.set(row.instrument,job);

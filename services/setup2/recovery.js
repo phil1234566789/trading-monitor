@@ -1,3 +1,4 @@
+import {createLiveEvidence} from './evidence.js';
 import {scanTradeSetup2Window} from '../../src/tradeSetup2Scan.js';
 import {setup1RecognitionTime} from '../../src/setup1RecognitionTime.js';
 import {ENTRY_PATTERN_1_VERSION} from '../../src/entryPattern1Conditions.js';
@@ -77,7 +78,15 @@ export async function recoverSuspendedRange({row,range,sessions,schedules,news,c
     event.missed_reason='Historische DR-Nachholung nach nativer Daten-Nachlieferung';events.set(event.id,event);
    }
   }};
- const scan=async(fromTime,toTime)=>scanTradeSetup2Window({...input,existingEntries:[...entries.values()],fromTime,toTime});
+ const evidenceBatches=[];let evidencePriceObservations=row.state.evidencePriceObservations;
+ const scan=async(fromTime,toTime)=>{
+  const evidence=createLiveEvidence({instrument,version:row.state.version,sessions,tradingWindows,news,settings:{},dailyAnchors:anchors},
+   {fromTime,toTime,startedAt:Date.now()/1000,mode:'catchup'});
+  const finalized=await scanTradeSetup2Window({...input,existingEntries:[...entries.values()],fromTime,toTime,
+   onSnapshot:s=>{input.onSnapshot(s);evidence.record(s);},onMinuteCheck:m=>{input.onMinuteCheck(m);evidence.recordMinute(m);}});
+  const {priceState,...batch}=evidence.complete(finalized,{m5Candles:m5,previous:evidencePriceObservations});evidencePriceObservations=priceState;if(batch.snapshots.length)evidenceBatches.push(batch);
+  for(const event of events.values())event.payload={...event.payload,provenance:{evaluationMode:'catchup',configurationId:evidence.configurationId}};
+ };
  await scan(suspendedResumeTime(range)+60,through);
  await yieldControl();
  if(!snapshot || !await acquire())return;
@@ -94,6 +103,7 @@ export async function recoverSuspendedRange({row,range,sessions,schedules,news,c
    await scan(through+60,liveThrough);through=liveThrough;
   }
   const state=structuredClone(current.state),unknown=snapshot.rangeCourse?.lifecycle?.main?.state==='unknown';
+  state.evidencePriceObservations={...state.evidencePriceObservations,...(evidencePriceObservations?.[range.setupKey]?{[range.setupKey]:evidencePriceObservations[range.setupKey]}:{})};
   state.nativeHistoryRevision=(state.nativeHistoryRevision ?? 0)+1;
   state.entries=[...new Map([...(state.entries ?? []),...entries.values()].map(item=>[item.entry.id,item])).values()];
   state.suspendedRanges=state.suspendedRanges.filter(item=>item.setupKey!==range.setupKey);
@@ -104,7 +114,7 @@ export async function recoverSuspendedRange({row,range,sessions,schedules,news,c
   }
   const knownAt=structures.get(range.setupKey);
   if(knownAt!=null)state.structureKnownAt={...state.structureKnownAt,[range.setupKey]:knownAt};
-  await checkpoint(state,[...events.values()]);
+  await checkpoint(state,[...events.values()],evidenceBatches);
   console.log(JSON.stringify({instrument,source:'range-recovery',setupKey:range.setupKey,through:iso(through),unknown,events:events.size}));
  } finally {await release();}
 }

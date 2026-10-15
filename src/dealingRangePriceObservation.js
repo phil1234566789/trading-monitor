@@ -7,12 +7,17 @@ export const DR_PRICE_OBSERVATION_VERSION = 'validated-frozen-levels-m5-v1';
 // Preisbeobachtung ist unabhängig von H und Execution-Ausgängen. Rohdaten reichen
 // über das erste Endereignis hinaus, damit spätere SQL-Schwellen auswertbar bleiben.
 export function observeDealingRangePrice({ candles, target1, target2 = null, invalidation,
-  validatedAt, validationPrice, direction, windowEnd }) {
-  const result = { version: DR_PRICE_OBSERVATION_VERSION, validatedAt, validationPrice, direction,
+  validatedAt, validationPrice, direction, windowEnd, previous = null }) {
+  let result = { version: DR_PRICE_OBSERVATION_VERSION, validatedAt, validationPrice, direction,
     target1, target2, invalidation, stage1: 'open', stage2: null, t1At: null, t2At: null,
     invalidationReturnAt: null, validationPriceReturnAt: null, extremePrice: null, extremeAt: null,
     endAt: windowEnd, endReason: 'windowEnd', rawThrough: null, processedCandles: 0, processedAfterT1: 0 };
-  let next = Math.ceil(validatedAt / 300) * 300;
+  const reusable=previous?.version===DR_PRICE_OBSERVATION_VERSION && previous.rawEndReason!=='missingHistory'
+    && Number.isFinite(previous.rawThrough) && previous.rawThrough<=windowEnd
+    && ['validatedAt','validationPrice','target1','target2','invalidation','direction'].every(k=>previous[k]===result[k]);
+  if(reusable){result=structuredClone(previous);if(result.endReason==='windowEnd')result.endAt=windowEnd;}
+  if(reusable && ['invalidation','ambiguous'].includes(result.stage1))return result;
+  let next = reusable ? result.rawThrough : Math.ceil(validatedAt / 300) * 300;
   const below = direction === 'short';
   const missing = () => {
     if (result.stage1 === 'open') result.stage1 = 'unknown';
@@ -61,18 +66,21 @@ export function observeDealingRangePrice({ candles, target1, target2 = null, inv
   return result;
 }
 
+export function dealingRangeValidationPrice(candles,validatedAt) {
+  const boundary=Math.floor(validatedAt/300)*300,reference=candles[candleTimeIndex(candles,boundary)-1];
+  return reference?.time+300===boundary?reference.close:null;
+}
+
 export function completeDealingRangePriceObservations(snapshots, candles, windowEnd) {
   const observations = new Map();
   for (const group of groupSetupSnapshots(snapshots)) {
     const first = group.firstValidated;
     if (!first) continue;
     const primary = first.checklist?.setup?.primary, selection = primary?.targetSelection;
-    const index = candleTimeIndex(candles, Math.floor(first.knownAt / 300) * 300) - 1;
-    const reference = candles[index];
     const observation = observeDealingRangePrice({ candles, target1: selection?.target1?.price,
       target2: selection?.target2?.price ?? null, invalidation: primary?.invalidation,
       direction: primary?.direction, validatedAt: first.knownAt,
-      validationPrice: reference?.time + 300 === Math.floor(first.knownAt / 300) * 300 ? reference.close : null, windowEnd });
+      validationPrice: dealingRangeValidationPrice(candles,first.knownAt), windowEnd });
     observations.set(group.key, { ...observation, setupKey: first.setupKey });
   }
   return snapshots.map(s => {

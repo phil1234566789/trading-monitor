@@ -1,0 +1,30 @@
+import {prepareLivePinDb} from './livePinDbFixture.mjs';
+import fs from 'node:fs';import assert from 'node:assert/strict';
+export async function checkSnapshotPinsDb(db) {
+ const failure=async fn=>assert.rejects(fn);
+ await db.exec('create role anon;create role authenticated;create role service_role bypassrls');
+ const before=await prepareLivePinDb(db,[{id:'event-1',kind:'trading',stage:3,instrument:'GBPUSD',direction:'short',setup_key:'GBPUSD:setup1:1',signal_at:'2026-10-15T06:00:00Z',payload:{entry:{id:'event-entry',recognizedAt:1792044000,price:1.2}}}]);
+ await db.exec(fs.readFileSync('supabase/migrations/20261015103000_setup2_live_evidence.sql','utf8'));
+ const snapshot={id:'entry-1',setupKey:'GBPUSD:setup1:1',instrument:'GBPUSD',direction:'short',knownAt:1792044000,entry:{id:'entry-1',recognizedAt:1792044000,price:1.2,stops:{wide:1.3}},checklist:{checks:{}}};
+ await db.query('insert into setup2_live_configurations(id,configuration) values($1,$2)',['a'.repeat(64),{instrument:'GBPUSD'}]);
+ await db.query('insert into setup2_live_snapshots(id,snapshot_id,instrument,setup_key,known_at,evaluated_through,configuration_id,evaluation_mode,snapshot,observation) values($1,$2,$3,$4,to_timestamp($5),to_timestamp($6),$7,$8,$9,$10)', ['b'.repeat(64),snapshot.id,'GBPUSD',snapshot.setupKey,snapshot.knownAt,snapshot.knownAt+60,'a'.repeat(64),'live',snapshot,{}]);
+ await db.exec(fs.readFileSync('supabase/migrations/20261015104000_snapshot_source_pins.sql','utf8'));
+ assert.deepEqual((await db.query("select to_jsonb(p)-'live_event_id'-'live_snapshot_id' as row from pin_context p order by id")).rows.map(r=>r.row),before);
+ const row=(await db.query('select * from setup2_live_snapshots')).rows[0];
+ const context={contextVersion:'simulation-pin-context-v4',runId:null,kind:'simulation_entry',instrument:'GBPUSD',direction:'short',setupKey:snapshot.setupKey,snapshotId:'entry-1',snapshotAt:{unix:snapshot.knownAt},source:{kind:'live-watcher',recordId:row.id,configurationId:row.configuration_id,evaluationMode:row.evaluation_mode,capturedAt:row.captured_at.toISOString(),evaluatedThrough:row.evaluated_through.toISOString(),viewId:'live-watcher:2026-10'},entry:{id:'entry-1',entryId:'entry-1',time:{unix:snapshot.knownAt},price:1.2,stops:snapshot.entry.stops}};
+ const insert=(key,ctx=context,extra={})=>db.query('insert into pin_context(kind,simulation_run_id,live_event_id,live_snapshot_id,simulation_entry_snapshot_id,simulation_snapshot_id,simulation_checkpoint_key,simulation_variant,simulation_pin_key,simulation_context) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',[extra.kind??'simulation_entry',extra.run??null,extra.event??null,extra.record??row.id,extra.entry===null?null:extra.entry??'entry-1',extra.snapshot??null,extra.checkpoint??null,extra.variant===null?null:'both',key,ctx]);
+ await insert('snapshot-entry');
+ for(const source of [{...context.source,configurationId:'wrong'},{...context.source,evaluationMode:'catchup'},{...context.source,capturedAt:'2020-01-01'},{...context.source,evaluatedThrough:'2020-01-01'},{...context.source,viewId:'live-watcher:2026-10:catchup'},{...context.source,eventId:'event-1'}])await failure(()=>insert('bad-source',{...context,source}));
+ await failure(()=>insert('both',context,{event:'event-1'}));await failure(()=>insert('fake-run',context,{run:'old-run'}));await failure(()=>insert('missing',context,{record:'c'.repeat(64)}));
+ await failure(()=>insert('bad-entry',{...context,entry:{...context.entry,price:1.1}}));
+ await failure(()=>insert('bad-time',{...context,snapshotAt:{unix:0}}));
+ await failure(()=>insert('bad-stops',{...context,entry:{...context.entry,stops:{}}}));
+ await insert('snapshot-dr',{...context,kind:'simulation_dr'},{kind:'simulation_dr',entry:null,snapshot:'entry-1',variant:null});
+ await insert('snapshot-check',{...context,kind:'simulation_checkpoint',checkpoint:{key:'D'}},{kind:'simulation_checkpoint',entry:null,snapshot:'entry-1',checkpoint:'D',variant:null});
+ const eventContext={contextVersion:'simulation-pin-context-v3',runId:null,kind:'simulation_entry',instrument:'GBPUSD',direction:'short',setupKey:snapshot.setupKey,snapshotId:'event-entry',source:{kind:'live-watcher',eventId:'event-1',viewId:'live-watcher:2026-10'},entry:{id:'event-entry',entryId:'event-entry',time:{unix:snapshot.knownAt},price:1.2}};
+ await db.query('insert into pin_context(kind,live_event_id,simulation_entry_snapshot_id,simulation_variant,simulation_pin_key,simulation_context) values($1,$2,$3,$4,$5,$6)',['simulation_entry','event-1','event-entry','both','old-event-pin',eventContext]);
+ await db.exec("update pin_context set note='kept' where simulation_pin_key='snapshot-entry'");
+ await db.query('delete from pin_context where simulation_run_id is null and live_snapshot_id=$1 and simulation_pin_key=$2',[row.id,'snapshot-entry']);
+ assert.equal((await db.query("select count(*)::int n from pin_context where simulation_pin_key in ('old-event-pin','old-key')")).rows[0].n,2);
+ const proof={originalPinsUnchanged:true,eventPinsWork:true,snapshotDrEntryCheckpointPinsWork:true,xorAndForeignKey:true,exactIdentityAndTimes:true,scopedNullRunDeletePreservesOtherPins:true,productionWrites:0};return proof;
+}
