@@ -9,3 +9,10 @@ it('shows original capture and later as-of times in Berlin with partial coverage
  expect(html).toContain('Nachholerkennung');expect(html).toContain('2026-10-15 08:00');expect(html).toContain('2026-10-13 10:23');expect(html).toContain('2026-10-13 10:24');expect(html).toContain('T1 beobachtet');expect(html).toContain('T2 beobachtet');expect(html).toContain('nicht belegt');
  expect(html).not.toContain('Original-Liveprüfung');
 });
+
+it('labels the later observation on a pin without changing its original source time',async()=>{
+ const source={recordId:'original',evaluationMode:'live',capturedAt:'2026-10-13T08:23:00Z',evaluatedThrough:'2026-10-13T08:23:00Z'};
+ const observation={recordId:'later',capturedAt:'2026-10-15T06:00:00Z',evaluatedThrough:'2026-10-13T10:23:00Z'};
+ const html=await renderToString(createSSRApp(LiveEvidenceProvenance,{source,observation}));
+ expect(html).toContain('2026-10-13 10:23');expect(html).toContain('2026-10-15 08:00');expect(html).toContain('2026-10-13 12:23');
+});

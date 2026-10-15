@@ -1,6 +1,6 @@
 <script setup>
 import {formatDatedTime} from '../berlinTime.js';
-defineProps({snapshot:Object,source:Object});
+defineProps({snapshot:Object,source:Object,observation:Object});
 const partial=snapshot=>{
  const observation=snapshot?.priceObservation;
  if(!snapshot?.liveCoverage?.missingBeforeCapture || !observation)return '';
@@ -11,8 +11,9 @@ const date=value=>Number.isFinite(value)?formatDatedTime(value):formatDatedTime(
 <template>
   <small v-if="source?.recordId || snapshot?.evidenceRecordId" class="evidence-provenance">
     {{ (source?.evaluationMode ?? snapshot?.evaluationMode)==='catchup'?'Nachholerkennung':'Original-Liveprüfung' }} · gespeichert {{ date(source?.capturedAt ?? snapshot.evidenceCapturedAt) }} · ausgewertet bis {{ date(source?.evaluatedThrough ?? snapshot.evidenceEvaluatedThrough) }} (Europe/Berlin)
-    <span v-if="snapshot?.observationCapturedAt && snapshot.observationCapturedAt!==snapshot.evidenceCapturedAt"> · späterer Verlauf gespeichert {{ date(snapshot.observationCapturedAt) }} · Verlauf bis {{ date(snapshot.liveObservedThrough) }}</span>
-    <span v-if="snapshot?.liveCoverage?.missingBeforeCapture"> · Verlauf vor dem ersten gespeicherten Prüfstand nicht belegt</span>
+    <span v-if="snapshot?.observationCapturedAt && snapshot.observationCapturedAt!==snapshot.evidenceCapturedAt"> · späterer Verlauf gespeichert {{ date(snapshot.observationCapturedAt) }} · Verlauf bis {{ date(snapshot.observationEvaluatedThrough ?? snapshot.liveObservedThrough) }}</span>
+    <span v-if="observation?.recordId"> · späterer Verlauf gespeichert {{ date(observation.capturedAt) }} · ausgewertet bis {{ date(observation.evaluatedThrough) }}</span>
+    <span v-if="snapshot?.liveCoverage?.missingBeforeCapture || observation?.coverage?.missingBeforeCapture"> · Verlauf vor dem ersten gespeicherten Prüfstand nicht belegt</span>
     <span v-if="partial(snapshot)"> · {{ partial(snapshot) }}</span>
   </small>
 </template>

@@ -31,7 +31,7 @@ export function liveEvidenceView(events,rows,runId){
   if(!observation)return snapshot;
   return {...snapshot,rangeCourse:observation.rangeCourse ?? snapshot.rangeCourse,priceObservation:observation.priceObservation ?? snapshot.priceObservation,
     ...(row.configuration_id===snapshot.configurationId && observation.checklistHistory?{checklistHistory:observation.checklistHistory}:{}),
-    liveCoverage:observation.coverage,liveObservedThrough:Math.max(snapshot.knownAt,seconds(row.evaluated_through)),observationCapturedAt:row.captured_at,observationConfigurationId:row.configuration_id,observationRecordId:row.id};
+    liveCoverage:observation.coverage,liveObservedThrough:Math.max(snapshot.knownAt,seconds(row.evaluated_through)),observationCapturedAt:row.captured_at,observationEvaluatedThrough:row.evaluated_through,observationConfigurationId:row.configuration_id,observationRecordId:row.id};
  });
 }
 export function liveEvidenceResults(snapshots){

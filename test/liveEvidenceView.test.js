@@ -53,3 +53,12 @@ it('links a DR pin back to the same archived candidate used by its immutable sou
  const context=simulationPinSnapshot({kind:'simulation_dr',group},{id:run},[]);
  expect(context.snapshotId).toBe('candidate-original');expect(context.source.recordId).toBe('candidate');expect(context.chartLink.query.setup2).toBe(context.snapshotId);
 });
+
+it('keeps later outcome provenance separate from the pinned original entry and its original as-of time',()=>{
+ const original=row(),observed={...row('later-observation','live',{id:'later-candidate',entry:null,knownAt:at+120}),captured_at:new Date((at+180)*1000).toISOString(),evaluated_through:new Date((at+120)*1000).toISOString(),observation:{priceObservation:{stage1:'target1'}}};
+ const snapshots=liveEvidenceView([],[original,observed],run),snapshot=snapshots.find(s=>s.id==='entry'),group=reviewGroups(snapshots)[0];
+ const context=simulationPinSnapshot({kind:'simulation_entry',group,entry:snapshot},{id:run},[]);
+ expect(context.source).toMatchObject({recordId:'row',evaluatedThrough:new Date(at*1000).toISOString()});
+ expect(context.observationSource).toMatchObject({recordId:'later-observation',capturedAt:observed.captured_at,evaluatedThrough:observed.evaluated_through});
+ expect(snapshot.observationEvaluatedThrough).toBe(observed.evaluated_through);
+});

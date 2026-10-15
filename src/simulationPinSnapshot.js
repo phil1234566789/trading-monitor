@@ -18,7 +18,10 @@ export function simulationPinSnapshot(target,run,results,pinnedAt=new Date().toI
   const source=!live?null:record?{kind:'live-watcher',recordId:record,configurationId:sourceSnapshot.configurationId,evaluationMode:sourceSnapshot.evaluationMode,capturedAt:sourceSnapshot.evidenceCapturedAt,evaluatedThrough:sourceSnapshot.evidenceEvaluatedThrough,viewId:'live-watcher:'+berlinDateStrFor(sourceSnapshot.knownAt).slice(0,7)+(sourceSnapshot.evaluationMode==='catchup'?':catchup':'')}
     :{kind:'live-watcher',eventId:sourceSnapshot.liveEventId,evaluationMode:sourceSnapshot.evaluationMode ?? 'live',viewId:'live-watcher:'+berlinDateStrFor(sourceSnapshot.knownAt).slice(0,7)};
   return {contextVersion:record?'simulation-pin-context-v4':live?'simulation-pin-context-v3':'simulation-pin-context-v2',
-    ...(live?{source}:{}),dealingRangeVersion:(record?sourceSnapshot:group.latestCandidate ?? snapshot).dealingRange?.version ?? null,
+    ...(live?{source}:{}),...(record && sourceSnapshot.observationRecordId?{observationSource:{
+      recordId:sourceSnapshot.observationRecordId,configurationId:sourceSnapshot.observationConfigurationId,
+      capturedAt:sourceSnapshot.observationCapturedAt,evaluatedThrough:sourceSnapshot.observationEvaluatedThrough,
+      coverage:sourceSnapshot.liveCoverage ?? null}}:{}),dealingRangeVersion:(record?sourceSnapshot:group.latestCandidate ?? snapshot).dealingRange?.version ?? null,
     dealingRangeReason:(record?sourceSnapshot:group.latestCandidate ?? snapshot).dealingRange?.reason ?? null,kind,runId:live?null:snapshot.runId,runVersion:run?.version ?? null,ruleVersion:(live?sourceSnapshot:snapshot).checklist?.ruleVersion ?? null,
     entryPatternVersion:entryPatternVersion(entry?.entry ?? (live?snapshot.entry:null)) ?? entryPatternVersion(config) ?? entryPatternVersion((live?sourceSnapshot:snapshot).checklist) ?? null,
     drId:live?JSON.stringify([group.instrument,snapshot.setupKey]):group.key,snapshotId:live?sourceSnapshot.id:snapshot.id,setupKey:snapshot.setupKey,setup1Id:(live?sourceSnapshot:snapshot).checklist?.setup?.primary?.tradeSetupId ?? null,
