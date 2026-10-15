@@ -49,14 +49,21 @@ export function createLiveWatcherRepository(client) {
       if(error) throw error;
       return liveMonthOptions(data?.[0]?.signal_at);
     },
-    async events(month) {
+    async rangeKeys(month){return (await this.events(month,undefined,'setup_key')).map(row=>row.setup_key);},
+    async events(month,setupKey,fields='id,signal_at,detected_at,instrument,stage,setup_key,direction,kind,payload,missed_reason') {
       const {from,to}=liveMonthBounds(month);
-      const {data,error}=await fetchAllRows((start,end)=>client.from('setup2_alarm_events')
-        .select('id,signal_at,detected_at,instrument,stage,setup_key,direction,kind,payload,missed_reason')
+      const {data,error}=await fetchAllRows((start,end)=>{let query=client.from('setup2_alarm_events')
+        .select(fields)
         .eq('kind','trading').gt('stage',0).gte('signal_at',from).lt('signal_at',to)
-        .order('signal_at').order('id').range(start,end));
+        .order('signal_at').order('id');
+      if(setupKey)query=query.eq('setup_key',setupKey);
+      return query.range(start,end);});
       if(error) throw error;
       return data;
+    },
+    async entryEvent(id) {
+      const {data,error}=await client.from('setup2_alarm_events').select('id,setup_key').eq('kind','trading').eq('stage',3).eq('payload->entry->>id',id).order('id').limit(1);
+      if(error)throw error;return data?.[0] ?? null;
     },
     async event(id) {
       const {data,error}=await client.from('setup2_alarm_events').select('id,signal_at,detected_at,instrument,stage,setup_key,direction,kind,payload,missed_reason').eq('id',id).eq('kind','trading').gt('stage',0).maybeSingle();

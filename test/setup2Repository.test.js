@@ -6,13 +6,13 @@ import {tradeSetup2Positions} from '../src/tradeSetup2Positions.js';
 const run='live-watcher:2026-10',at=Date.parse('2026-10-09T07:28:00Z')/1000;
 const events=['one','two'].map((id,i)=>({id:'event-'+id,kind:'trading',stage:3,instrument:'EURUSD',direction:'short',setup_key:'dr',signal_at:new Date((at+i*60)*1000).toISOString(),
  payload:{entry:{id,setupKey:'dr',direction:'short',recognizedAt:at+i*60,price:1.12,entryPattern:'countertrend-entry-model-1-v10',entryCategory:'risky'},variants:[{variant:'wide',lots:3,fullLots:7,entryCategory:'risky'}]}}));
-function client(){const reads=[],db={rpc:vi.fn(),from:vi.fn(table=>{const q={};for(const key of ['select','eq','gt','gte','lt','order'])q[key]=()=>q;q.range=async(start,end)=>{reads.push([table,start,end]);return {data:table==='setup2_alarm_events'&&start===0?events:[],error:null};};return q;})};return {db,reads};}
+function client(){const reads=[],db={rpc:vi.fn(),from:vi.fn(table=>{let entryId;const q={};for(const key of ['select','eq','gt','gte','lt','order'])q[key]=(...args)=>{if(key==='eq'&&args[0]==='payload->entry->>id')entryId=args[1];return q;};q.limit=async()=>({data:table==='setup2_alarm_events'?events.filter(event=>!entryId||event.payload.entry.id===entryId):[],error:null});q.range=async(start,end)=>{reads.push([table,start,end]);return {data:table==='setup2_alarm_events'&&start===0?events:[],error:null};};return q;})};return {db,reads};}
 it('loads the same original entries through the regular linked-snapshot reader without invented run inputs',async()=>{
  const {db,reads}=client(),repo=createSetup2Repository(db),before=JSON.stringify(events),record=await createLinkedSnapshotReader(repo)(run,'one');
  expect(record.snapshots.map(s=>s.id)).toEqual(['one','two']);expect(record.results).toHaveLength(4);
  expect(record.snapshot.entry.entryPattern).toBe('countertrend-entry-model-1-v10');expect(record.snapshot.checklist).toBeUndefined();
  expect((await repo.getRun(run)).configuration.setupVersion).toBeUndefined();expect((await repo.getRun(run)).configuration.sessions).toBeUndefined();
- expect(await repo.listRunDrCounts([run])).toEqual(new Map([[run,1]]));expect(reads.every(([table])=>['setup2_alarm_events','setup2_live_snapshots'].includes(table))).toBe(true);
+ expect(await repo.listRunDrCounts([run])).toEqual(new Map([[run,1]]));expect(reads.every(([table])=>['setup2_alarm_events','setup2_live_snapshots','setup2_live_snapshot_index'].includes(table))).toBe(true);
  expect(JSON.stringify(events)).toBe(before);expect(db.rpc).not.toHaveBeenCalled();
  const rows=(await repo.listResults({runId:run,asOf:at})).map(r=>simulationAsOf(r,at));expect(rows).toHaveLength(2);
  expect(rows.every(r=>r.status==='notStored' && r.commissionUsd===null && r.netPnlUsd===null)).toBe(true);

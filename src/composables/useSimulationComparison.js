@@ -19,6 +19,7 @@ export function useSimulationComparison(repository, filters, pins) {
       // Gleichzeitige JSONB-Abfragen konkurrieren um dasselbe knappe SQL-Zeitbudget.
       for(const id of ids){
         const snapshots=await repository.listReviewMetadata(id);
+        if(ticket!==revision)return;
         const results=await repository.listResults({runId:id});
         let groups=reviewGroups(snapshots);
         if(isLiveWatcherMonth(id)){const {from,to}=liveMonthBounds(liveSourceMonth(id));groups=groups.map(g=>({...g,entries:g.entries.filter(e=>e.knownAt>=Date.parse(from)/1000&&e.knownAt<Date.parse(to)/1000)}));}

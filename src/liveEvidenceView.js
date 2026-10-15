@@ -1,5 +1,6 @@
 import {liveWatcherSnapshots,liveWatcherEntryResults} from './liveWatcherSnapshots.js';
 import {liveMonthViewId} from './liveWatcherMonth.js';
+import {liveEvidenceOriginalOrder} from './liveEvidenceIndex.js';
 const seconds=value=>Date.parse(value)/1000;
 const identity=snapshot=>snapshot.entry?.id ?? snapshot.id;
 function sourceSnapshot(row,runId){
@@ -15,7 +16,7 @@ function sameOriginalEntry(a,b){
 export function liveEvidenceView(events,rows,runId){
  runId=liveMonthViewId(runId);
  const eventSnapshots=liveWatcherSnapshots(events,runId),byId=new Map(eventSnapshots.map(s=>[identity(s),s])),latest=new Map(),histories=new Map();
- const ordered=rows.toSorted((a,b)=>Number(a.evaluation_mode==='catchup')-Number(b.evaluation_mode==='catchup')||seconds(a.captured_at)-seconds(b.captured_at)||a.id.localeCompare(b.id));
+ const ordered=rows.toSorted(liveEvidenceOriginalOrder);
  const remember=(map,key,row)=>{
   const previous=map.get(key);
   if(!previous || seconds(row.evaluated_through)>seconds(previous.evaluated_through)
