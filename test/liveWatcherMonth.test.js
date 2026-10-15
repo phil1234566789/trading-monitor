@@ -64,3 +64,9 @@ describe('persisted live watcher month',()=>{
   expect(state.current.value.results[0]).toMatchObject({status:'notStored',commissionUsd:null,netPnlUsd:null});scope.stop();
  });
 });
+
+it('normalizes legacy month aliases for both statistics and chart selection while retaining ordinary run IDs',async()=>{
+ const {liveMonthViewId}=await import('../src/liveWatcherMonth.js');
+ expect(liveMonthViewId('live-watcher:2026-10:catchup')).toBe('live-watcher:2026-10');
+ expect(liveMonthViewId('live-watcher:2026-10')).toBe('live-watcher:2026-10');expect(liveMonthViewId('saved-run')).toBe('saved-run');
+});

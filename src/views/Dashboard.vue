@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { liveMonthViewId } from "../liveWatcherMonth.js";
 import PriceChart from "../components/PriceChart.vue";
 import { GOLD_CHART_BARS, goldChartSelection } from "../goldChartPolicy.js";
 import TradeSetupCockpit from "../components/TradeSetupCockpit.vue";
@@ -314,7 +315,7 @@ const tradeSetup2Variant = useLocalStorageRef("tradeSetup2Variant", "wide");
 const route = useRoute();
 const router = useRouter();
 const selectedTradeSetup2Id = computed(() => typeof route.query.setup2 === "string" ? route.query.setup2 : null);
-const tradeSetup2RunId = computed(() => typeof route.query.run === "string" ? route.query.run : null);
+const tradeSetup2RunId = computed(() => typeof route.query.run === "string" ? liveMonthViewId(route.query.run) : null);
 const snapshotView = computed(() => isTradeSetup2SnapshotView({
   tradeSetup2RunId: tradeSetup2RunId.value, selectedTradeSetup2Id: selectedTradeSetup2Id.value,
 }));
