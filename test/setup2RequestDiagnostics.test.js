@@ -31,3 +31,8 @@ it('shows only known RPC failure codes and the constant lease diagnosis',async()
  try {await requestJson('https://local.test',{},'checkpoint',async()=>new Response('{"code":"P0001","message":"private-secret","details":"private-secret"}',{status:400}));}
  catch(error){expect(error.message).toContain('HTTP 400 (P0001)');expect(error.message).not.toContain('private-secret');}
 });
+
+it('retains the database timeout code while redacting the server message and details',async()=>{
+ try {await requestJson('https://local.test',{},'checkpoint',async()=>new Response(JSON.stringify({code:'57014',message:'private-secret',details:'private-secret'}),{status:500}));throw new Error('Expected request failure');}
+ catch(error){expect(error.message).toContain('HTTP 500 (57014)');expect(error.message).not.toContain('private-secret');}
+});

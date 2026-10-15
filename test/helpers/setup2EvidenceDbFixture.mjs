@@ -4,6 +4,7 @@ export async function prepareEvidenceDb(db) {
  const original=fs.readFileSync('supabase/migrations/20261007170000_setup2_live_watcher.sql','utf8').split("select cron.schedule")[0];
  await db.exec(original);
  await db.exec(fs.readFileSync('supabase/migrations/20261015103000_setup2_live_evidence.sql','utf8'));
+ await db.exec(fs.readFileSync('supabase/migrations/20261015110000_bounded_live_evidence_packets.sql','utf8'));
  await db.exec("update setup2_live_state set enabled=true where instrument='GBPUSD'");
 }
 export async function checkEvidenceDb(db,batch) {

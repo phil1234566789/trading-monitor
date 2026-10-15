@@ -5,7 +5,7 @@ import sessions from './fixtures/gbpusd-m5-dr114-session-targets.json';
 import {setup1RecognitionTime} from '../src/setup1RecognitionTime.js';
 const iso=t=>new Date(t*1000).toISOString();
 it('T68 restart catches a newly recognized source after persisted watermark without invalid scan window',async()=>{
- const source=fixture.setups[0],recognized=setup1RecognitionTime(source),closed=recognized+600,checkpoints=[],checkpointRoutes=[];
+ const source=fixture.setups[0],recognized=setup1RecognitionTime(source),closed=recognized+600,checkpoints=[],checkpointRoutes=[],staged=[];
  const rows={ '1D':fixture.dailyCandles.filter(c=>c.time+86400<=closed), '1h':fixture.h1Candles.filter(c=>c.time+3600<=closed),
  '5m':fixture.m5Candles.filter(c=>c.time+300<=closed),'1m':minutes.filter(c=>c.time+60<=closed)};
  const setupRow={id:source.tradeSetupId,instrument:'GBPUSD',direction:'short',source:'live',created_at:iso(source.createdAt),
@@ -16,6 +16,7 @@ it('T68 restart catches a newly recognized source after persisted watermark with
   const url=new URL(input),table=url.pathname.split('/').at(-1),query=url.searchParams;
   let body=[];
   if(table==='setup2_acquire_lease')body=true;
+  else if(table==='setup2_store_live_evidence'){staged.push(JSON.parse(options.body).p_evidence);body=null;}
   else if(table==='setup2_checkpoint' || table==='setup2_checkpoint_with_evidence'){checkpointRoutes.push(table);checkpoints.push(JSON.parse(options.body));body=null;}
   else if(table==='setup2-notification-watch')body={};
   else if(Number(query.get('offset'))>0)body=[];
@@ -39,8 +40,8 @@ it('T68 restart catches a newly recognized source after persisted watermark with
   expect(Date.parse(firstM1.searchParams.get('time').slice(4))/1000).toBeLessThanOrEqual(Math.min(source.obStartTime,source.ls.touchedTime)-131*60);
   expect(checkpoints).toHaveLength(1);
   expect(checkpointRoutes).toEqual(['setup2_checkpoint_with_evidence']);
-  expect(checkpoints[0].p_evidence[0].snapshots.length).toBeGreaterThan(0);
-  expect(checkpoints[0].p_evidence[0].configuration.configuration).toMatchObject({instrument:'GBPUSD',m1Period:5});
+  expect(checkpoints[0].p_evidence[0].snapshot_ids.length).toBeGreaterThan(0);
+  expect(staged.find(b=>b.snapshots.length).configuration.configuration).toMatchObject({instrument:'GBPUSD',m1Period:5});
   expect(checkpoints[0].p_state.error).toBeNull();
   expect(checkpoints[0].p_state.evaluatedThrough).toBe(iso(closed));
   expect(error).not.toHaveBeenCalled();

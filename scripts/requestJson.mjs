@@ -8,7 +8,7 @@ export async function requestJson(url, options, operation, fetcher = fetch) {
    try {
     const body=await response.json();
     if(body.code==='P0001' && body.message==='Watcher lease expired')code='Watcher lease expired';
-    else if(['P0001','23503','23505','23514','42501','PGRST202','PGRST204'].includes(body.code))code=body.code;
+    else if(['P0001','57014','23503','23505','23514','42501','PGRST202','PGRST204'].includes(body.code))code=body.code;
    } catch {}
    const error=new Error('HTTP failure');error.safeCode=code;throw error;
   }

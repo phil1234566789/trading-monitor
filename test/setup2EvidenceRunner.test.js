@@ -2,7 +2,7 @@ import {it,expect,vi} from 'vitest';
 import fixture from './fixtures/gbpusd-m5-cd-97-105.json';
 const iso=t=>new Date(t*1000).toISOString();
 it('checkpoints finalized scanner output atomically with the original entry and actual versioned inputs',async()=>{
- vi.resetModules();const source=fixture.setups[0],closed=source.createdAt+1200,checkpoints=[];
+ vi.resetModules();const source=fixture.setups[0],closed=source.createdAt+1200,checkpoints=[],staged=[];
  const original={schemaVersion:3,id:'original-entry',setupKey:'GBPUSD:setup1:1',instrument:'GBPUSD',direction:'short',knownAt:closed,
   entry:{id:'original-entry',recognizedAt:closed,price:1.2},checklist:{evaluatedAt:closed,checks:{entry:{status:'passed'}}}};
  vi.doMock('../src/tradeSetup2Scan.js',()=>({scanTradeSetup2Window:async input=>{
@@ -12,6 +12,7 @@ it('checkpoints finalized scanner output atomically with the original entry and 
  vi.stubGlobal('fetch',async(input,options={})=>{
   const url=new URL(input),table=url.pathname.split('/').at(-1),query=url.searchParams;let body=[];
   if(table==='setup2_acquire_lease')body=true;
+  else if(table==='setup2_store_live_evidence'){staged.push(JSON.parse(options.body).p_evidence);body=null;}
   else if(table==='setup2_checkpoint_with_evidence'){checkpoints.push(JSON.parse(options.body));body=null;}
   else if(table==='setup2-notification-watch')body={};
   else if(Number(query.get('offset'))>0)body=[];
@@ -25,7 +26,8 @@ it('checkpoints finalized scanner output atomically with the original entry and 
  const clock=vi.spyOn(Date,'now').mockReturnValue((closed+20)*1000),log=vi.spyOn(console,'log').mockImplementation(()=>{});
  try{
   await import('../services/setup2/runner.mjs');expect(checkpoints).toHaveLength(1);
-  const body=checkpoints[0],batch=body.p_evidence[0];expect(body.p_state.entries[0].entry.id).toBe('original-entry');
+  const body=checkpoints[0],batch=staged.find(b=>b.snapshots.length);
+  expect(body.p_evidence).toEqual([{configuration_id:batch.configuration.id,snapshot_ids:batch.snapshots.map(s=>s.id)}]);expect(body.p_state.entries[0].entry.id).toBe('original-entry');
   expect(batch.snapshots[0].snapshot).toEqual(original);expect(batch.snapshots[0].observation).toHaveProperty('checklistHistory.entries');
   expect(batch.configuration.configuration).toMatchObject({instrument:'GBPUSD',setupVersion:expect.any(String),entryPattern:expect.any(String),m1Period:5,sessions:[],news:[]});
   expect(body.p_events).toEqual([]);

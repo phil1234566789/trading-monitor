@@ -13,6 +13,7 @@ import {requestJson} from '../../scripts/requestJson.mjs';
 import {partitionLiveSources,suspendedResumeTime,recoverSuspendedRange,recoveryConfig,refreshRecoveredHistory} from './recovery.js';
 import {mergeCapturedRangeState} from './priceObservations.js';
 import {createLiveEvidence} from './evidence.js';
+import {checkpointEvidence} from './evidenceCheckpoint.js';
 import {archiveClient} from '../../scripts/tradeSetup2Archive.mjs';
 
 const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -157,8 +158,7 @@ async function instrumentTick(row,sessions,schedules,news) {
    configFingerprint:recoveryConfig(sessions,tradingWindows,news),
    error:currentError,errorSince:currentError?(previous.error===currentError?previous.errorSince ?? iso(success):iso(success)):null,runtimeVersion:'live-minute-v2',version:`${ENTRY_PATTERN_1_VERSION}/${SETUP2_VERSION}`,initializedAt:previous.initializedAt ?? iso(success)};
   if(feedError)events.push({id:`feed:${instrument}:${lastM5}`,signal_at:iso(success),stage:0,kind:'problem',payload:{message:feedError,lastSuccessAt:previous.lastSuccessAt}});
-  await request(cache.pendingEvidence.length?'rpc/setup2_checkpoint_with_evidence':'rpc/setup2_checkpoint',
-   {p_instrument:instrument,p_owner:owner,p_state:state,p_events:events,...(cache.pendingEvidence.length?{p_evidence:cache.pendingEvidence}:{})});
+  await checkpointEvidence(request,{p_instrument:instrument,p_owner:owner,p_state:state,p_events:events},cache.pendingEvidence);
   cache.pendingEvidence=[];
   cache.entries=state.entries;cache.liveState=state;cache.anchors=anchors;cache.h1=h1;
   console.log(JSON.stringify({instrument,processed:state.evaluatedThrough,active:active.length,events:events.length,scanDurationMs:state.scanDurationMs,error:state.error}));
@@ -193,7 +193,7 @@ while(true){
     candles,readState:async()=> (await client.pages('setup2_live_state',{instrument:`eq.${row.instrument}`,select:'instrument,enabled,state'}))[0],
     readConfig:async()=>{const [ss,ts,nn]=await Promise.all([client.pages('sessions',{select:'*',order:'id.asc'}),client.pages('trading_schedules',{select:'*',order:'instrument.asc'}),client.pages('news_events',{select:'id,event_time,currency,title',order:'event_time.asc,id.asc',event_time:`gte.${iso(Date.now()/1000-86400*7)}`})]);return recoveryConfig(sessionRows(ss),ts.find(s=>s.instrument===row.instrument)?.trading_windows,nn);},
     acquire:()=>request('rpc/setup2_acquire_lease',{p_instrument:row.instrument,p_owner:recoveryOwner,p_seconds:180}),
-    checkpoint:(state,events,evidence=[])=>request(evidence.length?'rpc/setup2_checkpoint_with_evidence':'rpc/setup2_checkpoint',{p_instrument:row.instrument,p_owner:recoveryOwner,p_state:state,p_events:events,...(evidence.length?{p_evidence:evidence}:{})}),
+    checkpoint:(state,events,evidence=[])=>checkpointEvidence(request,{p_instrument:row.instrument,p_owner:recoveryOwner,p_state:state,p_events:events},evidence),
     release:()=>request(`setup2_live_state?instrument=eq.${row.instrument}&lease_owner=eq.${recoveryOwner}`,{lease_owner:null,lease_until:null},'PATCH')
    }).catch(error=>console.error(JSON.stringify({instrument:row.instrument,source:'range-recovery',error:error.message})))
     .finally(()=>recoveryJobs.delete(row.instrument));recoveryJobs.set(row.instrument,job);
