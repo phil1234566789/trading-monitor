@@ -678,9 +678,9 @@
     "semantic_hash": ""
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1792045782.9598377,
-    "seen": 1792046224.6780484,
-    "ast_hash": "f350e33c036f4c9d00e2950b2f252f54",
+    "mtime": 1792056050.405558,
+    "seen": 1792056174.8380694,
+    "ast_hash": "73d556cf7d8f4f39870818676dfa6d4a",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -6264,9 +6264,9 @@
     "semantic_hash": ""
   },
   "test/liveWatcherMonth.test.js": {
-    "mtime": 1792045851.3614004,
-    "seen": 1792046224.7470443,
-    "ast_hash": "1f8e92ef18d48d2d0350e5b6503ab2d8",
+    "mtime": 1792056050.4065628,
+    "seen": 1792056174.8821213,
+    "ast_hash": "9787a02a9ed40eb4ce29eca704aef3b8",
     "semantic_hash": ""
   },
   "src/liveWatcherSnapshots.js": {
