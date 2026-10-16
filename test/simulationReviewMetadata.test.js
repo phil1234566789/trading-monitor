@@ -31,8 +31,8 @@ it('projects decisions without chart pools, trees or history for raw/v1/v2 snaps
 it('continues after capped metadata pages and preserves run scoping and all294 records',async()=>{
  const datasets={trade_setup_simulation_setups:Array.from({length:271},(_,i)=>project({id:`candidate-${String(i).padStart(3,'0')}`,knownAt:i,setupKey:`dr-${i}`})),
   trade_setup_simulation_entries:Array.from({length:23},(_,i)=>project({id:`entry-${String(i).padStart(3,'0')}`,knownAt:i,entry:{recognizedAt:i}}))};
- const calls=[];const db={from:table=>{let after='';const q={select:fields=>{expect(fields).toBe(SIMULATION_REVIEW_METADATA_FIELDS);return q;},eq:(key,value)=>{expect([key,value]).toEqual(['run_id','run']);return q;},order:key=>{expect(key).toBe('id');return q;},gt:(key,value)=>{expect(key).toBe('id');after=value;return q;},
-  limit:async count=>{expect(count).toBe(10);calls.push([table,after]);return {data:datasets[table].filter(r=>r.id>after).slice(0,3)};}};return q;}};
+ const calls=[];const db={from:table=>{let after='';const q={select:fields=>{expect(fields).toBe('id,run_id,instrument,direction,metadata');return q;},eq:(key,value)=>{expect([key,value]).toEqual(['run_id','run']);return q;},order:key=>{expect(key).toBe('id');return q;},gt:(key,value)=>{expect(key).toBe('id');after=value;return q;},
+  limit:async count=>{expect(count).toBe(10);calls.push([table,after]);return {data:datasets[table.replace('_review_metadata','')].filter(r=>r.id>after).map(row=>({id:row.id,run_id:row.run_id,instrument:row.instrument,direction:row.direction,metadata:Object.fromEntries(Object.entries(row).filter(([key])=>key.startsWith('review')))})).slice(0,3)};}};return q;}};
  const rows=await createSimulationRepository(db).listReviewMetadata('run');expect(rows).toHaveLength(294);expect(rows[270].id).toBe('candidate-270');expect(rows.at(-1).id).toBe('entry-022');
- expect(calls).toContainEqual(['trade_setup_simulation_setups','candidate-270']);expect(calls).toContainEqual(['trade_setup_simulation_entries','entry-022']);
+ expect(calls).toContainEqual(['trade_setup_simulation_setups_review_metadata','candidate-270']);expect(calls).toContainEqual(['trade_setup_simulation_entries_review_metadata','entry-022']);
 });

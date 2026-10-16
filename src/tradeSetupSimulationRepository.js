@@ -1,4 +1,4 @@
-import { SIMULATION_REVIEW_METADATA_FIELDS, simulationReviewMetadata } from './simulationReviewMetadata.js';
+import { simulationReviewMetadata } from './simulationReviewMetadata.js';
 import {entryPatternVersion} from './entryPattern.js';
 import { applySimulationCommission, SIMULATION_COST_VERSION } from './tradeSetupSimulationCosts.js';
 import { restoreChecklistObservationChecks } from './checklistObservationRules.js';
@@ -65,11 +65,11 @@ export function createSimulationRepository(db,{compactStructures=false}={}) {
       const groups=[];
       for(const table of ['trade_setup_simulation_setups','trade_setup_simulation_entries'])
         groups.push(await snapshotMetadataPages(last => {
-          // OFFSET liest die grossen JSONB-Felder auch fuer uebersprungene Zeilen.
-          let query=db.from(table).select(SIMULATION_REVIEW_METADATA_FIELDS).eq('run_id',runId).order('id');
+          // Die View entpackt jeden Originalstand einmal; der Cursor vermeidet Arbeit für übersprungene Zeilen.
+          let query=db.from(table+'_review_metadata').select('id,run_id,instrument,direction,metadata').eq('run_id',runId).order('id');
           return last ? query.gt('id',last.id) : query;
         }));
-      return groups.flat().map(simulationReviewMetadata);
+      return groups.flat().map(row=>simulationReviewMetadata({...row,...row.metadata}));
     },
     listReviewSnapshots: async (runId) => {
       // Prüfbelege projizieren; geteilte Strukturen im primary benötigen ihren Speicherpool.
