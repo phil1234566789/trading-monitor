@@ -6508,5 +6508,11 @@
     "seen": 1792144901.5851357,
     "ast_hash": "6b18e4d92aeac8428395eb75ed4d19ca",
     "semantic_hash": ""
+  },
+  "test/helpers/setup2RiskCourseDbFixture.mjs": {
+    "mtime": 1792146022.118255,
+    "seen": 1792147473.926435,
+    "ast_hash": "2fcd820870f57e9cd87b5225f22749c6",
+    "semantic_hash": ""
   }
 }
