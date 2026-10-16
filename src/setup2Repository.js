@@ -40,10 +40,14 @@ export function createSetup2Repository(db){
   saveRun:run=>{assertStored(run.id);return stored.saveRun(run);},
   saveEntries:(run,records)=>{assertStored(run);return stored.saveEntries(run,records);},
   saveSetups:(run,records)=>{assertStored(run);return stored.saveSetups(run,records);},
+  async listRunOptions(){return [...liveMonthOptions().map(liveWatcherRun),...await stored.listRunOptions()];},
+  async listLiveRuns(){
+   const [oldMonths,first]=await Promise.all([live.months(),evidence.earliest()]);
+   return [...new Map([...oldMonths,...(first?liveMonthOptions(first):[])].map(option=>[option.id,option])).values()].map(liveWatcherRun);
+  },
   async listRuns(){
-   const [runs,oldMonths,first]=await Promise.all([stored.listRuns(),live.months(),evidence.earliest()]);
-   const months=new Map([...oldMonths,...(first?liveMonthOptions(first):[])].map(option=>[option.id,option]));
-   return [...[...months.values()].map(liveWatcherRun),...runs];
+   const [runs,months]=await Promise.all([stored.listRuns(),facade.listLiveRuns()]);
+   return [...months,...runs];
   },
   async getRun(run,configurationId){
    if(!isLiveWatcherMonth(run))return stored.getRun(run);

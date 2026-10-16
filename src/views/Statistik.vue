@@ -21,7 +21,7 @@ const legacySourceHint=ref(isLiveWatcherMonth(route.query.run)&&route.query.run.
 const filters=ref(readFilters(route.query)),pins=ref([]);
 const repository=createSetup2Repository(supabase);
 const liveSelected=computed(()=>isLiveWatcherMonth(filters.value.run));
-const {runs,selectedRun,comparisonRun,current,previous,datasets,loading,error,dateError,refresh}=useSimulationComparison(repository,filters,pins);
+const {runs,selectedRun,comparisonRun,current,previous,datasets,loading,error,runListError,dateError,refresh}=useSimulationComparison(repository,filters,pins);
 const pinState=useSimulationPins(filters,selectedRun,computed(()=>datasets.value.get(filters.value.run)?.results ?? []),{repository,datasets,runs});
 const pinListOpen=ref(false);
 const listedPins=pinState.listedPins;
@@ -45,6 +45,7 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
     </details>
     <SimulationRunStatus v-if="selectedRun" :run="selectedRun" />
     <SimulationComparisonFilters v-model="filters" :runs="runs" :features="features" />
+    <p v-if="runListError" role="alert" class="error">{{ runListError }} <button @click="refresh">Erneut versuchen</button></p>
     <p v-if="liveSelected" class="note">Gemeinsame Monatsansicht: Original-Livebelege und nachträgliche Erkennungen. Jeder Entry zählt einmal; Herkunft und tatsächliche Speicherzeiten stehen am Beleg. Fehlende Originaldaten bleiben unbekannt.</p>
     <p v-if="legacySourceHint===filters.run" class="note" role="status">Der frühere Nachholerkennungs-Link führt jetzt in die gemeinsame Monatsansicht. Nachträgliche Belege bleiben als solche gekennzeichnet.</p>
     <div :aria-busy="loading">
@@ -53,6 +54,7 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
       <p v-if="error || dateError" role="alert" class="error">{{ error || dateError }} <button v-if="error" @click="refresh">Erneut versuchen</button></p>
       <p v-else-if="loading" role="status" class="empty">Gespeicherte Läufe und Review-Belege werden geladen…</p>
       <p v-else-if="!runs.length" role="status" class="empty">Noch keine gespeicherten Simulationsläufe.</p>
+      <p v-else-if="!filters.run" role="status" class="empty">Bitte einen gespeicherten Lauf wählen.</p>
       <p v-else-if="!selectedRun" role="alert" class="empty">Kein abgeschlossener Lauf verfügbar oder der verlinkte Lauf fehlt. Bitte einen Lauf wählen.</p>
       <p v-else-if="filters.compare && !comparisonRun" role="alert">Der Vergleichslauf ist nicht verfügbar. Bitte neu wählen.</p>
       <template v-else>
@@ -68,5 +70,5 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
   </main>
 </template>
 <style scoped>
-.statistics-page{padding:24px;color:#d1d4dc;max-width:1600px;width:100%;min-width:0;box-sizing:border-box;margin:auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:20px}h1{margin:0;font-size:20px;font-weight:600}header p,.note{font-size:13px;color:#b1b7c5}button{background:#1e222d;color:#d1d4dc;border:1px solid #434651;padding:8px 12px;border-radius:4px;cursor:pointer}button:disabled{opacity:.6;cursor:wait}.simulation-rules{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:16px;margin-bottom:20px;font-size:13px;line-height:1.6}.simulation-rules p{color:#b1b7c5}summary{cursor:pointer}.empty{padding:24px 12px;border:1px solid #434651;color:#b1b7c5;font-size:13px}.error{color:#ff8b91}:is(button,summary):focus-visible{outline:2px solid #91b8ff;outline-offset:3px}@media(max-width:600px){.statistics-page{padding:12px}header{align-items:flex-start}}
+.statistics-page{padding:24px;color:#d1d4dc;max-width:1600px;width:100%;min-width:0;box-sizing:border-box;margin:0 auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:20px}h1{margin:0;font-size:20px;font-weight:600}header p,.note{font-size:13px;color:#b1b7c5}button{background:#1e222d;color:#d1d4dc;border:1px solid #434651;padding:8px 12px;border-radius:4px;cursor:pointer}button:disabled{opacity:.6;cursor:wait}.simulation-rules{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:16px;margin-bottom:20px;font-size:13px;line-height:1.6}.simulation-rules p{color:#b1b7c5}summary{cursor:pointer}.empty{padding:24px 12px;border:1px solid #434651;color:#b1b7c5;font-size:13px}.error{color:#ff8b91}:is(button,summary):focus-visible{outline:2px solid #91b8ff;outline-offset:3px}@media(max-width:600px){.statistics-page{padding:12px}header{align-items:flex-start}}
 </style>

@@ -116,6 +116,11 @@ export function createSimulationRepository(db,{compactStructures=false}={}) {
       records.map(record=>compactStructures?{...record,snapshot:encodeSnapshotStructures(record.snapshot)}:record)),
     // Bestehende rohe Snapshots behalten ihr Speicherformat für die Unveränderlichkeitsprüfung.
     saveSetups: (runId, records) => batches('save_trade_setup_simulation_setups', runId,compactStructures?records.map(encodeSnapshotStructures):records),
+    listRunOptions: async () => {
+      const fields='id,label:run->configuration->>label,status:run->>status,from:run->from,to:run->to,evaluatedAt:run->evaluatedAt,startedAt:run->startedAt,completedAt:run->completedAt';
+      const rows=await snapshotMetadataPages(last=>{let query=db.from('trade_setup_simulation_runs').select(fields).order('id');return last?query.gt('id',last.id):query;});
+      return rows.map(({label,...row})=>({...row,configuration:{label}}));
+    },
     listRuns: async () => (await pages((from, to) => db.from('trade_setup_simulation_runs').select('run').order('id').range(from, to))).map(row => row.run),
     listRunDrCounts: async runIds => {
       if(!runIds.length)return new Map();

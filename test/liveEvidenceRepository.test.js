@@ -96,3 +96,10 @@ it('keeps a nonlisted minute checkpoint available by its exact original ID',asyn
  const exact=await repo.getSetupSnapshot(run,'stand:15');expect(exact.id).toBe('stand:15');expect(exact.m1Check.structure.pivots).toHaveLength(200);
  expect(list).toHaveLength(2);
 });
+
+it('offers stored runs and the current month without touching either historical live archive',async()=>{
+ const f=fixture(),original={id:'saved-run',status:'complete',configuration:{label:'Saved run',sessions:['original setting']},coverage:{original:true}};f.tables.trade_setup_simulation_runs=[{id:'saved-run',run:original}];
+ const options=await createSetup2Repository(f.client).listRunOptions();expect(options.some(run=>run.id==='saved-run')).toBe(true);expect(options.some(run=>run.id.startsWith('live-watcher:'))).toBe(true);
+ expect(f.requests.every(read=>read.table==='trade_setup_simulation_runs'&&read.fields!=='run')).toBe(true);expect(options.find(run=>run.id==='saved-run').configuration).toEqual({label:'Saved run'});
+ expect(await createSetup2Repository(f.client).getRun('saved-run')).toEqual(original);
+});

@@ -16,13 +16,18 @@ export function useSimulationPins(filters,run,results,{repository,datasets,runs}
   const snapshotCache=new Map();
   let revision=0;
   async function refresh() {
-    const ticket=++revision;error.value='';loading.value=true;
+    const ticket=++revision;error.value='';
+    if(!filters.value.run){pins.value=[];origins.value=new Map();loading.value=false;return;}
+    loading.value=true;
     try {
       const rows=await fetchSimulationPins();
+      if(ticket!==revision)return;
       const resolved=new Map();
       if(repository) {
         // Ein Herkunftssnapshot je Pin genügt; alte Läufe müssen nicht vollständig geladen werden.
-        for(let offset=0;offset<rows.length;offset+=8)await Promise.all(rows.slice(offset,offset+8).map(async pin=>{
+        for(let offset=0;offset<rows.length;offset+=8){
+          if(ticket!==revision)return;
+          await Promise.all(rows.slice(offset,offset+8).map(async pin=>{
           const entry=pin.kind==='simulation_entry',id=entry?pin.simulationEntrySnapshotId:pin.simulationSnapshotId;
           if(!id)return;
           const live=livePinSource(pin);
@@ -31,6 +36,7 @@ export function useSimulationPins(filters,run,results,{repository,datasets,runs}
           try{resolved.set(pin.id,await snapshotCache.get(key));}
           catch{snapshotCache.delete(key);resolved.set(pin.id,{pinReadError:true});}
         }));
+        }
       }
       if(ticket===revision){pins.value=rows;origins.value=resolved;}
     } catch(cause){if(ticket===revision)error.value=cause.message || 'Pins konnten nicht geladen werden.';}

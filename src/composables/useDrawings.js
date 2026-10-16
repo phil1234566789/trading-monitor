@@ -1,4 +1,4 @@
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, effectScope, onScopeDispose } from "vue";
 import { useLocalStorageRef } from "./useLocalStorageRef.js";
 import { berlinDateStrFor } from "../berlinTime.js";
 import {
@@ -33,18 +33,21 @@ const drawings = ref([]); // [{id, instrument, date, annotations, created_at}, .
 const visible = ref(true);
 const loading = ref(false);
 
+let revision=0,users=0,syncScope=null;
 async function load() {
+  const ticket=++revision;
   loading.value = true;
   try {
-    drawings.value = await fetchDrawings(instrument.value, dateStr.value);
+    const rows=await fetchDrawings(instrument.value,dateStr.value);
+    if(ticket===revision)drawings.value=rows;
   } finally {
-    loading.value = false;
+    if(ticket===revision)loading.value = false;
   }
 }
 // Instrument-/Tageswechsel (Symbol-Switch, Replay-Zeitpunkt geändert, Replay an/aus) lädt die
 // Liste automatisch neu — Philip sieht beim Umschalten immer die zu diesem Tag gehörenden
 // Zeichnungen, nicht die vom vorher betrachteten Tag.
-watch([instrument, dateStr], load, { immediate: true });
+// Der globale Sichtbarkeitsknopf braucht keinen DB-Read; nur Chart und geöffnetes Modal abonnieren.
 
 // Jeder Klick auf "Zeichnen" legt eine NEUE Zeile an (fügt hinzu), statt die Liste zu ersetzen.
 // Ein Paste kann mehrere Gruppen enthalten (parseAnnotations gibt seit 2026-07-30 immer eine
@@ -81,6 +84,11 @@ async function setDrawingVisible(id, value) {
 // (d.visible === false) werden dabei rausgefiltert, zusätzlich zum globalen Toggle.
 const flatAnnotations = computed(() => drawings.value.filter((d) => d.visible).flatMap((d) => d.annotations));
 
-export function useDrawings() {
+export function useDrawings({load:loadOnUse=true}={}) {
+  if(loadOnUse){
+    // Der gemeinsame Watch bleibt aktiv, wenn der Chart schließt und das Modal noch offen ist.
+    if(users++===0){syncScope=effectScope(true);syncScope.run(()=>watch([instrument,dateStr],load,{immediate:true}));}
+    onScopeDispose(()=>{if(--users===0){syncScope.stop();syncScope=null;revision++;drawings.value=[];loading.value=false;}});
+  }
   return { instrument, dateStr, drawings, visible, loading, flatAnnotations, load, add, remove, setDrawingVisible };
 }

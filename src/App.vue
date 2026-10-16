@@ -16,10 +16,11 @@ const showDrawingsModal = ref(false);
 // Persistiert in Supabase (siehe useDrawings.js/drawingsStore.js) — hier nur der
 // Sichtbarkeits-Toggle nötig, die Liste selbst verwaltet DrawingsModal.vue direkt über
 // dieselbe Composable.
-const { visible: drawingsVisible } = useDrawings();
+const { visible: drawingsVisible } = useDrawings({load:false});
 
 const FRESH_MS = 30_000;
 const route = useRoute();
+const statisticsView=computed(()=>route.path==='/statistik');
 const snapshotView = computed(() => route.path === '/' && isTradeSetup2SnapshotView({
   tradeSetup2RunId: route.query.run, selectedTradeSetup2Id: route.query.setup2,
 }));
@@ -37,10 +38,11 @@ onMounted(() => {
 onUnmounted(() => clearInterval(timer));
 
 const isFresh = computed(() => lastSuccessAt.value != null && now.value - lastSuccessAt.value < FRESH_MS);
-const statusDotClass = computed(() => (snapshotView.value || lastSuccessAt.value == null ? "status-dot" : `status-dot ${isFresh.value ? "ok" : "dead"}`));
+const statusDotClass = computed(() => (snapshotView.value || statisticsView.value || lastSuccessAt.value == null ? "status-dot" : `status-dot ${isFresh.value ? "ok" : "dead"}`));
 const statusText = computed(() => {
   // Gespeicherte Entries pollen absichtlich nicht; eine Pause ist kein Verbindungsfehler.
   if (snapshotView.value) return "Gespeicherter Stand";
+  if (statisticsView.value) return "Statistik";
   if (lastSuccessAt.value == null) return "Verbinde...";
   return isFresh.value ? "Live" : "Verbindung tot";
 });
@@ -48,7 +50,7 @@ const statusText = computed(() => {
 // scharf gemachten Klick aus dem Dashboard (Target/Bestätigung/… an einem bestimmten Trade).
 const activeHint = computed(() => chartHint.value ?? CHART_MODES.find((m) => m.id === chartMode.value)?.hint ?? null);
 const lastUpdateText = computed(() =>
-  lastSuccessAt.value == null ? "" : `Letztes Update: ${new Date(lastSuccessAt.value).toLocaleTimeString("de-DE")}`,
+  statisticsView.value || lastSuccessAt.value == null ? "" : `Letztes Update: ${new Date(lastSuccessAt.value).toLocaleTimeString("de-DE")}`,
 );
 </script>
 
