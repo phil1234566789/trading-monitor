@@ -1,6 +1,9 @@
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { candleTouchesPrice } from './structurePivotTime';
-export const COUNTERTREND_RANGE_COURSE_VERSION='countertrend-validation-t1-be-t2-v2';
+import { evaluateJointLossRisk } from './dealingRangeRisk.js';
+export const COUNTERTREND_RANGE_COURSE_VERSION='countertrend-joint-loss-risk-v3';
+export const isCountertrendRangeCourseVersion = version =>
+  [COUNTERTREND_RANGE_COURSE_VERSION,'countertrend-validation-t1-be-t2-v2'].includes(version);
 
 export function countertrendRangeCourse(candidate) {
   if (!candidate?.lifecycle || candidate.targetSelection?.status!=='passed') return null;
@@ -20,7 +23,22 @@ export function countertrendLifecycleEnd({ invalid, target1, target2, hasTarget2
 }
 
 /** T1 sperrt neue Entries, beendet eine DR mit offenen Restpositionen aber noch nicht. */
-export function evaluateCountertrendLifecycle({ selection, invalidation, candles, evaluatedAt, entries = [], m1Candles = [], progress }) {
+export function evaluateCountertrendLifecycle(input) {
+  const {evaluatedAt,entries=[]} = input;
+  const risk = evaluateJointLossRisk(entries,evaluatedAt);
+  // Preisereignisse nach der Risikosperre dürfen deren früheren Grund nicht überschreiben.
+  const result = evaluateCountertrendPriceLifecycle({...input,
+    entries:entries.filter(e=>e.status!=='notExecutable'),
+    evaluatedAt:risk ? risk.recognizedAt : evaluatedAt});
+  result.evaluatedAt=evaluatedAt;
+  if (!risk || result.main.reason==='missingSelection'
+    || result.main.state==='ended' && result.main.recognizedAt<=risk.recognizedAt) return result;
+  return {...result,riskInvalidation:risk,entrySearchAllowed:false,
+    main:{state:'ended',reason:'twoConsecutiveJointLosses',endedAt:risk.recognizedAt,recognizedAt:risk.recognizedAt},
+    events:[...result.events,{type:'riskInvalidation',time:risk.recognizedAt,recognizedAt:risk.recognizedAt}]};
+}
+
+function evaluateCountertrendPriceLifecycle({ selection, invalidation, candles, evaluatedAt, entries = [], m1Candles = [], progress }) {
   let main = { state: 'unknown', reason: 'missingSelection', endedAt: null, recognizedAt: null };
   let result = { main, target1: { status: 'open', hitAt: null, recognizedAt: null },
     target2: { status: selection?.target2 ? 'open' : 'notApplicable', hitAt: null, recognizedAt: null },

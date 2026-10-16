@@ -1,3 +1,4 @@
+import { savedRiskInvalidationLabel } from './dealingRangeRisk.js';
 import { hasConfirmedChecklistAbc } from './tradeSetupChecklistGates.js';
 import { evaluateCountertrendDealingRange, COUNTERTREND_STAGE_VERSION } from './countertrendDealingRange.js';
 export { COUNTERTREND_STAGE_VERSION } from './countertrendDealingRange.js';
@@ -61,6 +62,8 @@ export function savedDealingRangeStatus(snapshot) {
 // Der historische Status mischt Validierungsentscheidungen mit Preisenden; nur die Anzeige trennen.
 export function dealingRangeLabel(snapshot) {
   const status = savedDealingRangeStatus(snapshot);
+  const riskLabel=status==='invalidated' && savedRiskInvalidationLabel(snapshot.dealingRange,snapshot.knownAt);
+  if (riskLabel) return riskLabel;
   if (status === 'invalidated' && snapshot.dealingRange.reason === 'priceInvalidation')
     return 'DR beendet · Invalidierungslevel erreicht';
   if (isDisqualifiedDealingRange(snapshot)) return DEALING_RANGE_LABELS.disqualified;

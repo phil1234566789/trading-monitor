@@ -1,3 +1,4 @@
+import { knownJointLossInvalidation, JOINT_LOSS_INVALIDATION_DETAIL } from './dealingRangeRisk.js';
 import { hasConfirmedChecklistAbc } from './tradeSetupChecklistGates.js';
 import { formatDatedTime } from './berlinTime.js';
 import { antiConfluenceStatus, checklistObservationRules, summarizeAntiConfluenceRules } from './checklistObservationRules.js';
@@ -27,6 +28,11 @@ export function evaluateCountertrendDealingRange(checklist, candidate) {
   const validity = candidate.validity;
   if (version === 'countertrend-abcdef-v1' && validity?.state === 'ended' && ['invalidation','both'].includes(validity.reason) && known(validity.recognizedAt))
     return {...confirmed,status:'invalidated',reason:'priceInvalidation',details:['Preis hat die Invalidierung der DR erreicht.']};
+  const riskInvalidation=version===COUNTERTREND_STAGE_VERSION
+    ? knownJointLossInvalidation(candidate.lifecycle,at) : null;
+  if (riskInvalidation && candidate.lifecycle.main?.reason==='twoConsecutiveJointLosses')
+    return {...confirmed,status:'invalidated',reason:'twoConsecutiveJointLosses',
+      details:[JOINT_LOSS_INVALIDATION_DETAIL],riskInvalidation};
   const anti = checks.antiConfluences;
   const antiStatus = antiConfluenceStatus(anti, at);
   const g = checks.confluences;

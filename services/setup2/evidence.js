@@ -1,3 +1,4 @@
+import { JOINT_LOSS_RISK_VERSION } from '../../src/dealingRangeRisk.js';
 import {observeCapturedRanges} from './priceObservations.js';
 import {packEvidence} from './evidencePayload.js';
 import {createHash} from 'node:crypto';
@@ -10,7 +11,7 @@ const iso=sec=>new Date(sec*1000).toISOString();
 
 // Originalwissen bleibt unverändert; später finalisierte Verläufe tragen einen eigenen as-of-Stand.
 export function createLiveEvidence(config,{fromTime,toTime,startedAt,mode}) {
- const configuration={schemaVersion:1,setupVersion:SETUP2_VERSION,entryPattern:ENTRY_PATTERN_1_VERSION,m1Period:M1_STRUCTURE_PERIOD,...config},configurationId=hash(configuration),originals=new Map(),payloads=new Map(),origins=new Map();
+ const configuration={schemaVersion:1,setupVersion:SETUP2_VERSION,drRiskVersion:JOINT_LOSS_RISK_VERSION,entryPattern:ENTRY_PATTERN_1_VERSION,m1Period:M1_STRUCTURE_PERIOD,...config},configurationId=hash(configuration),originals=new Map(),payloads=new Map(),origins=new Map();
  const evaluationMode=mode ?? (fromTime<Math.floor(startedAt/60)*60-60?'catchup':'live');
  function record(snapshot) {
   if(!snapshot?.id || !Number.isFinite(snapshot.knownAt) || snapshot.knownAt<fromTime || snapshot.knownAt>toTime)return;

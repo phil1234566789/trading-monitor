@@ -66,7 +66,7 @@ export async function scanCountertrendWindow(input) {
         progress});
         if(progress && outcome.status==='closed')progress.final=outcome;
         return outcome;
-      }).filter(e=>e.status!=='notExecutable');
+      });
       outcomes.set(snapshot.setupKey,[...(outcomes.get(snapshot.setupKey) ?? []),...outcomesForEntry]);
     }
     return outcomes;

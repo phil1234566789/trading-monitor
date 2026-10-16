@@ -15,7 +15,7 @@ function lightChecks(checks) {
       ...pick(r,['id','label','status','invalidates','disqualifies']),evidence:(r.evidence ?? []).map(signal)}))} : {}),
   }]));
 }
-const lightLifecycle = c => c ? {...pick(c,['version','entrySearchAllowed']),
+const lightLifecycle = c => c ? {...pick(c,['version','entrySearchAllowed','riskInvalidation']),
   main:pick(c.main,['state','reason','recognizedAt']),target1:pick(c.target1,['status','recognizedAt']),
   target2:pick(c.target2,['status','recognizedAt'])} : null;
 
@@ -36,7 +36,7 @@ export function createChecklistHistoryRecorder() {
       targetSelection:pick(candidate.targetSelection,['status','selectedAt','details']),lifecycle,validity:lifecycle?.main};
     if(primary.targetSelection)Object.assign(primary.targetSelection,{target1:signal(candidate.targetSelection.target1),target2:signal(candidate.targetSelection.target2)});
     const checks=lightChecks({...checklist.checks,...candidate.checks});
-    const value={checks,primary,dealingRange:pick(stage,['version','model','status','details','reason']),m1Check:m1Checks.get(key) ?? null};
+    const value={checks,primary,dealingRange:pick(stage,['version','model','status','details','reason','riskInvalidation']),m1Check:m1Checks.get(key) ?? null};
     const signature=JSON.stringify({...value,m1Check:value.m1Check ? {...value.m1Check,evaluatedAt:undefined} : null});
     if(previous.get(key)?.signature===signature)return;
     const state={...pick(checklist,['instrument','direction','status','model','ruleVersion','entryPattern']),direction:candidate.direction,

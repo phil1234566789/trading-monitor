@@ -1,3 +1,4 @@
+import { isCountertrendRangeCourseVersion } from './countertrendLifecycle.js';
 import { groupSetupSnapshots } from './tradeSetup2Review.js';
 import { evaluateChecklistLifecycle } from './tradeSetupChecklistLifecycle.js';
 import { markIgnoredCandles } from './sessionOccurrences.js';
@@ -12,7 +13,7 @@ export function completeSavedRangeCourses(snapshots, candles, evaluatedAt, sessi
   for (const group of groupSetupSnapshots(snapshots)) {
     if (group.entries.length || !group.firstValidated || !group.latestCandidate) continue;
     // Der neue Scanner speichert Ereignisse und Entry-Ausgänge selbst; Altverläufe bleiben M5-only.
-    if (group.latestCandidate.rangeCourse?.version==='countertrend-validation-t1-be-t2-v2') continue;
+    if (isCountertrendRangeCourseVersion(group.latestCandidate.rangeCourse?.version)) continue;
     const first = group.firstValidated, primary = first.checklist?.setup?.primary;
     const selection = primary?.targetSelection;
     if (selection?.status !== 'passed' || !Number.isFinite(selection.selectedAt)
