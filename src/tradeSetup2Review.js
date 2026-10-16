@@ -1,3 +1,4 @@
+import {savedRiskInvalidationLabel} from './dealingRangeRisk.js';
 import {entryPatternVersion} from './entryPattern.js';
 import { entryChecklist } from './m1Entry.js';
 import { m1PrerequisiteReason } from './m1Structure.js';
@@ -96,10 +97,11 @@ export function setupEntryConditions(snapshot) {
       pattern1 ? 'Das zentrale Entry-Gate prüft Handelszeiten, Sessions und News unmittelbar vor dem Entry.'
         : 'Entry 1 wird nur durch eine bekannte Sperre blockiert. Unbekannte Angaben gelten nicht als bestätigte Freigabe.']);
   const validity = primary?.validity;
+  const riskReason=savedRiskInvalidationLabel(primary?.lifecycle,at);
   const searchEnded=primary?.lifecycle?.entrySearchAllowed===false;
   add('active', checklist?.model==='countertrend' ? 'DR aktiv / Entry-Suche vor T1' : 'Setup noch nicht durch T1 oder Invalidierung beendet',
     searchEnded ? 'unmet' : validity?.state === 'active' ? 'passed' : validity?.state === 'ended' && known(validity.recognizedAt) ? 'unmet' : 'unknown',
-    [searchEnded ? 'Entry-Suche nach T1 oder Lifecycle-Ende beendet.' : validity?.state === 'active' ? 'Am Bewertungsstand aktiv.' : validity?.state === 'ended' && known(validity.recognizedAt)
+    riskReason?[riskReason,...dr?.details ?? []]:[searchEnded ? 'Entry-Suche nach T1 oder Lifecycle-Ende beendet.' : validity?.state === 'active' ? 'Am Bewertungsstand aktiv.' : validity?.state === 'ended' && known(validity.recognizedAt)
       ? `Beendet: ${ { target1: 'T1 vor Invalidation', target2:'T2 erreicht', entriesClosed:'alle Entries geschlossen', invalidation: 'Invalidation vor T1', both: 'T1 und Invalidierung' }[validity.reason] ?? 'Grund unbekannt' }.`
       : 'Gültigkeit nicht abschließend gespeichert. Nur ein bestätigtes Ende sperrt die M1-Auswertung.']);
   const pivotPattern=usesPivotBreakEntryPattern1(version);
