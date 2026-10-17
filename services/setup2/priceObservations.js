@@ -1,3 +1,4 @@
+import {priceInputHash} from './evidenceIdentity.js';
 import {observeDealingRangePrice,dealingRangeValidationPrice} from '../../src/dealingRangePriceObservation.js';
 
 import {markIgnoredCandles} from '../../src/sessionOccurrences.js';
@@ -34,7 +35,11 @@ export function observeCapturedRanges({origins,previous={},m5Candles,sessionConf
 
   const observation=observeDealingRangePrice({...parameters,candles:tail,windowEnd:toTime,previous:saved?.observation});
 
-  state[origin.setupKey]={coverage:{...coverage,evaluatedThrough:toTime},parameters,observation};
+  // Native Nachlieferung darf die Preisbeobachtung ergänzen, niemals den alten Originalbeleg ersetzen.
+  const causalRows=rows.slice(candleTimeIndex(rows,Math.floor(coverage.validatedAt/300)*300-300),candleTimeIndex(rows,Math.floor(toTime/300)*300));
+  const inputRevision=priceInputHash({version:'captured-m5-price-input-v1',parameters,sessions,toTime,
+   candles:causalRows.map(c=>[c.time,c.high,c.low,c.close,!!c.ignored])});
+  state[origin.setupKey]={coverage:{...coverage,evaluatedThrough:toTime},parameters,observation,inputRevision};
 
  }
 

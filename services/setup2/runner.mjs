@@ -15,6 +15,7 @@ import {partitionLiveSources,suspendedResumeTime,recoverSuspendedRange,recoveryC
 import {mergeCapturedRangeState} from './priceObservations.js';
 import {createLiveEvidence} from './evidence.js';
 import {checkpointEvidence} from './evidenceCheckpoint.js';
+import {queueEvidenceCheckpoint,flushPendingCheckpoint} from './pendingCheckpoint.js';
 import {archiveClient} from '../../scripts/tradeSetup2Archive.mjs';
 
 const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -59,6 +60,8 @@ async function instrumentTick(row,sessions,schedules,news) {
  const pendingKeys=new Set((cache.pendingEvidence ?? []).flatMap(b=>b.snapshots.map(s=>s.setup_key)));
  cache.evidencePriceObservations=mergeCapturedRangeState(previous.evidencePriceObservations,cache.evidencePriceObservations,pendingKeys);
  try {
+  const retried=await flushPendingCheckpoint(request,cache,{instrument,owner,previous});
+  if(retried){console.log(JSON.stringify({instrument,processed:retried.evaluatedThrough,retriedCheckpoint:true,error:retried.error ?? null}));return;}
   const [daily,h1]=await Promise.all([updateCandles(cache,instrument,'1D'),updateCandles(cache,instrument,'1h')]);
   const anchors=buildHistoricalDailyAnchors(daily,h1),now=Date.now()/1000;
   const latest=anchors.findLast(a=>a.knownAt<=now);
@@ -159,9 +162,8 @@ async function instrumentTick(row,sessions,schedules,news) {
    configFingerprint:recoveryConfig(sessions,tradingWindows,news),
    error:currentError,errorSince:currentError?(previous.error===currentError?previous.errorSince ?? iso(success):iso(success)):null,runtimeVersion:'live-minute-v2',version:`${ENTRY_PATTERN_1_VERSION}/${SETUP2_VERSION}`,initializedAt:previous.initializedAt ?? iso(success)};
   if(feedError)events.push({id:`feed:${instrument}:${lastM5}`,signal_at:iso(success),stage:0,kind:'problem',payload:{message:feedError,lastSuccessAt:previous.lastSuccessAt}});
-  await checkpointEvidence(request,{p_instrument:instrument,p_owner:owner,p_state:state,p_events:events},cache.pendingEvidence);
-  cache.pendingEvidence=[];
-  cache.entries=state.entries;cache.liveState=state;cache.anchors=anchors;cache.h1=h1;
+  queueEvidenceCheckpoint(cache,{state,events,previous,anchors,h1});
+  await flushPendingCheckpoint(request,cache,{instrument,owner,previous});
   console.log(JSON.stringify({instrument,processed:state.evaluatedThrough,active:active.length,events:events.length,scanDurationMs:state.scanDurationMs,error:state.error}));
  } catch(failure){
   const message=failure instanceof Error?failure.message:'Auswertung fehlgeschlagen';

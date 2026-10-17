@@ -1,12 +1,11 @@
 import { JOINT_LOSS_RISK_VERSION } from '../../src/dealingRangeRisk.js';
 import {observeCapturedRanges} from './priceObservations.js';
 import {packEvidence} from './evidencePayload.js';
-import {createHash} from 'node:crypto';
+import {evidenceHash as hash} from './evidenceIdentity.js';
 import {buildTradeSetup2CandidateSnapshot} from '../../src/tradeSetup2Snapshot.js';
 import {SETUP2_VERSION} from '../../src/tradeSetup2Configuration.js';
 import {ENTRY_PATTERN_1_VERSION} from '../../src/entryPattern1Conditions.js';
 import {M1_STRUCTURE_PERIOD} from '../../src/m1StructureSettings.js';
-const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const iso=sec=>new Date(sec*1000).toISOString();
 
 // Originalwissen bleibt unverändert; später finalisierte Verläufe tragen einen eigenen as-of-Stand.
@@ -37,7 +36,10 @@ export function createLiveEvidence(config,{fromTime,toTime,startedAt,mode}) {
    const final=last.get(snapshot.setupKey)===snapshot?(byId.get(snapshot.id) ?? byRange.get(snapshot.setupKey) ?? {}):{};
    const observation=Object.fromEntries(['checklistHistory','rangeCourse','priceObservation'].filter(k=>final[k]!=null).map(k=>[k,final[k]]));
    if(last.get(snapshot.setupKey)===snapshot && priceState[snapshot.setupKey])Object.assign(observation,{priceObservation:priceState[snapshot.setupKey].observation,coverage:priceState[snapshot.setupKey].coverage});
-   return {id:hash([snapshot.id,toTime,configurationId,evaluationMode]),snapshot_id:snapshot.id,instrument:snapshot.instrument,
+   const inputRevision=priceState[snapshot.setupKey]?.inputRevision;
+   // Leere Zwischenzeilen dürfen im Readindex keinen vollständigen Verlauf verdrängen.
+   if(inputRevision && last.get(snapshot.setupKey)===snapshot)observation.priceInputRevision=inputRevision;
+   return {id:hash([snapshot.id,toTime,configurationId,evaluationMode,...(inputRevision?[inputRevision]:[])]),snapshot_id:snapshot.id,instrument:snapshot.instrument,
     setup_key:snapshot.setupKey,known_at:iso(snapshot.knownAt),evaluated_through:iso(toTime),
     evaluation_mode:evaluationMode,snapshot,observation:packEvidence(observation,payloads,hash)};
   });
