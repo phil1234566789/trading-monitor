@@ -50,7 +50,7 @@ export async function checkRiskCourseDb(db,fixture,migration='supabase/migration
   assert.deepEqual(await fingerprint(),before);
   invalid.push(name);
  };
- await reject('unknown-course',s=>{s.rangeCourse.version='countertrend-joint-loss-risk-v4';},/Invalid frozen range course/);
+ await reject('unknown-course',s=>{s.rangeCourse.version='countertrend-joint-loss-risk-unsupported';},/Invalid frozen range course/);
  await reject('unknown-risk-version',s=>{s.rangeCourse.lifecycle.riskInvalidation.version='unsupported';});
  await reject('non-numeric-time',s=>{s.rangeCourse.lifecycle.riskInvalidation.recognizedAt='1792052640';});
  await reject('before-validation',s=>{

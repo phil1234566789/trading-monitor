@@ -1,4 +1,4 @@
-import { knownJointLossInvalidation, JOINT_LOSS_INVALIDATION_DETAIL } from './dealingRangeRisk.js';
+import { knownJointLossInvalidation, jointLossInvalidationDetail } from './dealingRangeRisk.js';
 import { hasConfirmedChecklistAbc } from './tradeSetupChecklistGates.js';
 import { formatDatedTime } from './berlinTime.js';
 import { antiConfluenceStatus, checklistObservationRules, summarizeAntiConfluenceRules } from './checklistObservationRules.js';
@@ -32,7 +32,7 @@ export function evaluateCountertrendDealingRange(checklist, candidate) {
     ? knownJointLossInvalidation(candidate.lifecycle,at) : null;
   if (riskInvalidation && candidate.lifecycle.main?.reason==='twoConsecutiveJointLosses')
     return {...confirmed,status:'invalidated',reason:'twoConsecutiveJointLosses',
-      details:[JOINT_LOSS_INVALIDATION_DETAIL],riskInvalidation};
+      details:[jointLossInvalidationDetail(riskInvalidation)],riskInvalidation};
   const anti = checks.antiConfluences;
   const antiStatus = antiConfluenceStatus(anti, at);
   const g = checks.confluences;

@@ -45,8 +45,8 @@ describe('T74 direkte chronologische Entryfolge',()=>{
    const entries=[...pair('one',600,1800),...pair('two',720,960),...pair('three',840,1020)];
    expect(evaluateJointLossRisk(entries,1500)).toMatchObject({recognizedAt:1020,entryIds:['two','three']});
  });
- it('prüft eine später vollständig abgeschlossene Variante erst mit deren Wissen neu',()=>{
-   const two=middle({});two[1].exitRecognizedAt=1140;
+ it('wartet auf den weiten Abschluss, nicht auf einen späteren engen Abschluss',()=>{
+   const two=middle({});two[0].exitRecognizedAt=1140;two[1].exitRecognizedAt=1200;
    expect(evaluateJointLossRisk([...first,...two],1139)).toBeNull();
    expect(evaluateJointLossRisk([...first,...two],1140)).toMatchObject({recognizedAt:1140});
  });
@@ -84,7 +84,7 @@ describe('T74 direkte chronologische Entryfolge',()=>{
    const dr=evaluateDealingRange(checklist);
    expect(dr).toMatchObject({status:'invalidated',reason:'twoConsecutiveJointLosses',riskInvalidation:risk});
    const snapshot=buildTradeSetup2CandidateSnapshot({checklist,candidate});
-   expect(snapshot.rangeCourse).toMatchObject({version:'countertrend-joint-loss-risk-v3',invalidation:1.4,
+   expect(snapshot.rangeCourse).toMatchObject({version:'countertrend-joint-loss-risk-v4',invalidation:1.4,
      lifecycle:{riskInvalidation:risk}});
    expect(dealingRangeLabel(snapshot)).toBe('DR risiko-invalidiert · zwei Verlust-Entries in Folge');
    const recorder=createChecklistHistoryRecorder();recorder.record(checklist,candidate,'M1');
@@ -93,4 +93,14 @@ describe('T74 direkte chronologische Entryfolge',()=>{
    expect(saved.checklist.setup.primary.lifecycle.riskInvalidation).toEqual(risk);
    expect(candidate.invalidation).toBe(1.4);
  });
+});
+it('never erases an already known risk stop because the narrow variant wins later',()=>{
+ const one=pair('one',600,780),two=pair('two',840,900);
+ Object.assign(one[1],{outcome:'t2',pnlUsd:100,exitRecognizedAt:1200});
+ Object.assign(two[1],{status:'open',outcome:null,pnlUsd:null,exitRecognizedAt:null});
+ const rows=[...one,...two];
+ expect(evaluateJointLossRisk(rows,900)).toMatchObject({recognizedAt:900});
+ expect(evaluateJointLossRisk(rows,1200)).toEqual(evaluateJointLossRisk(rows,900));
+ const before=structuredClone(rows);before[1].exitRecognizedAt=899;
+ expect(evaluateJointLossRisk(before,1200)).toBeNull();
 });

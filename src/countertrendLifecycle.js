@@ -1,9 +1,9 @@
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { candleTouchesPrice } from './structurePivotTime';
 import { evaluateJointLossRisk } from './dealingRangeRisk.js';
-export const COUNTERTREND_RANGE_COURSE_VERSION='countertrend-joint-loss-risk-v3';
+export const COUNTERTREND_RANGE_COURSE_VERSION='countertrend-joint-loss-risk-v4';
 export const isCountertrendRangeCourseVersion = version =>
-  [COUNTERTREND_RANGE_COURSE_VERSION,'countertrend-validation-t1-be-t2-v2'].includes(version);
+  [COUNTERTREND_RANGE_COURSE_VERSION,'countertrend-joint-loss-risk-v3','countertrend-validation-t1-be-t2-v2'].includes(version);
 
 export function countertrendRangeCourse(candidate) {
   if (!candidate?.lifecycle || candidate.targetSelection?.status!=='passed') return null;
