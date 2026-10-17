@@ -1,3 +1,4 @@
+import {runnerIncidentId} from '../../supabase/functions/_shared/setup2IncidentIdentity.js';
 import { ENTRY_PATTERN_1_VERSION } from '../../src/entryPattern1Conditions.js';
 import { SETUP2_VERSION } from '../../src/tradeSetup2Configuration.js';
 import {randomUUID} from 'node:crypto';
@@ -165,7 +166,7 @@ async function instrumentTick(row,sessions,schedules,news) {
  } catch(failure){
   const message=failure instanceof Error?failure.message:'Auswertung fehlgeschlagen';
   await request('rpc/setup2_checkpoint',{p_instrument:instrument,p_owner:owner,p_state:{...previous,lastProcessAt:iso(started/1000),error:message},p_events:[{
-   id:`runner:${instrument}:${previous.lastSuccessAt ?? 'never'}:${message}`,signal_at:iso(Date.now()/1000),stage:0,kind:'problem',payload:{message,lastSuccessAt:previous.lastSuccessAt}}]});
+   id:runnerIncidentId(instrument,previous.lastSuccessAt,message),signal_at:iso(Date.now()/1000),stage:0,kind:'problem',payload:{message,lastSuccessAt:previous.lastSuccessAt}}]});
   console.error(JSON.stringify({instrument,error:message}));
  }
 }

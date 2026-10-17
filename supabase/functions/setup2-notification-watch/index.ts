@@ -1,3 +1,4 @@
+import {runnerIncidentId} from '../_shared/setup2IncidentIdentity.js';
 import { db, env, json, checked, headers } from '../_shared/setup2Http.ts';
 import { healthReport, secretMatches, sendPushover, notificationText, validatePushover, sendTelegram } from '../_shared/setup2Notifications.js';
 import { isWithinTradingWindows } from '../_shared/tradingHoursGate.ts';
@@ -46,9 +47,10 @@ async function tick(client: any) {
   for (const instrument of report.instruments) {
     if (instrument.enabled && instrument.error) {
       checked(await client.rpc('setup2_record_problem', {
-        p_id: `health:${instrument.instrument}:${instrument.errorSince ?? 'initial'}:${instrument.error}`,
+        p_id: runnerIncidentId(instrument.instrument,instrument.lastSuccessAt,instrument.error),
         p_instrument: instrument.instrument,
-        p_payload: {message: instrument.error, lastSuccessAt: instrument.lastSuccessAt}
+        p_payload: {message: instrument.error, lastSuccessAt: instrument.lastSuccessAt,
+          ...(isRangeWarning({kind:'problem',id:'health:',payload:{message:instrument.error}})?{category:'range-warning'}:{})}
       }));
     }
   }
