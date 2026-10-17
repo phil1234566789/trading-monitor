@@ -2,8 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {encodeSnapshotStructures,decodeSnapshotStructures} from '../../src/tradeSetupSnapshotStorage.js';
 
-export async function checkRiskCourseDb(db,fixture){
- const migration='supabase/migrations/20261016122000_simulation_joint_loss_range_course.sql';
+export async function checkRiskCourseDb(db,fixture,migration='supabase/migrations/20261016122000_simulation_joint_loss_range_course.sql'){
  const acl=async()=>(await db.query("select proacl::text,prosecdef,proconfig from pg_proc where oid='save_trade_setup_simulation_setups(text,jsonb)'::regprocedure")).rows;
  const fingerprint=async()=>(await db.query('select run_id,id,md5(snapshot::text) hash from trade_setup_simulation_setups order by run_id,id')).rows;
  const beforeAcl=await acl(),beforeRows=await fingerprint();
