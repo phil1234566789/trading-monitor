@@ -6066,9 +6066,9 @@
     "semantic_hash": ""
   },
   "services/setup2/runner.mjs": {
-    "mtime": 1792220661.7697842,
-    "seen": 1792221150.467272,
-    "ast_hash": "5dff270d294d0556330d79fc9c62b75e",
+    "mtime": 1792221445.3090024,
+    "seen": 1792221779.81721,
+    "ast_hash": "42c6923cdde7a72459f461054af830c4",
     "semantic_hash": ""
   },
   "src/algoWatcher.js": {
@@ -6318,9 +6318,9 @@
     "semantic_hash": ""
   },
   "services/setup2/evidence.js": {
-    "mtime": 1792144551.940771,
-    "seen": 1792220593.3674524,
-    "ast_hash": "f7bcd700cc991bfc65c8bef66ddf53f4",
+    "mtime": 1792221732.2329297,
+    "seen": 1792221779.81621,
+    "ast_hash": "b75a3e23eb79994cabfeb26a55e84deb",
     "semantic_hash": ""
   },
   "services/setup2/evidencePayload.js": {
@@ -6330,9 +6330,9 @@
     "semantic_hash": ""
   },
   "services/setup2/priceObservations.js": {
-    "mtime": 1792050657.8486476,
-    "seen": 1792220593.3674524,
-    "ast_hash": "733c21bc4dedec704937e9e5a5f058f3",
+    "mtime": 1792221561.610155,
+    "seen": 1792221779.81721,
+    "ast_hash": "07f7c2b493b926c5182cab6b1f003163",
     "semantic_hash": ""
   },
   "src/components/LiveEvidenceProvenance.vue": {
@@ -6543,6 +6543,42 @@
     "mtime": 1792220651.5195544,
     "seen": 1792221150.586303,
     "ast_hash": "79ac169cb1346f902688f803aaa3cdb8",
+    "semantic_hash": ""
+  },
+  "services/setup2/evidenceIdentity.js": {
+    "mtime": 1792221561.6091523,
+    "seen": 1792221779.81621,
+    "ast_hash": "c619f748b79a5e0b2c5e584dae4287b7",
+    "semantic_hash": ""
+  },
+  "services/setup2/pendingCheckpoint.js": {
+    "mtime": 1792221561.610155,
+    "seen": 1792221779.81721,
+    "ast_hash": "00ae0e602583a60f628ee87bf8b4d0df",
+    "semantic_hash": ""
+  },
+  "test/fixtures/eurusd20789-price-input-native.json": {
+    "mtime": 1792221516.9451785,
+    "seen": 1792221779.9052095,
+    "ast_hash": "471ccfa6517074f126d4ccfb4391d538",
+    "semantic_hash": ""
+  },
+  "test/helpers/setup2PriceInputRevisionDbFixture.mjs": {
+    "mtime": 1792221561.6111562,
+    "seen": 1792221779.91421,
+    "ast_hash": "470ebe7384b89d6accf5ccc61d342ff4",
+    "semantic_hash": ""
+  },
+  "test/setup2PendingCheckpoint.test.js": {
+    "mtime": 1792221549.7050383,
+    "seen": 1792221779.932215,
+    "ast_hash": "08172ea53b80e18f063f30c00e52f420",
+    "semantic_hash": ""
+  },
+  "test/setup2PriceInputRevision.test.js": {
+    "mtime": 1792221725.0943067,
+    "seen": 1792221779.932215,
+    "ast_hash": "348c0dd5ada9c3d89dd7b836c2573338",
     "semantic_hash": ""
   }
 }
