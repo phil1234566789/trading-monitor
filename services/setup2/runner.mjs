@@ -94,7 +94,8 @@ async function instrumentTick(row,sessions,schedules,news) {
    loadM1Candles:async({structureFromTime})=>{
     // Scanner bestimmt Sweep-/P5-Vorlauf. Preisvergleich braucht die bestätigte OB-Historie ebenfalls.
     const from=Math.min(structureFromTime,...sources.map(s=>s.obStartTime))-131*60;
-    if(cache.m1Start!=null && from<cache.m1Start)delete cache['1m'];cache.m1Start=from;
+    // Ein späterer Kandidat verkürzt die bereits geladene Abdeckung nicht; sonst lädt der nächste Zugriff alles neu.
+    if(cache.m1Start!=null && from<cache.m1Start)delete cache['1m'];cache.m1Start=Math.min(cache.m1Start ?? Infinity,from);
     return updateCandles(cache,instrument,'1m',from);
    },onSnapshot:s=>{if(s.entry)entries.set(s.entry.id,{setupKey:s.setupKey,entry:s.entry});else ranges.set(s.setupKey,s);}};
   // Nach Neustart rekonstruieren wir die Entry-/Lifecycle-Historie mit dem unveränderten Batchpfad.
