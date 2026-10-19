@@ -6066,9 +6066,9 @@
     "semantic_hash": ""
   },
   "services/setup2/runner.mjs": {
-    "mtime": 1792392047.2791655,
-    "seen": 1792392103.1441472,
-    "ast_hash": "93f6fb3850548c594654ee1d1eda3667",
+    "mtime": 1792421775.3389626,
+    "seen": 1792421924.6566613,
+    "ast_hash": "5f3df5f68b2223f3c88e365852d01ee4",
     "semantic_hash": ""
   },
   "src/algoWatcher.js": {
@@ -6216,15 +6216,15 @@
     "semantic_hash": ""
   },
   "supabase/functions/_shared/setup2Recovery.js": {
-    "mtime": 1792411587.2161436,
-    "seen": 1792412658.6126435,
-    "ast_hash": "9ea3ca762c56ca3f80f316b5c08cbe26",
+    "mtime": 1792412683.244362,
+    "seen": 1792421924.736173,
+    "ast_hash": "8d212776bc29db5a1be3966ee5abc2f4",
     "semantic_hash": ""
   },
   "test/setup2RecoveryTelegram.test.js": {
-    "mtime": 1792412132.9680543,
-    "seen": 1792412658.6677413,
-    "ast_hash": "aea7d9936d4042c01b7b97c13b3338f9",
+    "mtime": 1792412670.054079,
+    "seen": 1792421924.811443,
+    "ast_hash": "7b0498ed221b4fbd810f6908dfec3c6a",
     "semantic_hash": ""
   },
   "scripts/requestJson.mjs": {
@@ -6396,9 +6396,9 @@
     "semantic_hash": ""
   },
   "test/setup2EvidenceRunner.test.js": {
-    "mtime": 1792052427.8389158,
-    "seen": 1792353800.4002874,
-    "ast_hash": "4811ddd86e150f8157c1bcaea9f462bf",
+    "mtime": 1792421864.126138,
+    "seen": 1792421924.8064454,
+    "ast_hash": "7442e60e29e2a92220a7f7ae1513926a",
     "semantic_hash": ""
   },
   "test/setup2LiveEvidence.test.js": {
