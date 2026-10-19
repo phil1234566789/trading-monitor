@@ -10,7 +10,7 @@ import {tradeSetupFromRow} from '../../src/tradeSetupRow.js';
 import {evaluateTradingHours} from '../../src/tradeSetupChecklistTime.js';
 import {minuteAlarmEvents,structureReady,deliveryReason,rememberStructure} from './events.js';
 import {RANGE_HISTORY_WARNING} from '../../supabase/functions/_shared/setup2RangeWarnings.js';
-import {requestJson} from '../../scripts/requestJson.mjs';
+import {requestJson,requestDiagnostic} from '../../scripts/requestJson.mjs';
 import {partitionLiveSources,suspendedResumeTime,recoverSuspendedRange,recoveryConfig,refreshRecoveredHistory} from './recovery.js';
 import {mergeCapturedRangeState} from './priceObservations.js';
 import {createLiveEvidence} from './evidence.js';
@@ -168,9 +168,9 @@ async function instrumentTick(row,sessions,schedules,news) {
   console.log(JSON.stringify({instrument,processed:state.evaluatedThrough,active:active.length,events:events.length,scanDurationMs:state.scanDurationMs,error:state.error}));
  } catch(failure){
   const message=failure instanceof Error?failure.message:'Auswertung fehlgeschlagen';
+  console.error(JSON.stringify({instrument,error:message,request:requestDiagnostic(failure)}));
   await request('rpc/setup2_checkpoint',{p_instrument:instrument,p_owner:owner,p_state:{...previous,lastProcessAt:iso(started/1000),error:message},p_events:[{
    id:runnerIncidentId(instrument,previous.lastSuccessAt,message),signal_at:iso(Date.now()/1000),stage:0,kind:'problem',payload:{message,lastSuccessAt:previous.lastSuccessAt}}]});
-  console.error(JSON.stringify({instrument,error:message}));
  }
 }
 const jobs=new Map(),recoveryJobs=new Map(),recoveryDue=new Map(),recoveryCursor=new Map();
@@ -182,7 +182,7 @@ while(true){
    client.pages('sessions',{select:'*',order:'id.asc'}),client.pages('trading_schedules',{select:'*',order:'instrument.asc'}),
    client.pages('news_events',{select:'id,event_time,currency,title',order:'event_time.asc,id.asc',event_time:`gte.${iso(Date.now()/1000-86400*7)}`})]);
   for(const row of states.filter(s=>s.enabled))if(!jobs.has(row.instrument)){
-   const job=instrumentTick(row,sessionRows(sessions),schedules,news).catch(error=>console.error(JSON.stringify({instrument:row.instrument,error:error.message}))).finally(()=>jobs.delete(row.instrument));
+   const job=instrumentTick(row,sessionRows(sessions),schedules,news).catch(error=>console.error(JSON.stringify({instrument:row.instrument,error:error.message,request:requestDiagnostic(error)}))).finally(()=>jobs.delete(row.instrument));
    jobs.set(row.instrument,job);
   }
   if(process.env.WATCHER_ONCE==='1')await Promise.all(jobs.values());
@@ -199,11 +199,11 @@ while(true){
     acquire:()=>request('rpc/setup2_acquire_lease',{p_instrument:row.instrument,p_owner:recoveryOwner,p_seconds:180}),
     checkpoint:(state,events,evidence=[])=>checkpointEvidence(request,{p_instrument:row.instrument,p_owner:recoveryOwner,p_state:state,p_events:events},evidence),
     release:()=>request(`setup2_live_state?instrument=eq.${row.instrument}&lease_owner=eq.${recoveryOwner}`,{lease_owner:null,lease_until:null},'PATCH')
-   }).catch(error=>console.error(JSON.stringify({instrument:row.instrument,source:'range-recovery',error:error.message})))
+   }).catch(error=>console.error(JSON.stringify({instrument:row.instrument,source:'range-recovery',error:error.message,request:requestDiagnostic(error)})))
     .finally(()=>recoveryJobs.delete(row.instrument));recoveryJobs.set(row.instrument,job);
   }
   await drain();
- } catch(error){console.error(JSON.stringify({error:error instanceof Error?error.message:'Watcher failed'}));}
+ } catch(error){console.error(JSON.stringify({error:error instanceof Error?error.message:'Watcher failed',request:requestDiagnostic(error)}));}
  if(process.env.WATCHER_ONCE==='1')break;
  await delay(Math.max(1000,((Math.floor(Date.now()/60000)+1)*60000+12000)-Date.now()));
 }

@@ -1,3 +1,12 @@
+const transportCategories = {
+ ECONNRESET:'connection', ECONNREFUSED:'connection', EPIPE:'connection', UND_ERR_SOCKET:'connection',
+ ENOTFOUND:'dns', EAI_AGAIN:'dns', ETIMEDOUT:'timeout', UND_ERR_CONNECT_TIMEOUT:'timeout',
+ UND_ERR_HEADERS_TIMEOUT:'timeout', UND_ERR_BODY_TIMEOUT:'timeout'
+};
+// Nur selbst erzeugte, feste Diagnosefelder freigeben; fremde Error-Properties dürfen nicht ins Log gelangen.
+const diagnostics = new WeakMap();
+export function requestDiagnostic(error) { return diagnostics.get(error); }
+
 export async function requestJson(url, options, operation, fetcher = fetch) {
  const started = Date.now();
  let phase = 'response headers', response;
@@ -21,6 +30,13 @@ export async function requestJson(url, options, operation, fetcher = fetch) {
   const reason = response && !response.ok ? `HTTP ${response.status}${failure.safeCode?` (${failure.safeCode})`:""}`
    : ['TimeoutError','AbortError'].includes(failure?.name) ? failure.name : 'request failed';
   // URLs, Header und Originalfehler können Zugangsdaten enthalten; nur explizite Operationslabels protokollieren.
-  throw new Error(`${operation}: ${phase}, ${reason}, ${durationMs}ms`);
+  const error = new Error(`${operation}: ${phase}, ${reason}, ${durationMs}ms`);
+  const code = [failure?.cause?.code, failure?.code].find(value=>typeof value==='string' && Object.hasOwn(transportCategories,value)) ?? null;
+  const category = response && !response.ok ? 'http' : phase==='JSON decode' ? 'decode'
+   : failure?.name==='TimeoutError' ? 'timeout' : failure?.name==='AbortError' ? 'abort'
+   : code ? transportCategories[code] : 'unknown';
+  // Die Meldung bleibt identisch: zusätzliche Diagnose darf bestehende Incident-IDs nicht aufspalten.
+  diagnostics.set(error,Object.freeze({phase,category,code}));
+  throw error;
  }
 }

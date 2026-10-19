@@ -36,3 +36,45 @@ it('retains the database timeout code while redacting the server message and det
  try {await requestJson('https://local.test',{},'checkpoint',async()=>new Response(JSON.stringify({code:'57014',message:'private-secret',details:'private-secret'}),{status:500}));throw new Error('Expected request failure');}
  catch(error){expect(error.message).toContain('HTTP 500 (57014)');expect(error.message).not.toContain('private-secret');}
 });
+
+import {requestDiagnostic} from '../scripts/requestJson.mjs';
+import {runnerIncidentId} from '../supabase/functions/_shared/setup2IncidentIdentity.js';
+
+it.each([
+ ['ECONNRESET','connection'],['ECONNREFUSED','connection'],['EPIPE','connection'],
+ ['ENOTFOUND','dns'],['EAI_AGAIN','dns'],['ETIMEDOUT','timeout'],
+ ['UND_ERR_CONNECT_TIMEOUT','timeout'],['UND_ERR_HEADERS_TIMEOUT','timeout'],
+ ['UND_ERR_BODY_TIMEOUT','timeout'],['UND_ERR_SOCKET','connection']
+])('retains allowlisted cause %s separately from the unchanged incident message',async(code,category)=>{
+ const raw=new TypeError('https://private.invalid?token=secret-value',{cause:Object.assign(new Error('secret-value'),{code,address:'secret-value'})});
+ const failure=await requestJson('https://private.invalid',{headers:{Authorization:'secret-value'}},'read',async()=>{throw raw;}).catch(e=>e);
+ expect(failure.message).toMatch(/^read: response headers, request failed, \d+ms$/);
+ expect(requestDiagnostic(failure)).toEqual({phase:'response headers',category,code});
+ expect(JSON.stringify(requestDiagnostic(failure))).not.toContain('secret-value');
+ expect(runnerIncidentId('GBPUSD',null,failure.message)).toBe(runnerIncidentId('GBPUSD',null,'read: response headers, request failed, 123ms'));
+});
+
+it('rejects arbitrary error metadata, inherited keys and forged diagnostic fields',async()=>{
+ for(const code of ['secret-value','constructor','toString','__proto__']){
+  const raw=Object.assign(new Error('secret-value'),{name:'secret-value',code,cause:{code},diagnostic:{phase:'secret-value',category:'secret-value'}});
+  const failure=await requestJson('https://private.invalid',{},'read',async()=>{throw raw;}).catch(e=>e);
+  expect(requestDiagnostic(failure)).toEqual({phase:'response headers',category:'unknown',code:null});
+  expect(JSON.stringify(failure)).not.toContain('secret-value');
+  expect(requestDiagnostic(raw)).toBeUndefined();
+ }
+});
+
+it('categorizes timeouts, aborts, body failures, decode errors and HTTP failures without free strings',async()=>{
+ const cases=[
+  [async()=>{throw new DOMException('secret-value','TimeoutError');},{phase:'response headers',category:'timeout',code:null}],
+  [async()=>{throw new DOMException('secret-value','AbortError');},{phase:'response headers',category:'abort',code:null}],
+  [async()=>({ok:true,text:async()=>{throw Object.assign(new Error('secret-value'),{code:'ECONNRESET'});}}),{phase:'response body',category:'connection',code:'ECONNRESET'}],
+  [async()=>new Response('secret-value'),{phase:'JSON decode',category:'decode',code:null}],
+  [async()=>new Response('secret-value',{status:503}),{phase:'response headers',category:'http',code:null}]
+ ];
+ for(const [fetcher,expected] of cases){
+  const failure=await requestJson('https://private.invalid',{},'read',fetcher).catch(e=>e);
+  expect(requestDiagnostic(failure)).toEqual(expected);
+  expect(Object.isFrozen(requestDiagnostic(failure))).toBe(true);
+ }
+});
