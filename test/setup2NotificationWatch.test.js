@@ -11,7 +11,7 @@ it.each([{historyFailure:false,legacyQueued:false},{historyFailure:true,legacyQu
  vi.resetModules();const writes=[],calls=[],net=vi.fn(async()=>new Response(JSON.stringify({status:1}),{status:200}));
  const server={provider_checked_at:new Date(now-30000).toISOString(),watch_checked_at:new Date(now-10000).toISOString(),provider_error:null};
  let storedEvent; const legacyEvent={id:'health:GBPUSD:legacy',kind:'problem',instrument:'GBPUSD',payload:{message:'Suspendierte DRs GBPUSD:setup1:13590: Lifecycle-Historie konnte nicht ermittelt werden (fehlend oder lückenhaft)'}};
- storedEvent=legacyEvent; const rows=[{instrument:'GBPUSD',enabled:true,state:{...((stateWarning||realError)?{error:stateWarning||realError}:{}),lastSuccessAt:new Date(now-20000).toISOString(),nextExpectedCheck:new Date(now+60000).toISOString(),activeRanges:[],lastM5Time:now/1000-300,evaluatedThrough:new Date(now-20000).toISOString(),suspendedRanges:[{setupKey:'DR13590',direction:'short'}]}}];
+ storedEvent=realError?{id:'runner:retryable',kind:'problem',instrument:'GBPUSD',payload:{message:realError}}:legacyEvent; const rows=[{instrument:'GBPUSD',enabled:true,state:{...((stateWarning||realError)?{error:stateWarning||realError}:{}),lastSuccessAt:new Date(now-20000).toISOString(),nextExpectedCheck:new Date(now+60000).toISOString(),activeRanges:[],lastM5Time:now/1000-300,evaluatedThrough:new Date(now-20000).toISOString(),suspendedRanges:[{setupKey:'DR13590',direction:'short'}]}}];
  ctx.client={from:table=>{
   const query={select:()=>query,eq:()=>query,neq:()=>query,in:()=>query,order:()=>query,limit:()=>query,lt:()=>query,single:()=>query,
    update:value=>{writes.push({table,value,mode:'update'});return query;},
@@ -24,13 +24,14 @@ it.each([{historyFailure:false,legacyQueued:false},{historyFailure:true,legacyQu
  try{
   await import('../supabase/functions/setup2-notification-watch/index.ts');
   const response=await ctx.handler(new Request('https://watcher.test',{method:'POST',headers:{Authorization:'Bearer local-watch-token'}}));
-  expect(response.status).toBe(historyFailure?503:200);expect(net).toHaveBeenCalledTimes(realError?1:0);
+  expect(response.status).toBe(historyFailure?503:200);expect(net).toHaveBeenCalledTimes(0);
   expect(writes.find(w=>w.table==='setup2_alarm_events').value).toMatchObject({setup_key:'DR13590',payload:{category:'range-warning'}});
   expect(writes.some(w=>w.table==='setup2_notification_outbox' && w.mode==='upsert')).toBe(false);
   if(legacyQueued||stateWarning)expect(writes.find(w=>w.table==='setup2_notification_outbox').value).toMatchObject({status:'suppressed'});
-  expect(ctx.client.rpc.mock.calls.some(([name])=>name==='setup2_record_problem')).toBe(!!(stateWarning||realError));
-  if(stateWarning)expect(storedEvent.payload.category).toBe('range-warning');
-  if(realError){expect(storedEvent.payload.category).toBeUndefined();expect(writes.find(w=>w.table==='setup2_notification_outbox').value.status).toBe('accepted');}
+  expect(ctx.client.rpc.mock.calls.some(([name])=>name==='setup2_record_problem')).toBe(false);
+  if(!historyFailure)expect(ctx.client.rpc.mock.calls.find(([name])=>name==='setup2_update_operational_incident')[1].p_critical).toBe(false);
+  if(stateWarning)expect(writes.some(w=>w.table==='setup2_alarm_events' && w.mode==='update' && w.value.payload?.category==='range-warning')).toBe(true);
+  if(realError){expect(storedEvent.payload.category).toBeUndefined();expect(writes.find(w=>w.table==='setup2_notification_outbox').value.status).toBe('suppressed');}
   expect(writes.some(w=>w.table==='pushover_test_limits' && w.value.watch_checked_at)).toBe(!historyFailure);
  }finally{clock.mockRestore();vi.unstubAllGlobals();}
 });

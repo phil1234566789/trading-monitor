@@ -275,7 +275,7 @@ const lastUpdateText = computed(() =>
   color: #fff;
 }
 .watcher-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: #787b86; }
-.watcher-dot.live { background: #26a69a; } .watcher-dot.waiting { background: #ffb300; } .watcher-dot.error { background: #ef5350; }
+.watcher-dot.live { background: #26a69a; } .watcher-dot.waiting, .watcher-dot.warning { background: #ffb300; } .watcher-dot.error { background: #ef5350; }
 .watcher-dot.pulse { animation: watcher-pulse 1.4s ease-in-out infinite; }
 @keyframes watcher-pulse { 50% { box-shadow: 0 0 0 5px rgba(38, 166, 154, .25); } }
 @media (prefers-reduced-motion: reduce) { .watcher-dot.pulse { animation: none; } }

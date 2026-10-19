@@ -22,14 +22,16 @@ async function sendTest() {
   <main class="watcher-page">
     <h1>Algo Watcher <span class="health" :class="health.state">{{ health.label }}</span></h1>
     <p>{{ health.reason }}</p>
-    <p v-if="report?.actionRequired" role="alert" class="error">🔴 Du bist dran · T68: {{ report.action }}</p>
+    <p v-if="health.actionRequired" role="alert" class="error">🔴 Du bist dran · Algo-Watcher: {{ health.action }}</p>
     <p v-if="error" role="alert" class="error">{{ error }}</p>
     <p>Unabhängige Serverprüfung: {{ watcherTime(report?.checkedAt) }} · gültig bis {{ watcherTime(report?.validUntil) }} (Europe/Berlin)</p>
     <button type="button" @click="refresh">Status aktualisieren</button>
     <section v-for="item in report?.instruments ?? []" :key="item.instrument" class="instrument">
       <h2>{{ item.instrument }} · {{ item.enabled ? item.phase : 'Aus' }}</h2>
-      <p v-if="item.error" role="alert" class="error">{{ item.error }}</p>
+      <p v-if="item.error" :role="item.actionRequired ? 'alert' : 'status'" :class="item.actionRequired ? 'error' : 'warning'">{{ item.error }}</p>
       <dl>
+        <dt>Ausgewerteter Marktstand</dt><dd>{{ watcherTime(item.marketWatermark) }}</dd>
+        <dt>Verzögerung des Marktstands</dt><dd>{{ item.marketLagSeconds == null ? 'Unbekannt' : `${Math.ceil(item.marketLagSeconds)} Sekunden` }}</dd>
         <dt>Prozess-Ping</dt><dd>{{ watcherTime(item.lastProcessAt) }}</dd>
         <dt>Letzter erfolgreicher Algorithmusschritt</dt><dd>{{ watcherTime(item.lastSuccessAt) }}</dd>
         <dt>Zuletzt ausgeführt</dt><dd>{{ item.lastStep ?? item.phase ?? '–' }}</dd>
@@ -73,7 +75,7 @@ async function sendTest() {
 <style scoped>
 .watcher-page { max-width: 1050px; margin: 0 auto; padding: 24px; color: #d1d4dc; }
 .health { font-size: 16px; padding: 4px 10px; border-radius: 6px; background: #2a2e39; }
-.live { color: #26a69a; } .waiting { color: #ffb300; } .error { color: #ef5350; } .off { color: #787b86; }
+.live { color: #26a69a; } .waiting, .warning { color: #ffb300; } .error { color: #ef5350; } .off { color: #787b86; }
 .instrument { background: #1e222d; border: 1px solid #2a2e39; border-radius: 8px; padding: 18px; margin-top: 18px; }
 dl { display: grid; grid-template-columns: minmax(180px, 1fr) 1fr; gap: 10px; } dd { margin: 0; }
 .range { border-top: 1px solid #2a2e39; padding: 12px 0; }

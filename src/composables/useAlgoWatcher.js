@@ -4,6 +4,7 @@ import { fetchAlgoWatcher, watcherHealth, watcherTooltip } from "../algoWatcher.
 const report = ref(null);
 const error = ref("");
 const now = ref(Date.now());
+const failureSince=ref(null);
 let users = 0;
 let pollTimer;
 let clockTimer;
@@ -11,8 +12,8 @@ let loading = false;
 async function refresh() {
   if (loading) return;
   loading = true;
-  try { report.value = await fetchAlgoWatcher(); error.value = ""; }
-  catch (err) { error.value = err.message; }
+  try { report.value = await fetchAlgoWatcher(); error.value = "";failureSince.value=null; }
+  catch (err) { error.value = err.message;failureSince.value ??= Date.now(); }
   finally { loading = false; now.value = Date.now(); }
 }
 export function useAlgoWatcher() {
@@ -26,7 +27,7 @@ export function useAlgoWatcher() {
   onUnmounted(() => {
     if (--users === 0) { clearInterval(pollTimer); clearInterval(clockTimer); }
   });
-  const health = computed(() => error.value && !report.value ? {state:'error',label:'Störung',pulse:false,reason:error.value} : watcherHealth(report.value, now.value));
+  const health = computed(() => error.value && !report.value ? {state:now.value-failureSince.value>300000?'error':'warning',label:now.value-failureSince.value>300000?'Störung':'Warnung',actionRequired:now.value-failureSince.value>300000,action:'Serverstatus ist nicht verlässlich. Bis zur Entwarnung die Marktbeobachtung selbst übernehmen.',pulse:false,reason:error.value} : watcherHealth(report.value, now.value));
   const tooltip = computed(() => watcherTooltip(report.value, health.value));
   return { report, error, health, tooltip, refresh };
 }

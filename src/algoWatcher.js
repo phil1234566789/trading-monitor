@@ -1,13 +1,14 @@
 import { supabase } from "./supabaseClient.js";
 import { fmtDateTime } from "./format.js";
 
-export const WATCHER_LABELS = { live: "Live", waiting: "Wartet", error: "Störung", off: "Aus" };
+export const WATCHER_LABELS = { live: "Live", waiting: "Wartet", warning: "Warnung", error: "Störung", off: "Aus" };
 export function watcherHealth(report, now = Date.now()) {
   if (!report) return { state: "waiting", label: "Wartet", pulse: false, reason: "Serverprüfung wird geladen" };
   // Ein erfolgreicher Browserabruf verlängert niemals den serverseitigen Gesundheitsnachweis.
   const fresh = Number.isFinite(Date.parse(report.validUntil)) && now < Date.parse(report.validUntil);
-  const state = fresh && WATCHER_LABELS[report.state] ? report.state : "error";
-  return { state, label: WATCHER_LABELS[state], pulse: fresh && state === "live" && report.pulse === true,
+  const grace=Number.isFinite(Date.parse(report.criticalAt)) && now<Date.parse(report.criticalAt);
+  const state=fresh && WATCHER_LABELS[report.state]?report.state:report.state==="error" || report.actionRequired?"error":grace?"warning":"error";
+  return { state,actionRequired:state==="error",action:report.action ?? "Bis zur Entwarnung die Marktbeobachtung selbst übernehmen.",label: WATCHER_LABELS[state], pulse: fresh && state === "live" && report.pulse === true,
     reason: fresh ? report.reason : "Serverprüfung fehlt oder ist abgelaufen" };
 }
 export function watcherTime(value) {
@@ -37,11 +38,12 @@ export function setup2AlarmRow(event) {
   const labels = { 1: "BOS + M1-Pivot", 2: "Neuer OB-Retest", 3: "Entry ausführbar" };
   const payload = event.payload ?? {};
   const rangeWarning=payload.category==='range-warning';
+  const protocolOnly=event.kind==="problem" && payload.category!=="operational-critical";
   const recovery=event.kind==='recovery';
   return { id: `setup2-${event.id}`, time: event.signal_at, detectedAt: event.detected_at,
-    typeLabel: recovery ? "Algo-Entwarnung" : rangeWarning ? 'DR-Warnung' : event.kind === "problem" ? "Algo-Störung" : `Setup 2 · ${labels[event.stage] ?? event.stage}`,
+    typeLabel: recovery ? "Algo-Entwarnung" : rangeWarning ? 'DR-Warnung' : protocolOnly ? "Algo-Protokoll" : event.kind === "problem" ? "Kritischer Watcher-Ausfall" : `Setup 2 · ${labels[event.stage] ?? event.stage}`,
     direction: event.direction, directionLabel: event.direction === "long" ? "Long" : event.direction === "short" ? "Short" : "–",
     detail: [recovery ? `Incident ${payload.incidentId ?? "–"}` : `DR ${event.setup_key ?? "–"}`, event.missed_reason || payload.reason || payload.message].filter(Boolean).join(" · "),
     price: payload.entryPrice ?? payload.entry?.price ?? "–", notifiedAt: recovery ? payload.delivery?.acceptedAt ?? null : null,
-    deliveryLabel: recovery ? `Telegram · ${payload.delivery?.status ?? "pending"}${payload.delivery?.error ? ` · ${payload.delivery.error}` : ""}` : rangeWarning ? 'Nur Protokoll · kein Eingreifen erforderlich' : event.missed_reason ? "Verpasst · Protokollhinweis" : "Siehe Watcher-Versandstatus" };
+    deliveryLabel: recovery ? `Telegram · ${payload.delivery?.status ?? "pending"}${payload.delivery?.error ? ` · ${payload.delivery.error}` : ""}` : protocolOnly ? 'Nur Protokoll · kein Eingreifen erforderlich' : event.missed_reason ? "Verpasst · Protokollhinweis" : "Siehe Watcher-Versandstatus" };
 }

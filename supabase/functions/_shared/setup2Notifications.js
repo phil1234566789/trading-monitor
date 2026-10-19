@@ -1,5 +1,6 @@
+import {operationalAssessment} from './setup2OperationalHealth.js';
 import {watcherFreshness} from './setup2Freshness.js';
-import {RANGE_HISTORY_WARNING} from './setup2RangeWarnings.js';
+import {RANGE_HISTORY_WARNING,isRangeWarning} from './setup2RangeWarnings.js';
 export async function secretMatches(actual, expected) {
   if (!expected || typeof actual !== 'string') return false;
   const digest = async value => new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)));
@@ -27,6 +28,10 @@ export function watcherAction(reason='',source=null) {
  return 'VPS-Dienst setup2-watcher und den angegebenen Auswertungsfehler prüfen.';
 }
 export function notificationText(event) {
+  if(event.kind==='problem' && event.payload?.category==='operational-critical'){
+    const payload=event.payload,instruments=payload.affected?.join(', ') || 'Algo-Watcher';
+    return `🔴 Du bist dran · Algo-Watcher: ${payload.message}\nBetroffen: ${instruments}\nAls kritisch erkannt: ${berlinTime(payload.openedAt)}\nLetzter Erfolg: ${berlinTime(payload.lastSuccessAt)}\n${payload.action ?? 'Bis zur Entwarnung die Marktbeobachtung selbst übernehmen.'}`.slice(0,1000);
+  }
   if (event.kind === 'problem') return `🔴 Du bist dran · T68 · ${event.instrument}: ${event.payload?.message ?? 'Algo-Watcher gestört'}\n${watcherAction(event.payload?.message,event.payload?.source)}\nLetzter Erfolg: ${berlinTime(event.payload?.lastSuccessAt)}`;
   const variants = Object.entries(event.payload?.variants ?? {}).map(([name, value]) => `${value.variant ?? name}: Stop ${value.stopPrice ?? value.stop ?? '–'}, Risiko ${value.riskPips ?? '–'} Pips${Number.isFinite(value.lots)?`, ${value.lots} Lots${Number.isFinite(value.fullLots)?` (Full: ${value.fullLots} Lots; ${value.positionSizeFactor===0.5?'50':'100'} %)`:''}`:''}`).join('\n');
   return `${event.instrument} · Stufe ${event.stage} · ${event.direction ?? ''}\nDR ${event.setup_key} · ${berlinTime(event.signal_at)}\n${event.payload?.message ?? ''}\n${variants}`.slice(0, 1000);
@@ -44,8 +49,9 @@ export function healthReport(rows, delivery, now = Date.now(), withinHours = ins
   const instruments = rows.map(row => {
     const value = row.state ?? {};
     const inHours=withinHours(row.instrument),freshness=watcherFreshness(value,row.enabled,now,inHours);
-    const stale=freshness.stale,error=value.error || freshness.error;
-    return {instrument: row.instrument, enabled: row.enabled, lastStep:value.lastStep ?? null, phase: value.phase ?? 'Setup 1 beobachten',
+    const evaluationError=isRangeWarning({kind:'problem',id:`health:${row.instrument}`,payload:{message:value.error}})?null:value.error;
+    const stale=freshness.stale,error=evaluationError || freshness.error;
+    return {instrument: row.instrument, enabled: row.enabled, updatedAt:row.updated_at ?? null,evaluationError:evaluationError ?? null,lastStep:value.lastStep ?? null, phase: value.phase ?? 'Setup 1 beobachten',
       lastSuccessAt: value.lastSuccessAt ?? null, lastProcessAt: value.lastProcessAt ?? null,
       lastM5Time: value.lastM5Time ?? null, lastM1Time: value.lastM1Time ?? null,
       nextExpectedCheck: value.nextExpectedCheck ?? null, activeRanges: (value.activeRanges ?? []).map(r => ({
@@ -53,19 +59,19 @@ export function healthReport(rows, delivery, now = Date.now(), withinHours = ins
       })), suspendedRanges:(value.suspendedRanges ?? []).map(r=>({setupKey:r.setupKey,direction:r.direction,reason:r.reason ?? RANGE_HISTORY_WARNING})), error, errorSince:value.errorSince ?? null, inHours, stale, evaluatedThrough:value.evaluatedThrough ?? null, marketWatermark:freshness.marketWatermark, marketLagSeconds:freshness.marketLagSeconds};
   });
   const enabled = instruments.filter(r => r.enabled);
-  const cronAt = Date.parse(server.watch_checked_at);
-  const providerAt = Date.parse(server.provider_checked_at);
-  const serverError = !Number.isFinite(cronAt) || now > cronAt + 150000 ? 'Unabhängiger Servercheck fehlt oder ist veraltet' : !Number.isFinite(providerAt) || now > providerAt + 420000 ? 'Pushover-Prüfung fehlt oder ist veraltet' : server.provider_error;
-  const operationalReason=enabled.find(r=>r.error)?.error ?? delivery.error ?? serverError;
-  const operationalSource=enabled.some(r=>r.error)?'runner':delivery.error?'delivery':!Number.isFinite(cronAt) || now>cronAt+150000?'cron':'provider';
-  const state = !enabled.length ? 'off' : enabled.some(r => r.error) || delivery.error || serverError ? 'error' : enabled.some(r => !r.lastSuccessAt) ? 'waiting' : enabled.some(r => r.inHours) ? 'live' : 'waiting';
-  return {checkedAt: Number.isFinite(cronAt) ? new Date(cronAt).toISOString() : null, validUntil: new Date(Number.isFinite(cronAt) ? Math.min(now + 90000, cronAt + 150000) : now).toISOString(), providerCheckedAt: server.provider_checked_at ?? null, state,
-    actionRequired:state==='error',action:state==='error'?watcherAction(operationalReason,operationalSource):null,
-    reason: state === 'error' ? operationalReason : state === 'off' ? 'Watcher ausgeschaltet' : state === 'waiting' ? (enabled.some(r=>!r.lastSuccessAt)?'Initialer Abgleich läuft':'Außerhalb der Handelszeiten') : 'Algorithmus verarbeitet geschlossene Kerzen',
-    pulse: state === 'live' && enabled.some(r => r.inHours && r.activeRanges.some(dr => dr.structureReady)), instruments, delivery};
+  const cronAt=Date.parse(server.watch_checked_at);
+  const assessment=operationalAssessment(instruments,delivery,now,server),{state}=assessment;
+  for(const instrument of instruments)instrument.actionRequired=assessment.criticalReasons.some(r=>r.instrument===instrument.instrument);
+  return {checkedAt:Number.isFinite(cronAt)?new Date(cronAt).toISOString():null,
+    validUntil:new Date(Number.isFinite(cronAt)?Math.min(now+90000,cronAt+150000):now).toISOString(),
+    criticalAt:Number.isFinite(cronAt)?new Date(cronAt+300000).toISOString():null,
+    providerCheckedAt:server.provider_checked_at ?? null,...assessment,
+    reason:assessment.reason ?? (state==='off'?'Watcher ausgeschaltet':state==='waiting'?(enabled.some(r=>!r.lastSuccessAt)?'Initialer Abgleich läuft':'Außerhalb der Handelszeiten'):'Algorithmus verarbeitet geschlossene Kerzen'),
+    pulse:state==='live' && enabled.some(r=>r.inHours && r.activeRanges.some(dr=>dr.structureReady)),instruments,delivery};
 }
 
 export function telegramText(event, reason) {
+ if(event.kind==='problem' && event.payload?.category==='operational-critical')return notificationText(event);
  const logUrl = 'https://phil1234566789.github.io/trading-monitor/#/protokoll';
  if (event.kind === 'recovery') return `T68 · Watcher läuft wieder; kein Eingreifen nötig\nStörung gemeldet: ${berlinTime(event.payload.reportedAt)}\nWiederhergestellt: ${berlinTime(event.payload.recoveredAt)}\nIncident: ${event.payload.incidentId}\n${logUrl}`;
  return `T68 · Alarm-Protokoll prüfen: ${event.instrument}, Stufe ${event.stage}, DR ${event.setup_key ?? '–'}\n${reason}\n${logUrl}`;

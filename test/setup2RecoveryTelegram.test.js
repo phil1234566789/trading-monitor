@@ -10,7 +10,7 @@ vi.mock('../supabase/functions/_shared/setup2Http.ts',()=>({db:()=>ctx.client,en
 const now=Date.parse('2026-10-08T06:00:00Z');
 const at=offset=>new Date(now+offset).toISOString();
 const recovery={id:'recovery:problem-1',instrument:'GBPUSD',kind:'recovery',stage:0,
- payload:{incidentId:'problem-1',reportedAt:at(-120000),recoveredAt:at(-30000)}};
+ payload:{category:'operational-recovery',incidentId:'problem-1',reportedAt:at(-120000),recoveredAt:at(-30000)}};
 const healthy={state:'live',actionRequired:false,instruments:[{enabled:true,lastSuccessAt:at(-30000),stale:false,error:null}]};
 it('requires actual success after the reported incident, including every enabled instrument',()=>{
  expect(recoveryHealthReady(healthy,recovery.payload.reportedAt)).toBe(true);
@@ -55,7 +55,7 @@ it.each([
    update:value=>{writes.push({table,value});return query;},
    then:resolve=>resolve({data:table==='setup2_live_state'?rows:table==='trading_schedules'?[{instrument:'GBPUSD',trading_windows:{weekday:[[0,1440]],saturday:[],sunday:[]}}]:table==='pushover_test_limits'?server:table==='setup2_alarm_events'?recovery:[],error:null})};
   return query;
- },rpc:vi.fn(async name=>({data:name==='setup2_claim_notifications'?[{id:7,event_id:recovery.id,channel:'telegram',attempts:1}]:name==='setup2_recovery_status'?mode==='superseded'?'superseded':'ready':null,error:mode==='database-failed' && name==='setup2_prepare_recovery'?'failed':null}))};
+ },rpc:vi.fn(async name=>({data:name==='setup2_claim_notifications'?[{id:7,event_id:recovery.id,channel:'telegram',attempts:1}]:name==='setup2_operational_incident_status'?mode==='superseded'?'superseded':'ready':null,error:mode==='database-failed' && name==='setup2_update_operational_incident'?'failed':null}))};
  const net=vi.fn(async()=>{if(mode==='timeout')throw new Error('timeout');return new Response(mode==='rejected'?'{"ok":false}':'{"ok":true}',{status:mode==='rejected'?429:200});});
  vi.stubGlobal('Deno',{serve:handler=>ctx.handler=handler});vi.stubGlobal('fetch',net);
  const clock=vi.spyOn(Date,'now').mockReturnValue(now);
@@ -69,7 +69,14 @@ it.each([
   if(expected==='failed' || expected==='pending')expect(Date.parse(write.retry_after)).toBe(now+60000);
   if(expected==='pending')expect(write.attempts).toBe(0);
   if(expected==='uncertain')expect(write.retry_after).toBeNull();
-  expect(ctx.client.rpc.mock.calls.some(([name])=>name==='setup2_record_problem')).toBe(mode==='unhealthy');
-  expect(readQueries).toContain('status,error,provider_accepted_at,setup2_alarm_events!inner(kind)');
+  expect(ctx.client.rpc.mock.calls.some(([name])=>name==='setup2_record_problem')).toBe(false);
+  expect(readQueries).toContain('status,error,provider_accepted_at,last_attempt_at,setup2_alarm_events!inner(kind,detected_at)');
  }finally{clock.mockRestore();vi.unstubAllGlobals();}
+});
+
+it('uses the bounded operational recovery proof while preserving strict legacy callers',()=>{
+ const report={...healthy,state:'warning',recoveryReady:true,instruments:[{...healthy.instruments[0],stale:true,error:'Marktstand verzögert'}]};
+ expect(recoveryHealthReady(report,recovery.payload.reportedAt)).toBe(true);
+ expect(recoveryHealthReady({...report,recoveryReady:false},recovery.payload.reportedAt)).toBe(false);
+ expect(recoveryHealthReady({...report,instruments:[{...report.instruments[0],lastSuccessAt:at(-130000)}]},recovery.payload.reportedAt)).toBe(false);
 });

@@ -1,4 +1,3 @@
-import {runnerIncidentId} from '../_shared/setup2IncidentIdentity.js';
 import { db, env, json, checked, headers } from '../_shared/setup2Http.ts';
 import { healthReport, secretMatches, sendPushover, notificationText, validatePushover, sendTelegram } from '../_shared/setup2Notifications.js';
 import { isWithinTradingWindows } from '../_shared/tradingHoursGate.ts';
@@ -6,54 +5,47 @@ import { isWithinTradingWindows } from '../_shared/tradingHoursGate.ts';
 import {recoveryHealthReady} from '../_shared/setup2Recovery.js';
 import {rangeWarningEvent,isRangeWarning} from '../_shared/setup2RangeWarnings.js';
 
-async function readHealth(client: any) {
+async function readHealth(client: any, checkingNow=false) {
   const [states, schedules, deliveries, server] = await Promise.all([
-    client.from('setup2_live_state').select('instrument,enabled,state').limit(3),
+    client.from('setup2_live_state').select('instrument,enabled,state,updated_at').limit(3),
     client.from('trading_schedules').select('instrument,trading_windows').limit(10),
-    client.from('setup2_notification_outbox').select('status,error,provider_accepted_at,setup2_alarm_events!inner(kind)').neq('setup2_alarm_events.kind','recovery').in('status',['accepted','failed','uncertain']).order('id', {ascending: false}).limit(1),
-    client.from('pushover_test_limits').select('watch_checked_at,provider_checked_at,provider_error').eq('id',true).single()
+    client.from('setup2_notification_outbox').select('status,error,provider_accepted_at,last_attempt_at,setup2_alarm_events!inner(kind,detected_at)').neq('setup2_alarm_events.kind','recovery').eq('channel','pushover').in('status',['accepted','failed','uncertain']).order('id', {ascending: false}).limit(5),
+    client.from('pushover_test_limits').select('watch_checked_at,provider_checked_at,provider_error,provider_error_since').eq('id',true).single()
   ]);
   const rows = checked(states) as any[];
   const windows = new Map((checked(schedules) as any[]).map(row => [row.instrument, row.trading_windows]));
-  const last = (checked(deliveries) as any[])[0];
-  const delivery = {status: last?.status ?? 'none', lastAcceptedAt: last?.provider_accepted_at ?? null,
+  const history=checked(deliveries) as any[],last=history[0];
+  const failures=history.slice(0,history.findIndex(row=>row.status==='accepted')<0?history.length:history.findIndex(row=>row.status==='accepted'));
+  const delivery = {status: last?.status ?? 'none', lastAcceptedAt:last?.provider_accepted_at ?? null,issueAt:last?.last_attempt_at ?? last?.setup2_alarm_events?.detected_at ?? null,
+    consecutiveFailures:failures.length,firstIssueAt:failures.at(-1)?.last_attempt_at ?? failures.at(-1)?.setup2_alarm_events?.detected_at ?? null,
     error: ['failed','uncertain'].includes(last?.status) ? last.error : null};
   return {report: healthReport(rows, delivery, Date.now(), (instrument: string) => {
     const value = windows.get(instrument);
     return !!value && isWithinTradingWindows(Date.now() / 1000, value);
-  }, checked(server)), windows, rows};
+  }, {...checked(server),checkingNow}), windows, rows};
 }
 async function missed(client: any, event: any, reason: string) {
   checked(await client.from('setup2_alarm_events').update({missed_reason: reason}).eq('id', event.id));
   checked(await client.from('setup2_notification_outbox').upsert({event_id: event.id, channel: 'telegram'}, {onConflict: 'event_id,channel', ignoreDuplicates: true}));
 }
 async function tick(client: any) {
-  let server = checked(await client.from('pushover_test_limits').select('provider_checked_at,provider_error').eq('id',true).single()) as any;
+  let server = checked(await client.from('pushover_test_limits').select('provider_checked_at,provider_error,provider_error_since').eq('id',true).single()) as any;
   if (!server.provider_checked_at || Date.now()-Date.parse(server.provider_checked_at)>300000) {
     let provider_error = null;
     try { await validatePushover(env); } catch (error) { provider_error = error instanceof Error ? error.message : 'Pushover validation failed'; }
-    server = {...server, provider_checked_at: new Date().toISOString(), provider_error};
+    server = {...server,provider_error_since:provider_error?(server.provider_error?server.provider_error_since ?? server.provider_checked_at ?? new Date().toISOString():new Date().toISOString()):null,provider_checked_at:new Date().toISOString(),provider_error};
   }
-  checked(await client.from('pushover_test_limits').update({provider_checked_at:server.provider_checked_at,provider_error:server.provider_error}).eq('id',true));
-  const {report, windows, rows} = await readHealth(client);
-  if (server.provider_error) checked(await client.rpc('setup2_record_problem', {
-    p_id: `provider:${new Date().toISOString().slice(0,10)}:${server.provider_error}`,p_instrument:'GBPUSD',
-    p_payload:{source:'provider',message:server.provider_error,lastSuccessAt:null}
-  }));
+  checked(await client.from('pushover_test_limits').update({provider_checked_at:server.provider_checked_at,provider_error:server.provider_error,provider_error_since:server.provider_error_since ?? null}).eq('id',true));
+  const {report, windows, rows} = await readHealth(client,true);
   // Fallwarnungen bleiben im Protokoll. Direkter Event-Insert legt ausdrücklich keine Versand-Outbox an.
   for (const row of rows) for (const range of row.state?.suspendedRanges ?? []) {
     checked(await client.from('setup2_alarm_events').upsert(rangeWarningEvent(row.instrument,range), {onConflict:'id',ignoreDuplicates:true}));
   }
-  for (const instrument of report.instruments) {
-    if (instrument.enabled && instrument.error) {
-      checked(await client.rpc('setup2_record_problem', {
-        p_id: runnerIncidentId(instrument.instrument,instrument.lastSuccessAt,instrument.error),
-        p_instrument: instrument.instrument,
-        p_payload: {message: instrument.error, lastSuccessAt: instrument.lastSuccessAt,
-          ...(isRangeWarning({kind:'problem',id:'health:',payload:{message:instrument.error}})?{category:'range-warning'}:{})}
-      }));
-    }
-  }
+  checked(await client.rpc('setup2_update_operational_incident',{
+    p_critical:report.actionRequired,p_recovery_ready:report.recoveryReady,
+    p_summary:{message:report.reason,action:report.action,affected:[...new Set(report.criticalReasons.map((r:any)=>r.instrument ?? (r.source==='cron'?'Alarmprüfung':'Alarmzustellung')))],lastSuccessAt:report.instruments.filter((r:any)=>r.enabled).map((r:any)=>r.lastSuccessAt).filter(Boolean).sort()[0] ?? null,
+      instruments:report.instruments.map((r:any)=>({instrument:r.instrument,enabled:r.enabled,lastSuccessAt:r.lastSuccessAt,marketWatermark:r.marketWatermark}))}
+  }));
   // Abgebrochene Sendungen sind ungewiss; sie werden dokumentiert, niemals blind wiederholt.
   const abandoned = checked(await client.from('setup2_notification_outbox').select('id,event_id,channel')
     .eq('status','claimed').lt('claim_until', new Date().toISOString()).limit(20)) as any[];
@@ -61,26 +53,25 @@ async function tick(client: any) {
     const event = checked(await client.from('setup2_alarm_events').select('*').eq('id', item.event_id).single()) as any;
     if (item.channel === 'pushover' && event.kind === 'trading') await missed(client, event, 'Versand unterbrochen; Providerannahme unbekannt');
   }
-  checked(await client.rpc('setup2_prepare_recovery', {p_healthy:recoveryHealthReady(report)}));
   const items = checked(await client.rpc('setup2_claim_notifications', {p_limit: 2})) as any[];
   const results = [];
   for (const item of items) {
     const event = checked(await client.from('setup2_alarm_events').select('*').eq('id', item.event_id).single()) as any;
     let status = 'accepted'; let error = null; let retry_after = null; let deferred = false;
     try {
-      if (isRangeWarning(event)) {
+      if (isRangeWarning(event) || event.kind==='problem' && event.payload?.category!=='operational-critical' || event.kind==='recovery' && event.payload?.category!=='operational-recovery') {
         status='suppressed';
-        if (event.payload?.category!=='range-warning') checked(await client.from('setup2_alarm_events').update({payload:{...event.payload,category:'range-warning'}}).eq('id',event.id));
+        if (isRangeWarning(event) && event.payload?.category!=='range-warning') checked(await client.from('setup2_alarm_events').update({payload:{...event.payload,category:'range-warning'}}).eq('id',event.id));
       }
       else if (event.kind === 'recovery') {
-        const current = (await readHealth(client)).report;
-        const recovery = checked(await client.rpc('setup2_recovery_status', {p_event_id:event.id}));
+        const current = (await readHealth(client,true)).report;
+        const recovery = checked(await client.rpc('setup2_operational_incident_status', {p_event_id:event.id}));
         if (recovery === 'superseded') status='suppressed';
         else if (recovery !== 'ready' || !recoveryHealthReady(current,event.payload.reportedAt)) {
           status='pending'; deferred=true; retry_after=new Date(Date.now()+60000).toISOString();
         } else await sendTelegram(event, null, env);
       }
-      else if (item.channel === 'telegram') await sendTelegram(event, event.missed_reason ?? 'Pushover-Versand gestört', env);
+      else if (item.channel === 'telegram' && event.kind==='trading') await sendTelegram(event, event.missed_reason ?? 'Pushover-Versand gestört', env);
       else if (event.kind === 'trading') {
         const schedule = windows.get(event.instrument);
         const signalInside = schedule && isWithinTradingWindows(Date.parse(event.signal_at) / 1000, schedule);
@@ -92,7 +83,14 @@ async function tick(client: any) {
           status = 'suppressed';
           await missed(client, event, event.missed_reason ?? (!signalInside || !nowInside ? 'Außerhalb der Handelszeiten' : 'Watcher-Störung vor Versand'));
         } else await sendPushover(notificationText(event), `Trading Monitor · Stufe ${event.stage}`, env);
-      } else await sendPushover(notificationText(event), 'Trading Monitor · Störung', env);
+      } else {
+        const current=(await readHealth(client,true)).report;
+        const incident=checked(await client.rpc('setup2_operational_incident_status',{p_event_id:event.id}));
+        if(incident!=='critical')status='suppressed';
+        else if(!current.actionRequired){status='pending';deferred=true;retry_after=new Date(Date.now()+60000).toISOString();}
+        else if(item.channel==='telegram')await sendTelegram(event,event.missed_reason,env);
+        else await sendPushover(notificationText(event),'Trading Monitor · Kritischer Ausfall',env);
+      }
     } catch (failure) {
       error = failure instanceof Error ? failure.message : 'Notification failed';
       // Netz-Timeout ist absichtlich uncertain: genau-einmal garantiert der Provider nicht.

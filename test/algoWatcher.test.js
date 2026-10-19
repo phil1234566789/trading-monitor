@@ -33,3 +33,17 @@ describe("server-verified Algo Watcher", () => {
       .toMatchObject({ time: "s", detectedAt: "d", detail: "DR 3070 · Runner war offline", deliveryLabel: "Verpasst · Protokollhinweis" });
   });
 });
+
+it('shows recoverable warnings and preserves the independent expiration deadline in the browser',()=>{
+ const now=Date.parse('2026-10-19T12:00:00Z');
+ const value={state:'warning',reason:'Verzögerung',pulse:true,actionRequired:false,validUntil:new Date(now+1000).toISOString(),criticalAt:new Date(now+150000).toISOString()};
+ expect(watcherHealth(value,now)).toMatchObject({state:'warning',label:'Warnung',pulse:false,actionRequired:false});
+ expect(watcherHealth({...value,state:'live'},now+2000)).toMatchObject({state:'warning',actionRequired:false,pulse:false});
+ expect(watcherHealth({...value,state:'live'},now+150001)).toMatchObject({state:'error',actionRequired:true,pulse:false});
+});
+
+it('does not downgrade an already proven critical report when its independent proof expires',()=>{
+ const now=Date.parse('2026-10-19T12:00:00Z');
+ expect(watcherHealth({state:'error',actionRequired:true,validUntil:new Date(now-1000).toISOString(),criticalAt:new Date(now+120000).toISOString()},now))
+  .toMatchObject({state:'error',actionRequired:true,pulse:false});
+});

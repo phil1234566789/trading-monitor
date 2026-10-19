@@ -17,8 +17,9 @@ describe('T68 server notification boundaries',()=>{
  it('zero active ranges remains live; browser GET cannot replace independent cron or provider evidence',()=>{
   expect(healthReport(rows,{},now,()=>true,server).state).toBe('live');
   expect(healthReport(rows,{},now,()=>true,{}).state).toBe('error');
-  expect(healthReport(rows,{},now+160000,()=>true,server).state).toBe('error');
-  expect(healthReport(rows,{},now,()=>true,{...server,provider_error:'Rejected'}).state).toBe('error');
+  expect(healthReport(rows,{},now+160000,()=>true,server)).toMatchObject({state:'warning',actionRequired:false});
+  expect(healthReport(rows,{},now+310000,()=>true,server)).toMatchObject({state:'error',actionRequired:true});
+  expect(healthReport(rows,{},now,()=>true,{...server,provider_error:'Rejected'}).state).toBe('warning');
  });
  it('suspended DRs stay visible without exposing stored source details or enabling pulse',()=>{
   const suspended=[{...rows[0],state:{...rows[0].state,suspendedRanges:[{setupKey:'DR13590',direction:'short',source:{private:'stored input'}}]}}];
@@ -26,19 +27,21 @@ describe('T68 server notification boundaries',()=>{
   expect(report.state).toBe('live');expect(report.actionRequired).toBe(false);expect(report.pulse).toBe(false);
   expect(report.instruments[0].suspendedRanges).toEqual([{setupKey:'DR13590',direction:'short',reason:RANGE_HISTORY_WARNING}]);
  });
- it('suspended DRs cannot mask a real runner, feed, provider or delivery fault',()=>{
+ it('keeps genuine faults visible and escalates sustained outages instead of one recoverable error',()=>{
   const warned=[{...rows[0],state:{...rows[0].state,suspendedRanges:[{setupKey:'DR13590'}]}}];
-  for(const error of ['Watcher stopped','FXCM-M1-Feed delayed'])expect(healthReport([{...warned[0],state:{...warned[0].state,error}}],{},now,()=>true,server)).toMatchObject({state:'error',actionRequired:true});
-  const realFeed=healthReport([{...warned[0],state:{...warned[0].state,error:'FXCM-M1-Feed delayed'}}],{},now,()=>true,server);
+  for(const error of ['Watcher stopped','FXCM-M1-Feed delayed']){
+   const transient=[{...warned[0],state:{...warned[0].state,error}}];
+   expect(healthReport(transient,{},now,()=>true,server)).toMatchObject({state:'warning',actionRequired:false});
+   const later=now+361000,proof={watch_checked_at:new Date(later-1000).toISOString(),provider_checked_at:new Date(later-1000).toISOString()};
+   const failed=healthReport(transient,{},later,()=>true,proof);
+   expect(failed).toMatchObject({state:'error',actionRequired:true});
+   expect(failed.criticalReasons.some(r=>r.instrument==='GBPUSD')).toBe(true);
+  }
   expect(()=>notificationText({kind:'problem',payload:{message:null}})).not.toThrow();
-  expect(realFeed.action).toContain('FXCM-Collector');
-  expect(notificationText({kind:'problem',instrument:'GBPUSD',payload:{message:'FXCM-M1-Feed delayed'}})).toContain('🔴 Du bist dran · T68');
   expect(healthReport([{...warned[0],state:{...warned[0].state,activeRanges:[{structureReady:true}]}}],{},now,()=>true,server).pulse).toBe(true);
-  expect(healthReport(warned,{error:'The operation was aborted due to timeout'},now,()=>true,server).action).toContain('Pushover-Zugang');
-  expect(healthReport(warned,{},now,()=>true,{...server,provider_error:'Rejected'}).action).toContain('Pushover-Zugang');
-  expect(healthReport(warned,{error:'Provider delivery uncertain'},now,()=>true,server).state).toBe('error');
-  expect(healthReport(warned,{},now,()=>true,{...server,provider_error:'Rejected'}).state).toBe('error');
-  expect(healthReport(warned,{},now+160000,()=>true,server).state).toBe('error');
+  expect(healthReport(warned,{error:'The operation was aborted due to timeout'},now,()=>true,server)).toMatchObject({state:'warning',actionRequired:false});
+  expect(healthReport(warned,{},now,()=>true,{...server,provider_error:'Rejected'})).toMatchObject({state:'warning',actionRequired:false});
+  expect(healthReport(warned,{},now,()=>true,{...server,provider_error:'Pushover secrets missing'})).toMatchObject({state:'error',actionRequired:true});
  });
  it('range warnings keep causal DR history without being trading or technical delivery alerts',()=>{
   const range={setupKey:'DR13590',direction:'short',suspendedAt:'2026-10-07T09:00:00Z'};
