@@ -111,7 +111,9 @@ async function instrumentTick(row,sessions,schedules,news) {
   // Erfolgreiche DRs dürfen weiterlaufen; suspendierte DRs behalten ihren eigenen Nachholstand.
   // Alte DR-Wasserstände gehören ausschließlich zum separaten Nachholjob.
   const processed=Number.isFinite(lastProcessed)?lastProcessed:latestClosed-60;
-  const fromTime=Math.min(latestClosed,processed+60);
+  // Ohne neue Kerze würde ein kürzeres Einpunktfenster denselben Originalstand mit anderer Verlaufshistorie belegen.
+  if(latestClosed<=processed)return;
+  const fromTime=processed+60;
   const evidence=createLiveEvidence({instrument,version:`${ENTRY_PATTERN_1_VERSION}/${SETUP2_VERSION}`,sessions,tradingWindows,news,settings:{},dailyAnchors:anchors},
    {fromTime,toTime:latestClosed,startedAt:started/1000});
   const onMinuteCheck=minute=>{
