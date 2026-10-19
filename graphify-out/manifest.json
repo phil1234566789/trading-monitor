@@ -4500,9 +4500,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2Configuration.js": {
-    "mtime": 1792143207.9045477,
-    "seen": 1792353800.4002874,
-    "ast_hash": "2022ca4cdf180bf5b543d919dbf9d090",
+    "mtime": 1792410536.5290494,
+    "seen": 1792410666.3260975,
+    "ast_hash": "fcc5cb7d0f0605d1572dd3e06b7fa02f",
     "semantic_hash": ""
   },
   "src/tradeSetup2Evidence.js": {
@@ -4680,9 +4680,9 @@
     "semantic_hash": ""
   },
   "test/tradeSetup2Configuration.test.js": {
-    "mtime": 1792143207.906306,
-    "seen": 1792353800.4002874,
-    "ast_hash": "c9c707a30b8d9078263e548b5609f853",
+    "mtime": 1792410536.5370514,
+    "seen": 1792410666.413325,
+    "ast_hash": "53301093978237f11c0bab9a0203e0f4",
     "semantic_hash": ""
   },
   "test/useTradeSetup2History.test.js": {
@@ -5064,9 +5064,9 @@
     "semantic_hash": ""
   },
   "src/countertrendDealingRange.js": {
-    "mtime": 1792144551.938771,
-    "seen": 1792353800.4002874,
-    "ast_hash": "763d14486d41b31f5c2b90aa00d6d226",
+    "mtime": 1792410536.5260441,
+    "seen": 1792410666.2998266,
+    "ast_hash": "911136a0cdc7767248e10e13b967c59f",
     "semantic_hash": ""
   },
   "test/countertrendDealingRangeStages.test.js": {
@@ -5076,9 +5076,9 @@
     "semantic_hash": ""
   },
   "src/countertrendLifecycle.js": {
-    "mtime": 1792144551.937771,
-    "seen": 1792353800.4002874,
-    "ast_hash": "47d721032e34ebd45e4ea115771654ff",
+    "mtime": 1792410536.5270493,
+    "seen": 1792410666.300827,
+    "ast_hash": "3b9beb931426808d7f5fad28fef0e588",
     "semantic_hash": ""
   },
   "src/countertrendScan.js": {
@@ -6228,8 +6228,8 @@
     "semantic_hash": ""
   },
   "scripts/requestJson.mjs": {
-    "mtime": 1792392047.2791655,
-    "seen": 1792392103.1391475,
+    "mtime": 1792392105.4135094,
+    "seen": 1792410666.2738204,
     "ast_hash": "0370b2a38abee6abf151cb1cb539bdc9",
     "semantic_hash": ""
   },
@@ -6474,9 +6474,9 @@
     "semantic_hash": ""
   },
   "src/dealingRangeRisk.js": {
-    "mtime": 1792144785.3559484,
-    "seen": 1792353800.4002874,
-    "ast_hash": "1038cad656af972c98afe055dec625b9",
+    "mtime": 1792410536.5280504,
+    "seen": 1792410666.301827,
+    "ast_hash": "890cb01b6f08ae3e37b3e65f2c14027d",
     "semantic_hash": ""
   },
   "test/dealingRangeRisk.test.js": {
@@ -6492,9 +6492,9 @@
     "semantic_hash": ""
   },
   "test/dealingRangeRiskSequence.test.js": {
-    "mtime": 1792144640.9902303,
-    "seen": 1792353800.4002874,
-    "ast_hash": "8fbe4944e11d775e5c75db5fdf96401d",
+    "mtime": 1792410536.5320497,
+    "seen": 1792410666.3693225,
+    "ast_hash": "17a3505bbe14f574fc19c1df60eb1c87",
     "semantic_hash": ""
   },
   "test/fixtures/eurusd-19982-joint-losses.json": {
@@ -6504,15 +6504,15 @@
     "semantic_hash": ""
   },
   "test/tradeSetup2RiskInvalidationPresentation.test.js": {
-    "mtime": 1792144489.523611,
-    "seen": 1792353800.4012864,
-    "ast_hash": "6b18e4d92aeac8428395eb75ed4d19ca",
+    "mtime": 1792410536.538051,
+    "seen": 1792410666.4153252,
+    "ast_hash": "16b00025e5c9b50e6357247606fb1811",
     "semantic_hash": ""
   },
   "test/helpers/setup2RiskCourseDbFixture.mjs": {
-    "mtime": 1792353313.1072211,
-    "seen": 1792353800.4002874,
-    "ast_hash": "598f61e53539ca7415c7e7e691e561b0",
+    "mtime": 1792410536.5360496,
+    "seen": 1792410666.3833227,
+    "ast_hash": "8b99160ff2991443764cd3a7f64a9f46",
     "semantic_hash": ""
   },
   "test/useDrawingsSubscriptions.test.js": {
@@ -6597,6 +6597,30 @@
     "mtime": 1792392047.2801657,
     "seen": 1792392103.263669,
     "ast_hash": "e93f1239da988b420144f68413ec9d04",
+    "semantic_hash": ""
+  },
+  "test/dealingRangeWideLossOriginal.test.js": {
+    "mtime": 1792410536.5320497,
+    "seen": 1792410666.3693225,
+    "ast_hash": "d92b7e7f7d3813ea016daa6e5e927b5e",
+    "semantic_hash": ""
+  },
+  "test/dealingRangeWideLossScan.test.js": {
+    "mtime": 1792410536.5330496,
+    "seen": 1792410666.3693225,
+    "ast_hash": "d58090c12b242ad9991dba89503a1715",
+    "semantic_hash": ""
+  },
+  "test/fixtures/gbpusd-2970-wide-loss.json": {
+    "mtime": 1792410536.5350494,
+    "seen": 1792410666.3733222,
+    "ast_hash": "3414fccade56ee183b9038572586bcd0",
+    "semantic_hash": ""
+  },
+  "test/helpers/wideLossCourseDbFixture.mjs": {
+    "mtime": 1792410536.5360496,
+    "seen": 1792410666.3843231,
+    "ast_hash": "9de0ff1c345a6bcdfcecfbc9349347c5",
     "semantic_hash": ""
   }
 }
