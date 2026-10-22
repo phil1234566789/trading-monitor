@@ -17,6 +17,11 @@ import { detectOrderBlocks } from "./orderBlockDetection.js";
 
 export { detectOrderBlocks };
 
+// Offene Boxen reichen bis zur letzten Kerze; gespeicherte Poll-Enden begrenzen weder Zeichnung noch Klick.
+export function orderBlockEndTime(zone) {
+  return zone.touched || zone.invalidated ? zone.endTime : Infinity;
+}
+
 const PIN_BORDER_INSET = 3; // px, Abstand des Pin-Rahmens nach außen von der normalen Box-Kante
 const PIN_BORDER_LINE_WIDTH = 2.5; // px
 // Auswahl-Rahmen (Chat 2026-08-18, PinPanel.vue-Hover) — weiter außen als der Pin-Rahmen, damit
@@ -164,7 +169,7 @@ class ZonePaneView {
       y: series.priceToCoordinate(z.top),
     };
     this._p2 = {
-      x: chartObjectCoordinate(timeScale,candles,z.touched || z.invalidated ? z.endTime : Infinity,this._source._options.eventBarSeconds),
+      x: chartObjectCoordinate(timeScale,candles,orderBlockEndTime(z),this._source._options.eventBarSeconds),
       y: series.priceToCoordinate(z.bottom),
     };
   }

@@ -331,3 +331,24 @@ describe("hasNearbyPinCandidate", () => {
     expect(hasNearbyPinCandidate(0, 0, withRealOb)).toBe(true);
   });
 });
+
+describe.each(['1H', '4H'])('offene %s-Orderblocks im Cockpit', timeframe => {
+  it.each([null, 120])('trifft die sichtbare Box auch bei gespeichertem Ende %s', endTime => {
+    const zone = { top: 1.3266, bottom: 1.32446, startTime: 100, endTime,
+      dir: -1, timeframe, touched: false, invalidated: false };
+    expect(matchOBZone([zone], 1.3265, 300, 'GBPUSD')).toMatchObject({
+      kind: 'ob', price: 1.3266, sourceTime: 100, touchedTime: null,
+      rangeLow: 1.32446, rangeHigh: 1.3266, instrument: 'GBPUSD', direction: 'short', timeframe,
+    });
+    expect(matchOBZone([zone], 1.3265, 99, 'GBPUSD')).toBeNull();
+    expect(matchOBZone([zone], 1.327, 300, 'GBPUSD')).toBeNull();
+  });
+
+  it('begrenzt berührte Boxen weiterhin auf den Touch', () => {
+    const zone = { top: 1.3266, bottom: 1.32446, startTime: 100, endTime: 200,
+      dir: -1, timeframe, touched: true, invalidated: false };
+    expect(matchOBZone([zone], 1.3265, 200, 'GBPUSD')).toMatchObject({ touchedTime: 200, timeframe });
+    expect(matchOBZone([zone], 1.3265, 201, 'GBPUSD')).toBeNull();
+    expect(matchOBZone([{ ...zone, invalidated: true }], 1.3265, 150, 'GBPUSD')).toBeNull();
+  });
+});
