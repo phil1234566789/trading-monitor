@@ -3,11 +3,13 @@ import {computed,ref} from 'vue';
 import {formatBerlinTime,formatDatedTime} from '../berlinTime.js';
 import {checklistHistoryAt,CHECKLIST_HISTORY_VERSION} from '../tradeSetup2ChecklistHistory.js';
 import {checklistHistoryChanges} from '../checklistReplayView.js';
+import {setup1ChecklistRows} from '../setup1ChecklistDetails.js';
 import {entryPatternText} from '../entryPattern.js';
-const props=defineProps({history:Object,asOf:Number});
+const props=defineProps({history:Object,asOf:Number,checklistState:Object});
 defineEmits(['jump']);
 const checkpoint=ref('');
 const active=computed(()=>checklistHistoryAt(props.history,props.asOf));
+const rows=computed(()=>setup1ChecklistRows(active.value?.rows ?? [],props.checklistState,active.value?.m1Check));
 const supported=computed(()=>props.history?.version===CHECKLIST_HISTORY_VERSION);
 const entries=computed(()=>props.history?.entries.filter(e=>checklistHistoryChanges(e,checkpoint.value).length) ?? []);
 const icon=value=>({passed:'✓',unmet:'✕',unknown:'?',observed:'~',validated:'✓',confirmed:'✓',disqualified:'✕',active:'✓',ended:'✕'})[value?.status ?? value?.main?.state ?? value] ?? '?';
@@ -17,7 +19,7 @@ const icon=value=>({passed:'✓',unmet:'✕',unknown:'?',observed:'~',validated:
     <p v-if="!supported">kein Verlauf gespeichert</p>
     <template v-else>
       <p class="stand" role="status"><template v-if="active">Stand von {{ formatBerlinTime(active.knownAt) }} · {{ formatDatedTime(active.knownAt).slice(0,10) }} (Europe/Berlin)</template><template v-else>Diese DR war zu diesem Replay-Zeitpunkt noch nicht erkannt.</template></p>
-      <dl v-if="active" class="history-checks"><template v-for="row in active.rows" :key="row.key"><dt>{{ icon(row.status) }} {{ entryPatternText(row.label) }}</dt><dd><p v-for="(detail,index) in row.details" :key="index">{{ entryPatternText(detail) }}</p></dd></template></dl>
+      <dl v-if="active" class="history-checks"><template v-for="row in rows" :key="row.key"><dt>{{ icon(row.status) }} {{ entryPatternText(row.label) }}</dt><dd><p v-for="(detail,index) in row.details" :key="index">{{ entryPatternText(detail) }}</p></dd></template></dl>
       <details><summary>Checklisten-Verlauf · {{ history.entries.length }} Stände</summary>
         <label>Checkpoint <select v-model="checkpoint"><option value="">Alle</option><option v-for="letter in 'ABCDEFGH'" :key="letter">{{ letter }}</option></select></label>
         <p v-if="!entries.length">Keine Änderungen für diesen Filter.</p>

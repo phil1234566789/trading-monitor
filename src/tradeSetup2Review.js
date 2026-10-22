@@ -1,3 +1,4 @@
+import {setup1ChecklistDetails} from './setup1ChecklistDetails.js';
 import {savedRiskInvalidationLabel} from './dealingRangeRisk.js';
 import {entryPatternVersion} from './entryPattern.js';
 import { entryChecklist } from './m1Entry.js';
@@ -61,6 +62,7 @@ export function setupEntryConditions(snapshot) {
   const normal = status => status === 'passed' ? 'passed' : ['unmet', 'pending', 'blocked'].includes(status) ? 'unmet' : 'unknown';
   const rows = [];
   const add = (key, label, status, details, time = at) => rows.push({ key, label, status, details, time: known(time) ? time : null });
+  const originalDetails=setup1ChecklistDetails(checklist,m1);
   const checkpoints = checklist?.model === 'countertrend' ? [
     ['liquiditySweep', 'A · Liquidity Sweep bestätigt', primary?.recognizedAt],
     ['reaction', 'B · Passender M5-Orderblock bestätigt', primary?.reactionRecognizedAt],
@@ -78,7 +80,7 @@ export function setupEntryConditions(snapshot) {
     const future = Number.isFinite(time) && !known(time);
     const antiStatus = key === 'antiConfluences' ? antiConfluenceStatus(check, at) : null;
     const status = antiStatus ? {clear:'passed',found:'unmet',unknown:'unknown'}[antiStatus] : normal(check?.status);
-    const details = antiStatus && check ? observationRuleDetails(checklistObservationRules(check, key)) : check?.details;
+    const details = antiStatus && check ? observationRuleDetails(checklistObservationRules(check, key)) : originalDetails[key] ?? check?.details;
     add(key, label, future ? 'unknown' : status, future ? ['Beleg liegt nach dem gespeicherten Stand.']
       : details ?? ['Keine Prüfung gespeichert.'], time ?? at);
   }

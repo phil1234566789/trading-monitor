@@ -1,10 +1,11 @@
+import {setup1ChecklistDetails} from './setup1ChecklistDetails.js';
 import { computeTrendChain, trendChainLevelDisplay } from './tradeSetupCockpit';
 import { formatAge } from './chartTimeUtils.js';
 import { pricePrecisionForInstrument } from './format.js';
 import { checklistObservationRules, observationRuleDetails } from './checklistObservationRules.js';
 
 // Nur Darstellung: Status und Zuordnung stammen weiter aus dem Evaluator.
-export function checklistPresentation(state) {
+export function checklistPresentation(state,m1Check) {
   if (!state) return {};
   const view = {};
   for (const key of ['antiConfluences', 'confluences']) {
@@ -49,5 +50,6 @@ export function checklistPresentation(state) {
       explanation: state.checks?.reaction?.details?.join(' '),
     };
   }
+  for(const [key,details] of Object.entries(setup1ChecklistDetails(state,m1Check))) view[key]={...view[key],details};
   return view;
 }

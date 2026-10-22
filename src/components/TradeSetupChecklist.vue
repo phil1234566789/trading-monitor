@@ -72,7 +72,7 @@ const evaluatedAt = computed(() => {
   const time = state.value?.evaluatedAt;
   return Number.isFinite(time) && Number.isFinite(new Date(time * 1000).getTime()) ? formatDatedTime(time) : null;
 });
-const presentation = computed(() => checklistPresentation(state.value));
+const presentation = computed(() => checklistPresentation(state.value,displayedM1.value));
 const m1 = computed(() => displayedM1.value ?? inactiveM1Checklist('prerequisites'));
 const definitions = computed(() => state.value?.model==='countertrend' && !state.value.checks?.time ? countertrendAbcdDefinitions
   : state.value?.checks?.h1Trend ? countertrendDefinitions
@@ -108,7 +108,7 @@ const checks = computed(() => definitions.value.map((definition, index) => {
       </div>
       <button type="button" class="checklist-close" aria-label="Trade Setup Checklist schließen" @click="$emit('close')">×</button>
     </header>
-    <ChecklistReplayHistory v-if="snapshotView" class="checklist-history-panel" :history="snapshotHistory" :as-of="replayAt" @jump="$emit('history-jump',$event)" />
+    <ChecklistReplayHistory v-if="snapshotView" class="checklist-history-panel" :history="snapshotHistory" :checklist-state="state" :as-of="replayAt" @jump="$emit('history-jump',$event)" />
     <template v-if="!snapshotHistory">
     <div v-if="!snapshotHistory" class="checklist-evaluation" role="status">
       <div class="checklist-timestamp">
@@ -131,13 +131,13 @@ const checks = computed(() => definitions.value.map((definition, index) => {
         <p v-if="check.note" class="checklist-note">{{ check.note }}</p>
         <p v-if="(check.key === 'm1' || state?.model === 'countertrend' && check.key === 'entry') && Number.isFinite(check.evaluatedAt)" class="checklist-note">M1-Stand um {{ formatBerlinTime(check.evaluatedAt) }} Uhr</p>
         <ChecklistOrderBlock v-if="check.orderBlock" :preview="check.orderBlock" :instrument="instrument" />
-        <ul v-else-if="check.details.length" class="checklist-details">
+        <ul v-if="check.details.length" class="checklist-details">
           <li v-for="(detail, index) in check.details" :key="index" :data-detail-status="check.detailStatuses[index]">{{ detail }}
             <ChecklistStatusIcon v-if="statuses[check.detailStatuses?.[index]]" class="checklist-detail-status"
               :data-status="check.detailStatuses[index]" v-bind="statuses[check.detailStatuses[index]]" />
           </li>
         </ul>
-        <p v-else-if="check.key !== 'entry'" class="checklist-note">{{ snapshotView ? 'Am gespeicherten Stand nicht belegt.' : state ? 'Noch keine Prüfdaten verfügbar.' : 'Wartet auf die automatische Auswertung.' }}</p>
+        <p v-else-if="!check.orderBlock && check.key !== 'entry'" class="checklist-note">{{ snapshotView ? 'Am gespeicherten Stand nicht belegt.' : state ? 'Noch keine Prüfdaten verfügbar.' : 'Wartet auf die automatische Auswertung.' }}</p>
       </li>
     </ol>
     </template>
