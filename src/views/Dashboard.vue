@@ -1540,7 +1540,7 @@ const visiblePinContextEntries = computed(() => (showPinHighlights.value ? pinCo
 // Browser-Aktionen, sondern im Hintergrund durch poi-watcher (Cron alle 5min) — deshalb, anders als
 // die beiden Fälle oben, MIT intervalMs. 60s reicht: schneller als jede sinnvolle manuelle
 // Beobachtung, ohne unnötig oft zu pollen.
-const { data: dbObZones, refresh: refreshDbObZones } = usePolledFetch(() => fetchObZones(), { ...dashboardDataOptions, intervalMs: 60_000 });
+const { data: dbObZones, refresh: refreshDbObZones } = usePolledFetch(() => fetchObZones(currentSymbol.value, replayUntil.value), { ...dashboardDataOptions, intervalMs: 60_000 });
 // Von poi-watcher persistierte Trade-Setups (Task "Chart zeichnet die persistierten Trade-Setups")
 // — gleicher Cron-im-Hintergrund-Grund fürs intervalMs wie dbObZones. Anders als dort NICHT über
 // alle Instrumente: trade_setups liegt je Instrument schon nahe am PostgREST-Zeilendeckel (siehe
@@ -1677,9 +1677,11 @@ const pinRsiDivergenceKeys = computed(() => {
 watch(currentSymbol, () => {
   refreshTrades();
   refreshDbTradeSetups();
+  refreshDbObZones();
   isolatedDealingRangeId.value = null;
 });
 watch(replayUntil, refreshDbTradeSetups);
+watch(replayUntil, refreshDbObZones);
 watch(selectedTradingAccountId, () => {
   refreshTrades();
   isolatedDealingRangeId.value = null;

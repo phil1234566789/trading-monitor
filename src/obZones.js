@@ -1,5 +1,28 @@
 import { supabase } from "./supabaseClient.js";
 import { fetchAllRows } from "./dbReadPaging.js";
+import { applyAsOfZones, earliestAmbiguousEventSec } from "../supabase/functions/trading-monitor-mcp/replayAsOf.ts";
+
+async function fetchReplayZones(instrument, asOfSec) {
+  // Im Replay gelten weder der heutige Status noch der Live-Deckel der jüngsten 500 Touches.
+  const { data, error } = await fetchAllRows((from, to) => supabase.from("ob_zones").select(SPALTEN)
+    .eq("instrument", instrument).in("timeframe", ["1H", "4H"])
+    .lte("start_time", new Date(asOfSec * 1000).toISOString())
+    .order("id", { ascending: true }).range(from, to));
+  if (error) throw error;
+  const eventSec = earliestAmbiguousEventSec(data, asOfSec);
+  let probe = [];
+  if (eventSec != null) {
+    const result = await fetchAllRows((from, to) => supabase.from("forex_candles")
+      .select("time, high, low").eq("instrument", instrument).eq("bar", "5m")
+      .gte("time", new Date(eventSec * 1000).toISOString())
+      .lte("time", new Date((asOfSec - 300) * 1000).toISOString())
+      .order("time", { ascending: true }).range(from, to));
+    if (result.error) throw result.error;
+    probe = result.data.map(c => ({ ...c, time: Date.parse(c.time) / 1000 }));
+  }
+  // Die dependency-freie Rückrechnung auch im Chart verwenden, damit MCP und Anzeige gleich bleiben.
+  return applyAsOfZones(data, asOfSec, probe).map(mapObZone);
+}
 
 // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 7
 // (PLAN-chart-objekte-forex.md Abschnitt 4a) — 1H/4H-Indikator-Overlay liest jetzt aus der von
@@ -32,7 +55,8 @@ function fetchUntouchedZones() {
     .order("id", { ascending: true }).range(from, to));
 }
 
-export async function fetchObZones() {
+export async function fetchObZones(instrument, asOfSec = null) {
+  if (asOfSec != null) return fetchReplayZones(instrument, asOfSec);
   const [unberuehrt, beruehrt] = await Promise.all([
     fetchUntouchedZones(),
     supabase.from("ob_zones").select(SPALTEN).in("timeframe", ["1H", "4H"]).eq("touched", true)
@@ -60,6 +84,6 @@ export function mapObZone(row) {
     touched: row.touched,
     invalidated: row.invalidated,
     startTime: Math.floor(new Date(row.start_time).getTime() / 1000),
-    endTime: Math.floor(new Date(row.end_time).getTime() / 1000),
+    endTime: row.end_time == null ? null : Math.floor(new Date(row.end_time).getTime() / 1000),
   };
 }
