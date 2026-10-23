@@ -486,9 +486,9 @@
     "semantic_hash": ""
   },
   "src/orderBlocks.js": {
-    "mtime": 1792694110.995167,
-    "seen": 1792696394.1846228,
-    "ast_hash": "8bd2a9fa69f55a049660f8904ce3add7",
+    "mtime": 1792773418.7093368,
+    "seen": 1792773709.0891652,
+    "ast_hash": "53bb2b8759929885d3e12ebe0a6a3df4",
     "semantic_hash": ""
   },
   "src/pinContext.js": {
@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "src/priceChartObZones.js": {
-    "mtime": 1792693901.117386,
-    "seen": 1792694054.8251476,
-    "ast_hash": "9051349751822e9edda35c22fcdc6222",
+    "mtime": 1792773153.308077,
+    "seen": 1792773709.091165,
+    "ast_hash": "bed959f0d0c89c77e368f9dbe547c6fe",
     "semantic_hash": ""
   },
   "src/range.type.ts": {
@@ -1998,9 +1998,9 @@
     "semantic_hash": ""
   },
   "test/priceChartObZones.test.js": {
-    "mtime": 1792693901.4038496,
-    "seen": 1792694054.8261487,
-    "ast_hash": "b4e499595b79eb8c919b7a7cae60a575",
+    "mtime": 1792773153.3100772,
+    "seen": 1792773709.1920533,
+    "ast_hash": "b572cde2fedb18980cecf3b877e48b6c",
     "semantic_hash": ""
   },
   "test/resolveStructureStartTime.test.js": {
@@ -6669,6 +6669,12 @@
     "mtime": 1792696466.7312198,
     "seen": 1792696575.5110981,
     "ast_hash": "5eeb30500ee8a2cf0e8d56657b833f55",
+    "semantic_hash": ""
+  },
+  "test/historicalObVisibility.test.js": {
+    "mtime": 1792773250.0612347,
+    "seen": 1792773709.1730497,
+    "ast_hash": "1383a2613614abce963a0b5f82608d10",
     "semantic_hash": ""
   }
 }
