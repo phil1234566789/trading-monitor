@@ -258,7 +258,7 @@ function zoneOptions(z, inPinContext, isSelectedPin) {
   const keys = OB_ZONE_KEYS[z.timeframe] ?? OB_ZONE_KEYS["1H"];
   const key = inactive ? keys.inactive : z.dir === 1 ? keys.bull : keys.bear;
   const borderKey = inactive ? keys.inactiveBorder : z.dir === 1 ? keys.bullBorder : keys.bearBorder;
-  const label = z.timeframe ?? "";
+  const label = z.invalidated ? `${z.timeframe ?? ""} · beendet` : z.timeframe ?? "";
   return {
     fillColor: cssColor(key),
     borderColor: cssColor(borderKey),
@@ -292,8 +292,8 @@ export function renderPersistedZones(series, zones, existingPrimitives, candles,
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
+  // Der gemeinsame Historienfilter entscheidet die Sichtbarkeit, nicht erneut die fachliche Gültigkeit.
   for (const z of zones) {
-    if (z.invalidated) continue;
     const key = obZoneNaturalKey(z.timeframe, z.dir, z.startTime);
     const inPinContext = pinKeys?.has(key) ?? false;
     const isSelectedPin = hoveredKey != null && hoveredKey === key;

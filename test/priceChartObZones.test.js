@@ -129,14 +129,14 @@ describe("collectObsZones", () => {
     expect(collectObsZones({ showObs4h: false, showObs1h: false, showObsM5: false, m5Candles: [], ...baseCtx })).toEqual([]);
   });
 
-  it("blendet invalidierte Zonen unabhängig vom Toggle immer aus", () => {
+  it("sammelt auch invalidierte Zonen für den gemeinsamen Historienfilter", () => {
     const result = collectObsZones({ showObs4h: false, showObs1h: true, showObsM5: false, m5Candles: [], ...baseCtx });
-    expect(result).toEqual([dbObZones[0]]);
+    expect(result).toEqual([dbObZones[0], dbObZones[1]]);
   });
 
   it("kombiniert mehrere aktivierte Timeframes", () => {
     const result = collectObsZones({ showObs4h: true, showObs1h: true, showObsM5: false, m5Candles: [], ...baseCtx });
-    expect(result).toEqual([dbObZones[2], dbObZones[0]]);
+    expect(result).toEqual([dbObZones[2], dbObZones[0], dbObZones[1]]);
   });
 });
 

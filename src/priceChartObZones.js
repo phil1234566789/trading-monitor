@@ -66,12 +66,10 @@ export function currentPriceEstimate(allCandles) {
   return allCandles.length > 0 ? allCandles[allCandles.length - 1].close : null;
 }
 
-// "Historische OBs"-Toggle (Dashboard-Toolbar) blendet bereits angetestete, aber noch nicht
-// invalidierte Zonen aus (analog zum tv-indikator-Toggle, siehe PLAN-notifications.md) —
-// invalidierte Zonen bleiben unabhängig davon immer ausgeblendet (eigene, ältere Regel). Gilt
-// einheitlich für alle drei Timeframes, kein eigener Feinschalter pro Timeframe nötig.
+// Historische Boxen bleiben auch nach Invalidierung sichtbar. Fachliche Auswahlwege
+// prüfen invalidated unabhängig davon; ohne Historie bleiben nur offene gültige Zonen.
 export function filterHistorical(zones, showHistoricalObs) {
-  return showHistoricalObs ? zones : zones.filter((z) => !z.touched);
+  return showHistoricalObs ? zones : zones.filter((z) => !z.touched && !z.invalidated);
 }
 
 // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 9 (Pip-Distanz-
@@ -111,12 +109,11 @@ export function filterDbObZones(dbObZones, symbol, replayUntil, timeframe, price
 // PLAN-chart-objekte-forex.md Abschnitt 5), das volle M5-Universum bleibt bewusst Live-Recompute.
 export function collectObsZones({ showObs4h, showObs1h, showObsM5, dbObZones, symbol, replayUntil, price, m5Candles }) {
   const zones = [];
-  if (showObs4h) zones.push(...filterDbObZones(dbObZones, symbol, replayUntil, "4H", price).filter((z) => !z.invalidated));
-  if (showObs1h) zones.push(...filterDbObZones(dbObZones, symbol, replayUntil, "1H", price).filter((z) => !z.invalidated));
+  if (showObs4h) zones.push(...filterDbObZones(dbObZones, symbol, replayUntil, "4H", price));
+  if (showObs1h) zones.push(...filterDbObZones(dbObZones, symbol, replayUntil, "1H", price));
   if (showObsM5) {
     zones.push(
       ...detectOrderBlocks(m5Candles, "5m", true, obMinimum(symbol, '5m'))
-        .filter((z) => !z.invalidated)
         .map((z) => ({ ...z, timeframe: "5M" })),
     );
   }
