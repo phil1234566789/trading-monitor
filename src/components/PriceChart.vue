@@ -1183,7 +1183,7 @@ function refreshPoiZonesInternal() {
     showObsM5: props.showObsM5,
     ...obZoneCtx(),
   });
-  const visibleZones = mergePinnedZones(filterHistorical(zones, props.showHistoricalObs), props.pinnedObZones, candles);
+  const visibleZones = mergePinnedZones(filterHistorical(zones, props.showHistoricalObs), props.pinnedObZones, candles, obZoneCtx());
   // Target-/Anti-Confluence-Picker-Hover (siehe openTargetPicker/openAntiConfluencePicker weiter
   // unten) laufen über denselben Pin-Halo-Highlight-Mechanismus wie eine gehoverte gepinnte OB-Zone.
   renderPersistedZones(

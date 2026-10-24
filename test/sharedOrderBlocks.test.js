@@ -1,3 +1,4 @@
+import {legacyOrderBlockSnapshot} from './helpers/legacyOrderBlockSnapshot.js';
 import {createSharedOrderBlockDetector} from '../src/sharedOrderBlocks.js';
 import {it,expect} from 'vitest';
 import {createIncrementalOrderBlockDetector} from '../src/incrementalOrderBlocks.js';
@@ -16,14 +17,14 @@ export function sharedDetectorCases(create){
     const candles=rows(seed),detect=create(tf),saved=[];
     for(const end of [0,4,25,25,60,25,61,60,80,20,100,80]){
       const prefix=candles.slice(0,end),actual=detect(prefix);
-      expect(actual).toEqual(before(prefix,tf));saved.push([prefix.map(c=>({...c})),structuredClone(actual)]);
+      expect(legacyOrderBlockSnapshot(actual)).toEqual(before(prefix,tf));saved.push([prefix.map(c=>({...c})),structuredClone(actual)]);
       if(actual[0])actual[0].top=-1;
-      expect(detect(prefix)).toEqual(before(prefix,tf));
+      expect(legacyOrderBlockSnapshot(detect(prefix))).toEqual(before(prefix,tf));
     }
     candles[20].high+=.005; candles[21].ignored=!candles[21].ignored;
     for(const prefix of [candles,candles.slice(0,25),candles.slice(10),candles.toReversed(),candles])
-      expect(detect(prefix)).toEqual(before(prefix,tf));
-    for(const [prefix,actual] of saved)expect(actual).toEqual(before(prefix,tf));
+      expect(legacyOrderBlockSnapshot(detect(prefix))).toEqual(before(prefix,tf));
+    for(const [prefix,actual] of saved)expect(legacyOrderBlockSnapshot(actual)).toEqual(before(prefix,tf));
   }
 }
 it('preserves independent callers, earlier snapshots, ignored bars and in-place corrections',()=>sharedDetectorCases(createIncrementalOrderBlockDetector));

@@ -1,3 +1,4 @@
+import { reconstructObLifecycle } from "../_shared/obReplayLifecycle.ts";
 import { pinTypeFields, type PinType } from './pinType.ts';
 import { supabase } from "./supabaseClient.ts";
 import { PIP_SIZE } from "../_shared/pipConfig.js";
@@ -41,7 +42,15 @@ export async function getObZones(instrument: string, timeframe?: string, include
     if (!includeAll && asOfSec == null) query = query.eq("invalidated", false).eq("touched", false);
     return query;
   });
-  let rows = applyAsOfZones(data, asOfSec, await asOfProbeCandles(instrument, data, asOfSec));
+  let rows = applyAsOfZones(data, asOfSec);
+  if (asOfSec != null) rows = await reconstructObLifecycle(rows, asOfSec, async (bar, fromSec, untilSec) => {
+    const candles = await fetchAllRows<{time: string; high: number; low: number}>((from, to) => supabase.from("forex_candles")
+      .select("time, high, low").eq("instrument", instrument).eq("bar", bar)
+      .gte("time", new Date(fromSec * 1000).toISOString())
+      .lte("time", new Date(untilSec * 1000).toISOString())
+      .order("time", { ascending: true }).range(from, to));
+    return candles.map(c => ({ ...c, time: Date.parse(c.time) / 1000 }));
+  });
   if (!includeAll && asOfSec != null) rows = rows.filter((r) => !r.invalidated && !r.touched);
   return rows;
 }

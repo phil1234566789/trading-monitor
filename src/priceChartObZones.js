@@ -5,7 +5,7 @@
 // Aufrufer bauen dafür ein `ctx`-Objekt ({ m5Candles, dbObZones, symbol, replayUntil, price }) statt
 // die Closures direkt zu lesen — dieselben Werte, die vorher aus den PriceChart.vue-internen
 // Variablen kamen.
-import { detectOrderBlocks, obZoneNaturalKey } from "./orderBlocks.js";
+import { detectOrderBlocks, obZoneNaturalKey, orderBlockEndTime } from "./orderBlocks.js";
 import { PIP_SIZE } from "./pipConfig.js";
 import { obMinimum, strategyDistance } from './instrumentConfig.js';
 
@@ -141,7 +141,7 @@ export function liveObZoneState(item, ctx) {
   // Journal-Objekte bleiben auch außerhalb des Indikator-Distanzfilters referenziert.
   const zone = liveObZonesForTimeframe(item.timeframe, { ...ctx, price: null }).find((z) =>
     z.top === item.rangeHigh && z.bottom === item.rangeLow && (item.sourceTime == null || z.startTime === item.sourceTime));
-  return zone ? { touched: zone.touched, endTime: zone.endTime } : null;
+  return zone ? { touched: zone.touched, endTime: orderBlockEndTime(zone, zone.endTime) } : null;
 }
 
 // touched und endTime müssen gemeinsam weitergereicht werden: der Renderer ignoriert endTime
@@ -170,11 +170,23 @@ export function obBoxTouchState(item, candles, ctx) {
 // nachverfolgt wird, siehe Dashboard.vue: pinnedObZones) wird anhand der aktuell geladenen Kerzen
 // self-geheilt (dieselbe firstCandleTouchRange-Technik wie refreshTradeConfirmationLinksInternal)
 // — sonst würde eine längst gesweepte M5-OB-Pin-Box für immer als "aktiv" bis "jetzt" gezeichnet.
-export function mergePinnedZones(zones, pinnedZones, candles) {
+export function mergePinnedZones(zones, pinnedZones, candles, ctx = null) {
   if (!pinnedZones || pinnedZones.length === 0) return zones;
   const seen = new Set(zones.map((z) => obZoneNaturalKey(z.timeframe, z.dir, z.startTime)));
   const extra = [];
-  for (const z of pinnedZones) {
+  const sources = new Map();
+  for (const pin of pinnedZones) {
+    // Pins nutzen dieselben Quellen wie Journal und Indikator, auch bei ausgeschaltetem Toggle.
+    let z = pin;
+    if (ctx != null) {
+      if (!sources.has(pin.timeframe)) sources.set(pin.timeframe,
+        liveObZonesForTimeframe(pin.timeframe, { ...ctx, price: null }));
+      const original = sources.get(pin.timeframe).find(row =>
+        obZoneNaturalKey(pin.timeframe, row.dir, row.startTime)
+          === obZoneNaturalKey(pin.timeframe, pin.dir, pin.startTime));
+      if (!original && pin.timeframe !== "5M") continue;
+      if (original) z = { ...original, timeframe: pin.timeframe };
+    }
     const key = obZoneNaturalKey(z.timeframe, z.dir, z.startTime);
     if (seen.has(key)) continue;
     seen.add(key);
@@ -182,7 +194,7 @@ export function mergePinnedZones(zones, pinnedZones, candles) {
       extra.push({ ...z, endTime: z.endTime ?? candles[candles.length - 1]?.time ?? z.startTime });
       continue;
     }
-    const touchTime = firstCandleTouchRange(candles, z.startTime, z.top, z.bottom);
+    const touchTime = firstCandleTouchRange(candles, z.startTime, z.bottom, z.top);
     extra.push({ ...z, touched: touchTime != null, endTime: touchTime ?? candles[candles.length - 1]?.time ?? z.startTime });
   }
   return [...zones, ...extra];

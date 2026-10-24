@@ -149,6 +149,8 @@ export function advanceOrderBlocks(candles,state,from) {
     // Gültigkeits-/Touched-Regeln laufen für alle bestehenden Zonen gegen die aktuelle Kerze.
     for (const z of zones) {
       if (z.invalidated) continue;
+      // Den ersten Kontakt separat erhalten: eine spätere Invalidierung darf das Zeichenende nicht ersetzen.
+      if (z.touchedTime == null && candleTouchesOrderBlock(cur, z)) z.touchedTime = cur.time;
       const wasTouched = z.touched; // vor der Pruefung dieser Kerze festhalten
 
       // Einfache Preisüberschreitung invalidiert (Wick genügt, kein Kerzenschluss nötig) — anders

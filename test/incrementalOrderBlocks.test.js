@@ -1,3 +1,4 @@
+import {legacyOrderBlockSnapshot} from './helpers/legacyOrderBlockSnapshot.js';
 import {it,expect} from 'vitest';
 import {createIncrementalOrderBlockDetector} from '../src/incrementalOrderBlocks.js';
 import {detectOrderBlocks as before} from './fixtures/orderBlockDetectionBeforePerformanceH.js';
@@ -15,12 +16,12 @@ it('matches the frozen detector after each append, correction, truncation and re
     const snapshots=[];
     for(let end=0;end<=rows.length;end++){
       const prefix=rows.slice(0,end),actual=detect(prefix);
-      expect(actual).toEqual(before(prefix,tf));snapshots.push(structuredClone(actual));
-      if(end===60){actual[0]&&(actual[0].top=0);expect(detect(prefix)).toEqual(before(prefix,tf));}
+      expect(legacyOrderBlockSnapshot(actual)).toEqual(before(prefix,tf));snapshots.push(structuredClone(actual));
+      if(end===60){actual[0]&&(actual[0].top=0);expect(legacyOrderBlockSnapshot(detect(prefix))).toEqual(before(prefix,tf));}
     }
     rows[20].high+=.005;rows[21].ignored=!rows[21].ignored;
     for(const prefix of [rows,rows.slice(0,35),rows.slice(10),rows.toReversed(),rows])
-      expect(detect(prefix)).toEqual(before(prefix,tf));
-    expect(snapshots[80]).toEqual(before(candles(seed).slice(0,80),tf));
+      expect(legacyOrderBlockSnapshot(detect(prefix))).toEqual(before(prefix,tf));
+    expect(legacyOrderBlockSnapshot(snapshots[80])).toEqual(before(candles(seed).slice(0,80),tf));
   }
 });

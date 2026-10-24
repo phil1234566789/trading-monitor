@@ -9,13 +9,13 @@ it('restores the GBP H1 zone before its later invalidation, beyond the live hist
     top: 1.3266, bottom: 1.32446, touched: true, invalidated: true,
     start_time: '2026-10-01T07:00:00Z', end_time: '2026-10-06T11:00:00Z' };
   const rows = [...Array.from({ length: 1100 }, (_, id) => ({ ...target, id })), { ...target, id: 3587174 }];
-  from.mockImplementation(() => {
+  from.mockImplementation(table => {
     let start = 0;
     const query = {
       select: () => query, in: () => query, eq: () => query, lte: () => query,
-      order: () => query, limit: () => query,
+      order: () => query, limit: () => query, gte: () => query,
       range: value => { start = value; return query; },
-      then: resolve => Promise.resolve({ data: rows.slice(start, start + 600), error: null }).then(resolve),
+      then: resolve => Promise.resolve({ data: table === 'forex_candles' ? (start ? [] : [{time:'2026-10-01T07:00:00Z',high:1.32,low:1.31}]) : rows.slice(start, start + 600), error: null }).then(resolve),
     };
     return query;
   });
@@ -31,16 +31,16 @@ it('loads the recent untouched OB even beyond a silently capped response', async
     start_time: '2026-09-21T13:00:00Z', end_time: '2026-09-22T08:00:00Z',
   }));
   const offsets = [];
-  from.mockImplementation(() => {
+  from.mockImplementation(table => {
     let touched = false, start = 0;
     const query = {
-      select: () => query, in: () => query, order: () => query, limit: () => query,
-      eq: (_, value) => { touched = value; return query; },
-      range: (value) => { start = value; offsets.push(value); return query; },
-      then: (resolve) => Promise.resolve({ data: touched ? [] : rows.slice(start, start + 600), error: null }).then(resolve),
+      select: () => query, in: () => query, order: () => query, limit: () => query, gte: () => query, lte: () => query,
+      eq: (key, value) => { if (key === 'touched') touched = value; return query; },
+      range: (value) => { start = value; if (table === 'ob_zones') offsets.push(value); return query; },
+      then: (resolve) => Promise.resolve({ data: table === 'forex_candles' ? (start ? [] : [{time:'2026-09-21T13:00:00Z',high:1.32,low:1.31}]) : touched ? [] : rows.slice(start, start + 600), error: null }).then(resolve),
     };
     return query;
   });
-  expect(await fetchObZones()).toHaveLength(1250);
+  expect(await fetchObZones('GBPUSD')).toHaveLength(1250);
   expect(offsets).toEqual([0, 600, 1200, 1250]);
 });

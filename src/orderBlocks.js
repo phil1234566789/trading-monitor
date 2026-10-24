@@ -18,8 +18,8 @@ import { detectOrderBlocks } from "./orderBlockDetection.js";
 export { detectOrderBlocks };
 
 // Offene Boxen reichen bis zur letzten Kerze; gespeicherte Poll-Enden begrenzen weder Zeichnung noch Klick.
-export function orderBlockEndTime(zone) {
-  return zone.touched || zone.invalidated ? zone.endTime : Infinity;
+export function orderBlockEndTime(zone, openEnd = Infinity) {
+  return zone.touchedTime ?? (zone.touched || zone.invalidated ? zone.endTime : openEnd);
 }
 
 const PIN_BORDER_INSET = 3; // px, Abstand des Pin-Rahmens nach außen von der normalen Box-Kante
