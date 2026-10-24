@@ -16,6 +16,7 @@ import { useGoldChartHistory } from '../composables/useGoldChartHistory.js';
 import { goldNativeZones } from '../priceChartObZones.js';
 import M5CandleClock from "./M5CandleClock.vue";
 import { createChart, CandlestickSeries, TickMarkType, CrosshairMode } from "lightweight-charts";
+import { historicalEvidenceHint } from "../tradeEvidence";
 import { renderPersistedZones, OrderBlockPrimitive, obZoneNaturalKey } from "../orderBlocks.js";
 import {
   firstCandleTouch,
@@ -999,7 +1000,7 @@ function refreshTradeConfirmationLinksInternal() {
       // größer" gewünscht, dann korrigiert auf "nur der Totenkopf 1,5x größer, Rest der Schrift
       // normal" — siehe chartIconLabel.js für die Umsetzung, da fillText nur eine Schriftgröße pro
       // Aufruf kann).
-      const label = isAntiConfluence ? kindPriceId : `${icon} ${kindPriceId}`;
+      const label = (isAntiConfluence ? kindPriceId : `${icon} ${kindPriceId}`) + historicalEvidenceHint(confirmation);
       const iconOptions = isAntiConfluence ? { icon: "💀", iconScale: 1.5 } : {};
       // Anti-Confluences bekommen die eigene, alarmierende Rot-Farbe (chartColors.js: antiConfluence)
       // statt der gemeinsamen Confirmation/Confluence-Farbe — Philip: "ich brauch eher ne andere
@@ -1630,7 +1631,9 @@ function findClickedOBZone(param) {
   const price = candleSeries.coordinateToPrice(param.point.y);
   const time = chart.timeScale().coordinateToTime(param.point.x);
   if (price == null || time == null) return null;
-  return matchOBZone(poiZonesMetadata.value, price, time, props.symbol);
+  return matchOBZone(poiZonesMetadata.value, price, time, props.symbol, {
+    allowHistorical: props.confirmationModeActive || props.confluenceModeActive || props.antiConfluenceModeActive,
+  });
 }
 
 function findClickedFibLevel(param) {

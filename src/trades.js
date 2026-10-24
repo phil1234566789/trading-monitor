@@ -109,6 +109,41 @@ function groupBy(rows, key) {
 // Zeilenzahl weiter (nicht um PAGE_SIZE), nur eine wirklich LEERE Seite gilt als "fertig".
 const TRADE_POSITIONS_PAGE_SIZE = 1000;
 
+// level unterscheidet die zwei Ebenen aus trade_evidence (siehe Migration 20260731120000:
+// dealing_range_id ODER trade_position_id) — TradeEditModal.vue braucht das, um "GO für die
+// Idee" von "GO für diesen Entry" in der Liste sichtbar zu trennen. category (generierte Spalte,
+// siehe Migration 20260828120000) trennt zusätzlich Confirmation ("Bestätigung", GO-Signal:
+// pivot/ob/rsi_divergence) von Confluence ("Zusatzargument", kein GO: fib) — TradeSetupCockpit.vue/
+// TradeEditModal.vue filtern beide Ebenen zusätzlich danach in je zwei Sektionen.
+function toConfirmation(c, level) {
+  return {
+    id: c.id,
+    level,
+    price: c.price,
+    kind: c.kind,
+    category: c.category,
+    ...(c.historical_only ? { historicalOnly: true } : {}),
+    sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
+    touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
+    liquidityLevel: toLiquidityLevel(c),
+    // Nur bei kind='fib' gesetzt (siehe tradeEvidence.ts) — die zwei Ankerpreise des
+    // gespeicherten Fib-Werts, sonst null.
+    rangeLow: c.range_low ?? null,
+    rangeHigh: c.range_high ?? null,
+    // Nur bei kind='ob' gesetzt — Zeitebene der Zone, siehe PriceChart.vue: refreshTradeTargetLinksInternal.
+    timeframe: c.timeframe ?? null,
+    // Nur bei kind='rsi_divergence' gesetzt (siehe tradeEvidence.ts) — price/sourceTime/
+    // touchedTime tragen bereits toPrice/fromTime/toTime, diese drei zusätzlich, damit sich die
+    // Divergenz als vollständiger Zwei-Bein-Konnektor nachzeichnen lässt.
+    fromPrice: c.from_price ?? null,
+    fromRsi: c.from_rsi ?? null,
+    toRsi: c.to_rsi ?? null,
+    divergenceType: c.divergence_type ?? null,
+    // Nur bei kind='pivot' gesetzt (siehe tradeEvidence.ts) — Session-Kontext wie "Asia-Mid".
+    bonus: c.bonus ?? null,
+  };
+}
+
 export async function fetchTrades(instrument, accountId = null) {
   // Seit 2026-07-31: eine Zeile hier ist eine trade_positions-AUSFÜHRUNG, mit ihrer dealing_ranges-
   // IDEE eingebettet (!inner, weil wir unten auf dealing_ranges.instrument filtern — ohne !inner
@@ -164,13 +199,13 @@ export async function fetchTrades(instrument, accountId = null) {
     supabase
       .from("trade_evidence")
       .select(
-        "id, dealing_range_id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
+        "id, dealing_range_id, price, kind, category, historical_only, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
       )
       .in("dealing_range_id", rangeIds),
     supabase
       .from("trade_evidence")
       .select(
-        "id, trade_position_id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
+        "id, trade_position_id, price, kind, category, historical_only, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
       )
       .in("trade_position_id", positionIds),
     lessonTargetIds.length > 0
@@ -196,39 +231,6 @@ export async function fetchTrades(instrument, accountId = null) {
   );
 
 
-  // level unterscheidet die zwei Ebenen aus trade_evidence (siehe Migration 20260731120000:
-  // dealing_range_id ODER trade_position_id) — TradeEditModal.vue braucht das, um "GO für die
-  // Idee" von "GO für diesen Entry" in der Liste sichtbar zu trennen. category (generierte Spalte,
-  // siehe Migration 20260828120000) trennt zusätzlich Confirmation ("Bestätigung", GO-Signal:
-  // pivot/ob/rsi_divergence) von Confluence ("Zusatzargument", kein GO: fib) — TradeSetupCockpit.vue/
-  // TradeEditModal.vue filtern beide Ebenen zusätzlich danach in je zwei Sektionen.
-  function toConfirmation(c, level) {
-    return {
-      id: c.id,
-      level,
-      price: c.price,
-      kind: c.kind,
-      category: c.category,
-      sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
-      touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
-      liquidityLevel: toLiquidityLevel(c),
-      // Nur bei kind='fib' gesetzt (siehe tradeEvidence.ts) — die zwei Ankerpreise des
-      // gespeicherten Fib-Werts, sonst null.
-      rangeLow: c.range_low ?? null,
-      rangeHigh: c.range_high ?? null,
-      // Nur bei kind='ob' gesetzt — Zeitebene der Zone, siehe PriceChart.vue: refreshTradeTargetLinksInternal.
-      timeframe: c.timeframe ?? null,
-      // Nur bei kind='rsi_divergence' gesetzt (siehe tradeEvidence.ts) — price/sourceTime/
-      // touchedTime tragen bereits toPrice/fromTime/toTime, diese drei zusätzlich, damit sich die
-      // Divergenz als vollständiger Zwei-Bein-Konnektor nachzeichnen lässt.
-      fromPrice: c.from_price ?? null,
-      fromRsi: c.from_rsi ?? null,
-      toRsi: c.to_rsi ?? null,
-      divergenceType: c.divergence_type ?? null,
-      // Nur bei kind='pivot' gesetzt (siehe tradeEvidence.ts) — Session-Kontext wie "Asia-Mid".
-      bonus: c.bonus ?? null,
-    };
-  }
 
   return data.map((row) => {
     const range = row.dealing_ranges;
@@ -353,7 +355,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
   ] = await Promise.all([
     supabase
       .from("trade_evidence")
-      .select(`id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, ${LIQUIDITY_LEVEL_EMBED}`)
+      .select(`id, price, kind, category, historical_only, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, ${LIQUIDITY_LEVEL_EMBED}`)
       .eq("dealing_range_id", dealingRangeId)
       .order("created_at"),
     supabase
@@ -374,24 +376,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
     // siehe tradeIntake.js: insertConfirmation) dadurch nie zu sehen, obwohl sie in der DB stand.
     invalidation: range.invalidation ?? null,
     invalidationItem: toInvalidationItem(range),
-    confirmations: (confirmations ?? []).map((c) => ({
-      id: c.id,
-      level: "range",
-      price: c.price,
-      kind: c.kind,
-      category: c.category,
-      sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
-      touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
-      liquidityLevel: toLiquidityLevel(c),
-      rangeLow: c.range_low ?? null,
-      rangeHigh: c.range_high ?? null,
-      timeframe: c.timeframe ?? null,
-      fromPrice: c.from_price ?? null,
-      fromRsi: c.from_rsi ?? null,
-      toRsi: c.to_rsi ?? null,
-      divergenceType: c.divergence_type ?? null,
-      bonus: c.bonus ?? null,
-    })),
+    confirmations: (confirmations ?? []).map(c => toConfirmation(c, "range")),
     targets: (targets ?? []).map((t) => ({
       id: t.id,
       price: t.price,

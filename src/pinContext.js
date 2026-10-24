@@ -48,7 +48,7 @@ const ROW_COLUMNS =
   // hier bisher nicht mit ausgewählt, weil ungenutzt.
   "ob_zones(id, instrument, direction, timeframe, top, bottom, start_time, end_time, touched, invalidated), " +
   "trade_setups(id, instrument, direction, ob_top, ob_bottom, ob_start_time, ls_touched_time), " +
-  "trade_evidence(id, kind, category, price, range_low, range_high, touched_time), " +
+  "trade_evidence(id, kind, category, historical_only, price, range_low, range_high, touched_time), " +
   "liquidity_levels(id, instrument, direction, timeframe, price, pivot_time, end_time, touched)";
 
 function toEntry(row) {
@@ -139,6 +139,7 @@ function toEntry(row) {
           id: row.trade_evidence.id,
           kind: row.trade_evidence.kind,
           category: row.trade_evidence.category,
+          ...(row.trade_evidence.historical_only ? { historicalOnly: true } : {}),
           price: row.trade_evidence.price,
           rangeLow: row.trade_evidence.range_low,
           rangeHigh: row.trade_evidence.range_high,

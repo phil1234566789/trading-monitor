@@ -478,6 +478,7 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
     price: confirmation.price,
     kind: confirmation.kind,
     category,
+    ...(confirmation.historicalOnly ? { historical_only: true } : {}),
     source_time: confirmation.sourceTime != null ? new Date(confirmation.sourceTime * 1000).toISOString() : null,
     touched_time: confirmation.touchedTime != null ? new Date(confirmation.touchedTime * 1000).toISOString() : null,
     // Nur bei kind='fib' gesetzt (siehe PriceChart.vue: findClickedFibLevel) — die zwei Ankerpreise
@@ -527,6 +528,7 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
   if (
     dealingRangeId != null &&
     category === "confirmation" &&
+    !confirmation.historicalOnly &&
     confirmation.kind === "ob" &&
     confirmation.rangeLow != null &&
     confirmation.rangeHigh != null &&

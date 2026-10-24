@@ -1049,7 +1049,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
   ] = await Promise.all([
     supabase
       .from("trade_evidence")
-      .select(`id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, ${LIQUIDITY_LEVEL_EMBED}`)
+      .select(`id, price, kind, category, historical_only, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, ${LIQUIDITY_LEVEL_EMBED}`)
       .eq("dealing_range_id", dealingRangeId)
       .order("created_at"),
     supabase
@@ -1072,6 +1072,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
       price: c.price,
       kind: c.kind,
       category: c.category,
+      ...(c.historical_only ? { historicalOnly: true } : {}),
       sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
       touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
       liquidityLevel: toLiquidityLevel(c),

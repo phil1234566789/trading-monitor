@@ -28,6 +28,7 @@ export interface TradeEvidence {
   // gegenläufiger OB als Confirmation ODER Anti-Confluence) eine normale Spalte, vom Arm-Zustand in
   // Dashboard.vue explizit gesetzt (siehe tradeIntake.js: insertConfirmation).
   category: TradeEvidenceCategory;
+  historicalOnly?: boolean;
   sourceTime: number | null;
   touchedTime: number | null;
   // Nur bei kind='fib' gesetzt (siehe marketStructureAnalysis.ts: computeFibLevels) — die zwei
@@ -49,6 +50,15 @@ export interface TradeEvidence {
   // Kontext wie "Asia-Mid", Snapshot beim Klick (Migration 20260829120000: Bug-Report Philip, ging
   // vorher komplett verloren, das Label zeigte nur noch generisch "Sweep ...").
   bonus: string | null;
+}
+
+// Historisch verknüpfte, bereits invalidierte OBs dokumentieren den Verlauf und geben kein GO.
+export function isGoConfirmation(evidence: TradeEvidence): boolean {
+  return evidence.category === "confirmation" && !evidence.historicalOnly;
+}
+
+export function historicalEvidenceHint(evidence: Pick<TradeEvidence, "historicalOnly">): string {
+  return evidence.historicalOnly ? " · historisch · ungültig · kein GO" : "";
 }
 
 // "Sweep" statt "Pivot" (anders als tradeTargets.ts: kindLabel) — eine Bestätigung/ein
@@ -79,6 +89,7 @@ export function evidenceAgeTier(evidence: TradeEvidence, nowSec: number): AgeTie
 // refreshTradeConfirmationLinksInternal), damit sich Modal-Zeile und Chart-Box eindeutig zuordnen
 // lassen — wie schon bei formatTargetLabel.
 export function formatEvidenceLabel(evidence: TradeEvidence, instrument: string, nowSec: number): string {
+  const historyHint = historicalEvidenceHint(evidence);
   const precision = pricePrecisionForInstrument(instrument);
   const price = fmtPrice(evidence.price, precision);
   const kind = kindLabel(evidence.kind);
@@ -98,8 +109,8 @@ export function formatEvidenceLabel(evidence: TradeEvidence, instrument: string,
   // refreshTradeConfirmationLinksInternal), damit beide weiterhin 1:1 zueinander passen.
   const idHint = evidence.id != null ? ` #${evidence.id}` : "";
   const seconds = evidenceAgeSeconds(evidence, nowSec);
-  if (seconds == null) return `${kind}${bonusHint} ${price}${rangeHint}${idHint}`;
+  if (seconds == null) return `${kind}${bonusHint} ${price}${rangeHint}${idHint}${historyHint}`;
   const tier = classifyAge(seconds);
   const age = formatAge(seconds);
-  return `${kind}${bonusHint} ${price}${rangeHint} · ${tier}${age ? ` (${age})` : ""}${idHint}`;
+  return `${kind}${bonusHint} ${price}${rangeHint} · ${tier}${age ? ` (${age})` : ""}${idHint}${historyHint}`;
 }
