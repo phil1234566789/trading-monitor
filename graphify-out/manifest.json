@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "src/components/PriceChart.vue": {
-    "mtime": 1792693901.0387866,
-    "seen": 1792694054.8251476,
-    "ast_hash": "8c1d60735f9c34064c1def2063a8c953",
+    "mtime": 1792829093.4362044,
+    "seen": 1792829159.292037,
+    "ast_hash": "3d563a84d88dbe1501da1b9267a8d596",
     "semantic_hash": ""
   },
   "src/components/ProtokollTable.vue": {
@@ -474,21 +474,21 @@
     "semantic_hash": ""
   },
   "src/obZones.js": {
-    "mtime": 1792693901.1098728,
-    "seen": 1792694054.8251476,
-    "ast_hash": "db23e135556469aee3068938bf6e059b",
+    "mtime": 1792828774.4953754,
+    "seen": 1792829076.1261282,
+    "ast_hash": "274ac76f6fc8693353349ec29d567f6a",
     "semantic_hash": ""
   },
   "src/orderBlockDetection.js": {
-    "mtime": 1792693901.1108725,
-    "seen": 1792694054.8251476,
-    "ast_hash": "663516f699e4fad7090dcd064984cf90",
+    "mtime": 1792828617.6303554,
+    "seen": 1792829076.1261282,
+    "ast_hash": "f4ee52487f36db5557c7a6645409a65f",
     "semantic_hash": ""
   },
   "src/orderBlocks.js": {
-    "mtime": 1792773418.7093368,
-    "seen": 1792773709.0891652,
-    "ast_hash": "53bb2b8759929885d3e12ebe0a6a3df4",
+    "mtime": 1792828774.4923754,
+    "seen": 1792829076.1271281,
+    "ast_hash": "4631300c8eb60876883805442758d3e4",
     "semantic_hash": ""
   },
   "src/pinContext.js": {
@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "src/priceChartObZones.js": {
-    "mtime": 1792773153.308077,
-    "seen": 1792773709.091165,
-    "ast_hash": "bed959f0d0c89c77e368f9dbe547c6fe",
+    "mtime": 1792829118.3781836,
+    "seen": 1792829159.3260632,
+    "ast_hash": "6f49eb2f384a0c401b4ad00ca214ba4b",
     "semantic_hash": ""
   },
   "src/range.type.ts": {
@@ -750,9 +750,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/_shared/orderBlocks.ts": {
-    "mtime": 1792693901.1826577,
-    "seen": 1792694054.8261487,
-    "ast_hash": "c4b81b4117812732a04ff7da7249a642",
+    "mtime": 1792828617.632357,
+    "seen": 1792829076.1566463,
+    "ast_hash": "395acf7b83997cc64f278b08c68f17d3",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/resolveStructureStartTime.ts": {
@@ -810,9 +810,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/db.ts": {
-    "mtime": 1792693901.200073,
-    "seen": 1792694054.8261487,
-    "ast_hash": "d234d7eb8b1fd4b571af1093505046d6",
+    "mtime": 1792828774.4943755,
+    "seen": 1792829076.1626463,
+    "ast_hash": "754ae568cdb4f423c2ac4f1f72434d01",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/ema.js": {
@@ -882,9 +882,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/orderBlockDetection.js": {
-    "mtime": 1792693901.2090716,
-    "seen": 1792694054.8261487,
-    "ast_hash": "85a2e38717ec85bd75e3df8e95f674b1",
+    "mtime": 1792828617.634356,
+    "seen": 1792829076.1656497,
+    "ast_hash": "89197460cb826c70c23714734b0acf99",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/pretradeGates.ts": {
@@ -3150,9 +3150,9 @@
     "semantic_hash": ""
   },
   "test/obZones.test.js": {
-    "mtime": 1792693901.3978493,
-    "seen": 1792694054.8261487,
-    "ast_hash": "9bdea14a1d18c6865f90c9d257d91c30",
+    "mtime": 1792828669.6564736,
+    "seen": 1792829076.2116745,
+    "ast_hash": "e76e6e14c6207da89e3d813f48073ff2",
     "semantic_hash": ""
   },
   "services/fxcm/backup.sql": {
@@ -5388,9 +5388,9 @@
     "semantic_hash": ""
   },
   "test/setup2PerformanceEquivalence.test.js": {
-    "mtime": 1792693901.4188502,
-    "seen": 1792694054.8261487,
-    "ast_hash": "231fdc8321206546bc61cf335382c49d",
+    "mtime": 1792828838.2259214,
+    "seen": 1792829076.2206779,
+    "ast_hash": "0b7d0be84bcb710cf5c077f22d16a98c",
     "semantic_hash": ""
   },
   "test/setup2Profiling.test.js": {
@@ -5418,9 +5418,9 @@
     "semantic_hash": ""
   },
   "test/incrementalOrderBlocks.test.js": {
-    "mtime": 1792693901.3771765,
-    "seen": 1792694054.8261487,
-    "ast_hash": "5c9ad1d44596b16dd2201d27f1663f83",
+    "mtime": 1792828838.2239242,
+    "seen": 1792829076.201163,
+    "ast_hash": "940e9ca9a1023dcffa76d0494445fba5",
     "semantic_hash": ""
   },
   "src/incrementalLiquidityLevels.js": {
@@ -5544,9 +5544,9 @@
     "semantic_hash": ""
   },
   "test/sharedOrderBlocks.test.js": {
-    "mtime": 1792693901.4238503,
-    "seen": 1792694054.8271482,
-    "ast_hash": "2824c0ceb5d4b608fec41126cfc5cdf1",
+    "mtime": 1792828838.224924,
+    "seen": 1792829076.2226777,
+    "ast_hash": "fe554ca61c9aefba53c86272035da64e",
     "semantic_hash": ""
   },
   "docs/performance-r3-proof.json": {
@@ -6675,6 +6675,24 @@
     "mtime": 1792773250.0612347,
     "seen": 1792773709.1730497,
     "ast_hash": "1383a2613614abce963a0b5f82608d10",
+    "semantic_hash": ""
+  },
+  "supabase/functions/_shared/obReplayLifecycle.ts": {
+    "mtime": 1792828927.5325198,
+    "seen": 1792829076.1566463,
+    "ast_hash": "da38abfa425eb05d00c96834264c59c3",
+    "semantic_hash": ""
+  },
+  "test/helpers/legacyOrderBlockSnapshot.js": {
+    "mtime": 1792828838.2219243,
+    "seen": 1792829076.1981623,
+    "ast_hash": "6b2b59d822b78380e9ab2cc44df58423",
+    "semantic_hash": ""
+  },
+  "test/obReplayLifecycle.test.js": {
+    "mtime": 1792829118.3791835,
+    "seen": 1792829159.4070628,
+    "ast_hash": "d640e7af1d92e64ac6cda038037bd6f9",
     "semantic_hash": ""
   }
 }
