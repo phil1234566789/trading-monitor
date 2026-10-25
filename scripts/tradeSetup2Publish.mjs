@@ -1,3 +1,4 @@
+import {readJsonArray} from './batchJsonFiles.mjs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,31 +29,34 @@ async function rawSnapshotIds(table) {
     offset+=data.length;
   }
 }
-async function saveRecords(method,table,records) {
-  const raw=compactStructures&&records.length?await rawSnapshotIds(table):new Set();
-  // Ein abgebrochener Publish kann schon rohe, unveränderliche Zeilen hinterlassen haben.
-  for(let i=0;i<records.length;i+=batchSize){
-    const batch=records.slice(i,i+batchSize),id=row=>row.snapshot?.id??row.id;
+async function saveRecords(method,table,file) {
+  const raw=compactStructures?await rawSnapshotIds(table):new Set();
+  let count=0,batch=[];
+  async function saveBatch(batch){
+    const id=row=>row.snapshot?.id??row.id;
+    // Ein abgebrochener Publish kann bereits rohe, unver�nderliche Zeilen enthalten.
     await rawRepository[method](run.id,batch.filter(row=>raw.has(id(row))));
     await repository[method](run.id,batch.filter(row=>!raw.has(id(row))));
   }
+  for await(const row of readJsonArray(path.join(directory,file))){batch.push(row);count++;if(batch.length===batchSize){await saveBatch(batch);batch=[];}}
+  if(batch.length)await saveBatch(batch);
+  return count;
 }
+
 await repository.saveRun({ ...run, status: 'running', progress: { phase: 'publish' } });
 let entries = 0, setups = 0;
 for (const instrument of manifest.instruments) {
-  const candidates = await read(`${instrument}-setups.json`);
-  const records = await read(`${instrument}-entries.json`);
+  const candidatesFile=`${instrument}-setups.json`,entriesFile=`${instrument}-entries.json`;
   // Lange historische Strukturbelege können die Transportgrenze vor dem Zeilenlimit erreichen.
-  await saveRecords('saveSetups','trade_setup_simulation_setups',candidates);
-  await saveRecords('saveEntries','trade_setup_simulation_entries',records);
-  for (const record of records) {
+  setups+=await saveRecords('saveSetups','trade_setup_simulation_setups',candidatesFile);
+  entries+=await saveRecords('saveEntries','trade_setup_simulation_entries',entriesFile);
+  for await (const record of readJsonArray(path.join(directory,entriesFile))) {
     const stored = await repository.getSnapshot(run.id, record.snapshot.id);
     // JSONB sortiert Objektschlüssel; strukturell vergleichen statt Serialisierungstext.
     const canonical = value => Array.isArray(value) ? value.map(canonical) : value && typeof value === 'object'
       ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
     if (JSON.stringify(canonical(stored)) !== JSON.stringify(canonical(record.snapshot))) throw new Error(`Snapshot roundtrip failed: ${record.snapshot.id}`);
   }
-  entries += records.length; setups += candidates.length;
 }
 await repository.saveRun(run);
 console.log(JSON.stringify({ runId: run.id, entries, setups, verified: true }));
