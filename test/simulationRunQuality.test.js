@@ -17,11 +17,11 @@ const branch=(html,label)=>html.match(new RegExp(`<article[^>]*aria-label="${lab
 it('integrates the twelve T2 DRs once, with both stop branches and no cross-tables',async()=>{
   const html=await render({groups,results});
   const t2=branch(html,'Gewählter Lauf · T1 vor Invalidation, dann T2');
-  expect(t2).toContain('>12</b>');
+  expect(t2).toContain('>12 DRs</b>');
   expect(t2.match(/Ohne Entry/g)).toHaveLength(1);
-  expect(t2).toContain('>9</b>');
-  expect(t2).toMatch(/aria-label="Weiter SL".*?Mind. ein Gewinn.*?>3<\/dd>.*?Nur Verluste.*?>0<\/dd>/s);
-  expect(t2).toMatch(/aria-label="Enger SL".*?Mind. ein Gewinn.*?>2<\/dd>.*?Nur Verluste.*?>1<\/dd>/s);
+  expect(t2).toContain('>9 DRs</b>');
+  expect(t2).toMatch(/aria-label="Weiter SL".*?Mind. ein Gewinn.*?>3 DRs<\/dd>.*?Nur Verluste.*?>0 DRs<\/dd>/s);
+  expect(t2).toMatch(/aria-label="Enger SL".*?Mind. ein Gewinn.*?>2 DRs<\/dd>.*?Nur Verluste.*?>1 DRs<\/dd>/s);
   expect(html).not.toContain('<table');
   for(const variant of ['wide','narrow']) for(const row of rangeEntryCrossTable(groups,results,variant))
     expect(row.without+row.win+row.loss+row.pending).toBe(row.total);
@@ -32,7 +32,21 @@ it('keeps filtered sums, incomplete outcomes and old-run comparison separate',as
   const filtered=filterReviewGroups(currentGroups,{outcome:'t2'});
   expect(rangeEntryCrossTable(filtered,groupResults(filtered,results),'wide')[0].total).toBe(12);
   const html=await render({groups:currentGroups,results},{groups:[group('old','unknown')],results:[]},true);
-  expect(branch(html,'Alt · DR-Ausgang nicht belegt')).toMatch(/>1<\/b>.*?Ohne Entry.*?>1<\/b>/s);
-  expect(branch(html,'Neu · Offen oder uneindeutig')).toMatch(/Offen \/ uneindeutig \/ unvollständig.*?>1<\/dd>/s);
-  expect(branch(html,'Neu · T1 vor Invalidation, dann T2')).toContain('>12</b>');
+  expect(branch(html,'Alt · DR-Ausgang nicht belegt')).toMatch(/>1 DRs<\/b>.*?Ohne Entry.*?>1 DRs<\/b>/s);
+  expect(branch(html,'Neu · Offen oder uneindeutig')).toMatch(/Offen \/ uneindeutig \/ unvollständig.*?>1 DRs<\/dd>/s);
+  expect(branch(html,'Neu · T1 vor Invalidation, dann T2')).toContain('>12 DRs</b>');
+});
+
+it('separates DRs without entries, DRs with entries and executions on every outcome card',async()=>{
+ const data=Array.from({length:293},(_,i)=>({...group(`range${i}`,'t2'),entries:i<69?Array.from({length:i<29?2:1},(_,j)=>({id:`range${i}:entry${j}`,runId:'new'})):[]}));
+ const html=await render({groups:data,results:[]});
+ const card=branch(html,'Gewählter Lauf · T1 vor Invalidation, dann T2');
+ expect(card).toMatch(/Ohne Entry:.*?224 DRs/s);
+ expect(card).toMatch(/Mit Entry:.*?69 DRs.*?98 Entries/s);
+ expect(card).toContain('293 DRs');expect(html).toContain('293 DRs insgesamt');
+ expect(html).toContain('alternative Auswertungen derselben DRs');
+ expect(html).not.toContain('gespeicherte Entries · Ohne Entry');
+ for(const value of html.matchAll(/<article[^>]*>(.*?)<\/article>/gs)){
+  expect(value[1]).toMatch(/Ohne Entry:.*?\d+ DRs/s);expect(value[1]).toMatch(/Mit Entry:.*?\d+ DRs.*?\d+ Entries/s);
+ }
 });
