@@ -6,6 +6,8 @@ vi.mock('../supabase/functions/_shared/setup2Http.ts',()=>({db:()=>ctx.client,en
 const now=Date.parse('2026-10-19T14:00:00+02:00'),at=seconds=>new Date(now+seconds*1000).toISOString();
 it.each([
  {mode:'critical',kind:'problem',category:'operational-critical',critical:true,expected:'accepted',sends:1},
+ {mode:'outside-hours',kind:'problem',category:'operational-critical',critical:true,expected:'pending',sends:0},
+ {mode:'recovery-outside-hours',kind:'recovery',category:'operational-recovery',critical:false,expected:'pending',sends:0},
  {mode:'timeout',kind:'problem',category:'operational-critical',critical:true,expected:'uncertain',sends:1},
  {mode:'obsolete',kind:'problem',category:'operational-critical',critical:true,expected:'suppressed',sends:0},
  {mode:'recovered',kind:'problem',category:'operational-critical',critical:false,expected:'pending',sends:0},
@@ -21,10 +23,10 @@ it.each([
  ctx.client={from:table=>{
   const query={select:()=>query,eq:()=>query,neq:()=>query,in:()=>query,order:()=>query,limit:()=>query,lt:()=>query,single:()=>query,
    update:value=>{writes.push({table,value});if(table==='pushover_test_limits')Object.assign(server,value);return query;},upsert:value=>{writes.push({table,value,upsert:true});return query;},
-   then:resolve=>resolve({data:table==='setup2_live_state'?[{instrument:'GBPUSD',enabled:true,state}]:table==='trading_schedules'?[{instrument:'GBPUSD',trading_windows:{weekday:[[0,1440]],saturday:[],sunday:[]}}]:table==='pushover_test_limits'?server:table==='setup2_alarm_events'?event:[],error:null})};return query;
+   then:resolve=>resolve({data:table==='setup2_live_state'?[{instrument:'GBPUSD',enabled:true,state}]:table==='trading_schedules'?[{instrument:'GBPUSD',trading_windows:{weekday:mode.includes('outside-hours')?[[480,600]]:[[0,1440]],saturday:[],sunday:[]}}]:table==='pushover_test_limits'?server:table==='setup2_alarm_events'?event:[],error:null})};return query;
  },rpc:vi.fn(async(name)=>{
   if(name==='setup2_claim_notifications'){if(claimed)return {data:[],error:null};claimed=true;return {data:[{id:1,event_id:event.id,channel:'pushover',attempts:1}],error:null};}
-  return {data:name==='setup2_operational_incident_status'?mode==='obsolete'?'superseded':'critical':null,error:null};
+  return {data:name==='setup2_operational_incident_status'?mode==='obsolete'?'superseded':mode==='recovery-outside-hours'?'ready':'critical':null,error:null};
  })};
  const net=vi.fn(async()=>{if(mode==='timeout'||mode==='provider-change')throw new Error('new transport failure');return new Response('{"status":1}');});
  vi.stubGlobal('Deno',{serve:handler=>ctx.handler=handler});vi.stubGlobal('fetch',net);const clock=vi.spyOn(Date,'now').mockReturnValue(now);
@@ -34,6 +36,7 @@ it.each([
   expect(net).toHaveBeenCalledTimes(sends);
   const result=writes.find(w=>w.table==='setup2_notification_outbox'&&!w.upsert)?.value;
   expect(result.status).toBe(expected);
+  if(mode.includes('outside-hours'))expect(ctx.client.rpc.mock.calls.find(([name])=>name==='setup2_update_operational_incident')[1].p_critical).toBe(false);
   if(mode==='timeout')expect(result.retry_after).toBeNull();
   if(mode==='recovered'){expect(result.attempts).toBe(0);expect(result.retry_after).toBe(at(60));}
   if(mode==='provider-change'){expect(server.provider_error_since).toBe(at(-600));expect(ctx.client.rpc.mock.calls.find(([name])=>name==='setup2_update_operational_incident')[1].p_critical).toBe(true);}

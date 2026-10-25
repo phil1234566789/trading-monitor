@@ -38,3 +38,9 @@ export function operationalAssessment(instruments,delivery,now,server) {
    && enabled.every(row=>!row.evaluationError && age(row.lastSuccessAt,now)<(row.activeRanges.length?120000:420000)),
   reason:critical?(criticalReasons.some(r=>r.source==='runner')?`Marktbeobachtung für ${criticalReasons.filter(r=>r.source==='runner').map(r=>r.instrument).join(', ')} ist nicht verlässlich`:'Alarmzustellung oder unabhängige Alarmprüfung ist nicht verlässlich'):state==='warning'?'Verzögerung oder Wiederholungsversuch · Frische und Protokoll beachten':null};
 }
+
+// Störungen bleiben sichtbar; eine Nachricht darf nur eine aktuell handelbare Beobachtung betreffen.
+export function operationalNotificationAllowed(report) {
+ return report.instruments.some(row=>row.enabled && row.inHours && (!report.actionRequired
+  || report.criticalReasons.some(reason=>!reason.instrument || reason.instrument===row.instrument)));
+}

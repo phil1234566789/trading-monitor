@@ -1,3 +1,4 @@
+import {operationalNotificationAllowed} from '../_shared/setup2OperationalHealth.js';
 import { db, env, json, checked, headers } from '../_shared/setup2Http.ts';
 import { healthReport, secretMatches, sendPushover, notificationText, validatePushover, sendTelegram } from '../_shared/setup2Notifications.js';
 import { isWithinTradingWindows } from '../_shared/tradingHoursGate.ts';
@@ -42,7 +43,7 @@ async function tick(client: any) {
     checked(await client.from('setup2_alarm_events').upsert(rangeWarningEvent(row.instrument,range), {onConflict:'id',ignoreDuplicates:true}));
   }
   checked(await client.rpc('setup2_update_operational_incident',{
-    p_critical:report.actionRequired,p_recovery_ready:report.recoveryReady,
+    p_critical:report.actionRequired && operationalNotificationAllowed(report),p_recovery_ready:report.recoveryReady,
     p_summary:{message:report.reason,action:report.action,affected:[...new Set(report.criticalReasons.map((r:any)=>r.instrument ?? (r.source==='cron'?'Alarmprüfung':'Alarmzustellung')))],lastSuccessAt:report.instruments.filter((r:any)=>r.enabled).map((r:any)=>r.lastSuccessAt).filter(Boolean).sort()[0] ?? null,
       instruments:report.instruments.map((r:any)=>({instrument:r.instrument,enabled:r.enabled,lastSuccessAt:r.lastSuccessAt,marketWatermark:r.marketWatermark}))}
   }));
@@ -67,7 +68,7 @@ async function tick(client: any) {
         const current = (await readHealth(client,true)).report;
         const recovery = checked(await client.rpc('setup2_operational_incident_status', {p_event_id:event.id}));
         if (recovery === 'superseded') status='suppressed';
-        else if (recovery !== 'ready' || !recoveryHealthReady(current,event.payload.reportedAt)) {
+        else if (recovery !== 'ready' || !operationalNotificationAllowed(current) || !recoveryHealthReady(current,event.payload.reportedAt)) {
           status='pending'; deferred=true; retry_after=new Date(Date.now()+60000).toISOString();
         } else await sendTelegram(event, null, env);
       }
@@ -87,7 +88,7 @@ async function tick(client: any) {
         const current=(await readHealth(client,true)).report;
         const incident=checked(await client.rpc('setup2_operational_incident_status',{p_event_id:event.id}));
         if(incident!=='critical')status='suppressed';
-        else if(!current.actionRequired){status='pending';deferred=true;retry_after=new Date(Date.now()+60000).toISOString();}
+        else if(!current.actionRequired || !operationalNotificationAllowed(current)){status='pending';deferred=true;retry_after=new Date(Date.now()+60000).toISOString();}
         else if(item.channel==='telegram')await sendTelegram(event,event.missed_reason,env);
         else await sendPushover(notificationText(event),'Trading Monitor · Kritischer Ausfall',env);
       }
