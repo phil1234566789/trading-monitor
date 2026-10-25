@@ -59,6 +59,19 @@ async function extractErrorMessage(res) {
   }
 }
 
+// Auch lokale Berechnungen verwenden denselben Indikator wie HTTP; Ende ist absichtlich idempotent.
+export function beginActivity(label) {
+  counts.set(label, (counts.get(label) ?? 0) + 1);
+  let finished = false;
+  return () => {
+    if (finished) return;
+    finished = true;
+    const n = (counts.get(label) ?? 1) - 1;
+    if (n <= 0) counts.delete(label);
+    else counts.set(label, n);
+  };
+}
+
 let patched = false;
 export function installHttpActivityTracking() {
   if (patched || typeof window === "undefined" || !window.fetch) return;
@@ -67,7 +80,7 @@ export function installHttpActivityTracking() {
   window.fetch = async (...args) => {
     const url = args[0] instanceof Request ? args[0].url : args[0];
     const label = labelFor(url);
-    counts.set(label, (counts.get(label) ?? 0) + 1);
+    const finish = beginActivity(label);
     try {
       const res = await originalFetch(...args);
       if (!res.ok) pushError(label, await extractErrorMessage(res), res.status);
@@ -79,9 +92,7 @@ export function installHttpActivityTracking() {
       pushError(label, err instanceof Error ? err.message : String(err));
       throw err;
     } finally {
-      const n = (counts.get(label) ?? 1) - 1;
-      if (n <= 0) counts.delete(label);
-      else counts.set(label, n);
+      finish();
     }
   };
 }

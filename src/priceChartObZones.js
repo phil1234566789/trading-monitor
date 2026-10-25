@@ -5,7 +5,7 @@
 // Aufrufer bauen dafür ein `ctx`-Objekt ({ m5Candles, dbObZones, symbol, replayUntil, price }) statt
 // die Closures direkt zu lesen — dieselben Werte, die vorher aus den PriceChart.vue-internen
 // Variablen kamen.
-import { detectOrderBlocks, obZoneNaturalKey } from "./orderBlocks.js";
+import { detectOrderBlocks, obZoneNaturalKey, orderBlockEndTime } from "./orderBlocks.js";
 import { PIP_SIZE } from "./pipConfig.js";
 import { obMinimum, strategyDistance } from './instrumentConfig.js';
 
@@ -66,12 +66,10 @@ export function currentPriceEstimate(allCandles) {
   return allCandles.length > 0 ? allCandles[allCandles.length - 1].close : null;
 }
 
-// "Historische OBs"-Toggle (Dashboard-Toolbar) blendet bereits angetestete, aber noch nicht
-// invalidierte Zonen aus (analog zum tv-indikator-Toggle, siehe PLAN-notifications.md) —
-// invalidierte Zonen bleiben unabhängig davon immer ausgeblendet (eigene, ältere Regel). Gilt
-// einheitlich für alle drei Timeframes, kein eigener Feinschalter pro Timeframe nötig.
+// Historische Boxen bleiben auch nach Invalidierung sichtbar. Fachliche Auswahlwege
+// prüfen invalidated unabhängig davon; ohne Historie bleiben nur offene gültige Zonen.
 export function filterHistorical(zones, showHistoricalObs) {
-  return showHistoricalObs ? zones : zones.filter((z) => !z.touched);
+  return showHistoricalObs ? zones : zones.filter((z) => !z.touched && !z.invalidated);
 }
 
 // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 9 (Pip-Distanz-
@@ -111,12 +109,11 @@ export function filterDbObZones(dbObZones, symbol, replayUntil, timeframe, price
 // PLAN-chart-objekte-forex.md Abschnitt 5), das volle M5-Universum bleibt bewusst Live-Recompute.
 export function collectObsZones({ showObs4h, showObs1h, showObsM5, dbObZones, symbol, replayUntil, price, m5Candles }) {
   const zones = [];
-  if (showObs4h) zones.push(...filterDbObZones(dbObZones, symbol, replayUntil, "4H", price).filter((z) => !z.invalidated));
-  if (showObs1h) zones.push(...filterDbObZones(dbObZones, symbol, replayUntil, "1H", price).filter((z) => !z.invalidated));
+  if (showObs4h) zones.push(...filterDbObZones(dbObZones, symbol, replayUntil, "4H", price));
+  if (showObs1h) zones.push(...filterDbObZones(dbObZones, symbol, replayUntil, "1H", price));
   if (showObsM5) {
     zones.push(
       ...detectOrderBlocks(m5Candles, "5m", true, obMinimum(symbol, '5m'))
-        .filter((z) => !z.invalidated)
         .map((z) => ({ ...z, timeframe: "5M" })),
     );
   }
@@ -144,7 +141,7 @@ export function liveObZoneState(item, ctx) {
   // Journal-Objekte bleiben auch außerhalb des Indikator-Distanzfilters referenziert.
   const zone = liveObZonesForTimeframe(item.timeframe, { ...ctx, price: null }).find((z) =>
     z.top === item.rangeHigh && z.bottom === item.rangeLow && (item.sourceTime == null || z.startTime === item.sourceTime));
-  return zone ? { touched: zone.touched, endTime: zone.endTime } : null;
+  return zone ? { touched: zone.touched, endTime: orderBlockEndTime(zone, zone.endTime) } : null;
 }
 
 // touched und endTime müssen gemeinsam weitergereicht werden: der Renderer ignoriert endTime
@@ -173,11 +170,23 @@ export function obBoxTouchState(item, candles, ctx) {
 // nachverfolgt wird, siehe Dashboard.vue: pinnedObZones) wird anhand der aktuell geladenen Kerzen
 // self-geheilt (dieselbe firstCandleTouchRange-Technik wie refreshTradeConfirmationLinksInternal)
 // — sonst würde eine längst gesweepte M5-OB-Pin-Box für immer als "aktiv" bis "jetzt" gezeichnet.
-export function mergePinnedZones(zones, pinnedZones, candles) {
+export function mergePinnedZones(zones, pinnedZones, candles, ctx = null) {
   if (!pinnedZones || pinnedZones.length === 0) return zones;
   const seen = new Set(zones.map((z) => obZoneNaturalKey(z.timeframe, z.dir, z.startTime)));
   const extra = [];
-  for (const z of pinnedZones) {
+  const sources = new Map();
+  for (const pin of pinnedZones) {
+    // Pins nutzen dieselben Quellen wie Journal und Indikator, auch bei ausgeschaltetem Toggle.
+    let z = pin;
+    if (ctx != null) {
+      if (!sources.has(pin.timeframe)) sources.set(pin.timeframe,
+        liveObZonesForTimeframe(pin.timeframe, { ...ctx, price: null }));
+      const original = sources.get(pin.timeframe).find(row =>
+        obZoneNaturalKey(pin.timeframe, row.dir, row.startTime)
+          === obZoneNaturalKey(pin.timeframe, pin.dir, pin.startTime));
+      if (!original && pin.timeframe !== "5M") continue;
+      if (original) z = { ...original, timeframe: pin.timeframe };
+    }
     const key = obZoneNaturalKey(z.timeframe, z.dir, z.startTime);
     if (seen.has(key)) continue;
     seen.add(key);
@@ -185,7 +194,7 @@ export function mergePinnedZones(zones, pinnedZones, candles) {
       extra.push({ ...z, endTime: z.endTime ?? candles[candles.length - 1]?.time ?? z.startTime });
       continue;
     }
-    const touchTime = firstCandleTouchRange(candles, z.startTime, z.top, z.bottom);
+    const touchTime = firstCandleTouchRange(candles, z.startTime, z.bottom, z.top);
     extra.push({ ...z, touched: touchTime != null, endTime: touchTime ?? candles[candles.length - 1]?.time ?? z.startTime });
   }
   return [...zones, ...extra];

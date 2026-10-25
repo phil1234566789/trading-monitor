@@ -1,3 +1,4 @@
+import { reconstructObLifecycle } from "../_shared/obReplayLifecycle.ts";
 import { pinTypeFields, type PinType } from './pinType.ts';
 import { supabase } from "./supabaseClient.ts";
 import { PIP_SIZE } from "../_shared/pipConfig.js";
@@ -41,7 +42,15 @@ export async function getObZones(instrument: string, timeframe?: string, include
     if (!includeAll && asOfSec == null) query = query.eq("invalidated", false).eq("touched", false);
     return query;
   });
-  let rows = applyAsOfZones(data, asOfSec, await asOfProbeCandles(instrument, data, asOfSec));
+  let rows = applyAsOfZones(data, asOfSec);
+  if (asOfSec != null) rows = await reconstructObLifecycle(rows, asOfSec, async (bar, fromSec, untilSec) => {
+    const candles = await fetchAllRows<{time: string; high: number; low: number}>((from, to) => supabase.from("forex_candles")
+      .select("time, high, low").eq("instrument", instrument).eq("bar", bar)
+      .gte("time", new Date(fromSec * 1000).toISOString())
+      .lte("time", new Date(untilSec * 1000).toISOString())
+      .order("time", { ascending: true }).range(from, to));
+    return candles.map(c => ({ ...c, time: Date.parse(c.time) / 1000 }));
+  });
   if (!includeAll && asOfSec != null) rows = rows.filter((r) => !r.invalidated && !r.touched);
   return rows;
 }
@@ -1040,7 +1049,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
   ] = await Promise.all([
     supabase
       .from("trade_evidence")
-      .select(`id, price, kind, category, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, ${LIQUIDITY_LEVEL_EMBED}`)
+      .select(`id, price, kind, category, historical_only, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, ${LIQUIDITY_LEVEL_EMBED}`)
       .eq("dealing_range_id", dealingRangeId)
       .order("created_at"),
     supabase
@@ -1063,6 +1072,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
       price: c.price,
       kind: c.kind,
       category: c.category,
+      ...(c.historical_only ? { historicalOnly: true } : {}),
       sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
       touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
       liquidityLevel: toLiquidityLevel(c),

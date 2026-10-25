@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
-import { formatEvidenceLabel, evidenceAgeTier } from "../tradeEvidence";
+import { formatEvidenceLabel, evidenceAgeTier, isGoConfirmation } from "../tradeEvidence";
 import { formatTargetLabel } from "../tradeTargets";
 import { trendChainLevelDisplay, computeTrendAlignment, trendAlignmentDisplay, m5TrendDisplay } from "../tradeSetupCockpit";
 import { toPips } from "../pipConfig.js";
@@ -77,6 +77,7 @@ const emit = defineEmits([
 // TradeEditModal.vue: rangeConfirmations/positionConfirmations (dort nach `level`, hier
 // zusätzlich nach `category`).
 const confirmations = computed(() => (props.range?.confirmations ?? []).filter((c) => c.category === "confirmation"));
+const goConfirmations = computed(() => confirmations.value.filter(isGoConfirmation));
 const confluences = computed(() => (props.range?.confirmations ?? []).filter((c) => c.category === "confluence"));
 const antiConfluences = computed(() => (props.range?.confirmations ?? []).filter((c) => c.category === "anti_confluence"));
 const targets = computed(() => props.range?.targets ?? []);
@@ -88,7 +89,7 @@ const direction = computed(() => props.range?.direction ?? null);
 const transferBlockReason = computed(() => {
   if (props.fromJournal) return "Diese Dealing Range ist bereits im Journal angelegt.";
   const missing = [];
-  if (confirmations.value.length < 2) missing.push("mind. 2 Bestätigungen");
+  if (goConfirmations.value.length < 2) missing.push("mind. 2 gültige Bestätigungen");
   if (targets.value.length < 1) missing.push("mind. 1 Target");
   if (props.range?.invalidation == null) missing.push("Invalidierung");
   return missing.length > 0 ? `Fehlt noch: ${missing.join(", ")}` : "";
@@ -147,13 +148,13 @@ const trendAlignmentInfo = computed(() => (direction.value && trendAlignment.val
 // der tradeIntake.js: insertConfirmation auch die Invalidierung ableitet, und genau die, über die
 // die Bänder gemessen wurden. Ohne OB-Bestätigung gibt es keine Kanten und damit kein Risiko; die
 // Zeile entfällt dann.
-const rangeOb = computed(() => confirmations.value.find((c) => c.kind === "ob" && c.rangeLow != null && c.rangeHigh != null) ?? null);
+const rangeOb = computed(() => goConfirmations.value.find((c) => c.kind === "ob" && c.rangeLow != null && c.rangeHigh != null) ?? null);
 const riskPips = computed(() => (rangeOb.value ? toPips(rangeOb.value.rangeHigh - rangeOb.value.rangeLow, props.instrument) : 0));
 // Sweep-Alter der Range = das der ERSTEN Sweep-Bestätigung (die, mit der die Idee angefangen hat,
 // siehe Dashboard.vue: tscBootstrapArmed) — dieselbe Einstufung wie ihr eigenes Zeilen-Label,
 // nicht neu gerechnet (tradeEvidence.ts: evidenceAgeTier).
 const sweepTier = computed(() => {
-  const sweep = confirmations.value.find((c) => c.kind === "pivot");
+  const sweep = goConfirmations.value.find((c) => c.kind === "pivot");
   return sweep ? evidenceAgeTier(sweep, nowSecResolved.value) : null;
 });
 // "Risiko 4,3 P · Minor-Sweep" — fmtPrice auf eine Nachkommastelle, damit die Pip-Zahl dasselbe
@@ -313,7 +314,7 @@ const accentStyle = computed(() => {
              statt Chart-Klick, erst ab 2 Bestätigungen sinnvoll (die legen Richtung/Kontext fest). -->
         <IconButton
           title="Target-Vorschläge (nächste LQ-Level)"
-          :disabled="confirmations.length < 2"
+          :disabled="goConfirmations.length < 2"
           @click="emit('open-target-picker')"
         >
           🔎

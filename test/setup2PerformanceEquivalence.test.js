@@ -1,3 +1,4 @@
+import {legacyOrderBlockSnapshot} from './helpers/legacyOrderBlockSnapshot.js';
 import {describe,it,expect} from 'vitest';
 import {detectOrderBlocks} from '../src/orderBlockDetection.js';
 import {createIncrementalOrderBlockDetector} from '../src/incrementalOrderBlocks.js';
@@ -45,9 +46,9 @@ describe('Performance H exact prefix equivalence',()=>{
       const rows=randomCandles(seed,100);
       for(let end=0;end<=rows.length;end++){
         const prefix=rows.slice(0,end),at=100000+end*300;
-        expect(detectOrderBlocks(prefix,'5m')).toEqual(previousOrderBlocks(prefix,'5m'));
-        expect(mcpOrderBlocks(prefix,'5m')).toEqual(previousOrderBlocks(prefix,'5m'));
-        expect(edgeOrderBlocks(prefix,'5m')).toEqual(previousOrderBlocks(prefix,'5m'));
+        expect(legacyOrderBlockSnapshot(detectOrderBlocks(prefix,'5m'))).toEqual(previousOrderBlocks(prefix,'5m'));
+        expect(legacyOrderBlockSnapshot(mcpOrderBlocks(prefix,'5m'))).toEqual(previousOrderBlocks(prefix,'5m'));
+        expect(legacyOrderBlockSnapshot(edgeOrderBlocks(prefix,'5m'))).toEqual(previousOrderBlocks(prefix,'5m'));
         expect(closedChecklistCandles(prefix,'5m',at)).toEqual(previousClosed(prefix,300,at));
       }
       for(const rowsVariant of [rows.toReversed(),[...rows,{time:NaN}],[...rows,rows[2]]])
@@ -68,8 +69,8 @@ describe('Performance H exact prefix equivalence',()=>{
     const rows=fixture.m5Candles.slice(-180),anchor=rows[10].time,incremental=createIncrementalOrderBlockDetector('5m');
     for(let end=20;end<=rows.length;end+=10){
       const prefix=rows.slice(0,end),at=prefix.at(-1).time+300;
-      expect(detectOrderBlocks(prefix,'5m')).toEqual(previousOrderBlocks(prefix,'5m'));
-      expect(incremental(prefix)).toEqual(previousOrderBlocks(prefix,'5m'));
+      expect(legacyOrderBlockSnapshot(detectOrderBlocks(prefix,'5m'))).toEqual(previousOrderBlocks(prefix,'5m'));
+      expect(legacyOrderBlockSnapshot(incremental(prefix))).toEqual(previousOrderBlocks(prefix,'5m'));
       const input={instrument:'GBPUSD',direction:'short',evaluatedAt:at};
       const old=evaluateChecklistM5({...input,m5Candles:previousClosed(prefix,300,at)},{},anchor);
       const current=evaluateChecklistM5({...input,m5Candles:closedChecklistCandles(prefix,'5m',at)},{},anchor);

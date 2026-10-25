@@ -9,7 +9,7 @@
 // brauchen. PriceChart.vue selbst löst die Koordinaten einmalig gegen chart/candleSeries auf und
 // ruft dann diese Funktionen auf — siehe findClickedSetup/-LiquidityLevel/-OBZone/-FibLevel/
 // -Divergence dort.
-import { OrderBlockPrimitive } from "./orderBlocks.js";
+import { OrderBlockPrimitive, orderBlockEndTime } from "./orderBlocks.js";
 
 // Trade-Modus-Klick-Hittest (Chat 2026-07-27) — testet gegen genau die Box, die
 // renderTradeSetupsInternal (PriceChart.vue) tatsächlich zeichnet (obTop/obBottom +
@@ -56,8 +56,8 @@ export function matchLiquidityLevel(currentLiquidityLevels, time, pointY, priceT
 // Nur der Preis (nicht die ganze Box) wird als Target übernommen — die dem Klick NÄHERE Kante,
 // nicht fest nach Richtung, weil ein Klick näher an der Oberkante eher "ich will die Oberkante"
 // meint als andersrum.
-export function matchOBZone(zones, price, time, symbol) {
-  const zone = (zones ?? []).find((z) => !z.invalidated && time >= z.startTime && time <= z.endTime && price <= z.top && price >= z.bottom);
+export function matchOBZone(zones, price, time, symbol, { allowHistorical = false } = {}) {
+  const zone = (zones ?? []).find((z) => (!z.invalidated || allowHistorical) && time >= z.startTime && time <= orderBlockEndTime(z) && price <= z.top && price >= z.bottom);
   if (!zone) return null;
   const nearEdge = Math.abs(price - zone.top) < Math.abs(price - zone.bottom) ? zone.top : zone.bottom;
   // endTime friert bei detectOrderBlocks() auf die berührende Kerze ein, sobald touched=true wird
@@ -70,7 +70,8 @@ export function matchOBZone(zones, price, time, symbol) {
     kind: "ob",
     price: nearEdge,
     sourceTime: zone.startTime,
-    touchedTime: zone.touched ? zone.endTime : null,
+    touchedTime: zone.touched || zone.invalidated ? orderBlockEndTime(zone) : null,
+    ...(zone.invalidated ? { historicalOnly: true } : {}),
     rangeLow: zone.bottom,
     rangeHigh: zone.top,
     // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren" — instrument/direction

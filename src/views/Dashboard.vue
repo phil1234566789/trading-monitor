@@ -27,6 +27,7 @@ import { toPips } from "../pipConfig.js";
 import { fetchTrades } from "../trades.js";
 import { useSetupConfirmations } from "../composables/useSetupConfirmations.js";
 import { useTscRange } from "../composables/useTscRange.js";
+import { useReplayInput } from '../composables/useReplayInput.js';
 import { useReplayStructureDefaults } from "../composables/useReplayStructureDefaults.js";
 import { useTradeSetup2Route } from "../composables/useTradeSetup2Route.js";
 import { useSnapshotVisitToggle } from "../composables/useSnapshotVisitToggle.js";
@@ -1368,12 +1369,8 @@ function toDatetimeLocal(unixSeconds) {
 }
 // <input type="datetime-local"> liefert/erwartet "YYYY-MM-DDTHH:mm" in der Browser-Lokalzeit —
 // new Date(v) parst das wieder als Lokalzeit, der Roundtrip braucht also keine eigene TZ-Logik.
-const replayInputValue = computed({
-  get: () => (replayTime.value == null ? "" : toDatetimeLocal(replayTime.value)),
-  set: (v) => {
-    replayTime.value = v ? Math.floor(new Date(v).getTime() / 1000) : null;
-  },
-});
+const replayInputValue = useReplayInput(replayTime, toDatetimeLocal,
+  () => [currentSymbol.value, currentBar.value, replayActive.value]);
 const rangesFixedStartInputValue = computed({
   get: () => (rangesFixedStartDateInput.value == null ? "" : toDatetimeLocal(rangesFixedStartDateInput.value)),
   set: (v) => {

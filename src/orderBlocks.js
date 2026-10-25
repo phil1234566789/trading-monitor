@@ -17,6 +17,11 @@ import { detectOrderBlocks } from "./orderBlockDetection.js";
 
 export { detectOrderBlocks };
 
+// Offene Boxen reichen bis zur letzten Kerze; gespeicherte Poll-Enden begrenzen weder Zeichnung noch Klick.
+export function orderBlockEndTime(zone, openEnd = Infinity) {
+  return zone.touchedTime ?? (zone.touched || zone.invalidated ? zone.endTime : openEnd);
+}
+
 const PIN_BORDER_INSET = 3; // px, Abstand des Pin-Rahmens nach außen von der normalen Box-Kante
 const PIN_BORDER_LINE_WIDTH = 2.5; // px
 // Auswahl-Rahmen (Chat 2026-08-18, PinPanel.vue-Hover) — weiter außen als der Pin-Rahmen, damit
@@ -164,7 +169,7 @@ class ZonePaneView {
       y: series.priceToCoordinate(z.top),
     };
     this._p2 = {
-      x: chartObjectCoordinate(timeScale,candles,z.touched || z.invalidated ? z.endTime : Infinity,this._source._options.eventBarSeconds),
+      x: chartObjectCoordinate(timeScale,candles,orderBlockEndTime(z),this._source._options.eventBarSeconds),
       y: series.priceToCoordinate(z.bottom),
     };
   }
@@ -253,7 +258,7 @@ function zoneOptions(z, inPinContext, isSelectedPin) {
   const keys = OB_ZONE_KEYS[z.timeframe] ?? OB_ZONE_KEYS["1H"];
   const key = inactive ? keys.inactive : z.dir === 1 ? keys.bull : keys.bear;
   const borderKey = inactive ? keys.inactiveBorder : z.dir === 1 ? keys.bullBorder : keys.bearBorder;
-  const label = z.timeframe ?? "";
+  const label = z.invalidated ? `${z.timeframe ?? ""} · beendet` : z.timeframe ?? "";
   return {
     fillColor: cssColor(key),
     borderColor: cssColor(borderKey),
@@ -287,8 +292,8 @@ export function renderPersistedZones(series, zones, existingPrimitives, candles,
   for (const p of existingPrimitives) series.detachPrimitive(p);
   existingPrimitives.length = 0;
 
+  // Der gemeinsame Historienfilter entscheidet die Sichtbarkeit, nicht erneut die fachliche Gültigkeit.
   for (const z of zones) {
-    if (z.invalidated) continue;
     const key = obZoneNaturalKey(z.timeframe, z.dir, z.startTime);
     const inPinContext = pinKeys?.has(key) ?? false;
     const isSelectedPin = hoveredKey != null && hoveredKey === key;
