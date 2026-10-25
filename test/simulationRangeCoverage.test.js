@@ -21,7 +21,7 @@ it('shows eleven stored entries across six unknown DRs without a false zero-only
  const groups=[2,2,2,2,2,1].map((count,i)=>group('dr'+i,'unknown',Array.from({length:count},(_,j)=>`entry${i}:${j}`))),data={groups,results:[]};
  const html=await renderToString(createSSRApp(SimulationRunQuality,{current:data,previous:{groups:[],results:[]},compare:false}));
  expect(runFunnel(groups,[])).toMatchObject({entries:11,withEntry:6,target2Unknown:6});
- expect(html).toContain('0 belegt · 6 unbekannt');expect(html).toContain('11 gespeicherte Entries');expect(html).toContain('DR-Stufe nicht gespeichert');
- expect(html).toMatch(/aria-label="Gewählter Lauf · DR-Stufe nicht gespeichert".*?>6<\/b>.*?11 gespeicherte Entries.*?unvollständig.*?>6<\/dd>/s);
+ expect(html).toContain('0 belegt · 6 unbekannt');expect(html).toContain('11 Entries');expect(html).toContain('DR-Stufe nicht gespeichert');
+ expect(html).toMatch(/aria-label="Gewählter Lauf · DR-Stufe nicht gespeichert".*?>6 DRs<\/b>.*?11 Entries.*?unvollständig.*?>6 DRs<\/dd>/s);
  expect(html).toContain('6 DRs mit originalem Bestätigungszeitbeleg');
 });
