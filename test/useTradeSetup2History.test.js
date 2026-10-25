@@ -71,10 +71,10 @@ it('loads a linked entry after a simultaneous instrument and replay change, then
     expect(focus).toHaveBeenCalledWith({from:-45,to:55});
     view.updateCandles(candles,true);
     await view.refresh();
-    expect(focus).toHaveBeenCalledTimes(1);
+    expect(focus).toHaveBeenCalledTimes(2);
     props.replayUntil=240;await flush();
     expect(view.selected.value).toBeNull();
-    expect(focus).toHaveBeenCalledTimes(1);
+    expect(focus).toHaveBeenCalledTimes(2);
   } finally {scope.stop();}
 });
 beforeEach(()=>{
@@ -291,4 +291,25 @@ it('loads and selects a saved candidate without a candle scan and hides it on re
     expect(view.positions.value).toEqual([]);
     expect(view.selected.value).toBeNull();
   } finally {scope.stop();}
+});
+
+it('waits for actual snapshot candle coverage before marking the route focused and refocuses on explicit refresh',async()=>{
+ const props=reactive({showTradeSetup2:true,symbol:'GBPUSD',tradeSetup2RunId:'run',selectedTradeSetup2Id:'candidate',tradeSetup2Variant:'wide',tradeSetup2HistoryCount:5,currentBar:'5m',replayUntil:900});
+ const snapshot={id:'candidate',setupKey:'candidate',instrument:'GBPUSD',direction:'short',knownAt:600,entry:null,evidence:[],checklist:{setup:{primary:{recognizedAt:600}}}};
+ const repository={getEntry:vi.fn(async()=>null),getSetupSnapshot:vi.fn(async()=>snapshot)};
+ const scope=effectScope(),focus=vi.fn(),v=scope.run(()=>useTradeSetup2History(props,ref(null),{repository,configurationInput:()=>({}),evaluationTime:()=>props.replayUntil}));
+ try{v.create({subscribeClick:vi.fn(),unsubscribeClick:vi.fn(),timeScale:()=>({setVisibleLogicalRange:focus})},{});await flush();
+  v.updateCandles([{time:0},{time:300}],true);expect(focus).not.toHaveBeenCalled();
+  v.updateCandles([{time:0},{time:300},{time:600}],true);expect(focus).toHaveBeenCalledOnce();
+  await v.refresh();expect(focus).toHaveBeenCalledTimes(2);
+  v.updateCandles([{time:-600},{time:-300},{time:0},{time:300},{time:600}],true);
+  v.refocus();expect(focus).toHaveBeenLastCalledWith({from:-46,to:54});
+ }finally{scope.stop()}
+});
+
+it('focuses a known M1 entry inside the final displayed M5 candle',async()=>{
+ const props=reactive({showTradeSetup2:true,symbol:'GBPUSD',tradeSetup2RunId:'run',selectedTradeSetup2Id:'entry',tradeSetup2Variant:'wide',currentBar:'5m',replayUntil:300});
+ const snapshot={id:'entry',instrument:'GBPUSD',knownAt:300,evidence:[],entry:{candleTime:240,recognizedAt:300}};
+ const scope=effectScope(),focus=vi.fn(),v=scope.run(()=>useTradeSetup2History(props,ref(null),{repository:{getEntry:async()=>({snapshot,results:[]})},configurationInput:()=>({}),evaluationTime:()=>300}));
+ try{v.create({subscribeClick:vi.fn(),unsubscribeClick:vi.fn(),timeScale:()=>({setVisibleLogicalRange:focus})},{});await flush();v.updateCandles([{time:0}],true);expect(focus).toHaveBeenCalledOnce();}finally{scope.stop()}
 });

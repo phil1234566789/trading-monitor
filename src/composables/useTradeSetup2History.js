@@ -1,3 +1,4 @@
+import {chartEventBarTime} from '../chartEventCoordinate.js';
 import {computed,onScopeDispose,ref,shallowRef,watch} from 'vue';
 import {scanTradeSetup2InWorker} from '../tradeSetup2BrowserScan.js';
 import {buildTradeSetup2Configuration,setup2DailyRun} from '../tradeSetup2Configuration.js';
@@ -74,6 +75,8 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     const key=`${props.tradeSetup2RunId}:${snapshot?.id}:${props.currentBar}`;
     if(chart&&displayReady&&snapshot?.id===props.selectedTradeSetup2Id&&props.tradeSetup2RunId&&key!==focusedRouteKey) {
       const firstEntry=Math.min(...(snapshot.entrySnapshots ?? [snapshot]).map(s=>s.entry?.candleTime ?? s.knownAt));
+      // Sonst klemmt der Sprung auf die letzte alte Kerze und gilt vorzeitig als erledigt.
+      if(chartEventBarTime(displayCandles.value,firstEntry,barSecondsFor(props.currentBar))==null)return;
       const viewport=computeJumpViewport(displayCandles.value,firstEntry,Math.min(evaluationTime(),displayCandles.value.at(-1)?.time ?? evaluationTime()),null);
       if(viewport){chart.timeScale().setVisibleLogicalRange(viewport);
         reserveEntryOverlaySpace(chart,displayCandles.value,entry.length*(props.tradeSetup2Variant?1:2));focusedRouteKey=key;}
@@ -110,7 +113,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     else await select(null);
   }
   async function refresh(force=false) {
-    if(force)runs.clear();
+    if(force){runs.clear();focusedRouteKey=null;}
     if(!props.showTradeSetup2){abort?.abort();revision++;loading.value=false;return;}
     if(isTradeSetup2SnapshotView(props)) {
       const ticket=++revision;
@@ -270,6 +273,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     if(series)for(const list of [overview,details,entry,m1Markers,h1Markers,m5Markers,obPrimitives,m1Lines,m5Lines,h1Lines])clearSetup2Primitives(series,list);series=null;});
   return {positions,selected:visibleSnapshot,detailSnapshot,snapshotM1,snapshotIndicators,loading,status,error,linkedReady,linkedRendered,select,refresh:()=>refresh(true),
     pinOrderBlockPrimitives:()=>[...obPrimitives,...details.filter(p=>p.pinZone)],
+    refocus(){focusedRouteKey=null;render();},
     waitForLinkedSnapshot:()=>readLinkedSnapshot(props.tradeSetup2RunId,props.selectedTradeSetup2Id),
     create(c,s){chart=c;series=s;chart.subscribeClick(click);render();},
     updateCandles(rows,ready=true){displayCandles.value=rows;displayReady=ready;render();}};

@@ -2577,6 +2577,8 @@ defineExpose({
   async refreshData() {
     if (snapshotView.value) {
       const [candlesLoaded] = await Promise.all([loadInitial({ preserveHistory: true, force: true }), setup2.refresh()]);
+      // Erst danach sind beide Datenstände und die erhaltenen logischen Chart-Indizes endgültig.
+      if(candlesLoaded && !setup2.error.value)setup2.refocus();
       return candlesLoaded && !setup2.error.value;
     }
     const results = await Promise.all([
