@@ -1,11 +1,11 @@
 import { checklistObservationRules } from './checklistObservationRules.js';
 export { isCandleAppend } from './candleAppend.js';
 
-export function createSetup2Memo(limit=200) {
-  const entries=new Map();
+export function createSetup2Memo(limit=200,initial=[]) {
+  const entries=new Map(initial.slice(-limit));
   return {get size(){return entries.size;},get:key=>entries.get(key),
     set(key,value){if(!entries.has(key) && entries.size>=limit)entries.delete(entries.keys().next().value);entries.set(key,value);},
-    delete:key=>entries.delete(key),clear:()=>entries.clear()};
+    entries:()=>[...entries],delete:key=>entries.delete(key),clear:()=>entries.clear()};
 }
 
 export function finalObservation(check,key) {

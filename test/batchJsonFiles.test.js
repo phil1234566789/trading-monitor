@@ -32,3 +32,5 @@ describe('streamed JSON reads',()=>{
  });
  it('reads an empty array',async()=>{const file=join(directory,'empty.json');await writeFile(file,' [ ]\n');const rows=[];for await(const row of readJsonArray(file))rows.push(row);expect(rows).toEqual([]);});
 });
+
+it('preserves the array index passed to per-record toJSON',async()=>{const d=await mkdtemp(join(tmpdir(),'json-index-'));try{const file=join(d,'rows.json'),rows=[{toJSON:key=>key},{toJSON:key=>({index:key})}];await writeJson(file,rows);expect(await readFile(file,'utf8')).toBe(JSON.stringify(rows));}finally{await rm(d,{recursive:true,force:true});}});

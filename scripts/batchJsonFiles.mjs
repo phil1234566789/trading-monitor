@@ -14,10 +14,13 @@ export async function atomicWriteFile(file,data){
  }
 }
 
-export async function writeJson(file,value){
- function* records(){yield '[';let first=true;for(const row of value){if(!first)yield ',';first=false;yield JSON.stringify(row)??'null';}yield ']';}
+export function writeJsonArray(file,values){
+ async function* records(){let first=true,index=0,chunk='[';for await(const row of values){const key=String(index++),encoded=JSON.stringify({[key]:row});chunk+=(first?'':',')+(encoded==='{}'?'null':encoded.slice(key.length+4,-1));if(first||chunk.length>=65536){yield chunk;chunk='';}first=false;}yield chunk+']';}
+ return atomicWriteFile(file,records());
+}
+export function writeJson(file,value){
  // Ein Jahresergebnis kann Nodes Einzelstringlimit übersteigen; ein Datensatz nicht.
- return atomicWriteFile(file,Array.isArray(value)&&typeof value.toJSON!=='function'?records():JSON.stringify(value));
+ return Array.isArray(value)&&typeof value.toJSON!=='function'?writeJsonArray(file,value):atomicWriteFile(file,JSON.stringify(value));
 }
 
 export async function* readJsonArray(file,{highWaterMark=65536}={}){

@@ -11,18 +11,41 @@ const VERSION='batch-checkpoint-v1';
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 async function json(file){try{return JSON.parse(await readFile(file,'utf8'));}catch(error){if(error.code==='ENOENT')return null;throw error;}}
 async function lock(directory){
- const file=path.join(directory,'writer.lock'),owner={pid:process.pid,token:randomUUID()};
- for(;;){
-  try{const fd=fs.openSync(file,'wx');try{fs.writeFileSync(fd,JSON.stringify(owner));fs.fsyncSync(fd);}finally{fs.closeSync(fd);}break;}
+ const file=path.join(directory,'writer.lock'),owner={pid:process.pid,token:randomUUID()},prepared=path.join(directory,`owner-${owner.token}.tmp`),claims=[];
+ const fd=fs.openSync(prepared,'wx');try{fs.writeFileSync(fd,JSON.stringify(owner));fs.fsyncSync(fd);}finally{fs.closeSync(fd);}
+ const active=previous=>{
+  if(!Number.isSafeInteger(previous?.pid)||previous.pid<=0||!/^[0-9a-f-]+$/.test(previous.token))throw new Error('Invalid batch writer lock');
+  try{process.kill(previous.pid,0);return true;}catch(error){if(error.code==='ESRCH')return false;throw error;}
+ };
+ async function claim(previous){
+  const target=path.join(directory,`recovery-${previous.token}.lock`);
+  try{await fs.promises.link(prepared,target);claims.push(target);}
   catch(error){
    if(error.code!=='EEXIST')throw error;
-   const previous=await json(file);if(!Number.isSafeInteger(previous?.pid)||previous.pid<=0)throw new Error('Invalid batch writer lock');
-   let alive=true;try{process.kill(previous.pid,0);}catch(probe){if(probe.code==='ESRCH')alive=false;else throw probe;}
-   if(alive)throw new Error(`Batch writer already active: ${previous.pid}`);
-   await unlink(file);
+   const claimant=await json(target);
+   if(active(claimant))throw new Error(`Batch writer recovery already active: ${claimant.pid}`);
+   // Jede verwaiste Besitzgeneration hat genau einen atomar gewaehlten Nachfolger.
+   await claim(claimant);
   }
  }
- return async()=>{const current=await json(file);if(current?.token===owner.token)await unlink(file);};
+ const cleanup=async()=>{
+  for(const target of claims){const current=await json(target);if(current?.token===owner.token)await unlink(target);}
+  await unlink(prepared);
+ };
+ try{
+  for(;;){
+   try{await fs.promises.link(prepared,file);break;}
+   catch(error){
+    if(error.code!=='EEXIST')throw error;
+    const previous=await json(file);if(!previous)continue;
+    if(active(previous))throw new Error(`Batch writer already active: ${previous.pid}`);
+    await claim(previous);
+    const current=await json(file);
+    if(current?.token===previous.token)await unlink(file);
+   }
+  }
+ }catch(error){await cleanup();throw error;}
+ return async()=>{const current=await json(file);if(current?.token===owner.token)await unlink(file);await cleanup();};
 }
 async function verifyJournal(directory,record){
  if(!/^journal-[0-9a-f-]+\.ndjson$/.test(record.file)||!Number.isSafeInteger(record.bytes)||record.bytes<0)throw new Error('Invalid batch journal reference');

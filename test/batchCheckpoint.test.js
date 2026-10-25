@@ -36,3 +36,19 @@ it('keeps only two internal scanner-state generations and leaves historical jour
 it('rejects another active writer and damaged committed scanner state',async()=>{
  const d=await directory(),store=await openBatchCheckpoint(d,identity);await expect(openBatchCheckpoint(d,identity)).rejects.toThrow('already active');await store.commit({nextStep:1});const stateFile=store.checkpoint.state.file;await store.close();await writeFile(join(d,stateFile),'corrupt');await expect(openBatchCheckpoint(d,identity)).rejects.toThrow('state checksum');
 });
+import fs from 'node:fs';
+it('never publishes a partial owner file when lock preparation is interrupted',async()=>{
+ const d=await directory(),original=fs.writeFileSync;
+ const spy=vi.spyOn(fs,'writeFileSync').mockImplementation((file,data,...args)=>{if(typeof data==='string'&&data.includes('"token"')){original(file,'{');throw new Error('lock preparation crash');}return original(file,data,...args);});
+ await expect(openBatchCheckpoint(d,identity)).rejects.toThrow('lock preparation crash');spy.mockRestore();
+ await expect(readFile(join(d,'writer.lock'))).rejects.toMatchObject({code:'ENOENT'});
+ const store=await openBatchCheckpoint(d,identity);await store.commit({nextStep:2});await store.close();
+});
+it('allows only one of two simultaneous stale-lock recoveries to become writer',async()=>{
+ const d=await directory();await writeFile(join(d,'writer.lock'),JSON.stringify({pid:2147483647,token:'00000000-0000-0000-0000-000000000000'}));
+ const attempts=await Promise.allSettled([openBatchCheckpoint(d,identity),openBatchCheckpoint(d,identity)]);
+ const winners=attempts.filter(r=>r.status==='fulfilled');expect(winners).toHaveLength(1);
+ expect(attempts.filter(r=>r.status==='rejected')[0].reason.message).toMatch(/already active/);
+ await winners[0].value.commit({nextStep:9});await winners[0].value.close();
+ const store=await openBatchCheckpoint(d,identity);expect(store.state.nextStep).toBe(9);await store.close();
+});

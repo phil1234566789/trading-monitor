@@ -14,6 +14,7 @@ import { evaluateChecklistTime, evaluateTradingHours, validTradingWindows } from
 
 const pause = () => new Promise(resolve => setTimeout(resolve, 0));
 
+export {completeCountertrendSnapshots,markCountertrendCandles} from './countertrendSnapshotCompletion.js';
 export { m1ScanPrefix } from './m1ScanPrefix.js';
 
 // M5 bestimmt ABC/Anker; nur innerhalb eines aktiven ABC-Fensters wird M1 geprüft.
@@ -21,10 +22,11 @@ export { m1ScanPrefix } from './m1ScanPrefix.js';
 // am ersten Entry-Schluss neu ausgewertet, nie aus einem späteren Endzustand datiert.
 export async function scanTradeSetup2Window({ instrument, h1Candles, m5Candles, m1Candles,
   fromTime, toTime, settings = {}, sessionConfigs = [], tradingWindows, news, newsLoadStatus,
-  signal, onProgress, onSnapshot, onMinuteCheck, scanMemo, dailyAnchors = null, tradeSetups = null, loadM1Candles, existingEntries = [], useMemo=true,yieldEvery = 32, yieldControl = pause }) {
+  signal, onProgress, onSnapshot, onMinuteCheck, scanMemo, dailyAnchors = null, tradeSetups = null, loadM1Candles, existingEntries = [], useMemo=true,yieldEvery = 32, yieldControl = pause,resumeState,onCheckpoint,onHistory,checkpointIdentity,collectSnapshots=true }) {
   signal?.throwIfAborted();
   if (!Number.isFinite(fromTime) || !Number.isFinite(toTime) || fromTime > toTime) throw new Error('Invalid scan window');
-  if (tradeSetups !== null) return scanCountertrendWindow({instrument,h1Candles,m5Candles,m1Candles,fromTime,toTime,settings,sessionConfigs,tradingWindows,news,newsLoadStatus,signal,onProgress,onSnapshot,onMinuteCheck,scanMemo,dailyAnchors,tradeSetups,loadM1Candles,existingEntries,useMemo,yieldEvery,yieldControl});
+  if (tradeSetups !== null) return scanCountertrendWindow({instrument,h1Candles,m5Candles,m1Candles,fromTime,toTime,settings,sessionConfigs,tradingWindows,news,newsLoadStatus,signal,onProgress,onSnapshot,onMinuteCheck,scanMemo,dailyAnchors,tradeSetups,loadM1Candles,existingEntries,useMemo,yieldEvery,yieldControl,resumeState,onCheckpoint,onHistory,checkpointIdentity,collectSnapshots});
+  if(resumeState||onCheckpoint||collectSnapshots===false)throw new Error('Batch checkpoints require explicit countertrend setup sources');
   if (!validTradingWindows(tradingWindows)) throw new Error(`Missing or invalid historical trading_windows: ${instrument}`);
   const allowedAt = evaluatedAt => evaluateTradingHours({ instrument, evaluatedAt, tradingWindows }).status === 'passed';
   const sorted = rows => rows.slice().sort((a, b) => a.time - b.time);
