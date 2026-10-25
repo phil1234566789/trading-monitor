@@ -1,4 +1,5 @@
 import { barSecondsFor } from "./timeframes.js";
+import {addCandleCoverage,candleCoverageAt} from './candleCacheCoverage.js';
 
 // Kerzen-Cache in IndexedDB (siehe Chat 2026-07-20: "cTrader ist das allerteuerste" + "TF-Wechsel
 // ist sehr laggy") — abgeschlossene Kerzen ändern sich nie wieder, also lohnt es sich, sie über
@@ -70,7 +71,8 @@ const DB_NAME = "trading-monitor-candles";
 // Quellenwechsel: cTrader-Kerzen dürfen nicht im FXCM-Cache weiterleben.
 // Alte, aus getrennten Ladefenstern zusammengesetzte Bestände können ganze Monate auslassen.
 // Gold-Testfenster und Wochenend-Platzhalter dürfen nicht im vollständigen Archivcache weiterleben.
-const DB_VERSION = 13;
+// v14 behält v13-Kerzen; ohne Abrufintervalle gelten alte Vollständigkeitsclaims nicht mehr.
+const DB_VERSION = 14;
 const STORE_NAME = "candles";
 
 // Rein defensiv, KEINE reguläre Obergrenze (siehe oben) — 500k Kerzen sind selbst auf M1 fast ein
@@ -90,16 +92,25 @@ function openDb() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
+    let blocked=false;
     // Idempotent statt einem einmaligen nackten createObjectStore — ein KÜNFTIGER Versions-Bump
     // (z.B. für einen ähnlichen Reset) liefe sonst gegen einen schon existierenden Store und würde
     // mit "object store already exists" crashen, weil IndexedDB den Store aus der alten Version
     // in die Upgrade-Transaktion mitnimmt, bevor createObjectStore erneut versucht wird.
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = event => {
       const db = req.result;
+      if(event.oldVersion>=13)return;
       if (db.objectStoreNames.contains(STORE_NAME)) db.deleteObjectStore(STORE_NAME);
       db.createObjectStore(STORE_NAME, { keyPath: "key" });
     };
-    req.onsuccess = () => resolve(req.result);
+    // Ein alter Tab darf das Laden nicht auf unbestimmte Zeit vor dem Archivabruf anhalten.
+    req.onblocked=()=>{blocked=true;reject(new Error('Kerzen-Cache-Upgrade durch anderen Tab blockiert.'));};
+    req.onsuccess = () => {
+      const db=req.result;
+      if(blocked){db.close();return;}
+      db.onversionchange=()=>db.close();
+      resolve(db);
+    };
     req.onerror = () => reject(req.error);
   });
   return dbPromise;
@@ -119,16 +130,17 @@ export async function getCachedCandles(symbol, bar) {
     return await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readonly");
       const req = tx.objectStore(STORE_NAME).get(cacheKey(symbol, bar));
-      req.onsuccess = () => resolve({ candles: req.result?.candles ?? [], completeUpTo: req.result?.completeUpTo ?? null });
+      req.onsuccess = () => resolve({ candles: req.result?.candles ?? [], completeUpTo: req.result?.completeUpTo ?? null,
+        coverage: req.result?.coverage ?? [] });
       req.onerror = () => reject(req.error);
     });
   } catch (err) {
     console.error("Kerzen-Cache lesen fehlgeschlagen:", err);
-    return { candles: [], completeUpTo: null };
+    return { candles: [], completeUpTo: null, coverage: [] };
   }
 }
 
-async function setCachedCandles(symbol, bar, candles, completeUpTo) {
+async function setCachedCandles(symbol, bar, candles, completeUpTo,coverage) {
   try {
     if (candles.length > SANITY_MAX_CANDLES) {
       console.error(
@@ -140,7 +152,7 @@ async function setCachedCandles(symbol, bar, candles, completeUpTo) {
     const db = await openDb();
     await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readwrite");
-      tx.objectStore(STORE_NAME).put({ key: cacheKey(symbol, bar), candles, completeUpTo });
+      tx.objectStore(STORE_NAME).put({ key: cacheKey(symbol, bar), candles, completeUpTo,coverage });
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
@@ -168,8 +180,7 @@ async function setCachedCandles(symbol, bar, candles, completeUpTo) {
 // bei echten Duplikaten (frischer Stand gewinnt, unverändertes Verhalten), aber eine gecachte
 // Kerze, die in `fresh` schlicht NICHT vorkommt, bleibt erhalten statt kommentarlos zu
 // verschwinden. Eine Lücke GENAU an der Naht zwischen before/fresh (oder fresh/after) bleibt
-// weiterhin möglich und ist unverändert kein Problem für sich (siehe cachedCandlesUpTo/completeUpTo
-// unten) — hier geht es nur um Lücken, die INNERHALB von fresh selbst schon vorhanden waren.
+// weiterhin möglich. Die Abrufintervalle verhindern, dass sie als gelesener Zeitraum gelten.
 export function mergeCandles(cached, fresh) {
   if (fresh.length === 0) return cached;
   if (cached.length === 0) return fresh;
@@ -214,14 +225,17 @@ export function mergeCandles(cached, fresh) {
 // unvermittelt auf den echten aktuellen Zeitpunkt). Hängt deshalb hier zusätzlich zur
 // Historie noch den bereits gecachten Lookahead an (begrenzt durch completeUpTo — weiter kann
 // auch ein Cache-Hit nicht garantiert vollständig sein).
-export function cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetCount, lookaheadSec = 0) {
+export function cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetCount, lookaheadSec = 0,coverage) {
   if (completeUpTo == null || effectiveEndSec > completeUpTo) return null;
+  const range=coverage&&candleCoverageAt(coverage,effectiveEndSec);
+  if(coverage&&!range)return null;
   const upToEnd = cached.filter((c) => c.time <= effectiveEndSec);
   if (upToEnd.length < targetCount) return null;
   const history = upToEnd.slice(-targetCount);
+  if(range&&history[0].time<range.from)return null;
   if (hasLargeCandleGap(history)) return null;
   if (lookaheadSec <= 0) return history;
-  const lookaheadEnd = Math.min(effectiveEndSec + lookaheadSec, completeUpTo);
+  const lookaheadEnd = Math.min(effectiveEndSec + lookaheadSec, range?.to ?? completeUpTo);
   const lookahead = cached.filter((c) => c.time > effectiveEndSec && c.time <= lookaheadEnd);
   const result = history.concat(lookahead);
   return hasLargeCandleGap(result) ? null : result;
@@ -255,11 +269,11 @@ export function cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetC
 // nicht gegen einen pro Aufruf neu verschobenen Wert — sonst würde die "Sicherheitsmarge" nie
 // tatsächlich aufgebraucht und jeder Schritt bliebe trotzdem ein Cache-Miss.
 export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs, lookaheadSec = 0) {
-  const { candles: cached, completeUpTo } = await getCachedCandles(symbol, bar);
+  const { candles: cached, completeUpTo,coverage } = await getCachedCandles(symbol, bar);
   const effectiveEndSec = toMs != null ? Math.floor(toMs / 1000) : Math.floor(Date.now() / 1000);
 
   if (toMs != null && cached.length > 0) {
-    const hit = cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetCount, lookaheadSec);
+    const hit = cachedCandlesUpTo(cached, completeUpTo, effectiveEndSec, targetCount, lookaheadSec,coverage);
     if (hit) return hit;
   }
 
@@ -286,7 +300,7 @@ export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs
     // statt mit Loch weiterzumergen — fresh deckt targetCount für sich allein bereits ab.
     const bridgesGap = fresh.length > 0 && fresh[0].time - lastCachedTime <= MAX_ACCEPTABLE_GAP_SEC;
     const merged = bridgesGap ? mergeCandles(cached, fresh) : fresh;
-    await setCachedCandles(symbol, bar, merged, completeUpTo);
+    await setCachedCandles(symbol, bar, merged, completeUpTo,coverage);
     return merged.slice(-targetCount);
   }
 
@@ -317,7 +331,10 @@ export async function fetchCandlesCached(fetchFn, symbol, bar, targetCount, toMs
   const fetchEffectiveEndSec = fetchToMs != null ? Math.floor(fetchToMs / 1000) : effectiveEndSec;
   const fresh = await fetchFn(symbol, bar, targetCount + lookaheadBars, fetchToMs);
   const merged = cached.length > 0 ? mergeCandles(cached, fresh) : fresh;
-  await setCachedCandles(symbol, bar, merged, toMs != null ? safeCompleteUpTo(fresh, fetchEffectiveEndSec) : completeUpTo);
+  const freshThrough=toMs!=null?safeCompleteUpTo(fresh,fetchEffectiveEndSec):null;
+  const verified=toMs!=null&&!hasLargeCandleGap(fresh)
+    ?addCandleCoverage(coverage,fresh[0]?.time,freshThrough,barSecondsFor(bar)):coverage;
+  await setCachedCandles(symbol, bar, merged,verified.at(-1)?.to ?? completeUpTo,verified);
   return fresh;
 }
 
