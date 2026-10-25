@@ -4464,9 +4464,9 @@
     "semantic_hash": ""
   },
   "scripts/tradeSetup2YearRun.mjs": {
-    "mtime": 1792950139.2110083,
-    "seen": 1792950251.1892195,
-    "ast_hash": "6b81a23f069106f302fc564ca4945b3e",
+    "mtime": 1792950347.9950151,
+    "seen": 1792950530.3046203,
+    "ast_hash": "539b9e88f54bff656eba426e81df7bc1",
     "semantic_hash": ""
   },
   "src/components/SimulationResultsTable.vue": {
@@ -5286,9 +5286,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationRunQuality.vue": {
-    "mtime": 1792094715.2419236,
-    "seen": 1792950251.1892195,
-    "ast_hash": "027507463d1e4042fa8eb312195fcf40",
+    "mtime": 1792950481.906288,
+    "seen": 1792950530.3286202,
+    "ast_hash": "2670d878187f9a6fa166f0426be07769",
     "semantic_hash": ""
   },
   "src/composables/useSimulationComparison.js": {
@@ -5772,9 +5772,9 @@
     "semantic_hash": ""
   },
   "test/simulationRunQuality.test.js": {
-    "mtime": 1791224233.912546,
-    "seen": 1792950251.1892195,
-    "ast_hash": "e3d4cd75f3bc10cce39394d2195f191d",
+    "mtime": 1792950481.908288,
+    "seen": 1792950530.5126204,
+    "ast_hash": "7e68a594d112d05508618bf80750d3ab",
     "semantic_hash": ""
   },
   "src/simulationRunPresentation.js": {
@@ -6414,9 +6414,9 @@
     "semantic_hash": ""
   },
   "test/simulationRangeCoverage.test.js": {
-    "mtime": 1792094715.333543,
-    "seen": 1792950251.1892195,
-    "ast_hash": "39e05a5430f70e18c9be4fab65386c42",
+    "mtime": 1792950481.9072897,
+    "seen": 1792950530.5106204,
+    "ast_hash": "cacf385d3f4e9fae78b260febc96b572",
     "semantic_hash": ""
   },
   "services/setup2/evidenceCheckpoint.js": {
@@ -6708,15 +6708,15 @@
     "semantic_hash": ""
   },
   "scripts/batchInstrument.mjs": {
-    "mtime": 1792949950.5753016,
-    "seen": 1792950251.1892195,
-    "ast_hash": "099a1debaa5129cab5fb9511b419ea60",
+    "mtime": 1792950347.9950151,
+    "seen": 1792950530.300621,
+    "ast_hash": "9fe8080e3cc1e5e423fa7019c4e79a0e",
     "semantic_hash": ""
   },
   "scripts/batchJsonFiles.mjs": {
-    "mtime": 1792948297.4887815,
-    "seen": 1792950251.1892195,
-    "ast_hash": "8ec4b98ff814c943b52a111903f7d571",
+    "mtime": 1792950267.7358065,
+    "seen": 1792950530.300621,
+    "ast_hash": "7fe859a636807b1211a0f5c7d59b8a7e",
     "semantic_hash": ""
   },
   "scripts/batchRunInputs.mjs": {
@@ -6762,15 +6762,15 @@
     "semantic_hash": ""
   },
   "test/batchJsonFiles.test.js": {
-    "mtime": 1792947427.1489377,
-    "seen": 1792950251.1892195,
-    "ast_hash": "66556f6b3a0a56425b307ed03ce77048",
+    "mtime": 1792950267.736809,
+    "seen": 1792950530.4356203,
+    "ast_hash": "1e7aa9421fdc88cb3f2b5e6ef7253196",
     "semantic_hash": ""
   },
   "test/countertrendScanResume.test.js": {
-    "mtime": 1792949995.4440408,
-    "seen": 1792950251.1892195,
-    "ast_hash": "3e0f1c8d6b97554e8f7a196afdbcf33a",
+    "mtime": 1792950446.4850118,
+    "seen": 1792950530.44162,
+    "ast_hash": "5d2cd0016d1a763c1133f7d3f74a394f",
     "semantic_hash": ""
   },
   "test/setup1ChecklistDetails.test.js": {
