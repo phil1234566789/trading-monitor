@@ -9,8 +9,6 @@ import { evaluateSimulation } from './tradeSetupSimulation.js';
 import { evaluateCountertrendLifecycle } from './countertrendLifecycle.js';
 import { createSetup2Entry } from './tradeSetup2EntryGate.js';
 import { createCloseReactionCache } from './m5CloseReactionHistory.js';
-import { markIgnoredCandles } from './sessionOccurrences.js';
-import { berlinOffsetMinutes } from './berlinTime.js';
 import { m1ScanPrefixStart } from './m1ScanPrefix.js';
 import { m1LoadStart } from './m1StructureStart.js';
 import { M1_FRACTAL_SUPPORT } from './m1StructureSettings.js';
@@ -18,7 +16,8 @@ import { candleTimeIndex } from './candleTimeIndex.js';
 import { createClosedCandlePrefix } from './closedCandlePrefix.js';
 import { createSetup2Memo,finalObservation } from './setup2Memo.js';
 import { entryPattern1FvgAt } from './entryPattern1Progress.js';
-import { completeDealingRangePriceObservations } from './dealingRangePriceObservation.js';
+import {completeCountertrendSnapshots,markCountertrendCandles} from './countertrendSnapshotCompletion.js';
+import {validateCountertrendResume,countertrendScanState} from './countertrendScanState.js';
 import { createChecklistHistoryRecorder } from './tradeSetup2ChecklistHistory.js';
 
 export async function scanCountertrendWindow(input) {
@@ -34,25 +33,34 @@ export async function scanCountertrendWindow(input) {
     await onProgress?.({phase:'scan',completed:0,total:0,m5Evaluations:0,m1Candles:0}); return [];
   }
   const ordered=rows=>(rows ?? []).slice().sort((a,b)=>a.time-b.time);
-  const marked=rows=>markIgnoredCandles(ordered(rows),input.sessionConfigs?.filter(s=>s.instrument===instrument) ?? [],
-    sec=>berlinOffsetMinutes(sec*1000));
+  const marked=rows=>markCountertrendCandles(rows,instrument,input.sessionConfigs);
   const m5=marked(input.m5Candles),h1=ordered(input.h1Candles);
   const closedM5At=createClosedCandlePrefix(m5,300);
-  let m1=marked(input.m1Candles),loadedFrom=Infinity;
-  const snapshots=[],entries=[...(input.existingEntries ?? [])],saved=new Map(),seen=new Set(entries.map(s=>s.entry.id));
-  const checklistHistory=createChecklistHistoryRecorder();
+  // Exakte Live-Erkennung zwischen zwei M5-Schlüssen bleibt erhalten (Referenz 105).
+  const start=Math.max(fromTime,Math.min(...setups.map(s=>s.at)));
+  const steps=[...new Set([start,...setups.map(s=>s.at).filter(at=>at>=start),
+    ...m5.map(c=>c.time+300).filter(at=>at>=start&&at<=toTime),toTime])].sort((a,b)=>a-b);
+  validateCountertrendResume(input,steps);
+  const resume=input.resumeState,collectSnapshots=input.collectSnapshots!==false;
+  if(!collectSnapshots&&!onSnapshot)throw new Error('Streamed scan requires a snapshot sink');
+  let m1=marked(input.m1Candles),loadedFrom=resume?.loadedFrom??Infinity;
+  const snapshots=[],entries=[...(resume?.entries??input.existingEntries??[])],saved=new Map(resume?.saved),seen=new Set(resume?.seen??entries.map(s=>s.entry.id));
+  let entryCount=resume?.entryCount??entries.length;
+  const emit=async snapshot=>{if(collectSnapshots)snapshots.push(snapshot);await onSnapshot?.(snapshot);};
+  const checklistHistory=createChecklistHistoryRecorder({resumeState:resume?.history,retainHistory:collectSnapshots,onRecord:input.onHistory});
   const memo=input.scanMemo ?? {};
   const classificationCache=memo.classificationCache ??= new Map(),closeReactionCache=memo.closeReactionCache ??= createCloseReactionCache(),m1Cache=createCloseReactionCache();
   const recognized=new Map();
-  const setupMemo=useMemo ? (memo.setupMemo ??= createSetup2Memo()) : null,lifecycles=createSetup2Memo(),executions=createSetup2Memo();
-  const searchThrough=createSetup2Memo(),entryProgress=createSetup2Memo();
+  const setupMemo=useMemo ? (memo.setupMemo ??= createSetup2Memo()) : null,lifecycles=createSetup2Memo(200,resume?.lifecycles),executions=createSetup2Memo(200,resume?.executions);
+  const searchThrough=createSetup2Memo(200,resume?.searchThrough),entryProgress=createSetup2Memo(200,resume?.entryProgress);
   const orderBlockDetectors=new Map();
   const detectScanOrderBlocks=(rows,timeframe,isForex=true,minGapOverride=null)=>{
     const key=JSON.stringify([timeframe,isForex,minGapOverride]);
     if(!orderBlockDetectors.has(key))orderBlockDetectors.set(key,createSharedOrderBlockDetector(timeframe,isForex,minGapOverride));
     return orderBlockDetectors.get(key)(rows);
   };
-  let evaluations=0;
+  let evaluations=resume?.evaluations??0;
+  const rebuilding=new Set(resume?.recognizedFinalized);
   const outcomesAt=(at,sources)=>{
     const outcomes=new Map();
     for (const snapshot of entries) {
@@ -80,7 +88,7 @@ export async function scanCountertrendWindow(input) {
   const evaluateAt=(at,sources)=>{
     for (const source of sources) if (!recognized.get(source.tradeSetupId) || !finalized(recognized.get(source.tradeSetupId))) {
       const recognitionTime=setup1RecognitionTime(source);
-      evaluations++;
+      if(!rebuilding.delete(source.tradeSetupId))evaluations++;
       recognized.set(source.tradeSetupId,evaluateCountertrendChecklist({...input,evaluatedAt:recognitionTime,tradeSetups:[source],
         m5Candles:m5.filter(c=>c.time+300<=recognitionTime),h1Candles:h1.filter(c=>c.time+3600<=recognitionTime),
         setupClassificationCache:classificationCache,setupMemo,closeReactionCache,detectScanOrderBlocks:useMemo?detectScanOrderBlocks:undefined}));
@@ -107,22 +115,21 @@ export async function scanCountertrendWindow(input) {
       const key=JSON.stringify([evaluateDealingRange(checklist,candidate).status,lifecycle]);
       if (checklist.evaluatedAt<fromTime || saved.get(candidate.id)===key) continue;
       const snapshot=buildTradeSetup2CandidateSnapshot({checklist,candidate});
-      if (snapshot) { saved.set(candidate.id,key); snapshots.push(snapshot); await onSnapshot?.(snapshot); }
+      if (snapshot) { saved.set(candidate.id,key); await emit(snapshot); }
     }
   };
-  // Exakte Live-Erkennung zwischen zwei M5-Schlüssen bleibt erhalten (Referenz 105).
-  const start=Math.max(fromTime,Math.min(...setups.map(s=>s.at)));
-  const steps=[...new Set([start,...setups.map(s=>s.at).filter(at=>at>=start),
-    ...m5.map(c=>c.time+300).filter(at=>at>=start&&at<=toTime),toTime])].sort((a,b)=>a-b);
-  let setupIndex=0;
-  const known=new Map();
-  for (const [index,at] of steps.entries()) {
+  let setupIndex=resume?.setupIndex??0;
+  const sourcesById=new Map(setups.map(s=>[s.source.tradeSetupId,s.source]));
+  const known=new Map((resume?.knownIds??[]).map(id=>{if(!sourcesById.has(id))throw new Error('Checkpoint setup source missing');return[id,sourcesById.get(id)];}));
+  const checkpoint=async(index,at)=>{await input.onCheckpoint?.({completed:index+1,total:steps.length,evaluatedAt:at},()=>countertrendScanState({input,steps,nextStep:index+1,setupIndex,known,saved,seen,entries,entryCount,evaluations,loadedFrom,lifecycles,executions,searchThrough,entryProgress,checklistHistory,recognized,finalized}));};
+  for(let index=resume?.nextStep??0;index<steps.length;index++){
+    const at=steps[index];
     signal?.throwIfAborted();
     while(setupIndex<setups.length && setups[setupIndex].at<=at){const source=setups[setupIndex++].source;known.set(source.tradeSetupId,source);}
     const sources=[...known.values()];
     if(!sources.length){await onProgress?.({phase:'scan',completed:index+1,total:steps.length,evaluatedAt:at,
-      entries:entries.length,setups:saved.size,m5Evaluations:evaluations,m1Candles:m1.length});
-      if((index+1)%yieldEvery===0)await yieldControl();continue;}
+      entries:entryCount,setups:saved.size,m5Evaluations:evaluations,m1Candles:m1.length});
+      await checkpoint(index,at);if((index+1)%yieldEvery===0)await yieldControl();continue;}
     const checklist=evaluateAt(at,sources);
     await save(checklist);
     if(useMemo)for(const candidate of checklist.setup.candidates)if(candidate.lifecycle?.main.state==='ended'){
@@ -166,7 +173,8 @@ export async function scanCountertrendWindow(input) {
         const rows=m1.slice(prefixStart,prefixEnd);
         const structure=buildM1Structure(rows,active.anchor,knownAt);
         let follow=entryProgress.get(candidate.id);
-        if(!follow){follow={detectM5OrderBlocks:rows=>detectScanOrderBlocks(rows,'5m')};entryProgress.set(candidate.id,follow);}
+        if(!follow){follow={};entryProgress.set(candidate.id,follow);}
+        follow.detectM5OrderBlocks??=rows=>detectScanOrderBlocks(rows,'5m');
         const check=evaluateM1Checklist({context:active,structure,candles:rows,evaluatedAt:knownAt,closeReactionCache:m1Cache,
           entryProgress:useMemo ? follow : undefined});
         if(knownAt>=fromTime)checklistHistory.record(current,current.setup.primary,'M1',check);
@@ -177,13 +185,13 @@ export async function scanCountertrendWindow(input) {
         if(knownAt>=fromTime)await onMinuteCheck?.({checklist:current,context:active,check,knownAt,snapshot:snapshot || null});
         if (!snapshot) continue;
         checklistHistory.record(current,current.setup.primary,'M1',check,snapshot.entry);
-        seen.add(snapshot.entry.id);entries.push(snapshot);snapshots.push(snapshot);await onSnapshot?.(snapshot);
+        seen.add(snapshot.entry.id);entryCount++;entries.push(collectSnapshots?snapshot:{setupKey:snapshot.setupKey,entry:snapshot.entry});await emit(snapshot);
       }
     }
     await onProgress?.({phase:'scan',completed:index+1,total:steps.length,evaluatedAt:at,
-      entries:entries.length,setups:saved.size,m5Evaluations:evaluations,m1Candles:m1.length});
+      entries:entryCount,setups:saved.size,m5Evaluations:evaluations,m1Candles:m1.length});
+    await checkpoint(index,at);
     if ((index+1)%yieldEvery===0) await yieldControl();
   }
-  const latest=new Map(snapshots.filter(s=>s.rangeCourse).map(s=>[s.setupKey,s.rangeCourse]));
-  return completeDealingRangePriceObservations(checklistHistory.complete(snapshots.map(s=>s.entry ? {...s,rangeCourse:latest.get(s.setupKey) ?? null} : s)),m5,toTime);
+  return collectSnapshots?completeCountertrendSnapshots(snapshots,m5,toTime,checklistHistory.entries):[];
 }

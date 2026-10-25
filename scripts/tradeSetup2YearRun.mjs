@@ -1,3 +1,6 @@
+import {scanBatchInstrument} from './batchInstrument.mjs';
+import {frozenBatchInputs} from './batchRunInputs.mjs';
+import {publishBatchRecords} from './batchScanResults.mjs';
 import { readFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -31,6 +34,7 @@ const setupSetManifest = options.setupSet ? await readSetupSetManifest(root, opt
 const sec = value => Date.parse(value) / 1000;
 const hash = data => createHash('sha256').update(JSON.stringify(data)).digest('hex');
 await mkdir(directory, { recursive: true });
+const frozenInputs=await frozenBatchInputs(directory);
 let previousRun;
 try { previousRun = await readJson(path.join(directory, 'run.json')); } catch (error) { if (error.code !== 'ENOENT') throw error; }
 
@@ -126,11 +130,10 @@ async function saveProgress(force = false) {
     publishedAt = Date.now();
   }
 }
+if(previousRun?.startedAt)run.startedAt=previousRun.startedAt;
+run.provenance.batchPersistence={version:'batch-checkpoint-v1',checkpointEverySteps:24,commitOnResultChange:true};
+if(previousRun?.provenance?.inputs)run.provenance.inputs=previousRun.provenance.inputs;
 await saveProgress(true);
-const outcomeRecords = (snapshots, candles, evaluatedAt) => snapshots.filter(s => s.entry).map(snapshot => ({ snapshot,
-  outcomes: ['wide', 'narrow'].map(variant => core.evaluateSimulation({ entry: snapshot.entry, variant, candles, evaluatedAt,
-    target1: snapshot.checklist.setup.primary.targetSelection?.target1?.price,
-    target2: snapshot.checklist.setup.primary.targetSelection?.target2?.price ?? null })) }));
 try {
   for (const [instrumentIndex, instrument] of instruments.entries()) {
     controller.signal.throwIfAborted();
@@ -157,6 +160,7 @@ try {
     const dailyAnchors = rows['1D'] ? core.buildHistoricalDailyAnchors(rows['1D'], rows['1h']) : null;
     timings.dailyAnchorsMs = performance.now() - anchorsStarted;
     if (dailyAnchors && !core.historicalSettingsAt(configuration.settings, dailyAnchors, from)) throw new Error(`Missing year-start daily anchor: ${instrument}`);
+    run.coverage.instruments=run.coverage.instruments.filter(c=>c.instrument!==instrument);
     run.coverage.instruments.push({ instrument, from, to, timeframes: Object.fromEntries(
       [['1h', 3600], ['5m', 300], ['1m', 60]].map(([bar, duration]) => [bar, candleCoverage(rows[bar], duration)])) });
     const sourceFile=path.join(directory,`${instrument}-sources.json`);
@@ -192,23 +196,24 @@ try {
     const profile=options.profile==='true'?createSetup2Profile():null;
     globalThis.__setup2Profile=profile;
     // Ein zusammenhängender Lauf erhält offene DRs/Entries über Monats- und Tagesgrenzen.
-    const snapshots=await core.scanTradeSetup2Window({instrument,h1Candles:rows['1h'],m5Candles:rows['5m'],m1Candles:rows['1m'],
+    const cacheDirectory=options.cache?path.resolve(root,options.cache):path.join(directory,'cache');
+    const inputHashes=await frozenInputs.seal([path.join(directory,'manifest.json'),sourceFile,path.join(root,'src','tradeSetupRow.js'),
+      ...['tradeSetup2YearRun.mjs','batchInstrument.mjs','batchScanResults.mjs','batchCheckpoint.mjs','batchJsonFiles.mjs'].map(file=>path.join(root,'scripts',file)),
+      ...Object.keys(rows).map(bar=>path.join(cacheDirectory,`${instrument}-${bar}-${start}-${to}.json`))]);
+    await scanBatchInstrument({core,directory,identity:{runId:run.id,sourceHash,inputHashes},input:{instrument,h1Candles:rows['1h'],m5Candles:rows['5m'],m1Candles:rows['1m'],
       tradeSetups,dailyAnchors,fromTime:from,toTime:to-1,settings:configuration.settings,sessionConfigs,
       tradingWindows:manifest.schedules.find(s=>s.instrument===instrument)?.trading_windows,
-      news:configuration.instruments[instrumentIndex].news,newsLoadStatus:configuration.instruments[instrumentIndex].newsLoadStatus,signal:controller.signal,
-      onProgress:async progress=>{
-        if(progress.completed%24!==0 && progress.completed!==progress.total)return;
-        run.progress={...progress,instrument,phase:'scan'};await saveProgress();
-      }});
+      news:configuration.instruments[instrumentIndex].news,newsLoadStatus:configuration.instruments[instrumentIndex].newsLoadStatus,signal:controller.signal},
+      onProgress:async progress=>{run.progress={...progress,instrument,phase:'scan'};await saveProgress();}});
     const elapsedCpu=process.cpuUsage(cpu);
     delete globalThis.__setup2Profile;
     if(profile)timings.scanProfile={functions:profile.functions,memo:profile.memo,memos:profile.memos};
     run.provenance.measurement={wallMs:performance.now()-started,cpuMs:(elapsedCpu.user+elapsedCpu.system)/1000};
-    const records=outcomeRecords(snapshots,rows['1m'],to);
     const writeStarted = performance.now();
-    await writeJson(path.join(directory,`${instrument}-entries.json`),records);
-    await writeJson(path.join(directory,`${instrument}-setups.json`),snapshots.filter(s=>!s.entry));
-    if(repository){await repository.saveSetups(run.id,snapshots.filter(s=>!s.entry));await repository.saveEntries(run.id,records);}
+    if(repository){
+      await publishBatchRecords(repository,'saveSetups',run.id,path.join(directory,`${instrument}-setups.json`));
+      await publishBatchRecords(repository,'saveEntries',run.id,path.join(directory,`${instrument}-entries.json`));
+    }
     timings.snapshotWriteMs += performance.now() - writeStarted;
     run.provenance.phaseTimings = timings;
   }

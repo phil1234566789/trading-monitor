@@ -20,8 +20,8 @@ const lightLifecycle = c => c ? {...pick(c,['version','entrySearchAllowed','risk
   target2:pick(c.target2,['status','recognizedAt'])} : null;
 
 // Nur Evaluator-Ergebnisse kopieren; weder Kerzen noch Strukturpools oder neue M1-Arbeit.
-export function createChecklistHistoryRecorder() {
-  const histories=new Map(),previous=new Map(),m1Checks=new Map();
+export function createChecklistHistoryRecorder({resumeState,retainHistory=true,onRecord}={}) {
+  const histories=new Map(),previous=new Map(resumeState?.previous),m1Checks=new Map(resumeState?.m1Checks);
   function record(checklist,candidate,source='M5',m1Check,savedEntry=null) {
     const at=checklist.evaluatedAt,key=candidate.id;
     if(m1Check)m1Checks.set(key,{...pick(m1Check,['status','details','detailStatuses','trends','currentTrend','entryPattern','evaluatedAt']),
@@ -52,10 +52,10 @@ export function createChecklistHistoryRecorder() {
     if(JSON.stringify(before?.lifecycle)!==JSON.stringify(lifecycle))changes.push({key:'lifecycle',old:before?.lifecycle ?? null,new:lifecycle,text:lifecycle?.main?.reason ?? lifecycle?.main?.state});
     const entry={knownAt:at,evaluatedAt:at,source,rows,changes,checklist:state,m1Check:value.m1Check,
       dealingRange:state.dealingRange,lifecycle};
-    if(!histories.has(key))histories.set(key,[]);
-    histories.get(key).push(entry);previous.set(key,{signature,entry});
+    if(retainHistory){if(!histories.has(key))histories.set(key,[]);histories.get(key).push(entry);}
+    previous.set(key,{signature,entry});onRecord?.(key,entry);
   }
-  return {record,complete:snapshots=>snapshots.map(s=>({...s,schemaVersion:4,
+  return {record,entries:key=>histories.get(key)??[],checkpoint:keys=>({previous:[...previous].filter(([key])=>keys.has(key)),m1Checks:[...m1Checks].filter(([key])=>keys.has(key))}),complete:snapshots=>snapshots.map(s=>({...s,schemaVersion:4,
     checklistHistory:{version:CHECKLIST_HISTORY_VERSION,entries:histories.get(s.setupKey) ?? []}}))};
 }
 

@@ -1,21 +1,9 @@
 import {requestJson} from './requestJson.mjs';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import {readFile} from 'node:fs/promises';
 import path from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
+import {writeJson} from './batchJsonFiles.mjs';
+export {writeJson} from './batchJsonFiles.mjs';
 
-export async function writeJson(file, value) {
-  await mkdir(path.dirname(file), { recursive: true });
-  await writeFile(file + '.tmp', JSON.stringify(value));
-  // Windows kann den Zielnamen während einer gleichzeitigen Fortschrittsanzeige
-  // kurz sperren. Die vollständige Tempdatei bleibt bis zum erfolgreichen Wechsel erhalten.
-  for (let attempt = 0; ; attempt++) {
-    try { await rename(file + '.tmp', file); break; }
-    catch (error) {
-      if (!['EPERM', 'EBUSY', 'EACCES'].includes(error.code) || attempt >= 9) throw error;
-      await delay(100);
-    }
-  }
-}
 
 export function archiveClient({ url, key, fetcher = fetch }) {
   const headers = { apikey: key, Authorization: `Bearer ${key}` };
