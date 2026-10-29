@@ -1,5 +1,5 @@
 import { describe,it,expect } from 'vitest';
-import { buildMarketPreview,signMarketPreview,verifyMarketPreview } from '../supabase/functions/trading-monitor-mcp/marketPreviewContract.js';
+import { buildMarketPreview,buildEntrySearchPreview,signMarketPreview,verifyMarketPreview } from '../supabase/functions/trading-monitor-mcp/marketPreviewContract.js';
 const now=1800000000, id='c297afbf-172c-4304-99e7-eb1198191050';
 const config={login:42,server:'Demo',mode:'demo',allowLive:false};
 const input={symbol:'EURUSD.gbe',direction:'short',stop_loss:1.101,take_profit:1.099};
@@ -25,5 +25,25 @@ describe('market preview authorization',()=>{
     await expect(verifyMarketPreview(token,secret,now+30)).rejects.toThrow();
     const changed=token.replace(token.split('.')[0],btoa(JSON.stringify({...p,risk:0})));
     await expect(verifyMarketPreview(changed,secret,now)).rejects.toThrow();
+  });
+});
+
+describe('asynchronous search preview',()=>{
+  it('binds candle color and expiry but never the preparation price',()=>{
+    const p=buildEntrySearchPreview({...input,duration_sec:600},snapshot,config,now,id);
+    expect(p.intent.trigger).toBe('m1_directional_close');
+    expect(p.intent.trigger_price).toBeNull();
+    expect(p.intent).not.toHaveProperty('reference_price');
+    expect(p.intent.volume).toBe(.01);
+    expect(p.reference_price).toBe(1.1);
+    expect(p.intent.expires_sec).toBe(now+600);
+    expect(p.confirmation_expires_sec).toBe(now+30);
+    expect(p.volume).toBe(.01);
+    for(const duration_sec of [0,61.5,3601]) expect(()=>buildEntrySearchPreview({...input,duration_sec},snapshot,config,now,id)).toThrow();
+  });
+  it('expires the activation view independently from the running search deadline',async()=>{
+    const p=buildEntrySearchPreview({...input,duration_sec:600},snapshot,config,now,id);
+    const secret='x'.repeat(40),token=await signMarketPreview(p,secret);
+    await expect(verifyMarketPreview(token,secret,now+31)).rejects.toThrow();
   });
 });

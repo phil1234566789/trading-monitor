@@ -10,7 +10,7 @@ nicht implementiert.
 ## Erste Version
 
 - App-Route: `/#/milky-meta-trader`, Navigation **MMT**.
-- Private API `mt5-control`: separater `MT5_CONTROL_TOKEN`, Browser hält ihn nur im Arbeitsspeicher.
+- Private API `mt5-control`: separater `MT5_CONTROL_TOKEN`, Browser speichert ihn nach erfolgreichem Entsperren lokal; explizites Sperren entfernt ihn.
 - Zugangsdaten: AES-256-GCM, zufällige Nonce, Login/Server als authentifizierte Zusatzdaten.
   `MT5_CREDENTIAL_KEY` ausschließlich als Function Secret sichern, zusätzlich außerhalb des Repos
   sicher aufbewahren. Verlust des Schlüssels macht gespeicherte Passwörter unlesbar. Nicht rotieren,
@@ -22,8 +22,11 @@ nicht implementiert.
 - `start_mt5_entry_search` startet nach ausdrücklichem Auftrag die Suche. Eine bloße Bias-Meinung
   reicht nicht. `get_mt5_execution_status` liest Status; `cancel_mt5_entry_search` beendet nur
   noch suchende Aufträge, keine offenen Positionen.
-- Die aktuelle technische Preisbedingung ist **keine vollständige Strategieprüfung**:
-  geschlossene M1 strikt oberhalb/unterhalb eines ausdrücklich gewählten Levels.
+- Die aktuelle Testregel ist **keine vollständige Strategieprüfung**:
+  `m1_directional_close`: nach Aktivierung geschlossene M1-Kerze, Short `close < open`,
+  Long `close > open`, Doji ausgeschlossen. Die bestätigte Broker-Mindestlotgröße
+  bleibt bis zum Entry gebunden; der Vorbereitungskurs nicht. Preislevel-Trigger bleiben
+  technisch verfügbar, sind aber nicht die aktuelle Standardregel.
   `test_next_m1_close` existiert nur für explizite Demo-Verbindungstests.
 - Nur M1-Schlüsse nach Aktivierung berücksichtigen. Signal höchstens zehn
   Sekunden alt, Tick höchstens fünf Sekunden alt; keine alten Signale nach einer Netzpause handeln.
@@ -125,7 +128,18 @@ unvertrauenswürdigen HTML-/Mermaid-Inhalte und verwendet kein SSR. Die Befunde 
 behoben auszugeben; separate Wartung mit Reachability-Prüfung bis 12.11.2026, kein ungeprüftes
 `audit fix --force` oder Mermaid-Major-Upgrade in dieser Änderung.
 
-## Marktorder mit Vorschau und Bestaetigung
+## Asynchrone Entry-Suche als Standard
+
+In MMT Symbol, Richtung, SL/TP und Suchdauer (1 bis 60 Minuten, Standard 10) vorbereiten
+und einmal bestaetigen. Die Bestaetigungsansicht gilt 30 Sekunden; die bestaetigte Suche
+wartet danach ohne weitere Rueckfrage auf die passende neu geschlossene M1-Kerze.
+Die Suchfrist steht explizit in der Ansicht. Der aktuelle Brokerkurs, SL/TP-Seite,
+Mindestlotgroesse und Risikobudget werden beim tatsaechlichen Entry erneut geprueft.
+Ein ausgefuehrter Auftrag endet; keine automatische Wiederholung oder Vervielfachung.
+`search_preview` erzeugt nur eine signierte Ansicht, `search_confirm` aktiviert die Queue.
+Keine Bindung an den Vorbereitungskurs und keine 0,5-Pip-Grenze fuer diesen Suchauftrag.
+
+## Technischer Marktorder-Endpunkt mit Vorschau und Bestaetigung
 
 Die private MMT-Ansicht bietet eine aktuelle Vorschau mit Broker-Symbol, Richtung,
 Mindestlotgroesse, SL/TP und Risiko in Kontowaehrung. Sie gilt 30 Sekunden und wird

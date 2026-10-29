@@ -22,6 +22,21 @@ class CoreTests(unittest.TestCase):
                 with self.subTest(key=key, value=bad), self.assertRaises(ValueError):
                     validate_intent(intent(**{key: bad}))
 
+    def test_directional_close_uses_new_closed_red_or_green_candle(self):
+        short=intent(trigger='m1_directional_close',trigger_price=None,volume=.01)
+        long=short|dict(direction='long')
+        red=dict(time=180,open=1.30,close=1.29)
+        green=dict(time=180,open=1.28,close=1.29)
+        self.assertEqual(validate_intent(short),short)
+        self.assertTrue(trigger_matches(short,red,241))
+        self.assertFalse(trigger_matches(short,green,241))
+        self.assertTrue(trigger_matches(long,green,241))
+        self.assertFalse(trigger_matches(long,red,241))
+        for candle,now in [(dict(time=180,open=1.29,close=1.29),241),
+                           (dict(time=180,close=1.29),241),(red,239),(red,251),
+                           (dict(time=60,open=1.3,close=1.29),121)]:
+            self.assertFalse(trigger_matches(short,candle,now))
+
     def test_live_requires_explicit_local_opt_in(self):
         with self.assertRaises(ValueError):
             validate_intent(intent(mode='live'))

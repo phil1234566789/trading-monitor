@@ -67,6 +67,25 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(quotes[0]['minimum_volume'],.01)
         m.order_send.assert_not_called()
 
+    def test_directional_search_prepares_at_trigger_quote_without_old_price_pin(self):
+        m=api();m.order_calc_profit.return_value=-100
+        order=intent(trigger='m1_directional_close',trigger_price=None,volume=.01,risk_amount=5)
+        request=Broker(m,42,'Demo').prepare(order)
+        self.assertEqual(request['price'],m.symbol_info_tick.return_value.bid)
+        self.assertEqual(request['volume'],.01)
+        m.order_send.assert_not_called()
+
+    def test_color_entry_uses_confirmed_minimum_even_below_test_cap(self):
+        m=api();m.order_calc_profit.return_value=-100
+        m.symbol_info.return_value.volume_min=.001
+        m.symbol_info.return_value.volume_step=.001
+        order=intent(trigger='m1_directional_close',trigger_price=None,volume=.001,risk_amount=5)
+        broker=Broker(m,42,'Demo')
+        self.assertEqual(broker.prepare(order)['volume'],.001)
+        m.symbol_info.return_value.volume_min=.002
+        with self.assertRaises(ValueError):broker.prepare(order)
+        m.order_send.assert_not_called()
+
     def test_refuses_account_switch_live_account_and_disabled_trading(self):
         for changes in [dict(login=43), dict(server='Other'), dict(trade_mode=2),
                         dict(trade_allowed=False), dict(trade_expert=False)]:

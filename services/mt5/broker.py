@@ -76,7 +76,7 @@ class Broker:
         rates = self.api.copy_rates_from_pos(symbol, self.api.TIMEFRAME_M1, 1, 1)
         if rates is None or len(rates) != 1:
             return None
-        return dict(time=int(rates[0]['time'])-self.server_time_offset_seconds, close=float(rates[0]['close']))
+        return dict(time=int(rates[0]['time'])-self.server_time_offset_seconds, open=float(rates[0]['open']),close=float(rates[0]['close']))
 
     def prepare(self, intent):
         validate_intent(intent, self.allow_live)
@@ -120,6 +120,7 @@ class Broker:
         if intent['trigger']=='market_confirmed':
             if abs(price-intent['reference_price'])>5*info.point:
                 raise ValueError('preview_price_changed')
+        if intent['trigger'] in ('market_confirmed','m1_directional_close'):
             if intent['volume']!=info.volume_min or intent['volume']>lots:
                 raise ValueError('minimum_volume_exceeds_budget')
             lots=intent['volume']
