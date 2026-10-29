@@ -6810,9 +6810,9 @@
     "semantic_hash": ""
   },
   "services/mt5/broker.py": {
-    "mtime": 1793266944.2462628,
-    "seen": 1793267061.6481001,
-    "ast_hash": "b271b15b94699af7278759398b40a12c",
+    "mtime": 1793267345.6166482,
+    "seen": 1793267582.4152102,
+    "ast_hash": "59116c7c074969c159cfbb43acc6dfd5",
     "semantic_hash": ""
   },
   "services/mt5/core.py": {
@@ -6822,15 +6822,15 @@
     "semantic_hash": ""
   },
   "services/mt5/start-worker.ps1": {
-    "mtime": 1793263361.582843,
-    "seen": 1793263458.1192353,
-    "ast_hash": "d2f2204127cb0fbd0ca51ba5cadc5dbd",
+    "mtime": 1793267345.6176493,
+    "seen": 1793267582.4152102,
+    "ast_hash": "54d79000595d6a1a0646aac3f8ba455f",
     "semantic_hash": ""
   },
   "services/mt5/test_broker.py": {
-    "mtime": 1793266944.2472627,
-    "seen": 1793267061.6481001,
-    "ast_hash": "cdafb07c3376b48ebde1cf6cc2e9acf4",
+    "mtime": 1793267345.6166482,
+    "seen": 1793267582.4152102,
+    "ast_hash": "5266e7a229f94e52dca36152d9c7c18e",
     "semantic_hash": ""
   },
   "services/mt5/test_core.py": {
@@ -6840,27 +6840,27 @@
     "semantic_hash": ""
   },
   "services/mt5/test_worker.py": {
-    "mtime": 1793266944.2482626,
-    "seen": 1793267061.6481001,
-    "ast_hash": "921018e67e256fb9c0454f63e4b9686c",
+    "mtime": 1793267345.61865,
+    "seen": 1793267582.4152102,
+    "ast_hash": "68557831065f11a89af523d5478d0668",
     "semantic_hash": ""
   },
   "services/mt5/worker.py": {
-    "mtime": 1793266944.249263,
-    "seen": 1793267061.6481001,
-    "ast_hash": "7ca1e9b8596bfa0a585918c31dffbc9b",
+    "mtime": 1793267345.6176493,
+    "seen": 1793267582.4152102,
+    "ast_hash": "7ca80730cab57ff8d772af4b4aee4041",
     "semantic_hash": ""
   },
   "src/milkyMetaTraderClient.js": {
-    "mtime": 1793266944.2562623,
-    "seen": 1793267061.6911,
-    "ast_hash": "669aa46200de598cd92478c63cdc148f",
+    "mtime": 1793267544.4854968,
+    "seen": 1793267582.4586139,
+    "ast_hash": "51d0b332f460d60e83c1a6e1d0324388",
     "semantic_hash": ""
   },
   "src/views/MilkyMetaTrader.vue": {
-    "mtime": 1793266944.2502632,
-    "seen": 1793267061.7244196,
-    "ast_hash": "1c1fbdb42452c31d2d31322dbcd57921",
+    "mtime": 1793267544.4844992,
+    "seen": 1793267582.4881215,
+    "ast_hash": "5ab20fd19eddf9ac3e066c6f78590958",
     "semantic_hash": ""
   },
   "supabase/functions/mt5-control/index.ts": {
@@ -6900,9 +6900,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5Execution.ts": {
-    "mtime": 1793266944.2532623,
-    "seen": 1793267061.7414198,
-    "ast_hash": "84eb7b8495bc678b0b28a4f687a4b7ba",
+    "mtime": 1793267095.4895587,
+    "seen": 1793267582.5051217,
+    "ast_hash": "acb725feb44a9cf323dcbb46593b8ad6",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/mt5Execution.ts": {
@@ -6930,9 +6930,9 @@
     "semantic_hash": ""
   },
   "docs/milky-meta-trader.md": {
-    "mtime": 1793263361.5988686,
-    "seen": 1793263458.120235,
-    "ast_hash": "66f959d59d62c7f4e23fd552417a3aad",
+    "mtime": 1793267388.283654,
+    "seen": 1793267582.610643,
+    "ast_hash": "99e721e28f61357fc5513a76dec1a910",
     "semantic_hash": ""
   },
   "services/mt5/requirements.txt": {
@@ -6954,9 +6954,9 @@
     "semantic_hash": ""
   },
   "src/components/MilkyMetaTraderOrder.vue": {
-    "mtime": 1793266944.249263,
-    "seen": 1793267061.659103,
-    "ast_hash": "6c27985988619b5d63aed42a40ad1f4b",
+    "mtime": 1793267544.4834943,
+    "seen": 1793267582.4276102,
+    "ast_hash": "3a6a0637a56e0d5a5f8987efbed2479e",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/marketPreview.ts": {
@@ -6966,9 +6966,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/marketPreviewContract.js": {
-    "mtime": 1793266944.2532623,
-    "seen": 1793267061.7414198,
-    "ast_hash": "6a0552b1b76d1228f71969caea9bb616",
+    "mtime": 1793267095.4895587,
+    "seen": 1793267582.504122,
+    "ast_hash": "1ed59455731fa0860228d2b61c770599",
     "semantic_hash": ""
   },
   "test/marketPreview.test.js": {
