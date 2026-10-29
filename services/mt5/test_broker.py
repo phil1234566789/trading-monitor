@@ -57,6 +57,16 @@ class BrokerTests(unittest.TestCase):
             with patch('broker.time.time',return_value=host),self.assertRaises(ValueError):
                 broker.fresh_tick('GBPUSD')
 
+    def test_quote_list_includes_broker_gold_but_not_unrelated_instruments(self):
+        m=api()
+        m.symbols_get.return_value=[NS(name='XAUUSD.gbe'),NS(name='BTCUSD.gbe')]
+        m.symbol_info.return_value.point=.01
+        m.symbol_info.return_value.digits=2
+        quotes=Broker(m,42,'Demo').quotes()
+        self.assertEqual([q['symbol'] for q in quotes],['XAUUSD.gbe'])
+        self.assertEqual(quotes[0]['minimum_volume'],.01)
+        m.order_send.assert_not_called()
+
     def test_refuses_account_switch_live_account_and_disabled_trading(self):
         for changes in [dict(login=43), dict(server='Other'), dict(trade_mode=2),
                         dict(trade_allowed=False), dict(trade_expert=False)]:
