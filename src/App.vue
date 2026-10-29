@@ -25,7 +25,8 @@ const snapshotView = computed(() => route.path === '/' && isTradeSetup2SnapshotV
   tradeSetup2RunId: route.query.run, selectedTradeSetup2Id: route.query.setup2,
 }));
 
-const { lastSuccessAt } = useStatusBar();
+const { lastSuccessAt, pageStatuses } = useStatusBar();
+const pageStatus=computed(()=>pageStatuses.get(route.path));
 const { activeLabels, isActive } = useHttpActivity();
 const now = ref(Date.now());
 
@@ -38,8 +39,9 @@ onMounted(() => {
 onUnmounted(() => clearInterval(timer));
 
 const isFresh = computed(() => lastSuccessAt.value != null && now.value - lastSuccessAt.value < FRESH_MS);
-const statusDotClass = computed(() => (snapshotView.value || statisticsView.value || lastSuccessAt.value == null ? "status-dot" : `status-dot ${isFresh.value ? "ok" : "dead"}`));
+const statusDotClass = computed(() => pageStatus.value ? `status-dot ${pageStatus.value.state}` : (snapshotView.value || statisticsView.value || lastSuccessAt.value == null ? "status-dot" : `status-dot ${isFresh.value ? "ok" : "dead"}`));
 const statusText = computed(() => {
+  if(pageStatus.value)return pageStatus.value.label;
   // Gespeicherte Entries pollen absichtlich nicht; eine Pause ist kein Verbindungsfehler.
   if (snapshotView.value) return "Gespeicherter Stand";
   if (statisticsView.value) return "Statistik";
@@ -50,7 +52,7 @@ const statusText = computed(() => {
 // scharf gemachten Klick aus dem Dashboard (Target/Bestätigung/… an einem bestimmten Trade).
 const activeHint = computed(() => chartHint.value ?? CHART_MODES.find((m) => m.id === chartMode.value)?.hint ?? null);
 const lastUpdateText = computed(() =>
-  statisticsView.value || lastSuccessAt.value == null ? "" : `Letztes Update: ${new Date(lastSuccessAt.value).toLocaleTimeString("de-DE")}`,
+  pageStatus.value ? (pageStatus.value.updatedAt ? `Brokerstand: ${new Date(pageStatus.value.updatedAt).toLocaleTimeString('de-DE',{timeZone:'Europe/Berlin'})}` : '') : statisticsView.value || lastSuccessAt.value == null ? "" : `Letztes Update: ${new Date(lastSuccessAt.value).toLocaleTimeString("de-DE")}`,
 );
 </script>
 

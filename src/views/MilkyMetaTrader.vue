@@ -1,5 +1,7 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
+import { useStatusBar } from '../composables/useStatusBar.js';
+import { mmtPollDelay, mmtStaleSeconds, mmtConnectionStatus } from '../milkyMetaTraderPolling.js';
 import { cssColor } from '../chartColors.js';
 import { fmtPrice } from '../format.js';
 import MilkyMetaTraderLivePosition from '../components/MilkyMetaTraderLivePosition.vue';
@@ -14,14 +16,18 @@ import { readMilkyMetaTraderKey, saveMilkyMetaTraderKey, forgetMilkyMetaTraderKe
 const token=ref(readMilkyMetaTraderKey()), unlocked=ref(false), accounts=ref([]), activeId=ref(null);
 const status=ref(null), busy=ref(false), error=ref(''), message=ref('');
 const form=ref({name:'',login:'',server:'BeyondIQCapital-Server',mode:'live',password:''});
-let timer=null;
+let timer=null, nextPoll=0, statusRequest=null, viewEpoch=0;
+const pollError=ref('');
+const { setPageStatus, clearPageStatus }=useStatusBar();
+const pollDelay=computed(()=>mmtPollDelay(status.value));
+const staleSeconds=computed(()=>mmtStaleSeconds(pollDelay.value));
 const now=ref(Date.now());
 const dataAge=computed(()=>snapshot.value&&!snapshot.value.worker_error?snapshotAgeSeconds(status.value?.bridge?.heartbeat_at,now.value):null);
 const unmatchedPositions=computed(()=>(snapshot.value?.positions??[]).filter(p=>!(status.value?.orders??[]).some(o=>findOrderPosition(o,snapshot.value)?.ticket===p.ticket)));
 const workerProblem=computed(()=>status.value?.bridge?.snapshot?.worker_error??status.value?.health?.incident);
 const deliveryLabels={pending:'wartet',claimed:'wird gesendet',accepted:'angenommen',failed:'fehlgeschlagen',uncertain:'Annahme unklar'};
 const active=computed(()=>accounts.value.find(a=>a.id===activeId.value));
-const api=(action,fields)=>createMilkyMetaTraderClient(import.meta.env.VITE_SUPABASE_URL,token.value)(action,fields);
+const api=(action,fields,options)=>createMilkyMetaTraderClient(import.meta.env.VITE_SUPABASE_URL,token.value)(action,fields,options);
 const time=value=>value ? new Date(value).toLocaleString('de-DE',{timeZone:'Europe/Berlin'}) : '—';
 const snapshot=computed(()=>{
   const value=status.value?.bridge?.snapshot;
@@ -33,11 +39,36 @@ const workingOrders=computed(()=>(status.value?.orders??[]).filter(order=>['sear
 async function refresh() {
   const data=await api('accounts');
   accounts.value=data.accounts; activeId.value=data.active_account_id;
+  // Ein bewusster Refresh muss auch nach einem bereits laufenden Poll einen neuen Stand lesen.
+  if(statusRequest)await statusRequest.catch(()=>{});
   await refreshStatus();
 }
-async function refreshStatus() {
-  status.value=activeId.value ? await api('status') : null;
+function refreshStatus(options={}) {
+  if(statusRequest)return statusRequest;
+  const accountId=activeId.value, epoch=viewEpoch;
+  if(!accountId){status.value=null;return Promise.resolve();}
+  statusRequest=(async()=>{
+    try {
+      const value=await api('status',{},options);
+      if(epoch===viewEpoch&&accountId===activeId.value){status.value=value;pollError.value='';}
+    } finally {statusRequest=null;nextPoll=Date.now()+pollDelay.value;}
+  })();
+  return statusRequest;
 }
+async function poll() {
+  if(!unlocked.value||busy.value||document.visibilityState!=='visible'||statusRequest)return;
+  const epoch=viewEpoch;
+  try {await refreshStatus({background:true});}
+  catch(e){if(epoch===viewEpoch)pollError.value=e.message;}
+}
+function visibilityChanged() {
+  now.value=Date.now();
+  if(document.visibilityState==='visible'){nextPoll=0;void poll();}
+}
+watchEffect(()=>setPageStatus('/milky-meta-trader',{
+  ...mmtConnectionStatus({unlocked:unlocked.value,active:active.value,status:status.value,snapshot:snapshot.value,age:dataAge.value,error:pollError.value,delay:pollDelay.value}),
+  updatedAt:snapshot.value?status.value?.bridge?.heartbeat_at:null,
+}));
 async function run(action) {
   if(busy.value) return;
   busy.value=true; error.value=''; message.value='';
@@ -48,19 +79,20 @@ async function unlock() {
     await refresh(); unlocked.value=true;
     if(!saveMilkyMetaTraderKey(token.value)) message.value='Browser-Speicherung nicht verfügbar. Der Schlüssel gilt nur für diese Ansicht.';
     clearInterval(timer);
-    timer=setInterval(()=>{now.value=Date.now();if(!busy.value&&document.visibilityState==='visible') run(refreshStatus);},1000);
+    nextPoll=Date.now()+pollDelay.value;
+    timer=setInterval(()=>{now.value=Date.now();if(now.value>=nextPoll)void poll();},1000);
   });
 }
 function clearView() {
-  clearInterval(timer); timer=null; token.value=''; unlocked.value=false;
+  viewEpoch++;clearInterval(timer); timer=null;pollError.value=''; token.value=''; unlocked.value=false;
   form.value.password=''; accounts.value=[]; status.value=null; activeId.value=null;
 }
 function lock() {
   if(!forgetMilkyMetaTraderKey()) {error.value='Der gespeicherte Schlüssel konnte nicht entfernt werden. Bitte die Website-Daten im Browser löschen.';return;}
   clearView();
 }
-onMounted(()=>{if(token.value) unlock();});
-onUnmounted(clearView);
+onMounted(()=>{document.addEventListener('visibilitychange',visibilityChanged);if(token.value) unlock();});
+onUnmounted(()=>{clearView();document.removeEventListener('visibilitychange',visibilityChanged);clearPageStatus('/milky-meta-trader');});
 async function save() {
   const fields={...form.value,login:Number(form.value.login)};
   // Ein fehlgeschlagener Request darf das Passwort nicht in einer Fehlermeldung oder einem Store hinterlassen.
@@ -85,6 +117,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
       <ActionButton v-if="unlocked" @click="lock">Sperren &amp; Schlüssel vergessen</ActionButton></header>
     <p class="mmt-notice">Testbetrieb: kleinste Broker-Lotgröße, höchstens 0,01 Lot. Kein pauschales Geldlimit. Strategie- und Challenge-Regeln folgen. Slippage und Gebühren können den tatsächlichen Verlust erhöhen.</p>
     <p v-if="error" role="alert" class="mmt-error">{{error}}</p>
+    <p v-if="pollError" role="alert" class="mmt-error">Statusabgleich fehlgeschlagen: {{pollError}}. Letzten Brokerstand und Verbindung prüfen.</p>
     <p v-if="message" role="status">{{message}}</p>
     <form v-if="!unlocked" class="mmt-panel" @submit.prevent="unlock">
       <h2>Privaten Bereich entsperren</h2>
@@ -108,14 +141,14 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <p v-if="status?.health?.incident">Fehleralarm: <span v-for="item in status.health.deliveries" :key="item.channel">{{item.channel==='pushover'?'Pushover':'Telegram'}} {{deliveryLabels[item.status]??item.status}}. </span></p>
         <p v-if="status?.health&&!status.health.checked_at" role="alert">Unabhängige Alarmprüfung noch nicht bestätigt.</p>
         <p v-else-if="status?.health?.checked_at&&Date.now()-Date.parse(status.health.checked_at)>150000" role="alert" class="mmt-error">Unabhängige Alarmprüfung ist veraltet. Letzte Prüfung: {{time(status.health.checked_at)}} (Berlin).</p>
-      <p v-if="dataAge==null||dataAge>5" role="status" class="mmt-error">Brokerdaten {{dataAge==null?'noch nicht verfügbar':'seit '+dataAge+' Sekunden nicht aktualisiert'}}. Angezeigte Werte sind kein aktueller Stand.</p>
+      <p v-if="dataAge==null||dataAge>staleSeconds" role="status" class="mmt-error">Brokerdaten {{dataAge==null?'noch nicht verfügbar':'seit '+dataAge+' Sekunden nicht aktualisiert'}}. Angezeigte Werte sind kein aktueller Stand.</p>
       <section v-if="unmatchedPositions.length" class="mmt-panel"><h2>Weitere offene Brokerpositionen</h2>
         <div v-for="position in unmatchedPositions" :key="position.ticket"><h3>{{position.symbol}} · {{position.type===0?'Long':'Short'}}</h3><MilkyMetaTraderLivePosition :position="position" :currency="snapshot?.currency" :age="dataAge" :digits="snapshot?.quotes?.find(q=>q.symbol===position.symbol)?.digits" /></div>
       </section>
       <div class="mmt-workspace">
         <section class="mmt-panel mmt-orders" aria-labelledby="mmt-orders-title">
           <div class="mmt-section-heading"><div><span class="mmt-eyebrow">VON DER IDEE ZUM TRADE</span><h2 id="mmt-orders-title">Entry-Aufträge</h2></div><ActionButton :disabled="busy" @click="run(refresh)">{{busy?'Lädt …':'Aktualisieren'}}</ActionButton></div>
-          <p class="mmt-muted">Suche, Ausführung und Brokerergebnis auf einen Blick. Automatischer Abgleich etwa jede Sekunde bei geöffneter Seite.</p>
+          <p class="mmt-muted">Suche, Ausführung und Brokerergebnis auf einen Blick. Hintergrundabgleich: {{pollDelay===1000?'etwa jede Sekunde':'alle 8 Sekunden im Leerlauf'}}. In versteckten Tabs pausiert.</p>
           <div v-if="!status?.orders?.length" class="mmt-empty"><strong>Noch kein Entry-Auftrag</strong><p>Wähle Symbol, Richtung und SL/TP im Suchformular. Nach deiner Bestätigung wartet MMT auf die passende M1-Kerze.</p></div>
           <ul v-else class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in status.orders" :key="order.id" :order="order" :busy="busy" :snapshot="snapshot" :age="dataAge" @cancel="cancel" /></ul>
         </section>
