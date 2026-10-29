@@ -17,3 +17,11 @@ describe('private MT5 control client',()=>{
     await expect(createMilkyMetaTraderClient('https://project.supabase.co','key',fetch)('accounts')).rejects.toThrow('Anfrage fehlgeschlagen');
   });
 });
+
+it('distinguishes a rejected preview from an ambiguous storage failure',async()=>{
+  for(const [code,definitive] of [['preview_expired',true],['request_failed',false]]) {
+    const fetch=vi.fn().mockResolvedValue({ok:false,status:400,json:async()=>({code})});
+    try {await createMilkyMetaTraderClient('https://project.supabase.co','key',fetch)('confirm');throw new Error('expected rejection');}
+    catch(error) {expect(error.definitiveRejection).toBe(definitive);}
+  }
+});

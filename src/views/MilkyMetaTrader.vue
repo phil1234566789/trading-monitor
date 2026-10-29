@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import ActionButton from '../components/ui/ActionButton.vue';
+import MilkyMetaTraderOrder from '../components/MilkyMetaTraderOrder.vue';
 import { createMilkyMetaTraderClient } from '../milkyMetaTraderClient.js';
 import { readMilkyMetaTraderKey, saveMilkyMetaTraderKey, forgetMilkyMetaTraderKey } from '../milkyMetaTraderKey.js';
 
@@ -105,6 +106,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         </template>
         <ActionButton :disabled="busy" @click="run(refresh)">Aktualisieren</ActionButton>
       </section>
+      <MilkyMetaTraderOrder :api="api" :status="status" :account="active" @submitted="run(refresh)" />
       <section class="mmt-panel" aria-labelledby="mmt-orders-title"><h2 id="mmt-orders-title">Entry-Aufträge</h2>
         <p>Suchaufträge erteilst du im Chat. Am gültigen M1-Trigger wird ohne erneute Rückfrage ausgeführt.</p>
         <p v-if="!status?.orders?.length">Noch keine Aufträge.</p>

@@ -42,3 +42,14 @@ describe('MT5 execution boundary', () => {
       {trade_allowed:'true'},{mode:'live'}]) expect(()=>validateWorkerSnapshot({...snapshot,...patch},config)).toThrow();
   });
 });
+
+// Eine Marktorder muss an die konkrete Vorschau gebunden bleiben.
+describe('confirmed market intent',()=>{
+  it('requires bounded lifetime, price and volume',()=>{
+    const market=intent({trigger:'market_confirmed',reference_price:1.3,volume:.01,expires_sec:now+30});
+    expect(validateExecutionIntent(market,config,now)).toEqual(market);
+    for(const patch of [{volume:.02},{reference_price:0},{expires_sec:now+31}]) {
+      expect(()=>validateExecutionIntent({...market,...patch},config,now)).toThrow();
+    }
+  });
+});
