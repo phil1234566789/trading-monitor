@@ -7038,9 +7038,9 @@
     "semantic_hash": ""
   },
   "test/milkyMetaTraderOrderCard.test.js": {
-    "mtime": 1793278260.9008608,
-    "seen": 1793280671.6810064,
-    "ast_hash": "e16b8e882a5e13079ffa02011ffef425",
+    "mtime": 1793285062.5762777,
+    "seen": 1793285130.5867953,
+    "ast_hash": "1e21b1d109947e58745626f3231e9234",
     "semantic_hash": ""
   },
   "src/components/MilkyMetaTraderLivePosition.vue": {

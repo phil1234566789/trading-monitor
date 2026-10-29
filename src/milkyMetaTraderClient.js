@@ -1,3 +1,4 @@
+import { HTTP_BACKGROUND } from './composables/useHttpActivity.js';
 const messages={
   bridge_offline:'MT5-Worker ist offline.',
   bridge_not_ready:'Worker ist nicht handelsbereit oder es bestehen bereits Positionen/Aufträge.',
@@ -10,8 +11,9 @@ const messages={
 };
 export function createMilkyMetaTraderClient(baseUrl, token, fetchImpl = fetch) {
   if (!baseUrl || !token) throw new Error('Milky Meta Trader ist noch nicht entsperrt.');
-  return async (action, fields = {}) => {
+  return async (action, fields = {}, { background = false } = {}) => {
     const response = await fetchImpl(`${baseUrl}/functions/v1/mt5-control`, {
+      [HTTP_BACKGROUND]:background,
       method:'POST', cache:'no-store', redirect:'error',
       headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
       body:JSON.stringify({...fields,action}),

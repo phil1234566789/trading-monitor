@@ -9,7 +9,9 @@ import { computed, reactive } from "vue";
 // supabaseClient.js: kein custom `fetch` an createClient übergeben) — ein Patch-Punkt deckt
 // also wirklich ALLES ab, auch zukünftige Fetch-Aufrufe an neuen Stellen, ohne dass die dort
 // extra angebunden werden müssten.
-const counts = reactive(new Map()); // Label -> Anzahl gerade laufender Aufrufe mit diesem Label
+export const HTTP_BACKGROUND = Symbol('httpBackground');
+const backgroundCounts = reactive(new Map());
+const foregroundCounts = reactive(new Map()); // Label -> Anzahl gerade laufender Aufrufe mit diesem Label
 
 // Fehler-Anzeige (Bug-Report Philip 2026-07-19: cTrader-Request blieb beim M5-TF-Wechsel
 // minutenlang hängen, ohne dass im UI irgendwas davon zu sehen war — "Fehlermeldungen für alle
@@ -60,7 +62,8 @@ async function extractErrorMessage(res) {
 }
 
 // Auch lokale Berechnungen verwenden denselben Indikator wie HTTP; Ende ist absichtlich idempotent.
-export function beginActivity(label) {
+export function beginActivity(label, { background = false } = {}) {
+  const counts = background ? backgroundCounts : foregroundCounts;
   counts.set(label, (counts.get(label) ?? 0) + 1);
   let finished = false;
   return () => {
@@ -80,9 +83,13 @@ export function installHttpActivityTracking() {
   window.fetch = async (...args) => {
     const url = args[0] instanceof Request ? args[0].url : args[0];
     const label = labelFor(url);
-    const finish = beginActivity(label);
+    // Der globale Watcher liest regelmäßig nur Gesundheitsdaten; auch er ist Hintergrundarbeit.
+    const watcherPoll=String(url).includes('/functions/v1/setup2-notification-watch')
+      &&(args[1]?.method??(args[0] instanceof Request?args[0].method:'GET')).toUpperCase()==='GET';
+    const { [HTTP_BACKGROUND]: background = watcherPoll, ...init } = args[1] ?? {};
+    const finish = beginActivity(label, { background });
     try {
-      const res = await originalFetch(...args);
+      const res = await originalFetch(args[0], init);
       if (!res.ok) pushError(label, await extractErrorMessage(res), res.status);
       return res;
     } catch (err) {
@@ -132,7 +139,8 @@ function labelFor(rawUrl) {
 }
 
 export function useHttpActivity() {
-  const activeLabels = computed(() => [...counts.keys()].sort());
-  const isActive = computed(() => counts.size > 0);
-  return { activeLabels, isActive, errors };
+  const activeLabels = computed(() => [...foregroundCounts.keys()].sort());
+  const isActive = computed(() => foregroundCounts.size > 0);
+  const backgroundLabels = computed(() => [...backgroundCounts.keys()].sort());
+  return { activeLabels, isActive, backgroundLabels, errors };
 }

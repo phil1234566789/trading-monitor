@@ -1,3 +1,4 @@
+import { HTTP_BACKGROUND } from '../src/composables/useHttpActivity.js';
 import { describe, it, expect, vi } from 'vitest';
 import { createMilkyMetaTraderClient } from '../src/milkyMetaTraderClient.js';
 
@@ -24,4 +25,11 @@ it('distinguishes a rejected preview from an ambiguous storage failure',async()=
     try {await createMilkyMetaTraderClient('https://project.supabase.co','key',fetch)('confirm');throw new Error('expected rejection');}
     catch(error) {expect(error.definitiveRejection).toBe(definitive);}
   }
+});
+
+it('marks status polls as background without putting metadata in the request body',async()=>{
+ const fetch=vi.fn().mockResolvedValue({ok:true,json:async()=>({})});
+ await createMilkyMetaTraderClient('https://project.supabase.co','key',fetch)('status',{}, {background:true});
+ expect(fetch.mock.calls[0][1][HTTP_BACKGROUND]).toBe(true);
+ expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({action:'status'});
 });
