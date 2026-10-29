@@ -35,7 +35,7 @@ class Broker:
     def quotes(self):
         result=[]
         for symbol in self.api.symbols_get() or ():
-            if not any(symbol.name == pair or symbol.name.startswith(pair+'.') for pair in ('EURUSD','GBPUSD')):
+            if not any(symbol.name == pair or symbol.name.startswith(pair+'.') for pair in ('EURUSD','GBPUSD','XAUUSD')):
                 continue
             if len(result)>=10:
                 break
