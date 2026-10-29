@@ -69,7 +69,7 @@ async function confirm() {
     <p>Nur das ausgewählte Testkonto. Die Mindestlotgröße kommt vom Broker. Vorschau und Bestätigung lösen keine weiteren Konten aus.</p>
     <p v-if="!ready">Der lokale MT5-Worker muss verbunden sein, bevor ein aktueller Brokerkurs und eine Vorschau verfügbar sind.</p>
     <p v-if="status?.online&&!status?.bridge?.snapshot?.trade_allowed">MT5 meldet Handel gesperrt. Bitte in MT5 Algo Trading einschalten.</p>
-    <p v-if="status?.online&&!status?.bridge?.snapshot?.execution_ready">Worker im Lesebetrieb: Vorschau verfuegbar, Orderversand gesperrt.</p>
+    <p v-if="status?.online&&!status?.bridge?.snapshot?.execution_ready">Worker im Lesebetrieb: Vorschau verfügbar, Orderversand gesperrt.</p>
     <p v-if="!liveEnabled">Live-Ausführung ist serverseitig noch gesperrt.</p>
     <p v-if="error" role="alert">{{error}}</p>
     <p v-if="receipt" role="status">{{receipt}}</p>
@@ -82,9 +82,9 @@ async function confirm() {
       <ActionButton type="submit" :disabled="busy||pendingId||!ready||!account">Aktuelle Ordervorschau</ActionButton>
     </form>
     <div v-if="preview" role="region" aria-label="Verbindliche Ordervorschau">
-      <p><strong>{{preview.account_name}} Â· {{preview.intent.symbol}} Â· {{preview.intent.direction==='short'?'Short':'Long'}}</strong><br>
-        {{preview.intent.volume}} Lot Â· Marktpreis circa {{preview.intent.reference_price}}<br>
-        SL {{preview.intent.stop_loss}} Â· TP {{preview.intent.take_profit}}<br>
+      <p><strong>{{preview.account_name}} · {{preview.intent.symbol}} · {{preview.intent.direction==='short'?'Short':'Long'}}</strong><br>
+        {{preview.intent.volume}} Lot · Marktpreis circa {{preview.intent.reference_price}}<br>
+        SL {{preview.intent.stop_loss}} · TP {{preview.intent.take_profit}}<br>
         Berechneter Verlust bis SL circa {{preview.risk.toFixed(2)}} {{preview.currency}} vor Gebühren und Slippage.</p>
       <p>Der aktuelle Brokerkurs darf bei der Vorprüfung höchstens 5 Punkte von der Vorschau abweichen. Der endgültige Ausführungspreis kann durch Slippage abweichen. Der Worker prüft Konto, Risiko und SL/TP unmittelbar vor dem Versand erneut. Keine Ausführung bei veralteter Vorschau.</p>
       <p v-if="expired">Vorschau abgelaufen. Bitte neu berechnen.</p>
