@@ -1,3 +1,4 @@
+import { readHistoryPage } from '../trading-monitor-mcp/mt5History.ts';
 import { marketPreviewAction } from '../trading-monitor-mcp/marketPreview.ts';
 import { manageMt5Accounts } from '../trading-monitor-mcp/mt5Credentials.ts';
 import { cancelExecutionOrder, getExecutionStatus } from '../trading-monitor-mcp/mt5Execution.ts';
@@ -22,6 +23,7 @@ Deno.serve(async req => {
     const body=JSON.parse(text);
     let result;
     if(['preview','confirm','search_preview','search_confirm'].includes(body.action)) result=await marketPreviewAction(body);
+    else if(body.action==='history_page') result=await readHistoryPage(body);
     else if(body.action==='status') result=await getExecutionStatus(body.id);
     else if(body.action==='cancel') result=await cancelExecutionOrder(body.id);
     else result=await manageMt5Accounts(body);

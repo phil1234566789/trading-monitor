@@ -4,6 +4,7 @@ import { useStatusBar } from '../composables/useStatusBar.js';
 import { mmtPollDelay, mmtStaleSeconds, mmtConnectionStatus } from '../milkyMetaTraderPolling.js';
 import { cssColor } from '../chartColors.js';
 import { fmtPrice } from '../format.js';
+import MilkyMetaTraderStatistics from '../components/MilkyMetaTraderStatistics.vue';
 import MilkyMetaTraderLivePosition from '../components/MilkyMetaTraderLivePosition.vue';
 import { findOrderPosition, snapshotAgeSeconds } from '../milkyMetaTraderMonitoring.js';
 import MilkyMetaTraderOrderCard from '../components/MilkyMetaTraderOrderCard.vue';
@@ -34,6 +35,8 @@ const snapshot=computed(()=>{
   return value?.account_login===Number(active.value?.login)&&value?.account_server===active.value?.server?value:null;
 });
 const ready=computed(()=>status.value?.online&&!workerProblem.value&&snapshot.value?.execution_ready&&snapshot.value?.trade_allowed&&(active.value?.mode==='demo'||status.value?.server_live_allowed));
+const currentOrders=computed(()=>(status.value?.orders??[]).filter(order=>['searching','sending','unknown'].includes(order.status)||(order.status==='executed'&&order.result?.position_lifecycle?.state!=='closed')));
+const previousOrders=computed(()=>(status.value?.orders??[]).filter(order=>!currentOrders.value.includes(order)));
 const workingOrders=computed(()=>(status.value?.orders??[]).filter(order=>['searching','sending','unknown'].includes(order.status)).length);
 
 async function refresh() {
@@ -146,12 +149,16 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <div v-for="position in unmatchedPositions" :key="position.ticket"><h3>{{position.symbol}} · {{position.type===0?'Long':'Short'}}</h3><MilkyMetaTraderLivePosition :position="position" :currency="snapshot?.currency" :age="dataAge" :digits="snapshot?.quotes?.find(q=>q.symbol===position.symbol)?.digits" /></div>
       </section>
       <div class="mmt-workspace">
-        <section class="mmt-panel mmt-orders" aria-labelledby="mmt-orders-title">
-          <div class="mmt-section-heading"><div><h2 id="mmt-orders-title">Entry-Aufträge</h2></div><ActionButton :disabled="busy" @click="run(refresh)">{{busy?'Lädt …':'Aktualisieren'}}</ActionButton></div>
-          <p class="mmt-muted">Abgleich: {{pollDelay===1000?'etwa jede Sekunde':'alle 8 Sekunden im Leerlauf'}}. In versteckten Tabs pausiert.</p>
-          <div v-if="!status?.orders?.length" class="mmt-empty"><strong>Noch kein Entry-Auftrag</strong><p>Wähle Symbol, Richtung und SL/TP im Suchformular. Nach deiner Bestätigung wartet MMT auf die passende M1-Kerze.</p></div>
-          <ul v-else class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in status.orders" :key="order.id" :order="order" :busy="busy" :snapshot="snapshot" :age="dataAge" @cancel="cancel" /></ul>
-        </section>
+        <div class="mmt-main-column">
+          <section v-if="currentOrders.length" class="mmt-panel mmt-orders" aria-labelledby="mmt-orders-title">
+            <div class="mmt-section-heading"><h2 id="mmt-orders-title">Aktuelle Entry-Aufträge</h2><ActionButton :disabled="busy" @click="run(refresh)">Aktualisieren</ActionButton></div>
+            <p class="mmt-muted">Abgleich {{pollDelay===1000?'etwa jede Sekunde':'alle 8 Sekunden'}} · kein erneuter Auftrag durch Aktualisieren.</p>
+            <ul class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in currentOrders" :key="order.id" :order="order" :busy="busy" :snapshot="snapshot" :age="dataAge" @cancel="cancel" /></ul>
+          </section>
+          <p v-else class="mmt-muted">Keine laufende Entry-Suche.</p>
+          <MilkyMetaTraderStatistics :api="api" :accounts="accounts" />
+          <details v-if="previousOrders.length" class="mmt-panel mmt-technical-history"><summary>Technischer Auftragsverlauf · {{previousOrders.length}} letzte erledigte Aufträge</summary><p>Suchaufträge sind keine vollständige Brokerhistorie und zählen nicht als Statistikdaten.</p><ul class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in previousOrders" :key="order.id" :order="order" :busy="busy" /></ul></details>
+        </div>
         <MilkyMetaTraderEntrySearch :api="api" :status="status" :account="active" @submitted="run(refresh)" />
       </div>
       <div class="mmt-settings"><h2>Konten &amp; Einstellungen</h2>
@@ -161,7 +168,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <ul class="mmt-accounts"><li v-for="account in accounts" :key="account.id">
           <div><strong>{{account.name}}</strong><br><small>{{account.login}} · {{account.server}} · MT5 {{account.mode==='demo'?'Demo':'Real'}}</small></div>
           <span v-if="account.id===activeId" class="mmt-selected">Ausgewähltes Testkonto</span>
-          <ActionButton v-else :disabled="busy" @click="select(account.id)">Als Testkonto wählen</ActionButton>
+          <ActionButton v-else :disabled="busy||account.archived" @click="select(account.id)">Als Testkonto wählen</ActionButton>
         </li></ul>
         <ActionButton v-if="activeId" :disabled="busy" @click="select(null)">Testkonto abwählen</ActionButton>
       </details>
