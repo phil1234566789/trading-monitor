@@ -113,9 +113,9 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
 
 <template>
   <main class="mmt-page" :style="{'--mmt-positive':cssColor('candleUp'),'--mmt-negative':cssColor('candleDown')}">
-    <header class="mmt-heading"><div><span class="mmt-eyebrow">DEIN TRADING-DESK</span><h1>Milky Meta Trader <small>MMT</small></h1><p>Du bestimmst die Richtung. MMT wartet auf deinen Entry.</p></div>
+    <header class="mmt-heading"><div><h1>Milky Meta Trader <small>MMT</small></h1></div>
       <ActionButton v-if="unlocked" @click="lock">Sperren &amp; Schlüssel vergessen</ActionButton></header>
-    <p class="mmt-notice">Testbetrieb: kleinste Broker-Lotgröße, höchstens 0,01 Lot. Kein pauschales Geldlimit. Strategie- und Challenge-Regeln folgen. Slippage und Gebühren können den tatsächlichen Verlust erhöhen.</p>
+    <details class="mmt-notice"><summary>Testbetrieb · Mindestlot, max. 0,01 Lot · Strategie-/Challenge-Regeln folgen</summary><p>Kein pauschales Geldlimit. Slippage und Gebühren können den tatsächlichen Verlust erhöhen.</p></details>
     <p v-if="error" role="alert" class="mmt-error">{{error}}</p>
     <p v-if="pollError" role="alert" class="mmt-error">Statusabgleich fehlgeschlagen: {{pollError}}. Letzten Brokerstand und Verbindung prüfen.</p>
     <p v-if="message" role="status">{{message}}</p>
@@ -128,7 +128,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
     </form>
     <template v-else>
       <section class="mmt-account-bar" aria-label="Aktives Testkonto">
-        <div><span class="mmt-eyebrow">AKTIVES TESTKONTO</span><h2>{{active?.name??'Kein Konto ausgewählt'}}</h2><span class="mmt-muted" v-if="active">{{active.login}} · {{active.server}} · {{active.mode==='demo'?'Demo':'Real / Challenge'}}</span></div>
+        <div><h2>{{active?.name??'Kein Konto ausgewählt'}}</h2><span class="mmt-muted" v-if="active">{{active.login}} · {{active.server}} · {{active.mode==='demo'?'Demo':'Real / Challenge'}}</span></div>
         <span class="mmt-status" :data-ready="Boolean(ready)">{{ready?'Bereit für Entry-Suche':status?.online?'Ausführung nicht bereit':'Worker offline'}}</span>
       </section>
       <dl class="mmt-metrics" v-if="snapshot">
@@ -147,8 +147,8 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
       </section>
       <div class="mmt-workspace">
         <section class="mmt-panel mmt-orders" aria-labelledby="mmt-orders-title">
-          <div class="mmt-section-heading"><div><span class="mmt-eyebrow">VON DER IDEE ZUM TRADE</span><h2 id="mmt-orders-title">Entry-Aufträge</h2></div><ActionButton :disabled="busy" @click="run(refresh)">{{busy?'Lädt …':'Aktualisieren'}}</ActionButton></div>
-          <p class="mmt-muted">Suche, Ausführung und Brokerergebnis auf einen Blick. Hintergrundabgleich: {{pollDelay===1000?'etwa jede Sekunde':'alle 8 Sekunden im Leerlauf'}}. In versteckten Tabs pausiert.</p>
+          <div class="mmt-section-heading"><div><h2 id="mmt-orders-title">Entry-Aufträge</h2></div><ActionButton :disabled="busy" @click="run(refresh)">{{busy?'Lädt …':'Aktualisieren'}}</ActionButton></div>
+          <p class="mmt-muted">Abgleich: {{pollDelay===1000?'etwa jede Sekunde':'alle 8 Sekunden im Leerlauf'}}. In versteckten Tabs pausiert.</p>
           <div v-if="!status?.orders?.length" class="mmt-empty"><strong>Noch kein Entry-Auftrag</strong><p>Wähle Symbol, Richtung und SL/TP im Suchformular. Nach deiner Bestätigung wartet MMT auf die passende M1-Kerze.</p></div>
           <ul v-else class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in status.orders" :key="order.id" :order="order" :busy="busy" :snapshot="snapshot" :age="dataAge" @cancel="cancel" /></ul>
         </section>

@@ -66,8 +66,8 @@ async function confirm() {
 
 <template>
   <section class="mmt-panel mmt-ticket" aria-labelledby="mmt-entry-search-title">
-    <span class="mmt-eyebrow">NEUER SUCHAUFTRAG</span><h2 id="mmt-entry-search-title">Deinen Entry finden</h2>
-    <p>Testregel: Short nach einer neu geschlossenen roten M1-Kerze, Long nach einer grünen. Dojis zählen nicht. Nur das ausgewählte Konto, kleinste Broker-Lotgröße.</p>
+    <h2 id="mmt-entry-search-title">Entry suchen</h2>
+    <details class="mmt-help"><summary>M1-Entry-Regel</summary><p>Short nach einer neu geschlossenen roten M1-Kerze, Long nach einer grünen. Dojis zählen nicht. Nur das ausgewählte Konto, kleinste Broker-Lotgröße.</p></details>
     <p v-if="!ready">Der lokale MT5-Worker muss verbunden sein, bevor ein aktueller Brokerkurs und eine Vorschau verfügbar sind.</p>
     <p v-if="status?.online&&!status?.bridge?.snapshot?.trade_allowed">MT5 meldet Handel gesperrt. Bitte in MT5 Algo Trading einschalten.</p>
     <p v-if="status?.online&&!status?.bridge?.snapshot?.execution_ready">Worker im Lesebetrieb: Vorschau verfügbar, Orderversand gesperrt.</p>

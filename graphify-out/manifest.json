@@ -84,9 +84,9 @@
     "semantic_hash": ""
   },
   "src/App.vue": {
-    "mtime": 1793263361.599869,
-    "seen": 1793263458.1192353,
-    "ast_hash": "5ab5c882f0e397513c4059e8f52119fa",
+    "mtime": 1793286717.795676,
+    "seen": 1793286891.9788313,
+    "ast_hash": "15c13dbe2c0ad639446c0acc830d1b28",
     "semantic_hash": ""
   },
   "src/ageTier.ts": {
@@ -264,9 +264,9 @@
     "semantic_hash": ""
   },
   "src/composables/useHttpActivity.js": {
-    "mtime": 1793262125.2111037,
-    "seen": 1793263458.1192353,
-    "ast_hash": "e88beccaf9d8e8d40f89ff601ec32106",
+    "mtime": 1793286793.291613,
+    "seen": 1793286891.9995778,
+    "ast_hash": "2adf8ad72d0bac379510b1eb8f9dc247",
     "semantic_hash": ""
   },
   "src/composables/useLocalStorageRef.js": {
@@ -336,9 +336,9 @@
     "semantic_hash": ""
   },
   "src/composables/useStatusBar.js": {
-    "mtime": 1793262125.225111,
-    "seen": 1793263458.120235,
-    "ast_hash": "8ebed60d77d8eec91da02fa393b240ab",
+    "mtime": 1793286841.2338586,
+    "seen": 1793286892.006088,
+    "ast_hash": "2d35db48380b85cec3d22b5f82319f01",
     "semantic_hash": ""
   },
   "src/composables/useTabScopedRef.js": {
@@ -6852,15 +6852,15 @@
     "semantic_hash": ""
   },
   "src/milkyMetaTraderClient.js": {
-    "mtime": 1793267544.4854968,
-    "seen": 1793267582.4586139,
-    "ast_hash": "51d0b332f460d60e83c1a6e1d0324388",
+    "mtime": 1793286717.7936761,
+    "seen": 1793286892.0252388,
+    "ast_hash": "447b487baf00537388e7676cb80521dc",
     "semantic_hash": ""
   },
   "src/views/MilkyMetaTrader.vue": {
-    "mtime": 1793285044.8944745,
-    "seen": 1793285061.7191298,
-    "ast_hash": "e9cec6ee6ecffeabfc525e90180101df",
+    "mtime": 1793286841.2348566,
+    "seen": 1793286892.0648978,
+    "ast_hash": "0f27513f0d39a0bd70f69111ec34e22f",
     "semantic_hash": ""
   },
   "supabase/functions/mt5-control/index.ts": {
@@ -6912,9 +6912,9 @@
     "semantic_hash": ""
   },
   "test/milkyMetaTraderClient.test.js": {
-    "mtime": 1793266944.257262,
-    "seen": 1793267061.7914197,
-    "ast_hash": "d27260c2a50ebec3ee27cd4159faa978",
+    "mtime": 1793286793.2936132,
+    "seen": 1793286892.1468105,
+    "ast_hash": "eb627f3aca31d9142b6c31cb2c3c08d8",
     "semantic_hash": ""
   },
   "test/mt5Database.integration.mjs": {
@@ -7059,6 +7059,24 @@
     "mtime": 1793285044.895985,
     "seen": 1793285061.8207214,
     "ast_hash": "0928586338465da06cb29661269778c2",
+    "semantic_hash": ""
+  },
+  "src/milkyMetaTraderPolling.js": {
+    "mtime": 1793286717.7946758,
+    "seen": 1793286892.0262394,
+    "ast_hash": "a4f14c6f4df6744123f715a0d3b3142f",
+    "semantic_hash": ""
+  },
+  "test/httpBackgroundActivity.test.js": {
+    "mtime": 1793286793.294613,
+    "seen": 1793286892.133298,
+    "ast_hash": "ab948833efc53d6270932c5d501436e0",
+    "semantic_hash": ""
+  },
+  "test/milkyMetaTraderPolling.test.js": {
+    "mtime": 1793286687.1656373,
+    "seen": 1793286892.1488414,
+    "ast_hash": "0e872154f87bc670f8b9142948905aa9",
     "semantic_hash": ""
   }
 }
