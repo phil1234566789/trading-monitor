@@ -189,3 +189,18 @@ eine exakt passende Position ab. Dealticket und Positionsticket bleiben verschie
 Felder; erst ein belegter positiver Fill-Preis wird als ausgefuehrter Entry angezeigt.
 Ein noch nicht belegter Fill bleibt offen/unknown und sperrt weitere Sendungen. Fehler
 bei der Resultatuebertragung duerfen die Heartbeats nicht mehr unterdruecken.
+
+## Positionsstatus bei Reload
+
+Der Worker gleicht ausgefuehrte Auftraege weiter rein lesend mit MT5 ab. Die Auftragsliste
+zeigt nach dem Reload den zuletzt synchronisierten Brokerstatus: offen, Exit-Abgleich
+oder geschlossen mit TP/SL-Grund, echtem Exitpreis und Nettoergebnis. Ein verschwundener
+Positionsdatensatz allein beweist keinen TP. Fuer einen Schluss muessen zugeordnete
+Eroeffnungsdeals und vollstaendig ausgeglichenes Exitvolumen vorliegen. Die Statuspflege
+sendet keine Brokerorder und veraendert keine Stops oder Ziele.
+
+Lifecycle-Daten liegen getrennt unter `result.position_lifecycle`; die urspruengliche
+Versandbestaetigung bleibt auch nach deren Ergaenzung idempotent. Closed ist endgueltig.
+Der Worker liest offene historische Auftraege in 20er-Seiten pro ausgewaehltem Konto,
+setzt den Cursor anhand der tatsaechlich gelesenen letzten ID fort und erst bei leerer
+Seite zurueck. Dadurch werden auch aeltere nicht abgeschlossene Abgleiche nachgefuehrt.

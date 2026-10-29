@@ -93,6 +93,16 @@ class Engine:
                 self.report_fault(error)
         return not failed
 
+    def watch_positions(self,rows):
+        okay=True
+        for row in rows:
+            try:
+                state=self.broker.position_lifecycle(row['intent'],row['result'])
+                self.cloud.call('position_update',dict(id=row['id'],lifecycle=state))
+            except Exception as error:
+                okay=False;self.report_fault(error)
+        return okay
+
     def consider(self, intent, now):
         if not self.execute:
             return
@@ -130,13 +140,19 @@ class Engine:
             self.journal.finish(intent['id'], result)
 
     def run(self):
-        orders, next_poll = [], 0.0
+        orders, next_poll, watch_cursor = [], 0.0, None
         while True:
             try:
+                checked_cycle=False
                 flush_ok=self.flush() if self.execute else True
                 if time.monotonic() >= next_poll:
                     snapshot=self.snapshot()
-                    response = self.cloud.call('poll', dict(snapshot=snapshot))
+                    response = self.cloud.call('poll', dict(snapshot=snapshot,watch_cursor=watch_cursor))
+                    checked_cycle=True
+                    watched=response.get('watch_orders',[])
+                    if not isinstance(watched,list) or len(watched)>20:raise ValueError('invalid_position_watch')
+                    if not self.watch_positions(watched):flush_ok=False
+                    watch_cursor=response.get('watch_cursor')
                     orders = response.get('orders')
                     if not isinstance(orders, list) or len(orders) > 100:
                         raise ValueError('invalid_order_list')
@@ -149,10 +165,10 @@ class Engine:
                 return
             except Exception as error:
                 self.report_fault(error)
-                orders, next_poll = [], 0.0
+                orders, next_poll, watch_cursor = [], 0.0, None
                 time.sleep(2)
             else:
-                if flush_ok:self.last_fault=None
+                if flush_ok and checked_cycle:self.last_fault=None
             time.sleep(.2)
 
 
