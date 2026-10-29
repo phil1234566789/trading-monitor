@@ -3,6 +3,10 @@ import time
 
 from core import positive, validate_intent, volume_for_risk
 
+# Symbol-Bitflags aus MQL5 fehlen im Python-SDK; ORDER_FILLING_* sind andere Werte.
+SYMBOL_FILLING_FOK = 1
+SYMBOL_FILLING_IOC = 2
+
 
 class Broker:
     def __init__(self, api, login, server, allow_live=False, server_time_offset_seconds=0):
@@ -124,9 +128,9 @@ class Broker:
             if intent['volume']!=info.volume_min or intent['volume']>lots:
                 raise ValueError('minimum_volume_exceeds_budget')
             lots=intent['volume']
-        if info.filling_mode & self.api.SYMBOL_FILLING_FOK:
+        if info.filling_mode & SYMBOL_FILLING_FOK:
             filling = self.api.ORDER_FILLING_FOK
-        elif info.filling_mode & self.api.SYMBOL_FILLING_IOC:
+        elif info.filling_mode & SYMBOL_FILLING_IOC:
             filling = self.api.ORDER_FILLING_IOC
         else:
             raise ValueError('unsupported_filling_mode')
