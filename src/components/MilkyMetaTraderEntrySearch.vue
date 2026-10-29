@@ -54,7 +54,7 @@ async function confirm() {
   } catch {error.value='Sitzungsspeicher nicht verfügbar. Aus Sicherheitsgründen wurde nichts gesendet.';busy.value=false;return;}
   try {
     const data=await props.api('search_confirm',{confirmation:token});
-    receipt.value='Auftrag angenommen: '+data.order.id+'. Der Brokerstatus erscheint unten bei den Aufträgen.';
+    receipt.value='Auftrag angenommen: '+data.order.id+'. Der Brokerstatus erscheint bei den Entry-Aufträgen.';
     clearPending();confirmation.value='';preview.value=null;emit('submitted');
   } catch(e) {
     if(e.definitiveRejection) {clearPending();error.value=e.message;}
@@ -65,8 +65,8 @@ async function confirm() {
 </script>
 
 <template>
-  <section class="mmt-panel" aria-labelledby="mmt-entry-search-title">
-    <h2 id="mmt-entry-search-title">Asynchronen Entry suchen</h2>
+  <section class="mmt-panel mmt-ticket" aria-labelledby="mmt-entry-search-title">
+    <span class="mmt-eyebrow">NEUER SUCHAUFTRAG</span><h2 id="mmt-entry-search-title">Deinen Entry finden</h2>
     <p>Testregel: Short nach einer neu geschlossenen roten M1-Kerze, Long nach einer grünen. Dojis zählen nicht. Nur das ausgewählte Konto, kleinste Broker-Lotgröße.</p>
     <p v-if="!ready">Der lokale MT5-Worker muss verbunden sein, bevor ein aktueller Brokerkurs und eine Vorschau verfügbar sind.</p>
     <p v-if="status?.online&&!status?.bridge?.snapshot?.trade_allowed">MT5 meldet Handel gesperrt. Bitte in MT5 Algo Trading einschalten.</p>
@@ -76,14 +76,14 @@ async function confirm() {
     <p v-if="receipt" role="status">{{receipt}}</p>
     <div v-if="pendingId"><p>Rückmeldung für Auftrag {{pendingId}} wird abgeglichen.</p><ActionButton :disabled="busy" @click="reconcile">Auftragstatus prüfen</ActionButton></div>
     <form class="mmt-form" @submit.prevent="showPreview">
-      <label>Broker-Symbol<select v-model="symbol" required :disabled="busy"><option value="" disabled>Symbol wählen</option><option v-for="q in quotes" :key="q.symbol" :value="q.symbol">{{q.symbol}}</option></select></label>
-      <label>Richtung<select v-model="direction" :disabled="busy"><option value="short">Short</option><option value="long">Long</option></select></label>
+      <label class="mmt-wide">Broker-Symbol<select v-model="symbol" required :disabled="busy"><option value="" disabled>Symbol wählen</option><option v-for="q in quotes" :key="q.symbol" :value="q.symbol">{{q.symbol}}</option></select></label>
+      <fieldset class="mmt-direction"><legend>Richtung</legend><label><input v-model="direction" type="radio" value="long" :disabled="busy"><span>Long</span></label><label><input v-model="direction" type="radio" value="short" :disabled="busy"><span>Short</span></label></fieldset>
       <label>Stop-Loss<input v-model="sl" type="number" min="0" step="any" required :disabled="busy"></label>
       <label>Take-Profit<input v-model="tp" type="number" min="0" step="any" required :disabled="busy"></label>
-      <label>Suche gültig für (Minuten)<input v-model="durationMinutes" type="number" min="1" max="60" step="1" required :disabled="busy"></label>
-      <ActionButton type="submit" :disabled="busy||pendingId||!ready||!account">Suchauftrag vorbereiten</ActionButton>
+      <label class="mmt-wide">Suche gültig für (Minuten)<input v-model="durationMinutes" type="number" min="1" max="60" step="1" required :disabled="busy"></label>
+      <ActionButton class="mmt-primary mmt-wide" type="submit" :disabled="busy||pendingId||!ready||!account">{{busy?'Wird vorbereitet …':'Suchauftrag vorbereiten'}}</ActionButton>
     </form>
-    <div v-if="preview" role="region" aria-label="Suchauftrag zur Bestätigung">
+    <div v-if="preview" class="mmt-preview" role="region" aria-label="Suchauftrag zur Bestätigung">
       <p><strong>{{preview.account_name}} · {{preview.intent.symbol}} · {{preview.intent.direction==='short'?'Short':'Long'}}</strong><br>
         {{preview.volume}} Lot · Kurs bei Vorbereitung circa {{preview.reference_price}}<br>
         SL {{preview.intent.stop_loss}} · TP {{preview.intent.take_profit}}<br>
@@ -91,7 +91,7 @@ async function confirm() {
       <p>Nach deiner einmaligen Bestätigung wartet der Worker selbstständig auf die passende M1-Kerze und sendet dann zum aktuellen Brokerkurs. Kein weiterer Klick und keine Bindung an den Vorbereitungskurs. Konto, SL/TP und Risikobudget werden beim Entry erneut geprüft.</p>
       <p>Suchende bis {{new Date(preview.intent.expires_sec*1000).toLocaleString('de-DE',{timeZone:'Europe/Berlin'})}} (Berlin). Nach einem ausgeführten Trade ist dieser Auftrag beendet.</p>
       <p v-if="expired">Bestätigungsansicht abgelaufen. Bitte den Suchauftrag erneut vorbereiten.</p>
-      <ActionButton :disabled="busy||expired||!confirmation||!ready||!liveEnabled||!executionReady" @click="confirm">Entry-Suche verbindlich starten</ActionButton>
+      <ActionButton class="mmt-primary" :disabled="busy||expired||!confirmation||!ready||!liveEnabled||!executionReady" @click="confirm">Entry-Suche verbindlich starten</ActionButton>
     </div>
   </section>
 </template>
