@@ -93,17 +93,21 @@
 .mmt-empty {padding:16px; border:1px dashed #485368; border-radius:3px; text-align:center}
 .mmt-empty p {max-width:380px; margin:8px auto 0; color:var(--mmt-muted)}
 .mmt-live-position {padding:8px; background:var(--mmt-bg); border:1px solid var(--mmt-border); border-radius:3px; margin-bottom:8px}
-.mmt-live-heading {display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; font-size:11px}
+.mmt-live-heading {margin-bottom:8px; align-items:baseline; display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; font-size:11px}
 .mmt-live-heading span {color:var(--mmt-muted)}
 .mmt-live-position[data-stale=true] {border-color:#ad8241}
 .mmt-live-position[data-stale=true] .mmt-live-heading span {color:#efcd8d}
-.mmt-live-pnl {font-size:22px; font-weight:650; font-variant-numeric:tabular-nums; margin:6px 0 10px}
+.mmt-live-pnl {font-size:22px; font-weight:650; font-variant-numeric:tabular-nums; margin:0 0 0 8px}
 .mmt-live-pnl small {font-size:11px}
 .mmt-live-levels {row-gap:8px}
 .mmt-live-position>small {font-size:10px}
+.mmt-broker-positions {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px}
+.mmt-broker-positions>h2 {grid-column:1/-1; margin:0}
+.mmt-broker-positions h3 {margin:0 0 6px}
+.mmt-broker-positions .mmt-live-position {margin-bottom:0}
 @media(min-width:1100px) {.mmt-ticket {position:sticky; top:0}}
 @media(max-width:850px) {
-  .mmt-workspace {grid-template-columns:1fr}
+  .mmt-workspace,.mmt-broker-positions {grid-template-columns:1fr}
   .mmt-ticket {grid-row:1}
   .mmt-settings {grid-template-columns:1fr}
   .mmt-metrics {gap:8px}

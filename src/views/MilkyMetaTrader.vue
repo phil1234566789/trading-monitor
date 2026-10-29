@@ -142,7 +142,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <p v-if="status?.health&&!status.health.checked_at" role="alert">Unabhängige Alarmprüfung noch nicht bestätigt.</p>
         <p v-else-if="status?.health?.checked_at&&Date.now()-Date.parse(status.health.checked_at)>150000" role="alert" class="mmt-error">Unabhängige Alarmprüfung ist veraltet. Letzte Prüfung: {{time(status.health.checked_at)}} (Berlin).</p>
       <p v-if="dataAge==null||dataAge>staleSeconds" role="status" class="mmt-error">Brokerdaten {{dataAge==null?'noch nicht verfügbar':'seit '+dataAge+' Sekunden nicht aktualisiert'}}. Angezeigte Werte sind kein aktueller Stand.</p>
-      <section v-if="unmatchedPositions.length" class="mmt-panel"><h2>Weitere offene Brokerpositionen</h2>
+      <section v-if="unmatchedPositions.length" class="mmt-panel mmt-broker-positions"><h2>Weitere offene Brokerpositionen</h2>
         <div v-for="position in unmatchedPositions" :key="position.ticket"><h3>{{position.symbol}} · {{position.type===0?'Long':'Short'}}</h3><MilkyMetaTraderLivePosition :position="position" :currency="snapshot?.currency" :age="dataAge" :digits="snapshot?.quotes?.find(q=>q.symbol===position.symbol)?.digits" /></div>
       </section>
       <div class="mmt-workspace">
