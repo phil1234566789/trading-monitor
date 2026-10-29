@@ -111,6 +111,8 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <p>Gestartete Suchaufträge warten selbstständig auf die passende geschlossene M1-Kerze. Du kannst eine noch laufende Suche hier abbrechen.</p>
         <p v-if="!status?.orders?.length">Noch keine Aufträge.</p>
         <ul class="mmt-accounts"><li v-for="order in status?.orders??[]" :key="order.id"><div><strong>{{order.intent.symbol}} · {{order.intent.direction==='long'?'Long':'Short'}}</strong><br>
+          Entry: {{order.status==='searching'?'wird gesucht':order.status==='executed'?(order.result?.price??'—'):'—'}}<br>
+          SL: {{order.intent.stop_loss}} · TP: {{order.intent.take_profit??'—'}}<br>
           {{labels[order.status]??order.status}} · {{time(order.created_at)}}<br>
           <small>{{order.id}} · {{order.result?.reason??''}}</small></div>
           <ActionButton v-if="order.status==='searching'" :disabled="busy" @click="cancel(order.id)">Suche abbrechen</ActionButton>
