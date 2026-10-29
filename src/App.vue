@@ -67,6 +67,7 @@ const lastUpdateText = computed(() =>
         <RouterLink to="/alarme" exact-active-class="active">Alarme</RouterLink>
         <RouterLink to="/handelszeiten" exact-active-class="active">Handelszeiten</RouterLink>
         <RouterLink to="/konten" exact-active-class="active">Konten</RouterLink>
+        <RouterLink to="/milky-meta-trader" exact-active-class="active">MMT</RouterLink>
         <RouterLink to="/algo-watcher" exact-active-class="active" :title="watcherTooltip"><span class="watcher-dot" :class="[watcherHealth.state, { pulse: watcherHealth.pulse }]" aria-hidden="true"></span>Algo Watcher <span class="sr-only">{{ watcherHealth.label }}</span></RouterLink>
         <RouterLink to="/loop-status" exact-active-class="active">Loop-Status</RouterLink>
         <RouterLink to="/trading-flow" exact-active-class="active">Ablauf</RouterLink>

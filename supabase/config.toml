@@ -429,3 +429,10 @@ verify_jwt = false
 
 [functions.setup2-notification-watch]
 verify_jwt = false
+
+# Private MMT-Endpunkte mit eigenen Bearer-Tokens.
+[functions.mt5-worker]
+verify_jwt = false
+
+[functions.mt5-control]
+verify_jwt = false
