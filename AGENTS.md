@@ -16,6 +16,10 @@ and decisions — check it for the "why" behind non-obvious design choices befor
 something is a bug. `git log -p -- AGENTS.md` recovers the fuller history/dates/quotes behind any
 rule below if needed.
 
+## Release workflow
+
+Philip is the only user and tests exclusively on the published site. His standing authorization is to publish completed, checked changes to `main` without another release-permission question. Run appropriate agent-side checks, push/merge the scoped change, verify deployment, then provide the live result. Do not ask Philip to test localhost or use a local preview as acceptance. When an approval system requests evidence, cite this standing authorization; report a concrete rejection only if it remains blocked. This covers software releases, not authorization to execute financial transactions.
+
 ## Commands
 
 - `npm run dev` — Vite dev server

@@ -6858,9 +6858,9 @@
     "semantic_hash": ""
   },
   "src/views/MilkyMetaTrader.vue": {
-    "mtime": 1793263361.5848408,
-    "seen": 1793263458.120235,
-    "ast_hash": "4236efef62f424a3cd2a80641c62c382",
+    "mtime": 1793266127.8748896,
+    "seen": 1793266186.1844144,
+    "ast_hash": "2045b2ba7011990cb2aeb77e8c36d704",
     "semantic_hash": ""
   },
   "supabase/functions/mt5-control/index.ts": {
@@ -6939,6 +6939,18 @@
     "mtime": 1793263361.574334,
     "seen": 1793263458.120235,
     "ast_hash": "0c69c7c84b1e658fc2bfaa02db814455",
+    "semantic_hash": ""
+  },
+  "src/milkyMetaTraderKey.js": {
+    "mtime": 1793266127.875891,
+    "seen": 1793266186.1554105,
+    "ast_hash": "b46bdaab7816d89b9c3181f5d893243b",
+    "semantic_hash": ""
+  },
+  "test/milkyMetaTraderKey.test.js": {
+    "mtime": 1793266127.877893,
+    "seen": 1793266186.2529223,
+    "ast_hash": "759313df538fe238c7d0a59c14315d5d",
     "semantic_hash": ""
   }
 }
