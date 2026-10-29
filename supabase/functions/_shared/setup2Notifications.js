@@ -76,16 +76,20 @@ export function telegramText(event, reason) {
  if (event.kind === 'recovery') return `T68 · Watcher läuft wieder; kein Eingreifen nötig\nStörung gemeldet: ${berlinTime(event.payload.reportedAt)}\nWiederhergestellt: ${berlinTime(event.payload.recoveredAt)}\nIncident: ${event.payload.incidentId}\n${logUrl}`;
  return `T68 · Alarm-Protokoll prüfen: ${event.instrument}, Stufe ${event.stage}, DR ${event.setup_key ?? '–'}\n${reason}\n${logUrl}`;
 }
-export async function sendTelegram(event, reason, env, fetcher = fetch) {
+export async function sendTelegramText(text, env, fetcher = fetch) {
  if (!env('TELEGRAM_BOT_TOKEN') || !env('TELEGRAM_CHAT_ID')) throw new Error('Telegram secrets missing');
  let response;
  try {
   response = await fetcher(`https://api.telegram.org/bot${env('TELEGRAM_BOT_TOKEN')}/sendMessage`, {
    method:'POST', headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({chat_id:env('TELEGRAM_CHAT_ID'),text:telegramText(event,reason)}),
+   body:JSON.stringify({chat_id:env('TELEGRAM_CHAT_ID'),text}),
    signal:AbortSignal.timeout(15000)
   });
  } catch { throw new Error('Telegram transport failed (acceptance unknown)'); }
  const body = await response.json();
  if (!response.ok || !body.ok) throw new Error(`Telegram rejected request (HTTP ${response.status})`);
+}
+
+export async function sendTelegram(event,reason,env,fetcher=fetch) {
+ return sendTelegramText(telegramText(event,reason),env,fetcher);
 }

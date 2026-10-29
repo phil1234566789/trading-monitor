@@ -9,6 +9,8 @@ const token=ref(readMilkyMetaTraderKey()), unlocked=ref(false), accounts=ref([])
 const status=ref(null), busy=ref(false), error=ref(''), message=ref('');
 const form=ref({name:'',login:'',server:'BeyondIQCapital-Server',mode:'live',password:''});
 let timer=null;
+const workerProblem=computed(()=>status.value?.bridge?.snapshot?.worker_error??status.value?.health?.incident);
+const deliveryLabels={pending:'wartet',claimed:'wird gesendet',accepted:'angenommen',failed:'fehlgeschlagen',uncertain:'Annahme unklar'};
 const active=computed(()=>accounts.value.find(a=>a.id===activeId.value));
 const api=(action,fields)=>createMilkyMetaTraderClient(import.meta.env.VITE_SUPABASE_URL,token.value)(action,fields);
 const time=value=>value ? new Date(value).toLocaleString('de-DE',{timeZone:'Europe/Berlin'}) : '—';
@@ -99,11 +101,15 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
       </details>
       <section class="mmt-panel" aria-labelledby="mmt-connection-title"><h2 id="mmt-connection-title">Verbindung</h2>
         <p v-if="!active">Zuerst ein Testkonto auswählen.</p>
-        <template v-else><p><strong>{{active.name}}</strong> · {{status?.online?'Worker erreichbar':'Worker offline / noch nicht gestartet'}}</p>
+        <template v-else><p><strong>{{active.name}}</strong> · {{status?.online?(workerProblem?'Worker gestört':'Worker erreichbar'):'Worker offline / noch nicht gestartet'}}</p>
           <p v-if="status?.bridge">Letzter Kontakt: {{time(status.bridge.heartbeat_at)}} (Berlin)<br>
             Balance {{status.bridge.snapshot.balance}} · Equity {{status.bridge.snapshot.equity}} {{status.bridge.snapshot.currency}}<br>
             {{status.bridge.snapshot.positions.length}} offene Positionen · Handel {{status.bridge.snapshot.trade_allowed?'freigegeben':'gesperrt'}}</p>
         </template>
+        <p v-if="workerProblem" role="alert" class="mmt-error">Ausführung gestört: {{workerProblem.code}}<span v-if="workerProblem.stage"> in {{workerProblem.stage}}</span>. Entry-Aufträge und Brokerstatus prüfen; nichts blind erneut senden.</p>
+        <p v-if="status?.health?.incident">Fehleralarm: <span v-for="item in status.health.deliveries" :key="item.channel">{{item.channel==='pushover'?'Pushover':'Telegram'}} {{deliveryLabels[item.status]??item.status}}. </span></p>
+        <p v-if="status?.health&&!status.health.checked_at" role="alert">Unabhängige Alarmprüfung noch nicht bestätigt.</p>
+        <p v-else-if="status?.health?.checked_at&&Date.now()-Date.parse(status.health.checked_at)>150000" role="alert" class="mmt-error">Unabhängige Alarmprüfung ist veraltet. Letzte Prüfung: {{time(status.health.checked_at)}} (Berlin).</p>
         <ActionButton :disabled="busy" @click="run(refresh)">Aktualisieren</ActionButton>
       </section>
       <MilkyMetaTraderEntrySearch :api="api" :status="status" :account="active" @submitted="run(refresh)" />
@@ -111,7 +117,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <p>Gestartete Suchaufträge warten selbstständig auf die passende geschlossene M1-Kerze. Du kannst eine noch laufende Suche hier abbrechen.</p>
         <p v-if="!status?.orders?.length">Noch keine Aufträge.</p>
         <ul class="mmt-accounts"><li v-for="order in status?.orders??[]" :key="order.id"><div><strong>{{order.intent.symbol}} · {{order.intent.direction==='long'?'Long':'Short'}}</strong><br>
-          Entry: {{order.status==='searching'?'wird gesucht':order.status==='executed'?(order.result?.price??'—'):'—'}}<br>
+          Entry: {{order.status==='searching'?'wird gesucht':order.status==='executed'?(order.result?.price??'—'):order.result?.reason==='broker_fill_pending'?'Brokerdaten werden abgeglichen':'—'}}<br>
           SL: {{order.intent.stop_loss}} · TP: {{order.intent.take_profit??'—'}}<br>
           {{labels[order.status]??order.status}} · {{time(order.created_at)}}<br>
           <small>{{order.id}} · {{order.result?.reason??''}}</small></div>

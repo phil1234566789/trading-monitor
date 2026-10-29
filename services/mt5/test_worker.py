@@ -71,6 +71,36 @@ class WorkerTests(unittest.TestCase):
             broker.send.assert_called_once()
             self.assertEqual(journal.pending()[0]['result']['status'],'executed')
 
+    def test_incomplete_success_is_reconciled_without_another_send(self):
+        with tempfile.TemporaryDirectory() as directory,Journal(Path(directory)/'j.sqlite3') as journal:
+            broker,cloud=Mock(),Mock()
+            raw=dict(status='executed',retcode=10009,order=123,deal=0,price=0,volume=.01,magic=77)
+            journal.reserve('order');journal.finish('order',raw)
+            resolved=dict(raw,position=123,price=1.23456,confirmation_source='position_snapshot')
+            broker.reconcile_result.side_effect=[None,resolved]
+            cloud.call.return_value=dict(recorded=True)
+            engine=Engine(broker,cloud,journal)
+            with patch('worker.time.monotonic',return_value=10):engine.flush()
+            self.assertEqual(cloud.call.call_args.args[1]['result']['status'],'unknown')
+            self.assertEqual(len(journal.pending()),1)
+            with patch('worker.time.monotonic',return_value=12):engine.flush()
+            self.assertEqual(journal.pending(),[])
+            self.assertEqual(cloud.call.call_args.args[1]['result']['price'],1.23456)
+            broker.send.assert_not_called()
+
+    def test_reported_fault_is_visible_and_disables_ready_without_leaking_text(self):
+        with tempfile.TemporaryDirectory() as directory,Journal(Path(directory)/'j.sqlite3') as journal:
+            broker,cloud=Mock(),Mock();broker.login=42;broker.server='Demo'
+            broker.snapshot.return_value={};broker.quotes.return_value=[]
+            engine=Engine(broker,cloud,journal)
+            with patch('builtins.print'):
+                engine.report_fault(AttributeError('password=private'))
+            snapshot=engine.snapshot()
+            self.assertFalse(snapshot['execution_ready'])
+            self.assertEqual(snapshot['worker_error']['code'],'AttributeError')
+            self.assertNotIn('private',str(cloud.call.call_args))
+            self.assertEqual(cloud.call.call_args.args[0],'fault')
+
     def test_no_authorization_no_trigger_no_trade(self):
         with tempfile.TemporaryDirectory() as directory, Journal(Path(directory) / 'j.sqlite3') as journal:
             broker, cloud = Mock(), Mock()
