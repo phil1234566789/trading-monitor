@@ -6858,9 +6858,9 @@
     "semantic_hash": ""
   },
   "src/views/MilkyMetaTrader.vue": {
-    "mtime": 1793286841.2348566,
-    "seen": 1793286892.0648978,
-    "ast_hash": "0f27513f0d39a0bd70f69111ec34e22f",
+    "mtime": 1793293863.181087,
+    "seen": 1793293932.1903374,
+    "ast_hash": "e97342f8e659ea8d02502476beedfd62",
     "semantic_hash": ""
   },
   "supabase/functions/mt5-control/index.ts": {
@@ -6972,9 +6972,9 @@
     "semantic_hash": ""
   },
   "src/components/MilkyMetaTraderEntrySearch.vue": {
-    "mtime": 1793280591.309734,
-    "seen": 1793280671.5156755,
-    "ast_hash": "d0febd89d40d07e88ab23e03e521c3f0",
+    "mtime": 1793293863.182087,
+    "seen": 1793293932.1159756,
+    "ast_hash": "cfcb5b10e80f634746dcc63206984992",
     "semantic_hash": ""
   },
   "services/mt5/health.py": {
