@@ -12,7 +12,10 @@ def api():
     m.ACCOUNT_TRADE_MODE_DEMO = 0
     m.ORDER_TYPE_BUY, m.ORDER_TYPE_SELL = 0, 1
     m.TRADE_ACTION_DEAL, m.ORDER_TIME_GTC, m.ORDER_FILLING_FOK = 1, 0, 0
-    m.SYMBOL_FILLING_FOK, m.SYMBOL_FILLING_IOC, m.ORDER_FILLING_IOC = 1, 2, 1
+    m.ORDER_FILLING_IOC = 1
+    # Das echte Python-SDK exportiert die Symbol-Bitflags nicht.
+    del m.SYMBOL_FILLING_FOK
+    del m.SYMBOL_FILLING_IOC
     m.account_info.return_value = NS(login=42, server='Demo', trade_mode=0, trade_allowed=True,
                                       trade_expert=True, balance=50000, equity=50000, currency='USD')
     m.terminal_info.return_value = NS(connected=True, tradeapi_disabled=False, trade_allowed=True)
@@ -85,6 +88,16 @@ class BrokerTests(unittest.TestCase):
         m.symbol_info.return_value.volume_min=.002
         with self.assertRaises(ValueError):broker.prepare(order)
         m.order_send.assert_not_called()
+
+    def test_symbol_filling_bits_map_to_distinct_order_enum_values(self):
+        for bits,expected in [(1,0),(2,1),(3,0)]:
+            m=api();m.symbol_info.return_value.filling_mode=bits
+            m.order_calc_profit.return_value=-100
+            self.assertEqual(Broker(m,42,'Demo').prepare(intent(risk_amount=5))['type_filling'],expected)
+            m.order_send.assert_not_called()
+        m=api();m.symbol_info.return_value.filling_mode=0;m.order_calc_profit.return_value=-100
+        with self.assertRaisesRegex(ValueError,'unsupported_filling_mode'):
+            Broker(m,42,'Demo').prepare(intent(risk_amount=5))
 
     def test_refuses_account_switch_live_account_and_disabled_trading(self):
         for changes in [dict(login=43), dict(server='Other'), dict(trade_mode=2),
