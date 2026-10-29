@@ -108,7 +108,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
       </section>
       <MilkyMetaTraderOrder :api="api" :status="status" :account="active" @submitted="run(refresh)" />
       <section class="mmt-panel" aria-labelledby="mmt-orders-title"><h2 id="mmt-orders-title">Entry-Aufträge</h2>
-        <p>Suchaufträge erteilst du im Chat. Am gültigen M1-Trigger wird ohne erneute Rückfrage ausgeführt.</p>
+        <p>Bestätigte Marktorders werden sofort geprüft. Asynchrone Suchaufträge warten auf ihren vereinbarten M1-Trigger.</p>
         <p v-if="!status?.orders?.length">Noch keine Aufträge.</p>
         <ul class="mmt-accounts"><li v-for="order in status?.orders??[]" :key="order.id"><div><strong>{{order.intent.symbol}} · {{order.intent.direction==='long'?'Long':'Short'}}</strong><br>
           {{labels[order.status]??order.status}} · {{time(order.created_at)}}<br>

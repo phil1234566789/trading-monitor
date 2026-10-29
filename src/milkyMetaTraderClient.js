@@ -1,12 +1,12 @@
 const messages={
   bridge_offline:'MT5-Worker ist offline.',
-  bridge_not_ready:'Worker ist nicht handelsbereit oder es bestehen bereits Positionen/Auftraege.',
+  bridge_not_ready:'Worker ist nicht handelsbereit oder es bestehen bereits Positionen/Aufträge.',
   quote_stale:'Brokerkurs ist veraltet. Bitte neue Vorschau anfordern.',
-  minimum_volume_exceeds_budget:'Die kleinste Broker-Lotgroesse ueberschreitet das Test-Risikobudget.',
+  minimum_volume_exceeds_budget:'Die kleinste Broker-Lotgröße überschreitet das Test-Risikobudget.',
   invalid_stop_or_target:'SL oder TP liegt auf der falschen Seite des aktuellen Kurses.',
   preview_expired:'Vorschau abgelaufen. Bitte neu berechnen.',
-  invalid_preview:'Vorschau ungueltig. Bitte neu berechnen.',
-  live_not_enabled:'Live-Ausfuehrung ist gesperrt.',
+  invalid_preview:'Vorschau ungültig. Bitte neu berechnen.',
+  live_not_enabled:'Live-Ausführung ist gesperrt.',
 };
 export function createMilkyMetaTraderClient(baseUrl, token, fetchImpl = fetch) {
   if (!baseUrl || !token) throw new Error('Milky Meta Trader ist noch nicht entsperrt.');
@@ -19,8 +19,8 @@ export function createMilkyMetaTraderClient(baseUrl, token, fetchImpl = fetch) {
     if (!response.ok) {
       let code;
       try {code=(await response.json()).code;} catch {}
-      const error=new Error(response.status===401?'Zugriffsschluessel ungueltig oder Backend noch nicht eingerichtet.'
-        :messages[code]??'Anfrage fehlgeschlagen. Konfiguration, Kontodaten und offene Auftraege pruefen.');
+      const error=new Error(response.status===401?'Zugriffsschlüssel ungültig oder Backend noch nicht eingerichtet.'
+        :messages[code]??'Anfrage fehlgeschlagen. Konfiguration, Kontodaten und offene Aufträge prüfen.');
       // Nur Fehler vor dem Enqueue beweisen, dass kein Auftrag angenommen wurde.
       error.definitiveRejection=response.status===401||['preview_expired','invalid_preview','live_not_enabled'].includes(code);
       throw error;
