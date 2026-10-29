@@ -2,7 +2,8 @@ param(
     [Parameter(Mandatory=$true)][string]$ConfigPath,
     [string]$Python = '',
     [switch]$Probe,
-    [switch]$Monitor
+    [switch]$Monitor,
+    [switch]$History
 )
 $ErrorActionPreference='Stop'
 if(-not $Python) {$Python=Join-Path $PSScriptRoot '.venv\Scripts\python.exe'}
@@ -13,7 +14,8 @@ foreach($line in Get-Content -LiteralPath $ConfigPath) {
     if($pair.Count -ne 2 -or $allowed -notcontains $pair[0]) {throw 'Unexpected worker configuration field'}
     [Environment]::SetEnvironmentVariable($pair[0],$pair[1],'Process')
 }
-if($Probe) {& $Python "$PSScriptRoot\worker.py" --probe}
+if($History) {& $Python "$PSScriptRoot\history_worker.py"}
+elseif($Probe) {& $Python "$PSScriptRoot\worker.py" --probe}
 elseif($Monitor) {& $Python "$PSScriptRoot\worker.py" --monitor}
 else {& $Python "$PSScriptRoot\worker.py"}
 exit $LASTEXITCODE

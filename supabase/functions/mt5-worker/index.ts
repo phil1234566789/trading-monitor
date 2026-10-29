@@ -1,3 +1,4 @@
+import { historyWorkerAction } from '../trading-monitor-mcp/mt5History.ts';
 import { workerAction } from '../trading-monitor-mcp/mt5Execution.ts';
 import { workerConfiguration } from '../trading-monitor-mcp/mt5Credentials.ts';
 
@@ -9,7 +10,7 @@ Deno.serve(async req => {
   if (text.length > 64_000) return new Response('Payload too large',{status:413});
   try {
     const body=JSON.parse(text);
-    return Response.json(body.action==='configuration' ? await workerConfiguration() : await workerAction(body),
+    return Response.json(body.action==='configuration' ? await workerConfiguration() : body.action?.startsWith('history_') ? await historyWorkerAction(body) : await workerAction(body),
       {headers:{'Cache-Control':'no-store'}});
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'worker_failed';

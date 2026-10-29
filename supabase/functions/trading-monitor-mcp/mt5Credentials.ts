@@ -38,7 +38,7 @@ export async function activeMt5Account() {
   const settings=checked(await db.from('mt5_execution_settings').select('active_account_id').eq('id','primary').single());
   if (!settings?.active_account_id) throw new Error('no_active_account');
   const account=checked(await db.from('mt5_accounts').select('*').eq('id',settings.active_account_id).single());
-  if (!account) throw new Error('no_active_account');
+  if (!account||account.archived) throw new Error('no_active_account');
   return account;
 }
 
@@ -53,7 +53,7 @@ export async function workerConfiguration() {
 export async function manageMt5Accounts(body:Record<string,unknown>) {
   const db=mt5Database();
   if (body.action==='accounts') {
-    const accounts=checked(await db.from('mt5_accounts').select('id,name,login,server,mode,created_at').order('created_at'));
+    const accounts=checked(await db.from('mt5_accounts').select('id,name,login,server,mode,archived,created_at').order('created_at'));
     const settings=checked(await db.from('mt5_execution_settings').select('active_account_id').eq('id','primary').single());
     return {accounts,active_account_id:settings?.active_account_id??null};
   }
@@ -69,6 +69,7 @@ export async function manageMt5Accounts(body:Record<string,unknown>) {
   }
   if (body.action==='select_account') {
     if (body.id!==null&&!isExecutionId(body.id)) throw new Error('invalid_id');
+    if(body.id){const candidate=checked(await db.from('mt5_accounts').select('archived').eq('id',body.id).single());if(!candidate||candidate.archived)throw new Error('archived_account');}
     checked(await db.rpc('mt5_select_test_account',{account_id:body.id}));
     return {active_account_id:body.id};
   }
