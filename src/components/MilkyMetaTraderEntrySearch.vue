@@ -8,6 +8,7 @@ const route=useRoute();
 const symbol=ref(typeof route.query.symbol==='string'?route.query.symbol:''),
   direction=ref(route.query.direction==='long'?'long':'short'),
   sl=ref(typeof route.query.sl==='string'?route.query.sl:''),tp=ref(typeof route.query.tp==='string'?route.query.tp:'');
+const durationMinutes=ref(10);
 const preview=ref(null),confirmation=ref(''),busy=ref(false),error=ref(''),receipt=ref('');
 const pendingKey='mmt-pending-confirmation';
 let pending;
@@ -30,16 +31,16 @@ onUnmounted(()=>clearInterval(timer));
 const quotes=computed(()=>props.status?.bridge?.snapshot?.quotes??[]);
 const ready=computed(()=>props.status?.online&&quotes.value.length>0);
 const executionReady=computed(()=>props.status?.bridge?.snapshot?.execution_ready&&props.status?.bridge?.snapshot?.trade_allowed);
-const expired=computed(()=>!preview.value||now.value>=preview.value.intent.expires_sec*1000);
+const expired=computed(()=>!preview.value||now.value>=preview.value.confirmation_expires_sec*1000);
 const liveEnabled=computed(()=>props.account?.mode==='demo'||props.status?.server_live_allowed);
-watch([symbol,direction,sl,tp,()=>props.account?.id],()=>{preview.value=null;confirmation.value='';receipt.value='';});
+watch([symbol,direction,sl,tp,durationMinutes,()=>props.account?.id],()=>{preview.value=null;confirmation.value='';receipt.value='';});
 watch(quotes,list=>{if(!symbol.value&&list.length===1) symbol.value=list[0].symbol;});
 async function showPreview() {
   if(busy.value||pendingId.value)return;
   busy.value=true;error.value='';preview.value=null;confirmation.value='';receipt.value='';
   try {
-    const data=await props.api('preview',{order:{symbol:symbol.value,direction:direction.value,
-      stop_loss:Number(sl.value),take_profit:Number(tp.value)}});
+    const data=await props.api('search_preview',{order:{symbol:symbol.value,direction:direction.value,
+      stop_loss:Number(sl.value),take_profit:Number(tp.value),duration_sec:Number(durationMinutes.value)*60}});
     preview.value=data.preview;confirmation.value=data.confirmation;now.value=Date.now();
   } catch(e) {error.value=e.message;} finally {busy.value=false;}
 }
@@ -52,7 +53,7 @@ async function confirm() {
     pendingId.value=preview.value.intent.id;
   } catch {error.value='Sitzungsspeicher nicht verfügbar. Aus Sicherheitsgründen wurde nichts gesendet.';busy.value=false;return;}
   try {
-    const data=await props.api('confirm',{confirmation:token});
+    const data=await props.api('search_confirm',{confirmation:token});
     receipt.value='Auftrag angenommen: '+data.order.id+'. Der Brokerstatus erscheint unten bei den Aufträgen.';
     clearPending();confirmation.value='';preview.value=null;emit('submitted');
   } catch(e) {
@@ -64,9 +65,9 @@ async function confirm() {
 </script>
 
 <template>
-  <section class="mmt-panel" aria-labelledby="mmt-order-title">
-    <h2 id="mmt-order-title">Neue Marktorder</h2>
-    <p>Nur das ausgewählte Testkonto. Die Mindestlotgröße kommt vom Broker. Vorschau und Bestätigung lösen keine weiteren Konten aus.</p>
+  <section class="mmt-panel" aria-labelledby="mmt-entry-search-title">
+    <h2 id="mmt-entry-search-title">Asynchronen Entry suchen</h2>
+    <p>Testregel: Short nach einer neu geschlossenen roten M1-Kerze, Long nach einer grünen. Dojis zählen nicht. Nur das ausgewählte Konto, kleinste Broker-Lotgröße.</p>
     <p v-if="!ready">Der lokale MT5-Worker muss verbunden sein, bevor ein aktueller Brokerkurs und eine Vorschau verfügbar sind.</p>
     <p v-if="status?.online&&!status?.bridge?.snapshot?.trade_allowed">MT5 meldet Handel gesperrt. Bitte in MT5 Algo Trading einschalten.</p>
     <p v-if="status?.online&&!status?.bridge?.snapshot?.execution_ready">Worker im Lesebetrieb: Vorschau verfügbar, Orderversand gesperrt.</p>
@@ -79,16 +80,18 @@ async function confirm() {
       <label>Richtung<select v-model="direction" :disabled="busy"><option value="short">Short</option><option value="long">Long</option></select></label>
       <label>Stop-Loss<input v-model="sl" type="number" min="0" step="any" required :disabled="busy"></label>
       <label>Take-Profit<input v-model="tp" type="number" min="0" step="any" required :disabled="busy"></label>
-      <ActionButton type="submit" :disabled="busy||pendingId||!ready||!account">Aktuelle Ordervorschau</ActionButton>
+      <label>Suche gültig für (Minuten)<input v-model="durationMinutes" type="number" min="1" max="60" step="1" required :disabled="busy"></label>
+      <ActionButton type="submit" :disabled="busy||pendingId||!ready||!account">Suchauftrag vorbereiten</ActionButton>
     </form>
-    <div v-if="preview" role="region" aria-label="Verbindliche Ordervorschau">
+    <div v-if="preview" role="region" aria-label="Suchauftrag zur Bestätigung">
       <p><strong>{{preview.account_name}} · {{preview.intent.symbol}} · {{preview.intent.direction==='short'?'Short':'Long'}}</strong><br>
-        {{preview.intent.volume}} Lot · Marktpreis circa {{preview.intent.reference_price}}<br>
+        {{preview.volume}} Lot · Kurs bei Vorbereitung circa {{preview.reference_price}}<br>
         SL {{preview.intent.stop_loss}} · TP {{preview.intent.take_profit}}<br>
-        Berechneter Verlust bis SL circa {{preview.risk.toFixed(2)}} {{preview.currency}} vor Gebühren und Slippage.</p>
-      <p>Der aktuelle Brokerkurs darf bei der Vorprüfung höchstens 5 Punkte von der Vorschau abweichen. Der endgültige Ausführungspreis kann durch Slippage abweichen. Der Worker prüft Konto, Risiko und SL/TP unmittelbar vor dem Versand erneut. Keine Ausführung bei veralteter Vorschau.</p>
-      <p v-if="expired">Vorschau abgelaufen. Bitte neu berechnen.</p>
-      <ActionButton :disabled="busy||expired||!confirmation||!ready||!liveEnabled||!executionReady" @click="confirm">Order verbindlich senden</ActionButton>
+        Verlust bis SL beim aktuellen Kurs circa {{preview.risk.toFixed(2)}} {{preview.currency}} vor Gebühren und Slippage.</p>
+      <p>Nach deiner einmaligen Bestätigung wartet der Worker selbstständig auf die passende M1-Kerze und sendet dann zum aktuellen Brokerkurs. Kein weiterer Klick und keine Bindung an den Vorbereitungskurs. Konto, SL/TP und Risikobudget werden beim Entry erneut geprüft.</p>
+      <p>Suchende bis {{new Date(preview.intent.expires_sec*1000).toLocaleString('de-DE',{timeZone:'Europe/Berlin'})}} (Berlin). Nach einem ausgeführten Trade ist dieser Auftrag beendet.</p>
+      <p v-if="expired">Bestätigungsansicht abgelaufen. Bitte den Suchauftrag erneut vorbereiten.</p>
+      <ActionButton :disabled="busy||expired||!confirmation||!ready||!liveEnabled||!executionReady" @click="confirm">Entry-Suche verbindlich starten</ActionButton>
     </div>
   </section>
 </template>

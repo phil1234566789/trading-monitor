@@ -16,6 +16,7 @@ export function registerMt5ExecutionTools(server: McpServer) {
     description:'HANDELSAUFTRAG: Nur nach ausdrücklichem menschlichem Auftrag wie „Suche einen Entry“. Eine Richtungsmeinung allein genügt nicht. ' +
       'Aktiviert für das exakt angegebene Konto und Instrument eine zeitlich begrenzte Suche. Bei gültigem M1-Schluss wird OHNE weitere Chatfreigabe ' +
       'eine Brokerposition mit SL eröffnet. V1: höchstens 0,01 Lot, Risikobudget höchstens 5 in Kontowährung, keine bestehende Kontoexposure. ' +
+      'm1_directional_close wartet auf eine nach Aktivierung geschlossene M1-Kerze: Short close<open, Long close>open, kein Doji; trigger_price ist null, volume muss die bestaetigte Broker-Mindestlotgroesse enthalten. ' +
       'Trigger m1_close_above/below vergleichen den Schlusskurs streng mit trigger_price; das sind technische Preisbedingungen, keine vollständige Strategieprüfung. ' +
       'test_next_m1_close ist ausschließlich ein ausdrücklich beauftragter DEMO-Verbindungstest, keine Strategie. ' +
       'Konto, genaue Brokersymbolbezeichnung (inkl. Suffix), Richtung, SL, Budget, Trigger und Ablauf müssen feststehen, nichts erfinden. ' +
@@ -25,7 +26,8 @@ export function registerMt5ExecutionTools(server: McpServer) {
       id:z.string().uuid(), account_login:z.number().int().positive(), account_server:z.string().min(1).max(100),
       mode:z.enum(['demo','live']),symbol:z.string().regex(/^[A-Za-z0-9._-]{1,64}$/),direction:z.enum(['long','short']),
       stop_loss:z.number().positive().finite(),take_profit:z.number().positive().finite().nullable(),
-      risk_amount:z.number().positive().max(5).finite(),trigger:z.enum(['m1_close_above','m1_close_below','test_next_m1_close']),
+      volume:z.number().positive().max(.01).finite().optional(),
+      risk_amount:z.number().positive().max(5).finite(),trigger:z.enum(['m1_directional_close','m1_close_above','m1_close_below','test_next_m1_close']),
       trigger_price:z.number().positive().finite().nullable(), expires_sec:z.number().int().positive(),
     },
     annotations:{readOnlyHint:false,destructiveHint:true,idempotentHint:true,openWorldHint:true},

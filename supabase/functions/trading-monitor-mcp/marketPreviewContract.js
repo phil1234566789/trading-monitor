@@ -37,6 +37,19 @@ export async function verifyMarketPreview(token,secret,now) {
   const data=decode(parts[0]);
   if(!await crypto.subtle.verify('HMAC',await key(secret),decode(parts[1]),data)) throw new Error('invalid_preview');
   const value=JSON.parse(new TextDecoder().decode(data));
-  if(!value?.intent||now>=value.intent.expires_sec||value.intent.created_sec>now+1) throw new Error('preview_expired');
+  if(!value?.intent||now>=(value.confirmation_expires_sec??value.intent.expires_sec)||value.intent.created_sec>now+1) throw new Error('preview_expired');
   return value;
+}
+
+export function buildEntrySearchPreview(input,snapshot,config,now,id) {
+  const {duration_sec,...fields}=input??{};
+  if(!Number.isInteger(duration_sec)||duration_sec<60||duration_sec>3600) throw new Error('invalid_search_duration');
+  const market=buildMarketPreview(fields,snapshot,config,now,id);
+  const {reference_price,...intent}=market.intent;
+  const volume=intent.volume;
+  intent.trigger='m1_directional_close';
+  intent.trigger_price=null;
+  intent.expires_sec=now+duration_sec;
+  validateExecutionIntent(intent,{...config,allowLive:true},now);
+  return {...market,intent,volume,reference_price,kind:'entry_search',confirmation_expires_sec:now+30};
 }

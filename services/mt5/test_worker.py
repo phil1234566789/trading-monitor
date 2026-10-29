@@ -54,6 +54,23 @@ class WorkerTests(unittest.TestCase):
             Engine(broker,cloud,journal,execute=False).consider(intent(),241)
             broker.prepare.assert_not_called();broker.send.assert_not_called();cloud.call.assert_not_called()
 
+    def test_directional_search_waits_for_matching_closed_color(self):
+        with tempfile.TemporaryDirectory() as directory,Journal(Path(directory)/'j.sqlite3') as journal:
+            broker,cloud=Mock(),Mock()
+            cloud.call.return_value=dict(authorized=True)
+            broker.send.return_value=dict(status='executed',deal=123,volume=.01)
+            broker.closed_m1.return_value=dict(time=180,open=1.28,close=1.29)
+            engine=Engine(broker,cloud,journal)
+            order=intent(trigger='m1_directional_close',trigger_price=None,volume=.01)
+            with patch('worker.time.time',return_value=241):
+                engine.consider(order,241)
+                broker.send.assert_not_called()
+                broker.closed_m1.return_value=dict(time=180,open=1.30,close=1.29)
+                engine.consider(order,241)
+                engine.consider(order,241)
+            broker.send.assert_called_once()
+            self.assertEqual(journal.pending()[0]['result']['status'],'executed')
+
     def test_no_authorization_no_trigger_no_trade(self):
         with tempfile.TemporaryDirectory() as directory, Journal(Path(directory) / 'j.sqlite3') as journal:
             broker, cloud = Mock(), Mock()

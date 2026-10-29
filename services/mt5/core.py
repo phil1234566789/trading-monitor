@@ -34,8 +34,10 @@ def validate_intent(value, allow_live=False):
     if value.get('take_profit') is not None and not positive(value['take_profit']):
         raise ValueError('invalid_take_profit')
     trigger = value.get('trigger')
-    if trigger not in ('market_confirmed', 'm1_close_above', 'm1_close_below', 'test_next_m1_close'):
+    if trigger not in ('m1_directional_close', 'market_confirmed', 'm1_close_above', 'm1_close_below', 'test_next_m1_close'):
         raise ValueError('unknown_trigger')
+    if trigger == 'm1_directional_close' and (not positive(value.get('volume')) or value['volume']>.01):
+        raise ValueError('invalid_search_volume')
     if trigger == 'market_confirmed':
         if (not positive(value.get('reference_price')) or not positive(value.get('volume'))
                 or value['volume'] > .01 or value['expires_sec'] - value['created_sec'] > 30):
@@ -43,7 +45,7 @@ def validate_intent(value, allow_live=False):
     elif trigger == 'test_next_m1_close':
         if value['mode'] != 'demo':
             raise ValueError('test_trigger_demo_only')
-    elif not positive(value.get('trigger_price')):
+    elif trigger != 'm1_directional_close' and not positive(value.get('trigger_price')):
         raise ValueError('invalid_trigger_price')
     return value
 
@@ -58,6 +60,9 @@ def trigger_matches(intent, candle, now):
     closed = opened + 60
     if closed <= intent['created_sec'] or not 0 <= now - closed <= 10 or now >= intent['expires_sec']:
         return False
+    if intent['trigger'] == 'm1_directional_close':
+        opened_price=candle.get('open')
+        return positive(opened_price) and (close<opened_price if intent['direction']=='short' else close>opened_price)
     if intent['trigger'] == 'test_next_m1_close':
         return True
     if intent['trigger'] == 'm1_close_above':

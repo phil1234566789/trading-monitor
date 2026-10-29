@@ -53,3 +53,8 @@ describe('confirmed market intent',()=>{
     }
   });
 });
+
+it('accepts a directional candle trigger without a price threshold',()=>{
+  const order=intent({trigger:'m1_directional_close',trigger_price:null,volume:.01});
+  expect(validateExecutionIntent(order,config,now)).toEqual(order);
+});

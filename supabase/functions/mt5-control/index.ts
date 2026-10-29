@@ -21,7 +21,7 @@ Deno.serve(async req => {
   try {
     const body=JSON.parse(text);
     let result;
-    if(['preview','confirm'].includes(body.action)) result=await marketPreviewAction(body);
+    if(['preview','confirm','search_preview','search_confirm'].includes(body.action)) result=await marketPreviewAction(body);
     else if(body.action==='status') result=await getExecutionStatus(body.id);
     else if(body.action==='cancel') result=await cancelExecutionOrder(body.id);
     else result=await manageMt5Accounts(body);

@@ -37,15 +37,16 @@ export function validateExecutionIntent(value, config, now) {
   if (!Number.isSafeInteger(value.created_sec) || value.created_sec > now + 2 || now - value.created_sec > 10
     || !Number.isSafeInteger(value.expires_sec) || value.expires_sec <= now
     || value.expires_sec - value.created_sec > 3600) throw new Error('invalid_expiry');
-  if (!['market_confirmed','m1_close_above','m1_close_below','test_next_m1_close'].includes(value.trigger)) {
+  if (!['m1_directional_close','market_confirmed','m1_close_above','m1_close_below','test_next_m1_close'].includes(value.trigger)) {
     throw new Error('invalid_trigger');
   }
+  if(value.trigger==='m1_directional_close'&&(!positive(value.volume)||value.volume>.01)) throw new Error('invalid_search_volume');
   if(value.trigger==='market_confirmed') {
     if(!positive(value.reference_price)||!positive(value.volume)||value.volume>.01
       ||value.expires_sec-value.created_sec>30) throw new Error('invalid_market_preview');
   } else if (value.trigger === 'test_next_m1_close') {
     if (value.mode !== 'demo') throw new Error('test_trigger_demo_only');
-  } else if (!positive(value.trigger_price)) throw new Error('invalid_trigger_price');
+  } else if (value.trigger!=='m1_directional_close'&&!positive(value.trigger_price)) throw new Error('invalid_trigger_price');
   return value;
 }
 
