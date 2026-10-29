@@ -1,9 +1,10 @@
 <script setup>
-import { computed, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import ActionButton from '../components/ui/ActionButton.vue';
 import { createMilkyMetaTraderClient } from '../milkyMetaTraderClient.js';
+import { readMilkyMetaTraderKey, saveMilkyMetaTraderKey, forgetMilkyMetaTraderKey } from '../milkyMetaTraderKey.js';
 
-const token=ref(''), unlocked=ref(false), accounts=ref([]), activeId=ref(null);
+const token=ref(readMilkyMetaTraderKey()), unlocked=ref(false), accounts=ref([]), activeId=ref(null);
 const status=ref(null), busy=ref(false), error=ref(''), message=ref('');
 const form=ref({name:'',login:'',server:'BeyondIQCapital-Server',mode:'live',password:''});
 let timer=null;
@@ -26,15 +27,21 @@ async function run(action) {
 async function unlock() {
   await run(async()=>{
     await refresh(); unlocked.value=true;
+    if(!saveMilkyMetaTraderKey(token.value)) message.value='Browser-Speicherung nicht verfügbar. Der Schlüssel gilt nur für diese Ansicht.';
     clearInterval(timer);
     timer=setInterval(()=>{if(!busy.value) run(refresh);},5000);
   });
 }
-function lock() {
+function clearView() {
   clearInterval(timer); timer=null; token.value=''; unlocked.value=false;
   form.value.password=''; accounts.value=[]; status.value=null; activeId.value=null;
 }
-onUnmounted(lock);
+function lock() {
+  if(!forgetMilkyMetaTraderKey()) {error.value='Der gespeicherte Schlüssel konnte nicht entfernt werden. Bitte die Website-Daten im Browser löschen.';return;}
+  clearView();
+}
+onMounted(()=>{if(token.value) unlock();});
+onUnmounted(clearView);
 async function save() {
   const fields={...form.value,login:Number(form.value.login)};
   // Ein fehlgeschlagener Request darf das Passwort nicht in einer Fehlermeldung oder einem Store hinterlassen.
@@ -56,7 +63,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
 <template>
   <main class="mmt-page">
     <header class="mmt-heading"><div><h1>Milky Meta Trader <small>MMT</small></h1><p>Konten, Verbindung und asynchrone Entry-Aufträge</p></div>
-      <ActionButton v-if="unlocked" @click="lock">Sperren</ActionButton></header>
+      <ActionButton v-if="unlocked" @click="lock">Sperren &amp; Schlüssel vergessen</ActionButton></header>
     <p class="mmt-notice">Testbetrieb: höchstens 0,01 Lot und 5 Einheiten Risikobudget in Kontowährung pro Auftrag. Strategie- und Challenge-Regeln folgen. Slippage und Gebühren können den tatsächlichen Verlust erhöhen.</p>
     <p v-if="error" role="alert" class="mmt-error">{{error}}</p>
     <p v-if="message" role="status">{{message}}</p>
@@ -64,7 +71,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
       <h2>Privaten Bereich entsperren</h2>
       <label for="mmt-control-key">MMT-Zugriffsschlüssel</label>
       <input id="mmt-control-key" v-model="token" type="password" autocomplete="off" required>
-      <p>Der Zugriffsschlüssel bleibt nur für diese geöffnete Ansicht im Speicher. Brokerpasswörter werden serverseitig verschlüsselt und nie zurück angezeigt.</p>
+      <p>Der Zugriffsschlüssel wird nach erfolgreichem Entsperren in diesem Browser gespeichert und beim nächsten Aufruf automatisch verwendet. Mit „Sperren & Schlüssel vergessen“ entfernst du ihn. Skripte dieser Website können auf den gespeicherten Schlüssel zugreifen. Brokerpasswörter werden serverseitig verschlüsselt und nie zurück angezeigt.</p>
       <ActionButton type="submit" :disabled="busy||!token">{{busy?'Verbinde …':'Entsperren'}}</ActionButton>
     </form>
     <template v-else>
