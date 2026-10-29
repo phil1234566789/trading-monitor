@@ -11,9 +11,9 @@ describe('market preview authorization',()=>{
     expect(p.intent.volume).toBe(.01);expect(p.intent.reference_price).toBe(1.1);
     expect(p.risk).toBeCloseTo(1);expect(p.intent.account_login).toBe(42);
   });
-  it('blocks stale quotes, excessive risk, wrong targets and existing exposure',()=>{
+  it('blocks stale quotes, wrong targets and existing exposure',()=>{
     expect(()=>buildMarketPreview(input,snapshot,config,now+6,id)).toThrow();
-    expect(()=>buildMarketPreview({...input,stop_loss:1.11},snapshot,config,now,id)).toThrow();
+
     expect(()=>buildMarketPreview({...input,take_profit:1.11},snapshot,config,now,id)).toThrow();
     expect(()=>buildMarketPreview(input,{...snapshot,pending_orders:1},config,now,id)).toThrow();
   });
@@ -46,4 +46,12 @@ describe('asynchronous search preview',()=>{
     const secret='x'.repeat(40),token=await signMarketPreview(p,secret);
     await expect(verifyMarketPreview(token,secret,now+31)).rejects.toThrow();
   });
+});
+
+it('reports loss above five currency units without imposing an invented money limit',()=>{
+  const p=buildEntrySearchPreview({...input,stop_loss:1.11,duration_sec:600},snapshot,config,now,id);
+  expect(p.risk).toBeCloseTo(10);
+  expect(p.intent.risk_amount).toBeCloseTo(p.risk);
+  expect(p.intent.volume).toBe(.01);
+  expect(()=>buildEntrySearchPreview({...input,duration_sec:600},{...snapshot,quotes:[{...snapshot.quotes[0],minimum_volume:.02}]},config,now,id)).toThrow();
 });

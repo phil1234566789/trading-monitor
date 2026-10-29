@@ -88,7 +88,7 @@ async function confirm() {
         {{preview.volume}} Lot · Kurs bei Vorbereitung circa {{preview.reference_price}}<br>
         SL {{preview.intent.stop_loss}} · TP {{preview.intent.take_profit}}<br>
         Verlust bis SL beim aktuellen Kurs circa {{preview.risk.toFixed(2)}} {{preview.currency}} vor Gebühren und Slippage.</p>
-      <p>Nach deiner einmaligen Bestätigung wartet der Worker selbstständig auf die passende M1-Kerze und sendet dann zum aktuellen Brokerkurs. Kein weiterer Klick und keine Bindung an den Vorbereitungskurs. Konto, SL/TP und Risikobudget werden beim Entry erneut geprüft.</p>
+      <p>Nach deiner einmaligen Bestätigung wartet der Worker selbstständig auf die passende M1-Kerze und sendet dann zum aktuellen Brokerkurs. Kein weiterer Klick und keine Bindung an den Vorbereitungskurs. Konto, SL/TP und Mindestlotgröße werden beim Entry erneut geprüft.</p>
       <p>Suchende bis {{new Date(preview.intent.expires_sec*1000).toLocaleString('de-DE',{timeZone:'Europe/Berlin'})}} (Berlin). Nach einem ausgeführten Trade ist dieser Auftrag beendet.</p>
       <p v-if="expired">Bestätigungsansicht abgelaufen. Bitte den Suchauftrag erneut vorbereiten.</p>
       <ActionButton class="mmt-primary" :disabled="busy||expired||!confirmation||!ready||!liveEnabled||!executionReady" @click="confirm">Entry-Suche verbindlich starten</ActionButton>

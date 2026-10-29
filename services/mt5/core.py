@@ -29,7 +29,7 @@ def validate_intent(value, allow_live=False):
     for key in ('stop_loss', 'risk_amount', 'created_sec', 'expires_sec'):
         if not positive(value.get(key)):
             raise ValueError('invalid_' + key)
-    if value['risk_amount'] > 5 or not 0 < value['expires_sec'] - value['created_sec'] <= 3600:
+    if not 0 < value['expires_sec'] - value['created_sec'] <= 3600:
         raise ValueError('test_limit_exceeded')
     if value.get('take_profit') is not None and not positive(value['take_profit']):
         raise ValueError('invalid_take_profit')
