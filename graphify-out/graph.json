@@ -11701,7 +11701,7 @@
       "file_type": "code",
       "norm_label": "clearview()",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L51"
+      "source_location": "L54"
     },
     {
       "id": "src_views_milkymetatrader_lock",
@@ -11713,7 +11713,7 @@
       "file_type": "code",
       "norm_label": "lock()",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L55"
+      "source_location": "L58"
     },
     {
       "id": "src_views_milkymetatrader_time",
@@ -19153,7 +19153,7 @@
       "file_type": "code",
       "norm_label": "cancel()",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L76"
+      "source_location": "L79"
     },
     {
       "id": "src_views_milkymetatrader_refresh",
@@ -19165,7 +19165,7 @@
       "file_type": "code",
       "norm_label": "refresh()",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L30"
+      "source_location": "L33"
     },
     {
       "id": "src_views_milkymetatrader_refreshstatus",
@@ -19177,7 +19177,7 @@
       "file_type": "code",
       "norm_label": "refreshstatus()",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L35"
+      "source_location": "L38"
     },
     {
       "id": "src_views_milkymetatrader_run",
@@ -19189,7 +19189,7 @@
       "file_type": "code",
       "norm_label": "run()",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L38"
+      "source_location": "L41"
     },
     {
       "id": "src_views_milkymetatrader_save",
@@ -19201,7 +19201,7 @@
       "file_type": "code",
       "norm_label": "save()",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L61"
+      "source_location": "L64"
     },
     {
       "id": "src_views_milkymetatrader_select",
@@ -19213,7 +19213,7 @@
       "file_type": "code",
       "norm_label": "select()",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L72"
+      "source_location": "L75"
     },
     {
       "id": "src_views_milkymetatrader_unlock",
@@ -19225,7 +19225,7 @@
       "file_type": "code",
       "norm_label": "unlock()",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L43"
+      "source_location": "L46"
     },
     {
       "id": "src_views_statistik_refreshall",
@@ -19513,7 +19513,7 @@
       "file_type": "code",
       "norm_label": "snapshotageseconds()",
       "source_file": "src/milkyMetaTraderMonitoring.js",
-      "source_location": "L7"
+      "source_location": "L8"
     },
     {
       "id": "src_composables_usereplaystructuredefaults_usereplaystructuredefaults",
@@ -43317,7 +43317,7 @@
       "file_type": "code",
       "norm_label": "ready",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L27"
+      "source_location": "L30"
     },
     {
       "id": "src_views_milkymetatrader_snapshot",
@@ -43383,7 +43383,7 @@
       "file_type": "code",
       "norm_label": "workingorders",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L28"
+      "source_location": "L31"
     },
     {
       "id": "scripts_setup2performanceprimitives",
@@ -93385,7 +93385,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L76",
+      "source_location": "L79",
       "weight": 1.0
     },
     {
@@ -93397,7 +93397,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L76",
+      "source_location": "L79",
       "weight": 1.0
     },
     {
@@ -93409,7 +93409,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L76",
+      "source_location": "L79",
       "weight": 1.0
     },
     {
@@ -93433,7 +93433,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L56",
+      "source_location": "L59",
       "weight": 1.0
     },
     {
@@ -93445,7 +93445,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L57",
+      "source_location": "L60",
       "weight": 1.0
     },
     {
@@ -93457,7 +93457,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L31",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -93469,7 +93469,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L33",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -93481,7 +93481,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L36",
+      "source_location": "L39",
       "weight": 1.0
     },
     {
@@ -93493,7 +93493,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L65",
+      "source_location": "L68",
       "weight": 1.0
     },
     {
@@ -93505,7 +93505,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L66",
+      "source_location": "L69",
       "weight": 1.0
     },
     {
@@ -93517,7 +93517,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L67",
+      "source_location": "L70",
       "weight": 1.0
     },
     {
@@ -93529,7 +93529,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L73",
+      "source_location": "L76",
       "weight": 1.0
     },
     {
@@ -93541,7 +93541,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L73",
+      "source_location": "L76",
       "weight": 1.0
     },
     {
@@ -93553,7 +93553,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L73",
+      "source_location": "L76",
       "weight": 1.0
     },
     {
@@ -93565,7 +93565,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L44",
+      "source_location": "L47",
       "weight": 1.0
     },
     {
@@ -93577,7 +93577,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L45",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -93589,7 +93589,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L46",
+      "source_location": "L49",
       "weight": 1.0
     },
     {
@@ -189922,7 +189922,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/milkyMetaTraderMonitoring.js",
-      "source_location": "L7",
+      "source_location": "L8",
       "weight": 1.0
     },
     {
@@ -199646,7 +199646,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L27",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -199657,7 +199657,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L28",
+      "source_location": "L31",
       "weight": 1.0
     },
     {
@@ -199668,7 +199668,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L30",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -199679,7 +199679,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L35",
+      "source_location": "L38",
       "weight": 1.0
     },
     {
@@ -199690,7 +199690,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L38",
+      "source_location": "L41",
       "weight": 1.0
     },
     {
@@ -199701,7 +199701,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L43",
+      "source_location": "L46",
       "weight": 1.0
     },
     {
@@ -199712,7 +199712,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L55",
+      "source_location": "L58",
       "weight": 1.0
     },
     {
@@ -199723,7 +199723,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L61",
+      "source_location": "L64",
       "weight": 1.0
     },
     {
@@ -199734,7 +199734,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L72",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -199745,7 +199745,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L76",
+      "source_location": "L79",
       "weight": 1.0
     },
     {
@@ -222279,7 +222279,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L60",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -222291,7 +222291,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "src/views/MilkyMetaTrader.vue",
-      "source_location": "L48",
+      "source_location": "L51",
       "weight": 1.0
     },
     {
@@ -227424,5 +227424,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "ba830e49fdc9f94d61513e3dd116065c7d0582cf"
+  "built_at_commit": "f5585df3251fecfc579adaffc97c32b0ab0d840f"
 }
