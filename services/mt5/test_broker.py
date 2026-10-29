@@ -29,6 +29,15 @@ def api():
 
 
 class BrokerTests(unittest.TestCase):
+    def test_snapshot_contains_native_entry_current_price_and_profit_without_send(self):
+        m=api()
+        m.positions_get.return_value=(NS(ticket=123,symbol='XAUUSD.gbe',volume=.01,type=1,sl=4032.654,tp=4008.752,profit=-3,magic=77,price_open=4022.5,price_current=4025.5),)
+        p=Broker(m,42,'Demo').snapshot()['positions'][0]
+        self.assertEqual(p['price_open'],4022.5)
+        self.assertEqual(p['price_current'],4025.5)
+        self.assertEqual(p['profit'],-3)
+        m.order_send.assert_not_called()
+
     def test_prepares_capped_short_with_protective_stop(self):
         m = api()
         order = intent(risk_amount=5)

@@ -28,3 +28,15 @@ describe('MMT order feedback',()=>{
     expect(html).toContain('2.801');
   });
 });
+
+it('renders native live PnL, price, lot and freshness for the exact broker position',async()=>{
+ const value={...order,status:'executed',intent:{...order.intent,account_login:42,account_server:'Demo'},result:{price:1.11431,position_lifecycle:{state:'open',position:123}}};
+ const snapshot={account_login:42,account_server:'Demo',currency:'USD',quotes:[{symbol:'EURUSD.gbe',digits:5}],positions:[{ticket:123,symbol:'EURUSD.gbe',type:0,volume:.01,profit:-2.5,price_open:1.11431,price_current:1.11181,sl:1.11252,tp:1.11506}]};
+ const html=await renderToString(createSSRApp(OrderCard,{order:value,snapshot,age:12}));
+ expect(html).toContain('1,11181');
+ expect(html).toContain('-2,5');
+ expect(html).toContain('0,01 Lot');
+ expect(html).toContain('Daten veraltet');
+ expect(html).toContain('Position offen');
+ expect(html).toContain('negative');
+});

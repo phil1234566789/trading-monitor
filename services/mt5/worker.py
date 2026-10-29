@@ -156,7 +156,7 @@ class Engine:
                     orders = response.get('orders')
                     if not isinstance(orders, list) or len(orders) > 100:
                         raise ValueError('invalid_order_list')
-                    next_poll = time.monotonic() + 2
+                    next_poll = time.monotonic() + 1
                 if self.execute and flush_ok and not any(row.get('status') in ('sending', 'unknown') for row in orders):
                     for row in orders:
                         if row.get('status') == 'searching':

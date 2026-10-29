@@ -86,3 +86,10 @@ it('does not cap a valid loss estimate at five currency units',()=>{
   const value=intent({risk_amount:25,trigger:'m1_directional_close',trigger_price:null,volume:.01});
   expect(validateExecutionIntent(value,config,now)).toEqual(value);
 });
+
+it('accepts native live prices and rejects invalid monitoring values',()=>{
+ const p={ticket:1,symbol:'XAUUSD.gbe',volume:.01,type:1,sl:4032.654,tp:4008.752,profit:-1,magic:77,price_open:4022.5,price_current:4023.5};
+ const s={account_login:42,account_server:'Demo',mode:'demo',balance:50000,equity:49999,currency:'USD',trade_allowed:true,positions:[p],pending_orders:0};
+ expect(validateWorkerSnapshot(s,config)).toEqual(s);
+ for(const patch of [{price_open:NaN},{price_current:0}])expect(()=>validateWorkerSnapshot({...s,positions:[{...p,...patch}]},config)).toThrow();
+});

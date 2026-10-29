@@ -71,7 +71,8 @@ export function validateWorkerSnapshot(value, config) {
     }
   }
   for (const p of value.positions) {
-    fields(p,['ticket','symbol','volume','type','sl','tp','profit','magic']);
+    fields(p,['ticket','symbol','volume','type','sl','tp','profit','magic','price_open','price_current']);
+    for(const key of ['price_open','price_current'])if(p[key]!=null&&!positive(p[key]))throw new Error('invalid_position_price');
     if (!Number.isSafeInteger(p.ticket) || p.ticket <= 0 || !positive(p.volume)
       || typeof p.symbol !== 'string' || !/^[A-Za-z0-9._-]{1,64}$/.test(p.symbol)
       || ![0,1].includes(p.type) || ![p.sl,p.tp,p.profit,p.magic].every(finite)) throw new Error('invalid_position');

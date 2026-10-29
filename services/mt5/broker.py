@@ -72,7 +72,8 @@ class Broker:
                     balance=a.balance, equity=a.equity, currency=a.currency,
                     trade_allowed=bool(a.trade_allowed and a.trade_expert and t.trade_allowed and not t.tradeapi_disabled),
                     positions=[dict(ticket=p.ticket, symbol=p.symbol, volume=p.volume, type=p.type,
-                                    sl=p.sl, tp=p.tp, profit=p.profit, magic=p.magic) for p in positions],
+                                    sl=p.sl, tp=p.tp, profit=p.profit, magic=p.magic,
+                                    price_open=p.price_open, price_current=p.price_current) for p in positions],
                     pending_orders=len(orders))
 
     def closed_m1(self, symbol):
