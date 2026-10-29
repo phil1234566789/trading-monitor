@@ -5,8 +5,11 @@ from core import positive, validate_intent, volume_for_risk
 
 
 class Broker:
-    def __init__(self, api, login, server, allow_live=False):
+    def __init__(self, api, login, server, allow_live=False, server_time_offset_seconds=0):
         self.api, self.login, self.server, self.allow_live = api, login, server, allow_live
+        if type(server_time_offset_seconds) is not int or abs(server_time_offset_seconds)>14*3600 or server_time_offset_seconds%900:
+            raise ValueError('invalid_server_time_offset')
+        self.server_time_offset_seconds=server_time_offset_seconds
 
     def account(self, mode=None):
         a, t = self.api.account_info(), self.api.terminal_info()
@@ -18,6 +21,41 @@ class Broker:
         if (not demo and not self.allow_live) or (mode and (mode == 'demo') != demo):
             raise ValueError('account_mode_mismatch')
         return a, t
+
+    def fresh_tick(self,symbol):
+        tick=self.api.symbol_info_tick(symbol)
+        if tick is None or not positive(tick.bid) or not positive(tick.ask) or tick.ask<tick.bid:
+            raise ValueError('quote_unavailable')
+        # Feed-Zeitkorrektur ist explizite Brokerkonfiguration, niemals aus einem alten Tick ableiten.
+        received=tick.time-self.server_time_offset_seconds
+        if not -1<=time.time()-received<=5:
+            raise ValueError('quote_stale')
+        return tick,received
+
+    def quotes(self):
+        result=[]
+        for symbol in self.api.symbols_get() or ():
+            if not any(symbol.name == pair or symbol.name.startswith(pair+'.') for pair in ('EURUSD','GBPUSD')):
+                continue
+            if len(result)>=10:
+                break
+            if not self.api.symbol_select(symbol.name,True):
+                continue
+            info=self.api.symbol_info(symbol.name)
+            try:
+                tick,received=self.fresh_tick(symbol.name)
+            except ValueError:
+                continue
+            if not info or not tick or not positive(info.point) or not positive(info.volume_min):
+                continue
+            long_loss=self.api.order_calc_profit(self.api.ORDER_TYPE_BUY,symbol.name,info.volume_min,tick.ask,tick.ask-info.point)
+            short_loss=self.api.order_calc_profit(self.api.ORDER_TYPE_SELL,symbol.name,info.volume_min,tick.bid,tick.bid+info.point)
+            if long_loss is None or short_loss is None or not positive(-long_loss) or not positive(-short_loss):
+                continue
+            result.append(dict(symbol=symbol.name,bid=tick.bid,ask=tick.ask,time=received,
+                               point=info.point,digits=info.digits,minimum_volume=info.volume_min,
+                               loss_per_unit_long=-long_loss/info.point,loss_per_unit_short=-short_loss/info.point))
+        return result
 
     def snapshot(self):
         a, t = self.account()
@@ -38,7 +76,7 @@ class Broker:
         rates = self.api.copy_rates_from_pos(symbol, self.api.TIMEFRAME_M1, 1, 1)
         if rates is None or len(rates) != 1:
             return None
-        return dict(time=int(rates[0]['time']), close=float(rates[0]['close']))
+        return dict(time=int(rates[0]['time'])-self.server_time_offset_seconds, close=float(rates[0]['close']))
 
     def prepare(self, intent):
         validate_intent(intent, self.allow_live)
@@ -59,11 +97,7 @@ class Broker:
             raise ValueError('unknown_symbol')
         if not info.visible and not self.api.symbol_select(symbol, True):
             raise ValueError('symbol_unavailable')
-        tick = self.api.symbol_info_tick(symbol)
-        if tick is None or not positive(tick.bid) or not positive(tick.ask) or tick.ask < tick.bid:
-            raise ValueError('quote_unavailable')
-        if not -1 <= time.time() - tick.time <= 5:
-            raise ValueError('quote_stale')
+        tick,received = self.fresh_tick(symbol)
         if tick.ask - tick.bid > 30 * info.point:
             raise ValueError('spread_exceeds_test_limit')
         long = intent['direction'] == 'long'
@@ -83,6 +117,12 @@ class Broker:
         # Budget enthält einen Puffer; Slippage/Gaps und unbekannte Kommission bleiben reale Risiken.
         lots = volume_for_risk(intent['risk_amount'] * .8, -profit,
                                info.volume_min, info.volume_max, info.volume_step, .01)
+        if intent['trigger']=='market_confirmed':
+            if abs(price-intent['reference_price'])>5*info.point:
+                raise ValueError('preview_price_changed')
+            if intent['volume']!=info.volume_min or intent['volume']>lots:
+                raise ValueError('minimum_volume_exceeds_budget')
+            lots=intent['volume']
         if info.filling_mode & self.api.SYMBOL_FILLING_FOK:
             filling = self.api.ORDER_FILLING_FOK
         elif info.filling_mode & self.api.SYMBOL_FILLING_IOC:

@@ -40,8 +40,9 @@ class Cloud:
 
 
 class Engine:
-    def __init__(self, broker, cloud, journal):
+    def __init__(self, broker, cloud, journal, execute=True):
         self.broker, self.cloud, self.journal = broker, cloud, journal
+        self.execute=execute
 
     def flush(self):
         for row in self.journal.pending():
@@ -51,10 +52,12 @@ class Engine:
                 self.journal.acknowledge(row['id'])
 
     def consider(self, intent, now):
+        if not self.execute:
+            return
         validate_intent(intent, self.broker.allow_live)
         if any(row['id'] == intent['id'] for row in self.journal.pending()):
             return
-        candle = self.broker.closed_m1(intent['symbol'])
+        candle = {} if intent['trigger']=='market_confirmed' else self.broker.closed_m1(intent['symbol'])
         if candle is None or not trigger_matches(intent, candle, now):
             return
         try:
@@ -88,14 +91,18 @@ class Engine:
         orders, next_poll = [], 0.0
         while True:
             try:
-                self.flush()
+                if self.execute:
+                    self.flush()
                 if time.monotonic() >= next_poll:
-                    response = self.cloud.call('poll', dict(snapshot=self.broker.snapshot()))
+                    snapshot=self.broker.snapshot()
+                    snapshot['quotes']=self.broker.quotes()
+                    snapshot['execution_ready']=self.execute
+                    response = self.cloud.call('poll', dict(snapshot=snapshot))
                     orders = response.get('orders')
                     if not isinstance(orders, list) or len(orders) > 100:
                         raise ValueError('invalid_order_list')
                     next_poll = time.monotonic() + 2
-                if not any(row.get('status') in ('sending', 'unknown') for row in orders):
+                if self.execute and not any(row.get('status') in ('sending', 'unknown') for row in orders):
                     for row in orders:
                         if row.get('status') == 'searching':
                             self.consider(row['intent'], time.time())
@@ -112,6 +119,7 @@ class Engine:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--probe', action='store_true', help='Nur lokalen Kontostand lesen; kein Cloudkontakt/Orderversand')
+    parser.add_argument('--monitor',action='store_true',help='Nur Kontostand und Kurse synchronisieren; kein Orderversand')
     args = parser.parse_args()
     path = os.environ.get('MT5_TERMINAL_PATH')
     if not path or not Path(path).is_file():
@@ -121,7 +129,7 @@ def main():
     if not args.probe:
         cloud = Cloud(os.environ['MT5_WORKER_URL'], os.environ['MT5_WORKER_TOKEN'])
         config = cloud.call('configuration', {})
-        if config.get('mode') == 'live' and (not config.get('allow_live') or os.environ.get('MT5_ALLOW_LIVE') != 'true'):
+        if not args.monitor and config.get('mode') == 'live' and (not config.get('allow_live') or os.environ.get('MT5_ALLOW_LIVE') != 'true'):
             raise ValueError('live_not_enabled_locally_and_remotely')
         if not isinstance(config.get('account_login'), int) or not isinstance(config.get('account_server'), str):
             raise ValueError('invalid_account_configuration')
@@ -135,17 +143,18 @@ def main():
             if account is None:
                 print(json.dumps(dict(connected=False, account_available=False)))
                 return 1
-            broker = Broker(mt5, account.login, account.server, allow_live=True)
+            broker = Broker(mt5, account.login, account.server, allow_live=True,server_time_offset_seconds=int(os.environ.get('MT5_SERVER_TIME_OFFSET_SEC','0')))
             print(json.dumps(broker.snapshot(), allow_nan=False))
             return 0
         login, server = config['account_login'], config['account_server']
         config.pop('password', None)
         connection.clear()
-        broker = Broker(mt5, login, server, allow_live=os.environ.get('MT5_ALLOW_LIVE') == 'true')
+        broker = Broker(mt5, login, server, allow_live=args.monitor or os.environ.get('MT5_ALLOW_LIVE') == 'true',
+                        server_time_offset_seconds=int(os.environ.get('MT5_SERVER_TIME_OFFSET_SEC','0')))
         broker.account(config['mode'])
         journal_path = Path(os.environ.get('MT5_JOURNAL_PATH', Path(__file__).with_name('execution.sqlite3')))
         with Journal(journal_path) as journal:
-            Engine(broker, cloud, journal).run()
+            Engine(broker, cloud, journal,execute=not args.monitor).run()
         return 0
     finally:
         mt5.shutdown()

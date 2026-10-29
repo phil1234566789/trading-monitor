@@ -1,3 +1,4 @@
+import { marketPreviewAction } from '../trading-monitor-mcp/marketPreview.ts';
 import { manageMt5Accounts } from '../trading-monitor-mcp/mt5Credentials.ts';
 import { cancelExecutionOrder, getExecutionStatus } from '../trading-monitor-mcp/mt5Execution.ts';
 
@@ -20,11 +21,15 @@ Deno.serve(async req => {
   try {
     const body=JSON.parse(text);
     let result;
-    if(body.action==='status') result=await getExecutionStatus();
+    if(['preview','confirm'].includes(body.action)) result=await marketPreviewAction(body);
+    else if(body.action==='status') result=await getExecutionStatus(body.id);
     else if(body.action==='cancel') result=await cancelExecutionOrder(body.id);
     else result=await manageMt5Accounts(body);
     return Response.json(result,{headers});
-  } catch {
-    return Response.json({error:'Anfrage fehlgeschlagen. Konfiguration, Kontodaten und offene Aufträge prüfen.'},{status:400,headers});
+  } catch(error) {
+    const reason=error instanceof Error?error.message:'';
+    const code=['bridge_offline','bridge_not_ready','quote_stale','minimum_volume_exceeds_budget',
+      'invalid_stop_or_target','preview_expired','invalid_preview','live_not_enabled','bridge_not_ready'].includes(reason)?reason:'request_failed';
+    return Response.json({code,error:'Anfrage fehlgeschlagen. Konfiguration, Kontodaten und offene Aufträge prüfen.'},{status:400,headers});
   }
 });

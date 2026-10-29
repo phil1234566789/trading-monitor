@@ -24,11 +24,13 @@ export async function getExecutionStatus(id?: string) {
   const orders = checked(await db.from('mt5_execution_orders').select('*').order('created_at', { ascending:false }).limit(20));
   const online = bridge && Date.now() - Date.parse(bridge.heartbeat_at) <= 15_000;
   return { bridge, online: !!online, orders, execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',
+    server_live_allowed:Deno.env.get('MT5_ALLOW_LIVE')==='true',
     limits: { maxLots:.01, maxRiskAccountCurrency:5, maxDurationSec:3600 } };
 }
 
-export async function createExecutionOrder(input: Record<string, unknown>) {
+export async function createExecutionOrder(input: Record<string, unknown>, confirmedMarket=false) {
   const config = await executionConfig();
+  if(input.trigger==='market_confirmed'&&!confirmedMarket) throw new Error('market_confirmation_required');
   const db = database();
   validId(input.id as string);
   const existing = checked(await db.from('mt5_execution_orders').select('*').eq('id', input.id).maybeSingle());
@@ -46,7 +48,7 @@ export async function createExecutionOrder(input: Record<string, unknown>) {
   validateWorkerSnapshot(bridge.snapshot, config);
   if (!bridge.snapshot.trade_allowed || bridge.snapshot.mode !== intent.mode) throw new Error('bridge_not_ready');
   const { data, error } = await db.rpc('mt5_enqueue_order',{new_intent:intent});
-  if (error?.code === '23505') return createExecutionOrder(input);
+  if (error?.code === '23505') return createExecutionOrder(input,confirmedMarket);
   return checked({ data, error });
 }
 
@@ -63,7 +65,7 @@ export async function workerAction(body: Record<string, any>) {
   const db = database();
   const now = new Date().toISOString();
   if (body.action === 'poll') {
-    const snapshot = validateWorkerSnapshot(body.snapshot, config);
+    const snapshot = validateWorkerSnapshot(body.snapshot, {...config,allowLive:true});
     checked(await db.from('mt5_bridge_state').upsert({ id:'primary', snapshot, heartbeat_at:now }));
     checked(await db.from('mt5_execution_orders').update({status:'expired',updated_at:now})
       .eq('status','searching').lte('expires_at',now));

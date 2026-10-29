@@ -124,3 +124,24 @@ Nanoid, PostCSS, source-map-js und Vite. Keine neuen Frontend-Pakete für MMT. M
 unvertrauenswürdigen HTML-/Mermaid-Inhalte und verwendet kein SSR. Die Befunde sind nicht als
 behoben auszugeben; separate Wartung mit Reachability-Prüfung bis 12.11.2026, kein ungeprüftes
 `audit fix --force` oder Mermaid-Major-Upgrade in dieser Änderung.
+
+## Marktorder mit Vorschau und Bestaetigung
+
+Die private MMT-Ansicht bietet eine aktuelle Vorschau mit Broker-Symbol, Richtung,
+Mindestlotgroesse, SL/TP und Risiko in Kontowaehrung. Sie gilt 30 Sekunden und wird
+serverseitig signiert. Erst der Nutzerknopf sendet den konkreten Auftrag in die Queue;
+Vorschau, Seitenaufruf oder Reload legen keine Order an. Der Worker prueft Konto,
+Quote, bestehende Exposure, Risiko und Broker-Precheck erneut. Die aktuelle Quote darf
+hoechstens fuenf Brokerpunkte von der Vorschau abweichen; der Fill kann durch Slippage
+abweichen. Verlorene HTTP-Antworten werden anhand der gespeicherten Auftrags-ID abgeglichen.
+
+`start-worker.ps1 -ConfigPath <private-worker.env> -Monitor` synchronisiert ausschliesslich
+Kontostand und Kurse. Auftragspruefung, Versand und Journalzustellung sind dabei gesperrt.
+Der Versandbetrieb benoetigt weiterhin lokale und serverseitige Live-Freigabe sowie die
+MT5-Freigabe fuer Algo Trading. Eine serverseitige Sperre verhindert auch bestaetigte Orders.
+
+`MT5_SERVER_TIME_OFFSET_SEC` ist eine explizite Feed-Zeitkorrektur, Standard 0. Fuer den
+geprueften BeyondIQCapital-Feed wurde ein Versatz von +10800 Sekunden gemessen und lokal
+konfiguriert. Er wird von nativen Tick- und M1-Zeitstempeln abgezogen. Bei Broker-/Feed-
+oder saisonalem Zeitwechsel erneut messen; keine automatische Ableitung aus alten Kursen.
+Die maximale Tick-Altersgrenze von fuenf Sekunden bleibt bestehen.

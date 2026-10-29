@@ -35,6 +35,25 @@ class WorkerTests(unittest.TestCase):
             self.assertEqual(broker.send.call_count, 1)
             self.assertEqual(journal.pending()[0]['result']['deal'], 123)
 
+    def test_confirmed_market_needs_no_candle_and_executes_only_once(self):
+        with tempfile.TemporaryDirectory() as directory, Journal(Path(directory)/'j.sqlite3') as journal:
+            broker,cloud=Mock(),Mock()
+            cloud.call.return_value=dict(authorized=True)
+            broker.send.return_value=dict(status='executed',deal=123,volume=.01)
+            order=intent(trigger='market_confirmed',reference_price=1.3,volume=.01,created_sec=240,expires_sec=270)
+            engine=Engine(broker,cloud,journal)
+            with patch('worker.time.time',return_value=241):
+                engine.consider(order,241)
+                engine.consider(order,241)
+            broker.closed_m1.assert_not_called()
+            broker.send.assert_called_once()
+
+    def test_monitor_never_prepares_or_sends_an_order(self):
+        with tempfile.TemporaryDirectory() as directory,Journal(Path(directory)/'j.sqlite3') as journal:
+            broker,cloud=Mock(),Mock()
+            Engine(broker,cloud,journal,execute=False).consider(intent(),241)
+            broker.prepare.assert_not_called();broker.send.assert_not_called();cloud.call.assert_not_called()
+
     def test_no_authorization_no_trigger_no_trade(self):
         with tempfile.TemporaryDirectory() as directory, Journal(Path(directory) / 'j.sqlite3') as journal:
             broker, cloud = Mock(), Mock()

@@ -1,7 +1,7 @@
 import time
 import unittest
 from types import SimpleNamespace as NS
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from broker import Broker
 from test_core import intent
@@ -35,6 +35,27 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(request['price'], 1.3)
         self.assertEqual(request['sl'], 1.31)
         m.order_send.assert_not_called()
+
+    def test_confirmed_market_uses_minimum_and_rejects_changed_quote(self):
+        m=api()
+        m.order_calc_profit.return_value=-100
+        order=intent(trigger='market_confirmed', reference_price=1.3, volume=.01, created_sec=240, expires_sec=270, risk_amount=5)
+        self.assertEqual(Broker(m,42,'Demo').prepare(order)['volume'],.01)
+        order['reference_price']=1.29
+        with self.assertRaises(ValueError):
+            Broker(m,42,'Demo').prepare(order)
+        m.order_send.assert_not_called()
+
+    def test_explicit_feed_offset_does_not_allow_old_or_future_ticks(self):
+        m=api();m.symbol_info_tick.return_value.time=10900
+        broker=Broker(m,42,'Demo',server_time_offset_seconds=10800)
+        with patch('broker.time.time',return_value=100):
+            self.assertEqual(broker.fresh_tick('GBPUSD')[1],100)
+            with self.assertRaises(ValueError):Broker(m,42,'Demo').fresh_tick('GBPUSD')
+        for host,tick in [(100,10870),(102,10872),(100,10902)]:
+            m.symbol_info_tick.return_value.time=tick
+            with patch('broker.time.time',return_value=host),self.assertRaises(ValueError):
+                broker.fresh_tick('GBPUSD')
 
     def test_refuses_account_switch_live_account_and_disabled_trading(self):
         for changes in [dict(login=43), dict(server='Other'), dict(trade_mode=2),
