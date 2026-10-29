@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {closedBrokerTrades,statisticsGroups,filterBrokerTrades} from '../src/milkyMetaTraderStatistics.js';
+import {closedBrokerTrades,statisticsGroups,filterBrokerTrades,positionCommission} from '../src/milkyMetaTraderStatistics.js';
 const entry={id:1,account_id:'a',ticket:1,position_id:42,time_msc:Date.parse('2026-10-29T08:30:00Z'),type:1,entry:0,symbol:'XAUUSD.gbe',volume:.01,price:4020,profit:0,commission:-.05,swap:0,fee:0,currency:'USD'};
 const exit={...entry,id:2,ticket:2,time_msc:Date.parse('2026-10-29T09:30:00Z'),type:0,entry:1,price:4010,profit:10,commission:-.05};
 describe('native broker statistics',()=>{
@@ -33,4 +33,22 @@ describe('native broker statistics',()=>{
  it('deduplicates replayed deal tickets within an account',()=>{
   expect(closedBrokerTrades([entry,exit,entry,exit]).trades[0].net).toBeCloseTo(9.9);
  });
+});
+
+it('exposes commission separately without subtracting it twice from net',()=>{
+ const rows=[entry,exit,{...entry,ticket:3,type:7,volume:0,profit:-1,commission:0}];
+ const t=closedBrokerTrades(rows).trades[0];
+ expect(t.commission).toBeCloseTo(-1.1);
+ expect(t.net).toBeCloseTo(8.9);
+ expect(statisticsGroups([t],'asset')[0].commission).toBeCloseTo(-1.1);
+ expect(positionCommission(rows,'a',42)).toBeCloseTo(-1.1);
+ expect(positionCommission(rows,'b',42)).toBeNull();
+ expect(positionCommission([], 'a',42)).toBeNull();
+ expect(positionCommission([{...entry,commission:0}],'a',42)).toBe(0);
+});
+
+it('preserves commission refunds, deduplicates fees and never mixes account currencies',()=>{
+ const rows=[entry,exit,{...entry,ticket:3,type:7,profit:.02,commission:0}];
+ expect(positionCommission([...rows,...rows],'a',42)).toBeCloseTo(-.08);
+ expect(positionCommission([entry,{...exit,currency:'EUR'}],'a',42)).toBeNull();
 });

@@ -4,7 +4,7 @@ import MilkyMetaTraderLivePosition from './MilkyMetaTraderLivePosition.vue';
 import { findOrderPosition } from '../milkyMetaTraderMonitoring.js';
 import ActionButton from './ui/ActionButton.vue';
 import { fmtDateTime, fmtPrice, pnlClass, pricePrecisionForInstrument } from '../format.js';
-const props=defineProps({order:{type:Object,required:true},busy:Boolean,snapshot:Object,age:Number});
+const props=defineProps({order:{type:Object,required:true},busy:Boolean,snapshot:Object,age:Number,commission:{type:Number,default:null},commissionAt:String});
 defineEmits(['cancel']);
 const lifecycle=computed(()=>props.order.result?.position_lifecycle);
 const position=computed(()=>findOrderPosition(props.order,props.snapshot));
@@ -27,9 +27,9 @@ const time=value=>fmtDateTime(value,{timeZone:'Europe/Berlin'});
       <div><dt>Stop-Loss <span>SL</span></dt><dd>{{price(order.intent.stop_loss)}}</dd></div>
       <div><dt>Take-Profit <span>TP</span></dt><dd>{{price(order.intent.take_profit)}}</dd></div>
     </dl>
-    <MilkyMetaTraderLivePosition v-if="position" :position="position" :currency="snapshot?.currency" :age="age" :digits="digits" />
+    <MilkyMetaTraderLivePosition v-if="position" :position="position" :currency="snapshot?.currency" :age="age" :digits="digits" :commission="commission" :commission-at="commissionAt" />
     <p v-else-if="order.status==='executed'&&!closed" class="mmt-muted">Keine offene Brokerposition im aktuellen Stand. Abschluss wird abgeglichen.</p>
-    <div v-if="closed" class="mmt-outcome"><div><span class="mmt-muted">Ergebnis netto</span><strong :class="pnlClass(lifecycle.net_profit)">{{fmtPrice(lifecycle.net_profit,2)}} <small>{{lifecycle.currency}}</small></strong></div><p>Exit {{price(lifecycle.exit_price)}}<br><span class="mmt-muted">{{time(lifecycle.closed_at_sec)}} · Berlin</span></p></div>
+    <div v-if="closed" class="mmt-outcome"><div><span class="mmt-muted">Ergebnis netto</span><strong :class="pnlClass(lifecycle.net_profit)">{{fmtPrice(lifecycle.net_profit,2)}} <small>{{lifecycle.currency}}</small></strong><span class="mmt-order-commission">Commission <b :class="pnlClass(commission)">{{fmtPrice(commission,2)}} {{lifecycle.currency}}</b></span></div><p>Exit {{price(lifecycle.exit_price)}}<br><span class="mmt-muted">{{time(lifecycle.closed_at_sec)}} · Berlin</span></p></div>
     <div class="mmt-order-footer"><details><summary>Auftragsdetails</summary><p>ID: {{order.id}}<br><span v-if="order.result?.reason">{{order.result.reason}}</span></p></details><ActionButton v-if="order.status==='searching'" :disabled="busy" @click="$emit('cancel',order.id)">Suche abbrechen</ActionButton></div>
   </li>
 </template>
