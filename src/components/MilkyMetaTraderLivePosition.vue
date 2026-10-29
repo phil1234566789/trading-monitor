@@ -1,6 +1,6 @@
 <script setup>
-import { fmtPrice, pnlClass, pricePrecisionForInstrument } from '../format.js';
-const props=defineProps({position:{type:Object,required:true},currency:String,age:Number,digits:Number});
+import { fmtDateTime, fmtPrice, pnlClass, pricePrecisionForInstrument } from '../format.js';
+const props=defineProps({position:{type:Object,required:true},currency:String,age:Number,digits:Number,commission:{type:Number,default:null},commissionAt:String});
 const price=value=>fmtPrice(value,props.digits??pricePrecisionForInstrument(props.position.symbol.replace(/\.gbe$/i,'')));
 </script>
 <template>
@@ -12,7 +12,8 @@ const price=value=>fmtPrice(value,props.digits??pricePrecisionForInstrument(prop
       <div><dt>Broker-Entry</dt><dd>{{price(position.price_open)}}</dd></div>
       <div><dt>Broker-SL</dt><dd>{{position.sl?price(position.sl):'Keiner'}}</dd></div>
       <div><dt>Broker-TP</dt><dd>{{position.tp?price(position.tp):'Keiner'}}</dd></div>
+      <div><dt>Commission bisher</dt><dd :class="pnlClass(commission)">{{fmtPrice(commission,2)}} {{currency}}</dd></div>
     </dl>
-    <small class="mmt-muted">Positions-PnL ohne Gebühren und Swap · Ticket {{position.ticket}}</small>
+    <small class="mmt-muted">Positions-PnL ohne Commission/Gebühren und Swap · Ticket {{position.ticket}}<br>Commission: {{commissionAt?'Historienstand '+fmtDateTime(commissionAt,{timeZone:'Europe/Berlin',second:'2-digit'}):'noch nicht abgeglichen'}}; spätere Ausstiegskosten noch nicht enthalten.</small>
   </div>
 </template>

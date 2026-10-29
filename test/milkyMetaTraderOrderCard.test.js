@@ -40,3 +40,9 @@ it('renders native live PnL, price, lot and freshness for the exact broker posit
  expect(html).toContain('Position offen');
  expect(html).toContain('negative');
 });
+
+it('shows separately supplied commission on closed executions without changing broker net',async()=>{
+ const value={...order,status:'executed',result:{price:1.11431,position_lifecycle:{state:'closed',close_reason:'tp',exit_price:1.11513,closed_at_sec:1793271749,net_profit:.77,currency:'USD'}}};
+ const html=await renderToString(createSSRApp(OrderCard,{order:value,commission:-.05}));
+ expect(html).toContain('Commission');expect(html).toContain('-0,05');expect(html).toContain('0,77');
+});

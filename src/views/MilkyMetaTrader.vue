@@ -2,11 +2,12 @@
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useStatusBar } from '../composables/useStatusBar.js';
 import { mmtPollDelay, mmtStaleSeconds, mmtConnectionStatus } from '../milkyMetaTraderPolling.js';
+import { positionCommissions } from '../milkyMetaTraderStatistics.js';
 import { cssColor } from '../chartColors.js';
 import { fmtPrice } from '../format.js';
 import MilkyMetaTraderStatistics from '../components/MilkyMetaTraderStatistics.vue';
 import MilkyMetaTraderLivePosition from '../components/MilkyMetaTraderLivePosition.vue';
-import { findOrderPosition, snapshotAgeSeconds } from '../milkyMetaTraderMonitoring.js';
+import { findOrderPosition, snapshotAgeSeconds, executionPositionId } from '../milkyMetaTraderMonitoring.js';
 import MilkyMetaTraderOrderCard from '../components/MilkyMetaTraderOrderCard.vue';
 import '../milkyMetaTrader.css';
 import ActionButton from '../components/ui/ActionButton.vue';
@@ -14,6 +15,12 @@ import MilkyMetaTraderEntrySearch from '../components/MilkyMetaTraderEntrySearch
 import { createMilkyMetaTraderClient } from '../milkyMetaTraderClient.js';
 import { readMilkyMetaTraderKey, saveMilkyMetaTraderKey, forgetMilkyMetaTraderKey } from '../milkyMetaTraderKey.js';
 
+const brokerHistory=ref({rows:[],sync:[]});
+const commissions=computed(()=>positionCommissions(brokerHistory.value.rows));
+const commissionFor=(accountId,positionId)=>commissions.value.get(`${accountId}:${positionId}`)??null;
+const historyTime=accountId=>brokerHistory.value.sync.find(s=>s.account_id===accountId)?.synced_at;
+const accountForOrder=order=>accounts.value.find(a=>Number(a.login)===order.intent.account_login&&a.server===order.intent.account_server)?.id;
+const orderCommission=order=>commissionFor(accountForOrder(order),executionPositionId(order));
 const token=ref(readMilkyMetaTraderKey()), unlocked=ref(false), accounts=ref([]), activeId=ref(null);
 const status=ref(null), busy=ref(false), error=ref(''), message=ref('');
 const form=ref({name:'',login:'',server:'BeyondIQCapital-Server',mode:'live',password:''});
@@ -88,7 +95,7 @@ async function unlock() {
 }
 function clearView() {
   viewEpoch++;clearInterval(timer); timer=null;pollError.value=''; token.value=''; unlocked.value=false;
-  form.value.password=''; accounts.value=[]; status.value=null; activeId.value=null;
+  brokerHistory.value={rows:[],sync:[]};form.value.password=''; accounts.value=[]; status.value=null; activeId.value=null;
 }
 function lock() {
   if(!forgetMilkyMetaTraderKey()) {error.value='Der gespeicherte Schlüssel konnte nicht entfernt werden. Bitte die Website-Daten im Browser löschen.';return;}
@@ -146,18 +153,18 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <p v-else-if="status?.health?.checked_at&&Date.now()-Date.parse(status.health.checked_at)>150000" role="alert" class="mmt-error">Unabhängige Alarmprüfung ist veraltet. Letzte Prüfung: {{time(status.health.checked_at)}} (Berlin).</p>
       <p v-if="dataAge==null||dataAge>staleSeconds" role="status" class="mmt-error">Brokerdaten {{dataAge==null?'noch nicht verfügbar':'seit '+dataAge+' Sekunden nicht aktualisiert'}}. Angezeigte Werte sind kein aktueller Stand.</p>
       <section v-if="unmatchedPositions.length" class="mmt-panel mmt-broker-positions"><h2>Weitere offene Brokerpositionen</h2>
-        <div v-for="position in unmatchedPositions" :key="position.ticket"><h3>{{position.symbol}} · {{position.type===0?'Long':'Short'}}</h3><MilkyMetaTraderLivePosition :position="position" :currency="snapshot?.currency" :age="dataAge" :digits="snapshot?.quotes?.find(q=>q.symbol===position.symbol)?.digits" /></div>
+        <div v-for="position in unmatchedPositions" :key="position.ticket"><h3>{{position.symbol}} · {{position.type===0?'Long':'Short'}}</h3><MilkyMetaTraderLivePosition :position="position" :commission="commissionFor(activeId,position.position_id??position.ticket)" :commission-at="historyTime(activeId)" :currency="snapshot?.currency" :age="dataAge" :digits="snapshot?.quotes?.find(q=>q.symbol===position.symbol)?.digits" /></div>
       </section>
       <div class="mmt-workspace">
         <div class="mmt-main-column">
           <section v-if="currentOrders.length" class="mmt-panel mmt-orders" aria-labelledby="mmt-orders-title">
             <div class="mmt-section-heading"><h2 id="mmt-orders-title">Aktuelle Entry-Aufträge</h2><ActionButton :disabled="busy" @click="run(refresh)">Aktualisieren</ActionButton></div>
             <p class="mmt-muted">Abgleich {{pollDelay===1000?'etwa jede Sekunde':'alle 8 Sekunden'}} · kein erneuter Auftrag durch Aktualisieren.</p>
-            <ul class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in currentOrders" :key="order.id" :order="order" :busy="busy" :snapshot="snapshot" :age="dataAge" @cancel="cancel" /></ul>
+            <ul class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in currentOrders" :key="order.id" :order="order" :commission="orderCommission(order)" :commission-at="historyTime(accountForOrder(order))" :busy="busy" :snapshot="snapshot" :age="dataAge" @cancel="cancel" /></ul>
           </section>
           <p v-else class="mmt-muted">Keine laufende Entry-Suche.</p>
-          <MilkyMetaTraderStatistics :api="api" :accounts="accounts" />
-          <details v-if="previousOrders.length" class="mmt-panel mmt-technical-history"><summary>Technischer Auftragsverlauf · {{previousOrders.length}} letzte erledigte Aufträge</summary><p>Suchaufträge sind keine vollständige Brokerhistorie und zählen nicht als Statistikdaten.</p><ul class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in previousOrders" :key="order.id" :order="order" :busy="busy" /></ul></details>
+          <MilkyMetaTraderStatistics :api="api" :accounts="accounts" @history="brokerHistory=$event" />
+          <details v-if="previousOrders.length" class="mmt-panel mmt-technical-history"><summary>Technischer Auftragsverlauf · {{previousOrders.length}} letzte erledigte Aufträge</summary><p>Suchaufträge sind keine vollständige Brokerhistorie und zählen nicht als Statistikdaten.</p><ul class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in previousOrders" :key="order.id" :order="order" :commission="orderCommission(order)" :commission-at="historyTime(accountForOrder(order))" :busy="busy" /></ul></details>
         </div>
         <MilkyMetaTraderEntrySearch :api="api" :status="status" :account="active" @submitted="run(refresh)" />
       </div>
