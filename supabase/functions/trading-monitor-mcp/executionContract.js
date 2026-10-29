@@ -52,12 +52,13 @@ export function validateExecutionIntent(value, config, now) {
 
 export function validateWorkerSnapshot(value, config) {
   fields(value, ['account_login','account_server','mode','balance','equity','currency',
-    'trade_allowed','positions','pending_orders','quotes','execution_ready']);
+    'trade_allowed','positions','pending_orders','quotes','execution_ready','worker_error']);
   account(value, config);
   if (!finite(value.balance) || !finite(value.equity) || typeof value.currency !== 'string'
     || !/^[A-Z]{3,8}$/.test(value.currency) || typeof value.trade_allowed !== 'boolean'
     || !Array.isArray(value.positions) || value.positions.length > 100
     || !Number.isSafeInteger(value.pending_orders) || value.pending_orders < 0) throw new Error('invalid_snapshot');
+  if(value.worker_error!=null)validateWorkerFault(value.worker_error);
   if(value.execution_ready!=null&&typeof value.execution_ready!=='boolean') throw new Error('invalid_snapshot');
   if(value.quotes!=null) {
     if(!Array.isArray(value.quotes)||value.quotes.length>10) throw new Error('invalid_quotes');
@@ -75,4 +76,28 @@ export function validateWorkerSnapshot(value, config) {
       || ![0,1].includes(p.type) || ![p.sl,p.tp,p.profit,p.magic].every(finite)) throw new Error('invalid_position');
   }
   return value;
+}
+
+export function validateExecutionResult(result) {
+  fields(result,['status','reason','retcode','order','deal','position','volume','price','magic','partial','confirmation_source']);
+  if(!['executed','rejected','unknown'].includes(result.status)
+    ||result.reason!=null&&(typeof result.reason!=='string'||result.reason.length>100))throw new Error('invalid_result');
+  for(const key of ['retcode','order','deal','position','volume','price','magic'])
+    if(result[key]!=null&&!finite(result[key]))throw new Error('invalid_result');
+  if(result.partial!=null&&typeof result.partial!=='boolean')throw new Error('invalid_result');
+  if(result.confirmation_source!=null&&!['deal_history','position_snapshot','broker_reply'].includes(result.confirmation_source))throw new Error('invalid_result');
+  const confirmed=positive(result.deal)||(positive(result.position)&&result.position===result.order
+    &&positive(result.magic)&&result.confirmation_source==='position_snapshot');
+  if(result.status==='executed'&&(!positive(result.volume)||result.volume>.01||!positive(result.price)||!confirmed))
+    throw new Error('invalid_execution_result');
+  return result;
+}
+
+export function validateWorkerFault(value) {
+ fields(value,['code','stage','line','since_sec']);
+ if(typeof value.code!=='string'||!/^[A-Za-z_][A-Za-z0-9_]{0,79}$/.test(value.code)
+  ||typeof value.stage!=='string'||!/^[A-Za-z_][A-Za-z0-9_]{0,79}$/.test(value.stage)
+  ||!Number.isSafeInteger(value.line)||value.line<1||value.line>1000000
+  ||!Number.isSafeInteger(value.since_sec)||value.since_sec<=0)throw new Error('invalid_worker_fault');
+ return value;
 }

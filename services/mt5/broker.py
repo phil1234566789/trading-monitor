@@ -2,6 +2,7 @@
 import time
 
 from core import positive, validate_intent, volume_for_risk
+from reconciliation import reconcile_fill
 
 # Symbol-Bitflags aus MQL5 fehlen im Python-SDK; ORDER_FILLING_* sind andere Werte.
 SYMBOL_FILLING_FOK = 1
@@ -143,6 +144,14 @@ class Broker:
         if check is None or check.retcode != 0:
             raise ValueError('broker_precheck_failed')
         return request
+
+    def reconcile_result(self,result):
+        self.account()
+        if not positive(result.get('order')):
+            return None
+        deals=self.api.history_deals_get(ticket=result['order'])
+        positions=self.api.positions_get(ticket=result['order'])
+        return reconcile_fill(result,deals,positions)
 
     def send(self, intent, request):
         # Nach der Cloud-Freigabe nicht auf Basis einer inzwischen gewechselten Kontositzung senden.

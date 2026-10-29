@@ -1,4 +1,6 @@
-import { isExecutionId, isSameExecutionResult, validateDispatchAccount, validateExecutionIntent, validateWorkerSnapshot } from './executionContract.js';
+import {scheduleMt5Health,getMt5Health} from './mt5Health.ts';
+
+import { isExecutionId, isSameExecutionResult, validateExecutionResult, validateWorkerFault, validateDispatchAccount, validateExecutionIntent, validateWorkerSnapshot } from './executionContract.js';
 import { activeMt5Account, checked, mt5Database as database } from './mt5Credentials.ts';
 
 export async function executionConfig() {
@@ -23,7 +25,7 @@ export async function getExecutionStatus(id?: string) {
   // Bewusst nur die letzten 20 Aufträge, kein vollständiger Archiv-Export.
   const orders = checked(await db.from('mt5_execution_orders').select('*').order('created_at', { ascending:false }).limit(20));
   const online = bridge && Date.now() - Date.parse(bridge.heartbeat_at) <= 15_000;
-  return { bridge, online: !!online, orders, execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',
+  return { bridge, online: !!online, health:await getMt5Health(), orders, execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',
     server_live_allowed:Deno.env.get('MT5_ALLOW_LIVE')==='true',
     limits: { maxLots:.01, maxRiskAccountCurrency:5, maxDurationSec:3600 } };
 }
@@ -46,7 +48,7 @@ export async function createExecutionOrder(input: Record<string, unknown>, confi
   const bridge = checked(await db.from('mt5_bridge_state').select('*').eq('id','primary').maybeSingle());
   if (!bridge || Date.now() - Date.parse(bridge.heartbeat_at) > 15_000) throw new Error('bridge_offline');
   validateWorkerSnapshot(bridge.snapshot, config);
-  if (!bridge.snapshot.trade_allowed || bridge.snapshot.mode !== intent.mode) throw new Error('bridge_not_ready');
+  if (bridge.snapshot.worker_error||bridge.snapshot.execution_ready===false||!bridge.snapshot.trade_allowed || bridge.snapshot.mode !== intent.mode) throw new Error('bridge_not_ready');
   const { data, error } = await db.rpc('mt5_enqueue_order',{new_intent:intent});
   if (error?.code === '23505') return createExecutionOrder(input,confirmedMarket);
   return checked({ data, error });
@@ -64,6 +66,14 @@ export async function workerAction(body: Record<string, any>) {
   const config = await executionConfig();
   const db = database();
   const now = new Date().toISOString();
+  if(body.action==='fault') {
+    if(body.account_login!==config.login||body.account_server!==config.server)throw new Error('account_mismatch');
+    const fault=validateWorkerFault(body.fault);
+    const bridge=checked(await db.from('mt5_bridge_state').select('*').eq('id','primary').maybeSingle());
+    if(bridge)checked(await db.from('mt5_bridge_state').update({snapshot:{...bridge.snapshot,worker_error:fault,execution_ready:false},heartbeat_at:now}).eq('id','primary'));
+    await scheduleMt5Health();
+    return {recorded:true};
+  }
   if (body.action === 'poll') {
     const snapshot = validateWorkerSnapshot(body.snapshot, {...config,allowLive:true});
     checked(await db.from('mt5_bridge_state').upsert({ id:'primary', snapshot, heartbeat_at:now }));
@@ -90,19 +100,13 @@ export async function workerAction(body: Record<string, any>) {
     return {recorded:!!rows?.length};
   }
   if (body.action === 'result') {
-    const result = body.result;
-    if (!result || !['executed','rejected','unknown'].includes(result.status)
-      || Object.keys(result).some(k => !['status','reason','retcode','order','deal','volume','price','magic','partial'].includes(k))
-      || (result.reason != null && (typeof result.reason !== 'string' || result.reason.length > 100))) throw new Error('invalid_result');
-    for (const key of ['retcode','order','deal','volume','price','magic']) {
-      if (result[key] != null && (typeof result[key] !== 'number' || !Number.isFinite(result[key]))) throw new Error('invalid_result');
-    }
-    if (result.status === 'executed' && (!(result.volume > 0) || result.volume > .01 || !(result.deal > 0))) {
-      throw new Error('invalid_execution_result');
-    }
+    const result=validateExecutionResult(body.result);
     const rows = checked(await db.from('mt5_execution_orders').update({ status:result.status,result,updated_at:now })
       .eq('id',body.id).in('status',['sending','unknown']).select('id'));
-    if(rows?.length===1) return {recorded:true};
+    if(rows?.length===1) {
+      if(result.status==='unknown')await scheduleMt5Health();
+      return {recorded:true};
+    }
     const existing=checked(await db.from('mt5_execution_orders').select('status,result').eq('id',body.id).maybeSingle());
     return { recorded:isSameExecutionResult(existing,result) };
   }

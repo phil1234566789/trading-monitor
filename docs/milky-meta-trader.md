@@ -159,3 +159,33 @@ geprueften BeyondIQCapital-Feed wurde ein Versatz von +10800 Sekunden gemessen u
 konfiguriert. Er wird von nativen Tick- und M1-Zeitstempeln abgezogen. Bei Broker-/Feed-
 oder saisonalem Zeitwechsel erneut messen; keine automatische Ableitung aus alten Kursen.
 Die maximale Tick-Altersgrenze von fuenf Sekunden bleibt bestehen.
+
+## Fehleralarmierung und Fill-Rueckmeldung
+
+Workerfehler werden ohne rohe Exception-Texte als Klasse, Codeposition und Fehlerbeginn
+an den privaten Worker-Endpunkt gemeldet. Der Heartbeat kann weiterlaufen, aber
+`execution_ready=false` und `worker_error` machen die gestoerte Ausfuehrung sichtbar.
+Eine frische Verbindung ist allein kein Betriebsnachweis. Die atomare Versandfreigabe
+blockiert einen Workerfehler auch auf Datenbankebene.
+
+`mt5-health` prueft unabhaengig jede Minute den Worker-Heartbeat, Ausfuehrungsfehler und
+unklare Versandzustaende. Ein Heartbeat-Ausfall wird nach 60 Sekunden kritisch, daher
+mit Cron-Takt typischerweise innerhalb von ein bis zwei Minuten erkannt. Neue Incidents
+legen je eine private Pushover- und Telegram-Zustellung an. Wiederholungen desselben
+aktiven Fehlers erzeugen keinen neuen Incident. Definite Providerablehnungen werden
+begrenzt erneut versucht; unbekannte Annahme oder abgebrochener Versand werden als
+`uncertain` dokumentiert und niemals blind wiederholt. MMT zeigt den Kanalstatus sowie
+eine ueberfaellige unabhaengige Alarmpruefung an. Die Providerannahme beweist nicht,
+dass eine Nachricht auf dem Telefon bereits gelesen wurde.
+
+Der Cron verwendet den vorhandenen privaten Vault-Token `setup2_watch_token`, der
+Endpoint prueft `SETUP2_WATCH_TOKEN`. Ein Alarmtest per POST `{"action":"test"}`
+benoetigt den privaten MMT-Control-Token. Zugangsdaten und Kontostaende stehen nicht
+in den Fehlermeldungen. Die bestehenden Pushover-/Telegram-Secrets bleiben serverseitig.
+
+IQ kann Erfolg mit Orderticket, aber ohne Deal-ID und Fill-Preis bestaetigen. Der Worker
+sendet niemals erneut: Er gleicht Orderticket, Magic und Volumen gegen Dealhistorie oder
+eine exakt passende Position ab. Dealticket und Positionsticket bleiben verschiedene
+Felder; erst ein belegter positiver Fill-Preis wird als ausgefuehrter Entry angezeigt.
+Ein noch nicht belegter Fill bleibt offen/unknown und sperrt weitere Sendungen. Fehler
+bei der Resultatuebertragung duerfen die Heartbeats nicht mehr unterdruecken.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isSameExecutionResult, validateDispatchAccount, validateExecutionIntent, validateWorkerSnapshot } from '../supabase/functions/trading-monitor-mcp/executionContract.js';
+import { validateExecutionResult, isSameExecutionResult, validateDispatchAccount, validateExecutionIntent, validateWorkerSnapshot } from '../supabase/functions/trading-monitor-mcp/executionContract.js';
 
 const now = 1800000000;
 const config = { login: 42, server: 'Demo', allowLive: false };
@@ -57,4 +57,12 @@ describe('confirmed market intent',()=>{
 it('accepts a directional candle trigger without a price threshold',()=>{
   const order=intent({trigger:'m1_directional_close',trigger_price:null,volume:.01});
   expect(validateExecutionIntent(order,config,now)).toEqual(order);
+});
+
+it('requires an actual deal or explicitly matched position and nonzero fill price',()=>{
+ const r={status:'executed',order:123,deal:0,price:0,volume:.01,magic:77};
+ expect(()=>validateExecutionResult(r)).toThrow();
+ expect(()=>validateExecutionResult({...r,price:1.2})).toThrow();
+ expect(validateExecutionResult({...r,price:1.2,position:123,confirmation_source:'position_snapshot'}).price).toBe(1.2);
+ expect(()=>validateExecutionResult({...r,price:1.2,position:456,confirmation_source:'position_snapshot'})).toThrow();
 });

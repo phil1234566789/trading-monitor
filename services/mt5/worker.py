@@ -8,7 +8,8 @@ from urllib.parse import urlparse
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 
 from broker import Broker
-from core import Journal, trigger_matches, validate_intent
+from core import Journal, trigger_matches, validate_intent, positive
+from health import fault_details
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -43,13 +44,54 @@ class Engine:
     def __init__(self, broker, cloud, journal, execute=True):
         self.broker, self.cloud, self.journal = broker, cloud, journal
         self.execute=execute
+        self.last_fault=None
+        self.last_fault_report=0
+        self.pending_notified=set()
+        self.next_reconcile={}
+
+    def report_fault(self,error):
+        fault=fault_details(error,self.last_fault)
+        changed=self.last_fault!=fault
+        self.last_fault=fault
+        if not changed and time.monotonic()-self.last_fault_report<30:
+            return
+        self.last_fault_report=time.monotonic()
+        print(json.dumps(dict(event='worker_paused',**fault)),flush=True)
+        try:
+            self.cloud.call('fault',dict(account_login=self.broker.login,account_server=self.broker.server,fault=fault))
+        except Exception:
+            print(json.dumps(dict(event='fault_report_pending')),flush=True)
+
+    def snapshot(self):
+        snapshot=self.broker.snapshot()
+        snapshot['quotes']=self.broker.quotes()
+        snapshot['execution_ready']=self.execute and self.last_fault is None
+        if self.last_fault:snapshot['worker_error']=self.last_fault
+        return snapshot
 
     def flush(self):
+        failed=False
         for row in self.journal.pending():
-            result = row['result'] or dict(status='unknown', reason='restart_after_reservation')
-            self.journal.finish(row['id'], result)
-            if self.cloud.call('result', dict(id=row['id'], result=result)).get('recorded') is True:
-                self.journal.acknowledge(row['id'])
+            try:
+                result=row['result'] or dict(status='unknown',reason='restart_after_reservation')
+                if result['status']=='executed' and (not positive(result.get('price')) or
+                    not (positive(result.get('deal')) or positive(result.get('position')))):
+                    if time.monotonic()<self.next_reconcile.get(row['id'],0):continue
+                    self.next_reconcile[row['id']]=time.monotonic()+2
+                    resolved=self.broker.reconcile_result(result)
+                    if resolved is None:
+                        if row['id'] not in self.pending_notified:
+                            self.cloud.call('result',dict(id=row['id'],result=dict(result,status='unknown',reason='broker_fill_pending')))
+                            self.pending_notified.add(row['id'])
+                        continue
+                    result=resolved
+                self.journal.finish(row['id'],result)
+                if self.cloud.call('result',dict(id=row['id'],result=result)).get('recorded') is True:
+                    self.journal.acknowledge(row['id'])
+            except Exception as error:
+                failed=True
+                self.report_fault(error)
+        return not failed
 
     def consider(self, intent, now):
         if not self.execute:
@@ -91,28 +133,26 @@ class Engine:
         orders, next_poll = [], 0.0
         while True:
             try:
-                if self.execute:
-                    self.flush()
+                flush_ok=self.flush() if self.execute else True
                 if time.monotonic() >= next_poll:
-                    snapshot=self.broker.snapshot()
-                    snapshot['quotes']=self.broker.quotes()
-                    snapshot['execution_ready']=self.execute
+                    snapshot=self.snapshot()
                     response = self.cloud.call('poll', dict(snapshot=snapshot))
                     orders = response.get('orders')
                     if not isinstance(orders, list) or len(orders) > 100:
                         raise ValueError('invalid_order_list')
                     next_poll = time.monotonic() + 2
-                if self.execute and not any(row.get('status') in ('sending', 'unknown') for row in orders):
+                if self.execute and flush_ok and not any(row.get('status') in ('sending', 'unknown') for row in orders):
                     for row in orders:
                         if row.get('status') == 'searching':
                             self.consider(row['intent'], time.time())
             except KeyboardInterrupt:
                 return
             except Exception as error:
-                # Keine Token, Payloads oder Brokerzugangsdaten in Fehlermeldungen drucken.
-                print(json.dumps(dict(event='worker_paused', error=type(error).__name__)), flush=True)
+                self.report_fault(error)
                 orders, next_poll = [], 0.0
                 time.sleep(2)
+            else:
+                if flush_ok:self.last_fault=None
             time.sleep(.2)
 
 

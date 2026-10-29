@@ -99,6 +99,18 @@ class BrokerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'unsupported_filling_mode'):
             Broker(m,42,'Demo').prepare(intent(risk_amount=5))
 
+    def test_fill_reconciliation_uses_exact_order_magic_and_position_without_send(self):
+        m=api();m.history_deals_get.return_value=()
+        ack=dict(status='executed',retcode=10009,order=123,deal=0,price=0,volume=.01,magic=77,partial=False)
+        m.positions_get.return_value=(NS(ticket=123,magic=77,volume=.01,price_open=1.23456),)
+        result=Broker(m,42,'Demo').reconcile_result(ack)
+        self.assertEqual(result['price'],1.23456)
+        self.assertEqual(result['position'],123)
+        self.assertEqual(result['confirmation_source'],'position_snapshot')
+        m.positions_get.return_value=(NS(ticket=123,magic=88,volume=.01,price_open=1.23456),)
+        self.assertIsNone(Broker(m,42,'Demo').reconcile_result(ack))
+        m.order_send.assert_not_called()
+
     def test_refuses_account_switch_live_account_and_disabled_trading(self):
         for changes in [dict(login=43), dict(server='Other'), dict(trade_mode=2),
                         dict(trade_allowed=False), dict(trade_expert=False)]:
