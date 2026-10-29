@@ -27,7 +27,7 @@ export async function getExecutionStatus(id?: string) {
   const online = bridge && Date.now() - Date.parse(bridge.heartbeat_at) <= 15_000;
   return { bridge, online: !!online, health:await getMt5Health(), orders, execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',
     server_live_allowed:Deno.env.get('MT5_ALLOW_LIVE')==='true',
-    limits: { maxLots:.01, maxRiskAccountCurrency:5, maxDurationSec:3600 } };
+    limits: { maxLots:.01, maxDurationSec:3600 } };
 }
 
 export async function createExecutionOrder(input: Record<string, unknown>, confirmedMarket=false) {

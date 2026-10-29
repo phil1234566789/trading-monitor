@@ -22,7 +22,7 @@ describe('MT5 execution boundary', () => {
   it('binds orders to the configured account and validates fresh bounded intent', () => {
     expect(validateExecutionIntent(intent(), config, now)).toEqual(intent());
     for (const patch of [{account_login:43},{account_server:'Other'},{mode:'live'},
-      {risk_amount:6},{risk_amount:NaN},{stop_loss:0},{expires_sec:now},
+      {risk_amount:NaN},{stop_loss:0},{expires_sec:now},
       {expires_sec:now+3601},{created_sec:now-60},{trigger:'whatever'}, {symbol:'GBPUSD\n'}]) {
       expect(() => validateExecutionIntent(intent(patch), config, now)).toThrow();
     }
@@ -80,4 +80,9 @@ it('requires positive exit price and a broker-history proof for closure',()=>{
 
 it('does not allow a pending lifecycle to carry a completed exit timestamp',()=>{
  expect(()=>validatePositionLifecycle({state:'unverified',position:123,closed_at_sec:1800000000})).toThrow();
+});
+
+it('does not cap a valid loss estimate at five currency units',()=>{
+  const value=intent({risk_amount:25,trigger:'m1_directional_close',trigger_price:null,volume:.01});
+  expect(validateExecutionIntent(value,config,now)).toEqual(value);
 });

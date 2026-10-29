@@ -72,7 +72,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
   <main class="mmt-page" :style="{'--mmt-positive':cssColor('candleUp'),'--mmt-negative':cssColor('candleDown')}">
     <header class="mmt-heading"><div><span class="mmt-eyebrow">DEIN TRADING-DESK</span><h1>Milky Meta Trader <small>MMT</small></h1><p>Du bestimmst die Richtung. MMT wartet auf deinen Entry.</p></div>
       <ActionButton v-if="unlocked" @click="lock">Sperren &amp; Schlüssel vergessen</ActionButton></header>
-    <p class="mmt-notice">Testbetrieb: höchstens 0,01 Lot und 5 Einheiten Risikobudget in Kontowährung pro Auftrag. Strategie- und Challenge-Regeln folgen. Slippage und Gebühren können den tatsächlichen Verlust erhöhen.</p>
+    <p class="mmt-notice">Testbetrieb: kleinste Broker-Lotgröße, höchstens 0,01 Lot. Kein pauschales Geldlimit. Strategie- und Challenge-Regeln folgen. Slippage und Gebühren können den tatsächlichen Verlust erhöhen.</p>
     <p v-if="error" role="alert" class="mmt-error">{{error}}</p>
     <p v-if="message" role="status">{{message}}</p>
     <form v-if="!unlocked" class="mmt-panel" @submit.prevent="unlock">

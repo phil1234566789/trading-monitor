@@ -11,9 +11,9 @@ export function buildMarketPreview(input, snapshot, config, now, id) {
   if(!Number.isFinite(sl)||!Number.isFinite(tp)||tp<=0
     ||(long?(sl>=q.bid-q.point||tp<=q.bid+q.point):(sl<=q.ask+q.point||tp>=q.ask-q.point))) throw new Error('invalid_stop_or_target');
   const risk=Math.abs(price-sl)*(long?q.loss_per_unit_long:q.loss_per_unit_short);
-  if(!Number.isFinite(risk)||risk<=0||risk>4) throw new Error('minimum_volume_exceeds_budget');
+  if(!Number.isFinite(risk)||risk<=0) throw new Error('risk_unavailable');
   const intent=validateExecutionIntent({id,account_login:config.login,account_server:config.server,mode:config.mode,
-    symbol:q.symbol,direction:input.direction,stop_loss:sl,take_profit:tp,risk_amount:5,
+    symbol:q.symbol,direction:input.direction,stop_loss:sl,take_profit:tp,risk_amount:risk,
     trigger:'market_confirmed',reference_price:price,volume:q.minimum_volume,created_sec:now,expires_sec:now+30},
     {...config,allowLive:true},now);
   return {intent,risk,currency:snapshot.currency,quote_time:q.time};

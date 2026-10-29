@@ -78,6 +78,15 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(request['volume'],.01)
         m.order_send.assert_not_called()
 
+    def test_minimum_lot_has_no_invented_cash_limit_and_never_scales_up(self):
+        for loss_per_lot in (900, 5000):
+            m=api();m.order_calc_profit.return_value=-loss_per_lot
+            order=intent(trigger='m1_directional_close',trigger_price=None,volume=.01,risk_amount=9)
+            self.assertEqual(Broker(m,42,'Demo').prepare(order)['volume'],.01)
+            m.order_send.assert_not_called()
+        m.symbol_info.return_value.volume_min=.02
+        with self.assertRaises(ValueError):Broker(m,42,'Demo').prepare(order)
+
     def test_color_entry_uses_confirmed_minimum_even_below_test_cap(self):
         m=api();m.order_calc_profit.return_value=-100
         m.symbol_info.return_value.volume_min=.001

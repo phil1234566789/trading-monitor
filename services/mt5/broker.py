@@ -119,16 +119,17 @@ class Broker:
         profit = self.api.order_calc_profit(side, symbol, 1.0, price, sl)
         if profit is None or not positive(-profit):
             raise ValueError('risk_unavailable')
-        # Budget enthält einen Puffer; Slippage/Gaps und unbekannte Kommission bleiben reale Risiken.
-        lots = volume_for_risk(intent['risk_amount'] * .8, -profit,
-                               info.volume_min, info.volume_max, info.volume_step, .01)
         if intent['trigger']=='market_confirmed':
             if abs(price-intent['reference_price'])>5*info.point:
                 raise ValueError('preview_price_changed')
         if intent['trigger'] in ('market_confirmed','m1_directional_close'):
-            if intent['volume']!=info.volume_min or intent['volume']>lots:
-                raise ValueError('minimum_volume_exceeds_budget')
+            # Mindestlot-Test: Der Verlust ist eine Schätzung, kein vom Nutzer beauftragtes Geldlimit.
+            if intent['volume']!=info.volume_min or intent['volume']>.01:
+                raise ValueError('invalid_minimum_volume')
             lots=intent['volume']
+        else:
+            lots = volume_for_risk(intent['risk_amount'], -profit,
+                                   info.volume_min, info.volume_max, info.volume_step, .01)
         if info.filling_mode & SYMBOL_FILLING_FOK:
             filling = self.api.ORDER_FILLING_FOK
         elif info.filling_mode & SYMBOL_FILLING_IOC:

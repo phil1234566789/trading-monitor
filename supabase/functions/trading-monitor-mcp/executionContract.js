@@ -33,7 +33,7 @@ export function validateExecutionIntent(value, config, now) {
   if (!isExecutionId(value.id) || typeof value.symbol !== 'string'
     || !/^[A-Za-z0-9._-]{1,64}$/.test(value.symbol)
     || !['long', 'short'].includes(value.direction)) throw new Error('invalid_order');
-  if (!positive(value.stop_loss) || !positive(value.risk_amount) || value.risk_amount > 5
+  if (!positive(value.stop_loss) || !positive(value.risk_amount)
     || (value.take_profit != null && !positive(value.take_profit))) throw new Error('invalid_risk');
   if (!Number.isSafeInteger(value.created_sec) || value.created_sec > now + 2 || now - value.created_sec > 10
     || !Number.isSafeInteger(value.expires_sec) || value.expires_sec <= now
