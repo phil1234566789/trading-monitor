@@ -10,6 +10,7 @@ const status=ref(null), busy=ref(false), error=ref(''), message=ref('');
 const form=ref({name:'',login:'',server:'BeyondIQCapital-Server',mode:'live',password:''});
 let timer=null;
 const workerProblem=computed(()=>status.value?.bridge?.snapshot?.worker_error??status.value?.health?.incident);
+const closeLabels={tp:'TP erreicht',sl:'SL erreicht',mixed:'Geschlossen (mehrere Gründe)',other:'Geschlossen'};
 const deliveryLabels={pending:'wartet',claimed:'wird gesendet',accepted:'angenommen',failed:'fehlgeschlagen',uncertain:'Annahme unklar'};
 const active=computed(()=>accounts.value.find(a=>a.id===activeId.value));
 const api=(action,fields)=>createMilkyMetaTraderClient(import.meta.env.VITE_SUPABASE_URL,token.value)(action,fields);
@@ -119,7 +120,15 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <ul class="mmt-accounts"><li v-for="order in status?.orders??[]" :key="order.id"><div><strong>{{order.intent.symbol}} · {{order.intent.direction==='long'?'Long':'Short'}}</strong><br>
           Entry: {{order.status==='searching'?'wird gesucht':order.status==='executed'?(order.result?.price??'—'):order.result?.reason==='broker_fill_pending'?'Brokerdaten werden abgeglichen':'—'}}<br>
           SL: {{order.intent.stop_loss}} · TP: {{order.intent.take_profit??'—'}}<br>
-          {{labels[order.status]??order.status}} · {{time(order.created_at)}}<br>
+          <template v-if="order.result?.position_lifecycle?.state==='closed'">
+            <strong>{{closeLabels[order.result.position_lifecycle.close_reason]}} · Position geschlossen</strong><br>
+            Exit: {{order.result.position_lifecycle.exit_price}} · {{time(order.result.position_lifecycle.closed_at_sec*1000)}} (Berlin)<br>
+            Ergebnis netto: {{order.result.position_lifecycle.net_profit}} {{order.result.position_lifecycle.currency}}<br>
+          </template>
+          <template v-else-if="order.status==='executed'">
+            Position: {{order.result?.position_lifecycle?.state==='open'?'offen':'Brokerstatus wird abgeglichen'}}<br>
+          </template>
+          <template v-if="order.result?.position_lifecycle?.state!=='closed'">{{labels[order.status]??order.status}} · {{time(order.created_at)}}<br></template>
           <small>{{order.id}} · {{order.result?.reason??''}}</small></div>
           <ActionButton v-if="order.status==='searching'" :disabled="busy" @click="cancel(order.id)">Suche abbrechen</ActionButton>
         </li></ul>

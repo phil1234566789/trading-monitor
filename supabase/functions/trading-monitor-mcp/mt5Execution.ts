@@ -1,6 +1,6 @@
 import {scheduleMt5Health,getMt5Health} from './mt5Health.ts';
 
-import { isExecutionId, isSameExecutionResult, validateExecutionResult, validateWorkerFault, validateDispatchAccount, validateExecutionIntent, validateWorkerSnapshot } from './executionContract.js';
+import { isExecutionId, isSameExecutionResult, validateExecutionResult, validatePositionLifecycle, validateWorkerFault, validateDispatchAccount, validateExecutionIntent, validateWorkerSnapshot } from './executionContract.js';
 import { activeMt5Account, checked, mt5Database as database } from './mt5Credentials.ts';
 
 export async function executionConfig() {
@@ -81,9 +81,27 @@ export async function workerAction(body: Record<string, any>) {
       .eq('status','searching').lte('expires_at',now));
     const orders = checked(await db.from('mt5_execution_orders').select('*')
       .in('status',['searching','sending','unknown']).order('created_at').limit(100));
-    return { orders };
+    if(body.watch_cursor!=null)validId(body.watch_cursor);
+    let query=db.from('mt5_execution_orders').select('*').eq('status','executed')
+      .eq('intent->>account_login',String(config.login)).eq('intent->>account_server',config.server)
+      .is('result->position_lifecycle->closed_at_sec',null).order('id').limit(20);
+    if(body.watch_cursor)query=query.gt('id',body.watch_cursor);
+    const watched=checked(await query)??[];
+    return {orders,watch_orders:watched,watch_cursor:watched.length?watched[watched.length-1].id:null};
   }
   validId(body.id);
+  if(body.action==='position_update') {
+    const row=checked(await db.from('mt5_execution_orders').select('*').eq('id',body.id).single());
+    if(!row||row.status!=='executed')throw new Error('invalid_position_order');
+    validateDispatchAccount(row.intent,{...config,allowLive:true});
+    const lifecycle=validatePositionLifecycle(body.lifecycle);
+    if(lifecycle.position!==(row.result?.position??row.result?.order))throw new Error('account_mismatch');
+    if(lifecycle.state==='closed'&&Math.abs(lifecycle.closed_volume-row.result.volume)>1e-8)throw new Error('invalid_lifecycle');
+    if(row.result?.position_lifecycle?.state==='closed')return {recorded:true};
+    const rows=checked(await db.from('mt5_execution_orders').update({result:{...row.result,position_lifecycle:lifecycle},updated_at:now})
+      .eq('id',body.id).eq('status','executed').eq('updated_at',row.updated_at).select('id'));
+    return {recorded:!!rows?.length};
+  }
   if (body.action === 'begin') {
     const order=checked(await db.from('mt5_execution_orders').select('intent').eq('id',body.id).single());
     if(!order) throw new Error('invalid_order');

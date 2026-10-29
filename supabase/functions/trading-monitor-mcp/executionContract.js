@@ -20,8 +20,9 @@ function account(value, config) {
 export function validateDispatchAccount(intent, config) { account(intent,config); }
 
 export function isSameExecutionResult(order, result) {
-  const saved=order?.result;
-  return !!saved && order.status===result.status && Object.keys(saved).length===Object.keys(result).length
+  const stored=order?.result;
+  const {position_lifecycle,...saved}=stored??{};
+  return !!stored && order.status===result.status && Object.keys(saved).length===Object.keys(result).length
     && Object.keys(saved).every(key=>saved[key]===result[key]);
 }
 
@@ -99,5 +100,18 @@ export function validateWorkerFault(value) {
   ||typeof value.stage!=='string'||!/^[A-Za-z_][A-Za-z0-9_]{0,79}$/.test(value.stage)
   ||!Number.isSafeInteger(value.line)||value.line<1||value.line>1000000
   ||!Number.isSafeInteger(value.since_sec)||value.since_sec<=0)throw new Error('invalid_worker_fault');
+ return value;
+}
+
+export function validatePositionLifecycle(value) {
+ fields(value,['state','position','remaining_volume','source','close_reason','exit_price','closed_volume','closed_at_sec','gross_profit','net_profit','currency']);
+ if(!['open','closed','unverified'].includes(value.state)||!Number.isSafeInteger(value.position)||value.position<=0)throw new Error('invalid_lifecycle');
+ if(value.state!=='closed'&&Object.keys(value).some(k=>!['state','position','remaining_volume'].includes(k)))throw new Error('invalid_lifecycle');
+ if(value.state==='closed'&&value.remaining_volume!=null)throw new Error('invalid_lifecycle');
+ if(value.state==='open'&&!positive(value.remaining_volume))throw new Error('invalid_lifecycle');
+ if(value.state==='closed'&&(!positive(value.exit_price)||!positive(value.closed_volume)||value.closed_volume>.01
+   ||!Number.isSafeInteger(value.closed_at_sec)||value.closed_at_sec<=0||![value.gross_profit,value.net_profit].every(finite)
+   ||value.source!=='deal_history'||!['tp','sl','mixed','other'].includes(value.close_reason)
+   ||typeof value.currency!=='string'||!/^[A-Z]{3,8}$/.test(value.currency)))throw new Error('invalid_lifecycle');
  return value;
 }

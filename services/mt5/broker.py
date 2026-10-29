@@ -2,7 +2,7 @@
 import time
 
 from core import positive, validate_intent, volume_for_risk
-from reconciliation import reconcile_fill
+from reconciliation import reconcile_fill, position_lifecycle
 
 # Symbol-Bitflags aus MQL5 fehlen im Python-SDK; ORDER_FILLING_* sind andere Werte.
 SYMBOL_FILLING_FOK = 1
@@ -144,6 +144,13 @@ class Broker:
         if check is None or check.retcode != 0:
             raise ValueError('broker_precheck_failed')
         return request
+
+    def position_lifecycle(self,intent,result):
+        account,_=self.account(intent['mode'])
+        position=result.get('position') or result.get('order')
+        positions=self.api.positions_get(ticket=position)
+        deals=self.api.history_deals_get(position=position)
+        return position_lifecycle(result,intent,positions,deals,self.server_time_offset_seconds,account.currency)
 
     def reconcile_result(self,result):
         self.account()
