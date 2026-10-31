@@ -1,3 +1,4 @@
+import {targetPlanAction} from '../trading-monitor-mcp/mt5TargetPlans.ts';
 import { readHistoryPage } from '../trading-monitor-mcp/mt5History.ts';
 import { readAccountBalances } from './accountBalances.ts';
 import { mt5JournalAction } from '../trading-monitor-mcp/mt5Journal.ts';
@@ -25,6 +26,7 @@ Deno.serve(async req => {
     const body=JSON.parse(text);
     let result;
     if(['preview','confirm','search_preview','search_confirm'].includes(body.action)) result=await marketPreviewAction(body);
+    else if(typeof body.action==='string'&&body.action.startsWith('target_')) result=await targetPlanAction(body);
     else if(body.action==='history_page') result=await readHistoryPage(body);
     else if(typeof body.action==='string'&&body.action.startsWith('journal_')) result=await mt5JournalAction(body);
     else if(body.action==='status') {
