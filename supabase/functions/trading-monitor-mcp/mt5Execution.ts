@@ -1,6 +1,8 @@
 import {readExecutionOrders} from './mt5OrderRead.js';
 import {riskPreviewMetrics} from './mt5RiskContract.js';
 import {readRiskPolicy} from './mt5Risk.ts';
+import {readDailyStopStatus} from './mt5DailyStop.ts';
+import {assertDailyStopSnapshot} from './dailyStopContract.js';
 import {scheduleMt5Health,getMt5Health} from './mt5Health.ts';
 
 import { isExecutionId, isSameExecutionResult, validateExecutionResult, validatePositionLifecycle, validateWorkerFault, validateDispatchAccount, validateExecutionIntent, validateWorkerSnapshot } from './executionContract.js';
@@ -30,7 +32,7 @@ export async function getExecutionStatus(id?: string) {
   const settings=checked(await db.from('mt5_execution_settings').select('active_account_id').eq('id','primary').single());
   const risk_policy=settings?.active_account_id?await readRiskPolicy(settings.active_account_id):null;
   const online = bridge && Date.now() - Date.parse(bridge.heartbeat_at) <= 15_000;
-  return { risk_policy,bridge, online: !!online, health:await getMt5Health(), orders, execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',
+  return { daily_stop:await readDailyStopStatus(),risk_policy,bridge, online: !!online, health:await getMt5Health(), orders, execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',
     server_live_allowed:Deno.env.get('MT5_ALLOW_LIVE')==='true',
     limits: { maxLots:.01, maxDurationSec:3600 } };
 }
@@ -53,6 +55,7 @@ export async function createExecutionOrder(input: Record<string, unknown>, confi
   const bridge = checked(await db.from('mt5_bridge_state').select('*').eq('id','primary').maybeSingle());
   if (!bridge || Date.now() - Date.parse(bridge.heartbeat_at) > 15_000) throw new Error('bridge_offline');
   validateWorkerSnapshot(bridge.snapshot, config);
+  assertDailyStopSnapshot(bridge.snapshot,now);
   riskPreviewMetrics({symbol:intent.symbol,direction:intent.direction,stop_loss:intent.stop_loss,take_profit:intent.take_profit,risk_mode:intent.risk_mode},bridge.snapshot,config.riskPolicy,now);
   if (bridge.snapshot.worker_error||bridge.snapshot.execution_ready===false||!bridge.snapshot.trade_allowed || bridge.snapshot.mode !== intent.mode) throw new Error('bridge_not_ready');
   const { data, error } = await db.rpc('mt5_enqueue_order',{new_intent:intent});

@@ -10,6 +10,8 @@ from urllib.request import Request, build_opener, HTTPRedirectHandler
 from broker import Broker
 from core import Journal, trigger_matches, validate_intent, positive
 from health import fault_details
+from daily_stop import DailyStopEngine
+from target_worker import TargetEngine
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -44,6 +46,8 @@ class Engine:
     def __init__(self, broker, cloud, journal, execute=True):
         self.broker, self.cloud, self.journal = broker, cloud, journal
         self.execute=execute
+        self.daily_stop=DailyStopEngine(broker,cloud,journal.db,execute)
+        self.targets=TargetEngine(broker,cloud,journal.db,execute)
         self.last_fault=None
         self.last_fault_report=0
         self.pending_notified=set()
@@ -62,10 +66,32 @@ class Engine:
         except Exception:
             print(json.dumps(dict(event='fault_report_pending')),flush=True)
 
+    def refresh_risk_context(self):
+        context=self.cloud.call('risk_context',dict(account_login=self.broker.login,account_server=self.broker.server))
+        now=time.time()
+        if (not isinstance(context,dict) or type(context.get('latched')) is not bool
+                or context.get('daily_stop_ready') is not True
+                or not isinstance(context.get('day'),str) or len(context['day'])!=10
+                or not all(type(context.get(k)) in (int,float) for k in ('day_start_sec','day_end_sec','checked_at_sec'))
+                or not context['day_start_sec']<=now<context['day_end_sec']
+                or not -1<=now-context['checked_at_sec']<=5):
+            raise ValueError('daily_stop_context_unavailable')
+        context['daily_stop_ready']=self.execute
+        self.broker.risk_context=context
+        return context
+
+    def prepare_entry(self,intent):
+        context=self.refresh_risk_context()
+        if context['latched']:raise ValueError('daily_stop_latched')
+        return self.broker.prepare(intent)
+
     def snapshot(self):
+        self.refresh_risk_context()
         snapshot=self.broker.snapshot()
         snapshot['quotes']=self.broker.quotes()
-        snapshot['execution_ready']=self.execute and self.last_fault is None
+        snapshot['target_plans_ready']=self.execute
+        snapshot['risk_guards_ready']=self.execute and snapshot.get('risk_guards_ready') is True
+        snapshot['execution_ready']=self.execute and self.last_fault is None and snapshot['risk_guards_ready'] and not snapshot.get('risk',{}).get('latched',True)
         if self.last_fault:snapshot['worker_error']=self.last_fault
         return snapshot
 
@@ -113,7 +139,7 @@ class Engine:
         if candle is None or not trigger_matches(intent, candle, now):
             return
         try:
-            request = self.broker.prepare(intent)
+            request = self.prepare_entry(intent)
         except ValueError as error:
             self.cloud.call('reject_search', dict(id=intent['id'], reason=str(error)[:100]))
             return
@@ -126,7 +152,7 @@ class Engine:
         try:
             if trigger_matches(intent, candle, time.time()):
                 try:
-                    request = self.broker.prepare(intent)
+                    request = self.prepare_entry(intent)
                 except ValueError as error:
                     result = dict(status='rejected', reason=str(error)[:100])
                 else:
@@ -148,6 +174,8 @@ class Engine:
                 if time.monotonic() >= next_poll:
                     snapshot=self.snapshot()
                     response = self.cloud.call('poll', dict(snapshot=snapshot,watch_cursor=watch_cursor))
+                    daily_allowed=self.daily_stop.cycle(snapshot)
+                    self.targets.cycle(risk_allowed=daily_allowed)
                     checked_cycle=True
                     watched=response.get('watch_orders',[])
                     if not isinstance(watched,list) or len(watched)>20:raise ValueError('invalid_position_watch')
@@ -157,7 +185,7 @@ class Engine:
                     if not isinstance(orders, list) or len(orders) > 100:
                         raise ValueError('invalid_order_list')
                     next_poll = time.monotonic() + 1
-                if self.execute and flush_ok and not any(row.get('status') in ('sending', 'unknown') for row in orders):
+                if self.execute and flush_ok and not self.daily_stop.latched and not any(row.get('status') in ('sending', 'unknown') for row in orders):
                     for row in orders:
                         if row.get('status') == 'searching':
                             self.consider(row['intent'], time.time())

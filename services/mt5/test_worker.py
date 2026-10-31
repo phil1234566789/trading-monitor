@@ -1,4 +1,5 @@
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -8,10 +9,19 @@ from worker import Engine
 from test_core import intent
 
 
+def configure_cloud(cloud):
+    def call(action,body):
+        if action=='risk_context':
+            now=time.time()
+            return dict(day='2026-10-31',day_start_sec=0,day_end_sec=now+86400,checked_at_sec=now,latched=False,daily_stop_ready=True)
+        return cloud.call.return_value
+    cloud.call.side_effect=call
+
+
 class WorkerTests(unittest.TestCase):
     def test_precheck_rejection_does_not_starve_next_intent(self):
         with tempfile.TemporaryDirectory() as directory, Journal(Path(directory) / 'j.sqlite3') as journal:
-            broker, cloud = Mock(), Mock()
+            broker, cloud = Mock(), Mock();configure_cloud(cloud)
             broker.closed_m1.return_value = dict(time=180, close=1.29)
             broker.prepare.side_effect = [ValueError('invalid_stop_side_or_distance'), {}, {}]
             cloud.call.return_value = dict(authorized=True, recorded=True)
@@ -21,10 +31,10 @@ class WorkerTests(unittest.TestCase):
                 engine.consider(intent(),241)
                 engine.consider(intent(id='e297afbf-172c-4304-99e7-eb1198191050'),241)
             self.assertEqual(broker.send.call_count,1)
-            self.assertEqual(cloud.call.call_args_list[0].args[0],'reject_search')
+            self.assertIn('reject_search',[call.args[0] for call in cloud.call.call_args_list])
     def test_trigger_executes_once_and_preserves_result_on_cloud_failure(self):
         with tempfile.TemporaryDirectory() as directory, Journal(Path(directory) / 'j.sqlite3') as journal:
-            broker, cloud = Mock(), Mock()
+            broker, cloud = Mock(), Mock();configure_cloud(cloud)
             broker.closed_m1.return_value = dict(time=180, close=1.29)
             broker.send.return_value = dict(status='executed', deal=123, volume=.01)
             cloud.call.return_value = dict(authorized=True)
@@ -37,7 +47,7 @@ class WorkerTests(unittest.TestCase):
 
     def test_confirmed_market_needs_no_candle_and_executes_only_once(self):
         with tempfile.TemporaryDirectory() as directory, Journal(Path(directory)/'j.sqlite3') as journal:
-            broker,cloud=Mock(),Mock()
+            broker,cloud=Mock(),Mock();configure_cloud(cloud)
             cloud.call.return_value=dict(authorized=True)
             broker.send.return_value=dict(status='executed',deal=123,volume=.01)
             order=intent(trigger='market_confirmed',reference_price=1.3,volume=.01,created_sec=240,expires_sec=270)
@@ -50,13 +60,13 @@ class WorkerTests(unittest.TestCase):
 
     def test_monitor_never_prepares_or_sends_an_order(self):
         with tempfile.TemporaryDirectory() as directory,Journal(Path(directory)/'j.sqlite3') as journal:
-            broker,cloud=Mock(),Mock()
+            broker,cloud=Mock(),Mock();configure_cloud(cloud)
             Engine(broker,cloud,journal,execute=False).consider(intent(),241)
             broker.prepare.assert_not_called();broker.send.assert_not_called();cloud.call.assert_not_called()
 
     def test_directional_search_waits_for_matching_closed_color(self):
         with tempfile.TemporaryDirectory() as directory,Journal(Path(directory)/'j.sqlite3') as journal:
-            broker,cloud=Mock(),Mock()
+            broker,cloud=Mock(),Mock();configure_cloud(cloud)
             cloud.call.return_value=dict(authorized=True)
             broker.send.return_value=dict(status='executed',deal=123,volume=.01)
             broker.closed_m1.return_value=dict(time=180,open=1.28,close=1.29)
@@ -73,7 +83,7 @@ class WorkerTests(unittest.TestCase):
 
     def test_incomplete_success_is_reconciled_without_another_send(self):
         with tempfile.TemporaryDirectory() as directory,Journal(Path(directory)/'j.sqlite3') as journal:
-            broker,cloud=Mock(),Mock()
+            broker,cloud=Mock(),Mock();configure_cloud(cloud)
             raw=dict(status='executed',retcode=10009,order=123,deal=0,price=0,volume=.01,magic=77)
             journal.reserve('order');journal.finish('order',raw)
             resolved=dict(raw,position=123,price=1.23456,confirmation_source='position_snapshot')
@@ -90,7 +100,7 @@ class WorkerTests(unittest.TestCase):
 
     def test_reported_fault_is_visible_and_disables_ready_without_leaking_text(self):
         with tempfile.TemporaryDirectory() as directory,Journal(Path(directory)/'j.sqlite3') as journal:
-            broker,cloud=Mock(),Mock();broker.login=42;broker.server='Demo'
+            broker,cloud=Mock(),Mock();configure_cloud(cloud);broker.login=42;broker.server='Demo'
             broker.snapshot.return_value={};broker.quotes.return_value=[]
             engine=Engine(broker,cloud,journal)
             with patch('builtins.print'):
@@ -99,11 +109,29 @@ class WorkerTests(unittest.TestCase):
             self.assertFalse(snapshot['execution_ready'])
             self.assertEqual(snapshot['worker_error']['code'],'AttributeError')
             self.assertNotIn('private',str(cloud.call.call_args))
-            self.assertEqual(cloud.call.call_args.args[0],'fault')
+            self.assertEqual(sum(c.args[0]=='fault' for c in cloud.call.call_args_list),1)
 
+    def test_missing_or_stale_guard_context_never_prepares_or_sends(self):
+        with tempfile.TemporaryDirectory() as directory,Journal(Path(directory)/'j.sqlite3') as journal:
+            broker,cloud=Mock(),Mock();broker.closed_m1.return_value=dict(time=180,close=1.29)
+            engine=Engine(broker,cloud,journal)
+            cloud.call.return_value={}
+            with patch('worker.time.time',return_value=241):engine.consider(intent(),241)
+            broker.prepare.assert_not_called();broker.send.assert_not_called()
+    def test_latch_between_claim_and_send_prevents_broker_action(self):
+        with tempfile.TemporaryDirectory() as directory,Journal(Path(directory)/'j.sqlite3') as journal:
+            broker,cloud=Mock(),Mock();broker.closed_m1.return_value=dict(time=180,close=1.29)
+            contexts=iter([False,True])
+            def call(action,body):
+                if action=='risk_context':return dict(day='1970-01-01',day_start_sec=0,day_end_sec=86400,checked_at_sec=241,latched=next(contexts),daily_stop_ready=True)
+                return dict(authorized=True)
+            cloud.call.side_effect=call
+            engine=Engine(broker,cloud,journal)
+            with patch('worker.time.time',return_value=241):engine.consider(intent(),241)
+            broker.send.assert_not_called();self.assertEqual(journal.pending()[0]['result']['reason'],'daily_stop_latched')
     def test_no_authorization_no_trigger_no_trade(self):
         with tempfile.TemporaryDirectory() as directory, Journal(Path(directory) / 'j.sqlite3') as journal:
-            broker, cloud = Mock(), Mock()
+            broker, cloud = Mock(), Mock();configure_cloud(cloud)
             broker.closed_m1.return_value = dict(time=180, close=1.29)
             cloud.call.return_value = dict(authorized=False)
             Engine(broker, cloud, journal).consider(intent(), 241)
@@ -112,7 +140,7 @@ class WorkerTests(unittest.TestCase):
 
     def test_exception_during_send_stays_unknown_even_if_it_is_a_value_error(self):
         with tempfile.TemporaryDirectory() as directory, Journal(Path(directory) / 'j.sqlite3') as journal:
-            broker, cloud = Mock(), Mock()
+            broker, cloud = Mock(), Mock();configure_cloud(cloud)
             broker.closed_m1.return_value = dict(time=180, close=1.29)
             cloud.call.return_value = dict(authorized=True)
             broker.send.side_effect = ValueError('response decoding failed after send')
@@ -122,7 +150,7 @@ class WorkerTests(unittest.TestCase):
 
     def test_crash_reservation_reports_unknown_and_never_retries_broker(self):
         with tempfile.TemporaryDirectory() as directory, Journal(Path(directory) / 'j.sqlite3') as journal:
-            broker, cloud = Mock(), Mock()
+            broker, cloud = Mock(), Mock();configure_cloud(cloud)
             journal.reserve(intent()['id'])
             cloud.call.return_value = dict(recorded=True)
             Engine(broker, cloud, journal).flush()
