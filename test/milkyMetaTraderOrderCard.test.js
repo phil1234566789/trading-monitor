@@ -46,3 +46,8 @@ it('shows separately supplied commission on closed executions without changing b
  const html=await renderToString(createSSRApp(OrderCard,{order:value,commission:-.05}));
  expect(html).toContain('Commission');expect(html).toContain('-0,05');expect(html).toContain('0,77');
 });
+
+it('shows a missing planned TP as a dash',async()=>{
+ const html=await render({...order,intent:{...order.intent,take_profit:null}});
+ expect(html).toContain('Take-Profit <span>TP</span></dt><dd>\u2013</dd>');
+});

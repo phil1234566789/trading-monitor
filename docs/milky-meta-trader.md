@@ -3,9 +3,8 @@
 MMT ergänzt den trading-monitor um private Brokerkonten und asynchrone MT5-Entry-Aufträge.
 Gespräch → MCP → private Supabase-Queue → ausgehender Python-Worker → MT5.
 Die bisherigen Journal-Konten bleiben getrennt: deren öffentliche Anon-Rechte sind für
-Brokerzugangsdaten ungeeignet. Vier Konten können gespeichert werden; zunächst wird genau
-ein Testkonto ausdrücklich ausgewählt. Gemeinsame Ausführung auf mehreren Konten ist noch
-nicht implementiert.
+Brokerzugangsdaten ungeeignet. Genau ein ausdrücklich ausgewähltes Handelskonto empfängt
+neue Aufträge. Bis zur Supportklärung gibt es keine Ordervervielfachung auf weitere Konten.
 
 ## Erste Version
 
@@ -56,7 +55,7 @@ verlässlichen Kurse oder Handelsmöglichkeit. Investor-Passwörter erlauben kei
    Nur der MCP-Server verwendet seine eigene `deno.json` für zueinander passende SDK/Zod-Versionen.
 4. In MMT entsperren und Konten mit numerischer MT5-Login-ID, Server und Trading-Passwort speichern.
    Die längere IQCapital-Account-Bezeichnung ist nicht die numerische Login-ID.
-   Erst eines als Testkonto auswählen; ohne Auswahl kann kein Auftrag ausgeführt werden.
+   Erst ein Handelskonto auswählen; ohne Auswahl kann kein Auftrag ausgeführt werden.
 5. Python-Umgebung und offizielle Bibliothek installieren:
 
    ```powershell
@@ -189,6 +188,48 @@ eine exakt passende Position ab. Dealticket und Positionsticket bleiben verschie
 Felder; erst ein belegter positiver Fill-Preis wird als ausgefuehrter Entry angezeigt.
 Ein noch nicht belegter Fill bleibt offen/unknown und sperrt weitere Sendungen. Fehler
 bei der Resultatuebertragung duerfen die Heartbeats nicht mehr unterdruecken.
+
+## Verbindung mit dem bestehenden Journal
+
+Die PnL-Liste öffnet über **Journal / Kommentare** die exakte Brokerposition und ihre
+Zuordnung zu DR und Journalposition. Nach Import im Chat sind dieselben privaten Kommentare
+auch im bestehenden Trade-Editor sichtbar und korrigierbar; der Chart-Link öffnet dessen
+vorhandene Darstellung. MMT zuvor entsperren. Ohne Zuordnung zuerst DR-Nummer, Konto und
+Brokerpositions-ID nennen; bereits manuell journalisierte Ausführungen ausdrücklich angeben.
+Historischer SL/TP und R bleiben ohne Nachweis unbekannt. Technischer Vertrag, Schutz der
+öffentlichen Journalzugriffe und Tests: [Privates MMT-Journal](mcp-server.md#privates-mmt-journal).
+
+## Aktives Handelskonto wechseln
+
+Unter „Brokerkonten verwalten“ manuell wählen oder im Chat das konkrete Konto nennen.
+Die privaten Tools `list_mt5_trading_accounts` und `select_mt5_trading_account` nutzen
+denselben Auswahlpfad wie die UI. Nach einem tatsächlichen Wechsel den Worker für dieses
+Konto neu starten und die Verbindung prüfen. Ein bestehender Suchauftrag wird nie umgeleitet.
+
+Die atomare Datenbankprüfung sperrt den Wechsel bei suchenden/sendenden/unklaren Aufträgen,
+noch nicht abschließend abgeglichenen Ausführungen, offenen Brokerpositionen oder Pending
+Orders. Ein bestehendes Handelskonto darf nur mit fehlerfreiem, höchstens 15 Sekunden altem
+Brokerstand verlassen werden. Dieselbe Auswahl ist ein No-op und löscht keinen Heartbeat.
+`mt5_select_test_account` bleibt ausschließlich als historischer RPC-Vertrag erhalten.
+Der sichtbare Testbetrieb-Hinweis wurde entfernt; technische Handelslimits gelten weiter.
+
+## Balance aller Konten
+
+Die Halbkreis-Anzeigen zeigen Balance zwischen absoluter Verlustgrenze und Challengeziel,
+ergänzt um Equity, belegtes Netto-PnL und Winrate abgeschlossener Brokertrades. Fehlende
+Historie bleibt unbekannt; Einzahlungen und Resets sind kein Trading-PnL. Anzeigen aktiviert
+kein Konto. Für das Verlustrisiko ist die Equity maßgeblich, nicht die Balance-Anzeige.
+Vier Konten passen nebeneinander; weitere Konten und schmale Bildschirme nutzen dieselbe
+horizontal scrollbare Kontoleiste (auch per Tastatur erreichbar).
+
+`mt5_account_balances` ist ausschließlich über den privaten Control-Endpoint lesbar.
+Der Datenbanktrigger hält den letzten fehlerfreien Workerstand pro Konto fest, auch nach
+einem späteren Kontowechsel. Manuell aus dem Brokerportal übernommene Balance/Equity und
+Limits tragen getrennte Quellen und Übernahmezeitpunkte; das ist keine Broker-Livezeit.
+Limits bei Bedarf erneut im Brokerportal prüfen und privat aktualisieren. Der Worker
+schreibt nur Kontostand und Positionszahl fort, niemals die EOD-Trailing-Grenze aus einer
+fallenden Balance neu berechnen. Transaktionaler Check: Migration plus
+`scripts/checkMt5AccountBalances.sql` innerhalb `begin`/`rollback` ausführen.
 
 ## Positionsstatus bei Reload
 

@@ -9,6 +9,7 @@ import MetadataPanel from "./MetadataPanel.vue";
 import CrudListSection from "./CrudListSection.vue";
 import ActionButton from "./ui/ActionButton.vue";
 import IconButton from "./ui/IconButton.vue";
+import TradeJournalComments from './TradeJournalComments.vue';
 
 // Ersetzt die vorherigen Inline-Buttons in TradesTable.vue (🔗 verknüpfen, + Ziel, × Ziel
 // entfernen) — Chat 2026-07-27/28: "das war jetzt bissl too much, was ist wenn man versehentlich
@@ -236,7 +237,7 @@ async function save() {
     size: size.value === "" ? null : Number(size.value),
     netPl: netPl.value === "" ? null : Number(netPl.value),
     commission: commission.value === "" ? null : Number(commission.value),
-  });
+  },props.trade.brokerPrivate);
   saving.value = false;
   if (ok) emit("saved");
 }
@@ -468,7 +469,7 @@ function confirmationLabel(confirmation) {
       />
 
       <section class="tem-section">
-        <h4 class="tem-section-title">Ausführung</h4>
+        <h4 class="tem-section-title">Ausführung<span v-if="trade.brokerPrivate"> · Beträge in {{trade.accountCurrency}}</span></h4>
         <form class="tem-form" autocomplete="off" @submit.prevent="save">
           <label>
             Entry-Preis
@@ -526,7 +527,9 @@ function confirmationLabel(confirmation) {
         </form>
       </section>
 
-      <ActionButton tone="danger" class="tem-delete-btn" @click="onDelete">🗑 Diese Ausführung löschen</ActionButton>
+      <TradeJournalComments :position-id="trade.id" />
+      <p v-if="trade.brokerPrivate">Private Brokerzuordnung · Original-Deals bleiben erhalten.</p>
+      <ActionButton v-else tone="danger" class="tem-delete-btn" @click="onDelete">🗑 Diese Ausführung löschen</ActionButton>
     </div>
   </MetadataPanel>
 </template>

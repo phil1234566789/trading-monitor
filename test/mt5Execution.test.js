@@ -93,3 +93,12 @@ it('accepts native live prices and rejects invalid monitoring values',()=>{
  expect(validateWorkerSnapshot(s,config)).toEqual(s);
  for(const patch of [{price_open:NaN},{price_current:0}])expect(()=>validateWorkerSnapshot({...s,positions:[{...p,...patch}]},config)).toThrow();
 });
+
+it('accepts no TP but rejects invalid targets and missing stops at dispatch',()=>{
+ const value=intent({take_profit:null,trigger:'m1_directional_close',trigger_price:null,volume:.01});
+ expect(validateExecutionIntent(value,config,now)).toEqual(value);
+ for(const take_profit of [0,-1,NaN,Infinity])
+   expect(()=>validateExecutionIntent({...value,take_profit},config,now)).toThrow();
+ for(const stop_loss of [null,undefined,0,-1])
+   expect(()=>validateExecutionIntent({...value,stop_loss},config,now)).toThrow();
+});

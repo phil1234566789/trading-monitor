@@ -1,10 +1,15 @@
 import { expect,it } from 'vitest';
-import { mmtPollDelay, mmtConnectionStatus } from '../src/milkyMetaTraderPolling.js';
+import { mmtPollDelay, mmtConnectionStatus, mmtSelectedAccountId } from '../src/milkyMetaTraderPolling.js';
 it('polls fast only for open exposure or unfinished execution',()=>{
  expect(mmtPollDelay({bridge:{snapshot:{positions:[]}},orders:[]})).toBe(8000);
  expect(mmtPollDelay({bridge:{snapshot:{positions:[{}]}},orders:[]})).toBe(1000);
  for(const status of ['searching','sending','unknown'])expect(mmtPollDelay({orders:[{status}]})).toBe(1000);
  expect(mmtPollDelay({orders:[{status:'executed'}]})).toBe(8000);
+});
+it('adopts external account selection and removal without confusing an older API response with deselection',()=>{
+ expect(mmtSelectedAccountId({active_account_id:'b'},'a')).toBe('b');
+ expect(mmtSelectedAccountId({active_account_id:null},'a')).toBeNull();
+ expect(mmtSelectedAccountId({},'a')).toBe('a');
 });
 it('distinguishes connection health from HTTP activity and idle age',()=>{
  const data={unlocked:true,active:true,status:{online:true},snapshot:{},age:8,error:'',delay:8000};

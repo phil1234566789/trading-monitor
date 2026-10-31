@@ -55,3 +55,19 @@ it('reports loss above five currency units without imposing an invented money li
   expect(p.intent.volume).toBe(.01);
   expect(()=>buildEntrySearchPreview({...input,duration_sec:600},{...snapshot,quotes:[{...snapshot.quotes[0],minimum_volume:.02}]},config,now,id)).toThrow();
 });
+
+for (const direction of ['short','long']) {
+  it(`signs a ${direction} search without TP and keeps SL mandatory`,async()=>{
+    const order={...input,direction,stop_loss:direction==='long'?1.099:1.101,duration_sec:600};
+    for(const take_profit of [null,undefined]) {
+      const p=buildEntrySearchPreview({...order,take_profit},snapshot,config,now,id);
+      expect(p.intent.take_profit).toBeNull();
+      const token=await signMarketPreview(p,'x'.repeat(40));
+      expect((await verifyMarketPreview(token,'x'.repeat(40),now)).intent.take_profit).toBeNull();
+    }
+    for(const take_profit of [0,-1,NaN,Infinity,'',direction==='long'?1.09:1.11])
+      expect(()=>buildEntrySearchPreview({...order,take_profit},snapshot,config,now,id)).toThrow();
+    for(const stop_loss of [null,undefined,0,-1,direction==='long'?1.11:1.09])
+      expect(()=>buildEntrySearchPreview({...order,take_profit:null,stop_loss},snapshot,config,now,id)).toThrow();
+  });
+}

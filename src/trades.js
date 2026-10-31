@@ -1,16 +1,9 @@
+import {INVALIDATION_OBJECT_EMBED,JOURNAL_POSITION_SELECT} from '../supabase/functions/_shared/journalSelect.js';
 import { supabase } from "./supabaseClient.js";
 import { ALL_ACCOUNTS_ID } from "./tradingAccounts.js";
+import {privateJournalAvailable,loadPrivateJournalPages} from './privateJournal.js';
 
-export function computeTradeStats(trades) {
-  const closed = trades.filter((t) => t.outcome === "win" || t.outcome === "loss");
-  const wins = closed.filter((t) => t.outcome === "win").length;
-  const losses = closed.filter((t) => t.outcome === "loss").length;
-  const totalR = closed.reduce((sum, t) => sum + (t.rMultiple ?? 0), 0);
-  const winrate = closed.length > 0 ? (wins / closed.length) * 100 : null;
-  const avgR = closed.length > 0 ? totalR / closed.length : null;
-
-  return { total: trades.length, closed: closed.length, wins, losses, totalR, winrate, avgR };
-}
+export {computeTradeStats} from './tradeStats.js';
 
 // Gruppiert Zeilen nach einer FK-Spalte (trade_targets/trade_evidence -> dealing_range_id,
 // trade_partial_exits/trade_evidence -> trade_position_id — seit 2026-07-31 aufgeteilt, siehe
@@ -81,12 +74,6 @@ export function toInvalidationItem(range) {
   };
 }
 
-// Embed beider Invalidierungs-Objekte (Migration 20260922183000) — benannte Embeds, weil die FK-
-// Spalte sonst nicht eindeutig ist.
-const INVALIDATION_OBJECT_EMBED =
-  "invalidation_liquidity_level:liquidity_levels!invalidation_liquidity_level_id(price, direction, timeframe, pivot_time, touched, end_time), " +
-  "invalidation_ob_zone:ob_zones!invalidation_ob_zone_id(timeframe, direction, top, bottom, start_time)";
-
 function groupBy(rows, key) {
   const result = {};
   for (const row of rows) {
@@ -155,7 +142,7 @@ export async function fetchTrades(instrument, accountId = null) {
     let query = supabase
       .from("trade_positions")
       .select(
-        `*, dealing_ranges!inner(id, instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, ${INVALIDATION_OBJECT_EMBED}, trade_setups(ob_start_time, ob_top, ob_bottom))`,
+        JOURNAL_POSITION_SELECT,
       )
       .eq("dealing_ranges.instrument", instrument);
     if (accountId != null && accountId !== ALL_ACCOUNTS_ID) query = query.eq("trading_account_id", accountId);
@@ -167,6 +154,8 @@ export async function fetchTrades(instrument, accountId = null) {
     data.push(...page);
     offset += page.length;
   }
+  if(privateJournalAvailable())data.push(...await loadPrivateJournalPages('journal_positions',{instrument,...(accountId!=null&&accountId!==ALL_ACCOUNTS_ID?{account_id:accountId}:{})}));
+  data.sort((a,b)=>Date.parse(b.triggered_at)-Date.parse(a.triggered_at)||b.id-a.id);
   if (data.length === 0) return [];
 
   // targets/confirmations hängen an der dealing_range (der IDEE, gilt für alle Ausführungen
@@ -236,6 +225,8 @@ export async function fetchTrades(instrument, accountId = null) {
     const range = row.dealing_ranges;
     return {
       id: row.id,
+      brokerPrivate: row.broker_private===true,
+      accountCurrency: row.account_currency??'USD',
       dealingRangeId: range.id,
       instrument: range.instrument,
       direction: range.direction,

@@ -88,6 +88,71 @@ Anders als `post_chart_annotations` sind diese Tools NICHT allow-gelistet — ei
 Chart-Zeichnung ist kosmetisch, ein falscher Journal-Eintrag verfälscht die Trade-Historie, also
 weiter Bestätigung abfragen, außer Philip sagt explizit was anderes.
 
+## Private MMT-Handelskonten
+
+`list_mt5_trading_accounts` liest sichere Kontometadaten und das aktive Konto ohne
+Credentials. `select_mt5_trading_account(account_id)` wählt ausschließlich nach konkretem
+menschlichem Wechselauftrag genau ein Handelskonto; `null` wählt ab. Keine Order und keine
+Vervielfachung oder Umleitung bestehender Suchen. UI und MCP teilen den atomaren Auswahlpfad.
+Wechsel-Sperren und Worker-Neustart: [Aktives Handelskonto wechseln](milky-meta-trader.md#aktives-handelskonto-wechseln).
+Tests ohne echte Kontowechsel: `node --test test/mt5AccountSelection.integration.mjs` sowie
+`deno test --config supabase/functions/trading-monitor-mcp/deno.json --allow-env test/mt5AccountTools.deno.ts`.
+
+## Privates MMT-Journal
+
+`get_mt5_broker_history` liest native Deals samt Profit, Commission, Swap, Gebühren,
+Kontowährung und Historien-Sync. Erste Seite enthält sichere Kontometadaten ohne Secrets.
+`after_id=next_cursor` fortsetzen, bis `rows` leer ist; kurze Seiten sind kein Ende.
+Historische SL/TP werden vom Dealarchiv nicht belegt und bleiben unbekannt.
+
+`mt5_journal_import` verbindet eine ausdrücklich ausgewählte Brokerposition mit einer
+vorhandenen `dealing_ranges.id`. Konto-UUID, Server, Brokerpositions-ID, exaktes Brokersymbol
+und ausdrücklich zugeordnetes Journalinstrument sind Pflicht. Symbol/Zeit allein beweisen
+keine Zuordnung. Bei bereits manuell journalisiertem Trade `existing_position_id` angeben;
+solange öffentliche Positionen auf der DR vorhanden sind, wird ein neuer Insert abgewiesen.
+Die optionale Journalkonto-ID wird nicht aus dem Brokernamen geraten. Mehrere importierte
+Re-Entries können derselben DR zugeordnet werden.
+
+Migration `20261031230000_mt5_journal.sql`: `import_mt5_journal` sperrt den Identitätsschlüssel
+transaktional; Unique-Constraints verhindern doppelte Broker- und Journalzuordnung. Retry
+liefert dieselbe Position, eine andere DR wird abgewiesen. Native Entry/Exit/Volumen/Netto/
+Commission kommen aus dem vorhandenen `closedBrokerTrades`-Aggregator. Nur vollständig
+geschlossene, widerspruchsfreie Verläufe bei bestätigtem Full-Sync sind importierbar.
+Bekannter SL und Journalkonto einer vorhandenen Position bleiben bei fehlenden Brokerwerten
+erhalten. R wird nicht aus aktuellem oder geratenem SL berechnet. Historischer Import löst
+keinen heutigen Live-Loop aus und sendet keine Brokerorder.
+
+`broker_private` schützt importierte `trade_positions` zusätzlich zu den bisherigen
+permissiven Policies durch eine restriktive RLS-Policy für anon/authenticated. Die Link-
+und Kommentartabellen haben keine öffentlichen Rechte. Die Import-RPC ist ausschließlich
+für service_role freigegeben. Die private API und der bestehend authentifizierte MCP dürfen
+die Daten lesen/schreiben. `get_journal` bleibt bei seinen bisherigen öffentlichen Daten;
+`mt5_journal_positions` ergänzt die privaten Positionen mit identischen Chart-Embeds.
+Im Browser lädt `fetchTrades` private Positionen nach MMT-Entsperren und verwendet denselben
+Mapper, Editor und Chart. Ohne MMT-Schlüssel werden keine privaten Positionen geladen.
+Ein ungültiger Schlüssel erzeugt einen Ladefehler statt einer scheinbar vollständigen Liste.
+
+`mt5_journal_context` löst die Brokeridentität auf Journalposition und DR auf.
+`mt5_journal_comments` liest gemeinsame private Kommentare je Journalposition mit UUID-
+Keyset-Paginierung. `mt5_journal_comment_save` erstellt/korrigiert mit stabiler Kommentar-UUID:
+`statement` = belegte Aussage, `observation` = belegbare Beobachtung, `hypothesis` = ausdrücklich
+Vermutung. Quelle und Ereigniszeit mit Zeitzone sind Pflicht; keine erfundenen Aussagen oder
+psychologischen Diagnosen. Erst eine tatsächliche Änderung setzt `updated_at` neu; der
+Eltern-Trade bleibt fest. Die gleiche `TradeJournalComments`-Komponente erlaubt Lesen und
+Korrigieren in MMT und im vorhandenen Trade-Editor. Vor dem Import ist eine Brokerposition
+noch keiner gemeinsamen Journal-Kommentarhistorie zugeordnet.
+
+`mt5_journal_position_update` korrigiert ausdrücklich übergebene Journalfelder hinter dem
+privaten Zugriff; Original-Deals bleiben unverändert. Löschen verknüpfter Positionen ist
+durch den Link-FK gesperrt. Rücknahme des Frontend-/Backend-Releases kann die neue UI entfernen;
+RLS und private Tabellen dabei zum Schutz vorhandener Brokerdaten erhalten.
+
+Prüfung: `npx vitest run test/mt5JournalContract.test.js test/privateJournal.test.js` sowie
+`deno run --node-modules-dir=none --allow-read --allow-env --allow-sys scripts/checkMt5JournalMigration.ts`.
+Der SQL-Test verwendet isoliertes PostgreSQL-WASM, keine Produktionsdaten. Deno-MCP-Prüfung
+mit `--config supabase/functions/trading-monitor-mcp/deno.json`, damit die vorhandenen
+SDK-/Zod-Pins gelten.
+
 ## Write-Tool-Safety: `post_chart_annotations` vs. Pin
 
 `post_chart_annotations` ist NACHRANGIG zu den Pin-Tools — für alles mit passendem Pin-`kind`

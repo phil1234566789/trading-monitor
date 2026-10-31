@@ -1,6 +1,8 @@
 import { readHistoryPage } from '../trading-monitor-mcp/mt5History.ts';
+import { readAccountBalances } from './accountBalances.ts';
+import { mt5JournalAction } from '../trading-monitor-mcp/mt5Journal.ts';
 import { marketPreviewAction } from '../trading-monitor-mcp/marketPreview.ts';
-import { manageMt5Accounts } from '../trading-monitor-mcp/mt5Credentials.ts';
+import { manageMt5Accounts, readActiveMt5AccountId, ACCOUNT_SELECTION_ERRORS } from '../trading-monitor-mcp/mt5AccountManagement.ts';
 import { cancelExecutionOrder, getExecutionStatus } from '../trading-monitor-mcp/mt5Execution.ts';
 
 Deno.serve(async req => {
@@ -24,14 +26,18 @@ Deno.serve(async req => {
     let result;
     if(['preview','confirm','search_preview','search_confirm'].includes(body.action)) result=await marketPreviewAction(body);
     else if(body.action==='history_page') result=await readHistoryPage(body);
-    else if(body.action==='status') result=await getExecutionStatus(body.id);
+    else if(typeof body.action==='string'&&body.action.startsWith('journal_')) result=await mt5JournalAction(body);
+    else if(body.action==='status') {
+      result=await getExecutionStatus(body.id);
+      if(!body.id)result={...result,account_balances:await readAccountBalances(),active_account_id:await readActiveMt5AccountId()};
+    }
     else if(body.action==='cancel') result=await cancelExecutionOrder(body.id);
     else result=await manageMt5Accounts(body);
     return Response.json(result,{headers});
   } catch(error) {
     const reason=error instanceof Error?error.message:'';
     const code=['bridge_offline','bridge_not_ready','quote_stale','minimum_volume_exceeds_budget',
-      'invalid_stop_or_target','preview_expired','invalid_preview','live_not_enabled','bridge_not_ready'].includes(reason)?reason:'request_failed';
+      'invalid_stop_or_target','preview_expired','invalid_preview','live_not_enabled','bridge_not_ready',...ACCOUNT_SELECTION_ERRORS].includes(reason)?reason:'request_failed';
     return Response.json({code,error:'Anfrage fehlgeschlagen. Konfiguration, Kontodaten und offene Aufträge prüfen.'},{status:400,headers});
   }
 });

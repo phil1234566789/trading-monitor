@@ -29,6 +29,24 @@ def api():
 
 
 class BrokerTests(unittest.TestCase):
+    def test_optional_tp_prepares_no_broker_target_but_requires_sl(self):
+        from core import validate_intent
+        for direction, sl, tp in [('short', 1.31, 1.28), ('long', 1.29, 1.32)]:
+            value=intent(direction=direction, stop_loss=sl, take_profit=None,
+                         trigger='m1_directional_close', trigger_price=None, volume=.01)
+            validate_intent(value)
+            m=api()
+            request=Broker(m,42,'Demo').prepare(value)
+            self.assertEqual(request['tp'],0)
+            self.assertEqual(request['sl'],sl)
+            self.assertEqual(Broker(m,42,'Demo').prepare(value|dict(take_profit=tp))['tp'],tp)
+            with self.assertRaises(ValueError):
+                Broker(m,42,'Demo').prepare(value|dict(stop_loss=1.29 if direction=='short' else 1.31))
+            for bad in [0,-1,float('nan')]:
+                with self.assertRaises(ValueError):
+                    validate_intent(value|dict(take_profit=bad))
+            m.order_send.assert_not_called()
+
     def test_snapshot_contains_native_entry_current_price_and_profit_without_send(self):
         m=api()
         m.positions_get.return_value=(NS(ticket=123,symbol='XAUUSD.gbe',volume=.01,type=1,sl=4032.654,tp=4008.752,profit=-3,magic=77,price_open=4022.5,price_current=4025.5),)

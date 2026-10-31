@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.110.0';
-import { isExecutionId } from './executionContract.js';
+
 
 export function mt5Database() {
   return createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -48,30 +48,4 @@ export async function workerConfiguration() {
   return {account_login:account.login,account_server:account.server,mode:account.mode,
     password:await decryptCredential(account.credentials,`${account.login}:${account.server}`),
     allow_live:Deno.env.get('MT5_ALLOW_LIVE')==='true'};
-}
-
-export async function manageMt5Accounts(body:Record<string,unknown>) {
-  const db=mt5Database();
-  if (body.action==='accounts') {
-    const accounts=checked(await db.from('mt5_accounts').select('id,name,login,server,mode,archived,created_at').order('created_at'));
-    const settings=checked(await db.from('mt5_execution_settings').select('active_account_id').eq('id','primary').single());
-    return {accounts,active_account_id:settings?.active_account_id??null};
-  }
-  if (body.action==='save_account') {
-    const {name,login,server,mode,password}=body;
-    if (typeof name!=='string'||!name.trim()||name.length>100||!Number.isSafeInteger(login)||Number(login)<=0
-      ||typeof server!=='string'||!server.trim()||server.length>100||!['demo','live'].includes(mode as string)
-      ||typeof password!=='string'||!password||password.length>200) throw new Error('invalid_account');
-    const credentials=await encryptCredential(password,`${login}:${server.trim()}`);
-    // Kein Upsert: vorhandene Zugangsdaten nicht versehentlich über einen zweiten Import überschreiben.
-    return {account:checked(await db.from('mt5_accounts').insert({name:name.trim(),login,server:server.trim(),mode,credentials})
-      .select('id,name,login,server,mode').single())};
-  }
-  if (body.action==='select_account') {
-    if (body.id!==null&&!isExecutionId(body.id)) throw new Error('invalid_id');
-    if(body.id){const candidate=checked(await db.from('mt5_accounts').select('archived').eq('id',body.id).single());if(!candidate||candidate.archived)throw new Error('archived_account');}
-    checked(await db.rpc('mt5_select_test_account',{account_id:body.id}));
-    return {active_account_id:body.id};
-  }
-  throw new Error('unknown_action');
 }

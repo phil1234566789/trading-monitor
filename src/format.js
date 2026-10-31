@@ -46,10 +46,10 @@ export function fmtR(r) {
 }
 
 // "$13.00" / "-$14.40" — für Net P/L und Commission (Chat 2026-07-31, Broker-Ausführungsdetails).
-export function fmtMoney(n) {
+export function fmtMoney(n, currency = 'USD') {
   if (n == null) return "–";
   const sign = n < 0 ? "-" : "";
-  return `${sign}$${Math.abs(n).toFixed(2)}`;
+  return currency==='USD'?`${sign}$${Math.abs(n).toFixed(2)}`:`${sign}${Math.abs(n).toFixed(2)} ${currency}`;
 }
 
 export function pnlClass(value) {
