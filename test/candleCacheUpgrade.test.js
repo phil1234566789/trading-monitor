@@ -5,7 +5,9 @@ it('keeps v13 candles but refetches their unverified scalar coverage',async()=>{
   vi.resetModules();
   let stored={key:'GBPUSD:5m',candles:[{time:0},{time:300}],completeUpTo:900};
   const remove=vi.fn(),create=vi.fn();
+  vi.stubGlobal('IDBKeyRange',{bound:(lower,upper)=>({lower,upper})});
   vi.stubGlobal('indexedDB',{open(){const req={};queueMicrotask(()=>{
+    req.transaction={objectStore:()=>({delete:vi.fn()})};
     req.result={deleteObjectStore:remove,createObjectStore:create,objectStoreNames:{contains:()=>true},close:vi.fn(),
       transaction(){const tx={objectStore:()=>({get(){const read={};queueMicrotask(()=>{read.result=stored;read.onsuccess();});return read;},
         put(value){stored=value;queueMicrotask(()=>tx.oncomplete());}})};return tx;}};
