@@ -1,10 +1,11 @@
 import { describe,it,expect } from 'vitest';
 import { buildMarketPreview,buildEntrySearchPreview,signMarketPreview,verifyMarketPreview } from '../supabase/functions/trading-monitor-mcp/marketPreviewContract.js';
 const now=1800000000, id='c297afbf-172c-4304-99e7-eb1198191050';
-const config={login:42,server:'Demo',mode:'demo',allowLive:false};
+const policy={revision:id,day:'2027-01-15',confirmed_balance:50000,confirmed_equity:50000,risk_base:50000,cost_buffer:10,currency:'USD',drawdown_floor:47000,valid_until_sec:now+1000};
+const config={riskPolicy:policy,login:42,server:'Demo',mode:'demo',allowLive:false};
 const input={symbol:'EURUSD.gbe',direction:'short',stop_loss:1.101,take_profit:1.099};
-const snapshot={positions:[],pending_orders:0,trade_allowed:true,execution_ready:true,currency:'USD',quotes:[
-  {symbol:'EURUSD.gbe',bid:1.1,ask:1.1001,time:now,point:.00001,digits:5,minimum_volume:.01,loss_per_unit_long:1000,loss_per_unit_short:1000}]};
+const snapshot={balance:50000,equity:50000,hedging:true,risk_guards_ready:true,risk:{day:policy.day,time:now,realized_net_day:0,open_loss:0,latched:false},positions:[],pending_orders:0,trade_allowed:true,execution_ready:true,currency:'USD',quotes:[
+  {symbol:'EURUSD.gbe',bid:1.1,ask:1.1001,time:now,point:.00001,digits:5,minimum_volume:.01,maximum_volume:100,volume_step:.01,stops_level:.00001,loss_per_unit_long:1000,loss_per_unit_short:1000}]};
 describe('market preview authorization',()=>{
   it('uses the selected account, broker minimum and account-currency risk',()=>{
     const p=buildMarketPreview(input,snapshot,config,now,id);
@@ -81,6 +82,11 @@ describe('explicit protected dynamic entry sizing',()=>{
   expect(p.intent.risk_mode).toBe('risky');expect(p.intent.risk_policy_revision).toBe(id);
   expect(p.intent.risk_amount).toBe(240);expect(p.volume).toBe(2.4);
   expect(p.intent.reference_price).toBeUndefined();expect(p.intent.trigger_price).toBeNull();
-  expect(()=>buildEntrySearchPreview({...input,duration_sec:1800,risk_mode:'full'},dynamic,config,now,id)).toThrow('risk_limits_unconfirmed');
+  expect(()=>buildEntrySearchPreview({...input,duration_sec:1800,risk_mode:'full'},dynamic,{...config,riskPolicy:null},now,id)).toThrow('risk_limits_unconfirmed');
  });
+});
+
+it('also blocks the pilot when no policy or insufficient daily remainder is confirmed',()=>{
+ expect(()=>buildEntrySearchPreview({...input,duration_sec:600},snapshot,{...config,riskPolicy:null},now,id)).toThrow('risk_limits_unconfirmed');
+ expect(()=>buildEntrySearchPreview({...input,duration_sec:600},{...snapshot,risk:{...snapshot.risk,realized_net_day:-999}},config,now,id)).toThrow();
 });

@@ -42,9 +42,10 @@ export function riskPreviewMetrics(input,snapshot,policy,now){
  const distance=Math.max(q.point,q.stops_level),reference=long?q.bid:q.ask;
  if(!positive(sl)||(long?sl>=reference-distance:sl<=reference+distance)
   ||(tp!==null&&(!positive(tp)||(long?tp<=reference+distance:tp>=reference-distance))))throw new Error('invalid_stop_or_target');
- const budget=riskBudget(input.risk_mode,input.symbol,snapshot,policy,now);
+ const dynamic=input.risk_mode!=null,budget=riskBudget(dynamic?input.risk_mode:'full',input.symbol,snapshot,policy,now);
  const lossPerLot=Math.abs(price-sl)*(long?q.loss_per_unit_long:q.loss_per_unit_short)/q.minimum_volume;
- const volume=riskVolume(budget.available,lossPerLot,q),risk=volume*lossPerLot;
+ const sized=riskVolume(budget.available,lossPerLot,q),volume=dynamic?sized:q.minimum_volume,risk=volume*lossPerLot;
+ if(risk>budget.available+1e-7)throw new Error('minimum_volume_exceeds_budget');
  const reward=tp==null?null:long?tp-price:price-tp;
  return {budget,volume,risk,reference_price:price,rr:reward>0?reward/Math.abs(price-sl):null,currency:snapshot.currency,quote_time:q.time};
 }

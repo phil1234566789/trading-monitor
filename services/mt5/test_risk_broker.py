@@ -33,6 +33,14 @@ class DynamicBrokerRiskTests(unittest.TestCase):
    else:broker.risk_context['checked_at_sec']-=6
    with self.assertRaises(ValueError):broker.prepare(value)
    m.order_send.assert_not_called()
+ def test_pilot_cannot_bypass_remaining_daily_budget_or_missing_policy(self):
+  for missing in [True,False]:
+   broker,m=self.configured();value=self.order();del value['risk_mode'];del value['risk_policy_revision']
+   if missing:broker.risk_context['policy']=None
+   else:
+    m.history_deals_get.return_value=[NS(time_msc=int(time.time())*1000,type=0,profit=-995,commission=0,swap=0,fee=0)]
+   with self.assertRaises(ValueError):broker.prepare(value)
+   m.order_send.assert_not_called()
  def test_missing_floor_unknown_history_or_latch_never_sizes(self):
   for mutation in ['policy','history','latch']:
    broker,m=self.configured()

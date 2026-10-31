@@ -1,4 +1,5 @@
 import {readExecutionOrders} from './mt5OrderRead.js';
+import {riskPreviewMetrics} from './mt5RiskContract.js';
 import {readRiskPolicy} from './mt5Risk.ts';
 import {scheduleMt5Health,getMt5Health} from './mt5Health.ts';
 
@@ -52,6 +53,7 @@ export async function createExecutionOrder(input: Record<string, unknown>, confi
   const bridge = checked(await db.from('mt5_bridge_state').select('*').eq('id','primary').maybeSingle());
   if (!bridge || Date.now() - Date.parse(bridge.heartbeat_at) > 15_000) throw new Error('bridge_offline');
   validateWorkerSnapshot(bridge.snapshot, config);
+  riskPreviewMetrics({symbol:intent.symbol,direction:intent.direction,stop_loss:intent.stop_loss,take_profit:intent.take_profit,risk_mode:intent.risk_mode},bridge.snapshot,config.riskPolicy,now);
   if (bridge.snapshot.worker_error||bridge.snapshot.execution_ready===false||!bridge.snapshot.trade_allowed || bridge.snapshot.mode !== intent.mode) throw new Error('bridge_not_ready');
   const { data, error } = await db.rpc('mt5_enqueue_order',{new_intent:intent});
   if (error?.code === '23505') return createExecutionOrder(input,confirmedMarket);

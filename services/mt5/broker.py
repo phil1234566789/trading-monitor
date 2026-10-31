@@ -143,25 +143,25 @@ class Broker:
         if intent['trigger']=='market_confirmed':
             if abs(price-intent['reference_price'])>5*info.point:
                 raise ValueError('preview_price_changed')
+        context=self.risk_context
+        policy=context.get('policy')
+        if not policy or (intent.get('risk_mode') and policy.get('revision')!=intent.get('risk_policy_revision')):
+            raise ValueError('risk_limits_unconfirmed')
+        budget=risk_budget(intent.get('risk_mode') or 'full',symbol,snapshot,policy,time.time())
+        amount=min(intent['risk_amount'],budget['available']) if intent.get('risk_mode') else budget['available']
         if intent.get('risk_mode'):
-            context=self.risk_context
-            if not context or context.get('latched') is not False:raise ValueError('risk_guard_unavailable')
-            policy=context.get('policy')
-            if not policy or policy.get('revision')!=intent.get('risk_policy_revision'):raise ValueError('risk_limits_unconfirmed')
-            budget=risk_budget(intent['risk_mode'],symbol,snapshot,policy,time.time())
-            # Die bestätigte Geldobergrenze wird bei engeren Restbudgets nur verkleinert.
-            amount=min(intent['risk_amount'],budget['available'])
             lots=risk_volume(amount,-profit,info.volume_min,info.volume_max,info.volume_step)
-            actual=self.api.order_calc_profit(side,symbol,lots,price,sl)
-            if actual is None or not positive(-actual) or -actual>amount+1e-7:raise ValueError('risk_sizing_unavailable')
         elif intent['trigger'] in ('market_confirmed','m1_directional_close'):
-            # Mindestlot-Test: Der Verlust ist eine Schätzung, kein vom Nutzer beauftragtes Geldlimit.
+            # Pilot bleibt Mindestlot, darf das gemeinsame Restbudget aber nicht umgehen.
             if intent['volume']!=info.volume_min or intent['volume']>.01:
                 raise ValueError('invalid_minimum_volume')
             lots=intent['volume']
         else:
-            lots = volume_for_risk(intent['risk_amount'], -profit,
+            lots = volume_for_risk(min(intent['risk_amount'],amount), -profit,
                                    info.volume_min, info.volume_max, info.volume_step, .01)
+        actual=self.api.order_calc_profit(side,symbol,lots,price,sl)
+        if actual is None or not positive(-actual) or -actual>amount+1e-7:
+            raise ValueError('minimum_volume_exceeds_budget')
         if info.filling_mode & SYMBOL_FILLING_FOK:
             filling = self.api.ORDER_FILLING_FOK
         elif info.filling_mode & SYMBOL_FILLING_IOC:

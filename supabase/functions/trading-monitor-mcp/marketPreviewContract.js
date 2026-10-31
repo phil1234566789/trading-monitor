@@ -11,17 +11,15 @@ export function buildMarketPreview(input, snapshot, config, now, id) {
   const sl=Number(input.stop_loss), tp=input.take_profit == null ? null : Number(input.take_profit);
   if(!Number.isFinite(sl)||sl<=0||(long?sl>=q.bid-q.point:sl<=q.ask+q.point)
     ||(tp!==null&&(!Number.isFinite(tp)||tp<=0||(long?tp<=q.bid+q.point:tp>=q.ask-q.point)))) throw new Error('invalid_stop_or_target');
-  const minimumRisk=Math.abs(price-sl)*(long?q.loss_per_unit_long:q.loss_per_unit_short);
-  if(!Number.isFinite(minimumRisk)||minimumRisk<=0) throw new Error('risk_unavailable');
   const dynamic=input.risk_mode!=null;
-  const metrics=dynamic?riskPreviewMetrics(input,snapshot,config.riskPolicy,now):null;
-  const risk=metrics?.risk??minimumRisk,volume=metrics?.volume??q.minimum_volume;
+  const metrics=riskPreviewMetrics(input,snapshot,config.riskPolicy,now);
+  const {risk,volume}=metrics;
   const intent=validateExecutionIntent({id,account_login:config.login,account_server:config.server,mode:config.mode,
-    symbol:q.symbol,direction:input.direction,stop_loss:sl,take_profit:tp,risk_amount:metrics?.budget.available??risk,
+    symbol:q.symbol,direction:input.direction,stop_loss:sl,take_profit:tp,risk_amount:dynamic?metrics.budget.available:risk,
     ...(dynamic?{risk_mode:input.risk_mode,risk_policy_revision:config.riskPolicy.revision}:{}),
     trigger:dynamic?'m1_directional_close':'market_confirmed',reference_price:price,volume,created_sec:now,expires_sec:now+30},
     {...config,allowLive:true},now);
-  return {intent,risk,...(metrics?{budget:metrics.budget}:{}),currency:snapshot.currency,quote_time:q.time};
+  return {intent,risk,budget:metrics.budget,currency:snapshot.currency,quote_time:q.time};
 }
 
 const encode=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
