@@ -166,6 +166,7 @@ const lastUpdateText = computed(() =>
 }
 
 .bar-right {
+  min-width:0;
   flex: 1;
   display: flex;
   flex-wrap: wrap;
@@ -191,7 +192,8 @@ const lastUpdateText = computed(() =>
 }
 
 .mode-switcher {
-  flex: none;
+  flex: 0 1 auto;
+  flex-wrap:wrap;
   display: flex;
   gap: 4px;
   border: 1px solid transparent;

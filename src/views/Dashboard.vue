@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { liveMonthViewId } from "../liveWatcherMonth.js";
+import DashboardMmt from '../components/DashboardMmt.vue';
 import PriceChart from "../components/PriceChart.vue";
 import { GOLD_CHART_BARS, goldChartSelection } from "../goldChartPolicy.js";
 import TradeSetupCockpit from "../components/TradeSetupCockpit.vue";
@@ -150,6 +151,8 @@ const showTradeSetups = useLocalStorageRef("showTradeSetups", true);
 // Ein/Ausblenden der eigenen geloggten Trades (Entry/Exit-Marker, verlinkte M5-OB-Box, Target-
 // Linien) — Untermenü-Feinschalter unter dem übergeordneten "Trades"-Toggle (showTradeSetups),
 // siehe Kommentar im Template.
+const showMmt = useLocalStorageRef("showMmt", false);
+const brokerTrades=ref([]);
 const showTrades = useLocalStorageRef("showTrades", true);
 // Anzahl vergangener Setups je Richtung, analog zu tradeSetupHistoryCountShort/Long im
 // tv-indikator (dort default 5, 0-50) — 0 zeigt nur das gerade aktive/letzte Setup.
@@ -1880,6 +1883,7 @@ watch(selectedTradingAccountId, () => {
           <ToggleButton variant="menu" :class="{ active: showTrades }" @click="showTrades = !showTrades">
             Trades
           </ToggleButton>
+          <ToggleButton variant="menu" :class="{active:showMmt}" :aria-pressed="showMmt" @click="showMmt=!showMmt">MMT</ToggleButton>
 
           <div class="toggle-dropdown-divider"></div>
 
@@ -2213,6 +2217,7 @@ watch(selectedTradingAccountId, () => {
       :symbol="currentSymbol"
     :current-bar="currentBar"
     :trades="isolatedTrades"
+    :broker-trades="showMmt ? brokerTrades : []"
     :hovered-trade-id="hoveredTradeId"
     :pin-trade-ids="pinTradeIds"
     :pin-ob-zone-keys="pinObZoneKeys"
@@ -2306,6 +2311,8 @@ watch(selectedTradingAccountId, () => {
     @add-target-from-picker="onAddTargetFromPicker"
     @add-anti-confluence-from-picker="onAddAntiConfluenceFromPicker"
     />
+    <aside v-if="(showMmt || showTradeSetupCockpit) && !snapshotView" class="chart-trading-sidebar">
+    <DashboardMmt v-if="showMmt" :symbol="currentSymbol" :annotations="visibleAnnotations" :last-candle-time="priceChartRef?.lastCandleTime" :replay="replayActive" @trades="brokerTrades=$event" />
     <TradeSetupCockpit
       v-if="showTradeSetupCockpit && !snapshotView"
       class="chart-tsc-row-tsc"
@@ -2335,6 +2342,8 @@ watch(selectedTradingAccountId, () => {
       @hover-evidence="hoveredCockpitEvidenceItem = $event"
       @hover-target="hoveredCockpitTargetItem = $event"
     />
+
+    </aside>
 
     <TradeSetupChecklist
       v-if="showTradeSetupChecklist || setup2Detail"
@@ -2544,6 +2553,7 @@ watch(selectedTradingAccountId, () => {
 }
 
 .replay-control {
+  flex-wrap:wrap;
   margin-left: auto;
   align-items: center;
   gap: 6px;
@@ -2594,6 +2604,9 @@ watch(selectedTradingAccountId, () => {
   gap: 12px;
 }
 
+.chart-trading-sidebar{display:flex;flex-direction:column;gap:8px;width:340px;flex:0 0 340px;min-width:0}
+.chart-trading-sidebar :deep(.tsc-card){width:100%;flex:1;min-height:0}
+@media(max-width:900px){.chart-tsc-row{flex-wrap:wrap}.chart-tsc-row-chart{flex-basis:100%}.chart-trading-sidebar{width:100%;flex-basis:100%}}
 .chart-tsc-row-chart {
   flex: 1;
   min-width: 0;

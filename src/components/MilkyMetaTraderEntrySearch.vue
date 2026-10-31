@@ -1,20 +1,28 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue';
 import ActionButton from './ui/ActionButton.vue';
+import {brokerIdeaMetrics} from '../tradeIdeas.js';
 import { useRoute } from 'vue-router';
-const props=defineProps({api:{type:Function,required:true},status:Object,account:Object});
+const props=defineProps({api:{type:Function,required:true},status:Object,account:Object,compact:Boolean,chartSymbol:String,idea:Object,disabled:Boolean});
 const emit=defineEmits(['submitted']);
 const route=useRoute();
 const symbol=ref(''),direction=ref('short'),sl=ref(''),tp=ref('');
 // Auch ein neuer Link ohne TP muss einen zuvor gesetzten Zielpreis entfernen.
 watch(()=>route.query,query=>{
+  if(props.compact)return;
   symbol.value=typeof query.symbol==='string'?query.symbol:'';
   direction.value=query.direction==='long'?'long':'short';
   sl.value=typeof query.sl==='string'?query.sl:'';
   tp.value=typeof query.tp==='string'?query.tp:'';
 },{immediate:true,deep:true});
-const durationMinutes=ref(10);
+watch(()=>[props.compact,props.chartSymbol,props.idea],()=>{
+ if(!props.compact)return;
+ symbol.value=props.chartSymbol??'';direction.value=props.idea?.direction??'short';
+ sl.value=props.idea?.sl??'';tp.value=props.idea?.tp??'';
+},{immediate:true,deep:true});
+const durationMinutes=ref(props.compact?30:10);
 const preview=ref(null),confirmation=ref(''),busy=ref(false),error=ref(''),receipt=ref('');
+const inputKey=computed(()=>JSON.stringify([symbol.value,direction.value,sl.value,tp.value,durationMinutes.value,props.account?.id,props.disabled]));
 const pendingKey='mmt-pending-confirmation';
 let pending;
 try {pending=JSON.parse(sessionStorage.getItem(pendingKey)??'null');} catch {}
@@ -34,23 +42,26 @@ async function reconcile() {
 const timer=setInterval(()=>{now.value=Date.now();},250);
 onUnmounted(()=>clearInterval(timer));
 const quotes=computed(()=>props.status?.bridge?.snapshot?.quotes??[]);
+const metrics=computed(()=>brokerIdeaMetrics({direction:direction.value,sl:Number(sl.value),tp:tp.value===''?null:Number(tp.value)},quotes.value.find(q=>q.symbol===symbol.value),now.value/1000));
 const ready=computed(()=>props.status?.online&&quotes.value.length>0);
 const executionReady=computed(()=>props.status?.bridge?.snapshot?.execution_ready&&props.status?.bridge?.snapshot?.trade_allowed);
 const expired=computed(()=>!preview.value||now.value>=preview.value.confirmation_expires_sec*1000);
 const liveEnabled=computed(()=>props.account?.mode==='demo'||props.status?.server_live_allowed);
-watch([symbol,direction,sl,tp,durationMinutes,()=>props.account?.id],()=>{preview.value=null;confirmation.value='';receipt.value='';});
+watch([symbol,direction,sl,tp,durationMinutes,()=>props.account?.id,()=>props.disabled],()=>{preview.value=null;confirmation.value='';receipt.value='';});
 watch(quotes,list=>{if(!symbol.value&&list.length===1) symbol.value=list[0].symbol;});
 async function showPreview() {
-  if(busy.value||pendingId.value)return;
+  if(busy.value||pendingId.value||props.disabled)return;
   busy.value=true;error.value='';preview.value=null;confirmation.value='';receipt.value='';
+  const requested=inputKey.value;
   try {
     const data=await props.api('search_preview',{order:{symbol:symbol.value,direction:direction.value,
       stop_loss:Number(sl.value),take_profit:tp.value===''?null:Number(tp.value),duration_sec:Number(durationMinutes.value)*60}});
+    if(requested!==inputKey.value)return;
     preview.value=data.preview;confirmation.value=data.confirmation;now.value=Date.now();
   } catch(e) {error.value=e.message;} finally {busy.value=false;}
 }
 async function confirm() {
-  if(busy.value||expired.value||!ready.value||!liveEnabled.value||!executionReady.value)return;
+  if(props.disabled||busy.value||expired.value||!ready.value||!liveEnabled.value||!executionReady.value)return;
   busy.value=true;error.value='';
   const token=confirmation.value;
   try {
@@ -72,7 +83,7 @@ async function confirm() {
 <template>
   <section class="mmt-panel mmt-ticket" aria-labelledby="mmt-entry-search-title">
     <h2 id="mmt-entry-search-title">Entry suchen</h2>
-    <details class="mmt-help"><summary>M1-Entry-Regel</summary><p>Short nach einer neu geschlossenen roten M1-Kerze, Long nach einer grünen. Dojis zählen nicht. Nur das ausgewählte Konto, kleinste Broker-Lotgröße.</p></details>
+    <details v-if="!compact" class="mmt-help"><summary>M1-Entry-Regel</summary><p>Short nach einer neu geschlossenen roten M1-Kerze, Long nach einer grünen. Dojis zählen nicht. Nur das ausgewählte Konto, kleinste Broker-Lotgröße.</p></details>
     <p v-if="!ready">Der lokale MT5-Worker muss verbunden sein, bevor ein aktueller Brokerkurs und eine Vorschau verfügbar sind.</p>
     <p v-if="status?.online&&!status?.bridge?.snapshot?.trade_allowed">MT5 meldet Handel gesperrt. Bitte in MT5 Algo Trading einschalten.</p>
     <p v-if="status?.online&&!status?.bridge?.snapshot?.execution_ready">Worker im Lesebetrieb: Vorschau verfügbar, Orderversand gesperrt.</p>
@@ -80,13 +91,18 @@ async function confirm() {
     <p v-if="error" role="alert">{{error}}</p>
     <p v-if="receipt" role="status">{{receipt}}</p>
     <div v-if="pendingId"><p>Rückmeldung für Auftrag {{pendingId}} wird abgeglichen.</p><ActionButton :disabled="busy" @click="reconcile">Auftragstatus prüfen</ActionButton></div>
+    <div v-if="compact" class="mmt-idea-summary">
+      <strong>{{idea?(direction==='long'?'Long':'Short'):'Keine eindeutige Idee'}} · SL {{idea?.sl??'—'}}</strong>
+      <p>RR {{metrics?.rr?.toFixed(2)??'—'}} · {{metrics?.volume??'—'}} Lot (Pilot)<br>Risiko bis SL {{metrics?.risk?.toFixed(2)??'—'}} {{status?.bridge?.snapshot?.currency}}</p>
+      <small>Brokerkurs {{metrics?.price??'—'}} · native Brokerberechnung. Mindestlot, maximal 0,01; dynamische Risikolots noch gesperrt.</small>
+    </div>
     <form class="mmt-form" @submit.prevent="showPreview">
-      <label class="mmt-wide">Broker-Symbol<select v-model="symbol" required :disabled="busy"><option value="" disabled>Symbol wählen</option><option v-for="q in quotes" :key="q.symbol" :value="q.symbol">{{q.symbol}}</option></select></label>
-      <fieldset class="mmt-direction"><legend>Richtung</legend><label><input v-model="direction" type="radio" value="long" :disabled="busy"><span>Long</span></label><label><input v-model="direction" type="radio" value="short" :disabled="busy"><span>Short</span></label></fieldset>
-      <label>Stop-Loss<input v-model="sl" type="number" min="0" step="any" required :disabled="busy"></label>
-      <label>Take-Profit (optional)<input v-model="tp" type="number" min="0" step="any" placeholder="Kein TP" :disabled="busy"></label>
+      <label v-if="!compact" class="mmt-wide">Broker-Symbol<select v-model="symbol" required :disabled="busy"><option value="" disabled>Symbol wählen</option><option v-for="q in quotes" :key="q.symbol" :value="q.symbol">{{q.symbol}}</option></select></label>
+      <fieldset v-if="!compact" class="mmt-direction"><legend>Richtung</legend><label><input v-model="direction" type="radio" value="long" :disabled="busy"><span>Long</span></label><label><input v-model="direction" type="radio" value="short" :disabled="busy"><span>Short</span></label></fieldset>
+      <label v-if="!compact">Stop-Loss<input v-model="sl" type="number" min="0" step="any" required :disabled="busy"></label>
+      <label v-if="!compact">Take-Profit (optional)<input v-model="tp" type="number" min="0" step="any" placeholder="Kein TP" :disabled="busy"></label>
       <label class="mmt-wide">Suche gültig für (Minuten)<input v-model="durationMinutes" type="number" min="1" max="60" step="1" required :disabled="busy"></label>
-      <ActionButton class="mmt-primary mmt-wide" type="submit" :disabled="busy||pendingId||!ready||!account">{{busy?'Wird vorbereitet …':'Suchauftrag vorbereiten'}}</ActionButton>
+      <ActionButton class="mmt-primary mmt-wide" type="submit" :disabled="disabled||busy||pendingId||!ready||!account||!symbol||(compact&&!idea)">{{busy?'Wird vorbereitet …':compact?'Entry suchen':'Suchauftrag vorbereiten'}}</ActionButton>
     </form>
     <div v-if="preview" class="mmt-preview" role="region" aria-label="Suchauftrag zur Bestätigung">
       <p><strong>{{preview.account_name}} · {{preview.intent.symbol}} · {{preview.intent.direction==='short'?'Short':'Long'}}</strong><br>
@@ -96,7 +112,7 @@ async function confirm() {
       <p>Nach deiner einmaligen Bestätigung wartet der Worker selbstständig auf die passende M1-Kerze und sendet dann zum aktuellen Brokerkurs. Kein weiterer Klick und keine Bindung an den Vorbereitungskurs. Konto, SL/TP und Mindestlotgröße werden beim Entry erneut geprüft.</p>
       <p>Suchende bis {{new Date(preview.intent.expires_sec*1000).toLocaleString('de-DE',{timeZone:'Europe/Berlin'})}} (Berlin). Nach einem ausgeführten Trade ist dieser Auftrag beendet.</p>
       <p v-if="expired">Bestätigungsansicht abgelaufen. Bitte den Suchauftrag erneut vorbereiten.</p>
-      <ActionButton class="mmt-primary" :disabled="busy||expired||!confirmation||!ready||!liveEnabled||!executionReady" @click="confirm">Entry-Suche verbindlich starten</ActionButton>
+      <ActionButton class="mmt-primary" :disabled="disabled||busy||expired||!confirmation||!ready||!liveEnabled||!executionReady" @click="confirm">Entry-Suche verbindlich starten</ActionButton>
     </div>
   </section>
 </template>

@@ -189,8 +189,8 @@ class LiquidityPaneView {
     const candles = this._source._candles;
 
     const y = series.priceToCoordinate(lvl.price);
-    this._p1 = { x: chartObjectCoordinate(timeScale,candles,lvl.pivotTime,this._source._options.eventBarSeconds), y };
-    this._p2 = { x: chartObjectCoordinate(timeScale,candles,lvl.endTime,this._source._options.eventBarSeconds), y };
+    this._p1 = { x: chartObjectCoordinate(timeScale,candles,lvl.pivotTime,this._source._options.eventBarSeconds,this._source._options.futureBarSeconds), y };
+    this._p2 = { x: chartObjectCoordinate(timeScale,candles,lvl.endTime,this._source._options.eventBarSeconds,this._source._options.futureBarSeconds), y };
   }
 
   renderer() {

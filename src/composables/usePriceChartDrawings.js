@@ -9,6 +9,8 @@
 // annotations.js: validateAnnotationList) verhalten sich seitdem wie jede andere Notiz auch
 // (normaler Inline-Text im Chart) — das Feld selbst bleibt im Schema gültig, nur ohne besondere
 // Wirkung mehr.
+import {renderTradeIdeas} from '../tradeIdeaRendering.js';
+import {barSecondsFor} from '../timeframes.js';
 import { renderAnnotations } from "../annotations.js";
 
 export function usePriceChartDrawings() {
@@ -29,8 +31,9 @@ export function usePriceChartDrawings() {
     candleSeries = null;
   }
 
-  function refresh({ annotations, annotationsDate, candles }) {
-    renderAnnotations(candleSeries, annotations, annotationPrimitives, annotationPriceLines, candles, annotationsDate);
+  function refresh({ annotations, annotationsDate, candles, currentBar }) {
+    renderAnnotations(candleSeries, annotations.filter(a=>!a.tradeIdea), annotationPrimitives, annotationPriceLines, candles, annotationsDate);
+    renderTradeIdeas(candleSeries,annotations,annotationPrimitives,candles,barSecondsFor(currentBar));
   }
 
   return { create, dispose, refresh };

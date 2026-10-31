@@ -21,6 +21,7 @@ const time=value=>fmtDateTime(value,{timeZone:'Europe/Berlin'});
 <template>
   <li class="mmt-order-card" :data-state="order.status">
     <div class="mmt-order-heading"><div><strong class="mmt-symbol">{{order.intent.symbol}}</strong> <span class="trade-direction" :class="order.intent.direction">{{order.intent.direction==='long'?'Long':'Short'}}</span></div><span class="mmt-order-state">{{stateLabel}}</span></div>
+    <p v-if="order.status==='searching'" class="mmt-order-time">Konto {{order.intent.account_login}} · gültig bis {{time(order.intent.expires_sec)}} · Berlin</p>
     <p class="mmt-order-time">Auftrag vom {{time(order.created_at)}} · Berlin</p>
     <dl class="mmt-levels">
       <div><dt>Entry</dt><dd :class="{'mmt-seeking':order.status==='searching'}">{{order.status==='searching'?'wird gesucht':order.status==='executed'?price(order.result?.price):order.result?.reason==='broker_fill_pending'?'Wird abgeglichen':'—'}}</dd></div>

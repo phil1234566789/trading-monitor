@@ -1,3 +1,4 @@
+import {readExecutionOrders} from './mt5OrderRead.js';
 import {scheduleMt5Health,getMt5Health} from './mt5Health.ts';
 
 import { isExecutionId, isSameExecutionResult, validateExecutionResult, validatePositionLifecycle, validateWorkerFault, validateDispatchAccount, validateExecutionIntent, validateWorkerSnapshot } from './executionContract.js';
@@ -22,8 +23,8 @@ export async function getExecutionStatus(id?: string) {
     return checked(await db.from('mt5_execution_orders').select('*').eq('id', id).maybeSingle());
   }
   const bridge = checked(await db.from('mt5_bridge_state').select('*').eq('id','primary').maybeSingle());
-  // Bewusst nur die letzten 20 Aufträge, kein vollständiger Archiv-Export.
-  const orders = checked(await db.from('mt5_execution_orders').select('*').order('created_at', { ascending:false }).limit(20));
+  // Erledigte Historie bleibt begrenzt; laufende Suchen dürfen durch neue Aufträge nie verschwinden.
+  const orders=await readExecutionOrders(db);
   const online = bridge && Date.now() - Date.parse(bridge.heartbeat_at) <= 15_000;
   return { bridge, online: !!online, health:await getMt5Health(), orders, execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',
     server_live_allowed:Deno.env.get('MT5_ALLOW_LIVE')==='true',
