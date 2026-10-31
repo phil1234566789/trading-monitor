@@ -26,6 +26,11 @@ it('renders all four accounts without activation controls and marks unknown data
  expect(html).toContain('Verlustgrenze');
  expect(html).toContain('tabindex="0"');
  expect(html).toMatch(/Winrate <strong[^>]*>unbekannt/);
+ expect(html).toContain('100 % geschafft');
+ expect(html).toContain('mmt-balance-floor-label');
+ expect(html).not.toContain('vom Challengeziel');
+ expect(html).not.toContain('Balance <');
+ expect(html).not.toContain('mmt-balance-details');
  expect(html).toContain('Fortschritt unbekannt');
  expect(html).toContain('Gespeicherter Stand')
  expect(html).toContain('Verbindung prüfen');

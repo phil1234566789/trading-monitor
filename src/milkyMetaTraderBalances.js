@@ -24,7 +24,9 @@ export function challengeGauge(balance,floor,target){
  // Die Brokergrenze zieht nach; die Vergleichsskala aller 50k-Konten bleibt fest.
  const scaleFloor=RISK_BASE-3000;
  const position=balancePosition(balance,scaleFloor,target),start=balancePosition(RISK_BASE,scaleFloor,target);
- return {position,start,scaleFloor,floor:balancePosition(floor,scaleFloor,target),progress:balancePosition(balance,RISK_BASE,target),
+ const floorPosition=balancePosition(floor,scaleFloor,target),angle=floorPosition*Math.PI/100;
+ return {position,start,scaleFloor,floor:floorPosition,
+  floorLabel:floorPosition==null?null:{x:110-122*Math.cos(angle),y:104-122*Math.sin(angle)},progress:balancePosition(balance,RISK_BASE,target),
   gain:position!=null&&start!=null?Math.max(0,position-start):0};
 }
 export function balanceHealth(status,fresh,account,now){

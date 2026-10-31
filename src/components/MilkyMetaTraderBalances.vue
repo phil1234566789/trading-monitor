@@ -24,26 +24,24 @@ const money=(value,currency)=>value==null?'unbekannt':fmtMoney(value,currency);
   <article v-for="row in rows" :key="row.account.id" class="mmt-balance-card" :data-selected="row.account.id===activeId" :aria-label="row.account.name+' · '+row.account.login">
    <div class="mmt-balance-heading">
     <strong>{{row.account.name}}</strong>
+    <span v-if="row.account.id===activeId" class="mmt-balance-health" :data-ok="row.health.ok" :role="row.health.ok?'status':'alert'">{{row.health.ok?'●':'⚠'}} {{row.health.label}}</span>
+    <small v-else class="mmt-muted mmt-balance-saved" :title="row.balance_at?time(row.balance_at)+' (Berlin)':'Zeitpunkt unbekannt'">Gespeicherter Stand</small>
     <div><small class="mmt-muted">{{row.account.login}}</small> <small v-if="row.account.id===activeId" class="mmt-selected">Aktives Handelskonto</small><small v-else class="mmt-muted">Nicht ausgewählt</small></div>
    </div>
-   <div class="mmt-balance-gauge" role="img" :aria-label="'Balance '+money(row.balance,row.currency)+', Verlustgrenze '+money(row.loss_floor,row.currency)+', Ziel '+money(row.target,row.currency)+', Challenge-Fortschritt '+(row.gauge.progress==null?'unbekannt':fmtPrice(row.gauge.progress,1)+' Prozent')">
-    <svg viewBox="0 0 220 122" aria-hidden="true">
+   <div class="mmt-balance-gauge" role="group" :aria-label="'Balance '+money(row.balance,row.currency)+', Verlustgrenze '+money(row.loss_floor,row.currency)+', Ziel '+money(row.target,row.currency)+', Challenge-Fortschritt '+(row.gauge.progress==null?'unbekannt':fmtPrice(row.gauge.progress,1)+' Prozent')">
+    <svg viewBox="-64 -32 348 154" aria-hidden="true">
      <path class="mmt-balance-arc" d="M 14 110 A 96 96 0 0 1 206 110" pathLength="100" />
      <path v-if="row.gauge.gain>0" class="mmt-balance-fill" d="M 14 110 A 96 96 0 0 1 206 110" pathLength="100" :stroke-dasharray="row.gauge.gain+' 100'" :stroke-dashoffset="-row.gauge.start" />
      <path v-if="row.gauge.floor!=null" class="mmt-balance-risk" d="M 14 110 A 96 96 0 0 1 206 110" pathLength="100" :stroke-dasharray="row.gauge.floor+' 100'" />
      <line v-if="row.gauge.floor!=null" class="mmt-balance-floor-marker" x1="3" y1="110" x2="25" y2="110" :transform="'rotate('+(row.gauge.floor*1.8)+' 110 110)'" />
      <line v-if="row.gauge.start!=null" class="mmt-balance-start" x1="5" y1="110" x2="23" y2="110" :transform="'rotate('+(row.gauge.start*1.8)+' 110 110)'" />
      <line v-if="row.gauge.position!=null" class="mmt-balance-pointer" :class="{negative:row.gauge.position<row.gauge.start}" x1="0" y1="110" x2="30" y2="110" :transform="'rotate('+(row.gauge.position*1.8)+' 110 110)'" />
+     <text v-if="row.gauge.floorLabel" class="mmt-balance-floor-label" :x="row.gauge.floorLabel.x" :y="row.gauge.floorLabel.y" text-anchor="middle"><title>{{'Quelle: '+(row.limits_source??'unbekannt')+' · '+(row.limits_at?time(row.limits_at):'Stand unbekannt')}}</title><tspan :x="row.gauge.floorLabel.x">Verlustgrenze</tspan><tspan :x="row.gauge.floorLabel.x" dy="12">{{money(row.loss_floor,row.currency)}}</tspan></text>
     </svg>
-    <div class="mmt-balance-value"><small>Balance <span v-if="row.currency">{{row.currency}}</span></small><strong>{{money(row.balance,row.currency)}}</strong><small>{{row.gauge.progress==null?'Fortschritt unbekannt':fmtPrice(row.gauge.progress,1)+' % vom Challengeziel'}}</small></div>
+    <div class="mmt-balance-value"><strong>{{money(row.balance,row.currency)}}</strong><small>{{row.gauge.progress==null?'Fortschritt unbekannt':fmtPrice(row.gauge.progress,1)+' % geschafft'}}</small><small>Winrate <strong>{{row.stats.winrate==null?'unbekannt':fmtPrice(row.stats.winrate,1)+' %'}}</strong><template v-if="row.stats.winrate!=null"> · {{row.stats.count}} Trades</template></small><small v-if="row.loss_floor==null" class="mmt-balance-floor">Verlustgrenze unbekannt</small></div>
    </div>
    <div class="mmt-balance-ends"><span>Skala<strong>{{money(row.gauge.scaleFloor,row.currency)}}</strong></span><span>Start<strong>50.000</strong></span><span>Ziel<strong>{{money(row.target,row.currency)}}</strong></span></div>
-   <div class="mmt-balance-details">
-    <span class="mmt-balance-floor" :title="'Quelle: '+(row.limits_source??'unbekannt')+' · '+(row.limits_at?time(row.limits_at):'Stand unbekannt')">Verlustgrenze {{money(row.loss_floor,row.currency)}}</span>
-    <span>Winrate <strong>{{row.stats.winrate==null?'unbekannt':fmtPrice(row.stats.winrate,1)+' %'}}</strong><template v-if="row.stats.winrate!=null"> · {{row.stats.count}} Trades</template></span>
-    <span v-if="row.account.id===activeId" class="mmt-balance-health" :data-ok="row.health.ok" :role="row.health.ok?'status':'alert'">{{row.health.ok?'●':'⚠'}} {{row.health.label}}</span>
-    <span v-else class="mmt-muted" :title="row.balance_at?time(row.balance_at)+' (Berlin)':'Zeitpunkt unbekannt'">Gespeicherter Stand</span>
-   </div>
+
    <p v-if="row.balance!=null&&row.loss_floor!=null&&row.balance<row.loss_floor" class="mmt-error">Balance unter der zuletzt bestätigten Verlustgrenze.</p>
    <p v-else-if="row.balance!=null&&row.target!=null&&row.balance>row.target" class="mmt-muted">Balance über dem Challengeziel.</p>
 
@@ -58,18 +56,18 @@ const money=(value,currency)=>value==null?'unbekannt':fmtMoney(value,currency);
 .mmt-balance-list:focus-visible{outline:2px solid var(--mmt-accent);outline-offset:2px}
 .mmt-balance-card{min-width:0;border:1px solid var(--mmt-border);border-radius:6px;padding:.75rem;background:var(--mmt-surface);scroll-snap-align:start}
 .mmt-balance-card[data-selected="true"]{border-color:var(--mmt-positive)}
-.mmt-balance-heading{display:grid;gap:.25rem;min-height:2.75rem;margin-bottom:.25rem}
+.mmt-balance-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.25rem .5rem;min-height:2.75rem;margin-bottom:.25rem;align-items:start}.mmt-balance-heading>div{grid-column:1/-1}.mmt-balance-heading>.mmt-balance-health,.mmt-balance-saved{text-align:right;max-width:110px;font-size:.65rem}
 .mmt-balance-heading strong{overflow-wrap:anywhere}
 .mmt-balance-heading small{font-weight:normal}
-.mmt-balance-gauge{position:relative;width:220px;max-width:100%;margin:0 auto}
+.mmt-balance-gauge{position:relative;width:320px;max-width:100%;min-height:120px;margin:0 auto}
 .mmt-balance-gauge svg{display:block;width:100%;overflow:visible}
 .mmt-balance-arc,.mmt-balance-risk,.mmt-balance-fill{fill:none;stroke-width:14}.mmt-balance-arc{stroke-linecap:round}
 .mmt-balance-arc{stroke:var(--mmt-border)}.mmt-balance-fill{stroke:var(--mmt-positive)}.mmt-balance-risk{stroke:var(--mmt-negative);opacity:.25}.mmt-balance-start{stroke:var(--mmt-muted);stroke-width:2}.mmt-balance-floor-marker{stroke:var(--mmt-negative);stroke-width:2}.mmt-balance-pointer{stroke:var(--mmt-positive);stroke-width:3}.mmt-balance-pointer.negative{stroke:var(--mmt-negative)}
-.mmt-balance-value{position:absolute;top:52%;left:0;right:0;display:grid;gap:.25rem;text-align:center;line-height:1.1}
-.mmt-balance-value small{font-size:.7rem;color:var(--mmt-muted)}.mmt-balance-value strong{font-size:1.1rem}
+.mmt-balance-value{position:absolute;top:57%;left:18%;right:18%;display:grid;gap:.25rem;text-align:center;line-height:1.1}
+.mmt-balance-value small{font-size:.7rem;color:var(--mmt-muted)}.mmt-balance-value>strong{font-size:1.1rem}.mmt-balance-value small strong{font-size:inherit}
 .mmt-balance-ends{display:flex;justify-content:space-between;gap:.5rem;font-size:.7rem;color:var(--mmt-muted)}
 .mmt-balance-ends span:nth-child(2){text-align:center}.mmt-balance-floor{color:var(--mmt-negative)}
 .mmt-balance-ends span:last-child{text-align:right}.mmt-balance-ends strong{display:block;font-weight:normal;color:inherit}
-.mmt-balance-details{display:grid;gap:.25rem;margin-top:.75rem;font-size:.75rem}
+.mmt-balance-floor-label{fill:var(--mmt-negative);font:11px system-ui}
 .mmt-balance-health{color:var(--mmt-negative)}.mmt-balance-health[data-ok="true"]{color:var(--mmt-positive)}
 </style>

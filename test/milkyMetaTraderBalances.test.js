@@ -35,11 +35,13 @@ it('separates earned challenge progress from the drawdown part of the same scale
  expect(g.start).toBeCloseTo(3000/7000*100);
  expect(g.gain).toBeCloseTo(g.position-g.start);
  expect(g.floor).toBeCloseTo(846.49/7000*100);
+ expect(Number.isFinite(g.floorLabel.x)&&Number.isFinite(g.floorLabel.y)).toBe(true);
  expect(challengeGauge(49500,47000,54000).gain).toBe(0);
  expect(challengeGauge(49500,47000,54000).position).toBeLessThan(g.start);
  expect(challengeGauge(55000,47000,54000).progress).toBe(100);
  expect(challengeGauge(null,47000,54000).position).toBeNull();
  expect(challengeGauge(50846.49,null,54000).floor).toBeNull();
+ expect(challengeGauge(50846.49,null,54000).floorLabel).toBeNull();
 });
 it('shows green only for fresh, ready and independently monitored operation',()=>{
  const now=Date.parse('2026-10-31T22:00:00Z');
