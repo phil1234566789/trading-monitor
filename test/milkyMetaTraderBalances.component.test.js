@@ -15,13 +15,17 @@ it('renders all four accounts without activation controls and marks unknown data
  expect(html.match(/<article/g)).toHaveLength(4);
  expect(html).toContain('Aktives Handelskonto');
  expect(html).toContain('Balance $55000.00');
- expect(html).toContain('Equity $45000.00');
+ for(const label of ['Equity','Netto-PnL','Positionen','Laufende Aufträge','Workerstand'])expect(html).not.toContain(label);
  expect(html.match(/<svg/g)).toHaveLength(4);
- expect(html).toContain('stroke-dasharray="100 100"');
+ expect(html).toContain('Challenge-Fortschritt 100 Prozent');
+ expect(html).toContain('mmt-balance-risk');
+ expect(html).toContain('mmt-balance-start');
+ expect(html).toContain('Verlustgrenze');
  expect(html).toContain('tabindex="0"');
  expect(html).toMatch(/Winrate <strong[^>]*>unbekannt/);
- expect(html).toContain('Skala unbekannt');
- expect(html).toContain('Letzter bekannter Stand');
+ expect(html).toContain('Fortschritt unbekannt');
+ expect(html).toContain('Gespeicherter Stand')
+ expect(html).toContain('Verbindung prüfen');
  expect(html).not.toContain('<button');
 });
 it('keeps additional accounts in the same scrollable account strip',async()=>{

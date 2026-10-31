@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useStatusBar } from '../composables/useStatusBar.js';
-import { mmtPollDelay, mmtStaleSeconds, mmtConnectionStatus, mmtSelectedAccountId } from '../milkyMetaTraderPolling.js';
+import { mmtPollDelay, mmtStaleSeconds, mmtConnectionStatus, mmtSelectedAccountId, mmtExecutionReady, mmtAccountSnapshot } from '../milkyMetaTraderPolling.js';
 import { positionCommissions } from '../milkyMetaTraderStatistics.js';
 import { cssColor } from '../chartColors.js';
 import MilkyMetaTraderStatistics from '../components/MilkyMetaTraderStatistics.vue';
@@ -39,11 +39,8 @@ const deliveryLabels={pending:'wartet',claimed:'wird gesendet',accepted:'angenom
 const active=computed(()=>accounts.value.find(a=>a.id===activeId.value));
 const api=(action,fields,options)=>createMilkyMetaTraderClient(import.meta.env.VITE_SUPABASE_URL,token.value)(action,fields,options);
 const time=value=>value ? new Date(value).toLocaleString('de-DE',{timeZone:'Europe/Berlin'}) : '—';
-const snapshot=computed(()=>{
-  const value=status.value?.bridge?.snapshot;
-  return value?.account_login===Number(active.value?.login)&&value?.account_server===active.value?.server?value:null;
-});
-const ready=computed(()=>status.value?.online&&!workerProblem.value&&snapshot.value?.execution_ready&&snapshot.value?.trade_allowed&&(active.value?.mode==='demo'||status.value?.server_live_allowed));
+const snapshot=computed(()=>mmtAccountSnapshot(active.value,status.value?.bridge));
+const ready=computed(()=>mmtExecutionReady(active.value,status.value,snapshot.value));
 const currentOrders=computed(()=>(status.value?.orders??[]).filter(order=>['searching','sending','unknown'].includes(order.status)||(order.status==='executed'&&order.result?.position_lifecycle?.state!=='closed')));
 const previousOrders=computed(()=>(status.value?.orders??[]).filter(order=>!currentOrders.value.includes(order)));
 

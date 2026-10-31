@@ -15,3 +15,13 @@ export function mmtConnectionStatus({unlocked,active,status,snapshot,age,error,d
   if(!snapshot||age==null||age>mmtStaleSeconds(delay))return {label:'Daten veraltet',state:'dead'};
   return {label:'Verbunden',state:'ok'};
 }
+
+export function mmtExecutionReady(active,status,snapshot){
+ return Boolean(status?.online&&!snapshot?.worker_error&&!status?.health?.incident&&snapshot?.execution_ready&&snapshot?.trade_allowed
+  &&(active?.mode==='demo'||status?.server_live_allowed));
+}
+
+export function mmtAccountSnapshot(account,bridge){
+ const snapshot=bridge?.snapshot;
+ return snapshot?.account_login===Number(account?.login)&&snapshot?.account_server===account?.server?snapshot:null;
+}
