@@ -33,11 +33,19 @@ export async function historyWorkerAction(body:Record<string,any>) {
  }
  throw new Error('unknown_action');
 }
+async function readHistorySync(db:ReturnType<typeof mt5Database>){
+ const rows=[];let after='00000000-0000-0000-0000-000000000000';
+ while(true){
+  const page:any[]=checked(await db.from('mt5_history_sync').select('*').gt('account_id',after).order('account_id').limit(500))??[];
+  if(!page.length)return rows;
+  rows.push(...page);after=page[page.length-1].account_id;
+ }
+}
 export async function readHistoryPage(body:Record<string,any>) {
  const cursor=body.after_id??0;
  if(!Number.isSafeInteger(cursor)||cursor<0)throw new Error('invalid_history_cursor');
  const db=mt5Database();
  const rows=checked(await db.from('mt5_broker_deals').select('*').gt('id',cursor).order('id').limit(500))??[];
- const sync=cursor===0?checked(await db.from('mt5_history_sync').select('*')):undefined;
+ const sync=cursor===0?await readHistorySync(db):undefined;
  return {rows,next_cursor:rows.length?rows[rows.length-1].id:null,sync};
 }

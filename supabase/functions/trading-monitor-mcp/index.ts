@@ -33,6 +33,7 @@ import { registerSessionWindowTool } from "./tools/sessionWindow.ts";
 import { registerBiasCheckTool } from "./tools/biasCheck.ts";
 import { registerValidationEvidenceTool } from "./tools/validationEvidence.ts";
 import { registerMt5ExecutionTools } from "./tools/mt5Execution.ts";
+import { registerMt5JournalTools } from "./tools/mt5Journal.ts";
 
 const MCP_TOKEN = Deno.env.get("TRADING_MONITOR_MCP_TOKEN");
 
@@ -58,6 +59,7 @@ function buildServer() {
   registerBiasCheckTool(server);
   registerValidationEvidenceTool(server);
   registerMt5ExecutionTools(server);
+  registerMt5JournalTools(server);
   return server;
 }
 

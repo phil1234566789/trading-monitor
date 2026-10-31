@@ -139,12 +139,12 @@ const showCommission = useLocalStorageRef("showCommissionColumn", false);
           <span class="trade-outcome" :class="t.outcome ?? 'open'">{{ outcomeLabel(t) }}</span>
         </td>
         <td>
-          <span v-if="t.netPl != null" class="trade-pl" :class="t.netPl >= 0 ? 'positive' : 'negative'">{{ fmtMoney(t.netPl) }}</span>
+          <span v-if="t.netPl != null" class="trade-pl" :class="t.netPl >= 0 ? 'positive' : 'negative'">{{ fmtMoney(t.netPl,t.accountCurrency) }}</span>
           <span v-else>–</span>
         </td>
         <td class="trade-commission-cell">
           <span v-if="!showCommission" class="trade-commission-hidden">•••</span>
-          <span v-else-if="t.commission != null" class="trade-pl" :class="t.commission >= 0 ? 'positive' : 'negative'">{{ fmtMoney(t.commission) }}</span>
+          <span v-else-if="t.commission != null" class="trade-pl" :class="t.commission >= 0 ? 'positive' : 'negative'">{{ fmtMoney(t.commission,t.accountCurrency) }}</span>
           <span v-else>–</span>
         </td>
         <td class="trade-reasoning-cell">{{ t.reasoning ?? "" }}</td>

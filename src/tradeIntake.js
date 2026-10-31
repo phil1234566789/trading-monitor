@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient.js";
+import {privateJournalApi} from './privateJournal.js';
 import { deriveSetupEntryInvalidation, TRADE_SETUP_DETECTOR_VERSION } from "./tradeSetup.js";
 import { tradeSetupProvenance } from '../supabase/functions/_shared/tradeSetupProvenance.js';
 import { tradeSetupFromRow } from "./tradeSetups.js";
@@ -352,7 +353,7 @@ export async function removeTargetFromTrade(targetId) {
 // generisches Partial-Update für TradeEditModal.vue. fields nutzt camelCase (wie das Objekt aus
 // trades.js), wird hier auf die DB-Spaltennamen gemappt statt das dem Aufrufer zu überlassen.
 // exitTime kommt als Unix-Sekunden (wie der Rest der App) oder null, nicht als ISO-String.
-export async function updateTrade(positionId, fields) {
+export async function updateTrade(positionId, fields, brokerPrivate=false) {
   const payload = {};
   if ("entryPrice" in fields) payload.entry_price = fields.entryPrice;
   // entryTime editiert bewusst triggered_at mit (nicht ein neues Feld) — das ist bereits die
@@ -375,6 +376,10 @@ export async function updateTrade(positionId, fields) {
   if ("netPl" in fields) payload.net_pl = fields.netPl;
   if ("commission" in fields) payload.commission = fields.commission;
 
+  if(brokerPrivate){
+    try{await privateJournalApi('journal_position_update',{position_id:positionId,fields:payload});return true;}
+    catch{return false;}
+  }
   const { error } = await supabase.from("trade_positions").update(payload).eq("id", positionId);
   if (error) {
     console.error("Trade aktualisieren fehlgeschlagen:", error);

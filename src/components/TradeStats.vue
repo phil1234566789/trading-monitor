@@ -36,6 +36,7 @@ const winrateClass = computed(() => {
     <div class="stat-item">
       <span class="stat-label">Ø R / Trade</span>
       <span class="stat-value">{{ fmtR(stats.avgR) }}</span>
+      <span v-if="stats.unknownR" class="stat-label">R belegt: {{stats.knownR}} · unbekannt: {{stats.unknownR}}</span>
     </div>
   </div>
 </template>

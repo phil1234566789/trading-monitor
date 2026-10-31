@@ -190,6 +190,16 @@ Felder; erst ein belegter positiver Fill-Preis wird als ausgefuehrter Entry ange
 Ein noch nicht belegter Fill bleibt offen/unknown und sperrt weitere Sendungen. Fehler
 bei der Resultatuebertragung duerfen die Heartbeats nicht mehr unterdruecken.
 
+## Verbindung mit dem bestehenden Journal
+
+Die PnL-Liste öffnet über **Journal / Kommentare** die exakte Brokerposition und ihre
+Zuordnung zu DR und Journalposition. Nach Import im Chat sind dieselben privaten Kommentare
+auch im bestehenden Trade-Editor sichtbar und korrigierbar; der Chart-Link öffnet dessen
+vorhandene Darstellung. MMT zuvor entsperren. Ohne Zuordnung zuerst DR-Nummer, Konto und
+Brokerpositions-ID nennen; bereits manuell journalisierte Ausführungen ausdrücklich angeben.
+Historischer SL/TP und R bleiben ohne Nachweis unbekannt. Technischer Vertrag, Schutz der
+öffentlichen Journalzugriffe und Tests: [Privates MMT-Journal](mcp-server.md#privates-mmt-journal).
+
 ## Positionsstatus bei Reload
 
 Der Worker gleicht ausgefuehrte Auftraege weiter rein lesend mit MT5 ab. Die Auftragsliste
