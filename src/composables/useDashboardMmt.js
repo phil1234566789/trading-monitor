@@ -2,6 +2,7 @@ import {computed,onMounted,onUnmounted,ref} from 'vue';
 import {createMilkyMetaTraderClient} from '../milkyMetaTraderClient.js';
 import {readMilkyMetaTraderKey} from '../milkyMetaTraderKey.js';
 import {mmtPollDelay} from '../milkyMetaTraderPolling.js';
+import {findOrderPosition} from '../milkyMetaTraderMonitoring.js';
 import {loadMmtHistory} from '../milkyMetaTraderHistory.js';
 import {confirmedOrderTrade,chartInstrument} from '../tradeIdeas.js';
 export function useDashboardMmt(symbol) {
@@ -18,10 +19,15 @@ export function useDashboardMmt(symbol) {
   return matches.length===1?matches[0]:null;
  });
  const activeOrders=computed(()=>(status.value?.orders??[]).filter(o=>['searching','sending','unknown'].includes(o.status)));
- const trades=computed(()=>(status.value?.orders??[]).flatMap(o=>{
+ function entryTimeFor(o){
+  const native=findOrderPosition(o,snapshot.value)?.opened_at_sec;
+  if(Number.isFinite(native)&&native>0)return native;
   const a=accounts.value.find(a=>Number(a.login)===o.intent.account_login&&a.server===o.intent.account_server);
-  const deal=history.value.filter(d=>d.account_id===a?.id&&d.position_id===(o.result?.position??o.result?.order)&&d.entry===0&&d.symbol===o.intent.symbol).sort((a,b)=>a.time_msc-b.time_msc)[0];
-  const trade=confirmedOrderTrade(o,deal?.time_msc/1000);
+  const times=history.value.filter(d=>d.account_id===a?.id&&d.position_id===(o.result?.position??o.result?.order)&&d.entry===0&&d.symbol===o.intent.symbol).map(d=>d.time_msc/1000);
+  return times.length?Math.min(...times):null;
+ }
+ const trades=computed(()=>(status.value?.orders??[]).flatMap(o=>{
+  const trade=confirmedOrderTrade(o,entryTimeFor(o));
   return trade&&trade.instrument===symbol.value?[trade]:[];
  }));
  let timer,next=0,request=null,disposed=false,lastHistory=0,historyCursor=0;
@@ -45,11 +51,11 @@ export function useDashboardMmt(symbol) {
      if(!disposed&&data.link)links.value={...links.value,[o.id]:data.link};
     }
    }
-  }catch(e){if(!disposed)error.value=e.message;}finally{request=null;next=Date.now()+mmtPollDelay(status.value);}})();
+  }catch(e){if(!disposed)error.value=e.message;}finally{request=null;next=Date.now()+Math.min(4000,mmtPollDelay(status.value));}})();
   return request;
  }
  async function cancel(id){try{await api('cancel',{id});await refresh();}catch(e){error.value=e.message;}}
  onMounted(()=>{void refresh();timer=setInterval(()=>{now.value=Date.now();if(now.value>=next&&document.visibilityState==='visible')void refresh();},1000);});
  onUnmounted(()=>{disposed=true;clearInterval(timer);});
- return {api,status,account,snapshot,brokerQuote,activeOrders,trades,links,error,key,now,refresh,cancel};
+ return {api,status,account,snapshot,brokerQuote,activeOrders,trades,entryTimeFor,links,error,key,now,refresh,cancel};
 }

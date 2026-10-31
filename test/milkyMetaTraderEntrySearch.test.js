@@ -16,10 +16,13 @@ function mount(query={},extra={}) {
   vi.stubGlobal('sessionStorage',{getItem:()=>null,removeItem:vi.fn()});
   route.query=reactive(query);
   const api=vi.fn().mockImplementation(async(action,{order})=>({preview:{intent:order,risk:1,confirmation_expires_sec:Date.now()/1000+30},confirmation:'signed'}));
-  app=renderer.createApp({...EntrySearch,render:()=>h('div')},{api,status:{online:true},account:{id:'demo',mode:'demo'},...extra});
+  const now=Date.now()/1000,policy={revision:'policy',risk_base:50000,cost_buffer:5,drawdown_floor:47000,confirmed_balance:50000,confirmed_equity:50000,currency:'USD',day:'fixture',valid_until_sec:now+3600};
+  const quote={bid:1.1,ask:1.1001,time:now,point:.00001,minimum_volume:.01,maximum_volume:100,volume_step:.01,stops_level:0,loss_per_unit_long:1000,loss_per_unit_short:1000};
+  const status={online:true,risk_policy:policy,bridge:{snapshot:{balance:50000,equity:50000,currency:'USD',hedging:true,positions:[],pending_orders:0,risk_guards_ready:true,risk:{time:now,day:'fixture',latched:false,realized_net_day:0,open_loss:0},quotes:[{...quote,symbol:'EURUSD.gbe'},{...quote,symbol:'XAUUSD.gbe',bid:4000,ask:4000.1,point:.001,loss_per_unit_long:1,loss_per_unit_short:1}]}}};
+  app=renderer.createApp({...EntrySearch,render:()=>h('div')},{api,status,account:{id:'demo',mode:'demo'},...extra});
   app.provide(ssrContextKey,{});
   const root={children:[]},vm=app.mount(root);
-  return {state:vm.$.setupState,api};
+  return {state:vm.$.setupState,api,status:vm.$props.status};
 }
 describe('MMT optional target form',()=>{
   it('keeps SL required and sends a blank TP as null',async()=>{
@@ -48,7 +51,8 @@ describe('MMT optional target form',()=>{
 describe('compact chart entry search',()=>{
  it('uses chart symbol and idea stop, never its anchor as trigger/reference',async()=>{
   const {state,api}=mount({}, {compact:true,chartSymbol:'XAUUSD.gbe',idea:{direction:'long',entry:4000,sl:3990,tp:null}});
-  expect(state.durationMinutes).toBe(30);
+  expect(state.durationMinutes).toBe(30);expect(state.riskMode).toBe('risky');
+  state.riskMode='';await nextTick();
   route.query.direction='short';route.query.symbol='EURUSD.gbe';await nextTick();
   expect(state.direction).toBe('long');expect(state.symbol).toBe('XAUUSD.gbe');
   await state.showPreview();
@@ -59,10 +63,28 @@ describe('compact chart entry search',()=>{
   await state.showPreview();expect(api).not.toHaveBeenCalled();
  });
  it('discards an in-flight preview if the idea changes',async()=>{
-  const {state,api}=mount({symbol:'EURUSD.gbe',sl:'1.09'});let resolve;
+  const {state,api}=mount({symbol:'EURUSD.gbe',direction:'long',sl:'1.09'});let resolve;
   api.mockImplementation(()=>new Promise(r=>{resolve=r;}));
   const loading=state.showPreview();state.sl='1.08';await nextTick();
   resolve({preview:{intent:{id:'old'}},confirmation:'old'});await loading;
   expect(state.preview).toBeNull();expect(state.confirmation).toBe('');
  });
+});
+
+it('keeps dynamic entry search blocked without confirmed account limits',async()=>{
+ const {state,api}=mount({}, {compact:true,chartSymbol:'XAUUSD.gbe',idea:{direction:'long',sl:3900},status:{online:true}});
+ await state.showPreview();expect(api).not.toHaveBeenCalled();expect(state.preview).toBeNull();
+});
+
+it('updates dynamic lots with broker prices and sends only the chosen risk mode',async()=>{
+ const {state,api,status}=mount({symbol:'EURUSD.gbe',direction:'long',sl:'1.09'});
+ state.riskMode='full';await nextTick();
+ const before=state.metrics.volume;
+ status.bridge.snapshot.quotes[0].ask=1.101;state.now+=1000;await nextTick();
+ expect(state.metrics.volume).toBeLessThan(before);
+ await state.showPreview();
+ expect(api.mock.calls.map(c=>c[0])).toEqual(['search_preview']);
+ expect(api.mock.calls[0][1].order).toMatchObject({risk_mode:'full',stop_loss:1.09});
+ expect(api.mock.calls[0][1].order).not.toHaveProperty('reference_price');
+ expect(api.mock.calls[0][1].order).not.toHaveProperty('trigger_price');
 });

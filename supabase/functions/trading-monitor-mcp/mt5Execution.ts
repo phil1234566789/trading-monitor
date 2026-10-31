@@ -29,10 +29,10 @@ export async function getExecutionStatus(id?: string) {
   const bridge = checked(await db.from('mt5_bridge_state').select('*').eq('id','primary').maybeSingle());
   // Erledigte Historie bleibt begrenzt; laufende Suchen dürfen durch neue Aufträge nie verschwinden.
   const orders=await readExecutionOrders(db);
-  const settings=checked(await db.from('mt5_execution_settings').select('active_account_id').eq('id','primary').single());
-  const risk_policy=settings?.active_account_id?await readRiskPolicy(settings.active_account_id):null;
+  const dailyStatus=await readDailyStopStatus();
+  const {policy:risk_policy,...dailyStop}=dailyStatus??{policy:null};
   const online = bridge && Date.now() - Date.parse(bridge.heartbeat_at) <= 15_000;
-  return { daily_stop:await readDailyStopStatus(),risk_policy,bridge, online: !!online, health:await getMt5Health(), orders, execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',
+  return { daily_stop:dailyStatus?dailyStop:null,risk_policy,bridge, online: !!online, health:await getMt5Health(), orders, execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',
     server_live_allowed:Deno.env.get('MT5_ALLOW_LIVE')==='true',
     limits: { maxLots:.01, maxDurationSec:3600 } };
 }

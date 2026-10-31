@@ -1,5 +1,6 @@
 <script setup>
 import {computed,ref,watch,onUnmounted} from 'vue';
+import {chartInstrument} from '../tradeIdeas.js';
 import {findOrderPosition} from '../milkyMetaTraderMonitoring.js';
 import {targetDraftAllocation,validateTargetAllocation} from '../../supabase/functions/trading-monitor-mcp/targetPlanContract.js';
 import {setTargetDraft,removeTargetDraft,useTargetDraft,selectTargetDraft} from '../mmtTargetDrafts.js';
@@ -15,13 +16,13 @@ const stateNames={pending:'Wird beim Worker installiert',sending:'Brokeränderun
 let timer,disposed=false,generation=0;
 const allocation=computed(()=>targetDraftAllocation(draft.value?.targets??[],position.value?.volume,quote.value?.volume_step));
 const validation=computed(()=>{
- try{return {value:validateTargetAllocation(allocation.value.targets,position.value,quote.value,props.order.result.price,props.order.intent.stop_loss),error:null};}
+ try{return {value:validateTargetAllocation(allocation.value.targets,position.value,quote.value,props.order.result.price,(props.order.result.initial_sl??props.order.intent.stop_loss)),error:null};}
  catch(e){return {value:null,error:e.message};}
 });
 const messages={invalid_target_precision:'Zielpreis passt nicht zur Broker-Preispräzision.',invalid_target_count:'Ein bis fünf Ziele angeben.',invalid_target_volume:'Aufteilung mit Broker-Mindestlot und Lot-Schritt nicht ausführbar.',invalid_remaining_volume:'Der Rest wäre kleiner als das Broker-Mindestlot.',target_volume_exceeds_position:'Zielmengen überschreiten das offene Volumen.',invalid_position_volume:'Broker-Volumen passt nicht zum Lot-Schritt.',invalid_target_price:'Ziele müssen in Gewinnrichtung noch vor uns liegen, mit Broker-Mindestabstand.',target_specs_unavailable:'Native Broker-Spezifikation fehlt; Worker aktualisieren.',invalid_target_basis:'Fester Fill und initialer SL müssen belegt sein.'};
 function initTargets(targets){
- setTargetDraft(props.order.id,{symbol:props.order.intent.symbol.split('.')[0],entryTime:props.entryTime??position.value?.opened_at_sec??null,digits:quote.value?.digits,
-  entryPrice:props.order.result.price,initialSl:props.order.intent.stop_loss,direction:props.order.intent.direction,
+ setTargetDraft(props.order.id,{symbol:chartInstrument(props.order.intent.symbol),entryTime:props.entryTime??position.value?.opened_at_sec??null,digits:quote.value?.digits,
+  entryPrice:props.order.result.price,initialSl:(props.order.result.initial_sl??props.order.intent.stop_loss),direction:props.order.intent.direction,
   targets,dirty:false,selectedIndex:null});
 }
 function update(index,key,value){
@@ -41,7 +42,7 @@ function remove(index){
  setTargetDraft(props.order.id,{...draft.value,targets:draft.value.targets.filter((_,i)=>i!==index),dirty:true,selectedIndex:selected===index?null:selected>index?selected-1:selected});
 }
 async function refresh(){
- if(disposed||busy.value)return;
+ if(disposed||busy.value||!props.online)return;
  const requested=generation;
  try{
   const value=await props.api('target_state',{order_id:props.order.id},{background:true});
@@ -69,7 +70,7 @@ onUnmounted(()=>{disposed=true;clearInterval(timer);removeTargetDraft(props.orde
 <template>
  <section class="mmt-target-editor" aria-label="TP-Verwaltung">
   <h3>TP verwalten · {{order.intent.symbol}}</h3>
-  <p>Fill {{order.result.price}} · {{order.result.volume}} Lot fest · initialer SL {{order.intent.stop_loss}}</p>
+  <p>Fill {{order.result.price}} · {{order.result.volume}} Lot fest · initialer SL {{order.result.initial_sl??order.intent.stop_loss}}</p>
   <p v-if="!position">Keine passende offene Brokerposition im aktuellen Stand.</p>
   <template v-else>
    <p>Offen {{position.volume}} Lot · Broker-SL {{position.sl}} · Broker-TP {{position.tp||'keiner'}}</p>

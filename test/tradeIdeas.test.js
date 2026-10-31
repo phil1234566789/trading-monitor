@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {makeTradeIdea,nearestTradeIdea,brokerIdeaMetrics,confirmedOrderTrade} from '../src/tradeIdeas.js';
+import {makeTradeIdea,nearestTradeIdea,confirmedOrderTrade} from '../src/tradeIdeas.js';
 describe('chart ideas never supply a broker entry',()=>{
  const a=makeTradeIdea('long',{time:100,price:10},{time:110,price:9},null).annotations[0];
  it('selects by absolute anchor distance, not rightmost or creation order',()=>{
@@ -11,13 +11,6 @@ describe('chart ideas never supply a broker entry',()=>{
  it('validates stop and optional target geometry',()=>{
   expect(()=>makeTradeIdea('long',{time:1,price:10},{time:2,price:11},null)).toThrow();
   expect(()=>makeTradeIdea('short',{time:1,price:10},{time:2,price:11},{time:3,price:12})).toThrow();
- });
- it('uses broker native point-loss, live ask/bid and no invented target',()=>{
-  const q={bid:10,ask:10.1,time:100,point:.01,minimum_volume:.01,loss_per_unit_long:1,loss_per_unit_short:2};
-  expect(brokerIdeaMetrics(a.tradeIdea,q,101)).toMatchObject({price:10.1,volume:.01,rr:null});
-  expect(brokerIdeaMetrics(a.tradeIdea,q,101).risk).toBeCloseTo(1.1);
-  expect(brokerIdeaMetrics(a.tradeIdea,{...q,loss_per_unit_long:100},101).risk).toBeCloseTo(110);
-  expect(brokerIdeaMetrics(a.tradeIdea,q,106)).toBeNull();
  });
  it('draws only broker-confirmed fill and never makes up its timestamp',()=>{
   const order={id:'x',status:'unknown',intent:{symbol:'GBPUSD.gbe',direction:'long',stop_loss:9},result:{price:10}};

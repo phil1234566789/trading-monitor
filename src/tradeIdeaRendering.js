@@ -22,5 +22,10 @@ export function renderBrokerTrades(series,trades,primitives,candles) {
  for(const trade of trades) {
   const marker=new TradeMarkerPrimitive(trade,tradeOptions(trade,true,false,false),candles);
   series.attachPrimitive(marker);primitives.push(marker);
+  if(Number.isFinite(trade.stopLoss)&&candles.length){
+   const stop=new LiquidityLinePrimitive({price:trade.stopLoss,pivotTime:trade.entryTime,endTime:trade.exitTime??candles[candles.length-1].time},
+    {color:cssColor('candleDown'),lineWidth:1,label:`Initialer SL ${trade.stopLoss} · RR-Basis`,labelSide:'end-below'},candles);
+   series.attachPrimitive(stop);primitives.push(stop);
+  }
  }
 }

@@ -1,5 +1,17 @@
 import { HTTP_BACKGROUND } from './composables/useHttpActivity.js';
 const messages={
+ daily_stop_not_ready:'Frische Tagesstopp-Prüfung fehlt oder ist gesperrt.',
+ daily_stop_latched:'Tagesstopp aktiv: keine neuen Entries.',
+ risk_limits_unconfirmed:'Heutige Risikobasis und Kontogrenzen fehlen oder sind abgelaufen.',
+ risk_guard_unavailable:'Frische Tagesstopp-/Risikoprüfung fehlt oder ist gesperrt.',
+ risk_floor_reconfirmation_required:'Aktuelle Drawdown-Grenze nach neuem Höchststand erneut bestätigen.',
+ risk_budget_exhausted:'Kein freies Markt-, Tages- oder Drawdownbudget.',
+ risk_exposure_unavailable:'Offenes Broker-Risiko ist noch ungeklärt.',
+ risk_sizing_unavailable:'Native Broker-Lotspezifikation fehlt.',
+ target_position_changed:'Brokerposition wurde inzwischen verändert. Entwurf mit frischem Brokerstand abgleichen.',
+ target_daily_stop:'Tagesstopp aktiv. TP-Änderung ist gesperrt.',
+ target_command_unresolved:'Vorheriger Brokerauftrag ist ungeklärt. Kein erneuter Versand.',
+
   bridge_offline:'MT5-Worker ist offline.',
   bridge_not_ready:'Worker ist nicht handelsbereit oder es bestehen bereits Positionen/Aufträge.',
   quote_stale:'Brokerkurs ist veraltet. Bitte neue Vorschau anfordern.',
@@ -24,6 +36,7 @@ export function createMilkyMetaTraderClient(baseUrl, token, fetchImpl = fetch) {
       const error=new Error(response.status===401?'Zugriffsschlüssel ungültig oder Backend noch nicht eingerichtet.'
         :messages[code]??'Anfrage fehlgeschlagen. Konfiguration, Kontodaten und offene Aufträge prüfen.');
       // Nur Fehler vor dem Enqueue beweisen, dass kein Auftrag angenommen wurde.
+      error.code=code;
       error.definitiveRejection=response.status===401||['preview_expired','invalid_preview','live_not_enabled'].includes(code);
       throw error;
     }

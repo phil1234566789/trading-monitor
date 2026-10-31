@@ -27,10 +27,10 @@ export async function targetPlanAction(body:Record<string,unknown>,worker=false)
   const q=s.quotes?.find((q:any)=>q.symbol===order.intent.symbol);
   if(!p||!q||Date.now()/1000-q.time>5)throw new Error('target_position_unavailable');
   if(['volume','sl','tp'].some(key=>Math.abs(p[key]-input.observed[key as keyof typeof input.observed])>1e-9))throw new Error('target_position_changed');
-  const allocation=validateTargetAllocation(input.targets,p,q,order.result.price,order.intent.stop_loss);
+  const allocation=validateTargetAllocation(input.targets,p,q,order.result.price,order.result.initial_sl??order.intent.stop_loss);
   const plan={...allocation,order_id:order.id,account_login:config.login,account_server:config.server,mode:config.mode,
    position:ticket,symbol:order.intent.symbol,direction:order.intent.direction,magic:order.result.magic,
-   entry_price:order.result.price,initial_sl:order.intent.stop_loss,filled_volume:order.result.volume};
+   entry_price:order.result.price,initial_sl:order.result.initial_sl??order.intent.stop_loss,filled_volume:order.result.volume};
   return {plan:checked(await db.rpc('mt5_save_target_plan',{p_order:order.id,p_revision:input.revision,p_expected:input.expected_revision,p_plan:plan,p_checkpoint:input.observed}))};
  }
  if(!worker)throw new Error('invalid_target_action');

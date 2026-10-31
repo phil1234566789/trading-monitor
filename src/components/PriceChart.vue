@@ -77,6 +77,7 @@ import {
 } from "../priceChartConstants.js";
 import { buildActiveMetadataSnapshot, hasActiveMetadata as hasActiveMetadataFor, saveDebugMetadataSection } from "../debugMetadata.js";
 import { usePriceChartDrawings } from "../composables/usePriceChartDrawings.js";
+import {useMmtTargetDrawing} from '../composables/useMmtTargetDrawing.js';
 import {useTradeIdeaDrawing} from '../composables/useTradeIdeaDrawing.js';
 import {useDrawings} from '../composables/useDrawings.js';
 import {renderBrokerTrades} from '../tradeIdeaRendering.js';
@@ -377,6 +378,7 @@ const emit = defineEmits([
   "measure-done",
 ]);
 
+const targetDrawing=useMmtTargetDrawing();
 const lastCandleTime=ref(null);
 const ideaStore=useDrawings();
 const ideaDrawing=useTradeIdeaDrawing({
@@ -1180,6 +1182,7 @@ function refreshInvalidationLinesInternal() {
 // Dünner Wrapper um usePriceChartDrawings' refresh() — baut die Argumente aus Props/
 // allCandles zusammen (siehe usePriceChartDrawings.js für die eigentliche Zeichenlogik).
 function refreshDrawingsInternal() {
+  targetDrawing.refresh({symbol:props.symbol,candles:clipReplay(allCandles),currentBar:props.currentBar});
   refreshDrawings({
     // Die laufende Messung hängt nur zum Zeichnen mit dran (Philip 2026-09-23: "momentan ist es
     // unmöglich genau 6 Pips zu zeichnen, ich sehe die Pip-Anzahl erst nach dem zweiten Klick") —
@@ -2084,6 +2087,7 @@ onMounted(() => {
   // EMA-Serien an (RSI-Series+Pane erst bei Bedarf, siehe refreshRsiInternal/priceChartRsi.refreshRsi).
   priceChartRsi.create(chart, candleSeries);
   createDrawings(chart, candleSeries);
+  targetDrawing.create(chart,candleSeries,chartContainerRef.value);
   createMarketStructure(chart, candleSeries);
   m1Structure.create(candleSeries);
   setup2.create(chart,candleSeries);
@@ -2277,6 +2281,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  targetDrawing.dispose();
   disposeDrawings();
   disposeMarketStructure();
   disposeTradeSetupDrawing();

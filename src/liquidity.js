@@ -119,7 +119,7 @@ class LiquidityLineRenderer {
       // Linie selbst bleibt unverändert stehen. lenientLabels (Bug-Report Philip 2026-08-26: HTF-
       // Label auf M5 unsichtbar) — HTF-Level nutzen bewusst die lockere Schwelle unabhängig vom
       // Chart-Timeframe, siehe levelOptions/canShowLabels.
-      if (this._options.label && canShowLabels(this._chart, this._candles, this._options.lenientLabels)) {
+      if (this._options.label && (this._options.forceLabel || canShowLabels(this._chart, this._candles, this._options.lenientLabels))) {
         const fontSizePx = Math.round(10 * scope.verticalPixelRatio);
         ctx.font = `${fontSizePx}px sans-serif`;
         ctx.fillStyle = this._options.color;

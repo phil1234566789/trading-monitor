@@ -6,7 +6,7 @@ import { cancelExecutionOrder, createExecutionOrder, getExecutionStatus } from '
 export function registerMt5ExecutionTools(server: McpServer) {
   server.registerTool('get_mt5_execution_status', {
     title:'MT5-Verbindung und Aufträge',
-    description:'Liest den privaten Python-Worker-Heartbeat (online nur bis 15 Sekunden), Konto und die letzten 20 Aufträge oder einen Auftrag per ID. Kein Orderversand. Journal-Trades sind keine Brokerpositionen.',
+    description:'Liest den privaten Python-Worker-Heartbeat (online nur bis 15 Sekunden), Konto, alle laufenden Suchen, die letzten 20 erledigten Aufträge sowie Tagesstopp-/Risikokonfiguration oder einen Auftrag per ID. Kein Orderversand. Journal-Trades sind keine Brokerpositionen.',
     inputSchema:{ id:z.string().uuid().optional() },
     annotations:{readOnlyHint:true},
   }, async ({id}: {id?:string}) => json(await getExecutionStatus(id)));
@@ -15,14 +15,14 @@ export function registerMt5ExecutionTools(server: McpServer) {
     title:'Asynchrone MT5-Entry-Suche aktivieren',
     description:'HANDELSAUFTRAG: Nur nach ausdrücklichem menschlichem Auftrag wie „Suche einen Entry“. Eine Richtungsmeinung allein genügt nicht. ' +
       'Aktiviert für das exakt angegebene Konto und Instrument eine zeitlich begrenzte Suche. Bei gültigem M1-Schluss wird OHNE weitere Chatfreigabe ' +
-      'eine Brokerposition mit zwingendem SL eröffnet. V1: höchstens 0,01 Lot, kein pauschales Geldlimit, keine bestehende Kontoexposure. ' +
+      'eine Brokerposition mit zwingendem SL eröffnet. Dieses MCP-Tool verwendet den Pilotpfad: höchstens 0,01 Lot und keine bestehende Kontoexposure. Bestätigte Tages-Risikobasis, Drawdown-Floor, Kostenpuffer und frische Worker-Tagesstoppprüfung sind trotzdem Pflicht. ' +
       'take_profit ist optional: null oder weggelassen bedeutet kein Broker-TP. ' +
       'm1_directional_close wartet auf eine nach Aktivierung geschlossene M1-Kerze: Short close<open, Long close>open, kein Doji; trigger_price ist null, volume muss die bestaetigte Broker-Mindestlotgroesse enthalten. ' +
       'Trigger m1_close_above/below vergleichen den Schlusskurs streng mit trigger_price; das sind technische Preisbedingungen, keine vollständige Strategieprüfung. ' +
       'test_next_m1_close ist ausschließlich ein ausdrücklich beauftragter DEMO-Verbindungstest, keine Strategie. ' +
       'Konto, genaue Brokersymbolbezeichnung (inkl. Suffix), Richtung, SL, Verlustschätzung, Trigger und Ablauf müssen feststehen, nichts erfinden. ' +
       'Eine UUID pro menschlichem Auftrag erzeugen und für jeden Retry unverändert wiederverwenden; niemals nach Timeout automatisch eine neue ID senden. ' +
-      'Kein garantiert besserer Preis. Challenge-/Strategieregeln sind noch nicht implementiert. Live-Ausführung benötigt lokale UND serverseitige Freischaltung.',
+      'Kein garantiert besserer Preis. Der persistente 1000-USD-Tagesstopp gilt für das aktive verbundene Konto; er ersetzt keine vollständige Challenge-/Strategieprüfung. Risky/Full werden im bestätigten Dashboard-Suchdialog gewählt. Live-Ausführung benötigt lokale UND serverseitige Freischaltung.',
     inputSchema:{
       id:z.string().uuid(), account_login:z.number().int().positive(), account_server:z.string().min(1).max(100),
       mode:z.enum(['demo','live']),symbol:z.string().regex(/^[A-Za-z0-9._-]{1,64}$/),direction:z.enum(['long','short']),
