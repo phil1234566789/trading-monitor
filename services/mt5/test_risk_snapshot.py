@@ -8,10 +8,10 @@ class NativeRiskTests(unittest.TestCase):
   api=Mock();context=dict(day='2026-10-31',day_start_sec=1000,day_end_sec=2000,latched=False)
   def deal(kind,profit,commission=0,stamp=1200):return NS(time_msc=stamp*1000,type=kind,profit=profit,commission=commission,swap=0,fee=0)
   api.history_deals_get.return_value=[deal(0,-400,-5),deal(1,100,-5),deal(7,-10),deal(2,50000),deal(0,-900,stamp=999)]
-  rows=[NS(profit=300,swap=0),NS(profit=-200,swap=-1)]
+  rows=[NS(profit=300,swap=-5),NS(profit=-200,swap=-1)]
   result=native_daily_risk(api,rows,context,0,1300)
   self.assertEqual(result['realized_net_day'],-320)
-  self.assertEqual(result['open_loss'],-201)
+  self.assertEqual(result['open_loss'],-206)
   api.order_send.assert_not_called()
  def test_history_or_day_gap_is_unavailable_not_zero(self):
   api=Mock();api.history_deals_get.return_value=None

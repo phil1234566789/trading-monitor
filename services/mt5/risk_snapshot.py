@@ -36,5 +36,6 @@ def native_daily_risk(api,positions,context,offset,now=None):
     for p in positions:
         swap=getattr(p,'swap',0)
         if not finite(p.profit) or not finite(swap):raise ValueError('risk_exposure_unavailable')
-        open_loss+=min(0,p.profit+swap)
+        # Offene Kursgewinne dürfen auch aufgelaufene Swap-Kosten nicht verdecken.
+        open_loss+=min(0,p.profit)+min(0,swap)
     return dict(time=int(now),day=context['day'],realized_net_day=net,open_loss=open_loss,latched=context['latched'])
