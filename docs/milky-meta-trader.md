@@ -93,7 +93,7 @@ Eine nachträgliche Ablehnung darf nur eingetragen werden, wenn sicher keine Aus
 
 Abbruch ist bis zum atomaren Versandrecht möglich; danach ist er kein garantierter Stopp mehr.
 Der Worker muss laufen und verbunden sein. Bei Ausfall wirken nur bestätigte serverseitige SL/TP.
-Aktive SL-/RSI-/Teilverkaufsregeln sind noch nicht implementiert. Kontoschutz, Challenge-Regeln und
+RSI-Exitregeln sind noch nicht implementiert; gespeicherte TP-Pläne sind unten beschrieben. Kontoschutz, Challenge-Regeln und
 Strategieregeln müssen vor regulärem Einsatz ergänzt und geprüft werden.
 
 Rücknahme: `MT5_EXECUTION_ENABLED=false`, Worker stoppen, noch suchende Aufträge abbrechen.
@@ -230,3 +230,29 @@ Versandbestaetigung bleibt auch nach deren Ergaenzung idempotent. Closed ist end
 Der Worker liest offene historische Auftraege in 20er-Seiten pro ausgewaehltem Konto,
 setzt den Cursor anhand der tatsaechlich gelesenen letzten ID fort und erst bei leerer
 Seite zurueck. Dadurch werden auch aeltere nicht abgeschlossene Abgleiche nachgefuehrt.
+
+
+## TP-Pläne nach bestätigtem Fill
+
+`MmtTargetEditor` und `useMmtTargetDrawing` bearbeiten gemeinsame Browserentwürfe.
+Ziehen, Preise und Prozent-/Lotmengen werden erst mit **TP-Plan verbindlich speichern** wirksam.
+Fill, ausgeführte Lotgröße und initialer SL bleiben die feste RR-Basis; offenes Volumen und
+aktueller Broker-SL werden gesondert angezeigt. Bis fünf Ziele sind möglich. Native Broker-
+Mindestlots und Lot-Schritte gelten für jedes Teilziel und den Rest. Prozentmengen werden
+abgerundet, der verbleibende Rest wird angezeigt; nicht ausführbare Aufteilungen bleiben gesperrt.
+
+Ein einzelnes Ziel für das gesamte Restvolumen wird als nativer Broker-TP installiert.
+Teilziele werden vom laufenden Worker überwacht; dabei wird der native TP entfernt, der
+vorhandene Broker-SL bleibt erhalten. Bei offline Worker bestehen keine brokerseitigen
+Teilziele. Änderungen am tatsächlichen Volumen, SL oder TP pausieren den Plan zum Neuabgleich.
+
+Migration `20261101001500_mt5_target_plans.sql` enthält private Plan-/Befehlsdaten und atomare
+Versandrechte. `TargetEngine` verwendet zusätzlich `target_sends` im bestehenden SQLite-Journal.
+Nach verlorener Rückmeldung/Neustart wird kein Teilclose erneut versendet. `unknown` bleibt
+sichtbar und sperrt Folgeaktionen; nie durch neue Revision oder Journal-Löschen umgehen.
+Die priorisierte Tagesnotbremse muss vor `TargetEngine.cycle(risk_allowed=...)` laufen.
+Worker-Capability `target_plans_ready` und native Volumenspezifikationen müssen vorhanden sein;
+ein alter Worker kann keine TP-Pläne annehmen. Keine echte Brokerorder gehört zum Testablauf.
+
+Broker-Schnittstelle: [MT5 order_send](https://www.mql5.com/en/docs/python_metatrader5/mt5ordersend_py)
+und [Positionsticket bei Modifikation/Close](https://www.mql5.com/en/docs/constants/structures/mqltraderequest).
