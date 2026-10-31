@@ -200,6 +200,22 @@ Brokerpositions-ID nennen; bereits manuell journalisierte Ausführungen ausdrüc
 Historischer SL/TP und R bleiben ohne Nachweis unbekannt. Technischer Vertrag, Schutz der
 öffentlichen Journalzugriffe und Tests: [Privates MMT-Journal](mcp-server.md#privates-mmt-journal).
 
+## Balance aller Konten
+
+Die vier Kontozeilen zeigen Balance zwischen absoluter Verlustgrenze und Challengeziel,
+ergänzt um Equity, belegtes Netto-PnL und Winrate abgeschlossener Brokertrades. Fehlende
+Historie bleibt unbekannt; Einzahlungen und Resets sind kein Trading-PnL. Anzeigen aktiviert
+kein Konto. Für das Verlustrisiko ist die Equity maßgeblich, nicht der Balance-Balken.
+
+`mt5_account_balances` ist ausschließlich über den privaten Control-Endpoint lesbar.
+Der Datenbanktrigger hält den letzten fehlerfreien Workerstand pro Konto fest, auch nach
+einem späteren Kontowechsel. Manuell aus dem Brokerportal übernommene Balance/Equity und
+Limits tragen getrennte Quellen und Übernahmezeitpunkte; das ist keine Broker-Livezeit.
+Limits bei Bedarf erneut im Brokerportal prüfen und privat aktualisieren. Der Worker
+schreibt nur Kontostand und Positionszahl fort, niemals die EOD-Trailing-Grenze aus einer
+fallenden Balance neu berechnen. Transaktionaler Check: Migration plus
+`scripts/checkMt5AccountBalances.sql` innerhalb `begin`/`rollback` ausführen.
+
 ## Positionsstatus bei Reload
 
 Der Worker gleicht ausgefuehrte Auftraege weiter rein lesend mit MT5 ab. Die Auftragsliste

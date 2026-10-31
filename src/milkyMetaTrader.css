@@ -21,11 +21,6 @@
 .mmt-account-bar .mmt-muted {font-size:11px}
 .mmt-status {border:1px solid #665332; color:#efcd8d; padding:4px 8px; border-radius:3px; font-size:11px; white-space:nowrap}
 .mmt-status[data-ready=true] {border-color:#365c52; color:#91d5c1}
-.mmt-metrics {display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); padding:10px 0; margin-top:0; margin-bottom:4px; gap:16px}
-.mmt-metrics>div {display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; border-left:1px solid var(--mmt-border); padding-left:16px}
-.mmt-metrics>div:first-child {border-left:0; padding-left:0}
-.mmt-metrics dt {font-size:11px}
-.mmt-metrics dd {font-size:17px; letter-spacing:-.3px; margin:0; font-variant-numeric:tabular-nums}
 .mmt-workspace {display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:12px; align-items:start}
 .mmt-panel {min-width:0; padding:12px; background:var(--mmt-surface); border:1px solid var(--mmt-border); border-radius:4px; margin-bottom:8px}
 .mmt-panel p {font-size:11px}
@@ -110,8 +105,6 @@
   .mmt-workspace,.mmt-broker-positions {grid-template-columns:1fr}
   .mmt-ticket {grid-row:1}
   .mmt-settings {grid-template-columns:1fr}
-  .mmt-metrics {gap:8px}
-  .mmt-metrics>div {padding-left:8px}
 }
 @media(max-width:480px) {
   .mmt-page {padding:10px}
@@ -119,9 +112,6 @@
   .mmt-heading h1 {font-size:17px}
   .mmt-heading .ui-action-btn {max-width:140px}
   .mmt-account-bar {align-items:start; flex-direction:column; gap:6px}
-  .mmt-metrics {grid-template-columns:1fr 1fr; gap:8px; padding:8px 0}
-  .mmt-metrics>div {padding-left:0; border:0}
-  .mmt-metrics dd {font-size:15px}
   .mmt-panel {padding:10px}
   .mmt-levels>div {display:block}
   .mmt-levels dd {margin-top:3px; font-size:12px}

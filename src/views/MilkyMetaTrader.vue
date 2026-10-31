@@ -4,8 +4,8 @@ import { useStatusBar } from '../composables/useStatusBar.js';
 import { mmtPollDelay, mmtStaleSeconds, mmtConnectionStatus } from '../milkyMetaTraderPolling.js';
 import { positionCommissions } from '../milkyMetaTraderStatistics.js';
 import { cssColor } from '../chartColors.js';
-import { fmtPrice } from '../format.js';
 import MilkyMetaTraderStatistics from '../components/MilkyMetaTraderStatistics.vue';
+import MilkyMetaTraderBalances from '../components/MilkyMetaTraderBalances.vue';
 import MilkyMetaTraderLivePosition from '../components/MilkyMetaTraderLivePosition.vue';
 import { findOrderPosition, snapshotAgeSeconds, executionPositionId } from '../milkyMetaTraderMonitoring.js';
 import MilkyMetaTraderOrderCard from '../components/MilkyMetaTraderOrderCard.vue';
@@ -44,7 +44,6 @@ const snapshot=computed(()=>{
 const ready=computed(()=>status.value?.online&&!workerProblem.value&&snapshot.value?.execution_ready&&snapshot.value?.trade_allowed&&(active.value?.mode==='demo'||status.value?.server_live_allowed));
 const currentOrders=computed(()=>(status.value?.orders??[]).filter(order=>['searching','sending','unknown'].includes(order.status)||(order.status==='executed'&&order.result?.position_lifecycle?.state!=='closed')));
 const previousOrders=computed(()=>(status.value?.orders??[]).filter(order=>!currentOrders.value.includes(order)));
-const workingOrders=computed(()=>(status.value?.orders??[]).filter(order=>['searching','sending','unknown'].includes(order.status)).length);
 
 async function refresh() {
   const data=await api('accounts');
@@ -56,7 +55,6 @@ async function refresh() {
 function refreshStatus(options={}) {
   if(statusRequest)return statusRequest;
   const accountId=activeId.value, epoch=viewEpoch;
-  if(!accountId){status.value=null;return Promise.resolve();}
   statusRequest=(async()=>{
     try {
       const value=await api('status',{},options);
@@ -141,12 +139,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <div><h2>{{active?.name??'Kein Konto ausgewählt'}}</h2><span class="mmt-muted" v-if="active">{{active.login}} · {{active.server}} · {{active.mode==='demo'?'Demo':'Real / Challenge'}}</span></div>
         <span class="mmt-status" :data-ready="Boolean(ready)">{{ready?'Bereit für Entry-Suche':status?.online?'Ausführung nicht bereit':'Worker offline'}}</span>
       </section>
-      <dl class="mmt-metrics" v-if="snapshot">
-        <div><dt>Balance <small>{{snapshot.currency}}</small></dt><dd>{{fmtPrice(snapshot.balance,2)}}</dd></div>
-        <div><dt>Equity <small>{{snapshot.currency}}</small></dt><dd>{{fmtPrice(snapshot.equity,2)}}</dd></div>
-        <div><dt>Offene Positionen</dt><dd>{{snapshot.positions?.length??'—'}}</dd></div>
-        <div><dt>Laufende Aufträge</dt><dd>{{workingOrders}}</dd></div>
-      </dl>
+      <MilkyMetaTraderBalances :accounts="accounts" :active-id="activeId" :status="status" :history="brokerHistory" :now="now" :stale-seconds="staleSeconds" />
         <p v-if="workerProblem" role="alert" class="mmt-error">Ausführung gestört: {{workerProblem.code}}<span v-if="workerProblem.stage"> in {{workerProblem.stage}}</span>. Entry-Aufträge und Brokerstatus prüfen; nichts blind erneut senden.</p>
         <p v-if="status?.health?.incident">Fehleralarm: <span v-for="item in status.health.deliveries" :key="item.channel">{{item.channel==='pushover'?'Pushover':'Telegram'}} {{deliveryLabels[item.status]??item.status}}. </span></p>
         <p v-if="status?.health&&!status.health.checked_at" role="alert">Unabhängige Alarmprüfung noch nicht bestätigt.</p>
