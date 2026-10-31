@@ -33,3 +33,10 @@ it('marks status polls as background without putting metadata in the request bod
  expect(fetch.mock.calls[0][1][HTTP_BACKGROUND]).toBe(true);
  expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({action:'status'});
 });
+
+it('explains account-switch guards without exposing server details',async()=>{
+ for(const code of ['active_orders_block_account_switch','active_positions_block_account_switch','account_state_unavailable']){
+  const fetch=vi.fn().mockResolvedValue({ok:false,status:400,json:async()=>({code,error:'private database detail'})});
+  await expect(createMilkyMetaTraderClient('https://project.supabase.co','key',fetch)('select_account',{id:'a'})).rejects.toThrow('Kontowechsel gesperrt');
+ }
+});

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useStatusBar } from '../composables/useStatusBar.js';
-import { mmtPollDelay, mmtStaleSeconds, mmtConnectionStatus } from '../milkyMetaTraderPolling.js';
+import { mmtPollDelay, mmtStaleSeconds, mmtConnectionStatus, mmtSelectedAccountId } from '../milkyMetaTraderPolling.js';
 import { positionCommissions } from '../milkyMetaTraderStatistics.js';
 import { cssColor } from '../chartColors.js';
 import MilkyMetaTraderStatistics from '../components/MilkyMetaTraderStatistics.vue';
@@ -60,7 +60,7 @@ function refreshStatus(options={}) {
   statusRequest=(async()=>{
     try {
       const value=await api('status',{},options);
-      if(epoch===viewEpoch&&accountId===activeId.value){status.value=value;pollError.value='';}
+      if(epoch===viewEpoch&&accountId===activeId.value){status.value=value;activeId.value=mmtSelectedAccountId(value,activeId.value);pollError.value='';}
     } finally {statusRequest=null;nextPoll=Date.now()+pollDelay.value;}
   })();
   return statusRequest;
@@ -110,13 +110,13 @@ async function save() {
   await run(async()=>{
     await api('save_account',fields); fields.password='';
     await refresh(); form.value.name='';form.value.login='';
-    message.value='Konto verschlüsselt gespeichert. Noch nicht für den Test ausgewählt.';
+    message.value='Konto verschlüsselt gespeichert. Noch nicht als Handelskonto ausgewählt.';
   });
   fields.password='';
 }
-async function select(id) {
+async function selectTradingAccount(id) {
   await run(async()=>{await api('select_account',{id});await refresh();
-    message.value=id ? 'Ein Testkonto ausgewählt. Python-Worker für dieses Konto starten bzw. neu starten.' : 'Kein Testkonto ausgewählt.';});
+    message.value=id ? 'Handelskonto ausgewählt. Python-Worker für dieses Konto starten bzw. neu starten. Erst nach bestätigter Verbindung können neue Aufträge ausgeführt werden.' : 'Kein aktives Handelskonto.';});
 }
 async function cancel(id) {await run(async()=>{await api('cancel',{id});await refresh();});}
 </script>
@@ -125,7 +125,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
   <main class="mmt-page" :style="{'--mmt-positive':cssColor('candleUp'),'--mmt-negative':cssColor('candleDown')}">
     <header class="mmt-heading"><div><h1>Milky Meta Trader <small>MMT</small></h1></div>
       <ActionButton v-if="unlocked" @click="lock">Sperren &amp; Schlüssel vergessen</ActionButton></header>
-    <details class="mmt-notice"><summary>Pilot ≤ 0,01 Lot · Risky / Full benötigen bestätigte Kontogrenzen und frische Schutzprüfung</summary><p>Alle Entry-Modi benötigen bestätigte Kontogrenzen und eine frische Worker-Schutzprüfung. Tagesstopp und Teilziele benötigen den laufenden Worker; Slippage und Gebühren können den tatsächlichen Verlust erhöhen.</p></details>
+    <details class="mmt-notice"><summary>Risikogrenzen und Worker-Schutz</summary><p>Alle Entry-Modi benötigen bestätigte Kontogrenzen und eine frische Worker-Schutzprüfung. Tagesstopp und Teilziele benötigen den laufenden Worker; Slippage und Gebühren können den tatsächlichen Verlust erhöhen.</p></details>
     <p v-if="error" role="alert" class="mmt-error">{{error}}</p>
     <p v-if="pollError" role="alert" class="mmt-error">Statusabgleich fehlgeschlagen: {{pollError}}. Letzten Brokerstand und Verbindung prüfen.</p>
     <p v-if="message" role="status">{{message}}</p>
@@ -137,7 +137,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
       <ActionButton type="submit" :disabled="busy||!token">{{busy?'Verbinde …':'Entsperren'}}</ActionButton>
     </form>
     <template v-else>
-      <section class="mmt-account-bar" aria-label="Aktives Testkonto">
+      <section class="mmt-account-bar" aria-label="Aktives Handelskonto">
         <div><h2>{{active?.name??'Kein Konto ausgewählt'}}</h2><span class="mmt-muted" v-if="active">{{active.login}} · {{active.server}} · {{active.mode==='demo'?'Demo':'Real / Challenge'}}</span></div>
         <span class="mmt-status" :data-ready="Boolean(ready)">{{ready?'Worker verbunden · Freigabe je Entry geprüft':status?.online?'Ausführung nicht bereit':'Worker offline'}}</span>
       </section>
@@ -167,14 +167,14 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
       <div class="mmt-settings"><h2>Konten &amp; Einstellungen</h2>
       <MmtRiskPolicyEditor :api="api" :policy="status?.risk_policy" :account="active" @saved="run(refresh)" />
       <details class="mmt-panel"><summary>Brokerkonten verwalten <span class="mmt-muted">· {{accounts.length}} gespeichert</span></summary>
-        <p>Genau ein Konto kann als Testkonto ausgewählt sein. Weitere gespeicherte Konten bleiben inaktiv. Keine automatische Vervielfachung von Orders.</p>
+        <p>Genau ein ausgewähltes Handelskonto empfängt neue Aufträge. Bis zur Supportklärung gibt es keine Ordervervielfachung auf weitere Konten. Manuell hier wählen oder im Chat einen konkreten Kontowechsel beauftragen. Laufende Suchen bleiben an ihr ursprüngliches Konto gebunden; offene Positionen oder unklare Aufträge sperren den Wechsel.</p>
         <p v-if="!accounts.length">Noch keine Brokerkonten hinterlegt.</p>
         <ul class="mmt-accounts"><li v-for="account in accounts" :key="account.id">
           <div><strong>{{account.name}}</strong><br><small>{{account.login}} · {{account.server}} · MT5 {{account.mode==='demo'?'Demo':'Real'}}</small></div>
-          <span v-if="account.id===activeId" class="mmt-selected">Ausgewähltes Testkonto</span>
-          <ActionButton v-else :disabled="busy||account.archived" @click="select(account.id)">Als Testkonto wählen</ActionButton>
+          <span v-if="account.id===activeId" class="mmt-selected">Aktives Handelskonto</span>
+          <ActionButton v-else :disabled="busy||account.archived" @click="selectTradingAccount(account.id)">Als Handelskonto wählen</ActionButton>
         </li></ul>
-        <ActionButton v-if="activeId" :disabled="busy" @click="select(null)">Testkonto abwählen</ActionButton>
+        <ActionButton v-if="activeId" :disabled="busy" @click="selectTradingAccount(null)">Handelskonto abwählen</ActionButton>
       </details>
       <details class="mmt-panel" :open="!accounts.length"><summary>Konto mit Zugangsdaten hinzufügen</summary>
         <form class="mmt-form" @submit.prevent="save">
@@ -188,7 +188,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         </form>
       </details>
       <details class="mmt-panel"><summary>Verbindung &amp; Diagnose</summary>
-        <p v-if="!active">Zuerst ein Testkonto auswählen.</p>
+        <p v-if="!active">Zuerst ein Handelskonto auswählen.</p>
         <template v-else><p><strong>{{active.name}}</strong> · {{status?.online?(workerProblem?'Worker gestört':'Worker erreichbar'):'Worker offline / noch nicht gestartet'}}</p>
           <p v-if="status?.bridge">Letzter Kontakt: {{time(status.bridge.heartbeat_at)}} (Berlin)<br>
             Balance {{status.bridge.snapshot.balance}} · Equity {{status.bridge.snapshot.equity}} {{status.bridge.snapshot.currency}}<br>

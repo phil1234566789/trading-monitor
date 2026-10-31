@@ -13,12 +13,20 @@ it('renders all four accounts without activation controls and marks unknown data
   status:{account_balances:[{account_id:'1',balance:55000,equity:45000,currency:'USD',loss_floor:47000,target:54000,
    balance_at:'2026-10-30T12:00:00Z',balance_source:'Brokerportal',limits_at:'2026-10-30T12:00:00Z',limits_source:'IQ Capital'}]}}));
  expect(html.match(/<article/g)).toHaveLength(4);
- expect(html).toContain('Handelskonto ausgewählt');
+ expect(html).toContain('Aktives Handelskonto');
  expect(html).toContain('Balance $55000.00');
  expect(html).toContain('Equity $45000.00');
- expect(html).toContain('width:100%');
+ expect(html.match(/<svg/g)).toHaveLength(4);
+ expect(html).toContain('stroke-dasharray="100 100"');
+ expect(html).toContain('tabindex="0"');
  expect(html).toMatch(/Winrate <strong[^>]*>unbekannt/);
  expect(html).toContain('Skala unbekannt');
  expect(html).toContain('Letzter bekannter Stand');
  expect(html).not.toContain('<button');
+});
+it('keeps additional accounts in the same scrollable account strip',async()=>{
+ const accounts=[1,2,3,4,5,6].map(id=>({id:String(id),login:id,server:'s',name:`Challenge ${id}`}));
+ const html=await renderToString(Vue.createSSRApp(Balances,{accounts,history:{rows:[],sync:[]},now:Date.now(),staleSeconds:30}));
+ expect(html.match(/<article/g)).toHaveLength(6);
+ expect(html).toContain('Konten horizontal scrollen');
 });

@@ -12,8 +12,6 @@
 .mmt-page h3 {font-size:13px; margin:8px 0}
 .mmt-page p {line-height:1.45; margin:6px 0}
 .mmt-muted,.mmt-page dt {color:var(--mmt-muted)}
-.mmt-notice {font-size:11px; padding:4px 8px; border:1px solid #51452d; border-left:2px solid #d7ad55; background:#24221e; border-radius:3px; margin-bottom:10px}
-.mmt-notice p {margin:4px 0}
 .mmt-page summary {cursor:pointer; padding:3px 0}
 .mmt-account-bar {display:flex; align-items:center; justify-content:space-between; gap:12px}
 .mmt-account-bar>div {display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}

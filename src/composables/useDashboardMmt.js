@@ -1,7 +1,7 @@
 import {computed,onMounted,onUnmounted,ref} from 'vue';
 import {createMilkyMetaTraderClient} from '../milkyMetaTraderClient.js';
 import {readMilkyMetaTraderKey} from '../milkyMetaTraderKey.js';
-import {mmtPollDelay} from '../milkyMetaTraderPolling.js';
+import {mmtPollDelay,mmtSelectedAccountId} from '../milkyMetaTraderPolling.js';
 import {findOrderPosition} from '../milkyMetaTraderMonitoring.js';
 import {loadMmtHistory} from '../milkyMetaTraderHistory.js';
 import {confirmedOrderTrade,chartInstrument} from '../tradeIdeas.js';
@@ -37,7 +37,7 @@ export function useDashboardMmt(symbol) {
   request=(async()=>{try{
    const [a,s]=await Promise.all([api('accounts',{}, {background:true}),api('status',{}, {background:true})]);
    if(disposed)return;
-   accounts.value=a.accounts;activeId.value=a.active_account_id;status.value=s;error.value='';
+   accounts.value=a.accounts;activeId.value=mmtSelectedAccountId(a,s);status.value=s;error.value='';
    if(s.orders?.some(o=>o.status==='executed')&&Date.now()-lastHistory>8000){
     const data=await loadMmtHistory(api,true,historyCursor);if(disposed)return;
     history.value=[...history.value,...data.rows];
