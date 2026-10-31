@@ -24,7 +24,7 @@ import {startSimulationRunExecution,completeSimulationRunExecution} from '../sim
 
 export function useTradeSetup2History(props,checklist,{repository,configurationInput,evaluationTime}) {
   const results=shallowRef([]),candidates=shallowRef([]),selected=shallowRef(null),status=ref(''),error=ref('');
-  const loading=ref(false),displayCandles=shallowRef([]);
+  const loading=ref(false),displayCandles=shallowRef([]),sourceRun=shallowRef(null);
   const linkedReady=ref(false),linkedRendered=ref(false),readLinkedSnapshot=createLinkedSnapshotReader(repository);
   let series=null,chart=null,abort=null,revision=0,selectionRevision=0,completedScanKey=null,appliedRouteKey=null;
   let activeInputKey=null,activeAt=null,refreshPending=false;
@@ -35,14 +35,16 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
     asOf:evaluationTime(),historyCount:props.tradeSetup2HistoryCount,candles:displayCandles.value}));
   const visibleSnapshot=computed(()=>props.showTradeSetup2 && selected.value?.instrument===props.symbol
     ?snapshotChecklistAt(selected.value,evaluationTime()):null);
-  const detailSnapshot=computed(()=>visibleSnapshot.value ?? (selected.value?.checklistHistory && props.showTradeSetup2
+  const baseDetailSnapshot=computed(()=>visibleSnapshot.value ?? (selected.value?.checklistHistory && props.showTradeSetup2
     ? {...selected.value,checklist:null,m1Check:null,historyEntry:null} : null));
+  const detailSnapshot=computed(()=>baseDetailSnapshot.value?{...baseDetailSnapshot.value,sourceRun:sourceRun.value}:null);
   const runs=new Map();
   const overlayRepository={getRun:(run,configurationId)=>{
     const key=JSON.stringify([run,configurationId]);
     if(!runs.has(key))runs.set(key,repository.getRun(run,configurationId).catch(e=>{runs.delete(key);throw e;}));
     return runs.get(key);
   }};
+  const readSourceRun=run=>repository.getRun?overlayRepository.getRun(run):Promise.resolve(null);
   const snapshotM1=useSnapshotM1(props,visibleSnapshot,overlayRepository,undefined,evaluationTime);
   const snapshotIndicators=useSnapshotIndicators(props,visibleSnapshot,overlayRepository,undefined,evaluationTime);
   function render() {
@@ -84,7 +86,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
   }
   async function select(id,runId) {
     const ticket=++selectionRevision;
-    if(!id){selected.value=null;return;}
+    if(!id){selected.value=null;sourceRun.value=null;return;}
     error.value='';
     try {
       const key=`${runId}:${id}`,cached=snapshots.get(key);
@@ -92,9 +94,10 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
         ?? await repository.getSetupSnapshot(runId,id);
       if(ticket!==selectionRevision)return;
       if(Number.isFinite(evaluationTime())&&snapshot?.knownAt>evaluationTime()) error.value='Dieses Setup war am Replay-Stand noch nicht bekannt.';
+      const origin=await readSourceRun(runId);if(ticket!==selectionRevision)return;
       const restored=cached ?? restoreTradeSetup2Snapshot(snapshot);
       if(restored)snapshots.set(key,restored);
-      selected.value=restored;
+      selected.value=restored;sourceRun.value=origin;
       if(!snapshot)error.value='Der gespeicherte Setup-Stand fehlt.';
     } catch(e){if(ticket===selectionRevision)error.value=e.message;}
   }
@@ -119,9 +122,9 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
       const ticket=++revision;
       loading.value=true;error.value='';status.value='Gespeichertes Setup laden…';linkedReady.value=false;
       try {
-        const record=await readLinkedSnapshot(props.tradeSetup2RunId,props.selectedTradeSetup2Id,force);
+        const [record,origin]=await Promise.all([readLinkedSnapshot(props.tradeSetup2RunId,props.selectedTradeSetup2Id,force),readSourceRun(props.tradeSetup2RunId)]);
         if(ticket!==revision)return;
-        selected.value=restoreTradeSetup2Snapshot(record.snapshot);
+        selected.value=restoreTradeSetup2Snapshot(record.snapshot);sourceRun.value=origin;
         if(record.snapshots)selected.value={...selected.value,entrySnapshots:record.snapshots.map(restoreTradeSetup2Snapshot)};
         for(const source of selected.value?.entrySnapshots ?? [selected.value])
           if(source)snapshots.set(`${props.tradeSetup2RunId}:${source.id}`,{...source,entrySnapshots:selected.value.entrySnapshots});

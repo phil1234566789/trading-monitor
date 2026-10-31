@@ -2345,6 +2345,8 @@ watch(selectedTradingAccountId, () => {
       :saved-entry="setup2Detail?.entry"
       :snapshot-view="snapshotView || !!setup2Detail"
       :snapshot-history="setup2Detail?.checklistHistory"
+      :snapshot-run="setup2Detail?.sourceRun"
+      :snapshot-setup-key="setup2Detail?.setupKey"
       :replay-at="replayUntil ?? Math.floor(Date.now()/1000)"
       @history-jump="replayTime=$event; replayActive=true"
       @close="setup2Detail ? closeTradeSetup2Selection() : (showTradeSetupChecklist = false)"

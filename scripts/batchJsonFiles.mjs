@@ -23,7 +23,7 @@ export function writeJson(file,value){
  return Array.isArray(value)&&typeof value.toJSON!=='function'?writeJsonArray(file,value):atomicWriteFile(file,JSON.stringify(value));
 }
 
-export async function* readJsonArray(file,{highWaterMark=65536}={}){
+export async function* readJsonArray(file,{highWaterMark=65536,raw=false}={}){
  let opened=false,ended=false,active=false,depth=0,quoted=false,escaped=false,expect='first',parts=[];
  for await(const text of createReadStream(file,{encoding:'utf8',highWaterMark})){
   let start=active?0:-1;
@@ -39,7 +39,7 @@ export async function* readJsonArray(file,{highWaterMark=65536}={}){
    }
    if(quoted){if(escaped)escaped=false;else if(c==='\\')escaped=true;else if(c==='"')quoted=false;continue;}
    if(depth===0&&(c===','||c===']')){
-    parts.push(text.slice(start,i));yield JSON.parse(parts.join(''));parts=[];active=false;start=-1;expect=c===','?'value':'comma';if(c===']')ended=true;continue;
+    parts.push(text.slice(start,i));const record=parts.join('');yield raw?record:JSON.parse(record);parts=[];active=false;start=-1;expect=c===','?'value':'comma';if(c===']')ended=true;continue;
    }
    if(c==='"')quoted=true;else if(c==='{'||c==='[')depth++;else if(c==='}'||c===']')depth--;
   }

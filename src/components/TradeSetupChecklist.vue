@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { formatDatedTime, formatBerlinTime } from "../berlinTime.js";
+import SimulationRunDerivation from './SimulationRunDerivation.vue';
 import ChecklistStatusIcon from "./ChecklistStatusIcon.vue";
 import ChecklistOrderBlock from "./ChecklistOrderBlock.vue";
 import { checklistPresentation } from "../tradeSetupChecklistPresentation.js";
@@ -19,6 +20,8 @@ const props = defineProps({
   m1Check: { type: Object, default: null },
   savedEntry: {type:Object,default:null},
   snapshotHistory: {type:Object,default:null},
+  snapshotRun: {type:Object,default:null},
+  snapshotSetupKey: {type:String,default:null},
   snapshotView: {type:Boolean,default:false},
   replayAt: {type:Number,default:null},
 });
@@ -108,6 +111,7 @@ const checks = computed(() => definitions.value.map((definition, index) => {
       </div>
       <button type="button" class="checklist-close" aria-label="Trade Setup Checklist schließen" @click="$emit('close')">×</button>
     </header>
+    <SimulationRunDerivation :run="snapshotRun" :setup-key="snapshotSetupKey" />
     <ChecklistReplayHistory v-if="snapshotView" class="checklist-history-panel" :history="snapshotHistory" :checklist-state="state" :as-of="replayAt" @jump="$emit('history-jump',$event)" />
     <template v-if="!snapshotHistory">
     <div v-if="!snapshotHistory" class="checklist-evaluation" role="status">

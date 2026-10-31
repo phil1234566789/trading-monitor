@@ -313,3 +313,10 @@ it('focuses a known M1 entry inside the final displayed M5 candle',async()=>{
  const scope=effectScope(),focus=vi.fn(),v=scope.run(()=>useTradeSetup2History(props,ref(null),{repository:{getEntry:async()=>({snapshot,results:[]})},configurationInput:()=>({}),evaluationTime:()=>300}));
  try{v.create({subscribeClick:vi.fn(),unsubscribeClick:vi.fn(),timeScale:()=>({setVisibleLogicalRange:focus})},{});await flush();v.updateCandles([{time:0}],true);expect(focus).toHaveBeenCalledOnce();}finally{scope.stop()}
 });
+it('passes derivation context to chart detail without modifying the saved snapshot',async()=>{
+ const snapshot={id:'entry',setupKey:'old',instrument:'GBPUSD',knownAt:300,evidence:[],entry:{}},origin={id:'derived',provenance:{derivation:{version:'selective-entry-replay-v1',parentRunId:'parent',parentSetupVersion:'v23',parentEntryPattern:'v10',targetSetupVersion:'v24',targetEntryPattern:'v11',inheritedSetupKeys:['old'],recomputedSetupKeys:['new']}}};
+ const props=reactive({showTradeSetup2:true,symbol:'GBPUSD',tradeSetup2Variant:'wide',tradeSetup2HistoryCount:5,tradeSetup2RunId:'derived',selectedTradeSetup2Id:'entry',currentBar:'1m',replayUntil:300});
+ const repository={getRun:vi.fn(async()=>origin),getEntry:vi.fn(async()=>({snapshot,results:[]})),getRangeEntries:vi.fn(async()=>[{snapshot,results:[]}])},scope=effectScope();
+ const view=scope.run(()=>useTradeSetup2History(props,ref(null),{repository,configurationInput:()=>({}),evaluationTime:()=>300}));
+ try{await flush();expect(view.detailSnapshot.value.sourceRun).toEqual(origin);expect(view.detailSnapshot.value.setupKey).toBe('old');expect(snapshot.sourceRun).toBeUndefined();expect(view.selected.value.sourceRun).toBeUndefined();}finally{scope.stop();}
+});
