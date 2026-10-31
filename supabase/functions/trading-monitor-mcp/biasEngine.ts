@@ -1,7 +1,7 @@
 import { berlinWeekdayAndMinutes } from "./pretradeGates.ts";
 import type { ForceAssessment } from "./forceAssessment.ts";
 
-// Pure Logik hinter run_bias_check (Schritt 3, siehe docs/state-machine.md + 03-htf-bias.md) —
+// Pure Logik hinter run_bias_check —
 // dependency-frei (nur pretradeGates.ts, selbst dependency-frei), damit sie ohne DB/Deno-Fetches
 // per Vitest testbar bleibt. Die eigentlichen Datenquellen (compute1hStructureState,
 // buildCandidatePool/findNearestLiquidityTargets/findNearestObTargets aus findTargetCandidates.js)
@@ -91,7 +91,7 @@ export interface PendingDecision {
   resolved?: string;
 }
 
-// Pilot für Schritt 3 (state-machine.md, 05.09.2026): macht sichtbar, WELCHE der vier
+// Offene qualitative Entscheidungen: macht sichtbar, WELCHE der vier
 // 03-htf-bias.md-Teilentscheidungen gerade offen ist, statt eine Antwort mit vier vermischten
 // Urteilen zurückzugeben — die dort bereits dokumentierte Fall-Taxonomie/Gate-Struktur wird hier
 // nachgebildet, nicht die Entscheidung selbst getroffen.

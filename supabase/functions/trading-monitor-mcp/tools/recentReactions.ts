@@ -9,7 +9,7 @@ import { computeM5LiquidityAndObZones, M5_DETECTION_LOOKBACK_HOURS, M5_DETECTION
 import { PIP_SIZE } from "../../_shared/pipConfig.js";
 import { json } from "../jsonResponse.ts";
 
-// get_recent_reactions (Pflichtprüfung 00-trading-steps/05-dealing-range-bestaetigen.md, 2026-08-31)
+// get_recent_reactions sammelt frische OB-Reaktionen und Liquidity-Sweeps.
 // — Philip: "die letzten LQ-Sweeps (alle TFs) prüfen, die letzten OBs (alle TFs) prüfen, prüfen ob
 // diese für den Analysezeitpunkt irgendeine Aussage haben (Fall 1/2/3/4)" soll bei JEDEM vollen
 // Schritt-5-Durchlauf laufen, nicht nur bei Verdacht — dafür reicht get_data_snapshot nicht (kein
@@ -26,8 +26,7 @@ import { json } from "../jsonResponse.ts";
 const DEFAULT_LOOKBACK_HOURS = 24;
 const OB_RANGE_PIPS = 40;
 // Nächste-N-pro-Richtung für 1H/4H-Confluence (Philip 05.09.2026, siehe orderblöcke.md#retest-
-// status): "wenn es NUR um find confluence geht, reicht 1x 1H + 1x 4H je Richtung" — Schritt 5
-// (run_dealing_range_loop) braucht mehr Kontext und übergibt explizit 2, siehe dealingRangeLoop.ts.
+// status): "wenn es NUR um find confluence geht, reicht 1x 1H + 1x 4H je Richtung".
 const DEFAULT_HTF_CONFLUENCE_LIMIT = 1;
 
 export interface RecentReactionsArgs {
@@ -108,10 +107,6 @@ export async function buildRecentReactions({
     obReactions,
     // Voller (nicht auf Reaktionen gefilterter) M5-Bestand — computeM5LiquidityAndObZones berechnet
     // das ohnehin schon fürs Obige, bisher wurde nur der touched/invalidated-Teil zurückgegeben.
-    // Für docs/attention-levels.md Level b/c (Fall 1/2): dealingRangeLoop.ts nutzt genau diese Listen
-    // als M5-Watch-Level-Kandidaten (nächste M5-Liquidity-Linie/M5-OB-Kante), statt die 1H/4H-Level
-    // + Schritt-3-Bias-Reste zu verwenden wie bei Fall 3 (Level a) — kein zweiter Kerzen-Fetch/keine
-    // zweite Erkennung nötig.
     m5Liquidity: m5LiquidityLevels,
     m5ObZones: m5ObZonesAll,
   };
@@ -123,8 +118,7 @@ export function registerRecentReactionsTools(server: McpServer) {
     {
       title: "Kürzliche LQ-Sweeps/OB-Reaktionen (alle Timeframes)",
       description:
-        "Pflichtprüfung für Schritt 5 (Dealing Range bestätigen, siehe 00-trading-steps/05-dealing-range-" +
-        "bestaetigen.md) — liefert ALLE kürzlich gesweepten Liquiditäts-Level UND ALLE kürzlich " +
+        "Liefert ALLE kürzlich gesweepten Liquiditäts-Level UND ALLE kürzlich " +
         "getesteten/invalidierten OB-Zonen, über 1H/4H/M5 hinweg, BEIDE Richtungen (bullisch UND " +
         "bärisch), sortiert nach Zeitpunkt (jüngster zuerst). Bei JEDEM vollen Schritt-5-Durchlauf " +
         "aufrufen, nicht nur bei Verdacht — auch bei einem direkten Replay-Einstieg mitten am Tag " +
@@ -137,12 +131,11 @@ export function registerRecentReactionsTools(server: McpServer) {
         "— eine retested OB zählt als Confluence UNABHÄNGIG vom Alter (keine minor/medium/major-" +
         "Einteilung wie bei Liquidity-Leveln), erscheint deshalb hier ohne `lookbackHours`-Zeitfenster, " +
         "nur nach Preisnähe gedeckelt auf die `htfConfluenceLimit` nächstgelegenen 1H/4H-OBs je " +
-        "Richtung (Default 1 — für Schritt 5 ruft run_dealing_range_loop intern mit 2, mehr Kontext " +
-        "nötig). Noch unentschiedene ('Retest läuft', touched && !invalidated && !retested) sowie " +
+        "Richtung (Default 1). Noch unentschiedene ('Retest läuft', touched && !invalidated && !retested) sowie " +
         "invalidierte Zonen bleiben weiterhin `lookbackHours`-zeitfenster-basiert (Default 24h) — das " +
         "ist weiterhin 'was ist kürzlich passiert'. `m5Liquidity`/`m5ObZones` liefern zusätzlich den " +
         "VOLLEN M5-Bestand (auch ungetouchte/nicht nur Reaktionen) — für 'was liegt als Nächstes in " +
-        "der Nähe', siehe docs/attention-levels.md.",
+        "der Nähe'.",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
         replayUntilSec: z.number().optional().describe("Unix-Sekunden — Backtest/Replay-Zeitpunkt statt live 'jetzt'"),

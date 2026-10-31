@@ -1,5 +1,4 @@
-// Pure Scoring-Logik hinter get_validation_evidence (Schritt 6, siehe docs/state-machine.md +
-// 06-dealing-range-validieren.md) — dependency-frei, testbar. Der eigentliche Kandidaten-Fetch
+// Pure Scoring-Logik hinter get_validation_evidence — dependency-frei, testbar. Der eigentliche Kandidaten-Fetch
 // (findAntiConfluenceCandidates.js unverändert wiederverwendet, plus die neue, spiegelbildliche
 // Confluence-Sammlung) bleibt in tools/validationEvidence.ts (Deno-seitiger Handler).
 

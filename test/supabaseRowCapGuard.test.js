@@ -55,7 +55,6 @@ const ALLOWLIST = new Set([
   'supabase/functions/poi-watcher/index.ts:trade_setups',          // .in über die höchstens zwei gerade erkannten OBs
   'supabase/functions/daily-structure-pivots/index.ts:daily_structure_pivots', // .gte ab dem ältesten erkannten Pivot
   'src/drawingsStore.js:claude_annotations',              // .eq(instrument) + .eq(date)
-  'src/loopState.js:trading_loop_state',                           // .eq(date_str)
   'src/trades.js:trade_targets',
   'src/trades.js:trade_partial_exits',
   'src/trades.js:trade_evidence',

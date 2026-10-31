@@ -1,9 +1,5 @@
 // Die EINE Stelle für die Kraftabwägung (kontext-analyse.md#kraft--herleitung-im-kontext-der-trade-
-// ableitung: 4H-OB-Reaktionen + 1H-OB-Reaktionen + Inducements). Vorher dreifach implementiert —
-// biasEngine.determineTrendForce (Schritt 3), fallClassifier.assessInducement (Schritt 5),
-// get_validation_evidence (Schritt 6) — mit widersprüchlichen Ausgaben: am 09.09.2026 meldete
-// Schritt 3 für 1.35652 "sauber durchbrochen ---> bullische Kraft", während Schritt 5 zeitgleich
-// "Major Inducement angelaufen ---> Kraft nach unten" lieferte.
+// ableitung: 4H-OB-Reaktionen + 1H-OB-Reaktionen + Inducements).
 //
 // Zwei Quellen, bewusst unterschiedliche Mechanik (03-htf-bias.md: "hier gilt NICHT das OB-Schema"):
 //   LQ-Level — die Kraft kommt aus dem LEVEL (gesweeptes Hoch = Kraft nach unten), nie aus dem Trend.
@@ -64,7 +60,7 @@ const sideWord = (side: ForceSide) => (side === "bullish" ? "bullische" : "bäri
 const opposite = (side: ForceSide): ForceSide => (side === "bullish" ? "bearish" : "bullish");
 
 // Ein getouchtes LQ-Level. Ungetouchte Level liefern kein Kraft-Signal — sie sind Watch-Level
-// (fallClassifier.computeWatchLevels), noch kein Ereignis.
+// auf der Beobachtungsliste, noch kein Ereignis.
 export function assessLiquidityForce(level: ForceLiquidityInput, atSec: number): ForceSignal | null {
   if (!level.touched || level.direction == null) return null;
   const inducementClass = classifyAge(businessSecondsBetween(level.pivotTimeSec, atSec));

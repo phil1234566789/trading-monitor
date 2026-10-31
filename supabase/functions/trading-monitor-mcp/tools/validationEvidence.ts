@@ -1,14 +1,12 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
-import { berlinDateTimeStrFor, berlinDateStrFor } from "../../_shared/berlinTime.ts";
+import { berlinDateTimeStrFor } from "../../_shared/berlinTime.ts";
 import { fetchForexCandles } from "../forexCandles.ts";
 import { fetchActiveTscRangeId, fetchDealingRangeCockpit, getOpenOppositeDealingRanges } from "../db.ts";
 import { findAntiConfluenceCandidates } from "../findAntiConfluenceCandidates.js";
 import { buildRecentReactions } from "./recentReactions.ts";
 import { computeEvidenceScore } from "../evidenceScoring.ts";
-import { logDecision } from "../stateMachineLog.ts";
-import { safeTransitionChain, loadMachineForDay, transition } from "../machineState.ts";
-import { REPLAY_UNTIL_SEC, REPLAY_UNTIL_SEC_REQUIRED, deprecatedTimeParam } from "../toolParams.ts";
+import { REPLAY_UNTIL_SEC } from "../toolParams.ts";
 import { json } from "../jsonResponse.ts";
 
 export interface ValidationEvidenceArgs {
@@ -17,15 +15,11 @@ export interface ValidationEvidenceArgs {
   currentTimeSec?: number;
 }
 
-// get_validation_evidence (Schritt 6, siehe docs/state-machine.md + 06-dealing-range-validieren.md)
-// — strukturiertes Confluence/Anti-Confluence-Paket + Score, OHNE die finale VALIDE/INVALIDE-
-// Entscheidung selbst zu treffen (die bleibt Lanas qualitative Abwägung). Kein
-// trading_loop_state-Write (Schritt 6 hat keinen eigenen Loop-State).
 export async function buildValidationEvidence({ instrument, dealingRangeId, currentTimeSec }: ValidationEvidenceArgs) {
   const effectiveTimeSec = currentTimeSec ?? Math.floor(Date.now() / 1000);
   const rangeId = dealingRangeId ?? (await fetchActiveTscRangeId(instrument));
   if (rangeId == null) {
-    throw new Error(`Keine aktive Dealing-Range für ${instrument} gefunden — zuerst Schritt 5 (run_dealing_range_loop) bis Fall 1 durchlaufen, oder dealingRangeId explizit angeben.`);
+    throw new Error(`Keine aktive Dealing-Range für ${instrument} gefunden — dealingRangeId explizit angeben oder eine Dealing Range anlegen.`);
   }
   const cockpit = await fetchDealingRangeCockpit(rangeId);
   if (!cockpit) throw new Error(`dealing_range ${rangeId} existiert nicht.`);
@@ -55,28 +49,6 @@ export async function buildValidationEvidence({ instrument, dealingRangeId, curr
   const antiConfluenceCount = antiConfluences.obCandidates.length + antiConfluences.sweepCandidates.length + antiConfluences.divergenceCandidates.length + antiConfluences.invalidationObCandidates.length;
   const score = computeEvidenceScore({ confluenceCount, antiConfluenceCount, hasActiveOppositeDealingRange: openOpposite.length > 0 });
 
-  // State-Machine-Verdrahtung (Schritt 5 Ende -> Schritt 6 Start, siehe machineState.ts:
-  // safeTransitionChain) — PIN2_CHECKED{false} holt einen übersprungenen "nichts zum Aufräumen"-
-  // Zwischenschritt nach (kein Tool-Call für den negativen Zweig, siehe find_targets-Kommentar),
-  // NOTIFIED repräsentiert die (Claude-Code-seitige) Benachrichtigungspflicht aus 05-dealing-range-
-  // bestaetigen.md, EVIDENCE_GATHERED ist der eigentliche Schritt-6-Einstieg durch DIESEN Aufruf.
-  await safeTransitionChain(instrument, [{ type: "PIN2_CHECKED", found: false }, { type: "NOTIFIED" }, { type: "EVIDENCE_GATHERED" }], effectiveTimeSec);
-
-  // Kein trading_loop_state-Write in Schritt 6 (siehe Kommentar oben) — dieser Log-Eintrag steht
-  // deshalb bewusst ohne loopStateId, per instrument/date_str/dealingRangeId (im result) trotzdem
-  // auffindbar.
-  await logDecision({
-    instrument,
-    dateStr: berlinDateStrFor(effectiveTimeSec),
-    sec: effectiveTimeSec,
-    step: 6,
-    tool: "get_validation_evidence",
-    decision: "evidence_score",
-    result: { dealingRangeId: rangeId, confluenceCount, antiConfluenceCount, hasActiveOppositeDealingRange: openOpposite.length > 0, score },
-    message: `Score ${score.score} (${score.breakdown.map((b) => b.label).join(", ") || "keine Faktoren"})`,
-    loopStateId: null,
-  });
-
   return {
     instrument,
     dealingRangeId: rangeId,
@@ -99,23 +71,8 @@ export function registerValidationEvidenceTool(server: McpServer) {
   server.registerTool(
     "get_validation_evidence",
     {
-      title: "Schritt 6: Validierungs-Evidenz (Confluences/Anti-Confluences)",
-      description:
-        "Mechanisiert die Kandidaten-Sammlung aus Schritt 6 (Dealing Range validieren) — braucht eine " +
-        "bereits bestätigte Dealing Range mit mindestens einem Target (siehe run_dealing_range_loop " +
-        "Fall 1). `confluences` (gleichgerichtete gehaltene HTF-OB-Reaktionen/Sweeps; RSI-Divergenzen " +
-        "werden als Bestätigung aus dem Chart übernommen) UND `antiConfluences` (dieselbe Kandidatenliste wie find_anti_confluences — " +
-        "gegenläufige OBs/Sweeps/Divergenz zwischen aktuellem Preis und dem preislich extremsten " +
-        "Target, plus unberührte gegenläufige OBs nahe der Invalidierung) sind reine Kandidatenlisten " +
-        "— jede tatsächlich per add_trade_confirmation gespeicherte Confluence/Anti-Confluence MUSS " +
-        "einer davon entsprechen. `score` ist additiv (Confluence +1, Anti-Confluence -1, aktive " +
-        "Gegen-Dealing-Range -2) und NUR ein grober Anhaltspunkt — `finalVerdict` ist bewusst `null`, " +
-        "die VALIDE/INVALIDE-Entscheidung bleibt deine eigene qualitative Abwägung laut " +
-        "06-dealing-range-validieren.md, kein Schwellenwert-Cutoff. `openOppositeDealingRanges` " +
-        "listet noch nicht abgeschlossene Gegen-Ideen — ob sie bereits erkennbar schwächelt, prüfst " +
-        "du selbst. `consolidationProtectionNote`: der Konsolidierungsschutz-Check ist noch nicht " +
-        "mechanisiert, weiter manuell laut Handbuch prüfen. dealingRangeId optional (Default: die " +
-        "aktive TSC-Range des Instruments, siehe get_tsc_range).",
+      title: "Validierungs-Evidenz (Confluences/Anti-Confluences)",
+      description: "Sammelt Confluences und Anti-Confluences zu einer Dealing Range mit mindestens einem Target. Der additive Score ist ein Anhaltspunkt; finalVerdict bleibt zur eigenen qualitativen Bewertung null. dealingRangeId optional, Standard ist die aktive TSC-Range.",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
         dealingRangeId: z.number().int().optional().describe("Default: aktive TSC-Range des Instruments"),
@@ -125,49 +82,4 @@ export function registerValidationEvidenceTool(server: McpServer) {
     async ({ replayUntilSec, ...rest }) => json(await buildValidationEvidence({ ...rest, currentTimeSec: replayUntilSec })),
   );
 
-  // Pendant zu log_bias_decision (Schritt 3)/log_fall_classification (Schritt 5) für Schritt 6 —
-  // die finale VALIDE/INVALIDE-Abwägung ist laut docs/state-machine.md dauerhaft Lanas eigene,
-  // qualitative Entscheidung (kein Schwellenwert-Cutoff aus get_validation_evidence.score), hatte
-  // bisher aber kein Tool, das dieses Urteil in die State-Machine einträgt (Task "State-Machine bis
-  // zum letzten Schritt durchziehen", 2026-09-05) — der Graph unter /trading-flow blieb dadurch bei
-  // Schritt 6 für immer stehen. Kein loopStateId-Parameter (anders als log_fall_classification):
-  // get_validation_evidence gibt keinen zurück (Schritt 6 hat laut eigener Doku keinen eigenen
-  // Loop-State-Write), lädt den aktiven Loop stattdessen direkt über instrument.
-  server.registerTool(
-    "log_validation_verdict",
-    {
-      title: "Schritt 6: VALIDE/INVALIDE-Urteil loggen",
-      description:
-        "Trägt Lanas finale VALIDE/INVALIDE-Abwägung aus Schritt 6 (Dealing Range validieren) in die " +
-        "State-Machine ein — NACH get_validation_evidence aufrufen, sobald du aus den Confluences/" +
-        "Anti-Confluences/dem Score eine qualitative Entscheidung getroffen hast (kein Schwellenwert-" +
-        "Cutoff, siehe 06-dealing-range-validieren.md). 'valide' geht weiter zu Schritt 7 (Find " +
-        "Entry), 'invalide' zurück zu Schritt 4/5 (neuer Loop-Durchlauf). Blockt hart, falls der " +
-        "Loop gerade nicht bei s6_validieren.llm6_valideInvalide parkt (z.B. get_validation_evidence " +
-        "noch nicht aufgerufen).",
-      inputSchema: {
-        instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
-        replayUntilSec: REPLAY_UNTIL_SEC_REQUIRED,
-        sec: deprecatedTimeParam("sec"),
-        verdict: z.enum(["valide", "invalide"]),
-        reasoning: z.string().describe("Kurze Begründung für das Urteil"),
-      },
-    },
-    async ({ instrument, replayUntilSec: sec, verdict, reasoning }) => {
-      const loaded = await loadMachineForDay(instrument, berlinDateStrFor(sec));
-      const currentNode = await transition(loaded, instrument, { type: "VALID_INVALID_JUDGED", verdict }, sec);
-      await logDecision({
-        instrument,
-        dateStr: berlinDateStrFor(sec),
-        sec,
-        step: 6,
-        tool: "log_validation_verdict",
-        decision: "verdict",
-        result: { verdict, reasoning },
-        message: `${verdict}: ${reasoning}`,
-        loopStateId: loaded.loopId,
-      });
-      return json({ logged: true as const, verdict, currentNode });
-    },
-  );
 }

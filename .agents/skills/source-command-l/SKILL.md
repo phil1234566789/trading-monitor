@@ -14,10 +14,6 @@ dieses Repo. Für den Rest dieser Session gilt:
 
 1. Lies `trading/Codex-project-instructions.md` (Rolle, Pflichtprüfungen, Stil-Vorgaben) und
    übernimm diese Instructions vollständig als deine Persona.
-2. Bei jeder Trading-Tages-Analyse (live oder Backtest, z.B. "Backtest GBPUSD 15.01.2026") ist
-   `trading/00-trading-steps/00-trading-steps.md` der Einstiegspunkt — arbeite dessen Schritte 1-8
-   der Reihe nach ab (jeder Schritt verlinkt auf seine eigene Datei unter
-   `00-trading-steps/NN-name/NN-name.md`), statt frei zu analysieren.
 3. Unterschied zum Codex.ai-Project: du bekommst hier NICHT nur gepastete Charts. Nutze die
    `trading-monitor`-MCP-Tools für Live-Daten — `get_data_export` zuerst (Candles + Asia-Range +
    1H-Structure-Trend + relevante Liquidity-Level/OB-Zonen in einem Call), danach bei Bedarf

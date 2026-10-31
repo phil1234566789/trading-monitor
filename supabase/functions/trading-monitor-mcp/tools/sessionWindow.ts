@@ -1,18 +1,11 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import { getSessions } from "../db.ts";
-import { berlinOffsetMinutes, berlinDateTimeStrFor, berlinDateStrFor } from "../../_shared/berlinTime.ts";
+import { berlinOffsetMinutes, berlinDateTimeStrFor } from "../../_shared/berlinTime.ts";
 import { sessionOccurrences } from "../../_shared/sessionOccurrences.js";
-import { logDecision } from "../stateMachineLog.ts";
-import { loadMachineForDayOrNull, transitionIfPossible } from "../machineState.ts";
 import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";
 import { json } from "../jsonResponse.ts";
 
-// check_session_window (Schritt 4, siehe docs/state-machine.md + 04-check-session.md) — REINE
-// Fakten, keine Interpretation/Auswahl (das bleibt Schritt 5, siehe run_dealing_range_loop, das
-// dieses Tool bei jedem vollen Durchlauf intern erneut aufruft). Richtwert <30 Minuten für
-// "unmittelbar bevorstehend" — derselbe Schwellwert, den 04-check-session.md selbst als Beispiel
-// nennt (v.a. NY-Open).
 export const SESSION_IMMINENT_MINUTES = 30;
 // Wie weit vor/zurück nach Vorkommen gesucht wird — 2 Tage Puffer reicht für jede über Mitternacht
 // laufende Session (siehe sessionOccurrences.js), auch die Freitag-23:00-bis-Sonntag-23:00
@@ -70,28 +63,12 @@ export function evaluateSessionWindows(nowSec: number, sessions: SessionConfigIn
 export interface SessionWindowArgs {
   instrument: string;
   nowSec?: number;
-  // Nur gesetzt, wenn intern von run_dealing_range_loop (Schritt 5) aufgerufen — verknüpft den
-  // geloggten Session-Fakten-Check mit dem laufenden Loop. Bleibt null bei einem direkten
-  // check_session_window-Aufruf (kein Loop-Kontext).
-  loopStateId?: number | null;
 }
 
-export async function buildSessionWindow({ instrument, nowSec, loopStateId = null }: SessionWindowArgs) {
+export async function buildSessionWindow({ instrument, nowSec }: SessionWindowArgs) {
   const effectiveNowSec = nowSec ?? Math.floor(Date.now() / 1000);
   const sessions = await getSessions(instrument);
   const windows = evaluateSessionWindows(effectiveNowSec, sessions);
-
-  await logDecision({
-    instrument,
-    dateStr: berlinDateStrFor(effectiveNowSec),
-    sec: effectiveNowSec,
-    step: 4,
-    tool: "check_session_window",
-    decision: "session_window",
-    result: { windows },
-    message: windows.length > 0 ? windows.map((w) => `${w.label} (${w.status})`).join(", ") : "keine aktive/bevorstehende Session",
-    loopStateId,
-  });
 
   return {
     instrument,
@@ -105,17 +82,8 @@ export function registerSessionWindowTool(server: McpServer) {
   server.registerTool(
     "check_session_window",
     {
-      title: "Schritt 4: Session-Fakten",
-      description:
-        "Mechanisiert Schritt 4 (Check Session) aus 00-trading-steps — REINE Fakten, keine " +
-        "Interpretation/Zonen-Auswahl (das bleibt Schritt 5, run_dealing_range_loop ruft dieses " +
-        "Tool bei jedem vollen Durchlauf intern erneut auf). `windows` listet NUR Sessions, die " +
-        "GERADE laufen (status='active') oder in <30 Min. beginnen (status='imminent') — alle " +
-        "anderen konfigurierten Sessions (Asia/MMM/Spread Hour/NY/... siehe Sessions-Modal im " +
-        "Dashboard) werden bewusst weggelassen, da 'weder aktiv noch unmittelbar bevorstehend' " +
-        "trivial und nicht ausgabewürdig ist (Philip). Kein Werturteil ('Vorsicht' o.ä.) — das " +
-        "zieht Schritt 5 selbst aus diesen Fakten. replayUntilSec optional für einen Backtest/" +
-        "Replay-Zeitpunkt (weglassen = live 'jetzt').",
+      title: "Session-Fakten",
+      description: "Listet konfigurierte Sessions, die gerade aktiv sind oder in bis zu 30 Minuten beginnen. Reine Fakten ohne Handelsentscheidung. replayUntilSec optional für historische Abfragen.",
       inputSchema: {
         instrument: z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument"),
         replayUntilSec: REPLAY_UNTIL_SEC,
@@ -125,16 +93,7 @@ export function registerSessionWindowTool(server: McpServer) {
     async ({ replayUntilSec, nowSec: _nowSec, ...rest }) => {
       const args = { ...rest, nowSec: replayUntilSec };
       const result = await buildSessionWindow(args);
-      // State-Machine V2 (tradingMachine.ts): der EIGENSTÄNDIGE check_session_window-Aufruf treibt
-      // NUR Schritt 3 -> 4 (s45.entry) voran (nicht die interne Wiederverwendung durch
-      // run_dealing_range_loop, die ruft buildSessionWindow() oben direkt auf, ohne die Maschine
-      // anzufassen) — S45_ENTER/MODE_SELECTED übernimmt run_dealing_range_loop selbst, bei JEDEM
-      // Einstieg in Schritt 5 (auch nach einem Loopback), nicht nur beim allerersten Mal.
-      // transitionIfPossible statt sendGuarded: dieses Tool bleibt bewusst auch frei aufrufbar, ohne
-      // bei jedem Aufruf zwingend voranzukommen (z.B. ein reiner Fakten-Check mitten in Schritt 5).
-      const loaded = await loadMachineForDayOrNull(args.instrument, berlinDateStrFor(result.nowSec));
-      const currentNode = loaded ? await transitionIfPossible(loaded, args.instrument, { type: "CONTEXT_SYNTHESIS_DONE" }, result.nowSec) : null;
-      return json({ ...result, currentNode });
+      return json(result);
     },
   );
 }

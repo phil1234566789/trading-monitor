@@ -3,9 +3,6 @@ import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp
 import { createDealingRange, deleteDealingRange, fetchActiveTscRangeId, fetchDealingRangeCockpit } from "../db.ts";
 import { findTargetCandidates } from "../findTargetCandidates.js";
 import { findAntiConfluenceCandidates } from "../findAntiConfluenceCandidates.js";
-import { logDecision } from "../stateMachineLog.ts";
-import { berlinDateStrFor } from "../../_shared/berlinTime.ts";
-import { safeTransitionChain } from "../machineState.ts";
 import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";
 import { json } from "../jsonResponse.ts";
 
@@ -32,34 +29,14 @@ export function registerTscTools(server: McpServer) {
         "entscheidet die Richtung, nicht ein bloßer Sweep. Bestätigungen/Targets danach über " +
         "add_trade_confirmation/add_trade_target mit level='range' und der hier zurückgegebenen id " +
         "hinzufügen. Sobald ein echter Entry feststeht, übernimmt add_trade_position diese Range in " +
-        "eine Ausführung — create_dealing_range NICHT ein zweites Mal für dieselbe Idee aufrufen. " +
-        "replayUntilSec optional für einen Backtest/Replay-Zeitpunkt (weglassen = live 'jetzt') — " +
-        "ohne ihn treibt dieser Aufruf die State-Machine-Zeile des HEUTIGEN Tages an, nicht die " +
-        "eines laufenden Backtests.",
+        "eine Ausführung — create_dealing_range NICHT ein zweites Mal für dieselbe Idee aufrufen. ",
       inputSchema: {
         instrument: INSTRUMENT,
         direction: DIRECTION,
-        replayUntilSec: REPLAY_UNTIL_SEC,
-        sec: deprecatedTimeParam("sec"),
       },
     },
-    async ({ instrument, direction, replayUntilSec: argSec }) => {
+    async ({ instrument, direction }) => {
       const result = await createDealingRange(instrument, direction);
-      const sec = argSec ?? Math.floor(Date.now() / 1000);
-      void logDecision({
-        instrument,
-        dateStr: berlinDateStrFor(sec),
-        sec,
-        step: 5,
-        tool: "create_dealing_range",
-        decision: "dealing_range_created",
-        result,
-        message: `direction=${direction}`,
-      });
-      // State-Machine-Verdrahtung nur für den expliziten "Richtung steht schon vorher fest"-Weg
-      // (siehe Tool-Beschreibung) — der interne Bootstrap-Zweig in addTradeConfirmation feuert
-      // TSC_BOOTSTRAPPED selbst, NACH der eigentlichen Bestätigung (richtige Reihenfolge im Log).
-      await safeTransitionChain(instrument, [{ type: "TSC_BOOTSTRAPPED" }], sec);
       return json(result);
     },
   );
@@ -96,11 +73,6 @@ export function registerTscTools(server: McpServer) {
         instrument: INSTRUMENT,
       },
     },
-    // Rein lesend, KEIN State-Machine-Übergang mehr (Philip 05.09.2026: "kann aus der State
-    // Machine und aus dem Graphen heraus") — add_trade_confirmation prüft/legt die Range beim
-    // Bootstrap-oder-Reuse-Zweig ohnehin selbst an, dieses Tool bleibt für Lana nutzbar, wann immer
-    // sie den aktuellen TSC-Stand sehen will, ohne dass die Maschine einen separaten Aufruf
-    // erzwingt oder dieser Aufruf selbst etwas am Loop-Fortschritt ändert.
     async ({ instrument }) => {
       const id = await fetchActiveTscRangeId(instrument);
       if (id == null) return json(null);
@@ -130,17 +102,6 @@ export function registerTscTools(server: McpServer) {
     },
     async ({ replayUntilSec, currentTimeSec: _currentTimeSec, ...rest }) => {
       const args = { ...rest, currentTimeSec: replayUntilSec };
-      const sec = replayUntilSec ?? Math.floor(Date.now() / 1000);
-      // "Fall 1 komplett?" (s45.fallAgainCheck) fällt inhaltlich mit der bereits getroffenen
-      // Fall-1-Klassifikation zusammen (siehe 05-dealing-range-bestaetigen.md: "Target(s) anhängen
-      // NUR Fall 1") — kein zweites Lana-Urteil nötig, find_targets aufzurufen IST das Signal.
-      // PIN_CHECKED{found:false} holt einen übersprungenen "nichts zum Aufräumen"-Zwischenschritt
-      // nach (kein Tool-Call existiert für den negativen Pin-Check-Zweig).
-      await safeTransitionChain(
-        args.instrument,
-        [{ type: "PIN_CHECKED", found: false }, { type: "FALL_AGAIN_CHECKED", complete: true }, { type: "TARGETS_FOUND" }],
-        sec,
-      );
       return json(await findTargetCandidates(args));
     },
   );

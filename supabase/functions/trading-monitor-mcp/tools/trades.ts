@@ -38,8 +38,6 @@ const ISO_WITH_OFFSET = z.string().refine(hasExplicitOffset, (value) => ({ messa
 // damit beide Tools garantiert dieselben Namen/Beschreibungen haben (siehe db.ts: TradePositionInput,
 // insertTradePosition).
 const TRADE_POSITION_FIELDS = {
-  replayUntilSec: REPLAY_UNTIL_SEC,
-  sec: deprecatedTimeParam("sec"),
   source: SOURCE,
   entryPrice: z.number().optional().describe("Füllpreis, falls schon bekannt"),
   stopLoss: z.number().optional(),
@@ -100,7 +98,7 @@ export function registerTradeTools(server: McpServer) {
           .describe("Geplante Ziele (TP1/TP2/...), gehören zur Idee, nicht zur einzelnen Ausführung"),
       },
     },
-    async ({ replayUntilSec, sec: _sec, ...rest }) => json(await createTrade({ ...rest, sec: replayUntilSec })),
+    async (args) => json(await createTrade(args)),
   );
 
   server.registerTool(
@@ -118,7 +116,7 @@ export function registerTradeTools(server: McpServer) {
         ...TRADE_POSITION_FIELDS,
       },
     },
-    async ({ dealingRangeId, replayUntilSec, sec: _sec, ...fields }) => json(await addTradePosition(dealingRangeId, { ...fields, sec: replayUntilSec })),
+    async ({ dealingRangeId, ...fields }) => json(await addTradePosition(dealingRangeId, fields)),
   );
 
   server.registerTool(
@@ -128,13 +126,9 @@ export function registerTradeTools(server: McpServer) {
       description:
         "Bearbeitet eine bestehende trade_position (Entry/Stop/Exit/Outcome/R-Multiple/Reasoning/" +
         "Konto) über ihre id (siehe get_journal für die ids). Nur übergebene Felder werden geändert " +
-        "— ein Feld explizit auf null setzen, um es zu leeren. sec optional für einen Backtest/" +
-        "Replay-Zeitpunkt (Default: jetzt) — nur relevant bei outcome='win'/'loss' (löst " +
-        "POSITION_CLOSED aus), sonst ohne Wirkung.",
+        "— ein Feld explizit auf null setzen, um es zu leeren.",
       inputSchema: {
         id: z.number().int(),
-        replayUntilSec: REPLAY_UNTIL_SEC,
-        sec: deprecatedTimeParam("sec"),
         entryPrice: z.number().nullable().optional(),
         stopLoss: z.number().nullable().optional(),
         triggeredAt: ISO_WITH_OFFSET.optional(),
@@ -150,7 +144,7 @@ export function registerTradeTools(server: McpServer) {
         commission: z.number().nullable().optional(),
       },
     },
-    async ({ id, replayUntilSec, sec: _sec, ...fields }) => json(await updateTradePosition(id, fields, replayUntilSec)),
+    async ({ id, ...fields }) => json(await updateTradePosition(id, fields)),
   );
 
   server.registerTool(
@@ -200,8 +194,7 @@ export function registerTradeTools(server: McpServer) {
         "läuft es wie bisher direkt gegen diese bestehende Range/Position — id MUSS dann existieren, " +
         "sonst Fehler. Idempotent bei level='range' + kind='pivot'/'ob': zeigt dieselbe " +
         "ob_zone_id/liquidity_level_id bereits eine Bestätigung an dieser Range, wird KEINE zweite " +
-        "Zeile angelegt (die bestehende kommt zurück) — der State-Machine-Übergang feuert trotzdem, " +
-        "sicher erneut aufrufbar, wenn der Loop mit unveränderter Evidenz zu s45.tscLink zurückkehrt. " +
+        "Zeile angelegt (die bestehende kommt zurück). " +
         "kind='pivot'/'ob'/'rsi_divergence' sind Confirmations (geben tatsächlich das GO), " +
         "kind='fib' ist eine Confluence (gibt nur zusätzliche Sicherheit, kein GO) — siehe " +
         "trading-Repo trade-from-poi.md#confirmation-confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt " +
@@ -244,13 +237,9 @@ export function registerTradeTools(server: McpServer) {
         "'rsi_divergence'→'rsi_divergence'; 'trade_position'/'trade_setup'/'trade_confirmation' als " +
         "Pin-Quelle werden abgelehnt, keine sinnvolle neue Bestätigung daraus ableitbar). Jedes hier " +
         "trotzdem explizit gesetzte Feld überschreibt den abgeleiteten Wert (z.B. touchedTime " +
-        "nachtragen, wenn der Pin selbst noch nicht 'touched' war). sec optional für einen Backtest/" +
-        "Replay-Zeitpunkt (Default: jetzt) — ohne ihn treibt dieser Aufruf die State-Machine-Zeile " +
-        "des HEUTIGEN Tages an, nicht die eines laufenden Backtests.",
+        "nachtragen, wenn der Pin selbst noch nicht 'touched' war).",
       inputSchema: {
         level: z.enum(["range", "position"]),
-        replayUntilSec: REPLAY_UNTIL_SEC,
-        sec: deprecatedTimeParam("sec"),
         id: z
           .number()
           .int()
@@ -291,7 +280,7 @@ export function registerTradeTools(server: McpServer) {
     // Validierung (kind/price/sourceTime Pflicht, rangeLow/rangeHigh bei kind='ob') sitzt jetzt in
     // addTradeConfirmation selbst, nicht mehr hier — sie muss auch nach einer pinId-Ableitung
     // greifen, die auf dieser Ebene noch nicht aufgelöst ist.
-    async ({ level, id, replayUntilSec, sec: _sec, ...fields }) => json(await addTradeConfirmation({ level, id, ...fields, sec: replayUntilSec })),
+    async (args) => json(await addTradeConfirmation(args)),
   );
 
   server.registerTool(
@@ -318,8 +307,7 @@ export function registerTradeTools(server: McpServer) {
         "näher liegende Kandidat in skippedCandidates mit Grund genannt ist (die Fehlermeldung listet " +
         "die fehlenden auf). Ein vorab gefasstes Ziel gegen die Liste zu halten und abzunicken reicht " +
         "also nicht mehr — erst die Liste durchgehen, dann wählen. sec optional für einen Backtest/" +
-        "Replay-Zeitpunkt (Default: jetzt) — ohne ihn treibt dieser Aufruf die State-Machine-Zeile " +
-        "des HEUTIGEN Tages an, nicht die eines laufenden Backtests.",
+        "Replay-Zeitpunkt (Default: jetzt) zur historischen Kandidatenprüfung.",
       inputSchema: {
         dealingRangeId: z.number().int(),
         replayUntilSec: REPLAY_UNTIL_SEC,
@@ -344,8 +332,8 @@ export function registerTradeTools(server: McpServer) {
       },
     },
     async ({ dealingRangeId, skippedCandidates, replayUntilSec, sec: _sec, ...rawFields }) => {
-      const fields = { ...rawFields, sec: replayUntilSec };
-      await assertTargetChoiceFromCandidates({ dealingRangeId, price: fields.price, sec: fields.sec, skippedCandidates });
+      const fields = rawFields;
+      await assertTargetChoiceFromCandidates({ dealingRangeId, price: fields.price, sec: replayUntilSec, skippedCandidates });
       return json(await addTradeTarget(dealingRangeId, fields));
     },
   );

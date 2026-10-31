@@ -15,8 +15,7 @@ const M5_SECONDS = barSecondsFor("5m");
 //   Fraktal: bestaetigt, sobald LIQUIDITY_FRACTAL_PERIOD Kerzen NACH dem Pivot geschlossen sind
 //   (isUpFractal prueft candles[p+1..p+5] in _shared/liquidity.ts) -> period + 1 Bars.
 //   OB-Zone: detectOrderBlocks legt sie auf der MITTLEREN der drei FVG-Kerzen an, entdeckt wird sie
-//   auf der darauffolgenden -> bekannt mit deren Schluss, dieselbe Herleitung wie
-//   firstObFormationTimeAfter in obFormationTrigger.ts.
+//   auf der darauffolgenden -> bekannt mit deren Schluss.
 // Nebeneffekt, bewusst akzeptiert: liquidity_levels enthaelt auch find-or-create-Zeilen der
 // Trade-Tools (findOrCreateLiquidityLevelId in db.ts) ohne Periode-5-Logik — die erscheinen dadurch
 // pauschal 6 Bars zu spaet. Wenige Zeilen, und zu spaet ist die harmlose Fehlerrichtung.

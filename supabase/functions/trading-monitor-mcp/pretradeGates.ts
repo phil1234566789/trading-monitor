@@ -1,7 +1,7 @@
 import { berlinDateTimeStrFor, berlinDateStrFor } from "../_shared/berlinTime.ts";
 import { berlinWeekdayAndMinutes, isWithinTradingWindows, type WeekdayGroup, type TradingWindows } from "../_shared/tradingHoursGate.ts";
 
-// Pure Logik hinter check_pretrade_gates (Schritt 1+2, siehe docs/state-machine.md) — dependency-frei
+// Pure Logik hinter check_pretrade_gates — dependency-frei
 // (nur Intl.DateTimeFormat + berlinTime.ts, kein db.ts/supabaseClient.ts-Import), damit sie
 // unabhängig von den DB-Fetches (trading_schedules/news_events, siehe tools/pretradeGates.ts) per
 // Vitest testbar bleibt. Der eigentliche Fenster-Check (berlinWeekdayAndMinutes/isWithinTradingWindows)
@@ -24,9 +24,7 @@ export interface TradingHoursGateResult {
   resultText: string;
 }
 
-// Schritt 1 — Handelszeit. Quelle = trading_schedules.trading_windows (Philips Entscheidung, siehe
-// docs/state-machine.md Tool 1 — aktiviert diese bisher nur referenzielle Spalte erstmals als
-// echtes Gate). Fenster sind [von,bis) in Minuten seit Mitternacht, from inklusiv/to exklusiv.
+// Handelszeit aus trading_schedules.trading_windows: [von,bis) in Minuten seit Mitternacht.
 export function evaluateTradingHoursGate(nowSec: number, tradingWindows: TradingWindows): TradingHoursGateResult {
   const { weekdayGroup, minutesOfDay } = berlinWeekdayAndMinutes(nowSec);
   const windows = tradingWindows[weekdayGroup] ?? [];

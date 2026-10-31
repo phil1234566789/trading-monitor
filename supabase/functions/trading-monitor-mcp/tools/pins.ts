@@ -1,10 +1,6 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
-import { getPinContext, addPinEntry, addPinM5ObEntry, addPinM5LiquidityEntry, addPinRsiDivergenceEntry, removePinEntry, getPinInstrumentById } from "../db.ts";
-import { logDecision } from "../stateMachineLog.ts";
-import { berlinDateStrFor } from "../../_shared/berlinTime.ts";
-import { safeTransitionChain } from "../machineState.ts";
-import { REPLAY_UNTIL_SEC, deprecatedTimeParam } from "../toolParams.ts";
+import { getPinContext, addPinEntry, addPinM5ObEntry, addPinM5LiquidityEntry, addPinRsiDivergenceEntry, removePinEntry } from "../db.ts";
 import { json } from "../jsonResponse.ts";
 
 // War bis Chat 2026-08-17 read-only ("Philip entfernt Einträge selbst im Pin-Modal, kein
@@ -70,11 +66,7 @@ export function registerPinTools(server: McpServer) {
         "braucht `m5Liquidity` (Liquiditäts-Level auf einem Nicht-1h-Timeframe, ebenfalls nie " +
         "persistiert); 'rsi_divergence' braucht `instrument` + `divergence` (aus " +
         "get_forex_rsi/detectRsiDivergence). Ein zweiter Aufruf für dieselbe Stelle aktualisiert " +
-        "nur die Notiz (Upsert), legt keinen Zweiteintrag an. Zeitfelder sind Unix-Sekunden. " +
-        "Landet als Eintrag im state_machine_log (Loop-Status-UI) — bei kind='ob_zone'/'trade_setup'/" +
-        "'liquidity_level' zusätzlich `instrument` mitgeben, sonst kann der Log-Eintrag dafür nicht " +
-        "geschrieben werden (bei den anderen kind-Werten steht das Instrument schon im jeweiligen " +
-        "Objekt).",
+        "nur die Notiz (Upsert), legt keinen Zweiteintrag an. Zeitfelder sind Unix-Sekunden.",
       inputSchema: {
         kind: z.enum(["ob_zone", "trade_setup", "liquidity_level", "m5_ob", "m5_liquidity_level", "rsi_divergence"]),
         note: z.string().optional(),
@@ -105,7 +97,7 @@ export function registerPinTools(server: McpServer) {
           .optional()
           .describe(
             "Pflicht (zusammen mit divergence) bei kind='rsi_divergence'. Bei kind='ob_zone'|'trade_setup'|" +
-              "'liquidity_level' optional, nur fürs state_machine_log (siehe Tool-Beschreibung) — bei " +
+              "'liquidity_level' optional, zur Instrumentzuordnung — bei " +
               "kind='m5_ob'/'m5_liquidity_level' steht es bereits in m5Ob/m5Liquidity, hier nicht nötig.",
           ),
         divergence: z
@@ -123,45 +115,23 @@ export function registerPinTools(server: McpServer) {
       },
     },
     async ({ kind, note, pinType, refId, m5Ob, m5Liquidity, instrument, divergence }) => {
-      // Fire-and-forget: fehlt das Instrument (kind='ob_zone'/'trade_setup'/'liquidity_level' ohne
-      // die optionale instrument-Angabe), wird der Log-Eintrag übersprungen statt mit einem
-      // Platzhalter zu erfinden — state_machine_log.instrument ist NOT NULL.
-      const logPin = (pinInstrument: string | undefined, result: unknown) => {
-        if (!pinInstrument) return;
-        const sec = Math.floor(Date.now() / 1000);
-        void logDecision({
-          instrument: pinInstrument,
-          dateStr: berlinDateStrFor(sec),
-          sec,
-          step: null,
-          tool: "add_pin_entry",
-          decision: "pin_added",
-          result,
-          message: `kind='${kind}'${note ? ` — ${note}` : ""}`,
-        });
-      };
-
       if (PIN_KIND_WITH_REF_ID.safeParse(kind).success) {
         if (refId == null) throw new Error(`refId ist Pflicht bei kind='${kind}'.`);
         const result = await addPinEntry(kind as "ob_zone" | "trade_setup" | "liquidity_level", refId, note, pinType);
-        logPin(instrument, result);
         return json(result);
       }
       if (kind === "m5_ob") {
         if (!m5Ob) throw new Error("m5Ob ist Pflicht bei kind='m5_ob'.");
         const result = await addPinM5ObEntry(m5Ob, note, pinType);
-        logPin(m5Ob.instrument, result);
         return json(result);
       }
       if (kind === "m5_liquidity_level") {
         if (!m5Liquidity) throw new Error("m5Liquidity ist Pflicht bei kind='m5_liquidity_level'.");
         const result = await addPinM5LiquidityEntry(m5Liquidity, note, pinType);
-        logPin(m5Liquidity.instrument, result);
         return json(result);
       }
       if (!instrument || !divergence) throw new Error("instrument und divergence sind Pflicht bei kind='rsi_divergence'.");
       const result = await addPinRsiDivergenceEntry(instrument, divergence, note, pinType);
-      logPin(instrument, result);
       return json(result);
     },
   );
@@ -169,54 +139,14 @@ export function registerPinTools(server: McpServer) {
   server.registerTool(
     "remove_pin_entry",
     {
-      title: "Pin entfernen / Pin-Check bestätigen",
-      description:
-        "Mit id: entfernt einen Pin-Kontext-Eintrag wieder (id aus get_pin_context) — Pendant zum 🗑 " +
-        "im Pin-Panel. Ohne id (dafür instrument mitgeben): bestätigt 'kein Pin aufzuräumen' — greift " +
-        "sowohl am s45.pinCheck-Knoten (erster Pin, nach TSC-Verknüpfung) als auch am s45.pinCheck2- " +
-        "Knoten (zweiter Pin, nach Target-Anlegen), nur der jeweils aktuell gültige Übergang feuert. " +
-        "Vorher musste dafür find_targets zweckentfremdet werden (das dabei ungefragt auch noch " +
-        "'Fall 1 komplett' erzwang, siehe find_targets/log_fall_again_check), jetzt bildet dieser " +
-        "Aufruf allein den jeweiligen Graph-Knoten '(nein)' ab. sec optional für einen Backtest/" +
-        "Replay-Zeitpunkt (Default: jetzt) — ohne ihn treibt dieser Aufruf die State-Machine-Zeile " +
-        "des HEUTIGEN Tages an, nicht die eines laufenden Backtests.",
+      title: "Pin entfernen",
+      description: "Entfernt einen Pin-Kontext-Eintrag (id aus get_pin_context), wie der Papierkorb im Pin-Panel.",
       inputSchema: {
-        id: z.number().optional().describe("Pin-id aus get_pin_context — weglassen, wenn kein Pin gefunden wurde (dann instrument mitgeben)"),
-        instrument: z.enum(["GBPUSD", "EURUSD"]).optional().describe("Nur ohne id: welches Instrument den 'kein Pin gefunden'-Schritt bestätigt"),
-        replayUntilSec: REPLAY_UNTIL_SEC,
-        sec: deprecatedTimeParam("sec"),
+        id: z.number().int(),
       },
     },
-    async ({ id, instrument: argInstrument, replayUntilSec: argSec }) => {
-      const sec = argSec ?? Math.floor(Date.now() / 1000);
-      if (id == null) {
-        if (!argInstrument) throw new Error("Ohne id: instrument mitgeben, um 'kein Pin gefunden' am s45.pinCheck-Knoten zu bestätigen.");
-        // Beide Pin-Check-Stellen versuchen (PIN_CHECKED = s45.pinCheck, erster Pin nach TSC-
-        // Verknüpfung; PIN2_CHECKED = s45.pinCheck2, zweiter Pin nach Target-Anlegen) — nur die am
-        // aktuellen Knoten gültige feuert tatsächlich (siehe safeTransitionChain), analog zum
-        // with-id-Zweig unten. Bug-Report Philip 07.09.2026, GBPUSD-Backtest 28.08.: pinCheck2 blieb
-        // hart geblockt stehen, weil hier ursprünglich nur PIN_CHECKED probiert wurde.
-        await safeTransitionChain(argInstrument, [{ type: "PIN_CHECKED", found: false }, { type: "PIN2_CHECKED", found: false }], sec);
-        return json({ removed: null, confirmedNoPin: true });
-      }
-      // Instrument VOR dem Löschen auflösen (danach ist die Zeile weg) — für die
-      // State-Machine-Verdrahtung unten (Schritt 5/6 Pin-Aufräum-Pflicht, s45.pinCheck/pinCheck2).
-      const instrument = await getPinInstrumentById(id);
+    async ({ id }) => {
       await removePinEntry(id);
-      if (instrument) {
-        // Beide Pin-Check-Stellen (nach TSC-Verknüpfung UND nach Target-Anlegen) versuchen — nur
-        // die am aktuellen Knoten gültige feuert tatsächlich, siehe safeTransitionChain.
-        await safeTransitionChain(
-          instrument,
-          [
-            { type: "PIN_CHECKED", found: true },
-            { type: "PIN_REMOVED" },
-            { type: "PIN2_CHECKED", found: true },
-            { type: "PIN2_REMOVED" },
-          ],
-          sec,
-        );
-      }
       return json({ removed: id });
     },
   );

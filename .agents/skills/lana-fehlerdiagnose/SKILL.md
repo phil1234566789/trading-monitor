@@ -1,6 +1,6 @@
 ---
 name: lana-fehlerdiagnose
-description: Diagnose-Ablauf für gemeldetes Lana-Fehlverhalten bei 00-trading-steps (live oder Backtest) - benennt anhand der vier AI-Capabilities-Eigenschaften (Next Token Prediction/Knowledge/Working Memory/Steerability), welche kollidiert sind, prueft die Diagnose gegen, und routet zum passenden STRUKTURELLEN Fix statt nur den einen Output zu patchen. Aufrufen, sobald Philip eine enttäuschende/fehlerhafte Lana-Antwort während einer Trading-Analyse meldet (z.B. "das hat nicht gepasst", "du hast X vergessen/übersehen", falscher Wert) - vor der eigentlichen Korrektur, nicht danach.
+description: Diagnose-Ablauf für gemeldetes Lana-Fehlverhalten bei Trading-Analysen (live oder Backtest) - benennt anhand der vier AI-Capabilities-Eigenschaften (Next Token Prediction/Knowledge/Working Memory/Steerability), welche kollidiert sind, prueft die Diagnose gegen, und routet zum passenden STRUKTURELLEN Fix statt nur den einen Output zu patchen. Aufrufen, sobald Philip eine enttäuschende/fehlerhafte Lana-Antwort während einer Trading-Analyse meldet (z.B. "das hat nicht gepasst", "du hast X vergessen/übersehen", falscher Wert) - vor der eigentlichen Korrektur, nicht danach.
 ---
 
 # Lana-Fehlerdiagnose
@@ -8,7 +8,7 @@ description: Diagnose-Ablauf für gemeldetes Lana-Fehlverhalten bei 00-trading-s
 Hintergrund/volle Kurs-Zusammenfassung: [trading-monitor/docs/steerabilty-vs-wrong-ai-outputs.md](../../../trading-monitor/docs/steerabilty-vs-wrong-ai-outputs.md)
 (Anthropic Academy "AI Capabilities and Limitations"). Dieser Skill wendet die dortige
 Exercise-Methode ("The Failure Diagnosis") konkret auf gemeldetes Lana-Fehlverhalten bei
-`00-trading-steps` an, statt nur den betroffenen Output zu korrigieren.
+Trading-Analysen an, statt nur den betroffenen Output zu korrigieren.
 
 ## Wann aufrufen
 

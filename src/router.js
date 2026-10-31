@@ -23,7 +23,5 @@ export const router = createRouter({
       try{const event=await createLiveWatcherRepository(supabase).event(to.query.event);return event?.payload?.entry?liveEntryLink(event):'/statistik';}catch{return '/statistik';}
     } },
     { path: "/algo-watcher", name: "algo-watcher", component: () => import("./views/AlgoWatcher.vue") },
-    { path: "/loop-status", name: "loop-status", component: () => import("./views/LoopStatus.vue") },
-    { path: "/trading-flow", name: "trading-flow", component: () => import("./views/TradingFlow.vue") },
   ],
 });
