@@ -7,9 +7,9 @@ export function buildMarketPreview(input, snapshot, config, now, id) {
   if(snapshot.positions.length||snapshot.pending_orders) throw new Error('bridge_not_ready');
   const long=input.direction==='long';
   const price=long?q.ask:q.bid;
-  const sl=Number(input.stop_loss), tp=Number(input.take_profit);
-  if(!Number.isFinite(sl)||!Number.isFinite(tp)||tp<=0
-    ||(long?(sl>=q.bid-q.point||tp<=q.bid+q.point):(sl<=q.ask+q.point||tp>=q.ask-q.point))) throw new Error('invalid_stop_or_target');
+  const sl=Number(input.stop_loss), tp=input.take_profit == null ? null : Number(input.take_profit);
+  if(!Number.isFinite(sl)||sl<=0||(long?sl>=q.bid-q.point:sl<=q.ask+q.point)
+    ||(tp!==null&&(!Number.isFinite(tp)||tp<=0||(long?tp<=q.bid+q.point:tp>=q.ask-q.point)))) throw new Error('invalid_stop_or_target');
   const risk=Math.abs(price-sl)*(long?q.loss_per_unit_long:q.loss_per_unit_short);
   if(!Number.isFinite(risk)||risk<=0) throw new Error('risk_unavailable');
   const intent=validateExecutionIntent({id,account_login:config.login,account_server:config.server,mode:config.mode,

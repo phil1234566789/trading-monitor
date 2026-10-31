@@ -5,9 +5,14 @@ import { useRoute } from 'vue-router';
 const props=defineProps({api:{type:Function,required:true},status:Object,account:Object});
 const emit=defineEmits(['submitted']);
 const route=useRoute();
-const symbol=ref(typeof route.query.symbol==='string'?route.query.symbol:''),
-  direction=ref(route.query.direction==='long'?'long':'short'),
-  sl=ref(typeof route.query.sl==='string'?route.query.sl:''),tp=ref(typeof route.query.tp==='string'?route.query.tp:'');
+const symbol=ref(''),direction=ref('short'),sl=ref(''),tp=ref('');
+// Auch ein neuer Link ohne TP muss einen zuvor gesetzten Zielpreis entfernen.
+watch(()=>route.query,query=>{
+  symbol.value=typeof query.symbol==='string'?query.symbol:'';
+  direction.value=query.direction==='long'?'long':'short';
+  sl.value=typeof query.sl==='string'?query.sl:'';
+  tp.value=typeof query.tp==='string'?query.tp:'';
+},{immediate:true,deep:true});
 const durationMinutes=ref(10);
 const preview=ref(null),confirmation=ref(''),busy=ref(false),error=ref(''),receipt=ref('');
 const pendingKey='mmt-pending-confirmation';
@@ -40,7 +45,7 @@ async function showPreview() {
   busy.value=true;error.value='';preview.value=null;confirmation.value='';receipt.value='';
   try {
     const data=await props.api('search_preview',{order:{symbol:symbol.value,direction:direction.value,
-      stop_loss:Number(sl.value),take_profit:Number(tp.value),duration_sec:Number(durationMinutes.value)*60}});
+      stop_loss:Number(sl.value),take_profit:tp.value===''?null:Number(tp.value),duration_sec:Number(durationMinutes.value)*60}});
     preview.value=data.preview;confirmation.value=data.confirmation;now.value=Date.now();
   } catch(e) {error.value=e.message;} finally {busy.value=false;}
 }
@@ -79,14 +84,14 @@ async function confirm() {
       <label class="mmt-wide">Broker-Symbol<select v-model="symbol" required :disabled="busy"><option value="" disabled>Symbol wählen</option><option v-for="q in quotes" :key="q.symbol" :value="q.symbol">{{q.symbol}}</option></select></label>
       <fieldset class="mmt-direction"><legend>Richtung</legend><label><input v-model="direction" type="radio" value="long" :disabled="busy"><span>Long</span></label><label><input v-model="direction" type="radio" value="short" :disabled="busy"><span>Short</span></label></fieldset>
       <label>Stop-Loss<input v-model="sl" type="number" min="0" step="any" required :disabled="busy"></label>
-      <label>Take-Profit<input v-model="tp" type="number" min="0" step="any" required :disabled="busy"></label>
+      <label>Take-Profit (optional)<input v-model="tp" type="number" min="0" step="any" placeholder="Kein TP" :disabled="busy"></label>
       <label class="mmt-wide">Suche gültig für (Minuten)<input v-model="durationMinutes" type="number" min="1" max="60" step="1" required :disabled="busy"></label>
       <ActionButton class="mmt-primary mmt-wide" type="submit" :disabled="busy||pendingId||!ready||!account">{{busy?'Wird vorbereitet …':'Suchauftrag vorbereiten'}}</ActionButton>
     </form>
     <div v-if="preview" class="mmt-preview" role="region" aria-label="Suchauftrag zur Bestätigung">
       <p><strong>{{preview.account_name}} · {{preview.intent.symbol}} · {{preview.intent.direction==='short'?'Short':'Long'}}</strong><br>
         {{preview.volume}} Lot · Kurs bei Vorbereitung circa {{preview.reference_price}}<br>
-        SL {{preview.intent.stop_loss}} · TP {{preview.intent.take_profit}}<br>
+        SL {{preview.intent.stop_loss}} · TP {{preview.intent.take_profit??'Kein TP'}}<br>
         Verlust bis SL beim aktuellen Kurs circa {{preview.risk.toFixed(2)}} {{preview.currency}} vor Gebühren und Slippage.</p>
       <p>Nach deiner einmaligen Bestätigung wartet der Worker selbstständig auf die passende M1-Kerze und sendet dann zum aktuellen Brokerkurs. Kein weiterer Klick und keine Bindung an den Vorbereitungskurs. Konto, SL/TP und Mindestlotgröße werden beim Entry erneut geprüft.</p>
       <p>Suchende bis {{new Date(preview.intent.expires_sec*1000).toLocaleString('de-DE',{timeZone:'Europe/Berlin'})}} (Berlin). Nach einem ausgeführten Trade ist dieser Auftrag beendet.</p>
