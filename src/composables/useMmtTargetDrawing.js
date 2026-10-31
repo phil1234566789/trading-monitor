@@ -1,6 +1,6 @@
 import {shallowRef,watchEffect,onScopeDispose} from 'vue';
 import {LiquidityLinePrimitive} from '../liquidity.js';
-import {targetDraftLines,moveTargetDraft} from '../mmtTargetDrafts.js';
+import {targetDraftLines,moveTargetDraft,selectTargetDraft} from '../mmtTargetDrafts.js';
 import {barSecondsFor} from '../timeframes.js';
 import {cssColor} from '../chartColors.js';
 export function useMmtTargetDrawing(){
@@ -11,10 +11,10 @@ export function useMmtTargetDrawing(){
   const c=context.value;if(!series||!c)return;
   clear();const candles=c.candles;if(!candles.length)return;
   const last=candles[candles.length-1].time,bar=barSecondsFor(c.currentBar);
-  for(const line of targetDraftLines(c.symbol)){
+  for(const line of targetDraftLines(c.symbol).sort((a,b)=>Number(a.selected)-Number(b.selected))){
    const risk=Math.abs(line.entryPrice-line.initialSl),rr=risk>0?(line.direction==='long'?line.price-line.entryPrice:line.entryPrice-line.price)/risk:null;
    const primitive=new LiquidityLinePrimitive({price:line.price,pivotTime:line.entryTime??last,endTime:last+bar*12},
-    {color:cssColor('candleUp'),lineWidth:2,label:`${line.label} · ${line.price} · RR ${rr?.toFixed(2)??'—'} · ziehen`,labelSide:'end-above',lenientLabels:true,futureBarSeconds:bar},candles);
+    {color:cssColor('candleUp'),lineWidth:line.selected?3:2,label:`${line.label} · ${line.price} · RR ${rr?.toFixed(2)??'—'} · ziehen`,labelSide:'end-above',lenientLabels:true,futureBarSeconds:bar},candles);
    series.attachPrimitive(primitive);primitives.push({primitive,line});
   }
  });
@@ -22,8 +22,10 @@ export function useMmtTargetDrawing(){
  function down(event){
   if(event.button!==0||event.target.tagName!=='CANVAS')return;
   const p=point(event),hits=primitives.filter(x=>x.primitive.distanceTo(p.x,p.y)<=7);
-  if(hits.length!==1)return;
-  drag=hits[0].line;scrollOptions=chart.options().handleScroll;chart.applyOptions({handleScroll:false});
+  const selected=hits.filter(hit=>hit.line.selected);
+  const hit=selected.length===1?selected[0]:hits.length===1?hits[0]:null;
+  if(!hit)return;
+  drag=hit.line;selectTargetDraft(drag.orderId,drag.index);scrollOptions=chart.options().handleScroll;chart.applyOptions({handleScroll:false});
   event.preventDefault();event.stopPropagation();
  }
  function move(event){

@@ -2,7 +2,7 @@
 import {computed,ref,watch,onUnmounted} from 'vue';
 import {findOrderPosition} from '../milkyMetaTraderMonitoring.js';
 import {targetDraftAllocation,validateTargetAllocation} from '../../supabase/functions/trading-monitor-mcp/targetPlanContract.js';
-import {setTargetDraft,removeTargetDraft,useTargetDraft} from '../mmtTargetDrafts.js';
+import {setTargetDraft,removeTargetDraft,useTargetDraft,selectTargetDraft} from '../mmtTargetDrafts.js';
 import ActionButton from './ui/ActionButton.vue';
 const props=defineProps({order:{type:Object,required:true},api:{type:Function,required:true},snapshot:Object,online:Boolean,entryTime:Number});
 const emit=defineEmits(['saved']);
@@ -22,7 +22,7 @@ const messages={invalid_target_precision:'Zielpreis passt nicht zur Broker-Preis
 function initTargets(targets){
  setTargetDraft(props.order.id,{symbol:props.order.intent.symbol.split('.')[0],entryTime:props.entryTime??position.value?.opened_at_sec??null,digits:quote.value?.digits,
   entryPrice:props.order.result.price,initialSl:props.order.intent.stop_loss,direction:props.order.intent.direction,
-  targets,dirty:false});
+  targets,dirty:false,selectedIndex:null});
 }
 function update(index,key,value){
  const targets=draft.value.targets.map((t,i)=>i===index?{...t,[key]:value}:t);
@@ -30,10 +30,16 @@ function update(index,key,value){
 }
 function add(){
  if((draft.value?.targets.length??0)>=5)return;
- const targets=[...(draft.value?.targets??[]),{price:'',volume:''}];
+ const previous=draft.value?.targets??[],last=previous.findLast(t=>Number(t.price)>0);
+ const targets=[...previous,{price:last?.price??'',volume:''}];
  setTargetDraft(props.order.id,{...draft.value,targets,dirty:true});
+ selectTargetDraft(props.order.id,targets.length-1);
 }
-function remove(index){setTargetDraft(props.order.id,{...draft.value,targets:draft.value.targets.filter((_,i)=>i!==index),dirty:true});}
+function selectForDrag(index){selectTargetDraft(props.order.id,index);}
+function remove(index){
+ const selected=draft.value.selectedIndex;
+ setTargetDraft(props.order.id,{...draft.value,targets:draft.value.targets.filter((_,i)=>i!==index),dirty:true,selectedIndex:selected===index?null:selected>index?selected-1:selected});
+}
 async function refresh(){
  if(disposed||busy.value)return;
  const requested=generation;
@@ -75,12 +81,13 @@ onUnmounted(()=>{disposed=true;clearInterval(timer);removeTargetDraft(props.orde
     <label>Lot<input :value="target.volume" type="number" min="0" :step="quote?.volume_step??'any'" @input="update(index,'volume',$event.target.value);update(index,'percent',null)"></label>
     <label>% offen<input :value="target.percent??''" type="number" min="0" max="100" step="any" @input="update(index,'percent',$event.target.value===''?null:Number($event.target.value))"></label>
     <button :aria-label="`TP ${index+1} entfernen`" @click="remove(index)">×</button>
+    <button class="mmt-target-select" :aria-label="`TP ${index+1} im Chart ziehen`" :aria-pressed="draft.selectedIndex===index" :disabled="!Number(target.price)" @click="selectForDrag(index)">{{draft.selectedIndex===index?'Im Chart ausgewählt · Linie ziehen':'Im Chart ziehen'}}</button>
     <small>Ausführbar {{allocation.targets[index]?.volume??'—'}} Lot · RR {{validation.value?.targets.find(t=>t.price===Number(target.price))?.rr.toFixed(2)??'—'}}</small>
    </div>
    <ActionButton :disabled="busy||(draft?.targets.length??0)>=5" @click="add">+ Teilziel</ActionButton>
    <p>Rest {{allocation.remainder??'—'}} Lot · Mindestlot {{quote?.minimum_volume??'—'}} · Schritt {{quote?.volume_step??'—'}}. Prozentmengen werden abgerundet; der Rest bleibt sichtbar.</p>
    <p v-if="validation.error" role="status">{{messages[validation.error]??validation.error}}</p>
-   <p v-if="draft?.dirty">Entwurf: Ziehen und Eingaben ändern noch keinen Broker-TP.</p>
+   <p v-if="draft?.dirty">Menge pro Teilziel frei angeben. Entwurf: Ziehen und Eingaben ändern noch keinen Broker-TP.</p>
    <ActionButton :disabled="busy||!ready||!!validation.error||!draft?.dirty||['sending','unknown'].includes(plan?.state)" @click="save">TP-Plan verbindlich speichern</ActionButton>
    <ActionButton :disabled="busy" @click="reset">Entwurf verwerfen</ActionButton>
   </template>
@@ -91,5 +98,6 @@ onUnmounted(()=>{disposed=true;clearInterval(timer);removeTargetDraft(props.orde
 .mmt-target-editor{border-top:1px solid #303746;padding-top:8px;font-size:11px}
 .mmt-target-row{display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:5px;align-items:end;margin:6px 0}
 label{display:flex;flex-direction:column;gap:3px;min-width:0}input{width:100%;min-width:0;background:#131722;color:#d1d4dc;border:1px solid #303746;border-radius:3px;padding:4px}
+.mmt-target-select{grid-column:1/-1;text-align:left;font-size:11px}
 small{grid-column:1/-1}button{cursor:pointer}
 </style>

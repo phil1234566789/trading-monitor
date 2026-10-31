@@ -24,6 +24,12 @@ describe('TP edits require Save',()=>{
   expect(state.allocation.remainder).toBe(.01);expect(state.validation.error).toBe('invalid_target_volume');await state.save();
   expect(api.mock.calls.map(x=>x[0])).toEqual(['target_state']);
  });
+ it('adds a directly draggable clone with a free quantity and never exceeds five drafts',async()=>{
+  const {state,api}=await mount();state.add();await nextTick();
+  expect(state.draft.targets[1]).toMatchObject({price:2010,volume:''});expect(state.draft.selectedIndex).toBe(1);
+  for(let n=0;n<10;n++)state.add();expect(state.draft.targets).toHaveLength(5);
+  expect(api).toHaveBeenCalledTimes(1);
+ });
  it('discard restores broker targets without sending',async()=>{
   const {state,api}=await mount();moveTargetDraft(order.id,0,2050);state.reset();await nextTick();
   expect(state.draft.targets[0].price).toBe(2010);expect(state.draft.dirty).toBe(false);expect(api).toHaveBeenCalledTimes(1);
