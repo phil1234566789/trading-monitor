@@ -1,4 +1,5 @@
 <script setup>
+import SimulationRunDerivation from './SimulationRunDerivation.vue';
 import { computed } from 'vue';
 import { formatDatedTime } from '../berlinTime.js';
 import { simulationRunStatusLabel } from '../tradeSetupSimulationStatistics.js';
@@ -22,6 +23,7 @@ const h1Start = computed(() => {
 <template>
   <section class="run-status" aria-label="Lauf neu">
     <p>{{ simulationRunInputsLabel(run) }}</p>
+    <SimulationRunDerivation :run="run" />
     <p v-if="run.status === 'running'" role="status" class="progress-label">
       {{ phaseLabels[progress.phase] ?? 'Auswertung läuft' }}<template v-if="progress.instrument"> · {{ progress.instrument }}</template>
       <template v-if="measurableProgress"> · {{ progress.completed }} / {{ progress.total }} {{ progress.phase === 'download' ? 'Instrumente' : 'Schritte' }}</template>

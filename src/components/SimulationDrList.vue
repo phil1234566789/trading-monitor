@@ -1,4 +1,5 @@
 <script setup>
+import SimulationRunDerivation from './SimulationRunDerivation.vue';
 import LiveEvidenceReviews from './LiveEvidenceReviews.vue';
 import LiveEvidenceProvenance from './LiveEvidenceProvenance.vue';
 import SimulationPinFlag from './SimulationPinFlag.vue';
@@ -10,7 +11,7 @@ import { SETUP_TYPE_LABELS,groupResults,variantMetrics } from '../simulationRunC
 import { fmtR,pnlClass } from '../format.js';
 import SimulationFeatureChips from './SimulationFeatureChips.vue';
 import SimulationEntryTable from './SimulationEntryTable.vue';
-const props=defineProps({groups:Array,results:Array,pinCount:{type:Number,default:0},isPinned:{type:Function,default:()=>false},pinNote:{type:Function,default:()=>undefined}});
+const props=defineProps({run:Object,groups:Array,results:Array,pinCount:{type:Number,default:0},isPinned:{type:Function,default:()=>false},pinNote:{type:Function,default:()=>undefined}});
 const emit=defineEmits(['pin-menu','show-pins']);
 const limit=ref(25);watch(()=>props.groups,()=>{limit.value=25;});
 const summary=(g,v)=>variantMetrics(groupResults([g],props.results),v).totalR;
@@ -25,6 +26,7 @@ const summary=(g,v)=>variantMetrics(groupResults([g],props.results),v).totalR;
         <RouterLink :to="simulationChartLink({...group.snapshot,drReplayTime:group.outcome.replayTime,variant:'both'},group.snapshot.runId)" target="_blank" rel="noopener noreferrer">Im Chart</RouterLink>
         <button type="button" class="more" :aria-label="`Pin-Menü für ${group.instrument} DR ${formatDatedTime(group.recognizedAt)}`" @click="emit('pin-menu',{kind:'simulation_dr',group},$event)">…</button>
       </header>
+      <SimulationRunDerivation :run="run" :setup-key="group.snapshot.setupKey" />
       <LiveEvidenceProvenance :snapshot="group.latestCandidate ?? group.snapshot" />
       <SimulationFeatureChips :features="group.features" :is-pinned="f=>isPinned(group,f)" :pin-note="f=>pinNote(group,f)" @pin-menu="(feature,event)=>emit('pin-menu',{kind:'simulation_checkpoint',group,feature},event)" />
       <LiveEvidenceReviews :snapshots="[group.snapshot,group.latestCandidate,...group.entries]" :is-pinned="isPinned" :pin-note="pinNote" @pin-menu="(target,event)=>emit('pin-menu',target,event)" />

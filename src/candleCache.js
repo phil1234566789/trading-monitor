@@ -72,8 +72,8 @@ const DB_NAME = "trading-monitor-candles";
 // Alte, aus getrennten Ladefenstern zusammengesetzte Bestände können ganze Monate auslassen.
 // Gold-Testfenster und Wochenend-Platzhalter dürfen nicht im vollständigen Archivcache weiterleben.
 // v14 behält v13-Kerzen; ohne Abrufintervalle gelten alte Vollständigkeitsclaims nicht mehr.
-// v15 entfernt nach dem gesicherten EURUSD-Pilot-Reset nur dessen alte FXCM-Kerzen.
-const DB_VERSION = 15;
+// v16 verwirft nur EURUSD-Pilot-Caches, damit das wiederhergestellte FXCM-Archiv neu geladen wird.
+const DB_VERSION = 16;
 const STORE_NAME = "candles";
 
 // Rein defensiv, KEINE reguläre Obergrenze (siehe oben) — 500k Kerzen sind selbst auf M1 fast ein
