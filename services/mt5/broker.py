@@ -203,7 +203,7 @@ class Broker:
         if result is None:
             return dict(status='unknown', reason='no_broker_result')
         fields = dict(retcode=result.retcode, order=result.order, deal=result.deal,
-                      volume=result.volume, price=result.price, magic=request['magic'])
+                      volume=result.volume, price=result.price, magic=request['magic'],initial_sl=request['sl'])
         if result.retcode in (self.api.TRADE_RETCODE_DONE, self.api.TRADE_RETCODE_DONE_PARTIAL):
             return dict(status='executed', partial=result.retcode == self.api.TRADE_RETCODE_DONE_PARTIAL, **fields)
         # Timeout/Verbindungsabbruch/PLACED sind keine sichere Ablehnung und dürfen nie einen Retry auslösen.

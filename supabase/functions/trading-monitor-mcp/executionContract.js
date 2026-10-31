@@ -96,11 +96,12 @@ export function validateWorkerSnapshot(value, config) {
 }
 
 export function validateExecutionResult(result,intent) {
-  fields(result,['status','reason','retcode','order','deal','position','volume','price','magic','partial','confirmation_source']);
+  fields(result,['status','reason','retcode','order','deal','position','volume','price','magic','partial','confirmation_source','initial_sl']);
   if(!['executed','rejected','unknown'].includes(result.status)
     ||result.reason!=null&&(typeof result.reason!=='string'||result.reason.length>100))throw new Error('invalid_result');
   for(const key of ['retcode','order','deal','position','volume','price','magic'])
     if(result[key]!=null&&!finite(result[key]))throw new Error('invalid_result');
+  if(result.initial_sl!=null&&!positive(result.initial_sl))throw new Error('invalid_execution_result');
   if(result.partial!=null&&typeof result.partial!=='boolean')throw new Error('invalid_result');
   if(result.confirmation_source!=null&&!['deal_history','position_snapshot','broker_reply'].includes(result.confirmation_source))throw new Error('invalid_result');
   const confirmed=positive(result.deal)||(positive(result.position)&&result.position===result.order
