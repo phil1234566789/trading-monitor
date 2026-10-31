@@ -13,7 +13,7 @@ it('renders all four accounts without activation controls and marks unknown data
   status:{account_balances:[{account_id:'1',balance:55000,equity:45000,currency:'USD',loss_floor:47000,target:54000,
    balance_at:'2026-10-30T12:00:00Z',balance_source:'Brokerportal',limits_at:'2026-10-30T12:00:00Z',limits_source:'IQ Capital'}]}}));
  expect(html.match(/<article/g)).toHaveLength(4);
- expect(html).toContain('Handelskonto ausgewählt');
+ expect(html).toContain('Aktives Handelskonto');
  expect(html).toContain('Balance $55000.00');
  expect(html).toContain('Equity $45000.00');
  expect(html.match(/<svg/g)).toHaveLength(4);

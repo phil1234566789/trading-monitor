@@ -1,5 +1,10 @@
 import { HTTP_BACKGROUND } from './composables/useHttpActivity.js';
 const messages={
+  active_orders_block_account_switch:'Kontowechsel gesperrt: Es gibt laufende Suchen, Sendungen oder einen unklaren Versand. Bestehende Aufträge bleiben an ihr Konto gebunden.',
+  active_positions_block_account_switch:'Kontowechsel gesperrt: Es gibt offene oder noch nicht abschließend abgeglichene Positionen/Brokeraufträge. Die Schutzüberwachung bleibt auf dem bisherigen Konto.',
+  account_state_unavailable:'Kontowechsel gesperrt: Ein frischer, fehlerfreier Brokerstand des bisherigen Kontos fehlt. Erst den bisherigen Worker verbinden und den Brokerstand prüfen.',
+  archived_account:'Das archivierte Handelskonto kann nicht ausgewählt werden.',
+  account_not_found:'Das Handelskonto wurde nicht gefunden. Kontenliste aktualisieren.',
   bridge_offline:'MT5-Worker ist offline.',
   bridge_not_ready:'Worker ist nicht handelsbereit oder es bestehen bereits Positionen/Aufträge.',
   quote_stale:'Brokerkurs ist veraltet. Bitte neue Vorschau anfordern.',

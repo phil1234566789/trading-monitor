@@ -3,9 +3,11 @@ export function mmtPollDelay(status) {
     ||status?.orders?.some(order=>['searching','sending','unknown'].includes(order.status))?1000:8000;
 }
 export function mmtStaleSeconds(delay) { return delay===1000?5:15; }
+// Ein Chat-Wechsel muss auch in einer bereits geöffneten MMT-Seite sichtbar werden.
+export const mmtSelectedAccountId=(status,previous)=>Object.hasOwn(status,'active_account_id')?status.active_account_id:previous;
 export function mmtConnectionStatus({unlocked,active,status,snapshot,age,error,delay}) {
   if(!unlocked)return {label:'MMT gesperrt',state:''};
-  if(!active)return {label:'Kein Testkonto',state:''};
+  if(!active)return {label:'Kein Handelskonto',state:''};
   if(error)return {label:'Verbindung gestört',state:'dead'};
   if(snapshot?.worker_error)return {label:'Worker gestört',state:'dead'};
   if(!status)return {label:'Verbinde …',state:''};

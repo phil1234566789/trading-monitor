@@ -2,21 +2,13 @@ import {z} from 'npm:zod@3.24.1';
 import type {McpServer} from 'npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js';
 import {json} from '../jsonResponse.ts';
 import {readHistoryPage} from '../mt5History.ts';
-import {checked,mt5Database} from '../mt5Credentials.ts';
+import {readMt5TradingAccounts} from '../mt5AccountManagement.ts';
 import {journalInput,mt5JournalAction} from '../mt5Journal.ts';
-async function readAccounts(){
- const db=mt5Database(),rows=[];let after='00000000-0000-0000-0000-000000000000';
- while(true){
-  const page:any[]=checked(await db.from('mt5_accounts').select('id,name,login,server,mode,archived').gt('id',after).order('id').limit(500))??[];
-  if(!page.length)return rows;
-  rows.push(...page);after=page[page.length-1].id;
- }
-}
 export function registerMt5JournalTools(server:McpServer){
  server.registerTool('get_mt5_broker_history',{
   description:'Private native Broker-Deals/Kosten und Historienvollständigkeit. Nur lesen, kein Kontowechsel oder Handel. 500er Keyset: mit next_cursor als after_id weiter bis rows leer; nie eine kurze Seite als Ende behandeln. Erste Seite enthält sichere Kontometadaten. SL/TP sind in Deals nicht belegt. Keine automatische Zuordnung nach Zeit/Symbol; exakte Position auswählen und bei Mehrdeutigkeit Philip fragen.',
   inputSchema:{after_id:z.number().int().nonnegative().safe().default(0)},annotations:{readOnlyHint:true}
- },async(input:any)=>json({...await readHistoryPage(input),...(input.after_id===0?{accounts:await readAccounts()}:{})}));
+ },async(input:any)=>json({...await readHistoryPage(input),...(input.after_id===0?{accounts:await readMt5TradingAccounts()}:{})}));
  const descriptions={
   journal_positions:'Private importierte Journalpositionen mit DR. instrument auch XAUUSD; after_id Keyset bis leere Seite. Bestehendes get_journal liefert weiterhin öffentliche manuelle Einträge.',
   journal_position_update:'Private Journalposition korrigieren. Nur tatsächlich übergebene Felder ändern. Native Broker-Deals bleiben unverändert. Kein Brokerhandel. Keine Werte erfinden.',

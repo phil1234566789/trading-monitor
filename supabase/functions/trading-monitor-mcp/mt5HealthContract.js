@@ -16,7 +16,7 @@ export function assessMt5Health({selected,bridge,orders},now=Date.now()) {
 export function healthMessage(incident) {
   const time=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',dateStyle:'short',timeStyle:'medium'}).format(new Date(incident.opened_at));
   const descriptions={worker_offline:'Der MT5-Worker liefert keinen aktuellen Heartbeat.',
-    account_mismatch:'Worker und ausgewaehltes Testkonto stimmen nicht ueberein.',
+    account_mismatch:'Worker und aktives Handelskonto stimmen nicht ueberein.',
     execution_paused:'Eine Entry-Suche wartet, aber der Worker ist nicht zur Ausfuehrung bereit.',
     send_outcome_unknown:'Der Orderausgang ist unklar. Brokerpositionen pruefen; nichts erneut senden.'};
   const reason=descriptions[incident.code]??`Ausfuehrungsfehler: ${incident.code}${incident.detail?.stage?' in '+incident.detail.stage:''}.`;

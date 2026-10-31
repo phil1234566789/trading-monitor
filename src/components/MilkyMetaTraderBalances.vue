@@ -25,7 +25,7 @@ const money=(value,currency)=>value==null?'unbekannt':fmtMoney(value,currency);
   <article v-for="row in rows" :key="row.account.id" class="mmt-balance-card" :data-selected="row.account.id===activeId" :aria-label="row.account.name+' · '+row.account.login">
    <div class="mmt-balance-heading">
     <strong>{{row.account.name}}</strong>
-    <div><small class="mmt-muted">{{row.account.login}}</small> <small v-if="row.account.id===activeId" class="mmt-selected">Handelskonto ausgewählt</small><small v-else class="mmt-muted">Nicht ausgewählt</small></div>
+    <div><small class="mmt-muted">{{row.account.login}}</small> <small v-if="row.account.id===activeId" class="mmt-selected">Aktives Handelskonto</small><small v-else class="mmt-muted">Nicht ausgewählt</small></div>
    </div>
    <div class="mmt-balance-gauge" role="img" :aria-label="'Balance '+money(row.balance,row.currency)+', Verlustgrenze '+money(row.loss_floor,row.currency)+', Ziel '+money(row.target,row.currency)">
     <svg viewBox="0 0 220 122" aria-hidden="true">

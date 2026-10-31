@@ -88,6 +88,16 @@ Anders als `post_chart_annotations` sind diese Tools NICHT allow-gelistet — ei
 Chart-Zeichnung ist kosmetisch, ein falscher Journal-Eintrag verfälscht die Trade-Historie, also
 weiter Bestätigung abfragen, außer Philip sagt explizit was anderes.
 
+## Private MMT-Handelskonten
+
+`list_mt5_trading_accounts` liest sichere Kontometadaten und das aktive Konto ohne
+Credentials. `select_mt5_trading_account(account_id)` wählt ausschließlich nach konkretem
+menschlichem Wechselauftrag genau ein Handelskonto; `null` wählt ab. Keine Order und keine
+Vervielfachung oder Umleitung bestehender Suchen. UI und MCP teilen den atomaren Auswahlpfad.
+Wechsel-Sperren und Worker-Neustart: [Aktives Handelskonto wechseln](milky-meta-trader.md#aktives-handelskonto-wechseln).
+Tests ohne echte Kontowechsel: `node --test test/mt5AccountSelection.integration.mjs` sowie
+`deno test --config supabase/functions/trading-monitor-mcp/deno.json --allow-env test/mt5AccountTools.deno.ts`.
+
 ## Privates MMT-Journal
 
 `get_mt5_broker_history` liest native Deals samt Profit, Commission, Swap, Gebühren,
