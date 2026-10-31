@@ -2,6 +2,8 @@
 import time
 
 from core import positive, validate_intent, volume_for_risk
+from risk import risk_budget, risk_volume
+from risk_snapshot import native_position, native_daily_risk
 from reconciliation import reconcile_fill, position_lifecycle
 
 # Symbol-Bitflags aus MQL5 fehlen im Python-SDK; ORDER_FILLING_* sind andere Werte.
@@ -12,6 +14,7 @@ SYMBOL_FILLING_IOC = 2
 class Broker:
     def __init__(self, api, login, server, allow_live=False, server_time_offset_seconds=0):
         self.api, self.login, self.server, self.allow_live = api, login, server, allow_live
+        self.risk_context=None
         if type(server_time_offset_seconds) is not int or abs(server_time_offset_seconds)>14*3600 or server_time_offset_seconds%900:
             raise ValueError('invalid_server_time_offset')
         self.server_time_offset_seconds=server_time_offset_seconds
@@ -59,6 +62,7 @@ class Broker:
                 continue
             result.append(dict(symbol=symbol.name,bid=tick.bid,ask=tick.ask,time=received,
                                point=info.point,digits=info.digits,minimum_volume=info.volume_min,
+                               volume_step=info.volume_step,maximum_volume=info.volume_max,stops_level=info.trade_stops_level*info.point,
                                loss_per_unit_long=-long_loss/info.point,loss_per_unit_short=-short_loss/info.point))
         return result
 
@@ -67,14 +71,17 @@ class Broker:
         positions, orders = self.api.positions_get(), self.api.orders_get()
         if positions is None or orders is None:
             raise ValueError('exposure_unknown')
-        return dict(account_login=a.login, account_server=a.server,
+        value=dict(account_login=a.login, account_server=a.server,
                     mode='demo' if a.trade_mode == self.api.ACCOUNT_TRADE_MODE_DEMO else 'live',
                     balance=a.balance, equity=a.equity, currency=a.currency,
                     trade_allowed=bool(a.trade_allowed and a.trade_expert and t.trade_allowed and not t.tradeapi_disabled),
-                    positions=[dict(ticket=p.ticket, symbol=p.symbol, volume=p.volume, type=p.type,
-                                    sl=p.sl, tp=p.tp, profit=p.profit, magic=p.magic,
-                                    price_open=p.price_open, price_current=p.price_current) for p in positions],
-                    pending_orders=len(orders))
+                    positions=[native_position(self.api,p,self.server_time_offset_seconds) for p in positions],
+                    pending_orders=len(orders),hedging=getattr(a,'margin_mode',None)==getattr(self.api,'ACCOUNT_MARGIN_MODE_RETAIL_HEDGING',object()),
+                    risk_guards_ready=self.risk_context is not None and self.risk_context.get('daily_stop_ready') is True)
+        try:value['risk']=native_daily_risk(self.api,positions,self.risk_context,self.server_time_offset_seconds)
+        except ValueError:value['risk_error']='risk_history_unavailable'
+        self.account()
+        return value
 
     def closed_m1(self, symbol):
         if not self.api.symbol_select(symbol, True):
@@ -83,6 +90,18 @@ class Broker:
         if rates is None or len(rates) != 1:
             return None
         return dict(time=int(rates[0]['time'])-self.server_time_offset_seconds, open=float(rates[0]['open']),close=float(rates[0]['close']))
+
+    def guard_snapshot(self):
+        context=self.risk_context
+        if (not context or not positive(context.get('checked_at_sec')) or not -1<=time.time()-context['checked_at_sec']<=5
+            or context.get('daily_stop_ready') is not True or context.get('latched') is not False):
+            raise ValueError('risk_guard_unavailable')
+        snapshot=self.snapshot()
+        r=snapshot.get('risk')
+        if (not r or r.get('latched') is not False or r['realized_net_day']+r['open_loss']<=-1000
+            or snapshot.get('hedging') is not True or snapshot.get('currency')!='USD'):
+            raise ValueError('risk_guard_unavailable')
+        return snapshot
 
     def prepare(self, intent):
         validate_intent(intent, self.allow_live)
@@ -95,8 +114,9 @@ class Broker:
         positions, orders = self.api.positions_get(), self.api.orders_get()
         if positions is None or orders is None:
             raise ValueError('exposure_unknown')
-        if positions or orders:
+        if orders or (positions and not intent.get('risk_mode')):
             raise ValueError('existing_exposure')
+        snapshot=self.guard_snapshot()
         symbol = intent['symbol']
         info = self.api.symbol_info(symbol)
         if info is None:
@@ -123,7 +143,18 @@ class Broker:
         if intent['trigger']=='market_confirmed':
             if abs(price-intent['reference_price'])>5*info.point:
                 raise ValueError('preview_price_changed')
-        if intent['trigger'] in ('market_confirmed','m1_directional_close'):
+        if intent.get('risk_mode'):
+            context=self.risk_context
+            if not context or context.get('latched') is not False:raise ValueError('risk_guard_unavailable')
+            policy=context.get('policy')
+            if not policy or policy.get('revision')!=intent.get('risk_policy_revision'):raise ValueError('risk_limits_unconfirmed')
+            budget=risk_budget(intent['risk_mode'],symbol,snapshot,policy,time.time())
+            # Die bestätigte Geldobergrenze wird bei engeren Restbudgets nur verkleinert.
+            amount=min(intent['risk_amount'],budget['available'])
+            lots=risk_volume(amount,-profit,info.volume_min,info.volume_max,info.volume_step)
+            actual=self.api.order_calc_profit(side,symbol,lots,price,sl)
+            if actual is None or not positive(-actual) or -actual>amount+1e-7:raise ValueError('risk_sizing_unavailable')
+        elif intent['trigger'] in ('market_confirmed','m1_directional_close'):
             # Mindestlot-Test: Der Verlust ist eine Schätzung, kein vom Nutzer beauftragtes Geldlimit.
             if intent['volume']!=info.volume_min or intent['volume']>.01:
                 raise ValueError('invalid_minimum_volume')
@@ -165,6 +196,7 @@ class Broker:
     def send(self, intent, request):
         # Nach der Cloud-Freigabe nicht auf Basis einer inzwischen gewechselten Kontositzung senden.
         self.account(intent['mode'])
+        self.guard_snapshot()
         if time.time() >= intent['expires_sec']:
             return dict(status='rejected', reason='expired_before_send')
         result = self.api.order_send(request)

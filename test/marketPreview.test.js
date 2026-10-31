@@ -71,3 +71,16 @@ for (const direction of ['short','long']) {
       expect(()=>buildEntrySearchPreview({...order,take_profit:null,stop_loss},snapshot,config,now,id)).toThrow();
   });
 }
+
+describe('explicit protected dynamic entry sizing',()=>{
+ it('signs risk mode and policy revision and keeps price unbound',()=>{
+  const policy={revision:id,day:'2027-01-15',confirmed_balance:50000,confirmed_equity:50000,risk_base:50000,cost_buffer:10,currency:'USD',drawdown_floor:47000,valid_until_sec:now+1000};
+  const dynamic={...snapshot,balance:50000,equity:50000,hedging:true,risk_guards_ready:true,risk:{day:policy.day,time:now,realized_net_day:0,open_loss:0,latched:false},
+   quotes:snapshot.quotes.map(q=>({...q,maximum_volume:100,volume_step:.01,stops_level:.00001}))};
+  const p=buildEntrySearchPreview({...input,duration_sec:1800,risk_mode:'risky'},dynamic,{...config,riskPolicy:policy},now,id);
+  expect(p.intent.risk_mode).toBe('risky');expect(p.intent.risk_policy_revision).toBe(id);
+  expect(p.intent.risk_amount).toBe(240);expect(p.volume).toBe(2.4);
+  expect(p.intent.reference_price).toBeUndefined();expect(p.intent.trigger_price).toBeNull();
+  expect(()=>buildEntrySearchPreview({...input,duration_sec:1800,risk_mode:'full'},dynamic,config,now,id)).toThrow('risk_limits_unconfirmed');
+ });
+});

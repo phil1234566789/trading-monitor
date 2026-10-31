@@ -1,4 +1,5 @@
 import {readExecutionOrders} from './mt5OrderRead.js';
+import {readRiskPolicy} from './mt5Risk.ts';
 import {scheduleMt5Health,getMt5Health} from './mt5Health.ts';
 
 import { isExecutionId, isSameExecutionResult, validateExecutionResult, validatePositionLifecycle, validateWorkerFault, validateDispatchAccount, validateExecutionIntent, validateWorkerSnapshot } from './executionContract.js';
@@ -8,8 +9,8 @@ export async function executionConfig() {
   if (Deno.env.get('MT5_EXECUTION_ENABLED') !== 'true') {
     throw new Error('mt5_not_configured');
   }
-  const {login,server,mode} = await activeMt5Account();
-  return { login:Number(login), server, mode, allowLive: Deno.env.get('MT5_ALLOW_LIVE') === 'true' };
+  const account=await activeMt5Account(),{login,server,mode}=account;
+  return { riskPolicy:await readRiskPolicy(account.id),login:Number(login), server, mode, allowLive: Deno.env.get('MT5_ALLOW_LIVE') === 'true' };
 }
 
 function validId(id: string) {
@@ -25,8 +26,10 @@ export async function getExecutionStatus(id?: string) {
   const bridge = checked(await db.from('mt5_bridge_state').select('*').eq('id','primary').maybeSingle());
   // Erledigte Historie bleibt begrenzt; laufende Suchen dürfen durch neue Aufträge nie verschwinden.
   const orders=await readExecutionOrders(db);
+  const settings=checked(await db.from('mt5_execution_settings').select('active_account_id').eq('id','primary').single());
+  const risk_policy=settings?.active_account_id?await readRiskPolicy(settings.active_account_id):null;
   const online = bridge && Date.now() - Date.parse(bridge.heartbeat_at) <= 15_000;
-  return { bridge, online: !!online, health:await getMt5Health(), orders, execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',
+  return { risk_policy,bridge, online: !!online, health:await getMt5Health(), orders, execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',
     server_live_allowed:Deno.env.get('MT5_ALLOW_LIVE')==='true',
     limits: { maxLots:.01, maxDurationSec:3600 } };
 }
@@ -95,7 +98,7 @@ export async function workerAction(body: Record<string, any>) {
     const row=checked(await db.from('mt5_execution_orders').select('*').eq('id',body.id).single());
     if(!row||row.status!=='executed')throw new Error('invalid_position_order');
     validateDispatchAccount(row.intent,{...config,allowLive:true});
-    const lifecycle=validatePositionLifecycle(body.lifecycle);
+    const lifecycle=validatePositionLifecycle(body.lifecycle,row.intent);
     if(lifecycle.position!==(row.result?.position??row.result?.order))throw new Error('account_mismatch');
     if(lifecycle.state==='closed'&&Math.abs(lifecycle.closed_volume-row.result.volume)>1e-8)throw new Error('invalid_lifecycle');
     if(row.result?.position_lifecycle?.state==='closed')return {recorded:true};
@@ -119,7 +122,8 @@ export async function workerAction(body: Record<string, any>) {
     return {recorded:!!rows?.length};
   }
   if (body.action === 'result') {
-    const result=validateExecutionResult(body.result);
+    const row=checked(await db.from('mt5_execution_orders').select('intent').eq('id',body.id).single());
+    const result=validateExecutionResult(body.result,row?.intent);
     const rows = checked(await db.from('mt5_execution_orders').update({ status:result.status,result,updated_at:now })
       .eq('id',body.id).in('status',['sending','unknown']).select('id'));
     if(rows?.length===1) {

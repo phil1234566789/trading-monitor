@@ -36,7 +36,12 @@ def validate_intent(value, allow_live=False):
     trigger = value.get('trigger')
     if trigger not in ('m1_directional_close', 'market_confirmed', 'm1_close_above', 'm1_close_below', 'test_next_m1_close'):
         raise ValueError('unknown_trigger')
-    if trigger == 'm1_directional_close' and (not positive(value.get('volume')) or value['volume']>.01):
+    dynamic=value.get('risk_mode') is not None
+    if dynamic:
+        if value.get('risk_mode') not in ('risky','full') or trigger!='m1_directional_close':raise ValueError('invalid_risk_mode')
+        try:uuid.UUID(value['risk_policy_revision'])
+        except (KeyError,ValueError,TypeError,AttributeError):raise ValueError('invalid_risk_policy') from None
+    if trigger == 'm1_directional_close' and (not positive(value.get('volume')) or (not dynamic and value['volume']>.01)):
         raise ValueError('invalid_search_volume')
     if trigger == 'market_confirmed':
         if (not positive(value.get('reference_price')) or not positive(value.get('volume'))

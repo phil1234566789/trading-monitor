@@ -3,13 +3,20 @@ import unittest
 from types import SimpleNamespace as NS
 from unittest.mock import Mock, patch
 
-from broker import Broker
+from broker import Broker as NativeBroker
+
+def Broker(*args,**kwargs):
+    broker=NativeBroker(*args,**kwargs);now=int(time.time())
+    broker.risk_context=dict(day="2026-10-31",day_start_sec=now-100,day_end_sec=now+1000,checked_at_sec=now,latched=False,daily_stop_ready=True,policy=None)
+    return broker
 from test_core import intent
 
 
 def api():
     m = Mock()
     m.ACCOUNT_TRADE_MODE_DEMO = 0
+    m.ACCOUNT_MARGIN_MODE_RETAIL_HEDGING=2
+    m.history_deals_get.return_value=[]
     m.ORDER_TYPE_BUY, m.ORDER_TYPE_SELL = 0, 1
     m.TRADE_ACTION_DEAL, m.ORDER_TIME_GTC, m.ORDER_FILLING_FOK = 1, 0, 0
     m.ORDER_FILLING_IOC = 1
@@ -17,7 +24,7 @@ def api():
     del m.SYMBOL_FILLING_FOK
     del m.SYMBOL_FILLING_IOC
     m.account_info.return_value = NS(login=42, server='Demo', trade_mode=0, trade_allowed=True,
-                                      trade_expert=True, balance=50000, equity=50000, currency='USD')
+                                      trade_expert=True, margin_mode=2,balance=50000, equity=50000, currency='USD')
     m.terminal_info.return_value = NS(connected=True, tradeapi_disabled=False, trade_allowed=True)
     m.positions_get.return_value, m.orders_get.return_value = (), ()
     m.symbol_info.return_value = NS(visible=True, digits=5, point=.00001, trade_stops_level=10,
