@@ -48,7 +48,8 @@ describe('T68 causal closed-minute alarm stages',()=>{
  it('Alarm3 contains actual clamped wide stop and independent narrow sizing',()=>{
   const entry={id:'executable',instrument:'GBPUSD',direction:'short',entryPattern:ENTRY_PATTERN_1_VERSION,recognizedAt:at,price:1.32411,
     stops:{wide:{price:1.325},narrow:{price:1.32454}}};
-  const event=alarms(conditions({bosAt:at-60,pivotAt:at-60}),at,{entry})[0];
+  entry.conditions={...conditions({bosAt:at-60,pivotAt:at-60,retestAt:at-60}),fvg:{direction:'short',recognizedAt:at}};
+  const event=alarms(entry.conditions,at,{entry})[0];
   expect(event.stage).toBe(3);
   expect(event.payload.variants.map(v=>v.variant)).toEqual(['wide','narrow']);
   expect(event.payload.variants[0].stopPrice).toBeCloseTo(1.32471,8);

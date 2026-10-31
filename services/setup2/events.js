@@ -1,4 +1,4 @@
-import { entryPattern1StructureCategory, entryPattern1CategoryMetadata, ENTRY_PATTERN_1_VERSION } from '../../src/entryPattern1Conditions.js';
+import { entryPattern1StructureCategory, entryPattern1CategoryMetadata, entryPattern1ConditionsReady, ENTRY_PATTERN_1_VERSION } from '../../src/entryPattern1Conditions.js';
 import { entryCategoryLabel } from '../../src/entryCategory.js';
 import { evaluateTradingHours } from '../../src/tradeSetupChecklistTime.js';
 import { sizeSimulation } from '../../src/tradeSetupSimulation.js';
@@ -13,9 +13,9 @@ export function rememberStructure(minute,structures) {
  return structures.get(context.setupKey);
 }
 export function minuteAlarmEvents({context,check,knownAt,snapshot,structureFirstKnownAt},tradingWindows) {
- const {instrument,direction,setupKey}=context,conditions=check.conditions;
+ const {instrument,direction,setupKey}=context,conditions=check.conditions,version=check.entryPattern ?? ENTRY_PATTERN_1_VERSION;
  if(evaluateTradingHours({instrument,evaluatedAt:knownAt,tradingWindows}).status!=='passed')return [];
- const category=entryPattern1StructureCategory(conditions,direction,knownAt,check.entryPattern ?? ENTRY_PATTERN_1_VERSION);
+ const category=entryPattern1StructureCategory(conditions,direction,knownAt,version);
  const ready=category!==null,events=[];
  const categoryData=entryPattern1CategoryMetadata(category);
  const label=entryCategoryLabel(categoryData);
@@ -28,10 +28,11 @@ export function minuteAlarmEvents({context,check,knownAt,snapshot,structureFirst
   // Ein früherer Retest wird bei späterem Strukturbruch ausdrücklich nicht nachgemeldet.
   if(retest?.recognizedAt===knownAt && retest.recognizedAt>at
    && retest.orderBlock?.dir===(direction==='short'?-1:1)
-   && structureReady(conditions,direction,retest.recognizedAt,check.entryPattern ?? ENTRY_PATTERN_1_VERSION))
+   && structureReady(conditions,direction,retest.recognizedAt,version))
    events.push(event(2,retest.orderBlock.startTime,knownAt,{message:`${label} · Neuer gültiger OB-Retest nach Strukturfreigabe · Vorwarnung`,...categoryData,conditions}));
  }
- if(snapshot?.entry){
+ if(snapshot?.entry && ready && snapshot.entry.direction===direction && snapshot.entry.recognizedAt===knownAt
+  && entryPattern1ConditionsReady(snapshot.entry.conditions,direction,knownAt,version)){
   const entry=snapshot.entry;
   const variants=['wide','narrow'].map(variant=>({variant,...sizeSimulation(entry,variant)}))
    .filter(v=>v.status==='ready');

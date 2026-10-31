@@ -1,6 +1,6 @@
 import { entryPattern1M5BosMatches } from './entryPattern1M5Bos.js';
 import {entryPatternVersion} from './entryPattern.js';
-import { usesM5BosEntryPattern1, entryPattern1ConditionsReady, isEntryPattern1, usesCountertrendM5BosEntryPattern1, usesOptionalM5BosEntryPattern1, entryPattern1StructureCategory, entryPattern1CategoryMetadata } from './entryPattern1Conditions.js';
+import { usesM5BosEntryPattern1, entryPattern1ConditionsReady, isEntryPattern1, usesCountertrendM5BosEntryPattern1, usesEntryPattern1Categories, entryPattern1StructureCategory, entryPattern1CategoryMetadata } from './entryPattern1Conditions.js';
 
 export const ENTRY_SIZING_VERSION = 'dr-against-m5-trend-choch-v1';
 export const LEGACY_ENTRY_PATTERN_1_SIZING_VERSION = 'countertrend-m5-bos-full-size-v2';
@@ -16,7 +16,7 @@ export function entryAgainstM5Allowed(checklist, entry) {
 }
 
 export function entrySizingAt(checklist, entry) {
-  if (usesOptionalM5BosEntryPattern1(entryPatternVersion(entry))) {
+  if (usesEntryPattern1Categories(entryPatternVersion(entry))) {
     const category=checklist.evaluatedAt===entry.recognizedAt && entryAgainstM5Allowed(checklist,entry)
       ? entryPattern1StructureCategory(entry.conditions,entry.direction,entry.recognizedAt,entryPatternVersion(entry)) : null;
     const factor=entryPattern1CategoryMetadata(category)?.positionSizeFactor ?? null;

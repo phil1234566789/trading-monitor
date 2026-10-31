@@ -1,12 +1,13 @@
 import {entryPositionSizeFactor} from './entryCategory.js';
 import { entryPattern1M5BosMatches, entryPattern1CountertrendKnown } from './entryPattern1M5Bos.js';
 
-export const ENTRY_PATTERN_1_VERSION = 'countertrend-entry-model-1-v10';
-export const isEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v9','countertrend-entry-model-1-v8','countertrend-entry-model-1-v7','countertrend-entry-model-1-v6','countertrend-entry-model-1-v5', 'countertrend-entry-model-1-v4', 'countertrend-entry-model-1-v3', 'countertrend-entry-model-1-v2', 'countertrend-entry-model-1-v1'].includes(version);
-export const usesM5BosEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v9','countertrend-entry-model-1-v8','countertrend-entry-model-1-v7','countertrend-entry-model-1-v6','countertrend-entry-model-1-v5', 'countertrend-entry-model-1-v4','countertrend-entry-model-1-v3','countertrend-entry-model-1-v2'].includes(version);
-export const usesPivotBreakEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v9','countertrend-entry-model-1-v8','countertrend-entry-model-1-v7','countertrend-entry-model-1-v6','countertrend-entry-model-1-v5','countertrend-entry-model-1-v4'].includes(version);
+export const ENTRY_PATTERN_1_VERSION = 'countertrend-entry-model-1-v11';
+export const OPTIONAL_M5_BOS_ENTRY_PATTERN_1_VERSION = 'countertrend-entry-model-1-v10';
+export const isEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,OPTIONAL_M5_BOS_ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v9','countertrend-entry-model-1-v8','countertrend-entry-model-1-v7','countertrend-entry-model-1-v6','countertrend-entry-model-1-v5', 'countertrend-entry-model-1-v4', 'countertrend-entry-model-1-v3', 'countertrend-entry-model-1-v2', 'countertrend-entry-model-1-v1'].includes(version);
+export const usesM5BosEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,OPTIONAL_M5_BOS_ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v9','countertrend-entry-model-1-v8','countertrend-entry-model-1-v7','countertrend-entry-model-1-v6','countertrend-entry-model-1-v5', 'countertrend-entry-model-1-v4','countertrend-entry-model-1-v3','countertrend-entry-model-1-v2'].includes(version);
+export const usesPivotBreakEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,OPTIONAL_M5_BOS_ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v9','countertrend-entry-model-1-v8','countertrend-entry-model-1-v7','countertrend-entry-model-1-v6','countertrend-entry-model-1-v5','countertrend-entry-model-1-v4'].includes(version);
 
-export const usesCountertrendM5BosEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v9','countertrend-entry-model-1-v8','countertrend-entry-model-1-v7','countertrend-entry-model-1-v6','countertrend-entry-model-1-v5'].includes(version);
+export const usesCountertrendM5BosEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,OPTIONAL_M5_BOS_ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v9','countertrend-entry-model-1-v8','countertrend-entry-model-1-v7','countertrend-entry-model-1-v6','countertrend-entry-model-1-v5'].includes(version);
 
 export function entryPattern1ConditionsReady(conditions, direction, entryAt, version = ENTRY_PATTERN_1_VERSION) {
   const {retest,fvg}=conditions ?? {};
@@ -25,7 +26,8 @@ export function entryPattern1ConditionsReady(conditions, direction, entryAt, ver
     && same(fvg) && fvg.recognizedAt > retest.recognizedAt;
 }
 
-export const usesOptionalM5BosEntryPattern1 = version => version === ENTRY_PATTERN_1_VERSION;
+export const usesOptionalM5BosEntryPattern1 = version => version === OPTIONAL_M5_BOS_ENTRY_PATTERN_1_VERSION;
+export const usesEntryPattern1Categories = version => version === ENTRY_PATTERN_1_VERSION || usesOptionalM5BosEntryPattern1(version);
 
 export function entryPattern1StructureCategory(conditions, direction, at, version = ENTRY_PATTERN_1_VERSION) {
   const pivot=conditions?.m1PivotBreak;

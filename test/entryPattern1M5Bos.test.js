@@ -65,10 +65,10 @@ describe('M5 BOS identity for Entry Pattern 1', () => {
       m1PivotBreak:{type:'pivot-break',direction,recognizedAt:entryAt},
       retest:{recognizedAt:entryAt-60,orderBlock:{dir:-1}},fvg:{direction,recognizedAt:entryAt}};
     expect(entryPattern1ConditionsReady(conditions,direction,entryAt,'countertrend-entry-model-1-v9')).toBe(false);
-    expect(entryPattern1ConditionsReady(conditions,direction,entryAt)).toBe(true);
+    expect(entryPattern1ConditionsReady(conditions,direction,entryAt)).toBe(false);
     const entry={entryPattern:ENTRY_PATTERN_1_VERSION,direction,recognizedAt:entryAt,conditions};
-    expect(entryAgainstM5Allowed({},entry)).toBe(true);
-    expect(entrySizingAt({evaluatedAt:entryAt},entry).reason).toBe('m5BosMissing');
+    expect(entryAgainstM5Allowed({},entry)).toBe(false);
+    expect(entrySizingAt({evaluatedAt:entryAt},entry).reason).toBe('invalidConditions');
     expect(entryPattern1ConditionsReady(conditions,direction,entryAt,'countertrend-entry-model-1-v4')).toBe(true);
     const correct={...fixture.originalBos,originTime:1790752800};
     expect(entryPattern1ConditionsReady({...conditions,m5Bos:correct},direction,entryAt)).toBe(true);

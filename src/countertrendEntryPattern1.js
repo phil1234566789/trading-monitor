@@ -9,7 +9,7 @@ import { evaluateChecklistM5 } from './tradeSetupChecklistM5.js';
 import { m1EntryFromFvg } from './m1Entry.js';
 import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { formatDatedTime } from './berlinTime.js';
-import { entryPattern1ConditionsReady, usesCountertrendM5BosEntryPattern1, ENTRY_PATTERN_1_VERSION, usesOptionalM5BosEntryPattern1, entryPattern1StructureCategory, entryPattern1CategoryMetadata } from './entryPattern1Conditions.js';
+import { entryPattern1ConditionsReady, usesCountertrendM5BosEntryPattern1, ENTRY_PATTERN_1_VERSION, usesOptionalM5BosEntryPattern1, usesEntryPattern1Categories, entryPattern1StructureCategory, entryPattern1CategoryMetadata } from './entryPattern1Conditions.js';
 import { advanceEntryPattern1Follow } from './entryPattern1Progress.js';
 
 // Explizite Startregel: der aus Setup 1.0 übernommene OB zählt auch bei späterem E.
@@ -46,7 +46,7 @@ export function evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,tren
       m5Candles:m5,closeReactionCache},context.settings,context.structureStart);
     const reaction=current.structureReaction;
     // Ohne aktuellen M5-Beleg darf der eingefrorene DR-Zustand kein Risky-Go ersetzen.
-    const m5Countertrend=usesOptionalM5BosEntryPattern1(version) && (!current.structureState || !['passed','pending'].includes(current.status)
+    const m5Countertrend=usesEntryPattern1Categories(version) && (!current.structureState || !['passed','pending'].includes(current.status)
       || !m5EntryHistoryKnown(m5,context.structureStart,evaluatedAt,context.sessionConfigs,context.instrument)) ? null
       : entryPattern1Countertrend(context.primary,context.direction,evaluatedAt,
         current.structureState,m5.at(-1)?.time+300 || undefined);
@@ -68,7 +68,7 @@ export function evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,tren
   const candidate=follow.status==='ready' && follow.fvg && follow.fvg.recognizedAt >= (context.validatedAt ?? context.confirmedAt)
     && entryPattern1ConditionsReady(conditions,context.direction,follow.fvg.recognizedAt,version)
     ? m1EntryFromFvg(context,follow.fvg,rows,evaluatedAt,follow.retest) : null;
-  const category=usesOptionalM5BosEntryPattern1(version)
+  const category=usesEntryPattern1Categories(version)
     ? entryPattern1StructureCategory(conditions,context.direction,follow.fvg?.recognizedAt,version) : null;
   const entry=candidate ? {...candidate,entryPattern:version,conditions,confirmedAt:context.confirmedAt,
     ...(entryPattern1CategoryMetadata(category) ?? {})} : null;
@@ -81,6 +81,6 @@ export function evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,tren
     details:[...trends.map(()=>''),...facts.map(([label,fact])=>fact ? `${label}: ${formatDatedTime(fact.recognizedAt)} Uhr${fact.orderBlock
       ? ` · OB ${formatDatedTime(fact.orderBlock.startTime)} Uhr · ${fact.orderBlock.bottom}–${fact.orderBlock.top} · ${fact.orderBlock.inclusionRule==='setup1OrderBlockIncluded' ? 'Startregel: Setup-1.0-OB' : 'ab DR-Bestätigung entstanden'}` : ''}` : missingFact(label))],
     detailStatuses:[...trends.map(()=> 'context'),...facts.map(([label,fact])=>fact?'passed':label.startsWith('M5-BOS') && usesOptionalM5BosEntryPattern1(version)?'context':follow.status==='unknown'?'unknown':'unmet')],
-    entryBlockedReason:entry ? null : usesOptionalM5BosEntryPattern1(version) && !m5Countertrend
+    entryBlockedReason:entry ? null : usesEntryPattern1Categories(version) && !m5Countertrend
       ? 'Konnte nicht ermittelt werden · aktueller kausaler M5-Strukturbeleg fehlt.' : facts.filter(([label,fact])=>!fact && !(label.startsWith('M5-BOS') && usesOptionalM5BosEntryPattern1(version))).map(([label])=>missingFact(label)).join('; ') || 'Signale erst nach der FVG bekannt.'},context.direction);
 }

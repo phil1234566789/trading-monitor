@@ -1,10 +1,12 @@
 import {describe,it,expect} from 'vitest';
-import {ENTRY_PATTERN_1_VERSION,entryPattern1ConditionsReady,entryPattern1StructureCategory} from '../src/entryPattern1Conditions.js';
+import {OPTIONAL_M5_BOS_ENTRY_PATTERN_1_VERSION as ENTRY_PATTERN_1_VERSION,entryPattern1ConditionsReady as conditionsReady,entryPattern1StructureCategory as structureCategory} from '../src/entryPattern1Conditions.js';
 import {entryCategoryOf,entryCategoryLabel} from '../src/entryCategory.js';
 import {entrySizingAt,entryAgainstM5Allowed} from '../src/tradeSetup2EntrySizing.js';
 import {sizeSimulation} from '../src/tradeSetupSimulation.js';
 import {minuteAlarmEvents} from '../services/setup2/events.js';
 import {notificationText} from '../supabase/functions/_shared/setup2Notifications.js';
+const entryPattern1ConditionsReady=(conditions,direction,at,version=ENTRY_PATTERN_1_VERSION)=>conditionsReady(conditions,direction,at,version);
+const entryPattern1StructureCategory=(conditions,direction,at,version=ENTRY_PATTERN_1_VERSION)=>structureCategory(conditions,direction,at,version);
 const at=Date.parse('2026-10-07T10:00:00Z')/1000;
 const windows={weekday:[[0,1440]],saturday:[],sunday:[]};
 function facts(direction='short',bos=false){return {

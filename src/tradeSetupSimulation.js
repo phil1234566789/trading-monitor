@@ -1,4 +1,4 @@
-import { usesOptionalM5BosEntryPattern1, entryPattern1CategoryMetadata } from './entryPattern1Conditions.js';
+import { ENTRY_PATTERN_1_VERSION, usesEntryPattern1Categories, entryPattern1CategoryMetadata } from './entryPattern1Conditions.js';
 import { entryPatternVersion } from './entryPattern.js';
 import { entryRiskScale } from './entryRisk.js';
 import { applySimulationCommission } from './tradeSetupSimulationCosts.js';
@@ -19,6 +19,7 @@ export function sizeSimulation(entry, variant) {
     positionSizeFactor:sizing.positionSizeFactor,fullRiskBudget:ENTRY_RISK_BUDGET*sizing.fullFactor,fullLots:0});
   const categoryData=entryPattern1CategoryMetadata(entry.entryCategory);
   const validRelative=relative && sizing.model==='relative-full-entry' && sizing.fullFactor===1
+    && (entryPatternVersion(entry)!==ENTRY_PATTERN_1_VERSION || entry.entryCategory==='full')
     && ['full','risky'].includes(entry.entryCategory) && sizing.entryCategory===entry.entryCategory
     && sizing.positionSizeFactor===categoryData?.positionSizeFactor
     && sizing.factor===sizing.fullFactor*sizing.positionSizeFactor
@@ -26,7 +27,7 @@ export function sizeSimulation(entry, variant) {
     && JSON.stringify(entry.optionalConditionsMissing)===JSON.stringify(categoryData?.optionalConditionsMissing);
   const validLegacy=!relative && [ENTRY_SIZING_VERSION,LEGACY_ENTRY_PATTERN_1_SIZING_VERSION].includes(sizing?.version)
     && sizing.model==='dr-against-m5-trend' && [0.5,1].includes(sizing.factor);
-  if (usesOptionalM5BosEntryPattern1(entryPatternVersion(entry)) && !validRelative
+  if (usesEntryPattern1Categories(entryPatternVersion(entry)) && !validRelative
     || sizing && (!(validRelative || validLegacy) || sizing.evaluatedAt !== entry.recognizedAt)) {
     return { ...base, status: 'notExecutable', reason: 'invalidSizing' };
   }

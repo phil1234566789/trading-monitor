@@ -4,7 +4,7 @@ import {it,expect} from 'vitest';
 import fs from 'node:fs';
 import candles from './fixtures/gbpusd-dr9312-targets.json';
 import source from './fixtures/gbpusd-dr9312-t70-checkpoints.json';
-import {ENTRY_PATTERN_1_VERSION} from '../src/entryPattern1Conditions.js';
+import {ENTRY_PATTERN_1_VERSION as CURRENT_ENTRY_PATTERN_1_VERSION,OPTIONAL_M5_BOS_ENTRY_PATTERN_1_VERSION as ENTRY_PATTERN_1_VERSION} from '../src/entryPattern1Conditions.js';
 import {fixChecklistTargets} from '../src/tradeSetupChecklistLifecycle.js';
 import {evaluateCountertrendLifecycle} from '../src/countertrendLifecycle.js';
 import {evaluateDealingRange} from '../src/tradeSetup2DealingRange.js';
@@ -16,14 +16,14 @@ import {sizeSimulation} from '../src/tradeSetupSimulation.js';
 import {markIgnoredCandles} from '../src/sessionOccurrences.js';
 import {berlinOffsetMinutes,formatDatedTime} from '../src/berlinTime.js';
 const closeReactionCache=createCloseReactionCache(),entryProgress={};
-function evaluate(at,rows=candles.m1Candles){
+function evaluate(at,rows=candles.m1Candles,version=ENTRY_PATTERN_1_VERSION){
  const mark=(data,seconds)=>markIgnoredCandles(data.filter(c=>c.time+seconds<=at),candles.sessionConfigs,t=>berlinOffsetMinutes(t*1000));
  const m5=mark(candles.m5Candles,300),m1=mark(rows,60),primary=structuredClone(source.primary);
  primary.checks.m5Trend.structureState=evaluateChecklistOuterM5({instrument:'GBPUSD',direction:'short',m5Candles:m5.filter(c=>c.time+300<=primary.recognizedAt),evaluatedAt:primary.recognizedAt},candles.settings,candles.structureStart).state;
- primary.targetSelection=fixChecklistTargets({candidate:primary,instrument:'GBPUSD',candles:m5,sessionConfigs:candles.sessionConfigs,recognitionWithinBar:true,entryPattern:ENTRY_PATTERN_1_VERSION});
+ primary.targetSelection=fixChecklistTargets({candidate:primary,instrument:'GBPUSD',candles:m5,sessionConfigs:candles.sessionConfigs,recognitionWithinBar:true,entryPattern:version});
  primary.lifecycle=evaluateCountertrendLifecycle({selection:primary.targetSelection,invalidation:primary.invalidation,candles:m5,m1Candles:m1,evaluatedAt:at});
  primary.validity=primary.lifecycle.main;
- const checklist={...source.checklist,entryPattern:ENTRY_PATTERN_1_VERSION,direction:'short',evaluatedAt:at,
+ const checklist={...source.checklist,entryPattern:version,direction:'short',evaluatedAt:at,
   checks:primary.checks,setup:{primary},context:{m5Candles:m5,settings:candles.settings,sessionConfigs:candles.sessionConfigs}};
  checklist.dealingRange=evaluateDealingRange(checklist);
  const context=activeM1Context(checklist);
@@ -56,4 +56,11 @@ it('T70 original native DR9312 yields one causal Risky entry at 16:09 with half 
  const proof={provenance:source.provenance,entryCount:1,entryTimeBerlin:formatDatedTime(at),entryCategory:result.entry.entryCategory,variants,mandatoryGate:'validated original T63 A-F; native lifecycle and T62 trading/news inputs unchanged'};
  console.log('T70_DR9312_PROOF '+JSON.stringify(proof));
  if(fs.existsSync('.debug/t61'))fs.writeFileSync('.debug/t61/t70-proof.json',JSON.stringify(proof,null,2));
+},120000);
+
+it('T87 rejects the same native DR9312 entry without BOS under the current rule and preserves its historical source',()=>{
+ const before=JSON.stringify(source),result=evaluate(1790777340,candles.m1Candles,CURRENT_ENTRY_PATTERN_1_VERSION);
+ expect(result.checklist.dealingRange.status).toBe('validated');expect(result.check.conditions.m5Bos).toBeNull();
+ expect(result.check.conditions.m1PivotBreak).toBeTruthy();expect(result.check.conditions.retest).toBeTruthy();expect(result.check.conditions.fvg).toBeTruthy();
+ expect(result.entry).toBeNull();expect(JSON.stringify(source)).toBe(before);
 },120000);
