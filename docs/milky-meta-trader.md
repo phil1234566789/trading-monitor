@@ -202,10 +202,12 @@ Historischer SL/TP und R bleiben ohne Nachweis unbekannt. Technischer Vertrag, S
 
 ## Balance aller Konten
 
-Die vier Kontozeilen zeigen Balance zwischen absoluter Verlustgrenze und Challengeziel,
+Die Halbkreis-Anzeigen zeigen Balance zwischen absoluter Verlustgrenze und Challengeziel,
 ergänzt um Equity, belegtes Netto-PnL und Winrate abgeschlossener Brokertrades. Fehlende
 Historie bleibt unbekannt; Einzahlungen und Resets sind kein Trading-PnL. Anzeigen aktiviert
-kein Konto. Für das Verlustrisiko ist die Equity maßgeblich, nicht der Balance-Balken.
+kein Konto. Für das Verlustrisiko ist die Equity maßgeblich, nicht die Balance-Anzeige.
+Vier Konten passen nebeneinander; weitere Konten und schmale Bildschirme nutzen dieselbe
+horizontal scrollbare Kontoleiste (auch per Tastatur erreichbar).
 
 `mt5_account_balances` ist ausschließlich über den privaten Control-Endpoint lesbar.
 Der Datenbanktrigger hält den letzten fehlerfreien Workerstand pro Konto fest, auch nach

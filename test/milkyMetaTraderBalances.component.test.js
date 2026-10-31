@@ -16,9 +16,17 @@ it('renders all four accounts without activation controls and marks unknown data
  expect(html).toContain('Handelskonto ausgewählt');
  expect(html).toContain('Balance $55000.00');
  expect(html).toContain('Equity $45000.00');
- expect(html).toContain('width:100%');
+ expect(html.match(/<svg/g)).toHaveLength(4);
+ expect(html).toContain('stroke-dasharray="100 100"');
+ expect(html).toContain('tabindex="0"');
  expect(html).toMatch(/Winrate <strong[^>]*>unbekannt/);
  expect(html).toContain('Skala unbekannt');
  expect(html).toContain('Letzter bekannter Stand');
  expect(html).not.toContain('<button');
+});
+it('keeps additional accounts in the same scrollable account strip',async()=>{
+ const accounts=[1,2,3,4,5,6].map(id=>({id:String(id),login:id,server:'s',name:`Challenge ${id}`}));
+ const html=await renderToString(Vue.createSSRApp(Balances,{accounts,history:{rows:[],sync:[]},now:Date.now(),staleSeconds:30}));
+ expect(html.match(/<article/g)).toHaveLength(6);
+ expect(html).toContain('Konten horizontal scrollen');
 });
