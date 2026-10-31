@@ -108,9 +108,9 @@
     "semantic_hash": "44d123d02c74bde4e0820bfd6e58f66f"
   },
   "src/candleCache.js": {
-    "mtime": 1793484245.0966027,
-    "seen": 1793484640.7609518,
-    "ast_hash": "015afa7527eeb6bee5812b37e4037e02",
+    "mtime": 1793484714.6747308,
+    "seen": 1793484783.4279966,
+    "ast_hash": "b51b0205587711326d150ac94aa20816",
     "semantic_hash": ""
   },
   "src/chartColors.js": {
@@ -7158,9 +7158,9 @@
     "semantic_hash": ""
   },
   "test/candleCacheEurusdPilot.test.js": {
-    "mtime": 1793484245.1176057,
-    "seen": 1793484640.7619517,
-    "ast_hash": "45cc339c854cd3c9d9c5107ed15b117e",
+    "mtime": 1793484714.67573,
+    "seen": 1793484783.5580163,
+    "ast_hash": "b67b28b060cf275a1a120e83b6aa9f05",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5AccountManagement.ts": {
