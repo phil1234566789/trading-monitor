@@ -1,11 +1,12 @@
 const finite=n=>typeof n==='number'&&Number.isFinite(n);
 const nonnegative=n=>finite(n)&&n>=0;
 const positive=n=>finite(n)&&n>0;
+export const RISK_BASE=50000;
 export const RISK_MODES={risky:.005,full:.009};
 export const riskMarket=symbol=>symbol.split('.')[0].toUpperCase();
 export function riskBudget(mode,symbol,snapshot,policy,now) {
  if(!Object.hasOwn(RISK_MODES,mode))throw new Error('invalid_risk_mode');
- if(!policy||!positive(policy.confirmed_balance)||!positive(policy.confirmed_equity)||!positive(policy.cost_buffer)||!positive(policy.risk_base)||!positive(policy.drawdown_floor)||!positive(policy.valid_until_sec)
+ if(!policy||!positive(policy.confirmed_balance)||!positive(policy.confirmed_equity)||!positive(policy.cost_buffer)||policy.risk_base!==RISK_BASE||!positive(policy.drawdown_floor)||!positive(policy.valid_until_sec)
   ||policy.valid_until_sec<=now||policy.currency!=='USD'||policy.currency!==snapshot.currency)throw new Error('risk_limits_unconfirmed');
  if(snapshot.balance>policy.confirmed_balance+1e-7||snapshot.equity>policy.confirmed_equity+1e-7)throw new Error('risk_floor_reconfirmation_required');
  const r=snapshot.risk;
@@ -19,7 +20,7 @@ export function riskBudget(mode,symbol,snapshot,policy,now) {
   remaining+=p.remaining_risk_to_sl+policy.cost_buffer;
   if(riskMarket(p.symbol)===riskMarket(symbol))marketUsed+=p.risk_to_sl+policy.cost_buffer;
  }
- const requested=policy.risk_base*RISK_MODES[mode],marketLeft=Math.max(0,policy.risk_base*.009-marketUsed);
+ const requested=RISK_BASE*RISK_MODES[mode],marketLeft=Math.max(0,RISK_BASE*.009-marketUsed);
  const dailyLeft=Math.max(0,1000+r.realized_net_day+r.open_loss-remaining);
  const drawdownLeft=Math.max(0,snapshot.equity-policy.drawdown_floor-remaining);
  const allocation=Math.min(requested,marketLeft,dailyLeft,drawdownLeft),available=allocation-policy.cost_buffer;

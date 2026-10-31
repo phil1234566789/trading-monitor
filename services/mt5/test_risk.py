@@ -10,6 +10,9 @@ class RiskTests(unittest.TestCase):
                       positions=[dict(symbol='GBPUSD.gbe',risk_to_sl=240,remaining_risk_to_sl=240)])
         self.assertAlmostEqual(risk_budget('full','GBPUSD.gbe',snapshot,policy,1000)['available'],190)
         self.assertAlmostEqual(risk_budget('full','XAUUSD.gbe',snapshot,policy,1000)['available'],440)
+        self.assertEqual(risk_budget('risky','XAUUSD.gbe',snapshot,policy,1000)['requested'],250)
+        with self.assertRaisesRegex(ValueError,'risk_limits_unconfirmed'):
+            risk_budget('full','XAUUSD.gbe',snapshot,{**policy,'risk_base':51000},1000)
         snapshot['risk']['realized_net_day']=-700
         self.assertAlmostEqual(risk_budget('full','GBPUSD.gbe',snapshot,policy,1000)['available'],40)
         snapshot['risk']['latched']=True

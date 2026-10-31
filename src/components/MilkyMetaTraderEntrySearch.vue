@@ -96,7 +96,7 @@ async function confirm() {
     <h2 id="mmt-entry-search-title">Entry suchen</h2>
     <details v-if="!compact" class="mmt-help"><summary>M1-Entry-Regel</summary><p>Short nach einer neu geschlossenen roten M1-Kerze, Long nach einer grünen. Dojis zählen nicht. Nur das ausgewählte Konto. Pilot nutzt Mindestlot; Risky/Full teilen sich das Marktbudget.</p></details>
     <p v-if="!ready">Der lokale MT5-Worker muss verbunden sein, bevor ein aktueller Brokerkurs und eine Vorschau verfügbar sind.</p>
-    <p v-if="status?.online&&!status?.bridge?.snapshot?.trade_allowed">MT5 meldet Handel gesperrt. Bitte in MT5 Algo Trading einschalten.</p>
+    <p v-if="status?.online&&!status?.bridge?.snapshot?.trade_allowed">MT5 meldet die Handelsfreigabe als gesperrt. Terminal- und Kontofreigabe in MT5 prüfen.</p>
     <p v-if="status?.online&&!status?.bridge?.snapshot?.execution_ready">Worker im Lesebetrieb: Vorschau verfügbar, Orderversand gesperrt.</p>
     <p v-if="!liveEnabled">Live-Ausführung ist serverseitig noch gesperrt.</p>
     <p v-if="error" role="alert">{{error}}</p>

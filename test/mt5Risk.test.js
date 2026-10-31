@@ -3,6 +3,11 @@ import {riskBudget,riskVolume,riskPreviewMetrics} from '../supabase/functions/tr
 const now=1800000000,policy={revision:'c297afbf-172c-4304-99e7-eb1198191050',confirmed_balance:50000,confirmed_equity:50000,risk_base:50000,cost_buffer:10,currency:'USD',drawdown_floor:47000,valid_until_sec:now+60,day:'2027-01-15'};
 const snapshot={balance:50000,equity:50000,currency:'USD',hedging:true,positions:[],pending_orders:0,risk_guards_ready:true,risk:{time:now,day:policy.day,realized_net_day:0,open_loss:0,latched:false,remaining_risk:0}};
 describe('MMT joint risk budget',()=>{
+ it('keeps the confirmed original capital fixed at 50000 USD',()=>{
+  expect(riskBudget('risky','GBPUSD.gbe',snapshot,policy,now).requested).toBe(250);
+  expect(riskBudget('full','GBPUSD.gbe',snapshot,policy,now).requested).toBeCloseTo(450);
+  for(const risk_base of [49000,51000])expect(()=>riskBudget('full','GBPUSD.gbe',snapshot,{...policy,risk_base},now)).toThrow('risk_limits_unconfirmed');
+ });
  it('shares .9% across same-market positions; full cannot add another .9%',()=>{
   const s={...snapshot,positions:[{symbol:'GBPUSD.gbe',risk_to_sl:240,remaining_risk_to_sl:240}]};
   expect(riskBudget('full','GBPUSD.gbe',s,policy,now).available).toBeCloseTo(190);

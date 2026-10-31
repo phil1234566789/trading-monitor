@@ -3,6 +3,7 @@ import math
 from decimal import Decimal, ROUND_FLOOR
 from core import positive
 
+RISK_BASE=50000
 RISK_MODES={'risky':.005,'full':.009}
 
 def finite(n):return type(n) in (int,float) and math.isfinite(n)
@@ -12,7 +13,7 @@ def market(symbol):return symbol.split('.')[0].upper()
 def risk_budget(mode,symbol,snapshot,policy,now):
     if mode not in RISK_MODES:raise ValueError('invalid_risk_mode')
     if (not policy or not all(positive(policy.get(k)) for k in ('risk_base','drawdown_floor','valid_until_sec','cost_buffer','confirmed_balance','confirmed_equity'))
-        or policy['valid_until_sec']<=now or policy.get('currency')!='USD' or policy.get('currency')!=snapshot.get('currency')):
+        or policy.get('risk_base')!=RISK_BASE or policy['valid_until_sec']<=now or policy.get('currency')!='USD' or policy.get('currency')!=snapshot.get('currency')):
         raise ValueError('risk_limits_unconfirmed')
     if snapshot['balance']>policy['confirmed_balance']+1e-7 or snapshot['equity']>policy['confirmed_equity']+1e-7:
         raise ValueError('risk_floor_reconfirmation_required')
@@ -30,8 +31,8 @@ def risk_budget(mode,symbol,snapshot,policy,now):
         if not all(nonnegative(p.get(k)) for k in ('risk_to_sl','remaining_risk_to_sl')):raise ValueError('risk_exposure_unavailable')
         remaining+=p['remaining_risk_to_sl']+policy['cost_buffer']
         if market(p['symbol'])==market(symbol):used+=p['risk_to_sl']+policy['cost_buffer']
-    requested=policy['risk_base']*RISK_MODES[mode]
-    market_left=max(0,policy['risk_base']*.009-used)
+    requested=RISK_BASE*RISK_MODES[mode]
+    market_left=max(0,RISK_BASE*.009-used)
     daily_left=max(0,1000+r['realized_net_day']+r['open_loss']-remaining)
     drawdown_left=max(0,snapshot['equity']-policy['drawdown_floor']-remaining)
     allocation=min(requested,market_left,daily_left,drawdown_left)

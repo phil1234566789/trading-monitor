@@ -35,7 +35,9 @@ neue Aufträge. Bis zur Supportklärung gibt es keine Ordervervielfachung auf we
   Kosten-/Slippagepuffer begrenzen jeden Modus einschließlich Pilot.
 - Alle Entries brauchen die private Tageskonfiguration `risk_base`, `drawdown_floor`,
   `cost_buffer`, `currency` und `source`. Es gibt keine geratenen Default-Grenzen. Die
-  Prozentbasis und die Herkunft des Floors werden ausdrücklich bestätigt. Tagesgültigkeit endet
+  Prozentbasis ist fest das ursprüngliche Kapital von 50.000 USD: Risky 250 USD, Full und
+  gemeinsames Marktbudget 450 USD. Andere Prozentbasen werden abgelehnt. Herkunft des aktuellen
+  Floors und Kostenpuffer werden ausdrücklich bestätigt. Tagesgültigkeit endet
   um Mitternacht Europe/Berlin; neue Höchststände bei Balance/Equity verlangen eine erneute
   Floor-Bestätigung. Ohne Policy, frische native Risikodaten oder betriebsbereiten Tagesstopp
   bleibt die Ausführung gesperrt. Ein bestätigter Floor ist keine automatisch ermittelte Brokerregel.
