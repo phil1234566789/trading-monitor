@@ -32,14 +32,14 @@ it('counts proven closed trades and costs, never deposits or resets as trading p
 it('separates earned challenge progress from the drawdown part of the same scale',()=>{
  const g=challengeGauge(50846.49,47846.49,54000);
  expect(g.progress).toBeCloseTo(21.16225);
- expect(g.start).toBeCloseTo((50000-47846.49)/(54000-47846.49)*100);
+ expect(g.start).toBeCloseTo(3000/7000*100);
  expect(g.gain).toBeCloseTo(g.position-g.start);
- expect(g.loss).toBe(0);
+ expect(g.floor).toBeCloseTo(846.49/7000*100);
  expect(challengeGauge(49500,47000,54000).gain).toBe(0);
- expect(challengeGauge(49500,47000,54000).loss).toBeGreaterThan(0);
+ expect(challengeGauge(49500,47000,54000).position).toBeLessThan(g.start);
  expect(challengeGauge(55000,47000,54000).progress).toBe(100);
  expect(challengeGauge(null,47000,54000).position).toBeNull();
- expect(challengeGauge(50846.49,null,54000).start).toBeNull();
+ expect(challengeGauge(50846.49,null,54000).floor).toBeNull();
 });
 it('shows green only for fresh, ready and independently monitored operation',()=>{
  const now=Date.parse('2026-10-31T22:00:00Z');
@@ -54,4 +54,15 @@ it('shows green only for fresh, ready and independently monitored operation',()=
  expect(balanceHealth({...status,bridge:{snapshot:{...status.bridge.snapshot,trade_allowed:false}}},true,account,now).ok).toBe(false);
  expect(balanceHealth(status,true,{...account,login:2},now).ok).toBe(false);
  expect(balanceHealth({...status,server_live_allowed:false},true,account,now).ok).toBe(false);
+});
+
+it('uses the same fixed scale for both accounts while moving the floor independently',()=>{
+ const baseline=challengeGauge(50000,47000,54000);
+ const profit=challengeGauge(50846.49,47846.49,54000);
+ expect(profit.start).toBe(baseline.start);
+ expect(profit.position).toBeGreaterThan(baseline.position);
+ expect(profit.position).toBeCloseTo((50846.49-47000)/7000*100);
+ expect(challengeGauge(50846.49,49000,54000).position).toBe(profit.position);
+ expect(profit.floor).toBeGreaterThan(baseline.floor);
+ expect(challengeGauge(49500,47500,54000).position).toBeLessThan(baseline.position);
 });

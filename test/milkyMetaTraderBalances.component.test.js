@@ -20,6 +20,9 @@ it('renders all four accounts without activation controls and marks unknown data
  expect(html).toContain('Challenge-Fortschritt 100 Prozent');
  expect(html).toContain('mmt-balance-risk');
  expect(html).toContain('mmt-balance-start');
+ expect(html).toContain('mmt-balance-pointer');
+ expect(html).toContain('mmt-balance-floor-marker');
+ expect(html).toContain('Skala');
  expect(html).toContain('Verlustgrenze');
  expect(html).toContain('tabindex="0"');
  expect(html).toMatch(/Winrate <strong[^>]*>unbekannt/);

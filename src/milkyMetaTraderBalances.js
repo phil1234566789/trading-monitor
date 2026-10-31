@@ -21,10 +21,11 @@ export function accountPerformance(id,currency,result,sync){
 }
 
 export function challengeGauge(balance,floor,target){
- const position=balancePosition(balance,floor,target),start=balancePosition(RISK_BASE,floor,target);
- const known=position!=null&&start!=null;
- return {position,start,progress:balancePosition(balance,RISK_BASE,target),
-  gain:known?Math.max(0,position-start):0,loss:known?Math.max(0,start-position):0};
+ // Die Brokergrenze zieht nach; die Vergleichsskala aller 50k-Konten bleibt fest.
+ const scaleFloor=RISK_BASE-3000;
+ const position=balancePosition(balance,scaleFloor,target),start=balancePosition(RISK_BASE,scaleFloor,target);
+ return {position,start,scaleFloor,floor:balancePosition(floor,scaleFloor,target),progress:balancePosition(balance,RISK_BASE,target),
+  gain:position!=null&&start!=null?Math.max(0,position-start):0};
 }
 export function balanceHealth(status,fresh,account,now){
  if(!fresh||!status?.online||!mmtAccountSnapshot(account,status?.bridge))return {ok:false,label:'Verbindung prüfen'};
