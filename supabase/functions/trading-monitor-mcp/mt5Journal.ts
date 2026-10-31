@@ -52,7 +52,7 @@ export async function mt5JournalAction(body:Record<string,any>){
    const reasons=['account_mismatch','range_mismatch','position_mismatch','position_already_linked','existing_position_required','broker_history_changed'];
    throw new Error(reasons.find(reason=>error.message===reason)??'mt5_storage_unavailable');
   }
-  return {trade_position_id:result,dealing_range_id:input.dealing_range_id,stop_loss:position.stop_loss,take_profit:null,
+  return {trade_position_id:result,dealing_range_id:input.dealing_range_id,broker_stop_loss:null,broker_take_profit:null,
    note:'Historischer Import ohne Live-State-Machine-Ereignis. SL/TP sind aus Deals nicht belegt; keine R-Schätzung.'};
  }
  if(body.action==='journal_comments'){
