@@ -1,22 +1,25 @@
+import {riskPreviewMetrics} from './mt5RiskContract.js';
 import { validateExecutionIntent } from './executionContract.js';
 
 export function buildMarketPreview(input, snapshot, config, now, id) {
-  if(!input||Object.keys(input).some(k=>!['symbol','direction','stop_loss','take_profit'].includes(k))) throw new Error('invalid_fields');
+  if(!input||Object.keys(input).some(k=>!['symbol','direction','stop_loss','take_profit','risk_mode'].includes(k))) throw new Error('invalid_fields');
   const q=snapshot.quotes?.find(q=>q.symbol===input.symbol);
   if(!q||now-q.time>5||q.time>now+1) throw new Error('quote_stale');
-  if(snapshot.positions.length||snapshot.pending_orders) throw new Error('bridge_not_ready');
+  if((snapshot.positions.length&&!input.risk_mode)||snapshot.pending_orders) throw new Error('bridge_not_ready');
   const long=input.direction==='long';
   const price=long?q.ask:q.bid;
   const sl=Number(input.stop_loss), tp=input.take_profit == null ? null : Number(input.take_profit);
   if(!Number.isFinite(sl)||sl<=0||(long?sl>=q.bid-q.point:sl<=q.ask+q.point)
     ||(tp!==null&&(!Number.isFinite(tp)||tp<=0||(long?tp<=q.bid+q.point:tp>=q.ask-q.point)))) throw new Error('invalid_stop_or_target');
-  const risk=Math.abs(price-sl)*(long?q.loss_per_unit_long:q.loss_per_unit_short);
-  if(!Number.isFinite(risk)||risk<=0) throw new Error('risk_unavailable');
+  const dynamic=input.risk_mode!=null;
+  const metrics=riskPreviewMetrics(input,snapshot,config.riskPolicy,now);
+  const {risk,volume}=metrics;
   const intent=validateExecutionIntent({id,account_login:config.login,account_server:config.server,mode:config.mode,
-    symbol:q.symbol,direction:input.direction,stop_loss:sl,take_profit:tp,risk_amount:risk,
-    trigger:'market_confirmed',reference_price:price,volume:q.minimum_volume,created_sec:now,expires_sec:now+30},
+    symbol:q.symbol,direction:input.direction,stop_loss:sl,take_profit:tp,risk_amount:dynamic?metrics.budget.available:risk,
+    ...(dynamic?{risk_mode:input.risk_mode,risk_policy_revision:config.riskPolicy.revision}:{}),
+    trigger:dynamic?'m1_directional_close':'market_confirmed',reference_price:price,volume,created_sec:now,expires_sec:now+30},
     {...config,allowLive:true},now);
-  return {intent,risk,currency:snapshot.currency,quote_time:q.time};
+  return {intent,risk,budget:metrics.budget,currency:snapshot.currency,quote_time:q.time};
 }
 
 const encode=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');

@@ -3,7 +3,7 @@ from core import positive
 
 def reconcile_fill(result,deals,positions):
     order,magic,expected=result.get('order'),result.get('magic'),result.get('volume')
-    if not positive(order) or not positive(magic) or not positive(expected) or expected>.01:
+    if not positive(order) or not positive(magic) or not positive(expected):
         return None
     fills=[d for d in deals or () if d.order==order and d.magic==magic and d.entry==0
            and d.type in (0,1) and positive(d.ticket) and positive(d.volume) and positive(d.price)]

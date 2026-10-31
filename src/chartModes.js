@@ -14,6 +14,8 @@ import { ref } from "vue";
 // nur beim Hovern und reicht dafür nicht); im Trade-Modus liefert Dashboard.vue ihn über chartHint,
 // weil er dort die Trade-Nummer nennt.
 export const CHART_MODES = [
+  {id:'idea-long',label:'↗ Long-Idee',title:'Ideen-Anker, SL und optionales Ziel anklicken',hint:'Ideen-Anker anklicken (kein Broker-Entry)'},
+  {id:'idea-short',label:'↘ Short-Idee',title:'Ideen-Anker, SL und optionales Ziel anklicken',hint:'Ideen-Anker anklicken (kein Broker-Entry)'},
   { id: "navigate", label: "🖐 Navigieren", title: "Chart normal bedienen (Pan/Zoom)", hint: null },
   {
     id: "measure",

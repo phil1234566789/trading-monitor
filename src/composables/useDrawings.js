@@ -54,8 +54,10 @@ async function load() {
 // Liste von Gruppen zurück) — DrawingsModal.vue ruft add() einmal pro Gruppe auf, jede
 // wird eine eigene, einzeln aus-/einblendbare Zeile.
 async function add(annotationsList, title) {
-  const row = await addDrawing(instrument.value, dateStr.value, annotationsList, title);
-  if (row) {
+  const savedInstrument=instrument.value,savedDate=dateStr.value;
+  const row = await addDrawing(savedInstrument, savedDate, annotationsList, title);
+  // Ein Symbolwechsel während des Inserts darf die alte Idee nicht im neuen Chart zeigen.
+  if (row && savedInstrument===instrument.value && savedDate===dateStr.value) {
     drawings.value.push(row);
     visible.value = true; // frisch gezeichnet -> direkt sichtbar, kein zusätzlicher Klick nötig
   }

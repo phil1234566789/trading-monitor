@@ -1,5 +1,5 @@
-export async function loadMmtHistory(api,background=false){
- const rows=[];let cursor=0,sync=[];
+export async function loadMmtHistory(api,background=false,afterId=0){
+ const rows=[];let cursor=afterId,sync=[];
  while(true){
   const page=await api('history_page',{after_id:cursor},{background});
   if(!Array.isArray(page.rows))throw new Error('Ungültige Brokerhistorie');

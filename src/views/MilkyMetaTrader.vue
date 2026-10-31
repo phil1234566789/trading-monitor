@@ -11,6 +11,8 @@ import { findOrderPosition, snapshotAgeSeconds, executionPositionId } from '../m
 import MilkyMetaTraderOrderCard from '../components/MilkyMetaTraderOrderCard.vue';
 import '../milkyMetaTrader.css';
 import ActionButton from '../components/ui/ActionButton.vue';
+import MmtDailyStopStatus from '../components/MmtDailyStopStatus.vue';
+import MmtRiskPolicyEditor from '../components/MmtRiskPolicyEditor.vue';
 import MilkyMetaTraderEntrySearch from '../components/MilkyMetaTraderEntrySearch.vue';
 import { createMilkyMetaTraderClient } from '../milkyMetaTraderClient.js';
 import { readMilkyMetaTraderKey, saveMilkyMetaTraderKey, forgetMilkyMetaTraderKey } from '../milkyMetaTraderKey.js';
@@ -123,6 +125,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
   <main class="mmt-page" :style="{'--mmt-positive':cssColor('candleUp'),'--mmt-negative':cssColor('candleDown')}">
     <header class="mmt-heading"><div><h1>Milky Meta Trader <small>MMT</small></h1></div>
       <ActionButton v-if="unlocked" @click="lock">Sperren &amp; Schlüssel vergessen</ActionButton></header>
+    <details class="mmt-notice"><summary>Risikogrenzen und Worker-Schutz</summary><p>Alle Entry-Modi benötigen bestätigte Kontogrenzen und eine frische Worker-Schutzprüfung. Tagesstopp und Teilziele benötigen den laufenden Worker; Slippage und Gebühren können den tatsächlichen Verlust erhöhen.</p></details>
     <p v-if="error" role="alert" class="mmt-error">{{error}}</p>
     <p v-if="pollError" role="alert" class="mmt-error">Statusabgleich fehlgeschlagen: {{pollError}}. Letzten Brokerstand und Verbindung prüfen.</p>
     <p v-if="message" role="status">{{message}}</p>
@@ -136,8 +139,9 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
     <template v-else>
       <section class="mmt-account-bar" aria-label="Aktives Handelskonto">
         <div><h2>{{active?.name??'Kein Konto ausgewählt'}}</h2><span class="mmt-muted" v-if="active">{{active.login}} · {{active.server}} · {{active.mode==='demo'?'Demo':'Real / Challenge'}}</span></div>
-        <span class="mmt-status" :data-ready="Boolean(ready)">{{ready?'Bereit für Entry-Suche':status?.online?'Ausführung nicht bereit':'Worker offline'}}</span>
+        <span class="mmt-status" :data-ready="Boolean(ready)">{{ready?'Worker verbunden · Freigabe je Entry geprüft':status?.online?'Ausführung nicht bereit':'Worker offline'}}</span>
       </section>
+      <MmtDailyStopStatus :status="status" :now="now" />
       <MilkyMetaTraderBalances :accounts="accounts" :active-id="activeId" :status="status" :history="brokerHistory" :now="now" :stale-seconds="staleSeconds" />
         <p v-if="workerProblem" role="alert" class="mmt-error">Ausführung gestört: {{workerProblem.code}}<span v-if="workerProblem.stage"> in {{workerProblem.stage}}</span>. Entry-Aufträge und Brokerstatus prüfen; nichts blind erneut senden.</p>
         <p v-if="status?.health?.incident">Fehleralarm: <span v-for="item in status.health.deliveries" :key="item.channel">{{item.channel==='pushover'?'Pushover':'Telegram'}} {{deliveryLabels[item.status]??item.status}}. </span></p>
@@ -161,6 +165,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <MilkyMetaTraderEntrySearch :api="api" :status="status" :account="active" @submitted="run(refresh)" />
       </div>
       <div class="mmt-settings"><h2>Konten &amp; Einstellungen</h2>
+      <MmtRiskPolicyEditor :api="api" :policy="status?.risk_policy" :account="active" @saved="run(refresh)" />
       <details class="mmt-panel"><summary>Brokerkonten verwalten <span class="mmt-muted">· {{accounts.length}} gespeichert</span></summary>
         <p>Genau ein ausgewähltes Handelskonto empfängt neue Aufträge. Bis zur Supportklärung gibt es keine Ordervervielfachung auf weitere Konten. Manuell hier wählen oder im Chat einen konkreten Kontowechsel beauftragen. Laufende Suchen bleiben an ihr ursprüngliches Konto gebunden; offene Positionen oder unklare Aufträge sperren den Wechsel.</p>
         <p v-if="!accounts.length">Noch keine Brokerkonten hinterlegt.</p>

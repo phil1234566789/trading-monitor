@@ -23,17 +23,25 @@ neue Aufträge. Bis zur Supportklärung gibt es keine Ordervervielfachung auf we
   noch suchende Aufträge, keine offenen Positionen.
 - Die aktuelle Testregel ist **keine vollständige Strategieprüfung**:
   `m1_directional_close`: nach Aktivierung geschlossene M1-Kerze, Short `close < open`,
-  Long `close > open`, Doji ausgeschlossen. Die bestätigte Broker-Mindestlotgröße
-  bleibt bis zum Entry gebunden; der Vorbereitungskurs nicht. Preislevel-Trigger bleiben
+  Long `close > open`, Doji ausgeschlossen. Konto, Richtung, SL und Ablauf
+  bleiben gebunden. Brokerkurs und zulässige dynamische Lotgröße werden vor dem Entry erneut geprüft. Preislevel-Trigger bleiben
   technisch verfügbar, sind aber nicht die aktuelle Standardregel.
   `test_next_m1_close` existiert nur für explizite Demo-Verbindungstests.
 - Nur M1-Schlüsse nach Aktivierung berücksichtigen. Signal höchstens zehn
   Sekunden alt, Tick höchstens fünf Sekunden alt; keine alten Signale nach einer Netzpause handeln.
-- Technische Testgrenzen: maximal 0,01 Lot, Risikobudget maximal 5 in Kontowährung,
-  20 Prozent Berechnungspuffer, maximal eine Stunde Suchdauer, keine bestehenden Positionen
-  oder Pending Orders auf dem Konto. Kommission, Gaps und Slippage können Verluste darüber hinaus
-  verursachen. Spreadgrenze 30 Broker-Points, Deviation 5 Points; dies sind Testwerte, keine
-  aus IQCapital-Regeln abgeleiteten Vorgaben.
+- Pilot: Broker-Mindestlot bis maximal 0,01 Lot. Risky (0,5 %) und Full (0,9 %) werden aus
+  nativen Broker-Verlustwerten und Lotstufen berechnet; beide teilen sich maximal 0,9 % pro Konto
+  und Markt. Bestehende Positionen zählen mit. Engere Tages-/Drawdownreste und der bestätigte
+  Kosten-/Slippagepuffer begrenzen jeden Modus einschließlich Pilot.
+- Alle Entries brauchen die private Tageskonfiguration `risk_base`, `drawdown_floor`,
+  `cost_buffer`, `currency` und `source`. Es gibt keine geratenen Default-Grenzen. Die
+  Prozentbasis und die Herkunft des Floors werden ausdrücklich bestätigt. Tagesgültigkeit endet
+  um Mitternacht Europe/Berlin; neue Höchststände bei Balance/Equity verlangen eine erneute
+  Floor-Bestätigung. Ohne Policy, frische native Risikodaten oder betriebsbereiten Tagesstopp
+  bleibt die Ausführung gesperrt. Ein bestätigter Floor ist keine automatisch ermittelte Brokerregel.
+- Maximal eine Stunde Suchdauer. Spreadgrenze 30 Broker-Points und Deviation 5 Points bleiben
+  erhalten; sie sind technische Testwerte, keine aus IQCapital-Regeln abgeleiteten Vorgaben.
+  Kommission, Gaps und Slippage können tatsächliche Verluste über die Planung hinaus erhöhen.
 - SL obligatorisch, TP optional. Broker-Mindestvolumen niemals zulasten des Budgets aufrunden.
   Broker-Füllungsmodus prüfen. Challenge-Konten können technisch als Demo klassifiziert sein:
   den tatsächlichen MT5-Kontotyp verwenden, nicht aus dem Challenge-Namen ableiten.
@@ -92,8 +100,9 @@ Eine nachträgliche Ablehnung darf nur eingetragen werden, wenn sicher keine Aus
 
 Abbruch ist bis zum atomaren Versandrecht möglich; danach ist er kein garantierter Stopp mehr.
 Der Worker muss laufen und verbunden sein. Bei Ausfall wirken nur bestätigte serverseitige SL/TP.
-Aktive SL-/RSI-/Teilverkaufsregeln sind noch nicht implementiert. Kontoschutz, Challenge-Regeln und
-Strategieregeln müssen vor regulärem Einsatz ergänzt und geprüft werden.
+RSI-Exitregeln und vollständige Strategie-/Challenge-Prüfungen sind nicht implementiert.
+Der bestätigte Tagesstopp und gespeicherte TP-Pläne sind nachfolgend beschrieben; beide benötigen
+einen aktuellen Worker und sind keine Garantie gegen Gaps, Slippage oder eine getrennte Brokerregel.
 
 Rücknahme: `MT5_EXECUTION_ENABLED=false`, Worker stoppen, noch suchende Aufträge abbrechen.
 Ein abgeschaltetes Backend schließt bereits offene Positionen nicht. Neue Tabellen und verschlüsselte
@@ -245,3 +254,58 @@ Versandbestaetigung bleibt auch nach deren Ergaenzung idempotent. Closed ist end
 Der Worker liest offene historische Auftraege in 20er-Seiten pro ausgewaehltem Konto,
 setzt den Cursor anhand der tatsaechlich gelesenen letzten ID fort und erst bei leerer
 Seite zurueck. Dadurch werden auch aeltere nicht abgeschlossene Abgleiche nachgefuehrt.
+
+
+## Dashboard und Tagesstopp
+
+**Trades → MMT** blendet die kompakte Card rechts vom vorhandenen Dashboard-Chart ein,
+oberhalb des TSC. Long-/Short-Ideen verwenden den Zeichnungsspeicher und bestehende Chartprimitiven.
+Der gezeichnete Entry ist ausschließlich ein Anker; er wird nie als Ausführungspreis/Trigger
+an MMT übergeben. Richtung und SL stammen aus der zeitlich nächsten sichtbaren Idee zur letzten
+Chartkerze; Gleichstände verlangen eine eindeutige Zeichnungsauswahl. RR ohne Ziel bleibt unbekannt.
+Chartkerzen bleiben im bestehenden Feed; Broker-Bid/Ask und native Kontraktdaten bestimmen die Suche.
+
+Alle laufenden Suchen bleiben assetübergreifend sichtbar. Erst brokerbestätigte Fills mit belegter
+Brokerzeit erhalten die vorhandene Positionszeichnung; unbekannte oder abgebrochene Aufträge
+werden nicht als Ausführung dargestellt. Bestehende DR-/Journalverknüpfungen bleiben zugänglich.
+
+Der Tagesverlust pro Konto ist realisiertes Tagesnetto einschließlich Commission, Swap und Fee
+plus offene Verluste; offene Gewinne verdecken offene Verlust-/Swapanteile nicht. Bei 1.000 USD
+Verlust wird die Sperre für den Berlin-Tag dauerhaft gesetzt. Entry-Suchen enden, Broker-Pendings
+werden storniert und offene Positionen über persistente, ticketgebundene Notfallaufträge geschlossen.
+Erholung hebt die Sperre nicht auf. Erst der neue Berlin-Tag setzt die Tagesgrenze zurück; ungeklärte
+Versandresultate bleiben darüber hinaus gesperrt. Eine zurückgenommene Drei-Loss-Regel existiert nicht.
+
+Entry-, Tagesstopp- und TP-Versandrechte werden gemeinsam koordiniert. Ungeklärte Close-Ergebnisse
+werden niemals blind wiederholt. Eine ungeklärte Aktion auf Position A verhindert keine notwendige
+Notfallschließung anderer Positionen. Broker-/Workerfehler und offene Abgleiche bleiben sichtbar.
+
+Für das Update zuerst die privaten Risiko-, TP- und Tagesstopp-Migrationen anwenden, dann
+`mt5-control`, `mt5-worker` und gegebenenfalls `trading-monitor-mcp` deployen, den Worker aktualisieren
+und das Frontend veröffentlichen. Alte Worker erfüllen die neuen Schutz-Capabilities nicht;
+Entries bleiben dann gesperrt. Betrieb, Tests und Deployment dürfen keine echte Testorder erzeugen.
+
+## TP-Pläne nach bestätigtem Fill
+
+`MmtTargetEditor` und `useMmtTargetDrawing` bearbeiten gemeinsame Browserentwürfe.
+Ziehen, Preise und Prozent-/Lotmengen werden erst mit **TP-Plan verbindlich speichern** wirksam.
+Fill, ausgeführte Lotgröße und initialer SL bleiben die feste RR-Basis; offenes Volumen und
+aktueller Broker-SL werden gesondert angezeigt. Bis fünf Ziele sind möglich. Native Broker-
+Mindestlots und Lot-Schritte gelten für jedes Teilziel und den Rest. Prozentmengen werden
+abgerundet, der verbleibende Rest wird angezeigt; nicht ausführbare Aufteilungen bleiben gesperrt.
+
+Ein einzelnes Ziel für das gesamte Restvolumen wird als nativer Broker-TP installiert.
+Teilziele werden vom laufenden Worker überwacht; dabei wird der native TP entfernt, der
+vorhandene Broker-SL bleibt erhalten. Bei offline Worker bestehen keine brokerseitigen
+Teilziele. Änderungen am tatsächlichen Volumen, SL oder TP pausieren den Plan zum Neuabgleich.
+
+Migration `20261101001500_mt5_target_plans.sql` enthält private Plan-/Befehlsdaten und atomare
+Versandrechte. `TargetEngine` verwendet zusätzlich `target_sends` im bestehenden SQLite-Journal.
+Nach verlorener Rückmeldung/Neustart wird kein Teilclose erneut versendet. `unknown` bleibt
+sichtbar und sperrt Folgeaktionen; nie durch neue Revision oder Journal-Löschen umgehen.
+Die priorisierte Tagesnotbremse muss vor `TargetEngine.cycle(risk_allowed=...)` laufen.
+Worker-Capability `target_plans_ready` und native Volumenspezifikationen müssen vorhanden sein;
+ein alter Worker kann keine TP-Pläne annehmen. Keine echte Brokerorder gehört zum Testablauf.
+
+Broker-Schnittstelle: [MT5 order_send](https://www.mql5.com/en/docs/python_metatrader5/mt5ordersend_py)
+und [Positionsticket bei Modifikation/Close](https://www.mql5.com/en/docs/constants/structures/mqltraderequest).

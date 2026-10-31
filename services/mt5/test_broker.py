@@ -3,13 +3,21 @@ import unittest
 from types import SimpleNamespace as NS
 from unittest.mock import Mock, patch
 
-from broker import Broker
+from broker import Broker as NativeBroker
+
+def Broker(*args,**kwargs):
+    broker=NativeBroker(*args,**kwargs);now=int(time.time())
+    policy=dict(revision='c297afbf-172c-4304-99e7-eb1198191050',day='2026-10-31',risk_base=50000,cost_buffer=10,currency='USD',drawdown_floor=47000,valid_until_sec=now+1000,confirmed_balance=50000,confirmed_equity=50000)
+    broker.risk_context=dict(day="2026-10-31",day_start_sec=now-100,day_end_sec=now+1000,checked_at_sec=now,latched=False,daily_stop_ready=True,policy=policy)
+    return broker
 from test_core import intent
 
 
 def api():
     m = Mock()
     m.ACCOUNT_TRADE_MODE_DEMO = 0
+    m.ACCOUNT_MARGIN_MODE_RETAIL_HEDGING=2
+    m.history_deals_get.return_value=[]
     m.ORDER_TYPE_BUY, m.ORDER_TYPE_SELL = 0, 1
     m.TRADE_ACTION_DEAL, m.ORDER_TIME_GTC, m.ORDER_FILLING_FOK = 1, 0, 0
     m.ORDER_FILLING_IOC = 1
@@ -17,13 +25,14 @@ def api():
     del m.SYMBOL_FILLING_FOK
     del m.SYMBOL_FILLING_IOC
     m.account_info.return_value = NS(login=42, server='Demo', trade_mode=0, trade_allowed=True,
-                                      trade_expert=True, balance=50000, equity=50000, currency='USD')
+                                      trade_expert=True, margin_mode=2,balance=50000, equity=50000, currency='USD')
     m.terminal_info.return_value = NS(connected=True, tradeapi_disabled=False, trade_allowed=True)
     m.positions_get.return_value, m.orders_get.return_value = (), ()
     m.symbol_info.return_value = NS(visible=True, digits=5, point=.00001, trade_stops_level=10,
                                      volume_min=.01, volume_max=100, volume_step=.01, filling_mode=3)
     m.symbol_info_tick.return_value = NS(bid=1.30000, ask=1.30010, time=time.time())
     m.order_calc_profit.return_value = -1000
+    m.order_calc_profit.side_effect=lambda side,symbol,volume,entry,exit:m.order_calc_profit.return_value*volume
     m.order_check.return_value = NS(retcode=0)
     return m
 
@@ -105,7 +114,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(request['volume'],.01)
         m.order_send.assert_not_called()
 
-    def test_minimum_lot_has_no_invented_cash_limit_and_never_scales_up(self):
+    def test_minimum_lot_respects_confirmed_budget_and_never_scales_up(self):
         for loss_per_lot in (900, 5000):
             m=api();m.order_calc_profit.return_value=-loss_per_lot
             order=intent(trigger='m1_directional_close',trigger_price=None,volume=.01,risk_amount=9)

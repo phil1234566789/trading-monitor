@@ -13,6 +13,7 @@ export async function marketPreviewAction(body:Record<string,any>) {
     const bridge=checked(await mt5Database().from('mt5_bridge_state').select('*').eq('id','primary').maybeSingle());
     if(!bridge||Date.now()-Date.parse(bridge.heartbeat_at)>15000) throw new Error('bridge_offline');
     const snapshot=validateWorkerSnapshot(bridge.snapshot,{...config,allowLive:true});
+    if(body.action==='preview'&&body.order?.risk_mode!=null)throw new Error('invalid_risk_mode');
     const build=body.action==='search_preview'?buildEntrySearchPreview:buildMarketPreview;
     const preview=build(body.order,snapshot,config,now,crypto.randomUUID());
     const account=await activeMt5Account();

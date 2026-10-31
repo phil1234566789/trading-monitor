@@ -77,6 +77,10 @@ import {
 } from "../priceChartConstants.js";
 import { buildActiveMetadataSnapshot, hasActiveMetadata as hasActiveMetadataFor, saveDebugMetadataSection } from "../debugMetadata.js";
 import { usePriceChartDrawings } from "../composables/usePriceChartDrawings.js";
+import {useMmtTargetDrawing} from '../composables/useMmtTargetDrawing.js';
+import {useTradeIdeaDrawing} from '../composables/useTradeIdeaDrawing.js';
+import {useDrawings} from '../composables/useDrawings.js';
+import {renderBrokerTrades} from '../tradeIdeaRendering.js';
 import { measureDrawing } from "../chartMeasure.js";
 import { usePriceChartTradeSetups } from "../composables/usePriceChartTradeSetups.js";
 import { usePriceChartMarketStructure } from "../composables/usePriceChartMarketStructure.js";
@@ -314,6 +318,7 @@ const props = defineProps({
   annotationsDate: { type: String, default: null },
   // Mess-Modus (Philip 2026-09-23) — eigener Klick-Modus neben dem Trade-Modus, nicht innerhalb:
   // gemessen wird frei zwischen zwei Punkten, ohne Treffer auf irgendein Chart-Objekt.
+  brokerTrades: {type:Array,default:()=>[]},
   measureModeActive: { type: Boolean, default: false },
   // Trade-Modus (Chat 2026-07-27: "damit ich nicht versehentlich in den Chart reinklicke") — nur
   // wenn aktiv, wertet der Klick-Handler unten Klicks auf Trade-Setup-OB-Boxen aus. Sonst bleibt
@@ -373,6 +378,27 @@ const emit = defineEmits([
   "measure-done",
 ]);
 
+const targetDrawing=useMmtTargetDrawing();
+const lastCandleTime=ref(null);
+const ideaStore=useDrawings();
+const ideaDrawing=useTradeIdeaDrawing({
+ context:()=>[props.symbol,props.currentBar,props.replayUntil],
+ pointAt:(x,y)=>{
+  if(!chart||!candleSeries||!allCandles.length)return null;
+  const price=candleSeries.coordinateToPrice(y),scale=chart.timeScale();
+  const candles=clipReplay(allCandles),logical=scale.coordinateToLogical(x),last=candles[candles.length-1];
+  const time=scale.coordinateToTime(x)??(logical==null||!last?null:last.time+Math.round(logical-(candles.length-1))*barSecondsFor(props.currentBar));
+  return price==null||time==null?null:{price,time};
+ },save:d=>ideaStore.add(d.annotations,d.title),refresh:()=>{if(chart&&candleSeries)refreshDrawingsInternal();}
+});
+const brokerPrimitives=[];
+function refreshBrokerTrades(){
+ if(!candleSeries)return;
+ for(const p of brokerPrimitives)candleSeries.detachPrimitive(p);
+ brokerPrimitives.length=0;
+ renderBrokerTrades(candleSeries,props.brokerTrades,brokerPrimitives,clipReplay(allCandles));
+}
+watch(()=>props.brokerTrades,refreshBrokerTrades);
 const { markSuccess } = useStatusBar();
 const snapshotView = computed(() => isTradeSetup2SnapshotView(props));
 const snapshotCandleState = ref('loading'), snapshotCandleError = ref('');
@@ -1156,12 +1182,14 @@ function refreshInvalidationLinesInternal() {
 // Dünner Wrapper um usePriceChartDrawings' refresh() — baut die Argumente aus Props/
 // allCandles zusammen (siehe usePriceChartDrawings.js für die eigentliche Zeichenlogik).
 function refreshDrawingsInternal() {
+  targetDrawing.refresh({symbol:props.symbol,candles:clipReplay(allCandles),currentBar:props.currentBar});
   refreshDrawings({
     // Die laufende Messung hängt nur zum Zeichnen mit dran (Philip 2026-09-23: "momentan ist es
     // unmöglich genau 6 Pips zu zeichnen, ich sehe die Pip-Anzahl erst nach dem zweiten Klick") —
     // dieselbe Darstellung wie die fertige Messung, nur noch nicht gespeichert.
-    annotations: measurePreview ? [...props.annotations, measurePreview] : props.annotations,
+    annotations: [...props.annotations,...(measurePreview?[measurePreview]:[]),...(ideaDrawing.draft.value?[ideaDrawing.draft.value]:[])],
     annotationsDate: props.annotationsDate,
+    currentBar: props.currentBar,
     candles: clipReplay(allCandles),
   });
 }
@@ -1847,6 +1875,8 @@ function applyCandleData() {
   const color = cssColor("fvgCandle");
   const snapshot=setup2.selected.value;
   const candles = tintFvgCandles(clipReplay(allCandles), snapshot ? [] : tradeSetupsMetadata.value, props.currentBar, color);
+  lastCandleTime.value=candles[candles.length-1]?.time??null;
+  refreshBrokerTrades();
   candleSeries.setData(tintM1FvgCandle(candles, snapshot ? (props.showM1Structure ? snapshot.m1Check?.fvg : null) : m1Structure.check.value.fvg, props.currentBar, color));
 }
 
@@ -2057,6 +2087,7 @@ onMounted(() => {
   // EMA-Serien an (RSI-Series+Pane erst bei Bedarf, siehe refreshRsiInternal/priceChartRsi.refreshRsi).
   priceChartRsi.create(chart, candleSeries);
   createDrawings(chart, candleSeries);
+  targetDrawing.create(chart,candleSeries,chartContainerRef.value);
   createMarketStructure(chart, candleSeries);
   m1Structure.create(candleSeries);
   setup2.create(chart,candleSeries);
@@ -2088,6 +2119,7 @@ onMounted(() => {
 
   chart.subscribeClick((param) => {
     if (!param.point) return;
+    if(ideaDrawing.click(param))return;
     if (props.measureModeActive) {
       measureClick(param);
       return;
@@ -2178,6 +2210,8 @@ onMounted(() => {
     const rect = chartContainerRef.value.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
+    ideaDrawing.move({x,y});
+    if(ideaDrawing.active.value){chartContainerRef.value.style.cursor="crosshair";return;}
     if (props.measureModeActive) {
       chartContainerRef.value.style.cursor = "crosshair";
       if (measureStartPoint) {
@@ -2247,6 +2281,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  targetDrawing.dispose();
   disposeDrawings();
   disposeMarketStructure();
   disposeTradeSetupDrawing();
@@ -2574,6 +2609,7 @@ function jumpToDivergence(d) {
 }
 
 defineExpose({
+  lastCandleTime,
   async refreshData() {
     if (snapshotView.value) {
       const [candlesLoaded] = await Promise.all([loadInitial({ preserveHistory: true, force: true }), setup2.refresh()]);
@@ -2660,6 +2696,11 @@ defineExpose({
       :status="setup2Status" :error="setup2Error" :snapshot-view="snapshotView" :m1-status="setup2.snapshotM1.value.message" :indicator-status="setup2.snapshotIndicators.value.message" @select="setup2.select" @close="closeTradeSetup2Selection" @refresh="setup2.refresh" />
     <M5CandleClock v-if="m5ClockEnabled()" :state="m5Clock" @retry="retryM5Clock" />
     <M1StructureStatus v-if="showM1Structure && !snapshotView" :status="m1StructureStatus" :symbol="symbol" />
+    <div v-if="ideaDrawing.active.value" class="idea-drawing-controls" role="status">
+      {{ideaDrawing.error.value || 'Idee: Anker → SL → optionales Ziel'}}
+      <button v-if="ideaDrawing.points.value.length===2" @click="ideaDrawing.finish()">Ohne TP abschließen</button>
+      <button @click="ideaDrawing.reset()">Neu beginnen</button>
+    </div>
     <div v-if="goldHistoryError" class="live-history-confirm" role="alert">Gold-Strukturvorlauf konnte nicht vollständig geladen werden. <button @click="reloadGoldHistory">Erneut laden</button></div>
     <div v-if="rangesLoading" class="ranges-loading">
       <span class="ranges-spinner"></span>
@@ -2789,6 +2830,8 @@ defineExpose({
 </template>
 
 <style scoped>
+.idea-drawing-controls{position:absolute;left:12px;bottom:44px;z-index:8;background:#1e222d;border:1px solid #303746;border-radius:4px;padding:8px;font-size:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:calc(100% - 24px)}
+
 .chart-wrapper {
   position: relative;
   /* Vorher flex:1;min-height:0 — teilte sich die Höhe mit .trades-panel (Dashboard.vue) innerhalb
