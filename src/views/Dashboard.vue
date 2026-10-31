@@ -1500,7 +1500,7 @@ onUnmounted(() => window.removeEventListener("click", closeMenusOutside));
 // refreshTrades()-Aufrufe unten), kein eigenes intervalMs also kein Hintergrund-Poll (siehe
 // usePolledFetch.js). Externe Änderungen lädt der Button „Daten aktualisieren“ gezielt nach.
 const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrades(currentSymbol.value, selectedTradingAccountId.value), dashboardDataOptions);
-useJournalRoute(()=>route.query,{trades,currentSymbol,selectedTradingAccountId,showTrades,open:onEditRequest,select:onSelectTrade});
+useJournalRoute(()=>route.query,{trades,currentSymbol,selectedTradingAccountId,showTrades,replayActive,replayTime,open:onEditRequest,select:onSelectTrade});
 // "Isolieren"-Modus (Task trade-journal-dr-im-chart-isolieren-zeilen-button, 2026-08-28): Philip
 // tat sich schwer, Journal-Zeilen den richtigen Chart-Objekten zuzuordnen, wenn mehrere Trades im
 // selben Zeitfenster liegen. isolatedTrades filtert NUR den Chart-Feed (PriceChart.vue's

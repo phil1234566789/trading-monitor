@@ -1,7 +1,7 @@
 import {watch} from 'vue';
 import {ALL_ACCOUNTS_ID} from '../tradingAccounts.js';
 
-export function useJournalRoute(query,{trades,currentSymbol,selectedTradingAccountId,showTrades,open,select}){
+export function useJournalRoute(query,{trades,currentSymbol,selectedTradingAccountId,showTrades,replayActive,replayTime,open,select}){
  let opened=null;
  watch(query,value=>{
   const id=Number(value.journalTrade);
@@ -15,6 +15,8 @@ export function useJournalRoute(query,{trades,currentSymbol,selectedTradingAccou
   if(opened===id)return;
   const trade=trades.value.find(t=>t.id===id&&t.instrument===currentSymbol.value);
   if(!trade)return;
+  // Ein alter Replay-Stichtag würde den verlinkten, späteren Fill im Chart ausblenden.
+  replayTime.value=trade.exitTime??trade.entryTime;replayActive.value=true;
   opened=id;open(trade);void select(trade);
  });
 }

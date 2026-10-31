@@ -2,7 +2,18 @@ import {describe,it,expect} from 'vitest';
 import {loadPrivateJournalPages} from '../src/privateJournal.js';
 import {computeTradeStats} from '../src/tradeStats.js';
 import {fmtMoney} from '../src/format.js';
+import {effectScope,ref,nextTick} from 'vue';
+import {useJournalRoute} from '../src/composables/useJournalRoute.js';
 describe('private journal',()=>{
+ it('opens the exact linked position beyond a stale replay cutoff only once',async()=>{
+  const scope=effectScope(),query=ref({journalTrade:'42',instrument:'XAUUSD'}),opened=[],selected=[];
+  const state={trades:ref([]),currentSymbol:ref('GBPUSD'),selectedTradingAccountId:ref(1),showTrades:ref(false),replayActive:ref(true),replayTime:ref(100),open:t=>opened.push(t.id),select:t=>selected.push(t.id)};
+  scope.run(()=>useJournalRoute(()=>query.value,state));
+  expect(state.currentSymbol.value).toBe('XAUUSD');expect(state.selectedTradingAccountId.value).toBe('all');
+  state.trades.value=[{id:42,instrument:'XAUUSD',entryTime:200,exitTime:300}];await nextTick();
+  expect(state.replayTime.value).toBe(300);expect(opened).toEqual([42]);expect(selected).toEqual([42]);
+  state.trades.value=[...state.trades.value];await nextTick();expect(opened).toEqual([42]);scope.stop();
+ });
  it('preserves native account currency while retaining manual USD formatting',()=>{
   expect(fmtMoney(-12.5,'EUR')).toBe('-12.50 EUR');expect(fmtMoney(7,'GBP')).toBe('7.00 GBP');expect(fmtMoney(-12.5)).toBe('-$12.50');
  });
