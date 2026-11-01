@@ -10,20 +10,28 @@ export const usesPivotBreakEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,O
 export const usesCountertrendM5BosEntryPattern1 = version => [ENTRY_PATTERN_1_VERSION,OPTIONAL_M5_BOS_ENTRY_PATTERN_1_VERSION,'countertrend-entry-model-1-v9','countertrend-entry-model-1-v8','countertrend-entry-model-1-v7','countertrend-entry-model-1-v6','countertrend-entry-model-1-v5'].includes(version);
 
 export function entryPattern1ConditionsReady(conditions, direction, entryAt, version = ENTRY_PATTERN_1_VERSION) {
+  return entryPattern1ConditionResults(conditions,direction,entryAt,version).every(rule=>!rule.required||rule.passed);
+}
+
+// UI und Entry-Gate verwenden dieselben historischen Einzelprädikate.
+export function entryPattern1ConditionResults(conditions, direction, entryAt, version = ENTRY_PATTERN_1_VERSION) {
   const {retest,fvg}=conditions ?? {};
   const legacy=version==='countertrend-entry-model-1-v1';
-  const pivotBreak=usesPivotBreakEntryPattern1(version);
-  const m5=conditions?.[legacy?'m5Choch':'m5Bos'],m1=conditions?.[legacy?'m1Bos':pivotBreak?'m1PivotBreak':'m1Choch'];
-  const known = fact => Number.isFinite(fact?.recognizedAt) && fact.recognizedAt <= entryAt;
-  const same = fact => known(fact) && fact.direction === direction;
-  return ['short','long'].includes(direction) && Number.isFinite(entryAt)
-    && (usesOptionalM5BosEntryPattern1(version)
-      ? entryPattern1CountertrendKnown(conditions?.m5Countertrend,direction,entryAt)
-      : (!usesCountertrendM5BosEntryPattern1(version) || entryPattern1M5BosMatches(m5,conditions?.m5Countertrend,direction,entryAt))
-        && same(m5) && m5.type === (legacy?'CHoCH':'BOS'))
-    && same(m1) && m1.type === (legacy?'BOS':pivotBreak?'pivot-break':'CHoCH')
-    && known(retest) && retest.orderBlock?.dir === (direction === 'short' ? -1 : 1)
-    && same(fvg) && fvg.recognizedAt > retest.recognizedAt;
+  const m5Key=legacy?'m5Choch':'m5Bos',m1Key=legacy?'m1Bos':usesPivotBreakEntryPattern1(version)?'m1PivotBreak':'m1Choch';
+  const m5=conditions?.[m5Key],m1=conditions?.[m1Key];
+  const known=fact=>Number.isFinite(fact?.recognizedAt)&&fact.recognizedAt<=entryAt;
+  const same=fact=>known(fact)&&fact.direction===direction;
+  const optional=usesOptionalM5BosEntryPattern1(version);
+  return [
+    {key:'direction',required:true,passed:['short','long'].includes(direction)&&Number.isFinite(entryAt)},
+    {key:'m5Countertrend',required:optional||usesCountertrendM5BosEntryPattern1(version),passed:entryPattern1CountertrendKnown(conditions?.m5Countertrend,direction,entryAt)},
+    {key:m5Key,required:!optional,passed:same(m5)&&m5.type===(legacy?'CHoCH':'BOS')&&(!usesCountertrendM5BosEntryPattern1(version)||entryPattern1M5BosMatches(m5,conditions?.m5Countertrend,direction,entryAt))},
+    {key:m1Key,required:true,passed:same(m1)&&m1.type===(legacy?'BOS':usesPivotBreakEntryPattern1(version)?'pivot-break':'CHoCH')},
+    {key:'retest',required:true,passed:known(retest)},
+    {key:'retestOrderBlock',required:true,passed:retest?.orderBlock?.dir===(direction==='short'?-1:1)},
+    {key:'fvg',required:true,passed:same(fvg)},
+    {key:'fvgAfterRetest',required:true,passed:fvg?.recognizedAt>retest?.recognizedAt},
+  ];
 }
 
 export const usesOptionalM5BosEntryPattern1 = version => version === OPTIONAL_M5_BOS_ENTRY_PATTERN_1_VERSION;

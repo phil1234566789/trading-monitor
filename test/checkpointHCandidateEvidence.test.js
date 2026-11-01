@@ -2,63 +2,67 @@ import {expect,it} from 'vitest';
 import original from './fixtures/checkpointH22681.json';
 import dr3033 from './fixtures/checkpointH3033.json';
 import {checkpointHExplanation} from '../src/checkpointHExplanation.js';
-it('explains why the original FVG could not trigger an entry before the much later pivot break',()=>{
-  const result=checkpointHExplanation(structuredClone(original));
-  expect(result.summary).toContain('13:04');expect(result.summary).toContain('14:07');
-  expect(result.summary).toContain('M1-Pivotbruch');expect(result.summary).not.toContain('Suchphase beendet');
-  expect(result.causality.candidateAt).toBe(1792494240);
-  expect(result.causality.proof.join(' ')).toContain('keine spätere FVG-Bestätigung gespeichert');
-  expect(result.summary).not.toContain('M5-BOS');
+const check=s=>checkpointHExplanation(structuredClone(s)).candidates[0];
+it('shows one coherent v10 candidate instead of later green pivot and later ended lifecycle',()=>{
+ const c=check(original);
+ expect(c.at).toBe(1792494240);expect(c.version).toBe('countertrend-entry-model-1-v10');
+ expect(c.rows.find(r=>r.key==='m1PivotBreak')).toMatchObject({state:'missing',tone:'negative',required:true});
+ expect(c.rows.find(r=>r.key==='m5Bos')).toMatchObject({state:'optionalMissing',tone:'warning',required:false});
+ for(const key of ['active','retest','fvg'])expect(c.rows.find(r=>r.key===key).state).toBe('fulfilled');
+ expect(c.summary).toContain('Kein Entry: Pflichtregel M1-Pivotbruch');
+ expect(c.timeline.join(' ')).toContain('14:07');
+ expect(JSON.stringify(c.rows)).not.toContain('14:07');
 });
-it('does not reveal the later pivot break when rewound to the FVG candidate',()=>{
-  const result=checkpointHExplanation(structuredClone(original),1792494240);
-  expect(result.summary).toContain('13:04');expect(result.summary).toContain('M1-Pivotbruch');
-  expect(result.summary).not.toContain('14:07');
+it('keeps v11 BOS mandatory and missing',()=>{
+ expect(check(dr3033).rows.find(r=>r.key==='m5Bos')).toMatchObject({state:'missing',required:true,tone:'negative'});
 });
-it('does not declare the later green individual facts a valid simultaneous pattern',()=>{
-  const s=structuredClone(original);
-  const latest=s.checklistHistory.entries.at(-1);
-  s.checklistHistory.entries=[latest];
-  const result=checkpointHExplanation(s);
-  expect(result.state).toBe('uncertain');
-  expect(result.summary).toContain('Grund mit gespeicherten Daten nicht feststellbar');
-  expect(result.causality.proof.join(' ')).toContain('Prüfung zum FVG-Zeitpunkt');
+it('does not reconstruct a candidate test from a later summary',()=>{
+ const s=structuredClone(original);s.checklistHistory.entries=s.checklistHistory.entries.filter(f=>f.m1Check?.evaluatedAt!==1792494240);
+ const c=check(s);expect(c.state).toBe('uncertain');expect(c.rows.every(r=>r.state==='uncertain')).toBe(true);
 });
-it('keeps a fresh later FVG with insufficient release evidence unknown instead of blaming the earlier late break',()=>{
-  const s=structuredClone(original),latest=s.checklistHistory.entries.at(-1);
-  const next=structuredClone(s.checklistHistory.entries.at(-2));
-  next.m1Check.evaluatedAt=1792498500;next.knownAt=1792498500;
-  next.m1Check.conditions.fvg.recognizedAt=1792498500;next.m1Check.fvg=next.m1Check.conditions.fvg;
-  s.checklistHistory.entries.splice(-1,0,next);
-  const result=checkpointHExplanation(s);
-  expect(result.state).toBe('uncertain');expect(result.summary).toContain('Grund mit gespeicherten Daten nicht feststellbar');
+it('keeps omitted optional evidence gray rather than yellow',()=>{
+ const s=structuredClone(original);for(const f of s.checklistHistory.entries)if(f.m1Check?.conditions)delete f.m1Check.conditions.m5Bos;
+ expect(check(s).rows.find(r=>r.key==='m5Bos')).toMatchObject({state:'uncertain',tone:'neutral'});
 });
-it('still explains DR3033 using the required missing M5 BOS at its actual FVG candidate time',()=>{
-  const result=checkpointHExplanation(structuredClone(dr3033));
-  expect(result.summary).toContain('M5-BOS');expect(result.summary).toContain('22:59');
-  expect(result.causality.candidateAt).toBe(1787864340);
+it('keeps multiple candidates and their exact tests separate',()=>{
+ const s=structuredClone(original),f=structuredClone(s.checklistHistory.entries[1]);
+ f.knownAt+=60;f.m1Check.evaluatedAt=f.knownAt;f.m1Check.conditions.fvg.recognizedAt=f.knownAt;f.m1Check.fvg.recognizedAt=f.knownAt;
+ s.checklistHistory.entries.splice(2,0,f);
+ const cs=checkpointHExplanation(s).candidates;expect(cs.map(c=>c.at)).toEqual([1792494240,1792494300]);
 });
-it('keeps the proven candidate cause ahead of a later technical failure',()=>{
-  const s=structuredClone(original);s.checklist.status='error';s.checklist.details=['Spätere Auswertung abgebrochen'];
-  const result=checkpointHExplanation(s);
-  expect(result.summary).toContain('13:04');expect(result.summary).toContain('14:07');
-  expect(result.state).toBe('missing');expect(result.technicalNote).toContain('Spätere Auswertung abgebrochen');
+it('never imports a later lifecycle or eligibility into candidate rules',()=>{
+ const s=structuredClone(original);s.entryEligibility={status:'blocked',details:['future gate']};
+ const c=check(s);expect(c.rows.find(r=>r.key==='time').state).toBe('uncertain');expect(c.rows.find(r=>r.key==='active').state).toBe('fulfilled');
 });
-it('names an explicit gate block stored at the candidate time, without recomputing schedules',()=>{
-  const s=structuredClone(original);s.checklistHistory.entries[1].entryEligibility={status:'blocked',details:['Session am Kandidatenzeitpunkt gesperrt.']};
-  const result=checkpointHExplanation(s);
-  expect(result.state).toBe('blocked');expect(result.summary).toContain('13:04');
-  expect(result.causality.proof).toContain('Session am Kandidatenzeitpunkt gesperrt.');
+it('uses only candidate-time entry proof and does not infer an entry from green signals',()=>{
+ const s=structuredClone(original);s.entry={recognizedAt:s.knownAt,price:999};
+ expect(check(s).state).toBe('missing');
 });
-it('keeps a technical failure in the candidate test distinct from absent pattern signals',()=>{
-  const s=structuredClone(original);s.checklistHistory.entries[1].m1Check.status='error';
-  const result=checkpointHExplanation(s);
-  expect(result.state).toBe('technical');expect(result.summary).toContain('13:04');
+it('distinguishes an explicitly absent countertrend from unrecorded countertrend data',()=>{
+ for(const absent of [true,false]){
+  const s=structuredClone(original),f=s.checklistHistory.entries[1];
+  if(absent)f.m1Check.conditions.m5Countertrend=null;else delete f.m1Check.conditions.m5Countertrend;
+  expect(check(s).rows.find(r=>r.key==='m5Countertrend').state).toBe(absent?'missing':'uncertain');
+ }
 });
-it('does not substitute a later error for a missing original candidate test',()=>{
-  const s=structuredClone(original);s.checklistHistory.entries=[s.checklistHistory.entries.at(-1)];
-  s.checklist.status='error';s.checklist.details=['Späterer Fehler'];
-  const result=checkpointHExplanation(s);
-  expect(result.state).toBe('uncertain');expect(result.summary).toContain('Grund mit gespeicherten Daten nicht feststellbar');
-  expect(result.technicalNote).toContain('Späterer Fehler');
+it('rejects a v11 BOS bound to the wrong countertrend origin',()=>{
+ const s=structuredClone(dr3033),f=s.checklistHistory.entries.find(f=>f.knownAt===1787864340),at=f.knownAt;
+ f.m1Check.conditions.m5Countertrend={trend:'uptrend',recognizedAt:at-60,range:{high:{pivotTime:at-120}}};
+ f.m1Check.conditions.m5Bos={type:'BOS',direction:'short',recognizedAt:at-30,originTime:at-180};
+ expect(check(s).rows.find(r=>r.key==='m5Bos').state).toBe('missing');
+});
+it('shows the retest contact separately from a mismatched orderblock direction',()=>{
+ const s=structuredClone(original);s.checklistHistory.entries[1].m1Check.conditions.retest.orderBlock={dir:-1};
+ const c=check(s);expect(c.rows.find(r=>r.key==='retest').state).toBe('fulfilled');
+ expect(c.rows.find(r=>r.key==='retestOrderBlock').state).toBe('missing');
+});
+it('does not claim an unrecorded orderblock direction or countertrend range passed',()=>{
+ const c=check(original);
+ for(const key of ['m5Countertrend','retestOrderBlock'])expect(c.rows.find(r=>r.key===key).state).toBe('uncertain');
+});
+it('rejects a wrong signal type and a FVG that predates the retest',()=>{
+ const s=structuredClone(original),f=s.checklistHistory.entries[1];
+ f.m1Check.conditions.m1PivotBreak={type:'BOS',direction:'long',recognizedAt:f.knownAt-1};
+ f.m1Check.conditions.retest.recognizedAt=f.knownAt+60;
+ const c=check(s);for(const key of ['m1PivotBreak','fvgAfterRetest'])expect(c.rows.find(r=>r.key===key).state).toBe('missing');
 });

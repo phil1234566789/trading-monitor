@@ -2,73 +2,28 @@ import {expect,it} from 'vitest';
 import original from './fixtures/checkpointH3033.json';
 import {checkpointHExplanation} from '../src/checkpointHExplanation.js';
 const copy=()=>structuredClone(original);
-it('uses the real saved M1 history instead of inventing missing signals from the empty summary',()=>{
-  const result=checkpointHExplanation(copy());
-  expect(result.sourceAt).toBe(1787864340);
-  expect(result.summary).toContain('M5-BOS');
-  expect(result.rows.find(r=>r.key==='m5Bos').state).toBe('missing');
-  for(const key of ['m1PivotBreak','retest','fvg'])expect(result.rows.find(r=>r.key===key).state).toBe('fulfilled');
-  expect(result.rows.find(r=>r.key==='active')).toMatchObject({state:'uncertain'});
-  expect(JSON.stringify(result)).not.toContain('nach T1 oder Lifecycle-Ende beendet');
+it('uses exact saved candidate history and keeps lifecycle at that same time',()=>{
+ const c=checkpointHExplanation(copy()).candidates[0];
+ expect(c.at).toBe(1787864340);expect(c.rows.find(r=>r.key==='m5Bos').state).toBe('missing');
+ for(const key of ['active','m1PivotBreak','retest','fvg'])expect(c.rows.find(r=>r.key===key).state).toBe('fulfilled');
 });
-it('does not turn absent historical checks into unmet requirements or technical errors',()=>{
-  const s=copy();delete s.checklistHistory;
-  const result=checkpointHExplanation(s);
-  expect(result.rows.filter(r=>r.state==='missing')).toEqual([]);
-  expect(result.rows.find(r=>r.key==='m5Bos').state).toBe('notStored');
-  expect(result.state).toBe('uncertain');
+it('does not invent a candidate when historical checks are absent',()=>{
+ const s=copy();delete s.checklistHistory;
+ expect(checkpointHExplanation(s).candidates).toEqual([]);
 });
-it('keeps a later lifecycle end separate from the earlier missing M5 BOS',()=>{
-  const s=copy(),last=s.checklistHistory.entries.at(-1);
-  last.checklist.setup.primary.lifecycle={main:{state:'ended',reason:'target1',recognizedAt:last.knownAt},entrySearchAllowed:false};
-  const result=checkpointHExplanation(s);
-  expect(result.summary).toContain('M5-BOS');
-  expect(result.rows.find(r=>r.key==='active').state).toBe('blocked');
-  expect(result.context).toContain('keine Erklärung für frühere');
+it('keeps later technical failure separate from the candidate result',()=>{
+ const s=copy();s.checklist.status='error';s.checklist.details=['Worker abgebrochen'];
+ const result=checkpointHExplanation(s);expect(result.candidates[0].state).toBe('missing');expect(result.technicalNotes.join(' ')).toContain('Worker abgebrochen');
 });
-it('labels absent checks after a proven end as not checked, not as failed',()=>{
-  const s=copy();delete s.checklistHistory;
-  s.checklist.setup.primary.lifecycle={main:{state:'ended',reason:'target1',recognizedAt:s.knownAt},entrySearchAllowed:false};
-  const result=checkpointHExplanation(s);
-  expect(result.rows.find(r=>r.key==='retest').state).toBe('notChecked');
-  expect(result.summary).toContain('Grund mit gespeicherten Daten nicht feststellbar');
-  expect(result.rows.find(r=>r.key==='active').state).toBe('blocked');
+it('never uses a future candidate or future technical failure while rewinding',()=>{
+ const s=copy();s.m1Check={status:'error',evaluatedAt:s.knownAt,details:['future failure']};
+ const result=checkpointHExplanation(s,1787864000);expect(result.candidates).toEqual([]);expect(result.technicalNotes).toEqual([]);
 });
-it('names only an explicitly stored technical failure as a technical failure',()=>{
-  const s=copy();delete s.checklistHistory;s.m1Check={evaluatedAt:s.knownAt,status:'error',details:['Worker abgebrochen']};
-  const result=checkpointHExplanation(s);
-  expect(result.state).toBe('technical');expect(result.summary).toContain('Technischer Fehler');
-  expect(result.technicalNote).toContain('Worker abgebrochen');
+it('keeps an omitted mandatory condition unknown rather than red',()=>{
+ const s=copy();for(const f of s.checklistHistory.entries)if(f.m1Check?.conditions)delete f.m1Check.conditions.m5Bos;
+ expect(checkpointHExplanation(s).candidates[0].rows.find(r=>r.key==='m5Bos').state).toBe('uncertain');
 });
-it('never uses a future saved M1 test or a future entry when rewinding',()=>{
-  const s=copy();s.entry={recognizedAt:s.knownAt+60,price:999};
-  const result=checkpointHExplanation(s,1787864000);
-  expect(result.rows.filter(r=>r.state==='missing')).toEqual([]);
-  expect(result.sourceAt).toBeNull();expect(JSON.stringify(result)).not.toContain('999');
-});
-it('does not treat an omitted condition key as an evaluated missing signal',()=>{
-  const s=copy();for(const h of s.checklistHistory.entries)delete h.m1Check.conditions.m5Bos;
-  const result=checkpointHExplanation(s);
-  expect(result.rows.find(r=>r.key==='m5Bos').state).toBe('notStored');
-  expect(result.rows.filter(r=>r.state==='missing')).toEqual([]);
-});
-it('keeps an explicit later technical error visible even when an earlier history exists',()=>{
-  const s=copy();s.checklist.status='error';s.checklist.details=['Auswertung fehlgeschlagen'];
-  expect(checkpointHExplanation(s)).toMatchObject({state:'missing',technicalNote:expect.stringContaining('Auswertung fehlgeschlagen')});
-});
-it('accepts a newer saved M1 summary even when unchanged history was last recorded earlier',()=>{
-  const s=copy();s.m1Check={...s.checklistHistory.entries[0].m1Check,evaluatedAt:s.knownAt};
-  const result=checkpointHExplanation(s);
-  expect(result.sourceAt).toBe(s.knownAt);
-  expect(result.rows.find(r=>r.key==='m5Bos').state).toBe('missing');
-});
-it('distinguishes an explicitly pending calculation from missing signals',()=>{
-  const s=copy();delete s.checklistHistory;s.m1Check={evaluatedAt:s.knownAt,status:'unknown',reason:'loading'};
-  const result=checkpointHExplanation(s);
-  expect(result.state).toBe('waiting');expect(result.rows.find(r=>r.key==='retest').state).toBe('waiting');
-});
-it('labels a saved disabled check as not checked rather than as missing data',()=>{
-  const s=copy();delete s.checklistHistory;s.m1Check={evaluatedAt:s.knownAt,status:'pending',reason:'disabled',details:['M1-Struktur ausgeschaltet.']};
-  const result=checkpointHExplanation(s);
-  expect(result.state).toBe('uncertain');expect(result.rows.find(r=>r.key==='retest').state).toBe('notChecked');
+it('keeps actual candidate technical error separate and all signal statuses unknown',()=>{
+ const s=copy();const f=s.checklistHistory.entries.find(f=>f.m1Check?.evaluatedAt===1787864340);f.m1Check.status='error';f.m1Check.details=['Failed'];
+ const c=checkpointHExplanation(s).candidates[0];expect(c.rows.every(r=>r.state==='uncertain')).toBe(true);expect(c.technicalNote).toContain('Failed');
 });
