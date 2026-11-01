@@ -1,8 +1,9 @@
 <script setup>
 import SimulationPinFlag from './SimulationPinFlag.vue';
+import CheckpointHDetails from './CheckpointHDetails.vue';
 import { ref,computed } from 'vue';
 import { FEATURE_VALUES,featureDetails } from '../simulationReviewFeatures.js';
-const props=defineProps({features:Array,selectedKey:String,isPinned:{type:Function,default:()=>false},pinNote:{type:Function,default:()=>undefined}});
+const props=defineProps({features:Array,snapshot:Object,loadSnapshot:Function,selectedKey:String,isPinned:{type:Function,default:()=>false},pinNote:{type:Function,default:()=>undefined}});
 const emit=defineEmits(['pin-menu']);
 const selected=ref(props.selectedKey ?? '');
 const active=computed(()=>props.features.find(f=>f.key===selected.value));
@@ -14,8 +15,11 @@ const active=computed(()=>props.features.find(f=>f.key===selected.value));
       <span class="sr-only"> · {{ FEATURE_VALUES[f.value] }}</span>
     </button>
   </div>
-  <section v-if="active" class="feature-details" :aria-label="active.label"><h4>{{ active.label }} · {{ FEATURE_VALUES[active.value] }}</h4>
+  <section v-if="active" class="feature-details" :aria-label="active.label">
+    <CheckpointHDetails v-if="active.key==='entry' && snapshot" :snapshot="snapshot" :load-snapshot="loadSnapshot" />
+    <template v-else><h4>{{ active.label }} · {{ FEATURE_VALUES[active.value] }}</h4>
     <div v-for="f in featureDetails(features,active)" :key="f.key"><strong v-if="f.key!==active.key">{{ f.label }} · {{ FEATURE_VALUES[f.value] }}</strong><p v-for="(detail,index) in f.details" :key="index">{{ detail }}</p><p v-if="!f.details?.length">Keine Prüfung gespeichert.</p></div>
+    </template>
   </section>
 </template>
 <style scoped>

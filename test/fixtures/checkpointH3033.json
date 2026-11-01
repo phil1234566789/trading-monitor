@@ -1,0 +1,580 @@
+{
+  "id": "GBPUSD:setup1:3033:stand:1787864700",
+  "setupKey": "GBPUSD:setup1:3033",
+  "instrument": "GBPUSD",
+  "direction": "short",
+  "knownAt": 1787864700,
+  "entry": null,
+  "m1Check": null,
+  "checklist": {
+    "model": "countertrend",
+    "setup": {
+      "primary": {
+        "id": "GBPUSD:setup1:3033",
+        "recognizedAt": 1787838600,
+        "reactionRecognizedAt": 1787838600,
+        "validity": {
+          "state": "unknown",
+          "reason": "missingHistory",
+          "endedAt": null,
+          "recognizedAt": null
+        },
+        "lifecycle": {
+          "main": {
+            "state": "unknown",
+            "reason": "missingHistory",
+            "endedAt": null,
+            "recognizedAt": null
+          },
+          "events": [],
+          "target1": {
+            "hitAt": null,
+            "status": "open",
+            "recognizedAt": null
+          },
+          "target2": {
+            "hitAt": null,
+            "status": "open",
+            "recognizedAt": null
+          },
+          "evaluatedAt": 1787864700,
+          "entrySearchAllowed": false
+        }
+      }
+    },
+    "checks": {
+      "m5Trend": {
+        "status": "passed",
+        "details": [
+          "Aktueller M5-Trend bullisch."
+        ]
+      },
+      "targets": {
+        "status": "passed",
+        "details": [
+          "NY-Low (50m): 1.3573",
+          "MMM-Low (3h 50m): 1.35703"
+        ]
+      },
+      "reaction": {
+        "status": "passed",
+        "details": [
+          "Zugehöriger M5-Orderblock aus Setup 1.0."
+        ]
+      },
+      "confluences": {
+        "status": "pending",
+        "details": [
+          "Keine zusätzliche M5-Divergenz am Sweep."
+        ]
+      },
+      "outerM5Trend": {
+        "status": "passed",
+        "details": [
+          "Äußerster M5-Trend bärisch."
+        ]
+      },
+      "liquiditySweep": {
+        "status": "passed",
+        "details": [
+          "Liquidity Sweep aus erkanntem Setup 1.0."
+        ]
+      },
+      "antiConfluences": {
+        "status": "clear",
+        "details": [
+          "bullische 1H Divergenz vorhanden"
+        ]
+      }
+    },
+    "status": "ready",
+    "confirmed": true,
+    "direction": "short",
+    "setupType": "countertrend",
+    "instrument": "GBPUSD",
+    "abortReason": null,
+    "evaluatedAt": 1787864700,
+    "ruleVersion": "countertrend-abcdef-v2",
+    "dealingRange": {
+      "model": "countertrend",
+      "reason": "noCounterDivergence",
+      "status": "validated",
+      "details": [
+        "A bis E erfüllt, kein eingeschalteter Anti-Confluence-Showstopper."
+      ],
+      "version": "countertrend-abcdef-v2",
+      "evaluatedAt": 1787864700,
+      "eShowstoppers": [],
+      "fShowstoppers": []
+    },
+    "entryPattern": "countertrend-entry-model-1-v11",
+    "tradeability": "unknown"
+  },
+  "checklistHistory": {
+    "version": "checklist-changes-v1",
+    "entries": [
+      {
+        "rows": [],
+        "source": "M1",
+        "changes": [],
+        "knownAt": 1787864340,
+        "m1Check": {
+          "bos": null,
+          "fvg": {
+            "gap": 0.00002999999999997449,
+            "direction": "short",
+            "candleTime": 1787864220,
+            "recognizedAt": 1787864340
+          },
+          "choch": null,
+          "entry": null,
+          "retest": {
+            "candleTime": 1787864100,
+            "recognizedAt": 1787864160
+          },
+          "status": "pending",
+          "trends": [
+            {
+              "depth": 0,
+              "trend": "uptrend"
+            },
+            {
+              "depth": 1,
+              "trend": "downtrend"
+            },
+            {
+              "depth": 2,
+              "trend": "uptrend"
+            }
+          ],
+          "details": [
+            "Aktuelle M1-Richtung: Uptrend",
+            "Outer: Uptrend (Kontext)",
+            "Nested Ebene 1: Downtrend (Kontext)",
+            "M5-BOS in Setup-Richtung fehlt",
+            "M1-Pivotbruch ab Sweep: 2026-08-27 16:22 Uhr",
+            "M5-OB-Retest: 2026-08-27 22:56 Uhr · OB 2026-08-27 19:10 Uhr · 1.3592899999999999–1.35963 · ab DR-Bestätigung entstanden",
+            "M1-FVG nach Retest: 2026-08-27 22:59 Uhr"
+          ],
+          "conditions": {
+            "fvg": {
+              "gap": 0.00002999999999997449,
+              "direction": "short",
+              "candleTime": 1787864220,
+              "recognizedAt": 1787864340
+            },
+            "m5Bos": null,
+            "retest": {
+              "candleTime": 1787864100,
+              "recognizedAt": 1787864160
+            },
+            "m1PivotBreak": {
+              "type": "pivot-break",
+              "price": 1.35884,
+              "direction": "short",
+              "pivotTime": 1787838480,
+              "candleTime": 1787840460,
+              "originTime": 1787837640,
+              "originPrice": 1.3600999999999999,
+              "pullbackTime": 1787838720,
+              "recognizedAt": 1787840520,
+              "breachKnownAt": 1787840520,
+              "pullbackPrice": 1.35955,
+              "pivotRecognizedAt": 1787839080
+            },
+            "m5Countertrend": {
+              "recognizedAt": 1787864100
+            }
+          },
+          "instrument": "GBPUSD",
+          "pivotBreak": {
+            "type": "pivot-break",
+            "price": 1.35884,
+            "direction": "short",
+            "pivotTime": 1787838480,
+            "candleTime": 1787840460,
+            "originTime": 1787837640,
+            "originPrice": 1.3600999999999999,
+            "pullbackTime": 1787838720,
+            "recognizedAt": 1787840520,
+            "breachKnownAt": 1787840520,
+            "pullbackPrice": 1.35955,
+            "pivotRecognizedAt": 1787839080
+          },
+          "evaluatedAt": 1787864340,
+          "currentTrend": {
+            "depth": 2,
+            "trend": "uptrend"
+          },
+          "entryPattern": "countertrend-entry-model-1-v11",
+          "detailStatuses": [
+            "context",
+            "context",
+            "context",
+            "unmet",
+            "passed",
+            "passed",
+            "passed"
+          ],
+          "structureStart": {
+            "price": 1.35982,
+            "sourceTime": 1787836800,
+            "recognizedAt": 1787837040,
+            "structureFrom": 1787836980,
+            "sourceTimeframe": "5M"
+          }
+        },
+        "checklist": {
+          "model": "countertrend",
+          "setup": {
+            "primary": {
+              "id": "GBPUSD:setup1:3033",
+              "recognizedAt": 1787838600,
+              "reactionRecognizedAt": 1787838600,
+              "validity": {
+                "state": "active",
+                "reason": null,
+                "recognizedAt": null
+              },
+              "lifecycle": {
+                "main": {
+                  "state": "active",
+                  "reason": null,
+                  "recognizedAt": null
+                },
+                "target1": {
+                  "status": "open",
+                  "recognizedAt": null
+                },
+                "target2": {
+                  "status": "open",
+                  "recognizedAt": null
+                },
+                "entrySearchAllowed": true
+              }
+            }
+          },
+          "checks": {
+            "m5Trend": {
+              "status": "passed",
+              "details": [
+                "Aktueller M5-Trend bullisch."
+              ]
+            },
+            "targets": {
+              "status": "passed",
+              "details": [
+                "NY-Low (50m): 1.3573",
+                "MMM-Low (3h 50m): 1.35703"
+              ]
+            },
+            "reaction": {
+              "status": "passed",
+              "details": [
+                "Zugehöriger M5-Orderblock aus Setup 1.0."
+              ]
+            },
+            "confluences": {
+              "status": "pending",
+              "details": [
+                "Keine zusätzliche M5-Divergenz am Sweep."
+              ]
+            },
+            "outerM5Trend": {
+              "status": "passed",
+              "details": [
+                "Äußerster M5-Trend bärisch."
+              ]
+            },
+            "liquiditySweep": {
+              "status": "passed",
+              "details": [
+                "Liquidity Sweep aus erkanntem Setup 1.0."
+              ]
+            },
+            "antiConfluences": {
+              "status": "clear",
+              "details": [
+                "bullische 1H Divergenz vorhanden"
+              ]
+            }
+          },
+          "status": "ready",
+          "direction": "short",
+          "instrument": "GBPUSD",
+          "evaluatedAt": 1787864340,
+          "ruleVersion": "countertrend-abcdef-v2",
+          "dealingRange": {
+            "model": "countertrend",
+            "reason": "noCounterDivergence",
+            "status": "validated",
+            "details": [
+              "A bis E erfüllt, kein eingeschalteter Anti-Confluence-Showstopper."
+            ],
+            "version": "countertrend-abcdef-v2",
+            "evaluatedAt": 1787864340
+          },
+          "entryPattern": "countertrend-entry-model-1-v11"
+        },
+        "lifecycle": {
+          "main": {
+            "state": "active",
+            "reason": null,
+            "recognizedAt": null
+          },
+          "target1": {
+            "status": "open",
+            "recognizedAt": null
+          },
+          "target2": {
+            "status": "open",
+            "recognizedAt": null
+          },
+          "entrySearchAllowed": true
+        },
+        "evaluatedAt": 1787864340,
+        "dealingRange": {
+          "model": "countertrend",
+          "reason": "noCounterDivergence",
+          "status": "validated",
+          "details": [
+            "A bis E erfüllt, kein eingeschalteter Anti-Confluence-Showstopper."
+          ],
+          "version": "countertrend-abcdef-v2",
+          "evaluatedAt": 1787864340
+        }
+      },
+      {
+        "rows": [],
+        "source": "M1",
+        "changes": [],
+        "knownAt": 1787864580,
+        "m1Check": {
+          "bos": null,
+          "fvg": {
+            "gap": 0.00002999999999997449,
+            "direction": "short",
+            "candleTime": 1787864220,
+            "recognizedAt": 1787864340
+          },
+          "choch": null,
+          "entry": null,
+          "retest": {
+            "candleTime": 1787864100,
+            "recognizedAt": 1787864160
+          },
+          "status": "pending",
+          "trends": [
+            {
+              "depth": 0,
+              "trend": "uptrend"
+            },
+            {
+              "depth": 1,
+              "trend": "downtrend"
+            },
+            {
+              "depth": 2,
+              "trend": "uptrend"
+            }
+          ],
+          "details": [
+            "Aktuelle M1-Richtung: Uptrend",
+            "Outer: Uptrend (Kontext)",
+            "Nested Ebene 1: Downtrend (Kontext)",
+            "M5-BOS in Setup-Richtung fehlt",
+            "M1-Pivotbruch ab Sweep: 2026-08-27 16:22 Uhr",
+            "M5-OB-Retest: 2026-08-27 22:56 Uhr · OB 2026-08-27 19:10 Uhr · 1.3592899999999999–1.35963 · ab DR-Bestätigung entstanden",
+            "M1-FVG nach Retest: 2026-08-27 22:59 Uhr"
+          ],
+          "conditions": {
+            "fvg": {
+              "gap": 0.00002999999999997449,
+              "direction": "short",
+              "candleTime": 1787864220,
+              "recognizedAt": 1787864340
+            },
+            "m5Bos": null,
+            "retest": {
+              "candleTime": 1787864100,
+              "recognizedAt": 1787864160
+            },
+            "m1PivotBreak": {
+              "type": "pivot-break",
+              "price": 1.35884,
+              "direction": "short",
+              "pivotTime": 1787838480,
+              "candleTime": 1787840460,
+              "originTime": 1787837640,
+              "originPrice": 1.3600999999999999,
+              "pullbackTime": 1787838720,
+              "recognizedAt": 1787840520,
+              "breachKnownAt": 1787840520,
+              "pullbackPrice": 1.35955,
+              "pivotRecognizedAt": 1787839080
+            },
+            "m5Countertrend": {
+              "recognizedAt": 1787864100
+            }
+          },
+          "instrument": "GBPUSD",
+          "pivotBreak": {
+            "type": "pivot-break",
+            "price": 1.35884,
+            "direction": "short",
+            "pivotTime": 1787838480,
+            "candleTime": 1787840460,
+            "originTime": 1787837640,
+            "originPrice": 1.3600999999999999,
+            "pullbackTime": 1787838720,
+            "recognizedAt": 1787840520,
+            "breachKnownAt": 1787840520,
+            "pullbackPrice": 1.35955,
+            "pivotRecognizedAt": 1787839080
+          },
+          "evaluatedAt": 1787864340,
+          "currentTrend": {
+            "depth": 2,
+            "trend": "uptrend"
+          },
+          "entryPattern": "countertrend-entry-model-1-v11",
+          "detailStatuses": [
+            "context",
+            "context",
+            "context",
+            "unmet",
+            "passed",
+            "passed",
+            "passed"
+          ],
+          "structureStart": {
+            "price": 1.35982,
+            "sourceTime": 1787836800,
+            "recognizedAt": 1787837040,
+            "structureFrom": 1787836980,
+            "sourceTimeframe": "5M"
+          }
+        },
+        "checklist": {
+          "model": "countertrend",
+          "setup": {
+            "primary": {
+              "id": "GBPUSD:setup1:3033",
+              "recognizedAt": 1787838600,
+              "reactionRecognizedAt": 1787838600,
+              "validity": {
+                "state": "unknown",
+                "reason": "missingHistory",
+                "recognizedAt": null
+              },
+              "lifecycle": {
+                "main": {
+                  "state": "unknown",
+                  "reason": "missingHistory",
+                  "recognizedAt": null
+                },
+                "target1": {
+                  "status": "open",
+                  "recognizedAt": null
+                },
+                "target2": {
+                  "status": "open",
+                  "recognizedAt": null
+                },
+                "entrySearchAllowed": false
+              }
+            }
+          },
+          "checks": {
+            "m5Trend": {
+              "status": "passed",
+              "details": [
+                "Aktueller M5-Trend bullisch."
+              ]
+            },
+            "targets": {
+              "status": "passed",
+              "details": [
+                "NY-Low (50m): 1.3573",
+                "MMM-Low (3h 50m): 1.35703"
+              ]
+            },
+            "reaction": {
+              "status": "passed",
+              "details": [
+                "Zugehöriger M5-Orderblock aus Setup 1.0."
+              ]
+            },
+            "confluences": {
+              "status": "pending",
+              "details": [
+                "Keine zusätzliche M5-Divergenz am Sweep."
+              ]
+            },
+            "outerM5Trend": {
+              "status": "passed",
+              "details": [
+                "Äußerster M5-Trend bärisch."
+              ]
+            },
+            "liquiditySweep": {
+              "status": "passed",
+              "details": [
+                "Liquidity Sweep aus erkanntem Setup 1.0."
+              ]
+            },
+            "antiConfluences": {
+              "status": "clear",
+              "details": [
+                "bullische 1H Divergenz vorhanden"
+              ]
+            }
+          },
+          "status": "ready",
+          "direction": "short",
+          "instrument": "GBPUSD",
+          "evaluatedAt": 1787864580,
+          "ruleVersion": "countertrend-abcdef-v2",
+          "dealingRange": {
+            "model": "countertrend",
+            "reason": "noCounterDivergence",
+            "status": "validated",
+            "details": [
+              "A bis E erfüllt, kein eingeschalteter Anti-Confluence-Showstopper."
+            ],
+            "version": "countertrend-abcdef-v2",
+            "evaluatedAt": 1787864580
+          },
+          "entryPattern": "countertrend-entry-model-1-v11"
+        },
+        "lifecycle": {
+          "main": {
+            "state": "unknown",
+            "reason": "missingHistory",
+            "recognizedAt": null
+          },
+          "target1": {
+            "status": "open",
+            "recognizedAt": null
+          },
+          "target2": {
+            "status": "open",
+            "recognizedAt": null
+          },
+          "entrySearchAllowed": false
+        },
+        "evaluatedAt": 1787864580,
+        "dealingRange": {
+          "model": "countertrend",
+          "reason": "noCounterDivergence",
+          "status": "validated",
+          "details": [
+            "A bis E erfüllt, kein eingeschalteter Anti-Confluence-Showstopper."
+          ],
+          "version": "countertrend-abcdef-v2",
+          "evaluatedAt": 1787864580
+        }
+      }
+    ]
+  }
+}

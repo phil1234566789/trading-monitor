@@ -15,7 +15,7 @@ const reviews=computed(()=>[...new Map((props.snapshots ?? []).flatMap(snapshot=
       <strong>{{ group.snapshot.entry?'Entry':'DR' }} · Prüfstand {{ formatDatedTime(group.snapshot.knownAt) }}</strong>
       <LiveEvidenceProvenance :snapshot="group.snapshot" review />
       <p v-if="Number.isFinite(group.snapshot.liveDetectedAt)">Erkennung gespeichert {{ formatDatedTime(group.snapshot.liveDetectedAt) }}</p>
-      <SimulationFeatureChips :features="group.features" :is-pinned="feature=>isPinned(group,feature)" :pin-note="feature=>pinNote(group,feature)" @pin-menu="(feature,event)=>emit('pin-menu',{kind:'simulation_checkpoint',group,feature},event)" />
+      <SimulationFeatureChips :features="group.features" :snapshot="group.snapshot" :is-pinned="feature=>isPinned(group,feature)" :pin-note="feature=>pinNote(group,feature)" @pin-menu="(feature,event)=>emit('pin-menu',{kind:'simulation_checkpoint',group,feature},event)" />
     </section>
   </details>
 </template>

@@ -3,6 +3,7 @@ import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { supabase } from '../supabaseClient.js';
 import {createSetup2Repository} from '../setup2Repository.js';
+import {createCheckpointSnapshotLoader} from '../checkpointSnapshotLoader.js';
 import { useSimulationComparison } from '../composables/useSimulationComparison.js';
 import { comparisonFilters } from '../simulationRunComparison.js';
 import SimulationRunStatus from '../components/SimulationRunStatus.vue';
@@ -20,6 +21,7 @@ const readFilters=query=>{const value=comparisonFilters(query),run=liveMonthView
 const legacySourceHint=ref(isLiveWatcherMonth(route.query.run)&&route.query.run.endsWith(':catchup')?liveMonthViewId(route.query.run):null);
 const filters=ref(readFilters(route.query)),pins=ref([]);
 const repository=createSetup2Repository(supabase);
+const loadCheckpointSnapshot=createCheckpointSnapshotLoader(repository);
 const liveSelected=computed(()=>isLiveWatcherMonth(filters.value.run));
 const {runs,selectedRun,comparisonRun,current,previous,datasets,loading,error,runListError,dateError,refresh}=useSimulationComparison(repository,filters,pins);
 const pinState=useSimulationPins(filters,selectedRun,computed(()=>datasets.value.get(filters.value.run)?.results ?? []),{repository,datasets,runs});
@@ -62,7 +64,7 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
         <p v-if="!current.groups.length" role="status" class="empty">Keine DRs für diese Filterauswahl.</p>
         <SimulationComparisonMetrics :current="current.results" :previous="previous.results" :compare="!!filters.compare" />
         <SimulationRunQuality :current="current" :previous="previous" :compare="!!filters.compare" />
-        <SimulationDrList :run="selectedRun" :groups="current.groups" :results="current.results" :is-pinned="pinState.isPinned" :pin-note="pinState.pinNote" :pin-count="listedPins.length+pinState.unmatchedPins.value.length" @show-pins="showPins" @pin-menu="pinState.open" />
+        <SimulationDrList :run="selectedRun" :groups="current.groups" :results="current.results" :load-snapshot="loadCheckpointSnapshot" :is-pinned="pinState.isPinned" :pin-note="pinState.pinNote" :pin-count="listedPins.length+pinState.unmatchedPins.value.length" @show-pins="showPins" @pin-menu="pinState.open" />
       </template>
     </div>
     <SimulationPinMenu :target="pinState.target.value" :saving="pinState.saving.value" :error="pinState.error.value" @close="pinState.target.value=null" @save="pinState.save" @remove="pinState.remove" @show-pins="showPins" />
