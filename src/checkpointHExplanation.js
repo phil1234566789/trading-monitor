@@ -1,5 +1,7 @@
 import {setupEntryConditions} from './tradeSetup2Review.js';
 import {snapshotChecklistAt} from './checklistReplayView.js';
+import {checkpointHCandidateEvidence} from './checkpointHCandidateEvidence.js';
+import {formatDatedTime} from './berlinTime.js';
 
 export const CHECKPOINT_H_KEYS=new Set(['time','active','anchor','structure','m5Bos','m1PivotBreak','m1Choch','m5Choch','m1Bos','retest','fvg','entry']);
 export const CHECKPOINT_H_STATES={
@@ -52,17 +54,15 @@ export function checkpointHExplanation(snapshot,at=snapshot.knownAt) {
     const {label:stateLabel,...presentation}=CHECKPOINT_H_STATES[state];
     return {...row,state,details:details?.filter(Boolean) ?? [],...presentation,stateLabel};
   });
-  const missing=rows.filter(r=>r.state==='missing');
+  const causality=checkpointHCandidateEvidence(snapshot,at);
   const technical=m1?.status==='error'?m1:known(snapshot.knownAt)&&snapshot.checklist?.status==='error'?snapshot.checklist
     :current.checklist?.status==='error'?current.checklist:null;
-  let state='uncertain',summary='Warum kein Entry entstand, ist nicht vollständig gespeichert.';
+  let {state,summary}=causality;
   if(entry){state='fulfilled';summary='Entry am gespeicherten Stand belegt.';}
-  else if(technical){state='technical';summary='Technischer Fehler bei der gespeicherten Prüfung.';}
-  else if(missing.length){state='missing';summary=`Kein Entry: ${missing.map(r=>r.label.replace(/ · optional.*$/,'')).join(', ')} am letzten Prüfstand nicht erfüllt.`;}
-  else if(waiting){state='waiting';summary='M1-Prüfung am gespeicherten Stand noch ausstehend.';}
-  else if(notChecked){state='notChecked';summary='M1-Prüfung am gespeicherten Stand nicht ausgeführt.';}
-  else if(ended){state='notChecked';summary='Keine weitere Entry-Prüfung: Suchphase beendet.';}
-  let context=technical||notChecked?(technical?.details ?? m1?.details ?? []).filter(Boolean).join(' '):'';
+  else if(technical&&!causality.candidateAt){state='technical';summary='Technischer Fehler bei der gespeicherten Prüfung.';}
+  else if(waiting&&!causality.candidateAt){state='waiting';summary='M1-Prüfung am gespeicherten Stand noch ausstehend.';}
+  const technicalNote=technical?`Technischer Zustand am ${formatDatedTime(technical.evaluatedAt ?? snapshot.knownAt)} Uhr: ${(technical.details ?? []).filter(Boolean).join(' ')}`:'';
+  let context=notChecked?(m1?.details ?? []).filter(Boolean).join(' '):'';
   if(ended)context+=' Die spätere Beendigung ist keine Erklärung für frühere Nicht-Entries. Für die Zeit davor gelten nur die gespeicherten Prüfbelege.';
-  return {state,summary,context:context.trim(),sourceAt:m1?.evaluatedAt ?? null,at:current.knownAt,rows,...CHECKPOINT_H_STATES[state]};
+  return {state,summary,causality,technicalNote,context:context.trim(),sourceAt:m1?.evaluatedAt ?? null,at:current.knownAt,rows,...CHECKPOINT_H_STATES[state]};
 }

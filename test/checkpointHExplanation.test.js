@@ -31,13 +31,14 @@ it('labels absent checks after a proven end as not checked, not as failed',()=>{
   s.checklist.setup.primary.lifecycle={main:{state:'ended',reason:'target1',recognizedAt:s.knownAt},entrySearchAllowed:false};
   const result=checkpointHExplanation(s);
   expect(result.rows.find(r=>r.key==='retest').state).toBe('notChecked');
-  expect(result.summary).toContain('Suchphase beendet');
+  expect(result.summary).toContain('Grund mit gespeicherten Daten nicht feststellbar');
+  expect(result.rows.find(r=>r.key==='active').state).toBe('blocked');
 });
 it('names only an explicitly stored technical failure as a technical failure',()=>{
   const s=copy();delete s.checklistHistory;s.m1Check={evaluatedAt:s.knownAt,status:'error',details:['Worker abgebrochen']};
   const result=checkpointHExplanation(s);
   expect(result.state).toBe('technical');expect(result.summary).toContain('Technischer Fehler');
-  expect(result.context).toContain('Worker abgebrochen');
+  expect(result.technicalNote).toContain('Worker abgebrochen');
 });
 it('never uses a future saved M1 test or a future entry when rewinding',()=>{
   const s=copy();s.entry={recognizedAt:s.knownAt+60,price:999};
@@ -53,7 +54,7 @@ it('does not treat an omitted condition key as an evaluated missing signal',()=>
 });
 it('keeps an explicit later technical error visible even when an earlier history exists',()=>{
   const s=copy();s.checklist.status='error';s.checklist.details=['Auswertung fehlgeschlagen'];
-  expect(checkpointHExplanation(s)).toMatchObject({state:'technical',context:'Auswertung fehlgeschlagen'});
+  expect(checkpointHExplanation(s)).toMatchObject({state:'missing',technicalNote:expect.stringContaining('Auswertung fehlgeschlagen')});
 });
 it('accepts a newer saved M1 summary even when unchanged history was last recorded earlier',()=>{
   const s=copy();s.m1Check={...s.checklistHistory.entries[0].m1Check,evaluatedAt:s.knownAt};
@@ -69,5 +70,5 @@ it('distinguishes an explicitly pending calculation from missing signals',()=>{
 it('labels a saved disabled check as not checked rather than as missing data',()=>{
   const s=copy();delete s.checklistHistory;s.m1Check={evaluatedAt:s.knownAt,status:'pending',reason:'disabled',details:['M1-Struktur ausgeschaltet.']};
   const result=checkpointHExplanation(s);
-  expect(result.state).toBe('notChecked');expect(result.rows.find(r=>r.key==='retest').state).toBe('notChecked');
+  expect(result.state).toBe('uncertain');expect(result.rows.find(r=>r.key==='retest').state).toBe('notChecked');
 });
