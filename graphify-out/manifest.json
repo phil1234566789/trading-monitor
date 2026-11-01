@@ -7470,9 +7470,9 @@
     "semantic_hash": ""
   },
   "src/checkpointHExplanation.js": {
-    "mtime": 1793521808.0260572,
-    "seen": 1793521895.8964815,
-    "ast_hash": "aa300a290ed37947326e2a906e4193ca",
+    "mtime": 1793529728.5467744,
+    "seen": 1793529952.9792426,
+    "ast_hash": "9a00e4dcf4588ceacd088a6e0dc41060",
     "semantic_hash": ""
   },
   "src/checkpointSnapshotLoader.js": {
@@ -7482,21 +7482,21 @@
     "semantic_hash": ""
   },
   "src/components/CheckpointHDetails.vue": {
-    "mtime": 1793521353.8655863,
-    "seen": 1793521735.4217153,
-    "ast_hash": "b98e74591993df4c6d41416696801f1b",
+    "mtime": 1793529728.7667718,
+    "seen": 1793529952.9802408,
+    "ast_hash": "6a716cdd96b9e2ae79e76ff025ae36e7",
     "semantic_hash": ""
   },
   "test/checkpointHDetails.test.js": {
-    "mtime": 1793521475.5279696,
-    "seen": 1793521735.422712,
-    "ast_hash": "d6518633d5d80216f369eb591980963a",
+    "mtime": 1793529631.1484425,
+    "seen": 1793529953.0842433,
+    "ast_hash": "357dbe73ca0058b03e7eeed953b4b7de",
     "semantic_hash": ""
   },
   "test/checkpointHExplanation.test.js": {
-    "mtime": 1793521808.2560816,
-    "seen": 1793521895.997993,
-    "ast_hash": "f3d954bffb1cf9f4f81c762a2496a656",
+    "mtime": 1793529728.9667718,
+    "seen": 1793529953.0842433,
+    "ast_hash": "e396588d03073304013b553e31b38b2b",
     "semantic_hash": ""
   },
   "test/checkpointSnapshotLoader.test.js": {
@@ -7509,6 +7509,24 @@
     "mtime": 1793521442.5302424,
     "seen": 1793521735.422712,
     "ast_hash": "93133362ae0d17d359ec9f45fac4845a",
+    "semantic_hash": ""
+  },
+  "src/checkpointHCandidateEvidence.js": {
+    "mtime": 1793529949.259241,
+    "seen": 1793529952.9792426,
+    "ast_hash": "3bfecbe87ce172eeb777c85dfffebc08",
+    "semantic_hash": ""
+  },
+  "test/checkpointHCandidateEvidence.test.js": {
+    "mtime": 1793529949.4712443,
+    "seen": 1793529953.0842433,
+    "ast_hash": "3933a5fd9c8a9250747b460f3838f9d1",
+    "semantic_hash": ""
+  },
+  "test/fixtures/checkpointH22681.json": {
+    "mtime": 1793529549.9245317,
+    "seen": 1793529953.0922415,
+    "ast_hash": "359443aa76e93417065a6503ca4352b7",
     "semantic_hash": ""
   }
 }
