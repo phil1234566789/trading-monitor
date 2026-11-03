@@ -81,8 +81,9 @@ async function sendTest() {
       </article>
     </section>
     <section class="instrument">
-      <h2>Suspendierungen ({{ suspensions.current.length }} aktuell)</h2>
-      <p v-if="!suspensions.current.length">Keine Suspendierung im zuletzt geladenen Status.</p>
+      <h2>Suspendierungen<template v-if="report"> ({{ suspensions.current.length }} aktuell)</template></h2>
+      <p v-if="!report">{{ error ? "Suspendierungsstatus unbekannt." : "Suspendierungsstatus wird geladen." }}</p>
+      <p v-else-if="!suspensions.current.length">Keine Suspendierung im zuletzt geladenen Status.</p>
       <details v-for="item in (report?.instruments ?? []).filter(item => item.suspendedRanges?.length)" :key="item.instrument">
         <summary>{{ item.instrument }} · {{ item.suspendedRanges.length }} aktuell suspendiert</summary>
         <p v-for="range in item.suspendedRanges" :key="range.setupKey">{{ range.setupKey }} · {{ directionLabel(range.direction) }} · {{ watcherTime(range.suspendedAt) }} · {{ range.reason }}</p>
