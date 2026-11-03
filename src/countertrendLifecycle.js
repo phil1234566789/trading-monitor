@@ -1,3 +1,4 @@
+import { skipSpreadHourGaps } from './spreadHourGaps.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { candleTouchesPrice } from './structurePivotTime';
 import { evaluateJointLossRisk } from './dealingRangeRisk.js';
@@ -38,7 +39,7 @@ export function evaluateCountertrendLifecycle(input) {
     events:[...result.events,{type:'riskInvalidation',time:risk.recognizedAt,recognizedAt:risk.recognizedAt}]};
 }
 
-function evaluateCountertrendPriceLifecycle({ selection, invalidation, candles, evaluatedAt, entries = [], m1Candles = [], progress }) {
+function evaluateCountertrendPriceLifecycle({ selection, invalidation, candles, evaluatedAt, entries = [], m1Candles = [], progress, allowSpreadHourGaps = false }) {
   let main = { state: 'unknown', reason: 'missingSelection', endedAt: null, recognizedAt: null };
   let result = { main, target1: { status: 'open', hitAt: null, recognizedAt: null },
     target2: { status: selection?.target2 ? 'open' : 'notApplicable', hitAt: null, recognizedAt: null },
@@ -48,8 +49,9 @@ function evaluateCountertrendPriceLifecycle({ selection, invalidation, candles, 
   // Bei Erkennung mitten in einer Kerze darf deren bereits vergangener Docht kein Ende auslösen.
   const minuteStart=Math.ceil(selection.selectedAt/60)*60;
   const minutes=closedChecklistCandles(m1Candles,'1m',evaluatedAt).filter(c=>c.time>=minuteStart);
-  const duration=minutes[0]?.time===minuteStart ? 60 : 300;
-  const key=JSON.stringify([selection,invalidation,duration]);
+  const duration=(minutes[0]?.time===minuteStart || allowSpreadHourGaps && minutes.length &&
+    skipSpreadHourGaps(minuteStart,minutes[0].time,60)===minutes[0].time) ? 60 : 300;
+  const key=JSON.stringify([selection,invalidation,duration,allowSpreadHourGaps]);
   // Nachgelieferte historische Entries können das damalige T1-Ende ändern; dann neu beginnen.
   const previous=progress?.key===key && progress.at<=evaluatedAt && progress.result
     && !entries.some(e=>!progress.entryTimes.includes(e.entryTime) && e.entryTime<progress.at) ? progress : null;
@@ -67,12 +69,13 @@ function evaluateCountertrendPriceLifecycle({ selection, invalidation, candles, 
     && candleTouchesPrice(c,price,favorable === short);
   for (const c of rows) {
     if(c.time<next)continue;
+    if (allowSpreadHourGaps) next=skipSpreadHourGaps(next,c.time,duration);
     if (c.time !== next || ![c.high,c.low].every(Number.isFinite)) {
       main.state = 'unknown'; main.reason = 'missingHistory'; result.entrySearchAllowed = false; return save();
     }
     next += duration;
     if(progress)progress.processed=(progress.processed ?? 0)+1;
-    if (c.ignored) continue;
+    if (c.ignored && !(allowSpreadHourGaps && skipSpreadHourGaps(c.time,next,duration)===next)) continue;
     const invalid = touches(c,invalidation,false);
     const t1 = touches(c,selection.target1.price,true);
     const t2 = touches(c,selection.target2?.price,true);
@@ -92,7 +95,9 @@ function evaluateCountertrendPriceLifecycle({ selection, invalidation, candles, 
       result.entrySearchAllowed=false; return save();
     }
   }
-  if (next < Math.floor(evaluatedAt/duration)*duration) { main.state='unknown'; main.reason='missingHistory'; result.entrySearchAllowed=false; }
+  const through=Math.floor(evaluatedAt/duration)*duration;
+  if (allowSpreadHourGaps) next=skipSpreadHourGaps(next,through,duration);
+  if (next < through) { main.state='unknown'; main.reason='missingHistory'; result.entrySearchAllowed=false; }
   const entryT1=entries.filter(e=>Number.isFinite(e.t1RecognizedAt) && e.t1RecognizedAt<=evaluatedAt)
     .sort((a,b)=>a.t1RecognizedAt-b.t1RecognizedAt)[0];
   if (entryT1 && result.target1.hitAt==null) {

@@ -62,3 +62,15 @@ describe('Countertrend-Lebenszyklus',()=>{
   expect(run([candle(600,1.19,1.41)]).main).toMatchObject({state:'ended',reason:'both',ambiguous:true});
  });
 });
+
+it.each(['2026-10-06T23:00:00+02:00','2026-11-03T23:00:00+01:00'])('überspringt nur fehlende Spread-Hour-Kerzen (%s)',start=>{
+ const hour=Date.parse(start)/1000;
+ const input={selection:{...selection,selectedAt:hour-60},invalidation:1.4,
+  candles:[],m1Candles:[candle(hour-60,1.23),candle(hour+3600,1.23)],
+  evaluatedAt:hour+3660,allowSpreadHourGaps:true};
+ expect(evaluateCountertrendLifecycle(input).main.state).toBe('active');
+ expect(evaluateCountertrendLifecycle({...input,allowSpreadHourGaps:false}).main.reason).toBe('missingHistory');
+ expect(evaluateCountertrendLifecycle({...input,evaluatedAt:hour+3720}).main.reason).toBe('missingHistory');
+ const real={...candle(hour+1800,1.23,1.41),ignored:true};
+ expect(evaluateCountertrendLifecycle({...input,m1Candles:[input.m1Candles[0],real,input.m1Candles[1]]}).main.reason).toBe('invalidation');
+});

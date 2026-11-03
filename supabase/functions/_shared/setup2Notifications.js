@@ -51,12 +51,12 @@ export function healthReport(rows, delivery, now = Date.now(), withinHours = ins
     const inHours=withinHours(row.instrument),freshness=watcherFreshness(value,row.enabled,now,inHours);
     const evaluationError=isRangeWarning({kind:'problem',id:`health:${row.instrument}`,payload:{message:value.error}})?null:value.error;
     const stale=freshness.stale,error=evaluationError || freshness.error;
-    return {instrument: row.instrument, enabled: row.enabled, updatedAt:row.updated_at ?? null,evaluationError:evaluationError ?? null,lastStep:value.lastStep ?? null, phase: value.phase ?? 'Setup 1 beobachten',
+    return {instrument: row.instrument, enabled: row.enabled, updatedAt:row.updated_at ?? null,evaluationError:evaluationError ?? null,errorPhase:value.errorPhase ?? null,lastStep:value.lastStep ?? null, phase: value.phase ?? 'Setup 1 beobachten',
       lastSuccessAt: value.lastSuccessAt ?? null, lastProcessAt: value.lastProcessAt ?? null,
       lastM5Time: value.lastM5Time ?? null, lastM1Time: value.lastM1Time ?? null,
       nextExpectedCheck: value.nextExpectedCheck ?? null, activeRanges: (value.activeRanges ?? []).map(r => ({
         setupKey: r.setupKey, direction: r.direction, structureReady: !!r.structureReady, lastM1Time: r.lastM1Time ?? null
-      })), suspendedRanges:(value.suspendedRanges ?? []).map(r=>({setupKey:r.setupKey,direction:r.direction,reason:r.reason ?? RANGE_HISTORY_WARNING})), error, errorSince:value.errorSince ?? null, inHours, stale, evaluatedThrough:value.evaluatedThrough ?? null, marketWatermark:freshness.marketWatermark, marketLagSeconds:freshness.marketLagSeconds};
+      })), rangeChecks:value.rangeChecks ?? [], marketPause:value.marketPause ?? null, suspendedRanges:(value.suspendedRanges ?? []).map(r=>({setupKey:r.setupKey,direction:r.direction,reason:r.reason ?? RANGE_HISTORY_WARNING,...(r.suspendedAt ? {suspendedAt:r.suspendedAt} : {})})), error, errorSince:value.errorSince ?? null, inHours, stale, evaluatedThrough:value.evaluatedThrough ?? null, marketWatermark:freshness.marketWatermark, marketLagSeconds:freshness.marketLagSeconds};
   });
   const enabled = instruments.filter(r => r.enabled);
   const cronAt=Date.parse(server.watch_checked_at);

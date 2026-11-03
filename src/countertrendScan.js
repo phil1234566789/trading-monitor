@@ -99,6 +99,7 @@ export async function scanCountertrendWindow(input) {
     const candidates=bases.flatMap(b=>b.setup.candidates).map(candidate=>{
       const lifecycle=evaluateCountertrendLifecycle({selection:candidate.targetSelection,invalidation:candidate.invalidation,
         candles:m5,m1Candles:m1,evaluatedAt:at,entries:outcomes.get(candidate.id) ?? [],
+        allowSpreadHourGaps:input.settings?.allowSpreadHourGaps,
         progress:useMemo ? lifecycleProgress(candidate.id) : undefined});
       return {...candidate,knownAsOf:at,lifecycle,validity:lifecycle.main};
     });

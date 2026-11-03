@@ -1,3 +1,4 @@
+import {watcherRangeEvidence,watcherMarketPause} from './watcherRangeEvidence.js';
 import {runnerIncidentId} from '../../supabase/functions/_shared/setup2IncidentIdentity.js';
 import { ENTRY_PATTERN_1_VERSION } from '../../src/entryPattern1Conditions.js';
 import { SETUP2_VERSION } from '../../src/tradeSetup2Configuration.js';
@@ -59,14 +60,18 @@ async function instrumentTick(row,sessions,schedules,news) {
  refreshRecoveredHistory(cache,previous);
  const pendingKeys=new Set((cache.pendingEvidence ?? []).flatMap(b=>b.snapshots.map(s=>s.setup_key)));
  cache.evidencePriceObservations=mergeCapturedRangeState(previous.evidencePriceObservations,cache.evidencePriceObservations,pendingKeys);
+ let errorPhase='save';
  try {
   const retried=await flushPendingCheckpoint(request,cache,{instrument,owner,previous});
   if(retried){console.log(JSON.stringify({instrument,processed:retried.evaluatedThrough,retriedCheckpoint:true,error:retried.error ?? null}));return;}
+  errorPhase='fetch';
   const [daily,h1]=await Promise.all([updateCandles(cache,instrument,'1D'),updateCandles(cache,instrument,'1h')]);
+  errorPhase='evaluate';
   const anchors=buildHistoricalDailyAnchors(daily,h1),now=Date.now()/1000;
   const latest=anchors.findLast(a=>a.knownAt<=now);
   if(!latest)throw new Error('Kein kausal bekannter D1-P4-Strukturanker');
   const retained=(previous.activeRanges ?? []).map(r=>r.source).filter(Boolean);
+  errorPhase='fetch';
   const raw=await client.pages('trade_setups',{instrument:`eq.${instrument}`,source:'eq.live',created_at:`gte.${iso(latest.structureStartTime)}`,select:'*,trade_setup_sweeps(*)',order:'created_at.asc,id.asc'});
   const sources=partitionLiveSources([...retained,...raw.map(tradeSetupFromRow)],previous.suspendedRanges);
   cache.entries=[...new Map([...cache.entries,...(previous.entries ?? [])].map(s=>[s.entry.id,s])).values()];
@@ -88,9 +93,10 @@ async function instrumentTick(row,sessions,schedules,news) {
    cache.m1Start=Math.min(cache.m1Start ?? Infinity,neededM1);
    await updateCandles(cache,instrument,'1m',cache.m1Start);
   }
-  const events=[],ranges=new Map(),entries=new Map(cache.entries.map(s=>[s.entry.id,s]));
+  errorPhase='evaluate';
+  const events=[],ranges=new Map(),minuteChecks=new Map(),entries=new Map(cache.entries.map(s=>[s.entry.id,s]));
   const input={instrument,scanMemo:cache.scanMemo,m1Candles:cache['1m'],tradeSetups:sources,m5Candles:m5,h1Candles:h1,dailyAnchors:anchors,sessionConfigs:sessions,tradingWindows,
-   news:news.map(n=>({...n,eventTime:seconds(n.event_time)})),newsLoadStatus:'ready',settings:{},yieldControl:()=>delay(0),
+   news:news.map(n=>({...n,eventTime:seconds(n.event_time)})),newsLoadStatus:'ready',settings:{allowSpreadHourGaps:true},yieldControl:()=>delay(0),
    loadM1Candles:async({structureFromTime})=>{
     // Scanner bestimmt Sweep-/P5-Vorlauf. Preisvergleich braucht die bestätigte OB-Historie ebenfalls.
     const from=Math.min(structureFromTime,...sources.map(s=>s.obStartTime))-131*60;
@@ -114,11 +120,12 @@ async function instrumentTick(row,sessions,schedules,news) {
   // Ohne neue Kerze würde ein kürzeres Einpunktfenster denselben Originalstand mit anderer Verlaufshistorie belegen.
   if(latestClosed<=processed)return;
   const fromTime=processed+60;
-  const evidence=createLiveEvidence({instrument,version:`${ENTRY_PATTERN_1_VERSION}/${SETUP2_VERSION}`,sessions,tradingWindows,news,settings:{},dailyAnchors:anchors},
+  const evidence=createLiveEvidence({instrument,version:`${ENTRY_PATTERN_1_VERSION}/${SETUP2_VERSION}`,sessions,tradingWindows,news,settings:input.settings,dailyAnchors:anchors},
    {fromTime,toTime:latestClosed,startedAt:started/1000});
   const onMinuteCheck=minute=>{
    evidence.recordMinute(minute);
    const {context,check,knownAt}=minute;
+   minuteChecks.set(context.setupKey, check);
    const source=sources.find(s=>`${instrument}:setup1:${s.tradeSetupId}`===context.setupKey);
    cache.ranges.set(context.setupKey,{setupKey:context.setupKey,direction:context.direction,
     structureReady:structureReady(check.conditions,context.direction,knownAt,check.entryPattern ?? ENTRY_PATTERN_1_VERSION),lastM1Time:knownAt-60,source});
@@ -134,6 +141,12 @@ async function instrumentTick(row,sessions,schedules,news) {
   cache.evidencePriceObservations={...cache.evidencePriceObservations,...priceState};
   for(const event of events)if(event.kind==='trading')event.payload={...event.payload,provenance:{evaluationMode:evidence.evaluationMode,configurationId:evidence.configurationId}};
   cache.pendingEvidence ??= [];if(batch.snapshots.length)cache.pendingEvidence.push(batch);
+  const latestEntries=new Map();
+  for(const {setupKey,entry} of entries.values()) {
+   if((latestEntries.get(setupKey)?.recognizedAt ?? -Infinity)<entry.recognizedAt)latestEntries.set(setupKey,entry);
+  }
+  const rangeChecks=[...ranges.values()].map(snapshot=>watcherRangeEvidence(snapshot,latestEntries.get(snapshot.setupKey),minuteChecks.get(snapshot.setupKey)))
+   .sort((a,b)=>b.knownAt-a.knownAt).slice(0,100);
   const active=[],suspended=[...(previous.suspendedRanges ?? [])];
   for(const [setupKey,snapshot] of ranges){
    if(snapshot.dealingRange?.status!=='validated' || snapshot.rangeCourse?.lifecycle?.main?.state==='ended')continue;
@@ -156,23 +169,25 @@ async function instrumentTick(row,sessions,schedules,news) {
    ? `FXCM-M1-Feed ${lag}s hinter geschlossenem Minutenstand` : null;
   // Sicher abgefangene DR-Warnungen sind keine Betriebsstörung und brauchen keinen Nutzereingriff.
   const currentError=feedError;
-  const state={phase:active.length?'Setup 2 · M1 beobachten':'Setup 1 · M5 beobachten',activeRanges:active,suspendedRanges:suspended,
+  const state={phase:active.length?'Setup 2 · M1 beobachten':'Setup 1 · M5 beobachten',activeRanges:active,suspendedRanges:suspended,rangeChecks,
+   marketPause:watcherMarketPause(cache['1m'],processed,previous.marketPause),
    entries:[...entries.values()],structureKnownAt:Object.fromEntries(cache.structures),lastProcessAt:iso(started/1000),lastSuccessAt:currentError?previous.lastSuccessAt ?? null:iso(success),lastM5Time:lastM5,
    lastM1Time:active.length?latestClosed-60:null,evaluatedThrough:currentError?previous.evaluatedThrough ?? null:iso(latestClosed),
    nextExpectedCheck:iso((active.length?Math.floor(success/60)*60+60:Math.floor(success/300)*300+300)+12),
    scanDurationMs:Date.now()-started,lastStep:active.length?'Geschlossene M1-Kerzen und Alarmstufen geprüft':'Geschlossene M5-Kerzen und Setup-1-Quellen geprüft',
    nativeHistoryRevision:previous.nativeHistoryRevision ?? 0,evidencePriceObservations:cache.evidencePriceObservations,
    configFingerprint:recoveryConfig(sessions,tradingWindows,news),
-   error:currentError,errorSince:currentError?(previous.error===currentError?previous.errorSince ?? iso(success):iso(success)):null,runtimeVersion:'live-minute-v2',version:`${ENTRY_PATTERN_1_VERSION}/${SETUP2_VERSION}`,initializedAt:previous.initializedAt ?? iso(success)};
-  if(feedError)events.push({id:`feed:${instrument}:${lastM5}`,signal_at:iso(success),stage:0,kind:'problem',payload:{message:feedError,lastSuccessAt:previous.lastSuccessAt}});
+   error:currentError,errorPhase:currentError?'fetch':null,errorSince:currentError?(previous.error===currentError?previous.errorSince ?? iso(success):iso(success)):null,runtimeVersion:'live-minute-v2',version:`${ENTRY_PATTERN_1_VERSION}/${SETUP2_VERSION}`,initializedAt:previous.initializedAt ?? iso(success)};
+  if(feedError)events.push({id:`feed:${instrument}:${lastM5}`,signal_at:iso(success),stage:0,kind:'problem',payload:{message:feedError,errorPhase:'fetch',lastSuccessAt:previous.lastSuccessAt}});
+  errorPhase='save';
   queueEvidenceCheckpoint(cache,{state,events,previous,anchors,h1});
   await flushPendingCheckpoint(request,cache,{instrument,owner,previous});
   console.log(JSON.stringify({instrument,processed:state.evaluatedThrough,active:active.length,events:events.length,scanDurationMs:state.scanDurationMs,error:state.error}));
  } catch(failure){
   const message=failure instanceof Error?failure.message:'Auswertung fehlgeschlagen';
   console.error(JSON.stringify({instrument,error:message,request:requestDiagnostic(failure)}));
-  await request('rpc/setup2_checkpoint',{p_instrument:instrument,p_owner:owner,p_state:{...previous,lastProcessAt:iso(started/1000),error:message},p_events:[{
-   id:runnerIncidentId(instrument,previous.lastSuccessAt,message),signal_at:iso(Date.now()/1000),stage:0,kind:'problem',payload:{message,lastSuccessAt:previous.lastSuccessAt}}]});
+  await request('rpc/setup2_checkpoint',{p_instrument:instrument,p_owner:owner,p_state:{...previous,lastProcessAt:iso(started/1000),error:message,errorPhase,errorSince:previous.error===message?previous.errorSince ?? iso(started/1000):iso(started/1000)},p_events:[{
+   id:runnerIncidentId(instrument,previous.lastSuccessAt,message),signal_at:iso(Date.now()/1000),stage:0,kind:'problem',payload:{message,errorPhase,lastSuccessAt:previous.lastSuccessAt}}]});
  }
 }
 const jobs=new Map(),recoveryJobs=new Map(),recoveryDue=new Map(),recoveryCursor=new Map();

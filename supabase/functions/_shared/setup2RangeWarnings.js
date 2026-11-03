@@ -9,7 +9,7 @@ export function rangeWarningEvent(instrument, range, now = Date.now()) {
 export function isRangeWarning(event) {
  if(event.payload?.category==='range-warning')return true;
  // Bereits angelegte Health-Outboxeinträge behalten ihre Historie, werden aber nicht mehr als Störung gesendet.
- return event.kind==='problem' && event.id?.startsWith('health:')===true && (
+ return event.kind==='problem' && typeof event.id==='string' && event.id.startsWith('health:') && (
   /^Suspendierte DRs .+: Lifecycle-Historie konnte nicht ermittelt werden \(fehlend oder lückenhaft\)$/.test(event.payload?.message ?? '')
   || /^DR .+: Lifecycle-Historie fehlt oder ist lueckenhaft$/.test(event.payload?.message ?? '')
  );

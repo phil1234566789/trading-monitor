@@ -47,3 +47,11 @@ export function setup2AlarmRow(event) {
     price: payload.entryPrice ?? payload.entry?.price ?? "–", notifiedAt: recovery ? payload.delivery?.acceptedAt ?? null : null,
     deliveryLabel: recovery ? `Telegram · ${payload.delivery?.status ?? "pending"}${payload.delivery?.error ? ` · ${payload.delivery.error}` : ""}` : protocolOnly ? 'Nur Protokoll · kein Eingreifen erforderlich' : event.missed_reason ? "Verpasst · Protokollhinweis" : "Siehe Watcher-Versandstatus" };
 }
+
+export async function fetchWatcherProblemHistory() {
+  const { data, error } = await supabase.from('setup2_alarm_events')
+    .select('id,instrument,setup_key,kind,signal_at,detected_at,payload')
+    .eq('kind','problem').order('signal_at',{ascending:false}).order('id').limit(100);
+  if (error) throw new Error('Watcher-Protokoll konnte nicht geladen werden');
+  return data ?? [];
+}

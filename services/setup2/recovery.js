@@ -1,3 +1,4 @@
+import {skipSpreadHourGaps} from '../../src/spreadHourGaps.js';
 import {createLiveEvidence} from './evidence.js';
 import {scanTradeSetup2Window} from '../../src/tradeSetup2Scan.js';
 import {setup1RecognitionTime} from '../../src/setup1RecognitionTime.js';
@@ -29,10 +30,11 @@ export function continuousHistory(rows,start,end,duration) {
  for(const candle of rows) {
   if(candle.time<next)continue;
   if(candle.time>=until)break;
+  next=skipSpreadHourGaps(next,candle.time,duration);
   if(candle.time!==next || ![candle.high,candle.low].every(Number.isFinite) || candle.low>candle.high)return false;
   next+=duration;
  }
- return next>=until;
+ return skipSpreadHourGaps(next,until,duration)>=until;
 }
 const fingerprint=(range,state)=>JSON.stringify([range?.source,range?.evaluatedThrough,range?.historyStart,state.configFingerprint,state.version]);
 export function recoveryConfig(sessions,windows,news) {
@@ -67,7 +69,7 @@ export async function recoverSuspendedRange({row,range,sessions,schedules,news,c
  const events=new Map();let snapshot=null;
  const input={instrument,tradeSetups:[source],m1Candles:m1,m5Candles:m5,h1Candles:h1,dailyAnchors:anchors,
   sessionConfigs:structuredClone(sessions),tradingWindows:structuredClone(tradingWindows),
-  news:news.map(n=>({...n,eventTime:seconds(n.event_time)})),newsLoadStatus:'ready',settings:{},scanMemo:{},yieldControl,
+  news:news.map(n=>({...n,eventTime:seconds(n.event_time)})),newsLoadStatus:'ready',settings:{allowSpreadHourGaps:true},scanMemo:{},yieldControl,
   loadM1Candles:async({structureFromTime})=>{
    if(structureFromTime-131*60<m1[0]?.time){const rows=await candles(instrument,'1m',structureFromTime-131*60);m1.splice(0,m1.length,...rows);}
    return m1;
@@ -80,7 +82,7 @@ export async function recoverSuspendedRange({row,range,sessions,schedules,news,c
   }};
  const evidenceBatches=[];let evidencePriceObservations=row.state.evidencePriceObservations;
  const scan=async(fromTime,toTime)=>{
-  const evidence=createLiveEvidence({instrument,version:row.state.version,sessions,tradingWindows,news,settings:{},dailyAnchors:anchors},
+  const evidence=createLiveEvidence({instrument,version:row.state.version,sessions,tradingWindows,news,settings:input.settings,dailyAnchors:anchors},
    {fromTime,toTime,startedAt:Date.now()/1000,mode:'catchup'});
   const finalized=await scanTradeSetup2Window({...input,existingEntries:[...entries.values()],fromTime,toTime,
    onSnapshot:s=>{input.onSnapshot(s);evidence.record(s);},onMinuteCheck:m=>{input.onMinuteCheck(m);evidence.recordMinute(m);}});

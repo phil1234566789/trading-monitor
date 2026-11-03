@@ -75,3 +75,11 @@ it('does not turn an isolated legacy DR-history warning into an operational outa
  const value=row('GBPUSD','13:59:40','13:59:00','14:00:12','Suspendierte DRs GBPUSD:setup1:13590: Lifecycle-Historie konnte nicht ermittelt werden (fehlend oder lückenhaft)');
  const status=report([value],at('14:00:00'));expect(status).toMatchObject({state:'live',actionRequired:false});
 });
+it('escalates a prolonged live observation block during trading hours and silences delivery outside them',()=>{
+ const now=at('14:00:00'), rows=[row('GBPUSD','13:48:00','13:48:00','14:05:12','Watcher database POST rpc/setup2_store_live_evidence: timeout')];
+ const inHours=healthReport(rows,{},now,()=>true,server(now));
+ const outside=healthReport(rows,{},now,()=>false,server(now));
+ expect(inHours).toMatchObject({state:'error',actionRequired:true});
+ expect(inHours.criticalReasons[0]).toMatchObject({source:'runner',instrument:'GBPUSD'});
+ expect(outside).toMatchObject({state:'warning',actionRequired:false});
+});
