@@ -1,11 +1,42 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useAlgoWatcher } from "../composables/useAlgoWatcher.js";
 import { watcherTime, testPushover, fetchWatcherProblemHistory } from "../algoWatcher.js";
 const { report, error, health, refresh } = useAlgoWatcher();
 import {isExpectedWatcherPause,isWatcherMarketGapWindow,watcherIssuePhase,watcherSuspensionGroups} from '../algoWatcherPresentation.js';
 import {isRangeWarning} from '../../supabase/functions/_shared/setup2RangeWarnings.js';
 import {DEALING_RANGE_LABELS} from '../tradeSetup2DealingRange.js';
+import {supabase} from '../supabaseClient.js';
+import {createWatcherArchive,watcherEndLabels} from '../algoWatcherArchive.js';
+import {fmtPrice,pricePrecisionForInstrument} from '../format.js';
+const fetchWatcherRangeArchive = createWatcherArchive(supabase);
+const archive = ref({});
+const archiveKey = range => range.lifecycle === 'ended'
+  ? [range.setupKey,range.lifecycleReason].join(':')
+  : [range.setupKey,range.knownAt].join(':');
+watch(report, async value => {
+  const ranges = (value?.instruments ?? []).flatMap(item => item.rangeChecks ?? [])
+    .filter(range => range.lifecycle === 'ended' || (range.step === 'H · Entry finden' && !range.entry && !range.missing));
+  const pending = ranges.filter(range => {
+    const saved = archive.value[archiveKey(range)];
+    return !saved || (!saved.loading && saved.retryAfter <= Date.now());
+  });
+  const keys = new Set(ranges.map(archiveKey));
+  for (const key of Object.keys(archive.value)) if (!keys.has(key)) delete archive.value[key];
+  for (const range of pending) archive.value[archiveKey(range)] = {loading:true};
+  await Promise.all(Array.from({length:Math.min(4,pending.length)},async () => {
+    for (let range; (range=pending.shift()); ) {
+      const key=archiveKey(range);
+      const ticket=archive.value[key];
+      if(!ticket?.loading)continue;
+      let result;
+      try { result=await fetchWatcherRangeArchive(range); }
+      catch { result={error:true}; }
+      if(result.error || (range.lifecycle==='ended' && !result.end))result.retryAfter=Date.now()+60000;
+      if(archive.value[key]===ticket)archive.value[key]=result;
+    }
+  }));
+},{immediate:true});
 const history = ref([]), historyError = ref('');
 const historicalIssues = computed(() => history.value.filter(event => !isRangeWarning(event)).slice(0, 30));
 const suspensions = computed(() => watcherSuspensionGroups(report.value?.instruments, report.value ? history.value : []));
@@ -70,8 +101,25 @@ async function sendTest() {
         <p>Prüfung {{ watcherTime(range.knownAt) }} · {{ range.step ?? 'Prüfschritt nicht belegt' }}</p>
         <p v-if="range.technical" class="warning">Auswertungsfehler · {{ watcherTime(range.technical.at) }} · {{ range.technical.details.join(" · ") || "Ursache nicht belegt" }}. Entry-Prüfung nicht verlässlich.</p>
         <p v-else-if="range.missing">Fehlende Bedingung · {{ range.missing }}</p>
-        <p v-else-if="range.step === 'H · Entry finden' && !range.entry">Fehlende Bedingung nicht belegt.</p>
-        <p v-if="range.lifecycle === 'ended'">DR beendet · {{ range.lifecycleReason ?? 'Grund unbekannt' }}</p>
+        <p v-else-if="range.step === 'H · Entry finden' && !range.entry && !archive[archiveKey(range)]?.loading">
+          <template v-if="archive[archiveKey(range)]?.block">Fehlende Pflichtbedingung · {{ archive[archiveKey(range)].block.missing.join(', ') }} · Prüfung {{ watcherTime(archive[archiveKey(range)].block.at) }}</template>
+          <template v-else>Fehlende Pflichtbedingung nicht belegt.</template>
+        </p>
+        <template v-if="range.lifecycle === 'ended'">
+          <p><strong>{{ watcherEndLabels[range.lifecycleReason] ?? 'DR beendet · Fachlicher Grund nicht belegt' }}</strong></p>
+          <template v-if="archive[archiveKey(range)]?.end">
+            <p>Level {{ archive[archiveKey(range)].end.level == null ? 'nicht belegt' : fmtPrice(archive[archiveKey(range)].end.level,pricePrecisionForInstrument(item.instrument)) }}
+              · Ereigniskerze {{ watcherTime(archive[archiveKey(range)].end.at) }}
+              · erkannt {{ watcherTime(archive[archiveKey(range)].end.recognizedAt) }}</p>
+          </template>
+          <p v-else-if="!archive[archiveKey(range)]?.loading">Level und Ereigniszeit nicht belegt.</p>
+          <p v-if="!range.entry && !archive[archiveKey(range)]?.loading">
+            <template v-if="archive[archiveKey(range)]?.block">Letzte belegte fehlende Pflichtbedingung vor dem Ende · {{ archive[archiveKey(range)].block.missing.join(', ') }} · Prüfung {{ watcherTime(archive[archiveKey(range)].block.at) }}</template>
+            <template v-else>Früherer Nicht-Entry-Grund nicht belegt.</template>
+          </p>
+        </template>
+        <p v-if="archive[archiveKey(range)]?.loading">Gespeicherte Belege werden geladen.</p>
+        <p v-if="archive[archiveKey(range)]?.error" role="status">Archivbelege konnten nicht geladen werden.</p>
         <p v-if="range.entry">Gespeicherter Entry · {{ range.entry.price ?? 'Preis unbekannt' }} · {{ watcherTime(range.entry.recognizedAt) }}</p>
         <p v-for="detail in range.details ?? []" :key="detail">{{ detail }}</p>
       </article>
