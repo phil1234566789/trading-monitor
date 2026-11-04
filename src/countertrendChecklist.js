@@ -13,7 +13,6 @@ import { ENTRY_PATTERN_1_VERSION } from './entryPattern1Conditions.js';
 import { finalObservation,setupMemoKey } from './setup2Memo.js';
 
 export { COUNTERTREND_STAGE_VERSION } from './tradeSetup2DealingRange.js';
-export const SETUP_TYPE_LABELS = { trendContinuation: 'Trendfortführung', countertrend: 'Countertrend', unclear: 'Unklar' };
 
 export function classifyM5SetupType(direction, currentTrend, outerTrend) {
   const expected = direction === 'long' ? 'uptrend' : direction === 'short' ? 'downtrend' : null;

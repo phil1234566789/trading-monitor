@@ -8,7 +8,6 @@ import { simulationReviewFeatures } from './simulationReviewFeatures.js';
 import { simulationChartReplayTime } from './simulationChartReplayTime.js';
 import {sortSimulationRunsByExecution} from './simulationRunPresentation.js';
 
-export const SETUP_TYPE_LABELS = { countertrend: 'Countertrend', continuation: 'Trendfortführung', unknown: 'Typ nicht belegt' };
 export const FILTER_DEFAULTS = { run: '', compare: '', instrument: '', type: '', from: '', to: '', stage: '', outcome: '', entry: '', pinned: '', feature: '', value: '' };
 export function comparisonFilters(query) {
   return Object.fromEntries(Object.entries(FILTER_DEFAULTS).map(([key, fallback]) => [key, typeof query[key] === 'string' && query[key] !== 'all' ? query[key] : fallback]));

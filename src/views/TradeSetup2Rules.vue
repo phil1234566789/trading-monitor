@@ -3,14 +3,25 @@
     <header>
       <p class="eyebrow">Milky Way · Regelprüfung</p>
       <h1>Trade Setup 2.0</h1>
-      <p class="lead">Countertrend · Bestätigung nach A bis E, Validierung über F.</p>
+      <p class="lead">Setup 1 · Bestätigung nach A bis E, Validierung über F.</p>
       <p class="review-state"><strong>Entwurf · gemeinsame Absegnung offen</strong><br />Diskussionsstand vom <time datetime="2026-10-03">03.10.2026</time>. Von Philip festgelegt, zur gemeinsamen Prüfung mit seinem Trading-Partner.</p>
       <p>Die <strong>Fachregeln</strong> beschreiben die Festlegungen. Der <strong>Implementierungsstand</strong> zeigt den technischen Stand laut Regelentwurf. <strong>Offene Entscheidungen</strong> sind noch gemeinsam festzulegen.</p>
       <p><RouterLink to="/setup-regeln">Direktlink zu dieser Regelübersicht</RouterLink> · Diesen Seitenlink könnt ihr für eure gemeinsame Prüfung teilen.</p>
     </header>
 
+    <section aria-label="Strategie-Setups">
+      <h2>Strategie-Setups</h2>
+      <ul>
+        <li>Setup 1 · Countertrend mit LS</li>
+        <li>Setup 2 · Trendfortführung mit LS</li>
+        <li>Setup 3 · Trendfortführung mit Break and Retest</li>
+        <li>Setup 4 · Trendfortführung mit Orderflow</li>
+      </ul>
+      <p>Bei Status 2 (DR bestätigt) soll die Setup-Nummer bereits feststehen. Die technischen Kriterien für Setup 2–4 sind noch offen.</p>
+    </section>
+
     <section id="abcd" aria-labelledby="abcd-title">
-      <h2 id="abcd-title">Countertrend · DR-Stufen</h2>
+      <h2 id="abcd-title">Setup 1 · DR-Stufen</h2>
       <dl class="criteria">
         <div><dt>A · Liquidity Sweep</dt><dd>Ein erkanntes Setup 1.0 liegt vor: Sweep, Protected-M5-Fraktal und zugehöriger M5-Orderblock. Kein H1-Alterskriterium.</dd></div>
         <div><dt>B · Reaktion</dt><dd>Vorerst der zugehörige M5-Orderblock aus Setup 1.0. Eine Verbesserung der Reaktionsprüfung folgt erst nach der Jahresstatistik.</dd></div>
@@ -21,7 +32,7 @@
         <div><dt>G · Confluences</dt><dd>Beobachtungen für die Statistik; ändern die DR-Stufe nicht.</dd></div>
         <div><dt>H · Entry finden</dt><dd>Entry Pattern 1 benötigt einen bestätigten kausalen M5-BOS und M1-Pivotbruch ab dem tatsächlichen Sweep in Setup-Richtung, den Retest eines passenden M5-OB und anschließend eine bestätigte gleichgerichtete M1-FVG. Short: bestätigtes P5-Hoch, Pivot-Tief und tieferes Hoch; danach strikter Bruch unter das Pivot-Tief. Long: Pivot-Tief, Pivot-Hoch und höheres Tief; danach strikter Bruch über das Pivot-Hoch. Ein Docht genügt. Der Bruch darf vor der P5-Bestätigung des Pullbacks liegen; er zählt erst, wenn beide Fakten bekannt sind. Bis zu neun brauchbare Kerzen vor dem Sweep dienen ausschließlich als linke Fraktalstütze; Strukturpivots beginnen ab dem Sweep. Entries entstehen erst ab DR-Validierung bis Target oder Invalidierung, ohne Rückdatierung. Der Entry liegt am Schluss der FVG-Bestätigungskerze. Die Reihenfolge von M5-BOS und M1-Pivotbruch ist frei. Ohne passenden M5-BOS gibt es keinen Entry, auch keinen Risky Entry mit halber Größe. Die Frühwarnung entsteht erst, wenn M5-BOS und M1-Pivotbruch bekannt sind; Retest- und Entry-Alarme benötigen denselben zulässigen Patternpfad. Jede positive M1-FVG ist zulässig; pro OB zählt nur die erste nach seinem Retest (OB-Mitigation). Ein weiterer Entry benötigt einen danach neu bestätigten M5-OB mit eigenem Retest und erster M1-FVG. Handelszeiten, Session- und News-Sperren prüft das zentrale Gate unmittelbar vor jedem Entry.</dd></div>
       </dl>
-      <p><strong>Countertrend:</strong> C zeigt in Setup-Richtung und D dagegen. A bis E erfüllt bestätigt die Dealing Range; F entscheidet validiert oder disqualifiziert. Ein CHoCH ist dafür keine Bedingung. Die bestehende Preisinvalidierung bleibt wirksam.</p>
+      <p><strong>Setup 1 · Countertrend mit LS:</strong> C zeigt in Setup-Richtung und D dagegen. A bis E erfüllt bestätigt die Dealing Range; F entscheidet validiert oder disqualifiziert. Ein CHoCH ist dafür keine Bedingung. Die bestehende Preisinvalidierung bleibt wirksam.</p>
       <p><strong>Trendfortführung:</strong> C und D zeigen in Setup-Richtung. Der Typ wird erkannt, der Pfad bricht mit „Typ Trendfortführung, noch nicht umgesetzt“ ab.</p>
       <p><strong>Abbruch:</strong> C zeigt gegen die Setup-Richtung oder ist unbekannt. Grund: „äußerster M5-Trend gegen Setup-Richtung“ beziehungsweise „M5-Trend unbekannt“.</p>
       <p>C und D werden am Bekannt-Zeitpunkt des Setups mit den bis dahin geschlossenen Kerzen ausgewertet. Spätere Replay-Kerzen ändern diese Typ-Prüfung nicht.</p>
