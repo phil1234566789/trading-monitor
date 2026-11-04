@@ -5,14 +5,26 @@ import { DEALING_RANGE_LABELS } from '../tradeSetup2DealingRange.js';
 import { DR_OUTCOME_LABELS } from '../simulationRunComparison.js';
 import { FEATURE_VALUES } from '../simulationReviewFeatures.js';
 const props=defineProps({modelValue:Object,runs:Array,features:Array});
+// Archivierte Laeufe bleiben ueber Direktlinks und Pins erreichbar.
+const archivedGbpRuns = new Set([
+  'setup2-06214b56e7619a7c6e9fda9a',
+  'setup2-275842e7b36252c6ca703520',
+  'setup2-2fdbdff3d17aa395319105f2',
+  'setup2-755bebd2fc0a0e17daa76e93',
+  'setup2-8f697b741db6d3901bb70454',
+  'setup2-derived-ba521449137addd7f84d174b',
+]);
+const selectableRuns = selectedId => props.runs.filter(run =>
+  run.id === selectedId || (!run.id.startsWith('chart:') && !archivedGbpRuns.has(run.id))
+);
 const emit=defineEmits(['update:modelValue']);
 const label=run=>simulationRunLabel(run,{showDrCount:true});
 const set=(key,value)=>emit('update:modelValue',{...props.modelValue,[key]:value});
 </script>
 <template>
   <form class="statistics-filters" @submit.prevent>
-    <label>Lauf neu<select :value="modelValue.run" @change="set('run',$event.target.value)"><option value="" disabled>Lauf wählen</option><option v-for="run in runs" :key="run.id" :value="run.id">{{ label(run) }}</option></select></label>
-    <label>Vergleich mit Lauf alt<select :value="modelValue.compare" @change="set('compare',$event.target.value)"><option value="">Kein Vergleich</option><option v-for="run in runs.filter(r=>r.id!==modelValue.run)" :key="run.id" :value="run.id">{{ label(run) }}</option></select></label>
+    <label>Lauf neu<select :value="modelValue.run" @change="set('run',$event.target.value)"><option value="" disabled>Lauf wählen</option><option v-for="run in selectableRuns(modelValue.run)" :key="run.id" :value="run.id">{{ label(run) }}</option></select></label>
+    <label>Vergleich mit Lauf alt<select :value="modelValue.compare" @change="set('compare',$event.target.value)"><option value="">Kein Vergleich</option><option v-for="run in selectableRuns(modelValue.compare).filter(r=>r.id!==modelValue.run)" :key="run.id" :value="run.id">{{ label(run) }}</option></select></label>
     <label>Instrument<select :value="modelValue.instrument" @change="set('instrument',$event.target.value)"><option value="">Alle</option><option v-for="name in ['GBPUSD','EURUSD','XAUUSD']" :key="name">{{ name }}</option></select></label>
     <label>Setup<select :value="modelValue.type" @change="set('type',$event.target.value)"><option value="">Alle</option><option v-for="key in ['countertrend', 'setup2', 'setup3', 'setup4', 'continuation', 'unknown']" :key="key" :value="key">{{ STRATEGY_SETUP_LABELS[key] }}</option></select></label>
     <label>Entry ab<input type="date" :value="modelValue.from" @input="set('from',$event.target.value)" /></label>
