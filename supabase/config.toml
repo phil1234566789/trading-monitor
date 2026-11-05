@@ -439,3 +439,6 @@ verify_jwt = false
 
 [functions.mt5-health]
 verify_jwt = false
+
+[functions.mt5-reader]
+verify_jwt = false

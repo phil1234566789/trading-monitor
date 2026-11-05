@@ -12,7 +12,8 @@ const rows=computed(()=>(props.accounts??[]).map(account=>{
  const stats=accountPerformance(account.id,value.currency,result.value,sync);
  const age=snapshotAgeSeconds(value.balance_at,props.now);
  const fresh=value.balance_source==='MT5-Worker'&&age!=null&&age<=props.staleSeconds&&Date.parse(value.balance_at)<=props.now;
- return {account,...value,stats,gauge:challengeGauge(value.balance,value.loss_floor,value.target),health:balanceHealth(props.status,fresh,account,props.now)};
+ const readerFresh=value.balance_source==='MT5-Reader'&&age!=null&&age>=0&&age<=90;
+ return {account,...value,stats,readerFresh,gauge:challengeGauge(value.balance,value.loss_floor,value.target),health:balanceHealth(props.status,fresh,account,props.now)};
 }));
 const time=value=>fmtDateTime(value,{year:'numeric',timeZone:'Europe/Berlin'});
 const money=(value,currency)=>value==null?'unbekannt':fmtMoney(value,currency);
@@ -25,7 +26,7 @@ const money=(value,currency)=>value==null?'unbekannt':fmtMoney(value,currency);
    <div class="mmt-balance-heading">
     <strong>{{row.account.name}}</strong>
     <span v-if="row.account.id===activeId" class="mmt-balance-health" :data-ok="row.health.ok" :role="row.health.ok?'status':'alert'">{{row.health.ok?'●':'⚠'}} {{row.health.label}}</span>
-    <small v-else class="mmt-muted mmt-balance-saved" :title="row.balance_at?time(row.balance_at)+' (Berlin)':'Zeitpunkt unbekannt'">Gespeicherter Stand</small>
+    <small v-else class="mmt-muted mmt-balance-saved" :title="row.balance_at?time(row.balance_at)+' (Berlin)':'Zeitpunkt unbekannt'">{{row.readerFresh?'Daten aktuell':'Gespeicherter Stand'}}</small>
     <div><small class="mmt-muted">{{row.account.login}}</small> <small v-if="row.account.id===activeId" class="mmt-selected">Aktives Handelskonto</small><small v-else class="mmt-muted">Nicht ausgewählt</small></div>
    </div>
    <div class="mmt-balance-gauge" role="group" :aria-label="'Balance '+money(row.balance,row.currency)+', Verlustgrenze '+money(row.loss_floor,row.currency)+', Ziel '+money(row.target,row.currency)+', Challenge-Fortschritt '+(row.gauge.progress==null?'unbekannt':fmtPrice(row.gauge.progress,1)+' Prozent')">

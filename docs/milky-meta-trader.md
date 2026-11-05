@@ -226,8 +226,9 @@ Der sichtbare Testbetrieb-Hinweis wurde entfernt; technische Handelslimits gelte
 
 ## Balance aller Konten
 
-Die Halbkreis-Anzeigen zeigen Balance zwischen absoluter Verlustgrenze und Challengeziel,
-ergänzt um Equity, belegtes Netto-PnL und Winrate abgeschlossener Brokertrades. Fehlende
+Die Halbkreis-Anzeigen verwenden eine feste Vergleichsskala von 47.000 bis 54.000 USD.
+Balance-Zeiger und tatsächliche Verlustgrenze bewegen sich getrennt; der Fortschritt ist
+der bereits geschaffte Anteil seit 50.000 USD. Ergänzt wird die Winrate belegter Brokertrades. Fehlende
 Historie bleibt unbekannt; Einzahlungen und Resets sind kein Trading-PnL. Anzeigen aktiviert
 kein Konto. Für das Verlustrisiko ist die Equity maßgeblich, nicht die Balance-Anzeige.
 Vier Konten passen nebeneinander; weitere Konten und schmale Bildschirme nutzen dieselbe
@@ -241,6 +242,27 @@ Limits bei Bedarf erneut im Brokerportal prüfen und privat aktualisieren. Der W
 schreibt nur Kontostand und Positionszahl fort, niemals die EOD-Trailing-Grenze aus einer
 fallenden Balance neu berechnen. Transaktionaler Check: Migration plus
 `scripts/checkMt5AccountBalances.sql` innerhalb `begin`/`rollback` ausführen.
+
+
+Zusätzliche Konten erhalten eigene portable MT5-Instanzen mit deaktiviertem Algo-Handel.
+`services/mt5/reader.py` liest Kontostand und Historie alle 30 Sekunden. Sein eigener
+`mt5-reader`-Endpoint akzeptiert ausschließlich Konfiguration, Kontostand und Historienaktionen;
+`MT5_READER_TOKEN` gilt nicht am Handelsendpoint. Er schreibt weder Kontowahl noch
+Handelsheartbeat. `mt5_record_reader_balance` bewahrt bestätigte Limits und neuere Snapshots.
+
+Private `*.reader.json`-Dateien enthalten Konto-UUID, isolierten `terminal_path`, `url`,
+`token` und den expliziten `server_time_offset_sec`. Zugangsdaten werden nur über HTTPS
+abgerufen, nicht in Logs oder JSON-Konfiguration gespeichert. `.mmt-read-only` bindet das
+Terminalverzeichnis an die Konto-UUID; `path` und `data_path` müssen genau dazu passen.
+`start-readers.ps1 -ConfigDirectory <privater Ordner> -Python <vorhandene Python-Umgebung>`
+startet die Leser versteckt und lässt bereits laufende Prozesse bestehen. Eine Dateisperre
+verhindert doppelte Leser je Konfiguration. Der Windows-Task `MMT Read-only Accounts 2-4`
+prüft bei Anmeldung und alle fünf Minuten, ob ein Leser neu gestartet werden muss.
+
+Frische Lesesnapshots sind als „Daten aktuell“ gekennzeichnet. Nach 90 Sekunden ohne neuen
+Snapshot erscheint wieder „Gespeicherter Stand“ mit Zeitpunkt im Tooltip. Computer und MT5
+müssen für laufende Daten eingeschaltet und verbunden bleiben. Diese Aktualisierung bestätigt
+keine neue Drawdown-Grenze; dafür bleibt eine belegte Brokerquelle erforderlich.
 
 ## Positionsstatus bei Reload
 

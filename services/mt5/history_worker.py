@@ -11,10 +11,11 @@ def normalise_deal(deal,offset):
                 symbol=d['symbol'],volume=float(d['volume']),price=float(d['price']),
                 profit=float(d['profit']),commission=float(d['commission']),swap=float(d['swap']),fee=float(d['fee']))
 
-def sync_history(api,cloud,offset):
-    context=cloud.call('history_context',{})
+def sync_history(api,cloud,offset,reader_id=None):
+    context=cloud.call('history_context',dict(account_id=reader_id) if reader_id else {})
     if context.get('archived'):raise ValueError('archived_account')
     identity=dict(account_login=context['account_login'],account_server=context['account_server'])
+    if reader_id:identity['account_id']=reader_id
     account=api.account_info()
     if account is None or (account.login,account.server)!=(identity['account_login'],identity['account_server']):raise ValueError('history_account_mismatch')
     cloud.call('history_start',identity)
