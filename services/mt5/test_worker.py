@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from core import Journal
-from worker import Engine
+from worker import Engine, Cloud
 from test_core import intent
 
 
@@ -162,3 +162,19 @@ class WorkerTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class CloudAccountTests(unittest.TestCase):
+    def test_every_worker_action_keeps_its_configured_account(self):
+        import json
+        with patch.dict('os.environ', {'MT5_ACCOUNT_ID': 'account-one'}):
+            cloud=Cloud('https://example.test/worker','x'*32)
+        response=Mock()
+        response.read.return_value=b'{}'
+        cloud.opener=Mock()
+        cloud.opener.open.return_value.__enter__=Mock(return_value=response)
+        cloud.opener.open.return_value.__exit__=Mock(return_value=False)
+        for action in ['configuration','poll','begin','result','risk_context','target_poll','history_begin']:
+            cloud.call(action, {'account_id':'wrong-account'})
+            request=cloud.opener.open.call_args.args[0]
+            self.assertEqual(json.loads(request.data)['account_id'],'account-one')

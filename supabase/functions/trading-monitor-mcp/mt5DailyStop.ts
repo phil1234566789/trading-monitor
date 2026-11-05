@@ -1,4 +1,4 @@
-import {activeMt5Account,checked,mt5Database} from './mt5Credentials.ts';
+import {accountBridge,activeMt5Account,checked,mt5Database} from './mt5Credentials.ts';
 import {readRiskPolicy} from './mt5Risk.ts';
 import {tradingDay,evaluateDailyStop,validateGuardExposure,guardCommandsForExposure} from './dailyStopContract.js';
 import {validateWorkerSnapshot,isExecutionId} from './executionContract.js';
@@ -20,7 +20,7 @@ async function stopContext(account:any,db:any,now:number){
   policy:await readRiskPolicy(account.id)};
 }
 export async function dailyStopAction(body:Record<string,any>){
- const db=mt5Database(),account=await activeMt5Account(),now=Math.floor(Date.now()/1000);
+ const db=mt5Database(),account=await activeMt5Account(body.account_id),now=Math.floor(Date.now()/1000);
  if(body.account_login!==Number(account.login)||body.account_server!==account.server)throw new Error('account_mismatch');
  const context=await stopContext(account,db,now);
  if(body.action==='risk_context')return context;
@@ -67,12 +67,12 @@ export async function dailyStopAction(body:Record<string,any>){
 
 export async function readDailyStopStatus(accountId?:string){
  const db=mt5Database();let account;
- try{account=await activeMt5Account();}catch(error){if(error instanceof Error&&error.message==='no_active_account')return null;throw error;}
+ try{account=await activeMt5Account(accountId);}catch(error){if(error instanceof Error&&error.message==='no_active_account')return null;throw error;}
  if(accountId&&accountId!==account.id)throw new Error('account_mismatch');
  const context=await stopContext(account,db,Math.floor(Date.now()/1000));
  const recent=checked(await db.from('mt5_guard_commands').select('*').eq('account_id',account.id).order('created_at',{ascending:false}).limit(20))??[];
  const commands=await readGuardCommands(db,account.id);
- const bridge:any=checked(await db.from('mt5_bridge_state').select('*').eq('id','primary').maybeSingle());
+ const bridge:any=await accountBridge(account);
  const s=bridge?.snapshot,now=Math.floor(Date.now()/1000);
  const ready=!!bridge&&Date.now()-Date.parse(bridge.heartbeat_at)<=5000&&s.account_login===Number(account.login)&&s.account_server===account.server
   &&s.risk_guards_ready===true&&s.hedging===true&&!s.worker_error&&!s.risk_error&&s.risk?.day===context.day

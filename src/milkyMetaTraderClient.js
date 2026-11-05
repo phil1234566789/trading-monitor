@@ -42,7 +42,7 @@ export function createMilkyMetaTraderClient(baseUrl, token, fetchImpl = fetch) {
         :messages[code]??'Anfrage fehlgeschlagen. Konfiguration, Kontodaten und offene Aufträge prüfen.');
       // Nur Fehler vor dem Enqueue beweisen, dass kein Auftrag angenommen wurde.
       error.code=code;
-      error.definitiveRejection=response.status===401||['preview_expired','invalid_preview','live_not_enabled'].includes(code);
+      error.definitiveRejection=response.status===401||['preview_expired','invalid_preview','live_not_enabled','bridge_offline','bridge_not_ready','quote_stale','risk_limits_unconfirmed','risk_guard_unavailable','risk_floor_reconfirmation_required','risk_budget_exhausted','risk_exposure_unavailable','risk_sizing_unavailable','daily_stop_not_ready','daily_stop_latched'].includes(code);
       throw error;
     }
     return response.json();

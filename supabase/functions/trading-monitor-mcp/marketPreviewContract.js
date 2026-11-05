@@ -33,14 +33,14 @@ export async function signMarketPreview(preview,secret) {
   const signature=await crypto.subtle.sign('HMAC',await key(secret),data);
   return encode(data)+'.'+encode(new Uint8Array(signature));
 }
-export async function verifyMarketPreview(token,secret,now) {
+export async function verifyMarketPreview(token,secret,now,{allowExpired=false}={}) {
   if(typeof token!=='string'||token.length>4096) throw new Error('invalid_preview');
   const parts=token.split('.');
   if(parts.length!==2) throw new Error('invalid_preview');
   const data=decode(parts[0]);
   if(!await crypto.subtle.verify('HMAC',await key(secret),decode(parts[1]),data)) throw new Error('invalid_preview');
   const value=JSON.parse(new TextDecoder().decode(data));
-  if(!value?.intent||now>=(value.confirmation_expires_sec??value.intent.expires_sec)||value.intent.created_sec>now+1) throw new Error('preview_expired');
+  if(!value?.intent||(!allowExpired&&now>=(value.confirmation_expires_sec??value.intent.expires_sec))||value.intent.created_sec>now+1) throw new Error('preview_expired');
   return value;
 }
 

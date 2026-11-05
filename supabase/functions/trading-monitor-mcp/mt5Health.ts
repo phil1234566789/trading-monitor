@@ -1,4 +1,6 @@
-import {checked,mt5Database} from './mt5Credentials.ts';
+import {readMt5TradingAccounts} from './mt5AccountManagement.ts';
+import {readExecutionOrders} from './mt5OrderRead.js';
+import {accountBridge,checked,mt5Database} from './mt5Credentials.ts';
 import {assessMt5Health,healthMessage} from './mt5HealthContract.js';
 import {sendPushover,sendTelegramText} from '../_shared/setup2Notifications.js';
 import {env} from '../_shared/setup2Http.ts';
@@ -32,16 +34,20 @@ export async function deliverMt5Health() {
 
 export async function checkMt5Health() {
  const db=mt5Database();
- const [settings,bridge,unknown,sending,searching]=await Promise.all([
-  db.from('mt5_execution_settings').select('active_account_id').eq('id','primary').single(),
-  db.from('mt5_bridge_state').select('*').eq('id','primary').maybeSingle(),
-  db.from('mt5_execution_orders').select('id,status,updated_at').eq('status','unknown').limit(1),
-  db.from('mt5_execution_orders').select('id,status,updated_at').eq('status','sending').order('updated_at').limit(1),
-  db.from('mt5_execution_orders').select('id,status,updated_at').eq('status','searching').limit(1),
- ]);
- const accountId=checked(settings)?.active_account_id;
- const selected=accountId?checked(await db.from('mt5_accounts').select('id,login,server').eq('id',accountId).single()):null;
- const issue=env('MT5_EXECUTION_ENABLED')==='true'?assessMt5Health({selected,bridge:checked(bridge),orders:[...(checked(unknown)??[]),...(checked(sending)??[]),...(checked(searching)??[])]}):null;
+ const settings=checked(await db.from('mt5_execution_settings').select('active_account_id').eq('id','primary').single());
+ const orders=await readExecutionOrders(db);
+ let issue=null;
+ if(env('MT5_EXECUTION_ENABLED')==='true'){
+  for(const selected of await readMt5TradingAccounts()){
+   if(selected.archived)continue;
+   const own=orders.filter(o=>o.intent.account_login===Number(selected.login)&&o.intent.account_server===selected.server);
+   const bridge=await accountBridge(selected);
+   const open=own.some(o=>['searching','sending','unknown'].includes(o.status)||o.status==='executed'&&o.result?.position_lifecycle?.state!=='closed');
+   if(selected.id!==settings?.active_account_id&&!open&&!bridge?.snapshot?.positions?.length)continue;
+   issue=assessMt5Health({selected,bridge,orders:own});
+   if(issue)break;
+  }
+ }
  checked(await db.rpc('mt5_record_health',{p_key:issue?.key??null,p_code:issue?.code??null,p_detail:issue?.detail??{}}));
  const deliveries=await deliverMt5Health();
  checked(await db.from('mt5_execution_settings').update({health_checked_at:new Date().toISOString()}).eq('id','primary'));

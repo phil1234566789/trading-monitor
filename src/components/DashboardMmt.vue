@@ -6,20 +6,22 @@ import {findOrderPosition} from '../milkyMetaTraderMonitoring.js';
 import {riskPreviewMetrics} from '../../supabase/functions/trading-monitor-mcp/mt5RiskContract.js';
 import {nearestTradeIdea,chartInstrument} from '../tradeIdeas.js';
 import {useDashboardMmt} from '../composables/useDashboardMmt.js';
-import EntrySearch from './MilkyMetaTraderEntrySearch.vue';
+import MmtBatchEntrySearch from './MmtBatchEntrySearch.vue';
 import OrderCard from './MilkyMetaTraderOrderCard.vue';
 import '../milkyMetaTrader.css';
 const props=defineProps({symbol:String,annotations:Array,lastCandleTime:Number,replay:Boolean});
 const emit=defineEmits(['trades']);
 const mmt=useDashboardMmt(toRef(props,'symbol'));
-const {api,status,accounts,activeId,switchingAccount,accountMessage,selectAccount,account,snapshot,brokerQuote,activeOrders,trades,entryTimeFor,links,error,key,now,refresh,cancel}=mmt;
+const {api,status,accounts,accountStatuses,activeId,account,snapshot,brokerQuote,activeOrders,trades,entryTimeFor,links,error,key,now,refresh,cancel}=mmt;
 const nearest=computed(()=>nearestTradeIdea(props.annotations??[],props.lastCandleTime));
 const reasons={loading:'Chartkerzen werden geladen.',missing:'Long-/Short-Idee im Chart einzeichnen.',tie:'Zwei Ideen sind gleich nah. Eine Idee unter Zeichnungen ausblenden.'};
-const quoteFor=o=>snapshot.value?.account_login===o.intent.account_login&&snapshot.value?.account_server===o.intent.account_server
- ?snapshot.value.quotes?.find(q=>q.symbol===o.intent.symbol):null;
+const accountFor=o=>accounts.value.find(a=>Number(a.login)===o.intent.account_login&&a.server===o.intent.account_server);
+const snapshotFor=o=>accountStatuses.value[accountFor(o)?.id]?.bridge?.snapshot;
+const apiFor=o=>(action,fields,options)=>api(action,{...fields,account_id:accountFor(o)?.id},options);
+const quoteFor=o=>snapshotFor(o)?.quotes?.find(q=>q.symbol===o.intent.symbol);
 const metrics=o=>{
  if(!quoteFor(o))return null;
- try{return riskPreviewMetrics(o.intent,snapshot.value,status.value?.risk_policy,now.value/1000);}catch{return null;}
+ try{return riskPreviewMetrics(o.intent,snapshotFor(o),accountStatuses.value[accountFor(o)?.id]?.risk_policy,now.value/1000);}catch{return null;}
 };
 const executed=computed(()=>(status.value?.orders??[]).filter(o=>o.status==='executed'));
 watch(trades,value=>emit('trades',value),{immediate:true});
@@ -33,24 +35,16 @@ watch(trades,value=>emit('trades',value),{immediate:true});
   <p v-if="nearest.reason" role="status">{{reasons[nearest.reason]}}</p>
   <p v-if="key&&!brokerQuote">Kein eindeutiges Broker-Symbol für {{symbol}} verfügbar.</p>
   <MmtDailyStopStatus v-if="key" :status="status" :now="now" />
-  <label v-if="key" class="mmt-account-picker">Handelskonto
-   <select :value="activeId??''" :disabled="switchingAccount||replay" @change="selectAccount($event.target.value)">
-    <option value="" disabled>Konto wählen</option>
-    <option v-for="a in accounts" :key="a.id" :value="a.id" :disabled="a.archived">{{a.name}} · {{a.login}}{{a.archived?' · Archiv':''}}</option>
-   </select>
-  </label>
-  <p v-if="switchingAccount" role="status">Konto wird gewechselt …</p>
-  <p v-if="accountMessage" role="status">{{accountMessage}}</p>
-  <EntrySearch v-if="key" :api="api" :status="status" :account="account" compact :chart-symbol="brokerQuote?.symbol" :idea="nearest.idea" :disabled="switchingAccount||replay||!!error||!nearest.idea||!brokerQuote" @submitted="refresh" />
+  <MmtBatchEntrySearch v-if="key" :api="api" :accounts="accounts" :statuses="accountStatuses" :active-id="activeId" :symbol="symbol" :idea="nearest.idea" :now="now" :disabled="replay||!!error||!nearest.idea" @submitted="refresh" />
   <details class="mmt-help"><summary>Idee und Ausführung</summary><p>Chart: FXCM Bid, geschlossene Kerzen. Suche: aktuelle MT5 Bid/Ask-Kurse. Der gezeichnete Anker ist niemals ein MMT-Trigger. Broker prüft SL und Mindestlot vor Ausführung erneut. Risky/Full benötigen heutige bestätigte Kontogrenzen und eine frische Worker-Schutzprüfung.</p></details>
   <section v-if="activeOrders.length" aria-label="Alle laufenden Entry-Suchen">
    <h3>Alle Assets · laufende Aufträge</h3>
    <ul class="mmt-order-list"><template v-for="order in activeOrders" :key="order.id">
-    <OrderCard :order="order" :snapshot="snapshot" @cancel="cancel" />
-    <li v-if="order.status==='searching'" class="mmt-muted">Aktuell RR {{metrics(order)?.rr?.toFixed(2)??'—'}} · {{metrics(order)?.volume??'—'}} Lot {{order.intent.risk_mode?'dynamisch':'(Pilot)'}} · Risiko {{metrics(order)?.risk?.toFixed(2)??'—'}} {{snapshot?.currency}}<br>SL / Richtung / Konto / Suchende sind fest.</li>
+    <OrderCard :order="order" :snapshot="snapshotFor(order)" @cancel="cancel" />
+    <li v-if="order.status==='searching'" class="mmt-muted">Aktuell RR {{metrics(order)?.rr?.toFixed(2)??'—'}} · {{metrics(order)?.volume??'—'}} Lot {{order.intent.risk_mode?'dynamisch':'(Pilot)'}} · Risiko {{metrics(order)?.risk?.toFixed(2)??'—'}} {{snapshotFor(order)?.currency}}<br>SL / Richtung / Konto / Suchende sind fest.</li>
    </template></ul>
   </section>
-  <MmtTargetEditor v-for="o in executed.filter(o=>findOrderPosition(o,snapshot))" :key="o.id" :order="o" :api="api" :snapshot="snapshot" :online="!!status?.online&&!error" :entry-time="entryTimeFor(o)" @saved="refresh" />
+  <MmtTargetEditor v-for="o in executed.filter(o=>findOrderPosition(o,snapshotFor(o)))" :key="o.id" :order="o" :api="apiFor(o)" :snapshot="snapshotFor(o)" :online="!!accountStatuses[accountFor(o)?.id]?.online&&!error" :entry-time="entryTimeFor(o)" @saved="refresh" />
   <details v-if="executed.length"><summary>Bestätigte Ausführungen · {{executed.length}}</summary>
    <p v-for="o in executed" :key="o.id">{{o.intent.symbol}} · {{o.result.volume}} Lot fest · Fill {{o.result.price}}<br>
     <span v-if="chartInstrument(o.intent.symbol)===symbol&&!trades.some(t=>t.id==='mmt:'+o.id)">Brokerzeit wird aus Dealhistorie abgeglichen; noch keine Chartmarke.</span>

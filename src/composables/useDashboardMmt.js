@@ -11,6 +11,7 @@ export function useDashboardMmt(symbol) {
  const api=(action,fields={},options={})=>createMilkyMetaTraderClient(import.meta.env.VITE_SUPABASE_URL,key.value)(action,fields,options);
  const account=computed(()=>accounts.value.find(a=>a.id===activeId.value));
  const switchingAccount=ref(false),accountMessage=ref('');
+ const accountStatuses=ref({});
  const snapshot=computed(()=>{
   const s=status.value?.bridge?.snapshot;
   return s?.account_login===Number(account.value?.login)&&s?.account_server===account.value?.server?s:null;
@@ -21,7 +22,7 @@ export function useDashboardMmt(symbol) {
  });
  const activeOrders=computed(()=>(status.value?.orders??[]).filter(o=>['searching','sending','unknown'].includes(o.status)));
  function entryTimeFor(o){
-  const native=findOrderPosition(o,snapshot.value)?.opened_at_sec;
+  const native=findOrderPosition(o,accountStatuses.value[accounts.value.find(a=>Number(a.login)===o.intent.account_login&&a.server===o.intent.account_server)?.id]?.bridge?.snapshot)?.opened_at_sec;
   if(Number.isFinite(native)&&native>0)return native;
   const a=accounts.value.find(a=>Number(a.login)===o.intent.account_login&&a.server===o.intent.account_server);
   const times=history.value.filter(d=>d.account_id===a?.id&&d.position_id===(o.result?.position??o.result?.order)&&d.entry===0&&d.symbol===o.intent.symbol).map(d=>d.time_msc/1000);
@@ -39,6 +40,9 @@ export function useDashboardMmt(symbol) {
    const [a,s]=await Promise.all([api('accounts',{}, {background:true}),api('status',{}, {background:true})]);
    if(disposed)return;
    accounts.value=a.accounts;activeId.value=mmtSelectedAccountId(s,a.active_account_id);status.value=s;error.value='';
+   const results=await Promise.allSettled(a.accounts.filter(a=>!a.archived).map(async a=>[a.id,await api('status',{account_id:a.id},{background:true})]));
+   if(disposed)return;
+   accountStatuses.value=Object.fromEntries(results.filter(r=>r.status==='fulfilled').map(r=>r.value));
    if(s.orders?.some(o=>o.status==='executed')&&Date.now()-lastHistory>8000){
     const data=await loadMmtHistory(api,true,historyCursor);if(disposed)return;
     history.value=[...history.value,...data.rows];
@@ -70,5 +74,5 @@ export function useDashboardMmt(symbol) {
  }
  onMounted(()=>{void refresh();timer=setInterval(()=>{now.value=Date.now();if(now.value>=next&&document.visibilityState==='visible')void refresh();},1000);});
  onUnmounted(()=>{disposed=true;clearInterval(timer);});
- return {api,status,accounts,activeId,switchingAccount,accountMessage,selectAccount,account,snapshot,brokerQuote,activeOrders,trades,entryTimeFor,links,error,key,now,refresh,cancel};
+ return {api,status,accounts,accountStatuses,activeId,switchingAccount,accountMessage,selectAccount,account,snapshot,brokerQuote,activeOrders,trades,entryTimeFor,links,error,key,now,refresh,cancel};
 }

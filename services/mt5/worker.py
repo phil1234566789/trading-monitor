@@ -27,10 +27,14 @@ class Cloud:
         if not token or len(token) < 32:
             raise ValueError('worker_token_missing')
         self.url, self.token = url, token
+        self.account_id = os.environ.get('MT5_ACCOUNT_ID')
         self.opener = build_opener(NoRedirect())
 
     def call(self, action, body):
-        request = Request(self.url, data=json.dumps(dict(action=action, **body), allow_nan=False).encode(),
+        payload = dict(action=action, **body)
+        if self.account_id:
+            payload['account_id'] = self.account_id
+        request = Request(self.url, data=json.dumps(payload, allow_nan=False).encode(),
                           headers={'Authorization': 'Bearer ' + self.token, 'Content-Type': 'application/json'})
         with self.opener.open(request, timeout=8) as response:
             data = response.read(128_001)
@@ -218,7 +222,7 @@ def main():
         if not isinstance(config.get('account_login'), int) or not isinstance(config.get('account_server'), str):
             raise ValueError('invalid_account_configuration')
     connection = dict(login=config['account_login'], server=config['account_server'], password=config['password']) if config else {}
-    if not mt5.initialize(path=path, timeout=5000, **connection):
+    if not mt5.initialize(path=path, timeout=5000, portable=bool(os.environ.get('MT5_ACCOUNT_ID')), **connection):
         print(json.dumps(dict(connected=False, error_code=mt5.last_error()[0])))
         return 1
     try:
@@ -245,4 +249,7 @@ def main():
 
 
 if __name__ == '__main__':
-    raise SystemExit(main())
+    from worker_lock import terminal_worker_lock, terminal_lock_path
+    terminal = Path(os.environ['MT5_TERMINAL_PATH'])
+    with terminal_worker_lock(terminal_lock_path(terminal)):
+        raise SystemExit(main())

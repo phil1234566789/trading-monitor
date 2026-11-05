@@ -1,7 +1,7 @@
 import { activeMt5Account,checked,mt5Database } from './mt5Credentials.ts';
 import { validateHistoryBatch } from './mt5HistoryContract.js';
 export async function historyWorkerAction(body:Record<string,any>,readerAccount?:Awaited<ReturnType<typeof activeMt5Account>>) {
- const account=readerAccount??await activeMt5Account(),db=mt5Database(),now=Math.floor(Date.now()/1000);
+ const account=readerAccount??await activeMt5Account(body.account_id),db=mt5Database(),now=Math.floor(Date.now()/1000);
  if(body.action==='history_context'){
   const sync=checked(await db.from('mt5_history_sync').select('*').eq('account_id',account.id).maybeSingle());
   return {account_login:Number(account.login),account_server:account.server,archived:account.archived,

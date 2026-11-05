@@ -26,13 +26,13 @@ Deno.serve(async req => {
   try {
     const body=JSON.parse(text);
     let result;
-    if(['preview','confirm','search_preview','search_confirm'].includes(body.action)) result=await marketPreviewAction(body);
+    if(['preview','confirm','search_preview','search_confirm','search_abandon'].includes(body.action)) result=await marketPreviewAction(body);
     else if(typeof body.action==='string'&&body.action.startsWith('target_')) result=await targetPlanAction(body);
     else if(['risk_policy','risk_policy_save'].includes(body.action)) result=await riskPolicyAction(body);
     else if(body.action==='history_page') result=await readHistoryPage(body);
     else if(typeof body.action==='string'&&body.action.startsWith('journal_')) result=await mt5JournalAction(body);
     else if(body.action==='status') {
-      result=await getExecutionStatus(body.id);
+      result=await getExecutionStatus(body.id,body.account_id);
       if(!body.id)result={...result,account_balances:await readAccountBalances(),active_account_id:await readActiveMt5AccountId()};
     }
     else if(body.action==='cancel') result=await cancelExecutionOrder(body.id);

@@ -90,3 +90,11 @@ it('also blocks the pilot when no policy or insufficient daily remainder is conf
  expect(()=>buildEntrySearchPreview({...input,duration_sec:600},snapshot,{...config,riskPolicy:null},now,id)).toThrow('risk_limits_unconfirmed');
  expect(()=>buildEntrySearchPreview({...input,duration_sec:600},{...snapshot,risk:{...snapshot.risk,realized_net_day:-999}},config,now,id)).toThrow();
 });
+
+it('allows expired signatures only for explicit abandonment and still rejects forgery',async()=>{
+ const p=buildEntrySearchPreview({...input,duration_sec:600},snapshot,config,now,id);
+ const token=await signMarketPreview(p,'x'.repeat(40));
+ expect((await verifyMarketPreview(token,'x'.repeat(40),now+1000,{allowExpired:true})).intent.id).toBe(id);
+ await expect(verifyMarketPreview(token,'y'.repeat(40),now+1000,{allowExpired:true})).rejects.toThrow();
+ await expect(verifyMarketPreview(token,'x'.repeat(40),now+1000)).rejects.toThrow('preview_expired');
+});

@@ -7,7 +7,7 @@ param(
 )
 $ErrorActionPreference='Stop'
 if(-not $Python) {$Python=Join-Path $PSScriptRoot '.venv\Scripts\python.exe'}
-$allowed=@('MT5_TERMINAL_PATH','MT5_WORKER_URL','MT5_WORKER_TOKEN','MT5_ALLOW_LIVE','MT5_JOURNAL_PATH','MT5_SERVER_TIME_OFFSET_SEC')
+$allowed=@('MT5_ACCOUNT_ID','MT5_TERMINAL_PATH','MT5_WORKER_URL','MT5_WORKER_TOKEN','MT5_ALLOW_LIVE','MT5_JOURNAL_PATH','MT5_SERVER_TIME_OFFSET_SEC')
 foreach($line in Get-Content -LiteralPath $ConfigPath) {
     if(-not $line.Trim() -or $line.Trim().StartsWith('#')) {continue}
     $pair=$line.Split('=',2)

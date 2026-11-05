@@ -6,30 +6,32 @@ import {assertDailyStopSnapshot} from './dailyStopContract.js';
 import {scheduleMt5Health,getMt5Health} from './mt5Health.ts';
 
 import { isExecutionId, isSameExecutionResult, validateExecutionResult, validatePositionLifecycle, validateWorkerFault, validateDispatchAccount, validateExecutionIntent, validateWorkerSnapshot } from './executionContract.js';
-import { activeMt5Account, checked, mt5Database as database } from './mt5Credentials.ts';
+import { accountBridge, activeMt5Account, checked, mt5Database as database } from './mt5Credentials.ts';
 
-export async function executionConfig() {
+export async function executionConfig(accountId?:unknown) {
   if (Deno.env.get('MT5_EXECUTION_ENABLED') !== 'true') {
     throw new Error('mt5_not_configured');
   }
-  const account=await activeMt5Account(),{login,server,mode}=account;
-  return { riskPolicy:await readRiskPolicy(account.id),login:Number(login), server, mode, allowLive: Deno.env.get('MT5_ALLOW_LIVE') === 'true' };
+  const account=await activeMt5Account(accountId),{login,server,mode}=account;
+  return { accountId:account.id,riskPolicy:await readRiskPolicy(account.id),login:Number(login), server, mode, allowLive: Deno.env.get('MT5_ALLOW_LIVE') === 'true' };
 }
 
 function validId(id: string) {
   if (!isExecutionId(id)) throw new Error('invalid_id');
 }
 
-export async function getExecutionStatus(id?: string) {
+export async function getExecutionStatus(id?: string,accountId?:unknown) {
   const db = database();
   if (id) {
     validId(id);
     return checked(await db.from('mt5_execution_orders').select('*').eq('id', id).maybeSingle());
   }
-  const bridge = checked(await db.from('mt5_bridge_state').select('*').eq('id','primary').maybeSingle());
+  let account;
+  try{account=await activeMt5Account(accountId);}catch(e){if(accountId!=null||!(e instanceof Error)||e.message!=='no_active_account')throw e;}
+  const bridge = account?await accountBridge(account):null;
   // Erledigte Historie bleibt begrenzt; laufende Suchen dürfen durch neue Aufträge nie verschwinden.
   const orders=await readExecutionOrders(db);
-  const dailyStatus=await readDailyStopStatus();
+  const dailyStatus=await readDailyStopStatus(accountId as string);
   const {policy:risk_policy,...dailyStop}=dailyStatus??{policy:null};
   const online = bridge && Date.now() - Date.parse(bridge.heartbeat_at) <= 15_000;
   return { daily_stop:dailyStatus?dailyStop:null,risk_policy,bridge, online: !!online, health:await getMt5Health(), orders, execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',
@@ -37,8 +39,8 @@ export async function getExecutionStatus(id?: string) {
     limits: { maxLots:.01, maxDurationSec:3600 } };
 }
 
-export async function createExecutionOrder(input: Record<string, unknown>, confirmedMarket=false) {
-  const config = await executionConfig();
+export async function createExecutionOrder(input: Record<string, unknown>, confirmedMarket=false,accountId?:unknown) {
+  const config = await executionConfig(accountId);
   if(input.trigger==='market_confirmed'&&!confirmedMarket) throw new Error('market_confirmation_required');
   const db = database();
   validId(input.id as string);
@@ -52,14 +54,14 @@ export async function createExecutionOrder(input: Record<string, unknown>, confi
   }
   const now = Math.floor(Date.now()/1000);
   const intent = validateExecutionIntent({ ...input, created_sec:now }, config, now);
-  const bridge = checked(await db.from('mt5_bridge_state').select('*').eq('id','primary').maybeSingle());
+  const bridge = await accountBridge(await activeMt5Account(accountId));
   if (!bridge || Date.now() - Date.parse(bridge.heartbeat_at) > 15_000) throw new Error('bridge_offline');
   validateWorkerSnapshot(bridge.snapshot, config);
   assertDailyStopSnapshot(bridge.snapshot,now);
   riskPreviewMetrics({symbol:intent.symbol,direction:intent.direction,stop_loss:intent.stop_loss,take_profit:intent.take_profit,risk_mode:intent.risk_mode},bridge.snapshot,config.riskPolicy,now);
   if (bridge.snapshot.worker_error||bridge.snapshot.execution_ready===false||!bridge.snapshot.trade_allowed || bridge.snapshot.mode !== intent.mode) throw new Error('bridge_not_ready');
   const { data, error } = await db.rpc('mt5_enqueue_order',{new_intent:intent});
-  if (error?.code === '23505') return createExecutionOrder(input,confirmedMarket);
+  if (error?.code === '23505') return createExecutionOrder(input,confirmedMarket,accountId);
   return checked({ data, error });
 }
 
@@ -72,24 +74,26 @@ export async function cancelExecutionOrder(id: string) {
 }
 
 export async function workerAction(body: Record<string, any>) {
-  const config = await executionConfig();
+  const config = await executionConfig(body.account_id);
   const db = database();
   const now = new Date().toISOString();
   if(body.action==='fault') {
     if(body.account_login!==config.login||body.account_server!==config.server)throw new Error('account_mismatch');
     const fault=validateWorkerFault(body.fault);
-    const bridge=checked(await db.from('mt5_bridge_state').select('*').eq('id','primary').maybeSingle());
-    if(bridge)checked(await db.from('mt5_bridge_state').update({snapshot:{...bridge.snapshot,worker_error:fault,execution_ready:false},heartbeat_at:now}).eq('id','primary'));
+    const bridge=await accountBridge(await activeMt5Account(body.account_id));
+    if(bridge)checked(await db.from('mt5_bridge_state').update({snapshot:{...bridge.snapshot,worker_error:fault,execution_ready:false},heartbeat_at:now}).eq('id',bridge.id));
     await scheduleMt5Health();
     return {recorded:true};
   }
   if (body.action === 'poll') {
     const snapshot = validateWorkerSnapshot(body.snapshot, {...config,allowLive:true});
-    checked(await db.from('mt5_bridge_state').upsert({ id:'primary', snapshot, heartbeat_at:now }));
+    checked(await db.from('mt5_bridge_state').upsert({ id:config.accountId, snapshot, heartbeat_at:now }));
+    const settings=checked(await db.from('mt5_execution_settings').select('active_account_id').eq('id','primary').single());
+    if(settings?.active_account_id===config.accountId)checked(await db.from('mt5_bridge_state').upsert({id:'primary',snapshot,heartbeat_at:now}));
     checked(await db.from('mt5_execution_orders').update({status:'expired',updated_at:now})
       .eq('status','searching').lte('expires_at',now));
     const orders = checked(await db.from('mt5_execution_orders').select('*')
-      .in('status',['searching','sending','unknown']).order('created_at').limit(100));
+      .in('status',['searching','sending','unknown']).eq('intent->>account_login',String(config.login)).eq('intent->>account_server',config.server).order('created_at').limit(100));
     if(body.watch_cursor!=null)validId(body.watch_cursor);
     let query=db.from('mt5_execution_orders').select('*').eq('status','executed')
       .eq('intent->>account_login',String(config.login)).eq('intent->>account_server',config.server)
@@ -120,6 +124,9 @@ export async function workerAction(body: Record<string, any>) {
   }
   if (body.action === 'reject_search') {
     if(typeof body.reason!=='string'||!body.reason||body.reason.length>100) throw new Error('invalid_reason');
+    const candidate=checked(await db.from('mt5_execution_orders').select('intent').eq('id',body.id).single());
+    if(!candidate)throw new Error('invalid_order');
+    validateDispatchAccount(candidate.intent,{...config,allowLive:true});
     const result={status:'rejected',reason:body.reason};
     // Ein zweiter Worker ohne Versandrecht darf eine laufende/unklare Sendung niemals entsperren.
     const rows=checked(await db.from('mt5_execution_orders').update({status:'rejected',result,updated_at:now})
@@ -128,6 +135,8 @@ export async function workerAction(body: Record<string, any>) {
   }
   if (body.action === 'result') {
     const row=checked(await db.from('mt5_execution_orders').select('intent').eq('id',body.id).single());
+    if(!row)throw new Error('invalid_order');
+    validateDispatchAccount(row.intent,{...config,allowLive:true});
     const result=validateExecutionResult(body.result,row?.intent);
     const rows = checked(await db.from('mt5_execution_orders').update({ status:result.status,result,updated_at:now })
       .eq('id',body.id).in('status',['sending','unknown']).select('id'));

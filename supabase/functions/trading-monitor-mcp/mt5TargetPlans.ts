@@ -1,5 +1,5 @@
 import {z} from 'npm:zod@3.24.1';
-import {checked,mt5Database} from './mt5Credentials.ts';
+import {accountBridge,activeMt5Account,checked,mt5Database} from './mt5Credentials.ts';
 import {executionConfig} from './mt5Execution.ts';
 import {validateWorkerSnapshot,validateDispatchAccount} from './executionContract.js';
 import {validateTargetAllocation} from './targetPlanContract.js';
@@ -12,13 +12,13 @@ export async function targetPlanAction(body:Record<string,unknown>,worker=false)
   const order=uuid.parse(body.order_id);
   return {plan:checked(await db.from('mt5_target_plans').select('*').eq('order_id',order).maybeSingle())};
  }
- const config=await executionConfig();
+ const config=await executionConfig(body.account_id);
  if(!worker&&action==='target_save'){
-  const {action:_,...fields}=body,input=request.parse(fields);
+  const {action:_,account_id:__,...fields}=body,input=request.parse(fields);
   const order:any=checked(await db.from('mt5_execution_orders').select('*').eq('id',input.order_id).single());
   if(order.status!=='executed'||!order.result?.price||!order.result?.volume||order.result?.position_lifecycle?.state==='closed')throw new Error('target_fill_required');
   validateDispatchAccount(order.intent,config);
-  const bridge:any=checked(await db.from('mt5_bridge_state').select('*').eq('id','primary').single());
+  const bridge:any=await accountBridge(await activeMt5Account(body.account_id));
   if(Date.now()-Date.parse(bridge.heartbeat_at)>5000)throw new Error('bridge_offline');
   const s=validateWorkerSnapshot(bridge.snapshot,config);
   if(!s.target_plans_ready||!s.execution_ready||!s.trade_allowed||s.worker_error)throw new Error('target_worker_not_ready');
