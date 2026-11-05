@@ -6684,9 +6684,9 @@
     "semantic_hash": ""
   },
   "services/mt5/start-worker.ps1": {
-    "mtime": 1793867000.3827631,
-    "seen": 1793867745.5118656,
-    "ast_hash": "86a7ef28104950e33afcbfce93f41f7b",
+    "mtime": 1793870055.1132343,
+    "seen": 1793870284.7034779,
+    "ast_hash": "ade4cae27fc5869fcae902504a87e224",
     "semantic_hash": ""
   },
   "services/mt5/test_broker.py": {
@@ -6702,21 +6702,21 @@
     "semantic_hash": ""
   },
   "services/mt5/test_worker.py": {
-    "mtime": 1793867000.388763,
-    "seen": 1793867745.5118656,
-    "ast_hash": "ee0d64c72e29de4752fd711f4756dfd9",
+    "mtime": 1793870055.1142354,
+    "seen": 1793870284.711478,
+    "ast_hash": "bb451a2cd07f9e9415646cf06a794a62",
     "semantic_hash": ""
   },
   "services/mt5/worker.py": {
-    "mtime": 1793867000.389762,
-    "seen": 1793867745.5118656,
-    "ast_hash": "15e1a40d6ee4af8c0715fac9d4a310c9",
+    "mtime": 1793870055.1152365,
+    "seen": 1793870284.711478,
+    "ast_hash": "b54d77274ca0186e744e70857834dbea",
     "semantic_hash": ""
   },
   "src/milkyMetaTraderClient.js": {
-    "mtime": 1793867000.5032842,
-    "seen": 1793867745.5123696,
-    "ast_hash": "e17879d56c2e76bfbfa9b82b347a0446",
+    "mtime": 1793870055.1197417,
+    "seen": 1793870284.8294961,
+    "ast_hash": "35b4d374a1f25754e25b62c0fcc753c4",
     "semantic_hash": ""
   },
   "src/views/MilkyMetaTrader.vue": {
@@ -6726,15 +6726,15 @@
     "semantic_hash": ""
   },
   "supabase/functions/mt5-control/index.ts": {
-    "mtime": 1793867000.6038885,
-    "seen": 1793867745.5123696,
-    "ast_hash": "f9f2e73980b8746c9e25535626d78caf",
+    "mtime": 1793870055.1212773,
+    "seen": 1793870284.927519,
+    "ast_hash": "b16b433463426780021ada89a35ac8ea",
     "semantic_hash": ""
   },
   "supabase/functions/mt5-worker/index.ts": {
-    "mtime": 1793867000.6048875,
-    "seen": 1793867745.5123696,
-    "ast_hash": "27feb765026539c37eb7b0a3829aad3b",
+    "mtime": 1793870055.1222827,
+    "seen": 1793870284.9295194,
+    "ast_hash": "cc993a609a7c21f93e3249808c9653ce",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/deno.json": {
@@ -6750,9 +6750,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5Credentials.ts": {
-    "mtime": 1793867000.6218927,
-    "seen": 1793867745.5123696,
-    "ast_hash": "4c52e856375a23c7064b34278cc69a81",
+    "mtime": 1793870055.1242824,
+    "seen": 1793870284.94452,
+    "ast_hash": "6d54d208edfd6859e0ea54f046ee6eba",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5Execution.deno.ts": {
@@ -6762,9 +6762,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5Execution.ts": {
-    "mtime": 1793867000.622892,
-    "seen": 1793867745.5123696,
-    "ast_hash": "a0ed9fb872de53498197e4077d64f319",
+    "mtime": 1793870055.126282,
+    "seen": 1793870284.94452,
+    "ast_hash": "bc5cc6064ea8c79d965cc09c23e47cc7",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/tools/mt5Execution.ts": {
@@ -6816,21 +6816,21 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/marketPreview.ts": {
-    "mtime": 1793867000.619894,
-    "seen": 1793867745.5123696,
-    "ast_hash": "2593b6ffac2ccc03e936a41f720fbccc",
+    "mtime": 1793870055.1222827,
+    "seen": 1793870284.942522,
+    "ast_hash": "73ac6b467d72e65171c20d6cdd051954",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/marketPreviewContract.js": {
-    "mtime": 1793867000.619894,
-    "seen": 1793867745.5123696,
-    "ast_hash": "2f3fce8add679d62ae30191e50d4fe47",
+    "mtime": 1793870055.1232827,
+    "seen": 1793870284.942522,
+    "ast_hash": "2e484e44b3724611fc8941e5a004a046",
     "semantic_hash": ""
   },
   "test/marketPreview.test.js": {
-    "mtime": 1793867000.8432457,
-    "seen": 1793867745.5123696,
-    "ast_hash": "3508c1d471bd2e9e2e78186f0875858c",
+    "mtime": 1793870055.1313145,
+    "seen": 1793870285.067044,
+    "ast_hash": "55caf162e3cde4dd87d1f2d360f4c98f",
     "semantic_hash": ""
   },
   "src/components/MilkyMetaTraderEntrySearch.vue": {
@@ -6864,9 +6864,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5Health.ts": {
-    "mtime": 1793867000.6238947,
-    "seen": 1793867745.5123696,
-    "ast_hash": "061914ffb770a38a68552726469aa018",
+    "mtime": 1793870055.126282,
+    "seen": 1793870284.94452,
+    "ast_hash": "f4d522b2aa9a1a5354ce765334790de7",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5HealthContract.js": {
@@ -6984,9 +6984,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5History.ts": {
-    "mtime": 1793867112.769055,
-    "seen": 1793867745.5123696,
-    "ast_hash": "0af85fbae867edc452ed66729d28f967",
+    "mtime": 1793870055.127283,
+    "seen": 1793870284.94452,
+    "ast_hash": "670e4205e3f5d8ca7e8d120ed832e4e6",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5HistoryContract.js": {
@@ -7146,9 +7146,9 @@
     "semantic_hash": ""
   },
   "test/milkyMetaTraderBalances.component.test.js": {
-    "mtime": 1793867000.8512428,
-    "seen": 1793867745.5123696,
-    "ast_hash": "3a9ec22f18080137a87c335c60d29c29",
+    "mtime": 1793867766.2630432,
+    "seen": 1793870285.0750418,
+    "ast_hash": "1b7c168a7d5cdc50d51e39333b833c0c",
     "semantic_hash": ""
   },
   "test/milkyMetaTraderBalances.test.js": {
@@ -7260,9 +7260,9 @@
     "semantic_hash": ""
   },
   "src/components/DashboardMmt.vue": {
-    "mtime": 1793867000.4127674,
-    "seen": 1793867745.5123696,
-    "ast_hash": "c721cfcb7afc5057bee7404ea65e3c30",
+    "mtime": 1793870055.1172342,
+    "seen": 1793870284.7359855,
+    "ast_hash": "f9b1c8b279b4b2bfb7237150153e0c05",
     "semantic_hash": ""
   },
   "src/components/MmtDailyStopStatus.vue": {
@@ -7284,9 +7284,9 @@
     "semantic_hash": ""
   },
   "src/composables/useDashboardMmt.js": {
-    "mtime": 1793867000.445285,
-    "seen": 1793867745.5123696,
-    "ast_hash": "48a8e2867bf2f6be35799209b0547abc",
+    "mtime": 1793870055.118235,
+    "seen": 1793870284.7679892,
+    "ast_hash": "b8ccb66579b7edf7aa5534522b699a06",
     "semantic_hash": ""
   },
   "src/composables/useMmtTargetDrawing.js": {
@@ -7326,9 +7326,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5DailyStop.ts": {
-    "mtime": 1793867000.6218927,
-    "seen": 1793867745.5123696,
-    "ast_hash": "bcc3c08cd660c56608d806761708dfae",
+    "mtime": 1793870055.1252837,
+    "seen": 1793870284.94452,
+    "ast_hash": "1f1b3a7d631f9dc815cce1c16de4c65c",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5OrderRead.js": {
@@ -7338,9 +7338,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5Risk.ts": {
-    "mtime": 1793867000.6268945,
-    "seen": 1793867745.5123696,
-    "ast_hash": "6da5f8f1837e6fb33373ae966d18a281",
+    "mtime": 1793870055.1282856,
+    "seen": 1793870284.9485192,
+    "ast_hash": "7136e5e5e5265037c5aab05cfffb43f6",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5RiskContract.js": {
@@ -7350,9 +7350,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5TargetPlans.ts": {
-    "mtime": 1793867000.627892,
-    "seen": 1793867745.5123696,
-    "ast_hash": "c53ac5e422bbe218917f9f348015db76",
+    "mtime": 1793870055.1282856,
+    "seen": 1793870284.9485192,
+    "ast_hash": "c270ec9b7b23fcf24b0c94cc38d6ab95",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/targetPlanContract.js": {
@@ -7623,6 +7623,42 @@
     "mtime": 1793867229.5889783,
     "seen": 1793867745.5123696,
     "ast_hash": "1cd2556245335ec46500aebf0030afd7",
+    "semantic_hash": ""
+  },
+  "services/mt5/start-account-workers.ps1": {
+    "mtime": 1793870055.112234,
+    "seen": 1793870284.7024744,
+    "ast_hash": "0cb9540f86b5ded2e2fb661e4cea5789",
+    "semantic_hash": ""
+  },
+  "services/mt5/test_worker_lock.py": {
+    "mtime": 1793870055.1152365,
+    "seen": 1793870284.711478,
+    "ast_hash": "0ac36b05bce95604776a02ba6454aa64",
+    "semantic_hash": ""
+  },
+  "services/mt5/worker_lock.py": {
+    "mtime": 1793870055.1162348,
+    "seen": 1793870284.711478,
+    "ast_hash": "bab376ac73e41233b70dc491ff5e2ca1",
+    "semantic_hash": ""
+  },
+  "src/components/MmtBatchEntrySearch.vue": {
+    "mtime": 1793870055.118235,
+    "seen": 1793870284.7449849,
+    "ast_hash": "37fa8c8207c4848aaff322e1e4b8573c",
+    "semantic_hash": ""
+  },
+  "src/mmtBatchSearch.js": {
+    "mtime": 1793870055.12027,
+    "seen": 1793870284.8314948,
+    "ast_hash": "43ce595867b39c0750c41775ceb37b6d",
+    "semantic_hash": ""
+  },
+  "test/mmtBatchSearch.test.js": {
+    "mtime": 1793870055.132314,
+    "seen": 1793870285.0805442,
+    "ast_hash": "9a5d5f2cce73609513eaf1edaec3dc70",
     "semantic_hash": ""
   }
 }
