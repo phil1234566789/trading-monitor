@@ -138,7 +138,10 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
     <template v-else>
       <section class="mmt-account-bar" aria-label="Aktives Handelskonto">
         <div><h2>{{active?.name??'Kein Konto ausgewählt'}}</h2><span class="mmt-muted" v-if="active">{{active.login}} · {{active.server}} · {{active.mode==='demo'?'Demo':'Real / Challenge'}}</span></div>
-        <span class="mmt-status" :data-ready="Boolean(ready)">{{ready?'Worker verbunden · Freigabe je Entry geprüft':status?.online?'Ausführung nicht bereit':'Worker offline'}}</span>
+        <div class="mmt-account-status">
+          <span class="mmt-status" :data-ready="Boolean(ready)">{{ready?'Worker verbunden · Freigabe je Entry geprüft':status?.online?'Ausführung nicht bereit':'Worker offline'}}</span>
+          <p v-if="dataAge==null||dataAge>staleSeconds" role="status" class="mmt-error">Brokerdaten {{dataAge==null?'noch nicht verfügbar':'seit '+dataAge+' Sekunden nicht aktualisiert'}}. Angezeigte Werte sind kein aktueller Stand.</p>
+        </div>
       </section>
       <MmtDailyStopStatus :status="status" :now="now" />
       <MilkyMetaTraderBalances v-model:statistics-account="statisticsAccount" :accounts="accounts" :active-id="activeId" :status="status" :history="brokerHistory" :now="now" :stale-seconds="staleSeconds" />
@@ -146,22 +149,23 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <p v-if="status?.health?.incident">Fehleralarm: <span v-for="item in status.health.deliveries" :key="item.channel">{{item.channel==='pushover'?'Pushover':'Telegram'}} {{deliveryLabels[item.status]??item.status}}. </span></p>
         <p v-if="status?.health&&!status.health.checked_at" role="alert">Unabhängige Alarmprüfung noch nicht bestätigt.</p>
         <p v-else-if="status?.health?.checked_at&&Date.now()-Date.parse(status.health.checked_at)>150000" role="alert" class="mmt-error">Unabhängige Alarmprüfung ist veraltet. Letzte Prüfung: {{time(status.health.checked_at)}} (Berlin).</p>
-      <p v-if="dataAge==null||dataAge>staleSeconds" role="status" class="mmt-error">Brokerdaten {{dataAge==null?'noch nicht verfügbar':'seit '+dataAge+' Sekunden nicht aktualisiert'}}. Angezeigte Werte sind kein aktueller Stand.</p>
       <section v-if="unmatchedPositions.length" class="mmt-panel mmt-broker-positions"><h2>Weitere offene Brokerpositionen</h2>
         <div v-for="position in unmatchedPositions" :key="position.ticket"><h3>{{position.symbol}} · {{position.type===0?'Long':'Short'}}</h3><MilkyMetaTraderLivePosition :position="position" :commission="commissionFor(activeId,position.position_id??position.ticket)" :commission-at="historyTime(activeId)" :currency="snapshot?.currency" :age="dataAge" :digits="snapshot?.quotes?.find(q=>q.symbol===position.symbol)?.digits" /></div>
       </section>
       <div class="mmt-workspace">
         <div class="mmt-main-column">
-          <section v-if="currentOrders.length" class="mmt-panel mmt-orders" aria-labelledby="mmt-orders-title">
-            <div class="mmt-section-heading"><h2 id="mmt-orders-title">Aktuelle Entry-Aufträge</h2><ActionButton :disabled="busy" @click="run(refresh)">Aktualisieren</ActionButton></div>
-            <p class="mmt-muted">Abgleich {{pollDelay===1000?'etwa jede Sekunde':'alle 8 Sekunden'}} · kein erneuter Auftrag durch Aktualisieren.</p>
-            <ul class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in currentOrders" :key="order.id" :order="order" :commission="orderCommission(order)" :commission-at="historyTime(accountForOrder(order))" :busy="busy" :snapshot="snapshot" :age="dataAge" @cancel="cancel" /></ul>
-          </section>
-          <p v-else class="mmt-muted">Keine laufende Entry-Suche.</p>
           <MilkyMetaTraderStatistics :api="api" :accounts="accounts" :account="statisticsAccount" @history="brokerHistory=$event" />
-          <details v-if="previousOrders.length" class="mmt-panel mmt-technical-history"><summary>Technischer Auftragsverlauf · {{previousOrders.length}} letzte erledigte Aufträge</summary><p>Suchaufträge sind keine vollständige Brokerhistorie und zählen nicht als Statistikdaten.</p><ul class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in previousOrders" :key="order.id" :order="order" :commission="orderCommission(order)" :commission-at="historyTime(accountForOrder(order))" :busy="busy" /></ul></details>
         </div>
-        <MilkyMetaTraderEntrySearch :api="api" :status="status" :account="active" @submitted="run(refresh)" />
+        <aside class="mmt-side-column" aria-label="Entry-Suche und Aufträge">
+          <section class="mmt-panel mmt-orders" aria-labelledby="mmt-orders-title">
+            <div class="mmt-section-heading"><h2 id="mmt-orders-title">Aktuelle Entry-Aufträge</h2><ActionButton v-if="currentOrders.length" :disabled="busy" @click="run(refresh)">Aktualisieren</ActionButton></div>
+            <p v-if="currentOrders.length" class="mmt-muted">Abgleich {{pollDelay===1000?'etwa jede Sekunde':'alle 8 Sekunden'}} · kein erneuter Auftrag durch Aktualisieren.</p>
+            <ul v-if="currentOrders.length" class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in currentOrders" :key="order.id" :order="order" :commission="orderCommission(order)" :commission-at="historyTime(accountForOrder(order))" :busy="busy" :snapshot="snapshot" :age="dataAge" @cancel="cancel" /></ul>
+            <p v-else class="mmt-muted">Keine laufende Entry-Suche.</p>
+            <details v-if="previousOrders.length" class="mmt-technical-history"><summary>Technischer Auftragsverlauf · {{previousOrders.length}} letzte erledigte Aufträge</summary><p>Suchaufträge sind keine vollständige Brokerhistorie und zählen nicht als Statistikdaten.</p><ul class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in previousOrders" :key="order.id" :order="order" :commission="orderCommission(order)" :commission-at="historyTime(accountForOrder(order))" :busy="busy" /></ul></details>
+          </section>
+          <MilkyMetaTraderEntrySearch :api="api" :status="status" :account="active" @submitted="run(refresh)" />
+        </aside>
       </div>
       <div class="mmt-settings"><h2>Konten &amp; Einstellungen</h2>
       <MmtRiskPolicyEditor :api="api" :policy="status?.risk_policy" :account="active" @saved="run(refresh)" />
