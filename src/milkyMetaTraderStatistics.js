@@ -53,6 +53,7 @@ export function filterBrokerTrades(trades,{account='',asset='',currency='',from=
  });
 }
 const weekdays={Monday:'Montag',Tuesday:'Dienstag',Wednesday:'Mittwoch',Thursday:'Donnerstag',Friday:'Freitag',Saturday:'Samstag',Sunday:'Sonntag'};
+const weekdayNames=Object.values(weekdays);
 export function statisticsGroups(trades,dimension){
  const groups=new Map();
  for(const t of trades){
@@ -60,5 +61,8 @@ export function statisticsGroups(trades,dimension){
   if(!groups.has(label))groups.set(label,{label,count:0,net:0,wins:0,commission:0});
   const g=groups.get(label);g.count++;g.net+=t.net;g.commission+=t.commission??0;if(t.net>0)g.wins++;
  }
- return [...groups.values()].map(g=>({...g,average:g.net/g.count,winrate:g.wins/g.count*100})).sort((a,b)=>b.average-a.average||b.count-a.count);
+ const rows=[...groups.values()].map(g=>({...g,average:g.net/g.count,winrate:g.wins/g.count*100}));
+ return rows.sort(dimension==='hour'?(a,b)=>a.label.localeCompare(b.label):dimension==='weekday'
+  ?(a,b)=>weekdayNames.indexOf(a.label)-weekdayNames.indexOf(b.label)
+  :(a,b)=>b.average-a.average||b.count-a.count);
 }

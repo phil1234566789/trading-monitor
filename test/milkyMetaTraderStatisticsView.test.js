@@ -7,6 +7,9 @@ it('shows unknown totals rather than zero performance for accounts without impor
  const html=await renderToString(createSSRApp(Statistics,{api,accounts:[{id:'a',name:'Challenge'}]}));
  expect(html).toContain('Noch keine Brokerhistorie');
  expect(html).toContain('Trades <strong>—</strong>');
+ expect(html).not.toContain('Währung<select');
+ for(const label of ['PnL-Liste','X–Y-Diagramm','Assets','Entry-Stunden · Berlin','Entry-Wochentage · Berlin'])expect(html).toContain(label);
+ expect(html).not.toContain('class="mmt-breakdown"');
  expect(api).not.toHaveBeenCalled();
 });
 

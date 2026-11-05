@@ -3,6 +3,13 @@ import {closedBrokerTrades,statisticsGroups,filterBrokerTrades,positionCommissio
 const entry={id:1,account_id:'a',ticket:1,position_id:42,time_msc:Date.parse('2026-10-29T08:30:00Z'),type:1,entry:0,symbol:'XAUUSD.gbe',volume:.01,price:4020,profit:0,commission:-.05,swap:0,fee:0,currency:'USD'};
 const exit={...entry,id:2,ticket:2,time_msc:Date.parse('2026-10-29T09:30:00Z'),type:0,entry:1,price:4010,profit:10,commission:-.05};
 describe('native broker statistics',()=>{
+ it('sorts hours and weekdays chronologically even when later entries perform better',()=>{
+  const trades=[{opened_at:Date.parse('2026-11-06T14:00:00Z'),net:100,commission:0,symbol:'B'},
+   {opened_at:Date.parse('2026-11-02T07:00:00Z'),net:-100,commission:0,symbol:'A'}];
+  expect(statisticsGroups(trades,'hour').map(r=>r.label)).toEqual(['08:00–08:59','15:00–15:59']);
+  expect(statisticsGroups(trades,'weekday').map(r=>r.label)).toEqual(['Montag','Freitag']);
+  expect(statisticsGroups(trades,'asset').map(r=>r.label)).toEqual(['B','A']);
+ });
  it('counts actual closed positions with all deal costs, not deposits',()=>{
   const data=closedBrokerTrades([entry,exit,{...entry,ticket:3,type:2,position_id:0,volume:0,price:0,profit:50000}]);
   expect(data.trades).toHaveLength(1);expect(data.trades[0].net).toBeCloseTo(9.9);expect(data.trades[0].direction).toBe('short');
