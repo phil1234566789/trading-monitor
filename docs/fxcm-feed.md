@@ -16,8 +16,7 @@ XAUUSD verwendet denselben Zugang mit einem getrennten Gold-Collector. Details u
   bleiben GBPUSD/EURUSD der Collector-Standard. Keine parallelen Schreiber auf denselben SQLite-Puffer.
 - Watchdog `fxcm-gold-watchdog.timer`/`.service`; 384 MiB RAM, 0,5 CPU, 96 PIDs,
   keine veröffentlichten Ports, übrige Schutzoptionen wie beim Forex-Collector.
-- Native M1/M3/M5/H1/H4/D1-Kerzen. M5/H1/H4/D1-Historie ab Januar 2026; M1/M3 werden ab Januar nachgezogen.
-  Chart, Replay und ältere Kerzen lesen das
+- Native M1/M3/M5/H1/H4/D1-Historie ab Januar 2026. Chart, Replay und ältere Kerzen lesen das
   Archiv; vor dessen Beginn gibt es keinen anderen Broker als Ersatz. Struktur braucht Vorlauf.
 - Gold-Sessions wurden aus GBPUSD initialisiert. Das vorhandene Gold-Handelsfenster blieb
   erhalten. Gold-Telegram bleibt deaktiviert; die Auswertung darf trotzdem Daten berechnen.
