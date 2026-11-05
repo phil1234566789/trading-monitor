@@ -11,7 +11,7 @@ Deno.test('private account tools paginate safe fields and expose only sanitized 
  globalThis.fetch=(async(input)=>{
   const url=new URL(input instanceof Request?input.url:input.toString());calls.push(url);
   if(url.pathname.endsWith('mt5_accounts')){
-   assert.equal(url.searchParams.get('select'),'id,name,login,server,mode,archived,created_at,trade_role');
+   assert.equal(url.searchParams.get('select'),'id,name,login,server,mode,archived,created_at,trade_role,archive_details');
    return Response.json(url.searchParams.get('id')?.endsWith(id)?[]:[{id,name:'Unchanged account name',login:42,server:'Demo',mode:'demo',archived:false,created_at:'2026-10-31T10:00:00Z'}]);
   }
   if(url.pathname.endsWith('mt5_execution_settings'))return Response.json({active_account_id:id});

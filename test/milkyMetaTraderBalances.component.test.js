@@ -62,3 +62,12 @@ it('selects a statistics card independently of the active trading account, inclu
  expect(html).toContain('Aktives Handelskonto');
  expect(html).not.toContain('Als Handelskonto wählen');
 });
+
+it('hides breached accounts from the semicircle strip without deleting their archive selector',async()=>{
+ const accounts=[{id:'active',name:'Active',login:2},{id:'failed',name:'Failed',login:1,archived:true}];
+ const html=await renderToString(Vue.createSSRApp(Balances,{accounts,history:{rows:[],sync:[]},now:Date.now(),staleSeconds:15}));
+ expect(html.match(/<article/g)).toHaveLength(1);
+ expect(html).not.toContain('Statistik: Failed');
+ expect(html).toContain('Alle aktive Konten');
+ expect(html).toContain('Inaktive Konten (1)');
+});

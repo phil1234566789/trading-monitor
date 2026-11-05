@@ -23,3 +23,13 @@ it('uses the parent account filter without rendering a competing switcher',async
  expect(html).toContain('Abschluss ab');
  expect(api).not.toHaveBeenCalled();
 });
+
+it('excludes archived accounts by default but preserves access to their statistics',async()=>{
+ const accounts=[{id:'active',name:'Active'},{id:'failed',name:'Failed',archived:true}];
+ for(const [account,label,count] of [['','Active',1],['failed','Failed',1],['all-history','Failed',2]]){
+  const html=await renderToString(createSSRApp(Statistics,{api:vi.fn(),accounts,account}));
+  expect(html).toContain(label);
+  expect(html).toContain('0 / '+count+' Konten');
+  if(!account)expect(html).not.toContain('Failed');
+ }
+});

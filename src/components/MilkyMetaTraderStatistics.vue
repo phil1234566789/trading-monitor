@@ -8,6 +8,7 @@ import {loadMmtHistory} from '../milkyMetaTraderHistory.js';
 import {closedBrokerTrades,filterBrokerTrades,statisticsGroups} from '../milkyMetaTraderStatistics.js';
 import {fmtDateTime,fmtPrice,pnlClass} from '../format.js';
 import '../milkyMetaTraderStatistics.css';
+import {statisticsAccounts,ALL_HISTORY_ACCOUNTS} from '../milkyMetaTraderAccountSelection.js';
 const emit=defineEmits(['history']);
 const props=defineProps({api:{type:Function,required:true},accounts:{type:Array,default:()=>[]},account:{type:String,default:''}});
 const raw=ref([]),sync=ref([]),loading=ref(false),error=ref(''),loaded=ref(false),view=ref('list');
@@ -27,23 +28,26 @@ const result=computed(()=>closedBrokerTrades(raw.value));
 const currencies=computed(()=>[...new Set(raw.value.map(d=>d.currency))].sort());
 watch(currencies,list=>{if(!list.includes(currency.value))currency.value=list[0]??'';},{immediate:true});
 const assets=computed(()=>[...new Set(result.value.trades.map(t=>t.symbol))].sort());
-const trades=computed(()=>filterBrokerTrades(result.value.trades,{account:account.value,asset:asset.value,currency:currency.value,from:from.value,to:to.value}));
+const selectedAccounts=computed(()=>statisticsAccounts(props.accounts,account.value));
+const selectedIds=computed(()=>new Set(selectedAccounts.value.map(a=>a.id)));
+const selectedRows=computed(()=>raw.value.filter(d=>selectedIds.value.has(d.account_id)));
+const selectedResult=computed(()=>closedBrokerTrades(selectedRows.value));
+const trades=computed(()=>filterBrokerTrades(selectedResult.value.trades,{asset:asset.value,currency:currency.value,from:from.value,to:to.value}));
 const total=computed(()=>trades.value.reduce((s,t)=>s+t.net,0));
 const commission=computed(()=>trades.value.reduce((s,t)=>s+t.commission,0));
 const wins=computed(()=>trades.value.filter(t=>t.net>0).length);
 const grouped=computed(()=>Object.fromEntries(['asset','hour','weekday'].map(dim=>[dim,statisticsGroups(trades.value,dim)])));
-const selectedAccounts=computed(()=>props.accounts.filter(a=>!account.value||a.id===account.value));
 const hasHistory=id=>sync.value.some(s=>s.account_id===id&&s.last_full_at);
 const coverage=computed(()=>selectedAccounts.value.filter(a=>hasHistory(a.id)));
-const problems=computed(()=>sync.value.filter(s=>(!account.value||s.account_id===account.value)&&(s.last_error||s.in_progress)));
-const fees=computed(()=>result.value.unallocated.filter(d=>(!account.value||d.account_id===account.value)&&d.currency===currency.value).reduce((s,d)=>s+d.profit+d.commission+d.swap+d.fee,0));
+const problems=computed(()=>sync.value.filter(s=>selectedIds.value.has(s.account_id)&&(s.last_error||s.in_progress)));
+const fees=computed(()=>selectedResult.value.unallocated.filter(d=>d.currency===currency.value).reduce((s,d)=>s+d.profit+d.commission+d.swap+d.fee,0));
 const listed=computed(()=>[...trades.value].reverse().slice(page.value*50,page.value*50+50));
 const pages=computed(()=>Math.max(1,Math.ceil(trades.value.length/50)));
 watch([account,asset,currency,from,to],()=>{page.value=0;});
 watch(pages,value=>{page.value=Math.min(page.value,value-1);});
-const name=id=>props.accounts.find(a=>a.id===id)?.name??id;
+const name=id=>id===ALL_HISTORY_ACCOUNTS?'Alle Konten inklusive inaktiver':props.accounts.find(a=>a.id===id)?.name??id;
 const time=ms=>fmtDateTime(ms/1000,{timeZone:'Europe/Berlin'});
-const latest=computed(()=>sync.value.filter(s=>!account.value||s.account_id===account.value).map(s=>s.synced_at).filter(Boolean).sort().at(-1));
+const latest=computed(()=>sync.value.filter(s=>selectedIds.value.has(s.account_id)).map(s=>s.synced_at).filter(Boolean).sort().at(-1));
 </script>
 <template><section class="mmt-panel mmt-statistics" aria-labelledby="mmt-statistics-title">
  <div class="mmt-section-heading"><h2 id="mmt-statistics-title">Trading-Statistik <small v-if="account" class="mmt-muted">· {{name(account)}}</small></h2><ActionButton :disabled="loading" @click="refresh(false)">{{loading?'Lädt …':'Statistik aktualisieren'}}</ActionButton></div>
@@ -65,6 +69,6 @@ const latest=computed(()=>sync.value.filter(s=>!account.value||s.account_id===ac
  <div v-if="coverage.length" class="mmt-stat-breakdowns"><Breakdown title="Assets" :rows="grouped.asset" :currency="currency"/><Breakdown title="Entry-Stunden · Berlin" :rows="grouped.hour" :currency="currency"/><Breakdown title="Entry-Wochentage · Berlin" :rows="grouped.weekday" :currency="currency"/></div>
  <p class="mmt-muted">Beträge in {{currency||'Kontowährung'}} aus zugeordneten Brokerbuchungen inklusive Commission, Gebühren und Swap. Die separat gezeigte Commission wird nicht nochmals abgezogen. Nach Ø/Trade sortiert; N = Stichprobe. Unterschiedliche Lotgrößen beeinflussen PnL; keine automatische Aussage über die Qualität einer Handelszeit. R-Werte benötigen belegtes initiales Risiko.</p>
  <p v-if="fees" class="mmt-error">Nicht einzelnen Trades zugeordnete Kosten/Buchungen (Konten/Währung, vor Zeit-/Assetfilter): {{fmtPrice(fees,2)}} {{currency}} – separat, nicht im Trade-PnL.</p>
- <p v-if="result.excluded" class="mmt-error">{{result.excluded}} Positionsverläufe mit fehlenden Einstiegen, Umkehrungen oder widersprüchlichen Buchungen sind nicht in den Kennzahlen enthalten.</p>
- <details><summary>Datenumfang &amp; ältere Konten</summary><p>Einzahlungen, Resets und sonstige Kontobuchungen sind keine Gewinne aus Trades. Offene/teilgeschlossene Positionen zählen erst nach vollständigem Abschluss. Alte und gescheiterte Konten können später als archivierte Historien hinzukommen; ihr Dateiimport ist noch nicht eingerichtet. Ausgewertet wird nur die vom Broker gelieferte Historie; davor liegende Trades sind nicht automatisch enthalten. Andere aktive MT5-Konten werden für den Statistikabruf nicht automatisch umgeschaltet.</p><ul><li v-for="a in selectedAccounts" :key="a.id">{{a.name}} · {{sync.find(s=>s.account_id===a.id)?.last_full_at?'Historie vorhanden':'Historie noch nicht abgerufen'}}</li></ul></details>
+ <p v-if="selectedResult.excluded" class="mmt-error">{{selectedResult.excluded}} Positionsverläufe mit fehlenden Einstiegen, Umkehrungen oder widersprüchlichen Buchungen sind nicht in den Kennzahlen enthalten.</p>
+ <details><summary>Datenumfang &amp; ältere Konten</summary><p>Einzahlungen, Resets und sonstige Kontobuchungen sind keine Gewinne aus Trades. Offene/teilgeschlossene Positionen zählen erst nach vollständigem Abschluss. Inaktive Konten bleiben über die Kontenauswahl zugänglich. Weitere Historien nehmen wir anhand ihrer Brokerdaten auf. Ausgewertet wird nur die vom Broker gelieferte Historie; davor liegende Trades sind nicht automatisch enthalten. Andere aktive MT5-Konten werden für den Statistikabruf nicht automatisch umgeschaltet.</p><ul><li v-for="a in selectedAccounts" :key="a.id">{{a.name}} · {{sync.find(s=>s.account_id===a.id)?.last_full_at?'Historie vorhanden':'Historie noch nicht abgerufen'}}</li></ul></details>
 </section></template>

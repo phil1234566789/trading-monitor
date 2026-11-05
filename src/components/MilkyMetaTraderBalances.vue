@@ -1,6 +1,7 @@
 <script setup>
 import {computed} from 'vue';
 import ToggleButton from './ui/ToggleButton.vue';
+import ArchivedAccounts from './MmtArchivedAccounts.vue';
 import {fmtMoney,fmtPrice,fmtDateTime} from '../format.js';
 import {closedBrokerTrades} from '../milkyMetaTraderStatistics.js';
 import {accountBalance,accountPerformance,challengeGauge,balanceHealth} from '../milkyMetaTraderBalances.js';
@@ -8,7 +9,7 @@ import {snapshotAgeSeconds} from '../milkyMetaTraderMonitoring.js';
 const statisticsAccount=defineModel('statisticsAccount',{type:String,default:''});
 const props=defineProps({accounts:Array,activeId:String,status:Object,history:Object,now:Number,staleSeconds:Number});
 const result=computed(()=>closedBrokerTrades(props.history?.rows??[]));
-const rows=computed(()=>(props.accounts??[]).map(account=>{
+const rows=computed(()=>(props.accounts??[]).filter(a=>!a.archived).map(account=>{
  const value=accountBalance(account,props.status?.account_balances?.find(s=>s.account_id===account.id),props.status?.bridge);
  const sync=props.history?.sync?.find(s=>s.account_id===account.id);
  const stats=accountPerformance(account.id,value.currency,result.value,sync);
@@ -24,7 +25,7 @@ const limitsTitle=row=>'Quelle: '+(row.limits_source??'unbekannt')+' · '+(row.l
 
 <template>
  <section class="mmt-balances" aria-label="Balance aller gespeicherten Konten">
-  <div class="mmt-balance-selection"><span class="mmt-muted">Statistik nach Konto</span><ToggleButton variant="bordered" :class="{active:!statisticsAccount}" :aria-pressed="!statisticsAccount" @click="statisticsAccount=''">Alle Konten</ToggleButton></div>
+  <div class="mmt-balance-selection"><span class="mmt-muted">Statistik nach Konto</span><ToggleButton variant="bordered" :class="{active:!statisticsAccount}" :aria-pressed="!statisticsAccount" @click="statisticsAccount=''">Alle aktive Konten</ToggleButton><ArchivedAccounts v-model:account="statisticsAccount" :accounts="accounts" /></div>
   <div class="mmt-balance-list" tabindex="0" role="region" aria-label="Konten horizontal scrollen">
   <article v-for="row in rows" :key="row.account.id" class="mmt-balance-card" :data-statistics-selected="row.account.id===statisticsAccount" :aria-label="row.account.name+' · '+row.account.login">
    <button type="button" class="mmt-balance-select" :aria-label="'Statistik: '+row.account.name" :aria-pressed="row.account.id===statisticsAccount" :title="'Verlustgrenze: '+money(row.loss_floor,row.currency)+' · '+limitsTitle(row)" @click="statisticsAccount=row.account.id"></button>
@@ -62,7 +63,8 @@ const limitsTitle=row=>'Quelle: '+(row.limits_source??'unbekannt')+' · '+(row.l
 .mmt-balance-list:focus-visible{outline:2px solid var(--mmt-accent);outline-offset:2px}
 .mmt-balance-card{position:relative;min-width:0;border:1px solid var(--mmt-border);border-radius:6px;padding:.75rem;background:var(--mmt-surface);scroll-snap-align:start}
 .mmt-balance-card[data-statistics-selected="true"]{border-color:var(--mmt-accent);box-shadow:inset 0 0 0 1px var(--mmt-accent)}
-.mmt-balance-selection{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px}
+.mmt-balance-selection{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;font-size:11px}
+.mmt-balance-selection>span{margin-right:auto}
 .mmt-balance-select{position:absolute;z-index:1;inset:0;width:100%;height:100%;padding:0;border:0;border-radius:6px;background:transparent;cursor:pointer}
 .mmt-balance-select:hover{box-shadow:inset 0 0 0 1px var(--mmt-accent)}
 .mmt-balance-select:focus-visible{outline:2px solid var(--mmt-accent);outline-offset:2px}

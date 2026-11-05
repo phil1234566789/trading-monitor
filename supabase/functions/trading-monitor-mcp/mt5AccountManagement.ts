@@ -7,7 +7,7 @@ export const ACCOUNT_SELECTION_ERRORS=['active_orders_block_account_switch','act
 export async function readMt5TradingAccounts(){
  const db=mt5Database(),rows=[];let after='00000000-0000-0000-0000-000000000000';
  while(true){
-  const page:Record<string,any>[]=checked(await db.from('mt5_accounts').select('id,name,login,server,mode,archived,created_at,trade_role')
+  const page:Record<string,any>[]=checked(await db.from('mt5_accounts').select('id,name,login,server,mode,archived,created_at,trade_role,archive_details')
    .gt('id',after).order('id').limit(500))??[];
   if(!page.length)return rows;
   rows.push(...page);after=page[page.length-1].id;

@@ -18,6 +18,7 @@ import {useJournalRoute} from '../composables/useJournalRoute.js';
 import TradingAccountSwitcher from "../components/TradingAccountSwitcher.vue";
 import MetadataPanel from "../components/MetadataPanel.vue";
 import ContextMenu from "../components/ContextMenu.vue";
+import DropdownMenu from "../components/ui/DropdownMenu.vue";
 import PinAddPopup from "../components/PinAddPopup.vue";
 import PinPanel from "../components/PinPanel.vue";
 import ToggleButton from "../components/ui/ToggleButton.vue";
@@ -1862,19 +1863,10 @@ watch(selectedTradingAccountId, () => {
         </div>
       </div>
 
-      <div class="toggle-group">
-        <ToggleButton :class="{ active: showTradeSetups }" @click="showTradeSetups = !showTradeSetups">
+      <DropdownMenu v-model:open="tradeSetupsMenuOpen" label="Trades-Untermenü">
+        <template #leading><ToggleButton :class="{ active: showTradeSetups }" @click="showTradeSetups = !showTradeSetups">
           Trades
-        </ToggleButton>
-        <ToggleButton
-          variant="caret"
-          :class="{ open: tradeSetupsMenuOpen }"
-          title="Untermenü"
-          @click="tradeSetupsMenuOpen = !tradeSetupsMenuOpen"
-        >
-          ▾
-        </ToggleButton>
-        <div v-if="tradeSetupsMenuOpen" class="toggle-dropdown">
+        </ToggleButton></template>
           <!-- Untermenü-Feinschalter: braucht den übergeordneten "Trades"-Toggle (showTradeSetups)
                zusätzlich an, um überhaupt was anzuzeigen (Bug-Report Philip 2026-07-28: "der
                übergeordnete Trades-Toggle soll Trades auch ausblenden, TSC ist einzige Ausnahme") —
@@ -1938,8 +1930,7 @@ watch(selectedTradingAccountId, () => {
               <option value="narrow">Enger SL</option>
             </select>
           </label>
-        </div>
-      </div>
+      </DropdownMenu>
 
       <div class="toggle-group">
         <ToggleButton :class="{ active: showRanges }" @click="showRanges = !showRanges">
