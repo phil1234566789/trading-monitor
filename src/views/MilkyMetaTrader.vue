@@ -18,6 +18,7 @@ import { createMilkyMetaTraderClient } from '../milkyMetaTraderClient.js';
 import { readMilkyMetaTraderKey, saveMilkyMetaTraderKey, forgetMilkyMetaTraderKey } from '../milkyMetaTraderKey.js';
 
 const brokerHistory=ref({rows:[],sync:[]});
+const statisticsAccount=ref('');
 const commissions=computed(()=>positionCommissions(brokerHistory.value.rows));
 const commissionFor=(accountId,positionId)=>commissions.value.get(`${accountId}:${positionId}`)??null;
 const historyTime=accountId=>brokerHistory.value.sync.find(s=>s.account_id===accountId)?.synced_at;
@@ -92,7 +93,7 @@ async function unlock() {
 }
 function clearView() {
   viewEpoch++;clearInterval(timer); timer=null;pollError.value=''; token.value=''; unlocked.value=false;
-  brokerHistory.value={rows:[],sync:[]};form.value.password=''; accounts.value=[]; status.value=null; activeId.value=null;
+  brokerHistory.value={rows:[],sync:[]};statisticsAccount.value='';form.value.password=''; accounts.value=[]; status.value=null; activeId.value=null;
 }
 function lock() {
   if(!forgetMilkyMetaTraderKey()) {error.value='Der gespeicherte Schlüssel konnte nicht entfernt werden. Bitte die Website-Daten im Browser löschen.';return;}
@@ -139,7 +140,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <span class="mmt-status" :data-ready="Boolean(ready)">{{ready?'Worker verbunden · Freigabe je Entry geprüft':status?.online?'Ausführung nicht bereit':'Worker offline'}}</span>
       </section>
       <MmtDailyStopStatus :status="status" :now="now" />
-      <MilkyMetaTraderBalances :accounts="accounts" :active-id="activeId" :status="status" :history="brokerHistory" :now="now" :stale-seconds="staleSeconds" />
+      <MilkyMetaTraderBalances v-model:statistics-account="statisticsAccount" :accounts="accounts" :active-id="activeId" :status="status" :history="brokerHistory" :now="now" :stale-seconds="staleSeconds" />
         <p v-if="workerProblem" role="alert" class="mmt-error">Ausführung gestört: {{workerProblem.code}}<span v-if="workerProblem.stage"> in {{workerProblem.stage}}</span>. Entry-Aufträge und Brokerstatus prüfen; nichts blind erneut senden.</p>
         <p v-if="status?.health?.incident">Fehleralarm: <span v-for="item in status.health.deliveries" :key="item.channel">{{item.channel==='pushover'?'Pushover':'Telegram'}} {{deliveryLabels[item.status]??item.status}}. </span></p>
         <p v-if="status?.health&&!status.health.checked_at" role="alert">Unabhängige Alarmprüfung noch nicht bestätigt.</p>
@@ -156,7 +157,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
             <ul class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in currentOrders" :key="order.id" :order="order" :commission="orderCommission(order)" :commission-at="historyTime(accountForOrder(order))" :busy="busy" :snapshot="snapshot" :age="dataAge" @cancel="cancel" /></ul>
           </section>
           <p v-else class="mmt-muted">Keine laufende Entry-Suche.</p>
-          <MilkyMetaTraderStatistics :api="api" :accounts="accounts" @history="brokerHistory=$event" />
+          <MilkyMetaTraderStatistics :api="api" :accounts="accounts" :account="statisticsAccount" @history="brokerHistory=$event" />
           <details v-if="previousOrders.length" class="mmt-panel mmt-technical-history"><summary>Technischer Auftragsverlauf · {{previousOrders.length}} letzte erledigte Aufträge</summary><p>Suchaufträge sind keine vollständige Brokerhistorie und zählen nicht als Statistikdaten.</p><ul class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in previousOrders" :key="order.id" :order="order" :commission="orderCommission(order)" :commission-at="historyTime(accountForOrder(order))" :busy="busy" /></ul></details>
         </div>
         <MilkyMetaTraderEntrySearch :api="api" :status="status" :account="active" @submitted="run(refresh)" />

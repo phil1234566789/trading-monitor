@@ -34,7 +34,8 @@ it('renders all four accounts without activation controls and marks unknown data
  expect(html).toContain('Fortschritt unbekannt');
  expect(html).toContain('Gespeicherter Stand')
  expect(html).toContain('Verbindung prüfen');
- expect(html).not.toContain('<button');
+ expect(html.match(/class="mmt-balance-select"/g)).toHaveLength(4);
+ expect(html).not.toContain('Als Handelskonto wählen');
 });
 it('keeps additional accounts in the same scrollable account strip',async()=>{
  const accounts=[1,2,3,4,5,6].map(id=>({id:String(id),login:id,server:'s',name:`Challenge ${id}`}));
@@ -51,4 +52,13 @@ it('marks only recent reader observations current and falls back to a saved stan
   expect(html.includes('Daten aktuell')).toBe(current);
   expect(html.includes('Gespeicherter Stand')).toBe(!current);
  }
+});
+
+it('selects a statistics card independently of the active trading account, including unknown accounts',async()=>{
+ const accounts=[{id:'a',login:1,server:'s',name:'Trading'},{id:'b',login:2,server:'s',name:'No history'}];
+ const html=await renderToString(Vue.createSSRApp(Balances,{accounts,activeId:'a',statisticsAccount:'b',history:{rows:[],sync:[]},now:Date.now(),staleSeconds:15}));
+ expect(html).toMatch(/aria-label="Statistik: Trading" aria-pressed="false"/);
+ expect(html).toMatch(/aria-label="Statistik: No history" aria-pressed="true"/);
+ expect(html).toContain('Aktives Handelskonto');
+ expect(html).not.toContain('Als Handelskonto wählen');
 });

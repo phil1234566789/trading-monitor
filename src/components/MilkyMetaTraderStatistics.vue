@@ -9,9 +9,10 @@ import {closedBrokerTrades,filterBrokerTrades,statisticsGroups} from '../milkyMe
 import {fmtDateTime,fmtPrice,pnlClass} from '../format.js';
 import '../milkyMetaTraderStatistics.css';
 const emit=defineEmits(['history']);
-const props=defineProps({api:{type:Function,required:true},accounts:{type:Array,default:()=>[]}});
+const props=defineProps({api:{type:Function,required:true},accounts:{type:Array,default:()=>[]},account:{type:String,default:''}});
 const raw=ref([]),sync=ref([]),loading=ref(false),error=ref(''),loaded=ref(false),view=ref('list');
-const account=ref(''),asset=ref(''),currency=ref(''),from=ref(''),to=ref(''),page=ref(0);
+const account=computed(()=>props.account);
+const asset=ref(''),currency=ref(''),from=ref(''),to=ref(''),page=ref(0);
 const journalTrade=ref(null);
 let timer,inFlight=false,alive=true;
 async function refresh(background=false){
@@ -45,17 +46,10 @@ const time=ms=>fmtDateTime(ms/1000,{timeZone:'Europe/Berlin'});
 const latest=computed(()=>sync.value.filter(s=>!account.value||s.account_id===account.value).map(s=>s.synced_at).filter(Boolean).sort().at(-1));
 </script>
 <template><section class="mmt-panel mmt-statistics" aria-labelledby="mmt-statistics-title">
- <div class="mmt-section-heading"><h2 id="mmt-statistics-title">Trading-Statistik</h2><ActionButton :disabled="loading" @click="refresh(false)">{{loading?'Lädt …':'Statistik aktualisieren'}}</ActionButton></div>
+ <div class="mmt-section-heading"><h2 id="mmt-statistics-title">Trading-Statistik <small v-if="account" class="mmt-muted">· {{name(account)}}</small></h2><ActionButton :disabled="loading" @click="refresh(false)">{{loading?'Lädt …':'Statistik aktualisieren'}}</ActionButton></div>
  <p v-if="error" class="mmt-error" role="alert">Historie nicht aktuell: {{error}}</p>
  <p class="mmt-muted">{{coverage.length}} / {{selectedAccounts.length}} Konten mit abgeschlossenem Historienabruf · {{latest?'Letzter Historienabgleich '+fmtDateTime(latest,{timeZone:'Europe/Berlin',second:'2-digit'}):'Historienabgleich noch nicht bestätigt'}} · Brokerdaten, inklusive manueller Trades.</p>
  <p v-if="problems.length" class="mmt-error" role="status">Historienimport läuft oder ist gestört. Ergebnisse können noch unvollständig sein.</p>
- <fieldset class="mmt-stat-accounts">
-  <legend>Statistik nach Konto <span class="mmt-muted">· nur Anzeige</span></legend>
-  <div class="mmt-stat-account-options">
-   <label><input v-model="account" type="radio" name="mmt-stat-account" value=""><span><strong>Alle Konten</strong><small>{{accounts.length}} Konten</small></span></label>
-   <label v-for="a in accounts" :key="a.id"><input v-model="account" type="radio" name="mmt-stat-account" :value="a.id"><span><strong>{{a.name}}</strong><small>{{a.login ? '#'+a.login+' · ' : ''}}{{hasHistory(a.id)?'Historie vorhanden':'Historie unbekannt'}}{{a.archived?' · archiviert':''}}</small></span></label>
-  </div>
- </fieldset>
  <div class="mmt-stat-filters">
   <label>Asset<select v-model="asset"><option value="">Alle Assets</option><option v-for="a in assets" :key="a">{{a}}</option></select></label>
   <label>Währung<select v-model="currency"><option v-if="!currencies.length" value="">—</option><option v-for="c in currencies" :key="c">{{c}}</option></select></label>
