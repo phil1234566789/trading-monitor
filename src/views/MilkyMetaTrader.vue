@@ -139,8 +139,8 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
       <section class="mmt-account-bar" aria-label="Aktives Handelskonto">
         <div><h2>{{active?.name??'Kein Konto ausgewählt'}}</h2><span class="mmt-muted" v-if="active">{{active.login}} · {{active.server}} · {{active.mode==='demo'?'Demo':'Real / Challenge'}}</span></div>
         <div class="mmt-account-status">
+          <span v-if="dataAge==null||dataAge>staleSeconds" role="status" class="mmt-status mmt-broker-status">Brokerdaten {{dataAge==null?'noch nicht verfügbar':'seit '+dataAge+' Sekunden nicht aktualisiert'}}. Angezeigte Werte sind kein aktueller Stand.</span>
           <span class="mmt-status" :data-ready="Boolean(ready)">{{ready?'Worker verbunden · Freigabe je Entry geprüft':status?.online?'Ausführung nicht bereit':'Worker offline'}}</span>
-          <p v-if="dataAge==null||dataAge>staleSeconds" role="status" class="mmt-error">Brokerdaten {{dataAge==null?'noch nicht verfügbar':'seit '+dataAge+' Sekunden nicht aktualisiert'}}. Angezeigte Werte sind kein aktueller Stand.</p>
         </div>
       </section>
       <MmtDailyStopStatus :status="status" :now="now" />

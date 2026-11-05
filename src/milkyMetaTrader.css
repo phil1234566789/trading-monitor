@@ -17,8 +17,8 @@
 .mmt-page summary {cursor:pointer; padding:3px 0}
 .mmt-account-bar {display:flex; align-items:center; justify-content:space-between; gap:12px}
 .mmt-account-bar>div {display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
-.mmt-account-bar>.mmt-account-status {display:grid;justify-items:end;gap:4px;min-width:0;margin-left:auto}
-.mmt-account-status p {max-width:420px;margin:0;font-size:11px;text-align:right}
+.mmt-account-bar>.mmt-account-status {display:flex;align-items:center;justify-content:flex-end;flex-wrap:nowrap;gap:8px;min-width:0;margin-left:auto}
+.mmt-status.mmt-broker-status {white-space:normal}
 .mmt-account-bar h2 {font-size:13px; margin:0}
 .mmt-account-bar .mmt-muted {font-size:11px}
 .mmt-status {border:1px solid #665332; color:#efcd8d; padding:4px 8px; border-radius:3px; font-size:11px; white-space:nowrap}
