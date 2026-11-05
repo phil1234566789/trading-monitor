@@ -6960,9 +6960,9 @@
     "semantic_hash": ""
   },
   "src/components/MilkyMetaTraderStatistics.vue": {
-    "mtime": 1793915877.8898053,
-    "seen": 1793916079.2636344,
-    "ast_hash": "85e90aa6faee35aeed6bc6699e3d47ea",
+    "mtime": 1793920571.0204914,
+    "seen": 1793920717.7796712,
+    "ast_hash": "1beabe6a06fcfe4b383599ffb61b91ff",
     "semantic_hash": ""
   },
   "src/components/MilkyMetaTraderStatisticsBreakdown.vue": {
@@ -6978,9 +6978,9 @@
     "semantic_hash": ""
   },
   "src/milkyMetaTraderStatistics.js": {
-    "mtime": 1793914208.2253325,
-    "seen": 1793914659.284417,
-    "ast_hash": "e46cb4089f7d816636a983020297a2c1",
+    "mtime": 1793920556.8041515,
+    "seen": 1793920717.8161845,
+    "ast_hash": "896b250bd06c0090b3d6b1c1a63bc0f5",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5History.ts": {
@@ -7002,9 +7002,9 @@
     "semantic_hash": ""
   },
   "test/milkyMetaTraderStatistics.test.js": {
-    "mtime": 1793914208.6010647,
-    "seen": 1793914659.284417,
-    "ast_hash": "c039afa028ccbdd7748944213c3df588",
+    "mtime": 1793920505.0014195,
+    "seen": 1793920717.9279838,
+    "ast_hash": "60f9295e87a751090d786ccb31ac103f",
     "semantic_hash": ""
   },
   "test/mt5History.test.js": {
@@ -7020,9 +7020,9 @@
     "semantic_hash": ""
   },
   "test/milkyMetaTraderStatisticsView.test.js": {
-    "mtime": 1793914322.0167742,
-    "seen": 1793914659.284417,
-    "ast_hash": "0eb44d3abfe9c11b2117c17f38e49af8",
+    "mtime": 1793920556.5977037,
+    "seen": 1793920717.9279838,
+    "ast_hash": "31697dbb6d3aef51a2446d987d6978cc",
     "semantic_hash": ""
   },
   "test/journalWithoutStateMachine.test.js": {
@@ -7743,6 +7743,18 @@
     "mtime": 1793915899.0245175,
     "seen": 1793916079.4310696,
     "ast_hash": "f0581608dddfeb03ead9065ddd70df90",
+    "semantic_hash": ""
+  },
+  "src/milkyMetaTraderWeeks.js": {
+    "mtime": 1793920647.5431783,
+    "seen": 1793920717.8161845,
+    "ast_hash": "4c9455a18c9735838aed0093b87e34ac",
+    "semantic_hash": ""
+  },
+  "test/milkyMetaTraderWeeks.test.js": {
+    "mtime": 1793920504.6050782,
+    "seen": 1793920717.9279838,
+    "ast_hash": "431930864e6bbb1aa7988f49add30597",
     "semantic_hash": ""
   }
 }
