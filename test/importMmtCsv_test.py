@@ -45,6 +45,25 @@ class ImportTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             importer.prepare_sql((HEADER + ROW).encode(), 'test.csv', 42, 50100, 50099.5, 'test', status='invalid')
 
+    def test_prefixed_provider_account_requires_an_explicit_exact_match(self):
+        data = (HEADER + ROW.replace(';42;', ';IQEV10K-42;')).encode()
+        with self.assertRaises(ValueError):
+            importer.parse_export(data, 42)
+        _, rows = importer.parse_export(data, 42, provider_account='IQEV10K-42')
+        self.assertEqual(len(rows), 1)
+        with self.assertRaises(ValueError):
+            importer.parse_export(data, 42, provider_account='IQEV50K-42')
+
+    def test_signed_volumetrica_quantities_preserve_direction_and_positive_lots(self):
+        header = HEADER.replace('Account;', 'Account;Provider;', 1)
+        for quantity, direction in [('50000', 'long'), ('-50000', 'short')]:
+            row = ROW.replace('Test;', 'Test;VolumetricaFX;', 1).replace(';50000;2026-', ';'+quantity+';2026-')
+            _, trades = importer.parse_export((header + row).encode(), 42)
+            self.assertEqual(trades[0]['direction'], direction)
+            self.assertEqual(trades[0]['volume'], 5)
+        with self.assertRaises(ValueError):
+            importer.parse_export((HEADER + ROW.replace(';50000;2026-', ';-50000;2026-')).encode(), 42)
+
 
 if __name__ == '__main__':
     unittest.main()

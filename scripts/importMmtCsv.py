@@ -28,27 +28,33 @@ def timestamp(value):
     return int(aware.timestamp() * 1000)
 
 
-def parse_export(data, login, currency='USD'):
+def parse_export(data, login, currency='USD', provider_account=None):
     rows = list(csv.DictReader(io.StringIO(data.decode('utf-8-sig')), delimiter=';'))
     if not rows:
         raise ValueError('Leere CSV')
     trades, seen = [], set()
     start = number(rows[0]['Start Balance'])
     for row in rows:
-        if row['Provider Account'] != str(login) or number(row['Start Balance']) != start:
+        if (row['Provider Account'] != (provider_account or str(login)) or number(row['Start Balance']) != start
+                or row.get('Provider') != rows[0].get('Provider')):
             raise ValueError('Gemischte Konten oder Startbeträge')
         trade_id = row['Trade Id']
         if not trade_id.isdigit() or int(trade_id) <= 0 or trade_id in seen:
             raise ValueError('Ungültige oder doppelte Trade-ID')
         seen.add(trade_id)
-        volume = number(row['Quantity']) / number(row['Divider'])
+        quantity, divider = number(row['Quantity']), number(row['Divider'])
+        if divider <= 0:
+            raise ValueError('Ungültiger Mengendivisor')
+        signed_quantity = row.get('Provider') == 'VolumetricaFX'
+        volume = (abs(quantity) if signed_quantity else quantity) / divider
         entry, exit_price = number(row['Entry Price']), number(row['Exit Price'])
         opened, closed = timestamp(row['Entry Date/Time']), timestamp(row['Exit Date/Time'])
         if volume <= 0 or entry <= 0 or exit_price <= 0 or closed < opened:
             raise ValueError('Ungültiger Trade')
         trades.append(dict(source_trade_id=trade_id, symbol=row['Contract'], currency=currency,
                            opened_at=opened, closed_at=closed, entry=float(entry), exit=float(exit_price),
-                           direction=None, volume=float(volume), net=float(number(row['Net PnL'])),
+                           direction=('long' if quantity > 0 else 'short') if signed_quantity else None,
+                           volume=float(volume), net=float(number(row['Net PnL'])),
                            commission=float(number(row['Commissions'])), source_row=row))
     return start, trades
 
@@ -57,19 +63,22 @@ def literal(value):
     return "'" + value.replace("'", "''") + "'"
 
 
-def prepare_sql(data, filename, login, peak, ending, reason, server='CSV-Archiv', status='breached', note=''):
+def prepare_sql(data, filename, login, peak, ending, reason, server='CSV-Archiv', status='breached', note='', provider_account=None):
     if status not in ('breached', 'closed', 'passed'):
         raise ValueError('Ungültiger Archivstatus')
-    start, trades = parse_export(data, login)
+    start, trades = parse_export(data, login, provider_account=provider_account)
     balance, csv_peak = start, start
     for trade in sorted(trades, key=lambda t: (t['closed_at'], int(t['source_trade_id']))):
         balance += number(trade['source_row']['Net PnL'])
         csv_peak = max(csv_peak, balance)
     details = dict(provider='IQCapital', status=status, reason=reason, initial_balance=float(start), currency='USD',
+                   platform=trades[0]['source_row'].get('Provider'),
+                   provider_account=provider_account or str(login),
                    peak_balance=float(peak), peak_source='Von Philip bestätigt', reported_end_balance=float(ending),
                    csv_end_balance=float(balance), csv_peak_balance=float(csv_peak),
                    source_timezone='Europe/Berlin (angenommen)',
-                   reconciliation_note='CSV-Import; Long/Short im Export unbekannt. ' + note)
+                   reconciliation_note='CSV-Import; ' + ('Long/Short aus signierter VolumetricaFX-Menge. '
+                   if all(t['direction'] for t in trades) else 'Long/Short im Export unbekannt. ') + note)
     encode = lambda value: literal(json.dumps(value, ensure_ascii=False, allow_nan=False)) + '::jsonb'
     account = f'(select id from public.mt5_accounts where login={login} and server={literal(server)})'
     columns = ['source_trade_id', 'symbol', 'currency', 'opened_at', 'closed_at', 'entry', 'exit',
@@ -106,11 +115,12 @@ if __name__ == '__main__':
     parser.add_argument('--reason', required=True)
     parser.add_argument('--status', choices=['breached', 'closed', 'passed'], default='breached')
     parser.add_argument('--note', default='')
+    parser.add_argument('--provider-account', help='Exakte Kennung der CSV, falls sie von der Kontonummer abweicht')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     if args.login <= 0:
         raise ValueError('Ungültige Kontonummer')
     sql, summary = prepare_sql(args.file.read_bytes(), args.file.name, args.login, args.peak, args.ending, args.reason,
-                               status=args.status, note=args.note)
+                               status=args.status, note=args.note, provider_account=args.provider_account)
     args.output.write_text(sql, encoding='utf-8')
     print(json.dumps(summary))
