@@ -3,13 +3,13 @@ import {computed,ref} from 'vue';
 import DropdownMenu from './ui/DropdownMenu.vue';
 import ToggleButton from './ui/ToggleButton.vue';
 import {ALL_HISTORY_ACCOUNTS} from '../milkyMetaTraderAccountSelection.js';
-import {fmtMoney} from '../format.js';
+import {fmtPrice} from '../format.js';
 const account=defineModel('account',{type:String,default:''});
 const props=defineProps({accounts:{type:Array,default:()=>[]}});
 const archived=computed(()=>props.accounts.filter(a=>a.archived));
 const open=ref(false);
 const states={breached:'Breached',closed:'Geschlossen',passed:'Bestanden'};
-const money=(value,currency)=>Number.isFinite(value)&&currency?fmtMoney(value,currency):'unbekannt';
+const money=(value,currency)=>Number.isFinite(value)&&currency?`${fmtPrice(value,2)} ${currency}`:'unbekannt';
 function gain(details){return Number.isFinite(details.peak_balance)&&Number.isFinite(details.initial_balance)?money(details.peak_balance-details.initial_balance,details.currency):'unbekannt';}
 function select(id,close){account.value=id;close();}
 </script>
