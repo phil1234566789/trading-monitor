@@ -7,7 +7,7 @@ export const ACCOUNT_SELECTION_ERRORS=['active_orders_block_account_switch','act
 export async function readMt5TradingAccounts(){
  const db=mt5Database(),rows=[];let after='00000000-0000-0000-0000-000000000000';
  while(true){
-  const page:Record<string,any>[]=checked(await db.from('mt5_accounts').select('id,name,login,server,mode,archived,created_at')
+  const page:Record<string,any>[]=checked(await db.from('mt5_accounts').select('id,name,login,server,mode,archived,created_at,trade_role')
    .gt('id',after).order('id').limit(500))??[];
   if(!page.length)return rows;
   rows.push(...page);after=page[page.length-1].id;
@@ -30,6 +30,11 @@ export async function selectMt5TradingAccount(accountId:unknown){
 export async function manageMt5Accounts(body:Record<string,unknown>){
  if(body.action==='accounts')return listMt5TradingAccounts();
  if(body.action==='select_account')return selectMt5TradingAccount(body.id);
+ if(body.action==='assign_account_role'){
+  if(!isExecutionId(body.id)||!(body.role===null||['risky','safe','normal'].includes(body.role as string)))throw new Error('invalid_account');
+  checked(await mt5Database().rpc('mt5_assign_account_role',{p_account:body.id,p_role:body.role}));
+  return {saved:true};
+ }
  if(body.action==='save_account'){
   const {name,login,server,mode,password}=body;
   if(typeof name!=='string'||!name.trim()||name.length>100||!Number.isSafeInteger(login)||Number(login)<=0

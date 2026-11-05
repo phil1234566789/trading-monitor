@@ -74,5 +74,5 @@ export function useDashboardMmt(symbol) {
  }
  onMounted(()=>{void refresh();timer=setInterval(()=>{now.value=Date.now();if(now.value>=next&&document.visibilityState==='visible')void refresh();},1000);});
  onUnmounted(()=>{disposed=true;clearInterval(timer);});
- return {api,status,accounts,accountStatuses,activeId,switchingAccount,accountMessage,selectAccount,account,snapshot,brokerQuote,activeOrders,trades,entryTimeFor,links,error,key,now,refresh,cancel};
+ return {api,status,accounts,accountStatuses,activeId,switchingAccount,accountMessage,selectAccount,account,snapshot,brokerQuote,activeOrders,trades,history,entryTimeFor,links,error,key,now,refresh,cancel};
 }

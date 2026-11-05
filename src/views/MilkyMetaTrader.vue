@@ -112,6 +112,7 @@ async function save() {
   });
   fields.password='';
 }
+async function assignRole(id,role) {await run(async()=>{await api('assign_account_role',{id,role:role||null});await refresh();});}
 async function selectTradingAccount(id) {
   await run(async()=>{await api('select_account',{id});await refresh();
     message.value=id ? 'Handelskonto ausgewählt. Python-Worker für dieses Konto starten bzw. neu starten. Erst nach bestätigter Verbindung können neue Aufträge ausgeführt werden.' : 'Kein aktives Handelskonto.';});
@@ -169,6 +170,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <p v-if="!accounts.length">Noch keine Brokerkonten hinterlegt.</p>
         <ul class="mmt-accounts"><li v-for="account in accounts" :key="account.id">
           <div><strong>{{account.name}}</strong><br><small>{{account.login}} · {{account.server}} · MT5 {{account.mode==='demo'?'Demo':'Real'}}</small></div>
+          <label>Konto-Tag<select :value="account.trade_role??''" :disabled="busy||account.archived" @change="assignRole(account.id,$event.target.value)"><option value="">Kein Tag</option><option value="risky">Riskante Trades</option><option value="safe">Sichere Trades</option><option value="normal">Normale Trades</option></select></label>
           <span v-if="account.id===activeId" class="mmt-selected">Aktives Handelskonto</span>
           <ActionButton v-else :disabled="busy||account.archived" @click="selectTradingAccount(account.id)">Als Handelskonto wählen</ActionButton>
         </li></ul>
