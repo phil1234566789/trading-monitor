@@ -1,5 +1,6 @@
 import { activeMt5Account,checked,mt5Database } from './mt5Credentials.ts';
 import { validateHistoryBatch } from './mt5HistoryContract.js';
+import {readImportedTrades} from './mt5ImportedTrades.ts';
 export async function historyWorkerAction(body:Record<string,any>,readerAccount?:Awaited<ReturnType<typeof activeMt5Account>>) {
  const account=readerAccount??await activeMt5Account(body.account_id),db=mt5Database(),now=Math.floor(Date.now()/1000);
  if(body.action==='history_context'){
@@ -47,5 +48,5 @@ export async function readHistoryPage(body:Record<string,any>) {
  const db=mt5Database();
  const rows=checked(await db.from('mt5_broker_deals').select('*').gt('id',cursor).order('id').limit(500))??[];
  const sync=cursor===0?await readHistorySync(db):undefined;
- return {rows,next_cursor:rows.length?rows[rows.length-1].id:null,sync};
+ return {rows,next_cursor:rows.length?rows[rows.length-1].id:null,sync,...(cursor===0?{imports:await readImportedTrades(db)}:{})};
 }
