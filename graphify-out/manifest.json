@@ -6720,9 +6720,9 @@
     "semantic_hash": ""
   },
   "src/views/MilkyMetaTrader.vue": {
-    "mtime": 1793914208.2978544,
-    "seen": 1793914659.284417,
-    "ast_hash": "0544a3d88a8f07ca5becd761d117497b",
+    "mtime": 1793919858.1639397,
+    "seen": 1793919950.9873214,
+    "ast_hash": "fd0c7de94caeb6bcb8f20a9e496c12e7",
     "semantic_hash": ""
   },
   "supabase/functions/mt5-control/index.ts": {
