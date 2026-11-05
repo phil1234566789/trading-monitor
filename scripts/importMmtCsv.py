@@ -57,18 +57,19 @@ def literal(value):
     return "'" + value.replace("'", "''") + "'"
 
 
-def prepare_sql(data, filename, login, peak, ending, reason, server='CSV-Archiv'):
+def prepare_sql(data, filename, login, peak, ending, reason, server='CSV-Archiv', status='breached', note=''):
+    if status not in ('breached', 'closed', 'passed'):
+        raise ValueError('Ungültiger Archivstatus')
     start, trades = parse_export(data, login)
     balance, csv_peak = start, start
     for trade in sorted(trades, key=lambda t: (t['closed_at'], int(t['source_trade_id']))):
         balance += number(trade['source_row']['Net PnL'])
         csv_peak = max(csv_peak, balance)
-    details = dict(provider='IQCapital', status='breached', reason=reason, initial_balance=float(start), currency='USD',
+    details = dict(provider='IQCapital', status=status, reason=reason, initial_balance=float(start), currency='USD',
                    peak_balance=float(peak), peak_source='Von Philip bestätigt', reported_end_balance=float(ending),
                    csv_end_balance=float(balance), csv_peak_balance=float(csv_peak),
                    source_timezone='Europe/Berlin (angenommen)',
-                   reconciliation_note='CSV-Import; möglicher Reset und frühere Kontonummer laut Philip. '
-                   'Saldoabgleich offen; keine Korrekturbuchung erfunden. Long/Short im Export unbekannt.')
+                   reconciliation_note='CSV-Import; Long/Short im Export unbekannt. ' + note)
     encode = lambda value: literal(json.dumps(value, ensure_ascii=False, allow_nan=False)) + '::jsonb'
     account = f'(select id from public.mt5_accounts where login={login} and server={literal(server)})'
     columns = ['source_trade_id', 'symbol', 'currency', 'opened_at', 'closed_at', 'entry', 'exit',
@@ -103,10 +104,13 @@ if __name__ == '__main__':
     parser.add_argument('--peak', type=number, required=True)
     parser.add_argument('--ending', type=number, required=True)
     parser.add_argument('--reason', required=True)
+    parser.add_argument('--status', choices=['breached', 'closed', 'passed'], default='breached')
+    parser.add_argument('--note', default='')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     if args.login <= 0:
         raise ValueError('Ungültige Kontonummer')
-    sql, summary = prepare_sql(args.file.read_bytes(), args.file.name, args.login, args.peak, args.ending, args.reason)
+    sql, summary = prepare_sql(args.file.read_bytes(), args.file.name, args.login, args.peak, args.ending, args.reason,
+                               status=args.status, note=args.note)
     args.output.write_text(sql, encoding='utf-8')
     print(json.dumps(summary))

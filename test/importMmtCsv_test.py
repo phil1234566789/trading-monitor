@@ -36,6 +36,15 @@ class ImportTest(unittest.TestCase):
         self.assertIn('on conflict(account_id,source_trade_id) do nothing', sql)
         self.assertEqual(summary['csv_end'], '50099.5')
 
+    def test_reset_does_not_inherit_breach_or_another_accounts_history(self):
+        sql, _ = importer.prepare_sql((HEADER + ROW).encode(), 'test.csv', 42, 50100, 50099.5,
+                                     'Reset, Fristablauf vermutet', status='closed', note='Reset laut Nutzer.')
+        self.assertIn('"status": "closed"', sql)
+        self.assertIn('Reset laut Nutzer.', sql)
+        self.assertNotIn('frühere Kontonummer', sql)
+        with self.assertRaises(ValueError):
+            importer.prepare_sql((HEADER + ROW).encode(), 'test.csv', 42, 50100, 50099.5, 'test', status='invalid')
+
 
 if __name__ == '__main__':
     unittest.main()
