@@ -135,7 +135,7 @@ function fetchCandles(symbol, bar, { count, to } = {}) {
 // Timeframes und nur GBPUSD sind aktuell in forex_candles gefüllt (Migration
 // 20260809120000_forex_candles.sql) — EURUSD oder andere Timeframes liefern hier einfach 0 Zeilen
 // zurück, kein Sonderfall nötig, aber der Set spart pro Miss eine unnötige Supabase-Anfrage.
-const DB_ARCHIVED_BARS = new Set(["1m", "5m", "1h", "4h", "1D"]);
+const DB_ARCHIVED_BARS = new Set(["1m", "3m", "5m", "1h", "4h", "1D"]);
 
 function mapArchivedRows(rows) {
   return rows

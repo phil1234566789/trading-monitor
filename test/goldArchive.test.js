@@ -42,8 +42,20 @@ it('skips a placeholder page without mistaking it for the history boundary', asy
   expect(candles).toHaveLength(1);
   expect(candles[0].time).toBe(Date.parse(row('25').time)/1000);
 });
-it('selects a supported Gold timeframe and brings an old Forex replay into the archive', () => {
-  expect(goldChartSelection('1m',1,Date.parse('2026-09-24T21:00:00Z'))).toMatchObject({bar:'5m',replayTime:Date.parse('2026-09-24T20:55:00Z')/1000});
+it('keeps Gold M1/M3 selections and clamps replay to the last closed bar', () => {
+  const now = Date.parse('2026-09-24T21:02:30Z');
+  expect(goldChartSelection('1m',1,now)).toMatchObject({bar:'1m',replayTime:Date.parse('2026-09-24T21:01:00Z')/1000});
+  expect(goldChartSelection('3m',1,now)).toMatchObject({bar:'3m',replayTime:Date.parse('2026-09-24T20:57:00Z')/1000});
+  expect(goldChartSelection('15m',1,now).bar).toBe('5m');
+});
+it('reads native Gold M3 from initial, scroll-back and next-candle archive paths', async () => {
+  mock.pages=[{data:[row('18')],error:null}];
+  expect(await fetchInitialCandles('XAUUSD','3m',1)).toHaveLength(1);
+  mock.pages=[{data:[row('17')],error:null}];
+  expect(await fetchOlderCandles('XAUUSD','3m',Date.parse(row('18').time)/1000,1)).toHaveLength(1);
+  mock.pages=[{data:[row('18')],error:null}];
+  expect((await fetchNextCandle('XAUUSD','3m',Date.parse(row('17').time)/1000)).time).toBe(Date.parse(row('18').time)/1000);
+  expect(fetch).not.toHaveBeenCalled();
 });
 it('steps over weekend placeholders to the next real replay candle', async () => {
   const placeholder = { ...row('26'), open:4400, high:4400, low:4400, close:4400 };

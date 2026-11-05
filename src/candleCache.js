@@ -73,7 +73,8 @@ const DB_NAME = "trading-monitor-candles";
 // Gold-Testfenster und Wochenend-Platzhalter dürfen nicht im vollständigen Archivcache weiterleben.
 // v14 behält v13-Kerzen; ohne Abrufintervalle gelten alte Vollständigkeitsclaims nicht mehr.
 // v16 verwirft nur EURUSD-Pilot-Caches, damit das wiederhergestellte FXCM-Archiv neu geladen wird.
-const DB_VERSION = 16;
+// v17: Gold-M3 wurde bisher als leeres, vollständig gelesenes Archiv gespeichert.
+const DB_VERSION = 17;
 const STORE_NAME = "candles";
 
 // Rein defensiv, KEINE reguläre Obergrenze (siehe oben) — 500k Kerzen sind selbst auf M1 fast ein
@@ -101,7 +102,10 @@ function openDb() {
     req.onupgradeneeded = event => {
       const db = req.result;
       if(event.oldVersion>=13){
-        req.transaction.objectStore(STORE_NAME).delete(IDBKeyRange.bound("EURUSD:", "EURUSD:\uffff"));
+        const store = req.transaction.objectStore(STORE_NAME);
+        if (event.oldVersion < 16) store.delete(IDBKeyRange.bound("EURUSD:", "EURUSD:\uffff"));
+        store.delete('XAUUSD:1m');
+        store.delete('XAUUSD:3m');
         return;
       }
       if (db.objectStoreNames.contains(STORE_NAME)) db.deleteObjectStore(STORE_NAME);
