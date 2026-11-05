@@ -70,4 +70,8 @@ it('hides breached accounts from the semicircle strip without deleting their arc
  expect(html).not.toContain('Statistik: Failed');
  expect(html).toContain('Alle aktive Konten');
  expect(html).toContain('Inaktive Konten (1)');
+ const buttons=html.replace(/<!--.*?-->/g,'');
+ expect(buttons).toMatch(/data-variant="plain"[^>]*>Inaktive Konten \(1\)<\/button>/);
+ expect(buttons).toMatch(/data-variant="caret"[^>]*aria-label="Inaktive Konten-Untermenü"[^>]*>▾<\/button>/);
+ expect(html).not.toContain('Inaktive Konten (1) ▾');
 });

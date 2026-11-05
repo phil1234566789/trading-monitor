@@ -1,5 +1,5 @@
 <script setup>
-import {computed} from 'vue';
+import {computed,ref} from 'vue';
 import DropdownMenu from './ui/DropdownMenu.vue';
 import ToggleButton from './ui/ToggleButton.vue';
 import {ALL_HISTORY_ACCOUNTS} from '../milkyMetaTraderAccountSelection.js';
@@ -7,14 +7,15 @@ import {fmtMoney} from '../format.js';
 const account=defineModel('account',{type:String,default:''});
 const props=defineProps({accounts:{type:Array,default:()=>[]}});
 const archived=computed(()=>props.accounts.filter(a=>a.archived));
+const open=ref(false);
 const states={breached:'Breached',closed:'Geschlossen',passed:'Bestanden'};
 const money=(value,currency)=>Number.isFinite(value)&&currency?fmtMoney(value,currency):'unbekannt';
 function gain(details){return Number.isFinite(details.peak_balance)&&Number.isFinite(details.initial_balance)?money(details.peak_balance-details.initial_balance,details.currency):'unbekannt';}
 function select(id,close){account.value=id;close();}
 </script>
 <template>
- <DropdownMenu label="Inaktive Konten" variant="bordered" align="right" :active="account===ALL_HISTORY_ACCOUNTS||archived.some(a=>a.id===account)">
-  <template #label>Inaktive Konten ({{archived.length}}) ▾</template>
+ <DropdownMenu v-model:open="open" label="Inaktive Konten-Untermenü" align="right">
+  <template #leading><ToggleButton :class="{active:account===ALL_HISTORY_ACCOUNTS||archived.some(a=>a.id===account)}" :aria-expanded="open" @click="open=!open">Inaktive Konten ({{archived.length}})</ToggleButton></template>
   <template #default="{close}">
   <ToggleButton variant="menu" :class="{active:account===ALL_HISTORY_ACCOUNTS}" :aria-pressed="account===ALL_HISTORY_ACCOUNTS" @click="select(ALL_HISTORY_ACCOUNTS,close)">Alle Konten inklusive inaktiver</ToggleButton>
   <p v-if="!archived.length" class="mmt-muted">Noch keine inaktiven Konten.</p>

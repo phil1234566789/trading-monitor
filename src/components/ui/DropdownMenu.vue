@@ -2,7 +2,8 @@
 import {onMounted,onUnmounted,ref} from 'vue';
 import ToggleButton from './ToggleButton.vue';
 const open=defineModel('open',{type:Boolean,default:false});
-defineProps({label:{type:String,default:'Untermenü'},variant:{type:String,default:'caret'},align:{type:String,default:'left'},active:{type:Boolean,default:false}});
+// Derselbe separate Pfeil wie im Trades-Menü; Aufrufer dürfen keine andere Buttonform einsetzen.
+defineProps({label:{type:String,default:'Untermenü'},align:{type:String,default:'left'}});
 const root=ref(null),trigger=ref(null);
 function outside(event){if(!root.value?.contains(event.target))open.value=false;}
 function escape(){open.value=false;trigger.value?.$el.focus();}
@@ -12,7 +13,7 @@ onUnmounted(()=>document.removeEventListener('click',outside));
 <template>
  <div ref="root" class="ui-dropdown toggle-group" @keydown.esc.stop="escape">
   <slot name="leading" />
-  <ToggleButton ref="trigger" :variant="variant" :class="{open,active}" :aria-label="label" :aria-expanded="open" @click="open=!open"><slot name="label">▾</slot></ToggleButton>
+  <ToggleButton ref="trigger" variant="caret" :class="{open}" :aria-label="label" :aria-expanded="open" @click="open=!open">▾</ToggleButton>
   <div v-if="open" class="ui-dropdown-panel" :data-align="align"><slot :close="escape" /></div>
  </div>
 </template>
