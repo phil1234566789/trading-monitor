@@ -14,6 +14,23 @@ function database(records = []) {
   }, async rpc(name, args) { writes.push(...args.observations); return { error: null }; } };
 }
 describe('separate durable target statistics', () => {
+  it('uses whole seconds consistently for live observations sent to bigint columns', async () => {
+    const db = database([record('old')]);
+    const input = { ...result(), evaluatedAt: 1793109363.97 };
+    await createChecklistStatisticsStore(db).save(input, {}, []);
+    expect(db.writes[0].evaluated_at).toBe(1793109363);
+    expect(db.writes[0].observation.evaluatedAt).toBe(1793109363);
+    expect(input.evaluatedAt).toBe(1793109363.97);
+  });
+  it('normalizes fractional setup recognition times without mutating the selection', async () => {
+    const db = database();
+    const targetSelection = { ...selection, selectedAt: 600.97 };
+    await createChecklistStatisticsStore(db).save({ ...result([{ id: 'new', targetSelection, invalidation: 12 }]), instrument: 'XAUUSD' }, {}, []);
+    expect(db.writes[0].instrument).toBe('XAUUSD');
+    expect(db.writes[0].selected_at).toBe(600);
+    expect(db.writes[0].selection.selectedAt).toBe(600);
+    expect(targetSelection.selectedAt).toBe(600.97);
+  });
   it('continues T2 for a stored candidate no longer in the current H1 tree', async () => {
     const db = database([record('old')]);
     await createChecklistStatisticsStore(db).save(result(), {}, []);

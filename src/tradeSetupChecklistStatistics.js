@@ -25,6 +25,8 @@ export function createChecklistStatisticsStore(db) {
   return {
     async save(result, settings, sessions) {
       if (result.status !== 'ready' || !result.setup) return 0;
+      // bigint und der JSON-Konsistenzcheck erwarten dieselben ganzen Unix-Sekunden.
+      const evaluatedAt = Math.floor(result.evaluatedAt);
       const configuration = checklistStatisticsConfiguration(settings, sessions, result.instrument);
       const configKey = await checklistConfigurationKey(configuration);
       const records = new Map();
@@ -33,7 +35,7 @@ export function createChecklistStatisticsStore(db) {
       for (let offset = 0; ;) {
         const { data, error } = await db.from('checklist_target_observations').select('candidate_id,selection,invalidation,source')
           .eq('instrument', result.instrument).eq('rule_version', CHECKLIST_RULE_VERSION).eq('config_key', configKey)
-          .lte('selected_at', result.evaluatedAt).order('candidate_id').range(offset, offset + 499);
+          .lte('selected_at', evaluatedAt).order('candidate_id').range(offset, offset + 499);
         if (error) throw error;
         if (!data?.length) break;
         data.forEach(row => records.set(row.candidate_id, row));
@@ -45,11 +47,14 @@ export function createChecklistStatisticsStore(db) {
           invalidation: c.invalidation, source: { sweep: c.sweep, reactionOB: c.reactionOB, reactionRecognizedAt: c.reactionRecognizedAt } });
       }
       const candles = markIgnoredCandles(result.context.m5Candles, configuration.sessions, sec => berlinOffsetMinutes(sec * 1000));
-      const rows = [...records.values()].map(row => ({ ...row, instrument: result.instrument,
-        rule_version: CHECKLIST_RULE_VERSION, config_key: configKey, configuration,
-        selected_at: row.selection.selectedAt, evaluated_at: result.evaluatedAt,
-        observation: evaluateChecklistLifecycle({ selection: row.selection, invalidation: row.invalidation, candles, evaluatedAt: result.evaluatedAt }),
-      }));
+      const rows = [...records.values()].map(row => {
+        const selection = { ...row.selection, selectedAt: Math.floor(row.selection.selectedAt) };
+        return { ...row, selection, instrument: result.instrument,
+          rule_version: CHECKLIST_RULE_VERSION, config_key: configKey, configuration,
+          selected_at: selection.selectedAt, evaluated_at: evaluatedAt,
+          observation: evaluateChecklistLifecycle({ selection: row.selection, invalidation: row.invalidation, candles, evaluatedAt }),
+        };
+      });
       for (let offset = 0; offset < rows.length; offset += 100) {
         const { error } = await db.rpc('save_checklist_target_observations', { observations: rows.slice(offset, offset + 100) });
         if (error) throw error;
