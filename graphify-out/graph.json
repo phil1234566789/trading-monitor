@@ -80088,7 +80088,7 @@
     },
     {
       "source": "src_components_mmtarchivedaccounts_money",
-      "target": "src_format_fmtmoney",
+      "target": "src_format_fmtprice",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -121943,7 +121943,7 @@
     },
     {
       "source": "src_components_mmtarchivedaccounts",
-      "target": "src_format_fmtmoney",
+      "target": "src_format_fmtprice",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -248225,5 +248225,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "25983391cf399b89c55f96dbf52779af7f3b819b"
+  "built_at_commit": "0f0d69a988c7f2afcded5d780e7b14a0e0ef743f"
 }
