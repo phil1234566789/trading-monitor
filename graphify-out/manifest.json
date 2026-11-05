@@ -7146,9 +7146,9 @@
     "semantic_hash": ""
   },
   "test/milkyMetaTraderBalances.component.test.js": {
-    "mtime": 1793914322.0157723,
-    "seen": 1793914659.284417,
-    "ast_hash": "c472dbb0897ae250f41e101caefff426",
+    "mtime": 1793917726.9505696,
+    "seen": 1793917811.0366848,
+    "ast_hash": "aea5623072384f2c6effc1808cb2876c",
     "semantic_hash": ""
   },
   "test/milkyMetaTraderBalances.test.js": {
@@ -7686,15 +7686,15 @@
     "semantic_hash": ""
   },
   "src/components/MmtArchivedAccounts.vue": {
-    "mtime": 1793914373.609151,
-    "seen": 1793914659.284417,
-    "ast_hash": "360acc78c8e059d3f04765a87070b6c1",
+    "mtime": 1793917698.2940989,
+    "seen": 1793917810.8711321,
+    "ast_hash": "1f47cfa181f29d3af23bd2d2d14c87a0",
     "semantic_hash": ""
   },
   "src/components/ui/DropdownMenu.vue": {
-    "mtime": 1793914589.016367,
-    "seen": 1793914659.284417,
-    "ast_hash": "dda7481893d682c682d7554a679904e7",
+    "mtime": 1793917698.0982702,
+    "seen": 1793917810.881643,
+    "ast_hash": "d2ff4ce482962f790b7496216902f581",
     "semantic_hash": ""
   },
   "src/milkyMetaTraderAccountSelection.js": {
