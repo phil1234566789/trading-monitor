@@ -7,7 +7,7 @@ export function tradeCalendarWeeks(trades){
  const groups=new Map();
  for(const trade of trades){
   // Kalenderdaten statt echter UTC-Wochen: Berliner Sonntag bleibt auch beim Sommerzeitwechsel Sonntag.
-  const start=monday(Date.parse(berlinTradeParts(trade.closed_at).date));
+  const start=monday(Date.parse(berlinTradeParts(trade.opened_at).date));
   if(!groups.has(start))groups.set(start,[]);
   groups.get(start).push(trade);
  }
@@ -19,7 +19,7 @@ export function tradeCalendarWeeks(trades){
   const year=new Date(start+3*DAY).getUTCFullYear();
   const number=Math.round((start-monday(Date.UTC(year,0,4)))/WEEK)+1;
   weeks.push({key:date(start),start:date(start),end:date(start+6*DAY),year,number,
-   trades:[...(groups.get(start)??[])].sort((a,b)=>b.closed_at-a.closed_at||b.id.localeCompare(a.id))});
+   trades:[...(groups.get(start)??[])].sort((a,b)=>b.opened_at-a.opened_at||b.id.localeCompare(a.id))});
  }
  return weeks;
 }

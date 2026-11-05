@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest';
 import {tradeCalendarWeeks} from '../src/milkyMetaTraderWeeks.js';
-const trade=(id,at)=>({id,closed_at:Date.parse(at)});
+const trade=(id,at)=>({id,opened_at:Date.parse(at),closed_at:Date.parse(at)});
 it('keeps all trades in Monday–Sunday Berlin weeks, independent of a 50-row page limit',()=>{
  const trades=Array.from({length:75},(_,i)=>trade(String(i),'2026-11-01T22:59:59Z'));
  const weeks=tradeCalendarWeeks([...trades,trade('monday','2026-11-01T23:00:00Z')]);
@@ -20,4 +20,9 @@ it('assigns summer and winter boundary instants to the correct Berlin calendar d
   expect(weeks[0].trades[0].id).toBe('mon');
   expect(weeks[1].trades[0].id).toBe('sun');
  }
+});
+
+it('assigns and orders list rows by entry time even when exits fall in another week',()=>{
+ const weeks=tradeCalendarWeeks([{id:'overnight',opened_at:Date.parse('2026-11-01T22:00:00Z'),closed_at:Date.parse('2026-11-03T10:00:00Z')},{id:'later-entry',opened_at:Date.parse('2026-11-02T10:00:00Z'),closed_at:Date.parse('2026-11-02T11:00:00Z')}]);
+ expect(weeks.map(w=>[w.key,w.trades[0].id])).toEqual([['2026-11-02','later-entry'],['2026-10-26','overnight']]);
 });

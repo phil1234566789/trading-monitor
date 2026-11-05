@@ -28,6 +28,10 @@ it('counts proven closed trades and costs, never deposits or resets as trading p
  expect(accountPerformance('c','USD',result,null)).toMatchObject({net:null,winrate:null,count:0});
  expect(accountPerformance('c','USD',result,{last_full_at:'date'})).toMatchObject({net:0,winrate:null,count:0});
 });
+it('uses the same pre-commission break-even rule in account card win rates',()=>{
+ const trades=[{account_id:'a',currency:'USD',net:-25,commission:-15},{account_id:'a',currency:'USD',net:20,commission:-5},{account_id:'a',currency:'USD',net:-30,commission:-5}];
+ expect(accountPerformance('a','USD',{trades,unallocated:[]},{last_full_at:'date'})).toMatchObject({count:3,wins:1,losses:1,breakeven:1,winrate:50,net:-35});
+});
 
 it('separates earned challenge progress from the drawdown part of the same scale',()=>{
  const g=challengeGauge(50846.49,47846.49,54000);

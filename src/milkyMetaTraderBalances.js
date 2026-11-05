@@ -1,5 +1,6 @@
 import {RISK_BASE} from '../supabase/functions/trading-monitor-mcp/mt5RiskContract.js';
 import {mmtExecutionReady,mmtAccountSnapshot} from './milkyMetaTraderPolling.js';
+import {tradePerformance} from './milkyMetaTraderPerformance.js';
 export function balancePosition(balance,floor,target){
  if(![balance,floor,target].every(Number.isFinite)||target<=floor)return null;
  return Math.max(0,Math.min(100,(balance-floor)/(target-floor)*100));
@@ -16,8 +17,8 @@ export function accountPerformance(id,currency,result,sync){
  const trades=result.trades.filter(t=>t.account_id===id&&t.currency===currency);
  const costs=result.unallocated.filter(d=>d.account_id===id&&d.currency===currency);
  const known=trades.length>0||Boolean(sync?.last_full_at);
- return {count:trades.length,net:known?trades.reduce((sum,t)=>sum+t.net,0)+costs.reduce((sum,d)=>sum+d.profit+d.commission+d.swap+d.fee,0):null,
-  winrate:trades.length?trades.filter(t=>t.net>0).length/trades.length*100:null};
+ const stats=tradePerformance(trades);
+ return {...stats,net:known?stats.net+costs.reduce((sum,d)=>sum+d.profit+d.commission+d.swap+d.fee,0):null};
 }
 
 export function challengeGauge(balance,floor,target){

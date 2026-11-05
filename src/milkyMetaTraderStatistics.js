@@ -1,3 +1,4 @@
+import {tradePerformance} from './milkyMetaTraderPerformance.js';
 const uniqueDeals=raw=>[...new Map(raw.map(d=>[`${d.account_id}:${d.ticket}`,d])).values()];
 const commissionTypes=new Set([7,8,9,10,11]);
 export const dealCommission=rows=>rows.reduce((sum,d)=>sum+d.commission+(commissionTypes.has(d.type)?d.profit:0),0);
@@ -56,12 +57,12 @@ const weekdays={Monday:'Montag',Tuesday:'Dienstag',Wednesday:'Mittwoch',Thursday
 const weekdayNames=Object.values(weekdays);
 export function statisticsGroups(trades,dimension){
  const groups=new Map();
- for(const t of trades){
-  const p=berlinTradeParts(t.opened_at),label=dimension==='asset'?t.symbol:dimension==='hour'?`${p.hour}:00–${p.hour}:59`:weekdays[p.weekday];
-  if(!groups.has(label))groups.set(label,{label,count:0,net:0,wins:0,commission:0});
-  const g=groups.get(label);g.count++;g.net+=t.net;g.commission+=t.commission??0;if(t.net>0)g.wins++;
+ for(const trade of trades){
+  const p=berlinTradeParts(trade.opened_at),label=dimension==='asset'?trade.symbol:dimension==='hour'?`${p.hour}:00–${p.hour}:59`:weekdays[p.weekday];
+  if(!groups.has(label))groups.set(label,[]);
+  groups.get(label).push(trade);
  }
- const rows=[...groups.values()].map(g=>({...g,average:g.net/g.count,winrate:g.wins/g.count*100}));
+ const rows=[...groups].map(([label,trades])=>({label,...tradePerformance(trades)}));
  return rows.sort(dimension==='hour'?(a,b)=>a.label.localeCompare(b.label):dimension==='weekday'
   ?(a,b)=>weekdayNames.indexOf(a.label)-weekdayNames.indexOf(b.label)
   :(a,b)=>b.average-a.average||b.count-a.count);
