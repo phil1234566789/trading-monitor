@@ -10,6 +10,7 @@ export function useDashboardMmt(symbol) {
  const key=ref(readMilkyMetaTraderKey()),now=ref(Date.now());
  const api=(action,fields={},options={})=>createMilkyMetaTraderClient(import.meta.env.VITE_SUPABASE_URL,key.value)(action,fields,options);
  const account=computed(()=>accounts.value.find(a=>a.id===activeId.value));
+ const switchingAccount=ref(false),accountMessage=ref('');
  const snapshot=computed(()=>{
   const s=status.value?.bridge?.snapshot;
   return s?.account_login===Number(account.value?.login)&&s?.account_server===account.value?.server?s:null;
@@ -37,7 +38,7 @@ export function useDashboardMmt(symbol) {
   request=(async()=>{try{
    const [a,s]=await Promise.all([api('accounts',{}, {background:true}),api('status',{}, {background:true})]);
    if(disposed)return;
-   accounts.value=a.accounts;activeId.value=mmtSelectedAccountId(a,s);status.value=s;error.value='';
+   accounts.value=a.accounts;activeId.value=mmtSelectedAccountId(s,a.active_account_id);status.value=s;error.value='';
    if(s.orders?.some(o=>o.status==='executed')&&Date.now()-lastHistory>8000){
     const data=await loadMmtHistory(api,true,historyCursor);if(disposed)return;
     history.value=[...history.value,...data.rows];
@@ -55,7 +56,19 @@ export function useDashboardMmt(symbol) {
   return request;
  }
  async function cancel(id){try{await api('cancel',{id});await refresh();}catch(e){error.value=e.message;}}
+ async function selectAccount(id){
+  if(switchingAccount.value||id===activeId.value)return;
+  switchingAccount.value=true;accountMessage.value='';
+  try{
+   if(request)await request;
+   await api('select_account',{id});
+   // Alte Kurse dürfen nach dem Wechsel keine Vorschau für das neue Konto liefern.
+   activeId.value=id;status.value=null;
+   await refresh();
+   accountMessage.value='Handelskonto gewählt. Der MT5-Worker muss mit diesem Konto verbunden sein.';
+  }catch(e){error.value=e.message;}finally{switchingAccount.value=false;}
+ }
  onMounted(()=>{void refresh();timer=setInterval(()=>{now.value=Date.now();if(now.value>=next&&document.visibilityState==='visible')void refresh();},1000);});
  onUnmounted(()=>{disposed=true;clearInterval(timer);});
- return {api,status,account,snapshot,brokerQuote,activeOrders,trades,entryTimeFor,links,error,key,now,refresh,cancel};
+ return {api,status,accounts,activeId,switchingAccount,accountMessage,selectAccount,account,snapshot,brokerQuote,activeOrders,trades,entryTimeFor,links,error,key,now,refresh,cancel};
 }

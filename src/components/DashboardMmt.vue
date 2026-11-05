@@ -12,7 +12,7 @@ import '../milkyMetaTrader.css';
 const props=defineProps({symbol:String,annotations:Array,lastCandleTime:Number,replay:Boolean});
 const emit=defineEmits(['trades']);
 const mmt=useDashboardMmt(toRef(props,'symbol'));
-const {api,status,account,snapshot,brokerQuote,activeOrders,trades,entryTimeFor,links,error,key,now,refresh,cancel}=mmt;
+const {api,status,accounts,activeId,switchingAccount,accountMessage,selectAccount,account,snapshot,brokerQuote,activeOrders,trades,entryTimeFor,links,error,key,now,refresh,cancel}=mmt;
 const nearest=computed(()=>nearestTradeIdea(props.annotations??[],props.lastCandleTime));
 const reasons={loading:'Chartkerzen werden geladen.',missing:'Long-/Short-Idee im Chart einzeichnen.',tie:'Zwei Ideen sind gleich nah. Eine Idee unter Zeichnungen ausblenden.'};
 const quoteFor=o=>snapshot.value?.account_login===o.intent.account_login&&snapshot.value?.account_server===o.intent.account_server
@@ -33,8 +33,15 @@ watch(trades,value=>emit('trades',value),{immediate:true});
   <p v-if="nearest.reason" role="status">{{reasons[nearest.reason]}}</p>
   <p v-if="key&&!brokerQuote">Kein eindeutiges Broker-Symbol für {{symbol}} verfügbar.</p>
   <MmtDailyStopStatus v-if="key" :status="status" :now="now" />
-  <p v-if="account">Konto: {{account.name}}</p>
-  <EntrySearch v-if="key" :api="api" :status="status" :account="account" compact :chart-symbol="brokerQuote?.symbol" :idea="nearest.idea" :disabled="replay||!!error||!nearest.idea||!brokerQuote" @submitted="refresh" />
+  <label v-if="key" class="mmt-account-picker">Handelskonto
+   <select :value="activeId??''" :disabled="switchingAccount||replay" @change="selectAccount($event.target.value)">
+    <option value="" disabled>Konto wählen</option>
+    <option v-for="a in accounts" :key="a.id" :value="a.id" :disabled="a.archived">{{a.name}} · {{a.login}}{{a.archived?' · Archiv':''}}</option>
+   </select>
+  </label>
+  <p v-if="switchingAccount" role="status">Konto wird gewechselt …</p>
+  <p v-if="accountMessage" role="status">{{accountMessage}}</p>
+  <EntrySearch v-if="key" :api="api" :status="status" :account="account" compact :chart-symbol="brokerQuote?.symbol" :idea="nearest.idea" :disabled="switchingAccount||replay||!!error||!nearest.idea||!brokerQuote" @submitted="refresh" />
   <details class="mmt-help"><summary>Idee und Ausführung</summary><p>Chart: FXCM Bid, geschlossene Kerzen. Suche: aktuelle MT5 Bid/Ask-Kurse. Der gezeichnete Anker ist niemals ein MMT-Trigger. Broker prüft SL und Mindestlot vor Ausführung erneut. Risky/Full benötigen heutige bestätigte Kontogrenzen und eine frische Worker-Schutzprüfung.</p></details>
   <section v-if="activeOrders.length" aria-label="Alle laufenden Entry-Suchen">
    <h3>Alle Assets · laufende Aufträge</h3>
@@ -57,6 +64,8 @@ watch(trades,value=>emit('trades',value),{immediate:true});
 .mmt-chart-card{padding:10px;font-size:12px;overflow:visible;flex:none;max-width:100%;border:1px solid #303746;border-radius:4px}
 header{display:flex;justify-content:space-between;gap:8px;align-items:center}
 header a{font-size:11px}
+.mmt-account-picker{display:grid;gap:4px;margin:8px 0}
+.mmt-account-picker select{width:100%;min-width:0;padding:6px;background:#111621;color:inherit;border:1px solid #475569;border-radius:4px}
 .mmt-chart-card :deep(.mmt-panel){padding:8px;margin:6px 0}
 .mmt-chart-card :deep(.mmt-form){gap:6px}
 .mmt-chart-card :deep(h2){font-size:13px;margin:0}
