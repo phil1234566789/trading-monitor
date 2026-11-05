@@ -42,3 +42,13 @@ it('keeps additional accounts in the same scrollable account strip',async()=>{
  expect(html.match(/<article/g)).toHaveLength(6);
  expect(html).toContain('Konten horizontal scrollen');
 });
+
+it('marks only recent reader observations current and falls back to a saved stand after an outage',async()=>{
+ const now=Date.parse('2026-11-05T08:00:00Z');
+ for(const [source,age,current] of [['MT5-Reader',30,true],['MT5-Reader',91,false],['Brokerportal',30,false]]){
+  const html=await renderToString(Vue.createSSRApp(Balances,{accounts:[{id:'a',login:42,server:'s',name:'Other account'}],now,staleSeconds:15,history:{rows:[],sync:[]},
+   status:{account_balances:[{account_id:'a',balance:49843.5,currency:'USD',loss_floor:47000,target:54000,balance_source:source,balance_at:new Date(now-age*1000).toISOString()}]}}));
+  expect(html.includes('Daten aktuell')).toBe(current);
+  expect(html.includes('Gespeicherter Stand')).toBe(!current);
+ }
+});
