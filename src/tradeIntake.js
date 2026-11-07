@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient.js";
+import { STRATEGY_SETUP_KEYS } from './strategySetupLabels.js';
 import {privateJournalApi} from './privateJournal.js';
 import { deriveSetupEntryInvalidation, TRADE_SETUP_DETECTOR_VERSION } from "./tradeSetup.js";
 import { tradeSetupProvenance } from '../supabase/functions/_shared/tradeSetupProvenance.js';
@@ -424,6 +425,10 @@ export async function updateDealingRange(dealingRangeId, fields) {
   // "Favorit"-Markierung (Chat 2026-08-13, siehe Migration 20260813120000_dealing_ranges_setup_type.sql)
   // — null entfernt die Markierung wieder.
   if ("setupType" in fields) payload.setup_type = fields.setupType;
+  if ("strategySetup" in fields) {
+    if (fields.strategySetup !== null && !STRATEGY_SETUP_KEYS.includes(fields.strategySetup)) return false;
+    payload.strategy_setup = fields.strategySetup === 'unknown' ? null : fields.strategySetup;
+  }
 
   const { error } = await supabase.from("dealing_ranges").update(payload).eq("id", dealingRangeId);
   if (error) {

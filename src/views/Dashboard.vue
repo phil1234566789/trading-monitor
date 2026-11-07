@@ -2305,6 +2305,7 @@ watch(selectedTradingAccountId, () => {
     <aside v-if="(showMmt || showTradeSetupCockpit) && !snapshotView" class="chart-trading-sidebar">
     <DashboardMmt v-if="showMmt" :symbol="currentSymbol" :annotations="visibleAnnotations" :last-candle-time="priceChartRef?.lastCandleTime" :replay="replayActive" @trades="brokerTrades=$event" />
     <TradeSetupCockpit
+      @setup-saved="refreshTscRange"
       v-if="showTradeSetupCockpit && !snapshotView"
       class="chart-tsc-row-tsc"
       :instrument="currentSymbol"

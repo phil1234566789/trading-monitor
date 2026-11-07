@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from "vue";
+import DealingRangeSetupSelect from './DealingRangeSetupSelect.vue';
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import { formatEvidenceLabel, evidenceAgeTier, isGoConfirmation } from "../tradeEvidence";
 import { formatTargetLabel } from "../tradeTargets";
@@ -48,6 +49,7 @@ const props = defineProps({
   armedSection: { type: String, default: null },
 });
 const emit = defineEmits([
+  "setup-saved",
   "add-confirmation",
   "add-target",
   "add-confluence",
@@ -191,6 +193,7 @@ const accentStyle = computed(() => {
     <div :inert="saving">
     <p v-if="fromJournal">Journal · Dealing Range #{{ range?.id }} · Änderungen werden direkt gespeichert.</p>
     <p v-if="loadError" role="alert">{{ loadError }}</p>
+    <DealingRangeSetupSelect v-if="range" :key="range.id" :range-id="range.id" :model-value="range.strategySetup" @saved="emit('setup-saved')" />
 
     <!-- Trend-Kette (Chat 2026-08-29, Philip: "der Trend soll rein") — Kontext, kein Bestätigungs-
          Objekt (kein Chart-Klick-Mechanismus, anders als die Sektionen unten), deshalb eigene Zeile

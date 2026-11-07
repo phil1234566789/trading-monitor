@@ -251,6 +251,7 @@ export async function fetchTrades(instrument, accountId = null) {
       // "Favorit"-Markierung (Chat 2026-08-13, siehe Migration 20260813120000_dealing_ranges_setup_type.sql)
       // — aktuell nur ein Wert ('10/10-Trade'), null = nicht markiert.
       setupType: range.setup_type ?? null,
+      strategySetup: range.strategy_setup ?? null,
       tradingAccountId: row.trading_account_id,
       // TradeTarget-Rohformat (siehe tradeTargets.ts) statt nur des Preises (Chat 2026-07-28: "kann
       // ich das bearbeiten?" / "wieso nur der Preis?") — kind/sourceTime/touchedTime fürs
@@ -333,7 +334,7 @@ export async function fetchActiveTscRangeId(instrument) {
 export async function fetchDealingRangeCockpit(dealingRangeId) {
   const { data: range, error: rangeError } = await supabase
     .from("dealing_ranges")
-    .select(`id, instrument, direction, invalidation, ${INVALIDATION_OBJECT_EMBED}`)
+    .select(`id, instrument, direction, invalidation, strategy_setup, ${INVALIDATION_OBJECT_EMBED}`)
     .eq("id", dealingRangeId)
     .maybeSingle();
   if (rangeError) throw rangeError;
@@ -362,6 +363,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
     id: range.id,
     instrument: range.instrument,
     direction: range.direction,
+    strategySetup: range.strategy_setup ?? null,
     // Bug-Report Philip 2026-08-27: fehlte hier komplett (weder im select() oben noch hier) —
     // die TSC-Karte bekam eine per Code abgeleitete Invalidierung (z.B. aus einer OB-Bestätigung,
     // siehe tradeIntake.js: insertConfirmation) dadurch nie zu sehen, obwohl sie in der DB stand.

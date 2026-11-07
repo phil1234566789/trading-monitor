@@ -1,5 +1,5 @@
 <script setup>
-import { STRATEGY_SETUP_LABELS } from "../strategySetupLabels.js";
+import { STRATEGY_SETUP_KEYS, STRATEGY_SETUP_LABELS } from "../strategySetupLabels.js";
 import {simulationRunLabel} from '../simulationRunPresentation.js';
 import { DEALING_RANGE_LABELS } from '../tradeSetup2DealingRange.js';
 import { DR_OUTCOME_LABELS } from '../simulationRunComparison.js';
@@ -26,7 +26,7 @@ const set=(key,value)=>emit('update:modelValue',{...props.modelValue,[key]:value
     <label>Lauf neu<select :value="modelValue.run" @change="set('run',$event.target.value)"><option value="" disabled>Lauf wählen</option><option v-for="run in selectableRuns(modelValue.run)" :key="run.id" :value="run.id">{{ label(run) }}</option></select></label>
     <label>Vergleich mit Lauf alt<select :value="modelValue.compare" @change="set('compare',$event.target.value)"><option value="">Kein Vergleich</option><option v-for="run in selectableRuns(modelValue.compare).filter(r=>r.id!==modelValue.run)" :key="run.id" :value="run.id">{{ label(run) }}</option></select></label>
     <label>Instrument<select :value="modelValue.instrument" @change="set('instrument',$event.target.value)"><option value="">Alle</option><option v-for="name in ['GBPUSD','EURUSD','XAUUSD']" :key="name">{{ name }}</option></select></label>
-    <label>Setup<select :value="modelValue.type" @change="set('type',$event.target.value)"><option value="">Alle</option><option v-for="key in ['countertrend', 'setup2', 'setup3', 'setup4', 'continuation', 'unknown']" :key="key" :value="key">{{ STRATEGY_SETUP_LABELS[key] }}</option></select></label>
+    <label>Setup<select :value="modelValue.type" @change="set('type',$event.target.value)"><option value="">Alle</option><option v-for="key in STRATEGY_SETUP_KEYS" :key="key" :value="key">{{ STRATEGY_SETUP_LABELS[key] }}</option></select></label>
     <label>Entry ab<input type="date" :value="modelValue.from" @input="set('from',$event.target.value)" /></label>
     <label>Entry bis einschließlich<input type="date" :value="modelValue.to" @input="set('to',$event.target.value)" /></label>
     <label>DR-Stufe<select :value="modelValue.stage" @change="set('stage',$event.target.value)"><option value="">Alle inkl. Altstand</option><option v-for="(name,key) in Object.fromEntries(Object.entries(DEALING_RANGE_LABELS).filter(([key])=>key!=='invalidated' || modelValue.stage==='invalidated'))" :key="key" :value="key">{{ name }}</option></select></label>

@@ -1,4 +1,5 @@
 <script setup>
+import DealingRangeSetupSelect from './DealingRangeSetupSelect.vue';
 import { ref, computed, watch } from "vue";
 import { updateTrade, updateDealingRange, deleteTrade, removeTargetFromTrade, removeConfirmationFromTrade } from "../tradeIntake.js";
 import { fmtDateTime, fmtPrice, pricePrecisionForInstrument } from "../format.js";
@@ -316,6 +317,8 @@ function confirmationLabel(confirmation) {
           {{ isFavorite ? "★ 10/10-Trade" : "☆ 10/10-Trade" }}
         </button>
       </h3>
+
+      <DealingRangeSetupSelect :key="trade.dealingRangeId" :range-id="trade.dealingRangeId" :model-value="trade.strategySetup" @saved="emit('saved')" />
 
       <!-- Invalidierung: dieselbe Liste mit höchstens einem Eintrag wie im TSC (Philip 22.09.2026,
            beide Stellen bewusst identisch) — der Eintrag ist das angeklickte Chart-Objekt. -->

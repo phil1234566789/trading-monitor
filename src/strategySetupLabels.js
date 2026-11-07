@@ -1,4 +1,5 @@
 const continuationLabel = 'Trendfortführung · Setup offen';
+export const STRATEGY_SETUP_KEYS = ['countertrend', 'setup2', 'setup3', 'setup4', 'continuation', 'unknown'];
 export const STRATEGY_SETUP_LABELS = {
   countertrend: 'Setup 1 · Countertrend mit LS',
   setup2: 'Setup 2 · Trendfortführung mit LS',
