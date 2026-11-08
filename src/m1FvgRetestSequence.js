@@ -1,4 +1,4 @@
-import { orderBlockMitigationFvg } from './orderBlockMitigation.js';
+import { orderBlockMitigationFvg,m1FvgBounds } from './orderBlockMitigation.js';
 import { candleTouchesOrderBlock } from './orderBlockDetection.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 
@@ -19,8 +19,7 @@ export function evaluateM1FvgRetestSequence({candles,direction,structureKnownAt,
     if(i && candle.time!==rows[i-1].time+60){result.status='unknown';return result;}
     const fvg=orderBlockMitigationFvg(rows,direction,i+1);
     if(!result.zone && fvg && fvg.recognizedAt>=structureKnownAt){
-      const bottom=direction==='short'?candle.high:candle.low-fvg.gap;
-      result.zone={...fvg,bottom,top:bottom+fvg.gap};
+      result.zone={...fvg,...m1FvgBounds(direction,fvg.gap,candle)};
     }
     // Die FVG muss vor Kerzenbeginn bekannt sein; Kontakt inkl. Wick-Überlauf zählt.
     if(result.zone && !result.retest && !candle.ignored && candle.time>=result.zone.recognizedAt

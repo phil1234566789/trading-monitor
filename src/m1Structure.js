@@ -6,8 +6,9 @@ import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { hasConfirmedChecklistAbc } from './tradeSetupChecklistGates.js';
 import { dealingRangeConfirmedAt } from './dealingRangeConfirmationTime.js';
 import { usesPivotBreakEntryPattern1 } from './entryPattern1Conditions.js';
-import { M1_STRUCTURE_PERIOD } from './m1StructureSettings.js';
+import { M1_STRUCTURE_PERIOD,M1_FVG_RETEST_STRUCTURE_PERIOD } from './m1StructureSettings.js';
 import { buildM1PivotStructure } from './m1PivotStructure.js';
+import {isEntryPattern2} from './entryPattern2Conditions.js';
 
 export { M1_STRUCTURE_PERIOD };
 
@@ -34,7 +35,7 @@ export function m1PrerequisiteReason(checklist, { allowEnded = false } = {}) {
   if (!allowEnded && setup2EntrySearchEnded(checklist)) return 'ended';
   if (!checklist.setup?.primary || !hasConfirmedChecklistAbc(checklist.checks)) return 'abc';
   if (checklist.dealingRange && checklist.dealingRange.status !== 'validated') return 'validation';
-  if (usesPivotBreakEntryPattern1(entryPatternVersion(checklist))) {
+  if (usesPivotBreakEntryPattern1(entryPatternVersion(checklist))||isEntryPattern2(entryPatternVersion(checklist))) {
     if(!Number.isFinite(checklist.setup.primary.sweep?.level?.touchedTime))return 'anchor';
   } else if (!checklist.checks.m5Trend?.m1Anchor) return 'anchor';
   return null;
@@ -42,13 +43,14 @@ export function m1PrerequisiteReason(checklist, { allowEnded = false } = {}) {
 
 export function activeM1Context(checklist, options) {
   if (m1PrerequisiteReason(checklist, options)) return null;
-  const current=checklist.model==='countertrend' && usesPivotBreakEntryPattern1(entryPatternVersion(checklist));
+  const current=checklist.model==='countertrend' && (usesPivotBreakEntryPattern1(entryPatternVersion(checklist))||isEntryPattern2(entryPatternVersion(checklist)));
   const anchor=current ? {entryPattern:entryPatternVersion(checklist),primary:checklist.setup.primary,
     pivotTime:checklist.setup.primary.sweep.level.touchedTime,price:checklist.setup.primary.sweep.level.price,
     recognizedAt:checklist.setup.primary.recognizedAt} : checklist.checks.m5Trend?.m1Anchor;
   return anchor ? { instrument: checklist.instrument, anchor, evaluatedAt: checklist.evaluatedAt,
-    ...(checklist.model === 'countertrend' && usesPivotBreakEntryPattern1(entryPatternVersion(checklist)) ? {
+    ...(current ? {
       entryPattern:entryPatternVersion(checklist),confirmedAt:dealingRangeConfirmedAt(checklist),
+      entryPatterns:checklist.setup.primary.entryPatterns ?? checklist.entryPatterns,
       validatedAt:checklist.setup.primary.validatedAt ?? checklist.dealingRange?.evaluatedAt,
       m5Candles:checklist.context?.m5Candles ?? [],settings:checklist.context?.settings ?? {},sessionConfigs:checklist.context?.sessionConfigs ?? [],
       structureStart:checklist.checks.outerM5Trend?.structureStart ?? checklist.checks.m5Trend?.structureStart,
@@ -59,6 +61,7 @@ export function activeM1Context(checklist, options) {
 }
 
 export function buildM1Structure(rows, anchor, evaluatedAt) {
+  if(isEntryPattern2(entryPatternVersion(anchor)))return buildM1PivotStructure(rows,anchor.primary,evaluatedAt,M1_FVG_RETEST_STRUCTURE_PERIOD);
   if(usesPivotBreakEntryPattern1(entryPatternVersion(anchor)))return buildM1PivotStructure(rows,anchor.primary,evaluatedAt);
   const empty = { state: null, pivotsOuter: [], pivotsInner: [], events: [], status: 'waiting' };
   if (!anchor || anchor.recognizedAt > evaluatedAt) return empty;

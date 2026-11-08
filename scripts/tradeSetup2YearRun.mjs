@@ -202,6 +202,7 @@ try {
       ...Object.keys(rows).map(bar=>path.join(cacheDirectory,`${instrument}-${bar}-${start}-${to}.json`))]);
     await scanBatchInstrument({core,directory,identity:{runId:run.id,sourceHash,inputHashes},input:{instrument,h1Candles:rows['1h'],m5Candles:rows['5m'],m1Candles:rows['1m'],
       tradeSetups,dailyAnchors,fromTime:from,toTime:to-1,settings:configuration.settings,sessionConfigs,
+      includeSweepRetestSources:modelVersions.includeSweepRetestSources===true,
       tradingWindows:manifest.schedules.find(s=>s.instrument===instrument)?.trading_windows,
       news:configuration.instruments[instrumentIndex].news,newsLoadStatus:configuration.instruments[instrumentIndex].newsLoadStatus,signal:controller.signal},
       onProgress:async progress=>{run.progress={...progress,instrument,phase:'scan'};await saveProgress();}});

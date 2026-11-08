@@ -7,8 +7,12 @@ import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 export function collectChecklistH1Sweeps(context) {
   const h1 = closedChecklistCandles(context.h1Candles, '1h', context.evaluatedAt);
   const m5 = closedChecklistCandles(context.m5Candles, '5m', context.evaluatedAt).filter(c => !c.ignored);
-  const frontier = h1.at(-1)?.time + 3600;
   const levels = [1, -1].flatMap(dir => collectStructureLqLevels(context.h1State, dir, true));
+  return refineChecklistH1Sweeps(levels,h1,m5);
+}
+
+export function refineChecklistH1Sweeps(levels,h1,m5) {
+  const frontier=h1.at(-1)?.time+3600;
   return levels.flatMap(level => {
     const from = level.touched ? level.touchedTime : frontier;
     if (!Number.isFinite(from)) return [];

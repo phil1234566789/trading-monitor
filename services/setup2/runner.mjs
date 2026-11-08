@@ -6,10 +6,10 @@ import {randomUUID} from 'node:crypto';
 import {setTimeout as delay} from 'node:timers/promises';
 import {scanTradeSetup2Window} from '../../src/tradeSetup2Scan.js';
 import {buildHistoricalDailyAnchors} from '../../src/tradeSetup2Anchors.js';
-import {setup1RecognitionTime} from '../../src/setup1RecognitionTime.js';
+import {assembleSetupSources,setupSourceKey,setupSourceRecognitionTime} from '../../src/setupSources.js';
 import {tradeSetupFromRow} from '../../src/tradeSetupRow.js';
 import {evaluateTradingHours} from '../../src/tradeSetupChecklistTime.js';
-import {minuteAlarmEvents,structureReady,deliveryReason,rememberStructure} from './events.js';
+import {minuteAlarmEvents,structureReady,deliveryReason,rememberStructure,structureTrackingKey} from './events.js';
 import {RANGE_HISTORY_WARNING} from '../../supabase/functions/_shared/setup2RangeWarnings.js';
 import {requestJson,requestDiagnostic} from '../../scripts/requestJson.mjs';
 import {partitionLiveSources,suspendedResumeTime,recoverSuspendedRange,recoveryConfig,refreshRecoveredHistory} from './recovery.js';
@@ -73,15 +73,17 @@ async function instrumentTick(row,sessions,schedules,news) {
   const retained=(previous.activeRanges ?? []).map(r=>r.source).filter(Boolean);
   errorPhase='fetch';
   const raw=await client.pages('trade_setups',{instrument:`eq.${instrument}`,source:'eq.live',created_at:`gte.${iso(latest.structureStartTime)}`,select:'*,trade_setup_sweeps(*)',order:'created_at.asc,id.asc'});
-  const sources=partitionLiveSources([...retained,...raw.map(tradeSetupFromRow)],previous.suspendedRanges);
+  let sources=partitionLiveSources([...retained,...raw.map(tradeSetupFromRow)],previous.suspendedRanges);
   cache.entries=[...new Map([...cache.entries,...(previous.entries ?? [])].map(s=>[s.entry.id,s])).values()];
   cache.structures=new Map([...cache.structures,...Object.entries(previous.structureKnownAt ?? {})]);
-  const relevant=anchors.filter(a=>sources.some(s=>a===anchors.findLast(p=>p.knownAt<=setup1RecognitionTime(s))));
+  const relevant=anchors.filter(a=>sources.some(s=>a===anchors.findLast(p=>p.knownAt<=setupSourceRecognitionTime(s))));
   const m5Start=Math.min(latest.structureStartTime,...relevant.map(a=>a.structureStartTime));
   if(cache.m5Start!=null && m5Start<cache.m5Start)delete cache['5m'];cache.m5Start=m5Start;
   const m5=await updateCandles(cache,instrument,'5m',m5Start);
   if(!m5.length)throw new Error('Geschlossene M5-Kerzen fehlen');
   let lastM5=m5.at(-1).time;const closedM5=lastM5+300;
+  sources=partitionLiveSources(assembleSetupSources({instrument,tradeSetups:sources,m5Candles:m5,h1Candles:h1,
+   evaluatedAt:closedM5,sessionConfigs:sessions,includeSweepRetestSources:true}),previous.suspendedRanges);
   const tradingWindows=schedules.find(s=>s.instrument===instrument)?.trading_windows;
   if(!tradingWindows)throw new Error('Handelszeiten fehlen');
   const lastProcessed=seconds(previous.evaluatedThrough);
@@ -95,7 +97,7 @@ async function instrumentTick(row,sessions,schedules,news) {
   }
   errorPhase='evaluate';
   const events=[],ranges=new Map(),minuteChecks=new Map(),entries=new Map(cache.entries.map(s=>[s.entry.id,s]));
-  const input={instrument,scanMemo:cache.scanMemo,m1Candles:cache['1m'],tradeSetups:sources,m5Candles:m5,h1Candles:h1,dailyAnchors:anchors,sessionConfigs:sessions,tradingWindows,
+  const input={instrument,scanMemo:cache.scanMemo,m1Candles:cache['1m'],tradeSetups:sources,sourcesAssembled:true,includeSweepRetestSources:true,m5Candles:m5,h1Candles:h1,dailyAnchors:anchors,sessionConfigs:sessions,tradingWindows,
    news:news.map(n=>({...n,eventTime:seconds(n.event_time)})),newsLoadStatus:'ready',settings:{allowSpreadHourGaps:true},yieldControl:()=>delay(0),
    loadM1Candles:async({structureFromTime})=>{
     // Scanner bestimmt Sweep-/P5-Vorlauf. Preisvergleich braucht die bestätigte OB-Historie ebenfalls.
@@ -106,8 +108,8 @@ async function instrumentTick(row,sessions,schedules,news) {
    },onSnapshot:s=>{if(s.entry)entries.set(s.entry.id,{setupKey:s.setupKey,entry:s.entry});else ranges.set(s.setupKey,s);}};
   // Nach Neustart rekonstruieren wir die Entry-/Lifecycle-Historie mit dem unveränderten Batchpfad.
   const baselineTo=Number.isFinite(lastProcessed)?Math.min(lastProcessed,closedM5):closedM5;
-  if(startup && previous.runtimeVersion!=='live-minute-v2' && sources.length && Math.min(...sources.map(setup1RecognitionTime))<=baselineTo){
-   await scanTradeSetup2Window({...input,existingEntries:[],fromTime:Math.min(...sources.map(setup1RecognitionTime)),toTime:baselineTo,onMinuteCheck:minute=>rememberStructure(minute,cache.structures)});
+  if(startup && previous.runtimeVersion!=='live-minute-v2' && sources.length && Math.min(...sources.map(setupSourceRecognitionTime))<=baselineTo){
+   await scanTradeSetup2Window({...input,existingEntries:[],fromTime:Math.min(...sources.map(setupSourceRecognitionTime)),toTime:baselineTo,onMinuteCheck:minute=>rememberStructure(minute,cache.structures)});
    cache.entries=[...entries.values()];
   }
   if(startup){await updateCandles(cache,instrument,'5m',m5Start);lastM5=m5.at(-1).time;}
@@ -125,12 +127,12 @@ async function instrumentTick(row,sessions,schedules,news) {
   const onMinuteCheck=minute=>{
    evidence.recordMinute(minute);
    const {context,check,knownAt}=minute;
-   minuteChecks.set(context.setupKey, check);
-   const source=sources.find(s=>`${instrument}:setup1:${s.tradeSetupId}`===context.setupKey);
+   minuteChecks.set(context.setupKey, minute.combinedCheck ?? check);
+   const source=sources.find(s=>setupSourceKey(s)===context.setupKey);
    cache.ranges.set(context.setupKey,{setupKey:context.setupKey,direction:context.direction,
-    structureReady:structureReady(check.conditions,context.direction,knownAt,check.entryPattern ?? ENTRY_PATTERN_1_VERSION),lastM1Time:knownAt-60,source});
+    structureReady:(minute.combinedCheck?.patterns ?? [check]).some(pattern=>structureReady(pattern.conditions,context.direction,knownAt,pattern.entryPattern ?? ENTRY_PATTERN_1_VERSION)),lastM1Time:knownAt-60,source});
    rememberStructure(minute,cache.structures);
-   for(const event of minuteAlarmEvents({...minute,structureFirstKnownAt:cache.structures.get(context.setupKey)},tradingWindows)){
+   for(const event of minuteAlarmEvents({...minute,structureFirstKnownAt:cache.structures.get(structureTrackingKey(minute))},tradingWindows)){
     event.missed_reason=deliveryReason({signalAt:seconds(event.signal_at),lastSuccess:previous.lastSuccessAt,
      nextDue:seconds(previous.nextExpectedCheck),latestClosed,startup:startup&&!Number.isFinite(lastProcessed),now});
     events.push(event);
@@ -150,12 +152,12 @@ async function instrumentTick(row,sessions,schedules,news) {
   const active=[],suspended=[...(previous.suspendedRanges ?? [])];
   for(const [setupKey,snapshot] of ranges){
    if(snapshot.dealingRange?.status!=='validated' || snapshot.rangeCourse?.lifecycle?.main?.state==='ended')continue;
-   const source=sources.find(s=>`${instrument}:setup1:${s.tradeSetupId}`===setupKey);
+   const source=sources.find(s=>setupSourceKey(s)===setupKey);
    if(snapshot.rangeCourse?.lifecycle?.main?.state==='unknown'){
     const prior=(previous.suspendedRanges ?? []).find(r=>r.setupKey===setupKey);
     const resume=prior?suspendedResumeTime(prior):Number.isFinite(lastProcessed)?lastProcessed:suspendedResumeTime({source});
     suspended.push({setupKey,direction:snapshot.direction,source,reason:RANGE_HISTORY_WARNING,
-     suspendedAt:prior?.suspendedAt ?? iso(now),historyStart:snapshot.rangeCourse?.selectedAt ?? setup1RecognitionTime(source),evaluatedThrough:iso(resume)});continue;
+     suspendedAt:prior?.suspendedAt ?? iso(now),historyStart:snapshot.rangeCourse?.selectedAt ?? setupSourceRecognitionTime(source),evaluatedThrough:iso(resume)});continue;
    }
    const range=cache.ranges.get(setupKey) ?? {setupKey,direction:snapshot.direction,structureReady:false,lastM1Time:null,source};
    if(snapshot.rangeCourse?.lifecycle?.entrySearchAllowed===false)range.structureReady=false;

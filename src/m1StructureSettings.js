@@ -1,4 +1,5 @@
 export const M1_STRUCTURE_PERIOD = 5;
+export const M1_FVG_RETEST_STRUCTURE_PERIOD = 2;
 // Q48 erlaubt diese Kerzen nur zur Fraktalbestätigung, nie als Strukturwurzeln.
 export const M1_FRACTAL_SUPPORT = 9;
 // Rohdaten-Vorlauf überbrückt Spread Hour; der Builder lässt nur neun brauchbare Stützkerzen zu.

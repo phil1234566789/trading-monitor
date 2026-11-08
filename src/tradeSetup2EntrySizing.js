@@ -1,5 +1,6 @@
 import { entryPattern1M5BosMatches } from './entryPattern1M5Bos.js';
 import {entryPatternVersion} from './entryPattern.js';
+import {isEntryPattern2,entryPattern2ConditionsReady} from './entryPattern2Conditions.js';
 import { usesM5BosEntryPattern1, entryPattern1ConditionsReady, isEntryPattern1, usesCountertrendM5BosEntryPattern1, usesEntryPattern1Categories, entryPattern1StructureCategory, entryPattern1CategoryMetadata } from './entryPattern1Conditions.js';
 
 export const ENTRY_SIZING_VERSION = 'dr-against-m5-trend-choch-v1';
@@ -8,6 +9,8 @@ export const ENTRY_PATTERN_1_SIZING_VERSION = 'relative-full-entry-v3';
 export const ENTRY_RISK_BUDGET = 500;
 
 export function entryAgainstM5Allowed(checklist, entry) {
+  if (isEntryPattern2(entryPatternVersion(entry))) return entry.conditions?.fvg?.recognizedAt===entry.recognizedAt
+    && entryPattern2ConditionsReady(entry.conditions,entry.direction,entry.recognizedAt);
   if (isEntryPattern1(entryPatternVersion(entry))) return entry.conditions?.fvg?.recognizedAt === entry.recognizedAt
     && entryPattern1ConditionsReady(entry.conditions,entry.direction,entry.recognizedAt,entryPatternVersion(entry));
   const trend = checklist.checks?.m5Trend?.structureReaction?.trend;
@@ -16,6 +19,13 @@ export function entryAgainstM5Allowed(checklist, entry) {
 }
 
 export function entrySizingAt(checklist, entry) {
+  if (isEntryPattern2(entryPatternVersion(entry))) {
+    const confirmed=checklist.evaluatedAt===entry.recognizedAt && entryAgainstM5Allowed(checklist,entry);
+    // Pattern 2 ist nach seiner vollständigen M1-Sequenz ein Full Entry; M5-BOS ist kein Gate.
+    return {version:ENTRY_PATTERN_1_SIZING_VERSION,model:'relative-full-entry',evaluatedAt:entry.recognizedAt,
+      entryCategory:confirmed?'full':null,positionSizeFactor:confirmed?1:null,fullFactor:1,factor:confirmed?1:null,
+      reason:confirmed?'m1PatternConfirmed':'invalidConditions'};
+  }
   if (usesEntryPattern1Categories(entryPatternVersion(entry))) {
     const category=checklist.evaluatedAt===entry.recognizedAt && entryAgainstM5Allowed(checklist,entry)
       ? entryPattern1StructureCategory(entry.conditions,entry.direction,entry.recognizedAt,entryPatternVersion(entry)) : null;

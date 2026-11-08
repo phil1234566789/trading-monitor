@@ -5,6 +5,7 @@ import { entryRiskScale, formatRiskPips, ENTRY_RISK_REASON_LABELS } from './entr
 import { formatBerlinTime } from './berlinTime.js';
 import { entrySizingLabel } from './tradeSetup2EntrySizing.js';
 import { usesPivotBreakEntryPattern1 } from './entryPattern1Conditions.js';
+import { M1_FVG_RETEST_PATTERN_VERSION } from './m1FvgRetestSequence.js';
 
 export function m1EntryFromFvg(context, fvg, candles, evaluatedAt, retest = null) {
   if (!fvg || !context?.setupKey || !Number.isFinite(evaluatedAt)
@@ -19,7 +20,8 @@ export function m1EntryFromFvg(context, fvg, candles, evaluatedAt, retest = null
   // Das Retestextrem ist beim Entry bekannt, auch wenn seine rechten P5-Kerzen
   // noch fehlen. Spätere Hochs/Tiefs dürfen den eingefrorenen Stopp nicht verschieben.
   const extreme = retestRows.reduce((best, c) => !best || (short ? c.high > best.high : c.low < best.low) ? c : best, null);
-  const stopOB=usesPivotBreakEntryPattern1(entryPatternVersion(context)) ? retest?.orderBlock : context.primary.reactionOB;
+  const pattern2=entryPatternVersion(context)===M1_FVG_RETEST_PATTERN_VERSION;
+  const stopOB=usesPivotBreakEntryPattern1(entryPatternVersion(context)) || pattern2 ? retest?.orderBlock : context.primary.reactionOB;
   const stops = {
     wide: { price: stopOB?.[short ? 'top' : 'bottom'] ?? null, sourceTime: stopOB?.startTime },
     narrow: { price: extreme?.[priceField] ?? null, sourceTime: extreme?.time ?? null },
@@ -34,8 +36,8 @@ export function m1EntryFromFvg(context, fvg, candles, evaluatedAt, retest = null
       stops[variant] = { ...stops[variant], structuralPrice: stops[variant].price, price: scale.stop };
   }
   const pattern1=usesPivotBreakEntryPattern1(entryPatternVersion(context));
-  return { id: pattern1 ? `${context.instrument}:${context.setupKey}:${entryPatternVersion(context)}:${fvg.recognizedAt}`
-      : `${context.instrument}:${context.setupKey}:entry-1`, label: pattern1 ? 'Entry Pattern 1' : 'Entry 1',
+  return { id: pattern1 || pattern2 ? `${context.instrument}:${context.setupKey}:${entryPatternVersion(context)}:${fvg.recognizedAt}`
+      : `${context.instrument}:${context.setupKey}:entry-1`, label: pattern2 ? 'Entry Pattern 2' : pattern1 ? 'Entry Pattern 1' : 'Entry 1',
     instrument: context.instrument, setupKey: context.setupKey, direction: context.direction,
     candleTime: candle.time, recognizedAt: fvg.recognizedAt, price: candle.close, stops, scales };
 }

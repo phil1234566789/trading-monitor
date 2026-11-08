@@ -1,5 +1,6 @@
 import {skipSpreadHourGaps} from '../../src/spreadHourGaps.js';
 import {entryPattern1ConditionResults,isEntryPattern1} from '../../src/entryPattern1Conditions.js';
+import {entryPattern2ConditionResults,isEntryPattern2} from '../../src/entryPattern2Conditions.js';
 
 const checkpoints = [
  ['liquiditySweep','A · Liquidity Sweep'], ['reaction','B · Reaktion'],
@@ -10,7 +11,7 @@ const labels = {
  m5Countertrend:'M5-Countertrend', m5Bos:'M5-BOS', m5Choch:'M5-CHoCH',
  m1PivotBreak:'M1-Pivotbruch', m1Choch:'M1-CHoCH', m1Bos:'M1-BOS',
  retest:'M5-OB-Retest', retestOrderBlock:'Retest-Orderblock in Setup-Richtung',
- fvg:'Gleichgerichtete M1-FVG', fvgAfterRetest:'FVG nach Retest'
+ fvg:'Gleichgerichtete M1-FVG', fvgAfterRetest:'FVG nach Retest',retestedFvg:'Bekannte M1-FVG zum Retest',fvgRetest:'M1-FVG-Retest'
 };
 
 export function watcherRangeEvidence(snapshot, entry, latestM1) {
@@ -30,8 +31,10 @@ export function watcherRangeEvidence(snapshot, entry, latestM1) {
  } else if (stage === 'validated') {
   step = 'H · Entry finden';
   if (snapshot.entryEligibility?.status === 'blocked') missing = snapshot.entryEligibility.details?.[0] ?? 'Handelszeit / Session / News gesperrt';
-  else if (isEntryPattern1(m1?.entryPattern) && conditions && m1.status !== 'error') {
-   const rule = entryPattern1ConditionResults(conditions, snapshot.direction, m1.evaluatedAt, m1.entryPattern)
+  else if ((isEntryPattern1(m1?.entryPattern)||isEntryPattern2(m1?.entryPattern)) && conditions && m1.status !== 'error') {
+   const rules=isEntryPattern2(m1.entryPattern)?entryPattern2ConditionResults(conditions,snapshot.direction,m1.evaluatedAt)
+    :entryPattern1ConditionResults(conditions,snapshot.direction,m1.evaluatedAt,m1.entryPattern);
+   const rule = rules
     .find(rule => rule.required && !rule.passed && Object.hasOwn(conditions, rule.key)
       && (conditions[rule.key] === null || (['m1PivotBreak','m1Choch','m1Bos'].includes(rule.key)
        && Number.isFinite(conditions[rule.key]?.recognizedAt) && conditions[rule.key]?.type && conditions[rule.key]?.direction)));

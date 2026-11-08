@@ -82,6 +82,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
       dataStatus: props.dbTradeSetups?.length && daily?.status.value !== 'ready'
         ? daily?.status.value ?? 'loading' : data.status,
       tradeSetups: props.dbTradeSetups ?? [], dailyAnchors, closeReactionCache, setupClassificationCache,setupMemo,dataRevision,
+      includeSweepRetestSources:true,
       settings: settings(), sessionConfigs,
       tradingWindows: timeData.tradingSchedules?.[props.symbol]?.tradingWindows,
       news: timeData.newsEvents,

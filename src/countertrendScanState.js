@@ -7,7 +7,7 @@ export function validateCountertrendResume(input,steps){
  return state;
 }
 export function countertrendScanState({input,steps,nextStep,setupIndex,known,saved,seen,entries,entryCount,evaluations,loadedFrom,lifecycles,executions,searchThrough,entryProgress,checklistHistory,recognized,finalized}){
- const activeKeys=new Set([...known.values()].map(s=>`${input.instrument}:setup1:${s.tradeSetupId}`));
+ const activeKeys=new Set([...known.values()].map(setupSourceKey));
  // Keine Kerzen, fertigen Snapshots oder Strukturpools kopieren; Maps bleiben clone-fähig.
  return{version:COUNTERTREND_SCAN_STATE_VERSION,identity:input.checkpointIdentity,instrument:input.instrument,fromTime:input.fromTime,toTime:input.toTime,nextStep,nextAt:steps[nextStep]??null,setupIndex,knownIds:[...known.keys()],saved:[...saved],seen:[...seen],entryCount,evaluations,loadedFrom,
   entries:entries.filter(s=>activeKeys.has(s.setupKey)).map(s=>({setupKey:s.setupKey,entry:s.entry})),
@@ -15,3 +15,4 @@ export function countertrendScanState({input,steps,nextStep,setupIndex,known,sav
   entryProgress:entryProgress.entries().map(([key,{detectM5OrderBlocks,...value}])=>[key,value]),
   history:checklistHistory.checkpoint(activeKeys),recognizedFinalized:[...recognized].filter(([,base])=>finalized(base)).map(([key])=>key)};
 }
+import {setupSourceKey} from './setupSources.js';

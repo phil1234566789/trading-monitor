@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "status": "engine-reference-only-source-path-undecided",
+  "status": "positive-entry-engine-reference-common-dr-gates-independent",
   "patternVersion": "m1-structure-fvg-retest-v1",
   "sourceFixture": "xauusd-dr121-exploratory-short.json",
   "sourceM1Sha256": "76539c103c669812c033886d850fdf3747054e09743003e78aa8dec8126635b4",
@@ -34,9 +34,9 @@
     "confirmationCandleClose": 4034.12
   },
   "limitations": [
-    "No automatic dealing-range source integration or production activation is claimed.",
+    "The additional source is recognized at 12:10; unchanged common gate D rejects this source because current and outer M5 are both downtrend. No complete DR121 entry acceptance is claimed.",
     "Existing journal positions 144 and 145 retain their original entries.",
     "This is a separate rule reference, not a relabeling of the original exploratory fixture.",
-    "M5 source eligibility, common gates, sizing and risk metadata are not implemented by this pure sequence slice."
+    "Gold lot execution remains unsupported by the existing simulation contract; Full means factor 1 and does not invent a contract size."
   ]
 }

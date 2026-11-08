@@ -1,5 +1,5 @@
 import {createSharedOrderBlockDetector} from './sharedOrderBlocks.js';
-import { setup1RecognitionTime } from './setup1RecognitionTime.js';
+import { setupSourceRecognitionTime,setupSourceId,setupSourceKey,assembleSetupSources } from './setupSources.js';
 import { evaluateCountertrendChecklist } from './countertrendChecklist.js';
 import { evaluateDealingRange } from './tradeSetup2DealingRange.js';
 import { activeM1Context, buildM1Structure } from './m1Structure.js';
@@ -27,8 +27,8 @@ export async function scanCountertrendWindow(input) {
   const cooperate=async()=>{
     if(++minuteWork%yieldEvery===0 || Date.now()-yieldedAt>=25){await yieldControl();yieldedAt=Date.now();}
   };
-  const setups=(input.tradeSetups ?? []).filter(s=>s.instrument===instrument)
-    .map(s=>({source:s,at:setup1RecognitionTime(s)})).filter(s=>s.at<=toTime).sort((a,b)=>a.at-b.at);
+  const setups=assembleSetupSources({...input,evaluatedAt:toTime}).filter(s=>s.instrument===instrument)
+    .map(s=>({source:s,at:setupSourceRecognitionTime(s)})).filter(s=>s.at<=toTime).sort((a,b)=>a.at-b.at);
   if (!setups.length) {
     await onProgress?.({phase:'scan',completed:0,total:0,m5Evaluations:0,m1Candles:0}); return [];
   }
@@ -64,7 +64,7 @@ export async function scanCountertrendWindow(input) {
   const outcomesAt=(at,sources)=>{
     const outcomes=new Map();
     for (const snapshot of entries) {
-      if(useMemo && !sources.some(s=>snapshot.setupKey===`${instrument}:setup1:${s.tradeSetupId}`))continue;
+      if(useMemo && !sources.some(s=>snapshot.setupKey===setupSourceKey(s)))continue;
       const outcomesForEntry=['wide','narrow'].map(variant=>{
         const progress=useMemo ? executionProgress(`${snapshot.entry.id}:${variant}`) : undefined;
         if(progress?.final && progress.final.evaluatedAt<=at)return {...progress.final,evaluatedAt:at};
@@ -86,14 +86,14 @@ export async function scanCountertrendWindow(input) {
     && base.setup.classifications.every(c=>c.outerTrend!=='unknown'
       && (c.currentTrend!=='unknown' || c.reason==='äußerster M5-Trend gegen Setup-Richtung'));
   const evaluateAt=(at,sources)=>{
-    for (const source of sources) if (!recognized.get(source.tradeSetupId) || !finalized(recognized.get(source.tradeSetupId))) {
-      const recognitionTime=setup1RecognitionTime(source);
-      if(!rebuilding.delete(source.tradeSetupId))evaluations++;
-      recognized.set(source.tradeSetupId,evaluateCountertrendChecklist({...input,evaluatedAt:recognitionTime,tradeSetups:[source],
+    for (const source of sources) if (!recognized.get(setupSourceId(source)) || !finalized(recognized.get(setupSourceId(source)))) {
+      const recognitionTime=setupSourceRecognitionTime(source);
+      if(!rebuilding.delete(setupSourceId(source)))evaluations++;
+      recognized.set(setupSourceId(source),evaluateCountertrendChecklist({...input,sourcesAssembled:true,evaluatedAt:recognitionTime,tradeSetups:[source],
         m5Candles:m5.filter(c=>c.time+300<=recognitionTime),h1Candles:h1.filter(c=>c.time+3600<=recognitionTime),
         setupClassificationCache:classificationCache,setupMemo,closeReactionCache,detectScanOrderBlocks:useMemo?detectScanOrderBlocks:undefined}));
     }
-    const bases=sources.map(source=>recognized.get(source.tradeSetupId)).sort((a,b)=>b.evaluatedAt-a.evaluatedAt);
+    const bases=sources.map(source=>recognized.get(setupSourceId(source))).sort((a,b)=>b.evaluatedAt-a.evaluatedAt);
     const base=bases.find(b=>b.setup.candidates.length) ?? bases[0];
     const outcomes=outcomesAt(at,sources);
     const candidates=bases.flatMap(b=>b.setup.candidates).map(candidate=>{
@@ -120,13 +120,13 @@ export async function scanCountertrendWindow(input) {
     }
   };
   let setupIndex=resume?.setupIndex??0;
-  const sourcesById=new Map(setups.map(s=>[s.source.tradeSetupId,s.source]));
+  const sourcesById=new Map(setups.map(s=>[setupSourceId(s.source),s.source]));
   const known=new Map((resume?.knownIds??[]).map(id=>{if(!sourcesById.has(id))throw new Error('Checkpoint setup source missing');return[id,sourcesById.get(id)];}));
   const checkpoint=async(index,at)=>{await input.onCheckpoint?.({completed:index+1,total:steps.length,evaluatedAt:at},()=>countertrendScanState({input,steps,nextStep:index+1,setupIndex,known,saved,seen,entries,entryCount,evaluations,loadedFrom,lifecycles,executions,searchThrough,entryProgress,checklistHistory,recognized,finalized}));};
   for(let index=resume?.nextStep??0;index<steps.length;index++){
     const at=steps[index];
     signal?.throwIfAborted();
-    while(setupIndex<setups.length && setups[setupIndex].at<=at){const source=setups[setupIndex++].source;known.set(source.tradeSetupId,source);}
+    while(setupIndex<setups.length && setups[setupIndex].at<=at){const source=setups[setupIndex++].source;known.set(setupSourceId(source),source);}
     const sources=[...known.values()];
     if(!sources.length){await onProgress?.({phase:'scan',completed:index+1,total:steps.length,evaluatedAt:at,
       entries:entryCount,setups:saved.size,m5Evaluations:evaluations,m1Candles:m1.length});
@@ -134,15 +134,15 @@ export async function scanCountertrendWindow(input) {
     const checklist=evaluateAt(at,sources);
     await save(checklist);
     if(useMemo)for(const candidate of checklist.setup.candidates)if(candidate.lifecycle?.main.state==='ended'){
-      known.delete(candidate.tradeSetupId);recognized.delete(candidate.tradeSetupId);
+      known.delete(candidate.sourceId);recognized.delete(candidate.sourceId);
       lifecycles.delete(candidate.id);entryProgress.delete(candidate.id);searchThrough.delete(candidate.id);
     }
     if(useMemo)for(const source of sources){
-      const base=recognized.get(source.tradeSetupId);
-      if(base && finalized(base) && !base.setup.candidates.length){known.delete(source.tradeSetupId);recognized.delete(source.tradeSetupId);}
+      const base=recognized.get(setupSourceId(source));
+      if(base && finalized(base) && !base.setup.candidates.length){known.delete(setupSourceId(source));recognized.delete(setupSourceId(source));}
     }
     for (const candidate of checklist.setup.candidates) {
-      const single={...checklist,checks:{...checklist.checks,...candidate.checks},direction:candidate.direction,
+      const single={...checklist,entryPattern:candidate.entryPattern,checks:{...checklist.checks,...candidate.checks},direction:candidate.direction,
         setup:{...checklist.setup,primary:candidate},dealingRange:evaluateDealingRange(checklist,candidate)};
       const context=activeM1Context(single);
       if (!context) continue;
@@ -163,7 +163,7 @@ export async function scanCountertrendWindow(input) {
         const knownAt=candle.time+60;
         if(useMemo && knownAt<=(searchThrough.get(candidate.id) ?? -Infinity))continue;
         if(useMemo)searchThrough.set(candidate.id,knownAt);
-        const current=evaluateAt(knownAt,[sources.find(s=>s.tradeSetupId===candidate.tradeSetupId)]);
+        const current=evaluateAt(knownAt,[sources.find(s=>setupSourceId(s)===candidate.sourceId)]);
         const active=activeM1Context(current);
         if(knownAt>=fromTime)for(const c of current.setup.candidates)checklistHistory.record(current,c,'M1');
         if (!active) break;
@@ -176,17 +176,21 @@ export async function scanCountertrendWindow(input) {
         let follow=entryProgress.get(candidate.id);
         if(!follow){follow={};entryProgress.set(candidate.id,follow);}
         follow.detectM5OrderBlocks??=rows=>detectScanOrderBlocks(rows,'5m');
-        const check=evaluateM1Checklist({context:active,structure,candles:rows,evaluatedAt:knownAt,closeReactionCache:m1Cache,
+        const combined=evaluateM1Checklist({context:active,structure,candles:rows,evaluatedAt:knownAt,closeReactionCache:m1Cache,
           entryProgress:useMemo ? follow : undefined});
-        if(knownAt>=fromTime)checklistHistory.record(current,current.setup.primary,'M1',check);
+        if(knownAt>=fromTime)checklistHistory.record(current,current.setup.primary,'M1',combined);
+        for(const patternCheck of combined.patterns ?? [combined]){
+        const grouped=combined.entryChecks?.find(item=>item.entry.id===patternCheck.entry?.id);
+        const check=combined.entryChecks?{...patternCheck,entry:grouped?.entry ?? null}:patternCheck;
         const newEntry=check.entry?.recognizedAt===knownAt && !seen.has(check.entry.id) && knownAt>=fromTime;
         const snapshot=newEntry && createSetup2Entry({instrument,evaluatedAt:knownAt,tradingWindows:input.tradingWindows,sessionConfigs:input.sessionConfigs,news:input.news,newsLoadStatus:input.newsLoadStatus},
           ()=>buildTradeSetup2Snapshot({checklist:current,m1Check:check,m1Structure:structure,m1Candles:rows}));
         // Live-Vorwarnungen brauchen auch Minuten ohne FVG; Batch bleibt unverändert.
-        if(knownAt>=fromTime)await onMinuteCheck?.({checklist:current,context:active,check,knownAt,snapshot:snapshot || null});
+        if(knownAt>=fromTime)await onMinuteCheck?.({checklist:current,context:active,check,combinedCheck:combined,knownAt,snapshot:snapshot || null});
         if (!snapshot) continue;
         checklistHistory.record(current,current.setup.primary,'M1',check,snapshot.entry);
         seen.add(snapshot.entry.id);entryCount++;entries.push(collectSnapshots?snapshot:{setupKey:snapshot.setupKey,entry:snapshot.entry});await emit(snapshot);
+        }
       }
     }
     await onProgress?.({phase:'scan',completed:index+1,total:steps.length,evaluatedAt:at,

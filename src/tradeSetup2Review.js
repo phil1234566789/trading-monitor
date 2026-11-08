@@ -13,6 +13,7 @@ import { savedDealingRangeStatus, isDisqualifiedDealingRange } from './tradeSetu
 import { antiConfluenceStatus, checklistObservationRules, observationRuleDetails } from './checklistObservationRules.js';
 import { usesM5BosEntryPattern1, usesPivotBreakEntryPattern1, isEntryPattern1, usesOptionalM5BosEntryPattern1 } from './entryPattern1Conditions.js';
 import {entryPattern1M5ConfirmationLabel} from './entryPattern1M5Confirmation.js';
+import {isEntryPattern2,entryPattern2ConditionResults} from './entryPattern2Conditions.js';
 
 export const REVIEW_STATUS_LABELS = { passed: 'Erfüllt', unmet: 'Fehlt am gespeicherten Stand', unknown: 'Unbekannt / unbewertet' };
 export const REVIEW_STATUS_ICONS = { passed: '✓', unmet: '✕', unknown: '?' };
@@ -48,16 +49,23 @@ export function filterDealingRanges(groups, filter = 'current') {
 
 // Die Tabelle erklärt gespeicherte Prüfungen, sie führt keinen neuen Scan aus.
 // Ohne Entry fehlt eine vollständige M1-Prüfung; das ist kein negativer Jahresbefund.
-export function setupEntryConditions(snapshot) {
+export function setupEntryConditions(snapshot,selectedPattern=null) {
   const at = snapshot.knownAt;
   const known = time => Number.isFinite(time) && Number.isFinite(at) && time <= at;
   const checklist = snapshot.checklist?.status === 'ready' && known(snapshot.checklist.evaluatedAt) ? snapshot.checklist : null;
   const checks = checklist?.checks ?? {}, primary = checklist?.setup?.primary;
-  const m1 = known(snapshot.m1Check?.evaluatedAt)
-    ? normalizeM1ChecklistPresentation(snapshot.m1Check, snapshot.direction, at) : null;
-  const entry = known(snapshot.entry?.recognizedAt) ? snapshot.entry : null;
+  const selectedM1=snapshot.m1Check?.patterns?.find(check=>entryPatternVersion(check)===selectedPattern) ?? snapshot.m1Check;
+  const m1 = known(selectedM1?.evaluatedAt)
+    ? normalizeM1ChecklistPresentation(selectedM1, snapshot.direction, at) : null;
+  const storedEntry = known(snapshot.entry?.recognizedAt) ? snapshot.entry : null;
+  const matches=storedEntry?.patternMatches ?? [];
+  const match=matches.find(item=>item.entryPattern===selectedPattern);
+  // Nur die Belegansicht wechselt; Ausführung, Sizing und gespeicherter Besitzer bleiben unverändert.
+  const entry=match?{...storedEntry,...match,label:isEntryPattern2(match.entryPattern)?'Entry Pattern 2':'Entry Pattern 1'}:storedEntry;
   const version=entryPatternVersion(entry) ?? entryPatternVersion(m1) ?? entryPatternVersion(checklist);
   const pattern1=isEntryPattern1(version);
+  const pattern2=isEntryPattern2(version),patternLabel=pattern2?'Entry Pattern 2':pattern1?'Entry Pattern 1':'Entry 1';
+  const patternOptions=matches.map(item=>({version:item.entryPattern,id:item.id,label:isEntryPattern2(item.entryPattern)?'Entry Pattern 2':'Entry Pattern 1'}));
   const price = value => Number.isFinite(value) ? fmtPrice(value, pricePrecisionForInstrument(snapshot.instrument)) : 'unbekannt';
   const date = time => known(time) ? `${formatDatedTime(time)} Uhr` : 'nicht gespeichert';
   const normal = status => status === 'passed' ? 'passed' : ['unmet', 'pending', 'blocked'].includes(status) ? 'unmet' : 'unknown';
@@ -97,7 +105,7 @@ export function setupEntryConditions(snapshot) {
   add('time', 'Handelszeit / Session / News',
     timeCheck?.status === 'blocked' ? 'unmet' : timeCheck?.status === 'passed' ? 'passed' : 'unknown',
     [...timeCheck?.details ?? ['Zeitprüfung nicht gespeichert.'],
-      pattern1 ? 'Das zentrale Entry-Gate prüft Handelszeiten, Sessions und News unmittelbar vor dem Entry.'
+      pattern1 || pattern2 ? 'Das zentrale Entry-Gate prüft Handelszeiten, Sessions und News unmittelbar vor dem Entry.'
         : 'Entry 1 wird nur durch eine bekannte Sperre blockiert. Unbekannte Angaben gelten nicht als bestätigte Freigabe.']);
   const validity = primary?.validity;
   const riskReason=savedRiskInvalidationLabel(primary?.lifecycle,at);
@@ -107,11 +115,11 @@ export function setupEntryConditions(snapshot) {
     riskReason?[riskReason,...dr?.details ?? []]:[searchEnded ? 'Entry-Suche nach T1 oder Lifecycle-Ende beendet.' : validity?.state === 'active' ? 'Am Bewertungsstand aktiv.' : validity?.state === 'ended' && known(validity.recognizedAt)
       ? `Beendet: ${ { target1: 'T1 vor Invalidation', target2:'T2 erreicht', entriesClosed:'alle Entries geschlossen', invalidation: 'Invalidation vor T1', both: 'T1 und Invalidierung' }[validity.reason] ?? 'Grund unbekannt' }.`
       : 'Gültigkeit nicht abschließend gespeichert. Nur ein bestätigtes Ende sperrt die M1-Auswertung.']);
-  const pivotPattern=usesPivotBreakEntryPattern1(version);
+  const pivotPattern=usesPivotBreakEntryPattern1(version)||pattern2;
   const anchor = pivotPattern ? m1?.structureStart : checks.m5Trend?.m1Anchor;
   add('anchor', pivotPattern ? 'Tatsächlicher Sweep als M1-Strukturstart' : 'Eindeutiger M5-Anker für die M1-P5-Struktur', known(anchor?.recognizedAt) ? 'passed' : 'unknown',
     known(anchor?.recognizedAt) ? [`${pivotPattern?'Sweep':'Pivot'} ${date(pivotPattern?anchor.structureFrom:anchor.pivotTime)} · ${price(anchor.price)}`] : ['Kein zeitlich belegter Anker gespeichert.'], anchor?.recognizedAt);
-  add('structure', 'M1-P5-Struktur auswertbar', m1?.currentTrend ? 'passed' : 'unknown',
+  add('structure', pattern2?'M1-P2-Struktur auswertbar':'M1-P5-Struktur auswertbar', m1?.currentTrend ? 'passed' : 'unknown',
     m1?.currentTrend ? (m1.details ?? []).slice(0, m1.trends?.length ?? 0)
       : Array.isArray(m1?.details) ? m1.details : ['Keine M1-Auswertung gespeichert.']);
   if (pattern1) for (const [key,label] of (usesM5BosEntryPattern1(version) ? [['m5Bos','M5-BOS in Setup-Richtung'],pivotPattern?['m1PivotBreak','M1-Pivotbruch ab Sweep']:['m1Choch','M1-CHoCH ab Sweep']] : [['m5Choch','M5-CHoCH in Setup-Richtung'],['m1Bos','M1-BOS in Setup-Richtung']])) {
@@ -121,7 +129,17 @@ export function setupEntryConditions(snapshot) {
     add(key,optional?`${signalLabel} · optional für Full Entry`:signalLabel,known(signal?.recognizedAt) && signal.direction===snapshot.direction ? 'passed' : optional?'observed':m1?.conditions || entry?.conditions ? 'unmet' : 'unknown',
       known(signal?.recognizedAt) ? [`Erkannt ${date(signal.recognizedAt)}`] : [optional?'Optionaler M5-BOS fehlt · Risky Entry bei erfüllten übrigen Pflichtbedingungen.':'Pflichtsignal fehlt.'],signal?.recognizedAt);
   }
-  for (const [key, label, offset] of [['retest', pattern1 ? 'Retest eines passenden M5-OB' : 'M5-OB-Retest nach bestätigter Reaktion', 2], ['fvg', pattern1 ? 'Gleichgerichtete M1-FVG nach Retest' : 'Erste gleichgerichtete M1-FVG nach Retest', 3]]) {
+  if(pattern2){
+    const conditions=entry?.conditions ?? m1?.conditions;
+    const labels={retest:'Retest eines passenden M5-OB',m1PivotBreak:'M1-P2-Pivotbruch in Traderichtung',
+      retestedFvg:'Gleichgerichtete M1-FVG ab Strukturfreigabe',fvgRetest:'Retest der bekannten M1-FVG · Wick-Überlauf zulässig',fvg:'Neue gleichgerichtete M1-FVG nach FVG-Retest'};
+    for(const rule of entryPattern2ConditionResults(conditions,snapshot.direction,entry?.recognizedAt ?? at)){
+      const fact=conditions?.[rule.key];
+      add(rule.key,labels[rule.key],rule.passed?'passed':fact?'unmet':'unknown',
+        fact?[`Erkannt ${date(fact.recognizedAt)}`,...(rule.passed?[]:['Pflichtbedingung am gespeicherten Stand nicht erfüllt.'])]:['Kein kausaler Beleg gespeichert.'],fact?.recognizedAt);
+    }
+  }
+  for (const [key, label, offset] of (pattern2?[]:[['retest', pattern1 ? 'Retest eines passenden M5-OB' : 'M5-OB-Retest nach bestätigter Reaktion', 2], ['fvg', pattern1 ? 'Gleichgerichtete M1-FVG nach Retest' : 'Erste gleichgerichtete M1-FVG nach Retest', 3]])) {
     const signal = m1?.[key] ?? entry?.conditions?.[key];
     // evaluateM1Checklist speichert nach den Trendzeilen CHoCH, BOS, Retest, FVG.
     const savedStatus = m1?.trends && m1.detailStatuses?.[m1.trends.length + offset + (m1.sweepPresentation?1:0)];
@@ -131,7 +149,7 @@ export function setupEntryConditions(snapshot) {
         ...(signal.orderBlock ? [`M5-OB ${date(signal.orderBlock.startTime)} · erkannt ${date(signal.orderBlock.recognizedAt)} · ${price(signal.orderBlock.bottom)}–${price(signal.orderBlock.top)} · ${signal.orderBlock.inclusionRule==='setup1OrderBlockIncluded' ? 'Startregel: Setup-1.0-OB' : 'ab DR-Bestätigung entstanden'}`] : [])]
       : [status === 'unmet' ? 'In der gespeicherten M1-Prüfung noch nicht erfüllt.' : 'Kein kausaler M1-Beleg gespeichert.'], signal?.recognizedAt ?? at);
   }
-  add('entry', `Schluss der FVG-Bestätigungskerze / ${pattern1 ? 'Entry Pattern 1' : 'Entry 1'}`, entry ? 'passed' : 'unknown',
+  add('entry', `Schluss der FVG-Bestätigungskerze / ${patternLabel}`, entry ? 'passed' : 'unknown',
     entry ? [...entryChecklist({ entry }).details, `Entry-Preis ${price(entry.price)} · Kerze ${date(entry.candleTime)}`]
       : ['Kein Entry in diesem Snapshot. Daraus folgt keine vollständige spätere M1-Prüfung.'], entry?.recognizedAt ?? at);
   const observations = (pivotPattern ? [] : pattern1 ? [usesM5BosEntryPattern1(version)?'bos':'choch'] : ['choch', 'bos']).map(key => {
@@ -145,5 +163,5 @@ export function setupEntryConditions(snapshot) {
   const counts = ['passed', 'unmet', 'unknown'].map(status => rows.filter(row => row.status === status).length);
   const assessment = missing.length ? { status: 'unmet', label: 'Nicht tradebar am Bewertungsstand' }
     : { status: 'unknown', label: entry ? 'Entry gespeichert · siehe Einzelbedingungen' : 'Handelbarkeit nicht vollständig belegt' };
-  return { pattern1,rows, missing, counts, assessment, observations, prerequisiteNote: reason ? inactiveM1Checklist(reason).details[0] : null };
+  return { pattern1,pattern2,patternLabel,patternOptions,version,rows, missing, counts, assessment, observations, prerequisiteNote: reason ? inactiveM1Checklist(reason).details[0] : null };
 }

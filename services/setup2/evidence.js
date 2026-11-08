@@ -3,7 +3,7 @@ import {observeCapturedRanges} from './priceObservations.js';
 import {packEvidence} from './evidencePayload.js';
 import {evidenceHash as hash} from './evidenceIdentity.js';
 import {buildTradeSetup2CandidateSnapshot} from '../../src/tradeSetup2Snapshot.js';
-import {SETUP2_VERSION} from '../../src/tradeSetup2Configuration.js';
+import {SETUP2_VERSION,CURRENT_ENTRY_PATTERNS,CURRENT_M1_PERIODS} from '../../src/tradeSetup2Configuration.js';
 import {ENTRY_PATTERN_1_VERSION} from '../../src/entryPattern1Conditions.js';
 import {M1_STRUCTURE_PERIOD} from '../../src/m1StructureSettings.js';
 import {m5BosRuleVersionFor} from '../../src/entryPattern1M5Confirmation.js';
@@ -12,7 +12,8 @@ const iso=sec=>new Date(sec*1000).toISOString();
 // Originalwissen bleibt unverändert; später finalisierte Verläufe tragen einen eigenen as-of-Stand.
 export function createLiveEvidence(config,{fromTime,toTime,startedAt,mode}) {
  const m5BosRuleVersion=m5BosRuleVersionFor(config.instrument,config.entryPattern);
- const configuration={schemaVersion:1,setupVersion:SETUP2_VERSION,drRiskVersion:JOINT_LOSS_RISK_VERSION,entryPattern:ENTRY_PATTERN_1_VERSION,m1Period:M1_STRUCTURE_PERIOD,...config,
+ const configuration={schemaVersion:1,setupVersion:SETUP2_VERSION,drRiskVersion:JOINT_LOSS_RISK_VERSION,entryPattern:ENTRY_PATTERN_1_VERSION,
+  entryPatterns:[...CURRENT_ENTRY_PATTERNS],m1Periods:{...CURRENT_M1_PERIODS},includeSweepRetestSources:true,m1Period:M1_STRUCTURE_PERIOD,...config,
   ...(m5BosRuleVersion?{m5BosRuleVersion}:{})},configurationId=hash(configuration),originals=new Map(),payloads=new Map(),origins=new Map();
  const evaluationMode=mode ?? (fromTime<Math.floor(startedAt/60)*60-60?'catchup':'live');
  function record(snapshot) {
@@ -27,7 +28,7 @@ export function createLiveEvidence(config,{fromTime,toTime,startedAt,mode}) {
  return {configurationId,evaluationMode,record,recordMinute:minute=>{
   const snapshot=minute.snapshot ?? buildTradeSetup2CandidateSnapshot({checklist:minute.checklist,candidate:minute.checklist?.setup?.primary});
   if(snapshot){
-   const original={...snapshot,m1Check:minute.check};
+   const original={...snapshot,m1Check:minute.snapshot?minute.check:minute.combinedCheck ?? minute.check};
    record(original);
   }
  },complete:(finalized=[],options={})=>{

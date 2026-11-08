@@ -7,6 +7,9 @@ import { computeRangesPivots } from './marketStructureAnalysis';
 import { buildStructureWithPhases } from './trendPhases.js';
 import { formatDatedTime } from './berlinTime.js';
 import { M1_LOAD_LEAD_IN } from './m1StructureSettings.js';
+import {M1_FVG_RETEST_STRUCTURE_PERIOD} from './m1StructureSettings.js';
+import {entryPatternVersion} from './entryPattern.js';
+import {isEntryPattern2} from './entryPattern2Conditions.js';
 
 export function snapshotOverlayTime(snapshot, replayUntil) {
   return Number.isFinite(replayUntil) ? Math.floor(replayUntil / 60) * 60 : snapshot.knownAt;
@@ -101,8 +104,10 @@ export function createSnapshotM1Reader(repository, fetchCandles) {
     const run = await (snapshot.configurationId?repository.getRun(runId,snapshot.configurationId):repository.getRun(runId));
     signal?.throwIfAborted();
     const config = run?.configuration?.instruments?.find(c => c.instrument === snapshot.instrument) ?? run?.configuration;
+    const period=isEntryPattern2(entryPatternVersion(context))?M1_FVG_RETEST_STRUCTURE_PERIOD:M1_STRUCTURE_PERIOD;
+    const configuredPeriod=config?.m1Periods?.[entryPatternVersion(context)] ?? config?.m1Period;
     if (config?.instrument !== snapshot.instrument || !supportsSnapshotIndicators(config.setupVersion)
-      || config.m1Period !== M1_STRUCTURE_PERIOD || !Array.isArray(config.sessions)) {
+      || configuredPeriod !== period || !Array.isArray(config.sessions)) {
       return unavailable('M1-Ergänzung nicht verfügbar: passende Algorithmusversion oder gespeicherte Sessions fehlen.');
     }
     // Zusätzlicher Vorlauf überbrückt ignorierte Spread-Hour-Kerzen. Reicht er
@@ -128,6 +133,6 @@ export function createSnapshotM1Reader(repository, fetchCandles) {
     if (result.status !== 'ready' || rows.at(-1)?.time + 60 !== at) {
       return unavailable('M1-Ergänzung nicht verfügbar: Archiv oder Fraktalvorlauf unvollständig.');
     }
-    return { result, message: `M1-Struktur und Debug-Pivots aus historischen Kerzen berechnet · P5 · ${result.pivotsOuter.length} Pivots · bis zum Replay-Stand ${formatDatedTime(at)} · Checklist ${formatDatedTime(snapshot.knownAt)}` };
+    return { result, message: `M1-Struktur und Debug-Pivots aus historischen Kerzen berechnet · P${period} · ${result.pivotsOuter.length} Pivots · bis zum Replay-Stand ${formatDatedTime(at)} · Checklist ${formatDatedTime(snapshot.knownAt)}` };
   }
 }

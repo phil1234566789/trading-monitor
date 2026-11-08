@@ -9,15 +9,20 @@ import { berlinDateStrFor, berlinDayRangeUtcMs } from './berlinTime.js';
 import { H1_COUNTER_DIVERGENCE_RULE, OBSERVATION_RULE_VERSION } from './checklistObservationRules.js';
 import { ENTRY_PATTERN_1_VERSION } from './entryPattern1Conditions.js';
 import {m5BosRuleVersionFor} from './entryPattern1M5Confirmation.js';
+import {M1_FVG_RETEST_PATTERN_VERSION} from './m1FvgRetestSequence.js';
+import {M1_STRUCTURE_PERIOD,M1_FVG_RETEST_STRUCTURE_PERIOD} from './m1StructureSettings.js';
 
-export const SETUP2_VERSION='countertrend-entry-model-1-v24';
+export const SETUP2_VERSION='ls-entry-patterns-v25';
+export const CURRENT_ENTRY_PATTERNS=[ENTRY_PATTERN_1_VERSION,M1_FVG_RETEST_PATTERN_VERSION];
+export const CURRENT_M1_PERIODS={[ENTRY_PATTERN_1_VERSION]:M1_STRUCTURE_PERIOD,[M1_FVG_RETEST_PATTERN_VERSION]:M1_FVG_RETEST_STRUCTURE_PERIOD};
 // Alte Snapshots behalten ihren gespeicherten Entry Pattern-Pfad im Archivreader.
-export const supportsSnapshotIndicators = version => [SETUP2_VERSION, 'countertrend-entry-model-1-v23', 'countertrend-entry-model-1-v22', 'countertrend-entry-model-1-v21', 'countertrend-entry-model-1-v20', 'countertrend-entry-model-1-v19', 'countertrend-entry-model-1-v18', 'countertrend-entry-model-1-v17', 'countertrend-entry-model-1-v15', 'countertrend-entry-model-1-v14', 'countertrend-entry-model-1-v13', 'countertrend-entry-model-1-v12', 'countertrend-entry-model-1-v11', 'countertrend-entry-model-1-v10', 'countertrend-entry-model-1-v9', 'countertrend-lifecycle-v8', 'countertrend-abcdef-v7', 'countertrend-abcd-v6', 'entry-snapshot-causal-c-m5-choch-v5', 'entry-snapshot-active-h1-trading-hours-v4', 'entry-snapshot-active-h1-p5-time-abc-v3', 'entry-snapshot-p5-time-abc-v2'].includes(version);
+export const supportsSnapshotIndicators = version => [SETUP2_VERSION, 'countertrend-entry-model-1-v24', 'countertrend-entry-model-1-v23', 'countertrend-entry-model-1-v22', 'countertrend-entry-model-1-v21', 'countertrend-entry-model-1-v20', 'countertrend-entry-model-1-v19', 'countertrend-entry-model-1-v18', 'countertrend-entry-model-1-v17', 'countertrend-entry-model-1-v15', 'countertrend-entry-model-1-v14', 'countertrend-entry-model-1-v13', 'countertrend-entry-model-1-v12', 'countertrend-entry-model-1-v11', 'countertrend-entry-model-1-v10', 'countertrend-entry-model-1-v9', 'countertrend-lifecycle-v8', 'countertrend-abcdef-v7', 'countertrend-abcd-v6', 'entry-snapshot-causal-c-m5-choch-v5', 'entry-snapshot-active-h1-trading-hours-v4', 'entry-snapshot-active-h1-p5-time-abc-v3', 'entry-snapshot-p5-time-abc-v2'].includes(version);
 export function buildTradeSetup2Configuration({instrument,settings={},sessionConfigs=[],tradingWindows,news=[],newsLoadStatus}) {
   const m5BosRuleVersion=m5BosRuleVersionFor(instrument);
   return {...checklistStatisticsConfiguration(settings,sessionConfigs,instrument),instrument,
     ...(m5BosRuleVersion?{m5BosRuleVersion}:{}),
-    entryPattern:ENTRY_PATTERN_1_VERSION,entryCategoryVersion:ENTRY_CATEGORY_VERSION,
+    entryPattern:ENTRY_PATTERN_1_VERSION,entryPatterns:[...CURRENT_ENTRY_PATTERNS],
+    includeSweepRetestSources:true,m1Periods:{...CURRENT_M1_PERIODS},entryCategoryVersion:ENTRY_CATEGORY_VERSION,
     observationRuleVersion:OBSERVATION_RULE_VERSION,antiConfluenceRules:[{...H1_COUNTER_DIVERGENCE_RULE}],
     setupVersion:SETUP2_VERSION,drRiskVersion:JOINT_LOSS_RISK_VERSION,dealingRangeVersion:COUNTERTREND_STAGE_VERSION,setupModel:'countertrend',outerM5Required:true,simulationVersion:SIMULATION_VERSION,entrySizingVersion:ENTRY_PATTERN_1_SIZING_VERSION,costVersion:SIMULATION_COST_VERSION,m1Period:5,
     m5StructurePeriod:settings.m5StructurePeriod ?? 5,m5Structure2Period:settings.m5Structure2Period ?? 2,

@@ -19,14 +19,14 @@ import {strategySetupLabel} from '../strategySetupLabels.js';
         <li>Setup 3 · Trendfortführung mit Break and Retest</li>
         <li>Setup 4 · Trendfortführung mit Orderflow</li>
       </ul>
-      <p>Die bisherigen LS-Kategorien sind zu „Setup 1 mit LS“ zusammengeführt. Der aktuelle Algorithmus mit äußerer und innerer M5-Struktur sowie das Entry Pattern bleiben unverändert. Die technischen Kriterien für Setup 3 und 4 sind noch offen.</p>
+      <p>Die bisherigen LS-Kategorien sind zu „Setup 1 mit LS“ zusammengeführt. Äußere und innere M5-Struktur bleiben erhalten. Entry Pattern 2 ergänzt das unveränderte Entry Pattern 1. Die technischen Kriterien für Setup 3 und 4 sind noch offen.</p>
     </section>
 
     <section id="abcd" aria-labelledby="abcd-title">
       <h2 id="abcd-title">Setup 1 · DR-Stufen</h2>
       <dl class="criteria">
-        <div><dt>A · Liquidity Sweep</dt><dd>Ein erkanntes Setup 1.0 liegt vor: Sweep, Protected-M5-Fraktal und zugehöriger M5-Orderblock. Kein H1-Alterskriterium.</dd></div>
-        <div><dt>B · Reaktion</dt><dd>Vorerst der zugehörige M5-Orderblock aus Setup 1.0. Eine Verbesserung der Reaktionsprüfung folgt erst nach der Jahresstatistik.</dd></div>
+        <div><dt>A · Liquidity Sweep</dt><dd>Zwei Startwege: ein erkanntes Setup 1.0 mit Sweep, Protected-M5-Fraktal und zugehörigem M5-Orderblock oder ein Liquidity Sweep mit anschließendem Retest eines bereits bekannten gleichgerichteten M5-Orderblocks. Kein H1-Alterskriterium.</dd></div>
+        <div><dt>B · Reaktion</dt><dd>Beim Setup-1.0-Startweg der zugehörige M5-Orderblock; beim zusätzlichen Startweg der bestätigte Retest des bereits vorher bekannten M5-Orderblocks. Quelle und Bekannt-Zeitpunkte werden getrennt gespeichert.</dd></div>
         <div><dt>C · M5-Trend (äußerster)</dt><dd>Der äußerste M5-Trend ab dem bekannten D1-Fraktal der Periode 4 ersetzt den H1-Trend. C muss in Setup-Richtung zeigen. Bei Gegenrichtung oder unbekanntem Trend wird abgebrochen, ohne D auszuwerten.</dd></div>
         <div><dt>D · M5-Trend (aktuell)</dt><dd>Die tiefste bestätigte M5-Strukturebene zum Erkennungszeitpunkt bestimmt den aktuellen Trend. Unbestätigte Nested-Kandidaten zählen nicht; ohne bestätigten Nested-Trend gilt der äußere Trend.</dd></div>
         <div><dt>E · Targets</dt><dd>Die bestehende Target-Auswahl bleibt erhalten. Targets gefunden bestätigt die DR; ohne Targets bleibt sie unbestätigt.</dd></div>
@@ -38,6 +38,17 @@ import {strategySetupLabel} from '../strategySetupLabels.js';
       <p><strong>Trendfortführung:</strong> C und D zeigen in Setup-Richtung. Der Typ wird erkannt, der Pfad bricht mit „Typ Trendfortführung, noch nicht umgesetzt“ ab.</p>
       <p><strong>Abbruch:</strong> C zeigt gegen die Setup-Richtung oder ist unbekannt. Grund: „äußerster M5-Trend gegen Setup-Richtung“ beziehungsweise „M5-Trend unbekannt“.</p>
       <p>C und D werden am Bekannt-Zeitpunkt des Setups mit den bis dahin geschlossenen Kerzen ausgewertet. Spätere Replay-Kerzen ändern diese Typ-Prüfung nicht.</p>
+      <section aria-labelledby="pattern2-title">
+        <h3 id="pattern2-title">Entry Pattern 2 · M1-Struktur und FVG-Retest</h3>
+        <p>Dieses zusätzliche Pattern ist für beide Startwege zulässig, auch für bestehende Setup-1.0-Quellen. Jedes Pattern speichert seine eigenen Belege und Entry-IDs. Entry Pattern 1 bleibt bei seiner bisherigen v11-Regel einschließlich M5-BOS-Pflicht.</p>
+        <ol>
+          <li>Retest eines passenden M5-Orderblocks und bestätigter M1-Pivotbruch in Traderichtung mit Periode 2.</li>
+          <li>Eine gleichgerichtete M1-FVG ist bei oder nach dem bestätigten Strukturbruch bekannt.</li>
+          <li>Eine spätere Kerze testet diese bekannte FVG an. Berührung einschließlich Wick-Überlauf zählt; vollständiges Füllen und perfekter OB-Touch sind keine zusätzlichen Bedingungen dieses FVG-Retests.</li>
+          <li>Eine neue gleichgerichtete M1-FVG wird nach dem Bekannt-Zeitpunkt des Retests bestätigt. Entry am Schluss ihrer tatsächlich vorhandenen Bestätigungskerze.</li>
+        </ol>
+        <p>Für Entry Pattern 2 gibt es kein M5-BOS-Gate und keine halbe Größe: Die vollständig bestätigte Sequenz erhält die volle konfigurierte Größe. Äußere und innere M5-Prüfung, Targets, Validierung, Handelszeiten, News-/Session-Sperren und Lifecycle bleiben gemeinsame Voraussetzungen. Nach T1 oder Lifecycle-Ende entstehen keine neuen Entries.</p>
+      </section>
       <p>Für den Retest zählen gleichgerichtete M5-OBs, die ab der DR-Bestätigung nach A bis E entstehen, auch zwischen Bestätigung und Validierung. Als ausdrücklich benannte Startregel zählt der OB aus Setup 1.0 ebenfalls. Der weite SL liegt an der Kante des geretesteten M5-OB: Short Oberkante, Long Unterkante. Jede Entry-Möglichkeit speichert die vier Belege samt Zeitpunkten und dem geretesteten OB. Nach T1 oder dem Lifecycle-Ende entstehen keine neuen Entries.</p>
       <p>Größe und Exit bleiben erhalten: 250 oder 500 USD Risiko, ganze Lots, 5 USD Roundturn-Kommission je begonnenem Lot, halber Exit bei T1, danach BE für den Rest bis T2. Neue Entries dieses Patterns sind Full Entries mit vollem Faktor. Historische Risky Entries behalten ihre gespeicherte halbe Größe; sie werden nicht nachträglich umgedeutet.</p>
       <aside class="open-decision"><h3>Nächste Festlegungen offen</h3><p>Short 97 und 105 bleiben Referenzen des bestehenden Algorithmus. Die Zusammenführung der Setup-Namen verändert weder die äußere noch die innere M5-Prüfung. Weitere Entry-Patterns werden separat festgelegt.</p><p>Die Target-Auswahl und die Erkennung der H1-Gegendivergenz bleiben unverändert. Weitere Anti-Confluence-Regeln werden separat festgelegt; die Regelliste ermöglicht zunächst reine Beobachtung.</p></aside>

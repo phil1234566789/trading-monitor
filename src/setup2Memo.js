@@ -17,5 +17,5 @@ export function setupMemoKey(source,anchor,settings,sessions,revision=0) {
   const {instrument,tradeSetupId,createdAt,dir,obTop,obBottom,obStartTime,obFvg,invalidation,ls}=source;
   return JSON.stringify([instrument,tradeSetupId,createdAt,dir,obTop,obBottom,obStartTime,obFvg,invalidation,
     ls?.price,ls?.dir,ls?.pivotTime,ls?.touchedTime,ls?.touched,source.sweeps?.[0]?.timeframe,
-    anchor?.structureStartTime,settings,sessions,revision]);
+    anchor?.structureStartTime,settings,sessions,revision,source.sourceKind,source.sourceKey,source.entryPattern]);
 }

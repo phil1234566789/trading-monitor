@@ -12,6 +12,11 @@ import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { entryAgainstM5Allowed } from './tradeSetup2EntrySizing.js';
 import { evaluateCountertrendEntryPattern1 } from './countertrendEntryPattern1.js';
 import { usesPivotBreakEntryPattern1 } from './entryPattern1Conditions.js';
+import {isEntryPattern2} from './entryPattern2Conditions.js';
+import {evaluateEntryPattern2} from './entryPattern2.js';
+import {buildM1PivotStructure} from './m1PivotStructure.js';
+import {M1_FVG_RETEST_PATTERN_VERSION} from './m1FvgRetestSequence.js';
+import {M1_FVG_RETEST_STRUCTURE_PERIOD} from './m1StructureSettings.js';
 
 const waiting = {
   abc: 'M1-Struktur wartet auf A, B und C.',
@@ -33,11 +38,31 @@ export function inactiveM1Checklist(reason) {
 }
 
 export function evaluateM1Checklist({ context, structure, candles, evaluatedAt, closeReactionCache,entryProgress }) {
+  const primary=evaluateSingleM1Checklist({context,structure,candles,evaluatedAt,closeReactionCache,entryProgress});
+  if(!context.entryPatterns?.includes(M1_FVG_RETEST_PATTERN_VERSION)||isEntryPattern2(entryPatternVersion(context)))return primary;
+  const secondStructure=buildM1PivotStructure(candles,context.primary,evaluatedAt,M1_FVG_RETEST_STRUCTURE_PERIOD);
+  const second=evaluateSingleM1Checklist({context:{...context,entryPattern:M1_FVG_RETEST_PATTERN_VERSION},
+    structure:secondStructure,candles,evaluatedAt});
+  const patterns=[primary,second],groups=new Map();
+  for(const check of patterns){
+    const entry=check.entry;if(!entry)continue;
+    const key=JSON.stringify([entry.setupKey,entry.direction,entry.recognizedAt,entry.price,entry.stops]);
+    const group=groups.get(key) ?? {check,matches:[]};
+    group.matches.push({id:entry.id,entryPattern:check.entryPattern,conditions:entry.conditions});groups.set(key,group);
+  }
+  const entryChecks=[...groups.values()].map(({check,matches})=>({...check,entry:{...check.entry,patternMatches:matches}}));
+  const selected=entryChecks.slice().sort((a,b)=>b.entry.recognizedAt-a.entry.recognizedAt)[0] ?? primary;
+  return {...selected,patterns,entryChecks,entries:entryChecks.map(check=>check.entry)};
+}
+
+function evaluateSingleM1Checklist({context,structure,candles,evaluatedAt,closeReactionCache,entryProgress}) {
   const unavailable = reason => ({ ...inactiveM1Checklist(reason), evaluatedAt });
   if (structure?.status !== 'ready') return unavailable(structure?.status === 'missing' ? 'missing' : 'loading');
-  if ((!structure.state || structure.state.trend === 'unknown') && !usesPivotBreakEntryPattern1(entryPatternVersion(context))) return unavailable('structure');
+  if ((!structure.state || structure.state.trend === 'unknown') && !usesPivotBreakEntryPattern1(entryPatternVersion(context))&&!isEntryPattern2(entryPatternVersion(context))) return unavailable('structure');
   const rows = closedChecklistCandles(candles, '1m', evaluatedAt);
   const trends = (structure.state ? collectNestedChain(structure.state) : []).map((level, depth) => ({ trend: level.trend, depth }));
+  if(isEntryPattern2(entryPatternVersion(context)))return evaluateEntryPattern2({context,rows,evaluatedAt,trends,
+    pivotBreak:structure.pivotBreak,structureStart:structure.start});
   if (usesPivotBreakEntryPattern1(entryPatternVersion(context))) {
     return evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,trends,
       pivotBreak:structure.pivotBreak,structureStart:structure.start,

@@ -11,8 +11,9 @@ import { renderLowerStructure } from '../structureOverlay.js';
 import { closedReplayEvaluationTime, closedChecklistCandles } from '../tradeSetupChecklistTimeBasis.js';
 import { renderM1Entry } from '../m1EntryRendering.js';
 import { afterBrowserPaint } from '../afterBrowserPaint.js';
-import { createSetup2Entry } from '../tradeSetup2EntryGate.js';
+import { gateM1ChecklistEntries } from '../tradeSetup2EntryGate.js';
 import { usesCountertrendM5BosEntryPattern1 } from '../entryPattern1Conditions.js';
+import {isEntryPattern2} from '../entryPattern2Conditions.js';
 import { createSetup2Memo,isCandleAppend } from '../setup2Memo.js';
 import { m1LoadStart } from '../m1StructureStart.js';
 import { M1_LOAD_LEAD_IN } from '../m1StructureSettings.js';
@@ -78,11 +79,8 @@ export function usePriceChartM1Structure(props, checklistState, {
       if(!progress){progress={};entryProgress.set(key,progress);}
       currentCheck = evaluateM1Checklist({ context: knownContext, structure: result, candles: marked, evaluatedAt,entryProgress:progress });
     }
-    if (usesCountertrendM5BosEntryPattern1(entryPatternVersion(currentCheck.entry))) {
-      const entry=currentCheck.entry;
-      currentCheck={...currentCheck,entry:createSetup2Entry({...prerequisites.context,
-        instrument:props.symbol,evaluatedAt:entry.recognizedAt},()=>entry)};
-      if (!currentCheck.entry) currentCheck.entryBlockedReason='Handelszeiten, Session oder News sperren diesen Entry.';
+    if (usesCountertrendM5BosEntryPattern1(entryPatternVersion(currentCheck.entry))||isEntryPattern2(entryPatternVersion(currentCheck.entry))) {
+      currentCheck=gateM1ChecklistEntries(currentCheck,{...prerequisites.context,instrument:props.symbol});
     }
     check.value = { ...currentCheck, evaluatedAt, instrument: props.symbol,
       updating: !!checklistState.value?.updating || status.value.state === 'loading' };
@@ -107,7 +105,7 @@ export function usePriceChartM1Structure(props, checklistState, {
       // auch vor Wochenend-Ankern genügend tatsächliche Fraktalkerzen.
       // Ein späterer Strukturanker darf den ersten Retest und Entry nicht abschneiden.
       const start = m1LoadStart(source);
-      const leadIn=usesCountertrendM5BosEntryPattern1(entryPatternVersion(source)) ? M1_LOAD_LEAD_IN : M1_STRUCTURE_PERIOD * 2 + 1;
+      const leadIn=usesCountertrendM5BosEntryPattern1(entryPatternVersion(source))||isEntryPattern2(entryPatternVersion(source)) ? M1_LOAD_LEAD_IN : M1_STRUCTURE_PERIOD * 2 + 1;
       const count = Math.max(1, Math.ceil((requestedUntil() - start) / 60)) + leadIn;
       const fetched = await fetchCached(fetchInitialCandles, source.instrument, '1m', count,
         props.replayUntil == null ? undefined : requestedUntil() * 1000, REPLAY_LOOKAHEAD_SEC);

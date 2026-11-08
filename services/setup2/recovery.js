@@ -1,21 +1,21 @@
 import {skipSpreadHourGaps} from '../../src/spreadHourGaps.js';
 import {createLiveEvidence} from './evidence.js';
 import {scanTradeSetup2Window} from '../../src/tradeSetup2Scan.js';
-import {setup1RecognitionTime} from '../../src/setup1RecognitionTime.js';
+import {setupSourceKey,setupSourceRecognitionTime} from '../../src/setupSources.js';
 import {ENTRY_PATTERN_1_VERSION} from '../../src/entryPattern1Conditions.js';
 import {SETUP2_VERSION} from '../../src/tradeSetup2Configuration.js';
-import {minuteAlarmEvents,rememberStructure} from './events.js';
+import {minuteAlarmEvents,rememberStructure,structureTrackingKey} from './events.js';
 const seconds=value=>typeof value==='number'?value:Date.parse(value)/1000;
 const iso=value=>new Date(value*1000).toISOString();
 
 export function suspendedResumeTime(range) {
  const saved=seconds(range.evaluatedThrough);
- return Number.isFinite(saved)?saved:setup1RecognitionTime(range.source)-60;
+ return Number.isFinite(saved)?saved:setupSourceRecognitionTime(range.source)-60;
 }
 export function partitionLiveSources(sources,suspended=[]) {
  const excluded=new Set((suspended ?? []).map(range=>range.setupKey));
- return [...new Map(sources.filter(source=>!excluded.has(`${source.instrument}:setup1:${source.tradeSetupId}`))
-  .map(source=>[`${source.instrument}:${source.tradeSetupId}`,source])).values()];
+ return [...new Map(sources.filter(source=>!excluded.has(setupSourceKey(source)))
+  .map(source=>[setupSourceKey(source),source])).values()];
 }
 export function refreshRecoveredHistory(cache,state) {
  const revision=state.nativeHistoryRevision ?? 0;
@@ -51,12 +51,12 @@ export async function recoverSuspendedRange({row,range,sessions,schedules,news,c
  if(recoveryConfig(sessions,tradingWindows,news)!==row.state.configFingerprint)return;
  const expected=fingerprint(range,row.state),source=structuredClone(range.source);
  const anchors=structuredClone(cache.anchors),h1=structuredClone(cache.h1);
- const anchor=anchors.findLast(a=>a.knownAt<=setup1RecognitionTime(source));
+ const anchor=anchors.findLast(a=>a.knownAt<=setupSourceRecognitionTime(source));
  if(!anchor)return;
  await yieldControl();
  const from=Math.min(anchor.structureStartTime,source.obStartTime,source.ls.touchedTime)-131*60;
  const m1=await candles(instrument,'1m',from);
- const historyStart=range.historyStart ?? setup1RecognitionTime(source);
+ const historyStart=range.historyStart ?? setupSourceRecognitionTime(source);
  const probeThrough=seconds(range.historyProbeThrough ?? range.suspendedAt);
  // Erst echte Nachlieferung prüfen; unveränderte Lücken dürfen keinen Mehrtages-Rescan starten.
  if(!Number.isFinite(probeThrough) || !continuousHistory(m1,historyStart,probeThrough,60))return;
@@ -67,7 +67,7 @@ export async function recoverSuspendedRange({row,range,sessions,schedules,news,c
  const entries=new Map((row.state.entries ?? []).filter(item=>item.setupKey===range.setupKey).map(item=>[item.entry.id,structuredClone(item)]));
  const structures=new Map(Object.entries(row.state.structureKnownAt ?? {}));
  const events=new Map();let snapshot=null;
- const input={instrument,tradeSetups:[source],m1Candles:m1,m5Candles:m5,h1Candles:h1,dailyAnchors:anchors,
+ const input={instrument,tradeSetups:[source],sourcesAssembled:true,includeSweepRetestSources:true,m1Candles:m1,m5Candles:m5,h1Candles:h1,dailyAnchors:anchors,
   sessionConfigs:structuredClone(sessions),tradingWindows:structuredClone(tradingWindows),
   news:news.map(n=>({...n,eventTime:seconds(n.event_time)})),newsLoadStatus:'ready',settings:{allowSpreadHourGaps:true},scanMemo:{},yieldControl,
   loadM1Candles:async({structureFromTime})=>{
@@ -76,7 +76,7 @@ export async function recoverSuspendedRange({row,range,sessions,schedules,news,c
   },onSnapshot:value=>{if(value.entry)entries.set(value.entry.id,{setupKey:value.setupKey,entry:value.entry});else snapshot=value;},
   onMinuteCheck:minute=>{
    rememberStructure(minute,structures);
-   for(const event of minuteAlarmEvents({...minute,structureFirstKnownAt:structures.get(minute.context.setupKey)},tradingWindows)){
+   for(const event of minuteAlarmEvents({...minute,structureFirstKnownAt:structures.get(structureTrackingKey(minute))},tradingWindows)){
     event.missed_reason='Historische DR-Nachholung nach nativer Daten-Nachlieferung';events.set(event.id,event);
    }
   }};

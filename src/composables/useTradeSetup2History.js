@@ -208,6 +208,7 @@ export function useTradeSetup2History(props,checklist,{repository,configurationI
         if(snapshot?.entry)existingEntries.push(snapshot);
       }
       const found=await scanTradeSetup2InWorker({...input,h1Candles:state.context.h1Candles,m5Candles:state.context.m5Candles,m1Candles,
+        includeSweepRetestSources:configuration.includeSweepRetestSources===true,
         ...(state.model==='countertrend'?{tradeSetups:props.dbTradeSetups ?? [],dailyAnchors:state.context.dailyAnchors ?? []}:{}),
         fromTime:run.from,toTime:at,existingEntries,lazyM1:state.model==='countertrend'},{signal,loadM1Candles,
         onProgress:p=>{if(ticket===revision)status.value=`Setups auswerten: ${p.completed}/${p.total}`;}});

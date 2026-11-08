@@ -1,6 +1,7 @@
 import { collectNestedChain } from './marketStructureAnalysis';
 import { structureRangePath } from './structureRangePath.js';
 import { checklistObservationRules } from './checklistObservationRules.js';
+import {m1FvgBounds} from './orderBlockMitigation.js';
 
 // Belege übernehmen nur erkannte Fakten; offene Zuordnungen sind keine Zeichnungsfreigabe.
 export function tradeSetup2Evidence({ checklist, m1Check, m1Structure, m1Candles = [] }) {
@@ -79,10 +80,18 @@ export function tradeSetup2Evidence({ checklist, m1Check, m1Structure, m1Candles
     touch.time,touch.time+60,'confirmation','Retest');
   const fvg=m1Check.fvg, confirmation=m1Candles.find(c=>c.time+60===fvg?.recognizedAt);
   if (confirmation) {
-    const short=primary.direction==='short';
-    const bottom=short?confirmation.high:confirmation.low-fvg.gap;
+    const bounds=m1FvgBounds(primary.direction,fvg.gap,confirmation);
     add('fvg','m1','1m',fvg.recognizedAt,{kind:'zone',fromTime:fvg.candleTime,toTime:confirmation.time,
-      top:bottom+fvg.gap,bottom,styleKey:'fvgCandle',label:'M1 FVG'});
+      ...bounds,styleKey:'fvgCandle',label:'M1 FVG'});
+  }
+  if(m1Check.retestedFvg){
+    const zone=m1Check.retestedFvg;
+    add('retestedFvg','m1','1m',zone.recognizedAt,{kind:'zone',fromTime:zone.candleTime,
+      toTime:m1Check.fvgRetest?.candleTime ?? zone.recognizedAt-60,top:zone.top,bottom:zone.bottom,
+      styleKey:'fvgCandle',label:'M1 FVG · Retestzone'});
+    const contact=m1Check.fvgRetest,candle=m1Candles.find(c=>c.time===contact?.candleTime);
+    if(candle)line('fvgRetest','m1','1m',contact.recognizedAt,primary.direction==='short'?candle.high:candle.low,
+      candle.time,candle.time+60,'confirmation','M1 FVG-Retest');
   }
   return result;
 }

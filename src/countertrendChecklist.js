@@ -1,4 +1,4 @@
-import { setup1RecognitionTime } from './setup1RecognitionTime.js';
+import { setupSourceRecognitionTime,setupSourceId,setupSourceKey,isSweepRetestSource,assembleSetupSources } from './setupSources.js';
 import { evaluateCountertrendLifecycle } from './countertrendLifecycle.js';
 import { evaluateChecklistM5, evaluateChecklistOuterM5, unknownChecklistM5 } from './tradeSetupChecklistM5.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
@@ -11,6 +11,7 @@ import { deriveSetupEntryInvalidation, sweepAgeSec } from './tradeSetup.js';
 import { divergenceObservationRule, H1_COUNTER_DIVERGENCE_RULE, M5_SWEEP_DIVERGENCE_RULE, OBSERVATION_RULE_VERSION } from './checklistObservationRules.js';
 import { ENTRY_PATTERN_1_VERSION } from './entryPattern1Conditions.js';
 import { finalObservation,setupMemoKey } from './setup2Memo.js';
+import {M1_FVG_RETEST_PATTERN_VERSION} from './m1FvgRetestSequence.js';
 
 export { COUNTERTREND_STAGE_VERSION } from './tradeSetup2DealingRange.js';
 
@@ -26,11 +27,12 @@ export function classifyM5SetupType(direction, currentTrend, outerTrend) {
 
 export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candles = [], h1Candles = [],
   tradeSetups = [], dailyAnchors = [], settings = {}, sessionConfigs = [], dataStatus = 'ready',
-  tradingWindows, news, newsLoadStatus, closeReactionCache, setupClassificationCache, setupMemo, detectScanOrderBlocks, dataRevision=0,entryOutcomes = new Map() } = {}) {
-  const pending = () => ({ status: 'pending', details: ['Wartet auf ein bekanntes Setup 1.0.'] });
+  tradingWindows, news, newsLoadStatus, closeReactionCache, setupClassificationCache, setupMemo, detectScanOrderBlocks, dataRevision=0,entryOutcomes = new Map(),includeSweepRetestSources=false,sourcesAssembled=false } = {}) {
+  const pendingDetail=includeSweepRetestSources?'Wartet auf Setup 1.0 oder Liquidity Sweep mit M5-OB-Retest.':'Wartet auf ein bekanntes Setup 1.0.';
+  const pending = () => ({ status: 'pending', details: [pendingDetail] });
   const checks = { liquiditySweep: pending(), reaction: pending(), m5Trend: unknownChecklistM5(),
     outerM5Trend: { status: 'unknown', required: true, trend: 'unknown', details: ['Äußerster M5-Trend unbekannt.'] },
-    targets: pending(), antiConfluences: {status:'unknown',details:['Wartet auf ein bekanntes Setup 1.0.'],
+    targets: pending(), antiConfluences: {status:'unknown',details:[pendingDetail],
       ruleVersion:OBSERVATION_RULE_VERSION,rules:[divergenceObservationRule({...H1_COUNTER_DIVERGENCE_RULE,divergences:{status:'unknown'}})]}, confluences: { ...pending(), ruleVersion:OBSERVATION_RULE_VERSION,
       rules:[divergenceObservationRule({...M5_SWEEP_DIVERGENCE_RULE,divergences:{status:'unknown'}})] } };
   const result = { model: 'countertrend', entryPattern:ENTRY_PATTERN_1_VERSION,ruleVersion: COUNTERTREND_STAGE_VERSION, instrument, evaluatedAt,
@@ -47,22 +49,25 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
   if (result.status === 'ready' && !m5.length) result.status = 'missing';
   if (result.status === 'ready' && m5.at(-1).time + 300 < Math.floor(evaluatedAt / 300) * 300) result.status = 'stale';
   if (result.status !== 'ready') { result.dealingRange = evaluateDealingRange(result); return result; }
-  for (const source of tradeSetups.filter(s=>s.instrument===instrument)) setup1RecognitionTime(source);
+  tradeSetups=assembleSetupSources({instrument,m5Candles:m5,h1Candles:result.context.h1Candles,evaluatedAt,
+    tradeSetups,includeSweepRetestSources,sourcesAssembled,sessionConfigs});
+  for (const source of tradeSetups.filter(s=>s.instrument===instrument)) setupSourceRecognitionTime(source);
   const known = tradeSetups.filter(s => s.instrument === instrument && Number.isFinite(s.createdAt)
     && [1, -1].includes(s.dir) && [s.obTop, s.obBottom, s.obStartTime, s.ls?.price, s.ls?.pivotTime, s.ls?.touchedTime].every(Number.isFinite)
-    && s.obTop > s.obBottom && setup1RecognitionTime(s) <= evaluatedAt
-    && s.ls.pivotTime < s.ls.touchedTime && s.ls.touchedTime + 300 <= setup1RecognitionTime(s))
-    .sort((a, b) => setup1RecognitionTime(b) - setup1RecognitionTime(a));
+    && s.obTop > s.obBottom && setupSourceRecognitionTime(s) <= evaluatedAt
+    && s.ls.pivotTime < s.ls.touchedTime && s.ls.touchedTime + 300 <= setupSourceRecognitionTime(s))
+    .sort((a, b) => setupSourceRecognitionTime(b) - setupSourceRecognitionTime(a));
   const memoKeys=new Map();
   const candidates = known.map(source => {
     const direction = source.dir === 1 ? 'short' : 'long';
-    const recognizedAt = setup1RecognitionTime(source);
+    const recognizedAt = setupSourceRecognitionTime(source),sourceId=setupSourceId(source);
+    const pattern=source.entryPattern ?? ENTRY_PATTERN_1_VERSION;
     const anchor = dailyAnchors.filter(a => a.instrument == null || a.instrument === instrument)
       .filter(a => a.knownAt <= recognizedAt && Number.isFinite(a.structureStartTime))
       .sort((a, b) => b.pivotTime - a.pivotTime)[0];
-    const memoKey=setupMemoKey(source,anchor,[COUNTERTREND_STAGE_VERSION,ENTRY_PATTERN_1_VERSION,
+    const memoKey=setupMemoKey(source,anchor,[COUNTERTREND_STAGE_VERSION,pattern,includeSweepRetestSources,
       CHECKLIST_RULE_VERSION,OBSERVATION_RULE_VERSION,settings],configs,dataRevision);
-    memoKeys.set(source.tradeSetupId,memoKey);
+    memoKeys.set(sourceId,memoKey);
     const memo=setupMemo?.get(memoKey);
     if(memo?.classificationFinal)return {...memo.candidate,knownAsOf:evaluatedAt,checks:{...memo.candidate.checks}};
     // Der kompakte Schlüssel kommt vor Markierung des Erkennungspräfixes.
@@ -90,8 +95,8 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     const outerPassed = outerTrend === (direction === 'short' ? 'downtrend' : 'uptrend');
     const classification = classifyM5SetupType(direction, currentTrend, outerTrend);
     const candidateChecks = {
-      liquiditySweep: { status: 'passed', details: ['Liquidity Sweep aus erkanntem Setup 1.0.'] },
-      reaction: { status: 'passed', details: ['Zugehöriger M5-Orderblock aus Setup 1.0.'] },
+      liquiditySweep: { status: 'passed', details: [isSweepRetestSource(source)?'Liquidity Sweep mit Retest eines vorhandenen M5-OB.':'Liquidity Sweep aus erkanntem Setup 1.0.'] },
+      reaction: { status: 'passed', details: [isSweepRetestSource(source)?'Bereits bekannter M5-Orderblock nach Sweep geretestet.':'Zugehöriger M5-Orderblock aus Setup 1.0.'] },
       m5Trend: { ...current, trend: currentTrend, evaluatedAt: recognizedAt,
         status: !outerPassed ? 'pending' : currentTrend === 'unknown' ? 'unknown' : classification.type === 'countertrend' ? 'passed' : 'unmet',
         details: current ? [`Aktueller M5-Trend ${currentTrend === 'uptrend' ? 'bullisch' : currentTrend === 'downtrend' ? 'bärisch' : 'unbekannt'}.`]
@@ -103,8 +108,11 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
         details: [`Äußerster M5-Trend ${outerTrend === 'uptrend' ? 'bullisch' : outerTrend === 'downtrend' ? 'bärisch' : 'unbekannt'}.`] },
     };
     const derived = deriveSetupEntryInvalidation({ dir: source.dir, obTop: source.obTop, obBottom: source.obBottom });
-    const ob = { dir: -source.dir, top: source.obTop, bottom: source.obBottom, startTime: source.obStartTime, fvg: source.obFvg };
-    const candidate={ id: `${instrument}:setup1:${source.tradeSetupId}`, tradeSetupId: source.tradeSetupId, direction,
+    const ob = { dir: -source.dir, top: source.obTop, bottom: source.obBottom, startTime: source.obStartTime, fvg: source.obFvg,
+      ...(isSweepRetestSource(source)?{recognizedAt:source.orderBlockKnownAt}: {}) };
+    const candidate={ id: setupSourceKey(source), tradeSetupId: source.tradeSetupId, sourceId,
+      entryPattern:pattern,sourceKind:source.sourceKind,sourceRetest:source.sourceRetest,direction,
+      ...(includeSweepRetestSources?{entryPatterns:isSweepRetestSource(source)?[M1_FVG_RETEST_PATTERN_VERSION]:[ENTRY_PATTERN_1_VERSION,M1_FVG_RETEST_PATTERN_VERSION]}:{}),
       setupType: classification.type, abortReason: classification.reason, knownAsOf: evaluatedAt,
       recognizedAt, reactionRecognizedAt: recognizedAt, checks: candidateChecks,
       sweep: { level: source.ls, timeframe: source.sweeps?.[0]?.timeframe ?? '5M', ageSeconds: sweepAgeSec(source.ls) },
@@ -121,7 +129,7 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     if(candidate.targetSelection?.status!=='passed')candidate.targetSelection = fixChecklistTargets({candidate,instrument,candles:m5,sessionConfigs,recognitionWithinBar:true,entryPattern:ENTRY_PATTERN_1_VERSION});
     candidate.checks.targets = candidate.targetSelection ?? {status:'unknown',details:['Zielprüfung offen.']};
     if (candidate.targetSelection?.status === 'passed') {
-      const memo=setupMemo?.get(memoKeys.get(candidate.tradeSetupId));
+      const memo=setupMemo?.get(memoKeys.get(candidate.sourceId));
       if(memo) memo.lifecycleProgress ??= {};
       candidate.lifecycle = evaluateCountertrendLifecycle({selection:candidate.targetSelection,invalidation:candidate.invalidation,
         candles:m5,evaluatedAt,entries:entryOutcomes.get(candidate.id) ?? [],progress:memo?.lifecycleProgress});
@@ -136,6 +144,8 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
   const selected = accepted[0] ?? candidates[0];
   if (selected) {
     result.direction = selected.direction;
+    result.entryPattern=selected.entryPattern;
+    result.entryPatterns=selected.entryPatterns;
     result.setupType = selected.setupType;
     result.abortReason = selected.abortReason;
     Object.assign(checks, selected.checks);
@@ -148,8 +158,8 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     candidate.validatedAt=Math.max(candidate.recognizedAt,candidate.targetSelection.selectedAt);
   // Nur statische Ergebnisse behalten; Lifecycle und knownAsOf gehören zum jeweiligen Replay-Stand.
   if(setupMemo)for(const source of known){
-    const candidate=candidates.find(c=>c.tradeSetupId===source.tradeSetupId);
-    const key=memoKeys.get(source.tradeSetupId);
+    const candidate=candidates.find(c=>c.sourceId===setupSourceId(source));
+    const key=memoKeys.get(setupSourceId(source));
     const previous=setupMemo.get(key);
     if(previous)setupMemo.set(key,{...previous,candidate:{...candidate,checks:{...candidate.checks}}});
   }

@@ -1,5 +1,6 @@
 import {formatDatedTime} from './berlinTime.js';
 import {fmtPrice,pricePrecisionForInstrument} from './format.js';
+import {isSweepRetestSource} from './setupSources.js';
 
 // Die Identität kommt nur aus dem ursprünglichen Setup, niemals aus einem späteren Entry-Retest.
 export function setup1ChecklistDetails(state,m1Check) {
@@ -21,9 +22,11 @@ export function setup1ChecklistDetails(state,m1Check) {
     liquiditySweep:[`${tf} ${type} · Level ${price(level?.price)}`,
       `Pivot-/Levelzeit: ${date(level?.pivotTime)}`,
       ...(known(exactSweep)?[`Tatsächlicher Sweep (M1): ${date(exactSweep)}`] : [`Sweepkerze (${Number.isFinite(level?.fineTouchedTime)?'M5':tf}): ${date(level?.fineTouchedTime ?? level?.touchedTime)}`, 'Genauere Sweepzeit: nicht gespeichert'])],
-    reaction:[`Ursprünglicher M5-Orderblock aus Setup 1.0 · ${ob?.dir===1?'bullisch':ob?.dir===-1?'bärisch':'Richtung nicht gespeichert'}`,
+    reaction:[`${isSweepRetestSource(primary)?'Bestehender M5-Orderblock · Startweg LS + Retest':'Ursprünglicher M5-Orderblock aus Setup 1.0'} · ${ob?.dir===1?'bullisch':ob?.dir===-1?'bärisch':'Richtung nicht gespeichert'}`,
       `Preiszone unten–oben: ${price(ob?.bottom)}–${price(ob?.top)}`,
-      `Entstehung: ${date(ob?.startTime)}`,`Bekannt / zugeordnet: ${date(primary?.reactionRecognizedAt)}`],
+      `Entstehung: ${date(ob?.startTime)}`,`Bekannt / zugeordnet: ${date(primary?.reactionRecognizedAt)}`,
+      ...(isSweepRetestSource(primary)&&known(primary?.sourceRetest?.recognizedAt)
+        ?[`Retestkerze: ${date(primary.sourceRetest.candleTime)}`,`Retest bekannt: ${date(primary.sourceRetest.recognizedAt)}`]:[])],
   };
 }
 

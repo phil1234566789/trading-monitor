@@ -1,17 +1,24 @@
 <script setup>
-import { computed } from 'vue';
+import { computed,ref,watch } from 'vue';
 import { setupEntryConditions, REVIEW_STATUS_LABELS, REVIEW_STATUS_ICONS } from '../tradeSetup2Review.js';
 import { formatDatedTime } from '../berlinTime.js';
 import { checklistObservationRules, observationRuleDetails } from '../checklistObservationRules.js';
 const props = defineProps({ snapshot: { type: Object, required: true } });
-const review = computed(() => setupEntryConditions(props.snapshot));
+const selectedPattern=ref(null);
+watch(()=>props.snapshot,()=>{selectedPattern.value=null;});
+const review = computed(() => setupEntryConditions(props.snapshot,selectedPattern.value));
 const observations = computed(() => ['antiConfluences', 'confluences'].map(key => ({ key,
   label: key === 'antiConfluences' ? 'F · Anti-Confluences' : 'G · Confluences',
   details: observationRuleDetails(checklistObservationRules(props.snapshot.checklist?.checks?.[key], key)) })));
 </script>
 <template>
   <div class="entry-conditions">
-    <h3>{{ review.pattern1 ? 'Entry Pattern 1' : 'Entry 1' }} · {{ snapshot.entry ? 'Entry-Stand' : 'Kandidatenstand' }} {{ formatDatedTime(snapshot.knownAt) }} Uhr</h3>
+    <h3>{{ review.patternLabel }} · {{ snapshot.entry ? 'Entry-Stand' : 'Kandidatenstand' }} {{ formatDatedTime(snapshot.knownAt) }} Uhr</h3>
+    <label v-if="review.patternOptions.length>1">Pattern-Belege derselben Ausführung
+      <select :value="review.version" @change="selectedPattern=$event.target.value">
+        <option v-for="pattern in review.patternOptions" :key="pattern.version" :value="pattern.version">{{ pattern.label }} · {{ pattern.id }}</option>
+      </select>
+    </label>
     <p :class="review.assessment.status"><strong>{{ REVIEW_STATUS_ICONS[review.assessment.status] }} {{ review.assessment.label }}</strong></p>
     <p v-if="!snapshot.entry">Gespeicherter DR-Stand ohne Entry-Freigabe. Ranges werden auch außerhalb der Handelszeiten erfasst. Dieser Stand beschreibt keine vollständige spätere Entry-Prüfung. Eine Zeitsperre gilt für den Bewertungszeitpunkt.</p>
     <p v-if="review.prerequisiteNote">{{ review.prerequisiteNote }}</p>
@@ -22,13 +29,14 @@ const observations = computed(() => ['antiConfluences', 'confluences'].map(key =
         <ul><li v-for="(detail, index) in condition.details" :key="index">{{ detail }}</li></ul>
       </li>
     </ol>
-    <h4>Zusätzliche Strukturmerkmale · keine zwingenden Entry-1-Bedingungen</h4>
+    <h4 v-if="review.observations.length">Zusätzliche Strukturmerkmale · keine zwingenden Entry-Bedingungen</h4>
     <p v-for="item in review.observations" :key="item.label"><strong>{{ item.label }}:</strong> {{ item.text }}</p>
     <template v-if="snapshot.dealingRange">
       <h4>F/G · gespeicherte Regeln und Beobachtungen</h4>
       <p v-for="item in observations" :key="item.key"><strong>{{ item.label }}:</strong> {{ item.details.join(' ') || 'Nicht prüfbar / nicht gespeichert.' }} {{ snapshot.checklist?.checks?.[item.key]?.explanation }}</p>
     </template>
-    <p v-if="review.pattern1">M5-CHoCH und M1-BOS in Setup-Richtung sind Pflicht. M1-Trendrichtung und M1-CHoCH bleiben Kontext. Der Entry erfolgt am Schluss der FVG-Bestätigungskerze nach dem Retest eines passenden M5-OB.</p>
+    <p v-if="review.pattern2">M5-OB-Retest, bestätigter M1-P2-Pivotbruch, bekannte gleichgerichtete M1-FVG, deren späterer Retest und eine neue bestätigte M1-FVG sind Pflicht. Berührung einschließlich Wick-Überlauf zählt. Entry am Schluss der neuen FVG-Bestätigungskerze, volle konfigurierte Größe; kein M5-BOS-Gate.</p>
+    <p v-else-if="review.pattern1">Die gespeicherte Version von Entry Pattern 1 bestimmt ihre Pflichtsignale. Die Einzelbedingungen oben zeigen deren ursprünglichen Stand. Der Entry erfolgt am Schluss der FVG-Bestätigungskerze nach dem Retest eines passenden M5-OB.</p>
     <p v-else>Die M1-Trendrichtung, CHoCH und BOS werden angezeigt, sind aber keine eigenen Pflichtsignale für Entry 1. Der Auslöser ist die bestätigte gleichgerichtete FVG nach dem OB-Retest im auswertbaren M1-Kontext. Ziele und Stopps stehen beim Entry in der Checklist bzw. im Chart.</p>
   </div>
 </template>

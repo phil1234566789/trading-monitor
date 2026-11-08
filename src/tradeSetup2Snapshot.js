@@ -7,6 +7,9 @@ import { evaluateDealingRange, COUNTERTREND_STAGE_VERSION } from './tradeSetup2D
 import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
 import { countertrendRangeCourse } from './countertrendLifecycle.js';
 import { restoreChecklistObservationChecks } from './checklistObservationRules.js';
+import {isEntryPattern2} from './entryPattern2Conditions.js';
+import {buildM1PivotStructure} from './m1PivotStructure.js';
+import {M1_FVG_RETEST_STRUCTURE_PERIOD} from './m1StructureSettings.js';
 
 export function isTradeSetup2SnapshotView(props) {
   return !!(props.tradeSetup2RunId && props.selectedTradeSetup2Id);
@@ -40,6 +43,7 @@ export function buildTradeSetup2CandidateSnapshot({checklist,candidate}) {
   if (dealingRange.status === 'unconfirmed' && checklist.model !== 'countertrend') return null;
   const state={...checklist,setup:{primary:candidate}};
   if (checklist.model==='countertrend') Object.assign(state,{direction:candidate.direction,setupType:candidate.setupType,
+    entryPattern:candidate.entryPattern ?? checklist.entryPattern,entryPatterns:candidate.entryPatterns ?? checklist.entryPatterns,
     abortReason:candidate.abortReason,confirmed:dealingRange.status!=='unconfirmed',structure:candidate.checks.m5Trend?.structureState ?? null});
   delete state.context;
   // Weitere bestätigte Sweeps erhalten eigene Beobachtungsbelege.
@@ -73,12 +77,14 @@ export function buildTradeSetup2Snapshot(input) {
   if (dealingRange.version === COUNTERTREND_STAGE_VERSION && setup2EntrySearchEnded(checklist)) return null;
   if (!entryAgainstM5Allowed(checklist, entry)) return null;
   const { instrument, evaluatedAt, status, checks, structure, tradeability, model, ruleVersion }=checklist;
-  const entryPattern=entryPatternVersion(checklist);
+  const entryPattern=entryPatternVersion(entry) ?? entryPatternVersion(checklist);
   const sizedEntry = { ...entry, sizing: entrySizingAt(checklist, entry) };
+  // Eine Legacyquelle liefert sonst ihren P5-Zeichenstand neben einem P2-Entry.
+  const evidenceInput=isEntryPattern2(entryPattern)?{...input,m1Structure:buildM1PivotStructure(input.m1Candles ?? [],checklist.setup.primary,entry.recognizedAt,M1_FVG_RETEST_STRUCTURE_PERIOD)}:input;
   const entryChecks=entryPatternVersion(entry) ? {...checks,entry:{status:'passed',entryPattern:entryPatternVersion(entry),
     entries:[sizedEntry],conditions:entry.conditions,evaluatedAt}} : checks;
   return restoreTradeSetup2Snapshot(JSON.parse(JSON.stringify({schemaVersion:3,id:entry.id,instrument,setupKey:entry.setupKey,
     direction:entry.direction,knownAt:entry.recognizedAt,entry:sizedEntry,
     dealingRange,checklist:{instrument,evaluatedAt,status,checks:entryChecks,structure,tradeability,model,ruleVersion,entryPattern,dealingRange,setup:{primary:checklist.setup.primary}},
-    m1Check:{...m1Check,entry:sizedEntry},evidence:tradeSetup2Evidence(input)})));
+    m1Check:{...m1Check,entry:sizedEntry},evidence:tradeSetup2Evidence(evidenceInput)})));
 }
