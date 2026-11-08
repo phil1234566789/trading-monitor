@@ -1,3 +1,6 @@
+<script setup>
+import {strategySetupLabel} from '../strategySetupLabels.js';
+</script>
 <template>
   <main class="rules-page">
     <header>
@@ -12,12 +15,11 @@
     <section aria-label="Strategie-Setups">
       <h2>Strategie-Setups</h2>
       <ul>
-        <li>Setup 1 · Countertrend mit LS</li>
-        <li>Setup 2 · Trendfortführung mit LS</li>
+        <li>{{ strategySetupLabel('setup1') }}</li>
         <li>Setup 3 · Trendfortführung mit Break and Retest</li>
         <li>Setup 4 · Trendfortführung mit Orderflow</li>
       </ul>
-      <p>Bei Status 2 (DR bestätigt) soll die Setup-Nummer bereits feststehen. Die technischen Kriterien für Setup 2–4 sind noch offen.</p>
+      <p>Die bisherigen LS-Kategorien sind zu „Setup 1 mit LS“ zusammengeführt. Der aktuelle Algorithmus mit äußerer und innerer M5-Struktur sowie das Entry Pattern bleiben unverändert. Die technischen Kriterien für Setup 3 und 4 sind noch offen.</p>
     </section>
 
     <section id="abcd" aria-labelledby="abcd-title">
@@ -32,13 +34,13 @@
         <div><dt>G · Confluences</dt><dd>Beobachtungen für die Statistik; ändern die DR-Stufe nicht.</dd></div>
         <div><dt>H · Entry finden</dt><dd>Entry Pattern 1 benötigt einen bestätigten kausalen M5-BOS und M1-Pivotbruch ab dem tatsächlichen Sweep in Setup-Richtung, den Retest eines passenden M5-OB und anschließend eine bestätigte gleichgerichtete M1-FVG. Short: bestätigtes P5-Hoch, Pivot-Tief und tieferes Hoch; danach strikter Bruch unter das Pivot-Tief. Long: Pivot-Tief, Pivot-Hoch und höheres Tief; danach strikter Bruch über das Pivot-Hoch. Ein Docht genügt. Der Bruch darf vor der P5-Bestätigung des Pullbacks liegen; er zählt erst, wenn beide Fakten bekannt sind. Bis zu neun brauchbare Kerzen vor dem Sweep dienen ausschließlich als linke Fraktalstütze; Strukturpivots beginnen ab dem Sweep. Entries entstehen erst ab DR-Validierung bis Target oder Invalidierung, ohne Rückdatierung. Der Entry liegt am Schluss der FVG-Bestätigungskerze. Die Reihenfolge von M5-BOS und M1-Pivotbruch ist frei. Ohne passenden M5-BOS gibt es keinen Entry, auch keinen Risky Entry mit halber Größe. Die Frühwarnung entsteht erst, wenn M5-BOS und M1-Pivotbruch bekannt sind; Retest- und Entry-Alarme benötigen denselben zulässigen Patternpfad. Jede positive M1-FVG ist zulässig; pro OB zählt nur die erste nach seinem Retest (OB-Mitigation). Ein weiterer Entry benötigt einen danach neu bestätigten M5-OB mit eigenem Retest und erster M1-FVG. Handelszeiten, Session- und News-Sperren prüft das zentrale Gate unmittelbar vor jedem Entry.</dd></div>
       </dl>
-      <p><strong>Setup 1 · Countertrend mit LS:</strong> C zeigt in Setup-Richtung und D dagegen. A bis E erfüllt bestätigt die Dealing Range; F entscheidet validiert oder disqualifiziert. Ein CHoCH ist dafür keine Bedingung. Die bestehende Preisinvalidierung bleibt wirksam.</p>
+      <p><strong>{{ strategySetupLabel('setup1') }} · aktueller Algorithmus:</strong> C zeigt in Setup-Richtung und D dagegen. A bis E erfüllt bestätigt die Dealing Range; F entscheidet validiert oder disqualifiziert. Ein CHoCH ist dafür keine Bedingung. Die bestehende Preisinvalidierung bleibt wirksam.</p>
       <p><strong>Trendfortführung:</strong> C und D zeigen in Setup-Richtung. Der Typ wird erkannt, der Pfad bricht mit „Typ Trendfortführung, noch nicht umgesetzt“ ab.</p>
       <p><strong>Abbruch:</strong> C zeigt gegen die Setup-Richtung oder ist unbekannt. Grund: „äußerster M5-Trend gegen Setup-Richtung“ beziehungsweise „M5-Trend unbekannt“.</p>
       <p>C und D werden am Bekannt-Zeitpunkt des Setups mit den bis dahin geschlossenen Kerzen ausgewertet. Spätere Replay-Kerzen ändern diese Typ-Prüfung nicht.</p>
       <p>Für den Retest zählen gleichgerichtete M5-OBs, die ab der DR-Bestätigung nach A bis E entstehen, auch zwischen Bestätigung und Validierung. Als ausdrücklich benannte Startregel zählt der OB aus Setup 1.0 ebenfalls. Der weite SL liegt an der Kante des geretesteten M5-OB: Short Oberkante, Long Unterkante. Jede Entry-Möglichkeit speichert die vier Belege samt Zeitpunkten und dem geretesteten OB. Nach T1 oder dem Lifecycle-Ende entstehen keine neuen Entries.</p>
       <p>Größe und Exit bleiben erhalten: 250 oder 500 USD Risiko, ganze Lots, 5 USD Roundturn-Kommission je begonnenem Lot, halber Exit bei T1, danach BE für den Rest bis T2. Neue Entries dieses Patterns sind Full Entries mit vollem Faktor. Historische Risky Entries behalten ihre gespeicherte halbe Größe; sie werden nicht nachträglich umgedeutet.</p>
-      <aside class="open-decision"><h3>Nächste Festlegungen offen</h3><p>Short 97 und 105 sind Countertrend-Referenzen. Der äußerste M5-Trend ist Pflicht. Die Trendfortführung folgt später.</p><p>Die Target-Auswahl und die Erkennung der H1-Gegendivergenz bleiben unverändert. Weitere Anti-Confluence-Regeln werden separat festgelegt; die Regelliste ermöglicht zunächst reine Beobachtung.</p></aside>
+      <aside class="open-decision"><h3>Nächste Festlegungen offen</h3><p>Short 97 und 105 bleiben Referenzen des bestehenden Algorithmus. Die Zusammenführung der Setup-Namen verändert weder die äußere noch die innere M5-Prüfung. Weitere Entry-Patterns werden separat festgelegt.</p><p>Die Target-Auswahl und die Erkennung der H1-Gegendivergenz bleiben unverändert. Weitere Anti-Confluence-Regeln werden separat festgelegt; die Regelliste ermöglicht zunächst reine Beobachtung.</p></aside>
     </section>
 
     <details class="countertrend-rules">

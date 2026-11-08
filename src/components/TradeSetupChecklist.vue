@@ -11,7 +11,7 @@ import { usePreservedScroll } from "../composables/usePreservedScroll.js";
 import { entryChecklist } from "../m1Entry.js";
 import { useChecklistDisplay } from "../composables/useChecklistDisplay.js";
 import { dealingRangeLabel } from "../tradeSetup2DealingRange.js";
-import { STRATEGY_SETUP_LABELS } from "../strategySetupLabels.js";
+import { strategySetupLabel } from "../strategySetupLabels.js";
 import ChecklistReplayHistory from './ChecklistReplayHistory.vue';
 
 const props = defineProps({
@@ -122,7 +122,7 @@ const checks = computed(() => definitions.value.map((definition, index) => {
       <ChecklistStatusIcon v-if="!busy" v-bind="dataStatus" />
     </div>
     <p v-if="state?.dealingRange" class="checklist-notice"><strong>{{ dealingRangeLabel({ dealingRange: state.dealingRange }) }}</strong><br />{{ state.dealingRange.details?.join(' ') }}</p>
-    <p v-if="state?.model === 'countertrend'" class="checklist-notice"><strong>Setup-Typ: {{ STRATEGY_SETUP_LABELS[state.setupType] ?? STRATEGY_SETUP_LABELS.unknown }}</strong><br />{{ state.abortReason || 'C ist Pflicht · D bestimmt den Setup-Typ' }}</p>
+    <p v-if="state?.model === 'countertrend'" class="checklist-notice"><strong>Setup: {{ strategySetupLabel(state.setupType) }}</strong><br />{{ state.abortReason || 'Die bisherigen C-/D-Prüfungen bleiben unverändert.' }}</p>
     <p v-if="state?.error" class="checklist-notice" role="alert">{{ state.error }}</p>
     <p v-if="state?.tradeability === 'blocked'" class="checklist-not-tradeable" role="status">Nicht tradebar</p>
     <p v-if="state?.statistics?.status === 'error'" class="checklist-notice" role="alert">Target-Statistik konnte nicht gespeichert werden. Neuer Versuch bei der nächsten Auswertung.</p>

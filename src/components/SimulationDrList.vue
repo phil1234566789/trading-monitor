@@ -1,5 +1,5 @@
 <script setup>
-import { STRATEGY_SETUP_LABELS } from "../strategySetupLabels.js";
+import { strategySetupLabel } from "../strategySetupLabels.js";
 import SimulationRunDerivation from './SimulationRunDerivation.vue';
 import LiveEvidenceReviews from './LiveEvidenceReviews.vue';
 import LiveEvidenceProvenance from './LiveEvidenceProvenance.vue';
@@ -23,7 +23,7 @@ const summary=(g,v)=>variantMetrics(groupResults([g],props.results),v).totalR;
     <article v-for="group in groups.slice(0,limit)" :key="group.key" class="dr-card">
       <header tabindex="0" @contextmenu.prevent="emit('pin-menu',{kind:'simulation_dr',group},$event)">
         <div><h3><SimulationPinFlag v-if="isPinned(group)" :note="pinNote(group)" />{{ group.direction==='long'?'Long':'Short' }} · {{ group.instrument }}</h3><span>{{ formatDatedTime(group.recognizedAt) }}</span></div>
-        <span class="chip">{{ STRATEGY_SETUP_LABELS[group.setupType] ?? STRATEGY_SETUP_LABELS.unknown }}</span><span class="chip">{{ dealingRangeLabel(group.latestCandidate ?? group.snapshot) }}</span><span>{{ group.outcome.label }}</span><span>{{ group.entries.length }} Entries</span><span>Weit <b :class="pnlClass(summary(group,'wide'))">{{ fmtR(summary(group,'wide')) }}</b> · Eng <b :class="pnlClass(summary(group,'narrow'))">{{ fmtR(summary(group,'narrow')) }}</b></span>
+        <span class="chip">{{ strategySetupLabel(group.setupType) }}</span><span class="chip">{{ dealingRangeLabel(group.latestCandidate ?? group.snapshot) }}</span><span>{{ group.outcome.label }}</span><span>{{ group.entries.length }} Entries</span><span>Weit <b :class="pnlClass(summary(group,'wide'))">{{ fmtR(summary(group,'wide')) }}</b> · Eng <b :class="pnlClass(summary(group,'narrow'))">{{ fmtR(summary(group,'narrow')) }}</b></span>
         <RouterLink :to="simulationChartLink({...group.snapshot,drReplayTime:group.outcome.replayTime,variant:'both'},group.snapshot.runId)" target="_blank" rel="noopener noreferrer">Im Chart</RouterLink>
         <button type="button" class="more" :aria-label="`Pin-Menü für ${group.instrument} DR ${formatDatedTime(group.recognizedAt)}`" @click="emit('pin-menu',{kind:'simulation_dr',group},$event)">…</button>
       </header>

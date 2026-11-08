@@ -1,13 +1,13 @@
 <script setup>
 import {ref,watch} from 'vue';
-import {STRATEGY_SETUP_KEYS,STRATEGY_SETUP_LABELS} from '../strategySetupLabels.js';
+import {STRATEGY_SETUP_KEYS,STRATEGY_SETUP_LABELS,normalizeStrategySetup} from '../strategySetupLabels.js';
 import {updateDealingRange} from '../tradeIntake.js';
 const props=defineProps({rangeId:{type:Number,required:true},modelValue:{type:String,default:null}});
 const emit=defineEmits(['saved']);
-const selected=ref(props.modelValue ?? 'unknown');
+const selected=ref(normalizeStrategySetup(props.modelValue) ?? 'unknown');
 const saving=ref(false),error=ref(''),saved=ref(false);
 watch(()=>[props.rangeId,props.modelValue],()=>{
- selected.value=props.modelValue ?? 'unknown';error.value='';saved.value=false;
+ selected.value=normalizeStrategySetup(props.modelValue) ?? 'unknown';error.value='';saved.value=false;
 });
 async function save(event){
  const value=event.target.value,rangeId=props.rangeId;

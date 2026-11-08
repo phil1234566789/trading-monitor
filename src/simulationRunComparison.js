@@ -7,17 +7,20 @@ import { simulationDateFilter, simulationEntryResult, simulationStatistics } fro
 import { simulationReviewFeatures } from './simulationReviewFeatures.js';
 import { simulationChartReplayTime } from './simulationChartReplayTime.js';
 import {sortSimulationRunsByExecution} from './simulationRunPresentation.js';
+import {normalizeStrategySetup} from './strategySetupLabels.js';
 
 export const FILTER_DEFAULTS = { run: '', compare: '', instrument: '', type: '', from: '', to: '', stage: '', outcome: '', entry: '', pinned: '', feature: '', value: '' };
 export function comparisonFilters(query) {
-  return Object.fromEntries(Object.entries(FILTER_DEFAULTS).map(([key, fallback]) => [key, typeof query[key] === 'string' && query[key] !== 'all' ? query[key] : fallback]));
+  const filters = Object.fromEntries(Object.entries(FILTER_DEFAULTS).map(([key, fallback]) => [key, typeof query[key] === 'string' && query[key] !== 'all' ? query[key] : fallback]));
+  filters.type = normalizeStrategySetup(filters.type);
+  return filters;
 }
 export function latestCompletedRun(runs) {
   return sortSimulationRunsByExecution(runs.filter(r => r.status === 'complete'))[0]?.id ?? '';
 }
 export function simulationSetupType(snapshot) {
-  return snapshot.checklist?.setup?.primary?.setupType ?? snapshot.checklist?.setupType ?? snapshot.dealingRange?.model
-    ?? snapshot.checklist?.model ?? 'unknown';
+  return normalizeStrategySetup(snapshot.checklist?.setup?.primary?.setupType ?? snapshot.checklist?.setupType ?? snapshot.dealingRange?.model
+    ?? snapshot.checklist?.model ?? 'unknown');
 }
 
 export function independentRangeOutcome(group) {
@@ -45,7 +48,7 @@ export function filterReviewGroups(groups, filters, pins = []) {
     return (bounds.from == null || time >= bounds.from) && (bounds.to == null || time < bounds.to);
   };
   return groups.filter(g => (!filters.instrument || g.instrument === filters.instrument)
-    && (!filters.type || g.setupType === filters.type) && (!filters.stage || (filters.stage === 'disqualified' ? isDisqualifiedDealingRange(g.latestCandidate ?? g.snapshot) : g.stage === filters.stage))
+    && (!filters.type || normalizeStrategySetup(g.setupType) === normalizeStrategySetup(filters.type)) && (!filters.stage || (filters.stage === 'disqualified' ? isDisqualifiedDealingRange(g.latestCandidate ?? g.snapshot) : g.stage === filters.stage))
     && (!filters.outcome || g.outcome.status === filters.outcome)
     && (!filters.entry || (filters.entry === 'with') === !!g.entries.length)
     && (!filters.pinned || (filters.pinned === 'with') === simulationGroupHasPin(g,pins))

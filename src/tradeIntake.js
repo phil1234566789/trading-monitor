@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient.js";
-import { STRATEGY_SETUP_KEYS } from './strategySetupLabels.js';
+import { STRATEGY_SETUP_KEYS, normalizeStrategySetup } from './strategySetupLabels.js';
 import {privateJournalApi} from './privateJournal.js';
 import { deriveSetupEntryInvalidation, TRADE_SETUP_DETECTOR_VERSION } from "./tradeSetup.js";
 import { tradeSetupProvenance } from '../supabase/functions/_shared/tradeSetupProvenance.js';
@@ -426,8 +426,9 @@ export async function updateDealingRange(dealingRangeId, fields) {
   // — null entfernt die Markierung wieder.
   if ("setupType" in fields) payload.setup_type = fields.setupType;
   if ("strategySetup" in fields) {
-    if (fields.strategySetup !== null && !STRATEGY_SETUP_KEYS.includes(fields.strategySetup)) return false;
-    payload.strategy_setup = fields.strategySetup === 'unknown' ? null : fields.strategySetup;
+    const value = normalizeStrategySetup(fields.strategySetup);
+    if (value !== null && !STRATEGY_SETUP_KEYS.includes(value)) return false;
+    payload.strategy_setup = value === 'unknown' ? null : value;
   }
 
   const { error } = await supabase.from("dealing_ranges").update(payload).eq("id", dealingRangeId);
