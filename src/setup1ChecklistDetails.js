@@ -19,6 +19,11 @@ export function setup1ChecklistDetails(state,m1Check) {
   const tf={'5M':'M5','1H':'H1','4H':'H4','1D':'D1'}[sweep?.timeframe?.toUpperCase()] ?? sweep?.timeframe ?? 'Zeitrahmen nicht gespeichert';
   const type=level?.dir===-1?'Liquidity Low':level?.dir===1?'Liquidity High':'Leveltyp nicht gespeichert';
   const association=primary?.rangeAssociation,relativeDetails={};
+  const idea=primary?.ideaBinding;
+  const aliasDetails=idea?.status==='ambiguous'?['Zuordnung zur bereits bekannten Idee ist mehrdeutig; keine erneute Entry-Freigabe.']
+    :idea?.status==='known'&&idea.canonicalSourceKey!==primary.id&&known(idea.knownAt)
+      ?[`Gleiche bereits bekannte POI→Target-Idee seit ${date(idea.knownAt)}.`,
+        `Diese Quelle ist erst seit ${date(primary.recognizedAt)} bekannt und startet den bisherigen Verlauf nicht neu.`]:[];
   if(association?.status==='ready'){
     for(const [key,name,range] of [['outerM5Trend','Umschließende M5-Range',association.outer],['m5Trend','Zum Sweep führende M5-Range',association.inner]]){
       relativeDetails[key]=[`${name} · ${range.trend==='uptrend'?'bullisch':'bärisch'}`,
@@ -37,7 +42,7 @@ export function setup1ChecklistDetails(state,m1Check) {
       `Preiszone unten–oben: ${price(ob?.bottom)}–${price(ob?.top)}`,
       `Entstehung: ${date(ob?.startTime)}`,`Bekannt / zugeordnet: ${date(primary?.reactionRecognizedAt)}`,
       ...(isSweepRetestSource(primary)&&known(primary?.sourceRetest?.recognizedAt)
-        ?[`Retestkerze: ${date(primary.sourceRetest.candleTime)}`,`Retest bekannt: ${date(primary.sourceRetest.recognizedAt)}`]:[])],
+        ?[`Retestkerze: ${date(primary.sourceRetest.candleTime)}`,`Retest bekannt: ${date(primary.sourceRetest.recognizedAt)}`]:[]),...aliasDetails],
   };
 }
 

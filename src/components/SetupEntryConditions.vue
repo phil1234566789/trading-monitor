@@ -15,8 +15,8 @@ const observations = computed(() => ['antiConfluences', 'confluences'].map(key =
   <div class="entry-conditions">
     <h3>{{ review.patternLabel }} · {{ snapshot.entry ? 'Entry-Stand' : 'Kandidatenstand' }} {{ formatDatedTime(snapshot.knownAt) }} Uhr</h3>
     <label v-if="review.patternOptions.length>1">Pattern-Belege derselben Ausführung
-      <select :value="review.version" @change="selectedPattern=$event.target.value">
-        <option v-for="pattern in review.patternOptions" :key="pattern.version" :value="pattern.version">{{ pattern.label }} · {{ pattern.id }}</option>
+      <select :value="review.selectedPatternId" @change="selectedPattern=$event.target.value">
+        <option v-for="pattern in review.patternOptions" :key="pattern.id" :value="pattern.id">{{ pattern.label }} · {{ pattern.id }}</option>
       </select>
     </label>
     <p :class="review.assessment.status"><strong>{{ REVIEW_STATUS_ICONS[review.assessment.status] }} {{ review.assessment.label }}</strong></p>

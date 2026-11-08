@@ -56,7 +56,7 @@ async function instrumentTick(row,sessions,schedules,news) {
  const current=await client.pages('setup2_live_state',{instrument:`eq.${instrument}`,select:'state'});
  const previous=current[0]?.state ?? observed;
  let cache=memory.get(instrument),startup=!cache;
- if(!cache){cache={'entries':previous.entries ?? [],ranges:new Map(),scanMemo:{},structures:new Map(Object.entries(previous.structureKnownAt ?? {}))};memory.set(instrument,cache);}
+ if(!cache){cache={'entries':previous.entries ?? [],ranges:new Map(),scanMemo:{},ideaBindings:new Map(previous.sourceIdeaBindings??[]),structures:new Map(Object.entries(previous.structureKnownAt ?? {}))};memory.set(instrument,cache);}
  refreshRecoveredHistory(cache,previous);
  const pendingKeys=new Set((cache.pendingEvidence ?? []).flatMap(b=>b.snapshots.map(s=>s.setup_key)));
  cache.evidencePriceObservations=mergeCapturedRangeState(previous.evidencePriceObservations,cache.evidencePriceObservations,pendingKeys);
@@ -97,7 +97,7 @@ async function instrumentTick(row,sessions,schedules,news) {
   }
   errorPhase='evaluate';
   const events=[],ranges=new Map(),minuteChecks=new Map(),entries=new Map(cache.entries.map(s=>[s.entry.id,s]));
-  const input={instrument,scanMemo:cache.scanMemo,m1Candles:cache['1m'],tradeSetups:sources,sourcesAssembled:true,includeSweepRetestSources:true,m5Candles:m5,h1Candles:h1,dailyAnchors:anchors,sessionConfigs:sessions,tradingWindows,
+  const input={instrument,scanMemo:cache.scanMemo,sourceIdeaBindings:cache.ideaBindings,m1Candles:cache['1m'],tradeSetups:sources,sourcesAssembled:true,includeSweepRetestSources:true,m5Candles:m5,h1Candles:h1,dailyAnchors:anchors,sessionConfigs:sessions,tradingWindows,
    news:news.map(n=>({...n,eventTime:seconds(n.event_time)})),newsLoadStatus:'ready',settings:{allowSpreadHourGaps:true},yieldControl:()=>delay(0),
    loadM1Candles:async({structureFromTime})=>{
     // Scanner bestimmt Sweep-/P5-Vorlauf. Preisvergleich braucht die bestätigte OB-Historie ebenfalls.
@@ -173,7 +173,7 @@ async function instrumentTick(row,sessions,schedules,news) {
   const currentError=feedError;
   const state={phase:active.length?'Setup 2 · M1 beobachten':'Setup 1 · M5 beobachten',activeRanges:active,suspendedRanges:suspended,rangeChecks,
    marketPause:watcherMarketPause(cache['1m'],processed,previous.marketPause),
-   entries:[...entries.values()],structureKnownAt:Object.fromEntries(cache.structures),lastProcessAt:iso(started/1000),lastSuccessAt:currentError?previous.lastSuccessAt ?? null:iso(success),lastM5Time:lastM5,
+   entries:[...entries.values()],sourceIdeaBindings:[...cache.ideaBindings],structureKnownAt:Object.fromEntries(cache.structures),lastProcessAt:iso(started/1000),lastSuccessAt:currentError?previous.lastSuccessAt ?? null:iso(success),lastM5Time:lastM5,
    lastM1Time:active.length?latestClosed-60:null,evaluatedThrough:currentError?previous.evaluatedThrough ?? null:iso(latestClosed),
    nextExpectedCheck:iso((active.length?Math.floor(success/60)*60+60:Math.floor(success/300)*300+300)+12),
    scanDurationMs:Date.now()-started,lastStep:active.length?'Geschlossene M1-Kerzen und Alarmstufen geprüft':'Geschlossene M5-Kerzen und Setup-1-Quellen geprüft',

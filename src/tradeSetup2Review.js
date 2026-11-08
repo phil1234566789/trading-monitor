@@ -21,7 +21,10 @@ export const REVIEW_STATUS_ICONS = { passed: '✓', unmet: '✕', unknown: '?' }
 export function groupSetupSnapshots(snapshots) {
   const groups = new Map();
   for (const snapshot of snapshots) {
-    const key = `${snapshot.runId ?? ''}:${snapshot.instrument}:${snapshot.setupKey ?? snapshot.entry?.setupKey ?? snapshot.id}`;
+    const lifecycle=snapshot.checklist?.setup?.primary?.lifecycle??snapshot.rangeCourse?.lifecycle;
+    const ideaKey=snapshot.entry?.ideaKey??lifecycle?.sourceIdeaKey,ideaKnownAt=snapshot.entry?.ideaKnownAt??lifecycle?.sourceIdeaKnownAt;
+    const identity=ideaKey&&Number.isFinite(ideaKnownAt)&&ideaKnownAt<=snapshot.knownAt?ideaKey:snapshot.setupKey??snapshot.entry?.setupKey??snapshot.id;
+    const key = `${snapshot.runId ?? ''}:${snapshot.instrument}:${identity}`;
     if (!groups.has(key)) groups.set(key, { key, candidate: null, latestCandidate: null, firstValidated: null, entries: [] });
     const group = groups.get(key);
     if (savedDealingRangeStatus(snapshot) === 'validated' && (!group.firstValidated || snapshot.knownAt < group.firstValidated.knownAt)) group.firstValidated = snapshot;
@@ -54,18 +57,21 @@ export function setupEntryConditions(snapshot,selectedPattern=null) {
   const known = time => Number.isFinite(time) && Number.isFinite(at) && time <= at;
   const checklist = snapshot.checklist?.status === 'ready' && known(snapshot.checklist.evaluatedAt) ? snapshot.checklist : null;
   const checks = checklist?.checks ?? {}, primary = checklist?.setup?.primary;
-  const selectedM1=snapshot.m1Check?.patterns?.find(check=>entryPatternVersion(check)===selectedPattern) ?? snapshot.m1Check;
+  const selectedVersion=snapshot.entry?.patternMatches?.find(item=>item.id===selectedPattern)?.entryPattern??selectedPattern;
+  const selectedM1=snapshot.m1Check?.patterns?.find(check=>entryPatternVersion(check)===selectedVersion) ?? snapshot.m1Check;
   const m1 = known(selectedM1?.evaluatedAt)
     ? normalizeM1ChecklistPresentation(selectedM1, snapshot.direction, at) : null;
   const storedEntry = known(snapshot.entry?.recognizedAt) ? snapshot.entry : null;
   const matches=storedEntry?.patternMatches ?? [];
-  const match=matches.find(item=>item.entryPattern===selectedPattern);
+  const match=matches.find(item=>item.id===selectedPattern)??matches.find(item=>item.entryPattern===selectedPattern);
   // Nur die Belegansicht wechselt; Ausführung, Sizing und gespeicherter Besitzer bleiben unverändert.
   const entry=match?{...storedEntry,...match,label:isEntryPattern2(match.entryPattern)?'Entry Pattern 2':'Entry Pattern 1'}:storedEntry;
   const version=entryPatternVersion(entry) ?? entryPatternVersion(m1) ?? entryPatternVersion(checklist);
   const pattern1=isEntryPattern1(version);
   const pattern2=isEntryPattern2(version),patternLabel=pattern2?'Entry Pattern 2':pattern1?'Entry Pattern 1':'Entry 1';
-  const patternOptions=matches.map(item=>({version:item.entryPattern,id:item.id,label:isEntryPattern2(item.entryPattern)?'Entry Pattern 2':'Entry Pattern 1'}));
+  const multipleSources=new Set(matches.map(item=>item.sourceSetupKey).filter(Boolean)).size>1;
+  const patternOptions=matches.map(item=>({version:item.entryPattern,id:item.id,
+    label:`${isEntryPattern2(item.entryPattern)?'Entry Pattern 2':'Entry Pattern 1'}${multipleSources?` · Quelle ${known(item.sourceKnownAt)?formatDatedTime(item.sourceKnownAt):'Zeit unbekannt'}`:''}`}));
   const price = value => Number.isFinite(value) ? fmtPrice(value, pricePrecisionForInstrument(snapshot.instrument)) : 'unbekannt';
   const date = time => known(time) ? `${formatDatedTime(time)} Uhr` : 'nicht gespeichert';
   const normal = status => status === 'passed' ? 'passed' : ['unmet', 'pending', 'blocked'].includes(status) ? 'unmet' : 'unknown';
@@ -163,5 +169,5 @@ export function setupEntryConditions(snapshot,selectedPattern=null) {
   const counts = ['passed', 'unmet', 'unknown'].map(status => rows.filter(row => row.status === status).length);
   const assessment = missing.length ? { status: 'unmet', label: 'Nicht tradebar am Bewertungsstand' }
     : { status: 'unknown', label: entry ? 'Entry gespeichert · siehe Einzelbedingungen' : 'Handelbarkeit nicht vollständig belegt' };
-  return { pattern1,pattern2,patternLabel,patternOptions,version,rows, missing, counts, assessment, observations, prerequisiteNote: reason ? inactiveM1Checklist(reason).details[0] : null };
+  return { pattern1,pattern2,patternLabel,patternOptions,selectedPatternId:match?.id??storedEntry?.id??null,version,rows, missing, counts, assessment, observations, prerequisiteNote: reason ? inactiveM1Checklist(reason).details[0] : null };
 }

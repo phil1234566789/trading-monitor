@@ -78,7 +78,11 @@ export function buildTradeSetup2Snapshot(input) {
   if (!entryAgainstM5Allowed(checklist, entry)) return null;
   const { instrument, evaluatedAt, status, checks, structure, tradeability, model, ruleVersion }=checklist;
   const entryPattern=entryPatternVersion(entry) ?? entryPatternVersion(checklist);
-  const sizedEntry = { ...entry, sizing: entrySizingAt(checklist, entry) };
+  const idea=checklist.setup.primary.ideaBinding;
+  const sizedEntry = { ...entry, sizing: entrySizingAt(checklist, entry),
+    ...(idea?.status==='known'&&idea.knownAt<=entry.recognizedAt?{ideaKey:checklist.setup.primary.ideaKey,
+      ideaKnownAt:idea.knownAt,sourceRecognizedAt:checklist.setup.primary.recognizedAt,
+      exitPolicy:checklist.setup.primary.exitPolicy,sourceFamilyKey:checklist.setup.primary.sourceFamilyKey}: {}) };
   // Eine Legacyquelle liefert sonst ihren P5-Zeichenstand neben einem P2-Entry.
   const evidenceInput=isEntryPattern2(entryPattern)?{...input,m1Structure:buildM1PivotStructure(input.m1Candles ?? [],checklist.setup.primary,entry.recognizedAt,M1_FVG_RETEST_STRUCTURE_PERIOD)}:input;
   const entryChecks=entryPatternVersion(entry) ? {...checks,entry:{status:'passed',entryPattern:entryPatternVersion(entry),

@@ -5,6 +5,7 @@ import {setupSourceKey,setupSourceRecognitionTime} from '../../src/setupSources.
 import {ENTRY_PATTERN_1_VERSION} from '../../src/entryPattern1Conditions.js';
 import {SETUP2_VERSION} from '../../src/tradeSetup2Configuration.js';
 import {minuteAlarmEvents,rememberStructure,structureTrackingKey} from './events.js';
+import {naturalSourceFamilyKey} from '../../src/setupSourceFamily.js';
 const seconds=value=>typeof value==='number'?value:Date.parse(value)/1000;
 const iso=value=>new Date(value*1000).toISOString();
 
@@ -22,7 +23,7 @@ export function refreshRecoveredHistory(cache,state) {
  if((cache.historyRevision ?? 0)===revision)return false;
  // Unter der frischen Livelease neu laden; keine laufenden Arrays vom Nachholjob aus verändern.
  delete cache['1m'];delete cache['5m'];delete cache.m1Start;delete cache.m5Start;
- cache.scanMemo={};cache.historyRevision=revision;return true;
+ cache.scanMemo={};cache.ideaBindings=new Map(structuredClone(state.sourceIdeaBindings??[]));cache.historyRevision=revision;return true;
 }
 export function continuousHistory(rows,start,end,duration) {
  let next=Math.ceil(start/duration)*duration;
@@ -36,7 +37,9 @@ export function continuousHistory(rows,start,end,duration) {
  }
  return skipSpreadHourGaps(next,until,duration)>=until;
 }
-const fingerprint=(range,state)=>JSON.stringify([range?.source,range?.evaluatedThrough,range?.historyStart,state.configFingerprint,state.version]);
+const familyBindings=(range,state)=>(state.sourceIdeaBindings??[]).filter(([,binding])=>binding.familyKey===naturalSourceFamilyKey(range.source));
+const fingerprint=(range,state)=>JSON.stringify([range?.source,range?.evaluatedThrough,range?.historyStart,state.configFingerprint,state.version,
+ state.nativeHistoryRevision??0,familyBindings(range,state)]);
 export function recoveryConfig(sessions,windows,news) {
  return JSON.stringify([sessions,windows,news,ENTRY_PATTERN_1_VERSION,SETUP2_VERSION]);
 }
@@ -64,10 +67,13 @@ export async function recoverSuspendedRange({row,range,sessions,schedules,news,c
  if(!continuousHistory(m5,historyStart,probeThrough,300))return;
  let through=m1.at(-1)?.time+60;
  if(!Number.isFinite(through))return;
- const entries=new Map((row.state.entries ?? []).filter(item=>item.setupKey===range.setupKey).map(item=>[item.entry.id,structuredClone(item)]));
+ const sourceIdeaBindings=new Map(structuredClone(row.state.sourceIdeaBindings??[]));
+ const familyKey=naturalSourceFamilyKey(source),ideaKeys=new Set(familyBindings(range,row.state).map(([key])=>key));
+ const entries=new Map((row.state.entries ?? []).filter(item=>item.setupKey===range.setupKey||familyKey&&item.entry.sourceFamilyKey===familyKey
+  ||ideaKeys.has(item.entry.ideaKey)).map(item=>[item.entry.id,structuredClone(item)]));
  const structures=new Map(Object.entries(row.state.structureKnownAt ?? {}));
  const events=new Map();let snapshot=null;
- const input={instrument,tradeSetups:[source],sourcesAssembled:true,includeSweepRetestSources:true,m1Candles:m1,m5Candles:m5,h1Candles:h1,dailyAnchors:anchors,
+ const input={instrument,sourceIdeaBindings,tradeSetups:[source],sourcesAssembled:true,includeSweepRetestSources:true,m1Candles:m1,m5Candles:m5,h1Candles:h1,dailyAnchors:anchors,
   sessionConfigs:structuredClone(sessions),tradingWindows:structuredClone(tradingWindows),
   news:news.map(n=>({...n,eventTime:seconds(n.event_time)})),newsLoadStatus:'ready',settings:{allowSpreadHourGaps:true},scanMemo:{},yieldControl,
   loadM1Candles:async({structureFromTime})=>{
@@ -105,6 +111,7 @@ export async function recoverSuspendedRange({row,range,sessions,schedules,news,c
    await scan(through+60,liveThrough);through=liveThrough;
   }
   const state=structuredClone(current.state),unknown=snapshot.rangeCourse?.lifecycle?.main?.state==='unknown';
+  state.sourceIdeaBindings=[...new Map([...(state.sourceIdeaBindings??[]),...[...sourceIdeaBindings].filter(([,binding])=>binding.familyKey===familyKey)])];
   state.evidencePriceObservations={...state.evidencePriceObservations,...(evidencePriceObservations?.[range.setupKey]?{[range.setupKey]:evidencePriceObservations[range.setupKey]}:{})};
   state.nativeHistoryRevision=(state.nativeHistoryRevision ?? 0)+1;
   state.entries=[...new Map([...(state.entries ?? []),...entries.values()].map(item=>[item.entry.id,item])).values()];

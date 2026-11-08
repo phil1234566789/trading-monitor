@@ -13,6 +13,9 @@ import { ENTRY_PATTERN_1_VERSION } from './entryPattern1Conditions.js';
 import { finalObservation,setupMemoKey } from './setup2Memo.js';
 import {M1_FVG_RETEST_PATTERN_VERSION} from './m1FvgRetestSequence.js';
 import {selectRelativeM5SweepRanges,relativeM5SweepKnownAt,RELATIVE_M5_SWEEP_RANGE_VERSION} from './relativeM5SweepRanges.js';
+import {naturalSourceFamilyKey} from './setupSourceFamily.js';
+import {knownSourceIdeaKey,SOURCE_IDEA_EXIT_POLICY} from './setupSourceIdeaIdentity.js';
+import {evaluateSourceIdeaLifecycles} from './sourceIdeaLifecycle.js';
 
 export { COUNTERTREND_STAGE_VERSION } from './tradeSetup2DealingRange.js';
 
@@ -28,7 +31,7 @@ export function classifyM5SetupType(direction, currentTrend, outerTrend) {
 
 export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candles = [], h1Candles = [],
   tradeSetups = [], dailyAnchors = [], settings = {}, sessionConfigs = [], dataStatus = 'ready',
-  tradingWindows, news, newsLoadStatus, closeReactionCache, setupClassificationCache, setupMemo, detectScanOrderBlocks, dataRevision=0,entryOutcomes = new Map(),includeSweepRetestSources=false,sourcesAssembled=false } = {}) {
+  tradingWindows, news, newsLoadStatus, closeReactionCache, setupClassificationCache, setupMemo, detectScanOrderBlocks, dataRevision=0,entryOutcomes = new Map(),includeSweepRetestSources=false,sourcesAssembled=false,sourceIdeaBindings } = {}) {
   const pendingDetail=includeSweepRetestSources?'Wartet auf Setup 1.0 oder Liquidity Sweep mit M5-OB-Retest.':'Wartet auf ein bekanntes Setup 1.0.';
   const pending = () => ({ status: 'pending', details: [pendingDetail] });
   const checks = { liquiditySweep: pending(), reaction: pending(), m5Trend: unknownChecklistM5(),
@@ -125,7 +128,8 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
         inner:{trend:rangeAssociation.inner.trend,rawTrend:rangeAssociation.inner.rawTrend,depth:rangeAssociation.inner.depth,range:rangeAssociation.inner.range,
           basis:rangeAssociation.inner.basis,knownAt:rangeAssociation.inner.knownAt,confirmation:rangeAssociation.inner.confirmation}}
         :{version:RELATIVE_M5_SWEEP_RANGE_VERSION,status:'unknown',reason:rangeAssociation?.reason ?? 'sourceContextUnknown'}}:{}),
-      ...(includeSweepRetestSources?{entryPatterns:isSweepRetestSource(source)?[M1_FVG_RETEST_PATTERN_VERSION]:[ENTRY_PATTERN_1_VERSION,M1_FVG_RETEST_PATTERN_VERSION]}:{}),
+      ...(includeSweepRetestSources?{instrument,sourceFamilyKey:naturalSourceFamilyKey(source),exitPolicy:SOURCE_IDEA_EXIT_POLICY,
+        entryPatterns:isSweepRetestSource(source)?[M1_FVG_RETEST_PATTERN_VERSION]:[ENTRY_PATTERN_1_VERSION,M1_FVG_RETEST_PATTERN_VERSION]}:{}),
       setupType: classification.type, abortReason: classification.reason, knownAsOf: evaluatedAt,
       recognizedAt, reactionRecognizedAt: recognizedAt, checks: candidateChecks,
       sweep: { level: source.ls, timeframe: source.sweeps?.[0]?.timeframe ?? '5M', ageSeconds: sweepAgeSec(source.ls) },
@@ -137,7 +141,7 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
   });
   result.setup.classifications = candidates.map(c => ({ id: c.id, setupType: c.setupType, reason: c.abortReason,
     recognizedAt: c.recognizedAt, currentTrend: c.checks.m5Trend.trend, outerTrend: c.checks.outerM5Trend.trend }));
-  const accepted = candidates.filter(c => c.setupType === 'countertrend');
+  let accepted = candidates.filter(c => c.setupType === 'countertrend');
   for (const candidate of accepted) {
     if(candidate.targetSelection?.status!=='passed')candidate.targetSelection = fixChecklistTargets({candidate,instrument,candles:m5,sessionConfigs,recognitionWithinBar:true,entryPattern:ENTRY_PATTERN_1_VERSION});
     candidate.checks.targets = candidate.targetSelection ?? {status:'unknown',details:['Zielprüfung offen.']};
@@ -154,6 +158,9 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
         frozen:candidate.checks,detectScanOrderBlocks}));
     }
   }
+  if(includeSweepRetestSources)accepted=evaluateSourceIdeaLifecycles(accepted,{evaluatedAt,
+    bindings:sourceIdeaBindings??new Map(),signature:knownSourceIdeaKey,outcomes:entryOutcomes,
+    evaluateLifecycle:evaluateCountertrendLifecycle,candles:m5});
   const selected = accepted[0] ?? candidates[0];
   if (selected) {
     result.direction = selected.direction;

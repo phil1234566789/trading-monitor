@@ -3,7 +3,8 @@ import {observeCapturedRanges} from './priceObservations.js';
 import {packEvidence} from './evidencePayload.js';
 import {evidenceHash as hash} from './evidenceIdentity.js';
 import {buildTradeSetup2CandidateSnapshot} from '../../src/tradeSetup2Snapshot.js';
-import {SETUP2_VERSION,CURRENT_ENTRY_PATTERNS,CURRENT_M1_PERIODS,RELATIVE_M5_SWEEP_RANGE_VERSION} from '../../src/tradeSetup2Configuration.js';
+import {SETUP2_VERSION,CURRENT_ENTRY_PATTERNS,CURRENT_M1_PERIODS,RELATIVE_M5_SWEEP_RANGE_VERSION,
+ SOURCE_FAMILY_VERSION,SOURCE_IDEA_BINDING_VERSION,SOURCE_IDEA_EXIT_POLICY} from '../../src/tradeSetup2Configuration.js';
 import {ENTRY_PATTERN_1_VERSION} from '../../src/entryPattern1Conditions.js';
 import {M1_STRUCTURE_PERIOD} from '../../src/m1StructureSettings.js';
 import {m5BosRuleVersionFor} from '../../src/entryPattern1M5Confirmation.js';
@@ -14,7 +15,8 @@ export function createLiveEvidence(config,{fromTime,toTime,startedAt,mode}) {
  const m5BosRuleVersion=m5BosRuleVersionFor(config.instrument,config.entryPattern);
  const configuration={schemaVersion:1,setupVersion:SETUP2_VERSION,drRiskVersion:JOINT_LOSS_RISK_VERSION,entryPattern:ENTRY_PATTERN_1_VERSION,
   entryPatterns:[...CURRENT_ENTRY_PATTERNS],m1Periods:{...CURRENT_M1_PERIODS},includeSweepRetestSources:true,
-  relativeM5SweepRangeVersion:RELATIVE_M5_SWEEP_RANGE_VERSION,m1Period:M1_STRUCTURE_PERIOD,...config,
+  relativeM5SweepRangeVersion:RELATIVE_M5_SWEEP_RANGE_VERSION,sourceFamilyVersion:SOURCE_FAMILY_VERSION,
+  sourceIdeaBindingVersion:SOURCE_IDEA_BINDING_VERSION,exitPolicy:SOURCE_IDEA_EXIT_POLICY,m1Period:M1_STRUCTURE_PERIOD,...config,
   ...(m5BosRuleVersion?{m5BosRuleVersion}:{})},configurationId=hash(configuration),originals=new Map(),payloads=new Map(),origins=new Map();
  const evaluationMode=mode ?? (fromTime<Math.floor(startedAt/60)*60-60?'catchup':'live');
  function record(snapshot) {

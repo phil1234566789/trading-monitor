@@ -19,3 +19,13 @@ it('reviews a matched second pattern without mutating the execution owner',()=>{
   expect(review.patternLabel).toBe('Entry Pattern 2');expect(review.patternOptions).toHaveLength(2);
   expect(review.rows.find(r=>r.key==='retestedFvg').status).toBe('passed');expect(s).toEqual(before);
 });
+it('selects distinct source facts by match ID when both use the same pattern version',()=>{
+ const s=snapshot(),other=structuredClone(facts);other.fvgRetest.candleTime=179;
+ s.entry.patternMatches=[{id:'source-a',entryPattern:version,sourceSetupKey:'a',sourceKnownAt:60,conditions:structuredClone(facts)},
+  {id:'source-b',entryPattern:version,sourceSetupKey:'b',sourceKnownAt:120,conditions:other}];
+ const before=structuredClone(s),review=setupEntryConditions(s,'source-b');
+ expect(review.selectedPatternId).toBe('source-b');
+ expect(review.rows.find(r=>r.key==='fvgRetest').status).toBe('unmet');
+ expect(review.patternOptions[0].label).not.toBe(review.patternOptions[1].label);
+ expect(s).toEqual(before);
+});

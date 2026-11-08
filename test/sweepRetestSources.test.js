@@ -22,7 +22,8 @@ describe('additional causal sweep / existing M5 OB source',()=>{
     const prefix={...input,m5Candles:input.m5Candles.filter(c=>c.time+300<=input.evaluatedAt),
       h1Candles:input.h1Candles.filter(c=>c.time+3600<=input.evaluatedAt)};
     expect(reference(detectSweepRetestSources(prefix))).toEqual(source);
-    expect(reference(assembleSetupSources({...input,includeSweepRetestSources:true,tradeSetups:[source]}))).toEqual(source);
+    const {sourceFamilyKey,sourceFamilyVersion,...assembled}=reference(assembleSetupSources({...input,includeSweepRetestSources:true,tradeSetups:[source]}));
+    expect(assembled).toEqual(source);expect(sourceFamilyKey).toBeTruthy();
     expect(assembleSetupSources({...input,includeSweepRetestSources:true,tradeSetups:[source]}).filter(s=>setupSourceKey(s)===setupSourceKey(source))).toHaveLength(1);
   });
   it('does not invent validity across missing OB history',()=>{
