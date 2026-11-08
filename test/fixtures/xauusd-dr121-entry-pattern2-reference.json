@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "status": "engine-reference-only-source-path-undecided",
+  "patternVersion": "m1-structure-fvg-retest-v1",
+  "sourceFixture": "xauusd-dr121-exploratory-short.json",
+  "sourceM1Sha256": "76539c103c669812c033886d850fdf3747054e09743003e78aa8dec8126635b4",
+  "timezone": "Europe/Berlin",
+  "date": "2026-10-29",
+  "timeSemantics": {
+    "candleTime": "native FXCM Bid candle start",
+    "knownAt": "closed candle availability, never intrabar recognition",
+    "structure": "existing directional three-pivot wick-break helper with P2; prior pattern keeps P5",
+    "fvgMinimumGap": "existing resolver: strictly greater than 1e-9 price units",
+    "fvgRetest": "inclusive candle-zone overlap after zone is known; wick overflow does not invalidate FVG",
+    "confirmation": "same-direction FVG newly confirmed strictly after retest close"
+  },
+  "philipAnnotations": {
+    "m5OrderBlockImpulse": "06:40",
+    "m5OrderBlockUpperBoundary": 4043.74,
+    "liquiditySweepPrice": 4037.84,
+    "m1StructureLevelCandle": "12:12",
+    "m1RetestedFvgImpulse": "12:16",
+    "m1FvgRetestCandle": "12:19",
+    "m1ConfirmationFvgImpulse": "12:23",
+    "proposedEntryKnownAt": "12:25"
+  },
+  "measured": {
+    "structureLevel": 4034.38,
+    "structureBreachCandle": "12:17",
+    "structureKnownAt": "12:18",
+    "retestedFvg": { "bottom": 4035.22, "top": 4035.93, "knownAt": "12:18" },
+    "retestKnownAt": "12:20",
+    "confirmationFvg": { "bottom": 4034.18, "top": 4034.40, "knownAt": "12:25" },
+    "confirmationCandleClose": 4034.12
+  },
+  "limitations": [
+    "No automatic dealing-range source integration or production activation is claimed.",
+    "Existing journal positions 144 and 145 retain their original entries.",
+    "This is a separate rule reference, not a relabeling of the original exploratory fixture.",
+    "M5 source eligibility, common gates, sizing and risk metadata are not implemented by this pure sequence slice."
+  ]
+}
