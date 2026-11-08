@@ -103648,7 +103648,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L105",
+      "source_location": "L108",
       "weight": 1.0
     },
     {
@@ -103660,7 +103660,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L106",
+      "source_location": "L109",
       "weight": 1.0
     },
     {
@@ -103672,7 +103672,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L114",
+      "source_location": "L117",
       "weight": 1.0
     },
     {
@@ -103684,7 +103684,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L121",
+      "source_location": "L124",
       "weight": 1.0
     },
     {
@@ -103696,7 +103696,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L128",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -103708,7 +103708,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L130",
+      "source_location": "L133",
       "weight": 1.0
     },
     {
@@ -103720,7 +103720,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L131",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -103732,7 +103732,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L139",
+      "source_location": "L142",
       "weight": 1.0
     },
     {
@@ -103744,7 +103744,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L151",
+      "source_location": "L154",
       "weight": 1.0
     },
     {
@@ -103756,7 +103756,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L151",
+      "source_location": "L154",
       "weight": 1.0
     },
     {
@@ -103768,7 +103768,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L156",
+      "source_location": "L159",
       "weight": 1.0
     },
     {
@@ -103780,7 +103780,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L164",
+      "source_location": "L167",
       "weight": 1.0
     },
     {
@@ -103792,7 +103792,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L169",
+      "source_location": "L172",
       "weight": 1.0
     },
     {
@@ -103804,7 +103804,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L60",
+      "source_location": "L61",
       "weight": 1.0
     },
     {
@@ -103816,7 +103816,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L62",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -103828,7 +103828,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L67",
+      "source_location": "L68",
       "weight": 1.0
     },
     {
@@ -103840,31 +103840,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L69",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tradesetup2review_setupentryconditions",
-      "target": "src_format_fmtprice",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L72",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tradesetup2review_setupentryconditions",
-      "target": "src_format_priceprecisionforinstrument",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L72",
+      "source_location": "L70",
       "weight": 1.0
     },
     {
@@ -103876,7 +103852,31 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L73",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tradesetup2review_setupentryconditions",
+      "target": "src_format_fmtprice",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/tradeSetup2Review.js",
+      "source_location": "L75",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tradesetup2review_setupentryconditions",
+      "target": "src_format_priceprecisionforinstrument",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/tradeSetup2Review.js",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -103888,7 +103888,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L77",
+      "source_location": "L80",
       "weight": 1.0
     },
     {
@@ -103900,7 +103900,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L93",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -103912,7 +103912,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L95",
+      "source_location": "L98",
       "weight": 1.0
     },
     {
@@ -103924,7 +103924,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetup2Review.js",
-      "source_location": "L95",
+      "source_location": "L98",
       "weight": 1.0
     },
     {
@@ -261346,5 +261346,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "0c148b0f7eff53e99bc5f0320f47a5ccfb72d1a2"
+  "built_at_commit": "d05a10bf05d7880c30aa26ae69438c61c2bf3a0f"
 }
