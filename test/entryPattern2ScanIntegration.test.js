@@ -6,6 +6,8 @@ import {scanTradeSetup2Window} from '../src/tradeSetup2Scan.js';
 import * as m5 from '../src/tradeSetupChecklistM5.js';
 import * as targets from '../src/tradeSetupChecklistTargets.js';
 import * as confluences from '../src/tradeSetupChecklistConfluences.js';
+import * as relativeRanges from '../src/relativeM5SweepRanges.js';
+import relativeReference from './fixtures/xauusd-dr121-relative-m5-ranges.json';
 const at=clock=>Date.parse(`2026-10-29T${clock}:00+01:00`)/1000;
 
 it('streams and resumes a generated source through the real P2 engine (synthetic common-gate acceptance)',async()=>{
@@ -14,6 +16,8 @@ it('streams and resumes a generated source through the real P2 engine (synthetic
   // Diese Testdoubles prüfen Transport/Resume, keine fachliche Freigabe der echten DR121-C/D.
   vi.spyOn(m5,'evaluateChecklistOuterM5').mockReturnValue({state:{trend:'downtrend'}});
   vi.spyOn(m5,'evaluateChecklistM5').mockReturnValue({structureReaction:{trend:'uptrend'}});
+  const association=relativeRanges.selectRelativeM5SweepRanges(relativeReference);
+  vi.spyOn(relativeRanges,'selectRelativeM5SweepRanges').mockReturnValue(association);
   vi.spyOn(targets,'evaluateChecklistTargets').mockReturnValue({status:'passed',direction:'short',selectedAt:at('12:10'),
     target1:{price:4023.05,knownAt:at('12:10')}});
   vi.spyOn(confluences,'evaluateChecklistConfluences').mockReturnValue({antiConfluences:{status:'clear',rules:[]},confluences:{status:'clear',rules:[]}});

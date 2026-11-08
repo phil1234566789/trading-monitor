@@ -5,6 +5,7 @@ import {M1_FVG_RETEST_PATTERN_VERSION} from '../src/m1FvgRetestSequence.js';
 import {buildM1Structure} from '../src/m1Structure.js';
 import {evaluateM1Checklist} from '../src/m1Checklist.js';
 import {buildTradeSetup2Snapshot} from '../src/tradeSetup2Snapshot.js';
+import {gateM1ChecklistEntries} from '../src/tradeSetup2EntryGate.js';
 const at=clock=>Date.parse(`2026-10-29T${clock}:00+01:00`)/1000;
 const source=detectSweepRetestSources({instrument:'XAUUSD',m5Candles:fixture.candles.m5,h1Candles:fixture.candles.h1,evaluatedAt:at('12:25')})
   .find(s=>s.obStartTime===at('06:40')&&s.sweeps.some(sweep=>sweep.level.price===4037.84));
@@ -41,5 +42,15 @@ describe('original native DR121 new pattern entry engine (common DR gates tested
     expect(snapshot.entry.sizing).toMatchObject({factor:1,reason:'m1PatternConfirmed'});
     expect(snapshot.evidence.some(e=>e.role==='structure'&&e.timeframe==='1m')).toBe(true);
     expect(snapshot.checklist.entryPattern).toBe(M1_FVG_RETEST_PATTERN_VERSION);
+  });
+  it('keeps the observed pattern separate from old blocked hours and permits the explicitly changed 07–18 window',()=>{
+    const check=evaluate('12:25'),settings={instrument:'XAUUSD',sessionConfigs:[],news:[],newsLoadStatus:'ready'};
+    const before=gateM1ChecklistEntries(check,{...settings,tradingWindows:{weekday:[[840,1080]],saturday:[],sunday:[]}});
+    expect(before.entry).toBeNull();
+    expect(before.patternCandidate.price).toBe(4034.12);
+    expect(before.entryEligibility.status).toBe('blocked');
+    const after=gateM1ChecklistEntries(check,{...settings,tradingWindows:{weekday:[[420,1080]],saturday:[],sunday:[]}});
+    expect(after.entry.price).toBe(4034.12);
+    expect(after.entry.entryEligibility.hours.status).toBe('passed');
   });
 });

@@ -1,0 +1,396 @@
+{
+  "schemaVersion": 1,
+  "id": "xauusd-dr121-relative-m5-ranges-20261029",
+  "provenance": {
+    "source": "Projection of unchanged native-FXCM M5 structure and CloseReaction output at source recognition, not a new market label.",
+    "sourceFixture": "xauusd-dr121-exploratory-short.json",
+    "codeBaseline": "2f0ed5ab",
+    "archives": {
+      "1D": {
+        "file": "XAUUSD-1D-1767333600-1793815200.json",
+        "sha256": "46930b581ce2dd231ee9cc403f932722f19705a51a38b59d307c11ab5c99b897"
+      },
+      "1h": {
+        "file": "XAUUSD-1h-1767333600-1793815200.json",
+        "sha256": "9c54d5e983e59d3b8f3a5422c767d6296c644d927bf87d59dd65fc8bf07fbc56"
+      },
+      "5m": {
+        "file": "XAUUSD-5m-1767333600-1793815200.json",
+        "sha256": "67fdd6aded2222260da5fa5b4de59e54e64f02c2649eb5e9d32879e1dbe2d814"
+      }
+    },
+    "projection": "Only source-pivot membership, current ranges, direct nested links and seeds used by the selector are retained; original full recomputation and state-prefix parity are recorded in local diagnostic artifacts."
+  },
+  "timeSemantics": {
+    "timezone": "Europe/Berlin",
+    "date": "2026-10-29",
+    "sourceKnownAt": "12:10",
+    "rawNestedConfirmation": "12:25; never borrowed for the 12:10 selection",
+    "existingChochKnownAt": "12:10"
+  },
+  "source": {
+    "instrument": "XAUUSD",
+    "sourceKey": "1:1793252400:1793271900",
+    "sourceKind": "liquidity-sweep-existing-m5-ob-retest-v1",
+    "entryPattern": "m1-structure-fvg-retest-v1",
+    "createdAt": 1793272200,
+    "recognizedAt": 1793272200,
+    "dir": 1,
+    "obTop": 4043.74,
+    "obBottom": 4038.24,
+    "obStartTime": 1793252400,
+    "obFvg": 2.6299999999996544,
+    "orderBlockKnownAt": 1793253000,
+    "sourceRetest": {
+      "candleTime": 1793271900,
+      "recognizedAt": 1793272200
+    },
+    "ls": {
+      "price": 4037.84,
+      "dir": 1,
+      "pivotTime": 1793264700,
+      "touched": true,
+      "touchedTime": 1793271900,
+      "endTime": 1793271900,
+      "recognizedAt": 1793266500
+    },
+    "sweeps": [
+      {
+        "timeframe": "5M",
+        "level": {
+          "price": 4037.84,
+          "dir": 1,
+          "pivotTime": 1793264700,
+          "touched": true,
+          "touchedTime": 1793271900,
+          "endTime": 1793271900,
+          "recognizedAt": 1793266500
+        }
+      },
+      {
+        "timeframe": "5M",
+        "level": {
+          "price": 4037.64,
+          "dir": 1,
+          "pivotTime": 1793257800,
+          "touched": true,
+          "touchedTime": 1793264700,
+          "endTime": 1793264700,
+          "recognizedAt": 1793259600
+        }
+      },
+      {
+        "timeframe": "5M",
+        "level": {
+          "price": 4035.11,
+          "dir": 1,
+          "pivotTime": 1793261400,
+          "touched": true,
+          "touchedTime": 1793264700,
+          "endTime": 1793264700,
+          "recognizedAt": 1793263200
+        }
+      }
+    ],
+    "invalidation": 4043.74
+  },
+  "anchor": {
+    "direction": "low",
+    "price": 4073.42,
+    "pivotTime": 1791925200,
+    "knownAt": 1792530000,
+    "structureStartTime": 1791993600
+  },
+  "state": {
+    "trend": "downtrend",
+    "currRange": {
+      "low": {
+        "type": "low",
+        "price": 3975.48,
+        "pivotTime": 1792765800,
+        "touched": false
+      },
+      "high": {
+        "type": "high",
+        "price": 4199.03,
+        "pivotTime": 1792160700,
+        "touched": false
+      }
+    },
+    "structurePivots": [
+      {
+        "type": "high",
+        "price": 4037.84,
+        "pivotTime": 1793264700,
+        "touched": {
+          "price": 4037.84,
+          "touchedAt": "1793271900",
+          "touchedTime": 1793271900
+        }
+      }
+    ],
+    "innerStructurePivots": [],
+    "appliedPivots": [
+      {
+        "type": "high",
+        "price": 4199.03,
+        "pivotTime": 1792160700,
+        "touched": false
+      },
+      {
+        "type": "low",
+        "price": 4173.58,
+        "pivotTime": 1792164300,
+        "touched": {
+          "price": 4173.58,
+          "touchedAt": "1792165200",
+          "touchedTime": 1792165200
+        }
+      }
+    ],
+    "nestedTrend": {
+      "trend": "uptrend",
+      "currRange": {
+        "low": {
+          "type": "low",
+          "price": 3975.48,
+          "pivotTime": 1792765800,
+          "touched": false
+        },
+        "high": {
+          "type": "high",
+          "price": 4082.22,
+          "pivotTime": 1793217600,
+          "touched": false
+        }
+      },
+      "structurePivots": [
+        {
+          "type": "high",
+          "price": 4037.84,
+          "pivotTime": 1793264700,
+          "touched": {
+            "price": 4037.84,
+            "touchedAt": "1793271900",
+            "touchedTime": 1793271900
+          }
+        }
+      ],
+      "innerStructurePivots": [],
+      "appliedPivots": [
+        {
+          "type": "low",
+          "price": 3975.48,
+          "pivotTime": 1792765800,
+          "touched": false
+        },
+        {
+          "type": "high",
+          "price": 4005.48,
+          "pivotTime": 1792766700,
+          "touched": {
+            "price": 4005.48,
+            "touchedAt": "1792770900",
+            "touchedTime": 1792770900
+          }
+        }
+      ],
+      "nestedTrend": {
+        "trend": "downtrend",
+        "currRange": {
+          "low": {
+            "type": "low",
+            "price": 4015.42,
+            "pivotTime": 1793263800,
+            "touched": false
+          },
+          "high": {
+            "type": "high",
+            "price": 4082.22,
+            "pivotTime": 1793217600,
+            "touched": false
+          }
+        },
+        "structurePivots": [
+          {
+            "type": "high",
+            "price": 4037.84,
+            "pivotTime": 1793264700,
+            "touched": {
+              "price": 4037.84,
+              "touchedAt": "1793271900",
+              "touchedTime": 1793271900
+            }
+          }
+        ],
+        "innerStructurePivots": [],
+        "appliedPivots": [
+          {
+            "type": "high",
+            "price": 4082.22,
+            "pivotTime": 1793217600,
+            "touched": false
+          },
+          {
+            "type": "low",
+            "price": 4055.37,
+            "pivotTime": 1793219400,
+            "touched": {
+              "price": 4055.37,
+              "touchedAt": "1793228400",
+              "touchedTime": 1793228400
+            }
+          }
+        ],
+        "nestedTrend": {
+          "trend": "unknown",
+          "currRange": {
+            "high": {
+              "type": "high",
+              "price": 4037.84,
+              "pivotTime": 1793264700,
+              "pivotAt": "1793264700",
+              "touched": {
+                "price": 4037.84,
+                "touchedAt": "1793271900",
+                "touchedTime": 1793271900
+              }
+            },
+            "low": {
+              "type": "low",
+              "price": 4015.42,
+              "pivotTime": 1793263800,
+              "pivotAt": "1793263800",
+              "touched": false
+            }
+          },
+          "appliedPivots": [
+            {
+              "type": "low",
+              "price": 4015.42,
+              "pivotTime": 1793263800,
+              "pivotAt": "1793263800",
+              "touched": false
+            },
+            {
+              "type": "high",
+              "price": 4037.84,
+              "pivotTime": 1793264700,
+              "pivotAt": "1793264700",
+              "touched": {
+                "price": 4037.84,
+                "touchedAt": "1793271900",
+                "touchedTime": 1793271900
+              }
+            },
+            {
+              "type": "high",
+              "price": 4037.84,
+              "pivotTime": 1793264700,
+              "pivotAt": "1793264700",
+              "touched": {
+                "price": 4037.84,
+                "touchedAt": "1793271900",
+                "touchedTime": 1793271900
+              }
+            },
+            {
+              "type": "low",
+              "price": 4023.05,
+              "pivotTime": 1793266500,
+              "pivotAt": "1793266500",
+              "touched": false
+            },
+            {
+              "type": "high",
+              "price": 4033.94,
+              "pivotTime": 1793268300,
+              "pivotAt": "1793268300",
+              "touched": {
+                "price": 4033.94,
+                "touchedAt": "1793271600",
+                "touchedTime": 1793271600
+              }
+            },
+            {
+              "type": "low",
+              "price": 4025.03,
+              "pivotTime": 1793270400,
+              "pivotAt": "1793270400",
+              "touched": false
+            }
+          ]
+        }
+      }
+    }
+  },
+  "stateKnownAt": 1793272200,
+  "evaluatedAt": 1793272200,
+  "reaction": {
+    "trend": "downtrend",
+    "direction": "long",
+    "choch": {
+      "type": "CHoCH",
+      "direction": "long",
+      "depth": 2,
+      "originTime": 1793263800,
+      "price": 4037.84,
+      "pivotTime": 1793264700,
+      "candleTime": 1793271900,
+      "recognizedAt": 1793272200
+    },
+    "bos": null,
+    "levels": [
+      {
+        "type": "CHoCH",
+        "direction": "long",
+        "depth": 0,
+        "originTime": 1792765800,
+        "price": 4005.48,
+        "pivotTime": 1792766700,
+        "candleTime": 1792983600,
+        "recognizedAt": 1792983900
+      },
+      {
+        "type": "BOS",
+        "direction": "long",
+        "depth": 0,
+        "originTime": 1792765800,
+        "price": 4034.21,
+        "pivotTime": 1792761600,
+        "candleTime": 1793109600,
+        "recognizedAt": 1793109900
+      },
+      {
+        "type": "CHoCH",
+        "direction": "short",
+        "depth": 1,
+        "originTime": 1793217600,
+        "price": 4055.37,
+        "pivotTime": 1793219400,
+        "candleTime": 1793228400,
+        "recognizedAt": 1793228700
+      },
+      {
+        "type": "BOS",
+        "direction": "short",
+        "depth": 1,
+        "originTime": 1793217600,
+        "price": 4027.32,
+        "pivotTime": 1793214000,
+        "candleTime": 1793253000,
+        "recognizedAt": 1793253300
+      },
+      {
+        "type": "CHoCH",
+        "direction": "long",
+        "depth": 2,
+        "originTime": 1793263800,
+        "price": 4037.84,
+        "pivotTime": 1793264700,
+        "candleTime": 1793271900,
+        "recognizedAt": 1793272200
+      }
+    ]
+  }
+}

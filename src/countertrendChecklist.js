@@ -12,6 +12,7 @@ import { divergenceObservationRule, H1_COUNTER_DIVERGENCE_RULE, M5_SWEEP_DIVERGE
 import { ENTRY_PATTERN_1_VERSION } from './entryPattern1Conditions.js';
 import { finalObservation,setupMemoKey } from './setup2Memo.js';
 import {M1_FVG_RETEST_PATTERN_VERSION} from './m1FvgRetestSequence.js';
+import {selectRelativeM5SweepRanges,relativeM5SweepKnownAt,RELATIVE_M5_SWEEP_RANGE_VERSION} from './relativeM5SweepRanges.js';
 
 export { COUNTERTREND_STAGE_VERSION } from './tradeSetup2DealingRange.js';
 
@@ -62,10 +63,13 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     const direction = source.dir === 1 ? 'short' : 'long';
     const recognizedAt = setupSourceRecognitionTime(source),sourceId=setupSourceId(source);
     const pattern=source.entryPattern ?? ENTRY_PATTERN_1_VERSION;
+    const relativeSource=isSweepRetestSource(source);
+    const classificationAt=relativeSource?(relativeM5SweepKnownAt(source) ?? recognizedAt):recognizedAt;
     const anchor = dailyAnchors.filter(a => a.instrument == null || a.instrument === instrument)
-      .filter(a => a.knownAt <= recognizedAt && Number.isFinite(a.structureStartTime))
+      .filter(a => a.knownAt <= classificationAt && Number.isFinite(a.structureStartTime))
       .sort((a, b) => b.pivotTime - a.pivotTime)[0];
     const memoKey=setupMemoKey(source,anchor,[COUNTERTREND_STAGE_VERSION,pattern,includeSweepRetestSources,
+      relativeSource?RELATIVE_M5_SWEEP_RANGE_VERSION:null,
       CHECKLIST_RULE_VERSION,OBSERVATION_RULE_VERSION,settings],configs,dataRevision);
     memoKeys.set(sourceId,memoKey);
     const memo=setupMemo?.get(memoKey);
@@ -73,45 +77,54 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     // Der kompakte Schlüssel kommt vor Markierung des Erkennungspräfixes.
     const cacheKey=memoKey;
     let evaluated = setupClassificationCache?.get(cacheKey);
-    const context = { instrument, direction, evaluatedAt: recognizedAt,
-      m5Candles: evaluated ? [] : mark(m5Candles, '5m', recognizedAt), closeReactionCache };
+    const context = { instrument, direction, evaluatedAt: classificationAt,
+      m5Candles: evaluated ? [] : mark(m5Candles, '5m', classificationAt), closeReactionCache };
     // Ohne bekannten D1-P4-Anker bleibt C unbekannt; kein Lookback-/H1-Ersatz.
     if (!evaluated) {
       const outer = anchor ? evaluateChecklistOuterM5(context, settings, anchor.structureStartTime) : null;
       const expected = direction === 'short' ? 'downtrend' : 'uptrend';
       // C sperrt vor der D-Auswertung: keine Close-Reaktion/innerste Richtungsprüfung bei Gegenrichtung.
-      const current = outer?.state.trend === expected
+      const current = (relativeSource&&outer?.state)||outer?.state?.trend === expected
         ? evaluateChecklistM5(context, settings, anchor.structureStartTime, outer) : null;
-      evaluated = { outer, current };
-      if (setupClassificationCache && ['uptrend','downtrend'].includes(outer?.state.trend)
+      const rangeAssociation=relativeSource?selectRelativeM5SweepRanges({source,state:outer?.state,
+        reaction:current?.structureReaction,stateKnownAt:classificationAt,evaluatedAt:recognizedAt}):null;
+      evaluated = { outer, current,rangeAssociation };
+      if (setupClassificationCache && ['uptrend','downtrend'].includes(outer?.state?.trend)
         && (!current || ['uptrend','downtrend'].includes(current.structureReaction?.trend))) {
         if (setupClassificationCache.size >= 200) setupClassificationCache.delete(setupClassificationCache.keys().next().value);
         setupClassificationCache.set(cacheKey, evaluated);
       }
     }
-    const { outer, current } = evaluated;
-    const currentTrend = current?.structureReaction?.trend ?? 'unknown';
-    const outerTrend = outer?.state.trend ?? 'unknown';
+    const { outer, current,rangeAssociation } = evaluated;
+    const associated=rangeAssociation?.status==='ready';
+    const currentTrend = relativeSource?(associated?rangeAssociation.inner.trend:'unknown'):current?.structureReaction?.trend ?? 'unknown';
+    const outerTrend = relativeSource?(associated?rangeAssociation.outer.trend:'unknown'):outer?.state.trend ?? 'unknown';
+    const outerState=relativeSource?rangeAssociation?.outer?.state:outer?.state;
     const outerPassed = outerTrend === (direction === 'short' ? 'downtrend' : 'uptrend');
     const classification = classifyM5SetupType(direction, currentTrend, outerTrend);
     const candidateChecks = {
       liquiditySweep: { status: 'passed', details: [isSweepRetestSource(source)?'Liquidity Sweep mit Retest eines vorhandenen M5-OB.':'Liquidity Sweep aus erkanntem Setup 1.0.'] },
       reaction: { status: 'passed', details: [isSweepRetestSource(source)?'Bereits bekannter M5-Orderblock nach Sweep geretestet.':'Zugehöriger M5-Orderblock aus Setup 1.0.'] },
-      m5Trend: { ...current, trend: currentTrend, evaluatedAt: recognizedAt,
+      m5Trend: { ...current, trend: currentTrend, evaluatedAt: classificationAt,
         status: !outerPassed ? 'pending' : currentTrend === 'unknown' ? 'unknown' : classification.type === 'countertrend' ? 'passed' : 'unmet',
-        details: current ? [`Aktueller M5-Trend ${currentTrend === 'uptrend' ? 'bullisch' : currentTrend === 'downtrend' ? 'bärisch' : 'unbekannt'}.`]
+        details: relativeSource?[associated?`Zum Sweep führende M5-Range ${currentTrend==='uptrend'?'bullisch':'bärisch'} · quellengebunden bekannt.`:'M5-Range zum Sweep nicht eindeutig kausal zugeordnet.']:current ? [`Aktueller M5-Trend ${currentTrend === 'uptrend' ? 'bullisch' : currentTrend === 'downtrend' ? 'bärisch' : 'unbekannt'}.`]
           : ['D nicht ausgewertet: C nicht erfüllt.'],
         detailStatuses: [!outerPassed ? 'pending' : currentTrend === 'unknown' ? 'unknown' : classification.type === 'countertrend' ? 'passed' : 'unmet'] },
       outerM5Trend: { status: outerTrend === 'unknown' ? 'unknown' : outerPassed ? 'passed' : 'unmet', required: true,
-        trend: outerTrend, evaluatedAt: recognizedAt, structureState: outer?.state ?? null,
-        structureStart: anchor?.structureStartTime ?? null, currRange: outer?.state.currRange ?? null,
-        details: [`Äußerster M5-Trend ${outerTrend === 'uptrend' ? 'bullisch' : outerTrend === 'downtrend' ? 'bärisch' : 'unbekannt'}.`] },
+        trend: outerTrend, evaluatedAt: classificationAt, structureState: outerState ?? null,
+        structureStart: anchor?.structureStartTime ?? null, currRange: outerState?.currRange ?? null,
+        details: [`${relativeSource?'Umschließender, den Sweep-Pivot enthaltender':'Äußerster'} M5-Trend ${outerTrend === 'uptrend' ? 'bullisch' : outerTrend === 'downtrend' ? 'bärisch' : 'unbekannt'}.`] },
     };
     const derived = deriveSetupEntryInvalidation({ dir: source.dir, obTop: source.obTop, obBottom: source.obBottom });
     const ob = { dir: -source.dir, top: source.obTop, bottom: source.obBottom, startTime: source.obStartTime, fvg: source.obFvg,
       ...(isSweepRetestSource(source)?{recognizedAt:source.orderBlockKnownAt}: {}) };
     const candidate={ id: setupSourceKey(source), tradeSetupId: source.tradeSetupId, sourceId,
       entryPattern:pattern,sourceKind:source.sourceKind,sourceRetest:source.sourceRetest,direction,
+      ...(relativeSource?{rangeAssociation:associated?{version:rangeAssociation.version,status:'ready',sweep:rangeAssociation.sweep,
+        outer:{trend:rangeAssociation.outer.trend,depth:rangeAssociation.outer.depth,range:rangeAssociation.outer.range,knownAt:rangeAssociation.outer.knownAt},
+        inner:{trend:rangeAssociation.inner.trend,rawTrend:rangeAssociation.inner.rawTrend,depth:rangeAssociation.inner.depth,range:rangeAssociation.inner.range,
+          basis:rangeAssociation.inner.basis,knownAt:rangeAssociation.inner.knownAt,confirmation:rangeAssociation.inner.confirmation}}
+        :{version:RELATIVE_M5_SWEEP_RANGE_VERSION,status:'unknown',reason:rangeAssociation?.reason ?? 'sourceContextUnknown'}}:{}),
       ...(includeSweepRetestSources?{entryPatterns:isSweepRetestSource(source)?[M1_FVG_RETEST_PATTERN_VERSION]:[ENTRY_PATTERN_1_VERSION,M1_FVG_RETEST_PATTERN_VERSION]}:{}),
       setupType: classification.type, abortReason: classification.reason, knownAsOf: evaluatedAt,
       recognizedAt, reactionRecognizedAt: recognizedAt, checks: candidateChecks,

@@ -101,7 +101,7 @@ export function setupEntryConditions(snapshot,selectedPattern=null) {
   }
   if (savedDealingRangeStatus(snapshot) !== 'legacy') add('validation', checklist?.model === 'countertrend' ? 'DR-Stufe nach E/F' : 'D · DR-Validierung / Targets',
     dr?.status === 'validated' ? 'passed' : isDisqualifiedDealingRange(snapshot) ? 'unmet' : 'unknown', dr?.details ?? ['DR-Stufenprüfung nicht gespeichert.'], dr?.evaluatedAt ?? at);
-  const timeCheck = snapshot.entryEligibility ?? checks.time;
+  const timeCheck = snapshot.entryEligibility ?? m1?.entryEligibility ?? checks.time;
   add('time', 'Handelszeit / Session / News',
     timeCheck?.status === 'blocked' ? 'unmet' : timeCheck?.status === 'passed' ? 'passed' : 'unknown',
     [...timeCheck?.details ?? ['Zeitprüfung nicht gespeichert.'],

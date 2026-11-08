@@ -93,7 +93,9 @@ const checks = computed(() => definitions.value.map((definition, index) => {
     letter: String.fromCharCode(65 + index),
     status,
     ...statuses[status],
-    title: definition.label,
+    title: state.value?.setup?.primary?.rangeAssociation
+      ?definition.key==='outerM5Trend'?'M5-Trend (umschließend am LS)':definition.key==='m5Trend'?'M5-Range zum LS':definition.label
+      :definition.label,
     evaluatedAt: result?.evaluatedAt,
     details: Array.isArray(result?.details) ? result.details.filter(detail => typeof detail === "string") : [],
     detailStatuses: result?.detailStatuses ?? [],

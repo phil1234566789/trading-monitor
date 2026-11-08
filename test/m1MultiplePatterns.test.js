@@ -45,5 +45,8 @@ describe('additional entry pattern on the same original Setup 1.0 source',()=>{
     expect(gated.entries).toEqual([]);
     expect(gated.patterns.every(c=>c.entry===null)).toBe(true);
     expect(gated.entryChecks).toEqual([]);
+    expect(gated.patternCandidate.id).toBe(combined.entry.id);
+    expect(gated.entryEligibility.status).toBe('blocked');
+    expect(gated.patterns.every(c=>c.patternCandidate&&c.entryEligibility.status==='blocked')).toBe(true);
   });
 });

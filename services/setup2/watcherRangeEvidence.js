@@ -30,7 +30,8 @@ export function watcherRangeEvidence(snapshot, entry, latestM1) {
   step = 'Entry-Suche ohne belegte Freigabe';
  } else if (stage === 'validated') {
   step = 'H · Entry finden';
-  if (snapshot.entryEligibility?.status === 'blocked') missing = snapshot.entryEligibility.details?.[0] ?? 'Handelszeit / Session / News gesperrt';
+  const eligibility=snapshot.entryEligibility ?? m1?.entryEligibility;
+  if (eligibility?.status === 'blocked') missing = eligibility.details?.[0] ?? 'Handelszeit / Session / News gesperrt';
   else if ((isEntryPattern1(m1?.entryPattern)||isEntryPattern2(m1?.entryPattern)) && conditions && m1.status !== 'error') {
    const rules=isEntryPattern2(m1.entryPattern)?entryPattern2ConditionResults(conditions,snapshot.direction,m1.evaluatedAt)
     :entryPattern1ConditionResults(conditions,snapshot.direction,m1.evaluatedAt,m1.entryPattern);

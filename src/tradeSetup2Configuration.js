@@ -11,6 +11,8 @@ import { ENTRY_PATTERN_1_VERSION } from './entryPattern1Conditions.js';
 import {m5BosRuleVersionFor} from './entryPattern1M5Confirmation.js';
 import {M1_FVG_RETEST_PATTERN_VERSION} from './m1FvgRetestSequence.js';
 import {M1_STRUCTURE_PERIOD,M1_FVG_RETEST_STRUCTURE_PERIOD} from './m1StructureSettings.js';
+import {RELATIVE_M5_SWEEP_RANGE_VERSION} from './relativeM5SweepRanges.js';
+export {RELATIVE_M5_SWEEP_RANGE_VERSION} from './relativeM5SweepRanges.js';
 
 export const SETUP2_VERSION='ls-entry-patterns-v25';
 export const CURRENT_ENTRY_PATTERNS=[ENTRY_PATTERN_1_VERSION,M1_FVG_RETEST_PATTERN_VERSION];
@@ -23,6 +25,7 @@ export function buildTradeSetup2Configuration({instrument,settings={},sessionCon
     ...(m5BosRuleVersion?{m5BosRuleVersion}:{}),
     entryPattern:ENTRY_PATTERN_1_VERSION,entryPatterns:[...CURRENT_ENTRY_PATTERNS],
     includeSweepRetestSources:true,m1Periods:{...CURRENT_M1_PERIODS},entryCategoryVersion:ENTRY_CATEGORY_VERSION,
+    relativeM5SweepRangeVersion:RELATIVE_M5_SWEEP_RANGE_VERSION,
     observationRuleVersion:OBSERVATION_RULE_VERSION,antiConfluenceRules:[{...H1_COUNTER_DIVERGENCE_RULE}],
     setupVersion:SETUP2_VERSION,drRiskVersion:JOINT_LOSS_RISK_VERSION,dealingRangeVersion:COUNTERTREND_STAGE_VERSION,setupModel:'countertrend',outerM5Required:true,simulationVersion:SIMULATION_VERSION,entrySizingVersion:ENTRY_PATTERN_1_SIZING_VERSION,costVersion:SIMULATION_COST_VERSION,m1Period:5,
     m5StructurePeriod:settings.m5StructurePeriod ?? 5,m5Structure2Period:settings.m5Structure2Period ?? 2,

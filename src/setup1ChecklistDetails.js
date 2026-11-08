@@ -18,7 +18,18 @@ export function setup1ChecklistDetails(state,m1Check) {
     ? anchor.structureFrom : null;
   const tf={'5M':'M5','1H':'H1','4H':'H4','1D':'D1'}[sweep?.timeframe?.toUpperCase()] ?? sweep?.timeframe ?? 'Zeitrahmen nicht gespeichert';
   const type=level?.dir===-1?'Liquidity Low':level?.dir===1?'Liquidity High':'Leveltyp nicht gespeichert';
+  const association=primary?.rangeAssociation,relativeDetails={};
+  if(association?.status==='ready'){
+    for(const [key,name,range] of [['outerM5Trend','Umschließende M5-Range',association.outer],['m5Trend','Zum Sweep führende M5-Range',association.inner]]){
+      relativeDetails[key]=[`${name} · ${range.trend==='uptrend'?'bullisch':'bärisch'}`,
+        `Spanne ${price(range.range.low.price)}–${price(range.range.high.price)}`,
+        `Low: ${date(range.range.low.pivotTime)} · High: ${date(range.range.high.pivotTime)}`,
+        `Kausal bekannt: ${date(range.knownAt)}`,
+        ...(range.basis==='existingCloseReactionChoch'?['Vorhandener CHoCH am Sweep bestätigt die Hinbewegung; die Raw-Nested-Pivotbestätigung wird nicht vorgezogen.']:[])];
+    }
+  }
   return {
+    ...relativeDetails,
     liquiditySweep:[`${tf} ${type} · Level ${price(level?.price)}`,
       `Pivot-/Levelzeit: ${date(level?.pivotTime)}`,
       ...(known(exactSweep)?[`Tatsächlicher Sweep (M1): ${date(exactSweep)}`] : [`Sweepkerze (${Number.isFinite(level?.fineTouchedTime)?'M5':tf}): ${date(level?.fineTouchedTime ?? level?.touchedTime)}`, 'Genauere Sweepzeit: nicht gespeichert'])],

@@ -7,7 +7,7 @@ import { evaluateM1Checklist } from './m1Checklist.js';
 import { buildTradeSetup2Snapshot, buildTradeSetup2CandidateSnapshot } from './tradeSetup2Snapshot.js';
 import { evaluateSimulation } from './tradeSetupSimulation.js';
 import { evaluateCountertrendLifecycle } from './countertrendLifecycle.js';
-import { createSetup2Entry } from './tradeSetup2EntryGate.js';
+import { createSetup2Entry,gateM1ChecklistEntries } from './tradeSetup2EntryGate.js';
 import { createCloseReactionCache } from './m5CloseReactionHistory.js';
 import { m1ScanPrefixStart } from './m1ScanPrefix.js';
 import { m1LoadStart } from './m1StructureStart.js';
@@ -176,8 +176,9 @@ export async function scanCountertrendWindow(input) {
         let follow=entryProgress.get(candidate.id);
         if(!follow){follow={};entryProgress.set(candidate.id,follow);}
         follow.detectM5OrderBlocks??=rows=>detectScanOrderBlocks(rows,'5m');
-        const combined=evaluateM1Checklist({context:active,structure,candles:rows,evaluatedAt:knownAt,closeReactionCache:m1Cache,
+        const rawCombined=evaluateM1Checklist({context:active,structure,candles:rows,evaluatedAt:knownAt,closeReactionCache:m1Cache,
           entryProgress:useMemo ? follow : undefined});
+        const combined=input.includeSweepRetestSources?gateM1ChecklistEntries(rawCombined,{...input,instrument}):rawCombined;
         if(knownAt>=fromTime)checklistHistory.record(current,current.setup.primary,'M1',combined);
         for(const patternCheck of combined.patterns ?? [combined]){
         const grouped=combined.entryChecks?.find(item=>item.entry.id===patternCheck.entry?.id);
