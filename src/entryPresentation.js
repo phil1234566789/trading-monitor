@@ -1,6 +1,7 @@
 import {entryCategoryOf,entryCategoryLabel} from './entryCategory.js';
 import {entrySizingLabel} from './tradeSetup2EntrySizing.js';
 import {fmtMoney} from './format.js';
+import {simulationVolumeLabel,simulationContractWarning} from './simulationVolumePresentation.js';
 
 export function entrySizeLabel(value) {
   if(!entryCategoryOf(value)) {
@@ -16,9 +17,9 @@ export function entryOptionalConditionLabel(value) {
 }
 export function entryLotsLabel(value) {
   if(!Number.isFinite(value?.lots))return '';
-  const lots=n=>n.toLocaleString('de-DE',{maximumFractionDigits:2});
-  const reference=entryCategoryOf(value)&&Number.isFinite(value.fullLots)?` · Full: ${lots(value.fullLots)} Lots`:'';
-  return `${lots(value.lots)} Lots${reference}`;
+  const reference=entryCategoryOf(value)&&Number.isFinite(value.fullLots)?` · Full: ${simulationVolumeLabel(value,'fullLots')}`:'';
+  const warning=simulationContractWarning(value);
+  return `${simulationVolumeLabel(value)}${reference}${warning?` · ${warning}`:''}`;
 }
 export function entryBudgetLabel(value) {
   if(!Number.isFinite(value?.riskBudget))return '';

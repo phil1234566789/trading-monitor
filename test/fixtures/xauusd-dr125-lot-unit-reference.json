@@ -1,0 +1,14 @@
+{
+ "sourceRunId":"setup2-471a7d9962ef63d3763837a0",
+ "instrument":"XAUUSD",
+ "entryPrice":4361.17,
+ "priceRiskBudgetUsd":500,
+ "commissionIncludedInRiskBudget":false,
+ "entryGranularityUnits":1,
+ "partialExitPolicy":"exact-half-abstract-backtest",
+ "variants":[
+  {"variant":"wide","stopPrice":4374.8,"riskDistance":13.63,"legacyOunces":36,"standardLots":0.36,"t1Lots":0.18,"actualRisk":490.68,"grossPnlUsd":877.68,"legacyCommissionUsd":180,"commissionUsd":1.8,"netPnlUsd":875.88},
+  {"variant":"narrow","stopPrice":4369.66,"riskDistance":8.49,"legacyOunces":58,"standardLots":0.58,"t1Lots":0.29,"actualRisk":492.42,"grossPnlUsd":1414.04,"legacyCommissionUsd":290,"commissionUsd":2.9,"netPnlUsd":1411.14}
+ ],
+ "provenance":"Original published run outcomes preserved. Corrected standard-lot/fee expectations use native broker-deal-verified 100 units per lot and 5 USD roundturn per standard lot. No entry or exit-rule change."
+}

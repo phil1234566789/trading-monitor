@@ -5,6 +5,7 @@ import { fmtMoney, fmtR } from '../format.js';
 import { SIMULATION_OUTCOME_LABELS, SIMULATION_REASON_LABELS, simulationOutcomeKey, simulationChartLink } from '../tradeSetupSimulationStatistics.js';
 import ToggleButton from './ui/ToggleButton.vue';
 import {entryCategorySizeLabel,entryOptionalConditionLabel,entryBudgetLabel,entryLotsLabel} from '../entryPresentation.js';
+import {simulationVolumeLabel} from '../simulationVolumePresentation.js';
 
 const props = defineProps({ rows: { type: Array, required: true }, runId: { type: String, required: true } });
 const page = ref(0);
@@ -12,7 +13,6 @@ const pageSize = 50;
 const pages = computed(() => Math.max(1, Math.ceil(props.rows.length / pageSize)));
 const visibleRows = computed(() => props.rows.slice(page.value * pageSize, (page.value + 1) * pageSize));
 watch(() => props.rows, () => { page.value = 0; });
-const lots = value => value == null ? '–' : value.toLocaleString('de-DE', { maximumFractionDigits: 2 });
 </script>
 
 <template>
@@ -22,14 +22,14 @@ const lots = value => value == null ? '–' : value.toLocaleString('de-DE', { ma
         <caption>Simulierte Positionen · Zeiten in Europe/Berlin · Brutto und Netto getrennt</caption>
         <thead><tr>
           <th scope="col">Entry</th><th scope="col">Instrument</th><th scope="col">Richtung</th>
-          <th scope="col">Entry-Größe / Grund</th><th scope="col">Lots</th><th scope="col" title="Geplanter Teilausstieg: exakt 50 % des Anfangsvolumens">T1-Anteil Lots</th><th scope="col">Risiko USD</th>
+          <th scope="col">Entry-Größe / Grund</th><th scope="col">Menge</th><th scope="col" title="Geplanter Teilausstieg: abstrakt exakt 50 % des Anfangsvolumens im Backtest">T1-Anteil</th><th scope="col">Risiko USD</th>
           <th scope="col">Ergebnis</th><th scope="col">Brutto R</th><th scope="col">Brutto USD</th><th scope="col">Kommission USD</th><th scope="col">Netto R</th><th scope="col">Netto USD</th><th scope="col">Realisiert brutto USD</th><th scope="col">Realisiert netto USD</th><th scope="col">Setup</th>
         </tr></thead>
         <tbody><tr v-for="row in visibleRows" :key="`${row.entryId}:${row.variant}`">
           <td>{{ row.entryTime == null ? '–' : formatDatedTime(row.entryTime) }}</td>
           <td>{{ row.instrument }}</td><td>{{ row.direction === 'long' ? 'Long' : row.direction === 'short' ? 'Short' : '–' }}</td>
           <td class="entry-sizing">{{ entryCategorySizeLabel(row) }}<small v-if="entryOptionalConditionLabel(row)">{{ entryOptionalConditionLabel(row) }}</small><small v-if="entryLotsLabel(row)">{{ entryLotsLabel(row) }}</small><small v-if="entryBudgetLabel(row)">{{ entryBudgetLabel(row) }}</small></td>
-          <td class="number">{{ lots(row.lots) }}</td><td class="number">{{ lots(row.t1Lots) }}</td>
+          <td class="number">{{ simulationVolumeLabel(row) }}</td><td class="number">{{ simulationVolumeLabel(row,'t1Lots') }}</td>
           <td class="number">{{ fmtMoney(row.actualRisk) }}</td>
           <td><span>{{ SIMULATION_OUTCOME_LABELS[simulationOutcomeKey(row)] ?? 'Unbekannt' }}</span><small v-if="row.reason">{{ SIMULATION_REASON_LABELS[row.reason] ?? 'Ergebnis nicht abschließend bestimmbar' }}</small></td>
           <td class="number" :class="{ positive: row.pnlUsd > 0, negative: row.pnlUsd < 0 }">{{ fmtR(row.rMultiple) }}</td>

@@ -4332,9 +4332,9 @@
     "semantic_hash": ""
   },
   "src/components/SimulationResultsTable.vue": {
-    "mtime": 1794152400.3244727,
-    "seen": 1794167265.7251055,
-    "ast_hash": "d8b3abc013e7c38dfd9af1d3cd30190f",
+    "mtime": 1794167915.800843,
+    "seen": 1794168063.1657758,
+    "ast_hash": "f2b35edf89b30f21a3b0e57cd3707e6d",
     "semantic_hash": ""
   },
   "src/composables/useSimulationStatistics.js": {
@@ -6036,9 +6036,9 @@
     "semantic_hash": ""
   },
   "src/entryPresentation.js": {
-    "mtime": 1794152400.368764,
-    "seen": 1794167265.7251055,
-    "ast_hash": "0f6ddb115210af80ee9bb32dd313d2d4",
+    "mtime": 1794167915.615059,
+    "seen": 1794168063.2094293,
+    "ast_hash": "990a970da1a5483bedff84d18c5a171c",
     "semantic_hash": ""
   },
   "src/m5EntryHistory.js": {
@@ -8049,6 +8049,30 @@
     "mtime": 1794167037.7039635,
     "seen": 1794167265.7261064,
     "ast_hash": "9b8ac99c0fbb88f660ce7f7b9563cd8e",
+    "semantic_hash": ""
+  },
+  "src/simulationVolumePresentation.js": {
+    "mtime": 1794167915.4388268,
+    "seen": 1794168063.2740889,
+    "ast_hash": "b6af9c89d2f8a63120b16993299c34be",
+    "semantic_hash": ""
+  },
+  "src/xauSimulationExecutionContract.js": {
+    "mtime": 1794168009.02508,
+    "seen": 1794168063.3081617,
+    "ast_hash": "d6b544bc69c08f35bac9e51ee38e5af7",
+    "semantic_hash": ""
+  },
+  "test/simulationVolumePresentation.test.js": {
+    "mtime": 1794167897.3816373,
+    "seen": 1794168063.4888716,
+    "ast_hash": "8d8b8105e9acdfb39a4d7b5d07fbec09",
+    "semantic_hash": ""
+  },
+  "test/xauSimulationLotContract.test.js": {
+    "mtime": 1794168042.3393927,
+    "seen": 1794168063.5279863,
+    "ast_hash": "8ae1bbed79d3c04304911fc7dbdd71e0",
     "semantic_hash": ""
   }
 }
