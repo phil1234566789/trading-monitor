@@ -19,6 +19,8 @@ const imports=ref([]);
 const raw=ref([]),sync=ref([]),loading=ref(false),error=ref(''),loaded=ref(false),view=ref('list');
 const account=computed(()=>props.account);
 const asset=ref(''),from=ref(''),to=ref(''),selectedWeek=ref('');
+const outcomes=ref(['win','loss','breakeven']);
+const outcomeOptions=[{key:'win',label:'Gewinner'},{key:'loss',label:'Verlierer'},{key:'breakeven',label:'Break-even'}];
 const currency='USD';
 const views=[{key:'list',label:'PnL-Liste'},{key:'chart',label:'X–Y-Diagramm'},{key:'asset',label:'Assets'},{key:'hour',label:'Entry-Stunden · Berlin'},{key:'weekday',label:'Entry-Wochentage · Berlin'}];
 const journalTrade=ref(null);
@@ -38,7 +40,7 @@ const selectedAccounts=computed(()=>statisticsAccounts(props.accounts,account.va
 const selectedIds=computed(()=>new Set(selectedAccounts.value.map(a=>a.id)));
 const selectedRows=computed(()=>raw.value.filter(d=>selectedIds.value.has(d.account_id)));
 const selectedResult=computed(()=>closedBrokerTrades(selectedRows.value));
-const trades=computed(()=>filterBrokerTrades([...selectedResult.value.trades,...imported.value.filter(t=>selectedIds.value.has(t.account_id))].sort((a,b)=>a.closed_at-b.closed_at||a.id.localeCompare(b.id)),{asset:asset.value,currency:currency,from:from.value,to:to.value}));
+const trades=computed(()=>filterBrokerTrades([...selectedResult.value.trades,...imported.value.filter(t=>selectedIds.value.has(t.account_id))].sort((a,b)=>a.closed_at-b.closed_at||a.id.localeCompare(b.id)),{asset:asset.value,currency:currency,from:from.value,to:to.value,outcomes:outcomes.value}));
 const performance=computed(()=>tradePerformance(trades.value));
 const total=computed(()=>performance.value.net);
 const commission=computed(()=>performance.value.commission);
@@ -52,7 +54,7 @@ const weekIndex=computed(()=>Math.max(0,weeks.value.findIndex(w=>w.key===selecte
 const week=computed(()=>weeks.value[weekIndex.value]);
 const listed=computed(()=>week.value?.trades??[]);
 const breakdown=computed(()=>views.find(v=>v.key===view.value));
-watch([account,asset,from,to],()=>{selectedWeek.value='';});
+watch([account,asset,from,to,outcomes],()=>{selectedWeek.value='';});
 const name=id=>id===ALL_HISTORY_ACCOUNTS?'Alle Konten inklusive inaktiver':props.accounts.find(a=>a.id===id)?.name??id;
 const time=ms=>fmtDateTime(ms/1000,{timeZone:'Europe/Berlin'});
 const latest=computed(()=>[...sync.value.filter(s=>selectedIds.value.has(s.account_id)).map(s=>s.synced_at),...imports.value.filter(t=>selectedIds.value.has(t.account_id)).map(t=>t.imported_at)].filter(Boolean).sort().at(-1));
@@ -66,6 +68,9 @@ const latest=computed(()=>[...sync.value.filter(s=>selectedIds.value.has(s.accou
   <label>Asset<select v-model="asset"><option value="">Alle Assets</option><option v-for="a in assets" :key="a">{{a}}</option></select></label>
   <label>Abschluss ab<input v-model="from" type="date"></label><label>bis<input v-model="to" type="date"></label>
  </div>
+ <fieldset class="mmt-outcome-filter"><legend>Ergebnis</legend><label v-for="item in outcomeOptions" :key="item.key"><input v-model="outcomes" type="checkbox" :value="item.key">{{item.label}}</label><span class="mmt-muted">Mehrfachauswahl · vor Kommission</span></fieldset>
+ <p v-if="!outcomes.length" class="mmt-muted" role="status">Keine Ergebnisart ausgewählt.</p>
+ <p v-if="outcomes.length<outcomeOptions.length" class="mmt-muted">Ergebnisfilter aktiv: Alle Kennzahlen und Ansichten beziehen sich nur auf die ausgewählten Ergebnisse.</p>
  <p v-if="from&&to&&from>to" role="alert" class="mmt-error">Das Enddatum liegt vor dem Startdatum.</p>
  <div class="mmt-stat-summary"><span>Netto-PnL <strong :class="pnlClass(total)">{{coverage.length?fmtPrice(total,2):'—'}} {{currency}}</strong></span><span>Commission <strong :class="pnlClass(commission)">{{coverage.length?fmtPrice(commission,2):'—'}} {{currency}}</strong></span><span>Trades <strong>{{coverage.length?trades.length:'—'}}</strong></span><span>Ø/Trade <strong :class="pnlClass(total)">{{trades.length?fmtPrice(total/trades.length,2):'—'}} {{currency}}</strong></span><span>Winrate <strong>{{performance.winrate==null?'—':fmtPrice(performance.winrate,0)}} %</strong></span><span>Break-even <strong>{{coverage.length?performance.breakeven:'—'}}</strong></span></div>
  <div class="mmt-stat-tabs" aria-label="Statistik-Ansicht"><ActionButton v-for="item in views" :key="item.key" :aria-pressed="view===item.key" @click="view=item.key">{{item.label}}</ActionButton></div>

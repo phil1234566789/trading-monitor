@@ -1,4 +1,4 @@
-import {tradePerformance} from './milkyMetaTraderPerformance.js';
+import {tradePerformance,tradeOutcome} from './milkyMetaTraderPerformance.js';
 const uniqueDeals=raw=>[...new Map(raw.map(d=>[`${d.account_id}:${d.ticket}`,d])).values()];
 const commissionTypes=new Set([7,8,9,10,11]);
 export const dealCommission=rows=>rows.reduce((sum,d)=>sum+d.commission+(commissionTypes.has(d.type)?d.profit:0),0);
@@ -47,10 +47,10 @@ export function closedBrokerTrades(raw){
  return {trades:trades.sort((a,b)=>a.closed_at-b.closed_at||a.id.localeCompare(b.id)),excluded,open,unallocated,
   cash:deals.filter(d=>![0,1].includes(d.type)&&!costTypes.has(d.type))};
 }
-export function filterBrokerTrades(trades,{account='',asset='',currency='',from='',to=''}={}){
+export function filterBrokerTrades(trades,{account='',asset='',currency='',from='',to='',outcomes=['win','loss','breakeven']}={}){
  return trades.filter(t=>{
   const day=berlinTradeParts(t.closed_at).date;
-  return (!account||t.account_id===account)&&(!asset||t.symbol===asset)&&(!currency||t.currency===currency)&&(!from||day>=from)&&(!to||day<=to);
+  return outcomes.includes(tradeOutcome(t))&&(!account||t.account_id===account)&&(!asset||t.symbol===asset)&&(!currency||t.currency===currency)&&(!from||day>=from)&&(!to||day<=to);
  });
 }
 const weekdays={Monday:'Montag',Tuesday:'Dienstag',Wednesday:'Mittwoch',Thursday:'Donnerstag',Friday:'Freitag',Saturday:'Samstag',Sunday:'Sonntag'};

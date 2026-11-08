@@ -64,3 +64,17 @@ it('preserves commission refunds, deduplicates fees and never mixes account curr
  expect(positionCommission([...rows,...rows],'a',42)).toBeCloseTo(-.08);
  expect(positionCommission([entry,{...exit,currency:'EUR'}],'a',42)).toBeNull();
 });
+
+it('filters every outcome combination with the shared inclusive pre-commission break-even rule',()=>{
+ const common={closed_at:Date.parse('2026-11-02T08:00:00Z'),symbol:'XAUUSD',currency:'USD',account_id:'a'};
+ const trades=[{...common,id:'win',net:20,commission:-5},{...common,id:'loss',net:-30,commission:-5},{...common,id:'breakeven',net:-25,commission:-15}];
+ for(let mask=0;mask<8;mask++){
+  const outcomes=['win','loss','breakeven'].filter((_,i)=>mask&(1<<i));
+  expect(filterBrokerTrades(trades,{outcomes}).map(t=>t.id)).toEqual(outcomes);
+ }
+ expect(filterBrokerTrades(trades)).toEqual(trades);
+ expect(filterBrokerTrades(trades,{outcomes:['win'],asset:'EURUSD'})).toEqual([]);
+ expect(filterBrokerTrades(trades,{outcomes:['win'],account:'b'})).toEqual([]);
+ expect(filterBrokerTrades(trades,{outcomes:['win'],from:'2026-11-03'})).toEqual([]);
+ expect(trades).toHaveLength(3);
+});
