@@ -22,11 +22,11 @@
 // rangesNeedsData/scheduleNextRangesPoll/startRangesPolling/stopRangesPolling bleiben aus
 // demselben Grund ebenfalls in PriceChart.vue (hängen an withPollRetries + mehreren fremden Props).
 import { ref } from "vue";
-import { computeRangesPivots as computeRangesPivotsPure, buildMarketStructureState, pivotForDisplay, deriveTrendReaction, innermostStructureStart } from "../marketStructureAnalysis";
+import { computeRangesPivots as computeRangesPivotsPure, pivotForDisplay, deriveTrendReaction, innermostStructureStart } from "../marketStructureAnalysis";
 import { renderMarketStructureAnalysis, collectFibLevels } from "../marketStructureRendering";
 import { renderPivotMarkers } from "../pivotMarkers";
 import { cssColor } from "../chartColors.js";
-import { buildStructureWithPhases } from "../trendPhases.js";
+import { createChartStructureWorker } from '../chartStructureWorkerClient.js';
 import { renderTrendPhaseBands } from "../trendPhaseRendering.js";
 import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
 
@@ -52,15 +52,17 @@ export function usePriceChartMarketStructure() {
   let m5StructurePrimitives = [];
   let m5TrendPhasePrimitives = [];
   let outerCutoff = null; // Start des 1h-Outer-Trends = M5-Anker-Fallback ohne Nested, siehe refreshM5Structure
-  let m5ComputedKey = null;
   let m5Computed = { state: null, phases: [], events: [], pivotsOuter: null, pivotsInner: null };
+  const h1Worker = createChartStructureWorker();
+  const m5Worker = createChartStructureWorker();
+  let h1Revision = 0, h1AppliedRevision = 0, m5Revision = 0, h1Pending = null;
   let m5MarkerPrimitives = [];
   // Ältere M5-Historie, falls der Anker vor der ältesten geladenen M5-Kerze liegt (Trade-Setups laden
   // fix TRADE_SETUP_M5_CANDLE_COUNT = ~8,7 Handelstage; ohne 1h-Nested fällt der Anker auf den
   // Outer-Start, der auch 12+ Tage zurückliegen kann). Einmal je Symbol/Anker nachgeladen.
   let m5Older = { symbol: null, candles: [] };
   let m5OlderRequested = null;
-  let lastM5Args = null;
+  let m5OlderPending = null;
 
   const marketStructureState = ref(null);
   const rangesMetadata = ref(null); // Liste der erkannten H1-Periode-5-Pivots fürs Ranges-Metadaten-Panel
@@ -80,8 +82,29 @@ export function usePriceChartMarketStructure() {
     candleSeries = candleSeriesInstance;
   }
   function dispose() {
+    invalidateRendering(); fetchSeq++;
+    h1Worker.dispose(); m5Worker.dispose();
     chart = null;
     candleSeries = null;
+  }
+  function invalidateRendering() {
+    h1Revision++; m5Revision++; h1Pending = null;
+  }
+  function cancelCalculation() {
+    invalidateRendering();
+    h1Worker.cancel(); m5Worker.cancel();
+    clearCalculationState(true);
+  }
+  function clearCalculationState(clearPivots = false) {
+    marketStructureState.value = null; m5Trend.value = null; currentFibLevels = [];
+    if (clearPivots) { rangesPivots = null; rangesPivots2 = null; }
+    if (!candleSeries) return;
+    // Beim Rücksprung oder Workerfehler keine Struktur aus der vorherigen Zukunft stehenlassen.
+    renderMarketStructureAnalysis(candleSeries, null, marketStructurePrimitives, []);
+    renderMarketStructureAnalysis(candleSeries, null, m5StructurePrimitives, []);
+    renderPivotMarkers(candleSeries, [], rangesMarkerPrimitives, []);
+    renderPivotMarkers(candleSeries, [], m5MarkerPrimitives, []);
+    renderTrendPhaseBands(candleSeries, [], m5TrendPhasePrimitives, []);
   }
 
   // H1-Fraktale im konfigurierten Lookback-Fenster — reine Pivot-Liste, noch keine weak/protected/
@@ -153,12 +176,26 @@ export function usePriceChartMarketStructure() {
   // = bereits clipReplay-gefiltertes rangesH1Candles (nicht allCandles) — andere Auflösung je nach
   // gewähltem Chart-Timeframe.
   function refreshMarketStructure({ candles, h1CandlesClipped, symbol, replayUntil, showRanges, rangesPeriod, ranges2Period }) {
+    const revision = ++h1Revision;
     // Dieselbe Filterung wie bei den Pivots (computeRangesPivotsAndMetadata) — die Close-Checks in
     // buildMarketStructureState duerfen die Spread Hour sonst doch noch als Bruch werten.
-    const state = buildMarketStructureState(rangesPivots, rangesPivots2, rangesPeriod, ranges2Period, withoutIgnored(h1CandlesClipped, symbol));
-    marketStructureState.value = state; // fürs Metadaten-Panel + TSC, unabhängig von showRanges (Zeichnen)
-    currentFibLevels = collectFibLevels(state); // für den Bestätigungs-Klick-Hittest, siehe findClickedFibLevel (PriceChart.vue)
-    renderMarketStructureAnalysis(candleSeries, showRanges ? state : null, marketStructurePrimitives, candles, structureRenderOptions(candles, symbol, replayUntil));
+    const pending = h1Worker.run({ kind: 'h1', symbol, pivotsOuter: rangesPivots, pivotsInner: rangesPivots2,
+      periodOuter: rangesPeriod, periodInner: ranges2Period, candles: withoutIgnored(h1CandlesClipped, symbol) }).then(state => {
+      if (!candleSeries || revision !== h1Revision) return false;
+      marketStructureState.value = state;
+      h1AppliedRevision = revision;
+      currentFibLevels = collectFibLevels(state);
+      renderMarketStructureAnalysis(candleSeries, showRanges ? state : null, marketStructurePrimitives, candles, structureRenderOptions(candles, symbol, replayUntil));
+      return true;
+    }).catch(error => {
+      if (error.name !== 'AbortError' && revision === h1Revision) {
+        clearCalculationState();
+        console.error('H1-Struktur fehlgeschlagen:', error);
+      }
+      return false;
+    }).finally(() => { if (h1Pending === pending) h1Pending = null; });
+    h1Pending = pending;
+    return pending;
   }
 
   // M5-Struktur (PLAN-m5-trend.md): derselbe Algo auf M5-Kerzen, verankert am Start der innersten
@@ -166,32 +203,40 @@ export function usePriceChartMarketStructure() {
   // geladenen M5-Kerzen nicht bis zum Anker, lädt loadOlderM5 den Rest einmalig nach (Philip
   // 27.09.2026: "muss sichergestellt werden, dass genug Candles da sind"). Läuft unabhängig von den
   // Toggles, weil das TSC den Trend immer braucht; die Toggles steuern nur das Zeichnen.
-  function refreshM5Structure(args) {
-    lastM5Args = args;
+  async function refreshM5Structure(args) {
+    const revision = ++m5Revision;
+    // M5 darf bei parallelem H1/M5-Laden nicht mit dem vorherigen H1-Anker rechnen.
+    while (h1Pending) {
+      const pending = h1Pending;
+      const applied = await pending;
+      if (!applied && !h1Pending && h1AppliedRevision !== h1Revision) return false;
+    }
+    if (!candleSeries || revision !== m5Revision) return false;
     const { candles, symbol, replayUntil, showM5Structure, showM5TrendPhases, showLiquidityDebug, m5Period, m5Period2 } = args;
     const anchor = innermostStructureStart(marketStructureState.value, outerCutoff);
     if (m5Older.symbol !== symbol) m5Older = { symbol, candles: [] };
     const loaded = args.m5CandlesClipped;
     const evaluatedAt = checklistEvaluationTime(replayUntil, Math.floor(Date.now() / 1000), loaded);
+    if (anchor != null && loaded.length > 0 && anchor < (m5Older.candles[0]?.time ?? loaded[0].time))
+      await loadOlderM5(symbol, anchor, loaded[0].time);
+    if (!candleSeries || revision !== m5Revision) return false;
     const merged = loaded.length > 0 ? [...m5Older.candles.filter((c) => c.time < loaded[0].time), ...loaded] : loaded;
+    // Das rollierende Ladefenster darf beim nächsten Schritt keinen Spalt zum Ankerbestand öffnen.
+    m5Older = { symbol, candles: merged };
     const m5CandlesClipped = withoutIgnored(closedChecklistCandles(merged, '5m', evaluatedAt), symbol);
-    if (anchor != null && m5CandlesClipped.length > 0 && anchor < m5CandlesClipped[0].time) loadOlderM5(symbol, anchor, m5CandlesClipped[0].time);
-    // Memo: bei P5/P2 über ~12 Tage ~150 ms — refreshChart() läuft aber auch bei jedem Style-Regler-
-    // Event, dort soll nur neu gezeichnet, nicht neu gerechnet werden.
-    const last = m5CandlesClipped.at(-1);
-    const key = `${symbol}:${m5CandlesClipped.length}:${last?.time}:${last?.open}:${last?.high}:${last?.low}:${last?.close}:${anchor}:${m5Period}:${m5Period2}`;
-    if (key !== m5ComputedKey) {
-      m5ComputedKey = key;
-      const ready = anchor != null && m5CandlesClipped.length > 0;
-      const pivotsOuter = ready ? computeRangesPivotsPure(m5CandlesClipped, m5Period, anchor, fmtDateTime) : null;
-      const pivotsInner = ready ? computeRangesPivotsPure(m5CandlesClipped, m5Period2, anchor, fmtDateTime) : null;
-      m5Computed = {
-        ...buildStructureWithPhases(pivotsOuter, pivotsInner, m5Period, m5Period2, m5CandlesClipped, barSecondsFor("5m"), { closeEvaluation: true }),
-        pivotsOuter,
-        pivotsInner,
-      };
-      m5Trend.value = deriveTrendReaction(m5Computed.state);
+    try {
+      const result = await m5Worker.run({ kind: 'm5', symbol, anchor, periodOuter: m5Period,
+        periodInner: m5Period2, candles: m5CandlesClipped });
+      if (!candleSeries || revision !== m5Revision) return false;
+      m5Computed = result;
+    } catch (error) {
+      if (error.name !== 'AbortError' && revision === m5Revision) {
+        clearCalculationState();
+        console.error('M5-Struktur fehlgeschlagen:', error);
+      }
+      return false;
     }
+    m5Trend.value = deriveTrendReaction(m5Computed.state);
     const { phases } = m5Computed;
     renderLowerStructure(candleSeries, m5Computed, m5StructurePrimitives, m5MarkerPrimitives, candles, {
       symbol, replayUntil, show: showM5Structure,
@@ -203,24 +248,25 @@ export function usePriceChartMarketStructure() {
       down: cssColor("m5TrendPhaseDown"),
       downPre: cssColor("m5TrendPhaseDownPre"),
     });
+    return true;
   }
 
   // Lädt die M5-Kerzen zwischen Anker und ältester geladener Kerze nach und zeichnet danach neu.
   // count über die Kalenderzeit ist eine Obergrenze (Wochenenden zählen mit), +20 für die
   // Fraktal-Vorlaufkerzen; gedeckelt auf das cTrader-Limit von 14000 Bars/Request.
-  async function loadOlderM5(symbol, anchor, oldestTime) {
+  function loadOlderM5(symbol, anchor, oldestTime) {
     const key = `${symbol}:${anchor}:${oldestTime}`;
-    if (m5OlderRequested === key) return;
+    if (m5OlderRequested === key) return m5OlderPending;
     m5OlderRequested = key;
-    try {
+    m5OlderPending = (async () => { try {
       const count = Math.min(14000, Math.ceil((oldestTime - anchor) / barSecondsFor("5m")) + 20);
-      const older = await fetchInitialForexCandles(symbol, "5m", count, oldestTime * 1000);
+      const older = await fetchCandlesCached(fetchInitialForexCandles, symbol, "5m", count, oldestTime * 1000);
       if (m5Older.symbol !== symbol || older.length === 0) return;
       m5Older = { symbol, candles: [...older.filter((c) => c.time < oldestTime), ...m5Older.candles.filter((c) => c.time >= oldestTime)] };
-      if (candleSeries && lastM5Args) refreshM5Structure(lastM5Args);
     } catch (err) {
       console.error("Ältere M5-Kerzen für die M5-Struktur fehlgeschlagen:", err);
-    }
+    } })();
+    return m5OlderPending;
   }
 
   // Eigener H1-Fetch fürs Ranges-Metadaten-Panel (und seit Chat 2026-07-28 auch für die H1-Level
@@ -266,6 +312,8 @@ export function usePriceChartMarketStructure() {
     getCurrentFibLevels,
     create,
     dispose,
+    cancelCalculation,
+    invalidateRendering,
     computeRangesPivotsAndMetadata,
     refreshRangesMarkers,
     refreshMarketStructure,

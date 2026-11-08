@@ -40,6 +40,7 @@ export function usePriceChartTradeSetups() {
   let m5Candles = [];
   let trendAnalysisM5Candles = [];
   let fetchSeq = 0;
+  let computedInputKey = null;
 
   const tradeSetupsMetadata = ref([]);
 
@@ -57,24 +58,31 @@ export function usePriceChartTradeSetups() {
   // aktive. candles = bereits clipReplay-gefiltertes m5Candles (siehe getM5Candles).
   function computeTradeSetups({ candles, marketStructureState, symbol, tradeSetupHistoryCount, dbTradeSetups = [] }) {
     if (candles.length === 0) {
+      computedInputKey = null;
       tradeSetupsMetadata.value = [];
       return;
     }
     // Einmal markiert fuer Fraktale UND die bestaetigende FVG — die beiden Erkennungen lesen das
     // Flag unterschiedlich (siehe markIgnoredCandles), brauchen aber denselben Kerzensatz.
     const kerzen = markIgnored(candles, symbol);
+    const params = tradeSetupParameters(symbol, candles[candles.length - 1].time);
+    const symbolSessions = sessions.filter((s) => s.instrument === symbol);
+    const minGap = obMinimum(symbol, '5m');
+    // H1-/M5-Lader und DB-Poll können denselben Stand liefern. Innenkorrekturen bleiben relevant.
+    const inputKey = JSON.stringify([symbol, kerzen, marketStructureState, dbTradeSetups,
+      tradeSetupHistoryCount, params, minGap, symbolSessions]);
+    if (inputKey === computedInputKey) return;
     const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(kerzen, TRADE_SETUP_M5_FRACTAL_PERIOD);
     // H1-Level kommen seit Chat 2026-07-28 aus marketStructureState.structurePivots statt einer
     // eigenen H1-Fraktal-Erkennung — kann leer sein, solange marketStructureState noch nicht
     // geladen ist; Path A/B finden dann übergangsweise nur M5-basierte Setups, kein Absturz.
     const h1Highs = collectStructureLqLevels(marketStructureState, 1);
     const h1Lows = collectStructureLqLevels(marketStructureState, -1);
-    const setupObs = detectSetupObs(kerzen, obMinimum(symbol, '5m'));
+    const setupObs = detectSetupObs(kerzen, minGap);
     // Preis-Scans von detectTradeSetups (Sweep-Bruch per Close, Aufweiten der OB-Kante auf das
     // Extrem) duerfen die Kerze wirklich weglassen — sonst beendet ein Rollover-Docht einen Sweep
     // oder zieht die Invalidierung auf einen Preis, den es auf anderen Feeds nicht gab.
     const kerzenOhneIgnorierte = kerzen.filter((c) => !c.ignored);
-    const params = tradeSetupParameters(symbol, candles[candles.length - 1].time);
     // n zählt die GESAMTE Anzahl gezeigter Setups je Richtung (kein separates "Live"-Setup, siehe
     // detectTradeSetups). n=0 zeigt nichts (slice(-0) wäre sonst das GANZE Array, daher der
     // Sonderfall).
@@ -85,9 +93,8 @@ export function usePriceChartTradeSetups() {
     // anzuzeigen. obStartTime statt fractal.pivotTime, weil der OB der früheste plausible
     // Entry-Zeitpunkt ist. VOR takeLast gefiltert, sonst würde ein rausgefiltertes Setup einen
     // History-Platz "verbrauchen".
-    const symbolSessions = sessions.filter((s) => s.instrument === symbol);
     const detectionConfiguration = setup1Configuration({ instrument: symbol, params,
-      minGap: obMinimum(symbol, '5m'), sessions: symbolSessions,
+      minGap, sessions: symbolSessions,
       m5FractalPeriod: TRADE_SETUP_M5_FRACTAL_PERIOD, m5Window: TRADE_SETUP_M5_CANDLE_COUNT,
       h1Source: 'marketStructurePivots', forbiddenSessionTimezone: 'browser-local',
       forbiddenSessions: symbolSessions.filter(s => s.danger === 'forbidden')
@@ -109,6 +116,7 @@ export function usePriceChartTradeSetups() {
       ...shorts.map((s, i) => ({ ...s, invalidationTarget: setupInvalidationTarget(s, m5Highs, symbol), label: "Short", setupNumber: n > 1 ? i + 1 : null })),
       ...longs.map((s, i) => ({ ...s, invalidationTarget: setupInvalidationTarget(s, m5Lows, symbol), label: "Long", setupNumber: n > 1 ? i + 1 : null })),
     ].map(s => s.fromDb ? s : { ...s, detectorVersion: TRADE_SETUP_DETECTOR_VERSION, detectionConfiguration });
+    computedInputKey = inputKey;
   }
 
   // TREND_ANALYSIS_CANDLE_COUNT (2000) liegt über dem Edge-Function-Limit pro Request (1000, siehe

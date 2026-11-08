@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+vi.mock('../src/chartStructureWorkerClient.js', () => import('./helpers/inlineChartStructureWorker.js'));
 import archive from './fixtures/gbpusd-m5-dr114-close-reaction.json';
 import { computeRangesPivots } from '../src/marketStructureAnalysis';
 import { buildStructureWithPhases } from '../src/trendPhases.js';
@@ -21,7 +22,7 @@ function draw(clock, { mirrored = false, closeEvaluation = true } = {}) {
 const lines = (primitives, type) => primitives.filter(p => p._options?.label?.startsWith(type));
 
 describe('M5 close levels through the shared chart renderer', () => {
-  it('filters live unfinished candles and recomputes the same cache on replay rewind', () => {
+  it('filters live unfinished candles and recomputes the same cache on replay rewind', async () => {
     const api = usePriceChartMarketStructure();
     const attached = new Set();
     api.create({}, { attachPrimitive: p => attached.add(p), detachPrimitive: p => attached.delete(p) });
@@ -30,9 +31,9 @@ describe('M5 close levels through the shared chart renderer', () => {
       rangesFixedStartActive: true, rangesFixedStartTime: 1788350400,
     });
     const clock = vi.spyOn(Date, 'now');
-    const refresh = (now, replayUntil, choch, bos) => {
+    const refresh = async (now, replayUntil, choch, bos) => {
       clock.mockReturnValue(at(now) * 1000);
-      api.refreshM5Structure({ candles: archive.filter(c => c.time <= (replayUntil ?? at(now))),
+      await api.refreshM5Structure({ candles: archive.filter(c => c.time <= (replayUntil ?? at(now))),
         m5CandlesClipped: archive, symbol: 'GBPUSD', replayUntil, showM5Structure: true,
         showM5TrendPhases: false, showLiquidityDebug: false, m5Period: 5, m5Period2: 2 });
       for (const [type, price, confirmed] of [['CHoCH', 1.35576, choch], ['BOS', 1.35554, bos]]) {
@@ -42,11 +43,11 @@ describe('M5 close levels through the shared chart renderer', () => {
       }
     };
     try {
-      refresh('09:54', null, false, false);
-      refresh('09:55', null, true, false);
-      refresh('10:05', null, true, true);
-      refresh('10:35', at('09:45'), false, false);
-      refresh('10:35', at('10:00'), true, true);
+      await refresh('09:54', null, false, false);
+      await refresh('09:55', null, true, false);
+      await refresh('10:05', null, true, true);
+      await refresh('10:35', at('09:45'), false, false);
+      await refresh('10:35', at('10:00'), true, true);
     } finally { clock.mockRestore(); api.dispose(); }
   });
   it.each([

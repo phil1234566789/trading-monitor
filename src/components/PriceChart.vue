@@ -461,6 +461,8 @@ const {
   refreshRangesMarkers: refreshRangesMarkersPure,
   refreshMarketStructure: refreshMarketStructurePure,
   refreshM5Structure: refreshM5StructurePure,
+  cancelCalculation: cancelMarketStructureCalculation,
+  invalidateRendering: invalidateStructureRendering,
   fetchRangesCandles,
 } = usePriceChartMarketStructure();
 // Trade-Setup-Zeichnung (siehe usePriceChartTradeSetupDrawing.js, Phase 6h) — reine Zeichenfunktion,
@@ -1495,9 +1497,9 @@ function refreshRangesInternal() {
 // volle Bug-Historie zum "1h-Range"-Trendalgorithmus/der Zeichnung) — stößt danach die Refreshs
 // an, die auf marketStructureState reagieren (Trade-Setups brauchen die H1-Level, siehe
 // collectStructureLqLevels in usePriceChartTradeSetups.js; TSC braucht beides).
-function refreshMarketStructureInternal() {
+async function refreshMarketStructureInternal() {
   if (!chart) return; // async fetchRangesCandles kann nach unmount noch abschließen, siehe onUnmounted
-  refreshMarketStructurePure({
+  const applied = await refreshMarketStructurePure({
     candles: clipReplay(allCandles),
     h1CandlesClipped: clipReplay(getRangesH1Candles()),
     symbol: props.symbol,
@@ -1506,7 +1508,8 @@ function refreshMarketStructureInternal() {
     rangesPeriod: props.rangesPeriod,
     ranges2Period: props.ranges2Period,
   });
-  refreshM5StructureInternal(); // hängt am 1h-Outer-Cutoff, siehe refreshM5Structure
+  if (!chart || !applied) return;
+  if (!await refreshM5StructureInternal()) return;
   // computeTradeSetups() liest marketStructureState.value (siehe collectStructureLqLevels, Chat
   // 2026-07-28) — muss also nach JEDEM Recompute hier neu laufen, nicht nur bei neuen M5-Kerzen
   // (siehe loadTradeSetupM5). Reine lokale Berechnung, kein Netzwerk-Call.
@@ -1517,13 +1520,14 @@ function refreshMarketStructureInternal() {
   // ist eine der beiden TSC-Datenquellen (siehe refreshCockpitInternal), die andere ist
   // currentTradeSetups (siehe loadTradeSetupM5 und computeTradeSetups() oben).
   refreshCockpitInternal();
+  activeMetadataSnapshot.value = buildActiveMetadataSnapshotInternal();
 }
 
 // M5-Struktur/-Trendphasen (siehe usePriceChartMarketStructure.js) — läuft nach jedem 1h-Recompute
 // (Anker) UND nach neuen M5-Kerzen (loadTradeSetupM5).
 function refreshM5StructureInternal() {
   if (!chart) return;
-  refreshM5StructurePure({
+  return refreshM5StructurePure({
     candles: clipReplay(allCandles),
     m5CandlesClipped: clipReplay(getTradeSetupM5Candles()),
     symbol: props.symbol,
@@ -1556,7 +1560,7 @@ function refreshCockpitInternal() {
 // Dünner Wrapper um usePriceChartMarketStructure' fetchRangesCandles() (siehe dort für die volle
 // Bug-Historie zum H1-Fetch) — löst nur den Fetch aus, die Refresh-Kaskade danach bleibt hier
 // (Pivots/Trendanalyse neu berechnen + 1H-OB-Zonen, die auf denselben Kerzen mitlaufen).
-async function loadRangesCandles() {
+async function loadRangesCandles({ refresh = true } = {}) {
   if (snapshotView.value) return true;
   const checklistTicket = checklist.begin('h1');
   const { ok, applied } = await fetchRangesCandles({
@@ -1570,7 +1574,7 @@ async function loadRangesCandles() {
   });
   checklist.finish(checklistTicket, { ok, applied }, getRangesH1Candles());
   if (!chart) return ok; // Ein ausstehender Fetch darf nach Unmount keine Primitive anfassen.
-  if (ok && applied) {
+  if (ok && applied && refresh) {
     refreshRangesInternal();
     refreshPoiZonesInternal(); // 1H-OB-Toggle (Chat 2026-07-30) läuft auf denselben Kerzen mit
   }
@@ -1768,15 +1772,16 @@ function refreshRsiDivergenceInternal() {
 // usePriceChartTradeSetups.js-Kopfkommentar für die Begründung. M5-Kerzen sind unabhängig vom
 // aktuell gewählten Chart-Timeframe (props.currentBar) — ein Setup basiert immer auf M5-Fraktal +
 // M5-OB, egal ob der Nutzer gerade den 1h- oder den 15m-Chart anschaut.
-async function loadTradeSetupM5() {
+async function loadTradeSetupM5({ refresh = true } = {}) {
   if (snapshotView.value) return true;
   const checklistTicket = checklist.begin('m5');
   const { ok, applied } = await fetchTradeSetupM5Candles({ symbol: props.symbol, toMs: replayToMs("5m"), showEma: props.showEma });
   checklist.finish(checklistTicket, { ok, applied }, getTradeSetupM5Candles());
   if (!chart) return ok;
-  if (ok && applied) {
+  if (ok && applied && refresh) {
     computeTradeSetupsInternal();
-    refreshM5StructureInternal();
+    await refreshM5StructureInternal();
+    if (!chart) return ok;
     if (chart) applyCandleData(); // neue Setups -> andere FVG-Kerzen, ohne auf den nächsten refreshChart() zu warten
     renderTradeSetupsInternal();
     refreshEmaInternal();
@@ -1885,7 +1890,7 @@ function closeTradeSetup2Selection() {
   if(snapshotView.value)emit('setup2-close');
 }
 
-function refreshChart() {
+function refreshChart({ structure = true } = {}) {
   // Async loads (loadInitial/pollRecent/lazy-load) koennen noch laufen, wenn die
   // Komponente schon unmounted wurde (z.B. schnelle Navigation zu /protokoll) — chart
   // ist dann bereits disposed, ohne Guard wirft lightweight-charts "Object is disposed".
@@ -1913,7 +1918,7 @@ function refreshChart() {
   refreshDrawingsInternal();
   renderTradeSetupsInternal();
   refreshRangesMarkersInternal();
-  refreshMarketStructureInternal(); // ruft refreshCockpitInternal() selbst mit auf, siehe dort
+  if (structure) refreshMarketStructureInternal();
   m1Structure.refresh(clipReplay(allCandles));
   setup2.updateCandles(clipReplay(allCandles),candlesReady&&loadedCandleKey===`${props.symbol}:${props.currentBar}`);
   refreshEmaInternal();
@@ -1922,7 +1927,7 @@ function refreshChart() {
   activeMetadataSnapshot.value = buildActiveMetadataSnapshotInternal();
 }
 
-async function loadInitial({ preserveHistory = false, force = false } = {}) {
+async function loadInitial({ preserveHistory = false, force = false, structure = true } = {}) {
   // Ein späterer Modus-/Timeframe-Wechsel überholt noch laufende Antworten.
   const seq = ++loadInitialFetchSeq;
   snapshotCandleState.value = 'loading';
@@ -1964,7 +1969,7 @@ async function loadInitial({ preserveHistory = false, force = false } = {}) {
       showLiveHistoryConfirm.value = false;
       showLoadOlderButton.value = false;
     }
-    refreshChart();
+    refreshChart({ structure });
     if (viewport) {
       const offset = Math.max(0, allCandles.findIndex((c) => c.time === firstTime));
       chart.timeScale().setVisibleLogicalRange({ from: viewport.from + offset, to: viewport.to + offset });
@@ -2306,6 +2311,8 @@ onUnmounted(() => {
 });
 
 watch(() => props.currentBar, () => {
+  // Nur die Zeichenfläche wechselt; identische H1/M5-Arbeit läuft koalesziert weiter.
+  invalidateStructureRendering();
   loadInitial();
   scheduleNextPoll(); // neuer Timeframe -> neue Kerzenschluss-Taktung, siehe dort
 });
@@ -2528,17 +2535,22 @@ let pendingReplayStep = null;
 watch(() => props.replayUntil, (until, previous) => {
   const singleStep = isPreparedReplayStep(pendingReplayStep, previous, until);
   pendingReplayStep = null;
-  refreshChart();
+  cancelMarketStructureCalculation();
+  refreshChart({ structure: false });
   // Zusätzliche Indikatorfenster nutzen ihren Replay-Cache. Schnelle Klicks bündeln.
   clearTimeout(replayFetchDebounceTimer);
   if (!singleStep) {
     ++loadInitialFetchSeq;
     candlesReady = false;
   }
-  replayFetchDebounceTimer = setTimeout(() => {
-    if (!singleStep) loadInitial();
-    loadTradeSetupM5();
-    if (rangesNeedsData()) loadRangesCandles();
+  replayFetchDebounceTimer = setTimeout(async () => {
+    // Beide Fenster erst gemeinsam anwenden: sonst rechnet M5 einmal mit dem alten H1-Anker.
+    await Promise.all([singleStep ? Promise.resolve() : loadInitial({ structure: false }),
+      loadTradeSetupM5({ refresh: false }),
+      rangesNeedsData() ? loadRangesCandles({ refresh: false }) : Promise.resolve()]);
+    if (!chart || props.replayUntil !== until) return;
+    refreshRangesInternal();
+    refreshChart({ structure: false });
   }, REPLAY_FETCH_DEBOUNCE_MS);
 });
 // StyleModal (Dashboard.vue) schreibt direkt in den chartColors-Singleton — Serien-OPTIONEN
