@@ -1,6 +1,7 @@
 import {berlinWallTime} from './tradeSetupChecklistTime.js';
 import {sessionOccurrences} from './sessionOccurrences.js';
 import {berlinOffsetMinutes} from './berlinTime.js';
+import {goldWeekendGapCovered} from './goldWeekendGap.js';
 
 export function m5EntryHistoryKnown(rows,from,at,sessionConfigs=[],instrument) {
  if(!Number.isFinite(from) || !Number.isFinite(at) || from>at)return false;
@@ -20,6 +21,7 @@ export function m5EntryHistoryKnown(rows,from,at,sessionConfigs=[],instrument) {
   .filter(r=>Number.isFinite(r.startSec) && Number.isFinite(r.endSec) && r.endSec>r.startSec)
   .sort((a,b)=>a.startSec-b.startSec);
  const covered=(from,to)=>{
+  if(instrument==='XAUUSD' && goldWeekendGapCovered(from,to))return true;
   let cursor=from;
   for(const range of closures){if(range.startSec>cursor)break;if(range.endSec>cursor)cursor=Math.min(to,range.endSec);if(cursor===to)return true;}
   return cursor===to;

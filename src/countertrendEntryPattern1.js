@@ -1,6 +1,7 @@
 import {m5EntryHistoryKnown} from './m5EntryHistory.js';
 import {entryPatternVersion} from './entryPattern.js';
-import { entryPattern1Countertrend, entryPattern1M5Bos } from './entryPattern1M5Bos.js';
+import { entryPattern1Countertrend } from './entryPattern1M5Bos.js';
+import {entryPattern1M5Confirmation,m5BosRuleVersionFor,entryPattern1M5ConfirmationLabel} from './entryPattern1M5Confirmation.js';
 import { detectOrderBlocks } from './orderBlockDetection.js';
 import { createIncrementalOrderBlockDetector } from './incrementalOrderBlocks.js';
 import { orderBlockRecognitionTimes } from './orderBlockRecognitionTime.js';
@@ -36,10 +37,12 @@ export function entryPattern1RetestFvg(rows, orderBlocks, confirmedAt, direction
 
 export function evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,trends,pivotBreak,structureStart,internalSweeps,closeReactionCache,entryProgress}) {
   const version=entryPatternVersion(context) ?? ENTRY_PATTERN_1_VERSION;
+  const m5BosRuleVersion=m5BosRuleVersionFor(context.instrument,version);
   const drCountertrend=entryPattern1Countertrend(context.primary,context.direction,evaluatedAt);
   const m5=closedChecklistCandles(context.m5Candles,'5m',evaluatedAt);
   const key=JSON.stringify([version,drCountertrend,context.instrument,context.direction,context.structureStart,context.settings,
-    context.confirmedAt,context.sessionConfigs,context.primary?.reactionOB,m5[0]?.time,m5.at(-1)?.time,m5.length]);
+    context.confirmedAt,context.sessionConfigs,context.primary?.reactionOB,m5[0]?.time,m5.at(-1)?.time,m5.length,
+    ...(m5BosRuleVersion?[m5BosRuleVersion]:[])]);
   let m5Facts=entryProgress?.m5?.key===key && entryProgress.m5.evaluatedAt<=evaluatedAt ? entryProgress.m5 : null;
   if(!m5Facts){
     const current=evaluateChecklistM5({instrument:context.instrument,direction:context.direction,evaluatedAt,
@@ -50,7 +53,9 @@ export function evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,tren
       || !m5EntryHistoryKnown(m5,context.structureStart,evaluatedAt,context.sessionConfigs,context.instrument)) ? null
       : entryPattern1Countertrend(context.primary,context.direction,evaluatedAt,
         current.structureState,m5.at(-1)?.time+300 || undefined);
-    const m5Bos=usesCountertrendM5BosEntryPattern1(version) ? entryPattern1M5Bos(reaction,m5Countertrend,context.direction,evaluatedAt)
+    const m5Bos=usesCountertrendM5BosEntryPattern1(version) ? entryPattern1M5Confirmation({instrument:context.instrument,entryPattern:version,reaction,countertrend:m5Countertrend,
+      primary:context.primary,direction:context.direction,evaluatedAt,candles:m5,anchor:context.structureStart,
+      periodOuter:context.settings.m5StructurePeriod??5,periodInner:context.settings.m5Structure2Period??2,currentState:current.structureState})
       : (reaction?.levels ?? []).find(s => s.type === 'BOS' && s.direction === context.direction
       && Number.isFinite(s.recognizedAt) && s.recognizedAt <= evaluatedAt) ?? null;
     const recognition=orderBlockRecognitionTimes(m5,'5m');
@@ -71,8 +76,9 @@ export function evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,tren
   const category=usesEntryPattern1Categories(version)
     ? entryPattern1StructureCategory(conditions,context.direction,follow.fvg?.recognizedAt,version) : null;
   const entry=candidate ? {...candidate,entryPattern:version,conditions,confirmedAt:context.confirmedAt,
+    ...(m5BosRuleVersion?{m5BosRuleVersion}:{}),
     ...(entryPattern1CategoryMetadata(category) ?? {})} : null;
-  const facts=[['M5-BOS in Setup-Richtung',m5Bos],['M1-Pivotbruch ab Sweep',conditions.m1PivotBreak],
+  const facts=[[entryPattern1M5ConfirmationLabel(context.instrument,m5Bos,version),m5Bos],['M1-Pivotbruch ab Sweep',conditions.m1PivotBreak],
     ['M5-OB-Retest',follow.retest],['M1-FVG nach Retest',follow.fvg]];
   const missingFact=label=>follow.status==='unknown' && ['M5-OB-Retest','M1-FVG nach Retest'].includes(label)
     ? `${label}: Konnte nicht ermittelt werden · M1-Historie ab OB-Bestätigung fehlt oder ist lückenhaft.` : `${label} fehlt`;

@@ -1,0 +1,13 @@
+import {describe,it,expect} from 'vitest';
+import {entryPattern1M5Confirmation,m5BosRuleVersionFor} from '../src/entryPattern1M5Confirmation.js';
+import {buildTradeSetup2Configuration} from '../src/tradeSetup2Configuration.js';
+const pivot={price:10,pivotTime:300},origin={price:15,pivotTime:1200};
+const level={trend:'uptrend',currRange:{low:{price:8,pivotTime:0},high:origin},structurePivots:[{type:'protected-low',price:9,pivotTime:0}],innerStructurePivots:[{type:'low',...pivot}]};
+const fixture=()=>({reaction:{levels:[]},primary:{},countertrend:{trend:'uptrend',range:level.currRange,recognizedAt:0},direction:'short',evaluatedAt:2400,candles:Array.from({length:8},(_,i)=>({time:i*300,open:12,high:14,low:i===1?10:11,close:i===6?9.5:12})),anchor:0,periodOuter:5,periodInner:2,currentState:level,deps:{detectLiquidityLevels:()=>({highs:[],lows:[pivot]}),computeRangesPivots:()=>[],buildMarketStructureState:()=>level,entryPattern1CountertrendState:()=>level}});
+describe('instrument-scoped M5 confirmation',()=>{
+ it('adds the tested preliminary break only for XAU',()=>{expect(entryPattern1M5Confirmation({instrument:'XAUUSD',...fixture()})).toMatchObject({price:10,recognizedAt:2100,evidenceType:'P2-preliminary-close-break',ruleVersion:'m5-p2-preliminary-close-same-d-v2'});expect(m5BosRuleVersionFor('XAUUSD')).toBe('m5-p2-preliminary-close-same-d-v2');});
+ it.each(['GBPUSD','EURUSD'])('keeps %s on the original BOS and never calls P2 math',instrument=>{const x=fixture();x.deps.detectLiquidityLevels=()=>{throw Error('P2 must not run');};expect(entryPattern1M5Confirmation({instrument,...x})).toBeNull();expect(m5BosRuleVersionFor(instrument)).toBeUndefined();});
+ it.each(['XAUUSD','GBPUSD','EURUSD'])('preserves an existing BOS for %s by identity',instrument=>{const x=fixture(),bos={type:'BOS',direction:'short',originTime:1200,recognizedAt:1800};x.reaction.levels=[bos];expect(entryPattern1M5Confirmation({instrument,...x})).toBe(bos);});
+ it('does not activate for older archived entry versions or an inner period other than P2',()=>{expect(entryPattern1M5Confirmation({instrument:'XAUUSD',...fixture(),entryPattern:'countertrend-entry-model-1-v10'})).toBeNull();expect(entryPattern1M5Confirmation({instrument:'XAUUSD',...fixture(),periodInner:3})).toBeNull();});
+ it('pins the new configuration version only for XAU',()=>{expect(buildTradeSetup2Configuration({instrument:'XAUUSD'}).m5BosRuleVersion).toBe('m5-p2-preliminary-close-same-d-v2');for(const instrument of ['GBPUSD','EURUSD'])expect(Object.hasOwn(buildTradeSetup2Configuration({instrument}),'m5BosRuleVersion')).toBe(false);});
+});

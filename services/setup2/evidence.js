@@ -6,11 +6,14 @@ import {buildTradeSetup2CandidateSnapshot} from '../../src/tradeSetup2Snapshot.j
 import {SETUP2_VERSION} from '../../src/tradeSetup2Configuration.js';
 import {ENTRY_PATTERN_1_VERSION} from '../../src/entryPattern1Conditions.js';
 import {M1_STRUCTURE_PERIOD} from '../../src/m1StructureSettings.js';
+import {m5BosRuleVersionFor} from '../../src/entryPattern1M5Confirmation.js';
 const iso=sec=>new Date(sec*1000).toISOString();
 
 // Originalwissen bleibt unverändert; später finalisierte Verläufe tragen einen eigenen as-of-Stand.
 export function createLiveEvidence(config,{fromTime,toTime,startedAt,mode}) {
- const configuration={schemaVersion:1,setupVersion:SETUP2_VERSION,drRiskVersion:JOINT_LOSS_RISK_VERSION,entryPattern:ENTRY_PATTERN_1_VERSION,m1Period:M1_STRUCTURE_PERIOD,...config},configurationId=hash(configuration),originals=new Map(),payloads=new Map(),origins=new Map();
+ const m5BosRuleVersion=m5BosRuleVersionFor(config.instrument,config.entryPattern);
+ const configuration={schemaVersion:1,setupVersion:SETUP2_VERSION,drRiskVersion:JOINT_LOSS_RISK_VERSION,entryPattern:ENTRY_PATTERN_1_VERSION,m1Period:M1_STRUCTURE_PERIOD,...config,
+  ...(m5BosRuleVersion?{m5BosRuleVersion}:{})},configurationId=hash(configuration),originals=new Map(),payloads=new Map(),origins=new Map();
  const evaluationMode=mode ?? (fromTime<Math.floor(startedAt/60)*60-60?'catchup':'live');
  function record(snapshot) {
   if(!snapshot?.id || !Number.isFinite(snapshot.knownAt) || snapshot.knownAt<fromTime || snapshot.knownAt>toTime)return;
