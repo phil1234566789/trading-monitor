@@ -1,0 +1,104 @@
+{
+  "evidence": [
+    {
+      "id": 379,
+      "dealing_range_id": 124,
+      "kind": "pivot",
+      "price": 4368.15,
+      "source_time": "2026-09-21T03:40:00+00:00",
+      "touched_time": "2026-09-21T11:50:00+00:00",
+      "timeframe": "5M",
+      "liquidity_level_id": 1381923,
+      "ob_zone_id": null
+    },
+    {
+      "id": 380,
+      "dealing_range_id": 124,
+      "kind": "pivot",
+      "price": 4356.76,
+      "source_time": "2026-09-21T10:15:00+00:00",
+      "touched_time": "2026-09-21T11:30:00+00:00",
+      "timeframe": "5M",
+      "liquidity_level_id": 1381922,
+      "ob_zone_id": null
+    },
+    {
+      "id": 381,
+      "dealing_range_id": 124,
+      "kind": "pivot",
+      "price": 4357.57,
+      "source_time": "2026-09-21T08:40:00+00:00",
+      "touched_time": "2026-09-21T11:30:00+00:00",
+      "timeframe": "5M",
+      "liquidity_level_id": 1381920,
+      "ob_zone_id": null
+    },
+    {
+      "id": 382,
+      "dealing_range_id": 124,
+      "kind": "pivot",
+      "price": 4361.97,
+      "source_time": "2026-09-21T05:30:00+00:00",
+      "touched_time": "2026-09-21T11:35:00+00:00",
+      "timeframe": "5M",
+      "liquidity_level_id": 1381924,
+      "ob_zone_id": null
+    },
+    {
+      "id": 383,
+      "dealing_range_id": 124,
+      "kind": "pivot",
+      "price": 4365.36,
+      "source_time": "2026-09-21T04:20:00+00:00",
+      "touched_time": "2026-09-21T11:40:00+00:00",
+      "timeframe": "5M",
+      "liquidity_level_id": 1381921,
+      "ob_zone_id": null
+    },
+    {
+      "id": 384,
+      "dealing_range_id": 124,
+      "kind": "ob",
+      "price": 4367.05,
+      "source_time": "2026-09-21T12:20:00+00:00",
+      "touched_time": null,
+      "timeframe": "5M",
+      "liquidity_level_id": null,
+      "ob_zone_id": 3462644
+    }
+  ],
+  "range": [
+    {
+      "id": 124,
+      "instrument": "XAUUSD",
+      "direction": "short",
+      "trade_setup_id": null,
+      "invalidation": 4374.8
+    }
+  ],
+  "setup": [],
+  "ob": [
+    {
+      "id": 3462644,
+      "instrument": "XAUUSD",
+      "timeframe": "5M",
+      "direction": "short",
+      "top": 4374.8,
+      "bottom": 4367.05,
+      "start_time": "2026-09-21T12:20:00+00:00"
+    }
+  ],
+  "provenance": {
+    "source": "public.trade_evidence and ob_zones read-only snapshot",
+    "date": "2026-09-21",
+    "timezone": "Europe/Berlin",
+    "replayAt": "2026-09-21T15:30:00+02:00",
+    "note": "DR124 has no linked trade_setup_id and no trade_setups row matches its OB natural key; evidence captures the actual chart import."
+  },
+  "expectedEvidenceIds": [
+    379,
+    383,
+    382,
+    384
+  ]
+}
