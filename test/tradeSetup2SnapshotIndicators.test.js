@@ -27,6 +27,13 @@ it('preserves archive indicator reconstruction for both sides of the H1 rule com
   const old = { ...configuration(), setupVersion: 'entry-snapshot-p5-time-abc-v2' };
   expect((await createSnapshotM1Reader(repository(old), async () => candles)('old', snapshot())).result).not.toBeNull();
 });
+it.each(['countertrend-entry-model-1-v30','xau-v30-both-frozen-recognition-v1'])('reads saved metadata for %s without changing current rules',async setupVersion=>{
+  const stored=snapshot(),before=JSON.stringify(stored);
+  const config={...configuration(),setupVersion};
+  const loaded=await createSnapshotM1Reader(repository({instruments:[config]}),async()=>candles)('archive',stored);
+  expect(loaded.result).not.toBeNull();
+  expect(JSON.stringify(stored)).toBe(before);
+});
 
 it('shares a bounded read and fixes all reconstructed pivots to knownAt without changing the snapshot', async () => {
   const source = snapshot(), before = JSON.stringify(source), db = repository({ instruments: [configuration()] });

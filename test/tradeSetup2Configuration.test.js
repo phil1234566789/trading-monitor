@@ -23,3 +23,13 @@ it('uses actual Berlin calendar days across both daylight saving transitions',as
   expect(spring.to-spring.from).toBe(23*3600);
   expect(autumn.to-autumn.from).toBe(25*3600);
 });
+it('reads the exact frozen recognition snapshot version without broad future-version fallback',()=>{
+  const metadata={instrument:'XAUUSD',setupVersion:'xau-v30-both-frozen-recognition-v1'};
+  expect(supportsSnapshotIndicators(metadata.setupVersion)).toBe(true);
+  expect(supportsSnapshotIndicators('countertrend-entry-model-1-v30')).toBe(true);
+  expect(supportsSnapshotIndicators('xau-v30-both-entry-patterns-causal-alias-v2')).toBe(true);
+  for(const version of ['xau-v30-both-frozen-recognition-v2','countertrend-entry-model-1-v31','xau-v30-unknown',undefined,null,''])
+    expect(supportsSnapshotIndicators(version)).toBe(false);
+  expect(buildTradeSetup2Configuration({instrument:metadata.instrument}).setupVersion)
+    .toBe('ls-entry-patterns-causal-alias-v26');
+});
