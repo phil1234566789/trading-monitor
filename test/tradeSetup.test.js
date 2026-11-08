@@ -180,7 +180,7 @@ describe("detectTradeSetups — mehrere Sweeps je OB", () => {
     expect(setups[0].obBottom).toBe(1.2995); // Fenster ab 800, nicht ab 900 (das wäre 1.2998)
   });
 
-  it("gibt ALLE Sweeps mit, ältester zuerst und je mit seiner Zeitebene", () => {
+  it("behält bis zu drei Sweeps, ältester zuerst und je mit seiner Zeitebene", () => {
     const lsH1 = lowLevel({ price: 1.3004, pivotTime: 50, touchedTime: 850 }); // Alter 800, der älteste
     const setups = detectTradeSetups(-1, [], [lsH1], [lsAlt, lsJung], setupObs, nah, m5Candles);
     expect(setups).toHaveLength(1);

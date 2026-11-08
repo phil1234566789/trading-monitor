@@ -1,5 +1,5 @@
 import { ref } from "vue";
-import { compareSweepAge } from "../tradeSetup.js";
+import { strongestSetupSweeps } from "../tradeSetup.js";
 import { addRangeConfirmation, addConfirmationToTrade, createDealingRange,
   directionForSetup, deriveSetupEntryInvalidation, linkTradeToSetup, updateTrade } from "../tradeIntake.js";
 
@@ -30,7 +30,7 @@ export function useSetupConfirmations({ currentSymbol, confirmationAddTrade, ran
         if (currentSymbol.value === instrument) tscRangeId.value = range.id;
       }
       // Nur die drei stärksten übernehmen; DB-Kindzeilen sind anders als Live-Sweeps nicht sortiert.
-      const sweeps = [...(setup.sweeps ?? [{ level: setup.ls, timeframe: "5M" }])].sort(compareSweepAge).slice(0, 3);
+      const sweeps = strongestSetupSweeps(setup.sweeps ?? [{ level: setup.ls, timeframe: "5M" }]);
       const confirmations = sweeps.map((sw) => ({
         kind: "pivot", price: sw.level.price, sourceTime: sw.level.pivotTime,
         touchedTime: sw.level.touchedTime ?? null, instrument, timeframe: sw.timeframe,

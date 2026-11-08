@@ -1,3 +1,5 @@
+import { strongestSetupSweeps } from './tradeSetup.js';
+
 const toSec = (iso) => Math.floor(new Date(iso).getTime() / 1000);
 
 // Ein gesweeptes Level in der Form, die die Live-Erkennung liefert — sowohl für ls als auch für die
@@ -16,12 +18,13 @@ export function tradeSetupFromRow(row) {
   // sweeps[0] ist per Vertrag der entscheidende (älteste) Sweep — der steht autoritativ in ls_*,
   // die Kindtabelle liefert nur die übrigen dazu. Zeilen von vor dem 21.09.2026 haben gar keine
   // Kind-Zeilen, dort bleibt der eine Sweep die ganze Liste.
-  const sweeps = [
+  // Altbestände mit mehr Kind-Zeilen lesend begrenzen, ohne ihre historischen Originale zu löschen.
+  const sweeps = strongestSetupSweeps([
     { level: ls, timeframe: row.ls_timeframe ?? "5M" },
     ...(row.trade_setup_sweeps ?? [])
       .filter((sw) => !sw.is_primary)
       .map((sw) => ({ level: sweepLevel(sw.price, sw.pivot_time, sw.touched_time, dir), timeframe: sw.timeframe })),
-  ];
+  ]);
   // Ohne eigenes bestätigtes Fraktal steht in beiden Spalten dasselbe (Path B, siehe
   // detectTradeSetups: `fractal: fractal ?? ls`) — dann dieselbe OBJEKTREFERENZ statt nur derselbe
   // Preis: die Zeichnung entscheidet genau an `fractal !== ls`, ob sie ein zweites "PP"-Label an

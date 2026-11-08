@@ -10,7 +10,7 @@ import { detectOrderBlocks } from "./orderBlockDetection.js";
 import { businessSecondsBetween } from "./chartTimeUtils.js";
 
 // Bei Regeländerungen beide Detektorkopien versionieren; Herkunft bleibt beim ersten Insert.
-export const TRADE_SETUP_DETECTOR_VERSION = 'setup1-fxcm-spread-ignore-v1';
+export const TRADE_SETUP_DETECTOR_VERSION = 'setup1-fxcm-top3-sweeps-v2';
 
 // Bis Bug-Report Philip 2026-07-29 ("M5 OBs bei trade-setup passen noch nicht") eine EIGENE, von
 // detectOrderBlocks() unabhängige 3-Kerzen-FVG-Existenzprüfung — bewusst OHNE Mindestgröße (jede
@@ -120,6 +120,10 @@ export function sweepAgeSec(ls) {
 
 export function compareSweepAge(a, b) {
   return sweepAgeSec(b.level) - sweepAgeSec(a.level) || a.level.pivotTime - b.level.pivotTime;
+}
+
+export function strongestSetupSweeps(sweeps) {
+  return [...sweeps].sort(compareSweepAge).slice(0, 3);
 }
 
 // Regel 2 (Philip 2026-09-21): der Close-Check disqualifiziert einen Sweep nur noch, solange das
@@ -264,7 +268,8 @@ export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupO
     const ls = sweeps[0].level;
     const fensterVon = Math.min(...sweeps.map((sw) => sw.level.touchedTime));
     const widened = widenObForSweep(ob, fensterVon, dir, m5Candles);
-    return { dir, fractal: fractal ?? ls, ls, sweeps, obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, obFvg: widened.fvg, pathType };
+    // Das Extrem braucht weiterhin alle Touches; nur das fertige Setup trägt höchstens drei Sweeps.
+    return { dir, fractal: fractal ?? ls, ls, sweeps: strongestSetupSweeps(sweeps), obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, obFvg: widened.fvg, pathType };
   };
 
   for (const { fractal, ls } of findAllProtectedFractals(fractalLevels, h1Levels, m5Levels, dir, params)) {

@@ -29,7 +29,7 @@ export interface DetectedTradeSetup {
   dir: 1 | -1; // 1 = Short (Protected High), -1 = Long (Protected Low)
   fractal: LiquidityLevel; // M5-Fraktal ("Protected High/Low")
   ls: LiquidityLevel; // sweependes LQ-Level (H1 oder M5) — das "Liquidity Sweep"
-  sweeps: SetupSweep[]; // ALLE Level, die dieser OB abgeräumt hat, ältester zuerst — sweeps[0].level === ls
+  sweeps: SetupSweep[]; // Höchstens drei stärkste Level, ältester zuerst — sweeps[0].level === ls
   obTop: number;
   obBottom: number;
   obStartTime: number;
@@ -69,7 +69,7 @@ export interface TradeSetupParams {
 // (trading-monitor-mcp) dieselbe Live-Erkennung mit denselben Werten braucht (DRY innerhalb
 // derselben Deno-Runtime, Task "Live-Trade-Setup-Erkennung serverseitig für Lana", 2026-09-05).
 // Bei Regeländerungen beide Detektorkopien versionieren; Herkunft bleibt beim ersten Insert.
-export const TRADE_SETUP_DETECTOR_VERSION = 'setup1-fxcm-spread-ignore-v1';
+export const TRADE_SETUP_DETECTOR_VERSION = 'setup1-fxcm-top3-sweeps-v2';
 export const TRADE_SETUP_M5_FRACTAL_PERIOD = 5; // liqM5Period
 export const TRADE_SETUP_H1_FRACTAL_PERIOD = 10; // liqH1Period — bewusst ANDERS als LIQUIDITY_FRACTAL_PERIOD (eigene 1H-Notification, andere Abstimmung)
 export const TRADE_SETUP_PIP_SIZE = 0.0001; // gilt für beide FX-Paare (GBPUSD/EURUSD)
@@ -226,6 +226,14 @@ function sweepAgeSec(ls: LiquidityLevel): number {
   return businessSecondsBetween(ls.pivotTime, ls.touchedTime ?? ls.pivotTime);
 }
 
+function compareSweepAge(a: SetupSweep, b: SetupSweep): number {
+  return sweepAgeSec(b.level) - sweepAgeSec(a.level) || a.level.pivotTime - b.level.pivotTime;
+}
+
+export function strongestSetupSweeps(sweeps: SetupSweep[]): SetupSweep[] {
+  return [...sweeps].sort(compareSweepAge).slice(0, 3);
+}
+
 // Regel 2 (Philip 2026-09-21): der Close-Check disqualifiziert einen Sweep nur noch, solange das
 // gesweepte Level JUNG war. Vorher galt er unbegrenzt, und genau das hat den schnellen Pfad bei
 // einem klassischen Sweep-and-Reclaim ausgeschaltet (Setup #1617, 21.09.2026: einmal unter dem
@@ -279,7 +287,7 @@ function collectObSweeps(
   // Regel 3, Teil 2: ÄLTESTER zuerst ("Ältester Sweep ist der für die Strategie am
   // entscheidendsten") — sweeps[0] füllt ls_price/ls_pivot_time/ls_touched_time/ls_timeframe. Bei
   // gleichem Alter der früher entstandene Pivot, damit beide Laufzeiten dasselbe Level wählen.
-  return sweeps.sort((a, b) => sweepAgeSec(b.level) - sweepAgeSec(a.level) || a.level.pivotTime - b.level.pivotTime);
+  return sweeps.sort(compareSweepAge);
 }
 
 // Path B (Chat 2026-07-26, Bug-Report "M5 OB wird nicht als Trade-Setup erkannt"): laut Philips
@@ -374,7 +382,8 @@ export function detectTradeSetup(
     const ls = sweeps[0].level;
     const fensterVon = Math.min(...sweeps.map((sw) => sw.level.touchedTime!));
     const widened = widenObForSweep(ob, fensterVon, dir, m5Candles);
-    return { dir, fractal: fractal ?? ls, ls, sweeps, obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, obFvg: widened.fvg, pathType };
+    // Das Extrem braucht weiterhin alle Touches; nur das fertige Setup trägt höchstens drei Sweeps.
+    return { dir, fractal: fractal ?? ls, ls, sweeps: strongestSetupSweeps(sweeps), obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, obFvg: widened.fvg, pathType };
   };
 
   let pathA: DetectedTradeSetup | null = null;
