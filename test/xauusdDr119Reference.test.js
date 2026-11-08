@@ -1,10 +1,10 @@
-import {createHash} from 'node:crypto';
 import {describe,expect,it} from 'vitest';
 import fixture from './fixtures/xauusd-dr119-trend-continuation.json';
 import {detectOrderBlocks,candleTouchesOrderBlock} from '../src/orderBlockDetection.js';
 import {orderBlockMitigationFvg} from '../src/orderBlockMitigation.js';
 import {closedChecklistCandles} from '../src/tradeSetupChecklistTimeBasis.js';
 import {tintM1FvgCandle} from '../src/fvgCandleTint.js';
+import {assertNativeReferenceCandles} from './helpers/nativeReferenceFixture.js';
 
 const at=clock=>Date.parse(`2026-09-16T${clock}:00+02:00`)/1000;
 const candle=clock=>fixture.candles.m1.find(c=>c.time===at(clock));
@@ -12,17 +12,7 @@ const candle=clock=>fixture.candles.m1.find(c=>c.time===at(clock));
 // Datenreferenz und bestehende FVG-Geometrie prüfen; das neue Entry-Muster ist noch nicht definiert.
 describe('DR119 native reference data, not a trend-continuation detector',()=>{
  it.each(['m1','m5','h1'])('keeps the original %s OHLC and explicit provenance intact',bar=>{
-  const rows=fixture.candles[bar],manifest=fixture.provenance.manifest[bar];
-  expect(rows).toHaveLength(manifest.count);
-  expect(rows[0].time).toBe(manifest.from);expect(rows.at(-1).time).toBe(manifest.to);
-  expect(createHash('sha256').update(JSON.stringify(rows)).digest('hex')).toBe(manifest.sha256);
-  for(const[cIndex,c]of rows.entries()){
-   expect(Object.values(c).every(Number.isFinite)).toBe(true);
-   expect(Number.isInteger(c.time)).toBe(true);expect(c.volume).toBeGreaterThanOrEqual(0);
-   expect(c.low).toBeGreaterThan(0);expect(c.low).toBeLessThanOrEqual(Math.min(c.open,c.close));
-   expect(c.high).toBeGreaterThanOrEqual(Math.max(c.open,c.close));
-   if(cIndex)expect(c.time).toBeGreaterThan(rows[cIndex-1].time);
-  }
+  assertNativeReferenceCandles(fixture,bar);
  });
  it('covers every M1 minute from the sweep through the target without inventing ticks',()=>{
   const rows=fixture.candles.m1.filter(c=>c.time>=at('10:11'));
