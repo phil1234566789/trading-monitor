@@ -8,11 +8,13 @@ import { simulationReviewFeatures } from './simulationReviewFeatures.js';
 import { simulationChartReplayTime } from './simulationChartReplayTime.js';
 import {sortSimulationRunsByExecution} from './simulationRunPresentation.js';
 import {normalizeStrategySetup} from './strategySetupLabels.js';
+import {SIMULATION_ENTRY_PATTERN_LABELS,matchesSimulationEntryPattern} from './simulationEntryPatterns.js';
 
-export const FILTER_DEFAULTS = { run: '', compare: '', instrument: '', type: '', from: '', to: '', stage: '', outcome: '', entry: '', pinned: '', feature: '', value: '' };
+export const FILTER_DEFAULTS = { run: '', compare: '', instrument: '', type: '', pattern: '', from: '', to: '', stage: '', outcome: '', entry: '', pinned: '', feature: '', value: '' };
 export function comparisonFilters(query) {
   const filters = Object.fromEntries(Object.entries(FILTER_DEFAULTS).map(([key, fallback]) => [key, typeof query[key] === 'string' && query[key] !== 'all' ? query[key] : fallback]));
   filters.type = normalizeStrategySetup(filters.type);
+  if(!Object.hasOwn(SIMULATION_ENTRY_PATTERN_LABELS,filters.pattern))filters.pattern='';
   return filters;
 }
 export function latestCompletedRun(runs) {
@@ -47,14 +49,16 @@ export function filterReviewGroups(groups, filters, pins = []) {
     const time = e.entry?.recognizedAt ?? e.knownAt;
     return (bounds.from == null || time >= bounds.from) && (bounds.to == null || time < bounds.to);
   };
+  const scopedEntry=e=>entryInPeriod(e)&&(!filters.pattern||matchesSimulationEntryPattern(e,filters.pattern));
+  const scopeEntries=!!filters.pattern||bounds.from!=null||bounds.to!=null;
   return groups.filter(g => (!filters.instrument || g.instrument === filters.instrument)
     && (!filters.type || normalizeStrategySetup(g.setupType) === normalizeStrategySetup(filters.type)) && (!filters.stage || (filters.stage === 'disqualified' ? isDisqualifiedDealingRange(g.latestCandidate ?? g.snapshot) : g.stage === filters.stage))
     && (!filters.outcome || g.outcome.status === filters.outcome)
     && (!filters.entry || (filters.entry === 'with') === !!g.entries.length)
     && (!filters.pinned || (filters.pinned === 'with') === simulationGroupHasPin(g,pins))
     && (!filters.feature || g.features.some(f => f.key === filters.feature && (!filters.value || f.value === filters.value)))
-    && (bounds.from == null && bounds.to == null || g.entries.some(entryInPeriod)))
-    .map(g => bounds.from == null && bounds.to == null ? g : { ...g, entries: g.entries.filter(entryInPeriod) });
+    && (!scopeEntries || g.entries.some(scopedEntry)))
+    .map(g => scopeEntries ? { ...g, entries: g.entries.filter(scopedEntry) } : g);
 }
 export function groupResults(groups, results, filters = {}) {
   const bounds = simulationDateFilter(filters.from, filters.to);

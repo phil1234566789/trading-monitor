@@ -4,6 +4,7 @@ import {simulationRunLabel} from '../simulationRunPresentation.js';
 import { DEALING_RANGE_LABELS } from '../tradeSetup2DealingRange.js';
 import { DR_OUTCOME_LABELS } from '../simulationRunComparison.js';
 import { FEATURE_VALUES } from '../simulationReviewFeatures.js';
+import {SIMULATION_ENTRY_PATTERN_LABELS} from '../simulationEntryPatterns.js';
 const props=defineProps({modelValue:Object,runs:Array,features:Array});
 // Archivierte Laeufe bleiben ueber Direktlinks und Pins erreichbar.
 const archivedGbpRuns = new Set([
@@ -27,6 +28,7 @@ const set=(key,value)=>emit('update:modelValue',{...props.modelValue,[key]:value
     <label>Vergleich mit Lauf alt<select :value="modelValue.compare" @change="set('compare',$event.target.value)"><option value="">Kein Vergleich</option><option v-for="run in selectableRuns(modelValue.compare).filter(r=>r.id!==modelValue.run)" :key="run.id" :value="run.id">{{ label(run) }}</option></select></label>
     <label>Instrument<select :value="modelValue.instrument" @change="set('instrument',$event.target.value)"><option value="">Alle</option><option v-for="name in ['GBPUSD','EURUSD','XAUUSD']" :key="name">{{ name }}</option></select></label>
     <label>Setup<select :value="modelValue.type" @change="set('type',$event.target.value)"><option value="">Alle</option><option v-for="key in STRATEGY_SETUP_KEYS" :key="key" :value="key">{{ STRATEGY_SETUP_LABELS[key] }}</option></select></label>
+    <label>Entry Pattern<select aria-label="Entry Pattern" :value="modelValue.pattern" @change="set('pattern',$event.target.value)"><option value="">Alle</option><option v-for="(name,key) in SIMULATION_ENTRY_PATTERN_LABELS" :key="key" :value="key">{{ name }}</option></select></label>
     <label>Entry ab<input type="date" :value="modelValue.from" @input="set('from',$event.target.value)" /></label>
     <label>Entry bis einschließlich<input type="date" :value="modelValue.to" @input="set('to',$event.target.value)" /></label>
     <label>DR-Stufe<select :value="modelValue.stage" @change="set('stage',$event.target.value)"><option value="">Alle inkl. Altstand</option><option v-for="(name,key) in Object.fromEntries(Object.entries(DEALING_RANGE_LABELS).filter(([key])=>key!=='invalidated' || modelValue.stage==='invalidated'))" :key="key" :value="key">{{ name }}</option></select></label>
@@ -36,8 +38,10 @@ const set=(key,value)=>emit('update:modelValue',{...props.modelValue,[key]:value
     <label>Merkmal<select :value="modelValue.feature" @change="set('feature',$event.target.value)"><option value="">Alle</option><option v-for="f in features" :key="f.key" :value="f.key">{{ f.label }}</option></select></label>
     <label>Merkmalswert<select :value="modelValue.value" :disabled="!modelValue.feature" @change="set('value',$event.target.value)"><option value="">Egal</option><option v-for="(label,key) in FEATURE_VALUES" :key="key" :value="key">{{ label }}</option></select></label>
     <p v-if="modelValue.stage === 'invalidated'">Historischer Stufenfilter: enthält auch Preisenden. Der gespeicherte Grund trennt Preisenden von Disqualifikationen; der gespeicherte Grund steht auf der Karte. Die Trichterzahl zählt nur Disqualifikationen.</p>
+    <p v-if="modelValue.pattern" class="pattern-hint">Entry-Tabelle und Kennzahlen zeigen nur passende Entries. Der DR-Kontext bleibt erhalten. Ein Entry mit beiden Patterns zählt einmal.</p>
   </form>
 </template>
 <style scoped>
 .statistics-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:20px 0}label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#b1b7c5;min-width:0}select,input{width:100%;min-height:36px;box-sizing:border-box;background:#1e222d;color:#d1d4dc;border:1px solid #434651;border-radius:4px;padding:7px;color-scheme:dark}select:focus-visible,input:focus-visible{outline:2px solid #91b8ff;outline-offset:2px}
+.pattern-hint{grid-column:1/-1;margin:0;font-size:12px;color:#b1b7c5}
 </style>
