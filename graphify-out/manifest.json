@@ -8164,5 +8164,11 @@
     "seen": 1794173907.342558,
     "ast_hash": "6248c4249389ceb22be37692aeae7442",
     "semantic_hash": ""
+  },
+  "test/simulationReferenceIndex.integration.mjs": {
+    "mtime": 1794203198.6525958,
+    "seen": 1794203290.287766,
+    "ast_hash": "c0e7c76809a12d84dc680681d7c68940",
+    "semantic_hash": ""
   }
 }
