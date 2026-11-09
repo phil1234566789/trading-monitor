@@ -28,6 +28,6 @@ export function buildM1PivotState(pivots,candles,fact,evaluatedAt) {
       phases.push({trend:inner.trend,pre:false,from:at,to:evaluatedAt});
       events.push({pivot,at,trend:inner.trend,pre:false,reason:'Trendwechsel'});
     }
-  });
+  },{cacheCloses:true});
   return {state,events,phases:phases.filter(p=>p.from<p.to)};
 }

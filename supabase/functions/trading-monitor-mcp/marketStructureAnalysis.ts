@@ -1090,7 +1090,7 @@ export function buildMarketStructureState(
   };
   // Ohne Callback kann niemand die Kerzen zwischen Pivot-Schritten ändern.
   // onStep behält dagegen sein eigenes Fenster pro Schritt (auch bei Mutation).
-  return onStep ? applyPivots() : withCandleCloseWindow(candles, applyPivots);
+  return onStep ? applyPivots() : withCandleCloseWindow(candles, applyPivots, {cacheCloses: true});
 }
 
 // Läuft die Nested-Tracker-Kette ab state selbst ab (state, state.nestedTrend, ...) und bricht am

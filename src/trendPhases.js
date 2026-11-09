@@ -49,7 +49,7 @@ export function buildStructureWithPhases(pivotsOuter, pivotsInner, periodOuter, 
       phases.push({ trend: inner.trend, pre, from, to: endTime ?? at });
       if (inner.trend !== "unknown") events.push({ pivot, at, trend: inner.trend, pre, reason, touchAt, level: reason === "CHoCH" ? inner.appliedPivots[1].price : null });
     },
-  }));
+  }), {cacheCloses: true});
   // Ein Pivot kann erst nach der letzten geladenen Kerze "verarbeitet" sein (Lookahead im Replay).
   return { state, events, phases: phases.filter((p) => p.trend !== "unknown" && p.from < p.to),
     ...(closeEvaluation ? { closeReaction: deriveM5CloseReaction(state, pivotsOuter, pivotsInner, periodOuter, periodInner, candles, barSeconds, closeReactionCache) } : {}) };

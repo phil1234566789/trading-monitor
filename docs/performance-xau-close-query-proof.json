@@ -1,0 +1,198 @@
+{
+  "method": "Explicit immutable synchronous close-query reuse; no trading-rule or output-schema change.",
+  "referenceRunId": "setup2-6dd4a875d67d73c94d77ba3d",
+  "historicalPipeline": {
+    "completeCalculationSeconds": 19474,
+    "initialRecognitionAndScanSeconds": 19411.273438720702,
+    "materializationApproxSeconds": 62.726561279296874,
+    "recognitionSplit": "Original log has no independent wall timestamps for initial recognition versus scan. Do not invent this split.",
+    "failedPublishAttempt": {
+      "seconds": 1637.4186728515624,
+      "method": "File creation to final write; includes setup/verification inside the command, not a CPU-only timer."
+    },
+    "successfulPublishRetry": {
+      "seconds": 1203.8698447265624,
+      "method": "File creation to final write; includes setup/verification inside the command, not a CPU-only timer."
+    },
+    "fullDatabaseRoundtrip": {
+      "seconds": 270.0015024414063,
+      "method": "File creation to final write; includes setup/verification inside the command, not a CPU-only timer."
+    },
+    "additionalAudit": "Reference reconstruction, independent reviews and a local SQL-contract audit occurred between calculation and publication. These are separate from market computation and normal JSONB-size preflight. No validations were removed."
+  },
+  "bottleneck": {
+    "queries": 11633287,
+    "repeatedWithinSameWindow": 11536401,
+    "repeatedFraction": 0.9916716573742228,
+    "windows": 184
+  },
+  "nativeBenchmark": {
+    "sources": 6,
+    "setupSnapshots": 7,
+    "entries": 2,
+    "repeatsPerVariant": 3,
+    "profile": false,
+    "serial": true,
+    "measurements": [
+      {
+        "variant": "baseline",
+        "wallMs": 7635.4314,
+        "cpuMs": 8797,
+        "firstStepWallMs": 6765.3582,
+        "checkpointWallMs": 65.02100000000155
+      },
+      {
+        "variant": "candidate",
+        "wallMs": 5130.5926,
+        "cpuMs": 6188,
+        "firstStepWallMs": 4208.6952,
+        "checkpointWallMs": 45.71339999999873
+      },
+      {
+        "variant": "candidate",
+        "wallMs": 5190.826,
+        "cpuMs": 6313,
+        "firstStepWallMs": 4362.1320000000005,
+        "checkpointWallMs": 63.19929999999931
+      },
+      {
+        "variant": "baseline",
+        "wallMs": 7372.6075,
+        "cpuMs": 8593,
+        "firstStepWallMs": 6489.8049,
+        "checkpointWallMs": 61.77800000000025
+      },
+      {
+        "variant": "baseline",
+        "wallMs": 7415.5461,
+        "cpuMs": 8594,
+        "firstStepWallMs": 6550.9335,
+        "checkpointWallMs": 61.61059999999907
+      },
+      {
+        "variant": "candidate",
+        "wallMs": 5067.0088,
+        "cpuMs": 6266,
+        "firstStepWallMs": 4221.9044,
+        "checkpointWallMs": 52.41570000000047
+      }
+    ],
+    "medianWallMs": {
+      "baseline": 7415.5461,
+      "candidate": 5130.5926
+    },
+    "improvementFraction": 0.30813017263826326,
+    "note": "Same frozen native history, isolated cold Node processes in balanced order; loading/hashing precedes scan timing. First-step timing includes initialization and is not a pure recognition-function timer."
+  },
+  "parity": {
+    "baselineRuntimeHashes": {
+      "core.mjs": "31464c5250895bb378b24fb6dea3b173f7ba57394823b2db0dc30e02c3ad884a",
+      "baseline.mjs": "c2e3f55a61a259d8338674b0329be4e3dd789a521397f5dc5cf6d5ad17e68bd1"
+    },
+    "candidateRuntimeHashes": {
+      "core.mjs": "4fede86b8b4f4b7e95c0ef00a150aad722096a54b7ee2bd4a1dfd7ec678f9b92",
+      "baseline.mjs": "1c47b792daf2fac9cac0c434be08b02d4e80c6c8fd7574ba87fb752ad5e166c4"
+    },
+    "originalSources": 9,
+    "p1Entries": 18,
+    "p1Outcomes": 36,
+    "completeSnapshotsExact": true,
+    "p2Cases": 3,
+    "p2Outcomes": 6,
+    "midresume": {
+      "processes": 4,
+      "completeOutputsExact": true,
+      "inputIdentity": "9518e91053cc81429a530fa34374d9f5a63447188c597587be403d70788dab1a",
+      "terminalScanCalls": 0
+    },
+    "frozenAdapter": "Only candleCloseWindow region and three pure call sites per module changed; inverse byte reconstruction exact. Original frozen files untouched.",
+    "fullFrozenRecognitionIdentity": "ea8548e603efd0b2ba8ddf04d9164e288ba360b2cea5d0a11584ac48d724c814",
+    "futureRunGuard": "New full freeze/orchestrator/proof identity and new run ID required. Existing run/checkpoints remain immutable."
+  },
+  "checkpointProbe": {
+    "bytes": 16285606,
+    "medianCommitMs": 116.12524999999997,
+    "samples": [
+      {
+        "repeat": 0,
+        "serializeMs": 28.377200000000002,
+        "deserializeMs": 52.08850000000001,
+        "commitMs": 115.41139999999999
+      },
+      {
+        "repeat": 1,
+        "serializeMs": 30.018500000000017,
+        "deserializeMs": 36.867999999999995,
+        "commitMs": 115.37259999999998
+      },
+      {
+        "repeat": 2,
+        "serializeMs": 27.73539999999997,
+        "deserializeMs": 54.315900000000056,
+        "commitMs": 101.73569999999995
+      },
+      {
+        "repeat": 3,
+        "serializeMs": 29.527099999999905,
+        "deserializeMs": 37.05110000000002,
+        "commitMs": 125.18999999999994
+      },
+      {
+        "repeat": 4,
+        "serializeMs": 29.784700000000043,
+        "deserializeMs": 36.22770000000003,
+        "commitMs": 117.33499999999992
+      },
+      {
+        "repeat": 5,
+        "serializeMs": 30.163800000000037,
+        "deserializeMs": 46.12339999999995,
+        "commitMs": 113.82180000000017
+      },
+      {
+        "repeat": 6,
+        "serializeMs": 27.89969999999994,
+        "deserializeMs": 36.347999999999956,
+        "commitMs": 116.87789999999995
+      }
+    ],
+    "verdict": "No checkpoint optimization retained: do not remove durable-state cloning/checks or infer total checkpoint cost from one late-state sample."
+  },
+  "cacheContract": {
+    "lifetime": "One synchronous explicitly immutable call window; always discarded in finally.",
+    "key": "from plus exact to/price/above checks; only last result per from retained.",
+    "mutation": "Default windows and foreign onStep callbacks remain dynamic; nested callers cannot upgrade an outer mutable window.",
+    "specialValues": "Empty, unsorted, duplicate-time, NaN and infinite bounds/prices preserve original predicates."
+  },
+  "verification": {
+    "focusedTests": "Close-query key/mutation/nesting/throw tests, existing full-state/snapshot parity and frontend/MCP copy guards.",
+    "fullSuite": {
+      "candidatePassed": 2677,
+      "candidateFailed": 13,
+      "skipped": 1,
+      "todo": 5,
+      "baselineFailuresSame": true,
+      "newFailures": 0,
+      "baselineNote": "Same 13 semantic failures reproduced on clean main fe4e27b1 in five files. A baseline-only parallel timeout passes isolated; ignored debug tests explain raw count differences. No tests changed or weakened."
+    },
+    "build": "passed",
+    "typecheck": "passed (repository-limited include set)",
+    "integratedMainBase": "ab46fd54",
+    "integratedFocusedTests": {
+      "files": 6,
+      "passed": 33
+    }
+  },
+  "attempts": [
+    {
+      "idea": "Window-scoped exact close-query reuse",
+      "verdict": "kept",
+      "reason": "30.81% median reduction exceeds observed sample variance; complete native parity and real resume preserved."
+    }
+  ],
+  "limits": [
+    "No new multi-month run; no whole-pipeline speedup percentage is claimed.",
+    "Published run, candles, sources, coverage/unknown policy, costs, risk and trading gates remain unchanged.",
+    "Node native-case speed is not a measured browser/MCP/watcher wall-time claim."
+  ]
+}
