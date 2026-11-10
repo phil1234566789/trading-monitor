@@ -1,7 +1,8 @@
 <script setup>
 import DealingRangeSetupSelect from './DealingRangeSetupSelect.vue';
-import { ref, computed, watch } from "vue";
-import { updateTrade, updateDealingRange, deleteTrade, removeTargetFromTrade, removeConfirmationFromTrade } from "../tradeIntake.js";
+import { ref, computed } from "vue";
+import { useTradePositionForm } from "../composables/useTradePositionForm.js";
+import { updateDealingRange, deleteTrade, removeTargetFromTrade, removeConfirmationFromTrade } from "../tradeIntake.js";
 import { fmtDateTime, fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import { formatTargetLabel } from "../tradeTargets";
 import { formatEvidenceLabel } from "../tradeEvidence";
@@ -44,6 +45,8 @@ const emit = defineEmits([
   "open-in-tsc",
   "close",
   "saved",
+  "created",
+  "position-draft-started",
   "deleted",
   "request-add-target",
   "request-add-confirmation",
@@ -67,18 +70,14 @@ const emit = defineEmits([
   "open-anti-confluence-picker",
 ]);
 
-const entryPrice = ref("");
-const entryTimeInput = ref("");
-const stopLoss = ref("");
-const exitPrice = ref("");
-const exitTimeInput = ref("");
-const outcome = ref("");
-const reasoning = ref("");
-const tradingAccountId = ref(null);
-const size = ref("");
-const netPl = ref("");
-const commission = ref("");
-const saving = ref(false);
+const { entryPrice, entryTimeInput, stopLoss, exitPrice, exitTimeInput, outcome, reasoning, tradingAccountId,
+  size, netPl, commission, saving, addingPosition, saveError, createdPositionId, beginPositionDraft, cancelPositionDraft, save } =
+  useTradePositionForm(() => props.trade, { saved:() => emit('saved'), created:(id, accountId) => emit('created', id, accountId) });
+function startPositionDraft(prefill) {
+  beginPositionDraft(prefill);
+  emit('position-draft-started');
+}
+defineExpose({ beginPositionDraft:startPositionDraft });
 
 // "Lesson"-Verknüpfung (Chat 2026-07-31, vierte Runde): "GBP Short#23 war ein dummer Fehler,
 // Long#24 wäre die Lesson daraus" — kann auch eine falsch bestimmte dealing range sein, nicht nur
@@ -150,62 +149,6 @@ async function toggleFavorite() {
   savingFavorite.value = false;
   if (ok) emit("saved");
 }
-// Sichtbares Feedback fürs Invalidierungs-Feld (Chat 2026-07-31, dritte Runde: "ich sehe nicht, ob
-// das erfolgreich übernommen worden ist") — gilt für BEIDE Wege, den Preis zu setzen: das Formular
-// <input type="datetime-local"> Roundtrip wie in NewsModal.vue/Dashboard.vue (replayInputValue) —
-// Browser-Lokalzeit, kein eigenes Zeitzonen-Handling nötig.
-function toDatetimeLocal(unixSeconds) {
-  const d = new Date(unixSeconds * 1000);
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-// Formular bei jedem Trade-Wechsel (anderer Trade geöffnet) ODER externem Update (Ziel/Setup über
-// den Chart hinzugefügt, siehe oben) mit dem aktuellen DB-Stand neu befüllen — NICHT nur beim
-// ersten Öffnen, sonst würde ein externes Update während offenem Panel nicht in den Feldern
-// auftauchen (nur in den schreibgeschützten Ziele-/Setup-Listen unten).
-//
-// Bug-Report Philip 2026-07-31: "will die Begründung editieren, auf einmal fügt sich irgendein
-// anderer Text ein" — kein Autofill-Problem, sondern Dashboard.vue's usePolledFetch pollt `trades`
-// alle POLL_MS neu (er sah dazu passend "ganz viele requests im Network-Tab"), was hier bei
-// OFFENEM Panel für DENSELBEN Trade eine neue props.trade-Objektreferenz mit dem alten DB-Stand
-// auslöste — der Watcher hat dann blind den gerade getippten Text mit dem zuletzt gespeicherten
-// überschrieben. Fix: "sync-if-untouched" — ein Feld nur aus dem neuen Trade übernehmen, wenn es
-// seit dem letzten Sync unverändert ist (== oldT-Wert), sonst ist der Nutzer gerade mittendrin,
-// es zu bearbeiten. Bei einem echten Trade-Wechsel (andere id) IMMER hart neu befüllen.
-function syncIfUntouched(ref, sameTrade, oldValue, newValue) {
-  if (sameTrade && ref.value !== oldValue) return;
-  ref.value = newValue;
-}
-watch(
-  () => props.trade,
-  (t, oldT) => {
-    const sameTrade = oldT != null && oldT.id === t.id;
-    syncIfUntouched(entryPrice, sameTrade, oldT?.entryPrice ?? "", t.entryPrice ?? "");
-    syncIfUntouched(
-      entryTimeInput,
-      sameTrade,
-      oldT?.entryTime != null ? toDatetimeLocal(oldT.entryTime) : "",
-      t.entryTime != null ? toDatetimeLocal(t.entryTime) : "",
-    );
-    syncIfUntouched(stopLoss, sameTrade, oldT?.stopLoss ?? "", t.stopLoss ?? "");
-    syncIfUntouched(exitPrice, sameTrade, oldT?.exitPrice ?? "", t.exitPrice ?? "");
-    syncIfUntouched(
-      exitTimeInput,
-      sameTrade,
-      oldT?.exitTime != null ? toDatetimeLocal(oldT.exitTime) : "",
-      t.exitTime != null ? toDatetimeLocal(t.exitTime) : "",
-    );
-    syncIfUntouched(outcome, sameTrade, oldT?.outcome ?? "", t.outcome ?? "");
-    syncIfUntouched(reasoning, sameTrade, oldT?.reasoning ?? "", t.reasoning ?? "");
-    syncIfUntouched(tradingAccountId, sameTrade, oldT?.tradingAccountId ?? null, t.tradingAccountId ?? null);
-    syncIfUntouched(size, sameTrade, oldT?.size ?? "", t.size ?? "");
-    syncIfUntouched(netPl, sameTrade, oldT?.netPl ?? "", t.netPl ?? "");
-    syncIfUntouched(commission, sameTrade, oldT?.commission ?? "", t.commission ?? "");
-  },
-  { immediate: true },
-);
-
 // Evidenz-Zeilen (trades.js: toConfirmation) sind mit level ("range"/"position") UND category
 // ("confirmation"/"confluence"/"anti_confluence", seit Migration 20260828130000 eine normale,
 // explizit gesetzte Spalte statt generiert) versehen — erst nach level aufgeteilt, damit "GO für
@@ -223,25 +166,6 @@ function pickerButtonTitle(baseTitle) {
   return instrumentMismatch.value ? `Erst zu ${props.trade.instrument} wechseln.` : baseTitle;
 }
 const positionAntiConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "position" && c.category === "anti_confluence"));
-
-async function save() {
-  saving.value = true;
-  const ok = await updateTrade(props.trade.id, {
-    entryPrice: entryPrice.value === "" ? null : Number(entryPrice.value),
-    entryTime: entryTimeInput.value ? Math.floor(new Date(entryTimeInput.value).getTime() / 1000) : null,
-    stopLoss: stopLoss.value === "" ? null : Number(stopLoss.value),
-    exitPrice: exitPrice.value === "" ? null : Number(exitPrice.value),
-    exitTime: exitTimeInput.value ? Math.floor(new Date(exitTimeInput.value).getTime() / 1000) : null,
-    outcome: outcome.value === "" ? null : outcome.value,
-    reasoning: reasoning.value.trim() === "" ? null : reasoning.value.trim(),
-    tradingAccountId: tradingAccountId.value,
-    size: size.value === "" ? null : Number(size.value),
-    netPl: netPl.value === "" ? null : Number(netPl.value),
-    commission: commission.value === "" ? null : Number(commission.value),
-  },props.trade.brokerPrivate);
-  saving.value = false;
-  if (ok) emit("saved");
-}
 
 async function onDelete() {
   if (!confirm(`Trade #${props.trade.id} wirklich löschen?`)) return;
@@ -282,7 +206,7 @@ function confirmationLabel(confirmation) {
 </script>
 
 <template>
-  <MetadataPanel :title="`✏️ Trade #${trade.id} bearbeiten`" :width="560" :height="700" position="bottom-right" @close="emit('close')">
+  <MetadataPanel :title="addingPosition ? `Position zu DR #${trade.dealingRangeId} hinzufügen` : `✏️ Trade #${trade.id} bearbeiten`" :width="560" :height="700" position="bottom-right" @close="emit('close')">
     <div class="tem-header">
       <span class="tem-direction" :class="trade.direction">{{ trade.direction === "short" ? "Short" : "Long" }}</span>
       <span>{{ trade.instrument }}</span>
@@ -306,6 +230,7 @@ function confirmationLabel(confirmation) {
     <div class="tem-group tem-group-range">
       <h3 class="tem-group-title">
         📐 Dealing Range #{{ trade.dealingRangeId }}
+        <button type="button" class="tem-favorite-btn" :disabled="saving || addingPosition" @click="startPositionDraft()">Position hinzufügen</button>
         <button type="button" class="tem-favorite-btn" @click="emit('open-in-tsc')">Im TSC öffnen</button>
         <button
           class="tem-favorite-btn"
@@ -427,7 +352,9 @@ function confirmationLabel(confirmation) {
     <!-- Trade Position: diese EINE Ausführung — Entry-Kriterien/Ergebnis können sich von anderen
          Re-Entries derselben Dealing Range unterscheiden. -->
     <div class="tem-group tem-group-position">
-      <h3 class="tem-group-title">▶ Ausführung #{{ trade.id }}</h3>
+      <h3 class="tem-group-title">{{ addingPosition ? '▶ Neue Ausführung' : `▶ Ausführung #${trade.id}` }}</h3>
+      <p v-if="addingPosition" class="tem-muted">Neue Position derselben DR · gespeichert wird erst mit „Position speichern“.</p>
+      <template v-if="!addingPosition">
 
       <CrudListSection
         title="Bestätigungen (GO für diesen Entry)"
@@ -471,16 +398,17 @@ function confirmationLabel(confirmation) {
         @hover="(c) => emit('hover-evidence', c)"
       />
 
+      </template>
       <section class="tem-section">
-        <h4 class="tem-section-title">Ausführung<span v-if="trade.brokerPrivate"> · Beträge in {{trade.accountCurrency}}</span></h4>
+        <h4 class="tem-section-title">Ausführung<span v-if="!addingPosition && trade.brokerPrivate"> · Beträge in {{trade.accountCurrency}}</span></h4>
         <form class="tem-form" autocomplete="off" @submit.prevent="save">
           <label>
             Entry-Preis
-            <input v-model="entryPrice" type="number" step="any" placeholder="leer = nicht gefüllt" />
+            <input v-model="entryPrice" type="number" step="any" :required="addingPosition" :min="addingPosition ? 0 : undefined" placeholder="leer = nicht gefüllt" />
           </label>
           <label>
             Entry-Zeit
-            <input v-model="entryTimeInput" type="datetime-local" />
+            <input v-model="entryTimeInput" type="datetime-local" :required="addingPosition" />
           </label>
           <label>
             Stop-Loss
@@ -526,13 +454,16 @@ function confirmationLabel(confirmation) {
             Begründung
             <textarea v-model="reasoning" rows="3" autocomplete="off"></textarea>
           </label>
-          <ActionButton type="submit" class="tem-save-btn" :disabled="saving">Speichern</ActionButton>
+          <p v-if="saveError" role="alert" class="tem-lesson-error">{{ saveError }}</p>
+          <p v-if="createdPositionId != null" role="status">Position #{{ createdPositionId }} gespeichert.</p>
+          <ActionButton type="submit" class="tem-save-btn" :disabled="saving || createdPositionId != null">{{ addingPosition ? 'Position speichern' : 'Speichern' }}</ActionButton>
+          <ActionButton v-if="addingPosition" :disabled="saving" @click="cancelPositionDraft">Abbrechen</ActionButton>
         </form>
       </section>
 
-      <TradeJournalComments :position-id="trade.id" />
-      <p v-if="trade.brokerPrivate">Private Brokerzuordnung · Original-Deals bleiben erhalten.</p>
-      <ActionButton v-else tone="danger" class="tem-delete-btn" @click="onDelete">🗑 Diese Ausführung löschen</ActionButton>
+      <TradeJournalComments v-if="!addingPosition" :position-id="trade.id" />
+      <p v-if="!addingPosition && trade.brokerPrivate">Private Brokerzuordnung · Original-Deals bleiben erhalten.</p>
+      <ActionButton v-if="!addingPosition && !trade.brokerPrivate" tone="danger" class="tem-delete-btn" @click="onDelete">🗑 Diese Ausführung löschen</ActionButton>
     </div>
   </MetadataPanel>
 </template>

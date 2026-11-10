@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { liveMonthViewId } from "../liveWatcherMonth.js";
 import DashboardMmt from '../components/DashboardMmt.vue';
@@ -24,7 +24,7 @@ import PinPanel from "../components/PinPanel.vue";
 import ToggleButton from "../components/ui/ToggleButton.vue";
 import DataRefreshButton from "../components/DataRefreshButton.vue";
 import { syncNewsEvents } from "../newsEvents.js";
-import { selectedTradingAccountId, writableTradingAccountId } from "../tradingAccounts.js";
+import { selectedTradingAccountId, writableTradingAccountId, ALL_ACCOUNTS_ID } from "../tradingAccounts.js";
 import { TIMEFRAMES, barSecondsForTimeframeCi } from "../timeframes.js";
 import { toPips } from "../pipConfig.js";
 import { fetchTrades } from "../trades.js";
@@ -354,6 +354,23 @@ const tradeModeActive = computed(() => chartMode.value === "trade");
 // selbst, damit editingTrade unten immer den LIVE-Stand aus der trades-Liste zeigt (z.B. sofort
 // aktualisiert, nachdem im Panel ein Setup/Ziel über den Chart hinzugefügt wurde).
 const editingTradeId = ref(null);
+const tradeEditModalRef = ref(null);
+function onPositionDraftStarted() {
+  disarmChartClick();
+  hoveredModalEvidenceItem.value = null;
+  hoveredModalTargetItem.value = null;
+}
+let positionAccountChange = false;
+async function onPositionCreated(positionId, accountId) {
+  // Ein bewusst anderes Zielkonto darf den gerade angelegten Entry nicht aus dem Editor filtern.
+  positionAccountChange = true;
+  if (selectedTradingAccountId.value !== ALL_ACCOUNTS_ID) selectedTradingAccountId.value = accountId ?? ALL_ACCOUNTS_ID;
+  // Der Konto-Watcher soll denselben Datensatz nicht parallel nochmals laden.
+  await nextTick();
+  positionAccountChange = false;
+  await refreshTrades();
+  editingTradeId.value = positionId;
+}
 const editingTrade = computed(() => trades.value.find((t) => t.id === editingTradeId.value) ?? null);
 function onEditRequest(t) {
   editingTradeId.value = t.id;
@@ -1686,7 +1703,7 @@ watch(currentSymbol, () => {
 watch(replayUntil, refreshDbTradeSetups);
 watch(replayUntil, refreshDbObZones);
 watch(selectedTradingAccountId, () => {
-  refreshTrades();
+  if (!positionAccountChange) refreshTrades();
   isolatedDealingRangeId.value = null;
 });
 </script>
@@ -2175,12 +2192,15 @@ watch(selectedTradingAccountId, () => {
   <SessionsModal v-if="showSessionsModal" :instrument="currentSymbol" @close="showSessionsModal = false" />
   <NewsModal v-if="showNewsModal" @close="showNewsModal = false" />
   <TradeEditModal
+    ref="tradeEditModalRef"
     v-if="editingTrade"
     :trade="editingTrade"
     :armed-action="armedTradeAction"
     :current-symbol="currentSymbol"
     @close="closeTradeEditModal"
     @saved="refreshTrades"
+    @created="onPositionCreated"
+    @position-draft-started="onPositionDraftStarted"
     @open-in-tsc="onOpenJournalInTsc(editingTrade)"
     @deleted="onTradeDeleted"
     @request-add-target="onAddTargetRequest(editingTrade)"

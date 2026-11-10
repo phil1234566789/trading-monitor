@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient.js";
+import { tradePositionPayload } from "./tradePositionFields.js";
 import { STRATEGY_SETUP_KEYS, normalizeStrategySetup } from './strategySetupLabels.js';
 import {privateJournalApi} from './privateJournal.js';
 import { deriveSetupEntryInvalidation, TRADE_SETUP_DETECTOR_VERSION } from "./tradeSetup.js";
@@ -189,7 +190,7 @@ export async function deleteDealingRange(dealingRangeId) {
 // falls keine OB dabei ist, der frühesten Bestätigung) — die genaue Uhrzeit ist hier bewusst
 // unwichtig ("Uhrzeit brauch ma für ne DR nicht"), die bekommt erst die echte Ausführung im
 // Trade-Edit-Modal. Fällt auf "jetzt" zurück, falls kein Anker übergeben wird.
-export async function addPositionToDealingRange(dealingRangeId, { tradingAccountId = null, triggeredAt = null } = {}) {
+export async function addPositionToDealingRange(dealingRangeId, { tradingAccountId = null, triggeredAt = null, fields = {} } = {}) {
   const { data, error } = await supabase
     .from("trade_positions")
     .insert({
@@ -197,6 +198,7 @@ export async function addPositionToDealingRange(dealingRangeId, { tradingAccount
       source: "live",
       triggered_at: (triggeredAt != null ? new Date(triggeredAt * 1000) : new Date()).toISOString(),
       trading_account_id: tradingAccountId,
+      ...tradePositionPayload(fields),
     })
     .select()
     .single();
@@ -355,27 +357,7 @@ export async function removeTargetFromTrade(targetId) {
 // trades.js), wird hier auf die DB-Spaltennamen gemappt statt das dem Aufrufer zu überlassen.
 // exitTime kommt als Unix-Sekunden (wie der Rest der App) oder null, nicht als ISO-String.
 export async function updateTrade(positionId, fields, brokerPrivate=false) {
-  const payload = {};
-  if ("entryPrice" in fields) payload.entry_price = fields.entryPrice;
-  // entryTime editiert bewusst triggered_at mit (nicht ein neues Feld) — das ist bereits die
-  // Spalte, aus der trades.js:entryTime gelesen wird und die den Entry-Marker im Chart
-  // positioniert (siehe PriceChart.vue: jumpToTrade/entryTime-Nutzung). Anders als exitTime NICHT
-  // nullbar (triggered_at ist `not null` in der DB) — leeres Feld im Formular wird ignoriert statt
-  // gesendet. Bug-Report Philip 2026-08-19: Entry-Preis war editierbar, Entry-Zeit nicht —
-  // triggered_at blieb dann auf dem reinen DB-Insert-Zeitpunkt stehen statt dem tatsächlichen
-  // Fill, der Marker saß am falschen Punkt im Chart.
-  if ("entryTime" in fields && fields.entryTime != null) payload.triggered_at = new Date(fields.entryTime * 1000).toISOString();
-  if ("stopLoss" in fields) payload.stop_loss = fields.stopLoss;
-  if ("exitPrice" in fields) payload.exit_price = fields.exitPrice;
-  if ("exitTime" in fields) payload.exit_time = fields.exitTime != null ? new Date(fields.exitTime * 1000).toISOString() : null;
-  if ("outcome" in fields) payload.outcome = fields.outcome;
-  if ("reasoning" in fields) payload.reasoning = fields.reasoning;
-  if ("tradingAccountId" in fields) payload.trading_account_id = fields.tradingAccountId;
-  // Broker-Ausführungsdetails (Chat 2026-07-31) — bisher zweckentfremdet im reasoning-Freitext
-  // (siehe Migration 20260731210000_trade_positions_size_pl_commission.sql).
-  if ("size" in fields) payload.size = fields.size;
-  if ("netPl" in fields) payload.net_pl = fields.netPl;
-  if ("commission" in fields) payload.commission = fields.commission;
+  const payload = tradePositionPayload(fields);
 
   if(brokerPrivate){
     try{await privateJournalApi('journal_position_update',{position_id:positionId,fields:payload});return true;}
