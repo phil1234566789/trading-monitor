@@ -23,6 +23,12 @@ describe('independent M5 DR observation', () => {
     expect(completed[0].priceObservation).toMatchObject({ stage1: 'target1', stage2: 'target2' });
     expect(completed[1].priceObservation).toEqual(completed[0].priceObservation);
     expect(savedDealingRangePriceOutcome(groupSetupSnapshots(completed)[0]).status).toBe('t2');
+    const laterSource = { ...snapshot, id: 'later', setupKey: 'source-b', knownAt: 660 };
+    const separateSources = [
+      ...completeDealingRangePriceObservations([snapshot], [candle(300, 19, 14), candle(600, 31, 14)], 900),
+      ...completeDealingRangePriceObservations([laterSource, entry], [candle(300, 19, 14), candle(600, 31, 14)], 900),
+    ];
+    expect(savedDealingRangePriceOutcome(groupSetupSnapshots(separateSources)[0]).status).toBe('t2');
   });
   it.each(['long','short'])('measures T2, return, open and missing history for %s', direction => {
     const mirror = c => direction === 'short' ? { ...c, high: 40-c.low, low: 40-c.high } : c;

@@ -12,7 +12,8 @@ export function savedDealingRangePriceOutcome(group) {
   if(partial)return {status:'unknown',label:DR_OUTCOME_LABELS.unknown,from:partial.liveCoverage.validatedAt,
     through:partial.liveObservedThrough,reason:'Der Verlauf vor dem ersten gespeicherten Live-Prüfstand fehlt.'};
   const first = group.firstValidated;
-  const observation = [group.latestCandidate, group.snapshot, ...group.entries]
+  // Bei gemeinsamen Ideen kann der erste Validierungsbeleg aus einer früheren Quelle stammen.
+  const observation = [group.latestCandidate, group.snapshot, first, ...group.entries]
     .map(s => s?.priceObservation).find(o => o?.version === DR_PRICE_OBSERVATION_VERSION
       && o.setupKey === first?.setupKey && o.validatedAt === first?.knownAt);
   if (!observation) return { status: 'unknown', label: DR_OUTCOME_LABELS.unknown };
