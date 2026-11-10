@@ -53,7 +53,7 @@ import { DivergenceLinePrimitive } from "../rsiRendering.js";
 import { usePriceChartRsi } from "../composables/usePriceChartRsi.js";
 import { usePriceChartCockpit } from "../composables/usePriceChartCockpit.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
-import { tintFvgCandles, tintM1FvgCandle, tintManualFvgConfirmation } from "../fvgCandleTint.js";
+import { tintFvgCandles, tintM1FvgCandle } from "../fvgCandleTint.js";
 import {createM1FvgChartSelection} from '../m1FvgChartSelection.js';
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
@@ -1892,7 +1892,7 @@ function applyCandleData() {
   lastCandleTime.value=candles[candles.length-1]?.time??null;
   refreshBrokerTrades();
   const tinted=tintM1FvgCandle(candles, snapshot ? (props.showM1Structure ? snapshot.m1Check?.fvg : null) : m1Structure.check.value.fvg, props.currentBar, color);
-  candleSeries.setData(tintManualFvgConfirmation(entryFvgPicker.paint(tinted,color),props.entryFvgPreview,props.currentBar,cssColor('tradeConnector')));
+  candleSeries.setData(entryFvgPicker.paint(tinted,color,cssColor('tradeConnector')));
 }
 
 const entryFvgPicker=createM1FvgChartSelection(()=>({candles:markIgnored(clipReplay(allCandles),props.symbol),

@@ -6,7 +6,7 @@ defineEmits(['request']);
 <template>
   <section class="fvg-entry-controls" aria-label="Entry aus M1-FVG vorbelegen">
     <b>M1-FVG → neue Position · DR #{{ rangeId }} · {{ instrument }} {{ direction === 'short' ? 'Short' : 'Long' }}</b>
-    <p>Variante wählen, dann eine goldene FVG-Impulskerze (Entstehung) im Chart anklicken. Die Entry-Zeit ist der bestätigende Kerzenschluss.</p>
+    <p>Variante wählen: Gold markiert FVG-Impulse, die Positionsfarbe alle bereits bestätigten Einstiegskerzen. Zum Vorbelegen eine goldene FVG-Impulskerze (Entstehung) anklicken.</p>
     <div>
       <button type="button" :disabled="disabled" :aria-pressed="armedAction === 'entryFvgImmediate'" @click="$emit('request','immediate')">a · FVG-Schluss</button>
       <button type="button" :disabled="disabled" :aria-pressed="armedAction === 'entryFvgRetestReaction'" @click="$emit('request','retestReaction')">b) FVG Retest + Bestätigungskerze</button>
