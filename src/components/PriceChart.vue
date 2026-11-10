@@ -2246,6 +2246,10 @@ onMounted(() => {
       }
       return;
     }
+    if(props.entryFvgSelection){
+      const hit=entryFvgPicker.select(chart.timeScale().coordinateToTime(x),candleSeries.coordinateToPrice(y));
+      chartContainerRef.value.style.cursor=hit?'pointer':'';return;
+    }
     if (props.targetModeActive) {
       const point = { point: { x, y } };
       const hit =

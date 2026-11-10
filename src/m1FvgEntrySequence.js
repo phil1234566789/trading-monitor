@@ -1,4 +1,4 @@
-import {candleTouchesOrderBlock} from './orderBlockDetection.js';
+import {candleTouchesOrderBlock,candleInvalidatesOrderBlock} from './orderBlockDetection.js';
 export const M1_FVG_MIN_RETEST_FRACTION=.5;
 
 function qualifiedFvgRetest(candle,fvg) {
@@ -30,6 +30,10 @@ export function advanceM1FvgEntrySequence(state,candle) {
   if(candle.time!==state.next){state.result={status:'unknown',reason:'M1-Historie zwischen FVG und Reaktion ist lückenhaft.'};return;}
   state.next+=60;
   if(candle.ignored)return;
+  // Ein gebrochener Ursprungs-OB kann keine spätere Reaktionskerze mehr bestätigen.
+  if(state.fvg.orderBlock && candleInvalidatesOrderBlock(candle,state.fvg.orderBlock)){
+    state.result={status:'invalid',reason:'Der zugehörige M1-OB wurde vor dem Entry durch einen Docht gebrochen.'};return;
+  }
   if(!state.retest){
     const qualified=qualifiedFvgRetest(candle,state.fvg);
     if(qualified===null)state.result={status:'unknown',reason:'Vollständige FVG-Füllung: Der zugehörige M1-OB ist aus dem Vierkerzen-Vorlauf nicht belegt.'};

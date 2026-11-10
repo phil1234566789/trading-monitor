@@ -19,6 +19,10 @@ export function createM1FvgChartSelection(read) {
     select(time,price){
       const c=context();
       if(!c)return null;
+      const candle=c.candles.find(row=>row.time===time);
+      if(!candle||!Number.isFinite(price)||price<candle.low||price>candle.high)return null;
+      const confirmation=c.confirmationResults.get(time);
+      if(confirmation)return {...confirmation,target:{...c.selection}};
       const fvg=matchM1FvgEntryCandidate(c.candidates,c.candles,time,price);
       if(!fvg)return null;
       return {...c.results.get(fvg.candleTime),target:{...c.selection}};

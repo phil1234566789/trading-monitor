@@ -6,14 +6,14 @@ defineEmits(['request']);
 <template>
   <section class="fvg-entry-controls" aria-label="Entry aus M1-FVG vorbelegen">
     <b>M1-FVG → Entry · Ausführung {{executionNumber}} · {{positionId!=null?'Position #'+positionId:'neue Position'}} · DR #{{ rangeId }} · {{ instrument }} {{ direction === 'short' ? 'Short' : 'Long' }}</b>
-    <p>Variante wählen: Gold markiert FVG-Impulse, die Positionsfarbe alle bereits bestätigten Einstiegskerzen. Zum Vorbelegen eine goldene FVG-Impulskerze (Entstehung) anklicken.</p>
+    <p>Variante wählen: Gold markiert FVG-Impulse, die Positionsfarbe alle bereits bestätigten Einstiegskerzen. Zum Vorbelegen eine pinke Bestätigungskerze anklicken; die goldene FVG-Impulskerze bleibt ebenfalls auswählbar.</p>
     <div>
       <button type="button" :disabled="disabled" :aria-pressed="armedAction === 'entryFvgImmediate'" @click="$emit('request','immediate')">a · FVG-Schluss</button>
       <button type="button" :disabled="disabled" :aria-pressed="armedAction === 'entryFvgRetestReaction'" @click="$emit('request','retestReaction')">b) FVG Retest + Bestätigungskerze</button>
     </div>
     <p><span :style="{color:cssColor('fvgCandle')}">Gold: FVG-Impuls</span> · <span :style="{color:cssColor('tradeConnector')}">Positionsfarbe (pink): Bestätigung · pinker Rahmen bei gleichzeitig goldenem Impuls</span></p>
     <p v-if="message" role="status">{{ message }}</p>
-    <p>Bei b muss der Docht mindestens die FVG-Mitte erreichen. Bei vollständiger Füllung muss dieselbe Kerze den zugehörigen M1-OB berühren. Erst eine zusätzliche Richtungskerze danach bestätigt den Entry.</p>
+    <p>Bei b muss der Docht mindestens die FVG-Mitte erreichen. Bei vollständiger Füllung muss dieselbe Kerze den zugehörigen M1-OB berühren. Der zugehörige OB darf bis zur Bestätigung nicht durch einen Docht gebrochen werden. Erst eine zusätzliche Richtungskerze danach bestätigt den Entry.</p>
     <p>Nur Entry-Preis und -Zeit werden vorgeschlagen. Gespeichert wird erst mit „{{draft?'Position speichern':'Speichern'}}“.</p>
   </section>
 </template>

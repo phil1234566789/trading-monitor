@@ -18,7 +18,11 @@ function project(rows,candidates,variant) {
     });
   }
   const results=new Map(states.map(state=>[state.fvg.candleTime,m1FvgSequenceResult(state)]));
-  return {candidates,results,confirmations:[...new Set([...results.values()]
+  const confirmationResults=new Map();
+  // Mehrere FVGs derselben Bestätigung liefern denselben Entry; der früheste Ursprung bleibt der Beleg.
+  for(const result of results.values())if(result.status==='ready'&&!confirmationResults.has(result.confirmationCandleTime))
+    confirmationResults.set(result.confirmationCandleTime,result);
+  return {candidates,results,confirmationResults,confirmations:[...new Set([...results.values()]
     .filter(result=>result.status==='ready').map(result=>result.confirmationCandleTime))],stateVisits};
 }
 
