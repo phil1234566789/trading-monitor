@@ -2,6 +2,7 @@
 import DealingRangeSetupSelect from './DealingRangeSetupSelect.vue';
 import TradeExecutionCard from './TradeExecutionCard.vue';
 import {useDealingRangeExecutions} from '../composables/useDealingRangeExecutions.js';
+import {journalExecutionCardKey,journalCardArmedAction,useJournalEntryFinder} from '../composables/useJournalEntryFinder.js';
 import {useJournalExecutionDraft} from '../composables/useJournalExecutionDraft.js';
 import { ref, computed } from "vue";
 import { updateDealingRange, removeTargetFromTrade, removeConfirmationFromTrade } from "../tradeIntake.js";
@@ -52,6 +53,7 @@ const emit = defineEmits([
   "position-draft-started",
   'position-draft-cancelled',
   'request-entry-fvg',
+  'entry-finder-changed',
   "deleted",
   "request-add-target",
   "request-add-confirmation",
@@ -77,13 +79,15 @@ const emit = defineEmits([
 
 const {positions:executions,loading:loadingExecutions,error:executionsError,refresh:loadExecutions}=
   useDealingRangeExecutions(()=>props.trade,()=>props.positions);
-const {draftKey,draftBase,card:draftCardRef,container:executionSectionRef,visiblePositions:visibleExecutions,start:startPositionDraft,cancel:cancelDraft,
-  apply:applyPositionDraftPrefill,reload:refreshExecutions,onCreated:onExecutionCreated}=useJournalExecutionDraft({
+const entryFinder=useJournalEntryFinder(key=>emit('entry-finder-changed',key));
+const activeEntryCardKey=entryFinder.activeKey;
+const {draftKey,draftBase,container:executionSectionRef,visiblePositions:visibleExecutions,start:startPositionDraft,cancel:cancelDraft,
+  reload:refreshExecutions,onCreated:onExecutionCreated}=useJournalExecutionDraft({
     trade:()=>props.trade,loading:computed(()=>loadingExecutions.value||!!executionsError.value),positions:executions,refresh:loadExecutions,
-    started:()=>emit('position-draft-started'),cancelled:()=>emit('position-draft-cancelled'),
+    started:()=>{entryFinder.closeAll();emit('position-draft-started');},cancelled:key=>emit('position-draft-cancelled',key),
     created:(id,accountId)=>emit('created',id,accountId),
   });
-defineExpose({applyPositionDraftPrefill,refreshExecutions});
+defineExpose({applyExecutionPrefill:entryFinder.apply,resolveExecutionTarget:entryFinder.resolve,refreshExecutions});
 async function onExecutionSaved(){await refreshExecutions();emit('saved');}
 function addEntryEvidence(category,position){
   const event={confirmation:'request-add-confirmation',confluence:'request-add-confluence',anti_confluence:'request-add-anti-confluence'}[category];
@@ -357,13 +361,15 @@ function confirmationLabel(confirmation) {
       </div>
       <p v-if="loadingExecutions" role="status" class="tem-muted">Ausführungen werden geladen …</p>
       <p v-if="executionsError" role="alert" class="tem-lesson-error">{{executionsError}} <button type="button" @click="refreshExecutions">Erneut laden</button></p>
-      <TradeExecutionCard v-for="(position,index) in visibleExecutions" :key="position.id" :trade="position" :number="index+1"
-        :selected="position.id===trade.id" :current-symbol="currentSymbol" :armed-action="armedPositionId===position.id?armedAction:null"
+      <TradeExecutionCard v-for="(position,index) in visibleExecutions" :key="position.id" :ref="entryFinder.refFor(journalExecutionCardKey(position))" :trade="position" :number="index+1"
+        :selected="position.id===trade.id" :current-symbol="currentSymbol" :armed-action="journalCardArmedAction(armedAction,armedPositionId,activeEntryCardKey,position)"
+        :entry-fvg-message="activeEntryCardKey===journalExecutionCardKey(position)?entryFvgMessage:''"
+        @finder-opened="entryFinder.open" @finder-closed="entryFinder.close" @request-entry-fvg="payload=>emit('request-entry-fvg',payload)"
         :draft-active="draftKey!=null" :can-delete="draftKey==null" @saved="onExecutionSaved" @created="onExecutionCreated" @deleted="id=>emit('deleted',id)"
         @add-evidence="addEntryEvidence" @remove-evidence="onRemoveConfirmation" @hover-evidence="item=>emit('hover-evidence',item)" />
-      <TradeExecutionCard v-if="draftKey!=null" ref="draftCardRef" :key="'draft:'+draftKey" :trade="draftBase" :number="visibleExecutions.length+1"
-        draft :draft-key="draftKey" :current-symbol="currentSymbol" :armed-action="armedAction" :entry-fvg-message="entryFvgMessage"
-        @saved="onExecutionSaved" @created="onExecutionCreated" @cancel="cancelDraft" @prefill="emit('position-draft-started')"
+      <TradeExecutionCard v-if="draftKey!=null" :ref="entryFinder.refFor(journalExecutionCardKey(draftBase,draftKey))" :key="'draft:'+draftKey" :trade="draftBase" :number="visibleExecutions.length+1"
+        draft :draft-key="draftKey" :current-symbol="currentSymbol" :armed-action="journalCardArmedAction(armedAction,armedPositionId,activeEntryCardKey,draftBase,draftKey)" :entry-fvg-message="activeEntryCardKey===journalExecutionCardKey(draftBase,draftKey)?entryFvgMessage:''"
+        @saved="onExecutionSaved" @created="onExecutionCreated" @cancel="cancelDraft" @finder-opened="entryFinder.open" @finder-closed="entryFinder.close"
         @request-entry-fvg="payload=>emit('request-entry-fvg',payload)" />
     </section>
   </MetadataPanel>

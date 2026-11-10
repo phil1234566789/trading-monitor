@@ -15,7 +15,7 @@ import StyleModal from "../components/StyleModal.vue";
 import SessionsModal from "../components/SessionsModal.vue";
 import NewsModal from "../components/NewsModal.vue";
 import TradeEditModal from "../components/TradeEditModal.vue";
-import {m1FvgDraftPrefill} from '../m1FvgEntrySelection.js';
+import {m1FvgCardPrefill} from '../m1FvgEntrySelection.js';
 import {formatDatedTime} from '../berlinTime.js';
 import {useJournalRoute} from '../composables/useJournalRoute.js';
 import TradingAccountSwitcher from "../components/TradingAccountSwitcher.vue";
@@ -369,6 +369,10 @@ function onPositionDraftStarted() {
   hoveredModalEvidenceItem.value = null;
   hoveredModalTargetItem.value = null;
 }
+function onPositionDraftCancelled(key){
+  const target=entryFvgSelection.value??entryFvgPreview.value?.target;
+  if(target?.cardKey===`draft:${key}`)onPositionDraftStarted();
+}
 let positionAccountChange = false;
 async function onPositionCreated(positionId, accountId) {
   disarmChartClick();
@@ -526,22 +530,23 @@ const armedTscSection = computed(() => (armedAction.value?.payload?.isTsc ? (TSC
 // mit den Arm-Keys — hier reicht der rohe Key.
 const armedTradeAction = computed(() => (armedAction.value && !armedAction.value.payload?.isTsc ? armedAction.value.key : null));
 const entryFvgSelection=computed(()=>armedAction.value?.key.startsWith('entryFvg')?armedAction.value.payload:null);
-function onRequestEntryFvg({variant,draftKey}){
-  const trade=editingTrade.value;
-  if(!trade||trade.instrument!==currentSymbol.value)return;
+function onRequestEntryFvg({variant,cardKey}){
+  const trade=tradeEditModalRef.value?.resolveExecutionTarget(cardKey);
+  if(!trade||trade.dealingRangeId!==editingTrade.value?.dealingRangeId||trade.instrument!==currentSymbol.value)return;
   entryFvgMessage.value='';
   entryFvgPreview.value=null;
   currentBar.value='1m';
   armChartClick(variant==='immediate'?'entryFvgImmediate':'entryFvgRetestReaction',
-    {...trade,variant,draftKey,draftToken:++entryFvgToken});
+    {...trade,variant,cardKey,draftToken:++entryFvgToken});
 }
 function onSelectEntryFvg(result){
   const target=entryFvgSelection.value;
   if(!target||target.draftToken!==result.target?.draftToken)return;
   if(result.status!=='ready'){entryFvgMessage.value=result.reason;return;}
-  const prefill=m1FvgDraftPrefill(result,target,editingTrade.value,currentSymbol.value);
+  const prefill=m1FvgCardPrefill(result,target,tradeEditModalRef.value?.resolveExecutionTarget(target.cardKey),currentSymbol.value);
   if(!prefill){disarmChartClick();return;}
-  if(!tradeEditModalRef.value?.applyPositionDraftPrefill(prefill,target.draftKey)){disarmChartClick();return;}
+  if(!tradeEditModalRef.value?.applyExecutionPrefill(prefill,target.cardKey)){disarmChartClick();return;}
+  disarmChartClick();
   entryFvgPreview.value=result;
   entryFvgMessage.value=`FVG-Impuls ${formatDatedTime(result.fvg.candleTime)}${result.retestCandleTime!=null?` · Retest ${formatDatedTime(result.retestCandleTime)}`:''} · Bestätigungskerze ${formatDatedTime(result.confirmationCandleTime)} · Entry nach Schluss ${formatDatedTime(prefill.entryTime)} · ${prefill.entryPrice}`;
 }
@@ -2248,8 +2253,9 @@ watch(selectedTradingAccountId, () => {
     @saved="refreshTrades"
     @created="onPositionCreated"
     @position-draft-started="onPositionDraftStarted"
-    @position-draft-cancelled="onPositionDraftStarted"
+    @position-draft-cancelled="onPositionDraftCancelled"
     @request-entry-fvg="onRequestEntryFvg"
+    @entry-finder-changed="onPositionDraftStarted"
     @open-in-tsc="onOpenJournalInTsc(editingTrade)"
     @deleted="onTradeDeleted"
     @request-add-target="onAddTargetRequest(editingTrade)"

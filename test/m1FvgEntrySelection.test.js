@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
 import native from './fixtures/dr128M1FvgSelection.json';
-import {m1FvgEntryCandidates,m1FvgEntryPrefill,matchM1FvgEntryCandidate,m1FvgDraftPrefill} from '../src/m1FvgEntrySelection.js';
+import {m1FvgEntryCandidates,m1FvgEntryPrefill,matchM1FvgEntryCandidate,m1FvgCardPrefill} from '../src/m1FvgEntrySelection.js';
 import {tintM1FvgCandidates} from '../src/fvgCandleTint.js';
 const at=clock=>Date.parse(`2026-11-05T${clock}:00+01:00`)/1000;
 const fvg=(rows,clock,direction='short')=>m1FvgEntryCandidates(rows,at('21:10'),direction).find(f=>f.candleTime===at(clock));
@@ -48,11 +48,11 @@ it('hits only a rendered impulse candle, and highlights the same candidates with
   expect(tintM1FvgCandidates(native,candidates,'5m','#ffd54f')).toBe(native);
 });
 it('only prefills the still selected DR draft, with no stop or exit fields',()=>{
-  const trade={id:151,dealingRangeId:128,instrument:'XAUUSD',direction:'short'};
+  const trade={cardKey:'position:151',id:151,dealingRangeId:128,instrument:'XAUUSD',direction:'short'};
   const target={...trade,draftToken:4},result={status:'ready',target,entryTime:at('21:01'),entryPrice:4112.12,stopLoss:999,exitPrice:1};
-  expect(m1FvgDraftPrefill(result,target,trade,'XAUUSD')).toEqual({entryTime:at('21:01'),entryPrice:4112.12});
-  expect(m1FvgDraftPrefill(result,{...target,draftToken:5},trade,'XAUUSD')).toBe(null);
-  expect(m1FvgDraftPrefill(result,target,{...trade,dealingRangeId:127},'XAUUSD')).toBe(null);
-  expect(m1FvgDraftPrefill(result,target,trade,'GBPUSD')).toBe(null);
-  expect(m1FvgDraftPrefill(result,null,trade,'XAUUSD')).toBe(null);
+  expect(m1FvgCardPrefill(result,target,trade,'XAUUSD')).toEqual({entryTime:at('21:01'),entryPrice:4112.12});
+  expect(m1FvgCardPrefill(result,{...target,draftToken:5},trade,'XAUUSD')).toBe(null);
+  expect(m1FvgCardPrefill(result,target,{...trade,dealingRangeId:127},'XAUUSD')).toBe(null);
+  expect(m1FvgCardPrefill(result,target,trade,'GBPUSD')).toBe(null);
+  expect(m1FvgCardPrefill(result,null,trade,'XAUUSD')).toBe(null);
 });

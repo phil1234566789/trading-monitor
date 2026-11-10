@@ -17,11 +17,8 @@ it('keeps both saved cards, creates only one sibling draft and cancels only that
  draft.cancel();expect(draft.visiblePositions.value).toEqual(positions.value);expect(draft.draftKey.value).toBeNull();
  await draft.start();expect(draft.draftKey.value).not.toBe(key);
 });
-it('rejects stale chart prefill keys and retains draft while a saved-card refresh happens',async()=>{
- const {draft,positions}=setup();await draft.start();const key=draft.draftKey.value,apply=vi.fn().mockReturnValue(true);
- draft.card.value={applyPrefill:apply};
- expect(draft.apply({entryPrice:1},key-1)).toBe(false);expect(apply).not.toHaveBeenCalled();
- expect(draft.apply({entryPrice:4004.83},key)).toBe(true);
+it('retains the additional card while an existing-card refresh happens',async()=>{
+ const {draft,positions}=setup();await draft.start();const key=draft.draftKey.value;
  positions.value=positions.value.map(p=>({...p,reasoning:'saved elsewhere'}));await draft.reload();
  expect(draft.draftKey.value).toBe(key);expect(draft.visiblePositions.value).toHaveLength(2);
 });

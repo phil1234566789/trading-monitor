@@ -1,11 +1,11 @@
 <script setup>
 import {cssColor} from '../chartColors.js';
-defineProps({rangeId:[String,Number],instrument:String,direction:String,armedAction:String,message:String,disabled:Boolean});
+defineProps({rangeId:[String,Number],executionNumber:Number,positionId:[String,Number],draft:Boolean,instrument:String,direction:String,armedAction:String,message:String,disabled:Boolean});
 defineEmits(['request']);
 </script>
 <template>
   <section class="fvg-entry-controls" aria-label="Entry aus M1-FVG vorbelegen">
-    <b>M1-FVG → neue Position · DR #{{ rangeId }} · {{ instrument }} {{ direction === 'short' ? 'Short' : 'Long' }}</b>
+    <b>M1-FVG → Entry · Ausführung {{executionNumber}} · {{positionId!=null?'Position #'+positionId:'neue Position'}} · DR #{{ rangeId }} · {{ instrument }} {{ direction === 'short' ? 'Short' : 'Long' }}</b>
     <p>Variante wählen: Gold markiert FVG-Impulse, die Positionsfarbe alle bereits bestätigten Einstiegskerzen. Zum Vorbelegen eine goldene FVG-Impulskerze (Entstehung) anklicken.</p>
     <div>
       <button type="button" :disabled="disabled" :aria-pressed="armedAction === 'entryFvgImmediate'" @click="$emit('request','immediate')">a · FVG-Schluss</button>
@@ -14,7 +14,7 @@ defineEmits(['request']);
     <p><span :style="{color:cssColor('fvgCandle')}">Gold: FVG-Impuls</span> · <span :style="{color:cssColor('tradeConnector')}">Positionsfarbe (pink): Bestätigung · pinker Rahmen bei gleichzeitig goldenem Impuls</span></p>
     <p v-if="message" role="status">{{ message }}</p>
     <p>Bei b muss der Docht mindestens die FVG-Mitte erreichen. Bei vollständiger Füllung muss dieselbe Kerze den zugehörigen M1-OB berühren. Erst eine zusätzliche Richtungskerze danach bestätigt den Entry.</p>
-    <p>Nur Entry-Preis und -Zeit werden vorgeschlagen. Gespeichert wird erst mit „Position speichern“.</p>
+    <p>Nur Entry-Preis und -Zeit werden vorgeschlagen. Gespeichert wird erst mit „{{draft?'Position speichern':'Speichern'}}“.</p>
   </section>
 </template>
 <style scoped>

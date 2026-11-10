@@ -1,5 +1,6 @@
 <script setup>
 import {computed,ref,watch} from 'vue';
+import {journalExecutionCardKey} from '../composables/useJournalEntryFinder.js';
 import {useTradePositionForm} from '../composables/useTradePositionForm.js';
 import {deleteTrade} from '../tradeIntake.js';
 import {fmtPrice,pricePrecisionForInstrument} from '../format.js';
@@ -13,8 +14,12 @@ import TradeJournalComments from './TradeJournalComments.vue';
 
 const props=defineProps({trade:{type:Object,required:true},number:Number,draft:Boolean,draftActive:Boolean,draftKey:Number,selected:Boolean,
  currentSymbol:String,armedAction:String,entryFvgMessage:String,canDelete:{type:Boolean,default:true}});
-const emit=defineEmits(['saved','created','cancel','deleted','request-entry-fvg','prefill','add-evidence','remove-evidence','hover-evidence']);
-const form=useTradePositionForm(()=>props.trade,{saved:()=>emit('saved'),created:(id,account)=>emit('created',id,account,props.draftKey)});
+const emit=defineEmits(['saved','created','cancel','deleted','request-entry-fvg','finder-opened','finder-closed','add-evidence','remove-evidence','hover-evidence']);
+const finderOpen=ref(false);
+const cardKey=computed(()=>journalExecutionCardKey(props.trade,props.draft?props.draftKey:null));
+function closeFinder(){if(finderOpen.value){finderOpen.value=false;emit('finder-closed',cardKey.value);}}
+function toggleFinder(){if(finderOpen.value)closeFinder();else{finderOpen.value=true;emit('finder-opened',cardKey.value);}}
+const form=useTradePositionForm(()=>props.trade,{saved:()=>{closeFinder();emit('saved');},created:(id,account)=>{closeFinder();emit('created',id,account,props.draftKey);}});
 const {entryPrice,entryTimeInput,stopLoss,exitPrice,exitDateInput,exitClockInput,outcome,reasoning,tradingAccountId,
  size,netPl,commission,saving,saveError,createdPositionId,save}=form;
 watch(()=>props.draft,active=>{if(active)form.beginPositionDraft();},{immediate:true});
@@ -22,6 +27,8 @@ const opened=ref(props.draft||props.selected);
 watch(()=>props.selected,selected=>{if(selected)opened.value=true;});
 // Die gespeicherten Summaries bleiben neben dem neuen Entwurf sichtbar; ihre Formularstates bleiben erhalten.
 watch(()=>props.draftActive,active=>{if(active&&!props.draft)opened.value=false;});
+watch(opened,open=>{if(!open)closeFinder();});
+watch(saving,value=>{if(value)closeFinder();});
 const positionId=computed(()=>createdPositionId.value??(props.draft?null:props.trade.id));
 const heading=computed(()=>`Ausführung ${props.number} · ${positionId.value!=null?'Position #'+positionId.value:'neue Position'}`);
 const price=value=>value==null?'–':fmtPrice(value,pricePrecisionForInstrument(props.trade.instrument));
@@ -33,25 +40,26 @@ const categories=[{key:'confirmation',title:'Bestätigungen (GO für diesen Entr
 const armKey=key=>key==='anti_confluence'?'antiConfluence':key;
 const evidence=category=>(props.trade.confirmations??[]).filter(item=>item.level==='position'&&item.category===category);
 const evidenceLabel=item=>formatEvidenceLabel(item,props.trade.instrument,Math.floor(Date.now()/1000));
-function cancel(){if(saving.value)return;if(props.draft)emit('cancel');else form.cancelPositionDraft();}
-function applyPrefill(prefill){
- if(!props.draft||saving.value||createdPositionId.value!=null)return false;
- form.beginPositionDraft(prefill);emit('prefill');return true;
+function cancel(){if(saving.value)return;closeFinder();if(props.draft)emit('cancel');else form.cancelPositionDraft();}
+function entryTarget(){
+ return finderOpen.value&&opened.value&&!saving.value&&createdPositionId.value==null?{...props.trade,cardKey:cardKey.value}:null;
 }
+function applyPrefill(prefill){return entryTarget()?form.applyEntryPrefill(prefill):false;}
 async function remove(){
  if(!props.canDelete||!confirm(`Position #${props.trade.id} wirklich löschen?`))return;
  if(await deleteTrade(props.trade.id))emit('deleted',props.trade.id);
 }
-defineExpose({applyPrefill});
+defineExpose({applyPrefill,entryTarget,closeFinder});
 </script>
 <template>
  <article class="execution-card" :aria-label="heading" :data-position-id="positionId" :data-draft-key="draft?draftKey:undefined">
   <details :open="opened" @toggle="opened=$event.target.open">
    <summary><strong>{{heading}}</strong><span>{{summary}}</span></summary>
    <div v-if="opened" class="execution-body">
-    <M1FvgEntryControls v-if="draft" :range-id="trade.dealingRangeId" :instrument="trade.instrument" :direction="trade.direction"
+    <ActionButton type="button" :aria-expanded="finderOpen" :disabled="saving||createdPositionId!=null" @click="toggleFinder">Entry finden</ActionButton>
+    <M1FvgEntryControls v-if="finderOpen" :range-id="trade.dealingRangeId" :instrument="trade.instrument" :direction="trade.direction" :execution-number="number" :position-id="positionId" :draft="draft"
      :armed-action="armedAction" :message="entryFvgMessage" :disabled="saving||currentSymbol!==trade.instrument||createdPositionId!=null"
-     @request="variant=>emit('request-entry-fvg',{variant,draftKey})" />
+     @request="variant=>emit('request-entry-fvg',{variant,cardKey})" />
     <template v-if="!draft">
      <CrudListSection v-for="category in categories" :key="category.key" :title="category.title" :icon="category.icon"
       add-title="Beleg für diese Ausführung im Chart anklicken" :items="evidence(category.key)" :item-key="item=>item.id"
@@ -76,7 +84,7 @@ defineExpose({applyPrefill});
      <p v-if="createdPositionId!=null" role="status" class="execution-wide">Position #{{createdPositionId}} gespeichert · Liste wird aktualisiert.</p>
      <div class="execution-wide execution-actions">
       <ActionButton type="submit" :disabled="saving||createdPositionId!=null">{{draft?'Position speichern':'Speichern'}}</ActionButton>
-      <ActionButton :disabled="saving||createdPositionId!=null" @click="cancel">{{draft?'Entwurf verwerfen':'Änderungen verwerfen'}}</ActionButton>
+      <ActionButton :disabled="saving||createdPositionId!=null" @click="cancel">{{draft?'Karte entfernen':'Änderungen verwerfen'}}</ActionButton>
      </div>
     </form>
     <TradeJournalComments v-if="!draft" :position-id="trade.id" />

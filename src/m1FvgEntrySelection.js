@@ -26,9 +26,10 @@ export function matchM1FvgEntryCandidate(candidates,candles,time,price) {
   return candidates.find(fvg=>fvg.candleTime===time) ?? null;
 }
 
-export function m1FvgDraftPrefill(result,armed,trade,symbol) {
+export function m1FvgCardPrefill(result,armed,trade,symbol) {
   const target=result?.target;
   if(result?.status!=='ready'||!armed||!trade||!target
+    ||typeof target.cardKey!=='string'||target.cardKey!==armed.cardKey||target.cardKey!==trade.cardKey
     ||target.draftToken!==armed.draftToken||target.id!==trade.id
     ||target.dealingRangeId!==trade.dealingRangeId||target.instrument!==trade.instrument
     ||target.direction!==trade.direction||symbol!==trade.instrument

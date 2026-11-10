@@ -31,6 +31,12 @@ export function useTradePositionForm(trade, { saved, created }) {
     for (const name of names) if (!same || fields[name].value === before[name]) fields[name].value = after[name];
   }, { immediate:true });
 
+  function applyEntryPrefill(prefill={}) {
+    if(saving.value||createdPositionId.value!=null)return false;
+    if(prefill.entryPrice!=null)fields.entryPrice.value=prefill.entryPrice;
+    if(prefill.entryTime!=null)fields.entryTimeInput.value=berlinDatetimeInput(prefill.entryTime);
+    return true;
+  }
   function beginPositionDraft(prefill = {}) {
     if (saving.value || trade().dealingRangeId == null) return;
     if (!addingPosition.value) {
@@ -38,8 +44,7 @@ export function useTradePositionForm(trade, { saved, created }) {
       fill({ ...empty(), tradingAccountId:trade().tradingAccountId ?? null });
       addingPosition.value = true;
     }
-    if (prefill.entryPrice != null) fields.entryPrice.value = prefill.entryPrice;
-    if (prefill.entryTime != null) fields.entryTimeInput.value = berlinDatetimeInput(prefill.entryTime);
+    applyEntryPrefill(prefill);
     saveError.value = '';
   }
   function cancelPositionDraft() {
@@ -77,5 +82,5 @@ export function useTradePositionForm(trade, { saved, created }) {
     } catch { saveError.value = 'Speichern fehlgeschlagen. Eingaben bleiben erhalten.'; }
     finally { saving.value = false; }
   }
-  return { ...fields, ...exitDate, addingPosition, saving, saveError, createdPositionId, beginPositionDraft, cancelPositionDraft, save };
+  return { ...fields, ...exitDate, addingPosition, saving, saveError, createdPositionId, applyEntryPrefill, beginPositionDraft, cancelPositionDraft, save };
 }

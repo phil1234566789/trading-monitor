@@ -1,7 +1,7 @@
 import {computed,nextTick,ref,watch} from 'vue';
 
 export function useJournalExecutionDraft({trade,loading,positions,refresh,started,cancelled,created}) {
- const draftKey=ref(null),draftBase=ref(null),card=ref(null),container=ref(null),pendingCreatedId=ref(null);
+ const draftKey=ref(null),draftBase=ref(null),container=ref(null),pendingCreatedId=ref(null);
  let nextKey=0;
  const visiblePositions=computed(()=>positions.value.filter(position=>draftKey.value==null||position.id!==pendingCreatedId.value));
  async function start(){
@@ -9,8 +9,7 @@ export function useJournalExecutionDraft({trade,loading,positions,refresh,starte
   draftBase.value={...trade()};draftKey.value=++nextKey;started();
   await nextTick();container.value?.scrollIntoView?.({block:'start'});return true;
  }
- function cancel(){draftKey.value=null;draftBase.value=null;pendingCreatedId.value=null;cancelled();}
- function apply(prefill,key){return draftKey.value===key ? card.value?.applyPrefill(prefill)??false : false;}
+ function cancel(){const key=draftKey.value;draftKey.value=null;draftBase.value=null;pendingCreatedId.value=null;cancelled(key);}
  async function reload(){
   const ok=await refresh();
   if(ok&&pendingCreatedId.value!=null&&positions.value.some(position=>position.id===pendingCreatedId.value))cancel();
@@ -23,5 +22,5 @@ export function useJournalExecutionDraft({trade,loading,positions,refresh,starte
   if(trade().dealingRangeId===range&&trade().instrument===symbol)created(id,accountId);
  }
  watch([()=>trade().dealingRangeId,()=>trade().instrument],()=>{if(draftKey.value!=null)cancel();});
- return {draftKey,draftBase,card,container,visiblePositions,start,cancel,apply,reload,onCreated};
+ return {draftKey,draftBase,container,visiblePositions,start,cancel,reload,onCreated};
 }

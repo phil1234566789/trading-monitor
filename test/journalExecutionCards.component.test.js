@@ -14,7 +14,7 @@ vi.mock('../src/components/ui/IconButton.vue',()=>({default:{render:()=>null}}))
 vi.mock('../src/components/ui/ActionButton.vue',async()=>{const {h}=await import('vue');return {default:{props:['disabled'],emits:['click'],setup:(props,{emit,slots})=>()=>h('button',{disabled:props.disabled,onClick:()=>emit('click')},slots.default?.())}};});
 vi.mock('../src/components/TradeExecutionCard.vue',async()=>{
  const {h}=await import('vue');return {default:{props:{trade:Object,number:Number,draft:Boolean,draftKey:Number},emits:['remove-evidence','saved','created','cancel'],setup:(props,{emit,expose})=>{
-  expose({applyPrefill:()=>true});return ()=>h('article',{'data-id':props.trade.id,'data-number':props.number,'data-draft':props.draft},[
+  expose({applyPrefill:()=>true,closeFinder:()=>{},entryTarget:()=>props.trade});return ()=>h('article',{'data-id':props.trade.id,'data-number':props.number,'data-draft':props.draft},[
    h('span',{},JSON.stringify(props.trade.confirmations??[])),
    h('button',{'data-remove':props.trade.id,onClick:()=>emit('remove-evidence',{id:99})},'Remove'),
    h('button',{'data-save':props.trade.id,onClick:()=>emit('saved')},'Saved'),
