@@ -174,10 +174,10 @@
     "semantic_hash": ""
   },
   "src/components/MetadataPanel.vue": {
-    "mtime": 1794212907.9891136,
-    "seen": 1794337415.3169882,
-    "ast_hash": "8d027ad41f5e203ff2e45acb738d133f",
-    "semantic_hash": "8d027ad41f5e203ff2e45acb738d133f"
+    "mtime": 1794342824.2036605,
+    "seen": 1794342946.4284034,
+    "ast_hash": "b940f438a0d1e8eccdb33ade4d03c8b3",
+    "semantic_hash": ""
   },
   "src/components/NewsModal.vue": {
     "mtime": 1794212907.996114,
@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "src/components/TradeEditModal.vue": {
-    "mtime": 1794337000.2703981,
-    "seen": 1794337415.3169882,
-    "ast_hash": "2495b625c235bbb9476a5c50b92f4a19",
+    "mtime": 1794342674.7367108,
+    "seen": 1794342946.4374034,
+    "ast_hash": "c35879af677dc10eaf7018cac1f9b98e",
     "semantic_hash": ""
   },
   "src/components/TradeSetupCockpit.vue": {
@@ -636,9 +636,9 @@
     "semantic_hash": ""
   },
   "src/trades.js": {
-    "mtime": 1794212908.1375623,
-    "seen": 1794337415.3169882,
-    "ast_hash": "abb0a2ef2fc5daa1bfc29c1a97e8669b",
+    "mtime": 1794341982.497625,
+    "seen": 1794342946.5062637,
+    "ast_hash": "ab5751a9bc5473d18feab7b7477f3725",
     "semantic_hash": ""
   },
   "src/tradingAccounts.js": {
@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1794339434.1061885,
-    "seen": 1794339627.1024485,
-    "ast_hash": "7642f422a87506512da84a245cabe63c",
+    "mtime": 1794342412.981062,
+    "seen": 1794342946.5082774,
+    "ast_hash": "06b2af5fe68be340a3f1d6ad010ad0b4",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -2082,9 +2082,9 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1794212907.8043537,
-    "seen": 1794337415.317988,
-    "ast_hash": "514c5b1c7ba55448bc13955842780a2a",
+    "mtime": 1794342412.9790585,
+    "seen": 1794342946.6618733,
+    "ast_hash": "9a67fb075f86532e088ef58ce14c55e7",
     "semantic_hash": ""
   },
   "PIP-SETTINGS.md": {
@@ -2442,9 +2442,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1794212907.8033516,
-    "seen": 1794337415.317988,
-    "ast_hash": "118bb825634df14bd820c53ced6dc53a",
+    "mtime": 1794342412.9780583,
+    "seen": 1794342946.6618733,
+    "ast_hash": "21463961c77c3c0651eed8b047fcd2e7",
     "semantic_hash": ""
   },
   "supabase/migrations/20260912210000_reset_gbpusd_20260909_lookahead_fix.sql": {
@@ -3174,9 +3174,9 @@
     "semantic_hash": ""
   },
   "src/berlinTime.js": {
-    "mtime": 1794212907.9695961,
-    "seen": 1794337415.3169882,
-    "ast_hash": "432aa232e15cef78e7a659c059284103",
+    "mtime": 1794341885.4550884,
+    "seen": 1794342946.419361,
+    "ast_hash": "2d076c17d26948deb996c17e07b2da5e",
     "semantic_hash": ""
   },
   "src/chartMeasure.js": {
@@ -8382,9 +8382,9 @@
     "semantic_hash": ""
   },
   "src/composables/useTradePositionForm.js": {
-    "mtime": 1794336958.0683148,
-    "seen": 1794337415.3169882,
-    "ast_hash": "66a22efacc16b9f8efb782bdd1dce797",
+    "mtime": 1794341885.507394,
+    "seen": 1794342946.4484048,
+    "ast_hash": "3a7af4836e0709264b4d77cd28696f86",
     "semantic_hash": ""
   },
   "src/tradePositionFields.js": {
@@ -8499,6 +8499,66 @@
     "mtime": 1794340609.486995,
     "seen": 1794340804.0650654,
     "ast_hash": "c96b2903d410b4b10c9357e0d1fb3362",
+    "semantic_hash": ""
+  },
+  "src/components/TradeExecutionCard.vue": {
+    "mtime": 1794342558.4721894,
+    "seen": 1794342946.4374034,
+    "ast_hash": "316350e4949c9005552719611f6295de",
+    "semantic_hash": ""
+  },
+  "src/composables/useDealingRangeExecutions.js": {
+    "mtime": 1794342063.8651958,
+    "seen": 1794342946.4414039,
+    "ast_hash": "a2d7e82158abdec3ee53ef20c4785c31",
+    "semantic_hash": ""
+  },
+  "src/composables/useJournalExecutionDraft.js": {
+    "mtime": 1794342558.4701898,
+    "seen": 1794342946.4414039,
+    "ast_hash": "8796b02f1bd92d522f0f55e979f866af",
+    "semantic_hash": ""
+  },
+  "src/composables/usePositionExitDate.js": {
+    "mtime": 1794341885.464596,
+    "seen": 1794342946.4424036,
+    "ast_hash": "19cd074cd33fb0a8072033c9ebb3a95f",
+    "semantic_hash": ""
+  },
+  "test/dealingRangeExecutions.test.js": {
+    "mtime": 1794342302.2433105,
+    "seen": 1794342946.5537906,
+    "ast_hash": "3c8bcbe5264461c00cbe1bee74119ebe",
+    "semantic_hash": ""
+  },
+  "test/journalExecutionCards.component.test.js": {
+    "mtime": 1794342602.8684244,
+    "seen": 1794342946.5798512,
+    "ast_hash": "6829388cf4c8effaba5eb72c24fc3a0e",
+    "semantic_hash": ""
+  },
+  "test/journalExecutionDraft.test.js": {
+    "mtime": 1794342243.1124132,
+    "seen": 1794342946.5798512,
+    "ast_hash": "40ae451d401972a643b5e4ca295f326b",
+    "semantic_hash": ""
+  },
+  "test/journalExecutionForms.test.js": {
+    "mtime": 1794342302.2453115,
+    "seen": 1794342946.5798512,
+    "ast_hash": "86cfb6b696320eee670017167092e145",
+    "semantic_hash": ""
+  },
+  "test/journalRangePositionsRead.test.js": {
+    "mtime": 1794342452.7040925,
+    "seen": 1794342946.5798512,
+    "ast_hash": "2cfb3b97359e49ae23b00b422a1acd30",
+    "semantic_hash": ""
+  },
+  "test/positionExitDate.test.js": {
+    "mtime": 1794341906.5903845,
+    "seen": 1794342946.6023598,
+    "ast_hash": "1575d2f87100dfd9c072c8b117a1048f",
     "semantic_hash": ""
   }
 }
