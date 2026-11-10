@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "src/components/PriceChart.vue": {
-    "mtime": 1794340596.1618545,
-    "seen": 1794340803.9335172,
-    "ast_hash": "e7aef20aa0e848f8f3704ba446865de8",
+    "mtime": 1794345444.6921554,
+    "seen": 1794345646.7964137,
+    "ast_hash": "8649909370b650c8fa1107d71b7de592",
     "semantic_hash": ""
   },
   "src/components/ProtokollTable.vue": {
@@ -8406,9 +8406,9 @@
     "semantic_hash": ""
   },
   "src/components/M1FvgEntryControls.vue": {
-    "mtime": 1794343728.9752507,
-    "seen": 1794344139.9447405,
-    "ast_hash": "cbca97765d70f3c4855b92c999ac9f8c",
+    "mtime": 1794345444.6931548,
+    "seen": 1794345646.7904,
+    "ast_hash": "6f09f988f7457cf09bd17bcb69ce224a",
     "semantic_hash": ""
   },
   "src/m1FairValueGap.js": {
@@ -8418,9 +8418,9 @@
     "semantic_hash": ""
   },
   "src/m1FvgChartSelection.js": {
-    "mtime": 1794340546.2687106,
-    "seen": 1794340803.9635198,
-    "ast_hash": "63ba50394ce28055376f55dbe668c48b",
+    "mtime": 1794345444.6891549,
+    "seen": 1794345646.8429835,
+    "ast_hash": "a54490dfb97a3fb9d896b235ec162fb7",
     "semantic_hash": ""
   },
   "src/m1FvgEntrySelection.js": {
@@ -8484,15 +8484,15 @@
     "semantic_hash": ""
   },
   "src/m1FvgEntryProjection.js": {
-    "mtime": 1794340546.2221885,
-    "seen": 1794340803.9635198,
-    "ast_hash": "4efc657d4136bbc38327ea11434b8d62",
+    "mtime": 1794345444.6881547,
+    "seen": 1794345646.8429835,
+    "ast_hash": "7a8db5d6647deb506b87c6c2a3112dc5",
     "semantic_hash": ""
   },
   "src/m1FvgEntrySequence.js": {
-    "mtime": 1794340509.1510072,
-    "seen": 1794340803.9635198,
-    "ast_hash": "dbc30e01b8dc3a73d58694c710ee7651",
+    "mtime": 1794345444.6871507,
+    "seen": 1794345646.8429835,
+    "ast_hash": "c9b7c2dd2d96c38c17168e8ec8055e02",
     "semantic_hash": ""
   },
   "test/m1FvgEntryProjection.test.js": {
@@ -8577,6 +8577,18 @@
     "mtime": 1794343831.6326,
     "seen": 1794344140.088902,
     "ast_hash": "7e75b132fd44e2a48fff13ff222fe9af",
+    "semantic_hash": ""
+  },
+  "test/fixtures/xau27OctM1ObBreakSelection.json": {
+    "mtime": 1794345444.6941547,
+    "seen": 1794345646.9743092,
+    "ast_hash": "200ed286abf9a7b29f02139e431929c7",
+    "semantic_hash": ""
+  },
+  "test/m1FvgConfirmationSelection.test.js": {
+    "mtime": 1794345587.8402462,
+    "seen": 1794345647.0081925,
+    "ast_hash": "c53cbfc896e754fff1c1acf4b78a50e4",
     "semantic_hash": ""
   }
 }
