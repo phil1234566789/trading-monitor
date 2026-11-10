@@ -8,9 +8,10 @@ defineEmits(['request']);
     <p>Variante wählen, dann eine goldene M1-Impulskerze im Chart anklicken. Die Entry-Zeit ist der bestätigende Kerzenschluss.</p>
     <div>
       <button type="button" :disabled="disabled" :aria-pressed="armedAction === 'entryFvgImmediate'" @click="$emit('request','immediate')">a · FVG-Schluss</button>
-      <button type="button" :disabled="disabled" :aria-pressed="armedAction === 'entryFvgRetestReaction'" @click="$emit('request','retestReaction')">b · Retest + Richtungskerze</button>
+      <button type="button" :disabled="disabled" :aria-pressed="armedAction === 'entryFvgRetestReaction'" @click="$emit('request','retestReaction')">b · ≥ 50 % Retest + Richtungskerze</button>
     </div>
     <p v-if="message" role="status">{{ message }}</p>
+    <p>Bei b muss der Docht mindestens die FVG-Mitte erreichen. Erst eine zusätzliche Richtungskerze danach bestätigt den Entry.</p>
     <p>Nur Entry-Preis und -Zeit werden vorgeschlagen. Gespeichert wird erst mit „Position speichern“.</p>
   </section>
 </template>

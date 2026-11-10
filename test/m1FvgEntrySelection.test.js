@@ -4,6 +4,7 @@ import {m1FvgEntryCandidates,m1FvgEntryPrefill,matchM1FvgEntryCandidate,m1FvgDra
 import {tintM1FvgCandidates} from '../src/fvgCandleTint.js';
 const at=clock=>Date.parse(`2026-11-05T${clock}:00+01:00`)/1000;
 const fvg=(rows,clock,direction='short')=>m1FvgEntryCandidates(rows,at('21:10'),direction).find(f=>f.candleTime===at(clock));
+const qualified=()=>native.map(c=>c.time===at('20:59')?{...c,high:4115.56}:c);
 it('uses the third Bid candle close and its close time for the native DR128 FVG',()=>{
   const selected=fvg(native,'20:54');
   expect(selected).toMatchObject({recognizedAt:at('20:56'),top:4116.05,bottom:4115.07});
@@ -13,11 +14,12 @@ it('uses the third Bid candle close and its close time for the native DR128 FVG'
   expect(m1FvgEntryCandidates(native,at('20:55'),'short').some(f=>f.candleTime===at('20:54'))).toBe(false);
 });
 it('requires an additional direction candle strictly after the retest and its completed close',()=>{
-  const selected=fvg(native,'20:54'),input={candles:native,fvg:selected,variant:'retestReaction'};
+  // Synthetische Grenzvariante: der echte native Docht erreicht nur 15,31 % (separater Negativtest).
+  const rows=qualified(),selected=fvg(rows,'20:54'),input={candles:rows,fvg:selected,variant:'retestReaction'};
   expect(m1FvgEntryPrefill({...input,evaluatedAt:at('21:00')})).toMatchObject({status:'pending'});
   expect(m1FvgEntryPrefill({...input,evaluatedAt:at('21:01')})).toMatchObject({status:'ready',
     retestCandleTime:at('20:59'),confirmationCandleTime:at('21:00'),entryTime:at('21:01'),entryPrice:4112.12});
-  const missing=native.filter(c=>c.time!==at('20:58'));
+  const missing=rows.filter(c=>c.time!==at('20:58'));
   expect(m1FvgEntryPrefill({...input,candles:missing,evaluatedAt:at('21:01')})).toMatchObject({status:'unknown'});
 });
 it('keeps the later 21:00 FVG impulse distinct from its 21:02 confirmation',()=>{
@@ -27,7 +29,7 @@ it('keeps the later 21:00 FVG impulse distinct from its 21:02 confirmation',()=>
   expect(m1FvgEntryPrefill({candles:native,fvg:selected,evaluatedAt:at('21:10'),variant:'retestReaction'})).toMatchObject({status:'pending'});
 });
 it('mirrors the same sequence for Long, never reads a next open or modifies journal data',()=>{
-  const rows=native.map(c=>({...c,open:9000-c.open,close:9000-c.close,high:9000-c.low,low:9000-c.high}));
+  const rows=qualified().map(c=>({...c,open:9000-c.open,close:9000-c.close,high:9000-c.low,low:9000-c.high}));
   const before=JSON.stringify(rows),selected=fvg(rows,'20:54','long');
   expect(m1FvgEntryPrefill({candles:rows,fvg:selected,evaluatedAt:at('21:01'),variant:'retestReaction'}))
     .toMatchObject({status:'ready',entryTime:at('21:01'),entryPrice:9000-4112.12});

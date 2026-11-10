@@ -1,6 +1,16 @@
 import {confirmedM1Fvg,m1FvgBounds} from './m1FairValueGap.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {candleTouchesOrderBlock} from './orderBlockDetection.js';
+export const M1_FVG_MIN_RETEST_FRACTION=.5;
+
+function qualifiedFvgRetest(candle,fvg) {
+  if(!candleTouchesOrderBlock(candle,fvg))return false;
+  const height=fvg.top-fvg.bottom;
+  const level=fvg.direction==='short'?fvg.bottom+height*M1_FVG_MIN_RETEST_FRACTION
+    :fvg.top-height*M1_FVG_MIN_RETEST_FRACTION;
+  const tolerance=Number.EPSILON*Math.max(Math.abs(fvg.top),Math.abs(fvg.bottom),1)*8;
+  return fvg.direction==='short'?candle.high+tolerance>=level:candle.low-tolerance<=level;
+}
 
 export function m1FvgEntryCandidates(candles,evaluatedAt,direction) {
   const rows=closedChecklistCandles(candles,'1m',evaluatedAt),result=[];
@@ -45,10 +55,10 @@ export function m1FvgEntryPrefill({candles,fvg,evaluatedAt,variant='immediate'})
     if(c.time!==next)return {status:'unknown',reason:'M1-Historie zwischen FVG und Reaktion ist lückenhaft.'};
     next+=60;
     if(c.ignored)continue;
-    if(!retest){if(candleTouchesOrderBlock(c,selected))retest=c;continue;}
+    if(!retest){if(qualifiedFvgRetest(c,selected))retest=c;continue;}
     if(selected.direction==='short'?c.close<c.open:c.close>c.open)
       return {...ready(c),retestCandleTime:retest.time};
   }
   return {status:'pending',reason:retest?'Zusätzliche Richtungskerze nach dem Retest ist noch nicht geschlossen.'
-    :'Die bestätigte FVG wurde am gewählten Stand noch nicht retestet.'};
+    :'Die bestätigte FVG wurde am gewählten Stand noch nicht mindestens 50 % retestet.'};
 }
