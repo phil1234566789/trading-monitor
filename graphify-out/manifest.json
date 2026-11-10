@@ -4362,9 +4362,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2Configuration.js": {
-    "mtime": 1794305261.6583295,
-    "seen": 1794305563.961522,
-    "ast_hash": "73866a5734dba0d3c793dd443e5729f9",
+    "mtime": 1794308459.6927245,
+    "seen": 1794309085.6762886,
+    "ast_hash": "9bef5bc70470e0c8c40ebd7cb0ddec5d",
     "semantic_hash": ""
   },
   "src/tradeSetup2Evidence.js": {
@@ -4542,9 +4542,9 @@
     "semantic_hash": ""
   },
   "test/tradeSetup2Configuration.test.js": {
-    "mtime": 1794305262.1855748,
-    "seen": 1794305563.9625218,
-    "ast_hash": "034cf24f141da9002b974c81849c5bb6",
+    "mtime": 1794308459.9231381,
+    "seen": 1794309085.8977041,
+    "ast_hash": "442dd761285a30b5d11cb8451e0dd4eb",
     "semantic_hash": ""
   },
   "test/useTradeSetup2History.test.js": {
@@ -4728,9 +4728,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup2Review.js": {
-    "mtime": 1794305198.79159,
-    "seen": 1794305563.961522,
-    "ast_hash": "baf6be1962b9a9abd904cd833deb46a4",
+    "mtime": 1794308552.927674,
+    "seen": 1794309085.6802936,
+    "ast_hash": "0b70d41ec1fb72145a7082b987df7387",
     "semantic_hash": ""
   },
   "test/tradeSetup2LinkedSnapshot.test.js": {
@@ -5724,9 +5724,9 @@
     "semantic_hash": ""
   },
   "src/countertrendEntryPattern1.js": {
-    "mtime": 1794212908.033633,
-    "seen": 1794305563.961522,
-    "ast_hash": "4424a06c992c501ab61e989f59fda5c1",
+    "mtime": 1794308659.255443,
+    "seen": 1794309085.6062348,
+    "ast_hash": "211e06fc8e382ad3084af2daed209785",
     "semantic_hash": ""
   },
   "src/entryPattern.js": {
@@ -5736,9 +5736,9 @@
     "semantic_hash": ""
   },
   "src/entryPattern1Conditions.js": {
-    "mtime": 1794212908.041631,
-    "seen": 1794305563.961522,
-    "ast_hash": "7e48dc7f33c5a05382e3d406649e10a4",
+    "mtime": 1794307933.8740416,
+    "seen": 1794309085.61324,
+    "ast_hash": "9fe2ba337f52d885d21dc948e7e13abc",
     "semantic_hash": ""
   },
   "src/entryPattern1Progress.js": {
@@ -5748,9 +5748,9 @@
     "semantic_hash": ""
   },
   "test/countertrendEntryPattern1.test.js": {
-    "mtime": 1794212908.3225348,
-    "seen": 1794305563.9625218,
-    "ast_hash": "8530f9783c08d1a040fa20f8275b1f56",
+    "mtime": 1794307973.4982886,
+    "seen": 1794309085.7628374,
+    "ast_hash": "a392b9493faa40517305cd88d98d87ba",
     "semantic_hash": ""
   },
   "test/countertrendEntryPattern1References.test.js": {
@@ -6180,15 +6180,15 @@
     "semantic_hash": ""
   },
   "services/setup2/evidence.js": {
-    "mtime": 1794305261.8329554,
-    "seen": 1794305563.961522,
-    "ast_hash": "a35556cd58a2d02102e79547b35fedfd",
+    "mtime": 1794307934.7895794,
+    "seen": 1794309085.539396,
+    "ast_hash": "42de693281bcfb622eb745f3d567dc9b",
     "semantic_hash": ""
   },
   "services/setup2/evidencePayload.js": {
-    "mtime": 1794212907.9625876,
-    "seen": 1794305563.961522,
-    "ast_hash": "f55f17f8343ec4c559f1d1d60d3bdfe2",
+    "mtime": 1794308880.32238,
+    "seen": 1794309085.540396,
+    "ast_hash": "615f5c3dd25b04a4289983eb909afbf4",
     "semantic_hash": ""
   },
   "services/setup2/priceObservations.js": {
@@ -7530,9 +7530,9 @@
     "semantic_hash": ""
   },
   "services/setup2/watcherRangeEvidence.js": {
-    "mtime": 1794305262.0092592,
-    "seen": 1794305563.961522,
-    "ast_hash": "bebb566a662f0a3bb21c2be0987baaa3",
+    "mtime": 1794307934.4222,
+    "seen": 1794309085.5423987,
+    "ast_hash": "8397c2ad5a50529a13a0dda6e997f067",
     "semantic_hash": ""
   },
   "src/algoWatcherPresentation.js": {
@@ -8325,6 +8325,42 @@
     "mtime": 1794305088.8948097,
     "seen": 1794305563.9625218,
     "ast_hash": "0eb9a7edf4437d5ec378d60d216fafff",
+    "semantic_hash": ""
+  },
+  "docs/pattern-local-sweep-age-proof.json": {
+    "mtime": 1794308988.8683774,
+    "seen": 1794309085.5047657,
+    "ast_hash": "e1a60b848c2912e9345046dc7d8d9b42",
+    "semantic_hash": ""
+  },
+  "scripts/buildPatternLocalSweepAgeRuntime.mjs": {
+    "mtime": 1794308210.5492659,
+    "seen": 1794309085.5133548,
+    "ast_hash": "ce8447a5d2f9a14bb6e95dca74ea8777",
+    "semantic_hash": ""
+  },
+  "src/entryPattern1SweepAge.js": {
+    "mtime": 1794308552.537404,
+    "seen": 1794309085.61324,
+    "ast_hash": "ae2a8786b7094b661fd7a504a9444a22",
+    "semantic_hash": ""
+  },
+  "test/entryPattern1SweepAge.test.js": {
+    "mtime": 1794307973.3158717,
+    "seen": 1794309085.7721403,
+    "ast_hash": "486725b19b79f53b0864111fd43874e7",
+    "semantic_hash": ""
+  },
+  "test/patternLocalSweepAgeFrozen.integration.mjs": {
+    "mtime": 1794308210.7294083,
+    "seen": 1794309085.8531744,
+    "ast_hash": "1d8600c0fe3e7bfe37210b96ddf92916",
+    "semantic_hash": ""
+  },
+  "test/setup2SweepAgeEvidence.test.js": {
+    "mtime": 1794308702.3671095,
+    "seen": 1794309085.8732314,
+    "ast_hash": "fbf67250946039124240465415f7e674",
     "semantic_hash": ""
   }
 }
